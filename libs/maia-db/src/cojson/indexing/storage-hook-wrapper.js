@@ -10,7 +10,8 @@
  */
 
 import { isSchemaCoValue, registerSchemaCoValue, indexCoValue, shouldIndexCoValue } from './schema-index-manager.js';
-import { EXCEPTION_SCHEMAS } from '../../schemas/registry.js';
+import { isExceptionSchema } from '../../schemas/registry.js';
+import { isAccountGroupOrProfile, extractSchemaFromMessage, shouldSkipValidation } from '../helpers/co-value-detection.js';
 
 // Track pending indexing operations to prevent duplicates
 const pendingIndexing = new Set();
@@ -53,30 +54,59 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
   function wrappedStore(msg, correctionCallback, originalStore) {
     const coId = msg.id;
     
+    // CRITICAL: ENFORCE that every co-value MUST have a schema in headerMeta.$schema
+    // Exception: Groups and accounts are created by CoJSON without schemas, but we detect them by ruleset/type
+    
+    // Use universal detection helper (consolidates all detection logic)
+    const detection = isAccountGroupOrProfile(msg, backend, coId);
+    
+    // Groups, accounts, and profiles during account creation are allowed without headerMeta.$schema
+    if (!detection.isAccount && !detection.isGroup && !detection.isProfile) {
+      // For all other co-values, ENFORCE headerMeta.$schema
+      if (!msg.header || !msg.header.meta) {
+        // No header.meta at all - REJECT
+        // Debug: Log header structure to understand what's missing
+        if (msg.header) {
+          console.warn(`[StorageHook] Co-value ${coId} has header but no meta. Header structure:`, {
+            type: msg.header.type,
+            ruleset: msg.header.ruleset,
+            hasMeta: !!msg.header.meta,
+            headerKeys: Object.keys(msg.header || {})
+          });
+        } else {
+          console.warn(`[StorageHook] Co-value ${coId} has no header at all. Message structure:`, {
+            id: msg.id,
+            hasHeader: !!msg.header,
+            messageKeys: Object.keys(msg || {})
+          });
+        }
+        console.error(`[StorageHook] REJECTING co-value ${coId}: Missing header.meta. Every co-value MUST have headerMeta.$schema (except groups, accounts, and profiles during account creation).`);
+        throw new Error(`[StorageHook] Co-value ${coId} missing header.meta. Every co-value MUST have headerMeta.$schema (except groups, accounts, and profiles during account creation).`);
+      }
+      
+      const schema = extractSchemaFromMessage(msg);
+      
+      // REJECT co-values without schemas (except exception schemas)
+      if (!schema && !detection.isException) {
+        console.error(`[StorageHook] REJECTING co-value ${coId}: Missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, GenesisSchema, and groups/accounts).`);
+        // Throw error to prevent storage (co-value will not be stored)
+        throw new Error(`[StorageHook] Co-value ${coId} missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, GenesisSchema, and groups/accounts).`);
+      }
+    }
+    
     // CRITICAL: Synchronous checks to prevent infinite loops BEFORE any async work
     // These checks must be fast and not trigger any storage operations
     
-    // 1. Check header for exception schemas (fastest check - no loading needed)
-    let shouldSkipIndexing = false;
+    // 1. Use universal skip validation helper (consolidates all skip logic)
+    // NOTE: We DON'T skip GenesisSchema here - @schema/meta uses GenesisSchema but should be registered!
+    // Let isSchemaCoValue() and shouldIndexCoValue() handle GenesisSchema detection properly
+    let shouldSkipIndexing = shouldSkipValidation(msg, backend, coId);
     
-    if (msg.header && msg.header.meta) {
-      const schema = msg.header.meta.$schema;
-      // Skip exception schemas (account, group)
-      // NOTE: We DON'T skip GenesisSchema here - @schema/meta uses GenesisSchema but should be registered!
-      // Let isSchemaCoValue() and shouldIndexCoValue() handle GenesisSchema detection properly
-      if (schema === EXCEPTION_SCHEMAS.ACCOUNT || 
-          schema === EXCEPTION_SCHEMAS.GROUP) {
-        shouldSkipIndexing = true;
-      }
-      
-      // Skip if it's an account type
-      if (msg.header.meta.type === 'account') {
-        shouldSkipIndexing = true;
-      }
-      
-      // Skip if it's a group (check ruleset)
-      if (msg.header.ruleset && msg.header.ruleset.type === 'group') {
-        shouldSkipIndexing = true;
+    // Don't skip GenesisSchema for indexing (it should be registered)
+    if (shouldSkipIndexing) {
+      const schema = extractSchemaFromMessage(msg);
+      if (schema === 'GenesisSchema') {
+        shouldSkipIndexing = false; // Allow GenesisSchema to be indexed
       }
     }
     

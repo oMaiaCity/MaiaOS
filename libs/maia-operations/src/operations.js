@@ -11,21 +11,26 @@ import {
   requireParam, 
   validateCoId, 
   requireDbEngine,
-  ensureCoValueAvailable
+  ensureCoValueAvailable,
+  loadSchemaAndValidate
 } from '@MaiaOS/schemata/validation.helper';
 
 async function resolveSchemaFromCoValue(backend, coId, opName) {
-  const schemaCoId = await resolve(backend, { fromCoValue: coId }, { returnType: 'coId' });
-  if (!schemaCoId) throw new Error(`[${opName}] Failed to extract schema from CoValue ${coId} headerMeta`);
-  return schemaCoId;
+  try {
+    const schemaCoId = await resolve(backend, { fromCoValue: coId }, { returnType: 'coId' });
+    if (!schemaCoId) {
+      // Schema not found - this is OK for co-values without schemas (like context co-values)
+      // Return null to indicate no schema (caller should skip validation)
+      return null;
+    }
+    return schemaCoId;
+  } catch (error) {
+    // Schema extraction failed - this is OK for co-values without schemas
+    // Return null to indicate no schema (caller should skip validation)
+    return null;
+  }
 }
 
-async function loadAndValidateSchema(backend, schemaCoId, data, opName, mergedData = null) {
-  const schema = await resolve(backend, schemaCoId, { returnType: 'schema' });
-  if (!schema) throw new Error(`[${opName}] Schema ${schemaCoId} not found`);
-  await validateAgainstSchemaOrThrow(schema, mergedData || data, `${opName} for schema ${schemaCoId}`);
-  return schema;
-}
 
 async function evaluateDataWithExisting(data, existingData, evaluator) {
   if (!evaluator) return data;
@@ -73,7 +78,7 @@ export async function createOperation(backend, dbEngine, params) {
   requireDbEngine(dbEngine, 'CreateOperation', 'runtime schema validation');
   const schemaCoId = await resolve(backend, schema, { returnType: 'coId' });
   if (!schemaCoId) throw new Error(`[CreateOperation] Could not resolve schema: ${schema}`);
-  await loadAndValidateSchema(backend, schemaCoId, data, 'CreateOperation');
+  await loadSchemaAndValidate(backend, schemaCoId, data, 'CreateOperation', { dbEngine });
   return await backend.create(schemaCoId, data);
 }
 
@@ -86,11 +91,20 @@ export async function updateOperation(backend, dbEngine, evaluator, params) {
   const rawExistingData = await backend.getRawRecord(id);
   if (!rawExistingData) throw new Error(`[UpdateOperation] Record not found: ${id}`);
   const schemaCoId = await resolveSchemaFromCoValue(backend, id, 'UpdateOperation');
+  
+  // Skip validation if schema not found (co-values without schemas, like context co-values)
+  if (schemaCoId) {
+    const { $schema: _schema, ...existingDataWithoutMetadata } = rawExistingData;
+    const evaluatedData = await evaluateDataWithExisting(data, existingDataWithoutMetadata, evaluator);
+    const mergedData = { ...existingDataWithoutMetadata, ...evaluatedData };
+    await loadSchemaAndValidate(backend, schemaCoId, mergedData || evaluatedData, 'UpdateOperation', { dbEngine });
+  }
+  
+  // Use schema from existing data or fallback to null (backend.update handles null schema)
+  const updateSchema = schemaCoId || rawExistingData.$schema || null;
   const { $schema: _schema, ...existingDataWithoutMetadata } = rawExistingData;
   const evaluatedData = await evaluateDataWithExisting(data, existingDataWithoutMetadata, evaluator);
-  const mergedData = { ...existingDataWithoutMetadata, ...evaluatedData };
-  await loadAndValidateSchema(backend, schemaCoId, evaluatedData, 'UpdateOperation', mergedData);
-  return await backend.update(schemaCoId, id, evaluatedData);
+  return await backend.update(updateSchema, id, evaluatedData);
 }
 
 export async function deleteOperation(backend, dbEngine, params) {

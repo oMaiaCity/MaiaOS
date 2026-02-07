@@ -306,6 +306,72 @@ export function requireDbEngine(dbEngine, operationName, reason = '') {
 }
 
 /**
+ * Universal schema loading and validation function (single source of truth)
+ * Consolidates schema loading + validation pattern used across codebase
+ * 
+ * Handles both:
+ * - Runtime schemas (co-id): Loads from database via resolve() API
+ * - Migration schemas (name): Uses registry schemas (seeding only)
+ * 
+ * @param {Object} backend - Backend instance (for resolve() API)
+ * @param {string} schemaRef - Schema co-id (co_z...) or name (for migrations)
+ * @param {any} data - Data to validate
+ * @param {string} context - Context for error messages (e.g., 'createCoMap')
+ * @param {Object} [options] - Options object
+ * @param {Object} [options.dbEngine] - Database engine (REQUIRED for co-id schemas)
+ * @param {Object} [options.registrySchemas] - Registry schemas map (ONLY for migrations/seeding)
+ * @param {Function} [options.getAllSchemas] - Function to get all schemas (for migrations)
+ * @throws {Error} If schema not found or validation fails
+ * @returns {Promise<Object>} Loaded schema definition
+ */
+export async function loadSchemaAndValidate(backend, schemaRef, data, context, options = {}) {
+  const { dbEngine, registrySchemas, getAllSchemas } = options;
+  
+  // Dynamic import to avoid circular dependencies
+  const { resolve } = await import('@MaiaOS/db');
+  
+  if (schemaRef.startsWith('co_z')) {
+    // Schema co-id - MUST validate using runtime schema from database
+    if (!dbEngine) {
+      throw new Error(`[${context}] dbEngine is REQUIRED for co-id schema validation. Schema: ${schemaRef}. Pass dbEngine in options.`);
+    }
+    
+    // Load schema from database (runtime schema - single source of truth)
+    const schemaDef = await resolve(backend, schemaRef, { returnType: 'schema' });
+    if (!schemaDef) {
+      throw new Error(`[${context}] Schema not found in database: ${schemaRef}`);
+    }
+    
+    // Validate data against runtime schema
+    await validateAgainstSchemaOrThrow(schemaDef, data, `${context} for schema ${schemaRef}`);
+    
+    return schemaDef;
+  } else {
+    // Schema name - use hardcoded registry (only for migrations/seeding)
+    if (!getAllSchemas || typeof getAllSchemas !== 'function') {
+      throw new Error(`[${context}] getAllSchemas function is REQUIRED for name-based schema validation. Schema: ${schemaRef}. This is only for migrations/seeding.`);
+    }
+    
+    const allSchemas = getAllSchemas();
+    const engine = await getValidationEngine({
+      registrySchemas: registrySchemas || allSchemas
+    });
+    const validation = await engine.validateData(schemaRef, data);
+    
+    if (!validation.valid) {
+      const errorDetails = validation.errors
+        .map(err => `  - ${err.instancePath}: ${err.message}`)
+        .join('\n');
+      throw new Error(`[${context}] Data validation failed for schema '${schemaRef}':\n${errorDetails}`);
+    }
+    
+    // Return schema from registry for consistency
+    const registrySchemasMap = registrySchemas || allSchemas;
+    return registrySchemasMap[schemaRef];
+  }
+}
+
+/**
  * Ensure CoValue is loaded and available
  * @param {Object} backend - Backend instance
  * @param {string} coId - Co-id to ensure is available

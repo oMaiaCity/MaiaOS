@@ -5,12 +5,9 @@
  * Schema is REQUIRED - no fallbacks or defaults
  */
 
-import { createSchemaMeta, isExceptionSchema } from "../../schemas/registry.js";
-import { getValidationEngine } from '@MaiaOS/schemata/validation.helper';
-import { getAllSchemas } from "../../schemas/registry.js";
+import { createSchemaMeta, isExceptionSchema, getAllSchemas } from "../../schemas/registry.js";
 import { hasSchemaInRegistry } from "../../schemas/registry.js";
-import { resolve } from '../schema/resolver.js';
-import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
+import { loadSchemaAndValidate } from '@MaiaOS/schemata/validation.helper';
 
 /**
  * Create a generic CoMap with MANDATORY schema validation
@@ -180,34 +177,14 @@ export async function createCoMap(accountOrGroup, init = {}, schemaName, node = 
 	// Validate data against schema BEFORE creating CoValue
 	// STRICT: Always validate using runtime schema from database (no fallbacks, no legacy hacks)
 	if (!isExceptionSchema(schemaName)) {
-		if (schemaName.startsWith('co_z')) {
-			// Schema co-id - MUST validate using runtime schema from database
-			if (!dbEngine) {
-				throw new Error(`[createCoMap] dbEngine is REQUIRED for co-id schema validation. Schema: ${schemaName}. Pass dbEngine as 5th parameter.`);
-			}
-			
-			// Load schema from database (runtime schema - single source of truth)
-			const schemaDef = await resolve(dbEngine.backend, schemaName, { returnType: 'schema' });
-			if (!schemaDef) {
-				throw new Error(`[createCoMap] Schema not found in database: ${schemaName}`);
-			}
-			
-			// Validate data against runtime schema
-			await validateAgainstSchemaOrThrow(schemaDef, init, `createCoMap for schema ${schemaName}`);
-		} else {
-			// Schema name - use hardcoded registry (only for migrations/seeding)
-			const engine = await getValidationEngine({
-				registrySchemas: getAllSchemas()
-			});
-			const validation = await engine.validateData(schemaName, init);
-			
-			if (!validation.valid) {
-				const errorDetails = validation.errors
-					.map(err => `  - ${err.instancePath}: ${err.message}`)
-					.join('\n');
-				throw new Error(`[createCoMap] Data validation failed for schema '${schemaName}':\n${errorDetails}`);
-			}
-		}
+		// Use consolidated universal validation function (single source of truth)
+		await loadSchemaAndValidate(
+			dbEngine?.backend || null,
+			schemaName,
+			init,
+			'createCoMap',
+			{ dbEngine, getAllSchemas }
+		);
 	}
 	
 	const meta = createSchemaMeta(schemaName);

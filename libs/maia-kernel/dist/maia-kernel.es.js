@@ -10045,52 +10045,6 @@ class SessionLogAdapter {
     return new SessionLogAdapter(this.sessionLog.clone());
   }
 }
-async function schemaMigration(account, node, creationProps) {
-  const PROFILE_NAME = "passkey";
-  let profileId = account.get("profile");
-  let profile;
-  let universalGroup;
-  if (profileId) {
-    const loadedProfile = node.getCoValue(profileId);
-    if (loadedProfile && loadedProfile.type === "comap") {
-      const profileContent = node.getCoValue(profileId)?.getCurrentContent?.();
-      if (profileContent && typeof profileContent.get === "function") {
-        profile = profileContent;
-        const existingGroupId = profile.get("group");
-        if (existingGroupId) {
-          const loadedGroup = node.getCoValue(existingGroupId);
-          if (loadedGroup && loadedGroup.type === "group") {
-            const groupContent = loadedGroup.getCurrentContent?.();
-            if (groupContent && typeof groupContent.createMap === "function") {
-              universalGroup = groupContent;
-            }
-          }
-        }
-      }
-    }
-  }
-  if (!universalGroup) {
-    universalGroup = node.createGroup();
-  }
-  if (!profile) {
-    profile = account.createMap({
-      name: PROFILE_NAME,
-      // Hardcoded: "passkey" (represents EOA identity)
-      group: universalGroup.id
-      // Reference to universal group (single source of truth)
-    }, { $schema: "ProfileSchema" });
-    account.set("profile", profile.id);
-  } else {
-    if (!profile.get("group")) {
-      profile.set("group", universalGroup.id);
-    }
-    const currentProfileName = profile.get("name");
-    if (currentProfileName !== PROFILE_NAME) {
-      profile.set("name", PROFILE_NAME);
-      console.log(`   🔄 Updated profile name from "${currentProfileName}" to "${PROFILE_NAME}"`);
-    }
-  }
-}
 const $defs$6 = { "comap": { "description": "CoMap - CRDT-based collaborative map/object", "type": "object", "properties": {}, "additionalProperties": { "anyOf": [{ "type": "string", "description": "Standard string value" }, { "type": "number", "description": "Standard number value" }, { "type": "integer", "description": "Standard integer value" }, { "type": "boolean", "description": "Standard boolean value" }, { "type": "null", "description": "Null value" }, { "type": "object", "description": "Nested object value" }, { "type": "array", "description": "Array value" }, { "type": "string", "pattern": "^co_z[a-zA-Z0-9]+$", "description": "Co-id reference to another CoValue" }, { "type": "string", "pattern": "^key_[a-zA-Z0-9_]+$", "description": "Key reference" }, { "type": "string", "pattern": "^sealed_", "description": "Sealed/encrypted value" }] } }, "costream": { "description": "CoStream - CRDT-based append-only stream", "type": "array", "items": { "anyOf": [{ "type": "object", "description": "Stream item object" }, { "type": "string", "description": "Stream item string" }, { "type": "number", "description": "Stream item number" }, { "type": "boolean", "description": "Stream item boolean" }, { "type": "null", "description": "Stream item null" }] } }, "colist": { "description": "CoList - CRDT-based collaborative list/array", "type": "array", "items": { "anyOf": [{ "type": "object", "description": "List item object" }, { "type": "string", "description": "List item string (can be co-id reference)" }, { "type": "number", "description": "List item number" }, { "type": "integer", "description": "List item integer" }, { "type": "boolean", "description": "List item boolean" }, { "type": "null", "description": "List item null" }, { "type": "array", "description": "Nested array" }] } } };
 const coTypesDefs = {
   $defs: $defs$6
@@ -12624,6 +12578,62 @@ function createSchemaMeta(schemaName) {
     // Schema name, co-id, or exception schema
   };
 }
+const registry$3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  EXCEPTION_SCHEMAS,
+  SCHEMA_REGISTRY,
+  createSchemaMeta,
+  getAllSchemas: getAllSchemas$1,
+  hasSchemaInRegistry,
+  isExceptionSchema
+}, Symbol.toStringTag, { value: "Module" }));
+async function schemaMigration(account, node, creationProps) {
+  const PROFILE_NAME = "passkey";
+  let profileId = account.get("profile");
+  let profile;
+  let universalGroup;
+  if (profileId) {
+    const loadedProfile = node.getCoValue(profileId);
+    if (loadedProfile && loadedProfile.type === "comap") {
+      const profileContent = node.getCoValue(profileId)?.getCurrentContent?.();
+      if (profileContent && typeof profileContent.get === "function") {
+        profile = profileContent;
+        const existingGroupId = profile.get("group");
+        if (existingGroupId) {
+          const loadedGroup = node.getCoValue(existingGroupId);
+          if (loadedGroup && loadedGroup.type === "group") {
+            const groupContent = loadedGroup.getCurrentContent?.();
+            if (groupContent && typeof groupContent.createMap === "function") {
+              universalGroup = groupContent;
+            }
+          }
+        }
+      }
+    }
+  }
+  if (!universalGroup) {
+    universalGroup = node.createGroup();
+  }
+  if (!profile) {
+    const profileMeta = createSchemaMeta("ProfileSchema");
+    profile = account.createMap({
+      name: PROFILE_NAME,
+      // Hardcoded: "passkey" (represents EOA identity)
+      group: universalGroup.id
+      // Reference to universal group (single source of truth)
+    }, profileMeta);
+    account.set("profile", profile.id);
+  } else {
+    if (!profile.get("group")) {
+      profile.set("group", universalGroup.id);
+    }
+    const currentProfileName = profile.get("name");
+    if (currentProfileName !== PROFILE_NAME) {
+      profile.set("name", PROFILE_NAME);
+      console.log(`   🔄 Updated profile name from "${currentProfileName}" to "${PROFILE_NAME}"`);
+    }
+  }
+}
 function ajvCoTypesPlugin(ajv2) {
   ajv2.addKeyword({
     keyword: "$co",
@@ -14488,6 +14498,37 @@ function requireDbEngine(dbEngine, operationName, reason = "") {
     throw new Error(`[${operationName}] dbEngine required${reasonText}`);
   }
 }
+async function loadSchemaAndValidate(backend, schemaRef, data2, context, options = {}) {
+  const { dbEngine, registrySchemas, getAllSchemas: getAllSchemas2 } = options;
+  const { resolve: resolve2 } = await Promise.resolve().then(() => index$2);
+  if (schemaRef.startsWith("co_z")) {
+    if (!dbEngine) {
+      throw new Error(`[${context}] dbEngine is REQUIRED for co-id schema validation. Schema: ${schemaRef}. Pass dbEngine in options.`);
+    }
+    const schemaDef = await resolve2(backend, schemaRef, { returnType: "schema" });
+    if (!schemaDef) {
+      throw new Error(`[${context}] Schema not found in database: ${schemaRef}`);
+    }
+    await validateAgainstSchemaOrThrow(schemaDef, data2, `${context} for schema ${schemaRef}`);
+    return schemaDef;
+  } else {
+    if (!getAllSchemas2 || typeof getAllSchemas2 !== "function") {
+      throw new Error(`[${context}] getAllSchemas function is REQUIRED for name-based schema validation. Schema: ${schemaRef}. This is only for migrations/seeding.`);
+    }
+    const allSchemas = getAllSchemas2();
+    const engine = await getValidationEngine({
+      registrySchemas: registrySchemas || allSchemas
+    });
+    const validation2 = await engine.validateData(schemaRef, data2);
+    if (!validation2.valid) {
+      const errorDetails = validation2.errors.map((err) => `  - ${err.instancePath}: ${err.message}`).join("\n");
+      throw new Error(`[${context}] Data validation failed for schema '${schemaRef}':
+${errorDetails}`);
+    }
+    const registrySchemasMap = registrySchemas || allSchemas;
+    return registrySchemasMap[schemaRef];
+  }
+}
 async function ensureCoValueAvailable(backend, coId, operationName) {
   const coValueCore = backend.getCoValue(coId);
   if (!coValueCore) {
@@ -14511,6 +14552,7 @@ const validation_helper = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.d
   ensureCoValueAvailable,
   formatValidationErrors,
   getValidationEngine,
+  loadSchemaAndValidate,
   requireDbEngine,
   requireParam,
   setSchemaResolver,
@@ -14633,26 +14675,13 @@ async function createCoMap(accountOrGroup, init = {}, schemaName, node = null, d
     throw new Error(`[createCoMap] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema`);
   }
   if (!isExceptionSchema(schemaName)) {
-    if (schemaName.startsWith("co_z")) {
-      if (!dbEngine) {
-        throw new Error(`[createCoMap] dbEngine is REQUIRED for co-id schema validation. Schema: ${schemaName}. Pass dbEngine as 5th parameter.`);
-      }
-      const schemaDef = await resolve$1(dbEngine.backend, schemaName, { returnType: "schema" });
-      if (!schemaDef) {
-        throw new Error(`[createCoMap] Schema not found in database: ${schemaName}`);
-      }
-      await validateAgainstSchemaOrThrow(schemaDef, init, `createCoMap for schema ${schemaName}`);
-    } else {
-      const engine = await getValidationEngine({
-        registrySchemas: getAllSchemas$1()
-      });
-      const validation2 = await engine.validateData(schemaName, init);
-      if (!validation2.valid) {
-        const errorDetails = validation2.errors.map((err) => `  - ${err.instancePath}: ${err.message}`).join("\n");
-        throw new Error(`[createCoMap] Data validation failed for schema '${schemaName}':
-${errorDetails}`);
-      }
-    }
+    await loadSchemaAndValidate(
+      dbEngine?.backend || null,
+      schemaName,
+      init,
+      "createCoMap",
+      { dbEngine, getAllSchemas: getAllSchemas$1 }
+    );
   }
   const meta = createSchemaMeta(schemaName);
   const comap = group.createMap(init, meta);
@@ -14702,26 +14731,13 @@ async function createCoList(accountOrGroup, init = [], schemaName, node = null, 
     throw new Error(`[createCoList] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema`);
   }
   if (!isExceptionSchema(schemaName)) {
-    if (schemaName.startsWith("co_z")) {
-      if (!dbEngine) {
-        throw new Error(`[createCoList] dbEngine is REQUIRED for co-id schema validation. Schema: ${schemaName}. Pass dbEngine as 5th parameter.`);
-      }
-      const schemaDef = await resolve$1(dbEngine.backend, schemaName, { returnType: "schema" });
-      if (!schemaDef) {
-        throw new Error(`[createCoList] Schema not found in database: ${schemaName}`);
-      }
-      await validateAgainstSchemaOrThrow(schemaDef, init, `createCoList for schema ${schemaName}`);
-    } else {
-      const engine = await getValidationEngine({
-        registrySchemas: getAllSchemas$1()
-      });
-      const validation2 = await engine.validateData(schemaName, init);
-      if (!validation2.valid) {
-        const errorDetails = validation2.errors.map((err) => `  - ${err.instancePath}: ${err.message}`).join("\n");
-        throw new Error(`[createCoList] Data validation failed for schema '${schemaName}':
-${errorDetails}`);
-      }
-    }
+    await loadSchemaAndValidate(
+      dbEngine?.backend || null,
+      schemaName,
+      init,
+      "createCoList",
+      { dbEngine, getAllSchemas: getAllSchemas$1 }
+    );
   }
   const meta = createSchemaMeta(schemaName);
   const colist = group.createList(init, meta);
@@ -17025,15 +17041,15 @@ async function resolveExpressions(payload, evaluator2, data2) {
   return resolved;
 }
 async function resolveSchemaFromCoValue(backend, coId, opName) {
-  const schemaCoId = await resolve$1(backend, { fromCoValue: coId }, { returnType: "coId" });
-  if (!schemaCoId) throw new Error(`[${opName}] Failed to extract schema from CoValue ${coId} headerMeta`);
-  return schemaCoId;
-}
-async function loadAndValidateSchema(backend, schemaCoId, data2, opName, mergedData = null) {
-  const schema = await resolve$1(backend, schemaCoId, { returnType: "schema" });
-  if (!schema) throw new Error(`[${opName}] Schema ${schemaCoId} not found`);
-  await validateAgainstSchemaOrThrow(schema, mergedData || data2, `${opName} for schema ${schemaCoId}`);
-  return schema;
+  try {
+    const schemaCoId = await resolve$1(backend, { fromCoValue: coId }, { returnType: "coId" });
+    if (!schemaCoId) {
+      return null;
+    }
+    return schemaCoId;
+  } catch (error) {
+    return null;
+  }
 }
 async function evaluateDataWithExisting(data2, existingData, evaluator2) {
   if (!evaluator2) return data2;
@@ -17080,7 +17096,7 @@ async function createOperation(backend, dbEngine, params) {
   requireDbEngine(dbEngine, "CreateOperation", "runtime schema validation");
   const schemaCoId = await resolve$1(backend, schema, { returnType: "coId" });
   if (!schemaCoId) throw new Error(`[CreateOperation] Could not resolve schema: ${schema}`);
-  await loadAndValidateSchema(backend, schemaCoId, data2, "CreateOperation");
+  await loadSchemaAndValidate(backend, schemaCoId, data2, "CreateOperation", { dbEngine });
   return await backend.create(schemaCoId, data2);
 }
 async function updateOperation(backend, dbEngine, evaluator2, params) {
@@ -17091,19 +17107,24 @@ async function updateOperation(backend, dbEngine, evaluator2, params) {
   requireDbEngine(dbEngine, "UpdateOperation", "schema validation");
   const rawExistingData = await backend.getRawRecord(id2);
   if (!rawExistingData) throw new Error(`[UpdateOperation] Record not found: ${id2}`);
-  const schemaCoId = await resolveSchemaFromCoValue(backend, id2, "UpdateOperation");
+  const schemaCoId = await resolveSchemaFromCoValue(backend, id2);
+  if (schemaCoId) {
+    const { $schema: _schema2, ...existingDataWithoutMetadata2 } = rawExistingData;
+    const evaluatedData2 = await evaluateDataWithExisting(data2, existingDataWithoutMetadata2, evaluator2);
+    const mergedData = { ...existingDataWithoutMetadata2, ...evaluatedData2 };
+    await loadSchemaAndValidate(backend, schemaCoId, mergedData || evaluatedData2, "UpdateOperation", { dbEngine });
+  }
+  const updateSchema = schemaCoId || rawExistingData.$schema || null;
   const { $schema: _schema, ...existingDataWithoutMetadata } = rawExistingData;
   const evaluatedData = await evaluateDataWithExisting(data2, existingDataWithoutMetadata, evaluator2);
-  const mergedData = { ...existingDataWithoutMetadata, ...evaluatedData };
-  await loadAndValidateSchema(backend, schemaCoId, evaluatedData, "UpdateOperation", mergedData);
-  return await backend.update(schemaCoId, id2, evaluatedData);
+  return await backend.update(updateSchema, id2, evaluatedData);
 }
 async function deleteOperation(backend, dbEngine, params) {
   const { id: id2 } = params;
   requireParam(id2, "id", "DeleteOperation");
   validateCoId(id2, "DeleteOperation");
   requireDbEngine(dbEngine, "DeleteOperation", "extract schema from CoValue headerMeta");
-  const schemaCoId = await resolveSchemaFromCoValue(dbEngine.backend, id2, "DeleteOperation");
+  const schemaCoId = await resolveSchemaFromCoValue(dbEngine.backend, id2);
   return await backend.delete(schemaCoId, id2);
 }
 async function seedOperation(backend, params) {
@@ -17153,7 +17174,7 @@ async function appendOperation(backend, dbEngine, params) {
   validateCoId(coId, "AppendOperation");
   requireDbEngine(dbEngine, "AppendOperation", "check schema cotype");
   const coValueCore = await ensureCoValueAvailable(backend, coId, "AppendOperation");
-  const schemaCoId = await resolveSchemaFromCoValue(backend, coId, "AppendOperation");
+  const schemaCoId = await resolveSchemaFromCoValue(backend, coId);
   let targetCotype = cotype2;
   if (!targetCotype) {
     const isColist = await checkCotype(backend, schemaCoId, "colist");
@@ -17641,6 +17662,33 @@ async function update(backend, schema, id2, data2) {
   }
   const content = backend.getCurrentContent(coValueCore);
   const rawType = content?.type || "unknown";
+  let schemaCoId = null;
+  try {
+    schemaCoId = await resolve$1(backend, { fromCoValue: id2 }, { returnType: "coId" });
+  } catch (error) {
+    console.log(`[Update] Skipping validation for ${id2}: ${error.message}`);
+  }
+  if (schemaCoId && backend.dbEngine && schemaCoId.startsWith("co_z")) {
+    const { isExceptionSchema: isExceptionSchema2 } = await Promise.resolve().then(() => registry$3);
+    if (!isExceptionSchema2(schemaCoId)) {
+      const existingDataRaw = await backend.getRawRecord(id2);
+      if (existingDataRaw) {
+        const { $schema: _schema, ...existingDataWithoutMetadata } = existingDataRaw;
+        const mergedData = { ...existingDataWithoutMetadata, ...data2 };
+        try {
+          await loadSchemaAndValidate(
+            backend,
+            schemaCoId,
+            mergedData,
+            `update for ${id2}`,
+            { dbEngine: backend.dbEngine }
+          );
+        } catch (error) {
+          throw new Error(`[Update] Validation failed: ${error.message}`);
+        }
+      }
+    }
+  }
   if (rawType === "comap" && content.set) {
     for (const [key, value] of Object.entries(data2)) {
       content.set(key, value);
@@ -17654,6 +17702,34 @@ const update$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProp
   __proto__: null,
   update
 }, Symbol.toStringTag, { value: "Module" }));
+function isAccountGroupOrProfile(msg, backend, coId) {
+  const isAccountById = backend?.account && backend.account.id === coId;
+  const isProfile = backend?.account && backend.account.get && backend.account.get("profile") === coId;
+  const isAccountByMeta = msg.header?.meta?.type === "account";
+  const ruleset = msg.header?.ruleset;
+  const isGroupOrAccount = ruleset?.type === "group";
+  const isAccountCreation = backend?.account && !msg.header;
+  const isAccount = isAccountById || isAccountByMeta || isAccountCreation;
+  const isGroup = isGroupOrAccount && !isAccountById && !isAccountByMeta && !isAccountCreation;
+  const schema = msg.header?.meta?.$schema;
+  const isException = schema ? isExceptionSchema(schema) : false;
+  return {
+    isAccount,
+    isGroup,
+    isProfile,
+    isException
+  };
+}
+function extractSchemaFromMessage(msg) {
+  if (!msg || !msg.header || !msg.header.meta) {
+    return null;
+  }
+  return msg.header.meta.$schema || null;
+}
+function shouldSkipValidation(msg, backend, coId) {
+  const detection = isAccountGroupOrProfile(msg, backend, coId);
+  return detection.isAccount || detection.isGroup || detection.isProfile || detection.isException;
+}
 const pendingIndexing = /* @__PURE__ */ new Set();
 function wrapStorageWithIndexingHooks(storage, backend) {
   if (!storage || !backend) {
@@ -17676,17 +17752,37 @@ function wrapStorageWithIndexingHooks(storage, backend) {
   });
   function wrappedStore(msg, correctionCallback, originalStore2) {
     const coId = msg.id;
-    let shouldSkipIndexing = false;
-    if (msg.header && msg.header.meta) {
-      const schema = msg.header.meta.$schema;
-      if (schema === EXCEPTION_SCHEMAS.ACCOUNT || schema === EXCEPTION_SCHEMAS.GROUP) {
-        shouldSkipIndexing = true;
+    const detection = isAccountGroupOrProfile(msg, backend, coId);
+    if (!detection.isAccount && !detection.isGroup && !detection.isProfile) {
+      if (!msg.header || !msg.header.meta) {
+        if (msg.header) {
+          console.warn(`[StorageHook] Co-value ${coId} has header but no meta. Header structure:`, {
+            type: msg.header.type,
+            ruleset: msg.header.ruleset,
+            hasMeta: !!msg.header.meta,
+            headerKeys: Object.keys(msg.header || {})
+          });
+        } else {
+          console.warn(`[StorageHook] Co-value ${coId} has no header at all. Message structure:`, {
+            id: msg.id,
+            hasHeader: !!msg.header,
+            messageKeys: Object.keys(msg || {})
+          });
+        }
+        console.error(`[StorageHook] REJECTING co-value ${coId}: Missing header.meta. Every co-value MUST have headerMeta.$schema (except groups, accounts, and profiles during account creation).`);
+        throw new Error(`[StorageHook] Co-value ${coId} missing header.meta. Every co-value MUST have headerMeta.$schema (except groups, accounts, and profiles during account creation).`);
       }
-      if (msg.header.meta.type === "account") {
-        shouldSkipIndexing = true;
+      const schema = extractSchemaFromMessage(msg);
+      if (!schema && !detection.isException) {
+        console.error(`[StorageHook] REJECTING co-value ${coId}: Missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, GenesisSchema, and groups/accounts).`);
+        throw new Error(`[StorageHook] Co-value ${coId} missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, GenesisSchema, and groups/accounts).`);
       }
-      if (msg.header.ruleset && msg.header.ruleset.type === "group") {
-        shouldSkipIndexing = true;
+    }
+    let shouldSkipIndexing = shouldSkipValidation(msg, backend, coId);
+    if (shouldSkipIndexing) {
+      const schema = extractSchemaFromMessage(msg);
+      if (schema === "GenesisSchema") {
+        shouldSkipIndexing = false;
       }
     }
     if (!shouldSkipIndexing && backend.account) {
@@ -17799,6 +17895,113 @@ function wrapStorageWithIndexingHooks(storage, backend) {
   }
   return wrappedStorage;
 }
+async function extractCurrentContent(backend, coId) {
+  try {
+    const coValueCore = backend.getCoValue(coId);
+    if (!coValueCore || !backend.isAvailable(coValueCore)) {
+      return null;
+    }
+    const currentContent = backend.getCurrentContent(coValueCore);
+    if (!currentContent) {
+      return null;
+    }
+    if (currentContent && typeof currentContent.toJSON === "function") {
+      return currentContent.toJSON();
+    }
+    return currentContent;
+  } catch (error) {
+    console.warn(`[ValidationHook] Failed to extract content for ${coId}:`, error);
+    return null;
+  }
+}
+async function waitForSchemaSync(backend, schemaCoId, timeoutMs = 5e3) {
+  const startTime = Date.now();
+  while (Date.now() - startTime < timeoutMs) {
+    try {
+      const schema = await resolve$1(backend, schemaCoId, { returnType: "schema" });
+      if (schema) {
+        return schema;
+      }
+    } catch (error) {
+    }
+    await new Promise((resolve2) => setTimeout(resolve2, 100));
+  }
+  return null;
+}
+async function validateRemoteTransactions(backend, dbEngine, msg) {
+  const coId = msg.id;
+  const detection = isAccountGroupOrProfile(msg, backend, coId);
+  if (detection.isGroup || detection.isAccount || detection.isProfile) {
+    return { valid: true, error: null };
+  }
+  const schemaCoId = extractSchemaFromMessage(msg);
+  if (!schemaCoId) {
+    return {
+      valid: false,
+      error: `Co-value ${coId} missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, GenesisSchema, and groups/accounts).`
+    };
+  }
+  if (isExceptionSchema(schemaCoId)) {
+    return { valid: true, error: null };
+  }
+  if (!schemaCoId.startsWith("co_z")) {
+    return {
+      valid: false,
+      error: `Co-value ${coId} has invalid schema format: ${schemaCoId}. Schema must be a co-id (co_z...) or exception schema (@account, @group, GenesisSchema).`
+    };
+  }
+  let schema = await resolve$1(backend, schemaCoId, { returnType: "schema" });
+  if (!schema) {
+    console.log(`[ValidationHook] Schema ${schemaCoId} not available, waiting for sync...`);
+    schema = await waitForSchemaSync(backend, schemaCoId, 5e3);
+    if (!schema) {
+      return {
+        valid: false,
+        error: `Schema ${schemaCoId} not available after timeout. Cannot validate remote transactions for ${coId}.`
+      };
+    }
+  }
+  const content = await extractCurrentContent(backend, coId);
+  if (!content) {
+    console.log(`[ValidationHook] Cannot extract content for ${coId} (likely new co-value) - schema availability verified, allowing transactions`);
+    return { valid: true, error: null };
+  }
+  try {
+    await loadSchemaAndValidate(
+      backend,
+      schemaCoId,
+      content,
+      `remote sync for ${coId}`,
+      { dbEngine }
+    );
+    return { valid: true, error: null };
+  } catch (error) {
+    return {
+      valid: false,
+      error: `Validation failed for remote transactions: ${error.message}`
+    };
+  }
+}
+function wrapSyncManagerWithValidation(syncManager, backend, dbEngine) {
+  if (!syncManager || !backend) {
+    return syncManager;
+  }
+  const originalHandleNewContent = syncManager.handleNewContent?.bind(syncManager);
+  if (!originalHandleNewContent) {
+    return syncManager;
+  }
+  syncManager.handleNewContent = async function(msg, from) {
+    if (msg && msg.id && dbEngine) {
+      const validation2 = await validateRemoteTransactions(backend, dbEngine, msg);
+      if (!validation2.valid) {
+        console.error(`[ValidationHook] Rejecting remote transactions for ${msg.id}: ${validation2.error}`);
+        throw new Error(`[ValidationHook] Invalid remote transactions rejected: ${validation2.error}`);
+      }
+    }
+    return originalHandleNewContent(msg, from);
+  };
+  return syncManager;
+}
 class CoJSONBackend extends DBAdapter {
   constructor(node, account, dbEngine = null) {
     super();
@@ -17809,6 +18012,9 @@ class CoJSONBackend extends DBAdapter {
     this._cachedUniversalGroup = null;
     if (node.storage) {
       node.storage = wrapStorageWithIndexingHooks(node.storage, this);
+    }
+    if (node.syncManager && dbEngine) {
+      wrapSyncManagerWithValidation(node.syncManager, this, dbEngine);
     }
   }
   /**

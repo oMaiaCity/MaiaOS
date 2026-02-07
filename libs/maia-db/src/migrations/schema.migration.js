@@ -39,6 +39,9 @@
  * @param {string} [creationProps.name] - Account name (optional, legacy - not used for profile/group names)
  * @returns {Promise<void>}
  */
+
+import { createSchemaMeta } from "../schemas/registry.js";
+
 export async function schemaMigration(account, node, creationProps) {
 	const isCreation = creationProps !== undefined;
 	
@@ -86,10 +89,12 @@ export async function schemaMigration(account, node, creationProps) {
 	// 3. Create or update profile with group reference
 	if (!profile) {
 		// Create profile CoMap with name "passkey" and group reference
+		// CRITICAL: Use createSchemaMeta() to ensure schema is properly set in headerMeta
+		const profileMeta = createSchemaMeta("ProfileSchema");
 		profile = account.createMap({
 			name: PROFILE_NAME,  // Hardcoded: "passkey" (represents EOA identity)
 			group: universalGroup.id  // Reference to universal group (single source of truth)
-		}, {$schema: "ProfileSchema"});
+		}, profileMeta);
 		account.set("profile", profile.id);
 	} else {
 		// Update existing profile to include group reference if missing

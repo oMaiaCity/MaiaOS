@@ -20,6 +20,7 @@ import * as crudUpdate from '../crud/update.js';
 import * as crudDelete from '../crud/delete.js';
 import { resolve } from '../schema/resolver.js';
 import { wrapStorageWithIndexingHooks } from '../indexing/storage-hook-wrapper.js';
+import { wrapSyncManagerWithValidation } from '../sync/validation-hook-wrapper.js';
 
 export class CoJSONBackend extends DBAdapter {
   constructor(node, account, dbEngine = null) {
@@ -43,6 +44,13 @@ export class CoJSONBackend extends DBAdapter {
     // This catches ALL writes: CRUD API, sync, direct CoJSON ops, etc.
     if (node.storage) {
       node.storage = wrapStorageWithIndexingHooks(node.storage, this);
+    }
+    
+    // Wrap sync manager with validation hooks (CRITICAL for P2P architecture)
+    // Validates remote transactions BEFORE they enter CRDT (before tryAddTransactions)
+    // This ensures each peer validates incoming data before accepting it
+    if (node.syncManager && dbEngine) {
+      wrapSyncManagerWithValidation(node.syncManager, this, dbEngine);
     }
     
     // Schema indexing is handled ONLY via storage-level hooks (most resilient approach)
