@@ -698,8 +698,12 @@ function cleanupLoadingScreenSync() {
 
 /**
  * Handle seed button click - reseed database (idempotent: preserves schemata, recreates configs/data)
+ * @param {string|Array|null} seedVibesConfig - Optional config override:
+ *   - `null` or `undefined` = use env var or default (no vibes)
+ *   - `"all"` = seed all vibes
+ *   - `["todos", "maia"]` = seed specific vibes
  */
-async function handleSeed() {
+async function handleSeed(seedVibesConfig = null) {
 	if (!maia || !maia.id) {
 		showToast("Please sign in first", 'error', 3000);
 		return;
@@ -711,16 +715,37 @@ async function handleSeed() {
 		// Get node and account from maia
 		const { node, maiaId: account } = maia.id;
 		
-		// Automatically discover and import all vibe registries
-		const vibeRegistries = await getAllVibeRegistries();
+		// Get seeding config from parameter, environment variable, or default (no vibes)
+		// SEED_VIBES can be: null/undefined/[] = no vibes, "all" = all vibes, or ["todos", "maia"] = specific vibes
+		// Check VITE_SEED_VIBES (Vite exposes env vars with VITE_ prefix) or fallback to SEED_VIBES
+		const envVar = typeof import.meta !== 'undefined' 
+			? (import.meta.env?.VITE_SEED_VIBES || import.meta.env?.SEED_VIBES)
+			: null;
+		const config = seedVibesConfig !== null 
+			? seedVibesConfig 
+			: (envVar
+				? (envVar === 'all' ? 'all' : envVar.split(',').map(s => s.trim()))
+				: null); // Default: no vibes
 		
+		// Automatically discover and import all vibe registries
+		const { getAllVibeRegistries, filterVibesForSeeding } = await import('@MaiaOS/vibes');
+		const allVibeRegistries = await getAllVibeRegistries();
+		
+		// Filter vibes based on config
+		const vibeRegistries = filterVibesForSeeding(allVibeRegistries, config);
 		
 		if (vibeRegistries.length === 0) {
-			showToast("No vibe registries found to seed", 'warning', 3000);
+			if (allVibeRegistries.length === 0) {
+				showToast("No vibe registries found to seed", 'warning', 3000);
+			} else {
+				showToast(`Seeding config filters out all vibes (config: ${JSON.stringify(config)})`, 'warning', 3000);
+			}
 			return;
 		}
 		
-		// Merge all configs from all vibes
+		console.log(`🌱 Seeding ${vibeRegistries.length} vibe(s) based on config: ${JSON.stringify(config)}`);
+		
+		// Merge all configs from filtered vibes
 		const mergedConfigs = {
 			styles: {},
 			actors: {},
@@ -732,7 +757,7 @@ async function handleSeed() {
 			data: {}
 		};
 		
-		// Merge configs from all vibe registries
+		// Merge configs from filtered vibe registries
 		for (const registry of vibeRegistries) {
 			Object.assign(mergedConfigs.styles, registry.styles || {});
 			Object.assign(mergedConfigs.actors, registry.actors || {});
@@ -767,10 +792,14 @@ async function handleSeed() {
 
 // Expose globally for onclick handlers
 window.handleSignIn = signIn;
+window.handleSeed = handleSeed;
+
+// Expose helper functions for seeding specific vibes
+window.seedAllVibes = () => handleSeed('all');
+window.seedVibes = (vibeKeys) => handleSeed(Array.isArray(vibeKeys) ? vibeKeys : [vibeKeys]);
 window.handleRegister = register;
 window.navigateTo = navigateTo;
 window.handleSignOut = signOut;
-window.handleSeed = handleSeed;
 window.showToast = showToast; // Expose for debugging
 
 // Navigation function for screen transitions

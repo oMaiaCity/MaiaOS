@@ -53,13 +53,31 @@ export async function createAccountWithSecret({ agentSecret, name = "Maia", peer
 	// Auto-seeding (auto-dosoding): Seed schemas, tools, and vibes automatically on account creation
 	// This runs once on new account signup, idempotency check ensures it doesn't run again
 	// Works exactly like manual seed button - replicates the exact same seeding flow
+	// NOTE: This runs client-side only (browser), so we use import.meta.env (Vite) not process.env (Node.js)
 	try {
+		// Get seeding config from environment variable (default: no vibes)
+		// VITE_SEED_VIBES can be: null/undefined/[] = no vibes, "all" = all vibes, or "todos,maia" = specific vibes
+		// Check VITE_SEED_VIBES (Vite exposes env vars with VITE_ prefix) or fallback to SEED_VIBES
+		const envVar = typeof import.meta !== 'undefined' 
+			? (import.meta.env?.VITE_SEED_VIBES || import.meta.env?.SEED_VIBES)
+			: null;
+		const seedVibesConfig = envVar
+			? (envVar === 'all' ? 'all' : envVar.split(',').map(s => s.trim()))
+			: null; // Default: no vibes
+		
 		// Get vibe registries (same as manual seed button)
-		const { getAllVibeRegistries } = await import('@MaiaOS/vibes');
-		const vibeRegistries = await getAllVibeRegistries();
+		const { getAllVibeRegistries, filterVibesForSeeding } = await import('@MaiaOS/vibes');
+		const allVibeRegistries = await getAllVibeRegistries();
+		
+		// Filter vibes based on config
+		const vibeRegistries = filterVibesForSeeding(allVibeRegistries, seedVibesConfig);
 		
 		if (vibeRegistries.length === 0) {
-			console.log('ℹ️  No vibe registries found, skipping auto-seeding');
+			if (allVibeRegistries.length === 0) {
+				console.log('ℹ️  No vibe registries found, skipping auto-seeding');
+			} else {
+				console.log(`ℹ️  Seeding config filters out all vibes (config: ${JSON.stringify(seedVibesConfig)}), skipping vibe seeding`);
+			}
 			return {
 				node: result.node,
 				account: rawAccount,
@@ -69,7 +87,9 @@ export async function createAccountWithSecret({ agentSecret, name = "Maia", peer
 			};
 		}
 		
-		// Merge all configs from all vibes (EXACT same structure as manual seed)
+		console.log(`🌱 Auto-seeding ${vibeRegistries.length} vibe(s) based on config: ${JSON.stringify(seedVibesConfig)}`);
+		
+		// Merge all configs from filtered vibes (EXACT same structure as manual seed)
 		const mergedConfigs = {
 			styles: {},
 			actors: {},
@@ -81,7 +101,7 @@ export async function createAccountWithSecret({ agentSecret, name = "Maia", peer
 			data: {}
 		};
 		
-		// Merge configs from all vibe registries (EXACT same logic as manual seed)
+		// Merge configs from filtered vibe registries (EXACT same logic as manual seed)
 		for (const registry of vibeRegistries) {
 			Object.assign(mergedConfigs.styles, registry.styles || {});
 			Object.assign(mergedConfigs.actors, registry.actors || {});

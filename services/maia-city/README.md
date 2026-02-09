@@ -44,6 +44,8 @@ bun run dev
 
 Server runs on **http://localhost:4200**
 
+**Note**: In dev mode, maia-city uses source files directly (not bundles) for proper Vite hot module reload (HMR). This means changes to kernel or vibes source files will automatically trigger HMR without manual bundle rebuilding.
+
 ## Routes
 
 - **/** - Database inspector (requires passkey auth)
@@ -91,7 +93,11 @@ import { MaiaOS } from '@MaiaOS/kernel';
 const os = await MaiaOS.boot({ node, account });
 ```
 
-**Vite resolves** `@MaiaOS/script` to `../../libs/maia-script/src/index.js` via `vite.config.js`.
+**Vite resolves imports** via `vite.config.js`:
+- **Dev mode**: Points to source files directly (`../../libs/maia-kernel/src/index.js`) for proper HMR
+- **Production builds**: Points to bundled files (`../../libs/maia-kernel/dist/maia-kernel.es.js`) for optimized builds
+
+Production builds automatically create bundles before building via the `build` script.
 
 ## Port
 

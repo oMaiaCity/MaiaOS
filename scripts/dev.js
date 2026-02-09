@@ -9,8 +9,7 @@ import { spawn } from 'node:child_process'
 import { execSync } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { existsSync } from 'node:fs'
-import { createLogger, bootHeader, bootFooter, buildProgress, buildComplete } from './logger.js'
+import { createLogger, bootHeader, bootFooter } from './logger.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = resolve(__dirname, '..')
@@ -21,8 +20,6 @@ let serverProcess = null
 let docsWatcherProcess = null
 let assetSyncProcess = null
 let faviconProcess = null
-let kernelWatchProcess = null
-let vibesWatchProcess = null
 
 // Track service readiness
 const serviceStatus = {
@@ -141,88 +138,6 @@ function checkAllReady() {
 
 async function startMaiaCity() {
 	const logger = createLogger('maia-city')
-	
-	// Build kernel and vibes bundles before starting maia-city (maia-city depends on them)
-	// Each package handles its own build via root-level scripts
-	try {
-		// Build kernel first (vibes depends on it)
-		buildProgress('kernel', 'Building...')
-		execSync('bun run kernel:build', {
-			cwd: rootDir,
-			stdio: 'pipe', // Capture output to filter
-		})
-		buildComplete('kernel')
-		
-		// Then build vibes (depends on kernel)
-		buildProgress('vibes', 'Building...')
-		execSync('bun run vibes:build', {
-			cwd: rootDir,
-			stdio: 'pipe', // Capture output to filter
-		})
-		buildComplete('vibes')
-		
-		// Verify bundle files exist before starting maia-city
-		const kernelBundlePath = resolve(rootDir, 'libs/maia-kernel/dist/maia-kernel.es.js')
-		const vibesBundlePath = resolve(rootDir, 'libs/maia-vibes/dist/maia-vibes.es.js')
-		
-		// Wait for files to be fully written (with retries)
-		let retries = 10
-		while (retries > 0 && (!existsSync(kernelBundlePath) || !existsSync(vibesBundlePath))) {
-			await new Promise(resolve => setTimeout(resolve, 100))
-			retries--
-		}
-		
-		if (!existsSync(kernelBundlePath)) {
-			logger.error(`Kernel bundle not found at ${kernelBundlePath}`)
-			return
-		}
-		if (!existsSync(vibesBundlePath)) {
-			logger.error(`Vibes bundle not found at ${vibesBundlePath}`)
-			return
-		}
-		
-		// Additional small delay to ensure files are fully flushed to disk
-		await new Promise(resolve => setTimeout(resolve, 200))
-		
-		// Start watch mode for both bundles (hot reload)
-		const kernelLogger = createLogger('kernel')
-		kernelLogger.status('Watching for changes...')
-		kernelWatchProcess = spawn('bun', ['run', 'kernel:build:watch'], {
-			cwd: rootDir,
-			stdio: ['ignore', 'pipe', 'pipe'],
-			shell: false,
-			env: { ...process.env },
-		})
-		
-		const vibesLogger = createLogger('vibes')
-		vibesLogger.status('Watching for changes...')
-		vibesWatchProcess = spawn('bun', ['run', 'vibes:build:watch'], {
-			cwd: rootDir,
-			stdio: ['ignore', 'pipe', 'pipe'],
-			shell: false,
-			env: { ...process.env },
-		})
-		
-		// Suppress watch output - bundles rebuild silently
-		kernelWatchProcess.stdout.on('data', () => {
-			// Silent rebuilds - no logs needed
-		})
-		
-		vibesWatchProcess.stdout.on('data', () => {
-			// Silent rebuilds - no logs needed
-		})
-		
-		kernelWatchProcess.on('error', () => {
-			// Non-fatal - watch mode is optional
-		})
-		
-		vibesWatchProcess.on('error', () => {
-			// Non-fatal - watch mode is optional
-		})
-	} catch (error) {
-		logger.warn('Dependencies build failed, continuing anyway...')
-		return // Don't start maia-city if bundles failed
-	}
 	
 	// Check for port conflicts and kill existing maia-city processes
 	try {
@@ -536,12 +451,6 @@ function setupSignalHandlers() {
 		if (docsWatcherProcess && !docsWatcherProcess.killed) {
 			docsWatcherProcess.kill('SIGTERM')
 		}
-		if (kernelWatchProcess && !kernelWatchProcess.killed) {
-			kernelWatchProcess.kill('SIGTERM')
-		}
-		if (vibesWatchProcess && !vibesWatchProcess.killed) {
-			vibesWatchProcess.kill('SIGTERM')
-		}
 		if (serverProcess && !serverProcess.killed) {
 			serverProcess.kill('SIGTERM')
 		}
@@ -565,12 +474,6 @@ function setupSignalHandlers() {
 		}
 		if (docsWatcherProcess && !docsWatcherProcess.killed) {
 			docsWatcherProcess.kill('SIGTERM')
-		}
-		if (kernelWatchProcess && !kernelWatchProcess.killed) {
-			kernelWatchProcess.kill('SIGTERM')
-		}
-		if (vibesWatchProcess && !vibesWatchProcess.killed) {
-			vibesWatchProcess.kill('SIGTERM')
 		}
 		if (serverProcess && !serverProcess.killed) {
 			serverProcess.kill('SIGTERM')
