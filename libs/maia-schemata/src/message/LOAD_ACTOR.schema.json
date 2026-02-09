@@ -1,0 +1,17 @@
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/message/LOAD_ACTOR",
+  "title": "@schema/message/LOAD_ACTOR",
+  "description": "Generic message type for loading actor data (reusable across vibes)",
+  "cotype": "comap",
+  "indexing": true,
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Entity co-id to load (required, generic property name for reuse across vibes)"
+    }
+  },
+  "required": ["id"],
+  "additionalProperties": true
+}

@@ -1,0 +1,54 @@
+{
+  "$schema": "@schema/state",
+  "$id": "@sparks/state/detail",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "on": {
+        "LOAD_ACTOR": {
+          "target": "updating",
+          "actions": [
+            {
+              "updateContext": {
+                "sparkId": "$$id"
+              }
+            }
+          ]
+        }
+      },
+      "entry": {
+        "updateContext": {
+          "hasSpark": {
+            "$ne": ["$sparkId", null]
+          },
+          "showEmptyState": {
+            "$eq": ["$sparkId", null]
+          },
+          "showContent": {
+            "$ne": ["$sparkId", null]
+          }
+        }
+      }
+    },
+    "updating": {
+      "entry": {
+        "updateContext": {
+          "hasSpark": {
+            "$ne": ["$sparkId", null]
+          },
+          "showEmptyState": {
+            "$eq": ["$sparkId", null]
+          },
+          "showContent": {
+            "$ne": ["$sparkId", null]
+          }
+        }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "idle"
+        }
+      }
+    }
+  }
+}

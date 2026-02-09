@@ -2,12 +2,23 @@
   "$schema": "@schema/tool",
   "$id": "sparks",
   "name": "@sparks",
-  "description": "Sparks tool for managing collaborative spaces (groups). Supports CRUD operations and future member/permission management.",
+  "description": "Sparks tool for managing collaborative spaces (groups). Supports CRUD operations, member management, and parent group management.",
   "schema": "@schema/tool",
   "params": {
     "op": {
       "type": "string",
-      "enum": ["createSpark", "readSpark", "updateSpark", "deleteSpark"],
+      "enum": [
+        "createSpark",
+        "readSpark",
+        "updateSpark",
+        "deleteSpark",
+        "addSparkMember",
+        "removeSparkMember",
+        "addSparkParentGroup",
+        "removeSparkParentGroup",
+        "getSparkMembers",
+        "updateSparkMemberRole"
+      ],
       "description": "Spark operation to execute"
     },
     "name": {
@@ -16,7 +27,7 @@
     },
     "id": {
       "type": "string",
-      "description": "Spark co-id (required for updateSpark, deleteSpark, optional for readSpark)"
+      "description": "Spark co-id (required for most operations)"
     },
     "data": {
       "type": "object",
@@ -25,10 +36,23 @@
     "schema": {
       "type": "string",
       "description": "Schema co-id (optional for readSpark, defaults to spark schema)"
+    },
+    "memberId": {
+      "type": "string",
+      "description": "Member account/group co-id (required for addSparkMember, removeSparkMember, updateSparkMemberRole)"
+    },
+    "role": {
+      "type": "string",
+      "enum": ["reader", "writer", "admin", "manager", "writeOnly"],
+      "description": "Member role (required for addSparkMember, updateSparkMemberRole)"
+    },
+    "parentGroupId": {
+      "type": "string",
+      "description": "Parent group co-id (required for addSparkParentGroup, removeSparkParentGroup)"
     }
   },
   "returns": {
     "type": "any",
-    "description": "Operation result (created/updated/deleted spark, reactive store for reads)"
+    "description": "Operation result (created/updated/deleted spark, reactive store for reads, member/group management results)"
   }
 }

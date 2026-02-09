@@ -1,0 +1,20 @@
+{
+  "$schema": "@schema/context",
+  "$id": "@sparks/context/detail",
+  "sparkId": null,
+  "sparkDetails": {
+    "schema": "@schema/data/spark",
+    "filter": {
+      "id": "$sparkId"
+    },
+    "options": {
+      "map": {
+        "members": "$$group.accountMembers",
+        "groupId": "$$group.id"
+      }
+    }
+  },
+  "hasSpark": false,
+  "showEmptyState": true,
+  "showContent": false
+}

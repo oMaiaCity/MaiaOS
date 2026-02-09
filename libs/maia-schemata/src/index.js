@@ -74,6 +74,8 @@ import retryMessageSchema from './message/RETRY.schema.json';
 import dismissMessageSchema from './message/DISMISS.schema.json';
 import selectNavMessageSchema from './message/SELECT_NAV.schema.json';
 import selectRowMessageSchema from './message/SELECT_ROW.schema.json';
+import selectSparkMessageSchema from './message/SELECT_SPARK.schema.json';
+import loadActorMessageSchema from './message/LOAD_ACTOR.schema.json';
 
 // Schema registry
 const SCHEMAS = {
@@ -124,7 +126,9 @@ const MESSAGE_SCHEMAS = {
   'message/RETRY': retryMessageSchema,
   'message/DISMISS': dismissMessageSchema,
   'message/SELECT_NAV': selectNavMessageSchema,
-  'message/SELECT_ROW': selectRowMessageSchema
+  'message/SELECT_ROW': selectRowMessageSchema,
+  'message/SELECT_SPARK': selectSparkMessageSchema,
+  'message/LOAD_ACTOR': loadActorMessageSchema
 };
 
 /**

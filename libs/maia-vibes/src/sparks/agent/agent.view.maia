@@ -86,21 +86,50 @@
       },
       {
         "tag": "div",
-        "class": "sparks-list",
-        "$each": {
-          "items": "$sparks",
-          "template": {
+        "class": "split-container",
+        "children": [
+          {
             "tag": "div",
-            "class": "spark-item",
+            "class": "sparks-list-panel",
             "children": [
               {
-                "tag": "h3",
-                "class": "spark-name",
-                "text": "$$name"
+                "tag": "div",
+                "class": "sparks-list",
+                "$each": {
+                  "items": "$sparks",
+                  "template": {
+                    "tag": "div",
+                    "class": "spark-item",
+                    "children": [
+                      {
+                        "tag": "h3",
+                        "class": "spark-name",
+                        "text": "$$name"
+                      }
+                    ],
+                    "$on": {
+                      "click": {
+                        "send": "SELECT_SPARK",
+                        "payload": { "sparkId": "$$id" }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "tag": "div",
+            "class": "sparks-detail-panel",
+            "children": [
+              {
+                "tag": "div",
+                "class": "detail-content-wrapper",
+                "$slot": "$currentDetail"
               }
             ]
           }
-        }
+        ]
       }
     ]
   }

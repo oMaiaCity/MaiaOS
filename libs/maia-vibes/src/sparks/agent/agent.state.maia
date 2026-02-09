@@ -15,6 +15,17 @@
               "updateContext": { "newSparkName": "$$value" }
             }
           ]
+        },
+        "SELECT_SPARK": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "selectedSparkId": "$$sparkId"
+              }
+            },
+            "sendToDetailActor"
+          ]
         }
       }
     },

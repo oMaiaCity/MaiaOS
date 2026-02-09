@@ -1,0 +1,17 @@
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/message/SELECT_SPARK",
+  "title": "@schema/message/SELECT_SPARK",
+  "description": "Message type for selecting a spark (generic, reusable across vibes)",
+  "cotype": "comap",
+  "indexing": true,
+  "type": "object",
+  "properties": {
+    "sparkId": {
+      "type": "string",
+      "description": "Spark co-id (required, generic property name for reuse across vibes)"
+    }
+  },
+  "required": ["sparkId"],
+  "additionalProperties": true
+}

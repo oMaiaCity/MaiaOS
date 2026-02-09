@@ -10,6 +10,7 @@
   "messageTypes": [
     "CREATE_BUTTON",
     "UPDATE_INPUT",
+    "SELECT_SPARK",
     "SUCCESS",
     "ERROR",
     "DISMISS"

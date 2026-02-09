@@ -1,0 +1,11 @@
+{
+  "$schema": "@schema/actor",
+  "$id": "@sparks/actor/detail",
+  "role": "ui",
+  "context": "@sparks/context/detail",
+  "view": "@sparks/view/detail",
+  "state": "@sparks/state/detail",
+  "brand": "@sparks/style/brand",
+  "inbox": "@sparks/inbox/detail",
+  "messageTypes": ["LOAD_ACTOR", "SUCCESS"]
+}

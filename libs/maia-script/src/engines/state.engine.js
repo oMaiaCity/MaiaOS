@@ -459,6 +459,21 @@ export class StateEngine {
     };
     const updates = commonActions[actionName];
     if (updates) await machine.actor.actorEngine.updateContextCoValue(machine.actor, updates);
+    
+    // Custom action: sendToDetailActor - sends LOAD_ACTOR message to detail actor via inbox
+    if (actionName === 'sendToDetailActor') {
+      // Read sparkId from event payload ($$sparkId), not from context (which may not be updated yet)
+      const sparkId = payload?.sparkId || machine.actor.context.value?.selectedSparkId;
+      if (sparkId && machine.actor?.children?.detail) {
+        const detailActor = machine.actor.children.detail;
+        // Send generic LOAD_ACTOR message to detail actor's inbox (proper actor-to-actor communication)
+        await machine.actor.actorEngine.sendMessage(detailActor.id, {
+          type: 'LOAD_ACTOR',
+          payload: { id: sparkId },
+          from: machine.actor.id
+        });
+      }
+    }
   }
 
   async _invokeTool(machine, toolName, payload = {}, autoTransition = true, isEntryAction = false) {

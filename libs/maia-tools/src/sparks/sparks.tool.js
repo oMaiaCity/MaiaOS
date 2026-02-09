@@ -4,18 +4,22 @@
  * Domain-specific tool for managing Sparks (collaborative spaces/groups)
  * Routes operations to maia.db() operation engine with spark-specific operations
  * 
- * Usage in state machines:
+ * CRUD Operations:
  *   {"tool": "@sparks", "payload": {"op": "createSpark", "name": "My Spark"}}
  *   {"tool": "@sparks", "payload": {"op": "readSpark"}}
  *   {"tool": "@sparks", "payload": {"op": "readSpark", "id": "co_z..."}}
  *   {"tool": "@sparks", "payload": {"op": "updateSpark", "id": "co_z...", "data": {...}}}
  *   {"tool": "@sparks", "payload": {"op": "deleteSpark", "id": "co_z..."}}
  * 
- * Future operations (to be added):
- *   {"tool": "@sparks", "payload": {"op": "addMember", "id": "co_z...", "memberId": "co_z..."}}
- *   {"tool": "@sparks", "payload": {"op": "removeMember", "id": "co_z...", "memberId": "co_z..."}}
- *   {"tool": "@sparks", "payload": {"op": "updatePermissions", "id": "co_z...", "memberId": "co_z...", "role": "admin"}}
- *   {"tool": "@sparks", "payload": {"op": "getMembers", "id": "co_z..."}}
+ * Member Management:
+ *   {"tool": "@sparks", "payload": {"op": "addSparkMember", "id": "co_z...", "memberId": "co_z...", "role": "writer"}}
+ *   {"tool": "@sparks", "payload": {"op": "removeSparkMember", "id": "co_z...", "memberId": "co_z..."}}
+ *   {"tool": "@sparks", "payload": {"op": "updateSparkMemberRole", "id": "co_z...", "memberId": "co_z...", "role": "admin"}}
+ *   {"tool": "@sparks", "payload": {"op": "getSparkMembers", "id": "co_z..."}}
+ * 
+ * Parent Group Management (Hierarchical Access):
+ *   {"tool": "@sparks", "payload": {"op": "addSparkParentGroup", "id": "co_z...", "parentGroupId": "co_z...", "role": "extend"}}
+ *   {"tool": "@sparks", "payload": {"op": "removeSparkParentGroup", "id": "co_z...", "parentGroupId": "co_z..."}}
  */
 export default {
   async execute(actor, payload) {

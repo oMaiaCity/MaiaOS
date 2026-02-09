@@ -34,7 +34,13 @@ import {
   createSparkOperation,
   readSparkOperation,
   updateSparkOperation,
-  deleteSparkOperation
+  deleteSparkOperation,
+  addSparkMemberOperation,
+  removeSparkMemberOperation,
+  addSparkParentGroupOperation,
+  removeSparkParentGroupOperation,
+  getSparkMembersOperation,
+  updateSparkMemberRoleOperation
 } from './operations/spark-operations.js';
 
 export class DBEngine {
@@ -71,7 +77,13 @@ export class DBEngine {
       createSpark: { execute: (params) => createSparkOperation(this.backend, this, params) },
       readSpark: { execute: (params) => readSparkOperation(this.backend, params) },
       updateSpark: { execute: (params) => updateSparkOperation(this.backend, this, params) },
-      deleteSpark: { execute: (params) => deleteSparkOperation(this.backend, this, params) }
+      deleteSpark: { execute: (params) => deleteSparkOperation(this.backend, this, params) },
+      addSparkMember: { execute: (params) => addSparkMemberOperation(this.backend, this, params) },
+      removeSparkMember: { execute: (params) => removeSparkMemberOperation(this.backend, this, params) },
+      addSparkParentGroup: { execute: (params) => addSparkParentGroupOperation(this.backend, this, params) },
+      removeSparkParentGroup: { execute: (params) => removeSparkParentGroupOperation(this.backend, this, params) },
+      getSparkMembers: { execute: (params) => getSparkMembersOperation(this.backend, params) },
+      updateSparkMemberRole: { execute: (params) => updateSparkMemberRoleOperation(this.backend, this, params) }
     };
   }
   
@@ -86,7 +98,7 @@ export class DBEngine {
     const { op, ...params } = payload;
     
     if (!op) {
-      throw new Error('[DBEngine] Operation required: {op: "read|create|update|delete|seed|schema|resolve|append|push|createSpark|readSpark|updateSpark|deleteSpark"}');
+      throw new Error('[DBEngine] Operation required: {op: "read|create|update|delete|seed|schema|resolve|append|push|createSpark|readSpark|updateSpark|deleteSpark|addSparkMember|removeSparkMember|addSparkParentGroup|removeSparkParentGroup|getSparkMembers|updateSparkMemberRole"}');
     }
     
     // Debug logging removed - too verbose

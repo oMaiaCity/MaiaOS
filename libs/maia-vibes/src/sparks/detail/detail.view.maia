@@ -1,0 +1,93 @@
+{
+  "$schema": "@schema/view",
+  "$id": "@sparks/view/detail",
+  "content": {
+    "tag": "div",
+    "class": "detail-container",
+    "children": [
+      {
+        "tag": "div",
+        "class": "empty-state",
+        "attrs": {
+          "data": {
+            "visible": "$showEmptyState"
+          }
+        },
+        "children": [
+          {
+            "tag": "p",
+            "text": "Select a spark to view details and members"
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "class": "detail-content",
+        "attrs": {
+          "data": {
+            "visible": "$showContent"
+          }
+        },
+        "children": [
+          {
+            "tag": "span",
+            "class": "detail-category",
+            "text": "Spark Details"
+          },
+          {
+            "tag": "h2",
+            "class": "detail-title",
+            "text": "$sparkDetails.name"
+          },
+          {
+            "tag": "div",
+            "class": "detail-list",
+            "children": [
+              {
+                "tag": "div",
+                "class": "detail-item",
+                "children": [
+                  { "tag": "span", "class": "detail-label", "text": "Group ID" },
+                  { "tag": "span", "class": "detail-value", "text": "$sparkDetails.groupId" }
+                ]
+              }
+            ]
+          },
+          {
+            "tag": "h3",
+            "class": "members-title",
+            "text": "Members"
+          },
+          {
+            "tag": "div",
+            "class": "members-list",
+            "$each": {
+              "items": "$sparkDetails.members",
+              "template": {
+                "tag": "div",
+                "class": "member-item",
+                "children": [
+                  {
+                    "tag": "span",
+                    "class": "member-id",
+                    "text": "$$id"
+                  },
+                  {
+                    "tag": "span",
+                    "class": "member-role",
+                    "attrs": {
+                      "data": {
+                        "role": "$$role"
+                      }
+                    },
+                    "text": "$$role"
+                  }
+                ]
+              }
+            }
+          },
+        ]
+      }
+    ]
+  }
+}

@@ -777,6 +777,12 @@ export class ActorEngine {
           processed: false
         };
         await createAndPushMessage(this.dbEngine, actor.inboxCoId, messageData);
+        // Schedule message processing
+        setTimeout(() => {
+          this.processMessages(actorId).catch(err => {
+            console.error(`[ActorEngine] Error processing deferred messages:`, err);
+          });
+        }, 0);
       } catch (error) {
         console.error(`[ActorEngine] Failed to send message:`, error);
       }

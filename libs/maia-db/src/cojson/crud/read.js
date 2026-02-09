@@ -16,6 +16,7 @@ import { matchesFilter } from './filter-helpers.js';
 import { deepResolveCoValue, resolveNestedReferencesPublic, resolveNestedReferences, isDeepResolvedOrResolving } from './deep-resolution.js';
 import { applyMapTransform, applyMapTransformToArray } from './map-transform.js';
 import { resolve as resolveSchema, resolveReactive as resolveSchemaReactive } from '../schema/resolver.js';
+import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
 
 /**
  * Universal read() function - works for ANY CoValue type
@@ -78,12 +79,35 @@ export async function read(backend, coId = null, schema = null, filter = null, s
  * @returns {Promise<ReactiveStore>} Unified ReactiveStore with merged data
  * @private
  */
+/**
+ * Evaluate filter expressions using context values
+ * @param {Object|null} filter - Filter object that may contain expressions (e.g., { "id": "$sparkId" })
+ * @param {Object} contextValue - Current context value for expression evaluation
+ * @param {Object} evaluator - Evaluator instance for MaiaScript expressions
+ * @returns {Promise<Object|null>} Fully evaluated filter object
+ */
+async function evaluateFilter(filter, contextValue, evaluator) {
+  if (!filter || typeof filter !== 'object') {
+    return filter; // Return null or non-object filters as-is
+  }
+  
+  // Use resolveExpressions to evaluate filter values that reference context
+  // This handles expressions like "$sparkId" → actual co-id value
+  return await resolveExpressions(filter, evaluator, { context: contextValue, item: {} });
+}
+
 async function createUnifiedStore(backend, contextStore, options = {}) {
   const unifiedStore = new ReactiveStore({});
   const queryStores = new Map(); // key -> ReactiveStore
-  const queryDefinitions = new Map(); // key -> query definition object (for $op)
+  const queryDefinitions = new Map(); // key -> query definition object (for $op) - stores evaluated filters
+  const queryIsFindOne = new Map(); // key -> boolean (true if query should return single object instead of array)
   const schemaSubscriptions = new Map(); // key -> unsubscribe function for schema resolution
   const { timeoutMs = 5000, onChange } = options;
+  
+  // Create evaluator for expression evaluation in filters
+  // Import dynamically to avoid circular dependencies
+  const { Evaluator } = await import('@MaiaOS/script/utils/evaluator.js');
+  const evaluator = new Evaluator();
 
   // Update Queue: batches all updates within a single event loop tick
   // Prevents duplicate renders when multiple query stores update simultaneously
@@ -119,16 +143,33 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
           mergedValue.$op = $op;
         }
         
-        // Merge query store values (resolved arrays at root level, same key as query name)
-        // CRITICAL: Always merge query store values, even if they're empty arrays
+        // Merge query store values (resolved arrays or single objects at root level, same key as query name)
+        // CRITICAL: Always merge query store values, even if they're empty arrays or null
         // This ensures progressive loading works - empty arrays become populated arrays reactively
         for (const [key, queryStore] of queryStores.entries()) {
           if (queryStore && typeof queryStore.subscribe === 'function' && 'value' in queryStore) {
-            // Remove the query object from mergedValue (if present) and replace with resolved array
+            // Remove the query object from mergedValue (if present) and replace with resolved value
             delete mergedValue[key];
-            // CRITICAL: Always set query store value, even if it's undefined/null/empty array
-            // This ensures reactivity works - when query store updates from [] to [items], unified store updates
-            mergedValue[key] = queryStore.value;
+            
+            const isFindOne = queryIsFindOne.get(key) || false;
+            const storeValue = queryStore.value;
+            
+            if (isFindOne) {
+              // findOne query: return single object (or null if not found/empty)
+              // If store value is an array, extract first element; if it's already an object, use it directly
+              if (Array.isArray(storeValue)) {
+                mergedValue[key] = storeValue.length > 0 ? storeValue[0] : null;
+              } else if (storeValue && typeof storeValue === 'object') {
+                mergedValue[key] = storeValue;
+              } else {
+                mergedValue[key] = null;
+              }
+            } else {
+              // Collection query: return array
+              // CRITICAL: Always set query store value, even if it's undefined/null/empty array
+              // This ensures reactivity works - when query store updates from [] to [items], unified store updates
+              mergedValue[key] = storeValue;
+            }
           }
         }
         
@@ -173,6 +214,28 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
         // Check if we already have this query store
         const existingStore = queryStores.get(key);
         
+        // Evaluate filter expressions using current context value
+        // This enables dynamic filters like { "id": "$sparkId" }
+        const evaluatedFilter = await evaluateFilter(value.filter || null, contextValue, evaluator);
+        
+        // Detect "findOne" pattern: filter with single "id" field pointing to a co-id
+        // When filtering by a single ID, we should return a single object instead of an array
+        const isFindOneQuery = evaluatedFilter && 
+          typeof evaluatedFilter === 'object' && 
+          Object.keys(evaluatedFilter).length === 1 &&
+          evaluatedFilter.id &&
+          typeof evaluatedFilter.id === 'string' &&
+          evaluatedFilter.id.startsWith('co_z');
+        
+        const singleCoId = isFindOneQuery ? evaluatedFilter.id : null;
+        
+        // Get stored query definition to compare filters
+        const storedQueryDef = queryDefinitions.get(key);
+        const storedFilter = storedQueryDef?.filter || null;
+        
+        // Compare evaluated filters to detect changes (deep comparison)
+        const filterChanged = JSON.stringify(evaluatedFilter) !== JSON.stringify(storedFilter);
+        
         try {
           // UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema resolution for queries
           let schemaCoId = value.schema;
@@ -199,12 +262,25 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
                 if (schemaState.loading) {
                   // Still loading - create empty query store to show loading state
                   if (!queryStores.has(key)) {
-                    const loadingStore = new ReactiveStore([]);
+                    // Re-evaluate filter to check if it's a findOne query
+                    const currentEvaluatedFilter = await evaluateFilter(value.filter || null, contextValue, evaluator);
+                    const isFindOne = currentEvaluatedFilter && 
+                      typeof currentEvaluatedFilter === 'object' && 
+                      Object.keys(currentEvaluatedFilter).length === 1 &&
+                      currentEvaluatedFilter.id &&
+                      typeof currentEvaluatedFilter.id === 'string' &&
+                      currentEvaluatedFilter.id.startsWith('co_z');
+                    
+                    // Use null for findOne queries, [] for collection queries
+                    const loadingStore = new ReactiveStore(isFindOne ? null : []);
                     queryStores.set(key, loadingStore);
+                    queryIsFindOne.set(key, isFindOne);
+                    
+                    // Store evaluated filter in query definition (re-evaluate in case context changed)
                     queryDefinitions.set(key, {
                       schema: value.schema,
                       ...(value.options ? { options: value.options } : {}),
-                      ...(value.filter ? { filter: value.filter } : {})
+                      filter: currentEvaluatedFilter
                     });
                     enqueueUpdate();
                   }
@@ -217,7 +293,7 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
                   return;
                 }
                 
-                // Schema resolved - execute query
+                // Schema resolved - execute query with evaluated filter
                 const resolvedSchemaCoId = schemaState.schemaCoId;
                 
                 try {
@@ -227,24 +303,58 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
                     ...(value.options || {})
                   };
                   
-                  const queryStore = await read(backend, null, resolvedSchemaCoId, value.filter || null, null, queryOptions);
+                  // Re-evaluate filter in case context changed during schema resolution
+                  const currentEvaluatedFilter = await evaluateFilter(value.filter || null, contextValue, evaluator);
                   
-                  // Store query definition for $op
-                  queryDefinitions.set(key, {
-                    schema: value.schema,
-                    ...(value.options ? { options: value.options } : {}),
-                    ...(value.filter ? { filter: value.filter } : {})
-                  });
+                  // Detect "findOne" pattern: filter with single "id" field pointing to a co-id
+                  const isFindOne = currentEvaluatedFilter && 
+                    typeof currentEvaluatedFilter === 'object' && 
+                    Object.keys(currentEvaluatedFilter).length === 1 &&
+                    currentEvaluatedFilter.id &&
+                    typeof currentEvaluatedFilter.id === 'string' &&
+                    currentEvaluatedFilter.id.startsWith('co_z');
                   
-                  // Subscribe to query store updates
-                  const queryUnsubscribe = queryStore.subscribe(() => {
+                  const singleCoId = isFindOne ? currentEvaluatedFilter.id : null;
+                  
+                  // Check if filter changed since we stored it (or if query store doesn't exist)
+                  const storedQueryDef = queryDefinitions.get(key);
+                  const storedFilter = storedQueryDef?.filter || null;
+                  const filterChanged = JSON.stringify(currentEvaluatedFilter) !== JSON.stringify(storedFilter);
+                  
+                  // Only recreate query store if filter changed or store doesn't exist
+                  if (filterChanged || !queryStores.has(key)) {
+                    // Unsubscribe from existing store if it exists
+                    const existingQueryStore = queryStores.get(key);
+                    if (existingQueryStore && existingQueryStore._queryUnsubscribe) {
+                      existingQueryStore._queryUnsubscribe();
+                    }
+                    
+                    // Use findOne pattern: read single CoValue directly instead of collection query
+                    const queryStore = isFindOne && singleCoId
+                      ? await read(backend, singleCoId, resolvedSchemaCoId, null, null, queryOptions)
+                      : await read(backend, null, resolvedSchemaCoId, currentEvaluatedFilter, null, queryOptions);
+                    
+                    // Store whether this is a findOne query
+                    queryIsFindOne.set(key, isFindOne);
+                    
+                    // Store query definition with evaluated filter
+                    queryDefinitions.set(key, {
+                      schema: value.schema,
+                      ...(value.options ? { options: value.options } : {}),
+                      filter: currentEvaluatedFilter
+                    });
+                    
+                    // Subscribe to query store updates
+                    const queryUnsubscribe = queryStore.subscribe(() => {
+                      enqueueUpdate();
+                    });
+                    queryStore._queryUnsubscribe = queryUnsubscribe;
+                    queryStores.set(key, queryStore);
+                    
+                    // Initial update now that query is ready
                     enqueueUpdate();
-                  });
-                  queryStore._queryUnsubscribe = queryUnsubscribe;
-                  queryStores.set(key, queryStore);
+                  }
                   
-                  // Initial update now that query is ready
-                  enqueueUpdate();
                   schemaUnsubscribe();
                 } catch (error) {
                   console.error(`[createUnifiedStore] Failed to execute query "${key}" after schema resolution:`, error);
@@ -262,27 +372,33 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
             }
           } else if (schemaCoId && typeof schemaCoId === 'string' && schemaCoId.startsWith('co_z')) {
             
-            // Schema is already a co-id - execute query immediately
-            const queryOptions = {
-              ...options,
-              timeoutMs,
-              ...(value.options || {})
-            };
-            
-            const queryStore = await read(backend, null, schemaCoId, value.filter || null, null, queryOptions);
-            
-            // Store query definition for $op
-            queryDefinitions.set(key, {
-              schema: value.schema,
-              ...(value.options ? { options: value.options } : {}),
-              ...(value.filter ? { filter: value.filter } : {})
-            });
-            
-            // Subscribe to query store if not already subscribed
-            if (!existingStore || existingStore !== queryStore) {
+            // Schema is already a co-id - check if filter changed or query store needs to be recreated
+            if (filterChanged || !existingStore) {
+              // Filter changed or query doesn't exist - recreate query store with new filter
               if (existingStore && existingStore._queryUnsubscribe) {
                 existingStore._queryUnsubscribe();
               }
+              
+              const queryOptions = {
+                ...options,
+                timeoutMs,
+                ...(value.options || {})
+              };
+              
+              // Use findOne pattern: read single CoValue directly instead of collection query
+              const queryStore = isFindOneQuery && singleCoId
+                ? await read(backend, singleCoId, schemaCoId, null, null, queryOptions)
+                : await read(backend, null, schemaCoId, evaluatedFilter, null, queryOptions);
+              
+              // Store whether this is a findOne query
+              queryIsFindOne.set(key, isFindOneQuery);
+              
+              // Store query definition with evaluated filter
+              queryDefinitions.set(key, {
+                schema: value.schema,
+                ...(value.options ? { options: value.options } : {}),
+                filter: evaluatedFilter
+              });
               
               const unsubscribe = queryStore.subscribe(() => {
                 enqueueUpdate();
@@ -290,6 +406,7 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
               queryStore._queryUnsubscribe = unsubscribe;
               queryStores.set(key, queryStore);
             }
+            // If filter didn't change and store exists, keep using existing store
           }
         } catch (error) {
           console.error(`[createUnifiedStore] Failed to resolve query "${key}":`, error);
@@ -306,6 +423,7 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
         }
         queryStores.delete(key);
         queryDefinitions.delete(key);
+        queryIsFindOne.delete(key);
       }
     }
     

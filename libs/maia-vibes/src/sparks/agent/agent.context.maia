@@ -9,5 +9,11 @@
   "createButtonText": "Create Spark",
   "error": null,
   "hasError": false,
-  "loading": false
+  "loading": false,
+  "selectedSparkId": null,
+  "selectedSparkItems": {},
+  "currentDetail": "@detail",
+  "@actors": {
+    "detail": "@sparks/actor/detail"
+  }
 }

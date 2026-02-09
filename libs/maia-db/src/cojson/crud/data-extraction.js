@@ -679,6 +679,32 @@ async function resolveCoId(backend, coId, options = {}, visited = new Set(), max
       currentDepth + 1
     );
     
+    // CRITICAL: If this is a group, automatically include members
+    // Check if this is a group by checking the CoValueCore ruleset
+    const coValueCore = backend.getCoValue(coId);
+    if (coValueCore) {
+      const header = backend.getHeader(coValueCore);
+      const ruleset = coValueCore.ruleset || header?.ruleset;
+      
+      if (ruleset && ruleset.type === 'group') {
+        // This is a group - automatically extract and include members
+        const groupContent = backend.getCurrentContent(coValueCore);
+        if (groupContent && typeof groupContent.addMember === 'function') {
+          // Import groups helper dynamically to avoid circular dependencies
+          const { getGroupInfoFromGroup } = await import('../groups/groups.js');
+          const groupInfo = getGroupInfoFromGroup(groupContent);
+          
+          if (groupInfo) {
+            // Merge group info (members) into resolved data
+            Object.assign(resolved, {
+              accountMembers: groupInfo.accountMembers || [],
+              groupMembers: groupInfo.groupMembers || []
+            });
+          }
+        }
+      }
+    }
+    
     // Ensure id is always present
     const finalResolved = {
       ...resolved,
