@@ -103,27 +103,27 @@ else
     echo "✓ HF_TOKEN secret is already set"
 fi
 
-# Ensure 40GB volume exists (fly deploy requires it to exist before creating machine)
+# Ensure 1GB volume exists (fly deploy requires it to exist before creating machine)
 echo ""
-echo "📦 Ensuring 40GB volume exists..."
-VOLUME_EXISTS=$(flyctl volumes list --app "$APP_NAME" 2>/dev/null | grep "personaplex_data" | grep "$REGION" | grep "40GB" || echo "")
+echo "📦 Ensuring 1GB volume exists..."
+VOLUME_EXISTS=$(flyctl volumes list --app "$APP_NAME" 2>/dev/null | grep "personaplex_data" | grep "$REGION" | grep "1GB" || echo "")
 
 if [ -z "$VOLUME_EXISTS" ]; then
-    echo "Creating volume 'personaplex_data' (40GB) in $REGION..."
-    flyctl volumes create personaplex_data --size 40 --region "$REGION" --vm-gpu-kind l40s --app "$APP_NAME" --yes || {
+    echo "Creating volume 'personaplex_data' (1GB) in $REGION..."
+    flyctl volumes create personaplex_data --size 1 --region "$REGION" --vm-gpu-kind l40s --app "$APP_NAME" --yes || {
         echo "⚠️  Volume creation failed"
         exit 1
     }
-    echo "✓ Volume created: 40GB in $REGION"
+    echo "✓ Volume created: 1GB in $REGION"
 else
-    echo "✓ Volume already exists (40GB in $REGION)"
+    echo "✓ Volume already exists (1GB in $REGION)"
 fi
 
 # Deploy - fly.toml handles everything automatically
 echo ""
 echo "🚀 Deploying with fly deploy..."
 echo "   fly.toml will automatically:"
-echo "     - Use existing 40GB volume"
+echo "     - Use existing 1GB volume"
 echo "     - Create machine in ORD with L40S GPU (performance-8x + l40s)"
 echo "     - Configure auto-stop (manual start only)"
 echo ""

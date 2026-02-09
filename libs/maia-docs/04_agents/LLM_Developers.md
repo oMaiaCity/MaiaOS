@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Developers
 
-**Auto-generated:** 2026-02-07T22:50:11.706Z
+**Auto-generated:** 2026-02-07T23:31:15.366Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---

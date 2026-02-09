@@ -12,9 +12,7 @@
   },
   "dependencies": {
     "@MaiaOS/kernel": "workspace:*",
-    "@MaiaOS/vibes": "workspace:*",
-    "ai": "^6.0.73",
-    "buffer": "^6.0.3"
+    "@MaiaOS/vibes": "workspace:*"
   },
   "devDependencies": {
     "vite": "^7.2.4"

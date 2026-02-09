@@ -74,11 +74,10 @@ export default defineConfig({
 				"@MaiaOS/tools": resolve(__dirname, "../../libs/maia-tools/src"),
 				// Alias for imports that vite might try to resolve from within the kernel bundle
 				"@MaiaOS/schemata/co-types.defs.json": resolve(__dirname, "../../libs/maia-schemata/src/co-types.defs.json"),
-				"buffer": resolve(__dirname, "node_modules/buffer/index.js"),
 			},
 		},
 	optimizeDeps: {
-		include: ["cojson", "buffer"],
+		include: ["cojson"],
 		exclude: [
 			"@MaiaOS/kernel", 
 			"@MaiaOS/vibes",

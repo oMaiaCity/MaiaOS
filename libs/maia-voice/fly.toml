@@ -7,7 +7,9 @@ primary_region = "ord"  # Chicago - L40S GPU available
   dockerfile = "Dockerfile"
 
 [env]
-  NO_TORCH_COMPILE = "1"
+  # torch.compile is REQUIRED for real-time performance
+  # Disabling it causes choppy audio (see GitHub issue #3)
+  # First-time compilation can take several minutes - grace_period increased to 300s
 
 # GPU configuration - L40S (per Fly.io GPU docs and community examples)
 # Use [[vm]] section with gpu_kind for proper GPU machine configuration
@@ -45,8 +47,8 @@ primary_region = "ord"  # Chicago - L40S GPU available
 
   [[services.http_checks]]
     interval = "10s"
-    timeout = "5s"
-    grace_period = "30s"
+    timeout = "10s"
+    grace_period = "300s"  # 5 minutes - first startup can take time to download models
     method = "GET"
     path = "/"
     protocol = "http"

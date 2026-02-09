@@ -19,6 +19,7 @@ WORKDIR /app/moshi/
 COPY moshi/ /app/moshi/
 RUN uv venv /app/moshi/.venv --python 3.12
 RUN uv sync
+# Note: Triton is now included in pyproject.toml dependencies for torch.compile support
 
 RUN mkdir -p /app/ssl
 
