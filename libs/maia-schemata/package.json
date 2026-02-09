@@ -11,7 +11,9 @@
     "./co-id-generator": "./src/co-id-generator.js",
     "./schema-transformer": "./src/schema-transformer.js",
     "./expression-resolver": "./src/expression-resolver.js",
-    "./co-types.defs.json": "./src/co-types.defs.json"
+    "./payload-resolver": "./src/payload-resolver.js",
+    "./co-types.defs.json": "./src/co-types.defs.json",
+    "./os/meta.schema.json": "./src/os/meta.schema.json"
   },
   "dependencies": {
     "ajv": "^8.12.0"

@@ -4,65 +4,130 @@
  * Adapted from jazz-run's startSyncServer for Bun.
  * Uses Bun's native WebSocket API instead of Node.js ws library.
  * Supports PGlite (PostgreSQL) for persistent storage.
+ * 
+ * DRY: Uses kernel bundle for account handling (single source of truth)
+ * The sync server is effectively an agent account that participates in the system.
+ * Sync service uses ONLY agent mode functions (createAgentAccount, loadAgentAccount) - no passkey/human mode.
  */
 
-import { LocalNode } from 'cojson';
-import { WasmCrypto } from 'cojson/crypto/WasmCrypto';
 import { createWebSocketPeer } from 'cojson-transport-ws';
-import { StorageApiAsync } from 'cojson/dist/storage/storageAsync.js';
-import { createPGliteAdapter } from './pglite-adapter.js';
+// Import from kernel bundle (workspace import in dev, bundle in Docker)
+// In dev: workspace import resolves to @MaiaOS/kernel
+// In Docker: bundle is copied to node_modules/@MaiaOS/kernel/dist/ and package.json exports handle it
+import { createAgentAccount, loadAgentAccount } from '@MaiaOS/kernel';
 
 /**
  * Create a sync server handler for Bun.serve()
  * 
+ * DRY: Uses @MaiaOS/self for account handling (single source of truth)
+ * The sync server is an agent account that participates in the CoJSON network.
+ * 
  * @param {Object} options - Server options
  * @param {boolean} [options.inMemory=true] - Use in-memory storage (default: true)
- * @param {string} [options.dbPath] - Database path (ignored if inMemory=true)
- * @param {CryptoProvider} [options.crypto] - Crypto provider (default: WasmCrypto)
+ * @param {string} [options.dbPath] - Database path for PGlite (ignored if inMemory=true)
+ * @param {string} [options.accountID] - Sync server account ID (from env var or generated)
+ * @param {string} [options.agentSecret] - Sync server agent secret (from env var or generated)
  * @returns {Promise<Object>} WebSocket handler object for Bun.serve()
  */
 export async function createSyncServer(options = {}) {
   const { 
     inMemory = true, 
-    dbPath, 
-    crypto: providedCrypto 
+    dbPath,
+    accountID: providedAccountID,
+    agentSecret: providedAgentSecret
   } = options;
-
-  // Initialize crypto
-  const crypto = providedCrypto || await WasmCrypto.create();
-
-  // Create agent secret and session ID
-  const agentSecret = crypto.newRandomAgentSecret();
-  const agentID = crypto.getAgentID(agentSecret);
-  const sessionID = crypto.newRandomSessionID(agentID);
-
-  // Create LocalNode
-  const localNode = new LocalNode(
-    agentSecret,
-    sessionID,
-    crypto
-  );
-
-  // Set up storage
-  let storage = undefined;
   
-  if (!inMemory && dbPath) {
-    try {
-      console.log(`[sync-server] Initializing PGlite storage at ${dbPath}...`);
-      const dbClient = await createPGliteAdapter(dbPath);
-      storage = new StorageApiAsync(dbClient);
-      localNode.setStorage(storage);
-      storage.enableDeletedCoValuesErasure();
-      console.log(`[sync-server] Storage: PGlite at ${dbPath}`);
-    } catch (error) {
-      console.error('[sync-server] Failed to initialize PGlite storage:', error);
-      console.warn('[sync-server] Falling back to in-memory storage');
-      storage = undefined;
-    }
-  } else {
-    console.log(`[sync-server] Storage: in-memory (no persistence)`);
-  }
+  // Get sync storage type from env (for passing to account functions)
+  const SYNC_STORAGE = (typeof process !== 'undefined' && process.env?.SYNC_MAIA_STORAGE) || 'pglite';
 
+  // Get sync server credentials from options or service-specific environment variables
+  // Priority: options > SYNC_MAIA_* env vars > error (no fallback generation)
+  const accountID = providedAccountID || 
+                    (typeof process !== 'undefined' && process.env?.SYNC_MAIA_AGENT_ACCOUNT_ID) ||
+                    null;
+  const agentSecret = providedAgentSecret ||
+                      (typeof process !== 'undefined' && process.env?.SYNC_MAIA_AGENT_SECRET) ||
+                      null;
+
+  // Load or create sync server account using centralized @MaiaOS/self
+  // DRY: Single source of truth for all account handling
+  // The sync server is an agent account that participates in the CoJSON network
+  // Note: Sync server doesn't connect to other sync servers (it IS the sync server)
+  // STRICT: Credentials MUST be provided via env vars - no fallback generation
+  
+  // Require credentials from service-specific environment variables (explicit configuration only)
+  if (!accountID || !agentSecret) {
+    throw new Error(
+      'Sync server requires SYNC_MAIA_AGENT_ACCOUNT_ID and SYNC_MAIA_AGENT_SECRET environment variables. ' +
+      'Run `bun agent:generate --service sync` to generate credentials, then set SYNC_MAIA_AGENT_ACCOUNT_ID and SYNC_MAIA_AGENT_SECRET in your .env file.'
+    );
+  }
+  
+  // Load or create sync server account using kernel bundle (single source of truth)
+  // DRY: Single source of truth for all account handling via kernel bundle
+  // The sync server is an agent account that participates in the CoJSON network
+  // Note: Sync server doesn't connect to other sync servers (it IS the sync server)
+  // STRICT: Credentials MUST be provided via env vars - no fallback generation
+  // Uses ONLY agent mode functions (createAgentAccount, loadAgentAccount) from kernel bundle
+  // Pass dbPath and inMemory for PGlite storage configuration
+  
+  let localNode, account;
+  try {
+    console.log('[sync-server] Loading sync server account from credentials...');
+    console.log('[sync-server] Note: If you see "Account unavailable from all peers" below, this is expected on first run.');
+    const loadResult = await loadAgentAccount({
+      accountID,
+      agentSecret,
+      syncDomain: null, // Sync server doesn't connect to other sync servers
+      servicePrefix: 'SYNC', // Use SYNC_MAIA_* env vars for storage config
+      dbPath: (!inMemory && dbPath) ? dbPath : undefined, // Pass dbPath for PGlite (from options or DB_PATH env)
+      inMemory: inMemory // Pass inMemory flag from options
+    });
+    localNode = loadResult.node;
+    account = loadResult.account;
+    console.log('[sync-server] ✓ Account loaded successfully');
+  } catch (loadError) {
+    // Check if error is "Account unavailable from all peers" - means account doesn't exist yet
+    // This is OK for first-time setup - create the account using provided env vars
+    const errorMessage = loadError?.message || String(loadError);
+    const isAccountNotFound = loadError?.isAccountNotFound ||
+                             errorMessage.includes('Account unavailable from all peers') ||
+                             errorMessage.includes('unavailable from all peers') ||
+                             errorMessage.includes('Account not found in storage');
+    
+    if (isAccountNotFound) {
+      // This is expected behavior for first-time setup - account doesn't exist yet
+      // The kernel logs an error above, but that's expected - we'll create the account now
+      console.log('[sync-server] Account not found in storage (first-time setup), creating new account...');
+      console.log('[sync-server] (The error above is expected - account will be created now)');
+      try {
+        const createResult = await createAgentAccount({
+          agentSecret,
+          name: 'Maia Sync Server',
+          syncDomain: null, // Sync server doesn't connect to other sync servers
+          servicePrefix: 'SYNC', // Use SYNC_MAIA_* env vars for storage config
+          dbPath: (!inMemory && dbPath) ? dbPath : undefined, // Pass dbPath for PGlite (from options or DB_PATH env)
+          inMemory: inMemory // Pass inMemory flag from options
+        });
+        localNode = createResult.node;
+        account = createResult.account;
+        console.log('[sync-server] ✓ Account created successfully');
+      } catch (createError) {
+        console.error('[sync-server] ✗ Failed to create account:', createError?.message || String(createError));
+        console.error('[sync-server] ✗ Create error stack:', createError?.stack);
+        throw createError;
+      }
+    } else {
+      // Other errors (wrong credentials, etc.) - re-throw
+      console.error('[sync-server] ✗ Failed to load account:', errorMessage);
+      throw loadError;
+    }
+  }
+  
+  // Storage is handled internally by loadAgentAccount/createAgentAccount
+  // They use SYNC_MAIA_STORAGE env var (defaults to pglite) via servicePrefix
+  // Storage configuration (inMemory, dbPath) is determined by the storage adapter
+  
   // Enable garbage collector
   localNode.enableGarbageCollector();
 

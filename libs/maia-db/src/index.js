@@ -18,7 +18,7 @@ export { createGroup, createProfile } from "./cojson/groups/create.js";
 export { createCoMap } from "./cojson/cotypes/coMap.js";
 export { createCoList } from "./cojson/cotypes/coList.js";
 export { createCoStream } from "./cojson/cotypes/coStream.js";
-export { createSchemaMeta, hasSchema, getSchema } from "./schemas/registry.js";
+export { createSchemaMeta, hasSchema, getSchema, getAllSchemas } from "./schemas/registry.js";
 export { schemaMigration } from "./migrations/schema.migration.js";
 
 // Unified cache (subscriptions, stores, resolutions, resolved data)
@@ -59,3 +59,6 @@ export {
   resolveQueryReactive,
   waitForReactiveResolution
 } from "./cojson/crud/reactive-resolver.js";
+
+// Sync Peer Setup (client-side peer configuration for LocalNode)
+export { setupSyncPeers, subscribeSyncState } from "./cojson/peers/sync-peers.js";

@@ -14,13 +14,14 @@ import {
 	signInWithPasskey, 
 	signUpWithPasskey, 
 	isPRFSupported, 
-	subscribeSyncState
+	subscribeSyncState,
+	loadAgentAccount,
+	createAgentAccount
 } from "@MaiaOS/kernel";
 import { getAllVibeRegistries } from "@MaiaOS/vibes";
 import { renderApp } from './db-view.js';
 import { renderLandingPage } from './landing.js';
 import { renderSignInPrompt, renderUnsupportedBrowser } from './signin.js';
-import { renderAgentChat } from './agent.js';
 
 let maia;
 let currentScreen = 'dashboard'; // Current screen: 'dashboard' | 'db-viewer' | 'vibe-viewer'
@@ -154,7 +155,8 @@ async function handleRoute() {
 		}
 	} else if (path === '/me' || path === '/dashboard') {
 		// If authenticated, show dashboard; otherwise redirect to signin
-		if (authState.signedIn && maia) {
+		// In agent mode, always show dashboard (no signin required)
+		if (detectMode() === 'agent' || (authState.signedIn && maia)) {
 			// Both auth state and maia are ready - show dashboard
 			try {
 				await renderAppInternal();
@@ -194,9 +196,6 @@ async function handleRoute() {
 			console.log("   → Not signed in, redirecting to /signin");
 			navigateTo('/signin');
 		}
-	} else if (path === '/agent') {
-		// Agent chat interface (open, no auth required)
-		renderAgentChat();
 	} else {
 		// Default route: landing page
 		// If already authenticated, redirect to dashboard
@@ -209,20 +208,154 @@ async function handleRoute() {
 	}
 }
 
+/**
+ * Detect operational mode from service-specific environment variables
+ * maia-city defaults to human mode (client frontend)
+ * @returns {'human' | 'agent'} Operational mode
+ */
+function detectMode() {
+	// Service-specific env vars: CITY_MAIA_MODE (for maia-city service)
+	const mode = (typeof import.meta !== 'undefined' && import.meta.env?.CITY_MAIA_MODE) ||
+	             (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CITY_MAIA_MODE) ||
+	             'human'; // Default to human mode for client frontend
+	return mode === 'agent' ? 'agent' : 'human';
+}
+
 async function init() {
 	try {
-		// Handle initial route
-		await handleRoute();
+		// Check if we're in agent mode
+		const mode = detectMode();
 		
-		// Listen for browser back/forward navigation
-		window.addEventListener('popstate', () => {
-			handleRoute().catch((error) => {
-				console.error("Route handling error:", error);
+		if (mode === 'agent') {
+			// Agent mode: automatically load/create account and boot MaiaOS
+			await initAgentMode();
+		} else {
+			// Human mode: use existing passkey flow
+			// Handle initial route
+			await handleRoute();
+			
+			// Listen for browser back/forward navigation
+			window.addEventListener('popstate', () => {
+				handleRoute().catch((error) => {
+					console.error("Route handling error:", error);
+				});
 			});
-		});
+		}
 	} catch (error) {
 		console.error("Failed to initialize:", error);
 		showToast("Failed to initialize: " + error.message, 'error', 10000);
+	}
+}
+
+/**
+ * Initialize agent mode
+ * Automatically loads or creates account using static credentials from env vars
+ */
+async function initAgentMode() {
+	try {
+		console.log('🤖 [AGENT MODE] Initializing agent mode...');
+		
+		// Get credentials from service-specific environment variables
+		const accountID = import.meta.env?.CITY_MAIA_AGENT_ACCOUNT_ID || import.meta.env?.VITE_CITY_MAIA_AGENT_ACCOUNT_ID;
+		const agentSecret = import.meta.env?.CITY_MAIA_AGENT_SECRET || import.meta.env?.VITE_CITY_MAIA_AGENT_SECRET;
+		
+		if (!accountID || !agentSecret) {
+			throw new Error(
+				'Agent mode requires CITY_MAIA_AGENT_ACCOUNT_ID and CITY_MAIA_AGENT_SECRET environment variables. ' +
+				'Run `bun agent:generate --service city` to generate credentials.'
+			);
+		}
+		
+		// Determine sync domain
+		const syncDomain = getSyncDomain();
+		
+		// Try to load existing account, create if it doesn't exist
+		// Use CITY service prefix for storage configuration
+		let agentResult;
+		try {
+			console.log('🤖 [AGENT MODE] Loading agent account...');
+			agentResult = await loadAgentAccount({
+				accountID,
+				agentSecret,
+				syncDomain: syncDomain || null,
+				servicePrefix: 'CITY' // Use CITY_MAIA_* env vars for storage
+			});
+		} catch (loadError) {
+			// If account doesn't exist, create it
+			console.log('🤖 [AGENT MODE] Account not found, creating new agent account...');
+			agentResult = await createAgentAccount({
+				agentSecret,
+				name: 'Maia Agent',
+				syncDomain: syncDomain || null,
+				servicePrefix: 'CITY' // Use CITY_MAIA_* env vars for storage
+			});
+		}
+		
+		const { node, account } = agentResult;
+		
+		// Boot MaiaOS with agent account
+		maia = await MaiaOS.boot({ 
+			node, 
+			account,
+			mode: 'agent', // Explicitly set mode
+			syncDomain, // Pass sync domain to kernel
+			modules: ['db', 'core', 'agent'] // Include all modules
+		});
+		window.maia = maia;
+		
+		// Set auth state
+		authState = {
+			signedIn: true,
+			accountID: account.id,
+		};
+		
+		// Subscribe to sync state changes
+		try {
+			unsubscribeSync = subscribeSyncState((state) => {
+				const stateChanged = JSON.stringify(syncState) !== JSON.stringify(state);
+				syncState = state;
+				
+				if (stateChanged && !isRendering) {
+					if (syncStateRenderTimeout) {
+						clearTimeout(syncStateRenderTimeout);
+					}
+					syncStateRenderTimeout = setTimeout(() => {
+						if (!isRendering) {
+							renderAppInternal();
+						}
+					}, 100);
+				}
+			});
+		} catch (syncError) {
+			console.error("⚠️ Sync subscription failed (non-fatal):", syncError);
+		}
+		
+		// Start with dashboard screen
+		currentScreen = 'dashboard';
+		currentContextCoValueId = null;
+		
+		// Navigate to /me
+		window.history.pushState({}, '', '/me');
+		await handleRoute();
+		
+		// Load linked CoValues in background
+		loadLinkedCoValues().catch((error) => {
+			console.error("⚠️ Failed to load linked CoValues (non-fatal):", error);
+		});
+		
+		console.log('🤖 [AGENT MODE] Agent mode initialized successfully');
+	} catch (error) {
+		console.error("❌ Agent mode initialization failed:", error);
+		showToast("Failed to initialize agent mode: " + error.message, 'error', 10000);
+		
+		// Show error screen
+		document.getElementById("app").innerHTML = `
+			<div style="display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; gap: 1rem;">
+				<h1 style="color: #ef4444;">Agent Mode Error</h1>
+				<p style="color: #666;">${error.message}</p>
+				<p style="color: #999; font-size: 0.875rem;">Check your environment variables and try again.</p>
+			</div>
+		`;
 	}
 }
 
@@ -715,8 +848,8 @@ async function handleSeed(seedVibesConfig = null) {
 		// Get node and account from maia
 		const { node, maiaId: account } = maia.id;
 		
-		// Get seeding config from parameter, environment variable, or default (no vibes)
-		// SEED_VIBES can be: null/undefined/[] = no vibes, "all" = all vibes, or ["todos", "maia"] = specific vibes
+		// Get seeding config from parameter, environment variable, or default ("all" = seed all vibes)
+		// SEED_VIBES can be: null/undefined = use env/default, "all" = all vibes, or ["todos", "maia"] = specific vibes
 		// Check VITE_SEED_VIBES (Vite exposes env vars with VITE_ prefix) or fallback to SEED_VIBES
 		const envVar = typeof import.meta !== 'undefined' 
 			? (import.meta.env?.VITE_SEED_VIBES || import.meta.env?.SEED_VIBES)
@@ -725,7 +858,7 @@ async function handleSeed(seedVibesConfig = null) {
 			? seedVibesConfig 
 			: (envVar
 				? (envVar === 'all' ? 'all' : envVar.split(',').map(s => s.trim()))
-				: null); // Default: no vibes
+				: 'all'); // Default: seed all vibes (changed from null to "all")
 		
 		// Automatically discover and import all vibe registries
 		const { getAllVibeRegistries, filterVibesForSeeding } = await import('@MaiaOS/vibes');

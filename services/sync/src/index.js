@@ -1,5 +1,5 @@
 /**
- * Server Service - Self-Hosted Sync Server
+ * Sync Service - Self-Hosted Sync Server
  * 
  * Thin service wrapper around @MaiaOS/sync library.
  * Provides self-hosted sync server using cojson LocalNode.
@@ -8,6 +8,13 @@
  *   ws://localhost:4203/sync - Self-hosted sync server
  * 
  * Port: 4203 (hardcoded per monorepo port assignments)
+ * 
+ * Environment Variables (service-specific prefix):
+ *   SYNC_MAIA_MODE=agent (required)
+ *   SYNC_MAIA_AGENT_ACCOUNT_ID (required)
+ *   SYNC_MAIA_AGENT_SECRET (required)
+ *   SYNC_MAIA_STORAGE=pglite (default for sync service)
+ *   DB_PATH=/data/sync.db (for Fly.io persistence)
  */
 
 // Import sync server dynamically (local in Docker, workspace in dev)
@@ -16,16 +23,30 @@ async function loadSyncServer() {
 		// Try local copy first (Docker - sync is at /app/sync/, we're at /app/src/)
 		const sync = await import('../sync/index.js');
 		return sync.createSyncServer;
-	} catch {
-		// Fallback to workspace import (dev)
-		const sync = await import('@MaiaOS/sync');
-		return sync.createSyncServer;
+	} catch (localError) {
+		// Log the error for debugging
+		console.log('[sync] Local import failed, trying workspace import:', localError.message);
+		try {
+			// Fallback to workspace import (dev)
+			const sync = await import('@MaiaOS/sync');
+			return sync.createSyncServer;
+		} catch (workspaceError) {
+			console.error('[sync] Both local and workspace imports failed');
+			console.error('[sync] Local error:', localError.message);
+			console.error('[sync] Workspace error:', workspaceError.message);
+			throw workspaceError;
+		}
 	}
 }
 
 const PORT = process.env.PORT || 4203
 // Default to local-sync.db for local development, use env var if set (e.g., '/data/sync.db' for Fly.io)
 const DB_PATH = process.env.DB_PATH || './local-sync.db'
+
+// Get sync service credentials from service-specific env vars
+const SYNC_ACCOUNT_ID = process.env.SYNC_MAIA_AGENT_ACCOUNT_ID;
+const SYNC_SECRET = process.env.SYNC_MAIA_AGENT_SECRET;
+const SYNC_STORAGE = process.env.SYNC_MAIA_STORAGE || 'pglite'; // Default to pglite for sync service
 
 // Compact startup - logs handled by dev.js
 
@@ -35,10 +56,13 @@ async function startServer() {
 		// Load sync server module
 		const createSyncServer = await loadSyncServer();
 		
-		// Initialize sync server with PGlite storage (always enabled now)
+		// Initialize sync server with service-specific credentials and storage
+		// Sync service requires SYNC_MAIA_* env vars (no fallback generation)
 		const syncServerHandler = await createSyncServer({ 
-			inMemory: false,
-			dbPath: DB_PATH 
+			inMemory: (SYNC_STORAGE === 'in-memory'),
+			dbPath: (SYNC_STORAGE === 'pglite') ? DB_PATH : undefined,
+			accountID: SYNC_ACCOUNT_ID,
+			agentSecret: SYNC_SECRET
 		})
 		
 		// Initialization complete - ready message handled by dev.js
@@ -51,7 +75,7 @@ async function startServer() {
 
 				// Health check endpoint
 				if (url.pathname === '/health') {
-					return new Response(JSON.stringify({ status: 'ok', service: 'server' }), {
+					return new Response(JSON.stringify({ status: 'ok', service: 'sync' }), {
 						headers: { 'Content-Type': 'application/json' },
 					})
 				}
@@ -82,7 +106,7 @@ async function startServer() {
 
 		// Service ready - message handled by dev.js logger
 	} catch (error) {
-		console.error('[server] ✗ Failed to initialize:', error.message)
+		console.error('[sync] ✗ Failed to initialize:', error.message)
 		process.exit(1)
 	}
 }

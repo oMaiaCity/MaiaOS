@@ -16,7 +16,7 @@ const rootDir = resolve(__dirname, '..')
 
 let maiaCityProcess = null
 let apiProcess = null
-let serverProcess = null
+let syncProcess = null
 let docsWatcherProcess = null
 let assetSyncProcess = null
 let faviconProcess = null
@@ -27,7 +27,7 @@ const serviceStatus = {
 	assets: false,
 	docs: false,
 	api: false,
-	server: false,
+	sync: false,
 	'maia-city': false,
 }
 
@@ -94,7 +94,7 @@ function processOutput(service, data, isError = false) {
 		}
 		
 		// Server/API ready messages
-		if (trimmed.includes('running on port') || trimmed.includes('Server service running')) {
+		if (trimmed.includes('running on port') || trimmed.includes('Sync service running')) {
 			const portMatch = trimmed.match(/port\s+(\d+)/i) || trimmed.match(/:(\d+)/)
 			if (portMatch && !serviceStatus[service]) {
 				const port = portMatch[1]
@@ -122,7 +122,7 @@ function processOutput(service, data, isError = false) {
 
 function checkAllReady() {
 	// Main services that need to be ready
-	const mainServices = ['api', 'server', 'maia-city']
+	const mainServices = ['api', 'sync', 'maia-city']
 	const mainReady = mainServices.every(service => serviceStatus[service] === true)
 	
 	// Helper services (nice to have but not critical)
@@ -254,17 +254,17 @@ function startApi() {
 	})
 }
 
-function startServer() {
-	const logger = createLogger('server')
+function startSync() {
+	const logger = createLogger('sync')
 	logger.status('Starting...')
 	
-	// Check for port conflicts and kill existing server processes
+	// Check for port conflicts and kill existing sync processes
 	try {
 		const portCheck = execSync(`lsof -ti:4203 2>/dev/null | head -1`, { encoding: 'utf-8' }).trim()
 		if (portCheck) {
 			const processInfo = execSync(`ps -p ${portCheck} -o command= 2>/dev/null`, { encoding: 'utf-8' }).trim()
-			if (processInfo && (processInfo.includes('bun') || processInfo.includes('server') || processInfo.includes('src/index.ts'))) {
-				// It's a bun/server process - kill it automatically
+			if (processInfo && (processInfo.includes('bun') || processInfo.includes('sync') || processInfo.includes('src/index.js'))) {
+				// It's a bun/sync process - kill it automatically
 				try {
 					execSync(`kill ${portCheck} 2>/dev/null`, { timeout: 2000 })
 					setTimeout(() => {}, 500)
@@ -284,26 +284,26 @@ function startServer() {
 		// Port is free or check failed - continue
 	}
 
-	serverProcess = spawn('bun', ['--env-file=.env', '--filter', 'server', 'dev'], {
+	syncProcess = spawn('bun', ['--env-file=.env', '--filter', 'sync', 'dev'], {
 		cwd: rootDir,
 		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,
 		env: { ...process.env },
 	})
 	
-	serverProcess.stdout.on('data', (data) => {
-		processOutput('server', data)
+	syncProcess.stdout.on('data', (data) => {
+		processOutput('sync', data)
 	})
 	
-	serverProcess.stderr.on('data', (data) => {
-		processOutput('server', data, true)
+	syncProcess.stderr.on('data', (data) => {
+		processOutput('sync', data, true)
 	})
 
-	serverProcess.on('error', (_error) => {
-		// Non-fatal - server service is optional
+	syncProcess.on('error', (_error) => {
+		// Non-fatal - sync service is optional
 	})
 
-	serverProcess.on('exit', (code) => {
+	syncProcess.on('exit', (code) => {
 		if (code !== 0 && code !== null) {
 			// Non-fatal
 		}
@@ -451,8 +451,8 @@ function setupSignalHandlers() {
 		if (docsWatcherProcess && !docsWatcherProcess.killed) {
 			docsWatcherProcess.kill('SIGTERM')
 		}
-		if (serverProcess && !serverProcess.killed) {
-			serverProcess.kill('SIGTERM')
+		if (syncProcess && !syncProcess.killed) {
+			syncProcess.kill('SIGTERM')
 		}
 		if (apiProcess && !apiProcess.killed) {
 			apiProcess.kill('SIGTERM')
@@ -475,8 +475,8 @@ function setupSignalHandlers() {
 		if (docsWatcherProcess && !docsWatcherProcess.killed) {
 			docsWatcherProcess.kill('SIGTERM')
 		}
-		if (serverProcess && !serverProcess.killed) {
-			serverProcess.kill('SIGTERM')
+		if (syncProcess && !syncProcess.killed) {
+			syncProcess.kill('SIGTERM')
 		}
 		if (apiProcess && !apiProcess.killed) {
 			apiProcess.kill('SIGTERM')
@@ -500,7 +500,7 @@ async function main() {
 		startAssetSync()
 		startDocsWatcher()
 		startApi()
-		startServer()
+		startSync()
 		await startMaiaCity()
 	}, 1000)
 

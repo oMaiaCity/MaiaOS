@@ -19,13 +19,14 @@
     "@MaiaOS/self": "workspace:*",
     "@MaiaOS/script": "workspace:*",
     "@MaiaOS/schemata": "workspace:*",
-    "@MaiaOS/operations": "workspace:*"
+    "@MaiaOS/operations": "workspace:*",
+    "@MaiaOS/tools": "workspace:*"
   },
   "devDependencies": {
     "vite": "^7.2.4"
   },
   "scripts": {
-    "build": "vite build",
+    "build": "vite build --logLevel warn 2>&1 || (echo 'Vite build failed' && exit 1)",
     "build:watch": "vite build --watch"
   }
 }

@@ -1,6 +1,6 @@
 #!/bin/bash
 # Deploy script for maia-city
-# No build secrets needed - server service handles sync API key
+# No build secrets needed - sync service handles sync API key
 
 set -e
 
@@ -20,18 +20,56 @@ retry_flyctl_deploy() {
   while [ $retry_count -lt $max_retries ]; do
     echo "Attempt $((retry_count + 1))/$max_retries: Deploying $app_name..."
     
-    if flyctl deploy \
+    # VITE_SEED_VIBES defaults to "all" in Dockerfile (seeds all vibes)
+    # To override, pass --build-arg VITE_SEED_VIBES="todos,maia" manually
+    # Or set as Fly.io secret and it will be available as env var (but needs build-time injection)
+    # For now, default to "all" - users can override via fly.toml [build] section if needed
+    echo "   Using VITE_SEED_VIBES=all (default - seeds all vibes)"
+    
+    # Run deploy and capture exit code
+    flyctl deploy \
       --dockerfile "$dockerfile" \
       --config "$config" \
       --app "$app_name" \
-      --wait-timeout 600 2>&1 | tee /tmp/flyctl-deploy.log; then
-      if flyctl status --app "$app_name" > /dev/null 2>&1; then
-        echo "✅ Deployment verified: $app_name is running"
-        return 0
+      --wait-timeout 600 2>&1 | tee /tmp/flyctl-deploy.log
+    
+    local deploy_exit_code=${PIPESTATUS[0]}
+    
+    # Check if deployment command succeeded FIRST
+    if [ $deploy_exit_code -eq 0 ]; then
+      # Deployment succeeded - verify it's actually running
+      # (Don't check for build errors here - if exit code is 0, deployment worked)
+      # Verify app is actually running and healthy
+      echo "Checking deployment status..."
+      local status_output=$(flyctl status --app "$app_name" 2>&1)
+      if [ $? -eq 0 ] && echo "$status_output" | grep -qE "running|started"; then
+        # Check if machines are healthy
+        local machines_output=$(flyctl machines list --app "$app_name" 2>&1)
+        if echo "$machines_output" | grep -qE "started|running"; then
+          echo "✅ Deployment verified: $app_name is running"
+          return 0
+        else
+          echo "⚠️  App exists but no healthy machines found"
+          echo "$machines_output"
+          return 1
+        fi
+      else
+        echo "⚠️  Deployment command succeeded but app is not running"
+        echo "$status_output"
+        return 1
+      fi
+    else
+      # Deployment failed - check for specific error types
+      if grep -qiE "Build failed|error during build|failed to build|build.*failed" /tmp/flyctl-deploy.log 2>/dev/null; then
+        echo "❌ Build failed detected in deployment log"
+        echo "Last 30 lines of build output:"
+        tail -30 /tmp/flyctl-deploy.log
+        return 1
       fi
     fi
 
-    if grep -q "EOF\|connection\|timeout" /tmp/flyctl-deploy.log 2>/dev/null; then
+    # Check if it's a network error (retryable)
+    if grep -qE "EOF|connection|timeout|network" /tmp/flyctl-deploy.log 2>/dev/null; then
       retry_count=$((retry_count + 1))
       if [ $retry_count -lt $max_retries ]; then
         echo "⚠️  Network/EOF error detected. Waiting ${wait_time}s before retry..."
@@ -40,14 +78,11 @@ retry_flyctl_deploy() {
       fi
     else
       echo "❌ Non-network error detected. Stopping retries."
+      echo "Last 20 lines of output:"
+      tail -20 /tmp/flyctl-deploy.log
       return 1
     fi
   done
-
-  if flyctl status --app "$app_name" > /dev/null 2>&1; then
-    echo "✅ Deployment actually succeeded despite errors! App is running."
-    return 0
-  fi
 
   echo "❌ Deployment failed after $max_retries attempts"
   return 1
@@ -59,6 +94,15 @@ echo ""
 
 cd "$MONOREPO_ROOT"
 
+# Build bundles first (required for Docker build)
+echo "📦 Building kernel and vibes bundles..."
+if ! bun run bundles:build; then
+  echo "❌ Failed to build bundles"
+  exit 1
+fi
+echo "✅ Bundles built successfully"
+echo ""
+
 if ! retry_flyctl_deploy \
   "next-maia-city" \
   "services/maia-city/Dockerfile" \
@@ -66,6 +110,13 @@ if ! retry_flyctl_deploy \
   echo "❌ Failed to deploy maia-city service after retries"
   exit 1
 fi
+
+# Scale to 1 machine (downgrade from 2 if needed)
+echo ""
+echo "📊 Scaling to 1 machine..."
+flyctl scale count 1 --app "next-maia-city" || {
+  echo "⚠️  Warning: Failed to scale machines (may already be at 1)"
+}
 
 echo ""
 echo "✅ Deployment complete!"
@@ -75,5 +126,8 @@ echo "⚠️  IMPORTANT: Verify PUBLIC_API_DOMAIN secret is set:"
 echo "   flyctl secrets list --app next-maia-city"
 echo ""
 echo "   If not set, sync will not work! Set it with:"
-echo "   flyctl secrets set PUBLIC_API_DOMAIN=\"api-next-maia-city.fly.dev\" --app next-maia-city"
-echo "   (or for custom domain: api.next.maia.city)"
+echo "   flyctl secrets set PUBLIC_API_DOMAIN=\"sync-next-maia-city.fly.dev\" --app next-maia-city"
+echo "   (or for custom domain: sync.next.maia.city)"
+echo ""
+echo "   Note: VITE_SEED_VIBES defaults to \"all\" (seeds all vibes automatically)"
+echo "   To override: flyctl deploy --build-arg VITE_SEED_VIBES=\"todos,maia\" --app next-maia-city"

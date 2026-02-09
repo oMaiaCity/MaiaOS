@@ -1,10 +1,10 @@
-# Server Service
+# Sync Service
 
-Self-hosted sync server using cojson LocalNode for reliable, direct sync without external dependencies.
+Self-hosted sync service using cojson LocalNode for reliable, direct sync without external dependencies.
 
 ## Architecture
 
-The server service provides a self-hosted sync server:
+The sync service provides a self-hosted sync server:
 - **Client** connects to: `ws://localhost:4203/sync` (or production domain)
 - **Service** uses cojson LocalNode to handle sync protocol directly
 - **Service** stores all CoValue transactions in SQLite database
@@ -29,11 +29,11 @@ The sync server logic is implemented in `@MaiaOS/sync` library (`libs/maia-sync/
 ## Development
 
 ```bash
-# Run server service
-bun dev:server
+# Run sync service
+bun dev:sync
 
 # Or from root
-bun --env-file=.env --filter server dev
+bun --env-file=.env --filter sync dev
 ```
 
 ## Endpoints
@@ -43,13 +43,15 @@ bun --env-file=.env --filter server dev
 
 ## Client Usage
 
-Clients connect via `@MaiaOS/self` library, which automatically connects to the sync server:
+Clients connect via kernel bundle, which automatically connects to the sync server:
 
 ```javascript
-import { signUpWithPasskey } from '@MaiaOS/self'
+import { signUpWithPasskey, setupSyncPeers, subscribeSyncState } from '@MaiaOS/kernel'
 
 // Sync server is used automatically - no API key needed
 const { node, account } = await signUpWithPasskey()
+
+// Peer setup and sync state are handled automatically via kernel bundle
 ```
 
 The client determines the sync server URL based on:
@@ -66,7 +68,7 @@ The sync server uses **PGlite (PostgreSQL-compatible) storage** for persistence:
 
 ## How It Works
 
-1. **Server-side LocalNode**: Creates a LocalNode instance without an account (server is relay, not participant)
+1. **Sync Service LocalNode**: Creates a LocalNode instance with an agent account (sync service is a participant in the CoJSON network)
 2. **PGlite Storage**: Uses PGlite (PostgreSQL-compatible) for persistent storage of all CoValue transactions
 3. **WebSocket Peers**: Each client connection creates a peer via `createWebSocketPeer`
 4. **Automatic Sync**: cojson's `SyncManager` handles all sync protocol automatically
@@ -74,6 +76,21 @@ The sync server uses **PGlite (PostgreSQL-compatible) storage** for persistence:
 
 ## Deployment
 
-Deploy the server service separately from the frontend. The frontend connects to it via WebSocket.
+Deploy the sync service separately from the frontend. The frontend connects to it via WebSocket.
+
+## Environment Variables
+
+The sync service uses service-specific environment variable prefixes:
+
+- `SYNC_MAIA_MODE=agent` (required)
+- `SYNC_MAIA_AGENT_ACCOUNT_ID` (required)
+- `SYNC_MAIA_AGENT_SECRET` (required)
+- `SYNC_MAIA_STORAGE=pglite` (default, for persistence)
+- `DB_PATH=/data/sync.db` (for Fly.io persistence)
+
+Generate credentials using:
+```bash
+bun agent:generate --service sync
+```
 
 **Note**: Uses PGlite for persistent storage. All data persists across server restarts. For production, deploy with a Fly.io volume mounted at `/data`.

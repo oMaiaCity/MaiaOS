@@ -1,16 +1,16 @@
-# Fly.io configuration for server service
-app = "api-next-maia-city"
+# Fly.io configuration for sync service
+app = "sync-next-maia-city"
 org = "maia-city"
 primary_region = "fra"
 
 # IMPORTANT: Single machine deployment required for PGlite volume persistence
 # PGlite uses a single volume mounted at /data - multiple machines would cause data inconsistency
-# To enforce single machine: flyctl scale count 1 --app api-next-maia-city
+# To enforce single machine: flyctl scale count 1 --app sync-next-maia-city
 # Note: Machine count is managed via flyctl scale, not in this config file
 
 [build]
-  # Build from monorepo root with Dockerfile in services/server/
-  # Use: flyctl deploy --dockerfile services/server/Dockerfile --config services/server/fly.toml
+  # Build from monorepo root with Dockerfile in services/sync/
+  # Use: flyctl deploy --dockerfile services/sync/Dockerfile --config services/sync/fly.toml
   # Note: dockerfile path must be specified via --dockerfile flag (relative to root)
 
 [env]
@@ -27,6 +27,11 @@ primary_region = "fra"
   protocol = "tcp"
   processes = ["app"]
 
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 1000
+    soft_limit = 500
+
   [[services.ports]]
     handlers = ["http"]
     port = 80
@@ -35,11 +40,6 @@ primary_region = "fra"
   [[services.ports]]
     handlers = ["tls", "http"]
     port = 443
-
-  [services.concurrency]
-    type = "connections"
-    hard_limit = 1000
-    soft_limit = 500
 
   [[services.http_checks]]
     interval = "10s"

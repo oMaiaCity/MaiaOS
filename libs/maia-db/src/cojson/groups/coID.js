@@ -8,6 +8,7 @@ import { LocalNode } from "cojson";
 import { WasmCrypto } from "cojson/crypto/WasmCrypto";
 import { schemaMigration } from "../../migrations/schema.migration.js";
 import { seed } from "../schema/seed.js";
+import { getStorage } from "@MaiaOS/storage";
 
 /**
  * Create a new MaiaID (Account) with provided agentSecret
@@ -23,13 +24,15 @@ import { seed } from "../schema/seed.js";
  * @param {Object} [options.storage] - Storage instance (optional, defaults to undefined)
  * @returns {Promise<{node, account, accountID, profile, group}>}
  */
-export async function createAccountWithSecret({ agentSecret, name = "Maia", peers = [], storage = undefined }) {
+export async function createAccountWithSecret({ agentSecret, name = "Maia", peers = [], storage = undefined, skipAutoSeeding = false }) {
 	if (!agentSecret) {
 		throw new Error("agentSecret is required. Use signInWithPasskey() to get agentSecret.");
 	}
 
 	const crypto = await WasmCrypto.create();
 	
+	// Use centralized storage if not provided
+	const finalStorage = storage !== undefined ? storage : await getStorage({ mode: 'human' });
 	
 	// Create Account with schemaMigration
 	// schemaMigration handles profile during creation and schemata/Data on load
@@ -38,7 +41,7 @@ export async function createAccountWithSecret({ agentSecret, name = "Maia", peer
 		crypto,
 		initialAgentSecret: agentSecret,  // Use provided secret from passkey!
 		peers: peers,  // Use provided sync peers
-		storage: storage,  // Use provided storage (if any)
+		storage: finalStorage,  // Use centralized storage if not provided
 		migration: schemaMigration,  // Handles profile + schemata + Data
 	});
 	
@@ -53,17 +56,19 @@ export async function createAccountWithSecret({ agentSecret, name = "Maia", peer
 	// Auto-seeding (auto-dosoding): Seed schemas, tools, and vibes automatically on account creation
 	// This runs once on new account signup, idempotency check ensures it doesn't run again
 	// Works exactly like manual seed button - replicates the exact same seeding flow
+	// NOTE: Skip for agent mode/server accounts (sync server, etc.) - they don't need vibes/views
 	// NOTE: This runs client-side only (browser), so we use import.meta.env (Vite) not process.env (Node.js)
-	try {
-		// Get seeding config from environment variable (default: no vibes)
-		// VITE_SEED_VIBES can be: null/undefined/[] = no vibes, "all" = all vibes, or "todos,maia" = specific vibes
+	if (!skipAutoSeeding) {
+		try {
+		// Get seeding config from environment variable (default: "all" = seed all vibes)
+		// VITE_SEED_VIBES can be: null/undefined = use default "all", "all" = all vibes, or "todos,maia" = specific vibes
 		// Check VITE_SEED_VIBES (Vite exposes env vars with VITE_ prefix) or fallback to SEED_VIBES
 		const envVar = typeof import.meta !== 'undefined' 
 			? (import.meta.env?.VITE_SEED_VIBES || import.meta.env?.SEED_VIBES)
 			: null;
 		const seedVibesConfig = envVar
 			? (envVar === 'all' ? 'all' : envVar.split(',').map(s => s.trim()))
-			: null; // Default: no vibes
+			: 'all'; // Default: seed all vibes (changed from null to "all")
 		
 		// Get vibe registries (same as manual seed button)
 		const { getAllVibeRegistries, filterVibesForSeeding } = await import('@MaiaOS/vibes');
@@ -142,10 +147,13 @@ export async function createAccountWithSecret({ agentSecret, name = "Maia", peer
 			data: mergedConfigs.data || {}
 		});
 		
-		// Auto-seeding complete
-	} catch (error) {
-		// Don't fail account creation if seeding fails - log error but continue
-		console.error('[createAccountWithSecret] Auto-seeding failed (non-blocking):', error);
+			// Auto-seeding complete
+		} catch (error) {
+			// Don't fail account creation if seeding fails - log error but continue
+			console.error('[createAccountWithSecret] Auto-seeding failed (non-blocking):', error);
+		}
+	} else {
+		console.log('ℹ️  Auto-seeding skipped (agent mode/server account)');
 	}
 	
 	return {
@@ -179,6 +187,9 @@ export async function loadAccount({ accountID, agentSecret, peers = [], storage 
 	}
 
 	const crypto = await WasmCrypto.create();
+	
+	// Use centralized storage if not provided
+	const finalStorage = storage !== undefined ? storage : await getStorage({ mode: 'human' });
 	
 	// Performance tracking - start timing immediately
 	const loadStartTime = performance.now();
@@ -242,8 +253,21 @@ export async function loadAccount({ accountID, agentSecret, peers = [], storage 
 		accountSecret: agentSecret,
 		sessionID: crypto.newRandomSessionID(accountID),
 		peers: peers,  // Use provided sync peers (sync happens in background if storage has data)
-		storage: storage,  // Use provided storage (if any) - enables local-first loading
+		storage: finalStorage,  // Use centralized storage if not provided - enables local-first loading
 		migration: deferredMigration,  // ← Runs after account loads, non-blocking
+	}).catch(error => {
+		// Check if this is the expected "account doesn't exist" error
+		// For agent mode with no peers (like sync server), this is expected on first run
+		if (error?.message?.includes('Account unavailable from all peers') && peers.length === 0 && finalStorage) {
+			// This is expected - account doesn't exist in storage yet, will be created by caller
+			// Re-throw with a clearer message and flag
+			const accountNotFoundError = new Error('Account not found in storage (first-time setup - will be created)');
+			accountNotFoundError.originalError = error;
+			accountNotFoundError.isAccountNotFound = true;
+			throw accountNotFoundError;
+		}
+		// Other errors - re-throw as-is
+		throw error;
 	});
 	
 	// Race against timeout - log warning if slow, but don't fail

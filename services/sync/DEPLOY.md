@@ -1,6 +1,6 @@
-# Server Service Deployment Guide
+# Sync Service Deployment Guide
 
-Deployment guide for the self-hosted sync server service on Fly.io.
+Deployment guide for the self-hosted sync service on Fly.io.
 
 ## Prerequisites
 
@@ -14,7 +14,7 @@ Deployment guide for the self-hosted sync server service on Fly.io.
 
 ```bash
 cd /path/to/MaiaOS
-flyctl apps create api-next-maia-city --org maia-city
+flyctl apps create sync-next-maia-city --org maia-city
 ```
 
 ### 2. Create Volume for PGlite Persistence
@@ -22,7 +22,7 @@ flyctl apps create api-next-maia-city --org maia-city
 Create a volume to persist PGlite database data:
 
 ```bash
-flyctl volumes create sync_data --app api-next-maia-city --region fra --size 3
+flyctl volumes create sync_data --app sync-next-maia-city --region fra --size 3
 ```
 
 **Notes:**
@@ -38,9 +38,9 @@ If you want to use a custom domain:
 
 ```bash
 # Add custom domain
-flyctl certs create api.next.maia.city --app api-next-maia-city
+flyctl certs create sync.next.maia.city --app sync-next-maia-city
 
-# Or use Fly.io domain (api-next-maia-city.fly.dev)
+# Or use Fly.io domain (sync-next-maia-city.fly.dev)
 ```
 
 ## Deployment
@@ -49,13 +49,13 @@ flyctl certs create api.next.maia.city --app api-next-maia-city
 
 ```bash
 cd /path/to/MaiaOS
-flyctl deploy --dockerfile services/server/Dockerfile --config services/server/fly.toml --app api-next-maia-city
+flyctl deploy --dockerfile services/sync/Dockerfile --config services/sync/fly.toml --app sync-next-maia-city
 ```
 
 ### Using Deployment Script
 
 ```bash
-cd services/server
+cd services/sync
 bun run deploy
 ```
 
@@ -79,13 +79,13 @@ The service uses a Fly.io volume for PGlite persistence:
 
 ```bash
 # List volumes
-flyctl volumes list --app api-next-maia-city
+flyctl volumes list --app sync-next-maia-city
 
 # Check volume status
-flyctl volumes status sync_data --app api-next-maia-city
+flyctl volumes status sync_data --app sync-next-maia-city
 
 # Extend volume size (if needed)
-flyctl volumes extend sync_data --app api-next-maia-city --size 10
+flyctl volumes extend sync_data --app sync-next-maia-city --size 10
 
 # Note: Volumes cannot be shrunk, only extended
 ```
@@ -100,9 +100,9 @@ flyctl volumes extend sync_data --app api-next-maia-city --size 10
 The service exposes a health check endpoint:
 
 ```bash
-curl https://api-next-maia-city.fly.dev/health
+curl https://sync-next-maia-city.fly.dev/health
 # or
-curl https://api.next.maia.city/health
+curl https://sync.next.maia.city/health
 ```
 
 Expected response:
@@ -114,8 +114,8 @@ Expected response:
 
 Clients connect to the self-hosted sync server via WebSocket:
 
-- **Fly.io domain**: `wss://api-next-maia-city.fly.dev/sync`
-- **Custom domain**: `wss://api.next.maia.city/sync`
+- **Fly.io domain**: `wss://sync-next-maia-city.fly.dev/sync`
+- **Custom domain**: `wss://sync.next.maia.city/sync`
 
 ## Connecting from maia-city
 
@@ -123,9 +123,9 @@ The `maia-city` service should be configured with:
 
 ```bash
 # In maia-city Fly.io app
-flyctl secrets set PUBLIC_API_DOMAIN="api-next-maia-city.fly.dev" --app next-maia-city
+flyctl secrets set PUBLIC_API_DOMAIN="sync-next-maia-city.fly.dev" --app next-maia-city
 # or for custom domain:
-flyctl secrets set PUBLIC_API_DOMAIN="api.next.maia.city" --app next-maia-city
+flyctl secrets set PUBLIC_API_DOMAIN="sync.next.maia.city" --app next-maia-city
 ```
 
 The client code in `@MaiaOS/self` will automatically use this domain to connect to the self-hosted sync server.
@@ -134,13 +134,13 @@ The client code in `@MaiaOS/self` will automatically use this domain to connect 
 
 ```bash
 # View logs
-flyctl logs --app api-next-maia-city
+flyctl logs --app sync-next-maia-city
 
 # Check status
-flyctl status --app api-next-maia-city
+flyctl status --app sync-next-maia-city
 
 # Open app
-flyctl open --app api-next-maia-city
+flyctl open --app sync-next-maia-city
 ```
 
 ## Troubleshooting
@@ -149,7 +149,7 @@ flyctl open --app api-next-maia-city
 
 Check logs:
 ```bash
-flyctl logs --app api-next-maia-city
+flyctl logs --app sync-next-maia-city
 ```
 
 ### Volume Not Mounted
@@ -158,12 +158,12 @@ If the service can't access the database:
 
 1. Verify volume exists:
    ```bash
-   flyctl volumes list --app api-next-maia-city
+   flyctl volumes list --app sync-next-maia-city
    ```
 
 2. Check volume is attached (should show in `flyctl status`):
    ```bash
-   flyctl status --app api-next-maia-city
+   flyctl status --app sync-next-maia-city
    ```
 
 3. Verify volume name matches `fly.toml`:
@@ -173,19 +173,19 @@ If the service can't access the database:
 
 4. If volume doesn't exist, create it:
    ```bash
-   flyctl volumes create sync_data --app api-next-maia-city --region fra --size 3
+   flyctl volumes create sync_data --app sync-next-maia-city --region fra --size 3
    ```
 
 5. Redeploy after creating volume:
    ```bash
-   flyctl deploy --dockerfile services/server/Dockerfile --config services/server/fly.toml --app api-next-maia-city
+   flyctl deploy --dockerfile services/sync/Dockerfile --config services/sync/fly.toml --app sync-next-maia-city
    ```
 
 ### WebSocket Connection Issues
 
 1. Check health endpoint:
    ```bash
-   curl https://api-next-maia-city.fly.dev/health
+   curl https://sync-next-maia-city.fly.dev/health
    ```
 
 3. Verify domain configuration in `maia-city`:

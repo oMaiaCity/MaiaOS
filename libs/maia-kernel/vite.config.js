@@ -14,20 +14,47 @@ export default defineConfig({
 			formats: ["es", "umd"],
 		},
 		rollupOptions: {
-			// Bundle all dependencies - no external dependencies for standalone bundle
-			// Everything should be included so users don't need to load anything separately
-			external: [],
+			// Externalize server-only dependencies (pglite is only needed in Node.js)
+			// Keep cojson bundled (needed in browser)
+			// Keep all @MaiaOS/* packages bundled
+			external: (id) => {
+				// Externalize pglite (both static and dynamic imports)
+				if (id === '@electric-sql/pglite' || id.includes('@electric-sql/pglite')) {
+					return true;
+				}
+				return false;
+			},
 			output: {
-				// No globals needed since everything is bundled
+				// Globals for external modules (UMD format only)
+				globals: {
+					'@electric-sql/pglite': 'pglite'
+				},
 				// Disable code splitting for ESM to avoid dynamic import issues
 				// All modules will be in a single file
 				inlineDynamicImports: true,
 			},
+			onwarn(warning, warn) {
+				// Suppress known harmless warnings from dependencies
+				if (
+					// TypeScript/cojson uses 'this' at top level - harmless
+					warning.code === 'THIS_IS_UNDEFINED' ||
+					// Circular dependencies in cojson are handled correctly
+					warning.code === 'CIRCULAR_DEPENDENCY' ||
+					// PGlite uses Node.js fs/path which are externalized for browser - expected
+					(warning.code === 'MISSING_EXPORT' && warning.id?.includes('pglite')) ||
+					// PGlite uses eval for WASM - acceptable for this use case
+					(warning.code === 'EVAL' && warning.id?.includes('pglite'))
+				) {
+					return; // Suppress these warnings
+				}
+				// Show other warnings
+				warn(warning);
+			}
 		},
-		// Generate source maps for debugging
-		sourcemap: true,
-		// Don't minify for now - easier to debug
-		minify: false,
+		// Generate source maps only in development
+		sourcemap: process.env.NODE_ENV === 'development',
+		// Enable minification for production builds
+		minify: 'esbuild',
 	},
 		resolve: {
 			alias: {
@@ -46,10 +73,11 @@ export default defineConfig({
 			"@MaiaOS/voice-google/client": resolve(__dirname, "../maia-voice-google/src/client/index.ts"),
 			// Resolve cojson and its subpaths for bundling
 			// Note: PureJSCrypto removed in cojson 0.20+ - only native Rust crypto (WasmCrypto) is supported
+			// Point to package root so subpaths like cojson/dist/storage work correctly
 			"cojson/crypto/WasmCrypto": resolve(__dirname, "../maia-db/node_modules/cojson/dist/crypto/WasmCrypto.js"),
-			cojson: resolve(__dirname, "../maia-db/node_modules/cojson/dist"),
+			cojson: resolve(__dirname, "../maia-db/node_modules/cojson"),
 			"cojson-storage-indexeddb": resolve(__dirname, "../maia-self/node_modules/cojson-storage-indexeddb"),
-			"cojson-transport-ws": resolve(__dirname, "../maia-self/node_modules/cojson-transport-ws"),
+			"cojson-transport-ws": resolve(__dirname, "../maia-db/node_modules/cojson-transport-ws"),
 			buffer: resolve(__dirname, "../../node_modules/buffer"),
 		},
 	},
@@ -57,6 +85,17 @@ export default defineConfig({
 		"global": "globalThis",
 	},
 	plugins: [
+		{
+			name: 'externalize-pglite-dynamic',
+			// Handle dynamic imports of pglite - mark as external so browser doesn't try to resolve
+			resolveId(id, importer) {
+				if (id === '@electric-sql/pglite' || id.includes('@electric-sql/pglite')) {
+					// Mark as external - browser will handle this at runtime (and fail gracefully)
+					return { id: id, external: true };
+				}
+				return null;
+			}
+		},
 		{
 			name: 'maia-json-loader',
 			transform(code, id) {
@@ -69,6 +108,31 @@ export default defineConfig({
 				}
 				// Vite handles .json files natively, no transformation needed
 				return null;
+			}
+		},
+		{
+			name: 'error-handler',
+			buildEnd(error) {
+				if (error) {
+					console.error('=== BUILD ERROR DETECTED ===');
+					console.error('Error:', error);
+					console.error('Error message:', error?.message || 'No message');
+					console.error('Error stack:', error?.stack || 'No stack');
+					if (error?.cause) {
+						console.error('Error cause:', error.cause);
+					}
+					console.error('=== END BUILD ERROR ===');
+				}
+			},
+			buildError(error) {
+				console.error('=== BUILD ERROR (buildError hook) ===');
+				console.error('Error:', error);
+				console.error('Error message:', error?.message || 'No message');
+				console.error('Error stack:', error?.stack || 'No stack');
+				if (error?.cause) {
+					console.error('Error cause:', error.cause);
+				}
+				console.error('=== END BUILD ERROR ===');
 			}
 		}
 	]

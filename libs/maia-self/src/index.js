@@ -7,8 +7,11 @@
 export {
 	signUpWithPasskey,
 	signInWithPasskey,
-	subscribeSyncState, // NEW: Sync state observable
+	generateAgentCredentials,
+	createAgentAccount,
+	loadAgentAccount,
 	// NO LOCALSTORAGE: Removed isSignedIn, signOut, getCurrentAccount, inspectStorage
+	// NO SYNC STATE: subscribeSyncState moved to @MaiaOS/db
 } from './self.js';
 
 export {
@@ -32,4 +35,4 @@ export {
 
 export {
 	getStorage,
-} from './storage.js';
+} from '@MaiaOS/storage';

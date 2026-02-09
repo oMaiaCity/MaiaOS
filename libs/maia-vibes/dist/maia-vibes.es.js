@@ -2653,6 +2653,32 @@ async function getAllVibeRegistries() {
   }
   return vibeRegistries;
 }
+function getVibeKey(vibe) {
+  if (!vibe) return null;
+  const originalVibeId = vibe.$id || "";
+  if (originalVibeId.startsWith("@vibe/")) {
+    return originalVibeId.replace("@vibe/", "");
+  }
+  return (vibe.name || "default").toLowerCase().replace(/\s+/g, "-");
+}
+function filterVibesForSeeding(vibeRegistries, config = null) {
+  if (config === null || config === void 0 || Array.isArray(config) && config.length === 0) {
+    return [];
+  }
+  if (config === "all") {
+    return vibeRegistries;
+  }
+  if (Array.isArray(config)) {
+    const configKeys = config.map((k) => k.toLowerCase().trim());
+    return vibeRegistries.filter((registry2) => {
+      if (!registry2.vibe) return false;
+      const vibeKey = getVibeKey(registry2.vibe);
+      return configKeys.includes(vibeKey);
+    });
+  }
+  console.warn(`[Vibes] Invalid seeding config: ${config}. Expected null, "all", or array of vibe keys.`);
+  return [];
+}
 const maiaAgentVibe = {
   "$schema": "@schema/vibe",
   "$id": "@vibe/maia",
@@ -3635,6 +3661,7 @@ export {
   MyDataVibeRegistry,
   TodosVibeRegistry as TodosRegistry,
   TodosVibeRegistry,
+  filterVibesForSeeding,
   getAllVibeRegistries,
   loadMyDataVibe,
   loadTodosVibe

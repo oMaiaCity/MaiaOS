@@ -199,13 +199,21 @@ export class MaiaOS {
    * @param {Object} [config.backend] - Pre-initialized backend (alternative to node+account)
    * @param {Object} [config.registry] - Config registry for seeding
    * @param {string} [config.syncDomain] - Sync service domain (overrides env vars, single source of truth)
+   * @param {'human' | 'agent'} [config.mode] - Operational mode (default: detect from env vars)
    * @returns {Promise<MaiaOS>} Booted OS instance
-   * @throws {Error} If neither backend nor node+account is provided
+   * @throws {Error} If neither backend nor node+account is provided (or agent mode credentials missing)
    */
   static async boot(config = {}) {
     const os = new MaiaOS();
     
     // Booting MaiaOS
+    
+    // Detect operational mode from config or environment variables
+    const mode = config.mode || 
+                 (typeof process !== 'undefined' && process.env?.MAIA_MODE) ||
+                 (typeof import.meta !== 'undefined' && import.meta.env?.MAIA_MODE) ||
+                 (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MAIA_MODE) ||
+                 'human'; // Default to human mode
     
     // Store sync domain (single source of truth for sync configuration)
     // If provided, use it; otherwise will be determined from env vars when needed
@@ -213,10 +221,57 @@ export class MaiaOS {
       os._syncDomain = config.syncDomain;
     }
     
-    // Store node and account for CoJSON backend compatibility
-    if (config.node && config.account) {
-      os._node = config.node;
-      os._account = config.account;
+    // Handle agent mode: automatically load/create account if node/account not provided
+    if (mode === 'agent' && !config.node && !config.account && !config.backend) {
+      // Import agent mode functions dynamically (to avoid circular dependencies)
+      const { loadAgentAccount, createAgentAccount } = await import('@MaiaOS/self');
+      
+      // Get credentials from environment variables
+      // Note: Service-specific prefixes (SYNC_MAIA_*, CITY_MAIA_*) should be set by the service
+      // This is a fallback for direct MaiaOS.boot() calls
+      const accountID = (typeof process !== 'undefined' && process.env?.MAIA_AGENT_ACCOUNT_ID) ||
+                        (typeof import.meta !== 'undefined' && import.meta.env?.MAIA_AGENT_ACCOUNT_ID) ||
+                        (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MAIA_AGENT_ACCOUNT_ID);
+      const agentSecret = (typeof process !== 'undefined' && process.env?.MAIA_AGENT_SECRET) ||
+                          (typeof import.meta !== 'undefined' && import.meta.env?.MAIA_AGENT_SECRET) ||
+                          (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MAIA_AGENT_SECRET);
+      
+      if (!accountID || !agentSecret) {
+        throw new Error(
+          'Agent mode requires MAIA_AGENT_ACCOUNT_ID and MAIA_AGENT_SECRET environment variables. ' +
+          'For services, use service-specific prefixes: SYNC_MAIA_* for sync service, CITY_MAIA_* for maia-city. ' +
+          'Run `bun agent:generate --service <service>` to generate credentials.'
+        );
+      }
+      
+      // Try to load existing account, create if it doesn't exist
+      let agentResult;
+      try {
+        agentResult = await loadAgentAccount({
+          accountID,
+          agentSecret,
+          syncDomain: config.syncDomain || null
+        });
+      } catch (loadError) {
+        // If account doesn't exist, create it
+        console.log('[MaiaOS.boot] Account not found, creating new agent account...');
+        agentResult = await createAgentAccount({
+          agentSecret,
+          name: 'Maia Agent',
+          syncDomain: config.syncDomain || null
+        });
+      }
+      
+      // Store node and account from agent mode
+      os._node = agentResult.node;
+      os._account = agentResult.account;
+    } else {
+      // Human mode or explicit node/account provided
+      // Store node and account for CoJSON backend compatibility
+      if (config.node && config.account) {
+        os._node = config.node;
+        os._account = config.account;
+      }
     }
     
     // Initialize database (requires CoJSON backend via node+account or pre-initialized backend)

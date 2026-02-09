@@ -1,5 +1,5 @@
 #!/bin/bash
-# Deploy script for server service to Fly.io
+# Deploy script for sync service to Fly.io
 
 set -e
 
@@ -52,21 +52,21 @@ retry_flyctl_deploy() {
   return 1
 }
 
-echo "🚀 Deploying server service to Fly.io..."
-echo "   App: api-next-maia-city"
+echo "🚀 Deploying sync service to Fly.io..."
+echo "   App: sync-next-maia-city"
 echo ""
 
 cd "$MONOREPO_ROOT"
 
 if ! retry_flyctl_deploy \
-  "api-next-maia-city" \
-  "services/server/Dockerfile" \
-  "services/server/fly.toml"; then
-  echo "❌ Failed to deploy server service after retries"
+  "sync-next-maia-city" \
+  "services/sync/Dockerfile" \
+  "services/sync/fly.toml"; then
+  echo "❌ Failed to deploy sync service after retries"
   exit 1
 fi
 
 echo ""
 echo "✅ Deployment complete!"
-echo "   Health check: https://api-next-maia-city.fly.dev/health"
-echo "   WebSocket: wss://api-next-maia-city.fly.dev/sync"
+echo "   Health check: https://sync-next-maia-city.fly.dev/health"
+echo "   WebSocket: wss://sync-next-maia-city.fly.dev/sync"

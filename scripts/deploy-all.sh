@@ -1,6 +1,6 @@
 #!/bin/bash
 # Deploy all MaiaOS services to Fly.io
-# Deploys: server (api-next-maia-city) and maia-city (next-maia-city)
+# Deploys: sync service (sync-next-maia-city) and maia-city (next-maia-city)
 
 set -e
 
@@ -22,22 +22,37 @@ retry_flyctl_deploy() {
     echo "Attempt $((retry_count + 1))/$max_retries: Deploying $app_name..."
     
     # Run flyctl deploy with increased wait timeout and capture output
-    if flyctl deploy \
+    flyctl deploy \
       --dockerfile "$dockerfile" \
       --config "$config" \
       --app "$app_name" \
-      --wait-timeout 600 2>&1 | tee /tmp/flyctl-deploy.log; then
-      # Check if deployment actually succeeded by verifying app status
+      --wait-timeout 600 2>&1 | tee /tmp/flyctl-deploy.log
+    
+    local deploy_exit_code=${PIPESTATUS[0]}
+    
+    # Check for build failures in the log
+    if grep -qiE "Build failed|ERROR|error.*build|failed.*build|exit code 1" /tmp/flyctl-deploy.log 2>/dev/null; then
+      echo "❌ Build failed detected in deployment log"
+      echo "Last 20 lines of build output:"
+      tail -20 /tmp/flyctl-deploy.log
+      return 1
+    fi
+    
+    # Check if deployment command succeeded
+    if [ $deploy_exit_code -eq 0 ]; then
+      # Verify app is actually running (not just that status command works)
       echo "Checking deployment status..."
-      if flyctl status --app "$app_name" > /dev/null 2>&1; then
+      local status_output=$(flyctl status --app "$app_name" 2>&1)
+      if [ $? -eq 0 ] && echo "$status_output" | grep -q "running\|started"; then
         echo "✅ Deployment verified: $app_name is running"
         return 0
       else
-        echo "⚠️  Deployment command succeeded but app status check failed"
+        echo "⚠️  Deployment command succeeded but app is not running"
+        echo "Status output: $status_output"
       fi
     fi
 
-    # Check if the error is EOF or network-related
+    # Check if the error is EOF or network-related (retryable)
     if grep -q "EOF\|connection\|timeout" /tmp/flyctl-deploy.log 2>/dev/null; then
       retry_count=$((retry_count + 1))
       if [ $retry_count -lt $max_retries ]; then
@@ -48,41 +63,61 @@ retry_flyctl_deploy() {
     else
       # Non-network error, don't retry
       echo "❌ Non-network error detected. Stopping retries."
+      echo "Last 20 lines of error output:"
+      tail -20 /tmp/flyctl-deploy.log
       return 1
     fi
   done
 
   # Final check: sometimes deployment succeeds despite EOF error
   echo "⚠️  All retries exhausted. Checking if deployment actually succeeded..."
-  if flyctl status --app "$app_name" > /dev/null 2>&1; then
+  local status_output=$(flyctl status --app "$app_name" 2>&1)
+  if [ $? -eq 0 ] && echo "$status_output" | grep -q "running\|started"; then
     echo "✅ Deployment actually succeeded despite errors! App is running."
     return 0
   fi
 
   echo "❌ Deployment failed after $max_retries attempts"
+  echo "Last 20 lines of error output:"
+  tail -20 /tmp/flyctl-deploy.log
   return 1
 }
 
 echo "🚀 Deploying all MaiaOS services to Fly.io..."
 echo ""
 
-# Deploy server service first (dependency)
+# Build bundles locally before Docker builds
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "📦 Step 1/2: Deploying server service (api-next-maia-city)..."
+echo "🔨 Building kernel and vibes bundles..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 cd "$MONOREPO_ROOT"
 
-if ! retry_flyctl_deploy \
-  "api-next-maia-city" \
-  "services/server/Dockerfile" \
-  "services/server/fly.toml"; then
-  echo "❌ Failed to deploy server service after retries"
+if ! bun run bundles:build; then
+  echo "❌ Failed to build bundles. Aborting deployment."
   exit 1
 fi
 
 echo ""
-echo "✅ Server service deployed!"
-echo "   Health check: https://api-next-maia-city.fly.dev/health"
+echo "✅ Bundles built successfully!"
+echo ""
+
+# Deploy sync service first (dependency)
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+echo "📦 Step 1/2: Deploying sync service (sync-next-maia-city)..."
+echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+cd "$MONOREPO_ROOT"
+
+if ! retry_flyctl_deploy \
+  "sync-next-maia-city" \
+  "services/sync/Dockerfile" \
+  "services/sync/fly.toml"; then
+  echo "❌ Failed to deploy sync service after retries"
+  exit 1
+fi
+
+echo ""
+echo "✅ Sync service deployed!"
+echo "   Health check: https://sync-next-maia-city.fly.dev/health"
 echo ""
 
 # Deploy maia-city service
@@ -106,16 +141,16 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 echo "📋 Service URLs:"
 echo "   Frontend: https://next-maia-city.fly.dev"
-echo "   Server:   https://api-next-maia-city.fly.dev/health"
+echo "   Sync:     https://sync-next-maia-city.fly.dev/health"
 echo ""
 echo "⚠️  IMPORTANT: Verify environment variables are set:"
 echo "   flyctl secrets list --app next-maia-city"
-echo "   flyctl secrets list --app api-next-maia-city"
+echo "   flyctl secrets list --app sync-next-maia-city"
 echo ""
 echo "   Required secrets:"
 echo "   - next-maia-city: PUBLIC_API_DOMAIN (REQUIRED for sync)"
 echo ""
 echo "🔍 Verify deployment:"
 echo "   flyctl status --app next-maia-city"
-echo "   flyctl status --app api-next-maia-city"
+echo "   flyctl status --app sync-next-maia-city"
 echo ""

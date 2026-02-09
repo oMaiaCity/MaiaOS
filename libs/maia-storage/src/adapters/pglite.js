@@ -3,9 +3,14 @@
  * 
  * Implements DBClientInterfaceAsync using PGlite (WebAssembly PostgreSQL).
  * Uses the same PostgreSQL SQL interface, making it easy to migrate to Fly Postgres later.
+ * 
+ * NOTE: PGlite is server-only (Node.js). This module uses dynamic imports
+ * to prevent browser bundlers from trying to resolve @electric-sql/pglite.
  */
 
-import { PGlite } from '@electric-sql/pglite';
+// Don't import pglite at top level - use dynamic import in functions
+// This prevents browser bundlers from trying to resolve it
+import { StorageApiAsync } from 'cojson/dist/storage/storageAsync.js';
 import { DeletedCoValueDeletionStatus } from 'cojson/dist/storage/types.js';
 import { logger, emptyKnownState } from 'cojson';
 
@@ -200,7 +205,7 @@ class PGliteTransaction {
 /**
  * PGlite Client implementing DBClientInterfaceAsync
  */
-export class PGliteClient {
+class PGliteClient {
   constructor(db) {
     this.db = db;
   }
@@ -435,12 +440,94 @@ export class PGliteClient {
 
 /**
  * Create PGlite adapter with migrations
+ * @param {string} dbPath - Path to PGlite database file
+ * @returns {Promise<PGliteClient>} PGlite client instance
  */
 export async function createPGliteAdapter(dbPath) {
-  const db = new PGlite(dbPath);
+  // PGlite is server-only - check environment first
+  if (typeof window !== 'undefined' || typeof process === 'undefined' || !process.versions?.node) {
+    throw new Error('[STORAGE] PGlite is only available in Node.js/server environments');
+  }
   
-  // Run migrations
-  await runMigrations(db);
+  console.log(`[STORAGE] Initializing PGlite at ${dbPath}...`);
   
-  return new PGliteClient(db);
+  try {
+    // Dynamic import to prevent browser bundlers from trying to resolve pglite
+    // Wrap in try-catch to handle browser environments gracefully
+    let PGlite;
+    try {
+      const pgliteModule = await import('@electric-sql/pglite');
+      PGlite = pgliteModule.PGlite || pgliteModule.default?.PGlite || pgliteModule.default;
+    } catch (importError) {
+      // In browser, this import will fail - provide clear error
+      if (typeof window !== 'undefined') {
+        throw new Error('[STORAGE] PGlite cannot be imported in browser environment. This is a server-only module.');
+      }
+      throw importError;
+    }
+    
+    if (!PGlite) {
+      throw new Error('[STORAGE] Failed to import PGlite - module structure may have changed');
+    }
+    
+    // Ensure directory exists (for Node.js runtime)
+    const fs = await import('fs/promises');
+    const path = await import('path');
+    const dir = path.dirname(dbPath);
+    try {
+      await fs.mkdir(dir, { recursive: true });
+      console.log(`[STORAGE] Ensured directory exists: ${dir}`);
+    } catch (mkdirError) {
+      // Directory might already exist, that's fine
+      if (mkdirError.code !== 'EEXIST') {
+        console.warn(`[STORAGE] Could not create directory ${dir}:`, mkdirError.message);
+      }
+    }
+    
+    // Use PGlite.create() which automatically waits for initialization
+    // This is the recommended way per PGlite docs
+    console.log(`[STORAGE] Creating PGlite instance...`);
+    const db = await PGlite.create(dbPath);
+    console.log(`[STORAGE] PGlite initialized successfully at ${dbPath}`);
+    
+    // Run migrations
+    console.log(`[STORAGE] Running PGlite migrations...`);
+    await runMigrations(db);
+    console.log(`[STORAGE] PGlite migrations completed`);
+    
+    return new PGliteClient(db);
+  } catch (error) {
+    console.error(`[STORAGE] PGlite initialization error at ${dbPath}:`, error);
+    console.error(`[STORAGE] Error details:`, {
+      message: error?.message,
+      stack: error?.stack,
+      name: error?.name,
+      cause: error?.cause
+    });
+    throw error; // Re-throw to let caller handle it
+  }
+}
+
+/**
+ * Get PGlite storage adapter wrapped in StorageApiAsync
+ * @param {string} dbPath - Path to PGlite database file
+ * @returns {Promise<StorageApiAsync | undefined>} Storage instance or undefined if failed
+ */
+export async function getPGliteStorage(dbPath) {
+  try {
+    const dbClient = await createPGliteAdapter(dbPath);
+    const storage = new StorageApiAsync(dbClient);
+    storage.enableDeletedCoValuesErasure();
+    console.log(`[STORAGE] PGlite storage adapter ready`);
+    return storage;
+  } catch (error) {
+    console.error('[STORAGE] Failed to initialize PGlite storage:', error);
+    console.error('[STORAGE] Error type:', error?.constructor?.name);
+    console.error('[STORAGE] Error message:', error?.message);
+    if (error?.stack) {
+      console.error('[STORAGE] Stack trace:', error.stack);
+    }
+    // Re-throw instead of returning undefined so caller can decide whether to fail hard
+    throw error;
+  }
 }

@@ -10,7 +10,7 @@
   "dependencies": {
     "cojson": "0.20.7",
     "cojson-transport-ws": "0.20.7",
-    "@electric-sql/pglite": "latest"
+    "@MaiaOS/kernel": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest"

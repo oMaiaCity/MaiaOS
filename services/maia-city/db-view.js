@@ -4,8 +4,8 @@
  */
 
 import { truncate, getSyncStatusMessage } from './utils.js'
-// Import getSchema and getAllSchemas from schemas registry (hardcoded schemas)
-import { getSchema, getAllSchemas } from '../../libs/maia-db/src/schemas/registry.js'
+// Import getSchema and getAllSchemas from kernel bundle (not directly from @MaiaOS/db)
+import { getSchema, getAllSchemas } from '@MaiaOS/kernel'
 import { renderDashboard, renderVibeViewer } from './dashboard.js'
 
 // Helper function to escape HTML

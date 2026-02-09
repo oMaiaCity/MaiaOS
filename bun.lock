@@ -33,7 +33,9 @@
       "dependencies": {
         "@MaiaOS/operations": "workspace:*",
         "@MaiaOS/schemata": "workspace:*",
+        "@MaiaOS/storage": "workspace:*",
         "cojson": "^0.20.7",
+        "cojson-transport-ws": "0.20.7",
       },
     },
     "libs/maia-docs": {
@@ -90,15 +92,24 @@
       "version": "0.1.23",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
+        "@MaiaOS/storage": "workspace:*",
+        "cojson": "0.20.7",
+      },
+    },
+    "libs/maia-storage": {
+      "name": "@MaiaOS/storage",
+      "version": "0.1.23",
+      "dependencies": {
+        "@electric-sql/pglite": "latest",
+        "cojson": "0.20.7",
         "cojson-storage-indexeddb": "0.20.7",
-        "cojson-transport-ws": "0.20.7",
       },
     },
     "libs/maia-sync": {
       "name": "@MaiaOS/sync",
       "version": "0.1.23",
       "dependencies": {
-        "@electric-sql/pglite": "latest",
+        "@MaiaOS/kernel": "workspace:*",
         "cojson": "0.20.7",
         "cojson-transport-ws": "0.20.7",
       },
@@ -153,10 +164,12 @@
         "vite": "^7.2.4",
       },
     },
-    "services/server": {
-      "name": "server",
+    "services/sync": {
+      "name": "sync",
       "version": "0.1.23",
       "dependencies": {
+        "@MaiaOS/kernel": "workspace:*",
+        "@MaiaOS/schemata": "workspace:*",
         "@MaiaOS/sync": "workspace:*",
       },
       "devDependencies": {
@@ -180,6 +193,8 @@
     "@MaiaOS/script": ["@MaiaOS/script@workspace:libs/maia-script"],
 
     "@MaiaOS/self": ["@MaiaOS/self@workspace:libs/maia-self"],
+
+    "@MaiaOS/storage": ["@MaiaOS/storage@workspace:libs/maia-storage"],
 
     "@MaiaOS/sync": ["@MaiaOS/sync@workspace:libs/maia-sync"],
 
@@ -1385,8 +1400,6 @@
 
     "serve-static": ["serve-static@1.16.2", "", { "dependencies": { "encodeurl": "~2.0.0", "escape-html": "~1.0.3", "parseurl": "~1.3.3", "send": "0.19.0" } }, "sha512-VqpjJZKadQB/PEbEwvFdO43Ax5dFBZ2UECszz8bQ7pi7wt//PWe1P6MN7eCnjsatYtBT6EuiClbjSWP2WrIoTw=="],
 
-    "server": ["server@workspace:services/server"],
-
     "setprototypeof": ["setprototypeof@1.2.0", "", {}, "sha512-E5LDX7Wrp85Kil5bhZv46j8jOeboKq5JMmYM3gVGdGH8xFpPWXUMsNrlODCrkoxMEeNi/XZIwuRvY4XNwYMJpw=="],
 
     "sharp": ["sharp@0.34.5", "", { "dependencies": { "@img/colour": "^1.0.0", "detect-libc": "^2.1.2", "semver": "^7.7.3" }, "optionalDependencies": { "@img/sharp-darwin-arm64": "0.34.5", "@img/sharp-darwin-x64": "0.34.5", "@img/sharp-libvips-darwin-arm64": "1.2.4", "@img/sharp-libvips-darwin-x64": "1.2.4", "@img/sharp-libvips-linux-arm": "1.2.4", "@img/sharp-libvips-linux-arm64": "1.2.4", "@img/sharp-libvips-linux-ppc64": "1.2.4", "@img/sharp-libvips-linux-riscv64": "1.2.4", "@img/sharp-libvips-linux-s390x": "1.2.4", "@img/sharp-libvips-linux-x64": "1.2.4", "@img/sharp-libvips-linuxmusl-arm64": "1.2.4", "@img/sharp-libvips-linuxmusl-x64": "1.2.4", "@img/sharp-linux-arm": "0.34.5", "@img/sharp-linux-arm64": "0.34.5", "@img/sharp-linux-ppc64": "0.34.5", "@img/sharp-linux-riscv64": "0.34.5", "@img/sharp-linux-s390x": "0.34.5", "@img/sharp-linux-x64": "0.34.5", "@img/sharp-linuxmusl-arm64": "0.34.5", "@img/sharp-linuxmusl-x64": "0.34.5", "@img/sharp-wasm32": "0.34.5", "@img/sharp-win32-arm64": "0.34.5", "@img/sharp-win32-ia32": "0.34.5", "@img/sharp-win32-x64": "0.34.5" } }, "sha512-Ou9I5Ft9WNcCbXrU9cMgPBcCK8LiwLqcbywW3t4oDV37n1pzpuNLsYiAV8eODnjbtQlSDwZ2cUEeQz4E54Hltg=="],
@@ -1462,6 +1475,8 @@
     "svgdom": ["svgdom@0.1.23", "", { "dependencies": { "fontkit": "^2.0.4", "image-size": "^1.2.1", "sax": "^1.4.1" } }, "sha512-zTT8cz8rf07OCvRhTipJv+bt/MgL5Zm2ZF3IttK9zr/MKVDTrgo+usbDQMOK1PGzqDT7GA1SshnYlXvtafK7Fw=="],
 
     "swr": ["swr@2.4.0", "", { "dependencies": { "dequal": "^2.0.3", "use-sync-external-store": "^1.6.0" }, "peerDependencies": { "react": "^16.11.0 || ^17.0.0 || ^18.0.0 || ^19.0.0" } }, "sha512-sUlC20T8EOt1pHmDiqueUWMmRRX03W7w5YxovWX7VR2KHEPCTMly85x05vpkP5i6Bu4h44ePSMD9Tc+G2MItFw=="],
+
+    "sync": ["sync@workspace:services/sync"],
 
     "tagged-tag": ["tagged-tag@1.0.0", "", {}, "sha512-yEFYrVhod+hdNyx7g5Bnkkb0G6si8HJurOoOEgC8B/O0uXLHlaey/65KRv6cuWBNhBgHKAROVpc7QyYqE5gFng=="],
 

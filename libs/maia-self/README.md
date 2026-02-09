@@ -13,8 +13,8 @@ This package provides passkey-based authentication with deterministic account de
 - 🔐 **Hardware-backed authentication** - Uses Secure Enclave/TPM
 - 🔑 **Deterministic accounts** - Same passkey = same account
 - 🚫 **Zero secret storage** - All secrets derived on-demand (NO localStorage!)
-- 🔄 **Cross-device sync** - Passkeys sync via iCloud/Google, accounts via Jazz
-- 🎯 **Self-sovereign** - No metadata storage, everything in passkey + Jazz sync
+- 🔄 **Cross-device sync** - Passkeys sync via iCloud/Google, accounts via self-hosted sync service
+- 🎯 **Self-sovereign** - No metadata storage, everything in passkey + self-hosted sync
 - ⚡ **Fast login** - Only 1 biometric prompt (no PRF re-evaluation!)
 
 ## Browser Support
@@ -40,19 +40,14 @@ bun add @MaiaOS/self
 
 ## Setup
 
-### 1. Jazz Cloud Sync (Required)
+### 1. Self-Hosted Sync Service (Required)
 
-Add your Jazz API key to `.env`:
+MaiaOS uses a self-hosted sync service for cross-device account persistence. The sync service URL is determined automatically:
 
-```env
-VITE_JAZZ_API_KEY=your_key_here
-```
+- **Development**: Uses relative path `/sync` (Vite proxy forwards to `localhost:4203`)
+- **Production**: Uses `PUBLIC_API_DOMAIN` environment variable or same origin
 
-**Note:** The `VITE_` prefix is required by Vite to expose the variable to client-side code.
-
-Get your API key from: https://jazz.tools/cloud
-
-**Why needed?** Without Jazz sync, accounts can't persist across devices. IndexedDB handles same-browser persistence, Jazz sync enables cross-device sync.
+**Why needed?** Without sync service, accounts can't persist across devices. IndexedDB handles same-browser persistence, sync service enables cross-device sync.
 
 ## Usage
 
@@ -81,7 +76,7 @@ const { accountID, agentSecret, node, account } = await signInWithPasskey({
   salt: "maia.city"
 });
 
-// Loads existing account from Jazz sync server
+// Loads existing account from sync service
 // Returns same structure as signUpWithPasskey
 // ⚡ Only 1 biometric prompt (PRF output cached in passkey!)
 ```
@@ -127,7 +122,7 @@ userHandle (inside Secure Enclave/TPM):
 
 - ❌ NO localStorage - Nothing stored in browser!
 - ❌ NO IndexedDB - No metadata cached!
-- ✅ Everything in passkey (hardware-protected) + Jazz sync (encrypted)
+- ✅ Everything in passkey (hardware-protected) + sync service (encrypted)
 
 ### What's NEVER Stored Anywhere
 
@@ -141,7 +136,7 @@ userHandle (inside Secure Enclave/TPM):
 - ✅ Device theft → Needs biometric + passkey
 - ✅ localStorage compromise → Nothing to steal!
 - ✅ Passkey in hardware → Can't extract, biometric required
-- ✅ Cross-device sync → Automatic via iCloud/Google (passkey) + Jazz (account)
+- ✅ Cross-device sync → Automatic via iCloud/Google (passkey) + sync service (account)
 
 ## How It Works
 
@@ -160,7 +155,7 @@ Step 3: Create FINAL passkey
   → Concatenate: [PRF_output (32 bytes) || accountID (UTF-8)]
   → Store in userHandle (inside Secure Enclave/TPM)
   → User sees 2nd biometric prompt
-  → DONE! Account persists to Jazz sync server
+  → DONE! Account persists to sync service
 
 Why 2 prompts?
   - Can't know accountID before account is created
@@ -182,7 +177,7 @@ Step 2: Parse userHandle
 
 Step 3: Load account
   → Derive AgentSecret from cached PRF output
-  → Load account from Jazz sync server using accountID
+  → Load account from sync service using accountID
   → DONE! Logged in with 1 prompt!
 
 Why only 1 prompt?
@@ -220,7 +215,9 @@ Sign in with existing passkey.
 
 **Note:** Shows only 1 biometric prompt (fast login!)
 
-### `subscribeSyncState(listener)`
+### `subscribeSyncState(listener)` ⚠️ Moved to `@MaiaOS/db`
+
+**Note:** This function has been moved to `@MaiaOS/db` for better separation of concerns. It's still available via `@MaiaOS/kernel` bundle for convenience.
 
 Subscribe to sync status changes.
 
@@ -234,6 +231,8 @@ Subscribe to sync status changes.
 
 **Example:**
 ```javascript
+import { subscribeSyncState } from '@MaiaOS/kernel'; // or '@MaiaOS/db'
+
 const unsub = subscribeSyncState((state) => {
   console.log("Sync:", state.connected ? "Online" : "Offline");
 });
@@ -260,8 +259,8 @@ Strictly require PRF support (throws on unsupported browsers).
 
 ```javascript
 // In your app initialization
-import { signInWithPasskey, signUpWithPasskey, subscribeSyncState } from '@MaiaOS/self';
-import { createMaiaOS } from '@MaiaOS/kernel';
+import { signInWithPasskey, signUpWithPasskey, subscribeSyncState } from '@MaiaOS/kernel';
+import { MaiaOS } from '@MaiaOS/kernel';
 
 async function init() {
   // Check PRF support first

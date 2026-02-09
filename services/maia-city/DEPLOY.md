@@ -35,14 +35,14 @@ This creates the app in your organization (not personal account).
 
 ### Step 2: Set Environment Variables
 
-Configure the API domain so maia-city can connect to the server service:
+Configure the API domain so maia-city can connect to the sync service:
 
 ```bash
 # Use Fly.io domain
-flyctl secrets set PUBLIC_API_DOMAIN="api-next-maia-city.fly.dev" --app next-maia-city
+flyctl secrets set PUBLIC_API_DOMAIN="sync-next-maia-city.fly.dev" --app next-maia-city
 
 # Or use custom domain (after setting up DNS)
-flyctl secrets set PUBLIC_API_DOMAIN="api.next.maia.city" --app next-maia-city
+flyctl secrets set PUBLIC_API_DOMAIN="sync.next.maia.city" --app next-maia-city
 ```
 
 ### Step 3: Deploy
@@ -85,14 +85,14 @@ flyctl open --app next-maia-city
 
 ## Domain Configuration
 
-The maia-city service needs to know where the server service is located. Set the `PUBLIC_API_DOMAIN` secret:
+The maia-city service needs to know where the sync service is located. Set the `PUBLIC_API_DOMAIN` secret:
 
 ```bash
 # Fly.io domain
-flyctl secrets set API_DOMAIN="api-next-maia-city.fly.dev" --app next-maia-city
+flyctl secrets set PUBLIC_API_DOMAIN="sync-next-maia-city.fly.dev" --app next-maia-city
 
 # Custom domain (requires DNS setup)
-flyctl secrets set API_DOMAIN="api.next.maia.city" --app next-maia-city
+flyctl secrets set PUBLIC_API_DOMAIN="sync.next.maia.city" --app next-maia-city
 ```
 
 The client code will automatically use this domain to connect to the sync proxy.
@@ -103,17 +103,17 @@ To use custom domains:
 
 1. **Set up DNS** for your domains:
    - `next.maia.city` → points to `next-maia-city.fly.dev`
-   - `api.next.maia.city` → points to `api-next-maia-city.fly.dev`
+   - `sync.next.maia.city` → points to `sync-next-maia-city.fly.dev`
 
 2. **Add certificates**:
    ```bash
    flyctl certs create next.maia.city --app next-maia-city
-   flyctl certs create api.next.maia.city --app api-next-maia-city
+   flyctl certs create sync.next.maia.city --app sync-next-maia-city
    ```
 
 3. **Update secrets**:
    ```bash
-   flyctl secrets set PUBLIC_API_DOMAIN="api.next.maia.city" --app next-maia-city
+   flyctl secrets set PUBLIC_API_DOMAIN="sync.next.maia.city" --app next-maia-city
    ```
 
 ## Subsequent Deployments

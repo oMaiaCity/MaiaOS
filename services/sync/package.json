@@ -1,5 +1,5 @@
 {
-  "name": "server",
+  "name": "sync",
   "version": "0.1.23",
   "type": "module",
   "private": true,
@@ -9,7 +9,9 @@
     "deploy": "./deploy.sh"
   },
   "dependencies": {
-    "@MaiaOS/sync": "workspace:*"
+    "@MaiaOS/sync": "workspace:*",
+    "@MaiaOS/kernel": "workspace:*",
+    "@MaiaOS/schemata": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest"

@@ -1,6 +1,6 @@
 /**
- * Storage helper for IndexedDB persistence
- * Follows jazz-tools browser context pattern
+ * IndexedDB Storage Adapter
+ * Browser-only storage using IndexedDB for CoValue persistence
  */
 
 import { getIndexedDBStorage } from "cojson-storage-indexeddb";
@@ -16,7 +16,7 @@ import { getIndexedDBStorage } from "cojson-storage-indexeddb";
  * 
  * @returns {Promise<StorageAPI | undefined>} Storage instance or undefined if unavailable
  */
-export async function getStorage() {
+export async function getIndexedDBStorageAdapter() {
 	try {
 		const storage = await getIndexedDBStorage();
 		return storage;
