@@ -176,10 +176,10 @@ todos:
 **Goal**: Create LLM integration tool using RedPill's OpenAI-compatible API
 
 **Implementation:**
-- [x] Create `libs/maia-tools/src/agent/agent.tool.maia` - Tool definition
-- [x] Create `libs/maia-tools/src/agent/agent.tool.js` - Tool implementation (uses OpenAI SDK)
-- [x] Create `libs/maia-script/src/modules/agent.module.js` - Module registration
-- [x] Update `libs/maia-tools/src/index.js` to export agent tool
+- [x] Create `libs/maia-tools/src/ai/ai.tool.maia` - Tool definition
+- [x] Create `libs/maia-tools/src/ai/ai.tool.js` - Tool implementation (uses OpenAI SDK)
+- [x] Create `libs/maia-script/src/modules/ai.module.js` - Module registration
+- [x] Update `libs/maia-tools/src/index.js` to export AI tool
 - [x] Implement RedPill API client using OpenAI SDK with `RED_PILL_API_KEY` from `.env`
 - [x] Use OpenAI SDK for chat completions (replaces direct fetch calls)
 - [x] Support chat completions endpoint (`/v1/chat/completions`) via OpenAI SDK
@@ -187,8 +187,8 @@ todos:
 - [x] Handle errors with OpenAI SDK error types
 
 **Tool Functions Needed:**
-- `@agent/chat` - Send messages to RedPill LLM, get responses
-- `@agent/stream` - Stream responses (optional, for future)
+- `@ai/chat` - Send messages to RedPill LLM, get responses
+- `@ai/stream` - Stream responses (optional, for future)
 
 **Environment Variables:**
 - `RED_PILL_API_KEY` - Already in `.env`
@@ -219,7 +219,7 @@ todos:
 - [ ] Implement state machine logic for conversation flow
 - [ ] Handle user message events
 - [ ] Call `@memory/getContext` to get relevant context from Honcho
-- [ ] Call `@agent/chat` with context + user message
+- [ ] Call `@ai/chat` with context + user message
 - [ ] Call `@memory/addMessage` to store user and agent messages
 - [ ] Update context with conversation history
 - [ ] Implement Honcho initialization (workspace, peers, sessions)
@@ -328,7 +328,7 @@ updateContext (update UI) → idle
 - [ ] Document tool parameters and usage
 
 **Final Review:**
-- [ ] Verify all tools work correctly (`@memory/*`, `@agent/*`)
+- [ ] Verify all tools work correctly (`@memory/*`, `@ai/*`)
 - [ ] Verify memory persistence works (Honcho stores conversations)
 - [ ] Verify LLM integration works (RedPill responds correctly)
 - [ ] Verify Maia Agent can have conversations
@@ -351,15 +351,15 @@ libs/
 │       ├── memory/
 │       │   ├── memory.tool.maia
 │       │   └── memory.tool.js
-│       ├── agent/
-│       │   ├── agent.tool.maia
-│       │   └── agent.tool.js
+│       ├── ai/
+│       │   ├── ai.tool.maia
+│       │   └── ai.tool.js
 │       └── index.js (updated)
 ├── maia-script/
 │   └── src/
 │       └── modules/
 │           ├── memory.module.js (new)
-│           └── agent.module.js (new)
+│           └── ai.module.js (new)
 └── maia-vibes/
     └── src/
         └── maia-agent/ (new)

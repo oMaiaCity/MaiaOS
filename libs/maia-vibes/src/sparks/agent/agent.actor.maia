@@ -1,0 +1,17 @@
+{
+  "$schema": "@schema/actor",
+  "$id": "@sparks/actor/agent",
+  "type": "service",
+  "state": "@sparks/state/agent",
+  "view": "@sparks/view/agent",
+  "context": "@sparks/context/agent",
+  "brand": "@sparks/style/brand",
+  "inbox": "@sparks/inbox/agent",
+  "messageTypes": [
+    "CREATE_BUTTON",
+    "UPDATE_INPUT",
+    "SUCCESS",
+    "ERROR",
+    "DISMISS"
+  ]
+}

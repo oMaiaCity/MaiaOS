@@ -1,0 +1,34 @@
+{
+  "$schema": "@schema/tool",
+  "$id": "sparks",
+  "name": "@sparks",
+  "description": "Sparks tool for managing collaborative spaces (groups). Supports CRUD operations and future member/permission management.",
+  "schema": "@schema/tool",
+  "params": {
+    "op": {
+      "type": "string",
+      "enum": ["createSpark", "readSpark", "updateSpark", "deleteSpark"],
+      "description": "Spark operation to execute"
+    },
+    "name": {
+      "type": "string",
+      "description": "Spark name (required for createSpark operation)"
+    },
+    "id": {
+      "type": "string",
+      "description": "Spark co-id (required for updateSpark, deleteSpark, optional for readSpark)"
+    },
+    "data": {
+      "type": "object",
+      "description": "Update data (name, group) - required for updateSpark operation"
+    },
+    "schema": {
+      "type": "string",
+      "description": "Schema co-id (optional for readSpark, defaults to spark schema)"
+    }
+  },
+  "returns": {
+    "type": "any",
+    "description": "Operation result (created/updated/deleted spark, reactive store for reads)"
+  }
+}

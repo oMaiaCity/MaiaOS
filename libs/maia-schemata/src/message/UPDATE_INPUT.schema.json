@@ -2,15 +2,15 @@
   "$schema": "@schema/meta",
   "$id": "@schema/message/UPDATE_INPUT",
   "title": "@schema/message/UPDATE_INPUT",
-  "description": "Message type for updating input field value",
+  "description": "Message type for updating input field value (generic, reusable across vibes)",
   "cotype": "comap",
   "indexing": true,
   "type": "object",
   "properties": {
-    "newTodoText": {
+    "value": {
       "type": "string",
-      "description": "New input text value"
+      "description": "New input field value (generic property name for reuse across vibes)"
     }
   },
-  "additionalProperties": false
+  "additionalProperties": true
 }

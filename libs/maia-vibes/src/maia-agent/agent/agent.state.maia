@@ -53,7 +53,7 @@
           "target": "idle",
           "actions": [
             {
-              "updateContext": { "inputText": "$$inputText" }
+              "updateContext": { "inputText": "$$value" }
             }
           ]
         }
@@ -104,7 +104,7 @@
     },
     "calling_llm": {
       "entry": {
-        "tool": "@agent/chat",
+        "tool": "@ai/chat",
         "payload": {
           "model": "qwen/qwen3-30b-a3b-instruct-2507",
           "temperature": 1,

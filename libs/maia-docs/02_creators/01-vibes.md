@@ -277,6 +277,163 @@ Vibe (App Manifest)
 > - **Actor** = Installed application
 > - **View** = Application window
 
+## Example: Sparks Vibe (Group Management)
+
+The Sparks vibe demonstrates how to create and manage groups (sparks) using the operations API.
+
+### Directory Structure
+
+```
+vibes/sparks/
+├── manifest.vibe.maia      # Sparks vibe manifest
+├── registry.js             # Registry exports
+├── loader.js               # Vibe loader
+└── agent/                  # Agent service actor
+    ├── agent.actor.maia    # Agent actor definition
+    ├── agent.context.maia  # Context with sparks query
+    ├── agent.state.maia    # State machine for spark CRUD
+    ├── agent.view.maia     # UI for creating and displaying sparks
+    └── agent.inbox.maia    # Inbox costream
+```
+
+### Context (`agent.context.maia`)
+
+```json
+{
+  "$schema": "@schema/context",
+  "$id": "@sparks/context/agent",
+  "sparks": {
+    "schema": "@schema/data/spark"
+  },
+  "newSparkName": "",
+  "inputPlaceholder": "Enter spark name...",
+  "createButtonText": "Create Spark",
+  "error": null
+}
+```
+
+**Key:** The `sparks` query object automatically creates a reactive store that reads from the indexed colist.
+
+### State Machine (`agent.state.maia`)
+
+```json
+{
+  "$schema": "@schema/state",
+  "$id": "@sparks/state/agent",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "on": {
+        "CREATE_BUTTON": {
+          "target": "creating"
+        },
+        "UPDATE_INPUT": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "newSparkName": "$$newSparkName" }
+            }
+          ]
+        }
+      }
+    },
+    "creating": {
+      "entry": {
+        "tool": "@db",
+        "payload": {
+          "op": "createSpark",
+          "name": "$newSparkName"
+        }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "newSparkName": "" }
+            }
+          ]
+        },
+        "ERROR": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "error": "$$error" }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+**Key:** Uses `createSpark` operation which creates both the group and Spark CoMap.
+
+### View (`agent.view.maia`)
+
+```json
+{
+  "$schema": "@schema/view",
+  "$id": "@sparks/view/agent",
+  "content": {
+    "tag": "div",
+    "class": "stack",
+    "children": [
+      {
+        "tag": "h2",
+        "text": "My Sparks"
+      },
+      {
+        "tag": "input",
+        "attrs": {
+          "placeholder": "$inputPlaceholder",
+          "value": "$newSparkName"
+        },
+        "$on": {
+          "input": {
+            "send": "UPDATE_INPUT",
+            "payload": { "newSparkName": "$event.target.value" }
+          }
+        }
+      },
+      {
+        "tag": "button",
+        "text": "$createButtonText",
+        "$on": {
+          "click": {
+            "send": "CREATE_BUTTON"
+          }
+        }
+      },
+      {
+        "tag": "div",
+        "class": "sparks-list",
+        "$each": {
+          "items": "$sparks",
+          "template": {
+            "tag": "div",
+            "class": "spark-item",
+            "children": [
+              {
+                "tag": "h3",
+                "text": "$$name"
+              },
+              {
+                "tag": "div",
+                "text": "Group: $$group"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+**Key:** Uses `$each` to display sparks reactively from the query object.
+
 ## Example: Complete Todo App
 
 ### Directory Structure

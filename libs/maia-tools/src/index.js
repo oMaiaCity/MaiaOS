@@ -10,14 +10,16 @@ import noopDef from './core/noop.tool.maia';
 import publishMessageDef from './core/publishMessage.tool.maia';
 import computeMessageNamesDef from './core/computeMessageNames.tool.maia';
 import memoryDef from './memory/memory.tool.maia';
-import agentDef from './agent/agent.tool.maia';
+import aiDef from './ai/ai.tool.maia';
+import sparksDef from './sparks/sparks.tool.maia';
 
 // Import tool functions
 import noopFn from './core/noop.tool.js';
 import publishMessageFn from './core/publishMessage.tool.js';
 import computeMessageNamesFn from './core/computeMessageNames.tool.js';
 import memoryFn from './memory/memory.tool.js';
-import agentFn from './agent/agent.tool.js';
+import aiFn from './ai/ai.tool.js';
+import sparksFn from './sparks/sparks.tool.js';
 
 /**
  * Tool registry organized by namespace
@@ -27,7 +29,8 @@ export const TOOLS = {
   'core/publishMessage': { definition: publishMessageDef, function: publishMessageFn },
   'core/computeMessageNames': { definition: computeMessageNamesDef, function: computeMessageNamesFn },
   'memory/memory': { definition: memoryDef, function: memoryFn },
-  'agent/chat': { definition: agentDef, function: agentFn }
+  'ai/chat': { definition: aiDef, function: aiFn },
+  'sparks/sparks': { definition: sparksDef, function: sparksFn }
 };
 
 /**

@@ -227,8 +227,8 @@ export class StateEngine {
         const originalEventPayload = machine.eventPayload || {};
         const cleanedResult = machine.lastToolResult ? this._cleanToolResult(machine.lastToolResult) : null;
         const successPayload = {
-          result: cleanedResult,
-          ...originalEventPayload
+          ...originalEventPayload,
+          result: cleanedResult  // CRITICAL: result must come AFTER spread to override any result in originalEventPayload
         };
         try {
           await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', successPayload);
@@ -250,8 +250,8 @@ export class StateEngine {
         // Clean tool result to remove CoJSON metadata (groupInfo) - it's metadata, not data
         const cleanedResult = machine.lastToolResult ? this._cleanToolResult(machine.lastToolResult) : null;
         const successPayload = {
-          result: cleanedResult,
-          ...originalEventPayload
+          ...originalEventPayload,
+          result: cleanedResult  // CRITICAL: result must come AFTER spread to override any result in originalEventPayload
         };
         try {
           await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', successPayload);
@@ -269,8 +269,8 @@ export class StateEngine {
         // Clean tool result to remove CoJSON metadata (groupInfo) - it's metadata, not data
         const cleanedResult = machine.lastToolResult ? this._cleanToolResult(machine.lastToolResult) : null;
         const successPayload = {
-          result: cleanedResult,
-          ...originalEventPayload
+          ...originalEventPayload,
+          result: cleanedResult  // CRITICAL: result must come AFTER spread to override any result in originalEventPayload
         };
         await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', successPayload);
       }

@@ -10,9 +10,13 @@
     "result": {
       "description": "Tool execution result (optional, can be any type - object, boolean, string, etc.)"
     },
+    "value": {
+      "type": "string",
+      "description": "Original event payload property (optional, for CREATE_BUTTON, UPDATE_INPUT - generic property name)"
+    },
     "text": {
       "type": "string",
-      "description": "Original event payload property (optional, for CREATE_BUTTON)"
+      "description": "Original event payload property (optional, legacy - use 'value' instead)"
     },
     "id": {
       "type": "string",
@@ -30,7 +34,7 @@
     },
     "newTodoText": {
       "type": "string",
-      "description": "Original event payload property (optional, for UPDATE_INPUT)"
+      "description": "Original event payload property (optional, legacy - use 'value' instead)"
     }
   },
   "additionalProperties": true

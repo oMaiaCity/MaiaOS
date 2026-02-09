@@ -293,6 +293,184 @@ export class CoJSONBackend extends DBAdapter {
   }
 
   // ============================================================================
+  // Spark Operations (Group References)
+  // ============================================================================
+
+  /**
+   * Create a new Spark (CoMap that references a group)
+   * Creates a child group owned by universal group, then creates Spark CoMap
+   * @param {string} name - Spark name
+   * @returns {Promise<Object>} Created spark with co-id
+   */
+  async createSpark(name) {
+    if (!this.account) {
+      throw new Error('[CoJSONBackend] Account required for createSpark');
+    }
+
+    // Get universal group
+    const universalGroup = await this.getDefaultGroup();
+    if (!universalGroup) {
+      throw new Error('[CoJSONBackend] Universal group not found');
+    }
+
+    // Create child group owned by universal group
+    const { createChildGroup } = await import('../groups/create.js');
+    const childGroup = createChildGroup(this.node, universalGroup, { name });
+
+    // Resolve spark schema
+    const sparkSchemaCoId = await resolve(this, '@schema/data/spark', { returnType: 'coId' });
+    if (!sparkSchemaCoId) {
+      throw new Error('[CoJSONBackend] Spark schema not found: @schema/data/spark');
+    }
+
+    // Create Spark CoMap with group reference
+    const { createCoMap } = await import('../cotypes/coMap.js');
+    const sparkCoMap = await createCoMap(
+      universalGroup,
+      { name, group: childGroup.id },
+      sparkSchemaCoId,
+      this.node,
+      this.dbEngine
+    );
+
+    // Register spark in account.sparks CoMap
+    await this._registerSparkInAccount(name, sparkCoMap.id);
+
+    return {
+      id: sparkCoMap.id,
+      name,
+      group: childGroup.id
+    };
+  }
+
+  /**
+   * Read Spark(s)
+   * @param {string} [id] - Specific spark co-id
+   * @param {string} [schema] - Schema co-id (optional)
+   * @returns {Promise<ReactiveStore|ReactiveStore[]>} Reactive store(s) with spark data
+   */
+  async readSpark(id, schema = null) {
+    if (id) {
+      // Single spark read
+      return await this.read(null, id);
+    }
+
+    // Collection read - read from account.sparks or indexed colist
+    const sparkSchema = schema || '@schema/data/spark';
+    const sparkSchemaCoId = await resolve(this, sparkSchema, { returnType: 'coId' });
+    if (!sparkSchemaCoId) {
+      throw new Error(`[CoJSONBackend] Spark schema not found: ${sparkSchema}`);
+    }
+
+    // Try reading from indexed colist first (reuses indexed data)
+    return await this.read(sparkSchemaCoId);
+  }
+
+  /**
+   * Update Spark
+   * @param {string} id - Spark co-id
+   * @param {Object} data - Update data (name, group)
+   * @returns {Promise<Object>} Updated spark
+   */
+  async updateSpark(id, data) {
+    // Extract schema from CoValue headerMeta
+    const schemaCoId = await resolve(this, { fromCoValue: id }, { returnType: 'coId' });
+    
+    // Update using standard update method
+    return await this.update(schemaCoId, id, data);
+  }
+
+  /**
+   * Delete Spark
+   * Removes spark from account.sparks and deletes Spark CoMap
+   * @param {string} id - Spark co-id
+   * @returns {Promise<Object>} Deletion result
+   */
+  async deleteSpark(id) {
+    // Get spark data to find name for account.sparks removal
+    const sparkStore = await this.read(null, id);
+    await new Promise((resolve) => {
+      if (!sparkStore.loading) {
+        resolve();
+        return;
+      }
+      const unsubscribe = sparkStore.subscribe(() => {
+        if (!sparkStore.loading) {
+          unsubscribe();
+          resolve();
+        }
+      });
+    });
+
+    const sparkData = sparkStore.value;
+    const sparkName = sparkData?.name;
+
+    // Extract schema from CoValue headerMeta
+    const schemaCoId = await resolve(this, { fromCoValue: id }, { returnType: 'coId' });
+
+    // Delete Spark CoMap (removes from index automatically via storage hooks)
+    await this.delete(schemaCoId, id);
+
+    // Remove from account.sparks if name is available
+    if (sparkName) {
+      await this._unregisterSparkFromAccount(sparkName);
+    }
+
+    return { success: true, id };
+  }
+
+  /**
+   * Register spark in account.sparks CoMap
+   * @private
+   * @param {string} sparkName - Spark name (key)
+   * @param {string} sparkCoId - Spark co-id (value)
+   */
+  async _registerSparkInAccount(sparkName, sparkCoId) {
+    // Get or create account.sparks CoMap
+    let sparksId = this.account.get('sparks');
+    let sparks;
+
+    if (sparksId) {
+      const sparksCore = this.node.getCoValue(sparksId);
+      if (sparksCore && sparksCore.type === 'comap') {
+        const sparksContent = sparksCore.getCurrentContent?.();
+        if (sparksContent && typeof sparksContent.set === 'function') {
+          sparks = sparksContent;
+        }
+      }
+    }
+
+    if (!sparks) {
+      // Create account.sparks CoMap
+      const universalGroup = await this.getDefaultGroup();
+      const sparksMeta = { $schema: 'GenesisSchema' };
+      sparks = universalGroup.createMap({}, sparksMeta);
+      this.account.set('sparks', sparks.id);
+    }
+
+    // Register spark
+    sparks.set(sparkName, sparkCoId);
+  }
+
+  /**
+   * Unregister spark from account.sparks CoMap
+   * @private
+   * @param {string} sparkName - Spark name (key)
+   */
+  async _unregisterSparkFromAccount(sparkName) {
+    const sparksId = this.account.get('sparks');
+    if (!sparksId) return;
+
+    const sparksCore = this.node.getCoValue(sparksId);
+    if (!sparksCore || sparksCore.type !== 'comap') return;
+
+    const sparks = sparksCore.getCurrentContent?.();
+    if (sparks && typeof sparks.delete === 'function') {
+      sparks.delete(sparkName);
+    }
+  }
+
+  // ============================================================================
   // DBAdapter Interface Implementation
   // ============================================================================
 

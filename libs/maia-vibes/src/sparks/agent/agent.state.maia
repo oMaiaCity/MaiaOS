@@ -1,0 +1,68 @@
+{
+  "$schema": "@schema/state",
+  "$id": "@sparks/state/agent",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "on": {
+        "CREATE_BUTTON": {
+          "target": "creating"
+        },
+        "UPDATE_INPUT": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "newSparkName": "$$value" }
+            }
+          ]
+        }
+      }
+    },
+    "creating": {
+      "entry": {
+        "tool": "@sparks",
+        "payload": {
+          "op": "createSpark",
+          "name": "$$value"
+        }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { 
+                "newSparkName": "",
+                "error": null, 
+                "hasError": false 
+              }
+            }
+          ]
+        },
+        "ERROR": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "error": "$$error", "hasError": true }
+            }
+          ]
+        }
+      }
+    },
+    "error": {
+      "entry": {
+        "updateContext": { "error": "$$error" }
+      },
+      "on": {
+        "DISMISS": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "error": null, "hasError": false }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

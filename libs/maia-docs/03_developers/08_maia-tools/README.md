@@ -236,10 +236,10 @@ const definitions = getAllToolDefinitions();
 - Manages actor memory (conversation history, etc.)
 - Parameters: `{ operation: string, ... }`
 
-### Agent Tools
+### AI Tools
 
-**`@agent/chat`**
-- Unified agent chat tool using OpenAI-compatible API (RedPill)
+**`@ai/chat`**
+- Unified AI chat tool using OpenAI-compatible API (RedPill)
 - Parameters: `{ context: Array<Message>, model?: string, temperature?: number }`
 - **Note:** LLMs are stateless - each request sends full context
 

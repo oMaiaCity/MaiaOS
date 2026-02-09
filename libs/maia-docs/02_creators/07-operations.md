@@ -330,6 +330,116 @@ const processed = await maia.db({
 
 **Note:** This is typically handled automatically by ActorEngine. Manual use is rare.
 
+### `createSpark` - Create New Spark (Group Reference)
+
+Create a new Spark - a CoMap that references a group for collaborative spaces. Automatically creates a child group owned by your universal group and registers the spark in `account.sparks`.
+
+```javascript
+const spark = await maia.db({
+  op: "createSpark",
+  name: "My Project"
+});
+
+console.log("Created spark:", spark.id);
+console.log("Group:", spark.group); // Co-id of the created group
+```
+
+**Parameters:**
+- `name` (required) - Spark name (string)
+
+**Returns:**
+- Created spark object with:
+  - `id` - Spark CoMap co-id
+  - `name` - Spark name
+  - `group` - Group co-id (child group owned by universal group)
+
+**What happens:**
+1. Creates a child group owned 100% by your universal group
+2. Creates a Spark CoMap with `{name, group}` structure
+3. Registers spark in `account.sparks` CoMap
+4. Automatically indexes spark in `account.os.{sparkSchemaCoId}` colist
+
+### `readSpark` - Read Spark(s)
+
+Read a single spark or all sparks. Returns a reactive store that automatically updates when sparks change.
+
+```javascript
+// Read all sparks
+const sparksStore = await maia.db({
+  op: "readSpark"
+});
+
+// Store has current value immediately
+console.log('My sparks:', sparksStore.value);
+
+// Subscribe to updates
+const unsubscribe = sparksStore.subscribe((sparks) => {
+  console.log('Sparks updated:', sparks);
+});
+
+// Read single spark
+const sparkStore = await maia.db({
+  op: "readSpark",
+  id: "co_zSpark123"
+});
+```
+
+**Parameters:**
+- `id` (optional) - Specific spark co-id for single spark read
+- `schema` (optional) - Schema co-id (defaults to spark schema)
+
+**Returns:**
+- `ReactiveStore` - Reactive store with spark(s) data
+  - Single spark: `{id, name, group}`
+  - Collection: Array of spark objects
+
+**Note:** Reads from indexed colist (`account.os.{sparkSchemaCoId}`) for efficient querying.
+
+### `updateSpark` - Update Spark
+
+Update a spark's name or group reference.
+
+```javascript
+const updated = await maia.db({
+  op: "updateSpark",
+  id: "co_zSpark123",
+  data: {
+    name: "Updated Project Name"
+  }
+});
+```
+
+**Parameters:**
+- `id` (required) - Spark co-id
+- `data` (required) - Update data (name, group)
+
+**Returns:**
+- Updated spark object
+
+### `deleteSpark` - Delete Spark
+
+Delete a spark and remove it from `account.sparks` registry.
+
+```javascript
+const deleted = await maia.db({
+  op: "deleteSpark",
+  id: "co_zSpark123"
+});
+
+console.log("Deleted:", deleted.success); // true
+```
+
+**Parameters:**
+- `id` (required) - Spark co-id
+
+**Returns:**
+- `{success: true, id}` - Deletion result
+
+**What happens:**
+1. Deletes Spark CoMap
+2. Removes spark from `account.sparks` CoMap
+3. Automatically removes spark from indexed colist
+
 ## Tool Invocation Pattern
 
 **CRITICAL:** Tools are invoked BY state machines, never directly from views or other engines.
@@ -732,7 +842,7 @@ The `@db` tool validates operations against this schema:
 {
   "op": {
     "type": "string",
-    "enum": ["read", "create", "update", "delete", "seed", "schema", "resolve", "append", "push", "processInbox"]
+    "enum": ["read", "create", "update", "delete", "seed", "schema", "resolve", "append", "push", "processInbox", "createSpark", "readSpark", "updateSpark", "deleteSpark"]
   },
   "schema": {
     "type": "string",

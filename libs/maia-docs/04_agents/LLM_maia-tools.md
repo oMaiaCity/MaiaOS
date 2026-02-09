@@ -1,6 +1,6 @@
 # MaiaOS Documentation for maia-tools
 
-**Auto-generated:** 2026-02-09T15:33:16.459Z
+**Auto-generated:** 2026-02-09T18:55:16.659Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -247,10 +247,10 @@ const definitions = getAllToolDefinitions();
 - Manages actor memory (conversation history, etc.)
 - Parameters: `{ operation: string, ... }`
 
-### Agent Tools
+### AI Tools
 
-**`@agent/chat`**
-- Unified agent chat tool using OpenAI-compatible API (RedPill)
+**`@ai/chat`**
+- Unified AI chat tool using OpenAI-compatible API (RedPill)
 - Parameters: `{ context: Array<Message>, model?: string, temperature?: number }`
 - **Note:** LLMs are stateless - each request sends full context
 

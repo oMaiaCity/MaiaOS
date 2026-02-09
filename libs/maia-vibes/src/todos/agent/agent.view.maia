@@ -70,15 +70,15 @@
             "$on": {
               "input": {
                 "send": "UPDATE_INPUT",
-                "payload": { "newTodoText": "@inputValue" }
+                "payload": { "value": "@inputValue" }
               },
               "blur": {
                 "send": "UPDATE_INPUT",
-                "payload": { "newTodoText": "@inputValue" }
+                "payload": { "value": "@inputValue" }
               },
               "keydown": {
                 "send": "CREATE_BUTTON",
-                "payload": { "text": "@inputValue" },
+                "payload": { "value": "@inputValue" },
                 "key": "Enter"
               }
             }
@@ -90,7 +90,7 @@
             "$on": {
               "click": {
                 "send": "CREATE_BUTTON",
-                "payload": { "text": "$newTodoText" }
+                "payload": { "value": "$newTodoText" }
               }
             }
           }

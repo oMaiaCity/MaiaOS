@@ -2,18 +2,18 @@
   "$schema": "@schema/meta",
   "$id": "@schema/message/CREATE_BUTTON",
   "title": "@schema/message/CREATE_BUTTON",
-  "description": "Message type for creating a new todo item",
+  "description": "Message type for creating a new item via button click (generic, reusable across vibes)",
   "cotype": "comap",
   "indexing": true,
   "type": "object",
   "properties": {
-    "text": {
+    "value": {
       "type": "string",
       "minLength": 1,
       "pattern": "^\\S",
-      "description": "Todo text (required, non-empty, must contain at least one non-whitespace character)"
+      "description": "Item value/text (required, non-empty, must contain at least one non-whitespace character). Generic property name for reuse across vibes."
     }
   },
-  "required": ["text"],
-  "additionalProperties": false
+  "required": ["value"],
+  "additionalProperties": true
 }

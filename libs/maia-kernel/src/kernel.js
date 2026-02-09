@@ -31,16 +31,18 @@ import { ValidationEngine } from '@MaiaOS/schemata/validation.engine';
 // Schema loading now uses resolve() from @MaiaOS/db if needed
 
 // Pre-import default modules so they're bundled (for standalone bundle)
-// This ensures db, core, and agent modules are included in the bundle
+// This ensures db, core, ai, and sparks modules are included in the bundle
 import * as dbModule from '@MaiaOS/script/modules/db.module.js';
 import * as coreModule from '@MaiaOS/script/modules/core.module.js';
-import * as agentModule from '@MaiaOS/script/modules/agent.module.js';
+import * as aiModule from '@MaiaOS/script/modules/ai.module.js';
+import * as sparksModule from '@MaiaOS/script/modules/sparks.module.js';
 
 // Store pre-loaded modules for registry
 const preloadedModules = {
   'db': dbModule,
   'core': coreModule,
-  'agent': agentModule,
+  'ai': aiModule,
+  'sparks': sparksModule,
 };
 
 /**
@@ -492,8 +494,8 @@ export class MaiaOS {
    * @param {Object} config - Boot configuration
    */
   static async _loadModules(os, config) {
-    // Load modules (default: db, core)
-    const modules = config.modules || ['db', 'core'];
+    // Load modules (default: db, core, sparks)
+    const modules = config.modules || ['db', 'core', 'sparks'];
     
     for (const moduleName of modules) {
       try {

@@ -11,9 +11,11 @@
 // Re-export todos loader and registry for convenience
 export { loadTodosVibe, TodosVibeRegistry } from './todos/loader.js';
 export { loadMyDataVibe, MyDataVibeRegistry } from './my-data/loader.js';
+export { loadSparksVibe, SparksVibeRegistry } from './sparks/loader.js';
 export { MaiaOS } from '@MaiaOS/kernel';
 export { TodosVibeRegistry as TodosRegistry } from './todos/registry.js';
 export { MyDataVibeRegistry as MyDataRegistry } from './my-data/registry.js';
+export { SparksVibeRegistry as SparksRegistry } from './sparks/registry.js';
 
 /**
  * Automatically discover and import all vibe registries
@@ -49,6 +51,15 @@ export async function getAllVibeRegistries() {
 		}
 	} catch (error) {
 		console.warn('[Vibes] Could not load MyDataVibeRegistry:', error.message);
+	}
+	
+	try {
+		const { SparksVibeRegistry } = await import('./sparks/registry.js');
+		if (SparksVibeRegistry && SparksVibeRegistry.vibe) {
+			vibeRegistries.push(SparksVibeRegistry);
+		}
+	} catch (error) {
+		console.warn('[Vibes] Could not load SparksVibeRegistry:', error.message);
 	}
 	
 	return vibeRegistries;

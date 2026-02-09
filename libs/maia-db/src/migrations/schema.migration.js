@@ -109,5 +109,15 @@ export async function schemaMigration(account, node, creationProps) {
 		}
 	}
 	
+	// 4. Create account.sparks CoMap if it doesn't exist (similar to account.vibes)
+	let sparksId = account.get("sparks");
+	if (!sparksId) {
+		// Create sparks CoMap using universal group
+		const sparksMeta = { $schema: 'GenesisSchema' };
+		const sparks = universalGroup.createMap({}, sparksMeta);
+		account.set("sparks", sparks.id);
+		console.log("✅ Created account.sparks CoMap:", sparks.id);
+	}
+	
 	// Identity migration complete
 }

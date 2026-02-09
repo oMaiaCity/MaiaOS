@@ -299,7 +299,7 @@ async function initAgentMode() {
 			account,
 			mode: 'agent', // Explicitly set mode
 			syncDomain, // Pass sync domain to kernel
-			modules: ['db', 'core', 'agent'] // Include all modules
+			modules: ['db', 'core', 'ai', 'sparks'] // Include all modules
 		});
 		window.maia = maia;
 		
@@ -419,7 +419,7 @@ async function signIn() {
 					node, 
 					account,
 					syncDomain, // Pass sync domain to kernel (single source of truth)
-					modules: ['db', 'core', 'agent'] // Include all modules
+					modules: ['db', 'core', 'ai', 'sparks'] // Include all modules
 				});
 				window.maia = maia;
 				
@@ -570,7 +570,7 @@ async function register() {
 				node, 
 				account,
 				syncDomain, // Pass sync domain to kernel (single source of truth)
-				modules: ['db', 'core', 'agent'] // Include all modules
+				modules: ['db', 'core', 'ai', 'sparks'] // Include all modules
 			});
 			window.maia = maia;
 		} catch (bootError) {
@@ -905,7 +905,7 @@ async function handleSeed(seedVibesConfig = null) {
 		maia = await MaiaOS.boot({ 
 			node, 
 			account,
-			modules: ['db', 'core', 'agent'], // Include all modules
+			modules: ['db', 'core', 'ai', 'sparks'], // Include all modules
 			registry: mergedConfigs
 		});
 		

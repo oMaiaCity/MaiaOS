@@ -60,6 +60,7 @@ import schematasRegistrySchema from './os/schematas-registry.schema.json';
 // Import data schemas
 import todosDataSchema from './data/todos.schema.json';
 import chatDataSchema from './data/chat.schema.json';
+import sparkDataSchema from './data/spark.schema.json';
 // Import message type schemas
 import createButtonMessageSchema from './message/CREATE_BUTTON.schema.json';
 import toggleButtonMessageSchema from './message/TOGGLE_BUTTON.schema.json';
@@ -106,7 +107,8 @@ const SCHEMAS = {
 // Data schemas registry (for application data validation)
 const DATA_SCHEMAS = {
   'data/todos': todosDataSchema,
-  'data/chat': chatDataSchema
+  'data/chat': chatDataSchema,
+  'data/spark': sparkDataSchema
 };
 
 // Message type schemas registry (for message payload validation)

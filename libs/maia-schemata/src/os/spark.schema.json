@@ -1,0 +1,19 @@
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/data/spark",
+  "title": "@schema/data/spark",
+  "description": "Spark CoMap - references a group for collaborative spaces",
+  "cotype": "comap",
+  "indexing": true,
+  "required": ["name", "group"],
+  "properties": {
+    "name": {
+      "type": "string",
+      "description": "Spark name"
+    },
+    "group": {
+      "$co": "@schema/group",
+      "description": "Co-id reference to the group this spark represents"
+    }
+  }
+}

@@ -51,7 +51,7 @@
           "target": "idle",
           "actions": [
             {
-              "updateContext": { "newTodoText": "$$newTodoText" }
+              "updateContext": { "newTodoText": "$$value" }
             }
           ]
         }
@@ -63,7 +63,7 @@
         "payload": { 
           "op": "create",
           "schema": "@schema/data/todos",
-          "data": { "text": "$$text", "done": false }
+          "data": { "text": "$$value", "done": false }
         }
       },
       "on": {

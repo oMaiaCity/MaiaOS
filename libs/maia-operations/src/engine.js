@@ -13,6 +13,10 @@
  * - seed: Flush + seed (dev only)
  * - schema: Load schema definitions by co-id, schema name, or from CoValue headerMeta
  * - resolve: Resolve human-readable keys to co-ids
+ * - createSpark: Create new Spark (group reference)
+ * - readSpark: Read Spark(s)
+ * - updateSpark: Update Spark
+ * - deleteSpark: Delete Spark
  */
 
 import {
@@ -26,6 +30,12 @@ import {
   appendOperation,
   processInboxOperation
 } from './operations.js';
+import {
+  createSparkOperation,
+  readSparkOperation,
+  updateSparkOperation,
+  deleteSparkOperation
+} from './operations/spark-operations.js';
 
 export class DBEngine {
   /**
@@ -57,7 +67,11 @@ export class DBEngine {
       resolve: { execute: (params) => resolveOperation(this.backend, params) },
       append: { execute: (params) => appendOperation(this.backend, this, params) },
       push: { execute: (params) => appendOperation(this.backend, this, { ...params, cotype: 'costream' }) },
-      processInbox: { execute: (params) => processInboxOperation(this.backend, this, params) }
+      processInbox: { execute: (params) => processInboxOperation(this.backend, this, params) },
+      createSpark: { execute: (params) => createSparkOperation(this.backend, this, params) },
+      readSpark: { execute: (params) => readSparkOperation(this.backend, params) },
+      updateSpark: { execute: (params) => updateSparkOperation(this.backend, this, params) },
+      deleteSpark: { execute: (params) => deleteSparkOperation(this.backend, this, params) }
     };
   }
   
@@ -72,7 +86,7 @@ export class DBEngine {
     const { op, ...params } = payload;
     
     if (!op) {
-      throw new Error('[DBEngine] Operation required: {op: "read|create|update|delete|seed|schema|resolve|append|push"}');
+      throw new Error('[DBEngine] Operation required: {op: "read|create|update|delete|seed|schema|resolve|append|push|createSpark|readSpark|updateSpark|deleteSpark"}');
     }
     
     // Debug logging removed - too verbose

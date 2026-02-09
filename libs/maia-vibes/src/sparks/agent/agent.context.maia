@@ -1,0 +1,13 @@
+{
+  "$schema": "@schema/context",
+  "$id": "@sparks/context/agent",
+  "sparks": {
+    "schema": "@schema/data/spark"
+  },
+  "newSparkName": "",
+  "inputPlaceholder": "Enter spark name...",
+  "createButtonText": "Create Spark",
+  "error": null,
+  "hasError": false,
+  "loading": false
+}

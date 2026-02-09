@@ -59,7 +59,7 @@ export async function loadMaiaAgentVibe(container) {
     os = await MaiaOS.boot({
       node,
       account,
-      modules: ['db', 'core', 'agent'], // Include agent module for LLM chat
+      modules: ['db', 'core', 'ai', 'sparks'], // Include AI module for LLM chat and sparks module
       registry: MaiaAgentVibeRegistry  // Registry passed but seeding skipped for CoJSON backend
     });
   }

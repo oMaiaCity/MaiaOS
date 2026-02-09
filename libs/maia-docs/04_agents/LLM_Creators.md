@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-02-09T15:33:16.450Z
+**Auto-generated:** 2026-02-09T18:55:16.625Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -1698,6 +1698,163 @@ Vibe (App Manifest)
 > - **Vibe** = App Store listing
 > - **Actor** = Installed application
 > - **View** = Application window
+
+## Example: Sparks Vibe (Group Management)
+
+The Sparks vibe demonstrates how to create and manage groups (sparks) using the operations API.
+
+### Directory Structure
+
+```
+vibes/sparks/
+├── manifest.vibe.maia      # Sparks vibe manifest
+├── registry.js             # Registry exports
+├── loader.js               # Vibe loader
+└── agent/                  # Agent service actor
+    ├── agent.actor.maia    # Agent actor definition
+    ├── agent.context.maia  # Context with sparks query
+    ├── agent.state.maia    # State machine for spark CRUD
+    ├── agent.view.maia     # UI for creating and displaying sparks
+    └── agent.inbox.maia    # Inbox costream
+```
+
+### Context (`agent.context.maia`)
+
+```json
+{
+  "$schema": "@schema/context",
+  "$id": "@sparks/context/agent",
+  "sparks": {
+    "schema": "@schema/data/spark"
+  },
+  "newSparkName": "",
+  "inputPlaceholder": "Enter spark name...",
+  "createButtonText": "Create Spark",
+  "error": null
+}
+```
+
+**Key:** The `sparks` query object automatically creates a reactive store that reads from the indexed colist.
+
+### State Machine (`agent.state.maia`)
+
+```json
+{
+  "$schema": "@schema/state",
+  "$id": "@sparks/state/agent",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "on": {
+        "CREATE_BUTTON": {
+          "target": "creating"
+        },
+        "UPDATE_INPUT": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "newSparkName": "$$newSparkName" }
+            }
+          ]
+        }
+      }
+    },
+    "creating": {
+      "entry": {
+        "tool": "@db",
+        "payload": {
+          "op": "createSpark",
+          "name": "$newSparkName"
+        }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "newSparkName": "" }
+            }
+          ]
+        },
+        "ERROR": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "error": "$$error" }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
+```
+
+**Key:** Uses `createSpark` operation which creates both the group and Spark CoMap.
+
+### View (`agent.view.maia`)
+
+```json
+{
+  "$schema": "@schema/view",
+  "$id": "@sparks/view/agent",
+  "content": {
+    "tag": "div",
+    "class": "stack",
+    "children": [
+      {
+        "tag": "h2",
+        "text": "My Sparks"
+      },
+      {
+        "tag": "input",
+        "attrs": {
+          "placeholder": "$inputPlaceholder",
+          "value": "$newSparkName"
+        },
+        "$on": {
+          "input": {
+            "send": "UPDATE_INPUT",
+            "payload": { "newSparkName": "$event.target.value" }
+          }
+        }
+      },
+      {
+        "tag": "button",
+        "text": "$createButtonText",
+        "$on": {
+          "click": {
+            "send": "CREATE_BUTTON"
+          }
+        }
+      },
+      {
+        "tag": "div",
+        "class": "sparks-list",
+        "$each": {
+          "items": "$sparks",
+          "template": {
+            "tag": "div",
+            "class": "spark-item",
+            "children": [
+              {
+                "tag": "h3",
+                "text": "$$name"
+              },
+              {
+                "tag": "div",
+                "text": "Group: $$group"
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+}
+```
+
+**Key:** Uses `$each` to display sparks reactively from the query object.
 
 ## Example: Complete Todo App
 
@@ -6089,6 +6246,96 @@ Toggle is not a separate operation. Use `update` with an expression:
 }
 ```
 
+### Sparks Module (`@sparks`)
+
+The `@sparks` tool is a domain-specific tool for managing Sparks (collaborative spaces/groups). Sparks are CoMaps that reference groups, allowing users to organize their data into separate collaborative spaces.
+
+**When to use `@sparks` vs `@db`:**
+- Use `@sparks` for spark-specific operations (creating sparks, managing spark groups, future member/permission management)
+- Use `@db` for generic CRUD operations on data collections (todos, notes, etc.)
+
+#### Create Spark Operation
+```json
+{
+  "tool": "@sparks",
+  "payload": {
+    "op": "createSpark",
+    "name": "My Project"
+  }
+}
+```
+
+**What it does:**
+- Creates a child group owned by your universal group
+- Creates a Spark CoMap with the name and group reference
+- Registers the spark in `account.sparks` CoMap
+- Automatically indexes the spark in the database
+
+**Tool Result:** Returns created spark object with `id`, `name`, and `group` properties.
+
+#### Read Spark Operation
+```json
+{
+  "tool": "@sparks",
+  "payload": {
+    "op": "readSpark"
+  }
+}
+```
+
+Read all sparks (returns reactive store):
+```json
+{
+  "tool": "@sparks",
+  "payload": {
+    "op": "readSpark",
+    "id": "co_z..."
+  }
+}
+```
+
+Read a specific spark by co-id.
+
+**Tool Result:** Returns reactive store(s) with spark data. Access via `$$result` in SUCCESS handler.
+
+#### Update Spark Operation
+```json
+{
+  "tool": "@sparks",
+  "payload": {
+    "op": "updateSpark",
+    "id": "co_z...",
+    "data": {
+      "name": "Updated Spark Name"
+    }
+  }
+}
+```
+
+**Note:** The `data` object can contain `name` and/or `group` properties.
+
+#### Delete Spark Operation
+```json
+{
+  "tool": "@sparks",
+  "payload": {
+    "op": "deleteSpark",
+    "id": "co_z..."
+  }
+}
+```
+
+**What it does:**
+- Removes the spark from `account.sparks` registry
+- Deletes the Spark CoMap
+- Note: The associated group is not deleted (groups persist independently)
+
+**Future Operations (to be added):**
+- `addMember` - Add member to spark's group
+- `removeMember` - Remove member from spark's group
+- `updatePermissions` - Update member permissions/roles
+- `getMembers` - List spark members
+
 ### Core Module (`@core/*`)
 
 #### `@core/setViewMode`
@@ -6713,6 +6960,116 @@ const processed = await maia.db({
 
 **Note:** This is typically handled automatically by ActorEngine. Manual use is rare.
 
+### `createSpark` - Create New Spark (Group Reference)
+
+Create a new Spark - a CoMap that references a group for collaborative spaces. Automatically creates a child group owned by your universal group and registers the spark in `account.sparks`.
+
+```javascript
+const spark = await maia.db({
+  op: "createSpark",
+  name: "My Project"
+});
+
+console.log("Created spark:", spark.id);
+console.log("Group:", spark.group); // Co-id of the created group
+```
+
+**Parameters:**
+- `name` (required) - Spark name (string)
+
+**Returns:**
+- Created spark object with:
+  - `id` - Spark CoMap co-id
+  - `name` - Spark name
+  - `group` - Group co-id (child group owned by universal group)
+
+**What happens:**
+1. Creates a child group owned 100% by your universal group
+2. Creates a Spark CoMap with `{name, group}` structure
+3. Registers spark in `account.sparks` CoMap
+4. Automatically indexes spark in `account.os.{sparkSchemaCoId}` colist
+
+### `readSpark` - Read Spark(s)
+
+Read a single spark or all sparks. Returns a reactive store that automatically updates when sparks change.
+
+```javascript
+// Read all sparks
+const sparksStore = await maia.db({
+  op: "readSpark"
+});
+
+// Store has current value immediately
+console.log('My sparks:', sparksStore.value);
+
+// Subscribe to updates
+const unsubscribe = sparksStore.subscribe((sparks) => {
+  console.log('Sparks updated:', sparks);
+});
+
+// Read single spark
+const sparkStore = await maia.db({
+  op: "readSpark",
+  id: "co_zSpark123"
+});
+```
+
+**Parameters:**
+- `id` (optional) - Specific spark co-id for single spark read
+- `schema` (optional) - Schema co-id (defaults to spark schema)
+
+**Returns:**
+- `ReactiveStore` - Reactive store with spark(s) data
+  - Single spark: `{id, name, group}`
+  - Collection: Array of spark objects
+
+**Note:** Reads from indexed colist (`account.os.{sparkSchemaCoId}`) for efficient querying.
+
+### `updateSpark` - Update Spark
+
+Update a spark's name or group reference.
+
+```javascript
+const updated = await maia.db({
+  op: "updateSpark",
+  id: "co_zSpark123",
+  data: {
+    name: "Updated Project Name"
+  }
+});
+```
+
+**Parameters:**
+- `id` (required) - Spark co-id
+- `data` (required) - Update data (name, group)
+
+**Returns:**
+- Updated spark object
+
+### `deleteSpark` - Delete Spark
+
+Delete a spark and remove it from `account.sparks` registry.
+
+```javascript
+const deleted = await maia.db({
+  op: "deleteSpark",
+  id: "co_zSpark123"
+});
+
+console.log("Deleted:", deleted.success); // true
+```
+
+**Parameters:**
+- `id` (required) - Spark co-id
+
+**Returns:**
+- `{success: true, id}` - Deletion result
+
+**What happens:**
+1. Deletes Spark CoMap
+2. Removes spark from `account.sparks` CoMap
+3. Automatically removes spark from indexed colist
+
 ## Tool Invocation Pattern
 
 **CRITICAL:** Tools are invoked BY state machines, never directly from views or other engines.
@@ -7115,7 +7472,7 @@ The `@db` tool validates operations against this schema:
 {
   "op": {
     "type": "string",
-    "enum": ["read", "create", "update", "delete", "seed", "schema", "resolve", "append", "push", "processInbox"]
+    "enum": ["read", "create", "update", "delete", "seed", "schema", "resolve", "append", "push", "processInbox", "createSpark", "readSpark", "updateSpark", "deleteSpark"]
   },
   "schema": {
     "type": "string",

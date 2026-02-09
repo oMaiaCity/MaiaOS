@@ -117,7 +117,7 @@
             "$on": {
               "input": {
                 "send": "UPDATE_INPUT",
-                "payload": { "inputText": "@inputValue" }
+                "payload": { "value": "@inputValue" }
               },
               "keydown": {
                 "send": "SEND_MESSAGE",

@@ -1,7 +1,7 @@
 /**
- * Agent Tool - @agent/chat
+ * AI Tool - @ai/chat
  * 
- * Unified agent chat tool using Vercel AI SDK (via API service) for LLM interactions
+ * Unified AI chat tool using Vercel AI SDK (via API service) for LLM interactions
  * Supports OpenAI-compatible APIs (e.g., RedPill) via local API service proxy
  * 
  * The model can be configured dynamically via the payload. The RedPill API endpoint
@@ -11,8 +11,8 @@
  * represents the complete conversation/context being sent to the LLM.
  * 
  * Usage in state machines:
- *   {"tool": "@agent/chat", "payload": {"context": [...], "model": "minimax/minimax-m2.1"}}
- *   {"tool": "@agent/chat", "payload": {"context": [...], "model": "custom-model-name"}}
+ *   {"tool": "@ai/chat", "payload": {"context": [...], "model": "minimax/minimax-m2.1"}}
+ *   {"tool": "@ai/chat", "payload": {"context": [...], "model": "custom-model-name"}}
  */
 
 // Get API service URL from environment
@@ -44,8 +44,8 @@ export default {
     const { model = 'qwen/qwen3-30b-a3b-instruct-2507', temperature = 1 } = payload;
 
     if (!context || !Array.isArray(context) || context.length === 0) {
-      console.error('[@agent/chat] Invalid context:', context);
-      throw new Error('[@agent/chat] context array is required');
+      console.error('[@ai/chat] Invalid context:', context);
+      throw new Error('[@ai/chat] context array is required');
     }
 
     try {
@@ -59,8 +59,8 @@ export default {
       const apiUrl = `${API_BASE_URL}/api/v0/llm/chat`;
       
       // Log client request
-      console.log('[@agent/chat] 📤 Sending request to:', apiUrl);
-      console.log('[@agent/chat] Request payload:', {
+      console.log('[@ai/chat] 📤 Sending request to:', apiUrl);
+      console.log('[@ai/chat] Request payload:', {
         model,
         temperature,
         messageCount: context.length,
@@ -75,7 +75,7 @@ export default {
         body: JSON.stringify(requestPayload),
       });
 
-      console.log('[@agent/chat] 📥 Response received:', {
+      console.log('[@ai/chat] 📥 Response received:', {
         status: response.status,
         statusText: response.statusText,
         ok: response.ok,
@@ -84,14 +84,14 @@ export default {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        console.error('[@agent/chat] ❌ API error:', errorData);
-        throw new Error(`[@agent/chat] API request failed: ${errorData.error || errorData.message || response.statusText}`);
+        console.error('[@ai/chat] ❌ API error:', errorData);
+        throw new Error(`[@ai/chat] API request failed: ${errorData.error || errorData.message || response.statusText}`);
       }
 
       const data = await response.json();
       
       // Log client response
-      console.log('[@agent/chat] ✅ Response data:', {
+      console.log('[@ai/chat] ✅ Response data:', {
         contentLength: data.content?.length || 0,
         contentPreview: data.content?.substring(0, 200) || 'N/A',
         role: data.role,
@@ -106,7 +106,7 @@ export default {
       };
       return result;
     } catch (error) {
-      console.error('[@agent/chat] Error:', error);
+      console.error('[@ai/chat] Error:', error);
       throw error;
     }
   }

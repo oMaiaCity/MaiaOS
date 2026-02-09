@@ -189,6 +189,96 @@ Toggle is not a separate operation. Use `update` with an expression:
 }
 ```
 
+### Sparks Module (`@sparks`)
+
+The `@sparks` tool is a domain-specific tool for managing Sparks (collaborative spaces/groups). Sparks are CoMaps that reference groups, allowing users to organize their data into separate collaborative spaces.
+
+**When to use `@sparks` vs `@db`:**
+- Use `@sparks` for spark-specific operations (creating sparks, managing spark groups, future member/permission management)
+- Use `@db` for generic CRUD operations on data collections (todos, notes, etc.)
+
+#### Create Spark Operation
+```json
+{
+  "tool": "@sparks",
+  "payload": {
+    "op": "createSpark",
+    "name": "My Project"
+  }
+}
+```
+
+**What it does:**
+- Creates a child group owned by your universal group
+- Creates a Spark CoMap with the name and group reference
+- Registers the spark in `account.sparks` CoMap
+- Automatically indexes the spark in the database
+
+**Tool Result:** Returns created spark object with `id`, `name`, and `group` properties.
+
+#### Read Spark Operation
+```json
+{
+  "tool": "@sparks",
+  "payload": {
+    "op": "readSpark"
+  }
+}
+```
+
+Read all sparks (returns reactive store):
+```json
+{
+  "tool": "@sparks",
+  "payload": {
+    "op": "readSpark",
+    "id": "co_z..."
+  }
+}
+```
+
+Read a specific spark by co-id.
+
+**Tool Result:** Returns reactive store(s) with spark data. Access via `$$result` in SUCCESS handler.
+
+#### Update Spark Operation
+```json
+{
+  "tool": "@sparks",
+  "payload": {
+    "op": "updateSpark",
+    "id": "co_z...",
+    "data": {
+      "name": "Updated Spark Name"
+    }
+  }
+}
+```
+
+**Note:** The `data` object can contain `name` and/or `group` properties.
+
+#### Delete Spark Operation
+```json
+{
+  "tool": "@sparks",
+  "payload": {
+    "op": "deleteSpark",
+    "id": "co_z..."
+  }
+}
+```
+
+**What it does:**
+- Removes the spark from `account.sparks` registry
+- Deletes the Spark CoMap
+- Note: The associated group is not deleted (groups persist independently)
+
+**Future Operations (to be added):**
+- `addMember` - Add member to spark's group
+- `removeMember` - Remove member from spark's group
+- `updatePermissions` - Update member permissions/roles
+- `getMembers` - List spark members
+
 ### Core Module (`@core/*`)
 
 #### `@core/setViewMode`
