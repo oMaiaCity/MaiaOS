@@ -27,7 +27,7 @@ function truncateDescription(text, maxWords = 10) {
 }
 
 /**
- * Extract vibe key from vibe $id (e.g., "@vibe/todos" -> "todos")
+ * Extract vibe key from vibe $id (e.g., "@maia/vibe/todos" -> "todos")
  */
 function getVibeKeyFromId(vibeId) {
 	if (!vibeId) return null;
@@ -36,23 +36,63 @@ function getVibeKeyFromId(vibeId) {
 }
 
 /**
- * Load vibes from account.vibes registry dynamically using read() API
- * Also loads vibe manifests to get name and description
+ * Load available sparks (context scopes) from account.sparks
  * @param {Object} maia - MaiaOS instance
+ * @returns {Promise<Array>} Array of spark objects with {key, name, description}
+ */
+async function loadSparksFromAccount(maia) {
+	const sparks = [];
+
+	if (!maia) return sparks;
+
+	try {
+		const account = maia.id.maiaId;
+		const accountStore = await maia.db({ op: 'read', schema: '@account', key: account.id });
+		const accountData = accountStore.value || accountStore;
+
+		const sparksId = accountData?.sparks;
+		if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_')) {
+			return sparks;
+		}
+
+		const sparksStore = await maia.db({ op: 'read', schema: sparksId, key: sparksId });
+		const sparksData = sparksStore.value || sparksStore;
+
+		if (!sparksData || typeof sparksData !== 'object' || Array.isArray(sparksData)) return sparks;
+
+		const sparkKeys = Object.keys(sparksData).filter(k =>
+			k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$schema' && k !== 'type' &&
+			typeof sparksData[k] === 'string' && sparksData[k].startsWith('co_')
+		);
+
+		for (const key of sparkKeys) {
+			const displayName = key.startsWith('@') ? key : `@${key}`;
+			sparks.push({
+				key,
+				name: displayName,
+				description: `Context scope for ${displayName}`
+			});
+		}
+	} catch (error) {
+		console.warn('[Dashboard] Failed to load sparks:', error);
+	}
+	return sparks;
+}
+
+/**
+ * Load vibes from account.sparks[spark].vibes registry
+ * @param {Object} maia - MaiaOS instance
+ * @param {string} spark - Spark name (e.g. '@maia')
  * @returns {Promise<Array>} Array of vibe objects with {key, name, description, coId}
  */
-async function loadVibesFromAccount(maia) {
+async function loadVibesFromSpark(maia, spark) {
 	const vibes = [];
-	
-	if (!maia) {
-		return vibes;
-	}
-	
+
+	if (!maia || !spark) return vibes;
+
 	try {
-		// Load vibe registries to get manifest data (name, description)
 		const vibeRegistries = await getAllVibeRegistries();
 		const vibeManifestMap = new Map();
-		
 		for (const registry of vibeRegistries) {
 			if (registry.vibe) {
 				const vibeKey = getVibeKeyFromId(registry.vibe.$id);
@@ -64,103 +104,123 @@ async function loadVibesFromAccount(maia) {
 				}
 			}
 		}
-		
+
 		const account = maia.id.maiaId;
-		// Read account.vibes CoMap using read() API operations
-		const accountStore = await maia.db({op: 'read', schema: '@account', key: account.id});
+		const accountStore = await maia.db({ op: 'read', schema: '@account', key: account.id });
 		const accountData = accountStore.value || accountStore;
-		
-		// Operations API returns flat objects: {id: '...', profile: '...', vibes: '...'}
-		if (accountData && accountData.vibes && typeof accountData.vibes === 'string' && accountData.vibes.startsWith('co_')) {
-			const vibesId = accountData.vibes;
-			const vibesStore = await maia.db({op: 'read', schema: vibesId, key: vibesId});
-			const vibesData = vibesStore.value || vibesStore;
-			
-			// Operations API returns flat objects: {id: '...', todos: 'co_...', ...}
-			if (vibesData && typeof vibesData === 'object' && !Array.isArray(vibesData)) {
-				// Extract vibe keys (exclude metadata keys)
-				const vibeKeys = Object.keys(vibesData).filter(k => 
-					k !== 'id' && 
-					k !== 'loading' && 
-					k !== 'error' && 
-					k !== '$schema' && 
-					k !== 'type'
-				);
-				
-				// Add each vibe from account.vibes
-				for (const vibeKey of vibeKeys) {
-					const vibeCoId = vibesData[vibeKey];
-					if (typeof vibeCoId === 'string' && vibeCoId.startsWith('co_')) {
-						// Get manifest data if available
-						const manifest = vibeManifestMap.get(vibeKey);
-						const name = manifest?.name || `${vibeKey.charAt(0).toUpperCase() + vibeKey.slice(1)}`;
-						const description = manifest?.description ? truncateDescription(manifest.description, 10) : `Open ${name}`;
-						
-						vibes.push({
-							key: vibeKey,
-							name: name,
-							description: description,
-							coId: vibeCoId
-						});
-					}
-				}
-			}
+
+		const sparksId = accountData?.sparks;
+		if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_')) return vibes;
+
+		const sparksStore = await maia.db({ op: 'read', schema: sparksId, key: sparksId });
+		const sparksData = sparksStore.value || sparksStore;
+		const sparkCoId = sparksData?.[spark];
+		if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_')) return vibes;
+
+		const sparkStore = await maia.db({ op: 'read', schema: null, key: sparkCoId });
+		const sparkData = sparkStore.value || sparkStore;
+		const vibesId = sparkData?.vibes;
+		if (!vibesId || typeof vibesId !== 'string' || !vibesId.startsWith('co_')) return vibes;
+
+		const vibesStore = await maia.db({ op: 'read', schema: vibesId, key: vibesId });
+		const vibesData = vibesStore.value || vibesStore;
+
+		if (!vibesData || typeof vibesData !== 'object' || Array.isArray(vibesData)) return vibes;
+
+		const vibeKeys = Object.keys(vibesData).filter(k =>
+			k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$schema' && k !== 'type' &&
+			typeof vibesData[k] === 'string' && vibesData[k].startsWith('co_')
+		);
+
+		for (const vibeKey of vibeKeys) {
+			const manifest = vibeManifestMap.get(vibeKey);
+			const name = manifest?.name || `${vibeKey.charAt(0).toUpperCase() + vibeKey.slice(1)}`;
+			const description = manifest?.description ? truncateDescription(manifest.description, 10) : `Open ${name}`;
+			vibes.push({
+				key: vibeKey,
+				name,
+				description,
+				coId: vibesData[vibeKey]
+			});
 		}
 	} catch (error) {
-		console.warn('[Dashboard] Failed to load vibes dynamically:', error);
+		console.warn('[Dashboard] Failed to load vibes for spark:', error);
 	}
-	
 	return vibes;
 }
 
 /**
- * Render dashboard screen with grid layout
- * Uses clean read() API - no manual subscription handling needed
+ * Render dashboard screen with grid context hierarchy
+ * Level 1: Sparks (context scopes) + DB Viewer
+ * Level 2: Vibes for selected spark (when currentSpark is set)
  */
-export async function renderDashboard(maia, authState, syncState, navigateToScreen) {
+export async function renderDashboard(maia, authState, syncState, navigateToScreen, currentSpark, loadSpark, loadVibe) {
 	const accountId = maia?.id?.maiaId?.id || '';
-	
-	// Load vibes dynamically using clean read() API (handles reactivity internally)
-	const vibes = await loadVibesFromAccount(maia);
-	
-	// Create DB Viewer card
-	const dbViewerCard = `
-		<div class="dashboard-card whitish-card" onclick="window.navigateToScreen('db-viewer')">
-			<div class="dashboard-card-content">
-				<div class="dashboard-card-icon">
-					<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-						<path d="M4 7h16M4 12h16M4 17h16"/>
-					</svg>
+
+	let cards = '';
+
+	if (!currentSpark) {
+		// Level 1: Show sparks (context scopes) + DB Viewer
+		const sparks = await loadSparksFromAccount(maia);
+
+		const dbViewerCard = `
+			<div class="dashboard-card whitish-card" onclick="window.navigateToScreen('db-viewer')">
+				<div class="dashboard-card-content">
+					<div class="dashboard-card-icon">
+						<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+							<path d="M4 7h16M4 12h16M4 17h16"/>
+						</svg>
+					</div>
+					<h3 class="dashboard-card-title">DB Viewer</h3>
+					<p class="dashboard-card-description">Explore and inspect your CoValues</p>
 				</div>
-				<h3 class="dashboard-card-title">DB Viewer</h3>
-				<p class="dashboard-card-description">Explore and inspect your CoValues</p>
 			</div>
-		</div>
-	`;
-	
-	// Create vibe cards
-	const vibeCards = vibes.map(vibe => `
-		<div class="dashboard-card whitish-card" onclick="window.loadVibe('${escapeHtml(vibe.key)}')">
-			<div class="dashboard-card-content">
-				<div class="dashboard-card-icon">
-					<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-						<path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
-					</svg>
+		`;
+
+		const sparkCards = sparks.map(spark => `
+			<div class="dashboard-card whitish-card" onclick="window.loadSpark('${escapeHtml(spark.key)}')">
+				<div class="dashboard-card-content">
+					<div class="dashboard-card-icon">
+						<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+							<path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+						</svg>
+					</div>
+					<h3 class="dashboard-card-title">${escapeHtml(spark.name)}</h3>
+					<p class="dashboard-card-description">${escapeHtml(spark.description)}</p>
 				</div>
-				<h3 class="dashboard-card-title">${escapeHtml(vibe.name)}</h3>
-				<p class="dashboard-card-description">${escapeHtml(vibe.description)}</p>
 			</div>
-		</div>
-	`).join('');
+		`).join('');
+
+		cards = dbViewerCard + sparkCards;
+	} else {
+		// Level 2: Show vibes for the selected spark (no back card - Switch Spark in bottom navbar)
+		const vibes = await loadVibesFromSpark(maia, currentSpark);
+
+		const vibeCards = vibes.map(vibe => `
+			<div class="dashboard-card whitish-card" onclick="window.loadVibe('${escapeHtml(vibe.key)}')">
+				<div class="dashboard-card-content">
+					<div class="dashboard-card-icon">
+						<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+							<path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+						</svg>
+					</div>
+					<h3 class="dashboard-card-title">${escapeHtml(vibe.name)}</h3>
+					<p class="dashboard-card-description">${escapeHtml(vibe.description)}</p>
+				</div>
+			</div>
+		`).join('');
+
+		cards = vibeCards;
+	}
 	
-	const cards = dbViewerCard + vibeCards;
-	
+	const headerTitle = currentSpark ? `${currentSpark} Vibes` : 'Me';
+
 	document.getElementById("app").innerHTML = `
 		<div class="db-container">
 			<header class="db-header whitish-card">
 				<div class="header-content">
 					<div class="header-left">
-						<h1>Me</h1>
+						<h1>${escapeHtml(headerTitle)}</h1>
 					</div>
 					<div class="header-center">
 						<!-- Logo centered in navbar -->
@@ -210,19 +270,35 @@ export async function renderDashboard(maia, authState, syncState, navigateToScre
 				</div>
 			</header>
 			
-			<div class="dashboard-main">
+			<div class="dashboard-main ${currentSpark ? 'has-bottom-navbar' : ''}">
 				<div class="dashboard-grid">
-					${cards || '<div class="empty-state p-12 text-center text-slate-400 italic">No apps available</div>'}
+					${cards || `<div class="empty-state p-12 text-center text-slate-400 italic">${currentSpark ? 'No vibes in this context' : 'No context scopes available'}</div>`}
 				</div>
 			</div>
+			${currentSpark ? `
+			<!-- Bottom navbar - Switch Spark (same position as Home in vibe viewer) -->
+			<div class="bottom-navbar">
+				<div class="bottom-navbar-left"></div>
+				<div class="bottom-navbar-center">
+					<button class="home-btn bottom-home-btn" onclick="window.loadSpark(null)" title="Switch Spark">
+						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+							<path d="M13 10V3L4 14h7v7l9-11h-7z"/>
+						</svg>
+						<span class="home-label">Switch Spark</span>
+					</button>
+				</div>
+				<div class="bottom-navbar-right"></div>
+			</div>
+			` : ''}
 		</div>
 	`;
 }
 
 /**
  * Render vibe viewer screen (full-screen vibe display)
+ * @param {string} [currentSpark='@maia'] - Spark context scope for vibes
  */
-export async function renderVibeViewer(maia, authState, syncState, currentVibe, navigateToScreen) {
+export async function renderVibeViewer(maia, authState, syncState, currentVibe, navigateToScreen, currentSpark = '@maia') {
 	const accountId = maia?.id?.maiaId?.id || '';
 	// Map vibe keys to display names
 	const vibeNameMap = {
@@ -307,7 +383,7 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 						<!-- Left buttons are vibe-specific, not global -->
 					</div>
 					<div class="bottom-navbar-center">
-						<button class="home-btn bottom-home-btn" onclick="window.navigateToScreen('dashboard')" title="Home">
+						<button class="home-btn bottom-home-btn" onclick="window.loadVibe(null)" title="Home">
 							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 								<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
 								<polyline points="9 22 9 12 15 12 15 22"></polyline>
@@ -395,8 +471,8 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 			// The kernel will handle actor detachment and reuse logic
 			container.innerHTML = '';
 			
-			// Load vibe from account
-			await maia.loadVibeFromAccount(currentVibe, container);
+			// Load vibe from spark context (account.sparks[spark].vibes)
+			await maia.loadVibeFromAccount(currentVibe, container, currentSpark || '@maia');
 			
 			// Add sidebar toggle handlers for maiadb vibe (after vibe loads)
 			setTimeout(() => {

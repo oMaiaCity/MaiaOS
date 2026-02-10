@@ -1,7 +1,7 @@
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/messagePayload",
-  "title": "@schema/messagePayload",
+  "$schema": "@maia/schema/meta",
+  "$id": "@maia/schema/messagePayload",
+  "title": "@maia/schema/messagePayload",
   "description": "Message payload definition",
   "cotype": "comap",
   "indexing": true,

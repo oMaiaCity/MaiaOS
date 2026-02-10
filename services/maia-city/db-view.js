@@ -18,16 +18,15 @@ function escapeHtml(text) {
 	return div.innerHTML;
 }
 
-export async function renderApp(maia, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, navigateToScreen) {
+export async function renderApp(maia, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, currentSpark, switchView, selectCoValue, loadVibe, loadSpark, navigateToScreen) {
 	// Route to appropriate screen based on currentScreen
 	if (currentScreen === 'dashboard') {
-		// Dashboard uses clean read() API - no subscription handling needed
-		await renderDashboard(maia, authState, syncState, navigateToScreen);
+		await renderDashboard(maia, authState, syncState, navigateToScreen, currentSpark, loadSpark, loadVibe);
 		return;
 	}
-	
+
 	if (currentScreen === 'vibe-viewer' && currentVibe) {
-		await renderVibeViewer(maia, authState, syncState, currentVibe, navigateToScreen);
+		await renderVibeViewer(maia, authState, syncState, currentVibe, navigateToScreen, currentSpark);
 		return;
 	}
 	
@@ -235,9 +234,8 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 						lastPropertiesCount = currentPropertiesCount;
 						lastLoadingState = currentLoadingState;
 						lastDataHash = currentDataHash;
-						// Use setTimeout to prevent infinite loops and batch updates
 						setTimeout(() => {
-							renderApp(maia, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, navigateToScreen);
+							renderApp(maia, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, currentSpark, switchView, selectCoValue, loadVibe, loadSpark, navigateToScreen);
 						}, 0);
 					}
 				});
@@ -273,7 +271,7 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 							lastLength = updatedResult.length;
 							// Use setTimeout to prevent infinite loops and batch updates
 							setTimeout(() => {
-								renderApp(maia, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, navigateToScreen);
+								renderApp(maia, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, currentSpark, switchView, selectCoValue, loadVibe, loadSpark, navigateToScreen);
 							}, 0);
 						}
 					});
@@ -287,7 +285,7 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 						// Match schema name (can be in various formats)
 						const schema = cv.$schema; // STRICT: Only $schema, no fallback
 						return schema === currentView || 
-							   schema === `@schema/${currentView}` ||
+							   schema === `@maia/schema/${currentView}` ||
 							   (cv.headerMeta?.$schema === currentView);
 					})
 					.map(cv => ({

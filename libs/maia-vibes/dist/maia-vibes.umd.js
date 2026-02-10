@@ -3,15 +3,15 @@
 })(this, (function(exports2, kernel) {
   "use strict";
   const todosVibe = {
-    "$schema": "@schema/vibe",
-    "$id": "@vibe/todos",
+    "$schema": "@maia/schema/vibe",
+    "$id": "@maia/vibe/todos",
     "name": "Todos",
     "description": "Complete todo list with state machines and AI tools",
-    "actor": "@todos/actor/agent"
+    "actor": "@maia/todos/actor/agent"
   };
   const brandStyle$3 = {
-    "$schema": "@schema/style",
-    "$id": "@todos/style/brand",
+    "$schema": "@maia/schema/style",
+    "$id": "@maia/todos/style/brand",
     "tokens": {
       "colors": {
         "marineBlue": "#001F33",
@@ -437,8 +437,8 @@
     }
   };
   const listStyle = {
-    "$schema": "@schema/style",
-    "$id": "@todos/style/list",
+    "$schema": "@maia/schema/style",
+    "$id": "@maia/todos/style/list",
     "components": {
       "list": {
         "display": "flex",
@@ -642,8 +642,8 @@
     }
   };
   const logsStyle = {
-    "$schema": "@schema/style",
-    "$id": "@todos/style/logs",
+    "$schema": "@maia/schema/style",
+    "$id": "@maia/todos/style/logs",
     "components": {
       "logs": {
         "padding": "0",
@@ -830,14 +830,14 @@
     }
   };
   const agentActor$3 = {
-    "$schema": "@schema/actor",
-    "$id": "@todos/actor/agent",
+    "$schema": "@maia/schema/actor",
+    "$id": "@maia/todos/actor/agent",
     "role": "agent",
-    "context": "@todos/context/agent",
-    "view": "@todos/view/agent",
-    "state": "@todos/state/agent",
-    "brand": "@todos/style/brand",
-    "inbox": "@todos/inbox/agent",
+    "context": "@maia/todos/context/agent",
+    "view": "@maia/todos/view/agent",
+    "state": "@maia/todos/state/agent",
+    "brand": "@maia/todos/style/brand",
+    "inbox": "@maia/todos/inbox/agent",
     "messageTypes": [
       "CREATE_BUTTON",
       "TOGGLE_BUTTON",
@@ -849,15 +849,15 @@
     ]
   };
   const listActor = {
-    "$schema": "@schema/actor",
-    "$id": "@todos/actor/list",
+    "$schema": "@maia/schema/actor",
+    "$id": "@maia/todos/actor/list",
     "role": "todo-list",
-    "context": "@todos/context/list",
-    "view": "@todos/view/list",
-    "state": "@todos/state/list",
-    "brand": "@todos/style/brand",
-    "style": "@todos/style/list",
-    "inbox": "@todos/inbox/list",
+    "context": "@maia/todos/context/list",
+    "view": "@maia/todos/view/list",
+    "state": "@maia/todos/state/list",
+    "brand": "@maia/todos/style/brand",
+    "style": "@maia/todos/style/list",
+    "inbox": "@maia/todos/inbox/list",
     "messageTypes": [
       "TOGGLE_BUTTON",
       "DELETE_BUTTON",
@@ -867,23 +867,23 @@
     ]
   };
   const logsActor = {
-    "$schema": "@schema/actor",
-    "$id": "@todos/actor/logs",
+    "$schema": "@maia/schema/actor",
+    "$id": "@maia/todos/actor/logs",
     "role": "logs",
-    "context": "@todos/context/logs",
-    "view": "@todos/view/logs",
-    "state": "@todos/state/logs",
-    "brand": "@todos/style/brand",
-    "style": "@todos/style/logs",
-    "inbox": "@todos/inbox/logs",
+    "context": "@maia/todos/context/logs",
+    "view": "@maia/todos/view/logs",
+    "state": "@maia/todos/state/logs",
+    "brand": "@maia/todos/style/brand",
+    "style": "@maia/todos/style/logs",
+    "inbox": "@maia/todos/inbox/logs",
     "messageTypes": [
       "RETRY",
       "DISMISS"
     ]
   };
   const agentView$3 = {
-    "$schema": "@schema/view",
-    "$id": "@todos/view/agent",
+    "$schema": "@maia/schema/view",
+    "$id": "@maia/todos/view/agent",
     "content": {
       "tag": "div",
       "class": "stack",
@@ -988,8 +988,8 @@
     }
   };
   const listView = {
-    "$schema": "@schema/view",
-    "$id": "@todos/view/list",
+    "$schema": "@maia/schema/view",
+    "$id": "@maia/todos/view/list",
     "content": {
       "class": "list",
       "$each": {
@@ -1033,8 +1033,8 @@
     }
   };
   const logsView = {
-    "$schema": "@schema/view",
-    "$id": "@todos/view/logs",
+    "$schema": "@maia/schema/view",
+    "$id": "@maia/todos/view/logs",
     "content": {
       "class": "logs",
       "attrs": {
@@ -1122,8 +1122,8 @@
     }
   };
   const agentContext$3 = {
-    "$schema": "@schema/context",
-    "$id": "@todos/context/agent",
+    "$schema": "@maia/schema/context",
+    "$id": "@maia/todos/context/agent",
     "currentView": "@list",
     "viewMode": "list",
     "listButtonActive": true,
@@ -1135,24 +1135,24 @@
     "newTodoText": "",
     "error": null,
     "@actors": {
-      "list": "@todos/actor/list",
-      "logs": "@todos/actor/logs"
+      "list": "@maia/todos/actor/list",
+      "logs": "@maia/todos/actor/logs"
     }
   };
   const listContext = {
-    "$schema": "@schema/context",
-    "$id": "@todos/context/list",
+    "$schema": "@maia/schema/context",
+    "$id": "@maia/todos/context/list",
     "list": {
-      "schema": "@schema/data/todos"
+      "schema": "@maia/schema/data/todos"
     },
     "toggleButtonText": "✓",
     "deleteButtonText": "✕"
   };
   const logsContext = {
-    "$schema": "@schema/context",
-    "$id": "@todos/context/logs",
+    "$schema": "@maia/schema/context",
+    "$id": "@maia/todos/context/logs",
     "messages": {
-      "schema": "@schema/message",
+      "schema": "@maia/schema/message",
       "options": {
         "map": {
           "fromRole": "$$source.role",
@@ -1165,8 +1165,8 @@
     "payloadLabel": "payload"
   };
   const agentState$3 = {
-    "$schema": "@schema/state",
-    "$id": "@todos/state/agent",
+    "$schema": "@maia/schema/state",
+    "$id": "@maia/todos/state/agent",
     "initial": "idle",
     "states": {
       "idle": {
@@ -1228,7 +1228,7 @@
           "tool": "@db",
           "payload": {
             "op": "create",
-            "schema": "@schema/data/todos",
+            "schema": "@maia/schema/data/todos",
             "data": { "text": "$$value", "done": false }
           }
         },
@@ -1388,8 +1388,8 @@
     }
   };
   const listState = {
-    "$schema": "@schema/state",
-    "$id": "@todos/state/list",
+    "$schema": "@maia/schema/state",
+    "$id": "@maia/todos/state/list",
     "initial": "idle",
     "states": {
       "idle": {
@@ -1402,7 +1402,7 @@
                 "payload": {
                   "type": "TOGGLE_BUTTON",
                   "payload": { "id": "$$id", "done": "$$done" },
-                  "target": "@todos/actor/agent"
+                  "target": "@maia/todos/actor/agent"
                 }
               }
             ]
@@ -1415,7 +1415,7 @@
                 "payload": {
                   "type": "DELETE_BUTTON",
                   "payload": { "id": "$$id" },
-                  "target": "@todos/actor/agent"
+                  "target": "@maia/todos/actor/agent"
                 }
               }
             ]
@@ -1451,8 +1451,8 @@
     }
   };
   const logsState = {
-    "$schema": "@schema/state",
-    "$id": "@todos/state/logs",
+    "$schema": "@maia/schema/state",
+    "$id": "@maia/todos/state/logs",
     "initial": "idle",
     "states": {
       "idle": {},
@@ -1482,51 +1482,51 @@
     }
   };
   const agentInbox$3 = {
-    "$schema": "@schema/inbox",
-    "$id": "@todos/inbox/agent",
+    "$schema": "@maia/schema/inbox",
+    "$id": "@maia/todos/inbox/agent",
     "items": []
   };
   const listInbox = {
-    "$schema": "@schema/inbox",
-    "$id": "@todos/inbox/list",
+    "$schema": "@maia/schema/inbox",
+    "$id": "@maia/todos/inbox/list",
     "items": []
   };
   const logsInbox = {
-    "$schema": "@schema/inbox",
-    "$id": "@todos/inbox/logs",
+    "$schema": "@maia/schema/inbox",
+    "$id": "@maia/todos/inbox/logs",
     "items": []
   };
   const TodosVibeRegistry = {
     vibe: todosVibe,
     styles: {
-      "@todos/style/brand": brandStyle$3,
-      "@todos/style/list": listStyle,
-      "@todos/style/logs": logsStyle
+      "@maia/todos/style/brand": brandStyle$3,
+      "@maia/todos/style/list": listStyle,
+      "@maia/todos/style/logs": logsStyle
     },
     actors: {
-      "@todos/actor/agent": agentActor$3,
-      "@todos/actor/list": listActor,
-      "@todos/actor/logs": logsActor
+      "@maia/todos/actor/agent": agentActor$3,
+      "@maia/todos/actor/list": listActor,
+      "@maia/todos/actor/logs": logsActor
     },
     views: {
-      "@todos/view/agent": agentView$3,
-      "@todos/view/list": listView,
-      "@todos/view/logs": logsView
+      "@maia/todos/view/agent": agentView$3,
+      "@maia/todos/view/list": listView,
+      "@maia/todos/view/logs": logsView
     },
     contexts: {
-      "@todos/context/agent": agentContext$3,
-      "@todos/context/list": listContext,
-      "@todos/context/logs": logsContext
+      "@maia/todos/context/agent": agentContext$3,
+      "@maia/todos/context/list": listContext,
+      "@maia/todos/context/logs": logsContext
     },
     states: {
-      "@todos/state/agent": agentState$3,
-      "@todos/state/list": listState,
-      "@todos/state/logs": logsState
+      "@maia/todos/state/agent": agentState$3,
+      "@maia/todos/state/list": listState,
+      "@maia/todos/state/logs": logsState
     },
     inboxes: {
-      "@todos/inbox/agent": agentInbox$3,
-      "@todos/inbox/list": listInbox,
-      "@todos/inbox/logs": logsInbox
+      "@maia/todos/inbox/agent": agentInbox$3,
+      "@maia/todos/inbox/list": listInbox,
+      "@maia/todos/inbox/logs": logsInbox
     },
     // Note: Children are now stored in context.actors (not separate children CoList files)
     // See agent.context.maia and composite.context.maia for children definitions
@@ -1595,15 +1595,15 @@
     return { os, vibe, actor: todoActor };
   }
   const myDataVibe = {
-    "$schema": "@schema/vibe",
-    "$id": "@vibe/my-data",
+    "$schema": "@maia/schema/vibe",
+    "$id": "@maia/vibe/my-data",
     "name": "MaiaDB",
     "description": "Database viewer with navigation and detail panels",
-    "actor": "@my-data/actor/agent"
+    "actor": "@maia/my-data/actor/agent"
   };
   const brandStyle$2 = {
-    "$schema": "@schema/style",
-    "$id": "@my-data/style/brand",
+    "$schema": "@maia/schema/style",
+    "$id": "@maia/my-data/style/brand",
     "tokens": {
       "colors": {
         "marineBlue": "#001F33",
@@ -2046,46 +2046,46 @@
     }
   };
   const agentActor$2 = {
-    "$schema": "@schema/actor",
-    "$id": "@my-data/actor/agent",
+    "$schema": "@maia/schema/actor",
+    "$id": "@maia/my-data/actor/agent",
     "role": "agent",
-    "context": "@my-data/context/agent",
-    "view": "@my-data/view/agent",
-    "state": "@my-data/state/agent",
-    "brand": "@my-data/style/brand",
-    "inbox": "@my-data/inbox/agent",
+    "context": "@maia/my-data/context/agent",
+    "view": "@maia/my-data/view/agent",
+    "state": "@maia/my-data/state/agent",
+    "brand": "@maia/my-data/style/brand",
+    "inbox": "@maia/my-data/inbox/agent",
     "messageTypes": [
       "SELECT_NAV",
       "SELECT_ROW"
     ]
   };
   const tableActor = {
-    "$schema": "@schema/actor",
-    "$id": "@my-data/actor/table",
+    "$schema": "@maia/schema/actor",
+    "$id": "@maia/my-data/actor/table",
     "role": "ui",
-    "context": "@my-data/context/table",
-    "view": "@my-data/view/table",
-    "state": "@my-data/state/table",
-    "brand": "@my-data/style/brand",
-    "inbox": "@my-data/inbox/table",
+    "context": "@maia/my-data/context/table",
+    "view": "@maia/my-data/view/table",
+    "state": "@maia/my-data/state/table",
+    "brand": "@maia/my-data/style/brand",
+    "inbox": "@maia/my-data/inbox/table",
     "messageTypes": [
       "SELECT_ROW"
     ]
   };
   const detailActor$1 = {
-    "$schema": "@schema/actor",
-    "$id": "@my-data/actor/detail",
+    "$schema": "@maia/schema/actor",
+    "$id": "@maia/my-data/actor/detail",
     "role": "ui",
-    "context": "@my-data/context/detail",
-    "view": "@my-data/view/detail",
-    "state": "@my-data/state/detail",
-    "brand": "@my-data/style/brand",
-    "inbox": "@my-data/inbox/detail",
+    "context": "@maia/my-data/context/detail",
+    "view": "@maia/my-data/view/detail",
+    "state": "@maia/my-data/state/detail",
+    "brand": "@maia/my-data/style/brand",
+    "inbox": "@maia/my-data/inbox/detail",
     "messageTypes": []
   };
   const agentView$2 = {
-    "$schema": "@schema/view",
-    "$id": "@my-data/view/agent",
+    "$schema": "@maia/schema/view",
+    "$id": "@maia/my-data/view/agent",
     "content": {
       "tag": "div",
       "class": "db-viewer",
@@ -2186,8 +2186,8 @@
     }
   };
   const tableView = {
-    "$schema": "@schema/view",
-    "$id": "@my-data/view/table",
+    "$schema": "@maia/schema/view",
+    "$id": "@maia/my-data/view/table",
     "content": {
       "tag": "div",
       "class": "table-container",
@@ -2275,8 +2275,8 @@
     }
   };
   const detailView$1 = {
-    "$schema": "@schema/view",
-    "$id": "@my-data/view/detail",
+    "$schema": "@maia/schema/view",
+    "$id": "@maia/my-data/view/detail",
     "content": {
       "tag": "div",
       "class": "detail-container",
@@ -2381,8 +2381,8 @@
     }
   };
   const agentContext$2 = {
-    "$schema": "@schema/context",
-    "$id": "@my-data/context/agent",
+    "$schema": "@maia/schema/context",
+    "$id": "@maia/my-data/context/agent",
     "navTitle": "MaiaDB",
     "navCategories": [
       {
@@ -2414,13 +2414,13 @@
     "currentTable": "@table",
     "currentDetail": "@detail",
     "@actors": {
-      "table": "@my-data/actor/table",
-      "detail": "@my-data/actor/detail"
+      "table": "@maia/my-data/actor/table",
+      "detail": "@maia/my-data/actor/detail"
     }
   };
   const tableContext = {
-    "$schema": "@schema/context",
-    "$id": "@my-data/context/table",
+    "$schema": "@maia/schema/context",
+    "$id": "@maia/my-data/context/table",
     "table": [
       { "id": "1", "name": "John Doe", "email": "john@example.com", "role": "admin", "status": "active", "createdAt": "2024-01-15" },
       { "id": "2", "name": "Jane Smith", "email": "jane@example.com", "role": "user", "status": "active", "createdAt": "2024-01-20" },
@@ -2438,8 +2438,8 @@
     }
   };
   const detailContext$1 = {
-    "$schema": "@schema/context",
-    "$id": "@my-data/context/detail",
+    "$schema": "@maia/schema/context",
+    "$id": "@maia/my-data/context/detail",
     "detail": {
       "id": "1",
       "name": "John Doe",
@@ -2466,8 +2466,8 @@
     }
   };
   const agentState$2 = {
-    "$schema": "@schema/state",
-    "$id": "@my-data/state/agent",
+    "$schema": "@maia/schema/state",
+    "$id": "@maia/my-data/state/agent",
     "initial": "idle",
     "states": {
       "idle": {
@@ -2505,8 +2505,8 @@
     }
   };
   const tableState = {
-    "$schema": "@schema/state",
-    "$id": "@my-data/state/table",
+    "$schema": "@maia/schema/state",
+    "$id": "@maia/my-data/state/table",
     "initial": "idle",
     "states": {
       "idle": {
@@ -2524,57 +2524,57 @@
     }
   };
   const detailState$1 = {
-    "$schema": "@schema/state",
-    "$id": "@my-data/state/detail",
+    "$schema": "@maia/schema/state",
+    "$id": "@maia/my-data/state/detail",
     "initial": "idle",
     "states": {
       "idle": {}
     }
   };
   const agentInbox$2 = {
-    "$schema": "@schema/inbox",
-    "$id": "@my-data/inbox/agent",
+    "$schema": "@maia/schema/inbox",
+    "$id": "@maia/my-data/inbox/agent",
     "cotype": "costream"
   };
   const tableInbox = {
-    "$schema": "@schema/inbox",
-    "$id": "@my-data/inbox/table",
+    "$schema": "@maia/schema/inbox",
+    "$id": "@maia/my-data/inbox/table",
     "cotype": "costream"
   };
   const detailInbox$1 = {
-    "$schema": "@schema/inbox",
-    "$id": "@my-data/inbox/detail",
+    "$schema": "@maia/schema/inbox",
+    "$id": "@maia/my-data/inbox/detail",
     "cotype": "costream"
   };
   const MyDataVibeRegistry = {
     vibe: myDataVibe,
     styles: {
-      "@my-data/style/brand": brandStyle$2
+      "@maia/my-data/style/brand": brandStyle$2
     },
     actors: {
-      "@my-data/actor/agent": agentActor$2,
-      "@my-data/actor/table": tableActor,
-      "@my-data/actor/detail": detailActor$1
+      "@maia/my-data/actor/agent": agentActor$2,
+      "@maia/my-data/actor/table": tableActor,
+      "@maia/my-data/actor/detail": detailActor$1
     },
     views: {
-      "@my-data/view/agent": agentView$2,
-      "@my-data/view/table": tableView,
-      "@my-data/view/detail": detailView$1
+      "@maia/my-data/view/agent": agentView$2,
+      "@maia/my-data/view/table": tableView,
+      "@maia/my-data/view/detail": detailView$1
     },
     contexts: {
-      "@my-data/context/agent": agentContext$2,
-      "@my-data/context/table": tableContext,
-      "@my-data/context/detail": detailContext$1
+      "@maia/my-data/context/agent": agentContext$2,
+      "@maia/my-data/context/table": tableContext,
+      "@maia/my-data/context/detail": detailContext$1
     },
     states: {
-      "@my-data/state/agent": agentState$2,
-      "@my-data/state/table": tableState,
-      "@my-data/state/detail": detailState$1
+      "@maia/my-data/state/agent": agentState$2,
+      "@maia/my-data/state/table": tableState,
+      "@maia/my-data/state/detail": detailState$1
     },
     inboxes: {
-      "@my-data/inbox/agent": agentInbox$2,
-      "@my-data/inbox/table": tableInbox,
-      "@my-data/inbox/detail": detailInbox$1
+      "@maia/my-data/inbox/agent": agentInbox$2,
+      "@maia/my-data/inbox/table": tableInbox,
+      "@maia/my-data/inbox/detail": detailInbox$1
     },
     // No initial data - this vibe uses mocked data in context
     data: {}
@@ -2628,15 +2628,15 @@
     return { os, vibe, actor: myDataActor };
   }
   const sparksVibe = {
-    "$schema": "@schema/vibe",
-    "$id": "@vibe/sparks",
+    "$schema": "@maia/schema/vibe",
+    "$id": "@maia/vibe/sparks",
     "name": "Sparks",
     "description": "Create and manage collaborative groups (sparks)",
-    "actor": "@sparks/actor/agent"
+    "actor": "@maia/sparks/actor/agent"
   };
   const brandStyle$1 = {
-    "$schema": "@schema/style",
-    "$id": "@sparks/style/brand",
+    "$schema": "@maia/schema/style",
+    "$id": "@maia/sparks/style/brand",
     "tokens": {
       "colors": {
         "marineBlue": "#001F33",
@@ -2977,6 +2977,17 @@
         "fontWeight": "{typography.fontWeight.bold}",
         "textTransform": "uppercase",
         "letterSpacing": "0.05em"
+      },
+      "memberRemoveButton": {
+        "padding": "0.15rem 0.4rem",
+        "minWidth": "1.5rem",
+        "fontSize": "1rem",
+        "lineHeight": "1",
+        "color": "#DC3545",
+        "background": "rgba(220, 53, 69, 0.15)",
+        "border": "1px solid rgba(220, 53, 69, 0.4)",
+        "borderRadius": "{radii.sm}",
+        "cursor": "pointer"
       }
     },
     "selectors": {
@@ -3277,14 +3288,14 @@
     }
   };
   const agentActor$1 = {
-    "$schema": "@schema/actor",
-    "$id": "@sparks/actor/agent",
+    "$schema": "@maia/schema/actor",
+    "$id": "@maia/sparks/actor/agent",
     "type": "service",
-    "state": "@sparks/state/agent",
-    "view": "@sparks/view/agent",
-    "context": "@sparks/context/agent",
-    "brand": "@sparks/style/brand",
-    "inbox": "@sparks/inbox/agent",
+    "state": "@maia/sparks/state/agent",
+    "view": "@maia/sparks/view/agent",
+    "context": "@maia/sparks/context/agent",
+    "brand": "@maia/sparks/style/brand",
+    "inbox": "@maia/sparks/inbox/agent",
     "messageTypes": [
       "CREATE_BUTTON",
       "UPDATE_INPUT",
@@ -3295,19 +3306,19 @@
     ]
   };
   const detailActor = {
-    "$schema": "@schema/actor",
-    "$id": "@sparks/actor/detail",
+    "$schema": "@maia/schema/actor",
+    "$id": "@maia/sparks/actor/detail",
     "role": "ui",
-    "context": "@sparks/context/detail",
-    "view": "@sparks/view/detail",
-    "state": "@sparks/state/detail",
-    "brand": "@sparks/style/brand",
-    "inbox": "@sparks/inbox/detail",
-    "messageTypes": ["LOAD_ACTOR", "SUCCESS", "ADD_AGENT", "UPDATE_AGENT_INPUT", "ERROR"]
+    "context": "@maia/sparks/context/detail",
+    "view": "@maia/sparks/view/detail",
+    "state": "@maia/sparks/state/detail",
+    "brand": "@maia/sparks/style/brand",
+    "inbox": "@maia/sparks/inbox/detail",
+    "messageTypes": ["LOAD_ACTOR", "SUCCESS", "ADD_AGENT", "REMOVE_MEMBER", "UPDATE_AGENT_INPUT", "ERROR"]
   };
   const agentView$1 = {
-    "$schema": "@schema/view",
-    "$id": "@sparks/view/agent",
+    "$schema": "@maia/schema/view",
+    "$id": "@maia/sparks/view/agent",
     "content": {
       "tag": "div",
       "class": "stack",
@@ -3442,8 +3453,8 @@
     }
   };
   const detailView = {
-    "$schema": "@schema/view",
-    "$id": "@sparks/view/detail",
+    "$schema": "@maia/schema/view",
+    "$id": "@maia/sparks/view/detail",
     "content": {
       "tag": "div",
       "class": "detail-container",
@@ -3524,6 +3535,17 @@
                         }
                       },
                       "text": "$$role"
+                    },
+                    {
+                      "tag": "button",
+                      "class": "member-remove-button",
+                      "text": "×",
+                      "$on": {
+                        "click": {
+                          "send": "REMOVE_MEMBER",
+                          "payload": { "memberId": "$$id" }
+                        }
+                      }
                     }
                   ]
                 }
@@ -3594,10 +3616,10 @@
     }
   };
   const agentContext$1 = {
-    "$schema": "@schema/context",
-    "$id": "@sparks/context/agent",
+    "$schema": "@maia/schema/context",
+    "$id": "@maia/sparks/context/agent",
     "sparks": {
-      "schema": "@schema/data/spark"
+      "schema": "@maia/schema/data/spark"
     },
     "newSparkName": "",
     "inputPlaceholder": "Enter spark name...",
@@ -3609,15 +3631,15 @@
     "selectedSparkItems": {},
     "currentDetail": "@detail",
     "@actors": {
-      "detail": "@sparks/actor/detail"
+      "detail": "@maia/sparks/actor/detail"
     }
   };
   const detailContext = {
-    "$schema": "@schema/context",
-    "$id": "@sparks/context/detail",
+    "$schema": "@maia/schema/context",
+    "$id": "@maia/sparks/context/detail",
     "sparkId": null,
     "sparkDetails": {
-      "schema": "@schema/data/spark",
+      "schema": "@maia/schema/data/spark",
       "filter": {
         "id": "$sparkId"
       },
@@ -3636,8 +3658,8 @@
     "addAgentHasError": false
   };
   const agentState$1 = {
-    "$schema": "@schema/state",
-    "$id": "@sparks/state/agent",
+    "$schema": "@maia/schema/state",
+    "$id": "@maia/sparks/state/agent",
     "initial": "idle",
     "states": {
       "idle": {
@@ -3714,143 +3736,41 @@
       }
     }
   };
-  const detailState = {
-    "$schema": "@schema/state",
-    "$id": "@sparks/state/detail",
-    "initial": "idle",
-    "states": {
-      "idle": {
-        "on": {
-          "LOAD_ACTOR": {
-            "target": "updating",
-            "actions": [
-              {
-                "updateContext": {
-                  "sparkId": "$$id"
-                }
-              }
-            ]
-          },
-          "UPDATE_AGENT_INPUT": {
-            "target": "idle",
-            "actions": [
-              {
-                "updateContext": {
-                  "agentIdInput": "$$value"
-                }
-              }
-            ]
-          },
-          "ADD_AGENT": {
-            "target": "addingAgent"
-          }
-        },
-        "entry": {
-          "updateContext": {
-            "hasSpark": {
-              "$ne": ["$sparkId", null]
-            },
-            "showEmptyState": {
-              "$eq": ["$sparkId", null]
-            },
-            "showContent": {
-              "$ne": ["$sparkId", null]
-            }
-          }
-        }
-      },
-      "updating": {
-        "entry": {
-          "updateContext": {
-            "hasSpark": {
-              "$ne": ["$sparkId", null]
-            },
-            "showEmptyState": {
-              "$eq": ["$sparkId", null]
-            },
-            "showContent": {
-              "$ne": ["$sparkId", null]
-            }
-          }
-        },
-        "on": {
-          "SUCCESS": {
-            "target": "idle"
-          }
-        }
-      },
-      "addingAgent": {
-        "entry": {
-          "tool": "@sparks",
-          "payload": {
-            "op": "addSparkMember",
-            "id": "$sparkId",
-            "memberId": "$$agentId",
-            "role": "writer"
-          }
-        },
-        "on": {
-          "SUCCESS": {
-            "target": "idle",
-            "actions": [
-              {
-                "updateContext": {
-                  "agentIdInput": "",
-                  "addAgentError": null,
-                  "addAgentHasError": false
-                }
-              }
-            ]
-          },
-          "ERROR": {
-            "target": "idle",
-            "actions": [
-              {
-                "updateContext": {
-                  "addAgentError": "$$error",
-                  "addAgentHasError": true
-                }
-              }
-            ]
-          }
-        }
-      }
-    }
-  };
+  const detailState = { "$schema": "@maia/schema/state", "$id": "@maia/sparks/state/detail", "initial": "idle", "states": { "idle": { "on": { "LOAD_ACTOR": { "target": "updating", "actions": [{ "updateContext": { "sparkId": "$$id" } }] }, "UPDATE_AGENT_INPUT": { "target": "idle", "actions": [{ "updateContext": { "agentIdInput": "$$value" } }] }, "ADD_AGENT": { "target": "addingAgent" }, "REMOVE_MEMBER": { "target": "removingMember" } }, "entry": { "updateContext": { "hasSpark": { "$ne": ["$sparkId", null] }, "showEmptyState": { "$eq": ["$sparkId", null] }, "showContent": { "$ne": ["$sparkId", null] } } } }, "updating": { "entry": { "updateContext": { "hasSpark": { "$ne": ["$sparkId", null] }, "showEmptyState": { "$eq": ["$sparkId", null] }, "showContent": { "$ne": ["$sparkId", null] } } }, "on": { "SUCCESS": { "target": "idle" } } }, "addingAgent": { "entry": { "tool": "@sparks", "payload": { "op": "addSparkMember", "id": "$sparkId", "memberId": "$$agentId", "role": "writer" } }, "on": { "SUCCESS": { "target": "idle", "actions": [{ "updateContext": { "agentIdInput": "", "addAgentError": null, "addAgentHasError": false } }] }, "ERROR": { "target": "idle", "actions": [{ "updateContext": { "addAgentError": "$$error", "addAgentHasError": true } }] } } }, "removingMember": { "entry": { "tool": "@sparks", "payload": { "op": "removeSparkMember", "id": "$sparkId", "memberId": "$$memberId" } }, "on": { "SUCCESS": { "target": "idle" }, "ERROR": { "target": "idle" } } } } };
   const agentInbox$1 = {
-    "$schema": "@schema/inbox",
-    "$id": "@sparks/inbox/agent",
+    "$schema": "@maia/schema/inbox",
+    "$id": "@maia/sparks/inbox/agent",
     "cotype": "costream"
   };
   const detailInbox = {
-    "$schema": "@schema/inbox",
-    "$id": "@sparks/inbox/detail",
+    "$schema": "@maia/schema/inbox",
+    "$id": "@maia/sparks/inbox/detail",
     "cotype": "costream"
   };
   const SparksVibeRegistry = {
     vibe: sparksVibe,
     styles: {
-      "@sparks/style/brand": brandStyle$1
+      "@maia/sparks/style/brand": brandStyle$1
     },
     actors: {
-      "@sparks/actor/agent": agentActor$1,
-      "@sparks/actor/detail": detailActor
+      "@maia/sparks/actor/agent": agentActor$1,
+      "@maia/sparks/actor/detail": detailActor
     },
     views: {
-      "@sparks/view/agent": agentView$1,
-      "@sparks/view/detail": detailView
+      "@maia/sparks/view/agent": agentView$1,
+      "@maia/sparks/view/detail": detailView
     },
     contexts: {
-      "@sparks/context/agent": agentContext$1,
-      "@sparks/context/detail": detailContext
+      "@maia/sparks/context/agent": agentContext$1,
+      "@maia/sparks/context/detail": detailContext
     },
     states: {
-      "@sparks/state/agent": agentState$1,
-      "@sparks/state/detail": detailState
+      "@maia/sparks/state/agent": agentState$1,
+      "@maia/sparks/state/detail": detailState
     },
     inboxes: {
-      "@sparks/inbox/agent": agentInbox$1,
-      "@sparks/inbox/detail": detailInbox
+      "@maia/sparks/inbox/agent": agentInbox$1,
+      "@maia/sparks/inbox/detail": detailInbox
     }
   };
   const registry$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -3914,8 +3834,8 @@
   function getVibeKey(vibe) {
     if (!vibe) return null;
     const originalVibeId = vibe.$id || "";
-    if (originalVibeId.startsWith("@vibe/")) {
-      return originalVibeId.replace("@vibe/", "");
+    if (originalVibeId.startsWith("@maia/vibe/")) {
+      return originalVibeId.replace("@maia/vibe/", "");
     }
     return (vibe.name || "default").toLowerCase().replace(/\s+/g, "-");
   }
@@ -3938,15 +3858,15 @@
     return [];
   }
   const maiaAgentVibe = {
-    "$schema": "@schema/vibe",
-    "$id": "@vibe/maia",
+    "$schema": "@maia/schema/vibe",
+    "$id": "@maia/vibe/maia",
     "name": "Maia Agent",
     "description": "CTO-level AI assistant for MaiaOS codebase",
-    "actor": "@maia/actor/agent"
+    "actor": "@maia/maia/actor/agent"
   };
   const brandStyle = {
-    "$schema": "@schema/style",
-    "$id": "@maia/style/brand",
+    "$schema": "@maia/schema/style",
+    "$id": "@maia/maia/style/brand",
     "tokens": {
       "colors": {
         "marineBlue": "#001F33",
@@ -4454,14 +4374,14 @@
     }
   };
   const agentActor = {
-    "$schema": "@schema/actor",
-    "$id": "@maia/actor/agent",
+    "$schema": "@maia/schema/actor",
+    "$id": "@maia/maia/actor/agent",
     "role": "agent",
-    "context": "@maia/context/agent",
-    "view": "@maia/view/agent",
-    "state": "@maia/state/agent",
-    "brand": "@maia/style/brand",
-    "inbox": "@maia/inbox/agent",
+    "context": "@maia/maia/context/agent",
+    "view": "@maia/maia/view/agent",
+    "state": "@maia/maia/state/agent",
+    "brand": "@maia/maia/style/brand",
+    "inbox": "@maia/maia/inbox/agent",
     "messageTypes": [
       "SEND_MESSAGE",
       "UPDATE_INPUT",
@@ -4473,8 +4393,8 @@
     ]
   };
   const agentView = {
-    "$schema": "@schema/view",
-    "$id": "@maia/view/agent",
+    "$schema": "@maia/schema/view",
+    "$id": "@maia/maia/view/agent",
     "content": {
       "tag": "div",
       "class": "chat-container",
@@ -4620,10 +4540,10 @@
     }
   };
   const agentContext = {
-    "$schema": "@schema/context",
-    "$id": "@maia/context/agent",
+    "$schema": "@maia/schema/context",
+    "$id": "@maia/maia/context/agent",
     "conversations": {
-      "schema": "@schema/data/chat"
+      "schema": "@maia/schema/data/chat"
     },
     "inputText": "",
     "assistantResponse": null,
@@ -4634,8 +4554,8 @@
     "messageNames": {}
   };
   const agentState = {
-    "$schema": "@schema/state",
-    "$id": "@maia/state/agent",
+    "$schema": "@maia/schema/state",
+    "$id": "@maia/maia/state/agent",
     "initial": "idle",
     "states": {
       "idle": {
@@ -4706,7 +4626,7 @@
             "tool": "@db",
             "payload": {
               "op": "create",
-              "schema": "@schema/data/chat",
+              "schema": "@maia/schema/data/chat",
               "data": {
                 "role": "user",
                 "content": "$$inputText"
@@ -4787,7 +4707,7 @@
             "tool": "@db",
             "payload": {
               "op": "create",
-              "schema": "@schema/data/chat",
+              "schema": "@maia/schema/data/chat",
               "data": {
                 "role": "assistant",
                 "content": "$$result.content"
@@ -4885,28 +4805,28 @@
     }
   };
   const agentInbox = {
-    "$schema": "@schema/inbox",
-    "$id": "@maia/inbox/agent"
+    "$schema": "@maia/schema/inbox",
+    "$id": "@maia/maia/inbox/agent"
   };
   const MaiaAgentVibeRegistry = {
     vibe: maiaAgentVibe,
     styles: {
-      "@maia/style/brand": brandStyle
+      "@maia/maia/style/brand": brandStyle
     },
     actors: {
-      "@maia/actor/agent": agentActor
+      "@maia/maia/actor/agent": agentActor
     },
     views: {
-      "@maia/view/agent": agentView
+      "@maia/maia/view/agent": agentView
     },
     contexts: {
-      "@maia/context/agent": agentContext
+      "@maia/maia/context/agent": agentContext
     },
     states: {
-      "@maia/state/agent": agentState
+      "@maia/maia/state/agent": agentState
     },
     inboxes: {
-      "@maia/inbox/agent": agentInbox
+      "@maia/maia/inbox/agent": agentInbox
     }
   };
   const registry = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({

@@ -1,7 +1,7 @@
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/state",
-  "title": "@schema/state",
+  "$schema": "@maia/schema/meta",
+  "$id": "@maia/schema/state",
+  "title": "@maia/schema/state",
   "description": "XState-like state machine with states, transitions, guards, and actions",
   "cotype": "comap",
   "indexing": true,
@@ -127,14 +127,14 @@
                 }
               },
               {
-                "$co": "@schema/action",
+                "$co": "@maia/schema/action",
                 "description": "Co-id reference to action CoValue"
               },
               {
                 "type": "array",
                 "description": "Array of action co-id references",
                 "items": {
-                  "$co": "@schema/action"
+                  "$co": "@maia/schema/action"
                 }
               }
             ]
@@ -249,14 +249,14 @@
                 }
               },
               {
-                "$co": "@schema/action",
+                "$co": "@maia/schema/action",
                 "description": "Co-id reference to action CoValue"
               },
               {
                 "type": "array",
                 "description": "Array of action co-id references",
                 "items": {
-                  "$co": "@schema/action"
+                  "$co": "@maia/schema/action"
                 }
               }
             ]
@@ -314,7 +314,7 @@
                             "required": ["updateContext"]
                           },
                           {
-                            "$co": "@schema/action"
+                            "$co": "@maia/schema/action"
                           }
                         ]
                       }
@@ -323,7 +323,7 @@
                   "required": ["target"]
                 },
                 {
-                  "$co": "@schema/transition",
+                  "$co": "@maia/schema/transition",
                   "description": "Co-id reference to transition CoValue"
                 }
               ]

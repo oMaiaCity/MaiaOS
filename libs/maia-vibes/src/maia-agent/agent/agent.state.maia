@@ -1,6 +1,6 @@
 {
-  "$schema": "@schema/state",
-  "$id": "@maia/state/agent",
+  "$schema": "@maia/schema/state",
+  "$id": "@maia/maia/state/agent",
   "initial": "idle",
   "states": {
     "idle": {
@@ -71,7 +71,7 @@
           "tool": "@db",
           "payload": {
             "op": "create",
-            "schema": "@schema/data/chat",
+            "schema": "@maia/schema/data/chat",
             "data": {
               "role": "user",
               "content": "$$inputText"
@@ -152,7 +152,7 @@
           "tool": "@db",
           "payload": {
             "op": "create",
-            "schema": "@schema/data/chat",
+            "schema": "@maia/schema/data/chat",
             "data": {
               "role": "assistant",
               "content": "$$result.content"

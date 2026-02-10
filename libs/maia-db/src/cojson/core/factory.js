@@ -30,7 +30,7 @@ export function createCoJSONAPI(node, account) {
   }
   
   // Create backend (implements DBAdapter)
-  const backend = new CoJSONBackend(node, account);
+  const backend = new CoJSONBackend(node, account, { systemSpark: '@maia' });
   
   // Create shared DBEngine with backend
   const dbEngine = new DBEngine(backend);

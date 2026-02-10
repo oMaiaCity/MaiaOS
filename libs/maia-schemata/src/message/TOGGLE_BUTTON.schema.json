@@ -1,7 +1,7 @@
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/message/TOGGLE_BUTTON",
-  "title": "@schema/message/TOGGLE_BUTTON",
+  "$schema": "@maia/schema/meta",
+  "$id": "@maia/schema/message/TOGGLE_BUTTON",
+  "title": "@maia/schema/message/TOGGLE_BUTTON",
   "description": "Message type for toggling a todo item's done status",
   "cotype": "comap",
   "indexing": true,

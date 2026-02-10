@@ -119,7 +119,7 @@ export async function createAccountWithSecret({ agentSecret, name = "Maia", peer
 		
 		// Create backend and dbEngine (same setup as MaiaOS.boot)
 		const { CoJSONBackend } = await import('../core/cojson-backend.js');
-		const backend = new CoJSONBackend(result.node, rawAccount);
+		const backend = new CoJSONBackend(result.node, rawAccount, { systemSpark: '@maia' });
 		const { DBEngine } = await import('@MaiaOS/operations');
 		const dbEngine = new DBEngine(backend);
 		backend.dbEngine = dbEngine;
@@ -157,7 +157,7 @@ export async function createAccountWithSecret({ agentSecret, name = "Maia", peer
 		try {
 			const { CoJSONBackend } = await import('../core/cojson-backend.js');
 			const { DBEngine } = await import('@MaiaOS/operations');
-			const backend = new CoJSONBackend(result.node, rawAccount);
+			const backend = new CoJSONBackend(result.node, rawAccount, { systemSpark: '@maia' });
 			backend.dbEngine = new DBEngine(backend);
 			await seedAgentAccount(rawAccount, result.node, backend);
 		} catch (agentSeedError) {

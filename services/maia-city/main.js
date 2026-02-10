@@ -28,6 +28,7 @@ let currentScreen = 'dashboard'; // Current screen: 'dashboard' | 'db-viewer' | 
 let currentView = 'account'; // Current schema filter (default: 'account')
 let currentContextCoValueId = null; // Currently loaded CoValue in main context (explorer-style navigation)
 let currentVibe = null; // Currently loaded vibe (null = DB view mode, 'todos' = todos vibe, etc.)
+let currentSpark = null; // Grid hierarchy: null = sparks level, '@maia' = vibes for that spark
 let currentVibeContainer = null; // Currently loaded vibe container element (for cleanup on unload)
 let navigationHistory = []; // Navigation history stack for back button
 let isRendering = false; // Guard to prevent render loops
@@ -936,13 +937,30 @@ window.handleSignOut = signOut;
 window.showToast = showToast; // Expose for debugging
 
 // Navigation function for screen transitions
-function navigateToScreen(screen) {
+// @param {string} screen - Screen to navigate to
+// @param {Object} [options] - Options
+// @param {boolean} [options.preserveSpark] - If true, keep currentSpark (Home from vibe → vibes grid, not sparks root)
+function navigateToScreen(screen, options = {}) {
 	currentScreen = screen;
 	if (screen === 'dashboard') {
 		currentVibe = null;
 		currentContextCoValueId = null;
+		if (!options.preserveSpark) {
+			currentSpark = null;
+		}
 		navigationHistory = [];
 	}
+	renderAppInternal();
+}
+
+/**
+ * Load a spark context (grid hierarchy level 1 → level 2)
+ * @param {string|null} spark - Spark name (e.g. '@maia') or null to go back to sparks level
+ */
+function loadSpark(spark) {
+	currentSpark = spark;
+	// Stay on dashboard, just re-render with new level
+	currentScreen = 'dashboard';
 	renderAppInternal();
 }
 
@@ -1043,7 +1061,7 @@ async function renderAppInternal() {
 	isRendering = true;
 	
 	try {
-		await renderApp(maia, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, switchView, selectCoValue, loadVibe, navigateToScreen);
+		await renderApp(maia, authState, syncState, currentScreen, currentView, currentContextCoValueId, currentVibe, currentSpark, switchView, selectCoValue, loadVibe, loadSpark, navigateToScreen);
 	} finally {
 		isRendering = false;
 	}
@@ -1081,8 +1099,8 @@ async function loadVibe(vibeKey) {
 			window.currentVibeContainer = null;
 			
 			currentVibe = null;
-			// Navigate back to dashboard when exiting vibe
-			navigateToScreen('dashboard');
+			// Navigate to vibes grid (preserve spark context)
+			navigateToScreen('dashboard', { preserveSpark: true });
 		} else {
 			// Detach actors from previous vibe BEFORE switching (if switching vibes)
 			if (currentVibe && currentVibe !== vibeKey && maia && maia.actorEngine) {
@@ -1192,7 +1210,7 @@ window.debugTodos = async function() {
 			// Get todos schema index colist from account.os (new indexing system)
 			const { getSchemaIndexColistId } = await import('@MaiaOS/kernel');
 			const backend = maia.dbEngine?.backend;
-			const todosSchemaIndexColistId = backend ? await getSchemaIndexColistId(backend, '@schema/data/todos') : null;
+			const todosSchemaIndexColistId = backend ? await getSchemaIndexColistId(backend, '@maia/schema/data/todos') : null;
 			
 			if (todosSchemaIndexColistId) {
 				console.log(`\n--- Todos Schema Index Colist (from account.os) ---`);
@@ -1239,6 +1257,7 @@ window.switchView = switchView;
 window.selectCoValue = selectCoValue;
 window.goBack = goBack;
 window.loadVibe = loadVibe;
+window.loadSpark = loadSpark;
 window.navigateToScreen = navigateToScreen;
 window.toggleExpand = toggleExpand;
 

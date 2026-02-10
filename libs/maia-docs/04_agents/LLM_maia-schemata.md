@@ -1,6 +1,6 @@
 # MaiaOS Documentation for maia-schemata
 
-**Auto-generated:** 2026-02-10T12:31:49.964Z
+**Auto-generated:** 2026-02-10T15:04:36.223Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---

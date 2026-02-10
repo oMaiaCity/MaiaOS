@@ -1,6 +1,6 @@
 {
-  "$schema": "@schema/view",
-  "$id": "@maia/view/agent",
+  "$schema": "@maia/schema/view",
+  "$id": "@maia/maia/view/agent",
   "content": {
     "tag": "div",
     "class": "chat-container",

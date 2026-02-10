@@ -1,12 +1,12 @@
 {
-  "$schema": "@schema/actor",
-  "$id": "@my-data/actor/agent",
+  "$schema": "@maia/schema/actor",
+  "$id": "@maia/my-data/actor/agent",
   "role": "agent",
-  "context": "@my-data/context/agent",
-  "view": "@my-data/view/agent",
-  "state": "@my-data/state/agent",
-  "brand": "@my-data/style/brand",
-  "inbox": "@my-data/inbox/agent",
+  "context": "@maia/my-data/context/agent",
+  "view": "@maia/my-data/view/agent",
+  "state": "@maia/my-data/state/agent",
+  "brand": "@maia/my-data/style/brand",
+  "inbox": "@maia/my-data/inbox/agent",
   "messageTypes": [
     "SELECT_NAV",
     "SELECT_ROW"

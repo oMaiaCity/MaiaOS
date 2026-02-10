@@ -862,8 +862,9 @@ export class ActorEngine {
 
     try {
       // Resolve message type schema from registry
-      // Format: @schema/message/{MESSAGE_TYPE}
-      const schemaKey = `@schema/message/${messageType}`;
+      // Format: @domain/schema/message/{MESSAGE_TYPE}
+      const domain = this.dbEngine?.backend?.systemSpark?.replace(/^@/, '') ?? 'maia';
+      const schemaKey = `@${domain}/schema/message/${messageType}`;
       const schema = await resolve(this.dbEngine.backend, schemaKey, { returnType: 'schema' });
       return schema;
     } catch (error) {

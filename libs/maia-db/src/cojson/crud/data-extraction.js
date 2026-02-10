@@ -27,7 +27,7 @@ export function extractCoValueData(backend, coValueCore, schemaHint = null) {
     schema = '@group'; // Groups don't have $schema, use special marker
   } else if (schemaHint === '@account' || (headerMeta && headerMeta.type === 'account')) {
     schema = '@account'; // Accounts don't have $schema, use special marker
-  } else if (schemaHint === '@meta-schema' || schema === 'GenesisSchema') {
+  } else if (schemaHint === '@meta-schema' || schema === '@maia') {
     schema = '@meta-schema'; // Meta schema uses special marker
   }
 
@@ -350,7 +350,7 @@ export function extractCoValueDataFlat(backend, coValueCore, schemaHint = null) 
     const hasTitle = content.get('title');
     const hasProperties = content.get('properties');
     const hasItems = content.get('items');
-    const isSchema = schema === 'GenesisSchema' || 
+    const isSchema = schema === '@maia' ||
                      (hasCotype || hasTitle || hasProperties || hasItems);
     
     const result = { 

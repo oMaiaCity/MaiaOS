@@ -7,7 +7,7 @@
  * Example:
  * {
  *   "op": "read",
- *   "schema": "@schema/message",
+ *   "schema": "@maia/schema/message",
  *   "map": {
  *     "fromRole": "$$source.role",
  *     "toRole": "$$target.role",

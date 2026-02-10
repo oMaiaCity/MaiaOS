@@ -1,7 +1,7 @@
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/message/SUCCESS",
-  "title": "@schema/message/SUCCESS",
+  "$schema": "@maia/schema/meta",
+  "$id": "@maia/schema/message/SUCCESS",
+  "title": "@maia/schema/message/SUCCESS",
   "description": "Message type for successful operation completion",
   "cotype": "comap",
   "indexing": true,

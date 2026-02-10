@@ -1,6 +1,6 @@
 {
-  "$schema": "@schema/style",
-  "$id": "@todos/style/logs",
+  "$schema": "@maia/schema/style",
+  "$id": "@maia/todos/style/logs",
   
   "components": {
     "logs": {

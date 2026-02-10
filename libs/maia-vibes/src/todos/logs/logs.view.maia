@@ -1,6 +1,6 @@
 {
-  "$schema": "@schema/view",
-  "$id": "@todos/view/logs",
+  "$schema": "@maia/schema/view",
+  "$id": "@maia/todos/view/logs",
   "content": {
     "class": "logs",
     "attrs": {

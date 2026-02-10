@@ -1,5 +1,5 @@
 {
-  "$schema": "@schema/tool",
+  "$schema": "@maia/schema/tool",
   "$id": "@tool/core/computeMessageNames",
   "name": "computeMessageNames",
   "description": "Computes a lookup object mapping message IDs to display names based on role",

@@ -10,7 +10,7 @@ import { resolve } from '../schema/resolver.js';
  * Resolve schema co-id from human-readable schema name or return co-id as-is
  * Uses universal schema resolver (single source of truth)
  * @param {Object} backend - Backend instance
- * @param {string} schema - Schema co-id (co_z...) or human-readable (@schema/data/todos, @schema/actor)
+ * @param {string} schema - Schema co-id (co_z...) or human-readable (@maia/schema/data/todos, @maia/schema/actor)
  * @returns {Promise<string|null>} Schema co-id or null if not found
  */
 async function resolveSchemaCoId(backend, schema) {
@@ -26,7 +26,7 @@ async function resolveSchemaCoId(backend, schema) {
  * Get schema index colist ID using schema co-id as key (all schemas indexed in account.os.indexes)
  * Lazily creates the index colist if it doesn't exist and the schema has indexing: true
  * @param {Object} backend - Backend instance
- * @param {string} schema - Schema co-id (co_z...) or human-readable (@schema/data/todos)
+ * @param {string} schema - Schema co-id (co_z...) or human-readable (@maia/schema/data/todos)
  * @returns {Promise<string|null>} Schema index colist ID or null if not found/not indexable
  */
 export async function getSchemaIndexColistId(backend, schema) {
@@ -37,8 +37,10 @@ export async function getSchemaIndexColistId(backend, schema) {
     return null;
   }
   
-  // All schema indexes are in account.os.indexes, keyed by schema co-id
-  const osId = backend.account.get('os');
+  // All schema indexes are in account.sparks[systemSpark].os.indexes, keyed by schema co-id
+  const { getSparkOsId } = await import('../groups/groups.js');
+  const spark = backend?.systemSpark ?? '@maia';
+  const osId = await getSparkOsId(backend, spark);
   if (!osId) {
     console.warn(`[getSchemaIndexColistId] ❌ account.os not found`);
     return null;
@@ -108,7 +110,7 @@ export async function getSchemaIndexColistId(backend, schema) {
 /**
  * Get CoList ID from account.os.indexes.<schemaCoId> (all schema indexes in account.os.indexes)
  * @param {Object} backend - Backend instance
- * @param {string} collectionNameOrSchema - Collection name (e.g., "todos"), schema co-id (co_z...), or namekey (@schema/data/todos)
+ * @param {string} collectionNameOrSchema - Collection name (e.g., "todos"), schema co-id (co_z...), or namekey (@maia/schema/data/todos)
  * @returns {Promise<string|null>} CoList ID or null if not found
  */
 export async function getCoListId(backend, collectionNameOrSchema) {
@@ -118,9 +120,10 @@ export async function getCoListId(backend, collectionNameOrSchema) {
     return null;
   }
   
-  // Must be a schema co-id or human-readable schema name
-  if (!collectionNameOrSchema.startsWith('co_z') && !collectionNameOrSchema.startsWith('@schema/')) {
-    console.warn(`[getCoListId] ❌ Invalid collection identifier: "${collectionNameOrSchema}". Must be schema co-id (co_z...) or namekey (@schema/...). Use schema registry to resolve collection names.`);
+  // Must be a schema co-id or human-readable schema name (@domain/schema/...)
+  const isSchemaRef = /^@[a-zA-Z0-9_-]+\/schema\//.test(collectionNameOrSchema);
+  if (!collectionNameOrSchema.startsWith('co_z') && !isSchemaRef) {
+    console.warn(`[getCoListId] ❌ Invalid collection identifier: "${collectionNameOrSchema}". Must be schema co-id (co_z...) or namekey (@domain/schema/...). Use schema registry to resolve collection names.`);
     return null;
   }
   

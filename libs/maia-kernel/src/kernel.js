@@ -332,7 +332,7 @@ export class MaiaOS {
     // If node and account are provided, use CoJSON backend
     if (config.node && config.account) {
       const { CoJSONBackend } = await import('@MaiaOS/db');
-      const backend = new CoJSONBackend(config.node, config.account);
+      const backend = new CoJSONBackend(config.node, config.account, { systemSpark: '@maia' });
       os.dbEngine = new DBEngine(backend);
       // Set dbEngine on backend for runtime schema validation in create functions
       backend.dbEngine = os.dbEngine;
@@ -573,68 +573,97 @@ export class MaiaOS {
   }
 
   /**
-   * Load a vibe from account.vibes using the abstracted operations API
-   * @param {string} vibeKey - Vibe key in account.vibes (e.g., "todos")
+   * Load a vibe from account.sparks[spark].vibes using the abstracted operations API
+   * @param {string} vibeKey - Vibe key in spark's vibes (e.g., "todos")
    * @param {HTMLElement} container - Container element
+   * @param {string} [spark='@maia'] - Spark name (context scope), e.g. '@maia'
    * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
    */
-  async loadVibeFromAccount(vibeKey, container) {
+  async loadVibeFromAccount(vibeKey, container, spark = '@maia') {
     if (!this.dbEngine || !this._account) {
       throw new Error('[Kernel] Cannot load vibe from account - dbEngine or account not available');
     }
 
     const account = this._account;
-    
-    // Step 1: Read account CoMap using abstracted operations API
+
+    // Step 1: Read account CoMap
     const accountStore = await this.dbEngine.execute({
       op: 'read',
       schema: '@account',
       key: account.id
     });
-    
+
     const accountData = accountStore.value;
     if (!accountData) {
       throw new Error('[Kernel] Failed to read account CoMap');
     }
-    
-    // Step 2: Extract vibes CoMap co-id from account data
-    // Operations API returns flat objects: {id: '...', profile: '...', vibes: '...'}
-    const vibesId = accountData.vibes;
-    if (!vibesId || typeof vibesId !== 'string' || !vibesId.startsWith('co_')) {
-      throw new Error(`[Kernel] account.vibes not found. Make sure the vibe was seeded correctly. Account data: ${JSON.stringify({id: accountData.id, hasVibes: !!accountData.vibes})}`);
+
+    // Step 2: Get account.sparks CoMap co-id
+    const sparksId = accountData.sparks;
+    if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_')) {
+      throw new Error(`[Kernel] account.sparks not found. Ensure schemaMigration has run. Account data: ${JSON.stringify({ id: accountData.id, hasSparks: !!accountData.sparks })}`);
     }
-    
-    // Step 3: Read account.vibes CoMap using abstracted operations API
-    // Backend's _readSingleItem waits for CoValue to be loaded before returning store
+
+    // Step 3: Read account.sparks CoMap
+    const sparksStore = await this.dbEngine.execute({
+      op: 'read',
+      schema: sparksId,
+      key: sparksId
+    });
+
+    const sparksData = sparksStore.value;
+    if (!sparksData || sparksData.error) {
+      throw new Error(`[Kernel] account.sparks not available: ${sparksData?.error || 'Unknown error'}`);
+    }
+
+    // Step 4: Get spark CoMap co-id from sparks[spark]
+    const sparkCoId = sparksData[spark];
+    if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_')) {
+      const availableSparks = Object.keys(sparksData).filter(k => k !== 'id' && k !== '$schema' && k !== 'type' && typeof sparksData[k] === 'string' && sparksData[k].startsWith('co_'));
+      throw new Error(`[Kernel] Spark "${spark}" not found in account.sparks. Available: ${availableSparks.join(', ') || 'none'}`);
+    }
+
+    // Step 5: Read spark CoMap to get spark.vibes (by co-id)
+    const sparkStore = await this.dbEngine.execute({
+      op: 'read',
+      schema: null,
+      key: sparkCoId
+    });
+
+    const sparkData = sparkStore.value;
+    if (!sparkData || sparkData.error) {
+      throw new Error(`[Kernel] Spark "${spark}" not available: ${sparkData?.error || 'Unknown error'}`);
+    }
+
+    const vibesId = sparkData.vibes;
+    if (!vibesId || typeof vibesId !== 'string' || !vibesId.startsWith('co_')) {
+      throw new Error(`[Kernel] Spark "${spark}" has no vibes registry. Ensure seeding has run.`);
+    }
+
+    // Step 6: Read spark.vibes CoMap
     const vibesStore = await this.dbEngine.execute({
       op: 'read',
       schema: vibesId,
       key: vibesId
     });
-    
-    // Store is already loaded by backend (operations API abstraction)
+
     const vibesData = vibesStore.value;
-    
     if (!vibesData || vibesData.error) {
-      throw new Error(`[Kernel] account.vibes CoMap not found or error (co-id: ${vibesId}): ${vibesData?.error || 'Unknown error'}. Make sure the vibe was seeded correctly.`);
+      throw new Error(`[Kernel] Spark "${spark}" vibes not available: ${vibesData?.error || 'Unknown error'}`);
     }
-    
-    // Operations API returns flat objects: {id: '...', todos: 'co_...', ...}
-    // Extract vibe co-id directly from flat object
+
     const vibeCoId = vibesData[vibeKey];
     if (!vibeCoId || typeof vibeCoId !== 'string' || !vibeCoId.startsWith('co_')) {
       const availableVibes = Object.keys(vibesData).filter(k => k !== 'id' && k !== '$schema' && k !== 'type' && typeof vibesData[k] === 'string' && vibesData[k].startsWith('co_'));
-      console.error(`[Kernel] Vibe '${vibeKey}' not found in account.vibes. Available vibes:`, availableVibes);
-      throw new Error(`[Kernel] Vibe '${vibeKey}' not found in account.vibes. Available vibes: ${availableVibes.join(', ')}`);
+      throw new Error(`[Kernel] Vibe '${vibeKey}' not found in ${spark}.vibes. Available: ${availableVibes.join(', ') || 'none'}`);
     }
-    
-    // Step 5: Load vibe using co-id (reuse existing loadVibeFromDatabase logic)
+
     return await this.loadVibeFromDatabase(vibeCoId, container, vibeKey);
   }
 
   /**
    * Load a vibe from database (maia.db)
-   * @param {string} vibeId - Vibe ID (co-id or human-readable like "@vibe/todos")
+   * @param {string} vibeId - Vibe ID (co-id or human-readable like "@maia/vibe/todos")
    * @param {HTMLElement} container - Container element
    * @param {string} [vibeKey] - Optional vibe key for actor reuse tracking (e.g., 'todos')
    * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance

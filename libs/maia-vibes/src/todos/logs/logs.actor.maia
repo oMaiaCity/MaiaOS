@@ -1,13 +1,13 @@
 {
-  "$schema": "@schema/actor",
-  "$id": "@todos/actor/logs",
+  "$schema": "@maia/schema/actor",
+  "$id": "@maia/todos/actor/logs",
   "role": "logs",
-  "context": "@todos/context/logs",
-  "view": "@todos/view/logs",
-  "state": "@todos/state/logs",
-  "brand": "@todos/style/brand",
-  "style": "@todos/style/logs",
-  "inbox": "@todos/inbox/logs",
+  "context": "@maia/todos/context/logs",
+  "view": "@maia/todos/view/logs",
+  "state": "@maia/todos/state/logs",
+  "brand": "@maia/todos/style/brand",
+  "style": "@maia/todos/style/logs",
+  "inbox": "@maia/todos/inbox/logs",
   "messageTypes": [
     "RETRY",
     "DISMISS"

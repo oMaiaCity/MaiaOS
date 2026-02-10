@@ -5,16 +5,16 @@
  * Schema is REQUIRED - no fallbacks or defaults
  */
 
-import { createSchemaMeta, isExceptionSchema, getAllSchemas } from "../../schemas/registry.js";
+import { createSchemaMeta, isExceptionSchema, getAllSchemas, EXCEPTION_SCHEMAS } from "../../schemas/registry.js";
 import { hasSchemaInRegistry } from "../../schemas/registry.js";
 import { loadSchemaAndValidate } from '@MaiaOS/schemata/validation.helper';
 
 /**
  * Create a generic CoMap with MANDATORY schema validation
  * 
- * Automatically uses universal group from account as owner/admin.
+ * Uses @maia spark's group when account is passed; uses group directly when resolved group passed.
  * 
- * @param {RawAccount|RawGroup} accountOrGroup - Account (to get universal group) or Group (for backward compatibility)
+ * @param {RawAccount|RawGroup} accountOrGroup - Account (resolves @maia spark group) or Group
  * @param {Object} init - Initial properties
  * @param {string} schemaName - Schema name or co-id for headerMeta (REQUIRED - use "@meta-schema" for meta schema creation)
  * @param {LocalNode} [node] - LocalNode instance (required if accountOrGroup is account)
@@ -23,146 +23,40 @@ import { loadSchemaAndValidate } from '@MaiaOS/schemata/validation.helper';
  * @throws {Error} If schema is missing or data validation fails
  */
 export async function createCoMap(accountOrGroup, init = {}, schemaName, node = null, dbEngine = null) {
-	// Get universal group from account (auto-assignment)
 	let group = accountOrGroup;
-	
-	// CRITICAL: Check if this is already a resolved group (from getDefaultGroup())
-	// Groups have createMap method, accounts don't
+
 	if (accountOrGroup && typeof accountOrGroup.createMap === 'function') {
-		// Already a resolved group - use it directly (standardized via getDefaultGroup())
+		// Already a resolved group (e.g. from getMaiaGroup())
 		group = accountOrGroup;
 	} else if (accountOrGroup && typeof accountOrGroup.get === 'function') {
 		// Check if first param is account (has get("profile") property) or group
 		// Accounts have profile property, regular groups don't
 		const profileId = accountOrGroup.get("profile");
 		if (profileId) {
-			// It's an account - resolve universal group via account.profile.group
-			if (!node) {
-				throw new Error('[createCoMap] Node parameter required when passing account');
+			// It's an account - resolve @maia spark's group via getSparkGroup
+			const backend = dbEngine?.backend;
+			if (!backend) {
+				throw new Error('[createCoMap] dbEngine.backend required when passing account (to resolve @maia spark group)');
 			}
-			
-			// Load profile and wait for it to be available
-			let profileCore = node.getCoValue(profileId);
-			if (!profileCore) {
-				console.log(`[createCoMap] Loading profile ${profileId.substring(0, 12)}...`);
-				profileCore = await node.loadCoValueCore(profileId);
+			const { getSparkGroup } = await import('../groups/groups.js');
+			group = await getSparkGroup(backend, '@maia');
+			if (!group) {
+				throw new Error('[createCoMap] @maia spark group not found. Ensure schemaMigration has run.');
 			}
-			
-			// Wait for profile to be available
-			if (!profileCore || !profileCore.isAvailable()) {
-				console.log(`[createCoMap] Waiting for profile ${profileId.substring(0, 12)}... to be available...`);
-				await new Promise((resolve, reject) => {
-					let unsubscribe = null;
-					const timeout = setTimeout(() => {
-						if (unsubscribe) unsubscribe();
-						reject(new Error(`Timeout waiting for profile ${profileId} to be available. The profile may not exist or may not be synced yet.`));
-					}, 10000);
-					
-					if (!profileCore) {
-						clearTimeout(timeout);
-						reject(new Error(`Profile core not found: ${profileId}. Ensure the account has a valid profile.`));
-						return;
-					}
-					
-					unsubscribe = profileCore.subscribe((core) => {
-						if (core && core.isAvailable()) {
-							clearTimeout(timeout);
-							if (unsubscribe) unsubscribe();
-							resolve();
-						}
-					});
-					
-					node.loadCoValueCore(profileId).catch(err => {
-						clearTimeout(timeout);
-						if (unsubscribe) unsubscribe();
-						reject(err);
-					});
-				});
-				
-				profileCore = node.getCoValue(profileId);
-			}
-			
-			if (!profileCore || profileCore.type !== 'comap') {
-				throw new Error(`[createCoMap] Profile not available or invalid type: ${profileId}. Expected comap, got ${profileCore?.type || 'null'}. Ensure the account has a valid profile.`);
-			}
-			
-			const profile = profileCore.getCurrentContent?.();
-			if (!profile || typeof profile.get !== 'function') {
-				throw new Error(`[createCoMap] Profile content not available: ${profileId}`);
-			}
-			
-			const universalGroupId = profile.get("group");
-			if (!universalGroupId) {
-				throw new Error('[createCoMap] Universal group not found in profile.group. Ensure identity migration has run.');
-			}
-			
-			// Load universal group and wait for it to be available
-			let universalGroupCore = node.getCoValue(universalGroupId);
-			if (!universalGroupCore) {
-				console.log(`[createCoMap] Loading universal group ${universalGroupId.substring(0, 12)}...`);
-				universalGroupCore = await node.loadCoValueCore(universalGroupId);
-			}
-			
-			// Wait for universal group to be available
-			if (!universalGroupCore.isAvailable()) {
-				console.log(`[createCoMap] Waiting for universal group ${universalGroupId.substring(0, 12)}... to be available...`);
-				await new Promise((resolve, reject) => {
-					let unsubscribe = null;
-					const timeout = setTimeout(() => {
-						if (unsubscribe) unsubscribe();
-						reject(new Error(`Timeout waiting for universal group ${universalGroupId} to be available`));
-					}, 10000);
-					
-					unsubscribe = universalGroupCore.subscribe((core) => {
-						if (core.isAvailable()) {
-							clearTimeout(timeout);
-							if (unsubscribe) unsubscribe();
-							resolve();
-						}
-					});
-					
-					node.loadCoValueCore(universalGroupId).catch(err => {
-						clearTimeout(timeout);
-						if (unsubscribe) unsubscribe();
-						reject(err);
-					});
-				});
-				
-				universalGroupCore = node.getCoValue(universalGroupId);
-			}
-			
-			if (!universalGroupCore) {
-				throw new Error(`[createCoMap] Universal group core not found: ${universalGroupId}`);
-			}
-			
-			// Verify it's a group using ruleset.type (groups don't have core.type === 'group')
-			const header = universalGroupCore.verified?.header;
-			const ruleset = universalGroupCore.ruleset || header?.ruleset;
-			if (!ruleset || ruleset.type !== 'group') {
-				throw new Error(`[createCoMap] Universal group is not a group type (ruleset.type !== 'group'): ${universalGroupId}`);
-			}
-			
-			const universalGroupContent = universalGroupCore.getCurrentContent?.();
-			if (!universalGroupContent || typeof universalGroupContent.createMap !== 'function') {
-				throw new Error(`[createCoMap] Universal group content not available: ${universalGroupId}`);
-			}
-			
-			group = universalGroupContent;
-			console.log(`[createCoMap] Using universal group via account.profile.group: ${universalGroupId}`);
 		}
-		// If profileId is null/undefined, it's a regular group, use it as-is
+		// If no profileId, accountOrGroup is a group - use as-is (group = accountOrGroup from line 27)
 	}
 	// STRICT: Schema is MANDATORY - no exceptions
 	if (!schemaName || typeof schemaName !== 'string') {
 		throw new Error('[createCoMap] Schema name is REQUIRED. Provide a valid schema name (e.g., "ProfileSchema", "@meta-schema")');
 	}
 	
-	// Special case: GenesisSchema (metaschema) uses hardcoded "GenesisSchema" reference (no validation needed)
+	// Special case: @maia (metaschema) uses hardcoded "@maia" reference (no validation needed)
 	// This is an exception because headerMeta is read-only after creation, so we can't self-reference the co-id
-	if (schemaName === 'GenesisSchema') {
-		const meta = { $schema: 'GenesisSchema' }; // Use GenesisSchema exception
+	if (schemaName === EXCEPTION_SCHEMAS.META_SCHEMA) {
+		const meta = { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
 		const comap = group.createMap(init, meta);
-		console.log("✅ CoMap created (GenesisSchema):", comap.id);
+		console.log("✅ CoMap created (@maia):", comap.id);
 		console.log("   Schema:", schemaName);
 		console.log("   HeaderMeta:", comap.headerMeta);
 		return comap;

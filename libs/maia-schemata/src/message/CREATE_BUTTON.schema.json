@@ -1,7 +1,7 @@
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/message/CREATE_BUTTON",
-  "title": "@schema/message/CREATE_BUTTON",
+  "$schema": "@maia/schema/meta",
+  "$id": "@maia/schema/message/CREATE_BUTTON",
+  "title": "@maia/schema/message/CREATE_BUTTON",
   "description": "Message type for creating a new item via button click (generic, reusable across vibes)",
   "cotype": "comap",
   "indexing": true,

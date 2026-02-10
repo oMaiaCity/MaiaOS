@@ -49,7 +49,7 @@ export class DBAdapter {
 
   /**
    * Update existing record (unified for data collections and configs)
-   * @param {string} schema - Schema co-id (co_z...) - MUST be a co-id, not '@schema/...'
+   * @param {string} schema - Schema co-id (co_z...) - MUST be a co-id, not '@maia/schema/...'
    * @param {string} id - Record co-id to update
    * @param {Object} data - Data to update
    * @returns {Promise<Object>} Updated record

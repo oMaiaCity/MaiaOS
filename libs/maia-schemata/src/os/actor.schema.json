@@ -1,7 +1,7 @@
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/actor",
-  "title": "@schema/actor",
+  "$schema": "@maia/schema/meta",
+  "$id": "@maia/schema/actor",
+  "title": "@maia/schema/actor",
   "description": "Pure declarative actor specification",
   "cotype": "comap",
   "indexing": true,
@@ -11,27 +11,27 @@
       "description": "Actor role (e.g., 'kanban-view', 'vibe', 'composite', 'leaf')"
     },
     "context": {
-      "$co": "@schema/context",
+      "$co": "@maia/schema/context",
       "description": "Co-id reference to context definition"
     },
     "view": {
-      "$co": "@schema/view",
+      "$co": "@maia/schema/view",
       "description": "Co-id reference to view definition"
     },
     "state": {
-      "$co": "@schema/state",
+      "$co": "@maia/schema/state",
       "description": "Co-id reference to state machine definition"
     },
     "brand": {
-      "$co": "@schema/style",
+      "$co": "@maia/schema/style",
       "description": "Co-id reference to brand style definition (uses style schema)"
     },
     "style": {
-      "$co": "@schema/style",
+      "$co": "@maia/schema/style",
       "description": "Co-id reference to local style definition"
     },
     "inbox": {
-      "$co": "@schema/inbox",
+      "$co": "@maia/schema/inbox",
       "description": "Co-id reference to message inbox costream (append-only message feed)"
     },
     "messageTypes": {

@@ -58,7 +58,7 @@ export function waitForReactiveResolution(store, options = {}) {
  * Resolve schema reactively - returns ReactiveStore that updates when schema becomes available
  * 
  * @param {Object} backend - Backend instance
- * @param {string} schemaKey - Schema key (@schema/data/todos) or co-id (co_z...)
+ * @param {string} schemaKey - Schema key (@maia/schema/data/todos) or co-id (co_z...)
  * @param {Object} [options] - Options
  * @param {number} [options.timeoutMs=10000] - Timeout for waiting (unused in reactive mode, kept for compatibility)
  * @returns {ReactiveStore} ReactiveStore that updates when schema resolves:
@@ -124,7 +124,7 @@ export function resolveSchemaReactive(backend, schemaKey, options = {}) {
           }
           
           // Check if schema is in registry
-          const normalizedKey = schemaKey.startsWith('@schema/') ? schemaKey : `@schema/${schemaKey}`;
+          const normalizedKey = schemaKey.startsWith('@maia/schema/') ? schemaKey : `@maia/schema/${schemaKey}`;
           const registryCoId = schematasData[normalizedKey] || schematasData[schemaKey];
           
           if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
@@ -239,7 +239,7 @@ export function resolveCoValueReactive(backend, coId, options = {}) {
  * Resolve query reactively - returns ReactiveStore that updates when query results become available
  * 
  * @param {Object} backend - Backend instance
- * @param {Object} queryDef - Query definition { schema: '@schema/data/todos', filter: {...}, options: {...} }
+ * @param {Object} queryDef - Query definition { schema: '@maia/schema/data/todos', filter: {...}, options: {...} }
  * @param {Object} [options] - Options
  * @returns {ReactiveStore} ReactiveStore that updates when query resolves:
  *   - Initial: { loading: true, items: [] }

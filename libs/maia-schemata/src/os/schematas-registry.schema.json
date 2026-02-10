@@ -1,18 +1,18 @@
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/os/schematas-registry",
-  "title": "@schema/os/schematas-registry",
-  "description": "Schema registry CoMap - maps schema namekeys (e.g., @schema/data/todos) to schema co-ids (co_z...). Stored in account.os.schematas",
+  "$schema": "@maia/schema/meta",
+  "$id": "@maia/schema/os/schematas-registry",
+  "title": "@maia/schema/os/schematas-registry",
+  "description": "Schema registry CoMap - maps schema namekeys (e.g., @maia/schema/data/todos) to schema co-ids (co_z...). Stored in account.os.schematas",
   "cotype": "comap",
   "indexing": false,
   "properties": {
-    "@schema/meta": {
+    "@maia/schema/meta": {
       "type": "string",
       "description": "Metaschema co-id (co_z...)"
     }
   },
   "additionalProperties": {
     "type": "string",
-    "description": "Schema namekey → schema co-id mapping (e.g., @schema/data/todos → co_z123...)"
+    "description": "Schema namekey → schema co-id mapping (e.g., @maia/schema/data/todos → co_z123...)"
   }
 }

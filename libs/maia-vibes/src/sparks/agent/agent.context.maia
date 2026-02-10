@@ -1,8 +1,8 @@
 {
-  "$schema": "@schema/context",
-  "$id": "@sparks/context/agent",
+  "$schema": "@maia/schema/context",
+  "$id": "@maia/sparks/context/agent",
   "sparks": {
-    "schema": "@schema/data/spark"
+    "schema": "@maia/schema/data/spark"
   },
   "newSparkName": "",
   "inputPlaceholder": "Enter spark name...",
@@ -14,6 +14,6 @@
   "selectedSparkItems": {},
   "currentDetail": "@detail",
   "@actors": {
-    "detail": "@sparks/actor/detail"
+    "detail": "@maia/sparks/actor/detail"
   }
 }

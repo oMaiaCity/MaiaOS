@@ -30,7 +30,7 @@ export function ajvCoTypesPlugin(ajv) {
           description: "Co-id reference (after transformation)"
         },
         {
-          pattern: "^@schema/",
+          pattern: "^@[a-zA-Z0-9_-]+/schema/",
           description: "Human-readable schema ID (before transformation)"
         }
       ],

@@ -41,37 +41,37 @@ export const MyDataVibeRegistry = {
   vibe: myDataVibe,
   
   styles: {
-    '@my-data/style/brand': brandStyle,
+    '@maia/my-data/style/brand': brandStyle,
   },
   
   actors: {
-    '@my-data/actor/agent': agentActor,
-    '@my-data/actor/table': tableActor,
-    '@my-data/actor/detail': detailActor,
+    '@maia/my-data/actor/agent': agentActor,
+    '@maia/my-data/actor/table': tableActor,
+    '@maia/my-data/actor/detail': detailActor,
   },
   
   views: {
-    '@my-data/view/agent': agentView,
-    '@my-data/view/table': tableView,
-    '@my-data/view/detail': detailView,
+    '@maia/my-data/view/agent': agentView,
+    '@maia/my-data/view/table': tableView,
+    '@maia/my-data/view/detail': detailView,
   },
   
   contexts: {
-    '@my-data/context/agent': agentContext,
-    '@my-data/context/table': tableContext,
-    '@my-data/context/detail': detailContext,
+    '@maia/my-data/context/agent': agentContext,
+    '@maia/my-data/context/table': tableContext,
+    '@maia/my-data/context/detail': detailContext,
   },
   
   states: {
-    '@my-data/state/agent': agentState,
-    '@my-data/state/table': tableState,
-    '@my-data/state/detail': detailState,
+    '@maia/my-data/state/agent': agentState,
+    '@maia/my-data/state/table': tableState,
+    '@maia/my-data/state/detail': detailState,
   },
   
   inboxes: {
-    '@my-data/inbox/agent': agentInbox,
-    '@my-data/inbox/table': tableInbox,
-    '@my-data/inbox/detail': detailInbox,
+    '@maia/my-data/inbox/agent': agentInbox,
+    '@maia/my-data/inbox/table': tableInbox,
+    '@maia/my-data/inbox/detail': detailInbox,
   },
   
   // No initial data - this vibe uses mocked data in context

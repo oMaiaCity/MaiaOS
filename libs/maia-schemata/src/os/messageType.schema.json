@@ -1,11 +1,11 @@
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/messageType",
-  "title": "@schema/messageType",
+  "$schema": "@maia/schema/meta",
+  "$id": "@maia/schema/messageType",
+  "title": "@maia/schema/messageType",
   "description": "Message type schema - this IS the payload schema (merged concept). Message type schemas are JSON Schemas that validate message payloads directly.",
   "cotype": "comap",
   "indexing": true,
   "type": "object",
-  "description": "Message type schemas are standard JSON Schemas that validate message payloads. The schema ID (e.g., '@schema/message/CREATE_BUTTON') identifies the message type.",
+  "description": "Message type schemas are standard JSON Schemas that validate message payloads. The schema ID (e.g., '@maia/schema/message/CREATE_BUTTON') identifies the message type.",
   "additionalProperties": true
 }

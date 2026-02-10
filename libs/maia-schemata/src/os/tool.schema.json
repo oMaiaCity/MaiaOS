@@ -1,7 +1,7 @@
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/tool",
-  "title": "@schema/tool",
+  "$schema": "@maia/schema/meta",
+  "$id": "@maia/schema/tool",
+  "title": "@maia/schema/tool",
   "description": "Tool metadata (AI-compatible JSON schema)",
   "cotype": "comap",
   "indexing": true,

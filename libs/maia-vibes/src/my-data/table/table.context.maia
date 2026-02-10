@@ -1,6 +1,6 @@
 {
-  "$schema": "@schema/context",
-  "$id": "@my-data/context/table",
+  "$schema": "@maia/schema/context",
+  "$id": "@maia/my-data/context/table",
   "table": [
     { "id": "1", "name": "John Doe", "email": "john@example.com", "role": "admin", "status": "active", "createdAt": "2024-01-15" },
     { "id": "2", "name": "Jane Smith", "email": "jane@example.com", "role": "user", "status": "active", "createdAt": "2024-01-20" },

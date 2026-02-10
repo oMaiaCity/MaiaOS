@@ -1,8 +1,8 @@
 {
-  "$schema": "@schema/context",
-  "$id": "@maia/context/agent",
+  "$schema": "@maia/schema/context",
+  "$id": "@maia/maia/context/agent",
   "conversations": {
-    "schema": "@schema/data/chat"
+    "schema": "@maia/schema/data/chat"
   },
   "inputText": "",
   "assistantResponse": null,

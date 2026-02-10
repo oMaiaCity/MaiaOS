@@ -69,7 +69,7 @@ function removeIdFields(obj, inPropertiesOrItems = false) {
  * @param {Object} backend - Backend instance
  * @param {string|Object} identifier - Identifier:
  *   - Co-id: 'co_z...' → returns co-value/schema
- *   - Registry key: '@schema/...' or '@vibe/...' → resolves to co-id, then returns co-value/schema
+ *   - Registry key: '@maia/schema/...' or '@maia/vibe/...' → resolves to co-id, then returns co-value/schema
  *   - Options: {fromCoValue: 'co_z...'} → extracts schema from headerMeta, then returns schema
  * @param {Object} [options] - Options
  * @param {string} [options.returnType='schema'] - Return type: 'coId' | 'schema' | 'coValue'
@@ -80,11 +80,15 @@ function removeIdFields(obj, inPropertiesOrItems = false) {
  *   - 'schema': returns Object (schema definition)
  *   - 'coValue': returns ReactiveStore (full co-value data)
  */
+const SCHEMA_REF_PATTERN = /^@[a-zA-Z0-9_-]+\/schema\//;
+const VIBE_REF_PATTERN = /^@[a-zA-Z0-9_-]+\/vibe\//;
+
 export async function resolve(backend, identifier, options = {}) {
   const {
     returnType = 'schema',
     deepResolve = false,
-    timeoutMs = 5000
+    timeoutMs = 5000,
+    spark
   } = options;
 
   if (!backend) {
@@ -190,12 +194,20 @@ export async function resolve(backend, identifier, options = {}) {
     return null;
   }
 
-  // Registry key lookup (@schema/... or @vibe/...)
-  if (identifier.startsWith('@schema/') || identifier.startsWith('@vibe/') || (!identifier.startsWith('@') && !identifier.startsWith('co_z'))) {
-    // Normalize key format
+  // Registry key lookup (@domain/schema/... or @domain/vibe/...)
+  const isSchemaKeyMatch = SCHEMA_REF_PATTERN.test(identifier);
+  const isVibeKeyMatch = VIBE_REF_PATTERN.test(identifier);
+  const isBareKey = !identifier.startsWith('@') && !identifier.startsWith('co_z');
+  if (isSchemaKeyMatch || isVibeKeyMatch || isBareKey) {
+    const effectiveSpark = spark ?? backend?.systemSpark;
+    if (!effectiveSpark && (isSchemaKeyMatch || isVibeKeyMatch || isBareKey)) {
+      throw new Error(`[resolve] spark required for registry lookup of ${identifier}. Pass options.spark or set backend.systemSpark.`);
+    }
+    // Normalize key format: bare key → @domain/schema/key (derive domain from spark, e.g. @maia → maia)
     let normalizedKey = identifier;
-    if (!normalizedKey.startsWith('@schema/') && !normalizedKey.startsWith('@vibe/') && !normalizedKey.startsWith('@')) {
-      normalizedKey = `@schema/${normalizedKey}`;
+    if (!SCHEMA_REF_PATTERN.test(normalizedKey) && !VIBE_REF_PATTERN.test(normalizedKey) && !normalizedKey.startsWith('@')) {
+      const domain = effectiveSpark?.replace(/^@/, '') ?? 'maia';
+      normalizedKey = `@${domain}/schema/${normalizedKey}`;
     }
 
     // Use read() API to load account.os or account.vibes registry
@@ -204,18 +216,46 @@ export async function resolve(backend, identifier, options = {}) {
       return null;
     }
 
-    const isSchemaKey = normalizedKey.startsWith('@schema/');
+    const isSchemaKey = SCHEMA_REF_PATTERN.test(normalizedKey);
     
     if (isSchemaKey) {
-      // Progressive loading: account.os loads in background during boot (non-blocking)
-      // If not ready yet, wait (with timeout) - schema resolution will return null until ready
-      // Schema keys → check account.os.schematas registry using read() API
-      const osId = backend.account.get('os');
+      // Schema keys → account.sparks[spark].os.schematas
+      const sparksId = backend.account.get('sparks');
+      if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_z')) {
+        return null;
+      }
+      const sparksStore = await universalRead(backend, sparksId, null, null, null, {
+        deepResolve: false,
+        timeoutMs
+      });
+      try {
+        await waitForStoreReady(sparksStore, sparksId, timeoutMs);
+      } catch {
+        return null;
+      }
+      const sparksData = sparksStore.value;
+      if (!sparksData || sparksData.error) return null;
+      const sparkCoId = sparksData[effectiveSpark];
+      if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_z')) {
+        return null;
+      }
+      const sparkStore = await universalRead(backend, sparkCoId, null, null, null, {
+        deepResolve: false,
+        timeoutMs
+      });
+      try {
+        await waitForStoreReady(sparkStore, sparkCoId, timeoutMs);
+      } catch {
+        return null;
+      }
+      const sparkData = sparkStore.value;
+      if (!sparkData || sparkData.error) return null;
+      const osId = sparkData.os;
       if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
         return null;
       }
 
-      // Load account.os using read() API
+      // Load spark.os using read() API
       const osStore = await universalRead(backend, osId, null, null, null, {
         deepResolve: false,
         timeoutMs
@@ -267,21 +307,51 @@ export async function resolve(backend, identifier, options = {}) {
       } else {
         // Schema not found in registry - this is a permanent failure
         // Don't warn for index schemas - they're created on-demand
-        const isIndexSchema = normalizedKey.startsWith('@schema/index/');
+        const isIndexSchema = /^@[a-zA-Z0-9_-]+\/schema\/index\//.test(normalizedKey);
         if (!isIndexSchema) {
           console.warn(`[resolve] Schema "${identifier}" not found in registry`);
         }
         return null;
       }
 
-    } else if (identifier.startsWith('@vibe/') || !identifier.startsWith('@')) {
-      // Vibe instance keys → check account.vibes registry using read() API
-      const vibesId = backend.account.get('vibes');
+    } else if (VIBE_REF_PATTERN.test(identifier) || !identifier.startsWith('@')) {
+      // Vibe instance keys → account.sparks[spark].vibes
+      const sparksId = backend.account.get('sparks');
+      if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_z')) {
+        return null;
+      }
+      const sparksStore = await universalRead(backend, sparksId, null, null, null, {
+        deepResolve: false,
+        timeoutMs
+      });
+      try {
+        await waitForStoreReady(sparksStore, sparksId, timeoutMs);
+      } catch {
+        return null;
+      }
+      const sparksData = sparksStore.value;
+      if (!sparksData || sparksData.error) return null;
+      const sparkCoId = sparksData[effectiveSpark];
+      if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_z')) {
+        return null;
+      }
+      const sparkStore = await universalRead(backend, sparkCoId, null, null, null, {
+        deepResolve: false,
+        timeoutMs
+      });
+      try {
+        await waitForStoreReady(sparkStore, sparkCoId, timeoutMs);
+      } catch {
+        return null;
+      }
+      const sparkData = sparkStore.value;
+      if (!sparkData || sparkData.error) return null;
+      const vibesId = sparkData.vibes;
       if (!vibesId || typeof vibesId !== 'string' || !vibesId.startsWith('co_z')) {
         return null;
       }
 
-      // Load account.vibes using read() API
+      // Load spark.vibes using read() API
       const vibesStore = await universalRead(backend, vibesId, null, null, null, {
         deepResolve: false,
         timeoutMs
@@ -298,9 +368,9 @@ export async function resolve(backend, identifier, options = {}) {
         return null;
       }
 
-      // Extract vibe name (remove @vibe/ prefix if present)
-      const vibeName = identifier.startsWith('@vibe/') 
-        ? identifier.replace('@vibe/', '')
+      // Extract vibe name (remove @domain/vibe/ prefix if present)
+      const vibeName = VIBE_REF_PATTERN.test(identifier)
+        ? identifier.replace(VIBE_REF_PATTERN, '')
         : identifier;
       
       // Lookup vibe in registry (flat object from read() API - properties directly accessible)

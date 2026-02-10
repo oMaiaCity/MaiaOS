@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "@schema/meta",
+  "$id": "@maia/schema/meta",
   "$vocabulary": {
     "https://json-schema.org/draft/2020-12/vocab/core": true,
     "https://json-schema.org/draft/2020-12/vocab/applicator": true,
@@ -14,7 +14,7 @@
   "allOf": [
     {"$ref": "https://json-schema.org/draft/2020-12/schema"}
   ],
-  "title": "@schema/meta",
+  "title": "@maia/schema/meta",
   "type": ["object", "boolean"],
   "indexing": false,
   "properties": {
@@ -34,7 +34,7 @@
           "description": "Co-id reference (after transformation)"
         },
         {
-          "pattern": "^@schema/",
+          "pattern": "^@[a-zA-Z0-9_-]+/schema/",
           "description": "Human-readable schema ID (before transformation)"
         }
       ],

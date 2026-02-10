@@ -1,7 +1,7 @@
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/action",
-  "title": "@schema/action",
+  "$schema": "@maia/schema/meta",
+  "$id": "@maia/schema/action",
+  "title": "@maia/schema/action",
   "description": "Action (tool invocation, context update, or data mapping)",
   "cotype": "comap",
   "indexing": true,

@@ -15,7 +15,7 @@ import {
 
 /**
  * Create a new Spark
- * Creates a child group owned by universal group, then creates Spark CoMap
+ * Creates a child group owned by @maia spark's group, then creates Spark CoMap
  * @param {Object} backend - Backend instance
  * @param {Object} dbEngine - DBEngine instance
  * @param {Object} params - Operation parameters
@@ -47,7 +47,7 @@ export async function readSparkOperation(backend, params) {
   }
   
   // Collection read - use spark schema or provided schema
-  const sparkSchema = schema || '@schema/data/spark';
+  const sparkSchema = schema || '@maia/schema/data/spark';
   return await backend.readSpark(null, sparkSchema);
 }
 

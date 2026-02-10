@@ -1,3 +1,5 @@
+import { isSchemaRef } from './patterns.js';
+
 /**
  * Schema Transformer - Transform schemas and instances for seeding
  * 
@@ -21,12 +23,13 @@ export function transformForSeeding(schemaOrInstance, coIdMap, options = {}) {
   
   // Detect if this is a schema or instance
   // KEY DIFFERENCE:
-  // - Schemas have $schema: "@schema/meta" (or "https://json-schema.org/...")
-  // - Instances have $schema: "@schema/vibe", "@schema/actor", etc. (pointing to their schema)
+  // - Schemas have $schema: "@maia/schema/meta" (or "https://json-schema.org/...")
+  // - Instances have $schema: "@maia/schema/vibe", "@maia/schema/actor", etc. (pointing to their schema)
   const schemaRef = schemaOrInstance.$schema;
   
   // Check if $schema points to meta-schema (indicates this IS a schema definition)
-  const isMetaSchema = schemaRef === '@schema/meta' || 
+  // Meta schema: @domain/schema/meta or standard JSON Schema URLs
+  const isMetaSchema = (typeof schemaRef === 'string' && /\/schema\/meta$/.test(schemaRef)) ||
                        (typeof schemaRef === 'string' && schemaRef.startsWith('https://json-schema.org/')) ||
                        (typeof schemaRef === 'string' && schemaRef.startsWith('https://'));
   
@@ -35,7 +38,7 @@ export function transformForSeeding(schemaOrInstance, coIdMap, options = {}) {
     return transformSchemaForSeeding(schemaOrInstance, coIdMap);
   }
   
-  // If $schema points to a data schema (e.g., "@schema/vibe", "@schema/actor"), it's an instance
+  // If $schema points to a data schema (e.g., "@maia/schema/vibe", "@maia/schema/actor"), it's an instance
   // Also check for instance-specific properties as additional confirmation
   const hasInstanceProperties = schemaOrInstance.actor !== undefined ||
                                 schemaOrInstance.context !== undefined ||
@@ -48,8 +51,7 @@ export function transformForSeeding(schemaOrInstance, coIdMap, options = {}) {
                                 (schemaOrInstance.name !== undefined && schemaOrInstance.description !== undefined);
   
   // If $schema points to a data schema (not meta-schema), it's an instance
-  const isDataSchema = schemaRef && typeof schemaRef === 'string' && 
-                       schemaRef.startsWith('@schema/') && schemaRef !== '@schema/meta';
+  const isDataSchema = schemaRef && isSchemaRef(schemaRef) && !/\/schema\/meta$/.test(schemaRef);
   
   if (isDataSchema || hasInstanceProperties) {
     return transformInstanceForSeeding(schemaOrInstance, coIdMap, options);
@@ -88,7 +90,7 @@ function transformSchemaForSeeding(schema, coIdMap) {
   // Transform $schema reference
   if (transformed.$schema) {
     const schemaRef = transformed.$schema;
-    if (schemaRef.startsWith('@schema/')) {
+    if (isSchemaRef(schemaRef)) {
       const coId = coIdMap.get(schemaRef);
       if (coId) {
         transformed.$schema = coId;
@@ -98,7 +100,7 @@ function transformSchemaForSeeding(schema, coIdMap) {
 
   // Transform $id reference (if it's a human-readable ID)
   if (transformed.$id && typeof transformed.$id === 'string') {
-    if (transformed.$id.startsWith('@schema/') || transformed.$id.startsWith('https://')) {
+    if (isSchemaRef(transformed.$id) || transformed.$id.startsWith('https://')) {
       const coId = coIdMap.get(transformed.$id);
       if (coId) {
         transformed.$id = coId;
@@ -182,8 +184,8 @@ function transformCoReferences(obj, coIdMap, path = '') {
       return 0;
     }
     
-    // If it's a human-readable ID (starts with @schema/), look it up in coIdMap
-    if (refValue.startsWith('@schema/')) {
+    // If it's a human-readable ID (starts with @maia/schema/), look it up in coIdMap
+    if (isSchemaRef(refValue)) {
       const coId = coIdMap.get(refValue);
       if (coId) {
         obj.$co = coId;
@@ -193,7 +195,7 @@ function transformCoReferences(obj, coIdMap, path = '') {
       } else {
         // CRITICAL: This means the referenced schema isn't in the coIdMap
         // This will cause validation errors at runtime
-        const availableKeys = Array.from(coIdMap.keys()).filter(k => k.startsWith('@schema/')).slice(0, 10).join(', ');
+        const availableKeys = Array.from(coIdMap.keys()).filter(k => isSchemaRef(k)).slice(0, 10).join(', ');
         console.error(`[SchemaTransformer] ❌ No co-id found for $co reference at ${path || 'root'}: ${refValue}. Available schema keys (first 10): ${availableKeys}`);
         throw new Error(`[SchemaTransformer] Failed to transform $co reference: ${refValue}. Schema must be registered before it can be referenced.`);
       }
@@ -243,7 +245,7 @@ function transformInstanceForSeeding(instance, coIdMap, options = {}) {
   // Transform $schema reference
   if (transformed.$schema) {
     const schemaRef = transformed.$schema;
-    if (schemaRef.startsWith('@schema/')) {
+    if (isSchemaRef(schemaRef)) {
       const coId = coIdMap.get(schemaRef);
       if (coId) {
         transformed.$schema = coId;
@@ -256,7 +258,7 @@ function transformInstanceForSeeding(instance, coIdMap, options = {}) {
     // If it's already a co-id, skip $id transformation but continue with other transformations
     if (!transformed.$id.startsWith('co_z')) {
       // Check if it's a human-readable ID pattern or a plain string that needs mapping
-      const isHumanReadablePattern = transformed.$id.startsWith('@schema/') || 
+      const isHumanReadablePattern = isSchemaRef(transformed.$id) || 
                                      transformed.$id.startsWith('vibe/') || 
                                      transformed.$id.startsWith('actor/') || 
                                      transformed.$id.startsWith('view/') ||
@@ -330,8 +332,8 @@ function transformInstanceForSeeding(instance, coIdMap, options = {}) {
           continue;
         }
         
-        // Must be @namespace/actor/instance format (e.g., @todos/actor/list, @maia/actor/agent)
-        if (!actorRef.match(/^@[^/]+\/actor\//)) {
+        // Must be @namespace/actor/instance format (e.g., @maia/todos/actor/list, @maia/maia/actor/agent)
+        if (!actorRef.match(/^@[^/]+.*\/actor\//)) {
           throw new Error(`[SchemaTransformer] context.actors[${namekey}] must use @namespace/actor/instance format, got: ${actorRef}`);
         }
         
@@ -352,8 +354,8 @@ function transformInstanceForSeeding(instance, coIdMap, options = {}) {
   if (transformed.children && typeof transformed.children === 'object') {
     for (const [key, childRef] of Object.entries(transformed.children)) {
       if (typeof childRef === 'string' && !childRef.startsWith('co_z')) {
-        // Must be new @namespace/actor/instance format (e.g., @todos/actor/list, @maia/actor/agent)
-        if (!childRef.match(/^@[^/]+\/actor\//)) {
+        // Must be new @namespace/actor/instance format (e.g., @maia/todos/actor/list, @maia/maia/actor/agent)
+        if (!childRef.match(/^@[^/]+.*\/actor\//)) {
           throw new Error(`[SchemaTransformer] children[${key}] reference must use @namespace/actor/instance format, got: ${childRef}`);
         }
         
@@ -421,8 +423,8 @@ function transformInstanceForSeeding(instance, coIdMap, options = {}) {
     }
   }
   if (transformed.target && typeof transformed.target === 'string' && !transformed.target.startsWith('co_z')) {
-    // Must be new @namespace/actor/instance format (e.g., @todos/actor/list, @maia/actor/agent)
-    if (!transformed.target.match(/^@[^/]+\/actor\//)) {
+    // Must be new @namespace/actor/instance format (e.g., @maia/todos/actor/list, @maia/maia/actor/agent)
+    if (!transformed.target.match(/^@[^/]+.*\/actor\//)) {
       throw new Error(`[SchemaTransformer] target reference must use @namespace/actor/instance format, got: ${transformed.target}`);
     }
     
@@ -486,7 +488,7 @@ function transformInstanceForSeeding(instance, coIdMap, options = {}) {
   }
 
   // Transform query objects in context properties
-  // Query objects have structure: {schema: "@schema/todos", filter: {...}}
+  // Query objects have structure: {schema: "@maia/schema/todos", filter: {...}}
   // Transform schema field from human-readable reference to co-id
   // Also transform target fields in tool payloads (for @core/publishMessage)
   transformQueryObjects(transformed, coIdMap);
@@ -496,20 +498,20 @@ function transformInstanceForSeeding(instance, coIdMap, options = {}) {
 
 /**
  * Transform query objects in instance (recursively handles nested objects)
- * Query objects have structure: {schema: "@schema/todos", filter: {...}}
+ * Query objects have structure: {schema: "@maia/schema/todos", filter: {...}}
  * @private
  * @param {Object} obj - Object to transform (may be instance or nested object)
  * @param {Map<string, string>} coIdMap - Map of human-readable ID → co-id
  */
 /**
  * Transform a schema reference to co-id
- * @param {string} schemaRef - Schema reference (e.g., "@schema/todos")
+ * @param {string} schemaRef - Schema reference (e.g., "@maia/schema/todos")
  * @param {Map} coIdMap - Map of human-readable IDs to co-ids
  * @param {string} context - Context for error messages
  * @returns {string|null} Co-id or null if not found
  */
 function transformSchemaReference(schemaRef, coIdMap, context = '') {
-  if (schemaRef.startsWith('@schema/') && !schemaRef.startsWith('co_z')) {
+  if (isSchemaRef(schemaRef) && !schemaRef.startsWith('co_z')) {
     const coId = coIdMap.get(schemaRef);
     if (coId) {
       return coId;
@@ -530,8 +532,8 @@ function transformSchemaReference(schemaRef, coIdMap, context = '') {
  * @returns {string|null} Co-id or null if not found
  */
 function transformTargetReference(targetRef, coIdMap, context = '') {
-  // Support namespaced actor references: @namespace/actor/instance (e.g., @todos/actor/list, @maia/actor/agent)
-  if (targetRef.match(/^@[^/]+\/actor\//) && !targetRef.startsWith('co_z')) {
+  // Support namespaced actor references: @namespace/actor/instance (e.g., @maia/todos/actor/list, @maia/maia/actor/agent)
+  if (targetRef.match(/^@[^/]+.*\/actor\//) && !targetRef.startsWith('co_z')) {
     const coId = coIdMap.get(targetRef);
     if (coId) {
       return coId;
@@ -701,7 +703,7 @@ function transformQueryObjects(obj, coIdMap, depth = 0) {
       continue;
     }
 
-    // Check for top-level schema field in contexts (e.g., context.schema = "@schema/todos")
+    // Check for top-level schema field in contexts (e.g., context.schema = "@maia/schema/todos")
     if (key === 'schema' && typeof value === 'string') {
       const coId = transformSchemaReference(value, coIdMap, 'top-level schema field');
       if (coId) {
@@ -721,8 +723,8 @@ function transformQueryObjects(obj, coIdMap, depth = 0) {
             continue;
           }
           
-          // Must be @namespace/actor/instance format (e.g., @todos/actor/list, @maia/actor/agent)
-          if (!actorRef.match(/^@[^/]+\/actor\//)) {
+          // Must be @namespace/actor/instance format (e.g., @maia/todos/actor/list, @maia/maia/actor/agent)
+          if (!actorRef.match(/^@[^/]+.*\/actor\//)) {
             throw new Error(`[SchemaTransformer] context.@actors[${namekey}] must use @namespace/actor/instance format, got: ${actorRef}`);
           }
           
@@ -798,11 +800,11 @@ function transformQueryObjects(obj, coIdMap, depth = 0) {
 
 /**
  * Validate schema structure (single source of truth for all schema validation)
- * Checks both for @schema/ references and nested co-types
+ * Checks both for @maia/schema/ references and nested co-types
  * @param {Object} schema - Schema to validate
  * @param {string} path - Current path (for error messages)
  * @param {Object} [options] - Validation options
- * @param {boolean} [options.checkSchemaReferences=true] - Check for @schema/ references
+ * @param {boolean} [options.checkSchemaReferences=true] - Check for @maia/schema/ references
  * @param {boolean} [options.checkNestedCoTypes=true] - Check for nested co-types
  * @returns {Array<string>} Array of error messages (empty if valid)
  */
@@ -814,23 +816,23 @@ export function validateSchemaStructure(schema, path = '', options = {}) {
     return errors;
   }
 
-  // Check for @schema/ references
+  // Check for @maia/schema/ references
   if (checkSchemaReferences) {
-    // Check if this object has a $co keyword with @schema/ reference
+    // Check if this object has a $co keyword with @maia/schema/ reference
     if (schema.$co && typeof schema.$co === 'string') {
-      if (schema.$co.startsWith('@schema/')) {
-        errors.push(`Found @schema/ reference in $co at ${path || 'root'}: ${schema.$co}. All $co references must be transformed to co-ids.`);
+      if (isSchemaRef(schema.$co)) {
+        errors.push(`Found @maia/schema/ reference in $co at ${path || 'root'}: ${schema.$co}. All $co references must be transformed to co-ids.`);
       }
     }
 
     // Check $schema reference
-    if (schema.$schema && typeof schema.$schema === 'string' && schema.$schema.startsWith('@schema/')) {
-      errors.push(`Found @schema/ reference in $schema at ${path || 'root'}: ${schema.$schema}. $schema must be transformed to co-id.`);
+    if (schema.$schema && typeof schema.$schema === 'string' && isSchemaRef(schema.$schema)) {
+      errors.push(`Found @maia/schema/ reference in $schema at ${path || 'root'}: ${schema.$schema}. $schema must be transformed to co-id.`);
     }
 
     // Check $id reference
-    if (schema.$id && typeof schema.$id === 'string' && schema.$id.startsWith('@schema/')) {
-      errors.push(`Found @schema/ reference in $id at ${path || 'root'}: ${schema.$id}. $id must be transformed to co-id.`);
+    if (schema.$id && typeof schema.$id === 'string' && isSchemaRef(schema.$id)) {
+      errors.push(`Found @maia/schema/ reference in $id at ${path || 'root'}: ${schema.$id}. $id must be transformed to co-id.`);
     }
   }
 
@@ -866,7 +868,7 @@ export function validateSchemaStructure(schema, path = '', options = {}) {
 }
 
 /**
- * Verify that no @schema/... references remain in transformed schema
+ * Verify that no @maia/schema/... references remain in transformed schema
  * Convenience function that calls validateSchemaStructure with checkSchemaReferences=true
  * @param {Object} schema - Transformed schema to verify
  * @param {string} path - Current path (for error messages)

@@ -14,6 +14,7 @@ import {
   ensureCoValueAvailable,
   loadSchemaAndValidate
 } from '@MaiaOS/schemata/validation.helper';
+import { isSchemaRef, isVibeRef } from '@MaiaOS/schemata';
 
 async function resolveSchemaFromCoValue(backend, coId, opName) {
   try {
@@ -64,7 +65,7 @@ function extractSchemaDefinition(coValueData, schemaCoId) {
 export async function readOperation(backend, params) {
   const { schema, key, keys, filter, options } = params;
   if (schema && !schema.startsWith('co_z') && !['@account', '@group', '@meta-schema'].includes(schema)) {
-    throw new Error(`[ReadOperation] Schema must be a co-id (co_z...) or special schema hint (@account, @group, @meta-schema), got: ${schema}. Runtime code must use co-ids only, not '@schema/...' patterns.`);
+    throw new Error(`[ReadOperation] Schema must be a co-id (co_z...) or special schema hint (@account, @group, @meta-schema), got: ${schema}. Runtime code must use co-ids only, not '@maia/schema/...' patterns.`);
   }
   if (keys !== undefined && !Array.isArray(keys)) throw new Error('[ReadOperation] keys parameter must be an array of co-ids');
   if (key && keys) throw new Error('[ReadOperation] Cannot provide both key and keys parameters');
@@ -154,10 +155,11 @@ export async function resolveOperation(backend, params) {
   const { humanReadableKey } = params;
   requireParam(humanReadableKey, 'humanReadableKey', 'ResolveOperation');
   if (typeof humanReadableKey !== 'string') throw new Error('[ResolveOperation] humanReadableKey must be a string');
-  if (humanReadableKey.startsWith('@schema/') || humanReadableKey.startsWith('@actor/') || humanReadableKey.startsWith('@vibe/')) {
+  if (isSchemaRef(humanReadableKey) || humanReadableKey.startsWith('@actor/') || isVibeRef(humanReadableKey)) {
     console.warn(`[ResolveOperation] resolve() called with human-readable key: ${humanReadableKey}. This should only be used during seeding. At runtime, all IDs should already be co-ids.`);
   }
-  return await resolve(backend, humanReadableKey, { returnType: 'coId' });
+  const spark = params.spark ?? backend?.systemSpark;
+  return await resolve(backend, humanReadableKey, { returnType: 'coId', spark });
 }
 
 export async function appendOperation(backend, dbEngine, params) {

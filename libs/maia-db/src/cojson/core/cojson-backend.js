@@ -19,22 +19,25 @@ import * as crudCreate from '../crud/create.js';
 import * as crudUpdate from '../crud/update.js';
 import * as crudDelete from '../crud/delete.js';
 import { resolve } from '../schema/resolver.js';
+import { EXCEPTION_SCHEMAS } from '../../schemas/registry.js';
 import { wrapStorageWithIndexingHooks } from '../indexing/storage-hook-wrapper.js';
 import { wrapSyncManagerWithValidation } from '../sync/validation-hook-wrapper.js';
 
 export class CoJSONBackend extends DBAdapter {
-  constructor(node, account, dbEngine = null) {
+  constructor(node, account, dbEngineOrOptions = null) {
     super();
+    // Third param: dbEngine (has .backend, .execute) or options (e.g. { systemSpark })
+    const isOptions = dbEngineOrOptions && typeof dbEngineOrOptions === 'object' && 
+      !dbEngineOrOptions.backend && typeof dbEngineOrOptions.execute !== 'function';
+    const dbEngine = isOptions ? null : dbEngineOrOptions;
+    const options = isOptions ? dbEngineOrOptions : {};
     this.node = node;
     this.account = account;
     this.dbEngine = dbEngine; // Store dbEngine for runtime schema validation
+    this.systemSpark = options.systemSpark ?? '@maia'; // Spark scope for registry lookups (passed from app)
     
     // Get node-aware unified cache (auto-clears if node changed)
     this.subscriptionCache = getGlobalCoCache(node);
-    // Cache universal group after first resolution (performance optimization)
-    this._cachedUniversalGroup = null;
-    
-    // CRITICAL FIX: Invalidate cached universal group on backend reset (account change)
     // This prevents stale group references after re-login
     // Note: Global unified cache is cleared automatically by getGlobalCoCache(node)
     // when it detects a node change, so we don't need to reset it here
@@ -64,11 +67,6 @@ export class CoJSONBackend extends DBAdapter {
    * Called when new backend is created to clear stale subscriptions from previous session.
    */
   _resetCaches() {
-    // Invalidate cached universal group on backend reset (account change)
-    // This prevents stale group references after re-login
-    if (this._cachedUniversalGroup) {
-      this._cachedUniversalGroup = null;
-    }
     // Note: Global unified cache is cleared automatically by getGlobalCoCache(node)
     // when it detects a node change, so we don't need to reset it here
   }
@@ -156,14 +154,11 @@ export class CoJSONBackend extends DBAdapter {
   }
   
   /**
-   * Get default group from account (for create operations)
-   * Returns universal group via account.profile.group using read() API
-   * Uses @group exception since groups don't have $schema
-   * Caches result after first resolution for performance
-   * @returns {RawGroup|null} Universal group or account as fallback
+   * Get @maia spark's group (for create operations)
+   * @returns {Promise<RawGroup|null>} @maia spark's group
    */
-  async getDefaultGroup() {
-    return await groups.getDefaultGroup(this);
+  async getMaiaGroup() {
+    return groups.getMaiaGroup(this);
   }
   
   /**
@@ -298,7 +293,7 @@ export class CoJSONBackend extends DBAdapter {
 
   /**
    * Create a new Spark (CoMap that references a group)
-   * Creates a child group owned by universal group, then creates Spark CoMap
+   * Creates a child group owned by @maia spark's group, then creates Spark CoMap
    * @param {string} name - Spark name
    * @returns {Promise<Object>} Created spark with co-id
    */
@@ -307,26 +302,22 @@ export class CoJSONBackend extends DBAdapter {
       throw new Error('[CoJSONBackend] Account required for createSpark');
     }
 
-    // Get universal group
-    const universalGroup = await this.getDefaultGroup();
-    if (!universalGroup) {
-      throw new Error('[CoJSONBackend] Universal group not found');
+    const maiaGroup = await this.getMaiaGroup();
+    if (!maiaGroup) {
+      throw new Error('[CoJSONBackend] @maia spark group not found');
     }
 
-    // Create child group owned by universal group
     const { createChildGroup } = await import('../groups/create.js');
-    const childGroup = createChildGroup(this.node, universalGroup, { name });
+    const childGroup = createChildGroup(this.node, maiaGroup, { name });
 
-    // Resolve spark schema
-    const sparkSchemaCoId = await resolve(this, '@schema/data/spark', { returnType: 'coId' });
+    const sparkSchemaCoId = await resolve(this, '@maia/schema/data/spark', { returnType: 'coId' });
     if (!sparkSchemaCoId) {
-      throw new Error('[CoJSONBackend] Spark schema not found: @schema/data/spark');
+      throw new Error('[CoJSONBackend] Spark schema not found: @maia/schema/data/spark');
     }
 
-    // Create Spark CoMap with group reference
     const { createCoMap } = await import('../cotypes/coMap.js');
     const sparkCoMap = await createCoMap(
-      universalGroup,
+      maiaGroup,
       { name, group: childGroup.id },
       sparkSchemaCoId,
       this.node,
@@ -356,7 +347,7 @@ export class CoJSONBackend extends DBAdapter {
     }
 
     // Collection read - read from account.sparks or indexed colist
-    const sparkSchema = schema || '@schema/data/spark';
+    const sparkSchema = schema || '@maia/schema/data/spark';
     const sparkSchemaCoId = await resolve(this, sparkSchema, { returnType: 'coId' });
     if (!sparkSchemaCoId) {
       throw new Error(`[CoJSONBackend] Spark schema not found: ${sparkSchema}`);
@@ -421,34 +412,51 @@ export class CoJSONBackend extends DBAdapter {
 
   /**
    * Register spark in account.sparks CoMap
+   * CRITICAL: Never overwrite account.sparks when it exists - only create when sparksId is null
    * @private
    * @param {string} sparkName - Spark name (key)
    * @param {string} sparkCoId - Spark co-id (value)
    */
   async _registerSparkInAccount(sparkName, sparkCoId) {
-    // Get or create account.sparks CoMap
     let sparksId = this.account.get('sparks');
     let sparks;
 
     if (sparksId) {
-      const sparksCore = this.node.getCoValue(sparksId);
+      // Existing account.sparks - MUST use it, never overwrite
+      let sparksCore = this.node.getCoValue(sparksId);
+      if (!sparksCore) {
+        await this.node.loadCoValueCore(sparksId);
+        sparksCore = this.node.getCoValue(sparksId);
+      }
       if (sparksCore && sparksCore.type === 'comap') {
-        const sparksContent = sparksCore.getCurrentContent?.();
-        if (sparksContent && typeof sparksContent.set === 'function') {
-          sparks = sparksContent;
+        if (!sparksCore.isAvailable?.()) {
+          await new Promise((resolve, reject) => {
+            const timeout = setTimeout(() => reject(new Error('[_registerSparkInAccount] Timeout waiting for account.sparks')), 15000);
+            const unsub = sparksCore.subscribe((core) => {
+              if (core?.isAvailable?.()) {
+                clearTimeout(timeout);
+                unsub?.();
+                resolve();
+              }
+            });
+          });
         }
+        sparks = sparksCore.getCurrentContent?.();
       }
     }
 
-    if (!sparks) {
-      // Create account.sparks CoMap
-      const universalGroup = await this.getDefaultGroup();
-      const sparksMeta = { $schema: 'GenesisSchema' };
-      sparks = universalGroup.createMap({}, sparksMeta);
+    // Only create new sparks CoMap when account has none (migration not run yet)
+    if (!sparks && !sparksId) {
+      const maiaGroup = await this.getMaiaGroup();
+      const sparksMeta = { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
+      sparks = maiaGroup.createMap({}, sparksMeta);
       this.account.set('sparks', sparks.id);
     }
 
-    // Register spark
+    if (!sparks || typeof sparks.set !== 'function') {
+      throw new Error(`[_registerSparkInAccount] account.sparks not available. sparksId=${sparksId || 'null'}`);
+    }
+
     sparks.set(sparkName, sparkCoId);
   }
 
@@ -479,7 +487,7 @@ export class CoJSONBackend extends DBAdapter {
    * @param {string} schema - Schema co-id (co_z...) or special exceptions:
    *   - '@group' - For groups (no $schema, use ruleset.type === 'group')
    *   - '@account' - For accounts (no $schema, use headerMeta.type === 'account')
-   *   - '@meta-schema' or 'GenesisSchema' - For meta schema
+   *   - '@meta-schema' or '@maia' - For meta schema
    * @param {string} [key] - Specific key (co-id) for single item
    * @param {string[]} [keys] - Array of co-ids for batch reads
    * @param {Object} [filter] - Filter criteria for collection queries
@@ -552,7 +560,7 @@ export class CoJSONBackend extends DBAdapter {
    * Get CoList ID from schema index (account.os.<schemaCoId>)
    * Supports schema co-ids, human-readable schema names, or collection names (legacy fallback)
    * @private
-   * @param {string} collectionNameOrSchema - Collection name (e.g., "todos"), schema co-id (co_z...), or namekey (@schema/data/todos)
+   * @param {string} collectionNameOrSchema - Collection name (e.g., "todos"), schema co-id (co_z...), or namekey (@maia/schema/data/todos)
    * @returns {Promise<string|null>} CoList ID or null if not found
    */
   async _getCoListId(collectionName) {
@@ -778,20 +786,14 @@ export class CoJSONBackend extends DBAdapter {
       total: 0
     };
 
-    // Get account.os co-id
+    // Get @maia spark's os (account.sparks[@maia].os)
     const getOsIdStartTime = performance.now();
-    let osId = this.account.get('os');
+    let osId = await groups.getSparkOsId(this, '@maia');
     phaseTimings.getOsId = performance.now() - getOsIdStartTime;
     
-    // If account.os doesn't exist, create it
     if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
-      const createOsStartTime = performance.now();
-      const group = await this.getDefaultGroup();
-      const osMeta = { $schema: 'GenesisSchema' };
-      const osCoMap = group.createMap({}, osMeta);
-      this.account.set('os', osCoMap.id);
-      osId = osCoMap.id;
-      phaseTimings.createOs = performance.now() - createOsStartTime;
+      console.warn('[CoJSONBackend.ensureAccountOsReady] @maia spark.os not found - migration should have created it');
+      return false;
     }
 
     // Load account.os using read() API
@@ -844,10 +846,9 @@ export class CoJSONBackend extends DBAdapter {
         return false;
       }
       
-      // Create schematas registry CoMap
-      // Use GenesisSchema during boot (schematas-registry schema might not be registered yet)
-      const group = await this.getDefaultGroup();
-      const schematasMeta = { $schema: 'GenesisSchema' }; // Use GenesisSchema during boot
+      // Create schematas registry CoMap (use @maia spark's group)
+      const group = await this.getMaiaGroup();
+      const schematasMeta = { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
       const schematasCoMap = group.createMap({}, schematasMeta);
       
       // Store in account.os.schematas

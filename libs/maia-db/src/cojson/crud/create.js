@@ -64,15 +64,11 @@ export async function create(backend, schema, data) {
   // Determine cotype from schema or data type
   const cotype = await determineCotype(backend, schema, data);
   
-  // Resolve universal group once (with proper fallbacks via getDefaultGroup)
-  // This eliminates redundant profile resolution in each create function
   if (!backend.account) {
     throw new Error('[CoJSONBackend] Account required for create');
   }
-  
-  // Resolve universal group once using getDefaultGroup() which has proper fallbacks
-  // Falls back to account if profile unavailable (graceful degradation)
-  const group = await backend.getDefaultGroup();
+
+  const group = await backend.getMaiaGroup();
 
   let coValue;
   switch (cotype) {
@@ -94,7 +90,7 @@ export async function create(backend, schema, data) {
       break;
     case 'costream':
       // Pass group directly instead of account - eliminates profile resolution in createCoStream
-      coValue = createCoStream(group, schema, backend.node);
+      coValue = await createCoStream(group, schema, backend.node, backend.dbEngine);
       break;
     default:
       throw new Error(`[CoJSONBackend] Unsupported cotype: ${cotype}`);

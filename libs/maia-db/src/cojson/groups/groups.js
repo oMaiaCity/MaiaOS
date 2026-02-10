@@ -25,84 +25,95 @@ export async function getGroup(node, groupId) {
 }
 
 /**
- * Get default group from account (for create operations)
- * Returns universal group via account.profile.group using read() API
- * Uses @group exception since groups don't have $schema
- * Caches result after first resolution for performance
+ * Get group for a spark by name
+ * Resolves account.sparks[spark] -> spark.group
  * 
  * @param {Object} backend - Backend instance with read(), getCoValue(), getCurrentContent(), account
- * @returns {Promise<RawGroup|null>} Universal group or account as fallback
+ * @param {string} spark - Spark name (e.g. "@maia", "@handle")
+ * @returns {Promise<RawGroup|null>} Group for the spark or null
  */
-export async function getDefaultGroup(backend) {
-  if (backend._cachedUniversalGroup) {
-    return backend._cachedUniversalGroup;
+export async function getSparkGroup(backend, spark) {
+  if (!spark || typeof spark !== 'string') {
+    throw new Error('[getSparkGroup] spark is required');
   }
-  
-  const profileStore = await backend.read(null, backend.account.get("profile"));
-  if (!profileStore || profileStore.error) {
-    throw new Error('[CoJSONBackend] Profile not found on account. Ensure the account has a valid profile.');
+  const cacheKey = `_cachedSparkGroup_${spark}`;
+  if (backend[cacheKey]) {
+    return backend[cacheKey];
   }
-  
+  const sparksId = backend.account.get('sparks');
+  if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_z')) {
+    throw new Error('[getSparkGroup] account.sparks not found. Ensure schemaMigration has created @maia spark.');
+  }
+  const sparksStore = await backend.read(null, sparksId);
+  if (!sparksStore || sparksStore.error) {
+    throw new Error('[getSparkGroup] account.sparks not available');
+  }
   await new Promise((resolve, reject) => {
-    if (!profileStore.loading) {
+    if (!sparksStore.loading) {
       resolve();
       return;
     }
-    // Fix: Declare unsubscribe before subscribe call to avoid temporal dead zone
     let unsubscribe;
     const timeout = setTimeout(() => {
-      reject(new Error('[CoJSONBackend] Timeout waiting for profile to be available'));
+      reject(new Error(`[getSparkGroup] Timeout waiting for account.sparks`));
     }, 10000);
-    unsubscribe = profileStore.subscribe(() => {
-      if (!profileStore.loading) {
+    unsubscribe = sparksStore.subscribe(() => {
+      if (!sparksStore.loading) {
         clearTimeout(timeout);
         unsubscribe();
         resolve();
       }
     });
   });
-  
-  const profileData = profileStore.value;
-  if (!profileData) {
-    throw new Error('[CoJSONBackend] Profile data not available. Ensure the profile is properly loaded.');
+  const sparksData = sparksStore.value;
+  if (!sparksData || sparksData.error) {
+    throw new Error('[getSparkGroup] account.sparks data not available');
   }
-  
-  const profileKeys = Object.keys(profileData).filter(key => !['id', 'type', '$schema'].includes(key));
-  if (profileKeys.length === 0 && (!profileData.properties || profileData.properties.length === 0)) {
-    throw new Error('[CoJSONBackend] Profile CoMap is empty. This may indicate the identity migration has not run. Please ensure schemaMigration() has been called during account creation/loading.');
+  const sparkCoId = sparksData[spark] || (sparksData.properties?.find?.(p => p.key === spark)?.value);
+  if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_z')) {
+    throw new Error(`[getSparkGroup] Spark "${spark}" not found in account.sparks`);
   }
-  
-  let universalGroupId;
-  if (profileData.properties && Array.isArray(profileData.properties)) {
-    const groupProperty = profileData.properties.find(p => p.key === 'group');
-    if (!groupProperty || !groupProperty.value) {
-      throw new Error('[CoJSONBackend] Universal group not found in profile.group. The profile exists but does not have a "group" property. This indicates the identity migration may not have completed successfully. Please check that schemaMigration() sets profile.set("group", universalGroupId).');
+  const sparkStore = await backend.read(null, sparkCoId);
+  if (!sparkStore || sparkStore.error) {
+    throw new Error(`[getSparkGroup] Spark ${spark} not available`);
+  }
+  await new Promise((resolve, reject) => {
+    if (!sparkStore.loading) {
+      resolve();
+      return;
     }
-    universalGroupId = groupProperty.value;
-  } else if (profileData.group && typeof profileData.group === 'string') {
-    universalGroupId = profileData.group;
-  } else {
-    throw new Error('[CoJSONBackend] Universal group not found in profile.group. The profile exists but does not have a "group" property. This indicates the identity migration may not have completed successfully. Please ensure schemaMigration() has been called and sets profile.set("group", universalGroupId).');
+    let unsubscribe;
+    const timeout = setTimeout(() => {
+      reject(new Error(`[getSparkGroup] Timeout waiting for spark ${spark}`));
+    }, 10000);
+    unsubscribe = sparkStore.subscribe(() => {
+      if (!sparkStore.loading) {
+        clearTimeout(timeout);
+        unsubscribe();
+        resolve();
+      }
+    });
+  });
+  const sparkData = sparkStore.value;
+  if (!sparkData || sparkData.error) {
+    throw new Error(`[getSparkGroup] Spark ${spark} data not available`);
   }
-  
-  if (!universalGroupId || typeof universalGroupId !== 'string' || !universalGroupId.startsWith('co_z')) {
-    throw new Error(`[CoJSONBackend] Invalid universal group ID format: ${universalGroupId}. Expected a valid co-id (co_z...). This may indicate a migration issue.`);
+  const groupId = sparkData.group || (sparkData.properties?.find?.(p => p.key === 'group')?.value);
+  if (!groupId || typeof groupId !== 'string' || !groupId.startsWith('co_z')) {
+    throw new Error(`[getSparkGroup] Spark ${spark} has no group reference`);
   }
-  
-  const groupStore = await backend.read('@group', universalGroupId);
+  const groupStore = await backend.read('@group', groupId);
   if (!groupStore || groupStore.error) {
-    throw new Error(`[CoJSONBackend] Universal group not available: ${universalGroupId}. Ensure the group exists and is synced.`);
+    throw new Error(`[getSparkGroup] Group for spark ${spark} not available: ${groupId}`);
   }
-  
   await new Promise((resolve, reject) => {
     if (!groupStore.loading) {
       resolve();
       return;
     }
-    // Fix: Declare unsubscribe before subscribe call to avoid temporal dead zone
     let unsubscribe;
     const timeout = setTimeout(() => {
-      reject(new Error(`[CoJSONBackend] Timeout waiting for universal group ${universalGroupId} to be available`));
+      reject(new Error(`[getSparkGroup] Timeout waiting for group ${groupId}`));
     }, 10000);
     unsubscribe = groupStore.subscribe(() => {
       if (!groupStore.loading) {
@@ -112,19 +123,119 @@ export async function getDefaultGroup(backend) {
       }
     });
   });
-  
-  const universalGroupCore = backend.getCoValue(universalGroupId);
-  if (!universalGroupCore) {
-    throw new Error(`[CoJSONBackend] Universal group core not found: ${universalGroupId}. Ensure the group is loaded in the node.`);
+  const groupCore = backend.getCoValue(groupId);
+  if (!groupCore) {
+    throw new Error(`[getSparkGroup] Group core not found: ${groupId}`);
   }
-  
-  const universalGroup = backend.getCurrentContent(universalGroupCore);
-  if (!universalGroup || typeof universalGroup.createMap !== 'function') {
-    throw new Error(`[CoJSONBackend] Universal group content not available: ${universalGroupId}. Ensure the group is properly initialized.`);
+  const group = backend.getCurrentContent(groupCore);
+  if (!group || typeof group.createMap !== 'function') {
+    throw new Error(`[getSparkGroup] Group content not available: ${groupId}`);
   }
-  
-  backend._cachedUniversalGroup = universalGroup;
-  return universalGroup;
+  backend[cacheKey] = group;
+  return group;
+}
+
+/**
+ * Get spark's os CoMap id (account.sparks[spark].os)
+ * @param {Object} backend
+ * @param {string} spark
+ * @returns {Promise<string|null>}
+ */
+export async function getSparkOsId(backend, spark) {
+  const sparksId = backend.account.get('sparks');
+  if (!sparksId?.startsWith('co_z')) return null;
+  const sparksStore = await backend.read(null, sparksId);
+  await new Promise((resolve, reject) => {
+    if (!sparksStore.loading) return resolve();
+    let unsub;
+    const t = setTimeout(() => reject(new Error('Timeout')), 10000);
+    unsub = sparksStore.subscribe(() => {
+      if (!sparksStore.loading) { clearTimeout(t); unsub?.(); resolve(); }
+    });
+  });
+  const sparkCoId = sparksStore.value?.[spark];
+  if (!sparkCoId?.startsWith('co_z')) return null;
+  const sparkStore = await backend.read(null, sparkCoId);
+  await new Promise((resolve, reject) => {
+    if (!sparkStore.loading) return resolve();
+    let unsub;
+    const t = setTimeout(() => reject(new Error('Timeout')), 10000);
+    unsub = sparkStore.subscribe(() => {
+      if (!sparkStore.loading) { clearTimeout(t); unsub?.(); resolve(); }
+    });
+  });
+  const osId = sparkStore.value?.os || null;
+  if (osId) backend._cachedMaiaOsId = osId;
+  return osId;
+}
+
+/**
+ * Get spark's vibes CoMap id (account.sparks[spark].vibes)
+ * @param {Object} backend
+ * @param {string} spark
+ * @returns {Promise<string|null>}
+ */
+export async function getSparkVibesId(backend, spark) {
+  const sparksId = backend.account.get('sparks');
+  if (!sparksId?.startsWith('co_z')) return null;
+  const sparksStore = await backend.read(null, sparksId);
+  await new Promise((resolve, reject) => {
+    if (!sparksStore.loading) return resolve();
+    let unsub;
+    const t = setTimeout(() => reject(new Error('Timeout')), 10000);
+    unsub = sparksStore.subscribe(() => {
+      if (!sparksStore.loading) { clearTimeout(t); unsub?.(); resolve(); }
+    });
+  });
+  const sparkCoId = sparksStore.value?.[spark];
+  if (!sparkCoId?.startsWith('co_z')) return null;
+  const sparkStore = await backend.read(null, sparkCoId);
+  await new Promise((resolve, reject) => {
+    if (!sparkStore.loading) return resolve();
+    let unsub;
+    const t = setTimeout(() => reject(new Error('Timeout')), 10000);
+    unsub = sparkStore.subscribe(() => {
+      if (!sparkStore.loading) { clearTimeout(t); unsub?.(); resolve(); }
+    });
+  });
+  return sparkStore.value?.vibes || null;
+}
+
+/**
+ * Set spark's vibes CoMap id (account.sparks[spark].vibes)
+ * Used when creating vibes during seed.
+ * @param {Object} backend
+ * @param {string} spark
+ * @param {string} vibesId
+ */
+export async function setSparkVibesId(backend, spark, vibesId) {
+  const sparksId = backend.account.get('sparks');
+  if (!sparksId?.startsWith('co_z')) throw new Error('[setSparkVibesId] account.sparks not found');
+  const sparksStore = await backend.read(null, sparksId);
+  await new Promise((resolve, reject) => {
+    if (!sparksStore.loading) return resolve();
+    let unsub;
+    const t = setTimeout(() => reject(new Error('Timeout')), 10000);
+    unsub = sparksStore.subscribe(() => {
+      if (!sparksStore.loading) { clearTimeout(t); unsub?.(); resolve(); }
+    });
+  });
+  const sparkCoId = sparksStore.value?.[spark];
+  if (!sparkCoId?.startsWith('co_z')) throw new Error(`[setSparkVibesId] Spark ${spark} not found`);
+  const sparkCore = backend.getCoValue(sparkCoId);
+  if (!sparkCore) throw new Error(`[setSparkVibesId] Spark core not found: ${sparkCoId}`);
+  const sparkContent = backend.getCurrentContent(sparkCore);
+  if (!sparkContent || typeof sparkContent.set !== 'function') throw new Error(`[setSparkVibesId] Spark content not available`);
+  sparkContent.set('vibes', vibesId);
+}
+
+/**
+ * Get @maia spark's group (for create operations, seeding, etc.)
+ * @param {Object} backend - Backend instance
+ * @returns {Promise<RawGroup|null>} @maia spark's group
+ */
+export async function getMaiaGroup(backend) {
+  return getSparkGroup(backend, '@maia');
 }
 
 /**

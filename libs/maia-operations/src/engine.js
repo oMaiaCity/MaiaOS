@@ -126,7 +126,7 @@ export class DBEngine {
    * Resolve a human-readable ID to a co-id
    * DEPRECATED: This method should only be used during seeding. At runtime, all IDs should already be co-ids.
    * @deprecated Use co-ids directly at runtime. This method is only for seeding/backward compatibility.
-   * @param {string} humanReadableId - Human-readable ID (e.g., '@vibe/todos', 'vibe/vibe')
+   * @param {string} humanReadableId - Human-readable ID (e.g., '@maia/vibe/todos', 'vibe/vibe')
    * @returns {Promise<string|null>} Co-id (co_z...) or null if not found
    */
 }

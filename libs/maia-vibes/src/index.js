@@ -68,13 +68,13 @@ export async function getAllVibeRegistries() {
 /**
  * Extract vibe key from vibe object
  * @param {Object} vibe - Vibe object with $id or name property
- * @returns {string} Vibe key (e.g., "todos" from "@vibe/todos")
+ * @returns {string} Vibe key (e.g., "todos" from "@maia/vibe/todos")
  */
 function getVibeKey(vibe) {
 	if (!vibe) return null;
 	const originalVibeId = vibe.$id || '';
-	if (originalVibeId.startsWith('@vibe/')) {
-		return originalVibeId.replace('@vibe/', '');
+	if (originalVibeId.startsWith('@maia/vibe/')) {
+		return originalVibeId.replace('@maia/vibe/', '');
 	}
 	return (vibe.name || 'default').toLowerCase().replace(/\s+/g, '-');
 }

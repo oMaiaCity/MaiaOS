@@ -31,26 +31,26 @@ export const MaiaAgentVibeRegistry = {
   vibe: maiaAgentVibe,
   
   styles: {
-    '@maia/style/brand': brandStyle,
+    '@maia/maia/style/brand': brandStyle,
   },
   
   actors: {
-    '@maia/actor/agent': agentActor,
+    '@maia/maia/actor/agent': agentActor,
   },
   
   views: {
-    '@maia/view/agent': agentView,
+    '@maia/maia/view/agent': agentView,
   },
   
   contexts: {
-    '@maia/context/agent': agentContext,
+    '@maia/maia/context/agent': agentContext,
   },
   
   states: {
-    '@maia/state/agent': agentState,
+    '@maia/maia/state/agent': agentState,
   },
   
   inboxes: {
-    '@maia/inbox/agent': agentInbox,
+    '@maia/maia/inbox/agent': agentInbox,
   },
 };

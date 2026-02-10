@@ -81,12 +81,13 @@ const GroupSchema = {
 
 /**
  * ProfileSchema - CoMap schema for profile CoValues
+ * Profile is account-owned only - identity only, no group reference.
  */
 const ProfileSchema = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://maia.city/ProfileSchema",
   title: "Profile",
-  description: "Schema for profile CoMap",
+  description: "Schema for profile CoMap (account-owned, identity only)",
   allOf: [
     { $ref: "#/$defs/comap" }
   ],
@@ -95,11 +96,6 @@ const ProfileSchema = {
       type: "string",
       minLength: 1,
       description: "User's display name"
-    },
-    group: {
-      type: "string",
-      pattern: "^co_z[a-zA-Z0-9]+$",
-      description: "Co-id reference to universal group (set by migration)"
     }
   },
   required: ["name"],
@@ -144,7 +140,7 @@ export function getAllSchemas() {
 export function hasSchemaInRegistry(schemaName) {
 	// Only check hardcoded registry (for migrations/seeding before account.os.schemata exists)
 	// Exception schemas are always valid
-	const EXCEPTION_SCHEMAS_LIST = ['@account', '@group', 'GenesisSchema'];
+	const EXCEPTION_SCHEMAS_LIST = ['@account', '@group', '@maia'];
 	if (EXCEPTION_SCHEMAS_LIST.includes(schemaName)) {
 		return true;
 	}
@@ -178,7 +174,7 @@ export async function getMetaSchemaFromBackend(backend) {
   const { resolve } = await import('../cojson/schema/resolver.js');
   
   // Resolve metaschema co-id from registry
-  const metaSchemaCoId = await resolve(backend, '@schema/meta', { returnType: 'coId' });
+  const metaSchemaCoId = await resolve(backend, '@maia/schema/meta', { returnType: 'coId' });
   if (!metaSchemaCoId) {
     throw new Error('[getMetaSchemaFromBackend] Metaschema not found in registry');
   }
@@ -199,13 +195,12 @@ export async function getMetaSchemaFromBackend(backend) {
  * These are special cases where headerMeta.$schema is not a co-id:
  * - @account: Account CoValue (read-only headerMeta)
  * - @group: Group CoValue (read-only headerMeta)
- * - GenesisSchema: Metaschema CoValue (chicken-egg problem - can't self-reference co-id in read-only headerMeta)
- *   The GenesisSchema CoMap has title: "Meta Schema" in its definition
+ * - @maia: Bootstrap/metaschema (chicken-egg - can't self-reference co-id in read-only headerMeta)
  */
 export const EXCEPTION_SCHEMAS = {
 	ACCOUNT: '@account',
 	GROUP: '@group',
-	META_SCHEMA: 'GenesisSchema'
+	META_SCHEMA: '@maia'
 };
 
 /**
@@ -221,7 +216,7 @@ export function isExceptionSchema(schema) {
 
 /**
  * Create metadata object with schema reference
- * @param {string} schemaName - Schema name or co-id (e.g., "ProfileSchema", "co_z123...", "@account", "@group", "GenesisSchema")
+ * @param {string} schemaName - Schema name or co-id (e.g., "ProfileSchema", "co_z123...", "@account", "@group", "@maia")
  * @returns {JsonObject} Metadata object for headerMeta
  */
 export function createSchemaMeta(schemaName) {
@@ -297,7 +292,7 @@ export function validateHeaderMetaSchema(coValue) {
 	if (!schema) {
 		return { 
 			valid: false, 
-			error: 'CoValue missing $schema in headerMeta (required for all CoValues except @account, @group, GenesisSchema)' 
+			error: 'CoValue missing $schema in headerMeta (required for all CoValues except @account, @group, @maia)' 
 		};
 	}
 	

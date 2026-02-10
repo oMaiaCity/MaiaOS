@@ -13,7 +13,7 @@ export class CoIdRegistry {
 
   /**
    * Register a co-id for a human-readable ID
-   * @param {string} humanId - Human-readable ID (e.g., "@schema/actor", "actor_001")
+   * @param {string} humanId - Human-readable ID (e.g., "@maia/schema/actor", "actor_001")
    * @param {string} coId - Generated co-id
    */
   register(humanId, coId) {
@@ -27,7 +27,7 @@ export class CoIdRegistry {
       return;
     }
     
-    // Allow one co-id to map to multiple human-readable IDs (e.g., @schema/actor and https://...)
+    // Allow one co-id to map to multiple human-readable IDs (e.g., @maia/schema/actor and https://...)
     // Only check reverse registry if we're trying to register a different human ID with same co-id
     // (which is fine - one co-id can have multiple aliases)
     this.registry.set(humanId, coId);

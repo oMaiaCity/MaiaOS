@@ -1,6 +1,6 @@
 {
-  "$schema": "@schema/view",
-  "$id": "@todos/view/agent",
+  "$schema": "@maia/schema/view",
+  "$id": "@maia/todos/view/agent",
   "content": {
     "tag": "div",
     "class": "stack",

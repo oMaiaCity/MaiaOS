@@ -1,6 +1,6 @@
 {
-  "$schema": "@schema/state",
-  "$id": "@my-data/state/agent",
+  "$schema": "@maia/schema/state",
+  "$id": "@maia/my-data/state/agent",
   "initial": "idle",
   "states": {
     "idle": {

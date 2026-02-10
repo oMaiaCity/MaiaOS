@@ -1,7 +1,7 @@
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/message/SEND_MESSAGE",
-  "title": "@schema/message/SEND_MESSAGE",
+  "$schema": "@maia/schema/meta",
+  "$id": "@maia/schema/message/SEND_MESSAGE",
+  "title": "@maia/schema/message/SEND_MESSAGE",
   "description": "Message type for sending a chat message",
   "cotype": "comap",
   "indexing": true,

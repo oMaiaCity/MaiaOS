@@ -10,6 +10,7 @@
 import { ValidationEngine } from './validation.engine.js';
 
 export { ValidationEngine };
+export { SCHEMA_REF_PATTERN, VIBE_REF_PATTERN, isSchemaRef, isVibeRef } from './patterns.js';
 
 // Export validation helper functions
 export { getValidationEngine, validateAgainstSchema, validateAgainstSchemaOrThrow, setSchemaResolver } from './validation.helper.js';
@@ -144,14 +145,17 @@ const MESSAGE_SCHEMAS = {
  * @returns {object|null} Schema object or null if not found
  */
 export function getSchema(type) {
-  // Check message schemas first (they use @schema/message/{TYPE} format)
+  // Check for full @maia/schema/ prefix
+  if (type.startsWith('@maia/schema/')) {
+    const short = type.replace('@maia/schema/', '');
+    if (short.startsWith('message/')) {
+      return MESSAGE_SCHEMAS[short] || null;
+    }
+    return SCHEMAS[short] || DATA_SCHEMAS[short] || null;
+  }
+  // Check message schemas (message/{TYPE} format)
   if (type.startsWith('message/')) {
     return MESSAGE_SCHEMAS[type] || null;
-  }
-  // Check if it's @schema/message/{TYPE} format
-  if (type.startsWith('@schema/message/')) {
-    const messageType = type.replace('@schema/message/', '');
-    return MESSAGE_SCHEMAS[`message/${messageType}`] || null;
   }
   return SCHEMAS[type] || DATA_SCHEMAS[type] || null;
 }
@@ -162,11 +166,11 @@ export function getSchema(type) {
  * @returns {object} All schema definitions
  */
 export function getAllSchemas() {
-  // Merge all schemas, converting message schemas to @schema/message/{TYPE} format
+  // Merge all schemas, converting message schemas to @maia/schema/message/{TYPE} format
   const allMessageSchemas = {};
   for (const [key, schema] of Object.entries(MESSAGE_SCHEMAS)) {
-    // Convert 'message/CREATE_BUTTON' to '@schema/message/CREATE_BUTTON'
-    allMessageSchemas[`@schema/${key}`] = schema;
+    // Convert 'message/CREATE_BUTTON' to '@maia/schema/message/CREATE_BUTTON'
+    allMessageSchemas[`@maia/schema/${key}`] = schema;
   }
   return { ...SCHEMAS, ...DATA_SCHEMAS, ...allMessageSchemas };
 }

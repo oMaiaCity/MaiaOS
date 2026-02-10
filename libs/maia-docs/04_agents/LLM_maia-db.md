@@ -1,6 +1,6 @@
 # MaiaOS Documentation for maia-db
 
-**Auto-generated:** 2026-02-10T12:31:49.968Z
+**Auto-generated:** 2026-02-10T15:04:36.243Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -345,24 +345,24 @@ Groups are CoMaps with special `ruleset.type === "group"` that:
 - Control access permissions (members, roles, parent groups)
 - Enable collaborative editing (multiple members can edit simultaneously)
 
-### Universal Group
+### @maia Spark's Group
 
-Every account has a **universal group** stored in `account.profile.group`:
+Every account has the **@maia spark** with a group at `account.sparks["@maia"].group`:
 - Created during `schemaMigration()` when account is first created
 - Owns ALL user data CoValues (schemas, configs, data)
 - Single source of truth for user's data ownership
 
 ### Creating Child Groups
 
-The universal group can create child groups it owns 100%:
+The @maia spark's group can create child groups it owns:
 
 ```javascript
 import { createChildGroup } from '@MaiaOS/db';
 
-const universalGroup = await backend.getDefaultGroup();
-const childGroup = createChildGroup(node, universalGroup, { name: "My Project" });
+const maiaGroup = await backend.getMaiaGroup();
+const childGroup = createChildGroup(node, maiaGroup, { name: "My Project" });
 
-// Universal group is now admin of childGroup
+// @maia group is now admin of childGroup
 // childGroup can own its own CoValues
 ```
 

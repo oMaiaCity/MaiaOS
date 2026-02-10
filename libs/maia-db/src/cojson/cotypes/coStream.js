@@ -4,16 +4,15 @@ import { hasSchemaInRegistry } from "../../schemas/registry.js";
 /**
  * Create a CoStream with MANDATORY schema validation
  * 
- * Automatically uses universal group from account as owner/admin.
+ * Automatically uses @maia spark group from account as owner/admin when account is passed.
  * 
- * @param {RawAccount|RawGroup} accountOrGroup - Account (to get universal group) or Group (for backward compatibility)
- * @param {string} schemaName - Schema name for headerMeta.$schema (REQUIRED - e.g., schema co-id or "@meta-schema")
+ * @param {RawAccount|RawGroup} accountOrGroup - Account (to get @maia spark group) or Group
+ * @param {string} schemaName - Schema name for headerMeta.$schema (REQUIRED)
  * @param {LocalNode} [node] - LocalNode instance (required if accountOrGroup is account)
- * @returns {RawCoStream} The created CoStream
- * @throws {Error} If schema is missing
+ * @param {Object} [dbEngine] - dbEngine with backend (required when account is passed)
+ * @returns {RawCoStream|Promise<RawCoStream>} The created CoStream
  */
-export function createCoStream(accountOrGroup, schemaName, node = null) {
-	// Get universal group from account (auto-assignment)
+export async function createCoStream(accountOrGroup, schemaName, node = null, dbEngine = null) {
 	let group = accountOrGroup;
 	
 	// Check if first param is account (has get("profile") property) or group
@@ -22,46 +21,16 @@ export function createCoStream(accountOrGroup, schemaName, node = null) {
 		// Try to get profile - if it exists, it's an account
 		const profileId = accountOrGroup.get("profile");
 		if (profileId) {
-			// It's an account - resolve universal group via account.profile.group
-			if (!node) {
-				throw new Error('[createCoStream] Node parameter required when passing account');
+			// It's an account - resolve @maia spark's group via getSparkGroup
+			const backend = dbEngine?.backend;
+			if (!backend) {
+				throw new Error('[createCoStream] dbEngine.backend required when passing account');
 			}
-			
-			// Load profile and get group reference
-			const profileCore = node.getCoValue(profileId);
-			if (!profileCore || profileCore.type !== 'comap') {
-				throw new Error(`[createCoStream] Profile not available: ${profileId}`);
+			const { getSparkGroup } = await import('../groups/groups.js');
+			group = await getSparkGroup(backend, '@maia');
+			if (!group) {
+				throw new Error('[createCoStream] @maia spark group not found. Ensure schemaMigration has run.');
 			}
-			
-			const profile = profileCore.getCurrentContent?.();
-			if (!profile || typeof profile.get !== 'function') {
-				throw new Error(`[createCoStream] Profile content not available: ${profileId}`);
-			}
-			
-			const universalGroupId = profile.get("group");
-			if (!universalGroupId) {
-				throw new Error('[createCoStream] Universal group not found in profile.group. Ensure identity migration has run.');
-			}
-			
-			const universalGroupCore = node.getCoValue(universalGroupId);
-			if (!universalGroupCore) {
-				throw new Error(`[createCoStream] Universal group core not found: ${universalGroupId}`);
-			}
-			
-			// Verify it's a group using ruleset.type (groups don't have core.type === 'group')
-			const header = universalGroupCore.verified?.header;
-			const ruleset = universalGroupCore.ruleset || header?.ruleset;
-			if (!ruleset || ruleset.type !== 'group') {
-				throw new Error(`[createCoStream] Universal group is not a group type (ruleset.type !== 'group'): ${universalGroupId}`);
-			}
-			
-			const universalGroupContent = universalGroupCore.getCurrentContent?.();
-			if (!universalGroupContent || typeof universalGroupContent.createStream !== 'function') {
-				throw new Error(`[createCoStream] Universal group content not available: ${universalGroupId}`);
-			}
-			
-			group = universalGroupContent;
-			console.log(`[createCoStream] Using universal group via account.profile.group: ${universalGroupId}`);
 		}
 		// If profileId is null/undefined, it's a regular group, use it as-is
 	}

@@ -1,6 +1,6 @@
 {
-  "$schema": "@schema/view",
-  "$id": "@my-data/view/agent",
+  "$schema": "@maia/schema/view",
+  "$id": "@maia/my-data/view/agent",
   "content": {
     "tag": "div",
     "class": "db-viewer",

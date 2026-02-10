@@ -1,6 +1,6 @@
 {
-  "$schema": "@schema/state",
-  "$id": "@todos/state/agent",
+  "$schema": "@maia/schema/state",
+  "$id": "@maia/todos/state/agent",
   "initial": "idle",
   "states": {
     "idle": {
@@ -62,7 +62,7 @@
         "tool": "@db",
         "payload": { 
           "op": "create",
-          "schema": "@schema/data/todos",
+          "schema": "@maia/schema/data/todos",
           "data": { "text": "$$value", "done": false }
         }
       },

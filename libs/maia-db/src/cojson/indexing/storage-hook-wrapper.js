@@ -88,9 +88,9 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
       
       // REJECT co-values without schemas (except exception schemas)
       if (!schema && !detection.isException) {
-        console.error(`[StorageHook] REJECTING co-value ${coId}: Missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, GenesisSchema, and groups/accounts).`);
+        console.error(`[StorageHook] REJECTING co-value ${coId}: Missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, @maia, and groups/accounts).`);
         // Throw error to prevent storage (co-value will not be stored)
-        throw new Error(`[StorageHook] Co-value ${coId} missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, GenesisSchema, and groups/accounts).`);
+        throw new Error(`[StorageHook] Co-value ${coId} missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, @maia, and groups/accounts).`);
       }
     }
     
@@ -98,22 +98,22 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
     // These checks must be fast and not trigger any storage operations
     
     // 1. Use universal skip validation helper (consolidates all skip logic)
-    // NOTE: We DON'T skip GenesisSchema here - @schema/meta uses GenesisSchema but should be registered!
-    // Let isSchemaCoValue() and shouldIndexCoValue() handle GenesisSchema detection properly
+    // NOTE: We DON'T skip @maia here - @maia/schema/meta uses @maia but should be registered!
+    // Let isSchemaCoValue() and shouldIndexCoValue() handle @maia detection properly
     let shouldSkipIndexing = shouldSkipValidation(msg, backend, coId);
     
-    // Don't skip GenesisSchema for indexing (it should be registered)
+    // Don't skip @maia for indexing (it should be registered)
     if (shouldSkipIndexing) {
       const schema = extractSchemaFromMessage(msg);
-      if (schema === 'GenesisSchema') {
-        shouldSkipIndexing = false; // Allow GenesisSchema to be indexed
+      if (schema === '@maia') {
+        shouldSkipIndexing = false; // Allow @maia to be indexed
       }
     }
     
-    // 2. Skip indexing if this is account.os, account.os.schematas, account.os.indexes, or any index colist (they're internal)
-    // Only check if account.os is already loaded (don't trigger loading!)
+    // 2. Skip indexing if this is spark.os, schematas, indexes, or any index colist (they're internal)
+    // Use cached osId (set when getSparkOsId is first called - don't trigger async here!)
     if (!shouldSkipIndexing && backend.account) {
-      const osId = backend.account.get('os');
+      const osId = backend._cachedMaiaOsId;
       if (coId === osId) {
         // This is account.os itself - skip indexing to prevent infinite loop
         shouldSkipIndexing = true;

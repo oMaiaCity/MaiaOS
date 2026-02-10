@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-02-10T12:31:49.961Z
+**Auto-generated:** 2026-02-10T15:04:36.215Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -6266,7 +6266,7 @@ The `@sparks` tool is a domain-specific tool for managing Sparks (collaborative 
 ```
 
 **What it does:**
-- Creates a child group owned by your universal group
+- Creates a child group owned by your @maia spark's group
 - Creates a Spark CoMap with the name and group reference
 - Registers the spark in `account.sparks` CoMap
 - Automatically indexes the spark in the database
@@ -6962,7 +6962,7 @@ const processed = await maia.db({
 
 ### `createSpark` - Create New Spark (Group Reference)
 
-Create a new Spark - a CoMap that references a group for collaborative spaces. Automatically creates a child group owned by your universal group and registers the spark in `account.sparks`.
+Create a new Spark - a CoMap that references a group for collaborative spaces. Automatically creates a child group owned by your @maia spark's group and registers the spark in `account.sparks`.
 
 ```javascript
 const spark = await maia.db({
@@ -6981,10 +6981,10 @@ console.log("Group:", spark.group); // Co-id of the created group
 - Created spark object with:
   - `id` - Spark CoMap co-id
   - `name` - Spark name
-  - `group` - Group co-id (child group owned by universal group)
+  - `group` - Group co-id (child group owned by @maia spark's group)
 
 **What happens:**
-1. Creates a child group owned 100% by your universal group
+1. Creates a child group owned by your @maia spark's group
 2. Creates a Spark CoMap with `{name, group}` structure
 3. Registers spark in `account.sparks` CoMap
 4. Automatically indexes spark in `account.os.{sparkSchemaCoId}` colist

@@ -36,31 +36,31 @@ export const SparksVibeRegistry = {
   vibe: sparksVibe,
   
   styles: {
-    '@sparks/style/brand': brandStyle,
+    '@maia/sparks/style/brand': brandStyle,
   },
   
   actors: {
-    '@sparks/actor/agent': agentActor,
-    '@sparks/actor/detail': detailActor,
+    '@maia/sparks/actor/agent': agentActor,
+    '@maia/sparks/actor/detail': detailActor,
   },
   
   views: {
-    '@sparks/view/agent': agentView,
-    '@sparks/view/detail': detailView,
+    '@maia/sparks/view/agent': agentView,
+    '@maia/sparks/view/detail': detailView,
   },
   
   contexts: {
-    '@sparks/context/agent': agentContext,
-    '@sparks/context/detail': detailContext,
+    '@maia/sparks/context/agent': agentContext,
+    '@maia/sparks/context/detail': detailContext,
   },
   
   states: {
-    '@sparks/state/agent': agentState,
-    '@sparks/state/detail': detailState,
+    '@maia/sparks/state/agent': agentState,
+    '@maia/sparks/state/detail': detailState,
   },
   
   inboxes: {
-    '@sparks/inbox/agent': agentInbox,
-    '@sparks/inbox/detail': detailInbox,
+    '@maia/sparks/inbox/agent': agentInbox,
+    '@maia/sparks/inbox/detail': detailInbox,
   },
 };

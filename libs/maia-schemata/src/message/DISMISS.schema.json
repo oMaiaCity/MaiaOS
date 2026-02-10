@@ -1,7 +1,7 @@
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/message/DISMISS",
-  "title": "@schema/message/DISMISS",
+  "$schema": "@maia/schema/meta",
+  "$id": "@maia/schema/message/DISMISS",
+  "title": "@maia/schema/message/DISMISS",
   "description": "Message type for dismissing an error or notification",
   "cotype": "comap",
   "indexing": true,

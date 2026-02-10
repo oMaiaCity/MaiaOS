@@ -1,6 +1,6 @@
 {
-  "$schema": "@schema/context",
-  "$id": "@my-data/context/agent",
+  "$schema": "@maia/schema/context",
+  "$id": "@maia/my-data/context/agent",
   "navTitle": "MaiaDB",
   "navCategories": [
     {
@@ -32,7 +32,7 @@
   "currentTable": "@table",
   "currentDetail": "@detail",
   "@actors": {
-    "table": "@my-data/actor/table",
-    "detail": "@my-data/actor/detail"
+    "table": "@maia/my-data/actor/table",
+    "detail": "@maia/my-data/actor/detail"
   }
 }

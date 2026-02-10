@@ -1,7 +1,7 @@
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/guard",
-  "title": "@schema/guard",
+  "$schema": "@maia/schema/meta",
+  "$id": "@maia/schema/guard",
+  "title": "@maia/schema/guard",
   "description": "JSON Schema guard for conditional logic - checks state/context conditions (NOT payload validation)",
   "cotype": "comap",
   "indexing": true,

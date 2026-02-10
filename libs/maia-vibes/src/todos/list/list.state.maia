@@ -1,6 +1,6 @@
 {
-  "$schema": "@schema/state",
-  "$id": "@todos/state/list",
+  "$schema": "@maia/schema/state",
+  "$id": "@maia/todos/state/list",
   "initial": "idle",
   "states": {
     "idle": {
@@ -13,7 +13,7 @@
               "payload": {
                 "type": "TOGGLE_BUTTON",
                 "payload": { "id": "$$id", "done": "$$done" },
-                "target": "@todos/actor/agent"
+                "target": "@maia/todos/actor/agent"
               }
             }
           ]
@@ -26,7 +26,7 @@
               "payload": {
                 "type": "DELETE_BUTTON",
                 "payload": { "id": "$$id" },
-                "target": "@todos/actor/agent"
+                "target": "@maia/todos/actor/agent"
               }
             }
           ]

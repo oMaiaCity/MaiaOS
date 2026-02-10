@@ -7,18 +7,18 @@
  * We create CoValues first, get their `.id` property, then use those IDs for transformations.
  * 
  * SPECIAL HANDLING:
- * - GenesisSchema (Meta Schema): Uses "GenesisSchema" string in headerMeta.$schema (can't self-reference co-id)
+ * - @maia (Meta Schema): Uses "@maia" string in headerMeta.$schema (can't self-reference co-id)
  *   The CoMap definition has title: "Meta Schema"
- * - @schema/meta: Human-readable ID for metaschema (matches schema title format)
- *   Gets transformed to GenesisSchema co-id during transformation
+ * - @maia/schema/meta: Human-readable ID for metaschema (matches schema $id format)
+ *   Gets transformed to @maia co-id during transformation
  * 
  * Seeding Order:
- * 1. GenesisSchema (Meta Schema) first
+ * 1. @maia (Meta Schema) first
  * 2. Schemas (topologically sorted by dependencies) - create first, then transform references
  * 3. Configs (actors, views, contexts, etc.) - create first, then transform references
  * 4. Data (todos, entities) - create first, then transform references
  * 
- * All CoValues are created with universal group as owner/admin (auto-assigned)
+ * All CoValues are created with @maia spark's group as owner/admin
  * All CoValues (except exceptions) use actual schema co-ids in headerMeta.$schema
  */
 
@@ -29,6 +29,9 @@ import { deleteRecord } from '../crud/delete.js';
 import { ensureCoValueLoaded } from '../crud/collection-helpers.js';
 import { resolve } from '../schema/resolver.js';
 import { ensureIndexesCoMap } from '../indexing/schema-index-manager.js';
+import * as groups from '../groups/groups.js';
+
+const MAIA_SPARK = '@maia';
 
 /**
  * Recursively remove 'id' fields from schema objects (AJV only accepts $id, not id)
@@ -67,7 +70,7 @@ function removeIdFields(obj, inPropertiesOrItems = false) {
  * **PRESERVED** (not deleted):
  * - account (the account CoMap itself)
  * - account.profile (profile CoMap with identity info)
- * - account.profile.group (universal group reference)
+ * - account.sparks["@maia"] (system spark with group)
  * - account.os.schematas (schema registry - all schema co-ids)
  * - account.os.metaSchema (metaschema reference)
  * 
@@ -90,8 +93,8 @@ async function deleteSeededCoValues(account, node, backend) {
   let errorCount = 0;
   
   try {
-    // Get account.os CoMap
-    const osId = account.get('os');
+    // Get @maia spark's os
+    const osId = await groups.getSparkOsId(backend, MAIA_SPARK);
     if (!osId) {
       return { deleted: 0, errors: 0 };
     }
@@ -296,9 +299,9 @@ async function deleteSeededCoValues(account, node, backend) {
       }
     }
     
-    // Also delete vibes from account.vibes
+    // Also delete vibes from account.sparks[@maia].vibes
     let vibesContentForClearing = null;
-    const vibesId = account.get('vibes');
+    const vibesId = await groups.getSparkVibesId(backend, MAIA_SPARK);
     if (vibesId) {
       try {
         const vibesCore = await ensureCoValueLoaded(backend, vibesId, {
@@ -408,15 +411,15 @@ async function deleteSeededCoValues(account, node, backend) {
           continue;
         }
         
-        // Construct the index colist schema title (e.g., "@schema/index/data/todos")
+        // Construct the index colist schema title (e.g., "@maia/schema/index/data/todos")
         const schemaTitle = schemaDef.title;
-        if (!schemaTitle.startsWith('@schema/')) {
+        if (!schemaTitle.startsWith('@maia/schema/')) {
           console.warn(`[Seed] Invalid schema title format: ${schemaTitle}, skipping index colist deletion`);
           continue;
         }
         
-        const schemaNamePart = schemaTitle.replace('@schema/', '');
-        const indexColistSchemaTitle = `@schema/index/${schemaNamePart}`;
+        const schemaNamePart = schemaTitle.replace('@maia/schema/', '');
+        const indexColistSchemaTitle = `@maia/schema/index/${schemaNamePart}`;
         
         // Resolve the index colist schema co-id
         const indexColistSchemaCoId = await resolve(backend, indexColistSchemaTitle, { returnType: 'coId' });
@@ -521,50 +524,6 @@ async function deleteSeededCoValues(account, node, backend) {
 }
 
 /**
- * Resolve universal group from account.profile.group
- * @param {RawAccount} account
- * @param {LocalNode} node
- * @param {CoJSONBackend} backend
- * @returns {Promise<RawGroup>} universalGroup
- */
-async function resolveUniversalGroup(account, node, backend) {
-  const profileId = account.get("profile");
-  if (!profileId) throw new Error('[CoJSONSeed] Profile not found on account. Ensure identity migration has run.');
-  const profileStore = await backend.read(null, profileId);
-  if (profileStore.loading) {
-    await new Promise((resolve, reject) => {
-      let unsubscribe;
-      const timeout = setTimeout(() => reject(new Error(`Timeout waiting for profile ${profileId}`)), 10000);
-      unsubscribe = profileStore.subscribe(() => {
-        if (!profileStore.loading) { clearTimeout(timeout); unsubscribe(); resolve(); }
-      });
-    });
-  }
-  if (profileStore.error || !profileStore.value) throw new Error(`[CoJSONSeed] Profile not available: ${profileId}`);
-  const profileData = profileStore.value;
-  if (!profileData.group || typeof profileData.group !== 'string') throw new Error('[CoJSONSeed] Universal group not found in profile.group.');
-  const universalGroupId = profileData.group;
-  const groupStore = await backend.read('@group', universalGroupId);
-  if (groupStore.loading) {
-    await new Promise((resolve, reject) => {
-      let unsubscribe;
-      const timeout = setTimeout(() => reject(new Error(`Timeout waiting for universal group ${universalGroupId}`)), 10000);
-      unsubscribe = groupStore.subscribe(() => {
-        if (!groupStore.loading) { clearTimeout(timeout); unsubscribe(); resolve(); }
-      });
-    });
-  }
-  if (groupStore.error || !groupStore.value) throw new Error(`[CoJSONSeed] Universal group not available: ${universalGroupId}`);
-  const universalGroupCore = node.getCoValue(universalGroupId);
-  if (!universalGroupCore) throw new Error(`[CoJSONSeed] Universal group core not found: ${universalGroupId}`);
-  const ruleset = universalGroupCore.verified?.header?.ruleset || universalGroupCore.ruleset;
-  if (!ruleset || ruleset.type !== 'group') throw new Error(`[CoJSONSeed] Universal group is not a group type: ${universalGroupId}`);
-  const universalGroup = universalGroupCore.getCurrentContent?.();
-  if (!universalGroup || typeof universalGroup.createMap !== 'function') throw new Error(`[CoJSONSeed] Universal group content not available: ${universalGroupId}`);
-  return universalGroup;
-}
-
-/**
  * Build metaschema definition for seeding
  * Loads merged meta.schema.json and updates $id/$schema with actual co-id
  * 
@@ -593,7 +552,7 @@ function buildMetaSchemaForSeeding(metaSchemaCoId) {
 /**
  * Seed CoJSON database with configs, schemas, and data
  * 
- * @param {RawAccount} account - The account (must have universalGroup)
+ * @param {RawAccount} account - The account (must have @maia spark)
  * @param {LocalNode} node - The LocalNode instance
  * @param {Object} configs - Config registry {vibe, styles, actors, views, contexts, states, interfaces}
  * @param {Object} schemas - Schema definitions
@@ -605,12 +564,12 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   // Use existing backend if provided (has dbEngine set), otherwise create new one
   // We need backend early for cleanup and idempotency check
   const { CoJSONBackend } = await import('../core/cojson-backend.js');
-  const backend = existingBackend || new CoJSONBackend(node, account);
+  const backend = existingBackend || new CoJSONBackend(node, account, { systemSpark: '@maia' });
   
   // IDEMPOTENCY CHECK: Only skip if account is already seeded AND no configs provided
   // This allows manual reseeding (when configs are provided) while preventing double auto-seeding
   try {
-    const osId = account.get('os');
+    const osId = await groups.getSparkOsId(backend, MAIA_SPARK);
     if (osId) {
       const osCore = await ensureCoValueLoaded(backend, osId, {
         waitForAvailable: true,
@@ -670,7 +629,7 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   // - deleteRecord() automatically removes co-values from schema indexes via removeFromIndex()
   // - create() operations automatically add co-values to schema indexes via storage hooks
   // No manual index management needed during reseeding
-  const osIdForCleanup = account.get('os');
+  const osIdForCleanup = await groups.getSparkOsId(backend, MAIA_SPARK);
   if (osIdForCleanup) {
     try {
       const osCoreForCleanup = await ensureCoValueLoaded(backend, osIdForCleanup, {
@@ -695,91 +654,10 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     }
   }
   
-  // Resolve universal group via account.profile.group using read() API
-  const profileId = account.get("profile");
-  if (!profileId) {
-    throw new Error('[CoJSONSeed] Profile not found on account. Ensure identity migration has run.');
-  }
-  
-  const profileStore = await backend.read(null, profileId);
-  
-  // Wait for profile to be available
-  if (profileStore.loading) {
-    await new Promise((resolve, reject) => {
-      // Fix: Declare unsubscribe before subscribe call to avoid temporal dead zone
-      let unsubscribe;
-      const timeout = setTimeout(() => {
-        reject(new Error(`Timeout waiting for profile ${profileId} to be available`));
-      }, 10000);
-      
-      unsubscribe = profileStore.subscribe(() => {
-        if (!profileStore.loading) {
-          clearTimeout(timeout);
-          unsubscribe();
-          resolve();
-        }
-      });
-    });
-  }
-  
-  if (profileStore.error || !profileStore.value) {
-    throw new Error(`[CoJSONSeed] Profile not available: ${profileId}`);
-  }
-  
-  // Extract group reference from profile data
-  // Note: read() API returns flat objects (not normalized format with properties array)
-  const profileData = profileStore.value;
-  
-  // STRICT: Only flat object format (operations API) - no legacy normalized format
-  if (!profileData.group || typeof profileData.group !== 'string') {
-    throw new Error('[CoJSONSeed] Universal group not found in profile.group. Ensure identity migration has run.');
-  }
-  const universalGroupId = profileData.group;
-  
-  // Use read() API with @group exception (groups don't have $schema)
-  const groupStore = await backend.read('@group', universalGroupId);
-  
-  // Wait for group to be available
-  if (groupStore.loading) {
-    await new Promise((resolve, reject) => {
-      // Fix: Declare unsubscribe before subscribe call to avoid temporal dead zone
-      let unsubscribe;
-      const timeout = setTimeout(() => {
-        reject(new Error(`Timeout waiting for universal group ${universalGroupId} to be available`));
-      }, 10000);
-      
-      unsubscribe = groupStore.subscribe(() => {
-        if (!groupStore.loading) {
-          clearTimeout(timeout);
-          unsubscribe();
-          resolve();
-        }
-      });
-    });
-  }
-  
-  if (groupStore.error || !groupStore.value) {
-    throw new Error(`[CoJSONSeed] Universal group not available: ${universalGroupId}`);
-  }
-  
-  // Verify it's actually a group (check ruleset.type === 'group')
-  const universalGroupCore = node.getCoValue(universalGroupId);
-  if (!universalGroupCore) {
-    throw new Error(`[CoJSONSeed] Universal group core not found: ${universalGroupId}`);
-  }
-  
-  const header = universalGroupCore.verified?.header;
-  const ruleset = universalGroupCore.ruleset || header?.ruleset;
-  if (!ruleset || ruleset.type !== 'group') {
-    throw new Error(`[CoJSONSeed] Universal group is not a group type (ruleset.type !== 'group'): ${universalGroupId}`);
-  }
-  
-  // Get the group content (RawGroup) for creating CoValues
-  // Note: read() API returns flat objects, but we need the RawGroup for creating CoValues
-  // So we get it directly from the core, not from the store
-  const universalGroup = universalGroupCore.getCurrentContent?.();
-  if (!universalGroup || typeof universalGroup.createMap !== 'function') {
-    throw new Error(`[CoJSONSeed] Universal group content not available: ${universalGroupId}`);
+  // Resolve @maia spark's group (replaces old profile.group)
+  const maiaGroup = await groups.getMaiaGroup(backend);
+  if (!maiaGroup || typeof maiaGroup.createMap !== 'function') {
+    throw new Error('[CoJSONSeed] @maia spark group not found. Ensure schemaMigration has created @maia spark.');
   }
   
   // Starting CoJSON seeding...
@@ -787,7 +665,7 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   // Deduplicate schemas by $id (same schema may be registered under multiple keys)
   const uniqueSchemasBy$id = new Map();
   for (const [name, schema] of Object.entries(schemas)) {
-    const schemaKey = schema.$id || `@schema/${name}`;
+    const schemaKey = schema.$id || `@maia/schema/${name}`;
     // Only keep first occurrence of each $id (deduplicate)
     if (!uniqueSchemasBy$id.has(schemaKey)) {
       uniqueSchemasBy$id.set(schemaKey, { name, schema });
@@ -803,7 +681,7 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     visited.add(obj);
     
     // Check if this object has a $co keyword
-    if (obj.$co && typeof obj.$co === 'string' && obj.$co.startsWith('@schema/')) {
+    if (obj.$co && typeof obj.$co === 'string' && obj.$co.startsWith('@maia/schema/')) {
       refs.add(obj.$co);
     }
     
@@ -855,8 +733,8 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     // Process dependencies first
     const deps = schemaDependencies.get(schemaKey) || new Set();
     for (const dep of deps) {
-      // Only process if it's a schema we're seeding (starts with @schema/)
-      if (dep.startsWith('@schema/') && uniqueSchemasBy$id.has(dep)) {
+      // Only process if it's a schema we're seeding (starts with @maia/schema/)
+      if (dep.startsWith('@maia/schema/') && uniqueSchemasBy$id.has(dep)) {
         visitSchema(dep);
       }
     }
@@ -866,24 +744,24 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     sortedSchemaKeys.push(schemaKey);
   };
   
-  // Visit all schemas (except @schema/meta which is handled specially in Phase 1)
+  // Visit all schemas (except @maia/schema/meta which is handled specially in Phase 1)
   for (const schemaKey of uniqueSchemasBy$id.keys()) {
-    if (schemaKey !== '@schema/meta') {
+    if (schemaKey !== '@maia/schema/meta') {
       visitSchema(schemaKey);
     }
   }
   
   // Phase 0: Create account.os FIRST (needed for storage hook to register schemas)
   // CRITICAL: account.os must exist before schemas are created, so the storage hook can register them
-  await ensureAccountOs(account, node, universalGroup, backend);
+  await ensureSparkOs(account, node, maiaGroup, backend);
   
   // Phase 1: Create or update metaschema FIRST (needed for schema CoMaps)
-  // SPECIAL HANDLING: Metaschema uses "GenesisSchema" as exception since headerMeta is read-only after creation
+  // SPECIAL HANDLING: Metaschema uses "@maia" as exception since headerMeta is read-only after creation
   // We can't put the metaschema's own co-id in headerMeta.$schema (chicken-egg problem)
   
-  // Check if metaschema exists in account.os.schematas registry
+  // Check if metaschema exists in spark.os.schematas registry
   let metaSchemaCoId = null;
-  const osId = account.get("os");
+  const osId = await groups.getSparkOsId(backend, MAIA_SPARK);
   if (osId) {
     const osCore = await ensureCoValueLoaded(backend, osId, {
       waitForAvailable: true,
@@ -904,7 +782,7 @@ export async function seed(account, node, configs, schemas, data, existingBacken
             if (schematasCore && backend.isAvailable(schematasCore)) {
               const schematasContent = backend.getCurrentContent(schematasCore);
               if (schematasContent && typeof schematasContent.get === 'function') {
-                metaSchemaCoId = schematasContent.get("@schema/meta");
+                metaSchemaCoId = schematasContent.get("@maia/schema/meta");
               }
             }
           }
@@ -914,14 +792,14 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   }
   
   if (!metaSchemaCoId) {
-    // Create metaschema with "GenesisSchema" exception (can't self-reference co-id in read-only headerMeta)
-    const metaSchemaMeta = { $schema: 'GenesisSchema' }; // Special exception for metaschema
+    // Create metaschema with "@maia" exception (can't self-reference co-id in read-only headerMeta)
+    const metaSchemaMeta = { $schema: '@maia' }; // Special exception for metaschema
     const tempMetaSchemaDef = buildMetaSchemaForSeeding('co_zTEMP');
     // Clean the initial meta-schema definition to remove any 'id' fields
     const cleanedTempDef = {
       definition: removeIdFields(tempMetaSchemaDef.definition || tempMetaSchemaDef)
     };
-    const metaSchemaCoMap = universalGroup.createMap(
+    const metaSchemaCoMap = maiaGroup.createMap(
       cleanedTempDef, // Will update $id after creation
       metaSchemaMeta
     );
@@ -969,13 +847,13 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     }
   }
   
-  // Register metaschema with @schema/meta key (matches schema title format)
+  // Register metaschema with @maia/schema/meta key (matches schema title format)
   // Only register if not already registered (idempotent - allows re-seeding)
-  if (!coIdRegistry.has('@schema/meta')) {
-    coIdRegistry.register('@schema/meta', metaSchemaCoId);
+  if (!coIdRegistry.has('@maia/schema/meta')) {
+    coIdRegistry.register('@maia/schema/meta', metaSchemaCoId);
   } else {
     // If already registered, verify it matches (if not, that's an error)
-    const existingCoId = coIdRegistry.get('@schema/meta');
+    const existingCoId = coIdRegistry.get('@maia/schema/meta');
     if (existingCoId !== metaSchemaCoId) {
       // Use existing co-id if it's already registered (database already has it)
       console.warn(`[Seed] Metaschema already registered with different co-id: ${existingCoId}, using existing instead of ${metaSchemaCoId}`);
@@ -1077,9 +955,9 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   }
   
   // Phase 3: Now transform all schemas with actual co-ids and update CoMaps
-  // CRITICAL: Add metaschema to schemaCoIdMap so transformSchemaForSeeding can replace @schema/meta references
-  if (metaSchemaCoId && !schemaCoIdMap.has('@schema/meta')) {
-    schemaCoIdMap.set('@schema/meta', metaSchemaCoId);
+  // CRITICAL: Add metaschema to schemaCoIdMap so transformSchemaForSeeding can replace @maia/schema/meta references
+  if (metaSchemaCoId && !schemaCoIdMap.has('@maia/schema/meta')) {
+    schemaCoIdMap.set('@maia/schema/meta', metaSchemaCoId);
   }
   
   const transformedSchemas = {};
@@ -1090,14 +968,14 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     const schemaCoId = schemaCoIdMap.get(schemaKey);
     const schemaCoMap = schemaCoMaps.get(schemaKey);
     
-    // Transform schema with actual co-ids (includes @schema/meta → metaSchemaCoId mapping)
+    // Transform schema with actual co-ids (includes @maia/schema/meta → metaSchemaCoId mapping)
     const transformedSchema = transformForSeeding(schema, schemaCoIdMap);
     transformedSchema.$id = `https://maia.city/${schemaCoId}`;
     
-    // Verify no @schema/... references remain after transformation
+    // Verify no @maia/schema/... references remain after transformation
     const verificationErrors = validateSchemaStructure(transformedSchema, schemaKey, { checkSchemaReferences: true, checkNestedCoTypes: false });
     if (verificationErrors.length > 0) {
-      const errorMsg = `[Seed] Schema ${schemaKey} still contains @schema/ references after transformation:\n${verificationErrors.join('\n')}`;
+      const errorMsg = `[Seed] Schema ${schemaKey} still contains @maia/schema/ references after transformation:\n${verificationErrors.join('\n')}`;
       console.error(errorMsg);
       throw new Error(errorMsg);
     }
@@ -1143,13 +1021,13 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   // Strategy: Generate co-ids for ALL configs first, register them, then transform and seed
   
   // Step 1: Build combined registry (schema co-ids + will include instance co-ids)
-  // Read schema co-ids from persisted registry (account.os.schematas) - REAL co-ids from CoJSON
+  // Read schema co-ids from persisted registry (spark.os.schematas) - REAL co-ids from CoJSON
   const getCombinedRegistry = async () => {
     // Start with schema registry
     const schemaRegistry = new Map();
     
     // Try to read from persisted registry first
-    const osId = account.get("os");
+    const osId = await groups.getSparkOsId(backend, MAIA_SPARK);
     if (osId) {
       const osCore = node.getCoValue(osId);
       if (osCore && osCore.type === 'comap') {
@@ -1183,9 +1061,9 @@ export async function seed(account, node, configs, schemas, data, existingBacken
       for (const [schemaKey, actualCoId] of schemaCoIdMap.entries()) {
         schemaRegistry.set(schemaKey, actualCoId);
       }
-      // Also add metaschema if we have it (as @schema/meta to match schema title)
+      // Also add metaschema if we have it (as @maia/schema/meta to match schema title)
       if (metaSchemaCoId) {
-        schemaRegistry.set('@schema/meta', metaSchemaCoId);
+        schemaRegistry.set('@maia/schema/meta', metaSchemaCoId);
       }
     }
     
@@ -1195,17 +1073,17 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   let combinedRegistry = await getCombinedRegistry();
   
   // Step 2: Register data collection schema co-ids (for query object transformations)
-  // Some configs have query objects that reference data collection schemas (e.g., @schema/todos)
+  // Some configs have query objects that reference data collection schemas (e.g., @maia/schema/todos)
   // We need these in the registry before transforming configs
   if (data) {
     for (const [collectionName] of Object.entries(data)) {
-      const schemaKey = `@schema/${collectionName}`;
-      const dataSchemaKey = `@schema/data/${collectionName}`;
+      const schemaKey = `@maia/schema/${collectionName}`;
+      const dataSchemaKey = `@maia/schema/data/${collectionName}`;
       
       // Check if data schema exists in schema registry
       const dataSchemaCoId = combinedRegistry.get(dataSchemaKey);
       if (dataSchemaCoId) {
-        // Register both @schema/todos and @schema/data/todos → same co-id
+        // Register both @maia/schema/todos and @maia/schema/data/todos → same co-id
         combinedRegistry.set(schemaKey, dataSchemaCoId);
         coIdRegistry.register(schemaKey, dataSchemaCoId);
       }
@@ -1225,7 +1103,7 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     const transformed = JSON.parse(JSON.stringify(instance));
     
     // Transform $schema reference only
-    if (transformed.$schema && transformed.$schema.startsWith('@schema/')) {
+    if (transformed.$schema && transformed.$schema.startsWith('@maia/schema/')) {
       const coId = schemaRegistry.get(transformed.$schema);
       if (coId) {
         transformed.$schema = coId;
@@ -1277,7 +1155,7 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     
     // seedConfigs expects keys like 'actors', 'views', etc., but uses singular type names internally
     const configsToSeed = { [configTypeKey]: transformed };
-    const seeded = await seedConfigs(account, node, universalGroup, configsToSeed, instanceCoIdMap, schemaCoMaps, schemaCoIdMap);
+    const seeded = await seedConfigs(account, node, maiaGroup, configsToSeed, instanceCoIdMap, schemaCoMaps, schemaCoIdMap);
     
     // Register REAL co-ids from CoJSON
     for (const configInfo of seeded.configs || []) {
@@ -1473,8 +1351,8 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     // REFRESH REGISTRY before transforming vibes (actors are now registered)
     combinedRegistry = refreshCombinedRegistry();
 
-    // Create or get account.vibes CoMap ONCE before the loop (reuse for all vibes)
-    let vibesId = account.get("vibes");
+    // Create or get account.sparks[@maia].vibes CoMap ONCE before the loop (reuse for all vibes)
+    let vibesId = await groups.getSparkVibesId(backend, MAIA_SPARK);
     let vibes;
     
     if (vibesId) {
@@ -1488,10 +1366,10 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     }
     
     if (!vibes) {
-      // Create vibes CoMap directly using universalGroup
-      const vibesMeta = { $schema: 'GenesisSchema' };
-      vibes = universalGroup.createMap({}, vibesMeta);
-      account.set("vibes", vibes.id);
+      // Create vibes CoMap and set on @maia spark
+      const vibesMeta = { $schema: '@maia' };
+      vibes = maiaGroup.createMap({}, vibesMeta);
+      await groups.setSparkVibesId(backend, MAIA_SPARK, vibes.id);
     }
 
     // Seed each vibe
@@ -1519,12 +1397,12 @@ export async function seed(account, node, configs, schemas, data, existingBacken
       
       // Extract vibe key from original $id BEFORE transformation
       const originalVibeId = vibe.$id || '';
-      const vibeKey = originalVibeId.startsWith('@vibe/') 
-        ? originalVibeId.replace('@vibe/', '')
+      const vibeKey = originalVibeId.startsWith('@maia/vibe/') 
+        ? originalVibeId.replace('@maia/vibe/', '')
         : (vibe.name || 'default').toLowerCase().replace(/\s+/g, '-');
       
       const vibeConfigs = { vibe: retransformedVibe };
-      const vibeSeeded = await seedConfigs(account, node, universalGroup, vibeConfigs, instanceCoIdMap, schemaCoMaps, schemaCoIdMap);
+      const vibeSeeded = await seedConfigs(account, node, maiaGroup, vibeConfigs, instanceCoIdMap, schemaCoMaps, schemaCoIdMap);
       seededConfigs.configs.push(...(vibeSeeded.configs || []));
       seededConfigs.count += vibeSeeded.count || 0;
       
@@ -1547,7 +1425,7 @@ export async function seed(account, node, configs, schemas, data, existingBacken
         }
         
         // Register REAL co-id from CoJSON (never pre-generate!)
-        const originalVibeIdForRegistry = vibe.$id; // Original $id (e.g., @vibe/todos)
+        const originalVibeIdForRegistry = vibe.$id; // Original $id (e.g., @maia/vibe/todos)
         // STRICT: Only register by original vibe ID - no backward compat 'vibe' key
         if (originalVibeIdForRegistry) {
           instanceCoIdMap.set(originalVibeIdForRegistry, vibeCoId);
@@ -1561,8 +1439,8 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     if (vibes && typeof vibes.get === 'function') {
       for (const vibe of allVibes) {
         const originalVibeId = vibe.$id || '';
-        const vibeKey = originalVibeId.startsWith('@vibe/') 
-          ? originalVibeId.replace('@vibe/', '')
+        const vibeKey = originalVibeId.startsWith('@maia/vibe/') 
+          ? originalVibeId.replace('@maia/vibe/', '')
           : (vibe.name || 'default').toLowerCase().replace(/\s+/g, '-');
         const storedValue = vibes.get(vibeKey);
         if (!storedValue) {
@@ -1574,10 +1452,10 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   
   // Phase 8: Seed data entities to CoJSON
   // Creates individual CoMap items - storage hooks automatically index them into account.os.{schemaCoId}
-  const seededData = await seedData(account, node, universalGroup, data, coIdRegistry);
+  const seededData = await seedData(account, node, maiaGroup, data, coIdRegistry);
   
-  // Phase 9: Store registry in account.os.schematas CoMap
-  await storeRegistry(account, node, universalGroup, coIdRegistry, schemaCoIdMap, instanceCoIdMap, configs || {}, seededSchemas);
+  // Phase 9: Store registry in spark.os.schematas CoMap
+  await storeRegistry(account, node, maiaGroup, backend, coIdRegistry, schemaCoIdMap, instanceCoIdMap, configs || {}, seededSchemas);
   
   // Note: Schema registration/indexing is now handled automatically by CRUD create hooks
   // No manual registration needed - hooks fire when schemas are created via CRUD API
@@ -1605,7 +1483,7 @@ export async function seed(account, node, configs, schemas, data, existingBacken
  * @returns {Promise<Object>} { metaSchema, schemas, registry }
  */
 export async function seedAgentAccount(account, node, backend) {
-  const universalGroup = await resolveUniversalGroup(account, node, backend);
+  const maiaGroup = await groups.getMaiaGroup(backend);
   const { getAllSchemas } = await import('@MaiaOS/schemata');
   const schemas = getAllSchemas();
   const { CoIdRegistry } = await import('@MaiaOS/schemata/co-id-generator');
@@ -1614,14 +1492,14 @@ export async function seedAgentAccount(account, node, backend) {
 
   const uniqueSchemasBy$id = new Map();
   for (const [name, schema] of Object.entries(schemas)) {
-    const schemaKey = schema.$id || `@schema/${name}`;
+    const schemaKey = schema.$id || `@maia/schema/${name}`;
     if (!uniqueSchemasBy$id.has(schemaKey)) uniqueSchemasBy$id.set(schemaKey, { name, schema });
   }
   const findCoReferences = (obj, visited = new Set()) => {
     if (!obj || typeof obj !== 'object' || visited.has(obj)) return new Set();
     visited.add(obj);
     const refs = new Set();
-    if (obj.$co && typeof obj.$co === 'string' && obj.$co.startsWith('@schema/')) refs.add(obj.$co);
+    if (obj.$co && typeof obj.$co === 'string' && obj.$co.startsWith('@maia/schema/')) refs.add(obj.$co);
     for (const value of Object.values(obj)) {
       if (value && typeof value === 'object') {
         (Array.isArray(value) ? value : [value]).forEach(item => {
@@ -1640,18 +1518,18 @@ export async function seedAgentAccount(account, node, backend) {
     if (processing.has(schemaKey)) return;
     processing.add(schemaKey);
     for (const dep of (schemaDependencies.get(schemaKey) || new Set())) {
-      if (dep.startsWith('@schema/') && uniqueSchemasBy$id.has(dep)) visitSchema(dep);
+      if (dep.startsWith('@maia/schema/') && uniqueSchemasBy$id.has(dep)) visitSchema(dep);
     }
     processing.delete(schemaKey);
     processed.add(schemaKey);
     sortedSchemaKeys.push(schemaKey);
   };
   for (const schemaKey of uniqueSchemasBy$id.keys()) {
-    if (schemaKey !== '@schema/meta') visitSchema(schemaKey);
+    if (schemaKey !== '@maia/schema/meta') visitSchema(schemaKey);
   }
 
-  await ensureAccountOs(account, node, universalGroup, backend);
-  const osId = account.get("os");
+  await ensureSparkOs(account, node, maiaGroup, backend);
+  const osId = await groups.getSparkOsId(backend, MAIA_SPARK);
   let metaSchemaCoId = null;
   if (osId) {
     const osCore = await ensureCoValueLoaded(backend, osId, { waitForAvailable: true, timeoutMs: 2000 });
@@ -1663,17 +1541,17 @@ export async function seedAgentAccount(account, node, backend) {
           const schematasCore = await ensureCoValueLoaded(backend, schematasId, { waitForAvailable: true, timeoutMs: 2000 });
           if (schematasCore && backend.isAvailable(schematasCore)) {
             const schematasContent = backend.getCurrentContent(schematasCore);
-            if (schematasContent?.get) metaSchemaCoId = schematasContent.get("@schema/meta");
+            if (schematasContent?.get) metaSchemaCoId = schematasContent.get("@maia/schema/meta");
           }
         }
       }
     }
   }
   if (!metaSchemaCoId) {
-    const metaSchemaMeta = { $schema: 'GenesisSchema' };
+    const metaSchemaMeta = { $schema: '@maia' };
     const tempMetaSchemaDef = buildMetaSchemaForSeeding('co_zTEMP');
     const cleanedTempDef = { definition: removeIdFields(tempMetaSchemaDef.definition || tempMetaSchemaDef) };
-    const metaSchemaCoMap = universalGroup.createMap(cleanedTempDef, metaSchemaMeta);
+    const metaSchemaCoMap = maiaGroup.createMap(cleanedTempDef, metaSchemaMeta);
     const actualMetaSchemaCoId = metaSchemaCoMap.id;
     const updatedMetaSchemaDef = buildMetaSchemaForSeeding(actualMetaSchemaCoId);
     const { $schema, $id, id, ...directProperties } = updatedMetaSchemaDef.definition || updatedMetaSchemaDef;
@@ -1688,7 +1566,7 @@ export async function seedAgentAccount(account, node, backend) {
       if (metaSchemaCoMap?.set) for (const [key, value] of Object.entries(removeIdFields(directProperties))) metaSchemaCoMap.set(key, value);
     }
   }
-  coIdRegistry.register('@schema/meta', metaSchemaCoId);
+  coIdRegistry.register('@maia/schema/meta', metaSchemaCoId);
 
   const schemaCoIdMap = new Map();
   const schemaCoMaps = new Map();
@@ -1735,7 +1613,7 @@ export async function seedAgentAccount(account, node, backend) {
     }
     coIdRegistry.register(schemaKey, actualCoId);
   }
-  if (metaSchemaCoId && !schemaCoIdMap.has('@schema/meta')) schemaCoIdMap.set('@schema/meta', metaSchemaCoId);
+  if (metaSchemaCoId && !schemaCoIdMap.has('@maia/schema/meta')) schemaCoIdMap.set('@maia/schema/meta', metaSchemaCoId);
   for (const schemaKey of sortedSchemaKeys) {
     const { name, schema } = uniqueSchemasBy$id.get(schemaKey);
     const schemaCoId = schemaCoIdMap.get(schemaKey);
@@ -1743,7 +1621,7 @@ export async function seedAgentAccount(account, node, backend) {
     const transformedSchema = transformForSeeding(schema, schemaCoIdMap);
     transformedSchema.$id = `https://maia.city/${schemaCoId}`;
     const verificationErrors = validateSchemaStructure(transformedSchema, schemaKey, { checkSchemaReferences: true, checkNestedCoTypes: false });
-    if (verificationErrors.length > 0) throw new Error(`[Seed] Schema ${schemaKey} contains @schema/ refs: ${verificationErrors.join(', ')}`);
+    if (verificationErrors.length > 0) throw new Error(`[Seed] Schema ${schemaKey} contains @maia/schema/ refs: ${verificationErrors.join(', ')}`);
     const { $schema, $id, id, ...directProperties } = transformedSchema;
     if (schemaCoMap?.set) for (const [key, value] of Object.entries(removeIdFields(directProperties))) schemaCoMap.set(key, value);
   }
@@ -1751,7 +1629,7 @@ export async function seedAgentAccount(account, node, backend) {
     const { name } = uniqueSchemasBy$id.get(schemaKey);
     return { name, key: schemaKey, coId: schemaCoIdMap.get(schemaKey), coMapId: schemaCoMaps.get(schemaKey)?.id };
   });
-  await storeRegistry(account, node, universalGroup, coIdRegistry, schemaCoIdMap, new Map(), {}, seededSchemas);
+  await storeRegistry(account, node, maiaGroup, backend, coIdRegistry, schemaCoIdMap, new Map(), {}, seededSchemas);
   console.log(`[Seed] Agent account seeded: ${seededSchemas.length} schemas`);
   return { metaSchema: metaSchemaCoId, schemas: seededSchemas, registry: coIdRegistry.getAll() };
 }
@@ -1761,7 +1639,7 @@ export async function seedAgentAccount(account, node, backend) {
  * Creates CoMaps for each config instance (vibe, actors, views, contexts, etc.)
  * @private
  */
-async function seedConfigs(account, node, universalGroup, transformedConfigs, instanceCoIdMap, schemaCoMaps, schemaCoIdMap) {
+async function seedConfigs(account, node, maiaGroup, transformedConfigs, instanceCoIdMap, schemaCoMaps, schemaCoIdMap) {
   const seededConfigs = [];
   let totalCount = 0;
   
@@ -1813,11 +1691,11 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
 
     if (cotype === 'colist') {
       // CoList: Create empty list, items will be added during update phase when refs are resolved
-      coValue = universalGroup.createList([], meta);
+      coValue = maiaGroup.createList([], meta);
       actualCoId = coValue.id;
     } else if (cotype === 'costream') {
       // CoStream: Create empty stream, items will be appended during update phase when refs are resolved
-      coValue = universalGroup.createStream(meta);
+      coValue = maiaGroup.createStream(meta);
       actualCoId = coValue.id;
       
       // Skip INIT messages during seeding - they're optional debug messages
@@ -1828,7 +1706,7 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
       // CoMap: Default behavior
       // CoJSON supports nested plain objects/arrays (like views with nested attrs.data, children, etc.)
       // Set all properties explicitly to ensure nested objects are stored correctly
-      coValue = universalGroup.createMap({}, meta); // Create empty map first
+      coValue = maiaGroup.createMap({}, meta); // Create empty map first
       actualCoId = coValue.id;
       
       // Set all properties explicitly (including nested objects) - CoJSON supports nested plain objects
@@ -1909,7 +1787,7 @@ async function seedConfigs(account, node, universalGroup, transformedConfigs, in
  * 
  * @private
  */
-async function seedData(account, node, universalGroup, data, coIdRegistry) {
+async function seedData(account, node, maiaGroup, data, coIdRegistry) {
   // Import transformer for data items
   const { transformForSeeding } = await import('@MaiaOS/schemata/schema-transformer');
   
@@ -1934,11 +1812,11 @@ async function seedData(account, node, universalGroup, data, coIdRegistry) {
     // Get schema co-id for this collection
     // Try multiple possible schema key formats:
     // 1. "data/todos" (direct schema name)
-    // 2. "@schema/data/todos" (with @schema prefix)
-    // 3. "@schema/todos" (without data prefix, for backward compatibility)
+    // 2. "@maia/schema/data/todos" (with @maia/schema prefix)
+    // 3. "@maia/schema/todos" (without data prefix, for backward compatibility)
     const schemaKey1 = `data/${collectionName}`;
-    const schemaKey2 = `@schema/data/${collectionName}`;
-    const schemaKey3 = `@schema/${collectionName}`;
+    const schemaKey2 = `@maia/schema/data/${collectionName}`;
+    const schemaKey3 = `@maia/schema/${collectionName}`;
     
     const schemaCoId = coIdRegistry.registry.get(schemaKey1) || 
                        coIdRegistry.registry.get(schemaKey2) || 
@@ -1962,7 +1840,7 @@ async function seedData(account, node, universalGroup, data, coIdRegistry) {
       // Create CoMap directly with schema co-id in headerMeta
       // Storage hook will automatically index this into account.os.{schemaCoId}
       const itemMeta = { $schema: schemaCoId };
-      const itemCoMap = universalGroup.createMap(itemWithoutId, itemMeta);
+      const itemCoMap = maiaGroup.createMap(itemWithoutId, itemMeta);
       
       itemCount++;
     }
@@ -1988,102 +1866,75 @@ async function seedData(account, node, universalGroup, data, coIdRegistry) {
  * Also creates account.os.indexes CoMap for schema indexes
  * @private
  */
-async function ensureAccountOs(account, node, universalGroup, backend) {
-  let osId = account.get("os");
-  
-  if (osId) {
-    // account.os exists - try to load it
-    let osCore = node.getCoValue(osId);
-    if (!osCore && node.loadCoValueCore) {
-      await node.loadCoValueCore(osId);
-      osCore = node.getCoValue(osId);
-    }
-    
-    if (osCore && osCore.isAvailable()) {
-      // account.os exists and is available - done
-      return;
-    }
+async function ensureSparkOs(account, node, maiaGroup, backend) {
+  // Get @maia spark's os (created by migration)
+  const osId = await groups.getSparkOsId(backend, MAIA_SPARK);
+  if (!osId) {
+    throw new Error('[Seed] @maia spark.os not found. Ensure schemaMigration has run.');
   }
   
-  // Create account.os if it doesn't exist
-  const osMeta = { $schema: 'GenesisSchema' };
-  const os = universalGroup.createMap({}, osMeta);
-  account.set("os", os.id);
-  
-  // Wait for storage sync and availability
-  if (node.storage && node.syncManager) {
-    try {
-      await node.syncManager.waitForStorageSync(os.id);
-      await node.syncManager.waitForStorageSync(account.id);
-    } catch (e) {
-      console.warn(`[Seed] Storage sync wait failed for account.os:`, e);
-    }
+  let osCore = node.getCoValue(osId);
+  if (!osCore && node.loadCoValueCore) {
+    await node.loadCoValueCore(osId);
+    osCore = node.getCoValue(osId);
   }
   
-  // Wait for account.os to become available
-  let osCore = node.getCoValue(os.id);
-  if (osCore && !osCore.isAvailable()) {
+  if (!osCore || !osCore.isAvailable()) {
     await new Promise((resolve) => {
-      // Fix: Declare unsubscribe before subscribe call to avoid temporal dead zone
       let unsubscribe;
       const timeout = setTimeout(resolve, 5000);
-      unsubscribe = osCore.subscribe((core) => {
-        if (core && core.isAvailable()) {
-          clearTimeout(timeout);
-          unsubscribe();
-          resolve();
-        }
-      });
+      if (osCore) {
+        unsubscribe = osCore.subscribe((core) => {
+          if (core && core.isAvailable()) {
+            clearTimeout(timeout);
+            unsubscribe?.();
+            resolve();
+          }
+        });
+      } else {
+        resolve();
+      }
     });
+    osCore = node.getCoValue(osId);
   }
   
-      // Create account.os.schematas CoMap if it doesn't exist
-      // Note: During initial seeding, schemas aren't registered yet, so we use GenesisSchema
-      // The schematas-registry schema will be used when it's available (after seeding)
-      osCore = node.getCoValue(os.id);
-      if (osCore && osCore.isAvailable()) {
-        const osContent = osCore.getCurrentContent?.();
-        if (osContent && typeof osContent.get === 'function') {
-          const schematasId = osContent.get("schematas");
-          if (!schematasId) {
-            const schematasMeta = { $schema: 'GenesisSchema' }; // Use GenesisSchema during initial seeding
-            const schematas = universalGroup.createMap({}, schematasMeta);
-            osContent.set("schematas", schematas.id);
-            
-            // Wait for storage sync
-            if (node.storage && node.syncManager) {
-              try {
-                await node.syncManager.waitForStorageSync(schematas.id);
-                await node.syncManager.waitForStorageSync(os.id);
-              } catch (e) {
-                console.warn(`[Seed] Storage sync wait failed for account.os.schematas:`, e);
-              }
-            }
-          }
-          
-          // Create account.os.indexes CoMap if it doesn't exist
-          // This is the dedicated container for all schema indexes
-          const indexesId = osContent.get("indexes");
-          if (!indexesId && backend) {
-            // Use ensureIndexesCoMap to create account.os.indexes
-            // This ensures proper schema usage and consistency
-            await ensureIndexesCoMap(backend);
+  // Ensure spark.os.schematas and spark.os.indexes exist
+  if (osCore && osCore.isAvailable()) {
+    const osContent = osCore.getCurrentContent?.();
+    if (osContent && typeof osContent.get === 'function') {
+      const schematasId = osContent.get("schematas");
+      if (!schematasId) {
+        const schematasMeta = { $schema: '@maia' };
+        const schematas = maiaGroup.createMap({}, schematasMeta);
+        osContent.set("schematas", schematas.id);
+        if (node.storage?.syncManager) {
+          try {
+            await node.syncManager.waitForStorageSync(schematas.id);
+            await node.syncManager.waitForStorageSync(osId);
+          } catch (e) {
+            console.warn(`[Seed] Storage sync wait failed for spark.os.schematas:`, e);
           }
         }
       }
+      const indexesId = osContent.get("indexes");
+      if (!indexesId && backend) {
+        await ensureIndexesCoMap(backend);
+      }
     }
+  }
+}
 
 /**
  * Store registry in account.os.schematas CoMap
- * Also creates account.os CoMap (if not already created by ensureAccountOs)
+ * Also creates account.os CoMap (if not already created by ensureSparkOs)
  * @private
  */
-async function storeRegistry(account, node, universalGroup, coIdRegistry, schemaCoIdMap, instanceCoIdMap, configs, seededSchemas) {
-  // account.os should already exist (created by ensureAccountOs in Phase 0)
+async function storeRegistry(account, node, maiaGroup, backend, coIdRegistry, schemaCoIdMap, instanceCoIdMap, configs, seededSchemas) {
+  // spark.os should already exist (created by ensureSparkOs in Phase 0)
   // Schemas are auto-registered by storage hook
-  const osId = account.get("os");
+  const osId = await groups.getSparkOsId(backend, MAIA_SPARK);
   if (!osId) {
-    console.warn(`[Seed] account.os not found - should have been created in Phase 0`);
+    console.warn(`[Seed] spark.os not found - should have been created in Phase 0`);
     return;
   }
   
@@ -2121,16 +1972,16 @@ async function storeRegistry(account, node, universalGroup, coIdRegistry, schema
   
   if (!schematas) {
     // Create schematas CoMap if it doesn't exist
-    // Try to use proper schema (@schema/os/schematas-registry), fallback to GenesisSchema if not available
-    // Note: During initial seeding, the schema might not be registered yet, so we fallback to GenesisSchema
+    // Try to use proper schema (@maia/schema/os/schematas-registry), fallback to @maia if not available
+    // Note: During initial seeding, the schema might not be registered yet, so we fallback to @maia
     let schematasSchemaCoId = null;
-    if (schemaCoIdMap && schemaCoIdMap.has('@schema/os/schematas-registry')) {
-      schematasSchemaCoId = schemaCoIdMap.get('@schema/os/schematas-registry');
+    if (schemaCoIdMap && schemaCoIdMap.has('@maia/schema/os/schematas-registry')) {
+      schematasSchemaCoId = schemaCoIdMap.get('@maia/schema/os/schematas-registry');
     }
     const schematasMeta = schematasSchemaCoId
       ? { $schema: schematasSchemaCoId }
-      : { $schema: 'GenesisSchema' }; // Fallback during initial seeding
-    schematas = universalGroup.createMap({}, schematasMeta);
+      : { $schema: '@maia' }; // Fallback during initial seeding
+    schematas = maiaGroup.createMap({}, schematasMeta);
     osContent.set("schematas", schematas.id);
     
     // Wait for storage sync
@@ -2146,16 +1997,16 @@ async function storeRegistry(account, node, universalGroup, coIdRegistry, schema
   
   // CRITICAL: Storage hook automatically registers ALL schemas when they're created via CRUD API
   // However, metaschema is created directly (not via CRUD API) so it needs manual registration
-  // All other schemas (@schema/* except @schema/meta) are auto-registered by storage hook
+  // All other schemas (@maia/schema/* except @maia/schema/meta) are auto-registered by storage hook
   // They're created via CRUD API, so the hook fires automatically
-  const metaschemaCoId = coIdRegistry.get('@schema/meta');
+  const metaschemaCoId = coIdRegistry.get('@maia/schema/meta');
   
   if (metaschemaCoId) {
     // Metaschema is created directly (not via CRUD API), so storage hook won't register it
     // Manually register it here as a fallback
-    const existingCoId = schematas.get('@schema/meta');
+    const existingCoId = schematas.get('@maia/schema/meta');
     if (!existingCoId) {
-      schematas.set('@schema/meta', metaschemaCoId);
+      schematas.set('@maia/schema/meta', metaschemaCoId);
     } else if (existingCoId !== metaschemaCoId) {
       // Different metaschema already registered - don't overwrite
       console.warn(`[Seed] Metaschema already registered with different co-id: ${existingCoId ? existingCoId.substring(0, 12) : 'undefined'}... (new: ${metaschemaCoId ? metaschemaCoId.substring(0, 12) : 'undefined'}...). Skipping.`);

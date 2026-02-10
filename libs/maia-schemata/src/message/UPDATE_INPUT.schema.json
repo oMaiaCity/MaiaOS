@@ -1,7 +1,7 @@
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/message/UPDATE_INPUT",
-  "title": "@schema/message/UPDATE_INPUT",
+  "$schema": "@maia/schema/meta",
+  "$id": "@maia/schema/message/UPDATE_INPUT",
+  "title": "@maia/schema/message/UPDATE_INPUT",
   "description": "Message type for updating input field value (generic, reusable across vibes)",
   "cotype": "comap",
   "indexing": true,

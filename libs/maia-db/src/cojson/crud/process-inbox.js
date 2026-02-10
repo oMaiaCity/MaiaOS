@@ -58,9 +58,9 @@ export async function processInbox(backend, actorId, inboxCoId) {
       if (messageSchemaRef.startsWith('co_z')) {
         // Already a co-id
         messageSchemaCoId = messageSchemaRef;
-      } else if (messageSchemaRef.startsWith('@schema/')) {
+      } else if (messageSchemaRef.startsWith('@maia/schema/')) {
         // Schema reference - resolve it using operations API
-        const schemaName = messageSchemaRef.replace('@schema/', '');
+        const schemaName = messageSchemaRef.replace('@maia/schema/', '');
         const messageSchemaStore = await dbEngine.execute({
           op: 'schema',
           schemaName: schemaName

@@ -1,7 +1,7 @@
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/message/DELETE_BUTTON",
-  "title": "@schema/message/DELETE_BUTTON",
+  "$schema": "@maia/schema/meta",
+  "$id": "@maia/schema/message/DELETE_BUTTON",
+  "title": "@maia/schema/message/DELETE_BUTTON",
   "description": "Message type for deleting a todo item",
   "cotype": "comap",
   "indexing": true,

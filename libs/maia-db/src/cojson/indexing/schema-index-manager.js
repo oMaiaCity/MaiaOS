@@ -5,7 +5,7 @@
  * Manages schema index colists keyed by schema co-id in account.os.indexes.
  * 
  * Structure:
- * - account.os.schematas: "@schema/namekey" → schema co-id (registry)
+ * - account.os.schematas: "@maia/schema/namekey" → schema co-id (registry)
  * - account.os.indexes: schema-co-id → colist of instance co-ids (index)
  * - account.os.unknown: colist of co-values without schemas
  */
@@ -15,20 +15,24 @@ import { createCoList } from '../cotypes/coList.js';
 import { read as universalRead } from '../crud/read.js';
 import { resolve } from '../schema/resolver.js';
 import { create } from '../crud/create.js';
+import * as groups from '../groups/groups.js';
+import { SCHEMA_REF_PATTERN } from '@MaiaOS/schemata';
+
+const SCHEMA_REF_MATCH = /^@([a-zA-Z0-9_-]+)\/schema\/(.+)$/;
 
 /**
- * Ensure account.os CoMap exists
+ * Ensure spark.os CoMap exists (account.sparks[spark].os)
  * @param {Object} backend - Backend instance
- * @returns {Promise<RawCoMap>} account.os CoMap
+ * @param {string} [spark='@maia'] - Spark name
+ * @returns {Promise<RawCoMap|null>} spark.os CoMap
  */
-async function ensureOsCoMap(backend) {
+async function ensureOsCoMap(backend, spark) {
+  const effectiveSpark = spark ?? backend?.systemSpark ?? '@maia';
   if (!backend.account) {
     throw new Error('[SchemaIndexManager] Account required');
   }
 
-  // CRITICAL: Check if account.os already exists FIRST (even if not loaded)
-  // Never overwrite existing account.os - it may contain important data!
-  let osId = backend.account.get('os');
+  const osId = await groups.getSparkOsId(backend, effectiveSpark);
   
   if (osId) {
     // account.os exists - use universal read() API to load and resolve it
@@ -82,13 +86,9 @@ async function ensureOsCoMap(backend) {
     }
   }
 
-  // Only create if account.os doesn't exist at all
-  const group = await backend.getDefaultGroup();
-  const osMeta = { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
-  const osCoMap = group.createMap({}, osMeta);
-  backend.account.set('os', osCoMap.id);
-  
-  return osCoMap;
+  // spark.os should exist from migration - if not, cannot create here (no spark ref)
+  console.warn('[SchemaIndexManager] spark.os not found - migration should have created it');
+  return null;
 }
 
 /**
@@ -150,9 +150,9 @@ export async function ensureIndexesCoMap(backend) {
 
   // Create new account.os.indexes CoMap
   // Use proper runtime validation with dbEngine when schema is available
-  // GenesisSchema fallback ONLY for initial setup before schema registry exists
-  const group = await backend.getDefaultGroup();
-  let indexesSchemaCoId = await resolve(backend, '@schema/os/indexes-registry', { returnType: 'coId' });
+  // @maia fallback when schema registry doesn't exist yet (initial setup)
+  const group = await backend.getMaiaGroup();
+  let indexesSchemaCoId = await resolve(backend, '@maia/schema/os/indexes-registry', { returnType: 'coId' });
   
   // Validate indexesSchemaCoId is a string (resolve() may return null if schema not found)
   let indexesCoMapId;
@@ -162,7 +162,7 @@ export async function ensureIndexesCoMap(backend) {
     const created = await create(backend, indexesSchemaCoId, {});
     indexesCoMapId = created.id;
   } else {
-    // Initial setup fallback: Use GenesisSchema ONLY when schema registry doesn't exist yet
+    // Initial setup fallback: Use @maia ONLY when schema registry doesn't exist yet
     // This happens during first account creation before schemas are seeded
     // After seeding, all new indexes will use proper schema validation
     const indexesMeta = { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
@@ -242,20 +242,22 @@ async function ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSc
     return null;
   }
 
-  // Extract schema title (e.g., "@schema/data/todos")
+  // Extract schema title (e.g., "@domain/schema/data/todos")
   const schemaTitle = schemaDef.title || schemaDef.$id;
-  if (!schemaTitle || typeof schemaTitle !== 'string' || !schemaTitle.startsWith('@schema/')) {
+  if (!schemaTitle || typeof schemaTitle !== 'string' || !SCHEMA_REF_PATTERN.test(schemaTitle)) {
     console.warn(`[SchemaIndexManager] Schema ${schemaCoId.substring(0, 12)}... has invalid title: ${schemaTitle}`);
     return null;
   }
 
   // Generate schema-specific index colist schema name
-  // Preserves the full path structure after @schema/
-  // e.g., "@schema/data/todos" → "@schema/index/data/todos"
-  // e.g., "@schema/os/schematas-registry" → "@schema/index/os/schematas-registry"
-  // e.g., "@schema/actor" → "@schema/index/actor"
-  const schemaNamePart = schemaTitle.replace('@schema/', '');
-  const indexColistSchemaTitle = `@schema/index/${schemaNamePart}`;
+  // Preserves the full path structure: @domain/schema/path → @domain/schema/index/path
+  const match = schemaTitle.match(SCHEMA_REF_MATCH);
+  if (!match) {
+    console.warn(`[SchemaIndexManager] Schema ${schemaCoId.substring(0, 12)}... has invalid title format: ${schemaTitle}`);
+    return null;
+  }
+  const [, domain, path] = match;
+  const indexColistSchemaTitle = `@${domain}/schema/index/${path}`;
   
   // Check if schema-specific index colist schema already exists
   const existingSchemaCoId = await resolve(backend, indexColistSchemaTitle, { returnType: 'coId' });
@@ -376,7 +378,7 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
     return null;
   }
 
-  const group = await backend.getDefaultGroup();
+  const group = await backend.getMaiaGroup();
   const indexMeta = { $schema: indexSchemaCoId };
   const indexColistRaw = group.createList([], indexMeta);
   indexColistId = indexColistRaw.id;
@@ -428,9 +430,9 @@ export async function ensureUnknownColist(backend) {
   }
 
   // Create new unknown colist
-  // Unknown items don't have schemas, so we use GenesisSchema (base schema)
+  // Unknown items don't have schemas, so we use @maia (base schema)
   // This is not a fallback - it's the appropriate schema for unknown items
-  const group = await backend.getDefaultGroup();
+  const group = await backend.getMaiaGroup();
   const unknownMeta = { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
   const unknownColist = group.createList([], unknownMeta);
   
@@ -456,8 +458,8 @@ async function isInternalCoValue(backend, coId) {
     return false;
   }
 
-  // Check if it's account.os
-  const osId = backend.account.get('os');
+  // Check if it's spark.os (account.sparks[@maia].os)
+  const osId = await groups.getSparkOsId(backend, backend?.systemSpark ?? '@maia');
   if (coId === osId) {
     return true;
   }
@@ -627,7 +629,7 @@ async function getMetaschemaCoId(backend) {
   }
 
   // Look up metaschema from registry
-  const metaSchemaCoId = schematasContent.get('@schema/meta');
+  const metaSchemaCoId = schematasContent.get('@maia/schema/meta');
   if (metaSchemaCoId && typeof metaSchemaCoId === 'string' && metaSchemaCoId.startsWith('co_z')) {
     return metaSchemaCoId;
   }
@@ -685,12 +687,12 @@ async function ensureSchemataRegistry(backend) {
   }
 
   // Create new schematas registry CoMap
-  // Try to use proper schema (@schema/os/schematas-registry), fallback to GenesisSchema if not available
-  const group = await backend.getDefaultGroup();
-  let schematasSchemaCoId = await resolve(backend, '@schema/os/schematas-registry', { returnType: 'coId' });
+  // Try to use proper schema (@maia/schema/os/schematas-registry), fallback to @maia if not available
+  const group = await backend.getMaiaGroup();
+  let schematasSchemaCoId = await resolve(backend, '@maia/schema/os/schematas-registry', { returnType: 'coId' });
   const schematasMeta = schematasSchemaCoId 
     ? { $schema: schematasSchemaCoId }
-    : { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }; // Fallback to GenesisSchema if schema not registered yet
+    : { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }; // Fallback to @maia if schema not registered yet
   const schematasCoMap = group.createMap({}, schematasMeta);
   
   // Store in account.os.schematas
@@ -721,7 +723,7 @@ export async function registerSchemaCoValue(backend, schemaCoValueCore) {
   }
 
   const title = content.get('title');
-  if (!title || typeof title !== 'string' || !title.startsWith('@schema/')) {
+  if (!title || typeof title !== 'string' || !SCHEMA_REF_PATTERN.test(title)) {
     // Not a valid schema title - skip
     return;
   }
@@ -803,18 +805,18 @@ export async function isSchemaCoValue(backend, coValueCore) {
     return false;
   }
 
-  // Metaschema itself uses GenesisSchema exception (can't self-reference)
+  // Metaschema itself uses @maia exception (can't self-reference)
   // Special case: Check content.title to confirm it's metaschema
-  // Uses "@schema/meta" (schema namekey from JSON definition - single source of truth)
+  // Uses "@maia/schema/meta" (schema namekey from JSON definition - single source of truth)
   if (schema === EXCEPTION_SCHEMAS.META_SCHEMA) {
     const content = backend.getCurrentContent(coValueCore);
     if (content && typeof content.get === 'function') {
       const title = content.get('title');
-      if (title === '@schema/meta') {
+      if (title === '@maia/schema/meta') {
         return true; // This is the metaschema itself
       }
     }
-    return false; // GenesisSchema but not metaschema - might be other exception
+    return false; // @maia but not metaschema - might be other exception
   }
 
   // PRIMARY CHECK: Schema co-values have metaschema co-id as their $schema
@@ -842,8 +844,8 @@ export async function isSchemaCoValue(backend, coValueCore) {
             const referencedTitle = referencedContent.get('title');
             
             // Check if it's the metaschema by title
-            // - "@schema/meta" (schema namekey from JSON definition - single source of truth)
-            if (referencedTitle === '@schema/meta') {
+            // - "@maia/schema/meta" (schema namekey from JSON definition - single source of truth)
+            if (referencedTitle === '@maia/schema/meta') {
               // headerMeta.$schema points to metaschema - this is a schema!
               return true;
             }

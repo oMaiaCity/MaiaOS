@@ -253,7 +253,7 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
           }
           
           if (!schemaCoId.startsWith('co_z')) {
-            if (schemaCoId.startsWith('@schema/')) {
+            if (schemaCoId.startsWith('@maia/schema/')) {
               // Use reactive schema resolution - returns ReactiveStore that updates when schema becomes available
               const schemaStore = resolveSchemaReactive(backend, schemaCoId, { timeoutMs });
               
@@ -791,7 +791,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
   });
   
   // Get schema index colist ID from account.os (keyed by schema co-id)
-  // Supports both schema co-ids (co_z...) and human-readable names (@schema/data/todos)
+  // Supports both schema co-ids (co_z...) and human-readable names (@maia/schema/data/todos)
   const coListId = await getCoListId(backend, schema);
   if (!coListId) {
     return store;

@@ -13,7 +13,7 @@ import { resolve } from '../schema/resolver.js';
  * Create a message CoMap and push its co-id to an inbox CoStream
  * 
  * CRITICAL: This function validates messages at two layers:
- * 1. Message schema validation (validates CoMap structure against @schema/message)
+ * 1. Message schema validation (validates CoMap structure against @maia/schema/message)
  * 2. Create operation validation (defense in depth - also validates)
  * 
  * @param {Object} dbEngine - Database engine instance
@@ -52,9 +52,9 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
       if (messageSchemaRef.startsWith('co_z')) {
         // Already a co-id
         messageSchemaCoId = messageSchemaRef;
-      } else if (messageSchemaRef.startsWith('@schema/')) {
+      } else if (messageSchemaRef.startsWith('@maia/schema/')) {
         // Schema reference - resolve it using operations API
-        const schemaName = messageSchemaRef.replace('@schema/', '');
+        const schemaName = messageSchemaRef.replace('@maia/schema/', '');
         const messageSchemaStore = await dbEngine.execute({
           op: 'schema',
           schemaName: schemaName
@@ -70,7 +70,7 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
     if (!messageSchemaCoId) {
       messageSchemaCoId = await dbEngine.execute({
         op: 'resolve',
-        humanReadableKey: '@schema/message'
+        humanReadableKey: '@maia/schema/message'
       });
     }
     

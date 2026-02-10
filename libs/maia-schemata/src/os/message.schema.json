@@ -1,7 +1,7 @@
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/message",
-  "title": "@schema/message",
+  "$schema": "@maia/schema/meta",
+  "$id": "@maia/schema/message",
+  "title": "@maia/schema/message",
   "description": "Actor message for state machine transitions",
   "cotype": "comap",
   "indexing": true,
@@ -16,11 +16,11 @@
       "description": "Message payload data"
     },
     "source": {
-      "$co": "@schema/actor",
+      "$co": "@maia/schema/actor",
       "description": "Co-id reference to source actor"
     },
     "target": {
-      "$co": "@schema/actor",
+      "$co": "@maia/schema/actor",
       "description": "Co-id reference to target actor (required for direct messaging)"
     },
     "processed": {

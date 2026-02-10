@@ -1,6 +1,7 @@
 import { resolve } from '@MaiaOS/db';
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
 import { validateAgainstSchema } from '@MaiaOS/schemata/validation.helper.js';
+import { isSchemaRef } from '@MaiaOS/schemata';
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
 import { RENDER_STATES } from './actor.engine.js';
 
@@ -394,7 +395,7 @@ export class StateEngine {
 
       // Resolve schema references to co-ids if needed (for read operations)
       if (params.schema && typeof params.schema === 'string' && !params.schema.startsWith('co_z')) {
-        if (params.schema.startsWith('@schema/')) {
+        if (isSchemaRef(params.schema)) {
           try {
             const resolved = await this.dbEngine.execute({ op: 'resolve', humanReadableKey: params.schema });
             if (resolved?.startsWith('co_z')) {
@@ -408,7 +409,7 @@ export class StateEngine {
             continue;
           }
         } else {
-          console.error(`[StateEngine] Invalid schema format for context key ${contextKey}: ${params.schema}. Expected co-id or @schema/... pattern.`);
+          console.error(`[StateEngine] Invalid schema format for context key ${contextKey}: ${params.schema}. Expected co-id or @domain/schema/... pattern.`);
           continue;
         }
       }

@@ -1,9 +1,9 @@
 {
-  "$schema": "@schema/tool",
+  "$schema": "@maia/schema/tool",
   "$id": "sparks",
   "name": "@sparks",
   "description": "Sparks tool for managing collaborative spaces (groups). Supports CRUD operations, member management, and parent group management.",
-  "schema": "@schema/tool",
+  "schema": "@maia/schema/tool",
   "params": {
     "op": {
       "type": "string",

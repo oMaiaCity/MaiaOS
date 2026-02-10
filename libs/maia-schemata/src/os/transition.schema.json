@@ -1,7 +1,7 @@
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/transition",
-  "title": "@schema/transition",
+  "$schema": "@maia/schema/meta",
+  "$id": "@maia/schema/transition",
+  "title": "@maia/schema/transition",
   "description": "State machine transition",
   "cotype": "comap",
   "indexing": true,
@@ -11,12 +11,12 @@
       "description": "Target state name"
     },
     "guard": {
-      "$co": "@schema/guard"
+      "$co": "@maia/schema/guard"
     },
     "actions": {
       "type": "array",
       "items": {
-        "$co": "@schema/action"
+        "$co": "@maia/schema/action"
       }
     }
   },

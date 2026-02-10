@@ -1,7 +1,7 @@
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/message/ERROR",
-  "title": "@schema/message/ERROR",
+  "$schema": "@maia/schema/meta",
+  "$id": "@maia/schema/message/ERROR",
+  "title": "@maia/schema/message/ERROR",
   "description": "Message type for operation errors",
   "cotype": "comap",
   "indexing": true,
