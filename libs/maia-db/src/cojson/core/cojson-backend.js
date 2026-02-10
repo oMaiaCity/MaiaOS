@@ -412,7 +412,8 @@ export class CoJSONBackend extends DBAdapter {
 
   /**
    * Register spark in account.sparks CoMap
-   * CRITICAL: Never overwrite account.sparks when it exists - only create when sparksId is null
+   * Appends new spark to account.sparks[sparkName] = sparkCoId
+   * Uses read() + waitForStoreReady (proper $store architecture)
    * @private
    * @param {string} sparkName - Spark name (key)
    * @param {string} sparkCoId - Spark co-id (value)
@@ -422,26 +423,12 @@ export class CoJSONBackend extends DBAdapter {
     let sparks;
 
     if (sparksId) {
-      // Existing account.sparks - MUST use it, never overwrite
-      let sparksCore = this.node.getCoValue(sparksId);
-      if (!sparksCore) {
-        await this.node.loadCoValueCore(sparksId);
-        sparksCore = this.node.getCoValue(sparksId);
-      }
-      if (sparksCore && sparksCore.type === 'comap') {
-        if (!sparksCore.isAvailable?.()) {
-          await new Promise((resolve, reject) => {
-            const timeout = setTimeout(() => reject(new Error('[_registerSparkInAccount] Timeout waiting for account.sparks')), 15000);
-            const unsub = sparksCore.subscribe((core) => {
-              if (core?.isAvailable?.()) {
-                clearTimeout(timeout);
-                unsub?.();
-                resolve();
-              }
-            });
-          });
-        }
-        sparks = sparksCore.getCurrentContent?.();
+      // Use read() + waitForStoreReady - proper store architecture
+      const sparksStore = await universalRead(this, sparksId, null, null, null, { deepResolve: false });
+      await waitForStoreReady(sparksStore, sparksId, 15000);
+      const sparksCore = this.node.getCoValue(sparksId);
+      if (sparksCore && this.isAvailable(sparksCore)) {
+        sparks = this.getCurrentContent(sparksCore);
       }
     }
 
@@ -462,6 +449,7 @@ export class CoJSONBackend extends DBAdapter {
 
   /**
    * Unregister spark from account.sparks CoMap
+   * Uses read() + waitForStoreReady (proper $store architecture)
    * @private
    * @param {string} sparkName - Spark name (key)
    */
@@ -469,12 +457,17 @@ export class CoJSONBackend extends DBAdapter {
     const sparksId = this.account.get('sparks');
     if (!sparksId) return;
 
-    const sparksCore = this.node.getCoValue(sparksId);
-    if (!sparksCore || sparksCore.type !== 'comap') return;
-
-    const sparks = sparksCore.getCurrentContent?.();
-    if (sparks && typeof sparks.delete === 'function') {
-      sparks.delete(sparkName);
+    try {
+      const sparksStore = await universalRead(this, sparksId, null, null, null, { deepResolve: false });
+      await waitForStoreReady(sparksStore, sparksId, 5000);
+      const sparksCore = this.node.getCoValue(sparksId);
+      if (!sparksCore || !this.isAvailable(sparksCore)) return;
+      const sparks = this.getCurrentContent(sparksCore);
+      if (sparks && typeof sparks.delete === 'function') {
+        sparks.delete(sparkName);
+      }
+    } catch {
+      // Non-blocking - spark may already be deleted
     }
   }
 
