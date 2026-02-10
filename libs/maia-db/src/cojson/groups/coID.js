@@ -7,7 +7,7 @@
 import { LocalNode } from "cojson";
 import { WasmCrypto } from "cojson/crypto/WasmCrypto";
 import { schemaMigration } from "../../migrations/schema.migration.js";
-import { seed } from "../schema/seed.js";
+import { seed, seedAgentAccount } from "../schema/seed.js";
 import { getStorage } from "@MaiaOS/storage";
 
 /**
@@ -154,6 +154,15 @@ export async function createAccountWithSecret({ agentSecret, name = "Maia", peer
 		}
 	} else {
 		console.log('ℹ️  Auto-seeding skipped (agent mode/server account)');
+		try {
+			const { CoJSONBackend } = await import('../core/cojson-backend.js');
+			const { DBEngine } = await import('@MaiaOS/operations');
+			const backend = new CoJSONBackend(result.node, rawAccount);
+			backend.dbEngine = new DBEngine(backend);
+			await seedAgentAccount(rawAccount, result.node, backend);
+		} catch (agentSeedError) {
+			console.error('[createAccountWithSecret] Agent seed failed (non-blocking):', agentSeedError);
+		}
 	}
 	
 	return {
@@ -207,16 +216,18 @@ export async function loadAccount({ accountID, agentSecret, peers = [], storage 
 	};
 	
 	console.log("   Sync peers:", peers.length > 0 ? `${peers.length} peer(s)` : 'none');
-	console.log("   Storage:", storage ? 'IndexedDB available (local-first)' : 'no storage (sync-only)');
-	
+	const storageLabel = storage
+		? (typeof process !== 'undefined' && process.versions?.node ? 'PGlite available (local-first)' : 'IndexedDB available (local-first)')
+		: 'no storage (sync-only)';
+	console.log("   Storage:", storageLabel);
+
 	const setupStartTime = performance.now();
-	
+
 	// Check storage availability and timing
 	const storageCheckStartTime = performance.now();
 	if (storage) {
-		// Storage exists - CoJSON will check it first internally
-		// We can't directly measure storage check time, but we can note it's available
-		console.log("   💾 Storage available - will check IndexedDB first");
+		// Storage exists - CoJSON uses it for persistence/sync
+		console.log("   💾 Storage available");
 	}
 	phaseTimings.storageCheck = performance.now() - storageCheckStartTime;
 	

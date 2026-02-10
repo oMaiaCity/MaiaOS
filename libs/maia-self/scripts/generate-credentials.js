@@ -62,7 +62,8 @@ const shouldWrite = args.includes('--write') || !args.includes('--no-write'); //
 const SERVICE_PREFIXES = {
   'sync': 'SYNC',
   'city': 'CITY',
-  'maia-city': 'CITY'
+  'maia-city': 'CITY',
+  'agent': 'AGENT'
 };
 
 // Require service to be specified
@@ -76,6 +77,7 @@ if (!service) {
   console.error('Available services:');
   console.error('  sync      - Sync service (uses SYNC_MAIA_* env vars)');
   console.error('  city      - Maia-city frontend (uses CITY_MAIA_* env vars)');
+  console.error('  agent     - Agent service (uses AGENT_MAIA_* env vars)');
   process.exit(1);
 }
 
@@ -96,7 +98,7 @@ async function main() {
     // Format for .env file with service-specific prefix
     const prefix = `${servicePrefix}_`;
     const defaultMode = service === 'city' ? 'human' : 'agent'; // maia-city defaults to human mode
-    const defaultStorage = service === 'sync' ? 'pglite' : (service === 'city' ? 'indexeddb' : 'in-memory');
+    const defaultStorage = service === 'sync' || service === 'agent' ? 'pglite' : (service === 'city' ? 'indexeddb' : 'in-memory');
     
     const envContent = `# ${servicePrefix} Service Configuration
 # Generated: ${new Date().toISOString()}

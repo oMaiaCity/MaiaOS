@@ -1,0 +1,16 @@
+{
+  "name": "agent",
+  "version": "0.1.23",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run src/index.js",
+    "start": "bun run src/index.js"
+  },
+  "dependencies": {
+    "@MaiaOS/agent": "workspace:*"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}

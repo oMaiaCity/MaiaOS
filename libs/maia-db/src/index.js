@@ -19,6 +19,7 @@ export { createCoMap } from "./cojson/cotypes/coMap.js";
 export { createCoList } from "./cojson/cotypes/coList.js";
 export { createCoStream } from "./cojson/cotypes/coStream.js";
 export { createSchemaMeta, hasSchema, getSchema, getAllSchemas } from "./schemas/registry.js";
+export { seedAgentAccount } from "./cojson/schema/seed.js";
 export { schemaMigration } from "./migrations/schema.migration.js";
 
 // Unified cache (subscriptions, stores, resolutions, resolved data)

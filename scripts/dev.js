@@ -17,6 +17,7 @@ const rootDir = resolve(__dirname, '..')
 let maiaCityProcess = null
 let apiProcess = null
 let syncProcess = null
+let agentProcess = null
 let docsWatcherProcess = null
 let assetSyncProcess = null
 let faviconProcess = null
@@ -28,6 +29,7 @@ const serviceStatus = {
 	docs: false,
 	api: false,
 	sync: false,
+	agent: false,
 	'maia-city': false,
 }
 
@@ -86,7 +88,7 @@ function processOutput(service, data, isError = false) {
 			const portMatch = trimmed.match(/port\s+(\d+)/i) || trimmed.match(/:(\d+)/)
 			if (portMatch && !serviceStatus[service]) {
 				const port = portMatch[1]
-				logger.success(`Ready on port ${port}`)
+				logger.success(`Running on http://localhost:${port}`)
 				serviceStatus[service] = true
 				checkAllReady()
 				continue
@@ -94,11 +96,11 @@ function processOutput(service, data, isError = false) {
 		}
 		
 		// Server/API ready messages
-		if (trimmed.includes('running on port') || trimmed.includes('Sync service running')) {
+		if (trimmed.includes('running on port') || trimmed.includes('Sync service running') || trimmed.includes('HTTP server on port')) {
 			const portMatch = trimmed.match(/port\s+(\d+)/i) || trimmed.match(/:(\d+)/)
 			if (portMatch && !serviceStatus[service]) {
 				const port = portMatch[1]
-				logger.success(`Ready on port ${port}`)
+				logger.success(`Running on http://localhost:${port}`)
 				serviceStatus[service] = true
 				checkAllReady()
 				continue
@@ -310,6 +312,61 @@ function startSync() {
 	})
 }
 
+function startAgent() {
+	const logger = createLogger('agent')
+	logger.status('Starting...')
+
+	// Check for port conflicts and kill existing agent processes
+	try {
+		const portCheck = execSync(`lsof -ti:4204 2>/dev/null | head -1`, { encoding: 'utf-8' }).trim()
+		if (portCheck) {
+			const processInfo = execSync(`ps -p ${portCheck} -o command= 2>/dev/null`, { encoding: 'utf-8' }).trim()
+			if (processInfo && (processInfo.includes('bun') || processInfo.includes('agent') || processInfo.includes('src/index.js'))) {
+				try {
+					execSync(`kill ${portCheck} 2>/dev/null`, { timeout: 2000 })
+					setTimeout(() => {}, 500)
+				} catch (e) {
+					try {
+						execSync(`kill -9 ${portCheck} 2>/dev/null`, { timeout: 2000 })
+						setTimeout(() => {}, 500)
+					} catch (e2) {
+						logger.warn(`Could not kill process ${portCheck}`)
+					}
+				}
+			} else if (processInfo) {
+				logger.warn(`Port 4204 in use by: ${processInfo}`)
+			}
+		}
+	} catch (e) {
+		// Port is free or check failed - continue
+	}
+
+	agentProcess = spawn('bun', ['--env-file=.env', '--filter', 'agent', 'dev'], {
+		cwd: rootDir,
+		stdio: ['ignore', 'pipe', 'pipe'],
+		shell: false,
+		env: { ...process.env, PORT: '4204' },
+	})
+
+	agentProcess.stdout.on('data', (data) => {
+		processOutput('agent', data)
+	})
+
+	agentProcess.stderr.on('data', (data) => {
+		processOutput('agent', data, true)
+	})
+
+	agentProcess.on('error', (_error) => {
+		// Non-fatal - agent service is optional
+	})
+
+	agentProcess.on('exit', (code) => {
+		if (code !== 0 && code !== null) {
+			// Non-fatal
+		}
+	})
+}
+
 function startDocsWatcher() {
 	const logger = createLogger('docs')
 	logger.status('Starting watcher...')
@@ -454,6 +511,9 @@ function setupSignalHandlers() {
 		if (syncProcess && !syncProcess.killed) {
 			syncProcess.kill('SIGTERM')
 		}
+		if (agentProcess && !agentProcess.killed) {
+			agentProcess.kill('SIGTERM')
+		}
 		if (apiProcess && !apiProcess.killed) {
 			apiProcess.kill('SIGTERM')
 		}
@@ -478,6 +538,9 @@ function setupSignalHandlers() {
 		if (syncProcess && !syncProcess.killed) {
 			syncProcess.kill('SIGTERM')
 		}
+		if (agentProcess && !agentProcess.killed) {
+			agentProcess.kill('SIGTERM')
+		}
 		if (apiProcess && !apiProcess.killed) {
 			apiProcess.kill('SIGTERM')
 		}
@@ -501,6 +564,7 @@ async function main() {
 		startDocsWatcher()
 		startApi()
 		startSync()
+		startAgent()
 		await startMaiaCity()
 	}, 1000)
 

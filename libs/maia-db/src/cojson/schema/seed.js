@@ -31,6 +31,28 @@ import { resolve } from '../schema/resolver.js';
 import { ensureIndexesCoMap } from '../indexing/schema-index-manager.js';
 
 /**
+ * Recursively remove 'id' fields from schema objects (AJV only accepts $id, not id)
+ * Preserve 'id' in properties/items (valid property names).
+ * @param {any} obj - Object to clean
+ * @param {boolean} inPropertiesOrItems - Whether inside properties/items
+ * @returns {any} Cleaned object
+ */
+function removeIdFields(obj, inPropertiesOrItems = false) {
+  if (obj === null || obj === undefined) return obj;
+  if (typeof obj !== 'object') return obj;
+  if (Array.isArray(obj)) return obj.map(item => removeIdFields(item, inPropertiesOrItems));
+  const cleaned = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (key === 'id' && !inPropertiesOrItems) continue;
+    const isPropertiesOrItems = key === 'properties' || key === 'items';
+    cleaned[key] = value !== null && value !== undefined && typeof value === 'object'
+      ? removeIdFields(value, isPropertiesOrItems || inPropertiesOrItems)
+      : value;
+  }
+  return cleaned;
+}
+
+/**
  * Delete all seeded co-values (configs and data) but preserve account identity and schemata
  * 
  * This function is used before reseeding to clean up old configs and data
@@ -499,6 +521,50 @@ async function deleteSeededCoValues(account, node, backend) {
 }
 
 /**
+ * Resolve universal group from account.profile.group
+ * @param {RawAccount} account
+ * @param {LocalNode} node
+ * @param {CoJSONBackend} backend
+ * @returns {Promise<RawGroup>} universalGroup
+ */
+async function resolveUniversalGroup(account, node, backend) {
+  const profileId = account.get("profile");
+  if (!profileId) throw new Error('[CoJSONSeed] Profile not found on account. Ensure identity migration has run.');
+  const profileStore = await backend.read(null, profileId);
+  if (profileStore.loading) {
+    await new Promise((resolve, reject) => {
+      let unsubscribe;
+      const timeout = setTimeout(() => reject(new Error(`Timeout waiting for profile ${profileId}`)), 10000);
+      unsubscribe = profileStore.subscribe(() => {
+        if (!profileStore.loading) { clearTimeout(timeout); unsubscribe(); resolve(); }
+      });
+    });
+  }
+  if (profileStore.error || !profileStore.value) throw new Error(`[CoJSONSeed] Profile not available: ${profileId}`);
+  const profileData = profileStore.value;
+  if (!profileData.group || typeof profileData.group !== 'string') throw new Error('[CoJSONSeed] Universal group not found in profile.group.');
+  const universalGroupId = profileData.group;
+  const groupStore = await backend.read('@group', universalGroupId);
+  if (groupStore.loading) {
+    await new Promise((resolve, reject) => {
+      let unsubscribe;
+      const timeout = setTimeout(() => reject(new Error(`Timeout waiting for universal group ${universalGroupId}`)), 10000);
+      unsubscribe = groupStore.subscribe(() => {
+        if (!groupStore.loading) { clearTimeout(timeout); unsubscribe(); resolve(); }
+      });
+    });
+  }
+  if (groupStore.error || !groupStore.value) throw new Error(`[CoJSONSeed] Universal group not available: ${universalGroupId}`);
+  const universalGroupCore = node.getCoValue(universalGroupId);
+  if (!universalGroupCore) throw new Error(`[CoJSONSeed] Universal group core not found: ${universalGroupId}`);
+  const ruleset = universalGroupCore.verified?.header?.ruleset || universalGroupCore.ruleset;
+  if (!ruleset || ruleset.type !== 'group') throw new Error(`[CoJSONSeed] Universal group is not a group type: ${universalGroupId}`);
+  const universalGroup = universalGroupCore.getCurrentContent?.();
+  if (!universalGroup || typeof universalGroup.createMap !== 'function') throw new Error(`[CoJSONSeed] Universal group content not available: ${universalGroupId}`);
+  return universalGroup;
+}
+
+/**
  * Build metaschema definition for seeding
  * Loads merged meta.schema.json and updates $id/$schema with actual co-id
  * 
@@ -589,49 +655,6 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     console.warn('[Seed] Idempotency check failed, proceeding with seeding:', e.message);
   }
   
-  // Seeding account data
-  
-  /**
-   * Recursively remove 'id' fields from schema objects (AJV only accepts $id, not id)
-   * BUT: Preserve 'id' fields in properties/items (those are valid property names in JSON Schema)
-   * Only remove top-level 'id' and nested 'id' in schema structure (not in property definitions)
-   * @param {any} obj - Object to clean
-   * @param {boolean} inPropertiesOrItems - Whether we're inside properties/items (preserve 'id' here)
-   * @returns {any} Cleaned object without 'id' fields (except in properties/items)
-   */
-  function removeIdFields(obj, inPropertiesOrItems = false) {
-    if (obj === null || obj === undefined) {
-      return obj;
-    }
-    
-    if (typeof obj !== 'object') {
-      return obj;
-    }
-    
-    if (Array.isArray(obj)) {
-      return obj.map(item => removeIdFields(item, inPropertiesOrItems));
-    }
-    
-    const cleaned = {};
-    for (const [key, value] of Object.entries(obj)) {
-      // Skip 'id' field ONLY if we're NOT in properties/items
-      // Properties named 'id' are valid in JSON Schema (e.g., properties.id)
-      if (key === 'id' && !inPropertiesOrItems) {
-        continue;
-      }
-      
-      // Recursively clean nested objects/arrays
-      // If we're entering properties or items, preserve 'id' fields there
-      if (value !== null && value !== undefined && typeof value === 'object') {
-        const isPropertiesOrItems = key === 'properties' || key === 'items';
-        cleaned[key] = removeIdFields(value, isPropertiesOrItems || inPropertiesOrItems);
-      } else {
-        cleaned[key] = value;
-      }
-    }
-    
-    return cleaned;
-  }
   // Import co-id registry and transformer
   const { CoIdRegistry } = 
     await import('@MaiaOS/schemata/co-id-generator');
@@ -1569,6 +1592,168 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     data: seededData,
     registry: coIdRegistry.getAll()
   };
+}
+
+/**
+ * Seed agent account with OS infrastructure and schemas only (no vibes/configs)
+ * Used for server-side agent accounts that need to run operations but not human UI.
+ * Creates: account.os, account.os.schematas, account.os.indexes, metaschema, all schema CoMaps.
+ *
+ * @param {RawAccount} account
+ * @param {LocalNode} node
+ * @param {CoJSONBackend} backend
+ * @returns {Promise<Object>} { metaSchema, schemas, registry }
+ */
+export async function seedAgentAccount(account, node, backend) {
+  const universalGroup = await resolveUniversalGroup(account, node, backend);
+  const { getAllSchemas } = await import('@MaiaOS/schemata');
+  const schemas = getAllSchemas();
+  const { CoIdRegistry } = await import('@MaiaOS/schemata/co-id-generator');
+  const { transformForSeeding, validateSchemaStructure } = await import('@MaiaOS/schemata/schema-transformer');
+  const coIdRegistry = new CoIdRegistry();
+
+  const uniqueSchemasBy$id = new Map();
+  for (const [name, schema] of Object.entries(schemas)) {
+    const schemaKey = schema.$id || `@schema/${name}`;
+    if (!uniqueSchemasBy$id.has(schemaKey)) uniqueSchemasBy$id.set(schemaKey, { name, schema });
+  }
+  const findCoReferences = (obj, visited = new Set()) => {
+    if (!obj || typeof obj !== 'object' || visited.has(obj)) return new Set();
+    visited.add(obj);
+    const refs = new Set();
+    if (obj.$co && typeof obj.$co === 'string' && obj.$co.startsWith('@schema/')) refs.add(obj.$co);
+    for (const value of Object.values(obj)) {
+      if (value && typeof value === 'object') {
+        (Array.isArray(value) ? value : [value]).forEach(item => {
+          if (item && typeof item === 'object') findCoReferences(item, visited).forEach(r => refs.add(r));
+        });
+      }
+    }
+    return refs;
+  };
+  const schemaDependencies = new Map();
+  for (const [schemaKey, { schema }] of uniqueSchemasBy$id) schemaDependencies.set(schemaKey, findCoReferences(schema));
+  const sortedSchemaKeys = [];
+  const processed = new Set(), processing = new Set();
+  const visitSchema = (schemaKey) => {
+    if (processed.has(schemaKey)) return;
+    if (processing.has(schemaKey)) return;
+    processing.add(schemaKey);
+    for (const dep of (schemaDependencies.get(schemaKey) || new Set())) {
+      if (dep.startsWith('@schema/') && uniqueSchemasBy$id.has(dep)) visitSchema(dep);
+    }
+    processing.delete(schemaKey);
+    processed.add(schemaKey);
+    sortedSchemaKeys.push(schemaKey);
+  };
+  for (const schemaKey of uniqueSchemasBy$id.keys()) {
+    if (schemaKey !== '@schema/meta') visitSchema(schemaKey);
+  }
+
+  await ensureAccountOs(account, node, universalGroup, backend);
+  const osId = account.get("os");
+  let metaSchemaCoId = null;
+  if (osId) {
+    const osCore = await ensureCoValueLoaded(backend, osId, { waitForAvailable: true, timeoutMs: 2000 });
+    if (osCore && backend.isAvailable(osCore)) {
+      const osContent = backend.getCurrentContent(osCore);
+      if (osContent?.get) {
+        const schematasId = osContent.get("schematas");
+        if (schematasId) {
+          const schematasCore = await ensureCoValueLoaded(backend, schematasId, { waitForAvailable: true, timeoutMs: 2000 });
+          if (schematasCore && backend.isAvailable(schematasCore)) {
+            const schematasContent = backend.getCurrentContent(schematasCore);
+            if (schematasContent?.get) metaSchemaCoId = schematasContent.get("@schema/meta");
+          }
+        }
+      }
+    }
+  }
+  if (!metaSchemaCoId) {
+    const metaSchemaMeta = { $schema: 'GenesisSchema' };
+    const tempMetaSchemaDef = buildMetaSchemaForSeeding('co_zTEMP');
+    const cleanedTempDef = { definition: removeIdFields(tempMetaSchemaDef.definition || tempMetaSchemaDef) };
+    const metaSchemaCoMap = universalGroup.createMap(cleanedTempDef, metaSchemaMeta);
+    const actualMetaSchemaCoId = metaSchemaCoMap.id;
+    const updatedMetaSchemaDef = buildMetaSchemaForSeeding(actualMetaSchemaCoId);
+    const { $schema, $id, id, ...directProperties } = updatedMetaSchemaDef.definition || updatedMetaSchemaDef;
+    for (const [key, value] of Object.entries(removeIdFields(directProperties))) metaSchemaCoMap.set(key, value);
+    metaSchemaCoId = actualMetaSchemaCoId;
+  } else {
+    const updatedMetaSchemaDef = buildMetaSchemaForSeeding(metaSchemaCoId);
+    const { $schema, $id, id, ...directProperties } = updatedMetaSchemaDef.definition || updatedMetaSchemaDef;
+    const metaSchemaCore = await ensureCoValueLoaded(backend, metaSchemaCoId, { waitForAvailable: true, timeoutMs: 2000 });
+    if (metaSchemaCore && backend.isAvailable(metaSchemaCore)) {
+      const metaSchemaCoMap = backend.getCurrentContent(metaSchemaCore);
+      if (metaSchemaCoMap?.set) for (const [key, value] of Object.entries(removeIdFields(directProperties))) metaSchemaCoMap.set(key, value);
+    }
+  }
+  coIdRegistry.register('@schema/meta', metaSchemaCoId);
+
+  const schemaCoIdMap = new Map();
+  const schemaCoMaps = new Map();
+  const crudCreate = await import('../crud/create.js');
+  const crudUpdate = await import('../crud/update.js');
+  const existingSchemaRegistry = new Map();
+  if (osId) {
+    const osCore = await ensureCoValueLoaded(backend, osId, { waitForAvailable: true, timeoutMs: 2000 });
+    if (osCore && backend.isAvailable(osCore)) {
+      const osContent = backend.getCurrentContent(osCore);
+      const schematasId = osContent?.get?.("schematas");
+      if (schematasId) {
+        const schematasCore = await ensureCoValueLoaded(backend, schematasId, { waitForAvailable: true, timeoutMs: 2000 });
+        if (schematasCore && backend.isAvailable(schematasCore)) {
+          const schematasContent = backend.getCurrentContent(schematasCore);
+          if (schematasContent?.get) {
+            for (const key of (schematasContent.keys?.() || Object.keys(schematasContent))) {
+              const schemaCoId = schematasContent.get(key);
+              if (schemaCoId?.startsWith?.('co_z')) existingSchemaRegistry.set(key, schemaCoId);
+            }
+          }
+        }
+      }
+    }
+  }
+  for (const schemaKey of sortedSchemaKeys) {
+    const { name, schema } = uniqueSchemasBy$id.get(schemaKey);
+    const { $schema, $id, id, ...directProperties } = schema;
+    const cleanedProperties = removeIdFields(directProperties);
+    const existingSchemaCoId = existingSchemaRegistry.get(schemaKey);
+    let actualCoId;
+    if (existingSchemaCoId) {
+      await crudUpdate.update(backend, metaSchemaCoId, existingSchemaCoId, cleanedProperties);
+      actualCoId = existingSchemaCoId;
+    } else {
+      const createdSchema = await crudCreate.create(backend, metaSchemaCoId, cleanedProperties);
+      actualCoId = createdSchema.id;
+    }
+    schemaCoIdMap.set(schemaKey, actualCoId);
+    const schemaCoValueCore = backend.getCoValue(actualCoId);
+    if (schemaCoValueCore && backend.isAvailable(schemaCoValueCore)) {
+      const schemaCoMapContent = backend.getCurrentContent(schemaCoValueCore);
+      if (schemaCoMapContent?.set) schemaCoMaps.set(schemaKey, schemaCoMapContent);
+    }
+    coIdRegistry.register(schemaKey, actualCoId);
+  }
+  if (metaSchemaCoId && !schemaCoIdMap.has('@schema/meta')) schemaCoIdMap.set('@schema/meta', metaSchemaCoId);
+  for (const schemaKey of sortedSchemaKeys) {
+    const { name, schema } = uniqueSchemasBy$id.get(schemaKey);
+    const schemaCoId = schemaCoIdMap.get(schemaKey);
+    const schemaCoMap = schemaCoMaps.get(schemaKey);
+    const transformedSchema = transformForSeeding(schema, schemaCoIdMap);
+    transformedSchema.$id = `https://maia.city/${schemaCoId}`;
+    const verificationErrors = validateSchemaStructure(transformedSchema, schemaKey, { checkSchemaReferences: true, checkNestedCoTypes: false });
+    if (verificationErrors.length > 0) throw new Error(`[Seed] Schema ${schemaKey} contains @schema/ refs: ${verificationErrors.join(', ')}`);
+    const { $schema, $id, id, ...directProperties } = transformedSchema;
+    if (schemaCoMap?.set) for (const [key, value] of Object.entries(removeIdFields(directProperties))) schemaCoMap.set(key, value);
+  }
+  const seededSchemas = sortedSchemaKeys.map(schemaKey => {
+    const { name } = uniqueSchemasBy$id.get(schemaKey);
+    return { name, key: schemaKey, coId: schemaCoIdMap.get(schemaKey), coMapId: schemaCoMaps.get(schemaKey)?.id };
+  });
+  await storeRegistry(account, node, universalGroup, coIdRegistry, schemaCoIdMap, new Map(), {}, seededSchemas);
+  console.log(`[Seed] Agent account seeded: ${seededSchemas.length} schemas`);
+  return { metaSchema: metaSchemaCoId, schemas: seededSchemas, registry: coIdRegistry.getAll() };
 }
 
 /**

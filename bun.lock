@@ -18,6 +18,16 @@
         "semantic-release": "^25.0.2",
       },
     },
+    "libs/maia-agent": {
+      "name": "@MaiaOS/agent",
+      "version": "0.1.23",
+      "dependencies": {
+        "@MaiaOS/kernel": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+    },
     "libs/maia-brand": {
       "name": "@MaiaOS/brand",
       "version": "0.17.0",
@@ -51,6 +61,7 @@
         "@MaiaOS/schemata": "workspace:*",
         "@MaiaOS/script": "workspace:*",
         "@MaiaOS/self": "workspace:*",
+        "@MaiaOS/tools": "workspace:*",
       },
       "devDependencies": {
         "vite": "^7.2.4",
@@ -141,6 +152,16 @@
         "@google/genai": "^1.30.0",
       },
     },
+    "services/agent": {
+      "name": "agent",
+      "version": "0.1.23",
+      "dependencies": {
+        "@MaiaOS/agent": "workspace:*",
+      },
+      "devDependencies": {
+        "@types/bun": "latest",
+      },
+    },
     "services/api": {
       "name": "api",
       "version": "0.0.0",
@@ -178,6 +199,8 @@
     },
   },
   "packages": {
+    "@MaiaOS/agent": ["@MaiaOS/agent@workspace:libs/maia-agent"],
+
     "@MaiaOS/brand": ["@MaiaOS/brand@workspace:libs/maia-brand"],
 
     "@MaiaOS/db": ["@MaiaOS/db@workspace:libs/maia-db"],
@@ -659,6 +682,8 @@
     "accepts": ["accepts@1.3.8", "", { "dependencies": { "mime-types": "~2.1.34", "negotiator": "0.6.3" } }, "sha512-PYAthTa2m2VKxuvSD3DPC/Gy+U+sOA1LAuT8mkmRuvw+NACSaeXEQ+NHcVF7rONl6qcaxV3Uuemwawk+7+SJLw=="],
 
     "acorn": ["acorn@8.15.0", "", { "bin": { "acorn": "bin/acorn" } }, "sha512-NZyJarBfL7nWwIq+FDL6Zp/yHEhePMNnnJ0y3qfieCrmNvYct8uvtiV41UvlSe6apAfk0fY1FbWx+NwfmpvtTg=="],
+
+    "agent": ["agent@workspace:services/agent"],
 
     "agent-base": ["agent-base@7.1.4", "", {}, "sha512-MnA+YT8fwfJPgBx3m60MNqakm30XOkyIoH1y6huTQvC0PwZG7ki8NacLBcrPbNoo8vEZy7Jpuk7+jMO+CUovTQ=="],
 
