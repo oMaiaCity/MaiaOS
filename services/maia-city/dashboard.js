@@ -36,6 +36,20 @@ function getVibeKeyFromId(vibeId) {
 }
 
 /**
+ * Get spark display name from spark co-id (reads spark CoMap)
+ */
+async function getSparkDisplayName(maia, sparkCoId) {
+	try {
+		const sparkStore = await maia.db({ op: 'read', schema: null, key: sparkCoId });
+		const sparkData = sparkStore?.value ?? sparkStore;
+		const name = sparkData?.name;
+		return name ? (name.startsWith('@') ? name : `@${name}`) : null;
+	} catch {
+		return null;
+	}
+}
+
+/**
  * Load available sparks (context scopes) from account.sparks
  * @param {Object} maia - MaiaOS instance
  * @returns {Promise<Array>} Array of spark objects with {key, name, description}
@@ -66,7 +80,10 @@ async function loadSparksFromAccount(maia) {
 		);
 
 		for (const key of sparkKeys) {
-			const displayName = key.startsWith('@') ? key : `@${key}`;
+			// key is co-id (new) or name like "@maia" (system spark)
+			const displayName = key.startsWith('co_')
+				? (await getSparkDisplayName(maia, key)) || key
+				: (key.startsWith('@') ? key : `@${key}`);
 			sparks.push({
 				key,
 				name: displayName,

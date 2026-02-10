@@ -69,7 +69,8 @@ export async function getSparkGroup(backend, spark) {
   if (!sparksData || sparksData.error) {
     throw new Error('[getSparkGroup] account.sparks data not available');
   }
-  const sparkCoId = sparksData[spark] || (sparksData.properties?.find?.(p => p.key === spark)?.value);
+  // spark can be co-id (new format) or name like "@maia" (system spark)
+  const sparkCoId = spark.startsWith('co_z') ? spark : (sparksData[spark] || (sparksData.properties?.find?.(p => p.key === spark)?.value));
   if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_z')) {
     throw new Error(`[getSparkGroup] Spark "${spark}" not found in account.sparks`);
   }

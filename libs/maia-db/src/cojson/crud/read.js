@@ -17,6 +17,7 @@ import { deepResolveCoValue, resolveNestedReferencesPublic, resolveNestedReferen
 import { applyMapTransform, applyMapTransformToArray } from './map-transform.js';
 import { resolve as resolveSchema, resolveReactive as resolveSchemaReactive } from '../schema/resolver.js';
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
+import { waitForStoreReady } from './read-operations.js';
 
 /**
  * Universal read() function - works for ANY CoValue type
@@ -60,10 +61,17 @@ export async function read(backend, coId = null, schema = null, filter = null, s
     return await readSingleCoValue(backend, coId, schemaHint || schema, readOptions);
   }
   
-  // Collection read (by schema) - returns array of items from CoList
+  // Collection read (by schema)
   if (schema) {
+    // Sparks: read from account.sparks (includes @maia system spark). Index only has user-created sparks.
+    const sparkSchemaCoId = await resolveSchema(backend, '@maia/schema/data/spark', { returnType: 'coId' });
+    const resolvedSchema = await resolveSchema(backend, schema, { returnType: 'coId' });
+    if (sparkSchemaCoId && resolvedSchema === sparkSchemaCoId) {
+      return await readSparksFromAccount(backend, readOptions);
+    }
     return await readCollection(backend, schema, filter, readOptions);
   }
+
   
   // All CoValues read (no schema) - returns array of all CoValues
   return await readAllCoValues(backend, filter, { deepResolve, maxDepth, timeoutMs });
@@ -751,6 +759,65 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
     backend.subscriptionCache.scheduleCleanup(`subscription:${coId}`);
   };
 
+  return store;
+}
+
+/**
+ * Read sparks from account.sparks CoMap (includes @maia system spark).
+ * Used when schema is spark schema - index colist only has user-created sparks.
+ * @param {Object} backend - Backend instance
+ * @param {Object} options - Read options
+ * @returns {Promise<ReactiveStore>} ReactiveStore with array of spark items {id, name, ...}
+ */
+async function readSparksFromAccount(backend, options = {}) {
+  const { deepResolve = true, maxDepth = 10, timeoutMs = 5000 } = options;
+  const store = backend.subscriptionCache.getOrCreateStore('sparks:account', () => new ReactiveStore([]));
+
+  const sparksId = backend.account?.get?.('sparks');
+  if (!sparksId || !sparksId.startsWith('co_')) {
+    return store;
+  }
+
+  const updateSparks = async () => {
+    const sparksStore = await readSingleCoValue(backend, sparksId, null, { deepResolve: false });
+    try {
+      await waitForStoreReady(sparksStore, sparksId, timeoutMs);
+    } catch {
+      return;
+    }
+    const sparksData = sparksStore?.value ?? {};
+    if (sparksData?.error) return;
+
+    const sparkCoIds = [];
+    for (const k of Object.keys(sparksData)) {
+      if (k === 'id' || k === 'loading' || k === 'error' || k === '$schema' || k === 'type') continue;
+      const v = sparksData[k];
+      const coId = typeof v === 'string' && v.startsWith('co_') ? v : (k.startsWith('co_') ? k : null);
+      if (coId) sparkCoIds.push(coId);
+    }
+
+    const items = [];
+    for (const coId of sparkCoIds) {
+      try {
+        const itemStore = await readSingleCoValue(backend, coId, null, { deepResolve, maxDepth, timeoutMs });
+        await waitForStoreReady(itemStore, coId, Math.min(timeoutMs, 2000));
+        const data = itemStore?.value;
+        if (data && !data.error) {
+          items.push({ id: coId, name: data.name ?? coId, ...data });
+        }
+      } catch {
+        items.push({ id: coId, name: coId });
+      }
+    }
+    store._set(items);
+  };
+
+  await updateSparks();
+  const sparksStore = await readSingleCoValue(backend, sparksId, null, { deepResolve: false });
+  const unsub = sparksStore?.subscribe?.(() => updateSparks());
+  if (unsub) {
+    backend.subscriptionCache.getOrCreate(`subscription:sparks:${sparksId}`, () => ({ unsubscribe: unsub }));
+  }
   return store;
 }
 

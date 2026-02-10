@@ -324,8 +324,8 @@ export class CoJSONBackend extends DBAdapter {
       this.dbEngine
     );
 
-    // Register spark in account.sparks CoMap
-    await this._registerSparkInAccount(name, sparkCoMap.id);
+    // Register spark in account.sparks CoMap (keyed by co-id)
+    await this._registerSparkInAccount(sparkCoMap.id);
 
     return {
       id: sparkCoMap.id,
@@ -378,47 +378,25 @@ export class CoJSONBackend extends DBAdapter {
    * @returns {Promise<Object>} Deletion result
    */
   async deleteSpark(id) {
-    // Get spark data to find name for account.sparks removal
-    const sparkStore = await this.read(null, id);
-    await new Promise((resolve) => {
-      if (!sparkStore.loading) {
-        resolve();
-        return;
-      }
-      const unsubscribe = sparkStore.subscribe(() => {
-        if (!sparkStore.loading) {
-          unsubscribe();
-          resolve();
-        }
-      });
-    });
-
-    const sparkData = sparkStore.value;
-    const sparkName = sparkData?.name;
-
-    // Extract schema from CoValue headerMeta
     const schemaCoId = await resolve(this, { fromCoValue: id }, { returnType: 'coId' });
 
     // Delete Spark CoMap (removes from index automatically via storage hooks)
     await this.delete(schemaCoId, id);
 
-    // Remove from account.sparks if name is available
-    if (sparkName) {
-      await this._unregisterSparkFromAccount(sparkName);
-    }
+    // Remove from account.sparks (keyed by co-id)
+    await this._unregisterSparkFromAccount(id);
 
     return { success: true, id };
   }
 
   /**
    * Register spark in account.sparks CoMap
-   * Appends new spark to account.sparks[sparkName] = sparkCoId
+   * Stores spark keyed by co-id: account.sparks[sparkCoId] = sparkCoId
    * Uses read() + waitForStoreReady (proper $store architecture)
    * @private
-   * @param {string} sparkName - Spark name (key)
-   * @param {string} sparkCoId - Spark co-id (value)
+   * @param {string} sparkCoId - Spark co-id (key and value)
    */
-  async _registerSparkInAccount(sparkName, sparkCoId) {
+  async _registerSparkInAccount(sparkCoId) {
     let sparksId = this.account.get('sparks');
     let sparks;
 
@@ -444,16 +422,16 @@ export class CoJSONBackend extends DBAdapter {
       throw new Error(`[_registerSparkInAccount] account.sparks not available. sparksId=${sparksId || 'null'}`);
     }
 
-    sparks.set(sparkName, sparkCoId);
+    sparks.set(sparkCoId, sparkCoId);
   }
 
   /**
    * Unregister spark from account.sparks CoMap
    * Uses read() + waitForStoreReady (proper $store architecture)
    * @private
-   * @param {string} sparkName - Spark name (key)
+   * @param {string} sparkCoId - Spark co-id (key)
    */
-  async _unregisterSparkFromAccount(sparkName) {
+  async _unregisterSparkFromAccount(sparkCoId) {
     const sparksId = this.account.get('sparks');
     if (!sparksId) return;
 
@@ -464,7 +442,7 @@ export class CoJSONBackend extends DBAdapter {
       if (!sparksCore || !this.isAvailable(sparksCore)) return;
       const sparks = this.getCurrentContent(sparksCore);
       if (sparks && typeof sparks.delete === 'function') {
-        sparks.delete(sparkName);
+        sparks.delete(sparkCoId);
       }
     } catch {
       // Non-blocking - spark may already be deleted
