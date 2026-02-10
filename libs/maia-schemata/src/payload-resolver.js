@@ -33,7 +33,13 @@ export function extractDOMValues(payload, element) {
   for (const [key, value] of Object.entries(payload)) {
     // Handle special @inputValue marker (DOM-specific)
     if (value === '@inputValue') {
-      result[key] = element.value || '';
+      // When event target is a button, element.value is empty - use form's/container's first input
+      let inputEl = element;
+      if (element.tagName !== 'INPUT' && element.tagName !== 'TEXTAREA') {
+        const formOrContainer = element.closest('form') || element.closest('[class*="form"]') || element.parentElement;
+        inputEl = formOrContainer?.querySelector('input, textarea') ?? element;
+      }
+      result[key] = (inputEl?.value ?? '') || '';
     }
     // Handle special @dataColumn marker (DOM-specific, extracts data-column attribute)
     else if (value === '@dataColumn') {

@@ -341,6 +341,17 @@
       "fontWeight": "{typography.fontWeight.bold}",
       "textTransform": "uppercase",
       "letterSpacing": "0.05em"
+    },
+    "memberRemoveButton": {
+      "padding": "0.15rem 0.4rem",
+      "minWidth": "1.5rem",
+      "fontSize": "1rem",
+      "lineHeight": "1",
+      "color": "#DC3545",
+      "background": "rgba(220, 53, 69, 0.15)",
+      "border": "1px solid rgba(220, 53, 69, 0.4)",
+      "borderRadius": "{radii.sm}",
+      "cursor": "pointer"
     }
   },
   "selectors": {

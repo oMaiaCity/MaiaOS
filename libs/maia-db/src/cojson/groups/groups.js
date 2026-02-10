@@ -420,32 +420,31 @@ export function getGroupInfoFromGroup(group) {
 
 /**
  * Add a member to a group
+ * Agents must have an account - we always add by account co-id (co_z...).
+ * No sealer/signer fallback - ensures consistent display and Jazz-native pattern.
  * @param {LocalNode} node - LocalNode instance
  * @param {RawGroup} group - Group CoValue
- * @param {string} memberId - Member ID (account or group Co-ID)
+ * @param {string} memberId - Member account co-id (co_z...) - REQUIRED
  * @param {string} role - Role name
+ * @param {Object} [backend] - Optional backend (for ensureCoValueLoaded)
  * @returns {Promise<void>}
  */
-export async function addGroupMember(node, group, memberId, role) {
+export async function addGroupMember(node, group, memberId, role, backend = null) {
   if (typeof group.addMember !== 'function') {
     throw new Error('[CoJSONBackend] Group does not support addMember');
   }
-  
-  const memberCore = node.getCoValue(memberId);
-  if (!memberCore) {
-    throw new Error(`[CoJSONBackend] Member not found: ${memberId}`);
+
+  if (!memberId || !memberId.startsWith('co_z')) {
+    throw new Error('[CoJSONBackend] Agent account co-id required (co_z...). Sealer/signer IDs are not supported - agents must use their account.');
   }
-  
-  try {
-    group.addMember(memberId, role);
-  } catch (error) {
-    const memberContent = memberCore?.getCurrentContent();
-    if (memberContent && memberContent.account) {
-      group.addMember(memberContent.account, role);
-    } else {
-      throw new Error(`[CoJSONBackend] Failed to add member: ${error.message}`);
-    }
+
+  if (backend) {
+    const { ensureCoValueLoaded } = await import('../crud/collection-helpers.js');
+    await ensureCoValueLoaded(backend, memberId, { waitForAvailable: true, timeoutMs: 10000 });
   }
+  const accountCore = node.expectCoValueLoaded(memberId, 'Expected account to be loaded for addMember');
+  const accountContent = accountCore.getCurrentContent();
+  group.addMember(accountContent, role);
 }
 
 /**
@@ -475,7 +474,7 @@ export async function setGroupMemberRole(node, group, memberId, role) {
     group.setRole(memberId, role);
   } else if (typeof group.removeMember === 'function' && typeof group.addMember === 'function') {
     group.removeMember(memberId);
-    await addGroupMember(node, group, memberId, role);
+    await addGroupMember(node, group, memberId, role, null);
   } else {
     throw new Error('[CoJSONBackend] Group does not support role changes');
   }

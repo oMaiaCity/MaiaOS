@@ -16,5 +16,8 @@
   },
   "hasSpark": false,
   "showEmptyState": true,
-  "showContent": false
+  "showContent": false,
+  "agentIdInput": "",
+  "addAgentError": null,
+  "addAgentHasError": false
 }

@@ -268,7 +268,7 @@ export class CoJSONBackend extends DBAdapter {
    * @returns {Promise<void>}
    */
   async addGroupMember(group, memberId, role) {
-    return await groups.addGroupMember(this.node, group, memberId, role);
+    return await groups.addGroupMember(this.node, group, memberId, role, this);
   }
   
   /**

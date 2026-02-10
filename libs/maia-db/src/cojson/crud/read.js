@@ -472,6 +472,33 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
 }
 
 /**
+ * Extract co-ids from raw item that map expressions depend on.
+ * Map expressions like "$$group.accountMembers" mean we depend on item.group.
+ * If item.group is a co-id string, we must subscribe to it for reactivity.
+ * @param {Object} rawData - Raw CoValue data (before map, may have co-id refs)
+ * @param {Object} mapConfig - Map config e.g. { members: "$$group.accountMembers" }
+ * @returns {Set<string>} Co-ids that affect the mapped result
+ */
+function getMapDependencyCoIds(rawData, mapConfig) {
+  if (!mapConfig || typeof mapConfig !== 'object' || !rawData || typeof rawData !== 'object') {
+    return new Set();
+  }
+  const deps = new Set();
+  for (const expression of Object.values(mapConfig)) {
+    if (typeof expression === 'string' && expression.startsWith('$$')) {
+      const rootProperty = expression.substring(2).split('.')[0];
+      if (rootProperty && rootProperty in rawData) {
+        const val = rawData[rootProperty];
+        if (typeof val === 'string' && val.startsWith('co_z')) {
+          deps.add(val);
+        }
+      }
+    }
+  }
+  return deps;
+}
+
+/**
  * Process CoValue data: extract, resolve, and map
  * Helper function to avoid duplication and enable caching
  * 
@@ -561,18 +588,49 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
     // Still set up subscription for updates, but use cached data initially
     const coValueCore = backend.getCoValue(coId);
     if (coValueCore) {
+      const processAndCacheCached = async (core) => {
+        const newData = await processCoValueData(backend, core, schemaHint, options, new Set());
+        cache.setResolvedData(coId, cacheOptions, newData);
+        return newData;
+      };
+      const depUnsubscribes = new Map();
+      const setupMapDependencySubscriptions = (mainCore) => {
+        if (!map) return;
+        const rawData = extractCoValueDataFlat(backend, mainCore, schemaHint);
+        const newDeps = getMapDependencyCoIds(rawData, map);
+        for (const depCoId of newDeps) {
+          if (depUnsubscribes.has(depCoId)) continue;
+          const depCore = backend.getCoValue(depCoId);
+          if (!depCore) continue;
+          const unsub = depCore.subscribe(async () => {
+            if (!mainCore.isAvailable()) return;
+            cache.invalidateResolvedData(depCoId);
+            const data = await processAndCacheCached(mainCore);
+            store._set(data);
+          });
+          depUnsubscribes.set(depCoId, unsub);
+        }
+        for (const [depCoId, unsub] of depUnsubscribes.entries()) {
+          if (!newDeps.has(depCoId)) {
+            unsub();
+            depUnsubscribes.delete(depCoId);
+          }
+        }
+      };
       const unsubscribe = coValueCore.subscribe(async (core) => {
         if (core.isAvailable()) {
-          // Re-process and update cache when CoValue changes
-          const newData = await processCoValueData(backend, core, schemaHint, options, new Set());
-          cache.setResolvedData(coId, cacheOptions, newData);
+          const newData = await processAndCacheCached(core);
+          setupMapDependencySubscriptions(core);
           store._set(newData);
         }
       });
+      setupMapDependencySubscriptions(coValueCore);
       backend.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({ unsubscribe }));
-      
+
       const originalUnsubscribe = store._unsubscribe;
       store._unsubscribe = () => {
+        for (const unsub of depUnsubscribes.values()) unsub();
+        depUnsubscribes.clear();
         if (originalUnsubscribe) originalUnsubscribe();
         backend.subscriptionCache.scheduleCleanup(`subscription:${coId}`);
       };
@@ -588,17 +646,40 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
     return store;
   }
 
-  // Shared visited set for this read operation (prevents circular references)
-  const sharedVisited = new Set();
-  
-  // Helper to process and cache CoValue data
+  // Helper to process and cache CoValue data (fresh visited set per run for correct re-processing)
   const processAndCache = async (core) => {
-    const processedData = await processCoValueData(backend, core, schemaHint, options, sharedVisited);
+    const processedData = await processCoValueData(backend, core, schemaHint, options, new Set());
     
     // Cache the processed data
     cache.setResolvedData(coId, cacheOptions, processedData);
     
     return processedData;
+  };
+
+  // Map dependency subscriptions: when resolved refs (e.g. group) change, re-process main coValue
+  const depUnsubscribes = new Map();
+  const setupMapDependencySubscriptions = (mainCore) => {
+    if (!map) return;
+    const rawData = extractCoValueDataFlat(backend, mainCore, schemaHint);
+    const newDeps = getMapDependencyCoIds(rawData, map);
+    for (const depCoId of newDeps) {
+      if (depUnsubscribes.has(depCoId)) continue;
+      const depCore = backend.getCoValue(depCoId);
+      if (!depCore) continue;
+      const unsub = depCore.subscribe(async () => {
+        if (!mainCore.isAvailable()) return;
+        cache.invalidateResolvedData(depCoId);
+        const data = await processAndCache(mainCore);
+        store._set(data);
+      });
+      depUnsubscribes.set(depCoId, unsub);
+    }
+    for (const [depCoId, unsub] of depUnsubscribes.entries()) {
+      if (!newDeps.has(depCoId)) {
+        unsub();
+        depUnsubscribes.delete(depCoId);
+      }
+    }
   };
   
   // Subscribe to CoValueCore updates
@@ -610,7 +691,8 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
 
     // Process and cache data (cache prevents duplicate work)
     const data = await processAndCache(core);
-    
+    setupMapDependencySubscriptions(core);
+
     // Check if data contains query objects (objects with schema property)
     const hasQueryObjects = data && typeof data === 'object' && 
       Object.values(data).some(value => 
@@ -634,7 +716,8 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
   if (coValueCore.isAvailable()) {
     // Process and cache data
     const data = await processAndCache(coValueCore);
-    
+    setupMapDependencySubscriptions(coValueCore);
+
     // Check if data contains query objects (objects with schema property)
     const hasQueryObjects = data && typeof data === 'object' && 
       Object.values(data).some(value => 
@@ -659,9 +742,11 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
     });
   }
 
-  // Set up store unsubscribe to clean up subscription
+  // Set up store unsubscribe to clean up subscription and map dependencies
   const originalUnsubscribe = store._unsubscribe;
   store._unsubscribe = () => {
+    for (const unsub of depUnsubscribes.values()) unsub();
+    depUnsubscribes.clear();
     if (originalUnsubscribe) originalUnsubscribe();
     backend.subscriptionCache.scheduleCleanup(`subscription:${coId}`);
   };

@@ -7,5 +7,5 @@
   "state": "@sparks/state/detail",
   "brand": "@sparks/style/brand",
   "inbox": "@sparks/inbox/detail",
-  "messageTypes": ["LOAD_ACTOR", "SUCCESS"]
+  "messageTypes": ["LOAD_ACTOR", "SUCCESS", "ADD_AGENT", "REMOVE_MEMBER", "UPDATE_AGENT_INPUT", "ERROR"]
 }

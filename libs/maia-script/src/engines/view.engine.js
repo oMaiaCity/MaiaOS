@@ -535,6 +535,9 @@ export class ViewEngine {
       return;
     }
 
+    // Message types that sync context from DOM - do NOT clear inputs (would overwrite user typing)
+    const isUpdateInputType = eventName === 'UPDATE_INPUT' || eventName === 'UPDATE_AGENT_INPUT';
+
     if (this.actorEngine) {
       const actor = this.actorEngine.getActor(actorId);
       if (actor && actor.machine) {
@@ -556,10 +559,10 @@ export class ViewEngine {
           throw new Error(`[ViewEngine] Payload contains unresolved expressions. Views must resolve all expressions before sending to inbox. Payload: ${JSON.stringify(payload).substring(0, 200)}`);
         }
         
-        // CLEAN ARCHITECTURE: For UPDATE_INPUT on blur, only send if DOM value differs from CURRENT context
+        // CLEAN ARCHITECTURE: For update-input types on blur, only send if DOM value differs from CURRENT context
         // This prevents repopulation after state machine explicitly clears the field
         // State machine is single source of truth - if context already matches DOM, no update needed
-        if (eventName === 'UPDATE_INPUT' && e.type === 'blur' && payload && typeof payload === 'object') {
+        if (isUpdateInputType && e.type === 'blur' && payload && typeof payload === 'object') {
           // Check if all payload fields match their corresponding CURRENT context values
           let allMatch = true;
           for (const [key, value] of Object.entries(payload)) {
@@ -577,9 +580,10 @@ export class ViewEngine {
         
         await this.actorEngine.sendInternalEvent(actorId, eventName, payload);
         
-        // AUTO-CLEAR INPUTS: After form submission (any event except UPDATE_INPUT), clear all input fields
+        // AUTO-CLEAR INPUTS: After form submission (any event except update-input types), clear all input fields
         // This ensures forms reset after submission without manual clearing workarounds
-        if (eventName !== 'UPDATE_INPUT') {
+        // UPDATE_INPUT, UPDATE_AGENT_INPUT etc. update context from DOM - do NOT clear (would overwrite user typing)
+        if (!isUpdateInputType) {
           this._clearInputFields(element, actorId);
         }
       } else {

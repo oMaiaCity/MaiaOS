@@ -81,11 +81,81 @@
                       }
                     },
                     "text": "$$role"
+                  },
+                  {
+                    "tag": "button",
+                    "class": "member-remove-button",
+                    "text": "×",
+                    "$on": {
+                      "click": {
+                        "send": "REMOVE_MEMBER",
+                        "payload": { "memberId": "$$id" }
+                      }
+                    }
                   }
                 ]
               }
             }
           },
+          {
+            "tag": "h3",
+            "class": "members-title add-agent-title",
+            "text": "Add Agent"
+          },
+          {
+            "tag": "div",
+            "class": "form add-agent-form",
+            "children": [
+              {
+                "tag": "input",
+                "class": "input",
+                "attrs": {
+                  "type": "text",
+                  "placeholder": "Agent account co-id (e.g. co_z...)"
+                },
+                "value": "$agentIdInput",
+                "$on": {
+                  "input": {
+                    "send": "UPDATE_AGENT_INPUT",
+                    "payload": { "value": "@inputValue" }
+                  },
+                  "blur": {
+                    "send": "UPDATE_AGENT_INPUT",
+                    "payload": { "value": "@inputValue" }
+                  },
+                  "keydown": {
+                    "send": "ADD_AGENT",
+                    "payload": { "agentId": "@inputValue" },
+                    "key": "Enter"
+                  }
+                }
+              },
+              {
+                "tag": "button",
+                "class": "button",
+                "text": "Add as writer",
+                "$on": {
+                  "click": {
+                    "send": "ADD_AGENT",
+                    "payload": { "agentId": "$agentIdInput" }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "tag": "div",
+            "class": "error-message add-agent-error",
+            "attrs": {
+              "data": {
+                "hasError": "$addAgentHasError"
+              }
+            },
+            "children": [
+              { "tag": "strong", "text": "Error: " },
+              { "text": "$addAgentError" }
+            ]
+          }
         ]
       }
     ]

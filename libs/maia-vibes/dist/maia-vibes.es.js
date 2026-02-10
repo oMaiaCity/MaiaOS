@@ -7,7 +7,7 @@ const todosVibe = {
   "description": "Complete todo list with state machines and AI tools",
   "actor": "@todos/actor/agent"
 };
-const brandStyle$2 = {
+const brandStyle$3 = {
   "$schema": "@schema/style",
   "$id": "@todos/style/brand",
   "tokens": {
@@ -827,7 +827,7 @@ const logsStyle = {
     }
   }
 };
-const agentActor$2 = {
+const agentActor$3 = {
   "$schema": "@schema/actor",
   "$id": "@todos/actor/agent",
   "role": "agent",
@@ -879,7 +879,7 @@ const logsActor = {
     "DISMISS"
   ]
 };
-const agentView$2 = {
+const agentView$3 = {
   "$schema": "@schema/view",
   "$id": "@todos/view/agent",
   "content": {
@@ -951,15 +951,15 @@ const agentView$2 = {
             "$on": {
               "input": {
                 "send": "UPDATE_INPUT",
-                "payload": { "newTodoText": "@inputValue" }
+                "payload": { "value": "@inputValue" }
               },
               "blur": {
                 "send": "UPDATE_INPUT",
-                "payload": { "newTodoText": "@inputValue" }
+                "payload": { "value": "@inputValue" }
               },
               "keydown": {
                 "send": "CREATE_BUTTON",
-                "payload": { "text": "@inputValue" },
+                "payload": { "value": "@inputValue" },
                 "key": "Enter"
               }
             }
@@ -971,7 +971,7 @@ const agentView$2 = {
             "$on": {
               "click": {
                 "send": "CREATE_BUTTON",
-                "payload": { "text": "$newTodoText" }
+                "payload": { "value": "$newTodoText" }
               }
             }
           }
@@ -1119,7 +1119,7 @@ const logsView = {
     ]
   }
 };
-const agentContext$2 = {
+const agentContext$3 = {
   "$schema": "@schema/context",
   "$id": "@todos/context/agent",
   "currentView": "@list",
@@ -1162,7 +1162,7 @@ const logsContext = {
   },
   "payloadLabel": "payload"
 };
-const agentState$2 = {
+const agentState$3 = {
   "$schema": "@schema/state",
   "$id": "@todos/state/agent",
   "initial": "idle",
@@ -1215,7 +1215,7 @@ const agentState$2 = {
           "target": "idle",
           "actions": [
             {
-              "updateContext": { "newTodoText": "$$newTodoText" }
+              "updateContext": { "newTodoText": "$$value" }
             }
           ]
         }
@@ -1227,7 +1227,7 @@ const agentState$2 = {
         "payload": {
           "op": "create",
           "schema": "@schema/data/todos",
-          "data": { "text": "$$text", "done": false }
+          "data": { "text": "$$value", "done": false }
         }
       },
       "on": {
@@ -1479,7 +1479,7 @@ const logsState = {
     }
   }
 };
-const agentInbox$2 = {
+const agentInbox$3 = {
   "$schema": "@schema/inbox",
   "$id": "@todos/inbox/agent",
   "items": []
@@ -1497,32 +1497,32 @@ const logsInbox = {
 const TodosVibeRegistry = {
   vibe: todosVibe,
   styles: {
-    "@todos/style/brand": brandStyle$2,
+    "@todos/style/brand": brandStyle$3,
     "@todos/style/list": listStyle,
     "@todos/style/logs": logsStyle
   },
   actors: {
-    "@todos/actor/agent": agentActor$2,
+    "@todos/actor/agent": agentActor$3,
     "@todos/actor/list": listActor,
     "@todos/actor/logs": logsActor
   },
   views: {
-    "@todos/view/agent": agentView$2,
+    "@todos/view/agent": agentView$3,
     "@todos/view/list": listView,
     "@todos/view/logs": logsView
   },
   contexts: {
-    "@todos/context/agent": agentContext$2,
+    "@todos/context/agent": agentContext$3,
     "@todos/context/list": listContext,
     "@todos/context/logs": logsContext
   },
   states: {
-    "@todos/state/agent": agentState$2,
+    "@todos/state/agent": agentState$3,
     "@todos/state/list": listState,
     "@todos/state/logs": logsState
   },
   inboxes: {
-    "@todos/inbox/agent": agentInbox$2,
+    "@todos/inbox/agent": agentInbox$3,
     "@todos/inbox/list": listInbox,
     "@todos/inbox/logs": logsInbox
   },
@@ -1544,7 +1544,7 @@ const TodosVibeRegistry = {
     ]
   }
 };
-const registry$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const registry$3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   TodosVibeRegistry
 }, Symbol.toStringTag, { value: "Module" }));
@@ -1599,7 +1599,7 @@ const myDataVibe = {
   "description": "Database viewer with navigation and detail panels",
   "actor": "@my-data/actor/agent"
 };
-const brandStyle$1 = {
+const brandStyle$2 = {
   "$schema": "@schema/style",
   "$id": "@my-data/style/brand",
   "tokens": {
@@ -2043,7 +2043,7 @@ const brandStyle$1 = {
     }
   }
 };
-const agentActor$1 = {
+const agentActor$2 = {
   "$schema": "@schema/actor",
   "$id": "@my-data/actor/agent",
   "role": "agent",
@@ -2070,7 +2070,7 @@ const tableActor = {
     "SELECT_ROW"
   ]
 };
-const detailActor = {
+const detailActor$1 = {
   "$schema": "@schema/actor",
   "$id": "@my-data/actor/detail",
   "role": "ui",
@@ -2081,7 +2081,7 @@ const detailActor = {
   "inbox": "@my-data/inbox/detail",
   "messageTypes": []
 };
-const agentView$1 = {
+const agentView$2 = {
   "$schema": "@schema/view",
   "$id": "@my-data/view/agent",
   "content": {
@@ -2272,7 +2272,7 @@ const tableView = {
     ]
   }
 };
-const detailView = {
+const detailView$1 = {
   "$schema": "@schema/view",
   "$id": "@my-data/view/detail",
   "content": {
@@ -2378,7 +2378,7 @@ const detailView = {
     ]
   }
 };
-const agentContext$1 = {
+const agentContext$2 = {
   "$schema": "@schema/context",
   "$id": "@my-data/context/agent",
   "navTitle": "MaiaDB",
@@ -2435,7 +2435,7 @@ const tableContext = {
     "createdAt": "Created"
   }
 };
-const detailContext = {
+const detailContext$1 = {
   "$schema": "@schema/context",
   "$id": "@my-data/context/detail",
   "detail": {
@@ -2463,7 +2463,7 @@ const detailContext = {
     "phone": "Phone"
   }
 };
-const agentState$1 = {
+const agentState$2 = {
   "$schema": "@schema/state",
   "$id": "@my-data/state/agent",
   "initial": "idle",
@@ -2521,7 +2521,7 @@ const tableState = {
     }
   }
 };
-const detailState = {
+const detailState$1 = {
   "$schema": "@schema/state",
   "$id": "@my-data/state/detail",
   "initial": "idle",
@@ -2529,7 +2529,7 @@ const detailState = {
     "idle": {}
   }
 };
-const agentInbox$1 = {
+const agentInbox$2 = {
   "$schema": "@schema/inbox",
   "$id": "@my-data/inbox/agent",
   "cotype": "costream"
@@ -2539,7 +2539,7 @@ const tableInbox = {
   "$id": "@my-data/inbox/table",
   "cotype": "costream"
 };
-const detailInbox = {
+const detailInbox$1 = {
   "$schema": "@schema/inbox",
   "$id": "@my-data/inbox/detail",
   "cotype": "costream"
@@ -2547,37 +2547,37 @@ const detailInbox = {
 const MyDataVibeRegistry = {
   vibe: myDataVibe,
   styles: {
-    "@my-data/style/brand": brandStyle$1
+    "@my-data/style/brand": brandStyle$2
   },
   actors: {
-    "@my-data/actor/agent": agentActor$1,
+    "@my-data/actor/agent": agentActor$2,
     "@my-data/actor/table": tableActor,
-    "@my-data/actor/detail": detailActor
+    "@my-data/actor/detail": detailActor$1
   },
   views: {
-    "@my-data/view/agent": agentView$1,
+    "@my-data/view/agent": agentView$2,
     "@my-data/view/table": tableView,
-    "@my-data/view/detail": detailView
+    "@my-data/view/detail": detailView$1
   },
   contexts: {
-    "@my-data/context/agent": agentContext$1,
+    "@my-data/context/agent": agentContext$2,
     "@my-data/context/table": tableContext,
-    "@my-data/context/detail": detailContext
+    "@my-data/context/detail": detailContext$1
   },
   states: {
-    "@my-data/state/agent": agentState$1,
+    "@my-data/state/agent": agentState$2,
     "@my-data/state/table": tableState,
-    "@my-data/state/detail": detailState
+    "@my-data/state/detail": detailState$1
   },
   inboxes: {
-    "@my-data/inbox/agent": agentInbox$1,
+    "@my-data/inbox/agent": agentInbox$2,
     "@my-data/inbox/table": tableInbox,
-    "@my-data/inbox/detail": detailInbox
+    "@my-data/inbox/detail": detailInbox$1
   },
   // No initial data - this vibe uses mocked data in context
   data: {}
 };
-const registry$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const registry$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   MyDataVibeRegistry
 }, Symbol.toStringTag, { value: "Module" }));
@@ -2625,10 +2625,1258 @@ async function loadMyDataVibe(container) {
   );
   return { os, vibe, actor: myDataActor };
 }
+const sparksVibe = {
+  "$schema": "@schema/vibe",
+  "$id": "@vibe/sparks",
+  "name": "Sparks",
+  "description": "Create and manage collaborative groups (sparks)",
+  "actor": "@sparks/actor/agent"
+};
+const brandStyle$1 = {
+  "$schema": "@schema/style",
+  "$id": "@sparks/style/brand",
+  "tokens": {
+    "colors": {
+      "marineBlue": "#001F33",
+      "marineBlueMuted": "#2D4A5C",
+      "marineBlueLight": "#5E7A8C",
+      "paradiseWater": "#00BDD6",
+      "lushGreen": "#4E9A58",
+      "terracotta": "#C27B66",
+      "sunYellow": "#E6B94D",
+      "softClay": "#E8E1D9",
+      "tintedWhite": "#F0EDE6",
+      "background": "transparent",
+      "foreground": "#001F33",
+      "primary": "#00BDD6",
+      "secondary": "#2D4A5C",
+      "border": "rgba(255, 255, 255, 0.1)",
+      "surface": "rgba(255, 255, 255, 0.3)",
+      "glass": "rgba(255, 255, 255, 0.0005)",
+      "glassStrong": "rgba(255, 255, 255, 0.15)",
+      "error": "#DC3545",
+      "errorBg": "rgba(220, 53, 69, 0.1)",
+      "errorBorder": "rgba(220, 53, 69, 0.2)",
+      "text": {
+        "marine": "#D1E8F7",
+        "water": "#004D59",
+        "green": "#F0F9F1",
+        "terracotta": "#FDF2EF",
+        "yellow": "#4D3810"
+      }
+    },
+    "spacing": {
+      "xs": "0.5rem",
+      "sm": "0.75rem",
+      "md": "1rem",
+      "lg": "1.5rem",
+      "xl": "2rem",
+      "2xl": "3rem"
+    },
+    "typography": {
+      "fontFamily": {
+        "heading": "'Indie Flower', cursive",
+        "body": "'Plus Jakarta Sans', sans-serif"
+      },
+      "fontWeight": {
+        "light": "300",
+        "normal": "400",
+        "medium": "500",
+        "semibold": "600",
+        "bold": "700"
+      }
+    },
+    "radii": {
+      "sm": "4px",
+      "md": "12px",
+      "apple": "18px",
+      "full": "9999px"
+    },
+    "shadows": {
+      "sm": "0 4px 30px rgba(0, 0, 0, 0.05)",
+      "md": "0 10px 30px rgba(0, 0, 0, 0.05)",
+      "lg": "0 10px 40px rgba(0, 0, 0, 0.1)"
+    },
+    "transitions": {
+      "fast": "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      "standard": "all 0.5s cubic-bezier(0.2, 0, 0.2, 1)"
+    }
+  },
+  "components": {
+    "stack": {
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "0.25rem",
+      "width": "100%",
+      "maxWidth": "100%",
+      "height": "100vh",
+      "background": "{colors.softClay}",
+      "padding": "0.375rem",
+      "overflowY": "auto",
+      "overflowX": "hidden",
+      "fontFamily": "{typography.fontFamily.body}",
+      "color": "{colors.marineBlue}",
+      "boxSizing": "border-box"
+    },
+    "headerSection": {
+      "display": "flex",
+      "flexDirection": "column",
+      "alignItems": "center",
+      "gap": "0.25rem",
+      "marginBottom": "0.25rem",
+      "width": "100%"
+    },
+    "sparksTitle": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "0.9rem",
+      "fontWeight": "{typography.fontWeight.bold}",
+      "color": "{colors.marineBlue}",
+      "margin": "0",
+      "marginBottom": "0.375rem",
+      "textAlign": "center",
+      "width": "100%",
+      "letterSpacing": "-0.02em"
+    },
+    "form": {
+      "display": "flex",
+      "flexDirection": "row",
+      "alignItems": "center",
+      "gap": "0.25rem",
+      "padding": "0.25rem 0.375rem",
+      "background": "rgba(255, 255, 255, 0.4)",
+      "backdropFilter": "blur(8px) saturate(150%)",
+      "borderRadius": "{radii.full}",
+      "border": "1px solid {colors.border}",
+      "boxShadow": "{shadows.md}",
+      "width": "100%",
+      "boxSizing": "border-box",
+      "marginBottom": "0.25rem"
+    },
+    "input": {
+      "flex": "1",
+      "width": "100%",
+      "padding": "0.25rem 0.5rem",
+      "border": "none",
+      "background": "transparent",
+      "fontSize": "0.6rem",
+      "color": "{colors.marineBlue}",
+      "fontFamily": "{typography.fontFamily.body}",
+      "fontWeight": "{typography.fontWeight.light}",
+      "outline": "none",
+      "minHeight": "0",
+      "minWidth": "0",
+      "lineHeight": "1.35"
+    },
+    "button": {
+      "width": "auto",
+      "padding": "0.25rem 0.5rem",
+      "background": "{colors.lushGreen}",
+      "color": "{colors.text.green}",
+      "border": "none",
+      "borderRadius": "{radii.full}",
+      "cursor": "pointer",
+      "fontSize": "0.5rem",
+      "fontWeight": "600",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.05em",
+      "transition": "{transitions.fast}",
+      "boxShadow": "0 4px 12px rgba(78, 154, 88, 0.2)",
+      "whiteSpace": "nowrap",
+      "flexShrink": "0",
+      ":hover": {
+        "filter": "brightness(1.1)",
+        "transform": "translateY(-1px)",
+        "boxShadow": "0 6px 16px rgba(78, 154, 88, 0.3)"
+      }
+    },
+    "errorMessage": {
+      "padding": "{spacing.sm} {spacing.md}",
+      "background": "{colors.errorBg}",
+      "color": "{colors.error}",
+      "borderRadius": "{radii.md}",
+      "border": "1px solid {colors.errorBorder}",
+      "margin": "{spacing.md} 0",
+      "display": "none",
+      "data": {
+        "hasError": {
+          "true": {
+            "display": "block"
+          }
+        }
+      }
+    },
+    "buttonDismiss": {
+      "marginLeft": "{spacing.sm}",
+      "padding": "0.25rem 0.5rem",
+      "background": "transparent",
+      "color": "{colors.error}",
+      "border": "1px solid {colors.errorBorder}",
+      "borderRadius": "{radii.sm}",
+      "cursor": "pointer",
+      "fontSize": "0.5rem",
+      "fontWeight": "600",
+      "transition": "{transitions.fast}",
+      ":hover": {
+        "background": "{colors.error}",
+        "color": "white"
+      }
+    },
+    "sparksList": {
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "0.25rem",
+      "width": "100%"
+    },
+    "sparkItem": {
+      "padding": "0.5rem 0.75rem",
+      "background": "rgba(255, 255, 255, 0.3)",
+      "backdropFilter": "blur(4px)",
+      "borderRadius": "{radii.md}",
+      "border": "1px solid {colors.border}",
+      "boxShadow": "{shadows.sm}",
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "0.25rem"
+    },
+    "sparkName": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "0.75rem",
+      "fontWeight": "{typography.fontWeight.bold}",
+      "color": "{colors.marineBlue}",
+      "margin": "0"
+    },
+    "sparkGroupId": {
+      "fontSize": "0.6rem",
+      "color": "{colors.marineBlueLight}",
+      "fontFamily": "{typography.fontFamily.body}"
+    },
+    "splitContainer": {
+      "display": "flex",
+      "flexDirection": "row",
+      "gap": "{spacing.md}",
+      "width": "100%",
+      "height": "100%",
+      "overflow": "hidden"
+    },
+    "sparksListPanel": {
+      "width": "50%",
+      "display": "flex",
+      "flexDirection": "column",
+      "overflowY": "auto",
+      "overflowX": "hidden",
+      "paddingRight": "{spacing.sm}"
+    },
+    "sparksDetailPanel": {
+      "width": "50%",
+      "display": "flex",
+      "flexDirection": "column",
+      "overflowY": "auto",
+      "overflowX": "hidden",
+      "paddingLeft": "{spacing.sm}"
+    },
+    "detailContentWrapper": {
+      "display": "flex",
+      "flexDirection": "column",
+      "height": "100%",
+      "width": "100%"
+    },
+    "detailContainer": {
+      "background": "rgba(255, 255, 255, 0.4)",
+      "backdropFilter": "blur(12px) saturate(160%)",
+      "borderRadius": "{radii.apple}",
+      "boxShadow": "{shadows.md}",
+      "overflow": "auto",
+      "border": "1px solid rgba(255, 255, 255, 0.2)",
+      "transition": "{transitions.standard}",
+      "height": "100%",
+      "display": "flex",
+      "flexDirection": "column",
+      "padding": "{spacing.md}"
+    },
+    "detailCategory": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "0.85rem",
+      "fontStyle": "italic",
+      "color": "{colors.paradiseWater}",
+      "marginBottom": "0.5rem",
+      "display": "block",
+      "textShadow": "0 0 10px rgba(0, 189, 214, 0.2)"
+    },
+    "detailTitle": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "{typography.fontSize.xl}",
+      "fontWeight": "{typography.fontWeight.bold}",
+      "color": "{colors.marineBlue}",
+      "marginBottom": "{spacing.md}",
+      "marginTop": "0",
+      "letterSpacing": "-0.02em"
+    },
+    "detailList": {
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "{spacing.sm}"
+    },
+    "detailItem": {
+      "display": "flex",
+      "flexDirection": "row",
+      "justifyContent": "space-between",
+      "alignItems": "center",
+      "padding": "{spacing.sm}",
+      "background": "rgba(255, 255, 255, 0.2)",
+      "borderRadius": "{radii.md}",
+      "gap": "{spacing.md}"
+    },
+    "detailLabel": {
+      "fontWeight": "{typography.fontWeight.semibold}",
+      "color": "{colors.marineBlueLight}",
+      "fontSize": "0.75rem"
+    },
+    "detailValue": {
+      "color": "{colors.marineBlue}",
+      "fontSize": "0.75rem",
+      "fontFamily": "{typography.fontFamily.body}",
+      "wordBreak": "break-all"
+    },
+    "membersTitle": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "{typography.fontSize.lg}",
+      "fontWeight": "{typography.fontWeight.bold}",
+      "color": "{colors.marineBlue}",
+      "marginTop": "{spacing.lg}",
+      "marginBottom": "{spacing.md}"
+    },
+    "membersList": {
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "{spacing.sm}"
+    },
+    "memberItem": {
+      "display": "flex",
+      "flexDirection": "row",
+      "justifyContent": "space-between",
+      "alignItems": "center",
+      "padding": "{spacing.sm}",
+      "background": "rgba(255, 255, 255, 0.3)",
+      "borderRadius": "{radii.md}",
+      "border": "1px solid {colors.border}",
+      "gap": "{spacing.md}"
+    },
+    "memberId": {
+      "color": "{colors.marineBlue}",
+      "fontSize": "0.7rem",
+      "fontFamily": "{typography.fontFamily.body}",
+      "wordBreak": "break-all",
+      "flex": "1"
+    },
+    "memberRole": {
+      "padding": "0.25rem 0.5rem",
+      "borderRadius": "{radii.sm}",
+      "fontSize": "0.6rem",
+      "fontWeight": "{typography.fontWeight.bold}",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.05em"
+    }
+  },
+  "selectors": {
+    ":host": {
+      "display": "block",
+      "height": "100%",
+      "background": "transparent"
+    },
+    ".spark-item[data-selected='true']": {
+      "background": "rgba(0, 189, 214, 0.2)",
+      "borderColor": "{colors.paradiseWater}",
+      "boxShadow": "0 4px 12px rgba(0, 189, 214, 0.3)"
+    },
+    ".spark-item:hover": {
+      "background": "rgba(255, 255, 255, 0.5)",
+      "cursor": "pointer",
+      "transform": "translateY(-1px)",
+      "boxShadow": "{shadows.md}"
+    },
+    ".member-role[data-role='admin']": {
+      "background": "rgba(220, 53, 69, 0.2)",
+      "color": "#DC3545",
+      "border": "1px solid rgba(220, 53, 69, 0.3)"
+    },
+    ".member-role[data-role='manager']": {
+      "background": "rgba(255, 193, 7, 0.2)",
+      "color": "#FFC107",
+      "border": "1px solid rgba(255, 193, 7, 0.3)"
+    },
+    ".member-role[data-role='writer']": {
+      "background": "rgba(78, 154, 88, 0.2)",
+      "color": "{colors.lushGreen}",
+      "border": "1px solid rgba(78, 154, 88, 0.3)"
+    },
+    ".member-role[data-role='reader']": {
+      "background": "rgba(0, 189, 214, 0.2)",
+      "color": "{colors.paradiseWater}",
+      "border": "1px solid rgba(0, 189, 214, 0.3)"
+    },
+    ".member-role[data-role='writeOnly']": {
+      "background": "rgba(230, 185, 77, 0.2)",
+      "color": "{colors.sunYellow}",
+      "border": "1px solid rgba(230, 185, 77, 0.3)"
+    },
+    ".empty-state": {
+      "display": "none",
+      "padding": "{spacing.lg}",
+      "textAlign": "center",
+      "color": "{colors.marineBlueLight}",
+      "fontSize": "0.85rem"
+    },
+    ".empty-state[data-visible='true']": {
+      "display": "block"
+    },
+    ".loading-state": {
+      "display": "none",
+      "padding": "{spacing.lg}",
+      "textAlign": "center",
+      "color": "{colors.marineBlueLight}",
+      "fontSize": "0.85rem"
+    },
+    ".loading-state[data-visible='true']": {
+      "display": "block"
+    },
+    ".error-state": {
+      "display": "none",
+      "padding": "{spacing.md}",
+      "background": "{colors.errorBg}",
+      "color": "{colors.error}",
+      "borderRadius": "{radii.md}",
+      "border": "1px solid {colors.errorBorder}",
+      "marginBottom": "{spacing.md}"
+    },
+    ".error-state[data-visible='true']": {
+      "display": "block"
+    },
+    ".detail-content": {
+      "display": "none"
+    },
+    ".detail-content[data-visible='true']": {
+      "display": "flex",
+      "flexDirection": "column"
+    },
+    ".empty-members": {
+      "display": "none",
+      "padding": "{spacing.md}",
+      "textAlign": "center",
+      "color": "{colors.marineBlueLight}",
+      "fontSize": "0.75rem"
+    },
+    ".empty-members[data-visible='true']": {
+      "display": "block"
+    },
+    "@container {containerName} (min-width: {containers.xs})": {
+      ".stack": {
+        "padding": "0.625rem",
+        "gap": "0.375rem"
+      },
+      ".headerSection": {
+        "gap": "0.375rem",
+        "marginBottom": "0.375rem"
+      },
+      ".sparksTitle": {
+        "fontSize": "1.15rem"
+      },
+      ".form": {
+        "gap": "0.375rem",
+        "padding": "0.375rem 0.5rem"
+      },
+      ".input": {
+        "padding": "0.375rem 0.625rem",
+        "fontSize": "0.7rem"
+      },
+      ".button": {
+        "padding": "0.375rem 0.625rem",
+        "fontSize": "0.6rem"
+      },
+      ".sparkItem": {
+        "padding": "0.625rem 0.875rem"
+      },
+      ".sparkName": {
+        "fontSize": "0.85rem"
+      },
+      ".sparkGroupId": {
+        "fontSize": "0.65rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.sm})": {
+      ".stack": {
+        "padding": "0.75rem",
+        "gap": "0.5rem"
+      },
+      ".headerSection": {
+        "gap": "0.5rem",
+        "marginBottom": "0.5rem"
+      },
+      ".sparksTitle": {
+        "fontSize": "1.3rem"
+      },
+      ".form": {
+        "gap": "0.5rem",
+        "padding": "0.5rem 0.625rem"
+      },
+      ".input": {
+        "padding": "0.5rem 0.75rem",
+        "fontSize": "0.75rem"
+      },
+      ".button": {
+        "padding": "0.5rem 0.75rem",
+        "fontSize": "0.65rem"
+      },
+      ".sparkItem": {
+        "padding": "0.75rem 1rem"
+      },
+      ".sparkName": {
+        "fontSize": "0.95rem"
+      },
+      ".sparkGroupId": {
+        "fontSize": "0.7rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.md})": {
+      ".stack": {
+        "padding": "1rem",
+        "gap": "0.625rem"
+      },
+      ".headerSection": {
+        "gap": "0.625rem",
+        "marginBottom": "0.625rem"
+      },
+      ".sparksTitle": {
+        "fontSize": "1.45rem"
+      },
+      ".form": {
+        "gap": "0.625rem",
+        "padding": "0.625rem 0.75rem"
+      },
+      ".input": {
+        "padding": "0.625rem 0.875rem",
+        "fontSize": "0.8rem"
+      },
+      ".button": {
+        "padding": "0.625rem 0.875rem",
+        "fontSize": "0.7rem"
+      },
+      ".sparkItem": {
+        "padding": "0.875rem 1.125rem"
+      },
+      ".sparkName": {
+        "fontSize": "1.1rem"
+      },
+      ".sparkGroupId": {
+        "fontSize": "0.75rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.lg})": {
+      ".stack": {
+        "padding": "1.25rem",
+        "gap": "0.75rem"
+      },
+      ".headerSection": {
+        "gap": "0.75rem",
+        "marginBottom": "0.75rem"
+      },
+      ".sparksTitle": {
+        "fontSize": "1.55rem"
+      },
+      ".form": {
+        "gap": "0.75rem",
+        "padding": "0.75rem 0.875rem"
+      },
+      ".input": {
+        "padding": "0.75rem 1rem",
+        "fontSize": "0.85rem"
+      },
+      ".button": {
+        "padding": "0.75rem 1rem",
+        "fontSize": "0.75rem"
+      },
+      ".sparkItem": {
+        "padding": "1rem 1.25rem"
+      },
+      ".sparkName": {
+        "fontSize": "1.2rem"
+      },
+      ".sparkGroupId": {
+        "fontSize": "0.8rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.xl})": {
+      ".stack": {
+        "padding": "1.5rem",
+        "gap": "0.875rem"
+      },
+      ".headerSection": {
+        "gap": "0.875rem",
+        "marginBottom": "0.875rem"
+      },
+      ".sparksTitle": {
+        "fontSize": "1.65rem"
+      },
+      ".form": {
+        "gap": "0.875rem",
+        "padding": "0.875rem 1rem"
+      },
+      ".input": {
+        "padding": "0.875rem 1.125rem",
+        "fontSize": "0.9rem"
+      },
+      ".button": {
+        "padding": "0.875rem 1.125rem",
+        "fontSize": "0.8rem"
+      },
+      ".sparkItem": {
+        "padding": "1.125rem 1.375rem"
+      },
+      ".sparkName": {
+        "fontSize": "1.3rem"
+      },
+      ".sparkGroupId": {
+        "fontSize": "0.85rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.2xl})": {
+      ".stack": {
+        "padding": "1.75rem",
+        "gap": "1rem"
+      },
+      ".headerSection": {
+        "gap": "1rem",
+        "marginBottom": "1rem"
+      },
+      ".sparksTitle": {
+        "fontSize": "1.75rem"
+      },
+      ".form": {
+        "gap": "1rem",
+        "padding": "1rem 1.125rem"
+      },
+      ".input": {
+        "padding": "1rem 1.25rem",
+        "fontSize": "0.95rem"
+      },
+      ".button": {
+        "padding": "1rem 1.25rem",
+        "fontSize": "0.85rem"
+      },
+      ".sparkItem": {
+        "padding": "1.25rem 1.5rem"
+      },
+      ".sparkName": {
+        "fontSize": "1.4rem"
+      },
+      ".sparkGroupId": {
+        "fontSize": "0.9rem"
+      }
+    }
+  }
+};
+const agentActor$1 = {
+  "$schema": "@schema/actor",
+  "$id": "@sparks/actor/agent",
+  "type": "service",
+  "state": "@sparks/state/agent",
+  "view": "@sparks/view/agent",
+  "context": "@sparks/context/agent",
+  "brand": "@sparks/style/brand",
+  "inbox": "@sparks/inbox/agent",
+  "messageTypes": [
+    "CREATE_BUTTON",
+    "UPDATE_INPUT",
+    "SELECT_SPARK",
+    "SUCCESS",
+    "ERROR",
+    "DISMISS"
+  ]
+};
+const detailActor = {
+  "$schema": "@schema/actor",
+  "$id": "@sparks/actor/detail",
+  "role": "ui",
+  "context": "@sparks/context/detail",
+  "view": "@sparks/view/detail",
+  "state": "@sparks/state/detail",
+  "brand": "@sparks/style/brand",
+  "inbox": "@sparks/inbox/detail",
+  "messageTypes": ["LOAD_ACTOR", "SUCCESS", "ADD_AGENT", "UPDATE_AGENT_INPUT", "ERROR"]
+};
+const agentView$1 = {
+  "$schema": "@schema/view",
+  "$id": "@sparks/view/agent",
+  "content": {
+    "tag": "div",
+    "class": "stack",
+    "children": [
+      {
+        "tag": "div",
+        "class": "header-section",
+        "children": [
+          {
+            "tag": "h2",
+            "class": "sparks-title",
+            "text": "My Sparks"
+          }
+        ]
+      },
+      {
+        "class": "form",
+        "children": [
+          {
+            "tag": "input",
+            "class": "input",
+            "attrs": {
+              "type": "text",
+              "placeholder": "$inputPlaceholder"
+            },
+            "value": "$newSparkName",
+            "$on": {
+              "input": {
+                "send": "UPDATE_INPUT",
+                "payload": { "value": "@inputValue" }
+              },
+              "blur": {
+                "send": "UPDATE_INPUT",
+                "payload": { "value": "@inputValue" }
+              },
+              "keydown": {
+                "send": "CREATE_BUTTON",
+                "payload": { "value": "@inputValue" },
+                "key": "Enter"
+              }
+            }
+          },
+          {
+            "tag": "button",
+            "class": "button",
+            "text": "$createButtonText",
+            "$on": {
+              "click": {
+                "send": "CREATE_BUTTON",
+                "payload": { "value": "@inputValue" }
+              }
+            }
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "class": "error-message",
+        "attrs": {
+          "data": {
+            "hasError": "$hasError"
+          }
+        },
+        "children": [
+          {
+            "tag": "strong",
+            "text": "Error: "
+          },
+          {
+            "text": "$error"
+          },
+          {
+            "tag": "button",
+            "class": "button-dismiss",
+            "text": "Dismiss",
+            "$on": {
+              "click": {
+                "send": "DISMISS"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "class": "split-container",
+        "children": [
+          {
+            "tag": "div",
+            "class": "sparks-list-panel",
+            "children": [
+              {
+                "tag": "div",
+                "class": "sparks-list",
+                "$each": {
+                  "items": "$sparks",
+                  "template": {
+                    "tag": "div",
+                    "class": "spark-item",
+                    "children": [
+                      {
+                        "tag": "h3",
+                        "class": "spark-name",
+                        "text": "$$name"
+                      }
+                    ],
+                    "$on": {
+                      "click": {
+                        "send": "SELECT_SPARK",
+                        "payload": { "sparkId": "$$id" }
+                      }
+                    }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "tag": "div",
+            "class": "sparks-detail-panel",
+            "children": [
+              {
+                "tag": "div",
+                "class": "detail-content-wrapper",
+                "$slot": "$currentDetail"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+};
+const detailView = {
+  "$schema": "@schema/view",
+  "$id": "@sparks/view/detail",
+  "content": {
+    "tag": "div",
+    "class": "detail-container",
+    "children": [
+      {
+        "tag": "div",
+        "class": "empty-state",
+        "attrs": {
+          "data": {
+            "visible": "$showEmptyState"
+          }
+        },
+        "children": [
+          {
+            "tag": "p",
+            "text": "Select a spark to view details and members"
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "class": "detail-content",
+        "attrs": {
+          "data": {
+            "visible": "$showContent"
+          }
+        },
+        "children": [
+          {
+            "tag": "span",
+            "class": "detail-category",
+            "text": "Spark Details"
+          },
+          {
+            "tag": "h2",
+            "class": "detail-title",
+            "text": "$sparkDetails.name"
+          },
+          {
+            "tag": "div",
+            "class": "detail-list",
+            "children": [
+              {
+                "tag": "div",
+                "class": "detail-item",
+                "children": [
+                  { "tag": "span", "class": "detail-label", "text": "Group ID" },
+                  { "tag": "span", "class": "detail-value", "text": "$sparkDetails.groupId" }
+                ]
+              }
+            ]
+          },
+          {
+            "tag": "h3",
+            "class": "members-title",
+            "text": "Members"
+          },
+          {
+            "tag": "div",
+            "class": "members-list",
+            "$each": {
+              "items": "$sparkDetails.members",
+              "template": {
+                "tag": "div",
+                "class": "member-item",
+                "children": [
+                  {
+                    "tag": "span",
+                    "class": "member-id",
+                    "text": "$$id"
+                  },
+                  {
+                    "tag": "span",
+                    "class": "member-role",
+                    "attrs": {
+                      "data": {
+                        "role": "$$role"
+                      }
+                    },
+                    "text": "$$role"
+                  }
+                ]
+              }
+            }
+          },
+          {
+            "tag": "h3",
+            "class": "members-title add-agent-title",
+            "text": "Add Agent"
+          },
+          {
+            "tag": "div",
+            "class": "form add-agent-form",
+            "children": [
+              {
+                "tag": "input",
+                "class": "input",
+                "attrs": {
+                  "type": "text",
+                  "placeholder": "Agent account co-id (e.g. co_z...)"
+                },
+                "value": "$agentIdInput",
+                "$on": {
+                  "input": {
+                    "send": "UPDATE_AGENT_INPUT",
+                    "payload": { "value": "@inputValue" }
+                  },
+                  "blur": {
+                    "send": "UPDATE_AGENT_INPUT",
+                    "payload": { "value": "@inputValue" }
+                  },
+                  "keydown": {
+                    "send": "ADD_AGENT",
+                    "payload": { "agentId": "@inputValue" },
+                    "key": "Enter"
+                  }
+                }
+              },
+              {
+                "tag": "button",
+                "class": "button",
+                "text": "Add as writer",
+                "$on": {
+                  "click": {
+                    "send": "ADD_AGENT",
+                    "payload": { "agentId": "$agentIdInput" }
+                  }
+                }
+              }
+            ]
+          },
+          {
+            "tag": "div",
+            "class": "error-message add-agent-error",
+            "attrs": {
+              "data": {
+                "hasError": "$addAgentHasError"
+              }
+            },
+            "children": [
+              { "tag": "strong", "text": "Error: " },
+              { "text": "$addAgentError" }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+};
+const agentContext$1 = {
+  "$schema": "@schema/context",
+  "$id": "@sparks/context/agent",
+  "sparks": {
+    "schema": "@schema/data/spark"
+  },
+  "newSparkName": "",
+  "inputPlaceholder": "Enter spark name...",
+  "createButtonText": "Create Spark",
+  "error": null,
+  "hasError": false,
+  "loading": false,
+  "selectedSparkId": null,
+  "selectedSparkItems": {},
+  "currentDetail": "@detail",
+  "@actors": {
+    "detail": "@sparks/actor/detail"
+  }
+};
+const detailContext = {
+  "$schema": "@schema/context",
+  "$id": "@sparks/context/detail",
+  "sparkId": null,
+  "sparkDetails": {
+    "schema": "@schema/data/spark",
+    "filter": {
+      "id": "$sparkId"
+    },
+    "options": {
+      "map": {
+        "members": "$$group.accountMembers",
+        "groupId": "$$group.id"
+      }
+    }
+  },
+  "hasSpark": false,
+  "showEmptyState": true,
+  "showContent": false,
+  "agentIdInput": "",
+  "addAgentError": null,
+  "addAgentHasError": false
+};
+const agentState$1 = {
+  "$schema": "@schema/state",
+  "$id": "@sparks/state/agent",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "on": {
+        "CREATE_BUTTON": {
+          "target": "creating"
+        },
+        "UPDATE_INPUT": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "newSparkName": "$$value" }
+            }
+          ]
+        },
+        "SELECT_SPARK": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "selectedSparkId": "$$sparkId"
+              }
+            },
+            "sendToDetailActor"
+          ]
+        }
+      }
+    },
+    "creating": {
+      "entry": {
+        "tool": "@sparks",
+        "payload": {
+          "op": "createSpark",
+          "name": "$$value"
+        }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "newSparkName": "",
+                "error": null,
+                "hasError": false
+              }
+            }
+          ]
+        },
+        "ERROR": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "error": "$$error", "hasError": true }
+            }
+          ]
+        }
+      }
+    },
+    "error": {
+      "entry": {
+        "updateContext": { "error": "$$error" }
+      },
+      "on": {
+        "DISMISS": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": { "error": null, "hasError": false }
+            }
+          ]
+        }
+      }
+    }
+  }
+};
+const detailState = {
+  "$schema": "@schema/state",
+  "$id": "@sparks/state/detail",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "on": {
+        "LOAD_ACTOR": {
+          "target": "updating",
+          "actions": [
+            {
+              "updateContext": {
+                "sparkId": "$$id"
+              }
+            }
+          ]
+        },
+        "UPDATE_AGENT_INPUT": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "agentIdInput": "$$value"
+              }
+            }
+          ]
+        },
+        "ADD_AGENT": {
+          "target": "addingAgent"
+        }
+      },
+      "entry": {
+        "updateContext": {
+          "hasSpark": {
+            "$ne": ["$sparkId", null]
+          },
+          "showEmptyState": {
+            "$eq": ["$sparkId", null]
+          },
+          "showContent": {
+            "$ne": ["$sparkId", null]
+          }
+        }
+      }
+    },
+    "updating": {
+      "entry": {
+        "updateContext": {
+          "hasSpark": {
+            "$ne": ["$sparkId", null]
+          },
+          "showEmptyState": {
+            "$eq": ["$sparkId", null]
+          },
+          "showContent": {
+            "$ne": ["$sparkId", null]
+          }
+        }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "idle"
+        }
+      }
+    },
+    "addingAgent": {
+      "entry": {
+        "tool": "@sparks",
+        "payload": {
+          "op": "addSparkMember",
+          "id": "$sparkId",
+          "memberId": "$$agentId",
+          "role": "writer"
+        }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "agentIdInput": "",
+                "addAgentError": null,
+                "addAgentHasError": false
+              }
+            }
+          ]
+        },
+        "ERROR": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "addAgentError": "$$error",
+                "addAgentHasError": true
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+};
+const agentInbox$1 = {
+  "$schema": "@schema/inbox",
+  "$id": "@sparks/inbox/agent",
+  "cotype": "costream"
+};
+const detailInbox = {
+  "$schema": "@schema/inbox",
+  "$id": "@sparks/inbox/detail",
+  "cotype": "costream"
+};
+const SparksVibeRegistry = {
+  vibe: sparksVibe,
+  styles: {
+    "@sparks/style/brand": brandStyle$1
+  },
+  actors: {
+    "@sparks/actor/agent": agentActor$1,
+    "@sparks/actor/detail": detailActor
+  },
+  views: {
+    "@sparks/view/agent": agentView$1,
+    "@sparks/view/detail": detailView
+  },
+  contexts: {
+    "@sparks/context/agent": agentContext$1,
+    "@sparks/context/detail": detailContext
+  },
+  states: {
+    "@sparks/state/agent": agentState$1,
+    "@sparks/state/detail": detailState
+  },
+  inboxes: {
+    "@sparks/inbox/agent": agentInbox$1,
+    "@sparks/inbox/detail": detailInbox
+  }
+};
+const registry$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  SparksVibeRegistry
+}, Symbol.toStringTag, { value: "Module" }));
+async function loadSparksVibe(maia, container) {
+  if (!maia || !container) {
+    throw new Error("[SparksVibe] MaiaOS instance and container required");
+  }
+  const vibe = SparksVibeRegistry.vibe;
+  if (!vibe) {
+    throw new Error("[SparksVibe] Vibe not found in registry");
+  }
+  const actorConfig = SparksVibeRegistry.actors[vibe.actor];
+  if (!actorConfig) {
+    throw new Error(`[SparksVibe] Actor ${vibe.actor} not found in registry`);
+  }
+  const actor = await maia.actors.create(actorConfig, container);
+  return {
+    vibe,
+    actor
+  };
+}
 async function getAllVibeRegistries() {
   const vibeRegistries = [];
   try {
-    const { TodosVibeRegistry: TodosVibeRegistry2 } = await Promise.resolve().then(() => registry$2);
+    const { TodosVibeRegistry: TodosVibeRegistry2 } = await Promise.resolve().then(() => registry$3);
     if (TodosVibeRegistry2 && TodosVibeRegistry2.vibe) {
       vibeRegistries.push(TodosVibeRegistry2);
     }
@@ -2644,12 +3892,20 @@ async function getAllVibeRegistries() {
     console.warn("[Vibes] Could not load MaiaAgentVibeRegistry:", error.message);
   }
   try {
-    const { MyDataVibeRegistry: MyDataVibeRegistry2 } = await Promise.resolve().then(() => registry$1);
+    const { MyDataVibeRegistry: MyDataVibeRegistry2 } = await Promise.resolve().then(() => registry$2);
     if (MyDataVibeRegistry2 && MyDataVibeRegistry2.vibe) {
       vibeRegistries.push(MyDataVibeRegistry2);
     }
   } catch (error) {
     console.warn("[Vibes] Could not load MyDataVibeRegistry:", error.message);
+  }
+  try {
+    const { SparksVibeRegistry: SparksVibeRegistry2 } = await Promise.resolve().then(() => registry$1);
+    if (SparksVibeRegistry2 && SparksVibeRegistry2.vibe) {
+      vibeRegistries.push(SparksVibeRegistry2);
+    }
+  } catch (error) {
+    console.warn("[Vibes] Could not load SparksVibeRegistry:", error.message);
   }
   return vibeRegistries;
 }
@@ -3333,7 +4589,7 @@ const agentView = {
             "$on": {
               "input": {
                 "send": "UPDATE_INPUT",
-                "payload": { "inputText": "@inputValue" }
+                "payload": { "value": "@inputValue" }
               },
               "keydown": {
                 "send": "SEND_MESSAGE",
@@ -3430,7 +4686,7 @@ const agentState = {
           "target": "idle",
           "actions": [
             {
-              "updateContext": { "inputText": "$$inputText" }
+              "updateContext": { "inputText": "$$value" }
             }
           ]
         }
@@ -3481,7 +4737,7 @@ const agentState = {
     },
     "calling_llm": {
       "entry": {
-        "tool": "@agent/chat",
+        "tool": "@ai/chat",
         "payload": {
           "model": "qwen/qwen3-30b-a3b-instruct-2507",
           "temperature": 1,
@@ -3659,11 +4915,14 @@ export {
   MaiaOS2 as MaiaOS,
   MyDataVibeRegistry as MyDataRegistry,
   MyDataVibeRegistry,
+  SparksVibeRegistry as SparksRegistry,
+  SparksVibeRegistry,
   TodosVibeRegistry as TodosRegistry,
   TodosVibeRegistry,
   filterVibesForSeeding,
   getAllVibeRegistries,
   loadMyDataVibe,
+  loadSparksVibe,
   loadTodosVibe
 };
 //# sourceMappingURL=maia-vibes.es.js.map
