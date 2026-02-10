@@ -47,8 +47,16 @@
                 "tag": "div",
                 "class": "detail-item",
                 "children": [
-                  { "tag": "span", "class": "detail-label", "text": "Group ID" },
-                  { "tag": "span", "class": "detail-value", "text": "$sparkDetails.groupId" }
+                  {
+                    "tag": "span",
+                    "class": "detail-label",
+                    "text": "Group ID"
+                  },
+                  {
+                    "tag": "span",
+                    "class": "detail-value",
+                    "text": "$sparkDetails.groupId"
+                  }
                 ]
               }
             ]
@@ -89,7 +97,9 @@
                     "$on": {
                       "click": {
                         "send": "REMOVE_MEMBER",
-                        "payload": { "memberId": "$$id" }
+                        "payload": {
+                          "memberId": "$$id"
+                        }
                       }
                     }
                   }
@@ -117,15 +127,21 @@
                 "$on": {
                   "input": {
                     "send": "UPDATE_AGENT_INPUT",
-                    "payload": { "value": "@inputValue" }
+                    "payload": {
+                      "value": "@inputValue"
+                    }
                   },
                   "blur": {
                     "send": "UPDATE_AGENT_INPUT",
-                    "payload": { "value": "@inputValue" }
+                    "payload": {
+                      "value": "@inputValue"
+                    }
                   },
                   "keydown": {
                     "send": "ADD_AGENT",
-                    "payload": { "agentId": "@inputValue" },
+                    "payload": {
+                      "agentId": "@inputValue"
+                    },
                     "key": "Enter"
                   }
                 }
@@ -137,7 +153,9 @@
                 "$on": {
                   "click": {
                     "send": "ADD_AGENT",
-                    "payload": { "agentId": "$agentIdInput" }
+                    "payload": {
+                      "agentId": "$agentIdInput"
+                    }
                   }
                 }
               }
@@ -152,8 +170,13 @@
               }
             },
             "children": [
-              { "tag": "strong", "text": "Error: " },
-              { "text": "$addAgentError" }
+              {
+                "tag": "strong",
+                "text": "Error: "
+              },
+              {
+                "text": "$addAgentError"
+              }
             ]
           }
         ]

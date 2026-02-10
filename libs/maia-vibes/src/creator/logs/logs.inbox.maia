@@ -1,0 +1,5 @@
+{
+  "$schema": "@maia/schema/inbox",
+  "$id": "@maia/creator/inbox/logs",
+  "items": []
+}

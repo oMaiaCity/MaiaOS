@@ -1,11 +1,347 @@
 import { signInWithPasskey, MaiaOS } from "@MaiaOS/kernel";
 import { MaiaOS as MaiaOS2 } from "@MaiaOS/kernel";
+const masterBrand = {
+  "$schema": "@maia/schema/style",
+  "$id": "@maia/style/brand",
+  "tokens": {
+    "colors": {
+      "marineBlue": "#001F33",
+      "marineBlueMuted": "#2D4A5C",
+      "marineBlueLight": "#5E7A8C",
+      "paradiseWater": "#00BDD6",
+      "lushGreen": "#4E9A58",
+      "terracotta": "#C27B66",
+      "sunYellow": "#E6B94D",
+      "softClay": "#E8E1D9",
+      "tintedWhite": "#F0EDE6",
+      "background": "transparent",
+      "foreground": "#001F33",
+      "primary": "#00BDD6",
+      "secondary": "#2D4A5C",
+      "border": "rgba(255, 255, 255, 0.1)",
+      "surface": "rgba(255, 255, 255, 0.3)",
+      "glass": "rgba(255, 255, 255, 0.0005)",
+      "glassStrong": "rgba(255, 255, 255, 0.15)",
+      "error": "#DC3545",
+      "errorBg": "rgba(220, 53, 69, 0.1)",
+      "errorBorder": "rgba(220, 53, 69, 0.2)",
+      "text": {
+        "marine": "#D1E8F7",
+        "water": "#004D59",
+        "green": "#F0F9F1",
+        "terracotta": "#FDF2EF",
+        "yellow": "#4D3810"
+      }
+    },
+    "spacing": {
+      "xs": "0.5rem",
+      "sm": "0.75rem",
+      "md": "1rem",
+      "lg": "1.5rem",
+      "xl": "2rem",
+      "2xl": "3rem"
+    },
+    "typography": {
+      "fontFamily": {
+        "heading": "'Indie Flower', cursive",
+        "body": "'Plus Jakarta Sans', sans-serif"
+      },
+      "fontFaces": [
+        {
+          "fontFamily": "Indie Flower",
+          "src": "url('/brand/fonts/IndieFlower/IndieFlower-Regular.ttf') format('truetype')",
+          "fontWeight": "400",
+          "fontStyle": "normal",
+          "fontDisplay": "swap"
+        },
+        {
+          "fontFamily": "Plus Jakarta Sans",
+          "src": "url('/brand/fonts/Jarkata/PlusJakartaSans-VariableFont_wght.ttf') format('truetype')",
+          "fontWeight": "100 900",
+          "fontStyle": "normal",
+          "fontDisplay": "swap"
+        }
+      ],
+      "fontSize": {
+        "xs": "0.75rem",
+        "sm": "0.85rem",
+        "base": "1rem",
+        "lg": "1.15rem",
+        "xl": "1.5rem",
+        "2xl": "2rem"
+      },
+      "fontWeight": {
+        "light": "300",
+        "normal": "400",
+        "medium": "500",
+        "semibold": "600",
+        "bold": "700"
+      }
+    },
+    "radii": {
+      "sm": "4px",
+      "md": "12px",
+      "apple": "18px",
+      "full": "9999px"
+    },
+    "shadows": {
+      "sm": "0 4px 30px rgba(0, 0, 0, 0.05)",
+      "md": "0 10px 30px rgba(0, 0, 0, 0.05)",
+      "lg": "0 10px 40px rgba(0, 0, 0, 0.1)"
+    },
+    "transitions": {
+      "fast": "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      "standard": "all 0.5s cubic-bezier(0.2, 0, 0.2, 1)"
+    }
+  },
+  "components": {
+    "stack": {
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "0.25rem",
+      "width": "100%",
+      "maxWidth": "100%",
+      "height": "100vh",
+      "background": "{colors.softClay}",
+      "padding": "0.375rem",
+      "overflowY": "auto",
+      "overflowX": "hidden",
+      "fontFamily": "{typography.fontFamily.body}",
+      "color": "{colors.marineBlue}",
+      "boxSizing": "border-box"
+    },
+    "headerSection": {
+      "display": "flex",
+      "flexDirection": "column",
+      "alignItems": "center",
+      "gap": "0.25rem",
+      "marginBottom": "0.25rem",
+      "width": "100%"
+    },
+    "viewSwitcher": {
+      "display": "flex",
+      "gap": "0.2rem",
+      "background": "rgba(255, 255, 255, 0.2)",
+      "padding": "0.15rem",
+      "borderRadius": "{radii.full}",
+      "margin": "0 auto",
+      "border": "1px solid {colors.border}"
+    },
+    "buttonViewSwitch": {
+      "padding": "0.25rem 0.6rem",
+      "background": "transparent",
+      "border": "none",
+      "borderRadius": "{radii.full}",
+      "fontSize": "0.55rem",
+      "fontWeight": "600",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.05em",
+      "color": "{colors.marineBlueMuted}",
+      "cursor": "pointer",
+      "transition": "{transitions.fast}",
+      "data": {
+        "active": {
+          "true": {
+            "background": "{colors.marineBlue}",
+            "color": "{colors.softClay}",
+            "boxShadow": "0 4px 12px rgba(0, 31, 51, 0.2)"
+          }
+        }
+      }
+    },
+    "form": {
+      "display": "flex",
+      "flexDirection": "row",
+      "alignItems": "center",
+      "gap": "0.25rem",
+      "padding": "0.25rem 0.375rem",
+      "background": "rgba(255, 255, 255, 0.4)",
+      "backdropFilter": "blur(8px) saturate(150%)",
+      "borderRadius": "{radii.full}",
+      "border": "1px solid {colors.border}",
+      "boxShadow": "{shadows.md}",
+      "width": "100%",
+      "boxSizing": "border-box",
+      "marginBottom": "0.25rem"
+    },
+    "input": {
+      "flex": "1",
+      "width": "100%",
+      "padding": "0.25rem 0.5rem",
+      "border": "none",
+      "background": "transparent",
+      "fontSize": "0.6rem",
+      "color": "{colors.marineBlue}",
+      "fontFamily": "{typography.fontFamily.body}",
+      "fontWeight": "{typography.fontWeight.light}",
+      "outline": "none",
+      "minHeight": "0",
+      "minWidth": "0",
+      "lineHeight": "1.35"
+    },
+    "button": {
+      "width": "auto",
+      "padding": "0.25rem 0.5rem",
+      "background": "{colors.lushGreen}",
+      "color": "{colors.text.green}",
+      "border": "none",
+      "borderRadius": "{radii.full}",
+      "cursor": "pointer",
+      "fontSize": "0.5rem",
+      "fontWeight": "600",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.05em",
+      "transition": "{transitions.fast}",
+      "boxShadow": "0 4px 12px rgba(78, 154, 88, 0.2)",
+      "whiteSpace": "nowrap",
+      "flexShrink": "0",
+      ":hover": {
+        "filter": "brightness(1.1)",
+        "transform": "translateY(-1px)",
+        "boxShadow": "0 6px 16px rgba(78, 154, 88, 0.3)"
+      }
+    },
+    "errorMessage": {
+      "padding": "{spacing.sm} {spacing.md}",
+      "background": "{colors.errorBg}",
+      "color": "{colors.error}",
+      "borderRadius": "{radii.md}",
+      "border": "1px solid {colors.errorBorder}",
+      "margin": "{spacing.md} 0",
+      "display": "none",
+      "data": {
+        "hasError": {
+          "true": {
+            "display": "block"
+          }
+        }
+      }
+    },
+    "buttonDismiss": {
+      "marginLeft": "{spacing.sm}",
+      "padding": "0.25rem 0.5rem",
+      "background": "transparent",
+      "color": "{colors.error}",
+      "border": "1px solid {colors.errorBorder}",
+      "borderRadius": "{radii.sm}",
+      "cursor": "pointer",
+      "fontSize": "0.5rem",
+      "fontWeight": "600",
+      "transition": "{transitions.fast}",
+      ":hover": {
+        "background": "{colors.error}",
+        "color": "white"
+      }
+    },
+    "card": {
+      "display": "flex",
+      "flexDirection": "column",
+      "alignItems": "flex-start",
+      "gap": "0.25rem",
+      "padding": "0.25rem 0.375rem",
+      "background": "rgba(255, 255, 255, 0.3)",
+      "backdropFilter": "blur(8px) saturate(150%)",
+      "borderRadius": "{radii.apple}",
+      "border": "1px solid {colors.border}",
+      "transition": "{transitions.fast}",
+      "marginBottom": "0.25rem",
+      ":hover": {
+        "background": "rgba(255, 255, 255, 0.5)",
+        "transform": "translateY(-2px)",
+        "boxShadow": "{shadows.sm}"
+      }
+    },
+    "detailContentWrapper": {
+      "display": "flex",
+      "flexDirection": "column",
+      "height": "100%",
+      "width": "100%"
+    },
+    "detailContainer": {
+      "background": "rgba(255, 255, 255, 0.4)",
+      "backdropFilter": "blur(12px) saturate(160%)",
+      "borderRadius": "{radii.apple}",
+      "boxShadow": "{shadows.md}",
+      "overflow": "auto",
+      "border": "1px solid rgba(255, 255, 255, 0.2)",
+      "transition": "{transitions.standard}",
+      "height": "100%",
+      "display": "flex",
+      "flexDirection": "column",
+      "padding": "{spacing.md}"
+    },
+    "detailCategory": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "0.85rem",
+      "fontStyle": "italic",
+      "color": "{colors.paradiseWater}",
+      "marginBottom": "0.5rem",
+      "display": "block",
+      "textShadow": "0 0 10px rgba(0, 189, 214, 0.2)"
+    },
+    "detailTitle": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "{typography.fontSize.xl}",
+      "fontWeight": "{typography.fontWeight.bold}",
+      "color": "{colors.marineBlue}",
+      "marginBottom": "{spacing.md}",
+      "marginTop": "0",
+      "letterSpacing": "-0.02em"
+    },
+    "detailList": {
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "{spacing.sm}"
+    },
+    "detailItem": {
+      "display": "flex",
+      "flexDirection": "row",
+      "justifyContent": "space-between",
+      "alignItems": "center",
+      "padding": "{spacing.sm}",
+      "background": "rgba(255, 255, 255, 0.2)",
+      "borderRadius": "{radii.md}",
+      "gap": "{spacing.md}"
+    },
+    "detailLabel": {
+      "fontWeight": "{typography.fontWeight.semibold}",
+      "color": "{colors.marineBlueLight}",
+      "fontSize": "0.75rem"
+    },
+    "detailValue": {
+      "color": "{colors.marineBlue}",
+      "fontSize": "0.75rem",
+      "fontFamily": "{typography.fontFamily.body}",
+      "wordBreak": "break-all"
+    },
+    "tableContainer": {
+      "background": "rgba(255, 255, 255, 0.4)",
+      "backdropFilter": "blur(12px) saturate(160%)",
+      "borderRadius": "{radii.apple}",
+      "boxShadow": "{shadows.md}",
+      "overflow": "auto",
+      "border": "1px solid rgba(255, 255, 255, 0.2)",
+      "transition": "{transitions.standard}",
+      "height": "100%",
+      "display": "flex",
+      "flexDirection": "column",
+      "padding": "{spacing.md}"
+    }
+  },
+  "selectors": {
+    ":host": {
+      "display": "block",
+      "height": "100%",
+      "background": "transparent"
+    }
+  }
+};
 const todosVibe = {
   "$schema": "@maia/schema/vibe",
   "$id": "@maia/vibe/todos",
   "name": "Todos",
   "description": "Complete todo list with state machines and AI tools",
-  "actor": "@maia/todos/actor/agent"
+  "actor": "@maia/todos/actor/vibe"
 };
 const brandStyle$3 = {
   "$schema": "@maia/schema/style",
@@ -639,212 +975,36 @@ const listStyle = {
     }
   }
 };
-const logsStyle = {
+const comingSoonStyle$1 = {
   "$schema": "@maia/schema/style",
-  "$id": "@maia/todos/style/logs",
+  "$id": "@maia/todos/style/coming-soon",
   "components": {
-    "logs": {
-      "padding": "0",
-      "margin": "0",
-      "background": "transparent",
-      "color": "#001F33",
-      "fontFamily": "'Plus Jakarta Sans', sans-serif",
-      "fontSize": "0.85rem",
-      "lineHeight": "1.5"
-    },
-    "logEntryContainer": {
+    "comingSoon": {
       "display": "flex",
       "flexDirection": "column",
-      "width": "100%",
-      "maxWidth": "100%",
-      "boxSizing": "border-box",
-      "overflow": "hidden"
-    },
-    "logEntries": {
-      "display": "flex",
-      "flexDirection": "column",
-      "gap": "0.2rem",
-      "width": "100%",
-      "maxWidth": "100%",
-      "boxSizing": "border-box"
-    },
-    "logEntry": {
-      "padding": "0.1rem 0.75rem",
-      "margin": "0",
-      "background": "rgba(255, 255, 255, 0.4)",
-      "backdropFilter": "blur(8px) saturate(150%)",
-      "-webkit-backdrop-filter": "blur(8px) saturate(150%)",
-      "border": "1px solid rgba(0, 31, 51, 0.05)",
-      "borderLeft": "4px solid #00BDD6",
-      "borderRadius": "8px",
-      "display": "grid",
-      "gridTemplateColumns": "auto auto auto 1fr auto",
-      "gridTemplateRows": "auto auto",
       "alignItems": "center",
-      "minHeight": "1.3rem",
-      "transition": "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
-      "width": "100%",
-      "maxWidth": "100%",
-      "boxSizing": "border-box",
-      "color": "#001F33",
-      "position": "relative",
-      "boxShadow": "0 2px 8px rgba(0, 0, 0, 0.02)",
-      "overflow": "visible",
-      ":hover": {
-        "background": "rgba(255, 255, 255, 0.6)",
-        "transform": "translateX(4px)",
-        "boxShadow": "0 4px 12px rgba(0, 0, 0, 0.04)"
-      }
+      "justifyContent": "center",
+      "padding": "{spacing.xl}",
+      "minHeight": "200px"
     },
-    "logType": {
-      "color": "#001F33",
-      "fontWeight": "700",
-      "fontSize": "0.6rem",
-      "textTransform": "uppercase",
-      "minWidth": "5rem",
-      "textAlign": "left",
-      "letterSpacing": "0.1em",
-      "opacity": "0.8"
-    },
-    "logSource": {
-      "color": "#2D4A5C",
-      "fontSize": "0.65rem",
-      "fontFamily": "monospace",
-      "minWidth": "8rem",
-      "flexShrink": "0",
-      "fontWeight": "500",
-      "display": "flex",
-      "alignItems": "center",
-      "gap": "0.3rem",
-      "background": "rgba(0, 31, 51, 0.05)",
-      "padding": "0.1rem 0.4rem",
-      "borderRadius": "4px"
-    },
-    "logSourceRole": {
-      "color": "#001F33",
-      "fontWeight": "700",
-      "textTransform": "lowercase",
-      "opacity": "0.6"
-    },
-    "logSourceId": {
-      "color": "#5E7A8C",
-      "fontSize": "0.6rem"
-    },
-    "logTarget": {
-      "color": "#2D4A5C",
-      "fontSize": "0.65rem",
-      "fontFamily": "monospace",
-      "minWidth": "8rem",
-      "flexShrink": "0",
-      "fontWeight": "500",
-      "display": "flex",
-      "alignItems": "center",
-      "gap": "0.3rem",
-      "background": "rgba(0, 189, 214, 0.05)",
-      "padding": "0.1rem 0.4rem",
-      "borderRadius": "4px"
-    },
-    "logTargetRole": {
-      "color": "#004D59",
-      "fontWeight": "700",
-      "textTransform": "lowercase",
-      "opacity": "0.6"
-    },
-    "logTargetId": {
-      "color": "#00BDD6",
-      "fontSize": "0.6rem"
-    },
-    "logPayloadDetails": {
-      "display": "contents"
-    },
-    "logPayloadToggle": {
-      "gridColumn": "5",
-      "gridRow": "1",
-      "color": "#004D59",
-      "fontSize": "0.6rem",
-      "fontWeight": "700",
-      "cursor": "pointer",
-      "userSelect": "none",
-      "padding": "0.15rem 0.5rem",
-      "borderRadius": "9999px",
-      "background": "rgba(0, 189, 214, 0.15)",
-      "border": "1px solid rgba(0, 189, 214, 0.2)",
-      "transition": "all 0.2s ease",
-      "textTransform": "uppercase",
-      "letterSpacing": "0.05em",
-      "justifySelf": "end",
-      ":hover": {
-        "background": "rgba(0, 189, 214, 0.25)",
-        "transform": "scale(1.05)"
-      }
-    },
-    "logPayload": {
-      "gridRow": "2",
-      "gridColumn": "4 / 6",
-      "margin": "0.3rem 0 0.2rem 0",
-      "padding": "0.6rem 0.8rem",
-      "background": "rgba(0, 31, 51, 0.03)",
-      "borderRadius": "8px",
-      "border": "1px solid rgba(0, 31, 51, 0.05)",
-      "color": "#2D4A5C",
-      "fontSize": "0.65rem",
-      "fontFamily": "monospace",
-      "whiteSpace": "pre-wrap",
-      "wordBreak": "break-all",
-      "overflow": "auto",
-      "maxHeight": "400px",
-      "width": "fit-content",
-      "minWidth": "180px",
-      "maxWidth": "100%",
-      "boxSizing": "border-box",
-      "boxShadow": "inset 0 2px 4px rgba(0, 0, 0, 0.02)",
-      "textAlign": "left",
-      "justifySelf": "end",
-      "display": "flex",
-      "alignItems": "center"
-    }
-  },
-  "selectors": {
-    ".log-entry[data-event-type='SUCCESS']": {
-      "borderLeftColor": "#4E9A58",
-      "background": "rgba(78, 154, 88, 0.05)"
-    },
-    ".log-entry[data-event-type='ERROR']": {
-      "borderLeftColor": "#C27B66",
-      "background": "rgba(194, 123, 102, 0.05)"
-    },
-    ".log-entry[data-event-type='SWITCH_VIEW']": {
-      "borderLeftColor": "#00BDD6"
-    },
-    "summary::-webkit-details-marker": {
-      "display": "none"
-    },
-    "summary::marker": {
-      "display": "none"
-    },
-    "details:not([open]) .log-payload": {
-      "display": "none"
+    "comingSoonText": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "1.2rem",
+      "color": "{colors.marineBlueLight}",
+      "fontStyle": "italic"
     }
   }
 };
-const agentActor$3 = {
+const vibeActor$4 = {
   "$schema": "@maia/schema/actor",
-  "$id": "@maia/todos/actor/agent",
+  "$id": "@maia/todos/actor/vibe",
   "role": "agent",
-  "context": "@maia/todos/context/agent",
-  "view": "@maia/todos/view/agent",
-  "state": "@maia/todos/state/agent",
+  "context": "@maia/todos/context/vibe",
+  "view": "@maia/todos/view/vibe",
+  "state": "@maia/todos/state/vibe",
   "brand": "@maia/todos/style/brand",
-  "inbox": "@maia/todos/inbox/agent",
-  "messageTypes": [
-    "CREATE_BUTTON",
-    "TOGGLE_BUTTON",
-    "DELETE_BUTTON",
-    "UPDATE_INPUT",
-    "SWITCH_VIEW",
-    "SUCCESS",
-    "ERROR"
-  ]
+  "inbox": "@maia/todos/inbox/vibe",
+  "messageTypes": ["CREATE_BUTTON", "TOGGLE_BUTTON", "DELETE_BUTTON", "UPDATE_INPUT", "SWITCH_VIEW", "SUCCESS", "ERROR"]
 };
 const listActor = {
   "$schema": "@maia/schema/actor",
@@ -864,24 +1024,21 @@ const listActor = {
     "DISMISS"
   ]
 };
-const logsActor = {
+const comingSoonActor$1 = {
   "$schema": "@maia/schema/actor",
-  "$id": "@maia/todos/actor/logs",
-  "role": "logs",
-  "context": "@maia/todos/context/logs",
-  "view": "@maia/todos/view/logs",
-  "state": "@maia/todos/state/logs",
-  "brand": "@maia/todos/style/brand",
-  "style": "@maia/todos/style/logs",
-  "inbox": "@maia/todos/inbox/logs",
-  "messageTypes": [
-    "RETRY",
-    "DISMISS"
-  ]
+  "$id": "@maia/todos/actor/coming-soon",
+  "role": "ui",
+  "context": "@maia/todos/context/coming-soon",
+  "view": "@maia/todos/view/coming-soon",
+  "state": "@maia/todos/state/coming-soon",
+  "brand": "@maia/style/brand",
+  "style": "@maia/todos/style/coming-soon",
+  "inbox": "@maia/todos/inbox/coming-soon",
+  "messageTypes": []
 };
-const agentView$3 = {
+const vibeView$4 = {
   "$schema": "@maia/schema/view",
-  "$id": "@maia/todos/view/agent",
+  "$id": "@maia/todos/view/vibe",
   "content": {
     "tag": "div",
     "class": "stack",
@@ -890,11 +1047,7 @@ const agentView$3 = {
         "tag": "div",
         "class": "header-section",
         "children": [
-          {
-            "tag": "h2",
-            "class": "todo-title",
-            "text": "Daily Focus"
-          },
+          { "tag": "h2", "class": "todo-title", "text": "Daily Focus" },
           {
             "tag": "div",
             "class": "view-switcher",
@@ -902,36 +1055,16 @@ const agentView$3 = {
               {
                 "tag": "button",
                 "class": "button-view-switch",
-                "attrs": {
-                  "data-view": "list",
-                  "data": {
-                    "active": "$listButtonActive"
-                  }
-                },
+                "attrs": { "data-view": "list", "data": { "active": "$listButtonActive" } },
                 "text": "$listViewLabel",
-                "$on": {
-                  "click": {
-                    "send": "SWITCH_VIEW",
-                    "payload": { "viewMode": "list" }
-                  }
-                }
+                "$on": { "click": { "send": "SWITCH_VIEW", "payload": { "viewMode": "list" } } }
               },
               {
                 "tag": "button",
                 "class": "button-view-switch",
-                "attrs": {
-                  "data-view": "logs",
-                  "data": {
-                    "active": "$logsButtonActive"
-                  }
-                },
-                "text": "$logsViewLabel",
-                "$on": {
-                  "click": {
-                    "send": "SWITCH_VIEW",
-                    "payload": { "viewMode": "logs" }
-                  }
-                }
+                "attrs": { "data-view": "comingSoon", "data": { "active": "$comingSoonButtonActive" } },
+                "text": "$comingSoonViewLabel",
+                "$on": { "click": { "send": "SWITCH_VIEW", "payload": { "viewMode": "comingSoon" } } }
               }
             ]
           }
@@ -943,45 +1076,18 @@ const agentView$3 = {
           {
             "tag": "input",
             "class": "input",
-            "attrs": {
-              "type": "text",
-              "placeholder": "$inputPlaceholder"
-            },
+            "attrs": { "type": "text", "placeholder": "$inputPlaceholder" },
             "value": "$newTodoText",
             "$on": {
-              "input": {
-                "send": "UPDATE_INPUT",
-                "payload": { "value": "@inputValue" }
-              },
-              "blur": {
-                "send": "UPDATE_INPUT",
-                "payload": { "value": "@inputValue" }
-              },
-              "keydown": {
-                "send": "CREATE_BUTTON",
-                "payload": { "value": "@inputValue" },
-                "key": "Enter"
-              }
+              "input": { "send": "UPDATE_INPUT", "payload": { "value": "@inputValue" } },
+              "blur": { "send": "UPDATE_INPUT", "payload": { "value": "@inputValue" } },
+              "keydown": { "send": "CREATE_BUTTON", "payload": { "value": "@inputValue" }, "key": "Enter" }
             }
           },
-          {
-            "tag": "button",
-            "class": "button",
-            "text": "$addButtonText",
-            "$on": {
-              "click": {
-                "send": "CREATE_BUTTON",
-                "payload": { "value": "$newTodoText" }
-              }
-            }
-          }
+          { "tag": "button", "class": "button", "text": "$addButtonText", "$on": { "click": { "send": "CREATE_BUTTON", "payload": { "value": "$newTodoText" } } } }
         ]
       },
-      {
-        "tag": "main",
-        "class": "content-area",
-        "$slot": "$currentView"
-      }
+      { "tag": "main", "class": "content-area", "$slot": "$currentView" }
     ]
   }
 };
@@ -1010,7 +1116,10 @@ const listView = {
             "$on": {
               "click": {
                 "send": "TOGGLE_BUTTON",
-                "payload": { "id": "$$id", "done": "$$done" }
+                "payload": {
+                  "id": "$$id",
+                  "done": "$$done"
+                }
               }
             }
           },
@@ -1021,7 +1130,9 @@ const listView = {
             "$on": {
               "click": {
                 "send": "DELETE_BUTTON",
-                "payload": { "id": "$$id" }
+                "payload": {
+                  "id": "$$id"
+                }
               }
             }
           }
@@ -1030,111 +1141,37 @@ const listView = {
     }
   }
 };
-const logsView = {
+const comingSoonView$1 = {
   "$schema": "@maia/schema/view",
-  "$id": "@maia/todos/view/logs",
+  "$id": "@maia/todos/view/coming-soon",
   "content": {
-    "class": "logs",
-    "attrs": {
-      "data": "log-viewer"
-    },
+    "tag": "div",
+    "class": "coming-soon",
     "children": [
       {
-        "tag": "div",
-        "class": "log-entries",
-        "$each": {
-          "items": "$messages",
-          "template": {
-            "class": "log-entry-container",
-            "children": [
-              {
-                "tag": "div",
-                "class": "log-entry",
-                "attrs": {
-                  "data": {
-                    "eventType": "$$type",
-                    "processed": "$$processed"
-                  }
-                },
-                "children": [
-                  {
-                    "tag": "span",
-                    "class": "log-type",
-                    "text": "$$type"
-                  },
-                  {
-                    "tag": "span",
-                    "class": "log-source",
-                    "children": [
-                      {
-                        "tag": "span",
-                        "class": "log-source-role",
-                        "text": "$$fromRole"
-                      },
-                      {
-                        "tag": "span",
-                        "class": "log-source-id",
-                        "text": "$$fromId"
-                      }
-                    ]
-                  },
-                  {
-                    "tag": "span",
-                    "class": "log-target",
-                    "children": [
-                      {
-                        "tag": "span",
-                        "class": "log-target-role",
-                        "text": "$$recipient"
-                      },
-                      {
-                        "tag": "span",
-                        "class": "log-target-id",
-                        "text": "$$targetId"
-                      }
-                    ]
-                  },
-                  {
-                    "tag": "details",
-                    "class": "log-payload-details",
-                    "children": [
-                      {
-                        "tag": "summary",
-                        "class": "log-payload-toggle",
-                        "text": "$payloadLabel"
-                      },
-                      {
-                        "tag": "pre",
-                        "class": "log-payload",
-                        "text": "$$payload"
-                      }
-                    ]
-                  }
-                ]
-              }
-            ]
-          }
-        }
+        "tag": "p",
+        "class": "coming-soon-text",
+        "text": "$message"
       }
     ]
   }
 };
-const agentContext$3 = {
+const vibeContext$4 = {
   "$schema": "@maia/schema/context",
-  "$id": "@maia/todos/context/agent",
+  "$id": "@maia/todos/context/vibe",
   "currentView": "@list",
   "viewMode": "list",
   "listButtonActive": true,
-  "logsButtonActive": false,
+  "comingSoonButtonActive": false,
   "inputPlaceholder": "Add a new todo...",
   "addButtonText": "Add",
   "listViewLabel": "List",
-  "logsViewLabel": "Logs",
+  "comingSoonViewLabel": "Soon",
   "newTodoText": "",
   "error": null,
   "@actors": {
     "list": "@maia/todos/actor/list",
-    "logs": "@maia/todos/actor/logs"
+    "comingSoon": "@maia/todos/actor/coming-soon"
   }
 };
 const listContext = {
@@ -1146,242 +1183,56 @@ const listContext = {
   "toggleButtonText": "✓",
   "deleteButtonText": "✕"
 };
-const logsContext = {
+const comingSoonContext$1 = {
   "$schema": "@maia/schema/context",
-  "$id": "@maia/todos/context/logs",
-  "messages": {
-    "schema": "@maia/schema/message",
-    "options": {
-      "map": {
-        "fromRole": "$$source.role",
-        "toRole": "$$target.role",
-        "fromId": "$$source.id",
-        "toId": "$$target.id"
-      }
-    }
-  },
-  "payloadLabel": "payload"
+  "$id": "@maia/todos/context/coming-soon",
+  "message": "Coming soon"
 };
-const agentState$3 = {
+const vibeState$4 = {
   "$schema": "@maia/schema/state",
-  "$id": "@maia/todos/state/agent",
+  "$id": "@maia/todos/state/vibe",
   "initial": "idle",
   "states": {
     "idle": {
       "on": {
-        "CREATE_BUTTON": {
-          "target": "creating"
-        },
-        "TOGGLE_BUTTON": {
-          "target": "toggling"
-        },
-        "DELETE_BUTTON": {
-          "target": "deleting"
-        },
+        "CREATE_BUTTON": { "target": "creating" },
+        "TOGGLE_BUTTON": { "target": "toggling" },
+        "DELETE_BUTTON": { "target": "deleting" },
         "SWITCH_VIEW": {
           "target": "idle",
           "actions": [
-            {
-              "updateContext": { "viewMode": "$$viewMode" }
-            },
-            {
-              "updateContext": {
-                "currentView": {
-                  "$if": {
-                    "condition": { "$eq": ["$$viewMode", "list"] },
-                    "then": "@list",
-                    "else": "@logs"
-                  }
-                }
-              }
-            },
-            {
-              "updateContext": {
-                "listButtonActive": {
-                  "$eq": ["$$viewMode", "list"]
-                }
-              }
-            },
-            {
-              "updateContext": {
-                "logsButtonActive": {
-                  "$eq": ["$$viewMode", "logs"]
-                }
-              }
-            }
+            { "updateContext": { "viewMode": "$$viewMode" } },
+            { "updateContext": { "currentView": { "$if": { "condition": { "$eq": ["$$viewMode", "list"] }, "then": "@list", "else": "@comingSoon" } } } },
+            { "updateContext": { "listButtonActive": { "$eq": ["$$viewMode", "list"] } } },
+            { "updateContext": { "comingSoonButtonActive": { "$eq": ["$$viewMode", "comingSoon"] } } }
           ]
         },
-        "UPDATE_INPUT": {
-          "target": "idle",
-          "actions": [
-            {
-              "updateContext": { "newTodoText": "$$value" }
-            }
-          ]
-        }
+        "UPDATE_INPUT": { "target": "idle", "actions": [{ "updateContext": { "newTodoText": "$$value" } }] }
       }
     },
     "creating": {
-      "entry": {
-        "tool": "@db",
-        "payload": {
-          "op": "create",
-          "schema": "@maia/schema/data/todos",
-          "data": { "text": "$$value", "done": false }
-        }
-      },
+      "entry": { "tool": "@db", "payload": { "op": "create", "schema": "@maia/schema/data/todos", "data": { "text": "$$value", "done": false } } },
       "on": {
-        "UPDATE_INPUT": {
-          "target": "idle"
-        },
-        "CREATE_BUTTON": {
-          "target": "creating"
-        },
-        "TOGGLE_BUTTON": {
-          "target": "toggling"
-        },
-        "DELETE_BUTTON": {
-          "target": "deleting"
-        },
-        "SWITCH_VIEW": {
-          "target": "idle",
-          "actions": [
-            {
-              "updateContext": { "viewMode": "$$viewMode" }
-            },
-            {
-              "updateContext": {
-                "currentView": {
-                  "$if": {
-                    "condition": { "$eq": ["$$viewMode", "list"] },
-                    "then": "@list",
-                    "else": "@logs"
-                  }
-                }
-              }
-            },
-            {
-              "updateContext": {
-                "listButtonActive": {
-                  "$eq": ["$$viewMode", "list"]
-                }
-              }
-            },
-            {
-              "updateContext": {
-                "logsButtonActive": {
-                  "$eq": ["$$viewMode", "logs"]
-                }
-              }
-            }
-          ]
-        },
-        "SUCCESS": {
-          "target": "idle",
-          "actions": [
-            {
-              "updateContext": { "newTodoText": "" }
-            }
-          ]
-        },
+        "UPDATE_INPUT": { "target": "idle" },
+        "CREATE_BUTTON": { "target": "creating" },
+        "TOGGLE_BUTTON": { "target": "toggling" },
+        "DELETE_BUTTON": { "target": "deleting" },
+        "SWITCH_VIEW": { "target": "idle", "actions": [{ "updateContext": { "viewMode": "$$viewMode" } }, { "updateContext": { "currentView": { "$if": { "condition": { "$eq": ["$$viewMode", "list"] }, "then": "@list", "else": "@comingSoon" } } } }, { "updateContext": { "listButtonActive": { "$eq": ["$$viewMode", "list"] } } }, { "updateContext": { "comingSoonButtonActive": { "$eq": ["$$viewMode", "comingSoon"] } } }] },
+        "SUCCESS": { "target": "idle", "actions": [{ "updateContext": { "newTodoText": "" } }] },
         "ERROR": "error"
       }
     },
     "toggling": {
-      "entry": {
-        "tool": "@db",
-        "payload": {
-          "op": "update",
-          "id": "$$id",
-          "data": {
-            "done": {
-              "$not": "$$done"
-            }
-          }
-        }
-      },
-      "on": {
-        "TOGGLE_BUTTON": {
-          "target": "toggling"
-        },
-        "DELETE_BUTTON": {
-          "target": "deleting"
-        },
-        "UPDATE_INPUT": {
-          "target": "idle"
-        },
-        "CREATE_BUTTON": {
-          "target": "creating"
-        },
-        "SWITCH_VIEW": {
-          "target": "idle"
-        },
-        "SUCCESS": {
-          "target": "idle"
-        },
-        "ERROR": "error"
-      }
+      "entry": { "tool": "@db", "payload": { "op": "update", "id": "$$id", "data": { "done": { "$not": "$$done" } } } },
+      "on": { "TOGGLE_BUTTON": { "target": "toggling" }, "DELETE_BUTTON": { "target": "deleting" }, "UPDATE_INPUT": { "target": "idle" }, "CREATE_BUTTON": { "target": "creating" }, "SWITCH_VIEW": { "target": "idle" }, "SUCCESS": { "target": "idle" }, "ERROR": "error" }
     },
     "deleting": {
-      "entry": {
-        "tool": "@db",
-        "payload": {
-          "op": "delete",
-          "id": "$$id"
-        }
-      },
-      "on": {
-        "DELETE_BUTTON": {
-          "target": "deleting"
-        },
-        "UPDATE_INPUT": {
-          "target": "idle"
-        },
-        "CREATE_BUTTON": {
-          "target": "creating"
-        },
-        "SWITCH_VIEW": {
-          "target": "idle"
-        },
-        "TOGGLE_BUTTON": {
-          "target": "toggling"
-        },
-        "SUCCESS": {
-          "target": "idle"
-        },
-        "ERROR": {
-          "target": "error"
-        }
-      }
+      "entry": { "tool": "@db", "payload": { "op": "delete", "id": "$$id" } },
+      "on": { "DELETE_BUTTON": { "target": "deleting" }, "UPDATE_INPUT": { "target": "idle" }, "CREATE_BUTTON": { "target": "creating" }, "SWITCH_VIEW": { "target": "idle" }, "TOGGLE_BUTTON": { "target": "toggling" }, "SUCCESS": { "target": "idle" }, "ERROR": { "target": "error" } }
     },
     "error": {
-      "entry": {
-        "updateContext": { "error": "$$error" }
-      },
-      "on": {
-        "TOGGLE_BUTTON": {
-          "target": "toggling"
-        },
-        "DELETE_BUTTON": {
-          "target": "deleting"
-        },
-        "RETRY": {
-          "target": "idle",
-          "actions": [
-            {
-              "updateContext": { "error": null }
-            }
-          ]
-        },
-        "DISMISS": {
-          "target": "idle",
-          "actions": [
-            {
-              "updateContext": { "error": null }
-            }
-          ]
-        }
-      }
+      "entry": { "updateContext": { "error": "$$error" } },
+      "on": { "TOGGLE_BUTTON": { "target": "toggling" }, "DELETE_BUTTON": { "target": "deleting" }, "RETRY": { "target": "idle", "actions": [{ "updateContext": { "error": null } }] }, "DISMISS": { "target": "idle", "actions": [{ "updateContext": { "error": null } }] } }
     }
   }
 };
@@ -1399,8 +1250,11 @@ const listState = {
               "tool": "@core/publishMessage",
               "payload": {
                 "type": "TOGGLE_BUTTON",
-                "payload": { "id": "$$id", "done": "$$done" },
-                "target": "@maia/todos/actor/agent"
+                "payload": {
+                  "id": "$$id",
+                  "done": "$$done"
+                },
+                "target": "@maia/todos/actor/vibe"
               }
             }
           ]
@@ -1412,8 +1266,10 @@ const listState = {
               "tool": "@core/publishMessage",
               "payload": {
                 "type": "DELETE_BUTTON",
-                "payload": { "id": "$$id" },
-                "target": "@maia/todos/actor/agent"
+                "payload": {
+                  "id": "$$id"
+                },
+                "target": "@maia/todos/actor/vibe"
               }
             }
           ]
@@ -1425,14 +1281,18 @@ const listState = {
     },
     "error": {
       "entry": {
-        "updateContext": { "error": "$$error" }
+        "updateContext": {
+          "error": "$$error"
+        }
       },
       "on": {
         "RETRY": {
           "target": "idle",
           "actions": [
             {
-              "updateContext": { "error": null }
+              "updateContext": {
+                "error": null
+              }
             }
           ]
         },
@@ -1440,7 +1300,9 @@ const listState = {
           "target": "idle",
           "actions": [
             {
-              "updateContext": { "error": null }
+              "updateContext": {
+                "error": null
+              }
             }
           ]
         }
@@ -1448,40 +1310,17 @@ const listState = {
     }
   }
 };
-const logsState = {
+const comingSoonState$1 = {
   "$schema": "@maia/schema/state",
-  "$id": "@maia/todos/state/logs",
+  "$id": "@maia/todos/state/coming-soon",
   "initial": "idle",
   "states": {
-    "idle": {},
-    "error": {
-      "entry": {
-        "updateContext": { "error": "$$error" }
-      },
-      "on": {
-        "RETRY": {
-          "target": "idle",
-          "actions": [
-            {
-              "updateContext": { "error": null }
-            }
-          ]
-        },
-        "DISMISS": {
-          "target": "idle",
-          "actions": [
-            {
-              "updateContext": { "error": null }
-            }
-          ]
-        }
-      }
-    }
+    "idle": {}
   }
 };
-const agentInbox$3 = {
+const vibeInbox$4 = {
   "$schema": "@maia/schema/inbox",
-  "$id": "@maia/todos/inbox/agent",
+  "$id": "@maia/todos/inbox/vibe",
   "items": []
 };
 const listInbox = {
@@ -1489,62 +1328,52 @@ const listInbox = {
   "$id": "@maia/todos/inbox/list",
   "items": []
 };
-const logsInbox = {
+const comingSoonInbox$1 = {
   "$schema": "@maia/schema/inbox",
-  "$id": "@maia/todos/inbox/logs",
+  "$id": "@maia/todos/inbox/coming-soon",
   "items": []
 };
 const TodosVibeRegistry = {
   vibe: todosVibe,
   styles: {
+    "@maia/style/brand": masterBrand,
     "@maia/todos/style/brand": brandStyle$3,
     "@maia/todos/style/list": listStyle,
-    "@maia/todos/style/logs": logsStyle
+    "@maia/todos/style/coming-soon": comingSoonStyle$1
   },
   actors: {
-    "@maia/todos/actor/agent": agentActor$3,
+    "@maia/todos/actor/vibe": vibeActor$4,
     "@maia/todos/actor/list": listActor,
-    "@maia/todos/actor/logs": logsActor
+    "@maia/todos/actor/coming-soon": comingSoonActor$1
   },
   views: {
-    "@maia/todos/view/agent": agentView$3,
+    "@maia/todos/view/vibe": vibeView$4,
     "@maia/todos/view/list": listView,
-    "@maia/todos/view/logs": logsView
+    "@maia/todos/view/coming-soon": comingSoonView$1
   },
   contexts: {
-    "@maia/todos/context/agent": agentContext$3,
+    "@maia/todos/context/vibe": vibeContext$4,
     "@maia/todos/context/list": listContext,
-    "@maia/todos/context/logs": logsContext
+    "@maia/todos/context/coming-soon": comingSoonContext$1
   },
   states: {
-    "@maia/todos/state/agent": agentState$3,
+    "@maia/todos/state/vibe": vibeState$4,
     "@maia/todos/state/list": listState,
-    "@maia/todos/state/logs": logsState
+    "@maia/todos/state/coming-soon": comingSoonState$1
   },
   inboxes: {
-    "@maia/todos/inbox/agent": agentInbox$3,
+    "@maia/todos/inbox/vibe": vibeInbox$4,
     "@maia/todos/inbox/list": listInbox,
-    "@maia/todos/inbox/logs": logsInbox
+    "@maia/todos/inbox/coming-soon": comingSoonInbox$1
   },
-  // Note: Children are now stored in context.actors (not separate children CoList files)
-  // See agent.context.maia and composite.context.maia for children definitions
-  // Initial data for seeding (creates individual todo CoMap items)
-  // NOTE: These todos are automatically indexed into account.os.{schemaCoId} via storage hooks
-  // The read() query reads from account.os.{schemaCoId}, NOT from account.data.todos (which is deprecated)
   data: {
     todos: [
-      {
-        text: "Welcome to MaiaOS! 🎉",
-        done: false
-      },
-      {
-        text: "Toggle me to mark as complete",
-        done: false
-      }
+      { text: "Welcome to MaiaOS! 🎉", done: false },
+      { text: "Toggle me to mark as complete", done: false }
     ]
   }
 };
-const registry$3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const registry$4 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   TodosVibeRegistry
 }, Symbol.toStringTag, { value: "Module" }));
@@ -1592,16 +1421,16 @@ async function loadTodosVibe(container) {
   );
   return { os, vibe, actor: todoActor };
 }
-const myDataVibe = {
+const dbVibe = {
   "$schema": "@maia/schema/vibe",
-  "$id": "@maia/vibe/my-data",
+  "$id": "@maia/vibe/db",
   "name": "MaiaDB",
   "description": "Database viewer with navigation and detail panels",
-  "actor": "@maia/my-data/actor/agent"
+  "actor": "@maia/db/actor/vibe"
 };
 const brandStyle$2 = {
   "$schema": "@maia/schema/style",
-  "$id": "@maia/my-data/style/brand",
+  "$id": "@maia/db/style/brand",
   "tokens": {
     "colors": {
       "marineBlue": "#001F33",
@@ -2043,15 +1872,15 @@ const brandStyle$2 = {
     }
   }
 };
-const agentActor$2 = {
+const vibeActor$3 = {
   "$schema": "@maia/schema/actor",
-  "$id": "@maia/my-data/actor/agent",
+  "$id": "@maia/db/actor/vibe",
   "role": "agent",
-  "context": "@maia/my-data/context/agent",
-  "view": "@maia/my-data/view/agent",
-  "state": "@maia/my-data/state/agent",
-  "brand": "@maia/my-data/style/brand",
-  "inbox": "@maia/my-data/inbox/agent",
+  "context": "@maia/db/context/vibe",
+  "view": "@maia/db/view/vibe",
+  "state": "@maia/db/state/vibe",
+  "brand": "@maia/db/style/brand",
+  "inbox": "@maia/db/inbox/vibe",
   "messageTypes": [
     "SELECT_NAV",
     "SELECT_ROW"
@@ -2059,31 +1888,31 @@ const agentActor$2 = {
 };
 const tableActor = {
   "$schema": "@maia/schema/actor",
-  "$id": "@maia/my-data/actor/table",
+  "$id": "@maia/db/actor/table",
   "role": "ui",
-  "context": "@maia/my-data/context/table",
-  "view": "@maia/my-data/view/table",
-  "state": "@maia/my-data/state/table",
-  "brand": "@maia/my-data/style/brand",
-  "inbox": "@maia/my-data/inbox/table",
+  "context": "@maia/db/context/table",
+  "view": "@maia/db/view/table",
+  "state": "@maia/db/state/table",
+  "brand": "@maia/db/style/brand",
+  "inbox": "@maia/db/inbox/table",
   "messageTypes": [
     "SELECT_ROW"
   ]
 };
 const detailActor$1 = {
   "$schema": "@maia/schema/actor",
-  "$id": "@maia/my-data/actor/detail",
+  "$id": "@maia/db/actor/detail",
   "role": "ui",
-  "context": "@maia/my-data/context/detail",
-  "view": "@maia/my-data/view/detail",
-  "state": "@maia/my-data/state/detail",
-  "brand": "@maia/my-data/style/brand",
-  "inbox": "@maia/my-data/inbox/detail",
+  "context": "@maia/db/context/detail",
+  "view": "@maia/db/view/detail",
+  "state": "@maia/db/state/detail",
+  "brand": "@maia/db/style/brand",
+  "inbox": "@maia/db/inbox/detail",
   "messageTypes": []
 };
-const agentView$2 = {
+const vibeView$3 = {
   "$schema": "@maia/schema/view",
-  "$id": "@maia/my-data/view/agent",
+  "$id": "@maia/db/view/vibe",
   "content": {
     "tag": "div",
     "class": "db-viewer",
@@ -2142,7 +1971,9 @@ const agentView$2 = {
                             "$on": {
                               "click": {
                                 "send": "SELECT_NAV",
-                                "payload": { "navId": "$$id" }
+                                "payload": {
+                                  "navId": "$$id"
+                                }
                               }
                             }
                           }
@@ -2185,7 +2016,7 @@ const agentView$2 = {
 };
 const tableView = {
   "$schema": "@maia/schema/view",
-  "$id": "@maia/my-data/view/table",
+  "$id": "@maia/db/view/table",
   "content": {
     "tag": "div",
     "class": "table-container",
@@ -2261,7 +2092,9 @@ const tableView = {
                 "$on": {
                   "click": {
                     "send": "SELECT_ROW",
-                    "payload": { "rowId": "$$id" }
+                    "payload": {
+                      "rowId": "$$id"
+                    }
                   }
                 }
               }
@@ -2274,7 +2107,7 @@ const tableView = {
 };
 const detailView$1 = {
   "$schema": "@maia/schema/view",
-  "$id": "@maia/my-data/view/detail",
+  "$id": "@maia/db/view/detail",
   "content": {
     "tag": "div",
     "class": "detail-container",
@@ -2297,80 +2130,160 @@ const detailView$1 = {
             "tag": "div",
             "class": "detail-item",
             "children": [
-              { "tag": "span", "class": "detail-label", "text": "$detailLabels.id" },
-              { "tag": "span", "class": "detail-value", "text": "$detail.id" }
+              {
+                "tag": "span",
+                "class": "detail-label",
+                "text": "$detailLabels.id"
+              },
+              {
+                "tag": "span",
+                "class": "detail-value",
+                "text": "$detail.id"
+              }
             ]
           },
           {
             "tag": "div",
             "class": "detail-item",
             "children": [
-              { "tag": "span", "class": "detail-label", "text": "$detailLabels.name" },
-              { "tag": "span", "class": "detail-value", "text": "$detail.name" }
+              {
+                "tag": "span",
+                "class": "detail-label",
+                "text": "$detailLabels.name"
+              },
+              {
+                "tag": "span",
+                "class": "detail-value",
+                "text": "$detail.name"
+              }
             ]
           },
           {
             "tag": "div",
             "class": "detail-item",
             "children": [
-              { "tag": "span", "class": "detail-label", "text": "$detailLabels.email" },
-              { "tag": "span", "class": "detail-value", "text": "$detail.email" }
+              {
+                "tag": "span",
+                "class": "detail-label",
+                "text": "$detailLabels.email"
+              },
+              {
+                "tag": "span",
+                "class": "detail-value",
+                "text": "$detail.email"
+              }
             ]
           },
           {
             "tag": "div",
             "class": "detail-item",
             "children": [
-              { "tag": "span", "class": "detail-label", "text": "$detailLabels.role" },
-              { "tag": "span", "class": "detail-value", "text": "$detail.role" }
+              {
+                "tag": "span",
+                "class": "detail-label",
+                "text": "$detailLabels.role"
+              },
+              {
+                "tag": "span",
+                "class": "detail-value",
+                "text": "$detail.role"
+              }
             ]
           },
           {
             "tag": "div",
             "class": "detail-item",
             "children": [
-              { "tag": "span", "class": "detail-label", "text": "$detailLabels.status" },
-              { "tag": "span", "class": "detail-value", "text": "$detail.status" }
+              {
+                "tag": "span",
+                "class": "detail-label",
+                "text": "$detailLabels.status"
+              },
+              {
+                "tag": "span",
+                "class": "detail-value",
+                "text": "$detail.status"
+              }
             ]
           },
           {
             "tag": "div",
             "class": "detail-item",
             "children": [
-              { "tag": "span", "class": "detail-label", "text": "$detailLabels.createdAt" },
-              { "tag": "span", "class": "detail-value", "text": "$detail.createdAt" }
+              {
+                "tag": "span",
+                "class": "detail-label",
+                "text": "$detailLabels.createdAt"
+              },
+              {
+                "tag": "span",
+                "class": "detail-value",
+                "text": "$detail.createdAt"
+              }
             ]
           },
           {
             "tag": "div",
             "class": "detail-item",
             "children": [
-              { "tag": "span", "class": "detail-label", "text": "$detailLabels.lastLogin" },
-              { "tag": "span", "class": "detail-value", "text": "$detail.lastLogin" }
+              {
+                "tag": "span",
+                "class": "detail-label",
+                "text": "$detailLabels.lastLogin"
+              },
+              {
+                "tag": "span",
+                "class": "detail-value",
+                "text": "$detail.lastLogin"
+              }
             ]
           },
           {
             "tag": "div",
             "class": "detail-item",
             "children": [
-              { "tag": "span", "class": "detail-label", "text": "$detailLabels.bio" },
-              { "tag": "span", "class": "detail-value", "text": "$detail.bio" }
+              {
+                "tag": "span",
+                "class": "detail-label",
+                "text": "$detailLabels.bio"
+              },
+              {
+                "tag": "span",
+                "class": "detail-value",
+                "text": "$detail.bio"
+              }
             ]
           },
           {
             "tag": "div",
             "class": "detail-item",
             "children": [
-              { "tag": "span", "class": "detail-label", "text": "$detailLabels.department" },
-              { "tag": "span", "class": "detail-value", "text": "$detail.department" }
+              {
+                "tag": "span",
+                "class": "detail-label",
+                "text": "$detailLabels.department"
+              },
+              {
+                "tag": "span",
+                "class": "detail-value",
+                "text": "$detail.department"
+              }
             ]
           },
           {
             "tag": "div",
             "class": "detail-item",
             "children": [
-              { "tag": "span", "class": "detail-label", "text": "$detailLabels.phone" },
-              { "tag": "span", "class": "detail-value", "text": "$detail.phone" }
+              {
+                "tag": "span",
+                "class": "detail-label",
+                "text": "$detailLabels.phone"
+              },
+              {
+                "tag": "span",
+                "class": "detail-value",
+                "text": "$detail.phone"
+              }
             ]
           }
         ]
@@ -2378,53 +2291,110 @@ const detailView$1 = {
     ]
   }
 };
-const agentContext$2 = {
+const vibeContext$3 = {
   "$schema": "@maia/schema/context",
-  "$id": "@maia/my-data/context/agent",
+  "$id": "@maia/db/context/vibe",
   "navTitle": "MaiaDB",
   "navCategories": [
     {
       "category": "Account",
       "items": [
-        { "id": "account", "label": "Owner" },
-        { "id": "group", "label": "Avatar" }
+        {
+          "id": "account",
+          "label": "Owner"
+        },
+        {
+          "id": "group",
+          "label": "Avatar"
+        }
       ]
     },
     {
       "category": "Vibes",
       "items": [
-        { "id": "maia-db", "label": "MaiaDB" },
-        { "id": "todos", "label": "Todos" }
+        {
+          "id": "maia-db",
+          "label": "MaiaDB"
+        },
+        {
+          "id": "todos",
+          "label": "Todos"
+        }
       ]
     },
     {
       "category": "OS",
       "items": [
-        { "id": "schemata", "label": "Schemata" },
-        { "id": "indexes", "label": "Indexes" }
+        {
+          "id": "schemata",
+          "label": "Schemata"
+        },
+        {
+          "id": "indexes",
+          "label": "Indexes"
+        }
       ]
     }
   ],
   "selectedNavId": "account",
   "selectedRowId": "1",
-  "selectedNavItems": { "account": true },
-  "selectedRowItems": { "1": true },
+  "selectedNavItems": {
+    "account": true
+  },
+  "selectedRowItems": {
+    "1": true
+  },
   "currentTable": "@table",
   "currentDetail": "@detail",
   "@actors": {
-    "table": "@maia/my-data/actor/table",
-    "detail": "@maia/my-data/actor/detail"
+    "table": "@maia/db/actor/table",
+    "detail": "@maia/db/actor/detail"
   }
 };
 const tableContext = {
   "$schema": "@maia/schema/context",
-  "$id": "@maia/my-data/context/table",
+  "$id": "@maia/db/context/table",
   "table": [
-    { "id": "1", "name": "John Doe", "email": "john@example.com", "role": "admin", "status": "active", "createdAt": "2024-01-15" },
-    { "id": "2", "name": "Jane Smith", "email": "jane@example.com", "role": "user", "status": "active", "createdAt": "2024-01-20" },
-    { "id": "3", "name": "Bob Johnson", "email": "bob@example.com", "role": "user", "status": "inactive", "createdAt": "2024-02-01" },
-    { "id": "4", "name": "Alice Williams", "email": "alice@example.com", "role": "moderator", "status": "active", "createdAt": "2024-02-10" },
-    { "id": "5", "name": "Charlie Brown", "email": "charlie@example.com", "role": "user", "status": "pending", "createdAt": "2024-02-15" }
+    {
+      "id": "1",
+      "name": "John Doe",
+      "email": "john@example.com",
+      "role": "admin",
+      "status": "active",
+      "createdAt": "2024-01-15"
+    },
+    {
+      "id": "2",
+      "name": "Jane Smith",
+      "email": "jane@example.com",
+      "role": "user",
+      "status": "active",
+      "createdAt": "2024-01-20"
+    },
+    {
+      "id": "3",
+      "name": "Bob Johnson",
+      "email": "bob@example.com",
+      "role": "user",
+      "status": "inactive",
+      "createdAt": "2024-02-01"
+    },
+    {
+      "id": "4",
+      "name": "Alice Williams",
+      "email": "alice@example.com",
+      "role": "moderator",
+      "status": "active",
+      "createdAt": "2024-02-10"
+    },
+    {
+      "id": "5",
+      "name": "Charlie Brown",
+      "email": "charlie@example.com",
+      "role": "user",
+      "status": "pending",
+      "createdAt": "2024-02-15"
+    }
   ],
   "selectedRowId": null,
   "tableHeaders": {
@@ -2437,7 +2407,7 @@ const tableContext = {
 };
 const detailContext$1 = {
   "$schema": "@maia/schema/context",
-  "$id": "@maia/my-data/context/detail",
+  "$id": "@maia/db/context/detail",
   "detail": {
     "id": "1",
     "name": "John Doe",
@@ -2463,9 +2433,9 @@ const detailContext$1 = {
     "phone": "Phone"
   }
 };
-const agentState$2 = {
+const vibeState$3 = {
   "$schema": "@maia/schema/state",
-  "$id": "@maia/my-data/state/agent",
+  "$id": "@maia/db/state/vibe",
   "initial": "idle",
   "states": {
     "idle": {
@@ -2476,7 +2446,9 @@ const agentState$2 = {
             {
               "updateContext": {
                 "selectedNavId": "$$navId",
-                "selectedNavItems": { "$$navId": true }
+                "selectedNavItems": {
+                  "$$navId": true
+                }
               }
             },
             {
@@ -2493,7 +2465,9 @@ const agentState$2 = {
             {
               "updateContext": {
                 "selectedRowId": "$$rowId",
-                "selectedRowItems": { "$$rowId": true }
+                "selectedRowItems": {
+                  "$$rowId": true
+                }
               }
             }
           ]
@@ -2504,7 +2478,7 @@ const agentState$2 = {
 };
 const tableState = {
   "$schema": "@maia/schema/state",
-  "$id": "@maia/my-data/state/table",
+  "$id": "@maia/db/state/table",
   "initial": "idle",
   "states": {
     "idle": {
@@ -2513,7 +2487,9 @@ const tableState = {
           "target": "idle",
           "actions": [
             {
-              "updateContext": { "selectedRowId": "$$rowId" }
+              "updateContext": {
+                "selectedRowId": "$$rowId"
+              }
             }
           ]
         }
@@ -2523,66 +2499,66 @@ const tableState = {
 };
 const detailState$1 = {
   "$schema": "@maia/schema/state",
-  "$id": "@maia/my-data/state/detail",
+  "$id": "@maia/db/state/detail",
   "initial": "idle",
   "states": {
     "idle": {}
   }
 };
-const agentInbox$2 = {
+const vibeInbox$3 = {
   "$schema": "@maia/schema/inbox",
-  "$id": "@maia/my-data/inbox/agent",
+  "$id": "@maia/db/inbox/vibe",
   "cotype": "costream"
 };
 const tableInbox = {
   "$schema": "@maia/schema/inbox",
-  "$id": "@maia/my-data/inbox/table",
+  "$id": "@maia/db/inbox/table",
   "cotype": "costream"
 };
 const detailInbox$1 = {
   "$schema": "@maia/schema/inbox",
-  "$id": "@maia/my-data/inbox/detail",
+  "$id": "@maia/db/inbox/detail",
   "cotype": "costream"
 };
-const MyDataVibeRegistry = {
-  vibe: myDataVibe,
+const DbVibeRegistry = {
+  vibe: dbVibe,
   styles: {
-    "@maia/my-data/style/brand": brandStyle$2
+    "@maia/db/style/brand": brandStyle$2
   },
   actors: {
-    "@maia/my-data/actor/agent": agentActor$2,
-    "@maia/my-data/actor/table": tableActor,
-    "@maia/my-data/actor/detail": detailActor$1
+    "@maia/db/actor/vibe": vibeActor$3,
+    "@maia/db/actor/table": tableActor,
+    "@maia/db/actor/detail": detailActor$1
   },
   views: {
-    "@maia/my-data/view/agent": agentView$2,
-    "@maia/my-data/view/table": tableView,
-    "@maia/my-data/view/detail": detailView$1
+    "@maia/db/view/vibe": vibeView$3,
+    "@maia/db/view/table": tableView,
+    "@maia/db/view/detail": detailView$1
   },
   contexts: {
-    "@maia/my-data/context/agent": agentContext$2,
-    "@maia/my-data/context/table": tableContext,
-    "@maia/my-data/context/detail": detailContext$1
+    "@maia/db/context/vibe": vibeContext$3,
+    "@maia/db/context/table": tableContext,
+    "@maia/db/context/detail": detailContext$1
   },
   states: {
-    "@maia/my-data/state/agent": agentState$2,
-    "@maia/my-data/state/table": tableState,
-    "@maia/my-data/state/detail": detailState$1
+    "@maia/db/state/vibe": vibeState$3,
+    "@maia/db/state/table": tableState,
+    "@maia/db/state/detail": detailState$1
   },
   inboxes: {
-    "@maia/my-data/inbox/agent": agentInbox$2,
-    "@maia/my-data/inbox/table": tableInbox,
-    "@maia/my-data/inbox/detail": detailInbox$1
+    "@maia/db/inbox/vibe": vibeInbox$3,
+    "@maia/db/inbox/table": tableInbox,
+    "@maia/db/inbox/detail": detailInbox$1
   },
   // No initial data - this vibe uses mocked data in context
   data: {}
 };
-const registry$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const registry$3 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  MyDataVibeRegistry
+  DbVibeRegistry
 }, Symbol.toStringTag, { value: "Module" }));
-async function loadMyDataVibe(container) {
-  console.log("🚀 Booting MaiaOS for My Data Vibe...");
+async function loadDbVibe(container) {
+  console.log("🚀 Booting MaiaOS for DB Vibe...");
   let os;
   const checkForExistingSession = () => {
     if (window.maia && window.maia.id && window.maia.id.node && window.maia.id.maiaId) {
@@ -2614,23 +2590,23 @@ async function loadMyDataVibe(container) {
       account,
       modules: ["db", "core"],
       // db module provides @db tool
-      registry: MyDataVibeRegistry
+      registry: DbVibeRegistry
       // Registry passed but seeding skipped for CoJSON backend
     });
   }
-  const { vibe, actor: myDataActor } = await os.loadVibeFromAccount(
-    "myData",
+  const { vibe, actor: dbActor } = await os.loadVibeFromAccount(
+    "db",
     // Vibe key in account.vibes
     container
   );
-  return { os, vibe, actor: myDataActor };
+  return { os, vibe, actor: dbActor };
 }
 const sparksVibe = {
   "$schema": "@maia/schema/vibe",
   "$id": "@maia/vibe/sparks",
   "name": "Sparks",
   "description": "Create and manage collaborative groups (sparks)",
-  "actor": "@maia/sparks/actor/agent"
+  "actor": "@maia/sparks/actor/vibe"
 };
 const brandStyle$1 = {
   "$schema": "@maia/schema/style",
@@ -3285,15 +3261,15 @@ const brandStyle$1 = {
     }
   }
 };
-const agentActor$1 = {
+const vibeActor$2 = {
   "$schema": "@maia/schema/actor",
-  "$id": "@maia/sparks/actor/agent",
+  "$id": "@maia/sparks/actor/vibe",
   "type": "service",
-  "state": "@maia/sparks/state/agent",
-  "view": "@maia/sparks/view/agent",
-  "context": "@maia/sparks/context/agent",
+  "state": "@maia/sparks/state/vibe",
+  "view": "@maia/sparks/view/vibe",
+  "context": "@maia/sparks/context/vibe",
   "brand": "@maia/sparks/style/brand",
-  "inbox": "@maia/sparks/inbox/agent",
+  "inbox": "@maia/sparks/inbox/vibe",
   "messageTypes": [
     "CREATE_BUTTON",
     "UPDATE_INPUT",
@@ -3312,11 +3288,18 @@ const detailActor = {
   "state": "@maia/sparks/state/detail",
   "brand": "@maia/sparks/style/brand",
   "inbox": "@maia/sparks/inbox/detail",
-  "messageTypes": ["LOAD_ACTOR", "SUCCESS", "ADD_AGENT", "REMOVE_MEMBER", "UPDATE_AGENT_INPUT", "ERROR"]
+  "messageTypes": [
+    "LOAD_ACTOR",
+    "SUCCESS",
+    "ADD_AGENT",
+    "REMOVE_MEMBER",
+    "UPDATE_AGENT_INPUT",
+    "ERROR"
+  ]
 };
-const agentView$1 = {
+const vibeView$2 = {
   "$schema": "@maia/schema/view",
-  "$id": "@maia/sparks/view/agent",
+  "$id": "@maia/sparks/view/vibe",
   "content": {
     "tag": "div",
     "class": "stack",
@@ -3346,15 +3329,21 @@ const agentView$1 = {
             "$on": {
               "input": {
                 "send": "UPDATE_INPUT",
-                "payload": { "value": "@inputValue" }
+                "payload": {
+                  "value": "@inputValue"
+                }
               },
               "blur": {
                 "send": "UPDATE_INPUT",
-                "payload": { "value": "@inputValue" }
+                "payload": {
+                  "value": "@inputValue"
+                }
               },
               "keydown": {
                 "send": "CREATE_BUTTON",
-                "payload": { "value": "@inputValue" },
+                "payload": {
+                  "value": "@inputValue"
+                },
                 "key": "Enter"
               }
             }
@@ -3366,7 +3355,9 @@ const agentView$1 = {
             "$on": {
               "click": {
                 "send": "CREATE_BUTTON",
-                "payload": { "value": "@inputValue" }
+                "payload": {
+                  "value": "@inputValue"
+                }
               }
             }
           }
@@ -3426,7 +3417,9 @@ const agentView$1 = {
                     "$on": {
                       "click": {
                         "send": "SELECT_SPARK",
-                        "payload": { "sparkId": "$$id" }
+                        "payload": {
+                          "sparkId": "$$id"
+                        }
                       }
                     }
                   }
@@ -3499,8 +3492,16 @@ const detailView = {
                 "tag": "div",
                 "class": "detail-item",
                 "children": [
-                  { "tag": "span", "class": "detail-label", "text": "Group ID" },
-                  { "tag": "span", "class": "detail-value", "text": "$sparkDetails.groupId" }
+                  {
+                    "tag": "span",
+                    "class": "detail-label",
+                    "text": "Group ID"
+                  },
+                  {
+                    "tag": "span",
+                    "class": "detail-value",
+                    "text": "$sparkDetails.groupId"
+                  }
                 ]
               }
             ]
@@ -3541,7 +3542,9 @@ const detailView = {
                     "$on": {
                       "click": {
                         "send": "REMOVE_MEMBER",
-                        "payload": { "memberId": "$$id" }
+                        "payload": {
+                          "memberId": "$$id"
+                        }
                       }
                     }
                   }
@@ -3569,15 +3572,21 @@ const detailView = {
                 "$on": {
                   "input": {
                     "send": "UPDATE_AGENT_INPUT",
-                    "payload": { "value": "@inputValue" }
+                    "payload": {
+                      "value": "@inputValue"
+                    }
                   },
                   "blur": {
                     "send": "UPDATE_AGENT_INPUT",
-                    "payload": { "value": "@inputValue" }
+                    "payload": {
+                      "value": "@inputValue"
+                    }
                   },
                   "keydown": {
                     "send": "ADD_AGENT",
-                    "payload": { "agentId": "@inputValue" },
+                    "payload": {
+                      "agentId": "@inputValue"
+                    },
                     "key": "Enter"
                   }
                 }
@@ -3589,7 +3598,9 @@ const detailView = {
                 "$on": {
                   "click": {
                     "send": "ADD_AGENT",
-                    "payload": { "agentId": "$agentIdInput" }
+                    "payload": {
+                      "agentId": "$agentIdInput"
+                    }
                   }
                 }
               }
@@ -3604,8 +3615,13 @@ const detailView = {
               }
             },
             "children": [
-              { "tag": "strong", "text": "Error: " },
-              { "text": "$addAgentError" }
+              {
+                "tag": "strong",
+                "text": "Error: "
+              },
+              {
+                "text": "$addAgentError"
+              }
             ]
           }
         ]
@@ -3613,9 +3629,9 @@ const detailView = {
     ]
   }
 };
-const agentContext$1 = {
+const vibeContext$2 = {
   "$schema": "@maia/schema/context",
-  "$id": "@maia/sparks/context/agent",
+  "$id": "@maia/sparks/context/vibe",
   "sparks": {
     "schema": "@maia/schema/data/spark"
   },
@@ -3655,9 +3671,9 @@ const detailContext = {
   "addAgentError": null,
   "addAgentHasError": false
 };
-const agentState$1 = {
+const vibeState$2 = {
   "$schema": "@maia/schema/state",
-  "$id": "@maia/sparks/state/agent",
+  "$id": "@maia/sparks/state/vibe",
   "initial": "idle",
   "states": {
     "idle": {
@@ -3669,7 +3685,9 @@ const agentState$1 = {
           "target": "idle",
           "actions": [
             {
-              "updateContext": { "newSparkName": "$$value" }
+              "updateContext": {
+                "newSparkName": "$$value"
+              }
             }
           ]
         },
@@ -3711,7 +3729,10 @@ const agentState$1 = {
           "target": "idle",
           "actions": [
             {
-              "updateContext": { "error": "$$error", "hasError": true }
+              "updateContext": {
+                "error": "$$error",
+                "hasError": true
+              }
             }
           ]
         }
@@ -3719,14 +3740,19 @@ const agentState$1 = {
     },
     "error": {
       "entry": {
-        "updateContext": { "error": "$$error" }
+        "updateContext": {
+          "error": "$$error"
+        }
       },
       "on": {
         "DISMISS": {
           "target": "idle",
           "actions": [
             {
-              "updateContext": { "error": null, "hasError": false }
+              "updateContext": {
+                "error": null,
+                "hasError": false
+              }
             }
           ]
         }
@@ -3734,10 +3760,151 @@ const agentState$1 = {
     }
   }
 };
-const detailState = { "$schema": "@maia/schema/state", "$id": "@maia/sparks/state/detail", "initial": "idle", "states": { "idle": { "on": { "LOAD_ACTOR": { "target": "updating", "actions": [{ "updateContext": { "sparkId": "$$id" } }] }, "UPDATE_AGENT_INPUT": { "target": "idle", "actions": [{ "updateContext": { "agentIdInput": "$$value" } }] }, "ADD_AGENT": { "target": "addingAgent" }, "REMOVE_MEMBER": { "target": "removingMember" } }, "entry": { "updateContext": { "hasSpark": { "$ne": ["$sparkId", null] }, "showEmptyState": { "$eq": ["$sparkId", null] }, "showContent": { "$ne": ["$sparkId", null] } } } }, "updating": { "entry": { "updateContext": { "hasSpark": { "$ne": ["$sparkId", null] }, "showEmptyState": { "$eq": ["$sparkId", null] }, "showContent": { "$ne": ["$sparkId", null] } } }, "on": { "SUCCESS": { "target": "idle" } } }, "addingAgent": { "entry": { "tool": "@sparks", "payload": { "op": "addSparkMember", "id": "$sparkId", "memberId": "$$agentId", "role": "writer" } }, "on": { "SUCCESS": { "target": "idle", "actions": [{ "updateContext": { "agentIdInput": "", "addAgentError": null, "addAgentHasError": false } }] }, "ERROR": { "target": "idle", "actions": [{ "updateContext": { "addAgentError": "$$error", "addAgentHasError": true } }] } } }, "removingMember": { "entry": { "tool": "@sparks", "payload": { "op": "removeSparkMember", "id": "$sparkId", "memberId": "$$memberId" } }, "on": { "SUCCESS": { "target": "idle" }, "ERROR": { "target": "idle" } } } } };
-const agentInbox$1 = {
+const detailState = {
+  "$schema": "@maia/schema/state",
+  "$id": "@maia/sparks/state/detail",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "on": {
+        "LOAD_ACTOR": {
+          "target": "updating",
+          "actions": [
+            {
+              "updateContext": {
+                "sparkId": "$$id"
+              }
+            }
+          ]
+        },
+        "UPDATE_AGENT_INPUT": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "agentIdInput": "$$value"
+              }
+            }
+          ]
+        },
+        "ADD_AGENT": {
+          "target": "addingAgent"
+        },
+        "REMOVE_MEMBER": {
+          "target": "removingMember"
+        }
+      },
+      "entry": {
+        "updateContext": {
+          "hasSpark": {
+            "$ne": [
+              "$sparkId",
+              null
+            ]
+          },
+          "showEmptyState": {
+            "$eq": [
+              "$sparkId",
+              null
+            ]
+          },
+          "showContent": {
+            "$ne": [
+              "$sparkId",
+              null
+            ]
+          }
+        }
+      }
+    },
+    "updating": {
+      "entry": {
+        "updateContext": {
+          "hasSpark": {
+            "$ne": [
+              "$sparkId",
+              null
+            ]
+          },
+          "showEmptyState": {
+            "$eq": [
+              "$sparkId",
+              null
+            ]
+          },
+          "showContent": {
+            "$ne": [
+              "$sparkId",
+              null
+            ]
+          }
+        }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "idle"
+        }
+      }
+    },
+    "addingAgent": {
+      "entry": {
+        "tool": "@sparks",
+        "payload": {
+          "op": "addSparkMember",
+          "id": "$sparkId",
+          "memberId": "$$agentId",
+          "role": "writer"
+        }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "agentIdInput": "",
+                "addAgentError": null,
+                "addAgentHasError": false
+              }
+            }
+          ]
+        },
+        "ERROR": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "addAgentError": "$$error",
+                "addAgentHasError": true
+              }
+            }
+          ]
+        }
+      }
+    },
+    "removingMember": {
+      "entry": {
+        "tool": "@sparks",
+        "payload": {
+          "op": "removeSparkMember",
+          "id": "$sparkId",
+          "memberId": "$$memberId"
+        }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "idle"
+        },
+        "ERROR": {
+          "target": "idle"
+        }
+      }
+    }
+  }
+};
+const vibeInbox$2 = {
   "$schema": "@maia/schema/inbox",
-  "$id": "@maia/sparks/inbox/agent",
+  "$id": "@maia/sparks/inbox/vibe",
   "cotype": "costream"
 };
 const detailInbox = {
@@ -3751,27 +3918,27 @@ const SparksVibeRegistry = {
     "@maia/sparks/style/brand": brandStyle$1
   },
   actors: {
-    "@maia/sparks/actor/agent": agentActor$1,
+    "@maia/sparks/actor/vibe": vibeActor$2,
     "@maia/sparks/actor/detail": detailActor
   },
   views: {
-    "@maia/sparks/view/agent": agentView$1,
+    "@maia/sparks/view/vibe": vibeView$2,
     "@maia/sparks/view/detail": detailView
   },
   contexts: {
-    "@maia/sparks/context/agent": agentContext$1,
+    "@maia/sparks/context/vibe": vibeContext$2,
     "@maia/sparks/context/detail": detailContext
   },
   states: {
-    "@maia/sparks/state/agent": agentState$1,
+    "@maia/sparks/state/vibe": vibeState$2,
     "@maia/sparks/state/detail": detailState
   },
   inboxes: {
-    "@maia/sparks/inbox/agent": agentInbox$1,
+    "@maia/sparks/inbox/vibe": vibeInbox$2,
     "@maia/sparks/inbox/detail": detailInbox
   }
 };
-const registry$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const registry$2 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   SparksVibeRegistry
 }, Symbol.toStringTag, { value: "Module" }));
@@ -3796,7 +3963,7 @@ async function loadSparksVibe(maia, container) {
 async function getAllVibeRegistries() {
   const vibeRegistries = [];
   try {
-    const { TodosVibeRegistry: TodosVibeRegistry2 } = await Promise.resolve().then(() => registry$3);
+    const { TodosVibeRegistry: TodosVibeRegistry2 } = await Promise.resolve().then(() => registry$4);
     if (TodosVibeRegistry2 && TodosVibeRegistry2.vibe) {
       vibeRegistries.push(TodosVibeRegistry2);
     }
@@ -3804,28 +3971,36 @@ async function getAllVibeRegistries() {
     console.warn("[Vibes] Could not load TodosVibeRegistry:", error.message);
   }
   try {
-    const { MaiaAgentVibeRegistry: MaiaAgentVibeRegistry2 } = await Promise.resolve().then(() => registry);
-    if (MaiaAgentVibeRegistry2 && MaiaAgentVibeRegistry2.vibe) {
-      vibeRegistries.push(MaiaAgentVibeRegistry2);
+    const { ChatVibeRegistry: ChatVibeRegistry2 } = await Promise.resolve().then(() => registry$1);
+    if (ChatVibeRegistry2 && ChatVibeRegistry2.vibe) {
+      vibeRegistries.push(ChatVibeRegistry2);
     }
   } catch (error) {
-    console.warn("[Vibes] Could not load MaiaAgentVibeRegistry:", error.message);
+    console.warn("[Vibes] Could not load ChatVibeRegistry:", error.message);
   }
   try {
-    const { MyDataVibeRegistry: MyDataVibeRegistry2 } = await Promise.resolve().then(() => registry$2);
-    if (MyDataVibeRegistry2 && MyDataVibeRegistry2.vibe) {
-      vibeRegistries.push(MyDataVibeRegistry2);
+    const { DbVibeRegistry: DbVibeRegistry2 } = await Promise.resolve().then(() => registry$3);
+    if (DbVibeRegistry2 && DbVibeRegistry2.vibe) {
+      vibeRegistries.push(DbVibeRegistry2);
     }
   } catch (error) {
-    console.warn("[Vibes] Could not load MyDataVibeRegistry:", error.message);
+    console.warn("[Vibes] Could not load DbVibeRegistry:", error.message);
   }
   try {
-    const { SparksVibeRegistry: SparksVibeRegistry2 } = await Promise.resolve().then(() => registry$1);
+    const { SparksVibeRegistry: SparksVibeRegistry2 } = await Promise.resolve().then(() => registry$2);
     if (SparksVibeRegistry2 && SparksVibeRegistry2.vibe) {
       vibeRegistries.push(SparksVibeRegistry2);
     }
   } catch (error) {
     console.warn("[Vibes] Could not load SparksVibeRegistry:", error.message);
+  }
+  try {
+    const { CreatorVibeRegistry: CreatorVibeRegistry2 } = await Promise.resolve().then(() => registry);
+    if (CreatorVibeRegistry2 && CreatorVibeRegistry2.vibe) {
+      vibeRegistries.push(CreatorVibeRegistry2);
+    }
+  } catch (error) {
+    console.warn("[Vibes] Could not load CreatorVibeRegistry:", error.message);
   }
   return vibeRegistries;
 }
@@ -3855,16 +4030,16 @@ function filterVibesForSeeding(vibeRegistries, config = null) {
   console.warn(`[Vibes] Invalid seeding config: ${config}. Expected null, "all", or array of vibe keys.`);
   return [];
 }
-const maiaAgentVibe = {
+const chatVibe = {
   "$schema": "@maia/schema/vibe",
-  "$id": "@maia/vibe/maia",
-  "name": "Maia Agent",
+  "$id": "@maia/vibe/chat",
+  "name": "Chat",
   "description": "CTO-level AI assistant for MaiaOS codebase",
-  "actor": "@maia/maia/actor/agent"
+  "actor": "@maia/chat/actor/vibe"
 };
 const brandStyle = {
   "$schema": "@maia/schema/style",
-  "$id": "@maia/maia/style/brand",
+  "$id": "@maia/chat/style/brand",
   "tokens": {
     "colors": {
       "marineBlue": "#001F33",
@@ -4371,15 +4546,15 @@ const brandStyle = {
     }
   }
 };
-const agentActor = {
+const vibeActor$1 = {
   "$schema": "@maia/schema/actor",
-  "$id": "@maia/maia/actor/agent",
+  "$id": "@maia/chat/actor/vibe",
   "role": "agent",
-  "context": "@maia/maia/context/agent",
-  "view": "@maia/maia/view/agent",
-  "state": "@maia/maia/state/agent",
-  "brand": "@maia/maia/style/brand",
-  "inbox": "@maia/maia/inbox/agent",
+  "context": "@maia/chat/context/vibe",
+  "view": "@maia/chat/view/vibe",
+  "state": "@maia/chat/state/vibe",
+  "brand": "@maia/chat/style/brand",
+  "inbox": "@maia/chat/inbox/vibe",
   "messageTypes": [
     "SEND_MESSAGE",
     "UPDATE_INPUT",
@@ -4390,9 +4565,9 @@ const agentActor = {
     "DISMISS"
   ]
 };
-const agentView = {
+const vibeView$1 = {
   "$schema": "@maia/schema/view",
-  "$id": "@maia/maia/view/agent",
+  "$id": "@maia/chat/view/vibe",
   "content": {
     "tag": "div",
     "class": "chat-container",
@@ -4509,11 +4684,15 @@ const agentView = {
             "$on": {
               "input": {
                 "send": "UPDATE_INPUT",
-                "payload": { "value": "@inputValue" }
+                "payload": {
+                  "value": "@inputValue"
+                }
               },
               "keydown": {
                 "send": "SEND_MESSAGE",
-                "payload": { "inputText": "@inputValue" },
+                "payload": {
+                  "inputText": "@inputValue"
+                },
                 "key": "Enter"
               }
             }
@@ -4528,7 +4707,9 @@ const agentView = {
             "$on": {
               "click": {
                 "send": "SEND_MESSAGE",
-                "payload": { "inputText": "$inputText" }
+                "payload": {
+                  "inputText": "$inputText"
+                }
               }
             }
           }
@@ -4537,9 +4718,9 @@ const agentView = {
     ]
   }
 };
-const agentContext = {
+const vibeContext$1 = {
   "$schema": "@maia/schema/context",
-  "$id": "@maia/maia/context/agent",
+  "$id": "@maia/chat/context/vibe",
   "conversations": {
     "schema": "@maia/schema/data/chat"
   },
@@ -4551,9 +4732,9 @@ const agentContext = {
   "hasError": false,
   "messageNames": {}
 };
-const agentState = {
+const vibeState$1 = {
   "$schema": "@maia/schema/state",
-  "$id": "@maia/maia/state/agent",
+  "$id": "@maia/chat/state/vibe",
   "initial": "idle",
   "states": {
     "idle": {
@@ -4582,7 +4763,12 @@ const agentState = {
             {
               "updateContext": {
                 "hasConversations": {
-                  "$gt": [{ "$length": "$conversations" }, 0]
+                  "$gt": [
+                    {
+                      "$length": "$conversations"
+                    },
+                    0
+                  ]
                 }
               }
             },
@@ -4606,7 +4792,9 @@ const agentState = {
           "target": "idle",
           "actions": [
             {
-              "updateContext": { "inputText": "$$value" }
+              "updateContext": {
+                "inputText": "$$value"
+              }
             }
           ]
         }
@@ -4727,7 +4915,12 @@ const agentState = {
             {
               "updateContext": {
                 "hasConversations": {
-                  "$gt": [{ "$length": "$conversations" }, 0]
+                  "$gt": [
+                    {
+                      "$length": "$conversations"
+                    },
+                    0
+                  ]
                 }
               }
             },
@@ -4802,46 +4995,686 @@ const agentState = {
     }
   }
 };
-const agentInbox = {
+const vibeInbox$1 = {
   "$schema": "@maia/schema/inbox",
-  "$id": "@maia/maia/inbox/agent"
+  "$id": "@maia/chat/inbox/vibe"
 };
-const MaiaAgentVibeRegistry = {
-  vibe: maiaAgentVibe,
+const ChatVibeRegistry = {
+  vibe: chatVibe,
   styles: {
-    "@maia/maia/style/brand": brandStyle
+    "@maia/chat/style/brand": brandStyle
   },
   actors: {
-    "@maia/maia/actor/agent": agentActor
+    "@maia/chat/actor/vibe": vibeActor$1
   },
   views: {
-    "@maia/maia/view/agent": agentView
+    "@maia/chat/view/vibe": vibeView$1
   },
   contexts: {
-    "@maia/maia/context/agent": agentContext
+    "@maia/chat/context/vibe": vibeContext$1
   },
   states: {
-    "@maia/maia/state/agent": agentState
+    "@maia/chat/state/vibe": vibeState$1
   },
   inboxes: {
-    "@maia/maia/inbox/agent": agentInbox
+    "@maia/chat/inbox/vibe": vibeInbox$1
   }
+};
+const registry$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  ChatVibeRegistry
+}, Symbol.toStringTag, { value: "Module" }));
+const creatorVibe = {
+  "$schema": "@maia/schema/vibe",
+  "$id": "@maia/vibe/creator",
+  "name": "Creator",
+  "description": "Create and manage vibes with logs viewer",
+  "actor": "@maia/creator/actor/vibe"
+};
+const vibeStyle = {
+  "$schema": "@maia/schema/style",
+  "$id": "@maia/creator/style/vibe",
+  "components": {
+    "vibeCreatorTitle": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "0.9rem",
+      "fontWeight": "{typography.fontWeight.bold}",
+      "color": "{colors.marineBlue}",
+      "margin": "0",
+      "marginBottom": "0.375rem",
+      "textAlign": "center",
+      "width": "100%",
+      "letterSpacing": "-0.02em"
+    }
+  }
+};
+const logsStyle = {
+  "$schema": "@maia/schema/style",
+  "$id": "@maia/creator/style/logs",
+  "components": {
+    "logs": {
+      "padding": "0",
+      "margin": "0",
+      "background": "transparent",
+      "color": "#001F33",
+      "fontFamily": "'Plus Jakarta Sans', sans-serif",
+      "fontSize": "0.85rem",
+      "lineHeight": "1.5"
+    },
+    "logEntryContainer": {
+      "display": "flex",
+      "flexDirection": "column",
+      "width": "100%",
+      "maxWidth": "100%",
+      "boxSizing": "border-box",
+      "overflow": "hidden"
+    },
+    "logEntries": {
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "0.2rem",
+      "width": "100%",
+      "maxWidth": "100%",
+      "boxSizing": "border-box"
+    },
+    "logEntry": {
+      "padding": "0.1rem 0.75rem",
+      "margin": "0",
+      "background": "rgba(255, 255, 255, 0.4)",
+      "backdropFilter": "blur(8px) saturate(150%)",
+      "-webkit-backdrop-filter": "blur(8px) saturate(150%)",
+      "border": "1px solid rgba(0, 31, 51, 0.05)",
+      "borderLeft": "4px solid #00BDD6",
+      "borderRadius": "8px",
+      "display": "grid",
+      "gridTemplateColumns": "auto auto auto 1fr auto",
+      "gridTemplateRows": "auto auto",
+      "alignItems": "center",
+      "minHeight": "1.3rem",
+      "transition": "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+      "width": "100%",
+      "maxWidth": "100%",
+      "boxSizing": "border-box",
+      "color": "#001F33",
+      "position": "relative",
+      "boxShadow": "0 2px 8px rgba(0, 0, 0, 0.02)",
+      "overflow": "visible",
+      ":hover": {
+        "background": "rgba(255, 255, 255, 0.6)",
+        "transform": "translateX(4px)",
+        "boxShadow": "0 4px 12px rgba(0, 0, 0, 0.04)"
+      }
+    },
+    "logType": {
+      "color": "#001F33",
+      "fontWeight": "700",
+      "fontSize": "0.6rem",
+      "textTransform": "uppercase",
+      "minWidth": "5rem",
+      "textAlign": "left",
+      "letterSpacing": "0.1em",
+      "opacity": "0.8"
+    },
+    "logSource": {
+      "color": "#2D4A5C",
+      "fontSize": "0.65rem",
+      "fontFamily": "monospace",
+      "minWidth": "8rem",
+      "flexShrink": "0",
+      "fontWeight": "500",
+      "display": "flex",
+      "alignItems": "center",
+      "gap": "0.3rem",
+      "background": "rgba(0, 31, 51, 0.05)",
+      "padding": "0.1rem 0.4rem",
+      "borderRadius": "4px"
+    },
+    "logSourceRole": {
+      "color": "#001F33",
+      "fontWeight": "700",
+      "textTransform": "lowercase",
+      "opacity": "0.6"
+    },
+    "logSourceId": {
+      "color": "#5E7A8C",
+      "fontSize": "0.6rem"
+    },
+    "logTarget": {
+      "color": "#2D4A5C",
+      "fontSize": "0.65rem",
+      "fontFamily": "monospace",
+      "minWidth": "8rem",
+      "flexShrink": "0",
+      "fontWeight": "500",
+      "display": "flex",
+      "alignItems": "center",
+      "gap": "0.3rem",
+      "background": "rgba(0, 189, 214, 0.05)",
+      "padding": "0.1rem 0.4rem",
+      "borderRadius": "4px"
+    },
+    "logTargetRole": {
+      "color": "#004D59",
+      "fontWeight": "700",
+      "textTransform": "lowercase",
+      "opacity": "0.6"
+    },
+    "logTargetId": {
+      "color": "#00BDD6",
+      "fontSize": "0.6rem"
+    },
+    "logPayloadDetails": {
+      "display": "contents"
+    },
+    "logPayloadToggle": {
+      "gridColumn": "5",
+      "gridRow": "1",
+      "color": "#004D59",
+      "fontSize": "0.6rem",
+      "fontWeight": "700",
+      "cursor": "pointer",
+      "userSelect": "none",
+      "padding": "0.15rem 0.5rem",
+      "borderRadius": "9999px",
+      "background": "rgba(0, 189, 214, 0.15)",
+      "border": "1px solid rgba(0, 189, 214, 0.2)",
+      "transition": "all 0.2s ease",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.05em",
+      "justifySelf": "end",
+      ":hover": {
+        "background": "rgba(0, 189, 214, 0.25)",
+        "transform": "scale(1.05)"
+      }
+    },
+    "logPayload": {
+      "gridRow": "2",
+      "gridColumn": "4 / 6",
+      "margin": "0.3rem 0 0.2rem 0",
+      "padding": "0.6rem 0.8rem",
+      "background": "rgba(0, 31, 51, 0.03)",
+      "borderRadius": "8px",
+      "border": "1px solid rgba(0, 31, 51, 0.05)",
+      "color": "#2D4A5C",
+      "fontSize": "0.65rem",
+      "fontFamily": "monospace",
+      "whiteSpace": "pre-wrap",
+      "wordBreak": "break-all",
+      "overflow": "auto",
+      "maxHeight": "400px",
+      "width": "fit-content",
+      "minWidth": "180px",
+      "maxWidth": "100%",
+      "boxSizing": "border-box",
+      "boxShadow": "inset 0 2px 4px rgba(0, 0, 0, 0.02)",
+      "textAlign": "left",
+      "justifySelf": "end",
+      "display": "flex",
+      "alignItems": "center"
+    }
+  },
+  "selectors": {
+    ".log-entry[data-event-type='SUCCESS']": {
+      "borderLeftColor": "#4E9A58",
+      "background": "rgba(78, 154, 88, 0.05)"
+    },
+    ".log-entry[data-event-type='ERROR']": {
+      "borderLeftColor": "#C27B66",
+      "background": "rgba(194, 123, 102, 0.05)"
+    },
+    ".log-entry[data-event-type='SWITCH_VIEW']": {
+      "borderLeftColor": "#00BDD6"
+    },
+    "summary::-webkit-details-marker": {
+      "display": "none"
+    },
+    "summary::marker": {
+      "display": "none"
+    },
+    "details:not([open]) .log-payload": {
+      "display": "none"
+    }
+  }
+};
+const comingSoonStyle = {
+  "$schema": "@maia/schema/style",
+  "$id": "@maia/creator/style/coming-soon",
+  "components": {
+    "comingSoon": {
+      "display": "flex",
+      "flexDirection": "column",
+      "alignItems": "center",
+      "justifyContent": "center",
+      "padding": "{spacing.xl}",
+      "minHeight": "200px"
+    },
+    "comingSoonText": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "1.2rem",
+      "color": "{colors.marineBlueLight}",
+      "fontStyle": "italic"
+    }
+  }
+};
+const vibeActor = {
+  "$schema": "@maia/schema/actor",
+  "$id": "@maia/creator/actor/vibe",
+  "role": "agent",
+  "context": "@maia/creator/context/vibe",
+  "view": "@maia/creator/view/vibe",
+  "state": "@maia/creator/state/vibe",
+  "brand": "@maia/style/brand",
+  "style": "@maia/creator/style/vibe",
+  "inbox": "@maia/creator/inbox/vibe",
+  "messageTypes": [
+    "SWITCH_VIEW"
+  ]
+};
+const logsActor = {
+  "$schema": "@maia/schema/actor",
+  "$id": "@maia/creator/actor/logs",
+  "role": "logs",
+  "context": "@maia/creator/context/logs",
+  "view": "@maia/creator/view/logs",
+  "state": "@maia/creator/state/logs",
+  "brand": "@maia/style/brand",
+  "style": "@maia/creator/style/logs",
+  "inbox": "@maia/creator/inbox/logs",
+  "messageTypes": [
+    "RETRY",
+    "DISMISS"
+  ]
+};
+const comingSoonActor = {
+  "$schema": "@maia/schema/actor",
+  "$id": "@maia/creator/actor/coming-soon",
+  "role": "ui",
+  "context": "@maia/creator/context/coming-soon",
+  "view": "@maia/creator/view/coming-soon",
+  "state": "@maia/creator/state/coming-soon",
+  "brand": "@maia/style/brand",
+  "style": "@maia/creator/style/coming-soon",
+  "inbox": "@maia/creator/inbox/coming-soon",
+  "messageTypes": []
+};
+const vibeView = {
+  "$schema": "@maia/schema/view",
+  "$id": "@maia/creator/view/vibe",
+  "content": {
+    "tag": "div",
+    "class": "stack",
+    "children": [
+      {
+        "tag": "div",
+        "class": "header-section",
+        "children": [
+          {
+            "tag": "h2",
+            "class": "vibe-creator-title",
+            "text": "Vibe Creator"
+          },
+          {
+            "tag": "div",
+            "class": "view-switcher",
+            "children": [
+              {
+                "tag": "button",
+                "class": "button-view-switch",
+                "attrs": {
+                  "data-view": "logs",
+                  "data": {
+                    "active": "$logsButtonActive"
+                  }
+                },
+                "text": "$logsViewLabel",
+                "$on": {
+                  "click": {
+                    "send": "SWITCH_VIEW",
+                    "payload": {
+                      "viewMode": "logs"
+                    }
+                  }
+                }
+              },
+              {
+                "tag": "button",
+                "class": "button-view-switch",
+                "attrs": {
+                  "data-view": "comingSoon",
+                  "data": {
+                    "active": "$comingSoonButtonActive"
+                  }
+                },
+                "text": "$comingSoonViewLabel",
+                "$on": {
+                  "click": {
+                    "send": "SWITCH_VIEW",
+                    "payload": {
+                      "viewMode": "comingSoon"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "tag": "main",
+        "class": "content-area",
+        "$slot": "$currentView"
+      }
+    ]
+  }
+};
+const logsView = {
+  "$schema": "@maia/schema/view",
+  "$id": "@maia/creator/view/logs",
+  "content": {
+    "class": "logs",
+    "attrs": {
+      "data": "log-viewer"
+    },
+    "children": [
+      {
+        "tag": "div",
+        "class": "log-entries",
+        "$each": {
+          "items": "$messages",
+          "template": {
+            "class": "log-entry-container",
+            "children": [
+              {
+                "tag": "div",
+                "class": "log-entry",
+                "attrs": {
+                  "data": {
+                    "eventType": "$$type",
+                    "processed": "$$processed"
+                  }
+                },
+                "children": [
+                  {
+                    "tag": "span",
+                    "class": "log-type",
+                    "text": "$$type"
+                  },
+                  {
+                    "tag": "span",
+                    "class": "log-source",
+                    "children": [
+                      {
+                        "tag": "span",
+                        "class": "log-source-role",
+                        "text": "$$fromRole"
+                      },
+                      {
+                        "tag": "span",
+                        "class": "log-source-id",
+                        "text": "$$fromId"
+                      }
+                    ]
+                  },
+                  {
+                    "tag": "span",
+                    "class": "log-target",
+                    "children": [
+                      {
+                        "tag": "span",
+                        "class": "log-target-role",
+                        "text": "$$recipient"
+                      },
+                      {
+                        "tag": "span",
+                        "class": "log-target-id",
+                        "text": "$$targetId"
+                      }
+                    ]
+                  },
+                  {
+                    "tag": "details",
+                    "class": "log-payload-details",
+                    "children": [
+                      {
+                        "tag": "summary",
+                        "class": "log-payload-toggle",
+                        "text": "$payloadLabel"
+                      },
+                      {
+                        "tag": "pre",
+                        "class": "log-payload",
+                        "text": "$$payload"
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        }
+      }
+    ]
+  }
+};
+const comingSoonView = {
+  "$schema": "@maia/schema/view",
+  "$id": "@maia/creator/view/coming-soon",
+  "content": {
+    "tag": "div",
+    "class": "coming-soon",
+    "children": [
+      {
+        "tag": "p",
+        "class": "coming-soon-text",
+        "text": "$message"
+      }
+    ]
+  }
+};
+const vibeContext = {
+  "$schema": "@maia/schema/context",
+  "$id": "@maia/creator/context/vibe",
+  "currentView": "@logs",
+  "viewMode": "logs",
+  "logsButtonActive": true,
+  "comingSoonButtonActive": false,
+  "logsViewLabel": "Logs",
+  "comingSoonViewLabel": "Soon",
+  "@actors": {
+    "logs": "@maia/creator/actor/logs",
+    "comingSoon": "@maia/creator/actor/coming-soon"
+  }
+};
+const logsContext = {
+  "$schema": "@maia/schema/context",
+  "$id": "@maia/creator/context/logs",
+  "messages": {
+    "schema": "@maia/schema/message",
+    "options": {
+      "map": {
+        "fromRole": "$$source.role",
+        "toRole": "$$target.role",
+        "fromId": "$$source.id",
+        "toId": "$$target.id",
+        "recipient": "$$target.role",
+        "targetId": "$$target.id"
+      }
+    }
+  },
+  "payloadLabel": "payload"
+};
+const comingSoonContext = {
+  "$schema": "@maia/schema/context",
+  "$id": "@maia/creator/context/coming-soon",
+  "message": "Coming soon"
+};
+const vibeState = {
+  "$schema": "@maia/schema/state",
+  "$id": "@maia/creator/state/vibe",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "on": {
+        "SWITCH_VIEW": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "viewMode": "$$viewMode"
+              }
+            },
+            {
+              "updateContext": {
+                "currentView": {
+                  "$if": {
+                    "condition": {
+                      "$eq": [
+                        "$$viewMode",
+                        "logs"
+                      ]
+                    },
+                    "then": "@logs",
+                    "else": "@comingSoon"
+                  }
+                }
+              }
+            },
+            {
+              "updateContext": {
+                "logsButtonActive": {
+                  "$eq": [
+                    "$$viewMode",
+                    "logs"
+                  ]
+                }
+              }
+            },
+            {
+              "updateContext": {
+                "comingSoonButtonActive": {
+                  "$eq": [
+                    "$$viewMode",
+                    "comingSoon"
+                  ]
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+};
+const logsState = {
+  "$schema": "@maia/schema/state",
+  "$id": "@maia/creator/state/logs",
+  "initial": "idle",
+  "states": {
+    "idle": {},
+    "error": {
+      "entry": {
+        "updateContext": {
+          "error": "$$error"
+        }
+      },
+      "on": {
+        "RETRY": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "error": null
+              }
+            }
+          ]
+        },
+        "DISMISS": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "error": null
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+};
+const comingSoonState = {
+  "$schema": "@maia/schema/state",
+  "$id": "@maia/creator/state/coming-soon",
+  "initial": "idle",
+  "states": {
+    "idle": {}
+  }
+};
+const vibeInbox = {
+  "$schema": "@maia/schema/inbox",
+  "$id": "@maia/creator/inbox/vibe",
+  "items": []
+};
+const logsInbox = {
+  "$schema": "@maia/schema/inbox",
+  "$id": "@maia/creator/inbox/logs",
+  "items": []
+};
+const comingSoonInbox = {
+  "$schema": "@maia/schema/inbox",
+  "$id": "@maia/creator/inbox/coming-soon",
+  "items": []
+};
+const CreatorVibeRegistry = {
+  vibe: creatorVibe,
+  styles: {
+    "@maia/style/brand": masterBrand,
+    "@maia/creator/style/vibe": vibeStyle,
+    "@maia/creator/style/logs": logsStyle,
+    "@maia/creator/style/coming-soon": comingSoonStyle
+  },
+  actors: {
+    "@maia/creator/actor/vibe": vibeActor,
+    "@maia/creator/actor/logs": logsActor,
+    "@maia/creator/actor/coming-soon": comingSoonActor
+  },
+  views: {
+    "@maia/creator/view/vibe": vibeView,
+    "@maia/creator/view/logs": logsView,
+    "@maia/creator/view/coming-soon": comingSoonView
+  },
+  contexts: {
+    "@maia/creator/context/vibe": vibeContext,
+    "@maia/creator/context/logs": logsContext,
+    "@maia/creator/context/coming-soon": comingSoonContext
+  },
+  states: {
+    "@maia/creator/state/vibe": vibeState,
+    "@maia/creator/state/logs": logsState,
+    "@maia/creator/state/coming-soon": comingSoonState
+  },
+  inboxes: {
+    "@maia/creator/inbox/vibe": vibeInbox,
+    "@maia/creator/inbox/logs": logsInbox,
+    "@maia/creator/inbox/coming-soon": comingSoonInbox
+  },
+  data: {}
 };
 const registry = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  MaiaAgentVibeRegistry
+  CreatorVibeRegistry
 }, Symbol.toStringTag, { value: "Module" }));
 export {
+  DbVibeRegistry as DbRegistry,
+  DbVibeRegistry,
   MaiaOS2 as MaiaOS,
-  MyDataVibeRegistry as MyDataRegistry,
-  MyDataVibeRegistry,
   SparksVibeRegistry as SparksRegistry,
   SparksVibeRegistry,
   TodosVibeRegistry as TodosRegistry,
   TodosVibeRegistry,
   filterVibesForSeeding,
   getAllVibeRegistries,
-  loadMyDataVibe,
+  loadDbVibe,
   loadSparksVibe,
   loadTodosVibe
 };

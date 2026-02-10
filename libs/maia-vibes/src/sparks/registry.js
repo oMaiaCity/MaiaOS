@@ -6,26 +6,26 @@
 
 // Import vibe manifest
 import sparksVibe from './manifest.vibe.maia';
-import brandStyle from './agent/brand.style.maia';
+import brandStyle from './vibe/brand.style.maia';
 
 // Import all actors
-import agentActor from './agent/agent.actor.maia';
+import vibeActor from './vibe/vibe.actor.maia';
 import detailActor from './detail/detail.actor.maia';
 
 // Import all views
-import agentView from './agent/agent.view.maia';
+import vibeView from './vibe/vibe.view.maia';
 import detailView from './detail/detail.view.maia';
 
 // Import all contexts
-import agentContext from './agent/agent.context.maia';
+import vibeContext from './vibe/vibe.context.maia';
 import detailContext from './detail/detail.context.maia';
 
 // Import all states
-import agentState from './agent/agent.state.maia';
+import vibeState from './vibe/vibe.state.maia';
 import detailState from './detail/detail.state.maia';
 
 // Import all inbox costreams
-import agentInbox from './agent/agent.inbox.maia';
+import vibeInbox from './vibe/vibe.inbox.maia';
 import detailInbox from './detail/detail.inbox.maia';
 
 /**
@@ -40,27 +40,27 @@ export const SparksVibeRegistry = {
   },
   
   actors: {
-    '@maia/sparks/actor/agent': agentActor,
+    '@maia/sparks/actor/vibe': vibeActor,
     '@maia/sparks/actor/detail': detailActor,
   },
   
   views: {
-    '@maia/sparks/view/agent': agentView,
+    '@maia/sparks/view/vibe': vibeView,
     '@maia/sparks/view/detail': detailView,
   },
   
   contexts: {
-    '@maia/sparks/context/agent': agentContext,
+    '@maia/sparks/context/vibe': vibeContext,
     '@maia/sparks/context/detail': detailContext,
   },
   
   states: {
-    '@maia/sparks/state/agent': agentState,
+    '@maia/sparks/state/vibe': vibeState,
     '@maia/sparks/state/detail': detailState,
   },
   
   inboxes: {
-    '@maia/sparks/inbox/agent': agentInbox,
+    '@maia/sparks/inbox/vibe': vibeInbox,
     '@maia/sparks/inbox/detail': detailInbox,
   },
 };

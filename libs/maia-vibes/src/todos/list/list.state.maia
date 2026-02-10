@@ -12,8 +12,11 @@
               "tool": "@core/publishMessage",
               "payload": {
                 "type": "TOGGLE_BUTTON",
-                "payload": { "id": "$$id", "done": "$$done" },
-                "target": "@maia/todos/actor/agent"
+                "payload": {
+                  "id": "$$id",
+                  "done": "$$done"
+                },
+                "target": "@maia/todos/actor/vibe"
               }
             }
           ]
@@ -25,8 +28,10 @@
               "tool": "@core/publishMessage",
               "payload": {
                 "type": "DELETE_BUTTON",
-                "payload": { "id": "$$id" },
-                "target": "@maia/todos/actor/agent"
+                "payload": {
+                  "id": "$$id"
+                },
+                "target": "@maia/todos/actor/vibe"
               }
             }
           ]
@@ -38,14 +43,18 @@
     },
     "error": {
       "entry": {
-        "updateContext": { "error": "$$error" }
+        "updateContext": {
+          "error": "$$error"
+        }
       },
       "on": {
         "RETRY": {
           "target": "idle",
           "actions": [
             {
-              "updateContext": { "error": null }
+              "updateContext": {
+                "error": null
+              }
             }
           ]
         },
@@ -53,7 +62,9 @@
           "target": "idle",
           "actions": [
             {
-              "updateContext": { "error": null }
+              "updateContext": {
+                "error": null
+              }
             }
           ]
         }

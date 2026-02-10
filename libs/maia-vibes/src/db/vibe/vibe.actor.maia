@@ -1,0 +1,14 @@
+{
+  "$schema": "@maia/schema/actor",
+  "$id": "@maia/db/actor/vibe",
+  "role": "agent",
+  "context": "@maia/db/context/vibe",
+  "view": "@maia/db/view/vibe",
+  "state": "@maia/db/state/vibe",
+  "brand": "@maia/db/style/brand",
+  "inbox": "@maia/db/inbox/vibe",
+  "messageTypes": [
+    "SELECT_NAV",
+    "SELECT_ROW"
+  ]
+}

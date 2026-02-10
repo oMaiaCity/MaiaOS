@@ -4,41 +4,31 @@
  * Exports everything as JS objects - no runtime file loading needed
  */
 
-// Import vibe manifest
+import masterBrand from '../shared/brand.style.maia';
 import todosVibe from './manifest.vibe.maia';
-import brandStyle from './agent/brand.style.maia';
+import brandStyle from './vibe/brand.style.maia';
 import listStyle from './list/list.style.maia';
-import logsStyle from './logs/logs.style.maia';
+import comingSoonStyle from './coming-soon/coming-soon.style.maia';
 
-// Import all actors
-import agentActor from './agent/agent.actor.maia';
+import vibeActor from './vibe/vibe.actor.maia';
 import listActor from './list/list.actor.maia';
-import logsActor from './logs/logs.actor.maia';
+import comingSoonActor from './coming-soon/coming-soon.actor.maia';
 
-// Import all views
-import agentView from './agent/agent.view.maia';
+import vibeView from './vibe/vibe.view.maia';
 import listView from './list/list.view.maia';
-import logsView from './logs/logs.view.maia';
+import comingSoonView from './coming-soon/coming-soon.view.maia';
 
-// Import all contexts
-import agentContext from './agent/agent.context.maia';
+import vibeContext from './vibe/vibe.context.maia';
 import listContext from './list/list.context.maia';
-import logsContext from './logs/logs.context.maia';
+import comingSoonContext from './coming-soon/coming-soon.context.maia';
 
-// Import all states
-import agentState from './agent/agent.state.maia';
+import vibeState from './vibe/vibe.state.maia';
 import listState from './list/list.state.maia';
-import logsState from './logs/logs.state.maia';
+import comingSoonState from './coming-soon/coming-soon.state.maia';
 
-// Topics infrastructure removed - using direct messaging instead
-
-// Import all inbox costreams
-import agentInbox from './agent/agent.inbox.maia';
+import vibeInbox from './vibe/vibe.inbox.maia';
 import listInbox from './list/list.inbox.maia';
-import logsInbox from './logs/logs.inbox.maia';
-
-// Note: Children are now stored in context.actors (not separate children CoList files)
-// See agent.context.maia and composite.context.maia for children definitions
+import comingSoonInbox from './coming-soon/coming-soon.inbox.maia';
 
 /**
  * Todos Vibe Registry
@@ -46,59 +36,48 @@ import logsInbox from './logs/logs.inbox.maia';
  */
 export const TodosVibeRegistry = {
   vibe: todosVibe,
-  
+
   styles: {
+    '@maia/style/brand': masterBrand,
     '@maia/todos/style/brand': brandStyle,
     '@maia/todos/style/list': listStyle,
-    '@maia/todos/style/logs': logsStyle,
+    '@maia/todos/style/coming-soon': comingSoonStyle,
   },
-  
+
   actors: {
-    '@maia/todos/actor/agent': agentActor,
+    '@maia/todos/actor/vibe': vibeActor,
     '@maia/todos/actor/list': listActor,
-    '@maia/todos/actor/logs': logsActor,
+    '@maia/todos/actor/coming-soon': comingSoonActor,
   },
-  
+
   views: {
-    '@maia/todos/view/agent': agentView,
+    '@maia/todos/view/vibe': vibeView,
     '@maia/todos/view/list': listView,
-    '@maia/todos/view/logs': logsView,
+    '@maia/todos/view/coming-soon': comingSoonView,
   },
-  
+
   contexts: {
-    '@maia/todos/context/agent': agentContext,
+    '@maia/todos/context/vibe': vibeContext,
     '@maia/todos/context/list': listContext,
-    '@maia/todos/context/logs': logsContext,
+    '@maia/todos/context/coming-soon': comingSoonContext,
   },
-  
+
   states: {
-    '@maia/todos/state/agent': agentState,
+    '@maia/todos/state/vibe': vibeState,
     '@maia/todos/state/list': listState,
-    '@maia/todos/state/logs': logsState,
+    '@maia/todos/state/coming-soon': comingSoonState,
   },
-  
+
   inboxes: {
-    '@maia/todos/inbox/agent': agentInbox,
+    '@maia/todos/inbox/vibe': vibeInbox,
     '@maia/todos/inbox/list': listInbox,
-    '@maia/todos/inbox/logs': logsInbox,
+    '@maia/todos/inbox/coming-soon': comingSoonInbox,
   },
-  
-  // Note: Children are now stored in context.actors (not separate children CoList files)
-  // See agent.context.maia and composite.context.maia for children definitions
-  
-  // Initial data for seeding (creates individual todo CoMap items)
-  // NOTE: These todos are automatically indexed into account.os.{schemaCoId} via storage hooks
-  // The read() query reads from account.os.{schemaCoId}, NOT from account.data.todos (which is deprecated)
+
   data: {
     todos: [
-      {
-        text: "Welcome to MaiaOS! 🎉",
-        done: false
-      },
-      {
-        text: "Toggle me to mark as complete",
-        done: false
-      }
-    ]
-  }
+      { text: 'Welcome to MaiaOS! 🎉', done: false },
+      { text: 'Toggle me to mark as complete', done: false },
+    ],
+  },
 };

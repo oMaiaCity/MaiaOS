@@ -1,0 +1,8 @@
+{
+  "$schema": "@maia/schema/state",
+  "$id": "@maia/creator/state/coming-soon",
+  "initial": "idle",
+  "states": {
+    "idle": {}
+  }
+}

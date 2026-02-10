@@ -10,11 +10,11 @@
 
 // Re-export todos loader and registry for convenience
 export { loadTodosVibe, TodosVibeRegistry } from './todos/loader.js';
-export { loadMyDataVibe, MyDataVibeRegistry } from './my-data/loader.js';
+export { loadDbVibe, DbVibeRegistry } from './db/loader.js';
 export { loadSparksVibe, SparksVibeRegistry } from './sparks/loader.js';
 export { MaiaOS } from '@MaiaOS/kernel';
 export { TodosVibeRegistry as TodosRegistry } from './todos/registry.js';
-export { MyDataVibeRegistry as MyDataRegistry } from './my-data/registry.js';
+export { DbVibeRegistry as DbRegistry } from './db/registry.js';
 export { SparksVibeRegistry as SparksRegistry } from './sparks/registry.js';
 
 /**
@@ -36,21 +36,21 @@ export async function getAllVibeRegistries() {
 	}
 	
 	try {
-		const { MaiaAgentVibeRegistry } = await import('./maia-agent/registry.js');
-		if (MaiaAgentVibeRegistry && MaiaAgentVibeRegistry.vibe) {
-			vibeRegistries.push(MaiaAgentVibeRegistry);
+		const { ChatVibeRegistry } = await import('./chat/registry.js');
+		if (ChatVibeRegistry && ChatVibeRegistry.vibe) {
+			vibeRegistries.push(ChatVibeRegistry);
 		}
 	} catch (error) {
-		console.warn('[Vibes] Could not load MaiaAgentVibeRegistry:', error.message);
+		console.warn('[Vibes] Could not load ChatVibeRegistry:', error.message);
 	}
 	
 	try {
-		const { MyDataVibeRegistry } = await import('./my-data/registry.js');
-		if (MyDataVibeRegistry && MyDataVibeRegistry.vibe) {
-			vibeRegistries.push(MyDataVibeRegistry);
+		const { DbVibeRegistry } = await import('./db/registry.js');
+		if (DbVibeRegistry && DbVibeRegistry.vibe) {
+			vibeRegistries.push(DbVibeRegistry);
 		}
 	} catch (error) {
-		console.warn('[Vibes] Could not load MyDataVibeRegistry:', error.message);
+		console.warn('[Vibes] Could not load DbVibeRegistry:', error.message);
 	}
 	
 	try {
@@ -61,7 +61,16 @@ export async function getAllVibeRegistries() {
 	} catch (error) {
 		console.warn('[Vibes] Could not load SparksVibeRegistry:', error.message);
 	}
-	
+
+	try {
+		const { CreatorVibeRegistry } = await import('./creator/registry.js');
+		if (CreatorVibeRegistry && CreatorVibeRegistry.vibe) {
+			vibeRegistries.push(CreatorVibeRegistry);
+		}
+	} catch (error) {
+		console.warn('[Vibes] Could not load CreatorVibeRegistry:', error.message);
+	}
+
 	return vibeRegistries;
 }
 

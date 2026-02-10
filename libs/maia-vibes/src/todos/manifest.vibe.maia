@@ -3,5 +3,5 @@
   "$id": "@maia/vibe/todos",
   "name": "Todos",
   "description": "Complete todo list with state machines and AI tools",
-  "actor": "@maia/todos/actor/agent"
+  "actor": "@maia/todos/actor/vibe"
 }

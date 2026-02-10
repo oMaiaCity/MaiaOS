@@ -1,0 +1,18 @@
+{
+  "$schema": "@maia/schema/context",
+  "$id": "@maia/todos/context/vibe",
+  "currentView": "@list",
+  "viewMode": "list",
+  "listButtonActive": true,
+  "comingSoonButtonActive": false,
+  "inputPlaceholder": "Add a new todo...",
+  "addButtonText": "Add",
+  "listViewLabel": "List",
+  "comingSoonViewLabel": "Soon",
+  "newTodoText": "",
+  "error": null,
+  "@actors": {
+    "list": "@maia/todos/actor/list",
+    "comingSoon": "@maia/todos/actor/coming-soon"
+  }
+}

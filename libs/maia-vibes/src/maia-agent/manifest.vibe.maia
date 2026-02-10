@@ -1,7 +1,0 @@
-{
-  "$schema": "@maia/schema/vibe",
-  "$id": "@maia/vibe/maia",
-  "name": "Maia Agent",
-  "description": "CTO-level AI assistant for MaiaOS codebase",
-  "actor": "@maia/maia/actor/agent"
-}

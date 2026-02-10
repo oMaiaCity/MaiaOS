@@ -9,7 +9,7 @@
   "properties": {
     "viewMode": {
       "type": "string",
-      "enum": ["list", "logs"],
+      "enum": ["list", "logs", "comingSoon"],
       "description": "View mode to switch to (required)"
     }
   },

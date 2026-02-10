@@ -1,0 +1,18 @@
+{
+  "$schema": "@maia/schema/context",
+  "$id": "@maia/creator/context/logs",
+  "messages": {
+    "schema": "@maia/schema/message",
+    "options": {
+      "map": {
+        "fromRole": "$$source.role",
+        "toRole": "$$target.role",
+        "fromId": "$$source.id",
+        "toId": "$$target.id",
+        "recipient": "$$target.role",
+        "targetId": "$$target.id"
+      }
+    }
+  },
+  "payloadLabel": "payload"
+}

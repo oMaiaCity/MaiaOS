@@ -1,0 +1,15 @@
+{
+  "$schema": "@maia/schema/view",
+  "$id": "@maia/creator/view/coming-soon",
+  "content": {
+    "tag": "div",
+    "class": "coming-soon",
+    "children": [
+      {
+        "tag": "p",
+        "class": "coming-soon-text",
+        "text": "$message"
+      }
+    ]
+  }
+}

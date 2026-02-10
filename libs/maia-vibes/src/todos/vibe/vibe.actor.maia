@@ -1,0 +1,11 @@
+{
+  "$schema": "@maia/schema/actor",
+  "$id": "@maia/todos/actor/vibe",
+  "role": "agent",
+  "context": "@maia/todos/context/vibe",
+  "view": "@maia/todos/view/vibe",
+  "state": "@maia/todos/state/vibe",
+  "brand": "@maia/todos/style/brand",
+  "inbox": "@maia/todos/inbox/vibe",
+  "messageTypes": ["CREATE_BUTTON", "TOGGLE_BUTTON", "DELETE_BUTTON", "UPDATE_INPUT", "SWITCH_VIEW", "SUCCESS", "ERROR"]
+}

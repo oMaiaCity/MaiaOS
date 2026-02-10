@@ -1,0 +1,12 @@
+{
+  "$schema": "@maia/schema/actor",
+  "$id": "@maia/creator/actor/coming-soon",
+  "role": "ui",
+  "context": "@maia/creator/context/coming-soon",
+  "view": "@maia/creator/view/coming-soon",
+  "state": "@maia/creator/state/coming-soon",
+  "brand": "@maia/style/brand",
+  "style": "@maia/creator/style/coming-soon",
+  "inbox": "@maia/creator/inbox/coming-soon",
+  "messageTypes": []
+}

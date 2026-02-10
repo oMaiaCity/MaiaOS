@@ -850,10 +850,10 @@ async function handleSeed(seedVibesConfig = null) {
 		const { node, maiaId: account } = maia.id;
 		
 		// Get seeding config from parameter, environment variable, or default ("all" = seed all vibes)
-		// SEED_VIBES can be: null/undefined = use env/default, "all" = all vibes, or ["todos", "maia"] = specific vibes
-		// Check VITE_SEED_VIBES (Vite exposes env vars with VITE_ prefix) or fallback to SEED_VIBES
+		// SEED_VIBES can be: null/undefined = use env/default, "all" = all vibes, or ["todos", "chat", "sparks", "creator"] = specific vibes
+		// Check VITE_MAIA_CITY_SEED_VIBES (maia-city specific) or VITE_SEED_VIBES or SEED_VIBES
 		const envVar = typeof import.meta !== 'undefined' 
-			? (import.meta.env?.VITE_SEED_VIBES || import.meta.env?.SEED_VIBES)
+			? (import.meta.env?.VITE_MAIA_CITY_SEED_VIBES || import.meta.env?.VITE_SEED_VIBES || import.meta.env?.SEED_VIBES)
 			: null;
 		const config = seedVibesConfig !== null 
 			? seedVibesConfig 

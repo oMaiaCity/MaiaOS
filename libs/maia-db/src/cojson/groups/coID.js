@@ -61,10 +61,10 @@ export async function createAccountWithSecret({ agentSecret, name = "Maia", peer
 	if (!skipAutoSeeding) {
 		try {
 		// Get seeding config from environment variable (default: "all" = seed all vibes)
-		// VITE_SEED_VIBES can be: null/undefined = use default "all", "all" = all vibes, or "todos,maia" = specific vibes
-		// Check VITE_SEED_VIBES (Vite exposes env vars with VITE_ prefix) or fallback to SEED_VIBES
+		// Options: "all" = all vibes, or "todos,chat,sparks,creator" = specific vibes
+		// Check VITE_MAIA_CITY_SEED_VIBES (maia-city), VITE_SEED_VIBES, or SEED_VIBES
 		const envVar = typeof import.meta !== 'undefined' 
-			? (import.meta.env?.VITE_SEED_VIBES || import.meta.env?.SEED_VIBES)
+			? (import.meta.env?.VITE_MAIA_CITY_SEED_VIBES || import.meta.env?.VITE_SEED_VIBES || import.meta.env?.SEED_VIBES)
 			: null;
 		const seedVibesConfig = envVar
 			? (envVar === 'all' ? 'all' : envVar.split(',').map(s => s.trim()))

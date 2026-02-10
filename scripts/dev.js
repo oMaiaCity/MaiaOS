@@ -174,7 +174,7 @@ async function startMaiaCity() {
 	
 	logger.status('Starting on port 4200...')
 
-	maiaCityProcess = spawn('bun', ['--filter', 'maia-city', 'dev'], {
+	maiaCityProcess = spawn('bun', ['--env-file=.env', '--filter', 'maia-city', 'dev'], {
 		cwd: rootDir,
 		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,

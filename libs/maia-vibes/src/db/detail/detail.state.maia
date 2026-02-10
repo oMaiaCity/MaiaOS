@@ -1,0 +1,8 @@
+{
+  "$schema": "@maia/schema/state",
+  "$id": "@maia/db/state/detail",
+  "initial": "idle",
+  "states": {
+    "idle": {}
+  }
+}

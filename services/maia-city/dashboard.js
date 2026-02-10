@@ -31,8 +31,10 @@ function truncateDescription(text, maxWords = 10) {
  */
 function getVibeKeyFromId(vibeId) {
 	if (!vibeId) return null;
-	const match = vibeId.match(/@vibe\/(.+)/);
-	return match ? match[1] : null;
+	if (vibeId.startsWith('@maia/vibe/')) {
+		return vibeId.replace('@maia/vibe/', '');
+	}
+	return null;
 }
 
 /**
@@ -319,7 +321,7 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 	const accountId = maia?.id?.maiaId?.id || '';
 	// Map vibe keys to display names
 	const vibeNameMap = {
-		'my-data': 'MaiaDB',
+		'db': 'MaiaDB',
 		'todos': 'Todos'
 	};
 	const vibeLabel = currentVibe ? (vibeNameMap[currentVibe] || `${currentVibe.charAt(0).toUpperCase() + currentVibe.slice(1)} Vibe`) : 'Vibe';

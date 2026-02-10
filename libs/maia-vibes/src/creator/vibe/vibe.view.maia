@@ -1,0 +1,70 @@
+{
+  "$schema": "@maia/schema/view",
+  "$id": "@maia/creator/view/vibe",
+  "content": {
+    "tag": "div",
+    "class": "stack",
+    "children": [
+      {
+        "tag": "div",
+        "class": "header-section",
+        "children": [
+          {
+            "tag": "h2",
+            "class": "vibe-creator-title",
+            "text": "Vibe Creator"
+          },
+          {
+            "tag": "div",
+            "class": "view-switcher",
+            "children": [
+              {
+                "tag": "button",
+                "class": "button-view-switch",
+                "attrs": {
+                  "data-view": "logs",
+                  "data": {
+                    "active": "$logsButtonActive"
+                  }
+                },
+                "text": "$logsViewLabel",
+                "$on": {
+                  "click": {
+                    "send": "SWITCH_VIEW",
+                    "payload": {
+                      "viewMode": "logs"
+                    }
+                  }
+                }
+              },
+              {
+                "tag": "button",
+                "class": "button-view-switch",
+                "attrs": {
+                  "data-view": "comingSoon",
+                  "data": {
+                    "active": "$comingSoonButtonActive"
+                  }
+                },
+                "text": "$comingSoonViewLabel",
+                "$on": {
+                  "click": {
+                    "send": "SWITCH_VIEW",
+                    "payload": {
+                      "viewMode": "comingSoon"
+                    }
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "tag": "main",
+        "class": "content-area",
+        "$slot": "$currentView"
+      }
+    ]
+  }
+}

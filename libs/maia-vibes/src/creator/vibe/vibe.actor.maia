@@ -1,0 +1,14 @@
+{
+  "$schema": "@maia/schema/actor",
+  "$id": "@maia/creator/actor/vibe",
+  "role": "agent",
+  "context": "@maia/creator/context/vibe",
+  "view": "@maia/creator/view/vibe",
+  "state": "@maia/creator/state/vibe",
+  "brand": "@maia/style/brand",
+  "style": "@maia/creator/style/vibe",
+  "inbox": "@maia/creator/inbox/vibe",
+  "messageTypes": [
+    "SWITCH_VIEW"
+  ]
+}
