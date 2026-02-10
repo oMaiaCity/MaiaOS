@@ -17,26 +17,10 @@
  *   DB_PATH=/data/sync.db (for Fly.io persistence)
  */
 
-// Import sync server dynamically (local in Docker, workspace in dev)
+// Import sync server from workspace (libs/maia-sync)
 async function loadSyncServer() {
-	try {
-		// Try local copy first (Docker - sync is at /app/sync/, we're at /app/src/)
-		const sync = await import('../sync/index.js');
-		return sync.createSyncServer;
-	} catch (localError) {
-		// Log the error for debugging
-		console.log('[sync] Local import failed, trying workspace import:', localError.message);
-		try {
-			// Fallback to workspace import (dev)
-			const sync = await import('@MaiaOS/sync');
-			return sync.createSyncServer;
-		} catch (workspaceError) {
-			console.error('[sync] Both local and workspace imports failed');
-			console.error('[sync] Local error:', localError.message);
-			console.error('[sync] Workspace error:', workspaceError.message);
-			throw workspaceError;
-		}
-	}
+	const sync = await import('@MaiaOS/sync');
+	return sync.createSyncServer;
 }
 
 const PORT = process.env.PORT || 4203

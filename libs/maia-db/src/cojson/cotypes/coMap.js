@@ -5,8 +5,7 @@
  * Schema is REQUIRED - no fallbacks or defaults
  */
 
-import { createSchemaMeta, isExceptionSchema, getAllSchemas, EXCEPTION_SCHEMAS } from "../../schemas/registry.js";
-import { hasSchemaInRegistry } from "../../schemas/registry.js";
+import { createSchemaMeta, isExceptionSchema, getAllSchemas, EXCEPTION_SCHEMAS, assertSchemaValidForCreate } from "../../schemas/registry.js";
 import { loadSchemaAndValidate } from '@MaiaOS/schemata/validation.helper';
 
 /**
@@ -16,7 +15,7 @@ import { loadSchemaAndValidate } from '@MaiaOS/schemata/validation.helper';
  * 
  * @param {RawAccount|RawGroup} accountOrGroup - Account (resolves @maia spark group) or Group
  * @param {Object} init - Initial properties
- * @param {string} schemaName - Schema name or co-id for headerMeta (REQUIRED - use "@meta-schema" for meta schema creation)
+ * @param {string} schemaName - Schema name or co-id for headerMeta (REQUIRED - use "@metaSchema" for meta schema creation)
  * @param {LocalNode} [node] - LocalNode instance (required if accountOrGroup is account)
  * @param {Object} [dbEngine] - Database engine for runtime schema validation (REQUIRED for co-ids)
  * @returns {Promise<RawCoMap>}
@@ -46,27 +45,16 @@ export async function createCoMap(accountOrGroup, init = {}, schemaName, node = 
 		}
 		// If no profileId, accountOrGroup is a group - use as-is (group = accountOrGroup from line 27)
 	}
-	// STRICT: Schema is MANDATORY - no exceptions
-	if (!schemaName || typeof schemaName !== 'string') {
-		throw new Error('[createCoMap] Schema name is REQUIRED. Provide a valid schema name (e.g., "ProfileSchema", "@meta-schema")');
-	}
-	
-	// Special case: @maia (metaschema) uses hardcoded "@maia" reference (no validation needed)
-	// This is an exception because headerMeta is read-only after creation, so we can't self-reference the co-id
+	// Special case: @metaSchema (metaschema) uses hardcoded "@metaSchema" reference (no validation needed)
 	if (schemaName === EXCEPTION_SCHEMAS.META_SCHEMA) {
 		const meta = { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
 		const comap = group.createMap(init, meta);
-		console.log("✅ CoMap created (@maia):", comap.id);
+		console.log("✅ CoMap created (@metaSchema):", comap.id);
 		console.log("   Schema:", schemaName);
 		console.log("   HeaderMeta:", comap.headerMeta);
 		return comap;
 	}
-	
-	// Validate schema exists in registry (skip for exception schemas and co-ids)
-	// Co-ids (starting with "co_z") are actual schema CoValue IDs and don't need registry validation
-	if (!isExceptionSchema(schemaName) && !schemaName.startsWith('co_z') && !hasSchemaInRegistry(schemaName)) {
-		throw new Error(`[createCoMap] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema`);
-	}
+	assertSchemaValidForCreate(schemaName, 'createCoMap');
 	
 	// Validate data against schema BEFORE creating CoValue
 	// STRICT: Always validate using runtime schema from database (no fallbacks, no legacy hacks)

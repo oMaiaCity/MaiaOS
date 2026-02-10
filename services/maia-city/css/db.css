@@ -419,6 +419,43 @@
   color: #854d0e; /* yellow-800 */
 }
 
+.metadata-parent-groups-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.metadata-parent-group-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.5rem;
+  border-radius: 14px;
+  background: rgba(248, 250, 252, 0.5);
+  border: 1px solid rgba(226, 232, 240, 0.8);
+}
+
+.metadata-parent-group-card > .metadata-member-item {
+  margin-bottom: 0;
+}
+
+.metadata-parent-group-members {
+  padding-left: 1rem;
+  border-left: 2px solid rgba(148, 163, 184, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.metadata-member-item.metadata-member-nested {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.7rem;
+}
+
+.metadata-member-item.metadata-member-nested .metadata-member-id {
+  font-size: 0.7rem;
+}
+
 /* Metadata Info */
 .metadata-info-list {
   display: flex;

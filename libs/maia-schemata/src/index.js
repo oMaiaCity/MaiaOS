@@ -58,6 +58,12 @@ import inboxSchema from './os/inbox.schema.json';
 import childrenSchema from './os/children.schema.json';
 // Import OS infrastructure schemas
 import schematasRegistrySchema from './os/schematas-registry.schema.json';
+import osRegistrySchema from './os/os-registry.schema.json';
+import capabilitiesSchema from './os/capabilities.schema.json';
+import indexesRegistrySchema from './os/indexes-registry.schema.json';
+import vibesRegistrySchema from './os/vibes-registry.schema.json';
+import sparksRegistrySchema from './os/sparks-registry.schema.json';
+import registriesSchema from './os/registries.schema.json';
 // Import data schemas
 import todosDataSchema from './data/todos.schema.json';
 import chatDataSchema from './data/chat.schema.json';
@@ -107,7 +113,13 @@ const SCHEMAS = {
   inbox: inboxSchema,
   children: childrenSchema,
   // OS infrastructure schemas
-  'os/schematas-registry': schematasRegistrySchema
+  'os/schematas-registry': schematasRegistrySchema,
+  'os/os-registry': osRegistrySchema,
+  'os/capabilities': capabilitiesSchema,
+  'os/indexes-registry': indexesRegistrySchema,
+  'os/vibes-registry': vibesRegistrySchema,
+  'os/sparks-registry': sparksRegistrySchema,
+  'os/registries': registriesSchema
 };
 
 // Data schemas registry (for application data validation)

@@ -4,9 +4,7 @@
  * Provides the create() method for creating new CoValues.
  */
 
-import { createCoMap } from '../cotypes/coMap.js';
-import { createCoList } from '../cotypes/coList.js';
-import { createCoStream } from '../cotypes/coStream.js';
+import { createCoValueForSpark } from '../covalue/create-covalue-for-spark.js';
 import * as collectionHelpers from './collection-helpers.js';
 import * as dataExtraction from './data-extraction.js';
 // Schema indexing is handled by storage-level hooks (more resilient than API hooks)
@@ -68,33 +66,19 @@ export async function create(backend, schema, data) {
     throw new Error('[CoJSONBackend] Account required for create');
   }
 
-  const group = await backend.getMaiaGroup();
-
-  let coValue;
-  switch (cotype) {
-    case 'comap':
-      if (!data || typeof data !== 'object' || Array.isArray(data)) {
-        throw new Error('[CoJSONBackend] Data must be object for comap');
-      }
-      // Pass group directly instead of account - eliminates profile resolution in createCoMap
-      // Pass dbEngine for runtime schema validation (REQUIRED for co-ids)
-      coValue = await createCoMap(group, data, schema, backend.node, backend.dbEngine);
-      break;
-    case 'colist':
-      if (!Array.isArray(data)) {
-        throw new Error('[CoJSONBackend] Data must be array for colist');
-      }
-      // Pass group directly instead of account - eliminates profile resolution in createCoList
-      // Pass dbEngine for runtime schema validation (REQUIRED for co-ids)
-      coValue = await createCoList(group, data, schema, backend.node, backend.dbEngine);
-      break;
-    case 'costream':
-      // Pass group directly instead of account - eliminates profile resolution in createCoStream
-      coValue = await createCoStream(group, schema, backend.node, backend.dbEngine);
-      break;
-    default:
-      throw new Error(`[CoJSONBackend] Unsupported cotype: ${cotype}`);
+  if (cotype === 'comap' && (!data || typeof data !== 'object' || Array.isArray(data))) {
+    throw new Error('[CoJSONBackend] Data must be object for comap');
   }
+  if (cotype === 'colist' && !Array.isArray(data)) {
+    throw new Error('[CoJSONBackend] Data must be array for colist');
+  }
+
+  const { coValue } = await createCoValueForSpark(backend, '@maia', {
+    schema,
+    cotype,
+    data: cotype === 'comap' ? data : cotype === 'colist' ? data : undefined,
+    dbEngine: backend.dbEngine
+  });
 
   // CRITICAL: Don't wait for storage sync - it blocks the UI!
   // The co-value is already created and available locally

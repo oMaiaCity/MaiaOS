@@ -1,5 +1,4 @@
-import { createSchemaMeta } from "../../schemas/registry.js";
-import { hasSchemaInRegistry } from "../../schemas/registry.js";
+import { createSchemaMeta, assertSchemaValidForCreate } from "../../schemas/registry.js";
 
 /**
  * Create a CoStream with MANDATORY schema validation
@@ -34,15 +33,7 @@ export async function createCoStream(accountOrGroup, schemaName, node = null, db
 		}
 		// If profileId is null/undefined, it's a regular group, use it as-is
 	}
-	// STRICT: Schema is MANDATORY
-	if (!schemaName || typeof schemaName !== 'string') {
-		throw new Error('[createCoStream] Schema name is REQUIRED. Provide a valid schema name (e.g., schema co-id or "@meta-schema")');
-	}
-	
-	// Validate schema exists in registry
-	if (!hasSchemaInRegistry(schemaName)) {
-		throw new Error(`[createCoStream] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema`);
-	}
+	assertSchemaValidForCreate(schemaName, 'createCoStream');
 	
 	const meta = createSchemaMeta(schemaName);
 	const costream = group.createStream(meta);

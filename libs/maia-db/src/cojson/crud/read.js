@@ -33,10 +33,10 @@ import { waitForStoreReady } from './read-operations.js';
  * @param {string} [coId] - CoValue ID (for single item read)
  * @param {string} [schema] - Schema co-id (for collection read, or schemaHint for single item)
  * @param {Object} [filter] - Filter criteria (for collection/all reads)
- * @param {string} [schemaHint] - Schema hint for special types (@group, @account, @meta-schema)
+ * @param {string} [schemaHint] - Schema hint for special types (@group, @account, @metaSchema)
  * @param {Object} [options] - Options for deep resolution and transformations
  * @param {boolean} [options.deepResolve=true] - Enable/disable deep resolution (default: true)
- * @param {number} [options.maxDepth=10] - Maximum depth for recursive resolution (default: 10)
+ * @param {number} [options.maxDepth=15] - Maximum depth for recursive resolution (default: 15, temporarily)
  * @param {number} [options.timeoutMs=5000] - Timeout for waiting for nested CoValues (default: 5000)
  * @param {Object} [options.resolveReferences] - Options for resolving CoValue references
  * @param {string[]} [options.resolveReferences.fields] - Specific field names to resolve (e.g., ['source', 'target']). If not provided, resolves all co-id references
@@ -46,7 +46,7 @@ import { waitForStoreReady } from './read-operations.js';
 export async function read(backend, coId = null, schema = null, filter = null, schemaHint = null, options = {}) {
   const {
     deepResolve = true,
-    maxDepth = 10,
+    maxDepth = 15, // TODO: temporarily scaled up from 10 for @maia spark detail deep resolution
     timeoutMs = 5000,
     resolveReferences = null,
     map = null,
@@ -520,7 +520,7 @@ function getMapDependencyCoIds(rawData, mapConfig) {
 async function processCoValueData(backend, coValueCore, schemaHint, options, visited = new Set()) {
   const {
     deepResolve = true,
-    maxDepth = 10,
+    maxDepth = 15, // TODO: temporarily scaled up from 10 for @maia spark detail deep resolution
     timeoutMs = 5000,
     resolveReferences = null,
     map = null
@@ -579,7 +579,7 @@ async function processCoValueData(backend, coValueCore, schemaHint, options, vis
 async function readSingleCoValue(backend, coId, schemaHint = null, options = {}) {
   const {
     deepResolve = true,
-    maxDepth = 10,
+    maxDepth = 15, // TODO: temporarily scaled up from 10 for @maia spark detail deep resolution
     timeoutMs = 5000,
     resolveReferences = null,
     map = null
@@ -770,7 +770,7 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
  * @returns {Promise<ReactiveStore>} ReactiveStore with array of spark items {id, name, ...}
  */
 async function readSparksFromAccount(backend, options = {}) {
-  const { deepResolve = true, maxDepth = 10, timeoutMs = 5000 } = options;
+  const { deepResolve = true, maxDepth = 15, timeoutMs = 5000 } = options; // TODO: maxDepth temporarily 15 for @maia spark detail
   const store = backend.subscriptionCache.getOrCreateStore('sparks:account', () => new ReactiveStore([]));
 
   const sparksId = backend.account?.get?.('sparks');
@@ -838,7 +838,7 @@ async function readSparksFromAccount(backend, options = {}) {
 async function readCollection(backend, schema, filter = null, options = {}) {
   const {
     deepResolve = true,
-    maxDepth = 10,
+    maxDepth = 15, // TODO: temporarily scaled up from 10 for @maia spark detail deep resolution
     timeoutMs = 5000,
     resolveReferences = null,
     map = null
@@ -857,7 +857,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
     return new ReactiveStore([]);
   });
   
-  // Get schema index colist ID from account.os (keyed by schema co-id)
+  // Get schema index colist ID from spark.os.indexes (keyed by schema co-id)
   // Supports both schema co-ids (co_z...) and human-readable names (@maia/schema/data/todos)
   const coListId = await getCoListId(backend, schema);
   if (!coListId) {
@@ -1190,7 +1190,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
 async function readAllCoValues(backend, filter = null, options = {}) {
   const {
     deepResolve = true,
-    maxDepth = 10,
+    maxDepth = 15, // TODO: temporarily scaled up from 10 for @maia spark detail deep resolution
     timeoutMs = 5000
   } = options;
   const store = new ReactiveStore([]);

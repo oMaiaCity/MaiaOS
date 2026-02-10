@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-02-10T15:18:57.065Z
+**Auto-generated:** 2026-02-10T23:00:48.541Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -6971,7 +6971,7 @@ const spark = await maia.db({
 });
 
 console.log("Created spark:", spark.id);
-console.log("Group:", spark.group); // Co-id of the created group
+console.log("Guardian:", spark.guardian); // Co-id of the spark's guardian group
 ```
 
 **Parameters:**
@@ -6981,11 +6981,11 @@ console.log("Group:", spark.group); // Co-id of the created group
 - Created spark object with:
   - `id` - Spark CoMap co-id
   - `name` - Spark name
-  - `group` - Group co-id (child group owned by @maia spark's group)
+  - `guardian` - Guardian group co-id (resolved via `spark.os.capabilities.guardian`)
 
 **What happens:**
-1. Creates a child group owned by your @maia spark's group
-2. Creates a Spark CoMap with `{name, group}` structure
+1. Creates a new guardian group (child of @maia spark's guardian)
+2. Creates full scaffold: capabilities, os, vibes, spark with `{name, os, vibes}` (no `group`; guardian is in `os.capabilities.guardian`)
 3. Registers spark in `account.sparks` CoMap
 4. Automatically indexes spark in `account.os.{sparkSchemaCoId}` colist
 

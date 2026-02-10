@@ -4,32 +4,10 @@
  * IDEMPOTENT: Runs on account load, checks if migration already applied
  *
  * Creates (if not exists):
- * 1. account.profile: Profile CoMap (account-owned, identity only - no group)
- * 2. account.sparks: CoMap mapping spark names -> Spark CoMap co-ids
- * 3. @maia spark: System default spark with group, os (schematas, indexes)
+ * 1. account.profile: Profile CoMap (account-owned, identity only)
  *
- * ARCHITECTURE:
- *
- * NAMING CONVENTION:
- * - Profile name = "passkey" (represents EOA/Externally Owned Account)
- * - @maia = hardcoded system default spark (just a spark like any other)
- *
- * CONCEPTUAL MODEL:
- * - Profile = account-owned only (identity), never group-owned
- * - Sparks = named scopes; @maia spark owns system content (schemata, vibes, indexes)
- * - Each spark has { name, group, os?, vibes? }; os and vibes at spark level
- *
- * account.profile (CoMap - account-owned)
- *   └── name: "passkey"
- *
- * account.sparks (CoMap - owned by @maia group)
- *   └── "@maia" -> @maia Spark CoMap co-id
- *
- * @maia Spark (CoMap - owned by @maia group)
- *   ├── name: "@maia"
- *   ├── group: @maia group co-id
- *   ├── os: group.os CoMap (schematas, indexes)
- *   └── vibes: (set by seed when vibes registry exists)
+ * Scaffold (account.sparks, @maia spark, os, capabilities, schematas, indexes, vibes)
+ * is created by seed.js during seeding, not by migration.
  *
  * @param {RawAccount} account - The account (new or existing)
  * @param {LocalNode} node - The LocalNode instance
@@ -38,14 +16,10 @@
  */
 
 import { createSchemaMeta } from "../schemas/registry.js";
-import { EXCEPTION_SCHEMAS } from "../schemas/registry.js";
 
-const PROFILE_NAME = "passkey";
-const MAIA_SPARK_NAME = "@maia";
+const PROFILE_NAME = "Samuel";
 
 export async function schemaMigration(account, node, creationProps) {
-	const isCreation = creationProps !== undefined;
-
 	// 1. Check if profile already exists
 	let profileId = account.get("profile");
 	let profile;
@@ -80,109 +54,75 @@ export async function schemaMigration(account, node, creationProps) {
 		}
 	}
 
-	// 2. Create profile (account-owned only, no group)
+	// 2. Create profile (public by default - profile group has everyone as reader)
 	if (!profile) {
 		const profileMeta = createSchemaMeta("ProfileSchema");
-		profile = account.createMap({ name: PROFILE_NAME }, profileMeta);
-		account.set("profile", profile.id);
+		const profileGroup = node.createGroup();
+		profileGroup.addMember("everyone", "reader");
+		const profileCoMap = profileGroup.createMap({ name: PROFILE_NAME }, profileMeta);
+		account.set("profile", profileCoMap.id);
 	} else {
 		const currentProfileName = profile.get("name");
 		if (currentProfileName !== PROFILE_NAME) {
 			profile.set("name", PROFILE_NAME);
 			console.log(`   🔄 Updated profile name from "${currentProfileName}" to "${PROFILE_NAME}"`);
 		}
-		// No backward compat: fresh accounts only; group was removed from ProfileSchema
 	}
 
-	// 3. Check if @maia spark already exists
-	let sparksId = account.get("sparks");
-	let sparks;
-	let maiaSparkId;
-
-	if (sparksId) {
-		try {
-			let sparksCore = node.getCoValue(sparksId);
-			if (!sparksCore) {
-				sparksCore = await node.loadCoValueCore(sparksId);
-			}
-			if (sparksCore && sparksCore.type === "comap") {
-				if (!sparksCore.isAvailable?.()) {
-					await new Promise((resolve, reject) => {
-						const timeout = setTimeout(() => reject(new Error("Timeout waiting for sparks")), 15000);
-						const unsub = sparksCore.subscribe((core) => {
-							if (core?.isAvailable?.()) {
-								clearTimeout(timeout);
-								unsub?.();
-								resolve();
-							}
-						});
-					});
-				}
-				const sparksContent = sparksCore.getCurrentContent?.();
-				if (sparksContent && typeof sparksContent.get === "function") {
-					maiaSparkId = sparksContent.get(MAIA_SPARK_NAME);
-				}
-			}
-		} catch (e) {
-			// Sparks not synced yet (e.g. sync/agent loading before propagation) - skip, will retry on next load
-			console.warn("[schemaMigration] Could not load sparks, will retry:", e?.message || e);
-			return; // Don't create - we don't know if @maia exists; migration will run again
-		}
-	}
-
-	// 4. Create @maia spark structure if not exists
-	if (!maiaSparkId || !maiaSparkId.startsWith("co_z")) {
-		// 4a. Create @maia group
-		const maiaGroup = node.createGroup();
-
-		// 4b. Create @maia Spark CoMap (owned by @maia group)
-		const sparkMeta = { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
-		const maiaSpark = maiaGroup.createMap(
-			{ name: MAIA_SPARK_NAME, group: maiaGroup.id },
-			sparkMeta
-		);
-
-		// 4c. Create group.os (schematas, indexes) - owned by @maia group
-		const osMeta = { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
-		const groupOs = maiaGroup.createMap({}, osMeta);
-		maiaSpark.set("os", groupOs.id);
-
-		// 4d. Create or get account.sparks, register @maia
-		if (!sparksId) {
-			const sparksMeta = { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
-			sparks = maiaGroup.createMap({}, sparksMeta);
-			account.set("sparks", sparks.id);
-			console.log("✅ Created account.sparks CoMap:", sparks.id);
-		} else {
-			try {
-				let sparksCore = node.getCoValue(sparksId);
-				if (!sparksCore) {
-					sparksCore = await node.loadCoValueCore(sparksId);
-				}
-				if (sparksCore && sparksCore.isAvailable?.()) {
-					sparks = sparksCore.getCurrentContent?.();
-				} else if (sparksCore) {
-					await new Promise((resolve, reject) => {
-						const timeout = setTimeout(() => reject(new Error("Timeout waiting for sparks")), 15000);
-						const unsub = sparksCore.subscribe((core) => {
-							if (core?.isAvailable?.()) {
-								clearTimeout(timeout);
-								unsub?.();
-								resolve();
-							}
-						});
-					});
-					sparks = sparksCore.getCurrentContent?.();
-				}
-			} catch (e) {
-				console.warn("[schemaMigration] Could not add @maia to sparks, will retry:", e?.message || e);
-			}
-		}
-		if (sparks && typeof sparks.set === "function") {
-			sparks.set(MAIA_SPARK_NAME, maiaSpark.id);
-			console.log("✅ Created @maia spark:", maiaSpark.id);
-		}
-	}
+	// 3. Migrate capabilities: sparkGuardian -> guardian (idempotent)
+	await migrateCapabilitiesGuardian(account, node);
 
 	// Identity migration complete
+}
+
+/**
+ * Migrate capabilities CoMaps: sparkGuardian -> guardian.
+ * Traverse account.sparks -> each spark -> os -> capabilities.
+ * Idempotent: skips when guardian already set.
+ */
+async function migrateCapabilitiesGuardian(account, node) {
+	const sparksId = account.get?.('sparks');
+	if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_z')) return;
+
+	const sparksCore = node.getCoValue(sparksId) || await node.loadCoValueCore(sparksId);
+	if (!sparksCore?.isAvailable?.()) return;
+	const sparks = sparksCore.getCurrentContent?.();
+	if (!sparks || typeof sparks.get !== 'function') return;
+
+	let migrated = 0;
+	const keys = typeof sparks.keys === 'function' ? Array.from(sparks.keys()) : Object.keys(sparks ?? {});
+	for (const key of keys) {
+		const sparkId = sparks.get(key);
+		if (!sparkId || typeof sparkId !== 'string' || !sparkId.startsWith('co_z')) continue;
+
+		const sparkCore = node.getCoValue(sparkId) || await node.loadCoValueCore(sparkId);
+		if (!sparkCore?.isAvailable?.()) continue;
+		const spark = sparkCore.getCurrentContent?.();
+		if (!spark || typeof spark.get !== 'function') continue;
+
+		const osId = spark.get('os');
+		if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) continue;
+
+		const osCore = node.getCoValue(osId) || await node.loadCoValueCore(osId);
+		if (!osCore?.isAvailable?.()) continue;
+		const os = osCore.getCurrentContent?.();
+		if (!os || typeof os.get !== 'function') continue;
+
+		const capabilitiesId = os.get('capabilities');
+		if (!capabilitiesId || typeof capabilitiesId !== 'string' || !capabilitiesId.startsWith('co_z')) continue;
+
+		const capabilitiesCore = node.getCoValue(capabilitiesId) || await node.loadCoValueCore(capabilitiesId);
+		if (!capabilitiesCore?.isAvailable?.()) continue;
+		const capabilities = capabilitiesCore.getCurrentContent?.();
+		if (!capabilities || typeof capabilities.set !== 'function') continue;
+
+		const sparkGuardianId = capabilities.get('sparkGuardian');
+		if (!sparkGuardianId || typeof sparkGuardianId !== 'string' || !sparkGuardianId.startsWith('co_z')) continue;
+		if (capabilities.get('guardian')) continue;
+
+		capabilities.set('guardian', sparkGuardianId);
+		capabilities.delete?.('sparkGuardian');
+		migrated++;
+	}
+	if (migrated > 0) console.log(`   🔄 Migrated capabilities sparkGuardian -> guardian (${migrated} sparks)`);
 }

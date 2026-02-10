@@ -25,9 +25,62 @@ export async function getGroup(node, groupId) {
 }
 
 /**
- * Get group for a spark by name
- * Resolves account.sparks[spark] -> spark.group
- * 
+ * Get capability group co-id for a spark from spark.os.capabilities
+ * Resolves: spark -> spark.os -> os.capabilities -> capabilities.get(capabilityName)
+ * @param {Object} backend - Backend instance
+ * @param {string} spark - Spark name (e.g. "@maia") or spark co-id
+ * @param {string} capabilityName - Capability key (e.g. 'guardian', 'publicReaders')
+ * @returns {Promise<string|null>} Group co-id or null
+ */
+/**
+ * Get capability group co-id from os CoMap id (os -> capabilities -> capabilityName)
+ * @param {Object} backend - Backend instance
+ * @param {string} osId - OS CoMap co-id
+ * @param {string} capabilityName - Capability key (e.g. 'guardian', 'publicReaders')
+ * @returns {Promise<string|null>} Group co-id or null
+ */
+export async function getCapabilityGroupIdFromOsId(backend, osId, capabilityName) {
+  if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) return null;
+  const osCore = backend.getCoValue(osId);
+  if (!osCore || !backend.isAvailable(osCore)) return null;
+  const osContent = backend.getCurrentContent(osCore);
+  if (!osContent || typeof osContent.get !== 'function') return null;
+  const capabilitiesId = osContent.get('capabilities');
+  if (!capabilitiesId || typeof capabilitiesId !== 'string' || !capabilitiesId.startsWith('co_z')) return null;
+  const capabilitiesCore = backend.getCoValue(capabilitiesId);
+  if (!capabilitiesCore || !backend.isAvailable(capabilitiesCore)) return null;
+  const capabilitiesContent = backend.getCurrentContent(capabilitiesCore);
+  if (!capabilitiesContent || typeof capabilitiesContent.get !== 'function') return null;
+  const groupId = capabilitiesContent.get(capabilityName);
+  if (!groupId || typeof groupId !== 'string' || !groupId.startsWith('co_z')) return null;
+  return groupId;
+}
+
+export async function getSparkCapabilityGroupId(backend, spark, capabilityName) {
+  const osId = await getSparkOsId(backend, spark);
+  return getCapabilityGroupIdFromOsId(backend, osId, capabilityName);
+}
+
+/**
+ * Get capability group co-id for a spark by spark co-id (not spark name)
+ * @param {Object} backend - Backend instance
+ * @param {string} sparkCoId - Spark CoMap co-id
+ * @param {string} capabilityName - Capability key (e.g. 'guardian', 'publicReaders')
+ * @returns {Promise<string|null>} Group co-id or null
+ */
+export async function getSparkCapabilityGroupIdFromSparkCoId(backend, sparkCoId, capabilityName) {
+  if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_z')) return null;
+  const sparkCore = backend.getCoValue(sparkCoId) || await backend.node?.loadCoValueCore?.(sparkCoId);
+  if (!sparkCore || !backend.isAvailable?.(sparkCore)) return null;
+  const sparkContent = backend.getCurrentContent?.(sparkCore);
+  if (!sparkContent || typeof sparkContent.get !== 'function') return null;
+  const osId = sparkContent.get('os');
+  return getCapabilityGroupIdFromOsId(backend, osId, capabilityName);
+}
+
+/**
+ * Get guardian (admin-role) group for a spark by name
+ * Resolves from spark.os.capabilities.guardian only (no spark.group; fresh DB).
  * @param {Object} backend - Backend instance with read(), getCoValue(), getCurrentContent(), account
  * @param {string} spark - Spark name (e.g. "@maia", "@handle")
  * @returns {Promise<RawGroup|null>} Group for the spark or null
@@ -40,68 +93,9 @@ export async function getSparkGroup(backend, spark) {
   if (backend[cacheKey]) {
     return backend[cacheKey];
   }
-  const sparksId = backend.account.get('sparks');
-  if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_z')) {
-    throw new Error('[getSparkGroup] account.sparks not found. Ensure schemaMigration has created @maia spark.');
-  }
-  const sparksStore = await backend.read(null, sparksId);
-  if (!sparksStore || sparksStore.error) {
-    throw new Error('[getSparkGroup] account.sparks not available');
-  }
-  await new Promise((resolve, reject) => {
-    if (!sparksStore.loading) {
-      resolve();
-      return;
-    }
-    let unsubscribe;
-    const timeout = setTimeout(() => {
-      reject(new Error(`[getSparkGroup] Timeout waiting for account.sparks`));
-    }, 10000);
-    unsubscribe = sparksStore.subscribe(() => {
-      if (!sparksStore.loading) {
-        clearTimeout(timeout);
-        unsubscribe();
-        resolve();
-      }
-    });
-  });
-  const sparksData = sparksStore.value;
-  if (!sparksData || sparksData.error) {
-    throw new Error('[getSparkGroup] account.sparks data not available');
-  }
-  // spark can be co-id (new format) or name like "@maia" (system spark)
-  const sparkCoId = spark.startsWith('co_z') ? spark : (sparksData[spark] || (sparksData.properties?.find?.(p => p.key === spark)?.value));
-  if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_z')) {
-    throw new Error(`[getSparkGroup] Spark "${spark}" not found in account.sparks`);
-  }
-  const sparkStore = await backend.read(null, sparkCoId);
-  if (!sparkStore || sparkStore.error) {
-    throw new Error(`[getSparkGroup] Spark ${spark} not available`);
-  }
-  await new Promise((resolve, reject) => {
-    if (!sparkStore.loading) {
-      resolve();
-      return;
-    }
-    let unsubscribe;
-    const timeout = setTimeout(() => {
-      reject(new Error(`[getSparkGroup] Timeout waiting for spark ${spark}`));
-    }, 10000);
-    unsubscribe = sparkStore.subscribe(() => {
-      if (!sparkStore.loading) {
-        clearTimeout(timeout);
-        unsubscribe();
-        resolve();
-      }
-    });
-  });
-  const sparkData = sparkStore.value;
-  if (!sparkData || sparkData.error) {
-    throw new Error(`[getSparkGroup] Spark ${spark} data not available`);
-  }
-  const groupId = sparkData.group || (sparkData.properties?.find?.(p => p.key === 'group')?.value);
+  const groupId = await getSparkCapabilityGroupId(backend, spark, 'guardian');
   if (!groupId || typeof groupId !== 'string' || !groupId.startsWith('co_z')) {
-    throw new Error(`[getSparkGroup] Spark ${spark} has no group reference`);
+    throw new Error(`[getSparkGroup] Spark ${spark} has no guardian in os.capabilities`);
   }
   const groupStore = await backend.read('@group', groupId);
   if (!groupStore || groupStore.error) {
@@ -241,7 +235,7 @@ export async function getMaiaGroup(backend) {
 
 /**
  * Extract account members from a group with their effective roles
- * Uses roleOf() to get effective roles including inherited roles from parent groups
+ * Uses roleOf() to get effective roles including inherited roles from group members
  * @param {RawGroup} groupContent - RawGroup instance
  * @returns {Array<{id: string, role: string, isInherited?: boolean}>} Array of account members with effective roles
  */
@@ -257,7 +251,7 @@ export function extractAccountMembers(groupContent) {
         if (seenMembers.has(memberId)) continue;
         seenMembers.add(memberId);
         
-        // Get effective role using roleOf() - this includes inherited roles from parent groups
+        // Get effective role using roleOf() - this includes inherited roles from group members
         let role = null;
         if (typeof groupContent.roleOf === 'function') {
           try {
@@ -282,9 +276,10 @@ export function extractAccountMembers(groupContent) {
         }
         
         if (role && role !== 'revoked') {
-          // Check if this is a direct role or inherited
+          // Check if this is a direct role or inherited (from parent group)
           const directRole = groupContent.get ? groupContent.get(memberId) : null;
-          const isInherited = directRole !== role && directRole !== 'revoked';
+          // When direct is revoked, role comes from parent → inherited. When direct !== role, inherited.
+          const isInherited = directRole === 'revoked' || directRole !== role;
           
           accountMembers.push({
             id: memberId,
@@ -377,60 +372,16 @@ export function extractEveryoneRole(groupContent) {
 }
 
 /**
- * Extract group members (parent groups) from a group with their delegation roles
+ * Extract group members (groups added via addGroupMember) from a group with their delegation roles
  * 
- * GROUP-IN-GROUP ACCESS / DELEGATED ACCESS EXPLANATION:
+ * GROUP-IN-GROUP ACCESS:
+ * A group can have other groups as members (addGroupMember(group, role)). Members of those groups
+ * get access to this group's co-values according to the delegation role.
  * 
- * CoJSON supports hierarchical group access through "parent groups". When a group extends
- * a parent group, all members of the parent group automatically get access to the child group.
- * 
- * How it works:
- * 1. A group can "extend" one or more parent groups by setting `parent_{groupId}` to a role
- * 2. When a parent group is extended, all members of the parent group get access to the child group
- * 3. The access level depends on the delegation role:
- * 
- * Delegation Roles:
- * - "extend": Inherits role from parent group
- *   → If parent member has "admin" in parent, they get "admin" in child
- *   → If parent member has "reader" in parent, they get "reader" in child
- *   → Most flexible - respects individual member roles in parent
- * 
- * - "reader": All parent members get "reader" access in child
- *   → Everyone in parent group can read child group's co-values
- *   → Useful for sharing read-only access to a group
- * 
- * - "writer": All parent members get "writer" access in child
- *   → Everyone in parent group can read and write child group's co-values
- *   → Useful for collaborative groups
- * 
- * - "manager": All parent members get "manager" access in child
- *   → Everyone in parent group can manage members (except admins)
- *   → Useful for delegating member management
- * 
- * - "admin": All parent members get "admin" access in child
- *   → Everyone in parent group gets full control
- *   → Use with caution - grants full access to all parent members
- * 
- * - "revoked": Delegation is revoked
- *   → Parent group members lose access (unless they have direct membership)
- * 
- * Example Scenario:
- * - Group A (Company) has members: Alice (admin), Bob (writer)
- * - Group B (Project) extends Group A with role "extend"
- *   → Alice gets admin access to Group B (inherited from her admin role in A)
- *   → Bob gets writer access to Group B (inherited from his writer role in A)
- * 
- * - Group C (Public) extends Group A with role "reader"
- *   → Alice gets reader access to Group C (not admin, because delegation is "reader")
- *   → Bob gets reader access to Group C (not writer, because delegation is "reader")
- * 
- * This enables powerful organizational structures:
- * - Company → Department → Project hierarchies
- * - Team → Sub-team → Task delegation
- * - Organization → Workspace → Resource access
- * 
+ * Delegation roles: "extend" (inherits each member's role), "reader", "writer", "manager", "admin", "revoked".
+ *
  * @param {RawGroup} groupContent - RawGroup instance
- * @returns {Array<{id: string, role: string, roleDescription: string}>} Array of parent group members with delegation roles
+ * @returns {Array<{id: string, role: string, roleDescription: string, members: Array<{id: string, role: string}>}>} Group members with delegation roles and their members
  */
 export function extractGroupMembers(groupContent) {
   const groupMembers = [];
@@ -456,28 +407,52 @@ export function extractGroupMembers(groupContent) {
             }
           }
           
-          // Map delegation role to description
+          // Map delegation role to description (user-facing: no "parent"/"extend" wording; use "group member" vocabulary)
           let roleDescription = '';
           if (delegationRole === 'extend') {
-            roleDescription = 'Inherits roles from parent group';
+            roleDescription = 'Inherits roles from this group';
           } else if (delegationRole === 'reader') {
-            roleDescription = 'All parent members get reader access';
+            roleDescription = 'All members of this group get reader access';
           } else if (delegationRole === 'writer') {
-            roleDescription = 'All parent members get writer access';
+            roleDescription = 'All members of this group get writer access';
           } else if (delegationRole === 'manager') {
-            roleDescription = 'All parent members get manager access';
+            roleDescription = 'All members of this group get manager access';
           } else if (delegationRole === 'admin') {
-            roleDescription = 'All parent members get admin access';
+            roleDescription = 'All members of this group get admin access';
           } else if (delegationRole === 'revoked') {
             roleDescription = 'Delegation revoked';
           } else {
             roleDescription = 'Delegated access';
           }
           
+          // Get actual members of this group member and their effective role here
+          const delegatedMembers = [];
+          try {
+            const memberKeys = typeof parentGroup.getMemberKeys === 'function'
+              ? parentGroup.getMemberKeys()
+              : [];
+            const hasEveryone = typeof parentGroup.get === 'function' && parentGroup.get('everyone');
+            const memberIds = [...memberKeys];
+            if (hasEveryone) memberIds.push('everyone');
+            for (const memberId of memberIds) {
+              const parentRole = typeof parentGroup.roleOf === 'function'
+                ? parentGroup.roleOf(memberId)
+                : null;
+              if (!parentRole || parentRole === 'revoked') continue;
+              const effectiveRole = (delegationRole === 'extend' || delegationRole === 'inherit')
+                ? parentRole
+                : delegationRole;
+              delegatedMembers.push({ id: memberId, role: effectiveRole });
+            }
+          } catch (e) {
+            // Group member may not be fully loaded - skip members
+          }
+
           groupMembers.push({
             id: parentId,
             role: delegationRole || 'extend',
-            roleDescription: roleDescription
+            roleDescription: roleDescription,
+            members: delegatedMembers
           });
         }
       }
@@ -560,16 +535,45 @@ export async function addGroupMember(node, group, memberId, role, backend = null
 }
 
 /**
+ * Check if removing memberId would leave the group with no admins
+ * @param {RawGroup} groupContent - Group content
+ * @param {string} memberIdToRemove - Member co-id to remove
+ * @returns {boolean} True if removing would leave no admins
+ */
+export function wouldLeaveNoAdmins(groupContent, memberIdToRemove) {
+  const accountMembers = extractAccountMembers(groupContent);
+  const directAdmins = accountMembers.filter(
+    (m) => (m.role === 'admin' || m.role === 'manager') && m.id !== memberIdToRemove
+  );
+  if (directAdmins.length > 0) return false;
+
+  const groupMembers = extractGroupMembers(groupContent);
+  // Parent with admin/extend role provides admin coverage (its members get delegated)
+  // Note: getMemberKeys may not exist on all CoJSON group types, so we allow remove when any parent has admin/extend
+  const hasParentWithAdmins = groupMembers.some((g) => g.role === 'admin' || g.role === 'extend');
+  if (hasParentWithAdmins) return false;
+
+  return true;
+}
+
+/**
  * Remove a member from a group
+ * Rejects if removing would leave the group with no admins
  * @param {RawGroup} group - Group CoValue
- * @param {string} memberId - Member ID to remove
+ * @param {string|Object} member - Member co-id (co_z...) or account content with .id
  * @returns {Promise<void>}
  */
-export async function removeGroupMember(group, memberId) {
+export async function removeGroupMember(group, member) {
+  const memberId = typeof member === 'string' ? member : (member?.id ?? member?.$jazz?.id);
+  if (!memberId || !memberId.startsWith('co_z')) {
+    throw new Error('[removeGroupMember] member must be co-id (co_z...) or account content with .id');
+  }
   if (typeof group.removeMember !== 'function') {
     throw new Error('[CoJSONBackend] Group does not support removeMember');
   }
-  
+  if (wouldLeaveNoAdmins(group, memberId)) {
+    throw new Error('[removeGroupMember] Cannot remove last admin. Group must have at least one admin.');
+  }
   group.removeMember(memberId);
 }
 

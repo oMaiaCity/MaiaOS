@@ -8,7 +8,7 @@
  * Extract CoValue data from CoValueCore and normalize (match IndexedDB format)
  * @param {Object} backend - Backend instance
  * @param {CoValueCore} coValueCore - CoValueCore instance
- * @param {string} [schemaHint] - Schema hint for special types (@group, @account, @meta-schema)
+ * @param {string} [schemaHint] - Schema hint for special types (@group, @account, @metaSchema)
  * @returns {Object} Normalized CoValue data (flattened properties, id field added)
  */
 export function extractCoValueData(backend, coValueCore, schemaHint = null) {
@@ -27,8 +27,8 @@ export function extractCoValueData(backend, coValueCore, schemaHint = null) {
     schema = '@group'; // Groups don't have $schema, use special marker
   } else if (schemaHint === '@account' || (headerMeta && headerMeta.type === 'account')) {
     schema = '@account'; // Accounts don't have $schema, use special marker
-  } else if (schemaHint === '@meta-schema' || schema === '@maia') {
-    schema = '@meta-schema'; // Meta schema uses special marker
+  } else if (schemaHint === '@metaSchema' || schema === '@metaSchema') {
+    schema = '@metaSchema'; // Meta schema uses special marker
   }
 
   // Normalize based on type
@@ -289,27 +289,45 @@ export function extractCoValueDataFlat(backend, coValueCore, schemaHint = null) 
   // Determine schema from headerMeta
   const schema = headerMeta?.$schema || null;
   
-  // CoList: return object with type and items array
+  // CoList: return object with id, cotype, type, items, and groupInfo (for DB viewer owner/members)
   if (rawType === 'colist' && content && content.toJSON) {
     try {
       const items = content.toJSON();
-      return {
+      const result = {
         id: coValueCore.id,
+        cotype: 'colist',
         type: 'colist',
         $schema: schema,
         items: items
       };
+      try {
+        if (typeof backend.getGroupInfo === 'function') {
+          const groupInfo = backend.getGroupInfo(coValueCore);
+          if (groupInfo) result.groupInfo = groupInfo;
+        }
+      } catch (_e) {
+        // groupInfo is optional
+      }
+      return result;
     } catch (e) {
-      return {
+      const result = {
         id: coValueCore.id,
+        cotype: 'colist',
         type: 'colist',
         $schema: schema,
         items: []
       };
+      try {
+        if (typeof backend.getGroupInfo === 'function') {
+          const groupInfo = backend.getGroupInfo(coValueCore);
+          if (groupInfo) result.groupInfo = groupInfo;
+        }
+      } catch (_e) {}
+      return result;
     }
   }
   
-  // CoStream: return object with type and items array
+  // CoStream: return object with id, cotype, type, items, and groupInfo (for DB viewer owner/members)
   if (rawType === 'costream' && content) {
     try {
       const streamData = content.toJSON();
@@ -324,43 +342,48 @@ export function extractCoValueDataFlat(backend, coValueCore, schemaHint = null) 
         }
       }
       
-      return {
+      const result = {
         id: coValueCore.id,
+        cotype: 'costream',
         type: 'costream',
         $schema: schema,
         items: items
       };
+      try {
+        if (typeof backend.getGroupInfo === 'function') {
+          const groupInfo = backend.getGroupInfo(coValueCore);
+          if (groupInfo) result.groupInfo = groupInfo;
+        }
+      } catch (_e) {}
+      return result;
     } catch (e) {
       console.error(`[CoJSONBackend] Error extracting CoStream ${coValueCore.id.substring(0, 12)}...:`, e);
-      return {
+      const result = {
         id: coValueCore.id,
+        cotype: 'costream',
         type: 'costream',
         $schema: schema,
         items: []
       };
+      try {
+        if (typeof backend.getGroupInfo === 'function') {
+          const groupInfo = backend.getGroupInfo(coValueCore);
+          if (groupInfo) result.groupInfo = groupInfo;
+        }
+      } catch (_e) {}
+      return result;
     }
   }
   
-  // CoMap: return flat object with properties directly accessible, including type and $schema
+  // CoMap: return flat object with properties directly accessible, including id, cotype, and $schema
   if (content && content.get && typeof content.get === 'function') {
-    // Check if this is a schema co-value (schemas shouldn't have 'id' or 'type' fields)
-    // Schemas are identified by: headerMeta.$schema === 'GenesisSchema' OR content has schema-like properties
-    // Schemas use 'cotype' for CoJSON types, not 'type' (which AJV expects to be JSON Schema types)
-    const hasCotype = content.get('cotype');
-    const hasTitle = content.get('title');
-    const hasProperties = content.get('properties');
-    const hasItems = content.get('items');
-    const isSchema = schema === '@maia' ||
-                     (hasCotype || hasTitle || hasProperties || hasItems);
-    
+    // Always include id and cotype for DB viewer (schemas were previously omitted - caused undefined/UNKNOWN)
+    const cotype = content.get('cotype') || rawType;
     const result = { 
-      // Only include 'id' and 'type' for non-schema co-values
-      // Schemas are content-addressable by co-ID and use 'cotype', not 'type'
-      ...(isSchema ? {} : { 
-        id: coValueCore.id,
-        type: rawType === 'comap' ? 'comap' : rawType
-      }),
-      $schema: schema // Include $schema for metadata lookup
+      id: coValueCore.id,
+      cotype: cotype === 'comap' ? 'comap' : cotype,
+      type: rawType, // Keep for backward compat; DB viewer prefers cotype
+      $schema: schema
     };
     const keys = content.keys && typeof content.keys === 'function' 
       ? content.keys() 
@@ -503,7 +526,7 @@ export function extractCoValueDataFlat(backend, coValueCore, schemaHint = null) 
  * @param {number} currentDepth - Current recursion depth
  * @returns {Promise<any>} Data object with CoValue references resolved
  */
-export async function resolveCoValueReferences(backend, data, options = {}, visited = new Set(), maxDepth = 10, currentDepth = 0) {
+export async function resolveCoValueReferences(backend, data, options = {}, visited = new Set(), maxDepth = 15, currentDepth = 0) { // TODO: temporarily 15
   const { fields = null, schemas = null, timeoutMs = 2000 } = options;
   
   if (currentDepth > maxDepth) {
@@ -580,7 +603,7 @@ export async function resolveCoValueReferences(backend, data, options = {}, visi
  * @param {Set<string>} visited - Set of already visited co-ids
  * @returns {Promise<any>} Resolved CoValue data or original co-id if not resolved
  */
-async function resolveCoId(backend, coId, options = {}, visited = new Set(), maxDepth = 10, currentDepth = 0) {
+async function resolveCoId(backend, coId, options = {}, visited = new Set(), maxDepth = 15, currentDepth = 0) { // TODO: temporarily 15
   const { schemas = null, timeoutMs = 2000 } = options;
   
   // CRITICAL: Check visited set first to prevent circular references within this resolution pass

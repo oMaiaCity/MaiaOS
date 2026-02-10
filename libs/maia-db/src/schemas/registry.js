@@ -140,7 +140,7 @@ export function getAllSchemas() {
 export function hasSchemaInRegistry(schemaName) {
 	// Only check hardcoded registry (for migrations/seeding before account.os.schemata exists)
 	// Exception schemas are always valid
-	const EXCEPTION_SCHEMAS_LIST = ['@account', '@group', '@maia'];
+	const EXCEPTION_SCHEMAS_LIST = ['@account', '@group', '@metaSchema'];
 	if (EXCEPTION_SCHEMAS_LIST.includes(schemaName)) {
 		return true;
 	}
@@ -149,6 +149,23 @@ export function hasSchemaInRegistry(schemaName) {
 
 // Registry version exported with specific name for internal use
 // Internal code should import hasSchemaInRegistry directly
+
+/**
+ * Assert schema is valid for CoValue creation. Throws if invalid.
+ * Single source of truth for coMap, coList, coStream.
+ * Skips registry check for: exception schemas, co-ids (co_z...).
+ * @param {string} schemaName - Schema name or co-id
+ * @param {string} cotype - Caller name for error message (e.g. 'createCoMap')
+ */
+export function assertSchemaValidForCreate(schemaName, cotype = 'createCoValue') {
+  if (!schemaName || typeof schemaName !== 'string') {
+    throw new Error(`[${cotype}] Schema name is REQUIRED.`);
+  }
+  if (isExceptionSchema(schemaName) || schemaName.startsWith('co_z') || hasSchemaInRegistry(schemaName)) {
+    return;
+  }
+  throw new Error(`[${cotype}] Schema '${schemaName}' not found in registry. Available: AccountSchema, GroupSchema, ProfileSchema`);
+}
 
 /**
  * Get co-type definitions
@@ -195,12 +212,12 @@ export async function getMetaSchemaFromBackend(backend) {
  * These are special cases where headerMeta.$schema is not a co-id:
  * - @account: Account CoValue (read-only headerMeta)
  * - @group: Group CoValue (read-only headerMeta)
- * - @maia: Bootstrap/metaschema (chicken-egg - can't self-reference co-id in read-only headerMeta)
+ * - @metaSchema: Bootstrap/metaschema (chicken-egg - can't self-reference co-id in read-only headerMeta)
  */
 export const EXCEPTION_SCHEMAS = {
 	ACCOUNT: '@account',
 	GROUP: '@group',
-	META_SCHEMA: '@maia'
+	META_SCHEMA: '@metaSchema'
 };
 
 /**
@@ -292,7 +309,7 @@ export function validateHeaderMetaSchema(coValue) {
 	if (!schema) {
 		return { 
 			valid: false, 
-			error: 'CoValue missing $schema in headerMeta (required for all CoValues except @account, @group, @maia)' 
+			error: 'CoValue missing $schema in headerMeta (required for all CoValues except @account, @group, @metaSchema)' 
 		};
 	}
 	

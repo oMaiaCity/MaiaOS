@@ -3643,8 +3643,8 @@ const detailContext = {
     },
     "options": {
       "map": {
-        "members": "$$group.accountMembers",
-        "groupId": "$$group.id"
+        "members": "$$os.capabilities.guardian.accountMembers",
+        "groupId": "$$os.capabilities.guardian.id"
       }
     }
   },

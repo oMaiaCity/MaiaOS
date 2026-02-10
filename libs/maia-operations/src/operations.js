@@ -64,8 +64,8 @@ function extractSchemaDefinition(coValueData, schemaCoId) {
 
 export async function readOperation(backend, params) {
   const { schema, key, keys, filter, options } = params;
-  if (schema && !schema.startsWith('co_z') && !['@account', '@group', '@meta-schema'].includes(schema)) {
-    throw new Error(`[ReadOperation] Schema must be a co-id (co_z...) or special schema hint (@account, @group, @meta-schema), got: ${schema}. Runtime code must use co-ids only, not '@maia/schema/...' patterns.`);
+  if (schema && !schema.startsWith('co_z') && !['@account', '@group', '@metaSchema'].includes(schema)) {
+    throw new Error(`[ReadOperation] Schema must be a co-id (co_z...) or special schema hint (@account, @group, @metaSchema), got: ${schema}. Runtime code must use co-ids only, not '@maia/schema/...' patterns.`);
   }
   if (keys !== undefined && !Array.isArray(keys)) throw new Error('[ReadOperation] keys parameter must be an array of co-ids');
   if (key && keys) throw new Error('[ReadOperation] Cannot provide both key and keys parameters');

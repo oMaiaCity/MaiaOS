@@ -10,7 +10,7 @@
  */
 
 import { isSchemaCoValue, registerSchemaCoValue, indexCoValue, shouldIndexCoValue } from './schema-index-manager.js';
-import { isExceptionSchema } from '../../schemas/registry.js';
+import { isExceptionSchema, EXCEPTION_SCHEMAS } from '../../schemas/registry.js';
 import { isAccountGroupOrProfile, extractSchemaFromMessage, shouldSkipValidation } from '../helpers/co-value-detection.js';
 
 // Track pending indexing operations to prevent duplicates
@@ -88,9 +88,9 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
       
       // REJECT co-values without schemas (except exception schemas)
       if (!schema && !detection.isException) {
-        console.error(`[StorageHook] REJECTING co-value ${coId}: Missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, @maia, and groups/accounts).`);
+        console.error(`[StorageHook] REJECTING co-value ${coId}: Missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, @metaSchema, and groups/accounts).`);
         // Throw error to prevent storage (co-value will not be stored)
-        throw new Error(`[StorageHook] Co-value ${coId} missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, @maia, and groups/accounts).`);
+        throw new Error(`[StorageHook] Co-value ${coId} missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, @metaSchema, and groups/accounts).`);
       }
     }
     
@@ -98,15 +98,15 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
     // These checks must be fast and not trigger any storage operations
     
     // 1. Use universal skip validation helper (consolidates all skip logic)
-    // NOTE: We DON'T skip @maia here - @maia/schema/meta uses @maia but should be registered!
+    // NOTE: We DON'T skip @metaSchema here - @maia/schema/meta uses @metaSchema but should be registered!
     // Let isSchemaCoValue() and shouldIndexCoValue() handle @maia detection properly
     let shouldSkipIndexing = shouldSkipValidation(msg, backend, coId);
     
-    // Don't skip @maia for indexing (it should be registered)
+    // Don't skip @metaSchema for indexing (it should be registered)
     if (shouldSkipIndexing) {
       const schema = extractSchemaFromMessage(msg);
-      if (schema === '@maia') {
-        shouldSkipIndexing = false; // Allow @maia to be indexed
+      if (schema === EXCEPTION_SCHEMAS.META_SCHEMA) {
+        shouldSkipIndexing = false; // Allow @metaSchema to be indexed
       }
     }
     
@@ -206,29 +206,22 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
         // If it's not available, it means it's a remote sync write, and we can skip indexing
         // (remote writes will be indexed when they sync to this peer)
         
-        // Get co-value core immediately (should be available for local writes)
+        // Get co-value core (may need brief retries for local rapid writes during seeding)
         let coValueCore = backend.getCoValue(coId);
-        
-        // If not immediately available, it might be a remote sync write
-        // Try a quick load attempt, but don't wait
+        let attempts = 0;
+        const maxAttempts = 5;
+        while ((!coValueCore || !backend.isAvailable(coValueCore)) && attempts < maxAttempts) {
+          if (backend.node?.loadCoValueCore) {
+            await backend.node.loadCoValueCore(coId).catch(() => {});
+          }
+          await new Promise((r) => setTimeout(r, 10 * (attempts + 1)));
+          coValueCore = backend.getCoValue(coId);
+          attempts++;
+        }
         if (!coValueCore || !backend.isAvailable(coValueCore)) {
-          // Trigger loading (fire and forget - don't wait)
-          if (backend.node && backend.node.loadCoValueCore) {
-            backend.node.loadCoValueCore(coId).catch(() => {
-              // Ignore errors - might be remote write
-            });
-          }
-          
-          // For local writes, co-value should be available immediately
-          // If not available, it's likely a remote sync write - skip indexing
-          // (will be indexed when it becomes available via subscription)
-          if (!coValueCore || !backend.isAvailable(coValueCore)) {
-            // Skip indexing for remote writes - they'll be indexed when they sync
-            return;
-          }
+          return; // Remote write or still not available - explicit re-index pass will catch if local
         }
         
-        // Co-value is available - proceed with indexing
         const updatedCoValueCore = backend.getCoValue(coId);
         if (!updatedCoValueCore || !backend.isAvailable(updatedCoValueCore)) {
           // Not available - skip (likely remote write)

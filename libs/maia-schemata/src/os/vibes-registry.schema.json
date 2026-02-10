@@ -1,0 +1,1 @@
+{"$schema":"@maia/schema/meta","$id":"@maia/schema/os/vibes-registry","title":"@maia/schema/os/vibes-registry","description":"Vibes registry CoMap - vibe key -> vibe co-id. Stored in spark.vibes","cotype":"comap","indexing":false,"additionalProperties":{"type":"string","pattern":"^co_z[a-zA-Z0-9]+$","description":"Vibe key -> vibe CoMap co-id"}}

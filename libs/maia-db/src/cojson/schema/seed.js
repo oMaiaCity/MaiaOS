@@ -7,23 +7,27 @@
  * We create CoValues first, get their `.id` property, then use those IDs for transformations.
  * 
  * SPECIAL HANDLING:
- * - @maia (Meta Schema): Uses "@maia" string in headerMeta.$schema (can't self-reference co-id)
+ * - @metaSchema (Meta Schema): Uses "@metaSchema" string in headerMeta.$schema (can't self-reference co-id)
  *   The CoMap definition has title: "Meta Schema"
  * - @maia/schema/meta: Human-readable ID for metaschema (matches schema $id format)
  *   Gets transformed to @maia co-id during transformation
  * 
- * Seeding Order:
- * 1. @maia (Meta Schema) first
- * 2. Schemas (topologically sorted by dependencies) - create first, then transform references
- * 3. Configs (actors, views, contexts, etc.) - create first, then transform references
- * 4. Data (todos, entities) - create first, then transform references
+ * Seeding Order (matches plan):
+ * 1. Migration creates account, profile only (no scaffold)
+ * 2. Bootstrap (when no account.sparks): guardian, account.temp, metaschema, schemata, scaffold, cleanup temp
+ * 3. Schemas (topologically sorted) - each with own group extending guardian
+ * 4. Populate os.schematas with schema co-ids
+ * 5. Configs (actors, views, contexts, etc.) - per-CoValue groups with guardian
+ * 6. Data (todos, entities) - per-CoValue groups with guardian
  * 
- * All CoValues are created with @maia spark's group as owner/admin
- * All CoValues (except exceptions) use actual schema co-ids in headerMeta.$schema
+ * account.temp staging: Bootstrap co-ids stored in account.temp (persists across restarts).
+ * Every CoValue has its own group extending guardian.
+ * @metaSchema only for metaschema; all other infra uses real schema co-ids.
  */
 
 import { createCoMap } from '../cotypes/coMap.js';
 import { createCoList } from '../cotypes/coList.js';
+import { createCoValueForSpark } from '../covalue/create-covalue-for-spark.js';
 import mergedMetaSchema from '@MaiaOS/schemata/os/meta.schema.json';
 import { deleteRecord } from '../crud/delete.js';
 import { ensureCoValueLoaded } from '../crud/collection-helpers.js';
@@ -32,6 +36,246 @@ import { ensureIndexesCoMap } from '../indexing/schema-index-manager.js';
 import * as groups from '../groups/groups.js';
 
 const MAIA_SPARK = '@maia';
+
+/**
+ * Bootstrap and scaffold when account.sparks doesn't exist (migration only creates account+profile).
+ * Order: guardian → account.temp → metaschema → schemata → scaffold → cleanup temp.
+ * @param {RawAccount} account
+ * @param {LocalNode} node
+ * @param {Object} schemas - Schema definitions from getAllSchemas()
+ * @param {Object} [dbEngine] - DB engine for co-id schema validation (required when schemas use co-ids)
+ * @returns {Promise<void>}
+ */
+async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
+  const { EXCEPTION_SCHEMAS } = await import('../../schemas/registry.js');
+  const { getAllSchemas } = await import('@MaiaOS/schemata');
+  const allSchemas = schemas || getAllSchemas();
+
+  // 1. guardian (spark's admin group)
+  const guardian = node.createGroup();
+
+  // 2. account.temp
+  const tempGroup = node.createGroup();
+  tempGroup.extend(guardian, 'extend');
+  const tempCoMap = tempGroup.createMap({}, { $schema: EXCEPTION_SCHEMAS.META_SCHEMA });
+  account.set('temp', tempCoMap.id);
+  tempCoMap.set('guardian', guardian.id);
+
+  // 3. Metaschema
+  const metaSchemaMeta = { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
+  const tempMetaSchemaDef = buildMetaSchemaForSeeding('co_zTEMP');
+  const cleanedTempDef = { definition: removeIdFields(tempMetaSchemaDef.definition || tempMetaSchemaDef) };
+  const { coValue: metaSchemaCoMap } = await createCoValueForSpark(
+    { node, account, guardian },
+    null,
+    { schema: EXCEPTION_SCHEMAS.META_SCHEMA, cotype: 'comap', data: cleanedTempDef, dbEngine }
+  );
+  const metaSchemaCoId = metaSchemaCoMap.id;
+  const updatedMetaSchemaDef = buildMetaSchemaForSeeding(metaSchemaCoId);
+  const { $schema: _s, $id: _i, id: _id, ...directProps } = updatedMetaSchemaDef.definition || updatedMetaSchemaDef;
+  for (const [k, v] of Object.entries(removeIdFields(directProps))) metaSchemaCoMap.set(k, v);
+  tempCoMap.set('metaschema', metaSchemaCoId);
+
+  // 4. Schemata (topologically sorted)
+  const uniqueSchemasBy$id = new Map();
+  for (const [name, schema] of Object.entries(allSchemas)) {
+    const key = schema.$id || `@maia/schema/${name}`;
+    if (!uniqueSchemasBy$id.has(key)) uniqueSchemasBy$id.set(key, { name, schema });
+  }
+  const findCoRefs = (obj, visited = new Set()) => {
+    if (!obj || typeof obj !== 'object' || visited.has(obj)) return new Set();
+    visited.add(obj);
+    const refs = new Set();
+    if (obj.$co && typeof obj.$co === 'string' && obj.$co.startsWith('@maia/schema/')) refs.add(obj.$co);
+    for (const v of Object.values(obj)) {
+      if (v && typeof v === 'object') {
+        (Array.isArray(v) ? v : [v]).forEach((item) => {
+          if (item && typeof item === 'object') findCoRefs(item, visited).forEach((r) => refs.add(r));
+        });
+      }
+    }
+    return refs;
+  };
+  const deps = new Map();
+  for (const [key, { schema }] of uniqueSchemasBy$id) deps.set(key, findCoRefs(schema));
+  const sorted = [];
+  const done = new Set();
+  const doing = new Set();
+  const visit = (key) => {
+    if (done.has(key)) return;
+    if (doing.has(key)) return;
+    doing.add(key);
+    for (const d of deps.get(key) || []) {
+      if (d.startsWith('@maia/schema/') && uniqueSchemasBy$id.has(d)) visit(d);
+    }
+    doing.delete(key);
+    done.add(key);
+    sorted.push(key);
+  };
+  for (const key of uniqueSchemasBy$id.keys()) {
+    if (key !== '@maia/schema/meta') visit(key);
+  }
+
+  const schemaCoIdMap = new Map();
+  for (const schemaKey of sorted) {
+    const { schema } = uniqueSchemasBy$id.get(schemaKey);
+    const { $schema, $id, id, ...props } = schema;
+    const cleaned = removeIdFields(props);
+    const { coValue: schemaCoMap } = await createCoValueForSpark(
+      { node, account, guardian },
+      null,
+      { schema: metaSchemaCoId, cotype: 'comap', data: cleaned, dbEngine }
+    );
+    const coId = schemaCoMap.id;
+    schemaCoIdMap.set(schemaKey, coId);
+    tempCoMap.set(schemaKey, coId);
+  }
+
+  // 5. Scaffold (use real schema co-ids, @metaSchema only for metaschema)
+  // Each scaffold type gets its own group extending guardian (no shared group).
+  const sparkSchemaCoId = tempCoMap.get('@maia/schema/data/spark') || EXCEPTION_SCHEMAS.META_SCHEMA;
+  const schematasSchemaCoId = tempCoMap.get('@maia/schema/os/schematas-registry') || EXCEPTION_SCHEMAS.META_SCHEMA;
+  const osSchemaCoId = tempCoMap.get('@maia/schema/os/os-registry') || EXCEPTION_SCHEMAS.META_SCHEMA;
+  const capabilitiesSchemaCoId = tempCoMap.get('@maia/schema/os/capabilities') || EXCEPTION_SCHEMAS.META_SCHEMA;
+  const indexesSchemaCoId = tempCoMap.get('@maia/schema/os/indexes-registry') || EXCEPTION_SCHEMAS.META_SCHEMA;
+  const vibesSchemaCoId = tempCoMap.get('@maia/schema/os/vibes-registry') || EXCEPTION_SCHEMAS.META_SCHEMA;
+  const sparksSchemaCoId = tempCoMap.get('@maia/schema/os/sparks-registry') || EXCEPTION_SCHEMAS.META_SCHEMA;
+
+  const ctx = { node, account, guardian };
+  const scaffoldOpts = (schema, data) => ({ schema, cotype: 'comap', data, dbEngine });
+  const { coValue: maiaSpark } = await createCoValueForSpark(ctx, null, scaffoldOpts(sparkSchemaCoId, { name: MAIA_SPARK }));
+  const { coValue: os } = await createCoValueForSpark(ctx, null, scaffoldOpts(osSchemaCoId, {}));
+  const { coValue: capabilities } = await createCoValueForSpark(ctx, null, scaffoldOpts(capabilitiesSchemaCoId, {}));
+  capabilities.set('guardian', guardian.id);
+  os.set('capabilities', capabilities.id);
+  const { coValue: schematas } = await createCoValueForSpark(ctx, null, scaffoldOpts(schematasSchemaCoId, {}));
+  const { coValue: indexes } = await createCoValueForSpark(ctx, null, scaffoldOpts(indexesSchemaCoId, {}));
+  const { coValue: vibes } = await createCoValueForSpark(ctx, null, scaffoldOpts(vibesSchemaCoId, {}));
+  os.set('schematas', schematas.id);
+  os.set('indexes', indexes.id);
+  maiaSpark.set('os', os.id);
+  maiaSpark.set('vibes', vibes.id);
+  schematas.set('@maia/schema/meta', metaSchemaCoId);
+  for (const [k, coId] of schemaCoIdMap) schematas.set(k, coId);
+  const { coValue: sparks } = await createCoValueForSpark(ctx, null, scaffoldOpts(sparksSchemaCoId, {}));
+  sparks.set(MAIA_SPARK, maiaSpark.id);
+  account.set('sparks', sparks.id);
+
+  // 6. Cleanup temp
+  if (typeof account.delete === 'function') account.delete('temp');
+  console.log('✅ Bootstrap scaffold complete: account.sparks, @maia spark, os, schematas, indexes, vibes');
+}
+
+/**
+ * Seed util: Map account.sparks[@maia].registries.sparks["@maia"] = maiaSparkCoId
+ * Creates registries and registries.sparks CoMaps if needed, uses real seeded co-id.
+ * Registry owned by a sub-group that extends maiaGroup (for write) and a public group (everyone=reader).
+ * maiaGroup stays private; only the registry CoMaps are publicly readable.
+ * @private
+ * @param {Object} backend
+ * @param {Object} maiaGroup - @maia spark's group
+ */
+async function seedMaiaSparkRegistriesSparksMapping(backend, maiaGroup) {
+  const sparksId = backend.account?.get('sparks');
+  if (!sparksId?.startsWith('co_z')) return;
+  const sparksStore = await backend.read(null, sparksId);
+  await new Promise((resolve, reject) => {
+    if (!sparksStore.loading) return resolve();
+    let unsub;
+    const t = setTimeout(() => reject(new Error('Timeout')), 10000);
+    unsub = sparksStore.subscribe(() => {
+      if (!sparksStore.loading) { clearTimeout(t); unsub?.(); resolve(); }
+    });
+  });
+  const sparksData = sparksStore?.value;
+  if (!sparksData || sparksData.error) return;
+  const maiaSparkCoId = sparksData[MAIA_SPARK];
+  if (!maiaSparkCoId || !maiaSparkCoId.startsWith('co_z')) return;
+
+  const sparkCore = backend.getCoValue(maiaSparkCoId);
+  if (!sparkCore) return;
+  if (!backend.isAvailable(sparkCore)) {
+    await new Promise((resolve, reject) => {
+      const t = setTimeout(() => reject(new Error('Timeout')), 10000);
+      const unsub = sparkCore.subscribe((c) => {
+        if (c && backend.isAvailable(c)) { clearTimeout(t); unsub?.(); resolve(); }
+      });
+    });
+  }
+  const sparkContent = backend.getCurrentContent(sparkCore);
+  if (!sparkContent || typeof sparkContent.set !== 'function') return;
+
+  const { EXCEPTION_SCHEMAS } = await import('../../schemas/registry.js');
+  const node = backend.node;
+
+  // Get capabilities from spark.os (source of truth for guardian, publicReaders)
+  const osId = sparkContent.get('os');
+  if (!osId || !osId.startsWith('co_z')) return;
+  const osCore = backend.getCoValue(osId);
+  if (!osCore || !backend.isAvailable(osCore)) return;
+  const osContent = backend.getCurrentContent(osCore);
+  if (!osContent || typeof osContent.get !== 'function') return;
+  const capabilitiesId = osContent.get('capabilities');
+  if (!capabilitiesId || !capabilitiesId.startsWith('co_z')) return;
+  const capabilitiesCore = backend.getCoValue(capabilitiesId);
+  if (!capabilitiesCore || !backend.isAvailable(capabilitiesCore)) return;
+  const capabilitiesContent = backend.getCurrentContent(capabilitiesCore);
+  if (!capabilitiesContent || typeof capabilitiesContent.set !== 'function') return;
+
+  // Get or create publicReaders group (everyone=reader); store in capabilities
+  let registryGroup = null;
+  const publicReadersId = capabilitiesContent.get('publicReaders');
+  if (publicReadersId && publicReadersId.startsWith('co_z')) {
+    const core = node.getCoValue(publicReadersId);
+    if (core?.isGroup?.() && backend.isAvailable(core)) {
+      registryGroup = backend.getCurrentContent(core);
+    }
+  }
+  if (!registryGroup || typeof registryGroup.createMap !== 'function') {
+    const publicGroup = node.createGroup();
+    publicGroup.addMember('everyone', 'reader');
+    registryGroup = node.createGroup();
+    registryGroup.extend(maiaGroup, 'extend');
+    registryGroup.extend(publicGroup, 'reader');
+    capabilitiesContent.set('publicReaders', registryGroup.id);
+  }
+
+  const { resolve } = await import('../schema/resolver.js');
+  const registriesSchemaCoId = await resolve(backend, '@maia/schema/os/registries', { returnType: 'coId' });
+  const sparksRegistrySchemaCoId = await resolve(backend, '@maia/schema/os/sparks-registry', { returnType: 'coId' });
+  const registriesMeta = registriesSchemaCoId ? { $schema: registriesSchemaCoId } : { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
+  const sparksRegistryMeta = sparksRegistrySchemaCoId ? { $schema: sparksRegistrySchemaCoId } : { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
+
+  let registriesId = sparkContent.get('registries');
+  let registriesContent = null;
+  if (registriesId) {
+    const registriesCore = backend.getCoValue(registriesId);
+    if (registriesCore && backend.isAvailable(registriesCore)) {
+      registriesContent = backend.getCurrentContent(registriesCore);
+    }
+  }
+  if (!registriesContent || typeof registriesContent.set !== 'function') {
+    const registries = registryGroup.createMap({}, registriesMeta);
+    sparkContent.set('registries', registries.id);
+    registriesContent = registries;
+  }
+
+  let sparksRegistryId = registriesContent.get('sparks');
+  let sparksContent = null;
+  if (sparksRegistryId) {
+    const sparksCore = backend.getCoValue(sparksRegistryId);
+    if (sparksCore && backend.isAvailable(sparksCore)) {
+      sparksContent = backend.getCurrentContent(sparksCore);
+    }
+  }
+  if (!sparksContent || typeof sparksContent.set !== 'function') {
+    const sparks = registryGroup.createMap({}, sparksRegistryMeta);
+    registriesContent.set('sparks', sparks.id);
+    sparksContent = sparks;
+  }
+
+  sparksContent.set(MAIA_SPARK, maiaSparkCoId);
+}
 
 /**
  * Recursively remove 'id' fields from schema objects (AJV only accepts $id, not id)
@@ -562,9 +806,14 @@ function buildMetaSchemaForSeeding(metaSchemaCoId) {
  */
 export async function seed(account, node, configs, schemas, data, existingBackend = null) {
   // Use existing backend if provided (has dbEngine set), otherwise create new one
-  // We need backend early for cleanup and idempotency check
   const { CoJSONBackend } = await import('../core/cojson-backend.js');
   const backend = existingBackend || new CoJSONBackend(node, account, { systemSpark: '@maia' });
+
+  // Bootstrap scaffold when migration only created account+profile (no account.sparks)
+  if (!account.get('sparks') || !String(account.get('sparks')).startsWith('co_z')) {
+    const { getAllSchemas } = await import('@MaiaOS/schemata');
+    await bootstrapAndScaffold(account, node, schemas || getAllSchemas(), existingBackend?.dbEngine);
+  }
   
   // IDEMPOTENCY CHECK: Only skip if account is already seeded AND no configs provided
   // This allows manual reseeding (when configs are provided) while preventing double auto-seeding
@@ -659,6 +908,9 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   if (!maiaGroup || typeof maiaGroup.createMap !== 'function') {
     throw new Error('[CoJSONSeed] @maia spark group not found. Ensure schemaMigration has created @maia spark.');
   }
+
+  // Seed util: account.sparks[@maia].registries.sparks["@maia"] = real co-id
+  await seedMaiaSparkRegistriesSparksMapping(backend, maiaGroup);
   
   // Starting CoJSON seeding...
   
@@ -751,12 +1003,11 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     }
   }
   
-  // Phase 0: Create account.os FIRST (needed for storage hook to register schemas)
-  // CRITICAL: account.os must exist before schemas are created, so the storage hook can register them
-  await ensureSparkOs(account, node, maiaGroup, backend);
+  // Phase 0: Ensure account.os structure (schematas, indexes)
+  await ensureSparkOs(account, node, maiaGroup, backend, undefined);
   
   // Phase 1: Create or update metaschema FIRST (needed for schema CoMaps)
-  // SPECIAL HANDLING: Metaschema uses "@maia" as exception since headerMeta is read-only after creation
+  // SPECIAL HANDLING: Metaschema uses "@metaSchema" as exception since headerMeta is read-only after creation
   // We can't put the metaschema's own co-id in headerMeta.$schema (chicken-egg problem)
   
   // Check if metaschema exists in spark.os.schematas registry
@@ -792,16 +1043,17 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   }
   
   if (!metaSchemaCoId) {
-    // Create metaschema with "@maia" exception (can't self-reference co-id in read-only headerMeta)
-    const metaSchemaMeta = { $schema: '@maia' }; // Special exception for metaschema
+    // Create metaschema with "@metaSchema" exception (can't self-reference co-id in read-only headerMeta)
+    const metaSchemaMeta = { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }; // Special exception for metaschema
     const tempMetaSchemaDef = buildMetaSchemaForSeeding('co_zTEMP');
     // Clean the initial meta-schema definition to remove any 'id' fields
     const cleanedTempDef = {
       definition: removeIdFields(tempMetaSchemaDef.definition || tempMetaSchemaDef)
     };
-    const metaSchemaCoMap = maiaGroup.createMap(
-      cleanedTempDef, // Will update $id after creation
-      metaSchemaMeta
+    const { coValue: metaSchemaCoMap } = await createCoValueForSpark(
+      { node, account, guardian: maiaGroup },
+      null,
+      { schema: EXCEPTION_SCHEMAS.META_SCHEMA, cotype: 'comap', data: cleanedTempDef }
     );
     
     // Update metaschema with direct properties (flattened structure)
@@ -1011,7 +1263,9 @@ export async function seed(account, node, configs, schemas, data, existingBacken
       coMapId: schemaCoMap.id
     });
   }
-  
+
+  // Phase 3b: Ensure spark.vibes exists (with proper schema) - now that schemaCoIdMap is ready
+  await ensureSparkOs(account, node, maiaGroup, backend, schemaCoIdMap);
   
   // Empty maps for now (data is commented out)
   const instanceCoIdMap = new Map();
@@ -1095,7 +1349,14 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   // Then register real co-ids, then transform dependent configs like vibes
   let seededConfigs = { configs: [], count: 0 };
   
-  // Helper: Transform only schema references (skip config references that don't exist yet)
+  // Reference props that must be co-ids at create time - omit until update phase when all refs exist
+  const REFERENCE_PROPS = ['actor', 'context', 'view', 'state', 'brand', 'style', 'inbox', 'subscribers'];
+
+  // Props with nested $co refs (states has actions arrays with action co-ids or built-in names like sendToDetailActor)
+  // Strip at create, add in update (transformForSeeding handles nested refs then)
+  const NESTED_REF_PROPS = ['states'];
+
+  // Helper: Transform only schema references, strip config references (add in update phase)
   const transformSchemaRefsOnly = (instance, schemaRegistry) => {
     if (!instance || typeof instance !== 'object') {
       return instance;
@@ -1110,7 +1371,24 @@ export async function seed(account, node, configs, schemas, data, existingBacken
       }
     }
     
-    // Don't transform config references (actor, children, etc.) - they'll be resolved after creation
+    // Strip reference props - they require co-ids but we create in leaf-first order so refs may not exist yet
+    for (const prop of REFERENCE_PROPS) {
+      delete transformed[prop];
+    }
+    
+    // Strip nested ref props (states with actions arrays containing $co refs or built-in names)
+    // updateConfigReferences adds them with full transformForSeeding
+    for (const prop of NESTED_REF_PROPS) {
+      if (prop === 'states' && transformed.initial) {
+        // State schema requires initial + states; provide minimal valid states
+        transformed.states = Object.fromEntries(
+          Object.keys(transformed.states || {}).map((k) => [k, {}])
+        );
+      } else {
+        delete transformed[prop];
+      }
+    }
+    
     return transformed;
   };
 
@@ -1155,7 +1433,7 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     
     // seedConfigs expects keys like 'actors', 'views', etc., but uses singular type names internally
     const configsToSeed = { [configTypeKey]: transformed };
-    const seeded = await seedConfigs(account, node, maiaGroup, configsToSeed, instanceCoIdMap, schemaCoMaps, schemaCoIdMap);
+    const seeded = await seedConfigs(account, node, maiaGroup, backend, configsToSeed, instanceCoIdMap, schemaCoMaps, schemaCoIdMap);
     
     // Register REAL co-ids from CoJSON
     for (const configInfo of seeded.configs || []) {
@@ -1366,9 +1644,15 @@ export async function seed(account, node, configs, schemas, data, existingBacken
     }
     
     if (!vibes) {
-      // Create vibes CoMap and set on @maia spark
-      const vibesMeta = { $schema: '@maia' };
-      vibes = maiaGroup.createMap({}, vibesMeta);
+      const vibesSchemaCoId = schemaCoIdMap?.get('@maia/schema/os/vibes-registry') ?? await (await import('../schema/resolver.js')).resolve(backend, '@maia/schema/os/vibes-registry', { returnType: 'coId' });
+      const ctx = { node, account, guardian: maiaGroup };
+      const { coValue: vibesCoMap } = await createCoValueForSpark(ctx, null, {
+        schema: vibesSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
+        cotype: 'comap',
+        data: {},
+        dbEngine: backend?.dbEngine
+      });
+      vibes = vibesCoMap;
       await groups.setSparkVibesId(backend, MAIA_SPARK, vibes.id);
     }
 
@@ -1402,7 +1686,7 @@ export async function seed(account, node, configs, schemas, data, existingBacken
         : (vibe.name || 'default').toLowerCase().replace(/\s+/g, '-');
       
       const vibeConfigs = { vibe: retransformedVibe };
-      const vibeSeeded = await seedConfigs(account, node, maiaGroup, vibeConfigs, instanceCoIdMap, schemaCoMaps, schemaCoIdMap);
+      const vibeSeeded = await seedConfigs(account, node, maiaGroup, backend, vibeConfigs, instanceCoIdMap, schemaCoMaps, schemaCoIdMap);
       seededConfigs.configs.push(...(vibeSeeded.configs || []));
       seededConfigs.count += vibeSeeded.count || 0;
       
@@ -1452,16 +1736,30 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   
   // Phase 8: Seed data entities to CoJSON
   // Creates individual CoMap items - storage hooks automatically index them into account.os.{schemaCoId}
-  const seededData = await seedData(account, node, maiaGroup, data, coIdRegistry);
+  const seededData = await seedData(account, node, maiaGroup, backend, data, coIdRegistry);
   
   // Phase 9: Store registry in spark.os.schematas CoMap
   await storeRegistry(account, node, maiaGroup, backend, coIdRegistry, schemaCoIdMap, instanceCoIdMap, configs || {}, seededSchemas);
-  
-  // Note: Schema registration/indexing is now handled automatically by CRUD create hooks
-  // No manual registration needed - hooks fire when schemas are created via CRUD API
-  
+
+  // Phase 10: Explicit re-index pass - ensures 100% of seeded CoValues are indexed
+  // Storage hooks may have skipped some (e.g. CoValue not immediately available, os not loaded during bootstrap)
+  // indexCoValue is idempotent - skips if already indexed
+  const { indexCoValue } = await import('../indexing/schema-index-manager.js');
+  const allSeededCoIds = [
+    ...(seededConfigs.configs || []).map((c) => c.coId).filter(Boolean),
+    ...(seededData.coIds || [])
+  ];
+  for (const coId of allSeededCoIds) {
+    if (coId && typeof coId === 'string' && coId.startsWith('co_z')) {
+      try {
+        await indexCoValue(backend, coId);
+      } catch (e) {
+        console.warn(`[Seed] Index pass failed for ${coId.substring(0, 12)}...:`, e.message);
+      }
+    }
+  }
+
   // CoJSON seeding complete
-  // Auto-seeding complete
 
   return {
     metaSchema: metaSchemaCoId,
@@ -1483,6 +1781,10 @@ export async function seed(account, node, configs, schemas, data, existingBacken
  * @returns {Promise<Object>} { metaSchema, schemas, registry }
  */
 export async function seedAgentAccount(account, node, backend) {
+  if (!account.get('sparks') || !String(account.get('sparks')).startsWith('co_z')) {
+    const { getAllSchemas } = await import('@MaiaOS/schemata');
+    await bootstrapAndScaffold(account, node, getAllSchemas());
+  }
   const maiaGroup = await groups.getMaiaGroup(backend);
   const { getAllSchemas } = await import('@MaiaOS/schemata');
   const schemas = getAllSchemas();
@@ -1548,13 +1850,17 @@ export async function seedAgentAccount(account, node, backend) {
     }
   }
   if (!metaSchemaCoId) {
-    const metaSchemaMeta = { $schema: '@maia' };
     const tempMetaSchemaDef = buildMetaSchemaForSeeding('co_zTEMP');
     const cleanedTempDef = { definition: removeIdFields(tempMetaSchemaDef.definition || tempMetaSchemaDef) };
-    const metaSchemaCoMap = maiaGroup.createMap(cleanedTempDef, metaSchemaMeta);
+    const ctx = { node, account, guardian: maiaGroup };
+    const { coValue: metaSchemaCoMap } = await createCoValueForSpark(ctx, null, {
+      schema: EXCEPTION_SCHEMAS.META_SCHEMA,
+      cotype: 'comap',
+      data: cleanedTempDef
+    });
     const actualMetaSchemaCoId = metaSchemaCoMap.id;
     const updatedMetaSchemaDef = buildMetaSchemaForSeeding(actualMetaSchemaCoId);
-    const { $schema, $id, id, ...directProperties } = updatedMetaSchemaDef.definition || updatedMetaSchemaDef;
+    const { $schema: _s, $id: _i, id: _id, ...directProperties } = updatedMetaSchemaDef.definition || updatedMetaSchemaDef;
     for (const [key, value] of Object.entries(removeIdFields(directProperties))) metaSchemaCoMap.set(key, value);
     metaSchemaCoId = actualMetaSchemaCoId;
   } else {
@@ -1639,7 +1945,7 @@ export async function seedAgentAccount(account, node, backend) {
  * Creates CoMaps for each config instance (vibe, actors, views, contexts, etc.)
  * @private
  */
-async function seedConfigs(account, node, maiaGroup, transformedConfigs, instanceCoIdMap, schemaCoMaps, schemaCoIdMap) {
+async function seedConfigs(account, node, maiaGroup, backend, transformedConfigs, instanceCoIdMap, schemaCoMaps, schemaCoIdMap) {
   const seededConfigs = [];
   let totalCount = 0;
   
@@ -1684,37 +1990,16 @@ async function seedConfigs(account, node, maiaGroup, transformedConfigs, instanc
     // Remove $id and $schema from config (they're stored in metadata, not as properties)
     const { $id, $schema, ...configWithoutId } = config;
 
-    // Create the appropriate CoJSON type based on schema's cotype
-    const meta = { $schema: schemaCoId }; // Set schema co-id in headerMeta
-    let coValue;
-    let actualCoId;
-
-    if (cotype === 'colist') {
-      // CoList: Create empty list, items will be added during update phase when refs are resolved
-      coValue = maiaGroup.createList([], meta);
-      actualCoId = coValue.id;
-    } else if (cotype === 'costream') {
-      // CoStream: Create empty stream, items will be appended during update phase when refs are resolved
-      coValue = maiaGroup.createStream(meta);
-      actualCoId = coValue.id;
-      
-      // Skip INIT messages during seeding - they're optional debug messages
-      // All runtime messages should be created as CoMap CoValues using createAndPushMessage helper
-      // During seeding, dbEngine isn't available yet, so we can't create proper CoMap messages
-      // INIT messages are skipped - they were only for debugging display issues
-    } else {
-      // CoMap: Default behavior
-      // CoJSON supports nested plain objects/arrays (like views with nested attrs.data, children, etc.)
-      // Set all properties explicitly to ensure nested objects are stored correctly
-      coValue = maiaGroup.createMap({}, meta); // Create empty map first
-      actualCoId = coValue.id;
-      
-      // Set all properties explicitly (including nested objects) - CoJSON supports nested plain objects
-      // This matches how views work - nested objects like attrs.data are stored directly
-      for (const [key, value] of Object.entries(configWithoutId)) {
-        coValue.set(key, value);
-      }
-    }
+    // Create the appropriate CoJSON type via createCoValueForSpark (3-step: group, extend, leave)
+    const ctx = { node, account, guardian: maiaGroup };
+    const data = cotype === 'colist' ? [] : cotype === 'costream' ? undefined : configWithoutId;
+    const { coValue } = await createCoValueForSpark(ctx, null, {
+      schema: schemaCoId,
+      cotype,
+      data,
+      dbEngine: backend?.dbEngine
+    });
+    const actualCoId = coValue.id;
 
     // Update instanceCoIdMap with actual co-id (CoJSON generates random co-ids, so they won't match human-readable IDs)
     if ($id) {
@@ -1787,14 +2072,15 @@ async function seedConfigs(account, node, maiaGroup, transformedConfigs, instanc
  * 
  * @private
  */
-async function seedData(account, node, maiaGroup, data, coIdRegistry) {
+async function seedData(account, node, maiaGroup, backend, data, coIdRegistry) {
   // Import transformer for data items
   const { transformForSeeding } = await import('@MaiaOS/schemata/schema-transformer');
   
   if (!data || Object.keys(data).length === 0) {
     return {
       collections: [],
-      totalItems: 0
+      totalItems: 0,
+      coIds: []
     };
   }
   
@@ -1828,8 +2114,9 @@ async function seedData(account, node, maiaGroup, data, coIdRegistry) {
     }
     
     // Create CoMaps for each item
-    // Storage hooks will automatically index them into account.os.{schemaCoId}
+    // Storage hooks will automatically index them; we collect co-ids for explicit re-index pass
     let itemCount = 0;
+    const coIds = [];
     for (const item of collectionItems) {
       // Transform item references
       const transformedItem = transformForSeeding(item, coIdRegistry.getAll());
@@ -1837,41 +2124,53 @@ async function seedData(account, node, maiaGroup, data, coIdRegistry) {
       // Remove $id if present (CoJSON will assign ID when creating CoMap)
       const { $id, ...itemWithoutId } = transformedItem;
       
-      // Create CoMap directly with schema co-id in headerMeta
-      // Storage hook will automatically index this into account.os.{schemaCoId}
-      const itemMeta = { $schema: schemaCoId };
-      const itemCoMap = maiaGroup.createMap(itemWithoutId, itemMeta);
-      
+      // Create CoMap via createCoValueForSpark (3-step: group, extend, leave)
+      const ctx = { node, account, guardian: maiaGroup };
+      const { coValue: itemCoMap } = await createCoValueForSpark(ctx, null, {
+        schema: schemaCoId,
+        cotype: 'comap',
+        data: itemWithoutId,
+        dbEngine: backend?.dbEngine
+      });
+      coIds.push(itemCoMap.id);
       itemCount++;
     }
     
     seededCollections.push({
       name: collectionName,
       schemaCoId: schemaCoId,
-      itemCount
+      itemCount,
+      coIds
     });
     
     totalItems += itemCount;
   }
   
+  const allDataCoIds = seededCollections.flatMap((c) => c.coIds || []);
   return {
     collections: seededCollections,
-    totalItems
+    totalItems,
+    coIds: allDataCoIds
   };
 }
 
 /**
  * Ensure account.os CoMap exists (creates if needed)
- * Called early in seeding so storage hook can register schemas
- * Also creates account.os.indexes CoMap for schema indexes
+ * Also ensures spark.os.schematas, spark.os.indexes, spark.vibes
+ * Uses real schema co-ids where available
  * @private
  */
-async function ensureSparkOs(account, node, maiaGroup, backend) {
-  // Get @maia spark's os (created by migration)
+async function ensureSparkOs(account, node, maiaGroup, backend, schemaCoIdMap) {
   const osId = await groups.getSparkOsId(backend, MAIA_SPARK);
   if (!osId) {
-    throw new Error('[Seed] @maia spark.os not found. Ensure schemaMigration has run.');
+    throw new Error('[Seed] @maia spark.os not found. Ensure schemaMigration or bootstrap has run.');
   }
+
+  const { resolve } = await import('../schema/resolver.js');
+  const schematasSchemaCoId = schemaCoIdMap?.get('@maia/schema/os/schematas-registry') ?? await resolve(backend, '@maia/schema/os/schematas-registry', { returnType: 'coId' });
+  const vibesSchemaCoId = schemaCoIdMap?.get('@maia/schema/os/vibes-registry') ?? await resolve(backend, '@maia/schema/os/vibes-registry', { returnType: 'coId' });
+  const schematasMeta = schematasSchemaCoId ? { $schema: schematasSchemaCoId } : { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
+  const vibesMeta = vibesSchemaCoId ? { $schema: vibesSchemaCoId } : { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
   
   let osCore = node.getCoValue(osId);
   if (!osCore && node.loadCoValueCore) {
@@ -1880,32 +2179,30 @@ async function ensureSparkOs(account, node, maiaGroup, backend) {
   }
   
   if (!osCore || !osCore.isAvailable()) {
-    await new Promise((resolve) => {
-      let unsubscribe;
-      const timeout = setTimeout(resolve, 5000);
+    await new Promise((r) => {
+      let unsub;
+      const t = setTimeout(r, 5000);
       if (osCore) {
-        unsubscribe = osCore.subscribe((core) => {
-          if (core && core.isAvailable()) {
-            clearTimeout(timeout);
-            unsubscribe?.();
-            resolve();
-          }
+        unsub = osCore.subscribe((c) => {
+          if (c?.isAvailable?.()) { clearTimeout(t); unsub?.(); r(); }
         });
-      } else {
-        resolve();
-      }
+      } else r();
     });
     osCore = node.getCoValue(osId);
   }
   
-  // Ensure spark.os.schematas and spark.os.indexes exist
   if (osCore && osCore.isAvailable()) {
     const osContent = osCore.getCurrentContent?.();
     if (osContent && typeof osContent.get === 'function') {
       const schematasId = osContent.get("schematas");
       if (!schematasId) {
-        const schematasMeta = { $schema: '@maia' };
-        const schematas = maiaGroup.createMap({}, schematasMeta);
+        const ctx = { node, account, guardian: maiaGroup };
+        const { coValue: schematas } = await createCoValueForSpark(ctx, null, {
+          schema: schematasSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
+          cotype: 'comap',
+          data: {},
+          dbEngine: backend?.dbEngine
+        });
         osContent.set("schematas", schematas.id);
         if (node.storage?.syncManager) {
           try {
@@ -1919,6 +2216,40 @@ async function ensureSparkOs(account, node, maiaGroup, backend) {
       const indexesId = osContent.get("indexes");
       if (!indexesId && backend) {
         await ensureIndexesCoMap(backend);
+      }
+    }
+  }
+
+  // Ensure spark.vibes exists (for old scaffolds) - only when we have schemaCoIdMap for proper schema
+  const vibesId = await groups.getSparkVibesId(backend, MAIA_SPARK);
+  if (!vibesId && schemaCoIdMap) {
+    const sparksId = backend.account?.get('sparks');
+    if (sparksId?.startsWith('co_z')) {
+      const sparksStore = await backend.read(null, sparksId);
+      await new Promise((resolve, reject) => {
+        if (!sparksStore.loading) return resolve();
+        const t = setTimeout(() => reject(new Error('Timeout')), 10000);
+        const unsub = sparksStore.subscribe(() => {
+          if (!sparksStore.loading) { clearTimeout(t); unsub?.(); resolve(); }
+        });
+      });
+      const sparksData = sparksStore?.value;
+      const maiaSparkCoId = sparksData?.[MAIA_SPARK];
+      if (maiaSparkCoId?.startsWith('co_z')) {
+        const sparkCore = backend.getCoValue(maiaSparkCoId);
+        if (sparkCore && backend.isAvailable(sparkCore)) {
+          const sparkContent = backend.getCurrentContent(sparkCore);
+          if (sparkContent && typeof sparkContent.set === 'function') {
+            const ctx = { node, account, guardian: maiaGroup };
+            const { coValue: vibes } = await createCoValueForSpark(ctx, null, {
+              schema: vibesSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
+              cotype: 'comap',
+              data: {},
+              dbEngine: backend?.dbEngine
+            });
+            sparkContent.set('vibes', vibes.id);
+          }
+        }
       }
     }
   }
@@ -1978,10 +2309,15 @@ async function storeRegistry(account, node, maiaGroup, backend, coIdRegistry, sc
     if (schemaCoIdMap && schemaCoIdMap.has('@maia/schema/os/schematas-registry')) {
       schematasSchemaCoId = schemaCoIdMap.get('@maia/schema/os/schematas-registry');
     }
-    const schematasMeta = schematasSchemaCoId
-      ? { $schema: schematasSchemaCoId }
-      : { $schema: '@maia' }; // Fallback during initial seeding
-    schematas = maiaGroup.createMap({}, schematasMeta);
+    const schemaForSchematas = schematasSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA;
+    const ctx = { node, account, guardian: maiaGroup };
+    const { coValue: schematasCreated } = await createCoValueForSpark(ctx, null, {
+      schema: schemaForSchematas,
+      cotype: 'comap',
+      data: {},
+      dbEngine: backend?.dbEngine
+    });
+    schematas = schematasCreated;
     osContent.set("schematas", schematas.id);
     
     // Wait for storage sync

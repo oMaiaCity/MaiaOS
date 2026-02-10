@@ -1,7 +1,7 @@
 /**
  * Collection Helper Functions
  * 
- * Provides helpers for resolving schema co-ids, getting CoList IDs using schema co-id keys in account.os, and ensuring CoValues are loaded.
+ * Provides helpers for resolving schema co-ids, getting CoList IDs using schema co-id keys in spark.os.indexes, and ensuring CoValues are loaded.
  */
 
 import { resolve } from '../schema/resolver.js';
@@ -23,7 +23,7 @@ async function resolveSchemaCoId(backend, schema) {
 }
 
 /**
- * Get schema index colist ID using schema co-id as key (all schemas indexed in account.os.indexes)
+ * Get schema index colist ID using schema co-id as key (all schemas indexed in spark.os.indexes)
  * Lazily creates the index colist if it doesn't exist and the schema has indexing: true
  * @param {Object} backend - Backend instance
  * @param {string} schema - Schema co-id (co_z...) or human-readable (@maia/schema/data/todos)
@@ -42,40 +42,40 @@ export async function getSchemaIndexColistId(backend, schema) {
   const spark = backend?.systemSpark ?? '@maia';
   const osId = await getSparkOsId(backend, spark);
   if (!osId) {
-    console.warn(`[getSchemaIndexColistId] ❌ account.os not found`);
+    console.warn(`[getSchemaIndexColistId] ❌ spark.os not found`);
     return null;
   }
   
-  // Load account.os CoMap
+  // Load spark.os CoMap
   const osCore = await ensureCoValueLoaded(backend, osId);
   if (!osCore || !backend.isAvailable(osCore)) {
-    console.warn(`[getSchemaIndexColistId] ❌ account.os not available (loaded: ${!!osCore}, available: ${osCore ? backend.isAvailable(osCore) : false})`);
+    console.warn(`[getSchemaIndexColistId] ❌ spark.os not available (loaded: ${!!osCore}, available: ${osCore ? backend.isAvailable(osCore) : false})`);
     return null;
   }
   
   const osContent = backend.getCurrentContent(osCore);
   if (!osContent || typeof osContent.get !== 'function') {
-    console.warn(`[getSchemaIndexColistId] ❌ account.os content not available`);
+    console.warn(`[getSchemaIndexColistId] ❌ spark.os content not available`);
     return null;
   }
   
-  // Get account.os.indexes CoMap
+  // Get spark.os.indexes CoMap
   const indexesId = osContent.get('indexes');
   if (!indexesId) {
-    console.warn(`[getSchemaIndexColistId] ❌ account.os.indexes not found`);
+    console.warn(`[getSchemaIndexColistId] ❌ spark.os.indexes not found`);
     return null;
   }
   
-  // Load account.os.indexes CoMap
+  // Load spark.os.indexes CoMap
   const indexesCore = await ensureCoValueLoaded(backend, indexesId);
   if (!indexesCore || !backend.isAvailable(indexesCore)) {
-    console.warn(`[getSchemaIndexColistId] ❌ account.os.indexes not available (loaded: ${!!indexesCore}, available: ${indexesCore ? backend.isAvailable(indexesCore) : false})`);
+    console.warn(`[getSchemaIndexColistId] ❌ spark.os.indexes not available (loaded: ${!!indexesCore}, available: ${indexesCore ? backend.isAvailable(indexesCore) : false})`);
     return null;
   }
   
   const indexesContent = backend.getCurrentContent(indexesCore);
   if (!indexesContent || typeof indexesContent.get !== 'function') {
-    console.warn(`[getSchemaIndexColistId] ❌ account.os.indexes content not available`);
+    console.warn(`[getSchemaIndexColistId] ❌ spark.os.indexes content not available`);
     return null;
   }
   
@@ -108,7 +108,7 @@ export async function getSchemaIndexColistId(backend, schema) {
 
 
 /**
- * Get CoList ID from account.os.indexes.<schemaCoId> (all schema indexes in account.os.indexes)
+ * Get CoList ID from spark.os.indexes.<schemaCoId> (all schema indexes in spark.os.indexes)
  * @param {Object} backend - Backend instance
  * @param {string} collectionNameOrSchema - Collection name (e.g., "todos"), schema co-id (co_z...), or namekey (@maia/schema/data/todos)
  * @returns {Promise<string|null>} CoList ID or null if not found

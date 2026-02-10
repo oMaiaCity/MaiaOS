@@ -1,5 +1,4 @@
-import { createSchemaMeta, isExceptionSchema, getAllSchemas } from "../../schemas/registry.js";
-import { hasSchemaInRegistry } from "../../schemas/registry.js";
+import { createSchemaMeta, isExceptionSchema, getAllSchemas, assertSchemaValidForCreate } from "../../schemas/registry.js";
 import { loadSchemaAndValidate } from '@MaiaOS/schemata/validation.helper';
 
 /**
@@ -36,15 +35,7 @@ export async function createCoList(accountOrGroup, init = [], schemaName, node =
 		}
 		// If profileId is null/undefined, it's a regular group, use it as-is
 	}
-	// STRICT: Schema is MANDATORY
-	if (!schemaName || typeof schemaName !== 'string') {
-		throw new Error('[createCoList] Schema name is REQUIRED. Provide a valid schema name (e.g., "NotesSchema") or co-id (e.g., "co_z123...")');
-	}
-	
-	// Skip validation for exception schemas or co-ids
-	if (!isExceptionSchema(schemaName) && !schemaName.startsWith('co_z') && !hasSchemaInRegistry(schemaName)) {
-		throw new Error(`[createCoList] Schema '${schemaName}' not found in registry. Available schemas: AccountSchema, GroupSchema, ProfileSchema`);
-	}
+	assertSchemaValidForCreate(schemaName, 'createCoList');
 	
 	// Validate data against schema BEFORE creating CoValue
 	// STRICT: Always validate using runtime schema from database (no fallbacks, no legacy hacks)

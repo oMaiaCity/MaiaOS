@@ -6,7 +6,7 @@
  */
 
 import { ReactiveStore } from '../reactive-store.js';
-import { resolve } from '@MaiaOS/db';
+import { getSparkCapabilityGroupIdFromSparkCoId } from '@MaiaOS/db';
 import { 
   requireParam, 
   validateCoId, 
@@ -57,7 +57,7 @@ export async function readSparkOperation(backend, params) {
  * @param {Object} dbEngine - DBEngine instance
  * @param {Object} params - Operation parameters
  * @param {string} params.id - Spark co-id
- * @param {Object} params.data - Update data (name, group)
+ * @param {Object} params.data - Update data (name only; guardian is in spark.os.capabilities)
  * @returns {Promise<Object>} Updated spark
  */
 export async function updateSparkOperation(backend, dbEngine, params) {
@@ -88,63 +88,24 @@ export async function deleteSparkOperation(backend, dbEngine, params) {
 }
 
 /**
- * Helper: Get spark's group from spark co-id
+ * Helper: Get spark's group from spark co-id (via spark.os.capabilities.guardian)
  * @param {Object} backend - Backend instance
  * @param {string} sparkId - Spark co-id
  * @returns {Promise<RawGroup>} Spark's group
  */
 async function getSparkGroup(backend, sparkId) {
   validateCoId(sparkId, 'GetSparkGroup');
-  
-  // Read spark to get group co-id
-  const sparkStore = await backend.readSpark(sparkId);
-  await new Promise((resolve, reject) => {
-    if (!sparkStore.loading) {
-      resolve();
-      return;
-    }
-    let unsubscribe;
-    const timeout = setTimeout(() => {
-      if (unsubscribe) unsubscribe();
-      reject(new Error('[GetSparkGroup] Timeout waiting for spark to load'));
-    }, 10000);
-    unsubscribe = sparkStore.subscribe(() => {
-      if (!sparkStore.loading) {
-        clearTimeout(timeout);
-        if (unsubscribe) unsubscribe();
-        resolve();
-      }
-    });
-  });
-  
-  const sparkData = sparkStore.value;
-  if (!sparkData || sparkData.error) {
-    throw new Error(`[GetSparkGroup] Spark not found: ${sparkId}`);
-  }
-  
-  // Extract group co-id from spark data (handle both direct properties and properties array formats)
-  let groupId = null;
-  if (sparkData.group) {
-    // Direct property format: {name: "...", group: "co_z..."}
-    groupId = sparkData.group;
-  } else if (sparkData.properties && Array.isArray(sparkData.properties)) {
-    // Properties array format: {properties: [{key: "group", value: "co_z..."}]}
-    const groupProperty = sparkData.properties.find(p => p.key === 'group');
-    if (groupProperty && groupProperty.value) {
-      groupId = groupProperty.value;
-    }
-  }
-  
+
+  const groupId = await getSparkCapabilityGroupIdFromSparkCoId(backend, sparkId, 'guardian');
   if (!groupId || typeof groupId !== 'string' || !groupId.startsWith('co_z')) {
-    throw new Error(`[GetSparkGroup] Invalid or missing group ID in spark: ${groupId || 'undefined'}`);
+    throw new Error(`[GetSparkGroup] Spark has no guardian in os.capabilities: ${sparkId}`);
   }
-  
-  // Get group from backend
+
   const group = await backend.getGroup(groupId);
   if (!group) {
     throw new Error(`[GetSparkGroup] Group not found: ${groupId}`);
   }
-  
+
   return group;
 }
 

@@ -15,6 +15,8 @@
 // STRICT: No createAccount() - only createAccountWithSecret() and loadAccount()
 export { createAccountWithSecret, loadAccount } from "./cojson/groups/coID.js";
 export { createGroup, createProfile } from "./cojson/groups/create.js";
+export { createCoValueForSpark } from "./cojson/covalue/create-covalue-for-spark.js";
+export { getSparkCapabilityGroupIdFromSparkCoId } from "./cojson/groups/groups.js";
 export { createCoMap } from "./cojson/cotypes/coMap.js";
 export { createCoList } from "./cojson/cotypes/coList.js";
 export { createCoStream } from "./cojson/cotypes/coStream.js";

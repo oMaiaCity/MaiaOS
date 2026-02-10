@@ -333,15 +333,15 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 					<p class="mt-4 text-slate-500 font-medium">Loading CoValue... (waiting for verified state)</p>
 				</div>
 			`;
-		} else if (data.type === 'colist' || data.type === 'costream') {
+		} else if ((data.cotype || data.type) === 'colist' || (data.cotype || data.type) === 'costream') {
 			// CoList/CoStream: Display items directly (they ARE the list/stream, no properties)
 			const items = data.items || [];
-			const isStream = data.type === 'costream';
+			const isStream = (data.cotype || data.type) === 'costream';
 			const typeLabel = isStream ? 'CoStream' : 'CoList';
 			
 			// Store header info for display in inspector-header
 			headerInfo = {
-				type: data.type,
+				type: data.cotype || data.type,
 				typeLabel: typeLabel,
 				itemCount: items.length,
 				description: isStream ? 'Append-only stream' : 'Ordered list'
@@ -387,6 +387,7 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 				k !== '$schema' && 
 				k !== 'schema' && 
 				k !== 'type' &&
+				k !== 'cotype' &&  // Display only in metadata aside, not as main content property
 				k !== 'displayName' &&
 				k !== 'headerMeta' &&
 				k !== 'groupInfo'  // Backend metadata - displayed in metadata sidebar, not as a property
@@ -447,14 +448,43 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 	let metadataSidebar = '';
 	if (currentContextCoValueId && data && !data.error && !data.loading) {
 		const groupInfo = data.groupInfo || null;
-		const hasMembers = groupInfo && (groupInfo.accountMembers?.length > 0 || groupInfo.groupMembers?.length > 0);
 
-		// Sort account members: "everyone" first
-		const sortedAccountMembers = groupInfo?.accountMembers ? [...groupInfo.accountMembers].sort((a, b) => {
-			if (a.id === 'everyone') return -1;
-			if (b.id === 'everyone') return 1;
-			return 0;
-		}) : [];
+		// Flattened "Members with access": each row is (who, role, source)
+		// Inherited roles (= via parent group) are only shown under "via" to avoid duplicates
+		const flattenedMembers = [];
+		const viaMemberIds = new Set();
+		if (groupInfo?.groupMembers) {
+			for (const g of groupInfo.groupMembers) {
+				for (const m of g.members || []) {
+					viaMemberIds.add(m.id);
+					flattenedMembers.push({
+						who: m.id,
+						role: m.role || 'reader',
+						source: `via ${truncate(g.id, 12)}`,
+						viaGroupId: g.id  // Parent group/capability – link to this CoValue, not the account
+					});
+				}
+			}
+		}
+		if (groupInfo?.accountMembers) {
+			for (const m of groupInfo.accountMembers) {
+				// Skip inherited: already shown under "via" above
+				if (m.isInherited && viaMemberIds.has(m.id)) continue;
+				flattenedMembers.push({
+					who: m.id,
+					role: m.role || 'reader',
+					source: m.isInherited ? 'inherited' : 'direct'
+				});
+			}
+		}
+		// Sort: everyone first, then by source (direct, then via…, then inherited)
+		const sourceOrder = (s) => (s === 'direct' ? 0 : s === 'inherited' ? 2 : 1);
+		flattenedMembers.sort((a, b) => {
+			if (a.who === 'everyone') return -1;
+			if (b.who === 'everyone') return 1;
+			return sourceOrder(a.source) - sourceOrder(b.source) || String(a.who).localeCompare(b.who);
+		});
+		const hasMembers = flattenedMembers.length > 0;
 
 		// Fetch schema title if schema is a co-id using the abstracted read operation API
 		let schemaTitle = null;
@@ -560,14 +590,14 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 							</div>
 						` : ''}
 						<div class="metadata-info-item">
-							<span class="metadata-info-key">CONTENT TYPE</span>
-							<span class="badge badge-type badge-${String(data.type || 'unknown').replace(/-/g, '')}">
-								${data.type === 'colist' ? 'COLIST' : data.type === 'costream' ? 'COSTREAM' : String(data.type || 'unknown').toUpperCase()}
+							<span class="metadata-info-key">CO TYPE</span>
+							<span class="badge badge-type badge-${String(data.cotype || data.type || 'unknown').replace(/-/g, '')}">
+								${(data.cotype || data.type) === 'colist' ? 'COLIST' : (data.cotype || data.type) === 'costream' ? 'COSTREAM' : String(data.cotype || data.type || 'unknown').toUpperCase()}
 							</span>
 						</div>
 						${groupInfo?.groupId ? `
 							<div class="metadata-info-item">
-								<span class="metadata-info-key">OWNER GROUP</span>
+								<span class="metadata-info-key">OWNER</span>
 								${groupName ? `
 									<div style="display: flex; flex-direction: column; gap: 2px;">
 										<span class="metadata-info-value" style="font-weight: 600; color: #1e293b;">
@@ -582,83 +612,40 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 										${truncate(groupInfo.groupId, 24)}
 									</code>
 								`}
-								<div class="metadata-info-hint" style="font-size: 10px; color: #64748b; margin-top: 2px;">
-									Ultimate owner - controls access to this co-value
-								</div>
 							</div>
 						` : ''}
 					</div>
 					
-					<!-- Members Section (if group info available) -->
+					<!-- Members with access: single flattened list (who, role, source) - no separate Parent Groups section -->
 					${groupInfo ? (
 						hasMembers ? `
 							<div class="metadata-members">
-								${sortedAccountMembers.length > 0 ? `
-									<div class="metadata-section">
-										<h4 class="metadata-section-title">Account Members</h4>
-										<div class="metadata-info-hint" style="font-size: 10px; color: #64748b; margin-bottom: 8px;">
-											Effective roles (includes inherited from parent groups)
-										</div>
-										<div class="metadata-members-list">
-											${sortedAccountMembers.map(member => {
-												const isEveryone = member.id === 'everyone';
-												const isAdmin = member.role?.toLowerCase() === 'admin';
-												const isManager = member.role?.toLowerCase() === 'manager';
-												const isWriter = member.role?.toLowerCase() === 'writer';
-												const isReader = member.role?.toLowerCase() === 'reader';
-												const roleClass = member.role?.toLowerCase() || 'member';
-												const isInherited = member.isInherited || false;
-												
-												// Role descriptions
-												let roleDescription = '';
-												if (isAdmin) roleDescription = 'Full control: read, write, manage members';
-												else if (isManager) roleDescription = 'Can read, write, invite/revoke (except admins)';
-												else if (isWriter) roleDescription = 'Can read and write';
-												else if (isReader) roleDescription = 'Can read only';
-												else roleDescription = 'Limited access';
-												
-												return `
-													<div class="metadata-member-item ${isEveryone ? 'everyone' : ''} ${isAdmin ? 'admin' : ''}" title="${roleDescription}${isInherited ? ' (inherited from parent group)' : ''}">
-														<div class="metadata-member-info">
-															<span class="metadata-member-id">${isEveryone ? 'Everyone' : truncate(member.id, 16)}</span>
-															${isInherited ? '<span style="font-size: 9px; color: #94a3b8; margin-left: 4px;">(inherited)</span>' : ''}
-														</div>
-														<span class="badge badge-role badge-${roleClass}">${member.role || 'member'}</span>
-													</div>
-												`;
-											}).join('')}
-										</div>
+								<div class="metadata-section">
+									<h4 class="metadata-section-title">Members with access</h4>
+									<div class="metadata-info-hint" style="font-size: 10px; color: #64748b; margin-bottom: 8px;">
+										Who has access, their role, and whether it's direct or via a group
 									</div>
-								` : ''}
-								${groupInfo.groupMembers && groupInfo.groupMembers.length > 0 ? `
-									<div class="metadata-section">
-										<h4 class="metadata-section-title">Parent Groups (Delegated Access)</h4>
-										<div class="metadata-info-hint" style="font-size: 10px; color: #64748b; margin-bottom: 8px;">
-											Groups that delegate access to their members
-										</div>
-										<div class="metadata-members-list">
-											${groupInfo.groupMembers.map(member => {
-												const roleClass = member.role?.toLowerCase() || 'extend';
-												const roleDescription = member.roleDescription || 'Delegated access';
-												return `
-													<div class="metadata-member-item" title="${roleDescription}">
-														<div class="metadata-member-info">
-															<code class="metadata-member-id co-id" onclick="selectCoValue('${member.id}')" title="${member.id}" style="cursor: pointer; text-decoration: underline;">
-																${truncate(member.id, 16)}
-															</code>
-														</div>
-														<div style="display: flex; flex-direction: column; align-items: flex-end; gap: 2px;">
-															<span class="badge badge-role badge-${roleClass}">${member.role || 'extend'}</span>
-															<span style="font-size: 9px; color: #94a3b8; max-width: 120px; text-align: right; line-height: 1.2;">
-																${roleDescription}
-															</span>
-														</div>
+									<div class="metadata-members-list">
+										${flattenedMembers.map(row => {
+											const isEveryone = row.who === 'everyone';
+											const roleClass = row.role?.toLowerCase() || 'reader';
+											// "via" links to the group/capability CoValue; account links to the account
+											const sourceHtml = row.viaGroupId
+												? `via <code class="co-id" onclick="selectCoValue('${row.viaGroupId}')" title="${row.viaGroupId}" style="cursor: pointer; text-decoration: underline; font-size: 9px;">${truncate(row.viaGroupId, 12)}</code>`
+												: escapeHtml(row.source);
+											return `
+												<div class="metadata-member-item ${isEveryone ? 'everyone' : ''}" title="${row.role} access — ${row.source}">
+													<div class="metadata-member-info">
+														<span class="metadata-member-id">${isEveryone ? 'Everyone' : truncate(row.who, 16)}</span>
+														${!isEveryone && row.who.startsWith('co_') ? `<code class="co-id" onclick="selectCoValue('${row.who}')" title="${row.who}" style="cursor: pointer; font-size: 9px; margin-left: 4px;">↗</code>` : ''}
+														<span style="font-size: 9px; color: #94a3b8; margin-left: 4px;">${sourceHtml}</span>
 													</div>
-												`;
-											}).join('')}
-										</div>
+													<span class="badge badge-role badge-${roleClass}">${row.role}</span>
+												</div>
+											`;
+										}).join('')}
 									</div>
-								` : ''}
+								</div>
 							</div>
 						` : `
 							<div class="metadata-empty">No member information available for this group.</div>
@@ -768,8 +755,8 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 										<span class="text-sm font-semibold text-marine-blue">${headerInfo.itemCount} ${headerInfo.itemCount === 1 ? 'Item' : 'Items'}</span>
 										<span class="text-xs text-marine-blue-light font-medium italic">${headerInfo.description}</span>
 									` : ''}
-									${!headerInfo && data?.type ? `
-										<span class="badge badge-type badge-${String(data.type || 'comap').replace(/-/g, '')} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${data.type === 'colist' ? 'COLIST' : data.type === 'costream' ? 'COSTREAM' : String(data.type || 'COMAP').toUpperCase()}</span>
+									${!headerInfo && (data?.cotype || data?.type) ? `
+										<span class="badge badge-type badge-${String(data.cotype || data.type || 'comap').replace(/-/g, '')} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${(data.cotype || data.type) === 'colist' ? 'COLIST' : (data.cotype || data.type) === 'costream' ? 'COSTREAM' : String(data.cotype || data.type || 'COMAP').toUpperCase()}</span>
 									` : ''}
 								</div>
 							</div>

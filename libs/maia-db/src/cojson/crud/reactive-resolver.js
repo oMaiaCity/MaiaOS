@@ -79,20 +79,17 @@ export function resolveSchemaReactive(backend, schemaKey, options = {}) {
   let osUnsubscribe = null;
   let schematasUnsubscribe = null;
   
-  // Set up reactive subscription to account.os.schematas for progressive resolution
+  // Set up reactive subscription to spark.os.schematas for progressive resolution (account.sparks[@maia].os.schematas)
   const setupReactiveSubscription = async () => {
-    if (!backend.account || typeof backend.account.get !== 'function') {
-      store._set({ loading: false, error: 'Account not available' });
-      return;
-    }
-    
-    const osId = backend.account.get('os');
+    const { getSparkOsId } = await import('../groups/groups.js');
+    const spark = backend?.systemSpark ?? '@maia';
+    const osId = await getSparkOsId(backend, spark);
     if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
-      store._set({ loading: false, error: 'account.os not found' });
+      store._set({ loading: false, error: 'spark.os not found' });
       return;
     }
     
-    // Load account.os store reactively
+    // Load spark.os store reactively
     const osStore = await universalRead(backend, osId, null, null, null, {
       deepResolve: false,
       timeoutMs
