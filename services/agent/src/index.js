@@ -3,10 +3,12 @@
  *
  * Endpoints:
  *   POST /on-added - Manual: register human's spark. Body: { sparkId }
+ *   POST /register-human - Register human in spark.registries.humans. Body: { username, accountId }
  *   POST /trigger - Push todo. Body: { text?, spark? }
  *
- *   curl http://localhost:4204/profile          - Current agent account + profile (debug)
+ *   curl http://localhost:4204/profile
  *   curl -X POST http://localhost:4204/on-added -H "Content-Type: application/json" -d '{"sparkId":"co_z..."}'
+ *   curl -X POST http://localhost:4204/register-human -H "Content-Type: application/json" -d '{"username":"samuel","accountId":"co_z..."}'
  *   curl -X POST http://localhost:4204/trigger -H "Content-Type: application/json" -d '{"text":"Buy milk","spark":"@Maia"}'
  *
  * Environment:
@@ -121,6 +123,62 @@ async function handleOnAdded(worker, body) {
   return jsonResponse({ ok: true, added: '@Maia', sparkId });
 }
 
+/** Returns humans registry co-id (spark.registries.humans). All writes go through CRUD API. */
+async function getHumansRegistryId(backend, account) {
+  const sparksContent = await ensureSparksAndGetContent(backend, account);
+  const sparkCoId = sparksContent.get('@Maia');
+  if (!sparkCoId?.startsWith('co_z')) {
+    throw new Error('@Maia spark not registered. Call /on-added first.');
+  }
+  const sparkStore = await backend.read(null, sparkCoId);
+  await withTimeout(waitForStoreReady(sparkStore, sparkCoId, SPARKS_LOAD_TIMEOUT_MS), SPARKS_LOAD_TIMEOUT_MS, 'spark');
+  const sparkCore = backend.node.getCoValue(sparkCoId);
+  if (!sparkCore || !backend.isAvailable(sparkCore)) throw new Error('Human spark not available');
+  const sparkContent = backend.getCurrentContent(sparkCore);
+  const registriesId = sparkContent?.get?.('registries');
+  if (!registriesId?.startsWith('co_z')) throw new Error('spark.registries not found');
+  const registriesStore = await backend.read(null, registriesId);
+  await withTimeout(waitForStoreReady(registriesStore, registriesId, SPARKS_LOAD_TIMEOUT_MS), SPARKS_LOAD_TIMEOUT_MS, 'registries');
+  const registriesCore = backend.node.getCoValue(registriesId);
+  if (!registriesCore || !backend.isAvailable(registriesCore)) throw new Error('registries not available');
+  const registriesContent = backend.getCurrentContent(registriesCore);
+  const humansId = registriesContent?.get?.('humans');
+  if (!humansId?.startsWith('co_z')) {
+    throw new Error('spark.registries.humans not found. Restart agent to run migration.');
+  }
+  const humansStore = await backend.read(null, humansId);
+  await withTimeout(waitForStoreReady(humansStore, humansId, SPARKS_LOAD_TIMEOUT_MS), SPARKS_LOAD_TIMEOUT_MS, 'humans');
+  return humansId;
+}
+
+async function handleRegisterHuman(worker, body) {
+  const { username, accountId } = body || {};
+  if (!username || typeof username !== 'string' || !username.trim()) {
+    return jsonResponse({ ok: false, error: 'username required (unique)', validationErrors: [{ field: 'username', message: 'required' }] }, 400);
+  }
+  const u = username.trim();
+  if (!accountId || typeof accountId !== 'string') {
+    return jsonResponse({ ok: false, error: 'accountId required', validationErrors: [{ field: 'accountId', message: 'required' }] }, 400);
+  }
+  const { backend, dbEngine } = await getBackendAndDbEngine(worker);
+  try {
+    const humansId = await getHumansRegistryId(backend, worker.account);
+    const raw = await backend.getRawRecord(humansId);
+    const existing = raw?.[u];
+    if (existing != null && existing !== accountId) {
+      return jsonResponse({ ok: false, error: 'username already registered to different account', validationErrors: [{ field: 'username', message: 'unique required' }] }, 409);
+    }
+    await dbEngine.execute({ op: 'update', id: humansId, data: { [u]: accountId } });
+    console.log('[agent] Registered human:', u, '->', accountId);
+    return jsonResponse({ ok: true, username: u, accountId });
+  } catch (e) {
+    const msg = e?.message ?? 'failed to register';
+    const isValidation = msg.includes('Validation failed') || msg.includes('validation');
+    const status = isValidation ? 400 : 500;
+    return jsonResponse({ ok: false, error: msg, ...(isValidation && { validationErrors: [{ field: 'accountId', message: msg }] }) }, status);
+  }
+}
+
 async function handleTrigger(worker, body) {
   const { backend, dbEngine } = await getBackendAndDbEngine(worker);
   const text = body?.text ?? 'Test todo from agent';
@@ -214,6 +272,18 @@ async function handleHttp(req, { worker }) {
       return result;
     } catch (e) {
       console.log('[agent] /on-added error:', e.message);
+      const status = e?.message?.includes('timed out') ? 504 : 400;
+      return jsonResponse({ ok: false, error: e.message }, status);
+    }
+  }
+
+  if (url.pathname === '/register-human' && req.method === 'POST') {
+    try {
+      const body = await req.json().catch(() => ({}));
+      const result = await withTimeout(handleRegisterHuman(worker, body), REQUEST_TIMEOUT_MS, '/register-human');
+      return result;
+    } catch (e) {
+      console.log('[agent] /register-human error:', e.message);
       const status = e?.message?.includes('timed out') ? 504 : 400;
       return jsonResponse({ ok: false, error: e.message }, status);
     }

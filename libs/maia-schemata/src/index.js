@@ -63,6 +63,7 @@ import capabilitiesSchema from './os/capabilities.schema.json';
 import indexesRegistrySchema from './os/indexes-registry.schema.json';
 import vibesRegistrySchema from './os/vibes-registry.schema.json';
 import sparksRegistrySchema from './os/sparks-registry.schema.json';
+import humansRegistrySchema from './os/humans-registry.schema.json';
 import registriesSchema from './os/registries.schema.json';
 // Import data schemas
 import todosDataSchema from './data/todos.schema.json';
@@ -119,6 +120,7 @@ const SCHEMAS = {
   'os/indexes-registry': indexesRegistrySchema,
   'os/vibes-registry': vibesRegistrySchema,
   'os/sparks-registry': sparksRegistrySchema,
+  'os/humans-registry': humansRegistrySchema,
   'os/registries': registriesSchema
 };
 

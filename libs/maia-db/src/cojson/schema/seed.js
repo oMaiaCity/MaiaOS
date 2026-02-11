@@ -263,8 +263,10 @@ async function seedMaiaSparkRegistriesSparksMapping(backend, maiaGroup) {
   const { resolve } = await import('../schema/resolver.js');
   const registriesSchemaCoId = await resolve(backend, '@maia/schema/os/registries', { returnType: 'coId' });
   const sparksRegistrySchemaCoId = await resolve(backend, '@maia/schema/os/sparks-registry', { returnType: 'coId' });
+  const humansRegistrySchemaCoId = await resolve(backend, '@maia/schema/os/humans-registry', { returnType: 'coId' });
   const registriesMeta = registriesSchemaCoId ? { $schema: registriesSchemaCoId } : { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
   const sparksRegistryMeta = sparksRegistrySchemaCoId ? { $schema: sparksRegistrySchemaCoId } : { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
+  const humansRegistryMeta = humansRegistrySchemaCoId ? { $schema: humansRegistrySchemaCoId } : { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
 
   // Each CoValue has its own group (clean architecture). publicReaders is a reader member.
   // Account leaves group (no direct members) - same as createCoValueForSpark
@@ -311,6 +313,24 @@ async function seedMaiaSparkRegistriesSparksMapping(backend, maiaGroup) {
   }
 
   sparksContent.set(MAIA_SPARK, maiaSparkCoId);
+
+  // Ensure spark.registries.humans exists (username -> account co-id)
+  let humansRegistryId = registriesContent.get('humans');
+  let humansContent = null;
+  if (humansRegistryId) {
+    const humansCore = backend.getCoValue(humansRegistryId);
+    if (humansCore && backend.isAvailable(humansCore)) {
+      humansContent = backend.getCurrentContent(humansCore);
+    }
+  }
+  if (!humansContent || typeof humansContent.set !== 'function') {
+    const humansGroup = node.createGroup();
+    humansGroup.extend(maiaGroup, 'extend');
+    humansGroup.extend(publicReadersGroup, 'reader');
+    const humans = humansGroup.createMap({}, humansRegistryMeta);
+    try { await removeGroupMember(humansGroup, memberIdToRemove); } catch (e) { /* guardian remains admin */ }
+    registriesContent.set('humans', humans.id);
+  }
 }
 
 /**
