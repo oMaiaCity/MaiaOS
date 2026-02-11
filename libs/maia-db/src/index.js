@@ -14,6 +14,8 @@
 // Re-export services for external use
 // STRICT: No createAccount() - only createAccountWithSecret() and loadAccount()
 export { createAccountWithSecret, loadAccount } from "./cojson/groups/coID.js";
+export { resolveAccountCoIdsToProfileNames } from "./cojson/helpers/resolve-account-profile.js";
+export { resolveGroupCoIdsToCapabilityNames } from "./cojson/helpers/resolve-capability-group.js";
 export { createGroup, createProfile } from "./cojson/groups/create.js";
 export { createCoValueForSpark } from "./cojson/covalue/create-covalue-for-spark.js";
 export { getSparkCapabilityGroupIdFromSparkCoId } from "./cojson/groups/groups.js";

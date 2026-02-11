@@ -92,6 +92,10 @@ export function setupSyncPeers(syncDomain = null) {
 	let connectionTimeout = null;
 	let websocketConnected = false;
 	let websocketConnectedResolve = null;
+	// Debounce connection-lost logs: reconnection attempts spam when server is down.
+	// Use time-based debounce: log at most once per 60s per disconnection session
+	let connectionLostLoggedAt = 0;
+	const CONNECTION_LOST_LOG_COOLDOWN_MS = 60000;
 	const websocketConnectedPromise = new Promise((resolve) => {
 		websocketConnectedResolve = resolve;
 	});
@@ -123,8 +127,10 @@ export function setupSyncPeers(syncDomain = null) {
 			if (index > -1) {
 				peers.splice(index, 1);
 			}
-			// Only log warning if we actually had a connection before
-			if (syncState.connected) {
+			// Only log if we had a connection and cooldown elapsed (reconnection retries spam)
+			const now = Date.now();
+			if (syncState.connected && now - connectionLostLoggedAt > CONNECTION_LOST_LOG_COOLDOWN_MS) {
+				connectionLostLoggedAt = now;
 				console.warn('⚠️ [SYNC] Peer removed, connection lost');
 			}
 			websocketConnected = false;
@@ -135,9 +141,11 @@ export function setupSyncPeers(syncDomain = null) {
 	
 	// Subscribe to connection changes (for WebSocket-level status)
 	// This fires when WebSocket is ACTUALLY connected, not just when peer object is created
+	// Debounce "connection lost" log: reconnection retries fire every 5s when server is down
 	wsPeer.subscribe((connected) => {
 		if (connected && !websocketConnected) {
 			websocketConnected = true;
+			connectionLostLoggedAt = 0; // Reset so we'll log again on next disconnection
 			syncState = { connected: true, syncing: true, error: null, status: 'syncing' };
 			notifySyncStateChange();
 			// Resolve the promise when WebSocket is actually connected
@@ -146,9 +154,12 @@ export function setupSyncPeers(syncDomain = null) {
 				websocketConnectedResolve = null;
 			}
 		} else if (!connected && websocketConnected) {
-			// Only log if we were previously connected
-			console.warn('⚠️ [SYNC] WebSocket connection lost');
 			websocketConnected = false;
+			const now = Date.now();
+			if (now - connectionLostLoggedAt > CONNECTION_LOST_LOG_COOLDOWN_MS) {
+				connectionLostLoggedAt = now;
+				console.warn('⚠️ [SYNC] WebSocket connection lost');
+			}
 			syncState = { connected: false, syncing: false, error: "Offline", status: 'error' };
 			notifySyncStateChange();
 		}

@@ -178,6 +178,7 @@
       "name": "maia-city",
       "version": "0.1.23",
       "dependencies": {
+        "@MaiaOS/db": "workspace:*",
         "@MaiaOS/kernel": "workspace:*",
         "@MaiaOS/vibes": "workspace:*",
       },

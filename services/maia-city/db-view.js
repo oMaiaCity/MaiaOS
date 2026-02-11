@@ -6,6 +6,7 @@
 import { truncate, getSyncStatusMessage } from './utils.js'
 // Import getSchema and getAllSchemas from kernel bundle (not directly from @MaiaOS/db)
 import { getSchema, getAllSchemas } from '@MaiaOS/kernel'
+import { resolveAccountCoIdsToProfileNames, resolveGroupCoIdsToCapabilityNames } from '@MaiaOS/db'
 import { renderDashboard, renderVibeViewer } from './dashboard.js'
 
 // Helper function to escape HTML
@@ -34,23 +35,23 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 	// Helper to render any value consistently
 	const renderValue = (value, depth = 0) => {
 		if (depth > 2) return '<span class="nested-depth">...</span>';
-		if (value === null) return '<span class="null-value text-xs text-slate-400 italic">null</span>';
-		if (value === undefined) return '<span class="undefined-value text-xs text-slate-400 italic">undefined</span>';
+		if (value === null) return '<span class="text-xs italic null-value text-slate-400">null</span>';
+		if (value === undefined) return '<span class="text-xs italic undefined-value text-slate-400">undefined</span>';
 		
 		if (typeof value === 'string') {
 			if (value.startsWith('co_')) {
-				return `<code class="co-id text-xs text-marine-blue-muted hover:underline clickable" onclick="selectCoValue('${value}')" title="${value}">${truncate(value, 12)}</code>`;
+				return `<code class="text-xs co-id text-marine-blue-muted hover:underline clickable" onclick="selectCoValue('${value}')" title="${value}">${truncate(value, 12)}</code>`;
 			}
 			if (value.startsWith('key_')) {
-				return `<code class="key-value text-xs text-marine-blue-muted" title="${value}">${truncate(value, 30)}</code>`;
+				return `<code class="text-xs key-value text-marine-blue-muted" title="${value}">${truncate(value, 30)}</code>`;
 			}
 			if (value.startsWith('sealed_')) {
-				return '<code class="sealed-value text-xs text-marine-blue-muted italic">sealed_***</code>';
+				return '<code class="text-xs italic sealed-value text-marine-blue-muted">sealed_***</code>';
 			}
 			
 			const maxLength = 100;
 			const truncated = value.length > maxLength ? value.substring(0, maxLength) + '...' : value;
-			return `<span class="string-value text-xs text-marine-blue-muted break-all min-w-0 text-right" title="${value}">"${escapeHtml(truncated)}"</span>`;
+			return `<span class="min-w-0 text-xs text-right break-all string-value text-marine-blue-muted" title="${value}">"${escapeHtml(truncated)}"</span>`;
 		}
 		
 		if (typeof value === 'boolean') {
@@ -58,14 +59,14 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 		}
 		
 		if (typeof value === 'number') {
-			return `<span class="number-value text-xs text-marine-blue-muted font-medium">${value}</span>`;
+			return `<span class="text-xs font-medium number-value text-marine-blue-muted">${value}</span>`;
 		}
 		
 		if (Array.isArray(value)) {
 			// Truncate array preview to max 24 characters
 			const preview = `[${value.length} ${value.length === 1 ? 'item' : 'items'}]`;
 			const truncated = preview.length > 24 ? preview.substring(0, 21) + '...' : preview;
-			return `<span class="array-value text-xs text-marine-blue-light italic" title="${escapeHtml(JSON.stringify(value))}">${escapeHtml(truncated)}</span>`;
+			return `<span class="text-xs italic array-value text-marine-blue-light" title="${escapeHtml(JSON.stringify(value))}">${escapeHtml(truncated)}</span>`;
 		}
 		
 		if (typeof value === 'object' && value !== null) {
@@ -79,7 +80,7 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 				if (jsonString.length > maxJsonLength) {
 					truncated = jsonString.substring(0, maxJsonLength - 3) + '...';
 				}
-				return `<span class="object-value text-xs text-marine-blue-light italic" title="${escapeHtml(jsonString)}">${escapeHtml(truncated)}<span class="text-marine-blue-light/50">${objectIndicator}</span></span>`;
+				return `<span class="text-xs italic object-value text-marine-blue-light" title="${escapeHtml(jsonString)}">${escapeHtml(truncated)}<span class="text-marine-blue-light/50">${objectIndicator}</span></span>`;
 			} catch (e) {
 				// Fallback if JSON.stringify fails
 				const keys = Object.keys(value);
@@ -88,7 +89,7 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 				if (preview.length > maxJsonLength) {
 					truncated = preview.substring(0, maxJsonLength - 3) + '...';
 				}
-				return `<span class="object-value text-xs text-marine-blue-light italic">${escapeHtml(truncated)}<span class="text-marine-blue-light/50">${objectIndicator}</span></span>`;
+				return `<span class="text-xs italic object-value text-marine-blue-light">${escapeHtml(truncated)}<span class="text-marine-blue-light/50">${objectIndicator}</span></span>`;
 			}
 		}
 		
@@ -131,29 +132,29 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 		}
 
 		return `
-			<div class="property-item-wrapper w-full">
+			<div class="w-full property-item-wrapper">
 				<button 
 					type="button"
 					class="list-item-card property-item-button w-full ${isClickable ? 'hoverable' : ''} group"
 					${onclickHandler}
 				>
-					<div class="flex justify-between items-center gap-3">
+					<div class="flex gap-3 justify-between items-center">
 						<!-- Left side: Property Key -->
-						<div class="flex items-center gap-2 flex-shrink-0 min-w-0">
+						<div class="flex flex-shrink-0 gap-2 items-center min-w-0">
 							<span class="text-[10px] font-bold text-marine-blue-light uppercase tracking-widest truncate group-hover:text-marine-blue transition-colors" title="${key}">
 								${label}
 							</span>
-							${isExpandable ? `<svg class="w-3 h-3 text-marine-blue-light/50 group-hover:text-marine-blue transition-colors expand-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>` : ''}
+							${isExpandable ? `<svg class="w-3 h-3 transition-colors text-marine-blue-light/50 group-hover:text-marine-blue expand-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" /></svg>` : ''}
 						</div>
 						
 						<!-- Right side: Value and Badge -->
-						<div class="flex items-center gap-2.5 flex-1 justify-end min-w-0">
-							<div class="value-container flex-1 flex justify-end truncate">
+						<div class="flex flex-1 gap-2.5 justify-end items-center min-w-0">
+							<div class="flex flex-1 justify-end truncate value-container">
 								${renderValue(value)}
 							</div>
 							<span class="badge badge-type badge-${typeClass} text-[9px] px-1.5 py-0.5 font-bold uppercase tracking-tighter rounded-md border border-white/50 shadow-sm">${type.toUpperCase()}</span>
 							${isClickable ? `
-								<svg class="w-3 h-3 text-marine-blue-light/50 group-hover:text-marine-blue transition-colors shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<svg class="w-3 h-3 transition-colors text-marine-blue-light/50 group-hover:text-marine-blue shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 									<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7" />
 								</svg>
 							` : ''}
@@ -161,7 +162,7 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 					</div>
 				</button>
 				${isExpandable ? `
-					<div id="${expandId}" class="expanded-content bg-white/20 backdrop-blur-md border-t border-white/10 p-3 mt-1 rounded-b-xl" style="display: none;">
+					<div id="${expandId}" class="p-3 mt-1 rounded-b-xl border-t backdrop-blur-md expanded-content bg-white/20 border-white/10" style="display: none;">
 						<pre class="json-display text-[11px] font-mono text-marine-blue-muted leading-relaxed whitespace-pre-wrap break-words">${escapeHtml(formatJSON(value))}</pre>
 					</div>
 				` : ''}
@@ -325,12 +326,12 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 		// Explorer-style: if context CoValue is loaded, show its properties in main container
 		// Show CoValue properties in main container (reuse property rendering from detail view)
 		if (data.error && !data.loading) {
-			tableContent = `<div class="empty-state p-8 text-center text-rose-500 font-medium bg-rose-50/50 rounded-2xl border border-rose-100">Error: ${data.error}</div>`;
+			tableContent = `<div class="p-8 font-medium text-center text-rose-500 rounded-2xl border border-rose-100 empty-state bg-rose-50/50">Error: ${data.error}</div>`;
 		} else if (data.loading) {
 			tableContent = `
-				<div class="empty-state p-12 flex flex-col items-center justify-center bg-slate-50/50 rounded-2xl border border-slate-100">
-					<div class="loading-spinner w-8 h-8 border-4 border-slate-200 border-t-slate-400 rounded-full animate-spin"></div>
-					<p class="mt-4 text-slate-500 font-medium">Loading CoValue... (waiting for verified state)</p>
+				<div class="flex flex-col justify-center items-center p-12 rounded-2xl border empty-state bg-slate-50/50 border-slate-100">
+					<div class="w-8 h-8 rounded-full border-4 animate-spin loading-spinner border-slate-200 border-t-slate-400"></div>
+					<p class="mt-4 font-medium text-slate-500">Loading CoValue... (waiting for verified state)</p>
 				</div>
 			`;
 		} else if ((data.cotype || data.type) === 'colist' || (data.cotype || data.type) === 'costream') {
@@ -366,9 +367,9 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 			}).join('');
 
 			tableContent = `
-				<div class="list-stream-container space-y-4">
-					<div class="list-view-container space-y-1">
-						${items.length > 0 ? itemRows : `<div class="p-8 text-center text-slate-400 italic bg-slate-50/30 rounded-xl border border-dashed border-slate-200">No items in this ${typeLabel.toLowerCase()}</div>`}
+				<div class="space-y-4 list-stream-container">
+					<div class="space-y-1 list-view-container">
+						${items.length > 0 ? itemRows : `<div class="p-8 italic text-center rounded-xl border border-dashed text-slate-400 bg-slate-50/30 border-slate-200">No items in this ${typeLabel.toLowerCase()}</div>`}
 					</div>
 				</div>
 			`;
@@ -395,7 +396,7 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 			
 			if (propertyKeys.length === 0) {
 				// No properties - show empty state
-				tableContent = '<div class="empty-state p-12 text-center text-slate-400 italic bg-slate-50/30 rounded-2xl border border-dashed border-slate-200">No properties available</div>';
+				tableContent = '<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">No properties available</div>';
 			} else {
 				const propertyItems = propertyKeys.map(key => {
 					const value = data[key];
@@ -427,18 +428,18 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 				}).join('');
 			
 				tableContent = `
-					<div class="list-view-container space-y-1">
+					<div class="space-y-1 list-view-container">
 						${propertyItems}
 					</div>
 				`;
 			}
 		} else {
 			// Fallback: empty or no properties
-			tableContent = '<div class="empty-state p-12 text-center text-slate-400 italic bg-slate-50/30 rounded-2xl border border-dashed border-slate-200">No properties available</div>';
+			tableContent = '<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">No properties available</div>';
 		}
 	} else {
 		// Default view - show list of CoValues or error
-		tableContent = '<div class="empty-state p-12 text-center text-slate-400 italic bg-slate-50/30 rounded-2xl border border-dashed border-slate-200">Select a CoValue to explore its content</div>';
+		tableContent = '<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">Select a CoValue to explore its content</div>';
 	}
 
 	// Get account ID for header status
@@ -557,6 +558,31 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 				console.warn('[DB Viewer] Failed to fetch group name:', e);
 			}
 		}
+
+		// Resolve account co-ids to profile names for members display
+		let profileNames = new Map();
+		if (hasMembers && maia) {
+			try {
+				const accountCoIds = flattenedMembers.map(row => row.who).filter(id => id);
+				profileNames = await resolveAccountCoIdsToProfileNames(maia, accountCoIds);
+			} catch (e) {
+				console.warn('[DB Viewer] Failed to resolve account profile names:', e);
+			}
+		}
+
+		// Resolve capability group co-ids to display names (e.g. @maia/Guardian)
+		let capabilityNames = new Map();
+		if (maia && account?.id) {
+			try {
+				const groupCoIds = [...new Set([
+					...(groupInfo?.groupId ? [groupInfo.groupId] : []),
+					...(flattenedMembers?.map(row => row.viaGroupId).filter(Boolean) ?? [])
+				])];
+				capabilityNames = await resolveGroupCoIdsToCapabilityNames(maia, groupCoIds, account.id);
+			} catch (e) {
+				console.warn('[DB Viewer] Failed to resolve capability group names:', e);
+			}
+		}
 		
 		metadataSidebar = `
 			<aside class="db-metadata">
@@ -598,10 +624,10 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 						${groupInfo?.groupId ? `
 							<div class="metadata-info-item">
 								<span class="metadata-info-key">OWNER</span>
-								${groupName ? `
+								${(groupName || capabilityNames.get(groupInfo.groupId)) ? `
 									<div style="display: flex; flex-direction: column; gap: 2px;">
 										<span class="metadata-info-value" style="font-weight: 600; color: #1e293b;">
-											${escapeHtml(groupName)}
+											${escapeHtml(groupName || capabilityNames.get(groupInfo.groupId))}
 										</span>
 										<code class="co-id" onclick="selectCoValue('${groupInfo.groupId}')" title="${groupInfo.groupId}" style="cursor: pointer; text-decoration: underline; font-size: 11px; color: #64748b;">
 											${truncate(groupInfo.groupId, 24)}
@@ -629,16 +655,17 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 										${flattenedMembers.map(row => {
 											const isEveryone = row.who === 'everyone';
 											const roleClass = row.role?.toLowerCase() || 'reader';
-											// "via" links to the group/capability CoValue; account links to the account
-											const sourceHtml = row.viaGroupId
-												? `via <code class="co-id" onclick="selectCoValue('${row.viaGroupId}')" title="${row.viaGroupId}" style="cursor: pointer; text-decoration: underline; font-size: 9px;">${truncate(row.viaGroupId, 12)}</code>`
-												: escapeHtml(row.source);
+											const displayName = isEveryone ? 'Everyone' : (profileNames.get(row.who) ?? truncate(row.who, 16));
+											// Row 1: account name. Row 2: group name (link) or "direct", both left-aligned
+											const groupLinkHtml = row.viaGroupId
+												? `<code class="co-id" onclick="selectCoValue('${row.viaGroupId}')" title="${row.viaGroupId}" style="cursor: pointer; text-decoration: underline; font-size: 9px;">${escapeHtml(capabilityNames.get(row.viaGroupId) ?? truncate(row.viaGroupId, 12))}</code>`
+												: null;
+											const sourceLine = row.viaGroupId ? groupLinkHtml : (row.source ? escapeHtml(row.source) : null);
 											return `
-												<div class="metadata-member-item ${isEveryone ? 'everyone' : ''}" title="${row.role} access — ${row.source}">
+												<div class="metadata-member-item ${isEveryone ? 'everyone' : ''}" title="${escapeHtml(String(row.role))} access — ${escapeHtml(row.source)}${!isEveryone ? ` (${escapeHtml(row.who)})` : ''}">
 													<div class="metadata-member-info">
-														<span class="metadata-member-id">${isEveryone ? 'Everyone' : truncate(row.who, 16)}</span>
-														${!isEveryone && row.who.startsWith('co_') ? `<code class="co-id" onclick="selectCoValue('${row.who}')" title="${row.who}" style="cursor: pointer; font-size: 9px; margin-left: 4px;">↗</code>` : ''}
-														<span style="font-size: 9px; color: #94a3b8; margin-left: 4px;">${sourceHtml}</span>
+														<span class="metadata-member-id">${escapeHtml(displayName)}</span>
+														${sourceLine ? `<div class="metadata-member-via">${sourceLine}</div>` : ''}
 													</div>
 													<span class="badge badge-role badge-${roleClass}">${row.role}</span>
 												</div>
@@ -744,7 +771,7 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 					<div class="inspector">
 						<div class="inspector-content-inner">
 							<div class="inspector-header">
-								<div class="flex items-center gap-3 flex-grow">
+								<div class="flex flex-grow gap-3 items-center">
 									${currentContextCoValueId && data?.id ? `
 										<code class="co-id-header">${truncate(data.id, 32)}</code>
 									` : `
@@ -753,7 +780,7 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 									${headerInfo ? `
 										<span class="badge badge-type badge-${headerInfo.type} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${headerInfo.typeLabel}</span>
 										<span class="text-sm font-semibold text-marine-blue">${headerInfo.itemCount} ${headerInfo.itemCount === 1 ? 'Item' : 'Items'}</span>
-										<span class="text-xs text-marine-blue-light font-medium italic">${headerInfo.description}</span>
+										<span class="text-xs italic font-medium text-marine-blue-light">${headerInfo.description}</span>
 									` : ''}
 									${!headerInfo && (data?.cotype || data?.type) ? `
 										<span class="badge badge-type badge-${String(data.cotype || data.type || 'comap').replace(/-/g, '')} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${(data.cotype || data.type) === 'colist' ? 'COLIST' : (data.cotype || data.type) === 'costream' ? 'COSTREAM' : String(data.cotype || data.type || 'COMAP').toUpperCase()}</span>

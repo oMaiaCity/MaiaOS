@@ -169,11 +169,11 @@ async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
 /**
  * Seed util: Map account.sparks[@maia].registries.sparks["@maia"] = maiaSparkCoId
  * Creates registries and registries.sparks CoMaps if needed, uses real seeded co-id.
- * Registry owned by a sub-group that extends maiaGroup (for write) and a public group (everyone=reader).
- * maiaGroup stays private; only the registry CoMaps are publicly readable.
+ * Clean architecture: each CoValue has its own group (extends guardian). publicReaders
+ * is a reader member of those groups, not the owner.
  * @private
  * @param {Object} backend
- * @param {Object} maiaGroup - @maia spark's group
+ * @param {Object} maiaGroup - @maia spark's guardian group
  */
 async function seedMaiaSparkRegistriesSparksMapping(backend, maiaGroup) {
   const sparksId = backend.account?.get('sparks');
@@ -223,21 +223,22 @@ async function seedMaiaSparkRegistriesSparksMapping(backend, maiaGroup) {
   if (!capabilitiesContent || typeof capabilitiesContent.set !== 'function') return;
 
   // Get or create publicReaders group (everyone=reader); store in capabilities
-  let registryGroup = null;
+  // publicReaders is a MEMBER (reader) of registry CoValues, not their owner
+  let publicReadersGroup = null;
   const publicReadersId = capabilitiesContent.get('publicReaders');
   if (publicReadersId && publicReadersId.startsWith('co_z')) {
     const core = node.getCoValue(publicReadersId);
     if (core?.isGroup?.() && backend.isAvailable(core)) {
-      registryGroup = backend.getCurrentContent(core);
+      publicReadersGroup = backend.getCurrentContent(core);
     }
   }
-  if (!registryGroup || typeof registryGroup.createMap !== 'function') {
+  if (!publicReadersGroup || typeof publicReadersGroup.createMap !== 'function') {
     const publicGroup = node.createGroup();
     publicGroup.addMember('everyone', 'reader');
-    registryGroup = node.createGroup();
-    registryGroup.extend(maiaGroup, 'extend');
-    registryGroup.extend(publicGroup, 'reader');
-    capabilitiesContent.set('publicReaders', registryGroup.id);
+    publicReadersGroup = node.createGroup();
+    publicReadersGroup.extend(maiaGroup, 'extend');
+    publicReadersGroup.extend(publicGroup, 'reader');
+    capabilitiesContent.set('publicReaders', publicReadersGroup.id);
   }
 
   const { resolve } = await import('../schema/resolver.js');
@@ -245,6 +246,14 @@ async function seedMaiaSparkRegistriesSparksMapping(backend, maiaGroup) {
   const sparksRegistrySchemaCoId = await resolve(backend, '@maia/schema/os/sparks-registry', { returnType: 'coId' });
   const registriesMeta = registriesSchemaCoId ? { $schema: registriesSchemaCoId } : { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
   const sparksRegistryMeta = sparksRegistrySchemaCoId ? { $schema: sparksRegistrySchemaCoId } : { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
+
+  // Each CoValue has its own group (clean architecture). publicReaders is a reader member.
+  // Account leaves group (no direct members) - same as createCoValueForSpark
+  const { removeGroupMember } = await import('../groups/groups.js');
+  const account = backend.account;
+  const memberIdToRemove = typeof node.getCurrentAccountOrAgentID === 'function'
+    ? node.getCurrentAccountOrAgentID()
+    : (account?.id ?? account?.$jazz?.id);
 
   let registriesId = sparkContent.get('registries');
   let registriesContent = null;
@@ -255,7 +264,11 @@ async function seedMaiaSparkRegistriesSparksMapping(backend, maiaGroup) {
     }
   }
   if (!registriesContent || typeof registriesContent.set !== 'function') {
-    const registries = registryGroup.createMap({}, registriesMeta);
+    const registriesGroup = node.createGroup();
+    registriesGroup.extend(maiaGroup, 'extend');
+    registriesGroup.extend(publicReadersGroup, 'reader');
+    const registries = registriesGroup.createMap({}, registriesMeta);
+    try { await removeGroupMember(registriesGroup, memberIdToRemove); } catch (e) { /* guardian remains admin */ }
     sparkContent.set('registries', registries.id);
     registriesContent = registries;
   }
@@ -269,7 +282,11 @@ async function seedMaiaSparkRegistriesSparksMapping(backend, maiaGroup) {
     }
   }
   if (!sparksContent || typeof sparksContent.set !== 'function') {
-    const sparks = registryGroup.createMap({}, sparksRegistryMeta);
+    const sparksGroup = node.createGroup();
+    sparksGroup.extend(maiaGroup, 'extend');
+    sparksGroup.extend(publicReadersGroup, 'reader');
+    const sparks = sparksGroup.createMap({}, sparksRegistryMeta);
+    try { await removeGroupMember(sparksGroup, memberIdToRemove); } catch (e) { /* guardian remains admin */ }
     registriesContent.set('sparks', sparks.id);
     sparksContent = sparks;
   }
