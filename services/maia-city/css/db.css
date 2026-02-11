@@ -128,6 +128,21 @@
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
 }
 
+/* Resolved profile name in navbar (uses body font, not monospace) */
+.db-status-name {
+  font-family: var(--font-body), system-ui, sans-serif;
+}
+
+/* Account ID in hamburger menu (first 8 chars) */
+.mobile-menu-account-id {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  margin-bottom: 0.25rem;
+}
+.mobile-menu-account-id .db-status {
+  font-size: 0.65rem;
+}
+
 /* Sync Status */
 .db-header .sync-status {
   padding: 0.3rem 0.75rem;
@@ -2215,7 +2230,8 @@ pre {
 	}
 	
 	/* Keep account info and hamburger visible */
-	.header-right .db-status {
+	.header-right .db-status,
+	.header-right .db-status-name {
 		display: inline-flex !important;
 		align-items: center;
 		font-size: 0.65rem;

@@ -5,6 +5,7 @@
 
 import { truncate, getSyncStatusMessage } from './utils.js';
 import { getAllVibeRegistries } from '@MaiaOS/vibes';
+import { resolveAccountCoIdsToProfileNames } from '@MaiaOS/kernel';
 
 // Helper function to escape HTML
 function escapeHtml(text) {
@@ -175,6 +176,16 @@ async function loadVibesFromSpark(maia, spark) {
  */
 export async function renderDashboard(maia, authState, syncState, navigateToScreen, currentSpark, loadSpark, loadVibe) {
 	const accountId = maia?.id?.maiaId?.id || '';
+	let accountDisplayName = truncate(accountId, 12);
+	if (accountId && accountId.startsWith('co_z') && maia?.db) {
+		try {
+			const profileNames = await resolveAccountCoIdsToProfileNames(maia, [accountId]);
+			accountDisplayName = profileNames.get(accountId) ?? accountDisplayName;
+		} catch (e) {
+			console.warn('[Dashboard] Failed to resolve account profile name:', e);
+		}
+	}
+	const accountIdShort = accountId ? accountId.slice(0, 8) : '';
 
 	let cards = '';
 
@@ -254,7 +265,7 @@ export async function renderDashboard(maia, authState, syncState, navigateToScre
 							</span>
 						</div>
 						${authState.signedIn ? `
-							<code class="db-status">${truncate(accountId, 12)}</code>
+							<span class="db-status db-status-name" title="Account: ${accountId}">${escapeHtml(accountDisplayName)}</span>
 						` : ''}
 						<!-- Hamburger menu button (mobile only) -->
 						<button class="hamburger-btn" onclick="window.toggleMobileMenu()" aria-label="Toggle menu">
@@ -274,8 +285,13 @@ export async function renderDashboard(maia, authState, syncState, navigateToScre
 						` : ''}
 					</div>
 				</div>
-				<!-- Mobile menu (collapsed by default) -->
+				<!-- Mobile menu (collapsed by default) - account ID shown inside -->
 				<div class="mobile-menu" id="mobile-menu">
+					${authState.signedIn && accountIdShort ? `
+						<div class="mobile-menu-account-id" title="${accountId}">
+							<code class="db-status">${accountIdShort}</code>
+						</div>
+					` : ''}
 					${authState.signedIn ? `
 						<button class="mobile-menu-item seed-btn" onclick="window.handleSeed(); window.toggleMobileMenu();" title="Seed database">
 							Seed
@@ -288,7 +304,7 @@ export async function renderDashboard(maia, authState, syncState, navigateToScre
 					` : ''}
 				</div>
 			</header>
-			
+
 			<div class="dashboard-main ${currentSpark ? 'has-bottom-navbar' : ''}">
 				<div class="dashboard-grid">
 					${cards || `<div class="empty-state p-12 text-center text-slate-400 italic">${currentSpark ? 'No vibes in this context' : 'No context scopes available'}</div>`}
@@ -319,6 +335,16 @@ export async function renderDashboard(maia, authState, syncState, navigateToScre
  */
 export async function renderVibeViewer(maia, authState, syncState, currentVibe, navigateToScreen, currentSpark = '@maia') {
 	const accountId = maia?.id?.maiaId?.id || '';
+	let accountDisplayName = truncate(accountId, 12);
+	if (accountId && accountId.startsWith('co_z') && maia?.db) {
+		try {
+			const profileNames = await resolveAccountCoIdsToProfileNames(maia, [accountId]);
+			accountDisplayName = profileNames.get(accountId) ?? accountDisplayName;
+		} catch (e) {
+			console.warn('[VibeViewer] Failed to resolve account profile name:', e);
+		}
+	}
+	const accountIdShort = accountId ? accountId.slice(0, 8) : '';
 	// Map vibe keys to display names
 	const vibeNameMap = {
 		'db': 'MaiaDB',
@@ -357,7 +383,7 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 							</span>
 						</div>
 						${authState.signedIn ? `
-							<code class="db-status">${truncate(accountId, 12)}</code>
+							<span class="db-status db-status-name" title="Account: ${accountId}">${escapeHtml(accountDisplayName)}</span>
 						` : ''}
 						<!-- Hamburger menu button (mobile only) -->
 						<button class="hamburger-btn" onclick="window.toggleMobileMenu()" aria-label="Toggle menu">
@@ -377,8 +403,13 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 						` : ''}
 					</div>
 				</div>
-				<!-- Mobile menu (collapsed by default) -->
+				<!-- Mobile menu (collapsed by default) - account ID shown inside -->
 				<div class="mobile-menu" id="mobile-menu">
+					${authState.signedIn && accountIdShort ? `
+						<div class="mobile-menu-account-id" title="${accountId}">
+							<code class="db-status">${accountIdShort}</code>
+						</div>
+					` : ''}
 					${authState.signedIn ? `
 						<button class="mobile-menu-item seed-btn" onclick="window.handleSeed(); window.toggleMobileMenu();" title="Seed database">
 							Seed
@@ -391,7 +422,7 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 					` : ''}
 				</div>
 			</header>
-			
+
 			<div class="vibe-viewer-main">
 				<div class="vibe-card">
 					<div id="vibe-container-${escapeHtml(currentVibe)}" class="vibe-container"></div>

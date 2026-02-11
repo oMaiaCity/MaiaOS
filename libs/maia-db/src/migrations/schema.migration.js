@@ -17,8 +17,18 @@
 
 import { createSchemaMeta } from "../schemas/registry.js";
 
+/** Short id for Traveler fallback (max 12 chars from co-id suffix or random) */
+function travelerFallbackId(account) {
+	const id = account?.id ?? (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : '');
+	const str = String(id || '');
+	return str.slice(-12) || (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID().slice(0, 12) : '');
+}
+
 export async function schemaMigration(account, node, creationProps) {
-	const profileName = creationProps?.name ?? "Maia";
+	const baseName = creationProps?.name?.trim();
+	const profileName = (baseName && baseName.length > 0)
+		? baseName
+		: `Traveler ${travelerFallbackId(account)}`;
 
 	// 1. Check if profile already exists
 	let profileId = account.get("profile");

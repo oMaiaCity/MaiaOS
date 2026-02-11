@@ -37,19 +37,24 @@ const { accountHeaderForInitialAgentSecret, idforHeader, rawCoIDtoBytes, rawCoID
  * NO STORAGE NEEDED!
  * 
  * @param {Object} options
- * @param {string} options.name - Display name for the account (default: "maia")
+ * @param {string} [options.name] - First name for account/profile and passkey (optional; fallback: "Traveler " + short id)
  * @param {string} options.salt - Salt for PRF derivation (default: "maia.city")
  * @returns {Promise<{accountID: string, agentSecret: Object, node: Object, account: Object}>}
  */
-export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = {}) {
+export async function signUpWithPasskey({ name, salt = "maia.city" } = {}) {
 	await requirePRFSupport();
 	
 	const saltBytes = stringToUint8Array(salt);
 	const crypto = await WasmCrypto.create();
-	
+	// Passkey requires a string; use firstName or "Traveler " + short random id
+	const webCrypto = globalThis.crypto ?? globalThis.window?.crypto;
+	const passkeyName = (name && typeof name === 'string' && name.trim())
+		? name.trim()
+		: `Traveler ${(webCrypto?.randomUUID?.() ?? '').slice(0, 8)}`;
+
 	// STEP 1: Create single passkey and evaluate PRF
 	const { credentialId, prfOutput } = await createPasskeyWithPRF({
-		name,
+		name: passkeyName,
 		userId: globalThis.crypto.getRandomValues(new Uint8Array(32)), // Random userID - we don't store anything!
 		salt: saltBytes,
 	});

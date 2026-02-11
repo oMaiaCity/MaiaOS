@@ -19,12 +19,12 @@ import { getStorage } from "@MaiaOS/storage";
  * 
  * @param {Object} options
  * @param {Object} options.agentSecret - AgentSecret from passkey (REQUIRED)
- * @param {string} options.name - Account name (default: "Maia")
+ * @param {string} [options.name] - Account name (default: undefined → "Traveler " + short id)
  * @param {Array} [options.peers] - Sync peers array (optional, defaults to empty array)
  * @param {Object} [options.storage] - Storage instance (optional, defaults to undefined)
  * @returns {Promise<{node, account, accountID, profile, group}>}
  */
-export async function createAccountWithSecret({ agentSecret, name = "Maia", peers = [], storage = undefined, skipAutoSeeding = false }) {
+export async function createAccountWithSecret({ agentSecret, name, peers = [], storage = undefined, skipAutoSeeding = false }) {
 	if (!agentSecret) {
 		throw new Error("agentSecret is required. Use signInWithPasskey() to get agentSecret.");
 	}

@@ -3,12 +3,6 @@
  * Used by db-viewer and other UIs to display human-readable names instead of opaque co-ids
  */
 
-function truncate(str, maxLen = 16) {
-	if (typeof str !== 'string') return str;
-	if (str.length <= maxLen) return str;
-	return str.substring(0, maxLen) + '...';
-}
-
 /**
  * Wait for a reactive store to finish loading (if loading)
  * @param {Object} store - Store with .loading and .subscribe()
@@ -37,10 +31,18 @@ async function waitForStore(store, timeoutMs = 5000) {
 }
 
 /**
+ * Fallback when profile has no name: "Traveler " + short id (last 12 chars of account co-id)
+ */
+function travelerFallback(accountCoId) {
+	const shortId = typeof accountCoId === 'string' ? accountCoId.slice(-12) : '';
+	return `Traveler ${shortId}`;
+}
+
+/**
  * Resolve a single account co-id to its profile name
  * @param {Object} maia - MaiaOS instance with maia.db()
  * @param {string} accountCoId - Account co-id (co_z...)
- * @returns {Promise<string>} Profile name or truncated co-id on failure
+ * @returns {Promise<string>} Profile name, or "Traveler " + short id when profile has no name
  */
 async function resolveOne(maia, accountCoId) {
 	try {
@@ -48,16 +50,16 @@ async function resolveOne(maia, accountCoId) {
 		await waitForStore(accountStore, 5000);
 		const accountData = accountStore?.value ?? accountStore;
 		if (!accountData?.profile || typeof accountData.profile !== 'string' || !accountData.profile.startsWith('co_')) {
-			return truncate(accountCoId, 16);
+			return travelerFallback(accountCoId);
 		}
 		const profileCoId = accountData.profile;
 		const profileStore = await maia.db({ op: 'read', schema: null, key: profileCoId });
 		await waitForStore(profileStore, 5000);
 		const profileData = profileStore?.value ?? profileStore;
 		const name = profileData?.name ?? profileData?.properties?.find?.(p => p?.key === 'name')?.value;
-		return (typeof name === 'string' && name.length > 0) ? name : truncate(accountCoId, 16);
+		return (typeof name === 'string' && name.length > 0) ? name : travelerFallback(accountCoId);
 	} catch (e) {
-		return truncate(accountCoId, 16);
+		return travelerFallback(accountCoId);
 	}
 }
 
@@ -65,7 +67,7 @@ async function resolveOne(maia, accountCoId) {
  * Resolve account co-ids to their profile names
  * @param {Object} maia - MaiaOS instance with maia.db() (operations API)
  * @param {string[]} accountCoIds - Array of account co-ids (co_z...); skips 'everyone' and non-co_z
- * @returns {Promise<Map<string, string>>} Map of accountCoId → profile name (or truncated co-id on failure)
+ * @returns {Promise<Map<string, string>>} Map of accountCoId → profile name (or "Traveler " + short id when empty)
  */
 export async function resolveAccountCoIdsToProfileNames(maia, accountCoIds) {
 	const result = new Map();

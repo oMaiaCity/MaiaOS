@@ -441,8 +441,18 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 		tableContent = '<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">Select a CoValue to explore its content</div>';
 	}
 
-	// Get account ID for header status
+	// Get account ID for header status; resolve to profile name for navbar display
 	const accountId = maia?.id?.maiaId?.id || '';
+	let accountDisplayName = truncate(accountId, 12);
+	if (accountId && accountId.startsWith('co_z') && maia?.db) {
+		try {
+			const profileNames = await resolveAccountCoIdsToProfileNames(maia, [accountId]);
+			accountDisplayName = profileNames.get(accountId) ?? accountDisplayName;
+		} catch (e) {
+			console.warn('[DB Viewer] Failed to resolve account profile name:', e);
+		}
+	}
+	const accountIdShort = accountId ? accountId.slice(0, 8) : '';
 	
 	// Metadata sidebar (explorer-style navigation)
 	let metadataSidebar = '';
@@ -719,7 +729,7 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 							</span>
 						</div>
 						${authState.signedIn ? `
-							<code class="db-status">${truncate(accountId, 12)}</code>
+							<span class="db-status db-status-name" title="Account: ${accountId}">${escapeHtml(accountDisplayName)}</span>
 						` : ''}
 						<!-- Hamburger menu button (mobile only) -->
 						<button class="hamburger-btn" onclick="window.toggleMobileMenu()" aria-label="Toggle menu">
@@ -739,8 +749,13 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 						` : ''}
 					</div>
 				</div>
-				<!-- Mobile menu (collapsed by default) -->
+				<!-- Mobile menu (collapsed by default) - account ID shown inside -->
 				<div class="mobile-menu" id="mobile-menu">
+					${authState.signedIn && accountIdShort ? `
+						<div class="mobile-menu-account-id" title="${accountId}">
+							<code class="db-status">${accountIdShort}</code>
+						</div>
+					` : ''}
 					${authState.signedIn ? `
 						<button class="mobile-menu-item seed-btn" onclick="window.handleSeed(); window.toggleMobileMenu();" title="Seed database">
 							Seed
@@ -753,7 +768,7 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 					` : ''}
 				</div>
 			</header>
-			
+
 			<div class="db-layout">
 				<aside class="db-sidebar">
 					<div class="sidebar-content-inner">

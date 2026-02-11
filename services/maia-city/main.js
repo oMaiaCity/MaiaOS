@@ -20,7 +20,7 @@ import {
 import { getAllVibeRegistries } from "@MaiaOS/vibes";
 import { renderApp } from './db-view.js';
 import { renderLandingPage } from './landing.js';
-import { renderSignInPrompt, renderUnsupportedBrowser } from './signin.js';
+import { renderSignInPrompt, renderUnsupportedBrowser, getFirstNameForRegister } from './signin.js';
 
 let maia;
 let currentScreen = 'dashboard'; // Current screen: 'dashboard' | 'db-viewer' | 'vibe-viewer'
@@ -536,7 +536,19 @@ async function loadLinkedCoValues() {
  */
 async function register() {
 	try {
-		
+		// Require first name before passkey prompt - input must exist and be filled
+		const firstNameInput = document.getElementById('signin-first-name');
+		if (firstNameInput) {
+			const val = (firstNameInput.value || '').trim();
+			if (!val) {
+				firstNameInput.focus();
+				firstNameInput.setAttribute('aria-invalid', 'true');
+				showToast('Please enter your first name before creating your Self.', 'info', 4000);
+				return;
+			}
+			firstNameInput.removeAttribute('aria-invalid');
+		}
+
 		// Determine sync domain (single source of truth - passed through kernel)
 		const syncDomain = getSyncDomain();
 		const isDev = import.meta.env?.DEV || window.location.hostname === 'localhost';
@@ -545,8 +557,12 @@ async function register() {
 			console.warn('⚠️ [SYNC] Sync domain not set in production - will use fallback');
 		}
 		
+		// First name from input (trimmed, max 50 chars); empty → fallback to "Traveler " + short id
+		const firstName = getFirstNameForRegister();
+		const name = firstName && firstName.length <= 50 ? firstName.trim() : undefined;
+
 		const { accountID, node, account } = await signUpWithPasskey({ 
-			name: "maia",
+			name,
 			salt: "maia.city"
 		});
 		
@@ -919,6 +935,10 @@ window.handleSeed = handleSeed;
 window.seedAllVibes = () => handleSeed('all');
 window.seedVibes = (vibeKeys) => handleSeed(Array.isArray(vibeKeys) ? vibeKeys : [vibeKeys]);
 window.handleRegister = register;
+
+// Swap signin/signup view mode (link-style toggle)
+window.switchToSigninView = () => renderSignInPrompt(hasExistingAccount, 'signin');
+window.switchToSignupView = () => renderSignInPrompt(hasExistingAccount, 'signup');
 window.navigateTo = navigateTo;
 window.handleSignOut = signOut;
 window.showToast = showToast; // Expose for debugging
