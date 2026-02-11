@@ -1,5 +1,0 @@
-{
-  "$schema": "@maia/schema/context",
-  "$id": "@maia/vibe-creator/context/coming-soon",
-  "message": "Coming soon"
-}

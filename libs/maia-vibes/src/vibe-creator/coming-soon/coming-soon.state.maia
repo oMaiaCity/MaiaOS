@@ -1,8 +1,0 @@
-{
-  "$schema": "@maia/schema/state",
-  "$id": "@maia/vibe-creator/state/coming-soon",
-  "initial": "idle",
-  "states": {
-    "idle": {}
-  }
-}
