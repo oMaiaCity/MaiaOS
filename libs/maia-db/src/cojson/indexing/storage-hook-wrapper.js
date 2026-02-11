@@ -65,20 +65,21 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
       // For all other co-values, ENFORCE headerMeta.$schema
       if (!msg.header || !msg.header.meta) {
         // No header.meta at all - REJECT
-        // Debug: Log header structure to understand what's missing
-        if (msg.header) {
-          console.warn(`[StorageHook] Co-value ${coId} has header but no meta. Header structure:`, {
-            type: msg.header.type,
-            ruleset: msg.header.ruleset,
-            hasMeta: !!msg.header.meta,
-            headerKeys: Object.keys(msg.header || {})
-          });
-        } else {
-          console.warn(`[StorageHook] Co-value ${coId} has no header at all. Message structure:`, {
-            id: msg.id,
-            hasHeader: !!msg.header,
-            messageKeys: Object.keys(msg || {})
-          });
+        if (process.env.DEBUG) {
+          if (msg.header) {
+            console.warn(`[StorageHook] Co-value ${coId} has header but no meta. Header structure:`, {
+              type: msg.header.type,
+              ruleset: msg.header.ruleset,
+              hasMeta: !!msg.header.meta,
+              headerKeys: Object.keys(msg.header || {})
+            });
+          } else {
+            console.warn(`[StorageHook] Co-value ${coId} has no header at all. Message structure:`, {
+              id: msg.id,
+              hasHeader: !!msg.header,
+              messageKeys: Object.keys(msg || {})
+            });
+          }
         }
         console.error(`[StorageHook] REJECTING co-value ${coId}: Missing header.meta. Every co-value MUST have headerMeta.$schema (except groups, accounts, and profiles during account creation).`);
         throw new Error(`[StorageHook] Co-value ${coId} missing header.meta. Every co-value MUST have headerMeta.$schema (except groups, accounts, and profiles during account creation).`);

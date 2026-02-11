@@ -1,26 +1,11 @@
 /**
  * Collection Helper Functions
- * 
- * Provides helpers for resolving schema co-ids, getting CoList IDs using schema co-id keys in spark.os.indexes, and ensuring CoValues are loaded.
+ *
+ * Provides helpers for getting CoList IDs from spark.os.indexes and ensuring CoValues are loaded.
+ * Uses schema-index-manager for indexing logic (single source of truth).
  */
 
 import { resolve } from '../schema/resolver.js';
-
-/**
- * Resolve schema co-id from human-readable schema name or return co-id as-is
- * Uses universal schema resolver (single source of truth)
- * @param {Object} backend - Backend instance
- * @param {string} schema - Schema co-id (co_z...) or human-readable (@maia/schema/data/todos, @maia/schema/actor)
- * @returns {Promise<string|null>} Schema co-id or null if not found
- */
-async function resolveSchemaCoId(backend, schema) {
-  if (!schema || typeof schema !== 'string') {
-    return null;
-  }
-  
-  // Use universal schema resolver (single source of truth)
-  return await resolve(backend, schema, { returnType: 'coId' });
-}
 
 /**
  * Get schema index colist ID using schema co-id as key (all schemas indexed in spark.os.indexes)
@@ -30,78 +15,22 @@ async function resolveSchemaCoId(backend, schema) {
  * @returns {Promise<string|null>} Schema index colist ID or null if not found/not indexable
  */
 export async function getSchemaIndexColistId(backend, schema) {
-  // Resolve schema to co-id
-  const schemaCoId = await resolveSchemaCoId(backend, schema);
-  if (!schemaCoId) {
-    console.warn(`[getSchemaIndexColistId] ❌ Failed to resolve schema "${schema.substring(0, 30)}..." to co-id`);
-    return null;
-  }
-  
-  // All schema indexes are in account.sparks[systemSpark].os.indexes, keyed by schema co-id
-  const { getSparkOsId } = await import('../groups/groups.js');
-  const spark = backend?.systemSpark ?? '@maia';
-  const osId = await getSparkOsId(backend, spark);
-  if (!osId) {
-    console.warn(`[getSchemaIndexColistId] ❌ spark.os not found`);
-    return null;
-  }
-  
-  // Load spark.os CoMap
-  const osCore = await ensureCoValueLoaded(backend, osId);
-  if (!osCore || !backend.isAvailable(osCore)) {
-    console.warn(`[getSchemaIndexColistId] ❌ spark.os not available (loaded: ${!!osCore}, available: ${osCore ? backend.isAvailable(osCore) : false})`);
-    return null;
-  }
-  
-  const osContent = backend.getCurrentContent(osCore);
-  if (!osContent || typeof osContent.get !== 'function') {
-    console.warn(`[getSchemaIndexColistId] ❌ spark.os content not available`);
-    return null;
-  }
-  
-  // Get spark.os.indexes CoMap
-  const indexesId = osContent.get('indexes');
-  if (!indexesId) {
-    console.warn(`[getSchemaIndexColistId] ❌ spark.os.indexes not found`);
-    return null;
-  }
-  
-  // Load spark.os.indexes CoMap
-  const indexesCore = await ensureCoValueLoaded(backend, indexesId);
-  if (!indexesCore || !backend.isAvailable(indexesCore)) {
-    console.warn(`[getSchemaIndexColistId] ❌ spark.os.indexes not available (loaded: ${!!indexesCore}, available: ${indexesCore ? backend.isAvailable(indexesCore) : false})`);
-    return null;
-  }
-  
-  const indexesContent = backend.getCurrentContent(indexesCore);
-  if (!indexesContent || typeof indexesContent.get !== 'function') {
-    console.warn(`[getSchemaIndexColistId] ❌ spark.os.indexes content not available`);
-    return null;
-  }
-  
-  // Get schema index colist using schema co-id as key
-  let indexColistId = indexesContent.get(schemaCoId);
+  const schemaCoId = await resolve(backend, schema, { returnType: 'coId' });
+  if (!schemaCoId) return null;
+
+  const { ensureIndexesCoMap, ensureSchemaIndexColist } = await import('../indexing/schema-index-manager.js');
+  const indexesCoMap = await ensureIndexesCoMap(backend);
+  if (!indexesCoMap) return null;
+
+  let indexColistId = indexesCoMap.get(schemaCoId);
   if (indexColistId && typeof indexColistId === 'string' && indexColistId.startsWith('co_')) {
     return indexColistId;
   }
-  
-  // Index colist doesn't exist - try to create it lazily if schema has indexing: true
-  // This handles the case where index colists were deleted during reseeding
-  // and haven't been recreated yet (they're normally created when first co-value is created)
+
   try {
-    const { ensureSchemaIndexColist } = await import('../indexing/schema-index-manager.js');
     const indexColist = await ensureSchemaIndexColist(backend, schemaCoId);
-    
-    if (indexColist && indexColist.id) {
-      // Index colist was created - return its ID
-      return indexColist.id;
-    }
-    
-    // Schema doesn't have indexing: true or creation failed - return null silently
-    // This is expected for schemas that shouldn't be indexed
-    return null;
-  } catch (e) {
-    // Creation failed - return null silently (don't warn, this is expected in some cases)
+    return indexColist?.id ?? null;
+  } catch {
     return null;
   }
 }
@@ -123,7 +52,7 @@ export async function getCoListId(backend, collectionNameOrSchema) {
   // Must be a schema co-id or human-readable schema name (@domain/schema/...)
   const isSchemaRef = /^@[a-zA-Z0-9_-]+\/schema\//.test(collectionNameOrSchema);
   if (!collectionNameOrSchema.startsWith('co_z') && !isSchemaRef) {
-    console.warn(`[getCoListId] ❌ Invalid collection identifier: "${collectionNameOrSchema}". Must be schema co-id (co_z...) or namekey (@domain/schema/...). Use schema registry to resolve collection names.`);
+    if (process.env.DEBUG) console.warn(`[getCoListId] Invalid collection identifier: "${collectionNameOrSchema}". Must be schema co-id or namekey (@domain/schema/...).`);
     return null;
   }
   
@@ -165,7 +94,7 @@ export async function ensureCoValueLoaded(backend, coId, options = {}) {
   
   // Not available - trigger loading from IndexedDB (jazz-tools pattern)
   backend.node.loadCoValueCore(coId).catch(err => {
-    console.error(`[CoJSONBackend] Failed to load CoValue ${coId}:`, err);
+    if (process.env.DEBUG) console.error(`[CoJSONBackend] Failed to load CoValue ${coId}:`, err);
   });
   
   // If waitForAvailable is true, wait for it to become available
@@ -174,7 +103,7 @@ export async function ensureCoValueLoaded(backend, coId, options = {}) {
       // Fix: Declare unsubscribe before subscribe call to avoid temporal dead zone
       let unsubscribe;
       const timeout = setTimeout(() => {
-        console.warn(`[CoJSONBackend] Timeout waiting for CoValue ${coId} to load`);
+        if (process.env.DEBUG) console.warn(`[CoJSONBackend] Timeout waiting for CoValue ${coId} to load`);
         unsubscribe();
         reject(new Error(`Timeout waiting for CoValue ${coId} to load after ${timeoutMs}ms`));
       }, timeoutMs);

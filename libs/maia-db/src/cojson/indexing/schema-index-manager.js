@@ -45,21 +45,21 @@ async function ensureOsCoMap(backend, spark) {
       
       // Check if read succeeded (store has data, not error)
       if (!osStore || osStore.value?.error) {
-        console.warn(`[SchemaIndexManager] spark.os CoValue not found or error: ${osId.substring(0, 12)}...`);
+        if (process.env.DEBUG) console.warn(`[SchemaIndexManager] spark.os CoValue not found or error: ${osId.substring(0, 12)}...`);
         return null;
       }
       
       // Get the raw CoValueCore and content after read() has loaded it
       const osCore = backend.getCoValue(osId);
       if (!osCore || !osCore.isAvailable()) {
-        console.warn(`[SchemaIndexManager] spark.os (${osId.substring(0, 12)}...) is not available after read()`);
+        if (process.env.DEBUG) console.warn(`[SchemaIndexManager] spark.os (${osId.substring(0, 12)}...) is not available after read()`);
         return null;
       }
       
       // Get the content - should work now since read() ensured it's loaded
       const osContent = osCore.getCurrentContent?.();
       if (!osContent) {
-        console.warn(`[SchemaIndexManager] spark.os (${osId.substring(0, 12)}...) is available but getCurrentContent() returned nothing`);
+        if (process.env.DEBUG) console.warn(`[SchemaIndexManager] spark.os (${osId.substring(0, 12)}...) is available but getCurrentContent() returned nothing`);
         return null;
       }
       
@@ -73,14 +73,14 @@ async function ensureOsCoMap(backend, spark) {
       const isCoMap = contentType === 'comap' && typeof osContent.get === 'function';
       
       if (!isCoMap) {
-        console.warn(`[SchemaIndexManager] spark.os (${osId.substring(0, 12)}...) is not a CoMap (cotype: ${contentType}, schema: ${schema}, has get: ${typeof osContent.get})`);
+        if (process.env.DEBUG) console.warn(`[SchemaIndexManager] spark.os (${osId.substring(0, 12)}...) is not a CoMap (cotype: ${contentType}, schema: ${schema}, has get: ${typeof osContent.get})`);
         return null;
       }
       
       // Successfully got CoMap content - return it
       return osContent;
     } catch (e) {
-      console.warn(`[SchemaIndexManager] Failed to load spark.os (${osId.substring(0, 12)}...):`, e.message);
+      if (process.env.DEBUG) console.warn(`[SchemaIndexManager] Failed to load spark.os (${osId.substring(0, 12)}...):`, e.message);
       // Return null instead of throwing - caller can handle gracefully
       return null;
     }
@@ -113,19 +113,19 @@ export async function ensureIndexesCoMap(backend) {
       });
       
       if (!indexesStore || indexesStore.value?.error) {
-        console.warn(`[SchemaIndexManager] spark.os.indexes CoValue not found or error: ${indexesId.substring(0, 12)}...`);
+        if (process.env.DEBUG) console.warn(`[SchemaIndexManager] spark.os.indexes CoValue not found or error: ${indexesId.substring(0, 12)}...`);
         return null;
       }
       
       const indexesCore = backend.getCoValue(indexesId);
       if (!indexesCore || !indexesCore.isAvailable()) {
-        console.warn(`[SchemaIndexManager] spark.os.indexes (${indexesId.substring(0, 12)}...) is not available after read()`);
+        if (process.env.DEBUG) console.warn(`[SchemaIndexManager] spark.os.indexes (${indexesId.substring(0, 12)}...) is not available after read()`);
         return null;
       }
       
       const indexesContent = indexesCore.getCurrentContent?.();
       if (!indexesContent) {
-        console.warn(`[SchemaIndexManager] spark.os.indexes (${indexesId.substring(0, 12)}...) is available but getCurrentContent() returned nothing`);
+        if (process.env.DEBUG) console.warn(`[SchemaIndexManager] spark.os.indexes (${indexesId.substring(0, 12)}...) is available but getCurrentContent() returned nothing`);
         return null;
       }
       
@@ -136,13 +136,13 @@ export async function ensureIndexesCoMap(backend) {
       
       const isCoMap = contentType === 'comap' && typeof indexesContent.get === 'function';
       if (!isCoMap) {
-        console.warn(`[SchemaIndexManager] spark.os.indexes (${indexesId.substring(0, 12)}...) is not a CoMap (cotype: ${contentType}, schema: ${schema}, has get: ${typeof indexesContent.get})`);
+        if (process.env.DEBUG) console.warn(`[SchemaIndexManager] spark.os.indexes (${indexesId.substring(0, 12)}...) is not a CoMap (cotype: ${contentType}, schema: ${schema}, has get: ${typeof indexesContent.get})`);
         return null;
       }
       
       return indexesContent;
     } catch (e) {
-      console.warn(`[SchemaIndexManager] Failed to load spark.os.indexes (${indexesId.substring(0, 12)}...):`, e.message);
+      if (process.env.DEBUG) console.warn(`[SchemaIndexManager] Failed to load spark.os.indexes (${indexesId.substring(0, 12)}...):`, e.message);
       return null;
     }
   }
@@ -189,7 +189,7 @@ export async function ensureIndexesCoMap(backend) {
       }
     }
   } catch (e) {
-    console.warn(`[SchemaIndexManager] Failed to load newly created spark.os.indexes:`, e.message);
+    if (process.env.DEBUG) console.warn(`[SchemaIndexManager] Failed to load newly created spark.os.indexes:`, e.message);
   }
   
   // Fallback: return null if not available yet (caller should handle this gracefully)
@@ -230,21 +230,21 @@ async function ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSc
   }
 
   if (!metaSchemaCoId || !metaSchemaCoId.startsWith('co_z')) {
-    console.warn(`[SchemaIndexManager] Cannot create schema-specific index colist schema - metaSchema not available`);
+    if (process.env.DEBUG) console.warn(`[SchemaIndexManager] Cannot create schema-specific index colist schema - metaSchema not available`);
     return null;
   }
 
   // Load schema definition to get its title
   const schemaDef = await resolve(backend, schemaCoId, { returnType: 'schema' });
   if (!schemaDef) {
-    console.warn(`[SchemaIndexManager] Cannot load schema definition for ${schemaCoId.substring(0, 12)}...`);
+    if (process.env.DEBUG) console.warn(`[SchemaIndexManager] Cannot load schema definition for ${schemaCoId.substring(0, 12)}...`);
     return null;
   }
 
   // Extract schema title (e.g., "@domain/schema/data/todos")
   const schemaTitle = schemaDef.title || schemaDef.$id;
   if (!schemaTitle || typeof schemaTitle !== 'string' || !SCHEMA_REF_PATTERN.test(schemaTitle)) {
-    console.warn(`[SchemaIndexManager] Schema ${schemaCoId.substring(0, 12)}... has invalid title: ${schemaTitle}`);
+    if (process.env.DEBUG) console.warn(`[SchemaIndexManager] Schema ${schemaCoId.substring(0, 12)}... has invalid title: ${schemaTitle}`);
     return null;
   }
 
@@ -252,7 +252,7 @@ async function ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSc
   // Preserves the full path structure: @domain/schema/path → @domain/schema/index/path
   const match = schemaTitle.match(SCHEMA_REF_MATCH);
   if (!match) {
-    console.warn(`[SchemaIndexManager] Schema ${schemaCoId.substring(0, 12)}... has invalid title format: ${schemaTitle}`);
+    if (process.env.DEBUG) console.warn(`[SchemaIndexManager] Schema ${schemaCoId.substring(0, 12)}... has invalid title format: ${schemaTitle}`);
     return null;
   }
   const [, domain, path] = match;
@@ -290,7 +290,7 @@ async function ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSc
 
     return indexColistSchemaCoId;
   } catch (error) {
-    console.error(`[SchemaIndexManager] Failed to create schema-specific index colist schema for ${schemaTitle}:`, error);
+    if (process.env.DEBUG) console.error(`[SchemaIndexManager] Failed to create schema-specific index colist schema for ${schemaTitle}:`, error);
     return null;
   }
 }
@@ -314,7 +314,7 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
   // Skip creating index colists if indexing is not true (defaults to false)
   const schemaDef = await resolve(backend, schemaCoId, { returnType: 'schema' });
   if (!schemaDef) {
-    console.warn(`[SchemaIndexManager] Cannot load schema definition for ${schemaCoId.substring(0, 12)}...`);
+    if (process.env.DEBUG) console.warn(`[SchemaIndexManager] Cannot load schema definition for ${schemaCoId.substring(0, 12)}...`);
     return null;
   }
 
@@ -358,11 +358,11 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
       }
     } catch (e) {
       // Read failed - continue to create new one if needed
-      console.warn(`[SchemaIndexManager] Failed to read index colist (${indexColistId.substring(0, 12)}...):`, e.message);
+      if (process.env.DEBUG) console.warn(`[SchemaIndexManager] Failed to read index colist (${indexColistId.substring(0, 12)}...):`, e.message);
     }
     
     // If indexColistId exists but couldn't be loaded, DON'T create a new one
-    console.warn(`[SchemaIndexManager] Index colist (${indexColistId.substring(0, 12)}...) exists but could not be loaded. Skipping to prevent overwriting.`);
+    if (process.env.DEBUG) console.warn(`[SchemaIndexManager] Index colist (${indexColistId.substring(0, 12)}...) exists but could not be loaded. Skipping to prevent overwriting.`);
     return null;
   }
 
@@ -371,7 +371,7 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
   // Pass metaSchema co-id if provided to avoid registry lookup issues
   const indexSchemaCoId = await ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSchemaCoId);
   if (!indexSchemaCoId) {
-    console.warn(`[SchemaIndexManager] Cannot create index colist - schema-specific index colist schema not available for ${schemaCoId.substring(0, 12)}...`);
+    if (process.env.DEBUG) console.warn(`[SchemaIndexManager] Cannot create index colist - schema-specific index colist schema not available for ${schemaCoId.substring(0, 12)}...`);
     return null;
   }
 
@@ -414,7 +414,7 @@ export async function ensureUnknownColist(backend) {
   
   if (!osCoMap) {
     // spark.os exists but couldn't be loaded - skip creating unknown colist
-    console.warn(`[SchemaIndexManager] Cannot create unknown colist - spark.os not available`);
+    if (process.env.DEBUG) console.warn(`[SchemaIndexManager] Cannot create unknown colist - spark.os not available`);
     return null;
   }
 
@@ -673,11 +673,11 @@ async function ensureSchemataRegistry(backend) {
       }
     } catch (e) {
       // Read failed - continue to create new one if needed
-      console.warn(`[SchemaIndexManager] Failed to read schematas registry (${schematasId.substring(0, 12)}...):`, e.message);
+      if (process.env.DEBUG) console.warn(`[SchemaIndexManager] Failed to read schematas registry (${schematasId.substring(0, 12)}...):`, e.message);
     }
     
     // If schematasId exists but couldn't be loaded, DON'T create a new one
-    console.warn(`[SchemaIndexManager] spark.os.schematas (${schematasId.substring(0, 12)}...) exists but could not be loaded. Skipping to prevent overwriting.`);
+    if (process.env.DEBUG) console.warn(`[SchemaIndexManager] spark.os.schematas (${schematasId.substring(0, 12)}...) exists but could not be loaded. Skipping to prevent overwriting.`);
     return null;
   }
 

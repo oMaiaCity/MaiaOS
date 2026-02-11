@@ -256,7 +256,7 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
           
           // Validate schemaCoId is a string
           if (typeof schemaCoId !== 'string') {
-            console.error(`[createUnifiedStore] Invalid schema type for query "${key}": expected string, got ${typeof schemaCoId}`, schemaCoId);
+            if (process.env.DEBUG) console.error(`[createUnifiedStore] Invalid schema type for query "${key}": expected string, got ${typeof schemaCoId}`, schemaCoId);
             continue;
           }
           
@@ -296,7 +296,7 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
                 }
                 
                 if (schemaState.error || !schemaState.schemaCoId) {
-                  console.error(`[createUnifiedStore] Failed to resolve schema ${value.schema} for query "${key}": ${schemaState.error || 'Schema not found'}`);
+                  if (process.env.DEBUG) console.error(`[createUnifiedStore] Failed to resolve schema ${value.schema} for query "${key}": ${schemaState.error || 'Schema not found'}`);
                   schemaUnsubscribe();
                   return;
                 }
@@ -365,7 +365,7 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
                   
                   schemaUnsubscribe();
                 } catch (error) {
-                  console.error(`[createUnifiedStore] Failed to execute query "${key}" after schema resolution:`, error);
+                  if (process.env.DEBUG) console.error(`[createUnifiedStore] Failed to execute query "${key}" after schema resolution:`, error);
                   schemaUnsubscribe();
                 }
               });
@@ -375,7 +375,7 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
               
               continue; // Skip to next query - this one will resolve reactively
             } else {
-              console.error(`[createUnifiedStore] Invalid schema format for query "${key}": ${schemaCoId}`);
+              if (process.env.DEBUG) console.error(`[createUnifiedStore] Invalid schema format for query "${key}": ${schemaCoId}`);
               continue;
             }
           } else if (schemaCoId && typeof schemaCoId === 'string' && schemaCoId.startsWith('co_z')) {
@@ -417,7 +417,7 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
             // If filter didn't change and store exists, keep using existing store
           }
         } catch (error) {
-          console.error(`[createUnifiedStore] Failed to resolve query "${key}":`, error);
+          if (process.env.DEBUG) console.error(`[createUnifiedStore] Failed to resolve query "${key}":`, error);
         }
       }
     }
@@ -563,7 +563,7 @@ async function processCoValueData(backend, coValueCore, schemaHint, options, vis
     try {
       data = await applyMapTransform(backend, data, map, { timeoutMs });
     } catch (err) {
-      console.warn(`[processCoValueData] Failed to apply map transform:`, err);
+      if (process.env.DEBUG) console.warn(`[processCoValueData] Failed to apply map transform:`, err);
       // Continue with unmapped data
     }
   }
@@ -923,7 +923,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
   if (!backend.isAvailable(coListCore)) {
     // Trigger loading (non-blocking)
     ensureCoValueLoaded(backend, coListId, { waitForAvailable: false }).catch(err => {
-      console.warn(`[readCollection] Failed to load CoList ${coListId.substring(0, 12)}...:`, err);
+      if (process.env.DEBUG) console.warn(`[readCollection] Failed to load CoList ${coListId.substring(0, 12)}...:`, err);
     });
     
     // Set up subscription to update store when colist becomes available
@@ -932,7 +932,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
         if (core && backend.isAvailable(core)) {
           // Colist is now available - trigger store update
           updateStore().catch(err => {
-            console.warn(`[readCollection] Error updating store after colist load:`, err);
+            if (process.env.DEBUG) console.warn(`[readCollection] Error updating store after colist load:`, err);
           });
         }
       });
@@ -970,7 +970,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
             // Guard: Check if updateStore is defined (may not be initialized yet if subscription fires synchronously)
             if (updateStore) {
               updateStore().catch(err => {
-                console.warn(`[CoJSONBackend] Error updating store:`, err);
+                if (process.env.DEBUG) console.warn(`[CoJSONBackend] Error updating store:`, err);
               });
             }
           });
@@ -983,12 +983,12 @@ async function readCollection(backend, schema, filter = null, options = {}) {
           // Guard: Check if updateStore is defined (may not be initialized yet)
           if (updateStore) {
             updateStore().catch(err => {
-              console.warn(`[CoJSONBackend] Error updating store after item load:`, err);
+              if (process.env.DEBUG) console.warn(`[CoJSONBackend] Error updating store after item load:`, err);
             });
           }
         }
       }).catch(err => {
-        console.error(`[CoJSONBackend] Failed to load item ${itemId}:`, err);
+        if (process.env.DEBUG) console.error(`[CoJSONBackend] Failed to load item ${itemId}:`, err);
       });
       return;
     }
@@ -1003,7 +1003,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
       // Guard: Check if updateStore is assigned before calling (prevents temporal dead zone error)
       if (updateStore) {
         updateStore().catch(err => {
-          console.warn(`[CoJSONBackend] Error updating store:`, err);
+          if (process.env.DEBUG) console.warn(`[CoJSONBackend] Error updating store:`, err);
         });
       }
     });
@@ -1021,7 +1021,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
     if (!backend.isAvailable(coListCore)) {
       // CoList became unavailable - trigger reload
       ensureCoValueLoaded(backend, coListId).catch(err => {
-        console.error(`[readCollection] Failed to reload CoList:`, err);
+        if (process.env.DEBUG) console.error(`[readCollection] Failed to reload CoList:`, err);
       });
       return;
     }
@@ -1116,7 +1116,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
               try {
                 processedData = await applyMapTransform(backend, processedData, map, { timeoutMs });
               } catch (err) {
-                console.warn(`[readCollection] Failed to apply map transform:`, err);
+                if (process.env.DEBUG) console.warn(`[readCollection] Failed to apply map transform:`, err);
               }
             }
             
@@ -1142,7 +1142,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
       }
       
     } catch (e) {
-      console.warn(`[readCollection] Error reading CoList items:`, e);
+      if (process.env.DEBUG) console.warn(`[readCollection] Error reading CoList items:`, e);
     }
     
     // Update store with current results (progressive loading - may be partial, updates reactively)
@@ -1155,7 +1155,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
   const unsubscribeCoList = coListCore.subscribe(() => {
     // Fire and forget - don't await async updateStore in subscription callback
     updateStore().catch(err => {
-      console.warn(`[CoJSONBackend] Error updating store:`, err);
+      if (process.env.DEBUG) console.warn(`[CoJSONBackend] Error updating store:`, err);
     });
   });
   
@@ -1178,7 +1178,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
             if (itemCore && !backend.isAvailable(itemCore)) {
               // Trigger loading immediately (don't wait - parallel loading)
               ensureCoValueLoaded(backend, itemId).catch(err => {
-                console.error(`[CoJSONBackend] Failed to load item ${itemId}:`, err);
+                if (process.env.DEBUG) console.error(`[CoJSONBackend] Failed to load item ${itemId}:`, err);
               });
             }
           }
@@ -1269,7 +1269,7 @@ async function readAllCoValues(backend, filter = null, options = {}) {
       // Trigger loading for unavailable CoValues
       if (!backend.isAvailable(coValueCore)) {
         ensureCoValueLoaded(backend, coId).catch(err => {
-          console.error(`[CoJSONBackend] Failed to load CoValue ${coId}:`, err);
+          if (process.env.DEBUG) console.error(`[CoJSONBackend] Failed to load CoValue ${coId}:`, err);
         });
         continue;
       }

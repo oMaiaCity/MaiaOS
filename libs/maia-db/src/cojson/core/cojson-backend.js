@@ -11,10 +11,7 @@ import { seed } from '../schema/seed.js';
 import * as groups from '../groups/groups.js';
 import { waitForStoreReady } from '../crud/read-operations.js';
 import { read as universalRead } from '../crud/read.js';
-import * as collectionHelpers from '../crud/collection-helpers.js';
-import * as dataExtraction from '../crud/data-extraction.js';
 import { extractCoStreamWithSessions } from '../crud/data-extraction.js';
-import * as filterHelpers from '../crud/filter-helpers.js';
 import * as crudCreate from '../crud/create.js';
 import * as crudUpdate from '../crud/update.js';
 import * as crudDelete from '../crud/delete.js';
@@ -528,125 +525,6 @@ export class CoJSONBackend extends DBAdapter {
   }
 
   /**
-   * Read a single CoValue by ID and wrap in ReactiveStore
-   * Waits for CoValue to be loaded before returning store (operations API abstraction)
-   * @private
-   * @param {string} coId - CoValue ID
-   * @param {string} [schemaHint] - Schema hint for special types (@group, @account, @metaSchema)
-   * @returns {Promise<ReactiveStore>} ReactiveStore with CoValue data (already loaded)
-   */
-  async _readSingleItem(coId, schemaHint = null) {
-    return await universalRead(this, coId, schemaHint, null, schemaHint);
-  }
-
-  /**
-   * Wait for a ReactiveStore to be ready (loaded and not in error state)
-   * Used internally by _readSingleItem to ensure stores are ready before returning
-   * @private
-   * @param {ReactiveStore} store - Store to wait for
-   * @param {string} coId - CoValue ID (for error messages)
-   * @param {number} timeoutMs - Timeout in milliseconds (default: 5000)
-   * @returns {Promise<void>} Resolves when store is ready, rejects on timeout or error
-   */
-  async _waitForStoreReady(store, coId, timeoutMs = 5000) {
-    return await waitForStoreReady(store, coId, timeoutMs);
-  }
-
-
-  /**
-   * Get CoList ID from schema index (spark.os.indexes.<schemaCoId>)
-   * Supports schema co-ids, human-readable schema names, or collection names (legacy fallback)
-   * @private
-   * @param {string} collectionNameOrSchema - Collection name (e.g., "todos"), schema co-id (co_z...), or namekey (@maia/schema/data/todos)
-   * @returns {Promise<string|null>} CoList ID or null if not found
-   */
-  async _getCoListId(collectionName) {
-    return await collectionHelpers.getCoListId(this, collectionName);
-  }
-
-  /**
-   * Ensure CoValue is loaded from IndexedDB (jazz-tools pattern)
-   * Generic method that works for ANY CoValue type (CoMap, CoList, CoStream, etc.)
-   * After re-login, CoValues exist in IndexedDB but aren't loaded into node memory
-   * This method explicitly loads them before accessing, just like jazz-tools does
-   * @private
-   * @param {string} coId - CoValue ID (co-id)
-   * @param {Object} [options] - Options
-   * @param {boolean} [options.waitForAvailable=false] - Wait for CoValue to become available
-   * @param {number} [options.timeoutMs=2000] - Timeout in milliseconds
-   * @returns {Promise<CoValueCore|null>} CoValueCore or null if not found
-   */
-  async _ensureCoValueLoaded(coId, options = {}) {
-    return await collectionHelpers.ensureCoValueLoaded(this, coId, options);
-  }
-
-
-  /**
-   * Read a collection of CoValues by schema
-   * @private
-   * @param {string} schema - Schema co-id (co_z...)
-   * @param {Object} [filter] - Filter criteria
-   * @returns {Promise<ReactiveStore>} ReactiveStore with array of CoValue data
-   */
-  async _readCollection(schema, filter) {
-    return await universalRead(this, null, schema, filter);
-  }
-
-  /**
-   * Read all CoValues (no schema filter)
-   * @private
-   * @param {Object} [filter] - Filter criteria
-   * @returns {Promise<ReactiveStore>} ReactiveStore with array of all CoValue data
-   */
-  async _readAllCoValues(filter) {
-    return await universalRead(this, null, null, filter);
-  }
-
-  /**
-   * Extract CoValue data from CoValueCore and normalize (match IndexedDB format)
-   * @private
-   * @param {CoValueCore} coValueCore - CoValueCore instance
-   * @param {string} [schemaHint] - Schema hint for special types (@group, @account, @metaSchema)
-   * @returns {Object} Normalized CoValue data (flattened properties, id field added)
-   */
-  _extractCoValueData(coValueCore, schemaHint = null) {
-    return dataExtraction.extractCoValueData(this, coValueCore, schemaHint);
-  }
-
-  /**
-   * Extract CoValue data as flat object (for SubscriptionEngine and UI)
-   * Returns flat objects like {id: '...', text: '...', done: false} instead of normalized format
-   * @private
-   * @param {CoValueCore} coValueCore - CoValueCore instance
-   * @param {string} [schemaHint] - Schema hint for special types
-   * @returns {Object|Array} Flat object or array of items
-   */
-  _extractCoValueDataFlat(coValueCore, schemaHint = null) {
-    return dataExtraction.extractCoValueDataFlat(this, coValueCore, schemaHint);
-  }
-
-  /**
-   * Extract CoValue data from RawCoValue content
-   * @private
-   * @param {RawCoValue} content - RawCoValue content
-   * @returns {Object} Extracted data
-   */
-  _extractCoValueDataFromContent(content) {
-    return filterHelpers.extractCoValueDataFromContent(content);
-  }
-
-  /**
-   * Check if CoValue data matches filter criteria
-   * @private
-   * @param {Object|Array} data - CoValue data (object for CoMap, array for CoList)
-   * @param {Object} filter - Filter criteria
-   * @returns {boolean} True if matches filter
-   */
-  _matchesFilter(data, filter) {
-    return filterHelpers.matchesFilter(data, filter);
-  }
-
-  /**
    * Create new record - directly creates CoValue using CoJSON raw methods
    * @param {string} schema - Schema co-id (co_z...) for data collections
    * @param {Object} data - Data to create
@@ -764,84 +642,46 @@ export class CoJSONBackend extends DBAdapter {
     const { timeoutMs = 10000 } = options;
     
     if (!this.account) {
-      console.warn('[CoJSONBackend.ensureAccountOsReady] Account not available');
+      if (process.env.DEBUG) console.warn('[CoJSONBackend.ensureAccountOsReady] Account not available');
       return false;
     }
 
-    const startTime = performance.now();
-    const phaseTimings = {
-      getOsId: 0,
-      createOs: 0,
-      osReadRequest: 0,
-      osReadResponse: 0,
-      osWaitForReady: 0,
-      osReadTotal: 0,
-      getSchematasId: 0,
-      createSchematas: 0,
-      schematasReadRequest: 0,
-      schematasReadResponse: 0,
-      schematasWaitForReady: 0,
-      schematasReadTotal: 0,
-      total: 0
-    };
-
-    // Get @maia spark's os (account.sparks[@maia].os)
-    const getOsIdStartTime = performance.now();
     let osId = await groups.getSparkOsId(this, '@maia');
-    phaseTimings.getOsId = performance.now() - getOsIdStartTime;
-    
     if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
-      console.warn('[CoJSONBackend.ensureAccountOsReady] @maia spark.os not found - migration should have created it');
+      if (process.env.DEBUG) console.warn('[CoJSONBackend.ensureAccountOsReady] @maia spark.os not found - migration should have created it');
       return false;
     }
 
-    // Load spark.os using read() API
-    const osReadRequestStartTime = performance.now();
     const osStore = await universalRead(this, osId, null, null, null, {
       deepResolve: false,
       timeoutMs
     });
-    const osReadResponseTime = performance.now();
-    phaseTimings.osReadRequest = osReadRequestStartTime - startTime;
-    phaseTimings.osReadResponse = osReadResponseTime - startTime;
-    phaseTimings.osReadTotal = osReadResponseTime - osReadRequestStartTime;
-
-    const osWaitForReadyStartTime = performance.now();
     try {
       await waitForStoreReady(osStore, osId, timeoutMs);
-      const osWaitForReadyEndTime = performance.now();
-      phaseTimings.osWaitForReady = osWaitForReadyEndTime - osWaitForReadyStartTime;
     } catch (error) {
-      const osWaitForReadyEndTime = performance.now();
-      phaseTimings.osWaitForReady = osWaitForReadyEndTime - osWaitForReadyStartTime;
-      console.error(`[CoJSONBackend.ensureAccountOsReady] Timeout waiting for spark.os to load: ${error.message}`);
+      if (process.env.DEBUG) console.error(`[CoJSONBackend.ensureAccountOsReady] Timeout waiting for spark.os to load: ${error.message}`);
       return false;
     }
 
     const osData = osStore.value;
     if (!osData || osData.error) {
-      console.error(`[CoJSONBackend.ensureAccountOsReady] spark.os data not available or has error`);
+      if (process.env.DEBUG) console.error(`[CoJSONBackend.ensureAccountOsReady] spark.os data not available or has error`);
       return false;
     }
 
-    // Ensure schematas registry exists
-    const getSchematasIdStartTime = performance.now();
     let schematasId = osData.schematas;
-    phaseTimings.getSchematasId = performance.now() - getSchematasIdStartTime;
-    
     if (!schematasId || typeof schematasId !== 'string' || !schematasId.startsWith('co_z')) {
-      const createSchematasStartTime = performance.now();
       
       // Get spark.os CoValueCore to update it
       const osCore = this.getCoValue(osId);
       if (!osCore || !osCore.isAvailable()) {
-        console.error(`[CoJSONBackend.ensureAccountOsReady] spark.os not available for creating schematas`);
+        if (process.env.DEBUG) console.error(`[CoJSONBackend.ensureAccountOsReady] spark.os not available for creating schematas`);
         return false;
       }
       
       const osContent = this.getCurrentContent(osCore);
       if (!osContent || typeof osContent.set !== 'function') {
-        console.error(`[CoJSONBackend.ensureAccountOsReady] spark.os content not available for creating schematas`);
+        if (process.env.DEBUG) console.error(`[CoJSONBackend.ensureAccountOsReady] spark.os content not available for creating schematas`);
         return false;
       }
       
@@ -856,7 +696,6 @@ export class CoJSONBackend extends DBAdapter {
       });
       osContent.set('schematas', schematasCoMap.id);
       schematasId = schematasCoMap.id;
-      phaseTimings.createSchematas = performance.now() - createSchematasStartTime;
       
       // Reload osData to get updated schematasId
       const osStore2 = await universalRead(this, osId, null, null, null, {
@@ -875,41 +714,26 @@ export class CoJSONBackend extends DBAdapter {
     }
 
     if (!schematasId || typeof schematasId !== 'string' || !schematasId.startsWith('co_z')) {
-      console.error(`[CoJSONBackend.ensureAccountOsReady] Failed to ensure schematas registry exists`);
+      if (process.env.DEBUG) console.error(`[CoJSONBackend.ensureAccountOsReady] Failed to ensure schematas registry exists`);
       return false;
     }
 
-    // Load schematas registry using read() API
-    const schematasReadRequestStartTime = performance.now();
     const schematasStore = await universalRead(this, schematasId, null, null, null, {
       deepResolve: false,
       timeoutMs
     });
-    const schematasReadResponseTime = performance.now();
-    phaseTimings.schematasReadRequest = schematasReadRequestStartTime - startTime;
-    phaseTimings.schematasReadResponse = schematasReadResponseTime - startTime;
-    phaseTimings.schematasReadTotal = schematasReadResponseTime - schematasReadRequestStartTime;
-
-    const schematasWaitForReadyStartTime = performance.now();
     try {
       await waitForStoreReady(schematasStore, schematasId, timeoutMs);
-      const schematasWaitForReadyEndTime = performance.now();
-      phaseTimings.schematasWaitForReady = schematasWaitForReadyEndTime - schematasWaitForReadyStartTime;
     } catch (error) {
-      const schematasWaitForReadyEndTime = performance.now();
-      phaseTimings.schematasWaitForReady = schematasWaitForReadyEndTime - schematasWaitForReadyStartTime;
-      console.error(`[CoJSONBackend.ensureAccountOsReady] Timeout waiting for schematas registry to load: ${error.message}`);
+      if (process.env.DEBUG) console.error(`[CoJSONBackend.ensureAccountOsReady] Timeout waiting for schematas registry to load: ${error.message}`);
       return false;
     }
 
     const schematasData = schematasStore.value;
     if (!schematasData || schematasData.error) {
-      console.error(`[CoJSONBackend.ensureAccountOsReady] schematas registry data not available or has error`);
+      if (process.env.DEBUG) console.error(`[CoJSONBackend.ensureAccountOsReady] schematas registry data not available or has error`);
       return false;
     }
-
-    const endTime = performance.now();
-    phaseTimings.total = endTime - startTime;
 
     return true;
   }

@@ -70,19 +70,6 @@ export function extractCoValueData(backend, coValueCore, schemaHint = null) {
         }
       }
       
-      // Essential debug: Log CoStream reading (always log for debugging)
-      console.log(`[CoJSONBackend] 📥 Read CoStream ${coValueCore.id} (${items.length} items)`);
-      if (items.length > 0) {
-        console.log(`[CoJSONBackend]   First item:`, JSON.stringify(items[0]).substring(0, 100));
-      } else {
-        // Log stream structure when empty to diagnose
-        console.log(`[CoJSONBackend]   Stream data type:`, typeof streamData, streamData instanceof Uint8Array ? 'Uint8Array' : 'object');
-        if (streamData && typeof streamData === 'object' && !(streamData instanceof Uint8Array)) {
-          console.log(`[CoJSONBackend]   Session keys:`, Object.keys(streamData));
-          console.log(`[CoJSONBackend]   Session counts:`, Object.fromEntries(Object.entries(streamData).map(([k, v]) => [k, Array.isArray(v) ? v.length : 'not array'])));
-        }
-      }
-      
       return {
         id: coValueCore.id,
         schema: schema,
@@ -91,7 +78,7 @@ export function extractCoValueData(backend, coValueCore, schemaHint = null) {
         // No properties array - CoStreams don't have custom key-value properties, only items
       };
     } catch (e) {
-      console.error(`[CoJSONBackend] ❌ Error reading CoStream ${coValueCore.id.substring(0, 12)}...:`, e);
+      if (process.env.DEBUG) console.error(`[CoJSONBackend] Error reading CoStream ${coValueCore.id.substring(0, 12)}...:`, e);
       return {
         id: coValueCore.id,
         $schema: schema, // Use $schema for consistency with headerMeta.$schema

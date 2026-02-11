@@ -15,44 +15,10 @@
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
 import { resolve } from '../schema/resolver.js';
 import { read as universalRead } from './read.js';
-import { waitForStoreReady } from './read-operations.js';
+import { waitForStoreReady, waitForReactiveResolution } from './read-operations.js';
 import { ensureCoValueLoaded } from './collection-helpers.js';
 
-/**
- * Wait for reactive store to resolve (subscribe and wait for first non-loading update)
- * Helper function for code that needs to wait for reactive resolution
- * 
- * @param {ReactiveStore} store - ReactiveStore to wait for
- * @param {Object} [options] - Options
- * @param {number} [options.timeoutMs=10000] - Timeout in milliseconds
- * @returns {Promise<any>} Resolved value from store
- */
-export function waitForReactiveResolution(store, options = {}) {
-  const { timeoutMs = 10000 } = options;
-  
-  return new Promise((resolve, reject) => {
-    let unsubscribe; // Declare before Promise to avoid temporal dead zone
-    const timeout = setTimeout(() => {
-      if (unsubscribe) unsubscribe();
-      reject(new Error(`Timeout waiting for reactive resolution after ${timeoutMs}ms`));
-    }, timeoutMs);
-    
-    unsubscribe = store.subscribe((state) => {
-      if (state.loading) {
-        return; // Still loading
-      }
-      
-      clearTimeout(timeout);
-      if (unsubscribe) unsubscribe();
-      
-      if (state.error) {
-        reject(new Error(state.error));
-      } else {
-        resolve(state);
-      }
-    });
-  });
-}
+export { waitForReactiveResolution } from './read-operations.js';
 
 /**
  * Resolve schema reactively - returns ReactiveStore that updates when schema becomes available
