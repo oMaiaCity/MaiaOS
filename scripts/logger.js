@@ -39,6 +39,8 @@ const serviceColors = {
 	'assets': colors.blue,
 	'docs': colors.yellow,
 	'api': colors.green,
+	'sync': colors.green,
+	'agent': colors.magenta,
 	'server': colors.cyan,
 	'maia-city': colors.bright + colors.cyan,
 	'kernel': colors.dim + colors.cyan,

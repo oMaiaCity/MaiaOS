@@ -85,7 +85,7 @@ export async function startAgentWorker(options = {}) {
     });
     node = loadResult.node;
     account = loadResult.account;
-    console.log('[maia-agent] Account loaded');
+    console.log('[maia-agent] ✓ Account loaded');
   } catch (loadError) {
     const msg = loadError?.message || String(loadError);
     const isNotFound =
@@ -93,10 +93,11 @@ export async function startAgentWorker(options = {}) {
       msg.includes('Account not found in storage');
 
     if (isNotFound) {
-      console.log('[maia-agent] Account not found, creating...');
+      console.log('[maia-agent] First run: creating account…');
+      const agentName = processEnv.AGENT_MAIA_PROFILE_NAME || `Maia Agent ${Math.random().toString(36).slice(2, 8)}`;
       const createResult = await createAgentAccount({
         agentSecret,
-        name: 'Maia Agent',
+        name: agentName,
         syncDomain,
         servicePrefix,
         dbPath,
@@ -104,7 +105,7 @@ export async function startAgentWorker(options = {}) {
       });
       node = createResult.node;
       account = createResult.account;
-      console.log('[maia-agent] Account created');
+      console.log('[maia-agent] ✓ Account created');
     } else {
       throw loadError;
     }
@@ -121,7 +122,7 @@ export async function startAgentWorker(options = {}) {
         return handlers.http(req, { worker });
       },
     });
-    console.log(`[maia-agent] HTTP server on port ${port}`);
+    console.log(`[maia-agent] ✓ HTTP server on port ${port}`);
   }
 
   return { worker, server };

@@ -73,8 +73,7 @@ export async function createSyncServer(options = {}) {
   
   let localNode, account;
   try {
-    console.log('[sync-server] Loading sync server account from credentials...');
-    console.log('[sync-server] Note: If you see "Account unavailable from all peers" below, this is expected on first run.');
+    console.log('[sync-server] Loading account…');
     const loadResult = await loadAgentAccount({
       accountID,
       agentSecret,
@@ -85,7 +84,7 @@ export async function createSyncServer(options = {}) {
     });
     localNode = loadResult.node;
     account = loadResult.account;
-    console.log('[sync-server] ✓ Account loaded successfully');
+    console.log('[sync-server] ✓ Account loaded');
   } catch (loadError) {
     // Check if error is "Account unavailable from all peers" - means account doesn't exist yet
     // This is OK for first-time setup - create the account using provided env vars
@@ -96,10 +95,7 @@ export async function createSyncServer(options = {}) {
                              errorMessage.includes('Account not found in storage');
     
     if (isAccountNotFound) {
-      // This is expected behavior for first-time setup - account doesn't exist yet
-      // The kernel logs an error above, but that's expected - we'll create the account now
-      console.log('[sync-server] Account not found in storage (first-time setup), creating new account...');
-      console.log('[sync-server] (The error above is expected - account will be created now)');
+      console.log('[sync-server] First run: creating account…');
       try {
         const createResult = await createAgentAccount({
           agentSecret,
@@ -111,7 +107,7 @@ export async function createSyncServer(options = {}) {
         });
         localNode = createResult.node;
         account = createResult.account;
-        console.log('[sync-server] ✓ Account created successfully');
+        console.log('[sync-server] ✓ Account created');
       } catch (createError) {
         console.error('[sync-server] ✗ Failed to create account:', createError?.message || String(createError));
         console.error('[sync-server] ✗ Create error stack:', createError?.stack);

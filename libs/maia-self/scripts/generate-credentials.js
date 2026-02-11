@@ -99,13 +99,14 @@ async function main() {
     const prefix = `${servicePrefix}_`;
     const defaultMode = service === 'city' ? 'human' : 'agent'; // maia-city defaults to human mode
     const defaultStorage = service === 'sync' || service === 'agent' ? 'pglite' : (service === 'city' ? 'indexeddb' : 'in-memory');
+    const profileNameLine = service === 'agent' ? `\n${prefix}MAIA_PROFILE_NAME=${accountName}` : '';
     
     const envContent = `# ${servicePrefix} Service Configuration
 # Generated: ${new Date().toISOString()}
 ${prefix}MAIA_MODE=${defaultMode}
 ${prefix}MAIA_AGENT_ACCOUNT_ID=${accountID}
 ${prefix}MAIA_AGENT_SECRET=${agentSecret}
-${prefix}MAIA_STORAGE=${defaultStorage}
+${prefix}MAIA_STORAGE=${defaultStorage}${profileNameLine}
 `;
     
     log('✅ Credentials generated successfully!\n');
@@ -133,6 +134,7 @@ ${prefix}MAIA_STORAGE=${defaultStorage}
                  !line.startsWith(`${prefix}MAIA_AGENT_ACCOUNT_ID=`) &&
                  !line.startsWith(`${prefix}MAIA_AGENT_SECRET=`) &&
                  !line.startsWith(`${prefix}MAIA_STORAGE=`) &&
+                 !line.startsWith(`${prefix}MAIA_PROFILE_NAME=`) &&
                  !line.startsWith(`# ${servicePrefix} Service Configuration`) &&
                  !line.startsWith('# Generated:');
         });

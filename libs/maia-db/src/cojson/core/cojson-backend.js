@@ -650,10 +650,12 @@ export class CoJSONBackend extends DBAdapter {
    * Create new record - directly creates CoValue using CoJSON raw methods
    * @param {string} schema - Schema co-id (co_z...) for data collections
    * @param {Object} data - Data to create
+   * @param {Object} [options] - Optional settings
+   * @param {string} [options.spark='@maia'] - Spark name for context (e.g. '@maia', '@Maia')
    * @returns {Promise<Object>} Created record with generated co-id
    */
-  async create(schema, data) {
-    return await crudCreate.create(this, schema, data);
+  async create(schema, data, options = {}) {
+    return await crudCreate.create(this, schema, data, options);
   }
 
 

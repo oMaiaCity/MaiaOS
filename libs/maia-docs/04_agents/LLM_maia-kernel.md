@@ -1,6 +1,6 @@
 # MaiaOS Documentation for maia-kernel
 
-**Auto-generated:** 2026-02-11T14:34:27.282Z
+**Auto-generated:** 2026-02-11T15:53:56.874Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---

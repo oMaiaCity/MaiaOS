@@ -8,7 +8,9 @@
     "start": "bun run src/index.js"
   },
   "dependencies": {
-    "@MaiaOS/agent": "workspace:*"
+    "@MaiaOS/agent": "workspace:*",
+    "@MaiaOS/db": "workspace:*",
+    "@MaiaOS/operations": "workspace:*"
   },
   "devDependencies": {
     "@types/bun": "latest"

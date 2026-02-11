@@ -18,6 +18,7 @@ let maiaCityProcess = null
 let apiProcess = null
 let syncProcess = null
 let agentProcess = null
+let agentStarted = false
 let docsWatcherProcess = null
 let assetSyncProcess = null
 let faviconProcess = null
@@ -39,6 +40,13 @@ function shouldFilterLine(line) {
 	
 	const trimmed = line.trim()
 	if (trimmed === '') return true
+	
+	// Filter expected first-run account load errors (agent/sync create account on first run)
+	if (trimmed.includes('Error withLoadedAccount') ||
+	    trimmed.includes('Account unavailable from all peers') ||
+	    (/\d+\s*\|\s*/.test(trimmed) && trimmed.includes('throw new Error'))) {
+		return true
+	}
 	
 	// Filter vite build verbose output
 	if (trimmed.includes('modules transformed') || 
@@ -82,21 +90,24 @@ function processOutput(service, data, isError = false) {
 		// Skip filtered lines after checking for Vite URL
 		if (shouldFilterLine(line)) continue
 		
-		// Extract meaningful messages
-		if (trimmed.includes('ready') || trimmed.includes('Ready') || trimmed.includes('VITE')) {
-			// Generic ready message
+		// Server/API ready messages — check BEFORE error block (agent may log to stderr)
+		if (trimmed.includes('running on port') || trimmed.includes('Sync service running') || trimmed.includes('Running on port') || trimmed.includes('HTTP server on port') || trimmed.includes('[maia-agent] HTTP server') || (trimmed.includes('HTTP server') && trimmed.includes('4204'))) {
 			const portMatch = trimmed.match(/port\s+(\d+)/i) || trimmed.match(/:(\d+)/)
 			if (portMatch && !serviceStatus[service]) {
 				const port = portMatch[1]
 				logger.success(`Running on http://localhost:${port}`)
 				serviceStatus[service] = true
+				if (service === 'sync' && !agentStarted) {
+					agentStarted = true
+					startAgent()
+				}
 				checkAllReady()
 				continue
 			}
 		}
 		
-		// Server/API ready messages
-		if (trimmed.includes('running on port') || trimmed.includes('Sync service running') || trimmed.includes('HTTP server on port')) {
+		// Extract meaningful messages (Vite ready etc.)
+		if (trimmed.includes('ready') || trimmed.includes('Ready') || trimmed.includes('VITE')) {
 			const portMatch = trimmed.match(/port\s+(\d+)/i) || trimmed.match(/:(\d+)/)
 			if (portMatch && !serviceStatus[service]) {
 				const port = portMatch[1]
@@ -341,11 +352,12 @@ function startAgent() {
 		// Port is free or check failed - continue
 	}
 
+	const agentDbPath = resolve(rootDir, 'services/agent/local-agent.db')
 	agentProcess = spawn('bun', ['--env-file=.env', '--filter', 'agent', 'dev'], {
 		cwd: rootDir,
 		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,
-		env: { ...process.env, PORT: '4204' },
+		env: { ...process.env, PORT: '4204', AGENT_MAIA_DB_PATH: agentDbPath },
 	})
 
 	agentProcess.stdout.on('data', (data) => {
@@ -360,9 +372,11 @@ function startAgent() {
 		// Non-fatal - agent service is optional
 	})
 
-	agentProcess.on('exit', (code) => {
+	agentProcess.on('exit', (code, signal) => {
 		if (code !== 0 && code !== null) {
-			// Non-fatal
+			const agentLogger = createLogger('agent')
+			agentLogger.error(`Exited with code ${code}${signal ? ` (signal: ${signal})` : ''}. Check AGENT_MAIA_AGENT_ACCOUNT_ID and AGENT_MAIA_AGENT_SECRET in .env`)
+			agentLogger.error('If you see "Aborted()" or "RuntimeError", try: rm -f services/agent/local-agent.db*')
 		}
 	})
 }
@@ -564,7 +578,7 @@ async function main() {
 		startDocsWatcher()
 		startApi()
 		startSync()
-		startAgent()
+		// Agent starts after sync is ready (depends on sync for account load/create)
 		await startMaiaCity()
 	}, 1000)
 

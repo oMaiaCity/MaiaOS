@@ -4,6 +4,8 @@
  * Provides all group-related operations: access, info extraction, and member management.
  */
 
+import { waitForStoreReady } from '../crud/read-operations.js';
+
 /**
  * Get a Group CoValue by ID
  * @param {LocalNode} node - LocalNode instance
@@ -34,6 +36,8 @@ export async function getGroup(node, groupId) {
  */
 /**
  * Get capability group co-id from os CoMap id (os -> capabilities -> capabilityName)
+ * Uses read() + waitForStoreReady to ensure os/capabilities are synced (e.g. when agent
+ * loads human's spark via sync - os and capabilities must be fetched before access).
  * @param {Object} backend - Backend instance
  * @param {string} osId - OS CoMap co-id
  * @param {string} capabilityName - Capability key (e.g. 'guardian', 'publicReaders')
@@ -41,12 +45,16 @@ export async function getGroup(node, groupId) {
  */
 export async function getCapabilityGroupIdFromOsId(backend, osId, capabilityName) {
   if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) return null;
+  const osStore = await backend.read(null, osId);
+  await waitForStoreReady(osStore, osId, 15000);
   const osCore = backend.getCoValue(osId);
   if (!osCore || !backend.isAvailable(osCore)) return null;
   const osContent = backend.getCurrentContent(osCore);
   if (!osContent || typeof osContent.get !== 'function') return null;
   const capabilitiesId = osContent.get('capabilities');
   if (!capabilitiesId || typeof capabilitiesId !== 'string' || !capabilitiesId.startsWith('co_z')) return null;
+  const capabilitiesStore = await backend.read(null, capabilitiesId);
+  await waitForStoreReady(capabilitiesStore, capabilitiesId, 15000);
   const capabilitiesCore = backend.getCoValue(capabilitiesId);
   if (!capabilitiesCore || !backend.isAvailable(capabilitiesCore)) return null;
   const capabilitiesContent = backend.getCurrentContent(capabilitiesCore);

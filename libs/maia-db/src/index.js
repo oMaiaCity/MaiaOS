@@ -22,7 +22,7 @@ export { getSparkCapabilityGroupIdFromSparkCoId } from "./cojson/groups/groups.j
 export { createCoMap } from "./cojson/cotypes/coMap.js";
 export { createCoList } from "./cojson/cotypes/coList.js";
 export { createCoStream } from "./cojson/cotypes/coStream.js";
-export { createSchemaMeta, hasSchema, getSchema, getAllSchemas } from "./schemas/registry.js";
+export { createSchemaMeta, hasSchema, getSchema, getAllSchemas, EXCEPTION_SCHEMAS } from "./schemas/registry.js";
 export { seedAgentAccount } from "./cojson/schema/seed.js";
 export { schemaMigration } from "./migrations/schema.migration.js";
 
@@ -47,6 +47,9 @@ export { createAndPushMessage } from "./cojson/crud/message-helpers.js";
 
 // Collection Helpers (schema index lookup, CoValue loading)
 export { getSchemaIndexColistId, getCoListId, ensureCoValueLoaded } from "./cojson/crud/collection-helpers.js";
+
+// Read Operations (store-based loading with proper $store architecture)
+export { waitForStoreReady } from "./cojson/crud/read-operations.js";
 
 // Universal Schema Resolver (single source of truth)
 export { 

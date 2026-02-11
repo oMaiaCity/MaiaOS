@@ -17,9 +17,9 @@
 
 import { createSchemaMeta } from "../schemas/registry.js";
 
-const PROFILE_NAME = "Samuel";
-
 export async function schemaMigration(account, node, creationProps) {
+	const profileName = creationProps?.name ?? "Maia";
+
 	// 1. Check if profile already exists
 	let profileId = account.get("profile");
 	let profile;
@@ -59,13 +59,13 @@ export async function schemaMigration(account, node, creationProps) {
 		const profileMeta = createSchemaMeta("ProfileSchema");
 		const profileGroup = node.createGroup();
 		profileGroup.addMember("everyone", "reader");
-		const profileCoMap = profileGroup.createMap({ name: PROFILE_NAME }, profileMeta);
+		const profileCoMap = profileGroup.createMap({ name: profileName }, profileMeta);
 		account.set("profile", profileCoMap.id);
-	} else {
+	} else if (creationProps?.name != null) {
 		const currentProfileName = profile.get("name");
-		if (currentProfileName !== PROFILE_NAME) {
-			profile.set("name", PROFILE_NAME);
-			console.log(`   🔄 Updated profile name from "${currentProfileName}" to "${PROFILE_NAME}"`);
+		if (currentProfileName !== creationProps.name) {
+			profile.set("name", creationProps.name);
+			console.log(`   🔄 Updated profile name from "${currentProfileName}" to "${creationProps.name}"`);
 		}
 	}
 

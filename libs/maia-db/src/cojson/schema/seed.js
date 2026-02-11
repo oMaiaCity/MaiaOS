@@ -38,6 +38,25 @@ import * as groups from '../groups/groups.js';
 const MAIA_SPARK = '@maia';
 
 /**
+ * Minimal bootstrap for agent accounts: only creates empty account.sparks.
+ * Agent connects to human's @Maia via /on-added; no own @maia spark, os, schematas.
+ * @param {RawAccount} account
+ * @param {LocalNode} node
+ */
+async function bootstrapAgentMinimal(account, node) {
+  const { EXCEPTION_SCHEMAS } = await import('../../schemas/registry.js');
+  const guardian = node.createGroup();
+  const ctx = { node, account, guardian };
+  const { coValue: sparks } = await createCoValueForSpark(ctx, null, {
+    schema: EXCEPTION_SCHEMAS.META_SCHEMA,
+    cotype: 'comap',
+    data: {},
+  });
+  account.set('sparks', sparks.id);
+  console.log('✅ Agent minimal bootstrap: account.sparks (empty, connect via /on-added)');
+}
+
+/**
  * Bootstrap and scaffold when account.sparks doesn't exist (migration only creates account+profile).
  * Order: guardian → account.temp → metaschema → schemata → scaffold → cleanup temp.
  * @param {RawAccount} account
@@ -1799,8 +1818,8 @@ export async function seed(account, node, configs, schemas, data, existingBacken
  */
 export async function seedAgentAccount(account, node, backend) {
   if (!account.get('sparks') || !String(account.get('sparks')).startsWith('co_z')) {
-    const { getAllSchemas } = await import('@MaiaOS/schemata');
-    await bootstrapAndScaffold(account, node, getAllSchemas());
+    await bootstrapAgentMinimal(account, node);
+    return { metaSchema: null, schemas: {}, registry: {} };
   }
   const maiaGroup = await groups.getMaiaGroup(backend);
   const { getAllSchemas } = await import('@MaiaOS/schemata');

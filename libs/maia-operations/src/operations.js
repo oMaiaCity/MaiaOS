@@ -73,14 +73,15 @@ export async function readOperation(backend, params) {
 }
 
 export async function createOperation(backend, dbEngine, params) {
-  const { schema, data } = params;
+  const { schema, data, spark } = params;
   requireParam(schema, 'schema', 'CreateOperation');
   requireParam(data, 'data', 'CreateOperation');
   requireDbEngine(dbEngine, 'CreateOperation', 'runtime schema validation');
   const schemaCoId = await resolve(backend, schema, { returnType: 'coId' });
   if (!schemaCoId) throw new Error(`[CreateOperation] Could not resolve schema: ${schema}`);
   await loadSchemaAndValidate(backend, schemaCoId, data, 'CreateOperation', { dbEngine });
-  return await backend.create(schemaCoId, data);
+  const options = spark != null ? { spark } : {};
+  return await backend.create(schemaCoId, data, options);
 }
 
 export async function updateOperation(backend, dbEngine, evaluator, params) {

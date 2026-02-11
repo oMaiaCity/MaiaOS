@@ -88,7 +88,7 @@ async function startServer() {
 			websocket: syncServerHandler,
 		})
 
-		// Service ready - message handled by dev.js logger
+		console.log(`[sync] Running on port ${PORT}`)
 	} catch (error) {
 		console.error('[sync] ✗ Failed to initialize:', error.message)
 		process.exit(1)

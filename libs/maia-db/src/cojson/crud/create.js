@@ -56,9 +56,13 @@ async function determineCotype(backend, schema, data) {
  * @param {Object} backend - Backend instance
  * @param {string} schema - Schema co-id (co_z...) for data collections
  * @param {Object} data - Data to create
+ * @param {Object} [options] - Optional settings
+ * @param {string} [options.spark='@maia'] - Spark name for context (e.g. '@maia', '@Maia')
  * @returns {Promise<Object>} Created record with generated co-id
  */
-export async function create(backend, schema, data) {
+export async function create(backend, schema, data, options = {}) {
+  const spark = options.spark ?? '@maia';
+
   // Determine cotype from schema or data type
   const cotype = await determineCotype(backend, schema, data);
   
@@ -73,7 +77,7 @@ export async function create(backend, schema, data) {
     throw new Error('[CoJSONBackend] Data must be array for colist');
   }
 
-  const { coValue } = await createCoValueForSpark(backend, '@maia', {
+  const { coValue } = await createCoValueForSpark(backend, spark, {
     schema,
     cotype,
     data: cotype === 'comap' ? data : cotype === 'colist' ? data : undefined,
