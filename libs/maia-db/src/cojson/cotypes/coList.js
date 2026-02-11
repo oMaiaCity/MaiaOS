@@ -52,11 +52,5 @@ export async function createCoList(accountOrGroup, init = [], schemaName, node =
 	
 	const meta = createSchemaMeta(schemaName);
 	const colist = group.createList(init, meta);
-
-	console.log("✅ CoList created:", colist.id);
-	console.log("   Schema:", schemaName);
-	console.log("   HeaderMeta:", colist.headerMeta);
-	console.log("   Initial items:", init.length);
-
 	return colist;
 }

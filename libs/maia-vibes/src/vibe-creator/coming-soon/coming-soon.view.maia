@@ -1,6 +1,6 @@
 {
   "$schema": "@maia/schema/view",
-  "$id": "@maia/creator/view/coming-soon",
+  "$id": "@maia/vibe-creator/view/coming-soon",
   "content": {
     "tag": "div",
     "class": "coming-soon",

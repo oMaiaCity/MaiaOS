@@ -63,6 +63,7 @@ export class ActorEngine {
     if (!actorConfig.view) throw new Error(`[ActorEngine] Actor config must have 'view' property`);
     
     const actorId = actorConfig.id || 'temp';
+    const configUnsubscribes = [];
     
     // UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
     const viewSchemaStore = resolveReactive(this.dbEngine.backend, { fromCoValue: actorConfig.view }, { returnType: 'coId' });
@@ -78,19 +79,18 @@ export class ActorEngine {
     const viewStore2 = await this.dbEngine.execute({ op: 'read', schema: viewSchemaCoId, key: actorConfig.view });
     const viewDef = viewStore2.value;
     
-    // $stores Architecture: Backend handles subscriptions automatically via subscriptionCache
-    // Subscribe for reactivity (rerender on view changes) - backend handles cleanup
-    viewStore2.subscribe((updatedView) => {
+    // Subscribe for reactivity (rerender on view changes) - must unsubscribe on destroy
+    const viewUnsub = viewStore2.subscribe((updatedView) => {
       const actor = this.actors.get(actorId);
       if (actor) {
         actor.viewDef = updatedView;
-        // Only rerender if state is READY (initial render complete)
         if (actor._renderState === RENDER_STATES.READY) {
           actor._renderState = RENDER_STATES.UPDATING;
           this._scheduleRerender(actor.id);
         }
       }
     }, { skipInitial: true });
+    configUnsubscribes.push(viewUnsub);
     
     // Parallelize loading of context, style, brand, and inbox configs
     const loadPromises = [];
@@ -133,8 +133,7 @@ export class ActorEngine {
         try {
           const styleSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: actorConfig.style }, { returnType: 'coId' });
           const styleStore = await this.dbEngine.execute({ op: 'read', schema: styleSchemaCoId, key: actorConfig.style });
-          // $stores Architecture: Backend handles subscriptions automatically via subscriptionCache
-          styleStore.subscribe(async (updatedStyle) => {
+          const styleUnsub = styleStore.subscribe(async (updatedStyle) => {
             const actor = this.actors.get(actorId);
             if (actor && this.styleEngine) {
               try {
@@ -150,6 +149,7 @@ export class ActorEngine {
               }
             }
           }, { skipInitial: true });
+          configUnsubscribes.push(styleUnsub);
           return styleStore;
         } catch (error) {
           console.error(`[ActorEngine] Failed to load style:`, error);
@@ -164,8 +164,7 @@ export class ActorEngine {
         try {
           const brandSchemaCoId = await resolve(this.dbEngine.backend, { fromCoValue: actorConfig.brand }, { returnType: 'coId' });
           const brandStore = await this.dbEngine.execute({ op: 'read', schema: brandSchemaCoId, key: actorConfig.brand });
-          // $stores Architecture: Backend handles subscriptions automatically via subscriptionCache
-          brandStore.subscribe(async (updatedBrand) => {
+          const brandUnsub = brandStore.subscribe(async (updatedBrand) => {
             const actor = this.actors.get(actorId);
             if (actor && this.styleEngine) {
               try {
@@ -181,6 +180,7 @@ export class ActorEngine {
               }
             }
           }, { skipInitial: true });
+          configUnsubscribes.push(brandUnsub);
           return brandStore;
         } catch (error) {
           console.error(`[ActorEngine] Failed to load brand:`, error);
@@ -219,7 +219,7 @@ export class ActorEngine {
       inbox = await inboxPromise;
     }
     
-    return { viewDef, context, contextCoId, contextSchemaCoId, inbox, inboxCoId };
+    return { viewDef, context, contextCoId, contextSchemaCoId, inbox, inboxCoId, configUnsubscribes };
   }
 
   /**
@@ -239,13 +239,12 @@ export class ActorEngine {
           schema: inboxSchemaCoId, 
           key: actorConfig.inbox 
         });
-        
-        // $stores Architecture: Backend handles subscriptions automatically via subscriptionCache
-        store.subscribe((updatedCostream) => {
+        const inboxUnsub = store.subscribe((updatedCostream) => {
           if (this.actors.has(actor.id) && updatedCostream?.items) {
             this.processMessages(actor.id);
           }
         });
+        if (actor._configUnsubscribes) actor._configUnsubscribes.push(inboxUnsub);
       } catch (error) {
         console.error(`[ActorEngine] Failed to subscribe to inbox:`, error);
       }
@@ -280,15 +279,13 @@ export class ActorEngine {
         // Backend's read() operation handles deep resolution automatically (deepResolve: true by default)
         // State definitions should already be fully resolved - no manual resolution needed
         
-        // $stores Architecture: Backend handles subscriptions automatically via subscriptionCache
         const actorId = actor.id;
-        stateStore.subscribe(async (updatedStateDef) => {
+        const stateUnsub = stateStore.subscribe(async (updatedStateDef) => {
           const currentActor = this.actors.get(actorId);
           if (currentActor && this.stateEngine) {
             try {
               if (currentActor.machine) this.stateEngine.destroyMachine(currentActor.machine.id);
               currentActor.machine = await this.stateEngine.createMachine(updatedStateDef, currentActor);
-              // Only rerender if state is READY (initial render complete)
               if (currentActor._renderState === RENDER_STATES.READY) {
                 currentActor._renderState = RENDER_STATES.UPDATING;
                 this._scheduleRerender(actorId);
@@ -298,6 +295,7 @@ export class ActorEngine {
             }
           }
         }, { skipInitial: true });
+        if (actor._configUnsubscribes) actor._configUnsubscribes.push(stateUnsub);
         
         actor.machine = await this.stateEngine.createMachine(stateDef, actor);
       } catch (error) {
@@ -399,9 +397,12 @@ export class ActorEngine {
     if (this.actors.has(actorId)) {
       return vibeKey ? await this.reuseActor(actorId, containerElement, vibeKey) : this.actors.get(actorId);
     }
+    if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
+      console.debug('[ActorEngine] createActor', actorId, vibeKey);
+    }
     const shadowRoot = containerElement.attachShadow({ mode: 'open' });
     const styleSheets = await this.styleEngine.getStyleSheets(actorConfig, actorId);
-    const { viewDef, context, contextCoId, contextSchemaCoId, inbox, inboxCoId, tempSubscriptions } = await this._loadActorConfigs(actorConfig);
+    const { viewDef, context, contextCoId, contextSchemaCoId, inbox, inboxCoId, tempSubscriptions, configUnsubscribes } = await this._loadActorConfigs(actorConfig);
     const actorType = await this._isServiceActor(actorConfig, viewDef) ? 'service' : 'ui';
     const actor = {
       id: actorId,
@@ -419,7 +420,8 @@ export class ActorEngine {
       inboxCoId,
       messageTypes: actorConfig.messageTypes || null, // REQUIRED: Message types this actor accepts
       _renderState: RENDER_STATES.INITIALIZING, // Start in INITIALIZING state
-      children: {}
+      children: {},
+      _configUnsubscribes: configUnsubscribes || []
     };
     
     await this._setupMessageSubscriptions(actor, actorConfig);
@@ -497,8 +499,9 @@ export class ActorEngine {
    * @param {string} actorId - The actor ID to rerender
    */
   _scheduleRerender(actorId) {
+    // Guard: Don't queue rerenders for destroyed actors (prevents race when subscriptions fire after destroy)
+    if (!this.actors.has(actorId)) return;
     // CRITICAL: Set.add() automatically deduplicates - if actorId already in Set, it's ignored
-    // This ensures that even if multiple subscriptions fire (context + query stores), actor only rerenders once
     this.pendingRerenders.add(actorId);
     
     // CRITICAL: Only schedule one microtask per event loop tick
@@ -520,13 +523,12 @@ export class ActorEngine {
    */
   async _flushRerenders() {
     // CRITICAL: Extract actor IDs BEFORE clearing Set
-    // This ensures we process all actors that were scheduled, even if new ones are added during processing
     const actorIds = Array.from(this.pendingRerenders);
     this.pendingRerenders.clear();
+    // Filter out destroyed actors (may have been scheduled before destroy)
+    const validIds = actorIds.filter(id => this.actors.has(id));
     
-    // Parallelize rerenders - they're independent operations
-    // Each actor rerenders exactly once, even if it was scheduled multiple times
-    await Promise.all(actorIds.map(actorId => this.rerender(actorId)));
+    await Promise.all(validIds.map(actorId => this.rerender(actorId)));
   }
 
   /**
@@ -536,10 +538,7 @@ export class ActorEngine {
    */
   async rerender(actorId) {
     const actor = this.actors.get(actorId);
-    if (!actor) {
-      console.warn(`[ActorEngine] rerender called for non-existent actor: ${actorId}`);
-      return;
-    }
+    if (!actor) return; // Expected when destroy races with subscription callback - silent no-op
     
     // State machine: Only rerender if state is UPDATING (data changed) or READY (post-init rerender)
     // Prevents renders during INITIALIZING or RENDERING states
@@ -642,6 +641,9 @@ export class ActorEngine {
   destroyActor(actorId) {
     const actor = this.actors.get(actorId);
     if (!actor) return;
+    if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
+      console.debug('[ActorEngine] destroyActor', actorId);
+    }
     actor.shadowRoot.innerHTML = '';
     if (this.viewEngine) this.viewEngine.cleanupActor(actorId);
     
@@ -649,6 +651,22 @@ export class ActorEngine {
     if (actor._contextUnsubscribe && typeof actor._contextUnsubscribe === 'function') {
       actor._contextUnsubscribe();
       delete actor._contextUnsubscribe;
+    }
+    
+    // Clean up view/style/brand/state/inbox config subscriptions (prevents rerender for destroyed actor)
+    for (const unsub of actor._configUnsubscribes || []) {
+      try { if (typeof unsub === 'function') unsub(); } catch (e) { /* ignore */ }
+    }
+    delete actor._configUnsubscribes;
+    
+    // CRITICAL: Call context store's _unsubscribe to release query stores, readCollection subscriptions, etc.
+    // Without this, colist + per-item subscriptions leak when switching vibes (detach keeps actors, but destroy must clean)
+    if (actor.context && actor.context._unsubscribe && typeof actor.context._unsubscribe === 'function') {
+      try {
+        actor.context._unsubscribe();
+      } catch (e) {
+        console.warn('[ActorEngine] Error cleaning up context store:', e.message);
+      }
     }
     
     // $stores Architecture: Backend handles subscription cleanup automatically via subscriptionCache
@@ -685,44 +703,6 @@ export class ActorEngine {
       this.destroyActor(actorId);
     }
     this._containerActors.delete(containerElement);
-  }
-
-  /**
-   * Detach all actors for a vibe (hide UI, keep actors alive)
-   * Used when navigating away from a vibe - preserves actors for reuse
-   * @param {string} vibeKey - The vibe key (e.g., 'todos')
-   */
-  detachActorsForVibe(vibeKey) {
-    const actorIds = this._vibeActors.get(vibeKey);
-    if (!actorIds?.size) return;
-    for (const actorId of actorIds) {
-      const actor = this.actors.get(actorId);
-      if (actor?.shadowRoot?.host?.parentNode) {
-        actor.shadowRoot.host.parentNode.removeChild(actor.shadowRoot.host);
-      }
-      if (actor?.containerElement && this._containerActors.has(actor.containerElement)) {
-        const containerActors = this._containerActors.get(actor.containerElement);
-        containerActors.delete(actorId);
-        if (containerActors.size === 0) this._containerActors.delete(actor.containerElement);
-      }
-    }
-  }
-
-  /**
-   * Reattach all actors for a vibe to a new container
-   * Used when navigating back to a vibe - reuses existing actors
-   * @param {string} vibeKey - The vibe key (e.g., 'todos')
-   * @param {HTMLElement} containerElement - The container element for the root actor
-   * @returns {Promise<Object|undefined>} The root actor instance, or undefined if no actors found
-   */
-  async reattachActorsForVibe(vibeKey, containerElement) {
-    const actorIds = this._vibeActors.get(vibeKey);
-    if (!vibeKey || !containerElement || !actorIds?.size) return undefined;
-    const rootActorId = Array.from(actorIds)[0];
-    const rootActor = this.actors.get(rootActorId);
-    if (!rootActor) return undefined;
-    await this.reuseActor(rootActorId, containerElement, vibeKey);
-    return rootActor;
   }
 
   /**

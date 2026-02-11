@@ -1087,11 +1087,13 @@ async function loadVibe(vibeKey) {
 	}
 	
 	try {
+		if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
+			console.debug('[loadVibe] start', { vibeKey, currentVibe });
+		}
 		if (vibeKey === null) {
-			// Unloading vibe - detach actors (keep alive for reuse)
-			// Use vibe-based tracking instead of container-based
+			// Unloading vibe - destroy actors (cleanup subscriptions, prevent leak)
 			if (currentVibe && maia && maia.actorEngine) {
-				maia.actorEngine.detachActorsForVibe(currentVibe);
+				maia.actorEngine.destroyActorsForVibe(currentVibe);
 			}
 			
 			// Clear container reference
@@ -1102,9 +1104,9 @@ async function loadVibe(vibeKey) {
 			// Navigate to vibes grid (preserve spark context)
 			navigateToScreen('dashboard', { preserveSpark: true });
 		} else {
-			// Detach actors from previous vibe BEFORE switching (if switching vibes)
+			// Destroy actors from previous vibe (cleanup subscriptions, prevent leak)
 			if (currentVibe && currentVibe !== vibeKey && maia && maia.actorEngine) {
-				maia.actorEngine.detachActorsForVibe(currentVibe);
+				maia.actorEngine.destroyActorsForVibe(currentVibe);
 			}
 			
 			// Save current context to history before entering vibe mode
@@ -1119,6 +1121,9 @@ async function loadVibe(vibeKey) {
 		
 		// Re-render to show vibe content or return to dashboard
 		await renderAppInternal();
+		if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
+			console.debug('[loadVibe] done', { vibeKey });
+		}
 	} catch (error) {
 		console.error(`[MaiaCity] Failed to load vibe ${vibeKey}:`, error);
 		currentVibe = null;

@@ -1,0 +1,43 @@
+{
+  "$schema": "@maia/schema/state",
+  "$id": "@maia/my-data/state/vibe",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "on": {
+        "SELECT_NAV": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "selectedNavId": "$$navId",
+                "selectedNavItems": {
+                  "$$navId": true
+                }
+              }
+            },
+            {
+              "updateContext": {
+                "selectedRowId": null,
+                "selectedRowItems": {}
+              }
+            }
+          ]
+        },
+        "SELECT_ROW": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "selectedRowId": "$$rowId",
+                "selectedRowItems": {
+                  "$$rowId": true
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}

@@ -36,11 +36,5 @@ export async function createCoStream(accountOrGroup, schemaName, node = null, db
 	assertSchemaValidForCreate(schemaName, 'createCoStream');
 	
 	const meta = createSchemaMeta(schemaName);
-	const costream = group.createStream(meta);
-
-	console.log("✅ CoStream created:", costream.id);
-	console.log("   Schema:", schemaName);
-	console.log("   HeaderMeta:", costream.headerMeta);
-
-	return costream;
+	return group.createStream(meta);
 }

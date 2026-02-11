@@ -977,7 +977,7 @@
       }
     }
   };
-  const comingSoonStyle$1 = {
+  const comingSoonStyle = {
     "$schema": "@maia/schema/style",
     "$id": "@maia/todos/style/coming-soon",
     "components": {
@@ -1026,7 +1026,7 @@
       "DISMISS"
     ]
   };
-  const comingSoonActor$1 = {
+  const comingSoonActor = {
     "$schema": "@maia/schema/actor",
     "$id": "@maia/todos/actor/coming-soon",
     "role": "ui",
@@ -1038,7 +1038,7 @@
     "inbox": "@maia/todos/inbox/coming-soon",
     "messageTypes": []
   };
-  const vibeView$4 = {
+  const vibeView$3 = {
     "$schema": "@maia/schema/view",
     "$id": "@maia/todos/view/vibe",
     "content": {
@@ -1143,7 +1143,7 @@
       }
     }
   };
-  const comingSoonView$1 = {
+  const comingSoonView = {
     "$schema": "@maia/schema/view",
     "$id": "@maia/todos/view/coming-soon",
     "content": {
@@ -1158,7 +1158,7 @@
       ]
     }
   };
-  const vibeContext$4 = {
+  const vibeContext$3 = {
     "$schema": "@maia/schema/context",
     "$id": "@maia/todos/context/vibe",
     "currentView": "@list",
@@ -1185,12 +1185,12 @@
     "toggleButtonText": "✓",
     "deleteButtonText": "✕"
   };
-  const comingSoonContext$1 = {
+  const comingSoonContext = {
     "$schema": "@maia/schema/context",
     "$id": "@maia/todos/context/coming-soon",
     "message": "Coming soon"
   };
-  const vibeState$4 = {
+  const vibeState$3 = {
     "$schema": "@maia/schema/state",
     "$id": "@maia/todos/state/vibe",
     "initial": "idle",
@@ -1312,7 +1312,7 @@
       }
     }
   };
-  const comingSoonState$1 = {
+  const comingSoonState = {
     "$schema": "@maia/schema/state",
     "$id": "@maia/todos/state/coming-soon",
     "initial": "idle",
@@ -1320,7 +1320,7 @@
       "idle": {}
     }
   };
-  const vibeInbox$4 = {
+  const vibeInbox$3 = {
     "$schema": "@maia/schema/inbox",
     "$id": "@maia/todos/inbox/vibe",
     "items": []
@@ -1330,7 +1330,7 @@
     "$id": "@maia/todos/inbox/list",
     "items": []
   };
-  const comingSoonInbox$1 = {
+  const comingSoonInbox = {
     "$schema": "@maia/schema/inbox",
     "$id": "@maia/todos/inbox/coming-soon",
     "items": []
@@ -1341,32 +1341,32 @@
       "@maia/style/brand": masterBrand,
       "@maia/todos/style/brand": brandStyle$3,
       "@maia/todos/style/list": listStyle,
-      "@maia/todos/style/coming-soon": comingSoonStyle$1
+      "@maia/todos/style/coming-soon": comingSoonStyle
     },
     actors: {
       "@maia/todos/actor/vibe": vibeActor$4,
       "@maia/todos/actor/list": listActor,
-      "@maia/todos/actor/coming-soon": comingSoonActor$1
+      "@maia/todos/actor/coming-soon": comingSoonActor
     },
     views: {
-      "@maia/todos/view/vibe": vibeView$4,
+      "@maia/todos/view/vibe": vibeView$3,
       "@maia/todos/view/list": listView,
-      "@maia/todos/view/coming-soon": comingSoonView$1
+      "@maia/todos/view/coming-soon": comingSoonView
     },
     contexts: {
-      "@maia/todos/context/vibe": vibeContext$4,
+      "@maia/todos/context/vibe": vibeContext$3,
       "@maia/todos/context/list": listContext,
-      "@maia/todos/context/coming-soon": comingSoonContext$1
+      "@maia/todos/context/coming-soon": comingSoonContext
     },
     states: {
-      "@maia/todos/state/vibe": vibeState$4,
+      "@maia/todos/state/vibe": vibeState$3,
       "@maia/todos/state/list": listState,
-      "@maia/todos/state/coming-soon": comingSoonState$1
+      "@maia/todos/state/coming-soon": comingSoonState
     },
     inboxes: {
-      "@maia/todos/inbox/vibe": vibeInbox$4,
+      "@maia/todos/inbox/vibe": vibeInbox$3,
       "@maia/todos/inbox/list": listInbox,
-      "@maia/todos/inbox/coming-soon": comingSoonInbox$1
+      "@maia/todos/inbox/coming-soon": comingSoonInbox
     },
     data: {
       todos: [
@@ -1912,7 +1912,7 @@
     "inbox": "@maia/db/inbox/detail",
     "messageTypes": []
   };
-  const vibeView$3 = {
+  const vibeView$2 = {
     "$schema": "@maia/schema/view",
     "$id": "@maia/db/view/vibe",
     "content": {
@@ -2293,7 +2293,7 @@
       ]
     }
   };
-  const vibeContext$3 = {
+  const vibeContext$2 = {
     "$schema": "@maia/schema/context",
     "$id": "@maia/db/context/vibe",
     "navTitle": "MaiaDB",
@@ -2435,7 +2435,7 @@
       "phone": "Phone"
     }
   };
-  const vibeState$3 = {
+  const vibeState$2 = {
     "$schema": "@maia/schema/state",
     "$id": "@maia/db/state/vibe",
     "initial": "idle",
@@ -2507,7 +2507,7 @@
       "idle": {}
     }
   };
-  const vibeInbox$3 = {
+  const vibeInbox$2 = {
     "$schema": "@maia/schema/inbox",
     "$id": "@maia/db/inbox/vibe",
     "cotype": "costream"
@@ -2533,22 +2533,22 @@
       "@maia/db/actor/detail": detailActor$1
     },
     views: {
-      "@maia/db/view/vibe": vibeView$3,
+      "@maia/db/view/vibe": vibeView$2,
       "@maia/db/view/table": tableView,
       "@maia/db/view/detail": detailView$1
     },
     contexts: {
-      "@maia/db/context/vibe": vibeContext$3,
+      "@maia/db/context/vibe": vibeContext$2,
       "@maia/db/context/table": tableContext,
       "@maia/db/context/detail": detailContext$1
     },
     states: {
-      "@maia/db/state/vibe": vibeState$3,
+      "@maia/db/state/vibe": vibeState$2,
       "@maia/db/state/table": tableState,
       "@maia/db/state/detail": detailState$1
     },
     inboxes: {
-      "@maia/db/inbox/vibe": vibeInbox$3,
+      "@maia/db/inbox/vibe": vibeInbox$2,
       "@maia/db/inbox/table": tableInbox,
       "@maia/db/inbox/detail": detailInbox$1
     },
@@ -3299,7 +3299,7 @@
       "ERROR"
     ]
   };
-  const vibeView$2 = {
+  const vibeView$1 = {
     "$schema": "@maia/schema/view",
     "$id": "@maia/sparks/view/vibe",
     "content": {
@@ -3631,7 +3631,7 @@
       ]
     }
   };
-  const vibeContext$2 = {
+  const vibeContext$1 = {
     "$schema": "@maia/schema/context",
     "$id": "@maia/sparks/context/vibe",
     "sparks": {
@@ -3673,7 +3673,7 @@
     "addAgentError": null,
     "addAgentHasError": false
   };
-  const vibeState$2 = {
+  const vibeState$1 = {
     "$schema": "@maia/schema/state",
     "$id": "@maia/sparks/state/vibe",
     "initial": "idle",
@@ -3904,7 +3904,7 @@
       }
     }
   };
-  const vibeInbox$2 = {
+  const vibeInbox$1 = {
     "$schema": "@maia/schema/inbox",
     "$id": "@maia/sparks/inbox/vibe",
     "cotype": "costream"
@@ -3924,19 +3924,19 @@
       "@maia/sparks/actor/detail": detailActor
     },
     views: {
-      "@maia/sparks/view/vibe": vibeView$2,
+      "@maia/sparks/view/vibe": vibeView$1,
       "@maia/sparks/view/detail": detailView
     },
     contexts: {
-      "@maia/sparks/context/vibe": vibeContext$2,
+      "@maia/sparks/context/vibe": vibeContext$1,
       "@maia/sparks/context/detail": detailContext
     },
     states: {
-      "@maia/sparks/state/vibe": vibeState$2,
+      "@maia/sparks/state/vibe": vibeState$1,
       "@maia/sparks/state/detail": detailState
     },
     inboxes: {
-      "@maia/sparks/inbox/vibe": vibeInbox$2,
+      "@maia/sparks/inbox/vibe": vibeInbox$1,
       "@maia/sparks/inbox/detail": detailInbox
     }
   };
@@ -4567,7 +4567,7 @@
       "DISMISS"
     ]
   };
-  const vibeView$1 = {
+  const vibeView = {
     "$schema": "@maia/schema/view",
     "$id": "@maia/chat/view/vibe",
     "content": {
@@ -4720,7 +4720,7 @@
       ]
     }
   };
-  const vibeContext$1 = {
+  const vibeContext = {
     "$schema": "@maia/schema/context",
     "$id": "@maia/chat/context/vibe",
     "conversations": {
@@ -4734,7 +4734,7 @@
     "hasError": false,
     "messageNames": {}
   };
-  const vibeState$1 = {
+  const vibeState = {
     "$schema": "@maia/schema/state",
     "$id": "@maia/chat/state/vibe",
     "initial": "idle",
@@ -4997,7 +4997,7 @@
       }
     }
   };
-  const vibeInbox$1 = {
+  const vibeInbox = {
     "$schema": "@maia/schema/inbox",
     "$id": "@maia/chat/inbox/vibe"
   };
@@ -5010,16 +5010,16 @@
       "@maia/chat/actor/vibe": vibeActor$1
     },
     views: {
-      "@maia/chat/view/vibe": vibeView$1
+      "@maia/chat/view/vibe": vibeView
     },
     contexts: {
-      "@maia/chat/context/vibe": vibeContext$1
+      "@maia/chat/context/vibe": vibeContext
     },
     states: {
-      "@maia/chat/state/vibe": vibeState$1
+      "@maia/chat/state/vibe": vibeState
     },
     inboxes: {
-      "@maia/chat/inbox/vibe": vibeInbox$1
+      "@maia/chat/inbox/vibe": vibeInbox
     }
   };
   const registry$1 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
@@ -5033,9 +5033,9 @@
     "description": "Create and manage vibes with logs viewer",
     "actor": "@maia/creator/actor/vibe"
   };
-  const vibeStyle = {
+  const logsStyle = {
     "$schema": "@maia/schema/style",
-    "$id": "@maia/creator/style/vibe",
+    "$id": "@maia/creator/style/logs",
     "components": {
       "vibeCreatorTitle": {
         "fontFamily": "{typography.fontFamily.heading}",
@@ -5047,13 +5047,7 @@
         "textAlign": "center",
         "width": "100%",
         "letterSpacing": "-0.02em"
-      }
-    }
-  };
-  const logsStyle = {
-    "$schema": "@maia/schema/style",
-    "$id": "@maia/creator/style/logs",
-    "components": {
+      },
       "logs": {
         "padding": "0",
         "margin": "0",
@@ -5238,255 +5232,8 @@
       }
     }
   };
-  const comingSoonStyle = {
-    "$schema": "@maia/schema/style",
-    "$id": "@maia/creator/style/coming-soon",
-    "components": {
-      "comingSoon": {
-        "display": "flex",
-        "flexDirection": "column",
-        "alignItems": "center",
-        "justifyContent": "center",
-        "padding": "{spacing.xl}",
-        "minHeight": "200px"
-      },
-      "comingSoonText": {
-        "fontFamily": "{typography.fontFamily.heading}",
-        "fontSize": "1.2rem",
-        "color": "{colors.marineBlueLight}",
-        "fontStyle": "italic"
-      }
-    }
-  };
-  const vibeActor = {
-    "$schema": "@maia/schema/actor",
-    "$id": "@maia/creator/actor/vibe",
-    "role": "agent",
-    "context": "@maia/creator/context/vibe",
-    "view": "@maia/creator/view/vibe",
-    "state": "@maia/creator/state/vibe",
-    "brand": "@maia/style/brand",
-    "style": "@maia/creator/style/vibe",
-    "inbox": "@maia/creator/inbox/vibe",
-    "messageTypes": [
-      "SWITCH_VIEW"
-    ]
-  };
-  const logsActor = {
-    "$schema": "@maia/schema/actor",
-    "$id": "@maia/creator/actor/logs",
-    "role": "logs",
-    "context": "@maia/creator/context/logs",
-    "view": "@maia/creator/view/logs",
-    "state": "@maia/creator/state/logs",
-    "brand": "@maia/style/brand",
-    "style": "@maia/creator/style/logs",
-    "inbox": "@maia/creator/inbox/logs",
-    "messageTypes": [
-      "RETRY",
-      "DISMISS"
-    ]
-  };
-  const comingSoonActor = {
-    "$schema": "@maia/schema/actor",
-    "$id": "@maia/creator/actor/coming-soon",
-    "role": "ui",
-    "context": "@maia/creator/context/coming-soon",
-    "view": "@maia/creator/view/coming-soon",
-    "state": "@maia/creator/state/coming-soon",
-    "brand": "@maia/style/brand",
-    "style": "@maia/creator/style/coming-soon",
-    "inbox": "@maia/creator/inbox/coming-soon",
-    "messageTypes": []
-  };
-  const vibeView = {
-    "$schema": "@maia/schema/view",
-    "$id": "@maia/creator/view/vibe",
-    "content": {
-      "tag": "div",
-      "class": "stack",
-      "children": [
-        {
-          "tag": "div",
-          "class": "header-section",
-          "children": [
-            {
-              "tag": "h2",
-              "class": "vibe-creator-title",
-              "text": "Vibe Creator"
-            },
-            {
-              "tag": "div",
-              "class": "view-switcher",
-              "children": [
-                {
-                  "tag": "button",
-                  "class": "button-view-switch",
-                  "attrs": {
-                    "data-view": "logs",
-                    "data": {
-                      "active": "$logsButtonActive"
-                    }
-                  },
-                  "text": "$logsViewLabel",
-                  "$on": {
-                    "click": {
-                      "send": "SWITCH_VIEW",
-                      "payload": {
-                        "viewMode": "logs"
-                      }
-                    }
-                  }
-                },
-                {
-                  "tag": "button",
-                  "class": "button-view-switch",
-                  "attrs": {
-                    "data-view": "comingSoon",
-                    "data": {
-                      "active": "$comingSoonButtonActive"
-                    }
-                  },
-                  "text": "$comingSoonViewLabel",
-                  "$on": {
-                    "click": {
-                      "send": "SWITCH_VIEW",
-                      "payload": {
-                        "viewMode": "comingSoon"
-                      }
-                    }
-                  }
-                }
-              ]
-            }
-          ]
-        },
-        {
-          "tag": "main",
-          "class": "content-area",
-          "$slot": "$currentView"
-        }
-      ]
-    }
-  };
-  const logsView = {
-    "$schema": "@maia/schema/view",
-    "$id": "@maia/creator/view/logs",
-    "content": {
-      "class": "logs",
-      "attrs": {
-        "data": "log-viewer"
-      },
-      "children": [
-        {
-          "tag": "div",
-          "class": "log-entries",
-          "$each": {
-            "items": "$messages",
-            "template": {
-              "class": "log-entry-container",
-              "children": [
-                {
-                  "tag": "div",
-                  "class": "log-entry",
-                  "attrs": {
-                    "data": {
-                      "eventType": "$$type",
-                      "processed": "$$processed"
-                    }
-                  },
-                  "children": [
-                    {
-                      "tag": "span",
-                      "class": "log-type",
-                      "text": "$$type"
-                    },
-                    {
-                      "tag": "span",
-                      "class": "log-source",
-                      "children": [
-                        {
-                          "tag": "span",
-                          "class": "log-source-role",
-                          "text": "$$fromRole"
-                        },
-                        {
-                          "tag": "span",
-                          "class": "log-source-id",
-                          "text": "$$fromId"
-                        }
-                      ]
-                    },
-                    {
-                      "tag": "span",
-                      "class": "log-target",
-                      "children": [
-                        {
-                          "tag": "span",
-                          "class": "log-target-role",
-                          "text": "$$recipient"
-                        },
-                        {
-                          "tag": "span",
-                          "class": "log-target-id",
-                          "text": "$$targetId"
-                        }
-                      ]
-                    },
-                    {
-                      "tag": "details",
-                      "class": "log-payload-details",
-                      "children": [
-                        {
-                          "tag": "summary",
-                          "class": "log-payload-toggle",
-                          "text": "$payloadLabel"
-                        },
-                        {
-                          "tag": "pre",
-                          "class": "log-payload",
-                          "text": "$$payload"
-                        }
-                      ]
-                    }
-                  ]
-                }
-              ]
-            }
-          }
-        }
-      ]
-    }
-  };
-  const comingSoonView = {
-    "$schema": "@maia/schema/view",
-    "$id": "@maia/creator/view/coming-soon",
-    "content": {
-      "tag": "div",
-      "class": "coming-soon",
-      "children": [
-        {
-          "tag": "p",
-          "class": "coming-soon-text",
-          "text": "$message"
-        }
-      ]
-    }
-  };
-  const vibeContext = {
-    "$schema": "@maia/schema/context",
-    "$id": "@maia/creator/context/vibe",
-    "currentView": "@logs",
-    "viewMode": "logs",
-    "logsButtonActive": true,
-    "comingSoonButtonActive": false,
-    "logsViewLabel": "Logs",
-    "comingSoonViewLabel": "Soon",
-    "@actors": {
-      "logs": "@maia/creator/actor/logs",
-      "comingSoon": "@maia/creator/actor/coming-soon"
-    }
-  };
+  const vibeActor = { "$schema": "@maia/schema/actor", "$id": "@maia/creator/actor/vibe", "role": "agent", "context": "@maia/creator/context/logs", "view": "@maia/creator/view/logs", "state": "@maia/creator/state/logs", "brand": "@maia/style/brand", "style": "@maia/creator/style/logs", "inbox": "@maia/creator/inbox/logs", "messageTypes": ["RETRY", "DISMISS"] };
+  const logsView = { "$schema": "@maia/schema/view", "$id": "@maia/creator/view/logs", "content": { "tag": "div", "class": "stack", "children": [{ "tag": "h2", "class": "vibe-creator-title", "text": "Vibe Creator" }, { "tag": "div", "class": "logs", "attrs": { "data": "log-viewer" }, "children": [{ "tag": "div", "class": "log-entries", "$each": { "items": "$messages", "template": { "class": "log-entry-container", "children": [{ "tag": "div", "class": "log-entry", "attrs": { "data": { "eventType": "$$type", "processed": "$$processed" } }, "children": [{ "tag": "span", "class": "log-type", "text": "$$type" }, { "tag": "span", "class": "log-source", "children": [{ "tag": "span", "class": "log-source-role", "text": "$$fromRole" }, { "tag": "span", "class": "log-source-id", "text": "$$fromId" }] }, { "tag": "span", "class": "log-target", "children": [{ "tag": "span", "class": "log-target-role", "text": "$$recipient" }, { "tag": "span", "class": "log-target-id", "text": "$$targetId" }] }, { "tag": "details", "class": "log-payload-details", "children": [{ "tag": "summary", "class": "log-payload-toggle", "text": "$payloadLabel" }, { "tag": "pre", "class": "log-payload", "text": "$$payload" }] }] }] } } }] }] } };
   const logsContext = {
     "$schema": "@maia/schema/context",
     "$id": "@maia/creator/context/logs",
@@ -5504,68 +5251,6 @@
       }
     },
     "payloadLabel": "payload"
-  };
-  const comingSoonContext = {
-    "$schema": "@maia/schema/context",
-    "$id": "@maia/creator/context/coming-soon",
-    "message": "Coming soon"
-  };
-  const vibeState = {
-    "$schema": "@maia/schema/state",
-    "$id": "@maia/creator/state/vibe",
-    "initial": "idle",
-    "states": {
-      "idle": {
-        "on": {
-          "SWITCH_VIEW": {
-            "target": "idle",
-            "actions": [
-              {
-                "updateContext": {
-                  "viewMode": "$$viewMode"
-                }
-              },
-              {
-                "updateContext": {
-                  "currentView": {
-                    "$if": {
-                      "condition": {
-                        "$eq": [
-                          "$$viewMode",
-                          "logs"
-                        ]
-                      },
-                      "then": "@logs",
-                      "else": "@comingSoon"
-                    }
-                  }
-                }
-              },
-              {
-                "updateContext": {
-                  "logsButtonActive": {
-                    "$eq": [
-                      "$$viewMode",
-                      "logs"
-                    ]
-                  }
-                }
-              },
-              {
-                "updateContext": {
-                  "comingSoonButtonActive": {
-                    "$eq": [
-                      "$$viewMode",
-                      "comingSoon"
-                    ]
-                  }
-                }
-              }
-            ]
-          }
-        }
-      }
-    }
   };
   const logsState = {
     "$schema": "@maia/schema/state",
@@ -5604,61 +5289,31 @@
       }
     }
   };
-  const comingSoonState = {
-    "$schema": "@maia/schema/state",
-    "$id": "@maia/creator/state/coming-soon",
-    "initial": "idle",
-    "states": {
-      "idle": {}
-    }
-  };
-  const vibeInbox = {
-    "$schema": "@maia/schema/inbox",
-    "$id": "@maia/creator/inbox/vibe",
-    "items": []
-  };
   const logsInbox = {
     "$schema": "@maia/schema/inbox",
     "$id": "@maia/creator/inbox/logs",
-    "items": []
-  };
-  const comingSoonInbox = {
-    "$schema": "@maia/schema/inbox",
-    "$id": "@maia/creator/inbox/coming-soon",
     "items": []
   };
   const CreatorVibeRegistry = {
     vibe: creatorVibe,
     styles: {
       "@maia/style/brand": masterBrand,
-      "@maia/creator/style/vibe": vibeStyle,
-      "@maia/creator/style/logs": logsStyle,
-      "@maia/creator/style/coming-soon": comingSoonStyle
+      "@maia/creator/style/logs": logsStyle
     },
     actors: {
-      "@maia/creator/actor/vibe": vibeActor,
-      "@maia/creator/actor/logs": logsActor,
-      "@maia/creator/actor/coming-soon": comingSoonActor
+      "@maia/creator/actor/vibe": vibeActor
     },
     views: {
-      "@maia/creator/view/vibe": vibeView,
-      "@maia/creator/view/logs": logsView,
-      "@maia/creator/view/coming-soon": comingSoonView
+      "@maia/creator/view/logs": logsView
     },
     contexts: {
-      "@maia/creator/context/vibe": vibeContext,
-      "@maia/creator/context/logs": logsContext,
-      "@maia/creator/context/coming-soon": comingSoonContext
+      "@maia/creator/context/logs": logsContext
     },
     states: {
-      "@maia/creator/state/vibe": vibeState,
-      "@maia/creator/state/logs": logsState,
-      "@maia/creator/state/coming-soon": comingSoonState
+      "@maia/creator/state/logs": logsState
     },
     inboxes: {
-      "@maia/creator/inbox/vibe": vibeInbox,
-      "@maia/creator/inbox/logs": logsInbox,
-      "@maia/creator/inbox/coming-soon": comingSoonInbox
+      "@maia/creator/inbox/logs": logsInbox
     },
     data: {}
   };

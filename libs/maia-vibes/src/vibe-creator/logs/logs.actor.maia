@@ -1,0 +1,15 @@
+{
+  "$schema": "@maia/schema/actor",
+  "$id": "@maia/vibe-creator/actor/logs",
+  "role": "logs",
+  "context": "@maia/vibe-creator/context/logs",
+  "view": "@maia/vibe-creator/view/logs",
+  "state": "@maia/vibe-creator/state/logs",
+  "brand": "@maia/style/brand",
+  "style": "@maia/vibe-creator/style/logs",
+  "inbox": "@maia/vibe-creator/inbox/logs",
+  "messageTypes": [
+    "RETRY",
+    "DISMISS"
+  ]
+}

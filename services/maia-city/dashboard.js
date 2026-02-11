@@ -330,9 +330,9 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 	// This ensures we don't have multiple vibe containers stacked
 	const app = document.getElementById("app");
 	if (app) {
-		// Find and remove any existing vibe containers
 		const existingContainers = app.querySelectorAll('.vibe-container');
 		for (const container of existingContainers) {
+			if (maia?.actorEngine) maia.actorEngine.destroyActorsForContainer(container);
 			container.remove();
 		}
 	}

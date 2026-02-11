@@ -4,6 +4,8 @@
  * Provides functions for extracting CoValue data in normalized and flat formats.
  */
 
+import { ensureCoValueLoaded } from './collection-helpers.js';
+
 /**
  * Extract CoValue data from CoValueCore and normalize (match IndexedDB format)
  * @param {Object} backend - Backend instance
@@ -511,6 +513,48 @@ export function extractCoValueDataFlat(backend, coValueCore, schemaHint = null) 
   }
   
   return fallbackResult;
+}
+
+/**
+ * Shallow resolve a single co-id: load CoValue and return raw data (nested co-ids stay as strings).
+ * Used for map-driven on-demand resolution - only loads this CoValue, no recursive resolution.
+ * Content-addressable: lookup by co-id via backend.
+ * @param {Object} backend - Backend instance
+ * @param {string} coId - Co-id to resolve
+ * @param {Object} options - Options { timeoutMs }
+ * @param {Set<string>} visited - Set of already visited co-ids (prevents circular references)
+ * @returns {Promise<Object>} Raw CoValue data with nested co-ids as strings, or { id: coId } on error/circular
+ */
+export async function resolveCoIdShallow(backend, coId, options = {}, visited = new Set()) {
+  const { timeoutMs = 2000 } = options;
+  if (visited.has(coId)) return { id: coId };
+  visited.add(coId);
+  try {
+    await ensureCoValueLoaded(backend, coId, { waitForAvailable: true, timeoutMs });
+    const coValueCore = backend.getCoValue(coId);
+    if (!coValueCore || !backend.isAvailable(coValueCore)) return { id: coId };
+    let data = extractCoValueDataFlat(backend, coValueCore);
+    data = { ...data, id: data.id || coId };
+    const header = backend.getHeader(coValueCore);
+    const ruleset = coValueCore.ruleset || header?.ruleset;
+    if (ruleset && ruleset.type === 'group') {
+      const groupContent = backend.getCurrentContent(coValueCore);
+      if (groupContent && typeof groupContent.addMember === 'function') {
+        const { getGroupInfoFromGroup } = await import('../groups/groups.js');
+        const groupInfo = getGroupInfoFromGroup(groupContent);
+        if (groupInfo) {
+          Object.assign(data, {
+            accountMembers: groupInfo.accountMembers || [],
+            groupMembers: groupInfo.groupMembers || [],
+            id: groupInfo.groupId || data.id
+          });
+        }
+      }
+    }
+    return data;
+  } catch (err) {
+    return { id: coId };
+  }
 }
 
 /**

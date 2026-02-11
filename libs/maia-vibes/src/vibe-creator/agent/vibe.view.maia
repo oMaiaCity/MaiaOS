@@ -1,6 +1,6 @@
 {
   "$schema": "@maia/schema/view",
-  "$id": "@maia/creator/view/vibe",
+  "$id": "@maia/vibe-creator/view/vibe",
   "content": {
     "tag": "div",
     "class": "stack",

@@ -86,8 +86,7 @@ async function ensureOsCoMap(backend, spark) {
     }
   }
 
-  // spark.os should exist from migration - if not, cannot create here (no spark ref)
-  console.warn('[SchemaIndexManager] spark.os not found - migration should have created it');
+  // spark.os not ready (expected during bootstrap before scaffold creates account.sparks)
   return null;
 }
 
@@ -328,9 +327,7 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
   const indexesCoMap = await ensureIndexesCoMap(backend);
   
   if (!indexesCoMap) {
-    // spark.os.indexes exists but couldn't be loaded - skip indexing for now
-    // Will be indexed when spark.os.indexes becomes available
-    console.warn(`[SchemaIndexManager] Cannot create index colist - spark.os.indexes not available`);
+    // spark.os.indexes not ready (expected during bootstrap) - skip indexing for now
     return null;
   }
 
@@ -645,8 +642,7 @@ async function ensureSchemataRegistry(backend) {
   const osCoMap = await ensureOsCoMap(backend);
   
   if (!osCoMap) {
-    // spark.os exists but couldn't be loaded - skip creating schematas registry
-    console.warn(`[SchemaIndexManager] Cannot create schematas registry - spark.os not available`);
+    // spark.os not ready (expected during bootstrap) - skip creating schematas registry
     return null;
   }
 

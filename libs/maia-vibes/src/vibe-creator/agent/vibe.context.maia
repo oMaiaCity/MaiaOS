@@ -1,14 +1,14 @@
 {
   "$schema": "@maia/schema/context",
-  "$id": "@maia/creator/context/vibe",
+  "$id": "@maia/vibe-creator/context/vibe",
   "currentView": "@logs",
   "viewMode": "logs",
   "logsButtonActive": true,
   "comingSoonButtonActive": false,
   "logsViewLabel": "Logs",
-  "comingSoonViewLabel": "Soon",
+  "comingSoonViewLabel": "Coming Soon",
   "@actors": {
-    "logs": "@maia/creator/actor/logs",
-    "comingSoon": "@maia/creator/actor/coming-soon"
+    "logs": "@maia/vibe-creator/actor/logs",
+    "comingSoon": "@maia/vibe-creator/actor/coming-soon"
   }
 }

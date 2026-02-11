@@ -48,11 +48,7 @@ export async function createCoMap(accountOrGroup, init = {}, schemaName, node = 
 	// Special case: @metaSchema (metaschema) uses hardcoded "@metaSchema" reference (no validation needed)
 	if (schemaName === EXCEPTION_SCHEMAS.META_SCHEMA) {
 		const meta = { $schema: EXCEPTION_SCHEMAS.META_SCHEMA };
-		const comap = group.createMap(init, meta);
-		console.log("✅ CoMap created (@metaSchema):", comap.id);
-		console.log("   Schema:", schemaName);
-		console.log("   HeaderMeta:", comap.headerMeta);
-		return comap;
+		return group.createMap(init, meta);
 	}
 	assertSchemaValidForCreate(schemaName, 'createCoMap');
 	

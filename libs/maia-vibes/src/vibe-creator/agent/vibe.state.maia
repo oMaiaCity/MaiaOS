@@ -1,6 +1,6 @@
 {
   "$schema": "@maia/schema/state",
-  "$id": "@maia/creator/state/vibe",
+  "$id": "@maia/vibe-creator/state/vibe",
   "initial": "idle",
   "states": {
     "idle": {

@@ -799,30 +799,13 @@ export class MaiaOS {
       throw new Error(`[MaiaOS] Actor with co-id ${actorCoId} not found in database. The actor may not have been seeded correctly.`);
     }
     
-    // Check if actors already exist for this vibe (reuse-based lifecycle)
-    // IMPORTANT: Only reuse if the actors are actually for THIS vibe's actor co-id
-    // This prevents reusing wrong actors when switching between vibes
+    // Destroy any existing actors for this vibe (destroy-on-switch lifecycle)
+    // Ensures cleanup of subscriptions and prevents memory leaks
     if (vibeKey) {
-      const existingActorIds = this.actorEngine.getActorsForVibe(vibeKey);
-      if (existingActorIds && existingActorIds.size > 0) {
-        // Get the first actor ID and verify it matches this vibe's actor co-id
-        const firstActorId = Array.from(existingActorIds)[0];
-        const firstActor = this.actorEngine.actors.get(firstActorId);
-        const existingActorCoId = firstActor?.config?.id || 'unknown';
-        if (firstActor && firstActor.config && firstActor.config.id === actorCoId) {
-          // Actors match - reuse existing actors - reattach to new container
-          const rootActor = await this.actorEngine.reattachActorsForVibe(vibeKey, container);
-          if (rootActor) {
-            return { vibe, actor: rootActor };
-          }
-        } else {
-          // Actors don't match - detach old ones and create new
-          this.actorEngine.detachActorsForVibe(vibeKey);
-        }
-      }
+      this.actorEngine.destroyActorsForVibe(vibeKey);
     }
     
-    // First time loading or no vibeKey - create actors normally
+    // Create actors
     // Use universal API directly - actorSchemaCoId already resolved above
     // Reuse actorStore that was already loaded for verification
     const actorConfig = actorStore.value;

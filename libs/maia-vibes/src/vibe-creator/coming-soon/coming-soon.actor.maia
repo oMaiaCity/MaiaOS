@@ -1,0 +1,12 @@
+{
+  "$schema": "@maia/schema/actor",
+  "$id": "@maia/vibe-creator/actor/coming-soon",
+  "role": "ui",
+  "context": "@maia/vibe-creator/context/coming-soon",
+  "view": "@maia/vibe-creator/view/coming-soon",
+  "state": "@maia/vibe-creator/state/coming-soon",
+  "brand": "@maia/style/brand",
+  "style": "@maia/vibe-creator/style/coming-soon",
+  "inbox": "@maia/vibe-creator/inbox/coming-soon",
+  "messageTypes": []
+}

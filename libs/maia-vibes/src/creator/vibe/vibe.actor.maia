@@ -1,14 +1,1 @@
-{
-  "$schema": "@maia/schema/actor",
-  "$id": "@maia/creator/actor/vibe",
-  "role": "agent",
-  "context": "@maia/creator/context/vibe",
-  "view": "@maia/creator/view/vibe",
-  "state": "@maia/creator/state/vibe",
-  "brand": "@maia/style/brand",
-  "style": "@maia/creator/style/vibe",
-  "inbox": "@maia/creator/inbox/vibe",
-  "messageTypes": [
-    "SWITCH_VIEW"
-  ]
-}
+{"$schema":"@maia/schema/actor","$id":"@maia/creator/actor/vibe","role":"agent","context":"@maia/creator/context/logs","view":"@maia/creator/view/logs","state":"@maia/creator/state/logs","brand":"@maia/style/brand","style":"@maia/creator/style/logs","inbox":"@maia/creator/inbox/logs","messageTypes":["RETRY","DISMISS"]}

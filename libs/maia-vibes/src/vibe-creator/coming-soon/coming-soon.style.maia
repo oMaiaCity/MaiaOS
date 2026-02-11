@@ -1,6 +1,6 @@
 {
   "$schema": "@maia/schema/style",
-  "$id": "@maia/creator/style/coming-soon",
+  "$id": "@maia/vibe-creator/style/coming-soon",
   "components": {
     "comingSoon": {
       "display": "flex",

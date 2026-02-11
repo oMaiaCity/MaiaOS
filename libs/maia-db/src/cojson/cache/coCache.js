@@ -47,6 +47,7 @@ export class CoCache {
 
 		// Create new entry via factory
 		const entry = factory();
+		this._maybeWarnSubscriptionBuildup();
 		
 		// Store in cache
 		this.cache.set(key, entry);
@@ -236,9 +237,45 @@ export class CoCache {
 
 		const timerId = setTimeout(() => {
 			this.destroy(key);
+			this._maybeLogStats();
 		}, this.cleanupTimeout);
 
 		this.cleanupTimers.set(key, timerId);
+	}
+
+	/**
+	 * Debug: Log cache stats when window._maiaDebugSubscriptions is true
+	 * Helps diagnose subscription buildup / vibe freeze issues
+	 * @private
+	 */
+	_maybeLogStats() {
+		if (typeof window !== 'undefined' && window._maiaDebugSubscriptions) {
+			const subs = Array.from(this.cache.keys()).filter(k => k.startsWith('subscription:'));
+			const stores = Array.from(this.cache.keys()).filter(k => k.startsWith('store:'));
+			console.debug('[CoCache]', {
+				cacheSize: this.cache.size,
+				subscriptions: subs.length,
+				stores: stores.length,
+				pendingCleanups: this.cleanupTimers.size
+			});
+		}
+	}
+
+	/**
+	 * Debug: Warn when subscription count exceeds threshold (indicates possible leak)
+	 * Set window._maiaDebugSubscriptions = true; threshold via window._maiaDebugSubscriptionThreshold (default 80)
+	 * Throttled to once per 10s to avoid spam.
+	 * @private
+	 */
+	_maybeWarnSubscriptionBuildup() {
+		if (typeof window === 'undefined' || !window._maiaDebugSubscriptions) return;
+		const subs = Array.from(this.cache.keys()).filter(k => k.startsWith('subscription:'));
+		const threshold = window._maiaDebugSubscriptionThreshold ?? 80;
+		if (subs.length < threshold) return;
+		const now = Date.now();
+		if (this._lastBuildupWarn && now - this._lastBuildupWarn < 10000) return;
+		this._lastBuildupWarn = now;
+		console.warn(`[CoCache] Subscription buildup: ${subs.length} active (threshold ${threshold}). May cause freeze on tab switch.`);
 	}
 
 	/**
@@ -322,6 +359,21 @@ export class CoCache {
 	 */
 	get size() {
 		return this.cache.size;
+	}
+
+	/**
+	 * Debug: Get cache stats for subscription/freeze investigation
+	 * Call via: maia.dbEngine.backend.subscriptionCache.getStats()
+	 * @returns {{ cacheSize: number, subscriptions: number, stores: number, pendingCleanups: number }}
+	 */
+	getStats() {
+		const keys = Array.from(this.cache.keys());
+		return {
+			cacheSize: this.cache.size,
+			subscriptions: keys.filter(k => k.startsWith('subscription:')).length,
+			stores: keys.filter(k => k.startsWith('store:')).length,
+			pendingCleanups: this.cleanupTimers.size
+		};
 	}
 
 	/**

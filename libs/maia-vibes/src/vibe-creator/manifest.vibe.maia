@@ -1,0 +1,7 @@
+{
+  "$schema": "@maia/schema/vibe",
+  "$id": "@maia/vibe/vibe-creator",
+  "name": "Vibe Creator",
+  "description": "Create and manage vibes with logs viewer",
+  "actor": "@maia/vibe-creator/actor/vibe"
+}

@@ -1,0 +1,19 @@
+{
+  "$schema": "@maia/schema/actor",
+  "$id": "@maia/maia/actor/vibe",
+  "role": "agent",
+  "context": "@maia/maia/context/vibe",
+  "view": "@maia/maia/view/vibe",
+  "state": "@maia/maia/state/vibe",
+  "brand": "@maia/maia/style/brand",
+  "inbox": "@maia/maia/inbox/vibe",
+  "messageTypes": [
+    "SEND_MESSAGE",
+    "UPDATE_INPUT",
+    "RENDER_COMPLETE",
+    "SUCCESS",
+    "ERROR",
+    "RETRY",
+    "DISMISS"
+  ]
+}
