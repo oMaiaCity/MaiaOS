@@ -1,5 +1,4 @@
-import sparksTool from '@MaiaOS/tools/sparks/sparks.tool.js';
-import sparksToolDef from '@MaiaOS/tools/sparks/sparks.tool.maia';
+import { getTool } from '@MaiaOS/tools';
 
 export const config = {
   version: '1.0.0',
@@ -9,10 +8,12 @@ export const config = {
 };
 
 export async function register(registry) {
+  const tool = getTool('sparks/sparks');
+  if (!tool) return;
   const toolEngine = registry._getToolEngine('SparksModule');
   toolEngine.tools.set('@sparks', {
-    definition: sparksToolDef,
-    function: sparksTool,
+    definition: tool.definition,
+    function: tool.function,
     namespacePath: 'sparks/sparks'
   });
   registry.registerModule('sparks', { config, query: (q) => q === 'tools' ? ['@sparks'] : null }, {

@@ -1,5 +1,4 @@
-import memoryTool from '@MaiaOS/tools/memory/memory.tool.js';
-import memoryToolDef from '@MaiaOS/tools/memory/memory.tool.maia';
+import { getTool } from '@MaiaOS/tools';
 
 export const config = {
   version: '1.0.0',
@@ -9,10 +8,12 @@ export const config = {
 };
 
 export async function register(registry) {
+  const tool = getTool('memory/memory');
+  if (!tool) return;
   const toolEngine = registry._getToolEngine('MemoryModule');
   toolEngine.tools.set('@memory', {
-    definition: memoryToolDef,
-    function: memoryTool,
+    definition: tool.definition,
+    function: tool.function,
     namespacePath: 'memory/memory'
   });
   registry.registerModule('memory', { config, query: (q) => q === 'tools' ? ['@memory'] : null }, {

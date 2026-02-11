@@ -1,5 +1,4 @@
-import dbTool from '@MaiaOS/tools/db/db.tool.js';
-import dbToolDef from '@MaiaOS/tools/db/db.tool.maia';
+import { getTool } from '@MaiaOS/tools';
 
 export const config = {
   version: '1.0.0',
@@ -9,10 +8,12 @@ export const config = {
 };
 
 export async function register(registry) {
+  const tool = getTool('db/db');
+  if (!tool) return;
   const toolEngine = registry._getToolEngine('DBModule');
   toolEngine.tools.set('@db', {
-    definition: dbToolDef,
-    function: dbTool,
+    definition: tool.definition,
+    function: tool.function,
     namespacePath: 'db/db'
   });
   registry.registerModule('db', { config, query: (q) => q === 'tools' ? ['@db'] : null }, {

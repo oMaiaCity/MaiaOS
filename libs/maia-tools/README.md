@@ -21,7 +21,7 @@ This package contains all tool definitions and implementations for MaiaOS. Tools
 import { getTool, getAllToolDefinitions } from '@MaiaOS/tools';
 
 // Get a specific tool
-const tool = getTool('core/noop');
+const tool = getTool('core/publishMessage');
 // Returns: { definition: {...}, function: execute(...) }
 
 // Get all tool definitions
@@ -46,12 +46,6 @@ src/
 Get a tool by its namespace path (e.g., `"core/noop"`).
 
 Returns: `{ definition: Object, function: Function }` or `null`
-
-### `getToolsByNamespace(namespace)`
-
-Get all tools for a given namespace (e.g., `"core"`).
-
-Returns: `Object` mapping namespace paths to tools
 
 ### `getAllToolDefinitions()`
 

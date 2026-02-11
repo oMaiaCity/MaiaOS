@@ -20,9 +20,7 @@ export async function getIndexedDBStorageAdapter() {
 	try {
 		const storage = await getIndexedDBStorage();
 		return storage;
-	} catch (error) {
-		console.warn("⚠️  [STORAGE] IndexedDB unavailable, running without persistence:", error);
-		console.warn("   This may happen in incognito mode or unsupported browsers");
+	} catch {
 		return undefined;
 	}
 }

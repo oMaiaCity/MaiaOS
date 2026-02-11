@@ -1,155 +1,81 @@
 /**
  * Sync Server Implementation
- * 
- * Adapted from jazz-run's startSyncServer for Bun.
- * Uses Bun's native WebSocket API instead of Node.js ws library.
- * Supports PGlite (PostgreSQL) for persistent storage.
- * 
- * DRY: Uses kernel bundle for account handling (single source of truth)
- * The sync server is effectively an agent account that participates in the system.
- * Sync service uses loadOrCreateAgentAccount from kernel - no passkey/human mode.
+ * Bun WebSocket handler for cojson LocalNode sync.
  */
 
 import { createWebSocketPeer } from 'cojson-transport-ws';
-// Import from kernel bundle (workspace import in dev, bundle in Docker)
-// In dev: workspace import resolves to @MaiaOS/kernel
-// In Docker: bundle is copied to node_modules/@MaiaOS/kernel/dist/ and package.json exports handle it
 import { loadOrCreateAgentAccount } from '@MaiaOS/kernel';
 
-/**
- * Create a sync server handler for Bun.serve()
- * 
- * DRY: Uses @MaiaOS/self for account handling (single source of truth)
- * The sync server is an agent account that participates in the CoJSON network.
- * 
- * @param {Object} options - Server options
- * @param {boolean} [options.inMemory=true] - Use in-memory storage (default: true)
- * @param {string} [options.dbPath] - Database path for PGlite (ignored if inMemory=true)
- * @param {string} [options.accountID] - Sync server account ID (from env var or generated)
- * @param {string} [options.agentSecret] - Sync server agent secret (from env var or generated)
- * @returns {Promise<Object>} WebSocket handler object for Bun.serve()
- */
 export async function createSyncServer(options = {}) {
-  const { 
-    inMemory = true, 
-    dbPath,
-    accountID: providedAccountID,
-    agentSecret: providedAgentSecret
-  } = options;
-  
-  // Get sync storage type from env (for passing to account functions)
-  const SYNC_STORAGE = (typeof process !== 'undefined' && process.env?.SYNC_MAIA_STORAGE) || 'pglite';
+  const { inMemory = true, dbPath, accountID: providedAccountID, agentSecret: providedAgentSecret } = options;
 
-  // Get sync server credentials from options or service-specific environment variables
-  // Priority: options > SYNC_MAIA_* env vars > error (no fallback generation)
-  const accountID = providedAccountID || 
-                    (typeof process !== 'undefined' && process.env?.SYNC_MAIA_AGENT_ACCOUNT_ID) ||
-                    null;
-  const agentSecret = providedAgentSecret ||
-                      (typeof process !== 'undefined' && process.env?.SYNC_MAIA_AGENT_SECRET) ||
-                      null;
+  const accountID = providedAccountID || (typeof process !== 'undefined' && process.env?.SYNC_MAIA_AGENT_ACCOUNT_ID) || null;
+  const agentSecret = providedAgentSecret || (typeof process !== 'undefined' && process.env?.SYNC_MAIA_AGENT_SECRET) || null;
 
-  // Load or create sync server account using centralized @MaiaOS/self
-  // DRY: Single source of truth for all account handling
-  // The sync server is an agent account that participates in the CoJSON network
-  // Note: Sync server doesn't connect to other sync servers (it IS the sync server)
-  // STRICT: Credentials MUST be provided via env vars - no fallback generation
-  
-  // Require credentials from service-specific environment variables (explicit configuration only)
   if (!accountID || !agentSecret) {
     throw new Error(
       'Sync server requires SYNC_MAIA_AGENT_ACCOUNT_ID and SYNC_MAIA_AGENT_SECRET environment variables. ' +
-      'Run `bun agent:generate --service sync` to generate credentials, then set SYNC_MAIA_AGENT_ACCOUNT_ID and SYNC_MAIA_AGENT_SECRET in your .env file.'
+      'Run `bun agent:generate --service sync` to generate credentials.'
     );
   }
-  
-  // Load or create sync server account using universal DRY interface
-  console.log('[sync-server] Loading account…');
-  const { node: localNode, account } = await loadOrCreateAgentAccount({
+
+  const { node: localNode } = await loadOrCreateAgentAccount({
     accountID,
     agentSecret,
-    syncDomain: null, // Sync server doesn't connect to other sync servers
+    syncDomain: null,
     servicePrefix: 'SYNC',
     dbPath: (!inMemory && dbPath) ? dbPath : undefined,
     inMemory,
     createName: 'Maia Sync Server',
   });
-  console.log('[sync-server] ✓ Account ready');
-  
-  // Storage is handled internally by loadAgentAccount/createAgentAccount
-  // They use SYNC_MAIA_STORAGE env var (defaults to pglite) via servicePrefix
-  // Storage configuration (inMemory, dbPath) is determined by the storage adapter
-  
-  // Enable garbage collector
+
   localNode.enableGarbageCollector();
 
-  console.log('[sync-server] Initialized sync server');
-  console.log(`[sync-server] LocalNode ready for peer connections`);
+  function adaptBunWebSocket(ws, clientId) {
+    const messageListeners = [];
+    const openListeners = [];
+    const adaptedWs = {
+      ...ws,
+      addEventListener(type, listener) {
+        if (type === 'message') messageListeners.push(listener);
+        else if (type === 'open') openListeners.push(listener);
+      },
+      removeEventListener(type, listener) {
+        const arr = type === 'message' ? messageListeners : type === 'open' ? openListeners : [];
+        const i = arr.indexOf(listener);
+        if (i > -1) arr.splice(i, 1);
+      },
+      send: (data) => ws.send(data),
+      close: (code, reason) => ws.close(code, reason),
+      get readyState() { return ws.readyState; }
+    };
+    ws._messageListeners = messageListeners;
+    ws._adaptedWs = adaptedWs;
+    return { adaptedWs, messageListeners, openListeners };
+  }
 
-  // Return WebSocket handler for Bun.serve()
-  return {
-    /**
-     * Handle WebSocket open event
-     * Called when a client connects
-     * OPTIMIZED: Minimize synchronous operations, defer non-critical setup
-     */
-    async open(ws) {
-      const connectionStartTime = performance.now();
-      const clientId = `client_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-      console.log(`[sync-server] Client connected: ${clientId}`);
-
-      // Minimal adapter: Add addEventListener support for createWebSocketPeer
-      // Bun's WebSocket doesn't have addEventListener, so we need to adapt it
-      const messageListeners = [];
-      const openListeners = [];
-      const closeListeners = [];
-      const errorListeners = [];
-
-      const adaptedWs = {
-        ...ws,
-        addEventListener(type, listener) {
-          if (type === 'message') {
-            messageListeners.push(listener);
-          } else if (type === 'open') {
-            openListeners.push(listener);
-          } else if (type === 'close') {
-            closeListeners.push(listener);
-          } else if (type === 'error') {
-            errorListeners.push(listener);
-          }
-        },
-        removeEventListener(type, listener) {
-          if (type === 'message') {
-            const index = messageListeners.indexOf(listener);
-            if (index > -1) messageListeners.splice(index, 1);
-          } else if (type === 'open') {
-            const index = openListeners.indexOf(listener);
-            if (index > -1) openListeners.splice(index, 1);
-          } else if (type === 'close') {
-            const index = closeListeners.indexOf(listener);
-            if (index > -1) closeListeners.splice(index, 1);
-          } else if (type === 'error') {
-            const index = errorListeners.indexOf(listener);
-            if (index > -1) errorListeners.splice(index, 1);
-          }
-        },
-        send(data) {
-          ws.send(data);
-        },
-        close(code, reason) {
-          ws.close(code, reason);
-        },
-        get readyState() {
-          return ws.readyState;
+  function startPing(ws, clientId) {
+    const sendPing = () => {
+      if (ws.readyState === WebSocket.OPEN) {
+        try {
+          ws.send(JSON.stringify({ type: 'ping', time: Date.now(), dc: 'unknown' }));
+        } catch (e) {
+          clearInterval(interval);
         }
-      };
+      } else {
+        clearInterval(interval);
+      }
+    };
+    const interval = setInterval(sendPing, 1500);
+    sendPing();
+    return interval;
+  }
 
-      // Store listeners on ws for cleanup
-      ws._messageListeners = messageListeners;
-      ws._adaptedWs = adaptedWs;
+  return {
+    async open(ws) {
+      const clientId = `client_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+      const { adaptedWs, messageListeners, openListeners } = adaptBunWebSocket(ws, clientId);
 
-      // Create WebSocket peer IMMEDIATELY (critical path - don't defer)
-      const peerCreationStartTime = performance.now();
       const peer = createWebSocketPeer({
         id: clientId,
         role: 'client',
@@ -157,151 +83,40 @@ export async function createSyncServer(options = {}) {
         expectPings: false,
         batchingByDefault: false,
         deletePeerStateOnClose: true,
-        onSuccess: () => {
-          // Peer ready - no logging needed
-        },
+        onSuccess: () => {},
         onClose: () => {
-          if (ws.data?.pingInterval) {
-            clearInterval(ws.data.pingInterval);
-          }
+          if (ws.data?.pingInterval) clearInterval(ws.data.pingInterval);
         }
       });
-      const peerCreationDuration = performance.now() - peerCreationStartTime;
 
-      // Add peer to sync manager IMMEDIATELY (critical path)
       localNode.syncManager.addPeer(peer);
-      ws.data = { clientId, peer };
+      ws.data = { clientId, peer, pingInterval: startPing(ws, clientId) };
 
-      // Fire open event asynchronously (non-blocking)
       queueMicrotask(() => {
         for (const listener of openListeners) {
-          try {
-            listener({ type: 'open', target: adaptedWs });
-          } catch (e) {
-            console.error(`[sync-server] Error in open listener:`, e);
-          }
+          try { listener({ type: 'open', target: adaptedWs }); } catch (e) { console.error('[sync-server] open listener:', e); }
         }
       });
-
-      // DEFER ping setup (non-critical, can happen after connection is established)
-      // This reduces initial connection delay
-      queueMicrotask(() => {
-        const pinging = setInterval(() => {
-          if (ws.readyState === WebSocket.OPEN) {
-            try {
-              ws.send(JSON.stringify({
-                type: 'ping',
-                time: Date.now(),
-                dc: 'unknown'
-              }));
-            } catch (e) {
-              console.error(`[sync-server] Error sending ping to ${clientId}:`, e);
-              clearInterval(pinging);
-            }
-          } else {
-            clearInterval(pinging);
-          }
-        }, 1500);
-
-        // Store ping interval on ws.data (after initial setup)
-        ws.data = { ...ws.data, pingInterval: pinging };
-
-        // Send initial ping after setup (non-blocking)
-        if (ws.readyState === WebSocket.OPEN) {
-          try {
-            ws.send(JSON.stringify({
-              type: 'ping',
-              time: Date.now(),
-              dc: 'unknown'
-            }));
-          } catch (e) {
-            console.error(`[sync-server] Error sending initial ping:`, e);
-          }
-        }
-      });
-
-      // Connection setup complete - no logging needed
     },
 
-    /**
-     * Handle WebSocket message event
-     * Called when a message is received from the client
-     * OPTIMIZED: Add performance logging to track response times
-     */
     async message(ws, message) {
-      const messageReceivedTime = performance.now();
-      const clientId = ws.data?.clientId || 'unknown';
-      
-      // Check if this is a load request (cojson-transport-ws handles this internally)
-      // We can't directly intercept load requests, but we can log message processing time
-      const messageProcessingStartTime = performance.now();
-      
-      // Route message to peer's message listeners
-      if (ws._messageListeners && ws._messageListeners.length > 0) {
+      if (ws._messageListeners?.length > 0) {
         const event = { type: 'message', data: message, target: ws._adaptedWs };
         for (const listener of ws._messageListeners) {
-          try {
-            listener(event);
-          } catch (e) {
-            console.error(`[sync-server] Error in message listener:`, e);
-          }
+          try { listener(event); } catch (e) { console.error('[sync-server] message listener:', e); }
         }
       }
-      
-      // Message processing - no logging needed
     },
 
-    /**
-     * Handle WebSocket close event
-     * Called when a client disconnects
-     */
     async close(ws, code, reason) {
-      const clientId = ws.data?.clientId || 'unknown';
-      console.log(`[sync-server] Client disconnected: ${clientId} (code: ${code}, reason: ${reason})`);
-
-      // Clean up ping interval
-      if (ws.data?.pingInterval) {
-        clearInterval(ws.data.pingInterval);
-      }
-
-      // Remove peer from sync manager
+      if (ws.data?.pingInterval) clearInterval(ws.data.pingInterval);
       if (ws.data?.peer) {
-        try {
-          localNode.syncManager.removePeer(ws.data.peer);
-        } catch (e) {
-          console.error(`[sync-server] Error removing peer:`, e);
-        }
-      }
-
-      // Fire close event listeners
-      if (ws._closeListeners) {
-        for (const listener of ws._closeListeners) {
-          try {
-            listener({ type: 'close', code, reason, target: ws._adaptedWs });
-          } catch (e) {
-            console.error(`[sync-server] Error in close listener:`, e);
-          }
-        }
+        try { localNode.syncManager.removePeer(ws.data.peer); } catch (e) { console.error('[sync-server] removePeer:', e); }
       }
     },
 
-    /**
-     * Handle WebSocket error event
-     */
     error(ws, error) {
-      const clientId = ws.data?.clientId || 'unknown';
-      console.error(`[sync-server] WebSocket error for ${clientId}:`, error);
-
-      // Fire error event listeners
-      if (ws._errorListeners) {
-        for (const listener of ws._errorListeners) {
-          try {
-            listener({ type: 'error', error, target: ws._adaptedWs });
-          } catch (e) {
-            console.error(`[sync-server] Error in error listener:`, e);
-          }
-        }
-      }
+      console.error('[sync-server] WebSocket error:', error);
     }
   };
 }

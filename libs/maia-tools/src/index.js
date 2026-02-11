@@ -1,63 +1,34 @@
 /**
  * Tools Registry - Central export for all tool definitions and functions
- * Uses direct JSON imports for definitions
- * 
- * Note: mutation and query tools have been replaced by the @db unified API
  */
 
-// Import tool definitions directly as JSON
 import publishMessageDef from './core/publishMessage.tool.maia';
 import computeMessageNamesDef from './core/computeMessageNames.tool.maia';
 import memoryDef from './memory/memory.tool.maia';
 import aiDef from './ai/ai.tool.maia';
 import sparksDef from './sparks/sparks.tool.maia';
+import dbDef from './db/db.tool.maia';
 
-// Import tool functions
 import publishMessageFn from './core/publishMessage.tool.js';
 import computeMessageNamesFn from './core/computeMessageNames.tool.js';
 import memoryFn from './memory/memory.tool.js';
 import aiFn from './ai/ai.tool.js';
 import sparksFn from './sparks/sparks.tool.js';
+import dbFn from './db/db.tool.js';
 
-/**
- * Tool registry organized by namespace
- */
 export const TOOLS = {
   'core/publishMessage': { definition: publishMessageDef, function: publishMessageFn },
   'core/computeMessageNames': { definition: computeMessageNamesDef, function: computeMessageNamesFn },
   'memory/memory': { definition: memoryDef, function: memoryFn },
   'ai/chat': { definition: aiDef, function: aiFn },
-  'sparks/sparks': { definition: sparksDef, function: sparksFn }
+  'sparks/sparks': { definition: sparksDef, function: sparksFn },
+  'db/db': { definition: dbDef, function: dbFn }
 };
 
-/**
- * Get tool by namespace path
- * @param {string} namespacePath - e.g., "core/noop"
- * @returns {Object|null} Tool definition and function
- */
 export function getTool(namespacePath) {
   return TOOLS[namespacePath] || null;
 }
 
-/**
- * Get all tools for a given namespace
- * @param {string} namespace - e.g., "core", "mutation"
- * @returns {Object} Tools in namespace
- */
-export function getToolsByNamespace(namespace) {
-  const result = {};
-  for (const [path, tool] of Object.entries(TOOLS)) {
-    if (path.startsWith(`${namespace}/`)) {
-      result[path] = tool;
-    }
-  }
-  return result;
-}
-
-/**
- * Get all tool definitions (for seeding into database)
- * @returns {Object} Tool definitions keyed by namespace path
- */
 export function getAllToolDefinitions() {
   const definitions = {};
   for (const [path, tool] of Object.entries(TOOLS)) {
