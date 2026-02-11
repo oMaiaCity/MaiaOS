@@ -1,0 +1,3 @@
+# Exclude workspace symlinks - they resolve to /libs/* in container (ENOENT)
+# The Dockerfile copies libs/* and builds node_modules fresh with bun install
+services/sync/node_modules

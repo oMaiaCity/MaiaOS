@@ -17,30 +17,27 @@ export { TodosVibeRegistry as TodosRegistry } from './todos/registry.js';
 export { DbVibeRegistry as DbRegistry } from './db/registry.js';
 export { SparksVibeRegistry as SparksRegistry } from './sparks/registry.js';
 
-const REGISTRY_IMPORTS = [
-	['./todos/registry.js', 'TodosVibeRegistry'],
-	['./chat/registry.js', 'ChatVibeRegistry'],
-	['./db/registry.js', 'DbVibeRegistry'],
-	['./sparks/registry.js', 'SparksVibeRegistry'],
-	['./creator/registry.js', 'CreatorVibeRegistry'],
+// Static imports - no dynamic import() so bundle works in production (avoids 404→index.html→text/html MIME error)
+import { TodosVibeRegistry } from './todos/registry.js';
+import { ChatVibeRegistry } from './chat/registry.js';
+import { DbVibeRegistry } from './db/registry.js';
+import { SparksVibeRegistry } from './sparks/registry.js';
+import { CreatorVibeRegistry } from './creator/registry.js';
+
+const ALL_REGISTRIES = [
+	TodosVibeRegistry,
+	ChatVibeRegistry,
+	DbVibeRegistry,
+	SparksVibeRegistry,
+	CreatorVibeRegistry,
 ];
 
 /**
- * Automatically discover and import all vibe registries
+ * Return all vibe registries (statically imported - no runtime fetch).
  * @returns {Promise<Array>} Array of vibe registry objects
  */
 export async function getAllVibeRegistries() {
-	const registries = [];
-	for (const [path, name] of REGISTRY_IMPORTS) {
-		try {
-			const m = await import(path);
-			const R = m[name];
-			if (R?.vibe) registries.push(R);
-		} catch (e) {
-			console.warn(`[Vibes] Could not load ${name}:`, e.message);
-		}
-	}
-	return registries;
+	return ALL_REGISTRIES.filter((R) => R?.vibe);
 }
 
 /**

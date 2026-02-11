@@ -161,7 +161,7 @@ const todosVibe = {
   "description": "Complete todo list with state machines and AI tools",
   "actor": "@maia/todos/actor/vibe"
 };
-const brandStyle$2 = {
+const brandStyle$3 = {
   "$schema": "@maia/schema/style",
   "$id": "@maia/todos/style/brand",
   "tokens": {
@@ -813,7 +813,7 @@ const comingSoonStyle = {
     }
   }
 };
-const vibeActor$2 = {
+const vibeActor$4 = {
   "$schema": "@maia/schema/actor",
   "$id": "@maia/todos/actor/vibe",
   "role": "agent",
@@ -854,7 +854,7 @@ const comingSoonActor = {
   "inbox": "@maia/todos/inbox/coming-soon",
   "messageTypes": []
 };
-const vibeView$2 = {
+const vibeView$3 = {
   "$schema": "@maia/schema/view",
   "$id": "@maia/todos/view/vibe",
   "content": {
@@ -974,7 +974,7 @@ const comingSoonView = {
     ]
   }
 };
-const vibeContext$2 = {
+const vibeContext$3 = {
   "$schema": "@maia/schema/context",
   "$id": "@maia/todos/context/vibe",
   "currentView": "@list",
@@ -1006,7 +1006,7 @@ const comingSoonContext = {
   "$id": "@maia/todos/context/coming-soon",
   "message": "Coming soon"
 };
-const vibeState$2 = {
+const vibeState$3 = {
   "$schema": "@maia/schema/state",
   "$id": "@maia/todos/state/vibe",
   "initial": "idle",
@@ -1136,7 +1136,7 @@ const comingSoonState = {
     "idle": {}
   }
 };
-const vibeInbox$2 = {
+const vibeInbox$3 = {
   "$schema": "@maia/schema/inbox",
   "$id": "@maia/todos/inbox/vibe",
   "items": []
@@ -1155,32 +1155,32 @@ const TodosVibeRegistry = {
   vibe: todosVibe,
   styles: {
     "@maia/style/brand": masterBrand,
-    "@maia/todos/style/brand": brandStyle$2,
+    "@maia/todos/style/brand": brandStyle$3,
     "@maia/todos/style/list": listStyle,
     "@maia/todos/style/coming-soon": comingSoonStyle
   },
   actors: {
-    "@maia/todos/actor/vibe": vibeActor$2,
+    "@maia/todos/actor/vibe": vibeActor$4,
     "@maia/todos/actor/list": listActor,
     "@maia/todos/actor/coming-soon": comingSoonActor
   },
   views: {
-    "@maia/todos/view/vibe": vibeView$2,
+    "@maia/todos/view/vibe": vibeView$3,
     "@maia/todos/view/list": listView,
     "@maia/todos/view/coming-soon": comingSoonView
   },
   contexts: {
-    "@maia/todos/context/vibe": vibeContext$2,
+    "@maia/todos/context/vibe": vibeContext$3,
     "@maia/todos/context/list": listContext,
     "@maia/todos/context/coming-soon": comingSoonContext
   },
   states: {
-    "@maia/todos/state/vibe": vibeState$2,
+    "@maia/todos/state/vibe": vibeState$3,
     "@maia/todos/state/list": listState,
     "@maia/todos/state/coming-soon": comingSoonState
   },
   inboxes: {
-    "@maia/todos/inbox/vibe": vibeInbox$2,
+    "@maia/todos/inbox/vibe": vibeInbox$3,
     "@maia/todos/inbox/list": listInbox,
     "@maia/todos/inbox/coming-soon": comingSoonInbox
   },
@@ -1199,7 +1199,7 @@ const dbVibe = {
   "description": "Database viewer with navigation and detail panels",
   "actor": "@maia/db/actor/vibe"
 };
-const brandStyle$1 = {
+const brandStyle$2 = {
   "$schema": "@maia/schema/style",
   "$id": "@maia/db/style/brand",
   "tokens": {
@@ -1643,7 +1643,7 @@ const brandStyle$1 = {
     }
   }
 };
-const vibeActor$1 = {
+const vibeActor$3 = {
   "$schema": "@maia/schema/actor",
   "$id": "@maia/db/actor/vibe",
   "role": "agent",
@@ -1681,7 +1681,7 @@ const detailActor$1 = {
   "inbox": "@maia/db/inbox/detail",
   "messageTypes": []
 };
-const vibeView$1 = {
+const vibeView$2 = {
   "$schema": "@maia/schema/view",
   "$id": "@maia/db/view/vibe",
   "content": {
@@ -2062,7 +2062,7 @@ const detailView$1 = {
     ]
   }
 };
-const vibeContext$1 = {
+const vibeContext$2 = {
   "$schema": "@maia/schema/context",
   "$id": "@maia/db/context/vibe",
   "navTitle": "MaiaDB",
@@ -2204,7 +2204,7 @@ const detailContext$1 = {
     "phone": "Phone"
   }
 };
-const vibeState$1 = {
+const vibeState$2 = {
   "$schema": "@maia/schema/state",
   "$id": "@maia/db/state/vibe",
   "initial": "idle",
@@ -2276,7 +2276,7 @@ const detailState$1 = {
     "idle": {}
   }
 };
-const vibeInbox$1 = {
+const vibeInbox$2 = {
   "$schema": "@maia/schema/inbox",
   "$id": "@maia/db/inbox/vibe",
   "cotype": "costream"
@@ -2294,30 +2294,30 @@ const detailInbox$1 = {
 const DbVibeRegistry = {
   vibe: dbVibe,
   styles: {
-    "@maia/db/style/brand": brandStyle$1
+    "@maia/db/style/brand": brandStyle$2
   },
   actors: {
-    "@maia/db/actor/vibe": vibeActor$1,
+    "@maia/db/actor/vibe": vibeActor$3,
     "@maia/db/actor/table": tableActor,
     "@maia/db/actor/detail": detailActor$1
   },
   views: {
-    "@maia/db/view/vibe": vibeView$1,
+    "@maia/db/view/vibe": vibeView$2,
     "@maia/db/view/table": tableView,
     "@maia/db/view/detail": detailView$1
   },
   contexts: {
-    "@maia/db/context/vibe": vibeContext$1,
+    "@maia/db/context/vibe": vibeContext$2,
     "@maia/db/context/table": tableContext,
     "@maia/db/context/detail": detailContext$1
   },
   states: {
-    "@maia/db/state/vibe": vibeState$1,
+    "@maia/db/state/vibe": vibeState$2,
     "@maia/db/state/table": tableState,
     "@maia/db/state/detail": detailState$1
   },
   inboxes: {
-    "@maia/db/inbox/vibe": vibeInbox$1,
+    "@maia/db/inbox/vibe": vibeInbox$2,
     "@maia/db/inbox/table": tableInbox,
     "@maia/db/inbox/detail": detailInbox$1
   },
@@ -2332,7 +2332,7 @@ const sparksVibe = {
   "description": "Create and manage collaborative groups (sparks)",
   "actor": "@maia/sparks/actor/vibe"
 };
-const brandStyle = {
+const brandStyle$1 = {
   "$schema": "@maia/schema/style",
   "$id": "@maia/sparks/style/brand",
   "tokens": {
@@ -2985,7 +2985,7 @@ const brandStyle = {
     }
   }
 };
-const vibeActor = {
+const vibeActor$2 = {
   "$schema": "@maia/schema/actor",
   "$id": "@maia/sparks/actor/vibe",
   "type": "service",
@@ -3021,7 +3021,7 @@ const detailActor = {
     "ERROR"
   ]
 };
-const vibeView = {
+const vibeView$1 = {
   "$schema": "@maia/schema/view",
   "$id": "@maia/sparks/view/vibe",
   "content": {
@@ -3353,7 +3353,7 @@ const detailView = {
     ]
   }
 };
-const vibeContext = {
+const vibeContext$1 = {
   "$schema": "@maia/schema/context",
   "$id": "@maia/sparks/context/vibe",
   "sparks": {
@@ -3395,7 +3395,7 @@ const detailContext = {
   "addAgentError": null,
   "addAgentHasError": false
 };
-const vibeState = {
+const vibeState$1 = {
   "$schema": "@maia/schema/state",
   "$id": "@maia/sparks/state/vibe",
   "initial": "idle",
@@ -3626,7 +3626,7 @@ const detailState = {
     }
   }
 };
-const vibeInbox = {
+const vibeInbox$1 = {
   "$schema": "@maia/schema/inbox",
   "$id": "@maia/sparks/inbox/vibe",
   "cotype": "costream"
@@ -3639,26 +3639,26 @@ const detailInbox = {
 const SparksVibeRegistry = {
   vibe: sparksVibe,
   styles: {
-    "@maia/sparks/style/brand": brandStyle
+    "@maia/sparks/style/brand": brandStyle$1
   },
   actors: {
-    "@maia/sparks/actor/vibe": vibeActor,
+    "@maia/sparks/actor/vibe": vibeActor$2,
     "@maia/sparks/actor/detail": detailActor
   },
   views: {
-    "@maia/sparks/view/vibe": vibeView,
+    "@maia/sparks/view/vibe": vibeView$1,
     "@maia/sparks/view/detail": detailView
   },
   contexts: {
-    "@maia/sparks/context/vibe": vibeContext,
+    "@maia/sparks/context/vibe": vibeContext$1,
     "@maia/sparks/context/detail": detailContext
   },
   states: {
-    "@maia/sparks/state/vibe": vibeState,
+    "@maia/sparks/state/vibe": vibeState$1,
     "@maia/sparks/state/detail": detailState
   },
   inboxes: {
-    "@maia/sparks/inbox/vibe": vibeInbox,
+    "@maia/sparks/inbox/vibe": vibeInbox$1,
     "@maia/sparks/inbox/detail": detailInbox
   }
 };
@@ -3680,25 +3680,1296 @@ async function loadSparksVibe(maia, container) {
     actor
   };
 }
-const REGISTRY_IMPORTS = [
-  ["./todos/registry.js", "TodosVibeRegistry"],
-  ["./chat/registry.js", "ChatVibeRegistry"],
-  ["./db/registry.js", "DbVibeRegistry"],
-  ["./sparks/registry.js", "SparksVibeRegistry"],
-  ["./creator/registry.js", "CreatorVibeRegistry"]
-];
-async function getAllVibeRegistries() {
-  const registries = [];
-  for (const [path, name] of REGISTRY_IMPORTS) {
-    try {
-      const m = await import(path);
-      const R = m[name];
-      if (R?.vibe) registries.push(R);
-    } catch (e) {
-      console.warn(`[Vibes] Could not load ${name}:`, e.message);
+const chatVibe = {
+  "$schema": "@maia/schema/vibe",
+  "$id": "@maia/vibe/chat",
+  "name": "Chat",
+  "description": "CTO-level AI assistant for MaiaOS codebase",
+  "actor": "@maia/chat/actor/vibe"
+};
+const brandStyle = {
+  "$schema": "@maia/schema/style",
+  "$id": "@maia/chat/style/brand",
+  "tokens": {
+    "colors": {
+      "marineBlue": "#001F33",
+      "marineBlueMuted": "#2D4A5C",
+      "marineBlueLight": "#5E7A8C",
+      "paradiseWater": "#00BDD6",
+      "lushGreen": "#4E9A58",
+      "terracotta": "#C27B66",
+      "sunYellow": "#E6B94D",
+      "softClay": "#E8E1D9",
+      "tintedWhite": "#F0EDE6",
+      "background": "transparent",
+      "foreground": "#001F33",
+      "primary": "#00BDD6",
+      "secondary": "#2D4A5C",
+      "border": "rgba(255, 255, 255, 0.1)",
+      "surface": "rgba(255, 255, 255, 0.3)",
+      "glass": "rgba(255, 255, 255, 0.0005)",
+      "glassStrong": "rgba(255, 255, 255, 0.15)",
+      "text": {
+        "marine": "#D1E8F7",
+        "water": "#004D59",
+        "green": "#F0F9F1",
+        "terracotta": "#FDF2EF",
+        "yellow": "#4D3810"
+      }
+    },
+    "spacing": {
+      "xs": "0.5rem",
+      "sm": "0.75rem",
+      "md": "1rem",
+      "lg": "1.5rem",
+      "xl": "2rem",
+      "2xl": "3rem"
+    },
+    "typography": {
+      "fontFamily": {
+        "heading": "'Indie Flower', cursive",
+        "body": "'Plus Jakarta Sans', sans-serif"
+      },
+      "fontWeight": {
+        "light": "300",
+        "normal": "400",
+        "medium": "500",
+        "semibold": "600",
+        "bold": "700"
+      }
+    },
+    "radii": {
+      "sm": "4px",
+      "md": "12px",
+      "apple": "18px",
+      "full": "9999px"
+    },
+    "shadows": {
+      "sm": "0 4px 30px rgba(0, 0, 0, 0.05)",
+      "md": "0 10px 30px rgba(0, 0, 0, 0.05)",
+      "lg": "0 10px 40px rgba(0, 0, 0, 0.1)"
+    },
+    "transitions": {
+      "fast": "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+      "standard": "all 0.5s cubic-bezier(0.2, 0, 0.2, 1)"
+    }
+  },
+  "selectors": {
+    ":host": {
+      "display": "block",
+      "height": "100%",
+      "background": "{colors.background}",
+      "fontFamily": "{typography.fontFamily.body}",
+      "color": "{colors.marineBlue}"
+    },
+    ".chatContainer": {
+      "display": "grid",
+      "gridTemplateRows": "1fr auto",
+      "height": "100%",
+      "minHeight": "0",
+      "maxHeight": "100%",
+      "position": "relative",
+      "overflow": "hidden",
+      "background": "{colors.softClay}",
+      "padding": "{spacing.sm}",
+      "gap": "{spacing.sm}"
+    },
+    ".messagesContainer": {
+      "gridRow": "1",
+      "overflowY": "auto",
+      "overflowX": "hidden",
+      "padding": "{spacing.sm}",
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "{spacing.md}",
+      "minHeight": "0",
+      "maxHeight": "100%",
+      "position": "relative",
+      "zIndex": "1",
+      "background": "rgba(255, 255, 255, 0.4)",
+      "backdropFilter": "blur(8px) saturate(150%)",
+      "borderRadius": "{radii.apple}",
+      "border": "1px solid {colors.border}",
+      "boxShadow": "{shadows.md}"
+    },
+    ".message-wrapper": {
+      "display": "flex",
+      "flexDirection": "column",
+      "marginBottom": "{spacing.md}"
+    },
+    ".message-wrapper[data-role='user']": {
+      "alignItems": "flex-end"
+    },
+    ".message-wrapper[data-role='assistant']": {
+      "alignItems": "flex-start"
+    },
+    ".message-name": {
+      "fontSize": "0.65rem",
+      "fontWeight": "{typography.fontWeight.semibold}",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.05em",
+      "marginBottom": "0.25rem",
+      "opacity": "0.7"
+    },
+    ".message-wrapper[data-role='user'] .message-name": {
+      "color": "{colors.marineBlue}",
+      "textAlign": "right"
+    },
+    ".message-wrapper[data-role='assistant'] .message-name": {
+      "color": "{colors.marineBlue}",
+      "textAlign": "left"
+    },
+    ".message": {
+      "padding": "{spacing.sm} {spacing.md}",
+      "borderRadius": "{radii.apple}",
+      "maxWidth": "85%",
+      "wordWrap": "break-word",
+      "fontSize": "0.75rem",
+      "fontWeight": "{typography.fontWeight.light}",
+      "lineHeight": "1.4",
+      "transition": "{transitions.fast}"
+    },
+    ".messageAssistant": {
+      "alignSelf": "flex-start",
+      "background": "rgba(255, 255, 255, 0.6)",
+      "color": "{colors.marineBlue}",
+      "border": "1px solid {colors.border}",
+      "boxShadow": "{shadows.sm}"
+    },
+    ".messageUser": {
+      "alignSelf": "flex-end",
+      "background": "{colors.marineBlue}",
+      "color": "{colors.text.marine}",
+      "boxShadow": "0 4px 12px rgba(0, 31, 51, 0.2)"
+    },
+    ".message[data-role='assistant']": {
+      "alignSelf": "flex-start",
+      "background": "rgba(255, 255, 255, 0.6)",
+      "color": "{colors.marineBlue}",
+      "border": "1px solid {colors.border}"
+    },
+    ".message[data-role='user']": {
+      "alignSelf": "flex-end",
+      "background": "{colors.marineBlue}",
+      "color": "{colors.text.marine}"
+    },
+    ".welcomeMessage": {
+      "fontFamily": "{typography.fontFamily.body}",
+      "fontSize": "0.75rem",
+      "background": "rgba(0, 189, 214, 0.05)",
+      "border": "1px solid rgba(0, 189, 214, 0.1)",
+      "color": "{colors.marineBlue}",
+      "marginTop": "{spacing.sm}",
+      "marginBottom": "{spacing.md}",
+      "data": {
+        "hasConversations": {
+          "true": {
+            "display": "none"
+          }
+        }
+      }
+    },
+    ".welcomeSection": {
+      "display": "flex",
+      "flexDirection": "column",
+      "marginBottom": "{spacing.md}"
+    },
+    ".agentCategory": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "0.6rem",
+      "fontStyle": "italic",
+      "color": "{colors.paradiseWater}",
+      "marginBottom": "0.25rem",
+      "display": "block",
+      "textShadow": "0 0 10px rgba(0, 189, 214, 0.2)"
+    },
+    ".agentTitle": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "0.9rem",
+      "fontWeight": "{typography.fontWeight.bold}",
+      "color": "{colors.marineBlue}",
+      "margin": "0",
+      "letterSpacing": "-0.02em"
+    },
+    ".inputContainer": {
+      "gridRow": "2",
+      "display": "flex",
+      "gap": "{spacing.sm}",
+      "padding": "{spacing.sm}",
+      "background": "rgba(255, 255, 255, 0.4)",
+      "backdropFilter": "blur(8px) saturate(150%)",
+      "borderRadius": "{radii.full}",
+      "border": "1px solid {colors.border}",
+      "boxShadow": "{shadows.md}",
+      "flexShrink": "0",
+      "position": "relative",
+      "zIndex": "100"
+    },
+    ".input": {
+      "flex": "1",
+      "padding": "{spacing.xs} {spacing.md}",
+      "border": "none",
+      "background": "transparent",
+      "fontSize": "0.7rem",
+      "color": "{colors.marineBlue}",
+      "fontFamily": "{typography.fontFamily.body}",
+      "fontWeight": "{typography.fontWeight.light}",
+      "outline": "none",
+      "cursor": "text"
+    },
+    ".button": {
+      "padding": "{spacing.xs} {spacing.md}",
+      "background": "{colors.paradiseWater}",
+      "color": "{colors.text.water}",
+      "border": "none",
+      "borderRadius": "{radii.full}",
+      "cursor": "pointer",
+      "fontSize": "0.6rem",
+      "fontWeight": "600",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.05em",
+      "transition": "{transitions.fast}",
+      "boxShadow": "0 4px 12px rgba(0, 189, 214, 0.2)",
+      ":hover": {
+        "filter": "brightness(1.1)",
+        "transform": "translateY(-1px)",
+        "boxShadow": "0 6px 16px rgba(0, 189, 214, 0.3)"
+      },
+      ":active": {
+        "transform": "translateY(0)"
+      }
+    },
+    ".button:disabled": {
+      "background": "{colors.marineBlueLight}",
+      "opacity": "0.5",
+      "cursor": "not-allowed",
+      "boxShadow": "none"
+    },
+    ".loading": {
+      "padding": "{spacing.sm} {spacing.md}",
+      "color": "{colors.marineBlueLight}",
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontStyle": "italic",
+      "display": "none",
+      "position": "absolute",
+      "top": "{spacing.xl}",
+      "left": "50%",
+      "transform": "translateX(-50%)",
+      "zIndex": "10",
+      "background": "rgba(232, 225, 217, 0.8)",
+      "backdropFilter": "blur(4px)",
+      "borderRadius": "{radii.full}",
+      "border": "1px solid {colors.border}",
+      "data": {
+        "isLoading": {
+          "true": {
+            "display": "block"
+          }
+        }
+      }
+    },
+    ".error": {
+      "padding": "{spacing.md}",
+      "background": "rgba(194, 123, 102, 0.1)",
+      "color": "{colors.terracotta}",
+      "borderRadius": "{radii.apple}",
+      "border": "1px solid rgba(194, 123, 102, 0.2)",
+      "margin": "{spacing.md}",
+      "display": "none",
+      "data": {
+        "hasError": {
+          "true": {
+            "display": "block"
+          }
+        }
+      }
+    },
+    "@container {containerName} (min-width: {containers.xs})": {
+      ".chatContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.sm}"
+      },
+      ".messagesContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.md}"
+      },
+      ".message": {
+        "padding": "{spacing.sm} {spacing.md}",
+        "fontSize": "0.7rem"
+      },
+      ".agentCategory": {
+        "fontSize": "0.65rem"
+      },
+      ".agentTitle": {
+        "fontSize": "0.85rem"
+      },
+      ".inputContainer": {
+        "gap": "{spacing.sm}",
+        "padding": "{spacing.sm}"
+      },
+      ".input": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.7rem"
+      },
+      ".button": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.65rem"
+      },
+      ".welcomeMessage": {
+        "fontSize": "0.7rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.sm})": {
+      ".chatContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.sm}"
+      },
+      ".messagesContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.md}"
+      },
+      ".message": {
+        "padding": "{spacing.sm} {spacing.md}",
+        "fontSize": "0.75rem"
+      },
+      ".agentCategory": {
+        "fontSize": "0.7rem"
+      },
+      ".agentTitle": {
+        "fontSize": "0.9rem"
+      },
+      ".inputContainer": {
+        "gap": "{spacing.sm}",
+        "padding": "{spacing.sm}"
+      },
+      ".input": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.7rem"
+      },
+      ".button": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.65rem"
+      },
+      ".welcomeMessage": {
+        "fontSize": "0.75rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.md})": {
+      ".chatContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.sm}"
+      },
+      ".messagesContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.md}"
+      },
+      ".message": {
+        "padding": "{spacing.sm} {spacing.md}",
+        "fontSize": "0.8rem"
+      },
+      ".agentCategory": {
+        "fontSize": "0.75rem"
+      },
+      ".agentTitle": {
+        "fontSize": "0.95rem"
+      },
+      ".inputContainer": {
+        "gap": "{spacing.sm}",
+        "padding": "{spacing.sm}"
+      },
+      ".input": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.75rem"
+      },
+      ".button": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.7rem"
+      },
+      ".welcomeMessage": {
+        "fontSize": "0.8rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.lg})": {
+      ".chatContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.sm}"
+      },
+      ".messagesContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.md}"
+      },
+      ".message": {
+        "padding": "{spacing.sm} {spacing.md}",
+        "fontSize": "0.85rem"
+      },
+      ".agentCategory": {
+        "fontSize": "0.8rem"
+      },
+      ".agentTitle": {
+        "fontSize": "1rem"
+      },
+      ".inputContainer": {
+        "gap": "{spacing.sm}",
+        "padding": "{spacing.sm}"
+      },
+      ".input": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.8rem"
+      },
+      ".button": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.75rem"
+      },
+      ".welcomeMessage": {
+        "fontSize": "0.85rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.xl})": {
+      ".chatContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.sm}"
+      },
+      ".messagesContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.md}"
+      },
+      ".message": {
+        "padding": "{spacing.sm} {spacing.md}",
+        "fontSize": "0.9rem"
+      },
+      ".agentCategory": {
+        "fontSize": "0.85rem"
+      },
+      ".agentTitle": {
+        "fontSize": "1.05rem"
+      },
+      ".inputContainer": {
+        "gap": "{spacing.sm}",
+        "padding": "{spacing.sm}"
+      },
+      ".input": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.85rem"
+      },
+      ".button": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.8rem"
+      },
+      ".welcomeMessage": {
+        "fontSize": "0.9rem"
+      }
+    },
+    "@container {containerName} (min-width: {containers.2xl})": {
+      ".chatContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.sm}"
+      },
+      ".messagesContainer": {
+        "padding": "{spacing.sm}",
+        "gap": "{spacing.md}"
+      },
+      ".message": {
+        "padding": "{spacing.sm} {spacing.md}",
+        "fontSize": "0.95rem"
+      },
+      ".agentCategory": {
+        "fontSize": "0.9rem"
+      },
+      ".agentTitle": {
+        "fontSize": "1.1rem"
+      },
+      ".inputContainer": {
+        "gap": "{spacing.sm}",
+        "padding": "{spacing.sm}"
+      },
+      ".input": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.9rem"
+      },
+      ".button": {
+        "padding": "{spacing.xs} {spacing.md}",
+        "fontSize": "0.85rem"
+      },
+      ".welcomeMessage": {
+        "fontSize": "0.95rem"
+      }
     }
   }
-  return registries;
+};
+const vibeActor$1 = {
+  "$schema": "@maia/schema/actor",
+  "$id": "@maia/chat/actor/vibe",
+  "role": "agent",
+  "context": "@maia/chat/context/vibe",
+  "view": "@maia/chat/view/vibe",
+  "state": "@maia/chat/state/vibe",
+  "brand": "@maia/chat/style/brand",
+  "inbox": "@maia/chat/inbox/vibe",
+  "messageTypes": [
+    "SEND_MESSAGE",
+    "UPDATE_INPUT",
+    "RENDER_COMPLETE",
+    "SUCCESS",
+    "ERROR",
+    "RETRY",
+    "DISMISS"
+  ]
+};
+const vibeView = {
+  "$schema": "@maia/schema/view",
+  "$id": "@maia/chat/view/vibe",
+  "content": {
+    "tag": "div",
+    "class": "chat-container",
+    "children": [
+      {
+        "tag": "div",
+        "class": "messages-container",
+        "children": [
+          {
+            "tag": "div",
+            "class": "welcome-section",
+            "children": [
+              {
+                "tag": "h2",
+                "class": "agent-title",
+                "text": "Maia"
+              },
+              {
+                "tag": "div",
+                "class": "message message-assistant welcome-message",
+                "attrs": {
+                  "data": {
+                    "hasConversations": "$hasConversations"
+                  }
+                },
+                "text": "Hello! I'm Maia, your CTO-level AI assistant. I understand the MaiaOS codebase and learn alongside your coding sessions. How can I help you today?"
+              }
+            ]
+          },
+          {
+            "$each": {
+              "items": "$conversations",
+              "template": {
+                "tag": "div",
+                "class": "message-wrapper",
+                "attrs": {
+                  "data": {
+                    "role": "$$role"
+                  }
+                },
+                "children": [
+                  {
+                    "tag": "div",
+                    "class": "message-name",
+                    "text": "$messageNames.$$id"
+                  },
+                  {
+                    "tag": "div",
+                    "class": "message",
+                    "attrs": {
+                      "data": {
+                        "role": "$$role"
+                      }
+                    },
+                    "text": "$$content"
+                  }
+                ]
+              }
+            }
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "class": "loading",
+        "attrs": {
+          "data": {
+            "isLoading": "$isLoading"
+          }
+        },
+        "text": "Maia is thinking..."
+      },
+      {
+        "tag": "div",
+        "class": "error",
+        "attrs": {
+          "data": {
+            "hasError": "$hasError"
+          }
+        },
+        "children": [
+          {
+            "tag": "strong",
+            "text": "Error: "
+          },
+          {
+            "text": "$error"
+          },
+          {
+            "tag": "button",
+            "class": "button",
+            "text": "Dismiss",
+            "$on": {
+              "click": {
+                "send": "DISMISS"
+              }
+            }
+          }
+        ]
+      },
+      {
+        "tag": "div",
+        "class": "input-container",
+        "children": [
+          {
+            "tag": "input",
+            "class": "input",
+            "attrs": {
+              "type": "text",
+              "placeholder": "Type your message...",
+              "disabled": "$isLoading"
+            },
+            "value": "$inputText",
+            "$on": {
+              "input": {
+                "send": "UPDATE_INPUT",
+                "payload": {
+                  "value": "@inputValue"
+                }
+              },
+              "keydown": {
+                "send": "SEND_MESSAGE",
+                "payload": {
+                  "inputText": "@inputValue"
+                },
+                "key": "Enter"
+              }
+            }
+          },
+          {
+            "tag": "button",
+            "class": "button",
+            "attrs": {
+              "disabled": "$isLoading"
+            },
+            "text": "Send",
+            "$on": {
+              "click": {
+                "send": "SEND_MESSAGE",
+                "payload": {
+                  "inputText": "$inputText"
+                }
+              }
+            }
+          }
+        ]
+      }
+    ]
+  }
+};
+const vibeContext = {
+  "$schema": "@maia/schema/context",
+  "$id": "@maia/chat/context/vibe",
+  "conversations": {
+    "schema": "@maia/schema/data/chat"
+  },
+  "inputText": "",
+  "assistantResponse": null,
+  "isLoading": false,
+  "error": null,
+  "hasConversations": false,
+  "hasError": false,
+  "messageNames": {}
+};
+const vibeState = {
+  "$schema": "@maia/schema/state",
+  "$id": "@maia/chat/state/vibe",
+  "initial": "idle",
+  "states": {
+    "idle": {
+      "entry": [
+        {
+          "updateContext": {
+            "isLoading": false
+          }
+        },
+        {
+          "tool": "@core/computeMessageNames",
+          "payload": {
+            "conversations": "$conversations"
+          },
+          "onSuccess": {
+            "updateContext": {
+              "messageNames": "$$result"
+            }
+          }
+        }
+      ],
+      "on": {
+        "RENDER_COMPLETE": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "hasConversations": {
+                  "$gt": [
+                    {
+                      "$length": "$conversations"
+                    },
+                    0
+                  ]
+                }
+              }
+            },
+            {
+              "tool": "@core/computeMessageNames",
+              "payload": {
+                "conversations": "$conversations"
+              },
+              "onSuccess": {
+                "updateContext": {
+                  "messageNames": "$$result"
+                }
+              }
+            }
+          ]
+        },
+        "SEND_MESSAGE": {
+          "target": "chatting"
+        },
+        "UPDATE_INPUT": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "inputText": "$$value"
+              }
+            }
+          ]
+        }
+      }
+    },
+    "chatting": {
+      "entry": [
+        {
+          "updateContext": {
+            "isLoading": true,
+            "hasError": false
+          }
+        },
+        {
+          "tool": "@db",
+          "payload": {
+            "op": "create",
+            "schema": "@maia/schema/data/chat",
+            "data": {
+              "role": "user",
+              "content": "$$inputText"
+            }
+          }
+        }
+      ],
+      "on": {
+        "SUCCESS": {
+          "target": "calling_llm",
+          "actions": [
+            {
+              "updateContext": {
+                "inputText": ""
+              }
+            }
+          ]
+        },
+        "ERROR": {
+          "target": "error",
+          "actions": [
+            {
+              "updateContext": {
+                "isLoading": false
+              }
+            }
+          ]
+        }
+      }
+    },
+    "calling_llm": {
+      "entry": {
+        "tool": "@ai/chat",
+        "payload": {
+          "model": "qwen/qwen3-30b-a3b-instruct-2507",
+          "temperature": 1,
+          "context": {
+            "$concat": [
+              [
+                {
+                  "role": "system",
+                  "content": "You are Maia, a CTO-level AI assistant that understands the entire MaiaOS codebase, architecture, and all packages. You learn alongside coding sessions. Be helpful, technical, and concise. Never use emoticons in your responses."
+                }
+              ],
+              {
+                "$map": {
+                  "array": "$conversations",
+                  "as": "msg",
+                  "return": {
+                    "role": "$$msg.role",
+                    "content": "$$msg.content"
+                  }
+                }
+              }
+            ]
+          }
+        }
+      },
+      "on": {
+        "SUCCESS": {
+          "target": "saving_response"
+        },
+        "ERROR": {
+          "target": "error",
+          "actions": [
+            {
+              "updateContext": {
+                "isLoading": false
+              }
+            }
+          ]
+        }
+      }
+    },
+    "saving_response": {
+      "entry": [
+        {
+          "tool": "@db",
+          "payload": {
+            "op": "create",
+            "schema": "@maia/schema/data/chat",
+            "data": {
+              "role": "assistant",
+              "content": "$$result.content"
+            }
+          }
+        }
+      ],
+      "on": {
+        "SUCCESS": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "assistantResponse": null,
+                "isLoading": false,
+                "hasError": false
+              }
+            },
+            {
+              "updateContext": {
+                "hasConversations": {
+                  "$gt": [
+                    {
+                      "$length": "$conversations"
+                    },
+                    0
+                  ]
+                }
+              }
+            },
+            {
+              "tool": "@core/computeMessageNames",
+              "payload": {
+                "conversations": "$conversations"
+              },
+              "onSuccess": {
+                "updateContext": {
+                  "messageNames": "$$result"
+                }
+              }
+            }
+          ]
+        },
+        "ERROR": {
+          "target": "error",
+          "actions": [
+            {
+              "updateContext": {
+                "isLoading": false
+              }
+            }
+          ]
+        }
+      }
+    },
+    "error": {
+      "entry": {
+        "updateContext": {
+          "error": "$$errors.0.message",
+          "isLoading": false,
+          "hasError": true
+        }
+      },
+      "on": {
+        "SEND_MESSAGE": {
+          "target": "chatting",
+          "actions": [
+            {
+              "updateContext": {
+                "error": null,
+                "hasError": false
+              }
+            }
+          ]
+        },
+        "RETRY": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "error": null,
+                "hasError": false
+              }
+            }
+          ]
+        },
+        "DISMISS": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "error": null,
+                "hasError": false
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+};
+const vibeInbox = {
+  "$schema": "@maia/schema/inbox",
+  "$id": "@maia/chat/inbox/vibe"
+};
+const ChatVibeRegistry = {
+  vibe: chatVibe,
+  styles: {
+    "@maia/chat/style/brand": brandStyle
+  },
+  actors: {
+    "@maia/chat/actor/vibe": vibeActor$1
+  },
+  views: {
+    "@maia/chat/view/vibe": vibeView
+  },
+  contexts: {
+    "@maia/chat/context/vibe": vibeContext
+  },
+  states: {
+    "@maia/chat/state/vibe": vibeState
+  },
+  inboxes: {
+    "@maia/chat/inbox/vibe": vibeInbox
+  }
+};
+const creatorVibe = {
+  "$schema": "@maia/schema/vibe",
+  "$id": "@maia/vibe/creator",
+  "name": "Creator",
+  "description": "Create and manage vibes with logs viewer",
+  "actor": "@maia/creator/actor/vibe"
+};
+const logsStyle = {
+  "$schema": "@maia/schema/style",
+  "$id": "@maia/creator/style/logs",
+  "components": {
+    "vibeCreatorTitle": {
+      "fontFamily": "{typography.fontFamily.heading}",
+      "fontSize": "0.9rem",
+      "fontWeight": "{typography.fontWeight.bold}",
+      "color": "{colors.marineBlue}",
+      "margin": "0",
+      "marginBottom": "0.375rem",
+      "textAlign": "center",
+      "width": "100%",
+      "letterSpacing": "-0.02em"
+    },
+    "logs": {
+      "padding": "0",
+      "margin": "0",
+      "background": "transparent",
+      "color": "#001F33",
+      "fontFamily": "'Plus Jakarta Sans', sans-serif",
+      "fontSize": "0.85rem",
+      "lineHeight": "1.5"
+    },
+    "logEntryContainer": {
+      "display": "flex",
+      "flexDirection": "column",
+      "width": "100%",
+      "maxWidth": "100%",
+      "boxSizing": "border-box",
+      "overflow": "hidden"
+    },
+    "logEntries": {
+      "display": "flex",
+      "flexDirection": "column",
+      "gap": "0.2rem",
+      "width": "100%",
+      "maxWidth": "100%",
+      "boxSizing": "border-box"
+    },
+    "logEntry": {
+      "padding": "0.1rem 0.75rem",
+      "margin": "0",
+      "background": "rgba(255, 255, 255, 0.4)",
+      "backdropFilter": "blur(8px) saturate(150%)",
+      "-webkit-backdrop-filter": "blur(8px) saturate(150%)",
+      "border": "1px solid rgba(0, 31, 51, 0.05)",
+      "borderLeft": "4px solid #00BDD6",
+      "borderRadius": "8px",
+      "display": "grid",
+      "gridTemplateColumns": "auto auto auto 1fr auto",
+      "gridTemplateRows": "auto auto",
+      "alignItems": "center",
+      "minHeight": "1.3rem",
+      "transition": "all 0.2s cubic-bezier(0.4, 0, 0.2, 1)",
+      "width": "100%",
+      "maxWidth": "100%",
+      "boxSizing": "border-box",
+      "color": "#001F33",
+      "position": "relative",
+      "boxShadow": "0 2px 8px rgba(0, 0, 0, 0.02)",
+      "overflow": "visible",
+      ":hover": {
+        "background": "rgba(255, 255, 255, 0.6)",
+        "transform": "translateX(4px)",
+        "boxShadow": "0 4px 12px rgba(0, 0, 0, 0.04)"
+      }
+    },
+    "logType": {
+      "color": "#001F33",
+      "fontWeight": "700",
+      "fontSize": "0.6rem",
+      "textTransform": "uppercase",
+      "minWidth": "5rem",
+      "textAlign": "left",
+      "letterSpacing": "0.1em",
+      "opacity": "0.8"
+    },
+    "logSource": {
+      "color": "#2D4A5C",
+      "fontSize": "0.65rem",
+      "fontFamily": "monospace",
+      "minWidth": "8rem",
+      "flexShrink": "0",
+      "fontWeight": "500",
+      "display": "flex",
+      "alignItems": "center",
+      "gap": "0.3rem",
+      "background": "rgba(0, 31, 51, 0.05)",
+      "padding": "0.1rem 0.4rem",
+      "borderRadius": "4px"
+    },
+    "logSourceRole": {
+      "color": "#001F33",
+      "fontWeight": "700",
+      "textTransform": "lowercase",
+      "opacity": "0.6"
+    },
+    "logSourceId": {
+      "color": "#5E7A8C",
+      "fontSize": "0.6rem"
+    },
+    "logTarget": {
+      "color": "#2D4A5C",
+      "fontSize": "0.65rem",
+      "fontFamily": "monospace",
+      "minWidth": "8rem",
+      "flexShrink": "0",
+      "fontWeight": "500",
+      "display": "flex",
+      "alignItems": "center",
+      "gap": "0.3rem",
+      "background": "rgba(0, 189, 214, 0.05)",
+      "padding": "0.1rem 0.4rem",
+      "borderRadius": "4px"
+    },
+    "logTargetRole": {
+      "color": "#004D59",
+      "fontWeight": "700",
+      "textTransform": "lowercase",
+      "opacity": "0.6"
+    },
+    "logTargetId": {
+      "color": "#00BDD6",
+      "fontSize": "0.6rem"
+    },
+    "logPayloadDetails": {
+      "display": "contents"
+    },
+    "logPayloadToggle": {
+      "gridColumn": "5",
+      "gridRow": "1",
+      "color": "#004D59",
+      "fontSize": "0.6rem",
+      "fontWeight": "700",
+      "cursor": "pointer",
+      "userSelect": "none",
+      "padding": "0.15rem 0.5rem",
+      "borderRadius": "9999px",
+      "background": "rgba(0, 189, 214, 0.15)",
+      "border": "1px solid rgba(0, 189, 214, 0.2)",
+      "transition": "all 0.2s ease",
+      "textTransform": "uppercase",
+      "letterSpacing": "0.05em",
+      "justifySelf": "end",
+      ":hover": {
+        "background": "rgba(0, 189, 214, 0.25)",
+        "transform": "scale(1.05)"
+      }
+    },
+    "logPayload": {
+      "gridRow": "2",
+      "gridColumn": "4 / 6",
+      "margin": "0.3rem 0 0.2rem 0",
+      "padding": "0.6rem 0.8rem",
+      "background": "rgba(0, 31, 51, 0.03)",
+      "borderRadius": "8px",
+      "border": "1px solid rgba(0, 31, 51, 0.05)",
+      "color": "#2D4A5C",
+      "fontSize": "0.65rem",
+      "fontFamily": "monospace",
+      "whiteSpace": "pre-wrap",
+      "wordBreak": "break-all",
+      "overflow": "auto",
+      "maxHeight": "400px",
+      "width": "fit-content",
+      "minWidth": "180px",
+      "maxWidth": "100%",
+      "boxSizing": "border-box",
+      "boxShadow": "inset 0 2px 4px rgba(0, 0, 0, 0.02)",
+      "textAlign": "left",
+      "justifySelf": "end",
+      "display": "flex",
+      "alignItems": "center"
+    }
+  },
+  "selectors": {
+    ".log-entry[data-event-type='SUCCESS']": {
+      "borderLeftColor": "#4E9A58",
+      "background": "rgba(78, 154, 88, 0.05)"
+    },
+    ".log-entry[data-event-type='ERROR']": {
+      "borderLeftColor": "#C27B66",
+      "background": "rgba(194, 123, 102, 0.05)"
+    },
+    ".log-entry[data-event-type='SWITCH_VIEW']": {
+      "borderLeftColor": "#00BDD6"
+    },
+    "summary::-webkit-details-marker": {
+      "display": "none"
+    },
+    "summary::marker": {
+      "display": "none"
+    },
+    "details:not([open]) .log-payload": {
+      "display": "none"
+    }
+  }
+};
+const vibeActor = { "$schema": "@maia/schema/actor", "$id": "@maia/creator/actor/vibe", "role": "agent", "context": "@maia/creator/context/logs", "view": "@maia/creator/view/logs", "state": "@maia/creator/state/logs", "brand": "@maia/style/brand", "style": "@maia/creator/style/logs", "inbox": "@maia/creator/inbox/logs", "messageTypes": ["RETRY", "DISMISS"] };
+const logsView = { "$schema": "@maia/schema/view", "$id": "@maia/creator/view/logs", "content": { "tag": "div", "class": "stack", "children": [{ "tag": "h2", "class": "vibe-creator-title", "text": "Vibe Creator" }, { "tag": "div", "class": "logs", "attrs": { "data": "log-viewer" }, "children": [{ "tag": "div", "class": "log-entries", "$each": { "items": "$messages", "template": { "class": "log-entry-container", "children": [{ "tag": "div", "class": "log-entry", "attrs": { "data": { "eventType": "$$type", "processed": "$$processed" } }, "children": [{ "tag": "span", "class": "log-type", "text": "$$type" }, { "tag": "span", "class": "log-source", "children": [{ "tag": "span", "class": "log-source-role", "text": "$$fromRole" }, { "tag": "span", "class": "log-source-id", "text": "$$fromId" }] }, { "tag": "span", "class": "log-target", "children": [{ "tag": "span", "class": "log-target-role", "text": "$$recipient" }, { "tag": "span", "class": "log-target-id", "text": "$$targetId" }] }, { "tag": "details", "class": "log-payload-details", "children": [{ "tag": "summary", "class": "log-payload-toggle", "text": "$payloadLabel" }, { "tag": "pre", "class": "log-payload", "text": "$$payload" }] }] }] } } }] }] } };
+const logsContext = {
+  "$schema": "@maia/schema/context",
+  "$id": "@maia/creator/context/logs",
+  "messages": {
+    "schema": "@maia/schema/message",
+    "options": {
+      "map": {
+        "fromRole": "$$source.role",
+        "toRole": "$$target.role",
+        "fromId": "$$source.id",
+        "toId": "$$target.id",
+        "recipient": "$$target.role",
+        "targetId": "$$target.id"
+      }
+    }
+  },
+  "payloadLabel": "payload"
+};
+const logsState = {
+  "$schema": "@maia/schema/state",
+  "$id": "@maia/creator/state/logs",
+  "initial": "idle",
+  "states": {
+    "idle": {},
+    "error": {
+      "entry": {
+        "updateContext": {
+          "error": "$$errors.0.message"
+        }
+      },
+      "on": {
+        "RETRY": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "error": null
+              }
+            }
+          ]
+        },
+        "DISMISS": {
+          "target": "idle",
+          "actions": [
+            {
+              "updateContext": {
+                "error": null
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+};
+const logsInbox = {
+  "$schema": "@maia/schema/inbox",
+  "$id": "@maia/creator/inbox/logs",
+  "items": []
+};
+const CreatorVibeRegistry = {
+  vibe: creatorVibe,
+  styles: {
+    "@maia/style/brand": masterBrand,
+    "@maia/creator/style/logs": logsStyle
+  },
+  actors: {
+    "@maia/creator/actor/vibe": vibeActor
+  },
+  views: {
+    "@maia/creator/view/logs": logsView
+  },
+  contexts: {
+    "@maia/creator/context/logs": logsContext
+  },
+  states: {
+    "@maia/creator/state/logs": logsState
+  },
+  inboxes: {
+    "@maia/creator/inbox/logs": logsInbox
+  },
+  data: {}
+};
+const ALL_REGISTRIES = [
+  TodosVibeRegistry,
+  ChatVibeRegistry,
+  DbVibeRegistry,
+  SparksVibeRegistry,
+  CreatorVibeRegistry
+];
+async function getAllVibeRegistries() {
+  return ALL_REGISTRIES.filter((R) => R?.vibe);
 }
 function getVibeKey(vibe) {
   if (!vibe) return null;

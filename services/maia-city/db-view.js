@@ -4,9 +4,8 @@
  */
 
 import { truncate, getSyncStatusMessage } from './utils.js'
-// Import getSchema and getAllSchemas from kernel bundle (not directly from @MaiaOS/db)
-import { getSchema, getAllSchemas } from '@MaiaOS/kernel'
-import { resolveAccountCoIdsToProfileNames, resolveGroupCoIdsToCapabilityNames } from '@MaiaOS/db'
+// Import from kernel bundle - everything bundled (no direct @MaiaOS/db in production)
+import { getSchema, getAllSchemas, resolveAccountCoIdsToProfileNames, resolveGroupCoIdsToCapabilityNames } from '@MaiaOS/kernel'
 import { renderDashboard, renderVibeViewer } from './dashboard.js'
 
 // Helper function to escape HTML

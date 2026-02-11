@@ -60,9 +60,11 @@ RUN echo '{ \
   } \
 }' > package.json
 
-# Install dependencies (root + @MaiaOS/sync so cojson-transport-ws resolves correctly)
+# Install root dependencies
 RUN bun install
-RUN cd node_modules/@MaiaOS/sync && bun install --no-save
+
+# Install @MaiaOS/sync deps in place - Bun resolves cojson-transport-ws from package's node_modules
+RUN cd node_modules/@MaiaOS/sync && bun install --production
 
 # Expose port
 EXPOSE 4203

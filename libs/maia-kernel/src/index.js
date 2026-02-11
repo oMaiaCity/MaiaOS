@@ -18,7 +18,9 @@ export {
 	createCoJSONAPI, 
 	getSchemaIndexColistId,
 	getSchema,
-	getAllSchemas
+	getAllSchemas,
+	resolveAccountCoIdsToProfileNames,
+	resolveGroupCoIdsToCapabilityNames
 } from "@MaiaOS/db";
 
 // Re-export peer setup functions (from db, not self)
