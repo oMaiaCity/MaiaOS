@@ -125,7 +125,7 @@ View subscribes to ReactiveStore → sees update → re-renders
 - ❌ Bypassing CoValue persistence - everything must go through persisted CoValues
 
 **Error Handling:**
-When tools fail, state machines receive ERROR events (via inbox) and can update context accordingly:
+When tools fail, state machines receive ERROR events (via inbox) with payload `{ errors: [{ type, message, path? }] }` — aligned with OperationResult. Use `$$errors.0.message` to extract the first error for display:
 ```json
 {
   "creating": {
@@ -138,7 +138,7 @@ When tools fail, state machines receive ERROR events (via inbox) and can update 
         "target": "error",
         "actions": [
           {
-            "updateContext": { "error": "$$error" }
+            "updateContext": { "error": "$$errors.0.message" }
           }
         ]
       }

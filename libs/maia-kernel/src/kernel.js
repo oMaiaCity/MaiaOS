@@ -868,7 +868,9 @@ export class MaiaOS {
     const WRITE_OPS = new Set(['create', 'update', 'delete', 'append', 'push', 'seed']);
     if (result && result.ok === false && WRITE_OPS.has(payload?.op)) {
       const msgs = result.errors?.map((e) => e.message).join('; ') || 'Operation failed';
-      throw new Error(`[db] ${payload.op} failed: ${msgs}`);
+      const err = new Error(`[db] ${payload.op} failed: ${msgs}`);
+      err.errors = result.errors;
+      throw err;
     }
     if (result && result.ok === true && typeof result.data !== 'undefined') {
       return result.data;

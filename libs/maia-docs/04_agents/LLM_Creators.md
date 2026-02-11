@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-02-11T19:56:06.979Z
+**Auto-generated:** 2026-02-11T20:17:10.311Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -3886,7 +3886,7 @@ View subscribes to ReactiveStore → sees update → re-renders
 - ❌ Bypassing CoValue persistence - everything must go through persisted CoValues
 
 **Error Handling:**
-When tools fail, state machines receive ERROR events (via inbox) and can update context accordingly:
+When tools fail, state machines receive ERROR events (via inbox) with payload `{ errors: [{ type, message, path? }] }` — aligned with OperationResult. Use `$$errors.0.message` to extract the first error for display:
 ```json
 {
   "creating": {
@@ -3899,7 +3899,7 @@ When tools fail, state machines receive ERROR events (via inbox) and can update 
         "target": "error",
         "actions": [
           {
-            "updateContext": { "error": "$$error" }
+            "updateContext": { "error": "$$errors.0.message" }
           }
         ]
       }
@@ -6115,24 +6115,44 @@ AI-compatible metadata describing the tool:
 ```
 
 ### 2. Tool Function (`.tool.js`)
-Executable JavaScript function:
+Executable JavaScript function (must return OperationResult):
 
 ```javascript
+import { createSuccessResult, createErrorResult, createErrorEntry } from '@MaiaOS/operations';
+
 export default {
   async execute(actor, payload) {
-    const { schema, data } = payload;
-    
-    // Execute operation (e.g., database operation)
-    const result = await someOperation(data);
-    
-    // Return result - state machines handle context updates via updateContext actions
-    // Tools should NOT directly manipulate context - all updates flow through state machines
-    return result;
+    try {
+      const result = await someOperation(payload);
+      return createSuccessResult(result);
+    } catch (err) {
+      return createErrorResult(err.errors ?? [createErrorEntry('structural', err.message)]);
+    }
   }
 };
 ```
 
-**CRITICAL:** Tools should return results, not manipulate context directly. State machines handle all context updates via `updateContext` actions in SUCCESS handlers.
+**CRITICAL:** Tools return OperationResult; they do not throw for domain errors. State machines handle context updates via `updateContext` actions in SUCCESS handlers.
+
+## Tool Roundtrip Contract
+
+All tools return **OperationResult** (never throw for domain errors). StateEngine routes to inbox events.
+
+- **Success:** Return `createSuccessResult(data)`. StateEngine sends `SUCCESS` with `{ ...eventPayload, result: data }` (domain data only; envelope is consistent).
+- **Error:** Return `createErrorResult(errors)`. StateEngine sends `ERROR` with `{ errors }`.
+
+Tools that call external APIs use shared helpers (`getApiBaseUrl`, `toStructuredErrors`) from `core/api-helpers.js`. All ERROR inbox events use `{ errors: [{ type, message, path? }] }` (same as OperationResult).
+
+**Example:**
+```javascript
+import { createSuccessResult, createErrorResult, createErrorEntry } from '@MaiaOS/operations';
+
+if (!target) {
+  return createErrorResult([createErrorEntry('structural', 'Target is required')]);
+}
+const data = await doWork();
+return createSuccessResult(data);
+```
 
 ## Available Tools
 

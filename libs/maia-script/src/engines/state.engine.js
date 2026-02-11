@@ -3,6 +3,7 @@ import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
 import { validateAgainstSchema } from '@MaiaOS/schemata/validation.helper.js';
 import { isSchemaRef } from '@MaiaOS/schemata';
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
+import { createErrorEntry, isPermissionError, isSuccessResult } from '@MaiaOS/operations';
 import { RENDER_STATES } from './actor.engine.js';
 
 /**
@@ -231,19 +232,18 @@ export class StateEngine {
       }
     
     if (actions.tool) {
-      // Single tool action: For entry actions, _executeStateActions handles SUCCESS sending
-      // For non-entry actions, _invokeTool handles SUCCESS sending
       const isEntry = type === 'entry';
       const result = await this._invokeTool(machine, actions.tool, actions.payload, true, isEntry);
-      if (result) machine.lastToolResult = result;
-      
-      // For entry actions, send SUCCESS here (not in _invokeTool) to avoid duplicates
-      if (isEntry && stateDef.on?.SUCCESS && machine.actor?.actorEngine) {
+      if (result && isSuccessResult(result)) {
+        machine.lastToolResult = result.data;
+      }
+
+      if (isEntry && isSuccessResult(result) && stateDef.on?.SUCCESS && machine.actor?.actorEngine) {
         const originalEventPayload = machine.eventPayload || {};
-        const cleanedResult = machine.lastToolResult ? this._cleanToolResult(machine.lastToolResult) : null;
+        const cleanedResult = machine.lastToolResult != null ? this._cleanToolResult(machine.lastToolResult) : null;
         const successPayload = {
           ...originalEventPayload,
-          result: cleanedResult  // CRITICAL: result must come AFTER spread to override any result in originalEventPayload
+          result: cleanedResult
         };
         try {
           await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', successPayload);
@@ -337,14 +337,12 @@ export class StateEngine {
         Object.assign(contextUpdates, this._sanitizeUpdates(updates, machine.lastToolResult || {}));
       } else if (action?.tool) {
         const result = await this._invokeTool(machine, action.tool, action.payload, false);
-        // CRITICAL: Store tool result so it's available in SUCCESS event payload
-        if (result) {
-          machine.lastToolResult = result;
+        if (result && isSuccessResult(result)) {
+          machine.lastToolResult = result.data;
         }
-        if (action.onSuccess?.updateContext && result) {
-          const updates = await this._evaluatePayload(action.onSuccess.updateContext, machine.actor.context, machine.eventPayload, result, machine.actor);
-          // Collect updates in batch instead of writing immediately
-          Object.assign(contextUpdates, this._sanitizeUpdates(updates, result || {}));
+        if (action.onSuccess?.updateContext && isSuccessResult(result)) {
+          const updates = await this._evaluatePayload(action.onSuccess.updateContext, machine.actor.context, machine.eventPayload, result.data, machine.actor);
+          Object.assign(contextUpdates, this._sanitizeUpdates(updates, result.data || {}));
         }
       }
     }
@@ -492,50 +490,51 @@ export class StateEngine {
   }
 
   async _invokeTool(machine, toolName, payload = {}, autoTransition = true, isEntryAction = false) {
+    const originalEventPayload = machine.eventPayload || {};
+    const stateDef = machine.definition.states[machine.currentState];
+
     try {
-      // ARCHITECTURE: Preserve original eventPayload by including it in SUCCESS event payload
-      // This ensures $$id and other references work correctly without in-memory hacks
-      // Flow: co-value (inbox) -> $store (state machine) -> actions
-      const originalEventPayload = machine.eventPayload || {};
-      
       // CRITICAL: Tool payloads from action configs may contain expressions (e.g., { text: "$context.title" })
-      // These need evaluation. Tool payloads from views are already resolved, but they don't reach here
-      // (views send events, not tool calls directly). So we always evaluate tool payloads from action configs.
       const evaluatedPayload = await this._evaluatePayload(payload, machine.actor.context, machine.eventPayload || {}, machine.lastToolResult, machine.actor);
-      const result = await this.toolEngine.execute(toolName, machine.actor, evaluatedPayload);
-      // For entry actions, SUCCESS is handled by _executeStateActions, not here
-      // This prevents duplicate SUCCESS events
-      if (autoTransition && !isEntryAction) {
-        const stateDef = machine.definition.states[machine.currentState];
-        // Only send SUCCESS if there's a SUCCESS handler in the current state
-        if (stateDef?.on?.SUCCESS && machine.actor?.actorEngine) {
-          // Include original event payload in SUCCESS event so $$id references work
-          // Clean tool result to remove CoJSON metadata (groupInfo) - it's metadata, not data
-          // CRITICAL: Put result AFTER spread so it takes precedence over any result in originalEventPayload
-          const cleanedResult = result ? this._cleanToolResult(result) : null;
-          await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', { 
-            ...originalEventPayload,
-            result: cleanedResult  // This must come last to override any result from originalEventPayload
-          });
+      const rawResult = await this.toolEngine.execute(toolName, machine.actor, evaluatedPayload);
+
+      // Tools return OperationResult: { ok: true, data } | { ok: false, errors }
+      if (!isSuccessResult(rawResult)) {
+        if (autoTransition && stateDef?.on?.ERROR && machine.actor?.actorEngine) {
+          await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'ERROR', { errors: rawResult.errors });
+        } else if (autoTransition && !stateDef?.on?.ERROR) {
+          console.warn(`[StateEngine] No ERROR handler for ${toolName} in state ${machine.currentState}`);
         }
+        return rawResult;
       }
-      return result;
+
+      const data = rawResult.data;
+      machine.lastToolResult = data;
+
+      if (autoTransition && !isEntryAction && stateDef?.on?.SUCCESS && machine.actor?.actorEngine) {
+        const cleanedResult = data != null ? this._cleanToolResult(data) : null;
+        await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', {
+          ...originalEventPayload,
+          result: cleanedResult
+        });
+      }
+      return rawResult;
     } catch (error) {
-      console.error(`[StateEngine] Tool execution failed: ${toolName}`, { 
+      console.error(`[StateEngine] Tool execution failed: ${toolName}`, {
         error: error.message,
         stack: error.stack,
         currentState: machine.currentState,
         autoTransition
       });
-      if (autoTransition) {
-        const stateDef = machine.definition.states[machine.currentState];
-        if (stateDef.on?.ERROR) {
-          await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'ERROR', { error: error.message });
-        } else {
-          console.warn(`[StateEngine] No ERROR handler for ${toolName} in state ${machine.currentState}`);
-        }
+      if (autoTransition && stateDef?.on?.ERROR && machine.actor?.actorEngine) {
+        const errors = error.errors ?? [
+          createErrorEntry(isPermissionError(error) ? 'permission' : 'structural', error.message)
+        ];
+        await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'ERROR', { errors });
+      } else if (autoTransition && !stateDef?.on?.ERROR) {
+        console.warn(`[StateEngine] No ERROR handler for ${toolName} in state ${machine.currentState}`);
       }
-      throw error; // Re-throw so caller can handle
+      throw error;
     }
   }
 

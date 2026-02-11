@@ -1231,7 +1231,7 @@ const vibeState$3 = {
       "on": { "DELETE_BUTTON": { "target": "deleting" }, "UPDATE_INPUT": { "target": "idle" }, "CREATE_BUTTON": { "target": "creating" }, "SWITCH_VIEW": { "target": "idle" }, "TOGGLE_BUTTON": { "target": "toggling" }, "SUCCESS": { "target": "idle" }, "ERROR": { "target": "error" } }
     },
     "error": {
-      "entry": { "updateContext": { "error": "$$error" } },
+      "entry": { "updateContext": { "error": "$$errors.0.message" } },
       "on": { "TOGGLE_BUTTON": { "target": "toggling" }, "DELETE_BUTTON": { "target": "deleting" }, "RETRY": { "target": "idle", "actions": [{ "updateContext": { "error": null } }] }, "DISMISS": { "target": "idle", "actions": [{ "updateContext": { "error": null } }] } }
     }
   }
@@ -1282,7 +1282,7 @@ const listState = {
     "error": {
       "entry": {
         "updateContext": {
-          "error": "$$error"
+          "error": "$$errors.0.message"
         }
       },
       "on": {
@@ -3730,7 +3730,7 @@ const vibeState$1 = {
           "actions": [
             {
               "updateContext": {
-                "error": "$$error",
+                "error": "$$errors.0.message",
                 "hasError": true
               }
             }
@@ -3741,7 +3741,7 @@ const vibeState$1 = {
     "error": {
       "entry": {
         "updateContext": {
-          "error": "$$error"
+          "error": "$$errors.0.message"
         }
       },
       "on": {
@@ -3874,7 +3874,7 @@ const detailState = {
           "actions": [
             {
               "updateContext": {
-                "addAgentError": "$$error",
+                "addAgentError": "$$errors.0.message",
                 "addAgentHasError": true
               }
             }
@@ -4952,7 +4952,7 @@ const vibeState = {
     "error": {
       "entry": {
         "updateContext": {
-          "error": "$$error",
+          "error": "$$errors.0.message",
           "isLoading": false,
           "hasError": true
         }
@@ -5259,7 +5259,7 @@ const logsState = {
     "error": {
       "entry": {
         "updateContext": {
-          "error": "$$error"
+          "error": "$$errors.0.message"
         }
       },
       "on": {

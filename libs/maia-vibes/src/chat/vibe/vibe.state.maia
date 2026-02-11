@@ -218,7 +218,7 @@
     "error": {
       "entry": {
         "updateContext": {
-          "error": "$$error",
+          "error": "$$errors.0.message",
           "isLoading": false,
           "hasError": true
         }

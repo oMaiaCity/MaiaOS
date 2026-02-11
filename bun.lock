@@ -132,6 +132,7 @@
       "name": "@MaiaOS/tools",
       "version": "0.17.0",
       "dependencies": {
+        "@MaiaOS/operations": "workspace:*",
         "@MaiaOS/schemata": "workspace:*",
       },
     },

@@ -112,7 +112,7 @@
           "actions": [
             {
               "updateContext": {
-                "addAgentError": "$$error",
+                "addAgentError": "$$errors.0.message",
                 "addAgentHasError": true
               }
             }

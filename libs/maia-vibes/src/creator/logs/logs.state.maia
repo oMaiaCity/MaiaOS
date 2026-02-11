@@ -7,7 +7,7 @@
     "error": {
       "entry": {
         "updateContext": {
-          "error": "$$error"
+          "error": "$$errors.0.message"
         }
       },
       "on": {

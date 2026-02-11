@@ -1233,7 +1233,7 @@
         "on": { "DELETE_BUTTON": { "target": "deleting" }, "UPDATE_INPUT": { "target": "idle" }, "CREATE_BUTTON": { "target": "creating" }, "SWITCH_VIEW": { "target": "idle" }, "TOGGLE_BUTTON": { "target": "toggling" }, "SUCCESS": { "target": "idle" }, "ERROR": { "target": "error" } }
       },
       "error": {
-        "entry": { "updateContext": { "error": "$$error" } },
+        "entry": { "updateContext": { "error": "$$errors.0.message" } },
         "on": { "TOGGLE_BUTTON": { "target": "toggling" }, "DELETE_BUTTON": { "target": "deleting" }, "RETRY": { "target": "idle", "actions": [{ "updateContext": { "error": null } }] }, "DISMISS": { "target": "idle", "actions": [{ "updateContext": { "error": null } }] } }
       }
     }
@@ -1284,7 +1284,7 @@
       "error": {
         "entry": {
           "updateContext": {
-            "error": "$$error"
+            "error": "$$errors.0.message"
           }
         },
         "on": {
@@ -3732,7 +3732,7 @@
             "actions": [
               {
                 "updateContext": {
-                  "error": "$$error",
+                  "error": "$$errors.0.message",
                   "hasError": true
                 }
               }
@@ -3743,7 +3743,7 @@
       "error": {
         "entry": {
           "updateContext": {
-            "error": "$$error"
+            "error": "$$errors.0.message"
           }
         },
         "on": {
@@ -3876,7 +3876,7 @@
             "actions": [
               {
                 "updateContext": {
-                  "addAgentError": "$$error",
+                  "addAgentError": "$$errors.0.message",
                   "addAgentHasError": true
                 }
               }
@@ -4954,7 +4954,7 @@
       "error": {
         "entry": {
           "updateContext": {
-            "error": "$$error",
+            "error": "$$errors.0.message",
             "isLoading": false,
             "hasError": true
           }
@@ -5261,7 +5261,7 @@
       "error": {
         "entry": {
           "updateContext": {
-            "error": "$$error"
+            "error": "$$errors.0.message"
           }
         },
         "on": {
