@@ -420,12 +420,16 @@ export class MaiaOS {
     const defaultData = config.registry?.data || {};
     const seedData = defaultData;
     
-    await os.dbEngine.execute({
+    const seedResult = await os.dbEngine.execute({
       op: 'seed',
       configs: configsWithTools,
       schemas: schemas,
       data: seedData
     });
+    if (!seedResult.ok) {
+      const msgs = seedResult.errors?.map((e) => e.message).join('; ') || 'Seed failed';
+      throw new Error(`[MaiaOS] Seed failed: ${msgs}`);
+    }
     
     // Database seeded successfully
     
@@ -857,10 +861,19 @@ export class MaiaOS {
   /**
    * Execute database operation (internal use + @db tool)
    * @param {Object} payload - Operation payload {op: 'query|create|update|delete|seed', ...}
-   * @returns {Promise<any>} Operation result
+   * @returns {Promise<any>} Operation result; for write ops: throws on error, returns data on success (backward compat for state machines)
    */
   async db(payload) {
-    return await this.dbEngine.execute(payload);
+    const result = await this.dbEngine.execute(payload);
+    const WRITE_OPS = new Set(['create', 'update', 'delete', 'append', 'push', 'seed']);
+    if (result && result.ok === false && WRITE_OPS.has(payload?.op)) {
+      const msgs = result.errors?.map((e) => e.message).join('; ') || 'Operation failed';
+      throw new Error(`[db] ${payload.op} failed: ${msgs}`);
+    }
+    if (result && result.ok === true && typeof result.data !== 'undefined') {
+      return result.data;
+    }
+    return result;
   }
   
   /**

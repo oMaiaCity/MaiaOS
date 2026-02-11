@@ -141,6 +141,35 @@ A simple reactive data store pattern (like Svelte stores):
 - Notifies subscribers when the value changes
 - Used by all read operations to provide reactive data access
 
+### OperationResult (Write Operations)
+
+Write operations (create, update, delete, append, push, seed) return a standardized `OperationResult`:
+
+**Success:**
+```javascript
+{ ok: true, data: { id: 'co_z...', ... }, op: 'create' }
+```
+
+**Error (schema, permission, or structural):**
+```javascript
+{
+  ok: false,
+  errors: [
+    { type: 'schema', message: '...', path: '/field' },
+    { type: 'permission', message: 'Not authorized to write...' }
+  ],
+  op: 'create'
+}
+```
+
+**Error types:** `schema`, `permission`, `structural`
+
+**Caller behavior:**
+- **maia.db()** (kernel): Throws on `ok: false`, returns `result.data` on success (tools/state machines get unwrapped data)
+- **dbEngine.execute()** (direct): Returns raw OperationResult; callers must check `result.ok` and handle `result.errors`
+
+**Helpers:** `isSuccessResult(result)`, `createErrorResult(errors, meta)`, `createErrorEntry(type, message, path)` from `@MaiaOS/operations`
+
 ---
 
 ## Usage

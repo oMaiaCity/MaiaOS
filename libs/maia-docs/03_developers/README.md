@@ -85,6 +85,12 @@ Read the documentation in the following order for a complete understanding:
 **Sub-topics:**
 - [README](./06_maia-operations/README.md) - Complete operations layer documentation
 
+### 7. [State and Persistence](./state-and-persistence.md)
+**Ephemeral vs persistable state and storage configuration**
+- What stays in memory by design
+- What could be persisted (machine state, history)
+- maia-sync `inMemory` vs `dbPath` for production
+
 ---
 
 ## Contributing

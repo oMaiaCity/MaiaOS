@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-02-11T16:28:11.585Z
+**Auto-generated:** 2026-02-11T19:56:06.979Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -6749,7 +6749,9 @@ console.log("Created:", newTodo.id); // Auto-generated ID (co-id)
 
 **Validation:**
 - Automatically validates against the schema definition
-- Throws error if validation fails
+- Throws error if validation fails (schema or permission)
+
+**Error handling:** When using `maia.db()`, write operations throw on failure. Wrap in try/catch to handle validation or permission errors.
 
 ### `update` - Update Existing Records
 

@@ -28,13 +28,18 @@ export class StateEngine {
 
   async createMachine(stateDef, actor) {
     const machineId = `${actor.id}_machine`;
+    let initialState = stateDef.initial;
+    const savedState = actor.context?.value?._currentState;
+    if (savedState && typeof savedState === 'string' && stateDef.states?.[savedState]) {
+      initialState = savedState;
+    }
     const machine = {
-      id: machineId, definition: stateDef, actor, currentState: stateDef.initial,
+      id: machineId, definition: stateDef, actor, currentState: initialState,
       history: [], eventPayload: {}
     };
     this.machines.set(machineId, machine);
     machine._isInitialCreation = true;
-    await this._executeEntry(machine, stateDef.initial);
+    await this._executeEntry(machine, initialState);
     machine._isInitialCreation = false;
     return machine;
   }
@@ -88,6 +93,15 @@ export class StateEngine {
     machine.history.push({ from: machine.currentState, to: targetState, event, timestamp: Date.now() });
     const previousState = machine.currentState;
     machine.currentState = targetState;
+
+    // Persist currentState to context CoValue so it survives page reload / reconnect
+    if (machine.actor.contextCoId && machine.actor.actorEngine) {
+      try {
+        await machine.actor.actorEngine.updateContextCoValue(machine.actor, { _currentState: targetState });
+      } catch (e) {
+        console.warn('[StateEngine] Failed to persist _currentState to context:', e.message);
+      }
+    }
 
     // CRITICAL: Preserve eventPayload for entry actions - entry actions need access to the original event payload
     // Store it before executing entry to ensure it's available for $$id and other event payload references

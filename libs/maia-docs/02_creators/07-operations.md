@@ -119,7 +119,9 @@ console.log("Created:", newTodo.id); // Auto-generated ID (co-id)
 
 **Validation:**
 - Automatically validates against the schema definition
-- Throws error if validation fails
+- Throws error if validation fails (schema or permission)
+
+**Error handling:** When using `maia.db()`, write operations throw on failure. Wrap in try/catch to handle validation or permission errors.
 
 ### `update` - Update Existing Records
 

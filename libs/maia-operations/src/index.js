@@ -8,3 +8,10 @@
 export { DBEngine } from './engine.js';
 export { DBAdapter } from './db-adapter.js';
 export { ReactiveStore } from './reactive-store.js';
+export {
+  createSuccessResult,
+  createErrorResult,
+  createErrorEntry,
+  isSuccessResult,
+  isPermissionError,
+} from './operation-result.js';

@@ -50,12 +50,16 @@ export class ActorEngine {
     for (const [key, value] of Object.entries(updates)) {
       sanitizedUpdates[key] = value === undefined ? null : value;
     }
-    await this.dbEngine.execute({
+    const updateResult = await this.dbEngine.execute({
       op: 'update',
       schema: contextSchemaCoId,
       id: actor.contextCoId,
       data: sanitizedUpdates
     });
+    if (!updateResult.ok) {
+      const msgs = updateResult.errors?.map((e) => e.message).join('; ') || 'Update failed';
+      throw new Error(`[ActorEngine] Context update failed: ${msgs}`);
+    }
   }
 
 

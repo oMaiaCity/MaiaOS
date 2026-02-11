@@ -6,15 +6,14 @@ import { ReactiveStore } from './reactive-store.js';
 import { resolve, checkCotype } from '@MaiaOS/db';
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js';
 import { 
-  validateAgainstSchemaOrThrow, 
   validateItems, 
   requireParam, 
   validateCoId, 
   requireDbEngine,
   ensureCoValueAvailable,
-  loadSchemaAndValidate
 } from '@MaiaOS/schemata/validation.helper';
 import { isSchemaRef, isVibeRef } from '@MaiaOS/schemata';
+import { createSuccessResult } from './operation-result.js';
 
 async function resolveSchemaFromCoValue(backend, coId, opName) {
   try {
@@ -79,9 +78,10 @@ export async function createOperation(backend, dbEngine, params) {
   requireDbEngine(dbEngine, 'CreateOperation', 'runtime schema validation');
   const schemaCoId = await resolve(backend, schema, { returnType: 'coId' });
   if (!schemaCoId) throw new Error(`[CreateOperation] Could not resolve schema: ${schema}`);
-  await loadSchemaAndValidate(backend, schemaCoId, data, 'CreateOperation', { dbEngine });
+  // Schema validation happens at gate: createCoMap/createCoList (backend)
   const options = spark != null ? { spark } : {};
-  return await backend.create(schemaCoId, data, options);
+  const result = await backend.create(schemaCoId, data, options);
+  return createSuccessResult(result, { op: 'create' });
 }
 
 export async function updateOperation(backend, dbEngine, evaluator, params) {
@@ -93,20 +93,14 @@ export async function updateOperation(backend, dbEngine, evaluator, params) {
   const rawExistingData = await backend.getRawRecord(id);
   if (!rawExistingData) throw new Error(`[UpdateOperation] Record not found: ${id}`);
   const schemaCoId = await resolveSchemaFromCoValue(backend, id, 'UpdateOperation');
-  
-  // Skip validation if schema not found (co-values without schemas, like context co-values)
-  if (schemaCoId) {
-    const { $schema: _schema, ...existingDataWithoutMetadata } = rawExistingData;
-    const evaluatedData = await evaluateDataWithExisting(data, existingDataWithoutMetadata, evaluator);
-    const mergedData = { ...existingDataWithoutMetadata, ...evaluatedData };
-    await loadSchemaAndValidate(backend, schemaCoId, mergedData || evaluatedData, 'UpdateOperation', { dbEngine });
-  }
+  // Schema validation happens at gate: update.js (backend)
   
   // Use schema from existing data or fallback to null (backend.update handles null schema)
   const updateSchema = schemaCoId || rawExistingData.$schema || null;
   const { $schema: _schema, ...existingDataWithoutMetadata } = rawExistingData;
   const evaluatedData = await evaluateDataWithExisting(data, existingDataWithoutMetadata, evaluator);
-  return await backend.update(updateSchema, id, evaluatedData);
+  const result = await backend.update(updateSchema, id, evaluatedData);
+  return createSuccessResult(result, { op: 'update' });
 }
 
 export async function deleteOperation(backend, dbEngine, params) {
@@ -115,14 +109,16 @@ export async function deleteOperation(backend, dbEngine, params) {
   validateCoId(id, 'DeleteOperation');
   requireDbEngine(dbEngine, 'DeleteOperation', 'extract schema from CoValue headerMeta');
   const schemaCoId = await resolveSchemaFromCoValue(dbEngine.backend, id, 'DeleteOperation');
-  return await backend.delete(schemaCoId, id);
+  const result = await backend.delete(schemaCoId, id);
+  return createSuccessResult(result, { op: 'delete' });
 }
 
 export async function seedOperation(backend, params) {
   const { configs, schemas, data } = params;
   if (!configs) throw new Error('[SeedOperation] Configs required');
   if (!schemas) throw new Error('[SeedOperation] Schemas required');
-  return await backend.seed(configs, schemas, data || {});
+  const result = await backend.seed(configs, schemas, data || {});
+  return createSuccessResult(result, { op: 'seed' });
 }
 
 export async function schemaOperation(backend, dbEngine, params) {
@@ -198,7 +194,8 @@ export async function appendOperation(backend, dbEngine, params) {
     for (const itemToAppend of itemsToAppend) content.push(itemToAppend), appendedCount++;
   }
   if (backend.node?.storage) await backend.node.syncManager.waitForStorageSync(coId);
-  return { success: true, coId, [targetCotype === 'colist' ? 'itemsAppended' : 'itemsPushed']: appendedCount, ...(targetCotype === 'colist' && { itemsSkipped: itemsToAppend.length - appendedCount }) };
+  const result = { coId, [targetCotype === 'colist' ? 'itemsAppended' : 'itemsPushed']: appendedCount, ...(targetCotype === 'colist' && { itemsSkipped: itemsToAppend.length - appendedCount }) };
+  return createSuccessResult(result, { op: 'append' });
 }
 
 export async function processInboxOperation(backend, dbEngine, params) {

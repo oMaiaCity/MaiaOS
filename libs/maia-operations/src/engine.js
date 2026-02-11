@@ -30,6 +30,7 @@ import {
   appendOperation,
   processInboxOperation
 } from './operations.js';
+import { createErrorResult, createErrorEntry, isPermissionError } from './operation-result.js';
 import {
   createSparkOperation,
   readSparkOperation,
@@ -113,11 +114,18 @@ export class DBEngine {
       throw new Error(`[DBEngine] Unknown operation: ${op}`);
     }
     
+    const WRITE_OPS = new Set(['create', 'update', 'delete', 'append', 'push', 'seed']);
     try {
       const result = await operation.execute(params);
       return result;
     } catch (error) {
       console.error(`[DBEngine] Operation ${op} failed:`, error);
+      if (WRITE_OPS.has(op)) {
+        const errors = [isPermissionError(error)
+          ? createErrorEntry('permission', error.message)
+          : createErrorEntry('schema', error.message)];
+        return createErrorResult(errors, { op });
+      }
       throw error;
     }
   }

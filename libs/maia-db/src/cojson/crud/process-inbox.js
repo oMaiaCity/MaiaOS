@@ -144,12 +144,15 @@ export async function processInbox(backend, actorId, inboxCoId) {
           // This ensures that if processInbox is called again before ActorEngine processes,
           // the message will already be marked as processed
           try {
-            await dbEngine.execute({
+            const updateResult = await dbEngine.execute({
               op: 'update',
               schema: messageSchemaCoId,
               id: messageCoId,
               data: { processed: true }
             });
+            if (!updateResult.ok) {
+              throw new Error(updateResult.errors?.map((e) => e.message).join('; ') || 'Update failed');
+            }
             // Verify update succeeded by reading using universal read() API
             try {
               const verifyStore = await universalRead(backend, messageCoId, messageSchemaCoId);

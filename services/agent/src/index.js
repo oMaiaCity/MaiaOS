@@ -168,7 +168,13 @@ async function handleRegisterHuman(worker, body) {
     if (existing != null && existing !== accountId) {
       return jsonResponse({ ok: false, error: 'username already registered to different account', validationErrors: [{ field: 'username', message: 'unique required' }] }, 409);
     }
-    await dbEngine.execute({ op: 'update', id: humansId, data: { [u]: accountId } });
+    const updateResult = await dbEngine.execute({ op: 'update', id: humansId, data: { [u]: accountId } });
+    if (updateResult && updateResult.ok === false) {
+      const msg = updateResult.errors?.map((e) => e.message).join('; ') ?? 'update failed';
+      const isValidation = msg.includes('Validation failed') || msg.includes('validation');
+      const status = isValidation ? 400 : 500;
+      return jsonResponse({ ok: false, error: msg, ...(isValidation && { validationErrors: [{ field: 'accountId', message: msg }] }) }, status);
+    }
     console.log('[agent] Registered human:', u, '->', accountId);
     return jsonResponse({ ok: true, username: u, accountId });
   } catch (e) {
@@ -197,7 +203,11 @@ async function handleTrigger(worker, body) {
       data: { text, done: false },
       spark,
     });
-    const todoId = result?.id;
+    if (result && result.ok === false) {
+      const msg = result.errors?.map((e) => e.message).join('; ') ?? 'create failed';
+      return jsonResponse({ ok: false, error: msg }, 400);
+    }
+    const todoId = result?.data?.id ?? result?.id;
     console.log('[agent] Created todo:', todoId, 'spark:', spark);
     return jsonResponse({ ok: true, created: todoId, spark, text });
   } catch (e) {

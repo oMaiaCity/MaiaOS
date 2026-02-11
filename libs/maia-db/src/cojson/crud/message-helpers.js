@@ -5,16 +5,14 @@
  * Ensures proper validation and CRDT-native message handling.
  */
 
-import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
 import { containsExpressions } from '@MaiaOS/schemata/expression-resolver.js';
 import { resolve } from '../schema/resolver.js';
 
 /**
  * Create a message CoMap and push its co-id to an inbox CoStream
  * 
- * CRITICAL: This function validates messages at two layers:
- * 1. Message schema validation (validates CoMap structure against @maia/schema/message)
- * 2. Create operation validation (defense in depth - also validates)
+ * Schema validation happens at gate: createCoMap (backend).
+ * This function enforces: containsExpressions check (payload must be resolved before persist).
  * 
  * @param {Object} dbEngine - Database engine instance
  * @param {string} inboxCoId - Inbox CoStream co-id
@@ -101,31 +99,35 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
     throw new Error(`[createAndPushMessage] Payload contains unresolved expressions. Only resolved values can be persisted to CoJSON. Payload: ${JSON.stringify(messageDataWithDefaults.payload).substring(0, 200)}`);
   }
   
-  // Validate message data against message schema
-  await validateAgainstSchemaOrThrow(messageSchema, messageDataWithDefaults, 'createAndPushMessage');
-  
-  // 3. Create message CoMap using create operation (also validates as defense in depth)
+  // Schema validation happens at gate: createCoMap (backend)
+  // 3. Create message CoMap using create operation
   const createResult = await dbEngine.execute({
     op: 'create',
     schema: messageSchemaCoId,
     data: messageDataWithDefaults
   });
-  
-  if (!createResult || !createResult.id) {
+  if (!createResult.ok) {
+    const msgs = createResult.errors?.map((e) => e.message).join('; ') || 'Create failed';
+    throw new Error(`[createAndPushMessage] Failed to create message: ${msgs}`);
+  }
+  const created = createResult.data;
+  if (!created || !created.id) {
     throw new Error('[createAndPushMessage] Failed to create message CoMap - create operation returned no id');
   }
-  
-  const messageCoId = createResult.id;
+  const messageCoId = created.id;
   if (!messageCoId.startsWith('co_z')) {
     throw new Error(`[createAndPushMessage] Invalid message co-id returned: ${messageCoId}`);
   }
-  
   // 4. Push message co-id to inbox CoStream (not plain object)
-  await dbEngine.execute({
+  const pushResult = await dbEngine.execute({
     op: 'push',
     coId: inboxCoId,
-    item: messageCoId  // Push co-id string, not plain object
+    item: messageCoId
   });
+  if (!pushResult.ok) {
+    const msgs = pushResult.errors?.map((e) => e.message).join('; ') || 'Push failed';
+    throw new Error(`[createAndPushMessage] Failed to push message to inbox: ${msgs}`);
+  }
   
   // 5. Return message co-id for reference
   return messageCoId;
