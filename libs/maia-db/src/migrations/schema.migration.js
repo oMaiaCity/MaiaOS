@@ -31,49 +31,19 @@ export async function schemaMigration(account, node, creationProps) {
 		: `Traveler ${travelerFallbackId(account)}`;
 
 	// 1. Check if profile already exists
-	let profileId = account.get("profile");
-	let profile;
+	const profileId = account.get("profile");
 
-	if (profileId) {
-		let loadedProfile = node.getCoValue(profileId);
-		if (!loadedProfile) {
-			loadedProfile = await node.loadCoValueCore(profileId);
-		}
-		if (loadedProfile && loadedProfile.type === "comap") {
-			if (loadedProfile.isAvailable?.()) {
-				const profileContent = loadedProfile.getCurrentContent?.();
-				if (profileContent && typeof profileContent.get === "function") {
-					profile = profileContent;
-				}
-			} else {
-				await new Promise((resolve, reject) => {
-					const timeout = setTimeout(() => reject(new Error("Timeout waiting for profile")), 15000);
-					const unsub = loadedProfile.subscribe((core) => {
-						if (core?.isAvailable?.()) {
-							clearTimeout(timeout);
-							unsub?.();
-							resolve();
-						}
-					});
-				});
-				const profileContent = loadedProfile.getCurrentContent?.();
-				if (profileContent && typeof profileContent.get === "function") {
-					profile = profileContent;
-				}
-			}
-		}
-	}
-
-	// 2. Create profile (public by default - profile group has everyone as reader)
-	// NEVER overwrite existing profile name on load/sign-in - only signup writes the name
-	if (!profile) {
+	// CRITICAL: If account already has a profile ID, NEVER create a new one.
+	// Creating would overwrite account.profile with a new "Traveler" profile and lose the real name.
+	// (On sign-in the profile may not be available yet due to sync timing - we must not misinterpret that as "no profile")
+	if (!profileId) {
+		// Only create on signup (withNewlyCreatedAccount). Sign-in always has profileId.
 		const profileMeta = createSchemaMeta("ProfileSchema");
 		const profileGroup = node.createGroup();
 		profileGroup.addMember("everyone", "reader");
 		const profileCoMap = profileGroup.createMap({ name: profileName }, profileMeta);
 		account.set("profile", profileCoMap.id);
 	}
-	// When profile exists: do NOT update name. Sign-in must never overwrite - only signup sets it.
 
 	// 3. Migrate capabilities: sparkGuardian -> guardian (idempotent)
 	await migrateCapabilitiesGuardian(account, node);

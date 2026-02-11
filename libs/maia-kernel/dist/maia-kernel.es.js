@@ -9319,28 +9319,11 @@ function MQ(t) {
 }
 async function Dn(t, A, e) {
   const i = e?.name?.trim(), o = i && i.length > 0 ? i : `Traveler ${MQ(t)}`;
-  let r = t.get("profile"), n;
-  if (r) {
-    let s = A.getCoValue(r);
-    if (s || (s = await A.loadCoValueCore(r)), s && s.type === "comap")
-      if (s.isAvailable?.()) {
-        const a = s.getCurrentContent?.();
-        a && typeof a.get == "function" && (n = a);
-      } else {
-        await new Promise((g, I) => {
-          const c = setTimeout(() => I(new Error("Timeout waiting for profile")), 15e3), C = s.subscribe((B) => {
-            B?.isAvailable?.() && (clearTimeout(c), C?.(), g());
-          });
-        });
-        const a = s.getCurrentContent?.();
-        a && typeof a.get == "function" && (n = a);
-      }
-  }
-  if (!n) {
-    const s = st("ProfileSchema"), a = A.createGroup();
-    a.addMember("everyone", "reader");
-    const g = a.createMap({ name: o }, s);
-    t.set("profile", g.id);
+  if (!t.get("profile")) {
+    const n = st("ProfileSchema"), s = A.createGroup();
+    s.addMember("everyone", "reader");
+    const a = s.createMap({ name: o }, n);
+    t.set("profile", a.id);
   }
   await GQ(t, A), await FQ(t, A);
 }
