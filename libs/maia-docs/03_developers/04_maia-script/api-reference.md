@@ -118,7 +118,7 @@ The package exports are defined in `libs/maia-script/package.json`:
 ## Related Documentation
 
 - [Main README](./README.md) - Package overview
-- [engines.md](./engines.md) - Detailed engine descriptions
+- [engines/](./engines/) - Detailed engine descriptions
 - [modules.md](./modules.md) - Module system
 - [expressions.md](./expressions.md) - Expression language
 - [patterns.md](./patterns.md) - Common patterns

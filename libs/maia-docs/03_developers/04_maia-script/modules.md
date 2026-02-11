@@ -166,6 +166,6 @@ These utilities ensure consistent module registration patterns across all module
 ## Related Documentation
 
 - [Main README](./README.md) - Package overview
-- [engines.md](./engines.md) - Engine details
+- [engines/](./engines/) - Engine details
 - [api-reference.md](./api-reference.md) - API reference
 - [patterns.md](./patterns.md) - Common patterns

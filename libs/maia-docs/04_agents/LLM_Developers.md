@@ -1,18 +1,24 @@
 # MaiaOS Documentation for Developers
 
-**Auto-generated:** 2026-02-11T20:56:54.243Z
+**Auto-generated:** 2026-02-11T21:30:35.373Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
 
-# CONCEPT
+# CONCEPTS AND TERMINOLOGY
 
-*Source: getting-started/01_concept.md*
+*Source: getting-started/01_concepts-and-terminology.md*
 
-# MaiaOS Concept
+# MaiaOS Concepts and Terminology
 
 **Version:** 0.4  
 **Last Updated:** January 2026
+
+## The Simple Version
+
+MaiaOS lets you build apps by writing **JSON files** instead of code. You describe what your app should do (like a recipe), and engines run it. No building, no compiling—just save a file and see it run. AI can read and edit these files too, so you can build apps by talking to an AI.
+
+---
 
 ## What is MaiaOS?
 
@@ -22,512 +28,124 @@ MaiaOS is a **100% runtime-based, AI-LLM native platform** for building AI-compo
 
 ### Pure Declarative Runtime
 
-**Everything is JSON:**
-- No JavaScript in your app code
-- No compiled bundles
-- No build steps
-- Pure `.maia` files loaded at runtime
-
-**Example Actor:**
-```json
-{
-  "$type": "actor",
-  "id": "actor_todo_001",
-  "contextRef": "todo",
-  "stateRef": "todo",
-  "viewRef": "todo"
-}
-```
-
-That's it. No classes, no functions, no imports. Just references.
+**Everything is JSON:** No JavaScript in your app code, no compiled bundles, no build steps. Pure `.maia` files loaded at runtime.
 
 ### AI-LLM Native
 
-**Built for AI Orchestration:**
-- LLMs can read and generate `.maia` files natively (they're just JSON)
-- Skills provide AI-readable interface specifications
-- State machines are AI-compatible event flows
-- Tools are defined with JSON schemas (LLM-friendly)
-
-**Why This Matters:**
-- AI agents can build entire apps by generating `.maia` files
-- No code generation → No syntax errors
-- LLMs understand the structure perfectly
-- Agents can modify apps at runtime
+LLMs can read and generate `.maia` files natively. Skills provide AI-readable interface specifications. Tools are defined with JSON schemas. AI agents can build entire apps by generating `.maia` files—no code generation, no syntax errors.
 
 ### 100% Runtime-Based
 
-**No Build Process:**
 ```
 Traditional:  Write Code → Compile → Bundle → Deploy → Run
 MaiaOS:       Write .maia → Run
 ```
 
-**Hot Runtime Reload Everything:**
-- Change a view → Instant update
-- Modify state machine → Instant update
-- Update styles → Instant update
-- No webpack, no vite, no build tools
-
-**How It Works:**
-1. Browser loads `o/kernel.js` (single entry point)
-2. Kernel initializes engines (Actor, View, State, Tool, DB, Subscription, etc.)
-3. Kernel loads modules (db, core, dragdrop)
-4. Kernel seeds database with configs, schemas, and tool definitions
-5. Kernel loads `.maia` files via `fetch()` or database queries
-6. Engines interpret and execute
-7. Shadow DOM renders isolated UI
-8. Done!
+Hot reload everything: change a view, modify a state machine, update styles—instant update. No webpack, no vite.
 
 ## Three-Layer Architecture
 
-### 1. Definition Layer (What to Do)
+**Definition Layer:** Pure JSON (actor, context, state, view, style, skill). No logic, just configuration.
 
-**Pure JSON definitions:**
-- `actor.maia` - Component identity and references
-- `context.maia` - Initial runtime data
-- `state.maia` - Behavior flow (state machine)
-- `view.maia` - UI structure
-- `style.maia` - Appearance
-- `skill.maia` - AI agent interface
+**Execution Layer:** JavaScript engines interpret definitions (ActorEngine, StateEngine, ViewEngine, ToolEngine, StyleEngine, DBEngine, SubscriptionEngine, MessageQueue).
 
-**No logic, just configuration.**
-
-### 2. Execution Layer (How to Do It)
-
-**JavaScript engines interpret definitions:**
-- `ActorEngine` - Orchestrates actors
-- `StateEngine` - Executes state machines
-- `ViewEngine` - Renders views
-- `ToolEngine` - Executes actions
-- `StyleEngine` - Compiles styles
-- `DBEngine` - Unified database operations (query, create, update, delete, toggle)
-- `SubscriptionEngine` - Context-driven reactive subscriptions
-- `MessageQueue` - Actor-to-actor communication
-
-**Logic lives here, not in your app.**
-
-### 3. Intelligence Layer (Why & When to Do It)
-
-**AI agents orchestrate via skills:**
-- Skills describe actor capabilities
-- LLMs read skills to understand what's possible
-- Agents generate events based on user intent
-- System executes via state machines
-
-**AI decides, engines execute.**
+**Intelligence Layer:** AI agents orchestrate via skills. Agents generate events based on user intent; system executes via state machines.
 
 ## Why MaiaOS?
 
-### For Vibecreators (App Builders)
+**Vibecreators:** No JavaScript required, instant hot reload, AI-assisted development, component isolation.
 
-✅ **No JavaScript Required** - Pure JSON definitions  
-✅ **Instant Hot Reload** - No build process  
-✅ **AI-Assisted Development** - LLMs understand `.maia` files  
-✅ **Component Isolation** - Shadow DOM per actor  
-✅ **Declarative Everything** - Views, state, styles  
+**AI Agents:** Native JSON, schema-defined tools, discoverable skills, composable actors, predictable state machines.
 
-### For AI Agents
-
-✅ **Native JSON** - No code generation needed  
-✅ **Schema-Defined** - Every tool has JSON schema  
-✅ **Discoverable** - Skills describe capabilities  
-✅ **Composable** - Mix and match actors  
-✅ **Predictable** - State machines are explicit  
-
-### For Developers (Core Contributors)
-
-✅ **Modular Architecture** - Pluggable engines  
-✅ **Schema-Agnostic Tools** - Generic CRUD  
-✅ **Clean Separation** - Definition vs. execution  
-✅ **Extensible** - Add engines, tools, modules  
-✅ **Type-Safe** - JSON schemas validate everything  
-
-## Real-World Example
-
-**Traditional React Todo:**
-```jsx
-// TodoApp.jsx (100+ lines of JavaScript)
-import React, { useState } from 'react';
-import './TodoApp.css';
-
-function TodoApp() {
-  const [todos, setTodos] = useState([]);
-  const [input, setInput] = useState('');
-  
-  const addTodo = () => {
-    setTodos([...todos, { id: Date.now(), text: input, done: false }]);
-    setInput('');
-  };
-  
-  // ... more code ...
-}
-```
-
-**MaiaOS Todo:**
-```json
-// todo.actor.maia (14 lines of JSON)
-{
-  "$type": "actor",
-  "contextRef": "todo",
-  "stateRef": "todo",
-  "viewRef": "todo"
-}
-```
-
-That's the entire actor. Context, state, and view are separate files. No JavaScript. No build. Just JSON.
-
-## Service/UI Actor Architecture
-
-MaiaOS uses a **service actor / UI actor** pattern for building applications:
-
-**Service Actors** (orchestration):
-- Entry point for every vibe
-- Handle business logic and data management
-- Coordinate between UI actors
-- Minimal or no view (only render child actors)
-
-**UI Actors** (presentation):
-- Render user interfaces
-- Handle user interactions
-- Receive data/configurations from service actors
-- Send generic events to service actors
-
-**Default Pattern:**
-```
-Vibe → Service Actor → Composite Actor → UI Actors
-```
-
-This ensures clean separation of concerns and scalable architecture. See [Actors Documentation](../vibecreators/02-actors.md#default-vibe-pattern-service--composite--ui) for details.
+**Developers:** Modular architecture, schema-agnostic tools, clean separation, extensible engines.
 
 ## Key Differentiators
 
-### vs. Traditional Frameworks (React, Vue, Svelte)
+| vs. Traditional Frameworks | vs. Low-Code |
+|----------------------------|--------------|
+| JSON instead of JS/TS | Text (`.maia`) instead of visual GUI |
+| No build process | Git version control |
+| Native AI generation | Native AI integration |
+| Shadow DOM isolation | Open source extensibility |
 
-| Feature | Traditional | MaiaOS |
-|---------|-------------|--------|
-| Language | JavaScript/TypeScript | JSON |
-| Build Process | Required | None |
-| Hot Reload | Via bundler | Native |
-| AI Generation | Code (error-prone) | JSON (perfect) |
-| Component Isolation | CSS Modules | Shadow DOM |
-| State Management | Library (Redux, etc.) | Built-in (State Machines) |
+## Service/UI Actor Pattern
 
-### vs. Low-Code Platforms (Bubble, Webflow)
-
-| Feature | Low-Code | MaiaOS |
-|---------|----------|--------|
-| Editing | Visual GUI | Text (`.maia` files) |
-| Version Control | Proprietary | Git |
-| AI Integration | Limited | Native |
-| Extensibility | Plugins | Engines + Tools |
-| Lock-in | Platform | Open source |
-
-### vs. Backend Frameworks (Rails, Django)
-
-MaiaOS is **frontend-first** but with backend patterns:
-- State machines (like backend workflows)
-- Tools (like backend services)
-- Actors (like backend models)
-- But all in the browser, no server required
-
-## The MaiaOS Promise
-
-> **Build AI-native applications with zero JavaScript, zero build process, and 100% runtime flexibility.**
-
-**What This Means:**
-1. **Vibecreators** define apps in JSON
-2. **Engines** execute definitions
-3. **AI Agents** orchestrate via skills
-4. **Users** get instant, reactive UIs
-
-**No compilation. No bundling. No build tools. Just pure, declarative, AI-native applications.**
-
-## Next Steps
-
-- [Terminology](./02_terminology.md) - Understand the key concepts
-- [Architecture](./03_architecture.md) - Deep dive into system design
-- [Installation](./04_install.md) - Get started building
+**Service Actors:** Entry point, business logic, coordinate UI actors.  
+**UI Actors:** Render interfaces, handle interactions, send events to service actors.  
+**Pattern:** `Vibe → Service Actor → Composite Actor → UI Actors`
 
 ---
 
-# TERMINOLOGY
+## Terminology Glossary
 
-*Source: getting-started/02_terminology.md*
+### Core Concepts
 
-# MaiaOS Terminology
+**MaiaOS** - The operating system. A runtime-based, AI-native platform for declarative applications. Think: "an OS for apps" that runs in the browser.
 
-**Quick reference glossary of all MaiaOS concepts.**
+**Kernel** - Single entry point (`o/kernel.js`). Boots the system, loads modules, initializes engines.
 
-## Core Concepts
+**MaiaScript** - JSON-based DSL for defining actors, views, states, styles, tools. Expressions: `$context`, `$$item`, `@inputValue`.
 
-### MaiaOS
+### Definition Layer
 
-The operating system itself. A runtime-based, AI-native platform for building declarative applications. Think of it as "an OS for apps" that runs in the browser.
+**Actor** - Pure declarative spec (`.actor.maia`). References other components. Zero logic—just IDs and references.
 
-### Kernel
+**Context** - Runtime data (`.context.maia`). Collections, UI state, form values. Inline or separate file.
 
-The single entry point (`o/kernel.js`). Boots the system, loads modules, initializes engines, and creates actors. One file to rule them all.
+**State Machine** - Behavior flow (`.state.maia`). XState-like: states, transitions, guards, actions. Defines WHAT happens WHEN.
 
-### MaiaScript
+**View** - UI structure (`.view.maia`). Declarative DOM tree with expressions, loops, conditionals. Renders to Shadow DOM.
 
-The JSON-based DSL (Domain Specific Language) for defining actors, views, states, styles, and tools. Pure declarative syntax with expressions like `$context`, `$$item`, `@inputValue`.
+**Style** - Appearance (`.style.maia`). Design tokens + component styles. Types: Brand (shared) or Local (actor-specific).
 
----
+**Skill** - AI agent interface (`.skill.maia`). Describes capabilities, events, context schema for LLM orchestration.
 
-## Definition Layer (Declarative)
+### Execution Layer
 
-### Actor
+**Engine** - JavaScript machinery that interprets definitions. ActorEngine, StateEngine, ViewEngine, ToolEngine, StyleEngine, DBEngine, SubscriptionEngine, MessageQueue, MaiaScriptEvaluator.
 
-A pure declarative specification (`.actor.maia`) that references other components. Contains zero logic - just IDs and references. Think: "component configuration file."
+**Tool** - Executable function (`.tool.js` + `.tool.maia`). The ONLY place imperative code lives. Tools mutate context or execute operations.
 
-### Context
+**Module** - Collection of tools (`.module.js`). Built-in: `db`, `core`, `dragdrop`, `interface`.
 
-Runtime data for an actor (`.context.maia`). All state lives here: collections, UI state, form values, etc. Can be inline or separate file.
+### Intelligence Layer
 
-### State Machine
+**Vibecreator** - Person who builds MaiaOS apps. Writes `.maia` files. No JavaScript required.
 
-Behavior flow definition (`.state.maia`). XState-like state machine with states, transitions, guards, and actions. Defines WHAT happens WHEN.
+**Agent/LLM** - AI assistant that reads skills and generates events.
 
-### View
+### Data Flow
 
-UI structure definition (`.view.maia`). Declarative DOM tree with expressions, loops, conditionals, and event handlers. Renders to Shadow DOM.
+**Event** - Message to state machine triggering a transition.  
+**Payload** - Data with event. Expressions: `$field` (context), `$$field` (item), `@inputValue` (DOM).  
+**Guard** - Condition for transition.  
+**Transition** - State change in response to event.  
+**Action** - Tool invocation or context update during transition.
 
-### Style
+### UI Concepts
 
-Appearance definition (`.style.maia`). Design tokens + component styles. Compiles to CSS and injects into Shadow DOM.
+**Shadow DOM** - Browser-native encapsulation. Each actor has isolated styles and DOM.
 
-**Types:**
+**Component** - In MaiaOS, component = actor. Reusable, isolated unit with state, view, behavior.
 
-- **Brand** (`brand.style.maia`) - Shared design system
-- **Local** (`actor.style.maia`) - Actor-specific overrides
+### File Conventions
 
-### Skill
+**Naming:** `{name}.{type}.maia` (e.g., `todo.actor.maia`, `todo.context.maia`)
 
-AI agent interface specification (`.skill.maia`). Describes actor capabilities, events, context schema, and usage patterns for LLM orchestration.
-
----
-
-## Execution Layer (Imperative)
-
-### Engine
-
-JavaScript execution machinery that interprets definitions. Engines contain all the logic - definitions contain none.
-
-**Core Engines:**
-
-- **ActorEngine** - Orchestrates actors, manages lifecycle
-- **StateEngine** - Interprets state machines, executes transitions
-- **ViewEngine** - Renders views to Shadow DOM
-- **ToolEngine** - Executes tool actions
-- **StyleEngine** - Compiles styles to CSS
-- **DBEngine** - Unified database operation engine (query, create, update, delete, toggle, seed)
-- **SubscriptionEngine** - Context-driven reactive subscriptions
-- **MessageQueue** - Actor-to-actor message passing
-- **ModuleRegistry** - Manages dynamic module loading
-- **MaiaScriptEvaluator** - Evaluates DSL expressions
-
-### Tool
-
-An executable function (`.tool.js` + `.tool.maia`). The ONLY place imperative code lives. Tools mutate actor context or execute operations based on payloads.
-
-**Structure:**
-
-- `.tool.maia` - JSON schema (AI-compatible metadata)
-- `.tool.js` - JavaScript function (execution logic)
-
-### Module
-
-A collection of related tools (`.module.js`). Modules register tools with the ToolEngine at boot time.
-
-**Built-in Modules:**
-
-- `db` - Database operations (unified API: `@db`)
-- `core` - UI utilities (modals, preventDefault, publishMessage)
-- `dragdrop` - Drag-and-drop handlers
-- `interface` - Interface validation
-
-### Module Registry
-
-Central plugin system for dynamic module loading. Manages module lifecycle and tool registration.
-
----
-
-## Intelligence Layer (AI Orchestration)
-
-### Vibecreator
-
-A person who builds MaiaOS applications. Writes `.maia` files, composes actors, defines behaviors. No JavaScript required.
-
-### Agent / LLM
-
-AI assistant (ChatGPT, Claude, Cursor, etc.) that reads skills and generates events. Orchestrates actors based on user intent.
-
-### Skill Engine
-
-(v0.5) Engine that manages skill discovery and interpretation for AI agents. Enables LLM-driven app orchestration.
-
----
-
-## Data Flow Concepts
-
-### Event
-
-A message sent to a state machine to trigger a transition. Events have a name and optional payload.
-
-### Payload
-
-Data passed with an event. Can contain expressions that are evaluated at runtime.
-
-**Expression Types:**
-
-- `$field` - Context reference (`actor.context.field`)
-- `$$field` - Item reference (in loops: `item.field`)
-- `@inputValue` - DOM value reference (`input.value`)
-
-### Guard
-
-A condition that determines if a transition should occur. Evaluated before state change.
-
-### Transition
-
-Moving from one state to another in response to an event. Can have guards and actions.
-
-### Action
-
-A tool invocation or context update. Executed during state transitions (entry/exit/inline).
-
----
-
-## UI Concepts
-
-### Shadow DOM
-
-Browser-native encapsulation. Each actor renders into its own shadow root with isolated styles and DOM.
-
-**Benefits:**
-
-- Style isolation (no CSS leakage)
-- DOM encapsulation
-- Multiple instances without conflicts
-
-### Constructable Stylesheet
-
-Modern CSS API for efficient style sharing. Brand styles compiled once, adopted by all actors.
-
-### Component
-
-In MaiaOS, "component" = "actor". Reusable, isolated, self-contained unit with state, view, and behavior.
-
----
-
-## Architectural Patterns
-
-### Schema-Agnostic
-
-Database operations don't know about specific data types. They work with generic `schema` (co-ids) and `data` parameters. Same tool, different schema. Zero hardcoded domain knowledge. All schemas are co-ids (CoJSON IDs).
-
-### Message Passing
-
-Actors communicate asynchronously via inboxes and subscriptions. Watermark pattern for processing.
-
-**Properties:**
-
-- `inbox` - Message queue
-- `subscriptions` - Actors to receive messages from
-- `inboxWatermark` - Last processed message index
-
-### Modular Architecture
-
-Everything is a plugin. Engines are pluggable, tools are modular, modules are dynamic.
-
----
-
-## File Conventions
-
-### `.maia` Extension
-
-All MaiaOS definition files use `.maia` extension. JSON format with `$type` discriminator.
-
-**Types:**
-
-- `actor.maia` - Actor definition
-- `context.maia` - Runtime data
-- `state.maia` - State machine
-- `view.maia` - UI structure
-- `style.maia` - Styling
-- `skill.maia` - AI interface
-- `tool.maia` - Tool metadata
-
-### Naming Pattern
-
-`{name}.{type}.maia`
-
-**Examples:**
-
-- `todo.actor.maia`
-- `todo.context.maia`
-- `todo.state.maia`
-- `brand.style.maia`
-
-### CoMap ID (Future)
-
-Fake IDs used for Jazz integration. Currently maps to filenames, will map to Jazz CoMaps in v0.5.
-
----
-
-## Development Concepts
-
-### Hot Reload
-
-Automatic browser refresh on file changes. No build process, instant updates.
-
-### Watch Mode
-
-Scripts that monitor file changes and regenerate outputs (e.g., LLM docs).
-
-### Vibecreators Docs
-
-User-facing documentation for app builders. Located in `docs/vibecreators/`.
-
-### Developers Docs
-
-Technical documentation for core contributors. Located in `docs/developers/`.
-
-### LLM Docs
-
-Auto-generated, context-optimized documentation for AI agents. Located in `docs/agents/`.
-
----
-
-## Quick Reference
-
-| Term      | Type       | Purpose                  |
-| --------- | ---------- | ------------------------ |
-| **Actor** | Definition | Component configuration |
-| **Context** | Definition | Runtime data |
-| **State** | Definition | Behavior flow |
-| **View** | Definition | UI structure |
-| **Style** | Definition | Appearance |
-| **Engine** | Execution | Interprets definitions |
-| **Tool** | Execution | Executes actions |
-| **Module** | Execution | Groups tools |
-| **Event** | Data Flow | Triggers transitions |
-| **Payload** | Data Flow | Event data |
-| **Guard** | Data Flow | Transition condition |
+**Types:** actor, context, state, view, style, skill, tool
 
 ---
 
 ## Next Steps
 
-- [Architecture](./03_architecture.md) - System design deep dive
+- [Architecture](./03_architecture/) - Deep dive into system design
 - [Installation](./04_install.md) - Get started building
 
 ---
 
-# ARCHITECTURE
+# 00 OVERVIEW
 
-*Source: getting-started/03_architecture.md*
+*Source: getting-started/03_architecture/00-overview.md*
 
 # MaiaOS Architecture
 
@@ -809,7 +427,14 @@ StateEngine.send(EVENT_NAME, payload)
 StateEngine finds current state
   ↓
 StateEngine checks event handlers
-  ↓
+
+---
+
+# 01 DETAIL
+
+*Source: getting-started/03_architecture/01-detail.md*
+
+↓
 StateEngine evaluates guard (if present)
   ↓
 Guard passes → Continue | Guard fails → Ignore
@@ -1035,9 +660,20 @@ actor.inbox = [...]; // Watermark pattern
 
 ## Next Steps
 
-- [Installation](./04_install.md) - Get started building
-- [Vibecreators Docs](../vibecreators/) - Build applications
-- [Developers Docs](../developers/) - Extend MaiaOS
+- [Installation](../04_install.md) - Get started building
+- [Creators Docs](../02_creators/) - Build applications
+- [Developers Docs](../03_developers/) - Extend MaiaOS
+
+---
+
+# README
+
+*Source: getting-started/03_architecture/README.md*
+
+# Architecture Documentation
+
+1. **[00-overview.md](./00-overview.md)** - System architecture overview
+2. **[01-detail.md](./01-detail.md)** - Architecture details
 
 ---
 
@@ -5002,7 +4638,7 @@ The core validation system. Wraps AJV (Another JSON Schema Validator) and adds C
 - Resolves schema dependencies ($schema, $co references)
 - Handles co-id references from IndexedDB
 
-**See:** [Validation Engine Details](./validation.md)
+**See:** [Validation Engine Details](./validation/)
 
 ### 2. Schema Transformer
 
@@ -5306,7 +4942,7 @@ transformInstanceForSeeding(instance, coIdMap);
 
 - [maia-operations Package](../06_maia-operations/README.md) - Operations layer that uses schema validation
 - [Schema Definitions](../03_schemas.md) - Schema structure and usage
-- [Validation Engine Details](./validation.md) - How ValidationEngine works
+- [Validation Engine Details](./validation/) - How ValidationEngine works
 - [Schema Transformation](./transformation.md) - How transformation works
 - [CoJSON Integration](./cojson-integration.md) - CoJSON types support
 - [CoJSON Architecture](../05_maia-db/cojson.md) - CoJSON system overview
@@ -5790,9 +5426,9 @@ transformQueryObjects(instance, coIdMap);
 
 ---
 
-# MAIA SCHEMATA/VALIDATION
+# MAIA SCHEMATA/00 OVERVIEW
 
-*Source: developers/03_maia-schemata/validation.md*
+*Source: developers/03_maia-schemata/validation/00-overview.md*
 
 # Validation Engine
 
@@ -6075,6 +5711,12 @@ const schema = await backend.resolveSchema({ fromCoValue: 'co_z456...' });
 
 Validation errors are formatted for readability:
 
+---
+
+# MAIA SCHEMATA/01 REFERENCE
+
+*Source: developers/03_maia-schemata/validation/01-reference.md*
+
 **AJV Error:**
 ```javascript
 {
@@ -6307,9 +5949,20 @@ await engine.loadSchema('actor', actorSchema);
 
 ---
 
-# MAIA SCRIPT/ACTOR COMMUNICATION
+# MAIA SCHEMATA/README
 
-*Source: developers/04_maia-script/actor-communication.md*
+*Source: developers/03_maia-schemata/validation/README.md*
+
+# Validation Documentation
+
+1. **[00-overview.md](./00-overview.md)** - Validation overview
+2. **[01-reference.md](./01-reference.md)** - Reference details
+
+---
+
+# MAIA SCRIPT/00 OVERVIEW
+
+*Source: developers/04_maia-script/actor-communication/00-overview.md*
 
 # Actor-to-Actor Communication Flow
 
@@ -6611,7 +6264,14 @@ The entry action runs when context changes:
                 "$or": [
                   { "$eq": ["$sparkDetails.members", null] },
                   { "$eq": [{ "$length": "$sparkDetails.members" }, 0] }
-                ]
+
+---
+
+# MAIA SCRIPT/01 REFERENCE
+
+*Source: developers/04_maia-script/actor-communication/01-reference.md*
+
+]
               }
             ]
           },
@@ -6837,9 +6497,9 @@ The view subscribes to context changes:
 
 ## Related Documentation
 
-- [Actor Engine API](../04_maia-script/engines.md#actor-engine) - Actor lifecycle and messaging
-- [State Engine API](../04_maia-script/engines.md#state-engine) - State machine execution
-- [View Engine API](../04_maia-script/engines.md#view-engine) - View rendering and events
+- [Actor Engine API](../engines/#actor-engine) - Actor lifecycle and messaging
+- [State Engine API](../engines/#state-engine) - State machine execution
+- [View Engine API](../engines/#view-engine) - View rendering and events
 - [Query Reactivity](../05_maia-db/README.md) - How queries work with dynamic filters
 - [MaiaScript Expressions](../04_maia-script/expressions.md) - Expression syntax and evaluation
 
@@ -6860,6 +6520,17 @@ The view subscribes to context changes:
 - `libs/maia-db/src/cojson/crud/read.js` - Query reactivity
 
 **Example**: Sparks vibe agent → detail actor communication flow (documented above)
+
+---
+
+# MAIA SCRIPT/README
+
+*Source: developers/04_maia-script/actor-communication/README.md*
+
+# Actor Communication Documentation
+
+1. **[00-overview.md](./00-overview.md)** - Communication overview
+2. **[01-reference.md](./01-reference.md)** - Reference details
 
 ---
 
@@ -6987,16 +6658,16 @@ The package exports are defined in `libs/maia-script/package.json`:
 ## Related Documentation
 
 - [Main README](./README.md) - Package overview
-- [engines.md](./engines.md) - Detailed engine descriptions
+- [engines/](./engines/) - Detailed engine descriptions
 - [modules.md](./modules.md) - Module system
 - [expressions.md](./expressions.md) - Expression language
 - [patterns.md](./patterns.md) - Common patterns
 
 ---
 
-# MAIA SCRIPT/ENGINES
+# MAIA SCRIPT/00 OVERVIEW
 
-*Source: developers/04_maia-script/engines.md*
+*Source: developers/04_maia-script/engines/00-overview.md*
 
 # Engines
 
@@ -7349,6 +7020,12 @@ const result = await toolEngine.executeTool(
 
 **CRITICAL PRINCIPLE:** **100% State Machine Pattern - All tool calls MUST flow through state machines.**
 
+---
+
+# MAIA SCRIPT/01 DETAIL
+
+*Source: developers/04_maia-script/engines/01-detail.md*
+
 ### Architecture: Everything Through State Machines
 
 **Strict Rule:** All tool calls MUST flow through state machines. No exceptions.
@@ -7549,6 +7226,12 @@ const updated = await dbEngine.execute({
 
 **Important:** This engine directly updates actor context for reactive query objects. This is the ONLY exception to the rule that state machines are the single source of truth for context changes.
 
+---
+
+# MAIA SCRIPT/02 REFERENCE
+
+*Source: developers/04_maia-script/engines/02-reference.md*
+
 **Config Reactivity:**
 When config CRDTs change (view, style, state, etc.), SubscriptionEngine automatically:
 - Updates caches
@@ -7746,6 +7429,18 @@ ViewEngine.render() - Re-renders view reactively
 
 ---
 
+# MAIA SCRIPT/README
+
+*Source: developers/04_maia-script/engines/README.md*
+
+# Engine Documentation
+
+1. **[00-overview.md](./00-overview.md)** - Engine overview
+2. **[01-detail.md](./01-detail.md)** - Engine details
+3. **[02-reference.md](./02-reference.md)** - Reference
+
+---
+
 # MAIA SCRIPT/EXPRESSIONS
 
 *Source: developers/04_maia-script/expressions.md*
@@ -7893,7 +7588,7 @@ await evaluator.evaluate(expression, data);
 ## Related Documentation
 
 - [Main README](./README.md) - Package overview
-- [engines.md](./engines.md) - MaiaScriptEvaluator details
+- [engines/](./engines/) - MaiaScriptEvaluator details
 - [api-reference.md](./api-reference.md) - API reference
 - [patterns.md](./patterns.md) - Common patterns
 
@@ -8071,7 +7766,7 @@ These utilities ensure consistent module registration patterns across all module
 ## Related Documentation
 
 - [Main README](./README.md) - Package overview
-- [engines.md](./engines.md) - Engine details
+- [engines/](./engines/) - Engine details
 - [api-reference.md](./api-reference.md) - API reference
 - [patterns.md](./patterns.md) - Common patterns
 
@@ -8216,7 +7911,7 @@ const evaluator = new MaiaScriptEvaluator(null, {
 ## Related Documentation
 
 - [Main README](./README.md) - Package overview
-- [engines.md](./engines.md) - Engine details
+- [engines/](./engines/) - Engine details
 - [modules.md](./modules.md) - Module system
 - [expressions.md](./expressions.md) - Expression language
 - [api-reference.md](./api-reference.md) - API reference
@@ -8343,10 +8038,12 @@ graph TD
 
 This package documentation is organized into focused topics:
 
-- **[engines.md](./engines.md)** - Detailed descriptions of all 10 engines
+- **[engines/](./engines/)** - Detailed descriptions of all 10 engines
 - **[modules.md](./modules.md)** - Module system and creating custom modules
 - **[expressions.md](./expressions.md)** - MaiaScript expression language reference
 - **[api-reference.md](./api-reference.md)** - Complete API reference
+- **[subscriptions-overview.md](./subscriptions-overview.md)** - Subscription architecture
+- **[subscriptions-reference.md](./subscriptions-reference.md)** - Config/data details, patterns, troubleshooting
 - **[patterns.md](./patterns.md)** - Common patterns and troubleshooting
 
 ---
@@ -8401,1197 +8098,9 @@ For full system usage, see the [maia-kernel Package](../02_maia-kernel/README.md
 
 ---
 
-# MAIA SCRIPT/SUBSCRIPTIONS CONFIG
+# MAIA SCRIPT/SUBSCRIPTIONS OVERVIEW
 
-*Source: developers/04_maia-script/subscriptions-config.md*
-
-# Config Subscriptions
-
-## Overview
-
-Config subscriptions automatically keep actor configs (view, style, state, etc.) in sync with their CRDT definitions. When a config CRDT changes, the actor automatically updates and re-renders.
-
-**Think of it like:** Auto-save in a document editor - when you change the document, everyone viewing it sees the update automatically.
-
----
-
-## The Simple Version
-
-Actor configs reference CRDTs by co-id. SubscriptionEngine automatically subscribes to these CRDTs:
-
-```javascript
-// Actor config references view co-id
-actor.config = {
-  view: "co_zView123",
-  style: "co_zStyle456"
-}
-
-// SubscriptionEngine automatically:
-// 1. Subscribes to view CRDT
-// 2. Subscribes to style CRDT
-// 3. When view changes → updates actor.viewDef → re-renders
-// 4. When style changes → reloads stylesheets → re-renders
-```
-
----
-
-## How It Works
-
-### Config Types
-
-SubscriptionEngine subscribes to these config CRDTs:
-
-- **`view`** - View definition CRDT (HTML structure)
-- **`style`** - Style definition CRDT (CSS styles)
-- **`brand`** - Brand style CRDT (design system tokens)
-- **`state`** - State machine definition CRDT (state transitions)
-- **`interface`** - Interface definition CRDT (message validation)
-- **`context`** - Base context CRDT (initial context values)
-
-### Subscription Process
-
-1. **Scan Config:**
-   ```javascript
-   // SubscriptionEngine.initialize(actor) scans actor.config
-   if (config.view && config.view.startsWith('co_z')) {
-     // Subscribe to view CRDT
-   }
-   ```
-
-2. **Subscribe via Engine or read() API:**
-   ```javascript
-   // View/style/state go through engines (they handle caching)
-   await viewEngine.loadView(config.view, (updatedView) => {
-     handleViewUpdate(actorId, updatedView);
-   });
-   
-   // Interface/context use read() API directly
-   const store = await dbEngine.execute({
-     op: 'read',
-     schema: interfaceSchemaCoId,
-     key: config.interface
-   });
-   store.subscribe((updatedInterface) => {
-     handleInterfaceUpdate(actorId, updatedInterface);
-   });
-   ```
-
-3. **Store Unsubscribe Function:**
-   ```javascript
-   // Store for cleanup when actor is destroyed
-   actor._configSubscriptions.push(unsubscribe);
-   ```
-
----
-
-## Config Update Handlers
-
-### View Update
-
-**Handler:** `SubscriptionEngine._handleViewUpdate()`
-
-**What happens:**
-1. Invalidates view cache
-2. Updates `actor.viewDef = newViewDef`
-3. Triggers re-render
-
-**Code:**
-```javascript
-_handleViewUpdate(actorId, newViewDef) {
-  const actor = this.actorEngine.getActor(actorId);
-  if (!actor) return;
-  
-  // Invalidate cache
-  this.viewEngine.viewCache.delete(actor.config.view);
-  
-  // Update actor
-  actor.viewDef = newViewDef;
-  
-  // Re-render
-  this._scheduleRerender(actorId);
-}
-```
-
-### Style Update
-
-**Handler:** `SubscriptionEngine._handleStyleUpdate()`
-
-**What happens:**
-1. Cache already updated by `loadStyle()` subscription callback
-2. Reloads stylesheets via `styleEngine.getStyleSheets()`
-3. Updates `actor.shadowRoot.adoptedStyleSheets`
-4. Triggers re-render
-
-**Code:**
-```javascript
-async _handleStyleUpdate(actorId, newStyleDef) {
-  const actor = this.actorEngine.getActor(actorId);
-  if (!actor) return;
-  
-  // Reload stylesheets
-  const styleSheets = await this.styleEngine.getStyleSheets(actor.config);
-  actor.shadowRoot.adoptedStyleSheets = styleSheets;
-  
-  // Re-render
-  this._scheduleRerender(actorId);
-}
-```
-
-### State Update
-
-**Handler:** `SubscriptionEngine._handleStateUpdate()`
-
-**What happens:**
-1. Invalidates state cache
-2. Destroys old state machine
-3. Creates new state machine from updated definition
-4. Triggers re-render
-
-**Code:**
-```javascript
-async _handleStateUpdate(actorId, newStateDef) {
-  const actor = this.actorEngine.getActor(actorId);
-  if (!actor || !this.stateEngine) return;
-  
-  // Invalidate cache
-  this.stateEngine.stateCache.delete(actor.config.state);
-  
-  // Destroy old machine
-  if (actor.machine) {
-    this.stateEngine.destroyMachine(actor.machine.id);
-  }
-  
-  // Create new machine
-  actor.machine = await this.stateEngine.createMachine(newStateDef, actor);
-  
-  // Re-render
-  this._scheduleRerender(actorId);
-}
-```
-
-### Interface Update
-
-**Handler:** `SubscriptionEngine._handleInterfaceUpdate()`
-
-**What happens:**
-1. Updates `actor.interface = newInterfaceDef`
-2. Re-validates interface (non-blocking)
-3. **No re-render** (interface only affects message validation)
-
-**Code:**
-```javascript
-async _handleInterfaceUpdate(actorId, newInterfaceDef) {
-  const actor = this.actorEngine.getActor(actorId);
-  if (!actor) return;
-  
-  // Update interface
-  actor.interface = newInterfaceDef;
-  
-  // Re-validate (non-blocking)
-  await this.actorEngine.toolEngine.execute('@interface/validateInterface', actor, {
-    interfaceDef: newInterfaceDef,
-    actorId
-  });
-}
-```
-
-### Context Update
-
-**Handler:** `SubscriptionEngine._handleContextUpdate()`
-
-**What happens:**
-1. Merges new context with existing context
-2. Re-subscribes to query objects (handles new queries)
-3. Triggers re-render
-
-**Code:**
-```javascript
-async _handleContextUpdate(actorId, newContext) {
-  const actor = this.actorEngine.getActor(actorId);
-  if (!actor) return;
-  
-  // Merge contexts
-  const existingContext = actor.context || {};
-  actor.context = { ...existingContext, ...newContext };
-  
-  // Re-subscribe to query objects
-  await this._subscribeToContext(actor);
-  
-  // Re-render
-  this._scheduleRerender(actorId);
-}
-```
-
----
-
-## Examples
-
-### View Subscription
-
-```javascript
-// Actor config references view co-id
-actor.config = {
-  view: "co_zView123"
-}
-
-// SubscriptionEngine automatically:
-// 1. Subscribes to view CRDT via viewEngine.loadView()
-// 2. When view changes → handleViewUpdate() fires
-// 3. Updates actor.viewDef
-// 4. Triggers re-render
-```
-
-### Style Subscription
-
-```javascript
-// Actor config references style and brand co-ids
-actor.config = {
-  style: "co_zStyle456",
-  brand: "co_zBrand789"
-}
-
-// SubscriptionEngine automatically:
-// 1. Subscribes to style CRDT
-// 2. Subscribes to brand CRDT
-// 3. When style changes → handleStyleUpdate() fires
-// 4. Reloads stylesheets
-// 5. Updates shadowRoot.adoptedStyleSheets
-// 6. Triggers re-render
-```
-
-### State Subscription
-
-```javascript
-// Actor config references state co-id
-actor.config = {
-  state: "co_zState123"
-}
-
-// SubscriptionEngine automatically:
-// 1. Subscribes to state CRDT via stateEngine.loadStateDef()
-// 2. When state changes → handleStateUpdate() fires
-// 3. Destroys old state machine
-// 4. Creates new state machine
-// 5. Triggers re-render
-```
-
----
-
-## Key Concepts
-
-### Engine Subscriptions vs Direct Subscriptions
-
-**View/Style/State:** Go through engines (they handle caching and batch subscriptions)
-
-```javascript
-// View subscription goes through ViewEngine
-await viewEngine.loadView(config.view, (updatedView) => {
-  handleViewUpdate(actorId, updatedView);
-});
-```
-
-**Interface/Context:** Use read() API directly
-
-```javascript
-// Interface subscription uses read() API
-const store = await dbEngine.execute({
-  op: 'read',
-  schema: interfaceSchemaCoId,
-  key: config.interface
-});
-store.subscribe((updatedInterface) => {
-  handleInterfaceUpdate(actorId, updatedInterface);
-});
-```
-
-### Cache Invalidation
-
-When configs update, caches are invalidated:
-
-```javascript
-// View update invalidates cache
-this.viewEngine.viewCache.delete(actor.config.view);
-
-// State update invalidates cache
-this.stateEngine.stateCache.delete(actor.config.state);
-```
-
-Caches are repopulated on next load (when re-render calls `loadView()`/`loadStateDef()` again).
-
----
-
-## Common Patterns
-
-### Multiple Config Subscriptions
-
-Actors can subscribe to multiple configs:
-
-```javascript
-actor.config = {
-  view: "co_zView123",
-  style: "co_zStyle456",
-  state: "co_zState789",
-  interface: "co_zInterface012"
-}
-
-// SubscriptionEngine subscribes to all automatically
-```
-
-### Runtime Config Editing
-
-Configs are runtime-editable - changes propagate automatically:
-
-```javascript
-// Edit view CRDT in database
-await dbEngine.execute({
-  op: 'updateConfig',
-  schema: viewSchemaCoId,
-  id: "co_zView123",
-  data: { /* updated view */ }
-});
-
-// Actor automatically:
-// 1. Receives update via subscription
-// 2. Updates actor.viewDef
-// 3. Re-renders with new view
-```
-
----
-
-## Troubleshooting
-
-### Config Not Updating
-
-**Symptoms:** Config CRDT changes but actor doesn't update
-
-**Check:**
-1. Is subscription set up? (`actor._configSubscriptions` has unsubscribe function)
-2. Is config co-id valid? (starts with `co_z`)
-3. Is handler being called? (add logging to handler)
-4. Is cache being invalidated? (check cache before/after)
-
-**Fix:**
-- Verify `SubscriptionEngine.initialize()` is called
-- Verify engines are set (`subscriptionEngine.setEngines()`)
-- Check console for subscription errors
-
-### Duplicate Subscriptions
-
-**Symptoms:** Multiple subscriptions to same config
-
-**Check:**
-1. Is `loadView()` called multiple times with `onUpdate`?
-2. Are subscriptions cleaned up properly?
-3. Is `_subscribeToConfig()` called multiple times?
-
-**Fix:**
-- Ensure `initialize()` is only called once per actor
-- Ensure `cleanup()` is called when actor is destroyed
-- Check for duplicate `loadView()` calls
-
----
-
-## Related Documentation
-
-- [subscriptions.md](./subscriptions.md) - Subscription overview
-- [subscriptions-data.md](./subscriptions-data.md) - Data subscriptions
-- [subscriptions-patterns.md](./subscriptions-patterns.md) - Patterns and troubleshooting
-- [engines.md](./engines.md) - ViewEngine, StyleEngine, StateEngine details
-
----
-
-## References
-
-- Source: `libs/maia-script/src/engines/subscription-engine/config-subscriptions.js`
-- Update Handlers: `libs/maia-script/src/engines/subscription-engine/update-handlers.js`
-- DB Engine: `libs/maia-script/src/engines/db-engine/operations/read.js`
-
----
-
-# MAIA SCRIPT/SUBSCRIPTIONS DATA
-
-*Source: developers/04_maia-script/subscriptions-data.md*
-
-# Data Subscriptions
-
-## Overview
-
-Data subscriptions automatically keep actor context in sync with database queries. When you define a query object in an actor's context, SubscriptionEngine automatically subscribes to that data and updates the context whenever it changes.
-
-**Think of it like:** Setting up a Google Doc notification - whenever someone edits the document, you get notified automatically.
-
----
-
-## The Simple Version
-
-Query objects in actor context automatically create reactive subscriptions:
-
-```javascript
-actor.context = {
-  todos: {
-    schema: "co_zTodos123",  // Which data to watch
-    filter: { completed: false }  // Filter criteria
-  }
-}
-
-// SubscriptionEngine automatically:
-// 1. Uses read() API to get reactive store
-// 2. Subscribes to store updates
-// 3. Updates actor.context.todos when data changes
-// 4. Triggers re-render so UI updates
-```
-
----
-
-## How It Works
-
-### Query Objects
-
-Query objects are simple objects in actor context that tell SubscriptionEngine what data to watch:
-
-```javascript
-{
-  schema: "co_zTodos123",  // Schema co-id (co_z...)
-  filter: { completed: false }  // Optional filter criteria
-}
-```
-
-**Detection:**
-- SubscriptionEngine scans `actor.context` for objects with `schema` property
-- If `schema` is a string starting with `co_z`, it's a query object
-- Query objects are automatically subscribed to
-
-### Subscription Process
-
-1. **Scan Context:**
-   ```javascript
-   // SubscriptionEngine.initialize(actor) scans context
-   for (const [key, value] of Object.entries(actor.context)) {
-     if (value && typeof value === 'object' && value.schema) {
-       // Found query object!
-     }
-   }
-   ```
-
-2. **Use read() API:**
-   ```javascript
-   // read() always returns reactive store
-   const store = await dbEngine.execute({
-     op: 'read',
-     schema: value.schema,  // co_zTodos123
-     filter: value.filter || null
-   });
-   ```
-
-3. **Subscribe to Store:**
-   ```javascript
-   // Subscribe to store updates
-   const unsubscribe = store.subscribe((data) => {
-     handleDataUpdate(subscriptionEngine, actor.id, key, data);
-   });
-   ```
-
-4. **Store Unsubscribe Function:**
-   ```javascript
-   // Store for cleanup when actor is destroyed
-   actor._subscriptions.push(unsubscribe);
-   ```
-
-### Update Handling
-
-When data changes, the store subscription fires:
-
-```javascript
-function handleDataUpdate(subscriptionEngine, actorId, contextKey, data) {
-  const actor = subscriptionEngine.actorEngine.getActor(actorId);
-  if (!actor) return; // Actor may have been destroyed
-
-  // Update context with new data
-  actor.context[contextKey] = data;
-  
-  // Trigger batched re-render
-  subscriptionEngine._scheduleRerender(actorId);
-}
-```
-
----
-
-## Examples
-
-### Basic Example
-
-```javascript
-// Actor context with query object
-actor.context = {
-  todos: {
-    schema: "co_zTodos123",
-    filter: { completed: false }
-  }
-}
-
-// SubscriptionEngine automatically subscribes:
-// 1. Calls dbEngine.execute({op: 'read', schema: "co_zTodos123", filter: {...}})
-// 2. Gets reactive store
-// 3. Subscribes to store updates
-// 4. Updates actor.context.todos when data changes
-```
-
-### Multiple Queries
-
-```javascript
-// Actor can have multiple query objects
-actor.context = {
-  todos: {
-    schema: "co_zTodos123",
-    filter: { completed: false }
-  },
-  notes: {
-    schema: "co_zNotes456",
-    filter: { archived: false }
-  }
-}
-
-// SubscriptionEngine subscribes to both automatically
-```
-
-### Filtered Queries
-
-```javascript
-// Query objects can have filters
-actor.context = {
-  activeTodos: {
-    schema: "co_zTodos123",
-    filter: { 
-      completed: false,
-      priority: 'high'
-    }
-  }
-}
-
-// Only todos matching filter are returned
-```
-
----
-
-## Key Concepts
-
-### Reactive Stores
-
-The `read()` API always returns a `ReactiveStore`:
-
-```javascript
-const store = await dbEngine.execute({
-  op: 'read',
-  schema: "co_zTodos123",
-  filter: { completed: false }
-});
-
-// Store has current value
-console.log('Current:', store.value);  // Array of todos
-
-// Subscribe to updates
-const unsubscribe = store.subscribe((data) => {
-  console.log('Updated:', data);  // New data when it changes
-});
-```
-
-**Store Properties:**
-- `store.value` - Current data value
-- `store.subscribe(callback)` - Subscribe to updates, returns unsubscribe function
-
-### Initial Data
-
-Stores always have initial data loaded immediately:
-
-```javascript
-const store = await dbEngine.execute({
-  op: 'read',
-  schema: "co_zTodos123"
-});
-
-// Initial value is available immediately
-console.log('Initial todos:', store.value);  // Already loaded!
-
-// Subscribe for future updates
-store.subscribe((data) => {
-  console.log('Updated:', data);
-});
-```
-
-### CoList Loading (Backend Implementation)
-
-**Important:** Collection queries (queries that return arrays of items) use CoLists as the single source of truth. The backend automatically loads CoLists from IndexedDB before querying to ensure data is available after re-login.
-
-**How it works:**
-1. When `read()` is called for a collection query, the backend resolves the collection name from the schema
-2. It gets the CoList ID from `account.data.<collectionName>`
-3. It loads the CoList from IndexedDB and waits for it to be available (jazz-tools pattern)
-4. Only then does it read items from the CoList and return them in the store
-
-**Why this matters:**
-- After re-login, CoLists exist in IndexedDB but aren't loaded into node memory
-- Without explicit loading, queries would return empty results initially
-- By waiting for CoList to be available, we ensure queries always return correct data
-
-**Example:**
-```javascript
-// Backend automatically handles CoList loading
-const store = await dbEngine.execute({
-  op: 'read',
-  schema: "co_zTodos123"  // Collection query
-});
-
-// Store.value contains all items from CoList (already loaded)
-console.log('Todos:', store.value);  // Array of todos, not empty!
-```
-
-### Deduplication
-
-SubscriptionEngine checks if data actually changed before updating:
-
-```javascript
-function handleDataUpdate(subscriptionEngine, actorId, contextKey, data) {
-  const actor = subscriptionEngine.actorEngine.getActor(actorId);
-  const oldData = actor.context[contextKey];
-  
-  // Check if data changed
-  if (isSameData(oldData, data)) {
-    return; // Skip if unchanged
-  }
-  
-  // Update context
-  actor.context[contextKey] = data;
-  subscriptionEngine._scheduleRerender(actorId);
-}
-```
-
----
-
-## Common Patterns
-
-### Dynamic Queries
-
-Query objects can be updated dynamically:
-
-```javascript
-// Initial query
-actor.context = {
-  todos: {
-    schema: "co_zTodos123",
-    filter: { completed: false }
-  }
-}
-
-// Later, update filter
-actor.context.todos.filter = { completed: true };
-
-// SubscriptionEngine will re-subscribe automatically
-// (handled by context update handler)
-```
-
-### Empty Results
-
-Stores handle empty results gracefully:
-
-```javascript
-// Query with no results
-const store = await dbEngine.execute({
-  op: 'read',
-  schema: "co_zTodos123",
-  filter: { completed: true }  // No completed todos
-});
-
-console.log(store.value);  // [] (empty array)
-
-// Subscribe still works - will fire when todos are completed
-store.subscribe((data) => {
-  console.log('Todos updated:', data);
-});
-```
-
----
-
-## Troubleshooting
-
-### Data Not Updating
-
-**Symptoms:** Query object in context but data doesn't update
-
-**Check:**
-1. Is schema a co-id? (must start with `co_z`)
-2. Is subscription set up? (`actor._subscriptions` has unsubscribe function)
-3. Is store subscription working? (check console for errors)
-
-**Fix:**
-- Verify schema is transformed to co-id during seeding
-- Check that `SubscriptionEngine.initialize()` is called
-- Verify `read()` operation succeeds
-
-### Duplicate Updates
-
-**Symptoms:** Same data triggers multiple updates
-
-**Check:**
-1. Is deduplication working? (check `isSameData()` function)
-2. Are multiple subscriptions to same query?
-3. Is batching working? (check `pendingRerenders`)
-
-**Fix:**
-- Verify deduplication logic
-- Check for duplicate query objects in context
-- Ensure batching system is working
-
----
-
-## CRDT-Safe Watermark Pattern
-
-### Distributed Inbox Message Processing
-
-In a distributed multi-browser scenario, actors share inboxes (CoStreams) across browser instances. To prevent duplicate message processing, MaiaOS uses a CRDT-safe watermark pattern.
-
-**The Problem:**
-- Two browser instances can both read the same message timestamp before either updates the watermark
-- Both browsers process the message, then both update the watermark
-- Result: Message is processed twice (duplicate actions)
-
-**The Solution:**
-CRDT-safe max() logic for watermark updates:
-
-```javascript
-// Before processing messages, read current watermark from persisted config
-const actorConfig = await dbEngine.execute({
-  op: 'read',
-  schema: actorSchemaCoId,
-  key: actorId
-});
-const currentWatermark = actorConfig.inboxWatermark || 0;
-
-// Only process messages after current watermark
-const newMessages = inboxItems.filter(msg => msg.timestamp > currentWatermark);
-
-// When updating watermark, use max() logic
-if (newWatermark > currentWatermark) {
-  // Only update if new watermark is greater than current
-  await dbEngine.execute({
-    op: 'update',
-    schema: actorSchemaCoId,
-    id: actorId,
-    data: { inboxWatermark: newWatermark }
-  });
-}
-```
-
-**Key Points:**
-- Watermark is always read from persisted config (not just in-memory) before processing
-- Watermark updates use max(current, new) logic - only update if new > current
-- This ensures that even if two browsers both try to update, the max() logic prevents duplicate processing
-- Watermark is stored in actor config CoMap, which is CRDT-based and syncs across browsers
-
-**Implementation:**
-- `ActorEngine.processMessages()` reads watermark from persisted config before filtering messages
-- `ActorEngine._persistWatermark()` implements CRDT-safe max() logic
-- Watermark updates are idempotent - multiple updates with the same value are safe
-
----
-
-## Related Documentation
-
-- [subscriptions.md](./subscriptions.md) - Subscription overview
-- [subscriptions-config.md](./subscriptions-config.md) - Config subscriptions
-- [subscriptions-patterns.md](./subscriptions-patterns.md) - Patterns and troubleshooting
-- [engines.md](./engines.md) - DBEngine and SubscriptionEngine details
-
----
-
-## References
-
-- Source: `libs/maia-script/src/engines/subscription-engine/data-subscriptions.js`
-- DB Engine: `libs/maia-script/src/engines/db-engine/operations/read.js`
-- Reactive Store: `libs/maia-script/src/utils/reactive-store.js`
-
----
-
-# MAIA SCRIPT/SUBSCRIPTIONS PATTERNS
-
-*Source: developers/04_maia-script/subscriptions-patterns.md*
-
-# Subscription Patterns
-
-## Overview
-
-This document covers common subscription patterns, troubleshooting, and best practices for working with MaiaOS subscriptions.
-
----
-
-## Subscription Patterns
-
-### Data Subscription Pattern
-
-**Using read() API with reactive stores:**
-
-```javascript
-// Query object in context
-actor.context = {
-  todos: {
-    schema: "co_zTodos123",  // Schema co-id
-    filter: { completed: false }
-  }
-}
-
-// SubscriptionEngine automatically subscribes:
-// 1. Uses read() API to get reactive store
-const store = await dbEngine.execute({
-  op: 'read',
-  schema: "co_zTodos123",
-  filter: { completed: false }
-});
-
-// 2. Subscribes to store updates
-const unsubscribe = store.subscribe((data) => {
-  // Updates actor.context.todos automatically
-  actor.context.todos = data;
-  subscriptionEngine._scheduleRerender(actorId);
-});
-
-// 3. Stores unsubscribe function for cleanup
-actor._subscriptions.push(unsubscribe);
-```
-
-**Important Notes:**
-- Collection queries (queries that return arrays) automatically load CoLists from IndexedDB before querying
-- This ensures data is available immediately after re-login (CoLists exist in IndexedDB but need to be loaded into node memory)
-- The backend waits for CoList to be available before returning initial store value, ensuring queries never return empty results incorrectly
-- All subscriptions created via `read()` operations are automatically stored in `actor._subscriptions` for cleanup
-- When actors are destroyed, `SubscriptionEngine.cleanup()` unsubscribes from all subscriptions, which automatically triggers `store._unsubscribe()` when the last subscriber unsubscribes
-- This ensures `CoJSONBackend._storeSubscriptions` is cleaned up automatically without manual tracking
-
-### Config Subscription Pattern
-
-**Using read() API for interface/context:**
-
-```javascript
-// Get schema co-id (must be co-id, not @schema/...)
-const interfaceSchemaCoId = await dbEngine.getSchemaCoId('interface');
-
-// Subscribe to config CRDT using read() API
-const store = await dbEngine.execute({
-  op: 'read',
-  schema: interfaceSchemaCoId,  // co-id (co_z...)
-  key: actorConfig.interface  // co-id of config
-});
-
-// Subscribe to store updates
-const unsubscribe = store.subscribe((updatedInterface) => {
-  // Handle update
-  actor.interface = updatedInterface;
-  // No re-render needed (interface only affects validation)
-});
-
-// Store for cleanup
-actor._configSubscriptions.push(unsubscribe);
-```
-
-**Using engine methods for view/style/state:**
-
-```javascript
-// View subscription goes through ViewEngine (handles caching)
-await viewEngine.loadView(config.view, (updatedView) => {
-  handleViewUpdate(actorId, updatedView);
-});
-
-// Style subscription goes through StyleEngine
-await styleEngine.loadStyle(config.style, (updatedStyle) => {
-  handleStyleUpdate(actorId, updatedStyle);
-});
-
-// State subscription goes through StateEngine
-await stateEngine.loadStateDef(config.state, (updatedStateDef) => {
-  handleStateUpdate(actorId, updatedStateDef);
-});
-```
-
----
-
-## Batching System
-
-**Purpose:** Prevent excessive re-renders when multiple subscriptions fire simultaneously
-
-MaiaOS uses a **Svelte-style microtask batching system** to optimize rerender performance. When multiple reactive subscriptions fire in the same event loop tick, they're batched together so each actor only rerenders once.
-
-**Why it's needed:**
-
-In a reactive system, a single data update can trigger multiple subscriptions:
-- Store subscription fires → updates context → triggers context subscription → rerender
-- Store subscription also directly triggers rerender
-- ViewEngine store subscriptions also trigger rerender
-
-Without batching, this results in 2-3 expensive rerenders per update. Each rerender reads the view from DB, gets stylesheets, and renders the DOM.
-
-**How it works:**
-1. Multiple subscriptions fire → multiple `_scheduleRerender()` calls
-2. `_scheduleRerender()` adds actor ID to `pendingRerenders` Set (automatically deduplicates)
-3. Schedules microtask if not already scheduled
-4. Microtask flushes all pending re-renders in one batch
-5. Each actor re-renders once (deduplicated by Set)
-
-**Implementation (ActorEngine):**
-```javascript
-// In constructor
-this.pendingRerenders = new Set(); // Track actors needing rerender
-this.batchTimer = null; // Track if microtask is scheduled
-
-// Schedule rerender (replaces direct rerender() calls)
-_scheduleRerender(actorId) {
-  this.pendingRerenders.add(actorId); // Deduplicates automatically (Set)
-  
-  if (!this.batchTimer) {
-    this.batchTimer = queueMicrotask(() => {
-      this._flushRerenders();
-    });
-  }
-}
-
-// Flush all pending rerenders in batch
-async _flushRerenders() {
-  const actorIds = Array.from(this.pendingRerenders);
-  this.pendingRerenders.clear();
-  this.batchTimer = null;
-  
-  // Process all rerenders in batch
-  for (const actorId of actorIds) {
-    await this.rerender(actorId); // Private implementation
-  }
-}
-```
-
-**Usage:**
-
-All engines call `_scheduleRerender()` instead of `rerender()` directly:
-- `StateEngine`: When store subscriptions fire
-- `ViewEngine`: When ReactiveStore subscriptions fire  
-- `ActorEngine`: When config subscriptions fire (view, style, state, context)
-
-**Benefits:**
-- **Performance**: Reduces redundant rerenders from 2-3 per update to 1
-- **Responsiveness**: UI feels smooth even with rapid updates
-- **Standard pattern**: Follows Svelte's proven batching architecture
-- **Automatic**: Works transparently - no manual batching needed
-
----
-
-## Cache Invalidation
-
-**Current Approach:**
-- Engines maintain caches (`viewCache`, `stateCache`, etc.)
-- Config subscription callbacks update caches automatically
-- Handlers explicitly invalidate caches before updates
-- Caches repopulated on next load
-
-**Cache Update Flow:**
-1. Config CRDT changes
-2. Store subscription fires
-3. Engine's `loadView()`/`loadStyle()` callback updates cache
-4. Handler invalidates cache (redundant but explicit)
-5. Handler updates actor and triggers re-render
-6. Re-render calls `loadView()` again → cache repopulated
-
-**Future Approach (Backend Swap):**
-- Backend handles caching automatically
-- No engine-level caches needed
-- Config changes automatically propagate via CRDT subscriptions
-
----
-
-## Runtime Code Requirements
-
-### Co-IDs Only
-
-**Rule:** Runtime code MUST use co-ids (`co_z...`), NEVER human-readable IDs (`@schema/...`)
-
-**Enforcement:**
-- `ReadOperation` validates: `if (!schema.startsWith('co_z')) throw new Error(...)`
-- Human-readable IDs are transformed to co-ids during seeding
-- Runtime code operates on CRDTs directly (co-ids are CRDT identifiers)
-
-**Why:**
-- Human-readable IDs are transformed to co-ids during seeding
-- Runtime code operates on CRDTs directly (co-ids are CRDT identifiers)
-- Backend swap will use real cojson (co-ids are native)
-
-### Unified read() API
-
-**Rule:** All data access uses `read()` operation, which always returns reactive stores
-
-**Pattern:**
-```javascript
-// read() always returns ReactiveStore
-const store = await dbEngine.execute({
-  op: 'read',
-  schema: "co_zTodos123",  // Schema co-id
-  key: "co_zTodo456"  // Optional: specific item co-id
-  filter: { completed: false }  // Optional: filter criteria
-});
-
-// Store has current value
-console.log('Current:', store.value);
-
-// Subscribe to updates
-const unsubscribe = store.subscribe((data) => {
-  console.log('Updated:', data);
-});
-```
-
-**Why:**
-- Single pattern for all data access
-- Always reactive (stores notify on changes)
-- Consistent across configs and data
-- No callback confusion (pure store pattern)
-
----
-
-## Troubleshooting
-
-### Config Not Updating
-
-**Symptoms:** Config CRDT changes but actor doesn't update
-
-**Check:**
-1. Is subscription set up? (`actor._configSubscriptions` has unsubscribe function)
-2. Is config co-id valid? (starts with `co_z`)
-3. Is handler being called? (add logging to handler)
-4. Is cache being invalidated? (check cache before/after)
-
-**Fix:**
-- Verify `SubscriptionEngine.initialize()` is called
-- Verify engines are set (`subscriptionEngine.setEngines()`)
-- Check console for subscription errors
-
-### Duplicate Subscriptions
-
-**Symptoms:** Multiple subscriptions to same config
-
-**Check:**
-1. Is `loadView()` called multiple times with `onUpdate`?
-2. Are subscriptions cleaned up properly?
-3. Is `_subscribeToConfig()` called multiple times?
-
-**Fix:**
-- Ensure `initialize()` is only called once per actor
-- Ensure `cleanup()` is called when actor is destroyed
-- Check for duplicate `loadView()` calls
-
-### Performance Issues
-
-**Symptoms:** Too many re-renders, laggy UI
-
-**Check:**
-1. Is batching working? (check `pendingRerenders` size)
-2. Are subscriptions deduplicated? (check backend)
-3. Are caches being used? (check cache hit rate)
-
-**Fix:**
-- Verify batching system is working
-- Check for unnecessary subscriptions
-- Optimize handlers (avoid heavy work in callbacks)
-
-## Actor Lifecycle and Cleanup
-
-### Container-Based Actor Tracking
-
-Actors are tracked by container element to enable cleanup when vibes are unloaded:
-
-```javascript
-// Actors are registered with their container on creation
-actorEngine._containerActors.set(containerElement, new Set([actorId1, actorId2]));
-
-// When unloading a vibe, destroy all actors for that container
-actorEngine.destroyActorsForContainer(containerElement);
-```
-
-**Key Points:**
-- Each actor is registered with its container element when created
-- Container tracking enables bulk cleanup when vibes are unloaded
-- `destroyActorsForContainer()` destroys all actors for a container and cleans up subscriptions automatically
-
-### Automatic Subscription Cleanup
-
-Subscriptions are automatically cleaned up when actors are destroyed:
-
-1. **Actor Destruction**: When `destroyActor()` is called, it calls `SubscriptionEngine.cleanup()`
-2. **Unsubscribe All**: `SubscriptionEngine.cleanup()` unsubscribes from all `actor._subscriptions`
-3. **Auto-Cleanup**: When the last subscriber unsubscribes from a store, `ReactiveStore` automatically calls `store._unsubscribe()`
-4. **Backend Cleanup**: `store._unsubscribe()` cleans up `CoJSONBackend._storeSubscriptions` automatically
-
-**Flow:**
-```
-destroyActor(actorId)
-  → SubscriptionEngine.cleanup(actor)
-    → unsubscribe from all actor._subscriptions
-      → ReactiveStore: last subscriber unsubscribes
-        → store._unsubscribe() called automatically
-          → CoJSONBackend._storeSubscriptions cleaned up
-```
-
-**Important:**
-- All subscriptions must go through `read()` → `store.subscribe()` → `actor._subscriptions` pattern
-- Never bypass this pattern - direct database access won't be cleaned up automatically
-- Container-based tracking ensures all actors for a vibe are destroyed together
-
-### Data Not Updating
-
-**Symptoms:** Query object in context but data doesn't update
-
-**Check:**
-1. Is schema a co-id? (must start with `co_z`)
-2. Is subscription set up? (`actor._subscriptions` has unsubscribe function)
-3. Is store subscription working? (check console for errors)
-
-**Fix:**
-- Verify schema is transformed to co-id during seeding
-- Check that `SubscriptionEngine.initialize()` is called
-- Verify `read()` operation succeeds
-
----
-
-## Future: Backend Swap
-
-**Current:** IndexedDB backend with reactive stores
-
-**Future:** Real CoJSON CRDT backend
-
-**Changes:**
-- Backend will use `oSubscriptionCache` for deduplication
-- Multiple actors subscribing to same CRDT → one backend subscription
-- Automatic cleanup after 5 seconds of inactivity
-- No engine-level caches needed (backend handles caching)
-
-**Migration:**
-- Subscription API stays the same (`dbEngine.execute({op: 'read', ...})`)
-- Backend implementation swaps
-- No actor-level code changes needed
-
----
-
-## Related Documentation
-
-- [subscriptions.md](./subscriptions.md) - Subscription overview
-- [subscriptions-data.md](./subscriptions-data.md) - Data subscriptions
-- [subscriptions-config.md](./subscriptions-config.md) - Config subscriptions
-- [engines.md](./engines.md) - Engine details
-
----
-
-## References
-
-- Source: `libs/maia-script/src/engines/subscription-engine/`
-- DB Engine: `libs/maia-script/src/engines/db-engine/operations/read.js`
-- Reactive Store: `libs/maia-script/src/utils/reactive-store.js`
-
----
-
-# MAIA SCRIPT/SUBSCRIPTIONS
-
-*Source: developers/04_maia-script/subscriptions.md*
+*Source: developers/04_maia-script/subscriptions-overview.md*
 
 # Subscription Architecture
 
@@ -9608,22 +8117,20 @@ When any dependency changes, actors automatically update and re-render.
 
 ## The Simple Version
 
-Think of subscriptions like automatic notifications. When you tell an actor "watch this data," it automatically gets notified whenever that data changes, just like getting a text message when someone updates a shared document.
+Think of subscriptions like automatic notifications. When you tell an actor "watch this data," it automatically gets notified whenever that data changes—like getting a text when someone updates a shared document.
 
-**Example:**
+**Data example:**
 ```javascript
-// Actor context has a query object
 actor.context = {
-  todos: {
-    schema: "co_zTodos123",  // Which data to watch
-    filter: { completed: false }  // Filter criteria
-  }
+  todos: { schema: "co_zTodos123", filter: { completed: false } }
 }
+// SubscriptionEngine subscribes automatically, updates context, triggers re-render
+```
 
-// SubscriptionEngine automatically:
-// 1. Subscribes to todos matching the filter
-// 2. Updates actor.context.todos when data changes
-// 3. Triggers re-render so the UI updates
+**Config example:**
+```javascript
+actor.config = { view: "co_zView123", style: "co_zStyle456" }
+// When view/style CRDTs change → actor updates → re-renders
 ```
 
 ---
@@ -9632,180 +8139,212 @@ actor.context = {
 
 ### Decentralized Per-Actor Tracking
 
-**Each actor tracks its own subscriptions:**
+Each actor tracks its own subscriptions:
+- `actor._subscriptions` - Data subscriptions
+- `actor._configSubscriptions` - Config subscriptions
+
+**Benefits:** Simple cleanup (actor destruction → unsubscribe all), no centralized registry.
+
+### Unified `read()` API
+
+All data access uses `read()`, which always returns a reactive store:
 
 ```javascript
-actor._subscriptions = [unsubscribe1, unsubscribe2, ...];      // Data subscriptions
-actor._configSubscriptions = [unsubscribe1, unsubscribe2, ...]; // Config subscriptions
-```
-
-**Benefits:**
-- Simple cleanup (actor destruction → unsubscribe all)
-- No centralized subscription registry needed
-- Backend handles deduplication (future: `oSubscriptionCache`)
-
-### Backend Abstraction
-
-**Current Backend (IndexedDB):**
-- `IndexedDBBackend` in `libs/maia-script/src/engines/db-engine/backend/indexeddb.js`
-- Uses reactive stores from unified `read()` API
-- Observer pattern: `this.observers = new Map()`
-- Each subscription creates separate observer
-- No centralized deduplication (that's future)
-
-**Future Backend (Real CoJSON):**
-- `maia-db` with `oSubscriptionCache`
-- Centralized deduplication (multiple actors → one backend subscription)
-- Automatic cleanup after 5 seconds
-- **NOT part of this refactor** - defer to backend swap
-
----
-
-## Documentation Structure
-
-This subscription documentation is organized into focused topics:
-
-- **[subscriptions-data.md](./subscriptions-data.md)** - Data subscriptions (query objects, reactive updates)
-- **[subscriptions-config.md](./subscriptions-config.md)** - Config subscriptions (view, style, state, handlers)
-- **[subscriptions-patterns.md](./subscriptions-patterns.md)** - Patterns, troubleshooting, and examples
-
----
-
-## Quick Start
-
-**Data Subscription:**
-```javascript
-// Query object in context automatically creates subscription
-actor.context = {
-  todos: {
-    schema: "co_zTodos123",
-    filter: { completed: false }
-  }
-}
-
-// SubscriptionEngine uses read() API:
 const store = await dbEngine.execute({
   op: 'read',
   schema: "co_zTodos123",
   filter: { completed: false }
 });
-
-// Subscribe to store updates
-const unsubscribe = store.subscribe((data) => {
-  actor.context.todos = data;
-  subscriptionEngine._scheduleRerender(actorId);
-});
+// store.value - current data
+// store.subscribe(callback) - get updates
 ```
-
-**Config Subscription:**
-```javascript
-// Actor config references view co-id
-actor.config = {
-  view: "co_zView123"
-}
-
-// SubscriptionEngine automatically subscribes to view CRDT
-// When view changes → updates actor.viewDef → re-renders
-```
-
----
-
-## Key Concepts
-
-### Unified `read()` API
-
-All data access uses the unified `read()` operation, which always returns a reactive store:
-
-```javascript
-// read() always returns a ReactiveStore
-const store = await dbEngine.execute({
-  op: 'read',
-  schema: "co_zTodos123",  // Schema co-id (co_z...)
-  filter: { completed: false }  // Optional filter
-});
-
-// Store has current value
-console.log('Current todos:', store.value);
-
-// Subscribe to updates
-const unsubscribe = store.subscribe((data) => {
-  console.log('Todos updated:', data);
-});
-```
-
-**Why unified API:**
-- Single pattern for all data access
-- Always reactive (stores notify on changes)
-- Consistent across configs and data
-- No callback confusion (pure store pattern)
 
 ### Co-IDs Only
 
-**Rule:** Runtime code MUST use co-ids (`co_z...`), NEVER human-readable IDs (`@schema/...`)
-
-**Enforcement:**
-- `ReadOperation` validates: `if (!schema.startsWith('co_z')) throw new Error(...)`
-- Human-readable IDs are transformed to co-ids during seeding
-- Runtime code operates on CRDTs directly (co-ids are CRDT identifiers)
+Runtime code MUST use co-ids (`co_z...`), never human-readable IDs. `ReadOperation` validates this. Human-readable IDs transform to co-ids during seeding.
 
 ---
 
-## Subscription Lifecycle
+## Lifecycle
 
-### Initialization
+**Initialization:** Actor created → SubscriptionEngine.initialize(actor) → subscribes to data + configs.
 
-**When:** Actor is created
+**Updates:** Store subscription fires → context/config updated → batched re-render scheduled.
 
-**Process:**
-1. `ActorEngine.createActor()` creates actor
-2. Loads configs (view, style, state, etc.) - one-time load
-3. Calls `SubscriptionEngine.initialize(actor)`
-4. `SubscriptionEngine` subscribes to:
-   - Data (query objects in context)
-   - Configs (view, style, state, interface, context, brand)
-5. Subscriptions stored in `actor._subscriptions` and `actor._configSubscriptions`
-
-### Updates
-
-**Data Updates:**
-- Store subscription fires with new data
-- `SubscriptionEngine._handleDataUpdate()` updates `actor.context[key]`
-- Batched re-render scheduled
-
-**Config Updates:**
-- Store subscription fires with new config
-- Handler updates actor property (`actor.viewDef`, `actor.machine`, etc.)
-- Cache invalidated/updated
-- Batched re-render scheduled
-
-### Cleanup
-
-**When:** Actor is destroyed
-
-**Process:**
-1. `ActorEngine.destroyActor()` called
-2. Calls `SubscriptionEngine.cleanup(actor)`
-3. Unsubscribes all data subscriptions (`actor._subscriptions`)
-4. Unsubscribes all config subscriptions (`actor._configSubscriptions`)
-5. Removes from pending re-renders
+**Cleanup:** Actor destroyed → SubscriptionEngine.cleanup(actor) → unsubscribes all.
 
 ---
 
 ## Related Documentation
 
-- [subscriptions-data.md](./subscriptions-data.md) - Data subscriptions details
-- [subscriptions-config.md](./subscriptions-config.md) - Config subscriptions details
-- [subscriptions-patterns.md](./subscriptions-patterns.md) - Patterns and troubleshooting
-- [engines.md](./engines.md) - Engine overview (includes SubscriptionEngine)
+- [subscriptions-reference.md](./subscriptions-reference.md) - Config/data details, patterns, troubleshooting
+- [engines/](./engines/) - Engine overview
 - [api-reference.md](./api-reference.md) - Complete API reference
 
 ---
 
 ## References
 
-- Source files: `libs/maia-script/src/engines/subscription-engine/`
+- Source: `libs/maia-script/src/engines/subscription-engine/`
 - DB Engine: `libs/maia-script/src/engines/db-engine/`
 - Reactive Store: `libs/maia-script/src/utils/reactive-store.js`
+
+---
+
+# MAIA SCRIPT/SUBSCRIPTIONS REFERENCE
+
+*Source: developers/04_maia-script/subscriptions-reference.md*
+
+# Subscription Reference
+
+Detailed reference for config subscriptions, data subscriptions, patterns, and troubleshooting.
+
+---
+
+## Config Subscriptions
+
+### Config Types
+
+SubscriptionEngine subscribes to: `view`, `style`, `brand`, `state`, `interface`, `context`.
+
+### Engine vs Direct Subscriptions
+
+**View/Style/State:** Go through engines (caching, batch subscriptions).
+
+```javascript
+await viewEngine.loadView(config.view, (updatedView) => {
+  handleViewUpdate(actorId, updatedView);
+});
+```
+
+**Interface/Context:** Use read() API directly.
+
+```javascript
+const store = await dbEngine.execute({
+  op: 'read',
+  schema: interfaceSchemaCoId,
+  key: config.interface
+});
+store.subscribe((updatedInterface) => handleInterfaceUpdate(actorId, updatedInterface));
+```
+
+### Update Handlers
+
+| Config | Handler | Result |
+|--------|---------|--------|
+| View | `_handleViewUpdate` | Invalidate cache, update viewDef, re-render |
+| Style | `_handleStyleUpdate` | Reload stylesheets, update shadowRoot, re-render |
+| State | `_handleStateUpdate` | Destroy old machine, create new, re-render |
+| Interface | `_handleInterfaceUpdate` | Update interface, re-validate (no re-render) |
+| Context | `_handleContextUpdate` | Merge context, re-subscribe queries, re-render |
+
+### Cache Invalidation
+
+View/state updates invalidate caches before applying changes. Caches repopulate on next load.
+
+---
+
+## Data Subscriptions
+
+### Query Objects
+
+Objects in context with `schema` (co-id) and optional `filter`. SubscriptionEngine scans context, subscribes automatically.
+
+```javascript
+actor.context = {
+  todos: { schema: "co_zTodos123", filter: { completed: false } }
+}
+```
+
+### Reactive Stores
+
+`read()` always returns ReactiveStore. Properties: `store.value`, `store.subscribe(callback)`.
+
+### CoList Loading
+
+Collection queries auto-load CoLists from IndexedDB before querying. Ensures data available after re-login.
+
+### Deduplication
+
+SubscriptionEngine checks `isSameData()` before updating context to avoid redundant re-renders.
+
+---
+
+## Batching System
+
+Svelte-style microtask batching prevents excessive re-renders. Multiple subscriptions in same tick → one rerender per actor.
+
+**Flow:** `_scheduleRerender(actorId)` → add to `pendingRerenders` Set → queueMicrotask → flush all in batch.
+
+**Usage:** All engines call `_scheduleRerender()` instead of `rerender()` directly.
+
+---
+
+## Runtime Requirements
+
+**Co-IDs only:** Runtime MUST use `co_z...`, never `@schema/...`. ReadOperation validates.
+
+**Unified read():** All data access via `read()` → returns ReactiveStore. Single pattern, always reactive.
+
+---
+
+## CRDT-Safe Watermark Pattern
+
+Distributed inboxes (CoStreams) across browsers require watermark to prevent duplicate processing.
+
+**Rule:** Read watermark from persisted config before processing. Update with max(current, new) logic. Prevents duplicate actions when two browsers process same message.
+
+**Implementation:** `ActorEngine.processMessages()` reads persisted watermark. `_persistWatermark()` uses max() logic.
+
+---
+
+## Actor Lifecycle and Cleanup
+
+**Container tracking:** Actors registered with container. `destroyActorsForContainer()` bulk cleanup on vibe unload.
+
+**Automatic cleanup:** `destroyActor()` → `SubscriptionEngine.cleanup()` → unsubscribe all → ReactiveStore auto-cleans backend when last subscriber leaves.
+
+**Flow:** destroyActor → cleanup → unsubscribe → last subscriber leaves → store._unsubscribe() → backend cleanup.
+
+---
+
+## Troubleshooting
+
+### Config Not Updating
+
+Check: `_configSubscriptions` has unsubscribe, co-id valid, handler called, cache invalidated. Fix: Verify initialize(), setEngines(), check console.
+
+### Duplicate Subscriptions
+
+Check: loadView() called multiple times, cleanup on destroy. Fix: initialize() once, cleanup() on destroy.
+
+### Data Not Updating
+
+Check: schema is co-id, `_subscriptions` has unsubscribe, store works. Fix: Verify seeding transforms to co-id, initialize() called, read() succeeds.
+
+### Performance Issues
+
+Check: batching (pendingRerenders), deduplication, cache hit rate. Fix: Verify batching, reduce subscriptions, optimize handlers.
+
+---
+
+## Future: Backend Swap
+
+**Current:** IndexedDB backend with reactive stores.
+
+**Future:** Real CoJSON with `oSubscriptionCache` for deduplication. Multiple actors → one backend subscription. Auto-cleanup after 5s inactivity.
+
+**Migration:** API unchanged. Backend implementation swaps. No actor-level changes.
+
+---
+
+## References
+
+- Config: `libs/maia-script/src/engines/subscription-engine/config-subscriptions.js`
+- Data: `libs/maia-script/src/engines/subscription-engine/data-subscriptions.js`
+- Handlers: `libs/maia-script/src/engines/subscription-engine/update-handlers.js`
+- DB: `libs/maia-script/src/engines/db-engine/operations/read.js`
+- Store: `libs/maia-script/src/utils/reactive-store.js`
 
 ---
 
@@ -10392,9 +8931,9 @@ The CoJSON backend will implement the `DBAdapter` interface from `@MaiaOS/operat
 
 ---
 
-# MAIA OPERATIONS/README
+# MAIA OPERATIONS/00 OVERVIEW
 
-*Source: developers/06_maia-operations/README.md*
+*Source: developers/06_maia-operations/00-overview.md*
 
 # maia-operations: Shared Database Operations Layer
 
@@ -10696,6 +9235,13 @@ const store = await dbEngine.execute({
 });
 
 // Collection
+
+---
+
+# MAIA OPERATIONS/01 REFERENCE
+
+*Source: developers/06_maia-operations/01-reference.md*
+
 const store = await dbEngine.execute({
   op: 'read',
   schema: 'co_zTodos123'
@@ -10973,6 +9519,17 @@ export class DBEngine extends SharedDBEngine {
 
 **Dependencies:**
 - `@MaiaOS/schemata` - Schema validation
+
+---
+
+# MAIA OPERATIONS/README
+
+*Source: developers/06_maia-operations/README.md*
+
+# maia-operations Documentation
+
+1. **[00-overview.md](./00-overview.md)** - Overview
+2. **[01-reference.md](./01-reference.md)** - Reference
 
 ---
 
@@ -11699,7 +10256,7 @@ const definitions = getAllToolDefinitions();
 **`@db/*`** (Deprecated)
 - Database tools have been replaced by the unified `@db` API
 - Use `maia.db({ op: 'read', ... })` instead
-- See: [maia-script DBEngine](../04_maia-script/engines.md#dbengine)
+- See: [maia-script DBEngine](../04_maia-script/engines/#dbengine)
 
 ---
 
@@ -11897,7 +10454,7 @@ export default {
 
 ## Related Documentation
 
-- [maia-script: ToolEngine](../04_maia-script/engines.md#toolengine) - How tools are executed
+- [maia-script: ToolEngine](../04_maia-script/engines/#toolengine) - How tools are executed
 - [maia-script: Modules](../04_maia-script/modules.md) - How tools are registered
 - [Creator Docs: Tools](../../02_creators/06-tools.md) - How to use tools as a creator
 
@@ -11913,13 +10470,15 @@ export default {
 
 ---
 
-# HYPERBEE COJSON EVALUATION
+# ARCHIVE/HYPERBEE COJSON EVALUATION
 
-*Source: developers/hyperbee-cojson-evaluation.md*
+*Source: developers/archive/hyperbee-cojson-evaluation.md*
 
 # Hyperbee as cojson Storage Backend: Deep Evaluation
 
 **Last Updated**: 2026-02-03
+
+*Archived evaluation document - reference for future backend architecture decisions.*
 
 This document evaluates **Hyperbee** (the key-value database from the Pear ecosystem) as a storage backend for MaiaOS sync servers, comparing it to SQLite.
 
@@ -11966,636 +10525,73 @@ Hyperswarm (P2P Discovery + Replication)
 - **Sparse downloading** - only downloads blocks needed for queries
 - Atomic batch operations
 
-**API Overview:**
-```javascript
-const bee = new Hyperbee(core, {
-  keyEncoding: 'utf-8',
-  valueEncoding: 'json'
-})
-
-// Basic operations
-await bee.put('key', { some: 'data' })  // Store
-const node = await bee.get('key')        // Retrieve
-await bee.del('key')                     // Delete
-
-// Batch operations (atomic)
-const batch = bee.batch()
-await batch.put('key1', value1)
-await batch.put('key2', value2)
-await batch.flush()  // Atomic commit
-
-// Range queries (sorted iteration)
-for await (const { key, value } of bee.createReadStream({ gte: 'a', lt: 'z' })) {
-  console.log(key, value)
-}
-```
-
 ---
 
 ## Part 2: cojson Storage API Requirements
 
-### What cojson Needs
-
-**Core Storage Interface (StorageAPI):**
-```typescript
-interface StorageAPI {
-  // Load CoValue by ID
-  load(id: string, callback: (data: NewContentMessage) => void, done?: (found: boolean) => void): void
-  
-  // Store CoValue content
-  store(data: NewContentMessage, handleCorrection: CorrectionCallback): void
-  
-  // Load only known state (metadata)
-  loadKnownState(id: string, callback: (knownState: CoValueKnownState | undefined) => void): void
-  
-  // Get cached known state
-  getKnownState(id: string): CoValueKnownState
-  
-  // Sync tracking
-  trackCoValuesSyncState(updates: { id: RawCoID; peerId: PeerID; synced: boolean }[]): void
-  getUnsyncedCoValueIDs(callback: (ids: RawCoID[]) => void): void
-  stopTrackingSyncState(id: RawCoID): void
-  
-  // Wait for storage sync
-  waitForSync(id: string, coValue: CoValueCore): Promise<void>
-  
-  // Deletion
-  markDeleteAsValid(id: RawCoID): void
-  eraseAllDeletedCoValues(): Promise<void>
-  
-  // Cleanup
-  onCoValueUnmounted(id: RawCoID): void
-  close(): Promise<unknown>
-}
-```
-
-**Underlying Database Schema (SQLite):**
-```sql
--- CoValues table
-CREATE TABLE coValues (
-  id TEXT PRIMARY KEY,
-  header TEXT  -- JSON
-);
-
--- Sessions table (one-to-many with coValues)
-CREATE TABLE sessions (
-  rowID INTEGER PRIMARY KEY,
-  coValue INTEGER,  -- Foreign key to coValues.rowID
-  sessionID TEXT,
-  lastIdx INTEGER,
-  lastSignature TEXT,
-  FOREIGN KEY (coValue) REFERENCES coValues(rowID)
-);
-
--- Transactions table (one-to-many with sessions)
-CREATE TABLE transactions (
-  ses INTEGER,  -- Foreign key to sessions.rowID
-  idx INTEGER,
-  tx TEXT,  -- JSON
-  FOREIGN KEY (ses) REFERENCES sessions(rowID)
-);
-
--- Signatures table
-CREATE TABLE signatureAfter (
-  ses INTEGER,
-  idx INTEGER,
-  signature TEXT,
-  FOREIGN KEY (ses) REFERENCES sessions(rowID)
-);
-
--- Sync state tracking
-CREATE TABLE syncState (
-  coValueId TEXT,
-  peerId TEXT,
-  synced INTEGER,
-  PRIMARY KEY (coValueId, peerId)
-);
-
--- Deleted CoValues queue
-CREATE TABLE deletedCoValues (
-  id TEXT PRIMARY KEY,
-  status INTEGER  -- 0 = pending, 1 = done
-);
-```
-
-**Key Operations:**
-1. **Store CoValue**: Insert/update header, sessions, transactions, signatures
-2. **Load CoValue**: Join tables to reconstruct full CoValue
-3. **Load Known State**: Get header + session counters (no transactions)
-4. **Sync Tracking**: Track which peers have synced which CoValues
-5. **Deletion**: Mark as deleted, queue for erasure, preserve tombstone
+cojson's StorageAPI needs: load, store, loadKnownState, getKnownState, sync tracking, waitForSync, deletion, cleanup. SQLite schema uses coValues, sessions, transactions, signatures, syncState, deletedCoValues tables.
 
 ---
 
 ## Part 3: Mapping Hyperbee to cojson Storage
 
-### Approach 1: Flat Key-Value with Composite Keys
+**Approach:** Flat key-value with composite keys. Key structure:
+- `${coValueId}:header` → header
+- `${coValueId}:session:${sessionId}` → session
+- `${coValueId}:tx:${sessionId}:${idx}` → transaction
+- `sync:${coValueId}:${peerId}` → sync state
 
-**Idea:** Use composite keys to store hierarchical data in Hyperbee's flat key-value structure.
+**Pros:** Simple mapping, atomic batches, range queries, sparse downloading, P2P replication.
 
-**Key Structure:**
-```
-CoValue:
-  ${coValueId}:header                    → CoValueHeader (JSON)
-  ${coValueId}:meta                      → { created, updated } (metadata)
-
-Sessions:
-  ${coValueId}:session:${sessionId}      → SessionRow (JSON)
-
-Transactions:
-  ${coValueId}:tx:${sessionId}:${idx}    → Transaction (JSON)
-
-Signatures:
-  ${coValueId}:sig:${sessionId}:${idx}   → Signature
-
-Sync State:
-  sync:${coValueId}:${peerId}            → { synced: boolean }
-
-Known States (cached):
-  ${coValueId}:knownState                → CoValueKnownState (JSON)
-
-Deleted Queue:
-  deleted:${coValueId}                   → { status: 'pending' | 'done' }
-```
-
-**Implementation Example:**
-```javascript
-class HyperbeeStorage implements StorageAPI {
-  constructor(bee) {
-    this.bee = bee
-    this.knownStates = new Map()  // In-memory cache
-  }
-  
-  async load(id, callback, done) {
-    // Load header
-    const headerNode = await this.bee.get(`${id}:header`)
-    if (!headerNode) {
-      done?.(false)
-      return
-    }
-    
-    const header = headerNode.value
-    
-    // Load all sessions for this CoValue
-    const sessions = []
-    for await (const { key, value } of this.bee.createReadStream({
-      gte: `${id}:session:`,
-      lt: `${id}:session:\xFF`  // \xFF sorts after all UTF-8
-    })) {
-      sessions.push(value)
-    }
-    
-    // Load transactions for each session
-    const transactions = []
-    for (const session of sessions) {
-      for await (const { key, value } of this.bee.createReadStream({
-        gte: `${id}:tx:${session.sessionID}:`,
-        lt: `${id}:tx:${session.sessionID}:\xFF`
-      })) {
-        transactions.push(value)
-      }
-    }
-    
-    // Construct NewContentMessage
-    callback({ id, header, sessions, transactions })
-    done?.(true)
-  }
-  
-  async store(data, handleCorrection) {
-    const batch = this.bee.batch()
-    
-    // Store header
-    if (data.header) {
-      await batch.put(`${data.id}:header`, data.header)
-    }
-    
-    // Store sessions
-    for (const session of data.sessions || []) {
-      await batch.put(`${data.id}:session:${session.sessionID}`, session)
-    }
-    
-    // Store transactions
-    for (const tx of data.transactions || []) {
-      await batch.put(`${data.id}:tx:${tx.sessionID}:${tx.idx}`, tx)
-    }
-    
-    // Atomic commit
-    await batch.flush()
-    
-    // Update known state cache
-    this.updateKnownState(data.id, data)
-  }
-  
-  async loadKnownState(id, callback) {
-    // Check cache first
-    if (this.knownStates.has(id)) {
-      callback(this.knownStates.get(id))
-      return
-    }
-    
-    // Load from storage
-    const cachedNode = await this.bee.get(`${id}:knownState`)
-    if (cachedNode) {
-      this.knownStates.set(id, cachedNode.value)
-      callback(cachedNode.value)
-      return
-    }
-    
-    // Compute from header + sessions
-    const headerNode = await this.bee.get(`${id}:header`)
-    if (!headerNode) {
-      callback(undefined)
-      return
-    }
-    
-    const sessions = []
-    for await (const { value } of this.bee.createReadStream({
-      gte: `${id}:session:`,
-      lt: `${id}:session:\xFF`
-    })) {
-      sessions.push(value)
-    }
-    
-    const knownState = {
-      header: !!headerNode,
-      sessions: sessions.reduce((acc, s) => {
-        acc[s.sessionID] = s.lastIdx
-        return acc
-      }, {})
-    }
-    
-    // Cache for future use
-    this.knownStates.set(id, knownState)
-    await this.bee.put(`${id}:knownState`, knownState)
-    
-    callback(knownState)
-  }
-  
-  async trackCoValuesSyncState(updates) {
-    const batch = this.bee.batch()
-    for (const { id, peerId, synced } of updates) {
-      await batch.put(`sync:${id}:${peerId}`, { synced })
-    }
-    await batch.flush()
-  }
-  
-  async getUnsyncedCoValueIDs(callback) {
-    const unsyncedIds = new Set()
-    
-    for await (const { key, value } of this.bee.createReadStream({
-      gte: 'sync:',
-      lt: 'sync:\xFF'
-    })) {
-      if (!value.synced) {
-        const [_, coValueId] = key.split(':')
-        unsyncedIds.add(coValueId)
-      }
-    }
-    
-    callback(Array.from(unsyncedIds))
-  }
-}
-```
-
-### Pros of Hyperbee Approach
-
-1. **Simple Key-Value Mapping**: cojson's storage needs map cleanly to Hyperbee's key-value API
-2. **Atomic Operations**: Hyperbee's `batch()` provides atomic multi-put/delete
-3. **Range Queries**: Can load all sessions/transactions for a CoValue efficiently
-4. **Sorted Iteration**: Keys are sorted lexicographically (useful for range queries)
-5. **Sparse Downloading**: Only downloads blocks needed for queries (huge win!)
-6. **P2P Replication**: Multiple sync servers can share data via Hyperswarm
-7. **Immutable History**: Append-only B-tree preserves history (good for auditing)
-
-### Cons of Hyperbee Approach
-
-1. **No Joins**: Can't do SQL-style joins - need multiple range queries
-2. **No Foreign Keys**: Need to manually maintain referential integrity
-3. **No Indexes**: Can't create secondary indexes - only primary key lookups
-4. **Encoding Overhead**: JSON encoding/decoding on every read/write
-5. **Complexity**: More complex than SQLite's relational model
-6. **Maturity**: Less mature than SQLite for server-side storage
+**Cons:** No joins, no foreign keys, no indexes, JSON encoding overhead.
 
 ---
 
-## Part 4: Comparison - SQLite vs Hyperbee
+## Part 4: SQLite vs Hyperbee Comparison
 
 | Aspect | SQLite | Hyperbee |
 |--------|--------|----------|
-| **Data Model** | Relational (tables, joins) | Key-value (flat, sorted) |
-| **Query Language** | SQL | Programmatic API |
-| **Transactions** | Full ACID | Batch operations (atomic) |
-| **Indexes** | Multiple indexes | Primary key only |
-| **Storage** | Single file | Hypercore blocks |
-| **Replication** | Manual (rsync, etc.) | Built-in (Hyperswarm) |
-| **Sparse Loading** | No | Yes (only download needed blocks) |
-| **Distributed** | No | Yes (P2P mesh) |
-| **Maturity** | Very mature | Mature (used in production) |
-| **Complexity** | Simple (SQL) | Moderate (key-value + composite keys) |
-| **Performance** | Excellent (local) | Good (network + sparse) |
-| **Use Case** | Single server | Distributed servers |
+| Data Model | Relational | Key-value |
+| Transactions | Full ACID | Atomic batches |
+| Replication | Manual | Built-in P2P |
+| Sparse Loading | No | Yes |
+| Use Case | Single server | Distributed |
 
 ---
 
-## Part 5: Use Cases for Each Approach
+## Part 5: Use Cases
 
-### Use SQLite When:
+**SQLite:** Single sync server, simplicity, SQL expertise, no distribution needed.
 
-1. **Single Sync Server**: You have one centralized sync server
-2. **Simplicity**: You want the simplest possible implementation
-3. **SQL Expertise**: Your team knows SQL well
-4. **Local Storage**: All data fits on one server
-5. **No Distribution**: No need for P2P replication between servers
-6. **Mature Tooling**: You want battle-tested tools (backups, monitoring, etc.)
-
-**Example:**
-- Single Fly.io instance serving all clients
-- All CoValue data stored locally
-- No need for server-to-server replication
-
-### Use Hyperbee When:
-
-1. **Distributed Sync**: You want multiple sync servers sharing data
-2. **Sparse Storage**: Servers don't need all CoValues (sparse downloading)
-3. **P2P Architecture**: Servers should discover and replicate via DHT
-4. **Mesh Topology**: No single point of failure (distributed mesh)
-5. **Selective Replication**: Only replicate CoValues you need
-6. **Immutable History**: Want append-only audit trail
-
-**Example:**
-- Multiple sync servers in different regions
-- Each server only stores CoValues for local users
-- Servers replicate via Hyperswarm (P2P)
-- Sparse downloading = don't need all data locally
-- Mesh topology = no single point of failure
+**Hyperbee:** Distributed sync, sparse storage, P2P mesh, selective replication.
 
 ---
 
-## Part 6: The Killer Feature - Sparse Downloading
+## Part 6: Sparse Downloading (Killer Feature)
 
-### What is Sparse Downloading?
-
-**Traditional database sync:**
-```
-Server A                          Server B
-  ↓                                  ↓
-Full DB (100GB)   →  Replicate  →  Full DB (100GB)
-```
-
-Every server needs a complete copy of the entire database.
-
-**Hyperbee sparse downloading:**
-```
-Server A                          Server B
-  ↓                                  ↓
-Full Hyperbee    →  Replicate  →  Partial Hyperbee (only needed data)
-(100GB)                            (5GB - just what B needs)
-```
-
-Server B only downloads blocks for queries it actually makes!
-
-### How It Works
-
-**Hyperbee is a B-tree stored in Hypercore blocks:**
-```
-Hypercore Block 0: Root node
-Hypercore Block 1: Left branch node
-Hypercore Block 2: Right branch node
-Hypercore Block 3: Leaf node (keys a-m)
-Hypercore Block 4: Leaf node (keys n-z)
-...
-```
-
-**When you query:**
-```javascript
-await bee.get('hello')  // Only downloads: Root → Branch → Leaf containing 'hello'
-```
-
-Hyperbee only downloads the blocks needed to traverse the B-tree to 'hello'. It doesn't download the entire database!
-
-### Why This Matters for Sync Servers
-
-**Scenario: Multi-Region Sync**
-
-```
-MaiaOS User A (US)  →  US Sync Server (Hyperbee)
-                             ↓ (sparse replication)
-                       EU Sync Server (Hyperbee)
-                             ↓
-MaiaOS User B (EU)
-```
-
-- US server has User A's CoValues
-- EU server has User B's CoValues
-- EU server can query US server for User A's data **without downloading all of US server's data**
-- Only the specific CoValues needed are downloaded (sparse!)
-
-**This enables:**
-1. **Distributed storage** - Servers don't need all data
-2. **Regional optimization** - Servers store local users' data primarily
-3. **On-demand replication** - Only replicate what's needed
-4. **Scalability** - Add more servers without each storing everything
+Hyperbee only downloads B-tree blocks needed for queries. Enables multi-region sync where servers store partial data.
 
 ---
 
-## Part 7: Hybrid Approach - Best of Both Worlds?
+## Part 7: Hybrid Approach
 
-### Idea: SQLite + Hyperbee Sync Layer
-
-**Architecture:**
-```
-┌────────────────────────────────────────┐
-│  Sync Server A                         │
-│                                        │
-│  ┌──────────────┐     ┌─────────────┐ │
-│  │  SQLite DB   │ ←→  │  Hyperbee   │ │
-│  │  (local)     │     │  (P2P sync) │ │
-│  └──────────────┘     └─────────────┘ │
-│                            ↕            │
-└────────────────────────────────────────┘
-                             ↕
-┌────────────────────────────────────────┐
-│  Sync Server B                         │
-│                                        │
-│  ┌──────────────┐     ┌─────────────┐ │
-│  │  SQLite DB   │ ←→  │  Hyperbee   │ │
-│  │  (local)     │     │  (P2P sync) │ │
-│  └──────────────┘     └─────────────┘ │
-└────────────────────────────────────────┘
-```
-
-**How It Works:**
-1. **Local storage**: Each server uses SQLite for local CoValue storage (simple, fast)
-2. **P2P sync**: Servers replicate via Hyperbee (distributed, sparse)
-3. **Sync layer**: When a CoValue is stored in SQLite, it's also put into Hyperbee
-4. **Query layer**: Queries check SQLite first, then fallback to Hyperbee if not local
-
-**Benefits:**
-- Simple local storage (SQLite)
-- Distributed replication (Hyperbee)
-- Sparse downloading (only replicate what you need)
-- Best of both worlds!
-
-**Tradeoffs:**
-- More complexity (two storage layers)
-- Need sync logic between SQLite ↔ Hyperbee
-- Storage overhead (data stored twice)
+SQLite for local storage + Hyperbee for P2P sync layer. Best of both: simple local, distributed replication.
 
 ---
 
 ## Part 8: Recommended Approach
 
-### Phase 1: Start with SQLite (Simplest)
+**Phase 1:** SQLite (simplest, single server, MVP).
 
-**For initial deployment:**
-- Use Bun's native SQLite for sync server storage
-- Single server, centralized architecture
-- Simple, battle-tested, well-understood
-- Get to production fast
+**Phase 2:** Add Hyperbee if distribution needed.
 
-**Implementation:**
-- Implement cojson's StorageAPI using SQLite (as planned)
-- Deploy to Fly.io or similar
-- All clients connect to single sync server
-
-### Phase 2: Add Hyperbee for Distribution (If Needed)
-
-**When you need:**
-- Multiple sync servers in different regions
-- Distributed storage (not all servers have all data)
-- P2P mesh topology (no single point of failure)
-
-**Implementation:**
-- Add Hyperbee as secondary storage layer
-- SQLite for local queries (fast)
-- Hyperbee for distributed replication (sparse)
-- Sync layer between SQLite ↔ Hyperbee
-
-### Phase 3: Pure Hyperbee (Advanced)
-
-**When you're ready:**
-- Replace SQLite entirely with Hyperbee
-- Pure P2P architecture
-- No central server needed
-- Maximum distribution and resilience
-
-**This is the endgame for truly decentralized MaiaOS!**
-
----
-
-## Part 9: Implementation Roadmap
-
-### Option A: SQLite First (Recommended for MVP)
-
-**Step 1: SQLite Storage Adapter**
-- Implement cojson's StorageAPI using Bun's SQLite
-- Follow cojson's existing SQLite implementation patterns
-- Deploy single sync server
-
-**Step 2: Production Testing**
-- Test with real users
-- Monitor performance, storage usage
-- Identify bottlenecks
-
-**Step 3: Evaluate Distribution Needs**
-- Do you need multiple regions?
-- Do you need distributed storage?
-- If yes, proceed to Option B
-
-### Option B: Hyperbee Storage Adapter (Experimental)
-
-**Step 1: Proof of Concept**
-- Implement basic StorageAPI with Hyperbee
-- Test load/store/loadKnownState operations
-- Validate composite key approach
-
-**Step 2: Full Implementation**
-- Implement all StorageAPI methods
-- Add sync state tracking
-- Add deletion queue
-- Test with real CoValue data
-
-**Step 3: Distributed Testing**
-- Deploy multiple sync servers
-- Test P2P replication via Hyperswarm
-- Validate sparse downloading
-- Measure performance vs SQLite
-
-**Step 4: Production Deployment**
-- Roll out gradually
-- Monitor for issues
-- Compare to SQLite baseline
-
-### Option C: Hybrid SQLite + Hyperbee (Future)
-
-**Step 1: SQLite as Primary**
-- Use SQLite for local storage
-- All queries hit SQLite first
-
-**Step 2: Hyperbee as Sync Layer**
-- Add Hyperbee for server-to-server replication
-- Sync CoValues from SQLite → Hyperbee
-- Replicate via Hyperswarm
-
-**Step 3: Fallback to P2P**
-- If CoValue not in local SQLite, query Hyperbee
-- Sparse download from other servers
-- Cache in local SQLite
+**Phase 3:** Pure Hyperbee for truly decentralized MaiaOS.
 
 ---
 
 ## Summary
 
-### Key Insights
-
-1. **Hyperbee is a surprisingly good match** for cojson's StorageAPI
-   - Key-value API maps cleanly
-   - Batch operations for transactions
-   - Range queries for loading sessions/transactions
-
-2. **Sparse downloading is the killer feature**
-   - Only download data you need
-   - Perfect for distributed sync servers
-   - Enables mesh topology without full replication
-
-3. **SQLite is simpler for single-server scenarios**
-   - Battle-tested, mature tooling
-   - SQL is well-understood
-   - Perfect for MVP
-
-4. **Hyperbee shines for distributed architectures**
-   - P2P replication via Hyperswarm
-   - No single point of failure
-   - Regional optimization
-
-### Recommended Path
-
-**Phase 1 (Now):** SQLite storage adapter
-- Simplest path to production
-- Single sync server
-- Get users on board
-
-**Phase 2 (Later):** Evaluate Hyperbee
-- If distribution is needed
-- Build proof of concept
-- Test in production
-
-**Phase 3 (Future):** Hybrid or pure Hyperbee
-- Multiple regions
-- Distributed mesh
-- True P2P architecture
-
-### The Answer
-
-**Can Hyperbee work as cojson storage?** Yes! It's actually a great fit.
-
-**Should you use it now?** Probably not - start with SQLite for simplicity.
-
-**Should you explore it later?** Absolutely - it enables powerful distributed architectures that SQLite can't match.
-
----
-
-**Bottom Line:** Hyperbee isn't just a drop-in replacement for SQLite - it's a fundamentally different architecture that enables distributed, sparse, P2P sync server meshes. Start with SQLite, but keep Hyperbee in mind for future scaling.
+**Can Hyperbee work?** Yes - great fit. **Use now?** Start with SQLite. **Explore later?** Yes - enables distributed architectures SQLite can't match.
 
 ---
 
@@ -12648,7 +10644,7 @@ Read the documentation in the following order for a complete understanding:
 - Co-ID generation and registry
 
 **Sub-topics:**
-- [Validation](./03_maia-schemata/validation.md) - Schema validation system
+- [Validation](./03_maia-schemata/validation/) - Schema validation system
 - [Transformation](./03_maia-schemata/transformation.md) - Schema transformation for seeding
 - [CoJSON Integration](./03_maia-schemata/cojson-integration.md) - CoJSON types integration
 - [Co-ID Generation](./03_maia-schemata/co-id-generation.md) - Co-ID generation and registry
@@ -12663,7 +10659,7 @@ Read the documentation in the following order for a complete understanding:
 - Complete API reference
 
 **Sub-topics:**
-- [Engines](./04_maia-script/engines.md) - Detailed engine descriptions
+- [Engines](./04_maia-script/engines/) - Detailed engine descriptions
 - [Modules](./04_maia-script/modules.md) - Module system and custom modules
 - [Expressions](./04_maia-script/expressions.md) - MaiaScript expression language
 - [API Reference](./04_maia-script/api-reference.md) - Complete API reference

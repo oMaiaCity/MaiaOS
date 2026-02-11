@@ -133,7 +133,7 @@ const evaluator = new MaiaScriptEvaluator(null, {
 ## Related Documentation
 
 - [Main README](./README.md) - Package overview
-- [engines.md](./engines.md) - Engine details
+- [engines/](./engines/) - Engine details
 - [modules.md](./modules.md) - Module system
 - [expressions.md](./expressions.md) - Expression language
 - [api-reference.md](./api-reference.md) - API reference

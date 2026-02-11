@@ -128,7 +128,7 @@ console.log('Actor:', actor);                  // Created agent actor instance
 **What's the difference?**
 - `createActor()` - Direct actor creation (low-level)
 - `loadVibe()` - Load app via manifest (recommended, marketplace-ready)
-  - Always loads the agent service actor (`@actor/agent`)
+  - Always loads the vibe root service actor (`@actor/vibe`)
   - Agent orchestrates the entire application
 
 **Best Practice:** Always create the agent service actor first, then reference it in the vibe manifest.

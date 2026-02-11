@@ -1,6 +1,6 @@
 # MaiaOS Documentation for maia-schemata
 
-**Auto-generated:** 2026-02-11T20:56:54.245Z
+**Auto-generated:** 2026-02-11T21:30:35.375Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -861,7 +861,7 @@ The core validation system. Wraps AJV (Another JSON Schema Validator) and adds C
 - Resolves schema dependencies ($schema, $co references)
 - Handles co-id references from IndexedDB
 
-**See:** [Validation Engine Details](./validation.md)
+**See:** [Validation Engine Details](./validation/)
 
 ### 2. Schema Transformer
 
@@ -1165,7 +1165,7 @@ transformInstanceForSeeding(instance, coIdMap);
 
 - [maia-operations Package](../06_maia-operations/README.md) - Operations layer that uses schema validation
 - [Schema Definitions](../03_schemas.md) - Schema structure and usage
-- [Validation Engine Details](./validation.md) - How ValidationEngine works
+- [Validation Engine Details](./validation/) - How ValidationEngine works
 - [Schema Transformation](./transformation.md) - How transformation works
 - [CoJSON Integration](./cojson-integration.md) - CoJSON types support
 - [CoJSON Architecture](../05_maia-db/cojson.md) - CoJSON system overview
@@ -1649,9 +1649,9 @@ transformQueryObjects(instance, coIdMap);
 
 ---
 
-# VALIDATION
+# 00 OVERVIEW
 
-*Source: developers/validation.md*
+*Source: developers/validation/00-overview.md*
 
 # Validation Engine
 
@@ -1934,6 +1934,12 @@ const schema = await backend.resolveSchema({ fromCoValue: 'co_z456...' });
 
 Validation errors are formatted for readability:
 
+---
+
+# 01 REFERENCE
+
+*Source: developers/validation/01-reference.md*
+
 **AJV Error:**
 ```javascript
 {
@@ -2163,6 +2169,17 @@ await engine.loadSchema('actor', actorSchema);
 - Helper functions: `libs/maia-schemata/src/validation.helper.js`
 - Error formatting: `libs/maia-schemata/src/validation.helper.js` (formatValidationErrors)
 - Schema validation toggle: `libs/maia-schemata/src/validation.helper.js` (withSchemaValidationDisabled)
+
+---
+
+# README
+
+*Source: developers/validation/README.md*
+
+# Validation Documentation
+
+1. **[00-overview.md](./00-overview.md)** - Validation overview
+2. **[01-reference.md](./01-reference.md)** - Reference details
 
 ---
 

@@ -141,6 +141,6 @@ await evaluator.evaluate(expression, data);
 ## Related Documentation
 
 - [Main README](./README.md) - Package overview
-- [engines.md](./engines.md) - MaiaScriptEvaluator details
+- [engines/](./engines/) - MaiaScriptEvaluator details
 - [api-reference.md](./api-reference.md) - API reference
 - [patterns.md](./patterns.md) - Common patterns

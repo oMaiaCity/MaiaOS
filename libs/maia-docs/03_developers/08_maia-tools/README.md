@@ -248,7 +248,7 @@ const definitions = getAllToolDefinitions();
 **`@db/*`** (Deprecated)
 - Database tools have been replaced by the unified `@db` API
 - Use `maia.db({ op: 'read', ... })` instead
-- See: [maia-script DBEngine](../04_maia-script/engines.md#dbengine)
+- See: [maia-script DBEngine](../04_maia-script/engines/#dbengine)
 
 ---
 
@@ -446,7 +446,7 @@ export default {
 
 ## Related Documentation
 
-- [maia-script: ToolEngine](../04_maia-script/engines.md#toolengine) - How tools are executed
+- [maia-script: ToolEngine](../04_maia-script/engines/#toolengine) - How tools are executed
 - [maia-script: Modules](../04_maia-script/modules.md) - How tools are registered
 - [Creator Docs: Tools](../../02_creators/06-tools.md) - How to use tools as a creator
 

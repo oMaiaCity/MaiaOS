@@ -114,10 +114,12 @@ graph TD
 
 This package documentation is organized into focused topics:
 
-- **[engines.md](./engines.md)** - Detailed descriptions of all 10 engines
+- **[engines/](./engines/)** - Detailed descriptions of all 10 engines
 - **[modules.md](./modules.md)** - Module system and creating custom modules
 - **[expressions.md](./expressions.md)** - MaiaScript expression language reference
 - **[api-reference.md](./api-reference.md)** - Complete API reference
+- **[subscriptions-overview.md](./subscriptions-overview.md)** - Subscription architecture
+- **[subscriptions-reference.md](./subscriptions-reference.md)** - Config/data details, patterns, troubleshooting
 - **[patterns.md](./patterns.md)** - Common patterns and troubleshooting
 
 ---

@@ -1,18 +1,24 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-02-11T20:56:54.241Z
+**Auto-generated:** 2026-02-11T21:30:35.373Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
 
-# CONCEPT
+# CONCEPTS AND TERMINOLOGY
 
-*Source: getting-started/01_concept.md*
+*Source: getting-started/01_concepts-and-terminology.md*
 
-# MaiaOS Concept
+# MaiaOS Concepts and Terminology
 
 **Version:** 0.4  
 **Last Updated:** January 2026
+
+## The Simple Version
+
+MaiaOS lets you build apps by writing **JSON files** instead of code. You describe what your app should do (like a recipe), and engines run it. No building, no compiling—just save a file and see it run. AI can read and edit these files too, so you can build apps by talking to an AI.
+
+---
 
 ## What is MaiaOS?
 
@@ -22,512 +28,124 @@ MaiaOS is a **100% runtime-based, AI-LLM native platform** for building AI-compo
 
 ### Pure Declarative Runtime
 
-**Everything is JSON:**
-- No JavaScript in your app code
-- No compiled bundles
-- No build steps
-- Pure `.maia` files loaded at runtime
-
-**Example Actor:**
-```json
-{
-  "$type": "actor",
-  "id": "actor_todo_001",
-  "contextRef": "todo",
-  "stateRef": "todo",
-  "viewRef": "todo"
-}
-```
-
-That's it. No classes, no functions, no imports. Just references.
+**Everything is JSON:** No JavaScript in your app code, no compiled bundles, no build steps. Pure `.maia` files loaded at runtime.
 
 ### AI-LLM Native
 
-**Built for AI Orchestration:**
-- LLMs can read and generate `.maia` files natively (they're just JSON)
-- Skills provide AI-readable interface specifications
-- State machines are AI-compatible event flows
-- Tools are defined with JSON schemas (LLM-friendly)
-
-**Why This Matters:**
-- AI agents can build entire apps by generating `.maia` files
-- No code generation → No syntax errors
-- LLMs understand the structure perfectly
-- Agents can modify apps at runtime
+LLMs can read and generate `.maia` files natively. Skills provide AI-readable interface specifications. Tools are defined with JSON schemas. AI agents can build entire apps by generating `.maia` files—no code generation, no syntax errors.
 
 ### 100% Runtime-Based
 
-**No Build Process:**
 ```
 Traditional:  Write Code → Compile → Bundle → Deploy → Run
 MaiaOS:       Write .maia → Run
 ```
 
-**Hot Runtime Reload Everything:**
-- Change a view → Instant update
-- Modify state machine → Instant update
-- Update styles → Instant update
-- No webpack, no vite, no build tools
-
-**How It Works:**
-1. Browser loads `o/kernel.js` (single entry point)
-2. Kernel initializes engines (Actor, View, State, Tool, DB, Subscription, etc.)
-3. Kernel loads modules (db, core, dragdrop)
-4. Kernel seeds database with configs, schemas, and tool definitions
-5. Kernel loads `.maia` files via `fetch()` or database queries
-6. Engines interpret and execute
-7. Shadow DOM renders isolated UI
-8. Done!
+Hot reload everything: change a view, modify a state machine, update styles—instant update. No webpack, no vite.
 
 ## Three-Layer Architecture
 
-### 1. Definition Layer (What to Do)
+**Definition Layer:** Pure JSON (actor, context, state, view, style, skill). No logic, just configuration.
 
-**Pure JSON definitions:**
-- `actor.maia` - Component identity and references
-- `context.maia` - Initial runtime data
-- `state.maia` - Behavior flow (state machine)
-- `view.maia` - UI structure
-- `style.maia` - Appearance
-- `skill.maia` - AI agent interface
+**Execution Layer:** JavaScript engines interpret definitions (ActorEngine, StateEngine, ViewEngine, ToolEngine, StyleEngine, DBEngine, SubscriptionEngine, MessageQueue).
 
-**No logic, just configuration.**
-
-### 2. Execution Layer (How to Do It)
-
-**JavaScript engines interpret definitions:**
-- `ActorEngine` - Orchestrates actors
-- `StateEngine` - Executes state machines
-- `ViewEngine` - Renders views
-- `ToolEngine` - Executes actions
-- `StyleEngine` - Compiles styles
-- `DBEngine` - Unified database operations (query, create, update, delete, toggle)
-- `SubscriptionEngine` - Context-driven reactive subscriptions
-- `MessageQueue` - Actor-to-actor communication
-
-**Logic lives here, not in your app.**
-
-### 3. Intelligence Layer (Why & When to Do It)
-
-**AI agents orchestrate via skills:**
-- Skills describe actor capabilities
-- LLMs read skills to understand what's possible
-- Agents generate events based on user intent
-- System executes via state machines
-
-**AI decides, engines execute.**
+**Intelligence Layer:** AI agents orchestrate via skills. Agents generate events based on user intent; system executes via state machines.
 
 ## Why MaiaOS?
 
-### For Vibecreators (App Builders)
+**Vibecreators:** No JavaScript required, instant hot reload, AI-assisted development, component isolation.
 
-✅ **No JavaScript Required** - Pure JSON definitions  
-✅ **Instant Hot Reload** - No build process  
-✅ **AI-Assisted Development** - LLMs understand `.maia` files  
-✅ **Component Isolation** - Shadow DOM per actor  
-✅ **Declarative Everything** - Views, state, styles  
+**AI Agents:** Native JSON, schema-defined tools, discoverable skills, composable actors, predictable state machines.
 
-### For AI Agents
-
-✅ **Native JSON** - No code generation needed  
-✅ **Schema-Defined** - Every tool has JSON schema  
-✅ **Discoverable** - Skills describe capabilities  
-✅ **Composable** - Mix and match actors  
-✅ **Predictable** - State machines are explicit  
-
-### For Developers (Core Contributors)
-
-✅ **Modular Architecture** - Pluggable engines  
-✅ **Schema-Agnostic Tools** - Generic CRUD  
-✅ **Clean Separation** - Definition vs. execution  
-✅ **Extensible** - Add engines, tools, modules  
-✅ **Type-Safe** - JSON schemas validate everything  
-
-## Real-World Example
-
-**Traditional React Todo:**
-```jsx
-// TodoApp.jsx (100+ lines of JavaScript)
-import React, { useState } from 'react';
-import './TodoApp.css';
-
-function TodoApp() {
-  const [todos, setTodos] = useState([]);
-  const [input, setInput] = useState('');
-  
-  const addTodo = () => {
-    setTodos([...todos, { id: Date.now(), text: input, done: false }]);
-    setInput('');
-  };
-  
-  // ... more code ...
-}
-```
-
-**MaiaOS Todo:**
-```json
-// todo.actor.maia (14 lines of JSON)
-{
-  "$type": "actor",
-  "contextRef": "todo",
-  "stateRef": "todo",
-  "viewRef": "todo"
-}
-```
-
-That's the entire actor. Context, state, and view are separate files. No JavaScript. No build. Just JSON.
-
-## Service/UI Actor Architecture
-
-MaiaOS uses a **service actor / UI actor** pattern for building applications:
-
-**Service Actors** (orchestration):
-- Entry point for every vibe
-- Handle business logic and data management
-- Coordinate between UI actors
-- Minimal or no view (only render child actors)
-
-**UI Actors** (presentation):
-- Render user interfaces
-- Handle user interactions
-- Receive data/configurations from service actors
-- Send generic events to service actors
-
-**Default Pattern:**
-```
-Vibe → Service Actor → Composite Actor → UI Actors
-```
-
-This ensures clean separation of concerns and scalable architecture. See [Actors Documentation](../vibecreators/02-actors.md#default-vibe-pattern-service--composite--ui) for details.
+**Developers:** Modular architecture, schema-agnostic tools, clean separation, extensible engines.
 
 ## Key Differentiators
 
-### vs. Traditional Frameworks (React, Vue, Svelte)
+| vs. Traditional Frameworks | vs. Low-Code |
+|----------------------------|--------------|
+| JSON instead of JS/TS | Text (`.maia`) instead of visual GUI |
+| No build process | Git version control |
+| Native AI generation | Native AI integration |
+| Shadow DOM isolation | Open source extensibility |
 
-| Feature | Traditional | MaiaOS |
-|---------|-------------|--------|
-| Language | JavaScript/TypeScript | JSON |
-| Build Process | Required | None |
-| Hot Reload | Via bundler | Native |
-| AI Generation | Code (error-prone) | JSON (perfect) |
-| Component Isolation | CSS Modules | Shadow DOM |
-| State Management | Library (Redux, etc.) | Built-in (State Machines) |
+## Service/UI Actor Pattern
 
-### vs. Low-Code Platforms (Bubble, Webflow)
-
-| Feature | Low-Code | MaiaOS |
-|---------|----------|--------|
-| Editing | Visual GUI | Text (`.maia` files) |
-| Version Control | Proprietary | Git |
-| AI Integration | Limited | Native |
-| Extensibility | Plugins | Engines + Tools |
-| Lock-in | Platform | Open source |
-
-### vs. Backend Frameworks (Rails, Django)
-
-MaiaOS is **frontend-first** but with backend patterns:
-- State machines (like backend workflows)
-- Tools (like backend services)
-- Actors (like backend models)
-- But all in the browser, no server required
-
-## The MaiaOS Promise
-
-> **Build AI-native applications with zero JavaScript, zero build process, and 100% runtime flexibility.**
-
-**What This Means:**
-1. **Vibecreators** define apps in JSON
-2. **Engines** execute definitions
-3. **AI Agents** orchestrate via skills
-4. **Users** get instant, reactive UIs
-
-**No compilation. No bundling. No build tools. Just pure, declarative, AI-native applications.**
-
-## Next Steps
-
-- [Terminology](./02_terminology.md) - Understand the key concepts
-- [Architecture](./03_architecture.md) - Deep dive into system design
-- [Installation](./04_install.md) - Get started building
+**Service Actors:** Entry point, business logic, coordinate UI actors.  
+**UI Actors:** Render interfaces, handle interactions, send events to service actors.  
+**Pattern:** `Vibe → Service Actor → Composite Actor → UI Actors`
 
 ---
 
-# TERMINOLOGY
+## Terminology Glossary
 
-*Source: getting-started/02_terminology.md*
+### Core Concepts
 
-# MaiaOS Terminology
+**MaiaOS** - The operating system. A runtime-based, AI-native platform for declarative applications. Think: "an OS for apps" that runs in the browser.
 
-**Quick reference glossary of all MaiaOS concepts.**
+**Kernel** - Single entry point (`o/kernel.js`). Boots the system, loads modules, initializes engines.
 
-## Core Concepts
+**MaiaScript** - JSON-based DSL for defining actors, views, states, styles, tools. Expressions: `$context`, `$$item`, `@inputValue`.
 
-### MaiaOS
+### Definition Layer
 
-The operating system itself. A runtime-based, AI-native platform for building declarative applications. Think of it as "an OS for apps" that runs in the browser.
+**Actor** - Pure declarative spec (`.actor.maia`). References other components. Zero logic—just IDs and references.
 
-### Kernel
+**Context** - Runtime data (`.context.maia`). Collections, UI state, form values. Inline or separate file.
 
-The single entry point (`o/kernel.js`). Boots the system, loads modules, initializes engines, and creates actors. One file to rule them all.
+**State Machine** - Behavior flow (`.state.maia`). XState-like: states, transitions, guards, actions. Defines WHAT happens WHEN.
 
-### MaiaScript
+**View** - UI structure (`.view.maia`). Declarative DOM tree with expressions, loops, conditionals. Renders to Shadow DOM.
 
-The JSON-based DSL (Domain Specific Language) for defining actors, views, states, styles, and tools. Pure declarative syntax with expressions like `$context`, `$$item`, `@inputValue`.
+**Style** - Appearance (`.style.maia`). Design tokens + component styles. Types: Brand (shared) or Local (actor-specific).
 
----
+**Skill** - AI agent interface (`.skill.maia`). Describes capabilities, events, context schema for LLM orchestration.
 
-## Definition Layer (Declarative)
+### Execution Layer
 
-### Actor
+**Engine** - JavaScript machinery that interprets definitions. ActorEngine, StateEngine, ViewEngine, ToolEngine, StyleEngine, DBEngine, SubscriptionEngine, MessageQueue, MaiaScriptEvaluator.
 
-A pure declarative specification (`.actor.maia`) that references other components. Contains zero logic - just IDs and references. Think: "component configuration file."
+**Tool** - Executable function (`.tool.js` + `.tool.maia`). The ONLY place imperative code lives. Tools mutate context or execute operations.
 
-### Context
+**Module** - Collection of tools (`.module.js`). Built-in: `db`, `core`, `dragdrop`, `interface`.
 
-Runtime data for an actor (`.context.maia`). All state lives here: collections, UI state, form values, etc. Can be inline or separate file.
+### Intelligence Layer
 
-### State Machine
+**Vibecreator** - Person who builds MaiaOS apps. Writes `.maia` files. No JavaScript required.
 
-Behavior flow definition (`.state.maia`). XState-like state machine with states, transitions, guards, and actions. Defines WHAT happens WHEN.
+**Agent/LLM** - AI assistant that reads skills and generates events.
 
-### View
+### Data Flow
 
-UI structure definition (`.view.maia`). Declarative DOM tree with expressions, loops, conditionals, and event handlers. Renders to Shadow DOM.
+**Event** - Message to state machine triggering a transition.  
+**Payload** - Data with event. Expressions: `$field` (context), `$$field` (item), `@inputValue` (DOM).  
+**Guard** - Condition for transition.  
+**Transition** - State change in response to event.  
+**Action** - Tool invocation or context update during transition.
 
-### Style
+### UI Concepts
 
-Appearance definition (`.style.maia`). Design tokens + component styles. Compiles to CSS and injects into Shadow DOM.
+**Shadow DOM** - Browser-native encapsulation. Each actor has isolated styles and DOM.
 
-**Types:**
+**Component** - In MaiaOS, component = actor. Reusable, isolated unit with state, view, behavior.
 
-- **Brand** (`brand.style.maia`) - Shared design system
-- **Local** (`actor.style.maia`) - Actor-specific overrides
+### File Conventions
 
-### Skill
+**Naming:** `{name}.{type}.maia` (e.g., `todo.actor.maia`, `todo.context.maia`)
 
-AI agent interface specification (`.skill.maia`). Describes actor capabilities, events, context schema, and usage patterns for LLM orchestration.
-
----
-
-## Execution Layer (Imperative)
-
-### Engine
-
-JavaScript execution machinery that interprets definitions. Engines contain all the logic - definitions contain none.
-
-**Core Engines:**
-
-- **ActorEngine** - Orchestrates actors, manages lifecycle
-- **StateEngine** - Interprets state machines, executes transitions
-- **ViewEngine** - Renders views to Shadow DOM
-- **ToolEngine** - Executes tool actions
-- **StyleEngine** - Compiles styles to CSS
-- **DBEngine** - Unified database operation engine (query, create, update, delete, toggle, seed)
-- **SubscriptionEngine** - Context-driven reactive subscriptions
-- **MessageQueue** - Actor-to-actor message passing
-- **ModuleRegistry** - Manages dynamic module loading
-- **MaiaScriptEvaluator** - Evaluates DSL expressions
-
-### Tool
-
-An executable function (`.tool.js` + `.tool.maia`). The ONLY place imperative code lives. Tools mutate actor context or execute operations based on payloads.
-
-**Structure:**
-
-- `.tool.maia` - JSON schema (AI-compatible metadata)
-- `.tool.js` - JavaScript function (execution logic)
-
-### Module
-
-A collection of related tools (`.module.js`). Modules register tools with the ToolEngine at boot time.
-
-**Built-in Modules:**
-
-- `db` - Database operations (unified API: `@db`)
-- `core` - UI utilities (modals, preventDefault, publishMessage)
-- `dragdrop` - Drag-and-drop handlers
-- `interface` - Interface validation
-
-### Module Registry
-
-Central plugin system for dynamic module loading. Manages module lifecycle and tool registration.
-
----
-
-## Intelligence Layer (AI Orchestration)
-
-### Vibecreator
-
-A person who builds MaiaOS applications. Writes `.maia` files, composes actors, defines behaviors. No JavaScript required.
-
-### Agent / LLM
-
-AI assistant (ChatGPT, Claude, Cursor, etc.) that reads skills and generates events. Orchestrates actors based on user intent.
-
-### Skill Engine
-
-(v0.5) Engine that manages skill discovery and interpretation for AI agents. Enables LLM-driven app orchestration.
-
----
-
-## Data Flow Concepts
-
-### Event
-
-A message sent to a state machine to trigger a transition. Events have a name and optional payload.
-
-### Payload
-
-Data passed with an event. Can contain expressions that are evaluated at runtime.
-
-**Expression Types:**
-
-- `$field` - Context reference (`actor.context.field`)
-- `$$field` - Item reference (in loops: `item.field`)
-- `@inputValue` - DOM value reference (`input.value`)
-
-### Guard
-
-A condition that determines if a transition should occur. Evaluated before state change.
-
-### Transition
-
-Moving from one state to another in response to an event. Can have guards and actions.
-
-### Action
-
-A tool invocation or context update. Executed during state transitions (entry/exit/inline).
-
----
-
-## UI Concepts
-
-### Shadow DOM
-
-Browser-native encapsulation. Each actor renders into its own shadow root with isolated styles and DOM.
-
-**Benefits:**
-
-- Style isolation (no CSS leakage)
-- DOM encapsulation
-- Multiple instances without conflicts
-
-### Constructable Stylesheet
-
-Modern CSS API for efficient style sharing. Brand styles compiled once, adopted by all actors.
-
-### Component
-
-In MaiaOS, "component" = "actor". Reusable, isolated, self-contained unit with state, view, and behavior.
-
----
-
-## Architectural Patterns
-
-### Schema-Agnostic
-
-Database operations don't know about specific data types. They work with generic `schema` (co-ids) and `data` parameters. Same tool, different schema. Zero hardcoded domain knowledge. All schemas are co-ids (CoJSON IDs).
-
-### Message Passing
-
-Actors communicate asynchronously via inboxes and subscriptions. Watermark pattern for processing.
-
-**Properties:**
-
-- `inbox` - Message queue
-- `subscriptions` - Actors to receive messages from
-- `inboxWatermark` - Last processed message index
-
-### Modular Architecture
-
-Everything is a plugin. Engines are pluggable, tools are modular, modules are dynamic.
-
----
-
-## File Conventions
-
-### `.maia` Extension
-
-All MaiaOS definition files use `.maia` extension. JSON format with `$type` discriminator.
-
-**Types:**
-
-- `actor.maia` - Actor definition
-- `context.maia` - Runtime data
-- `state.maia` - State machine
-- `view.maia` - UI structure
-- `style.maia` - Styling
-- `skill.maia` - AI interface
-- `tool.maia` - Tool metadata
-
-### Naming Pattern
-
-`{name}.{type}.maia`
-
-**Examples:**
-
-- `todo.actor.maia`
-- `todo.context.maia`
-- `todo.state.maia`
-- `brand.style.maia`
-
-### CoMap ID (Future)
-
-Fake IDs used for Jazz integration. Currently maps to filenames, will map to Jazz CoMaps in v0.5.
-
----
-
-## Development Concepts
-
-### Hot Reload
-
-Automatic browser refresh on file changes. No build process, instant updates.
-
-### Watch Mode
-
-Scripts that monitor file changes and regenerate outputs (e.g., LLM docs).
-
-### Vibecreators Docs
-
-User-facing documentation for app builders. Located in `docs/vibecreators/`.
-
-### Developers Docs
-
-Technical documentation for core contributors. Located in `docs/developers/`.
-
-### LLM Docs
-
-Auto-generated, context-optimized documentation for AI agents. Located in `docs/agents/`.
-
----
-
-## Quick Reference
-
-| Term      | Type       | Purpose                  |
-| --------- | ---------- | ------------------------ |
-| **Actor** | Definition | Component configuration |
-| **Context** | Definition | Runtime data |
-| **State** | Definition | Behavior flow |
-| **View** | Definition | UI structure |
-| **Style** | Definition | Appearance |
-| **Engine** | Execution | Interprets definitions |
-| **Tool** | Execution | Executes actions |
-| **Module** | Execution | Groups tools |
-| **Event** | Data Flow | Triggers transitions |
-| **Payload** | Data Flow | Event data |
-| **Guard** | Data Flow | Transition condition |
+**Types:** actor, context, state, view, style, skill, tool
 
 ---
 
 ## Next Steps
 
-- [Architecture](./03_architecture.md) - System design deep dive
+- [Architecture](./03_architecture/) - Deep dive into system design
 - [Installation](./04_install.md) - Get started building
 
 ---
 
-# ARCHITECTURE
+# 00 OVERVIEW
 
-*Source: getting-started/03_architecture.md*
+*Source: getting-started/03_architecture/00-overview.md*
 
 # MaiaOS Architecture
 
@@ -809,7 +427,14 @@ StateEngine.send(EVENT_NAME, payload)
 StateEngine finds current state
   ↓
 StateEngine checks event handlers
-  ↓
+
+---
+
+# 01 DETAIL
+
+*Source: getting-started/03_architecture/01-detail.md*
+
+↓
 StateEngine evaluates guard (if present)
   ↓
 Guard passes → Continue | Guard fails → Ignore
@@ -1035,9 +660,20 @@ actor.inbox = [...]; // Watermark pattern
 
 ## Next Steps
 
-- [Installation](./04_install.md) - Get started building
-- [Vibecreators Docs](../vibecreators/) - Build applications
-- [Developers Docs](../developers/) - Extend MaiaOS
+- [Installation](../04_install.md) - Get started building
+- [Creators Docs](../02_creators/) - Build applications
+- [Developers Docs](../03_developers/) - Extend MaiaOS
+
+---
+
+# README
+
+*Source: getting-started/03_architecture/README.md*
+
+# Architecture Documentation
+
+1. **[00-overview.md](./00-overview.md)** - System architecture overview
+2. **[01-detail.md](./01-detail.md)** - Architecture details
 
 ---
 
@@ -1288,10 +924,10 @@ Creator-facing documentation for building with MaiaOS.
 
 Read the documentation in the following order for a complete understanding:
 
-### 1. [Vibes](./01-vibes.md)
+### 1. [Vibes](./01-vibes/)
 **Understanding the Vibe System**
 - What are Vibes?
-- **Agent-first development pattern** (ALWAYS create agent service actor first!)
+- **Vibe-first development pattern** (ALWAYS create vibe root service actor first!)
 - Vibe composition and structure
 - Vibe ecosystem
 
@@ -1301,18 +937,18 @@ Read the documentation in the following order for a complete understanding:
 - Core concepts
 - System initialization
 
-### 3. [Actors](./03-actors.md)
+### 3. [Actors](./03-actors/)
 **Actor-Based Component System**
 - What are Actors?
 - **Architectural roles:** State machine defines transitions, context contains data, view renders from context
 - **Single source of truth:** Everything persisted to CoValues, accessed via ReactiveStore
-- **Agent-first development** (create agent service actor first!)
+- **Vibe-first development** (create vibe root service actor first!)
 - Actor lifecycle
 - Actor composition
 - Co-id references and seeding transformation
 - Brand/style separation (`brand` required, `style` optional)
 
-### 4. [Context](./04-context.md)
+### 4. [Context](./04-context/)
 **Context Management**
 - Context system (ReactiveStore pattern)
 - Universal `read()` API - Every CoValue accessible as ReactiveStore
@@ -1320,21 +956,21 @@ Read the documentation in the following order for a complete understanding:
 - Context composition
 - Data flow
 
-### 5. [State](./05-state.md)
+### 5. [State](./05-state/)
 **State Management**
 - State machines
 - State transitions
 - Event handling
 - Reactive state
 
-### 6. [Tools](./06-tools.md)
+### 6. [Tools](./06-tools/)
 **Tool System**
 - Tool definitions
 - Tool execution
 - Tool composition
 - Custom tools
 
-### 7. [Operations](./07-operations.md)
+### 7. [Operations](./07-operations/)
 **Database Operations API**
 - Universal `read()` API - Every CoValue accessible as ReactiveStore
 - Unified database operations (`maia.db()`)
@@ -1342,28 +978,31 @@ Read the documentation in the following order for a complete understanding:
 - Reactive subscriptions via ReactiveStore pattern
 - Co-id usage and schema transformation
 
-### 8. [Views](./08-views.md)
+### 8. [Views](./08-views/)
 **View System**
 - View structure
 - View composition
 - View-to-DOM rendering
 - Reactive updates
 
-### 9. [Brand](./09-brand.md)
+### 9. [Brand](./09-brand/)
 **Brand System (Shared Design System)**
 - Brand definitions (`brand.style.maia`)
 - Brand tokens (colors, spacing, typography)
 - Brand components (shared UI patterns)
 - **Required** - All actors reference brand via `brand` property
 
-### 10. [Style](./10-style.md)
+### 10. [Style](./10-style/)
 **Style System (Actor-Specific Overrides)**
 - Local style definitions (`{name}.style.maia`)
 - Actor-specific customization
 - **Optional** - Actors can override brand via `style` property
 - StyleEngine merges brand + style (brand first, style overrides)
 
-### 11. [Best Practices](./11-best-practices.md)
+### 11. [Schemata](./11-schemata/)
+**Schema definitions and validation**
+
+### 12. [Best Practices](./12-best-practices/)
 **Best Practices and Patterns**
 - Recommended patterns
 - Common pitfalls
@@ -1395,9 +1034,9 @@ This documentation is for **creators** who want to:
 
 ## Related Documentation
 
-- [Developer Documentation](../developers/) - Technical implementation details
-- [Getting Started](../getting-started/) - Quick start guides
-- [Agent Documentation](../agents/) - Auto-generated LLM agent docs
+- [Developer Documentation](../03_developers/) - Technical implementation details
+- [Getting Started](../01_getting-started/) - Concepts, architecture, installation
+- [Agent Documentation](../04_agents/) - Auto-generated LLM agent docs
 
 ---
 
@@ -1416,9 +1055,9 @@ bun run generate:llm-docs
 
 ---
 
-# VIBES
+# OVERVIEW
 
-*Source: creators/01-vibes.md*
+*Source: creators/01-vibes/00-overview.md*
 
 # Vibes (App Manifests)
 
@@ -1441,28 +1080,29 @@ A vibe is a JSON manifest file (`.vibe.maia`) that serves as an "app store listi
 
 > **Analogy:** If actors are the "executable," vibes are the "app store listing" that describes and loads them.
 
-### Default Pattern: Agent Service Actor Entry Point
+### Default Pattern: Vibe Root Service Actor Entry Point
 
-**Every vibe MUST have an "agent" service actor** as its entry point. This orchestrating service actor is called the **agent** and handles all business logic, data management, and coordination.
+**Every vibe MUST have a root service actor** as its entry point. This orchestrating service actor handles all business logic, data management, and coordination.
 
-**Best Practice:** Always define the agent service actor first when creating a vibe.
+**Best Practice:** Always define the vibe root service actor first when creating a vibe.
+
+**Naming convention:** Use `@actor/vibe` for the vibe's root service actor. This clearly indicates "the actor that IS the vibe" (as opposed to `@actor/agent` which could confuse with AI agents).
 
 ```
-Vibe → Agent (Service Actor) → Composite Actor → UI Actors
+Vibe → @actor/vibe (Root Service Actor) → Composite Actor → UI Actors
 ```
 
-**Why "agent"?**
-- Clear naming convention: the agent orchestrates everything
-- Consistent across all vibes: every vibe has an `@actor/agent`
-- AI-friendly: agents understand this pattern
-- Best practice: start with the agent, then build UI actors
+**Why `@actor/vibe`?**
+- Clear: the vibe's root actor, not to be confused with AI agents
+- Consistent: every vibe has `@actor/vibe` as its entry point
+- Semantic: the actor that powers the vibe
 
 This pattern ensures:
 - ✅ Clear separation of concerns (service logic vs. UI)
 - ✅ Scalable architecture (add UI actors as needed)
 - ✅ Message-based communication (loose coupling)
 - ✅ Consistent structure across all vibes
-- ✅ Agent-first development (define orchestrator first)
+- ✅ Vibe-first development (define orchestrator first)
 
 ## Vibe Structure
 
@@ -1474,7 +1114,7 @@ Create a file named `manifest.vibe.maia`:
   "$id": "@vibe/todos",
   "name": "Todo List",
   "description": "A complete todo list application",
-  "actor": "@actor/agent"
+  "actor": "@actor/vibe"
 }
 ```
 
@@ -1486,7 +1126,7 @@ Create a file named `manifest.vibe.maia`:
 | `$id` | string | Unique vibe identifier (`@vibe/todos`) - transformed to co-id during seeding |
 | `name` | string | Display name for marketplace |
 | `description` | string | Brief description of the app |
-| `actor` | string | Reference to agent service actor (`@actor/agent`) - transformed to co-id during seeding |
+| `actor` | string | Reference to vibe root service actor (`@actor/vibe`) - transformed to co-id during seeding |
 
 ### Field Details
 
@@ -1498,24 +1138,24 @@ Create a file named `manifest.vibe.maia`:
 
 **`description`:** A brief (1-3 sentence) description of what the app does. This appears in marketplace cards and search results.
 
-**`actor`:** Co-id reference to the agent service actor (`@actor/agent`) - transformed to co-id during seeding. When loading from file, the path is resolved relative to the vibe manifest location.
+**`actor`:** Co-id reference to the vibe root service actor (`@actor/vibe`) - transformed to co-id during seeding. When loading from file, the path is resolved relative to the vibe manifest location.
 
 ## Creating a Vibe
 
-### Best Practice: Agent-First Development
+### Best Practice: Vibe-First Development
 
-**Always create the agent service actor first.** This is your app's orchestrator and entry point.
+**Always create the vibe root service actor first.** This is your app's orchestrator and entry point.
 
-**Why Agent-First?**
-1. **Clear Architecture** - Agent defines the app's structure and data flow
-2. **Data First** - Agent handles all data operations before UI concerns
-3. **UI Second** - UI actors receive data from agent, keeping them simple
+**Why Vibe-First?**
+1. **Clear Architecture** - Root actor defines the app's structure and data flow
+2. **Data First** - Root actor handles all data operations before UI concerns
+3. **UI Second** - UI actors receive data from root actor, keeping them simple
 4. **Consistent Pattern** - Every vibe follows the same structure
 5. **AI-Friendly** - LLMs understand this pattern and can generate vibes correctly
 
 **Development Order:**
-1. ✅ **Create agent service actor** (`agent/agent.actor.maia`) - ALWAYS FIRST
-2. ✅ Create vibe manifest (`manifest.vibe.maia`) - References agent
+1. ✅ **Create vibe root service actor** (`vibe/vibe.actor.maia`) - ALWAYS FIRST
+2. ✅ Create vibe manifest (`manifest.vibe.maia`) - References `@actor/vibe`
 3. ✅ Create composite actor (`composite/composite.actor.maia`) - First UI actor
 4. ✅ Create UI actors (`list/list.actor.maia`, etc.) - Leaf components
 
@@ -1525,13 +1165,13 @@ Structure your app directory:
 
 ```
 todos/
-├── manifest.vibe.maia    # Vibe manifest
-├── agent/                # Agent service actor (ALWAYS CREATE FIRST)
-│   ├── agent.actor.maia
-│   ├── agent.context.maia
-│   ├── agent.state.maia
-│   ├── agent.view.maia
-│   ├── agent.inbox.maia
+├── manifest.vibe.maia    # Vibe manifest (references @actor/vibe)
+├── vibe/                 # Vibe root service actor (ALWAYS CREATE FIRST)
+│   ├── vibe.actor.maia
+│   ├── vibe.context.maia
+│   ├── vibe.state.maia
+│   ├── vibe.view.maia
+│   ├── vibe.inbox.maia
 │   └── brand.style.maia
 ├── composite/            # Composite actor (first UI actor)
 │   ├── composite.actor.maia
@@ -1539,7 +1179,7 @@ todos/
 ├── list/                 # UI actors
 │   ├── list.actor.maia
 │   └── ...
-└── agent/                # Brand style (shared design system)
+└── brand/                # Brand style (shared design system)
     └── brand.style.maia
 ```
 
@@ -1552,58 +1192,58 @@ todos/
   "$id": "@vibe/todos",
   "name": "Todo List",
   "description": "A simple todo list with drag-and-drop organization",
-  "actor": "@actor/agent"
+  "actor": "@actor/vibe"
 }
 ```
 
-**Note:** The `actor` field references `@actor/agent` - this is the agent service actor that orchestrates the entire vibe.
+**Note:** The `actor` field references `@actor/vibe` - this is the vibe root service actor that orchestrates the entire vibe.
 
-### Step 3: Create Your Agent Service Actor (ALWAYS FIRST!)
+### Step 3: Create Your Vibe Root Service Actor (ALWAYS FIRST!)
 
-**Best Practice:** Always define the agent service actor first. This is your app's orchestrator.
+**Best Practice:** Always define the vibe root service actor first. This is your app's orchestrator.
 
-**`agent/agent.actor.maia` (Agent Service Actor):**
+**`vibe/vibe.actor.maia` (Vibe Root Service Actor):**
 ```json
 {
   "$schema": "@schema/actor",
-  "$id": "@actor/agent",
+  "$id": "@actor/vibe",
   "role": "agent",
-  "context": "@context/agent",
-  "state": "@state/agent",
-  "view": "@view/agent",
+  "context": "@context/vibe",
+  "state": "@state/vibe",
+  "view": "@view/vibe",
   "brand": "@style/brand",
-  "inbox": "@inbox/agent"
+  "inbox": "@inbox/vibe"
 }
 ```
 
-**Note:** Children are defined in `agent.context.maia` via `@actors` system property. See [Actors](./03-actors.md#system-properties-in-context) for details.
+**Note:** Children are defined in `vibe.context.maia` via `@actors` system property. See [Actors](../03-actors/01-vibe-pattern.md#system-properties-in-context) for details.
 
-**Agent Responsibilities:**
+**Vibe Root Actor Responsibilities:**
 - Orchestrate data queries and mutations
 - Manage application-level state
 - Coordinate between UI actors via messages
 - Handle business logic
 - Load composite actor as first child
 
-**Agent View (Minimal):**
+**Vibe Root View (Minimal):**
 ```json
 {
   "$schema": "@schema/view",
-  "$id": "@view/agent",
+  "$id": "@view/vibe",
   "root": {
     "tag": "div",
-    "attrs": { "class": "agent-container" },
+    "attrs": { "class": "vibe-container" },
     "$slot": "$composite"  // ← Only renders child actor
   }
 }
 ```
 
-The agent orchestrates the application and loads UI actors as children. See [Actors](./02-actors.md#default-vibe-pattern-service--composite--ui) for the complete pattern.
+The vibe root actor orchestrates the application and loads UI actors as children. See [Actors](../03-actors/01-vibe-pattern.md) for the complete pattern.
 
-**Why Start with Agent?**
-1. **Clear Architecture** - Agent defines the app's structure
-2. **Data First** - Agent handles all data operations
-3. **UI Second** - UI actors receive data from agent
+**Why Start with Vibe Root?**
+1. **Clear Architecture** - Root actor defines the app's structure
+2. **Data First** - Root actor handles all data operations
+3. **UI Second** - UI actors receive data from root actor
 4. **Best Practice** - Always define orchestrator before components
 
 ## Loading Vibes
@@ -1710,20 +1350,20 @@ vibes/sparks/
 ├── manifest.vibe.maia      # Sparks vibe manifest
 ├── registry.js             # Registry exports
 ├── loader.js               # Vibe loader
-└── agent/                  # Agent service actor
-    ├── agent.actor.maia    # Agent actor definition
-    ├── agent.context.maia  # Context with sparks query
-    ├── agent.state.maia    # State machine for spark CRUD
-    ├── agent.view.maia     # UI for creating and displaying sparks
-    └── agent.inbox.maia    # Inbox costream
+└── vibe/                   # Vibe root service actor
+    ├── vibe.actor.maia     # Root actor definition
+    ├── vibe.context.maia   # Context with sparks query
+    ├── vibe.state.maia     # State machine for spark CRUD
+    ├── vibe.view.maia      # UI for creating and displaying sparks
+    └── vibe.inbox.maia     # Inbox costream
 ```
 
-### Context (`agent.context.maia`)
+### Context (`vibe.context.maia`)
 
 ```json
 {
   "$schema": "@schema/context",
-  "$id": "@sparks/context/agent",
+  "$id": "@sparks/context/vibe",
   "sparks": {
     "schema": "@schema/data/spark"
   },
@@ -1736,12 +1376,12 @@ vibes/sparks/
 
 **Key:** The `sparks` query object automatically creates a reactive store that reads from the indexed colist.
 
-### State Machine (`agent.state.maia`)
+### State Machine (`vibe.state.maia`)
 
 ```json
 {
   "$schema": "@schema/state",
-  "$id": "@sparks/state/agent",
+  "$id": "@sparks/state/vibe",
   "initial": "idle",
   "states": {
     "idle": {
@@ -1792,12 +1432,24 @@ vibes/sparks/
 
 **Key:** Uses `createSpark` operation which creates both the group and Spark CoMap.
 
-### View (`agent.view.maia`)
+---
+
+# REFERENCE
+
+*Source: creators/01-vibes/01-reference.md*
+
+# Vibes Reference
+
+*Continued from [00-overview.md](./00-overview.md)*
+
+## Example: Sparks Vibe (continued)
+
+### View (`vibe.view.maia`)
 
 ```json
 {
   "$schema": "@schema/view",
-  "$id": "@sparks/view/agent",
+  "$id": "@sparks/view/vibe",
   "content": {
     "tag": "div",
     "class": "stack",
@@ -1862,15 +1514,15 @@ vibes/sparks/
 
 ```
 vibes/todos/
-├── manifest.vibe.maia      # App manifest (references @actor/agent)
+├── manifest.vibe.maia      # App manifest (references @actor/vibe)
 ├── index.html              # App launcher
-├── agent/                  # Agent service actor (ALWAYS CREATE FIRST)
-│   ├── agent.actor.maia    # Agent actor definition
-│   ├── agent.context.maia  # Agent context (defines children via @actors)
-│   ├── agent.state.maia    # Agent state machine
-│   ├── agent.view.maia    # Minimal view (renders child)
-│   ├── agent.inbox.maia   # Inbox costream
-│   └── brand.style.maia   # Shared design system
+├── vibe/                   # Vibe root service actor (ALWAYS CREATE FIRST)
+│   ├── vibe.actor.maia     # Root actor definition
+│   ├── vibe.context.maia   # Root context (defines children via @actors)
+│   ├── vibe.state.maia     # Root state machine
+│   ├── vibe.view.maia      # Minimal view (renders child)
+│   ├── vibe.inbox.maia     # Inbox costream
+│   └── brand.style.maia    # Shared design system
 ├── composite/              # Composite actor (first UI actor)
 │   ├── composite.actor.maia
 │   ├── composite.context.maia
@@ -1891,7 +1543,7 @@ vibes/todos/
     └── kanban.inbox.maia
 ```
 
-**Note:** The agent directory is created first and contains the orchestrating service actor that all other actors depend on.
+**Note:** The vibe directory is created first and contains the orchestrating root actor that all other actors depend on.
 
 ### Vibe Manifest
 
@@ -1902,11 +1554,11 @@ vibes/todos/
   "$id": "@vibe/todos",
   "name": "Todo List",
   "description": "A complete todo list application with state machines, drag-drop kanban view, and AI-compatible tools. Showcases MaiaOS actor system, message passing, and declarative UI.",
-  "actor": "@actor/agent"
+  "actor": "@actor/vibe"
 }
 ```
 
-**Note:** The vibe references the **agent service actor** (`@actor/agent`) which orchestrates the application and loads UI actors as children. The agent is always defined first.
+**Note:** The vibe references the **vibe root service actor** (`@actor/vibe`) which orchestrates the application and loads UI actors as children. The vibe root is always defined first.
 
 ### Launcher HTML
 
@@ -1952,21 +1604,21 @@ vibes/todos/
 
 ### ✅ DO:
 
-- **Always create agent first** - Define `@actor/agent` before any UI actors
-- **Use schema references** - `@schema/vibe`, `@actor/agent` (transformed to co-ids during seeding)
+- **Always create vibe root first** - Define `@actor/vibe` before any UI actors
+- **Use schema references** - `@schema/vibe`, `@actor/vibe` (transformed to co-ids during seeding)
 - **Keep descriptions concise** - 1-3 sentences max
-- **Use semantic naming** - `manifest.vibe.maia`, `agent/agent.actor.maia`
-- **Reference agent in vibe** - Always use `"actor": "@actor/agent"` in vibe manifest
+- **Use semantic naming** - `manifest.vibe.maia`, `vibe/vibe.actor.maia`
+- **Reference vibe root in manifest** - Always use `"actor": "@actor/vibe"` in vibe manifest
 - **One vibe per app** - Each app gets its own vibe manifest
 
 ### ❌ DON'T:
 
-- **Don't skip the agent** - Every vibe MUST have an agent service actor
-- **Don't use file paths** - Use schema references (`@actor/agent`, not `"./agent.actor.maia"`)
+- **Don't skip the vibe root** - Every vibe MUST have a vibe root service actor
+- **Don't use file paths** - Use schema references (`@actor/vibe`, not `"./vibe.actor.maia"`)
 - **Don't include logic** - Vibes are metadata only
 - **Don't duplicate actor properties** - Vibe references actor, doesn't contain it
 - **Don't skip schema** - Always include `$schema: "@schema/vibe"`
-- **Don't nest actors** - Reference one root actor only (the agent)
+- **Don't nest actors** - Reference one root actor only (`@actor/vibe`)
 
 ## Marketplace Integration (Future)
 
@@ -1988,7 +1640,7 @@ Vibes are designed to support future marketplace features:
   "$id": "@vibe/todos",
   "name": "Todo List",
   "description": "A complete todo list application...",
-  "actor": "@actor/agent",
+  "actor": "@actor/vibe",
   "icon": "./icon.svg",
   "screenshots": ["./screenshots/list.png", "./screenshots/kanban.png"],
   "tags": ["productivity", "task-management"],
@@ -2038,14 +1690,25 @@ console.log(actor.context);    // Runtime state
 
 ## Next Steps
 
-- Learn about [Kernel](./01-kernel.md) - How to boot MaiaOS and load vibes
-- Understand [Actors](./02-actors.md) - What vibes reference
-- Explore [State Machines](./05-state.md) - Actor behavior
-- Create [Views](./07-views.md) - Actor UI
+- [Kernel](../02-kernel.md) - How to boot MaiaOS and load vibes
+- [Actors](../03-actors/) - What vibes reference
+- [State Machines](../05-state/) - Actor behavior
+- [Views](../08-views/) - Actor UI
 
 ---
 
 **Remember:** Vibes are the "app store wrapper" around your actors. They make your apps discoverable, installable, and marketplace-ready!
+
+---
+
+# README
+
+*Source: creators/01-vibes/README.md*
+
+# Vibes Documentation
+
+1. **[00-overview.md](./00-overview.md)** - Vibe system overview
+2. **[01-reference.md](./01-reference.md)** - Reference details
 
 ---
 
@@ -2183,7 +1846,7 @@ console.log('Actor:', actor);                  // Created agent actor instance
 **What's the difference?**
 - `createActor()` - Direct actor creation (low-level)
 - `loadVibe()` - Load app via manifest (recommended, marketplace-ready)
-  - Always loads the agent service actor (`@actor/agent`)
+  - Always loads the vibe root service actor (`@actor/vibe`)
   - Agent orchestrates the entire application
 
 **Best Practice:** Always create the agent service actor first, then reference it in the vibe manifest.
@@ -2287,9 +1950,9 @@ Failed to load actor: ./maia/todo.actor.maia
 
 ---
 
-# ACTORS
+# OVERVIEW
 
-*Source: creators/03-actors.md*
+*Source: creators/03-actors/00-overview.md*
 
 # Actors (Building Blocks)
 
@@ -2470,34 +2133,31 @@ Create a file named `{name}.actor.maia`:
 }
 ```
 
-**Note:** All references (`context`, `view`, `state`, `brand`, `style`, `inbox`) use schema/instance references (like `@context/todo`) that are transformed to co-ids (`co_z...`) during seeding. The `$schema` and `$id` properties also use schema references.
+**Note:** All references use schema/instance references (like `@context/todo`) that are transformed to co-ids during seeding.
 
 ### Properties
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `$schema` | string | Yes | Schema reference (`@schema/actor`) - transformed to co-id during seeding |
-| `$id` | string | Yes | Unique actor identifier (`@actor/todo`) - transformed to co-id during seeding |
+| `$schema` | string | Yes | Schema reference (`@schema/actor`) |
+| `$id` | string | Yes | Unique actor identifier (`@actor/todo`) |
 | `role` | string | No | Actor role (e.g., `"agent"`, `"composite"`, `"todo-list"`) |
-| `context` | string | No | Co-id reference to context (`@context/todo`) - transformed during seeding |
-| `state` | string | Yes | Co-id reference to state machine (`@state/todo`) - transformed during seeding |
-| `view` | string | No | Co-id reference to view (`@view/todo`) - optional for service actors |
-| `brand` | string | Yes | Co-id reference to brand style (`@style/brand`) - shared design system |
-| `style` | string | No | Co-id reference to local style (`@style/todo`) - actor-specific overrides |
-| `inbox` | string | No | Co-id reference to inbox costream (`@inbox/todo`) - message inbox for events |
-| `messageTypes` | array | No | **REQUIRED**: Array of message type strings this actor accepts (exhaustive list - like sealed protocol). If not provided, actor accepts all message types. |
+| `context` | string | No | Co-id reference to context |
+| `state` | string | Yes | Co-id reference to state machine |
+| `view` | string | No | Co-id reference to view (optional for service actors) |
+| `brand` | string | Yes | Co-id reference to brand style (required) |
+| `style` | string | No | Co-id reference to local style (optional) |
+| `inbox` | string | No | Co-id reference to inbox costream |
+| `messageTypes` | array | No | Array of message types this actor accepts |
 
-**Note:** Children are defined in context files via the `@actors` system property, not in the actor schema. See [Children Architecture](#system-properties-in-context) below.
+**Note:** Children are defined in context files via the `@actors` system property. See [01-vibe-pattern.md](./01-vibe-pattern.md#system-properties-in-context).
 
 ### Message Contracts
 
-**REQUIRED:** Actors should declare what message types they accept using the `messageTypes` property. This creates an explicit API contract, similar to sealed protocols in typed languages.
+Actors should declare `messageTypes` to create an explicit API contract:
 
-**Example:**
 ```json
 {
-  "$schema": "@schema/actor",
-  "$id": "@todos/actor/agent",
   "messageTypes": [
     "CREATE_BUTTON",
     "TOGGLE_BUTTON",
@@ -2510,198 +2170,57 @@ Create a file named `{name}.actor.maia`:
 }
 ```
 
-**Why message contracts matter:**
-- **Type Safety**: Messages are validated before reaching the state machine
-- **Self-Documenting**: Anyone can see what messages an actor accepts
-- **Early Rejection**: Invalid message types are rejected immediately with clear errors
-- **Distributed-Friendly**: Remote actors know what messages to send/receive
-
-**Message Type Schemas:**
-Each message type (e.g., `CREATE_BUTTON`, `TOGGLE_BUTTON`) must have a corresponding schema definition (`@schema/message/CREATE_BUTTON`, `@schema/message/TOGGLE_BUTTON`) that validates the message payload. The message type schema IS the payload schema - they're the same thing (merged concept). These schemas are automatically validated by ActorEngine before messages reach the state machine.
-
-**Style Properties:**
-- `brand` is **required** - shared design system (tokens, components) used by all actors
-- `style` is **optional** - actor-specific style overrides that merge with brand
-- StyleEngine merges brand + style at runtime (brand first, then style overrides)
+**Style Properties:** `brand` is required. `style` is optional. StyleEngine merges brand + style at runtime.
 
 ## Best Practice: Agent-First Development
 
 **Always create the agent service actor first when building a vibe.**
 
-**Why?**
-- **Clear Architecture** - Agent defines the app's structure
-- **Data First** - Agent handles all data operations
-- **UI Second** - UI actors receive data from agent
-- **Consistent Pattern** - Every vibe follows the same structure
-- **AI-Friendly** - LLMs understand this pattern
-
 **Development Order:**
-1. ✅ **Create agent service actor** (`agent/agent.actor.maia`) - ALWAYS FIRST
-2. ✅ Create vibe manifest (`manifest.vibe.maia`) - References `@actor/agent`
-3. ✅ Create composite actor (`composite/composite.actor.maia`) - First UI actor
-4. ✅ Create UI actors (`list/list.actor.maia`, etc.) - Leaf components
+1. ✅ Create agent service actor - ALWAYS FIRST
+2. ✅ Create vibe manifest - References `@actor/vibe`
+3. ✅ Create composite actor - First UI actor
+4. ✅ Create UI actors - Leaf components
 
 ## Actor Types
 
-MaiaOS distinguishes between two fundamental actor types based on their responsibilities and whether they render UI:
-
 ### Service Actors
 
-**Service actors** are orchestrating actors responsible for business logic, data management, and coordination. They typically have **no view** (or a minimal view that only renders child actors).
+Orchestrating actors: business logic, data management. Typically minimal or no view.
 
-**Characteristics:**
-- ✅ Orchestrate data queries and mutations
-- ✅ Manage application-level state
-- ✅ Coordinate between UI actors
-- ✅ Handle message routing and business logic
-- ❌ No direct UI rendering (or minimal container view)
-
-**Example: Agent Service Actor (Default Entry Point - ALWAYS CREATE FIRST)**
+**Example: Agent Service Actor**
 ```json
 {
   "$schema": "@schema/actor",
-  "$id": "@actor/agent",
+  "$id": "@actor/vibe",
   "role": "agent",
   "context": "@context/agent",
-  "view": "@view/agent",        // ← Minimal view (only renders child)
+  "view": "@view/agent",
   "state": "@state/agent",
   "brand": "@style/brand",
   "inbox": "@inbox/agent"
 }
 ```
 
-**Note:** Children are defined in the context file via `@actors` system property, not in the actor definition. See [Children Architecture](#system-properties-in-context) below.
-
-**Best Practice:** Always define the agent service actor first when creating a vibe. This is your app's orchestrator.
-
-**Agent View (Minimal):**
-```json
-{
-  "$schema": "@schema/view",
-  "$id": "@view/agent",
-  "root": {
-    "tag": "div",
-    "attrs": { "class": "agent-container" },
-    "$slot": "$currentView"  // ← Only renders child actor
-  }
-}
-```
-
-**Agent Context:**
-```json
-{
-  "$schema": "@schema/context",
-  "$id": "@context/agent",
-  "currentView": "@composite",  // ← Context property (CRDT CoValue) - references active child
-  "@actors": {
-    "composite": "@actor/composite"  // ← System property (like $schema/$id) - defines children
-  }
-}
-```
-
-**Use cases:**
-- **Vibe entry points** (default pattern - every vibe loads an agent service actor)
-- Data synchronization services
-- Background workers
-- API coordinators
-- Business logic orchestration
-
-**Why "agent"?**
-- Clear naming: the agent orchestrates everything
-- Consistent pattern: every vibe has `@actor/agent`
-- Best practice: define agent first, then UI actors
-
 ### UI Actors
 
-**UI actors** are presentation actors responsible for rendering user interfaces. They receive data/configurations from service actors and handle user interactions.
-
-**Characteristics:**
-- ✅ Render UI components
-- ✅ Handle user interactions
-- ✅ Receive query configurations from service actors
-- ✅ Send generic UI events (e.g., `TOGGLE_BUTTON`, `DELETE_BUTTON`) to service actors
-- ❌ No direct data mutations (delegate to service actors)
-
-**Example: List UI Actor**
-```json
-{
-  "$schema": "@schema/actor",
-  "$id": "@actor/list",
-  "role": "todo-list",
-  "context": "@context/list",
-  "view": "@view/list",        // ← Full UI view
-  "state": "@state/list",
-  "brand": "@style/brand",
-  "inbox": "@inbox/list"
-}
-```
-
-**Use cases:**
-- Todo lists
-- Note editors
-- Calendar widgets
-- Chat interfaces
-- Form components
-- Navigation components
+Presentation actors: render UI, handle interactions. Receive data from service actors.
 
 ### Composite Actors
 
-**Composite actors** are a special type of UI actor that compose other UI actors. They provide shared UI structure (e.g., header, form, view switcher) and slot child actors.
+Special UI actors that compose other actors. Shared structure (header, form), slot child actors.
 
-**Example: Composite Actor**
-```json
-{
-  "$schema": "@schema/actor",
-  "$id": "@actor/composite",
-  "role": "composite",
-  "context": "@context/composite",
-  "view": "@view/composite",
-  "state": "@state/composite",
-  "brand": "@style/brand",
-  "inbox": "@inbox/composite"
-}
-```
+---
 
-**Note:** Children are defined in the context file via `@actors` system property. See the context example below.
+**Next:** [01-vibe-pattern.md](./01-vibe-pattern.md) - Default vibe pattern and context
 
-**Composite View:**
-```json
-{
-  "$schema": "@schema/view",
-  "$id": "@view/composite",
-  "content": {
-    "tag": "div",
-    "children": [
-      {
-        "tag": "header",
-        "children": [
-          {"tag": "h1", "text": "Todo List"},
-          {"tag": "button", "$on": {"click": {"send": "SWITCH_VIEW"}}}
-        ]
-      },
-      {
-        "tag": "main",
-        "$slot": "$currentView"  // ← Slots child UI actors
-      }
-    ]
-  }
-}
-```
+---
 
-**Composite Context:**
-```json
-{
-  "$schema": "@schema/context",
-  "$id": "@context/composite",
-  "currentView": "@list",  // ← Context property (CRDT CoValue) - references active child
-  "@actors": {
-    "list": "@actor/list",      // ← System property (like $schema/$id) - defines children
-    "kanban": "@actor/kanban"
-  }
-}
-```
+# VIBE PATTERN
 
-## Default Vibe Pattern: Service → Composite → UI
+*Source: creators/03-actors/01-vibe-pattern.md*
+
+# Default Vibe Pattern: Service → Composite → UI
 
 **The standard pattern for building vibes:**
 
@@ -2712,9 +2231,9 @@ Vibe Entry Point
               └── UI Actors (leaf components)
 ```
 
-### Step 1: Vibe Loads Agent Service Actor
+## Step 1: Vibe Loads Agent Service Actor
 
-Every vibe's entry point is an **agent service actor** that orchestrates the application:
+Every vibe's entry point is an **vibes service actor**:
 
 **`manifest.vibe.maia`:**
 ```json
@@ -2722,12 +2241,9 @@ Every vibe's entry point is an **agent service actor** that orchestrates the app
   "$schema": "@schema/vibe",
   "$id": "@vibe/todos",
   "name": "Todo List",
-  "description": "A todo list application",
-  "actor": "@actor/agent"  // ← Agent service actor (ALWAYS CREATE FIRST)
+  "actor": "@actor/vibe"
 }
 ```
-
-**Best Practice:** Always define the agent service actor first. This is your app's orchestrator.
 
 ### Context Updates: State Machine as Single Source of Truth
 
@@ -2735,1029 +2251,311 @@ Every vibe's entry point is an **agent service actor** that orchestrates the app
 
 **Pattern:**
 1. View sends event to state machine (via inbox)
-2. State machine uses `updateContext` action (infrastructure, not a tool)
+2. State machine uses `updateContext` action
 3. `updateContextCoValue()` persists to context CoValue (CRDT)
-4. Context ReactiveStore automatically updates (read-only derived data)
+4. Context ReactiveStore automatically updates
 5. View re-renders with new context
 
-**Example:**
+**Never:** Mutate context directly, update from views, use removed `@context/update` tool.
+
+**Always:** Update via state machine actions, use `updateContext`, handle errors via ERROR events.
+
+## Step 2: Vibe Root Service Actor Loads Composite
+
+**`vibe.context.maia`:**
 ```json
 {
-  "idle": {
-    "on": {
-      "UPDATE_INPUT": {
-        "target": "idle",
-        "actions": [
-          {
-            "updateContext": { "newTodoText": "$$newTodoText" }
-          }
-        ]
-      }
-    }
+  "currentView": "@composite",
+  "@actors": {
+    "composite": "@actor/composite"
   }
 }
 ```
 
-**Never:**
-- ❌ Mutate context directly: `actor.context.field = value`
-- ❌ Update context from views
-- ❌ Use `@context/update` tool (removed - use `updateContext` infrastructure action)
+**Agent Responsibilities:**
+- Orchestrate data queries (universal `read()` API)
+- Handle mutations (CREATE_BUTTON, TOGGLE_BUTTON, etc.)
+- Coordinate between UI actors via messages
 
-**Always:**
-- ✅ Update context via state machine actions
-- ✅ Use `updateContext` infrastructure action for context updates
-- ✅ Handle errors via state machine ERROR events
+## Step 3: Composite Actor Composes UI Actors
 
-### Step 2: Agent Service Actor Loads Composite
+**Composite** provides shared UI (header, form, view switcher) and slots child actors.
 
-The agent loads a **composite actor** as its first child:
+## Step 4: UI Actors Render Components
 
-**`agent/agent.actor.maia` (Agent Service Actor):**
-```json
-{
-  "$schema": "@schema/actor",
-  "$id": "@actor/agent",
-  "role": "agent",
-  "context": "@context/agent",
-  "view": "@view/agent",        // ← Minimal view
-  "state": "@state/agent",      // ← Orchestrates queries/mutations
-  "brand": "@style/brand",
-  "inbox": "@inbox/agent"
-}
-```
-
-**Note:** Children are defined in `agent.context.maia` via `@actors` system property. See [Children Architecture](#system-properties-in-context) below.
-
-**Agent Service Actor Responsibilities:**
-- Orchestrate data queries using universal `read()` API
-- Handle mutations (`CREATE_BUTTON`, `TOGGLE_BUTTON`, `DELETE_BUTTON`)
-- Manage application-level state
-- Coordinate between UI actors via messages (inbox costream)
-- Load composite actor as first child (defined in context)
-
-**Why Start with Agent?**
-1. **Clear Architecture** - Agent defines the app's structure
-2. **Data First** - Agent handles all data operations
-3. **UI Second** - UI actors receive data from agent
-4. **Best Practice** - Always define orchestrator before components
-
-### Step 3: Composite Actor Composes UI Actors
-
-The composite actor provides shared UI structure and slots child UI actors:
-
-**`composite/composite.actor.maia`:**
-```json
-{
-  "$schema": "@schema/actor",
-  "$id": "@actor/composite",
-  "role": "composite",
-  "context": "@context/composite",
-  "view": "@view/composite",
-  "state": "@state/composite",
-  "brand": "@style/brand",
-  "inbox": "@inbox/composite"
-}
-```
-
-**Note:** Children are defined in `composite.context.maia` via `@actors` system property. See the context example below.
-
-**Composite Actor Responsibilities:**
-- Render shared UI (header, form, view switcher)
-- Slot child UI actors based on context
-- Forward UI events to service actor
-- Receive state updates from service actor
-
-### Step 4: UI Actors Render Components
-
-Leaf UI actors render specific components:
-
-**`list/list.actor.maia`:**
-```json
-{
-  "$schema": "@schema/actor",
-  "$id": "@actor/list",
-  "role": "todo-list",
-  "context": "@context/list",
-  "view": "@view/list",
-  "state": "@state/list",
-  "brand": "@style/brand",
-  "inbox": "@inbox/list"
-}
-```
-
-**UI Actor Responsibilities:**
-- Execute queries based on configurations from service actor
-- Render UI components
-- Send generic UI events to service actor
-- Receive data updates via messages
+Leaf UI actors (list, kanban, form) render specific components. Send generic events to service actor.
 
 ### Message Flow Pattern
 
 ```
-User clicks button in UI Actor
-  ↓
-UI Actor sends: TOGGLE_BUTTON { id: "123" }
-  ↓
-Service Actor receives message
-  ↓
-Service Actor executes: @db tool with op: "toggle"
-  ↓
-Service Actor publishes: TODO_COMPLETED { id: "123" }
-  ↓
-UI Actors receive update and re-render
+User clicks → UI Actor sends TOGGLE_BUTTON → Service Actor receives → @db tool → SUCCESS → UI re-renders
 ```
-
-### Why This Pattern?
-
-✅ **Clear Separation of Concerns**
-- Service actors = Business logic
-- UI actors = Presentation
-
-✅ **Scalable Through Composition**
-- Start simple (service → composite → UI)
-- Add more UI actors as needed
-- Service actor orchestrates everything
-
-✅ **Message-Based Communication**
-- Loose coupling between actors
-- Easy to test and modify
-- AI agents can understand message contracts
-
-✅ **Default Pattern for Vibes**
-- Every vibe follows this structure
-- Consistent architecture
-- Easy to understand and extend
 
 ### Scaling Through Composition
 
-**Simple Vibe:**
-```
-Service Actor → Composite Actor → UI Actor
-```
+**Simple:** Service → Composite → UI Actor
 
-**Complex Vibe:**
-```
-Service Actor
-  └── Composite Actor
-        ├── Header UI Actor
-        ├── Form UI Actor
-        ├── List UI Actor
-        │     └── List Item UI Actor (repeated)
-        └── Footer UI Actor
-```
+**Complex:** Service → Composite → Header, Form, List, Footer (each can have sub-actors)
 
-The service actor orchestrates all of them via messages, maintaining clean separation of concerns.
+---
 
 ## Context (Runtime State)
 
-The `context` holds all runtime data for the actor. It can be defined inline in the actor file or in a separate `.context.maia` file:
+The `context` holds all runtime data. Defined in separate `.context.maia` file.
 
 ### System Properties in Context
 
-Context files can contain **system properties** (like `$schema` and `$id`) that are used by the actor engine:
-
-**`@actors` - Child Actor Definitions:**
-- **System property** (like `$schema`, `$id`) - clearly indicates it's not user-defined context data
-- Defines which child actors exist (used by actor engine to create children)
-- Contains external references (`@actor/composite`, `@actor/list`, etc.)
+**`@actors`** - Child Actor Definitions (system property):
+- Defines which child actors exist
 - Format: `"@actors": { "namekey": "@actor/instance", ... }`
 
-**Example:**
 ```json
 {
-  "$schema": "@schema/context",
-  "$id": "@context/agent",
-  "currentView": "@composite",  // ← Context property (CRDT CoValue) - references active child
+  "currentView": "@composite",
   "@actors": {
-    "composite": "@actor/composite"  // ← System property - defines children
+    "composite": "@actor/composite"
   }
 }
 ```
 
 **Key Points:**
-- `context["@actors"]` is a **system property** - defines which children exist
-- `context.currentView` is a **context property** (CRDT CoValue) - references the active child actor
-- Slot resolution: `"$slot": "$currentView"` → looks up `context.currentView` → extracts namekey → finds `actor.children[namekey]`
-- **Unified pattern**: All actors use `currentView` for slot resolution (even if they only have one child)
+- `@actors` = system property, defines children
+- `currentView` = context property (CRDT), references active child
+- Slot resolution: `"$slot": "$currentView"` → namekey → `actor.children[namekey]`
 
-**Separate Context File (Recommended):**
-
-**`todo.context.maia`:**
+**Example Context:**
 ```json
 {
-  "$schema": "@schema/context",
-  "$id": "@context/todo",
   "todos": [],
-  "newTodoText": "",
-  "viewMode": "list"
-}
-```
-
-Referenced in actor:
-```json
-{
-  "$schema": "@schema/actor",
-  "$id": "@actor/todo",
-  "context": "@context/todo",  // ← Co-id reference (transformed during seeding)
-  "state": "@state/todo"
-}
-```
-
-**Note:** Context is always in a separate file. The `context` property references it via co-id (`@context/todo`), which gets transformed to an actual co-id (`co_z...`) during seeding. **Context is always persisted to a CoValue under the hood - accessed reactively via ReactiveStore. No in-memory mutation hacks!**
-
-**Example Context Structure:**
-```json
-{
-  // Collections
-  "todos": [
-    {"id": "1", "text": "Buy milk", "done": false}
-  ],
-  
-  // Derived/filtered data
-  "todosTodo": [],  // Computed by tools
-  "todosDone": [],
-  
-  // UI state
-  "viewMode": "list",
-  "isModalOpen": false,
-  
-  // Form state
-  "newTodoText": "",
-  
-  // Drag-drop state (managed by tools)
-  "draggedItemId": null,
-  "draggedItemIds": {}
-}
-```
-
-### Context Best Practices
-
-✅ **DO:**
-- Keep context flat when possible
-- Use clear, descriptive names
-- Initialize all fields (avoid `undefined`)
-- Store only serializable data (no functions)
-- **Update context via state machines** - State machines are the single source of truth
-- **Use `updateContext` infrastructure action** - Always update context through state machine actions
-- **Always go through CoValue persistence** - Everything must be persisted, no in-memory hacks
-- **Access via ReactiveStore** - Context is a ReactiveStore backed by persisted CoValue
-
-❌ **DON'T:**
-- Store UI elements or DOM references
-- Put logic in context (use tools instead)
-- Mix concerns (separate data from UI state)
-- **Don't mutate context directly** - Always use state machines and tools
-- **Don't update context from views** - Views send events, state machines update context
-- **Don't bypass CoValue persistence** - Never mutate `actor.context.value` directly
-- **Don't use in-memory mutation hacks** - Everything must go through persisted CoValues
-
-## Actor Lifecycle
-
-### Service Actors vs UI Actors
-
-MaiaOS differentiates between **service actors** and **UI actors** for lifecycle management:
-
-**Service Actors:**
-- **Persist** throughout the vibe lifecycle
-- Created once when vibe loads
-- Destroyed only when vibe is unloaded
-- Examples: Agent orchestrators, data services
-
-**UI Actors:**
-- **Created on-demand** when their view is active (referenced by `context.currentView`)
-- **Destroyed** when switching to a different view
-- Examples: List views, kanban views, form components
-
-### Lifecycle Flow
-
-**Service Actor Lifecycle:**
-```
-┌─────────────┐
-│   Created   │  ← createActor() called (once per vibe)
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│  Booting    │  ← State machine initialized
-└──────┬──────┘      View rendered (minimal, only slots)
-       │            Styles applied
-       ▼
-┌─────────────┐
-│   Active    │  ← Processes events (persists)
-└──────┬──────┘      Processes messages
-       │            Re-renders on state changes
-       │            (Lifecycle continues until vibe unloads)
-       ▼
-┌─────────────┐
-│  Destroyed  │  ← destroyActor() called (only on vibe unload)
-└─────────────┘
-```
-
-**UI Actor Lifecycle:**
-```
-┌─────────────┐
-│   Created   │  ← createActor() called lazily (when referenced by context.currentView)
-└──────┬──────┘
-       │
-       ▼
-┌─────────────┐
-│  Booting    │  ← State machine initialized
-└──────┬──────┘      View rendered (full UI)
-       │            Styles applied
-       ▼
-┌─────────────┐
-│   Active    │  ← Processes events
-└──────┬──────┘      Processes messages
-       │            Re-renders on state changes
-       │            (Active while context.currentView references this actor)
-       ▼
-┌─────────────┐
-│  Destroyed  │  ← destroyActor() called (when switching to different view)
-└─────────────┘
-```
-
-### Lazy Child Actor Creation
-
-Child actors are **created lazily** - only when they're referenced by `context.currentView`:
-
-- **Before**: All child actors were created immediately (wasteful)
-- **After**: Only the active child actor is created (efficient)
-
-When switching views:
-1. Previously active UI child actor is destroyed
-2. New child actor is created lazily (if not already exists)
-3. Service child actors persist (not destroyed)
-
-### Creating Actors
-
-```javascript
-// Single actor
-const actor = await os.createActor(
-  './maia/todo.actor.maia',
-  document.getElementById('container')
-);
-
-// Multiple actors
-const actors = await Promise.all([
-  os.createActor('./maia/todo.actor.maia', document.getElementById('col-1')),
-  os.createActor('./maia/notes.actor.maia', document.getElementById('col-2'))
-]);
-```
-
-### Accessing Actors
-
-```javascript
-// Get actor by ID
-const actor = os.getActor('actor_todo_001');
-
-// Access context
-console.log(actor.context.todos);
-
-// Access state
-console.log(actor.machine.currentState); // 'idle', 'creating', etc.
-```
-
-## Message Passing & Event Flow
-
-**CRITICAL:** Actor inbox is the **single source of truth** for ALL events (internal, external, SUCCESS, ERROR).
-
-**Unified Event Flow:**
-- ✅ View events → inbox → state machine
-- ✅ External messages → inbox → state machine  
-- ✅ Tool SUCCESS/ERROR → inbox → state machine
-- ✅ All events appear in inbox log for traceability
-
-**Event Flow Pattern:**
-```
-View Event → resolveExpressions() (FULLY resolve) → sendInternalEvent() → inbox (CoJSON - only clean JSON) → processMessages() → StateEngine.send() (payload already resolved)
-External Message → inbox → processMessages() → StateEngine.send() (payload already resolved)
-Tool SUCCESS → sendInternalEvent() → inbox → processMessages() → StateEngine.send() (payload already resolved)
-Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngine.send() (payload already resolved)
-```
-
-**CRITICAL: Expression Resolution**
-- **Views resolve ALL expressions** before sending to inbox (only resolved clean JS objects/JSON)
-- **Messages persist only resolved values** to CoJSON (no expressions - they can't be evaluated remotely)
-- **State machines receive resolved payloads** (no re-evaluation needed for message payloads)
-- **Action configs still support expressions** (e.g., `updateContext: { title: "$context.title" }` - these are evaluated in state machine)
-
-**Why inbox for all events:**
-- **Unified Event Log:** Complete traceability of all events
-- **Per-Message Processed Flags:** Each message has a `processed` boolean flag (distributed CRDT-native deduplication)
-- **Consistent Handling:** All events follow same path
-- **Better Debugging:** Can inspect inbox to see all events
-
-### Sending Messages
-
-**CRITICAL: Only Resolved Values in Messages**
-
-In distributed/decentralized systems, **expressions cannot be passed around** because:
-- Expressions require evaluation context (context, item, result) that may not exist on remote actors
-- CoJSON persistence stores messages that sync across devices - expressions can't be evaluated remotely
-- Only resolved clean JS objects/JSON can be persisted and synced
-
-**Views automatically resolve all expressions** before sending to inbox. You don't need to do anything - it happens automatically.
-
-**External messages** (actor-to-actor):
-
-```javascript
-// Send to specific actor
-// Payload must be resolved values (no expressions)
-os.sendMessage('actor_todo_001', {
-  type: 'notification',
-  from: 'actor_calendar_001',
-  payload: {text: 'Reminder: Meeting at 3pm'}  // Resolved value, not "$context.reminder"
-});
-
-// Actors can send to each other
-actor.actorEngine.sendMessage(targetActorId, message);
-```
-
-**Internal events** (from views) automatically route through inbox via `sendInternalEvent()`. Views resolve all expressions before sending.
-
-### Receiving Messages
-
-Messages are sent to actors via their inbox costream. Actors automatically process messages from their inbox and route them to their state machine. No explicit subscription configuration is needed - messages are sent directly to the target actor's inbox.
-
-### Processing Messages
-
-Messages are processed via the actor's state machine. The inbox is automatically processed, and events are routed to state machines:
-
-```json
-{
-  "idle": {
-    "on": {
-      "MESSAGE_RECEIVED": {
-        "target": "processingMessage"
-      },
-      "SUCCESS": {
-        "target": "idle"
-      },
-      "ERROR": {
-        "target": "error"
-      }
-    }
-  }
-}
-```
-
-**Note:** All events (including SUCCESS/ERROR from tools) flow through inbox and are processed by `processMessages()`, which routes them to the state machine.
-
-## Shadow DOM Isolation
-
-Each actor with a view renders into its own **Shadow DOM**, providing:
-
-✅ **Style isolation** - Actor styles don't leak  
-✅ **Encapsulation** - Internal DOM is private  
-✅ **Reusability** - Multiple instances don't conflict  
-✅ **Automatic container queries** - `:host` automatically has `container-type: inline-size` enabled
-
-```html
-<div id="actor-todo">
-  #shadow-root
-    <style>
-      :host {
-        container-type: inline-size;
-        container-name: actor-todo;
-        /* ... other styles ... */
-      }
-    </style>
-    <div>/* Actor UI */</div>
-</div>
-```
-
-**Container Queries:** Every actor's `:host` element automatically becomes a container, enabling responsive components that adapt to their container size (not just viewport size). Use `@container` queries in your style files with breakpoint tokens like `{containers.xs}`, `{containers.sm}`, etc. See [Style Guide](./10-style.md#container-queries-responsive-design) for details.
-
-## Multiple Actor Instances
-
-You can create multiple instances of the same actor type:
-
-```javascript
-const todo1 = await os.createActor('./maia/todo.actor.maia', container1);
-const todo2 = await os.createActor('./maia/todo.actor.maia', container2);
-
-// Each has independent context
-todo1.context.todos // []
-todo2.context.todos // []
-```
-
-## File Naming Convention
-
-```
-maia/
-├── todo.actor.maia    # Actor definition (references only)
-├── todo.context.maia  # Runtime data (referenced by contextRef)
-├── todo.state.maia    # State machine (referenced by stateRef)
-├── todo.view.maia     # View definition (referenced by viewRef)
-├── todo.style.maia    # Actor-specific styles (referenced by styleRef)
-└── brand.style.maia   # Shared design system
-```
-
-**Convention:** `{name}.{type}.maia`
-
-## Example: Complete Todo Actor
-
-**`todo.actor.maia`:**
-```json
-{
-  "$schema": "@schema/actor",
-  "$id": "@actor/todo",
-  "role": "todo-list",
-  "context": "@context/todo",
-  "state": "@state/todo",
-  "view": "@view/todo",
-  "brand": "@style/brand",
-  "style": "@style/todo",
-  "inbox": "@inbox/todo"
-}
-```
-
-**`todo.context.maia`:**
-```json
-{
-  "$schema": "@schema/context",
-  "$id": "@context/todo",
-  "todos": [
-    {"id": "1", "text": "Learn MaiaOS", "done": true},
-    {"id": "2", "text": "Build an app", "done": false}
-  ],
-  "todosTodo": [],
-  "todosDone": [],
   "newTodoText": "",
   "viewMode": "list",
   "isModalOpen": false
 }
 ```
 
-## Composing Actors
+**Note:** Context is always persisted to CoValue. Accessed reactively via ReactiveStore.
 
-**Composition** is combining smaller actors into larger, more complex actors. Think of it like building with LEGO blocks - you combine simple pieces to create complex structures.
+### Context Best Practices
 
-### Two Types of Actors
+✅ **DO:** Keep flat, clear names, initialize all fields, update via state machines, use `updateContext`, go through CoValue persistence.
 
-#### Leaf Actors
+❌ **DON'T:** Store DOM references, put logic in context, mutate directly, update from views, bypass CoValue persistence.
 
-**Leaf actors** are terminal components - they don't contain other actors. They render UI directly.
+---
 
-**Example: `todo_input.actor.maia`**
-```json
-{
-  "$schema": "@schema/actor",
-  "$id": "@actor/todo-input",
-  "role": "todo-input",
-  "context": "@context/todo-input",
-  "view": "@view/todo-input",
-  "state": "@state/todo-input",
-  "brand": "@style/brand",
-  "inbox": "@inbox/todo-input"
-}
+**Next:** [02-lifecycle-messaging.md](./02-lifecycle-messaging.md) - Actor lifecycle and message passing
+
+---
+
+# LIFECYCLE MESSAGING
+
+*Source: creators/03-actors/02-lifecycle-messaging.md*
+
+# Actor Lifecycle and Message Passing
+
+## Actor Lifecycle
+
+### Service Actors vs UI Actors
+
+**Service Actors:** Persist throughout vibe lifecycle. Created once, destroyed only on vibe unload.
+
+**UI Actors:** Created on-demand when view is active (`context.currentView`). Destroyed when switching views.
+
+### Lifecycle Flow
+
+**Service Actor:** Created → Booting (state machine, view, styles) → Active (processes events) → Destroyed (vibe unload)
+
+**UI Actor:** Created (lazily when referenced) → Booting → Active → Destroyed (when switching view)
+
+### Lazy Child Actor Creation
+
+Child actors created only when referenced by `context.currentView`. Service children persist; UI children destroyed when switching views.
+
+---
+
+## Message Passing & Event Flow
+
+**CRITICAL:** Actor inbox is the **single source of truth** for ALL events.
+
+**Flow:** View/External/Tool SUCCESS-ERROR → inbox → processMessages() → StateEngine.send()
+
+**Expression Resolution:**
+- Views resolve ALL expressions before sending to inbox (clean JSON only)
+- State machines receive resolved payloads
+- Action configs still support expressions (evaluated in state machine)
+
+### Sending Messages
+
+**External (actor-to-actor):**
+```javascript
+os.sendMessage('actor_todo_001', {
+  type: 'notification',
+  payload: { text: 'Reminder' }  // Resolved value, not expressions
+});
 ```
 
-**Leaf View: `todo_input.view.maia`**
-```json
-{
-  "$schema": "@schema/view",
-  "$id": "@view/todo-input",
-  "root": {
-    "tag": "div",
-    "children": [
-      {
-        "tag": "input",
-        "attrs": {
-          "value": "$newTodoText"
-        }
-      },
-      {
-        "tag": "button",
-        "text": "Add",
-        "$on": {
-          "click": {
-            "send": "CREATE_TODO"
-          }
-        }
-      }
-    ]
-  }
-}
+**Internal (from views):** Automatically route through inbox. Views resolve expressions before sending.
+
+### Receiving Messages
+
+Messages sent to inbox costream. Actors automatically process and route to state machine. No explicit subscription needed.
+
+---
+
+## Shadow DOM Isolation
+
+Each actor with a view renders into its own Shadow DOM:
+
+✅ Style isolation  
+✅ DOM encapsulation  
+✅ Multiple instances without conflicts  
+✅ Automatic container queries (`:host` has `container-type: inline-size`)
+
+See [10-style.md](../10-style.md) for `@container` queries.
+
+## Multiple Actor Instances
+
+```javascript
+const todo1 = await os.createActor('./maia/todo.actor.maia', container1);
+const todo2 = await os.createActor('./maia/todo.actor.maia', container2);
+// Each has independent context
 ```
 
-#### Composite Actors
+## File Naming Convention
 
-**Composite actors** are containers that hold other actors in slots.
-
-**Example: `agent.actor.maia`**
-```json
-{
-  "$schema": "@schema/actor",
-  "$id": "@actor/agent",
-  "role": "agent",
-  "context": "@context/agent",
-  "view": "@view/agent",
-  "state": "@state/agent",
-  "brand": "@style/brand",
-  "inbox": "@inbox/agent"
-}
+```
+maia/
+├── todo.actor.maia    # Actor definition
+├── todo.context.maia  # Runtime data
+├── todo.state.maia    # State machine
+├── todo.view.maia     # View definition
+├── todo.style.maia    # Actor-specific styles
 ```
 
-**Note:** Children are defined in the context file, not in the actor definition. See the context example below.
+---
 
-**Composite View: `app.view.maia`**
+**Next:** [03-composition.md](./03-composition.md) - Composing actors and examples
+
+---
+
+# COMPOSITION
+
+*Source: creators/03-actors/03-composition.md*
+
+# Composing Actors
+
+**Composition** is combining smaller actors into larger ones. Think LEGO blocks.
+
+## Leaf vs Composite Actors
+
+**Leaf actors:** Terminal components. Render UI directly. No child actors.
+
+**Composite actors:** Containers. Hold other actors in slots. Shared structure (header, form).
+
+## How Slots Work
+
+**Syntax:** `"$slot": "$currentView"` - context property contains `@namekey` reference.
+
+**Resolution:** ViewEngine extracts namekey from `@namekey` → finds `actor.children[namekey]` → attaches to slot element.
+
+**Unified pattern:** All slots work the same. Everything is CRDT CoValue.
+
+**Context defines children:**
 ```json
 {
-  "$schema": "@schema/view",
-  "$id": "@view/app",
-  "root": {
-    "tag": "div",
-    "attrs": {
-      "class": "app-layout"
-    },
-    "children": [
-      {
-        "tag": "header",
-        "$slot": "$header"  // Renders child actor from @actors.header
-      },
-      {
-        "tag": "main",
-        "$slot": "$input"   // Renders child actor from @actors.input
-      },
-      {
-        "tag": "section",
-        "$slot": "$currentView"    // Renders active child actor
-      }
-    ]
-  }
-}
-```
-
-### How Slots Work
-
-**Slots** are placeholders where child actors get rendered.
-
-**Syntax:**
-- Use `$slot` with a context value (e.g., `"$slot": "$currentView"`)
-- Context property contains `@namekey` reference (e.g., `currentView: "@list"`)
-- ViewEngine extracts `namekey` from `@namekey` → finds child actor in `actor.children[namekey]`
-- Attaches child actor's container to the slot element
-
-**Unified Pattern:**
-All slot resolution works the same way - no differentiation between "static" and "dynamic" slots. Everything is a CRDT CoValue.
-
-**Example Context:**
-```json
-{
-  "$schema": "@schema/context",
-  "$id": "@context/composite",
-  "currentView": "@list",  // ← Context property (CRDT CoValue) - references active child
+  "currentView": "@list",
   "@actors": {
-    "list": "@actor/list",      // ← System property (like $schema/$id) - defines children
+    "list": "@actor/list",
     "kanban": "@actor/kanban"
   }
 }
 ```
 
-**View with slots:**
+**State machine switches view:**
 ```json
 {
-  "$schema": "@schema/view",
-  "$id": "@view/composite",
-  "content": {
-    "tag": "div",
-    "children": [
-      {
-        "tag": "main",
-        "$slot": "$currentView"  // ← Resolves: context.currentView = "@list" → namekey "list" → actor.children["list"]
-      }
-    ]
-  }
-}
-```
-
-**State machine sets context:**
-```json
-{
-  "states": {
-    "idle": {
-      "on": {
-        "SWITCH_VIEW": {
-          "target": "idle",
-          "actions": [
-            {
-              "updateContext": {
-                "currentView": "@list"  // ← Updates context property (CRDT CoValue)
-              }
-            }
-          ]
-        }
-      }
+  "on": {
+    "SWITCH_VIEW": {
+      "actions": [
+        { "updateContext": { "currentView": "@list" } }
+      ]
     }
   }
 }
 ```
 
-**Key Points:**
-- `context["@actors"]` is a **system property** (like `$schema`, `$id`) that defines which children exist
-- `context.currentView` is a **context property** (CRDT CoValue) that references the active child actor
-- Slot resolution is **unified** - same logic for all slots, whether they reference one child or switch between multiple
+## Building a Composable App
 
-### Building a Composable App
+1. **Identify components** - Header, input, list, footer
+2. **Create leaf actors** - One per piece
+3. **Create composite root** - Composes all via `@actors` and slots
 
-#### Step 1: Identify Components
-
-Break your UI into logical pieces:
-- Header with navigation
-- Input form
-- List of items
-- Footer
-
-#### Step 2: Create Leaf Actors
-
-Create one actor for each piece:
-
-**`header.actor.maia`** - Navigation bar
-**`input.actor.maia`** - Form input
-**`list.actor.maia`** - Item list
-**`footer.actor.maia`** - Footer
-
-#### Step 3: Create Composite Root
-
-Create a root actor that composes all pieces:
-
-**`app.actor.maia`**
-```json
-{
-  "$schema": "@schema/actor",
-  "$id": "@actor/app",
-  "role": "composite",
-  "context": "@context/app",
-  "view": "@view/app",
-  "state": "@state/app",
-  "brand": "@style/brand",
-  "inbox": "@inbox/app"
-}
+**Example structure:**
+```
+app (composite)
+├── @header (slot)
+├── @input (slot)
+├── @currentView (slot - switches @list / @kanban)
+└── @footer (slot)
 ```
 
-**`app.context.maia`** (defines children):
-```json
-{
-  "$schema": "@schema/context",
-  "$id": "@context/app",
-  "@actors": {
-    "header": "@actor/header",
-    "input": "@actor/input",
-    "list": "@actor/list",
-    "footer": "@actor/footer"
-  },
-  "currentView": "@list"
-}
-```
+## Message Passing Between Actors
 
-**`app.view.maia`**
-```json
-{
-  "$schema": "@schema/view",
-  "$id": "@view/app",
-  "root": {
-    "tag": "div",
-    "attrs": {
-      "class": "app"
-    },
-    "children": [
-      {
-        "tag": "header",
-        "$slot": "$header"
-      },
-      {
-        "tag": "main",
-        "$slot": "$input"
-      },
-      {
-        "tag": "section",
-        "$slot": "$currentView"
-      },
-      {
-        "tag": "footer",
-        "$slot": "$footer"
-      }
-    ]
-  }
-}
-```
+Actors communicate via **inbox costreams**, not props. Use `@core/publishMessage` in state machine actions. Messages auto-route to state machine.
 
-**`app.state.maia`** - Sets context values for slots:
-```json
-{
-  "$schema": "@schema/state",
-  "$id": "@state/app",
-  "initial": "idle",
-  "states": {
-    "idle": {
-      "entry": {
-        "updateContext": {
-          "currentView": "@list"
-        }
-      }
-    }
-  }
-}
-```
+## Common Patterns
 
-**Note:** The `@actors` system property in context defines which children exist. The `currentView` context property references which child to display.
+**Layout:** `$slot` for header, main, footer. `$slot`: "$currentView" for view switcher.
 
-### Message Passing Between Actors
+**List with items:** `$each` with `items` and `template`.
 
-Actors communicate via **messages** sent to inbox costreams, not props.
+**View switching:** State machine `updateContext` sets `currentView` to `@list` or `@kanban`.
 
-#### Sending Messages
+## Best Practices
 
-When an event happens, publish a message:
+**✅ DO:** Small focused actors, clear slot names, message-based communication, define children in context `@actors`.
 
-**In state machine:**
-```json
-{
-  "states": {
-    "creating": {
-      "entry": {
-        "tool": "@db",
-        "payload": { "op": "create", "schema": "@schema/todos", "data": {...} }
-      },
-      "on": {
-        "SUCCESS": {
-          "target": "idle",
-          "actions": [
-            {
-              "tool": "@core/publishMessage",
-              "payload": {
-                "type": "TODO_CREATED",
-                "payload": { "id": "$id", "text": "$text" }
-              }
-            }
-          ]
-        }
-      }
-    }
-  }
-}
-```
+**❌ DON'T:** Monolithic actors, prop drilling, circular dependencies, conditional logic in views.
 
-#### Receiving Messages
-
-Messages are automatically processed from the actor's inbox costream and routed to the state machine. Actors handle messages by defining event handlers in their state machines.
-
-### Real Example: Todo App
-
-**Structure:**
-```
-vibe_root (composite)
-├── @header (view_switcher - leaf)
-├── @input (todo_input - leaf)
-├── @list (todo_list - composite)
-│   └── @item (todo_item - leaf, repeated)
-└── @kanban (kanban_view - leaf)
-```
-
-**Message Flow:**
-1. User types in `todo_input` → publishes `CREATE_TODO`
-2. `todo_list` receives `CREATE_TODO` → creates item
-3. `todo_item` instances render in list
-4. User clicks complete → `todo_item` publishes `TODO_COMPLETED`
-5. `todo_list` receives → updates state
-6. `vibe_root` receives → orchestrates view
-
-### Common Patterns
-
-#### Layout Container
-```json
-{
-  "$schema": "@schema/view",
-  "$id": "@view/layout",
-  "root": {
-    "tag": "div",
-    "children": [
-      {
-        "tag": "header",
-        "$slot": "$header"
-      },
-      {
-        "tag": "main",
-        "$slot": "$currentView"
-      },
-      {
-        "tag": "footer",
-        "$slot": "$footer"
-      }
-    ]
-  }
-}
-```
-
-#### List with Items
-```json
-{
-  "$schema": "@schema/view",
-  "$id": "@view/list",
-  "root": {
-    "tag": "ul",
-    "$each": {
-      "items": "$todos",
-      "template": {
-        "tag": "li",
-        "text": "$$item.text"
-      }
-    }
-  }
-}
-```
-
-#### Conditional View Switching
-```json
-{
-  "$schema": "@schema/view",
-  "$id": "@view/composite",
-  "root": {
-    "tag": "div",
-    "children": [
-      {
-        "tag": "section",
-        "$slot": "$currentView"  // State machine sets to "@list" or "@kanban"
-      }
-    ]
-  }
-}
-```
-
-**State machine handles switching:**
-```json
-{
-  "$schema": "@schema/state",
-  "$id": "@state/composite",
-  "initial": "idle",
-  "states": {
-    "idle": {
-      "on": {
-        "SWITCH_VIEW": {
-          "target": "idle",
-          "actions": [
-            {
-              "updateContext": {
-                "currentView": "$viewMode === 'list' ? '@list' : '@kanban'"  // ← Updates context property (CRDT CoValue)
-              }
-            }
-          ]
-        }
-      }
-    }
-  }
-}
-```
-
-### Best Practices
-
-**✅ DO:**
-- Keep actors small and focused
-- Use clear slot names (`@header`, not `@h`)
-- Send messages via inbox costreams for actor-to-actor communication
-- Keep context internal (don't expose)
-- Use state machine to set slot context values
-- Define children in context files via `@actors` system property
-
-**❌ DON'T:**
-- Don't create giant monolithic actors
-- Don't use prop drilling
-- Don't expose context directly
-- Don't create circular dependencies
-- Don't put conditional logic in views (use state machine instead)
-- Don't define children in actor schema (use context `@actors` instead)
+---
 
 ## Next Steps
 
-- Learn about [Skills](./03-skills.md) - AI agent interface
-- Understand [State Machines](./05-state.md) - Actor behavior
-- Explore [Context](./04-context.md) - Runtime data management
-- Create [Views](./07-views.md) - UI representation
-- Review [Best Practices](./10-best-practices.md) - Architecture patterns and scalability
+- [State Machines](../05-state.md) - Actor behavior
+- [Context](../04-context.md) - Runtime data management
+- [Views](../08-views.md) - UI representation
+- [Best Practices](../12-best-practices.md) - Architecture patterns
 
 ## Debugging Actors
 
 ```javascript
-// Expose actor globally
 window.actor = actor;
-
-// Inspect in console
-actor.context           // Runtime data (ReactiveStore)
-actor.context.value     // Current context value
-actor.machine          // State machine instance
+actor.context.value     // Current context
 actor.machine.currentState  // Current state
-actor.inbox            // Inbox costream (messages)
-
-// Inspect Shadow DOM
-// In DevTools: click the actor container, expand #shadow-root
+actor.inbox            // Messages
+// DevTools: expand #shadow-root for Shadow DOM
 ```
 
 ---
 
-# CONTEXT
+# README
 
-*Source: creators/04-context.md*
+*Source: creators/03-actors/README.md*
+
+# Actors Documentation
+
+Actor-based component system for MaiaOS. Read in order:
+
+1. **[00-overview.md](./00-overview.md)** - What are actors, architecture, definition, types
+2. **[01-vibe-pattern.md](./01-vibe-pattern.md)** - Service → Composite → UI pattern, context
+3. **[02-lifecycle-messaging.md](./02-lifecycle-messaging.md)** - Lifecycle, message passing, Shadow DOM
+4. **[03-composition.md](./03-composition.md)** - Composing actors, examples, debugging
+
+---
+
+# OVERVIEW
+
+*Source: creators/04-context/00-overview.md*
 
 # Context (The Memory)
 
@@ -4059,6 +2857,13 @@ See [Operations](./07-operations.md) for complete documentation on the universal
 2. MaiaOS uses universal `read()` API to get a ReactiveStore for that data
 3. The ReactiveStore automatically updates when data changes
 4. Context ReactiveStore subscribes to the data ReactiveStore
+
+---
+
+# DEFINITION
+
+*Source: creators/04-context/01-definition.md*
+
 5. Your view subscribes to context ReactiveStore and re-renders automatically
 
 **Think of it like:** Subscribing to a newsletter - you tell them what you want, they send you updates automatically. The universal `read()` API is like the subscription service - every CoValue becomes a reactive store you can subscribe to.
@@ -4360,6 +3165,12 @@ Use `$` prefix in expressions:
 }
 ```
 
+---
+
+# ADVANCED
+
+*Source: creators/04-context/02-advanced.md*
+
 ### From JavaScript
 Context is a ReactiveStore - access current value and subscribe to changes:
 
@@ -4659,6 +3470,13 @@ User sees new todo in the list! ✨
 ```
 
 **Key insight:** You never manually update `context.todos`. The universal `read()` API:
+
+---
+
+# PATTERNS
+
+*Source: creators/04-context/03-patterns.md*
+
 1. Reads from persisted CoValue (single source of truth)
 2. Returns a ReactiveStore that automatically updates when the CoValue changes
 3. Context ReactiveStore subscribes to the data ReactiveStore
@@ -4901,9 +3719,22 @@ validateContext(actor.context.value, {
 
 ---
 
-# STATE
+# README
 
-*Source: creators/05-state.md*
+*Source: creators/04-context/README.md*
+
+# Context Documentation
+
+1. **[00-overview.md](./00-overview.md)** - How it works, architectural roles
+2. **[01-definition.md](./01-definition.md)** - Context definition, read() API, types
+3. **[02-advanced.md](./02-advanced.md)** - Accessing, updates, best practices
+4. **[03-patterns.md](./03-patterns.md)** - Schema design, reactivity, derived data, debugging
+
+---
+
+# OVERVIEW
+
+*Source: creators/05-state/00-overview.md*
 
 # State Machines (The Brain)
 
@@ -5204,6 +4035,12 @@ State machine handles SUCCESS/ERROR
 - ❌ Self-transitions for parallel state handling (not needed with sequential processing)
 
 ## Basic Structure
+
+---
+
+# STRUCTURE
+
+*Source: creators/05-state/01-structure.md*
 
 Create a file named `{name}.state.maia`:
 
@@ -5506,6 +4343,12 @@ Use MaiaScript expressions in payloads:
 }
 ```
 
+---
+
+# DATA
+
+*Source: creators/05-state/02-data.md*
+
 ## Managing Item Lookup Objects
 
 For item-specific conditional styling, **state machines compute lookup objects** in context:
@@ -5805,6 +4648,13 @@ Toggle is not a separate operation. Use `update` with an expression:
 - Use `@db` tool in state machines for all data mutations (create, update, delete)
 - Use descriptive names (`todosTodo`, not `data1`)
 - Filter in query objects (context), not in views
+
+---
+
+# PRACTICES
+
+*Source: creators/05-state/03-practices.md*
+
 - Test with empty data (handle empty arrays gracefully)
 - Use schema references (`@schema/todos`) in context - they're resolved automatically
 
@@ -6051,9 +4901,22 @@ actor.machine.definition
 
 ---
 
-# TOOLS
+# README
 
-*Source: creators/06-tools.md*
+*Source: creators/05-state/README.md*
+
+# State Documentation
+
+1. **[00-overview.md](./00-overview.md)** - Example, responsibilities, inbox
+2. **[01-structure.md](./01-structure.md)** - Basic structure, definition, transitions, guards
+3. **[02-data.md](./02-data.md)** - Payload resolution, reactive queries, data patterns
+4. **[03-practices.md](./03-practices.md)** - Complete example, event flow, best practices
+
+---
+
+# OVERVIEW
+
+*Source: creators/06-tools/00-overview.md*
 
 # Tools (The Hands)
 
@@ -6405,6 +5268,13 @@ Read a specific spark by co-id.
     }
   }
 }
+
+---
+
+# REFERENCE
+
+*Source: creators/06-tools/01-reference.md*
+
 ```
 
 #### `@dragdrop/drop`
@@ -6644,9 +5514,20 @@ console.log(mockActor.context.todos); // [{id: "...", text: "Test", done: false}
 
 ---
 
-# OPERATIONS
+# README
 
-*Source: creators/07-operations.md*
+*Source: creators/06-tools/README.md*
+
+# Tools Documentation
+
+1. **[00-overview.md](./00-overview.md)** - Tool system overview
+2. **[01-reference.md](./01-reference.md)** - Reference details
+
+---
+
+# OVERVIEW
+
+*Source: creators/07-operations/00-overview.md*
 
 # Database Operations API
 
@@ -6999,6 +5880,12 @@ console.log("Guardian:", spark.guardian); // Co-id of the spark's guardian group
 **Parameters:**
 - `name` (required) - Spark name (string)
 
+---
+
+# USAGE
+
+*Source: creators/07-operations/01-usage.md*
+
 **Returns:**
 - Created spark object with:
   - `id` - Spark CoMap co-id
@@ -7298,6 +6185,12 @@ actor.actorEngine.toolEngine.execute('@db', actor, payload);
 
 **✅ DO:** Use `@db` tool for all data changes (invoked by state machines)
 
+---
+
+# REFERENCE
+
+*Source: creators/07-operations/02-reference.md*
+
 ```json
 {
   "tool": "@db",
@@ -7562,9 +6455,21 @@ Potential future operations:
 
 ---
 
-# VIEWS
+# README
 
-*Source: creators/08-views.md*
+*Source: creators/07-operations/README.md*
+
+# Operations Documentation
+
+1. **[00-overview.md](./00-overview.md)** - Core concept, available operations
+2. **[01-usage.md](./01-usage.md)** - Tool invocation, state machines, architecture, best practices
+3. **[02-reference.md](./02-reference.md)** - Examples, operation schema, references
+
+---
+
+# OVERVIEW
+
+*Source: creators/08-views/00-overview.md*
 
 # Views (UI Representation)
 
@@ -7916,7 +6821,14 @@ Data-attributes are the primary mechanism for conditional styling. The state mac
     "template": {
       "tag": "li",
       "text": "$$text",
-      "attrs": {"data-id": "$$id"}
+
+---
+
+# ELEMENTS
+
+*Source: creators/08-views/01-elements.md*
+
+"attrs": {"data-id": "$$id"}
     }
   }
 }
@@ -8216,6 +7128,13 @@ The wrapper element (with tag, class, attrs) wraps the child actor, allowing you
 - ✅ Uses `$on` for event handlers
 - ✅ Uses `data` attribute mapping for conditional styling
 - ✅ Uses `$draggedItemIds.$$id` for item-specific lookups
+
+---
+
+# ADVANCED
+
+*Source: creators/08-views/02-advanced.md*
+
 - ✅ No `$if` conditionals - all handled by state machine + CSS
 
 ## View Best Practices
@@ -8365,9 +7284,21 @@ Views support only these operations:
 
 ---
 
-# BRAND
+# README
 
-*Source: creators/09-brand.md*
+*Source: creators/08-views/README.md*
+
+# Views Documentation
+
+1. **[00-overview.md](./00-overview.md)** - Philosophy, definition, structure, tags, attributes
+2. **[01-elements.md](./01-elements.md)** - Text, events, conditionals, $each, $slot
+3. **[02-advanced.md](./02-advanced.md)** - Drag drop, complete example, best practices, debugging
+
+---
+
+# OVERVIEW
+
+*Source: creators/09-brand/00-overview.md*
 
 # Brand (Design System)
 
@@ -8719,7 +7650,14 @@ Define reusable component styles. Use nested `data` syntax for conditional styli
           "true": {
             "opacity": "0.6",
             "background": "rgba(0, 0, 0, 0.02)"
-          }
+
+---
+
+# REFERENCE
+
+*Source: creators/09-brand/01-reference.md*
+
+}
         }
       }
     },
@@ -9009,9 +7947,20 @@ For conditional styling, use nested `data` syntax in component definitions:
 
 ---
 
-# STYLE
+# README
 
-*Source: creators/10-style.md*
+*Source: creators/09-brand/README.md*
+
+# Brand Documentation
+
+1. **[00-overview.md](./00-overview.md)** - Brand system overview
+2. **[01-reference.md](./01-reference.md)** - Reference details
+
+---
+
+# OVERVIEW
+
+*Source: creators/10-style/00-overview.md*
 
 # Style (Local Styling)
 
@@ -9363,7 +8312,14 @@ Use these standard mobile-first breakpoint tokens in your container queries (aut
       ".form": {
         "flexDirection": "column",
         "gap": "0.5rem"
-      },
+
+---
+
+# REFERENCE
+
+*Source: creators/10-style/01-reference.md*
+
+},
       ".input": {
         "padding": "0.5rem",
         "fontSize": "0.875rem"
@@ -9724,9 +8680,20 @@ styleElement.textContent += `
 
 ---
 
-# SCHEMATA
+# README
 
-*Source: creators/11-schemata.md*
+*Source: creators/10-style/README.md*
+
+# Style Documentation
+
+1. **[00-overview.md](./00-overview.md)** - Style system overview
+2. **[01-reference.md](./01-reference.md)** - Reference details
+
+---
+
+# OVERVIEW
+
+*Source: creators/11-schemata/00-overview.md*
 
 # MaiaOS Schemata System
 
@@ -10078,6 +9045,13 @@ if (!result.valid) {
    - Query objects (`{schema: "@schema/todos", filter: {...}}`) are transformed
 
 ```javascript
+
+---
+
+# REFERENCE
+
+*Source: creators/11-schemata/01-reference.md*
+
 // Transform instance
 const transformed = transformInstanceForSeeding(instance, coIdMap);
 // Result: All references now use co-ids
@@ -10453,44 +9427,43 @@ This ensures type-safe, validated, and properly referenced CoJSON data structure
 
 ---
 
-# BEST PRACTICES
+# README
 
-*Source: creators/12-best-practices.md*
+*Source: creators/11-schemata/README.md*
+
+# Schemata Documentation
+
+1. **[00-overview.md](./00-overview.md)** - Schema system overview
+2. **[01-reference.md](./01-reference.md)** - Reference details
+
+---
+
+# OVERVIEW
+
+*Source: creators/12-best-practices/00-overview.md*
 
 # Best Practices: Actor Architecture
 
 **Comprehensive guide to building scalable, maintainable MaiaOS applications**
 
-## Agent-First Development
+## Vibe-First Development
 
-**Always create the agent service actor first when building a vibe.**
+**Always create the vibe root service actor first when building a vibe.**
+
+**Naming convention:** Use `@actor/vibe` for the vibe's root service actor (not `@actor/agent`—avoids confusion with AI agents).
 
 **Why?**
-- **Clear Architecture** - Agent defines the app's structure and data flow
-- **Data First** - Agent handles all data operations before UI concerns
-- **UI Second** - UI actors receive data from agent, keeping them simple
-- **Consistent Pattern** - Every vibe follows the same structure
+- **Clear Architecture** - Root actor defines the app's structure and data flow
+- **Data First** - Root actor handles all data operations before UI concerns
+- **UI Second** - UI actors receive data from root actor, keeping them simple
+- **Consistent Pattern** - Every vibe follows the same structure (`@actor/vibe`)
 - **AI-Friendly** - LLMs understand this pattern and can generate vibes correctly
 
 **Development Order:**
-1. ✅ **Create agent service actor** (`agent/agent.actor.maia`) - ALWAYS FIRST
-2. ✅ Create vibe manifest (`manifest.vibe.maia`) - References `@actor/agent`
+1. ✅ **Create vibe root service actor** (`vibe/vibe.actor.maia`) - ALWAYS FIRST
+2. ✅ Create vibe manifest (`manifest.vibe.maia`) - References `@actor/vibe`
 3. ✅ Create composite actor (`composite/composite.actor.maia`) - First UI actor
 4. ✅ Create UI actors (`list/list.actor.maia`, etc.) - Leaf components
-
-## Table of Contents
-
-1. [State Separation Pattern](#1-state-separation-pattern)
-2. [Service vs UI Actor Responsibilities](#2-service-vs-ui-actor-responsibilities)
-3. [Composite/Leaf Pattern](#3-compositeleaf-pattern)
-4. [Message Flow Patterns](#4-message-flow-patterns)
-5. [Scalability Strategies](#5-scalability-strategies)
-6. [Performance Optimization](#6-performance-optimization)
-7. [Domain Separation](#7-domain-separation)
-8. [Feature Modules](#8-feature-modules)
-9. [Schema Definitions](#9-schema-definitions)
-10. [Anti-Patterns to Avoid](#10-anti-patterns-to-avoid)
-11. [Real-World Examples](#11-real-world-examples)
 
 ---
 
@@ -10718,7 +9691,7 @@ View Event → resolveExpressions() (FULLY resolve) → sendInternalEvent() → 
 
 #### Layer 1: Agent Service Actor (Business Logic)
 
-**Best Practice:** Always create the agent service actor first. This is your app's orchestrator.
+**Best Practice:** Always create the vibe root service actor first. This is your app's orchestrator.
 
 **Lifecycle:** Service actors **persist** throughout the vibe lifecycle - created once, destroyed only on vibe unload.
 
@@ -10737,7 +9710,7 @@ View Event → resolveExpressions() (FULLY resolve) → sendInternalEvent() → 
 ```json
 {
   "$schema": "@schema/context",
-  "$id": "@context/agent",
+  "$id": "@context/vibe",
   "composite": "@actor/composite"
   // Only business logic references - no UI state
 }
@@ -10851,6 +9824,12 @@ View Event → resolveExpressions() (FULLY resolve) → sendInternalEvent() → 
 - UI presentation state
 
 ---
+
+---
+
+# PATTERNS
+
+*Source: creators/12-best-practices/01-patterns.md*
 
 ## 3. Composite/Leaf Pattern
 
@@ -11124,6 +10103,12 @@ App Service Actor
 
 ## 7. Domain Separation
 
+---
+
+# ARCHITECTURE
+
+*Source: creators/12-best-practices/02-architecture.md*
+
 ### Pattern: One Service Actor Per Domain
 
 **Each domain gets its own service actor:**
@@ -11153,17 +10138,17 @@ App Service Actor
 ```json
 {
   "$schema": "@schema/actor",
-  "$id": "@actor/agent",
+  "$id": "@actor/vibe",
   "role": "agent",
-  "context": "@context/agent",
-  "state": "@state/agent",
-  "view": "@view/agent",
+  "context": "@context/vibe",
+  "state": "@state/vibe",
+  "view": "@view/vibe",
   "brand": "@style/brand",
-  "inbox": "@inbox/agent"
+  "inbox": "@inbox/vibe"
 }
 ```
 
-**Note:** Always create the agent service actor first. This is your app's orchestrator.
+**Note:** Always create the vibe root service actor first. This is your app's orchestrator.
 
 ---
 
@@ -11208,8 +10193,8 @@ App Composite Actor
 }
 ```
 
-**Note:** Children are defined in `composite.context.maia` via `@actors` system property. See [Actors](./03-actors.md#system-properties-in-context) for details.
-```
+**Note:** Children are defined in `composite.context.maia` via `@actors` system property. See [Actors](../03-actors/01-vibe-pattern.md#system-properties-in-context) for details.
+
 
 ---
 
@@ -11377,6 +10362,25 @@ Every schema must have:
   "$id": "@schema/guard",
   "title": "Guard",
   "cotype": "comap",
+
+---
+
+# SCHEMA
+
+*Source: creators/12-best-practices/03-schema.md*
+
+# Schema Definitions (Continued)
+
+*Part 2 - Schema patterns and examples. See [02-architecture.md](./02-architecture.md) for Domain Separation, Feature Modules, and Schema Principles.*
+
+#### Pattern 5 (concluded): Schema Composition with `allOf`
+
+```json
+{
+  "$schema": "@schema/meta",
+  "$id": "@schema/guard",
+  "title": "Guard",
+  "cotype": "comap",
   "properties": {
     "$id": {
       "type": "string",
@@ -11535,6 +10539,12 @@ When reading and understanding schema definitions:
 
 ---
 
+---
+
+# ANTIPATTERNS
+
+*Source: creators/12-best-practices/04-antipatterns.md*
+
 ## 10. Anti-Patterns to Avoid
 
 ### ❌ Don't: Put UI State in Service Actor
@@ -11543,7 +10553,7 @@ When reading and understanding schema definitions:
 ```json
 {
   "$schema": "@schema/context",
-  "$id": "@context/agent",
+  "$id": "@context/vibe",
   "viewMode": "list",        // ❌ UI state in service
   "listButtonActive": true,  // ❌ UI state in service
   "newTodoText": ""          // ❌ Form state in service
@@ -11554,7 +10564,7 @@ When reading and understanding schema definitions:
 ```json
 {
   "$schema": "@schema/context",
-  "$id": "@context/agent",
+  "$id": "@context/vibe",
   "composite": "@actor/composite"  // ✅ Only business logic references
 }
 ```
@@ -11636,7 +10646,7 @@ When reading and understanding schema definitions:
 ```json
 {
   "$schema": "@schema/actor",
-  "$id": "@actor/agent",
+  "$id": "@actor/vibe",
   "role": "agent",
   "state": "@state/monolithic-service"  // ❌ Everything in one service
 }
@@ -11646,7 +10656,7 @@ When reading and understanding schema definitions:
 ```json
 {
   "$schema": "@schema/actor",
-  "$id": "@actor/agent",
+  "$id": "@actor/vibe",
   "role": "agent",
   "children": {
     "todos": "@actor/todos-service",    // ✅ Domain separation
@@ -11835,6 +10845,22 @@ App Service Actor
 ---
 
 **Remember:** The pattern scales from simple apps (2-5 actors) to enterprise applications (200+ actors) while maintaining clear separation of concerns and co-location of state.
+
+---
+
+# README
+
+*Source: creators/12-best-practices/README.md*
+
+# Best Practices Documentation
+
+Comprehensive guide to building scalable MaiaOS applications. Read in order:
+
+1. **[00-overview.md](./00-overview.md)** - Agent-first, state separation, actor responsibilities
+2. **[01-patterns.md](./01-patterns.md)** - Composite pattern, message flow, scalability, performance
+3. **[02-architecture.md](./02-architecture.md)** - Domain separation, feature modules
+4. **[03-schema.md](./03-schema.md)** - Schema definitions ($co, $ref, cotype)
+5. **[04-antipatterns.md](./04-antipatterns.md)** - Anti-patterns, examples, checklist
 
 ---
 

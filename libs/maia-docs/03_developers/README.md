@@ -43,7 +43,7 @@ Read the documentation in the following order for a complete understanding:
 - Co-ID generation and registry
 
 **Sub-topics:**
-- [Validation](./03_maia-schemata/validation.md) - Schema validation system
+- [Validation](./03_maia-schemata/validation/) - Schema validation system
 - [Transformation](./03_maia-schemata/transformation.md) - Schema transformation for seeding
 - [CoJSON Integration](./03_maia-schemata/cojson-integration.md) - CoJSON types integration
 - [Co-ID Generation](./03_maia-schemata/co-id-generation.md) - Co-ID generation and registry
@@ -58,7 +58,7 @@ Read the documentation in the following order for a complete understanding:
 - Complete API reference
 
 **Sub-topics:**
-- [Engines](./04_maia-script/engines.md) - Detailed engine descriptions
+- [Engines](./04_maia-script/engines/) - Detailed engine descriptions
 - [Modules](./04_maia-script/modules.md) - Module system and custom modules
 - [Expressions](./04_maia-script/expressions.md) - MaiaScript expression language
 - [API Reference](./04_maia-script/api-reference.md) - Complete API reference

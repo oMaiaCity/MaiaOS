@@ -1,13 +1,13 @@
 # MaiaOS Documentation for maia-operations
 
-**Auto-generated:** 2026-02-11T20:56:54.248Z
+**Auto-generated:** 2026-02-11T21:30:35.380Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
 
-# README
+# 00 OVERVIEW
 
-*Source: developers/README.md*
+*Source: developers/00-overview.md*
 
 # maia-operations: Shared Database Operations Layer
 
@@ -309,6 +309,13 @@ const store = await dbEngine.execute({
 });
 
 // Collection
+
+---
+
+# 01 REFERENCE
+
+*Source: developers/01-reference.md*
+
 const store = await dbEngine.execute({
   op: 'read',
   schema: 'co_zTodos123'
@@ -586,6 +593,17 @@ export class DBEngine extends SharedDBEngine {
 
 **Dependencies:**
 - `@MaiaOS/schemata` - Schema validation
+
+---
+
+# README
+
+*Source: developers/README.md*
+
+# maia-operations Documentation
+
+1. **[00-overview.md](./00-overview.md)** - Overview
+2. **[01-reference.md](./01-reference.md)** - Reference
 
 ---
 

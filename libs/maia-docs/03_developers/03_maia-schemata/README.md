@@ -91,7 +91,7 @@ The core validation system. Wraps AJV (Another JSON Schema Validator) and adds C
 - Resolves schema dependencies ($schema, $co references)
 - Handles co-id references from IndexedDB
 
-**See:** [Validation Engine Details](./validation.md)
+**See:** [Validation Engine Details](./validation/)
 
 ### 2. Schema Transformer
 
@@ -395,7 +395,7 @@ transformInstanceForSeeding(instance, coIdMap);
 
 - [maia-operations Package](../06_maia-operations/README.md) - Operations layer that uses schema validation
 - [Schema Definitions](../03_schemas.md) - Schema structure and usage
-- [Validation Engine Details](./validation.md) - How ValidationEngine works
+- [Validation Engine Details](./validation/) - How ValidationEngine works
 - [Schema Transformation](./transformation.md) - How transformation works
 - [CoJSON Integration](./cojson-integration.md) - CoJSON types support
 - [CoJSON Architecture](../05_maia-db/cojson.md) - CoJSON system overview
