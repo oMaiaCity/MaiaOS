@@ -1,46 +1,19 @@
-/**
- * Agent Service - Server-side agent with HTTP trigger
- *
- * Endpoints:
- *   POST /on-added - Manual: register human's spark. Body: { sparkId }
- *   POST /register-human - Register human in spark.registries.humans. Body: { username, accountId }
- *   POST /trigger - Push todo. Body: { text?, spark? }
- *
- *   curl http://localhost:4204/profile
- *   curl -X POST http://localhost:4204/on-added -H "Content-Type: application/json" -d '{"sparkId":"co_z..."}'
- *   curl -X POST http://localhost:4204/register-human -H "Content-Type: application/json" -d '{"username":"samuel","accountId":"co_z..."}'
- *   curl -X POST http://localhost:4204/trigger -H "Content-Type: application/json" -d '{"text":"Buy milk","spark":"@Maia"}'
- *
- * Environment:
- *   AGENT_MAIA_AGENT_ACCOUNT_ID (required)
- *   AGENT_MAIA_AGENT_SECRET (required)
- *   AGENT_MAIA_STORAGE=pglite (default for persistence)
- *   AGENT_MAIA_DB_PATH or DB_PATH - PGlite path (default: ./local-agent.db when pglite)
- *   PORT=4204
- */
+/** Agent Service - HTTP API for spark registration, human registry, todo trigger. See README for API docs. */
 
 import { loadOrCreateAgentAccount } from '@MaiaOS/kernel';
 import { CoJSONBackend, waitForStoreReady } from '@MaiaOS/db';
 import { DBEngine } from '@MaiaOS/operations';
 
 function jsonResponse(data, status = 200) {
-  return new Response(JSON.stringify(data), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
+  return new Response(JSON.stringify(data), { status, headers: { 'Content-Type': 'application/json' } });
 }
 
-async function getBackendAndDbEngine(worker) {
-  const { node, account } = worker;
-  // Agent uses human's @Maia spark for schema resolution (registered via /on-added)
-  const backend = new CoJSONBackend(node, account, { systemSpark: '@Maia' });
-  const dbEngine = new DBEngine(backend);
-  backend.dbEngine = dbEngine;
-  return { backend, dbEngine };
+function err(msg, status = 400, extra = {}) {
+  return jsonResponse({ ok: false, error: msg, ...extra }, status);
 }
 
-const SPARKS_LOAD_TIMEOUT_MS = 25000;
-const SPARKS_LOAD_RETRIES = 2;
+
+const LOAD_TIMEOUT_MS = 25000;
 const REQUEST_TIMEOUT_MS = 35000;
 
 function withTimeout(promise, ms, label) {
@@ -52,147 +25,91 @@ function withTimeout(promise, ms, label) {
   ]);
 }
 
-async function loadSparksWithRetry(backend, sparksId) {
+function getSparksId(account) {
+  const id = account.get('sparks');
+  if (!id?.startsWith('co_z')) throw new Error('account.sparks not found. Ensure agent completed seeding. If stuck, delete ./local-agent.db (or AGENT_MAIA_DB_PATH) and restart dev.');
+  return id;
+}
+
+async function loadCoMap(backend, coId, { timeout = LOAD_TIMEOUT_MS, retries = 1 } = {}) {
   let lastErr;
-  for (let attempt = 1; attempt <= SPARKS_LOAD_RETRIES; attempt++) {
+  for (let i = 1; i <= retries; i++) {
     try {
-      // Use universal read API (same as vibes frontend, _registerSparkInAccount) — proper $stores
-      const sparksStore = await backend.read(null, sparksId);
-      await withTimeout(
-        waitForStoreReady(sparksStore, sparksId, SPARKS_LOAD_TIMEOUT_MS),
-        SPARKS_LOAD_TIMEOUT_MS,
-        'waitForStoreReady(sparks)'
-      );
-      const sparksCore = backend.node.getCoValue(sparksId);
-      if (sparksCore && backend.isAvailable(sparksCore)) {
-        return backend.getCurrentContent(sparksCore);
-      }
-      lastErr = new Error('sparks CoMap not available after load');
+      const store = await backend.read(null, coId);
+      await withTimeout(waitForStoreReady(store, coId, timeout), timeout, `load(${coId.slice(0, 12)})`);
+      const core = backend.node.getCoValue(coId);
+      if (core && backend.isAvailable(core)) return backend.getCurrentContent(core);
+      lastErr = new Error(`CoMap ${coId.slice(0, 12)}... not available`);
     } catch (e) {
       lastErr = e;
-      if (attempt < SPARKS_LOAD_RETRIES) {
-        await new Promise((r) => setTimeout(r, 500));
-      }
+      if (i < retries) await new Promise((r) => setTimeout(r, 500));
     }
   }
   throw lastErr;
 }
 
-/**
- * Ensure account.sparks is loaded. Returns writable sparks content for adding @Maia.
- * NOTE: We cannot create account.sparks here — resolve/createCoValueForSpark both require
- * @maia which comes from account.sparks. Only bootstrapAndScaffold can create it.
- */
-async function ensureSparksAndGetContent(backend, account) {
-  const sparksId = account.get('sparks');
-  if (!sparksId?.startsWith('co_z')) {
-    throw new Error(
-      'account.sparks not found. Ensure agent completed seeding. If stuck, delete ./local-agent.db (or AGENT_MAIA_DB_PATH) and restart dev.'
-    );
+async function getCoIdByPath(backend, startId, path, opts = {}) {
+  let content = await loadCoMap(backend, startId, opts);
+  for (let i = 0; i < path.length; i++) {
+    const nextId = content?.get?.(path[i]);
+    if (!nextId?.startsWith('co_z')) throw new Error(`Path ${path[i]} not found`);
+    if (i === path.length - 1) return nextId;
+    content = await loadCoMap(backend, nextId, opts);
   }
-
-  console.log('[agent] Loading account.sparks:', sparksId);
-  const sparksContent = await loadSparksWithRetry(backend, sparksId);
-  if (!sparksContent || typeof sparksContent.set !== 'function') {
-    throw new Error('sparks CoMap loaded but not writable');
-  }
-  return sparksContent;
 }
 
 async function handleOnAdded(worker, body) {
   const { sparkId } = body || {};
-  if (!sparkId || typeof sparkId !== 'string' || !sparkId.startsWith('co_z')) {
-    return jsonResponse({ ok: false, error: 'sparkId required (co_z...)' }, 400);
-  }
-  console.log('[agent] /on-added received sparkId:', sparkId);
-  const { account } = worker;
-  const { backend } = await getBackendAndDbEngine(worker);
-
-  // CREATE the @Maia entry (agent doesn't have it at first load — we add it, not search)
-  let sparksContent;
+  if (!sparkId || typeof sparkId !== 'string' || !sparkId.startsWith('co_z')) return err('sparkId required (co_z...)');
+  const { backend } = worker;
   try {
-    sparksContent = await ensureSparksAndGetContent(backend, account);
+    const sparksId = getSparksId(worker.account);
+    const sparksContent = await loadCoMap(backend, sparksId, { retries: 2 });
+    if (!sparksContent?.set) throw new Error('sparks CoMap loaded but not writable');
+    sparksContent.set('@Maia', sparkId);
+    return jsonResponse({ ok: true, added: '@Maia', sparkId });
   } catch (e) {
-    return jsonResponse(
-      { ok: false, error: e?.message ?? 'failed to ensure sparks registry' },
-      500
-    );
+    return err(e?.message ?? 'failed to ensure sparks registry', 500);
   }
-  sparksContent.set('@Maia', sparkId);
-  console.log('[agent] Added @Maia spark:', sparkId);
-  return jsonResponse({ ok: true, added: '@Maia', sparkId });
-}
-
-/** Returns humans registry co-id (spark.registries.humans). All writes go through CRUD API. */
-async function getHumansRegistryId(backend, account) {
-  const sparksContent = await ensureSparksAndGetContent(backend, account);
-  const sparkCoId = sparksContent.get('@Maia');
-  if (!sparkCoId?.startsWith('co_z')) {
-    throw new Error('@Maia spark not registered. Call /on-added first.');
-  }
-  const sparkStore = await backend.read(null, sparkCoId);
-  await withTimeout(waitForStoreReady(sparkStore, sparkCoId, SPARKS_LOAD_TIMEOUT_MS), SPARKS_LOAD_TIMEOUT_MS, 'spark');
-  const sparkCore = backend.node.getCoValue(sparkCoId);
-  if (!sparkCore || !backend.isAvailable(sparkCore)) throw new Error('Human spark not available');
-  const sparkContent = backend.getCurrentContent(sparkCore);
-  const registriesId = sparkContent?.get?.('registries');
-  if (!registriesId?.startsWith('co_z')) throw new Error('spark.registries not found');
-  const registriesStore = await backend.read(null, registriesId);
-  await withTimeout(waitForStoreReady(registriesStore, registriesId, SPARKS_LOAD_TIMEOUT_MS), SPARKS_LOAD_TIMEOUT_MS, 'registries');
-  const registriesCore = backend.node.getCoValue(registriesId);
-  if (!registriesCore || !backend.isAvailable(registriesCore)) throw new Error('registries not available');
-  const registriesContent = backend.getCurrentContent(registriesCore);
-  const humansId = registriesContent?.get?.('humans');
-  if (!humansId?.startsWith('co_z')) {
-    throw new Error('spark.registries.humans not found. Restart agent to run migration.');
-  }
-  const humansStore = await backend.read(null, humansId);
-  await withTimeout(waitForStoreReady(humansStore, humansId, SPARKS_LOAD_TIMEOUT_MS), SPARKS_LOAD_TIMEOUT_MS, 'humans');
-  return humansId;
 }
 
 async function handleRegisterHuman(worker, body) {
   const { username, accountId } = body || {};
-  if (!username || typeof username !== 'string' || !username.trim()) {
-    return jsonResponse({ ok: false, error: 'username required (unique)', validationErrors: [{ field: 'username', message: 'required' }] }, 400);
-  }
+  if (!username || typeof username !== 'string' || !username.trim()) return err('username required (unique)', 400, { validationErrors: [{ field: 'username', message: 'required' }] });
   const u = username.trim();
-  if (!accountId || typeof accountId !== 'string') {
-    return jsonResponse({ ok: false, error: 'accountId required', validationErrors: [{ field: 'accountId', message: 'required' }] }, 400);
-  }
-  const { backend, dbEngine } = await getBackendAndDbEngine(worker);
+  if (!accountId || typeof accountId !== 'string') return err('accountId required', 400, { validationErrors: [{ field: 'accountId', message: 'required' }] });
+  const { backend, dbEngine } = worker;
   try {
-    const humansId = await getHumansRegistryId(backend, worker.account);
+    const sparksId = getSparksId(worker.account);
+    const humansId = await getCoIdByPath(backend, sparksId, ['@Maia', 'registries', 'humans'], { retries: 2 });
     const raw = await backend.getRawRecord(humansId);
     const existing = raw?.[u];
-    if (existing != null && existing !== accountId) {
-      return jsonResponse({ ok: false, error: 'username already registered to different account', validationErrors: [{ field: 'username', message: 'unique required' }] }, 409);
-    }
+    if (existing != null && existing !== accountId) return err('username already registered to different account', 409, { validationErrors: [{ field: 'username', message: 'unique required' }] });
     const updateResult = await dbEngine.execute({ op: 'update', id: humansId, data: { [u]: accountId } });
     if (updateResult && updateResult.ok === false) {
       const msg = updateResult.errors?.map((e) => e.message).join('; ') ?? 'update failed';
-      const isValidation = msg.includes('Validation failed') || msg.includes('validation');
-      const status = isValidation ? 400 : 500;
-      return jsonResponse({ ok: false, error: msg, ...(isValidation && { validationErrors: [{ field: 'accountId', message: msg }] }) }, status);
+      return err(msg, msg.includes('Validation failed') || msg.includes('validation') ? 400 : 500, msg.includes('validation') ? { validationErrors: [{ field: 'accountId', message: msg }] } : {});
     }
     console.log('[agent] Registered human:', u, '->', accountId);
     return jsonResponse({ ok: true, username: u, accountId });
   } catch (e) {
     const msg = e?.message ?? 'failed to register';
-    const isValidation = msg.includes('Validation failed') || msg.includes('validation');
-    const status = isValidation ? 400 : 500;
-    return jsonResponse({ ok: false, error: msg, ...(isValidation && { validationErrors: [{ field: 'accountId', message: msg }] }) }, status);
+    const isVal = msg.includes('Validation failed') || msg.includes('validation');
+    return err(msg, isVal ? 400 : 500, isVal ? { validationErrors: [{ field: 'accountId', message: msg }] } : {});
   }
 }
 
 async function handleTrigger(worker, body) {
-  const { backend, dbEngine } = await getBackendAndDbEngine(worker);
+  const { backend, dbEngine } = worker;
   const text = body?.text ?? 'Test todo from agent';
   let spark = body?.spark;
   if (spark == null) {
     try {
-      const sparksContent = await ensureSparksAndGetContent(backend, worker.account);
-      if (sparksContent?.get?.('@Maia')) spark = '@Maia';
+      const sparksId = worker.account.get('sparks');
+      if (sparksId?.startsWith('co_z')) {
+        const sparksContent = await loadCoMap(backend, sparksId, { retries: 2 });
+        if (sparksContent?.get?.('@Maia')) spark = '@Maia';
+      }
     } catch (_) {}
     if (spark == null) spark = '@maia';
   }
@@ -203,123 +120,64 @@ async function handleTrigger(worker, body) {
       data: { text, done: false },
       spark,
     });
-    if (result && result.ok === false) {
-      const msg = result.errors?.map((e) => e.message).join('; ') ?? 'create failed';
-      return jsonResponse({ ok: false, error: msg }, 400);
-    }
+    if (result && result.ok === false) return err(result.errors?.map((e) => e.message).join('; ') ?? 'create failed');
     const todoId = result?.data?.id ?? result?.id;
     console.log('[agent] Created todo:', todoId, 'spark:', spark);
     return jsonResponse({ ok: true, created: todoId, spark, text });
   } catch (e) {
     console.error('[agent] Trigger failed:', e.message);
-    return jsonResponse({ ok: false, error: e.message }, 500);
+    return err(e.message, 500);
+  }
+}
+
+async function handleProfile(worker) {
+  try {
+    const { account, backend } = worker;
+    const accountId = account?.id ?? account?.$jazz?.id ?? null;
+    const profileId = account?.get?.('profile') ?? null;
+    const sparksId = account?.get?.('sparks') ?? null;
+    let profileName = null;
+    if (profileId?.startsWith('co_z')) {
+      const profileStore = await backend.read(null, profileId);
+      await waitForStoreReady(profileStore, profileId, 5000).catch(() => {});
+      const profileData = profileStore?.value;
+      if (profileData && !profileData.error) profileName = profileData?.name ?? profileData?.properties?.name ?? null;
+    }
+    let sparks = null;
+    if (sparksId?.startsWith('co_z')) {
+      try {
+        const sparksContent = await loadCoMap(backend, sparksId, { retries: 2 });
+        if (sparksContent?.get) {
+          sparks = {};
+          const keys = sparksContent.keys && typeof sparksContent.keys === 'function' ? sparksContent.keys() : Object.keys(sparksContent);
+          for (const key of keys) sparks[key] = sparksContent.get(key);
+        }
+      } catch (e) {
+        sparks = { _error: e?.message ?? 'failed to load' };
+      }
+    }
+    return jsonResponse({ accountId, profileId, sparksId, sparks, profileName: profileName ?? '(not loaded)' });
+  } catch (e) {
+    return err(e.message, 500);
   }
 }
 
 async function handleHttp(req, { worker }) {
   const url = new URL(req.url);
-
-  if (url.pathname === '/health') {
-    return jsonResponse({ status: 'ok', service: 'agent' });
-  }
-
-  if (url.pathname === '/profile' && req.method === 'GET') {
+  if (url.pathname === '/health') return jsonResponse({ status: 'ok', service: 'agent' });
+  if (url.pathname === '/profile' && req.method === 'GET') return handleProfile(worker);
+  async function post(parseStrict, handler) {
     try {
-      const { account } = worker;
-      const { backend } = await getBackendAndDbEngine(worker);
-      const accountId = account?.id ?? account?.$jazz?.id ?? null;
-      const profileId = account?.get?.('profile') ?? null;
-      const sparksId = account?.get?.('sparks') ?? null;
-      let profileName = null;
-      if (profileId?.startsWith('co_z')) {
-        const profileStore = await backend.read(null, profileId);
-        await waitForStoreReady(profileStore, profileId, 5000).catch(() => {});
-        const profileData = profileStore?.value;
-        if (profileData && !profileData.error) {
-          profileName = profileData?.name ?? profileData?.properties?.name ?? null;
-        }
-      }
-      let sparks = null;
-      if (sparksId?.startsWith('co_z')) {
-        try {
-          const sparksContent = await ensureSparksAndGetContent(backend, account);
-          if (sparksContent?.get) {
-            sparks = {};
-            const keys = sparksContent.keys && typeof sparksContent.keys === 'function'
-              ? sparksContent.keys()
-              : Object.keys(sparksContent);
-            for (const key of keys) {
-              sparks[key] = sparksContent.get(key);
-            }
-          }
-        } catch (e) {
-          sparks = { _error: e?.message ?? 'failed to load' };
-        }
-      }
-      const out = {
-        accountId,
-        profileId,
-        sparksId,
-        sparks,
-        profileName: profileName ?? '(not loaded)',
-      };
-      console.log('[agent] /profile:', JSON.stringify(out, null, 2));
-      return jsonResponse(out);
+      const body = parseStrict ? await req.json() : await req.json().catch(() => ({}));
+      return await handler(worker, body);
     } catch (e) {
-      console.log('[agent] /profile error:', e.message);
-      return jsonResponse({ ok: false, error: e.message }, 500);
+      return err(e.message, e?.message?.includes('timed out') ? 504 : 400);
     }
   }
-
-  if (url.pathname === '/on-added' && req.method === 'POST') {
-    try {
-      const body = await req.json();
-      const result = await withTimeout(
-        handleOnAdded(worker, body),
-        REQUEST_TIMEOUT_MS,
-        '/on-added'
-      );
-      return result;
-    } catch (e) {
-      console.log('[agent] /on-added error:', e.message);
-      const status = e?.message?.includes('timed out') ? 504 : 400;
-      return jsonResponse({ ok: false, error: e.message }, status);
-    }
-  }
-
-  if (url.pathname === '/register-human' && req.method === 'POST') {
-    try {
-      const body = await req.json().catch(() => ({}));
-      const result = await withTimeout(handleRegisterHuman(worker, body), REQUEST_TIMEOUT_MS, '/register-human');
-      return result;
-    } catch (e) {
-      console.log('[agent] /register-human error:', e.message);
-      const status = e?.message?.includes('timed out') ? 504 : 400;
-      return jsonResponse({ ok: false, error: e.message }, status);
-    }
-  }
-
-  if (url.pathname === '/trigger' && req.method === 'POST') {
-    try {
-      const body = await req.json().catch(() => ({}));
-      return await handleTrigger(worker, body);
-    } catch (e) {
-      console.log('[agent] /trigger error:', e.message);
-      return jsonResponse({ ok: false, error: e.message }, 400);
-    }
-  }
-
+  if (url.pathname === '/on-added' && req.method === 'POST') return post(true, (w, b) => withTimeout(handleOnAdded(w, b), REQUEST_TIMEOUT_MS, '/on-added'));
+  if (url.pathname === '/register-human' && req.method === 'POST') return post(false, (w, b) => withTimeout(handleRegisterHuman(w, b), REQUEST_TIMEOUT_MS, '/register-human'));
+  if (url.pathname === '/trigger' && req.method === 'POST') return post(false, handleTrigger);
   return new Response('Not Found', { status: 404 });
-}
-
-function getSyncDomain() {
-  if (typeof process === 'undefined' || !process.env) return null;
-  return (
-    process.env.PUBLIC_SYNC_DOMAIN ||
-    process.env.AGENT_MAIA_SYNC_DOMAIN ||
-    process.env.PUBLIC_API_DOMAIN ||
-    (process.env.NODE_ENV !== 'production' ? 'localhost:4203' : null)
-  );
 }
 
 async function main() {
@@ -340,7 +198,10 @@ async function main() {
     );
   }
 
-  const syncDomain = getSyncDomain();
+  const syncDomain =
+    (typeof process !== 'undefined' && process.env
+      ? process.env.PUBLIC_SYNC_DOMAIN || process.env.AGENT_MAIA_SYNC_DOMAIN || process.env.PUBLIC_API_DOMAIN || (process.env.NODE_ENV !== 'production' ? 'localhost:4203' : null)
+      : null);
   if (syncDomain) {
     console.log(`[agent] Connecting to sync server: ${syncDomain}`);
   }
@@ -354,7 +215,10 @@ async function main() {
     inMemory: false,
     createName: processEnv.AGENT_MAIA_PROFILE_NAME || 'Maia Agent',
   });
-  const worker = { node, account };
+  const backend = new CoJSONBackend(node, account, { systemSpark: '@Maia' });
+  const dbEngine = new DBEngine(backend);
+  backend.dbEngine = dbEngine;
+  const worker = { node, account, backend, dbEngine };
   console.log('[agent] ✓ Account ready');
 
   const port = parseInt(process.env.PORT || '4204', 10);
@@ -367,7 +231,7 @@ async function main() {
   console.log(`[agent] ✓ HTTP server on port ${port}`);
 }
 
-main().catch((err) => {
-  console.error('[agent] Failed to start:', err.message);
+main().catch((e) => {
+  console.error('[agent] Failed to start:', e.message);
   process.exit(1);
 });
