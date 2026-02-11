@@ -4,69 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chat</title>
-  <style>
-    /* 
-      HOST CSS - ABSOLUTELY MINIMAL
-      This is outside Shadow DOM and should only handle layout.
-      All styling happens inside Shadow DOM via Constructable Stylesheets.
-    */
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-
-    body {
-      background: #f8f9fa;
-      font-family: system-ui, sans-serif;
-      color: #333;
-      font-size: 14px;
-      overflow: hidden;
-      width: 100vw;
-      height: 100vh;
-    }
-
-    .host-wrapper {
-      width: 100vw;
-      height: 100vh;
-      background: #f8f9fa;
-      overflow: hidden;
-    }
-  </style>
+  <style>*{margin:0;padding:0;box-sizing:border-box}body{background:#f8f9fa;font-family:system-ui,sans-serif;overflow:hidden;width:100vw;height:100vh}.host-wrapper{width:100vw;height:100vh;background:#f8f9fa;overflow:hidden}</style>
 </head>
 <body>
-  <!-- HOST: Minimal layout wrapper only -->
-  <div class="host-wrapper">
-    <div id="actor-chat"></div>
-  </div>
-  
+  <div class="host-wrapper"><div id="actor-chat"></div></div>
   <script type="module">
-    // MaiaOS - Chat Vibe
     import { loadChatVibe } from './loader.js';
-    
-    async function boot() {
-      try {
-        // Load Chat Vibe from IndexedDB (offline-first)
-        const { os, vibe, actor: chatActor } = await loadChatVibe(document.getElementById('actor-chat'));
-        
-        console.log('✅ Vibe loaded:', vibe.name);
-        console.log('✅ Chat Actor with State Machine:', chatActor.machine?.currentState);
-        console.log('💡 Chat is ready for conversations!');
-        
-        // Expose OS globally for debugging
-        window.MaiaOS = os;
-        window.os = os;
-        window.engines = os.getEngines();
-        window.vibe = vibe;
-        window.chatActor = chatActor;
-        
-      } catch (error) {
-        console.error('❌ Boot failed:', error);
-        console.error('Stack:', error.stack);
-      }
-    }
-    
-    boot();
+    import { bootVibe } from '../boot.js';
+    bootVibe(loadChatVibe, 'actor-chat', 'chatActor').catch(e => console.error('❌ Boot failed:', e));
   </script>
 </body>
 </html>

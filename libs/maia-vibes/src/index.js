@@ -17,61 +17,30 @@ export { TodosVibeRegistry as TodosRegistry } from './todos/registry.js';
 export { DbVibeRegistry as DbRegistry } from './db/registry.js';
 export { SparksVibeRegistry as SparksRegistry } from './sparks/registry.js';
 
+const REGISTRY_IMPORTS = [
+	['./todos/registry.js', 'TodosVibeRegistry'],
+	['./chat/registry.js', 'ChatVibeRegistry'],
+	['./db/registry.js', 'DbVibeRegistry'],
+	['./sparks/registry.js', 'SparksVibeRegistry'],
+	['./creator/registry.js', 'CreatorVibeRegistry'],
+];
+
 /**
  * Automatically discover and import all vibe registries
- * Looks for directories containing registry.js files and imports them
  * @returns {Promise<Array>} Array of vibe registry objects
  */
 export async function getAllVibeRegistries() {
-	const vibeRegistries = [];
-	
-	// Explicitly import known registries to ensure they're loaded
-	try {
-		const { TodosVibeRegistry } = await import('./todos/registry.js');
-		if (TodosVibeRegistry && TodosVibeRegistry.vibe) {
-			vibeRegistries.push(TodosVibeRegistry);
+	const registries = [];
+	for (const [path, name] of REGISTRY_IMPORTS) {
+		try {
+			const m = await import(path);
+			const R = m[name];
+			if (R?.vibe) registries.push(R);
+		} catch (e) {
+			console.warn(`[Vibes] Could not load ${name}:`, e.message);
 		}
-	} catch (error) {
-		console.warn('[Vibes] Could not load TodosVibeRegistry:', error.message);
 	}
-	
-	try {
-		const { ChatVibeRegistry } = await import('./chat/registry.js');
-		if (ChatVibeRegistry && ChatVibeRegistry.vibe) {
-			vibeRegistries.push(ChatVibeRegistry);
-		}
-	} catch (error) {
-		console.warn('[Vibes] Could not load ChatVibeRegistry:', error.message);
-	}
-	
-	try {
-		const { DbVibeRegistry } = await import('./db/registry.js');
-		if (DbVibeRegistry && DbVibeRegistry.vibe) {
-			vibeRegistries.push(DbVibeRegistry);
-		}
-	} catch (error) {
-		console.warn('[Vibes] Could not load DbVibeRegistry:', error.message);
-	}
-	
-	try {
-		const { SparksVibeRegistry } = await import('./sparks/registry.js');
-		if (SparksVibeRegistry && SparksVibeRegistry.vibe) {
-			vibeRegistries.push(SparksVibeRegistry);
-		}
-	} catch (error) {
-		console.warn('[Vibes] Could not load SparksVibeRegistry:', error.message);
-	}
-
-	try {
-		const { CreatorVibeRegistry } = await import('./creator/registry.js');
-		if (CreatorVibeRegistry && CreatorVibeRegistry.vibe) {
-			vibeRegistries.push(CreatorVibeRegistry);
-		}
-	} catch (error) {
-		console.warn('[Vibes] Could not load CreatorVibeRegistry:', error.message);
-	}
-
-	return vibeRegistries;
+	return registries;
 }
 
 /**

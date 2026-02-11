@@ -4,47 +4,14 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Creator</title>
-  <style>
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    body {
-      background: #f8f9fa;
-      font-family: system-ui, sans-serif;
-      color: #333;
-      font-size: 14px;
-      overflow: hidden;
-      width: 100vw;
-      height: 100vh;
-    }
-    .host-wrapper {
-      width: 100vw;
-      height: 100vh;
-      background: #f8f9fa;
-      overflow: hidden;
-    }
-  </style>
+  <style>*{margin:0;padding:0;box-sizing:border-box}body{background:#f8f9fa;font-family:system-ui,sans-serif;overflow:hidden;width:100vw;height:100vh}.host-wrapper{width:100vw;height:100vh;background:#f8f9fa;overflow:hidden}</style>
 </head>
 <body>
-  <div class="host-wrapper">
-    <div id="actor-creator"></div>
-  </div>
-
+  <div class="host-wrapper"><div id="actor-creator"></div></div>
   <script type="module">
     import { loadCreatorVibe } from './loader.js';
-
-    async function boot() {
-      try {
-        const { os, vibe, actor } = await loadCreatorVibe(document.getElementById('actor-creator'));
-        console.log('✅ Creator loaded:', vibe.name);
-        window.MaiaOS = os;
-        window.os = os;
-        window.vibe = vibe;
-        window.actor = actor;
-      } catch (error) {
-        console.error('❌ Boot failed:', error);
-      }
-    }
-
-    boot();
+    import { bootVibe } from '../boot.js';
+    bootVibe(loadCreatorVibe, 'actor-creator', 'actor').catch(e => console.error('❌ Boot failed:', e));
   </script>
 </body>
 </html>
