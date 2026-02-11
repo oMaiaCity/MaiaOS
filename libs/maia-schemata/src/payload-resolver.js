@@ -1,14 +1,9 @@
 /**
  * Universal Payload Resolution Interface
- * 
- * ONE interface for resolving payloads in two stages:
- * 1. DOM markers (view layer) - @inputValue, @dataColumn
- * 2. MaiaScript expressions (state machine) - $context, $$item, $$result, DSL operations
- * 
- * This eliminates dual resolution - View extracts DOM, State resolves MaiaScript
+ *
+ * DOM markers (view layer) - @inputValue, @dataColumn
+ * MaiaScript expressions: Use resolveExpressions from expression-resolver directly
  */
-
-import { resolveExpressions } from './expression-resolver.js';
 
 /**
  * Extract DOM marker values ONLY (view layer)
@@ -56,27 +51,4 @@ export function extractDOMValues(payload, element) {
   }
 
   return result;
-}
-
-/**
- * Resolve MaiaScript expressions ONLY (state machine)
- * Handles $context, $$item, $$result, DSL operations
- * 
- * @param {any} payload - The payload to resolve (may contain MaiaScript expressions)
- * @param {Object} evaluator - Evaluator instance with evaluate() and isDSLOperation() methods
- * @param {Object} context - Actor context (for $context resolution)
- * @param {Object} item - Event payload (for $$item resolution)
- * @param {any} result - Last tool result (for $$result resolution)
- * @returns {Promise<any>} Fully resolved payload with all MaiaScript expressions evaluated
- */
-export async function resolveMaiaScript(payload, evaluator, context, item, result = null) {
-  // Build data context for expression resolver
-  const data = {
-    context,
-    item: item || {},
-    result: result || null
-  };
-
-  // Use universal expression resolver (handles $, $$, DSL operations)
-  return await resolveExpressions(payload, evaluator, data);
 }

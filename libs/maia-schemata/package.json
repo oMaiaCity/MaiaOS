@@ -7,7 +7,6 @@
     ".": "./src/index.js",
     "./validation.engine": "./src/validation.engine.js",
     "./validation.helper": "./src/validation.helper.js",
-    "./schema-loader": "./src/schema-loader.js",
     "./co-id-generator": "./src/co-id-generator.js",
     "./schema-transformer": "./src/schema-transformer.js",
     "./expression-resolver": "./src/expression-resolver.js",

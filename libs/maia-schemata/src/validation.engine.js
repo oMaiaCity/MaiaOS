@@ -11,7 +11,7 @@ import { isSchemaRef } from './patterns.js';
 // Use merged meta.schema.json (contains everything: base JSON Schema 2020-12 + MaiaOS extensions)
 // This is the single source of truth for metaschema
 import customMetaSchema from './os/meta.schema.json';
-import { formatValidationErrors, withSchemaValidationDisabled } from './validation.helper.js';
+import { formatValidationErrors, withSchemaValidationDisabled } from './validation.utils.js';
 
 export class ValidationEngine {
   constructor(options = {}) {

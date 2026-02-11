@@ -866,25 +866,3 @@ export function validateSchemaStructure(schema, path = '', options = {}) {
 
   return errors;
 }
-
-/**
- * Verify that no @maia/schema/... references remain in transformed schema
- * Convenience function that calls validateSchemaStructure with checkSchemaReferences=true
- * @param {Object} schema - Transformed schema to verify
- * @param {string} path - Current path (for error messages)
- * @returns {Array<string>} Array of error messages (empty if valid)
- */
-export function verifyNoSchemaReferences(schema, path = '') {
-  return validateSchemaStructure(schema, path, { checkSchemaReferences: true, checkNestedCoTypes: false });
-}
-
-/**
- * Validate that no nested co-types exist (must use $co keyword instead)
- * Convenience function that calls validateSchemaStructure with checkNestedCoTypes=true
- * @param {Object} schema - Schema to validate
- * @param {string} path - Current path (for error messages)
- * @returns {Array<string>} Array of error messages (empty if valid)
- */
-export function validateNoNestedCoTypes(schema, path = '') {
-  return validateSchemaStructure(schema, path, { checkSchemaReferences: false, checkNestedCoTypes: true });
-}

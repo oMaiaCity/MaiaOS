@@ -1,42 +1,10 @@
 /**
  * Validation Helper - Initializes validation engine with all schemas
- * 
- * This helper ensures all schemas are loaded and provides a convenient
- * validation function for engines to use.
  */
 
-import { ValidationEngine } from './index.js';
-
-/**
- * Format AJV validation errors into a consistent structure
- * @param {Array} errors - Array of AJV error objects
- * @returns {Array} Formatted error objects
- */
-export function formatValidationErrors(errors) {
-  return errors.map(error => ({
-    instancePath: error.instancePath || '/',
-    schemaPath: error.schemaPath || '',
-    keyword: error.keyword || '',
-    message: error.message || '',
-    params: error.params || {}
-  }));
-}
-
-/**
- * Execute a callback with schema validation temporarily disabled
- * @param {Object} ajv - AJV instance
- * @param {Function} callback - Callback function to execute (can be async)
- * @returns {*} Return value of callback (or Promise if callback is async)
- */
-export async function withSchemaValidationDisabled(ajv, callback) {
-  const originalValidateSchema = ajv.opts.validateSchema;
-  ajv.opts.validateSchema = false;
-  try {
-    return await callback();
-  } finally {
-    ajv.opts.validateSchema = originalValidateSchema;
-  }
-}
+import { ValidationEngine } from './validation.engine.js';
+import { formatValidationErrors, handleValidationResult } from './validation.utils.js';
+export { formatValidationErrors, withSchemaValidationDisabled } from './validation.utils.js';
 
 // Singleton validation engine instance
 let validationEngine = null;
@@ -172,54 +140,15 @@ export async function validateAgainstSchema(schema, data, context = '', throwOnE
       return { valid: true, errors: null };
     }
     
-    // Format errors
-    const errors = validate.errors || [];
-    const formattedErrors = formatValidationErrors(errors);
-    
-    // Throw if requested
-    if (throwOnError) {
-      const contextMsg = context ? ` for '${context}'` : '';
-      const errorDetails = formattedErrors
-        .map(err => `  - ${err.instancePath}: ${err.message}`)
-        .join('\n');
-      
-      throw new Error(
-        `Validation failed${contextMsg}:\n${errorDetails}`
-      );
-    }
-    
-    return {
-      valid: false,
-      errors: formattedErrors
-    };
+    const formattedErrors = formatValidationErrors(validate.errors || []);
+    return handleValidationResult(formattedErrors, context, throwOnError);
   } catch (error) {
-    // If schema already exists, try to retrieve and use it
-    if (error.message && error.message.includes('already exists') && schema.$id) {
+    if (error.message?.includes('already exists') && schema.$id) {
       const existingValidator = engine.ajv.getSchema(schema.$id);
       if (existingValidator) {
-        const valid = existingValidator(data);
-        if (valid) {
-          return { valid: true, errors: null };
-        }
-        const errors = existingValidator.errors || [];
-        const formattedErrors = formatValidationErrors(errors);
-        
-        // Throw if requested
-        if (throwOnError) {
-          const contextMsg = context ? ` for '${context}'` : '';
-          const errorDetails = formattedErrors
-            .map(err => `  - ${err.instancePath}: ${err.message}`)
-            .join('\n');
-          
-          throw new Error(
-            `Validation failed${contextMsg}:\n${errorDetails}`
-          );
-        }
-        
-        return {
-          valid: false,
-          errors: formattedErrors
-        };
+        if (existingValidator(data)) return { valid: true, errors: null };
+        const formattedErrors = formatValidationErrors(existingValidator.errors || []);
+        return handleValidationResult(formattedErrors, context, throwOnError);
       }
     }
     

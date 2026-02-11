@@ -18,8 +18,8 @@ export { ToolEngine } from "./engines/tool.engine.js";
 export { Evaluator as MaiaScriptEvaluator } from "./utils/evaluator.js";
 export { Registry as ModuleRegistry } from "./modules/registry.js";
 
-// Export DB Engine (unified database operation engine)
-export { DBEngine } from "./engines/db.engine.js";
+// Export DB Engine (unified database operation engine) - from operations, pass evaluator via options
+export { DBEngine } from "@MaiaOS/operations";
 
 // SubscriptionEngine eliminated - all subscriptions handled via direct read() + ReactiveStore
 

@@ -312,17 +312,20 @@ export class MaiaOS {
    * @throws {Error} If neither backend nor node+account is provided
    */
   static async _initializeDatabase(os, config = {}) {
+    // Create minimal evaluator for DBEngine (expression evaluation in updates)
+    const evaluator = new MaiaScriptEvaluator();
+
     // If backend is provided, use it
     if (config.backend) {
-      os.dbEngine = new DBEngine(config.backend);
+      os.dbEngine = new DBEngine(config.backend, { evaluator });
       return config.backend;
     }
-    
+
     // If node and account are provided, use CoJSON backend
     if (config.node && config.account) {
       const { CoJSONBackend } = await import('@MaiaOS/db');
       const backend = new CoJSONBackend(config.node, config.account, { systemSpark: '@maia' });
-      os.dbEngine = new DBEngine(backend);
+      os.dbEngine = new DBEngine(backend, { evaluator });
       // Set dbEngine on backend for runtime schema validation in create functions
       backend.dbEngine = os.dbEngine;
       // Using CoJSON backend

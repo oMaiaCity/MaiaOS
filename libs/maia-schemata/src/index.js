@@ -22,7 +22,7 @@ export { getValidationEngine, validateAgainstSchema, validateAgainstSchemaOrThro
 export { resolve, loadSchemasFromAccount } from '@MaiaOS/db';
 
 // Export schema transformer functions (seeding only)
-export { transformForSeeding, validateSchemaStructure, verifyNoSchemaReferences, validateNoNestedCoTypes } from './schema-transformer.js';
+export { transformForSeeding, validateSchemaStructure } from './schema-transformer.js';
 
 // Export co-id registry (seeding only)
 export { CoIdRegistry } from './co-id-generator.js';
@@ -88,104 +88,41 @@ import updateAgentInputMessageSchema from './message/UPDATE_AGENT_INPUT.schema.j
 import addAgentMessageSchema from './message/ADD_AGENT.schema.json';
 import removeMemberMessageSchema from './message/REMOVE_MEMBER.schema.json';
 
-// Schema registry
+// Unified schema registry (os + data + message)
 const SCHEMAS = {
-  actor: actorSchema,
-  context: contextSchema,
-  state: stateSchema,
-  view: viewSchema,
-  style: styleSchema,
-  brand: styleSchema,
-  'brand.style': styleSchema,
-  'actor.style': styleSchema,
-  tool: toolSchema,
-  vibe: vibeSchema,
-  message: messageSchema,
-  // Extracted $defs as separate schemas (expression is inline type definition, not a CoValue)
-  guard: guardSchema,
-  action: actionSchema,
-  transition: transitionSchema,
-  messagePayload: messagePayloadSchema,
-  messageType: messageTypeSchema,
-  // MaiaScript expression schema (for validating DSL expressions)
+  actor: actorSchema, context: contextSchema, state: stateSchema, view: viewSchema,
+  style: styleSchema, brand: styleSchema, 'brand.style': styleSchema, 'actor.style': styleSchema,
+  tool: toolSchema, vibe: vibeSchema, message: messageSchema,
+  guard: guardSchema, action: actionSchema, transition: transitionSchema,
+  messagePayload: messagePayloadSchema, messageType: messageTypeSchema,
   'maia-script-expression': expressionSchema,
-  // CoValue schemas (separate CoValues referenced via $co)
-  subscribers: subscribersSchema,
-  inbox: inboxSchema,
-  children: childrenSchema,
-  // OS infrastructure schemas
-  'os/schematas-registry': schematasRegistrySchema,
-  'os/os-registry': osRegistrySchema,
-  'os/capabilities': capabilitiesSchema,
-  'os/indexes-registry': indexesRegistrySchema,
-  'os/vibes-registry': vibesRegistrySchema,
-  'os/sparks-registry': sparksRegistrySchema,
-  'os/humans-registry': humansRegistrySchema,
-  'os/registries': registriesSchema
-};
-
-// Data schemas registry (for application data validation)
-const DATA_SCHEMAS = {
-  'data/todos': todosDataSchema,
-  'data/chat': chatDataSchema,
-  'data/spark': sparkDataSchema
-};
-
-// Message type schemas registry (for message payload validation)
-const MESSAGE_SCHEMAS = {
-  'message/CREATE_BUTTON': createButtonMessageSchema,
-  'message/TOGGLE_BUTTON': toggleButtonMessageSchema,
-  'message/DELETE_BUTTON': deleteButtonMessageSchema,
-  'message/UPDATE_INPUT': updateInputMessageSchema,
-  'message/SWITCH_VIEW': switchViewMessageSchema,
-  'message/SUCCESS': successMessageSchema,
-  'message/ERROR': errorMessageSchema,
-  'message/SEND_MESSAGE': sendMessageMessageSchema,
-  'message/RETRY': retryMessageSchema,
-  'message/DISMISS': dismissMessageSchema,
-  'message/SELECT_NAV': selectNavMessageSchema,
-  'message/SELECT_ROW': selectRowMessageSchema,
-  'message/SELECT_SPARK': selectSparkMessageSchema,
-  'message/LOAD_ACTOR': loadActorMessageSchema,
-  'message/UPDATE_AGENT_INPUT': updateAgentInputMessageSchema,
-  'message/ADD_AGENT': addAgentMessageSchema,
+  subscribers: subscribersSchema, inbox: inboxSchema, children: childrenSchema,
+  'os/schematas-registry': schematasRegistrySchema, 'os/os-registry': osRegistrySchema,
+  'os/capabilities': capabilitiesSchema, 'os/indexes-registry': indexesRegistrySchema,
+  'os/vibes-registry': vibesRegistrySchema, 'os/sparks-registry': sparksRegistrySchema,
+  'os/humans-registry': humansRegistrySchema, 'os/registries': registriesSchema,
+  'data/todos': todosDataSchema, 'data/chat': chatDataSchema, 'data/spark': sparkDataSchema,
+  'message/CREATE_BUTTON': createButtonMessageSchema, 'message/TOGGLE_BUTTON': toggleButtonMessageSchema,
+  'message/DELETE_BUTTON': deleteButtonMessageSchema, 'message/UPDATE_INPUT': updateInputMessageSchema,
+  'message/SWITCH_VIEW': switchViewMessageSchema, 'message/SUCCESS': successMessageSchema,
+  'message/ERROR': errorMessageSchema, 'message/SEND_MESSAGE': sendMessageMessageSchema,
+  'message/RETRY': retryMessageSchema, 'message/DISMISS': dismissMessageSchema,
+  'message/SELECT_NAV': selectNavMessageSchema, 'message/SELECT_ROW': selectRowMessageSchema,
+  'message/SELECT_SPARK': selectSparkMessageSchema, 'message/LOAD_ACTOR': loadActorMessageSchema,
+  'message/UPDATE_AGENT_INPUT': updateAgentInputMessageSchema, 'message/ADD_AGENT': addAgentMessageSchema,
   'message/REMOVE_MEMBER': removeMemberMessageSchema
 };
 
-/**
- * Get schema for a given type (SEEDING/MIGRATIONS ONLY - synchronous)
- * Used to build registrySchemas for seeding
- * @param {string} type - Data type (e.g., 'actor', 'context', 'state', 'message/CREATE_BUTTON')
- * @returns {object|null} Schema object or null if not found
- */
 export function getSchema(type) {
-  // Check for full @maia/schema/ prefix
-  if (type.startsWith('@maia/schema/')) {
-    const short = type.replace('@maia/schema/', '');
-    if (short.startsWith('message/')) {
-      return MESSAGE_SCHEMAS[short] || null;
-    }
-    return SCHEMAS[short] || DATA_SCHEMAS[short] || null;
-  }
-  // Check message schemas (message/{TYPE} format)
-  if (type.startsWith('message/')) {
-    return MESSAGE_SCHEMAS[type] || null;
-  }
-  return SCHEMAS[type] || DATA_SCHEMAS[type] || null;
+  const key = type.startsWith('@maia/schema/') ? type.replace('@maia/schema/', '') : type;
+  return SCHEMAS[key] || null;
 }
 
-/**
- * Get all schemas including data schemas and message schemas (SEEDING/MIGRATIONS ONLY)
- * Used to build registrySchemas for seeding
- * @returns {object} All schema definitions
- */
 export function getAllSchemas() {
-  // Merge all schemas, converting message schemas to @maia/schema/message/{TYPE} format
-  const allMessageSchemas = {};
-  for (const [key, schema] of Object.entries(MESSAGE_SCHEMAS)) {
-    // Convert 'message/CREATE_BUTTON' to '@maia/schema/message/CREATE_BUTTON'
-    allMessageSchemas[`@maia/schema/${key}`] = schema;
+  const msg = {};
+  for (const [k, s] of Object.entries(SCHEMAS)) {
+    if (k.startsWith('message/')) msg[`@maia/schema/${k}`] = s;
   }
-  return { ...SCHEMAS, ...DATA_SCHEMAS, ...allMessageSchemas };
+  return { ...SCHEMAS, ...msg };
 }
 
