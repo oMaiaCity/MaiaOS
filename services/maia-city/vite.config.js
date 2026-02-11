@@ -15,7 +15,7 @@ export default defineConfig(({ mode }) => {
 			port: 4200,
 			strictPort: true, // Fail if port 4200 is taken instead of trying another port
 			open: false,
-			hmr: false, // Disable HMR - configs are in IndexedDB, just refresh manually
+			hmr: true,
 			fs: {
 				// Allow serving files from entire monorepo
 				allow: ['../..']

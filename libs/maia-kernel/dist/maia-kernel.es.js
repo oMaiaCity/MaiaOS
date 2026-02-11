@@ -8274,7 +8274,7 @@ async function rr(t, A, e) {
   return !t || typeof t != "object" ? t : await ot(t, e, { context: A, item: {} });
 }
 async function ii(t, A, e = {}) {
-  const i = new wA({}), o = /* @__PURE__ */ new Map(), r = /* @__PURE__ */ new Map(), n = /* @__PURE__ */ new Map(), s = /* @__PURE__ */ new Map(), { timeoutMs: a = 5e3, onChange: g } = e, { Evaluator: I } = await Promise.resolve().then(() => yD), c = new I();
+  const i = new wA({}), o = /* @__PURE__ */ new Map(), r = /* @__PURE__ */ new Map(), n = /* @__PURE__ */ new Map(), s = /* @__PURE__ */ new Map(), { timeoutMs: a = 5e3, onChange: g } = e, { Evaluator: I } = await Promise.resolve().then(() => DD), c = new I();
   let C = null, B = null;
   const Q = () => {
     B || (B = queueMicrotask(() => {
@@ -9313,39 +9313,38 @@ const jt = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   hasSchemaInRegistry: yn,
   isExceptionSchema: Je
 }, Symbol.toStringTag, { value: "Module" }));
+function MQ(t) {
+  const A = t?.id ?? (typeof crypto < "u" && crypto.randomUUID ? crypto.randomUUID() : "");
+  return String(A || "").slice(-12) || (typeof crypto < "u" && crypto.randomUUID ? crypto.randomUUID().slice(0, 12) : "");
+}
 async function Dn(t, A, e) {
-  const i = e?.name ?? "Maia";
-  let o = t.get("profile"), r;
-  if (o) {
-    let n = A.getCoValue(o);
-    if (n || (n = await A.loadCoValueCore(o)), n && n.type === "comap")
-      if (n.isAvailable?.()) {
-        const s = n.getCurrentContent?.();
-        s && typeof s.get == "function" && (r = s);
+  const i = e?.name?.trim(), o = i && i.length > 0 ? i : `Traveler ${MQ(t)}`;
+  let r = t.get("profile"), n;
+  if (r) {
+    let s = A.getCoValue(r);
+    if (s || (s = await A.loadCoValueCore(r)), s && s.type === "comap")
+      if (s.isAvailable?.()) {
+        const a = s.getCurrentContent?.();
+        a && typeof a.get == "function" && (n = a);
       } else {
-        await new Promise((a, g) => {
-          const I = setTimeout(() => g(new Error("Timeout waiting for profile")), 15e3), c = n.subscribe((C) => {
-            C?.isAvailable?.() && (clearTimeout(I), c?.(), a());
+        await new Promise((g, I) => {
+          const c = setTimeout(() => I(new Error("Timeout waiting for profile")), 15e3), C = s.subscribe((B) => {
+            B?.isAvailable?.() && (clearTimeout(c), C?.(), g());
           });
         });
-        const s = n.getCurrentContent?.();
-        s && typeof s.get == "function" && (r = s);
+        const a = s.getCurrentContent?.();
+        a && typeof a.get == "function" && (n = a);
       }
   }
-  if (r) {
-    if (e?.name != null) {
-      const n = r.get("name");
-      n !== e.name && (r.set("name", e.name), console.log(`   🔄 Updated profile name from "${n}" to "${e.name}"`));
-    }
-  } else {
-    const n = st("ProfileSchema"), s = A.createGroup();
-    s.addMember("everyone", "reader");
-    const a = s.createMap({ name: i }, n);
-    t.set("profile", a.id);
+  if (!n) {
+    const s = st("ProfileSchema"), a = A.createGroup();
+    a.addMember("everyone", "reader");
+    const g = a.createMap({ name: o }, s);
+    t.set("profile", g.id);
   }
-  await MQ(t, A), await GQ(t, A);
+  await GQ(t, A), await FQ(t, A);
 }
-async function MQ(t, A) {
+async function GQ(t, A) {
   const e = t.get?.("sparks");
   if (!e || typeof e != "string" || !e.startsWith("co_z")) return;
   const i = A.getCoValue(e) || await A.loadCoValueCore(e);
@@ -9378,7 +9377,7 @@ async function MQ(t, A) {
   }
   r > 0 && console.log(`   🔄 Migrated capabilities sparkGuardian -> guardian (${r} sparks)`);
 }
-async function GQ(t, A) {
+async function FQ(t, A) {
   const e = t.get?.("sparks");
   if (!e || typeof e != "string" || !e.startsWith("co_z")) return;
   const i = A.getCoValue(e) || await A.loadCoValueCore(e);
@@ -9428,7 +9427,7 @@ async function GQ(t, A) {
     C.set("humans", j.id), console.log(`   🔄 Created spark.registries.humans for spark ${n}`);
   }
 }
-function FQ(t) {
+function bQ(t) {
   t.addKeyword({
     keyword: "$co",
     macro: (A) => ({
@@ -9474,17 +9473,17 @@ function NA(t) {
 function aI(t) {
   return typeof t == "string" && sI.test(t);
 }
-const bQ = "https://json-schema.org/draft/2020-12/schema", RQ = "@maia/schema/meta", vQ = { "https://json-schema.org/draft/2020-12/vocab/core": !0, "https://json-schema.org/draft/2020-12/vocab/applicator": !0, "https://json-schema.org/draft/2020-12/vocab/unevaluated": !0, "https://json-schema.org/draft/2020-12/vocab/validation": !0, "https://json-schema.org/draft/2020-12/vocab/meta-data": !0, "https://json-schema.org/draft/2020-12/vocab/format-annotation": !0, "https://json-schema.org/draft/2020-12/vocab/content": !0, "https://maiaos.dev/vocab/cojson": !0 }, KQ = [{ $ref: "https://json-schema.org/draft/2020-12/schema" }], YQ = "@maia/schema/meta", UQ = ["object", "boolean"], JQ = !1, HQ = { title: { type: "string", description: "Human-readable schema title (required)" }, cotype: { enum: ["comap", "colist", "costream"], description: "CRDT type at schema root. Schemas can be comap (with properties), colist (with items), or costream (with items). CoText is modeled as colist with string items." }, $co: { type: "string", anyOf: [{ pattern: "^co_z[a-zA-Z0-9]+$", description: "Co-id reference (after transformation)" }, { pattern: "^@[a-zA-Z0-9_-]+/schema/", description: "Human-readable schema ID (before transformation)" }], description: "Reference to schema that this property value must conform to (human-readable ID or co-id). Use $co in properties to reference separate CoValues, never use cotype in properties." }, indexing: { type: "boolean", default: !1, description: "Whether instances of this schema should be indexed in account.os.{schemaCoId}" } }, qQ = ["title", "cotype"], xQ = { comap: { description: "CoMap - CRDT-based collaborative map/object", type: "object", properties: {}, additionalProperties: { anyOf: [{ type: "string", description: "Standard string value" }, { type: "number", description: "Standard number value" }, { type: "integer", description: "Standard integer value" }, { type: "boolean", description: "Standard boolean value" }, { type: "null", description: "Null value" }, { type: "object", description: "Nested object value" }, { type: "array", description: "Array value" }, { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Co-id reference to another CoValue" }, { type: "string", pattern: "^key_[a-zA-Z0-9_]+$", description: "Key reference" }, { type: "string", pattern: "^sealed_", description: "Sealed/encrypted value" }] } }, costream: { description: "CoStream - CRDT-based append-only stream", type: "array", items: { anyOf: [{ type: "object", description: "Stream item object" }, { type: "string", description: "Stream item string" }, { type: "number", description: "Stream item number" }, { type: "boolean", description: "Stream item boolean" }, { type: "null", description: "Stream item null" }] } }, colist: { description: "CoList - CRDT-based collaborative list/array", type: "array", items: { anyOf: [{ type: "object", description: "List item object" }, { type: "string", description: "List item string (can be co-id reference)" }, { type: "number", description: "List item number" }, { type: "integer", description: "List item integer" }, { type: "boolean", description: "List item boolean" }, { type: "null", description: "List item null" }, { type: "array", description: "Nested array" }] } } }, so = {
-  $schema: bQ,
-  $id: RQ,
-  $vocabulary: vQ,
-  allOf: KQ,
-  title: YQ,
-  type: UQ,
-  indexing: JQ,
-  properties: HQ,
-  required: qQ,
-  $defs: xQ
+const RQ = "https://json-schema.org/draft/2020-12/schema", vQ = "@maia/schema/meta", KQ = { "https://json-schema.org/draft/2020-12/vocab/core": !0, "https://json-schema.org/draft/2020-12/vocab/applicator": !0, "https://json-schema.org/draft/2020-12/vocab/unevaluated": !0, "https://json-schema.org/draft/2020-12/vocab/validation": !0, "https://json-schema.org/draft/2020-12/vocab/meta-data": !0, "https://json-schema.org/draft/2020-12/vocab/format-annotation": !0, "https://json-schema.org/draft/2020-12/vocab/content": !0, "https://maiaos.dev/vocab/cojson": !0 }, YQ = [{ $ref: "https://json-schema.org/draft/2020-12/schema" }], UQ = "@maia/schema/meta", JQ = ["object", "boolean"], HQ = !1, qQ = { title: { type: "string", description: "Human-readable schema title (required)" }, cotype: { enum: ["comap", "colist", "costream"], description: "CRDT type at schema root. Schemas can be comap (with properties), colist (with items), or costream (with items). CoText is modeled as colist with string items." }, $co: { type: "string", anyOf: [{ pattern: "^co_z[a-zA-Z0-9]+$", description: "Co-id reference (after transformation)" }, { pattern: "^@[a-zA-Z0-9_-]+/schema/", description: "Human-readable schema ID (before transformation)" }], description: "Reference to schema that this property value must conform to (human-readable ID or co-id). Use $co in properties to reference separate CoValues, never use cotype in properties." }, indexing: { type: "boolean", default: !1, description: "Whether instances of this schema should be indexed in account.os.{schemaCoId}" } }, xQ = ["title", "cotype"], LQ = { comap: { description: "CoMap - CRDT-based collaborative map/object", type: "object", properties: {}, additionalProperties: { anyOf: [{ type: "string", description: "Standard string value" }, { type: "number", description: "Standard number value" }, { type: "integer", description: "Standard integer value" }, { type: "boolean", description: "Standard boolean value" }, { type: "null", description: "Null value" }, { type: "object", description: "Nested object value" }, { type: "array", description: "Array value" }, { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Co-id reference to another CoValue" }, { type: "string", pattern: "^key_[a-zA-Z0-9_]+$", description: "Key reference" }, { type: "string", pattern: "^sealed_", description: "Sealed/encrypted value" }] } }, costream: { description: "CoStream - CRDT-based append-only stream", type: "array", items: { anyOf: [{ type: "object", description: "Stream item object" }, { type: "string", description: "Stream item string" }, { type: "number", description: "Stream item number" }, { type: "boolean", description: "Stream item boolean" }, { type: "null", description: "Stream item null" }] } }, colist: { description: "CoList - CRDT-based collaborative list/array", type: "array", items: { anyOf: [{ type: "object", description: "List item object" }, { type: "string", description: "List item string (can be co-id reference)" }, { type: "number", description: "List item number" }, { type: "integer", description: "List item integer" }, { type: "boolean", description: "List item boolean" }, { type: "null", description: "List item null" }, { type: "array", description: "Nested array" }] } } }, so = {
+  $schema: RQ,
+  $id: vQ,
+  $vocabulary: KQ,
+  allOf: YQ,
+  title: UQ,
+  type: JQ,
+  indexing: HQ,
+  properties: qQ,
+  required: xQ,
+  $defs: LQ
 };
 function Ge(t) {
   return (t || []).map((A) => ({
@@ -9537,11 +9536,11 @@ class Ke {
       this.ajvPromise = (async () => {
         let A;
         try {
-          const e = await Promise.resolve().then(() => B0);
+          const e = await Promise.resolve().then(() => Q0);
           A = e.default || e.Ajv2020 || e;
         } catch {
           try {
-            A = (await Promise.resolve().then(() => m0)).default;
+            A = (await Promise.resolve().then(() => S0)).default;
           } catch {
             try {
               const o = await import("https://esm.sh/ajv@8.12.0/dist/2020.js");
@@ -9603,7 +9602,7 @@ class Ke {
               return !1;
             }
           }
-        }), this._loadMetaSchema(), this._loadCoJsonMetaSchema(), FQ(this.ajv), await this._loadCoTypeDefinitions(), this.registrySchemas && await this.registerAllSchemas(this.registrySchemas), this.initialized = !0;
+        }), this._loadMetaSchema(), this._loadCoJsonMetaSchema(), bQ(this.ajv), await this._loadCoTypeDefinitions(), this.registrySchemas && await this.registerAllSchemas(this.registrySchemas), this.initialized = !0;
       })(), await this.ajvPromise;
     }
   }
@@ -10135,7 +10134,7 @@ async function cI(t, A, e) {
   }
   return i;
 }
-const LQ = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const TQ = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   ensureCoValueAvailable: cI,
   formatValidationErrors: Ge,
@@ -10555,7 +10554,7 @@ const de = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   setSparkVibesId: dI,
   wouldLeaveNoAdmins: hI
 }, Symbol.toStringTag, { value: "Module" }));
-async function TQ(t, A) {
+async function OQ(t, A) {
   if (t.node && t.account && t.guardian)
     return {
       node: t.node,
@@ -10576,7 +10575,7 @@ async function hA(t, A, e) {
     throw new Error("[createCoValueForSpark] options.schema is required");
   if (!o || !["comap", "colist", "costream"].includes(o))
     throw new Error("[createCoValueForSpark] options.cotype must be comap, colist, or costream");
-  const { node: s, account: a, guardian: g } = await TQ(t, A);
+  const { node: s, account: a, guardian: g } = await OQ(t, A);
   if (!a)
     throw new Error("[createCoValueForSpark] Account required");
   const I = s.createGroup();
@@ -10607,7 +10606,7 @@ const be = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   createCoValueForSpark: hA
 }, Symbol.toStringTag, { value: "Module" }));
-async function OQ(t, A, e) {
+async function PQ(t, A, e) {
   try {
     const i = await gA(t, A, { waitForAvailable: !0 });
     if (i && t.isAvailable(i)) {
@@ -10633,7 +10632,7 @@ async function OQ(t, A, e) {
   throw new Error(`[CoJSONBackend] Cannot determine cotype from data type for schema ${A}`);
 }
 async function bn(t, A, e, i = {}) {
-  const o = i.spark ?? "@maia", r = await OQ(t, A, e);
+  const o = i.spark ?? "@maia", r = await PQ(t, A, e);
   if (!t.account)
     throw new Error("[CoJSONBackend] Account required for create");
   if (r === "comap" && (!e || typeof e != "object" || Array.isArray(e)))
@@ -10693,7 +10692,7 @@ function Fe(t, A) {
     const o = A.get(e.$id);
     o && (e.$id = o);
   }
-  if (e.properties && PQ(e.properties, A), e.$defs)
+  if (e.properties && jQ(e.properties, A), e.$defs)
     for (const [o, r] of Object.entries(e.$defs))
       e.$defs[o] = Fe(r, A);
   return Ur(e, A, e.$id || "root") > 0 && e.$id, e.items && (e.items = Fe(e.items, A)), e.additionalProperties && typeof e.additionalProperties == "object" && (e.additionalProperties = Fe(e.additionalProperties, A)), ["allOf", "anyOf", "oneOf"].forEach((o) => {
@@ -10702,7 +10701,7 @@ function Fe(t, A) {
     ));
   }), e;
 }
-function PQ(t, A) {
+function jQ(t, A) {
   for (const [e, i] of Object.entries(t))
     i && typeof i == "object" && (t[e] = Fe(i, A));
 }
@@ -10874,7 +10873,7 @@ function qt(t, A, e = "") {
   }
   return t;
 }
-function jQ(t, A) {
+function VQ(t, A) {
   if (!("key" in t && !("op" in t)) && t.schema && typeof t.schema == "string") {
     const e = nt(t.schema, A, "query object");
     e && (t.schema = e);
@@ -10968,7 +10967,7 @@ function jA(t, A, e = 0) {
               s && typeof s == "object" && jA(s, A, e + 1);
             }
             continue;
-          } else o.schema && typeof o.schema == "string" && !("key" in o) && !("op" in o) ? jQ(o, A) : o.payload && typeof o.payload == "object" ? xt(o.payload, A, jA) : o.tool && typeof o.tool == "string" && o.payload && typeof o.payload == "object" ? wI(o, A, jA) : jA(o, A, e + 1);
+          } else o.schema && typeof o.schema == "string" && !("key" in o) && !("op" in o) ? VQ(o, A) : o.payload && typeof o.payload == "object" ? xt(o.payload, A, jA) : o.tool && typeof o.tool == "string" && o.payload && typeof o.payload == "object" ? wI(o, A, jA) : jA(o, A, e + 1);
         else o && typeof o == "object" && Array.isArray(o) && Jr(o, A, jA);
       }
   }
@@ -11055,485 +11054,485 @@ class yI {
 const DI = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   CoIdRegistry: yI
-}, Symbol.toStringTag, { value: "Module" })), VQ = "@maia/schema/meta", $Q = "@maia/schema/actor", WQ = "@maia/schema/actor", zQ = "Pure declarative actor specification", _Q = "comap", ZQ = !0, XQ = { role: { type: "string", description: "Actor role (e.g., 'kanban-view', 'vibe', 'composite', 'leaf')" }, context: { $co: "@maia/schema/context", description: "Co-id reference to context definition" }, view: { $co: "@maia/schema/view", description: "Co-id reference to view definition" }, state: { $co: "@maia/schema/state", description: "Co-id reference to state machine definition" }, brand: { $co: "@maia/schema/style", description: "Co-id reference to brand style definition (uses style schema)" }, style: { $co: "@maia/schema/style", description: "Co-id reference to local style definition" }, inbox: { $co: "@maia/schema/inbox", description: "Co-id reference to message inbox costream (append-only message feed)" }, messageTypes: { type: "array", items: { type: "string" }, description: "REQUIRED: Message types this actor accepts (exhaustive list - like sealed protocol). All actors must declare their message contracts." } }, AE = {
-  $schema: VQ,
-  $id: $Q,
-  title: WQ,
-  description: zQ,
-  cotype: _Q,
-  indexing: ZQ,
-  properties: XQ
-}, eE = "@maia/schema/meta", tE = "@maia/schema/context", iE = "@maia/schema/context", oE = "Runtime data for an actor (flexible JSON structure). The context itself is a comap CoValue (for CRDT sync/versioning), but all inner properties are plain JS objects/arrays/strings - NOT CoJSON types.", rE = "comap", nE = !0, sE = { description: "Any context fields (query objects, collections, UI state, form values, etc.). Query objects have schema + options properties. All inner properties are plain JS types (objects/arrays/strings/primitives) - NOT CoJSON types.", anyOf: [{ type: "object", description: "Query object for reactive subscription (has schema property). Can include nested options object with map, filter, etc.", properties: { schema: { type: "string", description: "Schema reference (e.g., '@maia/schema/message' or co-id)" }, options: { type: "object", description: "Query options (map, filter, etc.)", properties: { map: { type: "object", description: "Map transformation expressions (e.g., { sender: '$$source.role' })", additionalProperties: { type: "string" } }, filter: { description: "Filter criteria", oneOf: [{ type: "object" }, { type: "null" }] } }, additionalProperties: !0 }, filter: { description: "Filter criteria (legacy - use options.filter instead)", oneOf: [{ type: "object" }, { type: "null" }] } }, required: ["schema"], additionalProperties: !0 }, { type: "array", description: "Array of data items (after SubscriptionEngine processes the query object)" }, { type: "string" }, { type: "number" }, { type: "boolean" }, { type: "null" }, { type: "object", description: "Any other nested object (UI state, form values, etc.)" }] }, aE = {
-  $schema: eE,
-  $id: tE,
-  title: iE,
-  description: oE,
-  cotype: rE,
-  indexing: nE,
-  additionalProperties: sE
-}, gE = "@maia/schema/meta", IE = "@maia/schema/state", cE = "@maia/schema/state", CE = "XState-like state machine with states, transitions, guards, and actions", BE = "comap", QE = !0, EE = ["initial", "states"], lE = { initial: { type: "string", description: "Initial state name" }, states: { type: "object", description: "State definitions", additionalProperties: { type: "object", properties: { entry: { oneOf: [{ type: "object", description: "Inline tool action object", properties: { tool: { type: "string", description: "Tool identifier" }, payload: { type: "object", description: "Tool payload", additionalProperties: !0 } }, required: ["tool"] }, { type: "object", description: "Infrastructure context update action", properties: { updateContext: { type: "object", description: "Context updates (infrastructure, not a tool)", additionalProperties: !0 } }, required: ["updateContext"] }, { type: "object", description: "Map operations engine configs to context keys (universal API)", properties: { mapData: { type: "object", description: "Map operations engine configs to context keys (universal API)", additionalProperties: { type: "object", description: "Operations engine config (op, schema, filter, key, keys, etc.)", properties: { op: { type: "string", description: "Operation type (read, create, update, delete, schema, resolve, etc.)", default: "read" } }, additionalProperties: !0 } } }, required: ["mapData"] }, { type: "array", description: "Array of inline action objects", items: { oneOf: [{ type: "object", properties: { tool: { type: "string", description: "Tool identifier" }, payload: { type: "object", description: "Tool payload", additionalProperties: !0 } }, required: ["tool"] }, { type: "object", properties: { updateContext: { type: "object", description: "Context updates (infrastructure, not a tool)", additionalProperties: !0 } }, required: ["updateContext"] }, { type: "object", properties: { mapData: { type: "object", description: "Map operations engine configs to context keys (universal API)", additionalProperties: { type: "object", description: "Operations engine config (op, schema, filter, key, keys, etc.)", properties: { op: { type: "string", description: "Operation type (read, create, update, delete, schema, resolve, etc.)", default: "read" } }, additionalProperties: !0 } } }, required: ["mapData"] }] } }, { $co: "@maia/schema/action", description: "Co-id reference to action CoValue" }, { type: "array", description: "Array of action co-id references", items: { $co: "@maia/schema/action" } }] }, exit: { oneOf: [{ type: "object", description: "Inline tool action object", properties: { tool: { type: "string", description: "Tool identifier" }, payload: { type: "object", description: "Tool payload", additionalProperties: !0 } }, required: ["tool"] }, { type: "object", description: "Infrastructure context update action", properties: { updateContext: { type: "object", description: "Context updates (infrastructure, not a tool)", additionalProperties: !0 } }, required: ["updateContext"] }, { type: "object", description: "Map operations engine configs to context keys (universal API)", properties: { mapData: { type: "object", description: "Map operations engine configs to context keys (universal API)", additionalProperties: { type: "object", description: "Operations engine config (op, schema, filter, key, keys, etc.)", properties: { op: { type: "string", description: "Operation type (read, create, update, delete, schema, resolve, etc.)", default: "read" } }, additionalProperties: !0 } } }, required: ["mapData"] }, { type: "array", description: "Array of inline action objects", items: { oneOf: [{ type: "object", properties: { tool: { type: "string", description: "Tool identifier" }, payload: { type: "object", description: "Tool payload", additionalProperties: !0 } }, required: ["tool"] }, { type: "object", properties: { updateContext: { type: "object", description: "Context updates (infrastructure, not a tool)", additionalProperties: !0 } }, required: ["updateContext"] }, { type: "object", properties: { mapData: { type: "object", description: "Map operations engine configs to context keys (universal API)", additionalProperties: { type: "object", description: "Operations engine config (op, schema, filter, key, keys, etc.)", properties: { op: { type: "string", description: "Operation type (read, create, update, delete, schema, resolve, etc.)", default: "read" } }, additionalProperties: !0 } } }, required: ["mapData"] }] } }, { $co: "@maia/schema/action", description: "Co-id reference to action CoValue" }, { type: "array", description: "Array of action co-id references", items: { $co: "@maia/schema/action" } }] }, on: { type: "object", description: "Event handlers (transitions)", additionalProperties: { oneOf: [{ type: "string", description: "Simple target state name" }, { type: "object", description: "Inline transition object", properties: { target: { type: "string", description: "Target state name" }, guard: { type: "object", description: "Guard condition", additionalProperties: !0 }, actions: { type: "array", description: "Transition actions", items: { oneOf: [{ type: "object", properties: { tool: { type: "string", description: "Tool identifier" }, payload: { type: "object", additionalProperties: !0 } }, required: ["tool"] }, { type: "object", properties: { updateContext: { type: "object", description: "Context updates (infrastructure, not a tool)", additionalProperties: !0 } }, required: ["updateContext"] }, { $co: "@maia/schema/action" }] } } }, required: ["target"] }, { $co: "@maia/schema/transition", description: "Co-id reference to transition CoValue" }] } } }, additionalProperties: !1 } } }, dE = {
-  $schema: gE,
-  $id: IE,
-  title: cE,
-  description: CE,
-  cotype: BE,
-  indexing: QE,
-  required: EE,
-  properties: lE
-}, uE = "@maia/schema/meta", hE = "@maia/schema/view", fE = "@maia/schema/view", pE = "UI structure definition with DOM tree, expressions, loops, and event handlers (recursive viewNode structure)", wE = "comap", yE = !0, DE = { content: { type: "object", description: "View content structure (recursive viewNode)", $ref: "#/$defs/viewNode" } }, mE = { viewNode: { type: "object", description: "Recursive DOM node structure", properties: { tag: { type: "string" }, class: { type: "string" }, text: { anyOf: [{ type: "string", pattern: "^\\$\\$" }, { type: "string", pattern: "^@" }, { type: "string", pattern: "^\\$[^$]" }, { type: "string" }, { type: "number" }, { type: "boolean" }, { type: "null" }] }, value: { anyOf: [{ type: "string", pattern: "^\\$\\$" }, { type: "string", pattern: "^@" }, { type: "string", pattern: "^\\$[^$]" }, { type: "string" }, { type: "number" }, { type: "boolean" }, { type: "null" }] }, attrs: { type: "object", additionalProperties: { anyOf: [{ type: "string", pattern: "^\\$\\$" }, { type: "string", pattern: "^@" }, { type: "string", pattern: "^\\$[^$]" }, { type: "string" }, { type: "number" }, { type: "boolean" }, { type: "null" }, { type: "object", additionalProperties: { anyOf: [{ type: "string", pattern: "^\\$\\$" }, { type: "string", pattern: "^@" }, { type: "string", pattern: "^\\$[^$]" }, { type: "string" }, { type: "number" }, { type: "boolean" }, { type: "null" }] } }] } }, children: { type: "array", items: { $ref: "#/$defs/viewNode" } }, $on: { type: "object", additionalProperties: { type: "object", properties: { send: { type: "string" }, payload: { type: "object", additionalProperties: !0 }, key: { type: "string" } }, required: ["send"] } }, $each: { type: "object", properties: { items: { anyOf: [{ type: "string", pattern: "^\\$\\$" }, { type: "string", pattern: "^@" }, { type: "string", pattern: "^\\$[^$]" }, { type: "string" }, { type: "number" }, { type: "boolean" }, { type: "null" }] }, template: { $ref: "#/$defs/viewNode" } }, required: ["items", "template"] }, $slot: { anyOf: [{ type: "string", pattern: "^\\$\\$" }, { type: "string", pattern: "^@" }, { type: "string", pattern: "^\\$[^$]" }, { type: "string" }, { type: "number" }, { type: "boolean" }, { type: "null" }] } }, additionalProperties: !1 } }, SE = !1, kE = {
-  $schema: uE,
-  $id: hE,
-  title: fE,
-  description: pE,
-  cotype: wE,
-  indexing: yE,
-  properties: DE,
-  $defs: mE,
-  additionalProperties: SE
-}, NE = "@maia/schema/meta", ME = "@maia/schema/style", GE = "@maia/schema/style", FE = "Style definition (brand or actor-specific). Brand styles typically include selectors, actor styles are overrides.", bE = "comap", RE = !0, vE = { tokens: { type: "object", description: "Design tokens (colors, spacing, typography, etc.)", additionalProperties: !0 }, components: { type: "object", description: "Component styles", additionalProperties: !0 }, selectors: { type: "object", description: "CSS selector-based styles (typically used in brand styles)", additionalProperties: { type: "object", description: "CSS properties and values", additionalProperties: { oneOf: [{ type: "string" }, { type: "number" }, { type: "object", additionalProperties: !0 }] } } } }, oi = {
-  $schema: NE,
-  $id: ME,
-  title: GE,
-  description: FE,
-  cotype: bE,
-  indexing: RE,
-  properties: vE
-}, KE = "@maia/schema/meta", YE = "@maia/schema/tool", UE = "@maia/schema/tool", JE = "Tool metadata (AI-compatible JSON schema)", HE = "comap", qE = !0, xE = ["name", "description", "parameters"], LE = { name: { type: "string", description: "Tool identifier (e.g., '@mutation/create')", pattern: "^@" }, description: { type: "string", description: "Tool description" }, parameters: { type: "object", description: "JSON Schema for tool parameters (standard JSON Schema format)", properties: { type: { type: "string", enum: ["object", "array", "string", "number", "boolean", "null"] }, properties: { type: "object", additionalProperties: { type: "object", description: "Parameter property schema", properties: { type: { type: "string" }, description: { type: "string" }, required: { type: "boolean" }, properties: { type: "object", additionalProperties: !0 } }, additionalProperties: !0 } }, required: { type: "array", items: { type: "string" } } }, required: ["type"], additionalProperties: !0 } }, TE = {
-  $schema: KE,
-  $id: YE,
-  title: UE,
-  description: JE,
-  cotype: HE,
-  indexing: qE,
-  required: xE,
-  properties: LE
-}, OE = "@maia/schema/meta", PE = "@maia/schema/vibe", jE = "@maia/schema/vibe", VE = "Vibe manifest/metadata", $E = "comap", WE = !0, zE = ["name", "description", "actor"], _E = { name: { type: "string", description: "Vibe name" }, description: { type: "string", description: "Vibe description" }, actor: { $co: "@maia/schema/actor", description: "Co-id reference to actor definition (root actor for this vibe)" } }, ZE = {
-  $schema: OE,
-  $id: PE,
-  title: jE,
-  description: VE,
-  cotype: $E,
-  indexing: WE,
-  required: zE,
-  properties: _E
-}, XE = "@maia/schema/meta", Al = "@maia/schema/message", el = "@maia/schema/message", tl = "Actor message for state machine transitions", il = "comap", ol = !0, rl = ["type"], nl = { type: { type: "string", description: "Message type (event name)" }, payload: { type: "object", description: "Message payload data" }, source: { $co: "@maia/schema/actor", description: "Co-id reference to source actor" }, target: { $co: "@maia/schema/actor", description: "Co-id reference to target actor (required for direct messaging)" }, processed: { type: "boolean", description: "Whether this message has been processed", default: !1 } }, sl = {
-  $schema: XE,
-  $id: Al,
-  title: el,
-  description: tl,
-  cotype: il,
-  indexing: ol,
-  required: rl,
-  properties: nl
-}, al = "@maia/schema/meta", gl = "@maia/schema/guard", Il = "@maia/schema/guard", cl = "JSON Schema guard for conditional logic - checks state/context conditions (NOT payload validation)", Cl = "comap", Bl = !0, Ql = ["schema"], El = { schema: { type: "object", description: "JSON Schema to validate against current state/context (for conditional logic only, NOT payload validation)", additionalProperties: !0 } }, ll = !1, dl = {
-  $schema: al,
-  $id: gl,
-  title: Il,
-  description: cl,
-  cotype: Cl,
-  indexing: Bl,
-  required: Ql,
-  properties: El,
-  additionalProperties: ll
-}, ul = "@maia/schema/meta", hl = "@maia/schema/action", fl = "@maia/schema/action", pl = "Action (tool invocation, context update, or data mapping)", wl = "comap", yl = !0, Dl = [{ type: "object", properties: { tool: { type: "string", description: "Tool identifier (e.g., '@mutation/create')" }, payload: { description: "Tool payload (can contain expressions)", type: "object", additionalProperties: !0 } }, required: ["tool"] }, { type: "object", properties: { updateContext: { type: "object", description: "Context updates (infrastructure, not a tool)", additionalProperties: !0 } }, required: ["updateContext"] }, { type: "object", properties: { mapData: { type: "object", description: "Map operations engine configs to context keys (universal API)", additionalProperties: { type: "object", description: "Operations engine config (op, schema, filter, key, keys, etc.)", properties: { op: { type: "string", description: "Operation type (read, create, update, delete, schema, resolve, etc.)", default: "read" } }, additionalProperties: !0 } } }, required: ["mapData"] }], ml = {
-  $schema: ul,
-  $id: hl,
-  title: fl,
-  description: pl,
-  cotype: wl,
-  indexing: yl,
-  oneOf: Dl
-}, Sl = "@maia/schema/meta", kl = "@maia/schema/transition", Nl = "@maia/schema/transition", Ml = "State machine transition", Gl = "comap", Fl = !0, bl = { target: { type: "string", description: "Target state name" }, guard: { $co: "@maia/schema/guard" }, actions: { type: "array", items: { $co: "@maia/schema/action" } } }, Rl = ["target"], vl = {
-  $schema: Sl,
-  $id: kl,
-  title: Nl,
-  description: Ml,
-  cotype: Gl,
-  indexing: Fl,
-  properties: bl,
-  required: Rl
-}, Kl = "@maia/schema/meta", Yl = "@maia/schema/messagePayload", Ul = "@maia/schema/messagePayload", Jl = "Message payload definition", Hl = "comap", ql = !0, xl = {}, Ll = !0, Tl = {
-  $schema: Kl,
-  $id: Yl,
-  title: Ul,
-  description: Jl,
-  cotype: Hl,
-  indexing: ql,
-  properties: xl,
-  additionalProperties: Ll
-}, Ol = "@maia/schema/meta", Pl = "@maia/schema/messageType", jl = "@maia/schema/messageType", Vl = "Message type schemas are standard JSON Schemas that validate message payloads. The schema ID (e.g., '@maia/schema/message/CREATE_BUTTON') identifies the message type.", $l = "comap", Wl = !0, zl = "object", _l = !0, Zl = {
-  $schema: Ol,
-  $id: Pl,
-  title: jl,
-  description: Vl,
-  cotype: $l,
-  indexing: Wl,
-  type: zl,
-  additionalProperties: _l
-}, Xl = "@maia/schema/meta", Ad = "@maia/schema/maia-script-expression", ed = "@maia/schema/maia-script-expression", td = "comap", id = !1, od = "JSON-based DSL expression schema for MaiaScript runtime logic. Supports data access, comparisons, logical operations, control flow, and nested expressions.", rd = [{ description: "Primitive value", type: ["number", "boolean", "null"] }, { description: "String value (including shortcut syntax $key or $$key)", type: "string" }, { $ref: "#/$defs/expressionObject" }], nd = { expressionObject: { description: "MaiaScript expression object (DSL operation)", type: "object", oneOf: [{ description: "$context operation - access context data", properties: { $context: { type: "string", description: "Dot-separated path in context object (e.g., 'user.name')", pattern: "^(?!.*(__proto__|constructor|prototype))[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*$" } }, required: ["$context"], additionalProperties: !1 }, { description: "$item operation - access item data", properties: { $item: { type: "string", description: "Dot-separated path in item object (e.g., 'id', 'status.value')", pattern: "^(?!.*(__proto__|constructor|prototype))[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*$" } }, required: ["$item"], additionalProperties: !1 }, { description: "$eq operation - equality comparison", properties: { $eq: { type: "array", description: "Array of two expressions to compare", items: { $ref: "#" }, minItems: 2, maxItems: 2 } }, required: ["$eq"], additionalProperties: !1 }, { description: "$ne operation - inequality comparison", properties: { $ne: { type: "array", description: "Array of two expressions to compare", items: { $ref: "#" }, minItems: 2, maxItems: 2 } }, required: ["$ne"], additionalProperties: !1 }, { description: "$not operation - logical NOT (negate boolean)", properties: { $not: { $ref: "#", description: "Expression to negate (evaluated to boolean, then negated)" } }, required: ["$not"], additionalProperties: !1 }, { description: "$and operation - logical AND (all operands must be truthy)", properties: { $and: { type: "array", description: "Array of expressions to evaluate (all must be truthy)", items: { $ref: "#" }, minItems: 1 } }, required: ["$and"], additionalProperties: !1 }, { description: "$or operation - logical OR (at least one operand must be truthy)", properties: { $or: { type: "array", description: "Array of expressions to evaluate (at least one must be truthy)", items: { $ref: "#" }, minItems: 1 } }, required: ["$or"], additionalProperties: !1 }, { description: "$trim operation - trim whitespace from string", properties: { $trim: { $ref: "#", description: "Expression to trim (evaluated to string, then trimmed of leading/trailing whitespace)" } }, required: ["$trim"], additionalProperties: !1 }, { description: "$gt operation - greater than comparison", properties: { $gt: { type: "array", description: "Array of two expressions to compare (left > right)", items: { $ref: "#" }, minItems: 2, maxItems: 2 } }, required: ["$gt"], additionalProperties: !1 }, { description: "$length operation - get array or string length", properties: { $length: { $ref: "#", description: "Expression to get length of (evaluated to array or string)" } }, required: ["$length"], additionalProperties: !1 }, { description: "$concat operation - concatenate arrays", properties: { $concat: { type: "array", description: "Array of expressions, arrays, or objects to concatenate (all evaluated to arrays, then flattened)", items: { anyOf: [{ $ref: "#" }, { type: ["array", "object", "string", "number", "boolean", "null"] }] }, minItems: 1 } }, required: ["$concat"], additionalProperties: !1 }, { description: "$map operation - map over array", properties: { $map: { type: "object", description: "Map configuration object", properties: { array: { $ref: "#", description: "Expression evaluating to array to map over" }, as: { type: "string", description: "Variable name for each item in the array (default: 'item')" }, return: { description: "Expression, object, or array to evaluate for each item (result becomes item in returned array). 'do' is also supported as an alias.", anyOf: [{ $ref: "#" }, { type: ["object", "array", "string", "number", "boolean", "null"] }] }, do: { description: "Alias for 'return' - expression, object, or array to evaluate for each item", anyOf: [{ $ref: "#" }, { type: ["object", "array", "string", "number", "boolean", "null"] }] } }, required: ["array"], additionalProperties: !1 } }, required: ["$map"], additionalProperties: !1 }, { description: "$if operation - conditional expression", properties: { $if: { type: "object", description: "Conditional expression object", properties: { condition: { $ref: "#", description: "Condition expression (evaluated to boolean)" }, then: { $ref: "#", description: "Expression to evaluate if condition is true" }, else: { $ref: "#", description: "Expression to evaluate if condition is false" } }, required: ["condition", "then", "else"], additionalProperties: !1 } }, required: ["$if"], additionalProperties: !1 }] } }, sd = {
-  $schema: Xl,
-  $id: Ad,
-  title: ed,
-  cotype: td,
-  indexing: id,
-  description: od,
-  anyOf: rd,
-  $defs: nd
-}, ad = "@maia/schema/meta", gd = "@maia/schema/subscribers", Id = "@maia/schema/subscribers", cd = "A colist of actor co-ids subscribed to a topic", Cd = "colist", Bd = !0, Qd = { $co: "@maia/schema/actor", description: "Each item is a co-id reference to an actor subscribed to this topic" }, Ed = {
-  $schema: ad,
-  $id: gd,
-  title: Id,
-  description: cd,
-  cotype: Cd,
-  indexing: Bd,
-  items: Qd
-}, ld = "@maia/schema/meta", dd = "@maia/schema/inbox", ud = "@maia/schema/inbox", hd = "A costream (append-only stream) of messages received by this actor", fd = "costream", pd = !0, wd = { $co: "@maia/schema/message", description: "Each item is a co-id reference to a message" }, yd = {
-  $schema: ld,
-  $id: dd,
-  title: ud,
-  description: hd,
-  cotype: fd,
-  indexing: pd,
-  items: wd
-}, Dd = "@maia/schema/meta", md = "@maia/schema/children", Sd = "@maia/schema/children", kd = "A comap of child actors (namekey → actor co-id)", Nd = "comap", Md = !0, Gd = {}, Fd = { $co: "@maia/schema/actor", description: "Each value is a co-id reference to a child actor" }, bd = {
-  $schema: Dd,
-  $id: md,
-  title: Sd,
-  description: kd,
-  cotype: Nd,
-  indexing: Md,
-  properties: Gd,
-  additionalProperties: Fd
-}, Rd = "@maia/schema/meta", vd = "@maia/schema/os/schematas-registry", Kd = "@maia/schema/os/schematas-registry", Yd = "Schema registry CoMap - maps schema namekeys (e.g., @maia/schema/data/todos) to schema co-ids (co_z...). Stored in account.os.schematas", Ud = "comap", Jd = !1, Hd = { "@maia/schema/meta": { type: "string", description: "Metaschema co-id (co_z...)" } }, qd = { type: "string", description: "Schema namekey → schema co-id mapping (e.g., @maia/schema/data/todos → co_z123...)" }, xd = {
-  $schema: Rd,
-  $id: vd,
-  title: Kd,
-  description: Yd,
-  cotype: Ud,
-  indexing: Jd,
-  properties: Hd,
-  additionalProperties: qd
-}, Ld = "@maia/schema/meta", Td = "@maia/schema/os/os-registry", Od = "@maia/schema/os/os-registry", Pd = "OS CoMap - contains capabilities, schematas, indexes. Stored in spark.os", jd = "comap", Vd = !1, $d = { capabilities: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Capabilities CoMap co-id (guardian, publicReaders)" }, schematas: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Schemata registry CoMap co-id" }, indexes: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Indexes registry CoMap co-id" } }, Wd = {
-  $schema: Ld,
-  $id: Td,
-  title: Od,
-  description: Pd,
-  cotype: jd,
-  indexing: Vd,
-  properties: $d
-}, zd = "@maia/schema/meta", _d = "@maia/schema/os/capabilities", Zd = "@maia/schema/os/capabilities", Xd = "Capabilities CoMap - guardian, publicReaders. Stored in spark.os.capabilities", Au = "comap", eu = !1, tu = { guardian: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Guardian group co-id" }, publicReaders: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Public readers group co-id" } }, iu = {
-  $schema: zd,
-  $id: _d,
-  title: Zd,
-  description: Xd,
-  cotype: Au,
-  indexing: eu,
-  properties: tu
-}, ou = "@maia/schema/meta", ru = "@maia/schema/os/indexes-registry", nu = "@maia/schema/os/indexes-registry", su = "Indexes registry CoMap - schema co-id -> index colist. Stored in spark.os.indexes", au = "comap", gu = !1, Iu = { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Schema co-id -> index colist co-id" }, cu = {
-  $schema: ou,
-  $id: ru,
-  title: nu,
-  description: su,
-  cotype: au,
-  indexing: gu,
-  additionalProperties: Iu
-}, Cu = "@maia/schema/meta", Bu = "@maia/schema/os/vibes-registry", Qu = "@maia/schema/os/vibes-registry", Eu = "Vibes registry CoMap - vibe key -> vibe co-id. Stored in spark.vibes", lu = "comap", du = !1, uu = { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Vibe key -> vibe CoMap co-id" }, hu = {
-  $schema: Cu,
-  $id: Bu,
-  title: Qu,
-  description: Eu,
-  cotype: lu,
-  indexing: du,
-  additionalProperties: uu
-}, fu = "@maia/schema/meta", pu = "@maia/schema/os/sparks-registry", wu = "@maia/schema/os/sparks-registry", yu = "Sparks registry CoMap - spark name -> spark co-id. Stored in account.sparks", Du = "comap", mu = !1, Su = { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Spark name -> spark CoMap co-id" }, ku = {
-  $schema: fu,
-  $id: pu,
-  title: wu,
-  description: yu,
-  cotype: Du,
-  indexing: mu,
-  additionalProperties: Su
-}, Nu = "@maia/schema/meta", Mu = "@maia/schema/os/humans-registry", Gu = "@maia/schema/os/humans-registry", Fu = "Humans registry CoMap - username -> account co-id. Stored in spark.registries.humans", bu = "comap", Ru = !1, vu = { type: "string", pattern: "^co_z[a-zA-Z0-9]{20,}$", description: "Username -> account co-id" }, Ku = {
-  $schema: Nu,
-  $id: Mu,
-  title: Gu,
-  description: Fu,
-  cotype: bu,
-  indexing: Ru,
-  additionalProperties: vu
-}, Yu = "@maia/schema/meta", Uu = "@maia/schema/os/registries", Ju = "@maia/schema/os/registries", Hu = "Registries CoMap - contains sparks, etc. Stored in spark.registries", qu = "comap", xu = !1, Lu = { sparks: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Sparks registry CoMap co-id (spark name -> spark co-id)" } }, Tu = { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Registry name -> registry CoMap co-id" }, Ou = {
-  $schema: Yu,
-  $id: Uu,
-  title: Ju,
-  description: Hu,
-  cotype: qu,
-  indexing: xu,
-  properties: Lu,
-  additionalProperties: Tu
-}, Pu = "@maia/schema/data/todos", ju = "@maia/schema/meta", Vu = "@maia/schema/data/todos", $u = "comap", Wu = !0, zu = { text: { type: "string", minLength: 1, pattern: ".*\\S.*", description: "The todo item text content (must contain at least one non-whitespace character)" }, done: { type: "boolean", description: "Whether the todo item is completed" } }, _u = ["text", "done"], Zu = !1, Xu = {
-  $id: Pu,
-  $schema: ju,
-  title: Vu,
-  cotype: $u,
-  indexing: Wu,
-  properties: zu,
-  required: _u,
-  additionalProperties: Zu
-}, Ah = "@maia/schema/data/chat", eh = "@maia/schema/meta", th = "@maia/schema/data/chat", ih = "comap", oh = !0, rh = { role: { type: "string", enum: ["user", "assistant", "system"], description: "The role of the message sender" }, content: { type: "string", minLength: 1, description: "The message content" } }, nh = ["role", "content"], sh = !1, ah = {
-  $id: Ah,
-  $schema: eh,
-  title: th,
-  cotype: ih,
-  indexing: oh,
-  properties: rh,
-  required: nh,
-  additionalProperties: sh
-}, gh = "@maia/schema/meta", Ih = "@maia/schema/data/spark", ch = "@maia/schema/data/spark", Ch = "Spark CoMap. Guardian (admin) group is spark.os.capabilities.guardian.", Bh = "comap", Qh = !0, Eh = ["name"], lh = { name: { type: "string", description: "Spark name e.g. @maia" }, os: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "OS CoMap - contains schematas, indexes, capabilities (guardian, publicReaders)." }, vibes: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Vibes registry CoMap for this spark." } }, dh = {
-  $schema: gh,
-  $id: Ih,
-  title: ch,
-  description: Ch,
-  cotype: Bh,
-  indexing: Qh,
-  required: Eh,
-  properties: lh
-}, uh = "@maia/schema/meta", hh = "@maia/schema/message/CREATE_BUTTON", fh = "@maia/schema/message/CREATE_BUTTON", ph = "Message type for creating a new item via button click (generic, reusable across vibes)", wh = "comap", yh = !0, Dh = "object", mh = { value: { type: "string", minLength: 1, pattern: "^\\S", description: "Item value/text (required, non-empty, must contain at least one non-whitespace character). Generic property name for reuse across vibes." } }, Sh = ["value"], kh = !0, Nh = {
-  $schema: uh,
-  $id: hh,
-  title: fh,
-  description: ph,
-  cotype: wh,
-  indexing: yh,
-  type: Dh,
-  properties: mh,
-  required: Sh,
-  additionalProperties: kh
-}, Mh = "@maia/schema/meta", Gh = "@maia/schema/message/TOGGLE_BUTTON", Fh = "@maia/schema/message/TOGGLE_BUTTON", bh = "Message type for toggling a todo item's done status", Rh = "comap", vh = !0, Kh = "object", Yh = { id: { type: "string", pattern: "^co_z", description: "Todo item co-id (required)" }, done: { type: "boolean", description: "Current done status (optional, will be toggled)" } }, Uh = ["id"], Jh = !1, Hh = {
-  $schema: Mh,
-  $id: Gh,
-  title: Fh,
-  description: bh,
-  cotype: Rh,
-  indexing: vh,
-  type: Kh,
-  properties: Yh,
-  required: Uh,
-  additionalProperties: Jh
-}, qh = "@maia/schema/meta", xh = "@maia/schema/message/DELETE_BUTTON", Lh = "@maia/schema/message/DELETE_BUTTON", Th = "Message type for deleting a todo item", Oh = "comap", Ph = !0, jh = "object", Vh = { id: { type: "string", pattern: "^co_z", description: "Todo item co-id (required)" } }, $h = ["id"], Wh = !1, zh = {
-  $schema: qh,
-  $id: xh,
-  title: Lh,
-  description: Th,
-  cotype: Oh,
-  indexing: Ph,
-  type: jh,
-  properties: Vh,
-  required: $h,
-  additionalProperties: Wh
-}, _h = "@maia/schema/meta", Zh = "@maia/schema/message/UPDATE_INPUT", Xh = "@maia/schema/message/UPDATE_INPUT", Af = "Message type for updating input field value (generic, reusable across vibes)", ef = "comap", tf = !0, of = "object", rf = { value: { type: "string", description: "New input field value (generic property name for reuse across vibes)" } }, nf = !0, sf = {
-  $schema: _h,
-  $id: Zh,
-  title: Xh,
-  description: Af,
-  cotype: ef,
-  indexing: tf,
-  type: of,
-  properties: rf,
-  additionalProperties: nf
-}, af = "@maia/schema/meta", gf = "@maia/schema/message/SWITCH_VIEW", If = "@maia/schema/message/SWITCH_VIEW", cf = "Message type for switching view mode", Cf = "comap", Bf = !0, Qf = "object", Ef = { viewMode: { type: "string", enum: ["list", "logs", "comingSoon"], description: "View mode to switch to (required)" } }, lf = ["viewMode"], df = !1, uf = {
-  $schema: af,
-  $id: gf,
-  title: If,
-  description: cf,
-  cotype: Cf,
-  indexing: Bf,
-  type: Qf,
-  properties: Ef,
-  required: lf,
-  additionalProperties: df
-}, hf = "@maia/schema/meta", ff = "@maia/schema/message/SUCCESS", pf = "@maia/schema/message/SUCCESS", wf = "Message type for successful operation completion", yf = "comap", Df = !0, mf = "object", Sf = { result: { description: "Tool execution result (optional, can be any type - object, boolean, string, etc.)" }, value: { type: "string", description: "Original event payload property (optional, for CREATE_BUTTON, UPDATE_INPUT - generic property name)" }, text: { type: "string", description: "Original event payload property (optional, legacy - use 'value' instead)" }, id: { type: "string", pattern: "^co_z", description: "Original event payload property (optional, for TOGGLE_BUTTON, DELETE_BUTTON)" }, done: { type: "boolean", description: "Original event payload property (optional, for TOGGLE_BUTTON)" }, viewMode: { type: "string", enum: ["list", "logs"], description: "Original event payload property (optional, for SWITCH_VIEW)" }, newTodoText: { type: "string", description: "Original event payload property (optional, legacy - use 'value' instead)" } }, kf = !0, Nf = {
-  $schema: hf,
-  $id: ff,
-  title: pf,
-  description: wf,
-  cotype: yf,
-  indexing: Df,
-  type: mf,
-  properties: Sf,
-  additionalProperties: kf
-}, Mf = "@maia/schema/meta", Gf = "@maia/schema/message/ERROR", Ff = "@maia/schema/message/ERROR", bf = "Message type for operation errors. Aligned with OperationResult createErrorEntry shape.", Rf = "comap", vf = !0, Kf = "object", Yf = { errors: { type: "array", description: "Structured error entries. Same shape as OperationResult.", items: { type: "object", required: ["type", "message"], properties: { type: { type: "string", description: "Error type: schema | permission | structural" }, message: { type: "string", description: "Error message" }, path: { type: "string", description: "Optional path (e.g. /field)" } } } } }, Uf = ["errors"], Jf = !1, Hf = {
-  $schema: Mf,
-  $id: Gf,
-  title: Ff,
-  description: bf,
-  cotype: Rf,
-  indexing: vf,
-  type: Kf,
-  properties: Yf,
-  required: Uf,
-  additionalProperties: Jf
-}, qf = "@maia/schema/meta", xf = "@maia/schema/message/SEND_MESSAGE", Lf = "@maia/schema/message/SEND_MESSAGE", Tf = "Message type for sending a chat message", Of = "comap", Pf = !0, jf = "object", Vf = { inputText: { type: "string", minLength: 1, description: "Message text (required, non-empty)" } }, $f = ["inputText"], Wf = !1, zf = {
-  $schema: qf,
-  $id: xf,
-  title: Lf,
-  description: Tf,
-  cotype: Of,
-  indexing: Pf,
-  type: jf,
-  properties: Vf,
-  required: $f,
-  additionalProperties: Wf
-}, _f = "@maia/schema/meta", Zf = "@maia/schema/message/RETRY", Xf = "@maia/schema/message/RETRY", Ap = "Message type for retrying a failed operation", ep = "comap", tp = !0, ip = "object", op = {}, rp = !1, np = {
-  $schema: _f,
-  $id: Zf,
-  title: Xf,
-  description: Ap,
-  cotype: ep,
-  indexing: tp,
-  type: ip,
-  properties: op,
-  additionalProperties: rp
-}, sp = "@maia/schema/meta", ap = "@maia/schema/message/DISMISS", gp = "@maia/schema/message/DISMISS", Ip = "Message type for dismissing an error or notification", cp = "comap", Cp = !0, Bp = "object", Qp = {}, Ep = !1, lp = {
-  $schema: sp,
-  $id: ap,
-  title: gp,
-  description: Ip,
-  cotype: cp,
-  indexing: Cp,
-  type: Bp,
-  properties: Qp,
-  additionalProperties: Ep
-}, dp = "@maia/schema/meta", up = "@maia/schema/message/SELECT_NAV", hp = "@maia/schema/message/SELECT_NAV", fp = "Message type for selecting a navigation item", pp = "comap", wp = !0, yp = "object", Dp = { navId: { type: "string", description: "Navigation item ID (required)" } }, mp = ["navId"], Sp = !1, kp = {
-  $schema: dp,
-  $id: up,
-  title: hp,
-  description: fp,
-  cotype: pp,
-  indexing: wp,
-  type: yp,
-  properties: Dp,
-  required: mp,
-  additionalProperties: Sp
-}, Np = "@maia/schema/meta", Mp = "@maia/schema/message/SELECT_ROW", Gp = "@maia/schema/message/SELECT_ROW", Fp = "Message type for selecting a table row", bp = "comap", Rp = !0, vp = "object", Kp = { rowId: { type: "string", description: "Row ID (required)" } }, Yp = ["rowId"], Up = !1, Jp = {
-  $schema: Np,
-  $id: Mp,
-  title: Gp,
-  description: Fp,
-  cotype: bp,
-  indexing: Rp,
-  type: vp,
-  properties: Kp,
-  required: Yp,
-  additionalProperties: Up
-}, Hp = "@maia/schema/meta", qp = "@maia/schema/message/SELECT_SPARK", xp = "@maia/schema/message/SELECT_SPARK", Lp = "Message type for selecting a spark (generic, reusable across vibes)", Tp = "comap", Op = !0, Pp = "object", jp = { sparkId: { type: "string", description: "Spark co-id (required, generic property name for reuse across vibes)" } }, Vp = ["sparkId"], $p = !0, Wp = {
-  $schema: Hp,
-  $id: qp,
-  title: xp,
-  description: Lp,
-  cotype: Tp,
-  indexing: Op,
-  type: Pp,
-  properties: jp,
-  required: Vp,
-  additionalProperties: $p
-}, zp = "@maia/schema/meta", _p = "@maia/schema/message/LOAD_ACTOR", Zp = "@maia/schema/message/LOAD_ACTOR", Xp = "Generic message type for loading actor data (reusable across vibes)", Aw = "comap", ew = !0, tw = "object", iw = { id: { type: "string", description: "Entity co-id to load (required, generic property name for reuse across vibes)" } }, ow = ["id"], rw = !0, nw = {
-  $schema: zp,
-  $id: _p,
-  title: Zp,
-  description: Xp,
-  cotype: Aw,
-  indexing: ew,
-  type: tw,
-  properties: iw,
-  required: ow,
-  additionalProperties: rw
-}, sw = "@maia/schema/meta", aw = "@maia/schema/message/UPDATE_AGENT_INPUT", gw = "@maia/schema/message/UPDATE_AGENT_INPUT", Iw = "Message type for updating agent ID input field in Spark detail view", cw = "comap", Cw = !0, Bw = "object", Qw = { value: { type: "string", description: "Agent account co-id input value" } }, Ew = !0, lw = {
-  $schema: sw,
-  $id: aw,
-  title: gw,
-  description: Iw,
-  cotype: cw,
-  indexing: Cw,
-  type: Bw,
-  properties: Qw,
-  additionalProperties: Ew
-}, dw = "@maia/schema/meta", uw = "@maia/schema/message/ADD_AGENT", hw = "@maia/schema/message/ADD_AGENT", fw = "Message type for adding an agent as writer member to a Spark's group", pw = "comap", ww = !0, yw = "object", Dw = { agentId: { type: "string", description: "Agent account co-id to add as writer (co_z...). Operation validates format." } }, mw = ["agentId"], Sw = !0, kw = {
-  $schema: dw,
-  $id: uw,
-  title: hw,
-  description: fw,
-  cotype: pw,
-  indexing: ww,
-  type: yw,
-  properties: Dw,
-  required: mw,
-  additionalProperties: Sw
-}, Nw = "@maia/schema/meta", Mw = "@maia/schema/message/REMOVE_MEMBER", Gw = "@maia/schema/message/REMOVE_MEMBER", Fw = "Message type for removing a member from a Spark's group", bw = "comap", Rw = !0, vw = "object", Kw = { memberId: { type: "string", description: "Account co-id of member to remove (co_z...). Operation validates format." } }, Yw = ["memberId"], Uw = !0, Jw = {
-  $schema: Nw,
-  $id: Mw,
-  title: Gw,
-  description: Fw,
-  cotype: bw,
-  indexing: Rw,
-  type: vw,
-  properties: Kw,
-  required: Yw,
-  additionalProperties: Uw
+}, Symbol.toStringTag, { value: "Module" })), $Q = "@maia/schema/meta", WQ = "@maia/schema/actor", zQ = "@maia/schema/actor", _Q = "Pure declarative actor specification", ZQ = "comap", XQ = !0, AE = { role: { type: "string", description: "Actor role (e.g., 'kanban-view', 'vibe', 'composite', 'leaf')" }, context: { $co: "@maia/schema/context", description: "Co-id reference to context definition" }, view: { $co: "@maia/schema/view", description: "Co-id reference to view definition" }, state: { $co: "@maia/schema/state", description: "Co-id reference to state machine definition" }, brand: { $co: "@maia/schema/style", description: "Co-id reference to brand style definition (uses style schema)" }, style: { $co: "@maia/schema/style", description: "Co-id reference to local style definition" }, inbox: { $co: "@maia/schema/inbox", description: "Co-id reference to message inbox costream (append-only message feed)" }, messageTypes: { type: "array", items: { type: "string" }, description: "REQUIRED: Message types this actor accepts (exhaustive list - like sealed protocol). All actors must declare their message contracts." } }, eE = {
+  $schema: $Q,
+  $id: WQ,
+  title: zQ,
+  description: _Q,
+  cotype: ZQ,
+  indexing: XQ,
+  properties: AE
+}, tE = "@maia/schema/meta", iE = "@maia/schema/context", oE = "@maia/schema/context", rE = "Runtime data for an actor (flexible JSON structure). The context itself is a comap CoValue (for CRDT sync/versioning), but all inner properties are plain JS objects/arrays/strings - NOT CoJSON types.", nE = "comap", sE = !0, aE = { description: "Any context fields (query objects, collections, UI state, form values, etc.). Query objects have schema + options properties. All inner properties are plain JS types (objects/arrays/strings/primitives) - NOT CoJSON types.", anyOf: [{ type: "object", description: "Query object for reactive subscription (has schema property). Can include nested options object with map, filter, etc.", properties: { schema: { type: "string", description: "Schema reference (e.g., '@maia/schema/message' or co-id)" }, options: { type: "object", description: "Query options (map, filter, etc.)", properties: { map: { type: "object", description: "Map transformation expressions (e.g., { sender: '$$source.role' })", additionalProperties: { type: "string" } }, filter: { description: "Filter criteria", oneOf: [{ type: "object" }, { type: "null" }] } }, additionalProperties: !0 }, filter: { description: "Filter criteria (legacy - use options.filter instead)", oneOf: [{ type: "object" }, { type: "null" }] } }, required: ["schema"], additionalProperties: !0 }, { type: "array", description: "Array of data items (after SubscriptionEngine processes the query object)" }, { type: "string" }, { type: "number" }, { type: "boolean" }, { type: "null" }, { type: "object", description: "Any other nested object (UI state, form values, etc.)" }] }, gE = {
+  $schema: tE,
+  $id: iE,
+  title: oE,
+  description: rE,
+  cotype: nE,
+  indexing: sE,
+  additionalProperties: aE
+}, IE = "@maia/schema/meta", cE = "@maia/schema/state", CE = "@maia/schema/state", BE = "XState-like state machine with states, transitions, guards, and actions", QE = "comap", EE = !0, lE = ["initial", "states"], dE = { initial: { type: "string", description: "Initial state name" }, states: { type: "object", description: "State definitions", additionalProperties: { type: "object", properties: { entry: { oneOf: [{ type: "object", description: "Inline tool action object", properties: { tool: { type: "string", description: "Tool identifier" }, payload: { type: "object", description: "Tool payload", additionalProperties: !0 } }, required: ["tool"] }, { type: "object", description: "Infrastructure context update action", properties: { updateContext: { type: "object", description: "Context updates (infrastructure, not a tool)", additionalProperties: !0 } }, required: ["updateContext"] }, { type: "object", description: "Map operations engine configs to context keys (universal API)", properties: { mapData: { type: "object", description: "Map operations engine configs to context keys (universal API)", additionalProperties: { type: "object", description: "Operations engine config (op, schema, filter, key, keys, etc.)", properties: { op: { type: "string", description: "Operation type (read, create, update, delete, schema, resolve, etc.)", default: "read" } }, additionalProperties: !0 } } }, required: ["mapData"] }, { type: "array", description: "Array of inline action objects", items: { oneOf: [{ type: "object", properties: { tool: { type: "string", description: "Tool identifier" }, payload: { type: "object", description: "Tool payload", additionalProperties: !0 } }, required: ["tool"] }, { type: "object", properties: { updateContext: { type: "object", description: "Context updates (infrastructure, not a tool)", additionalProperties: !0 } }, required: ["updateContext"] }, { type: "object", properties: { mapData: { type: "object", description: "Map operations engine configs to context keys (universal API)", additionalProperties: { type: "object", description: "Operations engine config (op, schema, filter, key, keys, etc.)", properties: { op: { type: "string", description: "Operation type (read, create, update, delete, schema, resolve, etc.)", default: "read" } }, additionalProperties: !0 } } }, required: ["mapData"] }] } }, { $co: "@maia/schema/action", description: "Co-id reference to action CoValue" }, { type: "array", description: "Array of action co-id references", items: { $co: "@maia/schema/action" } }] }, exit: { oneOf: [{ type: "object", description: "Inline tool action object", properties: { tool: { type: "string", description: "Tool identifier" }, payload: { type: "object", description: "Tool payload", additionalProperties: !0 } }, required: ["tool"] }, { type: "object", description: "Infrastructure context update action", properties: { updateContext: { type: "object", description: "Context updates (infrastructure, not a tool)", additionalProperties: !0 } }, required: ["updateContext"] }, { type: "object", description: "Map operations engine configs to context keys (universal API)", properties: { mapData: { type: "object", description: "Map operations engine configs to context keys (universal API)", additionalProperties: { type: "object", description: "Operations engine config (op, schema, filter, key, keys, etc.)", properties: { op: { type: "string", description: "Operation type (read, create, update, delete, schema, resolve, etc.)", default: "read" } }, additionalProperties: !0 } } }, required: ["mapData"] }, { type: "array", description: "Array of inline action objects", items: { oneOf: [{ type: "object", properties: { tool: { type: "string", description: "Tool identifier" }, payload: { type: "object", description: "Tool payload", additionalProperties: !0 } }, required: ["tool"] }, { type: "object", properties: { updateContext: { type: "object", description: "Context updates (infrastructure, not a tool)", additionalProperties: !0 } }, required: ["updateContext"] }, { type: "object", properties: { mapData: { type: "object", description: "Map operations engine configs to context keys (universal API)", additionalProperties: { type: "object", description: "Operations engine config (op, schema, filter, key, keys, etc.)", properties: { op: { type: "string", description: "Operation type (read, create, update, delete, schema, resolve, etc.)", default: "read" } }, additionalProperties: !0 } } }, required: ["mapData"] }] } }, { $co: "@maia/schema/action", description: "Co-id reference to action CoValue" }, { type: "array", description: "Array of action co-id references", items: { $co: "@maia/schema/action" } }] }, on: { type: "object", description: "Event handlers (transitions)", additionalProperties: { oneOf: [{ type: "string", description: "Simple target state name" }, { type: "object", description: "Inline transition object", properties: { target: { type: "string", description: "Target state name" }, guard: { type: "object", description: "Guard condition", additionalProperties: !0 }, actions: { type: "array", description: "Transition actions", items: { oneOf: [{ type: "object", properties: { tool: { type: "string", description: "Tool identifier" }, payload: { type: "object", additionalProperties: !0 } }, required: ["tool"] }, { type: "object", properties: { updateContext: { type: "object", description: "Context updates (infrastructure, not a tool)", additionalProperties: !0 } }, required: ["updateContext"] }, { $co: "@maia/schema/action" }] } } }, required: ["target"] }, { $co: "@maia/schema/transition", description: "Co-id reference to transition CoValue" }] } } }, additionalProperties: !1 } } }, uE = {
+  $schema: IE,
+  $id: cE,
+  title: CE,
+  description: BE,
+  cotype: QE,
+  indexing: EE,
+  required: lE,
+  properties: dE
+}, hE = "@maia/schema/meta", fE = "@maia/schema/view", pE = "@maia/schema/view", wE = "UI structure definition with DOM tree, expressions, loops, and event handlers (recursive viewNode structure)", yE = "comap", DE = !0, mE = { content: { type: "object", description: "View content structure (recursive viewNode)", $ref: "#/$defs/viewNode" } }, SE = { viewNode: { type: "object", description: "Recursive DOM node structure", properties: { tag: { type: "string" }, class: { type: "string" }, text: { anyOf: [{ type: "string", pattern: "^\\$\\$" }, { type: "string", pattern: "^@" }, { type: "string", pattern: "^\\$[^$]" }, { type: "string" }, { type: "number" }, { type: "boolean" }, { type: "null" }] }, value: { anyOf: [{ type: "string", pattern: "^\\$\\$" }, { type: "string", pattern: "^@" }, { type: "string", pattern: "^\\$[^$]" }, { type: "string" }, { type: "number" }, { type: "boolean" }, { type: "null" }] }, attrs: { type: "object", additionalProperties: { anyOf: [{ type: "string", pattern: "^\\$\\$" }, { type: "string", pattern: "^@" }, { type: "string", pattern: "^\\$[^$]" }, { type: "string" }, { type: "number" }, { type: "boolean" }, { type: "null" }, { type: "object", additionalProperties: { anyOf: [{ type: "string", pattern: "^\\$\\$" }, { type: "string", pattern: "^@" }, { type: "string", pattern: "^\\$[^$]" }, { type: "string" }, { type: "number" }, { type: "boolean" }, { type: "null" }] } }] } }, children: { type: "array", items: { $ref: "#/$defs/viewNode" } }, $on: { type: "object", additionalProperties: { type: "object", properties: { send: { type: "string" }, payload: { type: "object", additionalProperties: !0 }, key: { type: "string" } }, required: ["send"] } }, $each: { type: "object", properties: { items: { anyOf: [{ type: "string", pattern: "^\\$\\$" }, { type: "string", pattern: "^@" }, { type: "string", pattern: "^\\$[^$]" }, { type: "string" }, { type: "number" }, { type: "boolean" }, { type: "null" }] }, template: { $ref: "#/$defs/viewNode" } }, required: ["items", "template"] }, $slot: { anyOf: [{ type: "string", pattern: "^\\$\\$" }, { type: "string", pattern: "^@" }, { type: "string", pattern: "^\\$[^$]" }, { type: "string" }, { type: "number" }, { type: "boolean" }, { type: "null" }] } }, additionalProperties: !1 } }, kE = !1, NE = {
+  $schema: hE,
+  $id: fE,
+  title: pE,
+  description: wE,
+  cotype: yE,
+  indexing: DE,
+  properties: mE,
+  $defs: SE,
+  additionalProperties: kE
+}, ME = "@maia/schema/meta", GE = "@maia/schema/style", FE = "@maia/schema/style", bE = "Style definition (brand or actor-specific). Brand styles typically include selectors, actor styles are overrides.", RE = "comap", vE = !0, KE = { tokens: { type: "object", description: "Design tokens (colors, spacing, typography, etc.)", additionalProperties: !0 }, components: { type: "object", description: "Component styles", additionalProperties: !0 }, selectors: { type: "object", description: "CSS selector-based styles (typically used in brand styles)", additionalProperties: { type: "object", description: "CSS properties and values", additionalProperties: { oneOf: [{ type: "string" }, { type: "number" }, { type: "object", additionalProperties: !0 }] } } } }, oi = {
+  $schema: ME,
+  $id: GE,
+  title: FE,
+  description: bE,
+  cotype: RE,
+  indexing: vE,
+  properties: KE
+}, YE = "@maia/schema/meta", UE = "@maia/schema/tool", JE = "@maia/schema/tool", HE = "Tool metadata (AI-compatible JSON schema)", qE = "comap", xE = !0, LE = ["name", "description", "parameters"], TE = { name: { type: "string", description: "Tool identifier (e.g., '@mutation/create')", pattern: "^@" }, description: { type: "string", description: "Tool description" }, parameters: { type: "object", description: "JSON Schema for tool parameters (standard JSON Schema format)", properties: { type: { type: "string", enum: ["object", "array", "string", "number", "boolean", "null"] }, properties: { type: "object", additionalProperties: { type: "object", description: "Parameter property schema", properties: { type: { type: "string" }, description: { type: "string" }, required: { type: "boolean" }, properties: { type: "object", additionalProperties: !0 } }, additionalProperties: !0 } }, required: { type: "array", items: { type: "string" } } }, required: ["type"], additionalProperties: !0 } }, OE = {
+  $schema: YE,
+  $id: UE,
+  title: JE,
+  description: HE,
+  cotype: qE,
+  indexing: xE,
+  required: LE,
+  properties: TE
+}, PE = "@maia/schema/meta", jE = "@maia/schema/vibe", VE = "@maia/schema/vibe", $E = "Vibe manifest/metadata", WE = "comap", zE = !0, _E = ["name", "description", "actor"], ZE = { name: { type: "string", description: "Vibe name" }, description: { type: "string", description: "Vibe description" }, actor: { $co: "@maia/schema/actor", description: "Co-id reference to actor definition (root actor for this vibe)" } }, XE = {
+  $schema: PE,
+  $id: jE,
+  title: VE,
+  description: $E,
+  cotype: WE,
+  indexing: zE,
+  required: _E,
+  properties: ZE
+}, Al = "@maia/schema/meta", el = "@maia/schema/message", tl = "@maia/schema/message", il = "Actor message for state machine transitions", ol = "comap", rl = !0, nl = ["type"], sl = { type: { type: "string", description: "Message type (event name)" }, payload: { type: "object", description: "Message payload data" }, source: { $co: "@maia/schema/actor", description: "Co-id reference to source actor" }, target: { $co: "@maia/schema/actor", description: "Co-id reference to target actor (required for direct messaging)" }, processed: { type: "boolean", description: "Whether this message has been processed", default: !1 } }, al = {
+  $schema: Al,
+  $id: el,
+  title: tl,
+  description: il,
+  cotype: ol,
+  indexing: rl,
+  required: nl,
+  properties: sl
+}, gl = "@maia/schema/meta", Il = "@maia/schema/guard", cl = "@maia/schema/guard", Cl = "JSON Schema guard for conditional logic - checks state/context conditions (NOT payload validation)", Bl = "comap", Ql = !0, El = ["schema"], ll = { schema: { type: "object", description: "JSON Schema to validate against current state/context (for conditional logic only, NOT payload validation)", additionalProperties: !0 } }, dl = !1, ul = {
+  $schema: gl,
+  $id: Il,
+  title: cl,
+  description: Cl,
+  cotype: Bl,
+  indexing: Ql,
+  required: El,
+  properties: ll,
+  additionalProperties: dl
+}, hl = "@maia/schema/meta", fl = "@maia/schema/action", pl = "@maia/schema/action", wl = "Action (tool invocation, context update, or data mapping)", yl = "comap", Dl = !0, ml = [{ type: "object", properties: { tool: { type: "string", description: "Tool identifier (e.g., '@mutation/create')" }, payload: { description: "Tool payload (can contain expressions)", type: "object", additionalProperties: !0 } }, required: ["tool"] }, { type: "object", properties: { updateContext: { type: "object", description: "Context updates (infrastructure, not a tool)", additionalProperties: !0 } }, required: ["updateContext"] }, { type: "object", properties: { mapData: { type: "object", description: "Map operations engine configs to context keys (universal API)", additionalProperties: { type: "object", description: "Operations engine config (op, schema, filter, key, keys, etc.)", properties: { op: { type: "string", description: "Operation type (read, create, update, delete, schema, resolve, etc.)", default: "read" } }, additionalProperties: !0 } } }, required: ["mapData"] }], Sl = {
+  $schema: hl,
+  $id: fl,
+  title: pl,
+  description: wl,
+  cotype: yl,
+  indexing: Dl,
+  oneOf: ml
+}, kl = "@maia/schema/meta", Nl = "@maia/schema/transition", Ml = "@maia/schema/transition", Gl = "State machine transition", Fl = "comap", bl = !0, Rl = { target: { type: "string", description: "Target state name" }, guard: { $co: "@maia/schema/guard" }, actions: { type: "array", items: { $co: "@maia/schema/action" } } }, vl = ["target"], Kl = {
+  $schema: kl,
+  $id: Nl,
+  title: Ml,
+  description: Gl,
+  cotype: Fl,
+  indexing: bl,
+  properties: Rl,
+  required: vl
+}, Yl = "@maia/schema/meta", Ul = "@maia/schema/messagePayload", Jl = "@maia/schema/messagePayload", Hl = "Message payload definition", ql = "comap", xl = !0, Ll = {}, Tl = !0, Ol = {
+  $schema: Yl,
+  $id: Ul,
+  title: Jl,
+  description: Hl,
+  cotype: ql,
+  indexing: xl,
+  properties: Ll,
+  additionalProperties: Tl
+}, Pl = "@maia/schema/meta", jl = "@maia/schema/messageType", Vl = "@maia/schema/messageType", $l = "Message type schemas are standard JSON Schemas that validate message payloads. The schema ID (e.g., '@maia/schema/message/CREATE_BUTTON') identifies the message type.", Wl = "comap", zl = !0, _l = "object", Zl = !0, Xl = {
+  $schema: Pl,
+  $id: jl,
+  title: Vl,
+  description: $l,
+  cotype: Wl,
+  indexing: zl,
+  type: _l,
+  additionalProperties: Zl
+}, Ad = "@maia/schema/meta", ed = "@maia/schema/maia-script-expression", td = "@maia/schema/maia-script-expression", id = "comap", od = !1, rd = "JSON-based DSL expression schema for MaiaScript runtime logic. Supports data access, comparisons, logical operations, control flow, and nested expressions.", nd = [{ description: "Primitive value", type: ["number", "boolean", "null"] }, { description: "String value (including shortcut syntax $key or $$key)", type: "string" }, { $ref: "#/$defs/expressionObject" }], sd = { expressionObject: { description: "MaiaScript expression object (DSL operation)", type: "object", oneOf: [{ description: "$context operation - access context data", properties: { $context: { type: "string", description: "Dot-separated path in context object (e.g., 'user.name')", pattern: "^(?!.*(__proto__|constructor|prototype))[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*$" } }, required: ["$context"], additionalProperties: !1 }, { description: "$item operation - access item data", properties: { $item: { type: "string", description: "Dot-separated path in item object (e.g., 'id', 'status.value')", pattern: "^(?!.*(__proto__|constructor|prototype))[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*$" } }, required: ["$item"], additionalProperties: !1 }, { description: "$eq operation - equality comparison", properties: { $eq: { type: "array", description: "Array of two expressions to compare", items: { $ref: "#" }, minItems: 2, maxItems: 2 } }, required: ["$eq"], additionalProperties: !1 }, { description: "$ne operation - inequality comparison", properties: { $ne: { type: "array", description: "Array of two expressions to compare", items: { $ref: "#" }, minItems: 2, maxItems: 2 } }, required: ["$ne"], additionalProperties: !1 }, { description: "$not operation - logical NOT (negate boolean)", properties: { $not: { $ref: "#", description: "Expression to negate (evaluated to boolean, then negated)" } }, required: ["$not"], additionalProperties: !1 }, { description: "$and operation - logical AND (all operands must be truthy)", properties: { $and: { type: "array", description: "Array of expressions to evaluate (all must be truthy)", items: { $ref: "#" }, minItems: 1 } }, required: ["$and"], additionalProperties: !1 }, { description: "$or operation - logical OR (at least one operand must be truthy)", properties: { $or: { type: "array", description: "Array of expressions to evaluate (at least one must be truthy)", items: { $ref: "#" }, minItems: 1 } }, required: ["$or"], additionalProperties: !1 }, { description: "$trim operation - trim whitespace from string", properties: { $trim: { $ref: "#", description: "Expression to trim (evaluated to string, then trimmed of leading/trailing whitespace)" } }, required: ["$trim"], additionalProperties: !1 }, { description: "$gt operation - greater than comparison", properties: { $gt: { type: "array", description: "Array of two expressions to compare (left > right)", items: { $ref: "#" }, minItems: 2, maxItems: 2 } }, required: ["$gt"], additionalProperties: !1 }, { description: "$length operation - get array or string length", properties: { $length: { $ref: "#", description: "Expression to get length of (evaluated to array or string)" } }, required: ["$length"], additionalProperties: !1 }, { description: "$concat operation - concatenate arrays", properties: { $concat: { type: "array", description: "Array of expressions, arrays, or objects to concatenate (all evaluated to arrays, then flattened)", items: { anyOf: [{ $ref: "#" }, { type: ["array", "object", "string", "number", "boolean", "null"] }] }, minItems: 1 } }, required: ["$concat"], additionalProperties: !1 }, { description: "$map operation - map over array", properties: { $map: { type: "object", description: "Map configuration object", properties: { array: { $ref: "#", description: "Expression evaluating to array to map over" }, as: { type: "string", description: "Variable name for each item in the array (default: 'item')" }, return: { description: "Expression, object, or array to evaluate for each item (result becomes item in returned array). 'do' is also supported as an alias.", anyOf: [{ $ref: "#" }, { type: ["object", "array", "string", "number", "boolean", "null"] }] }, do: { description: "Alias for 'return' - expression, object, or array to evaluate for each item", anyOf: [{ $ref: "#" }, { type: ["object", "array", "string", "number", "boolean", "null"] }] } }, required: ["array"], additionalProperties: !1 } }, required: ["$map"], additionalProperties: !1 }, { description: "$if operation - conditional expression", properties: { $if: { type: "object", description: "Conditional expression object", properties: { condition: { $ref: "#", description: "Condition expression (evaluated to boolean)" }, then: { $ref: "#", description: "Expression to evaluate if condition is true" }, else: { $ref: "#", description: "Expression to evaluate if condition is false" } }, required: ["condition", "then", "else"], additionalProperties: !1 } }, required: ["$if"], additionalProperties: !1 }] } }, ad = {
+  $schema: Ad,
+  $id: ed,
+  title: td,
+  cotype: id,
+  indexing: od,
+  description: rd,
+  anyOf: nd,
+  $defs: sd
+}, gd = "@maia/schema/meta", Id = "@maia/schema/subscribers", cd = "@maia/schema/subscribers", Cd = "A colist of actor co-ids subscribed to a topic", Bd = "colist", Qd = !0, Ed = { $co: "@maia/schema/actor", description: "Each item is a co-id reference to an actor subscribed to this topic" }, ld = {
+  $schema: gd,
+  $id: Id,
+  title: cd,
+  description: Cd,
+  cotype: Bd,
+  indexing: Qd,
+  items: Ed
+}, dd = "@maia/schema/meta", ud = "@maia/schema/inbox", hd = "@maia/schema/inbox", fd = "A costream (append-only stream) of messages received by this actor", pd = "costream", wd = !0, yd = { $co: "@maia/schema/message", description: "Each item is a co-id reference to a message" }, Dd = {
+  $schema: dd,
+  $id: ud,
+  title: hd,
+  description: fd,
+  cotype: pd,
+  indexing: wd,
+  items: yd
+}, md = "@maia/schema/meta", Sd = "@maia/schema/children", kd = "@maia/schema/children", Nd = "A comap of child actors (namekey → actor co-id)", Md = "comap", Gd = !0, Fd = {}, bd = { $co: "@maia/schema/actor", description: "Each value is a co-id reference to a child actor" }, Rd = {
+  $schema: md,
+  $id: Sd,
+  title: kd,
+  description: Nd,
+  cotype: Md,
+  indexing: Gd,
+  properties: Fd,
+  additionalProperties: bd
+}, vd = "@maia/schema/meta", Kd = "@maia/schema/os/schematas-registry", Yd = "@maia/schema/os/schematas-registry", Ud = "Schema registry CoMap - maps schema namekeys (e.g., @maia/schema/data/todos) to schema co-ids (co_z...). Stored in account.os.schematas", Jd = "comap", Hd = !1, qd = { "@maia/schema/meta": { type: "string", description: "Metaschema co-id (co_z...)" } }, xd = { type: "string", description: "Schema namekey → schema co-id mapping (e.g., @maia/schema/data/todos → co_z123...)" }, Ld = {
+  $schema: vd,
+  $id: Kd,
+  title: Yd,
+  description: Ud,
+  cotype: Jd,
+  indexing: Hd,
+  properties: qd,
+  additionalProperties: xd
+}, Td = "@maia/schema/meta", Od = "@maia/schema/os/os-registry", Pd = "@maia/schema/os/os-registry", jd = "OS CoMap - contains capabilities, schematas, indexes. Stored in spark.os", Vd = "comap", $d = !1, Wd = { capabilities: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Capabilities CoMap co-id (guardian, publicReaders)" }, schematas: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Schemata registry CoMap co-id" }, indexes: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Indexes registry CoMap co-id" } }, zd = {
+  $schema: Td,
+  $id: Od,
+  title: Pd,
+  description: jd,
+  cotype: Vd,
+  indexing: $d,
+  properties: Wd
+}, _d = "@maia/schema/meta", Zd = "@maia/schema/os/capabilities", Xd = "@maia/schema/os/capabilities", Au = "Capabilities CoMap - guardian, publicReaders. Stored in spark.os.capabilities", eu = "comap", tu = !1, iu = { guardian: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Guardian group co-id" }, publicReaders: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Public readers group co-id" } }, ou = {
+  $schema: _d,
+  $id: Zd,
+  title: Xd,
+  description: Au,
+  cotype: eu,
+  indexing: tu,
+  properties: iu
+}, ru = "@maia/schema/meta", nu = "@maia/schema/os/indexes-registry", su = "@maia/schema/os/indexes-registry", au = "Indexes registry CoMap - schema co-id -> index colist. Stored in spark.os.indexes", gu = "comap", Iu = !1, cu = { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Schema co-id -> index colist co-id" }, Cu = {
+  $schema: ru,
+  $id: nu,
+  title: su,
+  description: au,
+  cotype: gu,
+  indexing: Iu,
+  additionalProperties: cu
+}, Bu = "@maia/schema/meta", Qu = "@maia/schema/os/vibes-registry", Eu = "@maia/schema/os/vibes-registry", lu = "Vibes registry CoMap - vibe key -> vibe co-id. Stored in spark.vibes", du = "comap", uu = !1, hu = { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Vibe key -> vibe CoMap co-id" }, fu = {
+  $schema: Bu,
+  $id: Qu,
+  title: Eu,
+  description: lu,
+  cotype: du,
+  indexing: uu,
+  additionalProperties: hu
+}, pu = "@maia/schema/meta", wu = "@maia/schema/os/sparks-registry", yu = "@maia/schema/os/sparks-registry", Du = "Sparks registry CoMap - spark name -> spark co-id. Stored in account.sparks", mu = "comap", Su = !1, ku = { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Spark name -> spark CoMap co-id" }, Nu = {
+  $schema: pu,
+  $id: wu,
+  title: yu,
+  description: Du,
+  cotype: mu,
+  indexing: Su,
+  additionalProperties: ku
+}, Mu = "@maia/schema/meta", Gu = "@maia/schema/os/humans-registry", Fu = "@maia/schema/os/humans-registry", bu = "Humans registry CoMap - username -> account co-id. Stored in spark.registries.humans", Ru = "comap", vu = !1, Ku = { type: "string", pattern: "^co_z[a-zA-Z0-9]{20,}$", description: "Username -> account co-id" }, Yu = {
+  $schema: Mu,
+  $id: Gu,
+  title: Fu,
+  description: bu,
+  cotype: Ru,
+  indexing: vu,
+  additionalProperties: Ku
+}, Uu = "@maia/schema/meta", Ju = "@maia/schema/os/registries", Hu = "@maia/schema/os/registries", qu = "Registries CoMap - contains sparks, etc. Stored in spark.registries", xu = "comap", Lu = !1, Tu = { sparks: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Sparks registry CoMap co-id (spark name -> spark co-id)" } }, Ou = { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Registry name -> registry CoMap co-id" }, Pu = {
+  $schema: Uu,
+  $id: Ju,
+  title: Hu,
+  description: qu,
+  cotype: xu,
+  indexing: Lu,
+  properties: Tu,
+  additionalProperties: Ou
+}, ju = "@maia/schema/data/todos", Vu = "@maia/schema/meta", $u = "@maia/schema/data/todos", Wu = "comap", zu = !0, _u = { text: { type: "string", minLength: 1, pattern: ".*\\S.*", description: "The todo item text content (must contain at least one non-whitespace character)" }, done: { type: "boolean", description: "Whether the todo item is completed" } }, Zu = ["text", "done"], Xu = !1, Ah = {
+  $id: ju,
+  $schema: Vu,
+  title: $u,
+  cotype: Wu,
+  indexing: zu,
+  properties: _u,
+  required: Zu,
+  additionalProperties: Xu
+}, eh = "@maia/schema/data/chat", th = "@maia/schema/meta", ih = "@maia/schema/data/chat", oh = "comap", rh = !0, nh = { role: { type: "string", enum: ["user", "assistant", "system"], description: "The role of the message sender" }, content: { type: "string", minLength: 1, description: "The message content" } }, sh = ["role", "content"], ah = !1, gh = {
+  $id: eh,
+  $schema: th,
+  title: ih,
+  cotype: oh,
+  indexing: rh,
+  properties: nh,
+  required: sh,
+  additionalProperties: ah
+}, Ih = "@maia/schema/meta", ch = "@maia/schema/data/spark", Ch = "@maia/schema/data/spark", Bh = "Spark CoMap. Guardian (admin) group is spark.os.capabilities.guardian.", Qh = "comap", Eh = !0, lh = ["name"], dh = { name: { type: "string", description: "Spark name e.g. @maia" }, os: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "OS CoMap - contains schematas, indexes, capabilities (guardian, publicReaders)." }, vibes: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Vibes registry CoMap for this spark." } }, uh = {
+  $schema: Ih,
+  $id: ch,
+  title: Ch,
+  description: Bh,
+  cotype: Qh,
+  indexing: Eh,
+  required: lh,
+  properties: dh
+}, hh = "@maia/schema/meta", fh = "@maia/schema/message/CREATE_BUTTON", ph = "@maia/schema/message/CREATE_BUTTON", wh = "Message type for creating a new item via button click (generic, reusable across vibes)", yh = "comap", Dh = !0, mh = "object", Sh = { value: { type: "string", minLength: 1, pattern: "^\\S", description: "Item value/text (required, non-empty, must contain at least one non-whitespace character). Generic property name for reuse across vibes." } }, kh = ["value"], Nh = !0, Mh = {
+  $schema: hh,
+  $id: fh,
+  title: ph,
+  description: wh,
+  cotype: yh,
+  indexing: Dh,
+  type: mh,
+  properties: Sh,
+  required: kh,
+  additionalProperties: Nh
+}, Gh = "@maia/schema/meta", Fh = "@maia/schema/message/TOGGLE_BUTTON", bh = "@maia/schema/message/TOGGLE_BUTTON", Rh = "Message type for toggling a todo item's done status", vh = "comap", Kh = !0, Yh = "object", Uh = { id: { type: "string", pattern: "^co_z", description: "Todo item co-id (required)" }, done: { type: "boolean", description: "Current done status (optional, will be toggled)" } }, Jh = ["id"], Hh = !1, qh = {
+  $schema: Gh,
+  $id: Fh,
+  title: bh,
+  description: Rh,
+  cotype: vh,
+  indexing: Kh,
+  type: Yh,
+  properties: Uh,
+  required: Jh,
+  additionalProperties: Hh
+}, xh = "@maia/schema/meta", Lh = "@maia/schema/message/DELETE_BUTTON", Th = "@maia/schema/message/DELETE_BUTTON", Oh = "Message type for deleting a todo item", Ph = "comap", jh = !0, Vh = "object", $h = { id: { type: "string", pattern: "^co_z", description: "Todo item co-id (required)" } }, Wh = ["id"], zh = !1, _h = {
+  $schema: xh,
+  $id: Lh,
+  title: Th,
+  description: Oh,
+  cotype: Ph,
+  indexing: jh,
+  type: Vh,
+  properties: $h,
+  required: Wh,
+  additionalProperties: zh
+}, Zh = "@maia/schema/meta", Xh = "@maia/schema/message/UPDATE_INPUT", Af = "@maia/schema/message/UPDATE_INPUT", ef = "Message type for updating input field value (generic, reusable across vibes)", tf = "comap", of = !0, rf = "object", nf = { value: { type: "string", description: "New input field value (generic property name for reuse across vibes)" } }, sf = !0, af = {
+  $schema: Zh,
+  $id: Xh,
+  title: Af,
+  description: ef,
+  cotype: tf,
+  indexing: of,
+  type: rf,
+  properties: nf,
+  additionalProperties: sf
+}, gf = "@maia/schema/meta", If = "@maia/schema/message/SWITCH_VIEW", cf = "@maia/schema/message/SWITCH_VIEW", Cf = "Message type for switching view mode", Bf = "comap", Qf = !0, Ef = "object", lf = { viewMode: { type: "string", enum: ["list", "logs", "comingSoon"], description: "View mode to switch to (required)" } }, df = ["viewMode"], uf = !1, hf = {
+  $schema: gf,
+  $id: If,
+  title: cf,
+  description: Cf,
+  cotype: Bf,
+  indexing: Qf,
+  type: Ef,
+  properties: lf,
+  required: df,
+  additionalProperties: uf
+}, ff = "@maia/schema/meta", pf = "@maia/schema/message/SUCCESS", wf = "@maia/schema/message/SUCCESS", yf = "Message type for successful operation completion", Df = "comap", mf = !0, Sf = "object", kf = { result: { description: "Tool execution result (optional, can be any type - object, boolean, string, etc.)" }, value: { type: "string", description: "Original event payload property (optional, for CREATE_BUTTON, UPDATE_INPUT - generic property name)" }, text: { type: "string", description: "Original event payload property (optional, legacy - use 'value' instead)" }, id: { type: "string", pattern: "^co_z", description: "Original event payload property (optional, for TOGGLE_BUTTON, DELETE_BUTTON)" }, done: { type: "boolean", description: "Original event payload property (optional, for TOGGLE_BUTTON)" }, viewMode: { type: "string", enum: ["list", "logs"], description: "Original event payload property (optional, for SWITCH_VIEW)" }, newTodoText: { type: "string", description: "Original event payload property (optional, legacy - use 'value' instead)" } }, Nf = !0, Mf = {
+  $schema: ff,
+  $id: pf,
+  title: wf,
+  description: yf,
+  cotype: Df,
+  indexing: mf,
+  type: Sf,
+  properties: kf,
+  additionalProperties: Nf
+}, Gf = "@maia/schema/meta", Ff = "@maia/schema/message/ERROR", bf = "@maia/schema/message/ERROR", Rf = "Message type for operation errors. Aligned with OperationResult createErrorEntry shape.", vf = "comap", Kf = !0, Yf = "object", Uf = { errors: { type: "array", description: "Structured error entries. Same shape as OperationResult.", items: { type: "object", required: ["type", "message"], properties: { type: { type: "string", description: "Error type: schema | permission | structural" }, message: { type: "string", description: "Error message" }, path: { type: "string", description: "Optional path (e.g. /field)" } } } } }, Jf = ["errors"], Hf = !1, qf = {
+  $schema: Gf,
+  $id: Ff,
+  title: bf,
+  description: Rf,
+  cotype: vf,
+  indexing: Kf,
+  type: Yf,
+  properties: Uf,
+  required: Jf,
+  additionalProperties: Hf
+}, xf = "@maia/schema/meta", Lf = "@maia/schema/message/SEND_MESSAGE", Tf = "@maia/schema/message/SEND_MESSAGE", Of = "Message type for sending a chat message", Pf = "comap", jf = !0, Vf = "object", $f = { inputText: { type: "string", minLength: 1, description: "Message text (required, non-empty)" } }, Wf = ["inputText"], zf = !1, _f = {
+  $schema: xf,
+  $id: Lf,
+  title: Tf,
+  description: Of,
+  cotype: Pf,
+  indexing: jf,
+  type: Vf,
+  properties: $f,
+  required: Wf,
+  additionalProperties: zf
+}, Zf = "@maia/schema/meta", Xf = "@maia/schema/message/RETRY", Ap = "@maia/schema/message/RETRY", ep = "Message type for retrying a failed operation", tp = "comap", ip = !0, op = "object", rp = {}, np = !1, sp = {
+  $schema: Zf,
+  $id: Xf,
+  title: Ap,
+  description: ep,
+  cotype: tp,
+  indexing: ip,
+  type: op,
+  properties: rp,
+  additionalProperties: np
+}, ap = "@maia/schema/meta", gp = "@maia/schema/message/DISMISS", Ip = "@maia/schema/message/DISMISS", cp = "Message type for dismissing an error or notification", Cp = "comap", Bp = !0, Qp = "object", Ep = {}, lp = !1, dp = {
+  $schema: ap,
+  $id: gp,
+  title: Ip,
+  description: cp,
+  cotype: Cp,
+  indexing: Bp,
+  type: Qp,
+  properties: Ep,
+  additionalProperties: lp
+}, up = "@maia/schema/meta", hp = "@maia/schema/message/SELECT_NAV", fp = "@maia/schema/message/SELECT_NAV", pp = "Message type for selecting a navigation item", wp = "comap", yp = !0, Dp = "object", mp = { navId: { type: "string", description: "Navigation item ID (required)" } }, Sp = ["navId"], kp = !1, Np = {
+  $schema: up,
+  $id: hp,
+  title: fp,
+  description: pp,
+  cotype: wp,
+  indexing: yp,
+  type: Dp,
+  properties: mp,
+  required: Sp,
+  additionalProperties: kp
+}, Mp = "@maia/schema/meta", Gp = "@maia/schema/message/SELECT_ROW", Fp = "@maia/schema/message/SELECT_ROW", bp = "Message type for selecting a table row", Rp = "comap", vp = !0, Kp = "object", Yp = { rowId: { type: "string", description: "Row ID (required)" } }, Up = ["rowId"], Jp = !1, Hp = {
+  $schema: Mp,
+  $id: Gp,
+  title: Fp,
+  description: bp,
+  cotype: Rp,
+  indexing: vp,
+  type: Kp,
+  properties: Yp,
+  required: Up,
+  additionalProperties: Jp
+}, qp = "@maia/schema/meta", xp = "@maia/schema/message/SELECT_SPARK", Lp = "@maia/schema/message/SELECT_SPARK", Tp = "Message type for selecting a spark (generic, reusable across vibes)", Op = "comap", Pp = !0, jp = "object", Vp = { sparkId: { type: "string", description: "Spark co-id (required, generic property name for reuse across vibes)" } }, $p = ["sparkId"], Wp = !0, zp = {
+  $schema: qp,
+  $id: xp,
+  title: Lp,
+  description: Tp,
+  cotype: Op,
+  indexing: Pp,
+  type: jp,
+  properties: Vp,
+  required: $p,
+  additionalProperties: Wp
+}, _p = "@maia/schema/meta", Zp = "@maia/schema/message/LOAD_ACTOR", Xp = "@maia/schema/message/LOAD_ACTOR", Aw = "Generic message type for loading actor data (reusable across vibes)", ew = "comap", tw = !0, iw = "object", ow = { id: { type: "string", description: "Entity co-id to load (required, generic property name for reuse across vibes)" } }, rw = ["id"], nw = !0, sw = {
+  $schema: _p,
+  $id: Zp,
+  title: Xp,
+  description: Aw,
+  cotype: ew,
+  indexing: tw,
+  type: iw,
+  properties: ow,
+  required: rw,
+  additionalProperties: nw
+}, aw = "@maia/schema/meta", gw = "@maia/schema/message/UPDATE_AGENT_INPUT", Iw = "@maia/schema/message/UPDATE_AGENT_INPUT", cw = "Message type for updating agent ID input field in Spark detail view", Cw = "comap", Bw = !0, Qw = "object", Ew = { value: { type: "string", description: "Agent account co-id input value" } }, lw = !0, dw = {
+  $schema: aw,
+  $id: gw,
+  title: Iw,
+  description: cw,
+  cotype: Cw,
+  indexing: Bw,
+  type: Qw,
+  properties: Ew,
+  additionalProperties: lw
+}, uw = "@maia/schema/meta", hw = "@maia/schema/message/ADD_AGENT", fw = "@maia/schema/message/ADD_AGENT", pw = "Message type for adding an agent as writer member to a Spark's group", ww = "comap", yw = !0, Dw = "object", mw = { agentId: { type: "string", description: "Agent account co-id to add as writer (co_z...). Operation validates format." } }, Sw = ["agentId"], kw = !0, Nw = {
+  $schema: uw,
+  $id: hw,
+  title: fw,
+  description: pw,
+  cotype: ww,
+  indexing: yw,
+  type: Dw,
+  properties: mw,
+  required: Sw,
+  additionalProperties: kw
+}, Mw = "@maia/schema/meta", Gw = "@maia/schema/message/REMOVE_MEMBER", Fw = "@maia/schema/message/REMOVE_MEMBER", bw = "Message type for removing a member from a Spark's group", Rw = "comap", vw = !0, Kw = "object", Yw = { memberId: { type: "string", description: "Account co-id of member to remove (co_z...). Operation validates format." } }, Uw = ["memberId"], Jw = !0, Hw = {
+  $schema: Mw,
+  $id: Gw,
+  title: Fw,
+  description: bw,
+  cotype: Rw,
+  indexing: vw,
+  type: Kw,
+  properties: Yw,
+  required: Uw,
+  additionalProperties: Jw
 };
 function Hr() {
   return Ke.getMetaSchema();
 }
 const qr = {
-  actor: AE,
-  context: aE,
-  state: dE,
-  view: kE,
+  actor: eE,
+  context: gE,
+  state: uE,
+  view: NE,
   style: oi,
   brand: oi,
   "brand.style": oi,
   "actor.style": oi,
-  tool: TE,
-  vibe: ZE,
-  message: sl,
-  guard: dl,
-  action: ml,
-  transition: vl,
-  messagePayload: Tl,
-  messageType: Zl,
-  "maia-script-expression": sd,
-  subscribers: Ed,
-  inbox: yd,
-  children: bd,
-  "os/schematas-registry": xd,
-  "os/os-registry": Wd,
-  "os/capabilities": iu,
-  "os/indexes-registry": cu,
-  "os/vibes-registry": hu,
-  "os/sparks-registry": ku,
-  "os/humans-registry": Ku,
-  "os/registries": Ou,
-  "data/todos": Xu,
-  "data/chat": ah,
-  "data/spark": dh,
-  "message/CREATE_BUTTON": Nh,
-  "message/TOGGLE_BUTTON": Hh,
-  "message/DELETE_BUTTON": zh,
-  "message/UPDATE_INPUT": sf,
-  "message/SWITCH_VIEW": uf,
-  "message/SUCCESS": Nf,
-  "message/ERROR": Hf,
-  "message/SEND_MESSAGE": zf,
-  "message/RETRY": np,
-  "message/DISMISS": lp,
-  "message/SELECT_NAV": kp,
-  "message/SELECT_ROW": Jp,
-  "message/SELECT_SPARK": Wp,
-  "message/LOAD_ACTOR": nw,
-  "message/UPDATE_AGENT_INPUT": lw,
-  "message/ADD_AGENT": kw,
-  "message/REMOVE_MEMBER": Jw
+  tool: OE,
+  vibe: XE,
+  message: al,
+  guard: ul,
+  action: Sl,
+  transition: Kl,
+  messagePayload: Ol,
+  messageType: Xl,
+  "maia-script-expression": ad,
+  subscribers: ld,
+  inbox: Dd,
+  children: Rd,
+  "os/schematas-registry": Ld,
+  "os/os-registry": zd,
+  "os/capabilities": ou,
+  "os/indexes-registry": Cu,
+  "os/vibes-registry": fu,
+  "os/sparks-registry": Nu,
+  "os/humans-registry": Yu,
+  "os/registries": Pu,
+  "data/todos": Ah,
+  "data/chat": gh,
+  "data/spark": uh,
+  "message/CREATE_BUTTON": Mh,
+  "message/TOGGLE_BUTTON": qh,
+  "message/DELETE_BUTTON": _h,
+  "message/UPDATE_INPUT": af,
+  "message/SWITCH_VIEW": hf,
+  "message/SUCCESS": Mf,
+  "message/ERROR": qf,
+  "message/SEND_MESSAGE": _f,
+  "message/RETRY": sp,
+  "message/DISMISS": dp,
+  "message/SELECT_NAV": Np,
+  "message/SELECT_ROW": Hp,
+  "message/SELECT_SPARK": zp,
+  "message/LOAD_ACTOR": sw,
+  "message/UPDATE_AGENT_INPUT": dw,
+  "message/ADD_AGENT": Nw,
+  "message/REMOVE_MEMBER": Hw
 };
-function Hw(t) {
+function qw(t) {
   const A = t.startsWith("@maia/schema/") ? t.replace("@maia/schema/", "") : t;
   return qr[A] || null;
 }
@@ -11552,7 +11551,7 @@ const Wt = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   coTypesDefs: Pt,
   getAllSchemas: xr,
   getMetaSchema: Hr,
-  getSchema: Hw,
+  getSchema: qw,
   getValidationEngine: No,
   isSchemaRef: NA,
   isVibeRef: aI,
@@ -11562,7 +11561,7 @@ const Wt = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   validateAgainstSchema: Vt,
   validateAgainstSchemaOrThrow: at,
   validateSchemaStructure: Qo
-}, Symbol.toStringTag, { value: "Module" })), qw = /^@([a-zA-Z0-9_-]+)\/schema\/(.+)$/;
+}, Symbol.toStringTag, { value: "Module" })), xw = /^@([a-zA-Z0-9_-]+)\/schema\/(.+)$/;
 async function Kn(t, A) {
   const e = t?.systemSpark ?? "@maia";
   if (!t.account)
@@ -11646,7 +11645,7 @@ async function Fo(t) {
   }
   return null;
 }
-async function xw(t, A, e = null) {
+async function Lw(t, A, e = null) {
   if (!A || !A.startsWith("co_z"))
     throw new Error(`[SchemaIndexManager] Invalid schema co-id: ${A}`);
   if (!e) {
@@ -11661,7 +11660,7 @@ async function xw(t, A, e = null) {
   const o = i.title || i.$id;
   if (!o || typeof o != "string" || !ko.test(o))
     return process.env.DEBUG && console.warn(`[SchemaIndexManager] Schema ${A.substring(0, 12)}... has invalid title: ${o}`), null;
-  const r = o.match(qw);
+  const r = o.match(xw);
   if (!r)
     return process.env.DEBUG && console.warn(`[SchemaIndexManager] Schema ${A.substring(0, 12)}... has invalid title format: ${o}`), null;
   const [, n, s] = r, a = `@${n}/schema/index/${s}`, g = await eA(t, a, { returnType: "coId" });
@@ -11717,7 +11716,7 @@ async function Yn(t, A, e = null) {
     }
     return process.env.DEBUG && console.warn(`[SchemaIndexManager] Index colist (${r.substring(0, 12)}...) exists but could not be loaded. Skipping to prevent overwriting.`), null;
   }
-  const n = await xw(t, A, e);
+  const n = await Lw(t, A, e);
   if (!n)
     return process.env.DEBUG && console.warn(`[SchemaIndexManager] Cannot create index colist - schema-specific index colist schema not available for ${A.substring(0, 12)}...`), null;
   const { createCoValueForSpark: s } = await Promise.resolve().then(() => be), { coValue: a } = await s(t, "@maia", {
@@ -11755,7 +11754,7 @@ async function Un(t) {
   });
   return A.set("unknown", o.id), o;
 }
-async function Lw(t, A) {
+async function Tw(t, A) {
   if (!t.account || !A)
     return !1;
   const e = await vA(t, t?.systemSpark ?? "@maia");
@@ -11795,7 +11794,7 @@ async function Lw(t, A) {
 async function Jn(t, A) {
   if (!A)
     return { shouldIndex: !1, schemaCoId: null };
-  if (await Lw(t, A.id))
+  if (await Tw(t, A.id))
     return { shouldIndex: !1, schemaCoId: null };
   const i = t.getHeader(A);
   if (!i || !i.meta)
@@ -11976,7 +11975,7 @@ async function MI(t, A) {
     }
   }
 }
-async function Tw(t, A) {
+async function Ow(t, A) {
   if (!A || !A.startsWith("co_z") || !t.account)
     return null;
   const e = await Fo(t);
@@ -12013,7 +12012,7 @@ async function GI(t, A, e = null) {
       }
     }
     if (e && typeof e == "string" && e.startsWith("co_z")) {
-      const i = await Tw(t, e);
+      const i = await Ow(t, e);
       if (i && typeof i.toJSON == "function" && typeof i.delete == "function") {
         const r = i.toJSON().indexOf(A);
         r !== -1 && i.delete(r);
@@ -12079,7 +12078,7 @@ async function ao(t, A, e) {
   return g && t.node.storage && await t.node.syncManager.waitForStorageSync(e), g;
 }
 const kA = "@maia";
-async function Ow(t, A) {
+async function Pw(t, A) {
   const { EXCEPTION_SCHEMAS: e } = await Promise.resolve().then(() => jt), i = A.createGroup(), o = { node: A, account: t, guardian: i }, { coValue: r } = await hA(o, null, {
     schema: e.META_SCHEMA,
     cotype: "comap",
@@ -12087,7 +12086,7 @@ async function Ow(t, A) {
   });
   t.set("sparks", r.id), console.log("✅ Agent minimal bootstrap: account.sparks (empty, connect via /on-added)");
 }
-async function Pw(t, A, e, i = null) {
+async function jw(t, A, e, i = null) {
   const { EXCEPTION_SCHEMAS: o } = await Promise.resolve().then(() => jt), { getAllSchemas: r } = await Promise.resolve().then(() => Wt), n = e || r(), s = A.createGroup(), a = A.createGroup();
   a.extend(s, "extend");
   const g = a.createMap({}, { $schema: o.META_SCHEMA });
@@ -12143,7 +12142,7 @@ async function Pw(t, A, e, i = null) {
   const { coValue: Y } = await hA(O, null, Z(_, {}));
   Y.set(kA, T.id), t.set("sparks", Y.id), typeof t.delete == "function" && t.delete("temp"), console.log("✅ Bootstrap scaffold complete: account.sparks, @maia spark, os, schematas, indexes, vibes");
 }
-async function jw(t, A) {
+async function Vw(t, A) {
   const e = t.account?.get("sparks");
   if (!e?.startsWith("co_z")) return;
   const i = await t.read(null, e);
@@ -12249,7 +12248,7 @@ function bA(t, A = !1) {
   }
   return e;
 }
-async function Vw(t, A, e) {
+async function $w(t, A, e) {
   let i = 0, o = 0;
   try {
     const r = await vA(e, kA);
@@ -12482,11 +12481,11 @@ function Ee(t) {
     }
   };
 }
-async function $w(t, A, e, i, o, r = null) {
+async function Ww(t, A, e, i, o, r = null) {
   const { CoJSONBackend: n } = await Promise.resolve().then(() => Pr), s = r || new n(A, t, { systemSpark: "@maia" });
   if (!t.get("sparks") || !String(t.get("sparks")).startsWith("co_z")) {
     const { getAllSchemas: G } = await Promise.resolve().then(() => Wt);
-    await Pw(t, A, i || G(), r?.dbEngine);
+    await jw(t, A, i || G(), r?.dbEngine);
   }
   try {
     const G = await vA(s, kA);
@@ -12527,7 +12526,7 @@ async function $w(t, A, e, i, o, r = null) {
         const L = s.getCurrentContent(G);
         if (L && typeof L.get == "function" && L.get("schematas")) {
           console.log("🌱 Cleaning up existing seeded data before reseeding...");
-          const S = await Vw(t, A, s);
+          const S = await $w(t, A, s);
           console.log(`[Seed] Cleanup complete: deleted ${S.deleted} co-values, ${S.errors} errors`);
         }
       }
@@ -12537,7 +12536,7 @@ async function $w(t, A, e, i, o, r = null) {
   const B = await Go(s);
   if (!B || typeof B.createMap != "function")
     throw new Error("[CoJSONSeed] @maia spark group not found. Ensure schemaMigration has created @maia spark.");
-  await jw(s, B);
+  await Vw(s, B);
   const Q = /* @__PURE__ */ new Map();
   for (const [G, L] of Object.entries(i)) {
     const K = L.$id || `@maia/schema/${G}`;
@@ -12891,7 +12890,7 @@ ${H.join(`
         L.get(M) || console.error(`[CoJSONSeed] Missing: ${M} not found in account.vibes!`);
       }
   }
-  const N = await Ww(t, A, B, s, o, c);
+  const N = await zw(t, A, B, s, o, c);
   await RI(t, A, B, s, c, y);
   const { indexCoValue: Y } = await Promise.resolve().then(() => FI), P = [
     ...(_.configs || []).map((G) => G.coId).filter(Boolean),
@@ -12914,7 +12913,7 @@ ${H.join(`
 }
 async function bI(t, A, e) {
   if (!t.get("sparks") || !String(t.get("sparks")).startsWith("co_z"))
-    return await Ow(t, A), { metaSchema: null, schemas: {}, registry: {} };
+    return await Pw(t, A), { metaSchema: null, schemas: {}, registry: {} };
   const i = await Go(e), { getAllSchemas: o } = await Promise.resolve().then(() => Wt), r = o(), { CoIdRegistry: n } = await Promise.resolve().then(() => DI), { transformForSeeding: s, validateSchemaStructure: a } = await Promise.resolve().then(() => vn), g = new n(), I = /* @__PURE__ */ new Map();
   for (const [k, b] of Object.entries(r)) {
     const x = b.$id || `@maia/schema/${k}`;
@@ -13079,7 +13078,7 @@ async function ms(t, A, e, i, o, r, n, s) {
     configs: a
   };
 }
-async function Ww(t, A, e, i, o, r) {
+async function zw(t, A, e, i, o, r) {
   const { transformForSeeding: n } = await Promise.resolve().then(() => vn);
   if (!o || Object.keys(o).length === 0)
     return {
@@ -13232,15 +13231,15 @@ async function RI(t, A, e, i, o, r, n, s, a) {
     f ? f !== Q && console.warn(`[Seed] Metaschema already registered with different co-id: ${f ? f.substring(0, 12) : "undefined"}... (new: ${Q ? Q.substring(0, 12) : "undefined"}...). Skipping.`) : B.set("@maia/schema/meta", Q);
   }
 }
-const zw = [
+const _w = [
   "coValues",
   "sessions",
   "transactions",
   "signatureAfter",
   "deletedCoValues"
 ];
-class _w {
-  constructor(A, e = zw) {
+class Zw {
+  constructor(A, e = _w) {
     this.db = A, this.storeNames = e, this.pendingRequests = [], this.rejectHandlers = [], this.id = Math.random(), this.running = !1, this.failed = !1, this.done = !1, this.refresh();
   }
   refresh() {
@@ -13302,7 +13301,7 @@ function xe(t, A, e) {
     };
   });
 }
-function Zw(t, A, e) {
+function Xw(t, A, e) {
   return new Promise((i, o) => {
     const r = t.transaction(A, "readwrite"), n = r.objectStore(A).put(e);
     n.onerror = () => {
@@ -13317,7 +13316,7 @@ var Ss = function(t, A, e, i) {
   if (typeof A == "function" ? t !== A || !i : !A.has(t)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
   return e === "m" ? i : e === "a" ? i.call(t) : i ? i.value : A.get(t);
 }, go, Tr;
-class Xw {
+class Ay {
   constructor(A) {
     go.add(this), this.tx = A;
   }
@@ -13392,7 +13391,7 @@ go = /* @__PURE__ */ new WeakSet(), Tr = async function(A, e) {
   for (const r of o)
     await this.run((n) => n.getObjectStore(A).delete(r));
 };
-class Ay {
+class ey {
   constructor(A) {
     this.db = A;
   }
@@ -13412,7 +13411,7 @@ class Ay {
     return xe(this.db, "signatureAfter", (i) => i.getAll(IDBKeyRange.bound([A, e], [A, Number.POSITIVE_INFINITY])));
   }
   async upsertCoValue(A, e) {
-    return e ? Zw(this.db, "coValues", {
+    return e ? Xw(this.db, "coValues", {
       id: A,
       header: e
     }).catch(() => this.getCoValueRowID(A)) : this.getCoValueRowID(A);
@@ -13421,9 +13420,9 @@ class Ay {
     return (await xe(this.db, "deletedCoValues", (e) => e.index("deletedCoValuesByStatus").getAll("pending"))).map((e) => e.coValueID);
   }
   async transaction(A, e) {
-    const i = new _w(this.db, e);
+    const i = new Zw(this.db, e);
     try {
-      await A(new Xw(i)), i.commit();
+      await A(new Ay(i)), i.commit();
     } catch {
       i.rollback();
     }
@@ -13477,8 +13476,8 @@ class Ay {
     return o;
   }
 }
-let ey = "jazz-storage";
-async function ty(t = ey) {
+let ty = "jazz-storage";
+async function iy(t = ty) {
   const e = await new Promise((i, o) => {
     const r = indexedDB.open(t, 6);
     r.onerror = () => {
@@ -13522,11 +13521,11 @@ async function ty(t = ey) {
       });
     };
   });
-  return new Og(new Ay(e));
+  return new Og(new ey(e));
 }
-async function iy() {
+async function oy() {
   try {
-    return await ty();
+    return await iy();
   } catch {
     return;
   }
@@ -13581,14 +13580,14 @@ const ks = {
     "CREATE INDEX IF NOT EXISTS deletedCoValuesByStatus ON deletedCoValues (status);"
   ]
 };
-async function oy(t) {
+async function ry(t) {
   try {
     return (await t.query("SELECT version FROM schema_version ORDER BY version DESC LIMIT 1")).rows[0]?.version || 0;
   } catch {
     return 0;
   }
 }
-async function ry(t, A) {
+async function ny(t, A) {
   await t.exec(`
     CREATE TABLE IF NOT EXISTS schema_version (
       version INTEGER PRIMARY KEY,
@@ -13598,16 +13597,16 @@ async function ry(t, A) {
     ON CONFLICT (version) DO NOTHING;
   `);
 }
-async function ny(t) {
-  const A = await oy(t), e = Object.keys(ks).map((i) => parseInt(i, 10)).filter((i) => i > A).sort((i, o) => i - o);
+async function sy(t) {
+  const A = await ry(t), e = Object.keys(ks).map((i) => parseInt(i, 10)).filter((i) => i > A).sort((i, o) => i - o);
   for (const i of e) {
     const o = ks[i];
     for (const r of o)
       await t.exec(r);
-    await ry(t, i);
+    await ny(t, i);
   }
 }
-class sy {
+class ay {
   constructor(A) {
     this.db = A;
   }
@@ -13679,7 +13678,7 @@ class sy {
     );
   }
 }
-class ay {
+class gy {
   constructor(A) {
     this.db = A;
   }
@@ -13775,7 +13774,7 @@ class ay {
   async transaction(A) {
     await this.db.exec("BEGIN");
     try {
-      const e = new sy(this.db);
+      const e = new ay(this.db);
       await A(e), await this.db.exec("COMMIT");
     } catch (e) {
       throw await this.db.exec("ROLLBACK"), e;
@@ -13857,7 +13856,7 @@ class ay {
     return r;
   }
 }
-async function gy(t) {
+async function Iy(t) {
   if (typeof window < "u" || typeof process > "u" || !process.versions?.node)
     throw new Error("[STORAGE] PGlite is only available in Node.js/server environments");
   let A;
@@ -13876,17 +13875,17 @@ async function gy(t) {
     if (n.code !== "EEXIST") throw n;
   }
   const r = await A.create(t);
-  return await ny(r), new ay(r);
+  return await sy(r), new gy(r);
 }
-async function Iy(t) {
-  const A = await gy(t), e = new Og(A);
+async function cy(t) {
+  const A = await Iy(t), e = new Og(A);
   return e.enableDeletedCoValuesErasure(), e;
 }
 const lt = { BASE_URL: "/", DEV: !1, MODE: "production", PROD: !0, SSR: !1 };
-function cy() {
+function Cy() {
   return typeof EdgeRuntime < "u" || typeof Deno < "u" ? "edge" : typeof process < "u" && process.versions?.node ? "node" : "browser";
 }
-function Cy(t, A = null) {
+function By(t, A = null) {
   const e = A ? `${A}_${t}` : t;
   if (typeof import.meta < "u" && lt)
     return lt[e] || lt[t] || lt[`VITE_${e}`] || lt[`VITE_${t}`];
@@ -13896,16 +13895,16 @@ function Cy(t, A = null) {
 const dt = () => {
 };
 async function He(t = {}) {
-  const { mode: A = "human", dbPath: e, inMemory: i, servicePrefix: o } = t, r = cy(), n = Cy("MAIA_STORAGE", o);
+  const { mode: A = "human", dbPath: e, inMemory: i, servicePrefix: o } = t, r = Cy(), n = By("MAIA_STORAGE", o);
   if (i === !0 || r === "edge" || n === "in-memory")
     return dt();
   if (r === "browser")
-    return n === "indexeddb" || !n && A === "human" ? await iy() ?? dt() : dt();
+    return n === "indexeddb" || !n && A === "human" ? await oy() ?? dt() : dt();
   if (r === "node") {
     const s = e || typeof process < "u" && process.env?.DB_PATH;
     if ((s && !i || n === "pglite" && !i && s) && s)
       try {
-        return await Iy(s);
+        return await cy(s);
       } catch (g) {
         if (n === "pglite")
           throw new Error(
@@ -13917,7 +13916,7 @@ async function He(t = {}) {
   return dt();
 }
 const ar = { BASE_URL: "/", DEV: !1, MODE: "production", PROD: !0, SSR: !1 };
-async function Hn({ agentSecret: t, name: A = "Maia", peers: e = [], storage: i = void 0, skipAutoSeeding: o = !1 }) {
+async function Hn({ agentSecret: t, name: A, peers: e = [], storage: i = void 0, skipAutoSeeding: o = !1 }) {
   if (!t)
     throw new Error("agentSecret is required. Use signInWithPasskey() to get agentSecret.");
   const r = await Ie.create(), n = i !== void 0 ? i : await He({ mode: "human" }), s = await Me.withNewlyCreatedAccount({
@@ -13944,7 +13943,7 @@ async function Hn({ agentSecret: t, name: A = "Maia", peers: e = [], storage: i 
     }
   } else
     try {
-      const I = typeof import.meta < "u" ? ar?.VITE_MAIA_CITY_SEED_VIBES || ar?.VITE_SEED_VIBES || ar?.SEED_VIBES : null, c = I ? I === "all" ? "all" : I.split(",").map((b) => b.trim()) : "all", { getAllVibeRegistries: C, filterVibesForSeeding: B } = await Promise.resolve().then(() => xk), Q = await C(), f = B(Q, c);
+      const I = typeof import.meta < "u" ? ar?.VITE_MAIA_CITY_SEED_VIBES || ar?.VITE_SEED_VIBES || ar?.SEED_VIBES : null, c = I ? I === "all" ? "all" : I.split(",").map((b) => b.trim()) : "all", { getAllVibeRegistries: C, filterVibesForSeeding: B } = await Promise.resolve().then(() => Lk), Q = await C(), f = B(Q, c);
       if (f.length === 0)
         return Q.length === 0 ? console.log("ℹ️  No vibe registries found, skipping auto-seeding") : console.log(`ℹ️  Seeding config filters out all vibes (config: ${JSON.stringify(c)}), skipping vibe seeding`), {
           node: s.node,
@@ -14056,9 +14055,6 @@ async function qn({ accountID: t, agentSecret: A, peers: e = [], storage: i = vo
     accountID: l.id
   };
 }
-function gr(t, A = 16) {
-  return typeof t != "string" || t.length <= A ? t : t.substring(0, A) + "...";
-}
 async function Ns(t, A = 5e3) {
   (t?.value ?? t)?.loading && await new Promise((i, o) => {
     const r = setTimeout(() => o(new Error("Timeout waiting for store")), A), n = t.subscribe?.((a) => {
@@ -14067,22 +14063,25 @@ async function Ns(t, A = 5e3) {
     (t?.value ?? t)?.loading || (clearTimeout(r), n?.(), i());
   });
 }
-async function By(t, A) {
+function gr(t) {
+  return `Traveler ${typeof t == "string" ? t.slice(-12) : ""}`;
+}
+async function Qy(t, A) {
   try {
     const e = await t.db({ op: "read", schema: "@account", key: A });
     await Ns(e, 5e3);
     const i = e?.value ?? e;
     if (!i?.profile || typeof i.profile != "string" || !i.profile.startsWith("co_"))
-      return gr(A, 16);
+      return gr(A);
     const o = i.profile, r = await t.db({ op: "read", schema: null, key: o });
     await Ns(r, 5e3);
     const n = r?.value ?? r, s = n?.name ?? n?.properties?.find?.((a) => a?.key === "name")?.value;
-    return typeof s == "string" && s.length > 0 ? s : gr(A, 16);
+    return typeof s == "string" && s.length > 0 ? s : gr(A);
   } catch {
-    return gr(A, 16);
+    return gr(A);
   }
 }
-async function Qy(t, A) {
+async function Ey(t, A) {
   const e = /* @__PURE__ */ new Map();
   if (!t?.db || !Array.isArray(A)) return e;
   e.set("everyone", "Everyone");
@@ -14092,7 +14091,7 @@ async function Qy(t, A) {
   if (i.length === 0) return e;
   const o = await Promise.all(
     i.map(async (r) => {
-      const n = await By(t, r);
+      const n = await Qy(t, r);
       return [r, n];
     })
   );
@@ -14100,10 +14099,10 @@ async function Qy(t, A) {
     e.set(r, n);
   return e;
 }
-function Ey(t, A = 16) {
+function ly(t, A = 16) {
   return typeof t != "string" || t.length <= A ? t : t.substring(0, A) + "...";
 }
-function ly(t) {
+function dy(t) {
   return !t || typeof t != "string" ? t : t.charAt(0).toUpperCase() + t.slice(1);
 }
 function ri(t) {
@@ -14124,7 +14123,7 @@ async function ut(t, A = 5e3) {
     (t?.value ?? t)?.loading || (clearTimeout(r), n?.(), i());
   });
 }
-async function dy(t, A) {
+async function uy(t, A) {
   const e = /* @__PURE__ */ new Map();
   if (!t?.db || !A?.startsWith("co_")) return e;
   try {
@@ -14159,7 +14158,7 @@ async function dy(t, A) {
             if (g.has(k)) continue;
             const b = typeof m[k] == "string" && m[k].startsWith("co_") ? m[k] : null;
             if (!b) continue;
-            const x = ly(k);
+            const x = dy(k);
             e.set(b, `${u}/${x}`);
           }
         } catch {
@@ -14169,19 +14168,19 @@ async function dy(t, A) {
   }
   return e;
 }
-async function uy(t, A, e = null) {
+async function hy(t, A, e = null) {
   const i = /* @__PURE__ */ new Map();
   if (!t?.db || !Array.isArray(A)) return i;
   const o = [...new Set(A)].filter((s) => typeof s == "string" && s.startsWith("co_z"));
   if (o.length === 0) return i;
-  const r = e ?? t.id?.maiaId?.id, n = await dy(t, r);
+  const r = e ?? t.id?.maiaId?.id, n = await uy(t, r);
   for (const s of o) {
-    const a = n.get(s) ?? Ey(s, 16);
+    const a = n.get(s) ?? ly(s, 16);
     i.set(s, a);
   }
   return i;
 }
-function hy(t, A, { name: e = null } = {}) {
+function fy(t, A, { name: e = null } = {}) {
   const i = t.createGroup();
   if (A && typeof A.extend == "function")
     try {
@@ -14191,9 +14190,9 @@ function hy(t, A, { name: e = null } = {}) {
     }
   return e && i.set("name", e, "trusting"), console.log("✅ Child group created:", i.id), e && console.log("   Name:", e), console.log("   Owner:", A?.id), i;
 }
-const fy = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const py = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  createChildGroup: hy
+  createChildGroup: fy
 }, Symbol.toStringTag, { value: "Module" }));
 function RA(t, A = {}) {
   return { ok: !0, data: t, ...A };
@@ -14207,7 +14206,7 @@ function pA(t, A, e) {
 function Ve(t) {
   return t && t.ok === !0;
 }
-const py = [
+const wy = [
   "Transactor has no write permissions",
   "lacks admin permissions",
   "lacks write permissions",
@@ -14222,7 +14221,7 @@ const py = [
 function xn(t) {
   if (!t || !(t instanceof Error)) return !1;
   const A = (t.message || "").toLowerCase(), e = String(t);
-  return py.some(
+  return wy.some(
     (i) => A.includes(i.toLowerCase()) || e.includes(i)
   );
 }
@@ -14234,10 +14233,10 @@ async function Ln(t, A, e) {
     return null;
   }
 }
-async function wy(t, A, e) {
+async function yy(t, A, e) {
   return e ? await ot(t, e, { context: { existing: A }, item: {} }) : t;
 }
-function yy(t, A) {
+function Dy(t, A) {
   if (!t || t.error) return null;
   const e = {};
   if (t.properties?.length) {
@@ -14259,7 +14258,7 @@ function yy(t, A) {
   }
   return s.cotype || s.properties || s.items || s.title || s.description ? { ...s, $id: A } : null;
 }
-async function Dy(t, A) {
+async function my(t, A) {
   const { schema: e, key: i, keys: o, filter: r, options: n } = A;
   if (e && !e.startsWith("co_z") && !["@account", "@group", "@metaSchema"].includes(e))
     throw new Error(`[ReadOperation] Schema must be a co-id (co_z...) or special schema hint (@account, @group, @metaSchema), got: ${e}. Runtime code must use co-ids only, not '@maia/schema/...' patterns.`);
@@ -14267,7 +14266,7 @@ async function Dy(t, A) {
   if (i && o) throw new Error("[ReadOperation] Cannot provide both key and keys parameters");
   return await t.read(e, i, o, r, n);
 }
-async function my(t, A, e) {
+async function Sy(t, A, e) {
   const { schema: i, data: o, spark: r } = e;
   BA(i, "schema", "CreateOperation"), BA(o, "data", "CreateOperation"), JA(A, "CreateOperation", "runtime schema validation");
   const n = await eA(t, i, { returnType: "coId" });
@@ -14275,42 +14274,42 @@ async function my(t, A, e) {
   const s = r != null ? { spark: r } : {}, a = await t.create(n, o, s);
   return RA(a, { op: "create" });
 }
-async function Sy(t, A, e, i) {
+async function ky(t, A, e, i) {
   const { id: o, data: r } = i;
   BA(o, "id", "UpdateOperation"), EA(o, "UpdateOperation"), BA(r, "data", "UpdateOperation"), JA(A, "UpdateOperation", "schema validation");
   const n = await t.getRawRecord(o);
   if (!n) throw new Error(`[UpdateOperation] Record not found: ${o}`);
-  const a = await Ln(t, o) || n.$schema || null, { $schema: g, ...I } = n, c = await wy(r, I, e), C = await t.update(a, o, c);
+  const a = await Ln(t, o) || n.$schema || null, { $schema: g, ...I } = n, c = await yy(r, I, e), C = await t.update(a, o, c);
   return RA(C, { op: "update" });
 }
-async function ky(t, A, e) {
+async function Ny(t, A, e) {
   const { id: i } = e;
   BA(i, "id", "DeleteOperation"), EA(i, "DeleteOperation"), JA(A, "DeleteOperation", "extract schema from CoValue headerMeta");
   const o = await Ln(A.backend, i), r = await t.delete(o, i);
   return RA(r, { op: "delete" });
 }
-async function Ny(t, A) {
+async function My(t, A) {
   const { configs: e, schemas: i, data: o } = A;
   if (!e) throw new Error("[SeedOperation] Configs required");
   if (!i) throw new Error("[SeedOperation] Schemas required");
   const r = await t.seed(e, i, o || {});
   return RA(r, { op: "seed" });
 }
-async function My(t, A, e) {
+async function Gy(t, A, e) {
   const { coId: i, fromCoValue: o } = e, r = [i, o].filter(Boolean).length;
   if (r === 0) throw new Error("[SchemaOperation] One of coId or fromCoValue must be provided");
   if (r > 1) throw new Error("[SchemaOperation] Only one of coId or fromCoValue can be provided");
   let n = i ? (EA(i, "SchemaOperation"), i) : null;
   if (o && (EA(o, "SchemaOperation"), n = await eA(t, { fromCoValue: o }, { returnType: "coId" }), !n))
     return console.warn(`[SchemaOperation] Could not extract schema co-id from CoValue ${o} headerMeta`), new wA(null);
-  const s = await t.read(null, n), a = new wA(null), g = (C) => a._set(yy(C, n)), I = s.subscribe(g);
+  const s = await t.read(null, n), a = new wA(null), g = (C) => a._set(Dy(C, n)), I = s.subscribe(g);
   g(s.value);
   const c = a._unsubscribe;
   return a._unsubscribe = () => {
     c && c(), I();
   }, a;
 }
-async function Gy(t, A) {
+async function Fy(t, A) {
   const { humanReadableKey: e } = A;
   if (BA(e, "humanReadableKey", "ResolveOperation"), typeof e != "string") throw new Error("[ResolveOperation] humanReadableKey must be a string");
   (NA(e) || e.startsWith("@actor/") || aI(e)) && console.warn(`[ResolveOperation] resolve() called with human-readable key: ${e}. This should only be used during seeding. At runtime, all IDs should already be co-ids.`);
@@ -14352,28 +14351,28 @@ async function Ms(t, A, e) {
   const f = { coId: i, [g === "colist" ? "itemsAppended" : "itemsPushed"]: Q, ...g === "colist" && { itemsSkipped: B.length - Q } };
   return RA(f, { op: "append" });
 }
-async function Fy(t, A, e) {
+async function by(t, A, e) {
   const { actorId: i, inboxCoId: o } = e;
   BA(i, "actorId", "ProcessInboxOperation"), BA(o, "inboxCoId", "ProcessInboxOperation"), EA(i, "ProcessInboxOperation"), EA(o, "ProcessInboxOperation");
   const { processInbox: r } = await Promise.resolve().then(() => bo);
   return await r(t, i, o);
 }
-async function by(t, A, e) {
+async function Ry(t, A, e) {
   const { name: i } = e;
   return BA(i, "name", "CreateSparkOperation"), JA(A, "CreateSparkOperation", "spark creation"), await t.createSpark(i);
 }
-async function Ry(t, A) {
+async function vy(t, A) {
   const { id: e, schema: i } = A;
   if (e)
     return EA(e, "ReadSparkOperation"), await t.readSpark(e);
   const o = i || "@maia/schema/data/spark";
   return await t.readSpark(null, o);
 }
-async function vy(t, A, e) {
+async function Ky(t, A, e) {
   const { id: i, data: o } = e;
   return BA(i, "id", "UpdateSparkOperation"), EA(i, "UpdateSparkOperation"), BA(o, "data", "UpdateSparkOperation"), JA(A, "UpdateSparkOperation", "spark update"), await t.updateSpark(i, o);
 }
-async function Ky(t, A, e) {
+async function Yy(t, A, e) {
   const { id: i } = e;
   return BA(i, "id", "DeleteSparkOperation"), EA(i, "DeleteSparkOperation"), JA(A, "DeleteSparkOperation", "spark deletion"), await t.deleteSpark(i);
 }
@@ -14387,7 +14386,7 @@ async function gt(t, A) {
     throw new Error(`[GetSparkGroup] Group not found: ${e}`);
   return i;
 }
-async function Yy(t, A, e) {
+async function Uy(t, A, e) {
   const { id: i, memberId: o, role: r } = e;
   BA(i, "id", "AddSparkMemberOperation"), EA(i, "AddSparkMemberOperation"), BA(o, "memberId", "AddSparkMemberOperation"), EA(o, "AddSparkMemberOperation"), BA(r, "role", "AddSparkMemberOperation"), JA(A, "AddSparkMemberOperation", "spark member addition");
   const n = ["reader", "writer", "admin", "manager", "writeOnly"];
@@ -14401,7 +14400,7 @@ async function Yy(t, A, e) {
     role: r
   };
 }
-async function Uy(t, A, e) {
+async function Jy(t, A, e) {
   const { id: i, memberId: o } = e;
   BA(i, "id", "RemoveSparkMemberOperation"), EA(i, "RemoveSparkMemberOperation"), BA(o, "memberId", "RemoveSparkMemberOperation"), EA(o, "RemoveSparkMemberOperation"), JA(A, "RemoveSparkMemberOperation", "spark member removal");
   const r = await gt(t, i);
@@ -14411,7 +14410,7 @@ async function Uy(t, A, e) {
     memberId: o
   };
 }
-async function Jy(t, A, e) {
+async function Hy(t, A, e) {
   const { id: i, parentGroupId: o, role: r = "extend" } = e;
   BA(i, "id", "AddSparkParentGroupOperation"), EA(i, "AddSparkParentGroupOperation"), BA(o, "parentGroupId", "AddSparkParentGroupOperation"), EA(o, "AddSparkParentGroupOperation"), JA(A, "AddSparkParentGroupOperation", "spark parent group addition");
   const n = ["reader", "writer", "manager", "admin", "extend"];
@@ -14427,7 +14426,7 @@ async function Jy(t, A, e) {
     role: r
   };
 }
-async function Hy(t, A, e) {
+async function qy(t, A, e) {
   const { id: i, parentGroupId: o } = e;
   BA(i, "id", "RemoveSparkParentGroupOperation"), EA(i, "RemoveSparkParentGroupOperation"), BA(o, "parentGroupId", "RemoveSparkParentGroupOperation"), EA(o, "RemoveSparkParentGroupOperation"), JA(A, "RemoveSparkParentGroupOperation", "spark parent group removal");
   const r = await gt(t, i), n = await t.getGroup(o);
@@ -14439,7 +14438,7 @@ async function Hy(t, A, e) {
     parentGroupId: o
   };
 }
-async function qy(t, A) {
+async function xy(t, A) {
   const { id: e } = A;
   BA(e, "id", "GetSparkMembersOperation"), EA(e, "GetSparkMembersOperation");
   const i = await gt(t, e), o = t.getGroupInfoFromGroup(i);
@@ -14450,7 +14449,7 @@ async function qy(t, A) {
     parentGroups: o?.groupMembers || []
   };
 }
-async function xy(t, A, e) {
+async function Ly(t, A, e) {
   const { id: i, memberId: o, role: r } = e;
   BA(i, "id", "UpdateSparkMemberRoleOperation"), EA(i, "UpdateSparkMemberRoleOperation"), BA(o, "memberId", "UpdateSparkMemberRoleOperation"), EA(o, "UpdateSparkMemberRoleOperation"), BA(r, "role", "UpdateSparkMemberRoleOperation"), JA(A, "UpdateSparkMemberRoleOperation", "spark member role update");
   const n = ["reader", "writer", "admin", "manager", "writeOnly"];
@@ -14475,26 +14474,26 @@ class Eo {
     this.backend = A;
     const { evaluator: i } = e;
     A && typeof A.setDbEngine == "function" ? A.setDbEngine(this) : A && A.constructor.name === "CoJSONBackend" && (A.dbEngine = this), this.operations = {
-      read: { execute: (o) => Dy(this.backend, o) },
-      create: { execute: (o) => my(this.backend, this, o) },
-      update: { execute: (o) => Sy(this.backend, this, i, o) },
-      delete: { execute: (o) => ky(this.backend, this, o) },
-      seed: { execute: (o) => Ny(this.backend, o) },
-      schema: { execute: (o) => My(this.backend, this, o) },
-      resolve: { execute: (o) => Gy(this.backend, o) },
+      read: { execute: (o) => my(this.backend, o) },
+      create: { execute: (o) => Sy(this.backend, this, o) },
+      update: { execute: (o) => ky(this.backend, this, i, o) },
+      delete: { execute: (o) => Ny(this.backend, this, o) },
+      seed: { execute: (o) => My(this.backend, o) },
+      schema: { execute: (o) => Gy(this.backend, this, o) },
+      resolve: { execute: (o) => Fy(this.backend, o) },
       append: { execute: (o) => Ms(this.backend, this, o) },
       push: { execute: (o) => Ms(this.backend, this, { ...o, cotype: "costream" }) },
-      processInbox: { execute: (o) => Fy(this.backend, this, o) },
-      createSpark: { execute: (o) => by(this.backend, this, o) },
-      readSpark: { execute: (o) => Ry(this.backend, o) },
-      updateSpark: { execute: (o) => vy(this.backend, this, o) },
-      deleteSpark: { execute: (o) => Ky(this.backend, this, o) },
-      addSparkMember: { execute: (o) => Yy(this.backend, this, o) },
-      removeSparkMember: { execute: (o) => Uy(this.backend, this, o) },
-      addSparkParentGroup: { execute: (o) => Jy(this.backend, this, o) },
-      removeSparkParentGroup: { execute: (o) => Hy(this.backend, this, o) },
-      getSparkMembers: { execute: (o) => qy(this.backend, o) },
-      updateSparkMemberRole: { execute: (o) => xy(this.backend, this, o) }
+      processInbox: { execute: (o) => by(this.backend, this, o) },
+      createSpark: { execute: (o) => Ry(this.backend, this, o) },
+      readSpark: { execute: (o) => vy(this.backend, o) },
+      updateSpark: { execute: (o) => Ky(this.backend, this, o) },
+      deleteSpark: { execute: (o) => Yy(this.backend, this, o) },
+      addSparkMember: { execute: (o) => Uy(this.backend, this, o) },
+      removeSparkMember: { execute: (o) => Jy(this.backend, this, o) },
+      addSparkParentGroup: { execute: (o) => Hy(this.backend, this, o) },
+      removeSparkParentGroup: { execute: (o) => qy(this.backend, this, o) },
+      getSparkMembers: { execute: (o) => xy(this.backend, o) },
+      updateSparkMemberRole: { execute: (o) => Ly(this.backend, this, o) }
     };
   }
   /**
@@ -14659,12 +14658,12 @@ function Tn(t, A, e) {
 function Or(t) {
   return !t || !t.header || !t.header.meta ? null : t.header.meta.$schema || null;
 }
-function Ly(t, A, e) {
+function Ty(t, A, e) {
   const i = Tn(t, A, e);
   return i.isAccount || i.isGroup || i.isProfile || i.isException;
 }
 const _A = /* @__PURE__ */ new Set();
-function Ty(t, A) {
+function Oy(t, A) {
   if (!t || !A)
     return t;
   const e = t.store.bind(t), i = new Proxy(t, {
@@ -14694,7 +14693,7 @@ function Ty(t, A) {
       if (!Or(r) && !g.isException)
         throw console.error(`[StorageHook] REJECTING co-value ${a}: Missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, @metaSchema, and groups/accounts).`), new Error(`[StorageHook] Co-value ${a} missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, @metaSchema, and groups/accounts).`);
     }
-    let I = Ly(r, A, a);
+    let I = Ty(r, A, a);
     if (I && Or(r) === yA.META_SCHEMA && (I = !1), !I && A.account) {
       const C = A._cachedMaiaOsId;
       if (a === C)
@@ -14776,7 +14775,7 @@ function Ty(t, A) {
   }
   return i;
 }
-async function Oy(t, A) {
+async function Py(t, A) {
   try {
     const e = t.getCoValue(A);
     if (!e || !t.isAvailable(e))
@@ -14787,7 +14786,7 @@ async function Oy(t, A) {
     return console.warn(`[ValidationHook] Failed to extract content for ${A}:`, e), null;
   }
 }
-async function Py(t, A, e = 5e3) {
+async function jy(t, A, e = 5e3) {
   const i = Date.now();
   for (; Date.now() - i < e; ) {
     try {
@@ -14800,7 +14799,7 @@ async function Py(t, A, e = 5e3) {
   }
   return null;
 }
-async function jy(t, A, e) {
+async function Vy(t, A, e) {
   const i = e.id, o = Tn(e, t, i);
   if (o.isGroup || o.isAccount || o.isProfile)
     return { valid: !0, error: null };
@@ -14818,12 +14817,12 @@ async function jy(t, A, e) {
       error: `Co-value ${i} has invalid schema format: ${r}. Schema must be a co-id (co_z...) or exception schema (@account, @group, @maia).`
     };
   let n = await eA(t, r, { returnType: "schema" });
-  if (!n && (console.log(`[ValidationHook] Schema ${r} not available, waiting for sync...`), n = await Py(t, r, 5e3), !n))
+  if (!n && (console.log(`[ValidationHook] Schema ${r} not available, waiting for sync...`), n = await jy(t, r, 5e3), !n))
     return {
       valid: !1,
       error: `Schema ${r} not available after timeout. Cannot validate remote transactions for ${i}.`
     };
-  const s = await Oy(t, i);
+  const s = await Py(t, i);
   if (!s)
     return console.log(`[ValidationHook] Cannot extract content for ${i} (likely new co-value) - schema availability verified, allowing transactions`), { valid: !0, error: null };
   try {
@@ -14841,13 +14840,13 @@ async function jy(t, A, e) {
     };
   }
 }
-function Vy(t, A, e) {
+function $y(t, A, e) {
   if (!t || !A)
     return t;
   const i = t.handleNewContent?.bind(t);
   return i && (t.handleNewContent = async function(o, r) {
     if (o && o.id && e) {
-      const n = await jy(A, e, o);
+      const n = await Vy(A, e, o);
       if (!n.valid)
         throw console.error(`[ValidationHook] Rejecting remote transactions for ${o.id}: ${n.error}`), new Error(`[ValidationHook] Invalid remote transactions rejected: ${n.error}`);
     }
@@ -14858,7 +14857,7 @@ class On extends vI {
   constructor(A, e, i = null) {
     super();
     const o = i && typeof i == "object" && !i.backend && typeof i.execute != "function", r = o ? null : i, n = o ? i : {};
-    this.node = A, this.account = e, this.dbEngine = r, this.systemSpark = n.systemSpark ?? "@maia", this.subscriptionCache = tI(A), A.storage && (A.storage = Ty(A.storage, this)), A.syncManager && r && Vy(A.syncManager, this, r);
+    this.node = A, this.account = e, this.dbEngine = r, this.systemSpark = n.systemSpark ?? "@maia", this.subscriptionCache = tI(A), A.storage && (A.storage = Oy(A.storage, this)), A.syncManager && r && $y(A.syncManager, this, r);
   }
   /**
    * Reset all subscription-related caches
@@ -15028,7 +15027,7 @@ class On extends vI {
     const e = await this.getMaiaGroup();
     if (!e)
       throw new Error("[CoJSONBackend] @maia spark group not found");
-    const { createChildGroup: i } = await Promise.resolve().then(() => fy), o = i(this.node, e, { name: A }), r = await eA(this, "@maia/schema/data/spark", { returnType: "coId" }), n = await eA(this, "@maia/schema/os/capabilities", { returnType: "coId" }), s = await eA(this, "@maia/schema/os/os-registry", { returnType: "coId" }), a = await eA(this, "@maia/schema/os/vibes-registry", { returnType: "coId" });
+    const { createChildGroup: i } = await Promise.resolve().then(() => py), o = i(this.node, e, { name: A }), r = await eA(this, "@maia/schema/data/spark", { returnType: "coId" }), n = await eA(this, "@maia/schema/os/capabilities", { returnType: "coId" }), s = await eA(this, "@maia/schema/os/os-registry", { returnType: "coId" }), a = await eA(this, "@maia/schema/os/vibes-registry", { returnType: "coId" });
     if (!r || !n || !s || !a)
       throw new Error("[CoJSONBackend] Spark scaffold schemas not found");
     const g = { node: this.node, account: this.account, guardian: o }, { createCoValueForSpark: I } = await Promise.resolve().then(() => be), { coValue: c } = await I(g, null, {
@@ -15240,7 +15239,7 @@ class On extends vI {
   async seed(A, e, i) {
     if (!this.account)
       throw new Error("[CoJSONBackend] Account required for seed");
-    return await $w(this.account, this.node, A, e, i || {}, this);
+    return await Ww(this.account, this.node, A, e, i || {}, this);
   }
   /**
    * Ensure spark.os (account.sparks[@maia].os) is loaded and ready for schema-dependent operations
@@ -15319,7 +15318,7 @@ const Pr = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   CoJSONBackend: On
 }, Symbol.toStringTag, { value: "Module" }));
-function $y(t, A) {
+function Wy(t, A) {
   if (!t)
     throw new Error("[createCoJSONAPI] Node required");
   if (!A)
@@ -15403,7 +15402,7 @@ async function jr(t, A, e) {
   }
   return a;
 }
-async function Wy(t, A, e) {
+async function zy(t, A, e) {
   if (!t || !A || !e)
     throw new Error("[processInbox] backend, actorId, and inboxCoId are required");
   if (!t.getCurrentSessionID())
@@ -15507,30 +15506,30 @@ async function Wy(t, A, e) {
     messages: s
   };
 }
-const zy = 1e5, _y = 10;
+const _y = 1e5, Zy = 10;
 function Nt(t) {
   return t.readyState === 1;
 }
 function Vr(t) {
-  return t.bufferedAmount > zy && Nt(t);
+  return t.bufferedAmount > _y && Nt(t);
 }
-function Zy(t) {
+function Xy(t) {
   return new Promise((A) => {
     t.readyState === 1 ? A() : t.addEventListener("open", () => A(), { once: !0 });
   });
 }
-async function Xy(t) {
+async function AD(t) {
   for (; Vr(t); )
-    await new Promise((A) => setTimeout(A, _y));
+    await new Promise((A) => setTimeout(A, Zy));
 }
-const { CO_VALUE_PRIORITY: AD, getContentMessageSize: eD, WEBSOCKET_CONFIG: Fs } = dn;
-class tD {
+const { CO_VALUE_PRIORITY: eD, getContentMessageSize: tD, WEBSOCKET_CONFIG: Fs } = dn;
+class iD {
   constructor(A, e, i, o, r) {
     this.websocket = A, this.batching = e, this.meta = o, this.backlog = [], this.processing = !1, this.closed = !1, this.closeListeners = /* @__PURE__ */ new Set(), this.egressBytesCounter = (r ?? ge.getMeter("cojson-transport-ws")).createCounter("jazz.usage.egress", {
       description: "Total egress bytes",
       unit: "bytes",
       valueType: $A.INT
-    }), this.queue = new TB(AD.HIGH, "outgoing", {
+    }), this.queue = new TB(eD.HIGH, "outgoing", {
       peerRole: i
     }), this.egressBytesCounter.add(0, this.meta);
   }
@@ -15560,12 +15559,12 @@ class tD {
     for (; e; ) {
       if (this.closed)
         return;
-      Nt(A) || await Zy(A), Vr(A) && await Xy(A), Nt(A) && (this.processMessage(e), e = this.queue.pull());
+      Nt(A) || await Xy(A), Vr(A) && await AD(A), Nt(A) && (this.processMessage(e), e = this.queue.pull());
     }
     this.sendMessagesInBulk(), this.processing = !1;
   }
   processMessage(A, e = !1) {
-    A.action === "content" && this.egressBytesCounter.add(eD(A), this.meta);
+    A.action === "content" && this.egressBytesCounter.add(tD(A), this.meta);
     const i = this.serializeMessage(A);
     if (!this.batching || e) {
       this.websocket.send(i);
@@ -15606,7 +15605,7 @@ class tD {
     this.closeListeners.clear();
   }
 }
-function iD(t) {
+function oD(t) {
   if (typeof t != "string")
     return {
       ok: !1,
@@ -15625,8 +15624,8 @@ function iD(t) {
     };
   }
 }
-const { ConnectedPeerChannel: oD, getContentMessageSize: rD } = dn;
-function nD(t, A, e) {
+const { ConnectedPeerChannel: rD, getContentMessageSize: nD } = dn;
+function sD(t, A, e) {
   if (!t)
     return {
       reset() {
@@ -15646,21 +15645,21 @@ function nD(t, A, e) {
     }
   };
 }
-function sD(t = () => {
+function aD(t = () => {
 }) {
   let A = !1;
   return () => {
     A || (A = !0, t());
   };
 }
-function aD({ id: t, websocket: A, role: e, expectPings: i = !0, batchingByDefault: o = !0, deletePeerStateOnClose: r = !1, pingTimeout: n = 1e4, onSuccess: s, onClose: a, meter: g, meta: I }) {
+function gD({ id: t, websocket: A, role: e, expectPings: i = !0, batchingByDefault: o = !0, deletePeerStateOnClose: r = !1, pingTimeout: n = 1e4, onSuccess: s, onClose: a, meter: g, meta: I }) {
   const c = (g ?? ge.getMeter("cojson-transport-ws")).createCounter("jazz.usage.ingress", {
     description: "Total ingress bytes from peer",
     unit: "bytes",
     valueType: $A.INT
   });
   c.add(0, I);
-  const C = new oD(), B = sD(a);
+  const C = new rD(), B = aD(a);
   function Q() {
     A.removeEventListener("message", p), A.removeEventListener("close", f), A.removeEventListener("error", l), u.clear(), d.drain();
   }
@@ -15671,17 +15670,17 @@ function aD({ id: t, websocket: A, role: e, expectPings: i = !0, batchingByDefau
     E instanceof Error && E.message && AA.warn("WebSocket error", { err: E }), f();
   }
   A.addEventListener("close", f), A.addEventListener("error", l);
-  const u = nD(i, n, () => {
+  const u = sD(i, n, () => {
     f(), AA.warn("Ping timeout from peer", {
       peerId: t,
       peerRole: e
     });
-  }), d = new tD(A, o, e, I, g);
+  }), d = new iD(A, o, e, I, g);
   let h = !0;
   function p(E) {
     if (u.reset(), E.data === "")
       return;
-    const w = iD(E.data);
+    const w = oD(E.data);
     if (!w.ok) {
       AA.warn("Error while deserializing messages", { err: w.error });
       return;
@@ -15690,7 +15689,7 @@ function aD({ id: t, websocket: A, role: e, expectPings: i = !0, batchingByDefau
     const { messages: y } = w;
     y.length > 1 && d.setBatching(!0);
     for (const m of y)
-      m && "action" in m && (C.push(m), m.action === "content" && c.add(rD(m), I));
+      m && "action" in m && (C.push(m), m.action === "content" && c.add(nD(m), I));
   }
   return A.addEventListener("message", p), d.onClose(() => {
     Q(), B(), A.readyState === 0 ? A.addEventListener("open", function() {
@@ -15704,7 +15703,7 @@ function aD({ id: t, websocket: A, role: e, expectPings: i = !0, batchingByDefau
     persistent: !r
   };
 }
-class gD {
+class ID {
   constructor(A) {
     this.enabled = !1, this.closed = !0, this.connected = !1, this.currentPeer = void 0, this.unsubscribeNetworkChange = void 0, this.reconnectionAttempts = 0, this.onConnectionChangeListeners = /* @__PURE__ */ new Set(), this.waitUntilConnected = async () => {
       if (this.closed)
@@ -15725,7 +15724,7 @@ class gD {
           const e = this.reconnectionTimeout * this.reconnectionAttempts;
           AA.debug(`Websocket disconnected, trying to reconnect in ${e}ms`), await this.waitForOnline(e);
         }
-        this.enabled && (this.currentPeer = aD({
+        this.enabled && (this.currentPeer = gD({
           websocket: new this.WebSocketConstructor(this.peer),
           pingTimeout: this.pingTimeout,
           id: this.peer,
@@ -15777,7 +15776,7 @@ let Be = {
   // 'authenticating' | 'loading-account' | 'syncing' | 'connected' | 'error'
 };
 const $r = /* @__PURE__ */ new Set();
-function ID(t) {
+function cD(t) {
   return $r.add(t), t(Be), () => $r.delete(t);
 }
 function ni() {
@@ -15803,7 +15802,7 @@ function zt(t = null) {
   if (!i)
     return { peers: [], setNode: () => {
     }, wsPeer: null };
-  const C = new gD({
+  const C = new ID({
     peer: i,
     reconnectionTimeout: 5e3,
     addPeer: (B) => {
@@ -15860,7 +15859,7 @@ const bo = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   checkCotype: vt,
   createAccountWithSecret: Hn,
   createAndPushMessage: jr,
-  createCoJSONAPI: $y,
+  createCoJSONAPI: Wy,
   createCoList: BI,
   createCoMap: CI,
   createCoStream: QI,
@@ -15874,18 +15873,18 @@ const bo = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   getSchemaIndexColistId: hn,
   getSparkCapabilityGroupIdFromSparkCoId: Sn,
   loadAccount: qn,
-  processInbox: Wy,
+  processInbox: zy,
   resolve: eA,
-  resolveAccountCoIdsToProfileNames: Qy,
+  resolveAccountCoIdsToProfileNames: Ey,
   resolveCoValueReactive: Rr,
-  resolveGroupCoIdsToCapabilityNames: uy,
+  resolveGroupCoIdsToCapabilityNames: hy,
   resolveQueryReactive: oI,
   resolveReactive: Ae,
   resolveSchemaReactive: Rt,
   schemaMigration: Dn,
   seedAgentAccount: bI,
   setupSyncPeers: zt,
-  subscribeSyncState: ID,
+  subscribeSyncState: cD,
   waitForReactiveResolution: Qe,
   waitForStoreReady: dA
 }, Symbol.toStringTag, { value: "Module" })), lA = {
@@ -15898,7 +15897,7 @@ const bo = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   UPDATING: "updating"
   // Data changed, queued for rerender
 };
-class cD {
+class CD {
   constructor(A, e, i, o, r = null) {
     this.styleEngine = A, this.viewEngine = e, this.registry = i, this.toolEngine = o, this.stateEngine = r, this.actors = /* @__PURE__ */ new Map(), this.pendingMessages = /* @__PURE__ */ new Map(), this.dbEngine = null, this.os = null, this._containerActors = /* @__PURE__ */ new Map(), this._vibeActors = /* @__PURE__ */ new Map(), this.viewEngine.setActorEngine(this), this.pendingRerenders = /* @__PURE__ */ new Set(), this.batchTimer = null;
   }
@@ -16452,13 +16451,13 @@ function Wr(t, A) {
     } else o === "@dataColumn" ? e[i] = A.dataset.column || A.getAttribute("data-column") || null : typeof o == "object" && o !== null ? e[i] = Wr(o, A) : e[i] = o;
   return e;
 }
-function CD(t) {
+function BD(t) {
   return t == null ? "" : String(t).replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;").replace(/\//g, "&#x2F;");
 }
-function BD(t) {
+function QD(t) {
   return typeof t != "string" ? !1 : [/<script/i, /javascript:/i, /on\w+\s*=/i, /<iframe/i, /<object/i, /<embed/i, /<link/i, /<meta/i, /<style/i].some((A) => A.test(t));
 }
-class QD {
+class ED {
   constructor(A, e, i) {
     this.evaluator = A, this.actorEngine = e, this.moduleRegistry = i, this.dbEngine = null, this.actorInputCounters = /* @__PURE__ */ new Map();
   }
@@ -16532,7 +16531,7 @@ class QD {
               A[r] = g, g ? A.setAttribute(r, "") : A.removeAttribute(r);
             } else {
               let g = String(s);
-              BD(g) && (console.warn(`[ViewEngine] Potentially dangerous HTML detected in attribute ${r}, sanitizing`), g = CD(g)), A.setAttribute(r, g);
+              QD(g) && (console.warn(`[ViewEngine] Potentially dangerous HTML detected in attribute ${r}, sanitizing`), g = BD(g)), A.setAttribute(r, g);
             }
         }
     if (e.value !== void 0) {
@@ -16790,19 +16789,19 @@ class QD {
   cleanupActor(A) {
   }
 }
-const ED = ["__proto__", "constructor", "prototype"];
+const lD = ["__proto__", "constructor", "prototype"];
 function Rs(t, A = "style token path") {
   if (!t || typeof t != "string") return;
   const e = t.toLowerCase();
-  for (const i of ED)
+  for (const i of lD)
     if (e.includes(i.toLowerCase()))
       throw new Error(`[StyleEngine] Forbidden ${A}: path may not contain '${i}'. Got: ${t}`);
 }
-function lD(t, A) {
+function dD(t, A) {
   if (!(!t || !A))
     return Rs(A, "style token path"), A.split(".").reduce((e, i) => (Rs(i, "style token segment"), e?.[i]), t);
 }
-const dD = [
+const uD = [
   /javascript\s*:/i,
   /vbscript\s*:/i,
   /data\s*:\s*[^,]*base64\s*,/i,
@@ -16811,14 +16810,14 @@ const dD = [
   /@import\b/i,
   /behavior\s*:/i
 ];
-function uD(t) {
+function hD(t) {
   if (t == null || typeof t != "string") return t;
-  for (const A of dD)
+  for (const A of uD)
     if (A.test(t))
       return console.warn(`[StyleEngine] Blocked potentially dangerous CSS value (contains ${A.source})`), "";
   return t;
 }
-class hD {
+class fD {
   constructor() {
     this.cache = /* @__PURE__ */ new Map(), this.dbEngine = null;
   }
@@ -16835,8 +16834,8 @@ class hD {
   }
   _interpolateTokens(A, e) {
     return typeof A != "string" ? A : A.replace(/\{([^}]+)\}/g, (i, o) => {
-      const r = lD(e, o);
-      return r === void 0 ? i : uD(String(r));
+      const r = dD(e, o);
+      return r === void 0 ? i : hD(String(r));
     });
   }
   _toKebabCase(A) {
@@ -17023,7 +17022,7 @@ ${o}`), n;
     this.cache.clear();
   }
 }
-class fD {
+class pD {
   constructor(A, e, i = null) {
     this.toolEngine = A, this.evaluator = e, this.actorEngine = i, this.machines = /* @__PURE__ */ new Map(), this.dbEngine = null;
   }
@@ -17374,7 +17373,7 @@ class fD {
     this.machines.delete(A);
   }
 }
-class pD {
+class wD {
   constructor(A) {
     this.moduleRegistry = A, this.tools = /* @__PURE__ */ new Map();
   }
@@ -17418,11 +17417,11 @@ class pD {
     return Array.from(this.tools.values()).map((A) => A.definition);
   }
 }
-const wD = ["__proto__", "constructor", "prototype"];
+const yD = ["__proto__", "constructor", "prototype"];
 function vs(t, A = "path resolution") {
   if (!t || typeof t != "string") return;
   const e = t.toLowerCase();
-  for (const i of wD)
+  for (const i of yD)
     if (e.includes(i.toLowerCase()))
       throw new Error(`[Evaluator] Forbidden ${A}: path may not contain '${i}' or similar. Got: ${t}`);
 }
@@ -17587,10 +17586,10 @@ class zr {
     return typeof A == "string" && A.startsWith("$") ? !0 : typeof A != "object" || A === null ? !1 : "$context" in A || "$item" in A || "$if" in A || "$eq" in A || "$ne" in A || "$not" in A || "$and" in A || "$or" in A || "$trim" in A || "$gt" in A || "$length" in A || "$concat" in A || "$map" in A;
   }
 }
-const yD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const DD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   Evaluator: zr
-}, Symbol.toStringTag, { value: "Module" })), DD = {
+}, Symbol.toStringTag, { value: "Module" })), mD = {
   $schema: "@maia/schema/tool",
   $id: "tool_publish_message_001",
   name: "@core/publishMessage",
@@ -17610,7 +17609,7 @@ const yD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     },
     required: ["type"]
   }
-}, mD = {
+}, SD = {
   $schema: "@maia/schema/tool",
   $id: "@tool/core/computeMessageNames",
   name: "computeMessageNames",
@@ -17625,7 +17624,7 @@ const yD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     },
     required: ["conversations"]
   }
-}, SD = {
+}, kD = {
   $schema: "@maia/schema/tool",
   $id: "tool_memory_001",
   name: "@memory",
@@ -17665,7 +17664,7 @@ const yD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     },
     required: ["op"]
   }
-}, kD = {
+}, ND = {
   $schema: "@maia/schema/tool",
   $id: "tool_ai_001",
   name: "@ai/chat",
@@ -17705,7 +17704,7 @@ const yD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     },
     required: ["context"]
   }
-}, ND = {
+}, MD = {
   $schema: "@maia/schema/tool",
   $id: "sparks",
   name: "@sparks",
@@ -17762,7 +17761,7 @@ const yD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     type: "any",
     description: "Operation result (created/updated/deleted spark, reactive store for reads, member/group management results)"
   }
-}, MD = {
+}, GD = {
   $schema: "@maia/schema/tool",
   $id: "db",
   name: "Database Tool",
@@ -17802,7 +17801,7 @@ const yD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     type: "any",
     description: "Operation result (data, unsubscribe function, created/updated/deleted record, etc.)"
   }
-}, GD = {
+}, FD = {
   async execute(t, A) {
     const { type: e, payload: i = {}, target: o } = A;
     return e ? o ? t.actorEngine ? o.startsWith("@actor/") ? fA([pA("structural", `[publishMessage] Target not transformed: ${o}. Should be a co-id. Check schema transformer.`)]) : (await t.actorEngine.sendMessage(o, {
@@ -17812,7 +17811,7 @@ const yD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
       timestamp: Date.now()
     }), RA({})) : fA([pA("structural", "[publishMessage] Actor has no actorEngine reference")]) : fA([pA("structural", "Target is required. Topics infrastructure removed - use direct messaging with target parameter.")]) : fA([pA("structural", "Message type is required")]);
   }
-}, FD = {
+}, bD = {
   async execute(t, A) {
     const { conversations: e = [] } = A;
     if (!Array.isArray(e))
@@ -17838,9 +17837,9 @@ function JI(t) {
   const e = t.error || t.message || "Unknown error";
   return [pA("structural", typeof e == "string" ? e : String(e))];
 }
-const bD = UI();
+const RD = UI();
 async function si(t, A) {
-  const e = `${bD}${t}`, i = await fetch(e, {
+  const e = `${RD}${t}`, i = await fetch(e, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(A)
@@ -17851,7 +17850,7 @@ async function si(t, A) {
   }
   return { ok: !0, data: await i.json() };
 }
-const RD = {
+const vD = {
   async execute(t, A) {
     const { op: e, workspaceId: i = "maiaos-dev", peerId: o, sessionId: r, content: n, query: s, target: a } = A;
     switch (e) {
@@ -17883,12 +17882,12 @@ const RD = {
         return fA([pA("structural", `[@memory] Unknown operation: ${e}`)]);
     }
   }
-}, vD = UI(), KD = {
+}, KD = UI(), YD = {
   async execute(t, A) {
     const e = A?.context || A?.messages, { model: i = "qwen/qwen3-30b-a3b-instruct-2507", temperature: o = 1 } = A;
     if (!e || !Array.isArray(e) || e.length === 0)
       return fA([pA("structural", "[@ai/chat] context array is required")]);
-    const r = `${vD}/api/v0/llm/chat`, n = await fetch(r, {
+    const r = `${KD}/api/v0/llm/chat`, n = await fetch(r, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ model: i, messages: e, temperature: o })
@@ -17921,17 +17920,17 @@ const RD = {
     }
   }
 }, Pn = {
-  "core/publishMessage": { definition: DD, function: GD },
-  "core/computeMessageNames": { definition: mD, function: FD },
-  "memory/memory": { definition: SD, function: RD },
-  "ai/chat": { definition: kD, function: KD },
-  "sparks/sparks": { definition: ND, function: Ys },
-  "db/db": { definition: MD, function: Ys }
+  "core/publishMessage": { definition: mD, function: FD },
+  "core/computeMessageNames": { definition: SD, function: bD },
+  "memory/memory": { definition: kD, function: vD },
+  "ai/chat": { definition: ND, function: YD },
+  "sparks/sparks": { definition: MD, function: Ys },
+  "db/db": { definition: GD, function: Ys }
 };
 function _t(t) {
   return Pn[t] || null;
 }
-function YD() {
+function UD() {
   const t = {};
   for (const [A, e] of Object.entries(Pn))
     t[A] = e.definition;
@@ -17940,10 +17939,10 @@ function YD() {
 const HI = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   TOOLS: Pn,
-  getAllToolDefinitions: YD,
+  getAllToolDefinitions: UD,
   getTool: _t
 }, Symbol.toStringTag, { value: "Module" }));
-class UD {
+class JD {
   constructor() {
     this.modules = /* @__PURE__ */ new Map(), this.moduleConfigs = /* @__PURE__ */ new Map();
   }
@@ -18078,7 +18077,7 @@ const $e = {
   namespace: "@db",
   tools: ["@db"]
 };
-async function JD(t) {
+async function HD(t) {
   const A = _t("db/db");
   if (!A) return;
   t._getToolEngine("DBModule").tools.set("@db", {
@@ -18092,17 +18091,17 @@ async function JD(t) {
     tools: $e.tools
   });
 }
-const HD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const qD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   config: $e,
-  register: JD
+  register: HD
 }, Symbol.toStringTag, { value: "Module" })), me = {
   version: "1.0.0",
   description: "Core UI tools (view modes, modals, utilities)",
   namespace: "@core",
   tools: ["preventDefault", "publishMessage", "computeMessageNames"]
 };
-async function qD(t) {
+async function xD(t) {
   const A = me.tools, e = await t._registerToolsFromRegistry("core", A, me.namespace, { silent: !0 });
   t.registerModule("core", { config: me, query: () => null }, {
     version: me.version,
@@ -18111,17 +18110,17 @@ async function qD(t) {
     tools: e
   });
 }
-const xD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const LD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   config: me,
-  register: qD
+  register: xD
 }, Symbol.toStringTag, { value: "Module" })), We = {
   version: "1.0.0",
   description: "Unified AI tool for OpenAI-compatible API integration (RedPill)",
   namespace: "@ai",
   tools: ["@ai/chat"]
 };
-async function LD(t) {
+async function TD(t) {
   const A = _t("ai/chat");
   if (!A) return;
   t._getToolEngine("AiModule").tools.set("@ai/chat", {
@@ -18135,17 +18134,17 @@ async function LD(t) {
     tools: We.tools
   });
 }
-const TD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const OD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   config: We,
-  register: LD
+  register: TD
 }, Symbol.toStringTag, { value: "Module" })), ze = {
   version: "1.0.0",
   description: "Sparks tool for managing collaborative spaces (groups)",
   namespace: "@sparks",
   tools: ["@sparks"]
 };
-async function OD(t) {
+async function PD(t) {
   const A = _t("sparks/sparks");
   if (!A) return;
   t._getToolEngine("SparksModule").tools.set("@sparks", {
@@ -18159,15 +18158,15 @@ async function OD(t) {
     tools: ze.tools
   });
 }
-const PD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const jD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   config: ze,
-  register: OD
+  register: PD
 }, Symbol.toStringTag, { value: "Module" })), Le = {}, Us = {
-  db: HD,
-  core: xD,
-  ai: TD,
-  sparks: PD
+  db: qD,
+  core: LD,
+  ai: OD,
+  sparks: jD
 };
 class se {
   constructor() {
@@ -18282,7 +18281,7 @@ class se {
   static async boot(A = {}) {
     const e = new se(), i = A.mode || typeof process < "u" && process.env?.MAIA_MODE || typeof import.meta < "u" && Le?.MAIA_MODE || typeof import.meta < "u" && Le?.VITE_MAIA_MODE || "human";
     if (A.syncDomain && (e._syncDomain = A.syncDomain), i === "agent" && !A.node && !A.account && !A.backend) {
-      const { loadOrCreateAgentAccount: r } = await Promise.resolve().then(() => zD), n = typeof process < "u" && process.env?.MAIA_AGENT_ACCOUNT_ID || typeof import.meta < "u" && Le?.MAIA_AGENT_ACCOUNT_ID || typeof import.meta < "u" && Le?.VITE_MAIA_AGENT_ACCOUNT_ID, s = typeof process < "u" && process.env?.MAIA_AGENT_SECRET || typeof import.meta < "u" && Le?.MAIA_AGENT_SECRET || typeof import.meta < "u" && Le?.VITE_MAIA_AGENT_SECRET;
+      const { loadOrCreateAgentAccount: r } = await Promise.resolve().then(() => _D), n = typeof process < "u" && process.env?.MAIA_AGENT_ACCOUNT_ID || typeof import.meta < "u" && Le?.MAIA_AGENT_ACCOUNT_ID || typeof import.meta < "u" && Le?.VITE_MAIA_AGENT_ACCOUNT_ID, s = typeof process < "u" && process.env?.MAIA_AGENT_SECRET || typeof import.meta < "u" && Le?.MAIA_AGENT_SECRET || typeof import.meta < "u" && Le?.VITE_MAIA_AGENT_SECRET;
       if (!n || !s)
         throw new Error(
           "Agent mode requires MAIA_AGENT_ACCOUNT_ID and MAIA_AGENT_SECRET environment variables. For services, use service-specific prefixes: SYNC_MAIA_* for sync service, CITY_MAIA_* for maia-city. Run `bun agent:generate --service <service>` to generate credentials."
@@ -18374,7 +18373,7 @@ ${n}`), new Error(`Schema '${i}' is not valid JSON Schema`);
       const B = c.errors?.map((Q) => Q.message).join("; ") || "Seed failed";
       throw new Error(`[MaiaOS] Seed failed: ${B}`);
     }
-    const { setSchemaResolver: C } = await Promise.resolve().then(() => LQ);
+    const { setSchemaResolver: C } = await Promise.resolve().then(() => TQ);
     C({ dbEngine: A.dbEngine });
   }
   /**
@@ -18383,7 +18382,7 @@ ${n}`), new Error(`Schema '${i}' is not valid JSON Schema`);
    * @param {Object} config - Boot configuration
    */
   static _initializeEngines(A, e) {
-    A.moduleRegistry = new UD(), A.evaluator = new zr(A.moduleRegistry, { dbEngine: A.dbEngine }), A.toolEngine = new pD(A.moduleRegistry), A.moduleRegistry._toolEngine = A.toolEngine, A.moduleRegistry._dbEngine = A.dbEngine, A.stateEngine = new fD(A.toolEngine, A.evaluator), A.styleEngine = new hD(), e.isDevelopment && A.styleEngine.clearCache(), A.viewEngine = new QD(A.evaluator, null, A.moduleRegistry), A.actorEngine = new cD(
+    A.moduleRegistry = new JD(), A.evaluator = new zr(A.moduleRegistry, { dbEngine: A.dbEngine }), A.toolEngine = new wD(A.moduleRegistry), A.moduleRegistry._toolEngine = A.toolEngine, A.moduleRegistry._dbEngine = A.dbEngine, A.stateEngine = new pD(A.toolEngine, A.evaluator), A.styleEngine = new fD(), e.isDevelopment && A.styleEngine.clearCache(), A.viewEngine = new ED(A.evaluator, null, A.moduleRegistry), A.actorEngine = new CD(
       A.styleEngine,
       A.viewEngine,
       A.moduleRegistry,
@@ -18766,38 +18765,38 @@ async function TI({ name: t, userId: A, rpId: e = window.location.hostname, salt
   }
 }
 const { accountHeaderForInitialAgentSecret: Ro, idforHeader: vo } = dn;
-async function jD({ name: t = "maia", salt: A = "maia.city" } = {}) {
+async function VD({ name: t, salt: A = "maia.city" } = {}) {
   await jn();
-  const e = Vn(A), i = await Ie.create(), { credentialId: o, prfOutput: r } = await TI({
-    name: t,
+  const e = Vn(A), i = await Ie.create(), o = globalThis.crypto ?? globalThis.window?.crypto, r = t && typeof t == "string" && t.trim() ? t.trim() : `Traveler ${(o?.randomUUID?.() ?? "").slice(0, 8)}`, { credentialId: n, prfOutput: s } = await TI({
+    name: r,
     userId: globalThis.crypto.getRandomValues(new Uint8Array(32)),
     // Random userID - we don't store anything!
     salt: e
   });
-  if (!r)
+  if (!s)
     throw new Error("PRF evaluation failed");
-  const n = i.agentSecretFromSecretSeed(r), s = Ro(n, i), a = vo(s, i), g = await He({ mode: "human", servicePrefix: "CITY" }), I = zt(), c = await Hn({
-    agentSecret: n,
+  const a = i.agentSecretFromSecretSeed(s), g = Ro(a, i), I = vo(g, i), c = await He({ mode: "human", servicePrefix: "CITY" }), C = zt(), B = await Hn({
+    agentSecret: a,
     name: t,
-    peers: I ? I.peers : [],
-    storage: g
-  }), { node: C, account: B, accountID: Q } = c;
-  if (I && I.setNode(C), Q !== a)
+    peers: C ? C.peers : [],
+    storage: c
+  }), { node: Q, account: f, accountID: l } = B;
+  if (C && C.setNode(Q), l !== I)
     throw new Error(
       `CRITICAL: AccountID mismatch!
-  Computed: ${a}
-  Created:  ${Q}
+  Computed: ${I}
+  Created:  ${l}
 This should never happen - deterministic computation failed!`
     );
   return {
-    accountID: Q,
-    agentSecret: n,
-    node: C,
-    account: B,
-    credentialId: xI(o)
+    accountID: l,
+    agentSecret: a,
+    node: Q,
+    account: f,
+    credentialId: xI(n)
   };
 }
-async function VD({ salt: t = "maia.city" } = {}) {
+async function $D({ salt: t = "maia.city" } = {}) {
   await jn();
   const A = Vn(t), { prfOutput: e } = await LI({ salt: A });
   if (!e)
@@ -18830,7 +18829,7 @@ async function VD({ salt: t = "maia.city" } = {}) {
     loadingPromise: g
   };
 }
-async function $D({ name: t = "Maia Agent" } = {}) {
+async function WD({ name: t = "Maia Agent" } = {}) {
   const A = await Ie.create(), e = A.newRandomAgentSecret(), i = Ro(e, A);
   return {
     accountID: vo(i, A),
@@ -18887,7 +18886,7 @@ async function PI({ accountID: t, agentSecret: A, syncDomain: e = null, serviceP
     account: I
   };
 }
-async function WD({
+async function zD({
   accountID: t,
   agentSecret: A,
   syncDomain: e = null,
@@ -18919,20 +18918,20 @@ async function WD({
     throw s;
   }
 }
-const zD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _D = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   arrayBufferToBase64: xI,
   createAgentAccount: OI,
   createPasskeyWithPRF: TI,
   evaluatePRF: LI,
-  generateAgentCredentials: $D,
+  generateAgentCredentials: WD,
   getStorage: He,
   isPRFSupported: qI,
   loadAgentAccount: PI,
-  loadOrCreateAgentAccount: WD,
+  loadOrCreateAgentAccount: zD,
   requirePRFSupport: jn,
-  signInWithPasskey: VD,
-  signUpWithPasskey: jD,
+  signInWithPasskey: $D,
+  signUpWithPasskey: VD,
   stringToUint8Array: Vn
 }, Symbol.toStringTag, { value: "Module" }));
 function jI(t) {
@@ -19999,7 +19998,7 @@ function Ko() {
   })(cr)), cr;
 }
 var Ps;
-function _D() {
+function ZD() {
   if (Ps) return he;
   Ps = 1, Object.defineProperty(he, "__esModule", { value: !0 }), he.boolOrEmptySchema = he.topBoolOrEmptySchema = void 0;
   const t = Ko(), A = oA(), e = WA(), i = {
@@ -20224,7 +20223,7 @@ function uo() {
   return mA;
 }
 var ht = {}, Ws;
-function ZD() {
+function XD() {
   if (Ws) return ht;
   Ws = 1, Object.defineProperty(ht, "__esModule", { value: !0 }), ht.assignDefaults = void 0;
   const t = oA(), A = nA();
@@ -20360,7 +20359,7 @@ function zA() {
   return cA.validateUnion = u, cA;
 }
 var _s;
-function XD() {
+function Am() {
   if (_s) return PA;
   _s = 1, Object.defineProperty(PA, "__esModule", { value: !0 }), PA.validateKeywordUsage = PA.validSchemaType = PA.funcKeywordCode = PA.macroKeywordCode = void 0;
   const t = oA(), A = WA(), e = zA(), i = Ko();
@@ -20449,7 +20448,7 @@ function XD() {
   return PA.validateKeywordUsage = c, PA;
 }
 var re = {}, Zs;
-function Am() {
+function em() {
   if (Zs) return re;
   Zs = 1, Object.defineProperty(re, "__esModule", { value: !0 }), re.extendSubschemaMode = re.extendSubschemaData = re.getSubschema = void 0;
   const t = oA(), A = nA();
@@ -20533,7 +20532,7 @@ function WI() {
   }), Er;
 }
 var lr = { exports: {} }, Aa;
-function em() {
+function tm() {
   if (Aa) return lr.exports;
   Aa = 1;
   var t = lr.exports = function(i, o, r) {
@@ -20611,7 +20610,7 @@ var ea;
 function Yo() {
   if (ea) return MA;
   ea = 1, Object.defineProperty(MA, "__esModule", { value: !0 }), MA.getSchemaRefs = MA.resolveUrl = MA.normalizeId = MA._getFullPath = MA.getFullPath = MA.inlineRef = void 0;
-  const t = nA(), A = WI(), e = em(), i = /* @__PURE__ */ new Set([
+  const t = nA(), A = WI(), e = tm(), i = /* @__PURE__ */ new Set([
     "type",
     "format",
     "pattern",
@@ -20720,7 +20719,7 @@ var ta;
 function Zt() {
   if (ta) return ie;
   ta = 1, Object.defineProperty(ie, "__esModule", { value: !0 }), ie.getData = ie.KeywordCxt = ie.validateFunctionCode = void 0;
-  const t = _D(), A = uo(), e = $I(), i = uo(), o = ZD(), r = XD(), n = Am(), s = oA(), a = WA(), g = Yo(), I = nA(), c = Ko();
+  const t = ZD(), A = uo(), e = $I(), i = uo(), o = XD(), r = Am(), n = em(), s = oA(), a = WA(), g = Yo(), I = nA(), c = Ko();
   function C(S) {
     if (E(S) && (y(S), p(S))) {
       l(S);
@@ -21210,13 +21209,13 @@ function Jo() {
   }
   return KA;
 }
-const tm = "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#", im = "Meta-schema for $data reference (JSON AnySchema extension proposal)", om = "object", rm = ["$data"], nm = { $data: { type: "string", anyOf: [{ format: "relative-json-pointer" }, { format: "json-pointer" }] } }, sm = !1, am = {
-  $id: tm,
-  description: im,
-  type: om,
-  required: rm,
-  properties: nm,
-  additionalProperties: sm
+const im = "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#", om = "Meta-schema for $data reference (JSON AnySchema extension proposal)", rm = "object", nm = ["$data"], sm = { $data: { type: "string", anyOf: [{ format: "relative-json-pointer" }, { format: "json-pointer" }] } }, am = !1, gm = {
+  $id: im,
+  description: om,
+  type: rm,
+  required: nm,
+  properties: sm,
+  additionalProperties: am
 };
 var Ci = {}, ft = { exports: {} }, dr, na;
 function zI() {
@@ -21384,7 +21383,7 @@ function zI() {
   }, dr;
 }
 var ur, sa;
-function gm() {
+function Im() {
   if (sa) return ur;
   sa = 1;
   const { isUUID: t } = zI(), A = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu, e = (
@@ -21530,10 +21529,10 @@ function gm() {
   }, ur;
 }
 var aa;
-function Im() {
+function cm() {
   if (aa) return ft.exports;
   aa = 1;
-  const { normalizeIPv6: t, removeDotSegments: A, recomposeAuthority: e, normalizeComponentEncoding: i, isIPv4: o, nonSimpleDomain: r } = zI(), { SCHEMES: n, getSchemeHandler: s } = gm();
+  const { normalizeIPv6: t, removeDotSegments: A, recomposeAuthority: e, normalizeComponentEncoding: i, isIPv4: o, nonSimpleDomain: r } = zI(), { SCHEMES: n, getSchemeHandler: s } = Im();
   function a(l, u) {
     return typeof l == "string" ? l = /** @type {T} */
     C(Q(l, u), u) : typeof l == "object" && (l = /** @type {T} */
@@ -21621,10 +21620,10 @@ function Im() {
   return ft.exports = f, ft.exports.default = f, ft.exports.fastUri = f, ft.exports;
 }
 var ga;
-function cm() {
+function Cm() {
   if (ga) return Ci;
   ga = 1, Object.defineProperty(Ci, "__esModule", { value: !0 });
-  const t = Im();
+  const t = cm();
   return t.code = 'require("ajv/dist/runtime/uri").default', Ci.default = t, Ci;
 }
 var Ia;
@@ -21649,7 +21648,7 @@ function _I() {
     } }), Object.defineProperty(t, "CodeGen", { enumerable: !0, get: function() {
       return e.CodeGen;
     } });
-    const i = Uo(), o = Xt(), r = VI(), n = Jo(), s = oA(), a = Yo(), g = uo(), I = nA(), c = am, C = cm(), B = (T, F) => new RegExp(T, F);
+    const i = Uo(), o = Xt(), r = VI(), n = Jo(), s = oA(), a = Yo(), g = uo(), I = nA(), c = gm, C = Cm(), B = (T, F) => new RegExp(T, F);
     B.code = "new RegExp";
     const Q = ["removeAdditional", "useDefaults", "coerceTypes"], f = /* @__PURE__ */ new Set([
       "validate",
@@ -22071,7 +22070,7 @@ function _I() {
   })(Ir)), Ir;
 }
 var Bi = {}, Qi = {}, Ei = {}, ca;
-function Cm() {
+function Bm() {
   if (ca) return Ei;
   ca = 1, Object.defineProperty(Ei, "__esModule", { value: !0 });
   const t = {
@@ -22173,7 +22172,7 @@ var Ba;
 function ZI() {
   if (Ba) return Qi;
   Ba = 1, Object.defineProperty(Qi, "__esModule", { value: !0 });
-  const t = Cm(), A = $n(), e = [
+  const t = Bm(), A = $n(), e = [
     "$schema",
     "$id",
     "$defs",
@@ -22186,7 +22185,7 @@ function ZI() {
   return Qi.default = e, Qi;
 }
 var li = {}, di = {}, Qa;
-function Bm() {
+function Qm() {
   if (Qa) return di;
   Qa = 1, Object.defineProperty(di, "__esModule", { value: !0 });
   const t = oA(), A = t.operators, e = {
@@ -22211,7 +22210,7 @@ function Bm() {
   return di.default = o, di;
 }
 var ui = {}, Ea;
-function Qm() {
+function Em() {
   if (Ea) return ui;
   Ea = 1, Object.defineProperty(ui, "__esModule", { value: !0 });
   const t = oA(), e = {
@@ -22231,7 +22230,7 @@ function Qm() {
   return ui.default = e, ui;
 }
 var hi = {}, fi = {}, la;
-function Em() {
+function lm() {
   if (la) return fi;
   la = 1, Object.defineProperty(fi, "__esModule", { value: !0 });
   function t(A) {
@@ -22244,10 +22243,10 @@ function Em() {
   return fi.default = t, t.code = 'require("ajv/dist/runtime/ucs2length").default', fi;
 }
 var da;
-function lm() {
+function dm() {
   if (da) return hi;
   da = 1, Object.defineProperty(hi, "__esModule", { value: !0 });
-  const t = oA(), A = nA(), e = Em(), o = {
+  const t = oA(), A = nA(), e = lm(), o = {
     keyword: ["maxLength", "minLength"],
     type: "string",
     schemaType: "number",
@@ -22267,7 +22266,7 @@ function lm() {
   return hi.default = o, hi;
 }
 var pi = {}, ua;
-function dm() {
+function um() {
   if (ua) return pi;
   ua = 1, Object.defineProperty(pi, "__esModule", { value: !0 });
   const t = zA(), A = oA(), i = {
@@ -22287,7 +22286,7 @@ function dm() {
   return pi.default = i, pi;
 }
 var wi = {}, ha;
-function um() {
+function hm() {
   if (ha) return wi;
   ha = 1, Object.defineProperty(wi, "__esModule", { value: !0 });
   const t = oA(), e = {
@@ -22310,7 +22309,7 @@ function um() {
   return wi.default = e, wi;
 }
 var yi = {}, fa;
-function hm() {
+function fm() {
   if (fa) return yi;
   fa = 1, Object.defineProperty(yi, "__esModule", { value: !0 });
   const t = zA(), A = oA(), e = nA(), o = {
@@ -22367,7 +22366,7 @@ function hm() {
   return yi.default = o, yi;
 }
 var Di = {}, pa;
-function fm() {
+function pm() {
   if (pa) return Di;
   pa = 1, Object.defineProperty(Di, "__esModule", { value: !0 });
   const t = oA(), e = {
@@ -22397,7 +22396,7 @@ function Wn() {
   return t.code = 'require("ajv/dist/runtime/equal").default', Si.default = t, Si;
 }
 var ya;
-function pm() {
+function wm() {
   if (ya) return mi;
   ya = 1, Object.defineProperty(mi, "__esModule", { value: !0 });
   const t = uo(), A = oA(), e = nA(), i = Wn(), r = {
@@ -22441,7 +22440,7 @@ function pm() {
   return mi.default = r, mi;
 }
 var ki = {}, Da;
-function wm() {
+function ym() {
   if (Da) return ki;
   Da = 1, Object.defineProperty(ki, "__esModule", { value: !0 });
   const t = oA(), A = nA(), e = Wn(), o = {
@@ -22459,7 +22458,7 @@ function wm() {
   return ki.default = o, ki;
 }
 var Ni = {}, ma;
-function ym() {
+function Dm() {
   if (ma) return Ni;
   ma = 1, Object.defineProperty(Ni, "__esModule", { value: !0 });
   const t = oA(), A = nA(), e = Wn(), o = {
@@ -22502,7 +22501,7 @@ var Sa;
 function XI() {
   if (Sa) return li;
   Sa = 1, Object.defineProperty(li, "__esModule", { value: !0 });
-  const t = Bm(), A = Qm(), e = lm(), i = dm(), o = um(), r = hm(), n = fm(), s = pm(), a = wm(), g = ym(), I = [
+  const t = Qm(), A = Em(), e = dm(), i = um(), o = hm(), r = fm(), n = pm(), s = wm(), a = ym(), g = Dm(), I = [
     // number
     t.default,
     A.default,
@@ -22601,7 +22600,7 @@ function ec() {
   return Oe.validateTuple = o, Oe.default = i, Oe;
 }
 var Ma;
-function Dm() {
+function mm() {
   if (Ma) return Gi;
   Ma = 1, Object.defineProperty(Gi, "__esModule", { value: !0 });
   const t = ec(), A = {
@@ -22614,7 +22613,7 @@ function Dm() {
   return Gi.default = A, Gi;
 }
 var Fi = {}, Ga;
-function mm() {
+function Sm() {
   if (Ga) return Fi;
   Ga = 1, Object.defineProperty(Fi, "__esModule", { value: !0 });
   const t = oA(), A = nA(), e = zA(), i = Ac(), r = {
@@ -22634,7 +22633,7 @@ function mm() {
   return Fi.default = r, Fi;
 }
 var bi = {}, Fa;
-function Sm() {
+function km() {
   if (Fa) return bi;
   Fa = 1, Object.defineProperty(bi, "__esModule", { value: !0 });
   const t = oA(), A = nA(), i = {
@@ -22764,7 +22763,7 @@ function zn() {
   })(hr)), hr;
 }
 var Ri = {}, Ra;
-function km() {
+function Nm() {
   if (Ra) return Ri;
   Ra = 1, Object.defineProperty(Ri, "__esModule", { value: !0 });
   const t = oA(), A = nA(), i = {
@@ -22867,7 +22866,7 @@ function tc() {
   return vi.default = r, vi;
 }
 var Ki = {}, Ka;
-function Nm() {
+function Mm() {
   if (Ka) return Ki;
   Ka = 1, Object.defineProperty(Ki, "__esModule", { value: !0 });
   const t = Zt(), A = zA(), e = nA(), i = tc(), o = {
@@ -22902,7 +22901,7 @@ function Nm() {
   return Ki.default = o, Ki;
 }
 var Yi = {}, Ya;
-function Mm() {
+function Gm() {
   if (Ya) return Yi;
   Ya = 1, Object.defineProperty(Yi, "__esModule", { value: !0 });
   const t = zA(), A = oA(), e = nA(), i = nA(), o = {
@@ -22943,7 +22942,7 @@ function Mm() {
   return Yi.default = o, Yi;
 }
 var Ui = {}, Ua;
-function Gm() {
+function Fm() {
   if (Ua) return Ui;
   Ua = 1, Object.defineProperty(Ui, "__esModule", { value: !0 });
   const t = nA(), A = {
@@ -22969,7 +22968,7 @@ function Gm() {
   return Ui.default = A, Ui;
 }
 var Ji = {}, Ja;
-function Fm() {
+function bm() {
   if (Ja) return Ji;
   Ja = 1, Object.defineProperty(Ji, "__esModule", { value: !0 });
   const A = {
@@ -22982,7 +22981,7 @@ function Fm() {
   return Ji.default = A, Ji;
 }
 var Hi = {}, Ha;
-function bm() {
+function Rm() {
   if (Ha) return Hi;
   Ha = 1, Object.defineProperty(Hi, "__esModule", { value: !0 });
   const t = oA(), A = nA(), i = {
@@ -23018,7 +23017,7 @@ function bm() {
   return Hi.default = i, Hi;
 }
 var qi = {}, qa;
-function Rm() {
+function vm() {
   if (qa) return qi;
   qa = 1, Object.defineProperty(qi, "__esModule", { value: !0 });
   const t = nA(), A = {
@@ -23040,7 +23039,7 @@ function Rm() {
   return qi.default = A, qi;
 }
 var xi = {}, xa;
-function vm() {
+function Km() {
   if (xa) return xi;
   xa = 1, Object.defineProperty(xi, "__esModule", { value: !0 });
   const t = oA(), A = nA(), i = {
@@ -23087,7 +23086,7 @@ function vm() {
   return xi.default = i, xi;
 }
 var Li = {}, La;
-function Km() {
+function Ym() {
   if (La) return Li;
   La = 1, Object.defineProperty(Li, "__esModule", { value: !0 });
   const t = nA(), A = {
@@ -23103,7 +23102,7 @@ var Ta;
 function ic() {
   if (Ta) return Mi;
   Ta = 1, Object.defineProperty(Mi, "__esModule", { value: !0 });
-  const t = Ac(), A = Dm(), e = ec(), i = mm(), o = Sm(), r = zn(), n = km(), s = tc(), a = Nm(), g = Mm(), I = Gm(), c = Fm(), C = bm(), B = Rm(), Q = vm(), f = Km();
+  const t = Ac(), A = mm(), e = ec(), i = Sm(), o = km(), r = zn(), n = Nm(), s = tc(), a = Mm(), g = Gm(), I = Fm(), c = bm(), C = Rm(), B = vm(), Q = Km(), f = Ym();
   function l(u = !1) {
     const d = [
       // any
@@ -23182,7 +23181,7 @@ function rc() {
   return je.dynamicRef = o, je.default = i, je;
 }
 var Oi = {}, ja;
-function Ym() {
+function Um() {
   if (ja) return Oi;
   ja = 1, Object.defineProperty(Oi, "__esModule", { value: !0 });
   const t = oc(), A = nA(), e = {
@@ -23195,7 +23194,7 @@ function Ym() {
   return Oi.default = e, Oi;
 }
 var Pi = {}, Va;
-function Um() {
+function Jm() {
   if (Va) return Pi;
   Va = 1, Object.defineProperty(Pi, "__esModule", { value: !0 });
   const t = rc(), A = {
@@ -23206,14 +23205,14 @@ function Um() {
   return Pi.default = A, Pi;
 }
 var $a;
-function Jm() {
+function Hm() {
   if ($a) return Ti;
   $a = 1, Object.defineProperty(Ti, "__esModule", { value: !0 });
-  const t = oc(), A = rc(), e = Ym(), i = Um(), o = [t.default, A.default, e.default, i.default];
+  const t = oc(), A = rc(), e = Um(), i = Jm(), o = [t.default, A.default, e.default, i.default];
   return Ti.default = o, Ti;
 }
 var ji = {}, Vi = {}, Wa;
-function Hm() {
+function qm() {
   if (Wa) return Vi;
   Wa = 1, Object.defineProperty(Vi, "__esModule", { value: !0 });
   const t = zn(), A = {
@@ -23226,7 +23225,7 @@ function Hm() {
   return Vi.default = A, Vi;
 }
 var $i = {}, za;
-function qm() {
+function xm() {
   if (za) return $i;
   za = 1, Object.defineProperty($i, "__esModule", { value: !0 });
   const t = zn(), A = {
@@ -23238,7 +23237,7 @@ function qm() {
   return $i.default = A, $i;
 }
 var Wi = {}, _a;
-function xm() {
+function Lm() {
   if (_a) return Wi;
   _a = 1, Object.defineProperty(Wi, "__esModule", { value: !0 });
   const t = nA(), A = {
@@ -23252,14 +23251,14 @@ function xm() {
   return Wi.default = A, Wi;
 }
 var Za;
-function Lm() {
+function Tm() {
   if (Za) return ji;
   Za = 1, Object.defineProperty(ji, "__esModule", { value: !0 });
-  const t = Hm(), A = qm(), e = xm(), i = [t.default, A.default, e.default];
+  const t = qm(), A = xm(), e = Lm(), i = [t.default, A.default, e.default];
   return ji.default = i, ji;
 }
 var zi = {}, _i = {}, Xa;
-function Tm() {
+function Om() {
   if (Xa) return _i;
   Xa = 1, Object.defineProperty(_i, "__esModule", { value: !0 });
   const t = oA(), A = nA(), e = WA(), o = {
@@ -23305,7 +23304,7 @@ function Tm() {
   return _i.default = o, _i;
 }
 var Zi = {}, Ag;
-function Om() {
+function Pm() {
   if (Ag) return Zi;
   Ag = 1, Object.defineProperty(Zi, "__esModule", { value: !0 });
   const t = oA(), A = nA(), i = {
@@ -23338,14 +23337,14 @@ function Om() {
   return Zi.default = i, Zi;
 }
 var eg;
-function Pm() {
+function jm() {
   if (eg) return zi;
   eg = 1, Object.defineProperty(zi, "__esModule", { value: !0 });
-  const t = Tm(), A = Om(), e = [t.default, A.default];
+  const t = Om(), A = Pm(), e = [t.default, A.default];
   return zi.default = e, zi;
 }
 var Xi = {}, Ao = {}, tg;
-function jm() {
+function Vm() {
   if (tg) return Ao;
   tg = 1, Object.defineProperty(Ao, "__esModule", { value: !0 });
   const t = oA(), e = {
@@ -23417,7 +23416,7 @@ var ig;
 function nc() {
   if (ig) return Xi;
   ig = 1, Object.defineProperty(Xi, "__esModule", { value: !0 });
-  const A = [jm().default];
+  const A = [Vm().default];
   return Xi.default = A, Xi;
 }
 var pe = {}, og;
@@ -23437,10 +23436,10 @@ function sc() {
   ]), pe;
 }
 var rg;
-function Vm() {
+function $m() {
   if (rg) return Bi;
   rg = 1, Object.defineProperty(Bi, "__esModule", { value: !0 });
-  const t = ZI(), A = XI(), e = ic(), i = Jm(), o = Lm(), r = Pm(), n = nc(), s = sc(), a = [
+  const t = ZI(), A = XI(), e = ic(), i = Hm(), o = Tm(), r = jm(), n = nc(), s = sc(), a = [
     i.default,
     t.default,
     A.default,
@@ -23454,7 +23453,7 @@ function Vm() {
   return Bi.default = a, Bi;
 }
 var eo = {}, pt = {}, ng;
-function $m() {
+function Wm() {
   if (ng) return pt;
   ng = 1, Object.defineProperty(pt, "__esModule", { value: !0 }), pt.DiscrError = void 0;
   var t;
@@ -23466,7 +23465,7 @@ var sg;
 function ac() {
   if (sg) return eo;
   sg = 1, Object.defineProperty(eo, "__esModule", { value: !0 });
-  const t = oA(), A = $m(), e = Jo(), i = Xt(), o = nA(), n = {
+  const t = oA(), A = Wm(), e = Jo(), i = Xt(), o = nA(), n = {
     keyword: "discriminator",
     type: "object",
     schemaType: "object",
@@ -23540,81 +23539,81 @@ function ac() {
   return eo.default = n, eo;
 }
 var to = {};
-const Wm = "https://json-schema.org/draft/2020-12/schema", zm = "https://json-schema.org/draft/2020-12/schema", _m = { "https://json-schema.org/draft/2020-12/vocab/core": !0, "https://json-schema.org/draft/2020-12/vocab/applicator": !0, "https://json-schema.org/draft/2020-12/vocab/unevaluated": !0, "https://json-schema.org/draft/2020-12/vocab/validation": !0, "https://json-schema.org/draft/2020-12/vocab/meta-data": !0, "https://json-schema.org/draft/2020-12/vocab/format-annotation": !0, "https://json-schema.org/draft/2020-12/vocab/content": !0 }, Zm = "meta", Xm = "Core and Validation specifications meta-schema", AS = [{ $ref: "meta/core" }, { $ref: "meta/applicator" }, { $ref: "meta/unevaluated" }, { $ref: "meta/validation" }, { $ref: "meta/meta-data" }, { $ref: "meta/format-annotation" }, { $ref: "meta/content" }], eS = ["object", "boolean"], tS = "This meta-schema also defines keywords that have appeared in previous drafts in order to prevent incompatible extensions as they remain in common use.", iS = { definitions: { $comment: '"definitions" has been replaced by "$defs".', type: "object", additionalProperties: { $dynamicRef: "#meta" }, deprecated: !0, default: {} }, dependencies: { $comment: '"dependencies" has been split and replaced by "dependentSchemas" and "dependentRequired" in order to serve their differing semantics.', type: "object", additionalProperties: { anyOf: [{ $dynamicRef: "#meta" }, { $ref: "meta/validation#/$defs/stringArray" }] }, deprecated: !0, default: {} }, $recursiveAnchor: { $comment: '"$recursiveAnchor" has been replaced by "$dynamicAnchor".', $ref: "meta/core#/$defs/anchorString", deprecated: !0 }, $recursiveRef: { $comment: '"$recursiveRef" has been replaced by "$dynamicRef".', $ref: "meta/core#/$defs/uriReferenceString", deprecated: !0 } }, oS = {
-  $schema: Wm,
-  $id: zm,
-  $vocabulary: _m,
-  $dynamicAnchor: Zm,
-  title: Xm,
-  allOf: AS,
-  type: eS,
-  $comment: tS,
-  properties: iS
-}, rS = "https://json-schema.org/draft/2020-12/schema", nS = "https://json-schema.org/draft/2020-12/meta/applicator", sS = { "https://json-schema.org/draft/2020-12/vocab/applicator": !0 }, aS = "meta", gS = "Applicator vocabulary meta-schema", IS = ["object", "boolean"], cS = { prefixItems: { $ref: "#/$defs/schemaArray" }, items: { $dynamicRef: "#meta" }, contains: { $dynamicRef: "#meta" }, additionalProperties: { $dynamicRef: "#meta" }, properties: { type: "object", additionalProperties: { $dynamicRef: "#meta" }, default: {} }, patternProperties: { type: "object", additionalProperties: { $dynamicRef: "#meta" }, propertyNames: { format: "regex" }, default: {} }, dependentSchemas: { type: "object", additionalProperties: { $dynamicRef: "#meta" }, default: {} }, propertyNames: { $dynamicRef: "#meta" }, if: { $dynamicRef: "#meta" }, then: { $dynamicRef: "#meta" }, else: { $dynamicRef: "#meta" }, allOf: { $ref: "#/$defs/schemaArray" }, anyOf: { $ref: "#/$defs/schemaArray" }, oneOf: { $ref: "#/$defs/schemaArray" }, not: { $dynamicRef: "#meta" } }, CS = { schemaArray: { type: "array", minItems: 1, items: { $dynamicRef: "#meta" } } }, BS = {
-  $schema: rS,
-  $id: nS,
-  $vocabulary: sS,
-  $dynamicAnchor: aS,
-  title: gS,
-  type: IS,
-  properties: cS,
-  $defs: CS
-}, QS = "https://json-schema.org/draft/2020-12/schema", ES = "https://json-schema.org/draft/2020-12/meta/unevaluated", lS = { "https://json-schema.org/draft/2020-12/vocab/unevaluated": !0 }, dS = "meta", uS = "Unevaluated applicator vocabulary meta-schema", hS = ["object", "boolean"], fS = { unevaluatedItems: { $dynamicRef: "#meta" }, unevaluatedProperties: { $dynamicRef: "#meta" } }, pS = {
-  $schema: QS,
-  $id: ES,
-  $vocabulary: lS,
-  $dynamicAnchor: dS,
-  title: uS,
-  type: hS,
-  properties: fS
-}, wS = "https://json-schema.org/draft/2020-12/schema", yS = "https://json-schema.org/draft/2020-12/meta/content", DS = { "https://json-schema.org/draft/2020-12/vocab/content": !0 }, mS = "meta", SS = "Content vocabulary meta-schema", kS = ["object", "boolean"], NS = { contentEncoding: { type: "string" }, contentMediaType: { type: "string" }, contentSchema: { $dynamicRef: "#meta" } }, MS = {
-  $schema: wS,
-  $id: yS,
-  $vocabulary: DS,
-  $dynamicAnchor: mS,
-  title: SS,
-  type: kS,
-  properties: NS
-}, GS = "https://json-schema.org/draft/2020-12/schema", FS = "https://json-schema.org/draft/2020-12/meta/core", bS = { "https://json-schema.org/draft/2020-12/vocab/core": !0 }, RS = "meta", vS = "Core vocabulary meta-schema", KS = ["object", "boolean"], YS = { $id: { $ref: "#/$defs/uriReferenceString", $comment: "Non-empty fragments not allowed.", pattern: "^[^#]*#?$" }, $schema: { $ref: "#/$defs/uriString" }, $ref: { $ref: "#/$defs/uriReferenceString" }, $anchor: { $ref: "#/$defs/anchorString" }, $dynamicRef: { $ref: "#/$defs/uriReferenceString" }, $dynamicAnchor: { $ref: "#/$defs/anchorString" }, $vocabulary: { type: "object", propertyNames: { $ref: "#/$defs/uriString" }, additionalProperties: { type: "boolean" } }, $comment: { type: "string" }, $defs: { type: "object", additionalProperties: { $dynamicRef: "#meta" } } }, US = { anchorString: { type: "string", pattern: "^[A-Za-z_][-A-Za-z0-9._]*$" }, uriString: { type: "string", format: "uri" }, uriReferenceString: { type: "string", format: "uri-reference" } }, JS = {
-  $schema: GS,
-  $id: FS,
-  $vocabulary: bS,
-  $dynamicAnchor: RS,
-  title: vS,
-  type: KS,
-  properties: YS,
-  $defs: US
-}, HS = "https://json-schema.org/draft/2020-12/schema", qS = "https://json-schema.org/draft/2020-12/meta/format-annotation", xS = { "https://json-schema.org/draft/2020-12/vocab/format-annotation": !0 }, LS = "meta", TS = "Format vocabulary meta-schema for annotation results", OS = ["object", "boolean"], PS = { format: { type: "string" } }, jS = {
-  $schema: HS,
-  $id: qS,
-  $vocabulary: xS,
-  $dynamicAnchor: LS,
-  title: TS,
-  type: OS,
-  properties: PS
-}, VS = "https://json-schema.org/draft/2020-12/schema", $S = "https://json-schema.org/draft/2020-12/meta/meta-data", WS = { "https://json-schema.org/draft/2020-12/vocab/meta-data": !0 }, zS = "meta", _S = "Meta-data vocabulary meta-schema", ZS = ["object", "boolean"], XS = { title: { type: "string" }, description: { type: "string" }, default: !0, deprecated: { type: "boolean", default: !1 }, readOnly: { type: "boolean", default: !1 }, writeOnly: { type: "boolean", default: !1 }, examples: { type: "array", items: !0 } }, A0 = {
-  $schema: VS,
-  $id: $S,
-  $vocabulary: WS,
-  $dynamicAnchor: zS,
-  title: _S,
-  type: ZS,
-  properties: XS
-}, e0 = "https://json-schema.org/draft/2020-12/schema", t0 = "https://json-schema.org/draft/2020-12/meta/validation", i0 = { "https://json-schema.org/draft/2020-12/vocab/validation": !0 }, o0 = "meta", r0 = "Validation vocabulary meta-schema", n0 = ["object", "boolean"], s0 = { type: { anyOf: [{ $ref: "#/$defs/simpleTypes" }, { type: "array", items: { $ref: "#/$defs/simpleTypes" }, minItems: 1, uniqueItems: !0 }] }, const: !0, enum: { type: "array", items: !0 }, multipleOf: { type: "number", exclusiveMinimum: 0 }, maximum: { type: "number" }, exclusiveMaximum: { type: "number" }, minimum: { type: "number" }, exclusiveMinimum: { type: "number" }, maxLength: { $ref: "#/$defs/nonNegativeInteger" }, minLength: { $ref: "#/$defs/nonNegativeIntegerDefault0" }, pattern: { type: "string", format: "regex" }, maxItems: { $ref: "#/$defs/nonNegativeInteger" }, minItems: { $ref: "#/$defs/nonNegativeIntegerDefault0" }, uniqueItems: { type: "boolean", default: !1 }, maxContains: { $ref: "#/$defs/nonNegativeInteger" }, minContains: { $ref: "#/$defs/nonNegativeInteger", default: 1 }, maxProperties: { $ref: "#/$defs/nonNegativeInteger" }, minProperties: { $ref: "#/$defs/nonNegativeIntegerDefault0" }, required: { $ref: "#/$defs/stringArray" }, dependentRequired: { type: "object", additionalProperties: { $ref: "#/$defs/stringArray" } } }, a0 = { nonNegativeInteger: { type: "integer", minimum: 0 }, nonNegativeIntegerDefault0: { $ref: "#/$defs/nonNegativeInteger", default: 0 }, simpleTypes: { enum: ["array", "boolean", "integer", "null", "number", "object", "string"] }, stringArray: { type: "array", items: { type: "string" }, uniqueItems: !0, default: [] } }, g0 = {
-  $schema: e0,
-  $id: t0,
-  $vocabulary: i0,
-  $dynamicAnchor: o0,
-  title: r0,
-  type: n0,
-  properties: s0,
-  $defs: a0
+const zm = "https://json-schema.org/draft/2020-12/schema", _m = "https://json-schema.org/draft/2020-12/schema", Zm = { "https://json-schema.org/draft/2020-12/vocab/core": !0, "https://json-schema.org/draft/2020-12/vocab/applicator": !0, "https://json-schema.org/draft/2020-12/vocab/unevaluated": !0, "https://json-schema.org/draft/2020-12/vocab/validation": !0, "https://json-schema.org/draft/2020-12/vocab/meta-data": !0, "https://json-schema.org/draft/2020-12/vocab/format-annotation": !0, "https://json-schema.org/draft/2020-12/vocab/content": !0 }, Xm = "meta", AS = "Core and Validation specifications meta-schema", eS = [{ $ref: "meta/core" }, { $ref: "meta/applicator" }, { $ref: "meta/unevaluated" }, { $ref: "meta/validation" }, { $ref: "meta/meta-data" }, { $ref: "meta/format-annotation" }, { $ref: "meta/content" }], tS = ["object", "boolean"], iS = "This meta-schema also defines keywords that have appeared in previous drafts in order to prevent incompatible extensions as they remain in common use.", oS = { definitions: { $comment: '"definitions" has been replaced by "$defs".', type: "object", additionalProperties: { $dynamicRef: "#meta" }, deprecated: !0, default: {} }, dependencies: { $comment: '"dependencies" has been split and replaced by "dependentSchemas" and "dependentRequired" in order to serve their differing semantics.', type: "object", additionalProperties: { anyOf: [{ $dynamicRef: "#meta" }, { $ref: "meta/validation#/$defs/stringArray" }] }, deprecated: !0, default: {} }, $recursiveAnchor: { $comment: '"$recursiveAnchor" has been replaced by "$dynamicAnchor".', $ref: "meta/core#/$defs/anchorString", deprecated: !0 }, $recursiveRef: { $comment: '"$recursiveRef" has been replaced by "$dynamicRef".', $ref: "meta/core#/$defs/uriReferenceString", deprecated: !0 } }, rS = {
+  $schema: zm,
+  $id: _m,
+  $vocabulary: Zm,
+  $dynamicAnchor: Xm,
+  title: AS,
+  allOf: eS,
+  type: tS,
+  $comment: iS,
+  properties: oS
+}, nS = "https://json-schema.org/draft/2020-12/schema", sS = "https://json-schema.org/draft/2020-12/meta/applicator", aS = { "https://json-schema.org/draft/2020-12/vocab/applicator": !0 }, gS = "meta", IS = "Applicator vocabulary meta-schema", cS = ["object", "boolean"], CS = { prefixItems: { $ref: "#/$defs/schemaArray" }, items: { $dynamicRef: "#meta" }, contains: { $dynamicRef: "#meta" }, additionalProperties: { $dynamicRef: "#meta" }, properties: { type: "object", additionalProperties: { $dynamicRef: "#meta" }, default: {} }, patternProperties: { type: "object", additionalProperties: { $dynamicRef: "#meta" }, propertyNames: { format: "regex" }, default: {} }, dependentSchemas: { type: "object", additionalProperties: { $dynamicRef: "#meta" }, default: {} }, propertyNames: { $dynamicRef: "#meta" }, if: { $dynamicRef: "#meta" }, then: { $dynamicRef: "#meta" }, else: { $dynamicRef: "#meta" }, allOf: { $ref: "#/$defs/schemaArray" }, anyOf: { $ref: "#/$defs/schemaArray" }, oneOf: { $ref: "#/$defs/schemaArray" }, not: { $dynamicRef: "#meta" } }, BS = { schemaArray: { type: "array", minItems: 1, items: { $dynamicRef: "#meta" } } }, QS = {
+  $schema: nS,
+  $id: sS,
+  $vocabulary: aS,
+  $dynamicAnchor: gS,
+  title: IS,
+  type: cS,
+  properties: CS,
+  $defs: BS
+}, ES = "https://json-schema.org/draft/2020-12/schema", lS = "https://json-schema.org/draft/2020-12/meta/unevaluated", dS = { "https://json-schema.org/draft/2020-12/vocab/unevaluated": !0 }, uS = "meta", hS = "Unevaluated applicator vocabulary meta-schema", fS = ["object", "boolean"], pS = { unevaluatedItems: { $dynamicRef: "#meta" }, unevaluatedProperties: { $dynamicRef: "#meta" } }, wS = {
+  $schema: ES,
+  $id: lS,
+  $vocabulary: dS,
+  $dynamicAnchor: uS,
+  title: hS,
+  type: fS,
+  properties: pS
+}, yS = "https://json-schema.org/draft/2020-12/schema", DS = "https://json-schema.org/draft/2020-12/meta/content", mS = { "https://json-schema.org/draft/2020-12/vocab/content": !0 }, SS = "meta", kS = "Content vocabulary meta-schema", NS = ["object", "boolean"], MS = { contentEncoding: { type: "string" }, contentMediaType: { type: "string" }, contentSchema: { $dynamicRef: "#meta" } }, GS = {
+  $schema: yS,
+  $id: DS,
+  $vocabulary: mS,
+  $dynamicAnchor: SS,
+  title: kS,
+  type: NS,
+  properties: MS
+}, FS = "https://json-schema.org/draft/2020-12/schema", bS = "https://json-schema.org/draft/2020-12/meta/core", RS = { "https://json-schema.org/draft/2020-12/vocab/core": !0 }, vS = "meta", KS = "Core vocabulary meta-schema", YS = ["object", "boolean"], US = { $id: { $ref: "#/$defs/uriReferenceString", $comment: "Non-empty fragments not allowed.", pattern: "^[^#]*#?$" }, $schema: { $ref: "#/$defs/uriString" }, $ref: { $ref: "#/$defs/uriReferenceString" }, $anchor: { $ref: "#/$defs/anchorString" }, $dynamicRef: { $ref: "#/$defs/uriReferenceString" }, $dynamicAnchor: { $ref: "#/$defs/anchorString" }, $vocabulary: { type: "object", propertyNames: { $ref: "#/$defs/uriString" }, additionalProperties: { type: "boolean" } }, $comment: { type: "string" }, $defs: { type: "object", additionalProperties: { $dynamicRef: "#meta" } } }, JS = { anchorString: { type: "string", pattern: "^[A-Za-z_][-A-Za-z0-9._]*$" }, uriString: { type: "string", format: "uri" }, uriReferenceString: { type: "string", format: "uri-reference" } }, HS = {
+  $schema: FS,
+  $id: bS,
+  $vocabulary: RS,
+  $dynamicAnchor: vS,
+  title: KS,
+  type: YS,
+  properties: US,
+  $defs: JS
+}, qS = "https://json-schema.org/draft/2020-12/schema", xS = "https://json-schema.org/draft/2020-12/meta/format-annotation", LS = { "https://json-schema.org/draft/2020-12/vocab/format-annotation": !0 }, TS = "meta", OS = "Format vocabulary meta-schema for annotation results", PS = ["object", "boolean"], jS = { format: { type: "string" } }, VS = {
+  $schema: qS,
+  $id: xS,
+  $vocabulary: LS,
+  $dynamicAnchor: TS,
+  title: OS,
+  type: PS,
+  properties: jS
+}, $S = "https://json-schema.org/draft/2020-12/schema", WS = "https://json-schema.org/draft/2020-12/meta/meta-data", zS = { "https://json-schema.org/draft/2020-12/vocab/meta-data": !0 }, _S = "meta", ZS = "Meta-data vocabulary meta-schema", XS = ["object", "boolean"], A0 = { title: { type: "string" }, description: { type: "string" }, default: !0, deprecated: { type: "boolean", default: !1 }, readOnly: { type: "boolean", default: !1 }, writeOnly: { type: "boolean", default: !1 }, examples: { type: "array", items: !0 } }, e0 = {
+  $schema: $S,
+  $id: WS,
+  $vocabulary: zS,
+  $dynamicAnchor: _S,
+  title: ZS,
+  type: XS,
+  properties: A0
+}, t0 = "https://json-schema.org/draft/2020-12/schema", i0 = "https://json-schema.org/draft/2020-12/meta/validation", o0 = { "https://json-schema.org/draft/2020-12/vocab/validation": !0 }, r0 = "meta", n0 = "Validation vocabulary meta-schema", s0 = ["object", "boolean"], a0 = { type: { anyOf: [{ $ref: "#/$defs/simpleTypes" }, { type: "array", items: { $ref: "#/$defs/simpleTypes" }, minItems: 1, uniqueItems: !0 }] }, const: !0, enum: { type: "array", items: !0 }, multipleOf: { type: "number", exclusiveMinimum: 0 }, maximum: { type: "number" }, exclusiveMaximum: { type: "number" }, minimum: { type: "number" }, exclusiveMinimum: { type: "number" }, maxLength: { $ref: "#/$defs/nonNegativeInteger" }, minLength: { $ref: "#/$defs/nonNegativeIntegerDefault0" }, pattern: { type: "string", format: "regex" }, maxItems: { $ref: "#/$defs/nonNegativeInteger" }, minItems: { $ref: "#/$defs/nonNegativeIntegerDefault0" }, uniqueItems: { type: "boolean", default: !1 }, maxContains: { $ref: "#/$defs/nonNegativeInteger" }, minContains: { $ref: "#/$defs/nonNegativeInteger", default: 1 }, maxProperties: { $ref: "#/$defs/nonNegativeInteger" }, minProperties: { $ref: "#/$defs/nonNegativeIntegerDefault0" }, required: { $ref: "#/$defs/stringArray" }, dependentRequired: { type: "object", additionalProperties: { $ref: "#/$defs/stringArray" } } }, g0 = { nonNegativeInteger: { type: "integer", minimum: 0 }, nonNegativeIntegerDefault0: { $ref: "#/$defs/nonNegativeInteger", default: 0 }, simpleTypes: { enum: ["array", "boolean", "integer", "null", "number", "object", "string"] }, stringArray: { type: "array", items: { type: "string" }, uniqueItems: !0, default: [] } }, I0 = {
+  $schema: t0,
+  $id: i0,
+  $vocabulary: o0,
+  $dynamicAnchor: r0,
+  title: n0,
+  type: s0,
+  properties: a0,
+  $defs: g0
 };
 var ag;
-function I0() {
+function c0() {
   if (ag) return to;
   ag = 1, Object.defineProperty(to, "__esModule", { value: !0 });
-  const t = oS, A = BS, e = pS, i = MS, o = JS, r = jS, n = A0, s = g0, a = ["/properties"];
+  const t = rS, A = QS, e = wS, i = GS, o = HS, r = VS, n = e0, s = I0, a = ["/properties"];
   function g(I) {
     return [
       t,
@@ -23633,10 +23632,10 @@ function I0() {
   return to.default = g, to;
 }
 var gg;
-function c0() {
+function C0() {
   return gg || (gg = 1, (function(t, A) {
     Object.defineProperty(A, "__esModule", { value: !0 }), A.MissingRefError = A.ValidationError = A.CodeGen = A.Name = A.nil = A.stringify = A.str = A._ = A.KeywordCxt = A.Ajv2020 = void 0;
-    const e = _I(), i = Vm(), o = ac(), r = I0(), n = "https://json-schema.org/draft/2020-12/schema";
+    const e = _I(), i = $m(), o = ac(), r = c0(), n = "https://json-schema.org/draft/2020-12/schema";
     class s extends e.default {
       constructor(B = {}) {
         super({
@@ -23687,13 +23686,13 @@ function c0() {
     } });
   })(ai, ai.exports)), ai.exports;
 }
-var gc = c0();
-const C0 = /* @__PURE__ */ jI(gc), B0 = /* @__PURE__ */ Cc({
+var gc = C0();
+const B0 = /* @__PURE__ */ jI(gc), Q0 = /* @__PURE__ */ Cc({
   __proto__: null,
-  default: C0
+  default: B0
 }, [gc]);
 var io = { exports: {} }, oo = {}, Ig;
-function Q0() {
+function E0() {
   if (Ig) return oo;
   Ig = 1, Object.defineProperty(oo, "__esModule", { value: !0 });
   const t = ZI(), A = XI(), e = ic(), i = nc(), o = sc(), r = [
@@ -23706,20 +23705,20 @@ function Q0() {
   ];
   return oo.default = r, oo;
 }
-const E0 = "http://json-schema.org/draft-07/schema#", l0 = "http://json-schema.org/draft-07/schema#", d0 = "Core schema meta-schema", u0 = { schemaArray: { type: "array", minItems: 1, items: { $ref: "#" } }, nonNegativeInteger: { type: "integer", minimum: 0 }, nonNegativeIntegerDefault0: { allOf: [{ $ref: "#/definitions/nonNegativeInteger" }, { default: 0 }] }, simpleTypes: { enum: ["array", "boolean", "integer", "null", "number", "object", "string"] }, stringArray: { type: "array", items: { type: "string" }, uniqueItems: !0, default: [] } }, h0 = ["object", "boolean"], f0 = { $id: { type: "string", format: "uri-reference" }, $schema: { type: "string", format: "uri" }, $ref: { type: "string", format: "uri-reference" }, $comment: { type: "string" }, title: { type: "string" }, description: { type: "string" }, default: !0, readOnly: { type: "boolean", default: !1 }, examples: { type: "array", items: !0 }, multipleOf: { type: "number", exclusiveMinimum: 0 }, maximum: { type: "number" }, exclusiveMaximum: { type: "number" }, minimum: { type: "number" }, exclusiveMinimum: { type: "number" }, maxLength: { $ref: "#/definitions/nonNegativeInteger" }, minLength: { $ref: "#/definitions/nonNegativeIntegerDefault0" }, pattern: { type: "string", format: "regex" }, additionalItems: { $ref: "#" }, items: { anyOf: [{ $ref: "#" }, { $ref: "#/definitions/schemaArray" }], default: !0 }, maxItems: { $ref: "#/definitions/nonNegativeInteger" }, minItems: { $ref: "#/definitions/nonNegativeIntegerDefault0" }, uniqueItems: { type: "boolean", default: !1 }, contains: { $ref: "#" }, maxProperties: { $ref: "#/definitions/nonNegativeInteger" }, minProperties: { $ref: "#/definitions/nonNegativeIntegerDefault0" }, required: { $ref: "#/definitions/stringArray" }, additionalProperties: { $ref: "#" }, definitions: { type: "object", additionalProperties: { $ref: "#" }, default: {} }, properties: { type: "object", additionalProperties: { $ref: "#" }, default: {} }, patternProperties: { type: "object", additionalProperties: { $ref: "#" }, propertyNames: { format: "regex" }, default: {} }, dependencies: { type: "object", additionalProperties: { anyOf: [{ $ref: "#" }, { $ref: "#/definitions/stringArray" }] } }, propertyNames: { $ref: "#" }, const: !0, enum: { type: "array", items: !0, minItems: 1, uniqueItems: !0 }, type: { anyOf: [{ $ref: "#/definitions/simpleTypes" }, { type: "array", items: { $ref: "#/definitions/simpleTypes" }, minItems: 1, uniqueItems: !0 }] }, format: { type: "string" }, contentMediaType: { type: "string" }, contentEncoding: { type: "string" }, if: { $ref: "#" }, then: { $ref: "#" }, else: { $ref: "#" }, allOf: { $ref: "#/definitions/schemaArray" }, anyOf: { $ref: "#/definitions/schemaArray" }, oneOf: { $ref: "#/definitions/schemaArray" }, not: { $ref: "#" } }, p0 = {
-  $schema: E0,
-  $id: l0,
-  title: d0,
-  definitions: u0,
-  type: h0,
-  properties: f0,
+const l0 = "http://json-schema.org/draft-07/schema#", d0 = "http://json-schema.org/draft-07/schema#", u0 = "Core schema meta-schema", h0 = { schemaArray: { type: "array", minItems: 1, items: { $ref: "#" } }, nonNegativeInteger: { type: "integer", minimum: 0 }, nonNegativeIntegerDefault0: { allOf: [{ $ref: "#/definitions/nonNegativeInteger" }, { default: 0 }] }, simpleTypes: { enum: ["array", "boolean", "integer", "null", "number", "object", "string"] }, stringArray: { type: "array", items: { type: "string" }, uniqueItems: !0, default: [] } }, f0 = ["object", "boolean"], p0 = { $id: { type: "string", format: "uri-reference" }, $schema: { type: "string", format: "uri" }, $ref: { type: "string", format: "uri-reference" }, $comment: { type: "string" }, title: { type: "string" }, description: { type: "string" }, default: !0, readOnly: { type: "boolean", default: !1 }, examples: { type: "array", items: !0 }, multipleOf: { type: "number", exclusiveMinimum: 0 }, maximum: { type: "number" }, exclusiveMaximum: { type: "number" }, minimum: { type: "number" }, exclusiveMinimum: { type: "number" }, maxLength: { $ref: "#/definitions/nonNegativeInteger" }, minLength: { $ref: "#/definitions/nonNegativeIntegerDefault0" }, pattern: { type: "string", format: "regex" }, additionalItems: { $ref: "#" }, items: { anyOf: [{ $ref: "#" }, { $ref: "#/definitions/schemaArray" }], default: !0 }, maxItems: { $ref: "#/definitions/nonNegativeInteger" }, minItems: { $ref: "#/definitions/nonNegativeIntegerDefault0" }, uniqueItems: { type: "boolean", default: !1 }, contains: { $ref: "#" }, maxProperties: { $ref: "#/definitions/nonNegativeInteger" }, minProperties: { $ref: "#/definitions/nonNegativeIntegerDefault0" }, required: { $ref: "#/definitions/stringArray" }, additionalProperties: { $ref: "#" }, definitions: { type: "object", additionalProperties: { $ref: "#" }, default: {} }, properties: { type: "object", additionalProperties: { $ref: "#" }, default: {} }, patternProperties: { type: "object", additionalProperties: { $ref: "#" }, propertyNames: { format: "regex" }, default: {} }, dependencies: { type: "object", additionalProperties: { anyOf: [{ $ref: "#" }, { $ref: "#/definitions/stringArray" }] } }, propertyNames: { $ref: "#" }, const: !0, enum: { type: "array", items: !0, minItems: 1, uniqueItems: !0 }, type: { anyOf: [{ $ref: "#/definitions/simpleTypes" }, { type: "array", items: { $ref: "#/definitions/simpleTypes" }, minItems: 1, uniqueItems: !0 }] }, format: { type: "string" }, contentMediaType: { type: "string" }, contentEncoding: { type: "string" }, if: { $ref: "#" }, then: { $ref: "#" }, else: { $ref: "#" }, allOf: { $ref: "#/definitions/schemaArray" }, anyOf: { $ref: "#/definitions/schemaArray" }, oneOf: { $ref: "#/definitions/schemaArray" }, not: { $ref: "#" } }, w0 = {
+  $schema: l0,
+  $id: d0,
+  title: u0,
+  definitions: h0,
+  type: f0,
+  properties: p0,
   default: !0
 };
 var cg;
-function w0() {
+function y0() {
   return cg || (cg = 1, (function(t, A) {
     Object.defineProperty(A, "__esModule", { value: !0 }), A.MissingRefError = A.ValidationError = A.CodeGen = A.Name = A.nil = A.stringify = A.str = A._ = A.KeywordCxt = A.Ajv = void 0;
-    const e = _I(), i = Q0(), o = ac(), r = p0, n = ["/properties"], s = "http://json-schema.org/draft-07/schema";
+    const e = _I(), i = E0(), o = ac(), r = w0, n = ["/properties"], s = "http://json-schema.org/draft-07/schema";
     class a extends e.default {
       _addVocabularies() {
         super._addVocabularies(), i.default.forEach((Q) => this.addVocabulary(Q)), this.opts.discriminator && this.addKeyword(o.default);
@@ -23763,13 +23762,13 @@ function w0() {
     } });
   })(io, io.exports)), io.exports;
 }
-var y0 = w0();
-const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+var D0 = y0();
+const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: D0
-}, Symbol.toStringTag, { value: "Module" })), S0 = {}, Cg = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  default: m0
+}, Symbol.toStringTag, { value: "Module" })), k0 = {}, Cg = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: S0
+  default: k0
 }, Symbol.toStringTag, { value: "Module" })), Ic = {
   $schema: "@maia/schema/style",
   $id: "@maia/style/brand",
@@ -23896,13 +23895,13 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
   selectors: {
     ":host": { display: "block", height: "100%", background: "transparent" }
   }
-}, k0 = {
+}, N0 = {
   $schema: "@maia/schema/vibe",
   $id: "@maia/vibe/todos",
   name: "Todos",
   description: "Complete todo list with state machines and AI tools",
   actor: "@maia/todos/actor/vibe"
-}, N0 = {
+}, M0 = {
   $schema: "@maia/schema/style",
   $id: "@maia/todos/style/brand",
   tokens: {
@@ -24328,7 +24327,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, M0 = {
+}, G0 = {
   $schema: "@maia/schema/style",
   $id: "@maia/todos/style/list",
   components: {
@@ -24532,7 +24531,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       background: "rgba(255, 255, 255, 0.1)"
     }
   }
-}, G0 = {
+}, F0 = {
   $schema: "@maia/schema/style",
   $id: "@maia/todos/style/coming-soon",
   components: {
@@ -24551,7 +24550,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       fontStyle: "italic"
     }
   }
-}, F0 = {
+}, b0 = {
   $schema: "@maia/schema/actor",
   $id: "@maia/todos/actor/vibe",
   role: "agent",
@@ -24561,7 +24560,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
   brand: "@maia/todos/style/brand",
   inbox: "@maia/todos/inbox/vibe",
   messageTypes: ["CREATE_BUTTON", "TOGGLE_BUTTON", "DELETE_BUTTON", "UPDATE_INPUT", "SWITCH_VIEW", "SUCCESS", "ERROR"]
-}, b0 = {
+}, R0 = {
   $schema: "@maia/schema/actor",
   $id: "@maia/todos/actor/list",
   role: "todo-list",
@@ -24578,7 +24577,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
     "RETRY",
     "DISMISS"
   ]
-}, R0 = {
+}, v0 = {
   $schema: "@maia/schema/actor",
   $id: "@maia/todos/actor/coming-soon",
   role: "ui",
@@ -24589,7 +24588,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
   style: "@maia/todos/style/coming-soon",
   inbox: "@maia/todos/inbox/coming-soon",
   messageTypes: []
-}, v0 = {
+}, K0 = {
   $schema: "@maia/schema/view",
   $id: "@maia/todos/view/vibe",
   content: {
@@ -24643,7 +24642,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       { tag: "main", class: "content-area", $slot: "$currentView" }
     ]
   }
-}, K0 = {
+}, Y0 = {
   $schema: "@maia/schema/view",
   $id: "@maia/todos/view/list",
   content: {
@@ -24692,7 +24691,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, Y0 = {
+}, U0 = {
   $schema: "@maia/schema/view",
   $id: "@maia/todos/view/coming-soon",
   content: {
@@ -24706,7 +24705,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     ]
   }
-}, U0 = {
+}, J0 = {
   $schema: "@maia/schema/context",
   $id: "@maia/todos/context/vibe",
   currentView: "@list",
@@ -24723,7 +24722,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
     list: "@maia/todos/actor/list",
     comingSoon: "@maia/todos/actor/coming-soon"
   }
-}, J0 = {
+}, H0 = {
   $schema: "@maia/schema/context",
   $id: "@maia/todos/context/list",
   list: {
@@ -24731,11 +24730,11 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
   },
   toggleButtonText: "✓",
   deleteButtonText: "✕"
-}, H0 = {
+}, q0 = {
   $schema: "@maia/schema/context",
   $id: "@maia/todos/context/coming-soon",
   message: "Coming soon"
-}, q0 = {
+}, x0 = {
   $schema: "@maia/schema/state",
   $id: "@maia/todos/state/vibe",
   initial: "idle",
@@ -24782,7 +24781,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       on: { TOGGLE_BUTTON: { target: "toggling" }, DELETE_BUTTON: { target: "deleting" }, RETRY: { target: "idle", actions: [{ updateContext: { error: null } }] }, DISMISS: { target: "idle", actions: [{ updateContext: { error: null } }] } }
     }
   }
-}, x0 = {
+}, L0 = {
   $schema: "@maia/schema/state",
   $id: "@maia/todos/state/list",
   initial: "idle",
@@ -24855,57 +24854,57 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, L0 = {
+}, T0 = {
   $schema: "@maia/schema/state",
   $id: "@maia/todos/state/coming-soon",
   initial: "idle",
   states: {
     idle: {}
   }
-}, T0 = {
+}, O0 = {
   $schema: "@maia/schema/inbox",
   $id: "@maia/todos/inbox/vibe",
   items: []
-}, O0 = {
+}, P0 = {
   $schema: "@maia/schema/inbox",
   $id: "@maia/todos/inbox/list",
   items: []
-}, P0 = {
+}, j0 = {
   $schema: "@maia/schema/inbox",
   $id: "@maia/todos/inbox/coming-soon",
   items: []
 }, _r = {
-  vibe: k0,
+  vibe: N0,
   styles: {
     "@maia/style/brand": Ic,
-    "@maia/todos/style/brand": N0,
-    "@maia/todos/style/list": M0,
-    "@maia/todos/style/coming-soon": G0
+    "@maia/todos/style/brand": M0,
+    "@maia/todos/style/list": G0,
+    "@maia/todos/style/coming-soon": F0
   },
   actors: {
-    "@maia/todos/actor/vibe": F0,
-    "@maia/todos/actor/list": b0,
-    "@maia/todos/actor/coming-soon": R0
+    "@maia/todos/actor/vibe": b0,
+    "@maia/todos/actor/list": R0,
+    "@maia/todos/actor/coming-soon": v0
   },
   views: {
-    "@maia/todos/view/vibe": v0,
-    "@maia/todos/view/list": K0,
-    "@maia/todos/view/coming-soon": Y0
+    "@maia/todos/view/vibe": K0,
+    "@maia/todos/view/list": Y0,
+    "@maia/todos/view/coming-soon": U0
   },
   contexts: {
-    "@maia/todos/context/vibe": U0,
-    "@maia/todos/context/list": J0,
-    "@maia/todos/context/coming-soon": H0
+    "@maia/todos/context/vibe": J0,
+    "@maia/todos/context/list": H0,
+    "@maia/todos/context/coming-soon": q0
   },
   states: {
-    "@maia/todos/state/vibe": q0,
-    "@maia/todos/state/list": x0,
-    "@maia/todos/state/coming-soon": L0
+    "@maia/todos/state/vibe": x0,
+    "@maia/todos/state/list": L0,
+    "@maia/todos/state/coming-soon": T0
   },
   inboxes: {
-    "@maia/todos/inbox/vibe": T0,
-    "@maia/todos/inbox/list": O0,
-    "@maia/todos/inbox/coming-soon": P0
+    "@maia/todos/inbox/vibe": O0,
+    "@maia/todos/inbox/list": P0,
+    "@maia/todos/inbox/coming-soon": j0
   },
   data: {
     todos: [
@@ -24913,13 +24912,13 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       { text: "Toggle me to mark as complete", done: !1 }
     ]
   }
-}, j0 = {
+}, V0 = {
   $schema: "@maia/schema/vibe",
   $id: "@maia/vibe/db",
   name: "MaiaDB",
   description: "Database viewer with navigation and detail panels",
   actor: "@maia/db/actor/vibe"
-}, V0 = {
+}, $0 = {
   $schema: "@maia/schema/style",
   $id: "@maia/db/style/brand",
   tokens: {
@@ -25362,7 +25361,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, $0 = {
+}, W0 = {
   $schema: "@maia/schema/actor",
   $id: "@maia/db/actor/vibe",
   role: "agent",
@@ -25375,7 +25374,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
     "SELECT_NAV",
     "SELECT_ROW"
   ]
-}, W0 = {
+}, z0 = {
   $schema: "@maia/schema/actor",
   $id: "@maia/db/actor/table",
   role: "ui",
@@ -25387,7 +25386,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
   messageTypes: [
     "SELECT_ROW"
   ]
-}, z0 = {
+}, _0 = {
   $schema: "@maia/schema/actor",
   $id: "@maia/db/actor/detail",
   role: "ui",
@@ -25397,7 +25396,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
   brand: "@maia/db/style/brand",
   inbox: "@maia/db/inbox/detail",
   messageTypes: []
-}, _0 = {
+}, Z0 = {
   $schema: "@maia/schema/view",
   $id: "@maia/db/view/vibe",
   content: {
@@ -25500,7 +25499,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     ]
   }
-}, Z0 = {
+}, X0 = {
   $schema: "@maia/schema/view",
   $id: "@maia/db/view/table",
   content: {
@@ -25590,7 +25589,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     ]
   }
-}, X0 = {
+}, Ak = {
   $schema: "@maia/schema/view",
   $id: "@maia/db/view/detail",
   content: {
@@ -25775,7 +25774,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     ]
   }
-}, Ak = {
+}, ek = {
   $schema: "@maia/schema/context",
   $id: "@maia/db/context/vibe",
   navTitle: "MaiaDB",
@@ -25834,7 +25833,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
     table: "@maia/db/actor/table",
     detail: "@maia/db/actor/detail"
   }
-}, ek = {
+}, tk = {
   $schema: "@maia/schema/context",
   $id: "@maia/db/context/table",
   table: [
@@ -25887,7 +25886,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
     status: "Status",
     createdAt: "Created"
   }
-}, tk = {
+}, ik = {
   $schema: "@maia/schema/context",
   $id: "@maia/db/context/detail",
   detail: {
@@ -25914,7 +25913,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
     department: "Department",
     phone: "Phone"
   }
-}, ik = {
+}, ok = {
   $schema: "@maia/schema/state",
   $id: "@maia/db/state/vibe",
   initial: "idle",
@@ -25956,7 +25955,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, ok = {
+}, rk = {
   $schema: "@maia/schema/state",
   $id: "@maia/db/state/table",
   initial: "idle",
@@ -25976,64 +25975,64 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, rk = {
+}, nk = {
   $schema: "@maia/schema/state",
   $id: "@maia/db/state/detail",
   initial: "idle",
   states: {
     idle: {}
   }
-}, nk = {
+}, sk = {
   $schema: "@maia/schema/inbox",
   $id: "@maia/db/inbox/vibe",
   cotype: "costream"
-}, sk = {
+}, ak = {
   $schema: "@maia/schema/inbox",
   $id: "@maia/db/inbox/table",
   cotype: "costream"
-}, ak = {
+}, gk = {
   $schema: "@maia/schema/inbox",
   $id: "@maia/db/inbox/detail",
   cotype: "costream"
 }, Zr = {
-  vibe: j0,
+  vibe: V0,
   styles: {
-    "@maia/db/style/brand": V0
+    "@maia/db/style/brand": $0
   },
   actors: {
-    "@maia/db/actor/vibe": $0,
-    "@maia/db/actor/table": W0,
-    "@maia/db/actor/detail": z0
+    "@maia/db/actor/vibe": W0,
+    "@maia/db/actor/table": z0,
+    "@maia/db/actor/detail": _0
   },
   views: {
-    "@maia/db/view/vibe": _0,
-    "@maia/db/view/table": Z0,
-    "@maia/db/view/detail": X0
+    "@maia/db/view/vibe": Z0,
+    "@maia/db/view/table": X0,
+    "@maia/db/view/detail": Ak
   },
   contexts: {
-    "@maia/db/context/vibe": Ak,
-    "@maia/db/context/table": ek,
-    "@maia/db/context/detail": tk
+    "@maia/db/context/vibe": ek,
+    "@maia/db/context/table": tk,
+    "@maia/db/context/detail": ik
   },
   states: {
-    "@maia/db/state/vibe": ik,
-    "@maia/db/state/table": ok,
-    "@maia/db/state/detail": rk
+    "@maia/db/state/vibe": ok,
+    "@maia/db/state/table": rk,
+    "@maia/db/state/detail": nk
   },
   inboxes: {
-    "@maia/db/inbox/vibe": nk,
-    "@maia/db/inbox/table": sk,
-    "@maia/db/inbox/detail": ak
+    "@maia/db/inbox/vibe": sk,
+    "@maia/db/inbox/table": ak,
+    "@maia/db/inbox/detail": gk
   },
   // No initial data - this vibe uses mocked data in context
   data: {}
-}, gk = {
+}, Ik = {
   $schema: "@maia/schema/vibe",
   $id: "@maia/vibe/sparks",
   name: "Sparks",
   description: "Create and manage collaborative groups (sparks)",
   actor: "@maia/sparks/actor/vibe"
-}, Ik = {
+}, ck = {
   $schema: "@maia/schema/style",
   $id: "@maia/sparks/style/brand",
   tokens: {
@@ -26685,7 +26684,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, ck = {
+}, Ck = {
   $schema: "@maia/schema/actor",
   $id: "@maia/sparks/actor/vibe",
   type: "service",
@@ -26702,7 +26701,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
     "ERROR",
     "DISMISS"
   ]
-}, Ck = {
+}, Bk = {
   $schema: "@maia/schema/actor",
   $id: "@maia/sparks/actor/detail",
   role: "ui",
@@ -26719,7 +26718,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
     "UPDATE_AGENT_INPUT",
     "ERROR"
   ]
-}, Bk = {
+}, Qk = {
   $schema: "@maia/schema/view",
   $id: "@maia/sparks/view/vibe",
   content: {
@@ -26864,7 +26863,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     ]
   }
-}, Qk = {
+}, Ek = {
   $schema: "@maia/schema/view",
   $id: "@maia/sparks/view/detail",
   content: {
@@ -27049,7 +27048,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     ]
   }
-}, Ek = {
+}, lk = {
   $schema: "@maia/schema/context",
   $id: "@maia/sparks/context/vibe",
   sparks: {
@@ -27067,7 +27066,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
   "@actors": {
     detail: "@maia/sparks/actor/detail"
   }
-}, lk = {
+}, dk = {
   $schema: "@maia/schema/context",
   $id: "@maia/sparks/context/detail",
   sparkId: null,
@@ -27089,7 +27088,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
   agentIdInput: "",
   addAgentError: null,
   addAgentHasError: !1
-}, dk = {
+}, uk = {
   $schema: "@maia/schema/state",
   $id: "@maia/sparks/state/vibe",
   initial: "idle",
@@ -27177,7 +27176,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, uk = {
+}, hk = {
   $schema: "@maia/schema/state",
   $id: "@maia/sparks/state/detail",
   initial: "idle",
@@ -27318,46 +27317,46 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, hk = {
+}, fk = {
   $schema: "@maia/schema/inbox",
   $id: "@maia/sparks/inbox/vibe",
   cotype: "costream"
-}, fk = {
+}, pk = {
   $schema: "@maia/schema/inbox",
   $id: "@maia/sparks/inbox/detail",
   cotype: "costream"
 }, Xr = {
-  vibe: gk,
+  vibe: Ik,
   styles: {
-    "@maia/sparks/style/brand": Ik
+    "@maia/sparks/style/brand": ck
   },
   actors: {
-    "@maia/sparks/actor/vibe": ck,
-    "@maia/sparks/actor/detail": Ck
+    "@maia/sparks/actor/vibe": Ck,
+    "@maia/sparks/actor/detail": Bk
   },
   views: {
-    "@maia/sparks/view/vibe": Bk,
-    "@maia/sparks/view/detail": Qk
+    "@maia/sparks/view/vibe": Qk,
+    "@maia/sparks/view/detail": Ek
   },
   contexts: {
-    "@maia/sparks/context/vibe": Ek,
-    "@maia/sparks/context/detail": lk
+    "@maia/sparks/context/vibe": lk,
+    "@maia/sparks/context/detail": dk
   },
   states: {
-    "@maia/sparks/state/vibe": dk,
-    "@maia/sparks/state/detail": uk
+    "@maia/sparks/state/vibe": uk,
+    "@maia/sparks/state/detail": hk
   },
   inboxes: {
-    "@maia/sparks/inbox/vibe": hk,
-    "@maia/sparks/inbox/detail": fk
+    "@maia/sparks/inbox/vibe": fk,
+    "@maia/sparks/inbox/detail": pk
   }
-}, pk = {
+}, wk = {
   $schema: "@maia/schema/vibe",
   $id: "@maia/vibe/chat",
   name: "Chat",
   description: "CTO-level AI assistant for MaiaOS codebase",
   actor: "@maia/chat/actor/vibe"
-}, wk = {
+}, yk = {
   $schema: "@maia/schema/style",
   $id: "@maia/chat/style/brand",
   tokens: {
@@ -27865,7 +27864,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, yk = {
+}, Dk = {
   $schema: "@maia/schema/actor",
   $id: "@maia/chat/actor/vibe",
   role: "agent",
@@ -27883,7 +27882,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
     "RETRY",
     "DISMISS"
   ]
-}, Dk = {
+}, mk = {
   $schema: "@maia/schema/view",
   $id: "@maia/chat/view/vibe",
   content: {
@@ -28035,7 +28034,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     ]
   }
-}, mk = {
+}, Sk = {
   $schema: "@maia/schema/context",
   $id: "@maia/chat/context/vibe",
   conversations: {
@@ -28048,7 +28047,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
   hasConversations: !1,
   hasError: !1,
   messageNames: {}
-}, Sk = {
+}, kk = {
   $schema: "@maia/schema/state",
   $id: "@maia/chat/state/vibe",
   initial: "idle",
@@ -28310,36 +28309,36 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, kk = {
+}, Nk = {
   $schema: "@maia/schema/inbox",
   $id: "@maia/chat/inbox/vibe"
-}, Nk = {
-  vibe: pk,
+}, Mk = {
+  vibe: wk,
   styles: {
-    "@maia/chat/style/brand": wk
+    "@maia/chat/style/brand": yk
   },
   actors: {
-    "@maia/chat/actor/vibe": yk
+    "@maia/chat/actor/vibe": Dk
   },
   views: {
-    "@maia/chat/view/vibe": Dk
+    "@maia/chat/view/vibe": mk
   },
   contexts: {
-    "@maia/chat/context/vibe": mk
+    "@maia/chat/context/vibe": Sk
   },
   states: {
-    "@maia/chat/state/vibe": Sk
+    "@maia/chat/state/vibe": kk
   },
   inboxes: {
-    "@maia/chat/inbox/vibe": kk
+    "@maia/chat/inbox/vibe": Nk
   }
-}, Mk = {
+}, Gk = {
   $schema: "@maia/schema/vibe",
   $id: "@maia/vibe/creator",
   name: "Creator",
   description: "Create and manage vibes with logs viewer",
   actor: "@maia/creator/actor/vibe"
-}, Gk = {
+}, Fk = {
   $schema: "@maia/schema/style",
   $id: "@maia/creator/style/logs",
   components: {
@@ -28537,7 +28536,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       display: "none"
     }
   }
-}, Fk = { $schema: "@maia/schema/actor", $id: "@maia/creator/actor/vibe", role: "agent", context: "@maia/creator/context/logs", view: "@maia/creator/view/logs", state: "@maia/creator/state/logs", brand: "@maia/style/brand", style: "@maia/creator/style/logs", inbox: "@maia/creator/inbox/logs", messageTypes: ["RETRY", "DISMISS"] }, bk = { $schema: "@maia/schema/view", $id: "@maia/creator/view/logs", content: { tag: "div", class: "stack", children: [{ tag: "h2", class: "vibe-creator-title", text: "Vibe Creator" }, { tag: "div", class: "logs", attrs: { data: "log-viewer" }, children: [{ tag: "div", class: "log-entries", $each: { items: "$messages", template: { class: "log-entry-container", children: [{ tag: "div", class: "log-entry", attrs: { data: { eventType: "$$type", processed: "$$processed" } }, children: [{ tag: "span", class: "log-type", text: "$$type" }, { tag: "span", class: "log-source", children: [{ tag: "span", class: "log-source-role", text: "$$fromRole" }, { tag: "span", class: "log-source-id", text: "$$fromId" }] }, { tag: "span", class: "log-target", children: [{ tag: "span", class: "log-target-role", text: "$$recipient" }, { tag: "span", class: "log-target-id", text: "$$targetId" }] }, { tag: "details", class: "log-payload-details", children: [{ tag: "summary", class: "log-payload-toggle", text: "$payloadLabel" }, { tag: "pre", class: "log-payload", text: "$$payload" }] }] }] } } }] }] } }, Rk = {
+}, bk = { $schema: "@maia/schema/actor", $id: "@maia/creator/actor/vibe", role: "agent", context: "@maia/creator/context/logs", view: "@maia/creator/view/logs", state: "@maia/creator/state/logs", brand: "@maia/style/brand", style: "@maia/creator/style/logs", inbox: "@maia/creator/inbox/logs", messageTypes: ["RETRY", "DISMISS"] }, Rk = { $schema: "@maia/schema/view", $id: "@maia/creator/view/logs", content: { tag: "div", class: "stack", children: [{ tag: "h2", class: "vibe-creator-title", text: "Vibe Creator" }, { tag: "div", class: "logs", attrs: { data: "log-viewer" }, children: [{ tag: "div", class: "log-entries", $each: { items: "$messages", template: { class: "log-entry-container", children: [{ tag: "div", class: "log-entry", attrs: { data: { eventType: "$$type", processed: "$$processed" } }, children: [{ tag: "span", class: "log-type", text: "$$type" }, { tag: "span", class: "log-source", children: [{ tag: "span", class: "log-source-role", text: "$$fromRole" }, { tag: "span", class: "log-source-id", text: "$$fromId" }] }, { tag: "span", class: "log-target", children: [{ tag: "span", class: "log-target-role", text: "$$recipient" }, { tag: "span", class: "log-target-id", text: "$$targetId" }] }, { tag: "details", class: "log-payload-details", children: [{ tag: "summary", class: "log-payload-toggle", text: "$payloadLabel" }, { tag: "pre", class: "log-payload", text: "$$payload" }] }] }] } } }] }] } }, vk = {
   $schema: "@maia/schema/context",
   $id: "@maia/creator/context/logs",
   messages: {
@@ -28554,7 +28553,7 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
     }
   },
   payloadLabel: "payload"
-}, vk = {
+}, Kk = {
   $schema: "@maia/schema/state",
   $id: "@maia/creator/state/logs",
   initial: "idle",
@@ -28590,48 +28589,48 @@ const D0 = /* @__PURE__ */ jI(y0), m0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, Kk = {
+}, Yk = {
   $schema: "@maia/schema/inbox",
   $id: "@maia/creator/inbox/logs",
   items: []
-}, Yk = {
-  vibe: Mk,
+}, Uk = {
+  vibe: Gk,
   styles: {
     "@maia/style/brand": Ic,
-    "@maia/creator/style/logs": Gk
+    "@maia/creator/style/logs": Fk
   },
   actors: {
-    "@maia/creator/actor/vibe": Fk
+    "@maia/creator/actor/vibe": bk
   },
   views: {
-    "@maia/creator/view/logs": bk
+    "@maia/creator/view/logs": Rk
   },
   contexts: {
-    "@maia/creator/context/logs": Rk
+    "@maia/creator/context/logs": vk
   },
   states: {
-    "@maia/creator/state/logs": vk
+    "@maia/creator/state/logs": Kk
   },
   inboxes: {
-    "@maia/creator/inbox/logs": Kk
+    "@maia/creator/inbox/logs": Yk
   },
   data: {}
-}, Uk = [
+}, Jk = [
   _r,
-  Nk,
+  Mk,
   Zr,
   Xr,
-  Yk
+  Uk
 ];
-async function Jk() {
-  return Uk.filter((t) => t?.vibe);
+async function Hk() {
+  return Jk.filter((t) => t?.vibe);
 }
-function Hk(t) {
+function qk(t) {
   if (!t) return null;
   const A = t.$id || "";
   return A.startsWith("@maia/vibe/") ? A.replace("@maia/vibe/", "") : (t.name || "default").toLowerCase().replace(/\s+/g, "-");
 }
-function qk(t, A = null) {
+function xk(t, A = null) {
   if (A == null || Array.isArray(A) && A.length === 0)
     return [];
   if (A === "all")
@@ -28640,13 +28639,13 @@ function qk(t, A = null) {
     const e = A.map((i) => i.toLowerCase().trim());
     return t.filter((i) => {
       if (!i.vibe) return !1;
-      const o = Hk(i.vibe);
+      const o = qk(i.vibe);
       return e.includes(o);
     });
   }
   return console.warn(`[Vibes] Invalid seeding config: ${A}. Expected null, "all", or array of vibe keys.`), [];
 }
-const xk = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const Lk = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   DbRegistry: Zr,
   DbVibeRegistry: Zr,
@@ -28655,25 +28654,25 @@ const xk = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   SparksVibeRegistry: Xr,
   TodosRegistry: _r,
   TodosVibeRegistry: _r,
-  filterVibesForSeeding: qk,
-  getAllVibeRegistries: Jk
+  filterVibesForSeeding: xk,
+  getAllVibeRegistries: Hk
 }, Symbol.toStringTag, { value: "Module" }));
 export {
   se as MaiaOS,
   wA as ReactiveStore,
   OI as createAgentAccount,
-  $y as createCoJSONAPI,
-  $D as generateAgentCredentials,
+  Wy as createCoJSONAPI,
+  WD as generateAgentCredentials,
   mo as getAllSchemas,
   nI as getSchema,
   hn as getSchemaIndexColistId,
   qI as isPRFSupported,
   PI as loadAgentAccount,
-  WD as loadOrCreateAgentAccount,
-  Qy as resolveAccountCoIdsToProfileNames,
-  uy as resolveGroupCoIdsToCapabilityNames,
+  zD as loadOrCreateAgentAccount,
+  Ey as resolveAccountCoIdsToProfileNames,
+  hy as resolveGroupCoIdsToCapabilityNames,
   zt as setupSyncPeers,
-  VD as signInWithPasskey,
-  jD as signUpWithPasskey,
-  ID as subscribeSyncState
+  $D as signInWithPasskey,
+  VD as signUpWithPasskey,
+  cD as subscribeSyncState
 };

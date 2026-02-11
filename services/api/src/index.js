@@ -17,7 +17,7 @@ const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
 const PUBLIC_DOMAIN_API = process.env.PUBLIC_DOMAIN_API || 'localhost:4201'
 
 // Parse port from PUBLIC_DOMAIN_API (format: "hostname:port" or just "port")
-const parsePort = (domain: string): number => {
+const parsePort = (domain) => {
 	const parts = domain.split(':')
 	if (parts.length > 1) {
 		const port = parseInt(parts[parts.length - 1], 10)
@@ -45,7 +45,7 @@ const redpill = RED_PILL_API_KEY
 	: null
 
 // Helper function to create JSON response
-function jsonResponse(data: any, status: number = 200): Response {
+function jsonResponse(data, status = 200) {
 	return new Response(JSON.stringify(data), {
 		status,
 		headers: {
@@ -58,7 +58,7 @@ function jsonResponse(data: any, status: number = 200): Response {
 }
 
 // Helper function to handle CORS preflight
-function handleCORS(): Response {
+function handleCORS() {
 	return new Response(null, {
 		status: 204,
 		headers: {
@@ -70,7 +70,7 @@ function handleCORS(): Response {
 }
 
 // Helper function to parse JSON body
-async function parseJSONBody(req: Request): Promise<any> {
+async function parseJSONBody(req) {
 	try {
 		return await req.json()
 	} catch (error) {
@@ -80,7 +80,7 @@ async function parseJSONBody(req: Request): Promise<any> {
 
 Bun.serve({
 	port: PORT,
-	fetch(req: Request, server: any) {
+	fetch(req, server) {
 		const url = new URL(req.url)
 		
 		// Don't log requests - too verbose
@@ -108,7 +108,7 @@ Bun.serve({
 // RedPill API endpoint is hardcoded, but model can be configured dynamically per request
 // Uses Vercel AI SDK with RedPill provider for better streaming support and unified API
 
-async function handleLLMChat(req: Request): Promise<Response> {
+async function handleLLMChat(req) {
 	try {
 		if (!RED_PILL_API_KEY || !redpill) {
 			return jsonResponse({ error: 'RED_PILL_API_KEY not configured' }, 500)
@@ -123,8 +123,9 @@ async function handleLLMChat(req: Request): Promise<Response> {
 		}
 
 		// Use Vercel AI SDK generateText with RedPill provider
+		// AI SDK v5+ defaults to Responses API; RedPill uses Chat Completions API, so use .chat()
 		const result = await generateText({
-			model: redpill(model),
+			model: redpill.chat(model),
 			messages,
 			temperature,
 		})

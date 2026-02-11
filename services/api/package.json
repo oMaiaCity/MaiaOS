@@ -4,15 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "bun run src/index.ts",
-    "start": "bun run src/index.ts"
+    "dev": "bun run src/index.js",
+    "start": "bun run src/index.js"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^1.0.0",
-    "ai": "^4.0.0"
-  },
-  "devDependencies": {
-    "@types/bun": "latest",
-    "typescript": "^5.9.3"
+    "@ai-sdk/openai": "^3.0.27",
+    "ai": "^6.0.81",
+    "zod": "^4.1.8"
   }
 }

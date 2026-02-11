@@ -65,19 +65,15 @@ export async function schemaMigration(account, node, creationProps) {
 	}
 
 	// 2. Create profile (public by default - profile group has everyone as reader)
+	// NEVER overwrite existing profile name on load/sign-in - only signup writes the name
 	if (!profile) {
 		const profileMeta = createSchemaMeta("ProfileSchema");
 		const profileGroup = node.createGroup();
 		profileGroup.addMember("everyone", "reader");
 		const profileCoMap = profileGroup.createMap({ name: profileName }, profileMeta);
 		account.set("profile", profileCoMap.id);
-	} else if (creationProps?.name != null) {
-		const currentProfileName = profile.get("name");
-		if (currentProfileName !== creationProps.name) {
-			profile.set("name", creationProps.name);
-			console.log(`   🔄 Updated profile name from "${currentProfileName}" to "${creationProps.name}"`);
-		}
 	}
+	// When profile exists: do NOT update name. Sign-in must never overwrite - only signup sets it.
 
 	// 3. Migrate capabilities: sparkGuardian -> guardian (idempotent)
 	await migrateCapabilitiesGuardian(account, node);
