@@ -3,9 +3,26 @@ import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store';
 // getContextValue removed - Backend unified store provides merged value directly via context.value
 
+/** SECURITY: Block prototype chain / constructor access to prevent exploitation */
+const FORBIDDEN_PATH_KEYS = ['__proto__', 'constructor', 'prototype'];
+
+function assertSafePath(path, context = 'path resolution') {
+  if (!path || typeof path !== 'string') return;
+  const lowerPath = path.toLowerCase();
+  for (const key of FORBIDDEN_PATH_KEYS) {
+    if (lowerPath.includes(key.toLowerCase())) {
+      throw new Error(`[Evaluator] Forbidden ${context}: path may not contain '${key}' or similar. Got: ${path}`);
+    }
+  }
+}
+
 function resolvePath(obj, path) {
   if (!obj || !path) return undefined;
-  return path.split('.').reduce((acc, key) => acc?.[key], obj);
+  assertSafePath(path, 'path resolution');
+  return path.split('.').reduce((acc, key) => {
+    assertSafePath(key, 'path segment');
+    return acc?.[key];
+  }, obj);
 }
 
 /**

@@ -540,45 +540,33 @@ export class MaiaOS {
   }
 
   /**
-   * Load a vibe (app manifest) from file and create its root actor
-   * @param {string} vibePath - Path to vibe manifest
+   * Load a vibe by key or co-id from account/database (no arbitrary URL loading)
+   * @param {string} vibeKeyOrCoId - Vibe key (e.g., "todos") or co-id (co_z...) to lookup from account
    * @param {HTMLElement} container - Container element
+   * @param {string} [spark='@maia'] - Spark name when using key lookup
    * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
    */
-  async loadVibe(vibePath, container) {
-    // Fetch vibe manifest
-    const response = await fetch(vibePath);
-    if (!response.ok) {
-      throw new Error(`Failed to load vibe: ${vibePath}`);
-    }
-    
-    const vibe = await response.json();
-    
-    // Validate vibe structure using schema
-    // Note: When loading from file, we can't use fromCoValue pattern since it's not in the database yet
-    // For file-based loading, we skip schema validation (vibe will be validated when seeded)
-    // If you need validation, load the vibe schema by co-id or use loadVibeFromDatabase instead
-    
-    // Resolve actor path relative to vibe location
-    const vibeDir = vibePath.substring(0, vibePath.lastIndexOf('/'));
-    const actorPath = `${vibeDir}/${vibe.actor}`;
-    
-    // Create root actor
-    const actor = await this.createActor(actorPath, container);
-    
-    return { vibe, actor };
+  async loadVibe(vibeKeyOrCoId, container, spark = '@maia') {
+    return await this.loadVibeFromAccount(vibeKeyOrCoId, container, spark);
   }
 
   /**
-   * Load a vibe from account.sparks[spark].vibes using the abstracted operations API
-   * @param {string} vibeKey - Vibe key in spark's vibes (e.g., "todos")
+   * Load a vibe from account.sparks[spark].vibes or directly by co-id
+   * Supports: (1) vibe key (e.g., "todos") - lookup via spark.vibes map, (2) co-id (co_z...) - direct load from database
+   * SECURITY: No arbitrary URL loading - vibes load only from CoJSON database (account-scoped)
+   * @param {string} vibeKeyOrCoId - Vibe key in spark's vibes (e.g., "todos") or vibe co-id (co_z...)
    * @param {HTMLElement} container - Container element
-   * @param {string} [spark='@maia'] - Spark name (context scope), e.g. '@maia'
+   * @param {string} [spark='@maia'] - Spark name (used only when vibeKeyOrCoId is a key, not a co-id)
    * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
    */
-  async loadVibeFromAccount(vibeKey, container, spark = '@maia') {
+  async loadVibeFromAccount(vibeKeyOrCoId, container, spark = '@maia') {
     if (!this.dbEngine || !this._account) {
       throw new Error('[Kernel] Cannot load vibe from account - dbEngine or account not available');
+    }
+
+    // Co-id: load directly from database (skip spark.vibes lookup)
+    if (typeof vibeKeyOrCoId === 'string' && vibeKeyOrCoId.startsWith('co_z')) {
+      return await this.loadVibeFromDatabase(vibeKeyOrCoId, container, null);
     }
 
     const account = this._account;
@@ -649,13 +637,13 @@ export class MaiaOS {
       throw new Error(`[Kernel] Spark "${spark}" vibes not available: ${vibesData?.error || 'Unknown error'}`);
     }
 
-    const vibeCoId = vibesData[vibeKey];
+    const vibeCoId = vibesData[vibeKeyOrCoId];
     if (!vibeCoId || typeof vibeCoId !== 'string' || !vibeCoId.startsWith('co_')) {
       const availableVibes = Object.keys(vibesData).filter(k => k !== 'id' && k !== '$schema' && k !== 'type' && typeof vibesData[k] === 'string' && vibesData[k].startsWith('co_'));
-      throw new Error(`[Kernel] Vibe '${vibeKey}' not found in ${spark}.vibes. Available: ${availableVibes.join(', ') || 'none'}`);
+      throw new Error(`[Kernel] Vibe '${vibeKeyOrCoId}' not found in ${spark}.vibes. Available: ${availableVibes.join(', ') || 'none'}`);
     }
 
-    return await this.loadVibeFromDatabase(vibeCoId, container, vibeKey);
+    return await this.loadVibeFromDatabase(vibeCoId, container, vibeKeyOrCoId);
   }
 
   /**

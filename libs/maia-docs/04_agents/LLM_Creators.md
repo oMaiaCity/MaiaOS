@@ -1,6 +1,6 @@
 # MaiaOS Documentation for Creators
 
-**Auto-generated:** 2026-02-11T21:31:41.328Z
+**Auto-generated:** 2026-02-11T22:03:19.380Z
 **Purpose:** Complete context for LLM agents working with MaiaOS
 
 ---
@@ -1581,10 +1581,11 @@ vibes/todos/
         modules: ['db', 'core', 'dragdrop']
       });
       
-      // Load the vibe
+      // Load the vibe (by key from account.sparks[@maia].vibes or by co-id)
       const { vibe, actor } = await os.loadVibe(
-        './manifest.vibe.maia',
-        document.getElementById('actor-todo')
+        'todos',
+        document.getElementById('actor-todo'),
+        '@maia'
       );
       
       console.log('✅ Vibe loaded:', vibe.name);
@@ -1656,13 +1657,14 @@ Vibes are designed to support future marketplace features:
 ### Accessing Vibe Data
 
 ```javascript
-// After loading
-const { vibe, actor } = await os.loadVibe('./app.vibe.maia', container);
+// After loading (by key or co-id from account)
+const { vibe, actor } = await os.loadVibe('todos', container, '@maia');
+// Or by co-id: os.loadVibe('co_z...', container);
 
 // Inspect vibe
 console.log(vibe.name);        // "My App"
 console.log(vibe.description); // "App description"
-console.log(vibe.actor);       // "./myapp.actor.maia"
+console.log(vibe.actor);       // co-id (e.g. "co_z...")
 console.log(vibe.$id);         // "@vibe/todos" (or co-id after seeding)
 
 // Inspect actor (as usual)

@@ -1,8 +1,47 @@
 import { resolve } from '@MaiaOS/db';
 
+/** SECURITY: Block prototype chain / constructor access (matches Evaluator) */
+const FORBIDDEN_PATH_KEYS = ['__proto__', 'constructor', 'prototype'];
+
+function assertSafePath(path, context = 'style token path') {
+  if (!path || typeof path !== 'string') return;
+  const lowerPath = path.toLowerCase();
+  for (const key of FORBIDDEN_PATH_KEYS) {
+    if (lowerPath.includes(key.toLowerCase())) {
+      throw new Error(`[StyleEngine] Forbidden ${context}: path may not contain '${key}'. Got: ${path}`);
+    }
+  }
+}
+
 function resolvePath(obj, path) {
   if (!obj || !path) return undefined;
-  return path.split('.').reduce((acc, key) => acc?.[key], obj);
+  assertSafePath(path, 'style token path');
+  return path.split('.').reduce((acc, key) => {
+    assertSafePath(key, 'style token segment');
+    return acc?.[key];
+  }, obj);
+}
+
+/** SECURITY: Block CSS injection via url(), expression(), -moz-binding, etc. */
+const CSS_INJECTION_PATTERNS = [
+  /javascript\s*:/i,
+  /vbscript\s*:/i,
+  /data\s*:\s*[^,]*base64\s*,/i,
+  /expression\s*\(/i,
+  /-moz-binding\s*:/i,
+  /@import\b/i,
+  /behavior\s*:/i
+];
+
+function sanitizeCSSInterpolatedValue(value) {
+  if (value == null || typeof value !== 'string') return value;
+  for (const pattern of CSS_INJECTION_PATTERNS) {
+    if (pattern.test(value)) {
+      console.warn(`[StyleEngine] Blocked potentially dangerous CSS value (contains ${pattern.source})`);
+      return ''; // Replace dangerous value with empty string
+    }
+  }
+  return value;
 }
 
 export class StyleEngine {
@@ -35,7 +74,9 @@ export class StyleEngine {
     if (typeof value !== 'string') return value;
     return value.replace(/\{([^}]+)\}/g, (match, path) => {
       const tokenValue = resolvePath(tokens, path);
-      return tokenValue !== undefined ? tokenValue : match;
+      if (tokenValue === undefined) return match;
+      // SECURITY: Sanitize interpolated values to prevent CSS injection (url(), expression(), etc.)
+      return sanitizeCSSInterpolatedValue(String(tokenValue));
     });
   }
 
