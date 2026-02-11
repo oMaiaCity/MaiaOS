@@ -91,7 +91,7 @@ function processOutput(service, data, isError = false) {
 		if (shouldFilterLine(line)) continue
 		
 		// Server/API ready messages — check BEFORE error block (agent may log to stderr)
-		if (trimmed.includes('running on port') || trimmed.includes('Sync service running') || trimmed.includes('Running on port') || trimmed.includes('HTTP server on port') || trimmed.includes('[maia-agent] HTTP server') || (trimmed.includes('HTTP server') && trimmed.includes('4204'))) {
+		if (trimmed.includes('running on port') || trimmed.includes('Sync service running') || trimmed.includes('Running on port') || trimmed.includes('HTTP server on port') || trimmed.includes('[agent]') && trimmed.includes('HTTP server') || (trimmed.includes('HTTP server') && trimmed.includes('4204'))) {
 			const portMatch = trimmed.match(/port\s+(\d+)/i) || trimmed.match(/:(\d+)/)
 			if (portMatch && !serviceStatus[service]) {
 				const port = portMatch[1]

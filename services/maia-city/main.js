@@ -15,8 +15,7 @@ import {
 	signUpWithPasskey, 
 	isPRFSupported, 
 	subscribeSyncState,
-	loadAgentAccount,
-	createAgentAccount
+	loadOrCreateAgentAccount
 } from "@MaiaOS/kernel";
 import { getAllVibeRegistries } from "@MaiaOS/vibes";
 import { renderApp } from './db-view.js';
@@ -270,27 +269,15 @@ async function initAgentMode() {
 		// Determine sync domain
 		const syncDomain = getSyncDomain();
 		
-		// Try to load existing account, create if it doesn't exist
-		// Use CITY service prefix for storage configuration
-		let agentResult;
-		try {
-			console.log('🤖 [AGENT MODE] Loading agent account...');
-			agentResult = await loadAgentAccount({
-				accountID,
-				agentSecret,
-				syncDomain: syncDomain || null,
-				servicePrefix: 'CITY' // Use CITY_MAIA_* env vars for storage
-			});
-		} catch (loadError) {
-			// If account doesn't exist, create it
-			console.log('🤖 [AGENT MODE] Account not found, creating new agent account...');
-			agentResult = await createAgentAccount({
-				agentSecret,
-				name: 'Maia Agent',
-				syncDomain: syncDomain || null,
-				servicePrefix: 'CITY' // Use CITY_MAIA_* env vars for storage
-			});
-		}
+		// Load or create agent account using universal DRY interface
+		console.log('🤖 [AGENT MODE] Loading agent account...');
+		const agentResult = await loadOrCreateAgentAccount({
+			accountID,
+			agentSecret,
+			syncDomain: syncDomain || null,
+			servicePrefix: 'CITY',
+			createName: 'Maia Agent',
+		});
 		
 		const { node, account } = agentResult;
 		

@@ -7,14 +7,14 @@
  * 
  * DRY: Uses kernel bundle for account handling (single source of truth)
  * The sync server is effectively an agent account that participates in the system.
- * Sync service uses ONLY agent mode functions (createAgentAccount, loadAgentAccount) - no passkey/human mode.
+ * Sync service uses loadOrCreateAgentAccount from kernel - no passkey/human mode.
  */
 
 import { createWebSocketPeer } from 'cojson-transport-ws';
 // Import from kernel bundle (workspace import in dev, bundle in Docker)
 // In dev: workspace import resolves to @MaiaOS/kernel
 // In Docker: bundle is copied to node_modules/@MaiaOS/kernel/dist/ and package.json exports handle it
-import { createAgentAccount, loadAgentAccount } from '@MaiaOS/kernel';
+import { loadOrCreateAgentAccount } from '@MaiaOS/kernel';
 
 /**
  * Create a sync server handler for Bun.serve()
@@ -63,62 +63,18 @@ export async function createSyncServer(options = {}) {
     );
   }
   
-  // Load or create sync server account using kernel bundle (single source of truth)
-  // DRY: Single source of truth for all account handling via kernel bundle
-  // The sync server is an agent account that participates in the CoJSON network
-  // Note: Sync server doesn't connect to other sync servers (it IS the sync server)
-  // STRICT: Credentials MUST be provided via env vars - no fallback generation
-  // Uses ONLY agent mode functions (createAgentAccount, loadAgentAccount) from kernel bundle
-  // Pass dbPath and inMemory for PGlite storage configuration
-  
-  let localNode, account;
-  try {
-    console.log('[sync-server] Loading account…');
-    const loadResult = await loadAgentAccount({
-      accountID,
-      agentSecret,
-      syncDomain: null, // Sync server doesn't connect to other sync servers
-      servicePrefix: 'SYNC', // Use SYNC_MAIA_* env vars for storage config
-      dbPath: (!inMemory && dbPath) ? dbPath : undefined, // Pass dbPath for PGlite (from options or DB_PATH env)
-      inMemory: inMemory // Pass inMemory flag from options
-    });
-    localNode = loadResult.node;
-    account = loadResult.account;
-    console.log('[sync-server] ✓ Account loaded');
-  } catch (loadError) {
-    // Check if error is "Account unavailable from all peers" - means account doesn't exist yet
-    // This is OK for first-time setup - create the account using provided env vars
-    const errorMessage = loadError?.message || String(loadError);
-    const isAccountNotFound = loadError?.isAccountNotFound ||
-                             errorMessage.includes('Account unavailable from all peers') ||
-                             errorMessage.includes('unavailable from all peers') ||
-                             errorMessage.includes('Account not found in storage');
-    
-    if (isAccountNotFound) {
-      console.log('[sync-server] First run: creating account…');
-      try {
-        const createResult = await createAgentAccount({
-          agentSecret,
-          name: 'Maia Sync Server',
-          syncDomain: null, // Sync server doesn't connect to other sync servers
-          servicePrefix: 'SYNC', // Use SYNC_MAIA_* env vars for storage config
-          dbPath: (!inMemory && dbPath) ? dbPath : undefined, // Pass dbPath for PGlite (from options or DB_PATH env)
-          inMemory: inMemory // Pass inMemory flag from options
-        });
-        localNode = createResult.node;
-        account = createResult.account;
-        console.log('[sync-server] ✓ Account created');
-      } catch (createError) {
-        console.error('[sync-server] ✗ Failed to create account:', createError?.message || String(createError));
-        console.error('[sync-server] ✗ Create error stack:', createError?.stack);
-        throw createError;
-      }
-    } else {
-      // Other errors (wrong credentials, etc.) - re-throw
-      console.error('[sync-server] ✗ Failed to load account:', errorMessage);
-      throw loadError;
-    }
-  }
+  // Load or create sync server account using universal DRY interface
+  console.log('[sync-server] Loading account…');
+  const { node: localNode, account } = await loadOrCreateAgentAccount({
+    accountID,
+    agentSecret,
+    syncDomain: null, // Sync server doesn't connect to other sync servers
+    servicePrefix: 'SYNC',
+    dbPath: (!inMemory && dbPath) ? dbPath : undefined,
+    inMemory,
+    createName: 'Maia Sync Server',
+  });
+  console.log('[sync-server] ✓ Account ready');
   
   // Storage is handled internally by loadAgentAccount/createAgentAccount
   // They use SYNC_MAIA_STORAGE env var (defaults to pglite) via servicePrefix

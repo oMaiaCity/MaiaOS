@@ -390,3 +390,49 @@ export async function loadAgentAccount({ accountID, agentSecret, syncDomain = nu
 		account,
 	};
 }
+
+/**
+ * Load agent account, or create if not found. Universal DRY interface for services.
+ *
+ * @param {Object} options - Same as loadAgentAccount, plus createName for create fallback
+ * @param {string} [options.createName="Maia Agent"] - Name when creating new account
+ * @returns {Promise<{accountID: string, agentSecret: string, node: Object, account: Object}>}
+ */
+export async function loadOrCreateAgentAccount({
+	accountID,
+	agentSecret,
+	syncDomain = null,
+	servicePrefix = null,
+	dbPath = null,
+	inMemory = false,
+	createName = "Maia Agent",
+} = {}) {
+	try {
+		return await loadAgentAccount({
+			accountID,
+			agentSecret,
+			syncDomain,
+			servicePrefix,
+			dbPath,
+			inMemory,
+		});
+	} catch (loadError) {
+		const msg = loadError?.message || String(loadError);
+		const isNotFound =
+			loadError?.isAccountNotFound ||
+			msg.includes("Account unavailable from all peers") ||
+			msg.includes("unavailable from all peers") ||
+			msg.includes("Account not found in storage");
+		if (isNotFound) {
+			return await createAgentAccount({
+				agentSecret,
+				name: createName,
+				syncDomain,
+				servicePrefix,
+				dbPath,
+				inMemory,
+			});
+		}
+		throw loadError;
+	}
+}

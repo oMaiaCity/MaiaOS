@@ -7,6 +7,7 @@ export {
 	generateAgentCredentials,
 	createAgentAccount,
 	loadAgentAccount,
+	loadOrCreateAgentAccount,
 	isPRFSupported,
 	// NO LOCALSTORAGE: Removed signOut, isSignedIn, getCurrentAccount, inspectStorage
 	// NO SYNC STATE: subscribeSyncState moved to @MaiaOS/db

@@ -226,8 +226,8 @@ export class MaiaOS {
     // Handle agent mode: automatically load/create account if node/account not provided
     if (mode === 'agent' && !config.node && !config.account && !config.backend) {
       // Import agent mode functions dynamically (to avoid circular dependencies)
-      const { loadAgentAccount, createAgentAccount } = await import('@MaiaOS/self');
-      
+      const { loadOrCreateAgentAccount } = await import('@MaiaOS/self');
+
       // Get credentials from environment variables
       // Note: Service-specific prefixes (SYNC_MAIA_*, CITY_MAIA_*) should be set by the service
       // This is a fallback for direct MaiaOS.boot() calls
@@ -246,23 +246,12 @@ export class MaiaOS {
         );
       }
       
-      // Try to load existing account, create if it doesn't exist
-      let agentResult;
-      try {
-        agentResult = await loadAgentAccount({
-          accountID,
-          agentSecret,
-          syncDomain: config.syncDomain || null
-        });
-      } catch (loadError) {
-        // If account doesn't exist, create it
-        console.log('[MaiaOS.boot] Account not found, creating new agent account...');
-        agentResult = await createAgentAccount({
-          agentSecret,
-          name: 'Maia Agent',
-          syncDomain: config.syncDomain || null
-        });
-      }
+      const agentResult = await loadOrCreateAgentAccount({
+        accountID,
+        agentSecret,
+        syncDomain: config.syncDomain || null,
+        createName: 'Maia Agent',
+      });
       
       // Store node and account from agent mode
       os._node = agentResult.node;

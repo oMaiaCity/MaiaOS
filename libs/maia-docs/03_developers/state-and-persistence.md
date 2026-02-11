@@ -63,6 +63,6 @@ The sync service and agent use PGlite for CoValue storage. Two modes matter:
 - `SYNC_MAIA_STORAGE=in-memory` → in-memory (dev default when unspecified)
 - `SYNC_MAIA_STORAGE=pglite` + `DB_PATH=/data/sync.db` → persistent (production)
 
-**Agent** (`libs/maia-agent`):
+**Agent** (`services/agent`):
 
-- Pass `inMemory: false` and `dbPath` when loading the agent account for production durability.
+- Uses `loadOrCreateAgentAccount` from `@MaiaOS/kernel` with `AGENT_MAIA_*` env vars. Pass `inMemory: false` and `dbPath` for production durability.

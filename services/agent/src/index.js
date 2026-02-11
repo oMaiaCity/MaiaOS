@@ -19,7 +19,7 @@
  *   PORT=4204
  */
 
-import { startAgentWorker } from '@MaiaOS/agent';
+import { loadOrCreateAgentAccount } from '@MaiaOS/kernel';
 import { CoJSONBackend, waitForStoreReady } from '@MaiaOS/db';
 import { DBEngine } from '@MaiaOS/operations';
 
@@ -312,11 +312,59 @@ async function handleHttp(req, { worker }) {
   return new Response('Not Found', { status: 404 });
 }
 
+function getSyncDomain() {
+  if (typeof process === 'undefined' || !process.env) return null;
+  return (
+    process.env.PUBLIC_SYNC_DOMAIN ||
+    process.env.AGENT_MAIA_SYNC_DOMAIN ||
+    process.env.PUBLIC_API_DOMAIN ||
+    (process.env.NODE_ENV !== 'production' ? 'localhost:4203' : null)
+  );
+}
+
 async function main() {
-  await startAgentWorker({
+  const processEnv = typeof process !== 'undefined' ? process.env : {};
+  const storageType = processEnv.AGENT_MAIA_STORAGE || processEnv.MAIA_STORAGE;
+  const usePGlite = storageType === 'pglite';
+  const dbPath =
+    processEnv.AGENT_MAIA_DB_PATH ??
+    processEnv.DB_PATH ??
+    (usePGlite ? './local-agent.db' : undefined);
+
+  const accountID = processEnv.AGENT_MAIA_AGENT_ACCOUNT_ID;
+  const agentSecret = processEnv.AGENT_MAIA_AGENT_SECRET;
+  if (!accountID || !agentSecret) {
+    throw new Error(
+      'Agent service requires AGENT_MAIA_AGENT_ACCOUNT_ID and AGENT_MAIA_AGENT_SECRET. ' +
+        'Run `bun agent:generate --service agent` to generate credentials.'
+    );
+  }
+
+  const syncDomain = getSyncDomain();
+  if (syncDomain) {
+    console.log(`[agent] Connecting to sync server: ${syncDomain}`);
+  }
+
+  const { node, account } = await loadOrCreateAgentAccount({
+    accountID,
+    agentSecret,
+    syncDomain,
     servicePrefix: 'AGENT',
-    handlers: { http: handleHttp },
+    dbPath,
+    inMemory: false,
+    createName: processEnv.AGENT_MAIA_PROFILE_NAME || 'Maia Agent',
   });
+  const worker = { node, account };
+  console.log('[agent] ✓ Account ready');
+
+  const port = parseInt(process.env.PORT || '4204', 10);
+  Bun.serve({
+    port,
+    fetch(req) {
+      return handleHttp(req, { worker });
+    },
+  });
+  console.log(`[agent] ✓ HTTP server on port ${port}`);
 }
 
 main().catch((err) => {

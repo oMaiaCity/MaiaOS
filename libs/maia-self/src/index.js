@@ -10,6 +10,7 @@ export {
 	generateAgentCredentials,
 	createAgentAccount,
 	loadAgentAccount,
+	loadOrCreateAgentAccount,
 	// NO LOCALSTORAGE: Removed isSignedIn, signOut, getCurrentAccount, inspectStorage
 	// NO SYNC STATE: subscribeSyncState moved to @MaiaOS/db
 } from './self.js';
