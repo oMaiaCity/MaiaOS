@@ -67,6 +67,21 @@ The following environment variables are configured:
 - `NODE_ENV` - Set to `production` in fly.toml
 - `DB_PATH` - Set to `/data/sync.db` in fly.toml (PGlite database path on volume)
 
+### Required Secrets (Fly.io)
+
+The sync service **requires** these secrets to be set before deployment. Without them, the app will crash on startup:
+
+```bash
+# Generate credentials first (from monorepo root):
+bun agent:generate --service=sync
+
+# Then set secrets on Fly.io:
+flyctl secrets set SYNC_MAIA_AGENT_ACCOUNT_ID="<account-id>" --app sync-next-maia-city
+flyctl secrets set SYNC_MAIA_AGENT_SECRET="<agent-secret>" --app sync-next-maia-city
+```
+
+If you see "the app appears to be crashing" during deployment, check that these secrets are set: `flyctl secrets list --app sync-next-maia-city`
+
 ## Volume Configuration
 
 The service uses a Fly.io volume for PGlite persistence:
@@ -144,6 +159,21 @@ flyctl open --app sync-next-maia-city
 ```
 
 ## Troubleshooting
+
+### "The app appears to be crashing" (Smoke checks failed)
+
+Two common causes:
+
+1. **Missing secrets** - The sync service requires `SYNC_MAIA_AGENT_ACCOUNT_ID` and `SYNC_MAIA_AGENT_SECRET`. Verify with:
+   ```bash
+   flyctl secrets list --app sync-next-maia-city
+   ```
+   If missing, generate and set: `bun agent:generate --service=sync` then `flyctl secrets set ...`
+
+2. **Check logs** for the actual error:
+   ```bash
+   flyctl logs --app sync-next-maia-city
+   ```
 
 ### Service Not Starting
 

@@ -70,13 +70,12 @@ export default defineConfig({
 				"@MaiaOS/operations/operations": resolve(__dirname, "../maia-operations/src/operations/index.js"),
 			"@MaiaOS/tools": resolve(__dirname, "../maia-tools/src"),
 			"@MaiaOS/vibes": resolve(__dirname, "../maia-vibes/src"),
-			"@MaiaOS/voice-google/client": resolve(__dirname, "../maia-voice-google/src/client/index.ts"),
 			// Resolve cojson and its subpaths for bundling
 			// Note: PureJSCrypto removed in cojson 0.20+ - only native Rust crypto (WasmCrypto) is supported
 			// Point to package root so subpaths like cojson/dist/storage work correctly
 			"cojson/crypto/WasmCrypto": resolve(__dirname, "../maia-db/node_modules/cojson/dist/crypto/WasmCrypto.js"),
 			cojson: resolve(__dirname, "../maia-db/node_modules/cojson"),
-			"cojson-storage-indexeddb": resolve(__dirname, "../maia-self/node_modules/cojson-storage-indexeddb"),
+			"cojson-storage-indexeddb": resolve(__dirname, "../maia-storage/node_modules/cojson-storage-indexeddb"),
 			"cojson-transport-ws": resolve(__dirname, "../maia-db/node_modules/cojson-transport-ws"),
 			buffer: resolve(__dirname, "../../node_modules/buffer"),
 		},

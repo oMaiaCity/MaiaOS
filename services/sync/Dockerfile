@@ -11,9 +11,6 @@ WORKDIR /app
 # Copy sync service source
 COPY services/sync/ ./
 
-# Copy sync library source (needed for createSyncServer)
-COPY libs/maia-sync/src/ ./sync/
-
 # Copy pre-built kernel bundle (built locally via bun run bundles:build)
 # The bundle exports everything from @MaiaOS/kernel
 COPY libs/maia-kernel/dist/ ./node_modules/@MaiaOS/kernel/dist/
@@ -33,6 +30,24 @@ RUN echo '{ \
   } \
 }' > ./node_modules/@MaiaOS/kernel/package.json
 
+# Copy @MaiaOS/sync library (required for createSyncServer - import resolves to node_modules)
+COPY libs/maia-sync/ ./node_modules/@MaiaOS/sync/
+
+# Overwrite maia-sync package.json - remove workspace:* so Bun doesn't resolve to libs/maia-sync paths
+# Use file: reference for kernel (sibling in node_modules/@MaiaOS/)
+RUN echo '{ \
+  "name": "@MaiaOS/sync", \
+  "version": "0.1.23", \
+  "type": "module", \
+  "main": "src/index.js", \
+  "exports": {".": "./src/index.js"}, \
+  "dependencies": { \
+    "cojson": "0.20.7", \
+    "cojson-transport-ws": "0.20.7", \
+    "@MaiaOS/kernel": "file:../kernel" \
+  } \
+}' > ./node_modules/@MaiaOS/sync/package.json
+
 # Create package.json with all required dependencies
 RUN echo '{ \
   "name": "sync", \
@@ -45,8 +60,9 @@ RUN echo '{ \
   } \
 }' > package.json
 
-# Install dependencies
+# Install dependencies (root + @MaiaOS/sync so cojson-transport-ws resolves correctly)
 RUN bun install
+RUN cd node_modules/@MaiaOS/sync && bun install --no-save
 
 # Expose port
 EXPOSE 4203

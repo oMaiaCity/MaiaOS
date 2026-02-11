@@ -30,14 +30,14 @@ retry_flyctl_deploy() {
     
     local deploy_exit_code=${PIPESTATUS[0]}
     
-    # Check for build failures in the log
-    if grep -qiE "Build failed|ERROR|error.*build|failed.*build|exit code 1" /tmp/flyctl-deploy.log 2>/dev/null; then
+    # Check for build failures in the log (avoid matching "exit code 1" - that also appears on smoke check failures)
+    if grep -qiE "Build failed|build error|failed to build image|ERROR.*build" /tmp/flyctl-deploy.log 2>/dev/null; then
       echo "❌ Build failed detected in deployment log"
       echo "Last 20 lines of build output:"
       tail -20 /tmp/flyctl-deploy.log
       return 1
     fi
-    
+
     # Check if deployment command succeeded
     if [ $deploy_exit_code -eq 0 ]; then
       # Verify app is actually running (not just that status command works)
@@ -99,6 +99,15 @@ fi
 
 echo ""
 echo "✅ Bundles built successfully!"
+echo ""
+
+# Build maia-city frontend (required before Docker - avoids workspace resolution)
+echo "📦 Building maia-city frontend..."
+if ! (cd "$MONOREPO_ROOT/services/maia-city" && NODE_ENV=production VITE_SEED_VIBES=all bunx vite build --mode production); then
+  echo "❌ Failed to build maia-city frontend"
+  exit 1
+fi
+echo "✅ Maia-city build complete"
 echo ""
 
 # Deploy sync service first (dependency)

@@ -94,13 +94,17 @@ echo ""
 
 cd "$MONOREPO_ROOT"
 
-# Build bundles first (required for Docker build)
-echo "📦 Building kernel and vibes bundles..."
+# Build bundles and maia-city frontend (required before Docker - avoids workspace resolution in Docker)
+echo "📦 Building kernel, vibes, and maia-city frontend..."
 if ! bun run bundles:build; then
   echo "❌ Failed to build bundles"
   exit 1
 fi
-echo "✅ Bundles built successfully"
+if ! (cd services/maia-city && NODE_ENV=production VITE_SEED_VIBES=all bunx vite build --mode production); then
+  echo "❌ Failed to build maia-city frontend"
+  exit 1
+fi
+echo "✅ Build complete"
 echo ""
 
 if ! retry_flyctl_deploy \

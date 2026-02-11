@@ -34,8 +34,14 @@ Before first deployment, create apps and set secrets:
 flyctl apps create sync-next-maia-city --org maia-city
 flyctl apps create next-maia-city --org maia-city
 
-# Set secrets (REQUIRED)
-# Frontend service needs API domain (REQUIRED for sync to work)
+# Generate sync service credentials (from monorepo root)
+bun agent:generate --service=sync
+
+# Set sync service secrets (REQUIRED - app crashes without these)
+flyctl secrets set SYNC_MAIA_AGENT_ACCOUNT_ID="<from-generate-output>" --app sync-next-maia-city
+flyctl secrets set SYNC_MAIA_AGENT_SECRET="<from-generate-output>" --app sync-next-maia-city
+
+# Set frontend secrets (REQUIRED for sync to work)
 # For Fly.io domain:
 flyctl secrets set PUBLIC_API_DOMAIN="sync-next-maia-city.fly.dev" --app next-maia-city
 
@@ -94,8 +100,13 @@ See `services/DNS_SETUP.md` for detailed DNS configuration instructions, especia
 
 ### Sync Service (`sync-next-maia-city`)
 
-- `PORT` - Server port (default: 4203, set in fly.toml)
-- `DB_PATH` - PGlite database path (default: `/data/sync.db`, set in fly.toml)
+**Required secrets** (app crashes without these):
+- `SYNC_MAIA_AGENT_ACCOUNT_ID` - Agent account ID (generate via `bun agent:generate --service=sync`)
+- `SYNC_MAIA_AGENT_SECRET` - Agent secret (generate via `bun agent:generate --service=sync`)
+
+**Configured in fly.toml:**
+- `PORT` - Server port (default: 4203)
+- `DB_PATH` - PGlite database path (default: `/data/sync.db`)
 
 ### Maia City (`next-maia-city`)
 

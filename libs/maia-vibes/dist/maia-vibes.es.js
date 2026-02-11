@@ -119,248 +119,39 @@ const masterBrand = {
     "transitions": {
       "fast": "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
       "standard": "all 0.5s cubic-bezier(0.2, 0, 0.2, 1)"
+    },
+    "containers": {
+      "xs": "240px",
+      "sm": "360px",
+      "md": "480px",
+      "lg": "640px",
+      "xl": "768px",
+      "2xl": "1024px"
     }
   },
   "components": {
-    "stack": {
-      "display": "flex",
-      "flexDirection": "column",
-      "gap": "0.25rem",
-      "width": "100%",
-      "maxWidth": "100%",
-      "height": "100vh",
-      "background": "{colors.softClay}",
-      "padding": "0.375rem",
-      "overflowY": "auto",
-      "overflowX": "hidden",
-      "fontFamily": "{typography.fontFamily.body}",
-      "color": "{colors.marineBlue}",
-      "boxSizing": "border-box"
-    },
-    "headerSection": {
-      "display": "flex",
-      "flexDirection": "column",
-      "alignItems": "center",
-      "gap": "0.25rem",
-      "marginBottom": "0.25rem",
-      "width": "100%"
-    },
-    "viewSwitcher": {
-      "display": "flex",
-      "gap": "0.2rem",
-      "background": "rgba(255, 255, 255, 0.2)",
-      "padding": "0.15rem",
-      "borderRadius": "{radii.full}",
-      "margin": "0 auto",
-      "border": "1px solid {colors.border}"
-    },
-    "buttonViewSwitch": {
-      "padding": "0.25rem 0.6rem",
-      "background": "transparent",
-      "border": "none",
-      "borderRadius": "{radii.full}",
-      "fontSize": "0.55rem",
-      "fontWeight": "600",
-      "textTransform": "uppercase",
-      "letterSpacing": "0.05em",
-      "color": "{colors.marineBlueMuted}",
-      "cursor": "pointer",
-      "transition": "{transitions.fast}",
-      "data": {
-        "active": {
-          "true": {
-            "background": "{colors.marineBlue}",
-            "color": "{colors.softClay}",
-            "boxShadow": "0 4px 12px rgba(0, 31, 51, 0.2)"
-          }
-        }
-      }
-    },
-    "form": {
-      "display": "flex",
-      "flexDirection": "row",
-      "alignItems": "center",
-      "gap": "0.25rem",
-      "padding": "0.25rem 0.375rem",
-      "background": "rgba(255, 255, 255, 0.4)",
-      "backdropFilter": "blur(8px) saturate(150%)",
-      "borderRadius": "{radii.full}",
-      "border": "1px solid {colors.border}",
-      "boxShadow": "{shadows.md}",
-      "width": "100%",
-      "boxSizing": "border-box",
-      "marginBottom": "0.25rem"
-    },
-    "input": {
-      "flex": "1",
-      "width": "100%",
-      "padding": "0.25rem 0.5rem",
-      "border": "none",
-      "background": "transparent",
-      "fontSize": "0.6rem",
-      "color": "{colors.marineBlue}",
-      "fontFamily": "{typography.fontFamily.body}",
-      "fontWeight": "{typography.fontWeight.light}",
-      "outline": "none",
-      "minHeight": "0",
-      "minWidth": "0",
-      "lineHeight": "1.35"
-    },
-    "button": {
-      "width": "auto",
-      "padding": "0.25rem 0.5rem",
-      "background": "{colors.lushGreen}",
-      "color": "{colors.text.green}",
-      "border": "none",
-      "borderRadius": "{radii.full}",
-      "cursor": "pointer",
-      "fontSize": "0.5rem",
-      "fontWeight": "600",
-      "textTransform": "uppercase",
-      "letterSpacing": "0.05em",
-      "transition": "{transitions.fast}",
-      "boxShadow": "0 4px 12px rgba(78, 154, 88, 0.2)",
-      "whiteSpace": "nowrap",
-      "flexShrink": "0",
-      ":hover": {
-        "filter": "brightness(1.1)",
-        "transform": "translateY(-1px)",
-        "boxShadow": "0 6px 16px rgba(78, 154, 88, 0.3)"
-      }
-    },
-    "errorMessage": {
-      "padding": "{spacing.sm} {spacing.md}",
-      "background": "{colors.errorBg}",
-      "color": "{colors.error}",
-      "borderRadius": "{radii.md}",
-      "border": "1px solid {colors.errorBorder}",
-      "margin": "{spacing.md} 0",
-      "display": "none",
-      "data": {
-        "hasError": {
-          "true": {
-            "display": "block"
-          }
-        }
-      }
-    },
-    "buttonDismiss": {
-      "marginLeft": "{spacing.sm}",
-      "padding": "0.25rem 0.5rem",
-      "background": "transparent",
-      "color": "{colors.error}",
-      "border": "1px solid {colors.errorBorder}",
-      "borderRadius": "{radii.sm}",
-      "cursor": "pointer",
-      "fontSize": "0.5rem",
-      "fontWeight": "600",
-      "transition": "{transitions.fast}",
-      ":hover": {
-        "background": "{colors.error}",
-        "color": "white"
-      }
-    },
-    "card": {
-      "display": "flex",
-      "flexDirection": "column",
-      "alignItems": "flex-start",
-      "gap": "0.25rem",
-      "padding": "0.25rem 0.375rem",
-      "background": "rgba(255, 255, 255, 0.3)",
-      "backdropFilter": "blur(8px) saturate(150%)",
-      "borderRadius": "{radii.apple}",
-      "border": "1px solid {colors.border}",
-      "transition": "{transitions.fast}",
-      "marginBottom": "0.25rem",
-      ":hover": {
-        "background": "rgba(255, 255, 255, 0.5)",
-        "transform": "translateY(-2px)",
-        "boxShadow": "{shadows.sm}"
-      }
-    },
-    "detailContentWrapper": {
-      "display": "flex",
-      "flexDirection": "column",
-      "height": "100%",
-      "width": "100%"
-    },
-    "detailContainer": {
-      "background": "rgba(255, 255, 255, 0.4)",
-      "backdropFilter": "blur(12px) saturate(160%)",
-      "borderRadius": "{radii.apple}",
-      "boxShadow": "{shadows.md}",
-      "overflow": "auto",
-      "border": "1px solid rgba(255, 255, 255, 0.2)",
-      "transition": "{transitions.standard}",
-      "height": "100%",
-      "display": "flex",
-      "flexDirection": "column",
-      "padding": "{spacing.md}"
-    },
-    "detailCategory": {
-      "fontFamily": "{typography.fontFamily.heading}",
-      "fontSize": "0.85rem",
-      "fontStyle": "italic",
-      "color": "{colors.paradiseWater}",
-      "marginBottom": "0.5rem",
-      "display": "block",
-      "textShadow": "0 0 10px rgba(0, 189, 214, 0.2)"
-    },
-    "detailTitle": {
-      "fontFamily": "{typography.fontFamily.heading}",
-      "fontSize": "{typography.fontSize.xl}",
-      "fontWeight": "{typography.fontWeight.bold}",
-      "color": "{colors.marineBlue}",
-      "marginBottom": "{spacing.md}",
-      "marginTop": "0",
-      "letterSpacing": "-0.02em"
-    },
-    "detailList": {
-      "display": "flex",
-      "flexDirection": "column",
-      "gap": "{spacing.sm}"
-    },
-    "detailItem": {
-      "display": "flex",
-      "flexDirection": "row",
-      "justifyContent": "space-between",
-      "alignItems": "center",
-      "padding": "{spacing.sm}",
-      "background": "rgba(255, 255, 255, 0.2)",
-      "borderRadius": "{radii.md}",
-      "gap": "{spacing.md}"
-    },
-    "detailLabel": {
-      "fontWeight": "{typography.fontWeight.semibold}",
-      "color": "{colors.marineBlueLight}",
-      "fontSize": "0.75rem"
-    },
-    "detailValue": {
-      "color": "{colors.marineBlue}",
-      "fontSize": "0.75rem",
-      "fontFamily": "{typography.fontFamily.body}",
-      "wordBreak": "break-all"
-    },
-    "tableContainer": {
-      "background": "rgba(255, 255, 255, 0.4)",
-      "backdropFilter": "blur(12px) saturate(160%)",
-      "borderRadius": "{radii.apple}",
-      "boxShadow": "{shadows.md}",
-      "overflow": "auto",
-      "border": "1px solid rgba(255, 255, 255, 0.2)",
-      "transition": "{transitions.standard}",
-      "height": "100%",
-      "display": "flex",
-      "flexDirection": "column",
-      "padding": "{spacing.md}"
-    }
+    "stack": { "display": "flex", "flexDirection": "column", "gap": "0.25rem", "width": "100%", "maxWidth": "100%", "height": "100vh", "background": "{colors.softClay}", "padding": "0.375rem", "overflowY": "auto", "overflowX": "hidden", "fontFamily": "{typography.fontFamily.body}", "color": "{colors.marineBlue}", "boxSizing": "border-box" },
+    "headerSection": { "display": "flex", "flexDirection": "column", "alignItems": "center", "gap": "0.25rem", "marginBottom": "0.25rem", "width": "100%" },
+    "viewSwitcher": { "display": "flex", "gap": "0.2rem", "background": "rgba(255, 255, 255, 0.2)", "padding": "0.15rem", "borderRadius": "{radii.full}", "margin": "0 auto", "border": "1px solid {colors.border}" },
+    "buttonViewSwitch": { "padding": "0.25rem 0.6rem", "background": "transparent", "border": "none", "borderRadius": "{radii.full}", "fontSize": "0.55rem", "fontWeight": "600", "textTransform": "uppercase", "letterSpacing": "0.05em", "color": "{colors.marineBlueMuted}", "cursor": "pointer", "transition": "{transitions.fast}", "data": { "active": { "true": { "background": "{colors.marineBlue}", "color": "{colors.softClay}", "boxShadow": "0 4px 12px rgba(0, 31, 51, 0.2)" } } } },
+    "form": { "display": "flex", "flexDirection": "row", "alignItems": "center", "gap": "0.25rem", "padding": "0.25rem 0.375rem", "background": "rgba(255, 255, 255, 0.4)", "backdropFilter": "blur(8px) saturate(150%)", "borderRadius": "{radii.full}", "border": "1px solid {colors.border}", "boxShadow": "{shadows.md}", "width": "100%", "boxSizing": "border-box", "marginBottom": "0.25rem" },
+    "input": { "flex": "1", "width": "100%", "padding": "0.25rem 0.5rem", "border": "none", "background": "transparent", "fontSize": "0.6rem", "color": "{colors.marineBlue}", "fontFamily": "{typography.fontFamily.body}", "fontWeight": "{typography.fontWeight.light}", "outline": "none", "minHeight": "0", "minWidth": "0", "lineHeight": "1.35" },
+    "button": { "width": "auto", "padding": "0.25rem 0.5rem", "background": "{colors.lushGreen}", "color": "{colors.text.green}", "border": "none", "borderRadius": "{radii.full}", "cursor": "pointer", "fontSize": "0.5rem", "fontWeight": "600", "textTransform": "uppercase", "letterSpacing": "0.05em", "transition": "{transitions.fast}", "boxShadow": "0 4px 12px rgba(78, 154, 88, 0.2)", "whiteSpace": "nowrap", "flexShrink": "0", ":hover": { "filter": "brightness(1.1)", "transform": "translateY(-1px)", "boxShadow": "0 6px 16px rgba(78, 154, 88, 0.3)" } },
+    "errorMessage": { "padding": "{spacing.sm} {spacing.md}", "background": "{colors.errorBg}", "color": "{colors.error}", "borderRadius": "{radii.md}", "border": "1px solid {colors.errorBorder}", "margin": "{spacing.md} 0", "display": "none", "data": { "hasError": { "true": { "display": "block" } } } },
+    "buttonDismiss": { "marginLeft": "{spacing.sm}", "padding": "0.25rem 0.5rem", "background": "transparent", "color": "{colors.error}", "border": "1px solid {colors.errorBorder}", "borderRadius": "{radii.sm}", "cursor": "pointer", "fontSize": "0.5rem", "fontWeight": "600", "transition": "{transitions.fast}", ":hover": { "background": "{colors.error}", "color": "white" } },
+    "card": { "display": "flex", "flexDirection": "column", "alignItems": "flex-start", "gap": "0.25rem", "padding": "0.25rem 0.375rem", "background": "rgba(255, 255, 255, 0.3)", "backdropFilter": "blur(8px) saturate(150%)", "borderRadius": "{radii.apple}", "border": "1px solid {colors.border}", "transition": "{transitions.fast}", "marginBottom": "0.25rem", ":hover": { "background": "rgba(255, 255, 255, 0.5)", "transform": "translateY(-2px)", "boxShadow": "{shadows.sm}" } },
+    "detailContentWrapper": { "display": "flex", "flexDirection": "column", "height": "100%", "width": "100%" },
+    "detailContainer": { "background": "rgba(255, 255, 255, 0.4)", "backdropFilter": "blur(12px) saturate(160%)", "borderRadius": "{radii.apple}", "boxShadow": "{shadows.md}", "overflow": "auto", "border": "1px solid rgba(255, 255, 255, 0.2)", "transition": "{transitions.standard}", "height": "100%", "display": "flex", "flexDirection": "column", "padding": "{spacing.md}" },
+    "detailCategory": { "fontFamily": "{typography.fontFamily.heading}", "fontSize": "0.85rem", "fontStyle": "italic", "color": "{colors.paradiseWater}", "marginBottom": "0.5rem", "display": "block", "textShadow": "0 0 10px rgba(0, 189, 214, 0.2)" },
+    "detailTitle": { "fontFamily": "{typography.fontFamily.heading}", "fontSize": "{typography.fontSize.xl}", "fontWeight": "{typography.fontWeight.bold}", "color": "{colors.marineBlue}", "marginBottom": "{spacing.md}", "marginTop": "0", "letterSpacing": "-0.02em" },
+    "detailList": { "display": "flex", "flexDirection": "column", "gap": "{spacing.sm}" },
+    "detailItem": { "display": "flex", "flexDirection": "row", "justifyContent": "space-between", "alignItems": "center", "padding": "{spacing.sm}", "background": "rgba(255, 255, 255, 0.2)", "borderRadius": "{radii.md}", "gap": "{spacing.md}" },
+    "detailLabel": { "fontWeight": "{typography.fontWeight.semibold}", "color": "{colors.marineBlueLight}", "fontSize": "0.75rem" },
+    "detailValue": { "color": "{colors.marineBlue}", "fontSize": "0.75rem", "fontFamily": "{typography.fontFamily.body}", "wordBreak": "break-all" },
+    "tableContainer": { "background": "rgba(255, 255, 255, 0.4)", "backdropFilter": "blur(12px) saturate(160%)", "borderRadius": "{radii.apple}", "boxShadow": "{shadows.md}", "overflow": "auto", "border": "1px solid rgba(255, 255, 255, 0.2)", "transition": "{transitions.standard}", "height": "100%", "display": "flex", "flexDirection": "column", "padding": "{spacing.md}" }
   },
   "selectors": {
-    ":host": {
-      "display": "block",
-      "height": "100%",
-      "background": "transparent"
-    }
+    ":host": { "display": "block", "height": "100%", "background": "transparent" }
   }
 };
 const todosVibe = {
