@@ -591,9 +591,11 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
   const cachedData = cache.getResolvedData(coId, cacheOptions);
   
   if (cachedData) {
-    // Return cached data immediately - no processing needed
-    const store = new ReactiveStore(cachedData);
-    // Still set up subscription for updates, but use cached data initially
+    const hasQueryObjects = cachedData && typeof cachedData === 'object' &&
+      Object.values(cachedData).some(value =>
+        value && typeof value === 'object' && !Array.isArray(value) && value.schema
+      );
+    const ctxStore = new ReactiveStore(cachedData);
     const coValueCore = backend.getCoValue(coId);
     if (coValueCore) {
       const processAndCacheCached = async (core) => {
@@ -601,57 +603,69 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
         cache.setResolvedData(coId, cacheOptions, newData);
         return newData;
       };
-      const depUnsubscribes = new Map();
-      const setupMapDependencySubscriptions = (mainCore) => {
+      const cacheDepUnsubs = new Map();
+      const setupMapDepSubs = (mainCore) => {
         if (!map) return;
         const rawData = extractCoValueDataFlat(backend, mainCore, schemaHint);
         const newDeps = getMapDependencyCoIds(rawData, map);
         for (const depCoId of newDeps) {
-          if (depUnsubscribes.has(depCoId)) continue;
+          if (cacheDepUnsubs.has(depCoId)) continue;
           const depCore = backend.getCoValue(depCoId);
           if (!depCore) continue;
           const unsub = depCore.subscribe(async () => {
             if (!mainCore.isAvailable()) return;
             cache.invalidateResolvedData(depCoId);
             const data = await processAndCacheCached(mainCore);
-            store._set(data);
+            ctxStore._set(data);
           });
-          depUnsubscribes.set(depCoId, unsub);
+          cacheDepUnsubs.set(depCoId, unsub);
         }
-        for (const [depCoId, unsub] of depUnsubscribes.entries()) {
+        for (const [depCoId, unsub] of cacheDepUnsubs.entries()) {
           if (!newDeps.has(depCoId)) {
             unsub();
-            depUnsubscribes.delete(depCoId);
+            cacheDepUnsubs.delete(depCoId);
           }
         }
       };
-      const unsubscribe = coValueCore.subscribe(async (core) => {
+      const cacheCoUnsub = coValueCore.subscribe(async (core) => {
         if (core.isAvailable()) {
           const newData = await processAndCacheCached(core);
-          setupMapDependencySubscriptions(core);
-          store._set(newData);
+          setupMapDepSubs(core);
+          ctxStore._set(newData);
         }
       });
-      setupMapDependencySubscriptions(coValueCore);
-      backend.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({ unsubscribe }));
+      setupMapDepSubs(coValueCore);
+      backend.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({ unsubscribe: cacheCoUnsub }));
 
-      const originalUnsubscribe = store._unsubscribe;
-      store._unsubscribe = () => {
-        for (const unsub of depUnsubscribes.values()) unsub();
-        depUnsubscribes.clear();
-        if (originalUnsubscribe) originalUnsubscribe();
+      if (hasQueryObjects) {
+        const unified = await createUnifiedStore(backend, ctxStore, options);
+        const origUnsub = unified._unsubscribe;
+        unified._unsubscribe = () => {
+          if (origUnsub) origUnsub();
+          cacheCoUnsub();
+          for (const unsub of cacheDepUnsubs.values()) unsub();
+          cacheDepUnsubs.clear();
+          backend.subscriptionCache.scheduleCleanup(`subscription:${coId}`);
+        };
+        return unified;
+      }
+      const origUnsub = ctxStore._unsubscribe;
+      ctxStore._unsubscribe = () => {
+        if (origUnsub) origUnsub();
+        cacheCoUnsub();
+        for (const unsub of cacheDepUnsubs.values()) unsub();
+        cacheDepUnsubs.clear();
         backend.subscriptionCache.scheduleCleanup(`subscription:${coId}`);
       };
     }
-    return store;
+    return hasQueryObjects ? await createUnifiedStore(backend, ctxStore, options) : ctxStore;
   }
   
-  const store = new ReactiveStore(null);
   const coValueCore = backend.getCoValue(coId);
   
   if (!coValueCore) {
-    store._set({ error: 'CoValue not found', id: coId });
-    return store;
+    const errStore = new ReactiveStore({ error: 'CoValue not found', id: coId });
+    return errStore;
   }
 
   // Helper to process and cache CoValue data (fresh visited set per run for correct re-processing)
@@ -678,7 +692,7 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
         if (!mainCore.isAvailable()) return;
         cache.invalidateResolvedData(depCoId);
         const data = await processAndCache(mainCore);
-        store._set(data);
+        contextStore._set(data);
       });
       depUnsubscribes.set(depCoId, unsub);
     }
@@ -690,76 +704,62 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
     }
   };
   
-  // Subscribe to CoValueCore updates
-  const unsubscribe = coValueCore.subscribe(async (core) => {
+  // Context store: holds raw CoValue data. When it has query objects, createUnifiedStore
+  // subscribes to it and merges query results. CRITICAL: Use contextStore for BOTH sync
+  // and async paths so progressive loading works - createUnifiedStore must receive the
+  // context data when it loads (async path) and merge queries reactively.
+  const contextStore = new ReactiveStore(null);
+
+  const updateContextStore = async (core) => {
     if (!core.isAvailable()) {
-      store._set({ id: coId, loading: true });
+      contextStore._set({ id: coId, loading: true });
       return;
     }
-
-    // Process and cache data (cache prevents duplicate work)
     const data = await processAndCache(core);
     setupMapDependencySubscriptions(core);
+    contextStore._set(data);
+  };
 
-    // Check if data contains query objects (objects with schema property)
-    const hasQueryObjects = data && typeof data === 'object' && 
-      Object.values(data).some(value => 
-        value && typeof value === 'object' && !Array.isArray(value) && value.schema
-      );
-    
-    // If query objects detected, create unified store that merges queries
-    if (hasQueryObjects) {
-      store._set(data);
-      // Note: createUnifiedStore will be handled by the caller if needed
-      return;
-    }
-    
-    store._set(data);
-  });
+  const coUnsubscribe = coValueCore.subscribe(updateContextStore);
+  backend.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({ unsubscribe: coUnsubscribe }));
 
-  // Use unified cache for subscription
-  backend.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({ unsubscribe }));
-
-  // Set initial value immediately with available data (progressive loading)
   if (coValueCore.isAvailable()) {
-    // Process and cache data
     const data = await processAndCache(coValueCore);
     setupMapDependencySubscriptions(coValueCore);
-
-    // Check if data contains query objects (objects with schema property)
-    const hasQueryObjects = data && typeof data === 'object' && 
-      Object.values(data).some(value => 
-        value && typeof value === 'object' && !Array.isArray(value) && value.schema
-      );
-    
-    // If query objects detected, create unified store that merges queries
-    if (hasQueryObjects) {
-      store._set(data);
-      return await createUnifiedStore(backend, store, options);
-    }
-    
-    store._set(data);
-    return store;
-  } else {
-    // Set loading state, trigger load (subscription will fire when available)
-    store._set({ id: coId, loading: true });
-    ensureCoValueLoaded(backend, coId).then(async () => {
-      // Processing will happen in subscription callback
-    }).catch(err => {
-      store._set({ error: err.message, id: coId });
-    });
+    contextStore._set(data);
+    const unifiedStore = await createUnifiedStore(backend, contextStore, options);
+    const origUnsubSync = unifiedStore._unsubscribe;
+    unifiedStore._unsubscribe = () => {
+      if (origUnsubSync) origUnsubSync();
+      coUnsubscribe();
+      for (const unsub of depUnsubscribes.values()) unsub();
+      depUnsubscribes.clear();
+      backend.subscriptionCache.scheduleCleanup(`subscription:${coId}`);
+    };
+    return unifiedStore;
   }
 
-  // Set up store unsubscribe to clean up subscription and map dependencies
-  const originalUnsubscribe = store._unsubscribe;
-  store._unsubscribe = () => {
+  // Async path: CoValue not loaded yet. Pass contextStore to createUnifiedStore -
+  // when subscription fires and contextStore gets data, resolveQueries runs and
+  // progressive loading works. Root cause fix: previously we returned raw store
+  // and never created createUnifiedStore, so queries (list, messages) stayed as
+  // objects instead of resolved arrays.
+  contextStore._set({ id: coId, loading: true });
+  ensureCoValueLoaded(backend, coId).then(() => updateContextStore(coValueCore)).catch(err => {
+    contextStore._set({ error: err.message, id: coId });
+  });
+
+  const unifiedStore = await createUnifiedStore(backend, contextStore, options);
+  const origUnsub = unifiedStore._unsubscribe;
+  unifiedStore._unsubscribe = () => {
+    if (origUnsub) origUnsub();
+    coUnsubscribe();
     for (const unsub of depUnsubscribes.values()) unsub();
     depUnsubscribes.clear();
-    if (originalUnsubscribe) originalUnsubscribe();
     backend.subscriptionCache.scheduleCleanup(`subscription:${coId}`);
   };
 
-  return store;
+  return unifiedStore;
 }
 
 /**

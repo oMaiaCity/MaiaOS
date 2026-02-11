@@ -1,4 +1,6 @@
 ---
+description: Standards for creating and editing MaiaOS documentation. Apply when writing, updating, or reviewing docs in maia-docs, maia-blog, READMEs, or any project documentation. Covers the 12-year-old test, ADEPT method, progressive complexity, and audience-specific structure (creators, developers, agents).
+globs: "libs/maia-docs/**/*.md,libs/maia-blog/**/*.md"
 alwaysApply: false
 ---
 
