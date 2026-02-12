@@ -24,11 +24,7 @@ import { ensureCoValueLoaded } from '@MaiaOS/db';
 import { DBEngine } from '@MaiaOS/script';
 // Import validation helper
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper';
-// Import all schemas for seeding
-import * as schemata from '@MaiaOS/schemata';
-// Import ValidationEngine for meta schema validation
-import { ValidationEngine } from '@MaiaOS/schemata/validation.engine';
-// Schema loading now uses resolve() from @MaiaOS/db if needed
+// Schema loading uses resolve() from @MaiaOS/db
 
 // Pre-import default modules so they're bundled (for standalone bundle)
 // This ensures db, core, ai, and sparks modules are included in the bundle
@@ -199,7 +195,6 @@ export class MaiaOS {
    * @param {Object} [config.node] - LocalNode instance (required for CoJSON backend if backend not provided)
    * @param {Object} [config.account] - RawAccount instance (required for CoJSON backend if backend not provided)
    * @param {Object} [config.backend] - Pre-initialized backend (alternative to node+account)
-   * @param {Object} [config.registry] - Config registry for seeding
    * @param {string} [config.syncDomain] - Sync service domain (overrides env vars, single source of truth)
    * @param {'human' | 'agent'} [config.mode] - Operational mode (default: detect from env vars)
    * @returns {Promise<MaiaOS>} Booted OS instance
@@ -285,10 +280,9 @@ export class MaiaOS {
       // Don't await - let it load in background while we continue booting
     }
     
-    // Seed database if registry provided
-    if (config.registry) {
-      await MaiaOS._seedDatabase(os, backend, config);
-    }
+    // Set schema resolver for runtime validation (engines need dbEngine for schema lookups)
+    const { setSchemaResolver } = await import('@MaiaOS/schemata/validation.helper');
+    setSchemaResolver({ dbEngine: os.dbEngine });
     
     // Initialize engines
     MaiaOS._initializeEngines(os, config);
@@ -338,98 +332,6 @@ export class MaiaOS {
       'MaiaOS.boot() requires either a backend or node+account for CoJSON backend. ' +
       'Provide either: { backend: <DBAdapter> } or { node: <LocalNode>, account: <RawAccount> }'
     );
-  }
-
-  /**
-   * Collect schemas from schemata module
-   * @returns {Object} Schemas object
-   */
-  static _collectSchemas() {
-    const schemas = {};
-    
-    // Get all schema definitions from schemata module
-    if (typeof schemata.getAllSchemas === 'function') {
-      Object.assign(schemas, schemata.getAllSchemas());
-    }
-    
-    // Add meta schema for validation
-    if (typeof schemata.getMetaSchema === 'function') {
-      schemas['meta-schema'] = schemata.getMetaSchema();
-    }
-    
-    return schemas;
-  }
-
-  /**
-   * Validate schemas against meta schema
-   * @param {Object} schemas - Schemas to validate
-   * @param {ValidationEngine} validationEngine - Validation engine instance
-   * @throws {Error} If any schema fails validation
-   */
-  static async _validateSchemas(schemas, validationEngine) {
-    for (const [name, schema] of Object.entries(schemas)) {
-      const result = await validationEngine.validateSchemaAgainstMeta(schema);
-      if (!result.valid) {
-        const errorDetails = result.errors
-          .map(err => `  - ${err.instancePath}: ${err.message}`)
-          .join('\n');
-        console.error(`❌ Schema '${name}' failed meta schema validation:\n${errorDetails}`);
-        throw new Error(`Schema '${name}' is not valid JSON Schema`);
-      }
-    }
-  }
-
-  /**
-   * Seed database with configs, schemas, and tool definitions
-   * @param {MaiaOS} os - OS instance
-   * @param {DBAdapter} backend - Database backend (CoJSONBackend)
-   * @param {Object} config - Boot configuration
-   */
-  static async _seedDatabase(os, backend, config) {
-    // Seeding database
-    
-    // Import tool definitions
-    const { getAllToolDefinitions } = await import('@MaiaOS/tools');
-    const toolDefs = getAllToolDefinitions();
-    
-    // Merge tool definitions into registry
-    const configsWithTools = {
-      ...config.registry,
-      tool: toolDefs // Add tool definitions under 'tool' key
-    };
-    
-    // Collect schemas
-    const schemas = MaiaOS._collectSchemas();
-    
-    // Validate schemas against meta schema before seeding
-    // Metaschema is registered during ValidationEngine initialization
-    const validationEngine = new ValidationEngine();
-    await validationEngine.initialize();
-    await MaiaOS._validateSchemas(schemas, validationEngine);
-    
-    // Seed database
-    // Use registry default data if available
-    // Note: data.todos is deprecated - items are automatically indexed into account.os.{schemaCoId}
-    const defaultData = config.registry?.data || {};
-    const seedData = defaultData;
-    
-    const seedResult = await os.dbEngine.execute({
-      op: 'seed',
-      configs: configsWithTools,
-      schemas: schemas,
-      data: seedData
-    });
-    if (!seedResult.ok) {
-      const msgs = seedResult.errors?.map((e) => e.message).join('; ') || 'Seed failed';
-      throw new Error(`[MaiaOS] Seed failed: ${msgs}`);
-    }
-    
-    // Database seeded successfully
-    
-    // Set schema resolver on validation helper singleton for engines to use
-    // Pass dbEngine to use operations API (preferred over resolver function)
-    const { setSchemaResolver } = await import('@MaiaOS/schemata/validation.helper');
-    setSchemaResolver({ dbEngine: os.dbEngine }); // Pass dbEngine to use operations API
   }
 
   /**
@@ -586,7 +488,7 @@ export class MaiaOS {
     // Step 2: Get account.sparks CoMap co-id
     const sparksId = accountData.sparks;
     if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_')) {
-      throw new Error(`[Kernel] account.sparks not found. Ensure schemaMigration has run. Account data: ${JSON.stringify({ id: accountData.id, hasSparks: !!accountData.sparks })}`);
+      throw new Error(`[Kernel] account.sparks not found. Ensure bootstrap has run. Account data: ${JSON.stringify({ id: accountData.id, hasSparks: !!accountData.sparks })}`);
     }
 
     // Step 3: Read account.sparks CoMap

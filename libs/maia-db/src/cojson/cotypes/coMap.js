@@ -40,7 +40,7 @@ export async function createCoMap(accountOrGroup, init = {}, schemaName, node = 
 			const { getSparkGroup } = await import('../groups/groups.js');
 			group = await getSparkGroup(backend, '@maia');
 			if (!group) {
-				throw new Error('[createCoMap] @maia spark group not found. Ensure schemaMigration has run.');
+				throw new Error('[createCoMap] @maia spark group not found. Ensure bootstrap has run.');
 			}
 		}
 		// If no profileId, accountOrGroup is a group - use as-is (group = accountOrGroup from line 27)

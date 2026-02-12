@@ -30,7 +30,7 @@ export async function createCoList(accountOrGroup, init = [], schemaName, node =
 			const { getSparkGroup } = await import('../groups/groups.js');
 			group = await getSparkGroup(backend, '@maia');
 			if (!group) {
-				throw new Error('[createCoList] @maia spark group not found. Ensure schemaMigration has run.');
+				throw new Error('[createCoList] @maia spark group not found. Ensure bootstrap has run.');
 			}
 		}
 		// If profileId is null/undefined, it's a regular group, use it as-is

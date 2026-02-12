@@ -28,7 +28,7 @@ export async function createCoStream(accountOrGroup, schemaName, node = null, db
 			const { getSparkGroup } = await import('../groups/groups.js');
 			group = await getSparkGroup(backend, '@maia');
 			if (!group) {
-				throw new Error('[createCoStream] @maia spark group not found. Ensure schemaMigration has run.');
+				throw new Error('[createCoStream] @maia spark group not found. Ensure bootstrap has run.');
 			}
 		}
 		// If profileId is null/undefined, it's a regular group, use it as-is

@@ -965,7 +965,7 @@ export async function seed(account, node, configs, schemas, data, existingBacken
   // Resolve @maia spark's group (replaces old profile.group)
   const maiaGroup = await groups.getMaiaGroup(backend);
   if (!maiaGroup || typeof maiaGroup.createMap !== 'function') {
-    throw new Error('[CoJSONSeed] @maia spark group not found. Ensure schemaMigration has created @maia spark.');
+    throw new Error('[CoJSONSeed] @maia spark group not found. Ensure bootstrap has created @maia spark.');
   }
 
   // Seed util: account.sparks[@maia].registries.sparks["@maia"] = real co-id
@@ -2277,7 +2277,7 @@ async function seedData(account, node, maiaGroup, backend, data, coIdRegistry) {
 async function ensureSparkOs(account, node, maiaGroup, backend, schemaCoIdMap) {
   const osId = await groups.getSparkOsId(backend, MAIA_SPARK);
   if (!osId) {
-    throw new Error('[Seed] @maia spark.os not found. Ensure schemaMigration or bootstrap has run.');
+    throw new Error('[Seed] @maia spark.os not found. Ensure bootstrap has run.');
   }
 
   const { resolve } = await import('../schema/resolver.js');

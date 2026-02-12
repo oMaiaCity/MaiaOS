@@ -66,8 +66,8 @@ async function handleOnAdded(worker, body) {
     const sparksId = getSparksId(worker.account);
     const sparksContent = await loadCoMap(backend, sparksId, { retries: 2 });
     if (!sparksContent?.set) throw new Error('sparks CoMap loaded but not writable');
-    sparksContent.set('@Maia', sparkId);
-    return jsonResponse({ ok: true, added: '@Maia', sparkId });
+    sparksContent.set('@maia', sparkId);
+    return jsonResponse({ ok: true, added: '@maia', sparkId });
   } catch (e) {
     return err(e?.message ?? 'failed to ensure sparks registry', 500);
   }
@@ -81,7 +81,7 @@ async function handleRegisterHuman(worker, body) {
   const { backend, dbEngine } = worker;
   try {
     const sparksId = getSparksId(worker.account);
-    const humansId = await getCoIdByPath(backend, sparksId, ['@Maia', 'registries', 'humans'], { retries: 2 });
+    const humansId = await getCoIdByPath(backend, sparksId, ['@maia', 'registries', 'humans'], { retries: 2 });
     const raw = await backend.getRawRecord(humansId);
     const existing = raw?.[u];
     if (existing != null && existing !== accountId) return err('username already registered to different account', 409, { validationErrors: [{ field: 'username', message: 'unique required' }] });
@@ -108,7 +108,7 @@ async function handleTrigger(worker, body) {
       const sparksId = worker.account.get('sparks');
       if (sparksId?.startsWith('co_z')) {
         const sparksContent = await loadCoMap(backend, sparksId, { retries: 2 });
-        if (sparksContent?.get?.('@Maia')) spark = '@Maia';
+        if (sparksContent?.get?.('@maia')) spark = '@maia';
       }
     } catch (_) {}
     if (spark == null) spark = '@maia';
@@ -237,7 +237,7 @@ async function main() {
     }
   }
 
-  const backend = new CoJSONBackend(node, account, { systemSpark: '@Maia' });
+  const backend = new CoJSONBackend(node, account, { systemSpark: '@maia' });
   const dbEngine = new DBEngine(backend);
   backend.dbEngine = dbEngine;
   const worker = { node, account, backend, dbEngine };

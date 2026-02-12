@@ -359,20 +359,8 @@ async function defaultMigration(account, node) {
 ### Our Custom Migration
 
 ```javascript
-// In libs/maia-self/src/minimalMigration.js
-export async function minimalMigration(account, node, creationProps) {
-  const profileGroup = node.createGroup();
-  
-  const profile = createCoMap(
-    profileGroup,
-    { name: creationProps?.name || "Maia User" }
-  );
-  
-  account.set("profile", profile.id);
-  
-  // Migration completes BEFORE withNewlyCreatedAccount() returns
-  // The account and profile are persisted by withNewlyCreatedAccount()
-}
+// Profile creation is handled by schemaMigration in libs/maia-db/src/migrations/schema.migration.js
+// Passed to LocalNode.withNewlyCreatedAccount as migration hook
 ```
 
 ### The Critical Timing
