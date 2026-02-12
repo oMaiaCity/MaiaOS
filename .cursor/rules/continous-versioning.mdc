@@ -93,6 +93,12 @@ gh pr merge <number> --rebase
 - **Trigger:** Push to `next`.
 - **Skips:** If the push is its own version-bump commit (avoids loop).
 - **Steps:** Generate version → `bun run version:sync <version>` → commit → tag → release.
+- **Requires:** `REPO_PAT` secret (PAT from repo admin) to push to protected `next`.
+
+**Protected branch setup:** GitHub Actions is not a bypass actor. Add **Repository admin** to the bypass list, then:
+1. Create a PAT (classic `repo` or fine-grained Contents: Read and write) from a repo admin.
+2. Add as repo secret `REPO_PAT`.
+3. Workflow pushes as that user; admin bypass allows it.
 
 ### Deploy Next (`.github/workflows/deploy-next.yml`)
 
