@@ -10,7 +10,16 @@
  *   node scripts/sync-assets.js --no-watch  # One-time sync only
  */
 
-import { copyFileSync, existsSync, mkdirSync, readdirSync, statSync, watch, unlinkSync, rmSync } from 'node:fs'
+import {
+	copyFileSync,
+	existsSync,
+	mkdirSync,
+	readdirSync,
+	rmSync,
+	statSync,
+	unlinkSync,
+	watch,
+} from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -20,11 +29,10 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const monorepoRoot = resolve(__dirname, '..')
 const brandAssetsDir = resolve(monorepoRoot, 'libs/maia-brand/src/assets')
 
-// Sync assets to maia service (services/maia/public/brand, includes favicon/)
-// Vite serves static files from 'public' directory by default
-const serviceStaticDirs = [
-	resolve(monorepoRoot, 'services/maia/public/brand'),
-]
+// Sync assets to maia service only (never to legacy maia-city)
+// services/maia/public/brand — Vite serves static files from 'public'
+const serviceStaticDirs = [resolve(monorepoRoot, 'services/maia/public/brand')]
+const legacyMaiaCityDir = resolve(monorepoRoot, 'services/maia-city')
 
 /**
  * Remove a single asset from all service static directories
@@ -64,7 +72,7 @@ function copyAssetToServices(relativePath) {
 		return
 	}
 
-	let copied = false
+	let _copied = false
 	serviceStaticDirs.forEach((staticDir) => {
 		try {
 			const targetPath = join(staticDir, relativePath)
@@ -76,7 +84,7 @@ function copyAssetToServices(relativePath) {
 			}
 
 			copyFileSync(sourcePath, targetPath)
-			copied = true
+			_copied = true
 			// Individual file logs removed - only show summary at end
 		} catch (_err) {}
 	})
@@ -111,7 +119,10 @@ function getAllFiles(dirPath, basePath = '') {
  * Sync all assets from brand package to maia service (preserves folder structure)
  */
 function syncAllAssets() {
-	// Sync status handled by dev.js logger
+	// Remove legacy maia-city (defensive: source unknown, may be created externally)
+	if (existsSync(legacyMaiaCityDir)) {
+		rmSync(legacyMaiaCityDir, { recursive: true, force: true })
+	}
 	if (!existsSync(brandAssetsDir)) {
 		return
 	}
@@ -149,7 +160,6 @@ function watchAssets() {
 	// Watch status handled by dev.js logger
 	watch(brandAssetsDir, { recursive: true }, (_eventType, filename) => {
 		if (filename && !filename.startsWith('.')) {
-			// Sync silently
 			copyAssetToServices(filename)
 		}
 	})
