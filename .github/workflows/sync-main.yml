@@ -1,0 +1,27 @@
+name: Sync Main
+
+on:
+  push:
+    branches: [next]
+
+jobs:
+  sync-main:
+    # Only run on [release] commits (when version-tag has run); skip merge commits
+    if: "github.event.head_commit != null && startsWith(github.event.head_commit.message, '[release] ')"
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+          fetch-depth: 0
+
+      - name: Merge next into main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout main
+          git pull origin main
+          git merge origin/next -m "[chore] sync main with next"
+          git push origin main
