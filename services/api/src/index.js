@@ -1,50 +1,32 @@
 /**
  * API Service
  * Unified API proxy for external services (RedPill LLM)
- * 
+ *
  * REST Endpoints:
- *   POST /api/v0/llm/chat - RedPill LLM chat completions (via Vercel AI SDK)
- * 
+ *   POST /api/v0/llm/chat - RedPill LLM chat completions (OpenAI-compatible API)
+ *
  * Port: From PUBLIC_DOMAIN_API env var (default: 4201)
  */
 
-import { generateText } from 'ai'
-import { createOpenAI } from '@ai-sdk/openai'
+const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || '';
+const PUBLIC_DOMAIN_API = process.env.PUBLIC_DOMAIN_API || 'localhost:4201';
 
-// Read environment variables
-// Bun automatically loads .env from root when using --env-file
-const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
-const PUBLIC_DOMAIN_API = process.env.PUBLIC_DOMAIN_API || 'localhost:4201'
-
-// Parse port from PUBLIC_DOMAIN_API (format: "hostname:port" or just "port")
 const parsePort = (domain) => {
-	const parts = domain.split(':')
+	const parts = domain.split(':');
 	if (parts.length > 1) {
-		const port = parseInt(parts[parts.length - 1], 10)
-		if (!isNaN(port)) return port
+		const port = parseInt(parts[parts.length - 1], 10);
+		if (!Number.isNaN(port)) return port;
 	}
-	// If no port specified, try parsing as number
-	const port = parseInt(domain, 10)
-	return !isNaN(port) ? port : 4201
-}
+	const port = parseInt(domain, 10);
+	return !Number.isNaN(port) ? port : 4201;
+};
 
-const PORT = parsePort(PUBLIC_DOMAIN_API)
+const PORT = parsePort(PUBLIC_DOMAIN_API);
 
-// Compact startup logs
 if (!RED_PILL_API_KEY) {
-	console.warn('[api] ⚠️  RED_PILL_API_KEY not set')
+	console.warn('[api] ⚠️  RED_PILL_API_KEY not set');
 }
 
-// Create RedPill provider instance using Vercel AI SDK
-// RedPill is OpenAI-compatible, so we use createOpenAI with custom baseURL
-const redpill = RED_PILL_API_KEY
-	? createOpenAI({
-			apiKey: RED_PILL_API_KEY,
-			baseURL: 'https://api.redpill.ai/v1',
-	  })
-	: null
-
-// Helper function to create JSON response
 function jsonResponse(data, status = 200) {
 	return new Response(JSON.stringify(data), {
 		status,
@@ -54,10 +36,9 @@ function jsonResponse(data, status = 200) {
 			'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 			'Access-Control-Allow-Headers': 'Content-Type',
 		},
-	})
+	});
 }
 
-// Helper function to handle CORS preflight
 function handleCORS() {
 	return new Response(null, {
 		status: 204,
@@ -66,102 +47,96 @@ function handleCORS() {
 			'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 			'Access-Control-Allow-Headers': 'Content-Type',
 		},
-	})
+	});
 }
 
-// Helper function to parse JSON body
 async function parseJSONBody(req) {
 	try {
-		return await req.json()
+		return await req.json();
+	} catch {
+		throw new Error('Invalid JSON body');
+	}
+}
+
+async function handleLLMChat(req) {
+	try {
+		if (!RED_PILL_API_KEY) {
+			return jsonResponse({ error: 'RED_PILL_API_KEY not configured' }, 500);
+		}
+
+		const body = await parseJSONBody(req);
+		const { messages, model = 'qwen/qwen3-30b-a3b-instruct-2507', temperature = 1 } = body;
+
+		if (!messages || !Array.isArray(messages) || messages.length === 0) {
+			return jsonResponse({ error: 'messages array is required' }, 400);
+		}
+
+		const response = await fetch('https://api.redpill.ai/v1/chat/completions', {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${RED_PILL_API_KEY}`,
+			},
+			body: JSON.stringify({
+				model,
+				messages,
+				temperature,
+			}),
+		});
+
+		if (!response.ok) {
+			const errText = await response.text();
+			let errData = { error: 'LLM request failed' };
+			try {
+				errData = JSON.parse(errText);
+			} catch {}
+			return jsonResponse(
+				{
+					error: errData.error || `HTTP ${response.status}`,
+					message: errData.message || errData.error?.message || errText.slice(0, 200),
+				},
+				500,
+			);
+		}
+
+		const data = await response.json();
+		const choice = data.choices?.[0];
+		const content = choice?.message?.content ?? '';
+		const usage = data.usage ?? null;
+
+		return jsonResponse({
+			content,
+			role: 'assistant',
+			usage,
+		});
 	} catch (error) {
-		throw new Error('Invalid JSON body')
+		return jsonResponse(
+			{
+				error: 'Failed to process LLM request',
+				message: error instanceof Error ? error.message : 'Unknown error',
+			},
+			500,
+		);
 	}
 }
 
 Bun.serve({
 	port: PORT,
-	fetch(req, server) {
-		const url = new URL(req.url)
-		
-		// Don't log requests - too verbose
+	fetch(req) {
+		const url = new URL(req.url);
 
-		// Handle CORS preflight
 		if (req.method === 'OPTIONS') {
-			return handleCORS()
+			return handleCORS();
 		}
 
-		// Health check endpoint
 		if (url.pathname === '/health') {
-			return jsonResponse({ status: 'ok', service: 'api' })
+			return jsonResponse({ status: 'ok', service: 'api' });
 		}
 
-		// LLM endpoint
 		if (url.pathname === '/api/v0/llm/chat' && req.method === 'POST') {
-			return handleLLMChat(req)
+			return handleLLMChat(req);
 		}
 
-		return new Response('Not Found', { status: 404 })
+		return new Response('Not Found', { status: 404 });
 	},
-})
-
-console.log(`[api] HTTP server on port ${PORT}`)
-
-// LLM endpoint handler
-// RedPill API endpoint is hardcoded, but model can be configured dynamically per request
-// Uses Vercel AI SDK with RedPill provider for better streaming support and unified API
-
-async function handleLLMChat(req) {
-	try {
-		if (!RED_PILL_API_KEY || !redpill) {
-			return jsonResponse({ error: 'RED_PILL_API_KEY not configured' }, 500)
-		}
-
-		const body = await parseJSONBody(req)
-		// Model is dynamically configurable via request payload - each tool call can specify which LLM to use
-		const { messages, model = 'qwen/qwen3-30b-a3b-instruct-2507', temperature = 1 } = body
-
-		if (!messages || !Array.isArray(messages) || messages.length === 0) {
-			return jsonResponse({ error: 'messages array is required' }, 400)
-		}
-
-		// Use Vercel AI SDK generateText with RedPill provider
-		// AI SDK v5+ defaults to Responses API; RedPill uses Chat Completions API, so use .chat()
-		const result = await generateText({
-			model: redpill.chat(model),
-			messages,
-			temperature,
-		})
-
-		const responseText = result.text || ''
-
-		// Map Vercel AI SDK response to existing format for backwards compatibility
-		return jsonResponse({
-			content: responseText,
-			role: 'assistant',
-			usage: result.usage || null,
-		})
-	} catch (error) {
-		// Error logged but don't spam console
-		
-		// Handle Vercel AI SDK errors
-		if (error instanceof Error) {
-			return jsonResponse(
-				{
-					error: 'Failed to process LLM request',
-					message: error.message,
-				},
-				500,
-			)
-		}
-
-		return jsonResponse(
-			{
-				error: 'Failed to process LLM request',
-				message: 'Unknown error',
-			},
-			500,
-		)
-	}
-}
-
-// Service ready message is handled by dev.js logger
+});

@@ -1,15 +1,1 @@
-{
-  "name": "api",
-  "version": "0.0.0",
-  "private": true,
-  "type": "module",
-  "scripts": {
-    "dev": "bun run src/index.js",
-    "start": "bun run src/index.js"
-  },
-  "dependencies": {
-    "@ai-sdk/openai": "^3.0.27",
-    "ai": "^6.0.81",
-    "zod": "^4.1.8"
-  }
-}
+{"name":"api","version":"0.0.0","private":true,"type":"module","scripts":{"dev":"bun run src/index.js","start":"bun run src/index.js"},"dependencies":{}}

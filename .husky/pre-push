@@ -10,6 +10,4 @@
 #   git commit -m "chore: bump version [skip ci]" --no-verify || true
 # fi
 
-# Option 2: Use semantic-release instead (RECOMMENDED)
-# Just use conventional commits (feat:, fix:) and run `bun run release`
-# This is better because it bumps based on commit types, not every commit
+# Option 2: Use conventional commits (feat:, fix:) for manual releases
