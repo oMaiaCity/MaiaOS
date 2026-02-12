@@ -43,7 +43,12 @@ vite.config.ts.timestamp-*
 **/zero-replica.db*
 **/*.db-journal
 
-# Brand assets (synced from libs/hominio-brand/src/assets/)
+# PGlite local dev data (moai sync server - never commit)
+**/pgdata/
+local-sync.db
+/tmp/pglite/
+
+# Brand assets (synced from libs/maia-brand/src/assets to services/maia/public/brand)
 **/static/brand/
 **/public/brand/
 **/node_modules

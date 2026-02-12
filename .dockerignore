@@ -1,3 +1,7 @@
 # Exclude workspace symlinks - they resolve to /libs/* in container (ENOENT)
 # The Dockerfile copies libs/* and builds node_modules fresh with bun install
+# Exclude .env - never use local env in Docker builds (would override build args)
 services/moai/node_modules
+.env
+.env.local
+.env.*.local

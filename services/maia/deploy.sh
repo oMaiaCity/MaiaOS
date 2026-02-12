@@ -26,12 +26,14 @@ retry_flyctl_deploy() {
     # For now, default to "all" - users can override via fly.toml [build] section if needed
     echo "   Using VITE_SEED_VIBES=all (default - seeds all vibes)"
     
-    # Run deploy and capture exit code
+    # Run deploy - explicit build args ensure VITE_PEER_MOAI is in bundle (sync domain)
     flyctl deploy \
       --dockerfile "$dockerfile" \
       --config "$config" \
       --app "$app_name" \
-      --wait-timeout 600 2>&1 | tee /tmp/flyctl-deploy.log
+      --wait-timeout 600 \
+      --build-arg VITE_PEER_MOAI=moai.next.maia.city \
+      --build-arg VITE_PEER_MAIA=next.maia.city 2>&1 | tee /tmp/flyctl-deploy.log
     
     local deploy_exit_code=${PIPESTATUS[0]}
     
@@ -94,19 +96,7 @@ echo ""
 
 cd "$MONOREPO_ROOT"
 
-# Build bundles and maia frontend (required before Docker - avoids workspace resolution in Docker)
-echo "📦 Building kernel, vibes, and maia frontend..."
-if ! bun run bundles:build; then
-  echo "❌ Failed to build bundles"
-  exit 1
-fi
-if ! (cd services/maia && NODE_ENV=production VITE_SEED_VIBES=all bunx vite build --mode production); then
-  echo "❌ Failed to build maia frontend"
-  exit 1
-fi
-echo "✅ Build complete"
-echo ""
-
+# Maia build runs in Docker - VITE_PEER_MOAI from fly.toml [build.args]
 if ! retry_flyctl_deploy \
   "next-maia-city" \
   "services/maia/Dockerfile" \
@@ -126,12 +116,5 @@ echo ""
 echo "✅ Deployment complete!"
 echo "   URL: https://next-maia-city.fly.dev"
 echo ""
-echo "⚠️  IMPORTANT: Verify PUBLIC_API_DOMAIN secret is set:"
-echo "   flyctl secrets list --app next-maia-city"
-echo ""
-echo "   If not set, sync will not work! Set it with:"
-echo "   flyctl secrets set PUBLIC_API_DOMAIN=\"sync-next-maia-city.fly.dev\" --app next-maia-city"
-echo "   (or for custom domain: sync.next.maia.city)"
-echo ""
-echo "   Note: VITE_SEED_VIBES defaults to \"all\" (seeds all vibes automatically)"
-echo "   To override: flyctl deploy --build-arg VITE_SEED_VIBES=\"todos,maia\" --app next-maia-city"
+echo "   Sync domain: VITE_PEER_MOAI from fly.toml [build.args] (moai.next.maia.city)"
+echo "   To override: fly deploy --build-arg VITE_PEER_MOAI=custom.domain.com --app next-maia-city"

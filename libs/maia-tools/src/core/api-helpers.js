@@ -6,18 +6,30 @@
 import { createErrorEntry } from '@MaiaOS/operations';
 
 /**
- * Get API base URL for local API service (LLM, memory, etc.)
+ * Get API base URL for moai service (LLM, sync, agent API).
  * In browser dev mode, returns '' for Vite proxy. Otherwise explicit URL.
+ *
+ * Browser: VITE_PEER_MOAI (build-time from fly.toml [build.args]).
+ * Node: process.env.PEER_MOAI (agent mode).
+ * Dev: localhost:4201. Prod: moai.next.maia.city
  */
 export function getApiBaseUrl() {
   if (typeof window !== 'undefined' && import.meta.env?.DEV) {
     return '';
   }
-  const domain = import.meta.env?.PUBLIC_DOMAIN_API || import.meta.env?.VITE_API_SERVICE_URL || 'localhost:4201';
+  const domain =
+    import.meta.env?.VITE_PEER_MOAI ||
+    (typeof process !== 'undefined' && process.env?.PEER_MOAI) ||
+    'localhost:4201';
   if (domain.startsWith('http://') || domain.startsWith('https://')) {
     return domain;
   }
-  return `http://${domain}`;
+  // Use https in production (next.maia.city), http for localhost
+  const secure =
+    domain.includes('localhost') || domain.includes('127.0.0.1')
+      ? 'http'
+      : 'https';
+  return `${secure}://${domain}`;
 }
 
 /**

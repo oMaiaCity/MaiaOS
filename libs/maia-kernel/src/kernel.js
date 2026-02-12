@@ -223,21 +223,17 @@ export class MaiaOS {
       // Import agent mode functions dynamically (to avoid circular dependencies)
       const { loadOrCreateAgentAccount } = await import('@MaiaOS/self');
 
-      // Get credentials from environment variables
-      // Note: Service-specific prefixes (SYNC_MAIA_*, CITY_MAIA_*) should be set by the service
-      // This is a fallback for direct MaiaOS.boot() calls
-      const accountID = (typeof process !== 'undefined' && process.env?.MAIA_AGENT_ACCOUNT_ID) ||
-                        (typeof import.meta !== 'undefined' && import.meta.env?.MAIA_AGENT_ACCOUNT_ID) ||
-                        (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MAIA_AGENT_ACCOUNT_ID);
-      const agentSecret = (typeof process !== 'undefined' && process.env?.MAIA_AGENT_SECRET) ||
-                          (typeof import.meta !== 'undefined' && import.meta.env?.MAIA_AGENT_SECRET) ||
-                          (typeof import.meta !== 'undefined' && import.meta.env?.VITE_MAIA_AGENT_SECRET);
+      // Get credentials from environment variables (PEER_ID, PEER_SECRET)
+      const accountID = (typeof process !== 'undefined' && process.env?.PEER_ID) ||
+                        (typeof import.meta !== 'undefined' && import.meta.env?.PEER_ID) ||
+                        (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PEER_ID);
+      const agentSecret = (typeof process !== 'undefined' && process.env?.PEER_SECRET) ||
+                          (typeof import.meta !== 'undefined' && import.meta.env?.PEER_SECRET) ||
+                          (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PEER_SECRET);
       
       if (!accountID || !agentSecret) {
         throw new Error(
-          'Agent mode requires MAIA_AGENT_ACCOUNT_ID and MAIA_AGENT_SECRET environment variables. ' +
-          'For services, use service-specific prefixes: SYNC_MAIA_* for sync service, CITY_MAIA_* for maia-city. ' +
-          'Run `bun agent:generate --service <service>` to generate credentials.'
+          'Agent mode requires PEER_ID and PEER_SECRET environment variables. Run `bun agent:generate` to generate credentials.'
         );
       }
       
@@ -269,7 +265,7 @@ export class MaiaOS {
     // This allows MaiaOS to boot immediately without waiting 5+ seconds for account.os to sync
     if (backend && typeof backend.ensureAccountOsReady === 'function') {
       // Start loading account.os in background (non-blocking)
-      // 15s timeout for slow sync (e.g. first load to sync.next.maia.city)
+      // 15s timeout for slow sync (e.g. first load to moai.next.maia.city)
       backend.ensureAccountOsReady({ timeoutMs: 15000 }).then(accountOsReady => {
         if (!accountOsReady) {
           console.warn('[MaiaOS.boot] account.os not ready yet - schema resolution will work once sync completes');

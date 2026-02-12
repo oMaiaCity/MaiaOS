@@ -1,33 +1,27 @@
 # Fly.io configuration for moai service
-app = "sync-next-maia-city"
+# Single machine only: deploy uses --ha=false and post-deploy runs fly scale count 1
+app = "moai-next-maia-city"
 org = "maia-city"
 primary_region = "fra"
 
-# IMPORTANT: Single machine deployment required for PGlite volume persistence
-# PGlite uses a single volume mounted at /data - multiple machines would cause data inconsistency
-# To enforce single machine: flyctl scale count 1 --app sync-next-maia-city
-# Note: Machine count is managed via flyctl scale, not in this config file
+[vm]
+  memory = "512mb"
+  swap_size_mb = 128
 
 [build]
   # Build from monorepo root with Dockerfile in services/moai/
   # Use: flyctl deploy --dockerfile services/moai/Dockerfile --config services/moai/fly.toml
-  # Note: dockerfile path must be specified via --dockerfile flag (relative to root)
 
 [env]
   PORT = "4201"
   NODE_ENV = "production"
-  DB_PATH = "/data/sync.db"
-  ACCOUNT_MODE = "agent"
-  AGENT_STORAGE = "pglite"
+  PEER_MODE = "sync"
+  PEER_STORAGE = "postgres"
 
-# Secrets (set via: fly secrets set AGENT_ID=... AGENT_SECRET=... RED_PILL_API_KEY=...)
-# AGENT_ID - Agent account ID (co_z...)
-# AGENT_SECRET - Agent secret (sealerSecret_.../signerSecret_...)
+# Secrets: set manually via fly secrets set
+# PEER_ID, PEER_SECRET - required
+# PEER_DB_URL - from Fly Postgres Connect tab "Set secret and deploy"
 # RED_PILL_API_KEY - Optional, for LLM chat
-
-[mounts]
-  source = "sync_data"
-  destination = "/data"
 
 [[services]]
   internal_port = 4201

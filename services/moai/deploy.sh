@@ -1,5 +1,5 @@
 #!/bin/bash
-# Deploy script for sync service to Fly.io
+# Deploy script for moai service to Fly.io
 
 set -e
 
@@ -23,7 +23,9 @@ retry_flyctl_deploy() {
       --dockerfile "$dockerfile" \
       --config "$config" \
       --app "$app_name" \
-      --wait-timeout 600 2>&1 | tee /tmp/flyctl-deploy.log; then
+      --wait-timeout 600 \
+      --auto-confirm \
+      --ha=false 2>&1 | tee /tmp/flyctl-deploy.log; then
       if flyctl status --app "$app_name" > /dev/null 2>&1; then
         echo "✅ Deployment verified: $app_name is running"
         return 0
@@ -53,20 +55,25 @@ retry_flyctl_deploy() {
 }
 
 echo "🚀 Deploying moai service to Fly.io..."
-echo "   App: sync-next-maia-city"
+echo "   App: moai-next-maia-city"
 echo ""
 
 cd "$MONOREPO_ROOT"
 
+# Secrets (PEER_ID, PEER_SECRET, PEER_DB_URL) must be set manually before deploy
 if ! retry_flyctl_deploy \
-  "sync-next-maia-city" \
+  "moai-next-maia-city" \
   "services/moai/Dockerfile" \
   "services/moai/fly.toml"; then
-  echo "❌ Failed to deploy sync service after retries"
+  echo "❌ Failed to deploy moai service after retries"
   exit 1
 fi
 
+# Enforce single machine for moai (sync service must not scale beyond 1)
+echo "Enforcing single machine..."
+flyctl scale count 1 --app moai-next-maia-city --yes
+
 echo ""
 echo "✅ Deployment complete!"
-echo "   Health check: https://sync-next-maia-city.fly.dev/health"
-echo "   WebSocket: wss://sync-next-maia-city.fly.dev/sync"
+echo "   Health check: https://moai-next-maia-city.fly.dev/health"
+echo "   WebSocket: wss://moai-next-maia-city.fly.dev/sync"

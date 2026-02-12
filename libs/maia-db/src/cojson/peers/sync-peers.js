@@ -48,11 +48,10 @@ export function setupSyncPeers(syncDomain = null) {
 	const isDev = import.meta.env?.DEV || (typeof window !== 'undefined' && window.location.hostname === 'localhost');
 	
 	// Use syncDomain from kernel if provided (single source of truth)
-	// Fall back to env vars if syncDomain not provided
-	const apiDomain = syncDomain || 
-	                  (typeof window !== 'undefined' && window.__PUBLIC_API_DOMAIN__) || 
-	                  import.meta.env?.PUBLIC_API_DOMAIN ||
-	                  (typeof process !== 'undefined' && process.env?.PUBLIC_API_DOMAIN);
+	// Browser: VITE_PEER_MOAI (build-time, from fly.toml [build.args]). Node: process.env.PEER_MOAI (agent mode)
+	const apiDomain = syncDomain ||
+	                  import.meta.env?.VITE_PEER_MOAI ||
+	                  (typeof process !== 'undefined' && process.env?.PEER_MOAI);
 	
 	let syncServerUrl;
 	if (typeof window === 'undefined') {
@@ -67,7 +66,7 @@ export function setupSyncPeers(syncDomain = null) {
 		const protocol = syncDomain.includes('localhost') || syncDomain.includes('127.0.0.1') ? 'ws:' : 'wss:';
 		syncServerUrl = `${protocol}//${syncDomain}/sync`;
 	} else if (isDev) {
-		// Browser dev: Use relative path, Vite proxy forwards to localhost:4201
+		// Browser dev: Use relative path, Vite proxy forwards to localhost:4201 (legacy approach)
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 		syncServerUrl = `${protocol}//${window.location.host}/sync`;
 	} else if (apiDomain) {
@@ -84,7 +83,7 @@ export function setupSyncPeers(syncDomain = null) {
 	if (isDev) {
 	} else {
 		console.log(`   Sync Domain: ${apiDomain || '(not set - using same origin fallback)'}`);
-		console.log(`   Source: ${syncDomain ? 'kernel' : (typeof window !== 'undefined' && window.__PUBLIC_API_DOMAIN__ ? 'runtime env' : (import.meta.env?.PUBLIC_API_DOMAIN ? 'build-time env' : 'fallback'))}`);
+		console.log(`   Source: ${syncDomain ? 'kernel' : import.meta.env?.VITE_PEER_MOAI ? 'build-time' : 'fallback'}`);
 	}
 	
 	let node = undefined;
@@ -171,7 +170,7 @@ export function setupSyncPeers(syncDomain = null) {
 			if (!syncState.connected) {
 				console.error(`❌ [SYNC] Connection timeout after 10s. Check:`);
 				console.error(`   1. Sync service is running: curl https://${apiDomain || window.location.hostname}/health`);
-				console.error(`   2. PUBLIC_API_DOMAIN is set correctly: ${apiDomain || 'NOT SET'}`);
+				console.error(`   2. PEER_MOAI is set correctly: ${apiDomain || 'NOT SET'}`);
 				console.error(`   3. WebSocket URL: ${syncServerUrl}`);
 				syncState = { connected: false, syncing: false, error: "Connection timeout", status: 'error' };
 				notifySyncStateChange();

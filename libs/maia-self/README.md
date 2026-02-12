@@ -45,7 +45,7 @@ bun add @MaiaOS/self
 MaiaOS uses a self-hosted sync service for cross-device account persistence. The sync service URL is determined automatically:
 
 - **Development**: Uses relative path `/sync` (Vite proxy forwards to `localhost:4201`)
-- **Production**: Uses `PUBLIC_API_DOMAIN` environment variable or same origin
+- **Production**: Uses `PEER_MOAI` environment variable or same origin
 
 **Why needed?** Without sync service, accounts can't persist across devices. IndexedDB handles same-browser persistence, sync service enables cross-device sync.
 

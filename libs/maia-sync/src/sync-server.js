@@ -1,30 +1,33 @@
 /**
  * Sync Server Implementation
  * Bun WebSocket handler for cojson LocalNode sync.
+ *
+ * Config via options only – no process.env. Caller (e.g. moai) reads env and passes:
+ *   { accountID, agentSecret, dbPath?, inMemory? }
  */
 
 import { createWebSocketPeer } from 'cojson-transport-ws';
 import { loadOrCreateAgentAccount } from '@MaiaOS/kernel';
 
+/**
+ * @param {Object} options
+ * @param {string} options.accountID - Required, from PEER_ID
+ * @param {string} options.agentSecret - Required, from PEER_SECRET
+ * @param {string} [options.dbPath] - PGlite path when inMemory is false
+ * @param {boolean} [options.inMemory=true] - Use in-memory storage
+ */
 export async function createSyncServer(options = {}) {
-  const { inMemory = true, dbPath, accountID: providedAccountID, agentSecret: providedAgentSecret } = options;
-
-  const accountID = providedAccountID || (typeof process !== 'undefined' && process.env?.SYNC_MAIA_AGENT_ACCOUNT_ID) || null;
-  const agentSecret = providedAgentSecret || (typeof process !== 'undefined' && process.env?.SYNC_MAIA_AGENT_SECRET) || null;
+  const { accountID, agentSecret, dbPath, inMemory = true } = options;
 
   if (!accountID || !agentSecret) {
-    throw new Error(
-      'Sync server requires SYNC_MAIA_AGENT_ACCOUNT_ID and SYNC_MAIA_AGENT_SECRET environment variables. ' +
-      'Run `bun agent:generate --service sync` to generate credentials.'
-    );
+    throw new Error('createSyncServer requires accountID and agentSecret options. Caller reads env (PEER_ID, PEER_SECRET) and passes them.');
   }
 
   const { node: localNode } = await loadOrCreateAgentAccount({
     accountID,
     agentSecret,
     syncDomain: null,
-    servicePrefix: 'SYNC',
-    dbPath: (!inMemory && dbPath) ? dbPath : undefined,
+    dbPath: inMemory ? undefined : dbPath,
     inMemory,
     createName: 'Maia Sync Server',
   });

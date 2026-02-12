@@ -62,7 +62,7 @@ Configure `LocalNode` to connect to the sync service via WebSocket.
 
 **Parameters:**
 - `options.node` (LocalNode, required) - The LocalNode instance to configure
-- `options.syncDomain` (string, optional) - Sync service domain (defaults to relative `/sync` in browser, or `PUBLIC_API_DOMAIN` env var)
+- `options.syncDomain` (string, optional) - Sync service domain (defaults to relative `/sync` in browser, or `PEER_MOAI` env var)
 
 **Returns:** `Promise<void>`
 
@@ -76,7 +76,7 @@ const { node, account } = await signUpWithPasskey();
 // Configure sync peers (connects to sync service automatically)
 await setupSyncPeers({
   node,
-  syncDomain: 'wss://sync.maia.city' // Optional, defaults to relative path
+  syncDomain: 'moai.next.maia.city' // Optional, defaults to relative path in dev
 });
 ```
 

@@ -91,6 +91,12 @@ Read the documentation in the following order for a complete understanding:
 - What could be persisted (machine state, history)
 - maia-sync `inMemory` vs `dbPath` for production
 
+### 8. [Deployment](./09_deployment/README.md)
+**Production deployment and DNS setup**
+- Fly.io deployment (maia + moai services)
+- Custom domain and DNS configuration (Hetzner)
+- Troubleshooting sync, WebSocket, and TLS
+
 ---
 
 ## Contributing

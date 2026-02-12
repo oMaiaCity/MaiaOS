@@ -217,7 +217,13 @@ export async function loadAccount({ accountID, agentSecret, peers = [], storage 
 	
 	console.log("   Sync peers:", peers.length > 0 ? `${peers.length} peer(s)` : 'none');
 	const storageLabel = storage
-		? (typeof process !== 'undefined' && process.versions?.node ? 'PGlite available (local-first)' : 'IndexedDB available (local-first)')
+		? (typeof process !== 'undefined' && process.versions?.node
+			? (process.env.PEER_STORAGE === 'postgres'
+				? 'Postgres'
+				: process.env.PEER_STORAGE === 'pglite'
+					? 'PGlite'
+					: process.env.PEER_STORAGE || 'storage') + ' available (local-first)'
+			: 'IndexedDB available (local-first)')
 		: 'no storage (sync-only)';
 	console.log("   Storage:", storageLabel);
 

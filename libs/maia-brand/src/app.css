@@ -4,7 +4,7 @@
 @theme {
 	/* Font Families */
 	--font-sans: "Inter", system-ui, sans-serif;
-	--font-title: "Shrikhand", cursive;
+	--font-title: "Indie Flower", cursive;
 
 	/* Brand Colors - Primary (Marine Blue/Navy) */
 	--color-primary-50: #e6ecf7;
@@ -158,19 +158,10 @@
 
 /* Font Face Declarations */
 
-/* Shrikhand - Title Font */
-@font-face {
-	font-family: "Shrikhand";
-	src: url("/brand/fonts/Shrikhand/Shrikhand-Regular.ttf") format("truetype");
-	font-weight: 400;
-	font-style: normal;
-	font-display: swap;
-}
-
 /* Base styles */
 :root {
 	--font-sans: "Inter", system-ui, sans-serif;
-	--font-title: "Shrikhand", cursive;
+	--font-title: "Indie Flower", cursive;
 
 	/* Container Query Breakpoints */
 	--container-3xs: 20rem; /* 320px */
@@ -587,7 +578,7 @@ body::after {
 	border-bottom: 1px solid rgba(255, 255, 255, 0.1); /* border-white/10 */
 }
 
-/* Global Typography - Shrikhand Title Font with Brand Navy Color */
+/* Global Typography - Title Font with Brand Navy Color */
 h1,
 h2,
 h3,

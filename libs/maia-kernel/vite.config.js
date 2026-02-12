@@ -22,12 +22,17 @@ export default defineConfig({
 				if (id === '@electric-sql/pglite' || id.includes('@electric-sql/pglite')) {
 					return true;
 				}
+				// Externalize pg (node-postgres) - server-only, never used in browser
+				if (id === 'pg' || id.startsWith('pg/')) {
+					return true;
+				}
 				return false;
 			},
 			output: {
 				// Globals for external modules (UMD format only)
 				globals: {
-					'@electric-sql/pglite': 'pglite'
+					'@electric-sql/pglite': 'pglite',
+					pg: 'pg',
 				},
 				// Disable code splitting for ESM to avoid dynamic import issues
 				// All modules will be in a single file
@@ -40,8 +45,8 @@ export default defineConfig({
 					warning.code === 'THIS_IS_UNDEFINED' ||
 					// Circular dependencies in cojson are handled correctly
 					warning.code === 'CIRCULAR_DEPENDENCY' ||
-					// PGlite uses Node.js fs/path which are externalized for browser - expected
-					(warning.code === 'MISSING_EXPORT' && warning.id?.includes('pglite')) ||
+					// PGlite/pg use Node.js modules - externalized for browser - expected
+					(warning.code === 'MISSING_EXPORT' && (warning.id?.includes('pglite') || warning.id?.includes('pg'))) ||
 					// PGlite uses eval for WASM - acceptable for this use case
 					(warning.code === 'EVAL' && warning.id?.includes('pglite'))
 				) {
@@ -85,11 +90,37 @@ export default defineConfig({
 	},
 	plugins: [
 		{
-			name: 'externalize-pglite-dynamic',
-			// Handle dynamic imports of pglite - mark as external so browser doesn't try to resolve
-			resolveId(id, importer) {
+			name: 'stub-server-storage-adapters',
+			// PGlite and Postgres are server-only. Replace with stubs so browser bundle
+			// never pulls in Node modules (fs, path, net, pg). getStorage returns early for browser (IndexedDB).
+			load(id) {
+				if (id.includes('maia-storage') && id.includes('adapters/pglite')) {
+					return `export async function createPGliteAdapter() {
+  throw new Error('[STORAGE] PGlite is server-only - use IndexedDB in browser');
+}
+export async function getPGliteStorage() {
+  throw new Error('[STORAGE] PGlite is server-only - use IndexedDB in browser');
+}`;
+				}
+				if (id.includes('maia-storage') && id.includes('adapters/postgres')) {
+					return `export async function createPostgresAdapter() {
+  throw new Error('[STORAGE] Postgres is server-only - use IndexedDB in browser');
+}
+export async function getPostgresStorage() {
+  throw new Error('[STORAGE] Postgres is server-only - use IndexedDB in browser');
+}`;
+				}
+				return null;
+			}
+		},
+		{
+			name: 'externalize-server-only-modules',
+			// Handle dynamic imports - mark as external so browser doesn't try to resolve
+			resolveId(id) {
 				if (id === '@electric-sql/pglite' || id.includes('@electric-sql/pglite')) {
-					// Mark as external - browser will handle this at runtime (and fail gracefully)
+					return { id: id, external: true };
+				}
+				if (id === 'pg' || id.startsWith('pg/')) {
 					return { id: id, external: true };
 				}
 				return null;

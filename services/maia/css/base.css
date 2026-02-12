@@ -1,15 +1,16 @@
+/* Local fonts from maia-brand (IndieFlower + Plus Jakarta Sans) */
 @font-face {
-  font-family: 'Shrikhand';
-  src: url('/brand/fonts/Shrikhand/Shrikhand-Regular.ttf') format('truetype');
+  font-family: 'Indie Flower';
+  src: url('/brand/fonts/IndieFlower/IndieFlower-Regular.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
 }
 
 @font-face {
-  font-family: 'Alice';
-  src: url('/brand/fonts/Alice/Alice-Regular.ttf') format('truetype');
-  font-weight: 400;
+  font-family: 'Plus Jakarta Sans';
+  src: url('/brand/fonts/Jarkata/PlusJakartaSans-VariableFont_wght.ttf') format('truetype');
+  font-weight: 100 800;
   font-style: normal;
   font-display: swap;
 }

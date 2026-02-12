@@ -2,14 +2,14 @@
 alwaysApply: true
 ---
 
-# Hominio Monorepo Architecture
+# MaiaOS Monorepo Architecture
 
 This repository is organized as a **Bun monorepo** using workspaces for better code organization and shared library management.
 
 ## Repository Structure
 
 ```
-hominio/ (root)
+MaiaOS/ (root)
 ├── package.json          # Root workspace configuration + root-level scripts
 ├── bun.lockb             # Bun lockfile (shared across workspaces)
 ├── .env                  # Root-level environment variables (all services/libs)
@@ -18,34 +18,32 @@ hominio/ (root)
 ├── .cursor/
 │   └── rules/            # Cursor IDE rules
 ├── services/             # Application services
-│   ├── app/              # Main application workspace
-│   │   ├── package.json  # App-specific dependencies
-│   │   ├── src/          # SvelteKit source code
-│   │   ├── src-tauri/    # Tauri backend (Rust)
-│   │   └── ...           # App-specific config files
-│   ├── website/          # Landing page service
-│   │   ├── package.json  # Service-specific dependencies
-│   │   ├── index.html    # Landing page
+│   ├── maia/             # Frontend SPA (next.maia.city)
+│   │   ├── package.json
+│   │   ├── main.js       # Vite-built SPA entry
+│   │   ├── server.js    # Static file server (Bun)
 │   │   └── vite.config.js
-│   └── wallet/           # Auth service (BetterAuth API)
-│       ├── package.json  # Service-specific dependencies
-│       ├── src/          # SvelteKit API routes
-│       └── vite.config.js
-└── libs/                 # Shared libraries directory
-    └── [package-name]/   # Individual shared packages
+│   └── moai/             # Sync + API service (moai.next.maia.city)
+│       ├── package.json
+│       └── src/          # WebSocket sync, agent API, LLM proxy
+└── libs/                 # Shared libraries (@MaiaOS/*)
+    └── maia-*/           # maia-db, maia-kernel, maia-tools, etc.
         ├── package.json
         └── src/
 ```
 
 ## Workspace Organization
 
-### `services/app/` - Main Application
-The primary application workspace containing:
-- **Frontend**: SvelteKit application with Tailwind CSS
-- **Backend**: Tauri (Rust) for desktop and iOS builds
-- **Dependencies**: All app-specific dependencies declared here
-- **Scripts**: Build, dev, and release scripts
-- **Version Management**: Uses semantic-release for automated versioning
+### `services/maia/` - Frontend SPA
+- **Port 4200** (dev)
+- Vite-built SPA served by Bun static server
+- Connects to moai for sync (WebSocket) and API (LLM)
+- Sync domain: `VITE_PEER_MOAI` at build time (fly.toml [build.args])
+
+### `services/moai/` - Sync + API
+- **Port 4201** (dev)
+- Unified: WebSocket sync (cojson LocalNode), agent API, LLM proxy
+- Secrets: `PEER_ID`, `PEER_SECRET`, `RED_PILL_API_KEY`, etc. (no PEER_MOAI for maia deploy)
 
 ### `libs/` - Shared Libraries
 Reusable packages that can be shared across multiple workspaces:
@@ -76,42 +74,30 @@ Each workspace can depend on other workspaces (services or libs) using the `work
 
 1. **Service depends on Library:**
 ```json
-// services/app/package.json
+// services/maia/package.json
 {
   "dependencies": {
-    "@hominio/shared-utils": "workspace:*",
-    "@hominio/ui-components": "workspace:*"
+    "@MaiaOS/db": "workspace:*",
+    "@MaiaOS/kernel": "workspace:*"
   }
 }
 ```
 
-2. **Service depends on another Service:**
+2. **Library depends on another Library:**
 ```json
-// services/api/package.json
+// libs/maia-kernel/package.json
 {
   "dependencies": {
-    "@hominio/shared-utils": "workspace:*",
-    "app": "workspace:*"  // Can depend on other services
-  }
-}
-```
-
-3. **Library depends on another Library:**
-```json
-// libs/ui-components/package.json
-{
-  "dependencies": {
-    "@hominio/shared-utils": "workspace:*"  // Libs can depend on other libs
+    "@MaiaOS/db": "workspace:*",
+    "@MaiaOS/tools": "workspace:*"
   }
 }
 ```
 
 **Usage in Code:**
 ```javascript
-// In services/app/src/some-file.js
-import { someUtil } from "@hominio/shared-utils";
-import { Button } from "@hominio/ui-components";
-import { apiClient } from "app"; // If app depends on another service
+import { setupSyncPeers } from "@MaiaOS/db";
+import { getApiBaseUrl } from "@MaiaOS/tools";
 ```
 
 **Important Notes:**
@@ -131,7 +117,7 @@ import { apiClient } from "app"; // If app depends on another service
 2. **Create package.json:**
    ```json
    {
-     "name": "@hominio/my-shared-lib",
+     "name": "@MaiaOS/my-lib",
      "version": "0.1.23",
      "type": "module",
      "main": "src/index.js",
@@ -139,8 +125,7 @@ import { apiClient } from "app"; // If app depends on another service
        ".": "./src/index.js"
      },
      "dependencies": {
-       // Can depend on other libs or external packages
-       "@hominio/another-lib": "workspace:*"
+       "@MaiaOS/db": "workspace:*"
      }
    }
    ```
@@ -162,17 +147,11 @@ import { apiClient } from "app"; // If app depends on another service
    ```json
    {
      "dependencies": {
-       "@hominio/my-shared-lib": "workspace:*"
+       "@MaiaOS/my-lib": "workspace:*"
      }
    }
    ```
    Then run `bun install` from root.
-
-6. **Import and use:**
-   ```javascript
-   // In any service or lib
-   import { someFunction } from "@hominio/my-shared-lib";
-   ```
 
 ## Development Workflow
 
@@ -182,57 +161,43 @@ import { apiClient } from "app"; // If app depends on another service
 ```bash
 bun install                    # Install dependencies for all workspaces
 bun dev                        # Run maia (4200) and moai (4201) in parallel
-bun dev:maia                   # Run only maia service dev server (port 4200)
-bun dev:moai                   # Run only moai service dev server (port 4203)
-bun dev:app                    # Run only app dev server (port 4202)
-bun build                      # Build app (delegates to services/app)
-bun build:maia                 # Build maia service (delegates to services/maia)
-bun release                    # Run semantic-release (delegates to services/app)
-bun tauri:dev                  # Run Tauri dev (delegates to services/app)
+bun dev:maia                   # Run only maia dev server (port 4200)
+bun dev:moai                   # Run only moai dev server (port 4201)
+bun release                    # Run semantic-release
+bun deploy                     # Deploy maia + moai to Fly.io
 ```
 
-**Note:** `bun dev` runs both website and app services in parallel using shell `&` operator. Both services start simultaneously and output is interleaved. Use `bun dev:website`, `bun dev:wallet`, or `bun dev:app` to run a single service for cleaner output.
+**Note:** `bun dev` runs maia (4200) and moai (4201) in parallel. Use `bun dev:maia` or `bun dev:moai` for a single service.
 
 **From specific workspace (alternative):**
 ```bash
-cd services/app
-bun run dev                    # Run app dev server
-bun run tauri:dev              # Run Tauri dev
-bun run build                  # Build app
-
-cd services/website
-bun run dev                    # Run website service dev server
-bun run build                  # Build website service
+cd services/maia
+bun run dev                    # Run maia dev server (4200)
+bun run build                  # Build maia (Vite)
 
 cd services/moai
-bun run dev                    # Run moai service dev server
-bun run build                  # Build sync service
+bun run dev                    # Run moai dev server (4201)
+bun run build                  # Build moai
 ```
 
 ### Building
 
 Each workspace builds independently:
 ```bash
-# From root (recommended)
-bun build                      # Build app
-
-# Or from workspace
-cd services/app && bun run build        # Build app
-cd libs/my-lib && bun run build         # Build shared library (if it has build script)
+cd services/maia && bun run build       # Build maia (bundles + Vite)
+cd services/moai && bun run build      # Build moai
+cd libs/maia-kernel && bun run build    # Build kernel bundle
 ```
 
 ## Version Management
 
 - **Centralized versioning**: All services and libraries share the **same version number** across the entire monorepo
-- **Single source of truth**: Version is managed in `services/app/package.json` via semantic-release
+- **Single source of truth**: Version is managed in `services/maia/package.json` via semantic-release
 - **Automatic sync**: When a release is created, versions are automatically synced to:
   - All `services/*/package.json` files
   - All `libs/*/package.json` files
-  - `services/app/src-tauri/Cargo.toml` (Rust)
-  - `services/app/src-tauri/tauri.conf.json` (Tauri)
-  - `services/app/src-tauri/gen/apple/app_iOS/Info.plist` (iOS)
-  - `services/app/src-tauri/gen/apple/project.yml` (iOS)
-- **Release workflow**: Configured for `services/app/` workspace, but affects all packages
+  - (Tauri/Rust/iOS if present in services)
+- **Release workflow**: Affects all packages in the monorepo
 - **Root-level commands**: 
   - `bun version:sync <version>` - Manually sync version across all packages
   - `bun release` - Run semantic-release (analyzes commits, bumps version, creates release)
@@ -251,7 +216,7 @@ cd libs/my-lib && bun run build         # Build shared library (if it has build 
 1. **Keep root minimal**: Only workspace configuration at root
 2. **Self-contained workspaces**: Each workspace should be independently buildable
 3. **Shared code in libs/**: Don't duplicate code - extract to shared libraries
-4. **Clear naming**: Use `@hominio/` prefix for internal packages
+4. **Clear naming**: Use `@MaiaOS/` prefix for internal packages
 5. **Dependency management**: 
    - Use `workspace:*` for internal dependencies
    - Avoid circular dependencies (Bun will warn)
@@ -266,10 +231,10 @@ cd libs/my-lib && bun run build         # Build shared library (if it has build 
 Each service in the monorepo has a **hardcoded development port** to avoid conflicts and ensure consistency across team members. Ports are assigned sequentially from a safe range.
 
 **Port Range: 4200-4210**
-- Reserved for Hominio services (up to 11 services)
+- Reserved for MaiaOS services
 - Avoids conflicts with common framework defaults:
   - `3000-3010`: Next.js, Express, Create React App
-  - `5173`: Vite (used by `app` service)
+  - `5173`: Vite default
   - `8080-8090`: Common web servers
   - `8000-8010`: Django, some Node apps
   - `5000-5010`: Flask, some Node apps
@@ -277,12 +242,9 @@ Each service in the monorepo has a **hardcoded development port** to avoid confl
 **Current Port Assignments:**
 | Service | Port | Notes |
 |---------|------|-------|
-| `services/maia` | `4200` | Landing page (default `bun dev`) |
-| `services/app` | `4202` | Main application (Tauri-compatible) |
+| `services/maia` | `4200` | Frontend SPA (default `bun dev`) |
 | `services/moai` | `4201` | Unified sync (WebSocket + agent API + LLM proxy) |
-| `services/[service-4]` | `4204` | Reserved |
-| ... | ... | ... |
-| `services/[service-10]` | `4210` | Reserved |
+| `4202-4210` | Reserved | |
 
 **Configuration:**
 - Ports are configured in each service's `vite.config.js` or server configuration
@@ -291,10 +253,10 @@ Each service in the monorepo has a **hardcoded development port** to avoid confl
 
 **Example Vite Config:**
 ```javascript
-// services/app/vite.config.js
+// services/maia/vite.config.js
 export default defineConfig({
   server: {
-    port: process.env.PORT || 4201, // Hardcoded default
+    port: process.env.PORT || 4200,
     strictPort: true,
   },
 });
@@ -310,15 +272,21 @@ export default defineConfig({
 
 **Structure:**
 ```
-hominio/
+MaiaOS/
 ├── .env                    # Root-level env vars (all services/libs)
 ├── services/
-│   └── app/
+│   └── maia/
 │       └── .env.local      # Optional: service-specific overrides (gitignored)
 └── libs/
     └── [lib]/
         └── .env.local      # Optional: lib-specific overrides (gitignored)
 ```
+
+**Vite vs Non-Vite Env Vars:**
+- **VITE_*** prefix: Exposed to client via `import.meta.env.VITE_*`. Inlined at build time into the bundle. Use for public client-side config (sync domains, API URLs).
+- **Non-VITE_** prefix: Only in Node at build/serve. Not exposed to client (security). Use for secrets, DB URLs, server-only config.
+- **Build-time preferred** for per-environment public config: Pass via Dockerfile ARG + fly.toml [build.args]. No runtime injection or globals needed.
+- **Runtime only when required**: e.g. feature flags that change without rebuild. For stable per-deploy config, build-time is cleaner.
 
 **Best Practices:**
 - Keep all production secrets in root `.env` (or CI/CD secrets)
@@ -327,20 +295,10 @@ hominio/
 - Use `process.env` or `$env` (SvelteKit) to access variables
 - Create `.env.example` at root documenting all required variables (without sensitive values)
 
-**Example Root .env Structure:**
-```bash
-# Root .env file (all services/libs)
-NODE_ENV=development
-
-# Service-specific ports (hardcoded in config, documented here)
-# PUBLIC_DOMAIN_ME=localhost:4200 (maia service)
-# PUBLIC_DOMAIN_API=localhost:4201 (api service - RedPill LLM)
-# PUBLIC_DOMAIN_APP=localhost:4202 (app service)
-# PUBLIC_DOMAIN_SYNC=localhost:4203 (sync service, future)
-
-# Library-specific vars (delegated to libs/*)
-# LIBS_SHARED_UTILS_API_KEY=your-key
-```
+**Peer / Sync Domain:**
+- **Maia (frontend)**: `VITE_PEER_MOAI` at build time only (fly.toml [build.args]). No PEER_MOAI Fly secret.
+- **Moai (agent mode)**: `PEER_MOAI` when PEER_MODE=agent (future). Not used for normal sync deployment.
+- **PEER_MAIA**: Not used in code at present. Leave unset.
 
 ## Common Commands
 
@@ -351,23 +309,18 @@ bun install
 # Run development server (from root)
 bun dev
 
-# Build (from root)
-bun build
+# Build maia (from services/maia)
+cd services/maia && bun run build
 
-# Run semantic-release (from root)
-bun release
 
-# Add dependency to app workspace
-cd services/app && bun add <package>
+# Add dependency to maia
+cd services/maia && bun add <package>
 
 # Add dependency to shared library
-cd libs/my-lib && bun add <package>
+cd libs/maia-db && bun add <package>
 
-# Run script in specific workspace using filter
-bun --filter app dev
-
-# Run script in all workspaces
-bun --filter '*' build
+# Run script in specific workspace
+bun --filter maia dev
 ```
 
 ## Notes

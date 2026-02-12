@@ -14,7 +14,7 @@ import { createLogger, bootHeader, bootFooter } from './logger.js'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = resolve(__dirname, '..')
 
-let maiaCityProcess = null
+let maiaProcess = null
 let moaiProcess = null
 let docsWatcherProcess = null
 let assetSyncProcess = null
@@ -124,6 +124,12 @@ function processOutput(service, data, isError = false) {
 			continue
 		}
 		
+		// Passthrough: moai/sync init progress (PGlite, account loading)
+		if (service === 'moai' && (trimmed.startsWith('[sync]') || trimmed.startsWith('[STORAGE]'))) {
+			logger.log(trimmed)
+			continue
+		}
+
 		// Skip remaining verbose output
 		if (trimmed.includes('$') || trimmed.includes('│') || trimmed.includes('└─')) {
 			continue
@@ -135,7 +141,6 @@ function maybeLogBrandReady() {
 	if (serviceStatus.favicons && serviceStatus.assets && !serviceStatus._brandLogged) {
 		serviceStatus._brandLogged = true
 		serviceStatus.brand = true
-		createLogger('brand').success('Favicons and assets ready')
 	}
 }
 
@@ -155,88 +160,77 @@ function checkAllReady() {
 	}
 }
 
-async function startMaiaCity() {
+async function startMaia() {
 	const logger = createLogger('maia')
 	
-	// Check for port conflicts and kill existing maia processes
+	// Free port 4200 if in use - target LISTENER only (not client connections)
 	try {
-		const portCheck = execSync(`lsof -ti:4200 2>/dev/null | head -1`, { encoding: 'utf-8' }).trim()
+		const portCheck = execSync(`lsof -ti:4200 -sTCP:LISTEN 2>/dev/null | head -1`, { encoding: 'utf-8' }).trim()
 		if (portCheck) {
 			const processInfo = execSync(`ps -p ${portCheck} -o command= 2>/dev/null`, { encoding: 'utf-8' }).trim()
-			if (processInfo && (processInfo.includes('vite') || processInfo.includes('maia') || processInfo.includes('bun'))) {
-				// It's a vite/maia process - kill it automatically
-				console.log(`[maia] Killing existing process ${portCheck} on port 4200...`)
+			logger.warn(`Port 4200 in use by: ${processInfo || 'unknown'}. Attempting to free...`)
+			try {
+				execSync(`kill ${portCheck} 2>/dev/null`, { timeout: 2000 })
+				await new Promise(r => setTimeout(r, 800))
+			} catch (e) {
 				try {
-					execSync(`kill ${portCheck} 2>/dev/null`, { timeout: 2000 })
-					// Wait a moment for the port to be released
-					setTimeout(() => {}, 500)
-				} catch (e) {
-					// If kill fails, try force kill
-					try {
-						execSync(`kill -9 ${portCheck} 2>/dev/null`, { timeout: 2000 })
-						setTimeout(() => {}, 500)
-					} catch (e2) {
-						console.warn(`[maia] ⚠️  Could not kill process ${portCheck}, port may still be in use`)
-					}
+					execSync(`kill -9 ${portCheck} 2>/dev/null`, { timeout: 2000 })
+					await new Promise(r => setTimeout(r, 800))
+				} catch (e2) {
+					logger.error(`Could not free port 4200. Kill manually: kill ${portCheck}`)
+					process.exit(1)
 				}
-			} else if (processInfo) {
-				// It's a different process - warn user
-				console.warn(`[maia] ⚠️  WARNING: Port 4200 is already in use by: ${processInfo}`)
-				console.warn(`[maia] Please kill process ${portCheck} before starting: kill ${portCheck}`)
 			}
 		}
 	} catch (e) {
 		// Port is free or check failed - continue
 	}
 	
-	maiaCityProcess = spawn('bun', ['--env-file=.env', '--filter', 'maia', 'dev'], {
+	maiaProcess = spawn('bun', ['--env-file=.env', '--filter', 'maia', 'dev'], {
 		cwd: rootDir,
 		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,
 		env: { ...process.env },
 	})
 	
-	maiaCityProcess.stdout.on('data', (data) => {
+	maiaProcess.stdout.on('data', (data) => {
 		processOutput('maia', data)
 	})
 	
-	maiaCityProcess.stderr.on('data', (data) => {
+	maiaProcess.stderr.on('data', (data) => {
 		processOutput('maia', data, true)
 	})
 
-	maiaCityProcess.on('error', (_error) => {
+	maiaProcess.on('error', (_error) => {
 		process.exit(1)
 	})
 
-	maiaCityProcess.on('exit', (code) => {
+	maiaProcess.on('exit', (code) => {
 		if (code !== 0 && code !== null) {
 			process.exit(code)
 		}
 	})
 }
 
-function startMoai() {
+async function startMoai() {
 	const logger = createLogger('moai')
-	// Check for port conflicts and kill existing moai processes
+	// Free port 4201 if in use - target LISTENER only (not client connections)
 	try {
-		const portCheck = execSync(`lsof -ti:4201 2>/dev/null | head -1`, { encoding: 'utf-8' }).trim()
+		const portCheck = execSync(`lsof -ti:4201 -sTCP:LISTEN 2>/dev/null | head -1`, { encoding: 'utf-8' }).trim()
 		if (portCheck) {
 			const processInfo = execSync(`ps -p ${portCheck} -o command= 2>/dev/null`, { encoding: 'utf-8' }).trim()
-			if (processInfo && (processInfo.includes('bun') || processInfo.includes('moai') || processInfo.includes('src/index.js'))) {
-				// It's a bun/moai process - kill it automatically
+			logger.warn(`Port 4201 in use by: ${processInfo || 'unknown'}. Attempting to free...`)
+			try {
+				execSync(`kill ${portCheck} 2>/dev/null`, { timeout: 2000 })
+				await new Promise(r => setTimeout(r, 800))
+			} catch (e) {
 				try {
-					execSync(`kill ${portCheck} 2>/dev/null`, { timeout: 2000 })
-					setTimeout(() => {}, 500)
-				} catch (e) {
-					try {
-						execSync(`kill -9 ${portCheck} 2>/dev/null`, { timeout: 2000 })
-						setTimeout(() => {}, 500)
-					} catch (e2) {
-						logger.warn(`Could not kill process ${portCheck}`)
-					}
+					execSync(`kill -9 ${portCheck} 2>/dev/null`, { timeout: 2000 })
+					await new Promise(r => setTimeout(r, 800))
+				} catch (e2) {
+					logger.error(`Could not free port 4201. Kill manually: kill ${portCheck}`)
+					process.exit(1)
 				}
-			} else if (processInfo) {
-				logger.warn(`Port 4201 in use by: ${processInfo}`)
 			}
 		}
 	} catch (e) {
@@ -397,8 +391,8 @@ function setupSignalHandlers() {
 		if (moaiProcess && !moaiProcess.killed) {
 			moaiProcess.kill('SIGTERM')
 		}
-		if (maiaCityProcess && !maiaCityProcess.killed) {
-			maiaCityProcess.kill('SIGTERM')
+		if (maiaProcess && !maiaProcess.killed) {
+			maiaProcess.kill('SIGTERM')
 		}
 		process.exit(0)
 	})
@@ -418,8 +412,8 @@ function setupSignalHandlers() {
 		if (moaiProcess && !moaiProcess.killed) {
 			moaiProcess.kill('SIGTERM')
 		}
-		if (maiaCityProcess && !maiaCityProcess.killed) {
-			maiaCityProcess.kill('SIGTERM')
+		if (maiaProcess && !maiaProcess.killed) {
+			maiaProcess.kill('SIGTERM')
 		}
 		process.exit(0)
 	})
@@ -432,12 +426,13 @@ async function main() {
 	// Generate favicons first (runs once, then exits)
 	generateFavicons()
 	
-	// Wait a bit for favicon generation to start, then start other services
+	// Wait a bit for favicon generation to start, then start services
+	// maia (4200) + moai (4201) in parallel - sync peer retries until moai ready
 	setTimeout(async () => {
 		startAssetSync()
 		startDocsWatcher()
-		startMoai()
-		await startMaiaCity()
+		await startMoai()
+		await startMaia()
 	}, 1000)
 
 	process.stdin.resume()

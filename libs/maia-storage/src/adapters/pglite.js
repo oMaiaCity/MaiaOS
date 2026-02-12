@@ -13,107 +13,7 @@
 import { StorageApiAsync } from 'cojson/dist/storage/storageAsync.js';
 import { DeletedCoValueDeletionStatus } from 'cojson/dist/storage/types.js';
 import { logger, emptyKnownState } from 'cojson';
-
-/**
- * Convert SQLite migrations to PostgreSQL-compatible SQL
- * Uses quoted identifiers to preserve case
- */
-const migrations = {
-  1: [
-    `CREATE TABLE IF NOT EXISTS transactions (
-      ses INTEGER,
-      idx INTEGER,
-      tx TEXT NOT NULL,
-      PRIMARY KEY (ses, idx)
-    );`,
-    `CREATE TABLE IF NOT EXISTS sessions (
-      "rowID" SERIAL PRIMARY KEY,
-      "coValue" INTEGER NOT NULL,
-      "sessionID" TEXT NOT NULL,
-      "lastIdx" INTEGER,
-      "lastSignature" TEXT,
-      UNIQUE ("sessionID", "coValue")
-    );`,
-    'CREATE INDEX IF NOT EXISTS sessionsByCoValue ON sessions ("coValue");',
-    `CREATE TABLE IF NOT EXISTS coValues (
-      "rowID" SERIAL PRIMARY KEY,
-      id TEXT NOT NULL UNIQUE,
-      header TEXT NOT NULL
-    );`,
-    'CREATE INDEX IF NOT EXISTS coValuesByID ON coValues (id);',
-  ],
-  3: [
-    `CREATE TABLE IF NOT EXISTS signatureAfter (
-      ses INTEGER,
-      idx INTEGER,
-      signature TEXT NOT NULL,
-      PRIMARY KEY (ses, idx)
-    );`,
-    'ALTER TABLE sessions ADD COLUMN IF NOT EXISTS "bytesSinceLastSignature" INTEGER;',
-  ],
-  4: [
-    `CREATE TABLE IF NOT EXISTS unsynced_covalues (
-      "rowID" SERIAL PRIMARY KEY,
-      "co_value_id" TEXT NOT NULL,
-      "peer_id" TEXT NOT NULL,
-      UNIQUE ("co_value_id", "peer_id")
-    );`,
-    'CREATE INDEX IF NOT EXISTS idx_unsynced_covalues_co_value_id ON unsynced_covalues("co_value_id");',
-  ],
-  5: [
-    `CREATE TABLE IF NOT EXISTS deletedCoValues (
-      "coValueID" TEXT PRIMARY KEY,
-      status INTEGER NOT NULL DEFAULT 0
-    );`,
-    'CREATE INDEX IF NOT EXISTS deletedCoValuesByStatus ON deletedCoValues (status);',
-  ],
-};
-
-/**
- * Get migration version from schema_version table
- */
-async function getMigrationVersion(db) {
-  try {
-    const result = await db.query('SELECT version FROM schema_version ORDER BY version DESC LIMIT 1');
-    return result.rows[0]?.version || 0;
-  } catch {
-    // Table doesn't exist yet, return 0
-    return 0;
-  }
-}
-
-/**
- * Save migration version
- */
-async function saveMigrationVersion(db, version) {
-  await db.exec(`
-    CREATE TABLE IF NOT EXISTS schema_version (
-      version INTEGER PRIMARY KEY,
-      applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );
-    INSERT INTO schema_version (version) VALUES (${version})
-    ON CONFLICT (version) DO NOTHING;
-  `);
-}
-
-/**
- * Run migrations
- */
-async function runMigrations(db) {
-  const currentVersion = await getMigrationVersion(db);
-  const versions = Object.keys(migrations)
-    .map(v => parseInt(v, 10))
-    .filter(v => v > currentVersion)
-    .sort((a, b) => a - b);
-
-  for (const version of versions) {
-    const queries = migrations[version];
-    for (const query of queries) {
-      await db.exec(query);
-    }
-    await saveMigrationVersion(db, version);
-  }
-}
+import { runMigrations } from '../schema/postgres.js';
 
 /**
  * PGlite Transaction Interface
@@ -440,7 +340,10 @@ class PGliteClient {
 
 /**
  * Create PGlite adapter with migrations
- * @param {string} dbPath - Path to PGlite database file
+ * Matches legacy pattern (commit 39cf63): PGlite.create(dataDir) with string path.
+ * PGlite expects a directory path; for ./local-sync.db it uses that as the data dir.
+ *
+ * @param {string} dbPath - Path to PGlite data directory (e.g. ./local-sync.db)
  * @returns {Promise<PGliteClient>} PGlite client instance
  */
 export async function createPGliteAdapter(dbPath) {
@@ -464,16 +367,50 @@ export async function createPGliteAdapter(dbPath) {
     throw new Error('[STORAGE] Failed to import PGlite - module structure may have changed');
   }
 
-  const fs = await import('fs/promises');
   const path = await import('path');
+  const fs = await import('fs/promises');
   const dir = path.dirname(dbPath);
   try {
     await fs.mkdir(dir, { recursive: true });
+    await fs.mkdir(dbPath, { recursive: true }); // PGlite uses dbPath as data directory
   } catch (mkdirError) {
     if (mkdirError.code !== 'EEXIST') throw mkdirError;
   }
 
+  const isProcessRunning = async (pid) => {
+    try {
+      process.kill(pid, 0);
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  // Remove stale postmaster.pid from crashed runs - blocks PGlite startup otherwise
+  const postmasterPidPath = path.join(dbPath, 'postmaster.pid');
+  try {
+    const stat = await fs.stat(postmasterPidPath);
+    if (stat.isFile()) {
+      const content = await fs.readFile(postmasterPidPath, 'utf-8');
+      const pidLine = content.split('\n')[0]?.trim();
+      const pid = parseInt(pidLine, 10);
+      const isStale = !pid || pid < 1 || !(await isProcessRunning(pid));
+      if (isStale) {
+        await fs.unlink(postmasterPidPath);
+        if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
+          console.log('[STORAGE] Removed stale postmaster.pid from previous run');
+        }
+      }
+    }
+  } catch (e) {
+    if (e?.code !== 'ENOENT') throw e;
+  }
+
+  // Legacy pattern: simple PGlite.create(path) - worked in adb9e61
   const db = await PGlite.create(dbPath);
+  if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
+    console.log('[STORAGE] PGlite created, running migrations...');
+  }
   await runMigrations(db);
   return new PGliteClient(db);
 }

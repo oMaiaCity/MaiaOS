@@ -26,23 +26,17 @@ The sync service consolidates WebSocket sync, agent API, and LLM proxy in one pr
 
 ## Environment Variables
 
-**Compact format** (preferred):
-- `ACCOUNT_MODE=agent`
-- `AGENT_ID` - Agent account ID (required)
-- `AGENT_SECRET` - Agent secret (required)
-- `AGENT_STORAGE=pglite` - Storage backend
-- `DB_PATH` - PGlite path (default: `./local-sync.db` for dev, `/data/sync.db` for production)
-- `PORT` - Server port (default: 4201)
-- `RED_PILL_API_KEY` - Optional, for LLM chat
+- `PEER_MODE=sync` - Moai hosts /sync (default). Never connects to another.
+- `PEER_MODE=agent` - Client agent. Connects to sync at `PEER_MOAI`. For future pure agent workers.
+- `PEER_ID`, `PEER_SECRET` - Required (run `bun agent:generate`)
+- `PEER_STORAGE=pglite`
+- `DB_PATH` - Default: `./local-sync.db` (dev), `/data/sync.db` (prod)
+- `PEER_MOAI` - Required when `PEER_MODE=agent` (sync server URL). Ignored when `sync`.
 
 ## Development
 
 ```bash
-# Run sync service
-bun dev:sync
-
-# Or from root
-bun --env-file=.env --filter sync dev
+bun run dev:moai
 ```
 
 ## Endpoints
@@ -67,7 +61,7 @@ const { node, account } = await signUpWithPasskey()
 
 The client determines the sync server URL based on:
 - **Dev**: Relative path `/sync` (Vite proxy forwards to `localhost:4201`)
-- **Production**: `PUBLIC_API_DOMAIN` env var or same origin
+- **Production**: `PEER_MOAI` env var or same origin
 
 ## Storage
 

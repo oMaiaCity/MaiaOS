@@ -5,14 +5,13 @@
  *
  * Port: 4201
  *
- * Env vars (compact):
- *   ACCOUNT_MODE=agent
- *   AGENT_ID (required)
- *   AGENT_SECRET (required)
- *   AGENT_STORAGE=pglite
- *   DB_PATH=/data/sync.db
- *   RED_PILL_API_KEY (optional, for LLM)
- *   PUBLIC_SYNC_DOMAIN (optional)
+ * Env vars (required - moai never generates credentials, only reads from env):
+ *   PEER_ID, PEER_SECRET - From Fly secrets (sync from .env: bun run deploy:secrets)
+ *   PEER_MODE=sync | agent
+ *     - sync: I host /sync (moai). Never connect to another. syncDomain=null.
+ *     - agent: Client agent. Connects to sync at PEER_MOAI. Use for future pure agent workers.
+ *   PEER_STORAGE, DB_PATH
+ *   PEER_MOAI: Required when PEER_MODE=agent (where to connect). Ignored when sync.
  */
 
 import { createWebSocketPeer } from 'cojson-transport-ws';
@@ -23,18 +22,14 @@ import { DBEngine } from '@MaiaOS/operations';
 const PORT = process.env.PORT || 4201;
 const DB_PATH = process.env.DB_PATH || './local-sync.db';
 
-// Compact env vars (fallback to legacy for migration)
-function getEnv(key, legacy) {
-  const v = process.env[key] || (legacy && process.env[legacy]);
-  return v || null;
-}
-
-const accountID = getEnv('AGENT_ID', 'AGENT_MAIA_AGENT_ACCOUNT_ID') || getEnv('SYNC_MAIA_AGENT_ACCOUNT_ID');
-const agentSecret = getEnv('AGENT_SECRET', 'AGENT_MAIA_AGENT_SECRET') || getEnv('SYNC_MAIA_AGENT_SECRET');
-const storageType = getEnv('AGENT_STORAGE', 'AGENT_MAIA_STORAGE') || getEnv('SYNC_MAIA_STORAGE', 'MAIA_STORAGE') || 'pglite';
+const accountID = process.env.PEER_ID;
+const agentSecret = process.env.PEER_SECRET;
+const storageType = process.env.PEER_STORAGE || 'pglite';
 const usePGlite = storageType === 'pglite';
+const usePostgres = storageType === 'postgres';
 const dbPath = usePGlite ? DB_PATH : undefined;
-const syncDomain = process.env.PUBLIC_SYNC_DOMAIN || process.env.PUBLIC_API_DOMAIN || (process.env.NODE_ENV !== 'production' ? null : null);
+const peerMode = process.env.PEER_MODE || 'sync';
+const syncDomain = peerMode === 'agent' ? process.env.PEER_MOAI || null : null;
 const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || '';
 
 let localNode = null;
@@ -318,18 +313,22 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`);
 (async () => {
   try {
     if (!accountID || !agentSecret) {
-      throw new Error('AGENT_ID and AGENT_SECRET required. Run: bun agent:generate --service=sync');
+      throw new Error('PEER_ID and PEER_SECRET required. Run: bun agent:generate');
     }
 
-    // Map compact env vars for getStorage (reads MAIA_STORAGE, DB_PATH)
-    if (storageType && !process.env.MAIA_STORAGE) process.env.MAIA_STORAGE = storageType;
     if (dbPath && !process.env.DB_PATH) process.env.DB_PATH = dbPath;
 
+    const storageLabel = usePostgres
+      ? 'Postgres'
+      : usePGlite
+        ? `PGlite at ${dbPath || './local-sync.db'}`
+        : 'in-memory';
+    console.log('[sync] Loading account (%s)...', storageLabel);
+    console.log('[sync] accountID=%s', accountID?.slice(0, 12) + '...');
     const result = await loadOrCreateAgentAccount({
       accountID,
       agentSecret,
       syncDomain,
-      servicePrefix: null,
       dbPath: usePGlite ? dbPath : undefined,
       inMemory: storageType === 'in-memory',
       createName: 'Maia Sync Server',

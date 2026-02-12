@@ -15,9 +15,10 @@ import {
 	signUpWithPasskey, 
 	isPRFSupported, 
 	subscribeSyncState,
-	loadOrCreateAgentAccount
+	loadOrCreateAgentAccount,
+	getSchemaIndexColistId
 } from "@MaiaOS/kernel";
-import { getAllVibeRegistries } from "@MaiaOS/vibes";
+import { getAllVibeRegistries, filterVibesForSeeding } from "@MaiaOS/vibes";
 import { renderApp } from './db-view.js';
 import { renderLandingPage } from './landing.js';
 import { renderSignInPrompt, renderUnsupportedBrowser, getFirstNameForRegister } from './signin.js';
@@ -209,15 +210,14 @@ async function handleRoute() {
 }
 
 /**
- * Detect operational mode from service-specific environment variables
- * maia-city defaults to human mode (client frontend)
+ * Detect operational mode from environment variables
+ * Defaults to human mode (client frontend with passkeys)
  * @returns {'human' | 'agent'} Operational mode
  */
 function detectMode() {
-	// Service-specific env vars: CITY_MAIA_MODE (for maia-city service)
-	const mode = (typeof import.meta !== 'undefined' && import.meta.env?.CITY_MAIA_MODE) ||
-	             (typeof import.meta !== 'undefined' && import.meta.env?.VITE_CITY_MAIA_MODE) ||
-	             'human'; // Default to human mode for client frontend
+	const mode = (typeof import.meta !== 'undefined' && import.meta.env?.PEER_MODE) ||
+	             (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PEER_MODE) ||
+	             'human';
 	return mode === 'agent' ? 'agent' : 'human';
 }
 
@@ -255,14 +255,12 @@ async function initAgentMode() {
 	try {
 		console.log('🤖 [AGENT MODE] Initializing agent mode...');
 		
-		// Get credentials from service-specific environment variables
-		const accountID = import.meta.env?.CITY_MAIA_AGENT_ACCOUNT_ID || import.meta.env?.VITE_CITY_MAIA_AGENT_ACCOUNT_ID;
-		const agentSecret = import.meta.env?.CITY_MAIA_AGENT_SECRET || import.meta.env?.VITE_CITY_MAIA_AGENT_SECRET;
+		const accountID = import.meta.env?.PEER_ID || import.meta.env?.VITE_PEER_ID;
+		const agentSecret = import.meta.env?.PEER_SECRET || import.meta.env?.VITE_PEER_SECRET;
 		
 		if (!accountID || !agentSecret) {
 			throw new Error(
-				'Agent mode requires CITY_MAIA_AGENT_ACCOUNT_ID and CITY_MAIA_AGENT_SECRET environment variables. ' +
-				'Run `bun agent:generate --service city` to generate credentials.'
+				'Agent mode requires PEER_ID and PEER_SECRET. Run `bun agent:generate` to generate credentials.'
 			);
 		}
 		
@@ -275,7 +273,6 @@ async function initAgentMode() {
 			accountID,
 			agentSecret,
 			syncDomain: syncDomain || null,
-			servicePrefix: 'CITY',
 			createName: 'Maia Agent',
 		});
 		
@@ -362,11 +359,8 @@ function getSyncDomain() {
 		return null; // Dev mode uses relative path /sync (proxied by Vite)
 	}
 	
-	// In production, try to get sync domain from env vars
-	// Priority: 1) Runtime-injected (from server.js), 2) Build-time env var, 3) null
-	const runtimeDomain = typeof window !== 'undefined' && window.__PUBLIC_API_DOMAIN__;
-	const buildTimeDomain = import.meta.env?.PUBLIC_API_DOMAIN;
-	return runtimeDomain || buildTimeDomain || null;
+	// In production: VITE_PEER_MOAI (build-time from fly.toml [build.args])
+	return import.meta.env?.VITE_PEER_MOAI || null;
 }
 
 /**
@@ -865,7 +859,6 @@ async function handleSeed(seedVibesConfig = null) {
 				: 'all'); // Default: seed all vibes (changed from null to "all")
 		
 		// Automatically discover and import all vibe registries
-		const { getAllVibeRegistries, filterVibesForSeeding } = await import('@MaiaOS/vibes');
 		const allVibeRegistries = await getAllVibeRegistries();
 		
 		// Filter vibes based on config
@@ -1220,7 +1213,6 @@ window.debugTodos = async function() {
 	if (maia) {
 		try {
 			// Get todos schema index colist from account.os (new indexing system)
-			const { getSchemaIndexColistId } = await import('@MaiaOS/kernel');
 			const backend = maia.dbEngine?.backend;
 			const todosSchemaIndexColistId = backend ? await getSchemaIndexColistId(backend, '@maia/schema/data/todos') : null;
 			

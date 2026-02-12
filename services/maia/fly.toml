@@ -6,17 +6,14 @@ primary_region = "fra"
 [build]
   # Build from monorepo root with Dockerfile in services/maia/
   # Use: flyctl deploy --dockerfile services/maia/Dockerfile --config services/maia/fly.toml
-  # Note: dockerfile path must be specified via --dockerfile flag (relative to root)
+  # VITE_* from [build.args] - normal Vite env vars at build time (no runtime injection)
+  [build.args]
+  VITE_PEER_MOAI = "moai.next.maia.city"
+  VITE_PEER_MAIA = "next.maia.city"
 
 [env]
   PORT = "8080"
   NODE_ENV = "production"
-  # PUBLIC_API_DOMAIN MUST be set via Fly.io secrets for sync to work:
-  # For Fly.io domain: flyctl secrets set PUBLIC_API_DOMAIN="sync-next-maia-city.fly.dev" --app next-maia-city
-  # For custom domain: flyctl secrets set PUBLIC_API_DOMAIN="sync.next.maia.city" --app next-maia-city
-  # VITE_SEED_VIBES defaults to "all" (seeds all vibes automatically)
-  # To override, rebuild with: flyctl deploy --build-arg VITE_SEED_VIBES="todos,maia" --app next-maia-city
-  # Options: "all" = seed all vibes (default), "todos,maia" = specific vibes
 
 [[services]]
   internal_port = 8080

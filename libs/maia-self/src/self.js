@@ -71,8 +71,7 @@ export async function signUpWithPasskey({ name, salt = "maia.city" } = {}) {
 	// STEP 3: Create account using abstraction layer
 	// Get storage for persistence (BEFORE account creation!)
 	// Human mode defaults to IndexedDB in browser
-	// For maia-city service, uses CITY_MAIA_STORAGE env var (defaults to indexeddb)
-	const storage = await getStorage({ mode: 'human', servicePrefix: 'CITY' });
+	const storage = await getStorage({ mode: 'human' });
 	
 	// Setup sync peers BEFORE account creation
 	// Always use our own sync service (no Jazz fallback)
@@ -155,8 +154,7 @@ export async function signInWithPasskey({ salt = "maia.city" } = {}) {
 	const accountID = idforHeader(accountHeader, crypto);
 	
 	// STEP 4: Setup sync peers and storage (for background account loading)
-	// For maia-city service, uses CITY_MAIA_STORAGE env var (defaults to indexeddb)
-	const storage = await getStorage({ mode: 'human', servicePrefix: 'CITY' });
+	const storage = await getStorage({ mode: 'human' });
 	
 	// Setup sync peers BEFORE loading account
 	// Always use our own sync service (no Jazz fallback)
@@ -271,12 +269,11 @@ export async function generateAgentCredentials({ name = "Maia Agent" } = {}) {
  * @param {string} [options.syncDomain] - Sync domain from kernel (single source of truth)
  * @returns {Promise<{accountID: string, agentSecret: string, node: Object, account: Object}>}
  */
-export async function createAgentAccount({ agentSecret, name = "Maia Agent", syncDomain = null, servicePrefix = null, dbPath = null, inMemory = false } = {}) {
+export async function createAgentAccount({ agentSecret, name = "Maia Agent", syncDomain = null, dbPath = null, inMemory = false } = {}) {
 	
 	if (!agentSecret) {
 		throw new Error(
-			"agentSecret is required. Set service-specific env var (e.g., SYNC_MAIA_AGENT_SECRET or CITY_MAIA_AGENT_SECRET). " +
-			"Run `bun agent:generate --service <service>` to generate credentials."
+			"agentSecret is required. Set PEER_SECRET env var. Run `bun agent:generate` to generate credentials."
 		);
 	}
 	
@@ -286,9 +283,8 @@ export async function createAgentAccount({ agentSecret, name = "Maia Agent", syn
 	const accountHeader = accountHeaderForInitialAgentSecret(agentSecret, crypto);
 	const computedAccountID = idforHeader(accountHeader, crypto);
 	
-	// Get storage for agent mode using service-specific env vars if provided
-	// Pass dbPath and inMemory for sync server PGlite configuration
-	const storage = await getStorage({ mode: 'agent', servicePrefix, dbPath, inMemory });
+	// Get storage for agent mode (PEER_STORAGE, DB_PATH from env)
+	const storage = await getStorage({ mode: 'agent', dbPath, inMemory });
 	
 	// Setup sync peers BEFORE account creation
 	// Always use our own sync service (no Jazz fallback)
@@ -347,24 +343,21 @@ export async function createAgentAccount({ agentSecret, name = "Maia Agent", syn
  * @param {string} [options.syncDomain] - Sync domain from kernel (single source of truth)
  * @returns {Promise<{accountID: string, agentSecret: string, node: Object, account: Object}>}
  */
-export async function loadAgentAccount({ accountID, agentSecret, syncDomain = null, servicePrefix = null, dbPath = null, inMemory = false } = {}) {
+export async function loadAgentAccount({ accountID, agentSecret, syncDomain = null, dbPath = null, inMemory = false } = {}) {
 	
 	if (!agentSecret) {
 		throw new Error(
-			"agentSecret is required. Set service-specific env var (e.g., SYNC_MAIA_AGENT_SECRET or CITY_MAIA_AGENT_SECRET). " +
-			"Run `bun agent:generate --service <service>` to generate credentials."
+			"agentSecret is required. Set PEER_SECRET env var. Run `bun agent:generate` to generate credentials."
 		);
 	}
 	if (!accountID) {
 		throw new Error(
-			"accountID is required. Set service-specific env var (e.g., SYNC_MAIA_AGENT_ACCOUNT_ID or CITY_MAIA_AGENT_ACCOUNT_ID). " +
-			"Run `bun agent:generate --service <service>` to generate credentials."
+			"accountID is required. Set PEER_ID env var. Run `bun agent:generate` to generate credentials."
 		);
 	}
 	
-	// Get storage for agent mode using service-specific env vars if provided
-	// Pass dbPath and inMemory for sync server PGlite configuration
-	const storage = await getStorage({ mode: 'agent', servicePrefix, dbPath, inMemory });
+	// Get storage for agent mode (PEER_STORAGE, DB_PATH from env)
+	const storage = await getStorage({ mode: 'agent', dbPath, inMemory });
 	
 	// Setup sync peers BEFORE loading account
 	// Always use our own sync service (no Jazz fallback)
@@ -407,7 +400,6 @@ export async function loadOrCreateAgentAccount({
 	accountID,
 	agentSecret,
 	syncDomain = null,
-	servicePrefix = null,
 	dbPath = null,
 	inMemory = false,
 	createName = "Maia Agent",
@@ -417,7 +409,6 @@ export async function loadOrCreateAgentAccount({
 			accountID,
 			agentSecret,
 			syncDomain,
-			servicePrefix,
 			dbPath,
 			inMemory,
 		});
@@ -433,7 +424,6 @@ export async function loadOrCreateAgentAccount({
 				agentSecret,
 				name: createName,
 				syncDomain,
-				servicePrefix,
 				dbPath,
 				inMemory,
 			});

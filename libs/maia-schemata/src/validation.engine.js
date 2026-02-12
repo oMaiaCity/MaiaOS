@@ -111,6 +111,19 @@ export class ValidationEngine {
         }
       });
 
+      // Idempotent addSchema: parallel loadSchema calls can add same schema twice - ignore duplicate
+      const originalAddSchema = this.ajv.addSchema.bind(this.ajv);
+      this.ajv.addSchema = (schema, key, ...rest) => {
+        try {
+          return originalAddSchema(schema, key, ...rest);
+        } catch (error) {
+          if (error?.message?.includes?.('already exists')) {
+            return this.ajv;
+          }
+          throw error;
+        }
+      };
+
       // Register standard JSON Schema format validators
       // uri-reference: RFC 3986 URI reference (can be relative or absolute)
       // According to JSON Schema spec, this should accept any valid URI reference

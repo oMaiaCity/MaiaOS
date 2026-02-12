@@ -3,13 +3,14 @@
   "version": "0.1.23",
   "type": "module",
   "main": "./src/index.js",
-  "exports": {
-    ".": "./src/index.js"
-  },
+  "exports": { ".": "./src/index.js" },
   "dependencies": {
     "cojson-storage-indexeddb": "0.20.7",
-    "@electric-sql/pglite": "latest",
-    "cojson": "0.20.7"
+    "cojson": "0.20.7",
+    "pg": "^8.13.0"
   },
-  "description": "Centralized storage adapters for MaiaOS - IndexedDB, PGlite, and in-memory storage"
+  "devDependencies": {
+    "@electric-sql/pglite": "latest"
+  },
+  "description": "Centralized storage adapters for MaiaOS - IndexedDB, PGlite (dev), Postgres"
 }

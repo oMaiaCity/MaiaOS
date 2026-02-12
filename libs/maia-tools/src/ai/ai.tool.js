@@ -18,8 +18,6 @@
 import { createSuccessResult, createErrorResult, createErrorEntry } from '@MaiaOS/operations';
 import { getApiBaseUrl, toStructuredErrors } from '../core/api-helpers.js';
 
-const API_BASE_URL = getApiBaseUrl();
-
 export default {
   async execute(actor, payload) {
     const context = payload?.context || payload?.messages;
@@ -29,7 +27,7 @@ export default {
       return createErrorResult([createErrorEntry('structural', '[@ai/chat] context array is required')]);
     }
 
-    const apiUrl = `${API_BASE_URL}/api/v0/llm/chat`;
+    const apiUrl = `${getApiBaseUrl()}/api/v0/llm/chat`;
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

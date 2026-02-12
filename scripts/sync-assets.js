@@ -20,7 +20,7 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const monorepoRoot = resolve(__dirname, '..')
 const brandAssetsDir = resolve(monorepoRoot, 'libs/maia-brand/src/assets')
 
-// Sync assets to maia service only
+// Sync assets to maia service (services/maia/public/brand, includes favicon/)
 // Vite serves static files from 'public' directory by default
 const serviceStaticDirs = [
 	resolve(monorepoRoot, 'services/maia/public/brand'),
