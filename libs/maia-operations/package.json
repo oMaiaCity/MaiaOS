@@ -10,6 +10,7 @@
     "./db-adapter": "./src/db-adapter.js"
   },
   "dependencies": {
+    "@MaiaOS/db": "workspace:*",
     "@MaiaOS/schemata": "workspace:*"
   }
 }

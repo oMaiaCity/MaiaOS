@@ -1,6 +1,6 @@
 /**
  * Shared API helpers for tools that call external API services.
- * DRY: Single getApiBaseUrl and toStructuredErrors for @ai/chat, @memory, etc.
+ * DRY: Single getApiBaseUrl and toStructuredErrors for @ai/chat, etc.
  */
 
 import { createErrorEntry } from '@MaiaOS/operations';

@@ -279,7 +279,7 @@ Each service in the monorepo has a **hardcoded development port** to avoid confl
 | Service | Port | Notes |
 |---------|------|-------|
 | `services/maia-city` | `4200` | Landing page (default `bun dev`) |
-| `services/api` | `4201` | API proxy service (Honcho, RedPill, Voice) |
+| `services/api` | `4201` | API proxy service (RedPill LLM) |
 | `services/app` | `4202` | Main application (Tauri-compatible) |
 | `services/[next-service]` | `4203` | Next service port (e.g., sync) |
 | `services/[service-4]` | `4204` | Reserved |
@@ -336,7 +336,7 @@ NODE_ENV=development
 
 # Service-specific ports (hardcoded in config, documented here)
 # PUBLIC_DOMAIN_ME=localhost:4200 (maia-city service)
-# PUBLIC_DOMAIN_API=localhost:4201 (api service - Honcho, RedPill, Voice)
+# PUBLIC_DOMAIN_API=localhost:4201 (api service - RedPill LLM)
 # PUBLIC_DOMAIN_APP=localhost:4202 (app service)
 # PUBLIC_DOMAIN_SYNC=localhost:4203 (sync service, future)
 

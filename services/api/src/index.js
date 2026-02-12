@@ -120,7 +120,7 @@ async function handleLLMChat(req) {
 	}
 }
 
-Bun.serve({
+const server = Bun.serve({
 	port: PORT,
 	fetch(req) {
 		const url = new URL(req.url);
@@ -140,3 +140,5 @@ Bun.serve({
 		return new Response('Not Found', { status: 404 });
 	},
 });
+
+console.log(`[api] HTTP server on port ${server.port}`);

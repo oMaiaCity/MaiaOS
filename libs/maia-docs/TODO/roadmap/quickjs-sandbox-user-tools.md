@@ -32,7 +32,6 @@ The MaiaOS tools engine ([maia-tools](../../03_developers/08_maia-tools/README.m
 | Tool | Host access |
 |------|-------------|
 | `@ai/chat` | `fetch()` to API proxy |
-| `@memory` | `fetch()` to Honcho API |
 | `@db` | `os.db(payload)` (CoValue/backend) |
 | `@core/publishMessage` | `actorEngine.sendMessage()` |
 | `@sparks` | Thin wrapper over `@db` |
@@ -56,7 +55,6 @@ User code inside QuickJS receives **only** a `maia` object exposing explicit met
 const maia = {
   db(payload) { /* host executes os.db, returns OperationResult */ },
   publishMessage(target, type, payload) { /* host sends via actorEngine */ },
-  memory(payload) { /* host proxies to Honcho API */ },
   ai(context, model) { /* host proxies to RedPill — no cookies/auth */ },
   log(...args) { /* guest console or host logging */ }
 };

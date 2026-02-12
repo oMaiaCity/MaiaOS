@@ -1,8 +1,0 @@
-# Shared Libraries Directory
-
-This directory contains shared packages that can be reused across workspaces in the monorepo.
-
-Each subdirectory in `libs/` is a separate workspace with its own `package.json`.
-
-See `.cursor/rules/monorepo-architecture.mdc` for documentation on how to create and use shared libraries.
-

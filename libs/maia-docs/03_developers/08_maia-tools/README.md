@@ -47,9 +47,6 @@ libs/maia-tools/src/
 ├── db/                         # Database tools (deprecated - use @db unified API)
 │   ├── db.tool.maia
 │   └── db.tool.js
-├── memory/                     # Memory tools
-│   ├── memory.tool.maia
-│   └── memory.tool.js
 └── agent/                      # Agent tools
     ├── agent.tool.maia
     └── agent.tool.js
@@ -229,12 +226,6 @@ const definitions = getAllToolDefinitions();
 **`@core/computeMessageNames`**
 - Computes message names from context
 - Parameters: `{ context: object }`
-
-### Memory Tools
-
-**`@memory/memory`**
-- Manages actor memory (conversation history, etc.)
-- Parameters: `{ operation: string, ... }`
 
 ### AI Tools
 
