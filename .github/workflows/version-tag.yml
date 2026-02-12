@@ -14,7 +14,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          token: ${{ secrets.REPO_PAT }}
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
 
       - name: Setup Bun
         uses: oven-sh/setup-bun@v2
@@ -38,8 +38,6 @@ jobs:
           git tag -a "v${{ steps.version.outputs.version }}" -m "Release ${{ steps.version.outputs.version }}"
 
       - name: Push and create release
-        env:
-          GH_TOKEN: ${{ secrets.REPO_PAT }}
         run: |
           git push origin next
           git push origin "v${{ steps.version.outputs.version }}"
