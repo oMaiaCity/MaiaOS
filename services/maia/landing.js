@@ -5,7 +5,7 @@
 
 export function renderLandingPage() {
 	document.getElementById("app").innerHTML = `
-		<main class="container">
+		<main class="container landing-main" style="overflow-x: hidden; box-sizing: border-box;">
 			<!-- THE MASTER HOOK -->
 			<section class="hero" style="
 				min-height: 92vh;
@@ -47,7 +47,7 @@ export function renderLandingPage() {
 				</h1>
 
 				<!-- Story Opener - Positioned at bottom of hero -->
-				<div style="
+				<div class="landing-story-opener" style="
 					position: absolute;
 					bottom: 10%;
 					left: 50%;
@@ -67,27 +67,30 @@ export function renderLandingPage() {
 			</section>
 
 			<!-- THE STORY SECTION -->
-			<section style="
+			<section class="landing-story" style="
 				margin-top: 0;
 				padding-top: 2rem;
 				display: grid;
 				grid-template-columns: repeat(12, 1fr);
 				gap: 1.5rem;
 				max-width: 1100px;
+				width: 100%;
+				box-sizing: border-box;
+				padding-left: 1rem;
+				padding-right: 1rem;
 				margin-left: auto;
 				margin-right: auto;
 				align-items: center;
 			">
-				<!-- Chunk 1: Who - Left Aligned -->
-				<div style="
+				<!-- Chunk 1: Who -->
+				<div class="landing-chunk landing-chunk-1" style="
 					grid-column: 2 / span 7;
 					justify-self: start;
-					width: fit-content;
-					white-space: nowrap;
+					max-width: 100%;
 					font-family: var(--font-heading);
 					font-style: italic;
 					font-size: clamp(1.6rem, 4vw, 2.8rem);
-					line-height: 1.2;
+					line-height: 1.3;
 					padding: 2rem;
 					background: rgba(255, 255, 255, 0.12);
 					backdrop-filter: blur(20px) saturate(160%);
@@ -101,15 +104,15 @@ export function renderLandingPage() {
 					how <strong style="color: var(--color-terracotta); text-shadow: 0 0 20px rgba(194, 123, 102, 0.4);">1.3 million</strong> maia citizens
 				</div>
 
-				<!-- Chunk 3: What - Right Aligned Offset -->
-				<div style="
+				<!-- Chunk 2: What -->
+				<div class="landing-chunk landing-chunk-2" style="
 					grid-column: 4 / -1;
 					justify-self: end;
-					width: fit-content;
+					max-width: 100%;
 					font-family: var(--font-heading);
 					font-style: italic;
 					font-size: clamp(1.6rem, 4vw, 2.8rem);
-					line-height: 1.2;
+					line-height: 1.3;
 					padding: 2rem;
 					background: rgba(255, 255, 255, 0.18);
 					backdrop-filter: blur(25px) saturate(180%);
@@ -125,14 +128,14 @@ export function renderLandingPage() {
 					<strong style="color: var(--color-sun-yellow); font-weight: 700; text-shadow: 0 0 30px rgba(230, 185, 77, 0.5);">craft</strong> from the ground up
 				</div>
 
-				<!-- Chunk 3: Timeline - Centered -->
-				<div style="
+				<!-- Chunk 3: Timeline -->
+				<div class="landing-chunk landing-chunk-3" style="
 					grid-column: 1 / -1;
 					justify-self: center;
 					font-family: var(--font-heading);
 					font-style: italic;
 					font-size: clamp(1.4rem, 3.2vw, 2.2rem);
-					line-height: 1.2;
+					line-height: 1.3;
 					padding: 1.5rem 3rem;
 					background: rgba(255, 255, 255, 0.15);
 					backdrop-filter: blur(20px) saturate(160%);
@@ -147,12 +150,12 @@ export function renderLandingPage() {
 				</div>
 
 				<!-- LOGO STANDALONE -->
-				<div style="grid-column: 1 / -1; justify-self: center; margin: 3rem 0;">
+				<div class="landing-logo" style="grid-column: 1 / -1; justify-self: center; margin: 3rem 0;">
 					<img src="/brand/logo.svg" alt="MaiaCity Logo" style="height: clamp(8rem, 18vw, 14rem); filter: drop-shadow(0 0 50px rgba(0, 189, 214, 0.7));" />
 				</div>
 
-				<!-- Chunk 3: Why - Centered Large -->
-				<div style="
+				<!-- Chunk 4: Why -->
+				<div class="landing-chunk landing-chunk-4" style="
 					grid-column: 2 / 12;
 					font-family: var(--font-heading);
 					font-style: italic;

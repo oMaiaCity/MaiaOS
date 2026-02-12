@@ -268,10 +268,10 @@ export class MaiaOS {
       // 15s timeout for slow sync (e.g. first load to moai.next.maia.city)
       backend.ensureAccountOsReady({ timeoutMs: 15000 }).then(accountOsReady => {
         if (!accountOsReady) {
-          console.warn('[MaiaOS.boot] account.os not ready yet - schema resolution will work once sync completes');
+          console.debug('[MaiaOS.boot] account.os not ready yet - schema resolution will work once sync completes');
         }
       }).catch(err => {
-        console.warn('[MaiaOS.boot] account.os loading (non-blocking):', err.message);
+        console.debug('[MaiaOS.boot] account.os loading (non-blocking):', err.message);
       });
       // Don't await - let it load in background while we continue booting
     }

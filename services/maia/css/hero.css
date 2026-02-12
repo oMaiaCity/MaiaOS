@@ -6,6 +6,13 @@
   max-width: 1400px;
   margin: 0 auto;
   padding: 0 4rem;
+  overflow-x: hidden;
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 0 1rem;
+  }
 }
 
 .hero {
@@ -69,5 +76,59 @@
   
   .hero > div:last-child .btn {
     width: 100%;
+  }
+}
+
+/* Landing Story Section - Mobile Layout */
+@media (max-width: 768px) {
+  .landing-story {
+    display: flex !important;
+    flex-direction: column !important;
+    grid-template-columns: unset !important;
+    align-items: center !important;
+    gap: 1rem !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+  }
+
+  .landing-chunk {
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    grid-column: unset !important;
+    justify-self: unset !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    margin-top: 0 !important;
+    transform: none !important;
+    text-align: center !important;
+  }
+
+  .landing-chunk-1,
+  .landing-chunk-2,
+  .landing-chunk-3,
+  .landing-chunk-4 {
+    padding: 1.5rem 1.25rem !important;
+  }
+
+  .landing-chunk-3 {
+    padding: 1.25rem 1.5rem !important;
+  }
+
+  .landing-chunk-4 {
+    padding: 2rem 1.5rem !important;
+  }
+
+  .landing-logo {
+    margin: 2rem 0 !important;
+  }
+
+  .landing-story-opener {
+    left: 50% !important;
+    transform: translateX(-50%) !important;
+    max-width: calc(100% - 2rem) !important;
+    padding-left: 1rem !important;
+    padding-right: 1rem !important;
+    text-align: center !important;
   }
 }

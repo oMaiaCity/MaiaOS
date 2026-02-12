@@ -569,7 +569,7 @@ export class ValidationEngine {
     // CRITICAL: After seeding, all $co references should be co-ids, not @maia/schema/... patterns
     // If we see @maia/schema/... here, it means transformation failed or schema is from source files
     if (ref && isSchemaRef(ref)) {
-      console.warn(`[ValidationEngine] Warning: Registering schema with @maia/schema/ reference: ${ref}. This should be a co-id after seeding. Schema may be from source files instead of database.`);
+      console.debug(`[ValidationEngine] Registering schema with @maia/schema/ reference: ${ref}. This should be a co-id after seeding. Schema may be from source files instead of database.`);
       // Still register it so validation can work, but log the warning
     }
     
@@ -624,7 +624,7 @@ export class ValidationEngine {
     // CRITICAL: After seeding, all $co references should be co-ids, not @maia/schema/... patterns
     // If we see @maia/schema/... here, it means the schema wasn't transformed correctly
     if (ref && isSchemaRef(ref)) {
-      console.warn(`[ValidationEngine] Warning: Resolving $co reference with @maia/schema/ pattern: ${ref}. This should be a co-id after seeding. The schema may not have been transformed correctly.`);
+      console.debug(`[ValidationEngine] Resolving $co reference with @maia/schema/ pattern: ${ref}. This should be a co-id after seeding. The schema may not have been transformed correctly.`);
       // Still try to resolve it via schema resolver (which should handle @maia/schema/... via operations API)
     }
     
