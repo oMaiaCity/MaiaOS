@@ -206,15 +206,37 @@ async function main() {
     console.log(`[agent] Connecting to sync server: ${syncDomain}`);
   }
 
-  const { node, account } = await loadOrCreateAgentAccount({
-    accountID,
-    agentSecret,
-    syncDomain,
-    servicePrefix: 'AGENT',
-    dbPath,
-    inMemory: false,
-    createName: processEnv.AGENT_MAIA_PROFILE_NAME || 'Maia Agent',
-  });
+  const maxRetries = 3;
+  const retryDelayMs = 2000;
+  let lastError;
+  let node;
+  let account;
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await loadOrCreateAgentAccount({
+        accountID,
+        agentSecret,
+        syncDomain,
+        servicePrefix: 'AGENT',
+        dbPath,
+        inMemory: false,
+        createName: processEnv.AGENT_MAIA_PROFILE_NAME || 'Maia Agent',
+      });
+      node = result.node;
+      account = result.account;
+      lastError = null;
+      break;
+    } catch (e) {
+      lastError = e;
+      if (attempt < maxRetries) {
+        console.warn(`[agent] Attempt ${attempt}/${maxRetries} failed (${e?.message || e}), retrying in ${retryDelayMs}ms...`);
+        await new Promise((r) => setTimeout(r, retryDelayMs));
+      } else {
+        throw lastError;
+      }
+    }
+  }
+
   const backend = new CoJSONBackend(node, account, { systemSpark: '@Maia' });
   const dbEngine = new DBEngine(backend);
   backend.dbEngine = dbEngine;
@@ -228,10 +250,15 @@ async function main() {
       return handleHttp(req, { worker });
     },
   });
-  console.log(`[agent] ✓ HTTP server on port ${port}`);
+  console.log(`[agent] Running on http://localhost:${port}`);
 }
 
 main().catch((e) => {
-  console.error('[agent] Failed to start:', e.message);
+  const msg = e?.message || String(e);
+  const cause = e?.cause ? ` (cause: ${e.cause?.message || e.cause})` : '';
+  console.error(`[agent] Failed to start: ${msg}${cause}`);
+  if (process.env.NODE_ENV === 'development' && e?.stack) {
+    console.error(e.stack);
+  }
   process.exit(1);
 });

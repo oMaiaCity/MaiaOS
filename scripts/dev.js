@@ -73,15 +73,18 @@ function processOutput(service, data, isError = false) {
 		const trimmed = line.trim()
 		const logger = createLogger(service)
 		
-		// Check for Vite "Local:" line FIRST (before filtering) - this contains the URL
-		if ((trimmed.includes('Local:') || trimmed.includes('➜')) && trimmed.includes('http://')) {
-			// Match http:// followed by hostname:port (allow trailing slash)
-			const urlMatch = trimmed.match(/http:\/\/[^\s]+/)
-			if (urlMatch && !serviceStatus[service]) {
-				// Remove trailing slash if present
-				const url = urlMatch[0].replace(/\/$/, '')
+		// Check for Vite "Local:" / "➜" or any "http://localhost:PORT" — before filtering
+		if (trimmed.includes('http://') && !serviceStatus[service]) {
+			const urlMatch = trimmed.match(/http:\/\/localhost:(\d+)/)
+			if (urlMatch) {
+				const port = urlMatch[1]
+				const url = urlMatch[0]
 				logger.success(`Running on ${url}`)
 				serviceStatus[service] = true
+				if (service === 'sync' && !agentStarted) {
+					agentStarted = true
+					startAgent()
+				}
 				checkAllReady()
 				continue
 			}
@@ -96,6 +99,7 @@ function processOutput(service, data, isError = false) {
 			trimmed.includes('Sync service running') ||
 			trimmed.includes('Running on port') ||
 			trimmed.includes('HTTP server on port') ||
+			(trimmed.includes('[api]') && trimmed.includes('HTTP server')) ||
 			(trimmed.includes('[agent]') && trimmed.includes('HTTP server')) ||
 			(trimmed.includes('HTTP server') && trimmed.includes('4204')) ||
 			(trimmed.includes('[sync]') && trimmed.includes('Listening'))

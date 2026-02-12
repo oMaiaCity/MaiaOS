@@ -141,4 +141,4 @@ const server = Bun.serve({
 	},
 });
 
-console.log(`[api] HTTP server on port ${server.port}`);
+console.log(`[api] Running on http://localhost:${server.port}`);
