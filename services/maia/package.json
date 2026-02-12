@@ -1,5 +1,5 @@
 {
-	"name": "maia",
+	"name": "@MaiaOS/maia",
 	"version": "26.0212.2256",
 	"type": "module",
 	"private": true,

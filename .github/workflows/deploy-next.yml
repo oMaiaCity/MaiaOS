@@ -11,6 +11,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && startsWith(github.event.head_commit.message, '[release] '))
     name: Deploy moai
     runs-on: ubuntu-latest
+    environment: next
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
@@ -29,6 +30,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && startsWith(github.event.head_commit.message, '[release] '))
     name: Deploy maia
     runs-on: ubuntu-latest
+    environment: next
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:

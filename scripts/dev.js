@@ -186,7 +186,7 @@ async function startMaia() {
 		// Port is free or check failed - continue
 	}
 	
-	maiaProcess = spawn('bun', ['--env-file=.env', '--filter', 'maia', 'dev'], {
+	maiaProcess = spawn('bun', ['--env-file=.env', '--filter', '@MaiaOS/maia', 'dev'], {
 		cwd: rootDir,
 		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,
@@ -237,7 +237,7 @@ async function startMoai() {
 		// Port is free or check failed - continue
 	}
 
-	moaiProcess = spawn('bun', ['--env-file=.env', '--filter', 'moai', 'dev'], {
+	moaiProcess = spawn('bun', ['--env-file=.env', '--filter', '@MaiaOS/moai', 'dev'], {
 		cwd: rootDir,
 		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,
