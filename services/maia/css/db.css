@@ -133,46 +133,50 @@
   font-family: var(--font-body), system-ui, sans-serif;
 }
 
-/* Account ID in hamburger menu (first 8 chars) */
+/* Account ID in hamburger menu (full length + copy button) */
 .mobile-menu-account-id {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
   padding: 0.5rem 0.75rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.15);
   margin-bottom: 0.25rem;
+  min-width: 0;
 }
-.mobile-menu-account-id .db-status {
+.mobile-menu-account-id-value {
+  flex: 1;
+  min-width: 0;
   font-size: 0.65rem;
-}
-
-/* Sync Status */
-.db-header .sync-status {
-  padding: 0.3rem 0.75rem;
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  border-radius: 9999px; /* Pill shape */
-  height: 28px;
-  box-sizing: border-box;
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(8px) saturate(150%);
-  -webkit-backdrop-filter: blur(8px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  font-family: monospace;
+  word-break: break-all;
+  overflow-wrap: break-word;
   color: var(--color-marine-blue-muted);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+.mobile-menu-copy-id {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.15);
+  color: var(--color-marine-blue);
+  font-size: 0.75rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+.mobile-menu-copy-id:hover {
+  background: rgba(255, 255, 255, 0.25);
 }
 
-.db-header .sync-status.connected {
-  color: var(--color-lush-green);
-  background: rgba(78, 154, 88, 0.1);
-  border-color: rgba(78, 154, 88, 0.2);
-}
-
-.db-header .sync-status .sync-dot {
-  background-color: var(--color-marine-blue-light);
-}
-
-.db-header .sync-status.connected .sync-dot {
-  background-color: var(--color-lush-green);
+/* Sync Status - ghost badge in header (extends components.css) */
+.db-header .sync-status {
+  min-width: 28px;
+  min-height: 28px;
+  padding: 0.4rem;
 }
 
 /* Sign Out Button */
@@ -199,36 +203,6 @@
 }
 
 .sign-out-btn:hover {
-  background: rgba(255, 255, 255, 0.4);
-  transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
-}
-
-/* Seed Button - Matches sidebar navigation style */
-.seed-btn {
-  background: rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(8px) saturate(150%);
-  -webkit-backdrop-filter: blur(8px) saturate(150%);
-  color: var(--color-marine-blue);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  padding: 0.3rem 0.75rem;
-  font-size: 0.65rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  border-radius: 9999px; /* Pill shape */
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  height: 28px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  font-family: var(--font-body);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
-}
-
-.seed-btn:hover {
   background: rgba(255, 255, 255, 0.4);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
@@ -2247,14 +2221,8 @@ pre {
 	}
 	
 	/* Hide right-side items except account info, sync status, and hamburger */
-	.header-right .seed-btn,
 	.header-right .sign-out-btn {
 		display: none !important;
-	}
-	
-	/* Keep sync status visible on mobile - it's now in header */
-	.header-right .sync-status {
-		display: flex !important;
 	}
 	
 	/* Keep account info and hamburger visible */

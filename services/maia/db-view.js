@@ -452,8 +452,6 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 			console.warn('[DB Viewer] Failed to resolve account profile name:', e);
 		}
 	}
-	const accountIdShort = accountId ? accountId.slice(0, 8) : '';
-	
 	// Metadata sidebar (explorer-style navigation)
 	let metadataSidebar = '';
 	if (currentContextCoValueId && data && !data.error && !data.loading) {
@@ -717,6 +715,9 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 			<header class="db-header whitish-card">
 				<div class="header-content">
 					<div class="header-left">
+						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}" title="${getSyncStatusMessage(syncState)}" aria-label="${getSyncStatusMessage(syncState)}">
+							<span class="sync-dot"></span>
+						</div>
 						<h1>Maia DB</h1>
 					</div>
 					<div class="header-center">
@@ -724,13 +725,6 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
 					</div>
 					<div class="header-right">
-						<!-- Sync Status Indicator - moved to header, left of account ID -->
-						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
-							<span class="sync-dot"></span>
-							<span class="sync-text">
-								${getSyncStatusMessage(syncState)}
-							</span>
-						</div>
 						${authState.signedIn ? `
 							<span class="db-status db-status-name" title="Account: ${accountId}">${escapeHtml(accountDisplayName)}</span>
 						` : ''}
@@ -741,11 +735,6 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 							<span></span>
 						</button>
 						${authState.signedIn ? `
-							<button class="seed-btn" onclick="window.handleSeed()" title="Seed database (idempotent - preserves schemata, recreates configs/data)">
-								Seed
-							</button>
-						` : ''}
-						${authState.signedIn ? `
 							<button class="sign-out-btn" onclick="window.handleSignOut()">
 								Sign Out
 							</button>
@@ -754,15 +743,11 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 				</div>
 				<!-- Mobile menu (collapsed by default) - account ID shown inside -->
 				<div class="mobile-menu" id="mobile-menu">
-					${authState.signedIn && accountIdShort ? `
-						<div class="mobile-menu-account-id" title="${accountId}">
-							<code class="db-status">${accountIdShort}</code>
+					${authState.signedIn && accountId ? `
+						<div class="mobile-menu-account-id">
+							<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
+							<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
 						</div>
-					` : ''}
-					${authState.signedIn ? `
-						<button class="mobile-menu-item seed-btn" onclick="window.handleSeed(); window.toggleMobileMenu();" title="Seed database">
-							Seed
-						</button>
 					` : ''}
 					${authState.signedIn ? `
 						<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">

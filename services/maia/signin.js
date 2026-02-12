@@ -6,7 +6,20 @@
  * - State 1 (signup): New user – name input + Create button, link "> -- signin --" swaps to State 2
  * - State 2 (signin): Existing user – big Unlock button, link "-- register new --" swaps to State 1
  * Only signup writes/overwrites the profile name; sign-in never touches it.
+ *
+ * Enter key: Create new Self (signup) or Unlock (signin)
  */
+let signinKeyHandler = null;
+
+/**
+ * Remove Enter key listener (call when navigating away from signin screen)
+ */
+export function removeSigninKeyHandler() {
+	if (signinKeyHandler) {
+		document.removeEventListener('keydown', signinKeyHandler);
+		signinKeyHandler = null;
+	}
+}
 
 /**
  * Get first name from signup input (for "Create new Self" flow).
@@ -44,12 +57,12 @@ export function renderSignInPrompt(hasExistingAccount, viewMode) {
 						<img src="/brand/logo.svg" alt="Maia City" class="sign-in-logo" />
 					</div>
 					<h1>
-						<span>is where you become</span>
+						<span>is where we are</span>
 						<span class="h1-main-text">
-							the human
+							humans
 						</span>
 					</h1>
-					<p class="sign-in-subtitle">you were always meant to be</p>
+					<p class="sign-in-subtitle">who outgrow ourselves everyday creating the extraordinary</p>
 					${isSignupMode ? `
 						<div class="sign-in-first-name-wrap">
 							<label for="signin-first-name" class="sign-in-first-name-label">First name</label>
@@ -81,6 +94,24 @@ export function renderSignInPrompt(hasExistingAccount, viewMode) {
 			</div>
 		</div>
 	`;
+
+	// Enter key: Create (signup) or Unlock (signin)
+	if (signinKeyHandler) document.removeEventListener('keydown', signinKeyHandler);
+	signinKeyHandler = (e) => {
+		if (e.key !== 'Enter' || e.repeat) return;
+		if (!document.querySelector('.sign-in-container')) return; // Not on signin screen
+		if (isSignupMode) {
+			window.handleRegister();
+		} else {
+			window.handleSignIn();
+		}
+	};
+	document.addEventListener('keydown', signinKeyHandler);
+
+	// Focus name input when in signup mode
+	if (isSignupMode) {
+		requestAnimationFrame(() => document.getElementById('signin-first-name')?.focus());
+	}
 }
 
 export function renderUnsupportedBrowser(message) {

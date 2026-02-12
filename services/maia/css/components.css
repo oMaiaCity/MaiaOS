@@ -69,46 +69,45 @@
   letter-spacing: 0.05em;
 }
 
-/* Sync Status */
+/* Sync Status - ghost badge around dot (green = syncing/connected, red = disconnected) */
 .sync-status {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  padding: 0.6rem 1.25rem;
-  border-radius: 9999px; /* Pill shape */
-  background: rgba(255, 255, 255, 0.3);
+  justify-content: center;
+  padding: 0.4rem;
+  min-width: 28px;
+  min-height: 28px;
+  border-radius: 9999px;
+  cursor: default;
+  background: rgba(255, 255, 255, 0.15);
   backdrop-filter: blur(8px) saturate(150%);
   -webkit-backdrop-filter: blur(8px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  color: var(--color-marine-blue-muted);
-  font-size: 0.75rem;
-  font-weight: var(--font-weight-label);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  font-family: var(--font-body);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
-.sync-status.connected {
-  color: var(--color-lush-green);
-  background: rgba(78, 154, 88, 0.1);
-  border-color: rgba(78, 154, 88, 0.2);
-}
-
 .sync-dot {
-  width: 8px;
-  height: 8px;
+  width: 10px;
+  height: 10px;
   border-radius: 50%;
-  background: currentColor;
 }
 
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+.sync-status.connected {
+  background: rgba(78, 154, 88, 0.15);
+  border-color: rgba(78, 154, 88, 0.25);
 }
 
 .sync-status.connected .sync-dot {
-  animation: pulse 2s ease-in-out infinite;
+  background: var(--color-lush-green);
+}
+
+.sync-status.disconnected {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.2);
+}
+
+.sync-status.disconnected .sync-dot {
+  background: #ef4444;
 }
 
 /* Toast - Liquid Glass Design */

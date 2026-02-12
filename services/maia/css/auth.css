@@ -101,16 +101,22 @@ h1 em, .landing-hook em {
   font-family: 'Indie Flower', var(--font-heading), cursive !important;
   font-style: normal;
   font-weight: 400;
-  font-size: 4.5rem;
+  font-size: 5rem;
   color: var(--color-tinted-white);
   text-transform: none;
+}
+
+@media (max-width: 768px) {
+  .h1-main-text {
+    font-size: 2.9rem;
+  }
 }
 
 .sign-in-subtitle {
   font-family: var(--font-body) !important;
   font-weight: var(--font-weight-normal);
   font-style: normal;
-  font-size: 1.5rem;
+  font-size: 1.1rem;
   color: var(--color-soft-clay);
   margin-bottom: 3.5rem;
   opacity: 0.9;

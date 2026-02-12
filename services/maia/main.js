@@ -21,7 +21,7 @@ import {
 import { getAllVibeRegistries, filterVibesForSeeding } from "@MaiaOS/vibes";
 import { renderApp } from './db-view.js';
 import { renderLandingPage } from './landing.js';
-import { renderSignInPrompt, renderUnsupportedBrowser, getFirstNameForRegister } from './signin.js';
+import { renderSignInPrompt, renderUnsupportedBrowser, getFirstNameForRegister, removeSigninKeyHandler } from './signin.js';
 
 let maia;
 let currentScreen = 'dashboard'; // Current screen: 'dashboard' | 'db-viewer' | 'vibe-viewer'
@@ -155,6 +155,7 @@ async function handleRoute() {
 			renderUnsupportedBrowser(error.message);
 		}
 	} else if (path === '/me' || path === '/dashboard') {
+		removeSigninKeyHandler(); // Clean up signin Enter key listener
 		// If authenticated, show dashboard; otherwise redirect to signin
 		// In agent mode, always show dashboard (no signin required)
 		if (detectMode() === 'agent' || (authState.signedIn && maia)) {
@@ -198,6 +199,7 @@ async function handleRoute() {
 			navigateTo('/signin');
 		}
 	} else {
+		removeSigninKeyHandler(); // Clean up signin Enter key listener
 		// Default route: landing page
 		// If already authenticated, redirect to dashboard
 		if (authState.signedIn && maia) {

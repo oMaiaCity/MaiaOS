@@ -232,7 +232,6 @@ export async function renderDashboard(maia, authState, syncState, navigateToScre
 			console.warn('[Dashboard] Failed to resolve account profile name:', e);
 		}
 	}
-	const accountIdShort = accountId ? accountId.slice(0, 8) : '';
 
 	let cards = '';
 
@@ -297,6 +296,9 @@ export async function renderDashboard(maia, authState, syncState, navigateToScre
 			<header class="db-header whitish-card">
 				<div class="header-content">
 					<div class="header-left">
+						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}" title="${getSyncStatusMessage(syncState)}" aria-label="${getSyncStatusMessage(syncState)}">
+							<span class="sync-dot"></span>
+						</div>
 						<h1>${escapeHtml(headerTitle)}</h1>
 					</div>
 					<div class="header-center">
@@ -304,13 +306,6 @@ export async function renderDashboard(maia, authState, syncState, navigateToScre
 						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
 					</div>
 					<div class="header-right">
-						<!-- Sync Status Indicator - moved to header, left of account ID -->
-						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
-							<span class="sync-dot"></span>
-							<span class="sync-text">
-								${getSyncStatusMessage(syncState)}
-							</span>
-						</div>
 						${authState.signedIn ? `
 							<span class="db-status db-status-name" title="Account: ${accountId}">${escapeHtml(accountDisplayName)}</span>
 						` : ''}
@@ -321,11 +316,6 @@ export async function renderDashboard(maia, authState, syncState, navigateToScre
 							<span></span>
 						</button>
 						${authState.signedIn ? `
-							<button class="seed-btn" onclick="window.handleSeed()" title="Seed database (idempotent - preserves schemata, recreates configs/data)">
-								Seed
-							</button>
-						` : ''}
-						${authState.signedIn ? `
 							<button class="sign-out-btn" onclick="window.handleSignOut()">
 								Sign Out
 							</button>
@@ -334,15 +324,11 @@ export async function renderDashboard(maia, authState, syncState, navigateToScre
 				</div>
 				<!-- Mobile menu (collapsed by default) - account ID shown inside -->
 				<div class="mobile-menu" id="mobile-menu">
-					${authState.signedIn && accountIdShort ? `
-						<div class="mobile-menu-account-id" title="${accountId}">
-							<code class="db-status">${accountIdShort}</code>
+					${authState.signedIn && accountId ? `
+						<div class="mobile-menu-account-id">
+							<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
+							<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
 						</div>
-					` : ''}
-					${authState.signedIn ? `
-						<button class="mobile-menu-item seed-btn" onclick="window.handleSeed(); window.toggleMobileMenu();" title="Seed database">
-							Seed
-						</button>
 					` : ''}
 					${authState.signedIn ? `
 						<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">
@@ -391,7 +377,6 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 			console.warn('[VibeViewer] Failed to resolve account profile name:', e);
 		}
 	}
-	const accountIdShort = accountId ? accountId.slice(0, 8) : '';
 	// Map vibe keys to display names
 	const vibeNameMap = {
 		'db': 'MaiaDB',
@@ -415,6 +400,9 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 			<header class="db-header whitish-card">
 				<div class="header-content">
 					<div class="header-left">
+						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}" title="${getSyncStatusMessage(syncState)}" aria-label="${getSyncStatusMessage(syncState)}">
+							<span class="sync-dot"></span>
+						</div>
 						<h1>${escapeHtml(vibeLabel)}</h1>
 					</div>
 					<div class="header-center">
@@ -422,13 +410,6 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
 					</div>
 					<div class="header-right">
-						<!-- Sync Status Indicator - moved to header, left of account ID -->
-						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}">
-							<span class="sync-dot"></span>
-							<span class="sync-text">
-								${getSyncStatusMessage(syncState)}
-							</span>
-						</div>
 						${authState.signedIn ? `
 							<span class="db-status db-status-name" title="Account: ${accountId}">${escapeHtml(accountDisplayName)}</span>
 						` : ''}
@@ -439,11 +420,6 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 							<span></span>
 						</button>
 						${authState.signedIn ? `
-							<button class="seed-btn" onclick="window.handleSeed()" title="Seed database (idempotent - preserves schemata, recreates configs/data)">
-								Seed
-							</button>
-						` : ''}
-						${authState.signedIn ? `
 							<button class="sign-out-btn" onclick="window.handleSignOut()">
 								Sign Out
 							</button>
@@ -452,15 +428,11 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 				</div>
 				<!-- Mobile menu (collapsed by default) - account ID shown inside -->
 				<div class="mobile-menu" id="mobile-menu">
-					${authState.signedIn && accountIdShort ? `
-						<div class="mobile-menu-account-id" title="${accountId}">
-							<code class="db-status">${accountIdShort}</code>
+					${authState.signedIn && accountId ? `
+						<div class="mobile-menu-account-id">
+							<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
+							<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
 						</div>
-					` : ''}
-					${authState.signedIn ? `
-						<button class="mobile-menu-item seed-btn" onclick="window.handleSeed(); window.toggleMobileMenu();" title="Seed database">
-							Seed
-						</button>
 					` : ''}
 					${authState.signedIn ? `
 						<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">
