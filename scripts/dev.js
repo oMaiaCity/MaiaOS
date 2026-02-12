@@ -91,7 +91,15 @@ function processOutput(service, data, isError = false) {
 		if (shouldFilterLine(line)) continue
 		
 		// Server/API ready messages — check BEFORE error block (agent may log to stderr)
-		if (trimmed.includes('running on port') || trimmed.includes('Sync service running') || trimmed.includes('Running on port') || trimmed.includes('HTTP server on port') || trimmed.includes('[agent]') && trimmed.includes('HTTP server') || (trimmed.includes('HTTP server') && trimmed.includes('4204'))) {
+		const serverReadyPattern =
+			trimmed.includes('running on port') ||
+			trimmed.includes('Sync service running') ||
+			trimmed.includes('Running on port') ||
+			trimmed.includes('HTTP server on port') ||
+			(trimmed.includes('[agent]') && trimmed.includes('HTTP server')) ||
+			(trimmed.includes('HTTP server') && trimmed.includes('4204')) ||
+			(trimmed.includes('[sync]') && trimmed.includes('Listening'))
+		if (serverReadyPattern) {
 			const portMatch = trimmed.match(/port\s+(\d+)/i) || trimmed.match(/:(\d+)/)
 			if (portMatch && !serviceStatus[service]) {
 				const port = portMatch[1]
@@ -105,14 +113,19 @@ function processOutput(service, data, isError = false) {
 				continue
 			}
 		}
-		
-		// Extract meaningful messages (Vite ready etc.)
-		if (trimmed.includes('ready') || trimmed.includes('Ready') || trimmed.includes('VITE')) {
+
+		// [sync] Ready / [agent] Ready / Vite ready (no port in message) — use known ports when applicable
+		if ((trimmed.includes('ready') || trimmed.includes('Ready') || trimmed.includes('VITE')) && !serviceStatus[service]) {
 			const portMatch = trimmed.match(/port\s+(\d+)/i) || trimmed.match(/:(\d+)/)
-			if (portMatch && !serviceStatus[service]) {
-				const port = portMatch[1]
+			const knownPort = service === 'sync' ? 4203 : service === 'agent' ? 4204 : null
+			const port = portMatch?.[1] ?? (knownPort && trimmed.includes(`[${service}]`) ? String(knownPort) : null)
+			if (port) {
 				logger.success(`Running on http://localhost:${port}`)
 				serviceStatus[service] = true
+				if (service === 'sync' && !agentStarted) {
+					agentStarted = true
+					startAgent()
+				}
 				checkAllReady()
 				continue
 			}

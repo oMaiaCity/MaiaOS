@@ -918,6 +918,18 @@ export class ActorEngine {
           const validation = await this._validateMessagePayload(messageTypeSchema, payload, message.type);
           if (!validation.valid) {
             const errorDetails = validation.errors?.map(err => `  - ${err.instancePath || err.path || 'root'}: ${err.message || err}`).join('\n') || 'Unknown validation error';
+            const isEmptyValueRejection = message.type === 'CREATE_BUTTON' &&
+              (payload?.value === '' || payload?.value === undefined) &&
+              validation.errors?.every((e) => {
+                const msg = typeof e === 'string' ? e : e?.message ?? '';
+                const path = e?.instancePath ?? e?.path ?? '';
+                return (path === '/value' || path.endsWith('/value')) &&
+                  (msg.includes('fewer than 1') || msg.includes('pattern') || msg.includes('match') || msg.includes('minLength'));
+              });
+            if (isEmptyValueRejection) {
+              // Expected when user presses Enter/clicks with empty input; no need to log as error
+              continue;
+            }
             console.error(`[ActorEngine] Message payload validation failed for "${message.type}":\n${errorDetails}\nPayload:`, JSON.stringify(payload, null, 2));
             continue; // Skip invalid message
           }

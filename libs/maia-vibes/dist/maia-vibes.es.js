@@ -3318,12 +3318,16 @@ const detailView = {
               {
                 "tag": "button",
                 "class": "button",
+                "attrs": {
+                  "type": "button",
+                  "disabled": "$addButtonDisabled"
+                },
                 "text": "Add as writer",
                 "$on": {
                   "click": {
                     "send": "ADD_AGENT",
                     "payload": {
-                      "agentId": "$agentIdInput"
+                      "agentId": "@inputValue"
                     }
                   }
                 }
@@ -3372,29 +3376,7 @@ const vibeContext$1 = {
     "detail": "@maia/sparks/actor/detail"
   }
 };
-const detailContext = {
-  "$schema": "@maia/schema/context",
-  "$id": "@maia/sparks/context/detail",
-  "sparkId": null,
-  "sparkDetails": {
-    "schema": "@maia/schema/data/spark",
-    "filter": {
-      "id": "$sparkId"
-    },
-    "options": {
-      "map": {
-        "members": "$$os.capabilities.guardian.accountMembers",
-        "groupId": "$$os.capabilities.guardian.id"
-      }
-    }
-  },
-  "hasSpark": false,
-  "showEmptyState": true,
-  "showContent": false,
-  "agentIdInput": "",
-  "addAgentError": null,
-  "addAgentHasError": false
-};
+const detailContext = { "$schema": "@maia/schema/context", "$id": "@maia/sparks/context/detail", "sparkId": null, "sparkDetails": { "schema": "@maia/schema/data/spark", "filter": { "id": "$sparkId" }, "options": { "map": { "members": "$$os.capabilities.guardian.accountMembers", "groupId": "$$os.capabilities.guardian.id" } } }, "hasSpark": false, "showEmptyState": true, "showContent": false, "agentIdInput": "", "addAgentError": null, "addAgentHasError": false, "addButtonDisabled": true };
 const vibeState$1 = {
   "$schema": "@maia/schema/state",
   "$id": "@maia/sparks/state/vibe",
@@ -3484,148 +3466,7 @@ const vibeState$1 = {
     }
   }
 };
-const detailState = {
-  "$schema": "@maia/schema/state",
-  "$id": "@maia/sparks/state/detail",
-  "initial": "idle",
-  "states": {
-    "idle": {
-      "on": {
-        "LOAD_ACTOR": {
-          "target": "updating",
-          "actions": [
-            {
-              "updateContext": {
-                "sparkId": "$$id"
-              }
-            }
-          ]
-        },
-        "UPDATE_AGENT_INPUT": {
-          "target": "idle",
-          "actions": [
-            {
-              "updateContext": {
-                "agentIdInput": "$$value"
-              }
-            }
-          ]
-        },
-        "ADD_AGENT": {
-          "target": "addingAgent"
-        },
-        "REMOVE_MEMBER": {
-          "target": "removingMember"
-        }
-      },
-      "entry": {
-        "updateContext": {
-          "hasSpark": {
-            "$ne": [
-              "$sparkId",
-              null
-            ]
-          },
-          "showEmptyState": {
-            "$eq": [
-              "$sparkId",
-              null
-            ]
-          },
-          "showContent": {
-            "$ne": [
-              "$sparkId",
-              null
-            ]
-          }
-        }
-      }
-    },
-    "updating": {
-      "entry": {
-        "updateContext": {
-          "hasSpark": {
-            "$ne": [
-              "$sparkId",
-              null
-            ]
-          },
-          "showEmptyState": {
-            "$eq": [
-              "$sparkId",
-              null
-            ]
-          },
-          "showContent": {
-            "$ne": [
-              "$sparkId",
-              null
-            ]
-          }
-        }
-      },
-      "on": {
-        "SUCCESS": {
-          "target": "idle"
-        }
-      }
-    },
-    "addingAgent": {
-      "entry": {
-        "tool": "@sparks",
-        "payload": {
-          "op": "addSparkMember",
-          "id": "$sparkId",
-          "memberId": "$$agentId",
-          "role": "writer"
-        }
-      },
-      "on": {
-        "SUCCESS": {
-          "target": "idle",
-          "actions": [
-            {
-              "updateContext": {
-                "agentIdInput": "",
-                "addAgentError": null,
-                "addAgentHasError": false
-              }
-            }
-          ]
-        },
-        "ERROR": {
-          "target": "idle",
-          "actions": [
-            {
-              "updateContext": {
-                "addAgentError": "$$errors.0.message",
-                "addAgentHasError": true
-              }
-            }
-          ]
-        }
-      }
-    },
-    "removingMember": {
-      "entry": {
-        "tool": "@sparks",
-        "payload": {
-          "op": "removeSparkMember",
-          "id": "$sparkId",
-          "memberId": "$$memberId"
-        }
-      },
-      "on": {
-        "SUCCESS": {
-          "target": "idle"
-        },
-        "ERROR": {
-          "target": "idle"
-        }
-      }
-    }
-  }
-};
+const detailState = { "$schema": "@maia/schema/state", "$id": "@maia/sparks/state/detail", "initial": "idle", "states": { "idle": { "on": { "LOAD_ACTOR": { "target": "updating", "actions": [{ "updateContext": { "sparkId": "$$id" } }] }, "UPDATE_AGENT_INPUT": { "target": "idle", "actions": [{ "updateContext": { "agentIdInput": "$$value", "addButtonDisabled": { "$eq": ["$$value", ""] } } }] }, "ADD_AGENT": { "target": "addingAgent" }, "REMOVE_MEMBER": { "target": "removingMember" }, "ERROR": { "target": "idle" } }, "entry": { "updateContext": { "hasSpark": { "$ne": ["$sparkId", null] }, "showEmptyState": { "$eq": ["$sparkId", null] }, "showContent": { "$ne": ["$sparkId", null] } } } }, "updating": { "entry": { "updateContext": { "hasSpark": { "$ne": ["$sparkId", null] }, "showEmptyState": { "$eq": ["$sparkId", null] }, "showContent": { "$ne": ["$sparkId", null] } } }, "on": { "SUCCESS": { "target": "idle" } } }, "addingAgent": { "entry": { "tool": "@sparks", "payload": { "op": "addSparkMember", "id": "$sparkId", "memberId": "$$agentId", "role": "writer" } }, "on": { "SUCCESS": { "target": "idle", "actions": [{ "updateContext": { "agentIdInput": "", "addAgentError": null, "addAgentHasError": false, "addButtonDisabled": true } }] }, "ERROR": { "target": "idle", "actions": [{ "updateContext": { "addAgentError": "$$errors.0.message", "addAgentHasError": true } }] } } }, "removingMember": { "entry": { "tool": "@sparks", "payload": { "op": "removeSparkMember", "id": "$sparkId", "memberId": "$$memberId" } }, "on": { "SUCCESS": { "target": "idle" }, "ERROR": { "target": "idle" } } } } };
 const vibeInbox$1 = {
   "$schema": "@maia/schema/inbox",
   "$id": "@maia/sparks/inbox/vibe",

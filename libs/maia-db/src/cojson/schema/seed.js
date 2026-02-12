@@ -158,6 +158,7 @@ async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
   const capabilitiesSchemaCoId = tempCoMap.get('@maia/schema/os/capabilities') || EXCEPTION_SCHEMAS.META_SCHEMA;
   const indexesSchemaCoId = tempCoMap.get('@maia/schema/os/indexes-registry') || EXCEPTION_SCHEMAS.META_SCHEMA;
   const vibesSchemaCoId = tempCoMap.get('@maia/schema/os/vibes-registry') || EXCEPTION_SCHEMAS.META_SCHEMA;
+  const runtimesSchemaCoId = tempCoMap.get('@maia/schema/os/runtimes-registry') || EXCEPTION_SCHEMAS.META_SCHEMA;
   const sparksSchemaCoId = tempCoMap.get('@maia/schema/os/sparks-registry') || EXCEPTION_SCHEMAS.META_SCHEMA;
 
   const ctx = { node, account, guardian };
@@ -170,8 +171,10 @@ async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
   const { coValue: schematas } = await createCoValueForSpark(ctx, null, scaffoldOpts(schematasSchemaCoId, {}));
   const { coValue: indexes } = await createCoValueForSpark(ctx, null, scaffoldOpts(indexesSchemaCoId, {}));
   const { coValue: vibes } = await createCoValueForSpark(ctx, null, scaffoldOpts(vibesSchemaCoId, {}));
+  const { coValue: runtimes } = await createCoValueForSpark(ctx, null, scaffoldOpts(runtimesSchemaCoId, {}));
   os.set('schematas', schematas.id);
   os.set('indexes', indexes.id);
+  os.set('runtimes', runtimes.id);
   maiaSpark.set('os', os.id);
   maiaSpark.set('vibes', vibes.id);
   schematas.set('@maia/schema/meta', metaSchemaCoId);
@@ -182,7 +185,7 @@ async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
 
   // 6. Cleanup temp
   if (typeof account.delete === 'function') account.delete('temp');
-  console.log('✅ Bootstrap scaffold complete: account.sparks, @maia spark, os, schematas, indexes, vibes');
+  console.log('✅ Bootstrap scaffold complete: account.sparks, @maia spark, os, schematas, indexes, runtimes, vibes');
 }
 
 /**
@@ -1712,6 +1715,43 @@ export async function seed(account, node, configs, schemas, data, existingBacken
       await groups.setSparkVibesId(backend, MAIA_SPARK, vibes.id);
     }
 
+    // Ensure spark.os.runtimes exists (create if missing for legacy accounts)
+    let runtimes = null;
+    const osId = await groups.getSparkOsId(backend, MAIA_SPARK);
+    if (osId) {
+      const osCore = await ensureCoValueLoaded(backend, osId, { waitForAvailable: true, timeoutMs: 2000 });
+      if (osCore && backend.isAvailable(osCore)) {
+        const osContent = backend.getCurrentContent(osCore);
+        if (osContent) {
+          let runtimesId = osContent.get('runtimes');
+          if (runtimesId) {
+            const runtimesCore = node.getCoValue(runtimesId);
+            if (runtimesCore && runtimesCore.type === 'comap') {
+              const runtimesContent = runtimesCore.getCurrentContent?.();
+              if (runtimesContent && typeof runtimesContent.set === 'function') {
+                runtimes = runtimesContent;
+              }
+            }
+          }
+          if (!runtimes) {
+            const runtimesSchemaCoId = schemaCoIdMap?.get('@maia/schema/os/runtimes-registry') ?? await (await import('../schema/resolver.js')).resolve(backend, '@maia/schema/os/runtimes-registry', { returnType: 'coId' });
+            const ctx = { node, account, guardian: maiaGroup };
+            const { coValue: runtimesCoMap } = await createCoValueForSpark(ctx, null, {
+              schema: runtimesSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
+              cotype: 'comap',
+              data: {},
+              dbEngine: backend?.dbEngine
+            });
+            runtimes = runtimesCoMap;
+            osContent.set('runtimes', runtimes.id);
+          }
+        }
+      }
+    }
+
+    const runtimeAssignmentSchemaCoId = schemaCoIdMap?.get('@maia/schema/os/runtime-assignment');
+    const runtimeAssignmentsColistSchemaCoId = schemaCoIdMap?.get('@maia/schema/os/runtime-assignments-colist');
+
     // Seed each vibe
     for (const vibe of allVibes) {
       // Debug: Check if actor is in registry
@@ -1772,9 +1812,27 @@ export async function seed(account, node, configs, schemas, data, existingBacken
           combinedRegistry.set(originalVibeIdForRegistry, vibeCoId); // Add to registry for future transformations
           coIdRegistry.register(originalVibeIdForRegistry, vibeCoId);
         }
+
+        // Add runtime assignment: runtimes[vibeCoId] = [{ browser: guardianId }] (browser = spark guardian)
+        if (runtimes && runtimeAssignmentSchemaCoId && runtimeAssignmentsColistSchemaCoId && maiaGroup?.id) {
+          const ctx = { node, account, guardian: maiaGroup };
+          const { coValue: assignmentCoMap } = await createCoValueForSpark(ctx, null, {
+            schema: runtimeAssignmentSchemaCoId,
+            cotype: 'comap',
+            data: { browser: maiaGroup.id },
+            dbEngine: backend?.dbEngine
+          });
+          const { coValue: assignmentsColist } = await createCoValueForSpark(ctx, null, {
+            schema: runtimeAssignmentsColistSchemaCoId,
+            cotype: 'colist',
+            data: [assignmentCoMap.id],
+            dbEngine: backend?.dbEngine
+          });
+          runtimes.set(vibeCoId, assignmentsColist.id);
+        }
       }
     }
-    
+
     // Verify all vibes were stored correctly
     if (vibes && typeof vibes.get === 'function') {
       for (const vibe of allVibes) {

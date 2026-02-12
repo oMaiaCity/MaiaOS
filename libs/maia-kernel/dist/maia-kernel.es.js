@@ -15,33 +15,33 @@ function Cc(t, A) {
   return Object.freeze(Object.defineProperty(t, Symbol.toStringTag, { value: "Module" }));
 }
 const Bc = new TextEncoder(), Qc = new TextDecoder();
-function fr(t) {
+function pr(t) {
   t = t.replace(/=/g, "");
   const A = t.length, e = A % 4, i = e && e - 1, o = (A >> 2) * 3 + i, r = new Uint8Array(A + 3);
   Bc.encodeInto(t + "===", r);
   for (let n = 0, s = 0; n < A; n += 4, s += 3) {
-    const a = (_e[r[n]] << 18) + (_e[r[n + 1]] << 12) + (_e[r[n + 2]] << 6) + _e[r[n + 3]];
+    const a = (Xe[r[n]] << 18) + (Xe[r[n + 1]] << 12) + (Xe[r[n + 2]] << 6) + Xe[r[n + 3]];
     r[s] = a >> 16, r[s + 1] = a >> 8 & 255, r[s + 2] = a & 255;
   }
   return new Uint8Array(r.buffer, 0, o);
 }
-function pr(t) {
+function wr(t) {
   const A = t.length, e = A % 3, i = Math.floor(A / 3) * 4 + (e && e + 1), o = Math.ceil(A / 3) * 4, r = new Uint8Array(o);
   for (let s = 0, a = 0; a < A; s += 4, a += 3) {
     const g = (t[a] << 16) + (t[a + 1] << 8) + (t[a + 2] | 0);
-    r[s] = wt[g >> 18], r[s + 1] = wt[g >> 12 & 63], r[s + 2] = wt[g >> 6 & 63], r[s + 3] = wt[g & 63];
+    r[s] = Dt[g >> 18], r[s + 1] = Dt[g >> 12 & 63], r[s + 2] = Dt[g >> 6 & 63], r[s + 3] = Dt[g & 63];
   }
   let n = Qc.decode(new Uint8Array(r.buffer, 0, i));
   return e === 1 && (n += "=="), e === 2 && (n += "="), n;
 }
-const Bg = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_", _e = new Uint8Array(128);
+const Bg = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_", Xe = new Uint8Array(128);
 for (const [t, A] of Array.from(Bg).entries())
-  _e[A.charCodeAt(0)] = t;
-_e[61] = 0;
-const wt = new Uint8Array(64);
+  Xe[A.charCodeAt(0)] = t;
+Xe[61] = 0;
+const Dt = new Uint8Array(64);
 for (const [t, A] of Array.from(Bg).entries())
-  wt[t] = A.charCodeAt(0);
-var Ec = typeof globalThis == "object" ? globalThis : typeof self == "object" ? self : typeof window == "object" ? window : typeof globalThis == "object" ? globalThis : {}, ke = "1.9.0", Xn = /^(\d+)\.(\d+)\.(\d+)(-(.+))?$/;
+  Dt[t] = A.charCodeAt(0);
+var Ec = typeof globalThis == "object" ? globalThis : typeof self == "object" ? self : typeof window == "object" ? window : typeof globalThis == "object" ? globalThis : {}, Me = "1.9.0", Xn = /^(\d+)\.(\d+)\.(\d+)(-(.+))?$/;
 function lc(t) {
   var A = /* @__PURE__ */ new Set([t]), e = /* @__PURE__ */ new Set(), i = t.match(Xn);
   if (!i)
@@ -81,31 +81,31 @@ function lc(t) {
     return I.prerelease != null || o.major !== I.major ? r(a) : o.major === 0 ? o.minor === I.minor && o.patch <= I.patch ? n(a) : r(a) : o.minor <= I.minor ? n(a) : r(a);
   };
 }
-var dc = lc(ke), uc = ke.split(".")[0], Kt = /* @__PURE__ */ Symbol.for("opentelemetry.js.api." + uc), Yt = Ec;
-function Lt(t, A, e, i) {
+var dc = lc(Me), uc = Me.split(".")[0], Ut = /* @__PURE__ */ Symbol.for("opentelemetry.js.api." + uc), Jt = Ec;
+function Ot(t, A, e, i) {
   var o;
   i === void 0 && (i = !1);
-  var r = Yt[Kt] = (o = Yt[Kt]) !== null && o !== void 0 ? o : {
-    version: ke
+  var r = Jt[Ut] = (o = Jt[Ut]) !== null && o !== void 0 ? o : {
+    version: Me
   };
   if (!i && r[t]) {
     var n = new Error("@opentelemetry/api: Attempted duplicate registration of API: " + t);
     return e.error(n.stack || n.message), !1;
   }
-  if (r.version !== ke) {
-    var n = new Error("@opentelemetry/api: Registration of version v" + r.version + " for " + t + " does not match previously registered API v" + ke);
+  if (r.version !== Me) {
+    var n = new Error("@opentelemetry/api: Registration of version v" + r.version + " for " + t + " does not match previously registered API v" + Me);
     return e.error(n.stack || n.message), !1;
   }
-  return r[t] = A, e.debug("@opentelemetry/api: Registered a global for " + t + " v" + ke + "."), !0;
+  return r[t] = A, e.debug("@opentelemetry/api: Registered a global for " + t + " v" + Me + "."), !0;
 }
-function Re(t) {
-  var A, e, i = (A = Yt[Kt]) === null || A === void 0 ? void 0 : A.version;
+function Ke(t) {
+  var A, e, i = (A = Jt[Ut]) === null || A === void 0 ? void 0 : A.version;
   if (!(!i || !dc(i)))
-    return (e = Yt[Kt]) === null || e === void 0 ? void 0 : e[t];
+    return (e = Jt[Ut]) === null || e === void 0 ? void 0 : e[t];
 }
-function Tt(t, A) {
-  A.debug("@opentelemetry/api: Unregistering a global for " + t + " v" + ke + ".");
-  var e = Yt[Kt];
+function Pt(t, A) {
+  A.debug("@opentelemetry/api: Unregistering a global for " + t + " v" + Me + ".");
+  var e = Jt[Ut];
   e && delete e[t];
 }
 var hc = function(t, A) {
@@ -137,48 +137,48 @@ var hc = function(t, A) {
     return t.prototype.debug = function() {
       for (var A = [], e = 0; e < arguments.length; e++)
         A[e] = arguments[e];
-      return ct("debug", this._namespace, A);
+      return Bt("debug", this._namespace, A);
     }, t.prototype.error = function() {
       for (var A = [], e = 0; e < arguments.length; e++)
         A[e] = arguments[e];
-      return ct("error", this._namespace, A);
+      return Bt("error", this._namespace, A);
     }, t.prototype.info = function() {
       for (var A = [], e = 0; e < arguments.length; e++)
         A[e] = arguments[e];
-      return ct("info", this._namespace, A);
+      return Bt("info", this._namespace, A);
     }, t.prototype.warn = function() {
       for (var A = [], e = 0; e < arguments.length; e++)
         A[e] = arguments[e];
-      return ct("warn", this._namespace, A);
+      return Bt("warn", this._namespace, A);
     }, t.prototype.verbose = function() {
       for (var A = [], e = 0; e < arguments.length; e++)
         A[e] = arguments[e];
-      return ct("verbose", this._namespace, A);
+      return Bt("verbose", this._namespace, A);
     }, t;
   })()
 );
-function ct(t, A, e) {
-  var i = Re("diag");
+function Bt(t, A, e) {
+  var i = Ke("diag");
   if (i)
     return e.unshift(A), i[t].apply(i, fc([], hc(e), !1));
 }
-var UA;
+var HA;
 (function(t) {
   t[t.NONE = 0] = "NONE", t[t.ERROR = 30] = "ERROR", t[t.WARN = 50] = "WARN", t[t.INFO = 60] = "INFO", t[t.DEBUG = 70] = "DEBUG", t[t.VERBOSE = 80] = "VERBOSE", t[t.ALL = 9999] = "ALL";
-})(UA || (UA = {}));
+})(HA || (HA = {}));
 function wc(t, A) {
-  t < UA.NONE ? t = UA.NONE : t > UA.ALL && (t = UA.ALL), A = A || {};
+  t < HA.NONE ? t = HA.NONE : t > HA.ALL && (t = HA.ALL), A = A || {};
   function e(i, o) {
     var r = A[i];
     return typeof r == "function" && t >= o ? r.bind(A) : function() {
     };
   }
   return {
-    error: e("error", UA.ERROR),
-    warn: e("warn", UA.WARN),
-    info: e("info", UA.INFO),
-    debug: e("debug", UA.DEBUG),
-    verbose: e("verbose", UA.VERBOSE)
+    error: e("error", HA.ERROR),
+    warn: e("warn", HA.WARN),
+    info: e("info", HA.INFO),
+    debug: e("debug", HA.DEBUG),
+    verbose: e("verbose", HA.VERBOSE)
   };
 }
 var yc = function(t, A) {
@@ -201,7 +201,7 @@ var yc = function(t, A) {
   if (arguments.length === 2) for (var i = 0, o = A.length, r; i < o; i++)
     (r || !(i in A)) && (r || (r = Array.prototype.slice.call(A, 0, i)), r[i] = A[i]);
   return t.concat(r || Array.prototype.slice.call(A));
-}, mc = "diag", te = (
+}, mc = "diag", ie = (
   /** @class */
   (function() {
     function t() {
@@ -209,29 +209,29 @@ var yc = function(t, A) {
         return function() {
           for (var r = [], n = 0; n < arguments.length; n++)
             r[n] = arguments[n];
-          var s = Re("diag");
+          var s = Ke("diag");
           if (s)
             return s[o].apply(s, Dc([], yc(r), !1));
         };
       }
       var e = this, i = function(o, r) {
         var n, s, a;
-        if (r === void 0 && (r = { logLevel: UA.INFO }), o === e) {
+        if (r === void 0 && (r = { logLevel: HA.INFO }), o === e) {
           var g = new Error("Cannot use diag as the logger for itself. Please use a DiagLogger implementation like ConsoleDiagLogger or a custom implementation");
           return e.error((n = g.stack) !== null && n !== void 0 ? n : g.message), !1;
         }
         typeof r == "number" && (r = {
           logLevel: r
         });
-        var I = Re("diag"), c = wc((s = r.logLevel) !== null && s !== void 0 ? s : UA.INFO, o);
+        var I = Ke("diag"), c = wc((s = r.logLevel) !== null && s !== void 0 ? s : HA.INFO, o);
         if (I && !r.suppressOverrideMessage) {
           var C = (a = new Error().stack) !== null && a !== void 0 ? a : "<failed to generate stacktrace>";
           I.warn("Current logger will be overwritten from " + C), c.warn("Current logger will overwrite one already registered from " + C);
         }
-        return Lt("diag", c, e, !0);
+        return Ot("diag", c, e, !0);
       };
       e.setLogger = i, e.disable = function() {
-        Tt(mc, e);
+        Pt(mc, e);
       }, e.createComponentLogger = function(o) {
         return new pc(o);
       }, e.verbose = A("verbose"), e.debug = A("debug"), e.info = A("info"), e.warn = A("warn"), e.error = A("error");
@@ -310,7 +310,7 @@ var yc = function(t, A) {
     }, t;
   })()
 );
-te.instance();
+ie.instance();
 function Mc(t) {
   return t === void 0 && (t = {}), new Nc(new Map(Object.entries(t)));
 }
@@ -334,7 +334,7 @@ var Gc = (
     }
     return t;
   })()
-), Fc = new Gc(), Ye = /* @__PURE__ */ (function() {
+), bc = new Gc(), Je = /* @__PURE__ */ (function() {
   var t = function(A, e) {
     return t = Object.setPrototypeOf || { __proto__: [] } instanceof Array && function(i, o) {
       i.__proto__ = o;
@@ -351,7 +351,7 @@ var Gc = (
     }
     A.prototype = e === null ? Object.create(e) : (i.prototype = e.prototype, new i());
   };
-})(), bc = (
+})(), Fc = (
   /** @class */
   (function() {
     function t() {
@@ -374,7 +374,7 @@ var Gc = (
     }, t.prototype.removeBatchObservableCallback = function(A) {
     }, t;
   })()
-), ho = (
+), wo = (
   /** @class */
   /* @__PURE__ */ (function() {
     function t() {
@@ -384,44 +384,44 @@ var Gc = (
 ), Rc = (
   /** @class */
   (function(t) {
-    Ye(A, t);
+    Je(A, t);
     function A() {
       return t !== null && t.apply(this, arguments) || this;
     }
     return A.prototype.add = function(e, i) {
     }, A;
-  })(ho)
+  })(wo)
 ), vc = (
   /** @class */
   (function(t) {
-    Ye(A, t);
+    Je(A, t);
     function A() {
       return t !== null && t.apply(this, arguments) || this;
     }
     return A.prototype.add = function(e, i) {
     }, A;
-  })(ho)
+  })(wo)
 ), Kc = (
   /** @class */
   (function(t) {
-    Ye(A, t);
+    Je(A, t);
     function A() {
       return t !== null && t.apply(this, arguments) || this;
     }
     return A.prototype.record = function(e, i) {
     }, A;
-  })(ho)
+  })(wo)
 ), Yc = (
   /** @class */
   (function(t) {
-    Ye(A, t);
+    Je(A, t);
     function A() {
       return t !== null && t.apply(this, arguments) || this;
     }
     return A.prototype.record = function(e, i) {
     }, A;
-  })(ho)
-), An = (
+  })(wo)
+), en = (
   /** @class */
   (function() {
     function t() {
@@ -433,34 +433,34 @@ var Gc = (
 ), Uc = (
   /** @class */
   (function(t) {
-    Ye(A, t);
+    Je(A, t);
     function A() {
       return t !== null && t.apply(this, arguments) || this;
     }
     return A;
-  })(An)
+  })(en)
 ), Jc = (
   /** @class */
   (function(t) {
-    Ye(A, t);
+    Je(A, t);
     function A() {
       return t !== null && t.apply(this, arguments) || this;
     }
     return A;
-  })(An)
+  })(en)
 ), Hc = (
   /** @class */
   (function(t) {
-    Ye(A, t);
+    Je(A, t);
     function A() {
       return t !== null && t.apply(this, arguments) || this;
     }
     return A;
-  })(An)
-), qc = new bc(), xc = new Rc(), Lc = new Kc(), Tc = new Yc(), Oc = new vc(), Pc = new Uc(), jc = new Jc(), Vc = new Hc(), $A;
+  })(en)
+), qc = new Fc(), xc = new Rc(), Lc = new Kc(), Tc = new Yc(), Oc = new vc(), Pc = new Uc(), jc = new Jc(), Vc = new Hc(), WA;
 (function(t) {
   t[t.INT = 0] = "INT", t[t.DOUBLE = 1] = "DOUBLE";
-})($A || ($A = {}));
+})(WA || (WA = {}));
 var $c = {
   get: function(t, A) {
     if (t != null)
@@ -499,7 +499,7 @@ var $c = {
     function t() {
     }
     return t.prototype.active = function() {
-      return Fc;
+      return bc;
     }, t.prototype.with = function(A, e, i) {
       for (var o = [], r = 3; r < arguments.length; r++)
         o[r - 3] = arguments[r];
@@ -532,7 +532,7 @@ var $c = {
   if (arguments.length === 2) for (var i = 0, o = A.length, r; i < o; i++)
     (r || !(i in A)) && (r || (r = Array.prototype.slice.call(A, 0, i)), r[i] = A[i]);
   return t.concat(r || Array.prototype.slice.call(A));
-}, Lo = "context", eC = new Zc(), fo = (
+}, To = "context", eC = new Zc(), yo = (
   /** @class */
   (function() {
     function t() {
@@ -540,7 +540,7 @@ var $c = {
     return t.getInstance = function() {
       return this._instance || (this._instance = new t()), this._instance;
     }, t.prototype.setGlobalContextManager = function(A) {
-      return Lt(Lo, A, te.instance());
+      return Ot(To, A, ie.instance());
     }, t.prototype.active = function() {
       return this._getContextManager().active();
     }, t.prototype.with = function(A, e, i) {
@@ -550,20 +550,20 @@ var $c = {
     }, t.prototype.bind = function(A, e) {
       return this._getContextManager().bind(A, e);
     }, t.prototype._getContextManager = function() {
-      return Re(Lo) || eC;
+      return Ke(To) || eC;
     }, t.prototype.disable = function() {
-      this._getContextManager().disable(), Tt(Lo, te.instance());
+      this._getContextManager().disable(), Pt(To, ie.instance());
     }, t;
   })()
-), wr;
+), yr;
 (function(t) {
   t[t.NONE = 0] = "NONE", t[t.SAMPLED = 1] = "SAMPLED";
-})(wr || (wr = {}));
+})(yr || (yr = {}));
 var Eg = "0000000000000000", lg = "00000000000000000000000000000000", tC = {
   traceId: lg,
   spanId: Eg,
-  traceFlags: wr.NONE
-}, Mt = (
+  traceFlags: yr.NONE
+}, bt = (
   /** @class */
   (function() {
     function t(A) {
@@ -591,25 +591,25 @@ var Eg = "0000000000000000", lg = "00000000000000000000000000000000", tC = {
     }, t.prototype.recordException = function(A, e) {
     }, t;
   })()
-), en = Qg("OpenTelemetry Context Key SPAN");
-function tn(t) {
-  return t.getValue(en) || void 0;
+), tn = Qg("OpenTelemetry Context Key SPAN");
+function on(t) {
+  return t.getValue(tn) || void 0;
 }
 function iC() {
-  return tn(fo.getInstance().active());
+  return on(yo.getInstance().active());
 }
-function on(t, A) {
-  return t.setValue(en, A);
+function rn(t, A) {
+  return t.setValue(tn, A);
 }
 function oC(t) {
-  return t.deleteValue(en);
+  return t.deleteValue(tn);
 }
 function rC(t, A) {
-  return on(t, new Mt(A));
+  return rn(t, new bt(A));
 }
 function dg(t) {
   var A;
-  return (A = tn(t)) === null || A === void 0 ? void 0 : A.spanContext();
+  return (A = on(t)) === null || A === void 0 ? void 0 : A.spanContext();
 }
 var nC = /^([0-9a-f]{32})$/i, sC = /^[0-9a-f]{16}$/i;
 function aC(t) {
@@ -622,26 +622,26 @@ function ug(t) {
   return aC(t.traceId) && gC(t.spanId);
 }
 function IC(t) {
-  return new Mt(t);
+  return new bt(t);
 }
-var To = fo.getInstance(), hg = (
+var Oo = yo.getInstance(), hg = (
   /** @class */
   (function() {
     function t() {
     }
     return t.prototype.startSpan = function(A, e, i) {
-      i === void 0 && (i = To.active());
+      i === void 0 && (i = Oo.active());
       var o = !!e?.root;
       if (o)
-        return new Mt();
+        return new bt();
       var r = i && dg(i);
-      return cC(r) && ug(r) ? new Mt(r) : new Mt();
+      return cC(r) && ug(r) ? new bt(r) : new bt();
     }, t.prototype.startActiveSpan = function(A, e, i, o) {
       var r, n, s;
       if (!(arguments.length < 2)) {
         arguments.length === 2 ? s = e : arguments.length === 3 ? (r = e, s = i) : (r = e, n = i, s = o);
-        var a = n ?? To.active(), g = this.startSpan(A, r, a), I = on(a, g);
-        return To.with(I, s, void 0, g);
+        var a = n ?? Oo.active(), g = this.startSpan(A, r, a), I = rn(a, g);
+        return Oo.with(I, s, void 0, g);
       }
     }, t;
   })()
@@ -695,8 +695,8 @@ var CC = new hg(), BC = (
     }, t;
   })()
 );
-fo.getInstance();
-te.instance();
+yo.getInstance();
+ie.instance();
 var lC = (
   /** @class */
   (function() {
@@ -706,7 +706,7 @@ var lC = (
       return qc;
     }, t;
   })()
-), dC = new lC(), Oo = "metrics", uC = (
+), dC = new lC(), Po = "metrics", uC = (
   /** @class */
   (function() {
     function t() {
@@ -714,16 +714,16 @@ var lC = (
     return t.getInstance = function() {
       return this._instance || (this._instance = new t()), this._instance;
     }, t.prototype.setGlobalMeterProvider = function(A) {
-      return Lt(Oo, A, te.instance());
+      return Ot(Po, A, ie.instance());
     }, t.prototype.getMeterProvider = function() {
-      return Re(Oo) || dC;
+      return Ke(Po) || dC;
     }, t.prototype.getMeter = function(A, e, i) {
       return this.getMeterProvider().getMeter(A, e, i);
     }, t.prototype.disable = function() {
-      Tt(Oo, te.instance());
+      Pt(Po, ie.instance());
     }, t;
   })()
-), ge = uC.getInstance(), hC = (
+), ce = uC.getInstance(), hC = (
   /** @class */
   (function() {
     function t() {
@@ -735,20 +735,20 @@ var lC = (
       return [];
     }, t;
   })()
-), rn = Qg("OpenTelemetry Baggage Key");
+), nn = Qg("OpenTelemetry Baggage Key");
 function fg(t) {
-  return t.getValue(rn) || void 0;
+  return t.getValue(nn) || void 0;
 }
 function fC() {
-  return fg(fo.getInstance().active());
+  return fg(yo.getInstance().active());
 }
 function pC(t, A) {
-  return t.setValue(rn, A);
+  return t.setValue(nn, A);
 }
 function wC(t) {
-  return t.deleteValue(rn);
+  return t.deleteValue(nn);
 }
-var Po = "propagation", yC = new hC(), DC = (
+var jo = "propagation", yC = new hC(), DC = (
   /** @class */
   (function() {
     function t() {
@@ -757,7 +757,7 @@ var Po = "propagation", yC = new hC(), DC = (
     return t.getInstance = function() {
       return this._instance || (this._instance = new t()), this._instance;
     }, t.prototype.setGlobalPropagator = function(A) {
-      return Lt(Po, A, te.instance());
+      return Ot(jo, A, ie.instance());
     }, t.prototype.inject = function(A, e, i) {
       return i === void 0 && (i = Wc), this._getGlobalPropagator().inject(A, e, i);
     }, t.prototype.extract = function(A, e, i) {
@@ -765,30 +765,30 @@ var Po = "propagation", yC = new hC(), DC = (
     }, t.prototype.fields = function() {
       return this._getGlobalPropagator().fields();
     }, t.prototype.disable = function() {
-      Tt(Po, te.instance());
+      Pt(jo, ie.instance());
     }, t.prototype._getGlobalPropagator = function() {
-      return Re(Po) || yC;
+      return Ke(jo) || yC;
     }, t;
   })()
 );
 DC.getInstance();
-var jo = "trace", mC = (
+var Vo = "trace", mC = (
   /** @class */
   (function() {
     function t() {
-      this._proxyTracerProvider = new As(), this.wrapSpanContext = IC, this.isSpanContextValid = ug, this.deleteSpan = oC, this.getSpan = tn, this.getActiveSpan = iC, this.getSpanContext = dg, this.setSpan = on, this.setSpanContext = rC;
+      this._proxyTracerProvider = new As(), this.wrapSpanContext = IC, this.isSpanContextValid = ug, this.deleteSpan = oC, this.getSpan = on, this.getActiveSpan = iC, this.getSpanContext = dg, this.setSpan = rn, this.setSpanContext = rC;
     }
     return t.getInstance = function() {
       return this._instance || (this._instance = new t()), this._instance;
     }, t.prototype.setGlobalTracerProvider = function(A) {
-      var e = Lt(jo, this._proxyTracerProvider, te.instance());
+      var e = Ot(Vo, this._proxyTracerProvider, ie.instance());
       return e && this._proxyTracerProvider.setDelegate(A), e;
     }, t.prototype.getTracerProvider = function() {
-      return Re(jo) || this._proxyTracerProvider;
+      return Ke(Vo) || this._proxyTracerProvider;
     }, t.prototype.getTracer = function(A, e) {
       return this.getTracerProvider().getTracer(A, e);
     }, t.prototype.disable = function() {
-      Tt(jo, te.instance()), this._proxyTracerProvider = new As();
+      Pt(Vo, ie.instance()), this._proxyTracerProvider = new As();
     }, t;
   })()
 );
@@ -829,7 +829,7 @@ function kC(t) {
 function pg(t, A) {
   return Array.isArray(A) ? A.length === 0 ? !0 : t ? A.every((e) => typeof e == "string") : A.every((e) => Number.isSafeInteger(e)) : !1;
 }
-function yr(t, A) {
+function Dr(t, A) {
   if (typeof A != "string")
     throw new Error(`${t}: string expected`);
   return !0;
@@ -838,7 +838,7 @@ function wg(t) {
   if (!Number.isSafeInteger(t))
     throw new Error(`invalid integer: ${t}`);
 }
-function Dr(t) {
+function mr(t) {
   if (!Array.isArray(t))
     throw new Error("array expected");
 }
@@ -861,13 +861,13 @@ function GC(t) {
   yg("alphabet", A);
   const i = new Map(A.map((o, r) => [o, r]));
   return {
-    encode: (o) => (Dr(o), o.map((r) => {
+    encode: (o) => (mr(o), o.map((r) => {
       if (!Number.isSafeInteger(r) || r < 0 || r >= e)
         throw new Error(`alphabet.encode: digit index outside alphabet "${r}". Allowed: ${t}`);
       return A[r];
     })),
-    decode: (o) => (Dr(o), o.map((r) => {
-      yr("alphabet.decode", r);
+    decode: (o) => (mr(o), o.map((r) => {
+      Dr("alphabet.decode", r);
       const n = i.get(r);
       if (n === void 0)
         throw new Error(`Unknown letter: "${r}". Allowed: ${t}`);
@@ -876,10 +876,10 @@ function GC(t) {
   };
 }
 // @__NO_SIDE_EFFECTS__
-function FC(t = "") {
-  return yr("join", t), {
+function bC(t = "") {
+  return Dr("join", t), {
     encode: (A) => (yg("join.decode", A), A.join(t)),
-    decode: (A) => (yr("join.decode", A), A.split(t))
+    decode: (A) => (Dr("join.decode", A), A.split(t))
   };
 }
 function es(t, A, e) {
@@ -887,7 +887,7 @@ function es(t, A, e) {
     throw new Error(`convertRadix: invalid from=${A}, base cannot be less than 2`);
   if (e < 2)
     throw new Error(`convertRadix: invalid to=${e}, base cannot be less than 2`);
-  if (Dr(t), !t.length)
+  if (mr(t), !t.length)
     return [];
   let i = 0;
   const o = [], r = Array.from(t, (s) => {
@@ -918,7 +918,7 @@ function es(t, A, e) {
   return o.reverse();
 }
 // @__NO_SIDE_EFFECTS__
-function bC(t) {
+function FC(t) {
   wg(t);
   const A = 2 ** 8;
   return {
@@ -930,8 +930,8 @@ function bC(t) {
     decode: (e) => (NC("radix.decode", e), Uint8Array.from(es(e, t, A)))
   };
 }
-const RC = /* @__NO_SIDE_EFFECTS__ */ (t) => /* @__PURE__ */ MC(/* @__PURE__ */ bC(58), /* @__PURE__ */ GC(t), /* @__PURE__ */ FC("")), YA = /* @__PURE__ */ RC("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz");
-function LA(t) {
+const RC = /* @__NO_SIDE_EFFECTS__ */ (t) => /* @__PURE__ */ MC(/* @__PURE__ */ FC(58), /* @__PURE__ */ GC(t), /* @__PURE__ */ bC("")), JA = /* @__PURE__ */ RC("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz");
+function TA(t) {
   const A = [];
   let e = t;
   if (e && e.toJSON && typeof e.toJSON == "function" && (e = e.toJSON()), e === void 0)
@@ -943,7 +943,7 @@ function LA(t) {
   let i, o;
   if (Array.isArray(e)) {
     for (o = "[", i = 0; i < e.length; i++)
-      i && (o += ","), o += LA(e[i]) || "null";
+      i && (o += ","), o += TA(e[i]) || "null";
     return o + "]";
   }
   if (e === null)
@@ -952,22 +952,22 @@ function LA(t) {
     throw new TypeError("Converting circular structure to JSON");
   const r = A.push(e) - 1, n = Object.keys(e).sort();
   for (o = "", i = 0; i < n.length; i++) {
-    const s = n[i], a = LA(e[s]);
+    const s = n[i], a = TA(e[s]);
     a && (o && (o += ","), o += JSON.stringify(s) + ":" + a);
   }
   return A.splice(r, 1), "{" + o + "}";
 }
-function Io(t) {
+function Co(t) {
   return JSON.parse(t);
 }
-function mr(t) {
+function Sr(t) {
   try {
     return JSON.parse(t);
   } catch {
     return;
   }
 }
-const Ct = {
+const Qt = {
   DEBUG: 0,
   INFO: 1,
   WARN: 2,
@@ -988,7 +988,7 @@ class vC {
   }
 }
 class KC {
-  constructor(A = Ct.INFO, e = new vC()) {
+  constructor(A = Qt.INFO, e = new vC()) {
     this.level = A, this.logSystem = e;
   }
   setLevel(A) {
@@ -998,23 +998,23 @@ class KC {
     this.logSystem = A;
   }
   debug(A, e) {
-    this.level <= Ct.DEBUG && this.logSystem.debug(A, e);
+    this.level <= Qt.DEBUG && this.logSystem.debug(A, e);
   }
   info(A, e) {
-    this.level <= Ct.INFO && this.logSystem.info(A, e);
+    this.level <= Qt.INFO && this.logSystem.info(A, e);
   }
   warn(A, e) {
-    this.level <= Ct.WARN && this.logSystem.warn(A, e);
+    this.level <= Qt.WARN && this.logSystem.warn(A, e);
   }
   error(A, e) {
-    this.level <= Ct.ERROR && this.logSystem.error(A, e);
+    this.level <= Qt.ERROR && this.logSystem.error(A, e);
   }
 }
-const AA = new KC();
+const eA = new KC();
 function YC(t = 32) {
   return crypto.getRandomValues(new Uint8Array(t));
 }
-const SA = new TextEncoder(), ts = new TextDecoder();
+const MA = new TextEncoder(), ts = new TextDecoder();
 class UC {
   constructor() {
     this.agentIdCache = /* @__PURE__ */ new Map();
@@ -1023,10 +1023,10 @@ class UC {
     return YC(A);
   }
   newRandomSigner() {
-    return `signerSecret_z${YA.encode(this.newEd25519SigningKey())}`;
+    return `signerSecret_z${JA.encode(this.newEd25519SigningKey())}`;
   }
   newRandomSealer() {
-    return `sealerSecret_z${YA.encode(this.newX25519StaticSecret())}`;
+    return `sealerSecret_z${JA.encode(this.newX25519StaticSecret())}`;
   }
   newRandomAgentSecret() {
     return `${this.newRandomSealer()}/${this.newRandomSigner()}`;
@@ -1053,23 +1053,23 @@ class UC {
     return A.split("/")[0];
   }
   secureHash(A) {
-    return `hash_z${YA.encode(this.blake3HashOnce(SA.encode(LA(A))))}`;
+    return `hash_z${JA.encode(this.blake3HashOnce(MA.encode(TA(A))))}`;
   }
   shortHash(A) {
-    return `shortHash_z${YA.encode(this.blake3HashOnce(SA.encode(LA(A))).slice(0, JC))}`;
+    return `shortHash_z${JA.encode(this.blake3HashOnce(MA.encode(TA(A))).slice(0, JC))}`;
   }
   decrypt(A, e, i) {
     try {
-      return Io(this.decryptRaw(A, e, i));
+      return Co(this.decryptRaw(A, e, i));
     } catch (o) {
-      AA.error("Decryption error", { err: o });
+      eA.error("Decryption error", { err: o });
       return;
     }
   }
   newRandomKeySecret() {
     return {
-      secret: `keySecret_z${YA.encode(this.randomBytes(32))}`,
-      id: `key_z${YA.encode(this.randomBytes(12))}`
+      secret: `keySecret_z${JA.encode(this.randomBytes(32))}`,
+      id: `key_z${JA.encode(this.randomBytes(12))}`
     };
   }
   encryptKeySecret(A) {
@@ -1091,7 +1091,7 @@ class UC {
     return this.decrypt(A.encrypted, e, i);
   }
   uniquenessForHeader() {
-    return `z${YA.encode(this.randomBytes(12))}`;
+    return `z${JA.encode(this.randomBytes(12))}`;
   }
   createdNowUnique() {
     return {
@@ -1100,35 +1100,35 @@ class UC {
     };
   }
   newRandomSecretSeed() {
-    return this.randomBytes(Vo);
+    return this.randomBytes($o);
   }
   agentSecretFromSecretSeed(A) {
-    if (A.length !== Vo)
-      throw new Error(`Secret seed needs to be ${Vo} bytes long`);
-    return `sealerSecret_z${YA.encode(this.blake3HashOnceWithContext(A, {
-      context: SA.encode("seal")
-    }))}/signerSecret_z${YA.encode(this.blake3HashOnceWithContext(A, {
-      context: SA.encode("sign")
+    if (A.length !== $o)
+      throw new Error(`Secret seed needs to be ${$o} bytes long`);
+    return `sealerSecret_z${JA.encode(this.blake3HashOnceWithContext(A, {
+      context: MA.encode("seal")
+    }))}/signerSecret_z${JA.encode(this.blake3HashOnceWithContext(A, {
+      context: MA.encode("sign")
     }))}`;
   }
   newRandomSessionID(A) {
-    const e = YA.encode(this.randomBytes(8));
+    const e = JA.encode(this.randomBytes(8));
     return `${A}_session_z${e}`;
   }
   newDeleteSessionID(A) {
-    const e = YA.encode(this.randomBytes(7));
+    const e = JA.encode(this.randomBytes(7));
     return `${A}_session_d${e}$`;
   }
 }
-const JC = 19, Vo = 32;
+const JC = 19, $o = 32;
 function Dg(t) {
   return typeof t == "string" && t.startsWith("co_z");
 }
-function Ze(t) {
+function At(t) {
   return typeof t == "string" && t.startsWith("sealer_") && t.includes("/signer_");
 }
 const HC = 36;
-function ve(t) {
+function Ye(t) {
   return t.charCodeAt(t.length - 1) === HC;
 }
 function mg(t) {
@@ -1145,11 +1145,11 @@ function qC(t) {
       return t;
   }
 }
-function OA(t) {
+function PA(t) {
   const A = t.indexOf("_session");
   return t.slice(0, A);
 }
-class Ot {
+class jt {
   resetInternalState() {
     this.afterStart = [], this.beforeEnd = [], this.insertions = {}, this.deletionsByInsertion = {}, this._cachedEntries = void 0, this.knownTransactions = { [this.core.id]: 0 }, this.lastValidTransaction = void 0, this.totalValidTransactions = 0;
   }
@@ -1158,7 +1158,7 @@ class Ot {
     this.type = "colist", this.afterStart = [], this.beforeEnd = [], this.insertions = {}, this.deletionsByInsertion = {}, this.atTimeFilter = void 0, this.knownTransactions = {}, this.version = 0, this.totalValidTransactions = 0, this.id = A.id, this.core = A, this.insertions = {}, this.deletionsByInsertion = {}, this.afterStart = [], this.beforeEnd = [], this.knownTransactions = { [A.id]: 0 }, this.atTimeFilter = e, this._processNewTransactions();
   }
   getInsertionsEntry(A) {
-    const e = Ai(A), i = this.insertions[e];
+    const e = ti(A), i = this.insertions[e];
     if (!i)
       return;
     const o = i[A.txIndex];
@@ -1166,21 +1166,21 @@ class Ot {
       return o[A.changeIdx];
   }
   createInsertionsEntry(A, e) {
-    const i = Ai(A);
+    const i = ti(A);
     let o = this.insertions[i];
     o || (o = {}, this.insertions[i] = o);
     let r = o[A.txIndex];
     return r || (r = {}, o[A.txIndex] = r), r[A.changeIdx] ? !1 : (r[A.changeIdx] = e, !0);
   }
   isDeleted(A) {
-    const e = Ai(A), i = this.deletionsByInsertion[e];
+    const e = ti(A), i = this.deletionsByInsertion[e];
     if (!i)
       return !1;
     const o = i[A.txIndex];
     return o ? !!o[A.changeIdx]?.length : !1;
   }
   pushDeletionsByInsertionEntry(A, e) {
-    const i = Ai(A);
+    const i = ti(A);
     let o = this.deletionsByInsertion[i];
     o || (o = {}, this.deletionsByInsertion[i] = o);
     let r = o[A.txIndex];
@@ -1272,7 +1272,7 @@ class Ot {
    * @category 4. Time travel
    */
   atTime(A) {
-    return new Ot(this.core, A);
+    return new jt(this.core, A);
   }
   /**
    * Get the item currently at `idx`.
@@ -1346,7 +1346,7 @@ class Ot {
     const e = this.entries()[A];
     if (!e)
       return;
-    const i = new Date(e.madeAt), o = OA(e.opID.sessionID), r = e.value;
+    const i = new Date(e.madeAt), o = PA(e.opID.sessionID), r = e.value;
     return {
       by: o,
       tx: {
@@ -1367,7 +1367,7 @@ class Ot {
         for (const n in r) {
           const s = r[Number(n)];
           for (const a of s || []) {
-            const g = new Date(a.madeAt), I = OA(a.deletionID.sessionID);
+            const g = new Date(a.madeAt), I = PA(a.deletionID.sessionID);
             A.push({
               by: I,
               tx: a.deletionID,
@@ -1421,7 +1421,7 @@ class Ot {
     }
     const n = A.map((s) => ({
       op: "app",
-      value: At(s) ? s.id : s,
+      value: tt(s) ? s.id : s,
       after: r
     }));
     r !== "start" && n.reverse(), this.core.makeTransaction(n, i), this.processNewTransactions();
@@ -1456,7 +1456,7 @@ class Ot {
     this.core.makeTransaction([
       {
         op: "pre",
-        value: At(A) ? A.id : A,
+        value: tt(A) ? A.id : A,
         before: r
       }
     ], i), this.processNewTransactions();
@@ -1487,7 +1487,7 @@ class Ot {
     this.core.makeTransaction([
       {
         op: "app",
-        value: At(e) ? e.id : e,
+        value: tt(e) ? e.id : e,
         after: r.opID
       },
       {
@@ -1497,10 +1497,10 @@ class Ot {
     ], i), this.processNewTransactions();
   }
 }
-function Ai(t) {
+function ti(t) {
   return t.branch ? `${t.sessionID}_branch_${t.branch}` : t.sessionID;
 }
-function nn(t) {
+function sn(t) {
   return t.startsWith("co_");
 }
 class kg {
@@ -1557,7 +1557,7 @@ class kg {
     return Object.keys(this.items);
   }
   accounts() {
-    return new Set(this.sessions().map(OA).filter(nn));
+    return new Set(this.sessions().map(PA).filter(sn));
   }
   nthItemIn(A, e) {
     const i = this.items[A];
@@ -1566,7 +1566,7 @@ class kg {
     const o = i[e];
     if (o)
       return {
-        by: OA(A),
+        by: PA(A),
         tx: o.tx,
         at: new Date(o.madeAt),
         value: o.value
@@ -1582,7 +1582,7 @@ class kg {
     if (e)
       for (const i of e)
         yield {
-          by: OA(A),
+          by: PA(A),
           tx: i.tx,
           at: new Date(i.madeAt),
           value: i.value
@@ -1629,7 +1629,7 @@ class kg {
 }
 class Ng extends kg {
   push(A, e = "private") {
-    this.core.makeTransaction([At(A) ? A.id : A], e), this.processNewTransactions();
+    this.core.makeTransaction([tt(A) ? A.id : A], e), this.processNewTransactions();
   }
 }
 const xC = 8;
@@ -1644,7 +1644,7 @@ class LC extends kg {
       return;
     const e = A[0];
     if (e?.type !== "start") {
-      AA.error("Invalid binary stream start", e);
+      eA.error("Invalid binary stream start", e);
       return;
     }
     return {
@@ -1668,10 +1668,10 @@ class LC extends kg {
         break;
       }
       if (s.type !== "chunk") {
-        AA.error("Invalid binary stream chunk", s);
+        eA.error("Invalid binary stream chunk", s);
         return;
       }
-      const a = fr(s.chunk.slice(xC));
+      const a = pr(s.chunk.slice(xC));
       r.push(a);
     }
     return {
@@ -1695,7 +1695,7 @@ class Mg extends LC {
   pushBinaryStreamChunk(A, e = "private") {
     this.push({
       type: "chunk",
-      chunk: `binary_U${pr(A)}`
+      chunk: `binary_U${wr(A)}`
     }, e, !1);
   }
   endBinaryStream(A = "private") {
@@ -1704,10 +1704,10 @@ class Mg extends LC {
     }, A, !0);
   }
 }
-function At(t) {
-  return t instanceof sn || t instanceof Ot || t instanceof Ng || t instanceof Mg;
+function tt(t) {
+  return t instanceof an || t instanceof jt || t instanceof Ng || t instanceof Mg;
 }
-class sn {
+class an {
   /** @internal */
   get latestTxMadeAt() {
     return this.core.latestTxMadeAt;
@@ -1836,13 +1836,13 @@ class sn {
   nthEditAt(A, e) {
     const i = this.ops[A], o = this.atTimeFilter, r = i?.[e];
     if (r && !(o && r.madeAt > o))
-      return $o(r);
+      return Wo(r);
   }
   /** @category 5. Edit history */
   lastEditAt(A) {
     const e = this.getRaw(A);
     if (e)
-      return $o(e);
+      return Wo(e);
   }
   /** @category 5. Edit history */
   *editsAt(A) {
@@ -1853,7 +1853,7 @@ class sn {
     for (const o of e) {
       if (i && o.madeAt > i)
         return;
-      yield $o(o);
+      yield Wo(o);
     }
   }
   /** @category 3. Subscription */
@@ -1877,7 +1877,7 @@ class sn {
       {
         op: "set",
         key: A,
-        value: At(e) ? e.id : e
+        value: tt(e) ? e.id : e
       }
     ], i), this.processNewTransactions();
   }
@@ -1887,7 +1887,7 @@ class sn {
     this.core.makeTransaction(Object.entries(A).map(([i, o]) => ({
       op: "set",
       key: i,
-      value: At(o) ? o.id : o
+      value: tt(o) ? o.id : o
     })), e), this.processNewTransactions();
   }
   /** Delete the given key (setting it to undefined).
@@ -1909,27 +1909,27 @@ class sn {
     ], e), this.processNewTransactions();
   }
 }
-function $o(t) {
+function Wo(t) {
   return {
-    by: OA(t.txID.sessionID),
+    by: PA(t.txID.sessionID),
     tx: t.txID,
     at: new Date(t.madeAt),
     value: t.change.op === "del" ? void 0 : t.change.value
   };
 }
-function FA(t) {
+function RA(t) {
   if (t.type !== "comap")
     throw new Error("Expected group");
   if (t.core.verified.header.ruleset.type !== "group")
     throw new Error("Expected group ruleset in group");
-  if (!(t instanceof an))
+  if (!(t instanceof gn))
     throw new Error("Expected group");
   return t;
 }
 function is(t) {
   return t === "manager" || t === "admin" || t === "writer" || t === "reader" || t === "writeOnly";
 }
-function Bt(t) {
+function Et(t) {
   return t === "admin" || t === "manager";
 }
 function TC(t) {
@@ -1943,7 +1943,7 @@ function TC(t) {
     return;
   }
   if (t.verified.header.ruleset.type === "ownedByGroup") {
-    const A = FA(t.node.expectCoValueLoaded(t.verified.header.ruleset.group, "Determining valid transaction in owned object but its group wasn't loaded").getCurrentContent());
+    const A = RA(t.node.expectCoValueLoaded(t.verified.header.ruleset.group, "Determining valid transaction in owned object but its group wasn't loaded").getCurrentContent());
     if (A.type !== "comap")
       throw new Error("Group must be a map");
     for (const e of t.toValidateTransactions) {
@@ -2007,7 +2007,7 @@ class PC {
     let i = this.memberRoles.get(A);
     for (const [o, r] of this.parentGroups.entries()) {
       const n = o.atTime(e).roleOfInternal(A);
-      if (!n || !Fg(n))
+      if (!n || !bg(n))
         continue;
       const s = r === "extend" ? n : r;
       OC(s, i) && (i = s);
@@ -2051,21 +2051,21 @@ function jC(t, A) {
       continue;
     }
     if (c.key === "readKey") {
-      if (!Bt(a)) {
+      if (!Et(a)) {
         n.markInvalid("Only admins can set readKeys");
         continue;
       }
       n.markValid();
       continue;
     } else if (c.key === "profile") {
-      if (!Bt(a)) {
+      if (!Et(a)) {
         n.markInvalid("Only admins can set profile");
         continue;
       }
       n.markValid();
       continue;
     } else if (c.key === "root") {
-      if (!Bt(a)) {
+      if (!Et(a)) {
         n.markInvalid("Only admins can set root");
         continue;
       }
@@ -2079,7 +2079,7 @@ function jC(t, A) {
       n.markValid();
       continue;
     } else if (_C(c.key)) {
-      if (!Bt(a)) {
+      if (!Et(a)) {
         n.markInvalid("Only admins and managers can set parent extensions");
         continue;
       }
@@ -2088,8 +2088,8 @@ function jC(t, A) {
         n.markInvalid("Parent group is not a group");
         continue;
       }
-      const d = FA(u.getCurrentContent());
-      if (bg(t, d)) {
+      const d = RA(u.getCurrentContent());
+      if (Fg(t, d)) {
         n.markInvalid("Parent group is a circular dependency");
         continue;
       }
@@ -2105,7 +2105,7 @@ function jC(t, A) {
         n.markInvalid("Only admins and managers can set writeKeys");
         continue;
       }
-      if (e[l] = c.value, i.has(c.key) && !Bt(a)) {
+      if (e[l] = c.value, i.has(c.key) && !Et(a)) {
         n.markInvalid("Write key already exists and can't be overridden by invite");
         continue;
       }
@@ -2117,7 +2117,7 @@ function jC(t, A) {
       n.markInvalid("Group transaction must set a valid role");
       continue;
     }
-    if (C === XA && !(B === "reader" || B === "writer" || B === "writeOnly" || B === "revoked")) {
+    if (C === Ae && !(B === "reader" || B === "writer" || B === "writeOnly" || B === "revoked")) {
       n.markInvalid("Everyone can only be set to reader, writer, writeOnly or revoked");
       continue;
     }
@@ -2191,7 +2191,7 @@ function jC(t, A) {
   }
 }
 function VC(t, A) {
-  return t === A.id && A instanceof gn ? A.currentAgentID() : t;
+  return t === A.id && A instanceof In ? A.currentAgentID() : t;
 }
 function $C(t) {
   return t.startsWith("writeKeyFor_");
@@ -2217,14 +2217,14 @@ function XC(t, A, e) {
   const i = t.slice(0, t.indexOf("_for_"));
   return e[A] === i;
 }
-const XA = "everyone";
+const Ae = "everyone";
 function AB(t) {
   const A = t.get("readKey");
-  if (!A || !co(t, XA) || t.get(`${A}_for_${XA}`))
+  if (!A || !Bo(t, Ae) || t.get(`${A}_for_${Ae}`))
     return;
-  if (co(t, t.core.node.getCurrentAgent().id)) {
+  if (Bo(t, t.core.node.getCurrentAgent().id)) {
     const r = t.getReadKey(A);
-    r && t.set(`${A}_for_${XA}`, r, "trusting");
+    r && t.set(`${A}_for_${Ae}`, r, "trusting");
     return;
   }
   const i = t.keys().filter((r) => r.startsWith("key_") && r.endsWith("_for_everyone"));
@@ -2257,7 +2257,7 @@ class eB {
     return A === void 0 ? this.getLatest() : this.changes.findLast((e) => e.madeAt <= A)?.value;
   }
 }
-class an extends sn {
+class gn extends an {
   resetInternalState() {
     super.resetInternalState(), this.parentGroupsChanges = /* @__PURE__ */ new Map(), this.keyRevelations = /* @__PURE__ */ new Map(), this._lastReadableKeyId = void 0;
   }
@@ -2320,7 +2320,7 @@ class an extends sn {
       if (!n || n === "revoked")
         continue;
       const a = this.getParentGroup(o, this.atTimeFilter).roleOfInternal(A);
-      if (!Fg(a))
+      if (!bg(a))
         continue;
       const g = n !== "extend" ? n : a;
       tB(g, i) && (i = g);
@@ -2333,7 +2333,7 @@ class an extends sn {
     return i;
   }
   getParentGroup(A, e) {
-    const i = this.core.node.expectCoValueLoaded(A, "Expected parent group to be loaded"), o = FA(i.getCurrentContent());
+    const i = this.core.node.expectCoValueLoaded(A, "Expected parent group to be loaded"), o = RA(i.getCurrentContent());
     return e ? o.atTime(e) : o;
   }
   getParentGroups() {
@@ -2349,7 +2349,7 @@ class an extends sn {
       const i = this.core.node.getCoValue(e);
       if (!i.isGroup())
         continue;
-      const o = FA(i.getCurrentContent()), r = o.get(`parent_${this.id}`);
+      const o = RA(i.getCurrentContent()), r = o.get(`parent_${this.id}`);
       r && r !== "revoked" && A(o);
     }
   }
@@ -2375,7 +2375,7 @@ class an extends sn {
     const i = typeof A == "string" ? A : A.id, o = this.get(i);
     if (o === e)
       return;
-    if (i === XA) {
+    if (i === Ae) {
       if (!(e === "reader" || e === "writer" || e === "writeOnly"))
         throw new Error("Can't make everyone something other than reader, writer or writeOnly");
       const n = this.getCurrentReadKey();
@@ -2384,11 +2384,11 @@ class an extends sn {
       const s = this.get(i);
       if (this.set(i, e, "trusting"), this.get(i) !== e)
         throw new Error(`Failed to set role ${e} to ${i} (role of current account is ${this.myRole()})`);
-      e === "writeOnly" ? ((s === "reader" || s === "writer") && this.rotateReadKey("everyone"), this.delete(`${n.id}_for_${XA}`)) : this.set(`${n.id}_for_${XA}`, n.secret, "trusting");
+      e === "writeOnly" ? ((s === "reader" || s === "writer") && this.rotateReadKey("everyone"), this.delete(`${n.id}_for_${Ae}`)) : this.set(`${n.id}_for_${Ae}`, n.secret, "trusting");
       return;
     }
     const r = typeof A == "string" ? A : A.currentAgentID();
-    if (r === XA)
+    if (r === Ae)
       throw new Error("Agent should not be everyone");
     if (e === "writeOnly" || e === "writeOnlyInvite") {
       if ((o === "reader" || o === "writer" || o === "manager" || o === "admin") && this.rotateReadKey(i), this.set(i, e, "trusting"), this.get(i) !== e)
@@ -2404,7 +2404,7 @@ class an extends sn {
       for (const s of this.getWriteOnlyKeys()) {
         const a = this.core.getReadKey(s);
         if (!a) {
-          AA.error("Can't find key " + s);
+          eA.error("Can't find key " + s);
           continue;
         }
         this.storeKeyRevelationForMember(i, r, s, a);
@@ -2472,7 +2472,7 @@ class an extends sn {
     return this.get("readKey");
   }
   getMemberKeys() {
-    return this.keys().filter((A) => A.startsWith("co_") || Ze(A));
+    return this.keys().filter((A) => A.startsWith("co_") || At(A));
   }
   getAllMemberKeysSet() {
     const A = new Set(this.getMemberKeys());
@@ -2490,7 +2490,7 @@ class an extends sn {
     const e = this.core, i = this.get(`${A}_for_everyone`);
     if (i)
       return i;
-    const o = OA(e.node.currentSessionID), r = nn(o) && e.id === o ? e.node.crypto.getAgentID(e.node.agentSecret) : o, n = this.lastEditAt(`${A}_for_${r}`);
+    const o = PA(e.node.currentSessionID), r = sn(o) && e.id === o ? e.node.crypto.getAgentID(e.node.agentSecret) : o, n = this.lastEditAt(`${A}_for_${r}`);
     if (n?.value) {
       const a = n.by, g = e.node.resolveAccountAgent(a, "Expected to know revealer").value;
       if (!g)
@@ -2521,7 +2521,7 @@ class an extends sn {
         }, g);
         if (c)
           return c;
-        AA.warn(`Encrypting ${a} key didn't decrypt ${A}`);
+        eA.warn(`Encrypting ${a} key didn't decrypt ${A}`);
       }
     for (const a of this.parentGroupsChanges.keys()) {
       const g = e.node.expectCoValueLoaded(a, "Expected parent group to be loaded"), I = this.findValidParentKeys(A, g);
@@ -2535,7 +2535,7 @@ class an extends sn {
           }, c.secret);
           if (B)
             return B;
-          AA.warn(`Encrypting parent ${c.id} key didn't decrypt ${A}`);
+          eA.warn(`Encrypting parent ${c.id} key didn't decrypt ${A}`);
         }
       }
     }
@@ -2554,9 +2554,9 @@ class an extends sn {
   }
   /** @internal */
   rotateReadKey(A) {
-    if (A !== XA && co(this, XA))
+    if (A !== Ae && Bo(this, Ae))
       return;
-    const e = this.getMemberKeys().filter((g) => g !== A), i = e.filter((g) => co(this, g)), o = e.filter((g) => {
+    const e = this.getMemberKeys().filter((g) => g !== A), i = e.filter((g) => Bo(this, g)), o = e.filter((g) => {
       const I = this.get(g);
       return I === "writeOnly" || I === "writeOnlyInvite";
     }), r = this.getParentGroups(), n = this.getCurrentReadKey();
@@ -2594,7 +2594,7 @@ class an extends sn {
     for (const g of r) {
       const { id: I, secret: c } = g.getCurrentReadKey();
       if (!c) {
-        AA.warn("Can't reveal new child key to parent where we don't have access to the parent read key");
+        eA.warn("Can't reveal new child key to parent where we don't have access to the parent read key");
         continue;
       }
       this.storeKeyRevelationForParentGroup(I, c, a.id, a.secret);
@@ -2605,7 +2605,7 @@ class an extends sn {
           g.rotateReadKey(A);
         } catch (I) {
           if (I instanceof os)
-            AA.warn(`Can't rotate read key on child ${g.id} because we don't have access to the read key`);
+            eA.warn(`Can't rotate read key on child ${g.id} because we don't have access to the read key`);
           else
             throw I;
         }
@@ -2613,7 +2613,7 @@ class an extends sn {
   }
   /** Detect circular references in group inheritance */
   isSelfExtension(A) {
-    return bg(this.core, A);
+    return Fg(this.core, A);
   }
   getCurrentReadKey() {
     const A = this.getCurrentReadKeyId();
@@ -2648,7 +2648,7 @@ class an extends sn {
           continue;
         const g = this.core.getReadKey(a);
         if (!g) {
-          AA.error("Can't find key " + a);
+          eA.error("Can't find key " + a);
           continue;
         }
         this.storeKeyRevelationForParentGroup(n, s, a, g);
@@ -2768,21 +2768,21 @@ class an extends sn {
     }).getCurrentContent();
   }
 }
-function Fg(t) {
+function bg(t) {
   return t === "revoked" || t === "admin" || t === "manager" || t === "writer" || t === "reader";
 }
 function tB(t, A) {
   return t === "revoked" ? !0 : t === "manager" ? !A || A !== "manager" && A !== "admin" : t === "admin" ? !A || A !== "admin" : t === "writer" ? !A || A === "reader" || A === "writeOnly" : t === "reader" ? !A : !1;
 }
 function iB(t) {
-  return `inviteSecret_z${YA.encode(t)}`;
+  return `inviteSecret_z${JA.encode(t)}`;
 }
 function oB(t) {
   if (!t.startsWith("inviteSecret_z"))
     throw new Error("Invalid invite secret");
-  return YA.decode(t.slice(14));
+  return JA.decode(t.slice(14));
 }
-const co = (t, A) => {
+const Bo = (t, A) => {
   const e = t.get(A);
   return e === "admin" || e === "manager" || e === "writer" || e === "reader" || e === "adminInvite" || e === "writerInvite" || e === "readerInvite";
 };
@@ -2791,7 +2791,7 @@ class os extends Error {
     super(A), this.name = "NoReadKeyAccessError";
   }
 }
-function bg(t, A) {
+function Fg(t, A) {
   const e = /* @__PURE__ */ new Set(), i = [A];
   for (; ; ) {
     const o = i.pop();
@@ -2816,7 +2816,7 @@ function Rg(t, A) {
     uniqueness: null
   };
 }
-class gn extends an {
+class In extends gn {
   currentAgentID() {
     if (this._cachedCurrentAgentID)
       return this._cachedCurrentAgentID;
@@ -2824,7 +2824,7 @@ class gn extends an {
     if (A.ruleset.type !== "group")
       throw new Error("You can't get an agent id from a non-group value");
     const e = A.ruleset.initialAdmin;
-    if (!Ze(e))
+    if (!At(e))
       throw new Error("You can read agent ids only from account values");
     return this._cachedCurrentAgentID = e, e;
   }
@@ -2894,7 +2894,7 @@ class rs {
   }
 }
 function ns(t) {
-  if (!(t instanceof gn))
+  if (!(t instanceof In))
     throw new Error("Expected an account");
   return t;
 }
@@ -2973,7 +2973,7 @@ function* aB(t) {
     }, B = A, Q = "", a = !1, c = !1, r = o);
   }
 }
-function* Wo(t) {
+function* zo(t) {
   for (let A of aB(t)) yield A.segment;
 }
 function as(t, A) {
@@ -2997,9 +2997,9 @@ function gB(t) {
 function IB(t, A, e, i, o) {
   return t === 1 && A === 6 ? !1 : t === 1 || t === 2 || t === 6 || A === 1 || A === 2 || A === 6 ? !0 : t === 5 && (A === 5 || A === 7 || A === 8 || A === 13) || (t === 7 || t === 13) && (A === 12 || A === 13) || A === 12 && (t === 8 || t === 12) || A === 3 || A === 14 || A === 11 || t === 9 || A === 0 && o ? !1 : t === 14 && A === 4 ? !i : t === 10 && A === 10 ? e % 2 === 0 : !0;
 }
-const Sr = {
+const kr = {
   MAX_RECOMMENDED_TX_SIZE: 100 * 1024
-}, Xe = {
+}, et = {
   MAX_RETRIES: 1,
   TIMEOUT: 6e4,
   RETRY_DELAY: 3e3,
@@ -3017,7 +3017,7 @@ const Sr = {
 function cs(t) {
   return `${t.sessionID}:${t.txIndex}:${t.changeIdx}`;
 }
-class In extends Ot {
+class cn extends jt {
   constructor(A, e) {
     super(A, e), this.type = "coplaintext", this._cachedMapping = /* @__PURE__ */ new WeakMap();
   }
@@ -3043,7 +3043,7 @@ class In extends Ot {
     return this.entries().map((A) => A.value).join("");
   }
   atTime(A) {
-    return new In(this.core, A);
+    return new cn(this.core, A);
   }
   /**
    * Inserts `text` before the character at index `idx`.
@@ -3055,7 +3055,7 @@ class In extends Ot {
    * @category 2. Editing
    */
   insertBefore(A, e, i = "private") {
-    const o = Array.from(Wo(e));
+    const o = Array.from(zo(e));
     if (A === 0) {
       const r = o[0];
       r && this.prepend(r, 0, i), o.length > 1 && this.appendChars(o.slice(1), 0, i);
@@ -3076,7 +3076,7 @@ class In extends Ot {
    * @category 2. Editing
    */
   insertAfter(A, e, i = "private") {
-    const o = Array.from(Wo(e));
+    const o = Array.from(zo(e));
     A >= this.entries().length ? this.appendChars(o, A - 1, i) : this.appendChars(o, A, i);
   }
   deleteRange({ from: A, to: e }, i = "private") {
@@ -3098,7 +3098,7 @@ class In extends Ot {
   }
   /** @internal Helper method to split text into graphemes */
   toGraphemes(A) {
-    return [...Wo(A)];
+    return [...zo(A)];
   }
   /** @internal Helper method to join graphemes into a string */
   fromGraphemes(A) {
@@ -3106,24 +3106,24 @@ class In extends Ot {
   }
 }
 function BB(t) {
-  const A = Math.ceil(Sr.MAX_RECOMMENDED_TX_SIZE / 200), e = [];
+  const A = Math.ceil(kr.MAX_RECOMMENDED_TX_SIZE / 200), e = [];
   for (let i = 0; i < t.length; i += A)
     e.push(t.slice(i, i + A));
   return e;
 }
 function QB(t, A) {
-  return t.verified.header.type === "comap" ? t.verified.header.ruleset.type === "group" ? t.verified.header.meta?.type === "account" && !A?.ignorePrivateTransactions ? new gn(t) : new an(t, A) : new sn(t) : t.verified.header.type === "coplaintext" ? new In(t) : t.verified.header.type === "colist" ? new Ot(t) : t.verified.header.type === "costream" ? t.verified.header.meta && t.verified.header.meta.type === "binary" ? new Mg(t) : new Ng(t) : new SC(t);
+  return t.verified.header.type === "comap" ? t.verified.header.ruleset.type === "group" ? t.verified.header.meta?.type === "account" && !A?.ignorePrivateTransactions ? new In(t) : new gn(t, A) : new an(t) : t.verified.header.type === "coplaintext" ? new cn(t) : t.verified.header.type === "colist" ? new jt(t) : t.verified.header.type === "costream" ? t.verified.header.meta && t.verified.header.meta.type === "binary" ? new Mg(t) : new Ng(t) : new SC(t);
 }
-function cn(t, A = /* @__PURE__ */ new Set()) {
+function Cn(t, A = /* @__PURE__ */ new Set()) {
   return t.ruleset.type === "ownedByGroup" && A.add(t.ruleset.group), t.meta?.source && A.add(t.meta.source), A;
 }
 function Yg(t, A) {
   for (const e of t) {
-    const i = OA(e);
-    nn(i) && A.add(i);
+    const i = PA(e);
+    sn(i) && A.add(i);
   }
 }
-function Cn(t, A = /* @__PURE__ */ new Set()) {
+function Bn(t, A = /* @__PURE__ */ new Set()) {
   for (const e of t) {
     if (e.privacy !== "trusting")
       continue;
@@ -3138,58 +3138,58 @@ function Cn(t, A = /* @__PURE__ */ new Set()) {
 }
 function EB(t, A, e, i) {
   const o = /* @__PURE__ */ new Set();
-  if (cn(A, o), Yg(e, o), A.ruleset.type === "group")
+  if (Cn(A, o), Yg(e, o), A.ruleset.type === "group")
     for (const r of i)
-      Cn(r, o);
+      Bn(r, o);
   return o.delete(t), o;
 }
 function lB(t, A) {
   const e = /* @__PURE__ */ new Set();
-  A.header && cn(A.header, e);
+  A.header && Cn(A.header, e);
   const i = Object.keys(A.new);
   if (Yg(i, e), (t.verified?.header ?? A.header)?.ruleset.type === "group")
     for (const { newTransactions: r } of Object.values(A.new))
-      Cn(r, e);
+      Bn(r, e);
   return e.delete(t.id), e;
 }
 function dB(t) {
   try {
-    return Io(t);
+    return Co(t);
   } catch {
     return [];
   }
 }
-function Ue(t) {
+function He(t) {
   return {
     id: t,
     header: !1,
     sessions: {}
   };
 }
-function zo(t) {
+function _o(t) {
   return {
     id: t.id,
     header: t.header,
     sessions: t.sessions
   };
 }
-function _o(t, A) {
-  return it(t.sessions, A.sessions), A.header && !t.header && (t.header = !0), t;
+function Zo(t, A) {
+  return rt(t.sessions, A.sessions), A.header && !t.header && (t.header = !0), t;
 }
-function it(t, A) {
+function rt(t, A) {
   for (const [e, i] of Object.entries(A)) {
     const o = t[e] || 0;
     i > o && (t[e] = i);
   }
   return t;
 }
-function Zo(t, A, e) {
+function Xo(t, A, e) {
   t[A] = e;
 }
 function Cs(t, A, e) {
   t[A] = Math.max(t[A] || 0, e);
 }
-function Se(t) {
+function Ne(t) {
   return {
     id: t.id,
     header: t.header,
@@ -3204,7 +3204,7 @@ function Ug(t, A) {
   }
   return !0;
 }
-function kr(t, A) {
+function Nr(t, A) {
   for (const [e, i] of Object.entries(t)) {
     const o = A[e] ?? 0;
     if (i > o)
@@ -3213,7 +3213,7 @@ function kr(t, A) {
   return !0;
 }
 function uB(t, A) {
-  return !A || !A.header && t.header ? !1 : kr(t.sessions, A.sessions);
+  return !A || !A.header && t.header ? !1 : Nr(t.sessions, A.sessions);
 }
 function Jg(t, A) {
   const e = {};
@@ -3223,15 +3223,15 @@ function Jg(t, A) {
   }
   return e;
 }
-const TA = {
+const OA = {
   HIGH: 0,
   MEDIUM: 3,
   LOW: 6
 };
 function hB(t) {
-  return typeof t == "boolean" || !t ? TA.MEDIUM : t.meta?.type === "account" || t.ruleset.type === "group" ? TA.HIGH : t.type === "costream" && t.meta?.type === "binary" ? TA.LOW : TA.MEDIUM;
+  return typeof t == "boolean" || !t ? OA.MEDIUM : t.meta?.type === "account" || t.ruleset.type === "group" ? OA.HIGH : t.type === "costream" && t.meta?.type === "binary" ? OA.LOW : OA.MEDIUM;
 }
-function Gt(t, A, e = !0) {
+function Ft(t, A, e = !0) {
   return {
     action: "content",
     id: t,
@@ -3240,7 +3240,7 @@ function Gt(t, A, e = !0) {
     new: {}
   };
 }
-function Xo(t, A, e, i, o) {
+function Ar(t, A, e, i, o) {
   const r = t.new[e];
   r ? (r.newTransactions.push(A), r.lastSignature = i) : t.new[e] = {
     after: o,
@@ -3248,23 +3248,23 @@ function Xo(t, A, e, i, o) {
     lastSignature: i
   };
 }
-function po(t) {
+function Do(t) {
   return t.privacy === "private" ? t.encryptedChanges.length : t.changes.length;
 }
-function Co(t, A) {
-  return A === void 0 ? t > Sr.MAX_RECOMMENDED_TX_SIZE : t + A > Sr.MAX_RECOMMENDED_TX_SIZE;
+function Qo(t, A) {
+  return A === void 0 ? t > kr.MAX_RECOMMENDED_TX_SIZE : t + A > kr.MAX_RECOMMENDED_TX_SIZE;
 }
-function ei(t) {
-  const A = Ue(t.id);
+function ii(t) {
+  const A = He(t.id);
   A.header = !!t.header;
   for (const [e, i] of Object.entries(t.new))
     A.sessions[e] = i.after + i.newTransactions.length;
   return A;
 }
 function fB(t) {
-  return Object.values(t.new).reduce((A, e) => A + e.newTransactions.reduce((i, o) => i + po(o), 0), 0);
+  return Object.values(t.new).reduce((A, e) => A + e.newTransactions.reduce((i, o) => i + Do(o), 0), 0);
 }
-function Ar(t) {
+function er(t) {
   return Object.entries(t.new).map(([A, e]) => `Session: ${A} After: ${e.after} New: ${e.newTransactions.length}`);
 }
 function pB(t, A, e) {
@@ -3277,7 +3277,7 @@ function pB(t, A, e) {
 function wB(t) {
   return Object.entries(t.new);
 }
-class wo {
+class mo {
   constructor(A, e, i) {
     this.id = A, this.crypto = e, this.isDeleted = !1, this.sessions = /* @__PURE__ */ new Map(), this.knownState = { id: this.id, header: !0, sessions: {} }, i && (this.streamingKnownState = { ...i }, this.knownStateWithStreaming = {
       id: this.id,
@@ -3288,22 +3288,22 @@ class wo {
   markAsDeleted() {
     this.isDeleted = !0, this.knownState = { id: this.id, header: !0, sessions: {} }, this.knownStateWithStreaming = void 0, this.streamingKnownState = void 0, this.invalidateKnownStateCache();
     for (const [A, e] of this.sessions.entries())
-      ve(A) && (this.knownState.sessions[A] = e.transactions.length);
+      Ye(A) && (this.knownState.sessions[A] = e.transactions.length);
   }
   setStreamingKnownState(A) {
-    if (this.isDeleted || kr(A, this.knownState.sessions))
+    if (this.isDeleted || Nr(A, this.knownState.sessions))
       return;
     const e = Jg(A, this.knownState.sessions);
-    this.streamingKnownState ? it(this.streamingKnownState, e) : this.streamingKnownState = e, this.knownStateWithStreaming || (this.knownStateWithStreaming = Se(this.knownState)), it(this.knownStateWithStreaming.sessions, e);
+    this.streamingKnownState ? rt(this.streamingKnownState, e) : this.streamingKnownState = e, this.knownStateWithStreaming || (this.knownStateWithStreaming = Ne(this.knownState)), rt(this.knownStateWithStreaming.sessions, e);
   }
   invalidateKnownStateCache() {
     this.immutableKnownState = void 0, this.immutableKnownStateWithStreaming = void 0;
   }
   getImmutableKnownState() {
-    return this.immutableKnownState || (this.immutableKnownState = Se(this.knownState)), this.immutableKnownState;
+    return this.immutableKnownState || (this.immutableKnownState = Ne(this.knownState)), this.immutableKnownState;
   }
   getImmutableKnownStateWithStreaming() {
-    return this.knownStateWithStreaming ? (this.immutableKnownStateWithStreaming || (this.immutableKnownStateWithStreaming = Se(this.knownStateWithStreaming)), this.immutableKnownStateWithStreaming) : this.getImmutableKnownState();
+    return this.knownStateWithStreaming ? (this.immutableKnownStateWithStreaming || (this.immutableKnownStateWithStreaming = Ne(this.knownStateWithStreaming)), this.immutableKnownStateWithStreaming) : this.getImmutableKnownState();
   }
   get(A) {
     return this.sessions.get(A);
@@ -3321,7 +3321,7 @@ class wo {
     }, this.sessions.set(A, i)), i;
   }
   addTransaction(A, e, i, o, r = !1) {
-    if (this.isDeleted && !ve(A))
+    if (this.isDeleted && !Ye(A))
       throw new Error("Cannot add transactions to a deleted coValue");
     const n = this.getOrCreateSessionLog(A, e);
     n.impl.tryAdd(i, o, r), this.addTransactionsToJsLog(n, i, o);
@@ -3343,7 +3343,7 @@ class wo {
       A.transactions.push(r);
     A.lastSignature = i, A.txSizeSinceLastInbetweenSignature += e.reduce((r, n) => r + (n.privacy === "private" ? n.encryptedChanges.length : n.changes.length), 0);
     const o = A.transactions.length;
-    Co(A.txSizeSinceLastInbetweenSignature) && (A.signatureAfter[o - 1] = i, A.txSizeSinceLastInbetweenSignature = 0), Cs(this.knownState.sessions, A.sessionID, o), this.streamingKnownState && kr(this.streamingKnownState, this.knownState.sessions) && (this.streamingKnownState = void 0, this.knownStateWithStreaming = void 0), this.knownStateWithStreaming && Cs(this.knownStateWithStreaming.sessions, A.sessionID, o), this.invalidateKnownStateCache();
+    Qo(A.txSizeSinceLastInbetweenSignature) && (A.signatureAfter[o - 1] = i, A.txSizeSinceLastInbetweenSignature = 0), Cs(this.knownState.sessions, A.sessionID, o), this.streamingKnownState && Nr(this.streamingKnownState, this.knownState.sessions) && (this.streamingKnownState = void 0, this.knownStateWithStreaming = void 0), this.knownStateWithStreaming && Cs(this.knownStateWithStreaming.sessions, A.sessionID, o), this.invalidateKnownStateCache();
   }
   decryptTransaction(A, e, i) {
     const o = this.sessions.get(A);
@@ -3351,7 +3351,7 @@ class wo {
       return;
     const r = o.impl.decryptNextTransactionChangesJson(e, i);
     if (r)
-      return Io(r);
+      return Co(r);
   }
   decryptTransactionMeta(A, e, i) {
     const o = this.sessions.get(A);
@@ -3359,7 +3359,7 @@ class wo {
       return;
     const r = o.impl.decryptNextTransactionMetaJson(e, i);
     if (r)
-      return Io(r);
+      return Co(r);
   }
   get size() {
     return this.sessions.size;
@@ -3374,7 +3374,7 @@ class wo {
     return this.sessions.keys();
   }
   clone() {
-    const A = new wo(this.id, this.crypto);
+    const A = new mo(this.id, this.crypto);
     for (const [e, i] of this.sessions)
       A.sessions.set(e, {
         impl: i.impl.clone(),
@@ -3385,15 +3385,15 @@ class wo {
         signerID: i.signerID,
         sessionID: e
       });
-    return A.streamingKnownState = this.streamingKnownState ? { ...this.streamingKnownState } : void 0, A.knownState = Se(this.knownState), A.knownStateWithStreaming = this.knownStateWithStreaming ? Se(this.knownStateWithStreaming) : void 0, A;
+    return A.streamingKnownState = this.streamingKnownState ? { ...this.streamingKnownState } : void 0, A.knownState = Ne(this.knownState), A.knownStateWithStreaming = this.knownStateWithStreaming ? Ne(this.knownStateWithStreaming) : void 0, A;
   }
 }
-class Bn {
+class Qn {
   constructor(A, e, i, o) {
-    this.isDeleted = !1, this.id = A, this.crypto = e, this.header = i, this.sessions = o ?? new wo(A, e), this.branchSourceId = i.meta?.source, this.branchName = i.meta?.branch;
+    this.isDeleted = !1, this.id = A, this.crypto = e, this.header = i, this.sessions = o ?? new mo(A, e), this.branchSourceId = i.meta?.source, this.branchName = i.meta?.branch;
   }
   clone() {
-    return new Bn(this.id, this.crypto, this.header, this.sessions.clone());
+    return new Qn(this.id, this.crypto, this.header, this.sessions.clone());
   }
   markAsDeleted() {
     this.isDeleted = !0, this.sessions.markAsDeleted();
@@ -3415,11 +3415,11 @@ class Bn {
     this.sessions.setStreamingKnownState(A);
   }
   newContentSince(A) {
-    let e = Gt(this.id, this.header, !1);
+    let e = Ft(this.id, this.header, !1);
     const i = [e];
     let o = 0;
     const r = () => {
-      e = Gt(this.id, this.header, !1), i.push(e), o = 0;
+      e = Ft(this.id, this.header, !1), i.push(e), o = 0;
     }, n = (c) => {
       const C = e.new[c];
       if (!C)
@@ -3430,30 +3430,30 @@ class Bn {
           }
         });
       delete e.new[c];
-      const B = Gt(this.id, this.header, !1);
+      const B = Ft(this.id, this.header, !1);
       B.new[c] = C, i.splice(i.length - 1, 0, B);
     }, s = A?.sessions;
     for (const [c, C] of this.sessions.sessions) {
-      if (this.isDeleted && !ve(c))
+      if (this.isDeleted && !Ye(c))
         continue;
       const B = s?.[c] ?? 0;
       let Q = 0;
       for (let f = B; f < C.transactions.length; f++) {
         const l = f === C.transactions.length - 1, u = C.transactions[f];
-        Q += po(u);
+        Q += Do(u);
         const d = C.signatureAfter[f];
         if (d)
-          Xo(e, u, c, d, f), n(c), Q = 0;
+          Ar(e, u, c, d, f), n(c), Q = 0;
         else if (l) {
           if (!C.lastSignature)
             throw new Error("All the SessionLogs sent must have a lastSignature", {
               cause: C
             });
-          Xo(e, u, c, C.lastSignature, f), Co(Q) ? (er(c, e), n(c)) : Co(o, Q) ? (er(c, e), r()) : o += Q;
+          Ar(e, u, c, C.lastSignature, f), Qo(Q) ? (tr(c, e), n(c)) : Qo(o, Q) ? (tr(c, e), r()) : o += Q;
         } else
-          Xo(e, u, c, void 0, f);
+          Ar(e, u, c, void 0, f);
       }
-      er(c, e);
+      tr(c, e);
     }
     const a = i[0];
     if (!a)
@@ -3489,7 +3489,7 @@ class Bn {
     return this.sessions.decryptTransactionMeta(A, e, i);
   }
 }
-function er(t, A) {
+function tr(t, A) {
   if (A.new[t] && !A.new[t].lastSignature)
     throw new Error("The SessionContent sent must have a lastSignature", {
       cause: A.new[t]
@@ -3520,7 +3520,7 @@ function qg(t) {
 function yB(t, A, e) {
   if (!t.verified)
     throw new Error("CoValueCore: getBranchId called on coValue without verified state");
-  const i = e ?? Qn(t);
+  const i = e ?? En(t);
   if (!i)
     return t.id;
   const o = Hg({
@@ -3529,9 +3529,9 @@ function yB(t, A, e) {
     ownerId: i,
     sourceId: t.id
   });
-  return Ut(o, t.node.crypto);
+  return Ht(o, t.node.crypto);
 }
-function Qn(t) {
+function En(t) {
   if (!t.verified)
     throw new Error("CoValueCore: getBranchOwnerId called on coValue without verified state");
   const A = t.verified.header;
@@ -3541,12 +3541,12 @@ function Qn(t) {
 function DB(t, A, e) {
   if (!t.verified)
     throw new Error("CoValueCore: createBranch called on coValue without verified state");
-  const i = e ?? Qn(t);
+  const i = e ?? En(t);
   if (!i)
     return t;
   const o = t.safeGetGroup()?.myRole();
   if (!o || o === "reader" && !e)
-    return AA.warn("Trying to create a branch without enough access rights, returning the source coValue"), t;
+    return eA.warn("Trying to create a branch without enough access rights, returning the source coValue"), t;
   const r = o === "reader" ? "trusting" : "private", n = Hg({
     type: t.verified.header.type,
     branchName: A,
@@ -3580,7 +3580,7 @@ function mB(t) {
     throw new Error("CoValueCore: unable to find source branch");
   let e = {};
   for (const c of A.getMergeCommits())
-    c.branch === t.id && it(e, c.merged);
+    c.branch === t.id && rt(e, c.merged);
   const i = t.getValidTransactions({
     from: e,
     ignorePrivateTransactions: !1,
@@ -3622,16 +3622,16 @@ function SB(t, A) {
     }
   }
 }
-var xA = function(t, A, e, i) {
+var LA = function(t, A, e, i) {
   if (e === "a" && !i) throw new TypeError("Private accessor was defined without a getter");
   if (typeof A == "function" ? t !== A || !i : !A.has(t)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
   return e === "m" ? i : e === "a" ? i.call(t) : i ? i.value : A.get(t);
-}, qA = function(t, A, e, i, o) {
+}, xA = function(t, A, e, i, o) {
   if (i === "m") throw new TypeError("Private method is not writable");
   if (i === "a" && !o) throw new TypeError("Private accessor was defined without a setter");
   if (typeof A == "function" ? t !== A || !o : !A.has(t)) throw new TypeError("Cannot write private member to an object whose class did not declare it");
   return i === "a" ? o.call(t, e) : o ? o.value = e : A.set(t, e), e;
-}, Ne, we, ye, Lg, Nr, Bs, Qs, yt, Dt, mt;
+}, Ge, De, me, Lg, Mr, Bs, Qs, mt, St, kt;
 function kB(t) {
   if (typeof t == "number" && !Number.isInteger(t))
     return {
@@ -3653,12 +3653,12 @@ function kB(t) {
   }
   return { isOk: !0 };
 }
-function Ut(t, A) {
+function Ht(t, A) {
   return `co_z${A.shortHash(t).slice(11)}`;
 }
 class NB {
   constructor(A, e, i, o, r, n, s, a) {
-    this.isValidated = !1, this.isValid = !1, this.validationErrorMessage = void 0, this.dispatchTransaction = a, this.author = OA(e);
+    this.isValidated = !1, this.isValid = !1, this.validationErrorMessage = void 0, this.dispatchTransaction = a, this.author = PA(e);
     const g = r ? {
       sessionID: e,
       txIndex: i,
@@ -3667,7 +3667,7 @@ class NB {
       sessionID: e,
       txIndex: i
     };
-    this.coValueId = A, this.currentTxID = g, this.sourceTxID = void 0, this.tx = o, this.currentMadeAt = o.madeAt, this.sourceTxMadeAt = void 0, this.previous = s, n ? (this.changes = n.changes, this.meta = n.meta) : this.tx.privacy === "trusting" && (this.changes = mr(this.tx.changes), this.tx.meta && (this.meta = mr(this.tx.meta)));
+    this.coValueId = A, this.currentTxID = g, this.sourceTxID = void 0, this.tx = o, this.currentMadeAt = o.madeAt, this.sourceTxMadeAt = void 0, this.previous = s, n ? (this.changes = n.changes, this.meta = n.meta) : this.tx.privacy === "trusting" && (this.changes = Sr(this.tx.changes), this.tx.meta && (this.meta = Sr(this.tx.meta)));
   }
   // The TxID that refers to the current position in the session map
   // If this is a merged transaction, the txID is the TxID of the merged transaction
@@ -3705,16 +3705,16 @@ class Es {
     return this._verified;
   }
   constructor(A, e) {
-    Ne.add(this), this.isDeleted = !1, this.loadingStatuses = /* @__PURE__ */ new Map(), we.set(this, void 0), ye.set(this, void 0), this.listeners = /* @__PURE__ */ new Set(), this.missingDependencies = /* @__PURE__ */ new Set(), this.newContentQueue = [], yt.set(this, !1), Dt.set(this, !1), mt.set(this, !1), this.mergeCommits = [], this.branches = [], this.earliestTxMadeAt = Number.MAX_SAFE_INTEGER, this.latestTxMadeAt = 0, this.verifiedTransactions = [], this.toValidateTransactions = [], this.toDecryptTransactions = [], this.toParseMetaTransactions = [], this.toProcessTransactions = [], this.verifiedTransactionsKnownSessions = {}, this.lastVerifiedTransactionBySessionID = {}, this.parsingCache = /* @__PURE__ */ new Map(), this.dispatchTransaction = (i) => {
+    Ge.add(this), this.isDeleted = !1, this.loadingStatuses = /* @__PURE__ */ new Map(), De.set(this, void 0), me.set(this, void 0), this.listeners = /* @__PURE__ */ new Set(), this.missingDependencies = /* @__PURE__ */ new Set(), this.newContentQueue = [], mt.set(this, !1), St.set(this, !1), kt.set(this, !1), this.mergeCommits = [], this.branches = [], this.earliestTxMadeAt = Number.MAX_SAFE_INTEGER, this.latestTxMadeAt = 0, this.verifiedTransactions = [], this.toValidateTransactions = [], this.toDecryptTransactions = [], this.toParseMetaTransactions = [], this.toProcessTransactions = [], this.verifiedTransactionsKnownSessions = {}, this.lastVerifiedTransactionBySessionID = {}, this.parsingCache = /* @__PURE__ */ new Map(), this.dispatchTransaction = (i) => {
       if (!i.isValidated) {
         this.toValidateTransactions.push(i);
         return;
       }
       i.changes ? this.toProcessTransactions.push(i) : this.toDecryptTransactions.push(i), i.meta && this.toParseMetaTransactions.push(i);
-    }, this.dependencies = /* @__PURE__ */ new Set(), this.incompleteDependencies = /* @__PURE__ */ new Set(), this.dependant = /* @__PURE__ */ new Set(), this.readKeyCache = /* @__PURE__ */ new Map(), this.crypto = e.crypto, this.id = A, this._verified = null, this.node = e, this.counter = ge.getMeter("cojson").createUpDownCounter("jazz.covalues.loaded", {
+    }, this.dependencies = /* @__PURE__ */ new Set(), this.incompleteDependencies = /* @__PURE__ */ new Set(), this.dependant = /* @__PURE__ */ new Set(), this.readKeyCache = /* @__PURE__ */ new Map(), this.crypto = e.crypto, this.id = A, this._verified = null, this.node = e, this.counter = ce.getMeter("cojson").createUpDownCounter("jazz.covalues.loaded", {
       description: "The number of covalues in the system",
       unit: "covalue",
-      valueType: $A.INT
+      valueType: WA.INT
     }), this.updateCounter(null);
   }
   get loadingState() {
@@ -3723,8 +3723,8 @@ class Es {
     for (const A of this.loadingStatuses.values())
       if (A.type === "pending")
         return "loading";
-    if (xA(this, we, "f"))
-      return xA(this, we, "f");
+    if (LA(this, De, "f"))
+      return LA(this, De, "f");
     if (this.loadingStatuses.size === 0)
       return "unknown";
     for (const A of this.loadingStatuses.values())
@@ -3819,7 +3819,7 @@ class Es {
    * Called after the CoValue transitions from garbageCollected/onlyKnownState to available.
    */
   cleanupLastKnownState() {
-    qA(this, we, void 0, "f"), qA(this, ye, void 0, "f");
+    xA(this, De, void 0, "f"), xA(this, me, void 0, "f");
   }
   /**
    * Initialize this CoValueCore as a garbageCollected shell.
@@ -3829,7 +3829,7 @@ class Es {
     if (!this.node.storage)
       return;
     const e = this.loadingState;
-    qA(this, we, "garbageCollected", "f"), qA(this, ye, A, "f"), this.updateCounter(e);
+    xA(this, De, "garbageCollected", "f"), xA(this, me, A, "f"), this.updateCounter(e);
   }
   isCircularDependency(A) {
     if (A.id === this.id)
@@ -3864,24 +3864,24 @@ class Es {
     });
   }
   addDependencyFromHeader(A) {
-    for (const e of cn(A))
+    for (const e of Cn(A))
       this.addDependency(e);
   }
   provideHeader(A, e, i) {
     if (!i) {
       const o = kB(A.uniqueness);
       if (!o.isOk)
-        return AA.error("Invalid uniqueness", {
+        return eA.error("Invalid uniqueness", {
           header: A,
           errorMessage: o.message
         }), !1;
-      const r = Ut(A, this.node.crypto);
+      const r = Ht(A, this.node.crypto);
       if (this.id !== r)
         return !1;
     }
     if (this.addDependencyFromHeader(A), this._verified?.sessions.size)
       throw new Error("CoValueCore: provideHeader called on coValue with verified sessions present!");
-    return this._verified = new Bn(this.id, this.node.crypto, A, new wo(this.id, this.node.crypto, e)), this.isAvailable() && this.cleanupLastKnownState(), !0;
+    return this._verified = new Qn(this.id, this.node.crypto, A, new mo(this.id, this.node.crypto, e)), this.isAvailable() && this.cleanupLastKnownState(), !0;
   }
   markErrored(A, e) {
     const i = this.loadingState;
@@ -3912,7 +3912,7 @@ class Es {
    * For garbageCollected/onlyKnownState CoValues, returns the cached knownState.
    */
   knownState() {
-    return this.verified ? this.verified.immutableKnownState() : xA(this, ye, "f") ? xA(this, ye, "f") : Ue(this.id);
+    return this.verified ? this.verified.immutableKnownState() : LA(this, me, "f") ? LA(this, me, "f") : He(this.id);
   }
   /**
    * Returns a known state message to signal to the peer that the coValue doesn't need to be synced anymore
@@ -3925,8 +3925,8 @@ class Es {
         action: "known",
         ...this.knownState()
       };
-    const e = Se(this.knownState());
-    return it(e.sessions, A.sessions), {
+    const e = Ne(this.knownState());
+    return rt(e.sessions, A.sessions), {
       action: "known",
       ...e
     };
@@ -3955,14 +3955,14 @@ class Es {
     if (e.length === 0)
       return;
     let r;
-    if (this.isDeleted && !ve(A))
+    if (this.isDeleted && !Ye(A))
       return {
         type: "CoValueDeleted",
         id: this.id,
         error: new Error("Cannot add transactions to a deleted coValue")
       };
     if (!o) {
-      const s = this.node.resolveAccountAgent(OA(A), "Expected to know signer of transaction");
+      const s = this.node.resolveAccountAgent(PA(A), "Expected to know signer of transaction");
       if (s.error || !s.value)
         return {
           type: "ResolveAccountAgentError",
@@ -3977,11 +3977,11 @@ class Es {
         id: this.id,
         error: void 0
       };
-    const n = xA(this, Ne, "m", Lg).call(this, A, e, o);
+    const n = LA(this, Ge, "m", Lg).call(this, A, e, o);
     if (n.err)
       return n.err;
     try {
-      this.verified.tryAddTransactions(A, r, e, i, o), n.value && xA(this, Ne, "m", Nr).call(this), this.processNewTransactions(), this.scheduleNotifyUpdate(), this.invalidateDependants();
+      this.verified.tryAddTransactions(A, r, e, i, o), n.value && LA(this, Ge, "m", Mr).call(this), this.processNewTransactions(), this.scheduleNotifyUpdate(), this.invalidateDependants();
     } catch (s) {
       return { type: "InvalidSignature", id: this.id, error: s };
     }
@@ -4000,26 +4000,26 @@ class Es {
     this._cachedContent && this._cachedContent.processNewTransactions();
   }
   scheduleNotifyUpdate() {
-    this.listeners.size !== 0 && (qA(this, Dt, !0, "f"), xA(this, yt, "f") || (qA(this, yt, !0, "f"), queueMicrotask(() => {
-      qA(this, yt, !1, "f"), xA(this, Dt, "f") && this.notifyUpdate();
+    this.listeners.size !== 0 && (xA(this, St, !0, "f"), LA(this, mt, "f") || (xA(this, mt, !0, "f"), queueMicrotask(() => {
+      xA(this, mt, !1, "f"), LA(this, St, "f") && this.notifyUpdate();
     })));
   }
   pauseNotifyUpdate() {
-    qA(this, mt, !0, "f");
+    xA(this, kt, !0, "f");
   }
   resumeNotifyUpdate() {
-    qA(this, mt, !1, "f"), this.notifyUpdate();
+    xA(this, kt, !1, "f"), this.notifyUpdate();
   }
   notifyUpdate() {
-    if (!(this.listeners.size === 0 || xA(this, mt, "f"))) {
-      qA(this, Dt, !1, "f");
+    if (!(this.listeners.size === 0 || LA(this, kt, "f"))) {
+      xA(this, St, !1, "f");
       for (const A of this.listeners)
         try {
           A(this, () => {
             this.listeners.delete(A);
           });
         } catch (e) {
-          AA.error("Error in listener for coValue " + this.id, { err: e });
+          eA.error("Error in listener for coValue " + this.id, { err: e });
         }
     }
   }
@@ -4083,7 +4083,7 @@ class Es {
       throw new Error("CoValueCore: makeTransaction called on coValue without verified state");
     const r = !!i?.deleted;
     if (this.isDeleted && !r)
-      return AA.error("Cannot make transaction on a deleted coValue", {
+      return eA.error("Cannot make transaction on a deleted coValue", {
         id: this.id
       }), !1;
     let n = this.verified.header.meta?.type === "account" ? this.node.currentSessionID.replace(this.node.getCurrentAgent().id, this.node.getCurrentAgent().currentAgentID()) : this.node.currentSessionID;
@@ -4098,13 +4098,13 @@ class Es {
       a = this.verified.makeNewPrivateTransaction(n, s, A, C, c, i, o ?? Date.now());
     } else
       a = this.verified.makeNewTrustingTransaction(n, s, A, i, o ?? Date.now());
-    r && xA(this, Ne, "m", Nr).call(this);
+    r && LA(this, Ge, "m", Mr).call(this);
     const { transaction: I } = a;
     return this.parsingCache.set(I, { changes: A, meta: i }), this.node.syncManager.recordTransactionsSize([I], "local"), this.processNewTransactions(), this.addDependenciesFromNewTransaction(I), this.notifyUpdate(), this.node.syncManager.syncLocalTransaction(this.verified, g), o === void 0 ? this.notifyDependants() : this.invalidateDependants(), !0;
   }
   addDependenciesFromNewTransaction(A) {
     if (this.verified?.header.ruleset.type === "group")
-      for (const e of Cn([
+      for (const e of Bn([
         A
       ]))
         this.addDependency(e);
@@ -4168,7 +4168,7 @@ class Es {
     if (A.meta) {
       if (this.isBranched() && "from" in A.meta) {
         const e = A.meta;
-        this.branchStart ? this.branchStart = it(this.branchStart, e.from) : this.branchStart = e.from;
+        this.branchStart ? this.branchStart = rt(this.branchStart, e.from) : this.branchStart = e.from;
       }
       if ("branch" in A.meta) {
         const e = A.meta;
@@ -4187,7 +4187,7 @@ class Es {
           sessionID: o,
           txIndex: e.mi,
           branch: e.b ?? i?.txID.branch
-        } : AA.error("Merge commit without session ID", {
+        } : eA.error("Merge commit without session ID", {
           txID: A.txID,
           prevTxID: i?.txID ?? null
         });
@@ -4283,7 +4283,7 @@ class Es {
   }
   hasBranch(A, e) {
     this.parseNewTransactions(!1);
-    const i = Qn(this);
+    const i = En(this);
     return this.branches.some((o) => {
       if (o.branch !== A)
         return !1;
@@ -4309,7 +4309,7 @@ class Es {
     if (!this.verified)
       throw new Error("CoValueCore: getCurrentReadKey called on coValue without verified state");
     if (this.isGroupOrAccount())
-      return FA(this.getCurrentContent()).getCurrentReadKey();
+      return RA(this.getCurrentContent()).getCurrentReadKey();
     if (this.verified.header.ruleset.type === "ownedByGroup")
       return this.node.expectCoValueLoaded(this.verified.header.ruleset.group).getCurrentReadKey();
     throw new Error("Only groups or values owned by groups have read secrets");
@@ -4321,26 +4321,26 @@ class Es {
     if (!this.verified)
       throw new Error("CoValueCore: getUncachedReadKey called on coValue without verified state");
     if (this.isGroup())
-      return FA(
+      return RA(
         // Private transactions are not considered valid in groups, so we don't need to pass
         // ignorePrivateTransactions: true to safely load the content
         this.getCurrentContent()
       ).getReadKey(A);
     if (this.isGroupOrAccount())
-      return FA(
+      return RA(
         // Old accounts might have private transactions, because we were encrypting the root id in the past
         // So we need to load the account without private transactions, because we can't decrypt them without the read key
         this.getCurrentContent({ ignorePrivateTransactions: !0 })
       ).getReadKey(A);
     if (this.verified.header.ruleset.type === "ownedByGroup")
-      return FA(this.node.expectCoValueLoaded(this.verified.header.ruleset.group).getCurrentContent()).getReadKey(A);
+      return RA(this.node.expectCoValueLoaded(this.verified.header.ruleset.group).getCurrentContent()).getReadKey(A);
     throw new Error("Only groups or values owned by groups have read secrets");
   }
   safeGetGroup() {
     if (!this.verified)
       throw new Error("CoValueCore: getGroup called on coValue without verified state");
     if (this.verified.header.ruleset.type === "ownedByGroup")
-      return FA(this.node.expectCoValueLoaded(this.verified.header.ruleset.group).getCurrentContent());
+      return RA(this.node.expectCoValueLoaded(this.verified.header.ruleset.group).getCurrentContent());
   }
   getGroup() {
     const A = this.safeGetGroup();
@@ -4411,7 +4411,7 @@ class Es {
     this.node.storage.loadKnownState(this.id, (i) => {
       if (i && !this.isAvailable()) {
         const o = this.loadingState;
-        qA(this, we, "onlyKnownState", "f"), qA(this, ye, i, "f"), this.updateCounter(o);
+        xA(this, De, "onlyKnownState", "f"), xA(this, me, i, "f"), this.updateCounter(o);
       }
       A(i);
     });
@@ -4429,7 +4429,7 @@ class Es {
       return;
     }
     const i = () => {
-      this.getLoadingStateForPeer(A.id) === "pending" && (AA.warn("Timeout waiting for peer to load coValue", {
+      this.getLoadingStateForPeer(A.id) === "pending" && (eA.warn("Timeout waiting for peer to load coValue", {
         id: this.id,
         peerID: A.id
       }), this.markNotFoundInPeer(A.id));
@@ -4441,13 +4441,13 @@ class Es {
     }, !0);
   }
 }
-we = /* @__PURE__ */ new WeakMap(), ye = /* @__PURE__ */ new WeakMap(), yt = /* @__PURE__ */ new WeakMap(), Dt = /* @__PURE__ */ new WeakMap(), mt = /* @__PURE__ */ new WeakMap(), Ne = /* @__PURE__ */ new WeakSet(), Lg = function(A, e, i) {
+De = /* @__PURE__ */ new WeakMap(), me = /* @__PURE__ */ new WeakMap(), mt = /* @__PURE__ */ new WeakMap(), St = /* @__PURE__ */ new WeakMap(), kt = /* @__PURE__ */ new WeakMap(), Ge = /* @__PURE__ */ new WeakSet(), Lg = function(A, e, i) {
   if (!this.verified)
     return {
       value: !1
     };
   let o;
-  if (ve(A)) {
+  if (Ye(A)) {
     if ((this.verified.sessions.get(A)?.transactions.length ?? 0) > 0 || e.length > 1)
       return {
         value: !0,
@@ -4459,7 +4459,7 @@ we = /* @__PURE__ */ new WeakMap(), ye = /* @__PURE__ */ new WeakMap(), yt = /* 
           error: new Error("Delete transaction must be the only transaction in the session")
         }
       };
-    const n = e[0], s = n && xA(this, Ne, "m", Bs).call(this, n);
+    const n = e[0], s = n && LA(this, Ge, "m", Bs).call(this, n);
     if (s && (o = n, s.deleted !== this.id))
       return {
         value: !0,
@@ -4484,7 +4484,7 @@ we = /* @__PURE__ */ new WeakMap(), ye = /* @__PURE__ */ new WeakMap(), yt = /* 
       };
   }
   if (!i && o) {
-    const r = OA(A), n = xA(this, Ne, "m", Qs).call(this, r, o.madeAt);
+    const r = PA(A), n = LA(this, Ge, "m", Qs).call(this, r, o.madeAt);
     if (!n.ok)
       return {
         value: !0,
@@ -4501,12 +4501,12 @@ we = /* @__PURE__ */ new WeakMap(), ye = /* @__PURE__ */ new WeakMap(), yt = /* 
   return {
     value: !!o
   };
-}, Nr = function() {
+}, Mr = function() {
   this.isDeleted = !0, this.verified?.markAsDeleted();
 }, Bs = function(A) {
   if (A.privacy !== "trusting" || !A.meta)
     return;
-  const e = mr(A.meta);
+  const e = Sr(A.meta);
   return e && typeof e.deleted == "string" ? e : void 0;
 }, Qs = function(A, e) {
   if (!this.verified)
@@ -4557,22 +4557,22 @@ class MB {
     clearInterval(this.interval);
   }
 }
-class En {
+class ln {
   constructor(A, e) {
-    this.id = A, this.peerId = e, this.knownState = Ue(A);
+    this.id = A, this.peerId = e, this.knownState = He(A);
   }
   cloneWithoutOptimistic() {
-    const A = new En(this.id, this.peerId);
+    const A = new ln(this.id, this.peerId);
     return A.set(this.knownState), A;
   }
   updateHeader(A) {
     this.knownState.header = A, this.optimisticKnownState && (this.optimisticKnownState.header = A);
   }
   combineWith(A) {
-    _o(this.knownState, A), this.optimisticKnownState && _o(this.optimisticKnownState, A);
+    Zo(this.knownState, A), this.optimisticKnownState && Zo(this.optimisticKnownState, A);
   }
   combineOptimisticWith(A) {
-    this.optimisticKnownState || (this.optimisticKnownState = Se(this.knownState)), _o(this.optimisticKnownState, A);
+    this.optimisticKnownState || (this.optimisticKnownState = Ne(this.knownState)), Zo(this.optimisticKnownState, A);
   }
   /**
    * Aligns the CoValue known state with the defined payload
@@ -4587,7 +4587,7 @@ class En {
     return this.optimisticKnownState ?? this.knownState;
   }
 }
-class yo {
+class So {
   constructor(A) {
     this.meter = A, this.head = void 0, this.tail = void 0, this.length = 0;
   }
@@ -4620,13 +4620,13 @@ class yo {
 }
 class GB {
   constructor(A, e) {
-    this.attrs = e, this.pullCounter = ge.getMeter("cojson").createCounter(`${A}.pulled`, {
+    this.attrs = e, this.pullCounter = ce.getMeter("cojson").createCounter(`${A}.pulled`, {
       description: "Number of messages pulled from the queue",
-      valueType: $A.INT,
+      valueType: WA.INT,
       unit: "1"
-    }), this.pushCounter = ge.getMeter("cojson").createCounter(`${A}.pushed`, {
+    }), this.pushCounter = ce.getMeter("cojson").createCounter(`${A}.pushed`, {
       description: "Number of messages pushed to the queue",
-      valueType: $A.INT,
+      valueType: WA.INT,
       unit: "1"
     }), this.pullCounter.add(0, this.attrs), this.pushCounter.add(0, this.attrs);
   }
@@ -4637,25 +4637,25 @@ class GB {
     this.pushCounter.add(1, this.attrs);
   }
 }
-function Ft(t, A) {
-  return new yo(new GB("jazz.messagequeue." + t, A));
+function Rt(t, A) {
+  return new So(new GB("jazz.messagequeue." + t, A));
 }
-class FB {
+class bB {
   constructor(A) {
-    this.peerId = A, this.inFlightLoads = /* @__PURE__ */ new Map(), this.highPriorityPending = Ft("load-requests-queue", { priority: "high" }), this.lowPriorityPending = Ft("load-requests-queue", { priority: "low" }), this.lowPriorityNodes = /* @__PURE__ */ new Map(), this.highPriorityNodes = /* @__PURE__ */ new Map(), this.timeoutHandle = null, this.processing = !1;
+    this.peerId = A, this.inFlightLoads = /* @__PURE__ */ new Map(), this.highPriorityPending = Rt("load-requests-queue", { priority: "high" }), this.lowPriorityPending = Rt("load-requests-queue", { priority: "low" }), this.lowPriorityNodes = /* @__PURE__ */ new Map(), this.highPriorityNodes = /* @__PURE__ */ new Map(), this.timeoutHandle = null, this.processing = !1;
   }
   /**
    * Check if we can send another load request.
    */
   canSend() {
-    return this.inFlightLoads.size < Xe.MAX_IN_FLIGHT_LOADS_PER_PEER;
+    return this.inFlightLoads.size < et.MAX_IN_FLIGHT_LOADS_PER_PEER;
   }
   /**
    * Track that a load request has been sent.
    */
   trackSent(A) {
     const e = performance.now();
-    this.inFlightLoads.set(A, e), this.scheduleTimeoutCheck(Xe.TIMEOUT);
+    this.inFlightLoads.set(A, e), this.scheduleTimeoutCheck(et.TIMEOUT);
   }
   /**
    * Schedule a timeout check if not already scheduled.
@@ -4673,13 +4673,13 @@ class FB {
     const A = performance.now();
     let e;
     for (const [i, o] of this.inFlightLoads.entries()) {
-      const r = o + Xe.TIMEOUT;
-      A >= r ? (i.isAvailable() ? i.isStreaming() && AA.warn("Content streaming is taking more than " + Xe.TIMEOUT / 1e3 + "s", {
+      const r = o + et.TIMEOUT;
+      A >= r ? (i.isAvailable() ? i.isStreaming() && eA.warn("Content streaming is taking more than " + et.TIMEOUT / 1e3 + "s", {
         id: i.id,
         peerId: this.peerId,
         knownState: i.knownState().sessions,
         streamingTarget: i.knownStateWithStreaming().sessions
-      }) : (AA.warn("Load request timed out", {
+      }) : (eA.warn("Load request timed out", {
         id: i.id,
         peerId: this.peerId
       }), i.markNotFoundInPeer(this.peerId)), this.inFlightLoads.delete(i), this.processQueue()) : e = Math.min(e ?? 1 / 0, r - A);
@@ -4776,9 +4776,9 @@ class FB {
     return this.lowPriorityPending.length;
   }
 }
-class ln {
+class dn {
   constructor(A, e) {
-    this.peer = A, this.toldKnownState = /* @__PURE__ */ new Set(), this.loadRequestSent = /* @__PURE__ */ new Set(), this.listeners = /* @__PURE__ */ new Set(), this.closed = !1, this.closeListeners = /* @__PURE__ */ new Set(), this._knownStates = e ?? /* @__PURE__ */ new Map(), this.loadQueue = new FB(A.id);
+    this.peer = A, this.toldKnownState = /* @__PURE__ */ new Set(), this.loadRequestSent = /* @__PURE__ */ new Set(), this.listeners = /* @__PURE__ */ new Set(), this.closed = !1, this.closeListeners = /* @__PURE__ */ new Set(), this._knownStates = e ?? /* @__PURE__ */ new Map(), this.loadQueue = new bB(A.id);
   }
   getKnownState(A) {
     return this._knownStates.get(A)?.value();
@@ -4800,7 +4800,7 @@ class ln {
     const e = /* @__PURE__ */ new Map();
     for (const i of this._knownStates.values())
       e.set(i.id, i.cloneWithoutOptimistic());
-    return new ln(A, e);
+    return new dn(A, e);
   }
   sendLoadRequest(A, e) {
     this.toldKnownState.add(A.id), this.loadRequestSent.add(A.id), this.loadQueue.enqueue(A, () => {
@@ -4821,7 +4821,7 @@ class ln {
   }
   getOrCreateKnownState(A) {
     let e = this._knownStates.get(A);
-    return e || (e = new En(A, this.peer.id), this._knownStates.set(A, e)), e;
+    return e || (e = new ln(A, this.peer.id), this._knownStates.set(A, e)), e;
   }
   updateHeader(A, e) {
     const i = this.getOrCreateKnownState(A);
@@ -4890,13 +4890,13 @@ class ln {
     this.closeListeners.clear();
   }
   gracefulShutdown() {
-    this.closed || (AA.debug("Gracefully closing", {
+    this.closed || (eA.debug("Gracefully closing", {
       peerId: this.id,
       peerRole: this.role
     }), this.closed = !0, this.loadQueue.clear(), this.peer.outgoing.push("Disconnected"), this.peer.outgoing.close(), this.peer.incoming.close(), this.emitClose());
   }
 }
-class bB {
+class FB {
   constructor(A) {
     this.syncManager = A, this.listeners = /* @__PURE__ */ new Set(), this.listenersByCoValues = /* @__PURE__ */ new Map(), this.listenersByPeersAndCoValues = /* @__PURE__ */ new Map();
   }
@@ -5009,7 +5009,7 @@ class vB {
       try {
         A.trackCoValuesSyncState(e, () => i());
       } catch (o) {
-        AA.warn("Failed to persist batched unsynced CoValue tracking", {
+        eA.warn("Failed to persist batched unsynced CoValue tracking", {
           err: o
         }), i();
       }
@@ -5082,13 +5082,13 @@ class vB {
 }
 class KB {
   constructor(A) {
-    this.processQueues = A, this.currentQueue = 0, this.pullCounter = ge.getMeter("cojson").createCounter("jazz.messagequeue.incoming.pulled", {
+    this.processQueues = A, this.currentQueue = 0, this.pullCounter = ce.getMeter("cojson").createCounter("jazz.messagequeue.incoming.pulled", {
       description: "Number of messages pulled from the queue",
-      valueType: $A.INT,
+      valueType: WA.INT,
       unit: "1"
-    }), this.pushCounter = ge.getMeter("cojson").createCounter("jazz.messagequeue.incoming.pushed", {
+    }), this.pushCounter = ce.getMeter("cojson").createCounter("jazz.messagequeue.incoming.pushed", {
       description: "Number of messages pushed to the queue",
-      valueType: $A.INT,
+      valueType: WA.INT,
       unit: "1"
     }), this.pullCounter.add(0, {
       peerRole: "client"
@@ -5105,7 +5105,7 @@ class KB {
     if (i)
       i.push(A);
     else {
-      const o = new yo();
+      const o = new So();
       this.peerToQueue.set(e, o), this.queues.push([o, e]), o.push(A);
     }
     this.pushCounter.add(1, {
@@ -5167,14 +5167,14 @@ class UB {
     this._ignoreUnknownCoValuesFromServers = !0;
   }
   constructor(A) {
-    this.peers = {}, this.skipVerify = !1, this._ignoreUnknownCoValuesFromServers = !1, this.peersCounter = ge.getMeter("cojson").createUpDownCounter("jazz.peers", {
+    this.peers = {}, this.skipVerify = !1, this._ignoreUnknownCoValuesFromServers = !1, this.peersCounter = ce.getMeter("cojson").createUpDownCounter("jazz.peers", {
       description: "Amount of connected peers",
-      valueType: $A.INT,
+      valueType: WA.INT,
       unit: "peer"
-    }), this.messagesQueue = new KB(() => this.processQueues()), this.processing = !1, this.syncQueue = new YB((e) => this.syncContent(e)), this.syncLocalTransaction = this.syncQueue.syncTransaction, this.trackDirtyCoValues = this.syncQueue.trackDirtyCoValues, this.local = A, this.syncState = new bB(this), this.unsyncedTracker = new vB(), this.transactionsSizeHistogram = ge.getMeter("cojson").createHistogram("jazz.transactions.size", {
+    }), this.messagesQueue = new KB(() => this.processQueues()), this.processing = !1, this.syncQueue = new YB((e) => this.syncContent(e)), this.syncLocalTransaction = this.syncQueue.syncTransaction, this.trackDirtyCoValues = this.syncQueue.trackDirtyCoValues, this.local = A, this.syncState = new FB(this), this.unsyncedTracker = new vB(), this.transactionsSizeHistogram = ce.getMeter("cojson").createHistogram("jazz.transactions.size", {
       description: "The size of transactions in a covalue",
       unit: "bytes",
-      valueType: $A.INT
+      valueType: WA.INT
     });
   }
   disableTransactionVerification() {
@@ -5196,17 +5196,17 @@ class UB {
   handleSyncMessage(A, e) {
     if (!Dg(A.id)) {
       const i = A.id ? "invalid" : "undefined";
-      AA.warn(`Received sync message with ${i} id`, {
+      eA.warn(`Received sync message with ${i} id`, {
         msg: A
       });
       return;
     }
     if (e.role === "server" && this._ignoreUnknownCoValuesFromServers && !this.local.hasCoValue(A.id)) {
-      AA.warn(`Ignoring message ${A.action} on unknown coValue ${A.id} from peer ${e.id}`);
+      eA.warn(`Ignoring message ${A.action} on unknown coValue ${A.id} from peer ${e.id}`);
       return;
     }
     if (this.local.getCoValue(A.id).isErroredInPeer(e.id)) {
-      AA.warn(`Skipping message ${A.action} on errored coValue ${A.id} from peer ${e.id}`);
+      eA.warn(`Skipping message ${A.action} on errored coValue ${A.id} from peer ${e.id}`);
       return;
     }
     switch (A.action) {
@@ -5266,7 +5266,7 @@ class UB {
                 C || this.unsyncedTracker.removeAll(g), I();
               });
             } catch (c) {
-              AA.warn(`Failed to resume sync for CoValue ${g}:`, {
+              eA.warn(`Failed to resume sync for CoValue ${g}:`, {
                 err: c,
                 coValueId: g
               }), this.unsyncedTracker.removeAll(g), I();
@@ -5279,7 +5279,7 @@ class UB {
   }
   startPeerReconciliation(A) {
     ds(A) && this.resumeUnsyncedCoValues().catch((r) => {
-      AA.warn("Failed to resume unsynced CoValues:", r);
+      eA.warn("Failed to resume unsynced CoValues:", r);
     });
     const e = [], i = /* @__PURE__ */ new Set(), o = (r) => {
       if (!i.has(r.id) && (i.add(r.id), this.getServerPeers(r.id).find((n) => n.id === A.id) !== void 0)) {
@@ -5337,14 +5337,14 @@ class UB {
         try {
           this.handleSyncMessage(i.msg, i.peer);
         } catch (n) {
-          AA.error("Error processing message", { err: n });
+          eA.error("Error processing message", { err: n });
         }
       const o = e?.pull();
       if (o)
         try {
           o();
         } catch (n) {
-          AA.error("Error processing storage streaming entry", {
+          eA.error("Error processing storage streaming entry", {
             err: n
           });
         }
@@ -5355,7 +5355,7 @@ class UB {
     this.processing = !1;
   }
   addPeer(A, e = !1) {
-    const i = this.peers[A.id], o = i ? i.newPeerStateFrom(A) : new ln(A, void 0);
+    const i = this.peers[A.id], o = i ? i.newPeerStateFrom(A) : new dn(A, void 0);
     this.peers[A.id] = o, this.peersCounter.add(1, { role: A.role });
     const r = o.subscribeToKnownStatesUpdates((n, s) => {
       this.syncState.triggerUpdate(A, n, s.value());
@@ -5386,7 +5386,7 @@ class UB {
    * - The load message always replies with a known state message
    */
   handleLoad(A, e) {
-    e.setKnownState(A.id, zo(A));
+    e.setKnownState(A.id, _o(A));
     const i = this.local.getCoValue(A.id);
     if (i.isAvailable()) {
       this.sendNewContent(A.id, e);
@@ -5461,17 +5461,17 @@ class UB {
       id: A,
       header: !1,
       sessions: {}
-    }) : AA.error("Received new content with no header on a missing CoValue", {
+    }) : eA.error("Received new content with no header on a missing CoValue", {
       id: A
     });
   }
   handleKnownState(A, e) {
     const i = this.local.getCoValue(A.id);
-    e.combineWith(A.id, zo(A)), e.getOptimisticKnownState(A.id)?.header || i.markNotFoundInPeer(e.id), i.isAvailable() && this.sendNewContent(A.id, e), e.trackLoadRequestComplete(i);
+    e.combineWith(A.id, _o(A)), e.getOptimisticKnownState(A.id)?.header || i.markNotFoundInPeer(e.id), i.isAvailable() && this.sendNewContent(A.id, e), e.trackLoadRequestComplete(i);
   }
   recordTransactionsSize(A, e) {
     for (const i of A) {
-      const o = po(i);
+      const o = Do(i);
       this.transactionsSizeHistogram.record(o, {
         source: e
       });
@@ -5498,7 +5498,7 @@ class UB {
     else {
       if (!A.header) {
         if (e === "storage") {
-          AA.warn("Received content from storage without header - CoValue may have been garbage collected mid-stream", {
+          eA.warn("Received content from storage without header - CoValue may have been garbage collected mid-stream", {
             id: A.id,
             from: e
           });
@@ -5511,7 +5511,7 @@ class UB {
       }
       const I = i.loadingState;
       if (!i.provideHeader(A.header, A.expectContentUntil, this.skipVerify)) {
-        AA.error("Failed to provide header", {
+        eA.error("Failed to provide header", {
           id: A.id,
           header: A.header
         });
@@ -5535,7 +5535,7 @@ class UB {
     };
     let a = i.isDeleted;
     for (const [I, c] of wB(A)) {
-      if (a && !ve(I))
+      if (a && !Ye(I))
         continue;
       const C = pB(c, i.knownState(), I);
       if (C === void 0) {
@@ -5546,17 +5546,17 @@ class UB {
         continue;
       const B = i.tryAddTransactions(I, C, c.lastSignature, this.skipVerify);
       if (B) {
-        o ? (AA.error("Failed to add transactions", {
+        o ? (eA.error("Failed to add transactions", {
           peerId: o.id,
           peerRole: o.role,
           id: A.id,
           errorType: B.type,
           err: B.error,
           sessionID: I,
-          msgKnownState: ei(A).sessions,
-          msgSummary: Ar(A),
+          msgKnownState: ii(A).sessions,
+          msgSummary: er(A),
           knownState: i.knownState().sessions
-        }), i.markErrored(o.id, B)) : AA.error("Failed to add transactions from storage", {
+        }), i.markErrored(o.id, B)) : eA.error("Failed to add transactions from storage", {
           id: A.id,
           err: B.error,
           sessionID: I,
@@ -5566,13 +5566,13 @@ class UB {
       }
       r && r !== "import" && this.recordTransactionsSize(C, r), !a && i.isDeleted && (a = !0, s.new = {}), s.new[I] = c;
     }
-    o && (i.isDeleted ? o.combineWith(A.id, ei(A)) : o.combineWith(A.id, ei(s))), n ? o ? (this.trySendToPeer(o, {
+    o && (i.isDeleted ? o.combineWith(A.id, ii(A)) : o.combineWith(A.id, ii(s))), n ? o ? (this.trySendToPeer(o, {
       action: "known",
       isCorrection: !0,
       ...i.knownState()
-    }), o.trackToldKnownState(A.id)) : AA.error("Invalid state assumed when handling new content from storage", {
+    }), o.trackToldKnownState(A.id)) : eA.error("Invalid state assumed when handling new content from storage", {
       id: A.id,
-      content: Ar(A),
+      content: er(A),
       knownState: i.knownState()
     }) : o && (i.isDeleted ? this.trySendToPeer(o, i.stopSyncingKnownStateMessage(o.getKnownState(A.id))) : this.trySendToPeer(o, {
       action: "known",
@@ -5589,12 +5589,12 @@ class UB {
     }
   }
   handleCorrection(A, e) {
-    return e.setKnownState(A.id, zo(A)), this.sendNewContent(A.id, e);
+    return e.setKnownState(A.id, _o(A)), this.sendNewContent(A.id, e);
   }
   syncContent(A) {
     const e = this.local.getCoValue(A.id);
     this.storeContent(A), this.trackSyncState(e.id);
-    const i = ei(A);
+    const i = ii(A);
     for (const o of this.getPeers(e.id))
       if (!(o.role === "client" && !o.isCoValueSubscribedToPeer(e.id))) {
         if (o.closed || e.isErroredInPeer(o.id)) {
@@ -5628,9 +5628,9 @@ class UB {
     const i = this.local.getCoValue(A.id);
     i.isDeleted && e.markDeleteAsValid(i.id), e.store(A, (o) => {
       if (!i.verified) {
-        AA.error("Correction requested for a CoValue with no verified content", {
+        eA.error("Correction requested for a CoValue with no verified content", {
           id: A.id,
-          content: Ar(A),
+          content: er(A),
           correction: o,
           state: i.loadingState
         });
@@ -5704,7 +5704,7 @@ Marked as errored: "${I}"`), n(new Error(B)), s?.();
 let Tg = () => new Promise((t) => queueMicrotask(t));
 typeof setImmediate == "function" && (Tg = () => new Promise((t) => setImmediate(t)));
 function JB(t, A, { peer1role: e = "client", peer2role: i = "client", persistent: o = !1 } = {}) {
-  const r = new Mr(), n = new Mr();
+  const r = new Gr(), n = new Gr();
   return [{
     id: t,
     incoming: r,
@@ -5719,7 +5719,7 @@ function JB(t, A, { peer1role: e = "client", peer2role: i = "client", persistent
     persistent: o
   }];
 }
-let Mr = class {
+let Gr = class {
   constructor() {
     this.buffer = [], this.listeners = /* @__PURE__ */ new Set(), this.closed = !1, this.closeListeners = /* @__PURE__ */ new Set();
   }
@@ -5749,7 +5749,7 @@ let Mr = class {
     this.closeListeners.add(A);
   }
 };
-class Me {
+class be {
   /** @category 3. Low-level */
   constructor(A, e, i, o) {
     this.syncWhen = o, this.coValues = /* @__PURE__ */ new Map(), this.syncManager = new UB(this), this.garbageCollector = void 0, this.crashed = void 0, this.agentSecret = A, this.currentSessionID = e, this.crypto = i;
@@ -5820,18 +5820,18 @@ class Me {
     return o.setGarbageCollectedState(i), this.coValues.set(A, o), this.storage?.onCoValueUnmounted(A), !0;
   }
   getCurrentAccountOrAgentID() {
-    return OA(this.currentSessionID);
+    return PA(this.currentSessionID);
   }
   getCurrentAgent() {
     if (!this._cachedCurrentAgent) {
       const A = this.getCurrentAccountOrAgentID();
-      Ze(A) ? this._cachedCurrentAgent = new rs(this.agentSecret, this.crypto) : this._cachedCurrentAgent = new rB(ns(this.expectCoValueLoaded(A).getCurrentContent()), this.agentSecret);
+      At(A) ? this._cachedCurrentAgent = new rs(this.agentSecret, this.crypto) : this._cachedCurrentAgent = new rB(ns(this.expectCoValueLoaded(A).getCurrentContent()), this.agentSecret);
     }
     return this._cachedCurrentAgent;
   }
   expectCurrentAccountID(A) {
     const e = this.getCurrentAccountOrAgentID();
-    if (Ze(e))
+    if (At(e))
       throw new Error("Current account is an agent, but expected an account: " + A);
     return e;
   }
@@ -5840,11 +5840,11 @@ class Me {
     return ns(this.expectCoValueLoaded(e).getCurrentContent());
   }
   static internalCreateAccount(A) {
-    const { crypto: e, initialAgentSecret: i = e.newRandomAgentSecret(), peers: o = [], syncWhen: r } = A, n = Rg(i, e), s = Ut(n, e), a = new Me(i, e.newRandomSessionID(s), e, r);
+    const { crypto: e, initialAgentSecret: i = e.newRandomAgentSecret(), peers: o = [], syncWhen: r } = A, n = Rg(i, e), s = Ht(n, e), a = new be(i, e.newRandomSessionID(s), e, r);
     A.storage && a.setStorage(A.storage);
     for (const B of o)
       a.syncManager.addPeer(B);
-    const g = e.getAgentID(i), I = FA(a.createCoValue(n).getCurrentContent());
+    const g = e.getAgentID(i), I = RA(a.createCoValue(n).getCurrentContent());
     I.set(g, "admin", "trusting");
     const c = e.newRandomKeySecret(), C = e.seal({
       message: c.secret,
@@ -5859,7 +5859,7 @@ class Me {
   }
   /** @category 2. Node Creation */
   static async withNewlyCreatedAccount({ creationProps: A, peers: e, syncWhen: i, migration: o, crypto: r, initialAgentSecret: n = r.newRandomAgentSecret(), storage: s }) {
-    const a = Me.internalCreateAccount({
+    const a = be.internalCreateAccount({
       crypto: r,
       initialAgentSecret: n,
       peers: e,
@@ -5892,7 +5892,7 @@ class Me {
   /** @category 2. Node Creation */
   static async withLoadedAccount({ accountID: A, accountSecret: e, sessionID: i, peers: o, syncWhen: r, crypto: n, migration: s, storage: a }) {
     try {
-      const g = n.getAgentID(e), I = new Me(e, i || n.newRandomSessionID(A), n, r);
+      const g = n.getAgentID(e), I = new be(e, i || n.newRandomSessionID(A), n, r);
       a && I.setStorage(a);
       for (const Q of o)
         I.syncManager.addPeer(Q);
@@ -5907,7 +5907,7 @@ class Me {
       const B = c.get("root");
       return B && (c.getRaw("root")?.trusting || c.set("root", B, "trusting")), await I.load(C), s && await s(c, I), I;
     } catch (g) {
-      throw AA.error("Error withLoadedAccount", { err: g }), g;
+      throw eA.error("Error withLoadedAccount", { err: g }), g;
     }
   }
   /** @internal */
@@ -5916,10 +5916,10 @@ class Me {
       throw new Error("Trying to create CoValue after node has crashed", {
         cause: this.crashed
       });
-    const e = Ut(A, this.crypto), i = this.getCoValue(e);
+    const e = Ht(A, this.crypto), i = this.getCoValue(e);
     if (i.provideHeader(A), !i.hasVerifiedContent())
       throw new Error("CoValue not available after providing header");
-    return this.garbageCollector?.trackCoValueAccess(i), this.syncManager.syncLocalTransaction(i.verified, Ue(e)), i;
+    return this.garbageCollector?.trackCoValueAccess(i), this.syncManager.syncLocalTransaction(i.verified, He(e)), i;
   }
   /** @internal */
   async loadCoValueCore(A, e, i) {
@@ -5941,10 +5941,10 @@ class Me {
         r.load(s);
       }
       const n = await r.waitForAvailableOrUnavailable();
-      if (n.isAvailable() || i || o >= Xe.MAX_RETRIES)
+      if (n.isAvailable() || i || o >= et.MAX_RETRIES)
         return n;
       await Promise.race([
-        new Promise((s) => setTimeout(s, Xe.RETRY_DELAY)),
+        new Promise((s) => setTimeout(s, et.RETRY_DELAY)),
         r.waitForAvailable()
         // Stop waiting if the coValue becomes available
       ]), o++;
@@ -5992,7 +5992,7 @@ class Me {
         r = n.subscribe(e);
       }
     }).catch((n) => {
-      AA.error("Subscription error", {
+      eA.error("Subscription error", {
         id: A,
         err: n
       });
@@ -6012,9 +6012,9 @@ class Me {
       const Q = await this.load(o.group);
       if (Q === "unavailable")
         throw new Error("Trying to accept invite: CoValue owner unavailable from all peers");
-      r = FA(Q);
+      r = RA(Q);
     } else
-      r = FA(i);
+      r = RA(i);
     if (r.core.verified.header.meta?.type === "account")
       throw new Error("Can't accept invites to values owned by accounts");
     const n = this.crypto.agentSecretFromSecretSeed(oB(e)), s = this.crypto.getAgentID(n), a = await new Promise((Q, f) => {
@@ -6027,10 +6027,10 @@ class Me {
       throw new Error("No invite found");
     const g = this.getCurrentAgent(), I = r.get(g.id);
     if (I === "admin" || I === "writer" && a === "writerInvite" || I === "writer" && a === "reader" || I === "reader" && a === "readerInvite" || I && a === "writeOnlyInvite") {
-      AA.debug("Not accepting invite that would replace or downgrade role");
+      eA.debug("Not accepting invite that would replace or downgrade role");
       return;
     }
-    const c = await this.loadCoValueAsDifferentAgent(r.id, n), C = FA(c.getCurrentContent());
+    const c = await this.loadCoValueAsDifferentAgent(r.id, n), C = RA(c.getCurrentContent());
     C.addMemberInternal(g, a === "adminInvite" ? "admin" : a === "managerInvite" ? "manager" : a === "writerInvite" ? "writer" : a === "writeOnlyInvite" ? "writeOnly" : "reader");
     const B = C.core.newContentSince(r.core.knownState()) ?? [];
     for (const Q of B)
@@ -6045,14 +6045,14 @@ class Me {
   }
   /** @internal */
   expectProfileLoaded(A, e) {
-    const i = this.expectCoValueLoaded(A, e), o = FA(i.getCurrentContent()).get("profile");
+    const i = this.expectCoValueLoaded(A, e), o = RA(i.getCurrentContent()).get("profile");
     if (!o)
       throw new Error(`${e ? e + ": " : ""}Account ${A} has no profile`);
     return this.expectCoValueLoaded(o, e).getCurrentContent();
   }
   /** @internal */
   resolveAccountAgent(A, e) {
-    if (Ze(A))
+    if (At(A))
       return { value: A, error: void 0 };
     let i;
     try {
@@ -6066,7 +6066,7 @@ class Me {
         error: new Error(`Unexpectedly not account: ${e}`)
       };
     const o = i.verified.header.ruleset.initialAdmin;
-    return Ze(o) ? { value: o, error: void 0 } : {
+    return At(o) ? { value: o, error: void 0 } : {
       value: void 0,
       error: new Error(`Unexpectedly not account: ${e}`)
     };
@@ -6078,7 +6078,7 @@ class Me {
       meta: null,
       ...A.createdAt !== void 0 ? { createdAt: A.createdAt } : {},
       uniqueness: A.uniqueness
-    }), o = FA(i.getCurrentContent());
+    }), o = RA(i.getCurrentContent());
     o.set(e.id, "admin", "trusting");
     const r = this.crypto.newRandomKeySecret();
     return o.set(`${r.id}_for_${e.id}`, this.crypto.seal({
@@ -6092,7 +6092,7 @@ class Me {
     }), "trusting"), o.set("readKey", r.id, "trusting"), o;
   }
   async loadCoValueAsDifferentAgent(A, e, i) {
-    const o = new rs(e, this.crypto), r = new Me(e, this.crypto.newRandomSessionID(i || o.id), this.crypto);
+    const o = new rs(e, this.crypto), r = new be(e, this.crypto.newRandomSessionID(i || o.id), this.crypto);
     return await r.loadVerifiedStateFrom(this, A), r.expectCoValueLoaded(A);
   }
   /** @internal */
@@ -6131,19 +6131,19 @@ function qB(t, A) {
   return EB(e, t, i, o);
 }
 function xB(t) {
-  return t.reduce((A, e) => A + po(e), 0);
+  return t.reduce((A, e) => A + Do(e), 0);
 }
 const LB = {
-  [TA.HIGH]: 0,
-  [TA.MEDIUM]: 1,
-  [TA.LOW]: 2
+  [OA.HIGH]: 0,
+  [OA.MEDIUM]: 1,
+  [OA.LOW]: 2
 };
 class TB {
   constructor(A, e, i) {
     this.defaultPriority = A, this.queues = [
-      Ft(e, { priority: TA.HIGH, ...i }),
-      Ft(e, { priority: TA.MEDIUM, ...i }),
-      Ft(e, { priority: TA.LOW, ...i })
+      Rt(e, { priority: OA.HIGH, ...i }),
+      Rt(e, { priority: OA.MEDIUM, ...i }),
+      Rt(e, { priority: OA.LOW, ...i })
     ];
   }
   getQueue(A) {
@@ -6158,10 +6158,10 @@ class TB {
     return this.queues[A]?.shift();
   }
 }
-var Jt;
+var qt;
 (function(t) {
   t[t.Pending = 0] = "Pending", t[t.Done = 1] = "Done";
-})(Jt || (Jt = {}));
+})(qt || (qt = {}));
 class OB {
   constructor() {
     this.knownStates = /* @__PURE__ */ new Map(), this.waitForSyncRequests = /* @__PURE__ */ new Map();
@@ -6169,7 +6169,7 @@ class OB {
   getKnownState(A) {
     const e = this.knownStates.get(A);
     if (!e) {
-      const i = Ue(A);
+      const i = He(A);
       return this.knownStates.set(A, i), i;
     }
     return e;
@@ -6244,7 +6244,7 @@ class jB {
     try {
       A = await this.runCallback();
     } catch (e) {
-      AA.error("Error running deleted co values eraser scheduler", {
+      eA.error("Error running deleted co values eraser scheduler", {
         err: e
       }), this.isDisposed() || (this.state = "idle");
       return;
@@ -6260,7 +6260,7 @@ class jB {
 }
 class VB {
   constructor() {
-    this.backlog = new yo(), this.processing = !1;
+    this.backlog = new So(), this.processing = !1;
   }
   async schedule(A, e) {
     if (this.backlog.push({ queue: A, callback: e }), !this.processing) {
@@ -6270,9 +6270,9 @@ class VB {
     }
   }
 }
-class Do {
+class ko {
   constructor() {
-    this.queue = new yo(), this.closed = !1, this.processing = !1;
+    this.queue = new So(), this.closed = !1, this.processing = !1;
   }
   push(A, e) {
     this.closed || this.queue.push({ data: A, correctionCallback: e });
@@ -6282,14 +6282,14 @@ class Do {
   }
   processQueue(A) {
     if (!this.processing)
-      return this.processing = !0, Do.manager.schedule(this, async () => {
+      return this.processing = !0, ko.manager.schedule(this, async () => {
         let e;
         for (; e = this.pull(); ) {
           const { data: i, correctionCallback: o } = e;
           try {
             this.lastCallback = A(i, o), await this.lastCallback;
           } catch (r) {
-            AA.error("Error processing message in store queue", { err: r });
+            eA.error("Error processing message in store queue", { err: r });
           }
         }
         this.lastCallback = void 0, this.processing = !1;
@@ -6301,10 +6301,10 @@ class Do {
     return this.lastCallback;
   }
 }
-Do.manager = new VB();
+ko.manager = new VB();
 class Og {
   constructor(A) {
-    this.inMemoryCoValues = /* @__PURE__ */ new Set(), this.pendingKnownStateLoads = /* @__PURE__ */ new Map(), this.knownStates = new OB(), this.storeQueue = new Do(), this.deletedValues = /* @__PURE__ */ new Set(), this.dbClient = A;
+    this.inMemoryCoValues = /* @__PURE__ */ new Set(), this.pendingKnownStateLoads = /* @__PURE__ */ new Map(), this.knownStates = new OB(), this.storeQueue = new ko(), this.deletedValues = /* @__PURE__ */ new Set(), this.dbClient = A;
   }
   getKnownState(A) {
     return this.knownStates.getKnownState(A);
@@ -6321,7 +6321,7 @@ class Og {
       return;
     }
     const r = this.dbClient.getCoValueKnownState(A).then((n) => (n && this.knownStates.setKnownState(A, n), n)).catch((n) => {
-      AA.warn("Failed to load knownState from storage", { id: A, err: n });
+      eA.warn("Failed to load knownState from storage", { id: A, err: n });
     }).finally(() => {
       this.pendingKnownStateLoads.delete(A);
     });
@@ -6346,9 +6346,9 @@ class Og {
     const a = this.knownStates.getKnownState(o.id);
     a.header = !0;
     for (const c of r)
-      Zo(a.sessions, c.sessionID, c.lastIdx);
+      Xo(a.sessions, c.sessionID, c.lastIdx);
     this.inMemoryCoValues.add(o.id);
-    let g = Gt(o.id, o.header);
+    let g = Ft(o.id, o.header);
     s && (g.expectContentUntil = a.sessions);
     for (const c of r) {
       const C = n.get(c.sessionID) || [];
@@ -6365,7 +6365,7 @@ class Og {
           sessionRow: c,
           firstNewTxIdx: B,
           signature: f.signature
-        }), B = f.idx + 1, C.length > 1 && (await this.pushContentWithDependencies(o, g, e), g = Gt(o.id, o.header));
+        }), B = f.idx + 1, C.length > 1 && (await this.pushContentWithDependencies(o, g, e), g = Ft(o.id, o.header));
       }
     }
     (Object.keys(g.new).length > 0 || !s) && await this.pushContentWithDependencies(o, g, e), this.knownStates.handleUpdate(o.id, a), i?.(!0);
@@ -6404,13 +6404,13 @@ class Og {
   async handleCorrection(A, e) {
     const i = e(A);
     if (!i)
-      return AA.error("Correction callback returned undefined", {
+      return eA.error("Correction callback returned undefined", {
         knownState: A,
         correction: i ?? null
       }), !1;
     for (const o of i)
       if (!await this.storeSingle(o, (n) => {
-        AA.error("Double correction requested", {
+        eA.error("Double correction requested", {
           msg: o,
           knownState: n
         });
@@ -6423,7 +6423,7 @@ class Og {
       return !1;
     const i = A.id, o = await this.dbClient.upsertCoValue(i, A.header);
     if (!o) {
-      const s = Ue(i);
+      const s = He(i);
       return this.knownStates.setKnownState(i, s), this.handleCorrection(s, e);
     }
     const r = this.knownStates.getKnownState(i);
@@ -6432,13 +6432,13 @@ class Og {
     for (const s of Object.keys(A.new))
       await this.dbClient.transaction(async (a) => {
         const g = await a.getSingleCoValueSession(o, s);
-        this.deletedValues.has(i) && ve(s) && await a.markCoValueAsDeleted(i), g && Zo(r.sessions, g.sessionID, g.lastIdx);
+        this.deletedValues.has(i) && Ye(s) && await a.markCoValueAsDeleted(i), g && Xo(r.sessions, g.sessionID, g.lastIdx);
         const I = g?.lastIdx || 0, c = A.new[s]?.after || 0;
         if (I < c)
           n = !0;
         else {
           const C = await this.putNewTxs(a, A, s, g, o);
-          Zo(r.sessions, s, C);
+          Xo(r.sessions, s, C);
         }
       });
     return this.inMemoryCoValues.add(i), this.knownStates.handleUpdate(i, r), n ? this.handleCorrection(r, e) : !0;
@@ -6450,7 +6450,7 @@ class Og {
     let I = o?.bytesSinceLastSignature || 0;
     const c = xB(g), C = s + g.length;
     let B = !1;
-    Co(I, c) ? (B = !0, I = 0) : I += c;
+    Qo(I, c) ? (B = !0, I = 0) : I += c;
     const Q = s;
     if (!e.new[i])
       throw new Error("Session ID not found");
@@ -6497,36 +6497,36 @@ class Og {
     return this.deletedCoValuesEraserScheduler?.dispose(), this.inMemoryCoValues.clear(), this.storeQueue.close();
   }
 }
-const dn = {
+const un = {
   accountHeaderForInitialAgentSecret: Rg,
-  idforHeader: Ut,
-  CO_VALUE_PRIORITY: TA,
-  ConnectedPeerChannel: Mr,
+  idforHeader: Ht,
+  CO_VALUE_PRIORITY: OA,
+  ConnectedPeerChannel: Gr,
   getContentMessageSize: fB,
   WEBSOCKET_CONFIG: CB
 };
-let U, tA = 0, St = null;
-function et() {
-  return (St === null || St.byteLength === 0) && (St = new Uint8Array(U.memory.buffer)), St;
+let q, iA = 0, Nt = null;
+function it() {
+  return (Nt === null || Nt.byteLength === 0) && (Nt = new Uint8Array(q.memory.buffer)), Nt;
 }
-const ro = typeof TextEncoder < "u" ? new TextEncoder("utf-8") : { encode: () => {
+const so = typeof TextEncoder < "u" ? new TextEncoder("utf-8") : { encode: () => {
   throw Error("TextEncoder not available");
-} }, $B = typeof ro.encodeInto == "function" ? function(t, A) {
-  return ro.encodeInto(t, A);
+} }, $B = typeof so.encodeInto == "function" ? function(t, A) {
+  return so.encodeInto(t, A);
 } : function(t, A) {
-  const e = ro.encode(t);
+  const e = so.encode(t);
   return A.set(e), {
     read: t.length,
     written: e.length
   };
 };
-function CA(t, A, e) {
+function BA(t, A, e) {
   if (e === void 0) {
-    const s = ro.encode(t), a = A(s.length, 1) >>> 0;
-    return et().subarray(a, a + s.length).set(s), tA = s.length, a;
+    const s = so.encode(t), a = A(s.length, 1) >>> 0;
+    return it().subarray(a, a + s.length).set(s), iA = s.length, a;
   }
   let i = t.length, o = A(i, 1) >>> 0;
-  const r = et();
+  const r = it();
   let n = 0;
   for (; n < i; n++) {
     const s = t.charCodeAt(n);
@@ -6535,38 +6535,38 @@ function CA(t, A, e) {
   }
   if (n !== i) {
     n !== 0 && (t = t.slice(n)), o = e(o, i, i = n + t.length * 3, 1) >>> 0;
-    const s = et().subarray(o + n, o + i), a = $B(t, s);
+    const s = it().subarray(o + n, o + i), a = $B(t, s);
     n += a.written, o = e(o, i, n, 1) >>> 0;
   }
-  return tA = n, o;
+  return iA = n, o;
 }
-let De = null;
-function ti() {
-  return (De === null || De.buffer.detached === !0 || De.buffer.detached === void 0 && De.buffer !== U.memory.buffer) && (De = new DataView(U.memory.buffer)), De;
+let Se = null;
+function oi() {
+  return (Se === null || Se.buffer.detached === !0 || Se.buffer.detached === void 0 && Se.buffer !== q.memory.buffer) && (Se = new DataView(q.memory.buffer)), Se;
 }
-function kt(t) {
-  const A = U.__externref_table_alloc();
-  return U.__wbindgen_export_4.set(A, t), A;
+function Mt(t) {
+  const A = q.__externref_table_alloc();
+  return q.__wbindgen_export_4.set(A, t), A;
 }
-function Qt(t, A) {
+function lt(t, A) {
   try {
     return t.apply(this, A);
   } catch (e) {
-    const i = kt(e);
-    U.__wbindgen_exn_store(i);
+    const i = Mt(e);
+    q.__wbindgen_exn_store(i);
   }
 }
 const Pg = typeof TextDecoder < "u" ? new TextDecoder("utf-8", { ignoreBOM: !0, fatal: !0 }) : { decode: () => {
   throw Error("TextDecoder not available");
 } };
 typeof TextDecoder < "u" && Pg.decode();
-function VA(t, A) {
-  return t = t >>> 0, Pg.decode(et().subarray(t, t + A));
+function $A(t, A) {
+  return t = t >>> 0, Pg.decode(it().subarray(t, t + A));
 }
-function ae(t) {
+function Ie(t) {
   return t == null;
 }
-function Gr(t) {
+function br(t) {
   const A = typeof t;
   if (A == "number" || A == "boolean" || t == null)
     return `${t}`;
@@ -6583,9 +6583,9 @@ function Gr(t) {
   if (Array.isArray(t)) {
     const o = t.length;
     let r = "[";
-    o > 0 && (r += Gr(t[0]));
+    o > 0 && (r += br(t[0]));
     for (let n = 1; n < o; n++)
-      r += ", " + Gr(t[n]);
+      r += ", " + br(t[n]);
     return r += "]", r;
   }
   const e = /\[object ([^\]]+)\]/.exec(toString.call(t));
@@ -6603,124 +6603,124 @@ function Gr(t) {
   return t instanceof Error ? `${t.name}: ${t.message}
 ${t.stack}` : i;
 }
-function GA(t) {
-  const A = U.__wbindgen_export_4.get(t);
-  return U.__externref_table_dealloc(t), A;
+function FA(t) {
+  const A = q.__wbindgen_export_4.get(t);
+  return q.__externref_table_dealloc(t), A;
 }
-function DA(t, A) {
+function kA(t, A) {
   const e = A(t.length * 1, 1) >>> 0;
-  return et().set(t, e / 1), tA = t.length, e;
+  return it().set(t, e / 1), iA = t.length, e;
 }
-function le(t, A) {
-  return t = t >>> 0, et().subarray(t / 1, t / 1 + A);
+function de(t, A) {
+  return t = t >>> 0, it().subarray(t / 1, t / 1 + A);
 }
 function WB() {
-  const t = U.newEd25519SigningKey();
-  var A = le(t[0], t[1]).slice();
-  return U.__wbindgen_free(t[0], t[1] * 1, 1), A;
+  const t = q.newEd25519SigningKey();
+  var A = de(t[0], t[1]).slice();
+  return q.__wbindgen_free(t[0], t[1] * 1, 1), A;
 }
 function zB(t) {
   let A, e;
   try {
-    const r = DA(t, U.__wbindgen_malloc), n = tA, s = U.getSignerId(r, n);
+    const r = kA(t, q.__wbindgen_malloc), n = iA, s = q.getSignerId(r, n);
     var i = s[0], o = s[1];
     if (s[3])
-      throw i = 0, o = 0, GA(s[2]);
-    return A = i, e = o, VA(i, o);
+      throw i = 0, o = 0, FA(s[2]);
+    return A = i, e = o, $A(i, o);
   } finally {
-    U.__wbindgen_free(A, e, 1);
+    q.__wbindgen_free(A, e, 1);
   }
 }
 function _B(t, A) {
   let e, i;
   try {
-    const n = DA(t, U.__wbindgen_malloc), s = tA, a = DA(A, U.__wbindgen_malloc), g = tA, I = U.sign(n, s, a, g);
+    const n = kA(t, q.__wbindgen_malloc), s = iA, a = kA(A, q.__wbindgen_malloc), g = iA, I = q.sign(n, s, a, g);
     var o = I[0], r = I[1];
     if (I[3])
-      throw o = 0, r = 0, GA(I[2]);
-    return e = o, i = r, VA(o, r);
+      throw o = 0, r = 0, FA(I[2]);
+    return e = o, i = r, $A(o, r);
   } finally {
-    U.__wbindgen_free(e, i, 1);
+    q.__wbindgen_free(e, i, 1);
   }
 }
 function ZB(t, A, e) {
-  const i = DA(t, U.__wbindgen_malloc), o = tA, r = DA(A, U.__wbindgen_malloc), n = tA, s = DA(e, U.__wbindgen_malloc), a = tA, g = U.verify(i, o, r, n, s, a);
+  const i = kA(t, q.__wbindgen_malloc), o = iA, r = kA(A, q.__wbindgen_malloc), n = iA, s = kA(e, q.__wbindgen_malloc), a = iA, g = q.verify(i, o, r, n, s, a);
   if (g[2])
-    throw GA(g[1]);
+    throw FA(g[1]);
   return g[0] !== 0;
 }
 function XB(t) {
-  const A = DA(t, U.__wbindgen_malloc), e = tA, i = U.blake3HashOnce(A, e);
-  var o = le(i[0], i[1]).slice();
-  return U.__wbindgen_free(i[0], i[1] * 1, 1), o;
+  const A = kA(t, q.__wbindgen_malloc), e = iA, i = q.blake3HashOnce(A, e);
+  var o = de(i[0], i[1]).slice();
+  return q.__wbindgen_free(i[0], i[1] * 1, 1), o;
 }
 function AQ(t, A) {
-  const e = DA(t, U.__wbindgen_malloc), i = tA, o = DA(A, U.__wbindgen_malloc), r = tA, n = U.blake3HashOnceWithContext(e, i, o, r);
-  var s = le(n[0], n[1]).slice();
-  return U.__wbindgen_free(n[0], n[1] * 1, 1), s;
+  const e = kA(t, q.__wbindgen_malloc), i = iA, o = kA(A, q.__wbindgen_malloc), r = iA, n = q.blake3HashOnceWithContext(e, i, o, r);
+  var s = de(n[0], n[1]).slice();
+  return q.__wbindgen_free(n[0], n[1] * 1, 1), s;
 }
 function eQ(t, A, e, i) {
-  const o = DA(t, U.__wbindgen_malloc), r = tA, n = CA(A, U.__wbindgen_malloc, U.__wbindgen_realloc), s = tA, a = CA(e, U.__wbindgen_malloc, U.__wbindgen_realloc), g = tA, I = DA(i, U.__wbindgen_malloc), c = tA, C = U.unseal(o, r, n, s, a, g, I, c);
+  const o = kA(t, q.__wbindgen_malloc), r = iA, n = BA(A, q.__wbindgen_malloc, q.__wbindgen_realloc), s = iA, a = BA(e, q.__wbindgen_malloc, q.__wbindgen_realloc), g = iA, I = kA(i, q.__wbindgen_malloc), c = iA, C = q.unseal(o, r, n, s, a, g, I, c);
   if (C[3])
-    throw GA(C[2]);
-  var B = le(C[0], C[1]).slice();
-  return U.__wbindgen_free(C[0], C[1] * 1, 1), B;
+    throw FA(C[2]);
+  var B = de(C[0], C[1]).slice();
+  return q.__wbindgen_free(C[0], C[1] * 1, 1), B;
 }
 function tQ(t, A, e, i) {
-  const o = DA(t, U.__wbindgen_malloc), r = tA, n = CA(A, U.__wbindgen_malloc, U.__wbindgen_realloc), s = tA, a = CA(e, U.__wbindgen_malloc, U.__wbindgen_realloc), g = tA, I = DA(i, U.__wbindgen_malloc), c = tA, C = U.seal(o, r, n, s, a, g, I, c);
+  const o = kA(t, q.__wbindgen_malloc), r = iA, n = BA(A, q.__wbindgen_malloc, q.__wbindgen_realloc), s = iA, a = BA(e, q.__wbindgen_malloc, q.__wbindgen_realloc), g = iA, I = kA(i, q.__wbindgen_malloc), c = iA, C = q.seal(o, r, n, s, a, g, I, c);
   if (C[3])
-    throw GA(C[2]);
-  var B = le(C[0], C[1]).slice();
-  return U.__wbindgen_free(C[0], C[1] * 1, 1), B;
+    throw FA(C[2]);
+  var B = de(C[0], C[1]).slice();
+  return q.__wbindgen_free(C[0], C[1] * 1, 1), B;
 }
 function iQ(t, A, e) {
-  const i = DA(t, U.__wbindgen_malloc), o = tA, r = CA(A, U.__wbindgen_malloc, U.__wbindgen_realloc), n = tA, s = DA(e, U.__wbindgen_malloc), a = tA, g = U.encrypt(i, o, r, n, s, a);
+  const i = kA(t, q.__wbindgen_malloc), o = iA, r = BA(A, q.__wbindgen_malloc, q.__wbindgen_realloc), n = iA, s = kA(e, q.__wbindgen_malloc), a = iA, g = q.encrypt(i, o, r, n, s, a);
   if (g[3])
-    throw GA(g[2]);
-  var I = le(g[0], g[1]).slice();
-  return U.__wbindgen_free(g[0], g[1] * 1, 1), I;
+    throw FA(g[2]);
+  var I = de(g[0], g[1]).slice();
+  return q.__wbindgen_free(g[0], g[1] * 1, 1), I;
 }
 function oQ(t, A, e) {
-  const i = DA(t, U.__wbindgen_malloc), o = tA, r = CA(A, U.__wbindgen_malloc, U.__wbindgen_realloc), n = tA, s = DA(e, U.__wbindgen_malloc), a = tA, g = U.decrypt(i, o, r, n, s, a);
+  const i = kA(t, q.__wbindgen_malloc), o = iA, r = BA(A, q.__wbindgen_malloc, q.__wbindgen_realloc), n = iA, s = kA(e, q.__wbindgen_malloc), a = iA, g = q.decrypt(i, o, r, n, s, a);
   if (g[3])
-    throw GA(g[2]);
-  var I = le(g[0], g[1]).slice();
-  return U.__wbindgen_free(g[0], g[1] * 1, 1), I;
+    throw FA(g[2]);
+  var I = de(g[0], g[1]).slice();
+  return q.__wbindgen_free(g[0], g[1] * 1, 1), I;
 }
 function rQ(t) {
   let A, e;
   try {
-    const r = DA(t, U.__wbindgen_malloc), n = tA, s = U.getSealerId(r, n);
+    const r = kA(t, q.__wbindgen_malloc), n = iA, s = q.getSealerId(r, n);
     var i = s[0], o = s[1];
     if (s[3])
-      throw i = 0, o = 0, GA(s[2]);
-    return A = i, e = o, VA(i, o);
+      throw i = 0, o = 0, FA(s[2]);
+    return A = i, e = o, $A(i, o);
   } finally {
-    U.__wbindgen_free(A, e, 1);
+    q.__wbindgen_free(A, e, 1);
   }
 }
 function nQ() {
-  const t = U.newX25519PrivateKey();
-  var A = le(t[0], t[1]).slice();
-  return U.__wbindgen_free(t[0], t[1] * 1, 1), A;
+  const t = q.newX25519PrivateKey();
+  var A = de(t[0], t[1]).slice();
+  return q.__wbindgen_free(t[0], t[1] * 1, 1), A;
 }
-typeof FinalizationRegistry > "u" || new FinalizationRegistry((t) => U.__wbg_blake3hasher_free(t >>> 0, 1));
-const tr = typeof FinalizationRegistry > "u" ? { register: () => {
+typeof FinalizationRegistry > "u" || new FinalizationRegistry((t) => q.__wbg_blake3hasher_free(t >>> 0, 1));
+const ir = typeof FinalizationRegistry > "u" ? { register: () => {
 }, unregister: () => {
-} } : new FinalizationRegistry((t) => U.__wbg_sessionlog_free(t >>> 0, 1));
-class Bo {
+} } : new FinalizationRegistry((t) => q.__wbg_sessionlog_free(t >>> 0, 1));
+class Eo {
   static __wrap(A) {
     A = A >>> 0;
-    const e = Object.create(Bo.prototype);
-    return e.__wbg_ptr = A, tr.register(e, e.__wbg_ptr, e), e;
+    const e = Object.create(Eo.prototype);
+    return e.__wbg_ptr = A, ir.register(e, e.__wbg_ptr, e), e;
   }
   __destroy_into_raw() {
     const A = this.__wbg_ptr;
-    return this.__wbg_ptr = 0, tr.unregister(this), A;
+    return this.__wbg_ptr = 0, ir.unregister(this), A;
   }
   free() {
     const A = this.__destroy_into_raw();
-    U.__wbg_sessionlog_free(A, 0);
+    q.__wbg_sessionlog_free(A, 0);
   }
   /**
    * Commit pending transactions to the main state.
@@ -6730,9 +6730,9 @@ class Bo {
    * @param {boolean} skip_validate
    */
   commitTransactions(A, e) {
-    const i = CA(A, U.__wbindgen_malloc, U.__wbindgen_realloc), o = tA, r = U.sessionlog_commitTransactions(this.__wbg_ptr, i, o, e);
+    const i = BA(A, q.__wbindgen_malloc, q.__wbindgen_realloc), o = iA, r = q.sessionlog_commitTransactions(this.__wbg_ptr, i, o, e);
     if (r[1])
-      throw GA(r[0]);
+      throw FA(r[0]);
   }
   /**
    * @param {string} changes_json
@@ -6746,15 +6746,15 @@ class Bo {
   addNewPrivateTransaction(A, e, i, o, r, n) {
     let s, a;
     try {
-      const B = CA(A, U.__wbindgen_malloc, U.__wbindgen_realloc), Q = tA, f = CA(e, U.__wbindgen_malloc, U.__wbindgen_realloc), l = tA, u = CA(i, U.__wbindgen_malloc, U.__wbindgen_realloc), d = tA, h = CA(o, U.__wbindgen_malloc, U.__wbindgen_realloc), p = tA;
-      var g = ae(n) ? 0 : CA(n, U.__wbindgen_malloc, U.__wbindgen_realloc), I = tA;
-      const E = U.sessionlog_addNewPrivateTransaction(this.__wbg_ptr, B, Q, f, l, u, d, h, p, r, g, I);
+      const B = BA(A, q.__wbindgen_malloc, q.__wbindgen_realloc), Q = iA, f = BA(e, q.__wbindgen_malloc, q.__wbindgen_realloc), l = iA, u = BA(i, q.__wbindgen_malloc, q.__wbindgen_realloc), d = iA, h = BA(o, q.__wbindgen_malloc, q.__wbindgen_realloc), p = iA;
+      var g = Ie(n) ? 0 : BA(n, q.__wbindgen_malloc, q.__wbindgen_realloc), I = iA;
+      const E = q.sessionlog_addNewPrivateTransaction(this.__wbg_ptr, B, Q, f, l, u, d, h, p, r, g, I);
       var c = E[0], C = E[1];
       if (E[3])
-        throw c = 0, C = 0, GA(E[2]);
-      return s = c, a = C, VA(c, C);
+        throw c = 0, C = 0, FA(E[2]);
+      return s = c, a = C, $A(c, C);
     } finally {
-      U.__wbindgen_free(s, a, 1);
+      q.__wbindgen_free(s, a, 1);
     }
   }
   /**
@@ -6767,15 +6767,15 @@ class Bo {
   addNewTrustingTransaction(A, e, i, o) {
     let r, n;
     try {
-      const c = CA(A, U.__wbindgen_malloc, U.__wbindgen_realloc), C = tA, B = CA(e, U.__wbindgen_malloc, U.__wbindgen_realloc), Q = tA;
-      var s = ae(o) ? 0 : CA(o, U.__wbindgen_malloc, U.__wbindgen_realloc), a = tA;
-      const f = U.sessionlog_addNewTrustingTransaction(this.__wbg_ptr, c, C, B, Q, i, s, a);
+      const c = BA(A, q.__wbindgen_malloc, q.__wbindgen_realloc), C = iA, B = BA(e, q.__wbindgen_malloc, q.__wbindgen_realloc), Q = iA;
+      var s = Ie(o) ? 0 : BA(o, q.__wbindgen_malloc, q.__wbindgen_realloc), a = iA;
+      const f = q.sessionlog_addNewTrustingTransaction(this.__wbg_ptr, c, C, B, Q, i, s, a);
       var g = f[0], I = f[1];
       if (f[3])
-        throw g = 0, I = 0, GA(f[2]);
-      return r = g, n = I, VA(g, I);
+        throw g = 0, I = 0, FA(f[2]);
+      return r = g, n = I, $A(g, I);
     } finally {
-      U.__wbindgen_free(r, n, 1);
+      q.__wbindgen_free(r, n, 1);
     }
   }
   /**
@@ -6788,11 +6788,11 @@ class Bo {
    * @param {string | null} [meta]
    */
   addExistingPrivateTransaction(A, e, i, o) {
-    const r = CA(A, U.__wbindgen_malloc, U.__wbindgen_realloc), n = tA, s = CA(e, U.__wbindgen_malloc, U.__wbindgen_realloc), a = tA;
-    var g = ae(o) ? 0 : CA(o, U.__wbindgen_malloc, U.__wbindgen_realloc), I = tA;
-    const c = U.sessionlog_addExistingPrivateTransaction(this.__wbg_ptr, r, n, s, a, i, g, I);
+    const r = BA(A, q.__wbindgen_malloc, q.__wbindgen_realloc), n = iA, s = BA(e, q.__wbindgen_malloc, q.__wbindgen_realloc), a = iA;
+    var g = Ie(o) ? 0 : BA(o, q.__wbindgen_malloc, q.__wbindgen_realloc), I = iA;
+    const c = q.sessionlog_addExistingPrivateTransaction(this.__wbg_ptr, r, n, s, a, i, g, I);
     if (c[1])
-      throw GA(c[0]);
+      throw FA(c[0]);
   }
   /**
    * Add an existing trusting transaction to the staging area.
@@ -6803,11 +6803,11 @@ class Bo {
    * @param {string | null} [meta]
    */
   addExistingTrustingTransaction(A, e, i) {
-    const o = CA(A, U.__wbindgen_malloc, U.__wbindgen_realloc), r = tA;
-    var n = ae(i) ? 0 : CA(i, U.__wbindgen_malloc, U.__wbindgen_realloc), s = tA;
-    const a = U.sessionlog_addExistingTrustingTransaction(this.__wbg_ptr, o, r, e, n, s);
+    const o = BA(A, q.__wbindgen_malloc, q.__wbindgen_realloc), r = iA;
+    var n = Ie(i) ? 0 : BA(i, q.__wbindgen_malloc, q.__wbindgen_realloc), s = iA;
+    const a = q.sessionlog_addExistingTrustingTransaction(this.__wbg_ptr, o, r, e, n, s);
     if (a[1])
-      throw GA(a[0]);
+      throw FA(a[0]);
   }
   /**
    * @param {number} tx_index
@@ -6815,11 +6815,11 @@ class Bo {
    * @returns {string | undefined}
    */
   decryptNextTransactionMetaJson(A, e) {
-    const i = CA(e, U.__wbindgen_malloc, U.__wbindgen_realloc), o = tA, r = U.sessionlog_decryptNextTransactionMetaJson(this.__wbg_ptr, A, i, o);
+    const i = BA(e, q.__wbindgen_malloc, q.__wbindgen_realloc), o = iA, r = q.sessionlog_decryptNextTransactionMetaJson(this.__wbg_ptr, A, i, o);
     if (r[3])
-      throw GA(r[2]);
+      throw FA(r[2]);
     let n;
-    return r[0] !== 0 && (n = VA(r[0], r[1]).slice(), U.__wbindgen_free(r[0], r[1] * 1, 1)), n;
+    return r[0] !== 0 && (n = $A(r[0], r[1]).slice(), q.__wbindgen_free(r[0], r[1] * 1, 1)), n;
   }
   /**
    * @param {number} tx_index
@@ -6829,13 +6829,13 @@ class Bo {
   decryptNextTransactionChangesJson(A, e) {
     let i, o;
     try {
-      const s = CA(e, U.__wbindgen_malloc, U.__wbindgen_realloc), a = tA, g = U.sessionlog_decryptNextTransactionChangesJson(this.__wbg_ptr, A, s, a);
+      const s = BA(e, q.__wbindgen_malloc, q.__wbindgen_realloc), a = iA, g = q.sessionlog_decryptNextTransactionChangesJson(this.__wbg_ptr, A, s, a);
       var r = g[0], n = g[1];
       if (g[3])
-        throw r = 0, n = 0, GA(g[2]);
-      return i = r, o = n, VA(r, n);
+        throw r = 0, n = 0, FA(g[2]);
+      return i = r, o = n, $A(r, n);
     } finally {
-      U.__wbindgen_free(i, o, 1);
+      q.__wbindgen_free(i, o, 1);
     }
   }
   /**
@@ -6844,17 +6844,17 @@ class Bo {
    * @param {string | null} [signer_id]
    */
   constructor(A, e, i) {
-    const o = CA(A, U.__wbindgen_malloc, U.__wbindgen_realloc), r = tA, n = CA(e, U.__wbindgen_malloc, U.__wbindgen_realloc), s = tA;
-    var a = ae(i) ? 0 : CA(i, U.__wbindgen_malloc, U.__wbindgen_realloc), g = tA;
-    const I = U.sessionlog_new(o, r, n, s, a, g);
-    return this.__wbg_ptr = I >>> 0, tr.register(this, this.__wbg_ptr, this), this;
+    const o = BA(A, q.__wbindgen_malloc, q.__wbindgen_realloc), r = iA, n = BA(e, q.__wbindgen_malloc, q.__wbindgen_realloc), s = iA;
+    var a = Ie(i) ? 0 : BA(i, q.__wbindgen_malloc, q.__wbindgen_realloc), g = iA;
+    const I = q.sessionlog_new(o, r, n, s, a, g);
+    return this.__wbg_ptr = I >>> 0, ir.register(this, this.__wbg_ptr, this), this;
   }
   /**
    * @returns {SessionLog}
    */
   clone() {
-    const A = U.sessionlog_clone(this.__wbg_ptr);
-    return Bo.__wrap(A);
+    const A = q.sessionlog_clone(this.__wbg_ptr);
+    return Eo.__wrap(A);
   }
 }
 async function sQ(t, A) {
@@ -6878,22 +6878,22 @@ async function sQ(t, A) {
 function jg() {
   const t = {};
   return t.wbg = {}, t.wbg.__wbg_String_8f0eb39a4a4c2f66 = function(A, e) {
-    const i = String(e), o = CA(i, U.__wbindgen_malloc, U.__wbindgen_realloc), r = tA;
-    ti().setInt32(A + 4, r, !0), ti().setInt32(A + 0, o, !0);
+    const i = String(e), o = BA(i, q.__wbindgen_malloc, q.__wbindgen_realloc), r = iA;
+    oi().setInt32(A + 4, r, !0), oi().setInt32(A + 0, o, !0);
   }, t.wbg.__wbg_buffer_609cc3eee51ed158 = function(A) {
     return A.buffer;
   }, t.wbg.__wbg_call_672a4d21634d4a24 = function() {
-    return Qt(function(A, e) {
+    return lt(function(A, e) {
       return A.call(e);
     }, arguments);
   }, t.wbg.__wbg_call_7cccdd69e0791ae2 = function() {
-    return Qt(function(A, e, i) {
+    return lt(function(A, e, i) {
       return A.call(e, i);
     }, arguments);
   }, t.wbg.__wbg_crypto_574e78ad8b13b65f = function(A) {
     return A.crypto;
   }, t.wbg.__wbg_getRandomValues_b8f5dbd5f3995a9e = function() {
-    return Qt(function(A, e) {
+    return lt(function(A, e) {
       A.getRandomValues(e);
     }, arguments);
   }, t.wbg.__wbg_msCrypto_a61aeb35a24c1329 = function(A) {
@@ -6901,7 +6901,7 @@ function jg() {
   }, t.wbg.__wbg_new_a12002a7f91c75be = function(A) {
     return new Uint8Array(A);
   }, t.wbg.__wbg_newnoargs_105ed471475aaf50 = function(A, e) {
-    return new Function(VA(A, e));
+    return new Function($A(A, e));
   }, t.wbg.__wbg_newwithbyteoffsetandlength_d97e637ebe145a9a = function(A, e, i) {
     return new Uint8Array(A, e >>> 0, i >>> 0);
   }, t.wbg.__wbg_newwithlength_a381634e90c276d4 = function(A) {
@@ -6911,38 +6911,38 @@ function jg() {
   }, t.wbg.__wbg_process_dc0fbacc7c1c06f7 = function(A) {
     return A.process;
   }, t.wbg.__wbg_randomFillSync_ac0988aba3254290 = function() {
-    return Qt(function(A, e) {
+    return lt(function(A, e) {
       A.randomFillSync(e);
     }, arguments);
   }, t.wbg.__wbg_require_60cc747a6bc5215a = function() {
-    return Qt(function() {
+    return lt(function() {
       return module.require;
     }, arguments);
   }, t.wbg.__wbg_set_65595bdd868b3009 = function(A, e, i) {
     A.set(e, i >>> 0);
   }, t.wbg.__wbg_static_accessor_GLOBAL_88a902d13a557d07 = function() {
     const A = typeof globalThis > "u" ? null : globalThis;
-    return ae(A) ? 0 : kt(A);
+    return Ie(A) ? 0 : Mt(A);
   }, t.wbg.__wbg_static_accessor_GLOBAL_THIS_56578be7e9f832b0 = function() {
     const A = typeof globalThis > "u" ? null : globalThis;
-    return ae(A) ? 0 : kt(A);
+    return Ie(A) ? 0 : Mt(A);
   }, t.wbg.__wbg_static_accessor_SELF_37c5d418e4bf5819 = function() {
     const A = typeof self > "u" ? null : self;
-    return ae(A) ? 0 : kt(A);
+    return Ie(A) ? 0 : Mt(A);
   }, t.wbg.__wbg_static_accessor_WINDOW_5de37043a91a9c40 = function() {
     const A = typeof window > "u" ? null : window;
-    return ae(A) ? 0 : kt(A);
+    return Ie(A) ? 0 : Mt(A);
   }, t.wbg.__wbg_subarray_aa9065fa9dc5df96 = function(A, e, i) {
     return A.subarray(e >>> 0, i >>> 0);
   }, t.wbg.__wbg_versions_c01dfd4722a88165 = function(A) {
     return A.versions;
   }, t.wbg.__wbindgen_debug_string = function(A, e) {
-    const i = Gr(e), o = CA(i, U.__wbindgen_malloc, U.__wbindgen_realloc), r = tA;
-    ti().setInt32(A + 4, r, !0), ti().setInt32(A + 0, o, !0);
+    const i = br(e), o = BA(i, q.__wbindgen_malloc, q.__wbindgen_realloc), r = iA;
+    oi().setInt32(A + 4, r, !0), oi().setInt32(A + 0, o, !0);
   }, t.wbg.__wbindgen_error_new = function(A, e) {
-    return new Error(VA(A, e));
+    return new Error($A(A, e));
   }, t.wbg.__wbindgen_init_externref_table = function() {
-    const A = U.__wbindgen_export_4, e = A.grow(4);
+    const A = q.__wbindgen_export_4, e = A.grow(4);
     A.set(0, void 0), A.set(e + 0, void 0), A.set(e + 1, null), A.set(e + 2, !0), A.set(e + 3, !1);
   }, t.wbg.__wbindgen_is_function = function(A) {
     return typeof A == "function";
@@ -6954,18 +6954,18 @@ function jg() {
   }, t.wbg.__wbindgen_is_undefined = function(A) {
     return A === void 0;
   }, t.wbg.__wbindgen_memory = function() {
-    return U.memory;
+    return q.memory;
   }, t.wbg.__wbindgen_string_new = function(A, e) {
-    return VA(A, e);
+    return $A(A, e);
   }, t.wbg.__wbindgen_throw = function(A, e) {
-    throw new Error(VA(A, e));
+    throw new Error($A(A, e));
   }, t;
 }
 function Vg(t, A) {
-  return U = t.exports, $g.__wbindgen_wasm_module = A, De = null, St = null, U.__wbindgen_start(), U;
+  return q = t.exports, $g.__wbindgen_wasm_module = A, Se = null, Nt = null, q.__wbindgen_start(), q;
 }
 function aQ(t) {
-  if (U !== void 0) return U;
+  if (q !== void 0) return q;
   typeof t < "u" && (Object.getPrototypeOf(t) === Object.prototype ? { module: t } = t : console.warn("using deprecated parameters for `initSync()`; pass a single object instead"));
   const A = jg();
   t instanceof WebAssembly.Module || (t = new WebAssembly.Module(t));
@@ -6973,7 +6973,7 @@ function aQ(t) {
   return Vg(e, t);
 }
 async function $g(t) {
-  if (U !== void 0) return U;
+  if (q !== void 0) return q;
   if (typeof t < "u" && (Object.getPrototypeOf(t) === Object.prototype ? { module_or_path: t } = t : console.warn("using deprecated parameters for the initialization function; pass a single object instead")), typeof t > "u")
     throw new Error();
   const A = jg();
@@ -7030,7 +7030,7 @@ async function BQ() {
     throw new Error(Zg(t), { cause: t });
   }
 }
-class Ie extends UC {
+class Ce extends UC {
   constructor() {
     super();
   }
@@ -7046,12 +7046,12 @@ class Ie extends UC {
     } catch (A) {
       throw new Error(Zg(A), { cause: A });
     }
-    return new Ie();
+    return new Ce();
   }
   // TODO: Remove this method and use createSync instead, this is not necessary since we can use createSync in the browser and in the worker.
   // @deprecated
   static async create() {
-    return await BQ(), new Ie();
+    return await BQ(), new Ce();
   }
   blake3HashOnce(A) {
     return XB(A);
@@ -7063,43 +7063,43 @@ class Ie extends UC {
     return WB();
   }
   getSignerID(A) {
-    return zB(SA.encode(A));
+    return zB(MA.encode(A));
   }
   sign(A, e) {
-    return _B(SA.encode(LA(e)), SA.encode(A));
+    return _B(MA.encode(TA(e)), MA.encode(A));
   }
   verify(A, e, i) {
-    return ZB(SA.encode(A), SA.encode(LA(e)), SA.encode(i));
+    return ZB(MA.encode(A), MA.encode(TA(e)), MA.encode(i));
   }
   newX25519StaticSecret() {
     return nQ();
   }
   getSealerID(A) {
-    return rQ(SA.encode(A));
+    return rQ(MA.encode(A));
   }
   encrypt(A, e, i) {
-    return `encrypted_U${pr(iQ(SA.encode(LA(A)), e, SA.encode(LA(i))))}`;
+    return `encrypted_U${wr(iQ(MA.encode(TA(A)), e, MA.encode(TA(i))))}`;
   }
   decryptRaw(A, e, i) {
-    return ts.decode(oQ(fr(A.substring(11)), e, SA.encode(LA(i))));
+    return ts.decode(oQ(pr(A.substring(11)), e, MA.encode(TA(i))));
   }
   seal({ message: A, from: e, to: i, nOnceMaterial: o }) {
-    return `sealed_U${pr(tQ(SA.encode(LA(A)), e, i, SA.encode(LA(o))))}`;
+    return `sealed_U${wr(tQ(MA.encode(TA(A)), e, i, MA.encode(TA(o))))}`;
   }
   unseal(A, e, i, o) {
-    const r = ts.decode(eQ(fr(A.substring(8)), e, i, SA.encode(LA(o))));
+    const r = ts.decode(eQ(pr(A.substring(8)), e, i, MA.encode(TA(o))));
     try {
       return JSON.parse(r);
     } catch (n) {
-      AA.error("Failed to decrypt/parse sealed message", { err: n });
+      eA.error("Failed to decrypt/parse sealed message", { err: n });
       return;
     }
   }
   createSessionLog(A, e, i) {
-    return new un(new Bo(A, e, i));
+    return new hn(new Eo(A, e, i));
   }
 }
-class un {
+class hn {
   constructor(A) {
     this.sessionLog = A;
   }
@@ -7146,17 +7146,17 @@ class un {
     this.sessionLog.free();
   }
   clone() {
-    return new un(this.sessionLog.clone());
+    return new hn(this.sessionLog.clone());
   }
 }
-const Xg = { comap: { description: "CoMap - CRDT-based collaborative map/object", type: "object", properties: {}, additionalProperties: { anyOf: [{ type: "string", description: "Standard string value" }, { type: "number", description: "Standard number value" }, { type: "integer", description: "Standard integer value" }, { type: "boolean", description: "Standard boolean value" }, { type: "null", description: "Null value" }, { type: "object", description: "Nested object value" }, { type: "array", description: "Array value" }, { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Co-id reference to another CoValue" }, { type: "string", pattern: "^key_[a-zA-Z0-9_]+$", description: "Key reference" }, { type: "string", pattern: "^sealed_", description: "Sealed/encrypted value" }] } }, costream: { description: "CoStream - CRDT-based append-only stream", type: "array", items: { anyOf: [{ type: "object", description: "Stream item object" }, { type: "string", description: "Stream item string" }, { type: "number", description: "Stream item number" }, { type: "boolean", description: "Stream item boolean" }, { type: "null", description: "Stream item null" }] } }, colist: { description: "CoList - CRDT-based collaborative list/array", type: "array", items: { anyOf: [{ type: "object", description: "List item object" }, { type: "string", description: "List item string (can be co-id reference)" }, { type: "number", description: "List item number" }, { type: "integer", description: "List item integer" }, { type: "boolean", description: "List item boolean" }, { type: "null", description: "List item null" }, { type: "array", description: "Nested array" }] } } }, Pt = {
+const Xg = { comap: { description: "CoMap - CRDT-based collaborative map/object", type: "object", properties: {}, additionalProperties: { anyOf: [{ type: "string", description: "Standard string value" }, { type: "number", description: "Standard number value" }, { type: "integer", description: "Standard integer value" }, { type: "boolean", description: "Standard boolean value" }, { type: "null", description: "Null value" }, { type: "object", description: "Nested object value" }, { type: "array", description: "Array value" }, { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Co-id reference to another CoValue" }, { type: "string", pattern: "^key_[a-zA-Z0-9_]+$", description: "Key reference" }, { type: "string", pattern: "^sealed_", description: "Sealed/encrypted value" }] } }, costream: { description: "CoStream - CRDT-based append-only stream", type: "array", items: { anyOf: [{ type: "object", description: "Stream item object" }, { type: "string", description: "Stream item string" }, { type: "number", description: "Stream item number" }, { type: "boolean", description: "Stream item boolean" }, { type: "null", description: "Stream item null" }] } }, colist: { description: "CoList - CRDT-based collaborative list/array", type: "array", items: { anyOf: [{ type: "object", description: "List item object" }, { type: "string", description: "List item string (can be co-id reference)" }, { type: "number", description: "List item number" }, { type: "integer", description: "List item integer" }, { type: "boolean", description: "List item boolean" }, { type: "null", description: "List item null" }, { type: "array", description: "Nested array" }] } } }, Vt = {
   $defs: Xg
 }, QQ = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   $defs: Xg,
-  default: Pt
+  default: Vt
 }, Symbol.toStringTag, { value: "Module" }));
-let wA = class {
+let mA = class {
   constructor(A) {
     this._value = A, this._subscribers = /* @__PURE__ */ new Set(), this._unsubscribe = null;
   }
@@ -7191,10 +7191,10 @@ let wA = class {
     this._value = A, this._subscribers.forEach((e) => e(A));
   }
 };
-async function hn(t, A) {
-  const e = await eA(t, A, { returnType: "coId" });
+async function fn(t, A) {
+  const e = await tA(t, A, { returnType: "coId" });
   if (!e) return null;
-  const { ensureIndexesCoMap: i, ensureSchemaIndexColist: o } = await Promise.resolve().then(() => FI), r = await i(t);
+  const { ensureIndexesCoMap: i, ensureSchemaIndexColist: o } = await Promise.resolve().then(() => bI), r = await i(t);
   if (!r) return null;
   let n = r.get(e);
   if (n && typeof n == "string" && n.startsWith("co_"))
@@ -7205,13 +7205,13 @@ async function hn(t, A) {
     return null;
   }
 }
-async function fn(t, A) {
+async function pn(t, A) {
   if (!A || typeof A != "string")
     return null;
   const e = /^@[a-zA-Z0-9_-]+\/schema\//.test(A);
-  return !A.startsWith("co_z") && !e ? (process.env.DEBUG && console.warn(`[getCoListId] Invalid collection identifier: "${A}". Must be schema co-id or namekey (@domain/schema/...).`), null) : await hn(t, A);
+  return !A.startsWith("co_z") && !e ? (process.env.DEBUG && console.warn(`[getCoListId] Invalid collection identifier: "${A}". Must be schema co-id or namekey (@domain/schema/...).`), null) : await fn(t, A);
 }
-async function gA(t, A, e = {}) {
+async function sA(t, A, e = {}) {
   const { waitForAvailable: i = !1, timeoutMs: o = 2e3 } = e;
   if (!A || !A.startsWith("co_"))
     return null;
@@ -7230,9 +7230,9 @@ async function gA(t, A, e = {}) {
 }
 const EQ = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  ensureCoValueLoaded: gA,
-  getCoListId: fn,
-  getSchemaIndexColistId: hn
+  ensureCoValueLoaded: sA,
+  getCoListId: pn,
+  getSchemaIndexColistId: fn
 }, Symbol.toStringTag, { value: "Module" }));
 function AI(t, A, e = null) {
   const i = t.getCurrentContent(A), o = t.getHeader(A), r = o?.meta || null, n = A.ruleset || o?.ruleset, s = i?.type || "unknown";
@@ -7321,27 +7321,27 @@ function AI(t, A, e = null) {
     headerMeta: r
   };
 }
-function bt(t) {
+function vt(t) {
   if (typeof t == "string" && (t.startsWith("{") || t.startsWith("[")))
     try {
       const A = JSON.parse(t);
-      return bt(A);
+      return vt(A);
     } catch {
       return t;
     }
   else {
     if (Array.isArray(t))
-      return t.map((A) => bt(A));
+      return t.map((A) => vt(A));
     if (typeof t == "object" && t !== null) {
       const A = {};
       for (const [e, i] of Object.entries(t))
-        A[e] = bt(i);
+        A[e] = vt(i);
       return A;
     }
   }
   return t;
 }
-function ee(t, A, e = null) {
+function te(t, A, e = null) {
   const i = t.getHeader(A), o = i?.meta || null;
   A.ruleset || i?.ruleset;
   const r = e === "@account" || o && o.type === "account" || t.account && t.account.id === A.id;
@@ -7492,7 +7492,7 @@ function ee(t, A, e = null) {
             hasOptions: typeof l == "object" && l !== null ? "options" in l : !1,
             optionsType: typeof l == "object" && l !== null && "options" in l ? typeof l.options : "N/A",
             parsedSample: JSON.stringify(l).substring(0, 300)
-          }), Q = bt(l), console.log(`[extractCoValueDataFlat] ✅ After recursive parse for "${B}":`, {
+          }), Q = vt(l), console.log(`[extractCoValueDataFlat] ✅ After recursive parse for "${B}":`, {
             finalType: typeof Q,
             finalKeys: typeof Q == "object" && Q !== null ? Object.keys(Q) : [],
             hasOptions: typeof Q == "object" && Q !== null ? "options" in Q : !1,
@@ -7515,7 +7515,7 @@ function ee(t, A, e = null) {
           });
         }
         const l = JSON.stringify(Q).substring(0, 200);
-        Q = bt(Q);
+        Q = vt(Q);
         const u = JSON.stringify(Q).substring(0, 200);
         if (B === "allMessages" || a && a.includes("context")) {
           const d = "options" in Q, h = d ? typeof Q.options : "N/A", p = d && typeof Q.options == "object" && Q.options !== null ? "map" in Q.options : !1;
@@ -7561,16 +7561,16 @@ async function lQ(t, A, e = {}, i = /* @__PURE__ */ new Set()) {
   if (i.has(A)) return { id: A };
   i.add(A);
   try {
-    await gA(t, A, { waitForAvailable: !0, timeoutMs: o });
+    await sA(t, A, { waitForAvailable: !0, timeoutMs: o });
     const r = t.getCoValue(A);
     if (!r || !t.isAvailable(r)) return { id: A };
-    let n = ee(t, r);
+    let n = te(t, r);
     n = { ...n, id: n.id || A };
     const s = t.getHeader(r), a = r.ruleset || s?.ruleset;
     if (a && a.type === "group") {
       const g = t.getCurrentContent(r);
       if (g && typeof g.addMember == "function") {
-        const { getGroupInfoFromGroup: I } = await Promise.resolve().then(() => de), c = I(g);
+        const { getGroupInfoFromGroup: I } = await Promise.resolve().then(() => ue), c = I(g);
         c && Object.assign(n, {
           accountMembers: c.accountMembers || [],
           groupMembers: c.groupMembers || [],
@@ -7583,7 +7583,7 @@ async function lQ(t, A, e = {}, i = /* @__PURE__ */ new Set()) {
     return { id: A };
   }
 }
-async function Ht(t, A, e = {}, i = /* @__PURE__ */ new Set(), o = 15, r = 0) {
+async function xt(t, A, e = {}, i = /* @__PURE__ */ new Set(), o = 15, r = 0) {
   const { fields: n = null, schemas: s = null, timeoutMs: a = 2e3 } = e;
   if (r > o || A == null)
     return A;
@@ -7591,7 +7591,7 @@ async function Ht(t, A, e = {}, i = /* @__PURE__ */ new Set(), o = 15, r = 0) {
     return typeof A == "string" && A.startsWith("co_z") ? await fs(t, A, e, i, o, r) : A;
   if (Array.isArray(A))
     return Promise.all(A.map(
-      (I) => Ht(t, I, e, i, o, r + 1)
+      (I) => xt(t, I, e, i, o, r + 1)
     ));
   const g = {};
   for (const [I, c] of Object.entries(A)) {
@@ -7608,7 +7608,7 @@ async function Ht(t, A, e = {}, i = /* @__PURE__ */ new Set(), o = 15, r = 0) {
       const B = await fs(t, c, { ...e, timeoutMs: a, maxDepth: o, currentDepth: r }, i, o, r + 1);
       g[I] = B;
     } else
-      g[I] = await Ht(t, c, e, i, o, r + 1);
+      g[I] = await xt(t, c, e, i, o, r + 1);
   }
   return g;
 }
@@ -7660,7 +7660,7 @@ async function fs(t, A, e = {}, i = /* @__PURE__ */ new Set(), o = 15, r = 0) {
         return { id: A };
     }
     i.add(A);
-    const Q = await Ht(
+    const Q = await xt(
       t,
       B,
       e,
@@ -7673,7 +7673,7 @@ async function fs(t, A, e = {}, i = /* @__PURE__ */ new Set(), o = 15, r = 0) {
       if (d && d.type === "group") {
         const h = t.getCurrentContent(f);
         if (h && typeof h.addMember == "function") {
-          const { getGroupInfoFromGroup: p } = await Promise.resolve().then(() => de), E = p(h);
+          const { getGroupInfoFromGroup: p } = await Promise.resolve().then(() => ue), E = p(h);
           E && Object.assign(Q, {
             accountMembers: E.accountMembers || [],
             groupMembers: E.groupMembers || []
@@ -8014,30 +8014,30 @@ class Fr {
     this.cache.clear(), this.cleanupTimers.clear();
   }
 }
-let qe = null, ir = null;
+let Le = null, or = null;
 function tI(t, A) {
   if (!t)
     throw new Error("[getGlobalCoCache] node is required for node-aware caching");
-  return ir !== t ? (qe && qe.clear(), ir = t, qe = new Fr(A)) : qe || (ir = t, qe = new Fr(A)), qe;
+  return or !== t ? (Le && Le.clear(), or = t, Le = new Fr(A)) : Le || (or = t, Le = new Fr(A)), Le;
 }
-function br(t, A = /* @__PURE__ */ new Set(), e = 0, i = 15) {
+function Rr(t, A = /* @__PURE__ */ new Set(), e = 0, i = 15) {
   const o = /* @__PURE__ */ new Set();
   if (e > i || !t || typeof t != "object")
     return o;
   if (Array.isArray(t)) {
     for (const r of t)
-      br(r, A, e + 1, i).forEach((s) => {
+      Rr(r, A, e + 1, i).forEach((s) => {
         A.has(s) || o.add(s);
       });
     return o;
   }
   for (const [r, n] of Object.entries(t))
-    r === "id" || r === "$schema" || r === "type" || r === "loading" || r === "error" || (typeof n == "string" && n.startsWith("co_") ? A.has(n) || o.add(n) : typeof n == "object" && n !== null && br(n, A, e + 1, i).forEach((a) => {
+    r === "id" || r === "$schema" || r === "type" || r === "loading" || r === "error" || (typeof n == "string" && n.startsWith("co_") ? A.has(n) || o.add(n) : typeof n == "object" && n !== null && Rr(n, A, e + 1, i).forEach((a) => {
       A.has(a) || o.add(a);
     }));
   return o;
 }
-async function tt(t, A, e = /* @__PURE__ */ new Set(), i = {}) {
+async function ot(t, A, e = /* @__PURE__ */ new Set(), i = {}) {
   const {
     maxDepth: o = 15,
     // TODO: temporarily scaled up from 10 for @maia spark detail
@@ -8049,7 +8049,7 @@ async function tt(t, A, e = /* @__PURE__ */ new Set(), i = {}) {
     console.warn(`${s} ⚠️ Max depth ${o} reached, stopping recursion`);
     return;
   }
-  const a = br(A, e, n, o);
+  const a = Rr(A, e, n, o);
   if (a.size === 0)
     return;
   const g = Array.from(a).map(async (I) => {
@@ -8060,13 +8060,13 @@ async function tt(t, A, e = /* @__PURE__ */ new Set(), i = {}) {
         if (!c)
           return;
         if (!t.isAvailable(c)) {
-          gA(t, I, { waitForAvailable: !1 }).catch((f) => {
+          sA(t, I, { waitForAvailable: !1 }).catch((f) => {
           });
           const Q = c.subscribe(async (f) => {
             if (t.isAvailable(f))
               try {
-                const l = ee(t, f);
-                await tt(t, l, e, {
+                const l = te(t, f);
+                await ot(t, l, e, {
                   maxDepth: o,
                   timeoutMs: r,
                   currentDepth: n + 1
@@ -8079,8 +8079,8 @@ async function tt(t, A, e = /* @__PURE__ */ new Set(), i = {}) {
           });
           return;
         }
-        const C = ee(t, c);
-        await tt(t, C, e, {
+        const C = te(t, c);
+        await ot(t, C, e, {
           maxDepth: o,
           timeoutMs: r,
           currentDepth: n + 1
@@ -8088,8 +8088,8 @@ async function tt(t, A, e = /* @__PURE__ */ new Set(), i = {}) {
         const B = c.subscribe(async (Q) => {
           if (t.isAvailable(Q))
             try {
-              const f = ee(t, Q);
-              tt(t, f, e, {
+              const f = te(t, Q);
+              ot(t, f, e, {
                 maxDepth: o,
                 timeoutMs: r,
                 currentDepth: n + 1
@@ -8121,12 +8121,12 @@ async function uQ(t, A, e = {}) {
   const s = n.getOrCreateResolution(A, () => (async () => {
     try {
       const a = Date.now();
-      await gA(t, A, { waitForAvailable: !0, timeoutMs: r });
+      await sA(t, A, { waitForAvailable: !0, timeoutMs: r });
       const g = t.getCoValue(A);
       if (!g || !t.isAvailable(g))
         throw new Error(`CoValue ${A} failed to load`);
-      const I = ee(t, g);
-      tt(t, I, /* @__PURE__ */ new Set([A]), {
+      const I = te(t, g);
+      ot(t, I, /* @__PURE__ */ new Set([A]), {
         maxDepth: o,
         timeoutMs: r,
         currentDepth: 0
@@ -8139,7 +8139,7 @@ async function uQ(t, A, e = {}) {
   s !== !0 && await s;
 }
 async function hQ(t, A, e = {}) {
-  return await tt(t, A, /* @__PURE__ */ new Set(), e);
+  return await ot(t, A, /* @__PURE__ */ new Set(), e);
 }
 async function fQ(t, A, e, i, o = {}) {
   const r = e.split(".");
@@ -8178,22 +8178,22 @@ async function iI(t, A, e, i = {}) {
     delete n[a];
   return n;
 }
-async function ot(t, A, e) {
+async function nt(t, A, e) {
   if (typeof t == "string" && t.startsWith("$"))
     return await A.evaluate(t, e);
   if (t === null || typeof t != "object")
     return t;
   if (Array.isArray(t))
-    return Promise.all(t.map((r) => ot(r, A, e)));
+    return Promise.all(t.map((r) => nt(r, A, e)));
   const i = Object.keys(t);
   if (i.length === 1 && i[0].startsWith("$"))
     return await A.evaluate(t, e);
   const o = {};
   for (const [r, n] of Object.entries(t))
-    n && typeof n == "object" ? A.isDSLOperation(n) ? o[r] = await A.evaluate(n, e) : o[r] = await ot(n, A, e) : o[r] = await A.evaluate(n, e);
+    n && typeof n == "object" ? A.isDSLOperation(n) ? o[r] = await A.evaluate(n, e) : o[r] = await nt(n, A, e) : o[r] = await A.evaluate(n, e);
   return o;
 }
-function rt(t) {
+function st(t) {
   if (t == null)
     return !1;
   if (typeof t == "string")
@@ -8201,21 +8201,21 @@ function rt(t) {
   if (typeof t != "object")
     return !1;
   if (Array.isArray(t))
-    return t.some((e) => rt(e));
+    return t.some((e) => st(e));
   const A = Object.keys(t);
   if (A.length === 1 && A[0].startsWith("$"))
     return !0;
   for (const [e, i] of Object.entries(t))
-    if (rt(i))
+    if (st(i))
       return !0;
   return !1;
 }
-function or(t, A) {
+function rr(t, A) {
   return !t || t.loading || t.error ? !1 : t.hasProperties !== !1 || t.properties || typeof t == "object" && Object.keys(t).length > 0 && t.id;
 }
-async function dA(t, A, e = 5e3) {
+async function hA(t, A, e = 5e3) {
   const i = t.value;
-  if (!or(i)) {
+  if (!rr(i)) {
     if (i?.error) throw new Error(`CoValue error (co-id: ${A}): ${i.error}`);
     return new Promise((o, r) => {
       let n = !1, s;
@@ -8225,17 +8225,17 @@ async function dA(t, A, e = 5e3) {
             n = !0, s(), r(new Error(`CoValue error (co-id: ${A}): ${g.error}`));
             return;
           }
-          or(g) && (n = !0, s(), o());
+          rr(g) && (n = !0, s(), o());
         }
       });
       const a = t.value;
-      a?.error ? (n = !0, s(), r(new Error(`CoValue error (co-id: ${A}): ${a.error}`))) : or(a) && (n = !0, s(), o()), setTimeout(() => {
+      a?.error ? (n = !0, s(), r(new Error(`CoValue error (co-id: ${A}): ${a.error}`))) : rr(a) && (n = !0, s(), o()), setTimeout(() => {
         n || (n = !0, s(), r(new Error(`CoValue timeout loading (co-id: ${A}). Make sure the CoValue was seeded correctly.`)));
       }, e);
     });
   }
 }
-function Qe(t, A = {}) {
+function Ee(t, A = {}) {
   const { timeoutMs: e = 1e4 } = A, i = t.value;
   return i?.loading ? new Promise((o, r) => {
     let n;
@@ -8249,10 +8249,10 @@ function Qe(t, A = {}) {
 }
 const pQ = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  waitForReactiveResolution: Qe,
-  waitForStoreReady: dA
+  waitForReactiveResolution: Ee,
+  waitForStoreReady: hA
 }, Symbol.toStringTag, { value: "Module" }));
-async function IA(t, A = null, e = null, i = null, o = null, r = {}) {
+async function gA(t, A = null, e = null, i = null, o = null, r = {}) {
   const {
     deepResolve: n = !0,
     maxDepth: s = 15,
@@ -8263,18 +8263,18 @@ async function IA(t, A = null, e = null, i = null, o = null, r = {}) {
     onChange: c = null
   } = r, C = { deepResolve: n, maxDepth: s, timeoutMs: a, resolveReferences: g, map: I, onChange: c };
   if (A)
-    return await no(t, A, o || e, C);
+    return await ao(t, A, o || e, C);
   if (e) {
-    const B = await eA(t, "@maia/schema/data/spark", { returnType: "coId" }), Q = await eA(t, e, { returnType: "coId" });
+    const B = await tA(t, "@maia/schema/data/spark", { returnType: "coId" }), Q = await tA(t, e, { returnType: "coId" });
     return B && Q === B ? await wQ(t, C) : await yQ(t, e, i, C);
   }
   return await DQ(t, i, { deepResolve: n, maxDepth: s, timeoutMs: a });
 }
-async function rr(t, A, e) {
-  return !t || typeof t != "object" ? t : await ot(t, e, { context: A, item: {} });
+async function nr(t, A, e) {
+  return !t || typeof t != "object" ? t : await nt(t, e, { context: A, item: {} });
 }
-async function ii(t, A, e = {}) {
-  const i = new wA({}), o = /* @__PURE__ */ new Map(), r = /* @__PURE__ */ new Map(), n = /* @__PURE__ */ new Map(), s = /* @__PURE__ */ new Map(), { timeoutMs: a = 5e3, onChange: g } = e, { Evaluator: I } = await Promise.resolve().then(() => DD), c = new I();
+async function ri(t, A, e = {}) {
+  const i = new mA({}), o = /* @__PURE__ */ new Map(), r = /* @__PURE__ */ new Map(), n = /* @__PURE__ */ new Map(), s = /* @__PURE__ */ new Map(), { timeoutMs: a = 5e3, onChange: g } = e, { Evaluator: I } = await Promise.resolve().then(() => $D), c = new I();
   let C = null, B = null;
   const Q = () => {
     B || (B = queueMicrotask(() => {
@@ -8288,8 +8288,8 @@ async function ii(t, A, e = {}) {
       for (const [y, m] of o.entries())
         if (m && typeof m.subscribe == "function" && "value" in m) {
           delete h[y];
-          const k = n.get(y) || !1, b = m.value;
-          k ? Array.isArray(b) ? h[y] = b.length > 0 ? b[0] : null : b && typeof b == "object" ? h[y] = b : h[y] = null : h[y] = b;
+          const k = n.get(y) || !1, F = m.value;
+          k ? Array.isArray(F) ? h[y] = F.length > 0 ? F[0] : null : F && typeof F == "object" ? h[y] = F : h[y] = null : h[y] = F;
         }
       const E = JSON.stringify(h), w = C ? JSON.stringify(C) : null;
       E !== w && (C = h, i._set(h));
@@ -8303,7 +8303,7 @@ async function ii(t, A, e = {}) {
     for (const [p, E] of Object.entries(d))
       if (!(p === "$schema" || p === "$id" || p === "@stores" || p === "properties" || p === "items" || p === "$defs" || p === "cotype" || p === "indexing" || p === "title" || p === "description") && E && typeof E == "object" && !Array.isArray(E) && E.schema) {
         h.add(p);
-        const w = o.get(p), y = await rr(E.filter || null, d, c), m = y && typeof y == "object" && Object.keys(y).length === 1 && y.id && typeof y.id == "string" && y.id.startsWith("co_z"), k = m ? y.id : null, x = r.get(p)?.filter || null, j = JSON.stringify(y) !== JSON.stringify(x);
+        const w = o.get(p), y = await nr(E.filter || null, d, c), m = y && typeof y == "object" && Object.keys(y).length === 1 && y.id && typeof y.id == "string" && y.id.startsWith("co_z"), k = m ? y.id : null, L = r.get(p)?.filter || null, j = JSON.stringify(y) !== JSON.stringify(L);
         try {
           let J = E.schema;
           if (J && typeof J == "object" && J.$id && (J = J.$id), typeof J != "string") {
@@ -8313,65 +8313,65 @@ async function ii(t, A, e = {}) {
           if (J.startsWith("co_z")) {
             if (J && typeof J == "string" && J.startsWith("co_z") && (j || !w)) {
               w && w._queryUnsubscribe && w._queryUnsubscribe();
-              const W = {
+              const $ = {
                 ...e,
                 timeoutMs: a,
                 ...E.options || {}
-              }, X = m && k ? await IA(t, k, J, null, null, W) : await IA(t, null, J, y, null, W);
+              }, AA = m && k ? await gA(t, k, J, null, null, $) : await gA(t, null, J, y, null, $);
               n.set(p, m), r.set(p, {
                 schema: E.schema,
                 ...E.options ? { options: E.options } : {},
                 filter: y
               });
-              const z = X.subscribe(() => {
+              const W = AA.subscribe(() => {
                 Q();
               });
-              X._queryUnsubscribe = z, o.set(p, X);
+              AA._queryUnsubscribe = W, o.set(p, AA);
             }
           } else if (J.startsWith("@maia/schema/")) {
-            const X = Ae(t, J, { timeoutMs: a }).subscribe(async (z) => {
-              if (z.loading) {
+            const AA = ee(t, J, { timeoutMs: a }).subscribe(async (W) => {
+              if (W.loading) {
                 if (!o.has(p)) {
-                  const O = await rr(E.filter || null, d, c), Z = O && typeof O == "object" && Object.keys(O).length === 1 && O.id && typeof O.id == "string" && O.id.startsWith("co_z"), T = new wA(Z ? null : []);
+                  const P = await nr(E.filter || null, d, c), Z = P && typeof P == "object" && Object.keys(P).length === 1 && P.id && typeof P.id == "string" && P.id.startsWith("co_z"), T = new mA(Z ? null : []);
                   o.set(p, T), n.set(p, Z), r.set(p, {
                     schema: E.schema,
                     ...E.options ? { options: E.options } : {},
-                    filter: O
+                    filter: P
                   }), Q();
                 }
                 return;
               }
-              if (z.error || !z.schemaCoId) {
-                process.env.DEBUG && console.error(`[createUnifiedStore] Failed to resolve schema ${E.schema} for query "${p}": ${z.error || "Schema not found"}`), X();
+              if (W.error || !W.schemaCoId) {
+                process.env.DEBUG && console.error(`[createUnifiedStore] Failed to resolve schema ${E.schema} for query "${p}": ${W.error || "Schema not found"}`), AA();
                 return;
               }
-              const _ = z.schemaCoId;
+              const _ = W.schemaCoId;
               try {
-                const O = {
+                const P = {
                   ...e,
                   timeoutMs: a,
                   ...E.options || {}
-                }, Z = await rr(E.filter || null, d, c), T = Z && typeof Z == "object" && Object.keys(Z).length === 1 && Z.id && typeof Z.id == "string" && Z.id.startsWith("co_z"), F = T ? Z.id : null, R = r.get(p)?.filter || null;
+                }, Z = await nr(E.filter || null, d, c), T = Z && typeof Z == "object" && Object.keys(Z).length === 1 && Z.id && typeof Z.id == "string" && Z.id.startsWith("co_z"), G = T ? Z.id : null, R = r.get(p)?.filter || null;
                 if (JSON.stringify(Z) !== JSON.stringify(R) || !o.has(p)) {
                   const N = o.get(p);
                   N && N._queryUnsubscribe && N._queryUnsubscribe();
-                  const Y = T && F ? await IA(t, F, _, null, null, O) : await IA(t, null, _, Z, null, O);
+                  const H = T && G ? await gA(t, G, _, null, null, P) : await gA(t, null, _, Z, null, P);
                   n.set(p, T), r.set(p, {
                     schema: E.schema,
                     ...E.options ? { options: E.options } : {},
                     filter: Z
                   });
-                  const P = Y.subscribe(() => {
+                  const z = H.subscribe(() => {
                     Q();
                   });
-                  Y._queryUnsubscribe = P, o.set(p, Y), Q();
+                  H._queryUnsubscribe = z, o.set(p, H), Q();
                 }
-                X();
-              } catch (O) {
-                process.env.DEBUG && console.error(`[createUnifiedStore] Failed to execute query "${p}" after schema resolution:`, O), X();
+                AA();
+              } catch (P) {
+                process.env.DEBUG && console.error(`[createUnifiedStore] Failed to execute query "${p}" after schema resolution:`, P), AA();
               }
             });
-            s.set(p, X);
+            s.set(p, AA);
             continue;
           } else {
             process.env.DEBUG && console.error(`[createUnifiedStore] Invalid schema format for query "${p}": ${J}`);
@@ -8422,7 +8422,7 @@ async function ws(t, A, e, i, o = /* @__PURE__ */ new Set()) {
     resolveReferences: a = null,
     map: g = null
   } = i;
-  let I = ee(t, A, e);
+  let I = te(t, A, e);
   if (r)
     try {
       uQ(t, A.id, { deepResolve: r, maxDepth: n, timeoutMs: s }).catch((c) => {
@@ -8432,7 +8432,7 @@ async function ws(t, A, e, i, o = /* @__PURE__ */ new Set()) {
   if (a)
     try {
       const c = { ...a, timeoutMs: s };
-      I = await Ht(t, I, c, o, n, 0);
+      I = await xt(t, I, c, o, n, 0);
     } catch {
     }
   if (g)
@@ -8443,7 +8443,7 @@ async function ws(t, A, e, i, o = /* @__PURE__ */ new Set()) {
     }
   return I;
 }
-async function no(t, A, e = null, i = {}) {
+async function ao(t, A, e = null, i = {}) {
   const {
     deepResolve: o = !0,
     maxDepth: r = 15,
@@ -8455,73 +8455,73 @@ async function no(t, A, e = null, i = {}) {
   if (c) {
     const E = c && typeof c == "object" && Object.values(c).some(
       (m) => m && typeof m == "object" && !Array.isArray(m) && m.schema
-    ), w = new wA(c), y = t.getCoValue(A);
+    ), w = new mA(c), y = t.getCoValue(A);
     if (y) {
       const m = async (J) => {
-        const W = await ws(t, J, e, i, /* @__PURE__ */ new Set());
-        return g.setResolvedData(A, I, W), W;
-      }, k = /* @__PURE__ */ new Map(), b = (J) => {
+        const $ = await ws(t, J, e, i, /* @__PURE__ */ new Set());
+        return g.setResolvedData(A, I, $), $;
+      }, k = /* @__PURE__ */ new Map(), F = (J) => {
         if (!a) return;
-        const W = ee(t, J, e), X = ps(W, a);
-        for (const z of X) {
-          if (k.has(z)) continue;
-          const _ = t.getCoValue(z);
+        const $ = te(t, J, e), AA = ps($, a);
+        for (const W of AA) {
+          if (k.has(W)) continue;
+          const _ = t.getCoValue(W);
           if (!_) continue;
-          const O = _.subscribe(async () => {
+          const P = _.subscribe(async () => {
             if (!J.isAvailable()) return;
-            g.invalidateResolvedData(z);
+            g.invalidateResolvedData(W);
             const Z = await m(J);
             w._set(Z);
           });
-          k.set(z, O);
+          k.set(W, P);
         }
-        for (const [z, _] of k.entries())
-          X.has(z) || (_(), k.delete(z));
-      }, x = y.subscribe(async (J) => {
+        for (const [W, _] of k.entries())
+          AA.has(W) || (_(), k.delete(W));
+      }, L = y.subscribe(async (J) => {
         if (J.isAvailable()) {
-          const W = await m(J);
-          b(J), w._set(W);
+          const $ = await m(J);
+          F(J), w._set($);
         }
       });
-      if (b(y), t.subscriptionCache.getOrCreate(`subscription:${A}`, () => ({ unsubscribe: x })), E) {
-        const J = await ii(t, w, i), W = J._unsubscribe;
+      if (F(y), t.subscriptionCache.getOrCreate(`subscription:${A}`, () => ({ unsubscribe: L })), E) {
+        const J = await ri(t, w, i), $ = J._unsubscribe;
         return J._unsubscribe = () => {
-          W && W(), x();
-          for (const X of k.values()) X();
+          $ && $(), L();
+          for (const AA of k.values()) AA();
           k.clear(), t.subscriptionCache.scheduleCleanup(`subscription:${A}`);
         }, J;
       }
       const j = w._unsubscribe;
       w._unsubscribe = () => {
-        j && j(), x();
+        j && j(), L();
         for (const J of k.values()) J();
         k.clear(), t.subscriptionCache.scheduleCleanup(`subscription:${A}`);
       };
     }
-    return E ? await ii(t, w, i) : w;
+    return E ? await ri(t, w, i) : w;
   }
   const C = t.getCoValue(A);
   if (!C)
-    return new wA({ error: "CoValue not found", id: A });
+    return new mA({ error: "CoValue not found", id: A });
   const B = async (E) => {
     const w = await ws(t, E, e, i, /* @__PURE__ */ new Set());
     return g.setResolvedData(A, I, w), w;
-  }, Q = /* @__PURE__ */ new Map(), f = new wA(null);
+  }, Q = /* @__PURE__ */ new Map(), f = new mA(null);
   let l = null, u = null;
   const d = (E) => {
     if (!a) return;
-    const w = ee(t, E, e), y = ps(w, a);
+    const w = te(t, E, e), y = ps(w, a);
     for (const m of y) {
       if (Q.has(m)) continue;
       const k = t.getCoValue(m);
       if (!k) continue;
-      const b = k.subscribe(async () => {
+      const F = k.subscribe(async () => {
         if (!E.isAvailable()) return;
         g.invalidateResolvedData(m);
-        const x = await B(E);
-        u ? u._set(x) : f._set(x);
+        const L = await B(E);
+        u ? u._set(L) : f._set(L);
       });
-      Q.set(m, b);
+      Q.set(m, F);
     }
     for (const [m, k] of Q.entries())
       y.has(m) || (k(), Q.delete(m));
@@ -8537,8 +8537,8 @@ async function no(t, A, e = null, i = {}) {
       if (u)
         u._set(w);
       else {
-        u = new wA(w);
-        const m = await ii(t, u, i);
+        u = new mA(w);
+        const m = await ri(t, u, i);
         l = m.subscribe((k) => f._set(k)), f._set(m.value);
       }
     else
@@ -8550,10 +8550,10 @@ async function no(t, A, e = null, i = {}) {
       (m) => m && typeof m == "object" && !Array.isArray(m) && m.schema
     )) {
       f._set(E);
-      const m = await ii(t, f, i), k = m._unsubscribe;
+      const m = await ri(t, f, i), k = m._unsubscribe;
       return m._unsubscribe = () => {
         k && k(), h();
-        for (const b of Q.values()) b();
+        for (const F of Q.values()) F();
         Q.clear(), t.subscriptionCache.scheduleCleanup(`subscription:${A}`);
       }, m;
     }
@@ -8565,7 +8565,7 @@ async function no(t, A, e = null, i = {}) {
       Q.clear(), t.subscriptionCache.scheduleCleanup(`subscription:${A}`);
     }, f;
   }
-  f._set({ id: A, loading: !0 }), gA(t, A).then(() => {
+  f._set({ id: A, loading: !0 }), sA(t, A).then(() => {
   }).catch((E) => {
     f._set({ error: E.message, id: A });
   });
@@ -8577,13 +8577,13 @@ async function no(t, A, e = null, i = {}) {
   }, f;
 }
 async function wQ(t, A = {}) {
-  const { deepResolve: e = !0, maxDepth: i = 15, timeoutMs: o = 5e3 } = A, r = t.subscriptionCache.getOrCreateStore("sparks:account", () => new wA([])), n = t.account?.get?.("sparks");
+  const { deepResolve: e = !0, maxDepth: i = 15, timeoutMs: o = 5e3 } = A, r = t.subscriptionCache.getOrCreateStore("sparks:account", () => new mA([])), n = t.account?.get?.("sparks");
   if (!n || !n.startsWith("co_"))
     return r;
   const s = async () => {
-    const I = await no(t, n, null, { deepResolve: !1 });
+    const I = await ao(t, n, null, { deepResolve: !1 });
     try {
-      await dA(I, n, o);
+      await hA(I, n, o);
     } catch {
       return;
     }
@@ -8598,8 +8598,8 @@ async function wQ(t, A = {}) {
     const B = [];
     for (const Q of C)
       try {
-        const f = await no(t, Q, null, { deepResolve: e, maxDepth: i, timeoutMs: o });
-        await dA(f, Q, Math.min(o, 2e3));
+        const f = await ao(t, Q, null, { deepResolve: e, maxDepth: i, timeoutMs: o });
+        await hA(f, Q, Math.min(o, 2e3));
         const l = f?.value;
         l && !l.error && B.push({ id: Q, name: l.name ?? Q, ...l });
       } catch {
@@ -8608,7 +8608,7 @@ async function wQ(t, A = {}) {
     r._set(B);
   };
   await s();
-  const g = (await no(t, n, null, { deepResolve: !1 }))?.subscribe?.(() => s());
+  const g = (await ao(t, n, null, { deepResolve: !1 }))?.subscribe?.(() => s());
   return g && t.subscriptionCache.getOrCreate(`subscription:sparks:${n}`, () => ({ unsubscribe: g })), r;
 }
 async function yQ(t, A, e = null, i = {}) {
@@ -8620,9 +8620,9 @@ async function yQ(t, A, e = null, i = {}) {
     resolveReferences: s = null,
     map: a = null
   } = i, g = i && (i.map || i.resolveReferences) ? JSON.stringify({ map: i.map || null, resolveReferences: i.resolveReferences || null }) : "", I = `${A}:${JSON.stringify(e || {})}:${g}`, c = t.subscriptionCache.getOrCreateStore(I, () => {
-    const E = new wA([]);
+    const E = new mA([]);
     return E._cacheKey = `store:${I}`, E;
-  }), C = await fn(t, A);
+  }), C = await pn(t, A);
   if (!C)
     return c;
   let B = t.getCoValue(C);
@@ -8632,7 +8632,7 @@ async function yQ(t, A, e = null, i = {}) {
   let u = async () => {
   };
   if (!t.isAvailable(B)) {
-    if (gA(t, C, { waitForAvailable: !1 }).catch((E) => {
+    if (sA(t, C, { waitForAvailable: !1 }).catch((E) => {
       process.env.DEBUG && console.warn(`[readCollection] Failed to load CoList ${C.substring(0, 12)}...:`, E);
     }), B) {
       const E = B.subscribe((w) => {
@@ -8650,16 +8650,16 @@ async function yQ(t, A, e = null, i = {}) {
     Q.add(E);
     const w = t.getCoValue(E);
     if (!w || !t.isAvailable(w)) {
-      gA(t, E, { waitForAvailable: !0, timeoutMs: 2e3 }).then(() => {
+      sA(t, E, { waitForAvailable: !0, timeoutMs: 2e3 }).then(() => {
         const m = t.getCoValue(E);
         if (m && t.isAvailable(m)) {
           const k = m.subscribe(() => {
-            l.invalidateResolvedData(E), u && u().catch((b) => {
-              process.env.DEBUG && console.warn("[CoJSONBackend] Error updating store:", b);
+            l.invalidateResolvedData(E), u && u().catch((F) => {
+              process.env.DEBUG && console.warn("[CoJSONBackend] Error updating store:", F);
             });
           });
-          t.subscriptionCache.getOrCreate(`subscription:${E}`, () => ({ unsubscribe: k })), u && u().catch((b) => {
-            process.env.DEBUG && console.warn("[CoJSONBackend] Error updating store after item load:", b);
+          t.subscriptionCache.getOrCreate(`subscription:${E}`, () => ({ unsubscribe: k })), u && u().catch((F) => {
+            process.env.DEBUG && console.warn("[CoJSONBackend] Error updating store after item load:", F);
           });
         }
       }).catch((m) => {
@@ -8677,7 +8677,7 @@ async function yQ(t, A, e = null, i = {}) {
   u = async () => {
     const E = [];
     if (!t.isAvailable(B)) {
-      gA(t, C).catch((y) => {
+      sA(t, C).catch((y) => {
         process.env.DEBUG && console.error("[readCollection] Failed to reload CoList:", y);
       });
       return;
@@ -8687,29 +8687,29 @@ async function yQ(t, A, e = null, i = {}) {
       try {
         const y = w.toJSON();
         let m = 0, k = 0;
-        for (const b of y) {
-          if (typeof b != "string" || !b.startsWith("co_"))
+        for (const F of y) {
+          if (typeof F != "string" || !F.startsWith("co_"))
             continue;
-          d(b);
-          const x = t.getCoValue(b);
-          if (!x) {
+          d(F);
+          const L = t.getCoValue(F);
+          if (!L) {
             k++;
             continue;
           }
-          if (t.isAvailable(x)) {
+          if (t.isAvailable(L)) {
             m++;
-            const j = { deepResolve: o, resolveReferences: s, map: a, maxDepth: r, timeoutMs: n }, J = t.getCoValue(b);
+            const j = { deepResolve: o, resolveReferences: s, map: a, maxDepth: r, timeoutMs: n }, J = t.getCoValue(F);
             if (!J || !t.isAvailable(J))
               continue;
-            const W = await l.getOrCreateResolvedData(b, j, async () => {
-              let z = ee(t, J);
-              if (Object.keys(z).filter(
-                (O) => !["id", "type", "$schema"].includes(O)
-              ).length === 0 && z.type === "comap")
-                return z;
-              if (o && !a && !l.isResolved(b))
+            const $ = await l.getOrCreateResolvedData(F, j, async () => {
+              let W = te(t, J);
+              if (Object.keys(W).filter(
+                (P) => !["id", "type", "$schema"].includes(P)
+              ).length === 0 && W.type === "comap")
+                return W;
+              if (o && !a && !l.isResolved(F))
                 try {
-                  await tt(t, z, f, {
+                  await ot(t, W, f, {
                     maxDepth: r,
                     timeoutMs: n,
                     currentDepth: 0
@@ -8718,23 +8718,23 @@ async function yQ(t, A, e = null, i = {}) {
                 }
               if (s)
                 try {
-                  const O = { ...s, timeoutMs: n }, Z = await Ht(t, z, O, f, r, 0);
-                  Object.assign(z, Z);
+                  const P = { ...s, timeoutMs: n }, Z = await xt(t, W, P, f, r, 0);
+                  Object.assign(W, Z);
                 } catch {
                 }
               if (a)
                 try {
-                  z = await iI(t, z, a, { timeoutMs: n });
-                } catch (O) {
-                  process.env.DEBUG && console.warn("[readCollection] Failed to apply map transform:", O);
+                  W = await iI(t, W, a, { timeoutMs: n });
+                } catch (P) {
+                  process.env.DEBUG && console.warn("[readCollection] Failed to apply map transform:", P);
                 }
-              return z;
+              return W;
             });
-            if (Object.keys(W).filter(
-              (z) => !["id", "type", "$schema"].includes(z)
-            ).length === 0 && W.type === "comap")
+            if (Object.keys($).filter(
+              (W) => !["id", "type", "$schema"].includes(W)
+            ).length === 0 && $.type === "comap")
               continue;
-            (!e || eI(W, e)) && E.push(W);
+            (!e || eI($, e)) && E.push($);
           } else
             k++;
         }
@@ -8757,7 +8757,7 @@ async function yQ(t, A, e = null, i = {}) {
         for (const y of w)
           if (typeof y == "string" && y.startsWith("co_")) {
             const m = t.getCoValue(y);
-            m && !t.isAvailable(m) && gA(t, y).catch((k) => {
+            m && !t.isAvailable(m) && sA(t, y).catch((k) => {
               process.env.DEBUG && console.error(`[CoJSONBackend] Failed to load item ${y}:`, k);
             });
           }
@@ -8778,7 +8778,7 @@ async function DQ(t, A = null, e = {}) {
     maxDepth: o = 15,
     // TODO: temporarily scaled up from 10 for @maia spark detail deep resolution
     timeoutMs: r = 5e3
-  } = e, n = new wA([]), s = /* @__PURE__ */ new Set();
+  } = e, n = new mA([]), s = /* @__PURE__ */ new Set();
   let a = async () => {
   };
   const g = (c, C) => {
@@ -8796,12 +8796,12 @@ async function DQ(t, A = null, e = {}) {
       if (!B || typeof B != "string" || !B.startsWith("co_"))
         continue;
       if (g(B, Q), !t.isAvailable(Q)) {
-        gA(t, B).catch((u) => {
+        sA(t, B).catch((u) => {
           process.env.DEBUG && console.error(`[CoJSONBackend] Failed to load CoValue ${B}:`, u);
         });
         continue;
       }
-      const f = ee(t, Q);
+      const f = te(t, Q);
       if (!(Object.keys(f).filter(
         (u) => !["id", "type", "$schema"].includes(u)
       ).length === 0 && f.type === "comap")) {
@@ -8822,25 +8822,25 @@ async function DQ(t, A = null, e = {}) {
       t.subscriptionCache.scheduleCleanup(`subscription:${c}`);
   }, n;
 }
-function Rt(t, A, e = {}) {
-  const { timeoutMs: i = 1e4 } = e, o = new wA({ loading: !0 });
+function Kt(t, A, e = {}) {
+  const { timeoutMs: i = 1e4 } = e, o = new mA({ loading: !0 });
   if (A.startsWith("co_z"))
     return o._set({ loading: !1, schemaCoId: A }), o;
   let r = null, n = null;
   const s = async () => {
-    const { getSparkOsId: a } = await Promise.resolve().then(() => de), g = t?.systemSpark ?? "@maia", I = await a(t, g);
+    const { getSparkOsId: a } = await Promise.resolve().then(() => ue), g = t?.systemSpark ?? "@maia", I = await a(t, g);
     if (!I || typeof I != "string" || !I.startsWith("co_z")) {
       o._set({ loading: !1, error: "spark.os not found" });
       return;
     }
-    r = (await IA(t, I, null, null, null, {
+    r = (await gA(t, I, null, null, null, {
       deepResolve: !1,
       timeoutMs: i
     })).subscribe(async (B) => {
       if (!B || B.error)
         return;
       const Q = B.schematas;
-      !Q || typeof Q != "string" || !Q.startsWith("co_z") || n || (n = (await IA(t, Q, null, null, null, {
+      !Q || typeof Q != "string" || !Q.startsWith("co_z") || n || (n = (await gA(t, Q, null, null, null, {
         deepResolve: !1,
         timeoutMs: i
       })).subscribe((l) => {
@@ -8855,7 +8855,7 @@ function Rt(t, A, e = {}) {
       C && C(), n && (n(), n = null), r && (r(), r = null);
     };
   };
-  return eA(t, A, { returnType: "coId", timeoutMs: 2e3 }).then((a) => {
+  return tA(t, A, { returnType: "coId", timeoutMs: 2e3 }).then((a) => {
     a && a.startsWith("co_z") ? o._set({ loading: !1, schemaCoId: a }) : s().catch((g) => {
       o._set({ loading: !1, error: g.message });
     });
@@ -8865,8 +8865,8 @@ function Rt(t, A, e = {}) {
     });
   }), o;
 }
-function Rr(t, A, e = {}) {
-  const i = new wA({ loading: !0 });
+function vr(t, A, e = {}) {
+  const i = new mA({ loading: !0 });
   if (!A || !A.startsWith("co_z"))
     return i._set({ loading: !1, error: "Invalid co-id" }), i;
   const o = t.getCoValue(A);
@@ -8874,7 +8874,7 @@ function Rr(t, A, e = {}) {
     return i._set({ loading: !1, error: "CoValueCore not found" }), i;
   if (t.isAvailable(o))
     return i._set({ loading: !1, coValueCore: o }), i;
-  gA(t, A, { waitForAvailable: !1 }).catch((s) => {
+  sA(t, A, { waitForAvailable: !1 }).catch((s) => {
   });
   const r = o.subscribe((s) => {
     t.isAvailable(s) && (i._set({ loading: !1, coValueCore: s }), r());
@@ -8884,17 +8884,17 @@ function Rr(t, A, e = {}) {
   }, i;
 }
 function oI(t, A, e = {}) {
-  const i = new wA({ loading: !0, items: [] });
+  const i = new mA({ loading: !0, items: [] });
   if (!A || !A.schema)
     return i._set({ loading: !1, items: [], error: "Invalid query definition" }), i;
-  const r = Rt(t, A.schema, e).subscribe(async (n) => {
+  const r = Kt(t, A.schema, e).subscribe(async (n) => {
     if (!n.loading) {
       if (n.error || !n.schemaCoId) {
         i._set({ loading: !1, items: [], error: n.error || "Schema not found" }), r();
         return;
       }
       try {
-        const a = (await IA(
+        const a = (await gA(
           t,
           null,
           n.schemaCoId,
@@ -8923,7 +8923,7 @@ function mQ(t, A, e = {}) {
     if (A.schema)
       return oI(t, A, e);
     if (A.fromCoValue) {
-      const o = Rr(t, A.fromCoValue, e), r = new wA({ loading: !0 });
+      const o = vr(t, A.fromCoValue, e), r = new mA({ loading: !0 });
       let n, s, a;
       n = o.subscribe(async (I) => {
         if (I.loading)
@@ -8933,11 +8933,11 @@ function mQ(t, A, e = {}) {
           return;
         }
         const B = (t.getHeader(I.coValueCore)?.meta || null)?.$schema || null;
-        B && typeof B == "string" && B.startsWith("co_z") ? s = Rt(t, B, e).subscribe((f) => {
+        B && typeof B == "string" && B.startsWith("co_z") ? s = Kt(t, B, e).subscribe((f) => {
           r._set(f), f.loading || (s && s(), n && n());
         }) : a = I.coValueCore.subscribe((Q) => {
           const u = (t.getHeader(Q)?.meta || null)?.$schema || null;
-          u && typeof u == "string" && u.startsWith("co_z") && (s = Rt(t, u, e).subscribe((h) => {
+          u && typeof u == "string" && u.startsWith("co_z") && (s = Kt(t, u, e).subscribe((h) => {
             r._set(h), h.loading || (s && s(), a && a(), n && n());
           }));
         });
@@ -8948,25 +8948,25 @@ function mQ(t, A, e = {}) {
       }, r;
     }
   }
-  return typeof A == "string" ? A.startsWith("co_z") ? Rr(t, A, e) : Rt(t, A, e) : new wA({ loading: !1, error: "Invalid identifier" });
+  return typeof A == "string" ? A.startsWith("co_z") ? vr(t, A, e) : Kt(t, A, e) : new mA({ loading: !1, error: "Invalid identifier" });
 }
-function vr(t, A = !1) {
+function Kr(t, A = !1) {
   if (t == null || typeof t != "object")
     return t;
   if (Array.isArray(t))
-    return t.map((i) => vr(i, A));
+    return t.map((i) => Kr(i, A));
   const e = {};
   for (const [i, o] of Object.entries(t))
     if (!(i === "id" && !A))
       if (o != null && typeof o == "object") {
         const r = i === "properties" || i === "items";
-        e[i] = vr(o, r || A);
+        e[i] = Kr(o, r || A);
       } else
         e[i] = o;
   return e;
 }
-const nr = /^@[a-zA-Z0-9_-]+\/schema\//, Et = /^@[a-zA-Z0-9_-]+\/vibe\//;
-async function eA(t, A, e = {}) {
+const sr = /^@[a-zA-Z0-9_-]+\/schema\//, dt = /^@[a-zA-Z0-9_-]+\/vibe\//;
+async function tA(t, A, e = {}) {
   const {
     returnType: i = "schema",
     deepResolve: o = !1,
@@ -8979,12 +8979,12 @@ async function eA(t, A, e = {}) {
     if (A.fromCoValue) {
       if (!A.fromCoValue.startsWith("co_z"))
         throw new Error(`[resolve] fromCoValue must be a valid co-id (co_z...), got: ${A.fromCoValue}`);
-      const I = await IA(t, A.fromCoValue, null, null, null, {
+      const I = await gA(t, A.fromCoValue, null, null, null, {
         deepResolve: !1,
         timeoutMs: r
       });
       try {
-        await dA(I, A.fromCoValue, r);
+        await hA(I, A.fromCoValue, r);
       } catch {
         return null;
       }
@@ -8992,19 +8992,19 @@ async function eA(t, A, e = {}) {
       if (!c || c.error)
         return null;
       const C = c.$schema || null;
-      return C ? i === "coId" ? C : await eA(t, C, { returnType: i, deepResolve: o, timeoutMs: r }) : null;
+      return C ? i === "coId" ? C : await tA(t, C, { returnType: i, deepResolve: o, timeoutMs: r }) : null;
     }
     throw new Error('[resolve] Invalid identifier object. Expected { fromCoValue: "co_z..." }');
   }
   if (typeof A != "string")
     throw new Error(`[resolve] Invalid identifier type. Expected string or object, got: ${typeof A}`);
   if (A.startsWith("co_z")) {
-    const I = await IA(t, A, null, null, null, {
+    const I = await gA(t, A, null, null, null, {
       deepResolve: o,
       timeoutMs: r
     });
     try {
-      await dA(I, A, r);
+      await hA(I, A, r);
     } catch {
       return null;
     }
@@ -9019,31 +9019,31 @@ async function eA(t, A, e = {}) {
     if (C || B || Q || f) {
       const { id: u, type: d, ...h } = c;
       return {
-        ...vr(h),
+        ...Kr(h),
         $id: A
         // Ensure $id is set
       };
     }
     return null;
   }
-  const s = nr.test(A), a = Et.test(A), g = !A.startsWith("@") && !A.startsWith("co_z");
+  const s = sr.test(A), a = dt.test(A), g = !A.startsWith("@") && !A.startsWith("co_z");
   if (s || a || g) {
     const I = n ?? t?.systemSpark;
     if (!I && (s || a || g))
       throw new Error(`[resolve] spark required for registry lookup of ${A}. Pass options.spark or set backend.systemSpark.`);
     let c = A;
-    if (!nr.test(c) && !Et.test(c) && !c.startsWith("@") && (c = `@${I?.replace(/^@/, "") ?? "maia"}/schema/${c}`), !t.account || typeof t.account.get != "function")
+    if (!sr.test(c) && !dt.test(c) && !c.startsWith("@") && (c = `@${I?.replace(/^@/, "") ?? "maia"}/schema/${c}`), !t.account || typeof t.account.get != "function")
       return console.warn("[resolve] Account not available for registry lookup"), null;
-    if (nr.test(c)) {
+    if (sr.test(c)) {
       const B = t.account.get("sparks");
       if (!B || typeof B != "string" || !B.startsWith("co_z"))
         return null;
-      const Q = await IA(t, B, null, null, null, {
+      const Q = await gA(t, B, null, null, null, {
         deepResolve: !1,
         timeoutMs: r
       });
       try {
-        await dA(Q, B, r);
+        await hA(Q, B, r);
       } catch {
         return null;
       }
@@ -9052,12 +9052,12 @@ async function eA(t, A, e = {}) {
       const l = f[I];
       if (!l || typeof l != "string" || !l.startsWith("co_z"))
         return null;
-      const u = await IA(t, l, null, null, null, {
+      const u = await gA(t, l, null, null, null, {
         deepResolve: !1,
         timeoutMs: r
       });
       try {
-        await dA(u, l, r);
+        await hA(u, l, r);
       } catch {
         return null;
       }
@@ -9066,12 +9066,12 @@ async function eA(t, A, e = {}) {
       const h = d.os;
       if (!h || typeof h != "string" || !h.startsWith("co_z"))
         return null;
-      const p = await IA(t, h, null, null, null, {
+      const p = await gA(t, h, null, null, null, {
         deepResolve: !1,
         timeoutMs: r
       });
       try {
-        await dA(p, h, r);
+        await hA(p, h, r);
       } catch {
         return null;
       }
@@ -9081,12 +9081,12 @@ async function eA(t, A, e = {}) {
       const w = E.schematas;
       if (!w || typeof w != "string" || !w.startsWith("co_z"))
         return null;
-      const y = await IA(t, w, null, null, null, {
+      const y = await gA(t, w, null, null, null, {
         deepResolve: !1,
         timeoutMs: r
       });
       try {
-        await dA(y, w, r);
+        await hA(y, w, r);
       } catch {
         return null;
       }
@@ -9094,17 +9094,17 @@ async function eA(t, A, e = {}) {
       if (!m || m.error)
         return null;
       const k = m[c] || m[A];
-      return k && typeof k == "string" && k.startsWith("co_z") ? i === "coId" ? k : await eA(t, k, { returnType: i, deepResolve: o, timeoutMs: r }) : (/^@[a-zA-Z0-9_-]+\/schema\/index\//.test(c) || console.warn(`[resolve] Schema "${A}" not found in registry`), null);
-    } else if (Et.test(A) || !A.startsWith("@")) {
+      return k && typeof k == "string" && k.startsWith("co_z") ? i === "coId" ? k : await tA(t, k, { returnType: i, deepResolve: o, timeoutMs: r }) : (/^@[a-zA-Z0-9_-]+\/schema\/index\//.test(c) || console.warn(`[resolve] Schema "${A}" not found in registry`), null);
+    } else if (dt.test(A) || !A.startsWith("@")) {
       const B = t.account.get("sparks");
       if (!B || typeof B != "string" || !B.startsWith("co_z"))
         return null;
-      const Q = await IA(t, B, null, null, null, {
+      const Q = await gA(t, B, null, null, null, {
         deepResolve: !1,
         timeoutMs: r
       });
       try {
-        await dA(Q, B, r);
+        await hA(Q, B, r);
       } catch {
         return null;
       }
@@ -9113,12 +9113,12 @@ async function eA(t, A, e = {}) {
       const l = f[I];
       if (!l || typeof l != "string" || !l.startsWith("co_z"))
         return null;
-      const u = await IA(t, l, null, null, null, {
+      const u = await gA(t, l, null, null, null, {
         deepResolve: !1,
         timeoutMs: r
       });
       try {
-        await dA(u, l, r);
+        await hA(u, l, r);
       } catch {
         return null;
       }
@@ -9127,25 +9127,25 @@ async function eA(t, A, e = {}) {
       const h = d.vibes;
       if (!h || typeof h != "string" || !h.startsWith("co_z"))
         return null;
-      const p = await IA(t, h, null, null, null, {
+      const p = await gA(t, h, null, null, null, {
         deepResolve: !1,
         timeoutMs: r
       });
       try {
-        await dA(p, h, r);
+        await hA(p, h, r);
       } catch {
         return null;
       }
       const E = p.value;
       if (!E || E.error)
         return null;
-      const w = Et.test(A) ? A.replace(Et, "") : A, y = E[w];
-      return y && typeof y == "string" && y.startsWith("co_z") ? i === "coId" ? y : await eA(t, y, { returnType: i, deepResolve: o, timeoutMs: r }) : null;
+      const w = dt.test(A) ? A.replace(dt, "") : A, y = E[w];
+      return y && typeof y == "string" && y.startsWith("co_z") ? i === "coId" ? y : await tA(t, y, { returnType: i, deepResolve: o, timeoutMs: r }) : null;
     }
   }
   return null;
 }
-function Ae(t, A, e = {}) {
+function ee(t, A, e = {}) {
   const { returnType: i = "coId" } = e, o = mQ(t, A, e);
   if (i === "schema" || i === "coValue") {
     const r = new ReactiveStore({ loading: !0 }), n = o.subscribe(async (a) => {
@@ -9162,7 +9162,7 @@ function Ae(t, A, e = {}) {
           r._set({ loading: !1, schemaCoId: a.schemaCoId }), n();
         else
           try {
-            const g = await eA(t, a.schemaCoId, { returnType: i });
+            const g = await tA(t, a.schemaCoId, { returnType: i });
             g ? r._set({ loading: !1, [i === "schema" ? "schema" : "coValue"]: g }) : r._set({ loading: !1, error: "Schema not found" }), n();
           } catch (g) {
             r._set({ loading: !1, error: g.message }), n();
@@ -9180,17 +9180,17 @@ function Ae(t, A, e = {}) {
   }
   return o;
 }
-async function vt(t, A, e) {
-  const i = await eA(t, A, { returnType: "schema" });
+async function Yt(t, A, e) {
+  const i = await tA(t, A, { returnType: "schema" });
   if (!i)
     throw new Error(`[checkCotype] Schema ${A} not found`);
   return (i.cotype || "comap") === e;
 }
-const pn = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const lo = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  checkCotype: vt,
-  resolve: eA,
-  resolveReactive: Ae
+  checkCotype: Yt,
+  resolve: tA,
+  resolveReactive: ee
 }, Symbol.toStringTag, { value: "Module" })), SQ = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://maia.city/AccountSchema",
@@ -9233,7 +9233,7 @@ const pn = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     }
   },
   required: ["profile"],
-  $defs: Pt.$defs
+  $defs: Vt.$defs
 }, kQ = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://maia.city/GroupSchema",
@@ -9246,7 +9246,7 @@ const pn = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     // Groups can have members (co-ids) and permissions
     // Structure depends on cojson's group implementation
   },
-  $defs: Pt.$defs
+  $defs: Vt.$defs
 }, NQ = {
   $schema: "https://json-schema.org/draft/2020-12/schema",
   $id: "https://maia.city/ProfileSchema",
@@ -9263,34 +9263,34 @@ const pn = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     }
   },
   required: ["name"],
-  $defs: Pt.$defs
+  $defs: Vt.$defs
 }, wn = {
   AccountSchema: SQ,
   GroupSchema: kQ,
   ProfileSchema: NQ
 };
-function mo() {
+function No() {
   return { ...wn };
 }
 function yn(t) {
   return ["@account", "@group", "@metaSchema"].includes(t) ? !0 : t in wn;
 }
-function So(t, A = "createCoValue") {
+function Mo(t, A = "createCoValue") {
   if (!t || typeof t != "string")
     throw new Error(`[${A}] Schema name is REQUIRED.`);
-  if (!(Je(t) || t.startsWith("co_z") || yn(t)))
+  if (!(qe(t) || t.startsWith("co_z") || yn(t)))
     throw new Error(`[${A}] Schema '${t}' not found in registry. Available: AccountSchema, GroupSchema, ProfileSchema`);
 }
-const yA = {
+const SA = {
   ACCOUNT: "@account",
   GROUP: "@group",
   META_SCHEMA: "@metaSchema"
 };
-function Je(t) {
-  return t === yA.ACCOUNT || t === yA.GROUP || t === yA.META_SCHEMA;
+function qe(t) {
+  return t === SA.ACCOUNT || t === SA.GROUP || t === SA.META_SCHEMA;
 }
-function st(t) {
-  return !Je(t) && !t.startsWith("co_z") && !yn(t) && console.warn(`[createSchemaMeta] Schema '${t}' not found in registry`), {
+function gt(t) {
+  return !qe(t) && !t.startsWith("co_z") && !yn(t) && console.warn(`[createSchemaMeta] Schema '${t}' not found in registry`), {
     $schema: t
     // Schema name, co-id, or exception schema
   };
@@ -9301,17 +9301,17 @@ function rI(t) {
 function nI(t) {
   return rI(t);
 }
-const jt = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const $t = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  EXCEPTION_SCHEMAS: yA,
+  EXCEPTION_SCHEMAS: SA,
   SCHEMA_REGISTRY: wn,
-  assertSchemaValidForCreate: So,
-  createSchemaMeta: st,
-  getAllSchemas: mo,
+  assertSchemaValidForCreate: Mo,
+  createSchemaMeta: gt,
+  getAllSchemas: No,
   getSchema: nI,
   getSchemaFromCoValue: rI,
   hasSchemaInRegistry: yn,
-  isExceptionSchema: Je
+  isExceptionSchema: qe
 }, Symbol.toStringTag, { value: "Module" }));
 function MQ(t) {
   const A = t?.id ?? (typeof crypto < "u" && crypto.randomUUID ? crypto.randomUUID() : "");
@@ -9320,12 +9320,12 @@ function MQ(t) {
 async function Dn(t, A, e) {
   const i = e?.name?.trim(), o = i && i.length > 0 ? i : `Traveler ${MQ(t)}`;
   if (!t.get("profile")) {
-    const n = st("ProfileSchema"), s = A.createGroup();
+    const n = gt("ProfileSchema"), s = A.createGroup();
     s.addMember("everyone", "reader");
     const a = s.createMap({ name: o }, n);
     t.set("profile", a.id);
   }
-  await GQ(t, A), await FQ(t, A);
+  await GQ(t, A), await bQ(t, A);
 }
 async function GQ(t, A) {
   const e = t.get?.("sparks");
@@ -9360,7 +9360,7 @@ async function GQ(t, A) {
   }
   r > 0 && console.log(`   🔄 Migrated capabilities sparkGuardian -> guardian (${r} sparks)`);
 }
-async function FQ(t, A) {
+async function bQ(t, A) {
   const e = t.get?.("sparks");
   if (!e || typeof e != "string" || !e.startsWith("co_z")) return;
   const i = A.getCoValue(e) || await A.loadCoValueCore(e);
@@ -9399,18 +9399,18 @@ async function FQ(t, A) {
     if (!E?.isAvailable?.() || !w?.isAvailable?.()) continue;
     const y = E.getCurrentContent?.(), m = w.getCurrentContent?.();
     if (!y?.createMap || !m) continue;
-    const { EXCEPTION_SCHEMAS: k } = await Promise.resolve().then(() => jt), b = { $schema: k.META_SCHEMA }, x = A.createGroup();
-    x.extend(y, "extend"), x.extend(m, "reader");
-    const j = x.createMap({}, b), J = typeof A.getCurrentAccountOrAgentID == "function" ? A.getCurrentAccountOrAgentID() : t?.id ?? t?.$jazz?.id;
+    const { EXCEPTION_SCHEMAS: k } = await Promise.resolve().then(() => $t), F = { $schema: k.META_SCHEMA }, L = A.createGroup();
+    L.extend(y, "extend"), L.extend(m, "reader");
+    const j = L.createMap({}, F), J = typeof A.getCurrentAccountOrAgentID == "function" ? A.getCurrentAccountOrAgentID() : t?.id ?? t?.$jazz?.id;
     try {
-      const { removeGroupMember: W } = await Promise.resolve().then(() => de);
-      await W(x, J);
+      const { removeGroupMember: $ } = await Promise.resolve().then(() => ue);
+      await $(L, J);
     } catch {
     }
     C.set("humans", j.id), console.log(`   🔄 Created spark.registries.humans for spark ${n}`);
   }
 }
-function bQ(t) {
+function FQ(t) {
   t.addKeyword({
     keyword: "$co",
     macro: (A) => ({
@@ -9449,14 +9449,14 @@ function bQ(t) {
     }
   });
 }
-const ko = /^@[a-zA-Z0-9_-]+\/schema\//, sI = /^@[a-zA-Z0-9_-]+\/vibe\//;
-function NA(t) {
-  return typeof t == "string" && ko.test(t);
+const Go = /^@[a-zA-Z0-9_-]+\/schema\//, sI = /^@[a-zA-Z0-9_-]+\/vibe\//;
+function GA(t) {
+  return typeof t == "string" && Go.test(t);
 }
 function aI(t) {
   return typeof t == "string" && sI.test(t);
 }
-const RQ = "https://json-schema.org/draft/2020-12/schema", vQ = "@maia/schema/meta", KQ = { "https://json-schema.org/draft/2020-12/vocab/core": !0, "https://json-schema.org/draft/2020-12/vocab/applicator": !0, "https://json-schema.org/draft/2020-12/vocab/unevaluated": !0, "https://json-schema.org/draft/2020-12/vocab/validation": !0, "https://json-schema.org/draft/2020-12/vocab/meta-data": !0, "https://json-schema.org/draft/2020-12/vocab/format-annotation": !0, "https://json-schema.org/draft/2020-12/vocab/content": !0, "https://maiaos.dev/vocab/cojson": !0 }, YQ = [{ $ref: "https://json-schema.org/draft/2020-12/schema" }], UQ = "@maia/schema/meta", JQ = ["object", "boolean"], HQ = !1, qQ = { title: { type: "string", description: "Human-readable schema title (required)" }, cotype: { enum: ["comap", "colist", "costream"], description: "CRDT type at schema root. Schemas can be comap (with properties), colist (with items), or costream (with items). CoText is modeled as colist with string items." }, $co: { type: "string", anyOf: [{ pattern: "^co_z[a-zA-Z0-9]+$", description: "Co-id reference (after transformation)" }, { pattern: "^@[a-zA-Z0-9_-]+/schema/", description: "Human-readable schema ID (before transformation)" }], description: "Reference to schema that this property value must conform to (human-readable ID or co-id). Use $co in properties to reference separate CoValues, never use cotype in properties." }, indexing: { type: "boolean", default: !1, description: "Whether instances of this schema should be indexed in account.os.{schemaCoId}" } }, xQ = ["title", "cotype"], LQ = { comap: { description: "CoMap - CRDT-based collaborative map/object", type: "object", properties: {}, additionalProperties: { anyOf: [{ type: "string", description: "Standard string value" }, { type: "number", description: "Standard number value" }, { type: "integer", description: "Standard integer value" }, { type: "boolean", description: "Standard boolean value" }, { type: "null", description: "Null value" }, { type: "object", description: "Nested object value" }, { type: "array", description: "Array value" }, { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Co-id reference to another CoValue" }, { type: "string", pattern: "^key_[a-zA-Z0-9_]+$", description: "Key reference" }, { type: "string", pattern: "^sealed_", description: "Sealed/encrypted value" }] } }, costream: { description: "CoStream - CRDT-based append-only stream", type: "array", items: { anyOf: [{ type: "object", description: "Stream item object" }, { type: "string", description: "Stream item string" }, { type: "number", description: "Stream item number" }, { type: "boolean", description: "Stream item boolean" }, { type: "null", description: "Stream item null" }] } }, colist: { description: "CoList - CRDT-based collaborative list/array", type: "array", items: { anyOf: [{ type: "object", description: "List item object" }, { type: "string", description: "List item string (can be co-id reference)" }, { type: "number", description: "List item number" }, { type: "integer", description: "List item integer" }, { type: "boolean", description: "List item boolean" }, { type: "null", description: "List item null" }, { type: "array", description: "Nested array" }] } } }, so = {
+const RQ = "https://json-schema.org/draft/2020-12/schema", vQ = "@maia/schema/meta", KQ = { "https://json-schema.org/draft/2020-12/vocab/core": !0, "https://json-schema.org/draft/2020-12/vocab/applicator": !0, "https://json-schema.org/draft/2020-12/vocab/unevaluated": !0, "https://json-schema.org/draft/2020-12/vocab/validation": !0, "https://json-schema.org/draft/2020-12/vocab/meta-data": !0, "https://json-schema.org/draft/2020-12/vocab/format-annotation": !0, "https://json-schema.org/draft/2020-12/vocab/content": !0, "https://maiaos.dev/vocab/cojson": !0 }, YQ = [{ $ref: "https://json-schema.org/draft/2020-12/schema" }], UQ = "@maia/schema/meta", JQ = ["object", "boolean"], HQ = !1, qQ = { title: { type: "string", description: "Human-readable schema title (required)" }, cotype: { enum: ["comap", "colist", "costream"], description: "CRDT type at schema root. Schemas can be comap (with properties), colist (with items), or costream (with items). CoText is modeled as colist with string items." }, $co: { type: "string", anyOf: [{ pattern: "^co_z[a-zA-Z0-9]+$", description: "Co-id reference (after transformation)" }, { pattern: "^@[a-zA-Z0-9_-]+/schema/", description: "Human-readable schema ID (before transformation)" }], description: "Reference to schema that this property value must conform to (human-readable ID or co-id). Use $co in properties to reference separate CoValues, never use cotype in properties." }, indexing: { type: "boolean", default: !1, description: "Whether instances of this schema should be indexed in account.os.{schemaCoId}" } }, xQ = ["title", "cotype"], LQ = { comap: { description: "CoMap - CRDT-based collaborative map/object", type: "object", properties: {}, additionalProperties: { anyOf: [{ type: "string", description: "Standard string value" }, { type: "number", description: "Standard number value" }, { type: "integer", description: "Standard integer value" }, { type: "boolean", description: "Standard boolean value" }, { type: "null", description: "Null value" }, { type: "object", description: "Nested object value" }, { type: "array", description: "Array value" }, { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Co-id reference to another CoValue" }, { type: "string", pattern: "^key_[a-zA-Z0-9_]+$", description: "Key reference" }, { type: "string", pattern: "^sealed_", description: "Sealed/encrypted value" }] } }, costream: { description: "CoStream - CRDT-based append-only stream", type: "array", items: { anyOf: [{ type: "object", description: "Stream item object" }, { type: "string", description: "Stream item string" }, { type: "number", description: "Stream item number" }, { type: "boolean", description: "Stream item boolean" }, { type: "null", description: "Stream item null" }] } }, colist: { description: "CoList - CRDT-based collaborative list/array", type: "array", items: { anyOf: [{ type: "object", description: "List item object" }, { type: "string", description: "List item string (can be co-id reference)" }, { type: "number", description: "List item number" }, { type: "integer", description: "List item integer" }, { type: "boolean", description: "List item boolean" }, { type: "null", description: "List item null" }, { type: "array", description: "Nested array" }] } } }, go = {
   $schema: RQ,
   $id: vQ,
   $vocabulary: KQ,
@@ -9468,7 +9468,7 @@ const RQ = "https://json-schema.org/draft/2020-12/schema", vQ = "@maia/schema/me
   required: xQ,
   $defs: LQ
 };
-function Ge(t) {
+function Fe(t) {
   return (t || []).map((A) => ({
     instancePath: A.instancePath || "/",
     schemaPath: A.schemaPath || "",
@@ -9486,7 +9486,7 @@ ${o}`);
   }
   return { valid: !1, errors: t };
 }
-async function ne(t, A) {
+async function ae(t, A) {
   const e = t.opts.validateSchema;
   t.opts.validateSchema = !1;
   try {
@@ -9495,7 +9495,7 @@ async function ne(t, A) {
     t.opts.validateSchema = e;
   }
 }
-class Ke {
+class Ue {
   constructor(A = {}) {
     this.ajv = null, this.ajvPromise = null, this.initialized = !1, this.schemas = /* @__PURE__ */ new Map(), this.schemaResolver = null, this.registrySchemas = A.registrySchemas || null;
   }
@@ -9519,11 +9519,11 @@ class Ke {
       this.ajvPromise = (async () => {
         let A;
         try {
-          const e = await Promise.resolve().then(() => Q0);
+          const e = await Promise.resolve().then(() => J0);
           A = e.default || e.Ajv2020 || e;
         } catch {
           try {
-            A = (await Promise.resolve().then(() => S0)).default;
+            A = (await Promise.resolve().then(() => z0)).default;
           } catch {
             try {
               const o = await import("https://esm.sh/ajv@8.12.0/dist/2020.js");
@@ -9585,7 +9585,7 @@ class Ke {
               return !1;
             }
           }
-        }), this._loadMetaSchema(), this._loadCoJsonMetaSchema(), bQ(this.ajv), await this._loadCoTypeDefinitions(), this.registrySchemas && await this.registerAllSchemas(this.registrySchemas), this.initialized = !0;
+        }), this._loadMetaSchema(), this._loadCoJsonMetaSchema(), FQ(this.ajv), await this._loadCoTypeDefinitions(), this.registrySchemas && await this.registerAllSchemas(this.registrySchemas), this.initialized = !0;
       })(), await this.ajvPromise;
     }
   }
@@ -9594,23 +9594,23 @@ class Ke {
    * @returns {Object} Meta schema object
    */
   static getMetaSchema() {
-    return so;
+    return go;
   }
   /**
    * Get the base JSON Schema Draft 2020-12 meta-schema
    * @returns {Object} Meta schema object
    */
   static getBaseMetaSchema() {
-    return so;
+    return go;
   }
   /**
    * Load JSON Schema Draft 2020-12 meta-schema (hardcoded)
    * @private
    */
   _loadMetaSchema() {
-    const A = "https://json-schema.org/draft/2020-12/schema", e = "@maia/schema/meta-schema", i = Ke.getBaseMetaSchema();
+    const A = "https://json-schema.org/draft/2020-12/schema", e = "@maia/schema/meta-schema", i = Ue.getBaseMetaSchema();
     try {
-      ne(this.ajv, () => {
+      ae(this.ajv, () => {
         if (this.ajv.getSchema(A) || this.ajv.addMetaSchema(i, i.$id), !this.ajv.getSchema(e)) {
           const o = JSON.parse(JSON.stringify(i));
           o.$id = e, this.ajv.addMetaSchema(o, e);
@@ -9630,8 +9630,8 @@ class Ke {
   _loadCoJsonMetaSchema() {
     const A = "@maia/schema/meta";
     try {
-      ne(this.ajv, () => {
-        this.ajv.getSchema(A) || this.ajv.addMetaSchema(so, A);
+      ae(this.ajv, () => {
+        this.ajv.getSchema(A) || this.ajv.addMetaSchema(go, A);
       });
     } catch (e) {
       (!e.message || !e.message.includes("already exists")) && console.warn("[ValidationEngine] Failed to add CoJSON meta-schema:", e.message);
@@ -9687,7 +9687,7 @@ class Ke {
         const o = this._determineMetaSchemaType(e);
         if (i = this.ajv.getSchema(o), !i && e)
           try {
-            ne(this.ajv, () => {
+            ae(this.ajv, () => {
               this.ajv.addSchema(e, A), o !== A && this.ajv.addSchema(e, o), i = this.ajv.getSchema(o);
             });
           } catch {
@@ -9715,13 +9715,13 @@ class Ke {
       return console.warn(`[ValidationEngine] Meta schema '${e}' not available, skipping schema validation`), { valid: !0, errors: null };
     const n = "https://json-schema.org/draft/2020-12/schema";
     if (A.$id === n || A.$id === "@maia/schema/meta" || A.$schema === n && A.$id && A.$id.includes("schema"))
-      return ne(this.ajv, () => {
+      return ae(this.ajv, () => {
         if (r(A))
           return { valid: !0, errors: null };
         const C = r.errors || [];
         return {
           valid: !1,
-          errors: Ge(C)
+          errors: Fe(C)
         };
       });
     if (r(A))
@@ -9729,7 +9729,7 @@ class Ke {
     const g = r.errors || [];
     return {
       valid: !1,
-      errors: Ge(g)
+      errors: Fe(g)
     };
   }
   /**
@@ -9791,9 +9791,9 @@ class Ke {
    * @param {string} coId - Co-id of the schema
    */
   _registerResolvedSchema(A, e, i) {
-    if (e && NA(e) && console.warn(`[ValidationEngine] Warning: Registering schema with @maia/schema/ reference: ${e}. This should be a co-id after seeding. Schema may be from source files instead of database.`), e !== i && e && !this.ajv.getSchema(e))
+    if (e && GA(e) && console.warn(`[ValidationEngine] Warning: Registering schema with @maia/schema/ reference: ${e}. This should be a co-id after seeding. Schema may be from source files instead of database.`), e !== i && e && !this.ajv.getSchema(e))
       try {
-        ne(this.ajv, () => {
+        ae(this.ajv, () => {
           this.ajv.addSchema(A, e);
         });
       } catch (o) {
@@ -9801,7 +9801,7 @@ class Ke {
       }
     if (i && !this.ajv.getSchema(i))
       try {
-        ne(this.ajv, () => {
+        ae(this.ajv, () => {
           this.ajv.addSchema(A, i);
         });
       } catch (o) {
@@ -9819,7 +9819,7 @@ class Ke {
    */
   async _resolveCoReference(A, e, i, o) {
     if (!(e.has(A) || i.has(A))) {
-      A && NA(A) && console.warn(`[ValidationEngine] Warning: Resolving $co reference with @maia/schema/ pattern: ${A}. This should be a co-id after seeding. The schema may not have been transformed correctly.`), i.add(A);
+      A && GA(A) && console.warn(`[ValidationEngine] Warning: Resolving $co reference with @maia/schema/ pattern: ${A}. This should be a co-id after seeding. The schema may not have been transformed correctly.`), i.add(A);
       try {
         let r = await this.schemaResolver(A);
         if (r && r.$coId && !r.$schema && (r = await this.schemaResolver(r.$coId)), !r) {
@@ -9848,7 +9848,7 @@ class Ke {
    * @param {Object} schema - Schema object
    */
   async _resolveAndRegisterSchemaDependencies(A) {
-    !A || typeof A != "object" || !this.schemaResolver || await ne(this.ajv, async () => {
+    !A || typeof A != "object" || !this.schemaResolver || await ae(this.ajv, async () => {
       const e = /* @__PURE__ */ new Set(), i = /* @__PURE__ */ new Set(), o = async (r) => {
         if (!(!r || typeof r != "object")) {
           r.$schema && typeof r.$schema == "string" && r.$schema.startsWith("co_z") && await this._resolveSchemaReference(r.$schema, e, i, o), r.$co && typeof r.$co == "string" && await this._resolveCoReference(r.$co, e, i, o);
@@ -9888,7 +9888,7 @@ class Ke {
     const r = i.errors || [];
     return {
       valid: !1,
-      errors: Ge(r)
+      errors: Fe(r)
     };
   }
   /**
@@ -9921,7 +9921,7 @@ ${n}`
     };
     if (!this.ajv.getSchema(e.$id))
       try {
-        ne(this.ajv, () => {
+        ae(this.ajv, () => {
           this.ajv.addSchema(e, e.$id);
         });
       } catch (i) {
@@ -9987,7 +9987,7 @@ ${n}`
       const n = o.errors || [];
       return {
         valid: !1,
-        errors: Ge(n)
+        errors: Fe(n)
       };
     } catch (r) {
       return {
@@ -9997,7 +9997,7 @@ ${n}`
     }
   }
 }
-let ZA = null, Kr = null;
+let XA = null, Yr = null;
 function gI(t) {
   if (!t || typeof t != "object")
     throw new Error("[setSchemaResolver] Options object required: { dbEngine }");
@@ -10008,7 +10008,7 @@ function gI(t) {
     try {
       if (!A.backend)
         throw new Error("[SchemaResolver] dbEngine.backend is required");
-      const { resolve: o } = await Promise.resolve().then(() => bo), r = await o(A.backend, i, { returnType: "schema" });
+      const { resolve: o } = await Promise.resolve().then(() => Ko), r = await o(A.backend, i, { returnType: "schema" });
       if (!r)
         throw new Error(`[SchemaResolver] Schema ${i} not found`);
       return r;
@@ -10016,16 +10016,16 @@ function gI(t) {
       throw new Error(`[SchemaResolver] Failed to load schema ${i}: ${o.message}`);
     }
   };
-  Kr = e, ZA && ZA.setSchemaResolver(e);
+  Yr = e, XA && XA.setSchemaResolver(e);
 }
-async function No(t = null) {
+async function bo(t = null) {
   let A = null;
   t && typeof t == "object" && (A = t.registrySchemas || null);
   let e = null;
-  return Kr && (e = Kr), ZA ? A && !ZA.registrySchemas && (ZA = new Ke({ registrySchemas: A })) : ZA = new Ke({ registrySchemas: A }), e && !ZA.schemaResolver && ZA.setSchemaResolver(e), await ZA.initialize(), ZA;
+  return Yr && (e = Yr), XA ? A && !XA.registrySchemas && (XA = new Ue({ registrySchemas: A })) : XA = new Ue({ registrySchemas: A }), e && !XA.schemaResolver && XA.setSchemaResolver(e), await XA.initialize(), XA;
 }
-async function Vt(t, A, e = "", i = !1) {
-  const o = await No();
+async function Wt(t, A, e = "", i = !1) {
+  const o = await bo();
   await o.initialize();
   try {
     await o._resolveAndRegisterSchemaDependencies(t);
@@ -10037,22 +10037,22 @@ async function Vt(t, A, e = "", i = !1) {
       r = o.ajv.compile(t);
     if (r(A))
       return { valid: !0, errors: null };
-    const s = Ge(r.errors || []);
+    const s = Fe(r.errors || []);
     return ys(s, e, i);
   } catch (r) {
     if (r.message?.includes("already exists") && t.$id) {
       const n = o.ajv.getSchema(t.$id);
       if (n) {
         if (n(A)) return { valid: !0, errors: null };
-        const s = Ge(n.errors || []);
+        const s = Fe(n.errors || []);
         return ys(s, e, i);
       }
     }
     throw new Error(`[Validation] Failed to compile schema for ${e}: ${r.message}`);
   }
 }
-async function at(t, A, e = "") {
-  return await Vt(t, A, e, !0);
+async function It(t, A, e = "") {
+  return await Wt(t, A, e, !0);
 }
 function II(t, A) {
   if (!Array.isArray(A))
@@ -10063,35 +10063,35 @@ function II(t, A) {
         throw new Error(`[validateItems] Items must be co-ids when schema.items.$co is specified, got: ${e}`);
   }
 }
-function EA(t, A) {
+function dA(t, A) {
   if (!t)
     throw new Error(`[${A}] coId required`);
   if (!t.startsWith("co_z"))
     throw new Error(`[${A}] coId must be a valid co-id (co_z...), got: ${t}`);
 }
-function BA(t, A, e) {
+function QA(t, A, e) {
   if (t == null)
     throw new Error(`[${e}] ${A} required`);
 }
-function JA(t, A, e = "") {
+function qA(t, A, e = "") {
   if (!t) {
     const i = e ? ` (${e})` : "";
     throw new Error(`[${A}] dbEngine required${i}`);
   }
 }
-async function $t(t, A, e, i, o = {}) {
-  const { dbEngine: r, registrySchemas: n, getAllSchemas: s } = o, { resolve: a } = await Promise.resolve().then(() => bo);
+async function zt(t, A, e, i, o = {}) {
+  const { dbEngine: r, registrySchemas: n, getAllSchemas: s } = o, { resolve: a } = await Promise.resolve().then(() => Ko);
   if (A.startsWith("co_z")) {
     if (!r)
       throw new Error(`[${i}] dbEngine is REQUIRED for co-id schema validation. Schema: ${A}. Pass dbEngine in options.`);
     const g = await a(t, A, { returnType: "schema" });
     if (!g)
       throw new Error(`[${i}] Schema not found in database: ${A}`);
-    return await at(g, e, `${i} for schema ${A}`), g;
+    return await It(g, e, `${i} for schema ${A}`), g;
   } else {
     if (!s || typeof s != "function")
       throw new Error(`[${i}] getAllSchemas function is REQUIRED for name-based schema validation. Schema: ${A}. This is only for migrations/seeding.`);
-    const g = s(), c = await (await No({
+    const g = s(), c = await (await bo({
       registrySchemas: n || g
     })).validateData(A, e);
     if (!c.valid) {
@@ -10120,17 +10120,17 @@ async function cI(t, A, e) {
 const TQ = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   ensureCoValueAvailable: cI,
-  formatValidationErrors: Ge,
-  getValidationEngine: No,
-  loadSchemaAndValidate: $t,
-  requireDbEngine: JA,
-  requireParam: BA,
+  formatValidationErrors: Fe,
+  getValidationEngine: bo,
+  loadSchemaAndValidate: zt,
+  requireDbEngine: qA,
+  requireParam: QA,
   setSchemaResolver: gI,
-  validateAgainstSchema: Vt,
-  validateAgainstSchemaOrThrow: at,
-  validateCoId: EA,
+  validateAgainstSchema: Wt,
+  validateAgainstSchemaOrThrow: It,
+  validateCoId: dA,
   validateItems: II,
-  withSchemaValidationDisabled: ne
+  withSchemaValidationDisabled: ae
 }, Symbol.toStringTag, { value: "Module" }));
 async function CI(t, A = {}, e, i = null, o = null) {
   let r = t;
@@ -10140,22 +10140,22 @@ async function CI(t, A = {}, e, i = null, o = null) {
     const g = o?.backend;
     if (!g)
       throw new Error("[createCoMap] dbEngine.backend required when passing account (to resolve @maia spark group)");
-    const { getSparkGroup: I } = await Promise.resolve().then(() => de);
+    const { getSparkGroup: I } = await Promise.resolve().then(() => ue);
     if (r = await I(g, "@maia"), !r)
       throw new Error("[createCoMap] @maia spark group not found. Ensure schemaMigration has run.");
   }
-  if (e === yA.META_SCHEMA) {
-    const a = { $schema: yA.META_SCHEMA };
+  if (e === SA.META_SCHEMA) {
+    const a = { $schema: SA.META_SCHEMA };
     return r.createMap(A, a);
   }
-  So(e, "createCoMap"), Je(e) || await $t(
+  Mo(e, "createCoMap"), qe(e) || await zt(
     o?.backend || null,
     e,
     A,
     "createCoMap",
-    { dbEngine: o, getAllSchemas: mo }
+    { dbEngine: o, getAllSchemas: No }
   );
-  const n = st(e);
+  const n = gt(e);
   return r.createMap(A, n);
 }
 async function BI(t, A = [], e, i = null, o = null) {
@@ -10164,18 +10164,18 @@ async function BI(t, A = [], e, i = null, o = null) {
     const g = o?.backend;
     if (!g)
       throw new Error("[createCoList] dbEngine.backend required when passing account (to resolve @maia spark group)");
-    const { getSparkGroup: I } = await Promise.resolve().then(() => de);
+    const { getSparkGroup: I } = await Promise.resolve().then(() => ue);
     if (r = await I(g, "@maia"), !r)
       throw new Error("[createCoList] @maia spark group not found. Ensure schemaMigration has run.");
   }
-  So(e, "createCoList"), Je(e) || await $t(
+  Mo(e, "createCoList"), qe(e) || await zt(
     o?.backend || null,
     e,
     A,
     "createCoList",
-    { dbEngine: o, getAllSchemas: mo }
+    { dbEngine: o, getAllSchemas: No }
   );
-  const n = st(e);
+  const n = gt(e);
   return r.createList(A, n);
 }
 async function QI(t, A, e = null, i = null) {
@@ -10184,12 +10184,12 @@ async function QI(t, A, e = null, i = null) {
     const s = i?.backend;
     if (!s)
       throw new Error("[createCoStream] dbEngine.backend required when passing account");
-    const { getSparkGroup: a } = await Promise.resolve().then(() => de);
+    const { getSparkGroup: a } = await Promise.resolve().then(() => ue);
     if (o = await a(s, "@maia"), !o)
       throw new Error("[createCoStream] @maia spark group not found. Ensure schemaMigration has run.");
   }
-  So(A, "createCoStream");
-  const r = st(A);
+  Mo(A, "createCoStream");
+  const r = gt(A);
   return o.createStream(r);
 }
 async function EI(t, A) {
@@ -10202,7 +10202,7 @@ async function EI(t, A) {
 async function mn(t, A, e) {
   if (!A || typeof A != "string" || !A.startsWith("co_z")) return null;
   const i = await t.read(null, A);
-  await dA(i, A, 15e3);
+  await hA(i, A, 15e3);
   const o = t.getCoValue(A);
   if (!o || !t.isAvailable(o)) return null;
   const r = t.getCurrentContent(o);
@@ -10210,7 +10210,7 @@ async function mn(t, A, e) {
   const n = r.get("capabilities");
   if (!n || typeof n != "string" || !n.startsWith("co_z")) return null;
   const s = await t.read(null, n);
-  await dA(s, n, 15e3);
+  await hA(s, n, 15e3);
   const a = t.getCoValue(n);
   if (!a || !t.isAvailable(a)) return null;
   const g = t.getCurrentContent(a);
@@ -10290,7 +10290,7 @@ async function vA(t, A) {
   const n = r.value?.os || null;
   return n && (t._cachedMaiaOsId = n), n;
 }
-async function Mo(t, A) {
+async function Fo(t, A) {
   const e = t.account.get("sparks");
   if (!e?.startsWith("co_z")) return null;
   const i = await t.read(null, e);
@@ -10334,7 +10334,7 @@ async function dI(t, A, e) {
   if (!s || typeof s.set != "function") throw new Error("[setSparkVibesId] Spark content not available");
   s.set("vibes", e);
 }
-async function Go(t) {
+async function Ro(t) {
   return kn(t, "@maia");
 }
 function Nn(t) {
@@ -10460,7 +10460,7 @@ function Mn(t) {
   }
   return A;
 }
-function Yr(t) {
+function Ur(t) {
   if (!t || typeof t.addMember != "function")
     return null;
   try {
@@ -10499,7 +10499,7 @@ function hI(t, A) {
     (n) => (n.role === "admin" || n.role === "manager") && n.id !== A
   ).length > 0 || Mn(t).some((n) => n.role === "admin" || n.role === "extend"));
 }
-async function Fn(t, A) {
+async function bn(t, A) {
   const e = typeof A == "string" ? A : A?.id ?? A?.$jazz?.id;
   if (!e || !e.startsWith("co_z"))
     throw new Error("[removeGroupMember] member must be co-id (co_z...) or account content with .id");
@@ -10517,7 +10517,7 @@ async function fI(t, A, e, i) {
   else
     throw new Error("[CoJSONBackend] Group does not support role changes");
 }
-const de = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const ue = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   addGroupMember: Gn,
   extractAccountMembers: Nn,
@@ -10525,14 +10525,14 @@ const de = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   extractGroupMembers: Mn,
   getCapabilityGroupIdFromOsId: mn,
   getGroup: EI,
-  getGroupInfoFromGroup: Yr,
-  getMaiaGroup: Go,
+  getGroupInfoFromGroup: Ur,
+  getMaiaGroup: Ro,
   getSparkCapabilityGroupId: lI,
   getSparkCapabilityGroupIdFromSparkCoId: Sn,
   getSparkGroup: kn,
   getSparkOsId: vA,
-  getSparkVibesId: Mo,
-  removeGroupMember: Fn,
+  getSparkVibesId: Fo,
+  removeGroupMember: bn,
   setGroupMemberRole: fI,
   setSparkVibesId: dI,
   wouldLeaveNoAdmins: hI
@@ -10552,7 +10552,7 @@ async function OQ(t, A) {
     "[createCoValueForSpark] Invalid context. Provide backend (with node, account) + spark, or { node, account, guardian }."
   );
 }
-async function hA(t, A, e) {
+async function EA(t, A, e) {
   const { schema: i, cotype: o, data: r, dbEngine: n } = e;
   if (!i || typeof i != "string")
     throw new Error("[createCoValueForSpark] options.schema is required");
@@ -10579,19 +10579,19 @@ async function hA(t, A, e) {
   }
   const C = typeof s.getCurrentAccountOrAgentID == "function" ? s.getCurrentAccountOrAgentID() : a?.id ?? a?.$jazz?.id;
   try {
-    await Fn(I, C);
+    await bn(I, C);
   } catch (B) {
     throw new Error(`[createCoValueForSpark] Failed to remove account from group: ${B.message}`);
   }
   return { coValue: c };
 }
-const be = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const ve = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  createCoValueForSpark: hA
+  createCoValueForSpark: EA
 }, Symbol.toStringTag, { value: "Module" }));
 async function PQ(t, A, e) {
   try {
-    const i = await gA(t, A, { waitForAvailable: !0 });
+    const i = await sA(t, A, { waitForAvailable: !0 });
     if (i && t.isAvailable(i)) {
       const o = t.getCurrentContent(i);
       if (o && o.get) {
@@ -10614,7 +10614,7 @@ async function PQ(t, A, e) {
     return "comap";
   throw new Error(`[CoJSONBackend] Cannot determine cotype from data type for schema ${A}`);
 }
-async function bn(t, A, e, i = {}) {
+async function Fn(t, A, e, i = {}) {
   const o = i.spark ?? "@maia", r = await PQ(t, A, e);
   if (!t.account)
     throw new Error("[CoJSONBackend] Account required for create");
@@ -10622,7 +10622,7 @@ async function bn(t, A, e, i = {}) {
     throw new Error("[CoJSONBackend] Data must be object for comap");
   if (r === "colist" && !Array.isArray(e))
     throw new Error("[CoJSONBackend] Data must be array for colist");
-  const { coValue: n } = await hA(t, o, {
+  const { coValue: n } = await EA(t, o, {
     schema: A,
     cotype: r,
     data: r === "comap" || r === "colist" ? e : void 0,
@@ -10649,46 +10649,46 @@ async function bn(t, A, e, i = {}) {
 }
 const Rn = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  create: bn
+  create: Fn
 }, Symbol.toStringTag, { value: "Module" }));
 function pI(t, A, e = {}) {
   if (!t || typeof t != "object")
     return t;
   const i = t.$schema;
   if (typeof i == "string" && /\/schema\/meta$/.test(i) || typeof i == "string" && i.startsWith("https://json-schema.org/") || typeof i == "string" && i.startsWith("https://"))
-    return Fe(t, A);
+    return Re(t, A);
   const r = t.actor !== void 0 || t.context !== void 0 || t.view !== void 0 || t.state !== void 0 || t.brand !== void 0 || t.style !== void 0 || t.inbox !== void 0 || t.subscribers !== void 0 || t.name !== void 0 && t.description !== void 0;
-  return i && NA(i) && !/\/schema\/meta$/.test(i) || r ? Ds(t, A, e) : t.properties !== void 0 || t.$defs !== void 0 || t.items !== void 0 && typeof t.items == "object" && !Array.isArray(t.items) || t.cotype !== void 0 ? Fe(t, A) : Ds(t, A, e);
+  return i && GA(i) && !/\/schema\/meta$/.test(i) || r ? Ds(t, A, e) : t.properties !== void 0 || t.$defs !== void 0 || t.items !== void 0 && typeof t.items == "object" && !Array.isArray(t.items) || t.cotype !== void 0 ? Re(t, A) : Ds(t, A, e);
 }
-function Fe(t, A) {
+function Re(t, A) {
   if (!t || typeof t != "object")
     return t;
   const e = JSON.parse(JSON.stringify(t));
   if (e.$schema) {
     const o = e.$schema;
-    if (NA(o)) {
+    if (GA(o)) {
       const r = A.get(o);
       r && (e.$schema = r);
     }
   }
-  if (e.$id && typeof e.$id == "string" && (NA(e.$id) || e.$id.startsWith("https://"))) {
+  if (e.$id && typeof e.$id == "string" && (GA(e.$id) || e.$id.startsWith("https://"))) {
     const o = A.get(e.$id);
     o && (e.$id = o);
   }
   if (e.properties && jQ(e.properties, A), e.$defs)
     for (const [o, r] of Object.entries(e.$defs))
-      e.$defs[o] = Fe(r, A);
-  return Ur(e, A, e.$id || "root") > 0 && e.$id, e.items && (e.items = Fe(e.items, A)), e.additionalProperties && typeof e.additionalProperties == "object" && (e.additionalProperties = Fe(e.additionalProperties, A)), ["allOf", "anyOf", "oneOf"].forEach((o) => {
+      e.$defs[o] = Re(r, A);
+  return Jr(e, A, e.$id || "root") > 0 && e.$id, e.items && (e.items = Re(e.items, A)), e.additionalProperties && typeof e.additionalProperties == "object" && (e.additionalProperties = Re(e.additionalProperties, A)), ["allOf", "anyOf", "oneOf"].forEach((o) => {
     e[o] && Array.isArray(e[o]) && (e[o] = e[o].map(
-      (r) => Fe(r, A)
+      (r) => Re(r, A)
     ));
   }), e;
 }
 function jQ(t, A) {
   for (const [e, i] of Object.entries(t))
-    i && typeof i == "object" && (t[e] = Fe(i, A));
+    i && typeof i == "object" && (t[e] = Re(i, A));
 }
-function Ur(t, A, e = "") {
+function Jr(t, A, e = "") {
   if (!t || typeof t != "object")
     return 0;
   let i = 0;
@@ -10696,12 +10696,12 @@ function Ur(t, A, e = "") {
     const o = t.$co;
     if (o.startsWith("co_z"))
       return 0;
-    if (NA(o)) {
+    if (GA(o)) {
       const r = A.get(o);
       if (r)
         t.$co = r, i++;
       else {
-        const n = Array.from(A.keys()).filter((s) => NA(s)).slice(0, 10).join(", ");
+        const n = Array.from(A.keys()).filter((s) => GA(s)).slice(0, 10).join(", ");
         throw console.error(`[SchemaTransformer] ❌ No co-id found for $co reference at ${e || "root"}: ${o}. Available schema keys (first 10): ${n}`), new Error(`[SchemaTransformer] Failed to transform $co reference: ${o}. Schema must be registered before it can be referenced.`);
       }
     }
@@ -10710,11 +10710,11 @@ function Ur(t, A, e = "") {
     if (!(o === "$schema" || o === "$id" || o.startsWith("$")))
       if (r && typeof r == "object" && !Array.isArray(r)) {
         const n = e ? `${e}.${o}` : o;
-        i += Ur(r, A, n);
+        i += Jr(r, A, n);
       } else Array.isArray(r) && r.forEach((n, s) => {
         if (n && typeof n == "object") {
           const a = e ? `${e}.${o}[${s}]` : `${o}[${s}]`;
-          i += Ur(n, A, a);
+          i += Jr(n, A, a);
         }
       });
   return i;
@@ -10725,13 +10725,13 @@ function Ds(t, A, e = {}) {
   const i = JSON.parse(JSON.stringify(t));
   if (i.$schema) {
     const r = i.$schema;
-    if (NA(r)) {
+    if (GA(r)) {
       const n = A.get(r);
       n && (i.$schema = n);
     }
   }
   if (i.$id && typeof i.$id == "string" && !i.$id.startsWith("co_z")) {
-    const r = NA(i.$id) || i.$id.startsWith("vibe/") || i.$id.startsWith("actor/") || i.$id.startsWith("view/") || i.$id.startsWith("context/") || i.$id.startsWith("state/") || i.$id.startsWith("interface/") || i.$id.startsWith("style/") || i.$id.startsWith("brand/") || i.$id.startsWith("tool/"), n = A.get(i.$id);
+    const r = GA(i.$id) || i.$id.startsWith("vibe/") || i.$id.startsWith("actor/") || i.$id.startsWith("view/") || i.$id.startsWith("context/") || i.$id.startsWith("state/") || i.$id.startsWith("interface/") || i.$id.startsWith("style/") || i.$id.startsWith("brand/") || i.$id.startsWith("tool/"), n = A.get(i.$id);
     n ? i.$id = n : r && console.warn(`[SchemaTransformer] No co-id found for $id: ${i.$id}`);
   }
   const o = ["actor", "context", "view", "state", "brand", "style", "inbox", "subscribers"];
@@ -10819,32 +10819,32 @@ function Ds(t, A, e = {}) {
       if (!(!n || typeof n != "object")) {
         if (n.entry)
           if (n.entry.tool && n.entry.payload)
-            xt(n.entry.payload, A, jA);
+            Tt(n.entry.payload, A, VA);
           else if (n.entry.mapData && typeof n.entry.mapData == "object") {
             const s = n.entry.mapData;
             for (const [a, g] of Object.entries(s)) {
               if (g && typeof g == "object" && g.schema && typeof g.schema == "string") {
-                const I = nt(g.schema, A, `mapData.${a}.schema`);
+                const I = at(g.schema, A, `mapData.${a}.schema`);
                 I && (g.schema = I);
               }
-              g && typeof g == "object" && jA(g, A);
+              g && typeof g == "object" && VA(g, A);
             }
-          } else Array.isArray(n.entry) ? Jr(n.entry, A, jA) : n.entry.payload && xt(n.entry.payload, A, jA);
+          } else Array.isArray(n.entry) ? Hr(n.entry, A, VA) : n.entry.payload && Tt(n.entry.payload, A, VA);
         if (n.on && typeof n.on == "object")
           for (const [s, a] of Object.entries(n.on))
-            a && typeof a == "object" && Array.isArray(a.actions) && Jr(a.actions, A, jA);
+            a && typeof a == "object" && Array.isArray(a.actions) && Hr(a.actions, A, VA);
       }
   }
-  return jA(i, A), i;
+  return VA(i, A), i;
 }
-function nt(t, A, e = "") {
-  if (NA(t) && !t.startsWith("co_z")) {
+function at(t, A, e = "") {
+  if (GA(t) && !t.startsWith("co_z")) {
     const i = A.get(t);
     return i || (console.warn(`[SchemaTransformer] No co-id found for ${e} schema: ${t}. Make sure data collections are registered before transformation.`), null);
   }
   return t;
 }
-function qt(t, A, e = "") {
+function Lt(t, A, e = "") {
   if (t.match(/^@[^/]+.*\/actor\//) && !t.startsWith("co_z")) {
     const i = A.get(t);
     if (i)
@@ -10858,18 +10858,18 @@ function qt(t, A, e = "") {
 }
 function VQ(t, A) {
   if (!("key" in t && !("op" in t)) && t.schema && typeof t.schema == "string") {
-    const e = nt(t.schema, A, "query object");
+    const e = at(t.schema, A, "query object");
     e && (t.schema = e);
   }
 }
-function xt(t, A, e) {
+function Tt(t, A, e) {
   if (!(!t || typeof t != "object")) {
     if (e(t, A), t.schema && typeof t.schema == "string") {
-      const i = nt(t.schema, A, "tool payload");
+      const i = at(t.schema, A, "tool payload");
       i && (t.schema = i);
     }
     if (t.target && typeof t.target == "string") {
-      const i = qt(t.target, A, "tool payload");
+      const i = Lt(t.target, A, "tool payload");
       i && (t.target = i);
     }
   }
@@ -10877,32 +10877,32 @@ function xt(t, A, e) {
 function wI(t, A, e) {
   if (!(!t.payload || typeof t.payload != "object")) {
     if (t.payload.target && typeof t.payload.target == "string") {
-      const i = qt(t.payload.target, A, "tool action");
+      const i = Lt(t.payload.target, A, "tool action");
       i && (t.payload.target = i);
     }
     e(t.payload, A);
   }
 }
-function Jr(t, A, e) {
+function Hr(t, A, e) {
   for (let i = 0; i < t.length; i++) {
     const o = t[i];
     if (o && typeof o == "object")
       if (o.mapData && typeof o.mapData == "object")
         for (const [r, n] of Object.entries(o.mapData)) {
           if (n && typeof n == "object" && n.schema && typeof n.schema == "string") {
-            const s = nt(n.schema, A, `mapData.${r}.schema in array`);
+            const s = at(n.schema, A, `mapData.${r}.schema in array`);
             s && (n.schema = s);
           }
           n && typeof n == "object" && e(n, A);
         }
       else if (o.tool && typeof o.tool == "string" && o.payload && typeof o.payload == "object")
-        wI(o, A, e), xt(o.payload, A, e);
+        wI(o, A, e), Tt(o.payload, A, e);
       else if (o.payload && typeof o.payload == "object") {
         if (o.payload.target && typeof o.payload.target == "string") {
-          const r = qt(o.payload.target, A, "action payload.target in array");
+          const r = Lt(o.payload.target, A, "action payload.target in array");
           r && (o.payload.target = r);
         }
-        xt(o.payload, A, e);
+        Tt(o.payload, A, e);
       } else
         e(o, A);
     else if (typeof o == "string" && o.startsWith("@actor/") && !o.startsWith("co_z")) {
@@ -10911,12 +10911,12 @@ function Jr(t, A, e) {
     }
   }
 }
-function jA(t, A, e = 0) {
+function VA(t, A, e = 0) {
   if (!(!t || typeof t != "object" || Array.isArray(t))) {
     for (const [i, o] of Object.entries(t))
       if (!(i === "$schema" || i === "$id" || i.startsWith("$"))) {
         if (i === "schema" && typeof o == "string") {
-          const r = nt(o, A, "top-level schema field");
+          const r = at(o, A, "top-level schema field");
           r && (t[i] = r);
           continue;
         }
@@ -10927,7 +10927,7 @@ function jA(t, A, e = 0) {
                 continue;
               if (!n.match(/^@[^/]+.*\/actor\//))
                 throw new Error(`[SchemaTransformer] context.@actors[${r}] must use @namespace/actor/instance format, got: ${n}`);
-              const s = qt(n, A, `context.@actors[${r}]`);
+              const s = Lt(n, A, `context.@actors[${r}]`);
               s && (o[r] = s);
             }
           continue;
@@ -10935,7 +10935,7 @@ function jA(t, A, e = 0) {
         if (i === "actors" && o && typeof o == "object" && !Array.isArray(o))
           throw new Error('[SchemaTransformer] Legacy "actors" property found. Please migrate to "@actors" system property.');
         if (i === "target" && typeof o == "string") {
-          const r = qt(o, A, "target field");
+          const r = Lt(o, A, "target field");
           r && (t[i] = r);
           continue;
         }
@@ -10944,30 +10944,30 @@ function jA(t, A, e = 0) {
             const r = o.mapData;
             for (const [n, s] of Object.entries(r)) {
               if (s && typeof s == "object" && s.schema && typeof s.schema == "string") {
-                const a = nt(s.schema, A, `mapData.${n}.schema`);
+                const a = at(s.schema, A, `mapData.${n}.schema`);
                 a && (s.schema = a);
               }
-              s && typeof s == "object" && jA(s, A, e + 1);
+              s && typeof s == "object" && VA(s, A, e + 1);
             }
             continue;
-          } else o.schema && typeof o.schema == "string" && !("key" in o) && !("op" in o) ? VQ(o, A) : o.payload && typeof o.payload == "object" ? xt(o.payload, A, jA) : o.tool && typeof o.tool == "string" && o.payload && typeof o.payload == "object" ? wI(o, A, jA) : jA(o, A, e + 1);
-        else o && typeof o == "object" && Array.isArray(o) && Jr(o, A, jA);
+          } else o.schema && typeof o.schema == "string" && !("key" in o) && !("op" in o) ? VQ(o, A) : o.payload && typeof o.payload == "object" ? Tt(o.payload, A, VA) : o.tool && typeof o.tool == "string" && o.payload && typeof o.payload == "object" ? wI(o, A, VA) : VA(o, A, e + 1);
+        else o && typeof o == "object" && Array.isArray(o) && Hr(o, A, VA);
       }
   }
 }
-function Qo(t, A = "", e = {}) {
+function uo(t, A = "", e = {}) {
   const { checkSchemaReferences: i = !0, checkNestedCoTypes: o = !0 } = e, r = [];
   if (!t || typeof t != "object")
     return r;
-  if (i && (t.$co && typeof t.$co == "string" && NA(t.$co) && r.push(`Found @maia/schema/ reference in $co at ${A || "root"}: ${t.$co}. All $co references must be transformed to co-ids.`), t.$schema && typeof t.$schema == "string" && NA(t.$schema) && r.push(`Found @maia/schema/ reference in $schema at ${A || "root"}: ${t.$schema}. $schema must be transformed to co-id.`), t.$id && typeof t.$id == "string" && NA(t.$id) && r.push(`Found @maia/schema/ reference in $id at ${A || "root"}: ${t.$id}. $id must be transformed to co-id.`)), o && t.cotype && A !== "")
+  if (i && (t.$co && typeof t.$co == "string" && GA(t.$co) && r.push(`Found @maia/schema/ reference in $co at ${A || "root"}: ${t.$co}. All $co references must be transformed to co-ids.`), t.$schema && typeof t.$schema == "string" && GA(t.$schema) && r.push(`Found @maia/schema/ reference in $schema at ${A || "root"}: ${t.$schema}. $schema must be transformed to co-id.`), t.$id && typeof t.$id == "string" && GA(t.$id) && r.push(`Found @maia/schema/ reference in $id at ${A || "root"}: ${t.$id}. $id must be transformed to co-id.`)), o && t.cotype && A !== "")
     return r.push(`Nested co-type detected at ${A}. Use \`$co\` keyword to reference a separate CoValue entity instead.`), r;
   for (const [n, s] of Object.entries(t))
     if (s && typeof s == "object" && !Array.isArray(s)) {
-      const a = A ? `${A}.${n}` : n, g = Qo(s, a, e);
+      const a = A ? `${A}.${n}` : n, g = uo(s, a, e);
       r.push(...g);
     } else Array.isArray(s) && s.forEach((a, g) => {
       if (a && typeof a == "object") {
-        const I = A ? `${A}.${n}[${g}]` : `${n}[${g}]`, c = Qo(a, I, e);
+        const I = A ? `${A}.${n}[${g}]` : `${n}[${g}]`, c = uo(a, I, e);
         r.push(...c);
       }
     });
@@ -10976,7 +10976,7 @@ function Qo(t, A = "", e = {}) {
 const vn = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   transformForSeeding: pI,
-  validateSchemaStructure: Qo
+  validateSchemaStructure: uo
 }, Symbol.toStringTag, { value: "Module" }));
 class yI {
   constructor() {
@@ -11072,11 +11072,11 @@ const DI = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   properties: mE,
   $defs: SE,
   additionalProperties: kE
-}, ME = "@maia/schema/meta", GE = "@maia/schema/style", FE = "@maia/schema/style", bE = "Style definition (brand or actor-specific). Brand styles typically include selectors, actor styles are overrides.", RE = "comap", vE = !0, KE = { tokens: { type: "object", description: "Design tokens (colors, spacing, typography, etc.)", additionalProperties: !0 }, components: { type: "object", description: "Component styles", additionalProperties: !0 }, selectors: { type: "object", description: "CSS selector-based styles (typically used in brand styles)", additionalProperties: { type: "object", description: "CSS properties and values", additionalProperties: { oneOf: [{ type: "string" }, { type: "number" }, { type: "object", additionalProperties: !0 }] } } } }, oi = {
+}, ME = "@maia/schema/meta", GE = "@maia/schema/style", bE = "@maia/schema/style", FE = "Style definition (brand or actor-specific). Brand styles typically include selectors, actor styles are overrides.", RE = "comap", vE = !0, KE = { tokens: { type: "object", description: "Design tokens (colors, spacing, typography, etc.)", additionalProperties: !0 }, components: { type: "object", description: "Component styles", additionalProperties: !0 }, selectors: { type: "object", description: "CSS selector-based styles (typically used in brand styles)", additionalProperties: { type: "object", description: "CSS properties and values", additionalProperties: { oneOf: [{ type: "string" }, { type: "number" }, { type: "object", additionalProperties: !0 }] } } } }, ni = {
   $schema: ME,
   $id: GE,
-  title: FE,
-  description: bE,
+  title: bE,
+  description: FE,
   cotype: RE,
   indexing: vE,
   properties: KE
@@ -11125,13 +11125,13 @@ const DI = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   cotype: yl,
   indexing: Dl,
   oneOf: ml
-}, kl = "@maia/schema/meta", Nl = "@maia/schema/transition", Ml = "@maia/schema/transition", Gl = "State machine transition", Fl = "comap", bl = !0, Rl = { target: { type: "string", description: "Target state name" }, guard: { $co: "@maia/schema/guard" }, actions: { type: "array", items: { $co: "@maia/schema/action" } } }, vl = ["target"], Kl = {
+}, kl = "@maia/schema/meta", Nl = "@maia/schema/transition", Ml = "@maia/schema/transition", Gl = "State machine transition", bl = "comap", Fl = !0, Rl = { target: { type: "string", description: "Target state name" }, guard: { $co: "@maia/schema/guard" }, actions: { type: "array", items: { $co: "@maia/schema/action" } } }, vl = ["target"], Kl = {
   $schema: kl,
   $id: Nl,
   title: Ml,
   description: Gl,
-  cotype: Fl,
-  indexing: bl,
+  cotype: bl,
+  indexing: Fl,
   properties: Rl,
   required: vl
 }, Yl = "@maia/schema/meta", Ul = "@maia/schema/messagePayload", Jl = "@maia/schema/messagePayload", Hl = "Message payload definition", ql = "comap", xl = !0, Ll = {}, Tl = !0, Ol = {
@@ -11177,15 +11177,15 @@ const DI = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   cotype: pd,
   indexing: wd,
   items: yd
-}, md = "@maia/schema/meta", Sd = "@maia/schema/children", kd = "@maia/schema/children", Nd = "A comap of child actors (namekey → actor co-id)", Md = "comap", Gd = !0, Fd = {}, bd = { $co: "@maia/schema/actor", description: "Each value is a co-id reference to a child actor" }, Rd = {
+}, md = "@maia/schema/meta", Sd = "@maia/schema/children", kd = "@maia/schema/children", Nd = "A comap of child actors (namekey → actor co-id)", Md = "comap", Gd = !0, bd = {}, Fd = { $co: "@maia/schema/actor", description: "Each value is a co-id reference to a child actor" }, Rd = {
   $schema: md,
   $id: Sd,
   title: kd,
   description: Nd,
   cotype: Md,
   indexing: Gd,
-  properties: Fd,
-  additionalProperties: bd
+  properties: bd,
+  additionalProperties: Fd
 }, vd = "@maia/schema/meta", Kd = "@maia/schema/os/schematas-registry", Yd = "@maia/schema/os/schematas-registry", Ud = "Schema registry CoMap - maps schema namekeys (e.g., @maia/schema/data/todos) to schema co-ids (co_z...). Stored in account.os.schematas", Jd = "comap", Hd = !1, qd = { "@maia/schema/meta": { type: "string", description: "Metaschema co-id (co_z...)" } }, xd = { type: "string", description: "Schema namekey → schema co-id mapping (e.g., @maia/schema/data/todos → co_z123...)" }, Ld = {
   $schema: vd,
   $id: Kd,
@@ -11195,7 +11195,7 @@ const DI = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   indexing: Hd,
   properties: qd,
   additionalProperties: xd
-}, Td = "@maia/schema/meta", Od = "@maia/schema/os/os-registry", Pd = "@maia/schema/os/os-registry", jd = "OS CoMap - contains capabilities, schematas, indexes. Stored in spark.os", Vd = "comap", $d = !1, Wd = { capabilities: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Capabilities CoMap co-id (guardian, publicReaders)" }, schematas: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Schemata registry CoMap co-id" }, indexes: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Indexes registry CoMap co-id" } }, zd = {
+}, Td = "@maia/schema/meta", Od = "@maia/schema/os/os-registry", Pd = "@maia/schema/os/os-registry", jd = "OS CoMap - contains capabilities, schematas, indexes. Stored in spark.os", Vd = "comap", $d = !1, Wd = { capabilities: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Capabilities CoMap co-id (guardian, publicReaders)" }, schematas: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Schemata registry CoMap co-id" }, indexes: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Indexes registry CoMap co-id" }, runtimes: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Runtimes registry CoMap co-id - vibe co-id -> colist of runtime assignments" } }, zd = {
   $schema: Td,
   $id: Od,
   title: Pd,
@@ -11227,7 +11227,7 @@ const DI = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   cotype: du,
   indexing: uu,
   additionalProperties: hu
-}, pu = "@maia/schema/meta", wu = "@maia/schema/os/sparks-registry", yu = "@maia/schema/os/sparks-registry", Du = "Sparks registry CoMap - spark name -> spark co-id. Stored in account.sparks", mu = "comap", Su = !1, ku = { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Spark name -> spark CoMap co-id" }, Nu = {
+}, pu = "@maia/schema/meta", wu = "@maia/schema/os/runtimes-registry", yu = "@maia/schema/os/runtimes-registry", Du = "Runtimes registry CoMap - vibe co-id -> colist of runtime assignments. Stored in spark.os.runtimes. Key = vibe co-id (not human-readable). Guardian assigns which accounts run each vibe.", mu = "comap", Su = !1, ku = { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Vibe co-id -> CoList co-id of runtime assignments [{ browser: coId } | { server: coId }, ...]" }, Nu = {
   $schema: pu,
   $id: wu,
   title: yu,
@@ -11235,245 +11235,269 @@ const DI = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   cotype: mu,
   indexing: Su,
   additionalProperties: ku
-}, Mu = "@maia/schema/meta", Gu = "@maia/schema/os/humans-registry", Fu = "@maia/schema/os/humans-registry", bu = "Humans registry CoMap - username -> account co-id. Stored in spark.registries.humans", Ru = "comap", vu = !1, Ku = { type: "string", pattern: "^co_z[a-zA-Z0-9]{20,}$", description: "Username -> account co-id" }, Yu = {
+}, Mu = "@maia/schema/meta", Gu = "@maia/schema/os/runtime-assignment", bu = "@maia/schema/os/runtime-assignment", Fu = "Single runtime assignment: browser (account/group co-id) or server (agent account co-id)", Ru = "comap", vu = !1, Ku = [{ required: ["browser"], properties: { browser: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Account or group co-id that runs this vibe in browser" } } }, { required: ["server"], properties: { server: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Agent account co-id that runs this vibe on server" } } }], Yu = {
   $schema: Mu,
   $id: Gu,
-  title: Fu,
-  description: bu,
+  title: bu,
+  description: Fu,
   cotype: Ru,
   indexing: vu,
-  additionalProperties: Ku
-}, Uu = "@maia/schema/meta", Ju = "@maia/schema/os/registries", Hu = "@maia/schema/os/registries", qu = "Registries CoMap - contains sparks, etc. Stored in spark.registries", xu = "comap", Lu = !1, Tu = { sparks: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Sparks registry CoMap co-id (spark name -> spark co-id)" } }, Ou = { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Registry name -> registry CoMap co-id" }, Pu = {
+  oneOf: Ku
+}, Uu = "@maia/schema/meta", Ju = "@maia/schema/os/runtime-assignments-colist", Hu = "@maia/schema/os/runtime-assignments-colist", qu = "CoList of runtime assignments [{ browser: coId } | { server: coId }, ...]", xu = "colist", Lu = !1, Tu = { $co: "@maia/schema/os/runtime-assignment", description: "Each item is a runtime assignment (browser or server)" }, Ou = {
   $schema: Uu,
   $id: Ju,
   title: Hu,
   description: qu,
   cotype: xu,
   indexing: Lu,
-  properties: Tu,
-  additionalProperties: Ou
-}, ju = "@maia/schema/data/todos", Vu = "@maia/schema/meta", $u = "@maia/schema/data/todos", Wu = "comap", zu = !0, _u = { text: { type: "string", minLength: 1, pattern: ".*\\S.*", description: "The todo item text content (must contain at least one non-whitespace character)" }, done: { type: "boolean", description: "Whether the todo item is completed" } }, Zu = ["text", "done"], Xu = !1, Ah = {
+  items: Tu
+}, Pu = "@maia/schema/meta", ju = "@maia/schema/os/sparks-registry", Vu = "@maia/schema/os/sparks-registry", $u = "Sparks registry CoMap - spark name -> spark co-id. Stored in account.sparks", Wu = "comap", zu = !1, _u = { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Spark name -> spark CoMap co-id" }, Zu = {
+  $schema: Pu,
   $id: ju,
-  $schema: Vu,
-  title: $u,
+  title: Vu,
+  description: $u,
   cotype: Wu,
   indexing: zu,
-  properties: _u,
-  required: Zu,
-  additionalProperties: Xu
-}, eh = "@maia/schema/data/chat", th = "@maia/schema/meta", ih = "@maia/schema/data/chat", oh = "comap", rh = !0, nh = { role: { type: "string", enum: ["user", "assistant", "system"], description: "The role of the message sender" }, content: { type: "string", minLength: 1, description: "The message content" } }, sh = ["role", "content"], ah = !1, gh = {
-  $id: eh,
-  $schema: th,
-  title: ih,
-  cotype: oh,
-  indexing: rh,
-  properties: nh,
-  required: sh,
-  additionalProperties: ah
-}, Ih = "@maia/schema/meta", ch = "@maia/schema/data/spark", Ch = "@maia/schema/data/spark", Bh = "Spark CoMap. Guardian (admin) group is spark.os.capabilities.guardian.", Qh = "comap", Eh = !0, lh = ["name"], dh = { name: { type: "string", description: "Spark name e.g. @maia" }, os: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "OS CoMap - contains schematas, indexes, capabilities (guardian, publicReaders)." }, vibes: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Vibes registry CoMap for this spark." } }, uh = {
-  $schema: Ih,
-  $id: ch,
-  title: Ch,
-  description: Bh,
-  cotype: Qh,
-  indexing: Eh,
-  required: lh,
-  properties: dh
-}, hh = "@maia/schema/meta", fh = "@maia/schema/message/CREATE_BUTTON", ph = "@maia/schema/message/CREATE_BUTTON", wh = "Message type for creating a new item via button click (generic, reusable across vibes)", yh = "comap", Dh = !0, mh = "object", Sh = { value: { type: "string", minLength: 1, pattern: "^\\S", description: "Item value/text (required, non-empty, must contain at least one non-whitespace character). Generic property name for reuse across vibes." } }, kh = ["value"], Nh = !0, Mh = {
-  $schema: hh,
-  $id: fh,
-  title: ph,
-  description: wh,
-  cotype: yh,
-  indexing: Dh,
-  type: mh,
-  properties: Sh,
-  required: kh,
-  additionalProperties: Nh
-}, Gh = "@maia/schema/meta", Fh = "@maia/schema/message/TOGGLE_BUTTON", bh = "@maia/schema/message/TOGGLE_BUTTON", Rh = "Message type for toggling a todo item's done status", vh = "comap", Kh = !0, Yh = "object", Uh = { id: { type: "string", pattern: "^co_z", description: "Todo item co-id (required)" }, done: { type: "boolean", description: "Current done status (optional, will be toggled)" } }, Jh = ["id"], Hh = !1, qh = {
-  $schema: Gh,
-  $id: Fh,
-  title: bh,
-  description: Rh,
-  cotype: vh,
-  indexing: Kh,
-  type: Yh,
-  properties: Uh,
-  required: Jh,
-  additionalProperties: Hh
-}, xh = "@maia/schema/meta", Lh = "@maia/schema/message/DELETE_BUTTON", Th = "@maia/schema/message/DELETE_BUTTON", Oh = "Message type for deleting a todo item", Ph = "comap", jh = !0, Vh = "object", $h = { id: { type: "string", pattern: "^co_z", description: "Todo item co-id (required)" } }, Wh = ["id"], zh = !1, _h = {
-  $schema: xh,
-  $id: Lh,
-  title: Th,
-  description: Oh,
-  cotype: Ph,
-  indexing: jh,
-  type: Vh,
-  properties: $h,
-  required: Wh,
-  additionalProperties: zh
-}, Zh = "@maia/schema/meta", Xh = "@maia/schema/message/UPDATE_INPUT", Af = "@maia/schema/message/UPDATE_INPUT", ef = "Message type for updating input field value (generic, reusable across vibes)", tf = "comap", of = !0, rf = "object", nf = { value: { type: "string", description: "New input field value (generic property name for reuse across vibes)" } }, sf = !0, af = {
-  $schema: Zh,
-  $id: Xh,
-  title: Af,
-  description: ef,
-  cotype: tf,
-  indexing: of,
-  type: rf,
-  properties: nf,
-  additionalProperties: sf
-}, gf = "@maia/schema/meta", If = "@maia/schema/message/SWITCH_VIEW", cf = "@maia/schema/message/SWITCH_VIEW", Cf = "Message type for switching view mode", Bf = "comap", Qf = !0, Ef = "object", lf = { viewMode: { type: "string", enum: ["list", "logs", "comingSoon"], description: "View mode to switch to (required)" } }, df = ["viewMode"], uf = !1, hf = {
-  $schema: gf,
-  $id: If,
-  title: cf,
-  description: Cf,
-  cotype: Bf,
-  indexing: Qf,
-  type: Ef,
-  properties: lf,
-  required: df,
-  additionalProperties: uf
-}, ff = "@maia/schema/meta", pf = "@maia/schema/message/SUCCESS", wf = "@maia/schema/message/SUCCESS", yf = "Message type for successful operation completion", Df = "comap", mf = !0, Sf = "object", kf = { result: { description: "Tool execution result (optional, can be any type - object, boolean, string, etc.)" }, value: { type: "string", description: "Original event payload property (optional, for CREATE_BUTTON, UPDATE_INPUT - generic property name)" }, text: { type: "string", description: "Original event payload property (optional, legacy - use 'value' instead)" }, id: { type: "string", pattern: "^co_z", description: "Original event payload property (optional, for TOGGLE_BUTTON, DELETE_BUTTON)" }, done: { type: "boolean", description: "Original event payload property (optional, for TOGGLE_BUTTON)" }, viewMode: { type: "string", enum: ["list", "logs"], description: "Original event payload property (optional, for SWITCH_VIEW)" }, newTodoText: { type: "string", description: "Original event payload property (optional, legacy - use 'value' instead)" } }, Nf = !0, Mf = {
-  $schema: ff,
-  $id: pf,
-  title: wf,
-  description: yf,
-  cotype: Df,
-  indexing: mf,
-  type: Sf,
-  properties: kf,
-  additionalProperties: Nf
-}, Gf = "@maia/schema/meta", Ff = "@maia/schema/message/ERROR", bf = "@maia/schema/message/ERROR", Rf = "Message type for operation errors. Aligned with OperationResult createErrorEntry shape.", vf = "comap", Kf = !0, Yf = "object", Uf = { errors: { type: "array", description: "Structured error entries. Same shape as OperationResult.", items: { type: "object", required: ["type", "message"], properties: { type: { type: "string", description: "Error type: schema | permission | structural" }, message: { type: "string", description: "Error message" }, path: { type: "string", description: "Optional path (e.g. /field)" } } } } }, Jf = ["errors"], Hf = !1, qf = {
-  $schema: Gf,
-  $id: Ff,
-  title: bf,
-  description: Rf,
-  cotype: vf,
-  indexing: Kf,
-  type: Yf,
-  properties: Uf,
-  required: Jf,
-  additionalProperties: Hf
-}, xf = "@maia/schema/meta", Lf = "@maia/schema/message/SEND_MESSAGE", Tf = "@maia/schema/message/SEND_MESSAGE", Of = "Message type for sending a chat message", Pf = "comap", jf = !0, Vf = "object", $f = { inputText: { type: "string", minLength: 1, description: "Message text (required, non-empty)" } }, Wf = ["inputText"], zf = !1, _f = {
-  $schema: xf,
-  $id: Lf,
-  title: Tf,
-  description: Of,
-  cotype: Pf,
-  indexing: jf,
-  type: Vf,
-  properties: $f,
-  required: Wf,
-  additionalProperties: zf
-}, Zf = "@maia/schema/meta", Xf = "@maia/schema/message/RETRY", Ap = "@maia/schema/message/RETRY", ep = "Message type for retrying a failed operation", tp = "comap", ip = !0, op = "object", rp = {}, np = !1, sp = {
-  $schema: Zf,
-  $id: Xf,
-  title: Ap,
-  description: ep,
-  cotype: tp,
-  indexing: ip,
-  type: op,
-  properties: rp,
-  additionalProperties: np
-}, ap = "@maia/schema/meta", gp = "@maia/schema/message/DISMISS", Ip = "@maia/schema/message/DISMISS", cp = "Message type for dismissing an error or notification", Cp = "comap", Bp = !0, Qp = "object", Ep = {}, lp = !1, dp = {
-  $schema: ap,
-  $id: gp,
-  title: Ip,
-  description: cp,
-  cotype: Cp,
-  indexing: Bp,
-  type: Qp,
-  properties: Ep,
-  additionalProperties: lp
-}, up = "@maia/schema/meta", hp = "@maia/schema/message/SELECT_NAV", fp = "@maia/schema/message/SELECT_NAV", pp = "Message type for selecting a navigation item", wp = "comap", yp = !0, Dp = "object", mp = { navId: { type: "string", description: "Navigation item ID (required)" } }, Sp = ["navId"], kp = !1, Np = {
-  $schema: up,
-  $id: hp,
-  title: fp,
-  description: pp,
-  cotype: wp,
-  indexing: yp,
-  type: Dp,
-  properties: mp,
-  required: Sp,
-  additionalProperties: kp
-}, Mp = "@maia/schema/meta", Gp = "@maia/schema/message/SELECT_ROW", Fp = "@maia/schema/message/SELECT_ROW", bp = "Message type for selecting a table row", Rp = "comap", vp = !0, Kp = "object", Yp = { rowId: { type: "string", description: "Row ID (required)" } }, Up = ["rowId"], Jp = !1, Hp = {
-  $schema: Mp,
-  $id: Gp,
-  title: Fp,
-  description: bp,
-  cotype: Rp,
-  indexing: vp,
-  type: Kp,
-  properties: Yp,
-  required: Up,
-  additionalProperties: Jp
-}, qp = "@maia/schema/meta", xp = "@maia/schema/message/SELECT_SPARK", Lp = "@maia/schema/message/SELECT_SPARK", Tp = "Message type for selecting a spark (generic, reusable across vibes)", Op = "comap", Pp = !0, jp = "object", Vp = { sparkId: { type: "string", description: "Spark co-id (required, generic property name for reuse across vibes)" } }, $p = ["sparkId"], Wp = !0, zp = {
-  $schema: qp,
-  $id: xp,
-  title: Lp,
-  description: Tp,
-  cotype: Op,
-  indexing: Pp,
-  type: jp,
-  properties: Vp,
-  required: $p,
-  additionalProperties: Wp
-}, _p = "@maia/schema/meta", Zp = "@maia/schema/message/LOAD_ACTOR", Xp = "@maia/schema/message/LOAD_ACTOR", Aw = "Generic message type for loading actor data (reusable across vibes)", ew = "comap", tw = !0, iw = "object", ow = { id: { type: "string", description: "Entity co-id to load (required, generic property name for reuse across vibes)" } }, rw = ["id"], nw = !0, sw = {
-  $schema: _p,
-  $id: Zp,
-  title: Xp,
-  description: Aw,
-  cotype: ew,
-  indexing: tw,
-  type: iw,
-  properties: ow,
-  required: rw,
-  additionalProperties: nw
-}, aw = "@maia/schema/meta", gw = "@maia/schema/message/UPDATE_AGENT_INPUT", Iw = "@maia/schema/message/UPDATE_AGENT_INPUT", cw = "Message type for updating agent ID input field in Spark detail view", Cw = "comap", Bw = !0, Qw = "object", Ew = { value: { type: "string", description: "Agent account co-id input value" } }, lw = !0, dw = {
-  $schema: aw,
-  $id: gw,
-  title: Iw,
-  description: cw,
-  cotype: Cw,
-  indexing: Bw,
-  type: Qw,
-  properties: Ew,
-  additionalProperties: lw
-}, uw = "@maia/schema/meta", hw = "@maia/schema/message/ADD_AGENT", fw = "@maia/schema/message/ADD_AGENT", pw = "Message type for adding an agent as writer member to a Spark's group", ww = "comap", yw = !0, Dw = "object", mw = { agentId: { type: "string", description: "Agent account co-id to add as writer (co_z...). Operation validates format." } }, Sw = ["agentId"], kw = !0, Nw = {
-  $schema: uw,
-  $id: hw,
-  title: fw,
-  description: pw,
-  cotype: ww,
-  indexing: yw,
-  type: Dw,
-  properties: mw,
-  required: Sw,
-  additionalProperties: kw
-}, Mw = "@maia/schema/meta", Gw = "@maia/schema/message/REMOVE_MEMBER", Fw = "@maia/schema/message/REMOVE_MEMBER", bw = "Message type for removing a member from a Spark's group", Rw = "comap", vw = !0, Kw = "object", Yw = { memberId: { type: "string", description: "Account co-id of member to remove (co_z...). Operation validates format." } }, Uw = ["memberId"], Jw = !0, Hw = {
-  $schema: Mw,
-  $id: Gw,
-  title: Fw,
-  description: bw,
-  cotype: Rw,
-  indexing: vw,
-  type: Kw,
-  properties: Yw,
-  required: Uw,
-  additionalProperties: Jw
+  additionalProperties: _u
+}, Xu = "@maia/schema/meta", Ah = "@maia/schema/os/humans-registry", eh = "@maia/schema/os/humans-registry", th = "Humans registry CoMap - username -> account co-id. Stored in spark.registries.humans", ih = "comap", oh = !1, rh = { type: "string", pattern: "^co_z[a-zA-Z0-9]{20,}$", description: "Username -> account co-id" }, nh = {
+  $schema: Xu,
+  $id: Ah,
+  title: eh,
+  description: th,
+  cotype: ih,
+  indexing: oh,
+  additionalProperties: rh
+}, sh = "@maia/schema/meta", ah = "@maia/schema/os/registries", gh = "@maia/schema/os/registries", Ih = "Registries CoMap - contains sparks, etc. Stored in spark.registries", ch = "comap", Ch = !1, Bh = { sparks: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Sparks registry CoMap co-id (spark name -> spark co-id)" } }, Qh = { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Registry name -> registry CoMap co-id" }, Eh = {
+  $schema: sh,
+  $id: ah,
+  title: gh,
+  description: Ih,
+  cotype: ch,
+  indexing: Ch,
+  properties: Bh,
+  additionalProperties: Qh
+}, lh = "@maia/schema/data/todos", dh = "@maia/schema/meta", uh = "@maia/schema/data/todos", hh = "comap", fh = !0, ph = { text: { type: "string", minLength: 1, pattern: ".*\\S.*", description: "The todo item text content (must contain at least one non-whitespace character)" }, done: { type: "boolean", description: "Whether the todo item is completed" } }, wh = ["text", "done"], yh = !1, Dh = {
+  $id: lh,
+  $schema: dh,
+  title: uh,
+  cotype: hh,
+  indexing: fh,
+  properties: ph,
+  required: wh,
+  additionalProperties: yh
+}, mh = "@maia/schema/data/chat", Sh = "@maia/schema/meta", kh = "@maia/schema/data/chat", Nh = "comap", Mh = !0, Gh = { role: { type: "string", enum: ["user", "assistant", "system"], description: "The role of the message sender" }, content: { type: "string", minLength: 1, description: "The message content" } }, bh = ["role", "content"], Fh = !1, Rh = {
+  $id: mh,
+  $schema: Sh,
+  title: kh,
+  cotype: Nh,
+  indexing: Mh,
+  properties: Gh,
+  required: bh,
+  additionalProperties: Fh
+}, vh = "@maia/schema/meta", Kh = "@maia/schema/data/spark", Yh = "@maia/schema/data/spark", Uh = "Spark CoMap. Guardian (admin) group is spark.os.capabilities.guardian.", Jh = "comap", Hh = !0, qh = ["name"], xh = { name: { type: "string", description: "Spark name e.g. @maia" }, os: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "OS CoMap - contains schematas, indexes, capabilities (guardian, publicReaders)." }, vibes: { type: "string", pattern: "^co_z[a-zA-Z0-9]+$", description: "Vibes registry CoMap for this spark." } }, Lh = {
+  $schema: vh,
+  $id: Kh,
+  title: Yh,
+  description: Uh,
+  cotype: Jh,
+  indexing: Hh,
+  required: qh,
+  properties: xh
+}, Th = "@maia/schema/meta", Oh = "@maia/schema/message/CREATE_BUTTON", Ph = "@maia/schema/message/CREATE_BUTTON", jh = "Message type for creating a new item via button click (generic, reusable across vibes)", Vh = "comap", $h = !0, Wh = "object", zh = { value: { type: "string", minLength: 1, pattern: "^\\S", description: "Item value/text (required, non-empty, must contain at least one non-whitespace character). Generic property name for reuse across vibes." } }, _h = ["value"], Zh = !0, Xh = {
+  $schema: Th,
+  $id: Oh,
+  title: Ph,
+  description: jh,
+  cotype: Vh,
+  indexing: $h,
+  type: Wh,
+  properties: zh,
+  required: _h,
+  additionalProperties: Zh
+}, Af = "@maia/schema/meta", ef = "@maia/schema/message/TOGGLE_BUTTON", tf = "@maia/schema/message/TOGGLE_BUTTON", of = "Message type for toggling a todo item's done status", rf = "comap", nf = !0, sf = "object", af = { id: { type: "string", pattern: "^co_z", description: "Todo item co-id (required)" }, done: { type: "boolean", description: "Current done status (optional, will be toggled)" } }, gf = ["id"], If = !1, cf = {
+  $schema: Af,
+  $id: ef,
+  title: tf,
+  description: of,
+  cotype: rf,
+  indexing: nf,
+  type: sf,
+  properties: af,
+  required: gf,
+  additionalProperties: If
+}, Cf = "@maia/schema/meta", Bf = "@maia/schema/message/DELETE_BUTTON", Qf = "@maia/schema/message/DELETE_BUTTON", Ef = "Message type for deleting a todo item", lf = "comap", df = !0, uf = "object", hf = { id: { type: "string", pattern: "^co_z", description: "Todo item co-id (required)" } }, ff = ["id"], pf = !1, wf = {
+  $schema: Cf,
+  $id: Bf,
+  title: Qf,
+  description: Ef,
+  cotype: lf,
+  indexing: df,
+  type: uf,
+  properties: hf,
+  required: ff,
+  additionalProperties: pf
+}, yf = "@maia/schema/meta", Df = "@maia/schema/message/UPDATE_INPUT", mf = "@maia/schema/message/UPDATE_INPUT", Sf = "Message type for updating input field value (generic, reusable across vibes)", kf = "comap", Nf = !0, Mf = "object", Gf = { value: { type: "string", description: "New input field value (generic property name for reuse across vibes)" } }, bf = !0, Ff = {
+  $schema: yf,
+  $id: Df,
+  title: mf,
+  description: Sf,
+  cotype: kf,
+  indexing: Nf,
+  type: Mf,
+  properties: Gf,
+  additionalProperties: bf
+}, Rf = "@maia/schema/meta", vf = "@maia/schema/message/SWITCH_VIEW", Kf = "@maia/schema/message/SWITCH_VIEW", Yf = "Message type for switching view mode", Uf = "comap", Jf = !0, Hf = "object", qf = { viewMode: { type: "string", enum: ["list", "logs", "comingSoon"], description: "View mode to switch to (required)" } }, xf = ["viewMode"], Lf = !1, Tf = {
+  $schema: Rf,
+  $id: vf,
+  title: Kf,
+  description: Yf,
+  cotype: Uf,
+  indexing: Jf,
+  type: Hf,
+  properties: qf,
+  required: xf,
+  additionalProperties: Lf
+}, Of = "@maia/schema/meta", Pf = "@maia/schema/message/SUCCESS", jf = "@maia/schema/message/SUCCESS", Vf = "Message type for successful operation completion", $f = "comap", Wf = !0, zf = "object", _f = { result: { description: "Tool execution result (optional, can be any type - object, boolean, string, etc.)" }, value: { type: "string", description: "Original event payload property (optional, for CREATE_BUTTON, UPDATE_INPUT - generic property name)" }, text: { type: "string", description: "Original event payload property (optional, legacy - use 'value' instead)" }, id: { type: "string", pattern: "^co_z", description: "Original event payload property (optional, for TOGGLE_BUTTON, DELETE_BUTTON)" }, done: { type: "boolean", description: "Original event payload property (optional, for TOGGLE_BUTTON)" }, viewMode: { type: "string", enum: ["list", "logs"], description: "Original event payload property (optional, for SWITCH_VIEW)" }, newTodoText: { type: "string", description: "Original event payload property (optional, legacy - use 'value' instead)" } }, Zf = !0, Xf = {
+  $schema: Of,
+  $id: Pf,
+  title: jf,
+  description: Vf,
+  cotype: $f,
+  indexing: Wf,
+  type: zf,
+  properties: _f,
+  additionalProperties: Zf
+}, Ap = "@maia/schema/meta", ep = "@maia/schema/message/ERROR", tp = "@maia/schema/message/ERROR", ip = "Message type for operation errors. Aligned with OperationResult createErrorEntry shape.", op = "comap", rp = !0, np = "object", sp = { errors: { type: "array", description: "Structured error entries. Same shape as OperationResult.", items: { type: "object", required: ["type", "message"], properties: { type: { type: "string", description: "Error type: schema | permission | structural" }, message: { type: "string", description: "Error message" }, path: { type: "string", description: "Optional path (e.g. /field)" } } } } }, ap = ["errors"], gp = !1, Ip = {
+  $schema: Ap,
+  $id: ep,
+  title: tp,
+  description: ip,
+  cotype: op,
+  indexing: rp,
+  type: np,
+  properties: sp,
+  required: ap,
+  additionalProperties: gp
+}, cp = "@maia/schema/meta", Cp = "@maia/schema/message/SEND_MESSAGE", Bp = "@maia/schema/message/SEND_MESSAGE", Qp = "Message type for sending a chat message", Ep = "comap", lp = !0, dp = "object", up = { inputText: { type: "string", minLength: 1, description: "Message text (required, non-empty)" } }, hp = ["inputText"], fp = !1, pp = {
+  $schema: cp,
+  $id: Cp,
+  title: Bp,
+  description: Qp,
+  cotype: Ep,
+  indexing: lp,
+  type: dp,
+  properties: up,
+  required: hp,
+  additionalProperties: fp
+}, wp = "@maia/schema/meta", yp = "@maia/schema/message/RETRY", Dp = "@maia/schema/message/RETRY", mp = "Message type for retrying a failed operation", Sp = "comap", kp = !0, Np = "object", Mp = {}, Gp = !1, bp = {
+  $schema: wp,
+  $id: yp,
+  title: Dp,
+  description: mp,
+  cotype: Sp,
+  indexing: kp,
+  type: Np,
+  properties: Mp,
+  additionalProperties: Gp
+}, Fp = "@maia/schema/meta", Rp = "@maia/schema/message/DISMISS", vp = "@maia/schema/message/DISMISS", Kp = "Message type for dismissing an error or notification", Yp = "comap", Up = !0, Jp = "object", Hp = {}, qp = !1, xp = {
+  $schema: Fp,
+  $id: Rp,
+  title: vp,
+  description: Kp,
+  cotype: Yp,
+  indexing: Up,
+  type: Jp,
+  properties: Hp,
+  additionalProperties: qp
+}, Lp = "@maia/schema/meta", Tp = "@maia/schema/message/SELECT_NAV", Op = "@maia/schema/message/SELECT_NAV", Pp = "Message type for selecting a navigation item", jp = "comap", Vp = !0, $p = "object", Wp = { navId: { type: "string", description: "Navigation item ID (required)" } }, zp = ["navId"], _p = !1, Zp = {
+  $schema: Lp,
+  $id: Tp,
+  title: Op,
+  description: Pp,
+  cotype: jp,
+  indexing: Vp,
+  type: $p,
+  properties: Wp,
+  required: zp,
+  additionalProperties: _p
+}, Xp = "@maia/schema/meta", Aw = "@maia/schema/message/SELECT_ROW", ew = "@maia/schema/message/SELECT_ROW", tw = "Message type for selecting a table row", iw = "comap", ow = !0, rw = "object", nw = { rowId: { type: "string", description: "Row ID (required)" } }, sw = ["rowId"], aw = !1, gw = {
+  $schema: Xp,
+  $id: Aw,
+  title: ew,
+  description: tw,
+  cotype: iw,
+  indexing: ow,
+  type: rw,
+  properties: nw,
+  required: sw,
+  additionalProperties: aw
+}, Iw = "@maia/schema/meta", cw = "@maia/schema/message/SELECT_SPARK", Cw = "@maia/schema/message/SELECT_SPARK", Bw = "Message type for selecting a spark (generic, reusable across vibes)", Qw = "comap", Ew = !0, lw = "object", dw = { sparkId: { type: "string", description: "Spark co-id (required, generic property name for reuse across vibes)" } }, uw = ["sparkId"], hw = !0, fw = {
+  $schema: Iw,
+  $id: cw,
+  title: Cw,
+  description: Bw,
+  cotype: Qw,
+  indexing: Ew,
+  type: lw,
+  properties: dw,
+  required: uw,
+  additionalProperties: hw
+}, pw = "@maia/schema/meta", ww = "@maia/schema/message/LOAD_ACTOR", yw = "@maia/schema/message/LOAD_ACTOR", Dw = "Generic message type for loading actor data (reusable across vibes)", mw = "comap", Sw = !0, kw = "object", Nw = { id: { type: "string", description: "Entity co-id to load (required, generic property name for reuse across vibes)" } }, Mw = ["id"], Gw = !0, bw = {
+  $schema: pw,
+  $id: ww,
+  title: yw,
+  description: Dw,
+  cotype: mw,
+  indexing: Sw,
+  type: kw,
+  properties: Nw,
+  required: Mw,
+  additionalProperties: Gw
+}, Fw = "@maia/schema/meta", Rw = "@maia/schema/message/UPDATE_AGENT_INPUT", vw = "@maia/schema/message/UPDATE_AGENT_INPUT", Kw = "Message type for updating agent ID input field in Spark detail view", Yw = "comap", Uw = !0, Jw = "object", Hw = { value: { type: "string", description: "Agent account co-id input value" } }, qw = !0, xw = {
+  $schema: Fw,
+  $id: Rw,
+  title: vw,
+  description: Kw,
+  cotype: Yw,
+  indexing: Uw,
+  type: Jw,
+  properties: Hw,
+  additionalProperties: qw
+}, Lw = "@maia/schema/meta", Tw = "@maia/schema/message/ADD_AGENT", Ow = "@maia/schema/message/ADD_AGENT", Pw = "Message type for adding an agent as writer member to a Spark's group", jw = "comap", Vw = !0, $w = "object", Ww = { agentId: { type: "string", description: "Agent account co-id to add as writer (co_z...). Operation validates format." } }, zw = ["agentId"], _w = !0, Zw = {
+  $schema: Lw,
+  $id: Tw,
+  title: Ow,
+  description: Pw,
+  cotype: jw,
+  indexing: Vw,
+  type: $w,
+  properties: Ww,
+  required: zw,
+  additionalProperties: _w
+}, Xw = "@maia/schema/meta", Ay = "@maia/schema/message/REMOVE_MEMBER", ey = "@maia/schema/message/REMOVE_MEMBER", ty = "Message type for removing a member from a Spark's group", iy = "comap", oy = !0, ry = "object", ny = { memberId: { type: "string", description: "Account co-id of member to remove (co_z...). Operation validates format." } }, sy = ["memberId"], ay = !0, gy = {
+  $schema: Xw,
+  $id: Ay,
+  title: ey,
+  description: ty,
+  cotype: iy,
+  indexing: oy,
+  type: ry,
+  properties: ny,
+  required: sy,
+  additionalProperties: ay
 };
-function Hr() {
-  return Ke.getMetaSchema();
+function qr() {
+  return Ue.getMetaSchema();
 }
-const qr = {
+const xr = {
   actor: eE,
   context: gE,
   state: uE,
   view: NE,
-  style: oi,
-  brand: oi,
-  "brand.style": oi,
-  "actor.style": oi,
+  style: ni,
+  brand: ni,
+  "brand.style": ni,
+  "actor.style": ni,
   tool: OE,
   vibe: XE,
   message: al,
@@ -11491,60 +11515,63 @@ const qr = {
   "os/capabilities": ou,
   "os/indexes-registry": Cu,
   "os/vibes-registry": fu,
-  "os/sparks-registry": Nu,
-  "os/humans-registry": Yu,
-  "os/registries": Pu,
-  "data/todos": Ah,
-  "data/chat": gh,
-  "data/spark": uh,
-  "message/CREATE_BUTTON": Mh,
-  "message/TOGGLE_BUTTON": qh,
-  "message/DELETE_BUTTON": _h,
-  "message/UPDATE_INPUT": af,
-  "message/SWITCH_VIEW": hf,
-  "message/SUCCESS": Mf,
-  "message/ERROR": qf,
-  "message/SEND_MESSAGE": _f,
-  "message/RETRY": sp,
-  "message/DISMISS": dp,
-  "message/SELECT_NAV": Np,
-  "message/SELECT_ROW": Hp,
-  "message/SELECT_SPARK": zp,
-  "message/LOAD_ACTOR": sw,
-  "message/UPDATE_AGENT_INPUT": dw,
-  "message/ADD_AGENT": Nw,
-  "message/REMOVE_MEMBER": Hw
+  "os/runtimes-registry": Nu,
+  "os/runtime-assignment": Yu,
+  "os/runtime-assignments-colist": Ou,
+  "os/sparks-registry": Zu,
+  "os/humans-registry": nh,
+  "os/registries": Eh,
+  "data/todos": Dh,
+  "data/chat": Rh,
+  "data/spark": Lh,
+  "message/CREATE_BUTTON": Xh,
+  "message/TOGGLE_BUTTON": cf,
+  "message/DELETE_BUTTON": wf,
+  "message/UPDATE_INPUT": Ff,
+  "message/SWITCH_VIEW": Tf,
+  "message/SUCCESS": Xf,
+  "message/ERROR": Ip,
+  "message/SEND_MESSAGE": pp,
+  "message/RETRY": bp,
+  "message/DISMISS": xp,
+  "message/SELECT_NAV": Zp,
+  "message/SELECT_ROW": gw,
+  "message/SELECT_SPARK": fw,
+  "message/LOAD_ACTOR": bw,
+  "message/UPDATE_AGENT_INPUT": xw,
+  "message/ADD_AGENT": Zw,
+  "message/REMOVE_MEMBER": gy
 };
-function qw(t) {
+function Iy(t) {
   const A = t.startsWith("@maia/schema/") ? t.replace("@maia/schema/", "") : t;
-  return qr[A] || null;
+  return xr[A] || null;
 }
-function xr() {
+function Lr() {
   const t = {};
-  for (const [A, e] of Object.entries(qr))
+  for (const [A, e] of Object.entries(xr))
     A.startsWith("message/") && (t[`@maia/schema/${A}`] = e);
-  return { ...qr, ...t };
+  return { ...xr, ...t };
 }
-const Wt = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const _t = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   CoIdRegistry: yI,
-  SCHEMA_REF_PATTERN: ko,
+  SCHEMA_REF_PATTERN: Go,
   VIBE_REF_PATTERN: sI,
-  ValidationEngine: Ke,
-  coTypesDefs: Pt,
-  getAllSchemas: xr,
-  getMetaSchema: Hr,
-  getSchema: qw,
-  getValidationEngine: No,
-  isSchemaRef: NA,
+  ValidationEngine: Ue,
+  coTypesDefs: Vt,
+  getAllSchemas: Lr,
+  getMetaSchema: qr,
+  getSchema: Iy,
+  getValidationEngine: bo,
+  isSchemaRef: GA,
   isVibeRef: aI,
-  resolve: eA,
+  resolve: tA,
   setSchemaResolver: gI,
   transformForSeeding: pI,
-  validateAgainstSchema: Vt,
-  validateAgainstSchemaOrThrow: at,
-  validateSchemaStructure: Qo
-}, Symbol.toStringTag, { value: "Module" })), xw = /^@([a-zA-Z0-9_-]+)\/schema\/(.+)$/;
+  validateAgainstSchema: Wt,
+  validateAgainstSchemaOrThrow: It,
+  validateSchemaStructure: uo
+}, Symbol.toStringTag, { value: "Module" })), cy = /^@([a-zA-Z0-9_-]+)\/schema\/(.+)$/;
 async function Kn(t, A) {
   const e = t?.systemSpark ?? "@maia";
   if (!t.account)
@@ -11552,7 +11579,7 @@ async function Kn(t, A) {
   const i = await vA(t, e);
   if (i)
     try {
-      const o = await IA(t, i, null, null, null, {
+      const o = await gA(t, i, null, null, null, {
         deepResolve: !1,
         // Don't need deep resolution for infrastructure
         timeoutMs: 1e4
@@ -11573,14 +11600,14 @@ async function Kn(t, A) {
     }
   return null;
 }
-async function Fo(t) {
+async function vo(t) {
   const A = await Kn(t);
   if (!A)
     return null;
   const e = A.get("indexes");
   if (e)
     try {
-      const r = await IA(t, e, null, null, null, {
+      const r = await gA(t, e, null, null, null, {
         deepResolve: !1,
         timeoutMs: 1e4
       });
@@ -11597,13 +11624,13 @@ async function Fo(t) {
     } catch (r) {
       return process.env.DEBUG && console.warn(`[SchemaIndexManager] Failed to load spark.os.indexes (${e.substring(0, 12)}...):`, r.message), null;
     }
-  let i = await eA(t, "@maia/schema/os/indexes-registry", { returnType: "coId" }), o;
+  let i = await tA(t, "@maia/schema/os/indexes-registry", { returnType: "coId" }), o;
   if (i && typeof i == "string" && i.startsWith("co_z") && t.dbEngine) {
     const { create: r } = await Promise.resolve().then(() => Rn);
     o = (await r(t, i, {})).id;
   } else {
-    const { createCoValueForSpark: r } = await Promise.resolve().then(() => be), { coValue: n } = await r(t, "@maia", {
-      schema: yA.META_SCHEMA,
+    const { createCoValueForSpark: r } = await Promise.resolve().then(() => ve), { coValue: n } = await r(t, "@maia", {
+      schema: SA.META_SCHEMA,
       cotype: "comap",
       data: {}
     });
@@ -11611,7 +11638,7 @@ async function Fo(t) {
   }
   A.set("indexes", o);
   try {
-    const r = await IA(t, o, null, null, null, {
+    const r = await gA(t, o, null, null, null, {
       deepResolve: !1,
       timeoutMs: 5e3
     });
@@ -11628,25 +11655,25 @@ async function Fo(t) {
   }
   return null;
 }
-async function Lw(t, A, e = null) {
+async function Cy(t, A, e = null) {
   if (!A || !A.startsWith("co_z"))
     throw new Error(`[SchemaIndexManager] Invalid schema co-id: ${A}`);
   if (!e) {
     const c = t.getCoValue(A);
-    c && (e = t.getHeader(c)?.meta?.$schema, e && !e.startsWith("co_z") && (e = await eA(t, e, { returnType: "coId" }))), (!e || !e.startsWith("co_z")) && (e = await mI(t));
+    c && (e = t.getHeader(c)?.meta?.$schema, e && !e.startsWith("co_z") && (e = await tA(t, e, { returnType: "coId" }))), (!e || !e.startsWith("co_z")) && (e = await mI(t));
   }
   if (!e || !e.startsWith("co_z"))
     return process.env.DEBUG && console.warn("[SchemaIndexManager] Cannot create schema-specific index colist schema - metaSchema not available"), null;
-  const i = await eA(t, A, { returnType: "schema" });
+  const i = await tA(t, A, { returnType: "schema" });
   if (!i)
     return process.env.DEBUG && console.warn(`[SchemaIndexManager] Cannot load schema definition for ${A.substring(0, 12)}...`), null;
   const o = i.title || i.$id;
-  if (!o || typeof o != "string" || !ko.test(o))
+  if (!o || typeof o != "string" || !Go.test(o))
     return process.env.DEBUG && console.warn(`[SchemaIndexManager] Schema ${A.substring(0, 12)}... has invalid title: ${o}`), null;
-  const r = o.match(xw);
+  const r = o.match(cy);
   if (!r)
     return process.env.DEBUG && console.warn(`[SchemaIndexManager] Schema ${A.substring(0, 12)}... has invalid title format: ${o}`), null;
-  const [, n, s] = r, a = `@${n}/schema/index/${s}`, g = await eA(t, a, { returnType: "coId" });
+  const [, n, s] = r, a = `@${n}/schema/index/${s}`, g = await tA(t, a, { returnType: "coId" });
   if (g && g.startsWith("co_z"))
     return g;
   const I = {
@@ -11661,7 +11688,7 @@ async function Lw(t, A, e = null) {
     }
   };
   try {
-    const C = (await bn(t, e, I)).id, B = await SI(t);
+    const C = (await Fn(t, e, I)).id, B = await SI(t);
     return B && B.set(a, C), C;
   } catch (c) {
     return process.env.DEBUG && console.error(`[SchemaIndexManager] Failed to create schema-specific index colist schema for ${o}:`, c), null;
@@ -11670,18 +11697,18 @@ async function Lw(t, A, e = null) {
 async function Yn(t, A, e = null) {
   if (!A || typeof A != "string" || !A.startsWith("co_z"))
     throw new Error(`[SchemaIndexManager] Invalid schema co-id: expected string starting with 'co_z', got ${typeof A}: ${A}`);
-  const i = await eA(t, A, { returnType: "schema" });
+  const i = await tA(t, A, { returnType: "schema" });
   if (!i)
     return process.env.DEBUG && console.warn(`[SchemaIndexManager] Cannot load schema definition for ${A.substring(0, 12)}...`), null;
   if (i.indexing !== !0)
     return null;
-  const o = await Fo(t);
+  const o = await vo(t);
   if (!o)
     return null;
   let r = o.get(A);
   if (r) {
     try {
-      const I = await IA(t, r, null, null, null, {
+      const I = await gA(t, r, null, null, null, {
         deepResolve: !1,
         // Don't need deep resolution for index colists
         timeoutMs: 5e3
@@ -11699,10 +11726,10 @@ async function Yn(t, A, e = null) {
     }
     return process.env.DEBUG && console.warn(`[SchemaIndexManager] Index colist (${r.substring(0, 12)}...) exists but could not be loaded. Skipping to prevent overwriting.`), null;
   }
-  const n = await Lw(t, A, e);
+  const n = await Cy(t, A, e);
   if (!n)
     return process.env.DEBUG && console.warn(`[SchemaIndexManager] Cannot create index colist - schema-specific index colist schema not available for ${A.substring(0, 12)}...`), null;
-  const { createCoValueForSpark: s } = await Promise.resolve().then(() => be), { coValue: a } = await s(t, "@maia", {
+  const { createCoValueForSpark: s } = await Promise.resolve().then(() => ve), { coValue: a } = await s(t, "@maia", {
     schema: n,
     cotype: "colist",
     data: [],
@@ -11730,14 +11757,14 @@ async function Un(t) {
         return n;
     }
   }
-  const { createCoValueForSpark: i } = await Promise.resolve().then(() => be), { coValue: o } = await i(t, "@maia", {
-    schema: yA.META_SCHEMA,
+  const { createCoValueForSpark: i } = await Promise.resolve().then(() => ve), { coValue: o } = await i(t, "@maia", {
+    schema: SA.META_SCHEMA,
     cotype: "colist",
     data: []
   });
   return A.set("unknown", o.id), o;
 }
-async function Tw(t, A) {
+async function By(t, A) {
   if (!t.account || !A)
     return !1;
   const e = await vA(t, t?.systemSpark ?? "@maia");
@@ -11777,22 +11804,22 @@ async function Tw(t, A) {
 async function Jn(t, A) {
   if (!A)
     return { shouldIndex: !1, schemaCoId: null };
-  if (await Tw(t, A.id))
+  if (await By(t, A.id))
     return { shouldIndex: !1, schemaCoId: null };
   const i = t.getHeader(A);
   if (!i || !i.meta)
     return { shouldIndex: !1, schemaCoId: null };
   const o = i.meta, r = o.$schema;
-  if (yA.ACCOUNT === r || yA.GROUP === r || yA.META_SCHEMA === r)
+  if (SA.ACCOUNT === r || SA.GROUP === r || SA.META_SCHEMA === r)
     return { shouldIndex: !1, schemaCoId: null };
-  if (o.type === "account" || r === yA.ACCOUNT)
+  if (o.type === "account" || r === SA.ACCOUNT)
     return { shouldIndex: !1, schemaCoId: null };
   const n = A.ruleset || i?.ruleset;
   if (n && n.type === "group")
     return { shouldIndex: !1, schemaCoId: null };
   if (r && typeof r == "string" && r.startsWith("co_z")) {
     try {
-      const s = await eA(t, r, { returnType: "schema" });
+      const s = await tA(t, r, { returnType: "schema" });
       if (s && s.indexing !== !0)
         return { shouldIndex: !1, schemaCoId: r };
     } catch {
@@ -11830,7 +11857,7 @@ async function SI(t) {
   const e = A.get("schematas");
   if (e) {
     try {
-      const s = await IA(t, e, null, null, null, {
+      const s = await gA(t, e, null, null, null, {
         deepResolve: !1,
         // Don't need deep resolution for registry
         timeoutMs: 5e3
@@ -11848,7 +11875,7 @@ async function SI(t) {
     }
     return process.env.DEBUG && console.warn(`[SchemaIndexManager] spark.os.schematas (${e.substring(0, 12)}...) exists but could not be loaded. Skipping to prevent overwriting.`), null;
   }
-  const o = await eA(t, "@maia/schema/os/schematas-registry", { returnType: "coId" }) || yA.META_SCHEMA, { createCoValueForSpark: r } = await Promise.resolve().then(() => be), { coValue: n } = await r(t, "@maia", {
+  const o = await tA(t, "@maia/schema/os/schematas-registry", { returnType: "coId" }) || SA.META_SCHEMA, { createCoValueForSpark: r } = await Promise.resolve().then(() => ve), { coValue: n } = await r(t, "@maia", {
     schema: o,
     cotype: "comap",
     data: {},
@@ -11863,7 +11890,7 @@ async function kI(t, A) {
   if (!e || typeof e.get != "function")
     return;
   const i = e.get("title");
-  if (!i || typeof i != "string" || !ko.test(i))
+  if (!i || typeof i != "string" || !Go.test(i))
     return;
   const o = await SI(t);
   if (!o)
@@ -11872,7 +11899,7 @@ async function kI(t, A) {
   if (r === A.id || r && r !== A.id || (o.set(i, A.id), e.get("indexing") !== !0))
     return;
   let g = t.getHeader(A)?.meta?.$schema;
-  g && !g.startsWith("co_z") && (g = await eA(t, g, { returnType: "coId" })), await Yn(t, A.id, g);
+  g && !g.startsWith("co_z") && (g = await tA(t, g, { returnType: "coId" })), await Yn(t, A.id, g);
 }
 async function NI(t, A) {
   if (!A)
@@ -11883,13 +11910,13 @@ async function NI(t, A) {
   const o = e.meta.$schema;
   if (!o)
     return !1;
-  if (o === yA.META_SCHEMA) {
+  if (o === SA.META_SCHEMA) {
     const r = t.getCurrentContent(A);
     return !!(r && typeof r.get == "function" && r.get("title") === "@maia/schema/meta");
   }
   if (o && typeof o == "string" && o.startsWith("co_z")) {
     try {
-      const n = await IA(t, o, null, null, null, {
+      const n = await gA(t, o, null, null, null, {
         deepResolve: !1,
         // Don't need deep resolution for schema detection
         timeoutMs: 5e3
@@ -11911,7 +11938,7 @@ async function NI(t, A) {
   }
   return !1;
 }
-const sr = /* @__PURE__ */ new Set();
+const ar = /* @__PURE__ */ new Set();
 async function MI(t, A) {
   let e = A, i = null;
   if (typeof A == "string") {
@@ -11919,8 +11946,8 @@ async function MI(t, A) {
       return;
   } else
     i = A?.id;
-  if (!(!e || !i) && !sr.has(i)) {
-    sr.add(i);
+  if (!(!e || !i) && !ar.has(i)) {
+    ar.add(i);
     try {
       const { shouldIndex: o, schemaCoId: r } = await Jn(t, e);
       if (o && r) {
@@ -11954,21 +11981,21 @@ async function MI(t, A) {
         n.append(i);
       }
     } finally {
-      sr.delete(i);
+      ar.delete(i);
     }
   }
 }
-async function Ow(t, A) {
+async function Qy(t, A) {
   if (!A || !A.startsWith("co_z") || !t.account)
     return null;
-  const e = await Fo(t);
+  const e = await vo(t);
   if (!e)
     return null;
   const i = e.get(A);
   if (!i || typeof i != "string" || !i.startsWith("co_"))
     return null;
   try {
-    const o = await IA(t, i, null, null, null, {
+    const o = await gA(t, i, null, null, null, {
       deepResolve: !1,
       // Don't need deep resolution for removal
       timeoutMs: 2e3
@@ -11995,7 +12022,7 @@ async function GI(t, A, e = null) {
       }
     }
     if (e && typeof e == "string" && e.startsWith("co_z")) {
-      const i = await Ow(t, e);
+      const i = await Qy(t, e);
       if (i && typeof i.toJSON == "function" && typeof i.delete == "function") {
         const r = i.toJSON().indexOf(A);
         r !== -1 && i.delete(r);
@@ -12009,9 +12036,9 @@ async function GI(t, A, e = null) {
     }
   }
 }
-const FI = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const bI = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  ensureIndexesCoMap: Fo,
+  ensureIndexesCoMap: vo,
   ensureSchemaIndexColist: Yn,
   ensureUnknownColist: Un,
   indexCoValue: MI,
@@ -12020,8 +12047,8 @@ const FI = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   removeFromIndex: GI,
   shouldIndexCoValue: Jn
 }, Symbol.toStringTag, { value: "Module" }));
-async function ao(t, A, e) {
-  const i = await gA(t, e, { waitForAvailable: !0 });
+async function Io(t, A, e) {
+  const i = await sA(t, e, { waitForAvailable: !0 });
   if (!i)
     throw new Error(`[CoJSONBackend] CoValue not found: ${e}`);
   if (!t.isAvailable(i))
@@ -12060,97 +12087,97 @@ async function ao(t, A, e) {
     throw new Error(`[CoJSONBackend] Delete not supported for type: ${r}. Supported types: comap, colist, costream, coplaintext`);
   return g && t.node.storage && await t.node.syncManager.waitForStorageSync(e), g;
 }
-const kA = "@maia";
-async function Pw(t, A) {
-  const { EXCEPTION_SCHEMAS: e } = await Promise.resolve().then(() => jt), i = A.createGroup(), o = { node: A, account: t, guardian: i }, { coValue: r } = await hA(o, null, {
+const DA = "@maia";
+async function Ey(t, A) {
+  const { EXCEPTION_SCHEMAS: e } = await Promise.resolve().then(() => $t), i = A.createGroup(), o = { node: A, account: t, guardian: i }, { coValue: r } = await EA(o, null, {
     schema: e.META_SCHEMA,
     cotype: "comap",
     data: {}
   });
   t.set("sparks", r.id), console.log("✅ Agent minimal bootstrap: account.sparks (empty, connect via /on-added)");
 }
-async function jw(t, A, e, i = null) {
-  const { EXCEPTION_SCHEMAS: o } = await Promise.resolve().then(() => jt), { getAllSchemas: r } = await Promise.resolve().then(() => Wt), n = e || r(), s = A.createGroup(), a = A.createGroup();
+async function ly(t, A, e, i = null) {
+  const { EXCEPTION_SCHEMAS: o } = await Promise.resolve().then(() => $t), { getAllSchemas: r } = await Promise.resolve().then(() => _t), n = e || r(), s = A.createGroup(), a = A.createGroup();
   a.extend(s, "extend");
   const g = a.createMap({}, { $schema: o.META_SCHEMA });
   t.set("temp", g.id), g.set("guardian", s.id), o.META_SCHEMA;
-  const I = Ee("co_zTEMP"), c = { definition: bA(I.definition || I) }, { coValue: C } = await hA(
+  const I = le("co_zTEMP"), c = { definition: KA(I.definition || I) }, { coValue: C } = await EA(
     { node: A, account: t, guardian: s },
     null,
     { schema: o.META_SCHEMA, cotype: "comap", data: c, dbEngine: i }
-  ), B = C.id, Q = Ee(B), { $schema: f, $id: l, id: u, ...d } = Q.definition || Q;
-  for (const [P, G] of Object.entries(bA(d))) C.set(P, G);
+  ), B = C.id, Q = le(B), { $schema: f, $id: l, id: u, ...d } = Q.definition || Q;
+  for (const [Y, U] of Object.entries(KA(d))) C.set(Y, U);
   g.set("metaschema", B);
   const h = /* @__PURE__ */ new Map();
-  for (const [P, G] of Object.entries(n)) {
-    const L = G.$id || `@maia/schema/${P}`;
-    h.has(L) || h.set(L, { name: P, schema: G });
+  for (const [Y, U] of Object.entries(n)) {
+    const S = U.$id || `@maia/schema/${Y}`;
+    h.has(S) || h.set(S, { name: Y, schema: U });
   }
-  const p = (P, G = /* @__PURE__ */ new Set()) => {
-    if (!P || typeof P != "object" || G.has(P)) return /* @__PURE__ */ new Set();
-    G.add(P);
-    const L = /* @__PURE__ */ new Set();
-    P.$co && typeof P.$co == "string" && P.$co.startsWith("@maia/schema/") && L.add(P.$co);
-    for (const K of Object.values(P))
-      K && typeof K == "object" && (Array.isArray(K) ? K : [K]).forEach((S) => {
-        S && typeof S == "object" && p(S, G).forEach((M) => L.add(M));
+  const p = (Y, U = /* @__PURE__ */ new Set()) => {
+    if (!Y || typeof Y != "object" || U.has(Y)) return /* @__PURE__ */ new Set();
+    U.add(Y);
+    const S = /* @__PURE__ */ new Set();
+    Y.$co && typeof Y.$co == "string" && Y.$co.startsWith("@maia/schema/") && S.add(Y.$co);
+    for (const M of Object.values(Y))
+      M && typeof M == "object" && (Array.isArray(M) ? M : [M]).forEach((v) => {
+        v && typeof v == "object" && p(v, U).forEach((K) => S.add(K));
       });
-    return L;
+    return S;
   }, E = /* @__PURE__ */ new Map();
-  for (const [P, { schema: G }] of h) E.set(P, p(G));
-  const w = [], y = /* @__PURE__ */ new Set(), m = /* @__PURE__ */ new Set(), k = (P) => {
-    if (!y.has(P) && !m.has(P)) {
-      m.add(P);
-      for (const G of E.get(P) || [])
-        G.startsWith("@maia/schema/") && h.has(G) && k(G);
-      m.delete(P), y.add(P), w.push(P);
+  for (const [Y, { schema: U }] of h) E.set(Y, p(U));
+  const w = [], y = /* @__PURE__ */ new Set(), m = /* @__PURE__ */ new Set(), k = (Y) => {
+    if (!y.has(Y) && !m.has(Y)) {
+      m.add(Y);
+      for (const U of E.get(Y) || [])
+        U.startsWith("@maia/schema/") && h.has(U) && k(U);
+      m.delete(Y), y.add(Y), w.push(Y);
     }
   };
-  for (const P of h.keys())
-    P !== "@maia/schema/meta" && k(P);
-  const b = /* @__PURE__ */ new Map();
-  for (const P of w) {
-    const { schema: G } = h.get(P), { $schema: L, $id: K, id: S, ...M } = G, v = bA(M), { coValue: H } = await hA(
+  for (const Y of h.keys())
+    Y !== "@maia/schema/meta" && k(Y);
+  const F = /* @__PURE__ */ new Map();
+  for (const Y of w) {
+    const { schema: U } = h.get(Y), { $schema: S, $id: M, id: v, ...K } = U, O = KA(K), { coValue: V } = await EA(
       { node: A, account: t, guardian: s },
       null,
-      { schema: B, cotype: "comap", data: v, dbEngine: i }
-    ), V = H.id;
-    b.set(P, V), g.set(P, V);
+      { schema: B, cotype: "comap", data: O, dbEngine: i }
+    ), X = V.id;
+    F.set(Y, X), g.set(Y, X);
   }
-  const x = g.get("@maia/schema/data/spark") || o.META_SCHEMA, j = g.get("@maia/schema/os/schematas-registry") || o.META_SCHEMA, J = g.get("@maia/schema/os/os-registry") || o.META_SCHEMA, W = g.get("@maia/schema/os/capabilities") || o.META_SCHEMA, X = g.get("@maia/schema/os/indexes-registry") || o.META_SCHEMA, z = g.get("@maia/schema/os/vibes-registry") || o.META_SCHEMA, _ = g.get("@maia/schema/os/sparks-registry") || o.META_SCHEMA, O = { node: A, account: t, guardian: s }, Z = (P, G) => ({ schema: P, cotype: "comap", data: G, dbEngine: i }), { coValue: T } = await hA(O, null, Z(x, { name: kA })), { coValue: F } = await hA(O, null, Z(J, {})), { coValue: q } = await hA(O, null, Z(W, {}));
-  q.set("guardian", s.id), F.set("capabilities", q.id);
-  const { coValue: R } = await hA(O, null, Z(j, {})), { coValue: D } = await hA(O, null, Z(X, {})), { coValue: N } = await hA(O, null, Z(z, {}));
-  F.set("schematas", R.id), F.set("indexes", D.id), T.set("os", F.id), T.set("vibes", N.id), R.set("@maia/schema/meta", B);
-  for (const [P, G] of b) R.set(P, G);
-  const { coValue: Y } = await hA(O, null, Z(_, {}));
-  Y.set(kA, T.id), t.set("sparks", Y.id), typeof t.delete == "function" && t.delete("temp"), console.log("✅ Bootstrap scaffold complete: account.sparks, @maia spark, os, schematas, indexes, vibes");
+  const L = g.get("@maia/schema/data/spark") || o.META_SCHEMA, j = g.get("@maia/schema/os/schematas-registry") || o.META_SCHEMA, J = g.get("@maia/schema/os/os-registry") || o.META_SCHEMA, $ = g.get("@maia/schema/os/capabilities") || o.META_SCHEMA, AA = g.get("@maia/schema/os/indexes-registry") || o.META_SCHEMA, W = g.get("@maia/schema/os/vibes-registry") || o.META_SCHEMA, _ = g.get("@maia/schema/os/runtimes-registry") || o.META_SCHEMA, P = g.get("@maia/schema/os/sparks-registry") || o.META_SCHEMA, Z = { node: A, account: t, guardian: s }, T = (Y, U) => ({ schema: Y, cotype: "comap", data: U, dbEngine: i }), { coValue: G } = await EA(Z, null, T(L, { name: DA })), { coValue: x } = await EA(Z, null, T(J, {})), { coValue: R } = await EA(Z, null, T($, {}));
+  R.set("guardian", s.id), x.set("capabilities", R.id);
+  const { coValue: D } = await EA(Z, null, T(j, {})), { coValue: N } = await EA(Z, null, T(AA, {})), { coValue: H } = await EA(Z, null, T(W, {})), { coValue: z } = await EA(Z, null, T(_, {}));
+  x.set("schematas", D.id), x.set("indexes", N.id), x.set("runtimes", z.id), G.set("os", x.id), G.set("vibes", H.id), D.set("@maia/schema/meta", B);
+  for (const [Y, U] of F) D.set(Y, U);
+  const { coValue: b } = await EA(Z, null, T(P, {}));
+  b.set(DA, G.id), t.set("sparks", b.id), typeof t.delete == "function" && t.delete("temp"), console.log("✅ Bootstrap scaffold complete: account.sparks, @maia spark, os, schematas, indexes, runtimes, vibes");
 }
-async function Vw(t, A) {
+async function dy(t, A) {
   const e = t.account?.get("sparks");
   if (!e?.startsWith("co_z")) return;
   const i = await t.read(null, e);
-  await new Promise((O, Z) => {
-    if (!i.loading) return O();
+  await new Promise((P, Z) => {
+    if (!i.loading) return P();
     let T;
-    const F = setTimeout(() => Z(new Error("Timeout")), 1e4);
+    const G = setTimeout(() => Z(new Error("Timeout")), 1e4);
     T = i.subscribe(() => {
-      i.loading || (clearTimeout(F), T?.(), O());
+      i.loading || (clearTimeout(G), T?.(), P());
     });
   });
   const o = i?.value;
   if (!o || o.error) return;
-  const r = o[kA];
+  const r = o[DA];
   if (!r || !r.startsWith("co_z")) return;
   const n = t.getCoValue(r);
   if (!n) return;
-  t.isAvailable(n) || await new Promise((O, Z) => {
-    const T = setTimeout(() => Z(new Error("Timeout")), 1e4), F = n.subscribe((q) => {
-      q && t.isAvailable(q) && (clearTimeout(T), F?.(), O());
+  t.isAvailable(n) || await new Promise((P, Z) => {
+    const T = setTimeout(() => Z(new Error("Timeout")), 1e4), G = n.subscribe((x) => {
+      x && t.isAvailable(x) && (clearTimeout(T), G?.(), P());
     });
   });
   const s = t.getCurrentContent(n);
   if (!s || typeof s.set != "function") return;
-  const { EXCEPTION_SCHEMAS: a } = await Promise.resolve().then(() => jt), g = t.node, I = s.get("os");
+  const { EXCEPTION_SCHEMAS: a } = await Promise.resolve().then(() => $t), g = t.node, I = s.get("os");
   if (!I || !I.startsWith("co_z")) return;
   const c = t.getCoValue(I);
   if (!c || !t.isAvailable(c)) return;
@@ -12165,79 +12192,79 @@ async function Vw(t, A) {
   let l = null;
   const u = f.get("publicReaders");
   if (u && u.startsWith("co_z")) {
-    const O = g.getCoValue(u);
-    O?.isGroup?.() && t.isAvailable(O) && (l = t.getCurrentContent(O));
+    const P = g.getCoValue(u);
+    P?.isGroup?.() && t.isAvailable(P) && (l = t.getCurrentContent(P));
   }
   if (!l || typeof l.createMap != "function") {
-    const O = g.createGroup();
-    O.addMember("everyone", "reader"), l = g.createGroup(), l.extend(A, "extend"), l.extend(O, "reader"), f.set("publicReaders", l.id);
+    const P = g.createGroup();
+    P.addMember("everyone", "reader"), l = g.createGroup(), l.extend(A, "extend"), l.extend(P, "reader"), f.set("publicReaders", l.id);
   }
-  const { resolve: d } = await Promise.resolve().then(() => pn), h = await d(t, "@maia/schema/os/registries", { returnType: "coId" }), p = await d(t, "@maia/schema/os/sparks-registry", { returnType: "coId" }), E = await d(t, "@maia/schema/os/humans-registry", { returnType: "coId" }), w = h ? { $schema: h } : { $schema: a.META_SCHEMA }, y = p ? { $schema: p } : { $schema: a.META_SCHEMA }, m = E ? { $schema: E } : { $schema: a.META_SCHEMA }, { removeGroupMember: k } = await Promise.resolve().then(() => de), b = t.account, x = typeof g.getCurrentAccountOrAgentID == "function" ? g.getCurrentAccountOrAgentID() : b?.id ?? b?.$jazz?.id;
+  const { resolve: d } = await Promise.resolve().then(() => lo), h = await d(t, "@maia/schema/os/registries", { returnType: "coId" }), p = await d(t, "@maia/schema/os/sparks-registry", { returnType: "coId" }), E = await d(t, "@maia/schema/os/humans-registry", { returnType: "coId" }), w = h ? { $schema: h } : { $schema: a.META_SCHEMA }, y = p ? { $schema: p } : { $schema: a.META_SCHEMA }, m = E ? { $schema: E } : { $schema: a.META_SCHEMA }, { removeGroupMember: k } = await Promise.resolve().then(() => ue), F = t.account, L = typeof g.getCurrentAccountOrAgentID == "function" ? g.getCurrentAccountOrAgentID() : F?.id ?? F?.$jazz?.id;
   let j = s.get("registries"), J = null;
   if (j) {
-    const O = t.getCoValue(j);
-    O && t.isAvailable(O) && (J = t.getCurrentContent(O));
+    const P = t.getCoValue(j);
+    P && t.isAvailable(P) && (J = t.getCurrentContent(P));
   }
   if (!J || typeof J.set != "function") {
-    const O = g.createGroup();
-    O.extend(A, "extend"), O.extend(l, "reader");
-    const Z = O.createMap({}, w);
+    const P = g.createGroup();
+    P.extend(A, "extend"), P.extend(l, "reader");
+    const Z = P.createMap({}, w);
     try {
-      await k(O, x);
+      await k(P, L);
     } catch {
     }
     s.set("registries", Z.id), J = Z;
   }
-  let W = J.get("sparks"), X = null;
-  if (W) {
-    const O = t.getCoValue(W);
-    O && t.isAvailable(O) && (X = t.getCurrentContent(O));
+  let $ = J.get("sparks"), AA = null;
+  if ($) {
+    const P = t.getCoValue($);
+    P && t.isAvailable(P) && (AA = t.getCurrentContent(P));
   }
-  if (!X || typeof X.set != "function") {
-    const O = g.createGroup();
-    O.extend(A, "extend"), O.extend(l, "reader");
-    const Z = O.createMap({}, y);
+  if (!AA || typeof AA.set != "function") {
+    const P = g.createGroup();
+    P.extend(A, "extend"), P.extend(l, "reader");
+    const Z = P.createMap({}, y);
     try {
-      await k(O, x);
+      await k(P, L);
     } catch {
     }
-    J.set("sparks", Z.id), X = Z;
+    J.set("sparks", Z.id), AA = Z;
   }
-  X.set(kA, r);
-  let z = J.get("humans"), _ = null;
-  if (z) {
-    const O = t.getCoValue(z);
-    O && t.isAvailable(O) && (_ = t.getCurrentContent(O));
+  AA.set(DA, r);
+  let W = J.get("humans"), _ = null;
+  if (W) {
+    const P = t.getCoValue(W);
+    P && t.isAvailable(P) && (_ = t.getCurrentContent(P));
   }
   if (!_ || typeof _.set != "function") {
-    const O = g.createGroup();
-    O.extend(A, "extend"), O.extend(l, "reader");
-    const Z = O.createMap({}, m);
+    const P = g.createGroup();
+    P.extend(A, "extend"), P.extend(l, "reader");
+    const Z = P.createMap({}, m);
     try {
-      await k(O, x);
+      await k(P, L);
     } catch {
     }
     J.set("humans", Z.id);
   }
 }
-function bA(t, A = !1) {
+function KA(t, A = !1) {
   if (t == null || typeof t != "object") return t;
-  if (Array.isArray(t)) return t.map((i) => bA(i, A));
+  if (Array.isArray(t)) return t.map((i) => KA(i, A));
   const e = {};
   for (const [i, o] of Object.entries(t)) {
     if (i === "id" && !A) continue;
     const r = i === "properties" || i === "items";
-    e[i] = o != null && typeof o == "object" ? bA(o, r || A) : o;
+    e[i] = o != null && typeof o == "object" ? KA(o, r || A) : o;
   }
   return e;
 }
-async function $w(t, A, e) {
+async function uy(t, A, e) {
   let i = 0, o = 0;
   try {
-    const r = await vA(e, kA);
+    const r = await vA(e, DA);
     if (!r)
       return { deleted: 0, errors: 0 };
-    const n = await gA(e, r, {
+    const n = await sA(e, r, {
       waitForAvailable: !0,
       timeoutMs: 5e3
     });
@@ -12248,7 +12275,7 @@ async function $w(t, A, e) {
       return { deleted: 0, errors: 0 };
     const a = s.get("schematas"), g = /* @__PURE__ */ new Set();
     if (a) {
-      const E = await gA(e, a, {
+      const E = await sA(e, a, {
         waitForAvailable: !0,
         timeoutMs: 5e3
       });
@@ -12270,7 +12297,7 @@ async function $w(t, A, e) {
     const B = s.get("indexes");
     if (B)
       try {
-        const E = await gA(e, B, {
+        const E = await sA(e, B, {
           waitForAvailable: !0,
           timeoutMs: 5e3
         });
@@ -12282,15 +12309,15 @@ async function $w(t, A, e) {
               const m = C.get(y);
               if (m)
                 try {
-                  const k = await gA(e, m, {
+                  const k = await sA(e, m, {
                     waitForAvailable: !0,
                     timeoutMs: 2e3
                   });
                   if (k && e.isAvailable(k)) {
-                    const b = e.getCurrentContent(k);
-                    if (b && typeof b.toJSON == "function") {
-                      const x = b.toJSON();
-                      for (const j of x)
+                    const F = e.getCurrentContent(k);
+                    if (F && typeof F.toJSON == "function") {
+                      const L = F.toJSON();
+                      for (const j of L)
                         j && typeof j == "string" && j.startsWith("co_z") && c.add(j);
                     }
                   }
@@ -12306,7 +12333,7 @@ async function $w(t, A, e) {
     const f = s.get("unknown");
     if (f)
       try {
-        const E = await gA(e, f, {
+        const E = await sA(e, f, {
           waitForAvailable: !0,
           timeoutMs: 2e3
         });
@@ -12330,21 +12357,21 @@ async function $w(t, A, e) {
         if (k && g.has(E))
           continue;
         try {
-          await ao(e, k || null, E), i++;
-        } catch (b) {
-          if (b.message && (b.message.includes("Cannot access") || b.message.includes("before initialization") || b.message.includes("ReferenceError")))
+          await Io(e, k || null, E), i++;
+        } catch (F) {
+          if (F.message && (F.message.includes("Cannot access") || F.message.includes("before initialization") || F.message.includes("ReferenceError")))
             i++;
           else
-            throw b;
+            throw F;
         }
       } catch (w) {
         console.warn(`[Seed] Failed to delete co-value ${E ? E.substring(0, 12) : "undefined"}...:`, w.message), o++;
       }
     let u = null;
-    const d = await Mo(e, kA);
+    const d = await Fo(e, DA);
     if (d)
       try {
-        const E = await gA(e, d, {
+        const E = await sA(e, d, {
           waitForAvailable: !0,
           timeoutMs: 2e3
         });
@@ -12358,7 +12385,7 @@ async function $w(t, A, e) {
                 const k = e.getCoValue(m);
                 if (k) {
                   const j = (e.getHeader(k)?.meta || null)?.$schema;
-                  await ao(e, j || null, m), i++;
+                  await Io(e, j || null, m), i++;
                 }
               } catch (k) {
                 console.warn(`[Seed] Failed to delete vibe ${m ? m.substring(0, 12) : "undefined"}...:`, k.message), o++;
@@ -12378,7 +12405,7 @@ async function $w(t, A, e) {
       const E = s.get("indexes");
       if (E)
         try {
-          const w = await gA(e, E, {
+          const w = await sA(e, E, {
             waitForAvailable: !0,
             timeoutMs: 5e3
           });
@@ -12401,7 +12428,7 @@ async function $w(t, A, e) {
     }
     for (const { schemaCoId: E, indexColistId: w } of h)
       try {
-        const y = await eA(e, E, { returnType: "schema" });
+        const y = await tA(e, E, { returnType: "schema" });
         if (!y || !y.title) {
           console.warn(`[Seed] Cannot get schema title for ${E ? E.substring(0, 12) : "undefined"}..., skipping index colist deletion`);
           continue;
@@ -12411,13 +12438,13 @@ async function $w(t, A, e) {
           console.warn(`[Seed] Invalid schema title format: ${m}, skipping index colist deletion`);
           continue;
         }
-        const b = `@maia/schema/index/${m.replace("@maia/schema/", "")}`, x = await eA(e, b, { returnType: "coId" });
-        if (!x) {
-          console.warn(`[Seed] Cannot resolve index colist schema ${b}, skipping index colist deletion`);
+        const F = `@maia/schema/index/${m.replace("@maia/schema/", "")}`, L = await tA(e, F, { returnType: "coId" });
+        if (!L) {
+          console.warn(`[Seed] Cannot resolve index colist schema ${F}, skipping index colist deletion`);
           continue;
         }
         try {
-          await ao(e, x, w), i++, p && typeof p.delete == "function" && p.delete(E);
+          await Io(e, L, w), i++, p && typeof p.delete == "function" && p.delete(E);
         } catch (j) {
           if (j.message && (j.message.includes("Cannot access") || j.message.includes("before initialization") || j.message.includes("ReferenceError")))
             i++, p && typeof p.delete == "function" && p.delete(E);
@@ -12454,35 +12481,35 @@ async function $w(t, A, e) {
     return console.error("[Seed] Error during cleanup:", r), { deleted: i, errors: o + 1 };
   }
 }
-function Ee(t) {
+function le(t) {
   const A = t ? `https://maia.city/${t}` : "https://json-schema.org/draft/2020-12/schema";
   return {
     definition: {
-      ...so,
+      ...go,
       $id: A,
       $schema: A
     }
   };
 }
-async function Ww(t, A, e, i, o, r = null) {
-  const { CoJSONBackend: n } = await Promise.resolve().then(() => Pr), s = r || new n(A, t, { systemSpark: "@maia" });
+async function hy(t, A, e, i, o, r = null) {
+  const { CoJSONBackend: n } = await Promise.resolve().then(() => jr), s = r || new n(A, t, { systemSpark: "@maia" });
   if (!t.get("sparks") || !String(t.get("sparks")).startsWith("co_z")) {
-    const { getAllSchemas: G } = await Promise.resolve().then(() => Wt);
-    await jw(t, A, i || G(), r?.dbEngine);
+    const { getAllSchemas: b } = await Promise.resolve().then(() => _t);
+    await ly(t, A, i || b(), r?.dbEngine);
   }
   try {
-    const G = await vA(s, kA);
-    if (G) {
-      const L = await gA(s, G, {
+    const b = await vA(s, DA);
+    if (b) {
+      const Y = await sA(s, b, {
         waitForAvailable: !0,
         timeoutMs: 2e3
       });
-      if (L && s.isAvailable(L)) {
-        const K = s.getCurrentContent(L);
-        if (K && typeof K.get == "function") {
-          const S = K.get("schematas");
+      if (Y && s.isAvailable(Y)) {
+        const U = s.getCurrentContent(Y);
+        if (U && typeof U.get == "function") {
+          const S = U.get("schematas");
           if (S) {
-            const M = await gA(s, S, {
+            const M = await sA(s, S, {
               waitForAvailable: !0,
               timeoutMs: 2e3
             });
@@ -12495,79 +12522,79 @@ async function Ww(t, A, e, i, o, r = null) {
         }
       }
     }
-  } catch (G) {
-    console.warn("[Seed] Idempotency check failed, proceeding with seeding:", G.message);
+  } catch (b) {
+    console.warn("[Seed] Idempotency check failed, proceeding with seeding:", b.message);
   }
-  const { CoIdRegistry: a } = await Promise.resolve().then(() => DI), { transformForSeeding: g, validateSchemaStructure: I } = await Promise.resolve().then(() => vn), c = new a(), C = await vA(s, kA);
+  const { CoIdRegistry: a } = await Promise.resolve().then(() => DI), { transformForSeeding: g, validateSchemaStructure: I } = await Promise.resolve().then(() => vn), c = new a(), C = await vA(s, DA);
   if (C)
     try {
-      const G = await gA(s, C, {
+      const b = await sA(s, C, {
         waitForAvailable: !0,
         timeoutMs: 2e3
       });
-      if (G && s.isAvailable(G)) {
-        const L = s.getCurrentContent(G);
-        if (L && typeof L.get == "function" && L.get("schematas")) {
+      if (b && s.isAvailable(b)) {
+        const Y = s.getCurrentContent(b);
+        if (Y && typeof Y.get == "function" && Y.get("schematas")) {
           console.log("🌱 Cleaning up existing seeded data before reseeding...");
-          const S = await $w(t, A, s);
+          const S = await uy(t, A, s);
           console.log(`[Seed] Cleanup complete: deleted ${S.deleted} co-values, ${S.errors} errors`);
         }
       }
-    } catch (G) {
-      console.warn("[Seed] Cleanup check failed, proceeding with seeding:", G.message);
+    } catch (b) {
+      console.warn("[Seed] Cleanup check failed, proceeding with seeding:", b.message);
     }
-  const B = await Go(s);
+  const B = await Ro(s);
   if (!B || typeof B.createMap != "function")
     throw new Error("[CoJSONSeed] @maia spark group not found. Ensure schemaMigration has created @maia spark.");
-  await Vw(s, B);
+  await dy(s, B);
   const Q = /* @__PURE__ */ new Map();
-  for (const [G, L] of Object.entries(i)) {
-    const K = L.$id || `@maia/schema/${G}`;
-    Q.has(K) || Q.set(K, { name: G, schema: L });
+  for (const [b, Y] of Object.entries(i)) {
+    const U = Y.$id || `@maia/schema/${b}`;
+    Q.has(U) || Q.set(U, { name: b, schema: Y });
   }
-  const f = (G, L = /* @__PURE__ */ new Set()) => {
-    const K = /* @__PURE__ */ new Set();
-    if (!G || typeof G != "object" || L.has(G))
-      return K;
-    L.add(G), G.$co && typeof G.$co == "string" && G.$co.startsWith("@maia/schema/") && K.add(G.$co);
-    for (const S of Object.values(G))
+  const f = (b, Y = /* @__PURE__ */ new Set()) => {
+    const U = /* @__PURE__ */ new Set();
+    if (!b || typeof b != "object" || Y.has(b))
+      return U;
+    Y.add(b), b.$co && typeof b.$co == "string" && b.$co.startsWith("@maia/schema/") && U.add(b.$co);
+    for (const S of Object.values(b))
       if (S && typeof S == "object")
         if (Array.isArray(S))
           for (const M of S)
-            M && typeof M == "object" && f(M, L).forEach((H) => K.add(H));
+            M && typeof M == "object" && f(M, Y).forEach((K) => U.add(K));
         else
-          f(S, L).forEach((v) => K.add(v));
-    return K;
+          f(S, Y).forEach((v) => U.add(v));
+    return U;
   }, l = /* @__PURE__ */ new Map();
-  for (const [G, { schema: L }] of Q) {
-    const K = f(L);
-    l.set(G, K);
+  for (const [b, { schema: Y }] of Q) {
+    const U = f(Y);
+    l.set(b, U);
   }
-  const u = [], d = /* @__PURE__ */ new Set(), h = /* @__PURE__ */ new Set(), p = (G) => {
-    if (d.has(G) || h.has(G))
+  const u = [], d = /* @__PURE__ */ new Set(), h = /* @__PURE__ */ new Set(), p = (b) => {
+    if (d.has(b) || h.has(b))
       return;
-    h.add(G);
-    const L = l.get(G) || /* @__PURE__ */ new Set();
-    for (const K of L)
-      K.startsWith("@maia/schema/") && Q.has(K) && p(K);
-    h.delete(G), d.add(G), u.push(G);
+    h.add(b);
+    const Y = l.get(b) || /* @__PURE__ */ new Set();
+    for (const U of Y)
+      U.startsWith("@maia/schema/") && Q.has(U) && p(U);
+    h.delete(b), d.add(b), u.push(b);
   };
-  for (const G of Q.keys())
-    G !== "@maia/schema/meta" && p(G);
-  await Lr(t, A, B, s, void 0);
+  for (const b of Q.keys())
+    b !== "@maia/schema/meta" && p(b);
+  await Tr(t, A, B, s, void 0);
   let E = null;
-  const w = await vA(s, kA);
+  const w = await vA(s, DA);
   if (w) {
-    const G = await gA(s, w, {
+    const b = await sA(s, w, {
       waitForAvailable: !0,
       timeoutMs: 2e3
     });
-    if (G && s.isAvailable(G)) {
-      const L = s.getCurrentContent(G);
-      if (L && typeof L.get == "function" && !E) {
-        const K = L.get("schematas");
-        if (K) {
-          const S = await gA(s, K, {
+    if (b && s.isAvailable(b)) {
+      const Y = s.getCurrentContent(b);
+      if (Y && typeof Y.get == "function" && !E) {
+        const U = Y.get("schematas");
+        if (U) {
+          const S = await sA(s, U, {
             waitForAvailable: !0,
             timeoutMs: 2e3
           });
@@ -12580,47 +12607,47 @@ async function Ww(t, A, e, i, o, r = null) {
     }
   }
   if (E) {
-    const G = Ee(E), { $schema: L, $id: K, id: S, ...M } = G.definition || G, v = bA(M), H = await gA(s, E, {
+    const b = le(E), { $schema: Y, $id: U, id: S, ...M } = b.definition || b, v = KA(M), K = await sA(s, E, {
       waitForAvailable: !0,
       timeoutMs: 2e3
     });
-    if (H && s.isAvailable(H)) {
-      const V = s.getCurrentContent(H);
-      if (V && typeof V.set == "function")
-        for (const [$, iA] of Object.entries(v))
-          V.set($, iA);
+    if (K && s.isAvailable(K)) {
+      const O = s.getCurrentContent(K);
+      if (O && typeof O.set == "function")
+        for (const [V, X] of Object.entries(v))
+          O.set(V, X);
     }
   } else {
     EXCEPTION_SCHEMAS.META_SCHEMA;
-    const G = Ee("co_zTEMP"), L = {
-      definition: bA(G.definition || G)
-    }, { coValue: K } = await hA(
+    const b = le("co_zTEMP"), Y = {
+      definition: KA(b.definition || b)
+    }, { coValue: U } = await EA(
       { node: A, account: t, guardian: B },
       null,
-      { schema: EXCEPTION_SCHEMAS.META_SCHEMA, cotype: "comap", data: L }
-    ), S = K.id, M = Ee(S), { $schema: v, $id: H, id: V, ...$ } = M.definition || M, iA = bA($);
-    for (const [sA, aA] of Object.entries(iA))
-      K.set(sA, aA);
+      { schema: EXCEPTION_SCHEMAS.META_SCHEMA, cotype: "comap", data: Y }
+    ), S = U.id, M = le(S), { $schema: v, $id: K, id: O, ...V } = M.definition || M, X = KA(V);
+    for (const [nA, IA] of Object.entries(X))
+      U.set(nA, IA);
     E = S;
   }
   if (!c.has("@maia/schema/meta"))
     c.register("@maia/schema/meta", E);
   else {
-    const G = c.get("@maia/schema/meta");
-    G !== E && (console.warn(`[Seed] Metaschema already registered with different co-id: ${G}, using existing instead of ${E}`), E = G);
+    const b = c.get("@maia/schema/meta");
+    b !== E && (console.warn(`[Seed] Metaschema already registered with different co-id: ${b}, using existing instead of ${E}`), E = b);
   }
-  const y = /* @__PURE__ */ new Map(), m = /* @__PURE__ */ new Map(), k = await Promise.resolve().then(() => Rn), b = await Promise.resolve().then(() => YI), x = /* @__PURE__ */ new Map();
+  const y = /* @__PURE__ */ new Map(), m = /* @__PURE__ */ new Map(), k = await Promise.resolve().then(() => Rn), F = await Promise.resolve().then(() => YI), L = /* @__PURE__ */ new Map();
   if (w) {
-    const G = await gA(s, w, {
+    const b = await sA(s, w, {
       waitForAvailable: !0,
       timeoutMs: 2e3
     });
-    if (G && s.isAvailable(G)) {
-      const L = s.getCurrentContent(G);
-      if (L && typeof L.get == "function") {
-        const K = L.get("schematas");
-        if (K) {
-          const S = await gA(s, K, {
+    if (b && s.isAvailable(b)) {
+      const Y = s.getCurrentContent(b);
+      if (Y && typeof Y.get == "function") {
+        const U = Y.get("schematas");
+        if (U) {
+          const S = await sA(s, U, {
             waitForAvailable: !0,
             timeoutMs: 2e3
           });
@@ -12628,9 +12655,9 @@ async function Ww(t, A, e, i, o, r = null) {
             const M = s.getCurrentContent(S);
             if (M && typeof M.get == "function") {
               const v = M.keys && typeof M.keys == "function" ? M.keys() : Object.keys(M);
-              for (const H of v) {
-                const V = M.get(H);
-                V && typeof V == "string" && V.startsWith("co_z") && x.set(H, V);
+              for (const K of v) {
+                const O = M.get(K);
+                O && typeof O == "string" && O.startsWith("co_z") && L.set(K, O);
               }
             }
           }
@@ -12638,253 +12665,294 @@ async function Ww(t, A, e, i, o, r = null) {
       }
     }
   }
-  for (const G of u) {
-    const { name: L, schema: K } = Q.get(G), { $schema: S, $id: M, id: v, ...H } = K, V = bA(H), $ = x.get(G);
-    let iA;
-    $ ? (await b.update(s, E, $, V), iA = $) : iA = (await k.create(s, E, V)).id, y.set(G, iA);
-    const sA = s.getCoValue(iA);
-    if (sA && s.isAvailable(sA)) {
-      const aA = s.getCurrentContent(sA);
-      aA && typeof aA.set == "function" && m.set(G, aA);
+  for (const b of u) {
+    const { name: Y, schema: U } = Q.get(b), { $schema: S, $id: M, id: v, ...K } = U, O = KA(K), V = L.get(b);
+    let X;
+    V ? (await F.update(s, E, V, O), X = V) : X = (await k.create(s, E, O)).id, y.set(b, X);
+    const nA = s.getCoValue(X);
+    if (nA && s.isAvailable(nA)) {
+      const IA = s.getCurrentContent(nA);
+      IA && typeof IA.set == "function" && m.set(b, IA);
     }
-    c.register(G, iA);
+    c.register(b, X);
   }
   E && !y.has("@maia/schema/meta") && y.set("@maia/schema/meta", E);
   const j = /* @__PURE__ */ new Map();
-  for (const G of u) {
-    const { name: L, schema: K } = Q.get(G), S = y.get(G), M = m.get(G), v = g(K, y);
+  for (const b of u) {
+    const { name: Y, schema: U } = Q.get(b), S = y.get(b), M = m.get(b), v = g(U, y);
     v.$id = `https://maia.city/${S}`;
-    const H = I(v, G, { checkSchemaReferences: !0, checkNestedCoTypes: !1 });
-    if (H.length > 0) {
-      const QA = `[Seed] Schema ${G} still contains @maia/schema/ references after transformation:
-${H.join(`
+    const K = I(v, b, { checkSchemaReferences: !0, checkNestedCoTypes: !1 });
+    if (K.length > 0) {
+      const cA = `[Seed] Schema ${b} still contains @maia/schema/ references after transformation:
+${K.join(`
 `)}`;
-      throw console.error(QA), new Error(QA);
+      throw console.error(cA), new Error(cA);
     }
-    j.set(G, v);
-    const { $schema: V, $id: $, id: iA, ...sA } = v, aA = bA(sA);
-    for (const [QA, uA] of Object.entries(aA))
-      M.set(QA, uA);
+    j.set(b, v);
+    const { $schema: O, $id: V, id: X, ...nA } = v, IA = KA(nA);
+    for (const [cA, lA] of Object.entries(IA))
+      M.set(cA, lA);
   }
   const J = [];
-  for (const G of u) {
-    const { name: L } = Q.get(G), K = y.get(G), S = m.get(G);
+  for (const b of u) {
+    const { name: Y } = Q.get(b), U = y.get(b), S = m.get(b);
     J.push({
-      name: L,
-      key: G,
-      coId: K,
+      name: Y,
+      key: b,
+      coId: U,
       coMapId: S.id
     });
   }
-  await Lr(t, A, B, s, y);
-  const W = /* @__PURE__ */ new Map();
-  let z = await (async () => {
-    const G = /* @__PURE__ */ new Map(), L = await vA(s, kA);
-    if (L) {
-      const K = A.getCoValue(L);
-      if (K && K.type === "comap") {
-        const S = K.getCurrentContent?.();
+  await Tr(t, A, B, s, y);
+  const $ = /* @__PURE__ */ new Map();
+  let W = await (async () => {
+    const b = /* @__PURE__ */ new Map(), Y = await vA(s, DA);
+    if (Y) {
+      const U = A.getCoValue(Y);
+      if (U && U.type === "comap") {
+        const S = U.getCurrentContent?.();
         if (S && typeof S.get == "function") {
           const M = S.get("schematas");
           if (M) {
             const v = A.getCoValue(M);
             if (v && v.type === "comap") {
-              const H = v.getCurrentContent?.();
-              if (H && typeof H.get == "function") {
-                const V = H.keys();
-                for (const $ of V) {
-                  const iA = H.get($);
-                  iA && typeof iA == "string" && iA.startsWith("co_z") && G.set($, iA);
+              const K = v.getCurrentContent?.();
+              if (K && typeof K.get == "function") {
+                const O = K.keys();
+                for (const V of O) {
+                  const X = K.get(V);
+                  X && typeof X == "string" && X.startsWith("co_z") && b.set(V, X);
                 }
-                G.size > 0;
+                b.size > 0;
               }
             }
           }
         }
       }
     }
-    if (G.size === 0) {
-      for (const [K, S] of y.entries())
-        G.set(K, S);
-      E && G.set("@maia/schema/meta", E);
+    if (b.size === 0) {
+      for (const [U, S] of y.entries())
+        b.set(U, S);
+      E && b.set("@maia/schema/meta", E);
     }
-    return G;
+    return b;
   })();
   if (o)
-    for (const [G] of Object.entries(o)) {
-      const L = `@maia/schema/${G}`, K = `@maia/schema/data/${G}`, S = z.get(K);
-      S && (z.set(L, S), c.register(L, S));
+    for (const [b] of Object.entries(o)) {
+      const Y = `@maia/schema/${b}`, U = `@maia/schema/data/${b}`, S = W.get(U);
+      S && (W.set(Y, S), c.register(Y, S));
     }
   let _ = { configs: [], count: 0 };
-  const O = ["actor", "context", "view", "state", "brand", "style", "inbox", "subscribers"], Z = ["states"], T = (G, L) => {
-    if (!G || typeof G != "object")
-      return G;
-    const K = JSON.parse(JSON.stringify(G));
-    if (K.$schema && K.$schema.startsWith("@maia/schema/")) {
-      const S = L.get(K.$schema);
-      S && (K.$schema = S);
+  const P = ["actor", "context", "view", "state", "brand", "style", "inbox", "subscribers"], Z = ["states"], T = (b, Y) => {
+    if (!b || typeof b != "object")
+      return b;
+    const U = JSON.parse(JSON.stringify(b));
+    if (U.$schema && U.$schema.startsWith("@maia/schema/")) {
+      const S = Y.get(U.$schema);
+      S && (U.$schema = S);
     }
-    for (const S of O)
-      delete K[S];
+    for (const S of P)
+      delete U[S];
     for (const S of Z)
-      S === "states" && K.initial ? K.states = Object.fromEntries(
-        Object.keys(K.states || {}).map((M) => [M, {}])
-      ) : delete K[S];
-    return K;
-  }, F = () => {
-    const G = new Map(z);
-    for (const [L, K] of W.entries())
-      K && typeof K == "string" && K.startsWith("co_z") && G.set(L, K);
-    for (const [L, K] of c.getAll())
-      K && typeof K == "string" && K.startsWith("co_z") && G.set(L, K);
-    return G;
-  }, q = async (G, L, K) => {
-    if (!L || typeof L != "object")
+      S === "states" && U.initial ? U.states = Object.fromEntries(
+        Object.keys(U.states || {}).map((M) => [M, {}])
+      ) : delete U[S];
+    return U;
+  }, G = () => {
+    const b = new Map(W);
+    for (const [Y, U] of $.entries())
+      U && typeof U == "string" && U.startsWith("co_z") && b.set(Y, U);
+    for (const [Y, U] of c.getAll())
+      U && typeof U == "string" && U.startsWith("co_z") && b.set(Y, U);
+    return b;
+  }, x = async (b, Y, U) => {
+    if (!Y || typeof Y != "object")
       return { configs: [], count: 0 };
     const S = {};
-    for (const [H, V] of Object.entries(L))
-      S[H] = T(V, z);
-    const M = { [G]: S }, v = await ms(t, A, B, s, M, W, m, y);
-    for (const H of v.configs || []) {
-      const V = H.coId, $ = H.path, iA = H.expectedCoId;
-      W.set($, V), iA && (W.set(iA, V), z.set(iA, V), c.register(iA, V)), c.register($, V);
+    for (const [K, O] of Object.entries(Y))
+      S[K] = T(O, W);
+    const M = { [b]: S }, v = await ms(t, A, B, s, M, $, m, y);
+    for (const K of v.configs || []) {
+      const O = K.coId, V = K.path, X = K.expectedCoId;
+      $.set(V, O), X && ($.set(X, O), W.set(X, O), c.register(X, O)), c.register(V, O);
     }
     return v;
   };
   if (e) {
-    const G = await q("styles", e.styles);
-    _.configs.push(...G.configs || []), _.count += G.count || 0, z = F();
-    const L = await q("actors", e.actors);
-    _.configs.push(...L.configs || []), _.count += L.count || 0, z = F();
-    const K = await q("views", e.views);
-    _.configs.push(...K.configs || []), _.count += K.count || 0, z = F();
-    const S = await q("contexts", e.contexts);
-    _.configs.push(...S.configs || []), _.count += S.count || 0, z = F();
-    const M = await q("states", e.states);
-    _.configs.push(...M.configs || []), _.count += M.count || 0, z = F();
-    const v = await q("interfaces", e.interfaces);
-    _.configs.push(...v.configs || []), _.count += v.count || 0, z = F();
-    const H = await q("subscriptions", e.subscriptions);
-    _.configs.push(...H.configs || []), _.count += H.count || 0, z = F();
-    const V = await q("inboxes", e.inboxes);
-    _.configs.push(...V.configs || []), _.count += V.count || 0, z = F();
-    const $ = await q("children", e.children);
-    _.configs.push(...$.configs || []), _.count += $.count || 0, z = F();
-    const iA = await q("tool", e.tool);
-    _.configs.push(...iA.configs || []), _.count += iA.count || 0, z = F();
+    const b = await x("styles", e.styles);
+    _.configs.push(...b.configs || []), _.count += b.count || 0, W = G();
+    const Y = await x("actors", e.actors);
+    _.configs.push(...Y.configs || []), _.count += Y.count || 0, W = G();
+    const U = await x("views", e.views);
+    _.configs.push(...U.configs || []), _.count += U.count || 0, W = G();
+    const S = await x("contexts", e.contexts);
+    _.configs.push(...S.configs || []), _.count += S.count || 0, W = G();
+    const M = await x("states", e.states);
+    _.configs.push(...M.configs || []), _.count += M.count || 0, W = G();
+    const v = await x("interfaces", e.interfaces);
+    _.configs.push(...v.configs || []), _.count += v.count || 0, W = G();
+    const K = await x("subscriptions", e.subscriptions);
+    _.configs.push(...K.configs || []), _.count += K.count || 0, W = G();
+    const O = await x("inboxes", e.inboxes);
+    _.configs.push(...O.configs || []), _.count += O.count || 0, W = G();
+    const V = await x("children", e.children);
+    _.configs.push(...V.configs || []), _.count += V.count || 0, W = G();
+    const X = await x("tool", e.tool);
+    _.configs.push(...X.configs || []), _.count += X.count || 0, W = G();
   }
-  const R = async (G, L) => {
-    if (!G || !L)
+  const R = async (b, Y) => {
+    if (!b || !Y)
       return 0;
-    const K = F();
+    const U = G();
     let S = 0;
-    for (const M of G) {
+    for (const M of b) {
       M.coId;
-      const v = M.expectedCoId, H = v && L ? Object.values(L).find((sA) => sA.$id === v) : null;
-      if (!H)
+      const v = M.expectedCoId, K = v && Y ? Object.values(Y).find((nA) => nA.$id === v) : null;
+      if (!K)
         continue;
-      const V = g(H, K), $ = M.coMap, iA = M.cotype || "comap";
-      if (iA === "colist") {
-        if ($ && typeof $.append == "function") {
-          const sA = V.items || [];
-          for (const aA of sA)
-            $.append(aA);
+      const O = g(K, U), V = M.coMap, X = M.cotype || "comap";
+      if (X === "colist") {
+        if (V && typeof V.append == "function") {
+          const nA = O.items || [];
+          for (const IA of nA)
+            V.append(IA);
           S++;
         }
-      } else if (iA === "costream") {
-        if ($ && typeof $.push == "function") {
-          const sA = V.items || [];
-          for (const aA of sA)
-            $.push(aA);
+      } else if (X === "costream") {
+        if (V && typeof V.push == "function") {
+          const nA = O.items || [];
+          for (const IA of nA)
+            V.push(IA);
           S++;
         }
-      } else if ($ && typeof $.set == "function") {
-        const { $id: sA, $schema: aA, ...QA } = V;
-        QA.states && QA.states;
-        for (const [uA, ce] of Object.entries(QA))
-          $.set(uA, ce);
+      } else if (V && typeof V.set == "function") {
+        const { $id: nA, $schema: IA, ...cA } = O;
+        cA.states && cA.states;
+        for (const [lA, yA] of Object.entries(cA))
+          V.set(lA, yA);
         S++;
       }
     }
     return S;
   };
   if (e) {
-    const G = _.configs.filter(($) => $.type === "subscription");
-    await R(G, e.subscriptions);
-    const L = _.configs.filter(($) => $.type === "inbox");
-    await R(L, e.inboxes);
-    const K = _.configs.filter(($) => $.type === "children");
-    await R(K, e.children), F();
-    const S = _.configs.filter(($) => $.type === "actor");
+    const b = _.configs.filter((V) => V.type === "subscription");
+    await R(b, e.subscriptions);
+    const Y = _.configs.filter((V) => V.type === "inbox");
+    await R(Y, e.inboxes);
+    const U = _.configs.filter((V) => V.type === "children");
+    await R(U, e.children), G();
+    const S = _.configs.filter((V) => V.type === "actor");
     await R(S, e.actors);
-    const M = _.configs.filter(($) => $.type === "view");
+    const M = _.configs.filter((V) => V.type === "view");
     await R(M, e.views);
-    const v = _.configs.filter(($) => $.type === "context");
+    const v = _.configs.filter((V) => V.type === "context");
     await R(v, e.contexts);
-    const H = _.configs.filter(($) => $.type === "state");
-    await R(H, e.states);
-    const V = _.configs.filter(($) => $.type === "interface");
-    await R(V, e.interfaces);
+    const K = _.configs.filter((V) => V.type === "state");
+    await R(K, e.states);
+    const O = _.configs.filter((V) => V.type === "interface");
+    await R(O, e.interfaces);
   }
   const D = e?.vibes || [];
   if (D.length > 0) {
-    z = F();
-    let G = await Mo(s, kA), L;
-    if (G) {
-      const K = A.getCoValue(G);
+    W = G();
+    let b = await Fo(s, DA), Y;
+    if (b) {
+      const K = A.getCoValue(b);
       if (K && K.type === "comap") {
-        const S = K.getCurrentContent?.();
-        S && typeof S.set == "function" && (L = S);
+        const O = K.getCurrentContent?.();
+        O && typeof O.set == "function" && (Y = O);
       }
     }
-    if (!L) {
-      const K = y?.get("@maia/schema/os/vibes-registry") ?? await (await Promise.resolve().then(() => pn)).resolve(s, "@maia/schema/os/vibes-registry", { returnType: "coId" }), S = { node: A, account: t, guardian: B }, { coValue: M } = await hA(S, null, {
+    if (!Y) {
+      const K = y?.get("@maia/schema/os/vibes-registry") ?? await (await Promise.resolve().then(() => lo)).resolve(s, "@maia/schema/os/vibes-registry", { returnType: "coId" }), O = { node: A, account: t, guardian: B }, { coValue: V } = await EA(O, null, {
         schema: K || EXCEPTION_SCHEMAS.META_SCHEMA,
         cotype: "comap",
         data: {},
         dbEngine: s?.dbEngine
       });
-      L = M, await dI(s, kA, L.id);
+      Y = V, await dI(s, DA, Y.id);
     }
+    let U = null;
+    const S = await vA(s, DA);
+    if (S) {
+      const K = await sA(s, S, { waitForAvailable: !0, timeoutMs: 2e3 });
+      if (K && s.isAvailable(K)) {
+        const O = s.getCurrentContent(K);
+        if (O) {
+          let V = O.get("runtimes");
+          if (V) {
+            const X = A.getCoValue(V);
+            if (X && X.type === "comap") {
+              const nA = X.getCurrentContent?.();
+              nA && typeof nA.set == "function" && (U = nA);
+            }
+          }
+          if (!U) {
+            const X = y?.get("@maia/schema/os/runtimes-registry") ?? await (await Promise.resolve().then(() => lo)).resolve(s, "@maia/schema/os/runtimes-registry", { returnType: "coId" }), nA = { node: A, account: t, guardian: B }, { coValue: IA } = await EA(nA, null, {
+              schema: X || EXCEPTION_SCHEMAS.META_SCHEMA,
+              cotype: "comap",
+              data: {},
+              dbEngine: s?.dbEngine
+            });
+            U = IA, O.set("runtimes", U.id);
+          }
+        }
+      }
+    }
+    const M = y?.get("@maia/schema/os/runtime-assignment"), v = y?.get("@maia/schema/os/runtime-assignments-colist");
     for (const K of D) {
-      const S = K.actor;
-      if (S && !S.startsWith("co_z") && !z.get(S)) {
-        const sA = Array.from(z.keys()).filter((aA) => aA.startsWith("@actor/")).slice(0, 10).join(", ");
-        console.warn(`[CoJSONSeed] Actor reference ${S} not found in registry for vibe ${K.$id || K.name}. Available actor keys (first 10): ${sA}`);
+      const O = K.actor;
+      if (O && !O.startsWith("co_z") && !W.get(O)) {
+        const yA = Array.from(W.keys()).filter((wA) => wA.startsWith("@actor/")).slice(0, 10).join(", ");
+        console.warn(`[CoJSONSeed] Actor reference ${O} not found in registry for vibe ${K.$id || K.name}. Available actor keys (first 10): ${yA}`);
       }
-      const M = g(K, z);
-      M.actor && !M.actor.startsWith("co_z") && (console.error(`[CoJSONSeed] ❌ Vibe actor transformation failed! Expected co-id, got: ${M.actor}`), console.error(`[CoJSONSeed] Original actor: ${K.actor}, Registry has: ${z.has(K.actor)}`));
-      const v = K.$id || "", H = v.startsWith("@maia/vibe/") ? v.replace("@maia/vibe/", "") : (K.name || "default").toLowerCase().replace(/\s+/g, "-"), $ = await ms(t, A, B, s, { vibe: M }, W, m, y);
-      if (_.configs.push(...$.configs || []), _.count += $.count || 0, $.configs && $.configs.length > 0) {
-        const sA = $.configs[0].coId;
-        if (L && typeof L.set == "function") {
-          L.set(H, sA);
-          const QA = L.get(H);
-          QA !== sA && console.warn(`[CoJSONSeed] Vibe ${H} storage verification failed! Expected ${sA}, got ${QA}`);
+      const V = g(K, W);
+      V.actor && !V.actor.startsWith("co_z") && (console.error(`[CoJSONSeed] ❌ Vibe actor transformation failed! Expected co-id, got: ${V.actor}`), console.error(`[CoJSONSeed] Original actor: ${K.actor}, Registry has: ${W.has(K.actor)}`));
+      const X = K.$id || "", nA = X.startsWith("@maia/vibe/") ? X.replace("@maia/vibe/", "") : (K.name || "default").toLowerCase().replace(/\s+/g, "-"), cA = await ms(t, A, B, s, { vibe: V }, $, m, y);
+      if (_.configs.push(...cA.configs || []), _.count += cA.count || 0, cA.configs && cA.configs.length > 0) {
+        const yA = cA.configs[0].coId;
+        if (Y && typeof Y.set == "function") {
+          Y.set(nA, yA);
+          const oe = Y.get(nA);
+          oe !== yA && console.warn(`[CoJSONSeed] Vibe ${nA} storage verification failed! Expected ${yA}, got ${oe}`);
         } else
-          console.error(`[CoJSONSeed] ❌ Cannot store vibe ${H}: vibes CoMap not available`);
-        const aA = K.$id;
-        aA && (W.set(aA, sA), z.set(aA, sA), c.register(aA, sA));
+          console.error(`[CoJSONSeed] ❌ Cannot store vibe ${nA}: vibes CoMap not available`);
+        const wA = K.$id;
+        if (wA && ($.set(wA, yA), W.set(wA, yA), c.register(wA, yA)), U && M && v && B?.id) {
+          const oe = { node: A, account: t, guardian: B }, { coValue: Ct } = await EA(oe, null, {
+            schema: M,
+            cotype: "comap",
+            data: { browser: B.id },
+            dbEngine: s?.dbEngine
+          }), { coValue: he } = await EA(oe, null, {
+            schema: v,
+            cotype: "colist",
+            data: [Ct.id],
+            dbEngine: s?.dbEngine
+          });
+          U.set(yA, he.id);
+        }
       }
     }
-    if (L && typeof L.get == "function")
+    if (Y && typeof Y.get == "function")
       for (const K of D) {
-        const S = K.$id || "", M = S.startsWith("@maia/vibe/") ? S.replace("@maia/vibe/", "") : (K.name || "default").toLowerCase().replace(/\s+/g, "-");
-        L.get(M) || console.error(`[CoJSONSeed] Missing: ${M} not found in account.vibes!`);
+        const O = K.$id || "", V = O.startsWith("@maia/vibe/") ? O.replace("@maia/vibe/", "") : (K.name || "default").toLowerCase().replace(/\s+/g, "-");
+        Y.get(V) || console.error(`[CoJSONSeed] Missing: ${V} not found in account.vibes!`);
       }
   }
-  const N = await zw(t, A, B, s, o, c);
+  const N = await fy(t, A, B, s, o, c);
   await RI(t, A, B, s, c, y);
-  const { indexCoValue: Y } = await Promise.resolve().then(() => FI), P = [
-    ...(_.configs || []).map((G) => G.coId).filter(Boolean),
+  const { indexCoValue: H } = await Promise.resolve().then(() => bI), z = [
+    ...(_.configs || []).map((b) => b.coId).filter(Boolean),
     ...N.coIds || []
   ];
-  for (const G of P)
-    if (G && typeof G == "string" && G.startsWith("co_z"))
+  for (const b of z)
+    if (b && typeof b == "string" && b.startsWith("co_z"))
       try {
-        await Y(s, G);
-      } catch (L) {
-        console.warn(`[Seed] Index pass failed for ${G.substring(0, 12)}...:`, L.message);
+        await H(s, b);
+      } catch (Y) {
+        console.warn(`[Seed] Index pass failed for ${b.substring(0, 12)}...:`, Y.message);
       }
   return {
     metaSchema: E,
@@ -12894,47 +12962,47 @@ ${H.join(`
     registry: c.getAll()
   };
 }
-async function bI(t, A, e) {
+async function FI(t, A, e) {
   if (!t.get("sparks") || !String(t.get("sparks")).startsWith("co_z"))
-    return await Pw(t, A), { metaSchema: null, schemas: {}, registry: {} };
-  const i = await Go(e), { getAllSchemas: o } = await Promise.resolve().then(() => Wt), r = o(), { CoIdRegistry: n } = await Promise.resolve().then(() => DI), { transformForSeeding: s, validateSchemaStructure: a } = await Promise.resolve().then(() => vn), g = new n(), I = /* @__PURE__ */ new Map();
-  for (const [k, b] of Object.entries(r)) {
-    const x = b.$id || `@maia/schema/${k}`;
-    I.has(x) || I.set(x, { name: k, schema: b });
+    return await Ey(t, A), { metaSchema: null, schemas: {}, registry: {} };
+  const i = await Ro(e), { getAllSchemas: o } = await Promise.resolve().then(() => _t), r = o(), { CoIdRegistry: n } = await Promise.resolve().then(() => DI), { transformForSeeding: s, validateSchemaStructure: a } = await Promise.resolve().then(() => vn), g = new n(), I = /* @__PURE__ */ new Map();
+  for (const [k, F] of Object.entries(r)) {
+    const L = F.$id || `@maia/schema/${k}`;
+    I.has(L) || I.set(L, { name: k, schema: F });
   }
-  const c = (k, b = /* @__PURE__ */ new Set()) => {
-    if (!k || typeof k != "object" || b.has(k)) return /* @__PURE__ */ new Set();
-    b.add(k);
-    const x = /* @__PURE__ */ new Set();
-    k.$co && typeof k.$co == "string" && k.$co.startsWith("@maia/schema/") && x.add(k.$co);
+  const c = (k, F = /* @__PURE__ */ new Set()) => {
+    if (!k || typeof k != "object" || F.has(k)) return /* @__PURE__ */ new Set();
+    F.add(k);
+    const L = /* @__PURE__ */ new Set();
+    k.$co && typeof k.$co == "string" && k.$co.startsWith("@maia/schema/") && L.add(k.$co);
     for (const j of Object.values(k))
       j && typeof j == "object" && (Array.isArray(j) ? j : [j]).forEach((J) => {
-        J && typeof J == "object" && c(J, b).forEach((W) => x.add(W));
+        J && typeof J == "object" && c(J, F).forEach(($) => L.add($));
       });
-    return x;
+    return L;
   }, C = /* @__PURE__ */ new Map();
-  for (const [k, { schema: b }] of I) C.set(k, c(b));
+  for (const [k, { schema: F }] of I) C.set(k, c(F));
   const B = [], Q = /* @__PURE__ */ new Set(), f = /* @__PURE__ */ new Set(), l = (k) => {
     if (!Q.has(k) && !f.has(k)) {
       f.add(k);
-      for (const b of C.get(k) || /* @__PURE__ */ new Set())
-        b.startsWith("@maia/schema/") && I.has(b) && l(b);
+      for (const F of C.get(k) || /* @__PURE__ */ new Set())
+        F.startsWith("@maia/schema/") && I.has(F) && l(F);
       f.delete(k), Q.add(k), B.push(k);
     }
   };
   for (const k of I.keys())
     k !== "@maia/schema/meta" && l(k);
-  await Lr(t, A, i, e);
-  const u = await vA(e, kA);
+  await Tr(t, A, i, e);
+  const u = await vA(e, DA);
   let d = null;
   if (u) {
-    const k = await gA(e, u, { waitForAvailable: !0, timeoutMs: 2e3 });
+    const k = await sA(e, u, { waitForAvailable: !0, timeoutMs: 2e3 });
     if (k && e.isAvailable(k)) {
-      const b = e.getCurrentContent(k);
-      if (b?.get) {
-        const x = b.get("schematas");
-        if (x) {
-          const j = await gA(e, x, { waitForAvailable: !0, timeoutMs: 2e3 });
+      const F = e.getCurrentContent(k);
+      if (F?.get) {
+        const L = F.get("schematas");
+        if (L) {
+          const j = await sA(e, L, { waitForAvailable: !0, timeoutMs: 2e3 });
           if (j && e.isAvailable(j)) {
             const J = e.getCurrentContent(j);
             J?.get && (d = J.get("@maia/schema/meta"));
@@ -12944,62 +13012,62 @@ async function bI(t, A, e) {
     }
   }
   if (d) {
-    const k = Ee(d), { $schema: b, $id: x, id: j, ...J } = k.definition || k, W = await gA(e, d, { waitForAvailable: !0, timeoutMs: 2e3 });
-    if (W && e.isAvailable(W)) {
-      const X = e.getCurrentContent(W);
-      if (X?.set) for (const [z, _] of Object.entries(bA(J))) X.set(z, _);
+    const k = le(d), { $schema: F, $id: L, id: j, ...J } = k.definition || k, $ = await sA(e, d, { waitForAvailable: !0, timeoutMs: 2e3 });
+    if ($ && e.isAvailable($)) {
+      const AA = e.getCurrentContent($);
+      if (AA?.set) for (const [W, _] of Object.entries(KA(J))) AA.set(W, _);
     }
   } else {
-    const k = Ee("co_zTEMP"), b = { definition: bA(k.definition || k) }, x = { node: A, account: t, guardian: i }, { coValue: j } = await hA(x, null, {
+    const k = le("co_zTEMP"), F = { definition: KA(k.definition || k) }, L = { node: A, account: t, guardian: i }, { coValue: j } = await EA(L, null, {
       schema: EXCEPTION_SCHEMAS.META_SCHEMA,
       cotype: "comap",
-      data: b
-    }), J = j.id, W = Ee(J), { $schema: X, $id: z, id: _, ...O } = W.definition || W;
-    for (const [Z, T] of Object.entries(bA(O))) j.set(Z, T);
+      data: F
+    }), J = j.id, $ = le(J), { $schema: AA, $id: W, id: _, ...P } = $.definition || $;
+    for (const [Z, T] of Object.entries(KA(P))) j.set(Z, T);
     d = J;
   }
   g.register("@maia/schema/meta", d);
   const h = /* @__PURE__ */ new Map(), p = /* @__PURE__ */ new Map(), E = await Promise.resolve().then(() => Rn), w = await Promise.resolve().then(() => YI), y = /* @__PURE__ */ new Map();
   if (u) {
-    const k = await gA(e, u, { waitForAvailable: !0, timeoutMs: 2e3 });
+    const k = await sA(e, u, { waitForAvailable: !0, timeoutMs: 2e3 });
     if (k && e.isAvailable(k)) {
-      const x = e.getCurrentContent(k)?.get?.("schematas");
-      if (x) {
-        const j = await gA(e, x, { waitForAvailable: !0, timeoutMs: 2e3 });
+      const L = e.getCurrentContent(k)?.get?.("schematas");
+      if (L) {
+        const j = await sA(e, L, { waitForAvailable: !0, timeoutMs: 2e3 });
         if (j && e.isAvailable(j)) {
           const J = e.getCurrentContent(j);
           if (J?.get)
-            for (const W of J.keys?.() || Object.keys(J)) {
-              const X = J.get(W);
-              X?.startsWith?.("co_z") && y.set(W, X);
+            for (const $ of J.keys?.() || Object.keys(J)) {
+              const AA = J.get($);
+              AA?.startsWith?.("co_z") && y.set($, AA);
             }
         }
       }
     }
   }
   for (const k of B) {
-    const { name: b, schema: x } = I.get(k), { $schema: j, $id: J, id: W, ...X } = x, z = bA(X), _ = y.get(k);
-    let O;
-    _ ? (await w.update(e, d, _, z), O = _) : O = (await E.create(e, d, z)).id, h.set(k, O);
-    const Z = e.getCoValue(O);
+    const { name: F, schema: L } = I.get(k), { $schema: j, $id: J, id: $, ...AA } = L, W = KA(AA), _ = y.get(k);
+    let P;
+    _ ? (await w.update(e, d, _, W), P = _) : P = (await E.create(e, d, W)).id, h.set(k, P);
+    const Z = e.getCoValue(P);
     if (Z && e.isAvailable(Z)) {
       const T = e.getCurrentContent(Z);
       T?.set && p.set(k, T);
     }
-    g.register(k, O);
+    g.register(k, P);
   }
   d && !h.has("@maia/schema/meta") && h.set("@maia/schema/meta", d);
   for (const k of B) {
-    const { name: b, schema: x } = I.get(k), j = h.get(k), J = p.get(k), W = s(x, h);
-    W.$id = `https://maia.city/${j}`;
-    const X = a(W, k, { checkSchemaReferences: !0, checkNestedCoTypes: !1 });
-    if (X.length > 0) throw new Error(`[Seed] Schema ${k} contains @maia/schema/ refs: ${X.join(", ")}`);
-    const { $schema: z, $id: _, id: O, ...Z } = W;
-    if (J?.set) for (const [T, F] of Object.entries(bA(Z))) J.set(T, F);
+    const { name: F, schema: L } = I.get(k), j = h.get(k), J = p.get(k), $ = s(L, h);
+    $.$id = `https://maia.city/${j}`;
+    const AA = a($, k, { checkSchemaReferences: !0, checkNestedCoTypes: !1 });
+    if (AA.length > 0) throw new Error(`[Seed] Schema ${k} contains @maia/schema/ refs: ${AA.join(", ")}`);
+    const { $schema: W, $id: _, id: P, ...Z } = $;
+    if (J?.set) for (const [T, G] of Object.entries(KA(Z))) J.set(T, G);
   }
   const m = B.map((k) => {
-    const { name: b } = I.get(k);
-    return { name: b, key: k, coId: h.get(k), coMapId: p.get(k)?.id };
+    const { name: F } = I.get(k);
+    return { name: F, key: k, coId: h.get(k), coMapId: p.get(k)?.id };
   });
   return await RI(t, A, i, e, g, h), console.log(`[Seed] Agent account seeded: ${m.length} schemas`), { metaSchema: d, schemas: m, registry: g.getAll() };
 }
@@ -13011,8 +13079,8 @@ async function ms(t, A, e, i, o, r, n, s) {
     if (!f || !f.startsWith("co_z"))
       throw new Error(`[CoJSONSeed] Config ${B}:${Q} has invalid $schema: ${f}`);
     let l = "comap", u = null;
-    for (const [k, b] of s.entries())
-      if (b === f) {
+    for (const [k, F] of s.entries())
+      if (F === f) {
         u = n.get(k);
         break;
       }
@@ -13021,7 +13089,7 @@ async function ms(t, A, e, i, o, r, n, s) {
       k && k.type === "comap" && (u = k.getCurrentContent?.());
     }
     u && typeof u.get == "function" ? l = u.get("cotype") || "comap" : console.warn(`   ⚠️  Cannot read schema CoMap for ${f ? f.substring(0, 12) : "undefined"}... (config: ${Q}), schemaCoMap type: ${typeof u}`);
-    const { $id: d, $schema: h, ...p } = C, E = { node: A, account: t, guardian: e }, w = l === "colist" ? [] : l === "costream" ? void 0 : p, { coValue: y } = await hA(E, null, {
+    const { $id: d, $schema: h, ...p } = C, E = { node: A, account: t, guardian: e }, w = l === "colist" ? [] : l === "costream" ? void 0 : p, { coValue: y } = await EA(E, null, {
       schema: f,
       cotype: l,
       data: w,
@@ -13061,7 +13129,7 @@ async function ms(t, A, e, i, o, r, n, s) {
     configs: a
   };
 }
-async function zw(t, A, e, i, o, r) {
+async function fy(t, A, e, i, o, r) {
   const { transformForSeeding: n } = await Promise.resolve().then(() => vn);
   if (!o || Object.keys(o).length === 0)
     return {
@@ -13084,7 +13152,7 @@ async function zw(t, A, e, i, o, r) {
     let l = 0;
     const u = [];
     for (const d of c) {
-      const h = n(d, r.getAll()), { $id: p, ...E } = h, w = { node: A, account: t, guardian: e }, { coValue: y } = await hA(w, null, {
+      const h = n(d, r.getAll()), { $id: p, ...E } = h, w = { node: A, account: t, guardian: e }, { coValue: y } = await EA(w, null, {
         schema: f,
         cotype: "comap",
         data: E,
@@ -13106,11 +13174,11 @@ async function zw(t, A, e, i, o, r) {
     coIds: g
   };
 }
-async function Lr(t, A, e, i, o) {
-  const r = await vA(i, kA);
+async function Tr(t, A, e, i, o) {
+  const r = await vA(i, DA);
   if (!r)
     throw new Error("[Seed] @maia spark.os not found. Ensure schemaMigration or bootstrap has run.");
-  const { resolve: n } = await Promise.resolve().then(() => pn), s = o?.get("@maia/schema/os/schematas-registry") ?? await n(i, "@maia/schema/os/schematas-registry", { returnType: "coId" }), a = o?.get("@maia/schema/os/vibes-registry") ?? await n(i, "@maia/schema/os/vibes-registry", { returnType: "coId" });
+  const { resolve: n } = await Promise.resolve().then(() => lo), s = o?.get("@maia/schema/os/schematas-registry") ?? await n(i, "@maia/schema/os/schematas-registry", { returnType: "coId" }), a = o?.get("@maia/schema/os/vibes-registry") ?? await n(i, "@maia/schema/os/vibes-registry", { returnType: "coId" });
   s || EXCEPTION_SCHEMAS.META_SCHEMA, a || EXCEPTION_SCHEMAS.META_SCHEMA;
   let g = A.getCoValue(r);
   if (!g && A.loadCoValueCore && (await A.loadCoValueCore(r), g = A.getCoValue(r)), (!g || !g.isAvailable()) && (await new Promise((c) => {
@@ -13123,7 +13191,7 @@ async function Lr(t, A, e, i, o) {
     const c = g.getCurrentContent?.();
     if (c && typeof c.get == "function") {
       if (!c.get("schematas")) {
-        const Q = { node: A, account: t, guardian: e }, { coValue: f } = await hA(Q, null, {
+        const Q = { node: A, account: t, guardian: e }, { coValue: f } = await EA(Q, null, {
           schema: s || EXCEPTION_SCHEMAS.META_SCHEMA,
           cotype: "comap",
           data: {},
@@ -13136,10 +13204,10 @@ async function Lr(t, A, e, i, o) {
             console.warn("[Seed] Storage sync wait failed for spark.os.schematas:", l);
           }
       }
-      !c.get("indexes") && i && await Fo(i);
+      !c.get("indexes") && i && await vo(i);
     }
   }
-  if (!await Mo(i, kA) && o) {
+  if (!await Fo(i, DA) && o) {
     const c = i.account?.get("sparks");
     if (c?.startsWith("co_z")) {
       const C = await i.read(null, c);
@@ -13149,13 +13217,13 @@ async function Lr(t, A, e, i, o) {
           C.loading || (clearTimeout(u), d?.(), f());
         });
       });
-      const Q = C?.value?.[kA];
+      const Q = C?.value?.[DA];
       if (Q?.startsWith("co_z")) {
         const f = i.getCoValue(Q);
         if (f && i.isAvailable(f)) {
           const l = i.getCurrentContent(f);
           if (l && typeof l.set == "function") {
-            const u = { node: A, account: t, guardian: e }, { coValue: d } = await hA(u, null, {
+            const u = { node: A, account: t, guardian: e }, { coValue: d } = await EA(u, null, {
               schema: a || EXCEPTION_SCHEMAS.META_SCHEMA,
               cotype: "comap",
               data: {},
@@ -13169,7 +13237,7 @@ async function Lr(t, A, e, i, o) {
   }
 }
 async function RI(t, A, e, i, o, r, n, s, a) {
-  const g = await vA(i, kA);
+  const g = await vA(i, DA);
   if (!g) {
     console.warn("[Seed] spark.os not found - should have been created in Phase 0");
     return;
@@ -13195,7 +13263,7 @@ async function RI(t, A, e, i, o, r, n, s, a) {
   if (!B) {
     let f = null;
     r && r.has("@maia/schema/os/schematas-registry") && (f = r.get("@maia/schema/os/schematas-registry"));
-    const l = f || EXCEPTION_SCHEMAS.META_SCHEMA, u = { node: A, account: t, guardian: e }, { coValue: d } = await hA(u, null, {
+    const l = f || EXCEPTION_SCHEMAS.META_SCHEMA, u = { node: A, account: t, guardian: e }, { coValue: d } = await EA(u, null, {
       schema: l,
       cotype: "comap",
       data: {},
@@ -13214,15 +13282,15 @@ async function RI(t, A, e, i, o, r, n, s, a) {
     f ? f !== Q && console.warn(`[Seed] Metaschema already registered with different co-id: ${f ? f.substring(0, 12) : "undefined"}... (new: ${Q ? Q.substring(0, 12) : "undefined"}...). Skipping.`) : B.set("@maia/schema/meta", Q);
   }
 }
-const _w = [
+const py = [
   "coValues",
   "sessions",
   "transactions",
   "signatureAfter",
   "deletedCoValues"
 ];
-class Zw {
-  constructor(A, e = _w) {
+class wy {
+  constructor(A, e = py) {
     this.db = A, this.storeNames = e, this.pendingRequests = [], this.rejectHandlers = [], this.id = Math.random(), this.running = !1, this.failed = !1, this.done = !1, this.refresh();
   }
   refresh() {
@@ -13274,7 +13342,7 @@ class Zw {
     this.done || this.tx.commit();
   }
 }
-function xe(t, A, e) {
+function Te(t, A, e) {
   return new Promise((i, o) => {
     const r = t.transaction(A, "readonly"), n = e(r.objectStore(A));
     n.onerror = () => {
@@ -13284,7 +13352,7 @@ function xe(t, A, e) {
     };
   });
 }
-function Xw(t, A, e) {
+function yy(t, A, e) {
   return new Promise((i, o) => {
     const r = t.transaction(A, "readwrite"), n = r.objectStore(A).put(e);
     n.onerror = () => {
@@ -13298,10 +13366,10 @@ var Ss = function(t, A, e, i) {
   if (e === "a" && !i) throw new TypeError("Private accessor was defined without a getter");
   if (typeof A == "function" ? t !== A || !i : !A.has(t)) throw new TypeError("Cannot read private member from an object whose class did not declare it");
   return e === "m" ? i : e === "a" ? i.call(t) : i ? i.value : A.get(t);
-}, go, Tr;
-class Ay {
+}, co, Or;
+class Dy {
   constructor(A) {
-    go.add(this), this.tx = A;
+    co.add(this), this.tx = A;
   }
   async run(A) {
     return this.tx.handleRequest(A);
@@ -13318,7 +13386,7 @@ class Ay {
   async deleteCoValueContent(A) {
     const e = A.rowID, o = (await this.run((n) => n.getObjectStore("sessions").index("sessionsByCoValue").getAll(e))).filter((n) => !n.sessionID.endsWith("$")).map((n) => n.rowID), r = [];
     for (const n of o)
-      r.push(Ss(this, go, "m", Tr).call(this, "transactions", n), Ss(this, go, "m", Tr).call(this, "signatureAfter", n), this.run((s) => s.getObjectStore("sessions").delete(n)));
+      r.push(Ss(this, co, "m", Or).call(this, "transactions", n), Ss(this, co, "m", Or).call(this, "signatureAfter", n), this.run((s) => s.getObjectStore("sessions").delete(n)));
     r.push(this.run((n) => n.getObjectStore("deletedCoValues").put({
       coValueID: A.id,
       status: "done"
@@ -13369,43 +13437,43 @@ class Ay {
     await this.run((e) => e.getObjectStore("unsyncedCoValues").put(A));
   }
 }
-go = /* @__PURE__ */ new WeakSet(), Tr = async function(A, e) {
+co = /* @__PURE__ */ new WeakSet(), Or = async function(A, e) {
   const i = IDBKeyRange.bound([e, 0], [e, Number.POSITIVE_INFINITY]), o = await this.run((r) => r.getObjectStore(A).getAllKeys(i));
   for (const r of o)
     await this.run((n) => n.getObjectStore(A).delete(r));
 };
-class ey {
+class my {
   constructor(A) {
     this.db = A;
   }
   async getCoValue(A) {
-    return xe(this.db, "coValues", (e) => e.index("coValuesById").get(A));
+    return Te(this.db, "coValues", (e) => e.index("coValuesById").get(A));
   }
   async getCoValueRowID(A) {
     return this.getCoValue(A).then((e) => e?.rowID);
   }
   async getCoValueSessions(A) {
-    return xe(this.db, "sessions", (e) => e.index("sessionsByCoValue").getAll(A));
+    return Te(this.db, "sessions", (e) => e.index("sessionsByCoValue").getAll(A));
   }
   async getNewTransactionInSession(A, e, i) {
-    return xe(this.db, "transactions", (o) => o.getAll(IDBKeyRange.bound([A, e], [A, i])));
+    return Te(this.db, "transactions", (o) => o.getAll(IDBKeyRange.bound([A, e], [A, i])));
   }
   async getSignatures(A, e) {
-    return xe(this.db, "signatureAfter", (i) => i.getAll(IDBKeyRange.bound([A, e], [A, Number.POSITIVE_INFINITY])));
+    return Te(this.db, "signatureAfter", (i) => i.getAll(IDBKeyRange.bound([A, e], [A, Number.POSITIVE_INFINITY])));
   }
   async upsertCoValue(A, e) {
-    return e ? Xw(this.db, "coValues", {
+    return e ? yy(this.db, "coValues", {
       id: A,
       header: e
     }).catch(() => this.getCoValueRowID(A)) : this.getCoValueRowID(A);
   }
   async getAllCoValuesWaitingForDelete() {
-    return (await xe(this.db, "deletedCoValues", (e) => e.index("deletedCoValuesByStatus").getAll("pending"))).map((e) => e.coValueID);
+    return (await Te(this.db, "deletedCoValues", (e) => e.index("deletedCoValuesByStatus").getAll("pending"))).map((e) => e.coValueID);
   }
   async transaction(A, e) {
-    const i = new Zw(this.db, e);
+    const i = new wy(this.db, e);
     try {
-      await A(new Ay(i)), i.commit();
+      await A(new Dy(i)), i.commit();
     } catch {
       i.rollback();
     }
@@ -13434,7 +13502,7 @@ class ey {
     await this.transaction((i) => i.deleteCoValueContent(e));
   }
   async getUnsyncedCoValueIDs() {
-    const A = await xe(this.db, "unsyncedCoValues", (i) => i.getAll()), e = /* @__PURE__ */ new Set();
+    const A = await Te(this.db, "unsyncedCoValues", (i) => i.getAll()), e = /* @__PURE__ */ new Set();
     for (const i of A)
       e.add(i.coValueId);
     return Array.from(e);
@@ -13459,8 +13527,8 @@ class ey {
     return o;
   }
 }
-let ty = "jazz-storage";
-async function iy(t = ty) {
+let Sy = "jazz-storage";
+async function ky(t = Sy) {
   const e = await new Promise((i, o) => {
     const r = indexedDB.open(t, 6);
     r.onerror = () => {
@@ -13504,11 +13572,11 @@ async function iy(t = ty) {
       });
     };
   });
-  return new Og(new ey(e));
+  return new Og(new my(e));
 }
-async function oy() {
+async function Ny() {
   try {
-    return await iy();
+    return await ky();
   } catch {
     return;
   }
@@ -13563,14 +13631,14 @@ const ks = {
     "CREATE INDEX IF NOT EXISTS deletedCoValuesByStatus ON deletedCoValues (status);"
   ]
 };
-async function ry(t) {
+async function My(t) {
   try {
     return (await t.query("SELECT version FROM schema_version ORDER BY version DESC LIMIT 1")).rows[0]?.version || 0;
   } catch {
     return 0;
   }
 }
-async function ny(t, A) {
+async function Gy(t, A) {
   await t.exec(`
     CREATE TABLE IF NOT EXISTS schema_version (
       version INTEGER PRIMARY KEY,
@@ -13580,16 +13648,16 @@ async function ny(t, A) {
     ON CONFLICT (version) DO NOTHING;
   `);
 }
-async function sy(t) {
-  const A = await ry(t), e = Object.keys(ks).map((i) => parseInt(i, 10)).filter((i) => i > A).sort((i, o) => i - o);
+async function by(t) {
+  const A = await My(t), e = Object.keys(ks).map((i) => parseInt(i, 10)).filter((i) => i > A).sort((i, o) => i - o);
   for (const i of e) {
     const o = ks[i];
     for (const r of o)
       await t.exec(r);
-    await ny(t, i);
+    await Gy(t, i);
   }
 }
-class ay {
+class Fy {
   constructor(A) {
     this.db = A;
   }
@@ -13611,7 +13679,7 @@ class ay {
   async markCoValueAsDeleted(A) {
     await this.db.query(
       "INSERT INTO deletedCoValues (coValueID, status) VALUES ($1, $2) ON CONFLICT (coValueID) DO NOTHING",
-      [A, Jt.Pending]
+      [A, qt.Pending]
     );
   }
   async addSessionUpdate({ sessionUpdate: A, sessionRow: e }) {
@@ -13661,7 +13729,7 @@ class ay {
     );
   }
 }
-class gy {
+class Ry {
   constructor(A) {
     this.db = A;
   }
@@ -13680,7 +13748,7 @@ class gy {
         header: o
       };
     } catch (o) {
-      AA.warn(`Invalid JSON in header: ${i.header}`, {
+      eA.warn(`Invalid JSON in header: ${i.header}`, {
         id: A,
         err: o
       });
@@ -13712,7 +13780,7 @@ class gy {
   async getAllCoValuesWaitingForDelete() {
     return (await this.db.query(
       'SELECT "coValueID" FROM deletedCoValues WHERE status = $1',
-      [Jt.Pending]
+      [qt.Pending]
     )).rows.map((e) => e.coValueID || e.covalueid);
   }
   async getCoValueSessions(A) {
@@ -13740,7 +13808,7 @@ class gy {
           tx: typeof r.tx == "string" ? JSON.parse(r.tx) : r.tx
         };
       } catch (n) {
-        return AA.warn("Invalid JSON in transaction", { err: n }), null;
+        return eA.warn("Invalid JSON in transaction", { err: n }), null;
       }
     }).filter(Boolean);
   }
@@ -13757,7 +13825,7 @@ class gy {
   async transaction(A) {
     await this.db.exec("BEGIN");
     try {
-      const e = new ay(this.db);
+      const e = new Fy(this.db);
       await A(e), await this.db.exec("COMMIT");
     } catch (e) {
       throw await this.db.exec("ROLLBACK"), e;
@@ -13790,7 +13858,7 @@ class gy {
       [A]
     );
     if (!e.rows[0]) {
-      AA.warn(`CoValue ${A} not found, skipping deletion`);
+      eA.warn(`CoValue ${A} not found, skipping deletion`);
       return;
     }
     const i = e.rows[0].rowID || e.rows[0].rowid;
@@ -13816,7 +13884,7 @@ class gy {
       ), await this.db.query(
         `INSERT INTO deletedCoValues ("coValueID", status) VALUES ($1, $2)
          ON CONFLICT ("coValueID") DO UPDATE SET status = $2`,
-        [A, Jt.Done]
+        [A, qt.Done]
       );
     });
   }
@@ -13830,7 +13898,7 @@ class gy {
     const i = e.rows[0].rowID || e.rows[0].rowid, o = await this.db.query(
       'SELECT "sessionID", "lastIdx" FROM sessions WHERE "coValue" = $1',
       [i]
-    ), r = Ue(A);
+    ), r = He(A);
     r.header = !0;
     for (const n of o.rows) {
       const s = n.sessionID || n.sessionid, a = n.lastIdx || n.lastidx;
@@ -13839,7 +13907,7 @@ class gy {
     return r;
   }
 }
-async function Iy(t) {
+async function vy(t) {
   if (typeof window < "u" || typeof process > "u" || !process.versions?.node)
     throw new Error("[STORAGE] PGlite is only available in Node.js/server environments");
   let A;
@@ -13858,51 +13926,51 @@ async function Iy(t) {
     if (n.code !== "EEXIST") throw n;
   }
   const r = await A.create(t);
-  return await sy(r), new gy(r);
+  return await by(r), new Ry(r);
 }
-async function cy(t) {
-  const A = await Iy(t), e = new Og(A);
+async function Ky(t) {
+  const A = await vy(t), e = new Og(A);
   return e.enableDeletedCoValuesErasure(), e;
 }
-const lt = { BASE_URL: "/", DEV: !1, MODE: "production", PROD: !0, SSR: !1 };
-function Cy() {
+const ut = { BASE_URL: "/", DEV: !1, MODE: "production", PROD: !0, SSR: !1 };
+function Yy() {
   return typeof EdgeRuntime < "u" || typeof Deno < "u" ? "edge" : typeof process < "u" && process.versions?.node ? "node" : "browser";
 }
-function By(t, A = null) {
+function Uy(t, A = null) {
   const e = A ? `${A}_${t}` : t;
-  if (typeof import.meta < "u" && lt)
-    return lt[e] || lt[t] || lt[`VITE_${e}`] || lt[`VITE_${t}`];
+  if (typeof import.meta < "u" && ut)
+    return ut[e] || ut[t] || ut[`VITE_${e}`] || ut[`VITE_${t}`];
   if (typeof process < "u" && process.env)
     return process.env[e] || process.env[t];
 }
-const dt = () => {
+const ht = () => {
 };
-async function He(t = {}) {
-  const { mode: A = "human", dbPath: e, inMemory: i, servicePrefix: o } = t, r = Cy(), n = By("MAIA_STORAGE", o);
+async function xe(t = {}) {
+  const { mode: A = "human", dbPath: e, inMemory: i, servicePrefix: o } = t, r = Yy(), n = Uy("MAIA_STORAGE", o);
   if (i === !0 || r === "edge" || n === "in-memory")
-    return dt();
+    return ht();
   if (r === "browser")
-    return n === "indexeddb" || !n && A === "human" ? await oy() ?? dt() : dt();
+    return n === "indexeddb" || !n && A === "human" ? await Ny() ?? ht() : ht();
   if (r === "node") {
     const s = e || typeof process < "u" && process.env?.DB_PATH;
     if ((s && !i || n === "pglite" && !i && s) && s)
       try {
-        return await cy(s);
+        return await Ky(s);
       } catch (g) {
         if (n === "pglite")
           throw new Error(
             `[STORAGE] PGlite storage initialization FAILED at ${s}. Storage type is explicitly set to 'pglite' via MAIA_STORAGE env var - refusing to fall back. Original error: ${g?.message || g}`
           );
-        return dt();
+        return ht();
       }
   }
-  return dt();
+  return ht();
 }
-const ar = { BASE_URL: "/", DEV: !1, MODE: "production", PROD: !0, SSR: !1 };
+const gr = { BASE_URL: "/", DEV: !1, MODE: "production", PROD: !0, SSR: !1 };
 async function Hn({ agentSecret: t, name: A, peers: e = [], storage: i = void 0, skipAutoSeeding: o = !1 }) {
   if (!t)
     throw new Error("agentSecret is required. Use signInWithPasskey() to get agentSecret.");
-  const r = await Ie.create(), n = i !== void 0 ? i : await He({ mode: "human" }), s = await Me.withNewlyCreatedAccount({
+  const r = await Ce.create(), n = i !== void 0 ? i : await xe({ mode: "human" }), s = await be.withNewlyCreatedAccount({
     creationProps: { name: A },
     crypto: r,
     initialAgentSecret: t,
@@ -13919,14 +13987,14 @@ async function Hn({ agentSecret: t, name: A, peers: e = [], storage: i = void 0,
   if (o) {
     console.log("ℹ️  Auto-seeding skipped (agent mode/server account)");
     try {
-      const { CoJSONBackend: I } = await Promise.resolve().then(() => Pr), { DBEngine: c } = await Promise.resolve().then(() => Gs), C = new I(s.node, a, { systemSpark: "@maia" });
-      C.dbEngine = new c(C), await bI(a, s.node, C);
+      const { CoJSONBackend: I } = await Promise.resolve().then(() => jr), { DBEngine: c } = await Promise.resolve().then(() => Gs), C = new I(s.node, a, { systemSpark: "@maia" });
+      C.dbEngine = new c(C), await FI(a, s.node, C);
     } catch (I) {
       console.error("[createAccountWithSecret] Agent seed failed (non-blocking):", I);
     }
   } else
     try {
-      const I = typeof import.meta < "u" ? ar?.VITE_MAIA_CITY_SEED_VIBES || ar?.VITE_SEED_VIBES || ar?.SEED_VIBES : null, c = I ? I === "all" ? "all" : I.split(",").map((b) => b.trim()) : "all", { getAllVibeRegistries: C, filterVibesForSeeding: B } = await Promise.resolve().then(() => Lk), Q = await C(), f = B(Q, c);
+      const I = typeof import.meta < "u" ? gr?.VITE_MAIA_CITY_SEED_VIBES || gr?.VITE_SEED_VIBES || gr?.SEED_VIBES : null, c = I ? I === "all" ? "all" : I.split(",").map((F) => F.trim()) : "all", { getAllVibeRegistries: C, filterVibesForSeeding: B } = await Promise.resolve().then(() => CN), Q = await C(), f = B(Q, c);
       if (f.length === 0)
         return Q.length === 0 ? console.log("ℹ️  No vibe registries found, skipping auto-seeding") : console.log(`ℹ️  Seeding config filters out all vibes (config: ${JSON.stringify(c)}), skipping vibe seeding`), {
           node: s.node,
@@ -13943,19 +14011,19 @@ async function Hn({ agentSecret: t, name: A, peers: e = [], storage: i = void 0,
         contexts: {},
         states: {},
         inboxes: {},
-        vibes: f.map((b) => b.vibe),
+        vibes: f.map((F) => F.vibe),
         // Pass vibes as array
         data: {}
       };
-      for (const b of f)
-        Object.assign(l.styles, b.styles || {}), Object.assign(l.actors, b.actors || {}), Object.assign(l.views, b.views || {}), Object.assign(l.contexts, b.contexts || {}), Object.assign(l.states, b.states || {}), Object.assign(l.inboxes, b.inboxes || {}), Object.assign(l.data, b.data || {});
-      const { CoJSONBackend: u } = await Promise.resolve().then(() => Pr), d = new u(s.node, a, { systemSpark: "@maia" }), { DBEngine: h } = await Promise.resolve().then(() => Gs), p = new h(d);
+      for (const F of f)
+        Object.assign(l.styles, F.styles || {}), Object.assign(l.actors, F.actors || {}), Object.assign(l.views, F.views || {}), Object.assign(l.contexts, F.contexts || {}), Object.assign(l.states, F.states || {}), Object.assign(l.inboxes, F.inboxes || {}), Object.assign(l.data, F.data || {});
+      const { CoJSONBackend: u } = await Promise.resolve().then(() => jr), d = new u(s.node, a, { systemSpark: "@maia" }), { DBEngine: h } = await Promise.resolve().then(() => Gs), p = new h(d);
       d.dbEngine = p;
       const { getAllToolDefinitions: E } = await Promise.resolve().then(() => HI), w = E(), y = {
         ...l,
         tool: w
         // Add tool definitions under 'tool' key
-      }, { getAllSchemas: m } = await Promise.resolve().then(() => Wt), k = m();
+      }, { getAllSchemas: m } = await Promise.resolve().then(() => _t), k = m();
       await p.execute({
         op: "seed",
         configs: y,
@@ -13979,7 +14047,7 @@ async function qn({ accountID: t, agentSecret: A, peers: e = [], storage: i = vo
     throw new Error("agentSecret is required. Use signInWithPasskey() to get agentSecret.");
   if (!t)
     throw new Error("accountID is required.");
-  const o = await Ie.create(), r = i !== void 0 ? i : await He({ mode: "human" }), n = performance.now();
+  const o = await Ce.create(), r = i !== void 0 ? i : await xe({ mode: "human" }), n = performance.now();
   console.log("   Sync peers:", e.length > 0 ? `${e.length} peer(s)` : "none");
   const s = i ? typeof process < "u" && process.versions?.node ? "PGlite available (local-first)" : "IndexedDB available (local-first)" : "no storage (sync-only)";
   console.log("   Storage:", s), performance.now();
@@ -13988,7 +14056,7 @@ async function qn({ accountID: t, agentSecret: A, peers: e = [], storage: i = vo
   let g = null;
   const I = async (h, p) => (g = Dn(h, p).catch((E) => {
     console.error("[loadAccount] Migration error (non-blocking):", E);
-  }), Promise.resolve()), c = performance.now(), C = 3e3, B = Me.withLoadedAccount({
+  }), Promise.resolve()), c = performance.now(), C = 3e3, B = be.withLoadedAccount({
     crypto: o,
     accountID: t,
     accountSecret: A,
@@ -14046,25 +14114,25 @@ async function Ns(t, A = 5e3) {
     (t?.value ?? t)?.loading || (clearTimeout(r), n?.(), i());
   });
 }
-function gr(t) {
+function Ir(t) {
   return `Traveler ${typeof t == "string" ? t.slice(-12) : ""}`;
 }
-async function Qy(t, A) {
+async function Jy(t, A) {
   try {
     const e = await t.db({ op: "read", schema: "@account", key: A });
     await Ns(e, 5e3);
     const i = e?.value ?? e;
     if (!i?.profile || typeof i.profile != "string" || !i.profile.startsWith("co_"))
-      return gr(A);
+      return Ir(A);
     const o = i.profile, r = await t.db({ op: "read", schema: null, key: o });
     await Ns(r, 5e3);
     const n = r?.value ?? r, s = n?.name ?? n?.properties?.find?.((a) => a?.key === "name")?.value;
-    return typeof s == "string" && s.length > 0 ? s : gr(A);
+    return typeof s == "string" && s.length > 0 ? s : Ir(A);
   } catch {
-    return gr(A);
+    return Ir(A);
   }
 }
-async function Ey(t, A) {
+async function Hy(t, A) {
   const e = /* @__PURE__ */ new Map();
   if (!t?.db || !Array.isArray(A)) return e;
   e.set("everyone", "Everyone");
@@ -14074,7 +14142,7 @@ async function Ey(t, A) {
   if (i.length === 0) return e;
   const o = await Promise.all(
     i.map(async (r) => {
-      const n = await Qy(t, r);
+      const n = await Jy(t, r);
       return [r, n];
     })
   );
@@ -14082,13 +14150,13 @@ async function Ey(t, A) {
     e.set(r, n);
   return e;
 }
-function ly(t, A = 16) {
+function qy(t, A = 16) {
   return typeof t != "string" || t.length <= A ? t : t.substring(0, A) + "...";
 }
-function dy(t) {
+function xy(t) {
   return !t || typeof t != "string" ? t : t.charAt(0).toUpperCase() + t.slice(1);
 }
-function ri(t) {
+function si(t) {
   if (!t || typeof t != "object") return {};
   if (Array.isArray(t.properties) && t.properties.length > 0) {
     const A = {};
@@ -14098,7 +14166,7 @@ function ri(t) {
   }
   return t;
 }
-async function ut(t, A = 5e3) {
+async function ft(t, A = 5e3) {
   (t?.value ?? t)?.loading && await new Promise((i, o) => {
     const r = setTimeout(() => o(new Error("Timeout")), A), n = t.subscribe?.((a) => {
       (a ?? t?.value ?? t)?.loading || (clearTimeout(r), n?.(), i());
@@ -14106,43 +14174,43 @@ async function ut(t, A = 5e3) {
     (t?.value ?? t)?.loading || (clearTimeout(r), n?.(), i());
   });
 }
-async function uy(t, A) {
+async function Ly(t, A) {
   const e = /* @__PURE__ */ new Map();
   if (!t?.db || !A?.startsWith("co_")) return e;
   try {
     const i = await t.db({ op: "read", schema: "@account", key: A });
-    await ut(i, 5e3);
+    await ft(i, 5e3);
     const r = (i?.value ?? i)?.sparks;
     if (!r || typeof r != "string" || !r.startsWith("co_")) return e;
     const n = await t.db({ op: "read", schema: null, key: r });
-    await ut(n, 5e3);
+    await ft(n, 5e3);
     const s = n?.value ?? n;
     if (!s || s.error) return e;
-    const a = ri(s), g = /* @__PURE__ */ new Set(["id", "loading", "error", "$schema", "type", "cotype"]);
+    const a = si(s), g = /* @__PURE__ */ new Set(["id", "loading", "error", "$schema", "type", "cotype"]);
     for (const I of Object.keys(a)) {
       if (g.has(I)) continue;
       const c = typeof a[I] == "string" && a[I].startsWith("co_") ? a[I] : I.startsWith("co_") ? I : null;
       if (c)
         try {
           const C = await t.db({ op: "read", schema: null, key: c });
-          await ut(C, 3e3);
-          const B = C?.value ?? C, Q = ri(B), f = Q?.os;
+          await ft(C, 3e3);
+          const B = C?.value ?? C, Q = si(B), f = Q?.os;
           if (!f?.startsWith("co_")) continue;
           const l = Q?.name ?? I, u = l.startsWith("@") ? l : `@${l}`, d = await t.db({ op: "read", schema: null, key: f });
-          await ut(d, 3e3);
-          const h = d?.value ?? d, E = ri(h)?.capabilities;
+          await ft(d, 3e3);
+          const h = d?.value ?? d, E = si(h)?.capabilities;
           if (!E?.startsWith("co_")) continue;
           const w = await t.db({ op: "read", schema: null, key: E });
-          await ut(w, 3e3);
+          await ft(w, 3e3);
           const y = w?.value ?? w;
           if (!y || y.error) continue;
-          const m = ri(y);
+          const m = si(y);
           for (const k of Object.keys(m)) {
             if (g.has(k)) continue;
-            const b = typeof m[k] == "string" && m[k].startsWith("co_") ? m[k] : null;
-            if (!b) continue;
-            const x = dy(k);
-            e.set(b, `${u}/${x}`);
+            const F = typeof m[k] == "string" && m[k].startsWith("co_") ? m[k] : null;
+            if (!F) continue;
+            const L = xy(k);
+            e.set(F, `${u}/${L}`);
           }
         } catch {
         }
@@ -14151,19 +14219,19 @@ async function uy(t, A) {
   }
   return e;
 }
-async function hy(t, A, e = null) {
+async function Ty(t, A, e = null) {
   const i = /* @__PURE__ */ new Map();
   if (!t?.db || !Array.isArray(A)) return i;
   const o = [...new Set(A)].filter((s) => typeof s == "string" && s.startsWith("co_z"));
   if (o.length === 0) return i;
-  const r = e ?? t.id?.maiaId?.id, n = await uy(t, r);
+  const r = e ?? t.id?.maiaId?.id, n = await Ly(t, r);
   for (const s of o) {
-    const a = n.get(s) ?? ly(s, 16);
+    const a = n.get(s) ?? qy(s, 16);
     i.set(s, a);
   }
   return i;
 }
-function fy(t, A, { name: e = null } = {}) {
+function Oy(t, A, { name: e = null } = {}) {
   const i = t.createGroup();
   if (A && typeof A.extend == "function")
     try {
@@ -14173,11 +14241,11 @@ function fy(t, A, { name: e = null } = {}) {
     }
   return e && i.set("name", e, "trusting"), console.log("✅ Child group created:", i.id), e && console.log("   Name:", e), console.log("   Owner:", A?.id), i;
 }
-const py = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const Py = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  createChildGroup: fy
+  createChildGroup: Oy
 }, Symbol.toStringTag, { value: "Module" }));
-function RA(t, A = {}) {
+function YA(t, A = {}) {
   return { ok: !0, data: t, ...A };
 }
 function fA(t, A = {}) {
@@ -14186,10 +14254,10 @@ function fA(t, A = {}) {
 function pA(t, A, e) {
   return { type: t, message: A, path: e ?? void 0 };
 }
-function Ve(t) {
+function We(t) {
   return t && t.ok === !0;
 }
-const wy = [
+const jy = [
   "Transactor has no write permissions",
   "lacks admin permissions",
   "lacks write permissions",
@@ -14204,22 +14272,22 @@ const wy = [
 function xn(t) {
   if (!t || !(t instanceof Error)) return !1;
   const A = (t.message || "").toLowerCase(), e = String(t);
-  return wy.some(
+  return jy.some(
     (i) => A.includes(i.toLowerCase()) || e.includes(i)
   );
 }
 async function Ln(t, A, e) {
   try {
-    const i = await eA(t, { fromCoValue: A }, { returnType: "coId" });
+    const i = await tA(t, { fromCoValue: A }, { returnType: "coId" });
     return i || null;
   } catch {
     return null;
   }
 }
-async function yy(t, A, e) {
-  return e ? await ot(t, e, { context: { existing: A }, item: {} }) : t;
+async function Vy(t, A, e) {
+  return e ? await nt(t, e, { context: { existing: A }, item: {} }) : t;
 }
-function Dy(t, A) {
+function $y(t, A) {
   if (!t || t.error) return null;
   const e = {};
   if (t.properties?.length) {
@@ -14241,7 +14309,7 @@ function Dy(t, A) {
   }
   return s.cotype || s.properties || s.items || s.title || s.description ? { ...s, $id: A } : null;
 }
-async function my(t, A) {
+async function Wy(t, A) {
   const { schema: e, key: i, keys: o, filter: r, options: n } = A;
   if (e && !e.startsWith("co_z") && !["@account", "@group", "@metaSchema"].includes(e))
     throw new Error(`[ReadOperation] Schema must be a co-id (co_z...) or special schema hint (@account, @group, @metaSchema), got: ${e}. Runtime code must use co-ids only, not '@maia/schema/...' patterns.`);
@@ -14249,69 +14317,69 @@ async function my(t, A) {
   if (i && o) throw new Error("[ReadOperation] Cannot provide both key and keys parameters");
   return await t.read(e, i, o, r, n);
 }
-async function Sy(t, A, e) {
+async function zy(t, A, e) {
   const { schema: i, data: o, spark: r } = e;
-  BA(i, "schema", "CreateOperation"), BA(o, "data", "CreateOperation"), JA(A, "CreateOperation", "runtime schema validation");
-  const n = await eA(t, i, { returnType: "coId" });
+  QA(i, "schema", "CreateOperation"), QA(o, "data", "CreateOperation"), qA(A, "CreateOperation", "runtime schema validation");
+  const n = await tA(t, i, { returnType: "coId" });
   if (!n) throw new Error(`[CreateOperation] Could not resolve schema: ${i}`);
   const s = r != null ? { spark: r } : {}, a = await t.create(n, o, s);
-  return RA(a, { op: "create" });
+  return YA(a, { op: "create" });
 }
-async function ky(t, A, e, i) {
+async function _y(t, A, e, i) {
   const { id: o, data: r } = i;
-  BA(o, "id", "UpdateOperation"), EA(o, "UpdateOperation"), BA(r, "data", "UpdateOperation"), JA(A, "UpdateOperation", "schema validation");
+  QA(o, "id", "UpdateOperation"), dA(o, "UpdateOperation"), QA(r, "data", "UpdateOperation"), qA(A, "UpdateOperation", "schema validation");
   const n = await t.getRawRecord(o);
   if (!n) throw new Error(`[UpdateOperation] Record not found: ${o}`);
-  const a = await Ln(t, o) || n.$schema || null, { $schema: g, ...I } = n, c = await yy(r, I, e), C = await t.update(a, o, c);
-  return RA(C, { op: "update" });
+  const a = await Ln(t, o) || n.$schema || null, { $schema: g, ...I } = n, c = await Vy(r, I, e), C = await t.update(a, o, c);
+  return YA(C, { op: "update" });
 }
-async function Ny(t, A, e) {
+async function Zy(t, A, e) {
   const { id: i } = e;
-  BA(i, "id", "DeleteOperation"), EA(i, "DeleteOperation"), JA(A, "DeleteOperation", "extract schema from CoValue headerMeta");
+  QA(i, "id", "DeleteOperation"), dA(i, "DeleteOperation"), qA(A, "DeleteOperation", "extract schema from CoValue headerMeta");
   const o = await Ln(A.backend, i), r = await t.delete(o, i);
-  return RA(r, { op: "delete" });
+  return YA(r, { op: "delete" });
 }
-async function My(t, A) {
+async function Xy(t, A) {
   const { configs: e, schemas: i, data: o } = A;
   if (!e) throw new Error("[SeedOperation] Configs required");
   if (!i) throw new Error("[SeedOperation] Schemas required");
   const r = await t.seed(e, i, o || {});
-  return RA(r, { op: "seed" });
+  return YA(r, { op: "seed" });
 }
-async function Gy(t, A, e) {
+async function AD(t, A, e) {
   const { coId: i, fromCoValue: o } = e, r = [i, o].filter(Boolean).length;
   if (r === 0) throw new Error("[SchemaOperation] One of coId or fromCoValue must be provided");
   if (r > 1) throw new Error("[SchemaOperation] Only one of coId or fromCoValue can be provided");
-  let n = i ? (EA(i, "SchemaOperation"), i) : null;
-  if (o && (EA(o, "SchemaOperation"), n = await eA(t, { fromCoValue: o }, { returnType: "coId" }), !n))
-    return console.warn(`[SchemaOperation] Could not extract schema co-id from CoValue ${o} headerMeta`), new wA(null);
-  const s = await t.read(null, n), a = new wA(null), g = (C) => a._set(Dy(C, n)), I = s.subscribe(g);
+  let n = i ? (dA(i, "SchemaOperation"), i) : null;
+  if (o && (dA(o, "SchemaOperation"), n = await tA(t, { fromCoValue: o }, { returnType: "coId" }), !n))
+    return console.warn(`[SchemaOperation] Could not extract schema co-id from CoValue ${o} headerMeta`), new mA(null);
+  const s = await t.read(null, n), a = new mA(null), g = (C) => a._set($y(C, n)), I = s.subscribe(g);
   g(s.value);
   const c = a._unsubscribe;
   return a._unsubscribe = () => {
     c && c(), I();
   }, a;
 }
-async function Fy(t, A) {
+async function eD(t, A) {
   const { humanReadableKey: e } = A;
-  if (BA(e, "humanReadableKey", "ResolveOperation"), typeof e != "string") throw new Error("[ResolveOperation] humanReadableKey must be a string");
-  (NA(e) || e.startsWith("@actor/") || aI(e)) && console.warn(`[ResolveOperation] resolve() called with human-readable key: ${e}. This should only be used during seeding. At runtime, all IDs should already be co-ids.`);
+  if (QA(e, "humanReadableKey", "ResolveOperation"), typeof e != "string") throw new Error("[ResolveOperation] humanReadableKey must be a string");
+  (GA(e) || e.startsWith("@actor/") || aI(e)) && console.warn(`[ResolveOperation] resolve() called with human-readable key: ${e}. This should only be used during seeding. At runtime, all IDs should already be co-ids.`);
   const i = A.spark ?? t?.systemSpark;
-  return await eA(t, e, { returnType: "coId", spark: i });
+  return await tA(t, e, { returnType: "coId", spark: i });
 }
 async function Ms(t, A, e) {
   const { coId: i, item: o, items: r, cotype: n } = e;
-  BA(i, "coId", "AppendOperation"), EA(i, "AppendOperation"), JA(A, "AppendOperation", "check schema cotype");
+  QA(i, "coId", "AppendOperation"), dA(i, "AppendOperation"), qA(A, "AppendOperation", "check schema cotype");
   const s = await cI(t, i, "AppendOperation"), a = await Ln(t, i);
   let g = n;
   if (!g) {
-    const l = await vt(t, a, "colist"), u = await vt(t, a, "costream");
+    const l = await Yt(t, a, "colist"), u = await Yt(t, a, "costream");
     if (l) g = "colist";
     else if (u) g = "costream";
     else throw new Error(`[AppendOperation] CoValue ${i} must be a CoList (colist) or CoStream (costream), got schema cotype: ${a}`);
   }
-  if (!await vt(t, a, g)) throw new Error(`[AppendOperation] CoValue ${i} is not a ${g} (schema cotype check failed)`);
-  const I = await eA(t, a, { returnType: "schema" });
+  if (!await Yt(t, a, g)) throw new Error(`[AppendOperation] CoValue ${i} is not a ${g} (schema cotype check failed)`);
+  const I = await tA(t, a, { returnType: "schema" });
   if (!I) throw new Error(`[AppendOperation] Schema ${a} not found`);
   const c = t.getCurrentContent(s), C = g === "colist" ? "append" : "push";
   if (!c || typeof c[C] != "function") throw new Error(`[AppendOperation] ${g === "colist" ? "CoList" : "CoStream"} ${i} doesn't have ${C} method`);
@@ -14332,35 +14400,35 @@ async function Ms(t, A, e) {
     for (const l of B) c.push(l), Q++;
   t.node?.storage && await t.node.syncManager.waitForStorageSync(i);
   const f = { coId: i, [g === "colist" ? "itemsAppended" : "itemsPushed"]: Q, ...g === "colist" && { itemsSkipped: B.length - Q } };
-  return RA(f, { op: "append" });
+  return YA(f, { op: "append" });
 }
-async function by(t, A, e) {
+async function tD(t, A, e) {
   const { actorId: i, inboxCoId: o } = e;
-  BA(i, "actorId", "ProcessInboxOperation"), BA(o, "inboxCoId", "ProcessInboxOperation"), EA(i, "ProcessInboxOperation"), EA(o, "ProcessInboxOperation");
-  const { processInbox: r } = await Promise.resolve().then(() => bo);
+  QA(i, "actorId", "ProcessInboxOperation"), QA(o, "inboxCoId", "ProcessInboxOperation"), dA(i, "ProcessInboxOperation"), dA(o, "ProcessInboxOperation");
+  const { processInbox: r } = await Promise.resolve().then(() => Ko);
   return await r(t, i, o);
 }
-async function Ry(t, A, e) {
+async function iD(t, A, e) {
   const { name: i } = e;
-  return BA(i, "name", "CreateSparkOperation"), JA(A, "CreateSparkOperation", "spark creation"), await t.createSpark(i);
+  return QA(i, "name", "CreateSparkOperation"), qA(A, "CreateSparkOperation", "spark creation"), await t.createSpark(i);
 }
-async function vy(t, A) {
+async function oD(t, A) {
   const { id: e, schema: i } = A;
   if (e)
-    return EA(e, "ReadSparkOperation"), await t.readSpark(e);
+    return dA(e, "ReadSparkOperation"), await t.readSpark(e);
   const o = i || "@maia/schema/data/spark";
   return await t.readSpark(null, o);
 }
-async function Ky(t, A, e) {
+async function rD(t, A, e) {
   const { id: i, data: o } = e;
-  return BA(i, "id", "UpdateSparkOperation"), EA(i, "UpdateSparkOperation"), BA(o, "data", "UpdateSparkOperation"), JA(A, "UpdateSparkOperation", "spark update"), await t.updateSpark(i, o);
+  return QA(i, "id", "UpdateSparkOperation"), dA(i, "UpdateSparkOperation"), QA(o, "data", "UpdateSparkOperation"), qA(A, "UpdateSparkOperation", "spark update"), await t.updateSpark(i, o);
 }
-async function Yy(t, A, e) {
+async function nD(t, A, e) {
   const { id: i } = e;
-  return BA(i, "id", "DeleteSparkOperation"), EA(i, "DeleteSparkOperation"), JA(A, "DeleteSparkOperation", "spark deletion"), await t.deleteSpark(i);
+  return QA(i, "id", "DeleteSparkOperation"), dA(i, "DeleteSparkOperation"), qA(A, "DeleteSparkOperation", "spark deletion"), await t.deleteSpark(i);
 }
-async function gt(t, A) {
-  EA(A, "GetSparkGroup");
+async function ct(t, A) {
+  dA(A, "GetSparkGroup");
   const e = await Sn(t, A, "guardian");
   if (!e || typeof e != "string" || !e.startsWith("co_z"))
     throw new Error(`[GetSparkGroup] Spark has no guardian in os.capabilities: ${A}`);
@@ -14369,13 +14437,15 @@ async function gt(t, A) {
     throw new Error(`[GetSparkGroup] Group not found: ${e}`);
   return i;
 }
-async function Uy(t, A, e) {
+async function sD(t, A, e) {
   const { id: i, memberId: o, role: r } = e;
-  BA(i, "id", "AddSparkMemberOperation"), EA(i, "AddSparkMemberOperation"), BA(o, "memberId", "AddSparkMemberOperation"), EA(o, "AddSparkMemberOperation"), BA(r, "role", "AddSparkMemberOperation"), JA(A, "AddSparkMemberOperation", "spark member addition");
+  if (QA(i, "id", "AddSparkMemberOperation"), dA(i, "AddSparkMemberOperation"), !o || typeof o == "string" && !o.trim())
+    return fA([pA("schema", "Please enter an agent ID")], { op: "addSparkMember" });
+  dA(o, "AddSparkMemberOperation"), QA(r, "role", "AddSparkMemberOperation"), qA(A, "AddSparkMemberOperation", "spark member addition");
   const n = ["reader", "writer", "admin", "manager", "writeOnly"];
   if (!n.includes(r))
     throw new Error(`[AddSparkMemberOperation] Invalid role: ${r}. Must be one of: ${n.join(", ")}`);
-  const s = await gt(t, i);
+  const s = await ct(t, i);
   return await t.addGroupMember(s, o, r), {
     success: !0,
     sparkId: i,
@@ -14383,23 +14453,23 @@ async function Uy(t, A, e) {
     role: r
   };
 }
-async function Jy(t, A, e) {
+async function aD(t, A, e) {
   const { id: i, memberId: o } = e;
-  BA(i, "id", "RemoveSparkMemberOperation"), EA(i, "RemoveSparkMemberOperation"), BA(o, "memberId", "RemoveSparkMemberOperation"), EA(o, "RemoveSparkMemberOperation"), JA(A, "RemoveSparkMemberOperation", "spark member removal");
-  const r = await gt(t, i);
+  QA(i, "id", "RemoveSparkMemberOperation"), dA(i, "RemoveSparkMemberOperation"), QA(o, "memberId", "RemoveSparkMemberOperation"), dA(o, "RemoveSparkMemberOperation"), qA(A, "RemoveSparkMemberOperation", "spark member removal");
+  const r = await ct(t, i);
   return await t.removeGroupMember(r, o), {
     success: !0,
     sparkId: i,
     memberId: o
   };
 }
-async function Hy(t, A, e) {
+async function gD(t, A, e) {
   const { id: i, parentGroupId: o, role: r = "extend" } = e;
-  BA(i, "id", "AddSparkParentGroupOperation"), EA(i, "AddSparkParentGroupOperation"), BA(o, "parentGroupId", "AddSparkParentGroupOperation"), EA(o, "AddSparkParentGroupOperation"), JA(A, "AddSparkParentGroupOperation", "spark parent group addition");
+  QA(i, "id", "AddSparkParentGroupOperation"), dA(i, "AddSparkParentGroupOperation"), QA(o, "parentGroupId", "AddSparkParentGroupOperation"), dA(o, "AddSparkParentGroupOperation"), qA(A, "AddSparkParentGroupOperation", "spark parent group addition");
   const n = ["reader", "writer", "manager", "admin", "extend"];
   if (!n.includes(r))
     throw new Error(`[AddSparkParentGroupOperation] Invalid role: ${r}. Must be one of: ${n.join(", ")}`);
-  const s = await gt(t, i), a = await t.getGroup(o);
+  const s = await ct(t, i), a = await t.getGroup(o);
   if (!a)
     throw new Error(`[AddSparkParentGroupOperation] Parent group not found: ${o}`);
   return s.extend(a, r), {
@@ -14409,10 +14479,10 @@ async function Hy(t, A, e) {
     role: r
   };
 }
-async function qy(t, A, e) {
+async function ID(t, A, e) {
   const { id: i, parentGroupId: o } = e;
-  BA(i, "id", "RemoveSparkParentGroupOperation"), EA(i, "RemoveSparkParentGroupOperation"), BA(o, "parentGroupId", "RemoveSparkParentGroupOperation"), EA(o, "RemoveSparkParentGroupOperation"), JA(A, "RemoveSparkParentGroupOperation", "spark parent group removal");
-  const r = await gt(t, i), n = await t.getGroup(o);
+  QA(i, "id", "RemoveSparkParentGroupOperation"), dA(i, "RemoveSparkParentGroupOperation"), QA(o, "parentGroupId", "RemoveSparkParentGroupOperation"), dA(o, "RemoveSparkParentGroupOperation"), qA(A, "RemoveSparkParentGroupOperation", "spark parent group removal");
+  const r = await ct(t, i), n = await t.getGroup(o);
   if (!n)
     throw new Error(`[RemoveSparkParentGroupOperation] Parent group not found: ${o}`);
   return r.revokeExtend(n), {
@@ -14421,10 +14491,10 @@ async function qy(t, A, e) {
     parentGroupId: o
   };
 }
-async function xy(t, A) {
+async function cD(t, A) {
   const { id: e } = A;
-  BA(e, "id", "GetSparkMembersOperation"), EA(e, "GetSparkMembersOperation");
-  const i = await gt(t, e), o = t.getGroupInfoFromGroup(i);
+  QA(e, "id", "GetSparkMembersOperation"), dA(e, "GetSparkMembersOperation");
+  const i = await ct(t, e), o = t.getGroupInfoFromGroup(i);
   return {
     sparkId: e,
     groupId: i.id,
@@ -14432,13 +14502,13 @@ async function xy(t, A) {
     parentGroups: o?.groupMembers || []
   };
 }
-async function Ly(t, A, e) {
+async function CD(t, A, e) {
   const { id: i, memberId: o, role: r } = e;
-  BA(i, "id", "UpdateSparkMemberRoleOperation"), EA(i, "UpdateSparkMemberRoleOperation"), BA(o, "memberId", "UpdateSparkMemberRoleOperation"), EA(o, "UpdateSparkMemberRoleOperation"), BA(r, "role", "UpdateSparkMemberRoleOperation"), JA(A, "UpdateSparkMemberRoleOperation", "spark member role update");
+  QA(i, "id", "UpdateSparkMemberRoleOperation"), dA(i, "UpdateSparkMemberRoleOperation"), QA(o, "memberId", "UpdateSparkMemberRoleOperation"), dA(o, "UpdateSparkMemberRoleOperation"), QA(r, "role", "UpdateSparkMemberRoleOperation"), qA(A, "UpdateSparkMemberRoleOperation", "spark member role update");
   const n = ["reader", "writer", "admin", "manager", "writeOnly"];
   if (!n.includes(r))
     throw new Error(`[UpdateSparkMemberRoleOperation] Invalid role: ${r}. Must be one of: ${n.join(", ")}`);
-  const s = await gt(t, i);
+  const s = await ct(t, i);
   return await t.setGroupMemberRole(s, o, r), {
     success: !0,
     sparkId: i,
@@ -14446,7 +14516,7 @@ async function Ly(t, A, e) {
     role: r
   };
 }
-class Eo {
+class ho {
   /**
    * Create a new DBEngine instance
    * @param {DBAdapter} backend - Backend adapter instance (must implement DBAdapter interface)
@@ -14457,26 +14527,26 @@ class Eo {
     this.backend = A;
     const { evaluator: i } = e;
     A && typeof A.setDbEngine == "function" ? A.setDbEngine(this) : A && A.constructor.name === "CoJSONBackend" && (A.dbEngine = this), this.operations = {
-      read: { execute: (o) => my(this.backend, o) },
-      create: { execute: (o) => Sy(this.backend, this, o) },
-      update: { execute: (o) => ky(this.backend, this, i, o) },
-      delete: { execute: (o) => Ny(this.backend, this, o) },
-      seed: { execute: (o) => My(this.backend, o) },
-      schema: { execute: (o) => Gy(this.backend, this, o) },
-      resolve: { execute: (o) => Fy(this.backend, o) },
+      read: { execute: (o) => Wy(this.backend, o) },
+      create: { execute: (o) => zy(this.backend, this, o) },
+      update: { execute: (o) => _y(this.backend, this, i, o) },
+      delete: { execute: (o) => Zy(this.backend, this, o) },
+      seed: { execute: (o) => Xy(this.backend, o) },
+      schema: { execute: (o) => AD(this.backend, this, o) },
+      resolve: { execute: (o) => eD(this.backend, o) },
       append: { execute: (o) => Ms(this.backend, this, o) },
       push: { execute: (o) => Ms(this.backend, this, { ...o, cotype: "costream" }) },
-      processInbox: { execute: (o) => by(this.backend, this, o) },
-      createSpark: { execute: (o) => Ry(this.backend, this, o) },
-      readSpark: { execute: (o) => vy(this.backend, o) },
-      updateSpark: { execute: (o) => Ky(this.backend, this, o) },
-      deleteSpark: { execute: (o) => Yy(this.backend, this, o) },
-      addSparkMember: { execute: (o) => Uy(this.backend, this, o) },
-      removeSparkMember: { execute: (o) => Jy(this.backend, this, o) },
-      addSparkParentGroup: { execute: (o) => Hy(this.backend, this, o) },
-      removeSparkParentGroup: { execute: (o) => qy(this.backend, this, o) },
-      getSparkMembers: { execute: (o) => xy(this.backend, o) },
-      updateSparkMemberRole: { execute: (o) => Ly(this.backend, this, o) }
+      processInbox: { execute: (o) => tD(this.backend, this, o) },
+      createSpark: { execute: (o) => iD(this.backend, this, o) },
+      readSpark: { execute: (o) => oD(this.backend, o) },
+      updateSpark: { execute: (o) => rD(this.backend, this, o) },
+      deleteSpark: { execute: (o) => nD(this.backend, this, o) },
+      addSparkMember: { execute: (o) => sD(this.backend, this, o) },
+      removeSparkMember: { execute: (o) => aD(this.backend, this, o) },
+      addSparkParentGroup: { execute: (o) => gD(this.backend, this, o) },
+      removeSparkParentGroup: { execute: (o) => ID(this.backend, this, o) },
+      getSparkMembers: { execute: (o) => cD(this.backend, o) },
+      updateSparkMemberRole: { execute: (o) => CD(this.backend, this, o) }
     };
   }
   /**
@@ -14495,7 +14565,7 @@ class Eo {
     const o = this.operations[e];
     if (!o)
       throw new Error(`[DBEngine] Unknown operation: ${e}`);
-    const r = /* @__PURE__ */ new Set(["create", "update", "delete", "append", "push", "seed"]);
+    const r = /* @__PURE__ */ new Set(["create", "update", "delete", "append", "push", "seed", "addSparkMember", "removeSparkMember"]);
     try {
       return await o.execute(i);
     } catch (n) {
@@ -14577,16 +14647,16 @@ class vI {
 const Gs = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   DBAdapter: vI,
-  DBEngine: Eo,
-  ReactiveStore: wA,
+  DBEngine: ho,
+  ReactiveStore: mA,
   createErrorEntry: pA,
   createErrorResult: fA,
-  createSuccessResult: RA,
+  createSuccessResult: YA,
   isPermissionError: xn,
-  isSuccessResult: Ve
+  isSuccessResult: We
 }, Symbol.toStringTag, { value: "Module" }));
 async function KI(t, A, e, i) {
-  const o = await gA(t, e, { waitForAvailable: !0 });
+  const o = await sA(t, e, { waitForAvailable: !0 });
   if (!o)
     throw new Error(`[CoJSONBackend] CoValue not found: ${e}`);
   if (!t.isAvailable(o))
@@ -14594,18 +14664,18 @@ async function KI(t, A, e, i) {
   const r = t.getCurrentContent(o), n = r?.type || "unknown";
   let s = null;
   try {
-    s = await eA(t, { fromCoValue: e }, { returnType: "coId" });
+    s = await tA(t, { fromCoValue: e }, { returnType: "coId" });
   } catch (a) {
     console.log(`[Update] Skipping validation for ${e}: ${a.message}`);
   }
   if (s && t.dbEngine && s.startsWith("co_z")) {
-    const { isExceptionSchema: a } = await Promise.resolve().then(() => jt);
+    const { isExceptionSchema: a } = await Promise.resolve().then(() => $t);
     if (!a(s)) {
       const g = await t.getRawRecord(e);
       if (g) {
         const { $schema: I, ...c } = g, C = { ...c, ...i };
         try {
-          await $t(
+          await zt(
             t,
             s,
             C,
@@ -14630,7 +14700,7 @@ const YI = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   update: KI
 }, Symbol.toStringTag, { value: "Module" }));
 function Tn(t, A, e) {
-  const i = A?.account && A.account.id === e, o = A?.account && A.account.get && A.account.get("profile") === e, r = t.header?.meta?.type === "account", s = t.header?.ruleset?.type === "group", a = A?.account && !t.header, g = i || r || a, I = s && !i && !r && !a, c = t.header?.meta?.$schema, C = c ? Je(c) : !1;
+  const i = A?.account && A.account.id === e, o = A?.account && A.account.get && A.account.get("profile") === e, r = t.header?.meta?.type === "account", s = t.header?.ruleset?.type === "group", a = A?.account && !t.header, g = i || r || a, I = s && !i && !r && !a, c = t.header?.meta?.$schema, C = c ? qe(c) : !1;
   return {
     isAccount: g,
     isGroup: I,
@@ -14638,15 +14708,15 @@ function Tn(t, A, e) {
     isException: C
   };
 }
-function Or(t) {
+function Pr(t) {
   return !t || !t.header || !t.header.meta ? null : t.header.meta.$schema || null;
 }
-function Ty(t, A, e) {
+function BD(t, A, e) {
   const i = Tn(t, A, e);
   return i.isAccount || i.isGroup || i.isProfile || i.isException;
 }
-const _A = /* @__PURE__ */ new Set();
-function Oy(t, A) {
+const ZA = /* @__PURE__ */ new Set();
+function QD(t, A) {
   if (!t || !A)
     return t;
   const e = t.store.bind(t), i = new Proxy(t, {
@@ -14673,11 +14743,11 @@ function Oy(t, A) {
           hasHeader: !!r.header,
           messageKeys: Object.keys(r || {})
         })), console.error(`[StorageHook] REJECTING co-value ${a}: Missing header.meta. Every co-value MUST have headerMeta.$schema (except groups, accounts, and profiles during account creation).`), new Error(`[StorageHook] Co-value ${a} missing header.meta. Every co-value MUST have headerMeta.$schema (except groups, accounts, and profiles during account creation).`);
-      if (!Or(r) && !g.isException)
+      if (!Pr(r) && !g.isException)
         throw console.error(`[StorageHook] REJECTING co-value ${a}: Missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, @metaSchema, and groups/accounts).`), new Error(`[StorageHook] Co-value ${a} missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, @metaSchema, and groups/accounts).`);
     }
-    let I = Ty(r, A, a);
-    if (I && Or(r) === yA.META_SCHEMA && (I = !1), !I && A.account) {
+    let I = BD(r, A, a);
+    if (I && Pr(r) === SA.META_SCHEMA && (I = !1), !I && A.account) {
       const C = A._cachedMaiaOsId;
       if (a === C)
         I = !0;
@@ -14714,8 +14784,8 @@ function Oy(t, A) {
     }
     const c = s(r, n);
     return I || Promise.resolve(c).then(async () => {
-      if (!_A.has(a)) {
-        _A.add(a);
+      if (!ZA.has(a)) {
+        ZA.add(a);
         try {
           let C = A.getCoValue(a), B = 0;
           const Q = 5;
@@ -14729,10 +14799,10 @@ function Oy(t, A) {
             return;
           if (await NI(A, f)) {
             setTimeout(() => {
-              _A.has(a) && kI(A, f).then(() => {
-                _A.delete(a);
+              ZA.has(a) && kI(A, f).then(() => {
+                ZA.delete(a);
               }).catch(() => {
-                _A.delete(a);
+                ZA.delete(a);
               });
             }, 0);
             return;
@@ -14741,24 +14811,24 @@ function Oy(t, A) {
           if (!u)
             return;
           setTimeout(() => {
-            _A.has(a) && MI(A, f).then(() => {
-              _A.delete(a);
+            ZA.has(a) && MI(A, f).then(() => {
+              ZA.delete(a);
             }).catch(() => {
-              _A.delete(a);
+              ZA.delete(a);
             });
           }, 0);
         } catch {
-          _A.delete(a);
+          ZA.delete(a);
         }
       }
     }).catch(() => {
       const C = r.id;
-      _A.delete(C);
+      ZA.delete(C);
     }), c;
   }
   return i;
 }
-async function Py(t, A) {
+async function ED(t, A) {
   try {
     const e = t.getCoValue(A);
     if (!e || !t.isAvailable(e))
@@ -14769,11 +14839,11 @@ async function Py(t, A) {
     return console.warn(`[ValidationHook] Failed to extract content for ${A}:`, e), null;
   }
 }
-async function jy(t, A, e = 5e3) {
+async function lD(t, A, e = 5e3) {
   const i = Date.now();
   for (; Date.now() - i < e; ) {
     try {
-      const o = await eA(t, A, { returnType: "schema" });
+      const o = await tA(t, A, { returnType: "schema" });
       if (o)
         return o;
     } catch {
@@ -14782,34 +14852,34 @@ async function jy(t, A, e = 5e3) {
   }
   return null;
 }
-async function Vy(t, A, e) {
+async function dD(t, A, e) {
   const i = e.id, o = Tn(e, t, i);
   if (o.isGroup || o.isAccount || o.isProfile)
     return { valid: !0, error: null };
-  const r = Or(e);
+  const r = Pr(e);
   if (!r)
     return {
       valid: !1,
       error: `Co-value ${i} missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, @maia, and groups/accounts).`
     };
-  if (Je(r))
+  if (qe(r))
     return { valid: !0, error: null };
   if (!r.startsWith("co_z"))
     return {
       valid: !1,
       error: `Co-value ${i} has invalid schema format: ${r}. Schema must be a co-id (co_z...) or exception schema (@account, @group, @maia).`
     };
-  let n = await eA(t, r, { returnType: "schema" });
-  if (!n && (console.log(`[ValidationHook] Schema ${r} not available, waiting for sync...`), n = await jy(t, r, 5e3), !n))
+  let n = await tA(t, r, { returnType: "schema" });
+  if (!n && (console.log(`[ValidationHook] Schema ${r} not available, waiting for sync...`), n = await lD(t, r, 5e3), !n))
     return {
       valid: !1,
       error: `Schema ${r} not available after timeout. Cannot validate remote transactions for ${i}.`
     };
-  const s = await Py(t, i);
+  const s = await ED(t, i);
   if (!s)
     return console.log(`[ValidationHook] Cannot extract content for ${i} (likely new co-value) - schema availability verified, allowing transactions`), { valid: !0, error: null };
   try {
-    return await $t(
+    return await zt(
       t,
       r,
       s,
@@ -14823,13 +14893,13 @@ async function Vy(t, A, e) {
     };
   }
 }
-function $y(t, A, e) {
+function uD(t, A, e) {
   if (!t || !A)
     return t;
   const i = t.handleNewContent?.bind(t);
   return i && (t.handleNewContent = async function(o, r) {
     if (o && o.id && e) {
-      const n = await Vy(A, e, o);
+      const n = await dD(A, e, o);
       if (!n.valid)
         throw console.error(`[ValidationHook] Rejecting remote transactions for ${o.id}: ${n.error}`), new Error(`[ValidationHook] Invalid remote transactions rejected: ${n.error}`);
     }
@@ -14840,7 +14910,7 @@ class On extends vI {
   constructor(A, e, i = null) {
     super();
     const o = i && typeof i == "object" && !i.backend && typeof i.execute != "function", r = o ? null : i, n = o ? i : {};
-    this.node = A, this.account = e, this.dbEngine = r, this.systemSpark = n.systemSpark ?? "@maia", this.subscriptionCache = tI(A), A.storage && (A.storage = Oy(A.storage, this)), A.syncManager && r && $y(A.syncManager, this, r);
+    this.node = A, this.account = e, this.dbEngine = r, this.systemSpark = n.systemSpark ?? "@maia", this.subscriptionCache = tI(A), A.storage && (A.storage = QD(A.storage, this)), A.syncManager && r && uD(A.syncManager, this, r);
   }
   /**
    * Reset all subscription-related caches
@@ -14917,7 +14987,7 @@ class On extends vI {
    * @returns {Promise<RawGroup|null>} @maia spark's group
    */
   async getMaiaGroup() {
-    return Go(this);
+    return Ro(this);
   }
   /**
    * Get group information for a CoValue
@@ -14944,7 +15014,7 @@ class On extends vI {
         return null;
       if (!s || typeof s.addMember != "function")
         return null;
-      const a = Yr(s);
+      const a = Ur(s);
       return a && r && (a.groupId = r), a;
     } catch (e) {
       return console.warn("[CoJSONBackend] Error getting group info:", e), null;
@@ -14964,7 +15034,7 @@ class On extends vI {
    * @returns {Object|null} Group info object
    */
   getGroupInfoFromGroup(A) {
-    return Yr(A);
+    return Ur(A);
   }
   /**
    * Add a member to a group
@@ -14983,7 +15053,7 @@ class On extends vI {
    * @returns {Promise<void>}
    */
   async removeGroupMember(A, e) {
-    return await Fn(A, e);
+    return await bn(A, e);
   }
   /**
    * Set a member's role in a group
@@ -15010,10 +15080,10 @@ class On extends vI {
     const e = await this.getMaiaGroup();
     if (!e)
       throw new Error("[CoJSONBackend] @maia spark group not found");
-    const { createChildGroup: i } = await Promise.resolve().then(() => py), o = i(this.node, e, { name: A }), r = await eA(this, "@maia/schema/data/spark", { returnType: "coId" }), n = await eA(this, "@maia/schema/os/capabilities", { returnType: "coId" }), s = await eA(this, "@maia/schema/os/os-registry", { returnType: "coId" }), a = await eA(this, "@maia/schema/os/vibes-registry", { returnType: "coId" });
+    const { createChildGroup: i } = await Promise.resolve().then(() => Py), o = i(this.node, e, { name: A }), r = await tA(this, "@maia/schema/data/spark", { returnType: "coId" }), n = await tA(this, "@maia/schema/os/capabilities", { returnType: "coId" }), s = await tA(this, "@maia/schema/os/os-registry", { returnType: "coId" }), a = await tA(this, "@maia/schema/os/vibes-registry", { returnType: "coId" });
     if (!r || !n || !s || !a)
       throw new Error("[CoJSONBackend] Spark scaffold schemas not found");
-    const g = { node: this.node, account: this.account, guardian: o }, { createCoValueForSpark: I } = await Promise.resolve().then(() => be), { coValue: c } = await I(g, null, {
+    const g = { node: this.node, account: this.account, guardian: o }, { createCoValueForSpark: I } = await Promise.resolve().then(() => ve), { coValue: c } = await I(g, null, {
       schema: n,
       cotype: "comap",
       data: { guardian: o.id },
@@ -15049,7 +15119,7 @@ class On extends vI {
   async readSpark(A, e = null) {
     if (A)
       return await this.read(null, A);
-    const i = e || "@maia/schema/data/spark", o = await eA(this, i, { returnType: "coId" });
+    const i = e || "@maia/schema/data/spark", o = await tA(this, i, { returnType: "coId" });
     if (!o)
       throw new Error(`[CoJSONBackend] Spark schema not found: ${i}`);
     return await this.read(o);
@@ -15061,7 +15131,7 @@ class On extends vI {
    * @returns {Promise<Object>} Updated spark
    */
   async updateSpark(A, e) {
-    const { group: i, ...o } = e || {}, r = await eA(this, { fromCoValue: A }, { returnType: "coId" });
+    const { group: i, ...o } = e || {}, r = await tA(this, { fromCoValue: A }, { returnType: "coId" });
     return await this.update(r, A, o);
   }
   /**
@@ -15071,7 +15141,7 @@ class On extends vI {
    * @returns {Promise<Object>} Deletion result
    */
   async deleteSpark(A) {
-    const e = await eA(this, { fromCoValue: A }, { returnType: "coId" });
+    const e = await tA(this, { fromCoValue: A }, { returnType: "coId" });
     return await this.delete(e, A), await this._unregisterSparkFromAccount(A), { success: !0, id: A };
   }
   /**
@@ -15084,13 +15154,13 @@ class On extends vI {
   async _registerSparkInAccount(A) {
     let e = this.account.get("sparks"), i;
     if (e) {
-      const o = await IA(this, e, null, null, null, { deepResolve: !1 });
-      await dA(o, e, 15e3);
+      const o = await gA(this, e, null, null, null, { deepResolve: !1 });
+      await hA(o, e, 15e3);
       const r = this.node.getCoValue(e);
       r && this.isAvailable(r) && (i = this.getCurrentContent(r));
     }
     if (!i && !e) {
-      const r = await eA(this, "@maia/schema/os/sparks-registry", { returnType: "coId" }) || yA.META_SCHEMA, { createCoValueForSpark: n } = await Promise.resolve().then(() => be), { coValue: s } = await n(this, "@maia", {
+      const r = await tA(this, "@maia/schema/os/sparks-registry", { returnType: "coId" }) || SA.META_SCHEMA, { createCoValueForSpark: n } = await Promise.resolve().then(() => ve), { coValue: s } = await n(this, "@maia", {
         schema: r,
         cotype: "comap",
         data: {},
@@ -15112,8 +15182,8 @@ class On extends vI {
     const e = this.account.get("sparks");
     if (e)
       try {
-        const i = await IA(this, e, null, null, null, { deepResolve: !1 });
-        await dA(i, e, 5e3);
+        const i = await gA(this, e, null, null, null, { deepResolve: !1 });
+        await hA(i, e, 5e3);
         const o = this.node.getCoValue(e);
         if (!o || !this.isAvailable(o)) return;
         const r = this.getCurrentContent(o);
@@ -15151,7 +15221,7 @@ class On extends vI {
       map: I = null,
       onChange: c = null
     } = r, C = { deepResolve: n, maxDepth: s, timeoutMs: a, resolveReferences: g, map: I, onChange: c };
-    return i && Array.isArray(i) ? await Promise.all(i.map((Q) => IA(this, Q, A, null, A, C))) : e ? await IA(this, e, A, null, A, C) : A ? await IA(this, null, A, o, null, C) : await IA(this, null, null, o, null, C);
+    return i && Array.isArray(i) ? await Promise.all(i.map((Q) => gA(this, Q, A, null, A, C))) : e ? await gA(this, e, A, null, A, C) : A ? await gA(this, null, A, o, null, C) : await gA(this, null, null, o, null, C);
   }
   /**
    * Create new record - directly creates CoValue using CoJSON raw methods
@@ -15162,7 +15232,7 @@ class On extends vI {
    * @returns {Promise<Object>} Created record with generated co-id
    */
   async create(A, e, i = {}) {
-    return await bn(this, A, e, i);
+    return await Fn(this, A, e, i);
   }
   /**
    * Update existing record - directly updates CoValue using CoJSON raw methods
@@ -15182,7 +15252,7 @@ class On extends vI {
    * @returns {Promise<boolean>} true if deleted successfully
    */
   async delete(A, e) {
-    return await ao(this, A, e);
+    return await Io(this, A, e);
   }
   /**
    * Get raw record from database (without normalization)
@@ -15222,7 +15292,7 @@ class On extends vI {
   async seed(A, e, i) {
     if (!this.account)
       throw new Error("[CoJSONBackend] Account required for seed");
-    return await Ww(this.account, this.node, A, e, i || {}, this);
+    return await hy(this.account, this.node, A, e, i || {}, this);
   }
   /**
    * Ensure spark.os (account.sparks[@maia].os) is loaded and ready for schema-dependent operations
@@ -15244,12 +15314,12 @@ class On extends vI {
     let i = await vA(this, "@maia");
     if (!i || typeof i != "string" || !i.startsWith("co_z"))
       return process.env.DEBUG && console.warn("[CoJSONBackend.ensureAccountOsReady] @maia spark.os not found - migration should have created it"), !1;
-    const o = await IA(this, i, null, null, null, {
+    const o = await gA(this, i, null, null, null, {
       deepResolve: !1,
       timeoutMs: e
     });
     try {
-      await dA(o, i, e);
+      await hA(o, i, e);
     } catch (g) {
       return process.env.DEBUG && console.error(`[CoJSONBackend.ensureAccountOsReady] Timeout waiting for spark.os to load: ${g.message}`), !1;
     }
@@ -15264,19 +15334,19 @@ class On extends vI {
       const I = this.getCurrentContent(g);
       if (!I || typeof I.set != "function")
         return process.env.DEBUG && console.error("[CoJSONBackend.ensureAccountOsReady] spark.os content not available for creating schematas"), !1;
-      const C = await eA(this, "@maia/schema/os/schematas-registry", { returnType: "coId" }) || yA.META_SCHEMA, { createCoValueForSpark: B } = await Promise.resolve().then(() => be), { coValue: Q } = await B(this, "@maia", {
+      const C = await tA(this, "@maia/schema/os/schematas-registry", { returnType: "coId" }) || SA.META_SCHEMA, { createCoValueForSpark: B } = await Promise.resolve().then(() => ve), { coValue: Q } = await B(this, "@maia", {
         schema: C,
         cotype: "comap",
         data: {},
         dbEngine: this.dbEngine
       });
       I.set("schematas", Q.id), n = Q.id;
-      const f = await IA(this, i, null, null, null, {
+      const f = await gA(this, i, null, null, null, {
         deepResolve: !1,
         timeoutMs: 2e3
       });
       try {
-        await dA(f, i, 2e3);
+        await hA(f, i, 2e3);
         const l = f.value;
         l && !l.error && (n = l.schematas || n);
       } catch {
@@ -15284,12 +15354,12 @@ class On extends vI {
     }
     if (!n || typeof n != "string" || !n.startsWith("co_z"))
       return process.env.DEBUG && console.error("[CoJSONBackend.ensureAccountOsReady] Failed to ensure schematas registry exists"), !1;
-    const s = await IA(this, n, null, null, null, {
+    const s = await gA(this, n, null, null, null, {
       deepResolve: !1,
       timeoutMs: e
     });
     try {
-      await dA(s, n, e);
+      await hA(s, n, e);
     } catch (g) {
       return process.env.DEBUG && console.error(`[CoJSONBackend.ensureAccountOsReady] Timeout waiting for schematas registry to load: ${g.message}`), !1;
     }
@@ -15297,16 +15367,16 @@ class On extends vI {
     return !a || a.error ? (process.env.DEBUG && console.error("[CoJSONBackend.ensureAccountOsReady] schematas registry data not available or has error"), !1) : !0;
   }
 }
-const Pr = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const jr = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   CoJSONBackend: On
 }, Symbol.toStringTag, { value: "Module" }));
-function Wy(t, A) {
+function hD(t, A) {
   if (!t)
     throw new Error("[createCoJSONAPI] Node required");
   if (!A)
     throw new Error("[createCoJSONAPI] Account required");
-  const e = new On(t, A, { systemSpark: "@maia" }), i = new Eo(e);
+  const e = new On(t, A, { systemSpark: "@maia" }), i = new ho(e);
   return e.dbEngine = i, {
     /**
      * Execute a database operation
@@ -15318,7 +15388,7 @@ function Wy(t, A) {
     cojson: async (o) => await i.execute(o)
   };
 }
-async function jr(t, A, e) {
+async function Vr(t, A, e) {
   if (!t)
     throw new Error("[createAndPushMessage] dbEngine is required");
   if (!A || !A.startsWith("co_z"))
@@ -15351,13 +15421,13 @@ async function jr(t, A, e) {
   } catch (I) {
     throw new Error(`[createAndPushMessage] Failed to get message schema co-id: ${I.message}`);
   }
-  if (!await eA(t.backend, i, { returnType: "schema" }))
+  if (!await tA(t.backend, i, { returnType: "schema" }))
     throw new Error(`[createAndPushMessage] Message schema not found: ${i}`);
   const r = {
     processed: !1,
     ...e
   };
-  if (r.payload && rt(r.payload))
+  if (r.payload && st(r.payload))
     throw new Error(`[createAndPushMessage] Payload contains unresolved expressions. Only resolved values can be persisted to CoJSON. Payload: ${JSON.stringify(r.payload).substring(0, 200)}`);
   const n = await t.execute({
     op: "create",
@@ -15385,7 +15455,7 @@ async function jr(t, A, e) {
   }
   return a;
 }
-async function zy(t, A, e) {
+async function fD(t, A, e) {
   if (!t || !A || !e)
     throw new Error("[processInbox] backend, actorId, and inboxCoId are required");
   if (!t.getCurrentSessionID())
@@ -15431,9 +15501,9 @@ async function zy(t, A, e) {
         continue;
       }
       try {
-        const Q = await IA(t, B, r);
+        const Q = await gA(t, B, r);
         try {
-          await dA(Q, B, 2e3);
+          await hA(Q, B, 2e3);
         } catch (u) {
           console.warn(`[processInbox] Message CoMap not available: ${B} - ${u.message}`);
           continue;
@@ -15454,8 +15524,8 @@ async function zy(t, A, e) {
             if (!h.ok)
               throw new Error(h.errors?.map((p) => p.message).join("; ") || "Update failed");
             try {
-              const p = await IA(t, B, r);
-              await dA(p, B, 1e3);
+              const p = await gA(t, B, r);
+              await hA(p, B, 1e3);
               const E = p.value;
               E && E.processed !== !0 && console.warn(`[processInbox] Update verification failed for ${B} - processed flag is still false`);
             } catch (p) {
@@ -15489,30 +15559,30 @@ async function zy(t, A, e) {
     messages: s
   };
 }
-const _y = 1e5, Zy = 10;
-function Nt(t) {
+const pD = 1e5, wD = 10;
+function Gt(t) {
   return t.readyState === 1;
 }
-function Vr(t) {
-  return t.bufferedAmount > _y && Nt(t);
+function $r(t) {
+  return t.bufferedAmount > pD && Gt(t);
 }
-function Xy(t) {
+function yD(t) {
   return new Promise((A) => {
     t.readyState === 1 ? A() : t.addEventListener("open", () => A(), { once: !0 });
   });
 }
-async function AD(t) {
-  for (; Vr(t); )
-    await new Promise((A) => setTimeout(A, Zy));
+async function DD(t) {
+  for (; $r(t); )
+    await new Promise((A) => setTimeout(A, wD));
 }
-const { CO_VALUE_PRIORITY: eD, getContentMessageSize: tD, WEBSOCKET_CONFIG: Fs } = dn;
-class iD {
+const { CO_VALUE_PRIORITY: mD, getContentMessageSize: SD, WEBSOCKET_CONFIG: bs } = un;
+class kD {
   constructor(A, e, i, o, r) {
-    this.websocket = A, this.batching = e, this.meta = o, this.backlog = [], this.processing = !1, this.closed = !1, this.closeListeners = /* @__PURE__ */ new Set(), this.egressBytesCounter = (r ?? ge.getMeter("cojson-transport-ws")).createCounter("jazz.usage.egress", {
+    this.websocket = A, this.batching = e, this.meta = o, this.backlog = [], this.processing = !1, this.closed = !1, this.closeListeners = /* @__PURE__ */ new Set(), this.egressBytesCounter = (r ?? ce.getMeter("cojson-transport-ws")).createCounter("jazz.usage.egress", {
       description: "Total egress bytes",
       unit: "bytes",
-      valueType: $A.INT
-    }), this.queue = new TB(eD.HIGH, "outgoing", {
+      valueType: WA.INT
+    }), this.queue = new TB(mD.HIGH, "outgoing", {
       peerRole: i
     }), this.egressBytesCounter.add(0, this.meta);
   }
@@ -15526,12 +15596,12 @@ class iD {
         this.queue.push(A);
         return;
       }
-      if (Nt(this.websocket) && !Vr(this.websocket)) {
+      if (Gt(this.websocket) && !$r(this.websocket)) {
         this.processMessage(A, !0);
         return;
       }
       this.queue.push(A), this.processQueue().catch((e) => {
-        AA.error("Error while processing sendMessage queue", { err: e });
+        eA.error("Error while processing sendMessage queue", { err: e });
       });
     }
   }
@@ -15542,19 +15612,19 @@ class iD {
     for (; e; ) {
       if (this.closed)
         return;
-      Nt(A) || await Xy(A), Vr(A) && await AD(A), Nt(A) && (this.processMessage(e), e = this.queue.pull());
+      Gt(A) || await yD(A), $r(A) && await DD(A), Gt(A) && (this.processMessage(e), e = this.queue.pull());
     }
     this.sendMessagesInBulk(), this.processing = !1;
   }
   processMessage(A, e = !1) {
-    A.action === "content" && this.egressBytesCounter.add(tD(A), this.meta);
+    A.action === "content" && this.egressBytesCounter.add(SD(A), this.meta);
     const i = this.serializeMessage(A);
     if (!this.batching || e) {
       this.websocket.send(i);
       return;
     }
     const o = i.length, r = this.backlog.length + o;
-    this.backlog.length > 0 && r > Fs.MAX_OUTGOING_MESSAGES_CHUNK_BYTES && this.sendMessagesInBulk(), this.appendMessage(i), o >= Fs.MAX_OUTGOING_MESSAGES_CHUNK_BYTES && this.sendMessagesInBulk();
+    this.backlog.length > 0 && r > bs.MAX_OUTGOING_MESSAGES_CHUNK_BYTES && this.sendMessagesInBulk(), this.appendMessage(i), o >= bs.MAX_OUTGOING_MESSAGES_CHUNK_BYTES && this.sendMessagesInBulk();
   }
   serializeMessage(A) {
     return JSON.stringify(A);
@@ -15563,7 +15633,7 @@ class iD {
     this.backlog.push(A);
   }
   sendMessagesInBulk() {
-    this.backlog.length > 0 && Nt(this.websocket) && (this.websocket.send(this.backlog.join(`
+    this.backlog.length > 0 && Gt(this.websocket) && (this.websocket.send(this.backlog.join(`
 `)), this.backlog.length = 0);
   }
   drain() {
@@ -15588,7 +15658,7 @@ class iD {
     this.closeListeners.clear();
   }
 }
-function oD(t) {
+function ND(t) {
   if (typeof t != "string")
     return {
       ok: !1,
@@ -15601,14 +15671,14 @@ function oD(t) {
 `).map((A) => JSON.parse(A))
     };
   } catch (A) {
-    return AA.error("Error while deserializing messages", { err: A }), {
+    return eA.error("Error while deserializing messages", { err: A }), {
       ok: !1,
       error: A
     };
   }
 }
-const { ConnectedPeerChannel: rD, getContentMessageSize: nD } = dn;
-function sD(t, A, e) {
+const { ConnectedPeerChannel: MD, getContentMessageSize: GD } = un;
+function bD(t, A, e) {
   if (!t)
     return {
       reset() {
@@ -15628,21 +15698,21 @@ function sD(t, A, e) {
     }
   };
 }
-function aD(t = () => {
+function FD(t = () => {
 }) {
   let A = !1;
   return () => {
     A || (A = !0, t());
   };
 }
-function gD({ id: t, websocket: A, role: e, expectPings: i = !0, batchingByDefault: o = !0, deletePeerStateOnClose: r = !1, pingTimeout: n = 1e4, onSuccess: s, onClose: a, meter: g, meta: I }) {
-  const c = (g ?? ge.getMeter("cojson-transport-ws")).createCounter("jazz.usage.ingress", {
+function RD({ id: t, websocket: A, role: e, expectPings: i = !0, batchingByDefault: o = !0, deletePeerStateOnClose: r = !1, pingTimeout: n = 1e4, onSuccess: s, onClose: a, meter: g, meta: I }) {
+  const c = (g ?? ce.getMeter("cojson-transport-ws")).createCounter("jazz.usage.ingress", {
     description: "Total ingress bytes from peer",
     unit: "bytes",
-    valueType: $A.INT
+    valueType: WA.INT
   });
   c.add(0, I);
-  const C = new rD(), B = aD(a);
+  const C = new MD(), B = FD(a);
   function Q() {
     A.removeEventListener("message", p), A.removeEventListener("close", f), A.removeEventListener("error", l), u.clear(), d.drain();
   }
@@ -15650,29 +15720,29 @@ function gD({ id: t, websocket: A, role: e, expectPings: i = !0, batchingByDefau
     C.push("Disconnected"), B(), Q();
   }
   function l(E) {
-    E instanceof Error && E.message && AA.warn("WebSocket error", { err: E }), f();
+    E instanceof Error && E.message && eA.warn("WebSocket error", { err: E }), f();
   }
   A.addEventListener("close", f), A.addEventListener("error", l);
-  const u = sD(i, n, () => {
-    f(), AA.warn("Ping timeout from peer", {
+  const u = bD(i, n, () => {
+    f(), eA.warn("Ping timeout from peer", {
       peerId: t,
       peerRole: e
     });
-  }), d = new iD(A, o, e, I, g);
+  }), d = new kD(A, o, e, I, g);
   let h = !0;
   function p(E) {
     if (u.reset(), E.data === "")
       return;
-    const w = oD(E.data);
+    const w = ND(E.data);
     if (!w.ok) {
-      AA.warn("Error while deserializing messages", { err: w.error });
+      eA.warn("Error while deserializing messages", { err: w.error });
       return;
     }
     h && (s?.(), h = !1);
     const { messages: y } = w;
     y.length > 1 && d.setBatching(!0);
     for (const m of y)
-      m && "action" in m && (C.push(m), m.action === "content" && c.add(nD(m), I));
+      m && "action" in m && (C.push(m), m.action === "content" && c.add(GD(m), I));
   }
   return A.addEventListener("message", p), d.onClose(() => {
     Q(), B(), A.readyState === 0 ? A.addEventListener("open", function() {
@@ -15686,7 +15756,7 @@ function gD({ id: t, websocket: A, role: e, expectPings: i = !0, batchingByDefau
     persistent: !r
   };
 }
-class ID {
+class vD {
   constructor(A) {
     this.enabled = !1, this.closed = !0, this.connected = !1, this.currentPeer = void 0, this.unsubscribeNetworkChange = void 0, this.reconnectionAttempts = 0, this.onConnectionChangeListeners = /* @__PURE__ */ new Set(), this.waitUntilConnected = async () => {
       if (this.closed)
@@ -15705,9 +15775,9 @@ class ID {
         if (this.currentPeer) {
           this.removePeer(this.currentPeer), this.currentPeer.outgoing.close(), this.reconnectionAttempts++;
           const e = this.reconnectionTimeout * this.reconnectionAttempts;
-          AA.debug(`Websocket disconnected, trying to reconnect in ${e}ms`), await this.waitForOnline(e);
+          eA.debug(`Websocket disconnected, trying to reconnect in ${e}ms`), await this.waitForOnline(e);
         }
-        this.enabled && (this.currentPeer = gD({
+        this.enabled && (this.currentPeer = RD({
           websocket: new this.WebSocketConstructor(this.peer),
           pingTimeout: this.pingTimeout,
           id: this.peer,
@@ -15722,7 +15792,7 @@ class ID {
             this.closed = !1, this.connected = !0;
             for (const e of this.onConnectionChangeListeners)
               e(!0);
-            AA.debug("Websocket connection successful"), this.reconnectionAttempts = 0;
+            eA.debug("Websocket connection successful"), this.reconnectionAttempts = 0;
           }
         }), this.addPeer(this.currentPeer));
       }
@@ -15750,24 +15820,24 @@ class ID {
     });
   }
 }
-const bs = {};
-let Be = {
+const Fs = {};
+let Qe = {
   connected: !1,
   syncing: !1,
   error: null,
   status: null
   // 'authenticating' | 'loading-account' | 'syncing' | 'connected' | 'error'
 };
-const $r = /* @__PURE__ */ new Set();
-function cD(t) {
-  return $r.add(t), t(Be), () => $r.delete(t);
+const Wr = /* @__PURE__ */ new Set();
+function KD(t) {
+  return Wr.add(t), t(Qe), () => Wr.delete(t);
 }
-function ni() {
-  for (const t of $r)
-    t(Be);
+function ai() {
+  for (const t of Wr)
+    t(Qe);
 }
-function zt(t = null) {
-  const A = typeof window < "u" && window.location.hostname === "localhost", e = t || typeof window < "u" && window.__PUBLIC_API_DOMAIN__ || bs?.PUBLIC_API_DOMAIN || typeof process < "u" && process.env?.PUBLIC_API_DOMAIN;
+function Zt(t = null) {
+  const A = typeof window < "u" && window.location.hostname === "localhost", e = t || typeof window < "u" && window.__PUBLIC_API_DOMAIN__ || Fs?.PUBLIC_API_DOMAIN || typeof process < "u" && process.env?.PUBLIC_API_DOMAIN;
   let i;
   if (typeof window > "u") {
     if (!t)
@@ -15775,7 +15845,7 @@ function zt(t = null) {
       }, wsPeer: null };
     i = `${t.includes("localhost") || t.includes("127.0.0.1") ? "ws:" : "wss:"}//${t}/sync`;
   } else A ? i = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/sync` : e ? i = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${e}/sync` : (console.warn("⚠️ [SYNC] Sync domain not set! Falling back to same origin. Sync may not work."), i = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/sync`);
-  A || (console.log(`   Sync Domain: ${e || "(not set - using same origin fallback)"}`), console.log(`   Source: ${t ? "kernel" : typeof window < "u" && window.__PUBLIC_API_DOMAIN__ ? "runtime env" : bs?.PUBLIC_API_DOMAIN ? "build-time env" : "fallback"}`));
+  A || (console.log(`   Sync Domain: ${e || "(not set - using same origin fallback)"}`), console.log(`   Source: ${t ? "kernel" : typeof window < "u" && window.__PUBLIC_API_DOMAIN__ ? "runtime env" : Fs?.PUBLIC_API_DOMAIN ? "build-time env" : "fallback"}`));
   let o;
   const r = [];
   let n = null, s = !1, a = null, g = 0;
@@ -15785,7 +15855,7 @@ function zt(t = null) {
   if (!i)
     return { peers: [], setNode: () => {
     }, wsPeer: null };
-  const C = new ID({
+  const C = new vD({
     peer: i,
     reconnectionTimeout: 5e3,
     addPeer: (B) => {
@@ -15795,19 +15865,19 @@ function zt(t = null) {
       const Q = r.indexOf(B);
       Q > -1 && r.splice(Q, 1);
       const f = Date.now();
-      Be.connected && f - g > I && (g = f, console.warn("⚠️ [SYNC] Peer removed, connection lost")), s = !1, Be = { connected: !1, syncing: !1, error: "Disconnected", status: "error" }, ni();
+      Qe.connected && f - g > I && (g = f, console.warn("⚠️ [SYNC] Peer removed, connection lost")), s = !1, Qe = { connected: !1, syncing: !1, error: "Disconnected", status: "error" }, ai();
     }
   });
   return C.subscribe((B) => {
     if (B && !s)
-      s = !0, g = 0, Be = { connected: !0, syncing: !0, error: null, status: "syncing" }, ni(), a && (a(), a = null);
+      s = !0, g = 0, Qe = { connected: !0, syncing: !0, error: null, status: "syncing" }, ai(), a && (a(), a = null);
     else if (!B && s) {
       s = !1;
       const Q = Date.now();
-      Q - g > I && (g = Q, console.warn("⚠️ [SYNC] WebSocket connection lost")), Be = { connected: !1, syncing: !1, error: "Offline", status: "error" }, ni();
+      Q - g > I && (g = Q, console.warn("⚠️ [SYNC] WebSocket connection lost")), Qe = { connected: !1, syncing: !1, error: "Offline", status: "error" }, ai();
     }
   }), typeof window < "u" && (n = setTimeout(() => {
-    Be.connected || (console.error("❌ [SYNC] Connection timeout after 10s. Check:"), console.error(`   1. Sync service is running: curl https://${e || window.location.hostname}/health`), console.error(`   2. PUBLIC_API_DOMAIN is set correctly: ${e || "NOT SET"}`), console.error(`   3. WebSocket URL: ${i}`), Be = { connected: !1, syncing: !1, error: "Connection timeout", status: "error" }, ni());
+    Qe.connected || (console.error("❌ [SYNC] Connection timeout after 10s. Check:"), console.error(`   1. Sync service is running: curl https://${e || window.location.hostname}/health`), console.error(`   2. PUBLIC_API_DOMAIN is set correctly: ${e || "NOT SET"}`), console.error(`   3. WebSocket URL: ${i}`), Qe = { connected: !1, syncing: !1, error: "Connection timeout", status: "error" }, ai());
   }, 1e4)), C.enable(), {
     peers: r,
     wsPeer: C,
@@ -15834,43 +15904,43 @@ function zt(t = null) {
     }
   };
 }
-const bo = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const Ko = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   CoCache: Fr,
   CoJSONBackend: On,
-  EXCEPTION_SCHEMAS: yA,
-  checkCotype: vt,
+  EXCEPTION_SCHEMAS: SA,
+  checkCotype: Yt,
   createAccountWithSecret: Hn,
-  createAndPushMessage: jr,
-  createCoJSONAPI: Wy,
+  createAndPushMessage: Vr,
+  createCoJSONAPI: hD,
   createCoList: BI,
   createCoMap: CI,
   createCoStream: QI,
-  createCoValueForSpark: hA,
-  createSchemaMeta: st,
-  ensureCoValueLoaded: gA,
-  getAllSchemas: mo,
-  getCoListId: fn,
+  createCoValueForSpark: EA,
+  createSchemaMeta: gt,
+  ensureCoValueLoaded: sA,
+  getAllSchemas: No,
+  getCoListId: pn,
   getGlobalCoCache: tI,
   getSchema: nI,
-  getSchemaIndexColistId: hn,
+  getSchemaIndexColistId: fn,
   getSparkCapabilityGroupIdFromSparkCoId: Sn,
   loadAccount: qn,
-  processInbox: zy,
-  resolve: eA,
-  resolveAccountCoIdsToProfileNames: Ey,
-  resolveCoValueReactive: Rr,
-  resolveGroupCoIdsToCapabilityNames: hy,
+  processInbox: fD,
+  resolve: tA,
+  resolveAccountCoIdsToProfileNames: Hy,
+  resolveCoValueReactive: vr,
+  resolveGroupCoIdsToCapabilityNames: Ty,
   resolveQueryReactive: oI,
-  resolveReactive: Ae,
-  resolveSchemaReactive: Rt,
+  resolveReactive: ee,
+  resolveSchemaReactive: Kt,
   schemaMigration: Dn,
-  seedAgentAccount: bI,
-  setupSyncPeers: zt,
-  subscribeSyncState: cD,
-  waitForReactiveResolution: Qe,
-  waitForStoreReady: dA
-}, Symbol.toStringTag, { value: "Module" })), lA = {
+  seedAgentAccount: FI,
+  setupSyncPeers: Zt,
+  subscribeSyncState: KD,
+  waitForReactiveResolution: Ee,
+  waitForStoreReady: hA
+}, Symbol.toStringTag, { value: "Module" })), uA = {
   INITIALIZING: "initializing",
   // Setting up subscriptions, loading initial data
   RENDERING: "rendering",
@@ -15880,7 +15950,7 @@ const bo = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   UPDATING: "updating"
   // Data changed, queued for rerender
 };
-class CD {
+class YD {
   constructor(A, e, i, o, r = null) {
     this.styleEngine = A, this.viewEngine = e, this.registry = i, this.toolEngine = o, this.stateEngine = r, this.actors = /* @__PURE__ */ new Map(), this.pendingMessages = /* @__PURE__ */ new Map(), this.dbEngine = null, this.os = null, this._containerActors = /* @__PURE__ */ new Map(), this._vibeActors = /* @__PURE__ */ new Map(), this.viewEngine.setActorEngine(this), this.pendingRerenders = /* @__PURE__ */ new Set(), this.batchTimer = null;
   }
@@ -15889,7 +15959,7 @@ class CD {
       A.contextCoId || console.warn(`[ActorEngine] Actor ${A.id} has no contextCoId`);
       return;
     }
-    const i = A.contextSchemaCoId || await eA(this.dbEngine.backend, { fromCoValue: A.contextCoId }, { returnType: "coId" }), o = {};
+    const i = A.contextSchemaCoId || await tA(this.dbEngine.backend, { fromCoValue: A.contextCoId }, { returnType: "coId" }), o = {};
     for (const [n, s] of Object.entries(e))
       o[n] = s === void 0 ? null : s;
     const r = await this.dbEngine.execute({
@@ -15905,13 +15975,13 @@ class CD {
   }
   async _loadActorConfigs(A) {
     if (!A.view) throw new Error("[ActorEngine] Actor config must have 'view' property");
-    const e = A.id || "temp", i = [], o = Ae(this.dbEngine.backend, { fromCoValue: A.view }, { returnType: "coId" }), r = await Qe(o, { timeoutMs: 1e4 }), n = r.schemaCoId;
+    const e = A.id || "temp", i = [], o = ee(this.dbEngine.backend, { fromCoValue: A.view }, { returnType: "coId" }), r = await Ee(o, { timeoutMs: 1e4 }), n = r.schemaCoId;
     if (!n)
       throw new Error(`[ActorEngine] Failed to extract schema co-id from view CoValue ${A.view}: ${r.error || "Schema not found"}`);
     await this.dbEngine.execute({ op: "read", schema: null, key: A.view });
     const s = await this.dbEngine.execute({ op: "read", schema: n, key: A.view }), a = s.value, g = s.subscribe((p) => {
       const E = this.actors.get(e);
-      E && (E.viewDef = p, E._renderState === lA.READY && (E._renderState = lA.UPDATING, this._scheduleRerender(E.id)));
+      E && (E.viewDef = p, E._renderState === uA.READY && (E._renderState = uA.UPDATING, this._scheduleRerender(E.id)));
     }, { skipInitial: !0 });
     i.push(g);
     const I = [];
@@ -15926,7 +15996,7 @@ class CD {
         else
           throw new Error(`[ActorEngine] Failed to resolve context reference "${p}"`);
       }
-      const w = await eA(this.dbEngine.backend, { fromCoValue: E }, { returnType: "coId" }), y = await this.dbEngine.execute({
+      const w = await tA(this.dbEngine.backend, { fromCoValue: E }, { returnType: "coId" }), y = await this.dbEngine.execute({
         op: "read",
         schema: w,
         key: E
@@ -15936,12 +16006,12 @@ class CD {
     let C = null, B = null;
     A.style && (C = (async () => {
       try {
-        const p = await eA(this.dbEngine.backend, { fromCoValue: A.style }, { returnType: "coId" }), E = await this.dbEngine.execute({ op: "read", schema: p, key: A.style }), w = E.subscribe(async (y) => {
+        const p = await tA(this.dbEngine.backend, { fromCoValue: A.style }, { returnType: "coId" }), E = await this.dbEngine.execute({ op: "read", schema: p, key: A.style }), w = E.subscribe(async (y) => {
           const m = this.actors.get(e);
           if (m && this.styleEngine)
             try {
               const k = await this.styleEngine.getStyleSheets(m.config, m.id);
-              m.shadowRoot.adoptedStyleSheets = k, m._renderState === lA.READY && (m._renderState = lA.UPDATING, this._scheduleRerender(m.id));
+              m.shadowRoot.adoptedStyleSheets = k, m._renderState === uA.READY && (m._renderState = uA.UPDATING, this._scheduleRerender(m.id));
             } catch (k) {
               console.error("[ActorEngine] Failed to update stylesheets after style change:", k);
             }
@@ -15952,12 +16022,12 @@ class CD {
       }
     })(), I.push(C)), A.brand && (B = (async () => {
       try {
-        const p = await eA(this.dbEngine.backend, { fromCoValue: A.brand }, { returnType: "coId" }), E = await this.dbEngine.execute({ op: "read", schema: p, key: A.brand }), w = E.subscribe(async (y) => {
+        const p = await tA(this.dbEngine.backend, { fromCoValue: A.brand }, { returnType: "coId" }), E = await this.dbEngine.execute({ op: "read", schema: p, key: A.brand }), w = E.subscribe(async (y) => {
           const m = this.actors.get(e);
           if (m && this.styleEngine)
             try {
               const k = await this.styleEngine.getStyleSheets(m.config, m.id);
-              m.shadowRoot.adoptedStyleSheets = k, m._renderState === lA.READY && (m._renderState = lA.UPDATING, this._scheduleRerender(m.id));
+              m.shadowRoot.adoptedStyleSheets = k, m._renderState === uA.READY && (m._renderState = uA.UPDATING, this._scheduleRerender(m.id));
             } catch (k) {
               console.error("[ActorEngine] Failed to update stylesheets after brand change:", k);
             }
@@ -15969,7 +16039,7 @@ class CD {
     })(), I.push(B));
     let Q = null;
     A.inbox && (Q = (async () => {
-      const p = await eA(this.dbEngine.backend, { fromCoValue: A.inbox }, { returnType: "coId" });
+      const p = await tA(this.dbEngine.backend, { fromCoValue: A.inbox }, { returnType: "coId" });
       return await this.dbEngine.execute({ op: "read", schema: p, key: A.inbox });
     })(), I.push(Q)), await Promise.all(I);
     let f = null, l = null, u = null;
@@ -15990,7 +16060,7 @@ class CD {
   async _setupMessageSubscriptions(A, e) {
     if (e.inbox)
       try {
-        const i = await eA(this.dbEngine.backend, { fromCoValue: e.inbox }, { returnType: "coId" }), r = (await this.dbEngine.execute({
+        const i = await tA(this.dbEngine.backend, { fromCoValue: e.inbox }, { returnType: "coId" }), r = (await this.dbEngine.execute({
           op: "read",
           schema: i,
           key: e.inbox
@@ -16012,7 +16082,7 @@ class CD {
   async _initializeActorState(A, e) {
     if (this.stateEngine && e.state && !A.machine)
       try {
-        const i = Ae(this.dbEngine.backend, { fromCoValue: e.state }, { returnType: "coId" }), o = await Qe(i, { timeoutMs: 1e4 }), r = o.schemaCoId;
+        const i = ee(this.dbEngine.backend, { fromCoValue: e.state }, { returnType: "coId" }), o = await Ee(i, { timeoutMs: 1e4 }), r = o.schemaCoId;
         if (!r)
           throw new Error(`[ActorEngine] Failed to extract schema co-id from state CoValue ${e.state}: ${o.error || "Schema not found"}`);
         const n = await this.dbEngine.execute({
@@ -16023,7 +16093,7 @@ class CD {
           const c = this.actors.get(a);
           if (c && this.stateEngine)
             try {
-              c.machine && this.stateEngine.destroyMachine(c.machine.id), c.machine = await this.stateEngine.createMachine(I, c), c._renderState === lA.READY && (c._renderState = lA.UPDATING, this._scheduleRerender(a));
+              c.machine && this.stateEngine.destroyMachine(c.machine.id), c.machine = await this.stateEngine.createMachine(I, c), c._renderState === uA.READY && (c._renderState = uA.UPDATING, this._scheduleRerender(a));
             } catch (C) {
               console.error("[ActorEngine] Failed to update state machine:", C);
             }
@@ -16048,8 +16118,8 @@ class CD {
     if (!e)
       try {
         try {
-          const r = Ae(this.dbEngine.backend, { fromCoValue: A.view }, { returnType: "coId" });
-          if (!(await Qe(r, { timeoutMs: 1e4 })).schemaCoId)
+          const r = ee(this.dbEngine.backend, { fromCoValue: A.view }, { returnType: "coId" });
+          if (!(await Ee(r, { timeoutMs: 1e4 })).schemaCoId)
             return !1;
         } catch {
           return !1;
@@ -16079,7 +16149,7 @@ class CD {
     if (!r.startsWith("co_z"))
       throw new Error(`[ActorEngine] Child actor ID must be co-id: ${r}`);
     try {
-      const n = Ae(this.dbEngine.backend, { fromCoValue: r }, { returnType: "coId" }), s = await Qe(n, { timeoutMs: 1e4 }), a = s.schemaCoId;
+      const n = ee(this.dbEngine.backend, { fromCoValue: r }, { returnType: "coId" }), s = await Ee(n, { timeoutMs: 1e4 }), a = s.schemaCoId;
       if (!a)
         throw new Error(`[ActorEngine] Failed to extract schema co-id from child actor CoValue ${r}: ${s.error || "Schema not found"}`);
       const I = (await this.dbEngine.execute({ op: "read", schema: a, key: r })).value;
@@ -16113,7 +16183,7 @@ class CD {
       inboxCoId: C,
       messageTypes: A.messageTypes || null,
       // REQUIRED: Message types this actor accepts
-      _renderState: lA.INITIALIZING,
+      _renderState: uA.INITIALIZING,
       // Start in INITIALIZING state
       children: {},
       _configUnsubscribes: Q || []
@@ -16122,10 +16192,10 @@ class CD {
       let u = JSON.stringify(l.context.value || {});
       l._contextUnsubscribe = l.context.subscribe((d) => {
         const h = JSON.stringify(d || {}), p = h !== u;
-        u = h, l._renderState === lA.READY && p && (l._renderState = lA.UPDATING, this._scheduleRerender(o));
+        u = h, l._renderState === uA.READY && p && (l._renderState = uA.UPDATING, this._scheduleRerender(o));
       }, { skipInitial: !0 });
     }
-    if (e && (this._containerActors.has(e) || this._containerActors.set(e, /* @__PURE__ */ new Set()), this._containerActors.get(e).add(o)), i && this.registerActorForVibe(o, i), await this._initializeActorState(l, A), l._renderState = lA.RENDERING, await this.viewEngine.render(s, l.context, r, n, o), l._renderState = lA.READY, l._needsPostInitRerender && (delete l._needsPostInitRerender, this._scheduleRerender(o)), this.pendingMessages.has(o)) {
+    if (e && (this._containerActors.has(e) || this._containerActors.set(e, /* @__PURE__ */ new Set()), this._containerActors.get(e).add(o)), i && this.registerActorForVibe(o, i), await this._initializeActorState(l, A), l._renderState = uA.RENDERING, await this.viewEngine.render(s, l.context, r, n, o), l._renderState = uA.READY, l._needsPostInitRerender && (delete l._needsPostInitRerender, this._scheduleRerender(o)), this.pendingMessages.has(o)) {
       for (const u of this.pendingMessages.get(o))
         await this.sendMessage(o, u);
       this.pendingMessages.delete(o);
@@ -16163,14 +16233,14 @@ class CD {
    */
   async rerender(A) {
     const e = this.actors.get(A);
-    if (!e || e._renderState !== lA.UPDATING && e._renderState !== lA.READY)
+    if (!e || e._renderState !== uA.UPDATING && e._renderState !== uA.READY)
       return;
-    e._renderState = lA.RENDERING;
-    const i = Ae(this.dbEngine.backend, { fromCoValue: e.config.view }, { returnType: "coId" }), o = await Qe(i, { timeoutMs: 1e4 }), r = o.schemaCoId;
+    e._renderState = uA.RENDERING;
+    const i = ee(this.dbEngine.backend, { fromCoValue: e.config.view }, { returnType: "coId" }), o = await Ee(i, { timeoutMs: 1e4 }), r = o.schemaCoId;
     if (!r)
       throw new Error(`[ActorEngine] Failed to extract schema co-id from view CoValue ${e.config.view}: ${o.error || "Schema not found"}`);
     const s = (await this.dbEngine.execute({ op: "read", schema: r, key: e.config.view })).value, a = await this.styleEngine.getStyleSheets(e.config, A);
-    await this.viewEngine.render(s, e.context, e.shadowRoot, a, A), e._renderState = lA.READY;
+    await this.viewEngine.render(s, e.context, e.shadowRoot, a, A), e._renderState = uA.READY;
   }
   /**
    * Get actor by ID
@@ -16285,7 +16355,7 @@ class CD {
    * @param {Object} message - Message object { type, payload, from, timestamp }
    */
   async sendMessage(A, e) {
-    if (e.payload && rt(e.payload))
+    if (e.payload && st(e.payload))
       throw new Error(`[ActorEngine] Message payload contains unresolved expressions. Only resolved values can be sent between actors. Payload: ${JSON.stringify(e.payload).substring(0, 200)}`);
     const i = this.actors.get(A);
     if (!i) {
@@ -16303,7 +16373,7 @@ class CD {
           target: A,
           processed: !1
         };
-        await jr(this.dbEngine, i.inboxCoId, o), setTimeout(() => {
+        await Vr(this.dbEngine, i.inboxCoId, o), setTimeout(() => {
           this.processMessages(A).catch((r) => {
             console.error("[ActorEngine] Error processing deferred messages:", r);
           });
@@ -16313,7 +16383,7 @@ class CD {
       }
   }
   async sendInternalEvent(A, e, i = {}) {
-    if (rt(i))
+    if (st(i))
       throw new Error(`[ActorEngine] Payload contains unresolved expressions. Views must resolve all expressions before sending to inbox. Payload: ${JSON.stringify(i).substring(0, 200)}`);
     const o = this.actors.get(A);
     if (!o || !o.inboxCoId || !this.dbEngine) {
@@ -16325,7 +16395,7 @@ class CD {
       return;
     }
     try {
-      await jr(this.dbEngine, o.inboxCoId, {
+      await Vr(this.dbEngine, o.inboxCoId, {
         type: e,
         payload: i,
         source: A,
@@ -16359,7 +16429,7 @@ class CD {
       return console.warn("[ActorEngine] Cannot load message type schema: dbEngine not available"), null;
     try {
       const i = `@${this.dbEngine?.backend?.systemSpark?.replace(/^@/, "") ?? "maia"}/schema/message/${A}`;
-      return await eA(this.dbEngine.backend, i, { returnType: "schema" });
+      return await tA(this.dbEngine.backend, i, { returnType: "schema" });
     } catch (e) {
       return console.error(`[ActorEngine] Message type schema not found for "${A}". All message types must have schemas registered.`, e), null;
     }
@@ -16377,7 +16447,7 @@ class CD {
       return { valid: !1, errors: [`Message type schema is required for ${i}`] };
     try {
       const { groupInfo: o, ...r } = A;
-      return await Vt(r, e || {}, `message payload for ${i}`);
+      return await Wt(r, e || {}, `message payload for ${i}`);
     } catch (o) {
       return console.error(`[ActorEngine] Error validating message payload for ${i}:`, o), { valid: !1, errors: [o.message] };
     }
@@ -16402,8 +16472,13 @@ class CD {
               }
               const s = r.payload || {}, a = await this._validateMessagePayload(n, s, r.type);
               if (!a.valid) {
-                const g = a.errors?.map((I) => `  - ${I.instancePath || I.path || "root"}: ${I.message || I}`).join(`
+                const g = a.errors?.map((c) => `  - ${c.instancePath || c.path || "root"}: ${c.message || c}`).join(`
 `) || "Unknown validation error";
+                if (r.type === "CREATE_BUTTON" && (s?.value === "" || s?.value === void 0) && a.errors?.every((c) => {
+                  const C = typeof c == "string" ? c : c?.message ?? "", B = c?.instancePath ?? c?.path ?? "";
+                  return (B === "/value" || B.endsWith("/value")) && (C.includes("fewer than 1") || C.includes("pattern") || C.includes("match") || C.includes("minLength"));
+                }))
+                  continue;
                 console.error(`[ActorEngine] Message payload validation failed for "${r.type}":
 ${g}
 Payload:`, JSON.stringify(s, null, 2));
@@ -16421,31 +16496,31 @@ Payload:`, JSON.stringify(s, null, 2));
     }
   }
 }
-function Wr(t, A) {
+function zr(t, A) {
   if (!t || typeof t != "object")
     return t;
   if (Array.isArray(t))
-    return t.map((i) => Wr(i, A));
+    return t.map((i) => zr(i, A));
   const e = {};
   for (const [i, o] of Object.entries(t))
     if (o === "@inputValue") {
       let r = A;
       A.tagName !== "INPUT" && A.tagName !== "TEXTAREA" && (r = (A.closest("form") || A.closest('[class*="form"]') || A.parentElement)?.querySelector("input, textarea") ?? A), e[i] = (r?.value ?? "") || "";
-    } else o === "@dataColumn" ? e[i] = A.dataset.column || A.getAttribute("data-column") || null : typeof o == "object" && o !== null ? e[i] = Wr(o, A) : e[i] = o;
+    } else o === "@dataColumn" ? e[i] = A.dataset.column || A.getAttribute("data-column") || null : typeof o == "object" && o !== null ? e[i] = zr(o, A) : e[i] = o;
   return e;
 }
-function BD(t) {
+function UD(t) {
   return t == null ? "" : String(t).replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;").replace(/\//g, "&#x2F;");
 }
-function QD(t) {
+function JD(t) {
   return typeof t != "string" ? !1 : [/<script/i, /javascript:/i, /on\w+\s*=/i, /<iframe/i, /<object/i, /<embed/i, /<link/i, /<meta/i, /<style/i].some((A) => A.test(t));
 }
-class ED {
+class HD {
   constructor(A, e, i) {
     this.evaluator = A, this.actorEngine = e, this.moduleRegistry = i, this.dbEngine = null, this.actorInputCounters = /* @__PURE__ */ new Map();
   }
   async loadView(A) {
-    const e = Ae(this.dbEngine.backend, { fromCoValue: A }, { returnType: "coId" }), i = await Qe(e, { timeoutMs: 1e4 }), o = i.schemaCoId;
+    const e = ee(this.dbEngine.backend, { fromCoValue: A }, { returnType: "coId" }), i = await Ee(e, { timeoutMs: 1e4 }), o = i.schemaCoId;
     if (!o)
       throw new Error(`[ViewEngine] Failed to extract schema co-id from view CoValue ${A}: ${i.error || "Schema not found"}`);
     return await this.dbEngine.execute({
@@ -16514,7 +16589,7 @@ class ED {
               A[r] = g, g ? A.setAttribute(r, "") : A.removeAttribute(r);
             } else {
               let g = String(s);
-              QD(g) && (console.warn(`[ViewEngine] Potentially dangerous HTML detected in attribute ${r}, sanitizing`), g = BD(g)), A.setAttribute(r, g);
+              JD(g) && (console.warn(`[ViewEngine] Potentially dangerous HTML detected in attribute ${r}, sanitizing`), g = UD(g)), A.setAttribute(r, g);
             }
         }
     if (e.value !== void 0) {
@@ -16663,7 +16738,7 @@ class ED {
     if (!c) {
       const C = I.vibeKey || null;
       if (c = await this.actorEngine._createChildActorIfNeeded(I, g, C), !c) {
-        I._renderState === lA.READY && console.warn(`[ViewEngine] Failed to create child actor for namekey: ${g}`, {
+        I._renderState === uA.READY && console.warn(`[ViewEngine] Failed to create child actor for namekey: ${g}`, {
           actorId: o,
           availableChildren: I?.children ? Object.keys(I.children) : [],
           contextValue: s,
@@ -16676,7 +16751,7 @@ class ED {
       if (I?.children)
         for (const [C, B] of Object.entries(I.children))
           C !== g && B.actorType === "ui" && (this.actorEngine.destroyActor(B.id), delete I.children[C]);
-      c._renderState === lA.READY && this.actorEngine && (c._renderState = lA.UPDATING, this.actorEngine._scheduleRerender(c.id)), c.containerElement.parentNode !== i && (c.containerElement.parentNode && c.containerElement.parentNode.removeChild(c.containerElement), i.innerHTML = "", i.appendChild(c.containerElement));
+      c._renderState === uA.READY && this.actorEngine && (c._renderState = uA.UPDATING, this.actorEngine._scheduleRerender(c.id)), c.containerElement.parentNode !== i && (c.containerElement.parentNode && c.containerElement.parentNode.removeChild(c.containerElement), i.innerHTML = "", i.appendChild(c.containerElement));
     } else
       console.warn(`[ViewEngine] Child actor ${g} has no containerElement`, {
         actorId: o,
@@ -16721,14 +16796,14 @@ class ED {
     if (this.actorEngine) {
       const g = this.actorEngine.getActor(r);
       if (g && g.machine) {
-        s = Wr(s, o);
+        s = zr(s, o);
         const I = g.context.value, c = {
           context: I,
           item: i.item || {},
           result: null
           // $$result not available in view events (only in state machine actions after tool execution)
         };
-        if (s = await ot(s, this.evaluator, c), rt(s))
+        if (s = await nt(s, this.evaluator, c), st(s))
           throw new Error(`[ViewEngine] Payload contains unresolved expressions. Views must resolve all expressions before sending to inbox. Payload: ${JSON.stringify(s).substring(0, 200)}`);
         if (a && A.type === "blur" && s && typeof s == "object") {
           let C = !0;
@@ -16772,19 +16847,19 @@ class ED {
   cleanupActor(A) {
   }
 }
-const lD = ["__proto__", "constructor", "prototype"];
+const qD = ["__proto__", "constructor", "prototype"];
 function Rs(t, A = "style token path") {
   if (!t || typeof t != "string") return;
   const e = t.toLowerCase();
-  for (const i of lD)
+  for (const i of qD)
     if (e.includes(i.toLowerCase()))
       throw new Error(`[StyleEngine] Forbidden ${A}: path may not contain '${i}'. Got: ${t}`);
 }
-function dD(t, A) {
+function xD(t, A) {
   if (!(!t || !A))
     return Rs(A, "style token path"), A.split(".").reduce((e, i) => (Rs(i, "style token segment"), e?.[i]), t);
 }
-const uD = [
+const LD = [
   /javascript\s*:/i,
   /vbscript\s*:/i,
   /data\s*:\s*[^,]*base64\s*,/i,
@@ -16793,14 +16868,14 @@ const uD = [
   /@import\b/i,
   /behavior\s*:/i
 ];
-function hD(t) {
+function TD(t) {
   if (t == null || typeof t != "string") return t;
-  for (const A of uD)
+  for (const A of LD)
     if (A.test(t))
       return console.warn(`[StyleEngine] Blocked potentially dangerous CSS value (contains ${A.source})`), "";
   return t;
 }
-class fD {
+class OD {
   constructor() {
     this.cache = /* @__PURE__ */ new Map(), this.dbEngine = null;
   }
@@ -16817,8 +16892,8 @@ class fD {
   }
   _interpolateTokens(A, e) {
     return typeof A != "string" ? A : A.replace(/\{([^}]+)\}/g, (i, o) => {
-      const r = dD(e, o);
-      return r === void 0 ? i : hD(String(r));
+      const r = xD(e, o);
+      return r === void 0 ? i : TD(String(r));
     });
   }
   _toKebabCase(A) {
@@ -16977,10 +17052,10 @@ ${o}`), n;
     const r = e || A.$id || A.id || "actor", n = `${i}_${o || "none"}_${r}`;
     if (this.cache.has(n))
       return this.cache.get(n);
-    const s = this.resolveStyleRef(i), a = await eA(this.dbEngine.backend, { fromCoValue: s }, { returnType: "coId" }), I = (await this.dbEngine.execute({ op: "read", schema: a, key: s })).value;
+    const s = this.resolveStyleRef(i), a = await tA(this.dbEngine.backend, { fromCoValue: s }, { returnType: "coId" }), I = (await this.dbEngine.execute({ op: "read", schema: a, key: s })).value;
     let c = { tokens: {}, components: {} };
     if (o) {
-      const w = this.resolveStyleRef(o), y = await eA(this.dbEngine.backend, { fromCoValue: w }, { returnType: "coId" });
+      const w = this.resolveStyleRef(o), y = await tA(this.dbEngine.backend, { fromCoValue: w }, { returnType: "coId" });
       c = (await this.dbEngine.execute({ op: "read", schema: y, key: w })).value;
     }
     const C = r.replace(/[^a-zA-Z0-9-_]/g, "-").replace(/-+/g, "-"), B = {
@@ -17005,7 +17080,7 @@ ${o}`), n;
     this.cache.clear();
   }
 }
-class pD {
+class PD {
   constructor(A, e, i = null) {
     this.toolEngine = A, this.evaluator = e, this.actorEngine = i, this.machines = /* @__PURE__ */ new Map(), this.dbEngine = null;
   }
@@ -17057,7 +17132,7 @@ class pD {
         console.warn("[StateEngine] Failed to persist _currentState to context:", c.message);
       }
     const g = A.eventPayload;
-    a !== r && (A.eventPayload = g, await this._executeEntry(A, r)), a !== r && r !== "dragging" && !A._isInitialCreation && !(a === "init" && r === "idle") && A.actor._renderState === lA.READY && A.actor.actorEngine && (A.actor._renderState = lA.UPDATING, A.actor.actorEngine._scheduleRerender(A.actor.id));
+    a !== r && (A.eventPayload = g, await this._executeEntry(A, r)), a !== r && r !== "dragging" && !A._isInitialCreation && !(a === "init" && r === "idle") && A.actor._renderState === uA.READY && A.actor.actorEngine && (A.actor._renderState = uA.UPDATING, A.actor.actorEngine._scheduleRerender(A.actor.id));
   }
   /**
    * Clean tool result by removing CoJSON metadata (groupInfo)
@@ -17098,7 +17173,7 @@ class pD {
         state: o?.machine?.currentState || null,
         ...r
       };
-      return (await Vt(A.schema, n, "guard")).valid;
+      return (await Wt(A.schema, n, "guard")).valid;
     } catch (r) {
       return console.error("[StateEngine] Guard evaluation error:", r), !1;
     }
@@ -17135,7 +17210,7 @@ class pD {
       }
       if (r.tool) {
         const n = i === "entry", s = await this._invokeTool(A, r.tool, r.payload, !0, n);
-        if (s && Ve(s) && (A.lastToolResult = s.data), n && Ve(s) && o.on?.SUCCESS && A.actor?.actorEngine) {
+        if (s && We(s) && (A.lastToolResult = s.data), n && We(s) && o.on?.SUCCESS && A.actor?.actorEngine) {
           const a = A.eventPayload || {}, g = A.lastToolResult != null ? this._cleanToolResult(A.lastToolResult) : null, I = {
             ...a,
             result: g
@@ -17208,7 +17283,7 @@ class pD {
         Object.assign(o, this._sanitizeUpdates(n, A.lastToolResult || {}));
       } else if (r?.tool) {
         const n = await this._invokeTool(A, r.tool, r.payload, !1);
-        if (n && Ve(n) && (A.lastToolResult = n.data), r.onSuccess?.updateContext && Ve(n)) {
+        if (n && We(n) && (A.lastToolResult = n.data), r.onSuccess?.updateContext && We(n)) {
           const s = await this._evaluatePayload(r.onSuccess.updateContext, A.actor.context, A.eventPayload, n.data, A.actor);
           Object.assign(o, this._sanitizeUpdates(s, n.data || {}));
         }
@@ -17256,7 +17331,7 @@ class pD {
         continue;
       }
       if (a.schema && typeof a.schema == "string" && !a.schema.startsWith("co_z"))
-        if (NA(a.schema))
+        if (GA(a.schema))
           try {
             const g = await this.dbEngine.execute({ op: "resolve", humanReadableKey: a.schema });
             if (g?.startsWith("co_z"))
@@ -17316,7 +17391,7 @@ class pD {
     const n = A.eventPayload || {}, s = A.definition.states[A.currentState];
     try {
       const a = await this._evaluatePayload(i, A.actor.context, A.eventPayload || {}, A.lastToolResult, A.actor), g = await this.toolEngine.execute(e, A.actor, a);
-      if (!Ve(g))
+      if (!We(g))
         return o && s?.on?.ERROR && A.actor?.actorEngine ? await A.actor.actorEngine.sendInternalEvent(A.actor.id, "ERROR", { errors: g.errors }) : o && !s?.on?.ERROR && console.warn(`[StateEngine] No ERROR handler for ${e} in state ${A.currentState}`), g;
       const I = g.data;
       if (A.lastToolResult = I, o && !r && s?.on?.SUCCESS && A.actor?.actorEngine) {
@@ -17344,7 +17419,7 @@ class pD {
   }
   async _evaluatePayload(A, e, i = {}, o = null, r = null) {
     const n = e.value, s = i?.result || o || null, a = { context: n, item: i || {}, result: s };
-    return await ot(A, this.evaluator, a);
+    return await nt(A, this.evaluator, a);
   }
   getCurrentState(A) {
     return this.machines.get(A)?.currentState || null;
@@ -17356,7 +17431,7 @@ class pD {
     this.machines.delete(A);
   }
 }
-class wD {
+class jD {
   constructor(A) {
     this.moduleRegistry = A, this.tools = /* @__PURE__ */ new Map();
   }
@@ -17373,7 +17448,7 @@ class wD {
       }), new Error(`Tool not found: ${A}. Available tools: ${n.join(", ")}`);
     }
     const r = o.definition.parameters || o.definition.params;
-    return r && await at(this._normalizeToolSchema(r), i, "tool-payload"), await o.function.execute(e, i);
+    return r && await It(this._normalizeToolSchema(r), i, "tool-payload"), await o.function.execute(e, i);
   }
   _normalizeToolSchema(A) {
     const e = (s) => {
@@ -17400,19 +17475,19 @@ class wD {
     return Array.from(this.tools.values()).map((A) => A.definition);
   }
 }
-const yD = ["__proto__", "constructor", "prototype"];
+const VD = ["__proto__", "constructor", "prototype"];
 function vs(t, A = "path resolution") {
   if (!t || typeof t != "string") return;
   const e = t.toLowerCase();
-  for (const i of yD)
+  for (const i of VD)
     if (e.includes(i.toLowerCase()))
       throw new Error(`[Evaluator] Forbidden ${A}: path may not contain '${i}' or similar. Got: ${t}`);
 }
-function ue(t, A) {
+function fe(t, A) {
   if (!(!t || !A))
     return vs(A, "path resolution"), A.split(".").reduce((e, i) => (vs(i, "path segment"), e?.[i]), t);
 }
-class zr {
+class _r {
   constructor(A = null, e = {}) {
     this.registry = A, this.maxDepth = e.maxDepth || 50, this.validateExpressions = e.validateExpressions !== !1, this.dbEngine = e.dbEngine || null;
   }
@@ -17428,8 +17503,8 @@ class zr {
       throw new Error(`[Evaluator] Maximum recursion depth (${this.maxDepth}) exceeded. Expression may be malicious or too complex.`);
     if (this.validateExpressions && i === 0 && typeof A == "object" && A !== null && !Array.isArray(A))
       try {
-        const { getSchema: o } = await Promise.resolve().then(() => Wt), r = o("maia-script-expression");
-        r && await at(r, A, "maia-script-expression");
+        const { getSchema: o } = await Promise.resolve().then(() => _t), r = o("maia-script-expression");
+        r && await It(r, A, "maia-script-expression");
       } catch (o) {
         throw console.error("[Evaluator] Expression validation failed:", o), new Error(`[Evaluator] Invalid MaiaScript expression: ${o.message}`);
       }
@@ -17439,9 +17514,9 @@ class zr {
       return this.evaluateShortcut(A, e);
     if (typeof A != "object") return A;
     if ("$context" in A)
-      return ue(e.context, A.$context);
+      return fe(e.context, A.$context);
     if ("$item" in A)
-      return ue(e.item, A.$item);
+      return fe(e.item, A.$item);
     if ("$eq" in A) {
       const [o, r] = A.$eq, n = await this.evaluate(o, e, i + 1), s = await this.evaluate(r, e, i + 1);
       return n === s;
@@ -17525,14 +17600,14 @@ class zr {
   async evaluateMapReturn(A, e, i, o, r) {
     if (typeof A == "string" && A.startsWith("$$" + i + ".")) {
       const n = A.substring(2 + i.length + 1);
-      return ue(o, n);
+      return fe(o, n);
     }
     if (typeof A == "object" && A !== null && !Array.isArray(A)) {
       const n = {};
       for (const [s, a] of Object.entries(A))
         if (typeof a == "string" && a.startsWith("$$" + i + ".")) {
           const g = a.substring(2 + i.length + 1);
-          n[s] = ue(o, g);
+          n[s] = fe(o, g);
         } else
           n[s] = await this.evaluate(a, e, r + 1);
       return n;
@@ -17552,13 +17627,13 @@ class zr {
   evaluateShortcut(A, e) {
     if (A.startsWith("$$result")) {
       const r = A.substring(8);
-      if (r.startsWith(".")) return ue(e.result, r.substring(1));
+      if (r.startsWith(".")) return fe(e.result, r.substring(1));
       if (r === "") return e.result;
     }
     if (A.startsWith("$$"))
-      return ue(e.item, A.substring(2));
-    const i = A.substring(1), o = ue(e.context, i);
-    return o instanceof wA ? o.value : o;
+      return fe(e.item, A.substring(2));
+    const i = A.substring(1), o = fe(e.context, i);
+    return o instanceof mA ? o.value : o;
   }
   /**
    * Check if an expression is a DSL operation
@@ -17569,10 +17644,10 @@ class zr {
     return typeof A == "string" && A.startsWith("$") ? !0 : typeof A != "object" || A === null ? !1 : "$context" in A || "$item" in A || "$if" in A || "$eq" in A || "$ne" in A || "$not" in A || "$and" in A || "$or" in A || "$trim" in A || "$gt" in A || "$length" in A || "$concat" in A || "$map" in A;
   }
 }
-const DD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const $D = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  Evaluator: zr
-}, Symbol.toStringTag, { value: "Module" })), mD = {
+  Evaluator: _r
+}, Symbol.toStringTag, { value: "Module" })), WD = {
   $schema: "@maia/schema/tool",
   $id: "tool_publish_message_001",
   name: "@core/publishMessage",
@@ -17592,7 +17667,7 @@ const DD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     },
     required: ["type"]
   }
-}, SD = {
+}, zD = {
   $schema: "@maia/schema/tool",
   $id: "@tool/core/computeMessageNames",
   name: "computeMessageNames",
@@ -17607,7 +17682,7 @@ const DD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     },
     required: ["conversations"]
   }
-}, kD = {
+}, _D = {
   $schema: "@maia/schema/tool",
   $id: "tool_memory_001",
   name: "@memory",
@@ -17647,7 +17722,7 @@ const DD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     },
     required: ["op"]
   }
-}, ND = {
+}, ZD = {
   $schema: "@maia/schema/tool",
   $id: "tool_ai_001",
   name: "@ai/chat",
@@ -17687,7 +17762,7 @@ const DD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     },
     required: ["context"]
   }
-}, MD = {
+}, XD = {
   $schema: "@maia/schema/tool",
   $id: "sparks",
   name: "@sparks",
@@ -17744,7 +17819,7 @@ const DD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     type: "any",
     description: "Operation result (created/updated/deleted spark, reactive store for reads, member/group management results)"
   }
-}, GD = {
+}, Am = {
   $schema: "@maia/schema/tool",
   $id: "db",
   name: "Database Tool",
@@ -17784,7 +17859,7 @@ const DD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
     type: "any",
     description: "Operation result (data, unsubscribe function, created/updated/deleted record, etc.)"
   }
-}, FD = {
+}, em = {
   async execute(t, A) {
     const { type: e, payload: i = {}, target: o } = A;
     return e ? o ? t.actorEngine ? o.startsWith("@actor/") ? fA([pA("structural", `[publishMessage] Target not transformed: ${o}. Should be a co-id. Check schema transformer.`)]) : (await t.actorEngine.sendMessage(o, {
@@ -17792,17 +17867,17 @@ const DD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
       payload: i,
       from: t.id,
       timestamp: Date.now()
-    }), RA({})) : fA([pA("structural", "[publishMessage] Actor has no actorEngine reference")]) : fA([pA("structural", "Target is required. Topics infrastructure removed - use direct messaging with target parameter.")]) : fA([pA("structural", "Message type is required")]);
+    }), YA({})) : fA([pA("structural", "[publishMessage] Actor has no actorEngine reference")]) : fA([pA("structural", "Target is required. Topics infrastructure removed - use direct messaging with target parameter.")]) : fA([pA("structural", "Message type is required")]);
   }
-}, bD = {
+}, tm = {
   async execute(t, A) {
     const { conversations: e = [] } = A;
     if (!Array.isArray(e))
-      return RA({});
+      return YA({});
     const i = {};
     for (const o of e)
       o && o.id && (i[o.id] = o.role === "user" ? "me" : "Maia");
-    return RA(i);
+    return YA(i);
   }
 }, Ks = {};
 function UI() {
@@ -17820,9 +17895,9 @@ function JI(t) {
   const e = t.error || t.message || "Unknown error";
   return [pA("structural", typeof e == "string" ? e : String(e))];
 }
-const RD = UI();
-async function si(t, A) {
-  const e = `${RD}${t}`, i = await fetch(e, {
+const im = UI();
+async function gi(t, A) {
+  const e = `${im}${t}`, i = await fetch(e, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(A)
@@ -17833,44 +17908,44 @@ async function si(t, A) {
   }
   return { ok: !0, data: await i.json() };
 }
-const vD = {
+const om = {
   async execute(t, A) {
     const { op: e, workspaceId: i = "maiaos-dev", peerId: o, sessionId: r, content: n, query: s, target: a } = A;
     switch (e) {
       case "createSession": {
         if (!o)
           return fA([pA("structural", "[@memory] peerId is required for createSession")]);
-        const g = await si("/api/v0/memory/create-session", { workspaceId: i, peerId: o, sessionId: r });
-        return g.ok ? RA({ sessionId: g.data.sessionId, workspaceId: g.data.workspaceId, peerId: g.data.peerId }) : fA(g.errors);
+        const g = await gi("/api/v0/memory/create-session", { workspaceId: i, peerId: o, sessionId: r });
+        return g.ok ? YA({ sessionId: g.data.sessionId, workspaceId: g.data.workspaceId, peerId: g.data.peerId }) : fA(g.errors);
       }
       case "addMessage": {
         if (!r || !o || !n)
           return fA([pA("structural", "[@memory] sessionId, peerId, and content are required for addMessage")]);
-        const g = await si("/api/v0/memory/add-message", { workspaceId: i, sessionId: r, peerId: o, content: n });
-        return g.ok ? RA({ success: g.data.success, sessionId: g.data.sessionId, peerId: g.data.peerId, content: g.data.content }) : fA(g.errors);
+        const g = await gi("/api/v0/memory/add-message", { workspaceId: i, sessionId: r, peerId: o, content: n });
+        return g.ok ? YA({ success: g.data.success, sessionId: g.data.sessionId, peerId: g.data.peerId, content: g.data.content }) : fA(g.errors);
       }
       case "getContext": {
         if (!o || !s)
           return fA([pA("structural", "[@memory] peerId and query are required for getContext")]);
-        const g = await si("/api/v0/memory/get-context", { workspaceId: i, peerId: o, sessionId: r, query: s, target: a });
-        return g.ok ? RA({ context: g.data.context }) : fA(g.errors);
+        const g = await gi("/api/v0/memory/get-context", { workspaceId: i, peerId: o, sessionId: r, query: s, target: a });
+        return g.ok ? YA({ context: g.data.context }) : fA(g.errors);
       }
       case "chat": {
         if (!o || !s)
           return fA([pA("structural", "[@memory] peerId and query are required for chat")]);
-        const g = await si("/api/v0/memory/chat", { workspaceId: i, peerId: o, sessionId: r, query: s, target: a });
-        return g.ok ? RA({ response: g.data.response }) : fA(g.errors);
+        const g = await gi("/api/v0/memory/chat", { workspaceId: i, peerId: o, sessionId: r, query: s, target: a });
+        return g.ok ? YA({ response: g.data.response }) : fA(g.errors);
       }
       default:
         return fA([pA("structural", `[@memory] Unknown operation: ${e}`)]);
     }
   }
-}, KD = UI(), YD = {
+}, rm = UI(), nm = {
   async execute(t, A) {
     const e = A?.context || A?.messages, { model: i = "qwen/qwen3-30b-a3b-instruct-2507", temperature: o = 1 } = A;
     if (!e || !Array.isArray(e) || e.length === 0)
       return fA([pA("structural", "[@ai/chat] context array is required")]);
-    const r = `${KD}/api/v0/llm/chat`, n = await fetch(r, {
+    const r = `${rm}/api/v0/llm/chat`, n = await fetch(r, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ model: i, messages: e, temperature: o })
@@ -17880,7 +17955,7 @@ const vD = {
       return fA(JI(a));
     }
     const s = await n.json();
-    return RA({
+    return YA({
       content: s.content,
       role: s.role || "assistant",
       usage: s.usage || null
@@ -17897,23 +17972,23 @@ const vD = {
       return fA([pA("structural", `[@db] Schema must be a co-id (co_z...), got: ${A.schema}`)]);
     try {
       const i = await e.db(A);
-      return RA(i);
+      return YA(i);
     } catch (i) {
       return fA(i.errors ?? [pA("structural", i.message || "Database operation failed")]);
     }
   }
 }, Pn = {
-  "core/publishMessage": { definition: mD, function: FD },
-  "core/computeMessageNames": { definition: SD, function: bD },
-  "memory/memory": { definition: kD, function: vD },
-  "ai/chat": { definition: ND, function: YD },
-  "sparks/sparks": { definition: MD, function: Ys },
-  "db/db": { definition: GD, function: Ys }
+  "core/publishMessage": { definition: WD, function: em },
+  "core/computeMessageNames": { definition: zD, function: tm },
+  "memory/memory": { definition: _D, function: om },
+  "ai/chat": { definition: ZD, function: nm },
+  "sparks/sparks": { definition: XD, function: Ys },
+  "db/db": { definition: Am, function: Ys }
 };
-function _t(t) {
+function Xt(t) {
   return Pn[t] || null;
 }
-function UD() {
+function sm() {
   const t = {};
   for (const [A, e] of Object.entries(Pn))
     t[A] = e.definition;
@@ -17922,10 +17997,10 @@ function UD() {
 const HI = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   TOOLS: Pn,
-  getAllToolDefinitions: UD,
-  getTool: _t
+  getAllToolDefinitions: sm,
+  getTool: Xt
 }, Symbol.toStringTag, { value: "Module" }));
-class JD {
+class am {
   constructor() {
     this.modules = /* @__PURE__ */ new Map(), this.moduleConfigs = /* @__PURE__ */ new Map();
   }
@@ -18043,7 +18118,7 @@ class JD {
     const { silent: r = !1 } = o, n = this._getToolEngine(A), s = [];
     for (const a of e)
       try {
-        const g = _t(`${A}/${a}`);
+        const g = Xt(`${A}/${a}`);
         g && (await n.registerTool(`${A}/${a}`, `${i}/${a}`, {
           definition: g.definition,
           function: g.function
@@ -18054,104 +18129,104 @@ class JD {
     return s;
   }
 }
-const $e = {
+const ze = {
   version: "1.0.0",
   description: "Unified database operation API",
   namespace: "@db",
   tools: ["@db"]
 };
-async function HD(t) {
-  const A = _t("db/db");
+async function gm(t) {
+  const A = Xt("db/db");
   if (!A) return;
   t._getToolEngine("DBModule").tools.set("@db", {
     definition: A.definition,
     function: A.function,
     namespacePath: "db/db"
-  }), t.registerModule("db", { config: $e, query: (i) => i === "tools" ? ["@db"] : null }, {
-    version: $e.version,
-    description: $e.description,
-    namespace: $e.namespace,
-    tools: $e.tools
-  });
-}
-const qD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  config: $e,
-  register: HD
-}, Symbol.toStringTag, { value: "Module" })), me = {
-  version: "1.0.0",
-  description: "Core UI tools (view modes, modals, utilities)",
-  namespace: "@core",
-  tools: ["preventDefault", "publishMessage", "computeMessageNames"]
-};
-async function xD(t) {
-  const A = me.tools, e = await t._registerToolsFromRegistry("core", A, me.namespace, { silent: !0 });
-  t.registerModule("core", { config: me, query: () => null }, {
-    version: me.version,
-    description: me.description,
-    namespace: me.namespace,
-    tools: e
-  });
-}
-const LD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  config: me,
-  register: xD
-}, Symbol.toStringTag, { value: "Module" })), We = {
-  version: "1.0.0",
-  description: "Unified AI tool for OpenAI-compatible API integration (RedPill)",
-  namespace: "@ai",
-  tools: ["@ai/chat"]
-};
-async function TD(t) {
-  const A = _t("ai/chat");
-  if (!A) return;
-  t._getToolEngine("AiModule").tools.set("@ai/chat", {
-    definition: A.definition,
-    function: A.function,
-    namespacePath: "ai/chat"
-  }), t.registerModule("ai", { config: We, query: (i) => i === "tools" ? ["@ai/chat"] : null }, {
-    version: We.version,
-    description: We.description,
-    namespace: We.namespace,
-    tools: We.tools
-  });
-}
-const OD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
-  __proto__: null,
-  config: We,
-  register: TD
-}, Symbol.toStringTag, { value: "Module" })), ze = {
-  version: "1.0.0",
-  description: "Sparks tool for managing collaborative spaces (groups)",
-  namespace: "@sparks",
-  tools: ["@sparks"]
-};
-async function PD(t) {
-  const A = _t("sparks/sparks");
-  if (!A) return;
-  t._getToolEngine("SparksModule").tools.set("@sparks", {
-    definition: A.definition,
-    function: A.function,
-    namespacePath: "sparks/sparks"
-  }), t.registerModule("sparks", { config: ze, query: (i) => i === "tools" ? ["@sparks"] : null }, {
+  }), t.registerModule("db", { config: ze, query: (i) => i === "tools" ? ["@db"] : null }, {
     version: ze.version,
     description: ze.description,
     namespace: ze.namespace,
     tools: ze.tools
   });
 }
-const jD = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const Im = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   config: ze,
-  register: PD
-}, Symbol.toStringTag, { value: "Module" })), Le = {}, Us = {
-  db: qD,
-  core: LD,
-  ai: OD,
-  sparks: jD
+  register: gm
+}, Symbol.toStringTag, { value: "Module" })), ke = {
+  version: "1.0.0",
+  description: "Core UI tools (view modes, modals, utilities)",
+  namespace: "@core",
+  tools: ["preventDefault", "publishMessage", "computeMessageNames"]
 };
-class se {
+async function cm(t) {
+  const A = ke.tools, e = await t._registerToolsFromRegistry("core", A, ke.namespace, { silent: !0 });
+  t.registerModule("core", { config: ke, query: () => null }, {
+    version: ke.version,
+    description: ke.description,
+    namespace: ke.namespace,
+    tools: e
+  });
+}
+const Cm = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  config: ke,
+  register: cm
+}, Symbol.toStringTag, { value: "Module" })), _e = {
+  version: "1.0.0",
+  description: "Unified AI tool for OpenAI-compatible API integration (RedPill)",
+  namespace: "@ai",
+  tools: ["@ai/chat"]
+};
+async function Bm(t) {
+  const A = Xt("ai/chat");
+  if (!A) return;
+  t._getToolEngine("AiModule").tools.set("@ai/chat", {
+    definition: A.definition,
+    function: A.function,
+    namespacePath: "ai/chat"
+  }), t.registerModule("ai", { config: _e, query: (i) => i === "tools" ? ["@ai/chat"] : null }, {
+    version: _e.version,
+    description: _e.description,
+    namespace: _e.namespace,
+    tools: _e.tools
+  });
+}
+const Qm = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  config: _e,
+  register: Bm
+}, Symbol.toStringTag, { value: "Module" })), Ze = {
+  version: "1.0.0",
+  description: "Sparks tool for managing collaborative spaces (groups)",
+  namespace: "@sparks",
+  tools: ["@sparks"]
+};
+async function Em(t) {
+  const A = Xt("sparks/sparks");
+  if (!A) return;
+  t._getToolEngine("SparksModule").tools.set("@sparks", {
+    definition: A.definition,
+    function: A.function,
+    namespacePath: "sparks/sparks"
+  }), t.registerModule("sparks", { config: Ze, query: (i) => i === "tools" ? ["@sparks"] : null }, {
+    version: Ze.version,
+    description: Ze.description,
+    namespace: Ze.namespace,
+    tools: Ze.tools
+  });
+}
+const lm = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  __proto__: null,
+  config: Ze,
+  register: Em
+}, Symbol.toStringTag, { value: "Module" })), Oe = {}, Us = {
+  db: Im,
+  core: Cm,
+  ai: Qm,
+  sparks: lm
+};
+class ge {
   constructor() {
     this.moduleRegistry = null, this.evaluator = null, this.toolEngine = null, this.stateEngine = null, this.styleEngine = null, this.viewEngine = null, this.actorEngine = null, this.subscriptionEngine = null, this.dbEngine = null, this._node = null, this._account = null, this._syncDomain = null;
   }
@@ -18262,9 +18337,9 @@ class se {
    * @throws {Error} If neither backend nor node+account is provided (or agent mode credentials missing)
    */
   static async boot(A = {}) {
-    const e = new se(), i = A.mode || typeof process < "u" && process.env?.MAIA_MODE || typeof import.meta < "u" && Le?.MAIA_MODE || typeof import.meta < "u" && Le?.VITE_MAIA_MODE || "human";
+    const e = new ge(), i = A.mode || typeof process < "u" && process.env?.MAIA_MODE || typeof import.meta < "u" && Oe?.MAIA_MODE || typeof import.meta < "u" && Oe?.VITE_MAIA_MODE || "human";
     if (A.syncDomain && (e._syncDomain = A.syncDomain), i === "agent" && !A.node && !A.account && !A.backend) {
-      const { loadOrCreateAgentAccount: r } = await Promise.resolve().then(() => _D), n = typeof process < "u" && process.env?.MAIA_AGENT_ACCOUNT_ID || typeof import.meta < "u" && Le?.MAIA_AGENT_ACCOUNT_ID || typeof import.meta < "u" && Le?.VITE_MAIA_AGENT_ACCOUNT_ID, s = typeof process < "u" && process.env?.MAIA_AGENT_SECRET || typeof import.meta < "u" && Le?.MAIA_AGENT_SECRET || typeof import.meta < "u" && Le?.VITE_MAIA_AGENT_SECRET;
+      const { loadOrCreateAgentAccount: r } = await Promise.resolve().then(() => pm), n = typeof process < "u" && process.env?.MAIA_AGENT_ACCOUNT_ID || typeof import.meta < "u" && Oe?.MAIA_AGENT_ACCOUNT_ID || typeof import.meta < "u" && Oe?.VITE_MAIA_AGENT_ACCOUNT_ID, s = typeof process < "u" && process.env?.MAIA_AGENT_SECRET || typeof import.meta < "u" && Oe?.MAIA_AGENT_SECRET || typeof import.meta < "u" && Oe?.VITE_MAIA_AGENT_SECRET;
       if (!n || !s)
         throw new Error(
           "Agent mode requires MAIA_AGENT_ACCOUNT_ID and MAIA_AGENT_SECRET environment variables. For services, use service-specific prefixes: SYNC_MAIA_* for sync service, CITY_MAIA_* for maia-city. Run `bun agent:generate --service <service>` to generate credentials."
@@ -18278,12 +18353,12 @@ class se {
       e._node = a.node, e._account = a.account;
     } else
       A.node && A.account && (e._node = A.node, e._account = A.account);
-    const o = await se._initializeDatabase(e, A);
+    const o = await ge._initializeDatabase(e, A);
     return o && typeof o.ensureAccountOsReady == "function" && o.ensureAccountOsReady({ timeoutMs: 15e3 }).then((r) => {
       r || console.warn("[MaiaOS.boot] account.os not ready yet - schema resolution will work once sync completes");
     }).catch((r) => {
       console.warn("[MaiaOS.boot] account.os loading (non-blocking):", r.message);
-    }), A.registry && await se._seedDatabase(e, o, A), se._initializeEngines(e, A), await se._loadModules(e, A), e;
+    }), A.registry && await ge._seedDatabase(e, o, A), ge._initializeEngines(e, A), await ge._loadModules(e, A), e;
   }
   /**
    * Initialize database backend and engine
@@ -18297,12 +18372,12 @@ class se {
    * @throws {Error} If neither backend nor node+account is provided
    */
   static async _initializeDatabase(A, e = {}) {
-    const i = new zr();
+    const i = new _r();
     if (e.backend)
-      return A.dbEngine = new Eo(e.backend, { evaluator: i }), e.backend;
+      return A.dbEngine = new ho(e.backend, { evaluator: i }), e.backend;
     if (e.node && e.account) {
-      const { CoJSONBackend: o } = await Promise.resolve().then(() => bo), r = new o(e.node, e.account, { systemSpark: "@maia" });
-      return A.dbEngine = new Eo(r, { evaluator: i }), r.dbEngine = A.dbEngine, r;
+      const { CoJSONBackend: o } = await Promise.resolve().then(() => Ko), r = new o(e.node, e.account, { systemSpark: "@maia" });
+      return A.dbEngine = new ho(r, { evaluator: i }), r.dbEngine = A.dbEngine, r;
     }
     throw new Error(
       "MaiaOS.boot() requires either a backend or node+account for CoJSON backend. Provide either: { backend: <DBAdapter> } or { node: <LocalNode>, account: <RawAccount> }"
@@ -18314,7 +18389,7 @@ class se {
    */
   static _collectSchemas() {
     const A = {};
-    return typeof xr == "function" && Object.assign(A, xr()), typeof Hr == "function" && (A["meta-schema"] = Hr()), A;
+    return typeof Lr == "function" && Object.assign(A, Lr()), typeof qr == "function" && (A["meta-schema"] = qr()), A;
   }
   /**
    * Validate schemas against meta schema
@@ -18344,8 +18419,8 @@ ${n}`), new Error(`Schema '${i}' is not valid JSON Schema`);
       ...i.registry,
       tool: r
       // Add tool definitions under 'tool' key
-    }, s = se._collectSchemas(), a = new Ke();
-    await a.initialize(), await se._validateSchemas(s, a);
+    }, s = ge._collectSchemas(), a = new Ue();
+    await a.initialize(), await ge._validateSchemas(s, a);
     const I = i.registry?.data || {}, c = await A.dbEngine.execute({
       op: "seed",
       configs: n,
@@ -18365,7 +18440,7 @@ ${n}`), new Error(`Schema '${i}' is not valid JSON Schema`);
    * @param {Object} config - Boot configuration
    */
   static _initializeEngines(A, e) {
-    A.moduleRegistry = new JD(), A.evaluator = new zr(A.moduleRegistry, { dbEngine: A.dbEngine }), A.toolEngine = new wD(A.moduleRegistry), A.moduleRegistry._toolEngine = A.toolEngine, A.moduleRegistry._dbEngine = A.dbEngine, A.stateEngine = new pD(A.toolEngine, A.evaluator), A.styleEngine = new fD(), e.isDevelopment && A.styleEngine.clearCache(), A.viewEngine = new ED(A.evaluator, null, A.moduleRegistry), A.actorEngine = new CD(
+    A.moduleRegistry = new am(), A.evaluator = new _r(A.moduleRegistry, { dbEngine: A.dbEngine }), A.toolEngine = new jD(A.moduleRegistry), A.moduleRegistry._toolEngine = A.toolEngine, A.moduleRegistry._dbEngine = A.dbEngine, A.stateEngine = new PD(A.toolEngine, A.evaluator), A.styleEngine = new OD(), e.isDevelopment && A.styleEngine.clearCache(), A.viewEngine = new HD(A.evaluator, null, A.moduleRegistry), A.actorEngine = new YD(
       A.styleEngine,
       A.viewEngine,
       A.moduleRegistry,
@@ -18402,7 +18477,7 @@ ${n}`), new Error(`Schema '${i}' is not valid JSON Schema`);
     if (typeof A == "object" && A !== null)
       i = A;
     else if (typeof A == "string" && A.startsWith("co_z")) {
-      const r = await eA(this.actorEngine.dbEngine.backend, { fromCoValue: A }, { returnType: "coId" });
+      const r = await tA(this.actorEngine.dbEngine.backend, { fromCoValue: A }, { returnType: "coId" });
       i = (await this.actorEngine.dbEngine.execute({ op: "read", schema: r, key: A })).value;
     } else
       throw new Error(`[MaiaOS] createActor expects co-id (co_z...) or config object, got: ${typeof A}`);
@@ -18451,8 +18526,8 @@ ${n}`), new Error(`Schema '${i}' is not valid JSON Schema`);
       throw new Error(`[Kernel] account.sparks not available: ${g?.error || "Unknown error"}`);
     const I = g[i];
     if (!I || typeof I != "string" || !I.startsWith("co_")) {
-      const u = Object.keys(g).filter((d) => d !== "id" && d !== "$schema" && d !== "type" && typeof g[d] == "string" && g[d].startsWith("co_"));
-      throw new Error(`[Kernel] Spark "${i}" not found in account.sparks. Available: ${u.join(", ") || "none"}`);
+      const d = Object.keys(g).filter((h) => h !== "id" && h !== "$schema" && h !== "type" && typeof g[h] == "string" && g[h].startsWith("co_"));
+      throw new Error(`[Kernel] Spark "${i}" not found in account.sparks. Available: ${d.join(", ") || "none"}`);
     }
     const C = (await this.dbEngine.execute({
       op: "read",
@@ -18473,9 +18548,32 @@ ${n}`), new Error(`Schema '${i}' is not valid JSON Schema`);
       throw new Error(`[Kernel] Spark "${i}" vibes not available: ${f?.error || "Unknown error"}`);
     const l = f[A];
     if (!l || typeof l != "string" || !l.startsWith("co_")) {
-      const u = Object.keys(f).filter((d) => d !== "id" && d !== "$schema" && d !== "type" && typeof f[d] == "string" && f[d].startsWith("co_"));
-      throw new Error(`[Kernel] Vibe '${A}' not found in ${i}.vibes. Available: ${u.join(", ") || "none"}`);
+      const d = Object.keys(f).filter((h) => h !== "id" && h !== "$schema" && h !== "type" && typeof f[h] == "string" && f[h].startsWith("co_"));
+      throw new Error(`[Kernel] Vibe '${A}' not found in ${i}.vibes. Available: ${d.join(", ") || "none"}`);
     }
+    const u = C.os;
+    if (u && typeof u == "string" && u.startsWith("co_")) {
+      const p = (await this.dbEngine.execute({ op: "read", schema: null, key: u }))?.value?.runtimes;
+      if (p && typeof p == "string" && p.startsWith("co_")) {
+        const w = (await this.dbEngine.execute({ op: "read", schema: null, key: p }))?.value, y = w?.[l] ?? w?.get?.(l);
+        if (y) {
+          const F = (await this.dbEngine.execute({ op: "read", schema: null, key: y }))?.value?.items ?? [], L = Array.isArray(F) ? F : [];
+          let j = !1;
+          for (const J of L) {
+            if (typeof J != "string" || !J.startsWith("co_")) continue;
+            if ((await this.dbEngine.execute({ op: "read", schema: null, key: J }))?.value?.browser) {
+              j = !0;
+              break;
+            }
+          }
+          if (!j)
+            throw new Error(`[Kernel] Vibe '${A}' has no browser runtime in spark.os.runtimes. Access denied.`);
+        } else
+          throw new Error(`[Kernel] Vibe '${A}' has no runtimes entry in spark.os.runtimes. Access denied.`);
+      } else
+        throw new Error(`[Kernel] Spark "${i}" has no runtimes registry. Vibe loading requires spark.os.runtimes.`);
+    } else
+      throw new Error(`[Kernel] Spark "${i}" has no os. Vibe loading requires spark.os.runtimes.`);
     return await this.loadVibeFromDatabase(l, e, A);
   }
   /**
@@ -18523,13 +18621,13 @@ ${n}`), new Error(`Schema '${i}' is not valid JSON Schema`);
       g.id && (h.id = g.id), g.$schema && (h.$schema = g.$schema), g.type && (h.type = g.type), g = h;
     }
     const I = n.value;
-    I && await at(I, g, "vibe");
+    I && await It(I, g, "vibe");
     let c = g.actor;
     if (!c)
       throw new Error(`[MaiaOS] Vibe ${A} (${o}) does not have an 'actor' property. Vibe structure: ${JSON.stringify(Object.keys(g))}`);
     if (!c.startsWith("co_z"))
       throw new Error(`[Kernel] Actor ID must be co-id at runtime: ${c}. This should have been resolved during seeding.`);
-    const C = Ae(this.dbEngine.backend, { fromCoValue: c }, { returnType: "coId" });
+    const C = ee(this.dbEngine.backend, { fromCoValue: c }, { returnType: "coId" });
     let B;
     const Q = await new Promise((h, p) => {
       const E = setTimeout(() => {
@@ -18585,7 +18683,7 @@ ${n}`), new Error(`Schema '${i}' is not valid JSON Schema`);
    * @returns {Promise<any>} Operation result; for write ops: throws on error, returns data on success (backward compat for state machines)
    */
   async db(A) {
-    const e = await this.dbEngine.execute(A), i = /* @__PURE__ */ new Set(["create", "update", "delete", "append", "push", "seed"]);
+    const e = await this.dbEngine.execute(A), i = /* @__PURE__ */ new Set(["create", "update", "delete", "append", "push", "seed", "addSparkMember", "removeSparkMember"]);
     if (e && e.ok === !1 && i.has(A?.op)) {
       const o = e.errors?.map((n) => n.message).join("; ") || "Operation failed", r = new Error(`[db] ${A.op} failed: ${o}`);
       throw r.errors = e.errors, r;
@@ -18747,10 +18845,10 @@ async function TI({ name: t, userId: A, rpId: e = window.location.hostname, salt
     throw console.error("Passkey creation error:", o), new Error(`Failed to create passkey: ${o.message}`);
   }
 }
-const { accountHeaderForInitialAgentSecret: Ro, idforHeader: vo } = dn;
-async function VD({ name: t, salt: A = "maia.city" } = {}) {
+const { accountHeaderForInitialAgentSecret: Yo, idforHeader: Uo } = un;
+async function dm({ name: t, salt: A = "maia.city" } = {}) {
   await jn();
-  const e = Vn(A), i = await Ie.create(), o = globalThis.crypto ?? globalThis.window?.crypto, r = t && typeof t == "string" && t.trim() ? t.trim() : `Traveler ${(o?.randomUUID?.() ?? "").slice(0, 8)}`, { credentialId: n, prfOutput: s } = await TI({
+  const e = Vn(A), i = await Ce.create(), o = globalThis.crypto ?? globalThis.window?.crypto, r = t && typeof t == "string" && t.trim() ? t.trim() : `Traveler ${(o?.randomUUID?.() ?? "").slice(0, 8)}`, { credentialId: n, prfOutput: s } = await TI({
     name: r,
     userId: globalThis.crypto.getRandomValues(new Uint8Array(32)),
     // Random userID - we don't store anything!
@@ -18758,7 +18856,7 @@ async function VD({ name: t, salt: A = "maia.city" } = {}) {
   });
   if (!s)
     throw new Error("PRF evaluation failed");
-  const a = i.agentSecretFromSecretSeed(s), g = Ro(a, i), I = vo(g, i), c = await He({ mode: "human", servicePrefix: "CITY" }), C = zt(), B = await Hn({
+  const a = i.agentSecretFromSecretSeed(s), g = Yo(a, i), I = Uo(g, i), c = await xe({ mode: "human", servicePrefix: "CITY" }), C = Zt(), B = await Hn({
     agentSecret: a,
     name: t,
     peers: C ? C.peers : [],
@@ -18779,12 +18877,12 @@ This should never happen - deterministic computation failed!`
     credentialId: xI(n)
   };
 }
-async function $D({ salt: t = "maia.city" } = {}) {
+async function um({ salt: t = "maia.city" } = {}) {
   await jn();
   const A = Vn(t), { prfOutput: e } = await LI({ salt: A });
   if (!e)
     throw new Error("PRF evaluation failed during sign-in");
-  const i = await Ie.create(), o = i.agentSecretFromSecretSeed(e), r = Ro(o, i), n = vo(r, i), s = await He({ mode: "human", servicePrefix: "CITY" }), a = zt();
+  const i = await Ce.create(), o = i.agentSecretFromSecretSeed(e), r = Yo(o, i), n = Uo(r, i), s = await xe({ mode: "human", servicePrefix: "CITY" }), a = Zt();
   performance.now();
   const g = (async () => {
     try {
@@ -18812,10 +18910,10 @@ async function $D({ salt: t = "maia.city" } = {}) {
     loadingPromise: g
   };
 }
-async function WD({ name: t = "Maia Agent" } = {}) {
-  const A = await Ie.create(), e = A.newRandomAgentSecret(), i = Ro(e, A);
+async function hm({ name: t = "Maia Agent" } = {}) {
+  const A = await Ce.create(), e = A.newRandomAgentSecret(), i = Yo(e, A);
   return {
-    accountID: vo(i, A),
+    accountID: Uo(i, A),
     agentSecret: e,
     name: t
   };
@@ -18825,7 +18923,7 @@ async function OI({ agentSecret: t, name: A = "Maia Agent", syncDomain: e = null
     throw new Error(
       "agentSecret is required. Set service-specific env var (e.g., SYNC_MAIA_AGENT_SECRET or CITY_MAIA_AGENT_SECRET). Run `bun agent:generate --service <service>` to generate credentials."
     );
-  const n = await Ie.create(), s = Ro(t, n), a = vo(s, n), g = await He({ mode: "agent", servicePrefix: i, dbPath: o, inMemory: r }), I = zt(e), c = await Hn({
+  const n = await Ce.create(), s = Yo(t, n), a = Uo(s, n), g = await xe({ mode: "agent", servicePrefix: i, dbPath: o, inMemory: r }), I = Zt(e), c = await Hn({
     agentSecret: t,
     name: A,
     peers: I ? I.peers : [],
@@ -18856,7 +18954,7 @@ async function PI({ accountID: t, agentSecret: A, syncDomain: e = null, serviceP
     throw new Error(
       "accountID is required. Set service-specific env var (e.g., SYNC_MAIA_AGENT_ACCOUNT_ID or CITY_MAIA_AGENT_ACCOUNT_ID). Run `bun agent:generate --service <service>` to generate credentials."
     );
-  const n = await He({ mode: "agent", servicePrefix: i, dbPath: o, inMemory: r }), s = zt(e), a = await qn({
+  const n = await xe({ mode: "agent", servicePrefix: i, dbPath: o, inMemory: r }), s = Zt(e), a = await qn({
     accountID: t,
     agentSecret: A,
     peers: s ? s.peers : [],
@@ -18869,7 +18967,7 @@ async function PI({ accountID: t, agentSecret: A, syncDomain: e = null, serviceP
     account: I
   };
 }
-async function zD({
+async function fm({
   accountID: t,
   agentSecret: A,
   syncDomain: e = null,
@@ -18901,27 +18999,27 @@ async function zD({
     throw s;
   }
 }
-const _D = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const pm = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
   arrayBufferToBase64: xI,
   createAgentAccount: OI,
   createPasskeyWithPRF: TI,
   evaluatePRF: LI,
-  generateAgentCredentials: WD,
-  getStorage: He,
+  generateAgentCredentials: hm,
+  getStorage: xe,
   isPRFSupported: qI,
   loadAgentAccount: PI,
-  loadOrCreateAgentAccount: zD,
+  loadOrCreateAgentAccount: fm,
   requirePRFSupport: jn,
-  signInWithPasskey: $D,
-  signUpWithPasskey: VD,
+  signInWithPasskey: um,
+  signUpWithPasskey: dm,
   stringToUint8Array: Vn
 }, Symbol.toStringTag, { value: "Module" }));
 function jI(t) {
   return t && t.__esModule && Object.prototype.hasOwnProperty.call(t, "default") ? t.default : t;
 }
-var ai = { exports: {} }, Ir = {}, ie = {}, he = {}, cr = {}, Cr = {}, Br = {}, Js;
-function lo() {
+var Ii = { exports: {} }, cr = {}, re = {}, pe = {}, Cr = {}, Br = {}, Qr = {}, Js;
+function fo() {
   return Js || (Js = 1, (function(t) {
     Object.defineProperty(t, "__esModule", { value: !0 }), t.regexpCode = t.getEsmExportName = t.getProperty = t.safeStringify = t.stringify = t.strConcat = t.addCodeArg = t.str = t._ = t.nil = t._Code = t.Name = t.IDENTIFIER = t._CodeOrName = void 0;
     class A {
@@ -19041,13 +19139,13 @@ function lo() {
       return new i(u.toString());
     }
     t.regexpCode = l;
-  })(Br)), Br;
+  })(Qr)), Qr;
 }
-var Qr = {}, Hs;
+var Er = {}, Hs;
 function qs() {
   return Hs || (Hs = 1, (function(t) {
     Object.defineProperty(t, "__esModule", { value: !0 }), t.ValueScope = t.ValueScopeName = t.Scope = t.varKinds = t.UsedValueState = void 0;
-    const A = lo();
+    const A = fo();
     class e extends Error {
       constructor(g) {
         super(`CodeGen: "code" for ${g} not defined`), this.value = g.value;
@@ -19164,14 +19262,14 @@ function qs() {
       }
     }
     t.ValueScope = s;
-  })(Qr)), Qr;
+  })(Er)), Er;
 }
 var xs;
 function oA() {
   return xs || (xs = 1, (function(t) {
     Object.defineProperty(t, "__esModule", { value: !0 }), t.or = t.and = t.not = t.CodeGen = t.operators = t.varKinds = t.ValueScopeName = t.ValueScope = t.Scope = t.Name = t.regexpCode = t.stringify = t.getProperty = t.nil = t.strConcat = t.str = t._ = void 0;
-    const A = lo(), e = qs();
-    var i = lo();
+    const A = fo(), e = qs();
+    var i = fo();
     Object.defineProperty(t, "_", { enumerable: !0, get: function() {
       return i._;
     } }), Object.defineProperty(t, "str", { enumerable: !0, get: function() {
@@ -19219,31 +19317,31 @@ function oA() {
       }
     }
     class n extends r {
-      constructor(D, N, Y) {
-        super(), this.varKind = D, this.name = N, this.rhs = Y;
+      constructor(D, N, H) {
+        super(), this.varKind = D, this.name = N, this.rhs = H;
       }
       render({ es5: D, _n: N }) {
-        const Y = D ? e.varKinds.var : this.varKind, P = this.rhs === void 0 ? "" : ` = ${this.rhs}`;
-        return `${Y} ${this.name}${P};` + N;
+        const H = D ? e.varKinds.var : this.varKind, z = this.rhs === void 0 ? "" : ` = ${this.rhs}`;
+        return `${H} ${this.name}${z};` + N;
       }
       optimizeNames(D, N) {
         if (D[this.name.str])
-          return this.rhs && (this.rhs = W(this.rhs, D, N)), this;
+          return this.rhs && (this.rhs = $(this.rhs, D, N)), this;
       }
       get names() {
         return this.rhs instanceof A._CodeOrName ? this.rhs.names : {};
       }
     }
     class s extends r {
-      constructor(D, N, Y) {
-        super(), this.lhs = D, this.rhs = N, this.sideEffects = Y;
+      constructor(D, N, H) {
+        super(), this.lhs = D, this.rhs = N, this.sideEffects = H;
       }
       render({ _n: D }) {
         return `${this.lhs} = ${this.rhs};` + D;
       }
       optimizeNames(D, N) {
         if (!(this.lhs instanceof A.Name && !D[this.lhs.str] && !this.sideEffects))
-          return this.rhs = W(this.rhs, D, N), this;
+          return this.rhs = $(this.rhs, D, N), this;
       }
       get names() {
         const D = this.lhs instanceof A.Name ? {} : { ...this.lhs.names };
@@ -19251,8 +19349,8 @@ function oA() {
       }
     }
     class a extends s {
-      constructor(D, N, Y, P) {
-        super(D, Y, P), this.op = N;
+      constructor(D, N, H, z) {
+        super(D, H, z), this.op = N;
       }
       render({ _n: D }) {
         return `${this.lhs} ${this.op}= ${this.rhs};` + D;
@@ -19296,7 +19394,7 @@ function oA() {
         return `${this.code}` ? this : void 0;
       }
       optimizeNames(D, N) {
-        return this.code = W(this.code, D, N), this;
+        return this.code = $(this.code, D, N), this;
       }
       get names() {
         return this.code instanceof A._CodeOrName ? this.code.names : {};
@@ -19307,25 +19405,25 @@ function oA() {
         super(), this.nodes = D;
       }
       render(D) {
-        return this.nodes.reduce((N, Y) => N + Y.render(D), "");
+        return this.nodes.reduce((N, H) => N + H.render(D), "");
       }
       optimizeNodes() {
         const { nodes: D } = this;
         let N = D.length;
         for (; N--; ) {
-          const Y = D[N].optimizeNodes();
-          Array.isArray(Y) ? D.splice(N, 1, ...Y) : Y ? D[N] = Y : D.splice(N, 1);
+          const H = D[N].optimizeNodes();
+          Array.isArray(H) ? D.splice(N, 1, ...H) : H ? D[N] = H : D.splice(N, 1);
         }
         return D.length > 0 ? this : void 0;
       }
       optimizeNames(D, N) {
-        const { nodes: Y } = this;
-        let P = Y.length;
-        for (; P--; ) {
-          const G = Y[P];
-          G.optimizeNames(D, N) || (X(D, G.names), Y.splice(P, 1));
+        const { nodes: H } = this;
+        let z = H.length;
+        for (; z--; ) {
+          const b = H[z];
+          b.optimizeNames(D, N) || (AA(D, b.names), H.splice(z, 1));
         }
-        return Y.length > 0 ? this : void 0;
+        return H.length > 0 ? this : void 0;
       }
       get names() {
         return this.nodes.reduce((D, N) => j(D, N.names), {});
@@ -19356,18 +19454,18 @@ function oA() {
           return this.nodes;
         let N = this.else;
         if (N) {
-          const Y = N.optimizeNodes();
-          N = this.else = Array.isArray(Y) ? new l(Y) : Y;
+          const H = N.optimizeNodes();
+          N = this.else = Array.isArray(H) ? new l(H) : H;
         }
         if (N)
-          return D === !1 ? N instanceof u ? N : N.nodes : this.nodes.length ? this : new u(z(D), N instanceof u ? [N] : N.nodes);
+          return D === !1 ? N instanceof u ? N : N.nodes : this.nodes.length ? this : new u(W(D), N instanceof u ? [N] : N.nodes);
         if (!(D === !1 || !this.nodes.length))
           return this;
       }
       optimizeNames(D, N) {
-        var Y;
-        if (this.else = (Y = this.else) === null || Y === void 0 ? void 0 : Y.optimizeNames(D, N), !!(super.optimizeNames(D, N) || this.else))
-          return this.condition = W(this.condition, D, N), this;
+        var H;
+        if (this.else = (H = this.else) === null || H === void 0 ? void 0 : H.optimizeNames(D, N), !!(super.optimizeNames(D, N) || this.else))
+          return this.condition = $(this.condition, D, N), this;
       }
       get names() {
         const D = super.names;
@@ -19387,19 +19485,19 @@ function oA() {
       }
       optimizeNames(D, N) {
         if (super.optimizeNames(D, N))
-          return this.iteration = W(this.iteration, D, N), this;
+          return this.iteration = $(this.iteration, D, N), this;
       }
       get names() {
         return j(super.names, this.iteration.names);
       }
     }
     class p extends d {
-      constructor(D, N, Y, P) {
-        super(), this.varKind = D, this.name = N, this.from = Y, this.to = P;
+      constructor(D, N, H, z) {
+        super(), this.varKind = D, this.name = N, this.from = H, this.to = z;
       }
       render(D) {
-        const N = D.es5 ? e.varKinds.var : this.varKind, { name: Y, from: P, to: G } = this;
-        return `for(${N} ${Y}=${P}; ${Y}<${G}; ${Y}++)` + super.render(D);
+        const N = D.es5 ? e.varKinds.var : this.varKind, { name: H, from: z, to: b } = this;
+        return `for(${N} ${H}=${z}; ${H}<${b}; ${H}++)` + super.render(D);
       }
       get names() {
         const D = J(super.names, this.from);
@@ -19407,23 +19505,23 @@ function oA() {
       }
     }
     class E extends d {
-      constructor(D, N, Y, P) {
-        super(), this.loop = D, this.varKind = N, this.name = Y, this.iterable = P;
+      constructor(D, N, H, z) {
+        super(), this.loop = D, this.varKind = N, this.name = H, this.iterable = z;
       }
       render(D) {
         return `for(${this.varKind} ${this.name} ${this.loop} ${this.iterable})` + super.render(D);
       }
       optimizeNames(D, N) {
         if (super.optimizeNames(D, N))
-          return this.iterable = W(this.iterable, D, N), this;
+          return this.iterable = $(this.iterable, D, N), this;
       }
       get names() {
         return j(super.names, this.iterable.names);
       }
     }
     class w extends Q {
-      constructor(D, N, Y) {
-        super(), this.name = D, this.args = N, this.async = Y;
+      constructor(D, N, H) {
+        super(), this.name = D, this.args = N, this.async = H;
       }
       render(D) {
         return `${this.async ? "async " : ""}function ${this.name}(${this.args})` + super.render(D);
@@ -19446,8 +19544,8 @@ function oA() {
         return super.optimizeNodes(), (D = this.catch) === null || D === void 0 || D.optimizeNodes(), (N = this.finally) === null || N === void 0 || N.optimizeNodes(), this;
       }
       optimizeNames(D, N) {
-        var Y, P;
-        return super.optimizeNames(D, N), (Y = this.catch) === null || Y === void 0 || Y.optimizeNames(D, N), (P = this.finally) === null || P === void 0 || P.optimizeNames(D, N), this;
+        var H, z;
+        return super.optimizeNames(D, N), (H = this.catch) === null || H === void 0 || H.optimizeNames(D, N), (z = this.finally) === null || z === void 0 || z.optimizeNames(D, N), this;
       }
       get names() {
         const D = super.names;
@@ -19463,13 +19561,13 @@ function oA() {
       }
     }
     k.kind = "catch";
-    class b extends Q {
+    class F extends Q {
       render(D) {
         return "finally" + super.render(D);
       }
     }
-    b.kind = "finally";
-    class x {
+    F.kind = "finally";
+    class L {
       constructor(D, N = {}) {
         this._values = {}, this._blockStarts = [], this._constants = {}, this.opts = { ...N, _n: N.lines ? `
 ` : "" }, this._extScope = D, this._scope = new e.Scope({ parent: D }), this._nodes = [new f()];
@@ -19487,8 +19585,8 @@ function oA() {
       }
       // reserves unique name in the external scope and assigns value to it
       scopeValue(D, N) {
-        const Y = this._extScope.value(D, N);
-        return (this._values[Y.prefix] || (this._values[Y.prefix] = /* @__PURE__ */ new Set())).add(Y), Y;
+        const H = this._extScope.value(D, N);
+        return (this._values[H.prefix] || (this._values[H.prefix] = /* @__PURE__ */ new Set())).add(H), H;
       }
       getScopeValue(D, N) {
         return this._extScope.getValue(D, N);
@@ -19501,25 +19599,25 @@ function oA() {
       scopeCode() {
         return this._extScope.scopeCode(this._values);
       }
-      _def(D, N, Y, P) {
-        const G = this._scope.toName(N);
-        return Y !== void 0 && P && (this._constants[G.str] = Y), this._leafNode(new n(D, G, Y)), G;
+      _def(D, N, H, z) {
+        const b = this._scope.toName(N);
+        return H !== void 0 && z && (this._constants[b.str] = H), this._leafNode(new n(D, b, H)), b;
       }
       // `const` declaration (`var` in es5 mode)
-      const(D, N, Y) {
-        return this._def(e.varKinds.const, D, N, Y);
+      const(D, N, H) {
+        return this._def(e.varKinds.const, D, N, H);
       }
       // `let` declaration with optional assignment (`var` in es5 mode)
-      let(D, N, Y) {
-        return this._def(e.varKinds.let, D, N, Y);
+      let(D, N, H) {
+        return this._def(e.varKinds.let, D, N, H);
       }
       // `var` declaration with optional assignment
-      var(D, N, Y) {
-        return this._def(e.varKinds.var, D, N, Y);
+      var(D, N, H) {
+        return this._def(e.varKinds.var, D, N, H);
       }
       // assignment code
-      assign(D, N, Y) {
-        return this._leafNode(new s(D, N, Y));
+      assign(D, N, H) {
+        return this._leafNode(new s(D, N, H));
       }
       // `+=` code
       add(D, N) {
@@ -19532,17 +19630,17 @@ function oA() {
       // returns code for object literal for the passed argument list of key-value pairs
       object(...D) {
         const N = ["{"];
-        for (const [Y, P] of D)
-          N.length > 1 && N.push(","), N.push(Y), (Y !== P || this.opts.es5) && (N.push(":"), (0, A.addCodeArg)(N, P));
+        for (const [H, z] of D)
+          N.length > 1 && N.push(","), N.push(H), (H !== z || this.opts.es5) && (N.push(":"), (0, A.addCodeArg)(N, z));
         return N.push("}"), new A._Code(N);
       }
       // `if` clause (or statement if `thenBody` and, optionally, `elseBody` are passed)
-      if(D, N, Y) {
-        if (this._blockNode(new u(D)), N && Y)
-          this.code(N).else().code(Y).endIf();
+      if(D, N, H) {
+        if (this._blockNode(new u(D)), N && H)
+          this.code(N).else().code(H).endIf();
         else if (N)
           this.code(N).endIf();
-        else if (Y)
+        else if (H)
           throw new Error('CodeGen: "else" body without "then" body');
         return this;
       }
@@ -19566,28 +19664,28 @@ function oA() {
         return this._for(new h(D), N);
       }
       // `for` statement for a range of values
-      forRange(D, N, Y, P, G = this.opts.es5 ? e.varKinds.var : e.varKinds.let) {
-        const L = this._scope.toName(D);
-        return this._for(new p(G, L, N, Y), () => P(L));
+      forRange(D, N, H, z, b = this.opts.es5 ? e.varKinds.var : e.varKinds.let) {
+        const Y = this._scope.toName(D);
+        return this._for(new p(b, Y, N, H), () => z(Y));
       }
       // `for-of` statement (in es5 mode replace with a normal for loop)
-      forOf(D, N, Y, P = e.varKinds.const) {
-        const G = this._scope.toName(D);
+      forOf(D, N, H, z = e.varKinds.const) {
+        const b = this._scope.toName(D);
         if (this.opts.es5) {
-          const L = N instanceof A.Name ? N : this.var("_arr", N);
-          return this.forRange("_i", 0, (0, A._)`${L}.length`, (K) => {
-            this.var(G, (0, A._)`${L}[${K}]`), Y(G);
+          const Y = N instanceof A.Name ? N : this.var("_arr", N);
+          return this.forRange("_i", 0, (0, A._)`${Y}.length`, (U) => {
+            this.var(b, (0, A._)`${Y}[${U}]`), H(b);
           });
         }
-        return this._for(new E("of", P, G, N), () => Y(G));
+        return this._for(new E("of", z, b, N), () => H(b));
       }
       // `for-in` statement.
       // With option `ownProperties` replaced with a `for-of` loop for object keys
-      forIn(D, N, Y, P = this.opts.es5 ? e.varKinds.var : e.varKinds.const) {
+      forIn(D, N, H, z = this.opts.es5 ? e.varKinds.var : e.varKinds.const) {
         if (this.opts.ownProperties)
-          return this.forOf(D, (0, A._)`Object.keys(${N})`, Y);
-        const G = this._scope.toName(D);
-        return this._for(new E("in", P, G, N), () => Y(G));
+          return this.forOf(D, (0, A._)`Object.keys(${N})`, H);
+        const b = this._scope.toName(D);
+        return this._for(new E("in", z, b, N), () => H(b));
       }
       // end `for` loop
       endFor() {
@@ -19609,15 +19707,15 @@ function oA() {
         return this._endBlockNode(y);
       }
       // `try` statement
-      try(D, N, Y) {
-        if (!N && !Y)
+      try(D, N, H) {
+        if (!N && !H)
           throw new Error('CodeGen: "try" without "catch" and "finally"');
-        const P = new m();
-        if (this._blockNode(P), this.code(D), N) {
-          const G = this.name("e");
-          this._currNode = P.catch = new k(G), N(G);
+        const z = new m();
+        if (this._blockNode(z), this.code(D), N) {
+          const b = this.name("e");
+          this._currNode = z.catch = new k(b), N(b);
         }
-        return Y && (this._currNode = P.finally = new b(), this.code(Y)), this._endBlockNode(k, b);
+        return H && (this._currNode = z.finally = new F(), this.code(H)), this._endBlockNode(k, F);
       }
       // `throw` statement
       throw(D) {
@@ -19632,14 +19730,14 @@ function oA() {
         const N = this._blockStarts.pop();
         if (N === void 0)
           throw new Error("CodeGen: not in self-balancing block");
-        const Y = this._nodes.length - N;
-        if (Y < 0 || D !== void 0 && Y !== D)
-          throw new Error(`CodeGen: wrong number of nodes: ${Y} vs ${D} expected`);
+        const H = this._nodes.length - N;
+        if (H < 0 || D !== void 0 && H !== D)
+          throw new Error(`CodeGen: wrong number of nodes: ${H} vs ${D} expected`);
         return this._nodes.length = N, this;
       }
       // `function` heading (or definition if funcBody is passed)
-      func(D, N = A.nil, Y, P) {
-        return this._blockNode(new w(D, N, Y)), P && this.code(P).endFunc(), this;
+      func(D, N = A.nil, H, z) {
+        return this._blockNode(new w(D, N, H)), z && this.code(z).endFunc(), this;
       }
       // end function definition
       endFunc() {
@@ -19656,8 +19754,8 @@ function oA() {
         this._currNode.nodes.push(D), this._nodes.push(D);
       }
       _endBlockNode(D, N) {
-        const Y = this._currNode;
-        if (Y instanceof D || N && Y instanceof N)
+        const H = this._currNode;
+        if (H instanceof D || N && H instanceof N)
           return this._nodes.pop(), this;
         throw new Error(`CodeGen: not in block "${N ? `${D.kind}/${N.kind}` : D.kind}"`);
       }
@@ -19679,7 +19777,7 @@ function oA() {
         N[N.length - 1] = D;
       }
     }
-    t.CodeGen = x;
+    t.CodeGen = L;
     function j(R, D) {
       for (const N in D)
         R[N] = (R[N] || 0) + (D[N] || 0);
@@ -19688,51 +19786,51 @@ function oA() {
     function J(R, D) {
       return D instanceof A._CodeOrName ? j(R, D.names) : R;
     }
-    function W(R, D, N) {
+    function $(R, D, N) {
       if (R instanceof A.Name)
-        return Y(R);
-      if (!P(R))
+        return H(R);
+      if (!z(R))
         return R;
-      return new A._Code(R._items.reduce((G, L) => (L instanceof A.Name && (L = Y(L)), L instanceof A._Code ? G.push(...L._items) : G.push(L), G), []));
-      function Y(G) {
-        const L = N[G.str];
-        return L === void 0 || D[G.str] !== 1 ? G : (delete D[G.str], L);
+      return new A._Code(R._items.reduce((b, Y) => (Y instanceof A.Name && (Y = H(Y)), Y instanceof A._Code ? b.push(...Y._items) : b.push(Y), b), []));
+      function H(b) {
+        const Y = N[b.str];
+        return Y === void 0 || D[b.str] !== 1 ? b : (delete D[b.str], Y);
       }
-      function P(G) {
-        return G instanceof A._Code && G._items.some((L) => L instanceof A.Name && D[L.str] === 1 && N[L.str] !== void 0);
+      function z(b) {
+        return b instanceof A._Code && b._items.some((Y) => Y instanceof A.Name && D[Y.str] === 1 && N[Y.str] !== void 0);
       }
     }
-    function X(R, D) {
+    function AA(R, D) {
       for (const N in D)
         R[N] = (R[N] || 0) - (D[N] || 0);
     }
-    function z(R) {
-      return typeof R == "boolean" || typeof R == "number" || R === null ? !R : (0, A._)`!${q(R)}`;
+    function W(R) {
+      return typeof R == "boolean" || typeof R == "number" || R === null ? !R : (0, A._)`!${x(R)}`;
     }
-    t.not = z;
-    const _ = F(t.operators.AND);
-    function O(...R) {
+    t.not = W;
+    const _ = G(t.operators.AND);
+    function P(...R) {
       return R.reduce(_);
     }
-    t.and = O;
-    const Z = F(t.operators.OR);
+    t.and = P;
+    const Z = G(t.operators.OR);
     function T(...R) {
       return R.reduce(Z);
     }
     t.or = T;
-    function F(R) {
-      return (D, N) => D === A.nil ? N : N === A.nil ? D : (0, A._)`${q(D)} ${R} ${q(N)}`;
+    function G(R) {
+      return (D, N) => D === A.nil ? N : N === A.nil ? D : (0, A._)`${x(D)} ${R} ${x(N)}`;
     }
-    function q(R) {
+    function x(R) {
       return R instanceof A.Name ? R : (0, A._)`(${R})`;
     }
-  })(Cr)), Cr;
+  })(Br)), Br;
 }
 var rA = {}, Ls;
-function nA() {
+function aA() {
   if (Ls) return rA;
   Ls = 1, Object.defineProperty(rA, "__esModule", { value: !0 }), rA.checkStrictMode = rA.getErrorPath = rA.Type = rA.useFunc = rA.setEvaluated = rA.evaluatedPropsToName = rA.mergeEvaluated = rA.eachItem = rA.unescapeJsonPointer = rA.escapeJsonPointer = rA.escapeFragment = rA.unescapeFragment = rA.schemaRefOrVal = rA.schemaHasRulesButRef = rA.schemaHasRules = rA.checkUnknownRules = rA.alwaysValidSchema = rA.toHash = void 0;
-  const t = oA(), A = lo();
+  const t = oA(), A = fo();
   function e(E) {
     const w = {};
     for (const y of E)
@@ -19749,8 +19847,8 @@ function nA() {
     if (!y.strictSchema || typeof w == "boolean")
       return;
     const k = m.RULES.keywords;
-    for (const b in w)
-      k[b] || p(E, `unknown keyword: "${b}"`);
+    for (const F in w)
+      k[F] || p(E, `unknown keyword: "${F}"`);
   }
   rA.checkUnknownRules = o;
   function r(E, w) {
@@ -19806,8 +19904,8 @@ function nA() {
   }
   rA.eachItem = C;
   function B({ mergeNames: E, mergeToName: w, mergeValues: y, resultToName: m }) {
-    return (k, b, x, j) => {
-      const J = x === void 0 ? b : x instanceof t.Name ? (b instanceof t.Name ? E(k, b, x) : w(k, b, x), x) : b instanceof t.Name ? (w(k, x, b), b) : y(b, x);
+    return (k, F, L, j) => {
+      const J = L === void 0 ? F : L instanceof t.Name ? (F instanceof t.Name ? E(k, F, L) : w(k, F, L), L) : F instanceof t.Name ? (w(k, L, F), F) : y(F, L);
       return j === t.Name && !(J instanceof t.Name) ? m(k, J) : J;
     };
   }
@@ -19869,10 +19967,10 @@ function nA() {
   }
   return rA.checkStrictMode = p, rA;
 }
-var gi = {}, Ts;
-function WA() {
-  if (Ts) return gi;
-  Ts = 1, Object.defineProperty(gi, "__esModule", { value: !0 });
+var ci = {}, Ts;
+function zA() {
+  if (Ts) return ci;
+  Ts = 1, Object.defineProperty(ci, "__esModule", { value: !0 });
   const t = oA(), A = {
     // validation function arguments
     data: new t.Name("data"),
@@ -19902,13 +20000,13 @@ function WA() {
     jsonLen: new t.Name("jsonLen"),
     jsonPart: new t.Name("jsonPart")
   };
-  return gi.default = A, gi;
+  return ci.default = A, ci;
 }
 var Os;
-function Ko() {
+function Jo() {
   return Os || (Os = 1, (function(t) {
     Object.defineProperty(t, "__esModule", { value: !0 }), t.extendErrors = t.resetErrorsCount = t.reportExtraError = t.reportError = t.keyword$DataError = t.keywordError = void 0;
-    const A = oA(), e = nA(), i = WA();
+    const A = oA(), e = aA(), i = zA();
     t.keywordError = {
       message: ({ keyword: l }) => (0, A.str)`must pass "${l}" keyword validation`
     }, t.keyword$DataError = {
@@ -19975,28 +20073,28 @@ function Ko() {
       return d && (p = (0, A.str)`${p}${(0, e.getErrorPath)(d, e.Type.Str)}`), [I.schemaPath, p];
     }
     function f(l, { params: u, message: d }, h) {
-      const { keyword: p, data: E, schemaValue: w, it: y } = l, { opts: m, propertyName: k, topSchemaRef: b, schemaPath: x } = y;
-      h.push([I.keyword, p], [I.params, typeof u == "function" ? u(l) : u || (0, A._)`{}`]), m.messages && h.push([I.message, typeof d == "function" ? d(l) : d]), m.verbose && h.push([I.schema, w], [I.parentSchema, (0, A._)`${b}${x}`], [i.default.data, E]), k && h.push([I.propertyName, k]);
+      const { keyword: p, data: E, schemaValue: w, it: y } = l, { opts: m, propertyName: k, topSchemaRef: F, schemaPath: L } = y;
+      h.push([I.keyword, p], [I.params, typeof u == "function" ? u(l) : u || (0, A._)`{}`]), m.messages && h.push([I.message, typeof d == "function" ? d(l) : d]), m.verbose && h.push([I.schema, w], [I.parentSchema, (0, A._)`${F}${L}`], [i.default.data, E]), k && h.push([I.propertyName, k]);
     }
-  })(cr)), cr;
+  })(Cr)), Cr;
 }
 var Ps;
-function ZD() {
-  if (Ps) return he;
-  Ps = 1, Object.defineProperty(he, "__esModule", { value: !0 }), he.boolOrEmptySchema = he.topBoolOrEmptySchema = void 0;
-  const t = Ko(), A = oA(), e = WA(), i = {
+function wm() {
+  if (Ps) return pe;
+  Ps = 1, Object.defineProperty(pe, "__esModule", { value: !0 }), pe.boolOrEmptySchema = pe.topBoolOrEmptySchema = void 0;
+  const t = Jo(), A = oA(), e = zA(), i = {
     message: "boolean schema is false"
   };
   function o(s) {
     const { gen: a, schema: g, validateName: I } = s;
     g === !1 ? n(s, !1) : typeof g == "object" && g.$async === !0 ? a.return(e.default.data) : (a.assign((0, A._)`${I}.errors`, null), a.return(!0));
   }
-  he.topBoolOrEmptySchema = o;
+  pe.topBoolOrEmptySchema = o;
   function r(s, a) {
     const { gen: g, schema: I } = s;
     I === !1 ? (g.var(a, !1), n(s)) : g.var(a, !0);
   }
-  he.boolOrEmptySchema = r;
+  pe.boolOrEmptySchema = r;
   function n(s, a) {
     const { gen: g, data: I } = s, c = {
       gen: g,
@@ -20010,17 +20108,17 @@ function ZD() {
     };
     (0, t.reportError)(c, i, void 0, a);
   }
-  return he;
+  return pe;
 }
-var mA = {}, fe = {}, js;
+var NA = {}, we = {}, js;
 function VI() {
-  if (js) return fe;
-  js = 1, Object.defineProperty(fe, "__esModule", { value: !0 }), fe.getRules = fe.isJSONType = void 0;
+  if (js) return we;
+  js = 1, Object.defineProperty(we, "__esModule", { value: !0 }), we.getRules = we.isJSONType = void 0;
   const t = ["string", "number", "integer", "boolean", "null", "object", "array"], A = new Set(t);
   function e(o) {
     return typeof o == "string" && A.has(o);
   }
-  fe.isJSONType = e;
+  we.isJSONType = e;
   function i() {
     const o = {
       number: { type: "number", rules: [] },
@@ -20036,36 +20134,36 @@ function VI() {
       keywords: {}
     };
   }
-  return fe.getRules = i, fe;
+  return we.getRules = i, we;
 }
-var oe = {}, Vs;
+var ne = {}, Vs;
 function $I() {
-  if (Vs) return oe;
-  Vs = 1, Object.defineProperty(oe, "__esModule", { value: !0 }), oe.shouldUseRule = oe.shouldUseGroup = oe.schemaHasRulesForType = void 0;
+  if (Vs) return ne;
+  Vs = 1, Object.defineProperty(ne, "__esModule", { value: !0 }), ne.shouldUseRule = ne.shouldUseGroup = ne.schemaHasRulesForType = void 0;
   function t({ schema: i, self: o }, r) {
     const n = o.RULES.types[r];
     return n && n !== !0 && A(i, n);
   }
-  oe.schemaHasRulesForType = t;
+  ne.schemaHasRulesForType = t;
   function A(i, o) {
     return o.rules.some((r) => e(i, r));
   }
-  oe.shouldUseGroup = A;
+  ne.shouldUseGroup = A;
   function e(i, o) {
     var r;
     return i[o.keyword] !== void 0 || ((r = o.definition.implements) === null || r === void 0 ? void 0 : r.some((n) => i[n] !== void 0));
   }
-  return oe.shouldUseRule = e, oe;
+  return ne.shouldUseRule = e, ne;
 }
 var $s;
-function uo() {
-  if ($s) return mA;
-  $s = 1, Object.defineProperty(mA, "__esModule", { value: !0 }), mA.reportTypeError = mA.checkDataTypes = mA.checkDataType = mA.coerceAndCheckDataType = mA.getJSONTypes = mA.getSchemaTypes = mA.DataType = void 0;
-  const t = VI(), A = $I(), e = Ko(), i = oA(), o = nA();
+function po() {
+  if ($s) return NA;
+  $s = 1, Object.defineProperty(NA, "__esModule", { value: !0 }), NA.reportTypeError = NA.checkDataTypes = NA.checkDataType = NA.coerceAndCheckDataType = NA.getJSONTypes = NA.getSchemaTypes = NA.DataType = void 0;
+  const t = VI(), A = $I(), e = Jo(), i = oA(), o = aA();
   var r;
   (function(d) {
     d[d.Correct = 0] = "Correct", d[d.Wrong = 1] = "Wrong";
-  })(r || (mA.DataType = r = {}));
+  })(r || (NA.DataType = r = {}));
   function n(d) {
     const h = s(d.type);
     if (h.includes("null")) {
@@ -20078,14 +20176,14 @@ function uo() {
     }
     return h;
   }
-  mA.getSchemaTypes = n;
+  NA.getSchemaTypes = n;
   function s(d) {
     const h = Array.isArray(d) ? d : d ? [d] : [];
     if (h.every(t.isJSONType))
       return h;
     throw new Error("type must be JSONType or JSONType[]: " + h.join(","));
   }
-  mA.getJSONTypes = s;
+  NA.getJSONTypes = s;
   function a(d, h) {
     const { gen: p, data: E, opts: w } = d, y = I(h, w.coerceTypes), m = h.length > 0 && !(y.length === 0 && h.length === 1 && (0, A.schemaHasRulesForType)(d, h[0]));
     if (m) {
@@ -20096,7 +20194,7 @@ function uo() {
     }
     return m;
   }
-  mA.coerceAndCheckDataType = a;
+  NA.coerceAndCheckDataType = a;
   const g = /* @__PURE__ */ new Set(["string", "number", "integer", "boolean", "null"]);
   function I(d, h) {
     return h ? d.filter((p) => g.has(p) || h === "array" && p === "array") : [];
@@ -20104,13 +20202,13 @@ function uo() {
   function c(d, h, p) {
     const { gen: E, data: w, opts: y } = d, m = E.let("dataType", (0, i._)`typeof ${w}`), k = E.let("coerced", (0, i._)`undefined`);
     y.coerceTypes === "array" && E.if((0, i._)`${m} == 'object' && Array.isArray(${w}) && ${w}.length == 1`, () => E.assign(w, (0, i._)`${w}[0]`).assign(m, (0, i._)`typeof ${w}`).if(Q(h, w, y.strictNumbers), () => E.assign(k, w))), E.if((0, i._)`${k} !== undefined`);
-    for (const x of p)
-      (g.has(x) || x === "array" && y.coerceTypes === "array") && b(x);
+    for (const L of p)
+      (g.has(L) || L === "array" && y.coerceTypes === "array") && F(L);
     E.else(), l(d), E.endIf(), E.if((0, i._)`${k} !== undefined`, () => {
       E.assign(w, k), C(d, k);
     });
-    function b(x) {
-      switch (x) {
+    function F(L) {
+      switch (L) {
         case "string":
           E.elseIf((0, i._)`${m} == "number" || ${m} == "boolean"`).assign(k, (0, i._)`"" + ${w}`).elseIf((0, i._)`${w} === null`).assign(k, (0, i._)`""`);
           return;
@@ -20163,7 +20261,7 @@ function uo() {
       return (0, i.and)((0, i._)`typeof ${h} == "number"`, k, p ? (0, i._)`isFinite(${h})` : i.nil);
     }
   }
-  mA.checkDataType = B;
+  NA.checkDataType = B;
   function Q(d, h, p, E) {
     if (d.length === 1)
       return B(d[0], h, p, E);
@@ -20179,7 +20277,7 @@ function uo() {
       w = (0, i.and)(w, B(m, h, p, E));
     return w;
   }
-  mA.checkDataTypes = Q;
+  NA.checkDataTypes = Q;
   const f = {
     message: ({ schema: d }) => `must be ${d}`,
     params: ({ schema: d, schemaValue: h }) => typeof d == "string" ? (0, i._)`{type: ${d}}` : (0, i._)`{type: ${h}}`
@@ -20188,7 +20286,7 @@ function uo() {
     const h = u(d);
     (0, e.reportError)(h, f);
   }
-  mA.reportTypeError = l;
+  NA.reportTypeError = l;
   function u(d) {
     const { gen: h, data: p, schema: E } = d, w = (0, o.schemaRefOrVal)(d, E, "type");
     return {
@@ -20203,13 +20301,13 @@ function uo() {
       it: d
     };
   }
-  return mA;
+  return NA;
 }
-var ht = {}, Ws;
-function XD() {
-  if (Ws) return ht;
-  Ws = 1, Object.defineProperty(ht, "__esModule", { value: !0 }), ht.assignDefaults = void 0;
-  const t = oA(), A = nA();
+var pt = {}, Ws;
+function ym() {
+  if (Ws) return pt;
+  Ws = 1, Object.defineProperty(pt, "__esModule", { value: !0 }), pt.assignDefaults = void 0;
+  const t = oA(), A = aA();
   function e(o, r) {
     const { properties: n, items: s } = o.schema;
     if (r === "object" && n)
@@ -20217,7 +20315,7 @@ function XD() {
         i(o, a, n[a].default);
     else r === "array" && Array.isArray(s) && s.forEach((a, g) => i(o, g, a.default));
   }
-  ht.assignDefaults = e;
+  pt.assignDefaults = e;
   function i(o, r, n) {
     const { gen: s, compositeRule: a, data: g, opts: I } = o;
     if (n === void 0)
@@ -20230,28 +20328,28 @@ function XD() {
     let C = (0, t._)`${c} === undefined`;
     I.useDefaults === "empty" && (C = (0, t._)`${C} || ${c} === null || ${c} === ""`), s.if(C, (0, t._)`${c} = ${(0, t.stringify)(n)}`);
   }
-  return ht;
+  return pt;
 }
-var PA = {}, cA = {}, zs;
-function zA() {
-  if (zs) return cA;
-  zs = 1, Object.defineProperty(cA, "__esModule", { value: !0 }), cA.validateUnion = cA.validateArray = cA.usePattern = cA.callValidateCode = cA.schemaProperties = cA.allSchemaProperties = cA.noPropertyInData = cA.propertyInData = cA.isOwnProperty = cA.hasPropFunc = cA.reportMissingProp = cA.checkMissingProp = cA.checkReportMissingProp = void 0;
-  const t = oA(), A = nA(), e = WA(), i = nA();
+var jA = {}, CA = {}, zs;
+function _A() {
+  if (zs) return CA;
+  zs = 1, Object.defineProperty(CA, "__esModule", { value: !0 }), CA.validateUnion = CA.validateArray = CA.usePattern = CA.callValidateCode = CA.schemaProperties = CA.allSchemaProperties = CA.noPropertyInData = CA.propertyInData = CA.isOwnProperty = CA.hasPropFunc = CA.reportMissingProp = CA.checkMissingProp = CA.checkReportMissingProp = void 0;
+  const t = oA(), A = aA(), e = zA(), i = aA();
   function o(d, h) {
     const { gen: p, data: E, it: w } = d;
     p.if(I(p, E, h, w.opts.ownProperties), () => {
       d.setParams({ missingProperty: (0, t._)`${h}` }, !0), d.error();
     });
   }
-  cA.checkReportMissingProp = o;
+  CA.checkReportMissingProp = o;
   function r({ gen: d, data: h, it: { opts: p } }, E, w) {
     return (0, t.or)(...E.map((y) => (0, t.and)(I(d, h, y, p.ownProperties), (0, t._)`${w} = ${y}`)));
   }
-  cA.checkMissingProp = r;
+  CA.checkMissingProp = r;
   function n(d, h) {
     d.setParams({ missingProperty: h }, !0), d.error();
   }
-  cA.reportMissingProp = n;
+  CA.reportMissingProp = n;
   function s(d) {
     return d.scopeValue("func", {
       // eslint-disable-next-line @typescript-eslint/unbound-method
@@ -20259,41 +20357,41 @@ function zA() {
       code: (0, t._)`Object.prototype.hasOwnProperty`
     });
   }
-  cA.hasPropFunc = s;
+  CA.hasPropFunc = s;
   function a(d, h, p) {
     return (0, t._)`${s(d)}.call(${h}, ${p})`;
   }
-  cA.isOwnProperty = a;
+  CA.isOwnProperty = a;
   function g(d, h, p, E) {
     const w = (0, t._)`${h}${(0, t.getProperty)(p)} !== undefined`;
     return E ? (0, t._)`${w} && ${a(d, h, p)}` : w;
   }
-  cA.propertyInData = g;
+  CA.propertyInData = g;
   function I(d, h, p, E) {
     const w = (0, t._)`${h}${(0, t.getProperty)(p)} === undefined`;
     return E ? (0, t.or)(w, (0, t.not)(a(d, h, p))) : w;
   }
-  cA.noPropertyInData = I;
+  CA.noPropertyInData = I;
   function c(d) {
     return d ? Object.keys(d).filter((h) => h !== "__proto__") : [];
   }
-  cA.allSchemaProperties = c;
+  CA.allSchemaProperties = c;
   function C(d, h) {
     return c(h).filter((p) => !(0, A.alwaysValidSchema)(d, h[p]));
   }
-  cA.schemaProperties = C;
-  function B({ schemaCode: d, data: h, it: { gen: p, topSchemaRef: E, schemaPath: w, errorPath: y }, it: m }, k, b, x) {
-    const j = x ? (0, t._)`${d}, ${h}, ${E}${w}` : h, J = [
+  CA.schemaProperties = C;
+  function B({ schemaCode: d, data: h, it: { gen: p, topSchemaRef: E, schemaPath: w, errorPath: y }, it: m }, k, F, L) {
+    const j = L ? (0, t._)`${d}, ${h}, ${E}${w}` : h, J = [
       [e.default.instancePath, (0, t.strConcat)(e.default.instancePath, y)],
       [e.default.parentData, m.parentData],
       [e.default.parentDataProperty, m.parentDataProperty],
       [e.default.rootData, e.default.rootData]
     ];
     m.opts.dynamicRef && J.push([e.default.dynamicAnchors, e.default.dynamicAnchors]);
-    const W = (0, t._)`${j}, ${p.object(...J)}`;
-    return b !== t.nil ? (0, t._)`${k}.call(${b}, ${W})` : (0, t._)`${k}(${W})`;
+    const $ = (0, t._)`${j}, ${p.object(...J)}`;
+    return F !== t.nil ? (0, t._)`${k}.call(${F}, ${$})` : (0, t._)`${k}(${$})`;
   }
-  cA.callValidateCode = B;
+  CA.callValidateCode = B;
   const Q = (0, t._)`new RegExp`;
   function f({ gen: d, it: { opts: h } }, p) {
     const E = h.unicodeRegExp ? "u" : "", { regExp: w } = h.code, y = w(p, E);
@@ -20303,7 +20401,7 @@ function zA() {
       code: (0, t._)`${w.code === "new RegExp" ? Q : (0, i.useFunc)(d, w)}(${p}, ${E})`
     });
   }
-  cA.usePattern = f;
+  CA.usePattern = f;
   function l(d) {
     const { gen: h, data: p, keyword: E, it: w } = d, y = h.name("valid");
     if (w.allErrors) {
@@ -20312,40 +20410,40 @@ function zA() {
     }
     return h.var(y, !0), m(() => h.break()), y;
     function m(k) {
-      const b = h.const("len", (0, t._)`${p}.length`);
-      h.forRange("i", 0, b, (x) => {
+      const F = h.const("len", (0, t._)`${p}.length`);
+      h.forRange("i", 0, F, (L) => {
         d.subschema({
           keyword: E,
-          dataProp: x,
+          dataProp: L,
           dataPropType: A.Type.Num
         }, y), h.if((0, t.not)(y), k);
       });
     }
   }
-  cA.validateArray = l;
+  CA.validateArray = l;
   function u(d) {
     const { gen: h, schema: p, keyword: E, it: w } = d;
     if (!Array.isArray(p))
       throw new Error("ajv implementation error");
-    if (p.some((b) => (0, A.alwaysValidSchema)(w, b)) && !w.opts.unevaluated)
+    if (p.some((F) => (0, A.alwaysValidSchema)(w, F)) && !w.opts.unevaluated)
       return;
     const m = h.let("valid", !1), k = h.name("_valid");
-    h.block(() => p.forEach((b, x) => {
+    h.block(() => p.forEach((F, L) => {
       const j = d.subschema({
         keyword: E,
-        schemaProp: x,
+        schemaProp: L,
         compositeRule: !0
       }, k);
       h.assign(m, (0, t._)`${m} || ${k}`), d.mergeValidEvaluated(j, k) || h.if((0, t.not)(m));
     })), d.result(m, () => d.reset(), () => d.error(!0));
   }
-  return cA.validateUnion = u, cA;
+  return CA.validateUnion = u, CA;
 }
 var _s;
-function Am() {
-  if (_s) return PA;
-  _s = 1, Object.defineProperty(PA, "__esModule", { value: !0 }), PA.validateKeywordUsage = PA.validSchemaType = PA.funcKeywordCode = PA.macroKeywordCode = void 0;
-  const t = oA(), A = WA(), e = zA(), i = Ko();
+function Dm() {
+  if (_s) return jA;
+  _s = 1, Object.defineProperty(jA, "__esModule", { value: !0 }), jA.validateKeywordUsage = jA.validSchemaType = jA.funcKeywordCode = jA.macroKeywordCode = void 0;
+  const t = oA(), A = zA(), e = _A(), i = Jo();
   function o(C, B) {
     const { gen: Q, keyword: f, schema: l, parentSchema: u, it: d } = C, h = B.macro.call(d.self, l, u, d), p = g(Q, f, h);
     d.opts.validateSchema !== !1 && d.self.validateSchema(h, !0);
@@ -20358,7 +20456,7 @@ function Am() {
       compositeRule: !0
     }, E), C.pass(E, () => C.error(!0));
   }
-  PA.macroKeywordCode = o;
+  jA.macroKeywordCode = o;
   function r(C, B) {
     var Q;
     const { gen: f, keyword: l, schema: u, parentSchema: d, $data: h, it: p } = C;
@@ -20367,30 +20465,30 @@ function Am() {
     C.block$data(y, m), C.ok((Q = B.valid) !== null && Q !== void 0 ? Q : y);
     function m() {
       if (B.errors === !1)
-        x(), B.modifying && n(C), j(() => C.error());
+        L(), B.modifying && n(C), j(() => C.error());
       else {
-        const J = B.async ? k() : b();
+        const J = B.async ? k() : F();
         B.modifying && n(C), j(() => s(C, J));
       }
     }
     function k() {
       const J = f.let("ruleErrs", null);
-      return f.try(() => x((0, t._)`await `), (W) => f.assign(y, !1).if((0, t._)`${W} instanceof ${p.ValidationError}`, () => f.assign(J, (0, t._)`${W}.errors`), () => f.throw(W))), J;
+      return f.try(() => L((0, t._)`await `), ($) => f.assign(y, !1).if((0, t._)`${$} instanceof ${p.ValidationError}`, () => f.assign(J, (0, t._)`${$}.errors`), () => f.throw($))), J;
     }
-    function b() {
+    function F() {
       const J = (0, t._)`${w}.errors`;
-      return f.assign(J, null), x(t.nil), J;
+      return f.assign(J, null), L(t.nil), J;
     }
-    function x(J = B.async ? (0, t._)`await ` : t.nil) {
-      const W = p.opts.passContext ? A.default.this : A.default.self, X = !("compile" in B && !h || B.schema === !1);
-      f.assign(y, (0, t._)`${J}${(0, e.callValidateCode)(C, w, W, X)}`, B.modifying);
+    function L(J = B.async ? (0, t._)`await ` : t.nil) {
+      const $ = p.opts.passContext ? A.default.this : A.default.self, AA = !("compile" in B && !h || B.schema === !1);
+      f.assign(y, (0, t._)`${J}${(0, e.callValidateCode)(C, w, $, AA)}`, B.modifying);
     }
     function j(J) {
-      var W;
-      f.if((0, t.not)((W = B.valid) !== null && W !== void 0 ? W : y), J);
+      var $;
+      f.if((0, t.not)(($ = B.valid) !== null && $ !== void 0 ? $ : y), J);
     }
   }
-  PA.funcKeywordCode = r;
+  jA.funcKeywordCode = r;
   function n(C) {
     const { gen: B, data: Q, it: f } = C;
     B.if(f.parentData, () => B.assign(Q, (0, t._)`${f.parentData}[${f.parentDataProperty}]`));
@@ -20413,7 +20511,7 @@ function Am() {
   function I(C, B, Q = !1) {
     return !B.length || B.some((f) => f === "array" ? Array.isArray(C) : f === "object" ? C && typeof C == "object" && !Array.isArray(C) : typeof C == f || Q && typeof C > "u");
   }
-  PA.validSchemaType = I;
+  jA.validSchemaType = I;
   function c({ schema: C, opts: B, self: Q, errSchemaPath: f }, l, u) {
     if (Array.isArray(l.keyword) ? !l.keyword.includes(u) : l.keyword !== u)
       throw new Error("ajv implementation error");
@@ -20428,13 +20526,13 @@ function Am() {
         throw new Error(p);
     }
   }
-  return PA.validateKeywordUsage = c, PA;
+  return jA.validateKeywordUsage = c, jA;
 }
-var re = {}, Zs;
-function em() {
-  if (Zs) return re;
-  Zs = 1, Object.defineProperty(re, "__esModule", { value: !0 }), re.extendSubschemaMode = re.extendSubschemaData = re.getSubschema = void 0;
-  const t = oA(), A = nA();
+var se = {}, Zs;
+function mm() {
+  if (Zs) return se;
+  Zs = 1, Object.defineProperty(se, "__esModule", { value: !0 }), se.extendSubschemaMode = se.extendSubschemaData = se.getSubschema = void 0;
+  const t = oA(), A = aA();
   function e(r, { keyword: n, schemaProp: s, schema: a, schemaPath: g, errSchemaPath: I, topSchemaRef: c }) {
     if (n !== void 0 && a !== void 0)
       throw new Error('both "keyword" and "schema" passed, only one allowed');
@@ -20462,7 +20560,7 @@ function em() {
     }
     throw new Error('either "keyword" or "schema" must be passed');
   }
-  re.getSubschema = e;
+  se.getSubschema = e;
   function i(r, n, { dataProp: s, dataPropType: a, data: g, dataTypes: I, propertyName: c }) {
     if (g !== void 0 && s !== void 0)
       throw new Error('both "data" and "dataProp" passed, only one allowed');
@@ -20480,15 +20578,15 @@ function em() {
       r.data = Q, r.dataLevel = n.dataLevel + 1, r.dataTypes = [], n.definedProperties = /* @__PURE__ */ new Set(), r.parentData = n.data, r.dataNames = [...n.dataNames, Q];
     }
   }
-  re.extendSubschemaData = i;
+  se.extendSubschemaData = i;
   function o(r, { jtdDiscriminator: n, jtdMetadata: s, compositeRule: a, createErrors: g, allErrors: I }) {
     a !== void 0 && (r.compositeRule = a), g !== void 0 && (r.createErrors = g), I !== void 0 && (r.allErrors = I), r.jtdDiscriminator = n, r.jtdMetadata = s;
   }
-  return re.extendSubschemaMode = o, re;
+  return se.extendSubschemaMode = o, se;
 }
-var MA = {}, Er, Xs;
+var bA = {}, lr, Xs;
 function WI() {
-  return Xs || (Xs = 1, Er = function t(A, e) {
+  return Xs || (Xs = 1, lr = function t(A, e) {
     if (A === e) return !0;
     if (A && e && typeof A == "object" && typeof e == "object") {
       if (A.constructor !== e.constructor) return !1;
@@ -20512,13 +20610,13 @@ function WI() {
       return !0;
     }
     return A !== A && e !== e;
-  }), Er;
+  }), lr;
 }
-var lr = { exports: {} }, Aa;
-function tm() {
-  if (Aa) return lr.exports;
+var dr = { exports: {} }, Aa;
+function Sm() {
+  if (Aa) return dr.exports;
   Aa = 1;
-  var t = lr.exports = function(i, o, r) {
+  var t = dr.exports = function(i, o, r) {
     typeof o == "function" && (r = o, o = {}), r = o.cb || r;
     var n = typeof r == "function" ? r : r.pre || function() {
     }, s = r.post || function() {
@@ -20587,13 +20685,13 @@ function tm() {
   function e(i) {
     return i.replace(/~/g, "~0").replace(/\//g, "~1");
   }
-  return lr.exports;
+  return dr.exports;
 }
 var ea;
-function Yo() {
-  if (ea) return MA;
-  ea = 1, Object.defineProperty(MA, "__esModule", { value: !0 }), MA.getSchemaRefs = MA.resolveUrl = MA.normalizeId = MA._getFullPath = MA.getFullPath = MA.inlineRef = void 0;
-  const t = nA(), A = WI(), e = tm(), i = /* @__PURE__ */ new Set([
+function Ho() {
+  if (ea) return bA;
+  ea = 1, Object.defineProperty(bA, "__esModule", { value: !0 }), bA.getSchemaRefs = bA.resolveUrl = bA.normalizeId = bA._getFullPath = bA.getFullPath = bA.inlineRef = void 0;
+  const t = aA(), A = WI(), e = Sm(), i = /* @__PURE__ */ new Set([
     "type",
     "format",
     "pattern",
@@ -20614,7 +20712,7 @@ function Yo() {
   function o(f, l = !0) {
     return typeof f == "boolean" ? !0 : l === !0 ? !n(f) : l ? s(f) <= l : !1;
   }
-  MA.inlineRef = o;
+  bA.inlineRef = o;
   const r = /* @__PURE__ */ new Set([
     "$ref",
     "$recursiveRef",
@@ -20647,62 +20745,62 @@ function Yo() {
     const d = f.parse(l);
     return g(f, d);
   }
-  MA.getFullPath = a;
+  bA.getFullPath = a;
   function g(f, l) {
     return f.serialize(l).split("#")[0] + "#";
   }
-  MA._getFullPath = g;
+  bA._getFullPath = g;
   const I = /#\/?$/;
   function c(f) {
     return f ? f.replace(I, "") : "";
   }
-  MA.normalizeId = c;
+  bA.normalizeId = c;
   function C(f, l, u) {
     return u = c(u), f.resolve(l, u);
   }
-  MA.resolveUrl = C;
+  bA.resolveUrl = C;
   const B = /^[a-z_][-a-z0-9._]*$/i;
   function Q(f, l) {
     if (typeof f == "boolean")
       return {};
     const { schemaId: u, uriResolver: d } = this.opts, h = c(f[u] || l), p = { "": h }, E = a(d, h, !1), w = {}, y = /* @__PURE__ */ new Set();
-    return e(f, { allKeys: !0 }, (b, x, j, J) => {
+    return e(f, { allKeys: !0 }, (F, L, j, J) => {
       if (J === void 0)
         return;
-      const W = E + x;
-      let X = p[J];
-      typeof b[u] == "string" && (X = z.call(this, b[u])), _.call(this, b.$anchor), _.call(this, b.$dynamicAnchor), p[x] = X;
-      function z(O) {
+      const $ = E + L;
+      let AA = p[J];
+      typeof F[u] == "string" && (AA = W.call(this, F[u])), _.call(this, F.$anchor), _.call(this, F.$dynamicAnchor), p[L] = AA;
+      function W(P) {
         const Z = this.opts.uriResolver.resolve;
-        if (O = c(X ? Z(X, O) : O), y.has(O))
-          throw k(O);
-        y.add(O);
-        let T = this.refs[O];
-        return typeof T == "string" && (T = this.refs[T]), typeof T == "object" ? m(b, T.schema, O) : O !== c(W) && (O[0] === "#" ? (m(b, w[O], O), w[O] = b) : this.refs[O] = W), O;
+        if (P = c(AA ? Z(AA, P) : P), y.has(P))
+          throw k(P);
+        y.add(P);
+        let T = this.refs[P];
+        return typeof T == "string" && (T = this.refs[T]), typeof T == "object" ? m(F, T.schema, P) : P !== c($) && (P[0] === "#" ? (m(F, w[P], P), w[P] = F) : this.refs[P] = $), P;
       }
-      function _(O) {
-        if (typeof O == "string") {
-          if (!B.test(O))
-            throw new Error(`invalid anchor "${O}"`);
-          z.call(this, `#${O}`);
+      function _(P) {
+        if (typeof P == "string") {
+          if (!B.test(P))
+            throw new Error(`invalid anchor "${P}"`);
+          W.call(this, `#${P}`);
         }
       }
     }), w;
-    function m(b, x, j) {
-      if (x !== void 0 && !A(b, x))
+    function m(F, L, j) {
+      if (L !== void 0 && !A(F, L))
         throw k(j);
     }
-    function k(b) {
-      return new Error(`reference "${b}" resolves to more than one schema`);
+    function k(F) {
+      return new Error(`reference "${F}" resolves to more than one schema`);
     }
   }
-  return MA.getSchemaRefs = Q, MA;
+  return bA.getSchemaRefs = Q, bA;
 }
 var ta;
-function Zt() {
-  if (ta) return ie;
-  ta = 1, Object.defineProperty(ie, "__esModule", { value: !0 }), ie.getData = ie.KeywordCxt = ie.validateFunctionCode = void 0;
-  const t = ZD(), A = uo(), e = $I(), i = uo(), o = XD(), r = Am(), n = em(), s = oA(), a = WA(), g = Yo(), I = nA(), c = Ko();
+function Ai() {
+  if (ta) return re;
+  ta = 1, Object.defineProperty(re, "__esModule", { value: !0 }), re.getData = re.KeywordCxt = re.validateFunctionCode = void 0;
+  const t = wm(), A = po(), e = $I(), i = po(), o = ym(), r = Dm(), n = mm(), s = oA(), a = zA(), g = Ho(), I = aA(), c = Jo();
   function C(S) {
     if (E(S) && (y(S), p(S))) {
       l(S);
@@ -20710,11 +20808,11 @@ function Zt() {
     }
     B(S, () => (0, t.topBoolOrEmptySchema)(S));
   }
-  ie.validateFunctionCode = C;
-  function B({ gen: S, validateName: M, schema: v, schemaEnv: H, opts: V }, $) {
-    V.code.es5 ? S.func(M, (0, s._)`${a.default.data}, ${a.default.valCxt}`, H.$async, () => {
-      S.code((0, s._)`"use strict"; ${d(v, V)}`), f(S, V), S.code($);
-    }) : S.func(M, (0, s._)`${a.default.data}, ${Q(V)}`, H.$async, () => S.code(d(v, V)).code($));
+  re.validateFunctionCode = C;
+  function B({ gen: S, validateName: M, schema: v, schemaEnv: K, opts: O }, V) {
+    O.code.es5 ? S.func(M, (0, s._)`${a.default.data}, ${a.default.valCxt}`, K.$async, () => {
+      S.code((0, s._)`"use strict"; ${d(v, O)}`), f(S, O), S.code(V);
+    }) : S.func(M, (0, s._)`${a.default.data}, ${Q(O)}`, K.$async, () => S.code(d(v, O)).code(V));
   }
   function Q(S) {
     return (0, s._)`{${a.default.instancePath}="", ${a.default.parentData}, ${a.default.parentDataProperty}, ${a.default.rootData}=${a.default.data}${S.dynamicRef ? (0, s._)`, ${a.default.dynamicAnchors}={}` : s.nil}}={}`;
@@ -20727,9 +20825,9 @@ function Zt() {
     });
   }
   function l(S) {
-    const { schema: M, opts: v, gen: H } = S;
+    const { schema: M, opts: v, gen: K } = S;
     B(S, () => {
-      v.$comment && M.$comment && J(S), b(S), H.let(a.default.vErrors, null), H.let(a.default.errors, 0), v.unevaluated && u(S), m(S), W(S);
+      v.$comment && M.$comment && J(S), F(S), K.let(a.default.vErrors, null), K.let(a.default.errors, 0), v.unevaluated && u(S), m(S), $(S);
     });
   }
   function u(S) {
@@ -20759,29 +20857,29 @@ function Zt() {
     return typeof S.schema != "boolean";
   }
   function w(S, M) {
-    const { schema: v, gen: H, opts: V } = S;
-    V.$comment && v.$comment && J(S), x(S), j(S);
-    const $ = H.const("_errs", a.default.errors);
-    m(S, $), H.var(M, (0, s._)`${$} === ${a.default.errors}`);
+    const { schema: v, gen: K, opts: O } = S;
+    O.$comment && v.$comment && J(S), L(S), j(S);
+    const V = K.const("_errs", a.default.errors);
+    m(S, V), K.var(M, (0, s._)`${V} === ${a.default.errors}`);
   }
   function y(S) {
     (0, I.checkUnknownRules)(S), k(S);
   }
   function m(S, M) {
     if (S.opts.jtd)
-      return z(S, [], !1, M);
-    const v = (0, A.getSchemaTypes)(S.schema), H = (0, A.coerceAndCheckDataType)(S, v);
-    z(S, v, !H, M);
+      return W(S, [], !1, M);
+    const v = (0, A.getSchemaTypes)(S.schema), K = (0, A.coerceAndCheckDataType)(S, v);
+    W(S, v, !K, M);
   }
   function k(S) {
-    const { schema: M, errSchemaPath: v, opts: H, self: V } = S;
-    M.$ref && H.ignoreKeywordsWithRef && (0, I.schemaHasRulesButRef)(M, V.RULES) && V.logger.warn(`$ref: keywords ignored in schema at path "${v}"`);
+    const { schema: M, errSchemaPath: v, opts: K, self: O } = S;
+    M.$ref && K.ignoreKeywordsWithRef && (0, I.schemaHasRulesButRef)(M, O.RULES) && O.logger.warn(`$ref: keywords ignored in schema at path "${v}"`);
   }
-  function b(S) {
+  function F(S) {
     const { schema: M, opts: v } = S;
     M.default !== void 0 && v.useDefaults && v.strictSchema && (0, I.checkStrictMode)(S, "default is ignored in the schema root");
   }
-  function x(S) {
+  function L(S) {
     const M = S.schema[S.opts.schemaId];
     M && (S.baseId = (0, g.resolveUrl)(S.opts.uriResolver, S.baseId, M));
   }
@@ -20789,46 +20887,46 @@ function Zt() {
     if (S.schema.$async && !S.schemaEnv.$async)
       throw new Error("async schema in sync schema");
   }
-  function J({ gen: S, schemaEnv: M, schema: v, errSchemaPath: H, opts: V }) {
-    const $ = v.$comment;
-    if (V.$comment === !0)
-      S.code((0, s._)`${a.default.self}.logger.log(${$})`);
-    else if (typeof V.$comment == "function") {
-      const iA = (0, s.str)`${H}/$comment`, sA = S.scopeValue("root", { ref: M.root });
-      S.code((0, s._)`${a.default.self}.opts.$comment(${$}, ${iA}, ${sA}.schema)`);
+  function J({ gen: S, schemaEnv: M, schema: v, errSchemaPath: K, opts: O }) {
+    const V = v.$comment;
+    if (O.$comment === !0)
+      S.code((0, s._)`${a.default.self}.logger.log(${V})`);
+    else if (typeof O.$comment == "function") {
+      const X = (0, s.str)`${K}/$comment`, nA = S.scopeValue("root", { ref: M.root });
+      S.code((0, s._)`${a.default.self}.opts.$comment(${V}, ${X}, ${nA}.schema)`);
     }
   }
-  function W(S) {
-    const { gen: M, schemaEnv: v, validateName: H, ValidationError: V, opts: $ } = S;
-    v.$async ? M.if((0, s._)`${a.default.errors} === 0`, () => M.return(a.default.data), () => M.throw((0, s._)`new ${V}(${a.default.vErrors})`)) : (M.assign((0, s._)`${H}.errors`, a.default.vErrors), $.unevaluated && X(S), M.return((0, s._)`${a.default.errors} === 0`));
+  function $(S) {
+    const { gen: M, schemaEnv: v, validateName: K, ValidationError: O, opts: V } = S;
+    v.$async ? M.if((0, s._)`${a.default.errors} === 0`, () => M.return(a.default.data), () => M.throw((0, s._)`new ${O}(${a.default.vErrors})`)) : (M.assign((0, s._)`${K}.errors`, a.default.vErrors), V.unevaluated && AA(S), M.return((0, s._)`${a.default.errors} === 0`));
   }
-  function X({ gen: S, evaluated: M, props: v, items: H }) {
-    v instanceof s.Name && S.assign((0, s._)`${M}.props`, v), H instanceof s.Name && S.assign((0, s._)`${M}.items`, H);
+  function AA({ gen: S, evaluated: M, props: v, items: K }) {
+    v instanceof s.Name && S.assign((0, s._)`${M}.props`, v), K instanceof s.Name && S.assign((0, s._)`${M}.items`, K);
   }
-  function z(S, M, v, H) {
-    const { gen: V, schema: $, data: iA, allErrors: sA, opts: aA, self: QA } = S, { RULES: uA } = QA;
-    if ($.$ref && (aA.ignoreKeywordsWithRef || !(0, I.schemaHasRulesButRef)($, uA))) {
-      V.block(() => P(S, "$ref", uA.all.$ref.definition));
+  function W(S, M, v, K) {
+    const { gen: O, schema: V, data: X, allErrors: nA, opts: IA, self: cA } = S, { RULES: lA } = cA;
+    if (V.$ref && (IA.ignoreKeywordsWithRef || !(0, I.schemaHasRulesButRef)(V, lA))) {
+      O.block(() => z(S, "$ref", lA.all.$ref.definition));
       return;
     }
-    aA.jtd || O(S, M), V.block(() => {
-      for (const HA of uA.rules)
-        ce(HA);
-      ce(uA.post);
+    IA.jtd || P(S, M), O.block(() => {
+      for (const wA of lA.rules)
+        yA(wA);
+      yA(lA.post);
     });
-    function ce(HA) {
-      (0, e.shouldUseGroup)($, HA) && (HA.type ? (V.if((0, i.checkDataType)(HA.type, iA, aA.strictNumbers)), _(S, HA), M.length === 1 && M[0] === HA.type && v && (V.else(), (0, i.reportTypeError)(S)), V.endIf()) : _(S, HA), sA || V.if((0, s._)`${a.default.errors} === ${H || 0}`));
+    function yA(wA) {
+      (0, e.shouldUseGroup)(V, wA) && (wA.type ? (O.if((0, i.checkDataType)(wA.type, X, IA.strictNumbers)), _(S, wA), M.length === 1 && M[0] === wA.type && v && (O.else(), (0, i.reportTypeError)(S)), O.endIf()) : _(S, wA), nA || O.if((0, s._)`${a.default.errors} === ${K || 0}`));
     }
   }
   function _(S, M) {
-    const { gen: v, schema: H, opts: { useDefaults: V } } = S;
-    V && (0, o.assignDefaults)(S, M.type), v.block(() => {
-      for (const $ of M.rules)
-        (0, e.shouldUseRule)(H, $) && P(S, $.keyword, $.definition, M.type);
+    const { gen: v, schema: K, opts: { useDefaults: O } } = S;
+    O && (0, o.assignDefaults)(S, M.type), v.block(() => {
+      for (const V of M.rules)
+        (0, e.shouldUseRule)(K, V) && z(S, V.keyword, V.definition, M.type);
     });
   }
-  function O(S, M) {
-    S.schemaEnv.meta || !S.opts.strictTypes || (Z(S, M), S.opts.allowUnionTypes || T(S, M), F(S, S.dataTypes));
+  function P(S, M) {
+    S.schemaEnv.meta || !S.opts.strictTypes || (Z(S, M), S.opts.allowUnionTypes || T(S, M), G(S, S.dataTypes));
   }
   function Z(S, M) {
     if (M.length) {
@@ -20844,17 +20942,17 @@ function Zt() {
   function T(S, M) {
     M.length > 1 && !(M.length === 2 && M.includes("null")) && N(S, "use allowUnionTypes to allow union type keyword");
   }
-  function F(S, M) {
+  function G(S, M) {
     const v = S.self.RULES.all;
-    for (const H in v) {
-      const V = v[H];
-      if (typeof V == "object" && (0, e.shouldUseRule)(S.schema, V)) {
-        const { type: $ } = V.definition;
-        $.length && !$.some((iA) => q(M, iA)) && N(S, `missing type "${$.join(",")}" for keyword "${H}"`);
+    for (const K in v) {
+      const O = v[K];
+      if (typeof O == "object" && (0, e.shouldUseRule)(S.schema, O)) {
+        const { type: V } = O.definition;
+        V.length && !V.some((X) => x(M, X)) && N(S, `missing type "${V.join(",")}" for keyword "${K}"`);
       }
     }
   }
-  function q(S, M) {
+  function x(S, M) {
     return S.includes(M) || M === "number" && S.includes("integer");
   }
   function R(S, M) {
@@ -20862,27 +20960,27 @@ function Zt() {
   }
   function D(S, M) {
     const v = [];
-    for (const H of S.dataTypes)
-      R(M, H) ? v.push(H) : M.includes("integer") && H === "number" && v.push("integer");
+    for (const K of S.dataTypes)
+      R(M, K) ? v.push(K) : M.includes("integer") && K === "number" && v.push("integer");
     S.dataTypes = v;
   }
   function N(S, M) {
     const v = S.schemaEnv.baseId + S.errSchemaPath;
     M += ` at "${v}" (strictTypes)`, (0, I.checkStrictMode)(S, M, S.opts.strictTypes);
   }
-  class Y {
-    constructor(M, v, H) {
-      if ((0, r.validateKeywordUsage)(M, v, H), this.gen = M.gen, this.allErrors = M.allErrors, this.keyword = H, this.data = M.data, this.schema = M.schema[H], this.$data = v.$data && M.opts.$data && this.schema && this.schema.$data, this.schemaValue = (0, I.schemaRefOrVal)(M, this.schema, H, this.$data), this.schemaType = v.schemaType, this.parentSchema = M.schema, this.params = {}, this.it = M, this.def = v, this.$data)
-        this.schemaCode = M.gen.const("vSchema", K(this.$data, M));
+  class H {
+    constructor(M, v, K) {
+      if ((0, r.validateKeywordUsage)(M, v, K), this.gen = M.gen, this.allErrors = M.allErrors, this.keyword = K, this.data = M.data, this.schema = M.schema[K], this.$data = v.$data && M.opts.$data && this.schema && this.schema.$data, this.schemaValue = (0, I.schemaRefOrVal)(M, this.schema, K, this.$data), this.schemaType = v.schemaType, this.parentSchema = M.schema, this.params = {}, this.it = M, this.def = v, this.$data)
+        this.schemaCode = M.gen.const("vSchema", U(this.$data, M));
       else if (this.schemaCode = this.schemaValue, !(0, r.validSchemaType)(this.schema, v.schemaType, v.allowUndefined))
-        throw new Error(`${H} value must be ${JSON.stringify(v.schemaType)}`);
+        throw new Error(`${K} value must be ${JSON.stringify(v.schemaType)}`);
       ("code" in v ? v.trackErrors : v.errors !== !1) && (this.errsCount = M.gen.const("_errs", a.default.errors));
     }
-    result(M, v, H) {
-      this.failResult((0, s.not)(M), v, H);
+    result(M, v, K) {
+      this.failResult((0, s.not)(M), v, K);
     }
-    failResult(M, v, H) {
-      this.gen.if(M), H ? H() : this.error(), v ? (this.gen.else(), v(), this.allErrors && this.gen.endIf()) : this.allErrors ? this.gen.endIf() : this.gen.else();
+    failResult(M, v, K) {
+      this.gen.if(M), K ? K() : this.error(), v ? (this.gen.else(), v(), this.allErrors && this.gen.endIf()) : this.allErrors ? this.gen.endIf() : this.gen.else();
     }
     pass(M, v) {
       this.failResult((0, s.not)(M), void 0, v);
@@ -20900,12 +20998,12 @@ function Zt() {
       const { schemaCode: v } = this;
       this.fail((0, s._)`${v} !== undefined && (${(0, s.or)(this.invalid$data(), M)})`);
     }
-    error(M, v, H) {
+    error(M, v, K) {
       if (v) {
-        this.setParams(v), this._error(M, H), this.setParams({});
+        this.setParams(v), this._error(M, K), this.setParams({});
         return;
       }
-      this._error(M, H);
+      this._error(M, K);
     }
     _error(M, v) {
       (M ? c.reportExtraError : c.reportError)(this, this.def.error, v);
@@ -20924,121 +21022,121 @@ function Zt() {
     setParams(M, v) {
       v ? Object.assign(this.params, M) : this.params = M;
     }
-    block$data(M, v, H = s.nil) {
+    block$data(M, v, K = s.nil) {
       this.gen.block(() => {
-        this.check$data(M, H), v();
+        this.check$data(M, K), v();
       });
     }
     check$data(M = s.nil, v = s.nil) {
       if (!this.$data)
         return;
-      const { gen: H, schemaCode: V, schemaType: $, def: iA } = this;
-      H.if((0, s.or)((0, s._)`${V} === undefined`, v)), M !== s.nil && H.assign(M, !0), ($.length || iA.validateSchema) && (H.elseIf(this.invalid$data()), this.$dataError(), M !== s.nil && H.assign(M, !1)), H.else();
+      const { gen: K, schemaCode: O, schemaType: V, def: X } = this;
+      K.if((0, s.or)((0, s._)`${O} === undefined`, v)), M !== s.nil && K.assign(M, !0), (V.length || X.validateSchema) && (K.elseIf(this.invalid$data()), this.$dataError(), M !== s.nil && K.assign(M, !1)), K.else();
     }
     invalid$data() {
-      const { gen: M, schemaCode: v, schemaType: H, def: V, it: $ } = this;
-      return (0, s.or)(iA(), sA());
-      function iA() {
-        if (H.length) {
+      const { gen: M, schemaCode: v, schemaType: K, def: O, it: V } = this;
+      return (0, s.or)(X(), nA());
+      function X() {
+        if (K.length) {
           if (!(v instanceof s.Name))
             throw new Error("ajv implementation error");
-          const aA = Array.isArray(H) ? H : [H];
-          return (0, s._)`${(0, i.checkDataTypes)(aA, v, $.opts.strictNumbers, i.DataType.Wrong)}`;
+          const IA = Array.isArray(K) ? K : [K];
+          return (0, s._)`${(0, i.checkDataTypes)(IA, v, V.opts.strictNumbers, i.DataType.Wrong)}`;
         }
         return s.nil;
       }
-      function sA() {
-        if (V.validateSchema) {
-          const aA = M.scopeValue("validate$data", { ref: V.validateSchema });
-          return (0, s._)`!${aA}(${v})`;
+      function nA() {
+        if (O.validateSchema) {
+          const IA = M.scopeValue("validate$data", { ref: O.validateSchema });
+          return (0, s._)`!${IA}(${v})`;
         }
         return s.nil;
       }
     }
     subschema(M, v) {
-      const H = (0, n.getSubschema)(this.it, M);
-      (0, n.extendSubschemaData)(H, this.it, M), (0, n.extendSubschemaMode)(H, M);
-      const V = { ...this.it, ...H, items: void 0, props: void 0 };
-      return h(V, v), V;
+      const K = (0, n.getSubschema)(this.it, M);
+      (0, n.extendSubschemaData)(K, this.it, M), (0, n.extendSubschemaMode)(K, M);
+      const O = { ...this.it, ...K, items: void 0, props: void 0 };
+      return h(O, v), O;
     }
     mergeEvaluated(M, v) {
-      const { it: H, gen: V } = this;
-      H.opts.unevaluated && (H.props !== !0 && M.props !== void 0 && (H.props = I.mergeEvaluated.props(V, M.props, H.props, v)), H.items !== !0 && M.items !== void 0 && (H.items = I.mergeEvaluated.items(V, M.items, H.items, v)));
+      const { it: K, gen: O } = this;
+      K.opts.unevaluated && (K.props !== !0 && M.props !== void 0 && (K.props = I.mergeEvaluated.props(O, M.props, K.props, v)), K.items !== !0 && M.items !== void 0 && (K.items = I.mergeEvaluated.items(O, M.items, K.items, v)));
     }
     mergeValidEvaluated(M, v) {
-      const { it: H, gen: V } = this;
-      if (H.opts.unevaluated && (H.props !== !0 || H.items !== !0))
-        return V.if(v, () => this.mergeEvaluated(M, s.Name)), !0;
+      const { it: K, gen: O } = this;
+      if (K.opts.unevaluated && (K.props !== !0 || K.items !== !0))
+        return O.if(v, () => this.mergeEvaluated(M, s.Name)), !0;
     }
   }
-  ie.KeywordCxt = Y;
-  function P(S, M, v, H) {
-    const V = new Y(S, v, M);
-    "code" in v ? v.code(V, H) : V.$data && v.validate ? (0, r.funcKeywordCode)(V, v) : "macro" in v ? (0, r.macroKeywordCode)(V, v) : (v.compile || v.validate) && (0, r.funcKeywordCode)(V, v);
+  re.KeywordCxt = H;
+  function z(S, M, v, K) {
+    const O = new H(S, v, M);
+    "code" in v ? v.code(O, K) : O.$data && v.validate ? (0, r.funcKeywordCode)(O, v) : "macro" in v ? (0, r.macroKeywordCode)(O, v) : (v.compile || v.validate) && (0, r.funcKeywordCode)(O, v);
   }
-  const G = /^\/(?:[^~]|~0|~1)*$/, L = /^([0-9]+)(#|\/(?:[^~]|~0|~1)*)?$/;
-  function K(S, { dataLevel: M, dataNames: v, dataPathArr: H }) {
-    let V, $;
+  const b = /^\/(?:[^~]|~0|~1)*$/, Y = /^([0-9]+)(#|\/(?:[^~]|~0|~1)*)?$/;
+  function U(S, { dataLevel: M, dataNames: v, dataPathArr: K }) {
+    let O, V;
     if (S === "")
       return a.default.rootData;
     if (S[0] === "/") {
-      if (!G.test(S))
+      if (!b.test(S))
         throw new Error(`Invalid JSON-pointer: ${S}`);
-      V = S, $ = a.default.rootData;
+      O = S, V = a.default.rootData;
     } else {
-      const QA = L.exec(S);
-      if (!QA)
+      const cA = Y.exec(S);
+      if (!cA)
         throw new Error(`Invalid JSON-pointer: ${S}`);
-      const uA = +QA[1];
-      if (V = QA[2], V === "#") {
-        if (uA >= M)
-          throw new Error(aA("property/index", uA));
-        return H[M - uA];
+      const lA = +cA[1];
+      if (O = cA[2], O === "#") {
+        if (lA >= M)
+          throw new Error(IA("property/index", lA));
+        return K[M - lA];
       }
-      if (uA > M)
-        throw new Error(aA("data", uA));
-      if ($ = v[M - uA], !V)
-        return $;
+      if (lA > M)
+        throw new Error(IA("data", lA));
+      if (V = v[M - lA], !O)
+        return V;
     }
-    let iA = $;
-    const sA = V.split("/");
-    for (const QA of sA)
-      QA && ($ = (0, s._)`${$}${(0, s.getProperty)((0, I.unescapeJsonPointer)(QA))}`, iA = (0, s._)`${iA} && ${$}`);
-    return iA;
-    function aA(QA, uA) {
-      return `Cannot access ${QA} ${uA} levels up, current level is ${M}`;
+    let X = V;
+    const nA = O.split("/");
+    for (const cA of nA)
+      cA && (V = (0, s._)`${V}${(0, s.getProperty)((0, I.unescapeJsonPointer)(cA))}`, X = (0, s._)`${X} && ${V}`);
+    return X;
+    function IA(cA, lA) {
+      return `Cannot access ${cA} ${lA} levels up, current level is ${M}`;
     }
   }
-  return ie.getData = K, ie;
+  return re.getData = U, re;
 }
-var Ii = {}, ia;
-function Uo() {
-  if (ia) return Ii;
-  ia = 1, Object.defineProperty(Ii, "__esModule", { value: !0 });
+var Ci = {}, ia;
+function qo() {
+  if (ia) return Ci;
+  ia = 1, Object.defineProperty(Ci, "__esModule", { value: !0 });
   class t extends Error {
     constructor(e) {
       super("validation failed"), this.errors = e, this.ajv = this.validation = !0;
     }
   }
-  return Ii.default = t, Ii;
+  return Ci.default = t, Ci;
 }
-var ci = {}, oa;
-function Xt() {
-  if (oa) return ci;
-  oa = 1, Object.defineProperty(ci, "__esModule", { value: !0 });
-  const t = Yo();
+var Bi = {}, oa;
+function ei() {
+  if (oa) return Bi;
+  oa = 1, Object.defineProperty(Bi, "__esModule", { value: !0 });
+  const t = Ho();
   class A extends Error {
     constructor(i, o, r, n) {
       super(n || `can't resolve reference ${r} from id ${o}`), this.missingRef = (0, t.resolveUrl)(i, o, r), this.missingSchema = (0, t.normalizeId)((0, t.getFullPath)(i, this.missingRef));
     }
   }
-  return ci.default = A, ci;
+  return Bi.default = A, Bi;
 }
-var KA = {}, ra;
-function Jo() {
-  if (ra) return KA;
-  ra = 1, Object.defineProperty(KA, "__esModule", { value: !0 }), KA.resolveSchema = KA.getCompilingSchema = KA.resolveRef = KA.compileSchema = KA.SchemaEnv = void 0;
-  const t = oA(), A = Uo(), e = WA(), i = Yo(), o = nA(), r = Zt();
+var UA = {}, ra;
+function xo() {
+  if (ra) return UA;
+  ra = 1, Object.defineProperty(UA, "__esModule", { value: !0 }), UA.resolveSchema = UA.getCompilingSchema = UA.resolveRef = UA.compileSchema = UA.SchemaEnv = void 0;
+  const t = oA(), A = qo(), e = zA(), i = Ho(), o = aA(), r = Ai();
   class n {
     constructor(u) {
       var d;
@@ -21047,7 +21145,7 @@ function Jo() {
       typeof u.schema == "object" && (h = u.schema), this.schema = u.schema, this.schemaId = u.schemaId, this.root = u.root || this, this.baseId = (d = u.baseId) !== null && d !== void 0 ? d : (0, i.normalizeId)(h?.[u.schemaId || "$id"]), this.schemaPath = u.schemaPath, this.localRefs = u.localRefs, this.meta = u.meta, this.$async = h?.$async, this.refs = {};
     }
   }
-  KA.SchemaEnv = n;
+  UA.SchemaEnv = n;
   function s(l) {
     const u = I.call(this, l);
     if (u)
@@ -21085,29 +21183,29 @@ function Jo() {
       opts: this.opts,
       self: this
     };
-    let b;
+    let F;
     try {
       this._compilations.add(l), (0, r.validateFunctionCode)(k), w.optimize(this.opts.code.optimize);
-      const x = w.toString();
-      b = `${w.scopeRefs(e.default.scope)}return ${x}`, this.opts.code.process && (b = this.opts.code.process(b, l));
-      const J = new Function(`${e.default.self}`, `${e.default.scope}`, b)(this, this.scope.get());
-      if (this.scope.value(m, { ref: J }), J.errors = null, J.schema = l.schema, J.schemaEnv = l, l.$async && (J.$async = !0), this.opts.code.source === !0 && (J.source = { validateName: m, validateCode: x, scopeValues: w._values }), this.opts.unevaluated) {
-        const { props: W, items: X } = k;
+      const L = w.toString();
+      F = `${w.scopeRefs(e.default.scope)}return ${L}`, this.opts.code.process && (F = this.opts.code.process(F, l));
+      const J = new Function(`${e.default.self}`, `${e.default.scope}`, F)(this, this.scope.get());
+      if (this.scope.value(m, { ref: J }), J.errors = null, J.schema = l.schema, J.schemaEnv = l, l.$async && (J.$async = !0), this.opts.code.source === !0 && (J.source = { validateName: m, validateCode: L, scopeValues: w._values }), this.opts.unevaluated) {
+        const { props: $, items: AA } = k;
         J.evaluated = {
-          props: W instanceof t.Name ? void 0 : W,
-          items: X instanceof t.Name ? void 0 : X,
-          dynamicProps: W instanceof t.Name,
-          dynamicItems: X instanceof t.Name
+          props: $ instanceof t.Name ? void 0 : $,
+          items: AA instanceof t.Name ? void 0 : AA,
+          dynamicProps: $ instanceof t.Name,
+          dynamicItems: AA instanceof t.Name
         }, J.source && (J.source.evaluated = (0, t.stringify)(J.evaluated));
       }
       return l.validate = J, l;
-    } catch (x) {
-      throw delete l.validate, delete l.validateName, b && this.logger.error("Error compiling schema, function code:", b), x;
+    } catch (L) {
+      throw delete l.validate, delete l.validateName, F && this.logger.error("Error compiling schema, function code:", F), L;
     } finally {
       this._compilations.delete(l);
     }
   }
-  KA.compileSchema = s;
+  UA.compileSchema = s;
   function a(l, u, d) {
     var h;
     d = (0, i.resolveUrl)(this.opts.uriResolver, u, d);
@@ -21122,7 +21220,7 @@ function Jo() {
     if (E !== void 0)
       return l.refs[d] = g.call(this, E);
   }
-  KA.resolveRef = a;
+  UA.resolveRef = a;
   function g(l) {
     return (0, i.inlineRef)(l.schema, this.opts.inlineRefs) ? l.schema : l.validate ? l : s.call(this, l);
   }
@@ -21131,7 +21229,7 @@ function Jo() {
       if (c(u, l))
         return u;
   }
-  KA.getCompilingSchema = I;
+  UA.getCompilingSchema = I;
   function c(l, u) {
     return l.schema === u.schema && l.root === u.root && l.baseId === u.baseId;
   }
@@ -21159,7 +21257,7 @@ function Jo() {
       return f.call(this, d, w);
     }
   }
-  KA.resolveSchema = B;
+  UA.resolveSchema = B;
   const Q = /* @__PURE__ */ new Set([
     "properties",
     "patternProperties",
@@ -21190,19 +21288,19 @@ function Jo() {
     if (E = E || new n({ schema: d, schemaId: w, root: h, baseId: u }), E.schema !== E.root.schema)
       return E;
   }
-  return KA;
+  return UA;
 }
-const im = "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#", om = "Meta-schema for $data reference (JSON AnySchema extension proposal)", rm = "object", nm = ["$data"], sm = { $data: { type: "string", anyOf: [{ format: "relative-json-pointer" }, { format: "json-pointer" }] } }, am = !1, gm = {
-  $id: im,
-  description: om,
-  type: rm,
-  required: nm,
-  properties: sm,
-  additionalProperties: am
+const km = "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#", Nm = "Meta-schema for $data reference (JSON AnySchema extension proposal)", Mm = "object", Gm = ["$data"], bm = { $data: { type: "string", anyOf: [{ format: "relative-json-pointer" }, { format: "json-pointer" }] } }, Fm = !1, Rm = {
+  $id: km,
+  description: Nm,
+  type: Mm,
+  required: Gm,
+  properties: bm,
+  additionalProperties: Fm
 };
-var Ci = {}, ft = { exports: {} }, dr, na;
+var Qi = {}, wt = { exports: {} }, ur, na;
 function zI() {
-  if (na) return dr;
+  if (na) return ur;
   na = 1;
   const t = RegExp.prototype.test.bind(/^[\da-f]{8}-[\da-f]{4}-[\da-f]{4}-[\da-f]{4}-[\da-f]{12}$/iu), A = RegExp.prototype.test.bind(/^(?:(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d{2}|[1-9]\d|\d)$/u);
   function e(C) {
@@ -21354,7 +21452,7 @@ function zI() {
     }
     return (typeof C.port == "number" || typeof C.port == "string") && (B.push(":"), B.push(String(C.port))), B.length ? B.join("") : void 0;
   }
-  return dr = {
+  return ur = {
     nonSimpleDomain: i,
     recomposeAuthority: c,
     normalizeComponentEncoding: I,
@@ -21363,11 +21461,11 @@ function zI() {
     isUUID: t,
     normalizeIPv6: s,
     stringArrayToHexStripped: e
-  }, dr;
+  }, ur;
 }
-var ur, sa;
-function Im() {
-  if (sa) return ur;
+var hr, sa;
+function vm() {
+  if (sa) return hr;
   sa = 1;
   const { isUUID: t } = zI(), A = /([\da-z][\d\-a-z]{0,31}):((?:[\w!$'()*+,\-.:;=@]|%[\da-f]{2})+)/iu, e = (
     /** @type {const} */
@@ -21413,8 +21511,8 @@ function Im() {
     if (y) {
       const m = w.scheme || E.scheme || "urn";
       E.nid = y[1].toLowerCase(), E.nss = y[2];
-      const k = `${m}:${w.nid || E.nid}`, b = p(k);
-      E.path = void 0, b && (E = b.parse(E, w));
+      const k = `${m}:${w.nid || E.nid}`, F = p(k);
+      E.path = void 0, F && (E = F.parse(E, w));
     } else
       E.error = E.error || "URN can not be parsed.";
     return E;
@@ -21422,10 +21520,10 @@ function Im() {
   function I(E, w) {
     if (E.nid === void 0)
       throw new Error("URN without nid cannot be serialized");
-    const y = w.scheme || E.scheme || "urn", m = E.nid.toLowerCase(), k = `${y}:${w.nid || m}`, b = p(k);
-    b && (E = b.serialize(E, w));
-    const x = E, j = E.nss;
-    return x.path = `${m || w.nid}:${j}`, w.skipEscape = !0, x;
+    const y = w.scheme || E.scheme || "urn", m = E.nid.toLowerCase(), k = `${y}:${w.nid || m}`, F = p(k);
+    F && (E = F.serialize(E, w));
+    const L = E, j = E.nss;
+    return L.path = `${m || w.nid}:${j}`, w.skipEscape = !0, L;
   }
   function c(E, w) {
     const y = E;
@@ -21504,18 +21602,18 @@ function Im() {
       E.toLowerCase()
     ]) || void 0;
   }
-  return ur = {
+  return hr = {
     wsIsSecure: o,
     SCHEMES: h,
     isValidSchemeName: i,
     getSchemeHandler: p
-  }, ur;
+  }, hr;
 }
 var aa;
-function cm() {
-  if (aa) return ft.exports;
+function Km() {
+  if (aa) return wt.exports;
   aa = 1;
-  const { normalizeIPv6: t, removeDotSegments: A, recomposeAuthority: e, normalizeComponentEncoding: i, isIPv4: o, nonSimpleDomain: r } = zI(), { SCHEMES: n, getSchemeHandler: s } = Im();
+  const { normalizeIPv6: t, removeDotSegments: A, recomposeAuthority: e, normalizeComponentEncoding: i, isIPv4: o, nonSimpleDomain: r } = zI(), { SCHEMES: n, getSchemeHandler: s } = vm();
   function a(l, u) {
     return typeof l == "string" ? l = /** @type {T} */
     C(Q(l, u), u) : typeof l == "object" && (l = /** @type {T} */
@@ -21600,20 +21698,20 @@ function cm() {
     serialize: C,
     parse: Q
   };
-  return ft.exports = f, ft.exports.default = f, ft.exports.fastUri = f, ft.exports;
+  return wt.exports = f, wt.exports.default = f, wt.exports.fastUri = f, wt.exports;
 }
 var ga;
-function Cm() {
-  if (ga) return Ci;
-  ga = 1, Object.defineProperty(Ci, "__esModule", { value: !0 });
-  const t = cm();
-  return t.code = 'require("ajv/dist/runtime/uri").default', Ci.default = t, Ci;
+function Ym() {
+  if (ga) return Qi;
+  ga = 1, Object.defineProperty(Qi, "__esModule", { value: !0 });
+  const t = Km();
+  return t.code = 'require("ajv/dist/runtime/uri").default', Qi.default = t, Qi;
 }
 var Ia;
 function _I() {
   return Ia || (Ia = 1, (function(t) {
     Object.defineProperty(t, "__esModule", { value: !0 }), t.CodeGen = t.Name = t.nil = t.stringify = t.str = t._ = t.KeywordCxt = void 0;
-    var A = Zt();
+    var A = Ai();
     Object.defineProperty(t, "KeywordCxt", { enumerable: !0, get: function() {
       return A.KeywordCxt;
     } });
@@ -21631,7 +21729,7 @@ function _I() {
     } }), Object.defineProperty(t, "CodeGen", { enumerable: !0, get: function() {
       return e.CodeGen;
     } });
-    const i = Uo(), o = Xt(), r = VI(), n = Jo(), s = oA(), a = Yo(), g = uo(), I = nA(), c = gm, C = Cm(), B = (T, F) => new RegExp(T, F);
+    const i = qo(), o = ei(), r = VI(), n = xo(), s = oA(), a = Ho(), g = po(), I = aA(), c = Rm, C = Ym(), B = (T, G) => new RegExp(T, G);
     B.code = "new RegExp";
     const Q = ["removeAdditional", "useDefaults", "coerceTypes"], f = /* @__PURE__ */ new Set([
       "validate",
@@ -21669,135 +21767,135 @@ function _I() {
       unicode: '"minLength"/"maxLength" account for unicode characters by default.'
     }, d = 200;
     function h(T) {
-      var F, q, R, D, N, Y, P, G, L, K, S, M, v, H, V, $, iA, sA, aA, QA, uA, ce, HA, Ho, qo;
-      const It = T.strict, xo = (F = T.code) === null || F === void 0 ? void 0 : F.optimize, _n = xo === !0 || xo === void 0 ? 1 : xo || 0, Zn = (R = (q = T.code) === null || q === void 0 ? void 0 : q.regExp) !== null && R !== void 0 ? R : B, cc = (D = T.uriResolver) !== null && D !== void 0 ? D : C.default;
+      var G, x, R, D, N, H, z, b, Y, U, S, M, v, K, O, V, X, nA, IA, cA, lA, yA, wA, oe, Ct;
+      const he = T.strict, Lo = (G = T.code) === null || G === void 0 ? void 0 : G.optimize, _n = Lo === !0 || Lo === void 0 ? 1 : Lo || 0, Zn = (R = (x = T.code) === null || x === void 0 ? void 0 : x.regExp) !== null && R !== void 0 ? R : B, cc = (D = T.uriResolver) !== null && D !== void 0 ? D : C.default;
       return {
-        strictSchema: (Y = (N = T.strictSchema) !== null && N !== void 0 ? N : It) !== null && Y !== void 0 ? Y : !0,
-        strictNumbers: (G = (P = T.strictNumbers) !== null && P !== void 0 ? P : It) !== null && G !== void 0 ? G : !0,
-        strictTypes: (K = (L = T.strictTypes) !== null && L !== void 0 ? L : It) !== null && K !== void 0 ? K : "log",
-        strictTuples: (M = (S = T.strictTuples) !== null && S !== void 0 ? S : It) !== null && M !== void 0 ? M : "log",
-        strictRequired: (H = (v = T.strictRequired) !== null && v !== void 0 ? v : It) !== null && H !== void 0 ? H : !1,
+        strictSchema: (H = (N = T.strictSchema) !== null && N !== void 0 ? N : he) !== null && H !== void 0 ? H : !0,
+        strictNumbers: (b = (z = T.strictNumbers) !== null && z !== void 0 ? z : he) !== null && b !== void 0 ? b : !0,
+        strictTypes: (U = (Y = T.strictTypes) !== null && Y !== void 0 ? Y : he) !== null && U !== void 0 ? U : "log",
+        strictTuples: (M = (S = T.strictTuples) !== null && S !== void 0 ? S : he) !== null && M !== void 0 ? M : "log",
+        strictRequired: (K = (v = T.strictRequired) !== null && v !== void 0 ? v : he) !== null && K !== void 0 ? K : !1,
         code: T.code ? { ...T.code, optimize: _n, regExp: Zn } : { optimize: _n, regExp: Zn },
-        loopRequired: (V = T.loopRequired) !== null && V !== void 0 ? V : d,
-        loopEnum: ($ = T.loopEnum) !== null && $ !== void 0 ? $ : d,
-        meta: (iA = T.meta) !== null && iA !== void 0 ? iA : !0,
-        messages: (sA = T.messages) !== null && sA !== void 0 ? sA : !0,
-        inlineRefs: (aA = T.inlineRefs) !== null && aA !== void 0 ? aA : !0,
-        schemaId: (QA = T.schemaId) !== null && QA !== void 0 ? QA : "$id",
-        addUsedSchema: (uA = T.addUsedSchema) !== null && uA !== void 0 ? uA : !0,
-        validateSchema: (ce = T.validateSchema) !== null && ce !== void 0 ? ce : !0,
-        validateFormats: (HA = T.validateFormats) !== null && HA !== void 0 ? HA : !0,
-        unicodeRegExp: (Ho = T.unicodeRegExp) !== null && Ho !== void 0 ? Ho : !0,
-        int32range: (qo = T.int32range) !== null && qo !== void 0 ? qo : !0,
+        loopRequired: (O = T.loopRequired) !== null && O !== void 0 ? O : d,
+        loopEnum: (V = T.loopEnum) !== null && V !== void 0 ? V : d,
+        meta: (X = T.meta) !== null && X !== void 0 ? X : !0,
+        messages: (nA = T.messages) !== null && nA !== void 0 ? nA : !0,
+        inlineRefs: (IA = T.inlineRefs) !== null && IA !== void 0 ? IA : !0,
+        schemaId: (cA = T.schemaId) !== null && cA !== void 0 ? cA : "$id",
+        addUsedSchema: (lA = T.addUsedSchema) !== null && lA !== void 0 ? lA : !0,
+        validateSchema: (yA = T.validateSchema) !== null && yA !== void 0 ? yA : !0,
+        validateFormats: (wA = T.validateFormats) !== null && wA !== void 0 ? wA : !0,
+        unicodeRegExp: (oe = T.unicodeRegExp) !== null && oe !== void 0 ? oe : !0,
+        int32range: (Ct = T.int32range) !== null && Ct !== void 0 ? Ct : !0,
         uriResolver: cc
       };
     }
     class p {
-      constructor(F = {}) {
-        this.schemas = {}, this.refs = {}, this.formats = {}, this._compilations = /* @__PURE__ */ new Set(), this._loading = {}, this._cache = /* @__PURE__ */ new Map(), F = this.opts = { ...F, ...h(F) };
-        const { es5: q, lines: R } = this.opts.code;
-        this.scope = new s.ValueScope({ scope: {}, prefixes: f, es5: q, lines: R }), this.logger = j(F.logger);
-        const D = F.validateFormats;
-        F.validateFormats = !1, this.RULES = (0, r.getRules)(), E.call(this, l, F, "NOT SUPPORTED"), E.call(this, u, F, "DEPRECATED", "warn"), this._metaOpts = b.call(this), F.formats && m.call(this), this._addVocabularies(), this._addDefaultMetaSchema(), F.keywords && k.call(this, F.keywords), typeof F.meta == "object" && this.addMetaSchema(F.meta), y.call(this), F.validateFormats = D;
+      constructor(G = {}) {
+        this.schemas = {}, this.refs = {}, this.formats = {}, this._compilations = /* @__PURE__ */ new Set(), this._loading = {}, this._cache = /* @__PURE__ */ new Map(), G = this.opts = { ...G, ...h(G) };
+        const { es5: x, lines: R } = this.opts.code;
+        this.scope = new s.ValueScope({ scope: {}, prefixes: f, es5: x, lines: R }), this.logger = j(G.logger);
+        const D = G.validateFormats;
+        G.validateFormats = !1, this.RULES = (0, r.getRules)(), E.call(this, l, G, "NOT SUPPORTED"), E.call(this, u, G, "DEPRECATED", "warn"), this._metaOpts = F.call(this), G.formats && m.call(this), this._addVocabularies(), this._addDefaultMetaSchema(), G.keywords && k.call(this, G.keywords), typeof G.meta == "object" && this.addMetaSchema(G.meta), y.call(this), G.validateFormats = D;
       }
       _addVocabularies() {
         this.addKeyword("$async");
       }
       _addDefaultMetaSchema() {
-        const { $data: F, meta: q, schemaId: R } = this.opts;
+        const { $data: G, meta: x, schemaId: R } = this.opts;
         let D = c;
-        R === "id" && (D = { ...c }, D.id = D.$id, delete D.$id), q && F && this.addMetaSchema(D, D[R], !1);
+        R === "id" && (D = { ...c }, D.id = D.$id, delete D.$id), x && G && this.addMetaSchema(D, D[R], !1);
       }
       defaultMeta() {
-        const { meta: F, schemaId: q } = this.opts;
-        return this.opts.defaultMeta = typeof F == "object" ? F[q] || F : void 0;
+        const { meta: G, schemaId: x } = this.opts;
+        return this.opts.defaultMeta = typeof G == "object" ? G[x] || G : void 0;
       }
-      validate(F, q) {
+      validate(G, x) {
         let R;
-        if (typeof F == "string") {
-          if (R = this.getSchema(F), !R)
-            throw new Error(`no schema with key or ref "${F}"`);
+        if (typeof G == "string") {
+          if (R = this.getSchema(G), !R)
+            throw new Error(`no schema with key or ref "${G}"`);
         } else
-          R = this.compile(F);
-        const D = R(q);
+          R = this.compile(G);
+        const D = R(x);
         return "$async" in R || (this.errors = R.errors), D;
       }
-      compile(F, q) {
-        const R = this._addSchema(F, q);
+      compile(G, x) {
+        const R = this._addSchema(G, x);
         return R.validate || this._compileSchemaEnv(R);
       }
-      compileAsync(F, q) {
+      compileAsync(G, x) {
         if (typeof this.opts.loadSchema != "function")
           throw new Error("options.loadSchema should be a function");
         const { loadSchema: R } = this.opts;
-        return D.call(this, F, q);
-        async function D(K, S) {
-          await N.call(this, K.$schema);
-          const M = this._addSchema(K, S);
-          return M.validate || Y.call(this, M);
+        return D.call(this, G, x);
+        async function D(U, S) {
+          await N.call(this, U.$schema);
+          const M = this._addSchema(U, S);
+          return M.validate || H.call(this, M);
         }
-        async function N(K) {
-          K && !this.getSchema(K) && await D.call(this, { $ref: K }, !0);
+        async function N(U) {
+          U && !this.getSchema(U) && await D.call(this, { $ref: U }, !0);
         }
-        async function Y(K) {
+        async function H(U) {
           try {
-            return this._compileSchemaEnv(K);
+            return this._compileSchemaEnv(U);
           } catch (S) {
             if (!(S instanceof o.default))
               throw S;
-            return P.call(this, S), await G.call(this, S.missingSchema), Y.call(this, K);
+            return z.call(this, S), await b.call(this, S.missingSchema), H.call(this, U);
           }
         }
-        function P({ missingSchema: K, missingRef: S }) {
-          if (this.refs[K])
-            throw new Error(`AnySchema ${K} is loaded but ${S} cannot be resolved`);
+        function z({ missingSchema: U, missingRef: S }) {
+          if (this.refs[U])
+            throw new Error(`AnySchema ${U} is loaded but ${S} cannot be resolved`);
         }
-        async function G(K) {
-          const S = await L.call(this, K);
-          this.refs[K] || await N.call(this, S.$schema), this.refs[K] || this.addSchema(S, K, q);
+        async function b(U) {
+          const S = await Y.call(this, U);
+          this.refs[U] || await N.call(this, S.$schema), this.refs[U] || this.addSchema(S, U, x);
         }
-        async function L(K) {
-          const S = this._loading[K];
+        async function Y(U) {
+          const S = this._loading[U];
           if (S)
             return S;
           try {
-            return await (this._loading[K] = R(K));
+            return await (this._loading[U] = R(U));
           } finally {
-            delete this._loading[K];
+            delete this._loading[U];
           }
         }
       }
       // Adds schema to the instance
-      addSchema(F, q, R, D = this.opts.validateSchema) {
-        if (Array.isArray(F)) {
-          for (const Y of F)
-            this.addSchema(Y, void 0, R, D);
+      addSchema(G, x, R, D = this.opts.validateSchema) {
+        if (Array.isArray(G)) {
+          for (const H of G)
+            this.addSchema(H, void 0, R, D);
           return this;
         }
         let N;
-        if (typeof F == "object") {
-          const { schemaId: Y } = this.opts;
-          if (N = F[Y], N !== void 0 && typeof N != "string")
-            throw new Error(`schema ${Y} must be string`);
+        if (typeof G == "object") {
+          const { schemaId: H } = this.opts;
+          if (N = G[H], N !== void 0 && typeof N != "string")
+            throw new Error(`schema ${H} must be string`);
         }
-        return q = (0, a.normalizeId)(q || N), this._checkUnique(q), this.schemas[q] = this._addSchema(F, R, q, D, !0), this;
+        return x = (0, a.normalizeId)(x || N), this._checkUnique(x), this.schemas[x] = this._addSchema(G, R, x, D, !0), this;
       }
       // Add schema that will be used to validate other schemas
       // options in META_IGNORE_OPTIONS are alway set to false
-      addMetaSchema(F, q, R = this.opts.validateSchema) {
-        return this.addSchema(F, q, !0, R), this;
+      addMetaSchema(G, x, R = this.opts.validateSchema) {
+        return this.addSchema(G, x, !0, R), this;
       }
       //  Validate schema against its meta-schema
-      validateSchema(F, q) {
-        if (typeof F == "boolean")
+      validateSchema(G, x) {
+        if (typeof G == "boolean")
           return !0;
         let R;
-        if (R = F.$schema, R !== void 0 && typeof R != "string")
+        if (R = G.$schema, R !== void 0 && typeof R != "string")
           throw new Error("$schema must be a string");
         if (R = R || this.opts.defaultMeta || this.defaultMeta(), !R)
           return this.logger.warn("meta-schema not available"), this.errors = null, !0;
-        const D = this.validate(R, F);
-        if (!D && q) {
+        const D = this.validate(R, G);
+        if (!D && x) {
           const N = "schema is invalid: " + this.errorsText();
           if (this.opts.validateSchema === "log")
             this.logger.error(N);
@@ -21808,36 +21906,36 @@ function _I() {
       }
       // Get compiled schema by `key` or `ref`.
       // (`key` that was passed to `addSchema` or full schema reference - `schema.$id` or resolved id)
-      getSchema(F) {
-        let q;
-        for (; typeof (q = w.call(this, F)) == "string"; )
-          F = q;
-        if (q === void 0) {
+      getSchema(G) {
+        let x;
+        for (; typeof (x = w.call(this, G)) == "string"; )
+          G = x;
+        if (x === void 0) {
           const { schemaId: R } = this.opts, D = new n.SchemaEnv({ schema: {}, schemaId: R });
-          if (q = n.resolveSchema.call(this, D, F), !q)
+          if (x = n.resolveSchema.call(this, D, G), !x)
             return;
-          this.refs[F] = q;
+          this.refs[G] = x;
         }
-        return q.validate || this._compileSchemaEnv(q);
+        return x.validate || this._compileSchemaEnv(x);
       }
       // Remove cached schema(s).
       // If no parameter is passed all schemas but meta-schemas are removed.
       // If RegExp is passed all schemas with key/id matching pattern but meta-schemas are removed.
       // Even if schema is referenced by other schemas it still can be removed as other schemas have local references.
-      removeSchema(F) {
-        if (F instanceof RegExp)
-          return this._removeAllSchemas(this.schemas, F), this._removeAllSchemas(this.refs, F), this;
-        switch (typeof F) {
+      removeSchema(G) {
+        if (G instanceof RegExp)
+          return this._removeAllSchemas(this.schemas, G), this._removeAllSchemas(this.refs, G), this;
+        switch (typeof G) {
           case "undefined":
             return this._removeAllSchemas(this.schemas), this._removeAllSchemas(this.refs), this._cache.clear(), this;
           case "string": {
-            const q = w.call(this, F);
-            return typeof q == "object" && this._cache.delete(q.schema), delete this.schemas[F], delete this.refs[F], this;
+            const x = w.call(this, G);
+            return typeof x == "object" && this._cache.delete(x.schema), delete this.schemas[G], delete this.refs[G], this;
           }
           case "object": {
-            const q = F;
-            this._cache.delete(q);
-            let R = F[this.opts.schemaId];
+            const x = G;
+            this._cache.delete(x);
+            let R = G[this.opts.schemaId];
             return R && (R = (0, a.normalizeId)(R), delete this.schemas[R], delete this.refs[R]), this;
           }
           default:
@@ -21845,117 +21943,117 @@ function _I() {
         }
       }
       // add "vocabulary" - a collection of keywords
-      addVocabulary(F) {
-        for (const q of F)
-          this.addKeyword(q);
+      addVocabulary(G) {
+        for (const x of G)
+          this.addKeyword(x);
         return this;
       }
-      addKeyword(F, q) {
+      addKeyword(G, x) {
         let R;
-        if (typeof F == "string")
-          R = F, typeof q == "object" && (this.logger.warn("these parameters are deprecated, see docs for addKeyword"), q.keyword = R);
-        else if (typeof F == "object" && q === void 0) {
-          if (q = F, R = q.keyword, Array.isArray(R) && !R.length)
+        if (typeof G == "string")
+          R = G, typeof x == "object" && (this.logger.warn("these parameters are deprecated, see docs for addKeyword"), x.keyword = R);
+        else if (typeof G == "object" && x === void 0) {
+          if (x = G, R = x.keyword, Array.isArray(R) && !R.length)
             throw new Error("addKeywords: keyword must be string or non-empty array");
         } else
           throw new Error("invalid addKeywords parameters");
-        if (W.call(this, R, q), !q)
-          return (0, I.eachItem)(R, (N) => X.call(this, N)), this;
-        _.call(this, q);
+        if ($.call(this, R, x), !x)
+          return (0, I.eachItem)(R, (N) => AA.call(this, N)), this;
+        _.call(this, x);
         const D = {
-          ...q,
-          type: (0, g.getJSONTypes)(q.type),
-          schemaType: (0, g.getJSONTypes)(q.schemaType)
+          ...x,
+          type: (0, g.getJSONTypes)(x.type),
+          schemaType: (0, g.getJSONTypes)(x.schemaType)
         };
-        return (0, I.eachItem)(R, D.type.length === 0 ? (N) => X.call(this, N, D) : (N) => D.type.forEach((Y) => X.call(this, N, D, Y))), this;
+        return (0, I.eachItem)(R, D.type.length === 0 ? (N) => AA.call(this, N, D) : (N) => D.type.forEach((H) => AA.call(this, N, D, H))), this;
       }
-      getKeyword(F) {
-        const q = this.RULES.all[F];
-        return typeof q == "object" ? q.definition : !!q;
+      getKeyword(G) {
+        const x = this.RULES.all[G];
+        return typeof x == "object" ? x.definition : !!x;
       }
       // Remove keyword
-      removeKeyword(F) {
-        const { RULES: q } = this;
-        delete q.keywords[F], delete q.all[F];
-        for (const R of q.rules) {
-          const D = R.rules.findIndex((N) => N.keyword === F);
+      removeKeyword(G) {
+        const { RULES: x } = this;
+        delete x.keywords[G], delete x.all[G];
+        for (const R of x.rules) {
+          const D = R.rules.findIndex((N) => N.keyword === G);
           D >= 0 && R.rules.splice(D, 1);
         }
         return this;
       }
       // Add format
-      addFormat(F, q) {
-        return typeof q == "string" && (q = new RegExp(q)), this.formats[F] = q, this;
+      addFormat(G, x) {
+        return typeof x == "string" && (x = new RegExp(x)), this.formats[G] = x, this;
       }
-      errorsText(F = this.errors, { separator: q = ", ", dataVar: R = "data" } = {}) {
-        return !F || F.length === 0 ? "No errors" : F.map((D) => `${R}${D.instancePath} ${D.message}`).reduce((D, N) => D + q + N);
+      errorsText(G = this.errors, { separator: x = ", ", dataVar: R = "data" } = {}) {
+        return !G || G.length === 0 ? "No errors" : G.map((D) => `${R}${D.instancePath} ${D.message}`).reduce((D, N) => D + x + N);
       }
-      $dataMetaSchema(F, q) {
+      $dataMetaSchema(G, x) {
         const R = this.RULES.all;
-        F = JSON.parse(JSON.stringify(F));
-        for (const D of q) {
+        G = JSON.parse(JSON.stringify(G));
+        for (const D of x) {
           const N = D.split("/").slice(1);
-          let Y = F;
-          for (const P of N)
-            Y = Y[P];
-          for (const P in R) {
-            const G = R[P];
-            if (typeof G != "object")
+          let H = G;
+          for (const z of N)
+            H = H[z];
+          for (const z in R) {
+            const b = R[z];
+            if (typeof b != "object")
               continue;
-            const { $data: L } = G.definition, K = Y[P];
-            L && K && (Y[P] = Z(K));
+            const { $data: Y } = b.definition, U = H[z];
+            Y && U && (H[z] = Z(U));
           }
         }
-        return F;
+        return G;
       }
-      _removeAllSchemas(F, q) {
-        for (const R in F) {
-          const D = F[R];
-          (!q || q.test(R)) && (typeof D == "string" ? delete F[R] : D && !D.meta && (this._cache.delete(D.schema), delete F[R]));
+      _removeAllSchemas(G, x) {
+        for (const R in G) {
+          const D = G[R];
+          (!x || x.test(R)) && (typeof D == "string" ? delete G[R] : D && !D.meta && (this._cache.delete(D.schema), delete G[R]));
         }
       }
-      _addSchema(F, q, R, D = this.opts.validateSchema, N = this.opts.addUsedSchema) {
-        let Y;
-        const { schemaId: P } = this.opts;
-        if (typeof F == "object")
-          Y = F[P];
+      _addSchema(G, x, R, D = this.opts.validateSchema, N = this.opts.addUsedSchema) {
+        let H;
+        const { schemaId: z } = this.opts;
+        if (typeof G == "object")
+          H = G[z];
         else {
           if (this.opts.jtd)
             throw new Error("schema must be object");
-          if (typeof F != "boolean")
+          if (typeof G != "boolean")
             throw new Error("schema must be object or boolean");
         }
-        let G = this._cache.get(F);
-        if (G !== void 0)
-          return G;
-        R = (0, a.normalizeId)(Y || R);
-        const L = a.getSchemaRefs.call(this, F, R);
-        return G = new n.SchemaEnv({ schema: F, schemaId: P, meta: q, baseId: R, localRefs: L }), this._cache.set(G.schema, G), N && !R.startsWith("#") && (R && this._checkUnique(R), this.refs[R] = G), D && this.validateSchema(F, !0), G;
+        let b = this._cache.get(G);
+        if (b !== void 0)
+          return b;
+        R = (0, a.normalizeId)(H || R);
+        const Y = a.getSchemaRefs.call(this, G, R);
+        return b = new n.SchemaEnv({ schema: G, schemaId: z, meta: x, baseId: R, localRefs: Y }), this._cache.set(b.schema, b), N && !R.startsWith("#") && (R && this._checkUnique(R), this.refs[R] = b), D && this.validateSchema(G, !0), b;
       }
-      _checkUnique(F) {
-        if (this.schemas[F] || this.refs[F])
-          throw new Error(`schema with key or id "${F}" already exists`);
+      _checkUnique(G) {
+        if (this.schemas[G] || this.refs[G])
+          throw new Error(`schema with key or id "${G}" already exists`);
       }
-      _compileSchemaEnv(F) {
-        if (F.meta ? this._compileMetaSchema(F) : n.compileSchema.call(this, F), !F.validate)
+      _compileSchemaEnv(G) {
+        if (G.meta ? this._compileMetaSchema(G) : n.compileSchema.call(this, G), !G.validate)
           throw new Error("ajv implementation error");
-        return F.validate;
+        return G.validate;
       }
-      _compileMetaSchema(F) {
-        const q = this.opts;
+      _compileMetaSchema(G) {
+        const x = this.opts;
         this.opts = this._metaOpts;
         try {
-          n.compileSchema.call(this, F);
+          n.compileSchema.call(this, G);
         } finally {
-          this.opts = q;
+          this.opts = x;
         }
       }
     }
     p.ValidationError = i.default, p.MissingRefError = o.default, t.default = p;
-    function E(T, F, q, R = "error") {
+    function E(T, G, x, R = "error") {
       for (const D in T) {
         const N = D;
-        N in F && this.logger[R](`${q}: option ${D}. ${T[N]}`);
+        N in G && this.logger[R](`${x}: option ${D}. ${T[N]}`);
       }
     }
     function w(T) {
@@ -21967,13 +22065,13 @@ function _I() {
         if (Array.isArray(T))
           this.addSchema(T);
         else
-          for (const F in T)
-            this.addSchema(T[F], F);
+          for (const G in T)
+            this.addSchema(T[G], G);
     }
     function m() {
       for (const T in this.opts.formats) {
-        const F = this.opts.formats[T];
-        F && this.addFormat(T, F);
+        const G = this.opts.formats[T];
+        G && this.addFormat(T, G);
       }
     }
     function k(T) {
@@ -21982,24 +22080,24 @@ function _I() {
         return;
       }
       this.logger.warn("keywords option as map is deprecated, pass array");
-      for (const F in T) {
-        const q = T[F];
-        q.keyword || (q.keyword = F), this.addKeyword(q);
+      for (const G in T) {
+        const x = T[G];
+        x.keyword || (x.keyword = G), this.addKeyword(x);
       }
     }
-    function b() {
+    function F() {
       const T = { ...this.opts };
-      for (const F of Q)
-        delete T[F];
+      for (const G of Q)
+        delete T[G];
       return T;
     }
-    const x = { log() {
+    const L = { log() {
     }, warn() {
     }, error() {
     } };
     function j(T) {
       if (T === !1)
-        return x;
+        return L;
       if (T === void 0)
         return console;
       if (T.log && T.warn && T.error)
@@ -22007,68 +22105,68 @@ function _I() {
       throw new Error("logger must implement log, warn and error methods");
     }
     const J = /^[a-z_$][a-z0-9_$:-]*$/i;
-    function W(T, F) {
-      const { RULES: q } = this;
+    function $(T, G) {
+      const { RULES: x } = this;
       if ((0, I.eachItem)(T, (R) => {
-        if (q.keywords[R])
+        if (x.keywords[R])
           throw new Error(`Keyword ${R} is already defined`);
         if (!J.test(R))
           throw new Error(`Keyword ${R} has invalid name`);
-      }), !!F && F.$data && !("code" in F || "validate" in F))
+      }), !!G && G.$data && !("code" in G || "validate" in G))
         throw new Error('$data keyword must have "code" or "validate" function');
     }
-    function X(T, F, q) {
+    function AA(T, G, x) {
       var R;
-      const D = F?.post;
-      if (q && D)
+      const D = G?.post;
+      if (x && D)
         throw new Error('keyword with "post" flag cannot have "type"');
       const { RULES: N } = this;
-      let Y = D ? N.post : N.rules.find(({ type: G }) => G === q);
-      if (Y || (Y = { type: q, rules: [] }, N.rules.push(Y)), N.keywords[T] = !0, !F)
+      let H = D ? N.post : N.rules.find(({ type: b }) => b === x);
+      if (H || (H = { type: x, rules: [] }, N.rules.push(H)), N.keywords[T] = !0, !G)
         return;
-      const P = {
+      const z = {
         keyword: T,
         definition: {
-          ...F,
-          type: (0, g.getJSONTypes)(F.type),
-          schemaType: (0, g.getJSONTypes)(F.schemaType)
+          ...G,
+          type: (0, g.getJSONTypes)(G.type),
+          schemaType: (0, g.getJSONTypes)(G.schemaType)
         }
       };
-      F.before ? z.call(this, Y, P, F.before) : Y.rules.push(P), N.all[T] = P, (R = F.implements) === null || R === void 0 || R.forEach((G) => this.addKeyword(G));
+      G.before ? W.call(this, H, z, G.before) : H.rules.push(z), N.all[T] = z, (R = G.implements) === null || R === void 0 || R.forEach((b) => this.addKeyword(b));
     }
-    function z(T, F, q) {
-      const R = T.rules.findIndex((D) => D.keyword === q);
-      R >= 0 ? T.rules.splice(R, 0, F) : (T.rules.push(F), this.logger.warn(`rule ${q} is not defined`));
+    function W(T, G, x) {
+      const R = T.rules.findIndex((D) => D.keyword === x);
+      R >= 0 ? T.rules.splice(R, 0, G) : (T.rules.push(G), this.logger.warn(`rule ${x} is not defined`));
     }
     function _(T) {
-      let { metaSchema: F } = T;
-      F !== void 0 && (T.$data && this.opts.$data && (F = Z(F)), T.validateSchema = this.compile(F, !0));
+      let { metaSchema: G } = T;
+      G !== void 0 && (T.$data && this.opts.$data && (G = Z(G)), T.validateSchema = this.compile(G, !0));
     }
-    const O = {
+    const P = {
       $ref: "https://raw.githubusercontent.com/ajv-validator/ajv/master/lib/refs/data.json#"
     };
     function Z(T) {
-      return { anyOf: [T, O] };
+      return { anyOf: [T, P] };
     }
-  })(Ir)), Ir;
+  })(cr)), cr;
 }
-var Bi = {}, Qi = {}, Ei = {}, ca;
-function Bm() {
-  if (ca) return Ei;
-  ca = 1, Object.defineProperty(Ei, "__esModule", { value: !0 });
+var Ei = {}, li = {}, di = {}, ca;
+function Um() {
+  if (ca) return di;
+  ca = 1, Object.defineProperty(di, "__esModule", { value: !0 });
   const t = {
     keyword: "id",
     code() {
       throw new Error('NOT SUPPORTED: keyword "id", use "$id" for schema ID');
     }
   };
-  return Ei.default = t, Ei;
+  return di.default = t, di;
 }
-var Ce = {}, Ca;
+var Be = {}, Ca;
 function $n() {
-  if (Ca) return Ce;
-  Ca = 1, Object.defineProperty(Ce, "__esModule", { value: !0 }), Ce.callRef = Ce.getValidate = void 0;
-  const t = Xt(), A = zA(), e = oA(), i = WA(), o = Jo(), r = nA(), n = {
+  if (Ca) return Be;
+  Ca = 1, Object.defineProperty(Be, "__esModule", { value: !0 }), Be.callRef = Be.getValidate = void 0;
+  const t = ei(), A = _A(), e = oA(), i = zA(), o = xo(), r = aA(), n = {
     keyword: "$ref",
     schemaType: "string",
     code(g) {
@@ -22092,14 +22190,14 @@ function $n() {
         a(g, m, y, y.$async);
       }
       function w(y) {
-        const m = I.scopeValue("schema", l.code.source === !0 ? { ref: y, code: (0, e.stringify)(y) } : { ref: y }), k = I.name("valid"), b = g.subschema({
+        const m = I.scopeValue("schema", l.code.source === !0 ? { ref: y, code: (0, e.stringify)(y) } : { ref: y }), k = I.name("valid"), F = g.subschema({
           schema: y,
           dataTypes: [],
           schemaPath: e.nil,
           topSchemaRef: m,
           errSchemaPath: c
         }, k);
-        g.mergeEvaluated(b), g.ok(k);
+        g.mergeEvaluated(F), g.ok(k);
       }
     }
   };
@@ -22107,7 +22205,7 @@ function $n() {
     const { gen: c } = g;
     return I.validate ? c.scopeValue("validate", { ref: I.validate }) : (0, e._)`${c.scopeValue("wrapper", { ref: I })}.validate`;
   }
-  Ce.getValidate = s;
+  Be.getValidate = s;
   function a(g, I, c, C) {
     const { gen: B, it: Q } = g, { allErrors: f, schemaEnv: l, opts: u } = Q, d = u.passContext ? i.default.this : e.nil;
     C ? h() : p();
@@ -22137,25 +22235,25 @@ function $n() {
         if (k && !k.dynamicProps)
           k.props !== void 0 && (Q.props = r.mergeEvaluated.props(B, k.props, Q.props));
         else {
-          const b = B.var("props", (0, e._)`${y}.evaluated.props`);
-          Q.props = r.mergeEvaluated.props(B, b, Q.props, e.Name);
+          const F = B.var("props", (0, e._)`${y}.evaluated.props`);
+          Q.props = r.mergeEvaluated.props(B, F, Q.props, e.Name);
         }
       if (Q.items !== !0)
         if (k && !k.dynamicItems)
           k.items !== void 0 && (Q.items = r.mergeEvaluated.items(B, k.items, Q.items));
         else {
-          const b = B.var("items", (0, e._)`${y}.evaluated.items`);
-          Q.items = r.mergeEvaluated.items(B, b, Q.items, e.Name);
+          const F = B.var("items", (0, e._)`${y}.evaluated.items`);
+          Q.items = r.mergeEvaluated.items(B, F, Q.items, e.Name);
         }
     }
   }
-  return Ce.callRef = a, Ce.default = n, Ce;
+  return Be.callRef = a, Be.default = n, Be;
 }
 var Ba;
 function ZI() {
-  if (Ba) return Qi;
-  Ba = 1, Object.defineProperty(Qi, "__esModule", { value: !0 });
-  const t = Bm(), A = $n(), e = [
+  if (Ba) return li;
+  Ba = 1, Object.defineProperty(li, "__esModule", { value: !0 });
+  const t = Um(), A = $n(), e = [
     "$schema",
     "$id",
     "$defs",
@@ -22165,12 +22263,12 @@ function ZI() {
     t.default,
     A.default
   ];
-  return Qi.default = e, Qi;
+  return li.default = e, li;
 }
-var li = {}, di = {}, Qa;
-function Qm() {
-  if (Qa) return di;
-  Qa = 1, Object.defineProperty(di, "__esModule", { value: !0 });
+var ui = {}, hi = {}, Qa;
+function Jm() {
+  if (Qa) return hi;
+  Qa = 1, Object.defineProperty(hi, "__esModule", { value: !0 });
   const t = oA(), A = t.operators, e = {
     maximum: { okStr: "<=", ok: A.LTE, fail: A.GT },
     minimum: { okStr: ">=", ok: A.GTE, fail: A.LT },
@@ -22190,12 +22288,12 @@ function Qm() {
       r.fail$data((0, t._)`${s} ${e[n].fail} ${a} || isNaN(${s})`);
     }
   };
-  return di.default = o, di;
+  return hi.default = o, hi;
 }
-var ui = {}, Ea;
-function Em() {
-  if (Ea) return ui;
-  Ea = 1, Object.defineProperty(ui, "__esModule", { value: !0 });
+var fi = {}, Ea;
+function Hm() {
+  if (Ea) return fi;
+  Ea = 1, Object.defineProperty(fi, "__esModule", { value: !0 });
   const t = oA(), e = {
     keyword: "multipleOf",
     type: "number",
@@ -22210,12 +22308,12 @@ function Em() {
       i.fail$data((0, t._)`(${n} === 0 || (${g} = ${r}/${n}, ${I}))`);
     }
   };
-  return ui.default = e, ui;
+  return fi.default = e, fi;
 }
-var hi = {}, fi = {}, la;
-function lm() {
-  if (la) return fi;
-  la = 1, Object.defineProperty(fi, "__esModule", { value: !0 });
+var pi = {}, wi = {}, la;
+function qm() {
+  if (la) return wi;
+  la = 1, Object.defineProperty(wi, "__esModule", { value: !0 });
   function t(A) {
     const e = A.length;
     let i = 0, o = 0, r;
@@ -22223,13 +22321,13 @@ function lm() {
       i++, r = A.charCodeAt(o++), r >= 55296 && r <= 56319 && o < e && (r = A.charCodeAt(o), (r & 64512) === 56320 && o++);
     return i;
   }
-  return fi.default = t, t.code = 'require("ajv/dist/runtime/ucs2length").default', fi;
+  return wi.default = t, t.code = 'require("ajv/dist/runtime/ucs2length").default', wi;
 }
 var da;
-function dm() {
-  if (da) return hi;
-  da = 1, Object.defineProperty(hi, "__esModule", { value: !0 });
-  const t = oA(), A = nA(), e = lm(), o = {
+function xm() {
+  if (da) return pi;
+  da = 1, Object.defineProperty(pi, "__esModule", { value: !0 });
+  const t = oA(), A = aA(), e = qm(), o = {
     keyword: ["maxLength", "minLength"],
     type: "string",
     schemaType: "number",
@@ -22246,13 +22344,13 @@ function dm() {
       r.fail$data((0, t._)`${c} ${I} ${a}`);
     }
   };
-  return hi.default = o, hi;
+  return pi.default = o, pi;
 }
-var pi = {}, ua;
-function um() {
-  if (ua) return pi;
-  ua = 1, Object.defineProperty(pi, "__esModule", { value: !0 });
-  const t = zA(), A = oA(), i = {
+var yi = {}, ua;
+function Lm() {
+  if (ua) return yi;
+  ua = 1, Object.defineProperty(yi, "__esModule", { value: !0 });
+  const t = _A(), A = oA(), i = {
     keyword: "pattern",
     type: "string",
     schemaType: "string",
@@ -22266,12 +22364,12 @@ function um() {
       o.fail$data((0, A._)`!${c}.test(${r})`);
     }
   };
-  return pi.default = i, pi;
+  return yi.default = i, yi;
 }
-var wi = {}, ha;
-function hm() {
-  if (ha) return wi;
-  ha = 1, Object.defineProperty(wi, "__esModule", { value: !0 });
+var Di = {}, ha;
+function Tm() {
+  if (ha) return Di;
+  ha = 1, Object.defineProperty(Di, "__esModule", { value: !0 });
   const t = oA(), e = {
     keyword: ["maxProperties", "minProperties"],
     type: "object",
@@ -22289,13 +22387,13 @@ function hm() {
       i.fail$data((0, t._)`Object.keys(${r}).length ${s} ${n}`);
     }
   };
-  return wi.default = e, wi;
+  return Di.default = e, Di;
 }
-var yi = {}, fa;
-function fm() {
-  if (fa) return yi;
-  fa = 1, Object.defineProperty(yi, "__esModule", { value: !0 });
-  const t = zA(), A = oA(), e = nA(), o = {
+var mi = {}, fa;
+function Om() {
+  if (fa) return mi;
+  fa = 1, Object.defineProperty(mi, "__esModule", { value: !0 });
+  const t = _A(), A = oA(), e = aA(), o = {
     keyword: "required",
     type: "object",
     schemaType: "array",
@@ -22346,12 +22444,12 @@ function fm() {
       }
     }
   };
-  return yi.default = o, yi;
+  return mi.default = o, mi;
 }
-var Di = {}, pa;
-function pm() {
-  if (pa) return Di;
-  pa = 1, Object.defineProperty(Di, "__esModule", { value: !0 });
+var Si = {}, pa;
+function Pm() {
+  if (pa) return Si;
+  pa = 1, Object.defineProperty(Si, "__esModule", { value: !0 });
   const t = oA(), e = {
     keyword: ["maxItems", "minItems"],
     type: "array",
@@ -22369,20 +22467,20 @@ function pm() {
       i.fail$data((0, t._)`${r}.length ${s} ${n}`);
     }
   };
-  return Di.default = e, Di;
+  return Si.default = e, Si;
 }
-var mi = {}, Si = {}, wa;
+var ki = {}, Ni = {}, wa;
 function Wn() {
-  if (wa) return Si;
-  wa = 1, Object.defineProperty(Si, "__esModule", { value: !0 });
+  if (wa) return Ni;
+  wa = 1, Object.defineProperty(Ni, "__esModule", { value: !0 });
   const t = WI();
-  return t.code = 'require("ajv/dist/runtime/equal").default', Si.default = t, Si;
+  return t.code = 'require("ajv/dist/runtime/equal").default', Ni.default = t, Ni;
 }
 var ya;
-function wm() {
-  if (ya) return mi;
-  ya = 1, Object.defineProperty(mi, "__esModule", { value: !0 });
-  const t = uo(), A = oA(), e = nA(), i = Wn(), r = {
+function jm() {
+  if (ya) return ki;
+  ya = 1, Object.defineProperty(ki, "__esModule", { value: !0 });
+  const t = po(), A = oA(), e = aA(), i = Wn(), r = {
     keyword: "uniqueItems",
     type: "array",
     schemaType: "boolean",
@@ -22420,13 +22518,13 @@ function wm() {
       }
     }
   };
-  return mi.default = r, mi;
+  return ki.default = r, ki;
 }
-var ki = {}, Da;
-function ym() {
-  if (Da) return ki;
-  Da = 1, Object.defineProperty(ki, "__esModule", { value: !0 });
-  const t = oA(), A = nA(), e = Wn(), o = {
+var Mi = {}, Da;
+function Vm() {
+  if (Da) return Mi;
+  Da = 1, Object.defineProperty(Mi, "__esModule", { value: !0 });
+  const t = oA(), A = aA(), e = Wn(), o = {
     keyword: "const",
     $data: !0,
     error: {
@@ -22438,13 +22536,13 @@ function ym() {
       a || I && typeof I == "object" ? r.fail$data((0, t._)`!${(0, A.useFunc)(n, e.default)}(${s}, ${g})`) : r.fail((0, t._)`${I} !== ${s}`);
     }
   };
-  return ki.default = o, ki;
+  return Mi.default = o, Mi;
 }
-var Ni = {}, ma;
-function Dm() {
-  if (ma) return Ni;
-  ma = 1, Object.defineProperty(Ni, "__esModule", { value: !0 });
-  const t = oA(), A = nA(), e = Wn(), o = {
+var Gi = {}, ma;
+function $m() {
+  if (ma) return Gi;
+  ma = 1, Object.defineProperty(Gi, "__esModule", { value: !0 });
+  const t = oA(), A = aA(), e = Wn(), o = {
     keyword: "enum",
     schemaType: "array",
     $data: !0,
@@ -22478,13 +22576,13 @@ function Dm() {
       }
     }
   };
-  return Ni.default = o, Ni;
+  return Gi.default = o, Gi;
 }
 var Sa;
 function XI() {
-  if (Sa) return li;
-  Sa = 1, Object.defineProperty(li, "__esModule", { value: !0 });
-  const t = Qm(), A = Em(), e = dm(), i = um(), o = hm(), r = fm(), n = pm(), s = wm(), a = ym(), g = Dm(), I = [
+  if (Sa) return ui;
+  Sa = 1, Object.defineProperty(ui, "__esModule", { value: !0 });
+  const t = Jm(), A = Hm(), e = xm(), i = Lm(), o = Tm(), r = Om(), n = Pm(), s = jm(), a = Vm(), g = $m(), I = [
     // number
     t.default,
     A.default,
@@ -22503,13 +22601,13 @@ function XI() {
     a.default,
     g.default
   ];
-  return li.default = I, li;
+  return ui.default = I, ui;
 }
-var Mi = {}, Te = {}, ka;
+var bi = {}, Pe = {}, ka;
 function Ac() {
-  if (ka) return Te;
-  ka = 1, Object.defineProperty(Te, "__esModule", { value: !0 }), Te.validateAdditionalItems = void 0;
-  const t = oA(), A = nA(), i = {
+  if (ka) return Pe;
+  ka = 1, Object.defineProperty(Pe, "__esModule", { value: !0 }), Pe.validateAdditionalItems = void 0;
+  const t = oA(), A = aA(), i = {
     keyword: "additionalItems",
     type: "array",
     schemaType: ["boolean", "object"],
@@ -22543,13 +22641,13 @@ function Ac() {
       });
     }
   }
-  return Te.validateAdditionalItems = o, Te.default = i, Te;
+  return Pe.validateAdditionalItems = o, Pe.default = i, Pe;
 }
-var Gi = {}, Oe = {}, Na;
+var Fi = {}, je = {}, Na;
 function ec() {
-  if (Na) return Oe;
-  Na = 1, Object.defineProperty(Oe, "__esModule", { value: !0 }), Oe.validateTuple = void 0;
-  const t = oA(), A = nA(), e = zA(), i = {
+  if (Na) return je;
+  Na = 1, Object.defineProperty(je, "__esModule", { value: !0 }), je.validateTuple = void 0;
+  const t = oA(), A = aA(), e = _A(), i = {
     keyword: "items",
     type: "array",
     schemaType: ["object", "array", "boolean"],
@@ -22580,12 +22678,12 @@ function ec() {
       }
     }
   }
-  return Oe.validateTuple = o, Oe.default = i, Oe;
+  return je.validateTuple = o, je.default = i, je;
 }
 var Ma;
-function mm() {
-  if (Ma) return Gi;
-  Ma = 1, Object.defineProperty(Gi, "__esModule", { value: !0 });
+function Wm() {
+  if (Ma) return Fi;
+  Ma = 1, Object.defineProperty(Fi, "__esModule", { value: !0 });
   const t = ec(), A = {
     keyword: "prefixItems",
     type: "array",
@@ -22593,13 +22691,13 @@ function mm() {
     before: "uniqueItems",
     code: (e) => (0, t.validateTuple)(e, "items")
   };
-  return Gi.default = A, Gi;
+  return Fi.default = A, Fi;
 }
-var Fi = {}, Ga;
-function Sm() {
-  if (Ga) return Fi;
-  Ga = 1, Object.defineProperty(Fi, "__esModule", { value: !0 });
-  const t = oA(), A = nA(), e = zA(), i = Ac(), r = {
+var Ri = {}, Ga;
+function zm() {
+  if (Ga) return Ri;
+  Ga = 1, Object.defineProperty(Ri, "__esModule", { value: !0 });
+  const t = oA(), A = aA(), e = _A(), i = Ac(), r = {
     keyword: "items",
     type: "array",
     schemaType: ["object", "boolean"],
@@ -22613,13 +22711,13 @@ function Sm() {
       g.items = !0, !(0, A.alwaysValidSchema)(g, s) && (I ? (0, i.validateAdditionalItems)(n, I) : n.ok((0, e.validateArray)(n)));
     }
   };
-  return Fi.default = r, Fi;
+  return Ri.default = r, Ri;
 }
-var bi = {}, Fa;
-function km() {
-  if (Fa) return bi;
-  Fa = 1, Object.defineProperty(bi, "__esModule", { value: !0 });
-  const t = oA(), A = nA(), i = {
+var vi = {}, ba;
+function _m() {
+  if (ba) return vi;
+  ba = 1, Object.defineProperty(vi, "__esModule", { value: !0 });
+  const t = oA(), A = aA(), i = {
     keyword: "contains",
     type: "array",
     schemaType: ["object", "boolean"],
@@ -22670,13 +22768,13 @@ function km() {
       }
     }
   };
-  return bi.default = i, bi;
+  return vi.default = i, vi;
 }
-var hr = {}, ba;
+var fr = {}, Fa;
 function zn() {
-  return ba || (ba = 1, (function(t) {
+  return Fa || (Fa = 1, (function(t) {
     Object.defineProperty(t, "__esModule", { value: !0 }), t.validateSchemaDeps = t.validatePropertyDeps = t.error = void 0;
-    const A = oA(), e = nA(), i = zA();
+    const A = oA(), e = aA(), i = _A();
     t.error = {
       message: ({ params: { property: a, depsCount: g, deps: I } }) => {
         const c = g === 1 ? "property" : "properties";
@@ -22743,13 +22841,13 @@ function zn() {
         ), a.ok(Q));
     }
     t.validateSchemaDeps = s, t.default = o;
-  })(hr)), hr;
+  })(fr)), fr;
 }
-var Ri = {}, Ra;
-function Nm() {
-  if (Ra) return Ri;
-  Ra = 1, Object.defineProperty(Ri, "__esModule", { value: !0 });
-  const t = oA(), A = nA(), i = {
+var Ki = {}, Ra;
+function Zm() {
+  if (Ra) return Ki;
+  Ra = 1, Object.defineProperty(Ki, "__esModule", { value: !0 });
+  const t = oA(), A = aA(), i = {
     keyword: "propertyNames",
     type: "object",
     schemaType: ["object", "boolean"],
@@ -22775,13 +22873,13 @@ function Nm() {
       }), o.ok(g);
     }
   };
-  return Ri.default = i, Ri;
+  return Ki.default = i, Ki;
 }
-var vi = {}, va;
+var Yi = {}, va;
 function tc() {
-  if (va) return vi;
-  va = 1, Object.defineProperty(vi, "__esModule", { value: !0 });
-  const t = zA(), A = oA(), e = WA(), i = nA(), r = {
+  if (va) return Yi;
+  va = 1, Object.defineProperty(Yi, "__esModule", { value: !0 });
+  const t = _A(), A = oA(), e = zA(), i = aA(), r = {
     keyword: "additionalProperties",
     type: ["object"],
     schemaType: ["boolean", "object"],
@@ -22846,13 +22944,13 @@ function tc() {
       }
     }
   };
-  return vi.default = r, vi;
+  return Yi.default = r, Yi;
 }
-var Ki = {}, Ka;
-function Mm() {
-  if (Ka) return Ki;
-  Ka = 1, Object.defineProperty(Ki, "__esModule", { value: !0 });
-  const t = Zt(), A = zA(), e = nA(), i = tc(), o = {
+var Ui = {}, Ka;
+function Xm() {
+  if (Ka) return Ui;
+  Ka = 1, Object.defineProperty(Ui, "__esModule", { value: !0 });
+  const t = Ai(), A = _A(), e = aA(), i = tc(), o = {
     keyword: "properties",
     type: "object",
     schemaType: "object",
@@ -22881,13 +22979,13 @@ function Mm() {
       }
     }
   };
-  return Ki.default = o, Ki;
+  return Ui.default = o, Ui;
 }
-var Yi = {}, Ya;
-function Gm() {
-  if (Ya) return Yi;
-  Ya = 1, Object.defineProperty(Yi, "__esModule", { value: !0 });
-  const t = zA(), A = oA(), e = nA(), i = nA(), o = {
+var Ji = {}, Ya;
+function AS() {
+  if (Ya) return Ji;
+  Ya = 1, Object.defineProperty(Ji, "__esModule", { value: !0 });
+  const t = _A(), A = oA(), e = aA(), i = aA(), o = {
     keyword: "patternProperties",
     type: "object",
     schemaType: "object",
@@ -22922,13 +23020,13 @@ function Gm() {
       }
     }
   };
-  return Yi.default = o, Yi;
+  return Ji.default = o, Ji;
 }
-var Ui = {}, Ua;
-function Fm() {
-  if (Ua) return Ui;
-  Ua = 1, Object.defineProperty(Ui, "__esModule", { value: !0 });
-  const t = nA(), A = {
+var Hi = {}, Ua;
+function eS() {
+  if (Ua) return Hi;
+  Ua = 1, Object.defineProperty(Hi, "__esModule", { value: !0 });
+  const t = aA(), A = {
     keyword: "not",
     schemaType: ["object", "boolean"],
     trackErrors: !0,
@@ -22948,26 +23046,26 @@ function Fm() {
     },
     error: { message: "must NOT be valid" }
   };
-  return Ui.default = A, Ui;
+  return Hi.default = A, Hi;
 }
-var Ji = {}, Ja;
-function bm() {
-  if (Ja) return Ji;
-  Ja = 1, Object.defineProperty(Ji, "__esModule", { value: !0 });
+var qi = {}, Ja;
+function tS() {
+  if (Ja) return qi;
+  Ja = 1, Object.defineProperty(qi, "__esModule", { value: !0 });
   const A = {
     keyword: "anyOf",
     schemaType: "array",
     trackErrors: !0,
-    code: zA().validateUnion,
+    code: _A().validateUnion,
     error: { message: "must match a schema in anyOf" }
   };
-  return Ji.default = A, Ji;
+  return qi.default = A, qi;
 }
-var Hi = {}, Ha;
-function Rm() {
-  if (Ha) return Hi;
-  Ha = 1, Object.defineProperty(Hi, "__esModule", { value: !0 });
-  const t = oA(), A = nA(), i = {
+var xi = {}, Ha;
+function iS() {
+  if (Ha) return xi;
+  Ha = 1, Object.defineProperty(xi, "__esModule", { value: !0 });
+  const t = oA(), A = aA(), i = {
     keyword: "oneOf",
     schemaType: "array",
     trackErrors: !0,
@@ -22997,13 +23095,13 @@ function Rm() {
       }
     }
   };
-  return Hi.default = i, Hi;
+  return xi.default = i, xi;
 }
-var qi = {}, qa;
-function vm() {
-  if (qa) return qi;
-  qa = 1, Object.defineProperty(qi, "__esModule", { value: !0 });
-  const t = nA(), A = {
+var Li = {}, qa;
+function oS() {
+  if (qa) return Li;
+  qa = 1, Object.defineProperty(Li, "__esModule", { value: !0 });
+  const t = aA(), A = {
     keyword: "allOf",
     schemaType: "array",
     code(e) {
@@ -23019,13 +23117,13 @@ function vm() {
       });
     }
   };
-  return qi.default = A, qi;
+  return Li.default = A, Li;
 }
-var xi = {}, xa;
-function Km() {
-  if (xa) return xi;
-  xa = 1, Object.defineProperty(xi, "__esModule", { value: !0 });
-  const t = oA(), A = nA(), i = {
+var Ti = {}, xa;
+function rS() {
+  if (xa) return Ti;
+  xa = 1, Object.defineProperty(Ti, "__esModule", { value: !0 });
+  const t = oA(), A = aA(), i = {
     keyword: "if",
     schemaType: ["object", "boolean"],
     trackErrors: !0,
@@ -23066,26 +23164,26 @@ function Km() {
     const s = r.schema[n];
     return s !== void 0 && !(0, A.alwaysValidSchema)(r, s);
   }
-  return xi.default = i, xi;
+  return Ti.default = i, Ti;
 }
-var Li = {}, La;
-function Ym() {
-  if (La) return Li;
-  La = 1, Object.defineProperty(Li, "__esModule", { value: !0 });
-  const t = nA(), A = {
+var Oi = {}, La;
+function nS() {
+  if (La) return Oi;
+  La = 1, Object.defineProperty(Oi, "__esModule", { value: !0 });
+  const t = aA(), A = {
     keyword: ["then", "else"],
     schemaType: ["object", "boolean"],
     code({ keyword: e, parentSchema: i, it: o }) {
       i.if === void 0 && (0, t.checkStrictMode)(o, `"${e}" without "if" is ignored`);
     }
   };
-  return Li.default = A, Li;
+  return Oi.default = A, Oi;
 }
 var Ta;
 function ic() {
-  if (Ta) return Mi;
-  Ta = 1, Object.defineProperty(Mi, "__esModule", { value: !0 });
-  const t = Ac(), A = mm(), e = ec(), i = Sm(), o = km(), r = zn(), n = Nm(), s = tc(), a = Mm(), g = Gm(), I = Fm(), c = bm(), C = Rm(), B = vm(), Q = Km(), f = Ym();
+  if (Ta) return bi;
+  Ta = 1, Object.defineProperty(bi, "__esModule", { value: !0 });
+  const t = Ac(), A = Wm(), e = ec(), i = zm(), o = _m(), r = zn(), n = Zm(), s = tc(), a = Xm(), g = AS(), I = eS(), c = tS(), C = iS(), B = oS(), Q = rS(), f = nS();
   function l(u = !1) {
     const d = [
       // any
@@ -23104,13 +23202,13 @@ function ic() {
     ];
     return u ? d.push(A.default, i.default) : d.push(t.default, e.default), d.push(o.default), d;
   }
-  return Mi.default = l, Mi;
+  return bi.default = l, bi;
 }
-var Ti = {}, Pe = {}, Oa;
+var Pi = {}, Ve = {}, Oa;
 function oc() {
-  if (Oa) return Pe;
-  Oa = 1, Object.defineProperty(Pe, "__esModule", { value: !0 }), Pe.dynamicAnchor = void 0;
-  const t = oA(), A = WA(), e = Jo(), i = $n(), o = {
+  if (Oa) return Ve;
+  Oa = 1, Object.defineProperty(Ve, "__esModule", { value: !0 }), Ve.dynamicAnchor = void 0;
+  const t = oA(), A = zA(), e = xo(), i = $n(), o = {
     keyword: "$dynamicAnchor",
     schemaType: "string",
     code: (s) => r(s, s.schema)
@@ -23121,18 +23219,18 @@ function oc() {
     const c = (0, t._)`${A.default.dynamicAnchors}${(0, t.getProperty)(a)}`, C = I.errSchemaPath === "#" ? I.validateName : n(s);
     g.if((0, t._)`!${c}`, () => g.assign(c, C));
   }
-  Pe.dynamicAnchor = r;
+  Ve.dynamicAnchor = r;
   function n(s) {
     const { schemaEnv: a, schema: g, self: I } = s.it, { root: c, baseId: C, localRefs: B, meta: Q } = a.root, { schemaId: f } = I.opts, l = new e.SchemaEnv({ schema: g, schemaId: f, root: c, baseId: C, localRefs: B, meta: Q });
     return e.compileSchema.call(I, l), (0, i.getValidate)(s, l);
   }
-  return Pe.default = o, Pe;
+  return Ve.default = o, Ve;
 }
-var je = {}, Pa;
+var $e = {}, Pa;
 function rc() {
-  if (Pa) return je;
-  Pa = 1, Object.defineProperty(je, "__esModule", { value: !0 }), je.dynamicRef = void 0;
-  const t = oA(), A = WA(), e = $n(), i = {
+  if (Pa) return $e;
+  Pa = 1, Object.defineProperty($e, "__esModule", { value: !0 }), $e.dynamicRef = void 0;
+  const t = oA(), A = zA(), e = $n(), i = {
     keyword: "$dynamicRef",
     schemaType: "string",
     code: (r) => o(r, r.schema)
@@ -23161,43 +23259,43 @@ function rc() {
       }) : () => (0, e.callRef)(r, B);
     }
   }
-  return je.dynamicRef = o, je.default = i, je;
+  return $e.dynamicRef = o, $e.default = i, $e;
 }
-var Oi = {}, ja;
-function Um() {
-  if (ja) return Oi;
-  ja = 1, Object.defineProperty(Oi, "__esModule", { value: !0 });
-  const t = oc(), A = nA(), e = {
+var ji = {}, ja;
+function sS() {
+  if (ja) return ji;
+  ja = 1, Object.defineProperty(ji, "__esModule", { value: !0 });
+  const t = oc(), A = aA(), e = {
     keyword: "$recursiveAnchor",
     schemaType: "boolean",
     code(i) {
       i.schema ? (0, t.dynamicAnchor)(i, "") : (0, A.checkStrictMode)(i.it, "$recursiveAnchor: false is ignored");
     }
   };
-  return Oi.default = e, Oi;
+  return ji.default = e, ji;
 }
-var Pi = {}, Va;
-function Jm() {
-  if (Va) return Pi;
-  Va = 1, Object.defineProperty(Pi, "__esModule", { value: !0 });
+var Vi = {}, Va;
+function aS() {
+  if (Va) return Vi;
+  Va = 1, Object.defineProperty(Vi, "__esModule", { value: !0 });
   const t = rc(), A = {
     keyword: "$recursiveRef",
     schemaType: "string",
     code: (e) => (0, t.dynamicRef)(e, e.schema)
   };
-  return Pi.default = A, Pi;
+  return Vi.default = A, Vi;
 }
 var $a;
-function Hm() {
-  if ($a) return Ti;
-  $a = 1, Object.defineProperty(Ti, "__esModule", { value: !0 });
-  const t = oc(), A = rc(), e = Um(), i = Jm(), o = [t.default, A.default, e.default, i.default];
-  return Ti.default = o, Ti;
+function gS() {
+  if ($a) return Pi;
+  $a = 1, Object.defineProperty(Pi, "__esModule", { value: !0 });
+  const t = oc(), A = rc(), e = sS(), i = aS(), o = [t.default, A.default, e.default, i.default];
+  return Pi.default = o, Pi;
 }
-var ji = {}, Vi = {}, Wa;
-function qm() {
-  if (Wa) return Vi;
-  Wa = 1, Object.defineProperty(Vi, "__esModule", { value: !0 });
+var $i = {}, Wi = {}, Wa;
+function IS() {
+  if (Wa) return Wi;
+  Wa = 1, Object.defineProperty(Wi, "__esModule", { value: !0 });
   const t = zn(), A = {
     keyword: "dependentRequired",
     type: "object",
@@ -23205,25 +23303,25 @@ function qm() {
     error: t.error,
     code: (e) => (0, t.validatePropertyDeps)(e)
   };
-  return Vi.default = A, Vi;
+  return Wi.default = A, Wi;
 }
-var $i = {}, za;
-function xm() {
-  if (za) return $i;
-  za = 1, Object.defineProperty($i, "__esModule", { value: !0 });
+var zi = {}, za;
+function cS() {
+  if (za) return zi;
+  za = 1, Object.defineProperty(zi, "__esModule", { value: !0 });
   const t = zn(), A = {
     keyword: "dependentSchemas",
     type: "object",
     schemaType: "object",
     code: (e) => (0, t.validateSchemaDeps)(e)
   };
-  return $i.default = A, $i;
+  return zi.default = A, zi;
 }
-var Wi = {}, _a;
-function Lm() {
-  if (_a) return Wi;
-  _a = 1, Object.defineProperty(Wi, "__esModule", { value: !0 });
-  const t = nA(), A = {
+var _i = {}, _a;
+function CS() {
+  if (_a) return _i;
+  _a = 1, Object.defineProperty(_i, "__esModule", { value: !0 });
+  const t = aA(), A = {
     keyword: ["maxContains", "minContains"],
     type: "array",
     schemaType: "number",
@@ -23231,20 +23329,20 @@ function Lm() {
       i.contains === void 0 && (0, t.checkStrictMode)(o, `"${e}" without "contains" is ignored`);
     }
   };
-  return Wi.default = A, Wi;
+  return _i.default = A, _i;
 }
 var Za;
-function Tm() {
-  if (Za) return ji;
-  Za = 1, Object.defineProperty(ji, "__esModule", { value: !0 });
-  const t = qm(), A = xm(), e = Lm(), i = [t.default, A.default, e.default];
-  return ji.default = i, ji;
+function BS() {
+  if (Za) return $i;
+  Za = 1, Object.defineProperty($i, "__esModule", { value: !0 });
+  const t = IS(), A = cS(), e = CS(), i = [t.default, A.default, e.default];
+  return $i.default = i, $i;
 }
-var zi = {}, _i = {}, Xa;
-function Om() {
-  if (Xa) return _i;
-  Xa = 1, Object.defineProperty(_i, "__esModule", { value: !0 });
-  const t = oA(), A = nA(), e = WA(), o = {
+var Zi = {}, Xi = {}, Xa;
+function QS() {
+  if (Xa) return Xi;
+  Xa = 1, Object.defineProperty(Xi, "__esModule", { value: !0 });
+  const t = oA(), A = aA(), e = zA(), o = {
     keyword: "unevaluatedProperties",
     type: "object",
     schemaType: ["boolean", "object"],
@@ -23284,13 +23382,13 @@ function Om() {
       }
     }
   };
-  return _i.default = o, _i;
+  return Xi.default = o, Xi;
 }
-var Zi = {}, Ag;
-function Pm() {
-  if (Ag) return Zi;
-  Ag = 1, Object.defineProperty(Zi, "__esModule", { value: !0 });
-  const t = oA(), A = nA(), i = {
+var Ao = {}, Ag;
+function ES() {
+  if (Ag) return Ao;
+  Ag = 1, Object.defineProperty(Ao, "__esModule", { value: !0 });
+  const t = oA(), A = aA(), i = {
     keyword: "unevaluatedItems",
     type: "array",
     schemaType: ["boolean", "object"],
@@ -23317,19 +23415,19 @@ function Pm() {
       }
     }
   };
-  return Zi.default = i, Zi;
+  return Ao.default = i, Ao;
 }
 var eg;
-function jm() {
-  if (eg) return zi;
-  eg = 1, Object.defineProperty(zi, "__esModule", { value: !0 });
-  const t = Om(), A = Pm(), e = [t.default, A.default];
-  return zi.default = e, zi;
+function lS() {
+  if (eg) return Zi;
+  eg = 1, Object.defineProperty(Zi, "__esModule", { value: !0 });
+  const t = QS(), A = ES(), e = [t.default, A.default];
+  return Zi.default = e, Zi;
 }
-var Xi = {}, Ao = {}, tg;
-function Vm() {
-  if (tg) return Ao;
-  tg = 1, Object.defineProperty(Ao, "__esModule", { value: !0 });
+var eo = {}, to = {}, tg;
+function dS() {
+  if (tg) return to;
+  tg = 1, Object.defineProperty(to, "__esModule", { value: !0 });
   const t = oA(), e = {
     keyword: "format",
     type: ["number", "string"],
@@ -23379,8 +23477,8 @@ function Vm() {
           }
         }
         function w(m) {
-          const k = m instanceof RegExp ? (0, t.regexpCode)(m) : c.code.formats ? (0, t._)`${c.code.formats}${(0, t.getProperty)(a)}` : void 0, b = r.scopeValue("formats", { key: a, ref: m, code: k });
-          return typeof m == "object" && !(m instanceof RegExp) ? [m.type || "string", m.validate, (0, t._)`${b}.validate`] : ["string", m, b];
+          const k = m instanceof RegExp ? (0, t.regexpCode)(m) : c.code.formats ? (0, t._)`${c.code.formats}${(0, t.getProperty)(a)}` : void 0, F = r.scopeValue("formats", { key: a, ref: m, code: k });
+          return typeof m == "object" && !(m instanceof RegExp) ? [m.type || "string", m.validate, (0, t._)`${F}.validate`] : ["string", m, F];
         }
         function y() {
           if (typeof u == "object" && !(u instanceof RegExp) && u.async) {
@@ -23393,18 +23491,18 @@ function Vm() {
       }
     }
   };
-  return Ao.default = e, Ao;
+  return to.default = e, to;
 }
 var ig;
 function nc() {
-  if (ig) return Xi;
-  ig = 1, Object.defineProperty(Xi, "__esModule", { value: !0 });
-  const A = [Vm().default];
-  return Xi.default = A, Xi;
+  if (ig) return eo;
+  ig = 1, Object.defineProperty(eo, "__esModule", { value: !0 });
+  const A = [dS().default];
+  return eo.default = A, eo;
 }
-var pe = {}, og;
+var ye = {}, og;
 function sc() {
-  return og || (og = 1, Object.defineProperty(pe, "__esModule", { value: !0 }), pe.contentVocabulary = pe.metadataVocabulary = void 0, pe.metadataVocabulary = [
+  return og || (og = 1, Object.defineProperty(ye, "__esModule", { value: !0 }), ye.contentVocabulary = ye.metadataVocabulary = void 0, ye.metadataVocabulary = [
     "title",
     "description",
     "default",
@@ -23412,17 +23510,17 @@ function sc() {
     "readOnly",
     "writeOnly",
     "examples"
-  ], pe.contentVocabulary = [
+  ], ye.contentVocabulary = [
     "contentMediaType",
     "contentEncoding",
     "contentSchema"
-  ]), pe;
+  ]), ye;
 }
 var rg;
-function $m() {
-  if (rg) return Bi;
-  rg = 1, Object.defineProperty(Bi, "__esModule", { value: !0 });
-  const t = ZI(), A = XI(), e = ic(), i = Hm(), o = Tm(), r = jm(), n = nc(), s = sc(), a = [
+function uS() {
+  if (rg) return Ei;
+  rg = 1, Object.defineProperty(Ei, "__esModule", { value: !0 });
+  const t = ZI(), A = XI(), e = ic(), i = gS(), o = BS(), r = lS(), n = nc(), s = sc(), a = [
     i.default,
     t.default,
     A.default,
@@ -23433,22 +23531,22 @@ function $m() {
     o.default,
     r.default
   ];
-  return Bi.default = a, Bi;
+  return Ei.default = a, Ei;
 }
-var eo = {}, pt = {}, ng;
-function Wm() {
-  if (ng) return pt;
-  ng = 1, Object.defineProperty(pt, "__esModule", { value: !0 }), pt.DiscrError = void 0;
+var io = {}, yt = {}, ng;
+function hS() {
+  if (ng) return yt;
+  ng = 1, Object.defineProperty(yt, "__esModule", { value: !0 }), yt.DiscrError = void 0;
   var t;
   return (function(A) {
     A.Tag = "tag", A.Mapping = "mapping";
-  })(t || (pt.DiscrError = t = {})), pt;
+  })(t || (yt.DiscrError = t = {})), yt;
 }
 var sg;
 function ac() {
-  if (sg) return eo;
-  sg = 1, Object.defineProperty(eo, "__esModule", { value: !0 });
-  const t = oA(), A = Wm(), e = Jo(), i = Xt(), o = nA(), n = {
+  if (sg) return io;
+  sg = 1, Object.defineProperty(io, "__esModule", { value: !0 });
+  const t = oA(), A = hS(), e = xo(), i = ei(), o = aA(), n = {
     keyword: "discriminator",
     type: "object",
     schemaType: "object",
@@ -23484,119 +23582,119 @@ function ac() {
         var p;
         const E = {}, w = m(c);
         let y = !0;
-        for (let x = 0; x < B.length; x++) {
-          let j = B[x];
+        for (let L = 0; L < B.length; L++) {
+          let j = B[L];
           if (j?.$ref && !(0, o.schemaHasRulesButRef)(j, C.self.RULES)) {
-            const W = j.$ref;
-            if (j = e.resolveRef.call(C.self, C.schemaEnv.root, C.baseId, W), j instanceof e.SchemaEnv && (j = j.schema), j === void 0)
-              throw new i.default(C.opts.uriResolver, C.baseId, W);
+            const $ = j.$ref;
+            if (j = e.resolveRef.call(C.self, C.schemaEnv.root, C.baseId, $), j instanceof e.SchemaEnv && (j = j.schema), j === void 0)
+              throw new i.default(C.opts.uriResolver, C.baseId, $);
           }
           const J = (p = j?.properties) === null || p === void 0 ? void 0 : p[Q];
           if (typeof J != "object")
             throw new Error(`discriminator: oneOf subschemas (or referenced schemas) must have "properties/${Q}"`);
-          y = y && (w || m(j)), k(J, x);
+          y = y && (w || m(j)), k(J, L);
         }
         if (!y)
           throw new Error(`discriminator: "${Q}" must be required`);
         return E;
-        function m({ required: x }) {
-          return Array.isArray(x) && x.includes(Q);
+        function m({ required: L }) {
+          return Array.isArray(L) && L.includes(Q);
         }
-        function k(x, j) {
-          if (x.const)
-            b(x.const, j);
-          else if (x.enum)
-            for (const J of x.enum)
-              b(J, j);
+        function k(L, j) {
+          if (L.const)
+            F(L.const, j);
+          else if (L.enum)
+            for (const J of L.enum)
+              F(J, j);
           else
             throw new Error(`discriminator: "properties/${Q}" must have "const" or "enum"`);
         }
-        function b(x, j) {
-          if (typeof x != "string" || x in E)
+        function F(L, j) {
+          if (typeof L != "string" || L in E)
             throw new Error(`discriminator: "${Q}" values must be unique strings`);
-          E[x] = j;
+          E[L] = j;
         }
       }
     }
   };
-  return eo.default = n, eo;
+  return io.default = n, io;
 }
-var to = {};
-const zm = "https://json-schema.org/draft/2020-12/schema", _m = "https://json-schema.org/draft/2020-12/schema", Zm = { "https://json-schema.org/draft/2020-12/vocab/core": !0, "https://json-schema.org/draft/2020-12/vocab/applicator": !0, "https://json-schema.org/draft/2020-12/vocab/unevaluated": !0, "https://json-schema.org/draft/2020-12/vocab/validation": !0, "https://json-schema.org/draft/2020-12/vocab/meta-data": !0, "https://json-schema.org/draft/2020-12/vocab/format-annotation": !0, "https://json-schema.org/draft/2020-12/vocab/content": !0 }, Xm = "meta", AS = "Core and Validation specifications meta-schema", eS = [{ $ref: "meta/core" }, { $ref: "meta/applicator" }, { $ref: "meta/unevaluated" }, { $ref: "meta/validation" }, { $ref: "meta/meta-data" }, { $ref: "meta/format-annotation" }, { $ref: "meta/content" }], tS = ["object", "boolean"], iS = "This meta-schema also defines keywords that have appeared in previous drafts in order to prevent incompatible extensions as they remain in common use.", oS = { definitions: { $comment: '"definitions" has been replaced by "$defs".', type: "object", additionalProperties: { $dynamicRef: "#meta" }, deprecated: !0, default: {} }, dependencies: { $comment: '"dependencies" has been split and replaced by "dependentSchemas" and "dependentRequired" in order to serve their differing semantics.', type: "object", additionalProperties: { anyOf: [{ $dynamicRef: "#meta" }, { $ref: "meta/validation#/$defs/stringArray" }] }, deprecated: !0, default: {} }, $recursiveAnchor: { $comment: '"$recursiveAnchor" has been replaced by "$dynamicAnchor".', $ref: "meta/core#/$defs/anchorString", deprecated: !0 }, $recursiveRef: { $comment: '"$recursiveRef" has been replaced by "$dynamicRef".', $ref: "meta/core#/$defs/uriReferenceString", deprecated: !0 } }, rS = {
-  $schema: zm,
-  $id: _m,
-  $vocabulary: Zm,
-  $dynamicAnchor: Xm,
-  title: AS,
-  allOf: eS,
-  type: tS,
-  $comment: iS,
-  properties: oS
-}, nS = "https://json-schema.org/draft/2020-12/schema", sS = "https://json-schema.org/draft/2020-12/meta/applicator", aS = { "https://json-schema.org/draft/2020-12/vocab/applicator": !0 }, gS = "meta", IS = "Applicator vocabulary meta-schema", cS = ["object", "boolean"], CS = { prefixItems: { $ref: "#/$defs/schemaArray" }, items: { $dynamicRef: "#meta" }, contains: { $dynamicRef: "#meta" }, additionalProperties: { $dynamicRef: "#meta" }, properties: { type: "object", additionalProperties: { $dynamicRef: "#meta" }, default: {} }, patternProperties: { type: "object", additionalProperties: { $dynamicRef: "#meta" }, propertyNames: { format: "regex" }, default: {} }, dependentSchemas: { type: "object", additionalProperties: { $dynamicRef: "#meta" }, default: {} }, propertyNames: { $dynamicRef: "#meta" }, if: { $dynamicRef: "#meta" }, then: { $dynamicRef: "#meta" }, else: { $dynamicRef: "#meta" }, allOf: { $ref: "#/$defs/schemaArray" }, anyOf: { $ref: "#/$defs/schemaArray" }, oneOf: { $ref: "#/$defs/schemaArray" }, not: { $dynamicRef: "#meta" } }, BS = { schemaArray: { type: "array", minItems: 1, items: { $dynamicRef: "#meta" } } }, QS = {
-  $schema: nS,
-  $id: sS,
-  $vocabulary: aS,
-  $dynamicAnchor: gS,
-  title: IS,
-  type: cS,
-  properties: CS,
-  $defs: BS
-}, ES = "https://json-schema.org/draft/2020-12/schema", lS = "https://json-schema.org/draft/2020-12/meta/unevaluated", dS = { "https://json-schema.org/draft/2020-12/vocab/unevaluated": !0 }, uS = "meta", hS = "Unevaluated applicator vocabulary meta-schema", fS = ["object", "boolean"], pS = { unevaluatedItems: { $dynamicRef: "#meta" }, unevaluatedProperties: { $dynamicRef: "#meta" } }, wS = {
-  $schema: ES,
-  $id: lS,
-  $vocabulary: dS,
-  $dynamicAnchor: uS,
-  title: hS,
-  type: fS,
-  properties: pS
-}, yS = "https://json-schema.org/draft/2020-12/schema", DS = "https://json-schema.org/draft/2020-12/meta/content", mS = { "https://json-schema.org/draft/2020-12/vocab/content": !0 }, SS = "meta", kS = "Content vocabulary meta-schema", NS = ["object", "boolean"], MS = { contentEncoding: { type: "string" }, contentMediaType: { type: "string" }, contentSchema: { $dynamicRef: "#meta" } }, GS = {
-  $schema: yS,
-  $id: DS,
-  $vocabulary: mS,
-  $dynamicAnchor: SS,
-  title: kS,
-  type: NS,
-  properties: MS
-}, FS = "https://json-schema.org/draft/2020-12/schema", bS = "https://json-schema.org/draft/2020-12/meta/core", RS = { "https://json-schema.org/draft/2020-12/vocab/core": !0 }, vS = "meta", KS = "Core vocabulary meta-schema", YS = ["object", "boolean"], US = { $id: { $ref: "#/$defs/uriReferenceString", $comment: "Non-empty fragments not allowed.", pattern: "^[^#]*#?$" }, $schema: { $ref: "#/$defs/uriString" }, $ref: { $ref: "#/$defs/uriReferenceString" }, $anchor: { $ref: "#/$defs/anchorString" }, $dynamicRef: { $ref: "#/$defs/uriReferenceString" }, $dynamicAnchor: { $ref: "#/$defs/anchorString" }, $vocabulary: { type: "object", propertyNames: { $ref: "#/$defs/uriString" }, additionalProperties: { type: "boolean" } }, $comment: { type: "string" }, $defs: { type: "object", additionalProperties: { $dynamicRef: "#meta" } } }, JS = { anchorString: { type: "string", pattern: "^[A-Za-z_][-A-Za-z0-9._]*$" }, uriString: { type: "string", format: "uri" }, uriReferenceString: { type: "string", format: "uri-reference" } }, HS = {
-  $schema: FS,
+var oo = {};
+const fS = "https://json-schema.org/draft/2020-12/schema", pS = "https://json-schema.org/draft/2020-12/schema", wS = { "https://json-schema.org/draft/2020-12/vocab/core": !0, "https://json-schema.org/draft/2020-12/vocab/applicator": !0, "https://json-schema.org/draft/2020-12/vocab/unevaluated": !0, "https://json-schema.org/draft/2020-12/vocab/validation": !0, "https://json-schema.org/draft/2020-12/vocab/meta-data": !0, "https://json-schema.org/draft/2020-12/vocab/format-annotation": !0, "https://json-schema.org/draft/2020-12/vocab/content": !0 }, yS = "meta", DS = "Core and Validation specifications meta-schema", mS = [{ $ref: "meta/core" }, { $ref: "meta/applicator" }, { $ref: "meta/unevaluated" }, { $ref: "meta/validation" }, { $ref: "meta/meta-data" }, { $ref: "meta/format-annotation" }, { $ref: "meta/content" }], SS = ["object", "boolean"], kS = "This meta-schema also defines keywords that have appeared in previous drafts in order to prevent incompatible extensions as they remain in common use.", NS = { definitions: { $comment: '"definitions" has been replaced by "$defs".', type: "object", additionalProperties: { $dynamicRef: "#meta" }, deprecated: !0, default: {} }, dependencies: { $comment: '"dependencies" has been split and replaced by "dependentSchemas" and "dependentRequired" in order to serve their differing semantics.', type: "object", additionalProperties: { anyOf: [{ $dynamicRef: "#meta" }, { $ref: "meta/validation#/$defs/stringArray" }] }, deprecated: !0, default: {} }, $recursiveAnchor: { $comment: '"$recursiveAnchor" has been replaced by "$dynamicAnchor".', $ref: "meta/core#/$defs/anchorString", deprecated: !0 }, $recursiveRef: { $comment: '"$recursiveRef" has been replaced by "$dynamicRef".', $ref: "meta/core#/$defs/uriReferenceString", deprecated: !0 } }, MS = {
+  $schema: fS,
+  $id: pS,
+  $vocabulary: wS,
+  $dynamicAnchor: yS,
+  title: DS,
+  allOf: mS,
+  type: SS,
+  $comment: kS,
+  properties: NS
+}, GS = "https://json-schema.org/draft/2020-12/schema", bS = "https://json-schema.org/draft/2020-12/meta/applicator", FS = { "https://json-schema.org/draft/2020-12/vocab/applicator": !0 }, RS = "meta", vS = "Applicator vocabulary meta-schema", KS = ["object", "boolean"], YS = { prefixItems: { $ref: "#/$defs/schemaArray" }, items: { $dynamicRef: "#meta" }, contains: { $dynamicRef: "#meta" }, additionalProperties: { $dynamicRef: "#meta" }, properties: { type: "object", additionalProperties: { $dynamicRef: "#meta" }, default: {} }, patternProperties: { type: "object", additionalProperties: { $dynamicRef: "#meta" }, propertyNames: { format: "regex" }, default: {} }, dependentSchemas: { type: "object", additionalProperties: { $dynamicRef: "#meta" }, default: {} }, propertyNames: { $dynamicRef: "#meta" }, if: { $dynamicRef: "#meta" }, then: { $dynamicRef: "#meta" }, else: { $dynamicRef: "#meta" }, allOf: { $ref: "#/$defs/schemaArray" }, anyOf: { $ref: "#/$defs/schemaArray" }, oneOf: { $ref: "#/$defs/schemaArray" }, not: { $dynamicRef: "#meta" } }, US = { schemaArray: { type: "array", minItems: 1, items: { $dynamicRef: "#meta" } } }, JS = {
+  $schema: GS,
   $id: bS,
-  $vocabulary: RS,
-  $dynamicAnchor: vS,
-  title: KS,
-  type: YS,
-  properties: US,
-  $defs: JS
-}, qS = "https://json-schema.org/draft/2020-12/schema", xS = "https://json-schema.org/draft/2020-12/meta/format-annotation", LS = { "https://json-schema.org/draft/2020-12/vocab/format-annotation": !0 }, TS = "meta", OS = "Format vocabulary meta-schema for annotation results", PS = ["object", "boolean"], jS = { format: { type: "string" } }, VS = {
-  $schema: qS,
-  $id: xS,
-  $vocabulary: LS,
-  $dynamicAnchor: TS,
-  title: OS,
-  type: PS,
-  properties: jS
-}, $S = "https://json-schema.org/draft/2020-12/schema", WS = "https://json-schema.org/draft/2020-12/meta/meta-data", zS = { "https://json-schema.org/draft/2020-12/vocab/meta-data": !0 }, _S = "meta", ZS = "Meta-data vocabulary meta-schema", XS = ["object", "boolean"], A0 = { title: { type: "string" }, description: { type: "string" }, default: !0, deprecated: { type: "boolean", default: !1 }, readOnly: { type: "boolean", default: !1 }, writeOnly: { type: "boolean", default: !1 }, examples: { type: "array", items: !0 } }, e0 = {
-  $schema: $S,
-  $id: WS,
-  $vocabulary: zS,
-  $dynamicAnchor: _S,
-  title: ZS,
-  type: XS,
-  properties: A0
-}, t0 = "https://json-schema.org/draft/2020-12/schema", i0 = "https://json-schema.org/draft/2020-12/meta/validation", o0 = { "https://json-schema.org/draft/2020-12/vocab/validation": !0 }, r0 = "meta", n0 = "Validation vocabulary meta-schema", s0 = ["object", "boolean"], a0 = { type: { anyOf: [{ $ref: "#/$defs/simpleTypes" }, { type: "array", items: { $ref: "#/$defs/simpleTypes" }, minItems: 1, uniqueItems: !0 }] }, const: !0, enum: { type: "array", items: !0 }, multipleOf: { type: "number", exclusiveMinimum: 0 }, maximum: { type: "number" }, exclusiveMaximum: { type: "number" }, minimum: { type: "number" }, exclusiveMinimum: { type: "number" }, maxLength: { $ref: "#/$defs/nonNegativeInteger" }, minLength: { $ref: "#/$defs/nonNegativeIntegerDefault0" }, pattern: { type: "string", format: "regex" }, maxItems: { $ref: "#/$defs/nonNegativeInteger" }, minItems: { $ref: "#/$defs/nonNegativeIntegerDefault0" }, uniqueItems: { type: "boolean", default: !1 }, maxContains: { $ref: "#/$defs/nonNegativeInteger" }, minContains: { $ref: "#/$defs/nonNegativeInteger", default: 1 }, maxProperties: { $ref: "#/$defs/nonNegativeInteger" }, minProperties: { $ref: "#/$defs/nonNegativeIntegerDefault0" }, required: { $ref: "#/$defs/stringArray" }, dependentRequired: { type: "object", additionalProperties: { $ref: "#/$defs/stringArray" } } }, g0 = { nonNegativeInteger: { type: "integer", minimum: 0 }, nonNegativeIntegerDefault0: { $ref: "#/$defs/nonNegativeInteger", default: 0 }, simpleTypes: { enum: ["array", "boolean", "integer", "null", "number", "object", "string"] }, stringArray: { type: "array", items: { type: "string" }, uniqueItems: !0, default: [] } }, I0 = {
-  $schema: t0,
-  $id: i0,
-  $vocabulary: o0,
-  $dynamicAnchor: r0,
-  title: n0,
-  type: s0,
-  properties: a0,
-  $defs: g0
+  $vocabulary: FS,
+  $dynamicAnchor: RS,
+  title: vS,
+  type: KS,
+  properties: YS,
+  $defs: US
+}, HS = "https://json-schema.org/draft/2020-12/schema", qS = "https://json-schema.org/draft/2020-12/meta/unevaluated", xS = { "https://json-schema.org/draft/2020-12/vocab/unevaluated": !0 }, LS = "meta", TS = "Unevaluated applicator vocabulary meta-schema", OS = ["object", "boolean"], PS = { unevaluatedItems: { $dynamicRef: "#meta" }, unevaluatedProperties: { $dynamicRef: "#meta" } }, jS = {
+  $schema: HS,
+  $id: qS,
+  $vocabulary: xS,
+  $dynamicAnchor: LS,
+  title: TS,
+  type: OS,
+  properties: PS
+}, VS = "https://json-schema.org/draft/2020-12/schema", $S = "https://json-schema.org/draft/2020-12/meta/content", WS = { "https://json-schema.org/draft/2020-12/vocab/content": !0 }, zS = "meta", _S = "Content vocabulary meta-schema", ZS = ["object", "boolean"], XS = { contentEncoding: { type: "string" }, contentMediaType: { type: "string" }, contentSchema: { $dynamicRef: "#meta" } }, A0 = {
+  $schema: VS,
+  $id: $S,
+  $vocabulary: WS,
+  $dynamicAnchor: zS,
+  title: _S,
+  type: ZS,
+  properties: XS
+}, e0 = "https://json-schema.org/draft/2020-12/schema", t0 = "https://json-schema.org/draft/2020-12/meta/core", i0 = { "https://json-schema.org/draft/2020-12/vocab/core": !0 }, o0 = "meta", r0 = "Core vocabulary meta-schema", n0 = ["object", "boolean"], s0 = { $id: { $ref: "#/$defs/uriReferenceString", $comment: "Non-empty fragments not allowed.", pattern: "^[^#]*#?$" }, $schema: { $ref: "#/$defs/uriString" }, $ref: { $ref: "#/$defs/uriReferenceString" }, $anchor: { $ref: "#/$defs/anchorString" }, $dynamicRef: { $ref: "#/$defs/uriReferenceString" }, $dynamicAnchor: { $ref: "#/$defs/anchorString" }, $vocabulary: { type: "object", propertyNames: { $ref: "#/$defs/uriString" }, additionalProperties: { type: "boolean" } }, $comment: { type: "string" }, $defs: { type: "object", additionalProperties: { $dynamicRef: "#meta" } } }, a0 = { anchorString: { type: "string", pattern: "^[A-Za-z_][-A-Za-z0-9._]*$" }, uriString: { type: "string", format: "uri" }, uriReferenceString: { type: "string", format: "uri-reference" } }, g0 = {
+  $schema: e0,
+  $id: t0,
+  $vocabulary: i0,
+  $dynamicAnchor: o0,
+  title: r0,
+  type: n0,
+  properties: s0,
+  $defs: a0
+}, I0 = "https://json-schema.org/draft/2020-12/schema", c0 = "https://json-schema.org/draft/2020-12/meta/format-annotation", C0 = { "https://json-schema.org/draft/2020-12/vocab/format-annotation": !0 }, B0 = "meta", Q0 = "Format vocabulary meta-schema for annotation results", E0 = ["object", "boolean"], l0 = { format: { type: "string" } }, d0 = {
+  $schema: I0,
+  $id: c0,
+  $vocabulary: C0,
+  $dynamicAnchor: B0,
+  title: Q0,
+  type: E0,
+  properties: l0
+}, u0 = "https://json-schema.org/draft/2020-12/schema", h0 = "https://json-schema.org/draft/2020-12/meta/meta-data", f0 = { "https://json-schema.org/draft/2020-12/vocab/meta-data": !0 }, p0 = "meta", w0 = "Meta-data vocabulary meta-schema", y0 = ["object", "boolean"], D0 = { title: { type: "string" }, description: { type: "string" }, default: !0, deprecated: { type: "boolean", default: !1 }, readOnly: { type: "boolean", default: !1 }, writeOnly: { type: "boolean", default: !1 }, examples: { type: "array", items: !0 } }, m0 = {
+  $schema: u0,
+  $id: h0,
+  $vocabulary: f0,
+  $dynamicAnchor: p0,
+  title: w0,
+  type: y0,
+  properties: D0
+}, S0 = "https://json-schema.org/draft/2020-12/schema", k0 = "https://json-schema.org/draft/2020-12/meta/validation", N0 = { "https://json-schema.org/draft/2020-12/vocab/validation": !0 }, M0 = "meta", G0 = "Validation vocabulary meta-schema", b0 = ["object", "boolean"], F0 = { type: { anyOf: [{ $ref: "#/$defs/simpleTypes" }, { type: "array", items: { $ref: "#/$defs/simpleTypes" }, minItems: 1, uniqueItems: !0 }] }, const: !0, enum: { type: "array", items: !0 }, multipleOf: { type: "number", exclusiveMinimum: 0 }, maximum: { type: "number" }, exclusiveMaximum: { type: "number" }, minimum: { type: "number" }, exclusiveMinimum: { type: "number" }, maxLength: { $ref: "#/$defs/nonNegativeInteger" }, minLength: { $ref: "#/$defs/nonNegativeIntegerDefault0" }, pattern: { type: "string", format: "regex" }, maxItems: { $ref: "#/$defs/nonNegativeInteger" }, minItems: { $ref: "#/$defs/nonNegativeIntegerDefault0" }, uniqueItems: { type: "boolean", default: !1 }, maxContains: { $ref: "#/$defs/nonNegativeInteger" }, minContains: { $ref: "#/$defs/nonNegativeInteger", default: 1 }, maxProperties: { $ref: "#/$defs/nonNegativeInteger" }, minProperties: { $ref: "#/$defs/nonNegativeIntegerDefault0" }, required: { $ref: "#/$defs/stringArray" }, dependentRequired: { type: "object", additionalProperties: { $ref: "#/$defs/stringArray" } } }, R0 = { nonNegativeInteger: { type: "integer", minimum: 0 }, nonNegativeIntegerDefault0: { $ref: "#/$defs/nonNegativeInteger", default: 0 }, simpleTypes: { enum: ["array", "boolean", "integer", "null", "number", "object", "string"] }, stringArray: { type: "array", items: { type: "string" }, uniqueItems: !0, default: [] } }, v0 = {
+  $schema: S0,
+  $id: k0,
+  $vocabulary: N0,
+  $dynamicAnchor: M0,
+  title: G0,
+  type: b0,
+  properties: F0,
+  $defs: R0
 };
 var ag;
-function c0() {
-  if (ag) return to;
-  ag = 1, Object.defineProperty(to, "__esModule", { value: !0 });
-  const t = rS, A = QS, e = wS, i = GS, o = HS, r = VS, n = e0, s = I0, a = ["/properties"];
+function K0() {
+  if (ag) return oo;
+  ag = 1, Object.defineProperty(oo, "__esModule", { value: !0 });
+  const t = MS, A = JS, e = jS, i = A0, o = g0, r = d0, n = m0, s = v0, a = ["/properties"];
   function g(I) {
     return [
       t,
@@ -23612,13 +23710,13 @@ function c0() {
       return I ? C.$dataMetaSchema(B, a) : B;
     }
   }
-  return to.default = g, to;
+  return oo.default = g, oo;
 }
 var gg;
-function C0() {
+function Y0() {
   return gg || (gg = 1, (function(t, A) {
     Object.defineProperty(A, "__esModule", { value: !0 }), A.MissingRefError = A.ValidationError = A.CodeGen = A.Name = A.nil = A.stringify = A.str = A._ = A.KeywordCxt = A.Ajv2020 = void 0;
-    const e = _I(), i = $m(), o = ac(), r = c0(), n = "https://json-schema.org/draft/2020-12/schema";
+    const e = _I(), i = uS(), o = ac(), r = K0(), n = "https://json-schema.org/draft/2020-12/schema";
     class s extends e.default {
       constructor(B = {}) {
         super({
@@ -23641,7 +23739,7 @@ function C0() {
       }
     }
     A.Ajv2020 = s, t.exports = A = s, t.exports.Ajv2020 = s, Object.defineProperty(A, "__esModule", { value: !0 }), A.default = s;
-    var a = Zt();
+    var a = Ai();
     Object.defineProperty(A, "KeywordCxt", { enumerable: !0, get: function() {
       return a.KeywordCxt;
     } });
@@ -23659,25 +23757,25 @@ function C0() {
     } }), Object.defineProperty(A, "CodeGen", { enumerable: !0, get: function() {
       return g.CodeGen;
     } });
-    var I = Uo();
+    var I = qo();
     Object.defineProperty(A, "ValidationError", { enumerable: !0, get: function() {
       return I.default;
     } });
-    var c = Xt();
+    var c = ei();
     Object.defineProperty(A, "MissingRefError", { enumerable: !0, get: function() {
       return c.default;
     } });
-  })(ai, ai.exports)), ai.exports;
+  })(Ii, Ii.exports)), Ii.exports;
 }
-var gc = C0();
-const B0 = /* @__PURE__ */ jI(gc), Q0 = /* @__PURE__ */ Cc({
+var gc = Y0();
+const U0 = /* @__PURE__ */ jI(gc), J0 = /* @__PURE__ */ Cc({
   __proto__: null,
-  default: B0
+  default: U0
 }, [gc]);
-var io = { exports: {} }, oo = {}, Ig;
-function E0() {
-  if (Ig) return oo;
-  Ig = 1, Object.defineProperty(oo, "__esModule", { value: !0 });
+var ro = { exports: {} }, no = {}, Ig;
+function H0() {
+  if (Ig) return no;
+  Ig = 1, Object.defineProperty(no, "__esModule", { value: !0 });
   const t = ZI(), A = XI(), e = ic(), i = nc(), o = sc(), r = [
     t.default,
     A.default,
@@ -23686,22 +23784,22 @@ function E0() {
     o.metadataVocabulary,
     o.contentVocabulary
   ];
-  return oo.default = r, oo;
+  return no.default = r, no;
 }
-const l0 = "http://json-schema.org/draft-07/schema#", d0 = "http://json-schema.org/draft-07/schema#", u0 = "Core schema meta-schema", h0 = { schemaArray: { type: "array", minItems: 1, items: { $ref: "#" } }, nonNegativeInteger: { type: "integer", minimum: 0 }, nonNegativeIntegerDefault0: { allOf: [{ $ref: "#/definitions/nonNegativeInteger" }, { default: 0 }] }, simpleTypes: { enum: ["array", "boolean", "integer", "null", "number", "object", "string"] }, stringArray: { type: "array", items: { type: "string" }, uniqueItems: !0, default: [] } }, f0 = ["object", "boolean"], p0 = { $id: { type: "string", format: "uri-reference" }, $schema: { type: "string", format: "uri" }, $ref: { type: "string", format: "uri-reference" }, $comment: { type: "string" }, title: { type: "string" }, description: { type: "string" }, default: !0, readOnly: { type: "boolean", default: !1 }, examples: { type: "array", items: !0 }, multipleOf: { type: "number", exclusiveMinimum: 0 }, maximum: { type: "number" }, exclusiveMaximum: { type: "number" }, minimum: { type: "number" }, exclusiveMinimum: { type: "number" }, maxLength: { $ref: "#/definitions/nonNegativeInteger" }, minLength: { $ref: "#/definitions/nonNegativeIntegerDefault0" }, pattern: { type: "string", format: "regex" }, additionalItems: { $ref: "#" }, items: { anyOf: [{ $ref: "#" }, { $ref: "#/definitions/schemaArray" }], default: !0 }, maxItems: { $ref: "#/definitions/nonNegativeInteger" }, minItems: { $ref: "#/definitions/nonNegativeIntegerDefault0" }, uniqueItems: { type: "boolean", default: !1 }, contains: { $ref: "#" }, maxProperties: { $ref: "#/definitions/nonNegativeInteger" }, minProperties: { $ref: "#/definitions/nonNegativeIntegerDefault0" }, required: { $ref: "#/definitions/stringArray" }, additionalProperties: { $ref: "#" }, definitions: { type: "object", additionalProperties: { $ref: "#" }, default: {} }, properties: { type: "object", additionalProperties: { $ref: "#" }, default: {} }, patternProperties: { type: "object", additionalProperties: { $ref: "#" }, propertyNames: { format: "regex" }, default: {} }, dependencies: { type: "object", additionalProperties: { anyOf: [{ $ref: "#" }, { $ref: "#/definitions/stringArray" }] } }, propertyNames: { $ref: "#" }, const: !0, enum: { type: "array", items: !0, minItems: 1, uniqueItems: !0 }, type: { anyOf: [{ $ref: "#/definitions/simpleTypes" }, { type: "array", items: { $ref: "#/definitions/simpleTypes" }, minItems: 1, uniqueItems: !0 }] }, format: { type: "string" }, contentMediaType: { type: "string" }, contentEncoding: { type: "string" }, if: { $ref: "#" }, then: { $ref: "#" }, else: { $ref: "#" }, allOf: { $ref: "#/definitions/schemaArray" }, anyOf: { $ref: "#/definitions/schemaArray" }, oneOf: { $ref: "#/definitions/schemaArray" }, not: { $ref: "#" } }, w0 = {
-  $schema: l0,
-  $id: d0,
-  title: u0,
-  definitions: h0,
-  type: f0,
-  properties: p0,
+const q0 = "http://json-schema.org/draft-07/schema#", x0 = "http://json-schema.org/draft-07/schema#", L0 = "Core schema meta-schema", T0 = { schemaArray: { type: "array", minItems: 1, items: { $ref: "#" } }, nonNegativeInteger: { type: "integer", minimum: 0 }, nonNegativeIntegerDefault0: { allOf: [{ $ref: "#/definitions/nonNegativeInteger" }, { default: 0 }] }, simpleTypes: { enum: ["array", "boolean", "integer", "null", "number", "object", "string"] }, stringArray: { type: "array", items: { type: "string" }, uniqueItems: !0, default: [] } }, O0 = ["object", "boolean"], P0 = { $id: { type: "string", format: "uri-reference" }, $schema: { type: "string", format: "uri" }, $ref: { type: "string", format: "uri-reference" }, $comment: { type: "string" }, title: { type: "string" }, description: { type: "string" }, default: !0, readOnly: { type: "boolean", default: !1 }, examples: { type: "array", items: !0 }, multipleOf: { type: "number", exclusiveMinimum: 0 }, maximum: { type: "number" }, exclusiveMaximum: { type: "number" }, minimum: { type: "number" }, exclusiveMinimum: { type: "number" }, maxLength: { $ref: "#/definitions/nonNegativeInteger" }, minLength: { $ref: "#/definitions/nonNegativeIntegerDefault0" }, pattern: { type: "string", format: "regex" }, additionalItems: { $ref: "#" }, items: { anyOf: [{ $ref: "#" }, { $ref: "#/definitions/schemaArray" }], default: !0 }, maxItems: { $ref: "#/definitions/nonNegativeInteger" }, minItems: { $ref: "#/definitions/nonNegativeIntegerDefault0" }, uniqueItems: { type: "boolean", default: !1 }, contains: { $ref: "#" }, maxProperties: { $ref: "#/definitions/nonNegativeInteger" }, minProperties: { $ref: "#/definitions/nonNegativeIntegerDefault0" }, required: { $ref: "#/definitions/stringArray" }, additionalProperties: { $ref: "#" }, definitions: { type: "object", additionalProperties: { $ref: "#" }, default: {} }, properties: { type: "object", additionalProperties: { $ref: "#" }, default: {} }, patternProperties: { type: "object", additionalProperties: { $ref: "#" }, propertyNames: { format: "regex" }, default: {} }, dependencies: { type: "object", additionalProperties: { anyOf: [{ $ref: "#" }, { $ref: "#/definitions/stringArray" }] } }, propertyNames: { $ref: "#" }, const: !0, enum: { type: "array", items: !0, minItems: 1, uniqueItems: !0 }, type: { anyOf: [{ $ref: "#/definitions/simpleTypes" }, { type: "array", items: { $ref: "#/definitions/simpleTypes" }, minItems: 1, uniqueItems: !0 }] }, format: { type: "string" }, contentMediaType: { type: "string" }, contentEncoding: { type: "string" }, if: { $ref: "#" }, then: { $ref: "#" }, else: { $ref: "#" }, allOf: { $ref: "#/definitions/schemaArray" }, anyOf: { $ref: "#/definitions/schemaArray" }, oneOf: { $ref: "#/definitions/schemaArray" }, not: { $ref: "#" } }, j0 = {
+  $schema: q0,
+  $id: x0,
+  title: L0,
+  definitions: T0,
+  type: O0,
+  properties: P0,
   default: !0
 };
 var cg;
-function y0() {
+function V0() {
   return cg || (cg = 1, (function(t, A) {
     Object.defineProperty(A, "__esModule", { value: !0 }), A.MissingRefError = A.ValidationError = A.CodeGen = A.Name = A.nil = A.stringify = A.str = A._ = A.KeywordCxt = A.Ajv = void 0;
-    const e = _I(), i = E0(), o = ac(), r = w0, n = ["/properties"], s = "http://json-schema.org/draft-07/schema";
+    const e = _I(), i = H0(), o = ac(), r = j0, n = ["/properties"], s = "http://json-schema.org/draft-07/schema";
     class a extends e.default {
       _addVocabularies() {
         super._addVocabularies(), i.default.forEach((Q) => this.addVocabulary(Q)), this.opts.discriminator && this.addKeyword(o.default);
@@ -23717,7 +23815,7 @@ function y0() {
       }
     }
     A.Ajv = a, t.exports = A = a, t.exports.Ajv = a, Object.defineProperty(A, "__esModule", { value: !0 }), A.default = a;
-    var g = Zt();
+    var g = Ai();
     Object.defineProperty(A, "KeywordCxt", { enumerable: !0, get: function() {
       return g.KeywordCxt;
     } });
@@ -23735,23 +23833,23 @@ function y0() {
     } }), Object.defineProperty(A, "CodeGen", { enumerable: !0, get: function() {
       return I.CodeGen;
     } });
-    var c = Uo();
+    var c = qo();
     Object.defineProperty(A, "ValidationError", { enumerable: !0, get: function() {
       return c.default;
     } });
-    var C = Xt();
+    var C = ei();
     Object.defineProperty(A, "MissingRefError", { enumerable: !0, get: function() {
       return C.default;
     } });
-  })(io, io.exports)), io.exports;
+  })(ro, ro.exports)), ro.exports;
 }
-var D0 = y0();
-const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+var $0 = V0();
+const W0 = /* @__PURE__ */ jI($0), z0 = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: m0
-}, Symbol.toStringTag, { value: "Module" })), k0 = {}, Cg = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+  default: W0
+}, Symbol.toStringTag, { value: "Module" })), _0 = {}, Cg = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  default: k0
+  default: _0
 }, Symbol.toStringTag, { value: "Module" })), Ic = {
   $schema: "@maia/schema/style",
   $id: "@maia/style/brand",
@@ -23878,13 +23976,13 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
   selectors: {
     ":host": { display: "block", height: "100%", background: "transparent" }
   }
-}, N0 = {
+}, Z0 = {
   $schema: "@maia/schema/vibe",
   $id: "@maia/vibe/todos",
   name: "Todos",
   description: "Complete todo list with state machines and AI tools",
   actor: "@maia/todos/actor/vibe"
-}, M0 = {
+}, X0 = {
   $schema: "@maia/schema/style",
   $id: "@maia/todos/style/brand",
   tokens: {
@@ -24310,7 +24408,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, G0 = {
+}, Ak = {
   $schema: "@maia/schema/style",
   $id: "@maia/todos/style/list",
   components: {
@@ -24514,7 +24612,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       background: "rgba(255, 255, 255, 0.1)"
     }
   }
-}, F0 = {
+}, ek = {
   $schema: "@maia/schema/style",
   $id: "@maia/todos/style/coming-soon",
   components: {
@@ -24533,7 +24631,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       fontStyle: "italic"
     }
   }
-}, b0 = {
+}, tk = {
   $schema: "@maia/schema/actor",
   $id: "@maia/todos/actor/vibe",
   role: "agent",
@@ -24543,7 +24641,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
   brand: "@maia/todos/style/brand",
   inbox: "@maia/todos/inbox/vibe",
   messageTypes: ["CREATE_BUTTON", "TOGGLE_BUTTON", "DELETE_BUTTON", "UPDATE_INPUT", "SWITCH_VIEW", "SUCCESS", "ERROR"]
-}, R0 = {
+}, ik = {
   $schema: "@maia/schema/actor",
   $id: "@maia/todos/actor/list",
   role: "todo-list",
@@ -24560,7 +24658,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
     "RETRY",
     "DISMISS"
   ]
-}, v0 = {
+}, ok = {
   $schema: "@maia/schema/actor",
   $id: "@maia/todos/actor/coming-soon",
   role: "ui",
@@ -24571,7 +24669,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
   style: "@maia/todos/style/coming-soon",
   inbox: "@maia/todos/inbox/coming-soon",
   messageTypes: []
-}, K0 = {
+}, rk = {
   $schema: "@maia/schema/view",
   $id: "@maia/todos/view/vibe",
   content: {
@@ -24625,7 +24723,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       { tag: "main", class: "content-area", $slot: "$currentView" }
     ]
   }
-}, Y0 = {
+}, nk = {
   $schema: "@maia/schema/view",
   $id: "@maia/todos/view/list",
   content: {
@@ -24674,7 +24772,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, U0 = {
+}, sk = {
   $schema: "@maia/schema/view",
   $id: "@maia/todos/view/coming-soon",
   content: {
@@ -24688,7 +24786,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     ]
   }
-}, J0 = {
+}, ak = {
   $schema: "@maia/schema/context",
   $id: "@maia/todos/context/vibe",
   currentView: "@list",
@@ -24705,7 +24803,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
     list: "@maia/todos/actor/list",
     comingSoon: "@maia/todos/actor/coming-soon"
   }
-}, H0 = {
+}, gk = {
   $schema: "@maia/schema/context",
   $id: "@maia/todos/context/list",
   list: {
@@ -24713,11 +24811,11 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
   },
   toggleButtonText: "✓",
   deleteButtonText: "✕"
-}, q0 = {
+}, Ik = {
   $schema: "@maia/schema/context",
   $id: "@maia/todos/context/coming-soon",
   message: "Coming soon"
-}, x0 = {
+}, ck = {
   $schema: "@maia/schema/state",
   $id: "@maia/todos/state/vibe",
   initial: "idle",
@@ -24764,7 +24862,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       on: { TOGGLE_BUTTON: { target: "toggling" }, DELETE_BUTTON: { target: "deleting" }, RETRY: { target: "idle", actions: [{ updateContext: { error: null } }] }, DISMISS: { target: "idle", actions: [{ updateContext: { error: null } }] } }
     }
   }
-}, L0 = {
+}, Ck = {
   $schema: "@maia/schema/state",
   $id: "@maia/todos/state/list",
   initial: "idle",
@@ -24837,57 +24935,57 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, T0 = {
+}, Bk = {
   $schema: "@maia/schema/state",
   $id: "@maia/todos/state/coming-soon",
   initial: "idle",
   states: {
     idle: {}
   }
-}, O0 = {
+}, Qk = {
   $schema: "@maia/schema/inbox",
   $id: "@maia/todos/inbox/vibe",
   items: []
-}, P0 = {
+}, Ek = {
   $schema: "@maia/schema/inbox",
   $id: "@maia/todos/inbox/list",
   items: []
-}, j0 = {
+}, lk = {
   $schema: "@maia/schema/inbox",
   $id: "@maia/todos/inbox/coming-soon",
   items: []
-}, _r = {
-  vibe: N0,
+}, Zr = {
+  vibe: Z0,
   styles: {
     "@maia/style/brand": Ic,
-    "@maia/todos/style/brand": M0,
-    "@maia/todos/style/list": G0,
-    "@maia/todos/style/coming-soon": F0
+    "@maia/todos/style/brand": X0,
+    "@maia/todos/style/list": Ak,
+    "@maia/todos/style/coming-soon": ek
   },
   actors: {
-    "@maia/todos/actor/vibe": b0,
-    "@maia/todos/actor/list": R0,
-    "@maia/todos/actor/coming-soon": v0
+    "@maia/todos/actor/vibe": tk,
+    "@maia/todos/actor/list": ik,
+    "@maia/todos/actor/coming-soon": ok
   },
   views: {
-    "@maia/todos/view/vibe": K0,
-    "@maia/todos/view/list": Y0,
-    "@maia/todos/view/coming-soon": U0
+    "@maia/todos/view/vibe": rk,
+    "@maia/todos/view/list": nk,
+    "@maia/todos/view/coming-soon": sk
   },
   contexts: {
-    "@maia/todos/context/vibe": J0,
-    "@maia/todos/context/list": H0,
-    "@maia/todos/context/coming-soon": q0
+    "@maia/todos/context/vibe": ak,
+    "@maia/todos/context/list": gk,
+    "@maia/todos/context/coming-soon": Ik
   },
   states: {
-    "@maia/todos/state/vibe": x0,
-    "@maia/todos/state/list": L0,
-    "@maia/todos/state/coming-soon": T0
+    "@maia/todos/state/vibe": ck,
+    "@maia/todos/state/list": Ck,
+    "@maia/todos/state/coming-soon": Bk
   },
   inboxes: {
-    "@maia/todos/inbox/vibe": O0,
-    "@maia/todos/inbox/list": P0,
-    "@maia/todos/inbox/coming-soon": j0
+    "@maia/todos/inbox/vibe": Qk,
+    "@maia/todos/inbox/list": Ek,
+    "@maia/todos/inbox/coming-soon": lk
   },
   data: {
     todos: [
@@ -24895,13 +24993,13 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       { text: "Toggle me to mark as complete", done: !1 }
     ]
   }
-}, V0 = {
+}, dk = {
   $schema: "@maia/schema/vibe",
   $id: "@maia/vibe/db",
   name: "MaiaDB",
   description: "Database viewer with navigation and detail panels",
   actor: "@maia/db/actor/vibe"
-}, $0 = {
+}, uk = {
   $schema: "@maia/schema/style",
   $id: "@maia/db/style/brand",
   tokens: {
@@ -25344,7 +25442,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, W0 = {
+}, hk = {
   $schema: "@maia/schema/actor",
   $id: "@maia/db/actor/vibe",
   role: "agent",
@@ -25357,7 +25455,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
     "SELECT_NAV",
     "SELECT_ROW"
   ]
-}, z0 = {
+}, fk = {
   $schema: "@maia/schema/actor",
   $id: "@maia/db/actor/table",
   role: "ui",
@@ -25369,7 +25467,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
   messageTypes: [
     "SELECT_ROW"
   ]
-}, _0 = {
+}, pk = {
   $schema: "@maia/schema/actor",
   $id: "@maia/db/actor/detail",
   role: "ui",
@@ -25379,7 +25477,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
   brand: "@maia/db/style/brand",
   inbox: "@maia/db/inbox/detail",
   messageTypes: []
-}, Z0 = {
+}, wk = {
   $schema: "@maia/schema/view",
   $id: "@maia/db/view/vibe",
   content: {
@@ -25482,7 +25580,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     ]
   }
-}, X0 = {
+}, yk = {
   $schema: "@maia/schema/view",
   $id: "@maia/db/view/table",
   content: {
@@ -25572,7 +25670,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     ]
   }
-}, Ak = {
+}, Dk = {
   $schema: "@maia/schema/view",
   $id: "@maia/db/view/detail",
   content: {
@@ -25757,7 +25855,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     ]
   }
-}, ek = {
+}, mk = {
   $schema: "@maia/schema/context",
   $id: "@maia/db/context/vibe",
   navTitle: "MaiaDB",
@@ -25816,7 +25914,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
     table: "@maia/db/actor/table",
     detail: "@maia/db/actor/detail"
   }
-}, tk = {
+}, Sk = {
   $schema: "@maia/schema/context",
   $id: "@maia/db/context/table",
   table: [
@@ -25869,7 +25967,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
     status: "Status",
     createdAt: "Created"
   }
-}, ik = {
+}, kk = {
   $schema: "@maia/schema/context",
   $id: "@maia/db/context/detail",
   detail: {
@@ -25896,7 +25994,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
     department: "Department",
     phone: "Phone"
   }
-}, ok = {
+}, Nk = {
   $schema: "@maia/schema/state",
   $id: "@maia/db/state/vibe",
   initial: "idle",
@@ -25938,7 +26036,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, rk = {
+}, Mk = {
   $schema: "@maia/schema/state",
   $id: "@maia/db/state/table",
   initial: "idle",
@@ -25958,64 +26056,64 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, nk = {
+}, Gk = {
   $schema: "@maia/schema/state",
   $id: "@maia/db/state/detail",
   initial: "idle",
   states: {
     idle: {}
   }
-}, sk = {
+}, bk = {
   $schema: "@maia/schema/inbox",
   $id: "@maia/db/inbox/vibe",
   cotype: "costream"
-}, ak = {
+}, Fk = {
   $schema: "@maia/schema/inbox",
   $id: "@maia/db/inbox/table",
   cotype: "costream"
-}, gk = {
+}, Rk = {
   $schema: "@maia/schema/inbox",
   $id: "@maia/db/inbox/detail",
   cotype: "costream"
-}, Zr = {
-  vibe: V0,
+}, Xr = {
+  vibe: dk,
   styles: {
-    "@maia/db/style/brand": $0
+    "@maia/db/style/brand": uk
   },
   actors: {
-    "@maia/db/actor/vibe": W0,
-    "@maia/db/actor/table": z0,
-    "@maia/db/actor/detail": _0
+    "@maia/db/actor/vibe": hk,
+    "@maia/db/actor/table": fk,
+    "@maia/db/actor/detail": pk
   },
   views: {
-    "@maia/db/view/vibe": Z0,
-    "@maia/db/view/table": X0,
-    "@maia/db/view/detail": Ak
+    "@maia/db/view/vibe": wk,
+    "@maia/db/view/table": yk,
+    "@maia/db/view/detail": Dk
   },
   contexts: {
-    "@maia/db/context/vibe": ek,
-    "@maia/db/context/table": tk,
-    "@maia/db/context/detail": ik
+    "@maia/db/context/vibe": mk,
+    "@maia/db/context/table": Sk,
+    "@maia/db/context/detail": kk
   },
   states: {
-    "@maia/db/state/vibe": ok,
-    "@maia/db/state/table": rk,
-    "@maia/db/state/detail": nk
+    "@maia/db/state/vibe": Nk,
+    "@maia/db/state/table": Mk,
+    "@maia/db/state/detail": Gk
   },
   inboxes: {
-    "@maia/db/inbox/vibe": sk,
-    "@maia/db/inbox/table": ak,
-    "@maia/db/inbox/detail": gk
+    "@maia/db/inbox/vibe": bk,
+    "@maia/db/inbox/table": Fk,
+    "@maia/db/inbox/detail": Rk
   },
   // No initial data - this vibe uses mocked data in context
   data: {}
-}, Ik = {
+}, vk = {
   $schema: "@maia/schema/vibe",
   $id: "@maia/vibe/sparks",
   name: "Sparks",
   description: "Create and manage collaborative groups (sparks)",
   actor: "@maia/sparks/actor/vibe"
-}, ck = {
+}, Kk = {
   $schema: "@maia/schema/style",
   $id: "@maia/sparks/style/brand",
   tokens: {
@@ -26667,7 +26765,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, Ck = {
+}, Yk = {
   $schema: "@maia/schema/actor",
   $id: "@maia/sparks/actor/vibe",
   type: "service",
@@ -26684,7 +26782,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
     "ERROR",
     "DISMISS"
   ]
-}, Bk = {
+}, Uk = {
   $schema: "@maia/schema/actor",
   $id: "@maia/sparks/actor/detail",
   role: "ui",
@@ -26701,7 +26799,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
     "UPDATE_AGENT_INPUT",
     "ERROR"
   ]
-}, Qk = {
+}, Jk = {
   $schema: "@maia/schema/view",
   $id: "@maia/sparks/view/vibe",
   content: {
@@ -26846,7 +26944,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     ]
   }
-}, Ek = {
+}, Hk = {
   $schema: "@maia/schema/view",
   $id: "@maia/sparks/view/detail",
   content: {
@@ -26997,12 +27095,16 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
               {
                 tag: "button",
                 class: "button",
+                attrs: {
+                  type: "button",
+                  disabled: "$addButtonDisabled"
+                },
                 text: "Add as writer",
                 $on: {
                   click: {
                     send: "ADD_AGENT",
                     payload: {
-                      agentId: "$agentIdInput"
+                      agentId: "@inputValue"
                     }
                   }
                 }
@@ -27031,7 +27133,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     ]
   }
-}, lk = {
+}, qk = {
   $schema: "@maia/schema/context",
   $id: "@maia/sparks/context/vibe",
   sparks: {
@@ -27049,29 +27151,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
   "@actors": {
     detail: "@maia/sparks/actor/detail"
   }
-}, dk = {
-  $schema: "@maia/schema/context",
-  $id: "@maia/sparks/context/detail",
-  sparkId: null,
-  sparkDetails: {
-    schema: "@maia/schema/data/spark",
-    filter: {
-      id: "$sparkId"
-    },
-    options: {
-      map: {
-        members: "$$os.capabilities.guardian.accountMembers",
-        groupId: "$$os.capabilities.guardian.id"
-      }
-    }
-  },
-  hasSpark: !1,
-  showEmptyState: !0,
-  showContent: !1,
-  agentIdInput: "",
-  addAgentError: null,
-  addAgentHasError: !1
-}, uk = {
+}, xk = { $schema: "@maia/schema/context", $id: "@maia/sparks/context/detail", sparkId: null, sparkDetails: { schema: "@maia/schema/data/spark", filter: { id: "$sparkId" }, options: { map: { members: "$$os.capabilities.guardian.accountMembers", groupId: "$$os.capabilities.guardian.id" } } }, hasSpark: !1, showEmptyState: !0, showContent: !1, agentIdInput: "", addAgentError: null, addAgentHasError: !1, addButtonDisabled: !0 }, Lk = {
   $schema: "@maia/schema/state",
   $id: "@maia/sparks/state/vibe",
   initial: "idle",
@@ -27159,187 +27239,46 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, hk = {
-  $schema: "@maia/schema/state",
-  $id: "@maia/sparks/state/detail",
-  initial: "idle",
-  states: {
-    idle: {
-      on: {
-        LOAD_ACTOR: {
-          target: "updating",
-          actions: [
-            {
-              updateContext: {
-                sparkId: "$$id"
-              }
-            }
-          ]
-        },
-        UPDATE_AGENT_INPUT: {
-          target: "idle",
-          actions: [
-            {
-              updateContext: {
-                agentIdInput: "$$value"
-              }
-            }
-          ]
-        },
-        ADD_AGENT: {
-          target: "addingAgent"
-        },
-        REMOVE_MEMBER: {
-          target: "removingMember"
-        }
-      },
-      entry: {
-        updateContext: {
-          hasSpark: {
-            $ne: [
-              "$sparkId",
-              null
-            ]
-          },
-          showEmptyState: {
-            $eq: [
-              "$sparkId",
-              null
-            ]
-          },
-          showContent: {
-            $ne: [
-              "$sparkId",
-              null
-            ]
-          }
-        }
-      }
-    },
-    updating: {
-      entry: {
-        updateContext: {
-          hasSpark: {
-            $ne: [
-              "$sparkId",
-              null
-            ]
-          },
-          showEmptyState: {
-            $eq: [
-              "$sparkId",
-              null
-            ]
-          },
-          showContent: {
-            $ne: [
-              "$sparkId",
-              null
-            ]
-          }
-        }
-      },
-      on: {
-        SUCCESS: {
-          target: "idle"
-        }
-      }
-    },
-    addingAgent: {
-      entry: {
-        tool: "@sparks",
-        payload: {
-          op: "addSparkMember",
-          id: "$sparkId",
-          memberId: "$$agentId",
-          role: "writer"
-        }
-      },
-      on: {
-        SUCCESS: {
-          target: "idle",
-          actions: [
-            {
-              updateContext: {
-                agentIdInput: "",
-                addAgentError: null,
-                addAgentHasError: !1
-              }
-            }
-          ]
-        },
-        ERROR: {
-          target: "idle",
-          actions: [
-            {
-              updateContext: {
-                addAgentError: "$$errors.0.message",
-                addAgentHasError: !0
-              }
-            }
-          ]
-        }
-      }
-    },
-    removingMember: {
-      entry: {
-        tool: "@sparks",
-        payload: {
-          op: "removeSparkMember",
-          id: "$sparkId",
-          memberId: "$$memberId"
-        }
-      },
-      on: {
-        SUCCESS: {
-          target: "idle"
-        },
-        ERROR: {
-          target: "idle"
-        }
-      }
-    }
-  }
-}, fk = {
+}, Tk = { $schema: "@maia/schema/state", $id: "@maia/sparks/state/detail", initial: "idle", states: { idle: { on: { LOAD_ACTOR: { target: "updating", actions: [{ updateContext: { sparkId: "$$id" } }] }, UPDATE_AGENT_INPUT: { target: "idle", actions: [{ updateContext: { agentIdInput: "$$value", addButtonDisabled: { $eq: ["$$value", ""] } } }] }, ADD_AGENT: { target: "addingAgent" }, REMOVE_MEMBER: { target: "removingMember" }, ERROR: { target: "idle" } }, entry: { updateContext: { hasSpark: { $ne: ["$sparkId", null] }, showEmptyState: { $eq: ["$sparkId", null] }, showContent: { $ne: ["$sparkId", null] } } } }, updating: { entry: { updateContext: { hasSpark: { $ne: ["$sparkId", null] }, showEmptyState: { $eq: ["$sparkId", null] }, showContent: { $ne: ["$sparkId", null] } } }, on: { SUCCESS: { target: "idle" } } }, addingAgent: { entry: { tool: "@sparks", payload: { op: "addSparkMember", id: "$sparkId", memberId: "$$agentId", role: "writer" } }, on: { SUCCESS: { target: "idle", actions: [{ updateContext: { agentIdInput: "", addAgentError: null, addAgentHasError: !1, addButtonDisabled: !0 } }] }, ERROR: { target: "idle", actions: [{ updateContext: { addAgentError: "$$errors.0.message", addAgentHasError: !0 } }] } } }, removingMember: { entry: { tool: "@sparks", payload: { op: "removeSparkMember", id: "$sparkId", memberId: "$$memberId" } }, on: { SUCCESS: { target: "idle" }, ERROR: { target: "idle" } } } } }, Ok = {
   $schema: "@maia/schema/inbox",
   $id: "@maia/sparks/inbox/vibe",
   cotype: "costream"
-}, pk = {
+}, Pk = {
   $schema: "@maia/schema/inbox",
   $id: "@maia/sparks/inbox/detail",
   cotype: "costream"
-}, Xr = {
-  vibe: Ik,
+}, An = {
+  vibe: vk,
   styles: {
-    "@maia/sparks/style/brand": ck
+    "@maia/sparks/style/brand": Kk
   },
   actors: {
-    "@maia/sparks/actor/vibe": Ck,
-    "@maia/sparks/actor/detail": Bk
+    "@maia/sparks/actor/vibe": Yk,
+    "@maia/sparks/actor/detail": Uk
   },
   views: {
-    "@maia/sparks/view/vibe": Qk,
-    "@maia/sparks/view/detail": Ek
+    "@maia/sparks/view/vibe": Jk,
+    "@maia/sparks/view/detail": Hk
   },
   contexts: {
-    "@maia/sparks/context/vibe": lk,
-    "@maia/sparks/context/detail": dk
+    "@maia/sparks/context/vibe": qk,
+    "@maia/sparks/context/detail": xk
   },
   states: {
-    "@maia/sparks/state/vibe": uk,
-    "@maia/sparks/state/detail": hk
+    "@maia/sparks/state/vibe": Lk,
+    "@maia/sparks/state/detail": Tk
   },
   inboxes: {
-    "@maia/sparks/inbox/vibe": fk,
-    "@maia/sparks/inbox/detail": pk
+    "@maia/sparks/inbox/vibe": Ok,
+    "@maia/sparks/inbox/detail": Pk
   }
-}, wk = {
+}, jk = {
   $schema: "@maia/schema/vibe",
   $id: "@maia/vibe/chat",
   name: "Chat",
   description: "CTO-level AI assistant for MaiaOS codebase",
   actor: "@maia/chat/actor/vibe"
-}, yk = {
+}, Vk = {
   $schema: "@maia/schema/style",
   $id: "@maia/chat/style/brand",
   tokens: {
@@ -27847,7 +27786,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, Dk = {
+}, $k = {
   $schema: "@maia/schema/actor",
   $id: "@maia/chat/actor/vibe",
   role: "agent",
@@ -27865,7 +27804,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
     "RETRY",
     "DISMISS"
   ]
-}, mk = {
+}, Wk = {
   $schema: "@maia/schema/view",
   $id: "@maia/chat/view/vibe",
   content: {
@@ -28017,7 +27956,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     ]
   }
-}, Sk = {
+}, zk = {
   $schema: "@maia/schema/context",
   $id: "@maia/chat/context/vibe",
   conversations: {
@@ -28030,7 +27969,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
   hasConversations: !1,
   hasError: !1,
   messageNames: {}
-}, kk = {
+}, _k = {
   $schema: "@maia/schema/state",
   $id: "@maia/chat/state/vibe",
   initial: "idle",
@@ -28292,36 +28231,36 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, Nk = {
+}, Zk = {
   $schema: "@maia/schema/inbox",
   $id: "@maia/chat/inbox/vibe"
-}, Mk = {
-  vibe: wk,
+}, Xk = {
+  vibe: jk,
   styles: {
-    "@maia/chat/style/brand": yk
+    "@maia/chat/style/brand": Vk
   },
   actors: {
-    "@maia/chat/actor/vibe": Dk
+    "@maia/chat/actor/vibe": $k
   },
   views: {
-    "@maia/chat/view/vibe": mk
+    "@maia/chat/view/vibe": Wk
   },
   contexts: {
-    "@maia/chat/context/vibe": Sk
+    "@maia/chat/context/vibe": zk
   },
   states: {
-    "@maia/chat/state/vibe": kk
+    "@maia/chat/state/vibe": _k
   },
   inboxes: {
-    "@maia/chat/inbox/vibe": Nk
+    "@maia/chat/inbox/vibe": Zk
   }
-}, Gk = {
+}, AN = {
   $schema: "@maia/schema/vibe",
   $id: "@maia/vibe/creator",
   name: "Creator",
   description: "Create and manage vibes with logs viewer",
   actor: "@maia/creator/actor/vibe"
-}, Fk = {
+}, eN = {
   $schema: "@maia/schema/style",
   $id: "@maia/creator/style/logs",
   components: {
@@ -28519,7 +28458,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       display: "none"
     }
   }
-}, bk = { $schema: "@maia/schema/actor", $id: "@maia/creator/actor/vibe", role: "agent", context: "@maia/creator/context/logs", view: "@maia/creator/view/logs", state: "@maia/creator/state/logs", brand: "@maia/style/brand", style: "@maia/creator/style/logs", inbox: "@maia/creator/inbox/logs", messageTypes: ["RETRY", "DISMISS"] }, Rk = { $schema: "@maia/schema/view", $id: "@maia/creator/view/logs", content: { tag: "div", class: "stack", children: [{ tag: "h2", class: "vibe-creator-title", text: "Vibe Creator" }, { tag: "div", class: "logs", attrs: { data: "log-viewer" }, children: [{ tag: "div", class: "log-entries", $each: { items: "$messages", template: { class: "log-entry-container", children: [{ tag: "div", class: "log-entry", attrs: { data: { eventType: "$$type", processed: "$$processed" } }, children: [{ tag: "span", class: "log-type", text: "$$type" }, { tag: "span", class: "log-source", children: [{ tag: "span", class: "log-source-role", text: "$$fromRole" }, { tag: "span", class: "log-source-id", text: "$$fromId" }] }, { tag: "span", class: "log-target", children: [{ tag: "span", class: "log-target-role", text: "$$recipient" }, { tag: "span", class: "log-target-id", text: "$$targetId" }] }, { tag: "details", class: "log-payload-details", children: [{ tag: "summary", class: "log-payload-toggle", text: "$payloadLabel" }, { tag: "pre", class: "log-payload", text: "$$payload" }] }] }] } } }] }] } }, vk = {
+}, tN = { $schema: "@maia/schema/actor", $id: "@maia/creator/actor/vibe", role: "agent", context: "@maia/creator/context/logs", view: "@maia/creator/view/logs", state: "@maia/creator/state/logs", brand: "@maia/style/brand", style: "@maia/creator/style/logs", inbox: "@maia/creator/inbox/logs", messageTypes: ["RETRY", "DISMISS"] }, iN = { $schema: "@maia/schema/view", $id: "@maia/creator/view/logs", content: { tag: "div", class: "stack", children: [{ tag: "h2", class: "vibe-creator-title", text: "Vibe Creator" }, { tag: "div", class: "logs", attrs: { data: "log-viewer" }, children: [{ tag: "div", class: "log-entries", $each: { items: "$messages", template: { class: "log-entry-container", children: [{ tag: "div", class: "log-entry", attrs: { data: { eventType: "$$type", processed: "$$processed" } }, children: [{ tag: "span", class: "log-type", text: "$$type" }, { tag: "span", class: "log-source", children: [{ tag: "span", class: "log-source-role", text: "$$fromRole" }, { tag: "span", class: "log-source-id", text: "$$fromId" }] }, { tag: "span", class: "log-target", children: [{ tag: "span", class: "log-target-role", text: "$$recipient" }, { tag: "span", class: "log-target-id", text: "$$targetId" }] }, { tag: "details", class: "log-payload-details", children: [{ tag: "summary", class: "log-payload-toggle", text: "$payloadLabel" }, { tag: "pre", class: "log-payload", text: "$$payload" }] }] }] } } }] }] } }, oN = {
   $schema: "@maia/schema/context",
   $id: "@maia/creator/context/logs",
   messages: {
@@ -28536,7 +28475,7 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
     }
   },
   payloadLabel: "payload"
-}, Kk = {
+}, rN = {
   $schema: "@maia/schema/state",
   $id: "@maia/creator/state/logs",
   initial: "idle",
@@ -28572,48 +28511,48 @@ const m0 = /* @__PURE__ */ jI(D0), S0 = /* @__PURE__ */ Object.freeze(/* @__PURE
       }
     }
   }
-}, Yk = {
+}, nN = {
   $schema: "@maia/schema/inbox",
   $id: "@maia/creator/inbox/logs",
   items: []
-}, Uk = {
-  vibe: Gk,
+}, sN = {
+  vibe: AN,
   styles: {
     "@maia/style/brand": Ic,
-    "@maia/creator/style/logs": Fk
+    "@maia/creator/style/logs": eN
   },
   actors: {
-    "@maia/creator/actor/vibe": bk
+    "@maia/creator/actor/vibe": tN
   },
   views: {
-    "@maia/creator/view/logs": Rk
+    "@maia/creator/view/logs": iN
   },
   contexts: {
-    "@maia/creator/context/logs": vk
+    "@maia/creator/context/logs": oN
   },
   states: {
-    "@maia/creator/state/logs": Kk
+    "@maia/creator/state/logs": rN
   },
   inboxes: {
-    "@maia/creator/inbox/logs": Yk
+    "@maia/creator/inbox/logs": nN
   },
   data: {}
-}, Jk = [
-  _r,
-  Mk,
+}, aN = [
   Zr,
+  Xk,
   Xr,
-  Uk
+  An,
+  sN
 ];
-async function Hk() {
-  return Jk.filter((t) => t?.vibe);
+async function gN() {
+  return aN.filter((t) => t?.vibe);
 }
-function qk(t) {
+function IN(t) {
   if (!t) return null;
   const A = t.$id || "";
   return A.startsWith("@maia/vibe/") ? A.replace("@maia/vibe/", "") : (t.name || "default").toLowerCase().replace(/\s+/g, "-");
 }
-function xk(t, A = null) {
+function cN(t, A = null) {
   if (A == null || Array.isArray(A) && A.length === 0)
     return [];
   if (A === "all")
@@ -28622,40 +28561,40 @@ function xk(t, A = null) {
     const e = A.map((i) => i.toLowerCase().trim());
     return t.filter((i) => {
       if (!i.vibe) return !1;
-      const o = qk(i.vibe);
+      const o = IN(i.vibe);
       return e.includes(o);
     });
   }
   return console.warn(`[Vibes] Invalid seeding config: ${A}. Expected null, "all", or array of vibe keys.`), [];
 }
-const Lk = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
+const CN = /* @__PURE__ */ Object.freeze(/* @__PURE__ */ Object.defineProperty({
   __proto__: null,
-  DbRegistry: Zr,
-  DbVibeRegistry: Zr,
-  MaiaOS: se,
-  SparksRegistry: Xr,
-  SparksVibeRegistry: Xr,
-  TodosRegistry: _r,
-  TodosVibeRegistry: _r,
-  filterVibesForSeeding: xk,
-  getAllVibeRegistries: Hk
+  DbRegistry: Xr,
+  DbVibeRegistry: Xr,
+  MaiaOS: ge,
+  SparksRegistry: An,
+  SparksVibeRegistry: An,
+  TodosRegistry: Zr,
+  TodosVibeRegistry: Zr,
+  filterVibesForSeeding: cN,
+  getAllVibeRegistries: gN
 }, Symbol.toStringTag, { value: "Module" }));
 export {
-  se as MaiaOS,
-  wA as ReactiveStore,
+  ge as MaiaOS,
+  mA as ReactiveStore,
   OI as createAgentAccount,
-  Wy as createCoJSONAPI,
-  WD as generateAgentCredentials,
-  mo as getAllSchemas,
+  hD as createCoJSONAPI,
+  hm as generateAgentCredentials,
+  No as getAllSchemas,
   nI as getSchema,
-  hn as getSchemaIndexColistId,
+  fn as getSchemaIndexColistId,
   qI as isPRFSupported,
   PI as loadAgentAccount,
-  zD as loadOrCreateAgentAccount,
-  Ey as resolveAccountCoIdsToProfileNames,
-  hy as resolveGroupCoIdsToCapabilityNames,
-  zt as setupSyncPeers,
-  $D as signInWithPasskey,
-  VD as signUpWithPasskey,
-  cD as subscribeSyncState
+  fm as loadOrCreateAgentAccount,
+  Hy as resolveAccountCoIdsToProfileNames,
+  Ty as resolveGroupCoIdsToCapabilityNames,
+  Zt as setupSyncPeers,
+  um as signInWithPasskey,
+  dm as signUpWithPasskey,
+  KD as subscribeSyncState
 };

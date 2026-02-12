@@ -104,6 +104,8 @@ Bun.serve({
 	},
 })
 
+console.log(`[api] HTTP server on port ${PORT}`)
+
 // LLM endpoint handler
 // RedPill API endpoint is hardcoded, but model can be configured dynamically per request
 // Uses Vercel AI SDK with RedPill provider for better streaming support and unified API

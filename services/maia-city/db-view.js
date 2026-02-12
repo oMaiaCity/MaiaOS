@@ -599,9 +599,12 @@ export async function renderApp(maia, authState, syncState, currentScreen, curre
 					<!-- Consolidated Metadata View (no tabs) -->
 					<div class="metadata-info-list">
 						<!-- ID first (item's own ID) -->
-						<div class="metadata-info-item">
+						<div class="metadata-info-item metadata-info-id-row">
 							<span class="metadata-info-key">ID</span>
-							<code class="metadata-info-value" title="${data.id}">${truncate(data.id, 24)}</code>
+							<div class="metadata-info-value-wrap">
+								<code class="metadata-info-value" title="${escapeHtml(data.id || '')}">${truncate(data.id, 24)}</code>
+								<button type="button" class="metadata-copy-id" title="Copy full ID" data-copy-id="${escapeHtml(data.id || '')}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
+							</div>
 						</div>
 						${schemaCoId ? `
 							<div class="metadata-info-item">

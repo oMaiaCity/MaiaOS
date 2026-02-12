@@ -643,6 +643,41 @@ export class MaiaOS {
       throw new Error(`[Kernel] Vibe '${vibeKeyOrCoId}' not found in ${spark}.vibes. Available: ${availableVibes.join(', ') || 'none'}`);
     }
 
+    // STRICT: Require explicit browser runtime in spark.os.runtimes (no fallback)
+    const osId = sparkData.os;
+    if (osId && typeof osId === 'string' && osId.startsWith('co_')) {
+      const osStore = await this.dbEngine.execute({ op: 'read', schema: null, key: osId });
+      const osContent = osStore?.value;
+      const runtimesId = osContent?.runtimes;
+      if (runtimesId && typeof runtimesId === 'string' && runtimesId.startsWith('co_')) {
+        const runtimesStore = await this.dbEngine.execute({ op: 'read', schema: null, key: runtimesId });
+        const runtimesData = runtimesStore?.value;
+        const assignmentsColistId = runtimesData?.[vibeCoId] ?? runtimesData?.get?.(vibeCoId);
+        if (assignmentsColistId) {
+          const colistStore = await this.dbEngine.execute({ op: 'read', schema: null, key: assignmentsColistId });
+          const colistData = colistStore?.value;
+          const items = colistData?.items ?? [];
+          const itemIds = Array.isArray(items) ? items : [];
+          let hasBrowser = false;
+          for (const itemCoId of itemIds) {
+            if (typeof itemCoId !== 'string' || !itemCoId.startsWith('co_')) continue;
+            const itemStore = await this.dbEngine.execute({ op: 'read', schema: null, key: itemCoId });
+            const itemData = itemStore?.value;
+            if (itemData?.browser) { hasBrowser = true; break; }
+          }
+          if (!hasBrowser) {
+            throw new Error(`[Kernel] Vibe '${vibeKeyOrCoId}' has no browser runtime in spark.os.runtimes. Access denied.`);
+          }
+        } else {
+          throw new Error(`[Kernel] Vibe '${vibeKeyOrCoId}' has no runtimes entry in spark.os.runtimes. Access denied.`);
+        }
+      } else {
+        throw new Error(`[Kernel] Spark "${spark}" has no runtimes registry. Vibe loading requires spark.os.runtimes.`);
+      }
+    } else {
+      throw new Error(`[Kernel] Spark "${spark}" has no os. Vibe loading requires spark.os.runtimes.`);
+    }
+
     return await this.loadVibeFromDatabase(vibeCoId, container, vibeKeyOrCoId);
   }
 
@@ -846,7 +881,7 @@ export class MaiaOS {
    */
   async db(payload) {
     const result = await this.dbEngine.execute(payload);
-    const WRITE_OPS = new Set(['create', 'update', 'delete', 'append', 'push', 'seed']);
+    const WRITE_OPS = new Set(['create', 'update', 'delete', 'append', 'push', 'seed', 'addSparkMember', 'removeSparkMember']);
     if (result && result.ok === false && WRITE_OPS.has(payload?.op)) {
       const msgs = result.errors?.map((e) => e.message).join('; ') || 'Operation failed';
       const err = new Error(`[db] ${payload.op} failed: ${msgs}`);

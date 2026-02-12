@@ -62,6 +62,9 @@ import osRegistrySchema from './os/os-registry.schema.json';
 import capabilitiesSchema from './os/capabilities.schema.json';
 import indexesRegistrySchema from './os/indexes-registry.schema.json';
 import vibesRegistrySchema from './os/vibes-registry.schema.json';
+import runtimesRegistrySchema from './os/runtimes-registry.schema.json';
+import runtimeAssignmentSchema from './os/runtime-assignment.schema.json';
+import runtimeAssignmentsColistSchema from './os/runtime-assignments-colist.schema.json';
 import sparksRegistrySchema from './os/sparks-registry.schema.json';
 import humansRegistrySchema from './os/humans-registry.schema.json';
 import registriesSchema from './os/registries.schema.json';
@@ -99,7 +102,7 @@ const SCHEMAS = {
   subscribers: subscribersSchema, inbox: inboxSchema, children: childrenSchema,
   'os/schematas-registry': schematasRegistrySchema, 'os/os-registry': osRegistrySchema,
   'os/capabilities': capabilitiesSchema, 'os/indexes-registry': indexesRegistrySchema,
-  'os/vibes-registry': vibesRegistrySchema, 'os/sparks-registry': sparksRegistrySchema,
+  'os/vibes-registry': vibesRegistrySchema, 'os/runtimes-registry': runtimesRegistrySchema, 'os/runtime-assignment': runtimeAssignmentSchema, 'os/runtime-assignments-colist': runtimeAssignmentsColistSchema, 'os/sparks-registry': sparksRegistrySchema,
   'os/humans-registry': humansRegistrySchema, 'os/registries': registriesSchema,
   'data/todos': todosDataSchema, 'data/chat': chatDataSchema, 'data/spark': sparkDataSchema,
   'message/CREATE_BUTTON': createButtonMessageSchema, 'message/TOGGLE_BUTTON': toggleButtonMessageSchema,

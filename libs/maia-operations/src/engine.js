@@ -114,7 +114,7 @@ export class DBEngine {
       throw new Error(`[DBEngine] Unknown operation: ${op}`);
     }
     
-    const WRITE_OPS = new Set(['create', 'update', 'delete', 'append', 'push', 'seed']);
+    const WRITE_OPS = new Set(['create', 'update', 'delete', 'append', 'push', 'seed', 'addSparkMember', 'removeSparkMember']);
     try {
       const result = await operation.execute(params);
       return result;

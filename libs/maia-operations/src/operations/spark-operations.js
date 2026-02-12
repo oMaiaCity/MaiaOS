@@ -12,6 +12,7 @@ import {
   validateCoId, 
   requireDbEngine
 } from '@MaiaOS/schemata/validation.helper';
+import { createErrorResult, createErrorEntry } from '../operation-result.js';
 
 /**
  * Create a new Spark
@@ -123,7 +124,9 @@ export async function addSparkMemberOperation(backend, dbEngine, params) {
   const { id, memberId, role } = params;
   requireParam(id, 'id', 'AddSparkMemberOperation');
   validateCoId(id, 'AddSparkMemberOperation');
-  requireParam(memberId, 'memberId', 'AddSparkMemberOperation');
+  if (!memberId || (typeof memberId === 'string' && !memberId.trim())) {
+    return createErrorResult([createErrorEntry('schema', 'Please enter an agent ID')], { op: 'addSparkMember' });
+  }
   validateCoId(memberId, 'AddSparkMemberOperation');
   requireParam(role, 'role', 'AddSparkMemberOperation');
   requireDbEngine(dbEngine, 'AddSparkMemberOperation', 'spark member addition');

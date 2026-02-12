@@ -149,12 +149,16 @@
               {
                 "tag": "button",
                 "class": "button",
+                "attrs": {
+                  "type": "button",
+                  "disabled": "$addButtonDisabled"
+                },
                 "text": "Add as writer",
                 "$on": {
                   "click": {
                     "send": "ADD_AGENT",
                     "payload": {
-                      "agentId": "$agentIdInput"
+                      "agentId": "@inputValue"
                     }
                   }
                 }
