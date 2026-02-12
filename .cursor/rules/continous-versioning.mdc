@@ -30,19 +30,34 @@ No exclusions. Single source: the workflow generates the version and passes it t
 
 ```mermaid
 flowchart LR
-    PR[PR merged to next]
+    Branch[Branch from next]
+    Commit[Commit changes]
+    Push[Push branch]
+    AskPR{Ask user: create PR?}
+    CreatePR[gh pr create]
+    Merge[gh pr merge]
     VT[version-tag.yml]
-    Sync[Sync all packages]
+    Sync[Sync packages]
     Tag[Tag + Release]
     Deploy[deploy-next.yml]
-    PR --> VT --> Sync --> Tag
-    PR --> Deploy
+
+    Branch --> Commit --> Push --> AskPR
+    AskPR -->|Yes| CreatePR --> Merge
+    Merge --> VT --> Sync --> Tag
+    Merge --> Deploy
 ```
 
-1. PR passes checks and is merged to `next`.
-2. Push to `next` triggers `version-tag` and `deploy-next`.
-3. `version-tag`: Generate `YY.MMDD.HHMM`, sync to all packages, commit, tag, create GitHub release.
-4. `deploy-next`: Deploy maia and moai.
+**Developer flow:**
+1. Branch from `next`, make changes, commit, push.
+2. **Ask the user** if they want to create a PR. Only create when confirmed.
+3. `gh pr create` → open PR targeting `next`.
+4. **Ask the user** if they want to merge. Only merge when confirmed.
+5. `gh pr merge --rebase` → merge into `next`.
+
+**CI flow (after merge):**
+1. Push to `next` triggers `version-tag` and `deploy-next`.
+2. `version-tag`: Generate `YY.MMDD.HHMM`, sync all packages, commit, tag, create GitHub release.
+3. `deploy-next`: Deploy maia and moai.
 
 Version changes only on merge to `next`. No manual bumping.
 
@@ -54,6 +69,20 @@ The workflow skips when the head commit message contains `chore: bump version to
 
 - **`next`** – Deployment branch. Protected, updated only via PRs.
 - Feature branches – Branch from `next`, merge back via PR.
+
+---
+
+## PR Workflow (gh CLI)
+
+**Always ask the user** before creating or merging a PR. Never create or merge PRs without explicit confirmation.
+
+```bash
+# Create PR (after pushing branch)
+gh pr create --base next --head <branch> --title "<title>" --body "<body>"
+
+# Merge (rebase and merge)
+gh pr merge <number> --rebase
+```
 
 ---
 
