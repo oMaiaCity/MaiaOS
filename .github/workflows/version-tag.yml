@@ -7,7 +7,7 @@ on:
 jobs:
   version-tag:
     # Skip when this push was our own release commit (avoids loop)
-    if: "github.event.head_commit == null || contains(github.event.head_commit.message, 'release:') == false"
+    if: "github.event.head_commit == null || startsWith(github.event.head_commit.message, '[release] ') == false"
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -34,7 +34,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add 'services/*/package.json' 'libs/*/package.json'
-          git diff --staged --quiet || git commit -m "release: ${{ steps.version.outputs.version }}"
+          git diff --staged --quiet || git commit -m "[release] ${{ steps.version.outputs.version }}"
           git tag -a "v${{ steps.version.outputs.version }}" -m "Release ${{ steps.version.outputs.version }}"
 
       - name: Push and create release
