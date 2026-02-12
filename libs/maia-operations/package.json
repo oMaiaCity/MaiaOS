@@ -1,16 +1,16 @@
 {
-  "name": "@MaiaOS/operations",
-  "version": "0.17.0",
-  "type": "module",
-  "main": "src/index.js",
-  "exports": {
-    ".": "./src/index.js",
-    "./operations": "./src/operations/index.js",
-    "./reactive-store": "./src/reactive-store.js",
-    "./db-adapter": "./src/db-adapter.js"
-  },
-  "dependencies": {
-    "@MaiaOS/db": "workspace:*",
-    "@MaiaOS/schemata": "workspace:*"
-  }
+	"name": "@MaiaOS/operations",
+	"version": "26.0212.2234",
+	"type": "module",
+	"main": "src/index.js",
+	"exports": {
+		".": "./src/index.js",
+		"./operations": "./src/operations/index.js",
+		"./reactive-store": "./src/reactive-store.js",
+		"./db-adapter": "./src/db-adapter.js"
+	},
+	"dependencies": {
+		"@MaiaOS/db": "workspace:*",
+		"@MaiaOS/schemata": "workspace:*"
+	}
 }

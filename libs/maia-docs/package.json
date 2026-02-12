@@ -1,17 +1,17 @@
 {
-  "name": "@MaiaOS/docs",
-  "version": "0.1.23",
-  "type": "module",
-  "description": "Centralized documentation for MaiaOS - single source of truth for all docs",
-  "main": "README.md",
-  "scripts": {
-    "generate": "bun run ../../scripts/generate-llm-docs.js",
-    "generate:watch": "bun run ../../scripts/generate-llm-docs.js --watch"
-  },
-  "keywords": [
-    "maia",
-    "documentation",
-    "llm",
-    "agents"
-  ]
+	"name": "@MaiaOS/docs",
+	"version": "26.0212.2234",
+	"type": "module",
+	"description": "Centralized documentation for MaiaOS - single source of truth for all docs",
+	"main": "README.md",
+	"scripts": {
+		"generate": "bun run ../../scripts/generate-llm-docs.js",
+		"generate:watch": "bun run ../../scripts/generate-llm-docs.js --watch"
+	},
+	"keywords": [
+		"maia",
+		"documentation",
+		"llm",
+		"agents"
+	]
 }

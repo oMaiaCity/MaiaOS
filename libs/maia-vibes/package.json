@@ -1,29 +1,29 @@
 {
-  "name": "@MaiaOS/vibes",
-  "version": "0.17.0",
-  "type": "module",
-  "main": "src/index.js",
-  "exports": {
-    ".": "./src/index.js",
-    "./bundle": {
-      "import": "./dist/maia-vibes.es.js",
-      "require": "./dist/maia-vibes.umd.js"
-    },
-    "./todos/loader": "./src/todos/loader.js",
-    "./todos/registry": "./src/todos/registry.js"
-  },
-  "dependencies": {
-    "@MaiaOS/kernel": "workspace:*"
-  },
-  "devDependencies": {
-    "vite": "^7.3.1"
-  },
-  "scripts": {
-    "build": "bunx vite build",
-    "build:watch": "bunx vite build --watch"
-  },
-  "files": [
-    "src",
-    "dist"
-  ]
+	"name": "@MaiaOS/vibes",
+	"version": "26.0212.2234",
+	"type": "module",
+	"main": "src/index.js",
+	"exports": {
+		".": "./src/index.js",
+		"./bundle": {
+			"import": "./dist/maia-vibes.es.js",
+			"require": "./dist/maia-vibes.umd.js"
+		},
+		"./todos/loader": "./src/todos/loader.js",
+		"./todos/registry": "./src/todos/registry.js"
+	},
+	"dependencies": {
+		"@MaiaOS/kernel": "workspace:*"
+	},
+	"devDependencies": {
+		"vite": "^7.3.1"
+	},
+	"scripts": {
+		"build": "bunx vite build",
+		"build:watch": "bunx vite build --watch"
+	},
+	"files": [
+		"src",
+		"dist"
+	]
 }

@@ -1,18 +1,18 @@
 {
-  "name": "@MaiaOS/self",
-  "version": "0.1.23",
-  "type": "module",
-  "main": "./src/index.js",
-  "exports": {
-    ".": "./src/index.js"
-  },
-  "scripts": {
-    "generate-credentials": "bun scripts/generate-credentials.js"
-  },
-  "dependencies": {
-    "@MaiaOS/db": "workspace:*",
-    "@MaiaOS/storage": "workspace:*",
-    "cojson": "0.20.7"
-  },
-  "description": "Self-Sovereign Identity (SSI) via WebAuthn PRF for MaiaOS"
+	"name": "@MaiaOS/self",
+	"version": "26.0212.2234",
+	"type": "module",
+	"main": "./src/index.js",
+	"exports": {
+		".": "./src/index.js"
+	},
+	"scripts": {
+		"generate-credentials": "bun scripts/generate-credentials.js"
+	},
+	"dependencies": {
+		"@MaiaOS/db": "workspace:*",
+		"@MaiaOS/storage": "workspace:*",
+		"cojson": "0.20.7"
+	},
+	"description": "Self-Sovereign Identity (SSI) via WebAuthn PRF for MaiaOS"
 }

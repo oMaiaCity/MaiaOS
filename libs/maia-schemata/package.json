@@ -1,24 +1,24 @@
 {
-  "name": "@MaiaOS/schemata",
-  "version": "0.17.0",
-  "type": "module",
-  "main": "src/index.js",
-  "exports": {
-    ".": "./src/index.js",
-    "./validation.engine": "./src/validation.engine.js",
-    "./validation.helper": "./src/validation.helper.js",
-    "./co-id-generator": "./src/co-id-generator.js",
-    "./schema-transformer": "./src/schema-transformer.js",
-    "./expression-resolver": "./src/expression-resolver.js",
-    "./payload-resolver": "./src/payload-resolver.js",
-    "./co-types.defs.json": "./src/co-types.defs.json",
-    "./os/meta.schema.json": "./src/os/meta.schema.json"
-  },
-  "dependencies": {
-    "@MaiaOS/db": "workspace:*",
-    "ajv": "^8.12.0"
-  },
-  "files": [
-    "src"
-  ]
+	"name": "@MaiaOS/schemata",
+	"version": "26.0212.2234",
+	"type": "module",
+	"main": "src/index.js",
+	"exports": {
+		".": "./src/index.js",
+		"./validation.engine": "./src/validation.engine.js",
+		"./validation.helper": "./src/validation.helper.js",
+		"./co-id-generator": "./src/co-id-generator.js",
+		"./schema-transformer": "./src/schema-transformer.js",
+		"./expression-resolver": "./src/expression-resolver.js",
+		"./payload-resolver": "./src/payload-resolver.js",
+		"./co-types.defs.json": "./src/co-types.defs.json",
+		"./os/meta.schema.json": "./src/os/meta.schema.json"
+	},
+	"dependencies": {
+		"@MaiaOS/db": "workspace:*",
+		"ajv": "^8.12.0"
+	},
+	"files": [
+		"src"
+	]
 }

@@ -1,21 +1,21 @@
 {
-  "name": "maia",
-  "version": "0.1.23",
-  "type": "module",
-  "private": true,
-  "scripts": {
-    "dev": "vite",
-    "build": "cd ../.. && bun run bundles:build && cd services/maia && vite build",
-    "preview": "vite preview",
-    "start": "bun server.js",
-    "deploy": "./deploy.sh"
-  },
-  "dependencies": {
-    "@MaiaOS/db": "workspace:*",
-    "@MaiaOS/kernel": "workspace:*",
-    "@MaiaOS/vibes": "workspace:*"
-  },
-  "devDependencies": {
-    "vite": "^7.3.1"
-  }
+	"name": "maia",
+	"version": "26.0212.2234",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "vite",
+		"build": "cd ../.. && bun run bundles:build && cd services/maia && vite build",
+		"preview": "vite preview",
+		"start": "bun server.js",
+		"deploy": "./deploy.sh"
+	},
+	"dependencies": {
+		"@MaiaOS/db": "workspace:*",
+		"@MaiaOS/kernel": "workspace:*",
+		"@MaiaOS/vibes": "workspace:*"
+	},
+	"devDependencies": {
+		"vite": "^7.3.1"
+	}
 }

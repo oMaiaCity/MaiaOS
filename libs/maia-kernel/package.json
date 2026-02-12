@@ -1,32 +1,32 @@
 {
-  "name": "@MaiaOS/kernel",
-  "version": "0.1.23",
-  "type": "module",
-  "main": "./src/index.js",
-  "exports": {
-    ".": "./src/index.js",
-    "./bundle": {
-      "import": "./dist/maia-kernel.es.js",
-      "require": "./dist/maia-kernel.umd.js"
-    }
-  },
-  "files": [
-    "src",
-    "dist"
-  ],
-  "dependencies": {
-    "@MaiaOS/db": "workspace:*",
-    "@MaiaOS/self": "workspace:*",
-    "@MaiaOS/script": "workspace:*",
-    "@MaiaOS/schemata": "workspace:*",
-    "@MaiaOS/operations": "workspace:*",
-    "@MaiaOS/tools": "workspace:*"
-  },
-  "devDependencies": {
-    "vite": "^7.3.1"
-  },
-  "scripts": {
-    "build": "vite build --logLevel warn 2>&1 || (echo 'Vite build failed' && exit 1)",
-    "build:watch": "vite build --watch"
-  }
+	"name": "@MaiaOS/kernel",
+	"version": "26.0212.2234",
+	"type": "module",
+	"main": "./src/index.js",
+	"exports": {
+		".": "./src/index.js",
+		"./bundle": {
+			"import": "./dist/maia-kernel.es.js",
+			"require": "./dist/maia-kernel.umd.js"
+		}
+	},
+	"files": [
+		"src",
+		"dist"
+	],
+	"dependencies": {
+		"@MaiaOS/db": "workspace:*",
+		"@MaiaOS/self": "workspace:*",
+		"@MaiaOS/script": "workspace:*",
+		"@MaiaOS/schemata": "workspace:*",
+		"@MaiaOS/operations": "workspace:*",
+		"@MaiaOS/tools": "workspace:*"
+	},
+	"devDependencies": {
+		"vite": "^7.3.1"
+	},
+	"scripts": {
+		"build": "vite build --logLevel warn 2>&1 || (echo 'Vite build failed' && exit 1)",
+		"build:watch": "vite build --watch"
+	}
 }

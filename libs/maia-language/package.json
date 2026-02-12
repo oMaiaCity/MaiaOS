@@ -1,6 +1,6 @@
 {
 	"name": "@maia/language",
-	"version": "0.17.0",
+	"version": "26.0212.2234",
 	"type": "module",
 	"main": "src/index.ts",
 	"exports": {
@@ -12,4 +12,3 @@
 		"check": "bunx biome check ."
 	}
 }
-

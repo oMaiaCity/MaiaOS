@@ -1,1 +1,26 @@
-{"name":"@MaiaOS/brand","version":"0.17.0","private":true,"type":"module","main":"src/index.js","exports":{".":"./src/index.js","./app.css":"./src/app.css","./components":"./src/components/index.js","./views":"./src/views/index.js","./views/types":"./src/views/types.ts","./tokens":"./src/tokens/index.js","./utilities":"./src/utilities/index.js"},"scripts":{"sync-assets":"node ../../scripts/sync-assets.js","sync-assets:watch":"node ../../scripts/sync-assets.js --watch","format":"bunx biome format --write .","lint":"bunx biome lint .","check":"bunx biome check ."},"files":["src"]}
+{
+	"name": "@MaiaOS/brand",
+	"version": "26.0212.2234",
+	"private": true,
+	"type": "module",
+	"main": "src/index.js",
+	"exports": {
+		".": "./src/index.js",
+		"./app.css": "./src/app.css",
+		"./components": "./src/components/index.js",
+		"./views": "./src/views/index.js",
+		"./views/types": "./src/views/types.ts",
+		"./tokens": "./src/tokens/index.js",
+		"./utilities": "./src/utilities/index.js"
+	},
+	"scripts": {
+		"sync-assets": "node ../../scripts/sync-assets.js",
+		"sync-assets:watch": "node ../../scripts/sync-assets.js --watch",
+		"format": "bunx biome format --write .",
+		"lint": "bunx biome lint .",
+		"check": "bunx biome check ."
+	},
+	"files": [
+		"src"
+	]
+}

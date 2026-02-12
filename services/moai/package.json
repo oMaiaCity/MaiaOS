@@ -1,1 +1,17 @@
-{"name":"moai","version":"0.1.23","type":"module","private":true,"scripts":{"dev":"bun run src/index.js","start":"bun run src/index.js","deploy":"./deploy.sh"},"dependencies":{"@MaiaOS/kernel":"workspace:*","@MaiaOS/db":"workspace:*","@MaiaOS/operations":"workspace:*","cojson-transport-ws":"0.20.7"}}
+{
+	"name": "moai",
+	"version": "26.0212.2234",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "bun run src/index.js",
+		"start": "bun run src/index.js",
+		"deploy": "./deploy.sh"
+	},
+	"dependencies": {
+		"@MaiaOS/kernel": "workspace:*",
+		"@MaiaOS/db": "workspace:*",
+		"@MaiaOS/operations": "workspace:*",
+		"cojson-transport-ws": "0.20.7"
+	}
+}
