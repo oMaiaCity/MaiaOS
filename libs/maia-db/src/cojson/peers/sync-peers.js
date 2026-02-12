@@ -67,7 +67,7 @@ export function setupSyncPeers(syncDomain = null) {
 		const protocol = syncDomain.includes('localhost') || syncDomain.includes('127.0.0.1') ? 'ws:' : 'wss:';
 		syncServerUrl = `${protocol}//${syncDomain}/sync`;
 	} else if (isDev) {
-		// Browser dev: Use relative path, Vite proxy forwards to localhost:4203
+		// Browser dev: Use relative path, Vite proxy forwards to localhost:4201
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
 		syncServerUrl = `${protocol}//${window.location.host}/sync`;
 	} else if (apiDomain) {

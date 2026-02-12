@@ -2,7 +2,7 @@
 
 /**
  * Development script for MaiaOS
- * Runs maia-city (4200) and api services
+ * Runs maia (4200) and moai (4201)
  */
 
 import { spawn } from 'node:child_process'
@@ -15,23 +15,18 @@ const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = resolve(__dirname, '..')
 
 let maiaCityProcess = null
-let apiProcess = null
-let syncProcess = null
-let agentProcess = null
-let agentStarted = false
+let moaiProcess = null
 let docsWatcherProcess = null
 let assetSyncProcess = null
 let faviconProcess = null
 
-// Track service readiness
+// Track service readiness (sync = unified: WebSocket + agent API + LLM)
 const serviceStatus = {
 	favicons: false,
 	assets: false,
 	docs: false,
-	api: false,
-	sync: false,
-	agent: false,
-	'maia-city': false,
+	moai: false,
+	maia: false,
 }
 
 // Filter verbose output from child processes
@@ -81,10 +76,6 @@ function processOutput(service, data, isError = false) {
 				const url = urlMatch[0]
 				logger.success(`Running on ${url}`)
 				serviceStatus[service] = true
-				if (service === 'sync' && !agentStarted) {
-					agentStarted = true
-					startAgent()
-				}
 				checkAllReady()
 				continue
 			}
@@ -100,8 +91,6 @@ function processOutput(service, data, isError = false) {
 			trimmed.includes('Running on port') ||
 			trimmed.includes('HTTP server on port') ||
 			(trimmed.includes('[api]') && trimmed.includes('HTTP server')) ||
-			(trimmed.includes('[agent]') && trimmed.includes('HTTP server')) ||
-			(trimmed.includes('HTTP server') && trimmed.includes('4204')) ||
 			(trimmed.includes('[sync]') && trimmed.includes('Listening'))
 		if (serverReadyPattern) {
 			const portMatch = trimmed.match(/port\s+(\d+)/i) || trimmed.match(/:(\d+)/)
@@ -109,27 +98,19 @@ function processOutput(service, data, isError = false) {
 				const port = portMatch[1]
 				logger.success(`Running on http://localhost:${port}`)
 				serviceStatus[service] = true
-				if (service === 'sync' && !agentStarted) {
-					agentStarted = true
-					startAgent()
-				}
 				checkAllReady()
 				continue
 			}
 		}
 
-		// [sync] Ready / [agent] Ready / Vite ready (no port in message) — use known ports when applicable
+		// [sync] Ready / Vite ready — use known ports when applicable
 		if ((trimmed.includes('ready') || trimmed.includes('Ready') || trimmed.includes('VITE')) && !serviceStatus[service]) {
 			const portMatch = trimmed.match(/port\s+(\d+)/i) || trimmed.match(/:(\d+)/)
-			const knownPort = service === 'sync' ? 4203 : service === 'agent' ? 4204 : null
+			const knownPort = service === 'moai' ? 4201 : null
 			const port = portMatch?.[1] ?? (knownPort && trimmed.includes(`[${service}]`) ? String(knownPort) : null)
 			if (port) {
 				logger.success(`Running on http://localhost:${port}`)
 				serviceStatus[service] = true
-				if (service === 'sync' && !agentStarted) {
-					agentStarted = true
-					startAgent()
-				}
 				checkAllReady()
 				continue
 			}
@@ -150,13 +131,21 @@ function processOutput(service, data, isError = false) {
 	}
 }
 
+function maybeLogBrandReady() {
+	if (serviceStatus.favicons && serviceStatus.assets && !serviceStatus._brandLogged) {
+		serviceStatus._brandLogged = true
+		serviceStatus.brand = true
+		createLogger('brand').success('Favicons and assets ready')
+	}
+}
+
 function checkAllReady() {
-	// Main services that need to be ready
-	const mainServices = ['api', 'sync', 'maia-city']
+	// Main services (sync = unified WebSocket + agent + LLM)
+	const mainServices = ['moai', 'maia']
 	const mainReady = mainServices.every(service => serviceStatus[service] === true)
 	
-	// Helper services (nice to have but not critical)
-	const helperServices = ['favicons', 'assets', 'docs']
+	// Helper services (brand = favicons + assets combined; nice to have but not critical)
+	const helperServices = ['brand', 'docs']
 	const helpersReady = helperServices.every(service => serviceStatus[service] === true)
 	
 	// Show footer when main services are ready (helpers are optional)
@@ -167,16 +156,16 @@ function checkAllReady() {
 }
 
 async function startMaiaCity() {
-	const logger = createLogger('maia-city')
+	const logger = createLogger('maia')
 	
-	// Check for port conflicts and kill existing maia-city processes
+	// Check for port conflicts and kill existing maia processes
 	try {
 		const portCheck = execSync(`lsof -ti:4200 2>/dev/null | head -1`, { encoding: 'utf-8' }).trim()
 		if (portCheck) {
 			const processInfo = execSync(`ps -p ${portCheck} -o command= 2>/dev/null`, { encoding: 'utf-8' }).trim()
-			if (processInfo && (processInfo.includes('vite') || processInfo.includes('maia-city') || processInfo.includes('bun'))) {
-				// It's a vite/maia-city process - kill it automatically
-				console.log(`[maia-city] Killing existing process ${portCheck} on port 4200...`)
+			if (processInfo && (processInfo.includes('vite') || processInfo.includes('maia') || processInfo.includes('bun'))) {
+				// It's a vite/maia process - kill it automatically
+				console.log(`[maia] Killing existing process ${portCheck} on port 4200...`)
 				try {
 					execSync(`kill ${portCheck} 2>/dev/null`, { timeout: 2000 })
 					// Wait a moment for the port to be released
@@ -187,20 +176,20 @@ async function startMaiaCity() {
 						execSync(`kill -9 ${portCheck} 2>/dev/null`, { timeout: 2000 })
 						setTimeout(() => {}, 500)
 					} catch (e2) {
-						console.warn(`[maia-city] ⚠️  Could not kill process ${portCheck}, port may still be in use`)
+						console.warn(`[maia] ⚠️  Could not kill process ${portCheck}, port may still be in use`)
 					}
 				}
 			} else if (processInfo) {
 				// It's a different process - warn user
-				console.warn(`[maia-city] ⚠️  WARNING: Port 4200 is already in use by: ${processInfo}`)
-				console.warn(`[maia-city] Please kill process ${portCheck} before starting: kill ${portCheck}`)
+				console.warn(`[maia] ⚠️  WARNING: Port 4200 is already in use by: ${processInfo}`)
+				console.warn(`[maia] Please kill process ${portCheck} before starting: kill ${portCheck}`)
 			}
 		}
 	} catch (e) {
 		// Port is free or check failed - continue
 	}
 	
-	maiaCityProcess = spawn('bun', ['--env-file=.env', '--filter', 'maia-city', 'dev'], {
+	maiaCityProcess = spawn('bun', ['--env-file=.env', '--filter', 'maia', 'dev'], {
 		cwd: rootDir,
 		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,
@@ -208,11 +197,11 @@ async function startMaiaCity() {
 	})
 	
 	maiaCityProcess.stdout.on('data', (data) => {
-		processOutput('maia-city', data)
+		processOutput('maia', data)
 	})
 	
 	maiaCityProcess.stderr.on('data', (data) => {
-		processOutput('maia-city', data, true)
+		processOutput('maia', data, true)
 	})
 
 	maiaCityProcess.on('error', (_error) => {
@@ -226,15 +215,15 @@ async function startMaiaCity() {
 	})
 }
 
-function startApi() {
-	const logger = createLogger('api')
-	// Check for port conflicts and kill existing API processes
+function startMoai() {
+	const logger = createLogger('moai')
+	// Check for port conflicts and kill existing moai processes
 	try {
 		const portCheck = execSync(`lsof -ti:4201 2>/dev/null | head -1`, { encoding: 'utf-8' }).trim()
 		if (portCheck) {
 			const processInfo = execSync(`ps -p ${portCheck} -o command= 2>/dev/null`, { encoding: 'utf-8' }).trim()
-			if (processInfo && (processInfo.includes('bun') || processInfo.includes('api') || processInfo.includes('src/index.ts'))) {
-				// It's a bun/api process - kill it automatically
+			if (processInfo && (processInfo.includes('bun') || processInfo.includes('moai') || processInfo.includes('src/index.js'))) {
+				// It's a bun/moai process - kill it automatically
 				try {
 					execSync(`kill ${portCheck} 2>/dev/null`, { timeout: 2000 })
 					setTimeout(() => {}, 500)
@@ -254,138 +243,28 @@ function startApi() {
 		// Port is free or check failed - continue
 	}
 
-	apiProcess = spawn('bun', ['--env-file=.env', '--filter', 'api', 'dev'], {
+	moaiProcess = spawn('bun', ['--env-file=.env', '--filter', 'moai', 'dev'], {
 		cwd: rootDir,
 		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,
 		env: { ...process.env },
 	})
 	
-	apiProcess.stdout.on('data', (data) => {
-		processOutput('api', data)
+	moaiProcess.stdout.on('data', (data) => {
+		processOutput('moai', data)
 	})
 	
-	apiProcess.stderr.on('data', (data) => {
-		processOutput('api', data, true)
+	moaiProcess.stderr.on('data', (data) => {
+		processOutput('moai', data, true)
 	})
 
-	apiProcess.on('error', (_error) => {
-		// Non-fatal - api service is optional
+	moaiProcess.on('error', (_error) => {
+		// Non-fatal - moai service is optional
 	})
 
-	apiProcess.on('exit', (code) => {
+	moaiProcess.on('exit', (code) => {
 		if (code !== 0 && code !== null) {
 			// Non-fatal
-		}
-	})
-}
-
-function startSync() {
-	const logger = createLogger('sync')
-	// Check for port conflicts and kill existing sync processes
-	try {
-		const portCheck = execSync(`lsof -ti:4203 2>/dev/null | head -1`, { encoding: 'utf-8' }).trim()
-		if (portCheck) {
-			const processInfo = execSync(`ps -p ${portCheck} -o command= 2>/dev/null`, { encoding: 'utf-8' }).trim()
-			if (processInfo && (processInfo.includes('bun') || processInfo.includes('sync') || processInfo.includes('src/index.js'))) {
-				// It's a bun/sync process - kill it automatically
-				try {
-					execSync(`kill ${portCheck} 2>/dev/null`, { timeout: 2000 })
-					setTimeout(() => {}, 500)
-				} catch (e) {
-					try {
-						execSync(`kill -9 ${portCheck} 2>/dev/null`, { timeout: 2000 })
-						setTimeout(() => {}, 500)
-					} catch (e2) {
-						logger.warn(`Could not kill process ${portCheck}`)
-					}
-				}
-			} else if (processInfo) {
-				logger.warn(`Port 4203 in use by: ${processInfo}`)
-			}
-		}
-	} catch (e) {
-		// Port is free or check failed - continue
-	}
-
-	syncProcess = spawn('bun', ['--env-file=.env', '--filter', 'sync', 'dev'], {
-		cwd: rootDir,
-		stdio: ['ignore', 'pipe', 'pipe'],
-		shell: false,
-		env: { ...process.env },
-	})
-	
-	syncProcess.stdout.on('data', (data) => {
-		processOutput('sync', data)
-	})
-	
-	syncProcess.stderr.on('data', (data) => {
-		processOutput('sync', data, true)
-	})
-
-	syncProcess.on('error', (_error) => {
-		// Non-fatal - sync service is optional
-	})
-
-	syncProcess.on('exit', (code) => {
-		if (code !== 0 && code !== null) {
-			// Non-fatal
-		}
-	})
-}
-
-function startAgent() {
-	const logger = createLogger('agent')
-	// Check for port conflicts and kill existing agent processes
-	try {
-		const portCheck = execSync(`lsof -ti:4204 2>/dev/null | head -1`, { encoding: 'utf-8' }).trim()
-		if (portCheck) {
-			const processInfo = execSync(`ps -p ${portCheck} -o command= 2>/dev/null`, { encoding: 'utf-8' }).trim()
-			if (processInfo && (processInfo.includes('bun') || processInfo.includes('agent') || processInfo.includes('src/index.js'))) {
-				try {
-					execSync(`kill ${portCheck} 2>/dev/null`, { timeout: 2000 })
-					setTimeout(() => {}, 500)
-				} catch (e) {
-					try {
-						execSync(`kill -9 ${portCheck} 2>/dev/null`, { timeout: 2000 })
-						setTimeout(() => {}, 500)
-					} catch (e2) {
-						logger.warn(`Could not kill process ${portCheck}`)
-					}
-				}
-			} else if (processInfo) {
-				logger.warn(`Port 4204 in use by: ${processInfo}`)
-			}
-		}
-	} catch (e) {
-		// Port is free or check failed - continue
-	}
-
-	const agentDbPath = resolve(rootDir, 'services/agent/local-agent.db')
-	agentProcess = spawn('bun', ['--env-file=.env', '--filter', 'agent', 'dev'], {
-		cwd: rootDir,
-		stdio: ['ignore', 'pipe', 'pipe'],
-		shell: false,
-		env: { ...process.env, PORT: '4204', AGENT_MAIA_DB_PATH: agentDbPath },
-	})
-
-	agentProcess.stdout.on('data', (data) => {
-		processOutput('agent', data)
-	})
-
-	agentProcess.stderr.on('data', (data) => {
-		processOutput('agent', data, true)
-	})
-
-	agentProcess.on('error', (_error) => {
-		// Non-fatal - agent service is optional
-	})
-
-	agentProcess.on('exit', (code, signal) => {
-		if (code !== 0 && code !== null) {
-			const agentLogger = createLogger('agent')
-			agentLogger.error(`Exited with code ${code}${signal ? ` (signal: ${signal})` : ''}. Check AGENT_MAIA_AGENT_ACCOUNT_ID and AGENT_MAIA_AGENT_SECRET in .env`)
-			agentLogger.error('If you see "Aborted()" or "RuntimeError", try: rm -f services/agent/local-agent.db*')
 		}
 	})
 }
@@ -439,8 +318,8 @@ function generateFavicons() {
 	faviconProcess.stdout.on('data', (data) => {
 		const output = data.toString()
 		if (output.includes('generated successfully')) {
-			logger.success('Generated')
 			serviceStatus.favicons = true
+			maybeLogBrandReady()
 			checkAllReady()
 		}
 	})
@@ -459,6 +338,7 @@ function generateFavicons() {
 	faviconProcess.on('exit', (code) => {
 		if (code === 0) {
 			serviceStatus.favicons = true
+			maybeLogBrandReady()
 			checkAllReady()
 		}
 	})
@@ -476,8 +356,8 @@ function startAssetSync() {
 	assetSyncProcess.stdout.on('data', (data) => {
 		const output = data.toString()
 		if ((output.includes('synced') || output.includes('All brand assets synced') || output.includes('Watching assets')) && !serviceStatus.assets) {
-			logger.success('Watching assets')
 			serviceStatus.assets = true
+			maybeLogBrandReady()
 			checkAllReady()
 		}
 	})
@@ -493,6 +373,7 @@ function startAssetSync() {
 	assetSyncProcess.on('exit', (code) => {
 		if (code === 0) {
 			serviceStatus.assets = true
+			maybeLogBrandReady()
 			checkAllReady()
 		}
 	})
@@ -513,14 +394,8 @@ function setupSignalHandlers() {
 		if (docsWatcherProcess && !docsWatcherProcess.killed) {
 			docsWatcherProcess.kill('SIGTERM')
 		}
-		if (syncProcess && !syncProcess.killed) {
-			syncProcess.kill('SIGTERM')
-		}
-		if (agentProcess && !agentProcess.killed) {
-			agentProcess.kill('SIGTERM')
-		}
-		if (apiProcess && !apiProcess.killed) {
-			apiProcess.kill('SIGTERM')
+		if (moaiProcess && !moaiProcess.killed) {
+			moaiProcess.kill('SIGTERM')
 		}
 		if (maiaCityProcess && !maiaCityProcess.killed) {
 			maiaCityProcess.kill('SIGTERM')
@@ -540,14 +415,8 @@ function setupSignalHandlers() {
 		if (docsWatcherProcess && !docsWatcherProcess.killed) {
 			docsWatcherProcess.kill('SIGTERM')
 		}
-		if (syncProcess && !syncProcess.killed) {
-			syncProcess.kill('SIGTERM')
-		}
-		if (agentProcess && !agentProcess.killed) {
-			agentProcess.kill('SIGTERM')
-		}
-		if (apiProcess && !apiProcess.killed) {
-			apiProcess.kill('SIGTERM')
+		if (moaiProcess && !moaiProcess.killed) {
+			moaiProcess.kill('SIGTERM')
 		}
 		if (maiaCityProcess && !maiaCityProcess.killed) {
 			maiaCityProcess.kill('SIGTERM')
@@ -567,9 +436,7 @@ async function main() {
 	setTimeout(async () => {
 		startAssetSync()
 		startDocsWatcher()
-		startApi()
-		startSync()
-		// Agent starts after sync is ready (depends on sync for account load/create)
+		startMoai()
 		await startMaiaCity()
 	}, 1000)
 

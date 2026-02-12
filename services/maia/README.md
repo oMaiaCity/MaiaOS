@@ -1,4 +1,4 @@
-# Maia City Service
+# Maia Service
 
 The main UI service for MaiaOS, featuring:
 - **Database Inspector** at `/` (root) - Explore Jazz CoValues with authentication
@@ -7,7 +7,7 @@ The main UI service for MaiaOS, featuring:
 ## Structure
 
 ```
-services/maia-city/
+services/maia/
 ├── index.html          # Main app (database inspector)
 ├── main.js             # Main app logic
 ├── db-view.js          # Database viewer and dynamic vibe renderer
@@ -38,13 +38,13 @@ services/maia-city/
 bun dev
 
 # Or directly
-cd services/maia-city
+cd services/maia
 bun run dev
 ```
 
 Server runs on **http://localhost:4200**
 
-**Note**: In dev mode, maia-city uses source files directly (not bundles) for proper Vite hot module reload (HMR). This means changes to kernel or vibes source files will automatically trigger HMR without manual bundle rebuilding.
+**Note**: In dev mode, maia uses source files directly (not bundles) for proper Vite hot module reload (HMR). This means changes to kernel or vibes source files will automatically trigger HMR without manual bundle rebuilding.
 
 ## Routes
 
@@ -55,7 +55,7 @@ Server runs on **http://localhost:4200**
 
 ### Dynamic Vibe Rendering
 
-Vibes are loaded dynamically within the main maia-city app. When a user navigates to a vibe (e.g., "Todos Vibe" in the sidebar), the app:
+Vibes are loaded dynamically within the main maia app. When a user navigates to a vibe (e.g., "Todos Vibe" in the sidebar), the app:
 
 1. Calls `loadVibe('todos')` which sets `currentVibe = 'todos'`
 2. Renders a container div in the main view area
@@ -64,7 +64,7 @@ Vibes are loaded dynamically within the main maia-city app. When a user navigate
 
 **Example:**
 ```javascript
-// In services/maia-city/main.js
+// In services/maia/main.js
 async function loadVibe(vibeKey) {
   currentVibe = vibeKey;
   await renderAppInternal(); // Renders vibe container
@@ -86,9 +86,9 @@ export { MaiaOS } from "./kernel.js";
 export { ActorEngine, ViewEngine, StyleEngine, ... } from "./engines/...";
 ```
 
-**maia-city imports:**
+**maia imports:**
 ```javascript
-// services/maia-city/main.js
+// services/maia/main.js
 import { MaiaOS } from '@MaiaOS/kernel';
 const os = await MaiaOS.boot({ node, account });
 ```

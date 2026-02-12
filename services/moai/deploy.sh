@@ -52,7 +52,7 @@ retry_flyctl_deploy() {
   return 1
 }
 
-echo "🚀 Deploying sync service to Fly.io..."
+echo "🚀 Deploying moai service to Fly.io..."
 echo "   App: sync-next-maia-city"
 echo ""
 
@@ -60,8 +60,8 @@ cd "$MONOREPO_ROOT"
 
 if ! retry_flyctl_deploy \
   "sync-next-maia-city" \
-  "services/sync/Dockerfile" \
-  "services/sync/fly.toml"; then
+  "services/moai/Dockerfile" \
+  "services/moai/fly.toml"; then
   echo "❌ Failed to deploy sync service after retries"
   exit 1
 fi

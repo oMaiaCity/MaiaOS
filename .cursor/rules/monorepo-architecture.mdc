@@ -181,13 +181,12 @@ import { apiClient } from "app"; // If app depends on another service
 **From root (recommended - single command for everything):**
 ```bash
 bun install                    # Install dependencies for all workspaces
-bun dev                        # Run both maia-city (4200) and api (4201) dev servers in parallel
-bun dev:city                   # Run only maia-city service dev server (port 4200)
-bun dev:api                    # Run only API service dev server (port 4201)
+bun dev                        # Run maia (4200) and moai (4201) in parallel
+bun dev:maia                   # Run only maia service dev server (port 4200)
+bun dev:moai                   # Run only moai service dev server (port 4203)
 bun dev:app                    # Run only app dev server (port 4202)
 bun build                      # Build app (delegates to services/app)
-bun build:city                 # Build maia-city service (delegates to services/maia-city)
-bun build:api                  # Build API service (delegates to services/api)
+bun build:maia                 # Build maia service (delegates to services/maia)
 bun release                    # Run semantic-release (delegates to services/app)
 bun tauri:dev                  # Run Tauri dev (delegates to services/app)
 ```
@@ -205,9 +204,9 @@ cd services/website
 bun run dev                    # Run website service dev server
 bun run build                  # Build website service
 
-cd services/api
-bun run dev                    # Run API service dev server
-bun run build                  # Build API service
+cd services/moai
+bun run dev                    # Run moai service dev server
+bun run build                  # Build sync service
 ```
 
 ### Building
@@ -278,10 +277,9 @@ Each service in the monorepo has a **hardcoded development port** to avoid confl
 **Current Port Assignments:**
 | Service | Port | Notes |
 |---------|------|-------|
-| `services/maia-city` | `4200` | Landing page (default `bun dev`) |
-| `services/api` | `4201` | API proxy service (RedPill LLM) |
+| `services/maia` | `4200` | Landing page (default `bun dev`) |
 | `services/app` | `4202` | Main application (Tauri-compatible) |
-| `services/[next-service]` | `4203` | Next service port (e.g., sync) |
+| `services/moai` | `4201` | Unified sync (WebSocket + agent API + LLM proxy) |
 | `services/[service-4]` | `4204` | Reserved |
 | ... | ... | ... |
 | `services/[service-10]` | `4210` | Reserved |
@@ -335,7 +333,7 @@ hominio/
 NODE_ENV=development
 
 # Service-specific ports (hardcoded in config, documented here)
-# PUBLIC_DOMAIN_ME=localhost:4200 (maia-city service)
+# PUBLIC_DOMAIN_ME=localhost:4200 (maia service)
 # PUBLIC_DOMAIN_API=localhost:4201 (api service - RedPill LLM)
 # PUBLIC_DOMAIN_APP=localhost:4202 (app service)
 # PUBLIC_DOMAIN_SYNC=localhost:4203 (sync service, future)

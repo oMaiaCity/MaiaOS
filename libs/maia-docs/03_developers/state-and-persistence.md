@@ -47,22 +47,32 @@ The sync service and agent use PGlite for CoValue storage. Two modes matter:
 
 - **Use for**: Local development, tests, ephemeral agents
 - **Behavior**: PGlite runs in memory; all data is lost on process exit
-- **Env**: `SYNC_MAIA_STORAGE=in-memory` (sync service)
+- **Env**: `AGENT_STORAGE=in-memory` (sync service)
 
 ### On-Disk (`inMemory: false`, `dbPath` set)
 
 - **Use for**: Production sync server, durable agents
 - **Behavior**: PGlite writes to a file; data persists across restarts
-- **Env**: `SYNC_MAIA_STORAGE=pglite`, `DB_PATH=/data/sync.db` (sync service)
+- **Env**: `AGENT_STORAGE=pglite`, `DB_PATH=/data/sync.db` (sync service)
 - **Production**: Mount a Fly.io volume at `/data` and set `DB_PATH=/data/sync.db`
 
 ### Configuration
 
 **Sync service** (`services/sync/`):
 
-- `SYNC_MAIA_STORAGE=in-memory` → in-memory (dev default when unspecified)
-- `SYNC_MAIA_STORAGE=pglite` + `DB_PATH=/data/sync.db` → persistent (production)
+- `AGENT_STORAGE=in-memory` → in-memory (dev default when unspecified)
+- `AGENT_STORAGE=pglite` + `DB_PATH=/data/sync.db` → persistent (production)
+- Uses compact env vars: `ACCOUNT_MODE`, `AGENT_ID`, `AGENT_SECRET`, `AGENT_STORAGE`
 
-**Agent** (`services/agent`):
+---
 
-- Uses `loadOrCreateAgentAccount` from `@MaiaOS/kernel` with `AGENT_MAIA_*` env vars. Pass `inMemory: false` and `dbPath` for production durability.
+## Vibe Seeding: Human vs Agent Mode
+
+**`VITE_MAIA_CITY_SEED_VIBES`** controls which vibes (todos, chat, db, sparks, creator) are auto-seeded when a new account is created. It only applies in **human mode** (browser sign-up via passkey).
+
+| Mode | Where | `VITE_MAIA_CITY_SEED_VIBES` | Behavior |
+|------|-------|-----------------------------|----------|
+| **Human** | maia-city (browser) | `todos,chat,db,sparks,creator` or `all` | On sign-up, `createAccountWithSecret` reads this env (via `import.meta.env`). `filterVibesForSeeding` seeds the specified vibes into the new account. Default: `all` if unset. |
+| **Agent** | sync service | N/A | `loadOrCreateAgentAccount` uses `skipAutoSeeding: true`. No vibe seeding; sync server only needs bootstrap data. |
+
+**Values**: `"none"` (no seeding), `"all"` (all vibes), or comma-separated: `"todos,chat,db,sparks,creator"`.

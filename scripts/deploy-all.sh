@@ -101,16 +101,16 @@ echo ""
 echo "✅ Bundles built successfully!"
 echo ""
 
-# Build maia-city frontend (required before Docker - avoids workspace resolution)
+# Build maia frontend (required before Docker - avoids workspace resolution)
 echo "📦 Building maia-city frontend..."
-if ! (cd "$MONOREPO_ROOT/services/maia-city" && NODE_ENV=production VITE_SEED_VIBES=all bunx vite build --mode production); then
+if ! (cd "$MONOREPO_ROOT/services/maia" && NODE_ENV=production VITE_SEED_VIBES=all bunx vite build --mode production); then
   echo "❌ Failed to build maia-city frontend"
   exit 1
 fi
 echo "✅ Maia-city build complete"
 echo ""
 
-# Deploy sync service first (dependency)
+# Deploy moai service first (dependency)
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "📦 Step 1/2: Deploying sync service (sync-next-maia-city)..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -118,8 +118,8 @@ cd "$MONOREPO_ROOT"
 
 if ! retry_flyctl_deploy \
   "sync-next-maia-city" \
-  "services/sync/Dockerfile" \
-  "services/sync/fly.toml"; then
+  "services/moai/Dockerfile" \
+  "services/moai/fly.toml"; then
   echo "❌ Failed to deploy sync service after retries"
   exit 1
 fi
@@ -129,7 +129,7 @@ echo "✅ Sync service deployed!"
 echo "   Health check: https://sync-next-maia-city.fly.dev/health"
 echo ""
 
-# Deploy maia-city service
+# Deploy maia service
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "📦 Step 2/2: Deploying maia-city service (next-maia-city)..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -137,8 +137,8 @@ cd "$MONOREPO_ROOT"
 
 if ! retry_flyctl_deploy \
   "next-maia-city" \
-  "services/maia-city/Dockerfile" \
-  "services/maia-city/fly.toml"; then
+  "services/maia/Dockerfile" \
+  "services/maia/fly.toml"; then
   echo "❌ Failed to deploy maia-city service after retries"
   exit 1
 fi

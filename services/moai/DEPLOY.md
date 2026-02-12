@@ -49,13 +49,13 @@ flyctl certs create sync.next.maia.city --app sync-next-maia-city
 
 ```bash
 cd /path/to/MaiaOS
-flyctl deploy --dockerfile services/sync/Dockerfile --config services/sync/fly.toml --app sync-next-maia-city
+flyctl deploy --dockerfile services/moai/Dockerfile --config services/moai/fly.toml --app sync-next-maia-city
 ```
 
 ### Using Deployment Script
 
 ```bash
-cd services/sync
+cd services/moai
 bun run deploy
 ```
 
@@ -63,7 +63,7 @@ bun run deploy
 
 The following environment variables are configured:
 
-- `PORT` - Set to `4203` in fly.toml
+- `PORT` - Set to `4201` in fly.toml
 - `NODE_ENV` - Set to `production` in fly.toml
 - `DB_PATH` - Set to `/data/sync.db` in fly.toml (PGlite database path on volume)
 
@@ -75,9 +75,12 @@ The sync service **requires** these secrets to be set before deployment. Without
 # Generate credentials first (from monorepo root):
 bun agent:generate --service=sync
 
-# Then set secrets on Fly.io:
-flyctl secrets set SYNC_MAIA_AGENT_ACCOUNT_ID="<account-id>" --app sync-next-maia-city
-flyctl secrets set SYNC_MAIA_AGENT_SECRET="<agent-secret>" --app sync-next-maia-city
+# Then set secrets on Fly.io (compact env vars):
+flyctl secrets set AGENT_ID="<account-id>" --app sync-next-maia-city
+flyctl secrets set AGENT_SECRET="<agent-secret>" --app sync-next-maia-city
+
+# Optional - for LLM chat:
+flyctl secrets set RED_PILL_API_KEY="<api-key>" --app sync-next-maia-city
 ```
 
 If you see "the app appears to be crashing" during deployment, check that these secrets are set: `flyctl secrets list --app sync-next-maia-city`
@@ -132,12 +135,12 @@ Clients connect to the self-hosted sync server via WebSocket:
 - **Fly.io domain**: `wss://sync-next-maia-city.fly.dev/sync`
 - **Custom domain**: `wss://sync.next.maia.city/sync`
 
-## Connecting from maia-city
+## Connecting from maia
 
-The `maia-city` service should be configured with:
+The maia service should be configured with:
 
 ```bash
-# In maia-city Fly.io app
+# In maia Fly.io app (next-maia-city)
 flyctl secrets set PUBLIC_API_DOMAIN="sync-next-maia-city.fly.dev" --app next-maia-city
 # or for custom domain:
 flyctl secrets set PUBLIC_API_DOMAIN="sync.next.maia.city" --app next-maia-city
@@ -164,7 +167,7 @@ flyctl open --app sync-next-maia-city
 
 Two common causes:
 
-1. **Missing secrets** - The sync service requires `SYNC_MAIA_AGENT_ACCOUNT_ID` and `SYNC_MAIA_AGENT_SECRET`. Verify with:
+1. **Missing secrets** - The sync service requires `AGENT_ID` and `AGENT_SECRET`. Verify with:
    ```bash
    flyctl secrets list --app sync-next-maia-city
    ```
@@ -208,7 +211,7 @@ If the service can't access the database:
 
 5. Redeploy after creating volume:
    ```bash
-   flyctl deploy --dockerfile services/sync/Dockerfile --config services/sync/fly.toml --app sync-next-maia-city
+   flyctl deploy --dockerfile services/moai/Dockerfile --config services/moai/fly.toml --app sync-next-maia-city
    ```
 
 ### WebSocket Connection Issues
@@ -218,7 +221,7 @@ If the service can't access the database:
    curl https://sync-next-maia-city.fly.dev/health
    ```
 
-3. Verify domain configuration in `maia-city`:
+3. Verify domain configuration in maia:
    ```bash
    flyctl secrets list --app next-maia-city
    ```

@@ -2,7 +2,7 @@
 /**
  * Hot-reload-aware asset sync script for @maia/brand
  *
- * Syncs assets from libs/maia-brand/src/assets to maia-city service static folder.
+ * Syncs assets from libs/maia-brand/src/assets to maia service static folder.
  * Runs in watch mode during development for hot reloading.
  *
  * Usage:
@@ -20,10 +20,10 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const monorepoRoot = resolve(__dirname, '..')
 const brandAssetsDir = resolve(monorepoRoot, 'libs/maia-brand/src/assets')
 
-// Sync assets to maia-city service only
+// Sync assets to maia service only
 // Vite serves static files from 'public' directory by default
 const serviceStaticDirs = [
-	resolve(monorepoRoot, 'services/maia-city/public/brand'),
+	resolve(monorepoRoot, 'services/maia/public/brand'),
 ]
 
 /**
@@ -108,7 +108,7 @@ function getAllFiles(dirPath, basePath = '') {
 }
 
 /**
- * Sync all assets from brand package to maia-city service (preserves folder structure)
+ * Sync all assets from brand package to maia service (preserves folder structure)
  */
 function syncAllAssets() {
 	// Sync status handled by dev.js logger

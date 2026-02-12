@@ -5,7 +5,7 @@ Self-hosted sync service using cojson LocalNode for reliable, direct sync withou
 ## Architecture
 
 The sync service provides a self-hosted sync server:
-- **Client** connects to: `ws://localhost:4203/sync` (or production domain)
+- **Client** connects to: `ws://localhost:4201/sync` (or production domain)
 - **Service** uses cojson LocalNode to handle sync protocol directly
 - **Service** stores all CoValue transactions in SQLite database
 - **No external dependencies** - no API keys or third-party services needed
@@ -17,14 +17,23 @@ This architecture ensures:
 - ✅ Persistent storage in SQLite
 - ✅ Simpler, more maintainable code
 
-## Library
+## Unified Service
 
-The sync server logic is implemented in `@MaiaOS/sync` library (`libs/maia-sync/`), making it reusable across services.
+The sync service consolidates WebSocket sync, agent API, and LLM proxy in one process. Endpoints:
+- `WS /sync` - CoJSON sync
+- `POST /on-added`, `/register-human`, `/trigger`, `/profile` - Agent API
+- `POST /api/v0/llm/chat` - LLM proxy (RedPill)
 
 ## Environment Variables
 
-- `DB_PATH` - PGlite database path (default: `./local-sync.db` for dev, `/data/sync.db` for production)
-- `PORT` - Server port (default: 4203)
+**Compact format** (preferred):
+- `ACCOUNT_MODE=agent`
+- `AGENT_ID` - Agent account ID (required)
+- `AGENT_SECRET` - Agent secret (required)
+- `AGENT_STORAGE=pglite` - Storage backend
+- `DB_PATH` - PGlite path (default: `./local-sync.db` for dev, `/data/sync.db` for production)
+- `PORT` - Server port (default: 4201)
+- `RED_PILL_API_KEY` - Optional, for LLM chat
 
 ## Development
 
@@ -38,8 +47,10 @@ bun --env-file=.env --filter sync dev
 
 ## Endpoints
 
-- `GET /health` - Health check endpoint
-- `WS /sync` - WebSocket sync server endpoint
+- `GET /health` - Health check
+- `WS /sync` - WebSocket sync
+- `POST /on-added`, `/register-human`, `/trigger`, `/profile` - Agent API
+- `POST /api/v0/llm/chat` - LLM proxy
 
 ## Client Usage
 
@@ -55,7 +66,7 @@ const { node, account } = await signUpWithPasskey()
 ```
 
 The client determines the sync server URL based on:
-- **Dev**: Relative path `/sync` (Vite proxy forwards to `localhost:4203`)
+- **Dev**: Relative path `/sync` (Vite proxy forwards to `localhost:4201`)
 - **Production**: `PUBLIC_API_DOMAIN` env var or same origin
 
 ## Storage
@@ -77,16 +88,6 @@ The sync server uses **PGlite (PostgreSQL-compatible) storage** for persistence:
 ## Deployment
 
 Deploy the sync service separately from the frontend. The frontend connects to it via WebSocket.
-
-## Environment Variables
-
-The sync service uses service-specific environment variable prefixes:
-
-- `SYNC_MAIA_MODE=agent` (required)
-- `SYNC_MAIA_AGENT_ACCOUNT_ID` (required)
-- `SYNC_MAIA_AGENT_SECRET` (required)
-- `SYNC_MAIA_STORAGE=pglite` (default, for persistence)
-- `DB_PATH=/data/sync.db` (for Fly.io persistence)
 
 Generate credentials using:
 ```bash

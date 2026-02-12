@@ -1,11 +1,11 @@
 {
-  "name": "maia-city",
+  "name": "maia",
   "version": "0.1.23",
   "type": "module",
   "private": true,
   "scripts": {
     "dev": "vite",
-    "build": "cd ../.. && bun run bundles:build && cd services/maia-city && vite build",
+    "build": "cd ../.. && bun run bundles:build && cd services/maia && vite build",
     "preview": "vite preview",
     "start": "bun server.js",
     "deploy": "./deploy.sh"

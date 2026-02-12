@@ -27,11 +27,15 @@ export default defineConfig(({ mode }) => {
 					secure: false
 				},
 				'/sync': {
-					target: 'ws://localhost:4203',
+					target: 'ws://localhost:4201',
 					ws: true,
 					changeOrigin: true,
 					secure: false
-				}
+				},
+				'/on-added': { target: 'http://localhost:4201', changeOrigin: true, secure: false },
+				'/register-human': { target: 'http://localhost:4201', changeOrigin: true, secure: false },
+				'/trigger': { target: 'http://localhost:4201', changeOrigin: true, secure: false },
+				'/profile': { target: 'http://localhost:4201', changeOrigin: true, secure: false }
 			}
 		},
 		appType: 'spa', // Single-page app mode - enables SPA fallback for client-side routing

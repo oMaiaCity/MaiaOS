@@ -1,5 +1,5 @@
 #!/bin/bash
-# Deploy script for maia-city
+# Deploy script for maia
 # No build secrets needed - sync service handles sync API key
 
 set -e
@@ -88,20 +88,20 @@ retry_flyctl_deploy() {
   return 1
 }
 
-echo "🚀 Deploying maia-city to Fly.io..."
+echo "🚀 Deploying maia to Fly.io..."
 echo "   App: next-maia-city"
 echo ""
 
 cd "$MONOREPO_ROOT"
 
-# Build bundles and maia-city frontend (required before Docker - avoids workspace resolution in Docker)
-echo "📦 Building kernel, vibes, and maia-city frontend..."
+# Build bundles and maia frontend (required before Docker - avoids workspace resolution in Docker)
+echo "📦 Building kernel, vibes, and maia frontend..."
 if ! bun run bundles:build; then
   echo "❌ Failed to build bundles"
   exit 1
 fi
-if ! (cd services/maia-city && NODE_ENV=production VITE_SEED_VIBES=all bunx vite build --mode production); then
-  echo "❌ Failed to build maia-city frontend"
+if ! (cd services/maia && NODE_ENV=production VITE_SEED_VIBES=all bunx vite build --mode production); then
+  echo "❌ Failed to build maia frontend"
   exit 1
 fi
 echo "✅ Build complete"
@@ -109,9 +109,9 @@ echo ""
 
 if ! retry_flyctl_deploy \
   "next-maia-city" \
-  "services/maia-city/Dockerfile" \
-  "services/maia-city/fly.toml"; then
-  echo "❌ Failed to deploy maia-city service after retries"
+  "services/maia/Dockerfile" \
+  "services/maia/fly.toml"; then
+  echo "❌ Failed to deploy maia service after retries"
   exit 1
 fi
 

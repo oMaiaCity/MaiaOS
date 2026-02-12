@@ -59,11 +59,11 @@ const service = serviceArg ? serviceArg.split('=')[1] : null; // 'sync', 'city',
 const shouldWrite = args.includes('--write') || !args.includes('--no-write'); // Write by default, use --no-write to skip
 
 // Map service name to env var prefix
+// sync uses compact env vars (ACCOUNT_MODE, AGENT_ID, AGENT_SECRET, AGENT_STORAGE)
 const SERVICE_PREFIXES = {
-  'sync': 'SYNC',
+  'sync': 'AGENT', // compact output
   'city': 'CITY',
   'maia-city': 'CITY',
-  'agent': 'AGENT'
 };
 
 // Require service to be specified
@@ -77,89 +77,62 @@ if (!service) {
   console.error('Available services:');
   console.error('  sync      - Sync service (uses SYNC_MAIA_* env vars)');
   console.error('  city      - Maia-city frontend (uses CITY_MAIA_* env vars)');
-  console.error('  agent     - Agent service (uses AGENT_MAIA_* env vars)');
   process.exit(1);
 }
 
-const servicePrefix = SERVICE_PREFIXES[service.toLowerCase()] || service.toUpperCase();
+const isSync = service.toLowerCase() === 'sync';
 
 async function main() {
   try {
-    // Output to stderr to avoid Bun's output filtering
-    const log = (...args) => {
-      console.error(...args);
-    };
-    
+    const log = (...args) => console.error(...args);
     log('🔑 Generating agent credentials...\n');
     
-    // Generate credentials
-    const { accountID, agentSecret, name: accountName } = await generateAgentCredentials({ name });
+    const { accountID, agentSecret } = await generateAgentCredentials({ name });
+    const defaultMode = service === 'city' ? 'human' : 'agent';
+    const defaultStorage = isSync ? 'pglite' : (service === 'city' ? 'indexeddb' : 'in-memory');
     
-    // Format for .env file with service-specific prefix
-    const prefix = `${servicePrefix}_`;
-    const defaultMode = service === 'city' ? 'human' : 'agent'; // maia-city defaults to human mode
-    const defaultStorage = service === 'sync' || service === 'agent' ? 'pglite' : (service === 'city' ? 'indexeddb' : 'in-memory');
-    const profileNameLine = service === 'agent' ? `\n${prefix}MAIA_PROFILE_NAME=${accountName}` : '';
-    
-    const envContent = `# ${servicePrefix} Service Configuration
+    const envContent = isSync
+      ? `# Sync Service (compact env vars)
 # Generated: ${new Date().toISOString()}
-${prefix}MAIA_MODE=${defaultMode}
-${prefix}MAIA_AGENT_ACCOUNT_ID=${accountID}
-${prefix}MAIA_AGENT_SECRET=${agentSecret}
-${prefix}MAIA_STORAGE=${defaultStorage}${profileNameLine}
+ACCOUNT_MODE=${defaultMode}
+AGENT_ID=${accountID}
+AGENT_SECRET=${agentSecret}
+AGENT_STORAGE=${defaultStorage}
+`
+      : `# ${SERVICE_PREFIXES[service.toLowerCase()] || service} Service Configuration
+# Generated: ${new Date().toISOString()}
+${SERVICE_PREFIXES[service.toLowerCase()]}_MAIA_MODE=${defaultMode}
+${SERVICE_PREFIXES[service.toLowerCase()]}_MAIA_AGENT_ACCOUNT_ID=${accountID}
+${SERVICE_PREFIXES[service.toLowerCase()]}_MAIA_AGENT_SECRET=${agentSecret}
+${SERVICE_PREFIXES[service.toLowerCase()]}_MAIA_STORAGE=${defaultStorage}
 `;
     
     log('✅ Credentials generated successfully!\n');
     
-    // Write to .env file by default (unless --no-write flag is used)
     if (shouldWrite) {
       log('📋 Writing credentials to .env file...\n');
       const envPath = join(rootDir, '.env');
-      let existingContent = '';
+      let existingContent = existsSync(envPath) ? readFileSync(envPath, 'utf-8') : '';
       
-      if (existsSync(envPath)) {
-        existingContent = readFileSync(envPath, 'utf-8');
-      }
+      const removePatterns = isSync
+        ? (s) => /^(ACCOUNT_MODE|AGENT_ID|AGENT_SECRET|AGENT_STORAGE)=/.test(s) || s.startsWith('SYNC_MAIA_') || s.startsWith('AGENT_MAIA_') || (s.startsWith('#') && (s.includes('Sync Service') || s.includes('SYNC Service') || s.includes('AGENT Service') || s.includes('Generated:')))
+        : (s) => s.startsWith(`${SERVICE_PREFIXES[service.toLowerCase()]}_MAIA_`) || (s.startsWith('#') && (s.includes(SERVICE_PREFIXES[service.toLowerCase()]) || s.includes('Generated:')));
       
-      // Check if credentials already exist (service-specific)
-      const accountIdKey = `${prefix}MAIA_AGENT_ACCOUNT_ID`;
-      if (existingContent.includes(accountIdKey)) {
-        console.log(`⚠️  Warning: ${servicePrefix} service credentials already exist in .env file.`);
-        console.log('   Existing credentials will be replaced.\n');
-        
-        // Remove old service-specific credentials
-        const lines = existingContent.split('\n');
-        const filteredLines = lines.filter(line => {
-          return !line.startsWith(`${prefix}MAIA_MODE=`) &&
-                 !line.startsWith(`${prefix}MAIA_AGENT_ACCOUNT_ID=`) &&
-                 !line.startsWith(`${prefix}MAIA_AGENT_SECRET=`) &&
-                 !line.startsWith(`${prefix}MAIA_STORAGE=`) &&
-                 !line.startsWith(`${prefix}MAIA_PROFILE_NAME=`) &&
-                 !line.startsWith(`# ${servicePrefix} Service Configuration`) &&
-                 !line.startsWith('# Generated:');
-        });
-        existingContent = filteredLines.join('\n').trim();
-      }
+      const lines = existingContent.split('\n').filter(line => !removePatterns(line.trim()));
+      existingContent = lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
       
-      // Append new credentials
-      const newContent = existingContent 
-        ? `${existingContent}\n\n${envContent}`
-        : envContent;
-      
+      const newContent = existingContent ? `${existingContent}\n\n${envContent}` : envContent;
       writeFileSync(envPath, newContent, 'utf-8');
       log(`✅ Credentials written to .env file: ${envPath}\n`);
       log('📋 Generated credentials:\n');
       log(envContent);
     } else {
-      log('📋 Generated credentials (not written to .env - use without --no-write to auto-write):\n');
+      log('📋 Generated credentials (not written):\n');
       log(envContent);
     }
     
     log('📝 Next steps:');
-    log(`   1. Credentials are now in your .env file with ${servicePrefix}_ prefix`);
-    log(`   2. ${servicePrefix}_MAIA_MODE is set to ${defaultMode}`);
-    log(`   3. ${servicePrefix}_MAIA_STORAGE is set to ${defaultStorage}`);
-    log(`   4. The ${service} service will use these credentials automatically\n`);
+    log(`   1. Sync service uses: ACCOUNT_MODE, AGENT_ID, AGENT_SECRET, AGENT_STORAGE`);
     
     log('🔒 Security Note:');
     log('   - Keep MAIA_AGENT_SECRET secure (like a password)');

@@ -49,12 +49,12 @@ flyctl secrets set PUBLIC_API_DOMAIN="sync.next.maia.city" --app next-maia-city
 
 From the **monorepo root**:
 ```bash
-flyctl deploy --dockerfile services/maia-city/Dockerfile --config services/maia-city/fly.toml --app next-maia-city
+flyctl deploy --dockerfile services/maia/Dockerfile --config services/maia/fly.toml --app next-maia-city
 ```
 
 Or use the deploy script (from maia-city directory):
 ```bash
-cd services/maia-city
+cd services/maia
 bun run deploy
 ```
 
@@ -120,7 +120,7 @@ To use custom domains:
 
 After the first deployment, you can simply run:
 ```bash
-cd services/maia-city
+cd services/maia
 bun run deploy
 ```
 

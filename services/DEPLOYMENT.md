@@ -4,9 +4,8 @@ Complete guide for deploying MaiaOS services to Fly.io.
 
 ## Services Overview
 
-1. **next-maia-city** (`services/maia-city/`) - Frontend SPA
-2. **sync-next-maia-city** (`services/sync/`) - Self-hosted sync service
-3. **voice-maia-city** (`libs/maia-voice/`) - PersonaPlex voice backend (GPU-enabled, see `libs/maia-voice/DEPLOY.md`)
+1. **next-maia-city** (`services/maia/`) - Frontend SPA
+2. **sync-next-maia-city** (`services/moai/`) - Self-hosted sync service
 
 ## Quick Start
 
@@ -105,7 +104,7 @@ See `services/DNS_SETUP.md` for detailed DNS configuration instructions, especia
 - `SYNC_MAIA_AGENT_SECRET` - Agent secret (generate via `bun agent:generate --service=sync`)
 
 **Configured in fly.toml:**
-- `PORT` - Server port (default: 4203)
+- `PORT` - Server port (default: 4201)
 - `DB_PATH` - PGlite database path (default: `/data/sync.db`)
 
 ### Maia City (`next-maia-city`)
@@ -127,7 +126,7 @@ See `services/DNS_SETUP.md` for detailed DNS configuration instructions, especia
          ▼
 ┌─────────────────┐
 │  server         │  (Self-Hosted Sync Server)
-│  (Port 4203)    │
+│  (Port 4201)    │
 │  PGlite Storage │
 └─────────────────┘
 ```
@@ -193,7 +192,7 @@ Both services have deployment scripts:
 cd services/sync && bun run deploy
 
 # Maia City
-cd services/maia-city && bun run deploy
+cd services/maia && bun run deploy
 ```
 
 These scripts handle deployment from the monorepo root with proper Dockerfile and config paths.
