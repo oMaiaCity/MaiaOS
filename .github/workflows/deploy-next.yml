@@ -7,6 +7,8 @@ on:
 
 jobs:
   deploy-moai:
+    # Deploy only on release commits (version-tag push), or manual trigger
+    if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && contains(github.event.head_commit.message, 'release:'))
     name: Deploy moai
     runs-on: ubuntu-latest
     env:
@@ -23,6 +25,8 @@ jobs:
         run: ./services/moai/deploy.sh
 
   deploy-maia:
+    # Deploy only on release commits (version-tag push), or manual trigger
+    if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && contains(github.event.head_commit.message, 'release:'))
     name: Deploy maia
     runs-on: ubuntu-latest
     env:

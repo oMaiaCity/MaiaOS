@@ -61,7 +61,7 @@ flowchart LR
 
 Version changes only on merge to `next`. No manual bumping.
 
-The workflow skips when the head commit message contains `chore: bump version to`, so the version-bump push does not trigger another run (no loop).
+The version-tag workflow skips when the head commit message contains `release:`, so the release push does not trigger another run (no loop). Deploy-next runs only on `release:` commits (or manual trigger), so we deploy once per merge.
 
 ---
 
@@ -91,7 +91,7 @@ gh pr merge <number> --rebase
 ### Version Tag (`.github/workflows/version-tag.yml`)
 
 - **Trigger:** Push to `next`.
-- **Skips:** If the push is its own version-bump commit (avoids loop).
+- **Skips:** If the push is its own release commit (avoids loop).
 - **Steps:** Generate version → `bun run version:sync <version>` → commit → tag → release.
 - **Requires:** `DEPLOY_KEY` secret (SSH private key) to push to protected `next`.
 
@@ -103,7 +103,8 @@ gh pr merge <number> --rebase
 
 ### Deploy Next (`.github/workflows/deploy-next.yml`)
 
-- **Trigger:** Push to `next`.
+- **Trigger:** Push to `next`, or manual.
+- **Runs only on:** `release:` commits (version-tag push) or workflow_dispatch. Skips merge commits — deploy once per merge.
 - Deploys maia and moai to Fly.io (parallel).
 
 ---
