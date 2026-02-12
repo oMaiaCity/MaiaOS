@@ -123,6 +123,20 @@ gh pr merge <number> --rebase
 - **Runs only on:** `[release]` commits (version-tag push) or workflow_dispatch. Skips merge commits — deploy once per merge.
 - Deploys maia and moai to Fly.io (parallel).
 
+### Biome (`.github/workflows/biome.yml`)
+
+- **Trigger:** Pull requests and pushes to `next`.
+- **Runs:** `bun run check:ci` (lint + format check).
+- **Branch protection:** Require the Biome status check before PRs can merge into `next`. Settings → Branches → Rules for `next` → Require status checks to pass → Add checks. If "No results" appears, **manually type** `Lint & Format` or `biome` (the check name only appears after the workflow has run at least once—push a PR, let it run, then it will be searchable).
+
+---
+
+## Pre-commit (Biome)
+
+On each commit (local), Husky runs:
+1. **lint-staged** – Auto-fix staged files with Biome.
+2. **check:ci** – Verify full codebase passes. Commit blocked if it fails.
+
 ---
 
 ## Local Sync (CI / scripting only)

@@ -47,17 +47,11 @@
 				"noConsole": {
 					"level": "warn",
 					"options": {
-						"allow": [
-							"log"
-						]
+						"allow": ["log"]
 					}
 				}
 			},
-			"style": {
-				"noUnknownAtRules": {
-					"level": "off"
-				}
-			}
+			"style": {}
 		}
 	},
 	"javascript": {
@@ -92,34 +86,21 @@
 			"indentScriptAndStyle": true
 		}
 	},
-	"typescript": {
-		"formatter": {
-			"semicolons": "asNeeded",
-			"trailingCommas": "all",
-			"quoteStyle": "single",
-			"arrowParentheses": "always",
-			"bracketSameLine": false,
-			"bracketSpacing": true,
-			"jsxQuoteStyle": "double",
-			"quoteProperties": "asNeeded"
-		}
-	},
-	"markdown": {
-		"formatter": {
-			"enabled": true,
-			"indentStyle": "tab",
-			"indentWidth": 1,
-			"lineWidth": 100,
-			"lineEnding": "lf"
-		}
-	},
 	"overrides": [
 		{
-			"includes": [
-				"**/*.svelte",
-				"**/*.astro",
-				"**/*.vue"
-			],
+			"includes": ["package.json", "**/package.json"],
+			"formatter": {
+				"enabled": true
+			},
+			"json": {
+				"formatter": {
+					"trailingCommas": "none",
+					"expand": "always"
+				}
+			}
+		},
+		{
+			"includes": ["**/*.svelte", "**/*.astro", "**/*.vue"],
 			"linter": {
 				"rules": {
 					"style": {
@@ -142,9 +123,7 @@
 			}
 		},
 		{
-			"includes": [
-				"**/*.svelte"
-			],
+			"includes": ["**/*.svelte"],
 			"linter": {
 				"rules": {
 					"correctness": {

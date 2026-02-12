@@ -56,7 +56,7 @@ Reusable packages that can be shared across multiple workspaces:
 
 ### Root Package.json
 - **NO dependencies or devDependencies** at root level
-- Contains workspace configuration: `"workspaces": ["services/*", "libs/*"]`
+- Contains workspace configuration: `"workspaces": ["services/maia", "services/moai", "libs/*"]`
 - **Root-level scripts**: Delegates to workspaces using `bun --filter`
 - All common commands can be run from root (dev, build, release, etc.)
 - Keeps the monorepo structure clean and maintainable

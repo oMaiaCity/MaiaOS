@@ -5,11 +5,10 @@
  * Runs maia (4200) and moai (4201)
  */
 
-import { spawn } from 'node:child_process'
-import { execSync } from 'node:child_process'
+import { execSync, spawn } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createLogger, bootHeader, bootFooter } from './logger.js'
+import { bootFooter, bootHeader, createLogger } from './logger.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = resolve(__dirname, '..')
@@ -32,32 +31,36 @@ const serviceStatus = {
 // Filter verbose output from child processes
 function shouldFilterLine(line) {
 	if (!line) return true
-	
+
 	const trimmed = line.trim()
 	if (trimmed === '') return true
-	
+
 	// Filter expected first-run account load errors (agent/sync create account on first run)
-	if (trimmed.includes('Error withLoadedAccount') ||
-	    trimmed.includes('Account unavailable from all peers') ||
-	    (/\d+\s*\|\s*/.test(trimmed) && trimmed.includes('throw new Error'))) {
+	if (
+		trimmed.includes('Error withLoadedAccount') ||
+		trimmed.includes('Account unavailable from all peers') ||
+		(/\d+\s*\|\s*/.test(trimmed) && trimmed.includes('throw new Error'))
+	) {
 		return true
 	}
-	
+
 	// Filter vite build verbose output
-	if (trimmed.includes('modules transformed') || 
-	    trimmed.includes('built in') ||
-	    trimmed.includes('dist/') ||
-	    trimmed.includes('│') ||
-	    trimmed === '└─ Running...' ||
-	    trimmed.includes('$ bun') ||
-	    trimmed.includes('$ vite') ||
-	    trimmed.includes('$ cd') ||
-	    (trimmed.includes('vite v') && !trimmed.includes('Local:')) ||
-	    (trimmed.includes('✓') && trimmed.includes('modules')) ||
-	    (trimmed.includes('ready in') && !trimmed.includes('Local:'))) {
+	if (
+		trimmed.includes('modules transformed') ||
+		trimmed.includes('built in') ||
+		trimmed.includes('dist/') ||
+		trimmed.includes('│') ||
+		trimmed === '└─ Running...' ||
+		trimmed.includes('$ bun') ||
+		trimmed.includes('$ vite') ||
+		trimmed.includes('$ cd') ||
+		(trimmed.includes('vite v') && !trimmed.includes('Local:')) ||
+		(trimmed.includes('✓') && trimmed.includes('modules')) ||
+		(trimmed.includes('ready in') && !trimmed.includes('Local:'))
+	) {
 		return true
 	}
-	
+
 	return false
 }
 
@@ -67,12 +70,12 @@ function processOutput(service, data, isError = false) {
 	for (const line of lines) {
 		const trimmed = line.trim()
 		const logger = createLogger(service)
-		
+
 		// Check for Vite "Local:" / "➜" or any "http://localhost:PORT" — before filtering
 		if (trimmed.includes('http://') && !serviceStatus[service]) {
 			const urlMatch = trimmed.match(/http:\/\/localhost:(\d+)/)
 			if (urlMatch) {
-				const port = urlMatch[1]
+				const _port = urlMatch[1]
 				const url = urlMatch[0]
 				logger.success(`Running on ${url}`)
 				serviceStatus[service] = true
@@ -80,10 +83,10 @@ function processOutput(service, data, isError = false) {
 				continue
 			}
 		}
-		
+
 		// Skip filtered lines after checking for Vite URL
 		if (shouldFilterLine(line)) continue
-		
+
 		// Server/API ready messages — check BEFORE error block (agent may log to stderr)
 		const serverReadyPattern =
 			trimmed.includes('running on port') ||
@@ -104,10 +107,14 @@ function processOutput(service, data, isError = false) {
 		}
 
 		// [sync] Ready / Vite ready — use known ports when applicable
-		if ((trimmed.includes('ready') || trimmed.includes('Ready') || trimmed.includes('VITE')) && !serviceStatus[service]) {
+		if (
+			(trimmed.includes('ready') || trimmed.includes('Ready') || trimmed.includes('VITE')) &&
+			!serviceStatus[service]
+		) {
 			const portMatch = trimmed.match(/port\s+(\d+)/i) || trimmed.match(/:(\d+)/)
 			const knownPort = service === 'moai' ? 4201 : null
-			const port = portMatch?.[1] ?? (knownPort && trimmed.includes(`[${service}]`) ? String(knownPort) : null)
+			const port =
+				portMatch?.[1] ?? (knownPort && trimmed.includes(`[${service}]`) ? String(knownPort) : null)
 			if (port) {
 				logger.success(`Running on http://localhost:${port}`)
 				serviceStatus[service] = true
@@ -115,15 +122,20 @@ function processOutput(service, data, isError = false) {
 				continue
 			}
 		}
-		
+
 		// Error messages
-		if (isError || trimmed.includes('error') || trimmed.includes('Error') || trimmed.includes('Failed')) {
+		if (
+			isError ||
+			trimmed.includes('error') ||
+			trimmed.includes('Error') ||
+			trimmed.includes('Failed')
+		) {
 			if (!trimmed.includes('stack') && !trimmed.includes('at ')) {
 				logger.error(trimmed)
 			}
 			continue
 		}
-		
+
 		// Passthrough: moai/sync init progress (PGlite, account loading)
 		if (service === 'moai' && (trimmed.startsWith('[sync]') || trimmed.startsWith('[STORAGE]'))) {
 			logger.log(trimmed)
@@ -132,7 +144,6 @@ function processOutput(service, data, isError = false) {
 
 		// Skip remaining verbose output
 		if (trimmed.includes('$') || trimmed.includes('│') || trimmed.includes('└─')) {
-			continue
 		}
 	}
 }
@@ -147,12 +158,12 @@ function maybeLogBrandReady() {
 function checkAllReady() {
 	// Main services (sync = unified WebSocket + agent + LLM)
 	const mainServices = ['moai', 'maia']
-	const mainReady = mainServices.every(service => serviceStatus[service] === true)
-	
+	const mainReady = mainServices.every((service) => serviceStatus[service] === true)
+
 	// Helper services (brand = favicons + assets combined; nice to have but not critical)
 	const helperServices = ['brand', 'docs']
-	const helpersReady = helperServices.every(service => serviceStatus[service] === true)
-	
+	const _helpersReady = helperServices.every((service) => serviceStatus[service] === true)
+
 	// Show footer when main services are ready (helpers are optional)
 	if (mainReady && !serviceStatus._footerShown) {
 		serviceStatus._footerShown = true
@@ -162,41 +173,45 @@ function checkAllReady() {
 
 async function startMaia() {
 	const logger = createLogger('maia')
-	
+
 	// Free port 4200 if in use - target LISTENER only (not client connections)
 	try {
-		const portCheck = execSync(`lsof -ti:4200 -sTCP:LISTEN 2>/dev/null | head -1`, { encoding: 'utf-8' }).trim()
+		const portCheck = execSync(`lsof -ti:4200 -sTCP:LISTEN 2>/dev/null | head -1`, {
+			encoding: 'utf-8',
+		}).trim()
 		if (portCheck) {
-			const processInfo = execSync(`ps -p ${portCheck} -o command= 2>/dev/null`, { encoding: 'utf-8' }).trim()
+			const processInfo = execSync(`ps -p ${portCheck} -o command= 2>/dev/null`, {
+				encoding: 'utf-8',
+			}).trim()
 			logger.warn(`Port 4200 in use by: ${processInfo || 'unknown'}. Attempting to free...`)
 			try {
 				execSync(`kill ${portCheck} 2>/dev/null`, { timeout: 2000 })
-				await new Promise(r => setTimeout(r, 800))
-			} catch (e) {
+				await new Promise((r) => setTimeout(r, 800))
+			} catch (_e) {
 				try {
 					execSync(`kill -9 ${portCheck} 2>/dev/null`, { timeout: 2000 })
-					await new Promise(r => setTimeout(r, 800))
-				} catch (e2) {
+					await new Promise((r) => setTimeout(r, 800))
+				} catch (_e2) {
 					logger.error(`Could not free port 4200. Kill manually: kill ${portCheck}`)
 					process.exit(1)
 				}
 			}
 		}
-	} catch (e) {
+	} catch (_e) {
 		// Port is free or check failed - continue
 	}
-	
+
 	maiaProcess = spawn('bun', ['--env-file=.env', '--filter', '@MaiaOS/maia', 'dev'], {
 		cwd: rootDir,
 		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,
 		env: { ...process.env },
 	})
-	
+
 	maiaProcess.stdout.on('data', (data) => {
 		processOutput('maia', data)
 	})
-	
+
 	maiaProcess.stderr.on('data', (data) => {
 		processOutput('maia', data, true)
 	})
@@ -216,24 +231,28 @@ async function startMoai() {
 	const logger = createLogger('moai')
 	// Free port 4201 if in use - target LISTENER only (not client connections)
 	try {
-		const portCheck = execSync(`lsof -ti:4201 -sTCP:LISTEN 2>/dev/null | head -1`, { encoding: 'utf-8' }).trim()
+		const portCheck = execSync(`lsof -ti:4201 -sTCP:LISTEN 2>/dev/null | head -1`, {
+			encoding: 'utf-8',
+		}).trim()
 		if (portCheck) {
-			const processInfo = execSync(`ps -p ${portCheck} -o command= 2>/dev/null`, { encoding: 'utf-8' }).trim()
+			const processInfo = execSync(`ps -p ${portCheck} -o command= 2>/dev/null`, {
+				encoding: 'utf-8',
+			}).trim()
 			logger.warn(`Port 4201 in use by: ${processInfo || 'unknown'}. Attempting to free...`)
 			try {
 				execSync(`kill ${portCheck} 2>/dev/null`, { timeout: 2000 })
-				await new Promise(r => setTimeout(r, 800))
-			} catch (e) {
+				await new Promise((r) => setTimeout(r, 800))
+			} catch (_e) {
 				try {
 					execSync(`kill -9 ${portCheck} 2>/dev/null`, { timeout: 2000 })
-					await new Promise(r => setTimeout(r, 800))
-				} catch (e2) {
+					await new Promise((r) => setTimeout(r, 800))
+				} catch (_e2) {
 					logger.error(`Could not free port 4201. Kill manually: kill ${portCheck}`)
 					process.exit(1)
 				}
 			}
 		}
-	} catch (e) {
+	} catch (_e) {
 		// Port is free or check failed - continue
 	}
 
@@ -243,11 +262,11 @@ async function startMoai() {
 		shell: false,
 		env: { ...process.env },
 	})
-	
+
 	moaiProcess.stdout.on('data', (data) => {
 		processOutput('moai', data)
 	})
-	
+
 	moaiProcess.stderr.on('data', (data) => {
 		processOutput('moai', data, true)
 	})
@@ -271,10 +290,14 @@ function startDocsWatcher() {
 		shell: false,
 		env: { ...process.env },
 	})
-	
+
 	docsWatcherProcess.stdout.on('data', (data) => {
 		const output = data.toString()
-		if (output.includes('generated successfully') || output.includes('LLM documentation generated') || output.includes('Watching')) {
+		if (
+			output.includes('generated successfully') ||
+			output.includes('LLM documentation generated') ||
+			output.includes('Watching')
+		) {
 			if (!serviceStatus.docs) {
 				logger.success('Watching docs')
 				serviceStatus.docs = true
@@ -284,7 +307,7 @@ function startDocsWatcher() {
 			processOutput('docs', data)
 		}
 	})
-	
+
 	docsWatcherProcess.stderr.on('data', (data) => {
 		processOutput('docs', data, true)
 	})
@@ -308,7 +331,7 @@ function generateFavicons() {
 		shell: false,
 		env: { ...process.env },
 	})
-	
+
 	faviconProcess.stdout.on('data', (data) => {
 		const output = data.toString()
 		if (output.includes('generated successfully')) {
@@ -317,7 +340,7 @@ function generateFavicons() {
 			checkAllReady()
 		}
 	})
-	
+
 	faviconProcess.stderr.on('data', (data) => {
 		const output = data.toString()
 		if (output.includes('Failed')) {
@@ -346,16 +369,21 @@ function startAssetSync() {
 		shell: false,
 		env: { ...process.env },
 	})
-	
+
 	assetSyncProcess.stdout.on('data', (data) => {
 		const output = data.toString()
-		if ((output.includes('synced') || output.includes('All brand assets synced') || output.includes('Watching assets')) && !serviceStatus.assets) {
+		if (
+			(output.includes('synced') ||
+				output.includes('All brand assets synced') ||
+				output.includes('Watching assets')) &&
+			!serviceStatus.assets
+		) {
 			serviceStatus.assets = true
 			maybeLogBrandReady()
 			checkAllReady()
 		}
 	})
-	
+
 	assetSyncProcess.stderr.on('data', (data) => {
 		processOutput('assets', data, true)
 	})
@@ -375,7 +403,7 @@ function startAssetSync() {
 
 function setupSignalHandlers() {
 	const logger = createLogger('dev')
-	
+
 	process.on('SIGINT', () => {
 		console.log()
 		logger.status('Shutting down...')
@@ -425,7 +453,7 @@ async function main() {
 
 	// Generate favicons first (runs once, then exits)
 	generateFavicons()
-	
+
 	// Wait a bit for favicon generation to start, then start services
 	// maia (4200) + moai (4201) in parallel - sync peer retries until moai ready
 	setTimeout(async () => {
