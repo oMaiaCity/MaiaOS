@@ -7,7 +7,7 @@ on:
 jobs:
   version-tag:
     # Skip when this push was our own version-bump commit (avoids loop)
-    if: ${{ !contains(github.event.head_commit.message, 'chore: bump version to') }}
+    if: github.event.head_commit == null || contains(github.event.head_commit.message, 'chore: bump version to') == false
     runs-on: ubuntu-latest
     permissions:
       contents: write
