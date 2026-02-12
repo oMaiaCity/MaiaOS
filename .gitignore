@@ -17,7 +17,7 @@ build/
 # Rust build artifacts (Tauri)
 **/src-tauri/target/
 **/src-tauri/gen/
-# Exception: iOS version files need to be tracked for semantic-release
+# Exception: iOS version files need to be tracked for version sync
 !**/src-tauri/gen/apple/app_iOS/Info.plist
 !**/src-tauri/gen/apple/project.yml
 

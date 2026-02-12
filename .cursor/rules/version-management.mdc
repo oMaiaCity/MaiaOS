@@ -2,278 +2,80 @@
 alwaysApply: true
 ---
 
-## Version Management System
+## Version Management
 
-This project uses **semantic-release** with conventional commits for **centralized version management** across the entire monorepo. All services and libraries share the same version number.
+**Continuous version tagging.** Version is set automatically when a PR is merged to `next`. All packages share the same version.
 
-### Centralized Version Sync
+### Format: `YY.MMDD.HHMM`
 
-Versions are automatically synced across **all packages** in the monorepo:
-- **All services**: `services/*/package.json` (app, me, etc.)
-- **All libraries**: `libs/*/package.json` (all shared packages)
-- **Tauri/Rust**: `services/app/src-tauri/Cargo.toml`
-- **Tauri config**: `services/app/src-tauri/tauri.conf.json`
-- **iOS**: `services/app/src-tauri/gen/apple/app_iOS/Info.plist`
-- **iOS project**: `services/app/src-tauri/gen/apple/project.yml`
+| Part | Example | Meaning |
+|------|---------|---------|
+| YY | 26 | Year |
+| MMDD | 0212 | Feb 12 |
+| HHMM | 2230 | 22:30 UTC |
 
-**Single Source of Truth:** Version is managed in `services/app/package.json` and automatically propagated to all other packages during release.
+Example: `26.0212.2230` = Feb 12, 2026 at 22:30 UTC.
 
-**Commands:**
-- `bun version:sync <version>` - Manually sync specific version across all packages (from root)
-- `bun release` - Run semantic-release (analyzes commits, bumps version, syncs all packages, creates release)
-- `bun release:dry-run` - Test what semantic-release would do
+### Scope
 
-### How Semantic Release Works
+Every package gets the same version:
+- All `services/*/package.json`
+- All `libs/*/package.json`
 
-1. **Only runs on `main` branch** - Releases are only triggered when running on the `main` branch
-2. Analyzes commits since last release using conventional commit format
-3. Determines next version (patch/minor) based on commit types
-4. **Syncs version across all packages** - Updates all `services/*/package.json` and `libs/*/package.json` files automatically
-5. Updates platform-specific files (Cargo.toml, tauri.conf.json, iOS files)
-6. Generates CHANGELOG.md
-7. **Creates git tag** (e.g., `v0.2.0`) locally
-8. **Creates GitHub release** with the tag (automatically pushes tag to GitHub)
-9. Commits all changes (including all package.json files)
-
-**Git Tags:** Semantic-release automatically creates git tags and pushes them to GitHub via the `@semantic-release/github` plugin. You don't need to manually push tags - they're handled automatically.
-
-**Branch Protection:** Releases only happen on the `main` branch. Running `bun run release` on other branches will not create releases.
+No exclusions. Single source: the workflow generates the version and passes it to `sync-version.js`.
 
 ---
 
-## Workflow
+## Flow
 
-### Standard Workflow
-
-1. Make changes
-2. Stage changes: `git add .`
-3. Commit with conventional format:
-   - **Most changes**: `git commit -m "fix: description"` (patch bump)
-   - **New features**: `git commit -m "feat: description"` (minor bump - use sparingly!)
-   - **Maintenance**: `git commit -m "chore: description"` (no bump)
-4. Push: `git push`
-5. Run semantic-release: `bun run release` (or let CI do it)
-
-**Remember:** Most commits should be `fix:` or `chore:`. Only use `feat:` for significant new user-facing features.
-
-### Testing Before Release
-
-Before running actual release, test what would happen:
-```bash
-bun run release:dry-run
+```mermaid
+flowchart LR
+    PR[PR merged to next]
+    VT[version-tag.yml]
+    Sync[Sync all packages]
+    Tag[Tag + Release]
+    Deploy[deploy-next.yml]
+    PR --> VT --> Sync --> Tag
+    PR --> Deploy
 ```
 
-This shows what version would be released without making any changes.
+1. PR passes checks and is merged to `next`.
+2. Push to `next` triggers `version-tag` and `deploy-next`.
+3. `version-tag`: Generate `YY.MMDD.HHMM`, sync to all packages, commit, tag, create GitHub release.
+4. `deploy-next`: Deploy maia and moai.
 
-### Git Workflow: Use Rebase by Default
+Version changes only on merge to `next`. No manual bumping.
 
-**Why rebasing matters for semantic-release:**
-- **Linear history**: Creates a clean, linear commit history that's easier for semantic-release to analyze
-- **Better commit analysis**: semantic-release analyzes commits since the last tag/release. A linear history makes it easier to identify which commits belong to which release
-- **Cleaner CHANGELOG**: A linear history produces cleaner, more readable changelogs without merge commit noise
-- **Easier debugging**: Linear history makes it easier to track down when bugs were introduced
-
-**Recommended Git Configuration:**
-
-```bash
-# Set rebase as default for git pull
-git config pull.rebase true
-
-# Or set globally for all repositories
-git config --global pull.rebase true
-
-# Set rebase as default for git pull with merge strategy (safer)
-git config pull.rebase merges
-
-# Or globally
-git config --global pull.rebase merges
-```
-
-**Workflow with Rebase:**
-
-```bash
-# When pulling updates from main
-git pull --rebase
-
-# When merging feature branches, use rebase first
-git checkout feature-branch
-git rebase main
-git checkout main
-git merge feature-branch  # This will be a fast-forward merge
-
-# Or use GitHub's "Rebase and merge" option when merging PRs
-```
-
-**Benefits:**
-- No unnecessary merge commits cluttering the history
-- Each commit message is preserved and analyzed correctly by semantic-release
-- Easier to see the actual changes that went into each release
-- CHANGELOG.md is cleaner and more accurate
-
-**Note:** Always rebase feature branches before merging to `main` to maintain a clean linear history. This ensures semantic-release can accurately analyze commits and generate proper version bumps.
+The workflow skips when the head commit message contains `chore: bump version to`, so the version-bump push does not trigger another run (no loop).
 
 ---
 
-## GitHub Actions Integration
+## Branch Strategy
 
-Two workflows are set up for fully automated releases:
-
-### 1. Release Workflow (`.github/workflows/release.yml`)
-
-Runs semantic-release on pushes to `main`:
-- Analyzes commits
-- Bumps version
-- Creates GitHub release with tag
-- Generates CHANGELOG.md
-
-### 2. iOS Release Workflow (`.github/workflows/ios-release.yml`)
-
-Automatically triggers when a GitHub release is created:
-- Builds frontend (SvelteKit)
-- Builds iOS app (Tauri)
-- Uploads IPA to TestFlight automatically
-
-**Complete Flow:**
-1. Commit with conventional format: `feat: new feature`
-2. Push to `main`: `git push`
-3. Release workflow runs → Creates GitHub release
-4. iOS workflow automatically triggers → Builds & uploads to TestFlight
-5. App appears in TestFlight! 🎉
-
-**Required GitHub Secrets:**
-- `APPSTORE_CONNECT_API_KEY` - Contents of `.p8` file from App Store Connect
-- `APPSTORE_CONNECT_API_KEY_ID` - Key ID from App Store Connect
-- `APPSTORE_CONNECT_ISSUER_ID` - Issuer ID from App Store Connect
-- `APPLE_DEVELOPMENT_TEAM` - Your Team ID (e.g., `2P6VCHVJWB`)
-
-See `.github/workflows/README.md` for detailed setup instructions.
+- **`next`** – Deployment branch. Protected, updated only via PRs.
+- Feature branches – Branch from `next`, merge back via PR.
 
 ---
 
-## Quick Reference
+## GitHub Actions
 
-### When to Use `feat:` (Minor Bump - 0.1.0 → 0.2.0)
+### Version Tag (`.github/workflows/version-tag.yml`)
 
-**STRICT RULE: Only use `feat:` for significant, user-facing new features or capabilities.**
+- **Trigger:** Push to `next`.
+- **Skips:** If the push is its own version-bump commit (avoids loop).
+- **Steps:** Generate version → `bun run version:sync <version>` → commit → tag → release.
 
-**✅ Use `feat:` for:**
-- New user-facing features (e.g., "Add user profile page", "Add dark mode toggle")
-- New major functionality (e.g., "Add payment processing", "Add real-time notifications")
-- New API endpoints that expose new capabilities
-- Significant new integrations (e.g., "Add Stripe integration", "Add OAuth provider")
+### Deploy Next (`.github/workflows/deploy-next.yml`)
 
-**❌ DO NOT use `feat:` for:**
-- Bug fixes → Use `fix:`
-- Improvements to existing features → Use `fix:` or `perf:`
-- Refactoring → Use `refactor:` or `chore:`
-- Configuration changes → Use `chore:`
-- Dependency updates → Use `chore:`
-- Internal improvements → Use `fix:` or `chore:`
-- Migration scripts → Use `chore:` or `fix:`
-- Deployment fixes → Use `fix:` or `chore:`
-- Documentation → Use `docs:`
-- Styling/UI tweaks → Use `fix:` or `style:`
-
-**Example:**
-```bash
-# ✅ Correct - New user-facing feature
-git commit -m "feat: add user profile editing page"
-
-# ❌ Wrong - Should be fix:
-git commit -m "feat: fix login button styling"  # Should be "fix: login button styling"
-git commit -m "feat: improve error handling"    # Should be "fix: improve error handling"
-git commit -m "feat: add migration script"       # Should be "chore: add migration script"
-```
-
-### When to Use `fix:` (Patch Bump - 0.1.0 → 0.1.1)
-
-**Use `fix:` for most changes - this is the DEFAULT for improvements and bug fixes.**
-
-**✅ Use `fix:` for:**
-- Bug fixes
-- Performance improvements
-- Security fixes
-- Error handling improvements
-- UI/UX improvements
-- Styling fixes
-- Configuration fixes
-- Deployment fixes
-- Migration fixes
-- Any improvement to existing functionality
-
-**Example:**
-```bash
-git commit -m "fix: resolve login button styling issue"
-git commit -m "fix: improve error messages"
-git commit -m "fix: optimize database queries"
-git commit -m "fix: correct CORS configuration"
-git commit -m "fix: update migration script to use correct schema"
-```
-
-### When to Use `chore:` (No Version Bump)
-
-**Use `chore:` for maintenance tasks that don't affect functionality.**
-
-**✅ Use `chore:` for:**
-- Dependency updates
-- Build configuration changes
-- CI/CD workflow updates
-- Documentation updates (unless user-facing)
-- Code cleanup/refactoring (internal only)
-- Adding/updating scripts
-- Environment variable changes
-- Deployment configuration
-
-**Example:**
-```bash
-git commit -m "chore: update dependencies"
-git commit -m "chore: update GitHub Actions workflow"
-git commit -m "chore: add migration script"
-git commit -m "chore: update .env.example"
-```
-
-**Want a Major Bump (0.1.0 → 1.0.0)?**
-⚠️ **MAJOR VERSION BUMPS ARE MANUAL ONLY** - No commits (including breaking changes) can trigger major version bumps automatically.
-
-To manually trigger a major version bump:
-```bash
-# Automatically bumps to next major version (0.1.0 → 1.0.0)
-bun run release:major
-
-# Or specify exact version
-bun run release:major 1.0.0
-```
-
-This script will:
-1. Sync version across all files (package.json, Cargo.toml, tauri.conf.json, iOS files)
-2. Commit the version change
-3. Create git tag
-
-Then manually run semantic-release:
-```bash
-git push  # Push the version commit
-bun run release  # Creates tag, GitHub release, and CHANGELOG automatically
-```
-
-**Note:** Semantic-release will automatically create and push the git tag to GitHub. You don't need to manually push tags - the `@semantic-release/github` plugin handles this.
-
-**Important:** Breaking change commits (`feat!:` or `BREAKING CHANGE:`) will be documented in CHANGELOG but will **NOT** trigger automatic version bumps. Major bumps must be triggered manually using `bun run release:major`.
-
-**Don't Want a Bump?**
-```bash
-git commit -m "docs: update documentation"
-git commit -m "refactor: clean up code"
-git commit -m "chore: update dependencies"
-```
+- **Trigger:** Push to `next`.
+- Deploys maia and moai to Fly.io (parallel).
 
 ---
 
-## Important Notes
+## Local Sync (CI / scripting only)
 
-- **ALWAYS use conventional commits** - This is required for semantic-release to work
-- **Use rebase by default** - Maintain a linear commit history for better semantic-release analysis and cleaner changelogs
-- **Version sync happens automatically** - When you run `bun run release`, all version files are updated
-- **Test before releasing** - Use `bun run release:dry-run` to preview changes
-- **Breaking changes** - Breaking change commits (`feat!:` or `BREAKING CHANGE:`) will be documented in CHANGELOG but will **NOT** trigger automatic major version bumps.
-- **Major version bumps are manual only** - Use `bun run release:major` to manually trigger major version bump via semantic-release
-- **Git tags are automatic** - Semantic-release creates and pushes tags to GitHub automatically - no manual tag pushing needed
+Version is always supplied as an argument. No fallbacks.
+
+```bash
+bun run version:sync 26.0212.2230
+```

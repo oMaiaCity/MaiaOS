@@ -163,7 +163,7 @@ bun install                    # Install dependencies for all workspaces
 bun dev                        # Run maia (4200) and moai (4201) in parallel
 bun dev:maia                   # Run only maia dev server (port 4200)
 bun dev:moai                   # Run only moai dev server (port 4201)
-bun release                    # Run semantic-release
+bun run version:sync <version>  # Sync version (CI does this on merge to next)
 bun deploy                     # Deploy maia + moai to Fly.io
 ```
 
@@ -191,18 +191,9 @@ cd libs/maia-kernel && bun run build    # Build kernel bundle
 
 ## Version Management
 
-- **Centralized versioning**: All services and libraries share the **same version number** across the entire monorepo
-- **Single source of truth**: Version is managed in `services/maia/package.json` via semantic-release
-- **Automatic sync**: When a release is created, versions are automatically synced to:
-  - All `services/*/package.json` files
-  - All `libs/*/package.json` files
-  - (Tauri/Rust/iOS if present in services)
-- **Release workflow**: Affects all packages in the monorepo
-- **Root-level commands**: 
-  - `bun version:sync <version>` - Manually sync version across all packages
-  - `bun release` - Run semantic-release (analyzes commits, bumps version, creates release)
-  - `bun release:dry-run` - Test what semantic-release would do
-  - `bun release:major` - Manually trigger major version bump
+- **Continuous version tagging**: Version is set automatically when a PR is merged to `next` (format: `YY.MMDD.HHMM`)
+- **Centralized**: All services and libraries share the same version
+- **Root-level command**: `bun run version:sync <version>` — for CI/scripting; version required, no fallbacks
 
 ## Git Workflow
 
