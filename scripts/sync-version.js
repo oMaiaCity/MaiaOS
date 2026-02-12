@@ -4,8 +4,7 @@
  * Version is passed as the only argument — no fallbacks.
  *
  * Updates:
- * - All services/*/package.json
- * - All libs/*/package.json
+ * - All services/* and libs/* package.json files
  *
  * Triggered automatically on merge to `next` (version-tag workflow).
  * For local use: bun run version:sync <version>
