@@ -200,8 +200,6 @@ async function startMaiaCity() {
 		// Port is free or check failed - continue
 	}
 	
-	logger.status('Starting on port 4200...')
-
 	maiaCityProcess = spawn('bun', ['--env-file=.env', '--filter', 'maia-city', 'dev'], {
 		cwd: rootDir,
 		stdio: ['ignore', 'pipe', 'pipe'],
@@ -230,8 +228,6 @@ async function startMaiaCity() {
 
 function startApi() {
 	const logger = createLogger('api')
-	logger.status('Starting...')
-	
 	// Check for port conflicts and kill existing API processes
 	try {
 		const portCheck = execSync(`lsof -ti:4201 2>/dev/null | head -1`, { encoding: 'utf-8' }).trim()
@@ -286,8 +282,6 @@ function startApi() {
 
 function startSync() {
 	const logger = createLogger('sync')
-	logger.status('Starting...')
-	
 	// Check for port conflicts and kill existing sync processes
 	try {
 		const portCheck = execSync(`lsof -ti:4203 2>/dev/null | head -1`, { encoding: 'utf-8' }).trim()
@@ -342,8 +336,6 @@ function startSync() {
 
 function startAgent() {
 	const logger = createLogger('agent')
-	logger.status('Starting...')
-
 	// Check for port conflicts and kill existing agent processes
 	try {
 		const portCheck = execSync(`lsof -ti:4204 2>/dev/null | head -1`, { encoding: 'utf-8' }).trim()
@@ -400,8 +392,6 @@ function startAgent() {
 
 function startDocsWatcher() {
 	const logger = createLogger('docs')
-	logger.status('Starting watcher...')
-
 	docsWatcherProcess = spawn('bun', ['scripts/generate-llm-docs.js', '--watch'], {
 		cwd: rootDir,
 		stdio: ['ignore', 'pipe', 'pipe'],
@@ -411,17 +401,12 @@ function startDocsWatcher() {
 	
 	docsWatcherProcess.stdout.on('data', (data) => {
 		const output = data.toString()
-		if (output.includes('generated successfully') || output.includes('LLM documentation generated')) {
+		if (output.includes('generated successfully') || output.includes('LLM documentation generated') || output.includes('Watching')) {
 			if (!serviceStatus.docs) {
-				logger.success('Docs generated')
+				logger.success('Watching docs')
 				serviceStatus.docs = true
 				checkAllReady()
 			}
-		} else if (output.includes('Watching') && !serviceStatus.docs) {
-			logger.status('Watching for changes...')
-			// Mark as ready since watcher is running
-			serviceStatus.docs = true
-			checkAllReady()
 		} else if (!shouldFilterLine(output)) {
 			processOutput('docs', data)
 		}
@@ -444,8 +429,6 @@ function startDocsWatcher() {
 
 function generateFavicons() {
 	const logger = createLogger('favicons')
-	logger.status('Generating...')
-	
 	faviconProcess = spawn('bun', ['scripts/generate-favicons.js'], {
 		cwd: rootDir,
 		stdio: ['ignore', 'pipe', 'pipe'],
@@ -483,8 +466,6 @@ function generateFavicons() {
 
 function startAssetSync() {
 	const logger = createLogger('assets')
-	logger.status('Syncing...')
-
 	assetSyncProcess = spawn('node', ['scripts/sync-assets.js'], {
 		cwd: rootDir,
 		stdio: ['ignore', 'pipe', 'pipe'],
@@ -494,15 +475,8 @@ function startAssetSync() {
 	
 	assetSyncProcess.stdout.on('data', (data) => {
 		const output = data.toString()
-		if (output.includes('synced') || output.includes('All brand assets synced')) {
-			if (!serviceStatus.assets) {
-				logger.success('Synced')
-				serviceStatus.assets = true
-				checkAllReady()
-			}
-		} else if (output.includes('Watching') && !serviceStatus.assets) {
-			logger.status('Watching for changes...')
-			// Mark as ready since watcher is running
+		if ((output.includes('synced') || output.includes('All brand assets synced') || output.includes('Watching assets')) && !serviceStatus.assets) {
+			logger.success('Watching assets')
 			serviceStatus.assets = true
 			checkAllReady()
 		}

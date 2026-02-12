@@ -165,7 +165,7 @@ syncAllAssets()
 // Watch mode (enabled by default)
 if (!isNoWatch) {
 	watchAssets()
-	// Status handled by dev.js
+	console.log('[assets] Watching assets')
 } else {
 	process.exit(0)
 }
