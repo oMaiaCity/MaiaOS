@@ -19,7 +19,7 @@ h1 em,
 	justify-content: center;
 	padding: 2rem;
 	position: relative;
-	background-image: url("/brand/images/banner.png");
+	background-image: url("../brand/images/banner.png");
 	background-size: cover;
 	background-position: center;
 	background-attachment: fixed;
@@ -214,7 +214,7 @@ h1 em,
 	justify-content: center;
 	padding: 2rem;
 	position: relative;
-	background-image: url("/brand/images/banner.png");
+	background-image: url("../brand/images/banner.png");
 	background-size: cover;
 	background-position: center;
 	background-attachment: fixed;

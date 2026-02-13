@@ -16,14 +16,14 @@ ENV HUSKY=0
 RUN bun install
 RUN bun run distros:build
 
-# Runtime stage - only built artifacts, no source, no node_modules
+# Runtime stage - single moai-server.mjs bundle + vendored pglite.wasm (no node_modules)
 FROM oven/bun:1-slim
 WORKDIR /app
 
-COPY --from=builder /app/libs/maia-distros/output/moai-server.es.js ./
+COPY --from=builder /app/libs/maia-distros/output/moai-server.mjs ./
 COPY --from=builder /app/libs/maia-distros/output/pglite.wasm ./
 
 EXPOSE 4201
 
 # Env: PEER_MODE, PEER_STORAGE (from fly.toml). Secrets: PEER_ID, PEER_SECRET, PEER_DB_URL
-CMD ["bun", "moai-server.es.js"]
+CMD ["bun", "run", "moai-server.mjs"]

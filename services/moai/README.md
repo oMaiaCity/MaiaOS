@@ -59,9 +59,9 @@ const { node, account } = await signUpWithPasskey()
 // Peer setup and sync state are handled automatically via kernel bundle
 ```
 
-The client determines the sync server URL based on:
-- **Dev**: Relative path `/sync` (Vite proxy forwards to `localhost:4201`)
-- **Production**: `PEER_MOAI` env var or same origin
+The client connects directly to moai (CORS enabled). Sync server URL:
+- **Dev**: `localhost:4201` (maia on 4200, moai on 4201)
+- **Production**: `VITE_PEER_MOAI` (build-time, e.g. moai.next.maia.city)
 
 ## Storage
 

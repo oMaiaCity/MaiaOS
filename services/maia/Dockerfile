@@ -11,6 +11,7 @@ COPY package.json bun.lock* ./
 COPY libs ./libs
 COPY services/maia ./services/maia
 COPY services/moai ./services/moai
+COPY scripts ./scripts
 
 # VITE_PEER_MOAI must be set BEFORE distros:build - client bundle inlines sync domain
 ARG VITE_PEER_MOAI=moai.next.maia.city
@@ -22,13 +23,16 @@ ENV HUSKY=0
 RUN bun install
 RUN bun run distros:build
 
-# Build maia frontend (uses client + vibes from distros)
+# Generate favicons (sync-assets runs inside build.js, outputs to dist/brand)
+RUN bun scripts/generate-favicons.js
+
+# Build maia frontend (runs sync-assets → dist/brand, then bundles)
 RUN cd services/maia && \
   NODE_ENV=production \
   VITE_SEED_VIBES=all \
   VITE_PEER_MOAI=${VITE_PEER_MOAI:-moai.next.maia.city} \
   VITE_PEER_MAIA=${VITE_PEER_MAIA:-next.maia.city} \
-  bunx vite build --mode production
+  bun build.js
 
 # Runtime stage - only built SPA + static server, no source
 FROM oven/bun:1-slim

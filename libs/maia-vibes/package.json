@@ -5,24 +5,17 @@
 	"main": "src/index.js",
 	"exports": {
 		".": "./src/index.js",
-		"./bundle": {
-			"import": "./dist/maia-vibes.es.js",
-			"require": "./dist/maia-vibes.umd.js"
-		},
 		"./todos/loader": "./src/todos/loader.js",
 		"./todos/registry": "./src/todos/registry.js"
 	},
 	"dependencies": {
 		"@MaiaOS/core": "workspace:*"
 	},
-	"devDependencies": {
-		"vite": "^7.3.1"
-	},
+	"devDependencies": {},
 	"scripts": {
-		"build": "bunx vite build"
+		"build": "echo 'No build - use source via @MaiaOS/vibes'"
 	},
 	"files": [
-		"src",
-		"dist"
+		"src"
 	]
 }

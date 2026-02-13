@@ -2,7 +2,7 @@
 
 /**
  * Simple static file server for maia-city
- * Serves the Vite-built SPA with proper routing
+ * Serves the Bun-built SPA with proper routing
  */
 
 import { existsSync, readFileSync, statSync } from 'node:fs'
@@ -30,6 +30,7 @@ const MIME_TYPES = {
 	'.woff': 'font/woff',
 	'.woff2': 'font/woff2',
 	'.ttf': 'font/ttf',
+	'.webmanifest': 'application/manifest+json',
 	'.map': 'application/json',
 }
 

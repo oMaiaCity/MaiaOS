@@ -19,17 +19,33 @@ retry_flyctl_deploy() {
   while [ $retry_count -lt $max_retries ]; do
     echo "Attempt $((retry_count + 1))/$max_retries: Deploying $app_name..."
     
-    if flyctl deploy \
+    flyctl deploy \
       --dockerfile "$dockerfile" \
       --config "$config" \
       --app "$app_name" \
       --wait-timeout 600 \
       --auto-confirm \
-      --ha=false 2>&1 | tee /tmp/flyctl-deploy.log; then
+      --ha=false 2>&1 | tee /tmp/flyctl-deploy.log
+
+    local deploy_exit_code=${PIPESTATUS[0]}
+
+    if [ $deploy_exit_code -eq 0 ]; then
+      echo "Checking deployment status..."
       if flyctl status --app "$app_name" > /dev/null 2>&1; then
-        echo "✅ Deployment verified: $app_name is running"
-        return 0
+        echo "Verifying health endpoint..."
+        if curl -sf --max-time 10 "https://${app_name}.fly.dev/health" > /dev/null 2>&1; then
+          echo "✅ Deployment verified: $app_name is running and healthy"
+          return 0
+        else
+          echo "⚠️  flyctl status OK but /health did not respond"
+        fi
       fi
+    fi
+
+    # Smoke check / crash failures are not retryable
+    if grep -qE "smoke check|appears to be crashing" /tmp/flyctl-deploy.log 2>/dev/null; then
+      echo "❌ Smoke checks failed - app is crashing. Fix the app before retrying."
+      return 1
     fi
 
     if grep -q "EOF\|connection\|timeout" /tmp/flyctl-deploy.log 2>/dev/null; then
@@ -46,8 +62,10 @@ retry_flyctl_deploy() {
   done
 
   if flyctl status --app "$app_name" > /dev/null 2>&1; then
-    echo "✅ Deployment actually succeeded despite errors! App is running."
-    return 0
+    if curl -sf --max-time 10 "https://${app_name}.fly.dev/health" > /dev/null 2>&1; then
+      echo "✅ Deployment actually succeeded despite errors! App is running and healthy."
+      return 0
+    fi
   fi
 
   echo "❌ Deployment failed after $max_retries attempts"

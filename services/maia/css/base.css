@@ -1,7 +1,7 @@
 /* Local fonts from maia-brand (IndieFlower + Plus Jakarta Sans) */
 @font-face {
 	font-family: "Indie Flower";
-	src: url("/brand/fonts/IndieFlower/IndieFlower-Regular.ttf") format("truetype");
+	src: url("../brand/fonts/IndieFlower/IndieFlower-Regular.ttf") format("truetype");
 	font-weight: normal;
 	font-style: normal;
 	font-display: swap;
@@ -9,7 +9,7 @@
 
 @font-face {
 	font-family: "Plus Jakarta Sans";
-	src: url("/brand/fonts/Jarkata/PlusJakartaSans-VariableFont_wght.ttf") format("truetype");
+	src: url("../brand/fonts/Jarkata/PlusJakartaSans-VariableFont_wght.ttf") format("truetype");
 	font-weight: 100 800;
 	font-style: normal;
 	font-display: swap;
@@ -40,7 +40,7 @@ body {
 	position: fixed;
 	inset: 0;
 	z-index: -1;
-	background: url("/brand/images/banner.png") center / cover no-repeat;
+	background: url("../brand/images/banner.png") center / cover no-repeat;
 	background-attachment: fixed;
 }
 

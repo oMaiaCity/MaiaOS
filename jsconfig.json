@@ -1,0 +1,16 @@
+{
+	"compilerOptions": {
+		"paths": {
+			"@MaiaOS/core": ["./libs/maia-core/src/index.js"],
+			"@MaiaOS/db": ["./libs/maia-db/src/index.js"],
+			"@MaiaOS/self": ["./libs/maia-self/src/index.js"],
+			"@MaiaOS/script": ["./libs/maia-script/src"],
+			"@MaiaOS/script/*": ["./libs/maia-script/src/*"],
+			"@MaiaOS/schemata": ["./libs/maia-schemata/src"],
+			"@MaiaOS/operations": ["./libs/maia-operations/src"],
+			"@MaiaOS/operations/*": ["./libs/maia-operations/src/*"],
+			"@MaiaOS/tools": ["./libs/maia-tools/src"],
+			"@MaiaOS/vibes": ["./libs/maia-vibes/src"]
+		}
+	}
+}

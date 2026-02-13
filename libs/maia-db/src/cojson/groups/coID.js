@@ -163,7 +163,11 @@ export async function createAccountWithSecret({
 			})
 
 			// Auto-seeding complete
-		} catch (_error) {}
+			console.log('✅ Auto-seeding completed successfully')
+		} catch (error) {
+			console.error('❌ Auto-seeding failed:', error?.message ?? error)
+			if (error?.stack) console.error(error.stack)
+		}
 	} else {
 		console.log('ℹ️  Auto-seeding skipped (agent mode/server account)')
 		try {
@@ -172,7 +176,9 @@ export async function createAccountWithSecret({
 			const backend = new CoJSONBackend(result.node, rawAccount, { systemSpark: '@maia' })
 			backend.dbEngine = new DBEngine(backend)
 			await seedAgentAccount(rawAccount, result.node, backend)
-		} catch (_agentSeedError) {}
+		} catch (agentSeedError) {
+			console.error('❌ Agent account seeding failed:', agentSeedError?.message ?? agentSeedError)
+		}
 	}
 
 	return {

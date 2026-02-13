@@ -70,9 +70,10 @@ export function setupSyncPeers(syncDomain = null) {
 			syncDomain.includes('localhost') || syncDomain.includes('127.0.0.1') ? 'ws:' : 'wss:'
 		syncServerUrl = `${protocol}//${syncDomain}/sync`
 	} else if (isDev) {
-		// Browser dev: Use relative path, Vite proxy forwards to localhost:4201 (legacy approach)
+		// Browser dev: Connect directly to moai (no proxy). Maia=4200, moai=4201.
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-		syncServerUrl = `${protocol}//${window.location.host}/sync`
+		const devMoai = apiDomain || 'localhost:4201'
+		syncServerUrl = `${protocol}//${devMoai}/sync`
 	} else if (apiDomain) {
 		// Browser production: Use configured API domain (from kernel or env var)
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'

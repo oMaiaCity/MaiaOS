@@ -44,7 +44,7 @@ function shouldFilterLine(line) {
 		return true
 	}
 
-	// Filter vite build verbose output
+	// Filter verbose build/output
 	if (
 		trimmed.includes('modules transformed') ||
 		trimmed.includes('built in') ||
@@ -71,7 +71,7 @@ function processOutput(service, data, isError = false) {
 		const trimmed = line.trim()
 		const logger = createLogger(service)
 
-		// Check for Vite "Local:" / "➜" or any "http://localhost:PORT" — before filtering
+		// Check for "Local:" / "➜" or any "http://localhost:PORT" — before filtering
 		if (trimmed.includes('http://') && !serviceStatus[service]) {
 			const urlMatch = trimmed.match(/http:\/\/localhost:(\d+)/)
 			if (urlMatch) {
@@ -106,7 +106,7 @@ function processOutput(service, data, isError = false) {
 			}
 		}
 
-		// [sync] Ready / Vite ready — use known ports when applicable
+		// [sync] Ready — use known ports when applicable
 		if (
 			(trimmed.includes('ready') || trimmed.includes('Ready') || trimmed.includes('VITE')) &&
 			!serviceStatus[service]

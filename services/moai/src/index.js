@@ -265,14 +265,16 @@ async function handleLLMChat(req) {
 	}
 }
 
+const CORS_HEADERS = {
+	'Access-Control-Allow-Origin': '*',
+	'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+	'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+}
+
 function handleCORS() {
 	return new Response(null, {
 		status: 204,
-		headers: {
-			'Access-Control-Allow-Origin': '*',
-			'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-			'Access-Control-Allow-Headers': 'Content-Type',
-		},
+		headers: CORS_HEADERS,
 	})
 }
 
@@ -328,9 +330,17 @@ Bun.serve({
 		if (url.pathname === '/sync') {
 			if (!syncHandler) return jsonResponse({ error: 'Initializing', status: 503 }, 503)
 			if (req.headers.get('upgrade') !== 'websocket')
-				return new Response('Expected WebSocket upgrade', { status: 426 })
-			const ok = srv.upgrade(req, { data: {} })
-			return ok ? undefined : new Response('Failed to upgrade', { status: 500 })
+				return new Response('Expected WebSocket upgrade', {
+					status: 426,
+					headers: CORS_HEADERS,
+				})
+			const ok = srv.upgrade(req, { data: {}, headers: CORS_HEADERS })
+			return ok
+				? undefined
+				: new Response('Failed to upgrade', {
+						status: 500,
+						headers: CORS_HEADERS,
+					})
 		}
 
 		// Agent routes (require agentWorker)
@@ -349,7 +359,7 @@ Bun.serve({
 		// API (LLM)
 		if (url.pathname === '/api/v0/llm/chat' && req.method === 'POST') return handleLLMChat(req)
 
-		return new Response('Not Found', { status: 404 })
+		return new Response('Not Found', { status: 404, headers: CORS_HEADERS })
 	},
 	websocket: {
 		async open(ws) {
