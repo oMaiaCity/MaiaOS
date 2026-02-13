@@ -1,190 +1,190 @@
 {
-  "$schema": "@maia/schema/view",
-  "$id": "@maia/sparks/view/detail",
-  "content": {
-    "tag": "div",
-    "class": "detail-container",
-    "children": [
-      {
-        "tag": "div",
-        "class": "empty-state",
-        "attrs": {
-          "data": {
-            "visible": "$showEmptyState"
-          }
-        },
-        "children": [
-          {
-            "tag": "p",
-            "text": "Select a spark to view details and members"
-          }
-        ]
-      },
-      {
-        "tag": "div",
-        "class": "detail-content",
-        "attrs": {
-          "data": {
-            "visible": "$showContent"
-          }
-        },
-        "children": [
-          {
-            "tag": "span",
-            "class": "detail-category",
-            "text": "Spark Details"
-          },
-          {
-            "tag": "h2",
-            "class": "detail-title",
-            "text": "$sparkDetails.name"
-          },
-          {
-            "tag": "div",
-            "class": "detail-list",
-            "children": [
-              {
-                "tag": "div",
-                "class": "detail-item",
-                "children": [
-                  {
-                    "tag": "span",
-                    "class": "detail-label",
-                    "text": "Group ID"
-                  },
-                  {
-                    "tag": "span",
-                    "class": "detail-value",
-                    "text": "$sparkDetails.groupId"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "tag": "h3",
-            "class": "members-title",
-            "text": "Members"
-          },
-          {
-            "tag": "div",
-            "class": "members-list",
-            "$each": {
-              "items": "$sparkDetails.members",
-              "template": {
-                "tag": "div",
-                "class": "member-item",
-                "children": [
-                  {
-                    "tag": "span",
-                    "class": "member-id",
-                    "text": "$$id"
-                  },
-                  {
-                    "tag": "span",
-                    "class": "member-role",
-                    "attrs": {
-                      "data": {
-                        "role": "$$role"
-                      }
-                    },
-                    "text": "$$role"
-                  },
-                  {
-                    "tag": "button",
-                    "class": "member-remove-button",
-                    "text": "×",
-                    "$on": {
-                      "click": {
-                        "send": "REMOVE_MEMBER",
-                        "payload": {
-                          "memberId": "$$id"
-                        }
-                      }
-                    }
-                  }
-                ]
-              }
-            }
-          },
-          {
-            "tag": "h3",
-            "class": "members-title add-agent-title",
-            "text": "Add Agent"
-          },
-          {
-            "tag": "div",
-            "class": "form add-agent-form",
-            "children": [
-              {
-                "tag": "input",
-                "class": "input",
-                "attrs": {
-                  "type": "text",
-                  "placeholder": "Agent account co-id (e.g. co_z...)"
-                },
-                "value": "$agentIdInput",
-                "$on": {
-                  "input": {
-                    "send": "UPDATE_AGENT_INPUT",
-                    "payload": {
-                      "value": "@inputValue"
-                    }
-                  },
-                  "blur": {
-                    "send": "UPDATE_AGENT_INPUT",
-                    "payload": {
-                      "value": "@inputValue"
-                    }
-                  },
-                  "keydown": {
-                    "send": "ADD_AGENT",
-                    "payload": {
-                      "agentId": "@inputValue"
-                    },
-                    "key": "Enter"
-                  }
-                }
-              },
-              {
-                "tag": "button",
-                "class": "button",
-                "attrs": {
-                  "type": "button",
-                  "disabled": "$addButtonDisabled"
-                },
-                "text": "Add as writer",
-                "$on": {
-                  "click": {
-                    "send": "ADD_AGENT",
-                    "payload": {
-                      "agentId": "@inputValue"
-                    }
-                  }
-                }
-              }
-            ]
-          },
-          {
-            "tag": "div",
-            "class": "error-message add-agent-error",
-            "attrs": {
-              "data": {
-                "hasError": "$addAgentHasError"
-              }
-            },
-            "children": [
-              {
-                "tag": "strong",
-                "text": "Error: "
-              },
-              {
-                "text": "$addAgentError"
-              }
-            ]
-          }
-        ]
-      }
-    ]
-  }
+	"$schema": "@maia/schema/view",
+	"$id": "@maia/sparks/view/detail",
+	"content": {
+		"tag": "div",
+		"class": "detail-container",
+		"children": [
+			{
+				"tag": "div",
+				"class": "empty-state",
+				"attrs": {
+					"data": {
+						"visible": "$showEmptyState"
+					}
+				},
+				"children": [
+					{
+						"tag": "p",
+						"text": "Select a spark to view details and members"
+					}
+				]
+			},
+			{
+				"tag": "div",
+				"class": "detail-content",
+				"attrs": {
+					"data": {
+						"visible": "$showContent"
+					}
+				},
+				"children": [
+					{
+						"tag": "span",
+						"class": "detail-category",
+						"text": "Spark Details"
+					},
+					{
+						"tag": "h2",
+						"class": "detail-title",
+						"text": "$sparkDetails.name"
+					},
+					{
+						"tag": "div",
+						"class": "detail-list",
+						"children": [
+							{
+								"tag": "div",
+								"class": "detail-item",
+								"children": [
+									{
+										"tag": "span",
+										"class": "detail-label",
+										"text": "Group ID"
+									},
+									{
+										"tag": "span",
+										"class": "detail-value",
+										"text": "$sparkDetails.groupId"
+									}
+								]
+							}
+						]
+					},
+					{
+						"tag": "h3",
+						"class": "members-title",
+						"text": "Members"
+					},
+					{
+						"tag": "div",
+						"class": "members-list",
+						"$each": {
+							"items": "$sparkDetails.members",
+							"template": {
+								"tag": "div",
+								"class": "member-item",
+								"children": [
+									{
+										"tag": "span",
+										"class": "member-id",
+										"text": "$$id"
+									},
+									{
+										"tag": "span",
+										"class": "member-role",
+										"attrs": {
+											"data": {
+												"role": "$$role"
+											}
+										},
+										"text": "$$role"
+									},
+									{
+										"tag": "button",
+										"class": "member-remove-button",
+										"text": "×",
+										"$on": {
+											"click": {
+												"send": "REMOVE_MEMBER",
+												"payload": {
+													"memberId": "$$id"
+												}
+											}
+										}
+									}
+								]
+							}
+						}
+					},
+					{
+						"tag": "h3",
+						"class": "members-title add-agent-title",
+						"text": "Add Agent"
+					},
+					{
+						"tag": "div",
+						"class": "form add-agent-form",
+						"children": [
+							{
+								"tag": "input",
+								"class": "input",
+								"attrs": {
+									"type": "text",
+									"placeholder": "Agent account co-id (e.g. co_z...)"
+								},
+								"value": "$agentIdInput",
+								"$on": {
+									"input": {
+										"send": "UPDATE_AGENT_INPUT",
+										"payload": {
+											"value": "@inputValue"
+										}
+									},
+									"blur": {
+										"send": "UPDATE_AGENT_INPUT",
+										"payload": {
+											"value": "@inputValue"
+										}
+									},
+									"keydown": {
+										"send": "ADD_AGENT",
+										"payload": {
+											"agentId": "@inputValue"
+										},
+										"key": "Enter"
+									}
+								}
+							},
+							{
+								"tag": "button",
+								"class": "button",
+								"attrs": {
+									"type": "button",
+									"disabled": "$addButtonDisabled"
+								},
+								"text": "Add as writer",
+								"$on": {
+									"click": {
+										"send": "ADD_AGENT",
+										"payload": {
+											"agentId": "@inputValue"
+										}
+									}
+								}
+							}
+						]
+					},
+					{
+						"tag": "div",
+						"class": "error-message add-agent-error",
+						"attrs": {
+							"data": {
+								"hasError": "$addAgentHasError"
+							}
+						},
+						"children": [
+							{
+								"tag": "strong",
+								"text": "Error: "
+							},
+							{
+								"text": "$addAgentError"
+							}
+						]
+					}
+				]
+			}
+		]
+	}
 }

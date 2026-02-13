@@ -1,18 +1,18 @@
 {
-  "$schema": "@maia/schema/actor",
-  "$id": "@maia/todos/actor/list",
-  "role": "todo-list",
-  "context": "@maia/todos/context/list",
-  "view": "@maia/todos/view/list",
-  "state": "@maia/todos/state/list",
-  "brand": "@maia/todos/style/brand",
-  "style": "@maia/todos/style/list",
-  "inbox": "@maia/todos/inbox/list",
-  "messageTypes": [
-    "TOGGLE_BUTTON",
-    "DELETE_BUTTON",
-    "SUCCESS",
-    "RETRY",
-    "DISMISS"
-  ]
+	"$schema": "@maia/schema/actor",
+	"$id": "@maia/todos/actor/list",
+	"role": "todo-list",
+	"context": "@maia/todos/context/list",
+	"view": "@maia/todos/view/list",
+	"state": "@maia/todos/state/list",
+	"brand": "@maia/todos/style/brand",
+	"style": "@maia/todos/style/list",
+	"inbox": "@maia/todos/inbox/list",
+	"messageTypes": [
+		"TOGGLE_BUTTON",
+		"DELETE_BUTTON",
+		"SUCCESS",
+		"RETRY",
+		"DISMISS"
+	]
 }

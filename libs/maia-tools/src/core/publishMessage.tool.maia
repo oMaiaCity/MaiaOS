@@ -1,21 +1,23 @@
 {
-  "$schema": "@maia/schema/tool",
-  "$id": "tool_publish_message_001",
-  "name": "@core/publishMessage",
-  "description": "Publishes a message to subscribed actors",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "type": {
-        "type": "string",
-        "description": "Message type",
-      },
-      "payload": {
-        "type": "object",
-        "description": "Message payload",
-        "required": false
-      }
-    },
-    "required": ["type"]
-  }
+	"$schema": "@maia/schema/tool",
+	"$id": "tool_publish_message_001",
+	"name": "@core/publishMessage",
+	"description": "Publishes a message to subscribed actors",
+	"parameters": {
+		"type": "object",
+		"properties": {
+			"type": {
+				"type": "string",
+				"description": "Message type"
+			},
+			"payload": {
+				"type": "object",
+				"description": "Message payload",
+				"required": false
+			}
+		},
+		"required": [
+			"type"
+		]
+	}
 }

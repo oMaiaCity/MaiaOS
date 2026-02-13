@@ -1,37 +1,37 @@
 {
-  "$schema": "@maia/schema/state",
-  "$id": "@maia/creator/state/logs",
-  "initial": "idle",
-  "states": {
-    "idle": {},
-    "error": {
-      "entry": {
-        "updateContext": {
-          "error": "$$errors.0.message"
-        }
-      },
-      "on": {
-        "RETRY": {
-          "target": "idle",
-          "actions": [
-            {
-              "updateContext": {
-                "error": null
-              }
-            }
-          ]
-        },
-        "DISMISS": {
-          "target": "idle",
-          "actions": [
-            {
-              "updateContext": {
-                "error": null
-              }
-            }
-          ]
-        }
-      }
-    }
-  }
+	"$schema": "@maia/schema/state",
+	"$id": "@maia/creator/state/logs",
+	"initial": "idle",
+	"states": {
+		"idle": {},
+		"error": {
+			"entry": {
+				"updateContext": {
+					"error": "$$errors.0.message"
+				}
+			},
+			"on": {
+				"RETRY": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"error": null
+							}
+						}
+					]
+				},
+				"DISMISS": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"error": null
+							}
+						}
+					]
+				}
+			}
+		}
+	}
 }

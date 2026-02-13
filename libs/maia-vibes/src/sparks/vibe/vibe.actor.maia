@@ -1,18 +1,18 @@
 {
-  "$schema": "@maia/schema/actor",
-  "$id": "@maia/sparks/actor/vibe",
-  "type": "service",
-  "state": "@maia/sparks/state/vibe",
-  "view": "@maia/sparks/view/vibe",
-  "context": "@maia/sparks/context/vibe",
-  "brand": "@maia/sparks/style/brand",
-  "inbox": "@maia/sparks/inbox/vibe",
-  "messageTypes": [
-    "CREATE_BUTTON",
-    "UPDATE_INPUT",
-    "SELECT_SPARK",
-    "SUCCESS",
-    "ERROR",
-    "DISMISS"
-  ]
+	"$schema": "@maia/schema/actor",
+	"$id": "@maia/sparks/actor/vibe",
+	"type": "service",
+	"state": "@maia/sparks/state/vibe",
+	"view": "@maia/sparks/view/vibe",
+	"context": "@maia/sparks/context/vibe",
+	"brand": "@maia/sparks/style/brand",
+	"inbox": "@maia/sparks/inbox/vibe",
+	"messageTypes": [
+		"CREATE_BUTTON",
+		"UPDATE_INPUT",
+		"SELECT_SPARK",
+		"SUCCESS",
+		"ERROR",
+		"DISMISS"
+	]
 }

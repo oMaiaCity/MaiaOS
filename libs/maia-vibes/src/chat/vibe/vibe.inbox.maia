@@ -1,4 +1,4 @@
 {
-  "$schema": "@maia/schema/inbox",
-  "$id": "@maia/chat/inbox/vibe"
+	"$schema": "@maia/schema/inbox",
+	"$id": "@maia/chat/inbox/vibe"
 }

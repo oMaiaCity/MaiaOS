@@ -1,509 +1,509 @@
 {
-  "$schema": "@maia/schema/style",
-  "$id": "@maia/chat/style/brand",
-  "tokens": {
-    "colors": {
-      "marineBlue": "#001F33",
-      "marineBlueMuted": "#2D4A5C",
-      "marineBlueLight": "#5E7A8C",
-      "paradiseWater": "#00BDD6",
-      "lushGreen": "#4E9A58",
-      "terracotta": "#C27B66",
-      "sunYellow": "#E6B94D",
-      "softClay": "#E8E1D9",
-      "tintedWhite": "#F0EDE6",
-      "background": "transparent",
-      "foreground": "#001F33",
-      "primary": "#00BDD6",
-      "secondary": "#2D4A5C",
-      "border": "rgba(255, 255, 255, 0.1)",
-      "surface": "rgba(255, 255, 255, 0.3)",
-      "glass": "rgba(255, 255, 255, 0.0005)",
-      "glassStrong": "rgba(255, 255, 255, 0.15)",
-      "text": {
-        "marine": "#D1E8F7",
-        "water": "#004D59",
-        "green": "#F0F9F1",
-        "terracotta": "#FDF2EF",
-        "yellow": "#4D3810"
-      }
-    },
-    "spacing": {
-      "xs": "0.5rem",
-      "sm": "0.75rem",
-      "md": "1rem",
-      "lg": "1.5rem",
-      "xl": "2rem",
-      "2xl": "3rem"
-    },
-    "typography": {
-      "fontFamily": {
-        "heading": "'Indie Flower', cursive",
-        "body": "'Plus Jakarta Sans', sans-serif"
-      },
-      "fontWeight": {
-        "light": "300",
-        "normal": "400",
-        "medium": "500",
-        "semibold": "600",
-        "bold": "700"
-      }
-    },
-    "radii": {
-      "sm": "4px",
-      "md": "12px",
-      "apple": "18px",
-      "full": "9999px"
-    },
-    "shadows": {
-      "sm": "0 4px 30px rgba(0, 0, 0, 0.05)",
-      "md": "0 10px 30px rgba(0, 0, 0, 0.05)",
-      "lg": "0 10px 40px rgba(0, 0, 0, 0.1)"
-    },
-    "transitions": {
-      "fast": "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-      "standard": "all 0.5s cubic-bezier(0.2, 0, 0.2, 1)"
-    }
-  },
-  "selectors": {
-    ":host": {
-      "display": "block",
-      "height": "100%",
-      "background": "{colors.background}",
-      "fontFamily": "{typography.fontFamily.body}",
-      "color": "{colors.marineBlue}"
-    },
-    ".chatContainer": {
-      "display": "grid",
-      "gridTemplateRows": "1fr auto",
-      "height": "100%",
-      "minHeight": "0",
-      "maxHeight": "100%",
-      "position": "relative",
-      "overflow": "hidden",
-      "background": "{colors.softClay}",
-      "padding": "{spacing.sm}",
-      "gap": "{spacing.sm}"
-    },
-    ".messagesContainer": {
-      "gridRow": "1",
-      "overflowY": "auto",
-      "overflowX": "hidden",
-      "padding": "{spacing.sm}",
-      "display": "flex",
-      "flexDirection": "column",
-      "gap": "{spacing.md}",
-      "minHeight": "0",
-      "maxHeight": "100%",
-      "position": "relative",
-      "zIndex": "1",
-      "background": "rgba(255, 255, 255, 0.4)",
-      "backdropFilter": "blur(8px) saturate(150%)",
-      "borderRadius": "{radii.apple}",
-      "border": "1px solid {colors.border}",
-      "boxShadow": "{shadows.md}"
-    },
-    ".message-wrapper": {
-      "display": "flex",
-      "flexDirection": "column",
-      "marginBottom": "{spacing.md}"
-    },
-    ".message-wrapper[data-role='user']": {
-      "alignItems": "flex-end"
-    },
-    ".message-wrapper[data-role='assistant']": {
-      "alignItems": "flex-start"
-    },
-    ".message-name": {
-      "fontSize": "0.65rem",
-      "fontWeight": "{typography.fontWeight.semibold}",
-      "textTransform": "uppercase",
-      "letterSpacing": "0.05em",
-      "marginBottom": "0.25rem",
-      "opacity": "0.7"
-    },
-    ".message-wrapper[data-role='user'] .message-name": {
-      "color": "{colors.marineBlue}",
-      "textAlign": "right"
-    },
-    ".message-wrapper[data-role='assistant'] .message-name": {
-      "color": "{colors.marineBlue}",
-      "textAlign": "left"
-    },
-    ".message": {
-      "padding": "{spacing.sm} {spacing.md}",
-      "borderRadius": "{radii.apple}",
-      "maxWidth": "85%",
-      "wordWrap": "break-word",
-      "fontSize": "0.75rem",
-      "fontWeight": "{typography.fontWeight.light}",
-      "lineHeight": "1.4",
-      "transition": "{transitions.fast}"
-    },
-    ".messageAssistant": {
-      "alignSelf": "flex-start",
-      "background": "rgba(255, 255, 255, 0.6)",
-      "color": "{colors.marineBlue}",
-      "border": "1px solid {colors.border}",
-      "boxShadow": "{shadows.sm}"
-    },
-    ".messageUser": {
-      "alignSelf": "flex-end",
-      "background": "{colors.marineBlue}",
-      "color": "{colors.text.marine}",
-      "boxShadow": "0 4px 12px rgba(0, 31, 51, 0.2)"
-    },
-    ".message[data-role='assistant']": {
-      "alignSelf": "flex-start",
-      "background": "rgba(255, 255, 255, 0.6)",
-      "color": "{colors.marineBlue}",
-      "border": "1px solid {colors.border}"
-    },
-    ".message[data-role='user']": {
-      "alignSelf": "flex-end",
-      "background": "{colors.marineBlue}",
-      "color": "{colors.text.marine}"
-    },
-    ".welcomeMessage": {
-      "fontFamily": "{typography.fontFamily.body}",
-      "fontSize": "0.75rem",
-      "background": "rgba(0, 189, 214, 0.05)",
-      "border": "1px solid rgba(0, 189, 214, 0.1)",
-      "color": "{colors.marineBlue}",
-      "marginTop": "{spacing.sm}",
-      "marginBottom": "{spacing.md}",
-      "data": {
-        "hasConversations": {
-          "true": {
-            "display": "none"
-          }
-        }
-      }
-    },
-    ".welcomeSection": {
-      "display": "flex",
-      "flexDirection": "column",
-      "marginBottom": "{spacing.md}"
-    },
-    ".agentCategory": {
-      "fontFamily": "{typography.fontFamily.heading}",
-      "fontSize": "0.6rem",
-      "fontStyle": "italic",
-      "color": "{colors.paradiseWater}",
-      "marginBottom": "0.25rem",
-      "display": "block",
-      "textShadow": "0 0 10px rgba(0, 189, 214, 0.2)"
-    },
-    ".agentTitle": {
-      "fontFamily": "{typography.fontFamily.heading}",
-      "fontSize": "0.9rem",
-      "fontWeight": "{typography.fontWeight.bold}",
-      "color": "{colors.marineBlue}",
-      "margin": "0",
-      "letterSpacing": "-0.02em"
-    },
-    ".inputContainer": {
-      "gridRow": "2",
-      "display": "flex",
-      "gap": "{spacing.sm}",
-      "padding": "{spacing.sm}",
-      "background": "rgba(255, 255, 255, 0.4)",
-      "backdropFilter": "blur(8px) saturate(150%)",
-      "borderRadius": "{radii.full}",
-      "border": "1px solid {colors.border}",
-      "boxShadow": "{shadows.md}",
-      "flexShrink": "0",
-      "position": "relative",
-      "zIndex": "100"
-    },
-    ".input": {
-      "flex": "1",
-      "padding": "{spacing.xs} {spacing.md}",
-      "border": "none",
-      "background": "transparent",
-      "fontSize": "0.7rem",
-      "color": "{colors.marineBlue}",
-      "fontFamily": "{typography.fontFamily.body}",
-      "fontWeight": "{typography.fontWeight.light}",
-      "outline": "none",
-      "cursor": "text"
-    },
-    ".button": {
-      "padding": "{spacing.xs} {spacing.md}",
-      "background": "{colors.paradiseWater}",
-      "color": "{colors.text.water}",
-      "border": "none",
-      "borderRadius": "{radii.full}",
-      "cursor": "pointer",
-      "fontSize": "0.6rem",
-      "fontWeight": "600",
-      "textTransform": "uppercase",
-      "letterSpacing": "0.05em",
-      "transition": "{transitions.fast}",
-      "boxShadow": "0 4px 12px rgba(0, 189, 214, 0.2)",
-      ":hover": {
-        "filter": "brightness(1.1)",
-        "transform": "translateY(-1px)",
-        "boxShadow": "0 6px 16px rgba(0, 189, 214, 0.3)"
-      },
-      ":active": {
-        "transform": "translateY(0)"
-      }
-    },
-    ".button:disabled": {
-      "background": "{colors.marineBlueLight}",
-      "opacity": "0.5",
-      "cursor": "not-allowed",
-      "boxShadow": "none"
-    },
-    ".loading": {
-      "padding": "{spacing.sm} {spacing.md}",
-      "color": "{colors.marineBlueLight}",
-      "fontFamily": "{typography.fontFamily.heading}",
-      "fontStyle": "italic",
-      "display": "none",
-      "position": "absolute",
-      "top": "{spacing.xl}",
-      "left": "50%",
-      "transform": "translateX(-50%)",
-      "zIndex": "10",
-      "background": "rgba(232, 225, 217, 0.8)",
-      "backdropFilter": "blur(4px)",
-      "borderRadius": "{radii.full}",
-      "border": "1px solid {colors.border}",
-      "data": {
-        "isLoading": {
-          "true": {
-            "display": "block"
-          }
-        }
-      }
-    },
-    ".error": {
-      "padding": "{spacing.md}",
-      "background": "rgba(194, 123, 102, 0.1)",
-      "color": "{colors.terracotta}",
-      "borderRadius": "{radii.apple}",
-      "border": "1px solid rgba(194, 123, 102, 0.2)",
-      "margin": "{spacing.md}",
-      "display": "none",
-      "data": {
-        "hasError": {
-          "true": {
-            "display": "block"
-          }
-        }
-      }
-    },
-    "@container {containerName} (min-width: {containers.xs})": {
-      ".chatContainer": {
-        "padding": "{spacing.sm}",
-        "gap": "{spacing.sm}"
-      },
-      ".messagesContainer": {
-        "padding": "{spacing.sm}",
-        "gap": "{spacing.md}"
-      },
-      ".message": {
-        "padding": "{spacing.sm} {spacing.md}",
-        "fontSize": "0.7rem"
-      },
-      ".agentCategory": {
-        "fontSize": "0.65rem"
-      },
-      ".agentTitle": {
-        "fontSize": "0.85rem"
-      },
-      ".inputContainer": {
-        "gap": "{spacing.sm}",
-        "padding": "{spacing.sm}"
-      },
-      ".input": {
-        "padding": "{spacing.xs} {spacing.md}",
-        "fontSize": "0.7rem"
-      },
-      ".button": {
-        "padding": "{spacing.xs} {spacing.md}",
-        "fontSize": "0.65rem"
-      },
-      ".welcomeMessage": {
-        "fontSize": "0.7rem"
-      }
-    },
-    "@container {containerName} (min-width: {containers.sm})": {
-      ".chatContainer": {
-        "padding": "{spacing.sm}",
-        "gap": "{spacing.sm}"
-      },
-      ".messagesContainer": {
-        "padding": "{spacing.sm}",
-        "gap": "{spacing.md}"
-      },
-      ".message": {
-        "padding": "{spacing.sm} {spacing.md}",
-        "fontSize": "0.75rem"
-      },
-      ".agentCategory": {
-        "fontSize": "0.7rem"
-      },
-      ".agentTitle": {
-        "fontSize": "0.9rem"
-      },
-      ".inputContainer": {
-        "gap": "{spacing.sm}",
-        "padding": "{spacing.sm}"
-      },
-      ".input": {
-        "padding": "{spacing.xs} {spacing.md}",
-        "fontSize": "0.7rem"
-      },
-      ".button": {
-        "padding": "{spacing.xs} {spacing.md}",
-        "fontSize": "0.65rem"
-      },
-      ".welcomeMessage": {
-        "fontSize": "0.75rem"
-      }
-    },
-    "@container {containerName} (min-width: {containers.md})": {
-      ".chatContainer": {
-        "padding": "{spacing.sm}",
-        "gap": "{spacing.sm}"
-      },
-      ".messagesContainer": {
-        "padding": "{spacing.sm}",
-        "gap": "{spacing.md}"
-      },
-      ".message": {
-        "padding": "{spacing.sm} {spacing.md}",
-        "fontSize": "0.8rem"
-      },
-      ".agentCategory": {
-        "fontSize": "0.75rem"
-      },
-      ".agentTitle": {
-        "fontSize": "0.95rem"
-      },
-      ".inputContainer": {
-        "gap": "{spacing.sm}",
-        "padding": "{spacing.sm}"
-      },
-      ".input": {
-        "padding": "{spacing.xs} {spacing.md}",
-        "fontSize": "0.75rem"
-      },
-      ".button": {
-        "padding": "{spacing.xs} {spacing.md}",
-        "fontSize": "0.7rem"
-      },
-      ".welcomeMessage": {
-        "fontSize": "0.8rem"
-      }
-    },
-    "@container {containerName} (min-width: {containers.lg})": {
-      ".chatContainer": {
-        "padding": "{spacing.sm}",
-        "gap": "{spacing.sm}"
-      },
-      ".messagesContainer": {
-        "padding": "{spacing.sm}",
-        "gap": "{spacing.md}"
-      },
-      ".message": {
-        "padding": "{spacing.sm} {spacing.md}",
-        "fontSize": "0.85rem"
-      },
-      ".agentCategory": {
-        "fontSize": "0.8rem"
-      },
-      ".agentTitle": {
-        "fontSize": "1rem"
-      },
-      ".inputContainer": {
-        "gap": "{spacing.sm}",
-        "padding": "{spacing.sm}"
-      },
-      ".input": {
-        "padding": "{spacing.xs} {spacing.md}",
-        "fontSize": "0.8rem"
-      },
-      ".button": {
-        "padding": "{spacing.xs} {spacing.md}",
-        "fontSize": "0.75rem"
-      },
-      ".welcomeMessage": {
-        "fontSize": "0.85rem"
-      }
-    },
-    "@container {containerName} (min-width: {containers.xl})": {
-      ".chatContainer": {
-        "padding": "{spacing.sm}",
-        "gap": "{spacing.sm}"
-      },
-      ".messagesContainer": {
-        "padding": "{spacing.sm}",
-        "gap": "{spacing.md}"
-      },
-      ".message": {
-        "padding": "{spacing.sm} {spacing.md}",
-        "fontSize": "0.9rem"
-      },
-      ".agentCategory": {
-        "fontSize": "0.85rem"
-      },
-      ".agentTitle": {
-        "fontSize": "1.05rem"
-      },
-      ".inputContainer": {
-        "gap": "{spacing.sm}",
-        "padding": "{spacing.sm}"
-      },
-      ".input": {
-        "padding": "{spacing.xs} {spacing.md}",
-        "fontSize": "0.85rem"
-      },
-      ".button": {
-        "padding": "{spacing.xs} {spacing.md}",
-        "fontSize": "0.8rem"
-      },
-      ".welcomeMessage": {
-        "fontSize": "0.9rem"
-      }
-    },
-    "@container {containerName} (min-width: {containers.2xl})": {
-      ".chatContainer": {
-        "padding": "{spacing.sm}",
-        "gap": "{spacing.sm}"
-      },
-      ".messagesContainer": {
-        "padding": "{spacing.sm}",
-        "gap": "{spacing.md}"
-      },
-      ".message": {
-        "padding": "{spacing.sm} {spacing.md}",
-        "fontSize": "0.95rem"
-      },
-      ".agentCategory": {
-        "fontSize": "0.9rem"
-      },
-      ".agentTitle": {
-        "fontSize": "1.1rem"
-      },
-      ".inputContainer": {
-        "gap": "{spacing.sm}",
-        "padding": "{spacing.sm}"
-      },
-      ".input": {
-        "padding": "{spacing.xs} {spacing.md}",
-        "fontSize": "0.9rem"
-      },
-      ".button": {
-        "padding": "{spacing.xs} {spacing.md}",
-        "fontSize": "0.85rem"
-      },
-      ".welcomeMessage": {
-        "fontSize": "0.95rem"
-      }
-    }
-  }
+	"$schema": "@maia/schema/style",
+	"$id": "@maia/chat/style/brand",
+	"tokens": {
+		"colors": {
+			"marineBlue": "#001F33",
+			"marineBlueMuted": "#2D4A5C",
+			"marineBlueLight": "#5E7A8C",
+			"paradiseWater": "#00BDD6",
+			"lushGreen": "#4E9A58",
+			"terracotta": "#C27B66",
+			"sunYellow": "#E6B94D",
+			"softClay": "#E8E1D9",
+			"tintedWhite": "#F0EDE6",
+			"background": "transparent",
+			"foreground": "#001F33",
+			"primary": "#00BDD6",
+			"secondary": "#2D4A5C",
+			"border": "rgba(255, 255, 255, 0.1)",
+			"surface": "rgba(255, 255, 255, 0.3)",
+			"glass": "rgba(255, 255, 255, 0.0005)",
+			"glassStrong": "rgba(255, 255, 255, 0.15)",
+			"text": {
+				"marine": "#D1E8F7",
+				"water": "#004D59",
+				"green": "#F0F9F1",
+				"terracotta": "#FDF2EF",
+				"yellow": "#4D3810"
+			}
+		},
+		"spacing": {
+			"xs": "0.5rem",
+			"sm": "0.75rem",
+			"md": "1rem",
+			"lg": "1.5rem",
+			"xl": "2rem",
+			"2xl": "3rem"
+		},
+		"typography": {
+			"fontFamily": {
+				"heading": "'Indie Flower', cursive",
+				"body": "'Plus Jakarta Sans', sans-serif"
+			},
+			"fontWeight": {
+				"light": "300",
+				"normal": "400",
+				"medium": "500",
+				"semibold": "600",
+				"bold": "700"
+			}
+		},
+		"radii": {
+			"sm": "4px",
+			"md": "12px",
+			"apple": "18px",
+			"full": "9999px"
+		},
+		"shadows": {
+			"sm": "0 4px 30px rgba(0, 0, 0, 0.05)",
+			"md": "0 10px 30px rgba(0, 0, 0, 0.05)",
+			"lg": "0 10px 40px rgba(0, 0, 0, 0.1)"
+		},
+		"transitions": {
+			"fast": "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+			"standard": "all 0.5s cubic-bezier(0.2, 0, 0.2, 1)"
+		}
+	},
+	"selectors": {
+		":host": {
+			"display": "block",
+			"height": "100%",
+			"background": "{colors.background}",
+			"fontFamily": "{typography.fontFamily.body}",
+			"color": "{colors.marineBlue}"
+		},
+		".chatContainer": {
+			"display": "grid",
+			"gridTemplateRows": "1fr auto",
+			"height": "100%",
+			"minHeight": "0",
+			"maxHeight": "100%",
+			"position": "relative",
+			"overflow": "hidden",
+			"background": "{colors.softClay}",
+			"padding": "{spacing.sm}",
+			"gap": "{spacing.sm}"
+		},
+		".messagesContainer": {
+			"gridRow": "1",
+			"overflowY": "auto",
+			"overflowX": "hidden",
+			"padding": "{spacing.sm}",
+			"display": "flex",
+			"flexDirection": "column",
+			"gap": "{spacing.md}",
+			"minHeight": "0",
+			"maxHeight": "100%",
+			"position": "relative",
+			"zIndex": "1",
+			"background": "rgba(255, 255, 255, 0.4)",
+			"backdropFilter": "blur(8px) saturate(150%)",
+			"borderRadius": "{radii.apple}",
+			"border": "1px solid {colors.border}",
+			"boxShadow": "{shadows.md}"
+		},
+		".message-wrapper": {
+			"display": "flex",
+			"flexDirection": "column",
+			"marginBottom": "{spacing.md}"
+		},
+		".message-wrapper[data-role='user']": {
+			"alignItems": "flex-end"
+		},
+		".message-wrapper[data-role='assistant']": {
+			"alignItems": "flex-start"
+		},
+		".message-name": {
+			"fontSize": "0.65rem",
+			"fontWeight": "{typography.fontWeight.semibold}",
+			"textTransform": "uppercase",
+			"letterSpacing": "0.05em",
+			"marginBottom": "0.25rem",
+			"opacity": "0.7"
+		},
+		".message-wrapper[data-role='user'] .message-name": {
+			"color": "{colors.marineBlue}",
+			"textAlign": "right"
+		},
+		".message-wrapper[data-role='assistant'] .message-name": {
+			"color": "{colors.marineBlue}",
+			"textAlign": "left"
+		},
+		".message": {
+			"padding": "{spacing.sm} {spacing.md}",
+			"borderRadius": "{radii.apple}",
+			"maxWidth": "85%",
+			"wordWrap": "break-word",
+			"fontSize": "0.75rem",
+			"fontWeight": "{typography.fontWeight.light}",
+			"lineHeight": "1.4",
+			"transition": "{transitions.fast}"
+		},
+		".messageAssistant": {
+			"alignSelf": "flex-start",
+			"background": "rgba(255, 255, 255, 0.6)",
+			"color": "{colors.marineBlue}",
+			"border": "1px solid {colors.border}",
+			"boxShadow": "{shadows.sm}"
+		},
+		".messageUser": {
+			"alignSelf": "flex-end",
+			"background": "{colors.marineBlue}",
+			"color": "{colors.text.marine}",
+			"boxShadow": "0 4px 12px rgba(0, 31, 51, 0.2)"
+		},
+		".message[data-role='assistant']": {
+			"alignSelf": "flex-start",
+			"background": "rgba(255, 255, 255, 0.6)",
+			"color": "{colors.marineBlue}",
+			"border": "1px solid {colors.border}"
+		},
+		".message[data-role='user']": {
+			"alignSelf": "flex-end",
+			"background": "{colors.marineBlue}",
+			"color": "{colors.text.marine}"
+		},
+		".welcomeMessage": {
+			"fontFamily": "{typography.fontFamily.body}",
+			"fontSize": "0.75rem",
+			"background": "rgba(0, 189, 214, 0.05)",
+			"border": "1px solid rgba(0, 189, 214, 0.1)",
+			"color": "{colors.marineBlue}",
+			"marginTop": "{spacing.sm}",
+			"marginBottom": "{spacing.md}",
+			"data": {
+				"hasConversations": {
+					"true": {
+						"display": "none"
+					}
+				}
+			}
+		},
+		".welcomeSection": {
+			"display": "flex",
+			"flexDirection": "column",
+			"marginBottom": "{spacing.md}"
+		},
+		".agentCategory": {
+			"fontFamily": "{typography.fontFamily.heading}",
+			"fontSize": "0.6rem",
+			"fontStyle": "italic",
+			"color": "{colors.paradiseWater}",
+			"marginBottom": "0.25rem",
+			"display": "block",
+			"textShadow": "0 0 10px rgba(0, 189, 214, 0.2)"
+		},
+		".agentTitle": {
+			"fontFamily": "{typography.fontFamily.heading}",
+			"fontSize": "0.9rem",
+			"fontWeight": "{typography.fontWeight.bold}",
+			"color": "{colors.marineBlue}",
+			"margin": "0",
+			"letterSpacing": "-0.02em"
+		},
+		".inputContainer": {
+			"gridRow": "2",
+			"display": "flex",
+			"gap": "{spacing.sm}",
+			"padding": "{spacing.sm}",
+			"background": "rgba(255, 255, 255, 0.4)",
+			"backdropFilter": "blur(8px) saturate(150%)",
+			"borderRadius": "{radii.full}",
+			"border": "1px solid {colors.border}",
+			"boxShadow": "{shadows.md}",
+			"flexShrink": "0",
+			"position": "relative",
+			"zIndex": "100"
+		},
+		".input": {
+			"flex": "1",
+			"padding": "{spacing.xs} {spacing.md}",
+			"border": "none",
+			"background": "transparent",
+			"fontSize": "0.7rem",
+			"color": "{colors.marineBlue}",
+			"fontFamily": "{typography.fontFamily.body}",
+			"fontWeight": "{typography.fontWeight.light}",
+			"outline": "none",
+			"cursor": "text"
+		},
+		".button": {
+			"padding": "{spacing.xs} {spacing.md}",
+			"background": "{colors.paradiseWater}",
+			"color": "{colors.text.water}",
+			"border": "none",
+			"borderRadius": "{radii.full}",
+			"cursor": "pointer",
+			"fontSize": "0.6rem",
+			"fontWeight": "600",
+			"textTransform": "uppercase",
+			"letterSpacing": "0.05em",
+			"transition": "{transitions.fast}",
+			"boxShadow": "0 4px 12px rgba(0, 189, 214, 0.2)",
+			":hover": {
+				"filter": "brightness(1.1)",
+				"transform": "translateY(-1px)",
+				"boxShadow": "0 6px 16px rgba(0, 189, 214, 0.3)"
+			},
+			":active": {
+				"transform": "translateY(0)"
+			}
+		},
+		".button:disabled": {
+			"background": "{colors.marineBlueLight}",
+			"opacity": "0.5",
+			"cursor": "not-allowed",
+			"boxShadow": "none"
+		},
+		".loading": {
+			"padding": "{spacing.sm} {spacing.md}",
+			"color": "{colors.marineBlueLight}",
+			"fontFamily": "{typography.fontFamily.heading}",
+			"fontStyle": "italic",
+			"display": "none",
+			"position": "absolute",
+			"top": "{spacing.xl}",
+			"left": "50%",
+			"transform": "translateX(-50%)",
+			"zIndex": "10",
+			"background": "rgba(232, 225, 217, 0.8)",
+			"backdropFilter": "blur(4px)",
+			"borderRadius": "{radii.full}",
+			"border": "1px solid {colors.border}",
+			"data": {
+				"isLoading": {
+					"true": {
+						"display": "block"
+					}
+				}
+			}
+		},
+		".error": {
+			"padding": "{spacing.md}",
+			"background": "rgba(194, 123, 102, 0.1)",
+			"color": "{colors.terracotta}",
+			"borderRadius": "{radii.apple}",
+			"border": "1px solid rgba(194, 123, 102, 0.2)",
+			"margin": "{spacing.md}",
+			"display": "none",
+			"data": {
+				"hasError": {
+					"true": {
+						"display": "block"
+					}
+				}
+			}
+		},
+		"@container {containerName} (min-width: {containers.xs})": {
+			".chatContainer": {
+				"padding": "{spacing.sm}",
+				"gap": "{spacing.sm}"
+			},
+			".messagesContainer": {
+				"padding": "{spacing.sm}",
+				"gap": "{spacing.md}"
+			},
+			".message": {
+				"padding": "{spacing.sm} {spacing.md}",
+				"fontSize": "0.7rem"
+			},
+			".agentCategory": {
+				"fontSize": "0.65rem"
+			},
+			".agentTitle": {
+				"fontSize": "0.85rem"
+			},
+			".inputContainer": {
+				"gap": "{spacing.sm}",
+				"padding": "{spacing.sm}"
+			},
+			".input": {
+				"padding": "{spacing.xs} {spacing.md}",
+				"fontSize": "0.7rem"
+			},
+			".button": {
+				"padding": "{spacing.xs} {spacing.md}",
+				"fontSize": "0.65rem"
+			},
+			".welcomeMessage": {
+				"fontSize": "0.7rem"
+			}
+		},
+		"@container {containerName} (min-width: {containers.sm})": {
+			".chatContainer": {
+				"padding": "{spacing.sm}",
+				"gap": "{spacing.sm}"
+			},
+			".messagesContainer": {
+				"padding": "{spacing.sm}",
+				"gap": "{spacing.md}"
+			},
+			".message": {
+				"padding": "{spacing.sm} {spacing.md}",
+				"fontSize": "0.75rem"
+			},
+			".agentCategory": {
+				"fontSize": "0.7rem"
+			},
+			".agentTitle": {
+				"fontSize": "0.9rem"
+			},
+			".inputContainer": {
+				"gap": "{spacing.sm}",
+				"padding": "{spacing.sm}"
+			},
+			".input": {
+				"padding": "{spacing.xs} {spacing.md}",
+				"fontSize": "0.7rem"
+			},
+			".button": {
+				"padding": "{spacing.xs} {spacing.md}",
+				"fontSize": "0.65rem"
+			},
+			".welcomeMessage": {
+				"fontSize": "0.75rem"
+			}
+		},
+		"@container {containerName} (min-width: {containers.md})": {
+			".chatContainer": {
+				"padding": "{spacing.sm}",
+				"gap": "{spacing.sm}"
+			},
+			".messagesContainer": {
+				"padding": "{spacing.sm}",
+				"gap": "{spacing.md}"
+			},
+			".message": {
+				"padding": "{spacing.sm} {spacing.md}",
+				"fontSize": "0.8rem"
+			},
+			".agentCategory": {
+				"fontSize": "0.75rem"
+			},
+			".agentTitle": {
+				"fontSize": "0.95rem"
+			},
+			".inputContainer": {
+				"gap": "{spacing.sm}",
+				"padding": "{spacing.sm}"
+			},
+			".input": {
+				"padding": "{spacing.xs} {spacing.md}",
+				"fontSize": "0.75rem"
+			},
+			".button": {
+				"padding": "{spacing.xs} {spacing.md}",
+				"fontSize": "0.7rem"
+			},
+			".welcomeMessage": {
+				"fontSize": "0.8rem"
+			}
+		},
+		"@container {containerName} (min-width: {containers.lg})": {
+			".chatContainer": {
+				"padding": "{spacing.sm}",
+				"gap": "{spacing.sm}"
+			},
+			".messagesContainer": {
+				"padding": "{spacing.sm}",
+				"gap": "{spacing.md}"
+			},
+			".message": {
+				"padding": "{spacing.sm} {spacing.md}",
+				"fontSize": "0.85rem"
+			},
+			".agentCategory": {
+				"fontSize": "0.8rem"
+			},
+			".agentTitle": {
+				"fontSize": "1rem"
+			},
+			".inputContainer": {
+				"gap": "{spacing.sm}",
+				"padding": "{spacing.sm}"
+			},
+			".input": {
+				"padding": "{spacing.xs} {spacing.md}",
+				"fontSize": "0.8rem"
+			},
+			".button": {
+				"padding": "{spacing.xs} {spacing.md}",
+				"fontSize": "0.75rem"
+			},
+			".welcomeMessage": {
+				"fontSize": "0.85rem"
+			}
+		},
+		"@container {containerName} (min-width: {containers.xl})": {
+			".chatContainer": {
+				"padding": "{spacing.sm}",
+				"gap": "{spacing.sm}"
+			},
+			".messagesContainer": {
+				"padding": "{spacing.sm}",
+				"gap": "{spacing.md}"
+			},
+			".message": {
+				"padding": "{spacing.sm} {spacing.md}",
+				"fontSize": "0.9rem"
+			},
+			".agentCategory": {
+				"fontSize": "0.85rem"
+			},
+			".agentTitle": {
+				"fontSize": "1.05rem"
+			},
+			".inputContainer": {
+				"gap": "{spacing.sm}",
+				"padding": "{spacing.sm}"
+			},
+			".input": {
+				"padding": "{spacing.xs} {spacing.md}",
+				"fontSize": "0.85rem"
+			},
+			".button": {
+				"padding": "{spacing.xs} {spacing.md}",
+				"fontSize": "0.8rem"
+			},
+			".welcomeMessage": {
+				"fontSize": "0.9rem"
+			}
+		},
+		"@container {containerName} (min-width: {containers.2xl})": {
+			".chatContainer": {
+				"padding": "{spacing.sm}",
+				"gap": "{spacing.sm}"
+			},
+			".messagesContainer": {
+				"padding": "{spacing.sm}",
+				"gap": "{spacing.md}"
+			},
+			".message": {
+				"padding": "{spacing.sm} {spacing.md}",
+				"fontSize": "0.95rem"
+			},
+			".agentCategory": {
+				"fontSize": "0.9rem"
+			},
+			".agentTitle": {
+				"fontSize": "1.1rem"
+			},
+			".inputContainer": {
+				"gap": "{spacing.sm}",
+				"padding": "{spacing.sm}"
+			},
+			".input": {
+				"padding": "{spacing.xs} {spacing.md}",
+				"fontSize": "0.9rem"
+			},
+			".button": {
+				"padding": "{spacing.xs} {spacing.md}",
+				"fontSize": "0.85rem"
+			},
+			".welcomeMessage": {
+				"fontSize": "0.95rem"
+			}
+		}
+	}
 }

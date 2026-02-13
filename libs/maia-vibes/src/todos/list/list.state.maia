@@ -1,74 +1,74 @@
 {
-  "$schema": "@maia/schema/state",
-  "$id": "@maia/todos/state/list",
-  "initial": "idle",
-  "states": {
-    "idle": {
-      "on": {
-        "TOGGLE_BUTTON": {
-          "target": "idle",
-          "actions": [
-            {
-              "tool": "@core/publishMessage",
-              "payload": {
-                "type": "TOGGLE_BUTTON",
-                "payload": {
-                  "id": "$$id",
-                  "done": "$$done"
-                },
-                "target": "@maia/todos/actor/vibe"
-              }
-            }
-          ]
-        },
-        "DELETE_BUTTON": {
-          "target": "idle",
-          "actions": [
-            {
-              "tool": "@core/publishMessage",
-              "payload": {
-                "type": "DELETE_BUTTON",
-                "payload": {
-                  "id": "$$id"
-                },
-                "target": "@maia/todos/actor/vibe"
-              }
-            }
-          ]
-        },
-        "SUCCESS": {
-          "target": "idle"
-        }
-      }
-    },
-    "error": {
-      "entry": {
-        "updateContext": {
-          "error": "$$errors.0.message"
-        }
-      },
-      "on": {
-        "RETRY": {
-          "target": "idle",
-          "actions": [
-            {
-              "updateContext": {
-                "error": null
-              }
-            }
-          ]
-        },
-        "DISMISS": {
-          "target": "idle",
-          "actions": [
-            {
-              "updateContext": {
-                "error": null
-              }
-            }
-          ]
-        }
-      }
-    }
-  }
+	"$schema": "@maia/schema/state",
+	"$id": "@maia/todos/state/list",
+	"initial": "idle",
+	"states": {
+		"idle": {
+			"on": {
+				"TOGGLE_BUTTON": {
+					"target": "idle",
+					"actions": [
+						{
+							"tool": "@core/publishMessage",
+							"payload": {
+								"type": "TOGGLE_BUTTON",
+								"payload": {
+									"id": "$$id",
+									"done": "$$done"
+								},
+								"target": "@maia/todos/actor/vibe"
+							}
+						}
+					]
+				},
+				"DELETE_BUTTON": {
+					"target": "idle",
+					"actions": [
+						{
+							"tool": "@core/publishMessage",
+							"payload": {
+								"type": "DELETE_BUTTON",
+								"payload": {
+									"id": "$$id"
+								},
+								"target": "@maia/todos/actor/vibe"
+							}
+						}
+					]
+				},
+				"SUCCESS": {
+					"target": "idle"
+				}
+			}
+		},
+		"error": {
+			"entry": {
+				"updateContext": {
+					"error": "$$errors.0.message"
+				}
+			},
+			"on": {
+				"RETRY": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"error": null
+							}
+						}
+					]
+				},
+				"DISMISS": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"error": null
+							}
+						}
+					]
+				}
+			}
+		}
+	}
 }

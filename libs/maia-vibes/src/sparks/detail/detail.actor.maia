@@ -1,18 +1,18 @@
 {
-  "$schema": "@maia/schema/actor",
-  "$id": "@maia/sparks/actor/detail",
-  "role": "ui",
-  "context": "@maia/sparks/context/detail",
-  "view": "@maia/sparks/view/detail",
-  "state": "@maia/sparks/state/detail",
-  "brand": "@maia/sparks/style/brand",
-  "inbox": "@maia/sparks/inbox/detail",
-  "messageTypes": [
-    "LOAD_ACTOR",
-    "SUCCESS",
-    "ADD_AGENT",
-    "REMOVE_MEMBER",
-    "UPDATE_AGENT_INPUT",
-    "ERROR"
-  ]
+	"$schema": "@maia/schema/actor",
+	"$id": "@maia/sparks/actor/detail",
+	"role": "ui",
+	"context": "@maia/sparks/context/detail",
+	"view": "@maia/sparks/view/detail",
+	"state": "@maia/sparks/state/detail",
+	"brand": "@maia/sparks/style/brand",
+	"inbox": "@maia/sparks/inbox/detail",
+	"messageTypes": [
+		"LOAD_ACTOR",
+		"SUCCESS",
+		"ADD_AGENT",
+		"REMOVE_MEMBER",
+		"UPDATE_AGENT_INPUT",
+		"ERROR"
+	]
 }

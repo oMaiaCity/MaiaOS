@@ -1,20 +1,20 @@
 {
-  "$schema": "@maia/schema/style",
-  "$id": "@maia/todos/style/coming-soon",
-  "components": {
-    "comingSoon": {
-      "display": "flex",
-      "flexDirection": "column",
-      "alignItems": "center",
-      "justifyContent": "center",
-      "padding": "{spacing.xl}",
-      "minHeight": "200px"
-    },
-    "comingSoonText": {
-      "fontFamily": "{typography.fontFamily.heading}",
-      "fontSize": "1.2rem",
-      "color": "{colors.marineBlueLight}",
-      "fontStyle": "italic"
-    }
-  }
+	"$schema": "@maia/schema/style",
+	"$id": "@maia/todos/style/coming-soon",
+	"components": {
+		"comingSoon": {
+			"display": "flex",
+			"flexDirection": "column",
+			"alignItems": "center",
+			"justifyContent": "center",
+			"padding": "{spacing.xl}",
+			"minHeight": "200px"
+		},
+		"comingSoonText": {
+			"fontFamily": "{typography.fontFamily.heading}",
+			"fontSize": "1.2rem",
+			"color": "{colors.marineBlueLight}",
+			"fontStyle": "italic"
+		}
+	}
 }

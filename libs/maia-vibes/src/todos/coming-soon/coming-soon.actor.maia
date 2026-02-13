@@ -1,12 +1,12 @@
 {
-  "$schema": "@maia/schema/actor",
-  "$id": "@maia/todos/actor/coming-soon",
-  "role": "ui",
-  "context": "@maia/todos/context/coming-soon",
-  "view": "@maia/todos/view/coming-soon",
-  "state": "@maia/todos/state/coming-soon",
-  "brand": "@maia/style/brand",
-  "style": "@maia/todos/style/coming-soon",
-  "inbox": "@maia/todos/inbox/coming-soon",
-  "messageTypes": []
+	"$schema": "@maia/schema/actor",
+	"$id": "@maia/todos/actor/coming-soon",
+	"role": "ui",
+	"context": "@maia/todos/context/coming-soon",
+	"view": "@maia/todos/view/coming-soon",
+	"state": "@maia/todos/state/coming-soon",
+	"brand": "@maia/style/brand",
+	"style": "@maia/todos/style/coming-soon",
+	"inbox": "@maia/todos/inbox/coming-soon",
+	"messageTypes": []
 }
