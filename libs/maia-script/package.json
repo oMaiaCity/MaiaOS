@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/script",
-	"version": "26.0212.2305",
+	"version": "26.0213.0017",
 	"type": "module",
 	"main": "src/index.js",
 	"exports": {
