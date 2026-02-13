@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/db",
-	"version": "26.0213.1329",
+	"version": "26.0213.1516",
 	"type": "module",
 	"main": "./src/index.js",
 	"exports": {
