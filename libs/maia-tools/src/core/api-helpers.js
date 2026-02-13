@@ -51,7 +51,6 @@ export function toStructuredErrors(apiError) {
 	}
 	const err = apiError.error || ''
 	const msg = apiError.message || ''
-	const combined =
-		err && msg && msg !== 'Unknown' ? `${err}: ${msg}` : err || msg || 'Unknown error'
+	const combined = err && msg && msg !== 'Unknown' ? `${err}: ${msg}` : err || msg || 'Unknown error'
 	return [createErrorEntry('structural', typeof combined === 'string' ? combined : String(combined))]
 }

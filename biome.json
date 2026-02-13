@@ -13,7 +13,7 @@
 			"**/*.md",
 			"**/*.json",
 			"**/*.maia",
-			"!node_modules/**",
+			"!node_modules",
 			"!build",
 			"!dist",
 			"!gen",
