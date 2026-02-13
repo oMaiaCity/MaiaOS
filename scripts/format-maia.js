@@ -5,8 +5,8 @@
  * tabs, no trailing commas, LF line endings.
  * Use --check to validate without writing (exit 1 if any file needs formatting).
  */
-import { readdirSync, readFileSync, writeFileSync } from 'fs'
-import { join, relative } from 'path'
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { join, relative } from 'node:path'
 
 const ROOT = join(import.meta.dir, '..')
 const IGNORE = new Set(['node_modules', 'build', 'dist', 'gen', '.git', '.cursor', '.vscode'])
@@ -37,7 +37,7 @@ for (const fp of files) {
 		console.error(`[format-maia] ${relative(ROOT, fp)}: invalid JSON - ${err.message}`)
 		process.exit(1)
 	}
-	const formatted = JSON.stringify(parsed, null, '\t') + '\n'
+	const formatted = `${JSON.stringify(parsed, null, '\t')}\n`
 	if (formatted !== raw) {
 		if (CHECK) {
 			console.error(`[format-maia] ${relative(ROOT, fp)}: needs formatting`)

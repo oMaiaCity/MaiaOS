@@ -261,10 +261,7 @@ async function handleLLMChat(req) {
 	} catch (e) {
 		const msg = e?.message ?? String(e)
 		console.error('[llm]', msg, e)
-		return jsonResponse(
-			{ error: 'Failed to process LLM request', message: msg },
-			500,
-		)
+		return jsonResponse({ error: 'Failed to process LLM request', message: msg }, 500)
 	}
 }
 
