@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/operations",
-	"version": "26.0213.0017",
+	"version": "26.0213.0041",
 	"type": "module",
 	"main": "src/index.js",
 	"exports": {
