@@ -27,7 +27,7 @@ services/maia/
 
 ## Dependencies
 
-- `@MaiaOS/kernel` - Kernel functionality (Jazz, auth)
+- `@MaiaOS/core` - Core functionality (Jazz, auth)
 - `@MaiaOS/db` - Database utilities
 - `@MaiaOS/script` - MaiaScript engine (Actor system, DSL)
 
@@ -74,9 +74,9 @@ async function loadVibe(vibeKey) {
 
 ### Clean Import Pattern
 
-**maia-kernel exports:**
+**maia-core exports:**
 ```javascript
-// libs/maia-kernel/src/index.js
+// libs/maia-core/src/index.js
 export { MaiaOS } from "./kernel.js";
 ```
 
@@ -89,13 +89,13 @@ export { ActorEngine, ViewEngine, StyleEngine, ... } from "./engines/...";
 **maia imports:**
 ```javascript
 // services/maia/main.js
-import { MaiaOS } from '@MaiaOS/kernel';
+import { MaiaOS } from '@MaiaOS/core';
 const os = await MaiaOS.boot({ node, account });
 ```
 
 **Vite resolves imports** via `vite.config.js`:
-- **Dev mode**: Points to source files directly (`../../libs/maia-kernel/src/index.js`) for proper HMR
-- **Production builds**: Points to bundled files (`../../libs/maia-kernel/dist/maia-kernel.es.js`) for optimized builds
+- **Dev mode**: Points to source files directly (`../../libs/maia-core/src/index.js`) for proper HMR
+- **Production builds**: Points to bundled files (maia-distros client) for optimized builds
 
 Production builds automatically create bundles before building via the `build` script.
 

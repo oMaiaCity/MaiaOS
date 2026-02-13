@@ -320,6 +320,7 @@ class PGliteClient {
  * Create PGlite adapter with migrations
  * Matches legacy pattern (commit 39cf63): PGlite.create(dataDir) with string path.
  * PGlite expects a directory path; for ./local-sync.db it uses that as the data dir.
+ * Dynamic import avoids browser bundlers pulling in PGlite. Server bundle + vendored PGlite in dist/.
  *
  * @param {string} dbPath - Path to PGlite data directory (e.g. ./local-sync.db)
  * @returns {Promise<PGliteClient>} PGlite client instance
@@ -328,6 +329,22 @@ export async function createPGliteAdapter(dbPath) {
 	// PGlite is server-only - check environment first
 	if (typeof window !== 'undefined' || typeof process === 'undefined' || !process.versions?.node) {
 		throw new Error('[STORAGE] PGlite is only available in Node.js/server environments')
+	}
+
+	const path = await import('node:path')
+	const { fileURLToPath } = await import('node:url')
+	const { existsSync } = await import('node:fs')
+	const { readFile: readFileAsync } = await import('node:fs/promises')
+
+	// PGlite: always from node_modules (or bundle). For bundle: load wasm from output/pglite.wasm, pass wasmModule.
+	const bundleDir = path.dirname(fileURLToPath(import.meta.url))
+	const wasmPath = path.join(bundleDir, 'pglite.wasm')
+	const hasBundledWasm = existsSync(wasmPath)
+
+	let wasmModule
+	if (hasBundledWasm) {
+		const wasmBytes = await readFileAsync(wasmPath)
+		wasmModule = await WebAssembly.compile(wasmBytes)
 	}
 
 	let PGlite
@@ -347,7 +364,6 @@ export async function createPGliteAdapter(dbPath) {
 		throw new Error('[STORAGE] Failed to import PGlite - module structure may have changed')
 	}
 
-	const path = await import('node:path')
 	const fs = await import('node:fs/promises')
 	const dir = path.dirname(dbPath)
 	try {
@@ -386,8 +402,7 @@ export async function createPGliteAdapter(dbPath) {
 		if (e?.code !== 'ENOENT') throw e
 	}
 
-	// Legacy pattern: simple PGlite.create(path) - worked in adb9e61
-	const db = await PGlite.create(dbPath)
+	const db = await PGlite.create(dbPath, wasmModule ? { wasmModule } : undefined)
 	if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
 		console.log('[STORAGE] PGlite created, running migrations...')
 	}

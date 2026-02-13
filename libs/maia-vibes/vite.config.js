@@ -16,11 +16,11 @@ export default defineConfig({
 		rollupOptions: {
 			// Externalize kernel - vibes depends on kernel but doesn't bundle it
 			// Both bundles will be loaded separately in maia-city
-			external: ['@MaiaOS/kernel'],
+			external: ['@MaiaOS/core'],
 			output: {
 				inlineDynamicImports: true,
 				globals: {
-					'@MaiaOS/kernel': 'MaiaOS',
+					'@MaiaOS/core': 'MaiaOS',
 				},
 			},
 		},
@@ -30,7 +30,7 @@ export default defineConfig({
 	resolve: {
 		alias: {
 			// Resolve kernel to its bundle (vibes depends on kernel)
-			'@MaiaOS/kernel': resolve(__dirname, '../maia-kernel/dist/maia-kernel.es.js'),
+			'@MaiaOS/core': resolve(__dirname, '../maia-core/src/index.js'),
 		},
 	},
 	define: {

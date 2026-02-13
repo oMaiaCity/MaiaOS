@@ -10,6 +10,6 @@
 	"dependencies": {
 		"cojson": "0.20.7",
 		"cojson-transport-ws": "0.20.7",
-		"@MaiaOS/kernel": "workspace:*"
+		"@MaiaOS/core": "workspace:*"
 	}
 }

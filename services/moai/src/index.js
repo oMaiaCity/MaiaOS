@@ -10,24 +10,24 @@
  *   PEER_MODE=sync | agent
  *     - sync: I host /sync (moai). Never connect to another. syncDomain=null.
  *     - agent: Client agent. Connects to sync at PEER_MOAI. Use for future pure agent workers.
- *   PEER_STORAGE, DB_PATH
+ *   PEER_STORAGE, PEER_DB_PATH
  *   PEER_MOAI: Required when PEER_MODE=agent (where to connect). Ignored when sync.
  */
 
-import { CoJSONBackend, waitForStoreReady } from '@MaiaOS/db'
-import { loadOrCreateAgentAccount } from '@MaiaOS/kernel'
-import { DBEngine } from '@MaiaOS/operations'
+import { CoJSONBackend, DBEngine, loadOrCreateAgentAccount, waitForStoreReady } from '@MaiaOS/core'
+import { resolve } from 'node:path'
 import { createWebSocketPeer } from 'cojson-transport-ws'
 
 const PORT = process.env.PORT || 4201
-const DB_PATH = process.env.DB_PATH || './local-sync.db'
+const PEER_DB_PATH = process.env.PEER_DB_PATH || './local-sync.db'
 
 const accountID = process.env.PEER_ID
 const agentSecret = process.env.PEER_SECRET
 const storageType = process.env.PEER_STORAGE || 'pglite'
 const usePGlite = storageType === 'pglite'
 const usePostgres = storageType === 'postgres'
-const dbPath = usePGlite ? DB_PATH : undefined
+// Resolve to absolute path so bundle doesn't resolve relative to its own location
+const dbPath = usePGlite ? resolve(process.cwd(), PEER_DB_PATH) : undefined
 const peerMode = process.env.PEER_MODE || 'sync'
 const syncDomain = peerMode === 'agent' ? process.env.PEER_MOAI || null : null
 const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
@@ -374,7 +374,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 			throw new Error('PEER_ID and PEER_SECRET required. Run: bun agent:generate')
 		}
 
-		if (dbPath && !process.env.DB_PATH) process.env.DB_PATH = dbPath
+		if (dbPath && !process.env.PEER_DB_PATH) process.env.PEER_DB_PATH = dbPath
 
 		const storageLabel = usePostgres
 			? 'Postgres'
@@ -445,7 +445,9 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 		}
 
 		console.log('[sync] Ready')
-	} catch (_e) {
+	} catch (e) {
+		console.error('[sync] Init failed:', e?.message ?? e)
+		if (e?.stack) console.error(e.stack)
 		process.exit(1)
 	}
 })()

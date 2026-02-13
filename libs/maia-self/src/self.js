@@ -281,7 +281,7 @@ export async function createAgentAccount({
 	const accountHeader = accountHeaderForInitialAgentSecret(agentSecret, crypto)
 	const computedAccountID = idforHeader(accountHeader, crypto)
 
-	// Get storage for agent mode (PEER_STORAGE, DB_PATH from env)
+	// Get storage for agent mode (PEER_STORAGE, PEER_DB_PATH from env)
 	const storage = await getStorage({ mode: 'agent', dbPath, inMemory })
 
 	// Setup sync peers BEFORE account creation
@@ -359,7 +359,7 @@ export async function loadAgentAccount({
 		)
 	}
 
-	// Get storage for agent mode (PEER_STORAGE, DB_PATH from env)
+	// Get storage for agent mode (PEER_STORAGE, PEER_DB_PATH from env)
 	const storage = await getStorage({ mode: 'agent', dbPath, inMemory })
 
 	// Setup sync peers BEFORE loading account

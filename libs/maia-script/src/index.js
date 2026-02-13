@@ -6,7 +6,7 @@
  * - MaiaDB: Unified database operation engine (DBEngine)
  * - Modules and utils via subpath exports
  *
- * Note: MaiaOS kernel is now exported from @MaiaOS/kernel
+ * Note: MaiaOS kernel is now exported from @MaiaOS/core
  */
 
 // Export DB Engine (unified database operation engine) - from operations, pass evaluator via options

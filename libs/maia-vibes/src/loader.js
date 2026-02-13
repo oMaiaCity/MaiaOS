@@ -4,7 +4,7 @@
  * Reuses existing MaiaOS session from main app if available
  */
 
-import { MaiaOS, signInWithPasskey } from '@MaiaOS/kernel'
+import { MaiaOS, signInWithPasskey } from '@MaiaOS/core'
 
 function checkForExistingSession() {
 	if (window.maia?.id?.node && window.maia.id.maiaId) return window.maia

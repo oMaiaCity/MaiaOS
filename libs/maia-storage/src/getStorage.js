@@ -28,7 +28,7 @@ const inMemory = () => undefined
 
 /**
  * Get storage instance based on runtime and configuration
- * Agent mode: PEER_STORAGE, DB_PATH
+ * Agent mode: PEER_STORAGE, PEER_DB_PATH
  * Human mode: MAIA_STORAGE (defaults to indexeddb in browser)
  *
  * @param {Object} [options]
@@ -46,6 +46,11 @@ export async function getStorage(options = {}) {
 			: getEnvVar('MAIA_STORAGE')
 
 	if (forceInMemory === true || runtime === 'edge' || storageType === 'in-memory') {
+		if (mode === 'agent') {
+			throw new Error(
+				'[STORAGE] Agent/server mode does not support in-memory storage. Use PEER_STORAGE=pglite or PEER_STORAGE=postgres.',
+			)
+		}
 		return inMemory()
 	}
 
@@ -58,8 +63,22 @@ export async function getStorage(options = {}) {
 	}
 
 	if (runtime === 'node') {
-		const finalDbPath = dbPath || (typeof process !== 'undefined' && process.env?.DB_PATH)
+		const finalDbPath = dbPath || (typeof process !== 'undefined' && process.env?.PEER_DB_PATH)
 		const databaseUrl = typeof process !== 'undefined' && process.env?.PEER_DB_URL
+
+		// Agent/server mode: ONLY pglite or postgres. Never fall back to in-memory.
+		if (mode === 'agent' && !forceInMemory) {
+			if (storageType === 'in-memory') {
+				throw new Error(
+					'[STORAGE] Agent/server mode does not support in-memory storage. Use PEER_STORAGE=pglite or PEER_STORAGE=postgres.',
+				)
+			}
+			if (storageType && storageType !== 'pglite' && storageType !== 'postgres') {
+				throw new Error(
+					`[STORAGE] Agent/server mode requires PEER_STORAGE=pglite or PEER_STORAGE=postgres. Got: ${storageType}`,
+				)
+			}
+		}
 
 		// Postgres (Fly MPG or any Postgres)
 		if (storageType === 'postgres' && !forceInMemory) {
@@ -77,23 +96,28 @@ export async function getStorage(options = {}) {
 			}
 		}
 
-		const usePGlite =
-			(finalDbPath && !forceInMemory) || (storageType === 'pglite' && !forceInMemory && finalDbPath)
-
-		if (usePGlite && finalDbPath) {
+		// PGlite (local WASM Postgres)
+		if (
+			(storageType === 'pglite' || (storageType !== 'postgres' && finalDbPath)) &&
+			!forceInMemory &&
+			finalDbPath
+		) {
 			try {
 				const { getPGliteStorage } = await import('./adapters/pglite.js')
 				return await getPGliteStorage(finalDbPath)
 			} catch (error) {
-				if (storageType === 'pglite') {
-					throw new Error(
-						`[STORAGE] PGlite storage initialization FAILED at ${finalDbPath}. ` +
-							`Storage type is explicitly set to 'pglite' via PEER_STORAGE env var - refusing to fall back. ` +
-							`Original error: ${error?.message || error}`,
-					)
-				}
-				return inMemory()
+				throw new Error(
+					`[STORAGE] PGlite storage initialization FAILED at ${finalDbPath}. ` +
+						`Original error: ${error?.message || error}`,
+				)
 			}
+		}
+
+		// Agent mode with no valid storage → fail hard
+		if (mode === 'agent') {
+			throw new Error(
+				'[STORAGE] Agent mode requires PEER_STORAGE=pglite (with PEER_DB_PATH) or PEER_STORAGE=postgres (with PEER_DB_URL).',
+			)
 		}
 	}
 

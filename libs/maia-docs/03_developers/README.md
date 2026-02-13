@@ -21,7 +21,7 @@ Read the documentation in the following order for a complete understanding:
 - [Cryptography](./01_maia-self/cryptography.md) - Bottom-up crypto concepts
 - [API Reference](./01_maia-self/api-reference.md) - Complete API reference
 
-### 2. [maia-kernel Package](./02_maia-kernel/README.md)
+### 2. [maia-core Package](./02_maia-core/README.md)
 **Core system services and boot process**
 - Identity & authentication layer (`createMaiaOS`)
 - Actor & DSL execution layer (`MaiaOS.boot()`)
@@ -30,10 +30,10 @@ Read the documentation in the following order for a complete understanding:
 - Public API reference
 
 **Sub-topics:**
-- [Auth Layer](./02_maia-kernel/auth-layer.md) - Identity & Authentication layer
-- [Boot Process](./02_maia-kernel/boot-process.md) - Boot process and execution layer
-- [API Reference](./02_maia-kernel/api-reference.md) - Complete API reference
-- [Patterns](./02_maia-kernel/patterns.md) - Common patterns and troubleshooting
+- [Auth Layer](./02_maia-core/auth-layer.md) - Identity & Authentication layer
+- [Boot Process](./02_maia-core/boot-process.md) - Boot process and execution layer
+- [API Reference](./02_maia-core/api-reference.md) - Complete API reference
+- [Patterns](./02_maia-core/patterns.md) - Common patterns and troubleshooting
 
 ### 3. [maia-schemata Package](./03_maia-schemata/README.md)
 **Schema validation and transformation system**

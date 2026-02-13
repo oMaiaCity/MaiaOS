@@ -10,7 +10,7 @@ The `@MaiaOS/vibes` package contains pre-built vibe configurations (`.maia` file
 - ✅ **Example apps** - Reference implementations (Todos, MyData, MaiaAgent)
 
 **What it isn't:**
-- ❌ **Not the kernel** - Boot process is in `@MaiaOS/kernel`
+- ❌ **Not the kernel** - Boot process is in `@MaiaOS/core`
 - ❌ **Not the vibe system** - Vibe concept is documented in creator docs
 - ❌ **Not a build tool** - Vibes are just JSON configs, no compilation needed
 
@@ -217,14 +217,14 @@ const { vibe, actor } = await os.loadVibeFromAccount('todos', container);
 
 ## Integration Points
 
-### With maia-kernel
+### With maia-core
 
-The `maia-kernel` package uses vibes for:
+The `maia-core` package uses vibes for:
 - Loading apps from account.vibes
 - Seeding vibe configs during boot (if needed)
 - Creating root actors from vibe manifests
 
-**See:** `libs/maia-kernel/src/kernel.js`
+**See:** `libs/maia-core/src/kernel.js`
 
 ### With maia-script
 
@@ -381,7 +381,7 @@ export const MyVibeRegistry = {
 
 **`loader.js`:**
 ```javascript
-import { MaiaOS, signInWithPasskey } from '@MaiaOS/kernel';
+import { MaiaOS, signInWithPasskey } from '@MaiaOS/core';
 import { MyVibeRegistry } from './registry.js';
 
 export async function loadMyVibe(container) {
@@ -449,7 +449,7 @@ export { MyVibeRegistry } from './my-vibe/registry.js';
 ## Related Documentation
 
 - [Creator Docs: Vibes](../../02_creators/01-vibes.md) - How to use vibes as a creator
-- [maia-kernel Package](../02_maia-kernel/README.md) - Boot process and vibe loading
+- [maia-core Package](../02_maia-core/README.md) - Boot process and vibe loading
 - [maia-script Package](../04_maia-script/README.md) - Actor execution engines
 
 ---

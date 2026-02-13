@@ -3,7 +3,7 @@
  * Handles dashboard screen and vibe viewer rendering
  */
 
-import { resolveAccountCoIdsToProfileNames } from '@MaiaOS/kernel'
+import { resolveAccountCoIdsToProfileNames } from '@MaiaOS/core'
 import { getAllVibeRegistries } from '@MaiaOS/vibes'
 import { getSyncStatusMessage, truncate } from './utils.js'
 

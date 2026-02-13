@@ -17,7 +17,7 @@ import {
 	signInWithPasskey,
 	signUpWithPasskey,
 	subscribeSyncState,
-} from '@MaiaOS/kernel'
+} from '@MaiaOS/core'
 import { filterVibesForSeeding, getAllVibeRegistries } from '@MaiaOS/vibes'
 import { renderApp } from './db-view.js'
 import { renderLandingPage } from './landing.js'

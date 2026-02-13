@@ -30,7 +30,7 @@ The sync service consolidates WebSocket sync, agent API, and LLM proxy in one pr
 - `PEER_MODE=agent` - Client agent. Connects to sync at `PEER_MOAI`. For future pure agent workers.
 - `PEER_ID`, `PEER_SECRET` - Required (run `bun agent:generate`)
 - `PEER_STORAGE=pglite`
-- `DB_PATH` - Default: `./local-sync.db` (dev), `/data/sync.db` (prod)
+- `PEER_DB_PATH` - Default: `./local-sync.db` (dev), `/data/sync.db` (prod)
 - `PEER_MOAI` - Required when `PEER_MODE=agent` (sync server URL). Ignored when `sync`.
 
 ## Development
@@ -51,7 +51,7 @@ bun run dev:moai
 Clients connect via kernel bundle, which automatically connects to the sync server:
 
 ```javascript
-import { signUpWithPasskey, setupSyncPeers, subscribeSyncState } from '@MaiaOS/kernel'
+import { signUpWithPasskey, setupSyncPeers, subscribeSyncState } from '@MaiaOS/core'
 
 // Sync server is used automatically - no API key needed
 const { node, account } = await signUpWithPasskey()

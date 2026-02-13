@@ -4,14 +4,12 @@
 	"type": "module",
 	"private": true,
 	"scripts": {
-		"dev": "bun run src/index.js",
-		"start": "bun run src/index.js",
+		"dev": "bun run --env-file=../../.env src/index.js",
+		"start": "bun run --env-file=../../.env src/index.js",
 		"deploy": "./deploy.sh"
 	},
 	"dependencies": {
-		"@MaiaOS/kernel": "workspace:*",
-		"@MaiaOS/db": "workspace:*",
-		"@MaiaOS/operations": "workspace:*",
+		"@MaiaOS/core": "workspace:*",
 		"cojson-transport-ws": "0.20.7"
 	}
 }

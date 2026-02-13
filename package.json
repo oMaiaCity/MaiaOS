@@ -14,11 +14,8 @@
 		"deploy": "./scripts/deploy-all.sh",
 		"deploy:maia": "cd services/maia && ./deploy.sh",
 		"deploy:moai": "cd services/moai && ./deploy.sh",
-		"kernel:build": "cd libs/maia-kernel && bun run build",
-		"kernel:build:watch": "cd libs/maia-kernel && bun run build:watch",
 		"vibes:build": "cd libs/maia-vibes && bun run build",
-		"vibes:build:watch": "cd libs/maia-vibes && bun run build:watch",
-		"bundles:build": "bun run kernel:build && bun run vibes:build",
+		"distros:build": "bun run --filter @MaiaOS/maia-distros build",
 		"docs:generate": "bun scripts/generate-llm-docs.js",
 		"docs:watch": "bun scripts/generate-llm-docs.js --watch",
 		"version:sync": "node scripts/sync-version.js",
@@ -43,5 +40,8 @@
 	"lint-staged": {
 		"*.{js,css,html,md,json}": "biome check --write --no-errors-on-unmatched",
 		"*.maia": "bun scripts/format-maia.js"
+	},
+	"dependencies": {
+		"@electric-sql/pglite": "^0.3.15"
 	}
 }

@@ -255,7 +255,7 @@ After setting up DNS:
 
 **Sync from .env:** `bun run deploy:secrets` copies PEER_ID, PEER_SECRET, RED_PILL_API_KEY from root `.env` to Fly.
 
-**fly.toml:** `PORT` (4201), `DB_PATH` (`/data/sync.db`)
+**fly.toml:** `PORT` (4201), `PEER_DB_PATH` (`/data/sync.db`)
 
 ### Maia City (`next-maia-city`)
 
