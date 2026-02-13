@@ -12,7 +12,8 @@
 			"**/*.html",
 			"**/*.md",
 			"**/*.json",
-			"!node_modules",
+			"**/*.maia",
+			"!node_modules/**",
 			"!build",
 			"!dist",
 			"!gen",
@@ -96,6 +97,23 @@
 				"formatter": {
 					"trailingCommas": "none",
 					"expand": "always"
+				}
+			}
+		},
+		{
+			"includes": ["**/*.maia"],
+			"formatter": {
+				"enabled": true
+			},
+			"linter": {
+				"enabled": false
+			},
+			"json": {
+				"formatter": {
+					"trailingCommas": "none"
+				},
+				"parser": {
+					"allowComments": true
 				}
 			}
 		}

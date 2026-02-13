@@ -1,91 +1,91 @@
 {
-  "$schema": "@maia/schema/view",
-  "$id": "@maia/db/view/table",
-  "content": {
-    "tag": "div",
-    "class": "table-container",
-    "children": [
-      {
-        "tag": "table",
-        "class": "data-table",
-        "children": [
-          {
-            "tag": "thead",
-            "children": [
-              {
-                "tag": "tr",
-                "children": [
-                  {
-                    "tag": "th",
-                    "text": "$tableHeaders.name"
-                  },
-                  {
-                    "tag": "th",
-                    "text": "$tableHeaders.email"
-                  },
-                  {
-                    "tag": "th",
-                    "text": "$tableHeaders.role"
-                  },
-                  {
-                    "tag": "th",
-                    "text": "$tableHeaders.status"
-                  },
-                  {
-                    "tag": "th",
-                    "text": "$tableHeaders.createdAt"
-                  }
-                ]
-              }
-            ]
-          },
-          {
-            "tag": "tbody",
-            "$each": {
-              "items": "$table",
-              "template": {
-                "tag": "tr",
-                "class": "table-row",
-                "attrs": {
-                  "data": {
-                    "selected": "$selectedRowItems.$$id"
-                  }
-                },
-                "children": [
-                  {
-                    "tag": "td",
-                    "text": "$$name"
-                  },
-                  {
-                    "tag": "td",
-                    "text": "$$email"
-                  },
-                  {
-                    "tag": "td",
-                    "text": "$$role"
-                  },
-                  {
-                    "tag": "td",
-                    "text": "$$status"
-                  },
-                  {
-                    "tag": "td",
-                    "text": "$$createdAt"
-                  }
-                ],
-                "$on": {
-                  "click": {
-                    "send": "SELECT_ROW",
-                    "payload": {
-                      "rowId": "$$id"
-                    }
-                  }
-                }
-              }
-            }
-          }
-        ]
-      }
-    ]
-  }
+	"$schema": "@maia/schema/view",
+	"$id": "@maia/db/view/table",
+	"content": {
+		"tag": "div",
+		"class": "table-container",
+		"children": [
+			{
+				"tag": "table",
+				"class": "data-table",
+				"children": [
+					{
+						"tag": "thead",
+						"children": [
+							{
+								"tag": "tr",
+								"children": [
+									{
+										"tag": "th",
+										"text": "$tableHeaders.name"
+									},
+									{
+										"tag": "th",
+										"text": "$tableHeaders.email"
+									},
+									{
+										"tag": "th",
+										"text": "$tableHeaders.role"
+									},
+									{
+										"tag": "th",
+										"text": "$tableHeaders.status"
+									},
+									{
+										"tag": "th",
+										"text": "$tableHeaders.createdAt"
+									}
+								]
+							}
+						]
+					},
+					{
+						"tag": "tbody",
+						"$each": {
+							"items": "$table",
+							"template": {
+								"tag": "tr",
+								"class": "table-row",
+								"attrs": {
+									"data": {
+										"selected": "$selectedRowItems.$$id"
+									}
+								},
+								"children": [
+									{
+										"tag": "td",
+										"text": "$$name"
+									},
+									{
+										"tag": "td",
+										"text": "$$email"
+									},
+									{
+										"tag": "td",
+										"text": "$$role"
+									},
+									{
+										"tag": "td",
+										"text": "$$status"
+									},
+									{
+										"tag": "td",
+										"text": "$$createdAt"
+									}
+								],
+								"$on": {
+									"click": {
+										"send": "SELECT_ROW",
+										"payload": {
+											"rowId": "$$id"
+										}
+									}
+								}
+							}
+						}
+					}
+				]
+			}
+		]
+	}
 }

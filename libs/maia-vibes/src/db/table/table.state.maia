@@ -1,21 +1,21 @@
 {
-  "$schema": "@maia/schema/state",
-  "$id": "@maia/db/state/table",
-  "initial": "idle",
-  "states": {
-    "idle": {
-      "on": {
-        "SELECT_ROW": {
-          "target": "idle",
-          "actions": [
-            {
-              "updateContext": {
-                "selectedRowId": "$$rowId"
-              }
-            }
-          ]
-        }
-      }
-    }
-  }
+	"$schema": "@maia/schema/state",
+	"$id": "@maia/db/state/table",
+	"initial": "idle",
+	"states": {
+		"idle": {
+			"on": {
+				"SELECT_ROW": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"selectedRowId": "$$rowId"
+							}
+						}
+					]
+				}
+			}
+		}
+	}
 }

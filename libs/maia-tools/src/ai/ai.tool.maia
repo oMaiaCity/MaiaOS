@@ -1,41 +1,50 @@
 {
-  "$schema": "@maia/schema/tool",
-  "$id": "tool_ai_001",
-  "name": "@ai/chat",
-  "description": "Unified AI chat tool using OpenAI-compatible API (RedPill) for LLM interactions. Model can be configured dynamically via payload - RedPill API endpoint is hardcoded, but each call can specify which LLM model to query. LLMs are stateless - each request sends the full context (complete conversation history).",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "context": {
-        "type": "array",
-        "description": "Complete conversation context to send to the LLM. LLMs are stateless - this represents the full context/history for this request. Each request can have completely different context.",
-        "items": {
-          "type": "object",
-          "properties": {
-            "role": {
-              "type": "string",
-              "enum": ["system", "user", "assistant"],
-              "description": "Message role"
-            },
-            "content": {
-              "type": "string",
-              "description": "Message content"
-            }
-          },
-          "required": ["role", "content"]
-        }
-      },
-      "model": {
-        "type": "string",
-        "description": "LLM model to query (dynamically configurable per call). Default: qwen/qwen3-30b-a3b-instruct-2507. The RedPill API endpoint is hardcoded, but you can specify any model available on RedPill.",
-        "default": "qwen/qwen3-30b-a3b-instruct-2507"
-      },
-      "temperature": {
-        "type": "number",
-        "description": "Temperature for response (0-2, default: 1)",
-        "default": 1
-      }
-    },
-    "required": ["context"]
-  }
+	"$schema": "@maia/schema/tool",
+	"$id": "tool_ai_001",
+	"name": "@ai/chat",
+	"description": "Unified AI chat tool using OpenAI-compatible API (RedPill) for LLM interactions. Model can be configured dynamically via payload - RedPill API endpoint is hardcoded, but each call can specify which LLM model to query. LLMs are stateless - each request sends the full context (complete conversation history).",
+	"parameters": {
+		"type": "object",
+		"properties": {
+			"context": {
+				"type": "array",
+				"description": "Complete conversation context to send to the LLM. LLMs are stateless - this represents the full context/history for this request. Each request can have completely different context.",
+				"items": {
+					"type": "object",
+					"properties": {
+						"role": {
+							"type": "string",
+							"enum": [
+								"system",
+								"user",
+								"assistant"
+							],
+							"description": "Message role"
+						},
+						"content": {
+							"type": "string",
+							"description": "Message content"
+						}
+					},
+					"required": [
+						"role",
+						"content"
+					]
+				}
+			},
+			"model": {
+				"type": "string",
+				"description": "LLM model to query (dynamically configurable per call). Default: qwen/qwen3-30b-a3b-instruct-2507. The RedPill API endpoint is hardcoded, but you can specify any model available on RedPill.",
+				"default": "qwen/qwen3-30b-a3b-instruct-2507"
+			},
+			"temperature": {
+				"type": "number",
+				"description": "Temperature for response (0-2, default: 1)",
+				"default": 1
+			}
+		},
+		"required": [
+			"context"
+		]
+	}
 }

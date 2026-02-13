@@ -1,5 +1,5 @@
 {
-  "$schema": "@maia/schema/inbox",
-  "$id": "@maia/sparks/inbox/detail",
-  "cotype": "costream"
+	"$schema": "@maia/schema/inbox",
+	"$id": "@maia/sparks/inbox/detail",
+	"cotype": "costream"
 }

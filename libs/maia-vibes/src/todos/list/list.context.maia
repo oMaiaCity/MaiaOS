@@ -1,9 +1,9 @@
 {
-  "$schema": "@maia/schema/context",
-  "$id": "@maia/todos/context/list",
-  "list": {
-    "schema": "@maia/schema/data/todos"
-  },
-  "toggleButtonText": "✓",
-  "deleteButtonText": "✕"
+	"$schema": "@maia/schema/context",
+	"$id": "@maia/todos/context/list",
+	"list": {
+		"schema": "@maia/schema/data/todos"
+	},
+	"toggleButtonText": "✓",
+	"deleteButtonText": "✕"
 }

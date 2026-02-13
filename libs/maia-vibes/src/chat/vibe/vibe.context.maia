@@ -1,14 +1,14 @@
 {
-  "$schema": "@maia/schema/context",
-  "$id": "@maia/chat/context/vibe",
-  "conversations": {
-    "schema": "@maia/schema/data/chat"
-  },
-  "inputText": "",
-  "assistantResponse": null,
-  "isLoading": false,
-  "error": null,
-  "hasConversations": false,
-  "hasError": false,
-  "messageNames": {}
+	"$schema": "@maia/schema/context",
+	"$id": "@maia/chat/context/vibe",
+	"conversations": {
+		"schema": "@maia/schema/data/chat"
+	},
+	"inputText": "",
+	"assistantResponse": null,
+	"isLoading": false,
+	"error": null,
+	"hasConversations": false,
+	"hasError": false,
+	"messageNames": {}
 }

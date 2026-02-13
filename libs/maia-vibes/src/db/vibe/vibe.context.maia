@@ -1,60 +1,60 @@
 {
-  "$schema": "@maia/schema/context",
-  "$id": "@maia/db/context/vibe",
-  "navTitle": "MaiaDB",
-  "navCategories": [
-    {
-      "category": "Account",
-      "items": [
-        {
-          "id": "account",
-          "label": "Owner"
-        },
-        {
-          "id": "group",
-          "label": "Avatar"
-        }
-      ]
-    },
-    {
-      "category": "Vibes",
-      "items": [
-        {
-          "id": "maia-db",
-          "label": "MaiaDB"
-        },
-        {
-          "id": "todos",
-          "label": "Todos"
-        }
-      ]
-    },
-    {
-      "category": "OS",
-      "items": [
-        {
-          "id": "schemata",
-          "label": "Schemata"
-        },
-        {
-          "id": "indexes",
-          "label": "Indexes"
-        }
-      ]
-    }
-  ],
-  "selectedNavId": "account",
-  "selectedRowId": "1",
-  "selectedNavItems": {
-    "account": true
-  },
-  "selectedRowItems": {
-    "1": true
-  },
-  "currentTable": "@table",
-  "currentDetail": "@detail",
-  "@actors": {
-    "table": "@maia/db/actor/table",
-    "detail": "@maia/db/actor/detail"
-  }
+	"$schema": "@maia/schema/context",
+	"$id": "@maia/db/context/vibe",
+	"navTitle": "MaiaDB",
+	"navCategories": [
+		{
+			"category": "Account",
+			"items": [
+				{
+					"id": "account",
+					"label": "Owner"
+				},
+				{
+					"id": "group",
+					"label": "Avatar"
+				}
+			]
+		},
+		{
+			"category": "Vibes",
+			"items": [
+				{
+					"id": "maia-db",
+					"label": "MaiaDB"
+				},
+				{
+					"id": "todos",
+					"label": "Todos"
+				}
+			]
+		},
+		{
+			"category": "OS",
+			"items": [
+				{
+					"id": "schemata",
+					"label": "Schemata"
+				},
+				{
+					"id": "indexes",
+					"label": "Indexes"
+				}
+			]
+		}
+	],
+	"selectedNavId": "account",
+	"selectedRowId": "1",
+	"selectedNavItems": {
+		"account": true
+	},
+	"selectedRowItems": {
+		"1": true
+	},
+	"currentTable": "@table",
+	"currentDetail": "@detail",
+	"@actors": {
+		"table": "@maia/db/actor/table",
+		"detail": "@maia/db/actor/detail"
+	}
 }

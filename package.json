@@ -24,11 +24,13 @@
 		"version:sync": "node scripts/sync-version.js",
 		"agent:generate": "bun libs/maia-self/scripts/generate-credentials.js",
 		"deploy:secrets": "bun scripts/fly-secrets-sync.js",
-		"format": "bunx biome format --write .",
+		"format": "bun run format:maia && bunx biome format --write .",
+		"format:maia": "bun scripts/format-maia.js",
+		"format:maia:check": "bun scripts/format-maia.js --check",
 		"lint": "bunx biome lint .",
 		"check": "bunx biome check .",
 		"check:fix": "bunx biome check --write .",
-		"check:ci": "bunx biome ci .",
+		"check:ci": "bun run format:maia:check && bunx biome ci .",
 		"prepare": "husky"
 	},
 	"devDependencies": {
@@ -39,6 +41,7 @@
 		"lint-staged": "^16.2.7"
 	},
 	"lint-staged": {
-		"*.{js,css,html,md,json}": "biome check --write --no-errors-on-unmatched"
+		"*.{js,css,html,md,json}": "biome check --write --no-errors-on-unmatched",
+		"*.maia": "bun scripts/format-maia.js"
 	}
 }

@@ -1,19 +1,19 @@
 {
-  "$schema": "@maia/schema/context",
-  "$id": "@maia/sparks/context/vibe",
-  "sparks": {
-    "schema": "@maia/schema/data/spark"
-  },
-  "newSparkName": "",
-  "inputPlaceholder": "Enter spark name...",
-  "createButtonText": "Create Spark",
-  "error": null,
-  "hasError": false,
-  "loading": false,
-  "selectedSparkId": null,
-  "selectedSparkItems": {},
-  "currentDetail": "@detail",
-  "@actors": {
-    "detail": "@maia/sparks/actor/detail"
-  }
+	"$schema": "@maia/schema/context",
+	"$id": "@maia/sparks/context/vibe",
+	"sparks": {
+		"schema": "@maia/schema/data/spark"
+	},
+	"newSparkName": "",
+	"inputPlaceholder": "Enter spark name...",
+	"createButtonText": "Create Spark",
+	"error": null,
+	"hasError": false,
+	"loading": false,
+	"selectedSparkId": null,
+	"selectedSparkItems": {},
+	"currentDetail": "@detail",
+	"@actors": {
+		"detail": "@maia/sparks/actor/detail"
+	}
 }
