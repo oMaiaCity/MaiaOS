@@ -1,58 +1,58 @@
 :root {
-  /* Brand Colors - Inspired by Paradise Water and Nature */
-  --brand-green: #4ca661;
-  --brand-water: #00d2ff;
-  --brand-earth: #8b5e3c;
-  --brand-yellow: #ffb703;
-  --brand-red: #ef4444;
-  
-  /* Design System Brand Colors */
-  --color-lush-green: #4E9A58;
-  --color-marine-blue: #001F33;
-  --color-marine-blue-muted: #2D4A5C;
-  --color-marine-blue-light: #5E7A8C;
-  --color-paradise-water: #00BDD6;
-  --color-soft-clay: #E8E1D9;
-  --color-terracotta: #C27B66;
-  --color-sun-yellow: #E6B94D;
-  --color-sun-yellow-text: #5C4314;
-  --color-tinted-white: #F0EDE6;
-  
-  /* Typography */
-  --font-heading: 'Indie Flower', cursive;
-  --font-body: 'Plus Jakarta Sans', sans-serif;
-  --font-weight-normal: 300;
-  --font-weight-label: 600;
-  
-  /* Button Text Colors (Tone-on-Tone) */
-  --color-marine-text: #D1E8F7;
-  --color-water-text: #004D59;
-  --color-green-text: #F0F9F1;
-  --color-terracotta-text: #FDF2EF;
-  --color-yellow-text: #4D3810;
-  
-  /* Liquid Glass Config */
-  --glass-border: rgba(255, 255, 255, 0.25);
-  --glass-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.15);
-  
-  /* Text Styles */
-  --text-pure-white: #ffffff;
-  --text-welcome: #fdfcf0; /* Super light cream */
-  --text-primary: #f8f9fa;
-  --text-accent: #ede6d9; /* Earthy cream */
-  
-  --earth-dark: #2c2520;
-  --radius: 1rem; /* Even more compact for dashboard */
+	/* Brand Colors - Inspired by Paradise Water and Nature */
+	--brand-green: #4ca661;
+	--brand-water: #00d2ff;
+	--brand-earth: #8b5e3c;
+	--brand-yellow: #ffb703;
+	--brand-red: #ef4444;
 
-  /* Slate Palette - Legacy Data Explorer Inspiration */
-  --slate-50: #f8fafc;
-  --slate-100: #f1f5f9;
-  --slate-200: #e2e8f0;
-  --slate-300: #cbd5e1;
-  --slate-400: #94a3b8;
-  --slate-500: #64748b;
-  --slate-600: #475569;
-  --slate-700: #334155;
-  --slate-800: #1e293b;
-  --slate-900: #0f172a;
+	/* Design System Brand Colors */
+	--color-lush-green: #4e9a58;
+	--color-marine-blue: #001f33;
+	--color-marine-blue-muted: #2d4a5c;
+	--color-marine-blue-light: #5e7a8c;
+	--color-paradise-water: #00bdd6;
+	--color-soft-clay: #e8e1d9;
+	--color-terracotta: #c27b66;
+	--color-sun-yellow: #e6b94d;
+	--color-sun-yellow-text: #5c4314;
+	--color-tinted-white: #f0ede6;
+
+	/* Typography */
+	--font-heading: "Indie Flower", cursive;
+	--font-body: "Plus Jakarta Sans", sans-serif;
+	--font-weight-normal: 300;
+	--font-weight-label: 600;
+
+	/* Button Text Colors (Tone-on-Tone) */
+	--color-marine-text: #d1e8f7;
+	--color-water-text: #004d59;
+	--color-green-text: #f0f9f1;
+	--color-terracotta-text: #fdf2ef;
+	--color-yellow-text: #4d3810;
+
+	/* Liquid Glass Config */
+	--glass-border: rgba(255, 255, 255, 0.25);
+	--glass-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.15);
+
+	/* Text Styles */
+	--text-pure-white: #ffffff;
+	--text-welcome: #fdfcf0; /* Super light cream */
+	--text-primary: #f8f9fa;
+	--text-accent: #ede6d9; /* Earthy cream */
+
+	--earth-dark: #2c2520;
+	--radius: 1rem; /* Even more compact for dashboard */
+
+	/* Slate Palette - Legacy Data Explorer Inspiration */
+	--slate-50: #f8fafc;
+	--slate-100: #f1f5f9;
+	--slate-200: #e2e8f0;
+	--slate-300: #cbd5e1;
+	--slate-400: #94a3b8;
+	--slate-500: #64748b;
+	--slate-600: #475569;
+	--slate-700: #334155;
+	--slate-800: #1e293b;
+	--slate-900: #0f172a;
 }

@@ -3,39 +3,39 @@
  * Handles dashboard screen and vibe viewer rendering
  */
 
-import { truncate, getSyncStatusMessage } from './utils.js';
-import { getAllVibeRegistries } from '@MaiaOS/vibes';
-import { resolveAccountCoIdsToProfileNames } from '@MaiaOS/kernel';
+import { resolveAccountCoIdsToProfileNames } from '@MaiaOS/kernel'
+import { getAllVibeRegistries } from '@MaiaOS/vibes'
+import { getSyncStatusMessage, truncate } from './utils.js'
 
 // Helper function to escape HTML
 function escapeHtml(text) {
 	if (text === null || text === undefined) {
-		return '';
+		return ''
 	}
-	const div = document.createElement('div');
-	div.textContent = String(text);
-	return div.innerHTML;
+	const div = document.createElement('div')
+	div.textContent = String(text)
+	return div.innerHTML
 }
 
 /**
  * Helper function to truncate description to max words
  */
 function truncateDescription(text, maxWords = 10) {
-	if (!text) return '';
-	const words = text.trim().split(/\s+/);
-	if (words.length <= maxWords) return text;
-	return words.slice(0, maxWords).join(' ') + '...';
+	if (!text) return ''
+	const words = text.trim().split(/\s+/)
+	if (words.length <= maxWords) return text
+	return `${words.slice(0, maxWords).join(' ')}...`
 }
 
 /**
  * Extract vibe key from vibe $id (e.g., "@maia/vibe/todos" -> "todos")
  */
 function getVibeKeyFromId(vibeId) {
-	if (!vibeId) return null;
+	if (!vibeId) return null
 	if (vibeId.startsWith('@maia/vibe/')) {
-		return vibeId.replace('@maia/vibe/', '');
+		return vibeId.replace('@maia/vibe/', '')
 	}
-	return null;
+	return null
 }
 
 /**
@@ -43,12 +43,12 @@ function getVibeKeyFromId(vibeId) {
  */
 async function getSparkDisplayName(maia, sparkCoId) {
 	try {
-		const sparkStore = await maia.db({ op: 'read', schema: null, key: sparkCoId });
-		const sparkData = sparkStore?.value ?? sparkStore;
-		const name = sparkData?.name;
-		return name ? (name.startsWith('@') ? name : `@${name}`) : null;
+		const sparkStore = await maia.db({ op: 'read', schema: null, key: sparkCoId })
+		const sparkData = sparkStore?.value ?? sparkStore
+		const name = sparkData?.name
+		return name ? (name.startsWith('@') ? name : `@${name}`) : null
 	} catch {
-		return null;
+		return null
 	}
 }
 
@@ -58,45 +58,51 @@ async function getSparkDisplayName(maia, sparkCoId) {
  * @returns {Promise<Array>} Array of spark objects with {key, name, description}
  */
 async function loadSparksFromAccount(maia) {
-	const sparks = [];
+	const sparks = []
 
-	if (!maia) return sparks;
+	if (!maia) return sparks
 
 	try {
-		const account = maia.id.maiaId;
-		const accountStore = await maia.db({ op: 'read', schema: '@account', key: account.id });
-		const accountData = accountStore.value || accountStore;
+		const account = maia.id.maiaId
+		const accountStore = await maia.db({ op: 'read', schema: '@account', key: account.id })
+		const accountData = accountStore.value || accountStore
 
-		const sparksId = accountData?.sparks;
+		const sparksId = accountData?.sparks
 		if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_')) {
-			return sparks;
+			return sparks
 		}
 
-		const sparksStore = await maia.db({ op: 'read', schema: sparksId, key: sparksId });
-		const sparksData = sparksStore.value || sparksStore;
+		const sparksStore = await maia.db({ op: 'read', schema: sparksId, key: sparksId })
+		const sparksData = sparksStore.value || sparksStore
 
-		if (!sparksData || typeof sparksData !== 'object' || Array.isArray(sparksData)) return sparks;
+		if (!sparksData || typeof sparksData !== 'object' || Array.isArray(sparksData)) return sparks
 
-		const sparkKeys = Object.keys(sparksData).filter(k =>
-			k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$schema' && k !== 'type' &&
-			typeof sparksData[k] === 'string' && sparksData[k].startsWith('co_')
-		);
+		const sparkKeys = Object.keys(sparksData).filter(
+			(k) =>
+				k !== 'id' &&
+				k !== 'loading' &&
+				k !== 'error' &&
+				k !== '$schema' &&
+				k !== 'type' &&
+				typeof sparksData[k] === 'string' &&
+				sparksData[k].startsWith('co_'),
+		)
 
 		for (const key of sparkKeys) {
 			// key is co-id (new) or name like "@maia" (system spark)
 			const displayName = key.startsWith('co_')
 				? (await getSparkDisplayName(maia, key)) || key
-				: (key.startsWith('@') ? key : `@${key}`);
+				: key.startsWith('@')
+					? key
+					: `@${key}`
 			sparks.push({
 				key,
 				name: displayName,
-				description: `Context scope for ${displayName}`
-			});
+				description: `Context scope for ${displayName}`,
+			})
 		}
-	} catch (error) {
-		console.warn('[Dashboard] Failed to load sparks:', error);
-	}
-	return sparks;
+	} catch (_error) {}
+	return sparks
 }
 
 /**
@@ -107,25 +113,35 @@ async function loadSparksFromAccount(maia) {
  * @returns {Promise<boolean>}
  */
 async function vibeHasBrowserRuntime(maia, runtimesData, vibeCoId) {
-	if (!maia?.db || !runtimesData) return false;
+	if (!maia?.db || !runtimesData) return false
 	// runtimesData is a plain object from read (key -> colist co-id); CoMap content would use .get
-	const assignmentsColistId = runtimesData.get?.(vibeCoId) ?? runtimesData[vibeCoId];
-	if (!assignmentsColistId || typeof assignmentsColistId !== 'string' || !assignmentsColistId.startsWith('co_')) return false;
+	const assignmentsColistId = runtimesData.get?.(vibeCoId) ?? runtimesData[vibeCoId]
+	if (
+		!assignmentsColistId ||
+		typeof assignmentsColistId !== 'string' ||
+		!assignmentsColistId.startsWith('co_')
+	)
+		return false
 	try {
-		const colistStore = await maia.db({ op: 'read', schema: null, key: assignmentsColistId });
-		const colistData = colistStore?.value ?? colistStore;
-		const items = colistData?.items ?? (Array.isArray(colistData) ? colistData : []);
-		const itemIds = Array.isArray(items) ? items : (items && typeof items.slice === 'function' ? items.slice() : []);
+		const colistStore = await maia.db({ op: 'read', schema: null, key: assignmentsColistId })
+		const colistData = colistStore?.value ?? colistStore
+		const items = colistData?.items ?? (Array.isArray(colistData) ? colistData : [])
+		const itemIds = Array.isArray(items)
+			? items
+			: items && typeof items.slice === 'function'
+				? items.slice()
+				: []
 		for (const itemCoId of itemIds) {
-			if (typeof itemCoId !== 'string' || !itemCoId.startsWith('co_')) continue;
-			const itemStore = await maia.db({ op: 'read', schema: null, key: itemCoId });
-			const itemData = itemStore?.value ?? itemStore;
-			if (itemData?.browser) return true;
-			if (itemData && typeof itemData === 'object' && 'browser' in itemData && itemData.browser) return true;
+			if (typeof itemCoId !== 'string' || !itemCoId.startsWith('co_')) continue
+			const itemStore = await maia.db({ op: 'read', schema: null, key: itemCoId })
+			const itemData = itemStore?.value ?? itemStore
+			if (itemData?.browser) return true
+			if (itemData && typeof itemData === 'object' && 'browser' in itemData && itemData.browser)
+				return true
 		}
-		return false;
+		return false
 	} catch {
-		return false;
+		return false
 	}
 }
 
@@ -137,83 +153,91 @@ async function vibeHasBrowserRuntime(maia, runtimesData, vibeCoId) {
  * @returns {Promise<Array>} Array of vibe objects with {key, name, description, coId}
  */
 async function loadVibesFromSpark(maia, spark) {
-	const vibes = [];
+	const vibes = []
 
-	if (!maia || !spark) return vibes;
+	if (!maia || !spark) return vibes
 
 	try {
-		const vibeRegistries = await getAllVibeRegistries();
-		const vibeManifestMap = new Map();
+		const vibeRegistries = await getAllVibeRegistries()
+		const vibeManifestMap = new Map()
 		for (const registry of vibeRegistries) {
 			if (registry.vibe) {
-				const vibeKey = getVibeKeyFromId(registry.vibe.$id);
+				const vibeKey = getVibeKeyFromId(registry.vibe.$id)
 				if (vibeKey) {
 					vibeManifestMap.set(vibeKey, {
 						name: registry.vibe.name || vibeKey,
-						description: registry.vibe.description || ''
-					});
+						description: registry.vibe.description || '',
+					})
 				}
 			}
 		}
 
-		const account = maia.id.maiaId;
-		const accountStore = await maia.db({ op: 'read', schema: '@account', key: account.id });
-		const accountData = accountStore.value || accountStore;
+		const account = maia.id.maiaId
+		const accountStore = await maia.db({ op: 'read', schema: '@account', key: account.id })
+		const accountData = accountStore.value || accountStore
 
-		const sparksId = accountData?.sparks;
-		if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_')) return vibes;
+		const sparksId = accountData?.sparks
+		if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_')) return vibes
 
-		const sparksStore = await maia.db({ op: 'read', schema: sparksId, key: sparksId });
-		const sparksData = sparksStore.value || sparksStore;
-		const sparkCoId = sparksData?.[spark];
-		if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_')) return vibes;
+		const sparksStore = await maia.db({ op: 'read', schema: sparksId, key: sparksId })
+		const sparksData = sparksStore.value || sparksStore
+		const sparkCoId = sparksData?.[spark]
+		if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_')) return vibes
 
-		const sparkStore = await maia.db({ op: 'read', schema: null, key: sparkCoId });
-		const sparkData = sparkStore.value || sparkStore;
-		const vibesId = sparkData?.vibes;
-		const osId = sparkData?.os;
-		if (!vibesId || typeof vibesId !== 'string' || !vibesId.startsWith('co_')) return vibes;
+		const sparkStore = await maia.db({ op: 'read', schema: null, key: sparkCoId })
+		const sparkData = sparkStore.value || sparkStore
+		const vibesId = sparkData?.vibes
+		const osId = sparkData?.os
+		if (!vibesId || typeof vibesId !== 'string' || !vibesId.startsWith('co_')) return vibes
 
-		const vibesStore = await maia.db({ op: 'read', schema: vibesId, key: vibesId });
-		const vibesData = vibesStore.value || vibesStore;
+		const vibesStore = await maia.db({ op: 'read', schema: vibesId, key: vibesId })
+		const vibesData = vibesStore.value || vibesStore
 
-		if (!vibesData || typeof vibesData !== 'object' || Array.isArray(vibesData)) return vibes;
+		if (!vibesData || typeof vibesData !== 'object' || Array.isArray(vibesData)) return vibes
 
-		let runtimesData = null;
+		let runtimesData = null
 		if (osId && typeof osId === 'string' && osId.startsWith('co_')) {
-			const osStore = await maia.db({ op: 'read', schema: null, key: osId });
-			const osContent = osStore?.value ?? osStore;
-			const runtimesId = osContent?.runtimes;
+			const osStore = await maia.db({ op: 'read', schema: null, key: osId })
+			const osContent = osStore?.value ?? osStore
+			const runtimesId = osContent?.runtimes
 			if (runtimesId && typeof runtimesId === 'string' && runtimesId.startsWith('co_')) {
-				const runtimesStore = await maia.db({ op: 'read', schema: null, key: runtimesId });
-				runtimesData = runtimesStore?.value ?? runtimesStore;
+				const runtimesStore = await maia.db({ op: 'read', schema: null, key: runtimesId })
+				runtimesData = runtimesStore?.value ?? runtimesStore
 			}
 		}
 
-		const vibeKeys = Object.keys(vibesData).filter(k =>
-			k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$schema' && k !== 'type' &&
-			typeof vibesData[k] === 'string' && vibesData[k].startsWith('co_')
-		);
+		const vibeKeys = Object.keys(vibesData).filter(
+			(k) =>
+				k !== 'id' &&
+				k !== 'loading' &&
+				k !== 'error' &&
+				k !== '$schema' &&
+				k !== 'type' &&
+				typeof vibesData[k] === 'string' &&
+				vibesData[k].startsWith('co_'),
+		)
 
 		for (const vibeKey of vibeKeys) {
-			const vibeCoId = vibesData[vibeKey];
-			const hasBrowser = runtimesData ? await vibeHasBrowserRuntime(maia, runtimesData, vibeCoId) : false;
-			if (!hasBrowser) continue;
+			const vibeCoId = vibesData[vibeKey]
+			const hasBrowser = runtimesData
+				? await vibeHasBrowserRuntime(maia, runtimesData, vibeCoId)
+				: false
+			if (!hasBrowser) continue
 
-			const manifest = vibeManifestMap.get(vibeKey);
-			const name = manifest?.name || `${vibeKey.charAt(0).toUpperCase() + vibeKey.slice(1)}`;
-			const description = manifest?.description ? truncateDescription(manifest.description, 10) : `Open ${name}`;
+			const manifest = vibeManifestMap.get(vibeKey)
+			const name = manifest?.name || `${vibeKey.charAt(0).toUpperCase() + vibeKey.slice(1)}`
+			const description = manifest?.description
+				? truncateDescription(manifest.description, 10)
+				: `Open ${name}`
 			vibes.push({
 				key: vibeKey,
 				name,
 				description,
-				coId: vibeCoId
-			});
+				coId: vibeCoId,
+			})
 		}
-	} catch (error) {
-		console.warn('[Dashboard] Failed to load vibes for spark:', error);
-	}
-	return vibes;
+	} catch (_error) {}
+	return vibes
 }
 
 /**
@@ -221,23 +245,29 @@ async function loadVibesFromSpark(maia, spark) {
  * Level 1: Sparks (context scopes) + DB Viewer
  * Level 2: Vibes for selected spark (when currentSpark is set)
  */
-export async function renderDashboard(maia, authState, syncState, navigateToScreen, currentSpark, loadSpark, loadVibe) {
-	const accountId = maia?.id?.maiaId?.id || '';
-	let accountDisplayName = truncate(accountId, 12);
-	if (accountId && accountId.startsWith('co_z') && maia?.db) {
+export async function renderDashboard(
+	maia,
+	authState,
+	syncState,
+	_navigateToScreen,
+	currentSpark,
+	_loadSpark,
+	_loadVibe,
+) {
+	const accountId = maia?.id?.maiaId?.id || ''
+	let accountDisplayName = truncate(accountId, 12)
+	if (accountId?.startsWith('co_z') && maia?.db) {
 		try {
-			const profileNames = await resolveAccountCoIdsToProfileNames(maia, [accountId]);
-			accountDisplayName = profileNames.get(accountId) ?? accountDisplayName;
-		} catch (e) {
-			console.warn('[Dashboard] Failed to resolve account profile name:', e);
-		}
+			const profileNames = await resolveAccountCoIdsToProfileNames(maia, [accountId])
+			accountDisplayName = profileNames.get(accountId) ?? accountDisplayName
+		} catch (_e) {}
 	}
 
-	let cards = '';
+	let cards = ''
 
 	if (!currentSpark) {
 		// Level 1: Show sparks (context scopes) + DB Viewer
-		const sparks = await loadSparksFromAccount(maia);
+		const sparks = await loadSparksFromAccount(maia)
 
 		const dbViewerCard = `
 			<div class="dashboard-card whitish-card" onclick="window.navigateToScreen('db-viewer')">
@@ -251,9 +281,11 @@ export async function renderDashboard(maia, authState, syncState, navigateToScre
 					<p class="dashboard-card-description">Explore and inspect your CoValues</p>
 				</div>
 			</div>
-		`;
+		`
 
-		const sparkCards = sparks.map(spark => `
+		const sparkCards = sparks
+			.map(
+				(spark) => `
 			<div class="dashboard-card whitish-card" onclick="window.loadSpark('${escapeHtml(spark.key)}')">
 				<div class="dashboard-card-content">
 					<div class="dashboard-card-icon">
@@ -265,14 +297,18 @@ export async function renderDashboard(maia, authState, syncState, navigateToScre
 					<p class="dashboard-card-description">${escapeHtml(spark.description)}</p>
 				</div>
 			</div>
-		`).join('');
+		`,
+			)
+			.join('')
 
-		cards = dbViewerCard + sparkCards;
+		cards = dbViewerCard + sparkCards
 	} else {
 		// Level 2: Show vibes for the selected spark (no back card - Switch Spark in bottom navbar)
-		const vibes = await loadVibesFromSpark(maia, currentSpark);
+		const vibes = await loadVibesFromSpark(maia, currentSpark)
 
-		const vibeCards = vibes.map(vibe => `
+		const vibeCards = vibes
+			.map(
+				(vibe) => `
 			<div class="dashboard-card whitish-card" onclick="window.loadVibe('${escapeHtml(vibe.key)}')">
 				<div class="dashboard-card-content">
 					<div class="dashboard-card-icon">
@@ -284,14 +320,16 @@ export async function renderDashboard(maia, authState, syncState, navigateToScre
 					<p class="dashboard-card-description">${escapeHtml(vibe.description)}</p>
 				</div>
 			</div>
-		`).join('');
+		`,
+			)
+			.join('')
 
-		cards = vibeCards;
+		cards = vibeCards
 	}
-	
-	const headerTitle = currentSpark ? `${currentSpark} Vibes` : 'Me';
 
-	document.getElementById("app").innerHTML = `
+	const headerTitle = currentSpark ? `${currentSpark} Vibes` : 'Me'
+
+	document.getElementById('app').innerHTML = `
 		<div class="db-container">
 			<header class="db-header whitish-card">
 				<div class="header-content">
@@ -306,35 +344,51 @@ export async function renderDashboard(maia, authState, syncState, navigateToScre
 						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
 					</div>
 					<div class="header-right">
-						${authState.signedIn ? `
+						${
+							authState.signedIn
+								? `
 							<span class="db-status db-status-name" title="Account: ${accountId}">${escapeHtml(accountDisplayName)}</span>
-						` : ''}
+						`
+								: ''
+						}
 						<!-- Hamburger menu button (mobile only) -->
 						<button class="hamburger-btn" onclick="window.toggleMobileMenu()" aria-label="Toggle menu">
 							<span></span>
 							<span></span>
 							<span></span>
 						</button>
-						${authState.signedIn ? `
+						${
+							authState.signedIn
+								? `
 							<button class="sign-out-btn" onclick="window.handleSignOut()">
 								Sign Out
 							</button>
-						` : ''}
+						`
+								: ''
+						}
 					</div>
 				</div>
 				<!-- Mobile menu (collapsed by default) - account ID shown inside -->
 				<div class="mobile-menu" id="mobile-menu">
-					${authState.signedIn && accountId ? `
+					${
+						authState.signedIn && accountId
+							? `
 						<div class="mobile-menu-account-id">
 							<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
 							<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
 						</div>
-					` : ''}
-					${authState.signedIn ? `
+					`
+							: ''
+					}
+					${
+						authState.signedIn
+							? `
 						<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">
 							Sign Out
 						</button>
-					` : ''}
+					`
+							: ''
+					}
 				</div>
 			</header>
 
@@ -343,7 +397,9 @@ export async function renderDashboard(maia, authState, syncState, navigateToScre
 					${cards || `<div class="empty-state p-12 text-center text-slate-400 italic">${currentSpark ? 'No vibes in this context' : 'No context scopes available'}</div>`}
 				</div>
 			</div>
-			${currentSpark ? `
+			${
+				currentSpark
+					? `
 			<!-- Bottom navbar - Switch Spark (same position as Home in vibe viewer) -->
 			<div class="bottom-navbar">
 				<div class="bottom-navbar-left"></div>
@@ -357,44 +413,53 @@ export async function renderDashboard(maia, authState, syncState, navigateToScre
 				</div>
 				<div class="bottom-navbar-right"></div>
 			</div>
-			` : ''}
+			`
+					: ''
+			}
 		</div>
-	`;
+	`
 }
 
 /**
  * Render vibe viewer screen (full-screen vibe display)
  * @param {string} [currentSpark='@maia'] - Spark context scope for vibes
  */
-export async function renderVibeViewer(maia, authState, syncState, currentVibe, navigateToScreen, currentSpark = '@maia') {
-	const accountId = maia?.id?.maiaId?.id || '';
-	let accountDisplayName = truncate(accountId, 12);
-	if (accountId && accountId.startsWith('co_z') && maia?.db) {
+export async function renderVibeViewer(
+	maia,
+	authState,
+	syncState,
+	currentVibe,
+	_navigateToScreen,
+	currentSpark = '@maia',
+) {
+	const accountId = maia?.id?.maiaId?.id || ''
+	let accountDisplayName = truncate(accountId, 12)
+	if (accountId?.startsWith('co_z') && maia?.db) {
 		try {
-			const profileNames = await resolveAccountCoIdsToProfileNames(maia, [accountId]);
-			accountDisplayName = profileNames.get(accountId) ?? accountDisplayName;
-		} catch (e) {
-			console.warn('[VibeViewer] Failed to resolve account profile name:', e);
-		}
+			const profileNames = await resolveAccountCoIdsToProfileNames(maia, [accountId])
+			accountDisplayName = profileNames.get(accountId) ?? accountDisplayName
+		} catch (_e) {}
 	}
 	// Map vibe keys to display names
 	const vibeNameMap = {
-		'db': 'MaiaDB',
-		'todos': 'Todos'
-	};
-	const vibeLabel = currentVibe ? (vibeNameMap[currentVibe] || `${currentVibe.charAt(0).toUpperCase() + currentVibe.slice(1)} Vibe`) : 'Vibe';
-	
+		db: 'MaiaDB',
+		todos: 'Todos',
+	}
+	const vibeLabel = currentVibe
+		? vibeNameMap[currentVibe] || `${currentVibe.charAt(0).toUpperCase() + currentVibe.slice(1)} Vibe`
+		: 'Vibe'
+
 	// Clear any existing vibe containers before rendering new one
 	// This ensures we don't have multiple vibe containers stacked
-	const app = document.getElementById("app");
+	const app = document.getElementById('app')
 	if (app) {
-		const existingContainers = app.querySelectorAll('.vibe-container');
+		const existingContainers = app.querySelectorAll('.vibe-container')
 		for (const container of existingContainers) {
-			if (maia?.actorEngine) maia.actorEngine.destroyActorsForContainer(container);
-			container.remove();
+			if (maia?.actorEngine) maia.actorEngine.destroyActorsForContainer(container)
+			container.remove()
 		}
 	}
-	
+
 	app.innerHTML = `
 		<div class="db-container">
 			<header class="db-header whitish-card">
@@ -410,35 +475,51 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
 					</div>
 					<div class="header-right">
-						${authState.signedIn ? `
+						${
+							authState.signedIn
+								? `
 							<span class="db-status db-status-name" title="Account: ${accountId}">${escapeHtml(accountDisplayName)}</span>
-						` : ''}
+						`
+								: ''
+						}
 						<!-- Hamburger menu button (mobile only) -->
 						<button class="hamburger-btn" onclick="window.toggleMobileMenu()" aria-label="Toggle menu">
 							<span></span>
 							<span></span>
 							<span></span>
 						</button>
-						${authState.signedIn ? `
+						${
+							authState.signedIn
+								? `
 							<button class="sign-out-btn" onclick="window.handleSignOut()">
 								Sign Out
 							</button>
-						` : ''}
+						`
+								: ''
+						}
 					</div>
 				</div>
 				<!-- Mobile menu (collapsed by default) - account ID shown inside -->
 				<div class="mobile-menu" id="mobile-menu">
-					${authState.signedIn && accountId ? `
+					${
+						authState.signedIn && accountId
+							? `
 						<div class="mobile-menu-account-id">
 							<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
 							<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
 						</div>
-					` : ''}
-					${authState.signedIn ? `
+					`
+							: ''
+					}
+					${
+						authState.signedIn
+							? `
 						<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">
 							Sign Out
 						</button>
-					` : ''}
+					`
+							: ''
+					}
 				</div>
 			</header>
 
@@ -466,120 +547,116 @@ export async function renderVibeViewer(maia, authState, syncState, currentVibe, 
 				</div>
 			</div>
 		</div>
-	`;
-	
+	`
+
 	// Add sidebar toggle handlers for maiadb vibe
 	setTimeout(() => {
-		const vibeContainer = document.querySelector('.vibe-container');
-		if (vibeContainer && vibeContainer.shadowRoot) {
-			const navAside = vibeContainer.shadowRoot.querySelector('.nav-aside');
-			const detailAside = vibeContainer.shadowRoot.querySelector('.detail-aside');
-			
+		const vibeContainer = document.querySelector('.vibe-container')
+		if (vibeContainer?.shadowRoot) {
+			const navAside = vibeContainer.shadowRoot.querySelector('.nav-aside')
+			const detailAside = vibeContainer.shadowRoot.querySelector('.detail-aside')
+
 			// Start collapsed by default, no transitions
 			if (navAside) {
-				navAside.classList.add('collapsed');
+				navAside.classList.add('collapsed')
 			}
 			if (detailAside) {
-				detailAside.classList.add('collapsed');
+				detailAside.classList.add('collapsed')
 			}
-			
+
 			// Add toggle handlers
-			const navToggle = vibeContainer.shadowRoot.querySelector('.nav-toggle');
-			const detailToggle = vibeContainer.shadowRoot.querySelector('.detail-toggle');
-			
+			const navToggle = vibeContainer.shadowRoot.querySelector('.nav-toggle')
+			const detailToggle = vibeContainer.shadowRoot.querySelector('.detail-toggle')
+
 			if (navToggle) {
 				navToggle.addEventListener('click', () => {
 					if (navAside) {
 						// Enable transitions when user explicitly toggles
-						navAside.classList.add('sidebar-ready');
-						navAside.classList.toggle('collapsed');
+						navAside.classList.add('sidebar-ready')
+						navAside.classList.toggle('collapsed')
 					}
-				});
+				})
 			}
-			
+
 			if (detailToggle) {
 				detailToggle.addEventListener('click', () => {
 					if (detailAside) {
 						// Enable transitions when user explicitly toggles
-						detailAside.classList.add('sidebar-ready');
-						detailAside.classList.toggle('collapsed');
+						detailAside.classList.add('sidebar-ready')
+						detailAside.classList.toggle('collapsed')
 					}
-				});
+				})
 			}
 		}
-	}, 100);
-	
+	}, 100)
+
 	// Load vibe asynchronously after DOM is updated
 	requestAnimationFrame(async () => {
 		try {
-			await new Promise(resolve => setTimeout(resolve, 10));
-			
+			await new Promise((resolve) => setTimeout(resolve, 10))
+
 			// Ensure only one vibe container exists (cleanup any duplicates)
-			const allContainers = document.querySelectorAll('.vibe-container');
+			const allContainers = document.querySelectorAll('.vibe-container')
 			if (allContainers.length > 1) {
-				console.warn(`[Vibe Viewer] Found ${allContainers.length} vibe containers, removing duplicates`);
-				const targetContainer = document.getElementById(`vibe-container-${currentVibe}`);
+				const targetContainer = document.getElementById(`vibe-container-${currentVibe}`)
 				for (const container of allContainers) {
 					if (container !== targetContainer) {
-						container.remove();
+						container.remove()
 					}
 				}
 			}
-			
-			const container = document.getElementById(`vibe-container-${currentVibe}`);
+
+			const container = document.getElementById(`vibe-container-${currentVibe}`)
 			if (!container) {
-				console.error(`[Vibe Viewer] Container not found: vibe-container-${currentVibe}`);
-				return;
+				return
 			}
 			if (!maia) {
-				console.error(`[Vibe Viewer] MaiaOS instance not available`);
-				return;
+				return
 			}
-			
+
 			// Clear container before loading new vibe (remove any existing content)
 			// The kernel will handle actor detachment and reuse logic
-			container.innerHTML = '';
-			
+			container.innerHTML = ''
+
 			// Load vibe from spark context (account.sparks[spark].vibes)
-			await maia.loadVibeFromAccount(currentVibe, container, currentSpark || '@maia');
-			
+			await maia.loadVibeFromAccount(currentVibe, container, currentSpark || '@maia')
+
 			// Add sidebar toggle handlers for maiadb vibe (after vibe loads)
 			setTimeout(() => {
 				// Use shadow root if vibe is in shadow DOM
-				const vibeContainer = document.getElementById(`vibe-container-${currentVibe}`);
+				const vibeContainer = document.getElementById(`vibe-container-${currentVibe}`)
 				if (vibeContainer) {
-					const shadowRoot = vibeContainer.shadowRoot || vibeContainer;
-					const navToggle = shadowRoot.querySelector('.nav-toggle');
-					const detailToggle = shadowRoot.querySelector('.detail-toggle');
-					
+					const shadowRoot = vibeContainer.shadowRoot || vibeContainer
+					const navToggle = shadowRoot.querySelector('.nav-toggle')
+					const detailToggle = shadowRoot.querySelector('.detail-toggle')
+
 					if (navToggle) {
 						navToggle.addEventListener('click', () => {
-							const navAside = navToggle.closest('.nav-aside');
+							const navAside = navToggle.closest('.nav-aside')
 							if (navAside) {
-								navAside.classList.toggle('collapsed');
+								navAside.classList.toggle('collapsed')
 							}
-						});
+						})
 					}
-					
+
 					if (detailToggle) {
 						detailToggle.addEventListener('click', () => {
-							const detailAside = detailToggle.closest('.detail-aside');
+							const detailAside = detailToggle.closest('.detail-aside')
 							if (detailAside) {
-								detailAside.classList.toggle('collapsed');
+								detailAside.classList.toggle('collapsed')
 							}
-						});
+						})
 					}
 				}
-			}, 500);
-			
+			}, 500)
+
 			// Store container reference for cleanup on unload
-			window.currentVibeContainer = container;
+			window.currentVibeContainer = container
 		} catch (error) {
-			console.error(`❌ Failed to load vibe ${currentVibe}:`, error);
-			const container = document.getElementById(`vibe-container-${currentVibe}`);
+			const container = document.getElementById(`vibe-container-${currentVibe}`)
 			if (container) {
-				container.innerHTML = `<div class="empty-state p-8 text-center text-rose-500 font-medium bg-rose-50/50 rounded-2xl border border-rose-100">Error loading vibe: ${error.message}</div>`;
+				container.innerHTML = `<div class="empty-state p-8 text-center text-rose-500 font-medium bg-rose-50/50 rounded-2xl border border-rose-100">Error loading vibe: ${error.message}</div>`
 			}
 		}
-	});
+	})
 }

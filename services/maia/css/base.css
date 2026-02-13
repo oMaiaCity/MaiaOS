@@ -1,60 +1,61 @@
 /* Local fonts from maia-brand (IndieFlower + Plus Jakarta Sans) */
 @font-face {
-  font-family: 'Indie Flower';
-  src: url('/brand/fonts/IndieFlower/IndieFlower-Regular.ttf') format('truetype');
-  font-weight: normal;
-  font-style: normal;
-  font-display: swap;
+	font-family: "Indie Flower";
+	src: url("/brand/fonts/IndieFlower/IndieFlower-Regular.ttf") format("truetype");
+	font-weight: normal;
+	font-style: normal;
+	font-display: swap;
 }
 
 @font-face {
-  font-family: 'Plus Jakarta Sans';
-  src: url('/brand/fonts/Jarkata/PlusJakartaSans-VariableFont_wght.ttf') format('truetype');
-  font-weight: 100 800;
-  font-style: normal;
-  font-display: swap;
+	font-family: "Plus Jakarta Sans";
+	src: url("/brand/fonts/Jarkata/PlusJakartaSans-VariableFont_wght.ttf") format("truetype");
+	font-weight: 100 800;
+	font-style: normal;
+	font-display: swap;
 }
 
 * {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
 }
 
 body {
-  font-family: var(--font-body);
-  font-weight: var(--font-weight-normal);
-  line-height: 1.6;
-  color: var(--color-marine-blue);
-  min-height: 100vh;
-  margin: 0;
-  padding: 0;
-  -webkit-font-smoothing: antialiased;
-  background: var(--color-soft-clay);
-  position: relative;
-  overflow-x: hidden;
+	font-family: var(--font-body);
+	font-weight: var(--font-weight-normal);
+	line-height: 1.6;
+	color: var(--color-marine-blue);
+	min-height: 100vh;
+	margin: 0;
+	padding: 0;
+	-webkit-font-smoothing: antialiased;
+	background: var(--color-soft-clay);
+	position: relative;
+	overflow-x: hidden;
 }
 
 /* FOUNDATION */
 .bg-foundation {
-  position: fixed;
-  inset: 0;
-  z-index: -1;
-  background: url('/brand/images/banner.png') center/cover no-repeat;
-  background-attachment: fixed;
+	position: fixed;
+	inset: 0;
+	z-index: -1;
+	background: url("/brand/images/banner.png") center / cover no-repeat;
+	background-attachment: fixed;
 }
 
 .bg-overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  background: rgba(0, 0, 0, 0.40); /* Atmospheric depth */
+	position: fixed;
+	inset: 0;
+	z-index: 0;
+	background: rgba(0, 0, 0, 0.4); /* Atmospheric depth */
 }
 
 /* Watermark logo background - Removed for hero banner */
 
 /* Utils - Container moved to hero.css */
 
-pre, code {
-  font-family: 'Monaco', 'Menlo', 'Courier New', monospace;
+pre,
+code {
+	font-family: "Monaco", "Menlo", "Courier New", monospace;
 }

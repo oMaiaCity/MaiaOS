@@ -6,12 +6,7 @@
 	"main": "src/index.js",
 	"exports": {
 		".": "./src/index.js",
-		"./app.css": "./src/app.css",
-		"./components": "./src/components/index.js",
-		"./views": "./src/views/index.js",
-		"./views/types": "./src/views/types.ts",
-		"./tokens": "./src/tokens/index.js",
-		"./utilities": "./src/utilities/index.js"
+		"./legal": "./src/legal/index.js"
 	},
 	"scripts": {
 		"sync-assets": "node ../../scripts/sync-assets.js",

@@ -3,15 +3,19 @@
 /**
  * Generate favicons using @realfavicongenerator/generate-favicon Node.js API
  * Outputs to libs/maia-brand/src/assets/favicon/
- * 
+ *
  * logo_dark.svg is for light backgrounds (used as main icon)
  * logo.svg is for dark backgrounds (used as darkIcon)
  */
 
+import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
-import { generateFaviconFiles, generateFaviconHtml, IconTransformationType } from '@realfavicongenerator/generate-favicon'
+import {
+	generateFaviconFiles,
+	generateFaviconHtml,
+	IconTransformationType,
+} from '@realfavicongenerator/generate-favicon'
 import { getNodeImageAdapter, loadAndConvertToSvg } from '@realfavicongenerator/image-adapter-node'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -46,7 +50,7 @@ async function generateFavicons() {
 					regularIconTransformation: {
 						type: IconTransformationType.None,
 					},
-					darkIconType: "specific",
+					darkIconType: 'specific',
 					darkIconTransformation: {
 						type: IconTransformationType.None,
 					},
@@ -54,26 +58,26 @@ async function generateFavicons() {
 				touch: {
 					transformation: {
 						type: IconTransformationType.Background,
-						backgroundColor: "#e3e9ec",
+						backgroundColor: '#e3e9ec',
 						backgroundRadius: 0,
 						imageScale: 0.7,
 					},
-					appTitle: "MaiaCity"
+					appTitle: 'MaiaCity',
 				},
 				webAppManifest: {
 					transformation: {
 						type: IconTransformationType.Background,
-						backgroundColor: "#e3e9ec",
+						backgroundColor: '#e3e9ec',
 						backgroundRadius: 0,
 						imageScale: 0.6,
 					},
-					backgroundColor: "#ffffff",
-					themeColor: "#e3e9ec",
-					name: "Maia City",
-					shortName: "MaiaCity"
-				}
+					backgroundColor: '#ffffff',
+					themeColor: '#e3e9ec',
+					name: 'Maia City',
+					shortName: 'MaiaCity',
+				},
 			},
-			path: "/brand/favicon/",
+			path: '/brand/favicon/',
 		}
 
 		// Generate favicon files
@@ -95,14 +99,12 @@ async function generateFavicons() {
 			const htmlString = typeof html === 'string' ? html : String(html)
 			writeFileSync(htmlPath, htmlString)
 			// HTML markup log removed - only show summary at end
-		} catch (htmlError) {
+		} catch (_htmlError) {
 			// Non-fatal - continue silently
 		}
 
 		console.log('[favicons] ✓ All favicons generated successfully!')
-	} catch (error) {
-		console.error('[favicons] ✗ Failed:', error.message)
-		console.warn('[favicons] ⚠️  Continuing with existing favicons')
+	} catch (_error) {
 		// Don't throw - make it non-fatal so dev server can continue
 	}
 }

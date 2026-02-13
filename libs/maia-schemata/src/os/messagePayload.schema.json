@@ -1,11 +1,10 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/messagePayload",
-  "title": "@maia/schema/messagePayload",
-  "description": "Message payload definition",
-  "cotype": "comap",
-  "indexing": true,
-  "properties": {
-  },
-  "additionalProperties": true
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/messagePayload",
+	"title": "@maia/schema/messagePayload",
+	"description": "Message payload definition",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {},
+	"additionalProperties": true
 }

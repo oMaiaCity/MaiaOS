@@ -1,17 +1,17 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/guard",
-  "title": "@maia/schema/guard",
-  "description": "JSON Schema guard for conditional logic - checks state/context conditions (NOT payload validation)",
-  "cotype": "comap",
-  "indexing": true,
-  "required": ["schema"],
-  "properties": {
-    "schema": {
-      "type": "object",
-      "description": "JSON Schema to validate against current state/context (for conditional logic only, NOT payload validation)",
-      "additionalProperties": true
-    }
-  },
-  "additionalProperties": false
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/guard",
+	"title": "@maia/schema/guard",
+	"description": "JSON Schema guard for conditional logic - checks state/context conditions (NOT payload validation)",
+	"cotype": "comap",
+	"indexing": true,
+	"required": ["schema"],
+	"properties": {
+		"schema": {
+			"type": "object",
+			"description": "JSON Schema to validate against current state/context (for conditional logic only, NOT payload validation)",
+			"additionalProperties": true
+		}
+	},
+	"additionalProperties": false
 }

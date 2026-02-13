@@ -5,52 +5,49 @@
  */
 
 // Import vibe manifest
-import chatVibe from './manifest.vibe.maia';
-import brandStyle from './vibe/brand.style.maia';
+import chatVibe from './manifest.vibe.maia'
+import brandStyle from './vibe/brand.style.maia'
 
 // Import all actors
-import vibeActor from './vibe/vibe.actor.maia';
-
-// Import all views
-import vibeView from './vibe/vibe.view.maia';
-
+import vibeActor from './vibe/vibe.actor.maia'
 // Import all contexts
-import vibeContext from './vibe/vibe.context.maia';
+import vibeContext from './vibe/vibe.context.maia'
+// Import all inbox costreams
+import vibeInbox from './vibe/vibe.inbox.maia'
 
 // Import all states
-import vibeState from './vibe/vibe.state.maia';
-
-// Import all inbox costreams
-import vibeInbox from './vibe/vibe.inbox.maia';
+import vibeState from './vibe/vibe.state.maia'
+// Import all views
+import vibeView from './vibe/vibe.view.maia'
 
 /**
  * Chat Vibe Registry
  * All configs pre-loaded and ready to use
  */
 export const ChatVibeRegistry = {
-  vibe: chatVibe,
-  
-  styles: {
-    '@maia/chat/style/brand': brandStyle,
-  },
-  
-  actors: {
-    '@maia/chat/actor/vibe': vibeActor,
-  },
+	vibe: chatVibe,
 
-  views: {
-    '@maia/chat/view/vibe': vibeView,
-  },
+	styles: {
+		'@maia/chat/style/brand': brandStyle,
+	},
 
-  contexts: {
-    '@maia/chat/context/vibe': vibeContext,
-  },
+	actors: {
+		'@maia/chat/actor/vibe': vibeActor,
+	},
 
-  states: {
-    '@maia/chat/state/vibe': vibeState,
-  },
+	views: {
+		'@maia/chat/view/vibe': vibeView,
+	},
 
-  inboxes: {
-    '@maia/chat/inbox/vibe': vibeInbox,
-  },
-};
+	contexts: {
+		'@maia/chat/context/vibe': vibeContext,
+	},
+
+	states: {
+		'@maia/chat/state/vibe': vibeState,
+	},
+
+	inboxes: {
+		'@maia/chat/inbox/vibe': vibeInbox,
+	},
+}

@@ -1,126 +1,126 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/view",
-  "title": "@maia/schema/view",
-  "description": "UI structure definition with DOM tree, expressions, loops, and event handlers (recursive viewNode structure)",
-  "cotype": "comap",
-  "indexing": true,
-  "properties": {
-    "content": {
-      "type": "object",
-      "description": "View content structure (recursive viewNode)",
-      "$ref": "#/$defs/viewNode"
-    }
-  },
-  "$defs": {
-    "viewNode": {
-      "type": "object",
-      "description": "Recursive DOM node structure",
-      "properties": {
-        "tag": { "type": "string" },
-        "class": { "type": "string" },
-        "text": {
-          "anyOf": [
-            { "type": "string", "pattern": "^\\$\\$" },
-            { "type": "string", "pattern": "^@" },
-            { "type": "string", "pattern": "^\\$[^$]" },
-            { "type": "string" },
-            { "type": "number" },
-            { "type": "boolean" },
-            { "type": "null" }
-          ]
-        },
-        "value": {
-          "anyOf": [
-            { "type": "string", "pattern": "^\\$\\$" },
-            { "type": "string", "pattern": "^@" },
-            { "type": "string", "pattern": "^\\$[^$]" },
-            { "type": "string" },
-            { "type": "number" },
-            { "type": "boolean" },
-            { "type": "null" }
-          ]
-        },
-        "attrs": {
-          "type": "object",
-          "additionalProperties": {
-            "anyOf": [
-              { "type": "string", "pattern": "^\\$\\$" },
-              { "type": "string", "pattern": "^@" },
-              { "type": "string", "pattern": "^\\$[^$]" },
-              { "type": "string" },
-              { "type": "number" },
-              { "type": "boolean" },
-              { "type": "null" },
-              {
-                "type": "object",
-                "additionalProperties": {
-                  "anyOf": [
-                    { "type": "string", "pattern": "^\\$\\$" },
-                    { "type": "string", "pattern": "^@" },
-                    { "type": "string", "pattern": "^\\$[^$]" },
-                    { "type": "string" },
-                    { "type": "number" },
-                    { "type": "boolean" },
-                    { "type": "null" }
-                  ]
-                }
-              }
-            ]
-          }
-        },
-        "children": {
-          "type": "array",
-          "items": {
-            "$ref": "#/$defs/viewNode"
-          }
-        },
-        "$on": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "object",
-            "properties": {
-              "send": { "type": "string" },
-              "payload": { "type": "object", "additionalProperties": true },
-              "key": { "type": "string" }
-            },
-            "required": ["send"]
-          }
-        },
-        "$each": {
-          "type": "object",
-          "properties": {
-            "items": {
-              "anyOf": [
-                { "type": "string", "pattern": "^\\$\\$" },
-                { "type": "string", "pattern": "^@" },
-                { "type": "string", "pattern": "^\\$[^$]" },
-                { "type": "string" },
-                { "type": "number" },
-                { "type": "boolean" },
-                { "type": "null" }
-              ]
-            },
-            "template": {
-              "$ref": "#/$defs/viewNode"
-            }
-          },
-          "required": ["items", "template"]
-        },
-        "$slot": {
-          "anyOf": [
-            { "type": "string", "pattern": "^\\$\\$" },
-            { "type": "string", "pattern": "^@" },
-            { "type": "string", "pattern": "^\\$[^$]" },
-            { "type": "string" },
-            { "type": "number" },
-            { "type": "boolean" },
-            { "type": "null" }
-          ]
-        }
-      },
-      "additionalProperties": false
-    }
-  },
-  "additionalProperties": false
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/view",
+	"title": "@maia/schema/view",
+	"description": "UI structure definition with DOM tree, expressions, loops, and event handlers (recursive viewNode structure)",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"content": {
+			"type": "object",
+			"description": "View content structure (recursive viewNode)",
+			"$ref": "#/$defs/viewNode"
+		}
+	},
+	"$defs": {
+		"viewNode": {
+			"type": "object",
+			"description": "Recursive DOM node structure",
+			"properties": {
+				"tag": { "type": "string" },
+				"class": { "type": "string" },
+				"text": {
+					"anyOf": [
+						{ "type": "string", "pattern": "^\\$\\$" },
+						{ "type": "string", "pattern": "^@" },
+						{ "type": "string", "pattern": "^\\$[^$]" },
+						{ "type": "string" },
+						{ "type": "number" },
+						{ "type": "boolean" },
+						{ "type": "null" }
+					]
+				},
+				"value": {
+					"anyOf": [
+						{ "type": "string", "pattern": "^\\$\\$" },
+						{ "type": "string", "pattern": "^@" },
+						{ "type": "string", "pattern": "^\\$[^$]" },
+						{ "type": "string" },
+						{ "type": "number" },
+						{ "type": "boolean" },
+						{ "type": "null" }
+					]
+				},
+				"attrs": {
+					"type": "object",
+					"additionalProperties": {
+						"anyOf": [
+							{ "type": "string", "pattern": "^\\$\\$" },
+							{ "type": "string", "pattern": "^@" },
+							{ "type": "string", "pattern": "^\\$[^$]" },
+							{ "type": "string" },
+							{ "type": "number" },
+							{ "type": "boolean" },
+							{ "type": "null" },
+							{
+								"type": "object",
+								"additionalProperties": {
+									"anyOf": [
+										{ "type": "string", "pattern": "^\\$\\$" },
+										{ "type": "string", "pattern": "^@" },
+										{ "type": "string", "pattern": "^\\$[^$]" },
+										{ "type": "string" },
+										{ "type": "number" },
+										{ "type": "boolean" },
+										{ "type": "null" }
+									]
+								}
+							}
+						]
+					}
+				},
+				"children": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/viewNode"
+					}
+				},
+				"$on": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "object",
+						"properties": {
+							"send": { "type": "string" },
+							"payload": { "type": "object", "additionalProperties": true },
+							"key": { "type": "string" }
+						},
+						"required": ["send"]
+					}
+				},
+				"$each": {
+					"type": "object",
+					"properties": {
+						"items": {
+							"anyOf": [
+								{ "type": "string", "pattern": "^\\$\\$" },
+								{ "type": "string", "pattern": "^@" },
+								{ "type": "string", "pattern": "^\\$[^$]" },
+								{ "type": "string" },
+								{ "type": "number" },
+								{ "type": "boolean" },
+								{ "type": "null" }
+							]
+						},
+						"template": {
+							"$ref": "#/$defs/viewNode"
+						}
+					},
+					"required": ["items", "template"]
+				},
+				"$slot": {
+					"anyOf": [
+						{ "type": "string", "pattern": "^\\$\\$" },
+						{ "type": "string", "pattern": "^@" },
+						{ "type": "string", "pattern": "^\\$[^$]" },
+						{ "type": "string" },
+						{ "type": "number" },
+						{ "type": "boolean" },
+						{ "type": "null" }
+					]
+				}
+			},
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
 }

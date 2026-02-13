@@ -1,61 +1,61 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/tool",
-  "title": "@maia/schema/tool",
-  "description": "Tool metadata (AI-compatible JSON schema)",
-  "cotype": "comap",
-  "indexing": true,
-  "required": ["name", "description", "parameters"],
-  "properties": {
-    "name": {
-      "type": "string",
-      "description": "Tool identifier (e.g., '@mutation/create')",
-      "pattern": "^@"
-    },
-    "description": {
-      "type": "string",
-      "description": "Tool description"
-    },
-    "parameters": {
-      "type": "object",
-      "description": "JSON Schema for tool parameters (standard JSON Schema format)",
-      "properties": {
-        "type": {
-          "type": "string",
-          "enum": ["object", "array", "string", "number", "boolean", "null"]
-        },
-        "properties": {
-          "type": "object",
-          "additionalProperties": {
-            "type": "object",
-            "description": "Parameter property schema",
-            "properties": {
-              "type": {
-                "type": "string"
-              },
-              "description": {
-                "type": "string"
-              },
-              "required": {
-                "type": "boolean"
-              },
-              "properties": {
-                "type": "object",
-                "additionalProperties": true
-              }
-            },
-            "additionalProperties": true
-          }
-        },
-        "required": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        }
-      },
-      "required": ["type"],
-      "additionalProperties": true
-    }
-  }
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/tool",
+	"title": "@maia/schema/tool",
+	"description": "Tool metadata (AI-compatible JSON schema)",
+	"cotype": "comap",
+	"indexing": true,
+	"required": ["name", "description", "parameters"],
+	"properties": {
+		"name": {
+			"type": "string",
+			"description": "Tool identifier (e.g., '@mutation/create')",
+			"pattern": "^@"
+		},
+		"description": {
+			"type": "string",
+			"description": "Tool description"
+		},
+		"parameters": {
+			"type": "object",
+			"description": "JSON Schema for tool parameters (standard JSON Schema format)",
+			"properties": {
+				"type": {
+					"type": "string",
+					"enum": ["object", "array", "string", "number", "boolean", "null"]
+				},
+				"properties": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "object",
+						"description": "Parameter property schema",
+						"properties": {
+							"type": {
+								"type": "string"
+							},
+							"description": {
+								"type": "string"
+							},
+							"required": {
+								"type": "boolean"
+							},
+							"properties": {
+								"type": "object",
+								"additionalProperties": true
+							}
+						},
+						"additionalProperties": true
+					}
+				},
+				"required": {
+					"type": "array",
+					"items": {
+						"type": "string"
+					}
+				}
+			},
+			"required": ["type"],
+			"additionalProperties": true
+		}
+	}
 }

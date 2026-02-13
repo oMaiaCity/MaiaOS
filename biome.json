@@ -7,16 +7,18 @@
 	},
 	"files": {
 		"includes": [
-			"**",
-			"!**/node_modules",
-			"!**/build",
-			"!**/dist",
-			"!**/.svelte-kit",
-			"!**/gen",
+			"**/*.js",
+			"**/*.css",
+			"**/*.html",
+			"**/*.md",
+			"**/*.json",
+			"!node_modules",
+			"!build",
+			"!dist",
+			"!gen",
 			"!**/*.generated.*",
-			"!**/bun.lock",
-			"!**/package-lock.json",
-			"!**/yarn.lock"
+			"!.cursor",
+			"!.vscode"
 		]
 	},
 	"formatter": {
@@ -39,7 +41,10 @@
 		"rules": {
 			"recommended": true,
 			"correctness": {
-				"noUnusedVariables": "error",
+				"noUnusedVariables": {
+					"level": "error",
+					"options": { "ignoreRestSiblings": true }
+				},
 				"noUnusedImports": "error",
 				"noUnusedPrivateClassMembers": "error"
 			},
@@ -47,7 +52,7 @@
 				"noConsole": {
 					"level": "warn",
 					"options": {
-						"allow": ["log"]
+						"allow": ["log", "error"]
 					}
 				}
 			},
@@ -75,11 +80,6 @@
 			"allowComments": true
 		}
 	},
-	"css": {
-		"parser": {
-			"tailwindDirectives": true
-		}
-	},
 	"html": {
 		"experimentalFullSupportEnabled": true,
 		"formatter": {
@@ -97,49 +97,6 @@
 					"trailingCommas": "none",
 					"expand": "always"
 				}
-			}
-		},
-		{
-			"includes": ["**/*.svelte", "**/*.astro", "**/*.vue"],
-			"linter": {
-				"rules": {
-					"style": {
-						"useConst": "off",
-						"useImportType": "off"
-					},
-					"correctness": {
-						"noUnusedVariables": "off",
-						"noUnusedImports": "off"
-					},
-					"suspicious": {
-						"noExplicitAny": "warn"
-					}
-				}
-			},
-			"javascript": {
-				"parser": {
-					"unsafeParameterDecoratorsEnabled": true
-				}
-			}
-		},
-		{
-			"includes": ["**/*.svelte"],
-			"linter": {
-				"rules": {
-					"correctness": {
-						"noUnusedVariables": "off",
-						"noUnusedImports": "off"
-					},
-					"suspicious": {
-						"noExplicitAny": "warn"
-					},
-					"style": {
-						"noParameterAssign": "off"
-					}
-				}
-			},
-			"formatter": {
-				"enabled": true
 			}
 		}
 	]

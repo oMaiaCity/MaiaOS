@@ -1,58 +1,58 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/action",
-  "title": "@maia/schema/action",
-  "description": "Action (tool invocation, context update, or data mapping)",
-  "cotype": "comap",
-  "indexing": true,
-  "oneOf": [
-    {
-      "type": "object",
-      "properties": {
-        "tool": {
-          "type": "string",
-          "description": "Tool identifier (e.g., '@mutation/create')"
-        },
-        "payload": {
-          "description": "Tool payload (can contain expressions)",
-          "type": "object",
-          "additionalProperties": true
-        }
-      },
-      "required": ["tool"]
-    },
-    {
-      "type": "object",
-      "properties": {
-        "updateContext": {
-          "type": "object",
-          "description": "Context updates (infrastructure, not a tool)",
-          "additionalProperties": true
-        }
-      },
-      "required": ["updateContext"]
-    },
-    {
-      "type": "object",
-      "properties": {
-        "mapData": {
-          "type": "object",
-          "description": "Map operations engine configs to context keys (universal API)",
-          "additionalProperties": {
-            "type": "object",
-            "description": "Operations engine config (op, schema, filter, key, keys, etc.)",
-            "properties": {
-              "op": {
-                "type": "string",
-                "description": "Operation type (read, create, update, delete, schema, resolve, etc.)",
-                "default": "read"
-              }
-            },
-            "additionalProperties": true
-          }
-        }
-      },
-      "required": ["mapData"]
-    }
-  ]
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/action",
+	"title": "@maia/schema/action",
+	"description": "Action (tool invocation, context update, or data mapping)",
+	"cotype": "comap",
+	"indexing": true,
+	"oneOf": [
+		{
+			"type": "object",
+			"properties": {
+				"tool": {
+					"type": "string",
+					"description": "Tool identifier (e.g., '@mutation/create')"
+				},
+				"payload": {
+					"description": "Tool payload (can contain expressions)",
+					"type": "object",
+					"additionalProperties": true
+				}
+			},
+			"required": ["tool"]
+		},
+		{
+			"type": "object",
+			"properties": {
+				"updateContext": {
+					"type": "object",
+					"description": "Context updates (infrastructure, not a tool)",
+					"additionalProperties": true
+				}
+			},
+			"required": ["updateContext"]
+		},
+		{
+			"type": "object",
+			"properties": {
+				"mapData": {
+					"type": "object",
+					"description": "Map operations engine configs to context keys (universal API)",
+					"additionalProperties": {
+						"type": "object",
+						"description": "Operations engine config (op, schema, filter, key, keys, etc.)",
+						"properties": {
+							"op": {
+								"type": "string",
+								"description": "Operation type (read, create, update, delete, schema, resolve, etc.)",
+								"default": "read"
+							}
+						},
+						"additionalProperties": true
+					}
+				}
+			},
+			"required": ["mapData"]
+		}
+	]
 }

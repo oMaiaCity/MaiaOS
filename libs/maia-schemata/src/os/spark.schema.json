@@ -1,1 +1,27 @@
-{"$schema":"@maia/schema/meta","$id":"@maia/schema/data/spark","title":"@maia/schema/data/spark","description":"Spark CoMap - references a group for collaborative spaces","cotype":"comap","indexing":true,"required":["name","group"],"properties":{"name":{"type":"string","description":"Spark name e.g. @maia"},"group":{"type":"string","pattern":"^co_z[a-zA-Z0-9]+$","description":"Co-id reference to the group this spark represents"},"os":{"type":"string","pattern":"^co_z[a-zA-Z0-9]+$","description":"OS CoMap - contains schematas, indexes. Owned by group."},"vibes":{"type":"string","pattern":"^co_z[a-zA-Z0-9]+$","description":"Vibes registry CoMap for this spark (owned by group)"}}}
+{
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/data/spark",
+	"title": "@maia/schema/data/spark",
+	"description": "Spark CoMap - references a group for collaborative spaces",
+	"cotype": "comap",
+	"indexing": true,
+	"required": ["name", "group"],
+	"properties": {
+		"name": { "type": "string", "description": "Spark name e.g. @maia" },
+		"group": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "Co-id reference to the group this spark represents"
+		},
+		"os": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "OS CoMap - contains schematas, indexes. Owned by group."
+		},
+		"vibes": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "Vibes registry CoMap for this spark (owned by group)"
+		}
+	}
+}

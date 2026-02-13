@@ -1,12 +1,12 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/inbox",
-  "title": "@maia/schema/inbox",
-  "description": "A costream (append-only stream) of messages received by this actor",
-  "cotype": "costream",
-  "indexing": true,
-  "items": {
-    "$co": "@maia/schema/message",
-    "description": "Each item is a co-id reference to a message"
-  }
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/inbox",
+	"title": "@maia/schema/inbox",
+	"description": "A costream (append-only stream) of messages received by this actor",
+	"cotype": "costream",
+	"indexing": true,
+	"items": {
+		"$co": "@maia/schema/message",
+		"description": "Each item is a co-id reference to a message"
+	}
 }

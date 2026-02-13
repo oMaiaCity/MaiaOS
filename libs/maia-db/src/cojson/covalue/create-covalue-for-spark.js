@@ -9,10 +9,10 @@
  * Exception: guardian itself is NOT created via this util - it keeps the account.
  */
 
-import { createCoMap } from '../cotypes/coMap.js';
-import { createCoList } from '../cotypes/coList.js';
-import { createCoStream } from '../cotypes/coStream.js';
-import { getSparkGroup, removeGroupMember } from '../groups/groups.js';
+import { createCoList } from '../cotypes/coList.js'
+import { createCoMap } from '../cotypes/coMap.js'
+import { createCoStream } from '../cotypes/coStream.js'
+import { getSparkGroup, removeGroupMember } from '../groups/groups.js'
 
 /**
  * Resolve guardian from context.
@@ -21,20 +21,20 @@ import { getSparkGroup, removeGroupMember } from '../groups/groups.js';
  * @returns {Promise<{ node, account, guardian }>}
  */
 async function resolveContext(context, spark) {
-  if (context.node && context.account && context.guardian) {
-    return {
-      node: context.node,
-      account: context.account,
-      guardian: context.guardian
-    };
-  }
-  if (context.node && context.account && spark) {
-    const guardian = await getSparkGroup(context, spark);
-    return { node: context.node, account: context.account, guardian };
-  }
-  throw new Error(
-    '[createCoValueForSpark] Invalid context. Provide backend (with node, account) + spark, or { node, account, guardian }.'
-  );
+	if (context.node && context.account && context.guardian) {
+		return {
+			node: context.node,
+			account: context.account,
+			guardian: context.guardian,
+		}
+	}
+	if (context.node && context.account && spark) {
+		const guardian = await getSparkGroup(context, spark)
+		return { node: context.node, account: context.account, guardian }
+	}
+	throw new Error(
+		'[createCoValueForSpark] Invalid context. Provide backend (with node, account) + spark, or { node, account, guardian }.',
+	)
 }
 
 /**
@@ -51,53 +51,54 @@ async function resolveContext(context, spark) {
  * @returns {Promise<{ coValue: RawCoValue }>}
  */
 export async function createCoValueForSpark(context, spark, options) {
-  const { schema, cotype, data, dbEngine } = options;
-  if (!schema || typeof schema !== 'string') {
-    throw new Error('[createCoValueForSpark] options.schema is required');
-  }
-  if (!cotype || !['comap', 'colist', 'costream'].includes(cotype)) {
-    throw new Error('[createCoValueForSpark] options.cotype must be comap, colist, or costream');
-  }
+	const { schema, cotype, data, dbEngine } = options
+	if (!schema || typeof schema !== 'string') {
+		throw new Error('[createCoValueForSpark] options.schema is required')
+	}
+	if (!cotype || !['comap', 'colist', 'costream'].includes(cotype)) {
+		throw new Error('[createCoValueForSpark] options.cotype must be comap, colist, or costream')
+	}
 
-  const { node, account, guardian } = await resolveContext(context, spark);
-  if (!account) {
-    throw new Error('[createCoValueForSpark] Account required');
-  }
+	const { node, account, guardian } = await resolveContext(context, spark)
+	if (!account) {
+		throw new Error('[createCoValueForSpark] Account required')
+	}
 
-  // Step 1: Create group
-  const group = node.createGroup();
+	// Step 1: Create group
+	const group = node.createGroup()
 
-  // Step 2: Add guardian as admin
-  group.extend(guardian, 'admin');
+	// Step 2: Add guardian as admin
+	group.extend(guardian, 'admin')
 
-  // Create CoValue
-  let coValue;
-  const meta = { $schema: schema };
-  switch (cotype) {
-    case 'comap':
-      coValue = await createCoMap(group, data ?? {}, schema, node, dbEngine);
-      break;
-    case 'colist':
-      coValue = await createCoList(group, Array.isArray(data) ? data : [], schema, node, dbEngine);
-      break;
-    case 'costream':
-      coValue = await createCoStream(group, schema, node, dbEngine);
-      break;
-    default:
-      throw new Error('[createCoValueForSpark] Unsupported cotype: ' + cotype);
-  }
+	// Create CoValue
+	let coValue
+	const _meta = { $schema: schema }
+	switch (cotype) {
+		case 'comap':
+			coValue = await createCoMap(group, data ?? {}, schema, node, dbEngine)
+			break
+		case 'colist':
+			coValue = await createCoList(group, Array.isArray(data) ? data : [], schema, node, dbEngine)
+			break
+		case 'costream':
+			coValue = await createCoStream(group, schema, node, dbEngine)
+			break
+		default:
+			throw new Error(`[createCoValueForSpark] Unsupported cotype: ${cotype}`)
+	}
 
-  // Step 3: Account leaves group (guardian remains as admin via extend)
-  // Use node.getCurrentAccountOrAgentID() to match the key createGroup used (not account.id)
-  const memberIdToRemove = typeof node.getCurrentAccountOrAgentID === 'function'
-    ? node.getCurrentAccountOrAgentID()
-    : (account?.id ?? account?.$jazz?.id);
-  try {
-    await removeGroupMember(group, memberIdToRemove);
-  } catch (e) {
-    // wouldLeaveNoAdmins: should not happen (guardian is admin)
-    throw new Error(`[createCoValueForSpark] Failed to remove account from group: ${e.message}`);
-  }
+	// Step 3: Account leaves group (guardian remains as admin via extend)
+	// Use node.getCurrentAccountOrAgentID() to match the key createGroup used (not account.id)
+	const memberIdToRemove =
+		typeof node.getCurrentAccountOrAgentID === 'function'
+			? node.getCurrentAccountOrAgentID()
+			: (account?.id ?? account?.$jazz?.id)
+	try {
+		await removeGroupMember(group, memberIdToRemove)
+	} catch (e) {
+		// wouldLeaveNoAdmins: should not happen (guardian is admin)
+		throw new Error(`[createCoValueForSpark] Failed to remove account from group: ${e.message}`)
+	}
 
-  return { coValue };
+	return { coValue }
 }

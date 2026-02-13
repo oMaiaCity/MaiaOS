@@ -1,2992 +1,2992 @@
 [
-  {
-    "word": "a",
-    "type": "cmavo",
-    "definition": "logical connective: sumti afterthought or."
-  },
-  {
-    "word": "a'a",
-    "type": "cmavo",
-    "definition": "attitudinal: attentive - inattentive - avoiding."
-  },
-  {
-    "word": "a'e",
-    "type": "cmavo",
-    "definition": "attitudinal: alertness - exhaustion."
-  },
-  {
-    "word": "a'i",
-    "type": "cmavo",
-    "definition": "attitudinal: effort - no special effort - repose."
-  },
-  {
-    "word": "a'o",
-    "type": "cmavo",
-    "definition": "attitudinal: hope - despair."
-  },
-  {
-    "word": "a'u",
-    "type": "cmavo",
-    "definition": "attitudinal: interest - disinterest - repulsion."
-  },
-  {
-    "word": "ai",
-    "type": "cmavo",
-    "definition": "attitudinal: intent - indecision - rejection/refusal."
-  },
-  {
-    "word": "au",
-    "type": "cmavo",
-    "definition": "attitudinal: desire - indifference - reluctance."
-  },
-  {
-    "word": "ba",
-    "type": "cmavo",
-    "definition": "time tense relation/direction: will [selbri]; after [sumti]; default future tense."
-  },
-  {
-    "word": "ba'a",
-    "type": "cmavo",
-    "definition": "evidential: I expect - I experience - I remember."
-  },
-  {
-    "word": "ba'e",
-    "type": "cmavo",
-    "definition": "forethought emphasis indicator; indicates next word is especially emphasized."
-  },
-  {
-    "word": "ba'i",
-    "type": "cmavo",
-    "definition": "basti modal, 1st place                            replaced by ..."
-  },
-  {
-    "word": "ba'o",
-    "type": "cmavo",
-    "definition": "interval event contour: in the aftermath of ...; since ...; perfective              |     |----."
-  },
-  {
-    "word": "ba'u",
-    "type": "cmavo",
-    "definition": "discursive: exaggeration - accuracy - understatement."
-  },
-  {
-    "word": "bai",
-    "type": "cmavo",
-    "definition": "bapli modal, 1st place (forced by)                forcedly; compelled by force ..."
-  },
-  {
-    "word": "bau",
-    "type": "cmavo",
-    "definition": "bangu modal, 1st place                            in language ..."
-  },
-  {
-    "word": "be",
-    "type": "cmavo",
-    "definition": "sumti link to attach sumti (default $x_{2}$) to a selbri; used in descriptions."
-  },
-  {
-    "word": "be'a",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; north of."
-  },
-  {
-    "word": "be'e",
-    "type": "cmavo",
-    "definition": "vocative: request to send/speak."
-  },
-  {
-    "word": "be'i",
-    "type": "cmavo",
-    "definition": "benji modal, 1st place (sender)                   sent by ..."
-  },
-  {
-    "word": "be'o",
-    "type": "cmavo",
-    "definition": "elidable terminator: end linked sumti in specified description."
-  },
-  {
-    "word": "be'u",
-    "type": "cmavo",
-    "definition": "attitudinal modifier: lack/need - presence/satisfaction - satiation."
-  },
-  {
-    "word": "bei",
-    "type": "cmavo",
-    "definition": "separates multiple linked sumti within a selbri; used in descriptions."
-  },
-  {
-    "word": "bi",
-    "type": "cmavo",
-    "definition": "digit/number: 8 (digit) [eight]."
-  },
-  {
-    "word": "bi'e",
-    "type": "cmavo",
-    "definition": "prefixed to a mex operator to indicate high priority."
-  },
-  {
-    "word": "bi'i",
-    "type": "cmavo",
-    "definition": "non-logical interval connective: unordered between ... and ..."
-  },
-  {
-    "word": "bi'o",
-    "type": "cmavo",
-    "definition": "non-logical interval connective: ordered from ... to ..."
-  },
-  {
-    "word": "bi'u",
-    "type": "cmavo",
-    "definition": "discursive: newly introduced information - previously introduced information."
-  },
-  {
-    "word": "bo",
-    "type": "cmavo",
-    "definition": "short scope joiner; joins various constructs with shortest scope and right grouping."
-  },
-  {
-    "word": "boi",
-    "type": "cmavo",
-    "definition": "elidable terminator: terminate numeral or letteral string."
-  },
-  {
-    "word": "bu",
-    "type": "cmavo",
-    "definition": "convert any single word to BY."
-  },
-  {
-    "word": "bu'a",
-    "type": "cmavo",
-    "definition": "logically quantified predicate variable: some selbri 1."
-  },
-  {
-    "word": "bu'e",
-    "type": "cmavo",
-    "definition": "logically quantified predicate variable: some selbri 2."
-  },
-  {
-    "word": "bu'i",
-    "type": "cmavo",
-    "definition": "logically quantified predicate variable: some selbri 3."
-  },
-  {
-    "word": "bu'o",
-    "type": "cmavo",
-    "definition": "attitudinal contour: start emotion - continue emotion - end emotion."
-  },
-  {
-    "word": "bu'u",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; coincident with/at the same place as; space equivalent of ca."
-  },
-  {
-    "word": "by",
-    "type": "cmavo",
-    "definition": "letteral for b."
-  },
-  {
-    "word": "ca",
-    "type": "cmavo",
-    "definition": "time tense relation/direction: is [selbri]; during/simultaneous with [sumti]; present tense."
-  },
-  {
-    "word": "ca'a",
-    "type": "cmavo",
-    "definition": "modal aspect: actuality/ongoing event."
-  },
-  {
-    "word": "ca'e",
-    "type": "cmavo",
-    "definition": "evidential: I define."
-  },
-  {
-    "word": "ca'i",
-    "type": "cmavo",
-    "definition": "catni modal, 1st place                            by authority of ..."
-  },
-  {
-    "word": "ca'o",
-    "type": "cmavo",
-    "definition": "interval event contour: during ...; continuative                                    |-----|."
-  },
-  {
-    "word": "ca'u",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; forwards/to the front of ..."
-  },
-  {
-    "word": "cai",
-    "type": "cmavo",
-    "definition": "attitudinal: strong intensity attitude modifier."
-  },
-  {
-    "word": "cau",
-    "type": "cmavo",
-    "definition": "claxu modal, 1st place                            lacked by ..."
-  },
-  {
-    "word": "ce",
-    "type": "cmavo",
-    "definition": "non-logical connective: set link, unordered; \"and also\", but forming a set."
-  },
-  {
-    "word": "ce'a",
-    "type": "cmavo",
-    "definition": "2-word letteral/shift: the word following indicates a new font (e.g. italics, manuscript)."
-  },
-  {
-    "word": "ce'e",
-    "type": "cmavo",
-    "definition": "links terms into an afterthought termset."
-  },
-  {
-    "word": "ce'i",
-    "type": "cmavo",
-    "definition": "digit/number: % percentage symbol, hundredths."
-  },
-  {
-    "word": "ce'o",
-    "type": "cmavo",
-    "definition": "non-logical connective: ordered sequence link; \"and then\", forming a sequence."
-  },
-  {
-    "word": "ce'u",
-    "type": "cmavo",
-    "definition": "pseudo-quantifier binding a variable within an abstraction that represents an open place."
-  },
-  {
-    "word": "cei",
-    "type": "cmavo",
-    "definition": "selbri variable assignment; assigns broda series pro-bridi to a selbri."
-  },
-  {
-    "word": "ci",
-    "type": "cmavo",
-    "definition": "digit/number: 3 (digit) [three]."
-  },
-  {
-    "word": "ci'e",
-    "type": "cmavo",
-    "definition": "ciste modal, 1st place used in scalar negation    in system/context ..."
-  },
-  {
-    "word": "ci'i",
-    "type": "cmavo",
-    "definition": "digit/number: infinity; followed by digits => aleph cardinality."
-  },
-  {
-    "word": "ci'o",
-    "type": "cmavo",
-    "definition": "cinmo modal, 1st place                            emotionally felt by ..."
-  },
-  {
-    "word": "ci'u",
-    "type": "cmavo",
-    "definition": "ckilu modal, 1st place                            on the scale ..."
-  },
-  {
-    "word": "co",
-    "type": "cmavo",
-    "definition": "tanru inversion operator; \"... of type ...\"; allows modifier trailing sumti without sumti links."
-  },
-  {
-    "word": "co'a",
-    "type": "cmavo",
-    "definition": "interval event contour: at the starting point of ...; initiative                   >|<    |."
-  },
-  {
-    "word": "co'e",
-    "type": "cmavo",
-    "definition": "elliptical/unspecified bridi relationship."
-  },
-  {
-    "word": "co'i",
-    "type": "cmavo",
-    "definition": "interval event contour: at the instantaneous point of ...; achievative; point event   >|<."
-  },
-  {
-    "word": "co'o",
-    "type": "cmavo",
-    "definition": "vocative: partings/good-bye."
-  },
-  {
-    "word": "co'u",
-    "type": "cmavo",
-    "definition": "interval event contour: at the ending point of ... even if not done; cessative      |  >< |."
-  },
-  {
-    "word": "coi",
-    "type": "cmavo",
-    "definition": "vocative: greetings/hello."
-  },
-  {
-    "word": "cu",
-    "type": "cmavo",
-    "definition": "elidable marker: separates selbri from preceding sumti, allows preceding terminator elision."
-  },
-  {
-    "word": "cu'a",
-    "type": "cmavo",
-    "definition": "unary mathematical operator: absolute value/norm  |a|."
-  },
-  {
-    "word": "cu'e",
-    "type": "cmavo",
-    "definition": "tense/modal question."
-  },
-  {
-    "word": "cu'i",
-    "type": "cmavo",
-    "definition": "attitudinal: neutral scalar attitude modifier."
-  },
-  {
-    "word": "cu'o",
-    "type": "cmavo",
-    "definition": "convert number to probability selbri; event $x_{1}$ has probability (n) of occurring under cond. $x_{2}$."
-  },
-  {
-    "word": "cu'u",
-    "type": "cmavo",
-    "definition": "cusku modal, 1st place (attribution/quotation)    as said by source ...; used for quotation."
-  },
-  {
-    "word": "cy",
-    "type": "cmavo",
-    "definition": "letteral for c."
-  },
-  {
-    "word": "da",
-    "type": "cmavo",
-    "definition": "logically quantified existential pro-sumti: there exists something 1 (usually restricted)."
-  },
-  {
-    "word": "da'a",
-    "type": "cmavo",
-    "definition": "digit/number: all except n; all but n; default 1."
-  },
-  {
-    "word": "da'e",
-    "type": "cmavo",
-    "definition": "pro-sumti: remote future utterance; \"He'll tell you tomorrow. IT will be a doozy.\"."
-  },
-  {
-    "word": "da'i",
-    "type": "cmavo",
-    "definition": "discursive: supposing - in fact."
-  },
-  {
-    "word": "da'o",
-    "type": "cmavo",
-    "definition": "discursive: cancel pro-sumti/pro-bridi assignments."
-  },
-  {
-    "word": "da'u",
-    "type": "cmavo",
-    "definition": "pro-sumti: a remote past utterance; \"She couldn't have known that IT would be true.\"."
-  },
-  {
-    "word": "dai",
-    "type": "cmavo",
-    "definition": "attitudinal modifier: marks empathetic use of preceding attitudinal; shows another's feelings."
-  },
-  {
-    "word": "dau",
-    "type": "cmavo",
-    "definition": "digit/number: hex digit A (decimal 10) [ten]."
-  },
-  {
-    "word": "de",
-    "type": "cmavo",
-    "definition": "logically quantified existential pro-sumti: there exists something 2 (usually restricted)."
-  },
-  {
-    "word": "de'a",
-    "type": "cmavo",
-    "definition": "event contour for a temporary halt and ensuing pause in a process."
-  },
-  {
-    "word": "de'e",
-    "type": "cmavo",
-    "definition": "pro-sumti: a near future utterance."
-  },
-  {
-    "word": "de'i",
-    "type": "cmavo",
-    "definition": "detri modal, 1st place (for letters)              dated ... ; attaches date stamp."
-  },
-  {
-    "word": "de'o",
-    "type": "cmavo",
-    "definition": "binary mathematical operator: logarithm; [log/ln a to base b]; default base 10 or e."
-  },
-  {
-    "word": "de'u",
-    "type": "cmavo",
-    "definition": "pro-sumti: a recent utterance."
-  },
-  {
-    "word": "dei",
-    "type": "cmavo",
-    "definition": "pro-sumti: this utterance."
-  },
-  {
-    "word": "di",
-    "type": "cmavo",
-    "definition": "logically quantified existential pro-sumti: there exists something 3 (usually restricted)."
-  },
-  {
-    "word": "di'a",
-    "type": "cmavo",
-    "definition": "event contour for resumption of a paused process."
-  },
-  {
-    "word": "di'e",
-    "type": "cmavo",
-    "definition": "pro-sumti: the next utterance."
-  },
-  {
-    "word": "di'i",
-    "type": "cmavo",
-    "definition": "tense interval modifier: regularly; subjective tense/modal; defaults as time tense."
-  },
-  {
-    "word": "di'o",
-    "type": "cmavo",
-    "definition": "diklo modal, 1st place                            in the location of ..."
-  },
-  {
-    "word": "di'u",
-    "type": "cmavo",
-    "definition": "pro-sumti: the last utterance."
-  },
-  {
-    "word": "do",
-    "type": "cmavo",
-    "definition": "pro-sumti: you listener(s); identified by vocative."
-  },
-  {
-    "word": "do'a",
-    "type": "cmavo",
-    "definition": "discursive: generously - parsimoniously."
-  },
-  {
-    "word": "do'e",
-    "type": "cmavo",
-    "definition": "elliptical/unspecified modal."
-  },
-  {
-    "word": "do'i",
-    "type": "cmavo",
-    "definition": "pro-sumti: elliptical/unspecified utterance variable."
-  },
-  {
-    "word": "do'o",
-    "type": "cmavo",
-    "definition": "pro-sumti: you the listener & others unspecified."
-  },
-  {
-    "word": "do'u",
-    "type": "cmavo",
-    "definition": "elidable terminator: end vocative (often elidable)."
-  },
-  {
-    "word": "doi",
-    "type": "cmavo",
-    "definition": "generic vocative marker; identifies intended listener; elidable after COI."
-  },
-  {
-    "word": "du",
-    "type": "cmavo",
-    "definition": "identity selbri; = sign; $x_{1}$ identically equals $x_{2}$, $x_{3}$, etc.; attached sumti refer to same thing."
-  },
-  {
-    "word": "du'a",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; east of."
-  },
-  {
-    "word": "du'e",
-    "type": "cmavo",
-    "definition": "digit/number: too many; subjective."
-  },
-  {
-    "word": "du'i",
-    "type": "cmavo",
-    "definition": "dunli modal, 1st place (equalled by)              equally; as much as ..."
-  },
-  {
-    "word": "du'o",
-    "type": "cmavo",
-    "definition": "djuno modal, 1st place (info source)            authoritatively; according to ...; known by ..."
-  },
-  {
-    "word": "du'u",
-    "type": "cmavo",
-    "definition": "abstractor: predication/bridi abstractor; $x_{1}$ is predication [bridi] expressed in sentence $x_{2}$."
-  },
-  {
-    "word": "dy",
-    "type": "cmavo",
-    "definition": "letteral for d."
-  },
-  {
-    "word": "e",
-    "type": "cmavo",
-    "definition": "logical connective: sumti afterthought and."
-  },
-  {
-    "word": "e'a",
-    "type": "cmavo",
-    "definition": "attitudinal: granting permission - prohibiting."
-  },
-  {
-    "word": "e'e",
-    "type": "cmavo",
-    "definition": "attitudinal: competence - incompetence/inability."
-  },
-  {
-    "word": "e'i",
-    "type": "cmavo",
-    "definition": "attitudinal: feeling constraint - independence - challenge/resistance against constraint."
-  },
-  {
-    "word": "e'o",
-    "type": "cmavo",
-    "definition": "attitudinal: request - negative request."
-  },
-  {
-    "word": "e'u",
-    "type": "cmavo",
-    "definition": "attitudinal: suggestion - abandon suggest - warning."
-  },
-  {
-    "word": "ei",
-    "type": "cmavo",
-    "definition": "attitudinal: obligation - freedom."
-  },
-  {
-    "word": "fa",
-    "type": "cmavo",
-    "definition": "sumti place tag: tag 1st sumti place."
-  },
-  {
-    "word": "fa'a",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; arriving at/directly towards ..."
-  },
-  {
-    "word": "fa'e",
-    "type": "cmavo",
-    "definition": "fatne modal, 1st place                            backwards; reverse of ..."
-  },
-  {
-    "word": "fa'i",
-    "type": "cmavo",
-    "definition": "unary mathematical operator: reciprocal; multiplicative inverse; [1/a]."
-  },
-  {
-    "word": "fa'o",
-    "type": "cmavo",
-    "definition": "unconditional end of text; outside regular grammar; used for computer input."
-  },
-  {
-    "word": "fa'u",
-    "type": "cmavo",
-    "definition": "non-logical connective: respectively; unmixed ordered distributed association."
-  },
-  {
-    "word": "fai",
-    "type": "cmavo",
-    "definition": "sumti place tag: tag a sumti moved out of numbered place structure; used in modal conversions."
-  },
-  {
-    "word": "fau",
-    "type": "cmavo",
-    "definition": "fasnu modal, 1st place (non-causal)               in the event of ..."
-  },
-  {
-    "word": "fe",
-    "type": "cmavo",
-    "definition": "sumti place tag: tag 2nd sumti place."
-  },
-  {
-    "word": "fe'a",
-    "type": "cmavo",
-    "definition": "binary mathematical operator: nth root of; inverse power [a to the 1/b power]."
-  },
-  {
-    "word": "fe'e",
-    "type": "cmavo",
-    "definition": "mark space interval distributive aspects; labels interval tense modifiers as location-oriented."
-  },
-  {
-    "word": "fe'i",
-    "type": "cmavo",
-    "definition": "n-ary mathematical operator: divided by; division operator; [(((a / b) / c) / ...)]."
-  },
-  {
-    "word": "fe'o",
-    "type": "cmavo",
-    "definition": "vocative: over and out (end discussion)."
-  },
-  {
-    "word": "fe'u",
-    "type": "cmavo",
-    "definition": "elidable terminator: end nonce conversion of selbri to modal; usually elidable."
-  },
-  {
-    "word": "fei",
-    "type": "cmavo",
-    "definition": "digit/number: hex digit B (decimal 11) [eleven]."
-  },
-  {
-    "word": "fi",
-    "type": "cmavo",
-    "definition": "sumti place tag: tag 3rd sumti place."
-  },
-  {
-    "word": "fi'a",
-    "type": "cmavo",
-    "definition": "sumti place tag: place structure number/tag question."
-  },
-  {
-    "word": "fi'e",
-    "type": "cmavo",
-    "definition": "finti modal, 1st place (creator)                  created by ..."
-  },
-  {
-    "word": "fi'i",
-    "type": "cmavo",
-    "definition": "vocative: hospitality - inhospitality; you are welcome/ make yourself at home."
-  },
-  {
-    "word": "fi'o",
-    "type": "cmavo",
-    "definition": "convert selbri to nonce modal/sumti tag."
-  },
-  {
-    "word": "fi'u",
-    "type": "cmavo",
-    "definition": "digit/number: fraction slash; default \"/n\" => 1/n, \"n/\" => n/1, or \"/\" alone => golden ratio."
-  },
-  {
-    "word": "fo",
-    "type": "cmavo",
-    "definition": "sumti place tag: tag 4th sumti place."
-  },
-  {
-    "word": "fo'a",
-    "type": "cmavo",
-    "definition": "pro-sumti: he/she/it/they #6 (specified by goi)."
-  },
-  {
-    "word": "fo'e",
-    "type": "cmavo",
-    "definition": "pro-sumti: he/she/it/they #7 (specified by goi)."
-  },
-  {
-    "word": "fo'i",
-    "type": "cmavo",
-    "definition": "pro-sumti: he/she/it/they #8 (specified by goi)."
-  },
-  {
-    "word": "fo'o",
-    "type": "cmavo",
-    "definition": "pro-sumti: he/she/it/they #9 (specified by goi)."
-  },
-  {
-    "word": "fo'u",
-    "type": "cmavo",
-    "definition": "pro-sumti: he/she/it/they #10 (specified by goi)."
-  },
-  {
-    "word": "foi",
-    "type": "cmavo",
-    "definition": "terminator: end composite lerfu; never elidable."
-  },
-  {
-    "word": "fu",
-    "type": "cmavo",
-    "definition": "sumti place tag: tag 5th sumti place."
-  },
-  {
-    "word": "fu'a",
-    "type": "cmavo",
-    "definition": "reverse Polish mathematical expression (mex) operator flag."
-  },
-  {
-    "word": "fu'e",
-    "type": "cmavo",
-    "definition": "begin indicator long scope."
-  },
-  {
-    "word": "fu'i",
-    "type": "cmavo",
-    "definition": "attitudinal modifier: easy - difficult."
-  },
-  {
-    "word": "fu'o",
-    "type": "cmavo",
-    "definition": "end indicator long scope; terminates scope of all active indicators."
-  },
-  {
-    "word": "fu'u",
-    "type": "cmavo",
-    "definition": "n-ary mathematical operator: elliptical/unspecified mathematical expression (mex) operator."
-  },
-  {
-    "word": "fy",
-    "type": "cmavo",
-    "definition": "letteral for f."
-  },
-  {
-    "word": "ga",
-    "type": "cmavo",
-    "definition": "logical connective: forethought all but tanru-internal or (with gi)."
-  },
-  {
-    "word": "ga'a",
-    "type": "cmavo",
-    "definition": "zgana modal, 1st place                            to observer ... ; witnessed by ..."
-  },
-  {
-    "word": "ga'e",
-    "type": "cmavo",
-    "definition": "upper-case letteral shift."
-  },
-  {
-    "word": "ga'i",
-    "type": "cmavo",
-    "definition": "attitudinal modifier/honorific: hauteur - equal rank - meekness; used with one of lower rank."
-  },
-  {
-    "word": "ga'o",
-    "type": "cmavo",
-    "definition": "closed interval bracket marker; mod. intervals in non-logical connectives; include boundaries."
-  },
-  {
-    "word": "ga'u",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; upwards/up from ..."
-  },
-  {
-    "word": "gai",
-    "type": "cmavo",
-    "definition": "digit/number: hex digit C (decimal 12) [twelve]."
-  },
-  {
-    "word": "gau",
-    "type": "cmavo",
-    "definition": "gasnu modal, 1st place agent/actor case tag       with active agent ..."
-  },
-  {
-    "word": "ge",
-    "type": "cmavo",
-    "definition": "logical connective: forethought all but tanru-internal and (with gi)."
-  },
-  {
-    "word": "ge'a",
-    "type": "cmavo",
-    "definition": "mathematical operator: null mathematical expression (mex) operator (used in >2-ary ops)."
-  },
-  {
-    "word": "ge'e",
-    "type": "cmavo",
-    "definition": "attitudinal: elliptical/unspecified/non-specific emotion; no particular feeling."
-  },
-  {
-    "word": "ge'i",
-    "type": "cmavo",
-    "definition": "logical connective: forethought all but tanru-internal connective question (with gi)."
-  },
-  {
-    "word": "ge'o",
-    "type": "cmavo",
-    "definition": "shift letterals to Greek alphabet."
-  },
-  {
-    "word": "ge'u",
-    "type": "cmavo",
-    "definition": "elidable terminator: end relative/modal phrases; usually elidable in non-complex phrases."
-  },
-  {
-    "word": "gei",
-    "type": "cmavo",
-    "definition": "trinary mathematical operator: order of magnitude/value/base; [b * (c to the a power)]."
-  },
-  {
-    "word": "gi",
-    "type": "cmavo",
-    "definition": "logical connective: all but tanru-internal forethought connective medial marker."
-  },
-  {
-    "word": "gi'a",
-    "type": "cmavo",
-    "definition": "logical connective: bridi-tail afterthought or."
-  },
-  {
-    "word": "gi'e",
-    "type": "cmavo",
-    "definition": "logical connective: bridi-tail afterthought and."
-  },
-  {
-    "word": "gi'i",
-    "type": "cmavo",
-    "definition": "logical connective: bridi-tail afterthought conn question."
-  },
-  {
-    "word": "gi'o",
-    "type": "cmavo",
-    "definition": "logical connective: bridi-tail afterthought biconditional/iff/if-and-only-if."
-  },
-  {
-    "word": "gi'u",
-    "type": "cmavo",
-    "definition": "logical connective: bridi-tail afterthought whether-or-not."
-  },
-  {
-    "word": "go",
-    "type": "cmavo",
-    "definition": "logical connective: forethought all but tanru internal biconditional/iff/if-and-only-if(with gi)."
-  },
-  {
-    "word": "go'a",
-    "type": "cmavo",
-    "definition": "pro-bridi: repeats a recent bridi (usually not the last 2)."
-  },
-  {
-    "word": "go'e",
-    "type": "cmavo",
-    "definition": "pro-bridi: repeats the next to last bridi."
-  },
-  {
-    "word": "go'i",
-    "type": "cmavo",
-    "definition": "pro-bridi: preceding bridi; in answer to a yes/no question, repeats the claim, meaning yes."
-  },
-  {
-    "word": "go'o",
-    "type": "cmavo",
-    "definition": "pro-bridi: repeats a future bridi, normally the next one."
-  },
-  {
-    "word": "go'u",
-    "type": "cmavo",
-    "definition": "pro-bridi: repeats a remote past bridi."
-  },
-  {
-    "word": "goi",
-    "type": "cmavo",
-    "definition": "sumti assignment; used to define/assign ko'a/fo'a series pro-sumti; Latin 'sive'."
-  },
-  {
-    "word": "gu",
-    "type": "cmavo",
-    "definition": "logical connective: forethought all but tanru-internal whether-or-not (with gi)."
-  },
-  {
-    "word": "gu'a",
-    "type": "cmavo",
-    "definition": "logical connective: tanru-internal forethought or (with gi)."
-  },
-  {
-    "word": "gu'e",
-    "type": "cmavo",
-    "definition": "logical connective: tanru-internal forethought and (with gi)."
-  },
-  {
-    "word": "gu'i",
-    "type": "cmavo",
-    "definition": "logical connective: tanru-internal forethought question (with gi)."
-  },
-  {
-    "word": "gu'o",
-    "type": "cmavo",
-    "definition": "logical connective: tanru-internal forethought biconditional/iff/if-and-only-if (with gi)."
-  },
-  {
-    "word": "gu'u",
-    "type": "cmavo",
-    "definition": "logical connective: tanru-internal forethought whether-or-not (with gi)."
-  },
-  {
-    "word": "gy",
-    "type": "cmavo",
-    "definition": "letteral for g."
-  },
-  {
-    "word": "i",
-    "type": "cmavo",
-    "definition": "sentence link/continuation; continuing sentences on same topic; normally elided for new speakers."
-  },
-  {
-    "word": "i'a",
-    "type": "cmavo",
-    "definition": "attitudinal: acceptance - blame."
-  },
-  {
-    "word": "i'e",
-    "type": "cmavo",
-    "definition": "attitudinal: approval - non-approval - disapproval."
-  },
-  {
-    "word": "i'i",
-    "type": "cmavo",
-    "definition": "attitudinal: togetherness - privacy."
-  },
-  {
-    "word": "i'o",
-    "type": "cmavo",
-    "definition": "attitudinal: appreciation - envy."
-  },
-  {
-    "word": "i'u",
-    "type": "cmavo",
-    "definition": "attitudinal: familiarity - mystery."
-  },
-  {
-    "word": "ia",
-    "type": "cmavo",
-    "definition": "attitudinal: belief - skepticism - disbelief."
-  },
-  {
-    "word": "ie",
-    "type": "cmavo",
-    "definition": "attitudinal: agreement - disagreement."
-  },
-  {
-    "word": "ii",
-    "type": "cmavo",
-    "definition": "attitudinal: fear - security."
-  },
-  {
-    "word": "io",
-    "type": "cmavo",
-    "definition": "attitudinal: respect - disrespect."
-  },
-  {
-    "word": "iu",
-    "type": "cmavo",
-    "definition": "attitudinal: love - no love lost - hatred."
-  },
-  {
-    "word": "ja",
-    "type": "cmavo",
-    "definition": "logical connective: tanru-internal afterthought or."
-  },
-  {
-    "word": "ja'a",
-    "type": "cmavo",
-    "definition": "bridi logical affirmer; scope is an entire bridi."
-  },
-  {
-    "word": "ja'e",
-    "type": "cmavo",
-    "definition": "jalge modal, 1st place                            resultingly; therefore result ..."
-  },
-  {
-    "word": "ja'i",
-    "type": "cmavo",
-    "definition": "javni modal, 1st place (by standard 1)            orderly; by rule ..."
-  },
-  {
-    "word": "ja'o",
-    "type": "cmavo",
-    "definition": "evidential: I conclude."
-  },
-  {
-    "word": "jai",
-    "type": "cmavo",
-    "definition": "convert tense/modal (tagged) place to 1st place; 1st place moves to extra FA place (fai)."
-  },
-  {
-    "word": "jau",
-    "type": "cmavo",
-    "definition": "digit/number: hex digit D (decimal 13) [thirteen]."
-  },
-  {
-    "word": "je",
-    "type": "cmavo",
-    "definition": "logical connective: tanru-internal afterthought and."
-  },
-  {
-    "word": "je'a",
-    "type": "cmavo",
-    "definition": "scalar affirmer; denies scalar negation: Indeed!."
-  },
-  {
-    "word": "je'e",
-    "type": "cmavo",
-    "definition": "vocative: roger (ack) - negative acknowledge; used to acknowledge offers and thanks."
-  },
-  {
-    "word": "je'i",
-    "type": "cmavo",
-    "definition": "logical connective: tanru-internal afterthought conn question."
-  },
-  {
-    "word": "je'o",
-    "type": "cmavo",
-    "definition": "shift letterals to Hebrew alphabet."
-  },
-  {
-    "word": "je'u",
-    "type": "cmavo",
-    "definition": "discursive: truth - falsity."
-  },
-  {
-    "word": "jei",
-    "type": "cmavo",
-    "definition": "abstractor: truth-value abstractor; $x_{1}$ is truth value of [bridi] under epistemology $x_{2}$."
-  },
-  {
-    "word": "ji",
-    "type": "cmavo",
-    "definition": "logical connective: sumti afterthought connective question."
-  },
-  {
-    "word": "ji'a",
-    "type": "cmavo",
-    "definition": "discursive: additionally."
-  },
-  {
-    "word": "ji'e",
-    "type": "cmavo",
-    "definition": "jimte modal, 1st place                            limitedly; up to limit ..."
-  },
-  {
-    "word": "ji'i",
-    "type": "cmavo",
-    "definition": "digit/number: approximately (default the typical value in this context) (number)."
-  },
-  {
-    "word": "ji'o",
-    "type": "cmavo",
-    "definition": "jitro modal, 1st place (control)                  controlledly; under direction of ..."
-  },
-  {
-    "word": "ji'u",
-    "type": "cmavo",
-    "definition": "jicmu modal, 1st place (assumptions);             given that ...; based on ..."
-  },
-  {
-    "word": "jo",
-    "type": "cmavo",
-    "definition": "logical connective: tanru-internal afterthought biconditional/iff/if-and-only-if."
-  },
-  {
-    "word": "jo'a",
-    "type": "cmavo",
-    "definition": "discursive: metalinguistic affirmer."
-  },
-  {
-    "word": "jo'e",
-    "type": "cmavo",
-    "definition": "non-logical connective: union of sets."
-  },
-  {
-    "word": "jo'i",
-    "type": "cmavo",
-    "definition": "join mathematical expression (mex) operands into an array."
-  },
-  {
-    "word": "jo'o",
-    "type": "cmavo",
-    "definition": "shift letterals to Arabic alphabet."
-  },
-  {
-    "word": "jo'u",
-    "type": "cmavo",
-    "definition": "non-logical connective: in common with; along with (unmixed)."
-  },
-  {
-    "word": "joi",
-    "type": "cmavo",
-    "definition": "non-logical connective: mixed conjunction; \"and\" meaning \"mixed together\", forming a mass."
-  },
-  {
-    "word": "ju",
-    "type": "cmavo",
-    "definition": "logical connective: tanru-internal afterthought whether-or-not."
-  },
-  {
-    "word": "ju'a",
-    "type": "cmavo",
-    "definition": "evidential: I state - (default) elliptical/non-specific basis."
-  },
-  {
-    "word": "ju'e",
-    "type": "cmavo",
-    "definition": "vague non-logical connective: analogous to plain \".i\"."
-  },
-  {
-    "word": "ju'i",
-    "type": "cmavo",
-    "definition": "vocative: attention - at ease - ignore me."
-  },
-  {
-    "word": "ju'o",
-    "type": "cmavo",
-    "definition": "attitudinal modifier: certainty - uncertainty - impossibility."
-  },
-  {
-    "word": "ju'u",
-    "type": "cmavo",
-    "definition": "binary mathematical operator: number base; [a interpreted in the base b]."
-  },
-  {
-    "word": "jy",
-    "type": "cmavo",
-    "definition": "letteral for j."
-  },
-  {
-    "word": "ka",
-    "type": "cmavo",
-    "definition": "abstractor: property/quality abstractor (-ness); $x_{1}$ is quality/property exhibited by [bridi]."
-  },
-  {
-    "word": "ka'a",
-    "type": "cmavo",
-    "definition": "klama modal, 1st place                            gone to by ..."
-  },
-  {
-    "word": "ka'e",
-    "type": "cmavo",
-    "definition": "modal aspect: innate capability; possibly unrealized."
-  },
-  {
-    "word": "ka'i",
-    "type": "cmavo",
-    "definition": "krati modal, 1st place                            represented by ..."
-  },
-  {
-    "word": "ka'o",
-    "type": "cmavo",
-    "definition": "digit/number: imaginary i; square root of -1."
-  },
-  {
-    "word": "ka'u",
-    "type": "cmavo",
-    "definition": "evidential: I know by cultural means (myth or custom)."
-  },
-  {
-    "word": "kai",
-    "type": "cmavo",
-    "definition": "ckaji modal, 1st place                            characterizing ..."
-  },
-  {
-    "word": "kau",
-    "type": "cmavo",
-    "definition": "discursive: marks word serving as focus of indirect question: \"I know WHO went to the store\"."
-  },
-  {
-    "word": "ke",
-    "type": "cmavo",
-    "definition": "start grouping of tanru, etc; ... type of ... ; overrides normal tanru left grouping."
-  },
-  {
-    "word": "ke'a",
-    "type": "cmavo",
-    "definition": "pro-sumti: relativized sumti (object of relative clause)."
-  },
-  {
-    "word": "ke'e",
-    "type": "cmavo",
-    "definition": "elidable terminator: end of tanru left grouping override (usually elidable)."
-  },
-  {
-    "word": "ke'i",
-    "type": "cmavo",
-    "definition": "open interval bracket marker; modifies intervals in non-logical connectives; exclude boundaries."
-  },
-  {
-    "word": "ke'o",
-    "type": "cmavo",
-    "definition": "vocative: please repeat."
-  },
-  {
-    "word": "ke'u",
-    "type": "cmavo",
-    "definition": "discursive: repeating - continuing."
-  },
-  {
-    "word": "kei",
-    "type": "cmavo",
-    "definition": "elidable terminator: end abstraction bridi (often elidable)."
-  },
-  {
-    "word": "ki",
-    "type": "cmavo",
-    "definition": "tense/modal: set/use tense default; establishes new open scope space/time/modal reference base."
-  },
-  {
-    "word": "ki'a",
-    "type": "cmavo",
-    "definition": "attitudinal question: confusion about something said."
-  },
-  {
-    "word": "ki'e",
-    "type": "cmavo",
-    "definition": "vocative: thanks - no thanks to you."
-  },
-  {
-    "word": "ki'i",
-    "type": "cmavo",
-    "definition": "ckini modal, 1st place (related to)               relatively; as a relation of ..."
-  },
-  {
-    "word": "ki'o",
-    "type": "cmavo",
-    "definition": "digit/number: number comma; thousands."
-  },
-  {
-    "word": "ki'u",
-    "type": "cmavo",
-    "definition": "krinu modal, 1st place (justified by)             justifiably; because of reason ..."
-  },
-  {
-    "word": "ko",
-    "type": "cmavo",
-    "definition": "pro-sumti: you (imperative); make it true for you, the listener."
-  },
-  {
-    "word": "ko'a",
-    "type": "cmavo",
-    "definition": "pro-sumti: he/she/it/they #1 (specified by goi)."
-  },
-  {
-    "word": "ko'e",
-    "type": "cmavo",
-    "definition": "pro-sumti: he/she/it/they #2 (specified by goi)."
-  },
-  {
-    "word": "ko'i",
-    "type": "cmavo",
-    "definition": "pro-sumti: he/she/it/they #3 (specified by goi)."
-  },
-  {
-    "word": "ko'o",
-    "type": "cmavo",
-    "definition": "pro-sumti: he/she/it/they #4 (specified by goi)."
-  },
-  {
-    "word": "ko'u",
-    "type": "cmavo",
-    "definition": "pro-sumti: he/she/it/they #5 (specified by goi)."
-  },
-  {
-    "word": "koi",
-    "type": "cmavo",
-    "definition": "korbi modal, 1st place (bordered by)              bounded by ..."
-  },
-  {
-    "word": "ku",
-    "type": "cmavo",
-    "definition": "elidable terminator: end description, modal, or negator sumti; often elidable."
-  },
-  {
-    "word": "ku'a",
-    "type": "cmavo",
-    "definition": "non-logical connective: intersection of sets."
-  },
-  {
-    "word": "ku'e",
-    "type": "cmavo",
-    "definition": "elidable terminator: end mathematical (mex) forethought (Polish) expression; often elidable."
-  },
-  {
-    "word": "ku'i",
-    "type": "cmavo",
-    "definition": "discursive: however/but/in contrast."
-  },
-  {
-    "word": "ku'o",
-    "type": "cmavo",
-    "definition": "elidable terminator: end NOI relative clause; always elidable, but preferred in complex clauses."
-  },
-  {
-    "word": "ku'u",
-    "type": "cmavo",
-    "definition": "kulnu modal, 1st place                            in culture ..."
-  },
-  {
-    "word": "ky",
-    "type": "cmavo",
-    "definition": "letteral for k."
-  },
-  {
-    "word": "la",
-    "type": "cmavo",
-    "definition": "name descriptor: the one(s) called ... ; takes name or selbri description."
-  },
-  {
-    "word": "la'a",
-    "type": "cmavo",
-    "definition": "discursive: probability - improbability."
-  },
-  {
-    "word": "la'e",
-    "type": "cmavo",
-    "definition": "the referent of (indirect pointer); uses the referent of a sumti as the desired sumti."
-  },
-  {
-    "word": "la'i",
-    "type": "cmavo",
-    "definition": "name descriptor: the set of those named ... ; takes name or selbri description."
-  },
-  {
-    "word": "la'o",
-    "type": "cmavo",
-    "definition": "delimited non-Lojban name; the resulting quote sumti is treated as a name."
-  },
-  {
-    "word": "la'u",
-    "type": "cmavo",
-    "definition": "klani modal, 1st place (amount)                   quantifying ...; being a quantity of ..."
-  },
-  {
-    "word": "lai",
-    "type": "cmavo",
-    "definition": "name descriptor: the mass of individual(s) named ... ; takes name or selbri description."
-  },
-  {
-    "word": "lau",
-    "type": "cmavo",
-    "definition": "2-word letteral/shift: punctuation mark or special symbol follows."
-  },
-  {
-    "word": "le",
-    "type": "cmavo",
-    "definition": "non-veridical descriptor: the one(s) described as ..."
-  },
-  {
-    "word": "le'a",
-    "type": "cmavo",
-    "definition": "klesi modal, 1st place (scalar set)               in/of category ..."
-  },
-  {
-    "word": "le'e",
-    "type": "cmavo",
-    "definition": "non-veridical descriptor: the stereotype of those described as ..."
-  },
-  {
-    "word": "le'i",
-    "type": "cmavo",
-    "definition": "non-veridical descriptor: the set of those described as ..., treated as a set."
-  },
-  {
-    "word": "le'o",
-    "type": "cmavo",
-    "definition": "attitudinal modifier: aggressive - passive - defensive."
-  },
-  {
-    "word": "le'u",
-    "type": "cmavo",
-    "definition": "end quote of questionable or out-of-context text; not elidable."
-  },
-  {
-    "word": "lei",
-    "type": "cmavo",
-    "definition": "non-veridical descriptor: the mass of individual(s) described as ..."
-  },
-  {
-    "word": "li",
-    "type": "cmavo",
-    "definition": "the number/evaluated expression; convert number/operand/evaluated math expression to sumti."
-  },
-  {
-    "word": "li'a",
-    "type": "cmavo",
-    "definition": "discursive: clearly - obscurely."
-  },
-  {
-    "word": "li'e",
-    "type": "cmavo",
-    "definition": "lidne modal, 1st place                            preceded by ...; non-time sequencing."
-  },
-  {
-    "word": "li'i",
-    "type": "cmavo",
-    "definition": "abstractor: experience abstractor; $x_{1}$ is $x_{2}$'s experience of [bridi] (participant or observer)."
-  },
-  {
-    "word": "li'o",
-    "type": "cmavo",
-    "definition": "discursive: omitted text (quoted material)."
-  },
-  {
-    "word": "li'u",
-    "type": "cmavo",
-    "definition": "elidable terminator: end grammatical quotation; seldom elidable except at end of text."
-  },
-  {
-    "word": "lo",
-    "type": "cmavo",
-    "definition": "veridical descriptor: the one(s) that really is(are) ..."
-  },
-  {
-    "word": "lo'a",
-    "type": "cmavo",
-    "definition": "shift letterals to Lojban (Roman) alphabet."
-  },
-  {
-    "word": "lo'e",
-    "type": "cmavo",
-    "definition": "veridical descriptor: the typical one(s) who really is(are) ..."
-  },
-  {
-    "word": "lo'i",
-    "type": "cmavo",
-    "definition": "veridical descriptor: the set of those that really are ..., treated as a set."
-  },
-  {
-    "word": "lo'o",
-    "type": "cmavo",
-    "definition": "elidable terminator: end math express.(mex) sumti; end mex-to-sumti conversion; usually elidable."
-  },
-  {
-    "word": "lo'u",
-    "type": "cmavo",
-    "definition": "start questionable/out-of-context quote; text should be Lojban words, but needn't be grammatical."
-  },
-  {
-    "word": "loi",
-    "type": "cmavo",
-    "definition": "veridical descriptor: the mass of individual(s) that is(are) ..."
-  },
-  {
-    "word": "lu",
-    "type": "cmavo",
-    "definition": "start grammatical quotation; quoted text should be grammatical on its own."
-  },
-  {
-    "word": "lu'a",
-    "type": "cmavo",
-    "definition": "the members of the set/components of the mass; converts another description type to individuals."
-  },
-  {
-    "word": "lu'e",
-    "type": "cmavo",
-    "definition": "the symbol for (indirect discourse); uses the symbol/word(s) for a sumti as the desired sumti."
-  },
-  {
-    "word": "lu'i",
-    "type": "cmavo",
-    "definition": "the set with members; converts another description type to a set of the members."
-  },
-  {
-    "word": "lu'o",
-    "type": "cmavo",
-    "definition": "the mass composed of; converts another description type to a mass composed of the members."
-  },
-  {
-    "word": "lu'u",
-    "type": "cmavo",
-    "definition": "elidable terminator: end of sumti qualifiers; usually elidable except before a sumti."
-  },
-  {
-    "word": "ly",
-    "type": "cmavo",
-    "definition": "letteral for l."
-  },
-  {
-    "word": "ma",
-    "type": "cmavo",
-    "definition": "pro-sumti: sumti question (what/who/how/why/etc.); appropriately fill in sumti blank."
-  },
-  {
-    "word": "ma'a",
-    "type": "cmavo",
-    "definition": "pro-sumti: me/we the speaker(s)/author(s) & you the listener(s) & others unspecified."
-  },
-  {
-    "word": "ma'e",
-    "type": "cmavo",
-    "definition": "marji modal, 1st place                            material in object/substance ..."
-  },
-  {
-    "word": "ma'i",
-    "type": "cmavo",
-    "definition": "manri modal, 1st place (by standard 2)            in reference frame ..."
-  },
-  {
-    "word": "ma'o",
-    "type": "cmavo",
-    "definition": "convert letteral string or other mathematical expression (mex) operand to mex operator."
-  },
-  {
-    "word": "ma'u",
-    "type": "cmavo",
-    "definition": "digit/number: plus sign; positive number; default any positive."
-  },
-  {
-    "word": "mai",
-    "type": "cmavo",
-    "definition": "utterance ordinal suffix; converts a number to an ordinal, such as an item or paragraph number."
-  },
-  {
-    "word": "mau",
-    "type": "cmavo",
-    "definition": "zmadu modal, 1st place (a greater)                exceeded by ... ; usually a sumti modifier."
-  },
-  {
-    "word": "me",
-    "type": "cmavo",
-    "definition": "convert sumti to selbri/tanru element; $x_{1}$ is specific to [sumti] in aspect $x_{2}$."
-  },
-  {
-    "word": "me'a",
-    "type": "cmavo",
-    "definition": "mleca modal, 1st place (a lesser)                 undercut by ... ; usually a sumti modifier."
-  },
-  {
-    "word": "me'e",
-    "type": "cmavo",
-    "definition": "cmene modal, 1st place (requires quote)           with name ...; so-called ..."
-  },
-  {
-    "word": "me'i",
-    "type": "cmavo",
-    "definition": "digit/number: less than."
-  },
-  {
-    "word": "me'o",
-    "type": "cmavo",
-    "definition": "the mathematical expression (unevaluated); convert unevaluated mathematical expression to sumti."
-  },
-  {
-    "word": "me'u",
-    "type": "cmavo",
-    "definition": "elidable terminator: end sumti that was converted to selbri; usually elidable."
-  },
-  {
-    "word": "mei",
-    "type": "cmavo",
-    "definition": "convert number to cardinality selbri; $x_{1}$ is the mass formed from set $x_{2}$ whose n member(s) are $x_{3}$."
-  },
-  {
-    "word": "mi",
-    "type": "cmavo",
-    "definition": "pro-sumti: me/we the speaker(s)/author(s); identified by self-vocative."
-  },
-  {
-    "word": "mi'a",
-    "type": "cmavo",
-    "definition": "pro-sumti: me/we the speaker(s)/author(s) & others unspecified, but not you, the listener."
-  },
-  {
-    "word": "mi'e",
-    "type": "cmavo",
-    "definition": "self vocative: self-introduction - denial of identity; identifies speaker."
-  },
-  {
-    "word": "mi'i",
-    "type": "cmavo",
-    "definition": "non-logical interval connective: ordered components: ... center, ... range surrounding center."
-  },
-  {
-    "word": "mi'o",
-    "type": "cmavo",
-    "definition": "pro-sumti: me/we the speaker(s)/author(s) & you the listener(s)."
-  },
-  {
-    "word": "mi'u",
-    "type": "cmavo",
-    "definition": "discursive: ditto."
-  },
-  {
-    "word": "mo",
-    "type": "cmavo",
-    "definition": "pro-bridi: bridi/selbri/brivla question."
-  },
-  {
-    "word": "mo'a",
-    "type": "cmavo",
-    "definition": "digit/number: too few; subjective."
-  },
-  {
-    "word": "mo'e",
-    "type": "cmavo",
-    "definition": "convert sumti to mex operand; sample use in story arithmetic: [3 apples] + [3 apples] = what."
-  },
-  {
-    "word": "mo'i",
-    "type": "cmavo",
-    "definition": "mark motions in space-time."
-  },
-  {
-    "word": "mo'o",
-    "type": "cmavo",
-    "definition": "higher-order utterance ordinal suffix; converts a number to ordinal, usually a section/chapter."
-  },
-  {
-    "word": "mo'u",
-    "type": "cmavo",
-    "definition": "interval event contour: at the natural ending point of ...; completive              |    >|<."
-  },
-  {
-    "word": "moi",
-    "type": "cmavo",
-    "definition": "convert number to ordinal selbri; $x_{1}$ is (n)th member of set $x_{2}$ ordered by rule $x_{3}$."
-  },
-  {
-    "word": "mu",
-    "type": "cmavo",
-    "definition": "digit/number: 5 (digit) [five]."
-  },
-  {
-    "word": "mu'a",
-    "type": "cmavo",
-    "definition": "discursive: for example - omitting - end examples."
-  },
-  {
-    "word": "mu'e",
-    "type": "cmavo",
-    "definition": "abstractor: achievement (event) abstractor; $x_{1}$ is the event-as-a-point/achievement of [bridi]."
-  },
-  {
-    "word": "mu'i",
-    "type": "cmavo",
-    "definition": "mukti modal, 1st place                            because of motive ..."
-  },
-  {
-    "word": "mu'o",
-    "type": "cmavo",
-    "definition": "vocative: over (response OK) - more to come."
-  },
-  {
-    "word": "mu'u",
-    "type": "cmavo",
-    "definition": "mupli modal, 1st place                            exemplified by ..."
-  },
-  {
-    "word": "my",
-    "type": "cmavo",
-    "definition": "letteral for m."
-  },
-  {
-    "word": "na",
-    "type": "cmavo",
-    "definition": "bridi contradictory negator; scope is an entire bridi; logically negates in some cmavo compounds."
-  },
-  {
-    "word": "na'a",
-    "type": "cmavo",
-    "definition": "cancel all letteral shifts."
-  },
-  {
-    "word": "na'e",
-    "type": "cmavo",
-    "definition": "contrary scalar negator: other than ...; not ...; a scale or set is implied."
-  },
-  {
-    "word": "na'i",
-    "type": "cmavo",
-    "definition": "discursive: metalinguistic negator."
-  },
-  {
-    "word": "na'o",
-    "type": "cmavo",
-    "definition": "tense interval modifier: characteristically/typically; tense/modal; defaults as time tense."
-  },
-  {
-    "word": "na'u",
-    "type": "cmavo",
-    "definition": "convert selbri to mex operator; used to create less-used operators using fu'ivla, lujvo, etc."
-  },
-  {
-    "word": "nai",
-    "type": "cmavo",
-    "definition": "attached to cmavo to negate them; various negation-related meanings."
-  },
-  {
-    "word": "nau",
-    "type": "cmavo",
-    "definition": "tense: refers to current space/time reference absolutely."
-  },
-  {
-    "word": "ne",
-    "type": "cmavo",
-    "definition": "non-restrictive relative phrase marker: which incidentally is associated with ..."
-  },
-  {
-    "word": "ne'a",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; approximating/next to ..."
-  },
-  {
-    "word": "ne'i",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; within/inside of/into ..."
-  },
-  {
-    "word": "ne'o",
-    "type": "cmavo",
-    "definition": "unary mathematical operator: factorial; a!."
-  },
-  {
-    "word": "ne'u",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; south of."
-  },
-  {
-    "word": "nei",
-    "type": "cmavo",
-    "definition": "pro-bridi: repeats the current bridi."
-  },
-  {
-    "word": "ni",
-    "type": "cmavo",
-    "definition": "abstractor: quantity/amount abstractor; $x_{1}$ is quantity/amount of [bridi] measured on scale $x_{2}$."
-  },
-  {
-    "word": "ni'a",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; downwards/down from ..."
-  },
-  {
-    "word": "ni'e",
-    "type": "cmavo",
-    "definition": "convert selbri to mex operand; used to create new non-numerical quantifiers; e.g. \"herd\" of oxen."
-  },
-  {
-    "word": "ni'i",
-    "type": "cmavo",
-    "definition": "nibli modal, 1st place                            logically; logically because ..."
-  },
-  {
-    "word": "ni'o",
-    "type": "cmavo",
-    "definition": "discursive: paragraph break; introduce new topic."
-  },
-  {
-    "word": "ni'u",
-    "type": "cmavo",
-    "definition": "digit/number: minus sign; negative number); default any negative."
-  },
-  {
-    "word": "no",
-    "type": "cmavo",
-    "definition": "digit/number: 0 (digit) [zero]."
-  },
-  {
-    "word": "no'a",
-    "type": "cmavo",
-    "definition": "pro-bridi: repeats the bridi in which this one is embedded."
-  },
-  {
-    "word": "no'e",
-    "type": "cmavo",
-    "definition": "midpoint scalar negator: neutral point between je'a and to'e; \"not really\"."
-  },
-  {
-    "word": "no'i",
-    "type": "cmavo",
-    "definition": "discursive: paragraph break; resume previous topic."
-  },
-  {
-    "word": "no'o",
-    "type": "cmavo",
-    "definition": "digit/number: typical/average value."
-  },
-  {
-    "word": "no'u",
-    "type": "cmavo",
-    "definition": "non-restrictive appositive phrase marker: which incidentally is the same thing as ..."
-  },
-  {
-    "word": "noi",
-    "type": "cmavo",
-    "definition": "non-restrictive relative clause; attaches subordinate bridi with incidental information."
-  },
-  {
-    "word": "nu",
-    "type": "cmavo",
-    "definition": "abstractor: generalized event abstractor; $x_{1}$ is state/process/achievement/activity of [bridi]."
-  },
-  {
-    "word": "nu'a",
-    "type": "cmavo",
-    "definition": "convert mathematical expression (mex) operator to a selbri/tanru component."
-  },
-  {
-    "word": "nu'e",
-    "type": "cmavo",
-    "definition": "vocative: promise - promise release - un-promise."
-  },
-  {
-    "word": "nu'i",
-    "type": "cmavo",
-    "definition": "start forethought termset construct; marks start of place structure set with logical connection."
-  },
-  {
-    "word": "nu'o",
-    "type": "cmavo",
-    "definition": "modal aspect: can but has not; unrealized potential."
-  },
-  {
-    "word": "nu'u",
-    "type": "cmavo",
-    "definition": "elidable terminator: end forethought termset; usually elidable except with following sumti."
-  },
-  {
-    "word": "ny",
-    "type": "cmavo",
-    "definition": "letteral for n."
-  },
-  {
-    "word": "o",
-    "type": "cmavo",
-    "definition": "logical connective: sumti afterthought biconditional/iff/if-and-only-if."
-  },
-  {
-    "word": "o'a",
-    "type": "cmavo",
-    "definition": "attitudinal: pride - modesty/humility - shame."
-  },
-  {
-    "word": "o'e",
-    "type": "cmavo",
-    "definition": "attitudinal: closeness - distance."
-  },
-  {
-    "word": "o'i",
-    "type": "cmavo",
-    "definition": "attitudinal: caution - rashness."
-  },
-  {
-    "word": "o'o",
-    "type": "cmavo",
-    "definition": "attitudinal: patience - mere tolerance - anger."
-  },
-  {
-    "word": "o'u",
-    "type": "cmavo",
-    "definition": "attitudinal: relaxation - composure - stress."
-  },
-  {
-    "word": "oi",
-    "type": "cmavo",
-    "definition": "attitudinal: complaint - pleasure."
-  },
-  {
-    "word": "pa",
-    "type": "cmavo",
-    "definition": "digit/number: 1 (digit) [one]."
-  },
-  {
-    "word": "pa'a",
-    "type": "cmavo",
-    "definition": "panra modal, 1st place (parallel; shared property) similarly; in addition to ..."
-  },
-  {
-    "word": "pa'e",
-    "type": "cmavo",
-    "definition": "discursive: justice - prejudice."
-  },
-  {
-    "word": "pa'i",
-    "type": "cmavo",
-    "definition": "binary mathematical operator: ratio; [the ratio of a to b]."
-  },
-  {
-    "word": "pa'o",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; transfixing/passing through ..."
-  },
-  {
-    "word": "pa'u",
-    "type": "cmavo",
-    "definition": "pagbu modal, 1st place                            having component ..."
-  },
-  {
-    "word": "pai",
-    "type": "cmavo",
-    "definition": "digit/number: pi (approximately 3.1416...)."
-  },
-  {
-    "word": "pau",
-    "type": "cmavo",
-    "definition": "discursive: optional question premarker."
-  },
-  {
-    "word": "pe",
-    "type": "cmavo",
-    "definition": "restrictive relative phrase marker: which is associated with ...; loosest associative/possessive."
-  },
-  {
-    "word": "pe'a",
-    "type": "cmavo",
-    "definition": "marks a construct as figurative (non-literal/metaphorical) speech/text."
-  },
-  {
-    "word": "pe'e",
-    "type": "cmavo",
-    "definition": "marks the following connective as joining termsets."
-  },
-  {
-    "word": "pe'i",
-    "type": "cmavo",
-    "definition": "evidential: I opine (subjective claim)."
-  },
-  {
-    "word": "pe'o",
-    "type": "cmavo",
-    "definition": "forethought flag for mathematical expression (mex) Polish (forethought) operator."
-  },
-  {
-    "word": "pe'u",
-    "type": "cmavo",
-    "definition": "vocative: please."
-  },
-  {
-    "word": "pei",
-    "type": "cmavo",
-    "definition": "attitudinal: attitudinal question; how do you feel about it? with what intensity?."
-  },
-  {
-    "word": "pi",
-    "type": "cmavo",
-    "definition": "digit/number: radix (number base) point; default decimal."
-  },
-  {
-    "word": "pi'a",
-    "type": "cmavo",
-    "definition": "n-ary mathematical operator: operands are vectors to be treated as matrix rows."
-  },
-  {
-    "word": "pi'e",
-    "type": "cmavo",
-    "definition": "digit/number:separates digits for base >16, not current standard, or variable (e.g. time, date)."
-  },
-  {
-    "word": "pi'i",
-    "type": "cmavo",
-    "definition": "n-ary mathematical operator: times; multiplication operator; [(((a * b) * c) * ...)]."
-  },
-  {
-    "word": "pi'o",
-    "type": "cmavo",
-    "definition": "pilno modal, 1st place                            used by ..."
-  },
-  {
-    "word": "pi'u",
-    "type": "cmavo",
-    "definition": "non-logical connective: cross product; Cartesian product of sets."
-  },
-  {
-    "word": "po",
-    "type": "cmavo",
-    "definition": "restrictive relative phrase marker: which is specific to ...; normal possessive physical/legal."
-  },
-  {
-    "word": "po'e",
-    "type": "cmavo",
-    "definition": "restrictive relative phrase marker: which belongs to ... ; inalienable possession."
-  },
-  {
-    "word": "po'i",
-    "type": "cmavo",
-    "definition": "porsi modal, 1st place (in order)                 sequentially; in the sequence ..."
-  },
-  {
-    "word": "po'o",
-    "type": "cmavo",
-    "definition": "discursive: uniquely, only, solely: the only relevant case."
-  },
-  {
-    "word": "po'u",
-    "type": "cmavo",
-    "definition": "restrictive appositive phrase marker: which is the same thing as."
-  },
-  {
-    "word": "poi",
-    "type": "cmavo",
-    "definition": "restrictive relative clause; attaches subordinate bridi with identifying information to a sumti."
-  },
-  {
-    "word": "pu",
-    "type": "cmavo",
-    "definition": "time tense relation/direction: did [selbri]; before/prior to [sumti]; default past tense."
-  },
-  {
-    "word": "pu'a",
-    "type": "cmavo",
-    "definition": "pluka modal, 1st place                            pleased by ..."
-  },
-  {
-    "word": "pu'e",
-    "type": "cmavo",
-    "definition": "pruce modal, 1st place (in manner 1)              by process ..."
-  },
-  {
-    "word": "pu'i",
-    "type": "cmavo",
-    "definition": "modal aspect: can and has; demonstrated potential."
-  },
-  {
-    "word": "pu'o",
-    "type": "cmavo",
-    "definition": "interval event contour: in anticipation of ...;  until ... ; inchoative         ----|     |."
-  },
-  {
-    "word": "pu'u",
-    "type": "cmavo",
-    "definition": "abstractor: process (event) abstractor; $x_{1}$ is process of [bridi] proceeding in stages $x_{2}$."
-  },
-  {
-    "word": "py",
-    "type": "cmavo",
-    "definition": "letteral for p."
-  },
-  {
-    "word": "ra",
-    "type": "cmavo",
-    "definition": "pro-sumti: a recent sumti before the last one, as determined by back-counting rules."
-  },
-  {
-    "word": "ra'a",
-    "type": "cmavo",
-    "definition": "srana modal, 1st place                            pertained to by ... (generally more specific)."
-  },
-  {
-    "word": "ra'e",
-    "type": "cmavo",
-    "definition": "digit/number: repeating digits (of a decimal) follow."
-  },
-  {
-    "word": "ra'i",
-    "type": "cmavo",
-    "definition": "krasi modal, 1st place                            from source/origin/starting point ..."
-  },
-  {
-    "word": "ra'o",
-    "type": "cmavo",
-    "definition": "flag GOhA to indicate pro-assignment context updating for all pro-assigns in referenced bridi."
-  },
-  {
-    "word": "ra'u",
-    "type": "cmavo",
-    "definition": "discursive: chiefly - equally - incidentally."
-  },
-  {
-    "word": "rai",
-    "type": "cmavo",
-    "definition": "traji modal, 1st place                            with superlative ..."
-  },
-  {
-    "word": "rau",
-    "type": "cmavo",
-    "definition": "digit/number: enough; subjective."
-  },
-  {
-    "word": "re",
-    "type": "cmavo",
-    "definition": "digit/number: 2 (digit) [two]."
-  },
-  {
-    "word": "re'a",
-    "type": "cmavo",
-    "definition": "unary mathematical operator: matrix transpose/dual; A*."
-  },
-  {
-    "word": "re'e",
-    "type": "cmavo",
-    "definition": "emotion category/modifier: religious/spiritual/worship - sacrilege."
-  },
-  {
-    "word": "re'i",
-    "type": "cmavo",
-    "definition": "vocative: ready to receive - not ready to receive."
-  },
-  {
-    "word": "re'o",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; adjacent to/touching/contacting ..."
-  },
-  {
-    "word": "re'u",
-    "type": "cmavo",
-    "definition": "converts number to an objectively quantified ordinal tense interval modifier; defaults to time."
-  },
-  {
-    "word": "rei",
-    "type": "cmavo",
-    "definition": "digit/number: hex digit E (decimal 14) [fourteen]."
-  },
-  {
-    "word": "ri",
-    "type": "cmavo",
-    "definition": "pro-sumti: the last sumti, as determined by back-counting rules."
-  },
-  {
-    "word": "ri'a",
-    "type": "cmavo",
-    "definition": "rinka modal, 1st place (phys./mental)             causal because ..."
-  },
-  {
-    "word": "ri'e",
-    "type": "cmavo",
-    "definition": "attitudinal modifier: release of emotion - emotion restraint."
-  },
-  {
-    "word": "ri'i",
-    "type": "cmavo",
-    "definition": "lifri modal, 1st place patient/passive case tag; happens to...,experienced by...,with passive..."
-  },
-  {
-    "word": "ri'o",
-    "type": "cmavo",
-    "definition": "trinary mathematical operator: [integral of a with respect to b over range c]."
-  },
-  {
-    "word": "ri'u",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; rightwards/to the right of ..."
-  },
-  {
-    "word": "ro",
-    "type": "cmavo",
-    "definition": "digit/number: each, all."
-  },
-  {
-    "word": "ro'a",
-    "type": "cmavo",
-    "definition": "emotion category/modifier: social - antisocial."
-  },
-  {
-    "word": "ro'e",
-    "type": "cmavo",
-    "definition": "emotion category/modifier: mental - mindless."
-  },
-  {
-    "word": "ro'i",
-    "type": "cmavo",
-    "definition": "emotion category/modifier: emotional - denying emotion."
-  },
-  {
-    "word": "ro'o",
-    "type": "cmavo",
-    "definition": "emotion category/modifier: physical - denying physical."
-  },
-  {
-    "word": "ro'u",
-    "type": "cmavo",
-    "definition": "emotion category/modifier: sexual - sexual abstinence."
-  },
-  {
-    "word": "roi",
-    "type": "cmavo",
-    "definition": "converts number to an objectively quantified tense interval modifier; defaults to time tense."
-  },
-  {
-    "word": "ru",
-    "type": "cmavo",
-    "definition": "pro-sumti: a remote past sumti, before all other in-use backcounting sumti."
-  },
-  {
-    "word": "ru'a",
-    "type": "cmavo",
-    "definition": "evidential: I postulate."
-  },
-  {
-    "word": "ru'e",
-    "type": "cmavo",
-    "definition": "attitudinal: weak intensity attitude modifier."
-  },
-  {
-    "word": "ru'i",
-    "type": "cmavo",
-    "definition": "tense interval modifier: continuously; subjective tense/modal; defaults as time tense."
-  },
-  {
-    "word": "ru'o",
-    "type": "cmavo",
-    "definition": "shift letterals to Cyrillic alphabet."
-  },
-  {
-    "word": "ru'u",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; surrounding/annular ..."
-  },
-  {
-    "word": "ry",
-    "type": "cmavo",
-    "definition": "letteral for r."
-  },
-  {
-    "word": "sa",
-    "type": "cmavo",
-    "definition": "erase complete or partial utterance; next word shows how much erasing to do."
-  },
-  {
-    "word": "sa'a",
-    "type": "cmavo",
-    "definition": "discursive: material inserted by editor/narrator (bracketed text)."
-  },
-  {
-    "word": "sa'e",
-    "type": "cmavo",
-    "definition": "discursive: precisely speaking - loosely speaking."
-  },
-  {
-    "word": "sa'i",
-    "type": "cmavo",
-    "definition": "n-ary mathematical operator: operands are vectors to be treated as matrix columns."
-  },
-  {
-    "word": "sa'o",
-    "type": "cmavo",
-    "definition": "trinary mathematical operator: [derivative of a with respect to b of degree c]."
-  },
-  {
-    "word": "sa'u",
-    "type": "cmavo",
-    "definition": "discursive: simply - elaborating."
-  },
-  {
-    "word": "sai",
-    "type": "cmavo",
-    "definition": "attitudinal: moderate intensity attitude modifier."
-  },
-  {
-    "word": "sau",
-    "type": "cmavo",
-    "definition": "sarcu modal, 1st place                            requiring ..."
-  },
-  {
-    "word": "se",
-    "type": "cmavo",
-    "definition": "2nd conversion; switch 1st/2nd places."
-  },
-  {
-    "word": "se'a",
-    "type": "cmavo",
-    "definition": "attitudinal modifier: self-sufficiency - dependency."
-  },
-  {
-    "word": "se'e",
-    "type": "cmavo",
-    "definition": "following digits code a character (in ASCII, Unicode, etc.)."
-  },
-  {
-    "word": "se'i",
-    "type": "cmavo",
-    "definition": "attitudinal modifier: self-oriented - other-oriented."
-  },
-  {
-    "word": "se'o",
-    "type": "cmavo",
-    "definition": "evidential: I know by internal experience (dream, vision, or personal revelation)."
-  },
-  {
-    "word": "se'u",
-    "type": "cmavo",
-    "definition": "elidable terminator: end discursive bridi or mathematical precedence;usually elidable."
-  },
-  {
-    "word": "sei",
-    "type": "cmavo",
-    "definition": "start discursive (metalinguistic) bridi."
-  },
-  {
-    "word": "si",
-    "type": "cmavo",
-    "definition": "erase the last Lojban word, treating non-Lojban text as a single word."
-  },
-  {
-    "word": "si'a",
-    "type": "cmavo",
-    "definition": "discursive: similarly."
-  },
-  {
-    "word": "si'e",
-    "type": "cmavo",
-    "definition": "convert number to portion selbri; $x_{1}$ is an (n)th portion of mass/totality $x_{2}$; (cf. gunma)."
-  },
-  {
-    "word": "si'i",
-    "type": "cmavo",
-    "definition": "trinary mathematical operator: [sigma summation of a using variable b over range c]."
-  },
-  {
-    "word": "si'o",
-    "type": "cmavo",
-    "definition": "abstractor: idea/concept abstractor; $x_{1}$ is $x_{2}$'s concept of [bridi]."
-  },
-  {
-    "word": "si'u",
-    "type": "cmavo",
-    "definition": "sidju modal, 1st place (aiding agent)             aided by ..."
-  },
-  {
-    "word": "so",
-    "type": "cmavo",
-    "definition": "digit/number: 9 (digit) [nine]."
-  },
-  {
-    "word": "so'a",
-    "type": "cmavo",
-    "definition": "digit/number: almost all (digit/number)."
-  },
-  {
-    "word": "so'e",
-    "type": "cmavo",
-    "definition": "digit/number: most."
-  },
-  {
-    "word": "so'i",
-    "type": "cmavo",
-    "definition": "digit/number: many."
-  },
-  {
-    "word": "so'o",
-    "type": "cmavo",
-    "definition": "digit/number: several."
-  },
-  {
-    "word": "so'u",
-    "type": "cmavo",
-    "definition": "digit/number: few."
-  },
-  {
-    "word": "soi",
-    "type": "cmavo",
-    "definition": "discursive: reciprocal sumti marker; indicates a reciprocal relationship between sumti."
-  },
-  {
-    "word": "su",
-    "type": "cmavo",
-    "definition": "erase to start of discourse or text; drop subject or start over."
-  },
-  {
-    "word": "su'a",
-    "type": "cmavo",
-    "definition": "evidential: I generalize - I particularize; discursive: abstractly - concretely."
-  },
-  {
-    "word": "su'e",
-    "type": "cmavo",
-    "definition": "digit/number: at most (all); no more than."
-  },
-  {
-    "word": "su'i",
-    "type": "cmavo",
-    "definition": "n-ary mathematical operator: plus; addition operator; [(((a + b) + c) + ...)]."
-  },
-  {
-    "word": "su'o",
-    "type": "cmavo",
-    "definition": "digit/number: at least (some); no less than."
-  },
-  {
-    "word": "su'u",
-    "type": "cmavo",
-    "definition": "abstractor: generalized abstractor (how); $x_{1}$ is [bridi] as a non-specific abstraction of type $x_{2}$."
-  },
-  {
-    "word": "sy",
-    "type": "cmavo",
-    "definition": "letteral for s."
-  },
-  {
-    "word": "ta",
-    "type": "cmavo",
-    "definition": "pro-sumti: that there; nearby demonstrative it; indicated thing/place near listener."
-  },
-  {
-    "word": "ta'a",
-    "type": "cmavo",
-    "definition": "vocative: interruption."
-  },
-  {
-    "word": "ta'e",
-    "type": "cmavo",
-    "definition": "tense interval modifier: habitually; subjective tense/modal; defaults as time tense."
-  },
-  {
-    "word": "ta'i",
-    "type": "cmavo",
-    "definition": "tadji modal, 1st place (in manner 3)              methodically; by method ..."
-  },
-  {
-    "word": "ta'o",
-    "type": "cmavo",
-    "definition": "discursive: by the way - returning to main point."
-  },
-  {
-    "word": "ta'u",
-    "type": "cmavo",
-    "definition": "discursive: expanding the tanru - making a tanru."
-  },
-  {
-    "word": "tai",
-    "type": "cmavo",
-    "definition": "tamsmi modal, 1st place (like)/(in manner 2)      resembling ...; sharing ideal form ..."
-  },
-  {
-    "word": "tau",
-    "type": "cmavo",
-    "definition": "2-word letteral/shift: change case for next letteral only."
-  },
-  {
-    "word": "te",
-    "type": "cmavo",
-    "definition": "3rd conversion; switch 1st/3rd places."
-  },
-  {
-    "word": "te'a",
-    "type": "cmavo",
-    "definition": "binary mathematical operator: to the power; exponential; [a to the b power]."
-  },
-  {
-    "word": "te'e",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; edged by/edging up to ..."
-  },
-  {
-    "word": "te'o",
-    "type": "cmavo",
-    "definition": "digit/number: exponential e (approx 2.71828...)."
-  },
-  {
-    "word": "te'u",
-    "type": "cmavo",
-    "definition": "elidable terminator: end conversion between non-mex and mex; usually elidable."
-  },
-  {
-    "word": "tei",
-    "type": "cmavo",
-    "definition": "composite letteral follows; used for multi-character letterals."
-  },
-  {
-    "word": "ti",
-    "type": "cmavo",
-    "definition": "pro-sumti: this here; immediate demonstrative it; indicated thing/place near speaker."
-  },
-  {
-    "word": "ti'a",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; rearwards/to the rear of ..."
-  },
-  {
-    "word": "ti'e",
-    "type": "cmavo",
-    "definition": "evidential: I hear (hearsay)."
-  },
-  {
-    "word": "ti'i",
-    "type": "cmavo",
-    "definition": "stidi modal, 1st place                            suggested by ...; proposed by ..."
-  },
-  {
-    "word": "ti'o",
-    "type": "cmavo",
-    "definition": "mathematical expression (mex) operator precedence (discursive)."
-  },
-  {
-    "word": "ti'u",
-    "type": "cmavo",
-    "definition": "tcika modal, 1st place (for letters)              associated with time ... ; attach time stamp."
-  },
-  {
-    "word": "to",
-    "type": "cmavo",
-    "definition": "left parenthesis; start of parenthetical note which must be grammatical Lojban text."
-  },
-  {
-    "word": "to'a",
-    "type": "cmavo",
-    "definition": "lower-case letteral shift."
-  },
-  {
-    "word": "to'e",
-    "type": "cmavo",
-    "definition": "polar opposite scalar negator."
-  },
-  {
-    "word": "to'i",
-    "type": "cmavo",
-    "definition": "open editorial unquote (within a quote); contains grammatical text; mark with editorial insert."
-  },
-  {
-    "word": "to'o",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; departing from/directly away from ..."
-  },
-  {
-    "word": "to'u",
-    "type": "cmavo",
-    "definition": "discursive: in brief - in detail."
-  },
-  {
-    "word": "toi",
-    "type": "cmavo",
-    "definition": "elidable terminator: right parenthesis/end unquote; seldom elidable except at end of text."
-  },
-  {
-    "word": "tu",
-    "type": "cmavo",
-    "definition": "pro-sumti: that yonder; distant demonstrative it; indicated thing far from speaker&listener."
-  },
-  {
-    "word": "tu'a",
-    "type": "cmavo",
-    "definition": "extracts a concrete sumti from an unspecified abstraction; equivalent to le nu/su'u [sumti] co'e."
-  },
-  {
-    "word": "tu'e",
-    "type": "cmavo",
-    "definition": "start of multiple utterance scope; used for logical/non-logical/ordinal joining of sentences."
-  },
-  {
-    "word": "tu'i",
-    "type": "cmavo",
-    "definition": "stuzi modal, 1st place (used to situate letters)  associated with site ... ; label with location."
-  },
-  {
-    "word": "tu'o",
-    "type": "cmavo",
-    "definition": "null operand (used in unary mekso operations)."
-  },
-  {
-    "word": "tu'u",
-    "type": "cmavo",
-    "definition": "elidable terminator: end multiple utterance scope; seldom elidable."
-  },
-  {
-    "word": "ty",
-    "type": "cmavo",
-    "definition": "letteral for t."
-  },
-  {
-    "word": "u",
-    "type": "cmavo",
-    "definition": "logical connective: sumti afterthought whether-or-not."
-  },
-  {
-    "word": "u'a",
-    "type": "cmavo",
-    "definition": "attitudinal: gain - loss."
-  },
-  {
-    "word": "u'e",
-    "type": "cmavo",
-    "definition": "attitudinal: wonder - commonplace."
-  },
-  {
-    "word": "u'i",
-    "type": "cmavo",
-    "definition": "attitudinal: amusement - weariness."
-  },
-  {
-    "word": "u'o",
-    "type": "cmavo",
-    "definition": "attitudinal: courage - timidity - cowardice."
-  },
-  {
-    "word": "u'u",
-    "type": "cmavo",
-    "definition": "attitudinal: repentance - lack of regret - innocence."
-  },
-  {
-    "word": "ua",
-    "type": "cmavo",
-    "definition": "attitudinal: discovery - confusion/searching."
-  },
-  {
-    "word": "ue",
-    "type": "cmavo",
-    "definition": "attitudinal: surprise - not really surprised - expectation."
-  },
-  {
-    "word": "ui",
-    "type": "cmavo",
-    "definition": "attitudinal: happiness - unhappiness."
-  },
-  {
-    "word": "uo",
-    "type": "cmavo",
-    "definition": "attitudinal: completion - incompleteness."
-  },
-  {
-    "word": "uu",
-    "type": "cmavo",
-    "definition": "attitudinal: pity - cruelty."
-  },
-  {
-    "word": "va",
-    "type": "cmavo",
-    "definition": "location tense distance: near to ... ; there at ...; a medium/small distance from ..."
-  },
-  {
-    "word": "va'a",
-    "type": "cmavo",
-    "definition": "unary mathematical operator: additive inverse; [- a]."
-  },
-  {
-    "word": "va'e",
-    "type": "cmavo",
-    "definition": "convert number to scalar selbri; $x_{1}$ is at (n)th position on scale $x_{2}$."
-  },
-  {
-    "word": "va'i",
-    "type": "cmavo",
-    "definition": "discursive: in other words - in the same words."
-  },
-  {
-    "word": "va'o",
-    "type": "cmavo",
-    "definition": "vanbi modal, 1st place (conditions 1)             under conditions ...; in environment ..."
-  },
-  {
-    "word": "va'u",
-    "type": "cmavo",
-    "definition": "xamgu modal, 1st place beneficiary case tag complement  benefiting from ..."
-  },
-  {
-    "word": "vai",
-    "type": "cmavo",
-    "definition": "digit/number: hex digit F (decimal 15) [fifteen]."
-  },
-  {
-    "word": "vau",
-    "type": "cmavo",
-    "definition": "elidable: end of sumti in simple bridi; in compound bridi, separates common trailing sumti."
-  },
-  {
-    "word": "ve",
-    "type": "cmavo",
-    "definition": "4th conversion; switch 1st/4th places."
-  },
-  {
-    "word": "ve'a",
-    "type": "cmavo",
-    "definition": "location tense interval: a small/medium region of space."
-  },
-  {
-    "word": "ve'e",
-    "type": "cmavo",
-    "definition": "location tense interval: the whole of space."
-  },
-  {
-    "word": "ve'i",
-    "type": "cmavo",
-    "definition": "location tense interval: a tiny region of space."
-  },
-  {
-    "word": "ve'o",
-    "type": "cmavo",
-    "definition": "right mathematical bracket."
-  },
-  {
-    "word": "ve'u",
-    "type": "cmavo",
-    "definition": "location tense interval: a large region of space."
-  },
-  {
-    "word": "vei",
-    "type": "cmavo",
-    "definition": "left mathematical bracket."
-  },
-  {
-    "word": "vi",
-    "type": "cmavo",
-    "definition": "location tense distance: here at ... ; at or a very short/tiny distance from ..."
-  },
-  {
-    "word": "vi'a",
-    "type": "cmavo",
-    "definition": "dimensionality of space interval tense: 2-space interval; throughout an area."
-  },
-  {
-    "word": "vi'e",
-    "type": "cmavo",
-    "definition": "dimensionality of space interval tense: 4-space interval; throughout a spacetime."
-  },
-  {
-    "word": "vi'i",
-    "type": "cmavo",
-    "definition": "dimensionality of space interval tense: 1-space interval; along a line."
-  },
-  {
-    "word": "vi'o",
-    "type": "cmavo",
-    "definition": "vocative: wilco (ack and will comply)."
-  },
-  {
-    "word": "vi'u",
-    "type": "cmavo",
-    "definition": "dimensionality of space interval tense: 3-space interval; throughout a space."
-  },
-  {
-    "word": "vo",
-    "type": "cmavo",
-    "definition": "digit/number: 4 (digit) [four]."
-  },
-  {
-    "word": "vo'a",
-    "type": "cmavo",
-    "definition": "pro-sumti: repeats 1st place of main bridi of this sentence."
-  },
-  {
-    "word": "vo'e",
-    "type": "cmavo",
-    "definition": "pro-sumti: repeats 2nd place of main bridi of this sentence."
-  },
-  {
-    "word": "vo'i",
-    "type": "cmavo",
-    "definition": "pro-sumti: repeats 3rd place of main bridi of this sentence."
-  },
-  {
-    "word": "vo'o",
-    "type": "cmavo",
-    "definition": "pro-sumti: repeats 4th place of main bridi of this sentence."
-  },
-  {
-    "word": "vo'u",
-    "type": "cmavo",
-    "definition": "pro-sumti: repeats 5th place of main bridi of this sentence."
-  },
-  {
-    "word": "voi",
-    "type": "cmavo",
-    "definition": "non-veridical restrictive clause used to form complicated le-like descriptions using \"ke'a\"."
-  },
-  {
-    "word": "vu",
-    "type": "cmavo",
-    "definition": "location tense distance: far from ... ; yonder at ... ; a long distance from ..."
-  },
-  {
-    "word": "vu'a",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; west of."
-  },
-  {
-    "word": "vu'e",
-    "type": "cmavo",
-    "definition": "attitudinal modifier: virtue - sin."
-  },
-  {
-    "word": "vu'i",
-    "type": "cmavo",
-    "definition": "sumti qualifier: the sequence made from set or composed of elements/components; order is vague."
-  },
-  {
-    "word": "vu'o",
-    "type": "cmavo",
-    "definition": "joins relative clause/phrase to complete complex or logically connected sumti in afterthought."
-  },
-  {
-    "word": "vu'u",
-    "type": "cmavo",
-    "definition": "n-ary mathematical operator: minus; subtraction operator; [(((a - b) - c) - ...)]."
-  },
-  {
-    "word": "vy",
-    "type": "cmavo",
-    "definition": "letteral for v."
-  },
-  {
-    "word": "xa",
-    "type": "cmavo",
-    "definition": "digit/number: 6 (digit) [six]."
-  },
-  {
-    "word": "xe",
-    "type": "cmavo",
-    "definition": "5th conversion; switch 1st/5th places."
-  },
-  {
-    "word": "xi",
-    "type": "cmavo",
-    "definition": "subscript; attaches a numer of letteral string following as a subscript onto grammar structures."
-  },
-  {
-    "word": "xo",
-    "type": "cmavo",
-    "definition": "digit/number: number/digit/lerfu question."
-  },
-  {
-    "word": "xu",
-    "type": "cmavo",
-    "definition": "discursive: true-false question."
-  },
-  {
-    "word": "xy",
-    "type": "cmavo",
-    "definition": "letteral for x."
-  },
-  {
-    "word": "y",
-    "type": "cmavo",
-    "definition": "hesitation noise; maintains the floor while speaker decides what to say next."
-  },
-  {
-    "word": "y'y",
-    "type": "cmavo",
-    "definition": "letteral for '."
-  },
-  {
-    "word": "za",
-    "type": "cmavo",
-    "definition": "time tense distance: medium distance in time."
-  },
-  {
-    "word": "za'a",
-    "type": "cmavo",
-    "definition": "evidential: I observe."
-  },
-  {
-    "word": "za'e",
-    "type": "cmavo",
-    "definition": "forethought nonce-word indicator; indicates next word is nonce-creation and may be nonstandard."
-  },
-  {
-    "word": "za'i",
-    "type": "cmavo",
-    "definition": "abstractor: state (event) abstractor; $x_{1}$ is continuous state of [bridi] being true."
-  },
-  {
-    "word": "za'o",
-    "type": "cmavo",
-    "definition": "interval event contour: continuing too long after natural end of ...; superfective  |     ---->."
-  },
-  {
-    "word": "za'u",
-    "type": "cmavo",
-    "definition": "digit/number: greater than."
-  },
-  {
-    "word": "zai",
-    "type": "cmavo",
-    "definition": "2-word letteral/shift: alternate alphabet selector follows."
-  },
-  {
-    "word": "zau",
-    "type": "cmavo",
-    "definition": "zanru modal, 1st place                            approved by ..."
-  },
-  {
-    "word": "ze",
-    "type": "cmavo",
-    "definition": "digit/number: 7 (digit) [seven]."
-  },
-  {
-    "word": "ze'a",
-    "type": "cmavo",
-    "definition": "time tense interval: a medium length of time."
-  },
-  {
-    "word": "ze'e",
-    "type": "cmavo",
-    "definition": "time tense interval: the whole of time."
-  },
-  {
-    "word": "ze'i",
-    "type": "cmavo",
-    "definition": "time tense interval: an instantaneous/tiny/short amount of time."
-  },
-  {
-    "word": "ze'o",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; beyond/outward/receding from ..."
-  },
-  {
-    "word": "ze'u",
-    "type": "cmavo",
-    "definition": "time tense interval: a long amount of time."
-  },
-  {
-    "word": "zei",
-    "type": "cmavo",
-    "definition": "joins preceding and following words into a lujvo."
-  },
-  {
-    "word": "zi",
-    "type": "cmavo",
-    "definition": "time tense distance: instantaneous-to-short distance in time."
-  },
-  {
-    "word": "zi'e",
-    "type": "cmavo",
-    "definition": "joins relative clauses which apply to the same sumti."
-  },
-  {
-    "word": "zi'o",
-    "type": "cmavo",
-    "definition": "pro-sumti: fills a sumti place, deleting it from selbri place structure;changes selbri semantics."
-  },
-  {
-    "word": "zo",
-    "type": "cmavo",
-    "definition": "quote next word only; quotes a single Lojban word (not a cmavo compound or tanru)."
-  },
-  {
-    "word": "zo'a",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; tangential to/passing by ..."
-  },
-  {
-    "word": "zo'e",
-    "type": "cmavo",
-    "definition": "pro-sumti: an elliptical/unspecified value; has some value which makes bridi true."
-  },
-  {
-    "word": "zo'i",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; nearer than .../inward/approaching from ..."
-  },
-  {
-    "word": "zo'o",
-    "type": "cmavo",
-    "definition": "attitudinal modifier: humorously - dully - seriously."
-  },
-  {
-    "word": "zo'u",
-    "type": "cmavo",
-    "definition": "marks end of logical prenex quantifiers/topic identification and start of sentence bridi."
-  },
-  {
-    "word": "zoi",
-    "type": "cmavo",
-    "definition": "delimited non-Lojban quotation; the result treated as a block of text."
-  },
-  {
-    "word": "zu",
-    "type": "cmavo",
-    "definition": "time tense distance: long distance in time."
-  },
-  {
-    "word": "zu'a",
-    "type": "cmavo",
-    "definition": "location tense relation/direction; leftwards/to the left of ..."
-  },
-  {
-    "word": "zu'e",
-    "type": "cmavo",
-    "definition": "zukte modal, 1st place (purposed agent)           with goal-seeking actor ..."
-  },
-  {
-    "word": "zu'i",
-    "type": "cmavo",
-    "definition": "pro-sumti: the typical sumti value for this place in this relationship; affects truth value."
-  },
-  {
-    "word": "zu'o",
-    "type": "cmavo",
-    "definition": "abstractor: activity (event) abstractor; $x_{1}$ is abstract activity of [bridi] composed of $x_{2}$."
-  },
-  {
-    "word": "zu'u",
-    "type": "cmavo",
-    "definition": "discursive: on the one hand - on the other hand."
-  },
-  {
-    "word": "zy",
-    "type": "cmavo",
-    "definition": "letteral for z."
-  }
+	{
+		"word": "a",
+		"type": "cmavo",
+		"definition": "logical connective: sumti afterthought or."
+	},
+	{
+		"word": "a'a",
+		"type": "cmavo",
+		"definition": "attitudinal: attentive - inattentive - avoiding."
+	},
+	{
+		"word": "a'e",
+		"type": "cmavo",
+		"definition": "attitudinal: alertness - exhaustion."
+	},
+	{
+		"word": "a'i",
+		"type": "cmavo",
+		"definition": "attitudinal: effort - no special effort - repose."
+	},
+	{
+		"word": "a'o",
+		"type": "cmavo",
+		"definition": "attitudinal: hope - despair."
+	},
+	{
+		"word": "a'u",
+		"type": "cmavo",
+		"definition": "attitudinal: interest - disinterest - repulsion."
+	},
+	{
+		"word": "ai",
+		"type": "cmavo",
+		"definition": "attitudinal: intent - indecision - rejection/refusal."
+	},
+	{
+		"word": "au",
+		"type": "cmavo",
+		"definition": "attitudinal: desire - indifference - reluctance."
+	},
+	{
+		"word": "ba",
+		"type": "cmavo",
+		"definition": "time tense relation/direction: will [selbri]; after [sumti]; default future tense."
+	},
+	{
+		"word": "ba'a",
+		"type": "cmavo",
+		"definition": "evidential: I expect - I experience - I remember."
+	},
+	{
+		"word": "ba'e",
+		"type": "cmavo",
+		"definition": "forethought emphasis indicator; indicates next word is especially emphasized."
+	},
+	{
+		"word": "ba'i",
+		"type": "cmavo",
+		"definition": "basti modal, 1st place                            replaced by ..."
+	},
+	{
+		"word": "ba'o",
+		"type": "cmavo",
+		"definition": "interval event contour: in the aftermath of ...; since ...; perfective              |     |----."
+	},
+	{
+		"word": "ba'u",
+		"type": "cmavo",
+		"definition": "discursive: exaggeration - accuracy - understatement."
+	},
+	{
+		"word": "bai",
+		"type": "cmavo",
+		"definition": "bapli modal, 1st place (forced by)                forcedly; compelled by force ..."
+	},
+	{
+		"word": "bau",
+		"type": "cmavo",
+		"definition": "bangu modal, 1st place                            in language ..."
+	},
+	{
+		"word": "be",
+		"type": "cmavo",
+		"definition": "sumti link to attach sumti (default $x_{2}$) to a selbri; used in descriptions."
+	},
+	{
+		"word": "be'a",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; north of."
+	},
+	{
+		"word": "be'e",
+		"type": "cmavo",
+		"definition": "vocative: request to send/speak."
+	},
+	{
+		"word": "be'i",
+		"type": "cmavo",
+		"definition": "benji modal, 1st place (sender)                   sent by ..."
+	},
+	{
+		"word": "be'o",
+		"type": "cmavo",
+		"definition": "elidable terminator: end linked sumti in specified description."
+	},
+	{
+		"word": "be'u",
+		"type": "cmavo",
+		"definition": "attitudinal modifier: lack/need - presence/satisfaction - satiation."
+	},
+	{
+		"word": "bei",
+		"type": "cmavo",
+		"definition": "separates multiple linked sumti within a selbri; used in descriptions."
+	},
+	{
+		"word": "bi",
+		"type": "cmavo",
+		"definition": "digit/number: 8 (digit) [eight]."
+	},
+	{
+		"word": "bi'e",
+		"type": "cmavo",
+		"definition": "prefixed to a mex operator to indicate high priority."
+	},
+	{
+		"word": "bi'i",
+		"type": "cmavo",
+		"definition": "non-logical interval connective: unordered between ... and ..."
+	},
+	{
+		"word": "bi'o",
+		"type": "cmavo",
+		"definition": "non-logical interval connective: ordered from ... to ..."
+	},
+	{
+		"word": "bi'u",
+		"type": "cmavo",
+		"definition": "discursive: newly introduced information - previously introduced information."
+	},
+	{
+		"word": "bo",
+		"type": "cmavo",
+		"definition": "short scope joiner; joins various constructs with shortest scope and right grouping."
+	},
+	{
+		"word": "boi",
+		"type": "cmavo",
+		"definition": "elidable terminator: terminate numeral or letteral string."
+	},
+	{
+		"word": "bu",
+		"type": "cmavo",
+		"definition": "convert any single word to BY."
+	},
+	{
+		"word": "bu'a",
+		"type": "cmavo",
+		"definition": "logically quantified predicate variable: some selbri 1."
+	},
+	{
+		"word": "bu'e",
+		"type": "cmavo",
+		"definition": "logically quantified predicate variable: some selbri 2."
+	},
+	{
+		"word": "bu'i",
+		"type": "cmavo",
+		"definition": "logically quantified predicate variable: some selbri 3."
+	},
+	{
+		"word": "bu'o",
+		"type": "cmavo",
+		"definition": "attitudinal contour: start emotion - continue emotion - end emotion."
+	},
+	{
+		"word": "bu'u",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; coincident with/at the same place as; space equivalent of ca."
+	},
+	{
+		"word": "by",
+		"type": "cmavo",
+		"definition": "letteral for b."
+	},
+	{
+		"word": "ca",
+		"type": "cmavo",
+		"definition": "time tense relation/direction: is [selbri]; during/simultaneous with [sumti]; present tense."
+	},
+	{
+		"word": "ca'a",
+		"type": "cmavo",
+		"definition": "modal aspect: actuality/ongoing event."
+	},
+	{
+		"word": "ca'e",
+		"type": "cmavo",
+		"definition": "evidential: I define."
+	},
+	{
+		"word": "ca'i",
+		"type": "cmavo",
+		"definition": "catni modal, 1st place                            by authority of ..."
+	},
+	{
+		"word": "ca'o",
+		"type": "cmavo",
+		"definition": "interval event contour: during ...; continuative                                    |-----|."
+	},
+	{
+		"word": "ca'u",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; forwards/to the front of ..."
+	},
+	{
+		"word": "cai",
+		"type": "cmavo",
+		"definition": "attitudinal: strong intensity attitude modifier."
+	},
+	{
+		"word": "cau",
+		"type": "cmavo",
+		"definition": "claxu modal, 1st place                            lacked by ..."
+	},
+	{
+		"word": "ce",
+		"type": "cmavo",
+		"definition": "non-logical connective: set link, unordered; \"and also\", but forming a set."
+	},
+	{
+		"word": "ce'a",
+		"type": "cmavo",
+		"definition": "2-word letteral/shift: the word following indicates a new font (e.g. italics, manuscript)."
+	},
+	{
+		"word": "ce'e",
+		"type": "cmavo",
+		"definition": "links terms into an afterthought termset."
+	},
+	{
+		"word": "ce'i",
+		"type": "cmavo",
+		"definition": "digit/number: % percentage symbol, hundredths."
+	},
+	{
+		"word": "ce'o",
+		"type": "cmavo",
+		"definition": "non-logical connective: ordered sequence link; \"and then\", forming a sequence."
+	},
+	{
+		"word": "ce'u",
+		"type": "cmavo",
+		"definition": "pseudo-quantifier binding a variable within an abstraction that represents an open place."
+	},
+	{
+		"word": "cei",
+		"type": "cmavo",
+		"definition": "selbri variable assignment; assigns broda series pro-bridi to a selbri."
+	},
+	{
+		"word": "ci",
+		"type": "cmavo",
+		"definition": "digit/number: 3 (digit) [three]."
+	},
+	{
+		"word": "ci'e",
+		"type": "cmavo",
+		"definition": "ciste modal, 1st place used in scalar negation    in system/context ..."
+	},
+	{
+		"word": "ci'i",
+		"type": "cmavo",
+		"definition": "digit/number: infinity; followed by digits => aleph cardinality."
+	},
+	{
+		"word": "ci'o",
+		"type": "cmavo",
+		"definition": "cinmo modal, 1st place                            emotionally felt by ..."
+	},
+	{
+		"word": "ci'u",
+		"type": "cmavo",
+		"definition": "ckilu modal, 1st place                            on the scale ..."
+	},
+	{
+		"word": "co",
+		"type": "cmavo",
+		"definition": "tanru inversion operator; \"... of type ...\"; allows modifier trailing sumti without sumti links."
+	},
+	{
+		"word": "co'a",
+		"type": "cmavo",
+		"definition": "interval event contour: at the starting point of ...; initiative                   >|<    |."
+	},
+	{
+		"word": "co'e",
+		"type": "cmavo",
+		"definition": "elliptical/unspecified bridi relationship."
+	},
+	{
+		"word": "co'i",
+		"type": "cmavo",
+		"definition": "interval event contour: at the instantaneous point of ...; achievative; point event   >|<."
+	},
+	{
+		"word": "co'o",
+		"type": "cmavo",
+		"definition": "vocative: partings/good-bye."
+	},
+	{
+		"word": "co'u",
+		"type": "cmavo",
+		"definition": "interval event contour: at the ending point of ... even if not done; cessative      |  >< |."
+	},
+	{
+		"word": "coi",
+		"type": "cmavo",
+		"definition": "vocative: greetings/hello."
+	},
+	{
+		"word": "cu",
+		"type": "cmavo",
+		"definition": "elidable marker: separates selbri from preceding sumti, allows preceding terminator elision."
+	},
+	{
+		"word": "cu'a",
+		"type": "cmavo",
+		"definition": "unary mathematical operator: absolute value/norm  |a|."
+	},
+	{
+		"word": "cu'e",
+		"type": "cmavo",
+		"definition": "tense/modal question."
+	},
+	{
+		"word": "cu'i",
+		"type": "cmavo",
+		"definition": "attitudinal: neutral scalar attitude modifier."
+	},
+	{
+		"word": "cu'o",
+		"type": "cmavo",
+		"definition": "convert number to probability selbri; event $x_{1}$ has probability (n) of occurring under cond. $x_{2}$."
+	},
+	{
+		"word": "cu'u",
+		"type": "cmavo",
+		"definition": "cusku modal, 1st place (attribution/quotation)    as said by source ...; used for quotation."
+	},
+	{
+		"word": "cy",
+		"type": "cmavo",
+		"definition": "letteral for c."
+	},
+	{
+		"word": "da",
+		"type": "cmavo",
+		"definition": "logically quantified existential pro-sumti: there exists something 1 (usually restricted)."
+	},
+	{
+		"word": "da'a",
+		"type": "cmavo",
+		"definition": "digit/number: all except n; all but n; default 1."
+	},
+	{
+		"word": "da'e",
+		"type": "cmavo",
+		"definition": "pro-sumti: remote future utterance; \"He'll tell you tomorrow. IT will be a doozy.\"."
+	},
+	{
+		"word": "da'i",
+		"type": "cmavo",
+		"definition": "discursive: supposing - in fact."
+	},
+	{
+		"word": "da'o",
+		"type": "cmavo",
+		"definition": "discursive: cancel pro-sumti/pro-bridi assignments."
+	},
+	{
+		"word": "da'u",
+		"type": "cmavo",
+		"definition": "pro-sumti: a remote past utterance; \"She couldn't have known that IT would be true.\"."
+	},
+	{
+		"word": "dai",
+		"type": "cmavo",
+		"definition": "attitudinal modifier: marks empathetic use of preceding attitudinal; shows another's feelings."
+	},
+	{
+		"word": "dau",
+		"type": "cmavo",
+		"definition": "digit/number: hex digit A (decimal 10) [ten]."
+	},
+	{
+		"word": "de",
+		"type": "cmavo",
+		"definition": "logically quantified existential pro-sumti: there exists something 2 (usually restricted)."
+	},
+	{
+		"word": "de'a",
+		"type": "cmavo",
+		"definition": "event contour for a temporary halt and ensuing pause in a process."
+	},
+	{
+		"word": "de'e",
+		"type": "cmavo",
+		"definition": "pro-sumti: a near future utterance."
+	},
+	{
+		"word": "de'i",
+		"type": "cmavo",
+		"definition": "detri modal, 1st place (for letters)              dated ... ; attaches date stamp."
+	},
+	{
+		"word": "de'o",
+		"type": "cmavo",
+		"definition": "binary mathematical operator: logarithm; [log/ln a to base b]; default base 10 or e."
+	},
+	{
+		"word": "de'u",
+		"type": "cmavo",
+		"definition": "pro-sumti: a recent utterance."
+	},
+	{
+		"word": "dei",
+		"type": "cmavo",
+		"definition": "pro-sumti: this utterance."
+	},
+	{
+		"word": "di",
+		"type": "cmavo",
+		"definition": "logically quantified existential pro-sumti: there exists something 3 (usually restricted)."
+	},
+	{
+		"word": "di'a",
+		"type": "cmavo",
+		"definition": "event contour for resumption of a paused process."
+	},
+	{
+		"word": "di'e",
+		"type": "cmavo",
+		"definition": "pro-sumti: the next utterance."
+	},
+	{
+		"word": "di'i",
+		"type": "cmavo",
+		"definition": "tense interval modifier: regularly; subjective tense/modal; defaults as time tense."
+	},
+	{
+		"word": "di'o",
+		"type": "cmavo",
+		"definition": "diklo modal, 1st place                            in the location of ..."
+	},
+	{
+		"word": "di'u",
+		"type": "cmavo",
+		"definition": "pro-sumti: the last utterance."
+	},
+	{
+		"word": "do",
+		"type": "cmavo",
+		"definition": "pro-sumti: you listener(s); identified by vocative."
+	},
+	{
+		"word": "do'a",
+		"type": "cmavo",
+		"definition": "discursive: generously - parsimoniously."
+	},
+	{
+		"word": "do'e",
+		"type": "cmavo",
+		"definition": "elliptical/unspecified modal."
+	},
+	{
+		"word": "do'i",
+		"type": "cmavo",
+		"definition": "pro-sumti: elliptical/unspecified utterance variable."
+	},
+	{
+		"word": "do'o",
+		"type": "cmavo",
+		"definition": "pro-sumti: you the listener & others unspecified."
+	},
+	{
+		"word": "do'u",
+		"type": "cmavo",
+		"definition": "elidable terminator: end vocative (often elidable)."
+	},
+	{
+		"word": "doi",
+		"type": "cmavo",
+		"definition": "generic vocative marker; identifies intended listener; elidable after COI."
+	},
+	{
+		"word": "du",
+		"type": "cmavo",
+		"definition": "identity selbri; = sign; $x_{1}$ identically equals $x_{2}$, $x_{3}$, etc.; attached sumti refer to same thing."
+	},
+	{
+		"word": "du'a",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; east of."
+	},
+	{
+		"word": "du'e",
+		"type": "cmavo",
+		"definition": "digit/number: too many; subjective."
+	},
+	{
+		"word": "du'i",
+		"type": "cmavo",
+		"definition": "dunli modal, 1st place (equalled by)              equally; as much as ..."
+	},
+	{
+		"word": "du'o",
+		"type": "cmavo",
+		"definition": "djuno modal, 1st place (info source)            authoritatively; according to ...; known by ..."
+	},
+	{
+		"word": "du'u",
+		"type": "cmavo",
+		"definition": "abstractor: predication/bridi abstractor; $x_{1}$ is predication [bridi] expressed in sentence $x_{2}$."
+	},
+	{
+		"word": "dy",
+		"type": "cmavo",
+		"definition": "letteral for d."
+	},
+	{
+		"word": "e",
+		"type": "cmavo",
+		"definition": "logical connective: sumti afterthought and."
+	},
+	{
+		"word": "e'a",
+		"type": "cmavo",
+		"definition": "attitudinal: granting permission - prohibiting."
+	},
+	{
+		"word": "e'e",
+		"type": "cmavo",
+		"definition": "attitudinal: competence - incompetence/inability."
+	},
+	{
+		"word": "e'i",
+		"type": "cmavo",
+		"definition": "attitudinal: feeling constraint - independence - challenge/resistance against constraint."
+	},
+	{
+		"word": "e'o",
+		"type": "cmavo",
+		"definition": "attitudinal: request - negative request."
+	},
+	{
+		"word": "e'u",
+		"type": "cmavo",
+		"definition": "attitudinal: suggestion - abandon suggest - warning."
+	},
+	{
+		"word": "ei",
+		"type": "cmavo",
+		"definition": "attitudinal: obligation - freedom."
+	},
+	{
+		"word": "fa",
+		"type": "cmavo",
+		"definition": "sumti place tag: tag 1st sumti place."
+	},
+	{
+		"word": "fa'a",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; arriving at/directly towards ..."
+	},
+	{
+		"word": "fa'e",
+		"type": "cmavo",
+		"definition": "fatne modal, 1st place                            backwards; reverse of ..."
+	},
+	{
+		"word": "fa'i",
+		"type": "cmavo",
+		"definition": "unary mathematical operator: reciprocal; multiplicative inverse; [1/a]."
+	},
+	{
+		"word": "fa'o",
+		"type": "cmavo",
+		"definition": "unconditional end of text; outside regular grammar; used for computer input."
+	},
+	{
+		"word": "fa'u",
+		"type": "cmavo",
+		"definition": "non-logical connective: respectively; unmixed ordered distributed association."
+	},
+	{
+		"word": "fai",
+		"type": "cmavo",
+		"definition": "sumti place tag: tag a sumti moved out of numbered place structure; used in modal conversions."
+	},
+	{
+		"word": "fau",
+		"type": "cmavo",
+		"definition": "fasnu modal, 1st place (non-causal)               in the event of ..."
+	},
+	{
+		"word": "fe",
+		"type": "cmavo",
+		"definition": "sumti place tag: tag 2nd sumti place."
+	},
+	{
+		"word": "fe'a",
+		"type": "cmavo",
+		"definition": "binary mathematical operator: nth root of; inverse power [a to the 1/b power]."
+	},
+	{
+		"word": "fe'e",
+		"type": "cmavo",
+		"definition": "mark space interval distributive aspects; labels interval tense modifiers as location-oriented."
+	},
+	{
+		"word": "fe'i",
+		"type": "cmavo",
+		"definition": "n-ary mathematical operator: divided by; division operator; [(((a / b) / c) / ...)]."
+	},
+	{
+		"word": "fe'o",
+		"type": "cmavo",
+		"definition": "vocative: over and out (end discussion)."
+	},
+	{
+		"word": "fe'u",
+		"type": "cmavo",
+		"definition": "elidable terminator: end nonce conversion of selbri to modal; usually elidable."
+	},
+	{
+		"word": "fei",
+		"type": "cmavo",
+		"definition": "digit/number: hex digit B (decimal 11) [eleven]."
+	},
+	{
+		"word": "fi",
+		"type": "cmavo",
+		"definition": "sumti place tag: tag 3rd sumti place."
+	},
+	{
+		"word": "fi'a",
+		"type": "cmavo",
+		"definition": "sumti place tag: place structure number/tag question."
+	},
+	{
+		"word": "fi'e",
+		"type": "cmavo",
+		"definition": "finti modal, 1st place (creator)                  created by ..."
+	},
+	{
+		"word": "fi'i",
+		"type": "cmavo",
+		"definition": "vocative: hospitality - inhospitality; you are welcome/ make yourself at home."
+	},
+	{
+		"word": "fi'o",
+		"type": "cmavo",
+		"definition": "convert selbri to nonce modal/sumti tag."
+	},
+	{
+		"word": "fi'u",
+		"type": "cmavo",
+		"definition": "digit/number: fraction slash; default \"/n\" => 1/n, \"n/\" => n/1, or \"/\" alone => golden ratio."
+	},
+	{
+		"word": "fo",
+		"type": "cmavo",
+		"definition": "sumti place tag: tag 4th sumti place."
+	},
+	{
+		"word": "fo'a",
+		"type": "cmavo",
+		"definition": "pro-sumti: he/she/it/they #6 (specified by goi)."
+	},
+	{
+		"word": "fo'e",
+		"type": "cmavo",
+		"definition": "pro-sumti: he/she/it/they #7 (specified by goi)."
+	},
+	{
+		"word": "fo'i",
+		"type": "cmavo",
+		"definition": "pro-sumti: he/she/it/they #8 (specified by goi)."
+	},
+	{
+		"word": "fo'o",
+		"type": "cmavo",
+		"definition": "pro-sumti: he/she/it/they #9 (specified by goi)."
+	},
+	{
+		"word": "fo'u",
+		"type": "cmavo",
+		"definition": "pro-sumti: he/she/it/they #10 (specified by goi)."
+	},
+	{
+		"word": "foi",
+		"type": "cmavo",
+		"definition": "terminator: end composite lerfu; never elidable."
+	},
+	{
+		"word": "fu",
+		"type": "cmavo",
+		"definition": "sumti place tag: tag 5th sumti place."
+	},
+	{
+		"word": "fu'a",
+		"type": "cmavo",
+		"definition": "reverse Polish mathematical expression (mex) operator flag."
+	},
+	{
+		"word": "fu'e",
+		"type": "cmavo",
+		"definition": "begin indicator long scope."
+	},
+	{
+		"word": "fu'i",
+		"type": "cmavo",
+		"definition": "attitudinal modifier: easy - difficult."
+	},
+	{
+		"word": "fu'o",
+		"type": "cmavo",
+		"definition": "end indicator long scope; terminates scope of all active indicators."
+	},
+	{
+		"word": "fu'u",
+		"type": "cmavo",
+		"definition": "n-ary mathematical operator: elliptical/unspecified mathematical expression (mex) operator."
+	},
+	{
+		"word": "fy",
+		"type": "cmavo",
+		"definition": "letteral for f."
+	},
+	{
+		"word": "ga",
+		"type": "cmavo",
+		"definition": "logical connective: forethought all but tanru-internal or (with gi)."
+	},
+	{
+		"word": "ga'a",
+		"type": "cmavo",
+		"definition": "zgana modal, 1st place                            to observer ... ; witnessed by ..."
+	},
+	{
+		"word": "ga'e",
+		"type": "cmavo",
+		"definition": "upper-case letteral shift."
+	},
+	{
+		"word": "ga'i",
+		"type": "cmavo",
+		"definition": "attitudinal modifier/honorific: hauteur - equal rank - meekness; used with one of lower rank."
+	},
+	{
+		"word": "ga'o",
+		"type": "cmavo",
+		"definition": "closed interval bracket marker; mod. intervals in non-logical connectives; include boundaries."
+	},
+	{
+		"word": "ga'u",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; upwards/up from ..."
+	},
+	{
+		"word": "gai",
+		"type": "cmavo",
+		"definition": "digit/number: hex digit C (decimal 12) [twelve]."
+	},
+	{
+		"word": "gau",
+		"type": "cmavo",
+		"definition": "gasnu modal, 1st place agent/actor case tag       with active agent ..."
+	},
+	{
+		"word": "ge",
+		"type": "cmavo",
+		"definition": "logical connective: forethought all but tanru-internal and (with gi)."
+	},
+	{
+		"word": "ge'a",
+		"type": "cmavo",
+		"definition": "mathematical operator: null mathematical expression (mex) operator (used in >2-ary ops)."
+	},
+	{
+		"word": "ge'e",
+		"type": "cmavo",
+		"definition": "attitudinal: elliptical/unspecified/non-specific emotion; no particular feeling."
+	},
+	{
+		"word": "ge'i",
+		"type": "cmavo",
+		"definition": "logical connective: forethought all but tanru-internal connective question (with gi)."
+	},
+	{
+		"word": "ge'o",
+		"type": "cmavo",
+		"definition": "shift letterals to Greek alphabet."
+	},
+	{
+		"word": "ge'u",
+		"type": "cmavo",
+		"definition": "elidable terminator: end relative/modal phrases; usually elidable in non-complex phrases."
+	},
+	{
+		"word": "gei",
+		"type": "cmavo",
+		"definition": "trinary mathematical operator: order of magnitude/value/base; [b * (c to the a power)]."
+	},
+	{
+		"word": "gi",
+		"type": "cmavo",
+		"definition": "logical connective: all but tanru-internal forethought connective medial marker."
+	},
+	{
+		"word": "gi'a",
+		"type": "cmavo",
+		"definition": "logical connective: bridi-tail afterthought or."
+	},
+	{
+		"word": "gi'e",
+		"type": "cmavo",
+		"definition": "logical connective: bridi-tail afterthought and."
+	},
+	{
+		"word": "gi'i",
+		"type": "cmavo",
+		"definition": "logical connective: bridi-tail afterthought conn question."
+	},
+	{
+		"word": "gi'o",
+		"type": "cmavo",
+		"definition": "logical connective: bridi-tail afterthought biconditional/iff/if-and-only-if."
+	},
+	{
+		"word": "gi'u",
+		"type": "cmavo",
+		"definition": "logical connective: bridi-tail afterthought whether-or-not."
+	},
+	{
+		"word": "go",
+		"type": "cmavo",
+		"definition": "logical connective: forethought all but tanru internal biconditional/iff/if-and-only-if(with gi)."
+	},
+	{
+		"word": "go'a",
+		"type": "cmavo",
+		"definition": "pro-bridi: repeats a recent bridi (usually not the last 2)."
+	},
+	{
+		"word": "go'e",
+		"type": "cmavo",
+		"definition": "pro-bridi: repeats the next to last bridi."
+	},
+	{
+		"word": "go'i",
+		"type": "cmavo",
+		"definition": "pro-bridi: preceding bridi; in answer to a yes/no question, repeats the claim, meaning yes."
+	},
+	{
+		"word": "go'o",
+		"type": "cmavo",
+		"definition": "pro-bridi: repeats a future bridi, normally the next one."
+	},
+	{
+		"word": "go'u",
+		"type": "cmavo",
+		"definition": "pro-bridi: repeats a remote past bridi."
+	},
+	{
+		"word": "goi",
+		"type": "cmavo",
+		"definition": "sumti assignment; used to define/assign ko'a/fo'a series pro-sumti; Latin 'sive'."
+	},
+	{
+		"word": "gu",
+		"type": "cmavo",
+		"definition": "logical connective: forethought all but tanru-internal whether-or-not (with gi)."
+	},
+	{
+		"word": "gu'a",
+		"type": "cmavo",
+		"definition": "logical connective: tanru-internal forethought or (with gi)."
+	},
+	{
+		"word": "gu'e",
+		"type": "cmavo",
+		"definition": "logical connective: tanru-internal forethought and (with gi)."
+	},
+	{
+		"word": "gu'i",
+		"type": "cmavo",
+		"definition": "logical connective: tanru-internal forethought question (with gi)."
+	},
+	{
+		"word": "gu'o",
+		"type": "cmavo",
+		"definition": "logical connective: tanru-internal forethought biconditional/iff/if-and-only-if (with gi)."
+	},
+	{
+		"word": "gu'u",
+		"type": "cmavo",
+		"definition": "logical connective: tanru-internal forethought whether-or-not (with gi)."
+	},
+	{
+		"word": "gy",
+		"type": "cmavo",
+		"definition": "letteral for g."
+	},
+	{
+		"word": "i",
+		"type": "cmavo",
+		"definition": "sentence link/continuation; continuing sentences on same topic; normally elided for new speakers."
+	},
+	{
+		"word": "i'a",
+		"type": "cmavo",
+		"definition": "attitudinal: acceptance - blame."
+	},
+	{
+		"word": "i'e",
+		"type": "cmavo",
+		"definition": "attitudinal: approval - non-approval - disapproval."
+	},
+	{
+		"word": "i'i",
+		"type": "cmavo",
+		"definition": "attitudinal: togetherness - privacy."
+	},
+	{
+		"word": "i'o",
+		"type": "cmavo",
+		"definition": "attitudinal: appreciation - envy."
+	},
+	{
+		"word": "i'u",
+		"type": "cmavo",
+		"definition": "attitudinal: familiarity - mystery."
+	},
+	{
+		"word": "ia",
+		"type": "cmavo",
+		"definition": "attitudinal: belief - skepticism - disbelief."
+	},
+	{
+		"word": "ie",
+		"type": "cmavo",
+		"definition": "attitudinal: agreement - disagreement."
+	},
+	{
+		"word": "ii",
+		"type": "cmavo",
+		"definition": "attitudinal: fear - security."
+	},
+	{
+		"word": "io",
+		"type": "cmavo",
+		"definition": "attitudinal: respect - disrespect."
+	},
+	{
+		"word": "iu",
+		"type": "cmavo",
+		"definition": "attitudinal: love - no love lost - hatred."
+	},
+	{
+		"word": "ja",
+		"type": "cmavo",
+		"definition": "logical connective: tanru-internal afterthought or."
+	},
+	{
+		"word": "ja'a",
+		"type": "cmavo",
+		"definition": "bridi logical affirmer; scope is an entire bridi."
+	},
+	{
+		"word": "ja'e",
+		"type": "cmavo",
+		"definition": "jalge modal, 1st place                            resultingly; therefore result ..."
+	},
+	{
+		"word": "ja'i",
+		"type": "cmavo",
+		"definition": "javni modal, 1st place (by standard 1)            orderly; by rule ..."
+	},
+	{
+		"word": "ja'o",
+		"type": "cmavo",
+		"definition": "evidential: I conclude."
+	},
+	{
+		"word": "jai",
+		"type": "cmavo",
+		"definition": "convert tense/modal (tagged) place to 1st place; 1st place moves to extra FA place (fai)."
+	},
+	{
+		"word": "jau",
+		"type": "cmavo",
+		"definition": "digit/number: hex digit D (decimal 13) [thirteen]."
+	},
+	{
+		"word": "je",
+		"type": "cmavo",
+		"definition": "logical connective: tanru-internal afterthought and."
+	},
+	{
+		"word": "je'a",
+		"type": "cmavo",
+		"definition": "scalar affirmer; denies scalar negation: Indeed!."
+	},
+	{
+		"word": "je'e",
+		"type": "cmavo",
+		"definition": "vocative: roger (ack) - negative acknowledge; used to acknowledge offers and thanks."
+	},
+	{
+		"word": "je'i",
+		"type": "cmavo",
+		"definition": "logical connective: tanru-internal afterthought conn question."
+	},
+	{
+		"word": "je'o",
+		"type": "cmavo",
+		"definition": "shift letterals to Hebrew alphabet."
+	},
+	{
+		"word": "je'u",
+		"type": "cmavo",
+		"definition": "discursive: truth - falsity."
+	},
+	{
+		"word": "jei",
+		"type": "cmavo",
+		"definition": "abstractor: truth-value abstractor; $x_{1}$ is truth value of [bridi] under epistemology $x_{2}$."
+	},
+	{
+		"word": "ji",
+		"type": "cmavo",
+		"definition": "logical connective: sumti afterthought connective question."
+	},
+	{
+		"word": "ji'a",
+		"type": "cmavo",
+		"definition": "discursive: additionally."
+	},
+	{
+		"word": "ji'e",
+		"type": "cmavo",
+		"definition": "jimte modal, 1st place                            limitedly; up to limit ..."
+	},
+	{
+		"word": "ji'i",
+		"type": "cmavo",
+		"definition": "digit/number: approximately (default the typical value in this context) (number)."
+	},
+	{
+		"word": "ji'o",
+		"type": "cmavo",
+		"definition": "jitro modal, 1st place (control)                  controlledly; under direction of ..."
+	},
+	{
+		"word": "ji'u",
+		"type": "cmavo",
+		"definition": "jicmu modal, 1st place (assumptions);             given that ...; based on ..."
+	},
+	{
+		"word": "jo",
+		"type": "cmavo",
+		"definition": "logical connective: tanru-internal afterthought biconditional/iff/if-and-only-if."
+	},
+	{
+		"word": "jo'a",
+		"type": "cmavo",
+		"definition": "discursive: metalinguistic affirmer."
+	},
+	{
+		"word": "jo'e",
+		"type": "cmavo",
+		"definition": "non-logical connective: union of sets."
+	},
+	{
+		"word": "jo'i",
+		"type": "cmavo",
+		"definition": "join mathematical expression (mex) operands into an array."
+	},
+	{
+		"word": "jo'o",
+		"type": "cmavo",
+		"definition": "shift letterals to Arabic alphabet."
+	},
+	{
+		"word": "jo'u",
+		"type": "cmavo",
+		"definition": "non-logical connective: in common with; along with (unmixed)."
+	},
+	{
+		"word": "joi",
+		"type": "cmavo",
+		"definition": "non-logical connective: mixed conjunction; \"and\" meaning \"mixed together\", forming a mass."
+	},
+	{
+		"word": "ju",
+		"type": "cmavo",
+		"definition": "logical connective: tanru-internal afterthought whether-or-not."
+	},
+	{
+		"word": "ju'a",
+		"type": "cmavo",
+		"definition": "evidential: I state - (default) elliptical/non-specific basis."
+	},
+	{
+		"word": "ju'e",
+		"type": "cmavo",
+		"definition": "vague non-logical connective: analogous to plain \".i\"."
+	},
+	{
+		"word": "ju'i",
+		"type": "cmavo",
+		"definition": "vocative: attention - at ease - ignore me."
+	},
+	{
+		"word": "ju'o",
+		"type": "cmavo",
+		"definition": "attitudinal modifier: certainty - uncertainty - impossibility."
+	},
+	{
+		"word": "ju'u",
+		"type": "cmavo",
+		"definition": "binary mathematical operator: number base; [a interpreted in the base b]."
+	},
+	{
+		"word": "jy",
+		"type": "cmavo",
+		"definition": "letteral for j."
+	},
+	{
+		"word": "ka",
+		"type": "cmavo",
+		"definition": "abstractor: property/quality abstractor (-ness); $x_{1}$ is quality/property exhibited by [bridi]."
+	},
+	{
+		"word": "ka'a",
+		"type": "cmavo",
+		"definition": "klama modal, 1st place                            gone to by ..."
+	},
+	{
+		"word": "ka'e",
+		"type": "cmavo",
+		"definition": "modal aspect: innate capability; possibly unrealized."
+	},
+	{
+		"word": "ka'i",
+		"type": "cmavo",
+		"definition": "krati modal, 1st place                            represented by ..."
+	},
+	{
+		"word": "ka'o",
+		"type": "cmavo",
+		"definition": "digit/number: imaginary i; square root of -1."
+	},
+	{
+		"word": "ka'u",
+		"type": "cmavo",
+		"definition": "evidential: I know by cultural means (myth or custom)."
+	},
+	{
+		"word": "kai",
+		"type": "cmavo",
+		"definition": "ckaji modal, 1st place                            characterizing ..."
+	},
+	{
+		"word": "kau",
+		"type": "cmavo",
+		"definition": "discursive: marks word serving as focus of indirect question: \"I know WHO went to the store\"."
+	},
+	{
+		"word": "ke",
+		"type": "cmavo",
+		"definition": "start grouping of tanru, etc; ... type of ... ; overrides normal tanru left grouping."
+	},
+	{
+		"word": "ke'a",
+		"type": "cmavo",
+		"definition": "pro-sumti: relativized sumti (object of relative clause)."
+	},
+	{
+		"word": "ke'e",
+		"type": "cmavo",
+		"definition": "elidable terminator: end of tanru left grouping override (usually elidable)."
+	},
+	{
+		"word": "ke'i",
+		"type": "cmavo",
+		"definition": "open interval bracket marker; modifies intervals in non-logical connectives; exclude boundaries."
+	},
+	{
+		"word": "ke'o",
+		"type": "cmavo",
+		"definition": "vocative: please repeat."
+	},
+	{
+		"word": "ke'u",
+		"type": "cmavo",
+		"definition": "discursive: repeating - continuing."
+	},
+	{
+		"word": "kei",
+		"type": "cmavo",
+		"definition": "elidable terminator: end abstraction bridi (often elidable)."
+	},
+	{
+		"word": "ki",
+		"type": "cmavo",
+		"definition": "tense/modal: set/use tense default; establishes new open scope space/time/modal reference base."
+	},
+	{
+		"word": "ki'a",
+		"type": "cmavo",
+		"definition": "attitudinal question: confusion about something said."
+	},
+	{
+		"word": "ki'e",
+		"type": "cmavo",
+		"definition": "vocative: thanks - no thanks to you."
+	},
+	{
+		"word": "ki'i",
+		"type": "cmavo",
+		"definition": "ckini modal, 1st place (related to)               relatively; as a relation of ..."
+	},
+	{
+		"word": "ki'o",
+		"type": "cmavo",
+		"definition": "digit/number: number comma; thousands."
+	},
+	{
+		"word": "ki'u",
+		"type": "cmavo",
+		"definition": "krinu modal, 1st place (justified by)             justifiably; because of reason ..."
+	},
+	{
+		"word": "ko",
+		"type": "cmavo",
+		"definition": "pro-sumti: you (imperative); make it true for you, the listener."
+	},
+	{
+		"word": "ko'a",
+		"type": "cmavo",
+		"definition": "pro-sumti: he/she/it/they #1 (specified by goi)."
+	},
+	{
+		"word": "ko'e",
+		"type": "cmavo",
+		"definition": "pro-sumti: he/she/it/they #2 (specified by goi)."
+	},
+	{
+		"word": "ko'i",
+		"type": "cmavo",
+		"definition": "pro-sumti: he/she/it/they #3 (specified by goi)."
+	},
+	{
+		"word": "ko'o",
+		"type": "cmavo",
+		"definition": "pro-sumti: he/she/it/they #4 (specified by goi)."
+	},
+	{
+		"word": "ko'u",
+		"type": "cmavo",
+		"definition": "pro-sumti: he/she/it/they #5 (specified by goi)."
+	},
+	{
+		"word": "koi",
+		"type": "cmavo",
+		"definition": "korbi modal, 1st place (bordered by)              bounded by ..."
+	},
+	{
+		"word": "ku",
+		"type": "cmavo",
+		"definition": "elidable terminator: end description, modal, or negator sumti; often elidable."
+	},
+	{
+		"word": "ku'a",
+		"type": "cmavo",
+		"definition": "non-logical connective: intersection of sets."
+	},
+	{
+		"word": "ku'e",
+		"type": "cmavo",
+		"definition": "elidable terminator: end mathematical (mex) forethought (Polish) expression; often elidable."
+	},
+	{
+		"word": "ku'i",
+		"type": "cmavo",
+		"definition": "discursive: however/but/in contrast."
+	},
+	{
+		"word": "ku'o",
+		"type": "cmavo",
+		"definition": "elidable terminator: end NOI relative clause; always elidable, but preferred in complex clauses."
+	},
+	{
+		"word": "ku'u",
+		"type": "cmavo",
+		"definition": "kulnu modal, 1st place                            in culture ..."
+	},
+	{
+		"word": "ky",
+		"type": "cmavo",
+		"definition": "letteral for k."
+	},
+	{
+		"word": "la",
+		"type": "cmavo",
+		"definition": "name descriptor: the one(s) called ... ; takes name or selbri description."
+	},
+	{
+		"word": "la'a",
+		"type": "cmavo",
+		"definition": "discursive: probability - improbability."
+	},
+	{
+		"word": "la'e",
+		"type": "cmavo",
+		"definition": "the referent of (indirect pointer); uses the referent of a sumti as the desired sumti."
+	},
+	{
+		"word": "la'i",
+		"type": "cmavo",
+		"definition": "name descriptor: the set of those named ... ; takes name or selbri description."
+	},
+	{
+		"word": "la'o",
+		"type": "cmavo",
+		"definition": "delimited non-Lojban name; the resulting quote sumti is treated as a name."
+	},
+	{
+		"word": "la'u",
+		"type": "cmavo",
+		"definition": "klani modal, 1st place (amount)                   quantifying ...; being a quantity of ..."
+	},
+	{
+		"word": "lai",
+		"type": "cmavo",
+		"definition": "name descriptor: the mass of individual(s) named ... ; takes name or selbri description."
+	},
+	{
+		"word": "lau",
+		"type": "cmavo",
+		"definition": "2-word letteral/shift: punctuation mark or special symbol follows."
+	},
+	{
+		"word": "le",
+		"type": "cmavo",
+		"definition": "non-veridical descriptor: the one(s) described as ..."
+	},
+	{
+		"word": "le'a",
+		"type": "cmavo",
+		"definition": "klesi modal, 1st place (scalar set)               in/of category ..."
+	},
+	{
+		"word": "le'e",
+		"type": "cmavo",
+		"definition": "non-veridical descriptor: the stereotype of those described as ..."
+	},
+	{
+		"word": "le'i",
+		"type": "cmavo",
+		"definition": "non-veridical descriptor: the set of those described as ..., treated as a set."
+	},
+	{
+		"word": "le'o",
+		"type": "cmavo",
+		"definition": "attitudinal modifier: aggressive - passive - defensive."
+	},
+	{
+		"word": "le'u",
+		"type": "cmavo",
+		"definition": "end quote of questionable or out-of-context text; not elidable."
+	},
+	{
+		"word": "lei",
+		"type": "cmavo",
+		"definition": "non-veridical descriptor: the mass of individual(s) described as ..."
+	},
+	{
+		"word": "li",
+		"type": "cmavo",
+		"definition": "the number/evaluated expression; convert number/operand/evaluated math expression to sumti."
+	},
+	{
+		"word": "li'a",
+		"type": "cmavo",
+		"definition": "discursive: clearly - obscurely."
+	},
+	{
+		"word": "li'e",
+		"type": "cmavo",
+		"definition": "lidne modal, 1st place                            preceded by ...; non-time sequencing."
+	},
+	{
+		"word": "li'i",
+		"type": "cmavo",
+		"definition": "abstractor: experience abstractor; $x_{1}$ is $x_{2}$'s experience of [bridi] (participant or observer)."
+	},
+	{
+		"word": "li'o",
+		"type": "cmavo",
+		"definition": "discursive: omitted text (quoted material)."
+	},
+	{
+		"word": "li'u",
+		"type": "cmavo",
+		"definition": "elidable terminator: end grammatical quotation; seldom elidable except at end of text."
+	},
+	{
+		"word": "lo",
+		"type": "cmavo",
+		"definition": "veridical descriptor: the one(s) that really is(are) ..."
+	},
+	{
+		"word": "lo'a",
+		"type": "cmavo",
+		"definition": "shift letterals to Lojban (Roman) alphabet."
+	},
+	{
+		"word": "lo'e",
+		"type": "cmavo",
+		"definition": "veridical descriptor: the typical one(s) who really is(are) ..."
+	},
+	{
+		"word": "lo'i",
+		"type": "cmavo",
+		"definition": "veridical descriptor: the set of those that really are ..., treated as a set."
+	},
+	{
+		"word": "lo'o",
+		"type": "cmavo",
+		"definition": "elidable terminator: end math express.(mex) sumti; end mex-to-sumti conversion; usually elidable."
+	},
+	{
+		"word": "lo'u",
+		"type": "cmavo",
+		"definition": "start questionable/out-of-context quote; text should be Lojban words, but needn't be grammatical."
+	},
+	{
+		"word": "loi",
+		"type": "cmavo",
+		"definition": "veridical descriptor: the mass of individual(s) that is(are) ..."
+	},
+	{
+		"word": "lu",
+		"type": "cmavo",
+		"definition": "start grammatical quotation; quoted text should be grammatical on its own."
+	},
+	{
+		"word": "lu'a",
+		"type": "cmavo",
+		"definition": "the members of the set/components of the mass; converts another description type to individuals."
+	},
+	{
+		"word": "lu'e",
+		"type": "cmavo",
+		"definition": "the symbol for (indirect discourse); uses the symbol/word(s) for a sumti as the desired sumti."
+	},
+	{
+		"word": "lu'i",
+		"type": "cmavo",
+		"definition": "the set with members; converts another description type to a set of the members."
+	},
+	{
+		"word": "lu'o",
+		"type": "cmavo",
+		"definition": "the mass composed of; converts another description type to a mass composed of the members."
+	},
+	{
+		"word": "lu'u",
+		"type": "cmavo",
+		"definition": "elidable terminator: end of sumti qualifiers; usually elidable except before a sumti."
+	},
+	{
+		"word": "ly",
+		"type": "cmavo",
+		"definition": "letteral for l."
+	},
+	{
+		"word": "ma",
+		"type": "cmavo",
+		"definition": "pro-sumti: sumti question (what/who/how/why/etc.); appropriately fill in sumti blank."
+	},
+	{
+		"word": "ma'a",
+		"type": "cmavo",
+		"definition": "pro-sumti: me/we the speaker(s)/author(s) & you the listener(s) & others unspecified."
+	},
+	{
+		"word": "ma'e",
+		"type": "cmavo",
+		"definition": "marji modal, 1st place                            material in object/substance ..."
+	},
+	{
+		"word": "ma'i",
+		"type": "cmavo",
+		"definition": "manri modal, 1st place (by standard 2)            in reference frame ..."
+	},
+	{
+		"word": "ma'o",
+		"type": "cmavo",
+		"definition": "convert letteral string or other mathematical expression (mex) operand to mex operator."
+	},
+	{
+		"word": "ma'u",
+		"type": "cmavo",
+		"definition": "digit/number: plus sign; positive number; default any positive."
+	},
+	{
+		"word": "mai",
+		"type": "cmavo",
+		"definition": "utterance ordinal suffix; converts a number to an ordinal, such as an item or paragraph number."
+	},
+	{
+		"word": "mau",
+		"type": "cmavo",
+		"definition": "zmadu modal, 1st place (a greater)                exceeded by ... ; usually a sumti modifier."
+	},
+	{
+		"word": "me",
+		"type": "cmavo",
+		"definition": "convert sumti to selbri/tanru element; $x_{1}$ is specific to [sumti] in aspect $x_{2}$."
+	},
+	{
+		"word": "me'a",
+		"type": "cmavo",
+		"definition": "mleca modal, 1st place (a lesser)                 undercut by ... ; usually a sumti modifier."
+	},
+	{
+		"word": "me'e",
+		"type": "cmavo",
+		"definition": "cmene modal, 1st place (requires quote)           with name ...; so-called ..."
+	},
+	{
+		"word": "me'i",
+		"type": "cmavo",
+		"definition": "digit/number: less than."
+	},
+	{
+		"word": "me'o",
+		"type": "cmavo",
+		"definition": "the mathematical expression (unevaluated); convert unevaluated mathematical expression to sumti."
+	},
+	{
+		"word": "me'u",
+		"type": "cmavo",
+		"definition": "elidable terminator: end sumti that was converted to selbri; usually elidable."
+	},
+	{
+		"word": "mei",
+		"type": "cmavo",
+		"definition": "convert number to cardinality selbri; $x_{1}$ is the mass formed from set $x_{2}$ whose n member(s) are $x_{3}$."
+	},
+	{
+		"word": "mi",
+		"type": "cmavo",
+		"definition": "pro-sumti: me/we the speaker(s)/author(s); identified by self-vocative."
+	},
+	{
+		"word": "mi'a",
+		"type": "cmavo",
+		"definition": "pro-sumti: me/we the speaker(s)/author(s) & others unspecified, but not you, the listener."
+	},
+	{
+		"word": "mi'e",
+		"type": "cmavo",
+		"definition": "self vocative: self-introduction - denial of identity; identifies speaker."
+	},
+	{
+		"word": "mi'i",
+		"type": "cmavo",
+		"definition": "non-logical interval connective: ordered components: ... center, ... range surrounding center."
+	},
+	{
+		"word": "mi'o",
+		"type": "cmavo",
+		"definition": "pro-sumti: me/we the speaker(s)/author(s) & you the listener(s)."
+	},
+	{
+		"word": "mi'u",
+		"type": "cmavo",
+		"definition": "discursive: ditto."
+	},
+	{
+		"word": "mo",
+		"type": "cmavo",
+		"definition": "pro-bridi: bridi/selbri/brivla question."
+	},
+	{
+		"word": "mo'a",
+		"type": "cmavo",
+		"definition": "digit/number: too few; subjective."
+	},
+	{
+		"word": "mo'e",
+		"type": "cmavo",
+		"definition": "convert sumti to mex operand; sample use in story arithmetic: [3 apples] + [3 apples] = what."
+	},
+	{
+		"word": "mo'i",
+		"type": "cmavo",
+		"definition": "mark motions in space-time."
+	},
+	{
+		"word": "mo'o",
+		"type": "cmavo",
+		"definition": "higher-order utterance ordinal suffix; converts a number to ordinal, usually a section/chapter."
+	},
+	{
+		"word": "mo'u",
+		"type": "cmavo",
+		"definition": "interval event contour: at the natural ending point of ...; completive              |    >|<."
+	},
+	{
+		"word": "moi",
+		"type": "cmavo",
+		"definition": "convert number to ordinal selbri; $x_{1}$ is (n)th member of set $x_{2}$ ordered by rule $x_{3}$."
+	},
+	{
+		"word": "mu",
+		"type": "cmavo",
+		"definition": "digit/number: 5 (digit) [five]."
+	},
+	{
+		"word": "mu'a",
+		"type": "cmavo",
+		"definition": "discursive: for example - omitting - end examples."
+	},
+	{
+		"word": "mu'e",
+		"type": "cmavo",
+		"definition": "abstractor: achievement (event) abstractor; $x_{1}$ is the event-as-a-point/achievement of [bridi]."
+	},
+	{
+		"word": "mu'i",
+		"type": "cmavo",
+		"definition": "mukti modal, 1st place                            because of motive ..."
+	},
+	{
+		"word": "mu'o",
+		"type": "cmavo",
+		"definition": "vocative: over (response OK) - more to come."
+	},
+	{
+		"word": "mu'u",
+		"type": "cmavo",
+		"definition": "mupli modal, 1st place                            exemplified by ..."
+	},
+	{
+		"word": "my",
+		"type": "cmavo",
+		"definition": "letteral for m."
+	},
+	{
+		"word": "na",
+		"type": "cmavo",
+		"definition": "bridi contradictory negator; scope is an entire bridi; logically negates in some cmavo compounds."
+	},
+	{
+		"word": "na'a",
+		"type": "cmavo",
+		"definition": "cancel all letteral shifts."
+	},
+	{
+		"word": "na'e",
+		"type": "cmavo",
+		"definition": "contrary scalar negator: other than ...; not ...; a scale or set is implied."
+	},
+	{
+		"word": "na'i",
+		"type": "cmavo",
+		"definition": "discursive: metalinguistic negator."
+	},
+	{
+		"word": "na'o",
+		"type": "cmavo",
+		"definition": "tense interval modifier: characteristically/typically; tense/modal; defaults as time tense."
+	},
+	{
+		"word": "na'u",
+		"type": "cmavo",
+		"definition": "convert selbri to mex operator; used to create less-used operators using fu'ivla, lujvo, etc."
+	},
+	{
+		"word": "nai",
+		"type": "cmavo",
+		"definition": "attached to cmavo to negate them; various negation-related meanings."
+	},
+	{
+		"word": "nau",
+		"type": "cmavo",
+		"definition": "tense: refers to current space/time reference absolutely."
+	},
+	{
+		"word": "ne",
+		"type": "cmavo",
+		"definition": "non-restrictive relative phrase marker: which incidentally is associated with ..."
+	},
+	{
+		"word": "ne'a",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; approximating/next to ..."
+	},
+	{
+		"word": "ne'i",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; within/inside of/into ..."
+	},
+	{
+		"word": "ne'o",
+		"type": "cmavo",
+		"definition": "unary mathematical operator: factorial; a!."
+	},
+	{
+		"word": "ne'u",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; south of."
+	},
+	{
+		"word": "nei",
+		"type": "cmavo",
+		"definition": "pro-bridi: repeats the current bridi."
+	},
+	{
+		"word": "ni",
+		"type": "cmavo",
+		"definition": "abstractor: quantity/amount abstractor; $x_{1}$ is quantity/amount of [bridi] measured on scale $x_{2}$."
+	},
+	{
+		"word": "ni'a",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; downwards/down from ..."
+	},
+	{
+		"word": "ni'e",
+		"type": "cmavo",
+		"definition": "convert selbri to mex operand; used to create new non-numerical quantifiers; e.g. \"herd\" of oxen."
+	},
+	{
+		"word": "ni'i",
+		"type": "cmavo",
+		"definition": "nibli modal, 1st place                            logically; logically because ..."
+	},
+	{
+		"word": "ni'o",
+		"type": "cmavo",
+		"definition": "discursive: paragraph break; introduce new topic."
+	},
+	{
+		"word": "ni'u",
+		"type": "cmavo",
+		"definition": "digit/number: minus sign; negative number); default any negative."
+	},
+	{
+		"word": "no",
+		"type": "cmavo",
+		"definition": "digit/number: 0 (digit) [zero]."
+	},
+	{
+		"word": "no'a",
+		"type": "cmavo",
+		"definition": "pro-bridi: repeats the bridi in which this one is embedded."
+	},
+	{
+		"word": "no'e",
+		"type": "cmavo",
+		"definition": "midpoint scalar negator: neutral point between je'a and to'e; \"not really\"."
+	},
+	{
+		"word": "no'i",
+		"type": "cmavo",
+		"definition": "discursive: paragraph break; resume previous topic."
+	},
+	{
+		"word": "no'o",
+		"type": "cmavo",
+		"definition": "digit/number: typical/average value."
+	},
+	{
+		"word": "no'u",
+		"type": "cmavo",
+		"definition": "non-restrictive appositive phrase marker: which incidentally is the same thing as ..."
+	},
+	{
+		"word": "noi",
+		"type": "cmavo",
+		"definition": "non-restrictive relative clause; attaches subordinate bridi with incidental information."
+	},
+	{
+		"word": "nu",
+		"type": "cmavo",
+		"definition": "abstractor: generalized event abstractor; $x_{1}$ is state/process/achievement/activity of [bridi]."
+	},
+	{
+		"word": "nu'a",
+		"type": "cmavo",
+		"definition": "convert mathematical expression (mex) operator to a selbri/tanru component."
+	},
+	{
+		"word": "nu'e",
+		"type": "cmavo",
+		"definition": "vocative: promise - promise release - un-promise."
+	},
+	{
+		"word": "nu'i",
+		"type": "cmavo",
+		"definition": "start forethought termset construct; marks start of place structure set with logical connection."
+	},
+	{
+		"word": "nu'o",
+		"type": "cmavo",
+		"definition": "modal aspect: can but has not; unrealized potential."
+	},
+	{
+		"word": "nu'u",
+		"type": "cmavo",
+		"definition": "elidable terminator: end forethought termset; usually elidable except with following sumti."
+	},
+	{
+		"word": "ny",
+		"type": "cmavo",
+		"definition": "letteral for n."
+	},
+	{
+		"word": "o",
+		"type": "cmavo",
+		"definition": "logical connective: sumti afterthought biconditional/iff/if-and-only-if."
+	},
+	{
+		"word": "o'a",
+		"type": "cmavo",
+		"definition": "attitudinal: pride - modesty/humility - shame."
+	},
+	{
+		"word": "o'e",
+		"type": "cmavo",
+		"definition": "attitudinal: closeness - distance."
+	},
+	{
+		"word": "o'i",
+		"type": "cmavo",
+		"definition": "attitudinal: caution - rashness."
+	},
+	{
+		"word": "o'o",
+		"type": "cmavo",
+		"definition": "attitudinal: patience - mere tolerance - anger."
+	},
+	{
+		"word": "o'u",
+		"type": "cmavo",
+		"definition": "attitudinal: relaxation - composure - stress."
+	},
+	{
+		"word": "oi",
+		"type": "cmavo",
+		"definition": "attitudinal: complaint - pleasure."
+	},
+	{
+		"word": "pa",
+		"type": "cmavo",
+		"definition": "digit/number: 1 (digit) [one]."
+	},
+	{
+		"word": "pa'a",
+		"type": "cmavo",
+		"definition": "panra modal, 1st place (parallel; shared property) similarly; in addition to ..."
+	},
+	{
+		"word": "pa'e",
+		"type": "cmavo",
+		"definition": "discursive: justice - prejudice."
+	},
+	{
+		"word": "pa'i",
+		"type": "cmavo",
+		"definition": "binary mathematical operator: ratio; [the ratio of a to b]."
+	},
+	{
+		"word": "pa'o",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; transfixing/passing through ..."
+	},
+	{
+		"word": "pa'u",
+		"type": "cmavo",
+		"definition": "pagbu modal, 1st place                            having component ..."
+	},
+	{
+		"word": "pai",
+		"type": "cmavo",
+		"definition": "digit/number: pi (approximately 3.1416...)."
+	},
+	{
+		"word": "pau",
+		"type": "cmavo",
+		"definition": "discursive: optional question premarker."
+	},
+	{
+		"word": "pe",
+		"type": "cmavo",
+		"definition": "restrictive relative phrase marker: which is associated with ...; loosest associative/possessive."
+	},
+	{
+		"word": "pe'a",
+		"type": "cmavo",
+		"definition": "marks a construct as figurative (non-literal/metaphorical) speech/text."
+	},
+	{
+		"word": "pe'e",
+		"type": "cmavo",
+		"definition": "marks the following connective as joining termsets."
+	},
+	{
+		"word": "pe'i",
+		"type": "cmavo",
+		"definition": "evidential: I opine (subjective claim)."
+	},
+	{
+		"word": "pe'o",
+		"type": "cmavo",
+		"definition": "forethought flag for mathematical expression (mex) Polish (forethought) operator."
+	},
+	{
+		"word": "pe'u",
+		"type": "cmavo",
+		"definition": "vocative: please."
+	},
+	{
+		"word": "pei",
+		"type": "cmavo",
+		"definition": "attitudinal: attitudinal question; how do you feel about it? with what intensity?."
+	},
+	{
+		"word": "pi",
+		"type": "cmavo",
+		"definition": "digit/number: radix (number base) point; default decimal."
+	},
+	{
+		"word": "pi'a",
+		"type": "cmavo",
+		"definition": "n-ary mathematical operator: operands are vectors to be treated as matrix rows."
+	},
+	{
+		"word": "pi'e",
+		"type": "cmavo",
+		"definition": "digit/number:separates digits for base >16, not current standard, or variable (e.g. time, date)."
+	},
+	{
+		"word": "pi'i",
+		"type": "cmavo",
+		"definition": "n-ary mathematical operator: times; multiplication operator; [(((a * b) * c) * ...)]."
+	},
+	{
+		"word": "pi'o",
+		"type": "cmavo",
+		"definition": "pilno modal, 1st place                            used by ..."
+	},
+	{
+		"word": "pi'u",
+		"type": "cmavo",
+		"definition": "non-logical connective: cross product; Cartesian product of sets."
+	},
+	{
+		"word": "po",
+		"type": "cmavo",
+		"definition": "restrictive relative phrase marker: which is specific to ...; normal possessive physical/legal."
+	},
+	{
+		"word": "po'e",
+		"type": "cmavo",
+		"definition": "restrictive relative phrase marker: which belongs to ... ; inalienable possession."
+	},
+	{
+		"word": "po'i",
+		"type": "cmavo",
+		"definition": "porsi modal, 1st place (in order)                 sequentially; in the sequence ..."
+	},
+	{
+		"word": "po'o",
+		"type": "cmavo",
+		"definition": "discursive: uniquely, only, solely: the only relevant case."
+	},
+	{
+		"word": "po'u",
+		"type": "cmavo",
+		"definition": "restrictive appositive phrase marker: which is the same thing as."
+	},
+	{
+		"word": "poi",
+		"type": "cmavo",
+		"definition": "restrictive relative clause; attaches subordinate bridi with identifying information to a sumti."
+	},
+	{
+		"word": "pu",
+		"type": "cmavo",
+		"definition": "time tense relation/direction: did [selbri]; before/prior to [sumti]; default past tense."
+	},
+	{
+		"word": "pu'a",
+		"type": "cmavo",
+		"definition": "pluka modal, 1st place                            pleased by ..."
+	},
+	{
+		"word": "pu'e",
+		"type": "cmavo",
+		"definition": "pruce modal, 1st place (in manner 1)              by process ..."
+	},
+	{
+		"word": "pu'i",
+		"type": "cmavo",
+		"definition": "modal aspect: can and has; demonstrated potential."
+	},
+	{
+		"word": "pu'o",
+		"type": "cmavo",
+		"definition": "interval event contour: in anticipation of ...;  until ... ; inchoative         ----|     |."
+	},
+	{
+		"word": "pu'u",
+		"type": "cmavo",
+		"definition": "abstractor: process (event) abstractor; $x_{1}$ is process of [bridi] proceeding in stages $x_{2}$."
+	},
+	{
+		"word": "py",
+		"type": "cmavo",
+		"definition": "letteral for p."
+	},
+	{
+		"word": "ra",
+		"type": "cmavo",
+		"definition": "pro-sumti: a recent sumti before the last one, as determined by back-counting rules."
+	},
+	{
+		"word": "ra'a",
+		"type": "cmavo",
+		"definition": "srana modal, 1st place                            pertained to by ... (generally more specific)."
+	},
+	{
+		"word": "ra'e",
+		"type": "cmavo",
+		"definition": "digit/number: repeating digits (of a decimal) follow."
+	},
+	{
+		"word": "ra'i",
+		"type": "cmavo",
+		"definition": "krasi modal, 1st place                            from source/origin/starting point ..."
+	},
+	{
+		"word": "ra'o",
+		"type": "cmavo",
+		"definition": "flag GOhA to indicate pro-assignment context updating for all pro-assigns in referenced bridi."
+	},
+	{
+		"word": "ra'u",
+		"type": "cmavo",
+		"definition": "discursive: chiefly - equally - incidentally."
+	},
+	{
+		"word": "rai",
+		"type": "cmavo",
+		"definition": "traji modal, 1st place                            with superlative ..."
+	},
+	{
+		"word": "rau",
+		"type": "cmavo",
+		"definition": "digit/number: enough; subjective."
+	},
+	{
+		"word": "re",
+		"type": "cmavo",
+		"definition": "digit/number: 2 (digit) [two]."
+	},
+	{
+		"word": "re'a",
+		"type": "cmavo",
+		"definition": "unary mathematical operator: matrix transpose/dual; A*."
+	},
+	{
+		"word": "re'e",
+		"type": "cmavo",
+		"definition": "emotion category/modifier: religious/spiritual/worship - sacrilege."
+	},
+	{
+		"word": "re'i",
+		"type": "cmavo",
+		"definition": "vocative: ready to receive - not ready to receive."
+	},
+	{
+		"word": "re'o",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; adjacent to/touching/contacting ..."
+	},
+	{
+		"word": "re'u",
+		"type": "cmavo",
+		"definition": "converts number to an objectively quantified ordinal tense interval modifier; defaults to time."
+	},
+	{
+		"word": "rei",
+		"type": "cmavo",
+		"definition": "digit/number: hex digit E (decimal 14) [fourteen]."
+	},
+	{
+		"word": "ri",
+		"type": "cmavo",
+		"definition": "pro-sumti: the last sumti, as determined by back-counting rules."
+	},
+	{
+		"word": "ri'a",
+		"type": "cmavo",
+		"definition": "rinka modal, 1st place (phys./mental)             causal because ..."
+	},
+	{
+		"word": "ri'e",
+		"type": "cmavo",
+		"definition": "attitudinal modifier: release of emotion - emotion restraint."
+	},
+	{
+		"word": "ri'i",
+		"type": "cmavo",
+		"definition": "lifri modal, 1st place patient/passive case tag; happens to...,experienced by...,with passive..."
+	},
+	{
+		"word": "ri'o",
+		"type": "cmavo",
+		"definition": "trinary mathematical operator: [integral of a with respect to b over range c]."
+	},
+	{
+		"word": "ri'u",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; rightwards/to the right of ..."
+	},
+	{
+		"word": "ro",
+		"type": "cmavo",
+		"definition": "digit/number: each, all."
+	},
+	{
+		"word": "ro'a",
+		"type": "cmavo",
+		"definition": "emotion category/modifier: social - antisocial."
+	},
+	{
+		"word": "ro'e",
+		"type": "cmavo",
+		"definition": "emotion category/modifier: mental - mindless."
+	},
+	{
+		"word": "ro'i",
+		"type": "cmavo",
+		"definition": "emotion category/modifier: emotional - denying emotion."
+	},
+	{
+		"word": "ro'o",
+		"type": "cmavo",
+		"definition": "emotion category/modifier: physical - denying physical."
+	},
+	{
+		"word": "ro'u",
+		"type": "cmavo",
+		"definition": "emotion category/modifier: sexual - sexual abstinence."
+	},
+	{
+		"word": "roi",
+		"type": "cmavo",
+		"definition": "converts number to an objectively quantified tense interval modifier; defaults to time tense."
+	},
+	{
+		"word": "ru",
+		"type": "cmavo",
+		"definition": "pro-sumti: a remote past sumti, before all other in-use backcounting sumti."
+	},
+	{
+		"word": "ru'a",
+		"type": "cmavo",
+		"definition": "evidential: I postulate."
+	},
+	{
+		"word": "ru'e",
+		"type": "cmavo",
+		"definition": "attitudinal: weak intensity attitude modifier."
+	},
+	{
+		"word": "ru'i",
+		"type": "cmavo",
+		"definition": "tense interval modifier: continuously; subjective tense/modal; defaults as time tense."
+	},
+	{
+		"word": "ru'o",
+		"type": "cmavo",
+		"definition": "shift letterals to Cyrillic alphabet."
+	},
+	{
+		"word": "ru'u",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; surrounding/annular ..."
+	},
+	{
+		"word": "ry",
+		"type": "cmavo",
+		"definition": "letteral for r."
+	},
+	{
+		"word": "sa",
+		"type": "cmavo",
+		"definition": "erase complete or partial utterance; next word shows how much erasing to do."
+	},
+	{
+		"word": "sa'a",
+		"type": "cmavo",
+		"definition": "discursive: material inserted by editor/narrator (bracketed text)."
+	},
+	{
+		"word": "sa'e",
+		"type": "cmavo",
+		"definition": "discursive: precisely speaking - loosely speaking."
+	},
+	{
+		"word": "sa'i",
+		"type": "cmavo",
+		"definition": "n-ary mathematical operator: operands are vectors to be treated as matrix columns."
+	},
+	{
+		"word": "sa'o",
+		"type": "cmavo",
+		"definition": "trinary mathematical operator: [derivative of a with respect to b of degree c]."
+	},
+	{
+		"word": "sa'u",
+		"type": "cmavo",
+		"definition": "discursive: simply - elaborating."
+	},
+	{
+		"word": "sai",
+		"type": "cmavo",
+		"definition": "attitudinal: moderate intensity attitude modifier."
+	},
+	{
+		"word": "sau",
+		"type": "cmavo",
+		"definition": "sarcu modal, 1st place                            requiring ..."
+	},
+	{
+		"word": "se",
+		"type": "cmavo",
+		"definition": "2nd conversion; switch 1st/2nd places."
+	},
+	{
+		"word": "se'a",
+		"type": "cmavo",
+		"definition": "attitudinal modifier: self-sufficiency - dependency."
+	},
+	{
+		"word": "se'e",
+		"type": "cmavo",
+		"definition": "following digits code a character (in ASCII, Unicode, etc.)."
+	},
+	{
+		"word": "se'i",
+		"type": "cmavo",
+		"definition": "attitudinal modifier: self-oriented - other-oriented."
+	},
+	{
+		"word": "se'o",
+		"type": "cmavo",
+		"definition": "evidential: I know by internal experience (dream, vision, or personal revelation)."
+	},
+	{
+		"word": "se'u",
+		"type": "cmavo",
+		"definition": "elidable terminator: end discursive bridi or mathematical precedence;usually elidable."
+	},
+	{
+		"word": "sei",
+		"type": "cmavo",
+		"definition": "start discursive (metalinguistic) bridi."
+	},
+	{
+		"word": "si",
+		"type": "cmavo",
+		"definition": "erase the last Lojban word, treating non-Lojban text as a single word."
+	},
+	{
+		"word": "si'a",
+		"type": "cmavo",
+		"definition": "discursive: similarly."
+	},
+	{
+		"word": "si'e",
+		"type": "cmavo",
+		"definition": "convert number to portion selbri; $x_{1}$ is an (n)th portion of mass/totality $x_{2}$; (cf. gunma)."
+	},
+	{
+		"word": "si'i",
+		"type": "cmavo",
+		"definition": "trinary mathematical operator: [sigma summation of a using variable b over range c]."
+	},
+	{
+		"word": "si'o",
+		"type": "cmavo",
+		"definition": "abstractor: idea/concept abstractor; $x_{1}$ is $x_{2}$'s concept of [bridi]."
+	},
+	{
+		"word": "si'u",
+		"type": "cmavo",
+		"definition": "sidju modal, 1st place (aiding agent)             aided by ..."
+	},
+	{
+		"word": "so",
+		"type": "cmavo",
+		"definition": "digit/number: 9 (digit) [nine]."
+	},
+	{
+		"word": "so'a",
+		"type": "cmavo",
+		"definition": "digit/number: almost all (digit/number)."
+	},
+	{
+		"word": "so'e",
+		"type": "cmavo",
+		"definition": "digit/number: most."
+	},
+	{
+		"word": "so'i",
+		"type": "cmavo",
+		"definition": "digit/number: many."
+	},
+	{
+		"word": "so'o",
+		"type": "cmavo",
+		"definition": "digit/number: several."
+	},
+	{
+		"word": "so'u",
+		"type": "cmavo",
+		"definition": "digit/number: few."
+	},
+	{
+		"word": "soi",
+		"type": "cmavo",
+		"definition": "discursive: reciprocal sumti marker; indicates a reciprocal relationship between sumti."
+	},
+	{
+		"word": "su",
+		"type": "cmavo",
+		"definition": "erase to start of discourse or text; drop subject or start over."
+	},
+	{
+		"word": "su'a",
+		"type": "cmavo",
+		"definition": "evidential: I generalize - I particularize; discursive: abstractly - concretely."
+	},
+	{
+		"word": "su'e",
+		"type": "cmavo",
+		"definition": "digit/number: at most (all); no more than."
+	},
+	{
+		"word": "su'i",
+		"type": "cmavo",
+		"definition": "n-ary mathematical operator: plus; addition operator; [(((a + b) + c) + ...)]."
+	},
+	{
+		"word": "su'o",
+		"type": "cmavo",
+		"definition": "digit/number: at least (some); no less than."
+	},
+	{
+		"word": "su'u",
+		"type": "cmavo",
+		"definition": "abstractor: generalized abstractor (how); $x_{1}$ is [bridi] as a non-specific abstraction of type $x_{2}$."
+	},
+	{
+		"word": "sy",
+		"type": "cmavo",
+		"definition": "letteral for s."
+	},
+	{
+		"word": "ta",
+		"type": "cmavo",
+		"definition": "pro-sumti: that there; nearby demonstrative it; indicated thing/place near listener."
+	},
+	{
+		"word": "ta'a",
+		"type": "cmavo",
+		"definition": "vocative: interruption."
+	},
+	{
+		"word": "ta'e",
+		"type": "cmavo",
+		"definition": "tense interval modifier: habitually; subjective tense/modal; defaults as time tense."
+	},
+	{
+		"word": "ta'i",
+		"type": "cmavo",
+		"definition": "tadji modal, 1st place (in manner 3)              methodically; by method ..."
+	},
+	{
+		"word": "ta'o",
+		"type": "cmavo",
+		"definition": "discursive: by the way - returning to main point."
+	},
+	{
+		"word": "ta'u",
+		"type": "cmavo",
+		"definition": "discursive: expanding the tanru - making a tanru."
+	},
+	{
+		"word": "tai",
+		"type": "cmavo",
+		"definition": "tamsmi modal, 1st place (like)/(in manner 2)      resembling ...; sharing ideal form ..."
+	},
+	{
+		"word": "tau",
+		"type": "cmavo",
+		"definition": "2-word letteral/shift: change case for next letteral only."
+	},
+	{
+		"word": "te",
+		"type": "cmavo",
+		"definition": "3rd conversion; switch 1st/3rd places."
+	},
+	{
+		"word": "te'a",
+		"type": "cmavo",
+		"definition": "binary mathematical operator: to the power; exponential; [a to the b power]."
+	},
+	{
+		"word": "te'e",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; edged by/edging up to ..."
+	},
+	{
+		"word": "te'o",
+		"type": "cmavo",
+		"definition": "digit/number: exponential e (approx 2.71828...)."
+	},
+	{
+		"word": "te'u",
+		"type": "cmavo",
+		"definition": "elidable terminator: end conversion between non-mex and mex; usually elidable."
+	},
+	{
+		"word": "tei",
+		"type": "cmavo",
+		"definition": "composite letteral follows; used for multi-character letterals."
+	},
+	{
+		"word": "ti",
+		"type": "cmavo",
+		"definition": "pro-sumti: this here; immediate demonstrative it; indicated thing/place near speaker."
+	},
+	{
+		"word": "ti'a",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; rearwards/to the rear of ..."
+	},
+	{
+		"word": "ti'e",
+		"type": "cmavo",
+		"definition": "evidential: I hear (hearsay)."
+	},
+	{
+		"word": "ti'i",
+		"type": "cmavo",
+		"definition": "stidi modal, 1st place                            suggested by ...; proposed by ..."
+	},
+	{
+		"word": "ti'o",
+		"type": "cmavo",
+		"definition": "mathematical expression (mex) operator precedence (discursive)."
+	},
+	{
+		"word": "ti'u",
+		"type": "cmavo",
+		"definition": "tcika modal, 1st place (for letters)              associated with time ... ; attach time stamp."
+	},
+	{
+		"word": "to",
+		"type": "cmavo",
+		"definition": "left parenthesis; start of parenthetical note which must be grammatical Lojban text."
+	},
+	{
+		"word": "to'a",
+		"type": "cmavo",
+		"definition": "lower-case letteral shift."
+	},
+	{
+		"word": "to'e",
+		"type": "cmavo",
+		"definition": "polar opposite scalar negator."
+	},
+	{
+		"word": "to'i",
+		"type": "cmavo",
+		"definition": "open editorial unquote (within a quote); contains grammatical text; mark with editorial insert."
+	},
+	{
+		"word": "to'o",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; departing from/directly away from ..."
+	},
+	{
+		"word": "to'u",
+		"type": "cmavo",
+		"definition": "discursive: in brief - in detail."
+	},
+	{
+		"word": "toi",
+		"type": "cmavo",
+		"definition": "elidable terminator: right parenthesis/end unquote; seldom elidable except at end of text."
+	},
+	{
+		"word": "tu",
+		"type": "cmavo",
+		"definition": "pro-sumti: that yonder; distant demonstrative it; indicated thing far from speaker&listener."
+	},
+	{
+		"word": "tu'a",
+		"type": "cmavo",
+		"definition": "extracts a concrete sumti from an unspecified abstraction; equivalent to le nu/su'u [sumti] co'e."
+	},
+	{
+		"word": "tu'e",
+		"type": "cmavo",
+		"definition": "start of multiple utterance scope; used for logical/non-logical/ordinal joining of sentences."
+	},
+	{
+		"word": "tu'i",
+		"type": "cmavo",
+		"definition": "stuzi modal, 1st place (used to situate letters)  associated with site ... ; label with location."
+	},
+	{
+		"word": "tu'o",
+		"type": "cmavo",
+		"definition": "null operand (used in unary mekso operations)."
+	},
+	{
+		"word": "tu'u",
+		"type": "cmavo",
+		"definition": "elidable terminator: end multiple utterance scope; seldom elidable."
+	},
+	{
+		"word": "ty",
+		"type": "cmavo",
+		"definition": "letteral for t."
+	},
+	{
+		"word": "u",
+		"type": "cmavo",
+		"definition": "logical connective: sumti afterthought whether-or-not."
+	},
+	{
+		"word": "u'a",
+		"type": "cmavo",
+		"definition": "attitudinal: gain - loss."
+	},
+	{
+		"word": "u'e",
+		"type": "cmavo",
+		"definition": "attitudinal: wonder - commonplace."
+	},
+	{
+		"word": "u'i",
+		"type": "cmavo",
+		"definition": "attitudinal: amusement - weariness."
+	},
+	{
+		"word": "u'o",
+		"type": "cmavo",
+		"definition": "attitudinal: courage - timidity - cowardice."
+	},
+	{
+		"word": "u'u",
+		"type": "cmavo",
+		"definition": "attitudinal: repentance - lack of regret - innocence."
+	},
+	{
+		"word": "ua",
+		"type": "cmavo",
+		"definition": "attitudinal: discovery - confusion/searching."
+	},
+	{
+		"word": "ue",
+		"type": "cmavo",
+		"definition": "attitudinal: surprise - not really surprised - expectation."
+	},
+	{
+		"word": "ui",
+		"type": "cmavo",
+		"definition": "attitudinal: happiness - unhappiness."
+	},
+	{
+		"word": "uo",
+		"type": "cmavo",
+		"definition": "attitudinal: completion - incompleteness."
+	},
+	{
+		"word": "uu",
+		"type": "cmavo",
+		"definition": "attitudinal: pity - cruelty."
+	},
+	{
+		"word": "va",
+		"type": "cmavo",
+		"definition": "location tense distance: near to ... ; there at ...; a medium/small distance from ..."
+	},
+	{
+		"word": "va'a",
+		"type": "cmavo",
+		"definition": "unary mathematical operator: additive inverse; [- a]."
+	},
+	{
+		"word": "va'e",
+		"type": "cmavo",
+		"definition": "convert number to scalar selbri; $x_{1}$ is at (n)th position on scale $x_{2}$."
+	},
+	{
+		"word": "va'i",
+		"type": "cmavo",
+		"definition": "discursive: in other words - in the same words."
+	},
+	{
+		"word": "va'o",
+		"type": "cmavo",
+		"definition": "vanbi modal, 1st place (conditions 1)             under conditions ...; in environment ..."
+	},
+	{
+		"word": "va'u",
+		"type": "cmavo",
+		"definition": "xamgu modal, 1st place beneficiary case tag complement  benefiting from ..."
+	},
+	{
+		"word": "vai",
+		"type": "cmavo",
+		"definition": "digit/number: hex digit F (decimal 15) [fifteen]."
+	},
+	{
+		"word": "vau",
+		"type": "cmavo",
+		"definition": "elidable: end of sumti in simple bridi; in compound bridi, separates common trailing sumti."
+	},
+	{
+		"word": "ve",
+		"type": "cmavo",
+		"definition": "4th conversion; switch 1st/4th places."
+	},
+	{
+		"word": "ve'a",
+		"type": "cmavo",
+		"definition": "location tense interval: a small/medium region of space."
+	},
+	{
+		"word": "ve'e",
+		"type": "cmavo",
+		"definition": "location tense interval: the whole of space."
+	},
+	{
+		"word": "ve'i",
+		"type": "cmavo",
+		"definition": "location tense interval: a tiny region of space."
+	},
+	{
+		"word": "ve'o",
+		"type": "cmavo",
+		"definition": "right mathematical bracket."
+	},
+	{
+		"word": "ve'u",
+		"type": "cmavo",
+		"definition": "location tense interval: a large region of space."
+	},
+	{
+		"word": "vei",
+		"type": "cmavo",
+		"definition": "left mathematical bracket."
+	},
+	{
+		"word": "vi",
+		"type": "cmavo",
+		"definition": "location tense distance: here at ... ; at or a very short/tiny distance from ..."
+	},
+	{
+		"word": "vi'a",
+		"type": "cmavo",
+		"definition": "dimensionality of space interval tense: 2-space interval; throughout an area."
+	},
+	{
+		"word": "vi'e",
+		"type": "cmavo",
+		"definition": "dimensionality of space interval tense: 4-space interval; throughout a spacetime."
+	},
+	{
+		"word": "vi'i",
+		"type": "cmavo",
+		"definition": "dimensionality of space interval tense: 1-space interval; along a line."
+	},
+	{
+		"word": "vi'o",
+		"type": "cmavo",
+		"definition": "vocative: wilco (ack and will comply)."
+	},
+	{
+		"word": "vi'u",
+		"type": "cmavo",
+		"definition": "dimensionality of space interval tense: 3-space interval; throughout a space."
+	},
+	{
+		"word": "vo",
+		"type": "cmavo",
+		"definition": "digit/number: 4 (digit) [four]."
+	},
+	{
+		"word": "vo'a",
+		"type": "cmavo",
+		"definition": "pro-sumti: repeats 1st place of main bridi of this sentence."
+	},
+	{
+		"word": "vo'e",
+		"type": "cmavo",
+		"definition": "pro-sumti: repeats 2nd place of main bridi of this sentence."
+	},
+	{
+		"word": "vo'i",
+		"type": "cmavo",
+		"definition": "pro-sumti: repeats 3rd place of main bridi of this sentence."
+	},
+	{
+		"word": "vo'o",
+		"type": "cmavo",
+		"definition": "pro-sumti: repeats 4th place of main bridi of this sentence."
+	},
+	{
+		"word": "vo'u",
+		"type": "cmavo",
+		"definition": "pro-sumti: repeats 5th place of main bridi of this sentence."
+	},
+	{
+		"word": "voi",
+		"type": "cmavo",
+		"definition": "non-veridical restrictive clause used to form complicated le-like descriptions using \"ke'a\"."
+	},
+	{
+		"word": "vu",
+		"type": "cmavo",
+		"definition": "location tense distance: far from ... ; yonder at ... ; a long distance from ..."
+	},
+	{
+		"word": "vu'a",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; west of."
+	},
+	{
+		"word": "vu'e",
+		"type": "cmavo",
+		"definition": "attitudinal modifier: virtue - sin."
+	},
+	{
+		"word": "vu'i",
+		"type": "cmavo",
+		"definition": "sumti qualifier: the sequence made from set or composed of elements/components; order is vague."
+	},
+	{
+		"word": "vu'o",
+		"type": "cmavo",
+		"definition": "joins relative clause/phrase to complete complex or logically connected sumti in afterthought."
+	},
+	{
+		"word": "vu'u",
+		"type": "cmavo",
+		"definition": "n-ary mathematical operator: minus; subtraction operator; [(((a - b) - c) - ...)]."
+	},
+	{
+		"word": "vy",
+		"type": "cmavo",
+		"definition": "letteral for v."
+	},
+	{
+		"word": "xa",
+		"type": "cmavo",
+		"definition": "digit/number: 6 (digit) [six]."
+	},
+	{
+		"word": "xe",
+		"type": "cmavo",
+		"definition": "5th conversion; switch 1st/5th places."
+	},
+	{
+		"word": "xi",
+		"type": "cmavo",
+		"definition": "subscript; attaches a numer of letteral string following as a subscript onto grammar structures."
+	},
+	{
+		"word": "xo",
+		"type": "cmavo",
+		"definition": "digit/number: number/digit/lerfu question."
+	},
+	{
+		"word": "xu",
+		"type": "cmavo",
+		"definition": "discursive: true-false question."
+	},
+	{
+		"word": "xy",
+		"type": "cmavo",
+		"definition": "letteral for x."
+	},
+	{
+		"word": "y",
+		"type": "cmavo",
+		"definition": "hesitation noise; maintains the floor while speaker decides what to say next."
+	},
+	{
+		"word": "y'y",
+		"type": "cmavo",
+		"definition": "letteral for '."
+	},
+	{
+		"word": "za",
+		"type": "cmavo",
+		"definition": "time tense distance: medium distance in time."
+	},
+	{
+		"word": "za'a",
+		"type": "cmavo",
+		"definition": "evidential: I observe."
+	},
+	{
+		"word": "za'e",
+		"type": "cmavo",
+		"definition": "forethought nonce-word indicator; indicates next word is nonce-creation and may be nonstandard."
+	},
+	{
+		"word": "za'i",
+		"type": "cmavo",
+		"definition": "abstractor: state (event) abstractor; $x_{1}$ is continuous state of [bridi] being true."
+	},
+	{
+		"word": "za'o",
+		"type": "cmavo",
+		"definition": "interval event contour: continuing too long after natural end of ...; superfective  |     ---->."
+	},
+	{
+		"word": "za'u",
+		"type": "cmavo",
+		"definition": "digit/number: greater than."
+	},
+	{
+		"word": "zai",
+		"type": "cmavo",
+		"definition": "2-word letteral/shift: alternate alphabet selector follows."
+	},
+	{
+		"word": "zau",
+		"type": "cmavo",
+		"definition": "zanru modal, 1st place                            approved by ..."
+	},
+	{
+		"word": "ze",
+		"type": "cmavo",
+		"definition": "digit/number: 7 (digit) [seven]."
+	},
+	{
+		"word": "ze'a",
+		"type": "cmavo",
+		"definition": "time tense interval: a medium length of time."
+	},
+	{
+		"word": "ze'e",
+		"type": "cmavo",
+		"definition": "time tense interval: the whole of time."
+	},
+	{
+		"word": "ze'i",
+		"type": "cmavo",
+		"definition": "time tense interval: an instantaneous/tiny/short amount of time."
+	},
+	{
+		"word": "ze'o",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; beyond/outward/receding from ..."
+	},
+	{
+		"word": "ze'u",
+		"type": "cmavo",
+		"definition": "time tense interval: a long amount of time."
+	},
+	{
+		"word": "zei",
+		"type": "cmavo",
+		"definition": "joins preceding and following words into a lujvo."
+	},
+	{
+		"word": "zi",
+		"type": "cmavo",
+		"definition": "time tense distance: instantaneous-to-short distance in time."
+	},
+	{
+		"word": "zi'e",
+		"type": "cmavo",
+		"definition": "joins relative clauses which apply to the same sumti."
+	},
+	{
+		"word": "zi'o",
+		"type": "cmavo",
+		"definition": "pro-sumti: fills a sumti place, deleting it from selbri place structure;changes selbri semantics."
+	},
+	{
+		"word": "zo",
+		"type": "cmavo",
+		"definition": "quote next word only; quotes a single Lojban word (not a cmavo compound or tanru)."
+	},
+	{
+		"word": "zo'a",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; tangential to/passing by ..."
+	},
+	{
+		"word": "zo'e",
+		"type": "cmavo",
+		"definition": "pro-sumti: an elliptical/unspecified value; has some value which makes bridi true."
+	},
+	{
+		"word": "zo'i",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; nearer than .../inward/approaching from ..."
+	},
+	{
+		"word": "zo'o",
+		"type": "cmavo",
+		"definition": "attitudinal modifier: humorously - dully - seriously."
+	},
+	{
+		"word": "zo'u",
+		"type": "cmavo",
+		"definition": "marks end of logical prenex quantifiers/topic identification and start of sentence bridi."
+	},
+	{
+		"word": "zoi",
+		"type": "cmavo",
+		"definition": "delimited non-Lojban quotation; the result treated as a block of text."
+	},
+	{
+		"word": "zu",
+		"type": "cmavo",
+		"definition": "time tense distance: long distance in time."
+	},
+	{
+		"word": "zu'a",
+		"type": "cmavo",
+		"definition": "location tense relation/direction; leftwards/to the left of ..."
+	},
+	{
+		"word": "zu'e",
+		"type": "cmavo",
+		"definition": "zukte modal, 1st place (purposed agent)           with goal-seeking actor ..."
+	},
+	{
+		"word": "zu'i",
+		"type": "cmavo",
+		"definition": "pro-sumti: the typical sumti value for this place in this relationship; affects truth value."
+	},
+	{
+		"word": "zu'o",
+		"type": "cmavo",
+		"definition": "abstractor: activity (event) abstractor; $x_{1}$ is abstract activity of [bridi] composed of $x_{2}$."
+	},
+	{
+		"word": "zu'u",
+		"type": "cmavo",
+		"definition": "discursive: on the one hand - on the other hand."
+	},
+	{
+		"word": "zy",
+		"type": "cmavo",
+		"definition": "letteral for z."
+	}
 ]

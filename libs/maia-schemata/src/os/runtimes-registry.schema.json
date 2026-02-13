@@ -1,13 +1,13 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/os/runtimes-registry",
-  "title": "@maia/schema/os/runtimes-registry",
-  "description": "Runtimes registry CoMap - vibe co-id -> colist of runtime assignments. Stored in spark.os.runtimes. Key = vibe co-id (not human-readable). Guardian assigns which accounts run each vibe.",
-  "cotype": "comap",
-  "indexing": false,
-  "additionalProperties": {
-    "type": "string",
-    "pattern": "^co_z[a-zA-Z0-9]+$",
-    "description": "Vibe co-id -> CoList co-id of runtime assignments [{ browser: coId } | { server: coId }, ...]"
-  }
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/os/runtimes-registry",
+	"title": "@maia/schema/os/runtimes-registry",
+	"description": "Runtimes registry CoMap - vibe co-id -> colist of runtime assignments. Stored in spark.os.runtimes. Key = vibe co-id (not human-readable). Guardian assigns which accounts run each vibe.",
+	"cotype": "comap",
+	"indexing": false,
+	"additionalProperties": {
+		"type": "string",
+		"pattern": "^co_z[a-zA-Z0-9]+$",
+		"description": "Vibe co-id -> CoList co-id of runtime assignments [{ browser: coId } | { server: coId }, ...]"
+	}
 }

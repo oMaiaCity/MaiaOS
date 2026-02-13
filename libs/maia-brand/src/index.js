@@ -1,11 +1,6 @@
 /**
- * @maia/brand - Centralized Liquid Glass Design System
- * Main entry point for the design system package
+ * @MaiaOS/brand - Brand assets and legal content
+ * Assets are in src/assets/ (synced to maia via sync-assets.js)
+ * Legal content: footer, legal notice, privacy policy, social media policy
  */
-
-// Export components
-export * from './components/index.js'
-// Export tokens
-export * from './tokens/index.js'
-// Export utilities
-export * from './utilities/index.js'
+export * from './legal/index.js'

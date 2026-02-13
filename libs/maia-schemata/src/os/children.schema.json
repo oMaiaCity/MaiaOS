@@ -1,13 +1,13 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/children",
-  "title": "@maia/schema/children",
-  "description": "A comap of child actors (namekey → actor co-id)",
-  "cotype": "comap",
-  "indexing": true,
-  "properties": {},
-  "additionalProperties": {
-    "$co": "@maia/schema/actor",
-    "description": "Each value is a co-id reference to a child actor"
-  }
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/children",
+	"title": "@maia/schema/children",
+	"description": "A comap of child actors (namekey → actor co-id)",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {},
+	"additionalProperties": {
+		"$co": "@maia/schema/actor",
+		"description": "Each value is a co-id reference to a child actor"
+	}
 }

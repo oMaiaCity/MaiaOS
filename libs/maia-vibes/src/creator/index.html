@@ -9,9 +9,10 @@
 <body>
   <div class="host-wrapper"><div id="actor-creator"></div></div>
   <script type="module">
-    import { loadCreatorVibe } from './loader.js';
     import { bootVibe } from '../boot.js';
-    bootVibe(loadCreatorVibe, 'actor-creator', 'actor').catch(e => console.error('❌ Boot failed:', e));
+    import { loadCreatorVibe } from './loader.js';
+
+    bootVibe(loadCreatorVibe, 'actor-creator', 'actor').catch(_e => {});
   </script>
 </body>
 </html>

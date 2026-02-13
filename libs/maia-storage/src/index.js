@@ -3,4 +3,4 @@
  * IndexedDB (browser), PGlite (Node.js), in-memory (edge/testing)
  */
 
-export { getStorage } from './getStorage.js';
+export { getStorage } from './getStorage.js'

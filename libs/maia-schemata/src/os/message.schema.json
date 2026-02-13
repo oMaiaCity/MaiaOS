@@ -1,32 +1,32 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/message",
-  "title": "@maia/schema/message",
-  "description": "Actor message for state machine transitions",
-  "cotype": "comap",
-  "indexing": true,
-  "required": ["type"],
-  "properties": {
-    "type": {
-      "type": "string",
-      "description": "Message type (event name)"
-    },
-    "payload": {
-      "type": "object",
-      "description": "Message payload data"
-    },
-    "source": {
-      "$co": "@maia/schema/actor",
-      "description": "Co-id reference to source actor"
-    },
-    "target": {
-      "$co": "@maia/schema/actor",
-      "description": "Co-id reference to target actor (required for direct messaging)"
-    },
-    "processed": {
-      "type": "boolean",
-      "description": "Whether this message has been processed",
-      "default": false
-    }
-  }
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/message",
+	"title": "@maia/schema/message",
+	"description": "Actor message for state machine transitions",
+	"cotype": "comap",
+	"indexing": true,
+	"required": ["type"],
+	"properties": {
+		"type": {
+			"type": "string",
+			"description": "Message type (event name)"
+		},
+		"payload": {
+			"type": "object",
+			"description": "Message payload data"
+		},
+		"source": {
+			"$co": "@maia/schema/actor",
+			"description": "Co-id reference to source actor"
+		},
+		"target": {
+			"$co": "@maia/schema/actor",
+			"description": "Co-id reference to target actor (required for direct messaging)"
+		},
+		"processed": {
+			"type": "boolean",
+			"description": "Whether this message has been processed",
+			"default": false
+		}
+	}
 }

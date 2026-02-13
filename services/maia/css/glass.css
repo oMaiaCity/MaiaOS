@@ -1,52 +1,52 @@
 /* Liquid Glass Engine */
 .liquid-glass {
-  position: relative;
-  background: transparent;
-  border-radius: var(--radius);
-  overflow: hidden;
-  z-index: 1; /* Create a clean stacking context */
+	position: relative;
+	background: transparent;
+	border-radius: var(--radius);
+	overflow: hidden;
+	z-index: 1; /* Create a clean stacking context */
 }
 
 /* Base layer with blur */
 .liquid-glass--bend {
-  backdrop-filter: blur(12px) saturate(160%); /* Increased for better clarity */
-  -webkit-backdrop-filter: blur(12px) saturate(160%);
-  border-radius: var(--radius);
-  filter: url(#glass-blur);
-  inset: 0;
-  position: absolute;
-  z-index: 0;
-  background: rgba(255, 255, 255, 0.002);
-  pointer-events: none;
+	backdrop-filter: blur(12px) saturate(160%); /* Increased for better clarity */
+	-webkit-backdrop-filter: blur(12px) saturate(160%);
+	border-radius: var(--radius);
+	filter: url(#glass-blur);
+	inset: 0;
+	position: absolute;
+	z-index: 0;
+	background: rgba(255, 255, 255, 0.002);
+	pointer-events: none;
 }
 
 /* Face layer with tint and shadow */
 .liquid-glass--face {
-  border-radius: var(--radius);
-  box-shadow: 
-    0 10px 40px rgba(0, 0, 0, 0.15),
-    0 0 20px rgba(0, 0, 0, 0.03);
-  inset: 0;
-  position: absolute;
-  z-index: 1;
-  background: rgba(255, 255, 255, 0.01);
-  pointer-events: none;
+	border-radius: var(--radius);
+	box-shadow:
+		0 10px 40px rgba(0, 0, 0, 0.15),
+		0 0 20px rgba(0, 0, 0, 0.03);
+	inset: 0;
+	position: absolute;
+	z-index: 1;
+	background: rgba(255, 255, 255, 0.01);
+	pointer-events: none;
 }
 
 /* Edge layer with highlights */
 .liquid-glass--edge {
-  border-radius: var(--radius);
-  box-shadow: 
-    inset 2px 2px 4px 0 rgba(255, 255, 255, 0.4),
-    inset -2px -2px 4px 0 rgba(255, 255, 255, 0.2);
-  inset: 0;
-  position: absolute;
-  z-index: 2;
-  pointer-events: none;
+	border-radius: var(--radius);
+	box-shadow:
+		inset 2px 2px 4px 0 rgba(255, 255, 255, 0.4),
+		inset -2px -2px 4px 0 rgba(255, 255, 255, 0.2);
+	inset: 0;
+	position: absolute;
+	z-index: 2;
+	pointer-events: none;
 }
 
 /* Content wrapper - ALWAYS ON TOP */
 .liquid-glass-inner {
-  position: relative;
-  z-index: 10 !important;
+	position: relative;
+	z-index: 10;
 }

@@ -1,12 +1,12 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/os/runtime-assignments-colist",
-  "title": "@maia/schema/os/runtime-assignments-colist",
-  "description": "CoList of runtime assignments [{ browser: coId } | { server: coId }, ...]",
-  "cotype": "colist",
-  "indexing": false,
-  "items": {
-    "$co": "@maia/schema/os/runtime-assignment",
-    "description": "Each item is a runtime assignment (browser or server)"
-  }
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/os/runtime-assignments-colist",
+	"title": "@maia/schema/os/runtime-assignments-colist",
+	"description": "CoList of runtime assignments [{ browser: coId } | { server: coId }, ...]",
+	"cotype": "colist",
+	"indexing": false,
+	"items": {
+		"$co": "@maia/schema/os/runtime-assignment",
+		"description": "Each item is a runtime assignment (browser or server)"
+	}
 }

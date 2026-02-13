@@ -1,16 +1,16 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/message/UPDATE_INPUT",
-  "title": "@maia/schema/message/UPDATE_INPUT",
-  "description": "Message type for updating input field value (generic, reusable across vibes)",
-  "cotype": "comap",
-  "indexing": true,
-  "type": "object",
-  "properties": {
-    "value": {
-      "type": "string",
-      "description": "New input field value (generic property name for reuse across vibes)"
-    }
-  },
-  "additionalProperties": true
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/message/UPDATE_INPUT",
+	"title": "@maia/schema/message/UPDATE_INPUT",
+	"description": "Message type for updating input field value (generic, reusable across vibes)",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {
+		"value": {
+			"type": "string",
+			"description": "New input field value (generic property name for reuse across vibes)"
+		}
+	},
+	"additionalProperties": true
 }

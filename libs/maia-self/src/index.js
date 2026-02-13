@@ -1,39 +1,35 @@
 /**
  * @MaiaOS/self - Self-Sovereign Identity via WebAuthn PRF
- * 
+ *
  * STRICT: PRF required, no fallbacks
  */
 
-export {
-	signUpWithPasskey,
-	signInWithPasskey,
-	generateAgentCredentials,
-	createAgentAccount,
-	loadAgentAccount,
-	loadOrCreateAgentAccount,
-	// NO LOCALSTORAGE: Removed isSignedIn, signOut, getCurrentAccount, inspectStorage
-	// NO SYNC STATE: subscribeSyncState moved to @MaiaOS/db
-} from './self.js';
+export { getStorage } from '@MaiaOS/storage'
 
 export {
 	isPRFSupported,
 	requirePRFSupport,
-} from './feature-detection.js';
+} from './feature-detection.js'
 
 export {
-	evaluatePRF,
 	createPasskeyWithPRF,
+	evaluatePRF,
 	getExistingPasskey,
-} from './prf-evaluator.js';
-
+} from './prf-evaluator.js'
+export {
+	createAgentAccount,
+	generateAgentCredentials,
+	loadAgentAccount,
+	loadOrCreateAgentAccount,
+	signInWithPasskey,
+	signUpWithPasskey,
+	// NO LOCALSTORAGE: Removed isSignedIn, signOut, getCurrentAccount, inspectStorage
+	// NO SYNC STATE: subscribeSyncState moved to @MaiaOS/db
+} from './self.js'
 export {
 	arrayBufferToBase64,
 	base64ToArrayBuffer,
+	isValidAccountID,
 	stringToUint8Array,
 	uint8ArrayToHex,
-	isValidAccountID,
-} from './utils.js';
-
-export {
-	getStorage,
-} from '@MaiaOS/storage';
+} from './utils.js'

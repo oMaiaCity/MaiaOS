@@ -1,1 +1,13 @@
-{"$schema":"@maia/schema/meta","$id":"@maia/schema/os/indexes-registry","title":"@maia/schema/os/indexes-registry","description":"Indexes registry CoMap - schema co-id -> index colist. Stored in spark.os.indexes","cotype":"comap","indexing":false,"additionalProperties":{"type":"string","pattern":"^co_z[a-zA-Z0-9]+$","description":"Schema co-id -> index colist co-id"}}
+{
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/os/indexes-registry",
+	"title": "@maia/schema/os/indexes-registry",
+	"description": "Indexes registry CoMap - schema co-id -> index colist. Stored in spark.os.indexes",
+	"cotype": "comap",
+	"indexing": false,
+	"additionalProperties": {
+		"type": "string",
+		"pattern": "^co_z[a-zA-Z0-9]+$",
+		"description": "Schema co-id -> index colist co-id"
+	}
+}
