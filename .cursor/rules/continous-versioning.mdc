@@ -51,8 +51,9 @@ flowchart LR
 1. Branch from `next`, make changes, commit, push.
 2. **Ask the user** if they want to create a PR. Only create when confirmed.
 3. `gh pr create` → open PR targeting `next`.
-4. **Ask the user** if they want to merge. Only merge when confirmed.
-5. `gh pr merge --rebase` → merge into `next`.
+4. CI runs (Lint & Format + Build). **Both must pass** before merge.
+5. **Ask the user** if they want to merge. Only merge when confirmed.
+6. `gh pr merge --rebase` → merge into `next`.
 
 **CI flow (after merge):**
 1. Push to `next` triggers `version-tag` and `deploy-next`.
@@ -123,11 +124,15 @@ gh pr merge <number> --rebase
 - **Runs only on:** `[release]` commits (version-tag push) or workflow_dispatch. Skips merge commits — deploy once per merge.
 - Deploys maia and moai to Fly.io (parallel).
 
-### Biome (`.github/workflows/biome.yml`)
+### CI (`.github/workflows/biome.yml`)
 
 - **Trigger:** Pull requests and pushes to `next`.
-- **Runs:** `bun run check:ci` (lint + format check).
-- **Branch protection:** Require the Biome status check before PRs can merge into `next`. Settings → Branches → Rules for `next` → Require status checks to pass → Add checks. If "No results" appears, **manually type** `Lint & Format` or `biome` (the check name only appears after the workflow has run at least once—push a PR, let it run, then it will be searchable).
+- **Jobs:**
+  1. **Lint & Format** – `bun run check:ci` (Biome + .maia format check).
+  2. **Build (maia + moai)** – Docker build for both services. Validates deployment will succeed before merge.
+- **Branch protection:** Require **both** jobs before PRs can merge into `next`. Settings → Branches → Rules for `next` → Require status checks → Add `Lint & Format` and `Build (maia + moai)`. If "No results" appears, push a PR, let the workflow run once, then the check names become searchable.
+- **Deployment gate:** PRs cannot merge until the Build job passes. This prevents merging code that would break the deploy pipeline.
+- **When changing:** Dockerfiles, `package.json` workspaces, or deploy scripts — ensure the Build job passes before merging.
 
 ---
 

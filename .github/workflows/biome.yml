@@ -1,4 +1,4 @@
-name: Biome
+name: CI
 
 on:
   pull_request:
@@ -22,3 +22,15 @@ jobs:
 
       - name: Run Biome
         run: bun run check:ci
+
+  build:
+    name: Build (maia + moai)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build maia image
+        run: docker build -f services/maia/Dockerfile -t maia:test .
+
+      - name: Build moai image
+        run: docker build -f services/moai/Dockerfile -t moai:test .

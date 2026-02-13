@@ -10,6 +10,7 @@ WORKDIR /app
 COPY package.json bun.lock* ./
 COPY libs ./libs
 COPY services/maia ./services/maia
+COPY services/moai ./services/moai
 
 # VITE_PEER_MOAI must be set BEFORE bundles:build - kernel bundle contains sync logic and inlines this
 ARG VITE_PEER_MOAI=moai.next.maia.city
@@ -18,6 +19,8 @@ ARG VITE_PEER_MAIA=next.maia.city
 ENV VITE_PEER_MAIA=$VITE_PEER_MAIA
 
 # Build kernel + vibes bundles (kernel needs VITE_PEER_MOAI for sync domain)
+# HUSKY=0 skips prepare script (git hooks not needed in Docker)
+ENV HUSKY=0
 RUN bun install
 RUN bun run bundles:build
 
