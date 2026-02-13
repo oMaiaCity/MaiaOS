@@ -6,7 +6,7 @@
  *   { accountID, agentSecret, dbPath?, inMemory? }
  */
 
-import { loadOrCreateAgentAccount } from '@MaiaOS/kernel'
+import { loadOrCreateAgentAccount } from '@MaiaOS/core'
 import { createWebSocketPeer } from 'cojson-transport-ws'
 
 /**

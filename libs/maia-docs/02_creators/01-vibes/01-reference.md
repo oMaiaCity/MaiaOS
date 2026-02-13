@@ -134,7 +134,7 @@ vibes/todos/
   <div id="actor-todo"></div>
   
   <script type="module">
-    import { MaiaOS } from '@MaiaOS/kernel';
+    import { MaiaOS } from '@MaiaOS/core';
     
     async function boot() {
       const os = await MaiaOS.boot({

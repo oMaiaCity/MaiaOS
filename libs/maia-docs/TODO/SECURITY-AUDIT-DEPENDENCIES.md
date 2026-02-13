@@ -2,7 +2,7 @@
 
 ## Summary
 
-The MaiaOS kernel bundle (`maia-kernel.es.js`) contains `new Function()` at two locations. This audit confirms the sources and assesses risk.
+The MaiaOS kernel bundle (`maia-client.es.js (maia-distros)`) contains `new Function()` at two locations. This audit confirms the sources and assesses risk.
 
 ## Findings
 

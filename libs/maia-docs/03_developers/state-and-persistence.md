@@ -53,15 +53,15 @@ The sync service and agent use PGlite for CoValue storage. Two modes matter:
 
 - **Use for**: Production sync server, durable agents
 - **Behavior**: PGlite writes to a file; data persists across restarts
-- **Env**: `AGENT_STORAGE=pglite`, `DB_PATH=/data/sync.db` (sync service)
-- **Production**: Mount a Fly.io volume at `/data` and set `DB_PATH=/data/sync.db`
+- **Env**: `AGENT_STORAGE=pglite`, `PEER_DB_PATH=/data/sync.db` (sync service)
+- **Production**: Mount a Fly.io volume at `/data` and set `PEER_DB_PATH=/data/sync.db`
 
 ### Configuration
 
 **Sync service** (`services/sync/`):
 
 - `AGENT_STORAGE=in-memory` → in-memory (dev default when unspecified)
-- `AGENT_STORAGE=pglite` + `DB_PATH=/data/sync.db` → persistent (production)
+- `AGENT_STORAGE=pglite` + `PEER_DB_PATH=/data/sync.db` → persistent (production)
 - Uses compact env vars: `ACCOUNT_MODE`, `AGENT_ID`, `AGENT_SECRET`, `AGENT_STORAGE`
 
 ---

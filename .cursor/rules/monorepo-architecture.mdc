@@ -27,7 +27,7 @@ MaiaOS/ (root)
 │       ├── package.json
 │       └── src/          # WebSocket sync, agent API, LLM proxy
 └── libs/                 # Shared libraries (@MaiaOS/*)
-    └── maia-*/           # maia-db, maia-kernel, maia-tools, etc.
+    └── maia-*/           # maia-db, maia-core, maia-tools, etc.
         ├── package.json
         └── src/
 ```
@@ -78,14 +78,14 @@ Each workspace can depend on other workspaces (services or libs) using the `work
 {
   "dependencies": {
     "@MaiaOS/db": "workspace:*",
-    "@MaiaOS/kernel": "workspace:*"
+    "@MaiaOS/core": "workspace:*"
   }
 }
 ```
 
 2. **Library depends on another Library:**
 ```json
-// libs/maia-kernel/package.json
+// libs/maia-core/package.json
 {
   "dependencies": {
     "@MaiaOS/db": "workspace:*",
@@ -186,7 +186,7 @@ Each workspace builds independently:
 ```bash
 cd services/maia && bun run build       # Build maia (bundles + Vite)
 cd services/moai && bun run build      # Build moai
-cd libs/maia-kernel && bun run build    # Build kernel bundle
+cd libs/maia-distros && bun run build   # Build bundles (client, server, vibes)
 ```
 
 ## Version Management

@@ -1,8 +1,8 @@
-# maia-kernel: Core System Services
+# maia-core: Core System Services
 
 ## Overview
 
-The `@MaiaOS/kernel` package provides the foundational services that power MaiaOS. Think of it as the operating system kernel - it doesn't do much on its own, but everything else depends on it.
+The `@MaiaOS/core` package provides the foundational services that power MaiaOS. Think of it as the operating system kernel - it doesn't do much on its own, but everything else depends on it.
 
 **What it does:**
 - ✅ **Identity & Authentication** - Creates authenticated MaiaOS instances (`createMaiaOS`)
@@ -18,7 +18,7 @@ The `@MaiaOS/kernel` package provides the foundational services that power MaiaO
 
 ## The Simple Version
 
-Think of `maia-kernel` like the foundation of a house. Before you can build anything, you need:
+Think of `maia-core` like the foundation of a house. Before you can build anything, you need:
 1. **Identity** - Who are you? (`createMaiaOS` - proves you're authenticated)
 2. **System** - What can you do? (`MaiaOS.boot()` - starts all the engines)
 
@@ -39,7 +39,7 @@ The kernel provides **two distinct layers** that work together:
 **When to use:** Before booting the OS, you need to authenticate.
 
 ```javascript
-import { createMaiaOS } from '@MaiaOS/kernel';
+import { createMaiaOS } from '@MaiaOS/core';
 import { signInWithPasskey } from '@MaiaOS/self';
 
 // Step 1: Authenticate (get your ID card)
@@ -65,7 +65,7 @@ const o = await createMaiaOS({ node, account, accountID });
 **When to use:** After authentication, boot the OS to run your app.
 
 ```javascript
-import { MaiaOS } from '@MaiaOS/kernel';
+import { MaiaOS } from '@MaiaOS/core';
 
 // Boot the operating system
 const os = await MaiaOS.boot({
@@ -106,7 +106,7 @@ This package documentation is organized into focused topics:
 Here's the complete flow:
 
 ```javascript
-import { createMaiaOS, MaiaOS } from '@MaiaOS/kernel';
+import { createMaiaOS, MaiaOS } from '@MaiaOS/core';
 import { signInWithPasskey } from '@MaiaOS/self';
 
 async function startApp() {
@@ -146,7 +146,7 @@ async function startApp() {
 
 ## Source Files
 
-**Package:** `libs/maia-kernel/`
+**Package:** `libs/maia-core/`
 
 **Key Files:**
 - `src/index.js` - Public API exports

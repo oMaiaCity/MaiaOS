@@ -5,15 +5,14 @@
 	"private": true,
 	"scripts": {
 		"dev": "vite",
-		"build": "cd ../.. && bun run bundles:build && cd services/maia && vite build",
+		"build": "cd ../.. && bun run distros:build && cd services/maia && vite build",
 		"preview": "vite preview",
 		"start": "bun server.js",
 		"deploy": "./deploy.sh"
 	},
 	"dependencies": {
 		"@MaiaOS/db": "workspace:*",
-		"@MaiaOS/kernel": "workspace:*",
-		"@MaiaOS/vibes": "workspace:*"
+		"@MaiaOS/maia-distros": "workspace:*"
 	},
 	"devDependencies": {
 		"vite": "^7.3.1"

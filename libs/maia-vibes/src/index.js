@@ -8,7 +8,7 @@
  * - @MaiaOS/vibes/todos/registry - Registry for Todos vibe configs
  */
 
-export { MaiaOS } from '@MaiaOS/kernel'
+export { MaiaOS } from '@MaiaOS/core'
 export { DbVibeRegistry, loadDbVibe } from './db/loader.js'
 export { DbVibeRegistry as DbRegistry } from './db/registry.js'
 export { loadSparksVibe, SparksVibeRegistry } from './sparks/loader.js'

@@ -1,7 +1,7 @@
-// Re-export db functions (bundled in kernel)
-// Re-export peer setup functions (from db, not self)
-// Only our own sync service - no Jazz sync
+// Re-export db functions (bundled in core)
+// Peer setup, sync state, backend for operations
 export {
+	CoJSONBackend,
 	createCoJSONAPI,
 	getAllSchemas,
 	getSchema,
@@ -10,7 +10,10 @@ export {
 	resolveGroupCoIdsToCapabilityNames,
 	setupSyncPeers,
 	subscribeSyncState,
+	waitForStoreReady,
 } from '@MaiaOS/db'
+// Re-export DBEngine for server/agent (moai)
+export { DBEngine } from '@MaiaOS/operations'
 // Re-export ReactiveStore from script (bundled in kernel)
 export { ReactiveStore } from '@MaiaOS/script'
 // Re-export auth functions for convenience

@@ -1,0 +1,31 @@
+{
+	"name": "@MaiaOS/maia-distros",
+	"version": "26.0213.0017",
+	"type": "module",
+	"private": true,
+	"exports": {
+		"./client": "./output/maia-client.es.js",
+		"./server": "./output/moai-server.es.js",
+		"./vibes": "./output/vibes.es.js"
+	},
+	"files": [
+		"output"
+	],
+	"dependencies": {
+		"@MaiaOS/db": "workspace:*",
+		"@MaiaOS/core": "workspace:*",
+		"@MaiaOS/operations": "workspace:*",
+		"@MaiaOS/vibes": "workspace:*",
+		"cojson-transport-ws": "0.20.7"
+	},
+	"devDependencies": {
+		"vite": "^7.3.1"
+	},
+	"scripts": {
+		"build": "bun run build:client && bun run build:server && bun run build:vibes && bun run build:vendor-pglite",
+		"build:client": "vite build --config client/vite.config.js",
+		"build:server": "vite build --config server/vite.config.js --ssr",
+		"build:vibes": "vite build --config vibes/vite.config.js",
+		"build:vendor-pglite": "node scripts/vendor-pglite.js"
+	}
+}

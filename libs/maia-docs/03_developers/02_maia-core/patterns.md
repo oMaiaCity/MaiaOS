@@ -9,7 +9,7 @@ Common usage patterns and solutions to frequent problems.
 ### Pattern 1: Full App Setup
 
 ```javascript
-import { createMaiaOS, MaiaOS } from '@MaiaOS/kernel';
+import { createMaiaOS, MaiaOS } from '@MaiaOS/core';
 import { signInWithPasskey } from '@MaiaOS/self';
 
 async function setupApp() {

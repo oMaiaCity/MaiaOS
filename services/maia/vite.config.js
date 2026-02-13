@@ -52,10 +52,10 @@ export default defineConfig(({ mode }) => {
 				external: isDev
 					? undefined
 					: (id) => {
-							// Externalize all @MaiaOS/* packages except kernel and vibes bundles
-							// Everything else (db, script, self, schemata, operations, tools) is bundled in kernel
-							// Kernel and vibes are loaded as separate bundles, so don't externalize them
-							if (id.startsWith('@MaiaOS/') && !id.includes('kernel') && !id.includes('vibes')) {
+							// Externalize all @MaiaOS/* packages except core and vibes bundles
+							// Everything else (db, script, self, schemata, operations, tools) is bundled in client
+							// Core and vibes are loaded as separate bundles, so don't externalize them
+							if (id.startsWith('@MaiaOS/') && !id.includes('core') && !id.includes('vibes')) {
 								// This is an import that's already bundled in kernel - externalize it
 								return true
 							}
@@ -71,7 +71,7 @@ export default defineConfig(({ mode }) => {
 			alias: isDev
 				? {
 						// Dev mode: Use source files directly for proper Vite HMR
-						'@MaiaOS/kernel': resolve(__dirname, '../../libs/maia-kernel/src/index.js'),
+						'@MaiaOS/core': resolve(__dirname, '../../libs/maia-core/src/index.js'),
 						'@MaiaOS/vibes': resolve(__dirname, '../../libs/maia-vibes/src/index.js'),
 						// Alias workspace packages to their source (for vite to resolve)
 						'@MaiaOS/db': resolve(__dirname, '../../libs/maia-db/src/index.js'),
@@ -103,41 +103,26 @@ export default defineConfig(({ mode }) => {
 						// Production mode: Use ONLY pre-bundled kernel and vibes
 						// All other @MaiaOS/* packages are bundled in kernel and will be externalized
 						// Check if bundles are in node_modules (Docker build) or libs (local build)
-						const kernelNodeModulesPath = resolve(
+						const bundlesClientPath = resolve(
 							__dirname,
-							'../../node_modules/@MaiaOS/kernel/dist/maia-kernel.es.js',
+							'../../node_modules/@MaiaOS/maia-distros/output/maia-client.es.js',
 						)
-						const kernelLibsPath = resolve(__dirname, '../../libs/maia-kernel/dist/maia-kernel.es.js')
-						const vibesNodeModulesPath = resolve(
+						const bundlesLibsPath = resolve(__dirname, '../../libs/maia-distros/output/maia-client.es.js')
+						const bundlesVibesNodePath = resolve(
 							__dirname,
-							'../../node_modules/@MaiaOS/vibes/dist/maia-vibes.es.js',
+							'../../node_modules/@MaiaOS/maia-distros/output/vibes.es.js',
 						)
-						const vibesLibsPath = resolve(__dirname, '../../libs/maia-vibes/dist/maia-vibes.es.js')
+						const bundlesVibesLibsPath = resolve(__dirname, '../../libs/maia-distros/output/vibes.es.js')
 
-						// Determine which paths exist
-						let kernelPath, vibesPath
-						if (existsSync(kernelNodeModulesPath)) {
-							kernelPath = kernelNodeModulesPath
-						} else if (existsSync(kernelLibsPath)) {
-							kernelPath = kernelLibsPath
-						} else {
-							// Fallback: use node_modules path (will be created by Docker)
-							kernelPath = kernelNodeModulesPath
-						}
+						const kernelPath = existsSync(bundlesLibsPath) ? bundlesLibsPath : bundlesClientPath
+						const vibesPath = existsSync(bundlesVibesLibsPath)
+							? bundlesVibesLibsPath
+							: bundlesVibesNodePath
 
-						if (existsSync(vibesNodeModulesPath)) {
-							vibesPath = vibesNodeModulesPath
-						} else if (existsSync(vibesLibsPath)) {
-							vibesPath = vibesLibsPath
-						} else {
-							// Fallback: use node_modules path (will be created by Docker)
-							vibesPath = vibesNodeModulesPath
-						}
-
-						// Only alias kernel and vibes bundles - everything else is externalized
-						// (db, script, self, schemata, operations, tools are all bundled in kernel)
+						// Only alias core and vibes bundles - everything else is externalized
+						// (db, script, self, schemata, operations, tools are all bundled in client)
 						return {
-							'@MaiaOS/kernel': kernelPath,
+							'@MaiaOS/core': kernelPath,
 							'@MaiaOS/vibes': vibesPath,
 						}
 					})(),
@@ -156,8 +141,8 @@ export default defineConfig(({ mode }) => {
 						'@MaiaOS/tools',
 					]
 				: [
-						// Production: exclude kernel/vibes bundles and their dependencies
-						'@MaiaOS/kernel',
+						// Production: exclude core/vibes bundles and their dependencies
+						'@MaiaOS/core',
 						'@MaiaOS/vibes',
 						'@MaiaOS/db',
 						'@MaiaOS/script',
@@ -191,13 +176,13 @@ export default defineConfig(({ mode }) => {
 				: [
 						{
 							name: 'externalize-maiaos-packages',
-							// Mark all @MaiaOS/* packages as external except kernel and vibes (which are separate bundles)
+							// Mark all @MaiaOS/* packages as external except core and vibes (which are separate bundles)
 							// This prevents Vite from trying to resolve source files that don't exist in Docker
 							resolveId(id) {
-								// Externalize all @MaiaOS/* packages except kernel and vibes bundles
-								// Everything else (db, script, self, schemata, operations, tools) is bundled in kernel
-								if (id.startsWith('@MaiaOS/') && !id.includes('kernel') && !id.includes('vibes')) {
-									// Mark as external - it's already bundled in kernel
+								// Externalize all @MaiaOS/* packages except core and vibes bundles
+								// Everything else (db, script, self, schemata, operations, tools) is bundled in client
+								if (id.startsWith('@MaiaOS/') && !id.includes('core') && !id.includes('vibes')) {
+									// Mark as external - it's already bundled in client
 									return { id: id, external: true }
 								}
 								// Externalize @electric-sql/pglite - it's server-only and already externalized in kernel bundle

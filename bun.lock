@@ -4,6 +4,9 @@
   "workspaces": {
     "": {
       "name": "hominio",
+      "dependencies": {
+        "@electric-sql/pglite": "^0.3.15",
+      },
       "devDependencies": {
         "@biomejs/biome": "2.3.8",
         "@realfavicongenerator/generate-favicon": "^0.6.0",
@@ -14,26 +17,11 @@
     },
     "libs/maia-brand": {
       "name": "@MaiaOS/brand",
-      "version": "26.212.2305",
+      "version": "26.213.17",
     },
-    "libs/maia-db": {
-      "name": "@MaiaOS/db",
-      "version": "26.212.2305",
-      "dependencies": {
-        "@MaiaOS/operations": "workspace:*",
-        "@MaiaOS/schemata": "workspace:*",
-        "@MaiaOS/storage": "workspace:*",
-        "cojson": "^0.20.7",
-        "cojson-transport-ws": "0.20.7",
-      },
-    },
-    "libs/maia-docs": {
-      "name": "@MaiaOS/docs",
-      "version": "26.212.2305",
-    },
-    "libs/maia-kernel": {
-      "name": "@MaiaOS/kernel",
-      "version": "26.212.2305",
+    "libs/maia-core": {
+      "name": "@MaiaOS/core",
+      "version": "26.213.17",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/operations": "workspace:*",
@@ -42,17 +30,43 @@
         "@MaiaOS/self": "workspace:*",
         "@MaiaOS/tools": "workspace:*",
       },
+    },
+    "libs/maia-db": {
+      "name": "@MaiaOS/db",
+      "version": "26.213.17",
+      "dependencies": {
+        "@MaiaOS/operations": "workspace:*",
+        "@MaiaOS/schemata": "workspace:*",
+        "@MaiaOS/storage": "workspace:*",
+        "cojson": "^0.20.7",
+        "cojson-transport-ws": "0.20.7",
+      },
+    },
+    "libs/maia-distros": {
+      "name": "@MaiaOS/maia-distros",
+      "version": "26.213.17",
+      "dependencies": {
+        "@MaiaOS/core": "workspace:*",
+        "@MaiaOS/db": "workspace:*",
+        "@MaiaOS/operations": "workspace:*",
+        "@MaiaOS/vibes": "workspace:*",
+        "cojson-transport-ws": "0.20.7",
+      },
       "devDependencies": {
         "vite": "^7.3.1",
       },
     },
+    "libs/maia-docs": {
+      "name": "@MaiaOS/docs",
+      "version": "26.213.17",
+    },
     "libs/maia-language": {
       "name": "@maia/language",
-      "version": "26.212.2305",
+      "version": "26.213.17",
     },
     "libs/maia-operations": {
       "name": "@MaiaOS/operations",
-      "version": "26.212.2305",
+      "version": "26.213.17",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/schemata": "workspace:*",
@@ -60,7 +74,7 @@
     },
     "libs/maia-schemata": {
       "name": "@MaiaOS/schemata",
-      "version": "26.212.2305",
+      "version": "26.213.17",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "ajv": "^8.12.0",
@@ -68,7 +82,7 @@
     },
     "libs/maia-script": {
       "name": "@MaiaOS/script",
-      "version": "26.212.2305",
+      "version": "26.213.17",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/operations": "workspace:*",
@@ -81,7 +95,7 @@
     },
     "libs/maia-self": {
       "name": "@MaiaOS/self",
-      "version": "26.212.2305",
+      "version": "26.213.17",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/storage": "workspace:*",
@@ -90,28 +104,26 @@
     },
     "libs/maia-storage": {
       "name": "@MaiaOS/storage",
-      "version": "26.212.2305",
+      "version": "26.213.17",
       "dependencies": {
+        "@electric-sql/pglite": "latest",
         "cojson": "0.20.7",
         "cojson-storage-indexeddb": "0.20.7",
         "pg": "^8.13.0",
       },
-      "devDependencies": {
-        "@electric-sql/pglite": "latest",
-      },
     },
     "libs/maia-sync": {
       "name": "@MaiaOS/sync",
-      "version": "26.212.2305",
+      "version": "26.213.17",
       "dependencies": {
-        "@MaiaOS/kernel": "workspace:*",
+        "@MaiaOS/core": "workspace:*",
         "cojson": "0.20.7",
         "cojson-transport-ws": "0.20.7",
       },
     },
     "libs/maia-tools": {
       "name": "@MaiaOS/tools",
-      "version": "26.212.2305",
+      "version": "26.213.17",
       "dependencies": {
         "@MaiaOS/operations": "workspace:*",
         "@MaiaOS/schemata": "workspace:*",
@@ -119,9 +131,9 @@
     },
     "libs/maia-vibes": {
       "name": "@MaiaOS/vibes",
-      "version": "26.212.2305",
+      "version": "26.213.17",
       "dependencies": {
-        "@MaiaOS/kernel": "workspace:*",
+        "@MaiaOS/core": "workspace:*",
       },
       "devDependencies": {
         "vite": "^7.3.1",
@@ -129,11 +141,10 @@
     },
     "services/maia": {
       "name": "@MaiaOS/maia",
-      "version": "26.212.2305",
+      "version": "26.213.17",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
-        "@MaiaOS/kernel": "workspace:*",
-        "@MaiaOS/vibes": "workspace:*",
+        "@MaiaOS/maia-distros": "workspace:*",
       },
       "devDependencies": {
         "vite": "^7.3.1",
@@ -141,11 +152,9 @@
     },
     "services/moai": {
       "name": "@MaiaOS/moai",
-      "version": "26.212.2305",
+      "version": "26.213.17",
       "dependencies": {
-        "@MaiaOS/db": "workspace:*",
-        "@MaiaOS/kernel": "workspace:*",
-        "@MaiaOS/operations": "workspace:*",
+        "@MaiaOS/core": "workspace:*",
         "cojson-transport-ws": "0.20.7",
       },
     },
@@ -153,13 +162,15 @@
   "packages": {
     "@MaiaOS/brand": ["@MaiaOS/brand@workspace:libs/maia-brand"],
 
+    "@MaiaOS/core": ["@MaiaOS/core@workspace:libs/maia-core"],
+
     "@MaiaOS/db": ["@MaiaOS/db@workspace:libs/maia-db"],
 
     "@MaiaOS/docs": ["@MaiaOS/docs@workspace:libs/maia-docs"],
 
-    "@MaiaOS/kernel": ["@MaiaOS/kernel@workspace:libs/maia-kernel"],
-
     "@MaiaOS/maia": ["@MaiaOS/maia@workspace:services/maia"],
+
+    "@MaiaOS/maia-distros": ["@MaiaOS/maia-distros@workspace:libs/maia-distros"],
 
     "@MaiaOS/moai": ["@MaiaOS/moai@workspace:services/moai"],
 

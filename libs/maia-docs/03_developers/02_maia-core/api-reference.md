@@ -1,6 +1,6 @@
 # API Reference
 
-Complete API reference for `@MaiaOS/kernel` package.
+Complete API reference for `@MaiaOS/core` package.
 
 ---
 

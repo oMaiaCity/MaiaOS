@@ -13,14 +13,13 @@
 		"./todos/registry": "./src/todos/registry.js"
 	},
 	"dependencies": {
-		"@MaiaOS/kernel": "workspace:*"
+		"@MaiaOS/core": "workspace:*"
 	},
 	"devDependencies": {
 		"vite": "^7.3.1"
 	},
 	"scripts": {
-		"build": "bunx vite build",
-		"build:watch": "bunx vite build --watch"
+		"build": "bunx vite build"
 	},
 	"files": [
 		"src",

@@ -20,7 +20,8 @@ primary_region = "fra"
 
 # Secrets: set manually via fly secrets set
 # PEER_ID, PEER_SECRET - required
-# PEER_DB_URL - from Fly Postgres Connect tab "Set secret and deploy"
+# PEER_DB_URL - from Fly Postgres Connect tab (PEER_STORAGE=postgres)
+# PEER_DB_PATH - PGlite data path (PEER_STORAGE=pglite, e.g. /data/sync.db)
 # RED_PILL_API_KEY - Optional, for LLM chat
 
 [[services]]

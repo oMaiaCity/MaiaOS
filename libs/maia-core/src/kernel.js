@@ -6,7 +6,7 @@
  * Imports engines from @MaiaOS/script and orchestrates them
  *
  * Usage:
- *   import { MaiaOS } from '@MaiaOS/kernel';
+ *   import { MaiaOS } from '@MaiaOS/core';
  *   const os = await MaiaOS.boot(config);
  */
 

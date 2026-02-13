@@ -1,0 +1,20 @@
+{
+	"name": "@MaiaOS/core",
+	"version": "26.0213.0017",
+	"type": "module",
+	"main": "./src/index.js",
+	"exports": {
+		".": "./src/index.js"
+	},
+	"files": [
+		"src"
+	],
+	"dependencies": {
+		"@MaiaOS/db": "workspace:*",
+		"@MaiaOS/self": "workspace:*",
+		"@MaiaOS/script": "workspace:*",
+		"@MaiaOS/schemata": "workspace:*",
+		"@MaiaOS/operations": "workspace:*",
+		"@MaiaOS/tools": "workspace:*"
+	}
+}
