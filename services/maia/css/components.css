@@ -2,236 +2,314 @@
 
 /* Buttons - Design System */
 .btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.9rem 2.5rem;
-  border-radius: 9999px; /* Fully rounded buttons */
-  font-family: var(--font-body);
-  font-weight: var(--font-weight-label);
-  font-size: 0.85rem;
-  letter-spacing: 0.05em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  text-decoration: none;
-  border: 1.5px solid transparent;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.9rem 2.5rem;
+	border-radius: 9999px; /* Fully rounded buttons */
+	font-family: var(--font-body);
+	font-weight: var(--font-weight-label);
+	font-size: 0.85rem;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+	cursor: pointer;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	text-decoration: none;
+	border: 1.5px solid transparent;
 }
 
-.btn:hover { 
-  transform: translateY(-2px); 
-  filter: brightness(1.1);
-  box-shadow: 0 10px 30px rgba(0,0,0,0.1); 
+.btn:hover {
+	transform: translateY(-2px);
+	filter: brightness(1.1);
+	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
 }
 
-.btn:active { transform: scale(0.97); }
+.btn:active {
+	transform: scale(0.97);
+}
 
 /* SOLID VARIANTS (Tone-on-Tone) */
-.btn-solid-marine { background: var(--color-marine-blue); color: var(--color-marine-text); border-color: rgba(255,255,255,0.1); }
-.btn-solid-water { background: var(--color-paradise-water); color: var(--color-water-text); border-color: rgba(255,255,255,0.2); }
-.btn-solid-green { background: var(--color-lush-green); color: var(--color-green-text); border-color: rgba(255,255,255,0.1); }
-.btn-solid-terracotta { background: var(--color-terracotta); color: var(--color-terracotta-text); border-color: rgba(255,255,255,0.1); }
-.btn-solid-yellow { background: var(--color-sun-yellow); color: var(--color-yellow-text); border-color: rgba(255,255,255,0.1); }
+.btn-solid-marine {
+	background: var(--color-marine-blue);
+	color: var(--color-marine-text);
+	border-color: rgba(255, 255, 255, 0.1);
+}
+.btn-solid-water {
+	background: var(--color-paradise-water);
+	color: var(--color-water-text);
+	border-color: rgba(255, 255, 255, 0.2);
+}
+.btn-solid-green {
+	background: var(--color-lush-green);
+	color: var(--color-green-text);
+	border-color: rgba(255, 255, 255, 0.1);
+}
+.btn-solid-terracotta {
+	background: var(--color-terracotta);
+	color: var(--color-terracotta-text);
+	border-color: rgba(255, 255, 255, 0.1);
+}
+.btn-solid-yellow {
+	background: var(--color-sun-yellow);
+	color: var(--color-yellow-text);
+	border-color: rgba(255, 255, 255, 0.1);
+}
 
 /* OUTLINE VARIANTS (Tone-on-Tone) */
-.btn-outline-marine { border-color: var(--color-marine-blue); color: var(--color-marine-blue); background: transparent; }
-.btn-outline-water { border-color: var(--color-paradise-water); color: var(--color-paradise-water); background: transparent; }
-.btn-outline-green { border-color: var(--color-lush-green); color: var(--color-lush-green); background: transparent; }
-.btn-outline-terracotta { border-color: var(--color-terracotta); color: var(--color-terracotta); background: transparent; }
-.btn-outline-yellow { border-color: var(--color-sun-yellow); color: var(--color-sun-yellow); background: transparent; }
+.btn-outline-marine {
+	border-color: var(--color-marine-blue);
+	color: var(--color-marine-blue);
+	background: transparent;
+}
+.btn-outline-water {
+	border-color: var(--color-paradise-water);
+	color: var(--color-paradise-water);
+	background: transparent;
+}
+.btn-outline-green {
+	border-color: var(--color-lush-green);
+	color: var(--color-lush-green);
+	background: transparent;
+}
+.btn-outline-terracotta {
+	border-color: var(--color-terracotta);
+	color: var(--color-terracotta);
+	background: transparent;
+}
+.btn-outline-yellow {
+	border-color: var(--color-sun-yellow);
+	color: var(--color-sun-yellow);
+	background: transparent;
+}
 
 /* GLASS VARIANTS (Dark Context - Tone-on-Tone) */
-.btn-glass { background: rgba(255, 255, 255, 0.1); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-color: rgba(255, 255, 255, 0.2); color: var(--color-soft-clay); }
-.btn-glass-marine { background: rgba(0, 31, 51, 0.3); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-color: rgba(0, 31, 51, 0.4); color: var(--color-marine-text); }
-.btn-glass-water { background: rgba(0, 189, 214, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-color: rgba(0, 189, 214, 0.3); color: var(--color-paradise-water); }
-.btn-glass-green { background: rgba(78, 154, 88, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-color: rgba(78, 154, 88, 0.3); color: var(--color-lush-green); }
-.btn-glass-terracotta { background: rgba(194, 123, 102, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-color: rgba(194, 123, 102, 0.3); color: var(--color-terracotta); }
-.btn-glass-yellow { background: rgba(230, 185, 77, 0.2); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); border-color: rgba(230, 185, 77, 0.3); color: var(--color-sun-yellow); }
+.btn-glass {
+	background: rgba(255, 255, 255, 0.1);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
+	border-color: rgba(255, 255, 255, 0.2);
+	color: var(--color-soft-clay);
+}
+.btn-glass-marine {
+	background: rgba(0, 31, 51, 0.3);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
+	border-color: rgba(0, 31, 51, 0.4);
+	color: var(--color-marine-text);
+}
+.btn-glass-water {
+	background: rgba(0, 189, 214, 0.2);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
+	border-color: rgba(0, 189, 214, 0.3);
+	color: var(--color-paradise-water);
+}
+.btn-glass-green {
+	background: rgba(78, 154, 88, 0.2);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
+	border-color: rgba(78, 154, 88, 0.3);
+	color: var(--color-lush-green);
+}
+.btn-glass-terracotta {
+	background: rgba(194, 123, 102, 0.2);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
+	border-color: rgba(194, 123, 102, 0.3);
+	color: var(--color-terracotta);
+}
+.btn-glass-yellow {
+	background: rgba(230, 185, 77, 0.2);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
+	border-color: rgba(230, 185, 77, 0.3);
+	color: var(--color-sun-yellow);
+}
 
 .btn-danger {
-  color: var(--brand-red);
-  border-color: rgba(239, 68, 68, 0.3);
+	color: var(--brand-red);
+	border-color: rgba(239, 68, 68, 0.3);
 }
 
 .btn-danger:hover {
-  background: var(--brand-red);
-  color: #fff;
+	background: var(--brand-red);
+	color: #fff;
 }
 
 /* Badges */
 .badge {
-  display: inline-block;
-  padding: 0.25rem 0.75rem;
-  border-radius: 999px;
-  font-size: 0.7rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+	display: inline-block;
+	padding: 0.25rem 0.75rem;
+	border-radius: 999px;
+	font-size: 0.7rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
 }
 
 /* Sync Status - ghost badge around dot (green = syncing/connected, red = disconnected) */
 .sync-status {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0.4rem;
-  min-width: 28px;
-  min-height: 28px;
-  border-radius: 9999px;
-  cursor: default;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(8px) saturate(150%);
-  -webkit-backdrop-filter: blur(8px) saturate(150%);
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 0.4rem;
+	min-width: 28px;
+	min-height: 28px;
+	border-radius: 9999px;
+	cursor: default;
+	background: rgba(255, 255, 255, 0.15);
+	backdrop-filter: blur(8px) saturate(150%);
+	-webkit-backdrop-filter: blur(8px) saturate(150%);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .sync-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
+	width: 10px;
+	height: 10px;
+	border-radius: 50%;
 }
 
 .sync-status.connected {
-  background: rgba(78, 154, 88, 0.15);
-  border-color: rgba(78, 154, 88, 0.25);
+	background: rgba(78, 154, 88, 0.15);
+	border-color: rgba(78, 154, 88, 0.25);
 }
 
 .sync-status.connected .sync-dot {
-  background: var(--color-lush-green);
+	background: var(--color-lush-green);
 }
 
 .sync-status.disconnected {
-  background: rgba(239, 68, 68, 0.1);
-  border-color: rgba(239, 68, 68, 0.2);
+	background: rgba(239, 68, 68, 0.1);
+	border-color: rgba(239, 68, 68, 0.2);
 }
 
 .sync-status.disconnected .sync-dot {
-  background: #ef4444;
+	background: #ef4444;
 }
 
 /* Toast - Liquid Glass Design */
 .toast {
-  position: fixed;
-  top: 2rem;
-  left: 50%;
-  transform: translateX(-50%);
-  min-width: 400px;
-  max-width: 600px;
-  z-index: 10000;
-  border-radius: var(--radius);
-  overflow: hidden;
-  animation: toastSlideIn 0.4s cubic-bezier(0.23, 1, 0.32, 1);
+	position: fixed;
+	top: 2rem;
+	left: 50%;
+	transform: translateX(-50%);
+	min-width: 400px;
+	max-width: 600px;
+	z-index: 10000;
+	border-radius: var(--radius);
+	overflow: hidden;
+	animation: toastSlideIn 0.4s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
 /* Liquid Glass Layers */
 .toast::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  backdrop-filter: blur(12px) saturate(160%);
-  -webkit-backdrop-filter: blur(12px) saturate(160%);
-  background: rgba(255, 255, 255, 0.002);
-  border-radius: var(--radius);
-  z-index: 0;
-  pointer-events: none;
+	content: "";
+	position: absolute;
+	inset: 0;
+	backdrop-filter: blur(12px) saturate(160%);
+	-webkit-backdrop-filter: blur(12px) saturate(160%);
+	background: rgba(255, 255, 255, 0.002);
+	border-radius: var(--radius);
+	z-index: 0;
+	pointer-events: none;
 }
 
 .toast::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: var(--radius);
-  box-shadow: 
-    0 10px 40px rgba(0, 0, 0, 0.15),
-    0 0 20px rgba(0, 0, 0, 0.03),
-    inset 2px 2px 4px 0 rgba(255, 255, 255, 0.4),
-    inset -2px -2px 4px 0 rgba(255, 255, 255, 0.2);
-  z-index: 1;
-  pointer-events: none;
+	content: "";
+	position: absolute;
+	inset: 0;
+	border-radius: var(--radius);
+	box-shadow:
+		0 10px 40px rgba(0, 0, 0, 0.15),
+		0 0 20px rgba(0, 0, 0, 0.03),
+		inset 2px 2px 4px 0 rgba(255, 255, 255, 0.4),
+		inset -2px -2px 4px 0 rgba(255, 255, 255, 0.2);
+	z-index: 1;
+	pointer-events: none;
 }
 
 .toast-content {
-  position: relative;
-  z-index: 10;
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  padding: 1rem 1.5rem;
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(8px);
-  -webkit-backdrop-filter: blur(8px);
+	position: relative;
+	z-index: 10;
+	display: flex;
+	align-items: flex-start;
+	gap: 1rem;
+	padding: 1rem 1.5rem;
+	background: rgba(255, 255, 255, 0.15);
+	backdrop-filter: blur(8px);
+	-webkit-backdrop-filter: blur(8px);
 }
 
 .toast-icon {
-  font-size: 1.5rem;
-  flex-shrink: 0;
+	font-size: 1.5rem;
+	flex-shrink: 0;
 }
 
 .toast-message {
-  flex: 1;
-  color: var(--text-pure-white);
-  font-size: 0.9rem;
-  line-height: 1.5;
+	flex: 1;
+	color: var(--text-pure-white);
+	font-size: 0.9rem;
+	line-height: 1.5;
 }
 
 .toast-title {
-  font-weight: 700;
-  font-size: 1rem;
-  margin-bottom: 0.25rem;
-  color: var(--text-pure-white);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+	font-weight: 700;
+	font-size: 1rem;
+	margin-bottom: 0.25rem;
+	color: var(--text-pure-white);
+	text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
 .toast.error .toast-content {
-  background: rgba(254, 226, 226, 0.25);
+	background: rgba(254, 226, 226, 0.25);
 }
 
 .toast.error .toast-message,
 .toast.error .toast-title {
-  color: #fef2f2;
+	color: #fef2f2;
 }
 
 .toast.success .toast-content {
-  background: rgba(220, 252, 231, 0.25);
+	background: rgba(220, 252, 231, 0.25);
 }
 
 .toast.success .toast-message,
 .toast.success .toast-title {
-  color: #f0fdf4;
+	color: #f0fdf4;
 }
 
 .toast.info .toast-content {
-  background: rgba(224, 242, 254, 0.25);
+	background: rgba(224, 242, 254, 0.25);
 }
 
 .toast.info .toast-message,
 .toast.info .toast-title {
-  color: #f0f9ff;
+	color: #f0f9ff;
 }
 
 .toast.removing {
-  animation: toastSlideOut 0.3s cubic-bezier(0.23, 1, 0.32, 1) forwards;
+	animation: toastSlideOut 0.3s cubic-bezier(0.23, 1, 0.32, 1) forwards;
 }
 
 @keyframes toastSlideIn {
-  from {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
+	from {
+		opacity: 0;
+		transform: translateX(-50%) translateY(-20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateX(-50%) translateY(0);
+	}
 }
 
 @keyframes toastSlideOut {
-  from {
-    opacity: 1;
-    transform: translateX(-50%) translateY(0);
-  }
-  to {
-    opacity: 0;
-    transform: translateX(-50%) translateY(-20px);
-  }
+	from {
+		opacity: 1;
+		transform: translateX(-50%) translateY(0);
+	}
+	to {
+		opacity: 0;
+		transform: translateX(-50%) translateY(-20px);
+	}
 }

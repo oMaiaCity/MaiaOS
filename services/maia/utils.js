@@ -3,9 +3,9 @@
  */
 
 export function truncate(str, maxLen = 40) {
-	if (typeof str !== 'string') return str;
-	if (str.length <= maxLen) return str;
-	return str.substring(0, maxLen) + '...';
+	if (typeof str !== 'string') return str
+	if (str.length <= maxLen) return str
+	return `${str.substring(0, maxLen)}...`
 }
 
 /**
@@ -15,20 +15,20 @@ export function truncate(str, maxLen = 40) {
  */
 export function getSyncStatusMessage(syncState) {
 	if (syncState.status === 'authenticating') {
-		return 'Authenticating...';
+		return 'Authenticating...'
 	} else if (syncState.status === 'loading-account') {
-		return 'Loading account...';
+		return 'Loading account...'
 	} else if (syncState.status === 'syncing') {
-		return 'Syncing';
+		return 'Syncing'
 	} else if (syncState.status === 'connected') {
-		return 'Connected';
+		return 'Connected'
 	} else if (syncState.status === 'error') {
-		return syncState.error || 'Error';
+		return syncState.error || 'Error'
 	} else if (syncState.connected) {
-		return syncState.syncing ? 'Syncing' : 'Connected';
+		return syncState.syncing ? 'Syncing' : 'Connected'
 	} else if (syncState.error) {
-		return syncState.error;
+		return syncState.error
 	} else {
-		return 'Offline';
+		return 'Offline'
 	}
 }

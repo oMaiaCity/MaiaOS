@@ -1,8 +1,9 @@
-<script lang="ts">
-  import { TextWrap } from "../index.js";
-</script>
-
-<TextWrap>
+/**
+ * Site Notice / Impressum legal content.
+ * Vanilla HTML string for use in maia or other services.
+ */
+export const legalNoticeHTML = `
+<div class="legal-content">
   <h1>Site Notice</h1>
 
   <p>
@@ -45,25 +46,17 @@
   <h2>EU dispute resolution</h2>
   <p>
     The European Commission provides a platform for online dispute resolution
-    (ODR): <a
-      href="https://ec.europa.eu/consumers/odr/"
-      target="_blank"
-      rel="noopener noreferrer">https://ec.europa.eu/consumers/odr/</a
-    >.<br /> Our e-mail address can be found above in the site notice.
+    (ODR): <a href="https://ec.europa.eu/consumers/odr/" target="_blank" rel="noopener noreferrer">https://ec.europa.eu/consumers/odr/</a>.<br />
+    Our e-mail address can be found above in the site notice.
   </p>
 
-  <h2>
-    Dispute resolution proceedings in front of a consumer arbitration board
-  </h2>
+  <h2>Dispute resolution proceedings in front of a consumer arbitration board</h2>
   <p>
     We are not willing or obliged to participate in dispute resolution
     proceedings in front of a consumer arbitration board.
   </p>
 
-  <h2>
-    Central contact point according to the Digital Services Act - DSA
-    (Regulation (EU) 2022/265)
-  </h2>
+  <h2>Central contact point according to the Digital Services Act - DSA (Regulation (EU) 2022/265)</h2>
   <p>
     You can reach our central contact point for users and authorities in
     accordance with Art. 11, 12 DSA as follows:
@@ -73,4 +66,5 @@
     Phone: +49 89 38466851
   </p>
   <p>The languages available for contact are: German, English.</p>
-</TextWrap>
+</div>
+`.trim()

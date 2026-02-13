@@ -1,18 +1,18 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/message/SWITCH_VIEW",
-  "title": "@maia/schema/message/SWITCH_VIEW",
-  "description": "Message type for switching view mode",
-  "cotype": "comap",
-  "indexing": true,
-  "type": "object",
-  "properties": {
-    "viewMode": {
-      "type": "string",
-      "enum": ["list", "logs", "comingSoon"],
-      "description": "View mode to switch to (required)"
-    }
-  },
-  "required": ["viewMode"],
-  "additionalProperties": false
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/message/SWITCH_VIEW",
+	"title": "@maia/schema/message/SWITCH_VIEW",
+	"description": "Message type for switching view mode",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {
+		"viewMode": {
+			"type": "string",
+			"enum": ["list", "logs", "comingSoon"],
+			"description": "View mode to switch to (required)"
+		}
+	},
+	"required": ["viewMode"],
+	"additionalProperties": false
 }

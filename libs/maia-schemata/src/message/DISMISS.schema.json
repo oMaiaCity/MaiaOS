@@ -1,11 +1,11 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/message/DISMISS",
-  "title": "@maia/schema/message/DISMISS",
-  "description": "Message type for dismissing an error or notification",
-  "cotype": "comap",
-  "indexing": true,
-  "type": "object",
-  "properties": {},
-  "additionalProperties": false
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/message/DISMISS",
+	"title": "@maia/schema/message/DISMISS",
+	"description": "Message type for dismissing an error or notification",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {},
+	"additionalProperties": false
 }

@@ -1,19 +1,19 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/message/CREATE_BUTTON",
-  "title": "@maia/schema/message/CREATE_BUTTON",
-  "description": "Message type for creating a new item via button click (generic, reusable across vibes)",
-  "cotype": "comap",
-  "indexing": true,
-  "type": "object",
-  "properties": {
-    "value": {
-      "type": "string",
-      "minLength": 1,
-      "pattern": "^\\S",
-      "description": "Item value/text (required, non-empty, must contain at least one non-whitespace character). Generic property name for reuse across vibes."
-    }
-  },
-  "required": ["value"],
-  "additionalProperties": true
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/message/CREATE_BUTTON",
+	"title": "@maia/schema/message/CREATE_BUTTON",
+	"description": "Message type for creating a new item via button click (generic, reusable across vibes)",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {
+		"value": {
+			"type": "string",
+			"minLength": 1,
+			"pattern": "^\\S",
+			"description": "Item value/text (required, non-empty, must contain at least one non-whitespace character). Generic property name for reuse across vibes."
+		}
+	},
+	"required": ["value"],
+	"additionalProperties": true
 }

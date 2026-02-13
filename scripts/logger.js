@@ -10,7 +10,7 @@ const colors = {
 	reset: '\x1b[0m',
 	bright: '\x1b[1m',
 	dim: '\x1b[2m',
-	
+
 	// Text colors
 	black: '\x1b[30m',
 	red: '\x1b[31m',
@@ -20,7 +20,7 @@ const colors = {
 	magenta: '\x1b[35m',
 	cyan: '\x1b[36m',
 	white: '\x1b[37m',
-	
+
 	// Background colors
 	bgBlack: '\x1b[40m',
 	bgRed: '\x1b[41m',
@@ -34,19 +34,19 @@ const colors = {
 
 // Service color mapping
 const serviceColors = {
-	'dev': colors.cyan,
-	'favicons': colors.magenta,
-	'assets': colors.blue,
-	'brand': colors.blue,
-	'docs': colors.yellow,
-	'api': colors.green,
-	'sync': colors.green,
-	'moai': colors.green,
-	'agent': colors.magenta,
-	'server': colors.cyan,
-	'maia': colors.bright + colors.cyan,
-	'kernel': colors.dim + colors.cyan,
-	'vibes': colors.dim + colors.cyan,
+	dev: colors.cyan,
+	favicons: colors.magenta,
+	assets: colors.blue,
+	brand: colors.blue,
+	docs: colors.yellow,
+	api: colors.green,
+	sync: colors.green,
+	moai: colors.green,
+	agent: colors.magenta,
+	server: colors.cyan,
+	maia: colors.bright + colors.cyan,
+	kernel: colors.dim + colors.cyan,
+	vibes: colors.dim + colors.cyan,
 }
 
 // Status icons
@@ -82,27 +82,27 @@ export class Logger {
 	constructor(service) {
 		this.service = service
 	}
-	
+
 	success(message) {
 		console.log(formatLog(this.service, message, icons.success))
 	}
-	
+
 	error(message) {
 		console.log(formatLog(this.service, message, icons.error))
 	}
-	
+
 	warn(message) {
 		console.log(formatLog(this.service, message, icons.warning))
 	}
-	
+
 	info(message) {
 		console.log(formatLog(this.service, message, icons.info))
 	}
-	
+
 	log(message) {
 		console.log(formatLog(this.service, message))
 	}
-	
+
 	/**
 	 * Compact status update (single line, no icon)
 	 */
@@ -123,9 +123,15 @@ export function createLogger(service) {
  */
 export function bootHeader() {
 	console.log()
-	console.log(`${colors.bright}${colors.cyan}╔════════════════════════════════════════╗${colors.reset}`)
-	console.log(`${colors.bright}${colors.cyan}║${colors.reset}  ${colors.bright}MaiaOS Development Server${colors.reset}  ${colors.bright}${colors.cyan}║${colors.reset}`)
-	console.log(`${colors.bright}${colors.cyan}╚════════════════════════════════════════╝${colors.reset}`)
+	console.log(
+		`${colors.bright}${colors.cyan}╔════════════════════════════════════════╗${colors.reset}`,
+	)
+	console.log(
+		`${colors.bright}${colors.cyan}║${colors.reset}  ${colors.bright}MaiaOS Development Server${colors.reset}  ${colors.bright}${colors.cyan}║${colors.reset}`,
+	)
+	console.log(
+		`${colors.bright}${colors.cyan}╚════════════════════════════════════════╝${colors.reset}`,
+	)
 	console.log()
 }
 
@@ -134,7 +140,9 @@ export function bootHeader() {
  */
 export function bootFooter() {
 	console.log()
-	console.log(`${colors.dim}${colors.green}✓${colors.reset} ${colors.green}${colors.bright}All services ready!${colors.reset}`)
+	console.log(
+		`${colors.dim}${colors.green}✓${colors.reset} ${colors.green}${colors.bright}All services ready!${colors.reset}`,
+	)
 	console.log(`${colors.dim}Press Ctrl+C to stop${colors.reset}`)
 	console.log()
 }

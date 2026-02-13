@@ -13,8 +13,8 @@
 
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
 import { exit } from 'node:process'
+import { fileURLToPath } from 'node:url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -22,8 +22,6 @@ const rootDir = join(__dirname, '..')
 
 const newVersion = process.argv[2]
 if (!newVersion) {
-	console.error('Usage: bun run version:sync <version>')
-	console.error('Example: bun run version:sync 26.0212.2230')
 	exit(1)
 }
 
@@ -56,7 +54,7 @@ function sync(dir) {
 		const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
 		pkg.version = newVersion
 		writeFileSync(pkgPath, `${JSON.stringify(pkg, null, '\t')}\n`)
-		console.log(`  ${pkgPath.replace(rootDir + '/', '')}`)
+		console.log(`  ${pkgPath.replace(`${rootDir}/`, '')}`)
 	}
 }
 

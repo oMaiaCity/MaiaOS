@@ -1,1 +1,20 @@
-{"$schema":"@maia/schema/meta","$id":"@maia/schema/os/registries","title":"@maia/schema/os/registries","description":"Registries CoMap - contains sparks, etc. Stored in spark.registries","cotype":"comap","indexing":false,"properties":{"sparks":{"type":"string","pattern":"^co_z[a-zA-Z0-9]+$","description":"Sparks registry CoMap co-id (spark name -> spark co-id)"}},"additionalProperties":{"type":"string","pattern":"^co_z[a-zA-Z0-9]+$","description":"Registry name -> registry CoMap co-id"}}
+{
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/os/registries",
+	"title": "@maia/schema/os/registries",
+	"description": "Registries CoMap - contains sparks, etc. Stored in spark.registries",
+	"cotype": "comap",
+	"indexing": false,
+	"properties": {
+		"sparks": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "Sparks registry CoMap co-id (spark name -> spark co-id)"
+		}
+	},
+	"additionalProperties": {
+		"type": "string",
+		"pattern": "^co_z[a-zA-Z0-9]+$",
+		"description": "Registry name -> registry CoMap co-id"
+	}
+}

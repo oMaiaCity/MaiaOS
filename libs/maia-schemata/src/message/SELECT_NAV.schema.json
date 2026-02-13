@@ -1,17 +1,17 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/message/SELECT_NAV",
-  "title": "@maia/schema/message/SELECT_NAV",
-  "description": "Message type for selecting a navigation item",
-  "cotype": "comap",
-  "indexing": true,
-  "type": "object",
-  "properties": {
-    "navId": {
-      "type": "string",
-      "description": "Navigation item ID (required)"
-    }
-  },
-  "required": ["navId"],
-  "additionalProperties": false
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/message/SELECT_NAV",
+	"title": "@maia/schema/message/SELECT_NAV",
+	"description": "Message type for selecting a navigation item",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {
+		"navId": {
+			"type": "string",
+			"description": "Navigation item ID (required)"
+		}
+	},
+	"required": ["navId"],
+	"additionalProperties": false
 }

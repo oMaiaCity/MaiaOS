@@ -1,17 +1,17 @@
 /**
  * MaiaOS Operations Package
- * 
+ *
  * Shared operations layer for database operations.
  * Works with any backend that implements the DBAdapter interface.
  */
 
-export { DBEngine } from './engine.js';
-export { DBAdapter } from './db-adapter.js';
-export { ReactiveStore } from './reactive-store.js';
+export { DBAdapter } from './db-adapter.js'
+export { DBEngine } from './engine.js'
 export {
-  createSuccessResult,
-  createErrorResult,
-  createErrorEntry,
-  isSuccessResult,
-  isPermissionError,
-} from './operation-result.js';
+	createErrorEntry,
+	createErrorResult,
+	createSuccessResult,
+	isPermissionError,
+	isSuccessResult,
+} from './operation-result.js'
+export { ReactiveStore } from './reactive-store.js'

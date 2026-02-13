@@ -1,8 +1,9 @@
-<script lang="ts">
-  import { TextWrap } from "../index.js";
-</script>
-
-<TextWrap>
+/**
+ * Privacy Policy legal content.
+ * Vanilla HTML string for use in maia or other services.
+ */
+export const privacyPolicyHTML = `
+<div class="legal-content">
   <h1>Privacy Policy</h1>
   <h2>1. An overview of data protection</h2>
   <h3>General information</h3>
@@ -15,10 +16,7 @@
     included beneath this copy.
   </p>
   <h3>Data recording on this website</h3>
-  <h4>
-    Who is the responsible party for the recording of data on this website
-    (i.e., the "controller")?
-  </h4>
+  <h4>Who is the responsible party for the recording of data on this website (i.e., the "controller")?</h4>
   <p>
     The data on this website is processed by the operator of the website, whose
     contact information is available under section "Information about the
@@ -121,17 +119,13 @@
     through e-mail communications) may be prone to security gaps. It is not
     possible to completely protect data against third-party access.
   </p>
-  <h3>
-    Information about the responsible party (referred to as the "controller" in
-    the GDPR)
-  </h3>
+  <h3>Information about the responsible party (referred to as the "controller" in the GDPR)</h3>
   <p>The data processing controller on this website is:</p>
   <p>
     Visioncreator GmbH<br />
     Reifenstuelstr. 6<br />
     80469 München
   </p>
-
   <p>
     Phone: +49 89 38466851<br />
     E-mail: hello@visioncreator.earth
@@ -141,7 +135,6 @@
     jointly with others makes decisions as to the purposes of and resources for
     the processing of personal data (e.g., names, e-mail addresses, etc.).
   </p>
-
   <h3>Storage duration</h3>
   <p>
     Unless a more specific storage period has been specified in this privacy
@@ -152,10 +145,7 @@
     personal data (e.g., tax or commercial law retention periods); in the latter
     case, the deletion will take place after these reasons cease to apply.
   </p>
-  <h3>
-    General information on the legal basis for the data processing on this
-    website
-  </h3>
+  <h3>General information on the legal basis for the data processing on this website</h3>
   <p>
     If you have consented to data processing, we process your personal data on
     the basis of Art. 6(1)(a) GDPR or Art. 9 (2)(a) GDPR, if special categories
@@ -194,10 +184,7 @@
     already given us. This shall be without prejudice to the lawfulness of any
     data collection that occurred prior to your revocation.
   </p>
-  <h3>
-    Right to object to the collection of data in special cases; right to object
-    to direct advertising (Art. 21 GDPR)
-  </h3>
+  <h3>Right to object to the collection of data in special cases; right to object to direct advertising (Art. 21 GDPR)</h3>
   <p>
     IN THE EVENT THAT DATA ARE PROCESSED ON THE BASIS OF ART. 6(1)(E) OR (F)
     GDPR, YOU HAVE THE RIGHT TO AT ANY TIME OBJECT TO THE PROCESSING OF YOUR
@@ -353,4 +340,5 @@
     statutory provisions - in particular statutory retention periods - remain
     unaffected.
   </p>
-</TextWrap>
+</div>
+`.trim()

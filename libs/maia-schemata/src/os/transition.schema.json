@@ -1,24 +1,24 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/transition",
-  "title": "@maia/schema/transition",
-  "description": "State machine transition",
-  "cotype": "comap",
-  "indexing": true,
-  "properties": {
-    "target": {
-      "type": "string",
-      "description": "Target state name"
-    },
-    "guard": {
-      "$co": "@maia/schema/guard"
-    },
-    "actions": {
-      "type": "array",
-      "items": {
-        "$co": "@maia/schema/action"
-      }
-    }
-  },
-  "required": ["target"]
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/transition",
+	"title": "@maia/schema/transition",
+	"description": "State machine transition",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"target": {
+			"type": "string",
+			"description": "Target state name"
+		},
+		"guard": {
+			"$co": "@maia/schema/guard"
+		},
+		"actions": {
+			"type": "array",
+			"items": {
+				"$co": "@maia/schema/action"
+			}
+		}
+	},
+	"required": ["target"]
 }

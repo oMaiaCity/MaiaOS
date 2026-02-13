@@ -1,21 +1,21 @@
 {
-  "$id": "@maia/schema/data/chat",
-  "$schema": "@maia/schema/meta",
-  "title": "@maia/schema/data/chat",
-  "cotype": "comap",
-  "indexing": true,
-  "properties": {
-    "role": {
-      "type": "string",
-      "enum": ["user", "assistant", "system"],
-      "description": "The role of the message sender"
-    },
-    "content": {
-      "type": "string",
-      "minLength": 1,
-      "description": "The message content"
-    }
-  },
-  "required": ["role", "content"],
-  "additionalProperties": false
+	"$id": "@maia/schema/data/chat",
+	"$schema": "@maia/schema/meta",
+	"title": "@maia/schema/data/chat",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"role": {
+			"type": "string",
+			"enum": ["user", "assistant", "system"],
+			"description": "The role of the message sender"
+		},
+		"content": {
+			"type": "string",
+			"minLength": 1,
+			"description": "The message content"
+		}
+	},
+	"required": ["role", "content"],
+	"additionalProperties": false
 }

@@ -1,21 +1,21 @@
 {
-  "$id": "@maia/schema/data/todos",
-  "$schema": "@maia/schema/meta",
-  "title": "@maia/schema/data/todos",
-  "cotype": "comap",
-  "indexing": true,
-  "properties": {
-    "text": {
-      "type": "string",
-      "minLength": 1,
-      "pattern": ".*\\S.*",
-      "description": "The todo item text content (must contain at least one non-whitespace character)"
-    },
-    "done": {
-      "type": "boolean",
-      "description": "Whether the todo item is completed"
-    }
-  },
-  "required": ["text", "done"],
-  "additionalProperties": false
+	"$id": "@maia/schema/data/todos",
+	"$schema": "@maia/schema/meta",
+	"title": "@maia/schema/data/todos",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"text": {
+			"type": "string",
+			"minLength": 1,
+			"pattern": ".*\\S.*",
+			"description": "The todo item text content (must contain at least one non-whitespace character)"
+		},
+		"done": {
+			"type": "boolean",
+			"description": "Whether the todo item is completed"
+		}
+	},
+	"required": ["text", "done"],
+	"additionalProperties": false
 }

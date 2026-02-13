@@ -1,1 +1,17 @@
-{"$schema":"@maia/schema/meta","$id":"@maia/schema/message/ADD_AGENT","title":"@maia/schema/message/ADD_AGENT","description":"Message type for adding an agent as writer member to a Spark's group","cotype":"comap","indexing":true,"type":"object","properties":{"agentId":{"type":"string","description":"Agent account co-id to add as writer (co_z...). Operation validates format."}},"required":["agentId"],"additionalProperties":true}
+{
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/message/ADD_AGENT",
+	"title": "@maia/schema/message/ADD_AGENT",
+	"description": "Message type for adding an agent as writer member to a Spark's group",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {
+		"agentId": {
+			"type": "string",
+			"description": "Agent account co-id to add as writer (co_z...). Operation validates format."
+		}
+	},
+	"required": ["agentId"],
+	"additionalProperties": true
+}

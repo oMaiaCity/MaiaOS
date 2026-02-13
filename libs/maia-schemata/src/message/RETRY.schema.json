@@ -1,11 +1,11 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/message/RETRY",
-  "title": "@maia/schema/message/RETRY",
-  "description": "Message type for retrying a failed operation",
-  "cotype": "comap",
-  "indexing": true,
-  "type": "object",
-  "properties": {},
-  "additionalProperties": false
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/message/RETRY",
+	"title": "@maia/schema/message/RETRY",
+	"description": "Message type for retrying a failed operation",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {},
+	"additionalProperties": false
 }

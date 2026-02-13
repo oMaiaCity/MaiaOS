@@ -4,7 +4,7 @@
  */
 
 export function renderLandingPage() {
-	document.getElementById("app").innerHTML = `
+	document.getElementById('app').innerHTML = `
 		<main class="container landing-main" style="overflow-x: hidden; box-sizing: border-box;">
 			<!-- THE MASTER HOOK -->
 			<section class="hero" style="
@@ -205,5 +205,5 @@ export function renderLandingPage() {
 				</div>
 			</section>
 		</main>
-	`;
+	`
 }

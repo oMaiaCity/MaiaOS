@@ -9,7 +9,7 @@
  * @returns {{ ok: true, data: any, ...meta }}
  */
 export function createSuccessResult(data, meta = {}) {
-  return { ok: true, data, ...meta };
+	return { ok: true, data, ...meta }
 }
 
 /**
@@ -18,7 +18,7 @@ export function createSuccessResult(data, meta = {}) {
  * @returns {{ ok: false, errors: Array, ...meta }}
  */
 export function createErrorResult(errors, meta = {}) {
-  return { ok: false, errors, ...meta };
+	return { ok: false, errors, ...meta }
 }
 
 /**
@@ -28,7 +28,7 @@ export function createErrorResult(errors, meta = {}) {
  * @returns {{ type: string, message: string, path?: string }}
  */
 export function createErrorEntry(type, message, path) {
-  return { type, message, path: path ?? undefined };
+	return { type, message, path: path ?? undefined }
 }
 
 /**
@@ -36,7 +36,7 @@ export function createErrorEntry(type, message, path) {
  * @returns {boolean}
  */
 export function isSuccessResult(result) {
-  return result && result.ok === true;
+	return result && result.ok === true
 }
 
 /**
@@ -44,27 +44,25 @@ export function isSuccessResult(result) {
  * Sources: cojson permissions.ts, coValueCore.ts, group.ts
  */
 const PERMISSION_PATTERNS = [
-  'Transactor has no write permissions',
-  'lacks admin permissions',
-  'lacks write permissions',
-  'lacks read permissions',
-  'Cannot verify delete permissions',
-  'wouldLeaveNoAdmins',
-  'Not a member',
-  'NotAdmin',
-  'CannotVerifyPermissions',
-  'permission',
-];
+	'Transactor has no write permissions',
+	'lacks admin permissions',
+	'lacks write permissions',
+	'lacks read permissions',
+	'Cannot verify delete permissions',
+	'wouldLeaveNoAdmins',
+	'Not a member',
+	'NotAdmin',
+	'CannotVerifyPermissions',
+	'permission',
+]
 
 /**
  * @param {Error} e - Caught error
  * @returns {boolean}
  */
 export function isPermissionError(e) {
-  if (!e || !(e instanceof Error)) return false;
-  const msg = (e.message || '').toLowerCase();
-  const str = String(e);
-  return PERMISSION_PATTERNS.some(
-    (p) => msg.includes(p.toLowerCase()) || str.includes(p)
-  );
+	if (!e || !(e instanceof Error)) return false
+	const msg = (e.message || '').toLowerCase()
+	const str = String(e)
+	return PERMISSION_PATTERNS.some((p) => msg.includes(p.toLowerCase()) || str.includes(p))
 }

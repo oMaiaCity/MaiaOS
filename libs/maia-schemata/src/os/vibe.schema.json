@@ -1,23 +1,23 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/vibe",
-  "title": "@maia/schema/vibe",
-  "description": "Vibe manifest/metadata",
-  "cotype": "comap",
-  "indexing": true,
-  "required": ["name", "description", "actor"],
-  "properties": {
-    "name": {
-      "type": "string",
-      "description": "Vibe name"
-    },
-    "description": {
-      "type": "string",
-      "description": "Vibe description"
-    },
-    "actor": {
-      "$co": "@maia/schema/actor",
-      "description": "Co-id reference to actor definition (root actor for this vibe)"
-    }
-  }
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/vibe",
+	"title": "@maia/schema/vibe",
+	"description": "Vibe manifest/metadata",
+	"cotype": "comap",
+	"indexing": true,
+	"required": ["name", "description", "actor"],
+	"properties": {
+		"name": {
+			"type": "string",
+			"description": "Vibe name"
+		},
+		"description": {
+			"type": "string",
+			"description": "Vibe description"
+		},
+		"actor": {
+			"$co": "@maia/schema/actor",
+			"description": "Co-id reference to actor definition (root actor for this vibe)"
+		}
+	}
 }

@@ -1,18 +1,15 @@
-<script lang="ts">
-  import { TextWrap } from "../index.js";
-</script>
-
-<TextWrap>
+/**
+ * Social Media Privacy Policy legal content.
+ * Vanilla HTML string for use in maia or other services.
+ */
+export const socialMediaPrivacyPolicyHTML = `
+<div class="legal-content">
   <h1>Social Media Privacy Policy</h1>
   <h3>Our social media appearances</h3>
   <h4>This privacy policy applies to the following social media presence</h4>
   <ul>
     <li>
-      <a
-        href="https://instagram.com/HominioMe"
-        target="_blank"
-        rel="noopener noreferrer">https://instagram.com/HominioMe</a
-      >
+      <a href="https://instagram.com/HominioMe" target="_blank" rel="noopener noreferrer">https://instagram.com/HominioMe</a>
     </li>
   </ul>
   <h4>Data processing through social networks</h4>
@@ -98,7 +95,6 @@
     circumstances, the restriction of the processing of your personal data.
   </p>
   <h4>Individual social networks</h4>
-
   <h5>Instagram</h5>
   <p>
     We have a profile on Instagram. The provider of this service is Meta
@@ -106,27 +102,15 @@
   </p>
   <p>
     Data transmission to the US is based on the Standard Contractual Clauses
-    (SCC) of the European Commission. Details can be found here: <a
-      href="https://www.facebook.com/legal/EU_data_transfer_addendum"
-      target="_blank"
-      rel="noopener noreferrer"
-      >https://www.facebook.com/legal/EU_data_transfer_addendum</a
-    >
+    (SCC) of the European Commission. Details can be found here:
+    <a href="https://www.facebook.com/legal/EU_data_transfer_addendum" target="_blank" rel="noopener noreferrer">https://www.facebook.com/legal/EU_data_transfer_addendum</a>
     and
-    <a
-      href="https://de-de.facebook.com/help/566994660333381"
-      target="_blank"
-      rel="noopener noreferrer"
-      >https://de-de.facebook.com/help/566994660333381</a
-    >.
+    <a href="https://de-de.facebook.com/help/566994660333381" target="_blank" rel="noopener noreferrer">https://de-de.facebook.com/help/566994660333381</a>.
   </p>
   <p>
     For details on how they handle your personal information, see the Instagram
-    Privacy Policy: <a
-      href="https://privacycenter.instagram.com/policy/"
-      target="_blank"
-      rel="noopener noreferrer">https://privacycenter.instagram.com/policy/</a
-    >.
+    Privacy Policy:
+    <a href="https://privacycenter.instagram.com/policy/" target="_blank" rel="noopener noreferrer">https://privacycenter.instagram.com/policy/</a>.
   </p>
   <p>
     The company is certified in accordance with the "EU-US Data Privacy
@@ -134,11 +118,8 @@
     US, which is intended to ensure compliance with European data protection
     standards for data processing in the US. Every company certified under the
     DPF is obliged to comply with these data protection standards. For more
-    information, please contact the provider under the following link: <a
-      href="https://www.dataprivacyframework.gov/participant/4452"
-      target="_blank"
-      rel="noopener noreferrer"
-      >https://www.dataprivacyframework.gov/participant/4452</a
-    >
+    information, please contact the provider under the following link:
+    <a href="https://www.dataprivacyframework.gov/participant/4452" target="_blank" rel="noopener noreferrer">https://www.dataprivacyframework.gov/participant/4452</a>
   </p>
-</TextWrap>
+</div>
+`.trim()

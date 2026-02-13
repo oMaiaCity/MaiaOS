@@ -1,73 +1,67 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/context",
-  "title": "@maia/schema/context",
-  "description": "Runtime data for an actor (flexible JSON structure). The context itself is a comap CoValue (for CRDT sync/versioning), but all inner properties are plain JS objects/arrays/strings - NOT CoJSON types.",
-  "cotype": "comap",
-  "indexing": true,
-  "additionalProperties": {
-    "description": "Any context fields (query objects, collections, UI state, form values, etc.). Query objects have schema + options properties. All inner properties are plain JS types (objects/arrays/strings/primitives) - NOT CoJSON types.",
-    "anyOf": [
-      {
-        "type": "object",
-        "description": "Query object for reactive subscription (has schema property). Can include nested options object with map, filter, etc.",
-        "properties": {
-          "schema": {
-            "type": "string",
-            "description": "Schema reference (e.g., '@maia/schema/message' or co-id)"
-          },
-          "options": {
-            "type": "object",
-            "description": "Query options (map, filter, etc.)",
-            "properties": {
-              "map": {
-                "type": "object",
-                "description": "Map transformation expressions (e.g., { sender: '$$source.role' })",
-                "additionalProperties": {
-                  "type": "string"
-                }
-              },
-              "filter": {
-                "description": "Filter criteria",
-                "oneOf": [
-                  {"type": "object"},
-                  {"type": "null"}
-                ]
-              }
-            },
-            "additionalProperties": true
-          },
-          "filter": {
-            "description": "Filter criteria (legacy - use options.filter instead)",
-            "oneOf": [
-              {"type": "object"},
-              {"type": "null"}
-            ]
-          }
-        },
-        "required": ["schema"],
-        "additionalProperties": true
-      },
-      {
-        "type": "array",
-        "description": "Array of data items (after SubscriptionEngine processes the query object)"
-      },
-      {
-        "type": "string"
-      },
-      {
-        "type": "number"
-      },
-      {
-        "type": "boolean"
-      },
-      {
-        "type": "null"
-      },
-      {
-        "type": "object",
-        "description": "Any other nested object (UI state, form values, etc.)"
-      }
-    ]
-  }
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/context",
+	"title": "@maia/schema/context",
+	"description": "Runtime data for an actor (flexible JSON structure). The context itself is a comap CoValue (for CRDT sync/versioning), but all inner properties are plain JS objects/arrays/strings - NOT CoJSON types.",
+	"cotype": "comap",
+	"indexing": true,
+	"additionalProperties": {
+		"description": "Any context fields (query objects, collections, UI state, form values, etc.). Query objects have schema + options properties. All inner properties are plain JS types (objects/arrays/strings/primitives) - NOT CoJSON types.",
+		"anyOf": [
+			{
+				"type": "object",
+				"description": "Query object for reactive subscription (has schema property). Can include nested options object with map, filter, etc.",
+				"properties": {
+					"schema": {
+						"type": "string",
+						"description": "Schema reference (e.g., '@maia/schema/message' or co-id)"
+					},
+					"options": {
+						"type": "object",
+						"description": "Query options (map, filter, etc.)",
+						"properties": {
+							"map": {
+								"type": "object",
+								"description": "Map transformation expressions (e.g., { sender: '$$source.role' })",
+								"additionalProperties": {
+									"type": "string"
+								}
+							},
+							"filter": {
+								"description": "Filter criteria",
+								"oneOf": [{ "type": "object" }, { "type": "null" }]
+							}
+						},
+						"additionalProperties": true
+					},
+					"filter": {
+						"description": "Filter criteria (legacy - use options.filter instead)",
+						"oneOf": [{ "type": "object" }, { "type": "null" }]
+					}
+				},
+				"required": ["schema"],
+				"additionalProperties": true
+			},
+			{
+				"type": "array",
+				"description": "Array of data items (after SubscriptionEngine processes the query object)"
+			},
+			{
+				"type": "string"
+			},
+			{
+				"type": "number"
+			},
+			{
+				"type": "boolean"
+			},
+			{
+				"type": "null"
+			},
+			{
+				"type": "object",
+				"description": "Any other nested object (UI state, form values, etc.)"
+			}
+		]
+	}
 }

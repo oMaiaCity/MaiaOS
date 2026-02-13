@@ -1,1 +1,22 @@
-{"$schema":"@maia/schema/meta","$id":"@maia/schema/data/spark","title":"@maia/schema/data/spark","description":"Spark CoMap. Guardian (admin) group is spark.os.capabilities.guardian.","cotype":"comap","indexing":true,"required":["name"],"properties":{"name":{"type":"string","description":"Spark name e.g. @maia"},"os":{"type":"string","pattern":"^co_z[a-zA-Z0-9]+$","description":"OS CoMap - contains schematas, indexes, capabilities (guardian, publicReaders)."},"vibes":{"type":"string","pattern":"^co_z[a-zA-Z0-9]+$","description":"Vibes registry CoMap for this spark."}}}
+{
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/data/spark",
+	"title": "@maia/schema/data/spark",
+	"description": "Spark CoMap. Guardian (admin) group is spark.os.capabilities.guardian.",
+	"cotype": "comap",
+	"indexing": true,
+	"required": ["name"],
+	"properties": {
+		"name": { "type": "string", "description": "Spark name e.g. @maia" },
+		"os": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "OS CoMap - contains schematas, indexes, capabilities (guardian, publicReaders)."
+		},
+		"vibes": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "Vibes registry CoMap for this spark."
+		}
+	}
+}

@@ -1,18 +1,18 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/message/SEND_MESSAGE",
-  "title": "@maia/schema/message/SEND_MESSAGE",
-  "description": "Message type for sending a chat message",
-  "cotype": "comap",
-  "indexing": true,
-  "type": "object",
-  "properties": {
-    "inputText": {
-      "type": "string",
-      "minLength": 1,
-      "description": "Message text (required, non-empty)"
-    }
-  },
-  "required": ["inputText"],
-  "additionalProperties": false
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/message/SEND_MESSAGE",
+	"title": "@maia/schema/message/SEND_MESSAGE",
+	"description": "Message type for sending a chat message",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {
+		"inputText": {
+			"type": "string",
+			"minLength": 1,
+			"description": "Message text (required, non-empty)"
+		}
+	},
+	"required": ["inputText"],
+	"additionalProperties": false
 }

@@ -27,7 +27,7 @@
  * - Expressions without $$ prefix will throw an error
  */
 
-import { resolveCoIdShallow } from './data-extraction.js';
+import { resolveCoIdShallow } from './data-extraction.js'
 
 /**
  * Traverse path step-by-step. When value is co-id, resolve by id (content-addressable).
@@ -40,20 +40,20 @@ import { resolveCoIdShallow } from './data-extraction.js';
  * @returns {Promise<any>} Value at path, or undefined
  */
 async function getValueAtPathWithResolution(backend, item, path, visited, options = {}) {
-  const parts = path.split('.');
-  let current = item;
-  for (const part of parts) {
-    if (current == null) return undefined;
-    const key = /^\d+$/.test(part) ? parseInt(part, 10) : part;
-    let value = current[key];
-    while (typeof value === 'string' && value.startsWith('co_z')) {
-      if (visited.has(value)) return undefined;
-      const resolved = await resolveCoIdShallow(backend, value, options, visited);
-      value = resolved;
-    }
-    current = value;
-  }
-  return current;
+	const parts = path.split('.')
+	let current = item
+	for (const part of parts) {
+		if (current == null) return undefined
+		const key = /^\d+$/.test(part) ? parseInt(part, 10) : part
+		let value = current[key]
+		while (typeof value === 'string' && value.startsWith('co_z')) {
+			if (visited.has(value)) return undefined
+			const resolved = await resolveCoIdShallow(backend, value, options, visited)
+			value = resolved
+		}
+		current = value
+	}
+	return current
 }
 
 /**
@@ -66,43 +66,46 @@ async function getValueAtPathWithResolution(backend, item, path, visited, option
  * @returns {Promise<Object>} Transformed item with mapped fields
  */
 export async function applyMapTransform(backend, item, mapConfig, options = {}) {
-  if (!mapConfig || typeof mapConfig !== 'object') {
-    return item;
-  }
+	if (!mapConfig || typeof mapConfig !== 'object') {
+		return item
+	}
 
-  const { timeoutMs = 2000 } = options;
-  const visited = new Set();
-  const mappedItem = { ...item };
-  const coIdsToRemove = new Set();
+	const { timeoutMs = 2000 } = options
+	const visited = new Set()
+	const mappedItem = { ...item }
+	const coIdsToRemove = new Set()
 
-  for (const [targetField, expression] of Object.entries(mapConfig)) {
-    try {
-      if (typeof expression !== 'string' || !expression.startsWith('$$')) {
-        throw new Error(`Map expression for "${targetField}" must use strict $$ syntax. Got: "${expression}". Expected format: "$$property.path"`);
-      }
+	for (const [targetField, expression] of Object.entries(mapConfig)) {
+		try {
+			if (typeof expression !== 'string' || !expression.startsWith('$$')) {
+				throw new Error(
+					`Map expression for "${targetField}" must use strict $$ syntax. Got: "${expression}". Expected format: "$$property.path"`,
+				)
+			}
 
-      const path = expression.substring(2);
-      const rootProperty = path.split('.')[0];
-      if (rootProperty && rootProperty in item) {
-        const originalValue = item[rootProperty];
-        if (originalValue && typeof originalValue === 'string' && originalValue.startsWith('co_z')) {
-          coIdsToRemove.add(rootProperty);
-        }
-      }
+			const path = expression.substring(2)
+			const rootProperty = path.split('.')[0]
+			if (rootProperty && rootProperty in item) {
+				const originalValue = item[rootProperty]
+				if (originalValue && typeof originalValue === 'string' && originalValue.startsWith('co_z')) {
+					coIdsToRemove.add(rootProperty)
+				}
+			}
 
-      const mappedValue = await getValueAtPathWithResolution(backend, item, path, visited, { timeoutMs });
-      mappedItem[targetField] = mappedValue;
-    } catch (err) {
-      console.warn(`[applyMapTransform] Failed to evaluate expression "${expression}" for field "${targetField}":`, err);
-      mappedItem[targetField] = undefined;
-    }
-  }
+			const mappedValue = await getValueAtPathWithResolution(backend, item, path, visited, {
+				timeoutMs,
+			})
+			mappedItem[targetField] = mappedValue
+		} catch (_err) {
+			mappedItem[targetField] = undefined
+		}
+	}
 
-  for (const coIdKey of coIdsToRemove) {
-    delete mappedItem[coIdKey];
-  }
+	for (const coIdKey of coIdsToRemove) {
+		delete mappedItem[coIdKey]
+	}
 
-  return mappedItem;
+	return mappedItem
 }
 
 /**
@@ -114,11 +117,9 @@ export async function applyMapTransform(backend, item, mapConfig, options = {}) 
  * @returns {Promise<Array>} Array of transformed items
  */
 export async function applyMapTransformToArray(backend, items, mapConfig, options = {}) {
-  if (!Array.isArray(items)) {
-    return items;
-  }
+	if (!Array.isArray(items)) {
+		return items
+	}
 
-  return Promise.all(
-    items.map(item => applyMapTransform(backend, item, mapConfig, options))
-  );
+	return Promise.all(items.map((item) => applyMapTransform(backend, item, mapConfig, options)))
 }

@@ -9,15 +9,15 @@
  *
  * Enter key: Create new Self (signup) or Unlock (signin)
  */
-let signinKeyHandler = null;
+let signinKeyHandler = null
 
 /**
  * Remove Enter key listener (call when navigating away from signin screen)
  */
 export function removeSigninKeyHandler() {
 	if (signinKeyHandler) {
-		document.removeEventListener('keydown', signinKeyHandler);
-		signinKeyHandler = null;
+		document.removeEventListener('keydown', signinKeyHandler)
+		signinKeyHandler = null
 	}
 }
 
@@ -27,10 +27,10 @@ export function removeSigninKeyHandler() {
  * @returns {string|undefined}
  */
 export function getFirstNameForRegister() {
-	const input = document.getElementById('signin-first-name');
-	if (!input) return undefined;
-	const val = (input.value || '').trim();
-	return val.length > 0 ? val : undefined;
+	const input = document.getElementById('signin-first-name')
+	if (!input) return undefined
+	const val = (input.value || '').trim()
+	return val.length > 0 ? val : undefined
 }
 
 /**
@@ -38,15 +38,15 @@ export function getFirstNameForRegister() {
  * @param {'signup' | 'signin'} [viewMode] - Override; default: hasAccount ? 'signin' : 'signup'
  */
 export function renderSignInPrompt(hasExistingAccount, viewMode) {
-	const hasAccount = hasExistingAccount();
-	const mode = viewMode ?? (hasAccount ? 'signin' : 'signup');
+	const hasAccount = hasExistingAccount()
+	const mode = viewMode ?? (hasAccount ? 'signin' : 'signup')
 
 	// State 1: Signup – name input + Create button, link to switch to signin
 	// State 2: Signin – big Unlock button only, link to switch to signup
 
-	const isSignupMode = mode === 'signup';
+	const isSignupMode = mode === 'signup'
 
-	document.getElementById("app").innerHTML = `
+	document.getElementById('app').innerHTML = `
 		<div class="sign-in-container">
 			<div class="sign-in-content liquid-glass">
 				<div class="liquid-glass--bend"></div>
@@ -63,7 +63,9 @@ export function renderSignInPrompt(hasExistingAccount, viewMode) {
 						</span>
 					</h1>
 					<p class="sign-in-subtitle">who outgrow ourselves everyday creating the extraordinary</p>
-					${isSignupMode ? `
+					${
+						isSignupMode
+							? `
 						<div class="sign-in-first-name-wrap">
 							<label for="signin-first-name" class="sign-in-first-name-label">First name</label>
 							<input
@@ -82,40 +84,42 @@ export function renderSignInPrompt(hasExistingAccount, viewMode) {
 							</button>
 							<a href="#" class="sign-in-swap-link" onclick="window.switchToSigninView(); return false;">&mdash; signin instead &mdash;</a>
 						</div>
-					` : `
+					`
+							: `
 						<div class="sign-in-buttons">
 							<button class="btn btn-solid-water" onclick="window.handleSignIn()">
 								Unlock your Self
 							</button>
 							<a href="#" class="sign-in-swap-link" onclick="window.switchToSignupView(); return false;">&mdash; register new &mdash;</a>
 						</div>
-					`}
+					`
+					}
 				</div>
 			</div>
 		</div>
-	`;
+	`
 
 	// Enter key: Create (signup) or Unlock (signin)
-	if (signinKeyHandler) document.removeEventListener('keydown', signinKeyHandler);
+	if (signinKeyHandler) document.removeEventListener('keydown', signinKeyHandler)
 	signinKeyHandler = (e) => {
-		if (e.key !== 'Enter' || e.repeat) return;
-		if (!document.querySelector('.sign-in-container')) return; // Not on signin screen
+		if (e.key !== 'Enter' || e.repeat) return
+		if (!document.querySelector('.sign-in-container')) return // Not on signin screen
 		if (isSignupMode) {
-			window.handleRegister();
+			window.handleRegister()
 		} else {
-			window.handleSignIn();
+			window.handleSignIn()
 		}
-	};
-	document.addEventListener('keydown', signinKeyHandler);
+	}
+	document.addEventListener('keydown', signinKeyHandler)
 
 	// Focus name input when in signup mode
 	if (isSignupMode) {
-		requestAnimationFrame(() => document.getElementById('signin-first-name')?.focus());
+		requestAnimationFrame(() => document.getElementById('signin-first-name')?.focus())
 	}
 }
 
 export function renderUnsupportedBrowser(message) {
-	document.getElementById("app").innerHTML = `
+	document.getElementById('app').innerHTML = `
 		<div class="unsupported-browser">
 			<div class="unsupported-content">
 				<h1>⚠️ Browser Not Supported</h1>
@@ -135,5 +139,5 @@ export function renderUnsupportedBrowser(message) {
 				</div>
 			</div>
 		</div>
-	`;
+	`
 }

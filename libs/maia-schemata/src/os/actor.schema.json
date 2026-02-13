@@ -1,45 +1,45 @@
 {
-  "$schema": "@maia/schema/meta",
-  "$id": "@maia/schema/actor",
-  "title": "@maia/schema/actor",
-  "description": "Pure declarative actor specification",
-  "cotype": "comap",
-  "indexing": true,
-  "properties": {
-    "role": {
-      "type": "string",
-      "description": "Actor role (e.g., 'kanban-view', 'vibe', 'composite', 'leaf')"
-    },
-    "context": {
-      "$co": "@maia/schema/context",
-      "description": "Co-id reference to context definition"
-    },
-    "view": {
-      "$co": "@maia/schema/view",
-      "description": "Co-id reference to view definition"
-    },
-    "state": {
-      "$co": "@maia/schema/state",
-      "description": "Co-id reference to state machine definition"
-    },
-    "brand": {
-      "$co": "@maia/schema/style",
-      "description": "Co-id reference to brand style definition (uses style schema)"
-    },
-    "style": {
-      "$co": "@maia/schema/style",
-      "description": "Co-id reference to local style definition"
-    },
-    "inbox": {
-      "$co": "@maia/schema/inbox",
-      "description": "Co-id reference to message inbox costream (append-only message feed)"
-    },
-    "messageTypes": {
-      "type": "array",
-      "items": {
-        "type": "string"
-      },
-      "description": "REQUIRED: Message types this actor accepts (exhaustive list - like sealed protocol). All actors must declare their message contracts."
-    }
-  }
+	"$schema": "@maia/schema/meta",
+	"$id": "@maia/schema/actor",
+	"title": "@maia/schema/actor",
+	"description": "Pure declarative actor specification",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"role": {
+			"type": "string",
+			"description": "Actor role (e.g., 'kanban-view', 'vibe', 'composite', 'leaf')"
+		},
+		"context": {
+			"$co": "@maia/schema/context",
+			"description": "Co-id reference to context definition"
+		},
+		"view": {
+			"$co": "@maia/schema/view",
+			"description": "Co-id reference to view definition"
+		},
+		"state": {
+			"$co": "@maia/schema/state",
+			"description": "Co-id reference to state machine definition"
+		},
+		"brand": {
+			"$co": "@maia/schema/style",
+			"description": "Co-id reference to brand style definition (uses style schema)"
+		},
+		"style": {
+			"$co": "@maia/schema/style",
+			"description": "Co-id reference to local style definition"
+		},
+		"inbox": {
+			"$co": "@maia/schema/inbox",
+			"description": "Co-id reference to message inbox costream (append-only message feed)"
+		},
+		"messageTypes": {
+			"type": "array",
+			"items": {
+				"type": "string"
+			},
+			"description": "REQUIRED: Message types this actor accepts (exhaustive list - like sealed protocol). All actors must declare their message contracts."
+		}
+	}
 }
