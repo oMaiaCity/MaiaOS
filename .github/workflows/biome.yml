@@ -8,6 +8,8 @@ on:
 
 jobs:
   biome:
+    # Skip on [release] commits - CI already passed pre-merge; only version bump changed
+    if: github.event_name != 'push' || github.event.head_commit == null || !startsWith(github.event.head_commit.message, '[release] ')
     name: Lint & Format
     runs-on: ubuntu-latest
     steps:
@@ -24,6 +26,8 @@ jobs:
         run: bun run check:ci
 
   build:
+    # Skip on [release] commits - Build already passed pre-merge
+    if: github.event_name != 'push' || github.event.head_commit == null || !startsWith(github.event.head_commit.message, '[release] ')
     name: Build (maia + moai)
     runs-on: ubuntu-latest
     steps:
