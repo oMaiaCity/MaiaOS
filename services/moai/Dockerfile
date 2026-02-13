@@ -5,12 +5,15 @@ FROM oven/bun:1-slim
 
 WORKDIR /app
 
-# Copy workspace files
-COPY package.json bun.lock ./
-COPY services/moai ./services/moai
+# Copy workspace files (all workspaces required by root package.json)
+COPY package.json bun.lock* ./
 COPY libs ./libs
+COPY services/maia ./services/maia
+COPY services/moai ./services/moai
 
 # Install dependencies (resolves workspace:* from root)
+# HUSKY=0 skips prepare script (git hooks not needed in Docker)
+ENV HUSKY=0
 RUN bun install
 
 # Moai runs on 4201
