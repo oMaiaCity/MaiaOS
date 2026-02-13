@@ -32,7 +32,7 @@ retry_flyctl_deploy() {
       --config "$config" \
       --app "$app_name" \
       --wait-timeout 600 \
-      --build-arg VITE_PEER_MOAI=moai.next.maia.city \
+      --build-arg VITE_PEER_MOAI="${VITE_PEER_MOAI}" \
       --build-arg VITE_PEER_MAIA=next.maia.city 2>&1 | tee /tmp/flyctl-deploy.log
     
     local deploy_exit_code=${PIPESTATUS[0]}
@@ -96,7 +96,18 @@ echo ""
 
 cd "$MONOREPO_ROOT"
 
-# Maia build runs in Docker - VITE_PEER_MOAI from fly.toml [build.args]
+# Verify build args before deploy (VITE_PEER_MOAI = moai sync domain, not maia)
+bun scripts/fly-build-args-verify.js || exit 1
+echo ""
+
+# Optional: override via env - VITE_PEER_MOAI must be moai domain (not maia)
+VITE_PEER_MOAI="${VITE_PEER_MOAI:-moai.next.maia.city}"
+export VITE_PEER_MOAI
+if [[ "$VITE_PEER_MOAI" != "moai.next.maia.city" ]] && [[ "$VITE_PEER_MOAI" != "moai-next-maia-city.fly.dev" ]]; then
+  echo "⚠️  VITE_PEER_MOAI=$VITE_PEER_MOAI (custom - ensure moai sync is at this domain)"
+fi
+
+# Maia build runs in Docker - VITE_PEER_MOAI passed as --build-arg
 if ! retry_flyctl_deploy \
   "next-maia-city" \
   "services/maia/Dockerfile" \

@@ -7,16 +7,13 @@ import { createErrorEntry } from '@MaiaOS/operations'
 
 /**
  * Get API base URL for moai service (LLM, sync, agent API).
- * In browser dev mode, returns '' for Vite proxy. Otherwise explicit URL.
+ * Client connects directly to moai (no proxy). CORS enabled on moai.
  *
  * Browser: VITE_PEER_MOAI (build-time from fly.toml [build.args]).
  * Node: process.env.PEER_MOAI (agent mode).
  * Dev: localhost:4201. Prod: moai.next.maia.city
  */
 export function getApiBaseUrl() {
-	if (typeof window !== 'undefined' && import.meta.env?.DEV) {
-		return ''
-	}
 	const domain =
 		import.meta.env?.VITE_PEER_MOAI ||
 		(typeof process !== 'undefined' && process.env?.PEER_MOAI) ||

@@ -355,7 +355,7 @@ export class MaiaOS {
 		os.stateEngine = new StateEngine(os.toolEngine, os.evaluator)
 		os.styleEngine = new StyleEngine()
 		// Clear cache on boot in development only
-		if (config.isDevelopment || import.meta.env.DEV) {
+		if (config.isDevelopment || import.meta.env?.DEV) {
 			os.styleEngine.clearCache()
 		}
 		os.viewEngine = new ViewEngine(os.evaluator, null, os.moduleRegistry)

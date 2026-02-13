@@ -13,6 +13,7 @@
 		"dev:moai": "bun --env-file=.env --filter @MaiaOS/moai dev",
 		"deploy": "./scripts/deploy-all.sh",
 		"deploy:maia": "cd services/maia && ./deploy.sh",
+		"deploy:maia:verify": "bun scripts/fly-build-args-verify.js",
 		"deploy:moai": "cd services/moai && ./deploy.sh",
 		"vibes:build": "cd libs/maia-vibes && bun run build",
 		"distros:build": "bun run --filter @MaiaOS/maia-distros build",

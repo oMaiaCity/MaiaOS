@@ -4,9 +4,9 @@
 	"type": "module",
 	"private": true,
 	"scripts": {
-		"dev": "vite",
-		"build": "cd ../.. && bun run distros:build && cd services/maia && vite build",
-		"preview": "vite preview",
+		"dev": "PORT=4200 bun dev-server.js",
+		"build": "cd ../.. && bun run distros:build && cd services/maia && bun build.js",
+		"preview": "bun server.js",
 		"start": "bun server.js",
 		"deploy": "./deploy.sh"
 	},
@@ -14,7 +14,5 @@
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/maia-distros": "workspace:*"
 	},
-	"devDependencies": {
-		"vite": "^7.3.1"
-	}
+	"devDependencies": {}
 }

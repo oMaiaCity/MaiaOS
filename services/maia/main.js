@@ -341,19 +341,12 @@ async function initAgentMode() {
 /**
  * Determine sync domain from environment (runtime injection or build-time env var)
  * Single source of truth for sync domain configuration
- * In dev mode, returns null (uses relative path via Vite proxy)
- * In production, returns domain or null (fallback to same origin)
+ * In dev: null (sync-peers uses localhost:4201). In prod: VITE_PEER_MOAI
  * @returns {string|null} Sync domain or null if not set
  */
 function getSyncDomain() {
 	const isDev = import.meta.env?.DEV || window.location.hostname === 'localhost'
-
-	// In dev mode, we don't need a sync domain - Vite proxy handles it
-	if (isDev) {
-		return null // Dev mode uses relative path /sync (proxied by Vite)
-	}
-
-	// In production: VITE_PEER_MOAI (build-time from fly.toml [build.args])
+	if (isDev) return null // sync-peers defaults to localhost:4201
 	return import.meta.env?.VITE_PEER_MOAI || null
 }
 

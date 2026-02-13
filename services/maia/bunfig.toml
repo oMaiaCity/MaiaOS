@@ -1,0 +1,5 @@
+# Bun config for maia dev (bun index.html)
+# Path resolution via jsconfig.json
+# .maia files treated as JSON (inlined, not emitted)
+[loader]
+".maia" = "json"

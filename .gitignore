@@ -51,9 +51,10 @@ local-sync.db
 # Legacy maia-city (removed - use services/maia)
 services/maia-city/
 
-# Brand assets (synced from libs/maia-brand/src/assets to services/maia/public/brand)
+# Brand assets (synced from libs/maia-brand/src/assets to services/maia/brand or dist/brand)
 **/static/brand/
-**/public/brand/
+services/maia/brand/
+services/maia/public/
 **/node_modules
 
 debug.log*

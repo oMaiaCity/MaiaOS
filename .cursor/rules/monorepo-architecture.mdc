@@ -20,9 +20,8 @@ MaiaOS/ (root)
 ├── services/             # Application services
 │   ├── maia/             # Frontend SPA (next.maia.city)
 │   │   ├── package.json
-│   │   ├── main.js       # Vite-built SPA entry
-│   │   ├── server.js    # Static file server (Bun)
-│   │   └── vite.config.js
+│   │   ├── main.js       # Bun-built SPA entry
+│   │   └── server.js     # Static file server (Bun)
 │   └── moai/             # Sync + API service (moai.next.maia.city)
 │       ├── package.json
 │       └── src/          # WebSocket sync, agent API, LLM proxy
@@ -36,8 +35,8 @@ MaiaOS/ (root)
 
 ### `services/maia/` - Frontend SPA
 - **Port 4200** (dev)
-- Vite-built SPA served by Bun static server
-- Connects to moai for sync (WebSocket) and API (LLM)
+- Bun-built SPA, pure static server (no proxy)
+- Client connects directly to moai (4201) for sync/API — CORS enabled on moai
 - Sync domain: `VITE_PEER_MOAI` at build time (fly.toml [build.args])
 
 ### `services/moai/` - Sync + API
@@ -173,7 +172,7 @@ bun deploy                     # Deploy maia + moai to Fly.io
 ```bash
 cd services/maia
 bun run dev                    # Run maia dev server (4200)
-bun run build                  # Build maia (Vite)
+bun run build                  # Build maia (Bun)
 
 cd services/moai
 bun run dev                    # Run moai dev server (4201)
@@ -184,7 +183,7 @@ bun run build                  # Build moai
 
 Each workspace builds independently:
 ```bash
-cd services/maia && bun run build       # Build maia (bundles + Vite)
+cd services/maia && bun run build       # Build maia (Bun, uses distros bundles)
 cd services/moai && bun run build      # Build moai
 cd libs/maia-distros && bun run build   # Build bundles (client, server, vibes)
 ```
@@ -238,20 +237,9 @@ Each service in the monorepo has a **hardcoded development port** to avoid confl
 | `4202-4210` | Reserved | |
 
 **Configuration:**
-- Ports are configured in each service's `vite.config.js` or server configuration
+- Ports are configured in each service's dev script or server configuration
 - Can be overridden via environment variables for flexibility
 - Document port assignments in this file when adding new services
-
-**Example Vite Config:**
-```javascript
-// services/maia/vite.config.js
-export default defineConfig({
-  server: {
-    port: process.env.PORT || 4200,
-    strictPort: true,
-  },
-});
-```
 
 ## Environment Variables
 

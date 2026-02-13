@@ -43,8 +43,8 @@
 	"prettier.enable": false,
 	"eslint.enable": false,
 
-	// Biome-specific settings
-	"biome.lspBin": null,
+	// Biome-specific settings - use project's Biome to match version
+	"biome.lspBin": "./node_modules/@biomejs/biome/bin/biome",
 
 	// CSS validation - allow Tailwind CSS v4 at-rules (@theme, @custom-variant, etc.)
 	"css.lint.unknownAtRules": "ignore",

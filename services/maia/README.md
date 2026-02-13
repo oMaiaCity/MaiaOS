@@ -44,7 +44,7 @@ bun run dev
 
 Server runs on **http://localhost:4200**
 
-**Note**: In dev mode, maia uses source files directly (not bundles) for proper Vite hot module reload (HMR). This means changes to kernel or vibes source files will automatically trigger HMR without manual bundle rebuilding.
+**Note**: In dev mode, maia uses source files directly (not bundles) for Bun HMR. Client connects directly to moai (4201) for sync/API — no proxy.
 
 ## Routes
 
@@ -93,12 +93,12 @@ import { MaiaOS } from '@MaiaOS/core';
 const os = await MaiaOS.boot({ node, account });
 ```
 
-**Vite resolves imports** via `vite.config.js`:
-- **Dev mode**: Points to source files directly (`../../libs/maia-core/src/index.js`) for proper HMR
-- **Production builds**: Points to bundled files (maia-distros client) for optimized builds
+**Bun resolves imports** via `jsconfig.build.json`:
+- **Dev mode**: Source files served directly for HMR
+- **Production builds**: maia-distros bundles (maia-client.mjs, vibes.mjs)
 
-Production builds automatically create bundles before building via the `build` script.
+Production builds run `distros:build` then `bun build.js`.
 
 ## Port
 
-- **4200** (hardcoded in vite.config.js)
+- **4200** (maia static server). Moai at **4201** (sync/API) — client connects directly via CORS.

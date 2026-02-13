@@ -1,18 +1,17 @@
 #!/usr/bin/env node
 /**
- * Hot-reload-aware asset sync script for @maia/brand
- *
- * Syncs assets from libs/maia-brand/src/assets to maia service static folder.
- * Runs in watch mode during development for hot reloading.
+ * Asset sync for @maia/brand: libs/maia-brand/src/assets → target dir.
  *
  * Usage:
- *   node scripts/sync-assets.js          # Sync and watch (default)
- *   node scripts/sync-assets.js --no-watch  # One-time sync only
+ *   bun scripts/sync-assets.js              # Dev: sync to services/maia/brand, watch
+ *   bun scripts/sync-assets.js --no-watch   # One-time sync to services/maia/brand
+ *   bun scripts/sync-assets.js --out <dir>  # Sync to custom dir (e.g. dist/brand for build)
  */
 
 import {
 	copyFileSync,
 	existsSync,
+	lstatSync,
 	mkdirSync,
 	readdirSync,
 	rmSync,
@@ -24,15 +23,17 @@ import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
-
-// Paths - script is now in scripts/ folder, so monorepo root is one level up
 const monorepoRoot = resolve(__dirname, '..')
 const brandAssetsDir = resolve(monorepoRoot, 'libs/maia-brand/src/assets')
-
-// Sync assets to maia service only (never to legacy maia-city)
-// services/maia/public/brand — Vite serves static files from 'public'
-const serviceStaticDirs = [resolve(monorepoRoot, 'services/maia/public/brand')]
+const defaultTarget = resolve(monorepoRoot, 'services/maia/brand')
 const legacyMaiaCityDir = resolve(monorepoRoot, 'services/maia-city')
+const legacyPublicBrandDir = resolve(monorepoRoot, 'services/maia/public')
+
+const args = process.argv.slice(2)
+const outIdx = args.indexOf('--out')
+const outDir =
+	outIdx >= 0 && args[outIdx + 1] ? resolve(process.cwd(), args[outIdx + 1]) : defaultTarget
+const serviceStaticDirs = [outDir]
 
 /**
  * Remove a single asset from all service static directories
@@ -119,10 +120,24 @@ function getAllFiles(dirPath, basePath = '') {
  * Sync all assets from brand package to maia service (preserves folder structure)
  */
 function syncAllAssets() {
-	// Remove legacy maia-city (defensive: source unknown, may be created externally)
+	// Remove legacy dirs (no longer used - brand lives in services/maia/brand or dist/brand)
 	if (existsSync(legacyMaiaCityDir)) {
 		rmSync(legacyMaiaCityDir, { recursive: true, force: true })
 	}
+	if (existsSync(legacyPublicBrandDir)) {
+		rmSync(legacyPublicBrandDir, { recursive: true, force: true })
+	}
+	// Replace symlink with real dir (brand may have been a symlink to public/brand)
+	serviceStaticDirs.forEach((staticDir) => {
+		if (existsSync(staticDir)) {
+			try {
+				const stat = lstatSync(staticDir)
+				if (stat.isSymbolicLink()) {
+					unlinkSync(staticDir)
+				}
+			} catch (_err) {}
+		}
+	})
 	if (!existsSync(brandAssetsDir)) {
 		return
 	}
@@ -166,7 +181,6 @@ function watchAssets() {
 }
 
 // Main execution
-const args = process.argv.slice(2)
 const isNoWatch = args.includes('--no-watch') || args.includes('--no-w')
 
 // Initial sync

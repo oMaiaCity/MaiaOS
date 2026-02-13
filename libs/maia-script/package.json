@@ -6,7 +6,8 @@
 	"exports": {
 		".": "./src/index.js",
 		"./modules/*": "./src/modules/*",
-		"./engines/*": "./src/engines/*"
+		"./engines/*": "./src/engines/*",
+		"./utils/*": "./src/utils/*"
 	},
 	"dependencies": {
 		"@MaiaOS/db": "workspace:*",
