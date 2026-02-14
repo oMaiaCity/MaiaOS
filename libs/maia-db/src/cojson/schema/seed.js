@@ -1060,13 +1060,13 @@ export async function seed(
 	const coIdRegistry = new CoIdRegistry()
 
 	// Phase -1: Cleanup existing seeded co-values (but preserve schemata)
-	// This makes seeding idempotent - can be called multiple times safely
-	// Run cleanup if account was previously seeded (has schematas registry)
+	// Skip cleanup when we just bootstrapped - scaffold is fresh, nothing to clean.
+	// Cleanup only for reseeding an existing scaffold (would corrupt fresh bootstrap).
 	// NOTE: Schema index colists are automatically managed:
 	// - deleteRecord() automatically removes co-values from schema indexes via removeFromIndex()
 	// - create() operations automatically add co-values to schema indexes via storage hooks
 	// No manual index management needed during reseeding
-	const osIdForCleanup = await groups.getSparkOsId(backend, MAIA_SPARK)
+	const osIdForCleanup = needsBootstrap ? null : await groups.getSparkOsId(backend, MAIA_SPARK)
 	if (osIdForCleanup) {
 		try {
 			const osCoreForCleanup = await ensureCoValueLoaded(backend, osIdForCleanup, {

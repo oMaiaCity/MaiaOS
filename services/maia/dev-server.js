@@ -21,28 +21,33 @@ Bun.serve({
 		const url = new URL(req.url)
 		const pathname = url.pathname
 
-		// Serve /brand/* as static (Bun's SPA fallback would return HTML for these)
-		if (pathname.startsWith('/brand/')) {
-			const filePath = join(serviceDir, pathname.slice(1))
+		const MIME = {
+			'.css': 'text/css',
+			'.svg': 'image/svg+xml',
+			'.png': 'image/png',
+			'.ico': 'image/x-icon',
+			'.ttf': 'font/ttf',
+			'.woff': 'font/woff',
+			'.woff2': 'font/woff2',
+			'.json': 'application/json',
+			'.webmanifest': 'application/manifest+json',
+		}
+
+		// Serve static assets: /style.css, /css/*, /brand/*
+		const isStatic =
+			pathname === '/style.css' || pathname.startsWith('/css/') || pathname.startsWith('/brand/')
+
+		if (isStatic) {
+			const filePath = join(serviceDir, pathname === '/' ? 'index.html' : pathname.slice(1))
 			if (existsSync(filePath) && statSync(filePath).isFile()) {
 				const ext = pathname.slice(pathname.lastIndexOf('.'))
-				const types = {
-					'.svg': 'image/svg+xml',
-					'.png': 'image/png',
-					'.ico': 'image/x-icon',
-					'.ttf': 'font/ttf',
-					'.woff': 'font/woff',
-					'.woff2': 'font/woff2',
-					'.json': 'application/json',
-					'.webmanifest': 'application/manifest+json',
-				}
 				return new Response(Bun.file(filePath), {
-					headers: { 'Content-Type': types[ext] || 'application/octet-stream' },
+					headers: { 'Content-Type': MIME[ext] || 'application/octet-stream' },
 				})
 			}
 		}
 
-		// SPA fallback: non-brand paths get the index (Bun serves bundled assets internally)
+		// SPA fallback: non-static paths get the index (Bun serves bundled JS internally)
 		return fetch(new URL('/', req.url))
 	},
 })
