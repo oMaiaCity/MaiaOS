@@ -257,12 +257,12 @@ export class CoJSONBackend extends DBAdapter {
 	/**
 	 * Add a member to a group
 	 * @param {RawGroup} group - Group CoValue
-	 * @param {string} memberId - Member ID (account or group Co-ID)
+	 * @param {string} accountCoId - Account co-id (co_z...) - agent ID resolved internally, never exposed
 	 * @param {string} role - Role name
 	 * @returns {Promise<void>}
 	 */
-	async addGroupMember(group, memberId, role) {
-		return await groups.addGroupMember(this.node, group, memberId, role, this)
+	async addGroupMember(group, accountCoId, role) {
+		return await groups.addGroupMember(this.node, group, accountCoId, role, this)
 	}
 
 	/**
@@ -622,15 +622,16 @@ export class CoJSONBackend extends DBAdapter {
 	 * @param {Object} configs - Config registry {vibe, styles, actors, views, contexts, states, interfaces}
 	 * @param {Object} schemas - Schema definitions
 	 * @param {Object} data - Initial application data {todos: [], ...}
+	 * @param {Object} [options] - Options (forceFreshSeed: bypass co-value checks, always bootstrap)
 	 * @returns {Promise<Object>} Summary of what was seeded
 	 */
-	async seed(configs, schemas, data) {
+	async seed(configs, schemas, data, options = {}) {
 		if (!this.account) {
 			throw new Error('[CoJSONBackend] Account required for seed')
 		}
 
 		// Pass backend instance so dbEngine is available for schema validation during seeding
-		return await seed(this.account, this.node, configs, schemas, data || {}, this)
+		return await seed(this.account, this.node, configs, schemas, data || {}, this, options)
 	}
 
 	/**

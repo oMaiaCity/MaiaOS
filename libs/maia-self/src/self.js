@@ -77,7 +77,7 @@ export async function signUpWithPasskey({ name, salt = 'maia.city' } = {}) {
 	const syncSetup = setupSyncPeers()
 
 	// Use createAccountWithSecret() abstraction from @MaiaOS/db
-	// This ensures consistent account creation through the abstraction layer
+	// Human signup always minimal (no vibe seeding); server seeds vibes
 	const createResult = await createAccountWithSecret({
 		agentSecret,
 		name,
@@ -291,13 +291,12 @@ export async function createAgentAccount({
 	const syncSetup = setupSyncPeers(syncDomain)
 
 	// Use createAccountWithSecret() abstraction from @MaiaOS/db
-	// Skip auto-seeding for agent accounts (they don't need vibes/views - that's for human users)
+	// All signups get simpleAccountSeed; genesis (full scaffold) is PEER_MODE=sync only
 	const createResult = await createAccountWithSecret({
 		agentSecret,
 		name,
 		peers: syncSetup ? syncSetup.peers : [],
 		storage: storage,
-		skipAutoSeeding: true, // Agent accounts don't need vibes/views seeding
 	})
 
 	const { node, account, accountID: createdAccountID } = createResult

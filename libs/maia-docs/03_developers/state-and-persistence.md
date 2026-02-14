@@ -66,13 +66,16 @@ The sync service and agent use PGlite for CoValue storage. Two modes matter:
 
 ---
 
-## Vibe Seeding: Human vs Agent Mode
+## Seeding: Two Modes
 
-**`VITE_MAIA_CITY_SEED_VIBES`** controls which vibes (todos, chat, db, sparks, creator) are auto-seeded when a new account is created. It only applies in **human mode** (browser sign-up via passkey).
+**simpleAccountSeed** – Empty `account.sparks` only. Used for all signups (human + agent).
 
-| Mode | Where | `VITE_MAIA_CITY_SEED_VIBES` | Behavior |
-|------|-------|-----------------------------|----------|
-| **Human** | maia-city (browser) | `todos,chat,db,sparks,creator` or `all` | On sign-up, `createAccountWithSecret` reads this env (via `import.meta.env`). `filterVibesForSeeding` seeds the specified vibes into the new account. Default: `all` if unset. |
-| **Agent** | sync service | N/A | `loadOrCreateAgentAccount` uses `skipAutoSeeding: true`. No vibe seeding; sync server only needs bootstrap data. |
+**genesisAccountSeed** – Full scaffold + vibes. Only when **PEER_MODE=sync** (moai sync server).
 
-**Values**: `"none"` (no seeding), `"all"` (all vibes), or comma-separated: `"todos,chat,db,sparks,creator"`.
+| Trigger | Mode | Behavior |
+|---------|------|----------|
+| **createAccountWithSecret** (human or agent) | simpleAccountSeed | Empty account.sparks. Vibes come from sync when human connects. |
+| **Moai PEER_MODE=sync** | genesisAccountSeed | Full scaffold + vibes into sync server account. |
+| **handleSeed** (agent mode, manual) | genesisAccountSeed | Manual reseed for dev. |
+
+**SEED_VIBES** (moai env) controls which vibes moai seeds when PEER_MODE=sync: `"all"` or comma-separated `"todos,chat,db,sparks,creator"`.

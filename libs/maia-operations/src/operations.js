@@ -127,10 +127,11 @@ export async function deleteOperation(backend, dbEngine, params) {
 }
 
 export async function seedOperation(backend, params) {
-	const { configs, schemas, data } = params
+	const { configs, schemas, data, forceFreshSeed } = params
 	if (!configs) throw new Error('[SeedOperation] Configs required')
 	if (!schemas) throw new Error('[SeedOperation] Schemas required')
-	const result = await backend.seed(configs, schemas, data || {})
+	const options = forceFreshSeed ? { forceFreshSeed: true } : {}
+	const result = await backend.seed(configs, schemas, data || {}, options)
 	return createSuccessResult(result, { op: 'seed' })
 }
 

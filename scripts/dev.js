@@ -44,6 +44,17 @@ function shouldFilterLine(line) {
 		return true
 	}
 
+	// Filter verbose seed logs ([Seed], Bootstrap scaffold, Auto-seeding, etc.)
+	if (
+		trimmed.startsWith('[Seed]') ||
+		trimmed.includes('Bootstrap scaffold complete') ||
+		trimmed.includes('Auto-seeding') ||
+		trimmed.includes('Cleaning up existing seeded') ||
+		trimmed.includes('Cleanup complete: deleted')
+	) {
+		return true
+	}
+
 	// Filter verbose build/output
 	if (
 		trimmed.includes('modules transformed') ||

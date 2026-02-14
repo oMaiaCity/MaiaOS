@@ -17,6 +17,16 @@
 
 import { createSchemaMeta } from '../schemas/registry.js'
 
+/** Wait up to 10s for a co-value to become available (PGlite lazy-load) */
+async function waitForAvailable(core, _label = 'co-value') {
+	if (!core) return false
+	for (let i = 0; i < 50; i++) {
+		if (core.isAvailable?.()) return true
+		await new Promise((r) => setTimeout(r, 200))
+	}
+	return false
+}
+
 /** Short id for Traveler fallback (max 12 chars from co-id suffix or random) */
 function travelerFallbackId(account) {
 	const id =
@@ -67,7 +77,7 @@ async function migrateCapabilitiesGuardian(account, node) {
 	if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_z')) return
 
 	const sparksCore = node.getCoValue(sparksId) || (await node.loadCoValueCore(sparksId))
-	if (!sparksCore?.isAvailable?.()) return
+	if (!(await waitForAvailable(sparksCore, 'sparks'))) return
 	const sparks = sparksCore.getCurrentContent?.()
 	if (!sparks || typeof sparks.get !== 'function') return
 
@@ -79,7 +89,7 @@ async function migrateCapabilitiesGuardian(account, node) {
 		if (!sparkId || typeof sparkId !== 'string' || !sparkId.startsWith('co_z')) continue
 
 		const sparkCore = node.getCoValue(sparkId) || (await node.loadCoValueCore(sparkId))
-		if (!sparkCore?.isAvailable?.()) continue
+		if (!(await waitForAvailable(sparkCore, `spark ${key}`))) continue
 		const spark = sparkCore.getCurrentContent?.()
 		if (!spark || typeof spark.get !== 'function') continue
 
@@ -87,7 +97,7 @@ async function migrateCapabilitiesGuardian(account, node) {
 		if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) continue
 
 		const osCore = node.getCoValue(osId) || (await node.loadCoValueCore(osId))
-		if (!osCore?.isAvailable?.()) continue
+		if (!(await waitForAvailable(osCore, `os ${key}`))) continue
 		const os = osCore.getCurrentContent?.()
 		if (!os || typeof os.get !== 'function') continue
 
@@ -97,7 +107,7 @@ async function migrateCapabilitiesGuardian(account, node) {
 
 		const capabilitiesCore =
 			node.getCoValue(capabilitiesId) || (await node.loadCoValueCore(capabilitiesId))
-		if (!capabilitiesCore?.isAvailable?.()) continue
+		if (!(await waitForAvailable(capabilitiesCore, `capabilities ${key}`))) continue
 		const capabilities = capabilitiesCore.getCurrentContent?.()
 		if (!capabilities || typeof capabilities.set !== 'function') continue
 
@@ -127,7 +137,7 @@ async function ensureRegistriesHumans(account, node) {
 	if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_z')) return
 
 	const sparksCore = node.getCoValue(sparksId) || (await node.loadCoValueCore(sparksId))
-	if (!sparksCore?.isAvailable?.()) return
+	if (!(await waitForAvailable(sparksCore, 'sparks'))) return
 	const sparks = sparksCore.getCurrentContent?.()
 	if (!sparks || typeof sparks.get !== 'function') return
 
@@ -138,7 +148,7 @@ async function ensureRegistriesHumans(account, node) {
 		if (!sparkId || typeof sparkId !== 'string' || !sparkId.startsWith('co_z')) continue
 
 		const sparkCore = node.getCoValue(sparkId) || (await node.loadCoValueCore(sparkId))
-		if (!sparkCore?.isAvailable?.()) continue
+		if (!(await waitForAvailable(sparkCore, `spark ${key}`))) continue
 		const spark = sparkCore.getCurrentContent?.()
 		if (!spark || typeof spark.get !== 'function') continue
 
@@ -147,7 +157,7 @@ async function ensureRegistriesHumans(account, node) {
 			continue
 
 		const registriesCore = node.getCoValue(registriesId) || (await node.loadCoValueCore(registriesId))
-		if (!registriesCore?.isAvailable?.()) continue
+		if (!(await waitForAvailable(registriesCore, `registries ${key}`))) continue
 		const registries = registriesCore.getCurrentContent?.()
 		if (!registries || typeof registries.set !== 'function') continue
 
@@ -156,14 +166,14 @@ async function ensureRegistriesHumans(account, node) {
 		const osId = spark.get('os')
 		if (!osId?.startsWith('co_z')) continue
 		const osCore = node.getCoValue(osId) || (await node.loadCoValueCore(osId))
-		if (!osCore?.isAvailable?.()) continue
+		if (!(await waitForAvailable(osCore, `os ${key}`))) continue
 		const os = osCore.getCurrentContent?.()
 		if (!os?.get) continue
 		const capabilitiesId = os.get('capabilities')
 		if (!capabilitiesId?.startsWith('co_z')) continue
 		const capabilitiesCore =
 			node.getCoValue(capabilitiesId) || (await node.loadCoValueCore(capabilitiesId))
-		if (!capabilitiesCore?.isAvailable?.()) continue
+		if (!(await waitForAvailable(capabilitiesCore, `capabilities ${key}`))) continue
 		const capabilities = capabilitiesCore.getCurrentContent?.()
 		if (!capabilities?.get) continue
 		const guardianId = capabilities.get('guardian')
@@ -173,7 +183,8 @@ async function ensureRegistriesHumans(account, node) {
 		const guardianCore = node.getCoValue(guardianId) || (await node.loadCoValueCore(guardianId))
 		const publicReadersCore =
 			node.getCoValue(publicReadersId) || (await node.loadCoValueCore(publicReadersId))
-		if (!guardianCore?.isAvailable?.() || !publicReadersCore?.isAvailable?.()) continue
+		if (!(await waitForAvailable(guardianCore, `guardian ${key}`))) continue
+		if (!(await waitForAvailable(publicReadersCore, `publicReaders ${key}`))) continue
 		const guardian = guardianCore.getCurrentContent?.()
 		const publicReaders = publicReadersCore.getCurrentContent?.()
 		if (!guardian?.createMap || !publicReaders) continue

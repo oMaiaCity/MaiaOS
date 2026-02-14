@@ -3,7 +3,8 @@
  * Bun WebSocket handler for cojson LocalNode sync.
  *
  * Config via options only – no process.env. Caller (e.g. moai) reads env and passes:
- *   { accountID, agentSecret, dbPath?, inMemory? }
+ *   { accountID, agentSecret, dbPath }
+ * In-memory storage is not allowed.
  */
 
 import { loadOrCreateAgentAccount } from '@MaiaOS/core'
@@ -13,25 +14,26 @@ import { createWebSocketPeer } from 'cojson-transport-ws'
  * @param {Object} options
  * @param {string} options.accountID - Required, from PEER_ID
  * @param {string} options.agentSecret - Required, from PEER_SECRET
- * @param {string} [options.dbPath] - PGlite path when inMemory is false
- * @param {boolean} [options.inMemory=true] - Use in-memory storage
+ * @param {string} options.dbPath - Required, PGlite path (in-memory not allowed)
  */
 export async function createSyncServer(options = {}) {
-	const { accountID, agentSecret, dbPath, inMemory = true } = options
+	const { accountID, agentSecret, dbPath } = options
 
 	if (!accountID || !agentSecret) {
 		throw new Error(
 			'createSyncServer requires accountID and agentSecret options. Caller reads env (PEER_ID, PEER_SECRET) and passes them.',
 		)
 	}
+	if (!dbPath) {
+		throw new Error('createSyncServer requires dbPath. In-memory storage is not allowed.')
+	}
 
 	const { node: localNode } = await loadOrCreateAgentAccount({
 		accountID,
 		agentSecret,
 		syncDomain: null,
-		dbPath: inMemory ? undefined : dbPath,
-		inMemory,
-		createName: 'Maia Sync Server',
+		dbPath,
+		createName: 'Agent Moai',
 	})
 
 	localNode.enableGarbageCollector()

@@ -33,7 +33,7 @@ MaiaOS Operations (maia.db({ op: 'read', ... }))
 - `setupSyncPeers`, `subscribeSyncState` - Sync peer configuration
 - `createGroup`, `createProfile`, `createCoMap`, `createCoList`, `createCoStream`
 - `createAndPushMessage`, `processInbox` - Inbox handling
-- `seedAgentAccount`, `schemaMigration` - Bootstrap and migration
+- `simpleAccountSeed`, `schemaMigration` - Bootstrap and migration
 
 ## Project Structure
 

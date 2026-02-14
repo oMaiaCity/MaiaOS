@@ -254,6 +254,16 @@ export async function renderDashboard(
 	_loadSpark,
 	_loadVibe,
 ) {
+	// Require signed-in account (maia.id = { maiaId, node })
+	if (!maia?.id?.maiaId || !maia.id.node) {
+		document.getElementById('app').innerHTML = `
+			<div class="flex flex-col justify-center items-center min-h-[60vh] text-slate-500">
+				<p class="font-medium">${authState?.signedIn ? 'Loading account…' : 'Please sign in.'}</p>
+			</div>
+		`
+		return
+	}
+
 	const accountId = maia?.id?.maiaId?.id || ''
 	let accountDisplayName = truncate(accountId, 12)
 	if (accountId?.startsWith('co_z') && maia?.db) {

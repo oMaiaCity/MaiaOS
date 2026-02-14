@@ -27,9 +27,9 @@ RUN bun run distros:build
 RUN bun scripts/generate-favicons.js
 
 # Build maia frontend (runs sync-assets → dist/brand, then bundles)
+# serverOwnsVibes is standard default (not configurable): minimal human account + symlink via /syncRegistry
 RUN cd services/maia && \
   NODE_ENV=production \
-  VITE_SEED_VIBES=all \
   VITE_PEER_MOAI=${VITE_PEER_MOAI:-moai.next.maia.city} \
   VITE_PEER_MAIA=${VITE_PEER_MAIA:-next.maia.city} \
   bun build.js

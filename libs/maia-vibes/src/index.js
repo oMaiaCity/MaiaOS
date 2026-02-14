@@ -45,13 +45,73 @@ export async function getAllVibeRegistries() {
  * @param {Object} vibe - Vibe object with $id or name property
  * @returns {string} Vibe key (e.g., "todos" from "@maia/vibe/todos")
  */
-function getVibeKey(vibe) {
+export function getVibeKey(vibe) {
 	if (!vibe) return null
 	const originalVibeId = vibe.$id || ''
 	if (originalVibeId.startsWith('@maia/vibe/')) {
 		return originalVibeId.replace('@maia/vibe/', '')
 	}
 	return (vibe.name || 'default').toLowerCase().replace(/\s+/g, '-')
+}
+
+const VIBE_SCHEMA = '@maia/schema/vibe'
+
+/**
+ * Ensure vibe manifest has required fields for seeding ($schema, $id).
+ * Call before passing vibes to seed. Throws if vibe cannot be normalized.
+ * @param {Object} vibe - Raw vibe from registry
+ * @returns {Object} Normalized vibe with $schema and $id
+ */
+export function normalizeVibeForSeeding(vibe) {
+	if (!vibe || typeof vibe !== 'object') {
+		throw new Error('[vibes] Vibe must be a non-null object')
+	}
+	const key = getVibeKey(vibe)
+	const normalized = { ...vibe }
+	if (!normalized.$schema || typeof normalized.$schema !== 'string') {
+		normalized.$schema = VIBE_SCHEMA
+	}
+	if (!normalized.$id || !normalized.$id.startsWith('@maia/vibe/')) {
+		normalized.$id = `@maia/vibe/${key}`
+	}
+	return normalized
+}
+
+/**
+ * Build merged seed config from vibe registries.
+ * Used by genesisAccountSeed (moai sync, handleSeed).
+ * Caller adds tool + schemas before dbEngine.execute.
+ *
+ * @param {Array} vibeRegistries - Filtered vibe registries (use filterVibesForSeeding first)
+ * @returns {{ configs: Object, data: Object }}
+ */
+export function buildSeedConfig(vibeRegistries) {
+	const validRegistries = vibeRegistries.filter((r) => r?.vibe && typeof r.vibe === 'object')
+	if (vibeRegistries.length > 0 && validRegistries.length === 0) {
+		throw new Error(
+			'[vibes] All vibe manifests invalid (null or not object). Ensure .maia files load as JSON (bunfig.toml: [loader] ".maia" = "json")',
+		)
+	}
+	const merged = {
+		styles: {},
+		actors: {},
+		views: {},
+		contexts: {},
+		states: {},
+		inboxes: {},
+		vibes: validRegistries.map((r) => normalizeVibeForSeeding(r.vibe)),
+		data: {},
+	}
+	for (const registry of vibeRegistries) {
+		Object.assign(merged.styles, registry.styles || {})
+		Object.assign(merged.actors, registry.actors || {})
+		Object.assign(merged.views, registry.views || {})
+		Object.assign(merged.contexts, registry.contexts || {})
+		Object.assign(merged.states, registry.states || {})
+		Object.assign(merged.inboxes, registry.inboxes || {})
+		Object.assign(merged.data, registry.data || {})
+	}
+	return { configs: merged, data: merged.data || {} }
 }
 
 /**

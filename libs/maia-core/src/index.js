@@ -8,6 +8,7 @@ export {
 	getSchemaIndexColistId,
 	resolveAccountCoIdsToProfileNames,
 	resolveGroupCoIdsToCapabilityNames,
+	schemaMigration,
 	setupSyncPeers,
 	subscribeSyncState,
 	waitForStoreReady,

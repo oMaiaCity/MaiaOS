@@ -61,7 +61,7 @@ export {
 	resolve,
 	resolveReactive,
 } from './cojson/schema/resolver.js'
-export { seedAgentAccount } from './cojson/schema/seed.js'
+export { simpleAccountSeed } from './cojson/schema/seed.js'
 export { schemaMigration } from './migrations/schema.migration.js'
 export {
 	createSchemaMeta,

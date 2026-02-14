@@ -1,0 +1,3 @@
+# Moai service - .maia files must load as JSON for @MaiaOS/vibes imports
+[loader]
+".maia" = "json"

@@ -21,7 +21,7 @@ This architecture ensures:
 
 The sync service consolidates WebSocket sync, agent API, and LLM proxy in one process. Endpoints:
 - `WS /sync` - CoJSON sync
-- `POST /on-added`, `/register-human`, `/trigger`, `/profile` - Agent API
+- `POST /register-human`, `GET /profile` - Agent API
 - `POST /api/v0/llm/chat` - LLM proxy (RedPill)
 
 ## Environment Variables
@@ -42,8 +42,9 @@ bun run dev:moai
 ## Endpoints
 
 - `GET /health` - Health check
+- `GET /syncRegistry` - Sync registry (@maia spark co-id)
 - `WS /sync` - WebSocket sync
-- `POST /on-added`, `/register-human`, `/trigger`, `/profile` - Agent API
+- `POST /register-human`, `GET /profile` - Agent API
 - `POST /api/v0/llm/chat` - LLM proxy
 
 ## Client Usage
