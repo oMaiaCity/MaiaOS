@@ -10,7 +10,6 @@
  */
 
 import {
-	getSchemaIndexColistId,
 	isPRFSupported,
 	loadOrCreateAgentAccount,
 	MaiaOS,
@@ -27,6 +26,7 @@ import {
 	renderSignInPrompt,
 	renderUnsupportedBrowser,
 } from './signin.js'
+import { getSyncStatusMessage } from './utils.js'
 
 let maia
 let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'db-viewer' | 'vibe-viewer'
@@ -54,6 +54,22 @@ let syncState = {
 let unsubscribeSync = null
 let syncStateRenderTimeout = null // Debounce sync state renders
 
+/** Subscribe to sync state changes with debounced renderAppInternal */
+function setupSyncSubscription() {
+	try {
+		unsubscribeSync = subscribeSyncState((state) => {
+			const stateChanged = JSON.stringify(syncState) !== JSON.stringify(state)
+			syncState = state
+			if (stateChanged && !isRendering) {
+				if (syncStateRenderTimeout) clearTimeout(syncStateRenderTimeout)
+				syncStateRenderTimeout = setTimeout(() => {
+					if (!isRendering) renderAppInternal()
+				}, 100)
+			}
+		})
+	} catch (_syncError) {}
+}
+
 // Check if user has previously authenticated (localStorage flag only, no secrets)
 const HAS_ACCOUNT_KEY = 'maia_has_account'
 
@@ -69,56 +85,26 @@ function _clearAccountFlag() {
 	localStorage.removeItem(HAS_ACCOUNT_KEY)
 }
 
-/**
- * Show a toast notification
- * @param {string} message - The message to display
- * @param {string} type - Type of toast: 'success', 'error', 'info'
- * @param {number} duration - Duration in ms (default: 5000)
- */
+const TOAST_ICONS = { success: '✓', error: '✕', info: 'ℹ' }
+const TOAST_TITLES = { success: 'Success', error: 'Authentication Failed', info: 'Info' }
+
+/** Show toast notification. type: 'success'|'error'|'info', duration in ms (default 5000) */
 function showToast(message, type = 'info', duration = 5000) {
-	const icons = {
-		success: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-			<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-			<path d="M8 12.5L10.5 15L16 9.5" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-		</svg>`,
-		error: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-			<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-			<path d="M12 8V12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-			<circle cx="12" cy="16" r="1" fill="currentColor"/>
-		</svg>`,
-		info: `<svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-			<circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="2"/>
-			<path d="M12 12V16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-			<circle cx="12" cy="8" r="1" fill="currentColor"/>
-		</svg>`,
-	}
-
-	const titles = {
-		success: 'Success',
-		error: 'Authentication Failed',
-		info: 'Info',
-	}
-
 	const toast = document.createElement('div')
 	toast.className = `toast ${type}`
 	toast.innerHTML = `
 		<div class="toast-content">
-			<div class="toast-icon">${icons[type]}</div>
+			<div class="toast-icon">${TOAST_ICONS[type]}</div>
 			<div class="toast-message">
-				<div class="toast-title">${titles[type]}</div>
+				<div class="toast-title">${TOAST_TITLES[type]}</div>
 				${message}
 			</div>
 		</div>
 	`
-
 	document.body.appendChild(toast)
-
-	// Auto-remove after duration
 	setTimeout(() => {
 		toast.classList.add('removing')
-		setTimeout(() => {
-			document.body.removeChild(toast)
-		}, 300) // Match animation duration
+		setTimeout(() => document.body.removeChild(toast), 300)
 	}, duration)
 }
 
@@ -136,78 +122,67 @@ function navigateTo(path) {
 	}
 }
 
-/**
- * Handle route changes
- */
+function redirectIfSignedIn() {
+	if (authState.signedIn && maia) {
+		navigateTo('/me')
+		return true
+	}
+	return false
+}
+
+/** Handle route changes */
 async function handleRoute() {
 	const path = window.location.pathname
 
 	if (path === '/signin' || path === '/signup') {
-		// If already signed in, redirect to dashboard
-		if (authState.signedIn && maia) {
-			console.log('   → Already signed in, redirecting to /me')
-			navigateTo('/me')
-			return
-		}
-		// Check PRF support before showing sign-in
+		if (redirectIfSignedIn()) return
 		try {
 			await isPRFSupported()
 			renderSignInPrompt(hasExistingAccount)
 		} catch (error) {
 			renderUnsupportedBrowser(error.message)
 		}
-	} else if (path === '/me' || path === '/dashboard') {
-		removeSigninKeyHandler() // Clean up signin Enter key listener
-		// If authenticated, show dashboard; otherwise redirect to signin
-		// In agent mode, always show dashboard (no signin required)
-		if (detectMode() === 'agent' || (authState.signedIn && maia)) {
-			// Both auth state and maia are ready - show dashboard
+		return
+	}
+
+	if (path === '/me' || path === '/dashboard') {
+		removeSigninKeyHandler()
+		const ready = detectMode() === 'agent' || (authState.signedIn && maia)
+		if (ready) {
 			try {
 				await renderAppInternal()
 			} catch (error) {
 				showToast(`Failed to render app: ${error.message}`, 'error')
 			}
-		} else if (authState.signedIn && !maia) {
-			// Signed in but maia not ready yet - might be initializing
-			// Show loading/connecting screen with sync status (prevents redirect loop on mobile)
+			return
+		}
+		if (authState.signedIn && !maia) {
 			renderLoadingConnectingScreen()
-			// Wait for maia to be initialized (with timeout)
 			let waitCount = 0
 			const checkMaia = setInterval(() => {
 				waitCount++
 				if (maia) {
 					clearInterval(checkMaia)
-					cleanupLoadingScreenSync() // Clean up loading screen sync subscription
-					renderAppInternal().catch((error) => {
-						showToast(`Failed to render app: ${error.message}`, 'error')
-					})
+					cleanupLoadingScreenSync()
+					renderAppInternal().catch((e) => showToast(`Failed to render app: ${e.message}`, 'error'))
 				} else if (waitCount > 20) {
-					// 10 seconds timeout (20 * 500ms)
 					clearInterval(checkMaia)
-					cleanupLoadingScreenSync() // Clean up loading screen sync subscription
+					cleanupLoadingScreenSync()
 					authState = { signedIn: false, accountID: null }
 					navigateTo('/signin')
 				} else {
-					// Update loading screen with current sync status
 					updateLoadingConnectingScreen()
 				}
-			}, 500) // Check every 500ms
-		} else {
-			// Not signed in - redirect to signin
-			console.log('   → Not signed in, redirecting to /signin')
-			navigateTo('/signin')
+			}, 500)
+			return
 		}
-	} else {
-		removeSigninKeyHandler() // Clean up signin Enter key listener
-		// Default route: landing page
-		// If already authenticated, redirect to dashboard
-		if (authState.signedIn && maia) {
-			console.log('   → Already signed in, redirecting to /me')
-			navigateTo('/me')
-		} else {
-			renderLandingPage()
-		}
+		navigateTo('/signin')
+		return
 	}
+
+	removeSigninKeyHandler()
+	if (redirectIfSignedIn()) return
+	renderLandingPage()
 }
 
 /**
@@ -293,24 +268,7 @@ async function initAgentMode() {
 			accountID: account.id,
 		}
 
-		// Subscribe to sync state changes
-		try {
-			unsubscribeSync = subscribeSyncState((state) => {
-				const stateChanged = JSON.stringify(syncState) !== JSON.stringify(state)
-				syncState = state
-
-				if (stateChanged && !isRendering) {
-					if (syncStateRenderTimeout) {
-						clearTimeout(syncStateRenderTimeout)
-					}
-					syncStateRenderTimeout = setTimeout(() => {
-						if (!isRendering) {
-							renderAppInternal()
-						}
-					}, 100)
-				}
-			})
-		} catch (_syncError) {}
+		setupSyncSubscription()
 
 		// Start with dashboard screen
 		currentScreen = 'dashboard'
@@ -369,57 +327,24 @@ function getMoaiBaseUrl() {
 	return `${protocol}://${host}`
 }
 
-/**
- * Link human account to sync server's @maia spark (fetch /syncRegistry, set account.sparks["@maia"])
- * Run after sign-in / sign-up when maia is ready. Human mode only; agent mode skips.
- */
+/** Link human account to sync server's @maia spark. Human mode only. */
 async function linkAccountToSyncRegistry(maia) {
-	if (!maia?.id?.node || !maia.id.maiaId) return
-	if (detectMode() === 'agent') return
+	if (!maia?.id?.node || !maia.id.maiaId || detectMode() === 'agent') return
 	const baseUrl = getMoaiBaseUrl()
-	if (!baseUrl) {
-		console.warn(
-			'[linkAccountToSyncRegistry] No moai base URL (sync server). Vibes will be empty until connected.',
-		)
-		return
-	}
+	if (!baseUrl) return
 	try {
 		const res = await fetch(`${baseUrl}/syncRegistry`)
-		if (!res.ok) {
-			console.warn(
-				`[linkAccountToSyncRegistry] syncRegistry failed: ${res.status}. Is moai running on ${baseUrl}?`,
-			)
-			return
-		}
-		const data = await res.json()
-		const maiaSparkId = data?.['@maia']
-		if (!maiaSparkId?.startsWith('co_z')) {
-			console.warn(
-				'[linkAccountToSyncRegistry] syncRegistry returned no @maia spark. Ensure moai genesis seeded.',
-			)
-			return
-		}
+		if (!res.ok) return
+		const maiaSparkId = (await res.json())?.['@maia']
+		if (!maiaSparkId?.startsWith('co_z')) return
 		const { node, maiaId: account } = maia.id
 		const sparksId = account.get('sparks')
 		if (!sparksId?.startsWith('co_z')) return
 		const sparksCore = node.getCoValue(sparksId) || (await node.loadCoValueCore(sparksId))
 		await node.load(sparksId)
 		const sparksContent = sparksCore?.getCurrentContent?.()
-		if (sparksContent?.set) {
-			sparksContent.set('@maia', maiaSparkId)
-			console.log('[linkAccountToSyncRegistry] Linked account.sparks["@maia"] to sync server')
-		} else {
-			console.warn(
-				'[linkAccountToSyncRegistry] Could not set sparks["@maia"] – sparks CoMap not writable',
-			)
-		}
-	} catch (e) {
-		console.warn(
-			'[linkAccountToSyncRegistry] Failed:',
-			e?.message || e,
-			'– ensure moai is running on port 4201',
-		)
-	}
+		if (sparksContent?.set) sparksContent.set('@maia', maiaSparkId)
+	} catch (_e) {}
 }
 
 /**
@@ -482,26 +407,7 @@ async function signIn() {
 				maia = null
 			})
 
-		// Subscribe to sync state changes
-		try {
-			unsubscribeSync = subscribeSyncState((state) => {
-				// Only update if state actually changed
-				const stateChanged = JSON.stringify(syncState) !== JSON.stringify(state)
-				syncState = state
-
-				// Debounce re-renders to prevent loops
-				if (stateChanged && !isRendering) {
-					if (syncStateRenderTimeout) {
-						clearTimeout(syncStateRenderTimeout)
-					}
-					syncStateRenderTimeout = setTimeout(() => {
-						if (!isRendering) {
-							renderAppInternal() // Re-render when sync state changes
-						}
-					}, 100) // Small debounce
-				}
-			})
-		} catch (_syncError) {}
+		setupSyncSubscription()
 
 		// Start with dashboard screen (don't set default context)
 		currentScreen = 'dashboard'
@@ -551,33 +457,17 @@ async function signIn() {
 	}
 }
 
-/**
- * Load linked CoValues from account
- *
- * Uses maia.db() operations API with deep resolution to automatically load nested CoValues.
- * Deep resolution ensures all referenced CoValues are loaded progressively.
- */
+/** Load linked CoValues from account (vibes via deep resolution) */
 async function loadLinkedCoValues() {
 	if (!maia?.id?.maiaId) return
-
 	try {
-		const account = maia.id.maiaId
-		// Read account using operations API
-		const accountStore = await maia.db({ op: 'read', schema: '@account', key: account.id })
-		const accountData = accountStore.value || accountStore
-
-		// Load account.vibes and its referenced vibe CoValues with deep resolution
-		if (
-			accountData?.vibes &&
-			typeof accountData.vibes === 'string' &&
-			accountData.vibes.startsWith('co_')
-		) {
-			const vibesId = accountData.vibes
-			// Use deepResolve to automatically load nested CoValues
+		const accountStore = await maia.db({ op: 'read', schema: '@account', key: maia.id.maiaId.id })
+		const accountData = accountStore?.value ?? accountStore
+		const vibesId = accountData?.vibes
+		if (typeof vibesId === 'string' && vibesId.startsWith('co_')) {
 			await maia.db({ op: 'read', schema: vibesId, key: vibesId, deepResolve: true })
-			// Deep resolution automatically loads all referenced vibe CoValues
 		}
-	} catch (_error) {}
+	} catch (_e) {}
 }
 
 /**
@@ -638,26 +528,7 @@ async function register() {
 		// Mark that user has successfully registered
 		markAccountExists()
 
-		// Subscribe to sync state changes
-		try {
-			unsubscribeSync = subscribeSyncState((state) => {
-				// Only update if state actually changed
-				const stateChanged = JSON.stringify(syncState) !== JSON.stringify(state)
-				syncState = state
-
-				// Debounce re-renders to prevent loops
-				if (stateChanged && !isRendering) {
-					if (syncStateRenderTimeout) {
-						clearTimeout(syncStateRenderTimeout)
-					}
-					syncStateRenderTimeout = setTimeout(() => {
-						if (!isRendering) {
-							renderAppInternal() // Re-render when sync state changes
-						}
-					}, 100) // Small debounce
-				}
-			})
-		} catch (_syncError) {}
+		setupSyncSubscription()
 
 		// Start with dashboard screen (don't set default context)
 		currentScreen = 'dashboard'
@@ -721,125 +592,50 @@ function signOut() {
 // Store loading screen sync subscription
 let loadingScreenSyncUnsubscribe = null
 
-/**
- * Render loading/connecting screen while MaiaOS initializes
- * Shows app structure with loading overlay and sync status
- * Sets up sync state listener to update the screen in real-time
- */
+const LOADING_SCREEN_HTML = (syncMessage, indicatorStyle) => `
+	<div class="app-container" style="opacity: 0.5; pointer-events: none;">
+		<div class="dashboard-container">
+			<div class="dashboard-header"><h1>Maia City</h1></div>
+			<div class="dashboard-grid">
+				<div class="dashboard-card whitish-card">
+					<div class="dashboard-card-content">
+						<div class="dashboard-card-icon">📊</div>
+						<h3 class="dashboard-card-title">Loading...</h3>
+					</div>
+				</div>
+				<div class="dashboard-card whitish-card">
+					<div class="dashboard-card-content">
+						<div class="dashboard-card-icon">📋</div>
+						<h3 class="dashboard-card-title">Loading...</h3>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="loading-connecting-overlay">
+		<div class="loading-spinner"></div>
+		<div>
+			<h2 style="font-size: 1.5rem; margin: 0 0 0.5rem 0; font-weight: 600;">Initializing your account</h2>
+			<div style="font-size: 1rem; opacity: 0.8; margin-bottom: 1rem;">Setting up your sovereign self...</div>
+			<div class="sync-status loading-connecting-sync">
+				<div class="sync-indicator loading-connecting-indicator" style="${indicatorStyle}"></div>
+				<span class="sync-message">${syncMessage}</span>
+			</div>
+		</div>
+	</div>`
+
+/** Render loading/connecting screen; sets up sync state listener for live updates */
 function renderLoadingConnectingScreen() {
-	const syncMessage = getSyncStatusMessage()
-
-	document.getElementById('app').innerHTML = `
-		<div class="app-container" style="opacity: 0.5; pointer-events: none;">
-			<!-- Show app structure (dashboard skeleton) -->
-			<div class="dashboard-container">
-				<div class="dashboard-header">
-					<h1>Maia City</h1>
-				</div>
-				<div class="dashboard-grid">
-					<div class="dashboard-card whitish-card">
-						<div class="dashboard-card-content">
-							<div class="dashboard-card-icon">📊</div>
-							<h3 class="dashboard-card-title">Loading...</h3>
-						</div>
-					</div>
-					<div class="dashboard-card whitish-card">
-						<div class="dashboard-card-content">
-							<div class="dashboard-card-icon">📋</div>
-							<h3 class="dashboard-card-title">Loading...</h3>
-						</div>
-					</div>
-				</div>
-			</div>
-		</div>
-		<!-- Loading/Connecting Overlay -->
-		<div class="loading-connecting-overlay" style="
-			position: fixed;
-			top: 0;
-			left: 0;
-			right: 0;
-			bottom: 0;
-			background: rgba(0, 0, 0, 0.85);
-			backdrop-filter: blur(10px);
-			display: flex;
-			align-items: center;
-			justify-content: center;
-			flex-direction: column;
-			gap: 2rem;
-			z-index: 1000;
-		">
-			<div class="loading-spinner" style="
-				width: 64px;
-				height: 64px;
-				border: 4px solid rgba(255, 255, 255, 0.2);
-				border-top-color: rgba(255, 255, 255, 0.8);
-				border-radius: 50%;
-				animation: spin 1s linear infinite;
-			"></div>
-			<div style="text-align: center; color: white;">
-				<h2 style="font-size: 1.5rem; margin: 0 0 0.5rem 0; font-weight: 600;">Initializing your account</h2>
-				<div style="font-size: 1rem; opacity: 0.8; margin-bottom: 1rem;">Setting up your sovereign self...</div>
-				<div class="sync-status" style="
-					display: inline-flex;
-					align-items: center;
-					gap: 0.5rem;
-					padding: 0.5rem 1rem;
-					background: rgba(255, 255, 255, 0.1);
-					border-radius: 8px;
-					font-size: 0.875rem;
-					margin-top: 1rem;
-				">
-					<div class="sync-indicator" style="
-						width: 8px;
-						height: 8px;
-						border-radius: 50%;
-						background: ${syncState.connected ? '#4ade80' : syncState.error ? '#ef4444' : '#fbbf24'};
-						animation: ${syncState.connected ? 'none' : 'pulse 2s ease-in-out infinite'};
-					"></div>
-					<span class="sync-message">${syncMessage}</span>
-				</div>
-			</div>
-		</div>
-		<style>
-			@keyframes spin {
-				to { transform: rotate(360deg); }
-			}
-			@keyframes pulse {
-				0%, 100% { opacity: 1; }
-				50% { opacity: 0.5; }
-			}
-		</style>
-	`
-
-	// Set up sync state listener to update loading screen in real-time
+	const syncMsg = getSyncStatusMessage(syncState, 'Connecting to sync...')
+	const isConnected = syncState.connected && syncState.status === 'connected'
+	const hasError = syncState.status === 'error' || syncState.error
+	const indicatorStyle = `background: ${isConnected ? '#4ade80' : hasError ? '#ef4444' : '#fbbf24'}; animation: ${isConnected ? 'none' : 'pulse 2s ease-in-out infinite'};`
+	document.getElementById('app').innerHTML = LOADING_SCREEN_HTML(syncMsg, indicatorStyle)
 	if (!loadingScreenSyncUnsubscribe) {
 		loadingScreenSyncUnsubscribe = subscribeSyncState((state) => {
 			syncState = state
 			updateLoadingConnectingScreen()
 		})
-	}
-}
-
-/**
- * Get sync status message based on status field (for loading screen)
- */
-function getSyncStatusMessage() {
-	if (syncState.status === 'authenticating') {
-		return 'Authenticating...'
-	} else if (syncState.status === 'loading-account') {
-		return 'Loading your account...'
-	} else if (syncState.status === 'syncing') {
-		return 'Syncing data...'
-	} else if (syncState.status === 'connected') {
-		return 'Connected'
-	} else if (syncState.status === 'error') {
-		return syncState.error || 'Error'
-	} else if (syncState.connected) {
-		return syncState.syncing ? 'Syncing' : 'Connected'
-	} else if (syncState.error) {
-		return syncState.error
-	} else {
-		return 'Connecting to sync...'
 	}
 }
 
@@ -850,7 +646,7 @@ function updateLoadingConnectingScreen() {
 	const syncStatusElement = document.querySelector('.sync-status')
 	const syncIndicator = document.querySelector('.sync-indicator')
 	const syncMessageElement = document.querySelector('.sync-message')
-	const syncMessage = getSyncStatusMessage()
+	const syncMessage = getSyncStatusMessage(syncState, 'Connecting to sync...')
 
 	if (syncStatusElement && syncIndicator && syncMessageElement) {
 		syncMessageElement.textContent = syncMessage
@@ -1196,116 +992,6 @@ function toggleExpand(expandId) {
 	}
 }
 
-/**
- * Debug helper function for inspecting todos state
- * Exposed as window.debugTodos() for console access
- */
-window.debugTodos = async () => {
-	if (!maia) {
-		return
-	}
-
-	console.log('=== TODOS DEBUG INFO ===')
-
-	// Find todos-related actors
-	const actorEngine = maia.actorEngine
-	if (!actorEngine) {
-		return
-	}
-
-	const actors = actorEngine.getAllActors()
-	console.log(`Total actors: ${actors.length}`)
-
-	// Find actors with todos context
-	const todosActors = []
-	for (const actor of actors) {
-		if (actor.context && ('todos' in actor.context || 'todosTodo' in actor.context)) {
-			todosActors.push(actor)
-		}
-	}
-
-	console.log(`Actors with todos context: ${todosActors.length}`)
-
-	for (const actor of todosActors) {
-		console.log(`\n--- Actor ${actor.id.substring(0, 12)}... ---`)
-		console.log(`Context keys:`, Object.keys(actor.context))
-
-		// Check todos context
-		if (actor.context.todos) {
-			const todos = actor.context.todos
-			const todosType = Array.isArray(todos) ? `array[${todos.length}]` : typeof todos
-			console.log(`context.todos: ${todosType}`, todos)
-		}
-
-		if (actor.context.todosTodo) {
-			const todosTodo = actor.context.todosTodo
-			const todosTodoType = Array.isArray(todosTodo) ? `array[${todosTodo.length}]` : typeof todosTodo
-			console.log(`context.todosTodo: ${todosTodoType}`, todosTodo)
-		}
-
-		// Check initial data received
-		if (actor._initialDataReceived) {
-			console.log(`Initial data received:`, Array.from(actor._initialDataReceived))
-		}
-
-		// Check render state
-		console.log(`Initial render complete: ${actor._initialRenderComplete}`)
-		console.log(`Needs post-init rerender: ${actor._needsPostInitRerender}`)
-	}
-
-	// Check todos schema index using operations API (from account.os, not account.data.todos)
-	if (maia) {
-		try {
-			// Get todos schema index colist from account.os (new indexing system)
-			const backend = maia.dbEngine?.backend
-			const todosSchemaIndexColistId = backend
-				? await getSchemaIndexColistId(backend, '@maia/schema/data/todos')
-				: null
-
-			if (todosSchemaIndexColistId) {
-				console.log(`\n--- Todos Schema Index Colist (from account.os) ---`)
-				console.log(`Index Colist ID: ${todosSchemaIndexColistId}`)
-				// Use operations API to read the index colist
-				const indexStore = await maia.db({
-					op: 'read',
-					schema: todosSchemaIndexColistId,
-					key: todosSchemaIndexColistId,
-				})
-				const indexData = indexStore.value || indexStore
-
-				if (indexData && !indexData.error && !indexData.loading) {
-					console.log(`Index Colist available: true`)
-					// Operations API returns items array for colists
-					const items = indexData.items || []
-					console.log(`Indexed todo IDs: ${items.length} items`, items)
-
-					// Check each item using operations API
-					for (const itemId of items) {
-						if (typeof itemId === 'string' && itemId.startsWith('co_')) {
-							try {
-								const itemStore = await maia.db({ op: 'read', schema: itemId, key: itemId })
-								const itemData = itemStore.value || itemStore
-								const itemAvailable = !itemData.error && !itemData.loading
-								console.log(`  Todo ${itemId.substring(0, 12)}...: available=${itemAvailable}`)
-							} catch (itemError) {
-								console.log(`  Todo ${itemId.substring(0, 12)}...: error loading - ${itemError.message}`)
-							}
-						}
-					}
-				} else {
-					console.log(`Index Colist not available or still loading`)
-				}
-			} else {
-				console.log(
-					`\nTodos schema index colist not found in account.os (schema may not be registered yet)`,
-				)
-			}
-		} catch (_error) {}
-	}
-
-	console.log('\n=== END DEBUG INFO ===')
-}
-
 // Expose globally for onclick handlers
 window.switchView = switchView
 window.selectCoValue = selectCoValue
@@ -1327,74 +1013,24 @@ window.toggleMobileMenu = () => {
 	}
 }
 
-// Toggle DB viewer left sidebar (navigation)
-window.toggleDBLeftSidebar = () => {
-	const sidebar = document.querySelector('.db-sidebar')
-	if (sidebar) {
-		// Enable transitions when user explicitly toggles
-		sidebar.classList.add('sidebar-ready')
-		sidebar.classList.toggle('collapsed')
-		// Also collapse right sidebar when opening left (optional - can remove if you want both open)
-		const rightSidebar = document.querySelector('.db-metadata')
-		if (rightSidebar && !sidebar.classList.contains('collapsed')) {
-			rightSidebar.classList.add('sidebar-ready')
-			rightSidebar.classList.add('collapsed')
-		}
+/** Toggle sidebar (DB viewer or vibe viewer). Pass containerSelector for Shadow DOM (vibe). */
+function toggleSidebar(sidebarSelector, otherSidebarSelector, containerSelector) {
+	const root = containerSelector ? document.querySelector(containerSelector)?.shadowRoot : document
+	if (!root) return
+	const sidebar = root.querySelector(sidebarSelector)
+	if (!sidebar) return
+	sidebar.classList.add('sidebar-ready')
+	sidebar.classList.toggle('collapsed')
+	const other = root.querySelector(otherSidebarSelector)
+	if (other && !sidebar.classList.contains('collapsed')) {
+		other.classList.add('sidebar-ready')
+		other.classList.add('collapsed')
 	}
 }
 
-// Toggle DB viewer right sidebar (metadata)
-window.toggleDBRightSidebar = () => {
-	const sidebar = document.querySelector('.db-metadata')
-	if (sidebar) {
-		// Enable transitions when user explicitly toggles
-		sidebar.classList.add('sidebar-ready')
-		sidebar.classList.toggle('collapsed')
-		// Also collapse left sidebar when opening right (optional - can remove if you want both open)
-		const leftSidebar = document.querySelector('.db-sidebar')
-		if (leftSidebar && !sidebar.classList.contains('collapsed')) {
-			leftSidebar.classList.add('sidebar-ready')
-			leftSidebar.classList.add('collapsed')
-		}
-	}
-}
-
-// Toggle vibe viewer left sidebar (navigation)
-window.toggleLeftSidebar = () => {
-	const vibeContainer = document.querySelector('.vibe-container')
-	if (vibeContainer?.shadowRoot) {
-		const navAside = vibeContainer.shadowRoot.querySelector('.nav-aside')
-		if (navAside) {
-			// Enable transitions when user explicitly toggles
-			navAside.classList.add('sidebar-ready')
-			navAside.classList.toggle('collapsed')
-			// Also collapse right sidebar when opening left
-			const detailAside = vibeContainer.shadowRoot.querySelector('.detail-aside')
-			if (detailAside && !navAside.classList.contains('collapsed')) {
-				detailAside.classList.add('sidebar-ready')
-				detailAside.classList.add('collapsed')
-			}
-		}
-	}
-}
-
-// Toggle vibe viewer right sidebar (detail)
-window.toggleRightSidebar = () => {
-	const vibeContainer = document.querySelector('.vibe-container')
-	if (vibeContainer?.shadowRoot) {
-		const detailAside = vibeContainer.shadowRoot.querySelector('.detail-aside')
-		if (detailAside) {
-			// Enable transitions when user explicitly toggles
-			detailAside.classList.add('sidebar-ready')
-			detailAside.classList.toggle('collapsed')
-			// Also collapse left sidebar when opening right
-			const navAside = vibeContainer.shadowRoot.querySelector('.nav-aside')
-			if (navAside && !detailAside.classList.contains('collapsed')) {
-				navAside.classList.add('sidebar-ready')
-				navAside.classList.add('collapsed')
-			}
-		}
-	}
-}
+window.toggleDBLeftSidebar = () => toggleSidebar('.db-sidebar', '.db-metadata')
+window.toggleDBRightSidebar = () => toggleSidebar('.db-metadata', '.db-sidebar')
+window.toggleLeftSidebar = () => toggleSidebar('.nav-aside', '.detail-aside', '.vibe-container')
+window.toggleRightSidebar = () => toggleSidebar('.detail-aside', '.nav-aside', '.vibe-container')
 
 init()

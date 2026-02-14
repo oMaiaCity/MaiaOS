@@ -5,27 +5,7 @@
 
 import { resolveAccountCoIdsToProfileNames } from '@MaiaOS/core'
 import { getAllVibeRegistries } from '@MaiaOS/vibes'
-import { getSyncStatusMessage, truncate } from './utils.js'
-
-// Helper function to escape HTML
-function escapeHtml(text) {
-	if (text === null || text === undefined) {
-		return ''
-	}
-	const div = document.createElement('div')
-	div.textContent = String(text)
-	return div.innerHTML
-}
-
-/**
- * Helper function to truncate description to max words
- */
-function truncateDescription(text, maxWords = 10) {
-	if (!text) return ''
-	const words = text.trim().split(/\s+/)
-	if (words.length <= maxWords) return text
-	return `${words.slice(0, maxWords).join(' ')}...`
-}
+import { escapeHtml, getSyncStatusMessage, truncate, truncateWords } from './utils.js'
 
 /**
  * Extract vibe key from vibe $id (e.g., "@maia/vibe/todos" -> "todos")
@@ -114,30 +94,18 @@ async function loadSparksFromAccount(maia) {
  */
 async function vibeHasBrowserRuntime(maia, runtimesData, vibeCoId) {
 	if (!maia?.db || !runtimesData) return false
-	// runtimesData is a plain object from read (key -> colist co-id); CoMap content would use .get
 	const assignmentsColistId = runtimesData.get?.(vibeCoId) ?? runtimesData[vibeCoId]
-	if (
-		!assignmentsColistId ||
-		typeof assignmentsColistId !== 'string' ||
-		!assignmentsColistId.startsWith('co_')
-	)
-		return false
+	if (typeof assignmentsColistId !== 'string' || !assignmentsColistId.startsWith('co_')) return false
 	try {
 		const colistStore = await maia.db({ op: 'read', schema: null, key: assignmentsColistId })
 		const colistData = colistStore?.value ?? colistStore
 		const items = colistData?.items ?? (Array.isArray(colistData) ? colistData : [])
-		const itemIds = Array.isArray(items)
-			? items
-			: items && typeof items.slice === 'function'
-				? items.slice()
-				: []
+		const itemIds = Array.isArray(items) ? items : items ? [...items] : []
 		for (const itemCoId of itemIds) {
 			if (typeof itemCoId !== 'string' || !itemCoId.startsWith('co_')) continue
 			const itemStore = await maia.db({ op: 'read', schema: null, key: itemCoId })
 			const itemData = itemStore?.value ?? itemStore
 			if (itemData?.browser) return true
-			if (itemData && typeof itemData === 'object' && 'browser' in itemData && itemData.browser)
-				return true
 		}
 		return false
 	} catch {
@@ -154,53 +122,46 @@ async function vibeHasBrowserRuntime(maia, runtimesData, vibeCoId) {
  */
 async function loadVibesFromSpark(maia, spark) {
 	const vibes = []
-
 	if (!maia || !spark) return vibes
-
 	try {
 		const vibeRegistries = await getAllVibeRegistries()
 		const vibeManifestMap = new Map()
 		for (const registry of vibeRegistries) {
 			if (registry.vibe) {
 				const vibeKey = getVibeKeyFromId(registry.vibe.$id)
-				if (vibeKey) {
+				if (vibeKey)
 					vibeManifestMap.set(vibeKey, {
 						name: registry.vibe.name || vibeKey,
 						description: registry.vibe.description || '',
 					})
-				}
 			}
 		}
 
-		const account = maia.id.maiaId
-		const accountStore = await maia.db({ op: 'read', schema: '@account', key: account.id })
-		const accountData = accountStore.value || accountStore
-
+		const accountStore = await maia.db({ op: 'read', schema: '@account', key: maia.id.maiaId.id })
+		const accountData = accountStore?.value ?? accountStore
 		const sparksId = accountData?.sparks
-		if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_')) return vibes
+		if (typeof sparksId !== 'string' || !sparksId.startsWith('co_')) return vibes
 
 		const sparksStore = await maia.db({ op: 'read', schema: sparksId, key: sparksId })
-		const sparksData = sparksStore.value || sparksStore
+		const sparksData = sparksStore?.value ?? sparksStore
 		const sparkCoId = sparksData?.[spark]
-		if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_')) return vibes
+		if (typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_')) return vibes
 
 		const sparkStore = await maia.db({ op: 'read', schema: null, key: sparkCoId })
-		const sparkData = sparkStore.value || sparkStore
+		const sparkData = sparkStore?.value ?? sparkStore
 		const vibesId = sparkData?.vibes
 		const osId = sparkData?.os
-		if (!vibesId || typeof vibesId !== 'string' || !vibesId.startsWith('co_')) return vibes
+		if (typeof vibesId !== 'string' || !vibesId.startsWith('co_')) return vibes
 
 		const vibesStore = await maia.db({ op: 'read', schema: vibesId, key: vibesId })
-		const vibesData = vibesStore.value || vibesStore
-
+		const vibesData = vibesStore?.value ?? vibesStore
 		if (!vibesData || typeof vibesData !== 'object' || Array.isArray(vibesData)) return vibes
 
 		let runtimesData = null
-		if (osId && typeof osId === 'string' && osId.startsWith('co_')) {
+		if (typeof osId === 'string' && osId.startsWith('co_')) {
 			const osStore = await maia.db({ op: 'read', schema: null, key: osId })
-			const osContent = osStore?.value ?? osStore
-			const runtimesId = osContent?.runtimes
-			if (runtimesId && typeof runtimesId === 'string' && runtimesId.startsWith('co_')) {
+			const runtimesId = (osStore?.value ?? osStore)?.runtimes
+			if (typeof runtimesId === 'string' && runtimesId.startsWith('co_')) {
 				const runtimesStore = await maia.db({ op: 'read', schema: null, key: runtimesId })
 				runtimesData = runtimesStore?.value ?? runtimesStore
 			}
@@ -227,7 +188,7 @@ async function loadVibesFromSpark(maia, spark) {
 			const manifest = vibeManifestMap.get(vibeKey)
 			const name = manifest?.name || `${vibeKey.charAt(0).toUpperCase() + vibeKey.slice(1)}`
 			const description = manifest?.description
-				? truncateDescription(manifest.description, 10)
+				? truncateWords(manifest.description, 10)
 				: `Open ${name}`
 			vibes.push({
 				key: vibeKey,
