@@ -57,6 +57,16 @@ export async function renderApp(
 		return
 	}
 
+	// DB viewer requires signed-in account (maia.id = { maiaId, node })
+	if (!maia?.id?.maiaId || !maia.id.node) {
+		document.getElementById('app').innerHTML = `
+			<div class="flex flex-col justify-center items-center min-h-[60vh] text-slate-500">
+				<p class="font-medium">${authState?.signedIn ? 'Loading account…' : 'Please sign in to view the DB.'}</p>
+			</div>
+		`
+		return
+	}
+
 	// Default: render DB viewer (currentScreen === 'db-viewer')
 	// Helper to render any value consistently
 	const renderValue = (value, depth = 0) => {
@@ -497,9 +507,16 @@ export async function renderApp(
 			)
 
 			if (propertyKeys.length === 0) {
-				// No properties - show empty state
-				tableContent =
-					'<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">No properties available</div>'
+				// No properties - show empty state (with hint for vibes/schematas/indexes)
+				const schemaId = (data.$schema || schemaCoId || '').toString()
+				const isRegistryEmpty =
+					schemaId.includes('vibes-registry') ||
+					schemaId.includes('schematas-registry') ||
+					schemaId.includes('indexes-registry')
+				const emptyHint = isRegistryEmpty
+					? '<p class="mt-3 text-sm text-amber-600 max-w-md mx-auto">Vibes/schemas come from the sync server. Run <code class="bg-amber-100 px-1 rounded">bun dev</code> (moai on :4201), sign in, and check console for <code class="bg-amber-100 px-1 rounded">linkAccountToSyncRegistry</code>.</p>'
+					: ''
+				tableContent = `<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">No properties available${emptyHint}</div>`
 			} else {
 				const propertyItems = propertyKeys
 					.map((key) => {
@@ -794,7 +811,10 @@ export async function renderApp(
 												const roleClass = row.role?.toLowerCase() || 'reader'
 												const displayName = isEveryone
 													? 'Everyone'
-													: (profileNames.get(row.who) ?? truncate(row.who, 16))
+													: (profileNames.get(row.who) ??
+														(row.who?.startsWith?.('sealer_') || row.who?.startsWith?.('signer_')
+															? `Agent ${truncate(row.who, 12)}`
+															: truncate(row.who, 16)))
 												// Row 1: account name. Row 2: group name (link) or "direct", both left-aligned
 												const groupLinkHtml = row.viaGroupId
 													? `<code class="co-id" onclick="selectCoValue('${row.viaGroupId}')" title="${row.viaGroupId}" style="cursor: pointer; text-decoration: underline; font-size: 9px;">${escapeHtml(capabilityNames.get(row.viaGroupId) ?? truncate(row.viaGroupId, 12))}</code>`

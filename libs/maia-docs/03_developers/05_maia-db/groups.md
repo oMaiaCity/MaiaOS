@@ -126,6 +126,21 @@ childGroup.extend(parentGroup, "reader"); // All parent members get reader acces
 - `"admin"` - All parent members get admin access
 - `"revoked"` - Delegation revoked
 
+## Group Member Contract
+
+MaiaOS standardizes on **account co-ids** (co_z...) for group member storage and display. Never use agent IDs (sealer_z.../signer_z...) at the API or display layers.
+
+**Storage:**
+- Groups store **account co-ids** as member keys when using `addGroupMember`.
+- CoJSON supports both account co-ids and agent IDs; we standardize on account co-id for consistency and profile resolution.
+
+**API and display:**
+- Accept and expose **account co-id only**. Agent ID is internal (used for crypto/key revelation) and never accepted, returned, or logged at the API boundary.
+- `resolveAccountCoIdsToProfileNames` expects account co-ids; agent IDs are never resolved (by design).
+- For legacy data that may contain agent IDs, the frontend displays "Agent X" as a fallback instead of raw sealer_z/signer_z strings.
+
+**Implementation:** `addGroupMember` passes an account-like object `{ id: accountCoId, currentAgentID: () => agentId }` to CoJSON, so the group stores `account.id` (co_z) as the member key while using agent ID only for cryptographic operations.
+
 ## Implementation Files
 
 - **Group Creation:** `libs/maia-db/src/cojson/groups/create.js`

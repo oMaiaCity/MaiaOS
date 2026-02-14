@@ -18,7 +18,7 @@ import {
 	signUpWithPasskey,
 	subscribeSyncState,
 } from '@MaiaOS/core'
-import { filterVibesForSeeding, getAllVibeRegistries } from '@MaiaOS/vibes'
+import { buildSeedConfig, filterVibesForSeeding, getAllVibeRegistries } from '@MaiaOS/vibes'
 import { renderApp } from './db-view.js'
 import { renderLandingPage } from './landing.js'
 import {
@@ -350,6 +350,78 @@ function getSyncDomain() {
 	return import.meta.env?.VITE_PEER_MOAI || null
 }
 
+/** Base URL for moai HTTP API (syncRegistry, etc.) */
+function getMoaiBaseUrl() {
+	const isDev =
+		import.meta.env?.DEV ||
+		(typeof window !== 'undefined' &&
+			(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+	const apiDomain = getSyncDomain() || import.meta.env?.VITE_PEER_MOAI
+	if (!apiDomain && isDev) return 'http://localhost:4201'
+	if (!apiDomain) return null
+	const host = apiDomain.replace(/^https?:\/\//, '').split('/')[0]
+	const protocol =
+		host.includes('localhost') || host.includes('127.0.0.1') || host.includes(':4201')
+			? 'http'
+			: typeof window !== 'undefined' && window.location.protocol === 'https:'
+				? 'https'
+				: 'http'
+	return `${protocol}://${host}`
+}
+
+/**
+ * Link human account to sync server's @maia spark (fetch /syncRegistry, set account.sparks["@maia"])
+ * Run after sign-in / sign-up when maia is ready. Human mode only; agent mode skips.
+ */
+async function linkAccountToSyncRegistry(maia) {
+	if (!maia?.id?.node || !maia.id.maiaId) return
+	if (detectMode() === 'agent') return
+	const baseUrl = getMoaiBaseUrl()
+	if (!baseUrl) {
+		console.warn(
+			'[linkAccountToSyncRegistry] No moai base URL (sync server). Vibes will be empty until connected.',
+		)
+		return
+	}
+	try {
+		const res = await fetch(`${baseUrl}/syncRegistry`)
+		if (!res.ok) {
+			console.warn(
+				`[linkAccountToSyncRegistry] syncRegistry failed: ${res.status}. Is moai running on ${baseUrl}?`,
+			)
+			return
+		}
+		const data = await res.json()
+		const maiaSparkId = data?.['@maia']
+		if (!maiaSparkId?.startsWith('co_z')) {
+			console.warn(
+				'[linkAccountToSyncRegistry] syncRegistry returned no @maia spark. Ensure moai genesis seeded.',
+			)
+			return
+		}
+		const { node, maiaId: account } = maia.id
+		const sparksId = account.get('sparks')
+		if (!sparksId?.startsWith('co_z')) return
+		const sparksCore = node.getCoValue(sparksId) || (await node.loadCoValueCore(sparksId))
+		await node.load(sparksId)
+		const sparksContent = sparksCore?.getCurrentContent?.()
+		if (sparksContent?.set) {
+			sparksContent.set('@maia', maiaSparkId)
+			console.log('[linkAccountToSyncRegistry] Linked account.sparks["@maia"] to sync server')
+		} else {
+			console.warn(
+				'[linkAccountToSyncRegistry] Could not set sparks["@maia"] – sparks CoMap not writable',
+			)
+		}
+	} catch (e) {
+		console.warn(
+			'[linkAccountToSyncRegistry] Failed:',
+			e?.message || e,
+			'– ensure moai is running on port 4201',
+		)
+	}
+}
+
 /**
  * Sign in with existing passkey
  */
@@ -390,6 +462,7 @@ async function signIn() {
 						modules: ['db', 'core', 'ai', 'sparks'], // Include all modules
 					})
 					window.maia = maia
+					linkAccountToSyncRegistry(maia).catch(() => {})
 
 					// Re-render app now that maia is ready
 					if (authState.signedIn) {
@@ -485,9 +558,7 @@ async function signIn() {
  * Deep resolution ensures all referenced CoValues are loaded progressively.
  */
 async function loadLinkedCoValues() {
-	if (!maia) {
-		return
-	}
+	if (!maia?.id?.maiaId) return
 
 	try {
 		const account = maia.id.maiaId
@@ -553,6 +624,7 @@ async function register() {
 				modules: ['db', 'core', 'ai', 'sparks'], // Include all modules
 			})
 			window.maia = maia
+			linkAccountToSyncRegistry(maia).catch(() => {})
 		} catch (bootError) {
 			throw new Error(`Failed to initialize MaiaOS: ${bootError.message}`)
 		}
@@ -807,6 +879,11 @@ function cleanupLoadingScreenSync() {
  *   - `["todos", "maia"]` = seed specific vibes
  */
 async function handleSeed(seedVibesConfig = null) {
+	// Seeding is agent/sync mode only. Human mode gets vibes from sync server.
+	if (detectMode() !== 'agent') {
+		showToast('Seeding is agent/sync mode only. Vibes sync from server.', 'info', 3000)
+		return
+	}
 	if (!maia || !maia.id) {
 		showToast('Please sign in first', 'error', 3000)
 		return
@@ -814,9 +891,6 @@ async function handleSeed(seedVibesConfig = null) {
 
 	try {
 		showToast('🌱 Reseeding database (preserving schemata)...', 'info', 2000)
-
-		// Get node and account from maia
-		const { node, maiaId: account } = maia.id
 
 		// Get seeding config from parameter, environment variable, or default ("all" = seed all vibes)
 		// SEED_VIBES can be: null/undefined = use env/default, "all" = all vibes, or ["todos", "chat", "sparks", "creator"] = specific vibes
@@ -859,35 +933,16 @@ async function handleSeed(seedVibesConfig = null) {
 			`🌱 Seeding ${vibeRegistries.length} vibe(s) based on config: ${JSON.stringify(config)}`,
 		)
 
-		// Merge all configs from filtered vibes
-		const mergedConfigs = {
-			styles: {},
-			actors: {},
-			views: {},
-			contexts: {},
-			states: {},
-			inboxes: {},
-			vibes: vibeRegistries.map((r) => r.vibe), // Pass vibes as array
-			data: {},
-		}
-
-		// Merge configs from filtered vibe registries
-		for (const registry of vibeRegistries) {
-			Object.assign(mergedConfigs.styles, registry.styles || {})
-			Object.assign(mergedConfigs.actors, registry.actors || {})
-			Object.assign(mergedConfigs.views, registry.views || {})
-			Object.assign(mergedConfigs.contexts, registry.contexts || {})
-			Object.assign(mergedConfigs.states, registry.states || {})
-			Object.assign(mergedConfigs.inboxes, registry.inboxes || {})
-			Object.assign(mergedConfigs.data, registry.data || {})
-		}
-
-		// Single seed call - seed function handles everything
-		maia = await MaiaOS.boot({
-			node,
-			account,
-			modules: ['db', 'core', 'ai', 'sparks'], // Include all modules
-			registry: mergedConfigs,
+		const { configs: mergedConfigs, data } = buildSeedConfig(vibeRegistries)
+		const { getAllToolDefinitions } = await import('@MaiaOS/tools')
+		const { getAllSchemas } = await import('@MaiaOS/schemata')
+		const configsWithTools = { ...mergedConfigs, tool: getAllToolDefinitions() }
+		const schemas = getAllSchemas()
+		await maia.db({
+			op: 'seed',
+			configs: configsWithTools,
+			schemas,
+			data,
 		})
 
 		// Reload linked CoValues to see seeded data
@@ -904,11 +959,12 @@ async function handleSeed(seedVibesConfig = null) {
 
 // Expose globally for onclick handlers
 window.handleSignIn = signIn
-window.handleSeed = handleSeed
-
-// Expose helper functions for seeding specific vibes
-window.seedAllVibes = () => handleSeed('all')
-window.seedVibes = (vibeKeys) => handleSeed(Array.isArray(vibeKeys) ? vibeKeys : [vibeKeys])
+// Seeding: agent/sync mode only. Human mode gets vibes from sync server.
+if (detectMode() === 'agent') {
+	window.handleSeed = handleSeed
+	window.seedAllVibes = () => handleSeed('all')
+	window.seedVibes = (vibeKeys) => handleSeed(Array.isArray(vibeKeys) ? vibeKeys : [vibeKeys])
+}
 window.handleRegister = register
 
 // Swap signin/signup view mode (link-style toggle)

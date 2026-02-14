@@ -1,7 +1,7 @@
 /**
  * Unified Sync Service - WebSocket sync + Agent API + LLM proxy
  *
- * Consolidates: sync (WebSocket), agent (/on-added, /register-human, /trigger, /profile), api (/api/v0/llm/chat)
+ * Consolidates: sync (WebSocket), agent (/register-human, /profile), api (/api/v0/llm/chat)
  *
  * Port: 4201
  *
@@ -10,13 +10,30 @@
  *   PEER_MODE=sync | agent
  *     - sync: I host /sync (moai). Never connect to another. syncDomain=null.
  *     - agent: Client agent. Connects to sync at PEER_MOAI. Use for future pure agent workers.
- *   PEER_STORAGE, PEER_DB_PATH
+ *   PEER_STORAGE=pglite | postgres (required; in-memory not allowed)
+ *     - pglite: PEER_DB_PATH (default ./local-sync.db)
+ *     - postgres: PEER_DB_URL (required)
  *   PEER_MOAI: Required when PEER_MODE=agent (where to connect). Ignored when sync.
+ *   PEER_ADD_GUARDIAN: Default false. Set true to add PEER_GUARDIAN as admin on startup (one-time genesis).
+ *   PEER_GUARDIAN: Human account co-id (co_z...). Human must sign in from maia first so account syncs.
+ *   PEER_FRESH_SEED: Default false. Set true to run genesis seed (bootstrap + schemas + vibes).
+ *     - true: Fresh seed (first deploy or intentional reset). May overwrite existing scaffold.
+ *     - false/unset: Skip seed, use persisted data. Never overwrite on restart.
  */
 
-import { CoJSONBackend, DBEngine, loadOrCreateAgentAccount, waitForStoreReady } from '@MaiaOS/core'
-import { resolve } from 'node:path'
+import {
+	CoJSONBackend,
+	DBEngine,
+	loadOrCreateAgentAccount,
+	schemaMigration,
+	waitForStoreReady,
+} from '@MaiaOS/core'
+import { dirname, resolve } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { createWebSocketPeer } from 'cojson-transport-ws'
+
+// Resolve db path relative to moai package root (not process.cwd) so persistence is stable across restarts
+const _moaiDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 const PORT = process.env.PORT || 4201
 const PEER_DB_PATH = process.env.PEER_DB_PATH || './local-sync.db'
@@ -24,13 +41,26 @@ const PEER_DB_PATH = process.env.PEER_DB_PATH || './local-sync.db'
 const accountID = process.env.PEER_ID
 const agentSecret = process.env.PEER_SECRET
 const storageType = process.env.PEER_STORAGE || 'pglite'
+if (storageType === 'in-memory') {
+	throw new Error(
+		'[moai] PEER_STORAGE=in-memory is not allowed. Use PEER_STORAGE=pglite or PEER_STORAGE=postgres.',
+	)
+}
 const usePGlite = storageType === 'pglite'
 const usePostgres = storageType === 'postgres'
-// Resolve to absolute path so bundle doesn't resolve relative to its own location
-const dbPath = usePGlite ? resolve(process.cwd(), PEER_DB_PATH) : undefined
+if (!usePGlite && !usePostgres) {
+	throw new Error(`[moai] PEER_STORAGE must be pglite or postgres. Got: ${storageType}`)
+}
+// Resolve relative to moai package dir (stable across runs regardless of cwd)
+const dbPath = usePGlite ? resolve(_moaiDir, PEER_DB_PATH) : undefined
 const peerMode = process.env.PEER_MODE || 'sync'
 const syncDomain = peerMode === 'agent' ? process.env.PEER_MOAI || null : null
 const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
+const peerAddGuardian = process.env.PEER_ADD_GUARDIAN === 'true'
+const peerGuardianAccountId = process.env.PEER_GUARDIAN?.trim() || null
+const peerFreshSeed = process.env.PEER_FRESH_SEED === 'true'
+// Sync mode seeds all vibes by default (internal, not configurable)
+const seedVibesConfig = 'all'
 
 let localNode = null
 let agentWorker = null
@@ -94,22 +124,22 @@ async function getCoIdByPath(backend, startId, path, opts = {}) {
 	}
 }
 
-// --- Agent handlers ---
-async function handleOnAdded(worker, body) {
-	const { sparkId } = body || {}
-	if (!sparkId || typeof sparkId !== 'string' || !sparkId.startsWith('co_z'))
-		return err('sparkId required (co_z...)')
-	const { backend } = worker
+/** Returns server's @maia spark co-id for frontend to link account.sparks["@maia"] */
+async function handleSyncRegistry(worker) {
 	try {
-		const sparksContent = await loadCoMap(backend, getSparksId(worker.account), { retries: 2 })
-		if (!sparksContent?.set) throw new Error('sparks CoMap not writable')
-		sparksContent.set('@maia', sparkId)
-		return jsonResponse({ ok: true, added: '@maia', sparkId })
+		const sparksContent = await loadCoMap(worker.backend, getSparksId(worker.account), {
+			retries: 2,
+		})
+		const maiaSparkId = sparksContent?.get?.('@maia')
+		if (!maiaSparkId?.startsWith('co_z'))
+			return err('@maia spark not in registry (ensure genesis seeded)', 500)
+		return jsonResponse({ '@maia': maiaSparkId })
 	} catch (e) {
-		return err(e?.message ?? 'failed to ensure sparks registry', 500)
+		return err(e?.message ?? 'failed to get sync registry', 500)
 	}
 }
 
+// --- Agent handlers ---
 async function handleRegisterHuman(worker, body) {
 	const { username, accountId } = body || {}
 	if (!username || typeof username !== 'string' || !username.trim())
@@ -138,34 +168,6 @@ async function handleRegisterHuman(worker, body) {
 		return jsonResponse({ ok: true, username: u, accountId })
 	} catch (e) {
 		return err(e?.message ?? 'failed to register', 500)
-	}
-}
-
-async function handleTrigger(worker, body) {
-	const { dbEngine } = worker
-	const text = body?.text ?? 'Test todo from agent'
-	let spark = body?.spark
-	if (spark == null) {
-		try {
-			const sparksId = worker.account.get('sparks')
-			if (sparksId?.startsWith('co_z')) {
-				const sparksContent = await loadCoMap(worker.backend, sparksId, { retries: 2 })
-				if (sparksContent?.get?.('@maia')) spark = '@maia'
-			}
-		} catch (_) {}
-		spark = spark ?? '@maia'
-	}
-	try {
-		const r = await dbEngine.execute({
-			op: 'create',
-			schema: '@maia/schema/data/todos',
-			data: { text, done: false },
-			spark,
-		})
-		if (r?.ok === false) return err(r.errors?.map((e) => e.message).join('; ') ?? 'create failed')
-		return jsonResponse({ ok: true, created: r?.data?.id ?? r?.id, spark, text })
-	} catch (e) {
-		return err(e.message, 500)
 	}
 }
 
@@ -217,13 +219,10 @@ async function handleAgentHttp(req, worker) {
 			return err(e.message, e?.message?.includes('timed out') ? 504 : 400)
 		}
 	}
-	if (url.pathname === '/on-added' && req.method === 'POST')
-		return post(true, (w, b) => withTimeout(handleOnAdded(w, b), REQUEST_TIMEOUT_MS, '/on-added'))
 	if (url.pathname === '/register-human' && req.method === 'POST')
 		return post(false, (w, b) =>
 			withTimeout(handleRegisterHuman(w, b), REQUEST_TIMEOUT_MS, '/register-human'),
 		)
-	if (url.pathname === '/trigger' && req.method === 'POST') return post(false, handleTrigger)
 	return null
 }
 
@@ -327,6 +326,11 @@ Bun.serve({
 			return jsonResponse({ status: 'ok', service: 'sync', ready: !!syncHandler })
 		}
 
+		if (url.pathname === '/syncRegistry' && req.method === 'GET') {
+			if (!agentWorker) return jsonResponse({ error: 'Initializing', status: 503 }, 503)
+			return withTimeout(handleSyncRegistry(agentWorker), REQUEST_TIMEOUT_MS, '/syncRegistry')
+		}
+
 		if (url.pathname === '/sync') {
 			if (!syncHandler) return jsonResponse({ error: 'Initializing', status: 503 }, 503)
 			if (req.headers.get('upgrade') !== 'websocket')
@@ -348,10 +352,9 @@ Bun.serve({
 			const agentRes = await handleAgentHttp(req, agentWorker)
 			if (agentRes) return agentRes
 		} else if (
-			url.pathname.startsWith('/on-added') ||
 			url.pathname.startsWith('/register-human') ||
-			url.pathname.startsWith('/trigger') ||
-			url.pathname.startsWith('/profile')
+			url.pathname.startsWith('/profile') ||
+			url.pathname.startsWith('/syncRegistry')
 		) {
 			return jsonResponse({ error: 'Initializing', status: 503 }, 503)
 		}
@@ -386,11 +389,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 
 		if (dbPath && !process.env.PEER_DB_PATH) process.env.PEER_DB_PATH = dbPath
 
-		const storageLabel = usePostgres
-			? 'Postgres'
-			: usePGlite
-				? `PGlite at ${dbPath || './local-sync.db'}`
-				: 'in-memory'
+		const storageLabel = usePostgres ? 'Postgres' : `PGlite at ${dbPath || './local-sync.db'}`
 		console.log('[sync] Loading account (%s)...', storageLabel)
 		console.log('[sync] accountID=%s', `${accountID?.slice(0, 12)}...`)
 		const result = await loadOrCreateAgentAccount({
@@ -398,17 +397,93 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 			agentSecret,
 			syncDomain,
 			dbPath: usePGlite ? dbPath : undefined,
-			inMemory: storageType === 'in-memory',
-			createName: 'Maia Sync Server',
+			createName: 'Agent Moai',
 		})
 
 		localNode = result.node
 		localNode.enableGarbageCollector()
 
+		// Graceful shutdown: flush pending storage writes before exit (ensures scaffold persists)
+		const shutdown = async () => {
+			try {
+				if (localNode?.syncManager?.gracefulShutdown) {
+					await localNode.syncManager.gracefulShutdown()
+				}
+			} catch (e) {
+				console.error('[sync] Graceful shutdown error:', e?.message ?? e)
+			}
+			process.exit(0)
+		}
+		process.on('SIGTERM', () => shutdown())
+		process.on('SIGINT', () => shutdown())
+
 		const backend = new CoJSONBackend(localNode, result.account, { systemSpark: '@maia' })
 		const dbEngine = new DBEngine(backend)
 		backend.dbEngine = dbEngine
 		agentWorker = { node: localNode, account: result.account, backend, dbEngine }
+
+		// Ensure migration completes before seed (sparkGuardian -> guardian, registries.humans)
+		// loadAccount defers migration; seed needs guardian in os.capabilities
+		await schemaMigration(result.account, localNode)
+
+		// Genesis sync mode: seed only when PEER_FRESH_SEED=true (explicit, no co-value inference).
+		// Agent mode never seeds (minimal account, no vibes).
+		if (peerMode === 'sync' && peerFreshSeed) {
+			const { buildSeedConfig, getAllVibeRegistries, filterVibesForSeeding } = await import(
+				'@MaiaOS/vibes'
+			)
+			const { getAllToolDefinitions } = await import('@MaiaOS/tools')
+			const { getAllSchemas } = await import('@MaiaOS/schemata')
+			const allVibeRegistries = await getAllVibeRegistries()
+			const vibeRegistries = filterVibesForSeeding(allVibeRegistries, seedVibesConfig)
+			if (vibeRegistries.length === 0) {
+				throw new Error(
+					'[sync] Genesis sync requires vibes. getAllVibeRegistries returned none or SEED_VIBES filtered all.',
+				)
+			}
+			const { configs: mergedConfigs, data } = buildSeedConfig(vibeRegistries)
+			const configsWithTools = { ...mergedConfigs, tool: getAllToolDefinitions() }
+			const schemas = getAllSchemas()
+			const seedResult = await dbEngine.execute({
+				op: 'seed',
+				configs: configsWithTools,
+				schemas,
+				data,
+				forceFreshSeed: true, // PEER_FRESH_SEED=true: always bootstrap, bypass idempotency
+			})
+			if (seedResult?.ok === false && seedResult?.errors?.length) {
+				const msg = seedResult.errors.map((e) => e?.message ?? e).join('; ')
+				throw new Error(`[sync] Genesis seed failed: ${msg}`)
+			}
+			console.log(
+				`[sync] Genesis seeded: ${vibeRegistries.length} vibe(s) (schemas + scaffold). Set PEER_FRESH_SEED=false for subsequent restarts.`,
+			)
+		} else if (peerMode === 'sync' && !peerFreshSeed) {
+			console.log('[sync] PEER_FRESH_SEED not set — using persisted scaffold (skip seed).')
+		}
+
+		// One-time: add PEER_GUARDIAN (human account co-id) as admin of @maia spark guardian group
+		if (peerAddGuardian && peerGuardianAccountId?.startsWith('co_z')) {
+			try {
+				const guardian = await agentWorker.backend.getMaiaGroup()
+				if (guardian) {
+					await agentWorker.backend.addGroupMember(guardian, peerGuardianAccountId, 'admin')
+					console.log(
+						`[sync] Added guardian as admin of @maia spark (set PEER_ADD_GUARDIAN=false to skip on next restart)`,
+					)
+				} else {
+					console.warn(
+						'[sync] PEER_ADD_GUARDIAN=true but @maia spark guardian not found (ensure genesis seeded first)',
+					)
+				}
+			} catch (e) {
+				console.error('[sync] Failed to add guardian:', e?.message ?? e)
+			}
+		} else if (peerAddGuardian && !peerGuardianAccountId?.startsWith('co_z')) {
+			console.warn(
+				'[sync] PEER_ADD_GUARDIAN=true but PEER_GUARDIAN missing. Set PEER_GUARDIAN=co_z... (human account co-id, from /me after sign-in).',
+			)
+		}
 
 		syncHandler = {
 			async open(ws) {

@@ -8,7 +8,7 @@ import { getStorage } from '@MaiaOS/storage'
 import { LocalNode } from 'cojson'
 import { WasmCrypto } from 'cojson/crypto/WasmCrypto'
 import { schemaMigration } from '../../migrations/schema.migration.js'
-import { seedAgentAccount } from '../schema/seed.js'
+import { simpleAccountSeed } from '../schema/seed.js'
 
 /**
  * Create a new MaiaID (Account) with provided agentSecret
@@ -29,7 +29,6 @@ export async function createAccountWithSecret({
 	name,
 	peers = [],
 	storage = undefined,
-	skipAutoSeeding = false,
 }) {
 	if (!agentSecret) {
 		throw new Error('agentSecret is required. Use signInWithPasskey() to get agentSecret.')
@@ -59,126 +58,13 @@ export async function createAccountWithSecret({
 		throw new Error('Profile not created by account creation migration')
 	}
 
-	// Auto-seeding (auto-dosoding): Seed schemas, tools, and vibes automatically on account creation
-	// This runs once on new account signup, idempotency check ensures it doesn't run again
-	// Works exactly like manual seed button - replicates the exact same seeding flow
-	// NOTE: Skip for agent mode/server accounts (sync server, etc.) - they don't need vibes/views
-	// NOTE: This runs client-side only (browser), so we use import.meta.env (Vite) not process.env (Node.js)
-	if (!skipAutoSeeding) {
-		try {
-			// Get seeding config from environment variable (default: "all" = seed all vibes)
-			// Options: "all" = all vibes, or "todos,chat,sparks,creator" = specific vibes
-			// Check VITE_MAIA_CITY_SEED_VIBES (maia-city), VITE_SEED_VIBES, or SEED_VIBES
-			const envVar =
-				typeof import.meta !== 'undefined'
-					? import.meta.env?.VITE_MAIA_CITY_SEED_VIBES ||
-						import.meta.env?.VITE_SEED_VIBES ||
-						import.meta.env?.SEED_VIBES
-					: null
-			const seedVibesConfig = envVar
-				? envVar === 'all'
-					? 'all'
-					: envVar.split(',').map((s) => s.trim())
-				: 'all' // Default: seed all vibes (changed from null to "all")
-
-			// Get vibe registries (same as manual seed button)
-			const { getAllVibeRegistries, filterVibesForSeeding } = await import('@MaiaOS/vibes')
-			const allVibeRegistries = await getAllVibeRegistries()
-
-			// Filter vibes based on config
-			const vibeRegistries = filterVibesForSeeding(allVibeRegistries, seedVibesConfig)
-
-			if (vibeRegistries.length === 0) {
-				if (allVibeRegistries.length === 0) {
-					console.log('ℹ️  No vibe registries found, skipping auto-seeding')
-				} else {
-					console.log(
-						`ℹ️  Seeding config filters out all vibes (config: ${JSON.stringify(seedVibesConfig)}), skipping vibe seeding`,
-					)
-				}
-				return {
-					node: result.node,
-					account: rawAccount,
-					accountID: rawAccount.id,
-					profile: profileValue,
-					group: null,
-				}
-			}
-
-			console.log(
-				`🌱 Auto-seeding ${vibeRegistries.length} vibe(s) based on config: ${JSON.stringify(seedVibesConfig)}`,
-			)
-
-			// Merge all configs from filtered vibes (EXACT same structure as manual seed)
-			const mergedConfigs = {
-				styles: {},
-				actors: {},
-				views: {},
-				contexts: {},
-				states: {},
-				inboxes: {},
-				vibes: vibeRegistries.map((r) => r.vibe), // Pass vibes as array
-				data: {},
-			}
-
-			// Merge configs from filtered vibe registries (EXACT same logic as manual seed)
-			for (const registry of vibeRegistries) {
-				Object.assign(mergedConfigs.styles, registry.styles || {})
-				Object.assign(mergedConfigs.actors, registry.actors || {})
-				Object.assign(mergedConfigs.views, registry.views || {})
-				Object.assign(mergedConfigs.contexts, registry.contexts || {})
-				Object.assign(mergedConfigs.states, registry.states || {})
-				Object.assign(mergedConfigs.inboxes, registry.inboxes || {})
-				Object.assign(mergedConfigs.data, registry.data || {})
-			}
-
-			// Create backend and dbEngine (same setup as MaiaOS.boot)
-			const { CoJSONBackend } = await import('../core/cojson-backend.js')
-			const backend = new CoJSONBackend(result.node, rawAccount, { systemSpark: '@maia' })
-			const { DBEngine } = await import('@MaiaOS/operations')
-			const dbEngine = new DBEngine(backend)
-			backend.dbEngine = dbEngine
-
-			// Use the exact same seeding flow as MaiaOS._seedDatabase
-			const { getAllToolDefinitions } = await import('@MaiaOS/tools')
-			const toolDefs = getAllToolDefinitions()
-
-			// Merge tool definitions into registry (same as _seedDatabase)
-			const configsWithTools = {
-				...mergedConfigs,
-				tool: toolDefs, // Add tool definitions under 'tool' key
-			}
-
-			// Collect schemas (same as _seedDatabase)
-			// Use getAllSchemas directly to avoid circular dependency with MaiaOS
-			const { getAllSchemas } = await import('@MaiaOS/schemata')
-			const schemas = getAllSchemas()
-
-			// Use dbEngine.execute() with seed operation (EXACT same as manual seed)
-			await dbEngine.execute({
-				op: 'seed',
-				configs: configsWithTools,
-				schemas: schemas,
-				data: mergedConfigs.data || {},
-			})
-
-			// Auto-seeding complete
-			console.log('✅ Auto-seeding completed successfully')
-		} catch (error) {
-			console.error('❌ Auto-seeding failed:', error?.message ?? error)
-			if (error?.stack) console.error(error.stack)
-		}
-	} else {
-		console.log('ℹ️  Auto-seeding skipped (agent mode/server account)')
-		try {
-			const { CoJSONBackend } = await import('../core/cojson-backend.js')
-			const { DBEngine } = await import('@MaiaOS/operations')
-			const backend = new CoJSONBackend(result.node, rawAccount, { systemSpark: '@maia' })
-			backend.dbEngine = new DBEngine(backend)
-			await seedAgentAccount(rawAccount, result.node, backend)
-		} catch (agentSeedError) {
-			console.error('❌ Agent account seeding failed:', agentSeedError?.message ?? agentSeedError)
-		}
+	// Two modes: simpleAccountSeed (all signups) and genesisAccountSeed (PEER_MODE=sync only).
+	// createAccountWithSecret always runs simpleAccountSeed — empty account.sparks only.
+	try {
+		await simpleAccountSeed(rawAccount, result.node)
+		console.log('ℹ️  Simple account seed: account.sparks (vibes from sync when applicable)')
+	} catch (seedError) {
+		console.error('❌ Simple account seed failed:', seedError?.message ?? seedError)
 	}
 
 	return {

@@ -10,6 +10,7 @@
 	},
 	"dependencies": {
 		"@MaiaOS/core": "workspace:*",
+		"@MaiaOS/vibes": "workspace:*",
 		"cojson-transport-ws": "0.20.7"
 	}
 }

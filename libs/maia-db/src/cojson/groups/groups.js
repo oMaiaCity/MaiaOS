@@ -108,26 +108,10 @@ export async function getSparkGroup(backend, spark) {
 		throw new Error(`[getSparkGroup] Spark ${spark} has no guardian in os.capabilities`)
 	}
 	const groupStore = await backend.read('@group', groupId)
-	if (!groupStore || groupStore.error) {
+	if (!groupStore || groupStore.value?.error) {
 		throw new Error(`[getSparkGroup] Group for spark ${spark} not available: ${groupId}`)
 	}
-	await new Promise((resolve, reject) => {
-		if (!groupStore.loading) {
-			resolve()
-			return
-		}
-		let unsubscribe
-		const timeout = setTimeout(() => {
-			reject(new Error(`[getSparkGroup] Timeout waiting for group ${groupId}`))
-		}, 10000)
-		unsubscribe = groupStore.subscribe(() => {
-			if (!groupStore.loading) {
-				clearTimeout(timeout)
-				unsubscribe()
-				resolve()
-			}
-		})
-	})
+	await waitForStoreReady(groupStore, groupId, 10000)
 	const groupCore = backend.getCoValue(groupId)
 	if (!groupCore) {
 		throw new Error(`[getSparkGroup] Group core not found: ${groupId}`)
@@ -150,33 +134,11 @@ export async function getSparkOsId(backend, spark) {
 	const sparksId = backend.account.get('sparks')
 	if (!sparksId?.startsWith('co_z')) return null
 	const sparksStore = await backend.read(null, sparksId)
-	await new Promise((resolve, reject) => {
-		if (!sparksStore.loading) return resolve()
-		let unsub
-		const t = setTimeout(() => reject(new Error('Timeout')), 10000)
-		unsub = sparksStore.subscribe(() => {
-			if (!sparksStore.loading) {
-				clearTimeout(t)
-				unsub?.()
-				resolve()
-			}
-		})
-	})
+	await waitForStoreReady(sparksStore, sparksId, 10000)
 	const sparkCoId = sparksStore.value?.[spark]
 	if (!sparkCoId?.startsWith('co_z')) return null
 	const sparkStore = await backend.read(null, sparkCoId)
-	await new Promise((resolve, reject) => {
-		if (!sparkStore.loading) return resolve()
-		let unsub
-		const t = setTimeout(() => reject(new Error('Timeout')), 10000)
-		unsub = sparkStore.subscribe(() => {
-			if (!sparkStore.loading) {
-				clearTimeout(t)
-				unsub?.()
-				resolve()
-			}
-		})
-	})
+	await waitForStoreReady(sparkStore, sparkCoId, 10000)
 	const osId = sparkStore.value?.os || null
 	if (osId) backend._cachedMaiaOsId = osId
 	return osId
@@ -192,33 +154,11 @@ export async function getSparkVibesId(backend, spark) {
 	const sparksId = backend.account.get('sparks')
 	if (!sparksId?.startsWith('co_z')) return null
 	const sparksStore = await backend.read(null, sparksId)
-	await new Promise((resolve, reject) => {
-		if (!sparksStore.loading) return resolve()
-		let unsub
-		const t = setTimeout(() => reject(new Error('Timeout')), 10000)
-		unsub = sparksStore.subscribe(() => {
-			if (!sparksStore.loading) {
-				clearTimeout(t)
-				unsub?.()
-				resolve()
-			}
-		})
-	})
+	await waitForStoreReady(sparksStore, sparksId, 10000)
 	const sparkCoId = sparksStore.value?.[spark]
 	if (!sparkCoId?.startsWith('co_z')) return null
 	const sparkStore = await backend.read(null, sparkCoId)
-	await new Promise((resolve, reject) => {
-		if (!sparkStore.loading) return resolve()
-		let unsub
-		const t = setTimeout(() => reject(new Error('Timeout')), 10000)
-		unsub = sparkStore.subscribe(() => {
-			if (!sparkStore.loading) {
-				clearTimeout(t)
-				unsub?.()
-				resolve()
-			}
-		})
-	})
+	await waitForStoreReady(sparkStore, sparkCoId, 10000)
 	return sparkStore.value?.vibes || null
 }
 
@@ -233,18 +173,7 @@ export async function setSparkVibesId(backend, spark, vibesId) {
 	const sparksId = backend.account.get('sparks')
 	if (!sparksId?.startsWith('co_z')) throw new Error('[setSparkVibesId] account.sparks not found')
 	const sparksStore = await backend.read(null, sparksId)
-	await new Promise((resolve, reject) => {
-		if (!sparksStore.loading) return resolve()
-		let unsub
-		const t = setTimeout(() => reject(new Error('Timeout')), 10000)
-		unsub = sparksStore.subscribe(() => {
-			if (!sparksStore.loading) {
-				clearTimeout(t)
-				unsub?.()
-				resolve()
-			}
-		})
-	})
+	await waitForStoreReady(sparksStore, sparksId, 10000)
 	const sparkCoId = sparksStore.value?.[spark]
 	if (!sparkCoId?.startsWith('co_z')) throw new Error(`[setSparkVibesId] Spark ${spark} not found`)
 	const sparkCore = backend.getCoValue(sparkCoId)
@@ -535,37 +464,54 @@ export function getGroupInfoFromGroup(group) {
 }
 
 /**
- * Add a member to a group
- * Agents must have an account - we always add by account co-id (co_z...).
- * No sealer/signer fallback - ensures consistent display and Jazz-native pattern.
+ * Add a member to a group. Accepts account co-id only; agent ID is resolved internally (never exposed).
+ * Sealer/signer and PEER_SECRET are private - never accept, log, or expose agent IDs.
+ * Stores account co-id (co_z) as the group member key so resolveAccountCoIdsToProfileNames works.
  * @param {LocalNode} node - LocalNode instance
  * @param {RawGroup} group - Group CoValue
- * @param {string} memberId - Member account co-id (co_z...) - REQUIRED
+ * @param {string} accountCoId - Account co-id (co_z...) - REQUIRED
  * @param {string} role - Role name
  * @param {Object} [backend] - Optional backend (for ensureCoValueLoaded)
  * @returns {Promise<void>}
  */
-export async function addGroupMember(node, group, memberId, role, backend = null) {
+export async function addGroupMember(node, group, accountCoId, role, backend = null) {
 	if (typeof group.addMember !== 'function') {
 		throw new Error('[CoJSONBackend] Group does not support addMember')
 	}
 
-	if (!memberId || !memberId.startsWith('co_z')) {
+	if (!accountCoId || !accountCoId.startsWith('co_z')) {
 		throw new Error(
-			'[CoJSONBackend] Agent account co-id required (co_z...). Sealer/signer IDs are not supported - agents must use their account.',
+			'[CoJSONBackend] accountCoId required (co_z...). Human must sign in from maia first so account syncs.',
 		)
 	}
 
 	if (backend) {
 		const { ensureCoValueLoaded } = await import('../crud/collection-helpers.js')
-		await ensureCoValueLoaded(backend, memberId, { waitForAvailable: true, timeoutMs: 10000 })
+		await ensureCoValueLoaded(backend, accountCoId, { waitForAvailable: true, timeoutMs: 10000 })
 	}
 	const accountCore = node.expectCoValueLoaded(
-		memberId,
-		'Expected account to be loaded for addMember',
+		accountCoId,
+		'Expected account loaded. Human must sign in from maia at least once so account syncs.',
 	)
 	const accountContent = accountCore.getCurrentContent()
-	group.addMember(accountContent, role)
+	// Resolve to agent ID internally only - never expose, log, or accept agent ID as input
+	let agentId = null
+	if (typeof accountContent?.currentAgentID === 'function') {
+		agentId = accountContent.currentAgentID()
+	} else if (accountCore.verified?.header?.ruleset?.type === 'group') {
+		const raw = accountCore.verified.header.ruleset.initialAdmin
+		if (typeof raw === 'string' && raw.startsWith('sealer_') && raw.includes('/signer_')) {
+			agentId = raw
+		}
+	}
+	if (!agentId) {
+		throw new Error(
+			'[addGroupMember] Could not resolve agent ID from account. Human must sign in from maia at least once.',
+		)
+	}
+	// Pass account-like object so CoJSON stores account co-id (co_z), not agent ID (sealer_z)
+	const accountLike = { id: accountCoId, currentAgentID: () => agentId }
+	group.addMember(accountLike, role)
 }
 
 /**
