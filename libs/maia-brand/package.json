@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/brand",
-	"version": "26.0214.0822",
+	"version": "26.0214.0829",
 	"private": true,
 	"type": "module",
 	"main": "src/index.js",
