@@ -9,7 +9,7 @@ import {
 	getSchema,
 	resolveAccountCoIdsToProfileNames,
 	resolveGroupCoIdsToCapabilityNames,
-} from '@MaiaOS/core'
+} from '@MaiaOS/loader'
 import { renderDashboard, renderVibeViewer } from './dashboard.js'
 import { escapeHtml, getSyncStatusMessage, truncate } from './utils.js'
 

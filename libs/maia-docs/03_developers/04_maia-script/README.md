@@ -11,7 +11,7 @@ The `@MaiaOS/script` package provides the reusable execution components that pow
 - ✅ **Utilities** - Shared helpers for config loading, path resolution, etc.
 
 **What it isn't:**
-- ❌ **Not the kernel** - Boot process is in `@MaiaOS/core`
+- ❌ **Not the kernel** - Boot process is in `@MaiaOS/loader`
 - ❌ **Not tool definitions** - Tools are in `@MaiaOS/tools`
 - ❌ **Not schemas** - Schema validation is in `@MaiaOS/schemata`
 
@@ -141,13 +141,13 @@ const result = await evaluator.evaluate(
 // Returns: 'green'
 ```
 
-For full system usage, see the [maia-core Package](../02_maia-core/README.md).
+For full system usage, see the [maia-loader Package](../02_maia-loader/README.md).
 
 ---
 
 ## Related Documentation
 
-- [maia-core Package](../02_maia-core/README.md) - Boot process and orchestration
+- [maia-loader Package](../02_maia-loader/README.md) - Boot process and orchestration
 - [maia-operations Package](../06_maia-operations/README.md) - Shared database operations layer
 - [maia-schemata Package](../03_maia-schemata/README.md) - Schema validation
 - [maia-db Package](../05_maia-db/cojson.md) - Database backends

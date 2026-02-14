@@ -15,7 +15,7 @@ MaiaOS uses **passkey-based authentication** via WebAuthn PRF for self-sovereign
 ### 1. Basic Authentication Flow
 
 ```javascript
-import { createMaiaOS, signInWithPasskey } from '@MaiaOS/core';
+import { createMaiaOS, signInWithPasskey } from '@MaiaOS/loader';
 
 async function init() {
   // Step 1: Sign in with passkey (auto-detects register vs login)
@@ -36,7 +36,7 @@ async function init() {
 ### 2. Check Sign-In Status
 
 ```javascript
-import { isSignedIn, getCurrentAccount } from '@MaiaOS/core';
+import { isSignedIn, getCurrentAccount } from '@MaiaOS/loader';
 
 if (isSignedIn()) {
   const account = getCurrentAccount();
@@ -53,7 +53,7 @@ if (isSignedIn()) {
 ### 3. Sign Out
 
 ```javascript
-import { signOut } from '@MaiaOS/core';
+import { signOut } from '@MaiaOS/loader';
 
 function handleSignOut() {
   signOut(); // Clears metadata
@@ -175,7 +175,7 @@ console.log("Warnings:", report.warnings);
 ### Pattern 1: Simple Auth Wall
 
 ```javascript
-import { createMaiaOS, signInWithPasskey, isSignedIn } from '@MaiaOS/core';
+import { createMaiaOS, signInWithPasskey, isSignedIn } from '@MaiaOS/loader';
 
 async function init() {
   if (!isSignedIn()) {
@@ -268,7 +268,7 @@ document.getElementById("sign-in-btn")
 ### Detecting Support
 
 ```javascript
-import { isPRFSupported } from '@MaiaOS/core';
+import { isPRFSupported } from '@MaiaOS/loader';
 
 try {
   await isPRFSupported();
@@ -367,7 +367,7 @@ const account2 = await signInWithPasskey({ salt: "app2" });
 ### Debugging Storage
 
 ```javascript
-import { inspectStorage } from '@MaiaOS/core';
+import { inspectStorage } from '@MaiaOS/loader';
 
 // In browser console or code:
 const report = inspectStorage();

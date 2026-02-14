@@ -11,32 +11,11 @@ const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const repoRoot = join(__dirname, '../../..')
 const outputDir = join(__dirname, '../output')
 
-/** Stub postgres/pglite adapters for browser builds - avoids pulling in Node pg/tls/dns. */
-const stubServerStorageAdapters = {
-	name: 'stub-server-storage-adapters',
-	setup(builder) {
-		builder.onLoad({ filter: /adapters\/(postgres|pglite)\.js$/ }, (args) => {
-			if (args.path.includes('maia-storage')) {
-				const isPostgres = args.path.includes('postgres')
-				return {
-					contents: `export async function create${isPostgres ? 'Postgres' : 'PGlite'}Adapter() {
-  throw new Error('[STORAGE] ${isPostgres ? 'Postgres' : 'PGlite'} is server-only - use IndexedDB in browser');
-}
-export async function get${isPostgres ? 'Postgres' : 'PGlite'}Storage() {
-  throw new Error('[STORAGE] ${isPostgres ? 'Postgres' : 'PGlite'} is server-only - use IndexedDB in browser');
-}`,
-					loader: 'js',
-				}
-			}
-			return undefined
-		})
-	},
-}
+// maia-storage uses package.json "browser" exports for postgres/pglite → stubs in client builds
 
 mkdirSync(outputDir, { recursive: true })
 
 async function build(entry, outfile, target, opts = {}) {
-	const plugins = target === 'browser' ? [stubServerStorageAdapters] : []
 	const result = await Bun.build({
 		entrypoints: [join(repoRoot, entry)],
 		outdir: outputDir,
@@ -48,8 +27,10 @@ async function build(entry, outfile, target, opts = {}) {
 		define: { global: 'globalThis' },
 		loader: { '.maia': 'json' },
 		external: opts.external || [],
+		root: repoRoot, // Resolve from monorepo root so workspace node_modules is used
 		tsconfig: join(repoRoot, 'jsconfig.json'), // Resolve @MaiaOS/* paths for self-contained bundle
-		plugins: [...plugins, ...(opts.plugins || [])],
+		...(target === 'browser' && { conditions: ['browser'] }),
+		plugins: opts.plugins || [],
 		...opts,
 	})
 

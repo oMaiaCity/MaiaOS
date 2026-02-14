@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"baseUrl": ".",
 		"paths": {
-			"@MaiaOS/core": ["../../libs/maia-distros/output/maia-client.mjs"],
+			"@MaiaOS/loader": ["../../libs/maia-distros/output/maia-client.mjs"],
 			"@MaiaOS/vibes": ["../../libs/maia-distros/output/vibes.mjs"]
 		}
 	}

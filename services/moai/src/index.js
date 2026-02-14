@@ -22,15 +22,20 @@
  */
 
 import {
+	buildSeedConfig,
 	CoJSONBackend,
+	createWebSocketPeer,
 	DBEngine,
+	filterVibesForSeeding,
+	getAllSchemas,
+	getAllToolDefinitions,
+	getAllVibeRegistries,
 	loadOrCreateAgentAccount,
 	schemaMigration,
 	waitForStoreReady,
-} from '@MaiaOS/core'
+} from '@MaiaOS/loader'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createWebSocketPeer } from 'cojson-transport-ws'
 
 // Resolve db path relative to moai package root (not process.cwd) so persistence is stable across restarts
 const _moaiDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -189,8 +194,11 @@ async function handleProfile(worker) {
 				const c = await loadCoMap(backend, sparksId, { retries: 2 })
 				if (c?.get) {
 					sparks = {}
-					const keys = c.keys?.() ?? Object.keys(c)
-					for (const k of keys) sparks[k] = c.get(k)
+					const keys = typeof c.keys === 'function' ? Array.from(c.keys()) : Object.keys(c ?? {})
+					for (const k of keys) {
+						const val = c.get(k)
+						if (val && typeof val === 'string' && val.startsWith('co_z')) sparks[k] = val
+					}
 				}
 			} catch (e) {
 				sparks = { _error: e?.message ?? 'failed to load' }
@@ -429,19 +437,14 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 		// Genesis sync mode: seed only when PEER_FRESH_SEED=true (explicit, no co-value inference).
 		// Agent mode never seeds (minimal account, no vibes).
 		if (peerMode === 'sync' && peerFreshSeed) {
-			const { buildSeedConfig, getAllVibeRegistries, filterVibesForSeeding } = await import(
-				'@MaiaOS/vibes'
-			)
-			const { getAllToolDefinitions } = await import('@MaiaOS/tools')
-			const { getAllSchemas } = await import('@MaiaOS/schemata')
 			const allVibeRegistries = await getAllVibeRegistries()
-			const vibeRegistries = filterVibesForSeeding(allVibeRegistries, seedVibesConfig)
+			const vibeRegistries = await filterVibesForSeeding(allVibeRegistries, seedVibesConfig)
 			if (vibeRegistries.length === 0) {
 				throw new Error(
 					'[sync] Genesis sync requires vibes. getAllVibeRegistries returned none or SEED_VIBES filtered all.',
 				)
 			}
-			const { configs: mergedConfigs, data } = buildSeedConfig(vibeRegistries)
+			const { configs: mergedConfigs, data } = await buildSeedConfig(vibeRegistries)
 			const configsWithTools = { ...mergedConfigs, tool: getAllToolDefinitions() }
 			const schemas = getAllSchemas()
 			const seedResult = await dbEngine.execute({

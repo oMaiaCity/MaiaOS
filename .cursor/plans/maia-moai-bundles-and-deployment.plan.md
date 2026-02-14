@@ -52,7 +52,7 @@ All three are outputs of `@MaiaOS/maia-bundles`. Vibes source stays in `@MaiaOS/
 
 ### Current
 
-- `@MaiaOS/core` – source + browser bundle (`maia-client.es.js`)
+- `@MaiaOS/loader` – source + browser bundle (`maia-client.es.js`)
 - Moai – workspace deps (kernel, db, operations), full monorepo in Docker
 - Mixed concepts: "kernel" = package name + client bundle; no server bundle
 

@@ -33,27 +33,7 @@ if (syncResult.status !== 0) {
 	process.exit(1)
 }
 
-/** Stub postgres/pglite adapters for browser - avoids pulling in Node pg/tls/dns. */
-const stubServerStorageAdapters = {
-	name: 'stub-server-storage-adapters',
-	setup(builder) {
-		builder.onLoad({ filter: /adapters\/(postgres|pglite)\.js$/ }, (args) => {
-			if (args.path.includes('maia-storage')) {
-				const isPostgres = args.path.includes('postgres')
-				return {
-					contents: `export async function create${isPostgres ? 'Postgres' : 'PGlite'}Adapter() {
-  throw new Error('[STORAGE] ${isPostgres ? 'Postgres' : 'PGlite'} is server-only - use IndexedDB in browser');
-}
-export async function get${isPostgres ? 'Postgres' : 'PGlite'}Storage() {
-  throw new Error('[STORAGE] ${isPostgres ? 'Postgres' : 'PGlite'} is server-only - use IndexedDB in browser');
-}`,
-					loader: 'js',
-				}
-			}
-			return undefined
-		})
-	},
-}
+// maia-storage uses package.json "browser" exports for postgres/pglite → stubs in client builds
 
 const clientPath = join(serviceDir, '../../libs/maia-distros/output/maia-client.mjs')
 const vibesPath = join(serviceDir, '../../libs/maia-distros/output/vibes.mjs')
@@ -87,6 +67,7 @@ const result = await Bun.build({
 	outdir: distDir,
 	naming: { entry: 'main.[ext]' },
 	target: 'browser',
+	conditions: ['browser'],
 	format: 'esm',
 	minify: true,
 	sourcemap: false,
@@ -94,7 +75,6 @@ const result = await Bun.build({
 	banner,
 	tsconfig: join(serviceDir, 'jsconfig.build.json'),
 	loader: { '.maia': 'json' },
-	plugins: [stubServerStorageAdapters],
 })
 
 if (!result.success) {

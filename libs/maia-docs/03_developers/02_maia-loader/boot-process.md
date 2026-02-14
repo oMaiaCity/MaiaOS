@@ -15,7 +15,7 @@ The `MaiaOS.boot()` function initializes the entire MaiaOS operating system with
 ## Usage
 
 ```javascript
-import { MaiaOS } from '@MaiaOS/core';
+import { MaiaOS } from '@MaiaOS/loader';
 
 // Boot the operating system
 const os = await MaiaOS.boot({

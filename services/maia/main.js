@@ -10,14 +10,18 @@
  */
 
 import {
+	buildSeedConfig,
+	filterVibesForSeeding,
+	getAllSchemas,
+	getAllToolDefinitions,
+	getAllVibeRegistries,
 	isPRFSupported,
 	loadOrCreateAgentAccount,
 	MaiaOS,
 	signInWithPasskey,
 	signUpWithPasskey,
 	subscribeSyncState,
-} from '@MaiaOS/core'
-import { buildSeedConfig, filterVibesForSeeding, getAllVibeRegistries } from '@MaiaOS/vibes'
+} from '@MaiaOS/loader'
 import { renderApp } from './db-view.js'
 import { renderLandingPage } from './landing.js'
 import {
@@ -710,7 +714,7 @@ async function handleSeed(seedVibesConfig = null) {
 		const allVibeRegistries = await getAllVibeRegistries()
 
 		// Filter vibes based on config
-		const vibeRegistries = filterVibesForSeeding(allVibeRegistries, config)
+		const vibeRegistries = await filterVibesForSeeding(allVibeRegistries, config)
 
 		if (vibeRegistries.length === 0) {
 			if (allVibeRegistries.length === 0) {
@@ -729,9 +733,7 @@ async function handleSeed(seedVibesConfig = null) {
 			`🌱 Seeding ${vibeRegistries.length} vibe(s) based on config: ${JSON.stringify(config)}`,
 		)
 
-		const { configs: mergedConfigs, data } = buildSeedConfig(vibeRegistries)
-		const { getAllToolDefinitions } = await import('@MaiaOS/tools')
-		const { getAllSchemas } = await import('@MaiaOS/schemata')
+		const { configs: mergedConfigs, data } = await buildSeedConfig(vibeRegistries)
 		const configsWithTools = { ...mergedConfigs, tool: getAllToolDefinitions() }
 		const schemas = getAllSchemas()
 		await maia.db({

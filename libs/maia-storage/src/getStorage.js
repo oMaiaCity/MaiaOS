@@ -86,7 +86,7 @@ export async function getStorage(options = {}) {
 				throw new Error('[STORAGE] PEER_STORAGE=postgres requires PEER_DB_URL env var')
 			}
 			try {
-				const { getPostgresStorage } = await import('./adapters/postgres.js')
+				const { getPostgresStorage } = await import('@MaiaOS/storage/adapters/postgres.js')
 				return await getPostgresStorage(databaseUrl)
 			} catch (error) {
 				throw new Error(
@@ -103,7 +103,7 @@ export async function getStorage(options = {}) {
 			finalDbPath
 		) {
 			try {
-				const { getPGliteStorage } = await import('./adapters/pglite.js')
+				const { getPGliteStorage } = await import('@MaiaOS/storage/adapters/pglite.js')
 				return await getPGliteStorage(finalDbPath)
 			} catch (error) {
 				throw new Error(

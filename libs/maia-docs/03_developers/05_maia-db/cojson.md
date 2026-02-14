@@ -297,7 +297,7 @@ const profile = group.createMap({ name: "Alice" }, profileMeta);
 - **MaiaOS Extensions**:
   - `libs/maia-db/src/services/` - CoValue creation services
   - `libs/maia-db/src/utils/meta.js` - Schema metadata utilities
-  - `libs/maia-core/src/o.js` - Inspector with schema support
+  - `libs/maia-loader/src/o.js` - Inspector with schema support
 
 ---
 

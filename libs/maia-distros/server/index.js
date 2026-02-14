@@ -1,6 +1,6 @@
 /**
  * Moai server bundle entry.
- * Single entry point: @MaiaOS/core (like client).
+ * Single entry point: @MaiaOS/loader (like client).
  * Core re-exports db, operations, self internally.
  */
 export {
@@ -8,4 +8,4 @@ export {
 	DBEngine,
 	loadOrCreateAgentAccount,
 	waitForStoreReady,
-} from '@MaiaOS/core'
+} from '@MaiaOS/loader'
