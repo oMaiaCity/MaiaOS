@@ -2,7 +2,7 @@
 
 MaiaScript provides reusable execution components (engines, modules, utils) for MaiaOS.
 
-**Note:** The MaiaOS core (`MaiaOS.boot()`) is now exported from `@MaiaOS/core`. This package exports engines, modules, and utilities for reuse.
+**Note:** The MaiaOS core (`MaiaOS.boot()`) is now exported from `@MaiaOS/loader`. This package exports engines, modules, and utilities for reuse.
 
 ## Features
 
@@ -18,7 +18,7 @@ MaiaScript provides reusable execution components (engines, modules, utils) for 
 # In workspace package
 "dependencies": {
   "@MaiaOS/script": "workspace:*",
-  "@MaiaOS/core": "workspace:*"  # For MaiaOS.boot()
+  "@MaiaOS/loader": "workspace:*"  # For MaiaOS.boot()
 }
 ```
 
@@ -27,7 +27,7 @@ MaiaScript provides reusable execution components (engines, modules, utils) for 
 ### Using the Kernel
 
 ```javascript
-import { MaiaOS } from '@MaiaOS/core'
+import { MaiaOS } from '@MaiaOS/loader'
 
 // Boot MaiaOS
 const os = await MaiaOS.boot({
@@ -103,7 +103,7 @@ src/
 ```
 
 **Notes:**
-- Kernel (`MaiaOS.boot()`) has been moved to `@MaiaOS/core`
+- Kernel (`MaiaOS.boot()`) has been moved to `@MaiaOS/loader`
 - Tools have been extracted to `@MaiaOS/tools` package
 - Engines, modules, and utils remain here for reuse
 

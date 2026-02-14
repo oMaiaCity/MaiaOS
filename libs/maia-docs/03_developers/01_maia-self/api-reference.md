@@ -305,7 +305,7 @@ import {
   subscribeSyncState,
   requirePRFSupport 
 } from '@MaiaOS/self';
-import { createMaiaOS } from '@MaiaOS/core';
+import { createMaiaOS } from '@MaiaOS/loader';
 
 async function init() {
   // Check PRF support first

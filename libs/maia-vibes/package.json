@@ -5,11 +5,12 @@
 	"main": "src/index.js",
 	"exports": {
 		".": "./src/index.js",
+		"./seeding": "./src/seeding.js",
 		"./todos/loader": "./src/todos/loader.js",
 		"./todos/registry": "./src/todos/registry.js"
 	},
 	"dependencies": {
-		"@MaiaOS/core": "workspace:*"
+		"@MaiaOS/loader": "workspace:*"
 	},
 	"devDependencies": {},
 	"scripts": {

@@ -7,7 +7,7 @@
  * In-memory storage is not allowed.
  */
 
-import { loadOrCreateAgentAccount } from '@MaiaOS/core'
+import { loadOrCreateAgentAccount } from '@MaiaOS/loader'
 import { createWebSocketPeer } from 'cojson-transport-ws'
 
 /**

@@ -170,7 +170,7 @@ Structure developer docs by package:
 ```
 03_developers/
 ├── README.md (overview)
-├── maia-core/
+├── maia-loader/
 │   ├── README.md
 │   ├── architecture.md
 │   └── api-reference.md
@@ -198,11 +198,11 @@ Structure developer docs by package:
 
 **Example:**
 ```markdown
-# maia-core: Core System Services
+# maia-loader: Core System Services
 
 ## Overview
 
-The `maia-core` package provides the foundational services that power MaiaOS. Think of it as the operating system kernel - it doesn't do much on its own, but everything else depends on it.
+The `maia-loader` package provides the foundational services that power MaiaOS. Think of it as the operating system kernel - it doesn't do much on its own, but everything else depends on it.
 
 ## Architecture
 
@@ -212,7 +212,7 @@ The core system is organized into:
 - **Engines**: Processing systems (validation, transformation)
 - **Utils**: Shared utilities
 
-See `libs/maia-core/src/` for implementation.
+See `libs/maia-loader/src/` for implementation.
 ```
 
 ### Target Group 3: LLM Agents (`libs/maia-docs/04_agents/`)
@@ -471,7 +471,7 @@ maia-script/
 - [Main README](./README.md) - Package overview
 - [engines.md](./engines.md) - Engine details
 - [expressions.md](./expressions.md) - Expression language
-- [maia-core Package](../02_maia-core/README.md) - Boot process
+- [maia-loader Package](../02_maia-loader/README.md) - Boot process
 ```
 
 ### File Naming Conventions

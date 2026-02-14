@@ -6,56 +6,9 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy-moai:
-    # Deploy on merge (not [release] push), or manual trigger
-    if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && !startsWith(github.event.head_commit.message, '[release] '))
-    name: Deploy moai
-    runs-on: ubuntu-latest
-    environment:
-      name: Next
-      url: https://moai.next.maia.city/health
-    env:
-      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Fly.io CLI
-        uses: superfly/flyctl-actions/setup-flyctl@master
-        with:
-          version: latest
-
-      - name: Deploy moai
-        run: ./services/moai/deploy.sh
-
-  deploy-maia:
-    # Deploy on merge (not [release] push), or manual trigger
-    if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && !startsWith(github.event.head_commit.message, '[release] '))
-    name: Deploy maia
-    runs-on: ubuntu-latest
-    environment:
-      name: Next
-      url: https://next.maia.city
-    env:
-      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Setup Fly.io CLI
-        uses: superfly/flyctl-actions/setup-flyctl@master
-        with:
-          version: latest
-
-      - name: Deploy maia
-        run: ./services/maia/deploy.sh
-
   version-tag:
-    # Run only after both deploys succeed; skip on our own [release] push
-    needs: [deploy-maia, deploy-moai]
-    if: github.event.head_commit == null || !startsWith(github.event.head_commit.message, '[release] ')
+    # Release first (merge → version-tag pushes [release]); skip on our own [release] push
+    if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && !startsWith(github.event.head_commit.message, '[release] '))
     name: Version Tag & Release
     runs-on: ubuntu-latest
     permissions:
@@ -94,3 +47,49 @@ jobs:
           gh release create "v${{ steps.version.outputs.version }}" \
             --title "v${{ steps.version.outputs.version }}" \
             --notes "Auto-generated release from merge to next"
+
+  deploy-moai:
+    # Deploy [release] commit. version-tag pushes → new run triggers → deploy runs (tag = deployed).
+    if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && startsWith(github.event.head_commit.message, '[release] '))
+    name: Deploy moai
+    runs-on: ubuntu-latest
+    environment:
+      name: Next
+      url: https://moai.next.maia.city/health
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Fly.io CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+        with:
+          version: latest
+
+      - name: Deploy moai
+        run: ./services/moai/deploy.sh
+
+  deploy-maia:
+    # Deploy [release] commit. version-tag pushes → new run triggers → deploy runs (tag = deployed).
+    if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && startsWith(github.event.head_commit.message, '[release] '))
+    name: Deploy maia
+    runs-on: ubuntu-latest
+    environment:
+      name: Next
+      url: https://next.maia.city
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Fly.io CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+        with:
+          version: latest
+
+      - name: Deploy maia
+        run: ./services/maia/deploy.sh

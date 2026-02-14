@@ -27,9 +27,7 @@ services/maia/
 
 ## Dependencies
 
-- `@MaiaOS/core` - Core functionality (Jazz, auth)
-- `@MaiaOS/db` - Database utilities
-- `@MaiaOS/script` - MaiaScript engine (Actor system, DSL)
+- `@MaiaOS/maia-distros` only. All bundling happens in maia-distros; maia uses pre-built bundles (maia-client.mjs, vibes.mjs) via jsconfig path overrides.
 
 ## Development
 
@@ -74,9 +72,9 @@ async function loadVibe(vibeKey) {
 
 ### Clean Import Pattern
 
-**maia-core exports:**
+**maia-loader exports:**
 ```javascript
-// libs/maia-core/src/index.js
+// libs/maia-loader/src/index.js
 export { MaiaOS } from "./kernel.js";
 ```
 
@@ -89,7 +87,7 @@ export { ActorEngine, ViewEngine, StyleEngine, ... } from "./engines/...";
 **maia imports:**
 ```javascript
 // services/maia/main.js
-import { MaiaOS } from '@MaiaOS/core';
+import { MaiaOS } from '@MaiaOS/loader';
 const os = await MaiaOS.boot({ node, account });
 ```
 

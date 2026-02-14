@@ -33,6 +33,10 @@ The sync service consolidates WebSocket sync, agent API, and LLM proxy in one pr
 - `PEER_DB_PATH` - Default: `./local-sync.db` (dev), `/data/sync.db` (prod)
 - `PEER_MOAI` - Required when `PEER_MODE=agent` (sync server URL). Ignored when `sync`.
 
+## Dependencies
+
+- `@MaiaOS/maia-distros` + `@MaiaOS/loader`. Moai imports only from loader; loader re-exports schemata, tools, vibes, cojson-transport-ws. maia-distros has no app logic—only bundling. Moai owns the logic (src/index.js); distros bundles it to moai-server.mjs. Prod runs the bundle; dev runs source.
+
 ## Development
 
 ```bash
@@ -52,7 +56,7 @@ bun run dev:moai
 Clients connect via kernel bundle, which automatically connects to the sync server:
 
 ```javascript
-import { signUpWithPasskey, setupSyncPeers, subscribeSyncState } from '@MaiaOS/core'
+import { signUpWithPasskey, setupSyncPeers, subscribeSyncState } from '@MaiaOS/loader'
 
 // Sync server is used automatically - no API key needed
 const { node, account } = await signUpWithPasskey()

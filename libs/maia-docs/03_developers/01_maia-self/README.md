@@ -212,7 +212,7 @@ const { accountID, agentSecret, node, account } = await signInWithPasskey({
 
 ## Related Documentation
 
-- [maia-core Package](../02_maia-core/README.md) - Boot process and orchestration
+- [maia-loader Package](../02_maia-loader/README.md) - Boot process and orchestration
 - [Security Improvements](../architecture/security-improvements.md) - Security analysis
 - [Auth Secrets](../architecture/auth-secrets.md) - Secret hierarchy details
 - [CoJSON Integration](../architecture/cojson.md) - Database layer

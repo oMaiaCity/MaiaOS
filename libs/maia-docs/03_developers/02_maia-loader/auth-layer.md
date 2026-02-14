@@ -15,7 +15,7 @@ The `createMaiaOS` function provides the identity and authentication layer of Ma
 ## Usage
 
 ```javascript
-import { createMaiaOS } from '@MaiaOS/core';
+import { createMaiaOS } from '@MaiaOS/loader';
 import { signInWithPasskey } from '@MaiaOS/self';
 
 // Step 1: Authenticate (get your ID card)

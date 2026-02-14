@@ -4,7 +4,15 @@
 	"type": "module",
 	"main": "./src/index.js",
 	"exports": {
-		".": "./src/index.js"
+		".": "./src/index.js",
+		"./adapters/postgres.js": {
+			"browser": "./src/adapters/postgres-stub.js",
+			"default": "./src/adapters/postgres.js"
+		},
+		"./adapters/pglite.js": {
+			"browser": "./src/adapters/pglite-stub.js",
+			"default": "./src/adapters/pglite.js"
+		}
 	},
 	"dependencies": {
 		"@electric-sql/pglite": "latest",

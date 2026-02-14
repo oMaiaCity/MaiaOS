@@ -1405,7 +1405,7 @@ User Authenticated
 - `src/utils.js` - Encoding, validation, byte manipulation
 
 **Integration:**
-- `libs/maia-core/src/o.js` - MaiaOS kernel (auth API)
+- `libs/maia-loader/src/o.js` - MaiaOS kernel (auth API)
 - `services/maia-city/main.js` - Inspector UI (sign in/register)
 
 **Documentation:**
@@ -1488,7 +1488,7 @@ User Authenticated
 - `libs/maia-self/src/feature-detection.js` - Strict PRF requirement enforcement
 - `libs/maia-self/src/storage.js` - IndexedDB helper (CoValue data only)
 - `libs/maia-self/src/utils.js` - Byte encoding, validation utilities
-- `libs/maia-core/src/auth.js` - MaiaOS kernel (auth API integration)
+- `libs/maia-loader/src/auth.js` - MaiaOS kernel (auth API integration)
 - `services/maia-city/main.js` - Inspector UI (sign in/register flow)
 
 **Related Documentation:**

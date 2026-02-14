@@ -1,7 +1,7 @@
 {
 	"compilerOptions": {
 		"paths": {
-			"@MaiaOS/core": ["./libs/maia-core/src/index.js"],
+			"@MaiaOS/loader": ["./libs/maia-loader/src/index.js"],
 			"@MaiaOS/db": ["./libs/maia-db/src/index.js"],
 			"@MaiaOS/self": ["./libs/maia-self/src/index.js"],
 			"@MaiaOS/script": ["./libs/maia-script/src"],
