@@ -3,7 +3,7 @@
  * Loads the Sparks vibe registry
  */
 
-import { MaiaOS } from '@MaiaOS/core'
+import { MaiaOS } from '@MaiaOS/loader'
 import { SparksVibeRegistry } from './registry.js'
 
 /**

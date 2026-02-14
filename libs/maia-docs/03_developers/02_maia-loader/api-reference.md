@@ -1,6 +1,23 @@
 # API Reference
 
-Complete API reference for `@MaiaOS/core` package.
+Complete API reference for `@MaiaOS/loader` package.
+
+---
+
+## Re-exports (single-entry pattern)
+
+Services (maia, moai) import only from `@MaiaOS/loader`. Loader re-exports everything needed:
+
+| Export | Source | Use |
+|--------|--------|-----|
+| `getAllSchemas` | `@MaiaOS/schemata` | Seed/bootstrap (canonical schema definitions) |
+| `getAllToolDefinitions` | `@MaiaOS/tools` | Seed/bootstrap (tool definitions) |
+| `getAllVibeRegistries` | `@MaiaOS/vibes` (async) | Seed/bootstrap (vibe registries) |
+| `buildSeedConfig` | `@MaiaOS/vibes` (async) | Seed config from vibes |
+| `filterVibesForSeeding` | `@MaiaOS/vibes` (async) | Filter vibes by config |
+| `createWebSocketPeer` | `cojson-transport-ws` | WebSocket sync peers |
+
+Vibes helpers use dynamic import internally to avoid loader↔vibes circular dependency—callers use `await`.
 
 ---
 

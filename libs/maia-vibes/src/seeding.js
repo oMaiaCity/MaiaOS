@@ -1,27 +1,14 @@
 /**
- * MaiaOS Vibes Package
+ * Vibes Seeding API - Cycle-free entry for moai genesis
  *
- * This package contains vibe configurations (.maia files) for MaiaOS applications.
- *
- * Exports:
- * - @MaiaOS/vibes/todos/loader - Loader for the Todos vibe
- * - @MaiaOS/vibes/todos/registry - Registry for Todos vibe configs
+ * No dependency on @MaiaOS/loader - safe for static import in bundled moai-server.mjs.
+ * Used by loader for getAllVibeRegistries, buildSeedConfig, filterVibesForSeeding.
  */
-
-export { MaiaOS } from '@MaiaOS/loader'
-export { DbVibeRegistry, loadDbVibe } from './db/loader.js'
-export { DbVibeRegistry as DbRegistry } from './db/registry.js'
-export { loadSparksVibe, SparksVibeRegistry } from './sparks/loader.js'
-export { SparksVibeRegistry as SparksRegistry } from './sparks/registry.js'
-// Re-export todos loader and registry for convenience
-export { loadTodosVibe, TodosVibeRegistry } from './todos/loader.js'
-export { TodosVibeRegistry as TodosRegistry } from './todos/registry.js'
 
 import { ChatVibeRegistry } from './chat/registry.js'
 import { CreatorVibeRegistry } from './creator/registry.js'
 import { DbVibeRegistry } from './db/registry.js'
 import { SparksVibeRegistry } from './sparks/registry.js'
-// Static imports - no dynamic import() so bundle works in production (avoids 404→index.html→text/html MIME error)
 import { TodosVibeRegistry } from './todos/registry.js'
 
 const ALL_REGISTRIES = [
@@ -32,20 +19,7 @@ const ALL_REGISTRIES = [
 	CreatorVibeRegistry,
 ]
 
-/**
- * Return all vibe registries (statically imported - no runtime fetch).
- * @returns {Promise<Array>} Array of vibe registry objects
- */
-export async function getAllVibeRegistries() {
-	return ALL_REGISTRIES.filter((R) => R?.vibe)
-}
-
-/**
- * Extract vibe key from vibe object
- * @param {Object} vibe - Vibe object with $id or name property
- * @returns {string} Vibe key (e.g., "todos" from "@maia/vibe/todos")
- */
-export function getVibeKey(vibe) {
+function getVibeKey(vibe) {
 	if (!vibe) return null
 	const originalVibeId = vibe.$id || ''
 	if (originalVibeId.startsWith('@maia/vibe/')) {
@@ -56,13 +30,7 @@ export function getVibeKey(vibe) {
 
 const VIBE_SCHEMA = '@maia/schema/vibe'
 
-/**
- * Ensure vibe manifest has required fields for seeding ($schema, $id).
- * Call before passing vibes to seed. Throws if vibe cannot be normalized.
- * @param {Object} vibe - Raw vibe from registry
- * @returns {Object} Normalized vibe with $schema and $id
- */
-export function normalizeVibeForSeeding(vibe) {
+function normalizeVibeForSeeding(vibe) {
 	if (!vibe || typeof vibe !== 'object') {
 		throw new Error('[vibes] Vibe must be a non-null object')
 	}
@@ -77,14 +45,10 @@ export function normalizeVibeForSeeding(vibe) {
 	return normalized
 }
 
-/**
- * Build merged seed config from vibe registries.
- * Used by genesisAccountSeed (moai sync, handleSeed).
- * Caller adds tool + schemas before dbEngine.execute.
- *
- * @param {Array} vibeRegistries - Filtered vibe registries (use filterVibesForSeeding first)
- * @returns {{ configs: Object, data: Object }}
- */
+export async function getAllVibeRegistries() {
+	return ALL_REGISTRIES.filter((R) => R?.vibe)
+}
+
 export function buildSeedConfig(vibeRegistries) {
 	const validRegistries = vibeRegistries.filter((r) => r?.vibe && typeof r.vibe === 'object')
 	if (vibeRegistries.length > 0 && validRegistries.length === 0) {
@@ -114,28 +78,13 @@ export function buildSeedConfig(vibeRegistries) {
 	return { configs: merged, data: merged.data || {} }
 }
 
-/**
- * Filter vibe registries based on seeding configuration
- *
- * @param {Array} vibeRegistries - Array of vibe registry objects
- * @param {string|Array|null} config - Seeding configuration:
- *   - `null` or `undefined` or `[]` = no vibes (default)
- *   - `"all"` = all vibes
- *   - `["todos", "maia"]` = specific vibes by key
- * @returns {Array} Filtered array of vibe registries
- */
 export function filterVibesForSeeding(vibeRegistries, config = null) {
-	// Default: no vibes
 	if (config === null || config === undefined || (Array.isArray(config) && config.length === 0)) {
 		return []
 	}
-
-	// "all" = all vibes
 	if (config === 'all') {
 		return vibeRegistries
 	}
-
-	// Array of specific vibe keys
 	if (Array.isArray(config)) {
 		const configKeys = config.map((k) => k.toLowerCase().trim())
 		return vibeRegistries.filter((registry) => {

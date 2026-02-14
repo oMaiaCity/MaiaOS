@@ -108,7 +108,7 @@ const unsubscribe = subscribeSyncState((state) => {
 unsubscribe();
 ```
 
-**Note:** These functions are also available via `@MaiaOS/core` bundle for convenience.
+**Note:** These functions are also available via `@MaiaOS/loader` bundle for convenience.
 
 ## Dependencies
 

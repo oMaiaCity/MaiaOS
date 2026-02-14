@@ -199,7 +199,7 @@ The vibe root actor orchestrates the application and loads UI actors as children
   <div id="app-container"></div>
   
   <script type="module">
-    import { MaiaOS } from '@MaiaOS/core';
+    import { MaiaOS } from '@MaiaOS/loader';
     
     async function boot() {
       // Boot MaiaOS

@@ -91,7 +91,7 @@ flowchart TB
 
 ### Aliases Required (all configs)
 
-- `@MaiaOS/core`, `@MaiaOS/db`, `@MaiaOS/self`, `@MaiaOS/script`, `@MaiaOS/schemata`, `@MaiaOS/operations/*`, `@MaiaOS/tools`, `@MaiaOS/vibes`
+- `@MaiaOS/loader`, `@MaiaOS/db`, `@MaiaOS/self`, `@MaiaOS/script`, `@MaiaOS/schemata`, `@MaiaOS/operations/*`, `@MaiaOS/tools`, `@MaiaOS/vibes`
 - `cojson`, `cojson/crypto/WasmCrypto`, `cojson-storage-indexeddb`, `cojson-transport-ws`, `buffer`
 
 ### Special Handling

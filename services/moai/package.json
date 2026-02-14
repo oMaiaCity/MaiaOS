@@ -5,12 +5,11 @@
 	"private": true,
 	"scripts": {
 		"dev": "bun run --env-file=../../.env src/index.js",
-		"start": "bun run --env-file=../../.env src/index.js",
+		"start": "bun run --env-file=../../.env ../../libs/maia-distros/output/moai-server.mjs",
 		"deploy": "./deploy.sh"
 	},
 	"dependencies": {
-		"@MaiaOS/core": "workspace:*",
-		"@MaiaOS/vibes": "workspace:*",
-		"cojson-transport-ws": "0.20.7"
+		"@MaiaOS/loader": "workspace:*",
+		"@MaiaOS/maia-distros": "workspace:*"
 	}
 }
