@@ -11,17 +11,7 @@ import {
 	resolveGroupCoIdsToCapabilityNames,
 } from '@MaiaOS/core'
 import { renderDashboard, renderVibeViewer } from './dashboard.js'
-import { getSyncStatusMessage, truncate } from './utils.js'
-
-// Helper function to escape HTML
-function escapeHtml(text) {
-	if (text === null || text === undefined) {
-		return ''
-	}
-	const div = document.createElement('div')
-	div.textContent = String(text)
-	return div.innerHTML
-}
+import { escapeHtml, getSyncStatusMessage, truncate } from './utils.js'
 
 export async function renderApp(
 	maia,

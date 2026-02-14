@@ -1886,6 +1886,56 @@ pre {
 	}
 }
 
+@keyframes pulse {
+	0%,
+	100% {
+		opacity: 1;
+	}
+	50% {
+		opacity: 0.5;
+	}
+}
+
+.loading-connecting-overlay {
+	position: fixed;
+	inset: 0;
+	background: rgba(0, 0, 0, 0.85);
+	backdrop-filter: blur(10px);
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-direction: column;
+	gap: 2rem;
+	z-index: 1000;
+	text-align: center;
+	color: white;
+}
+
+.loading-connecting-overlay .loading-spinner {
+	width: 64px;
+	height: 64px;
+	border: 4px solid rgba(255, 255, 255, 0.2);
+	border-top-color: rgba(255, 255, 255, 0.8);
+	animation: spin 1s linear infinite;
+}
+
+.loading-connecting-sync {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+	padding: 0.5rem 1rem;
+	background: rgba(255, 255, 255, 0.1);
+	border-radius: 8px;
+	font-size: 0.875rem;
+	margin-top: 1rem;
+}
+
+.loading-connecting-indicator {
+	width: 8px;
+	height: 8px;
+	border-radius: 50%;
+}
+
 .loading-hint {
 	font-size: 0.875rem;
 	color: var(--slate-500);
