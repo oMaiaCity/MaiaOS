@@ -60,7 +60,9 @@ ${accountMode === 'agent' ? '# PEER_MOAI=localhost:4201  # Set to sync server UR
 
 		log('✅ Credentials generated successfully!\n')
 
-		if (shouldWrite) {
+		if (!shouldWrite) {
+			console.log(envContent.trim())
+		} else if (shouldWrite) {
 			log('📋 Writing credentials to .env file...\n')
 			const envPath = join(rootDir, '.env')
 			let existingContent = existsSync(envPath) ? readFileSync(envPath, 'utf-8') : ''
