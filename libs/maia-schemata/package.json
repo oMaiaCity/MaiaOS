@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/schemata",
-	"version": "26.0214.1304",
+	"version": "26.0214.1328",
 	"type": "module",
 	"main": "src/index.js",
 	"exports": {
