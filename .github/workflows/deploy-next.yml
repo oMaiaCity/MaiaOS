@@ -7,8 +7,8 @@ on:
 
 jobs:
   deploy-moai:
-    # Deploy only on release commits (version-tag push), or manual trigger
-    if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && startsWith(github.event.head_commit.message, '[release] '))
+    # Deploy on merge (not [release] push), or manual trigger
+    if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && !startsWith(github.event.head_commit.message, '[release] '))
     name: Deploy moai
     runs-on: ubuntu-latest
     environment:
@@ -28,8 +28,8 @@ jobs:
         run: ./services/moai/deploy.sh
 
   deploy-maia:
-    # Deploy only on release commits (version-tag push), or manual trigger
-    if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && startsWith(github.event.head_commit.message, '[release] '))
+    # Deploy on merge (not [release] push), or manual trigger
+    if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && !startsWith(github.event.head_commit.message, '[release] '))
     name: Deploy maia
     runs-on: ubuntu-latest
     environment:
@@ -51,3 +51,46 @@ jobs:
 
       - name: Deploy maia
         run: ./services/maia/deploy.sh
+
+  version-tag:
+    # Run only after both deploys succeed; skip on our own [release] push
+    needs: [deploy-maia, deploy-moai]
+    if: github.event.head_commit == null || !startsWith(github.event.head_commit.message, '[release] ')
+    name: Version Tag & Release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Generate version
+        id: version
+        run: |
+          VERSION=$(date -u +%y.%m%d.%H%M)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Generated version: $VERSION"
+
+      - name: Sync version across all packages
+        run: bun run version:sync ${{ steps.version.outputs.version }}
+
+      - name: Commit and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add 'services/*/package.json' 'libs/*/package.json'
+          git diff --staged --quiet || git commit -m "[release] ${{ steps.version.outputs.version }}"
+          git tag -a "v${{ steps.version.outputs.version }}" -m "Release ${{ steps.version.outputs.version }}"
+
+      - name: Push and create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git push origin next
+          git push origin "v${{ steps.version.outputs.version }}"
+          gh release create "v${{ steps.version.outputs.version }}" \
+            --title "v${{ steps.version.outputs.version }}" \
+            --notes "Auto-generated release from merge to next"
