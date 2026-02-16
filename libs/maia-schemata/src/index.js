@@ -54,6 +54,7 @@ import selectNavMessageSchema from './message/SELECT_NAV.schema.json'
 import selectRowMessageSchema from './message/SELECT_ROW.schema.json'
 import selectSparkMessageSchema from './message/SELECT_SPARK.schema.json'
 import sendMessageMessageSchema from './message/SEND_MESSAGE.schema.json'
+import statusUpdateMessageSchema from './message/STATUS_UPDATE.schema.json'
 import successMessageSchema from './message/SUCCESS.schema.json'
 import switchViewMessageSchema from './message/SWITCH_VIEW.schema.json'
 import toggleButtonMessageSchema from './message/TOGGLE_BUTTON.schema.json'
@@ -131,6 +132,7 @@ const SCHEMAS = {
 	'message/SUCCESS': successMessageSchema,
 	'message/ERROR': errorMessageSchema,
 	'message/SEND_MESSAGE': sendMessageMessageSchema,
+	'message/STATUS_UPDATE': statusUpdateMessageSchema,
 	'message/RETRY': retryMessageSchema,
 	'message/DISMISS': dismissMessageSchema,
 	'message/SELECT_NAV': selectNavMessageSchema,

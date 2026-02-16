@@ -2138,28 +2138,45 @@ async function seedConfigs(
 		// Create the appropriate CoJSON type via createCoValueForSpark (3-step: group, extend, leave)
 		const ctx = { node, account, guardian: maiaGroup }
 		const data = cotype === 'colist' ? [] : cotype === 'costream' ? undefined : configWithoutId
-		const { coValue } = await createCoValueForSpark(ctx, null, {
-			schema: schemaCoId,
-			cotype,
-			data,
-			dbEngine: backend?.dbEngine,
-		})
-		const actualCoId = coValue.id
-
-		// Update instanceCoIdMap with actual co-id (CoJSON generates random co-ids, so they won't match human-readable IDs)
-		if ($id) {
-			instanceCoIdMap.set(path, actualCoId)
-			instanceCoIdMap.set($id, actualCoId)
+		let schemaKeyForError = null
+		for (const [k, cid] of schemaCoIdMap.entries()) {
+			if (cid === schemaCoId) {
+				schemaKeyForError = k
+				break
+			}
 		}
+		try {
+			const { coValue } = await createCoValueForSpark(ctx, null, {
+				schema: schemaCoId,
+				cotype,
+				data,
+				dbEngine: backend?.dbEngine,
+			})
+			const actualCoId = coValue.id
 
-		return {
-			type: configType,
-			path,
-			coId: actualCoId,
-			expectedCoId: $id || undefined, // Use $id from config (line 899), or undefined if not present
-			coMapId: actualCoId,
-			coMap: coValue, // Store the actual CoValue reference (CoMap, CoList, or CoStream)
-			cotype: cotype, // Store the type for reference
+			// Update instanceCoIdMap with actual co-id (CoJSON generates random co-ids, so they won't match human-readable IDs)
+			if ($id) {
+				instanceCoIdMap.set(path, actualCoId)
+				instanceCoIdMap.set($id, actualCoId)
+			}
+
+			return {
+				type: configType,
+				path,
+				coId: actualCoId,
+				expectedCoId: $id || undefined, // Use $id from config (line 899), or undefined if not present
+				coMapId: actualCoId,
+				coMap: coValue, // Store the actual CoValue reference (CoMap, CoList, or CoStream)
+				cotype: cotype, // Store the type for reference
+			}
+		} catch (err) {
+			const ctx = schemaKeyForError || schemaCoId
+			const dataPreview =
+				typeof data === 'object' && data !== null ? JSON.stringify(data).slice(0, 200) : String(data)
+			throw new Error(
+				`[CoJSONSeed] Failed to create ${configType}:${path} (schema: ${ctx}): ${err?.message ?? err}\nData preview: ${dataPreview}...`,
+				{ cause: err },
+			)
 		}
 	}
 
