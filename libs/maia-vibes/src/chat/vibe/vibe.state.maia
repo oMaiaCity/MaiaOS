@@ -224,6 +224,18 @@
 				}
 			},
 			"on": {
+				"UPDATE_INPUT": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"error": null,
+								"hasError": false,
+								"inputText": "$$value"
+							}
+						}
+					]
+				},
 				"SEND_MESSAGE": {
 					"target": "chatting",
 					"actions": [

@@ -308,12 +308,23 @@ export class ActorEngine {
 					schema: inboxSchemaCoId,
 					key: actorConfig.inbox,
 				})
+				let debounceTimeout = null
 				const inboxUnsub = store.subscribe((updatedCostream) => {
-					if (this.actors.has(actor.id) && updatedCostream?.items) {
+					if (!this.actors.has(actor.id) || !updatedCostream?.items) return
+					if (debounceTimeout) clearTimeout(debounceTimeout)
+					debounceTimeout = setTimeout(() => {
+						debounceTimeout = null
 						this.processMessages(actor.id)
-					}
+					}, 50)
 				})
-				if (actor._configUnsubscribes) actor._configUnsubscribes.push(inboxUnsub)
+				const wrappedUnsub = () => {
+					if (debounceTimeout) {
+						clearTimeout(debounceTimeout)
+						debounceTimeout = null
+					}
+					inboxUnsub()
+				}
+				if (actor._configUnsubscribes) actor._configUnsubscribes.push(wrappedUnsub)
 			} catch (_error) {}
 		}
 	}
@@ -879,10 +890,7 @@ export class ActorEngine {
 					processed: false,
 				}
 				await createAndPushMessage(this.dbEngine, actor.inboxCoId, messageData)
-				// Schedule message processing
-				setTimeout(() => {
-					this.processMessages(actorId).catch((_err) => {})
-				}, 0)
+				// Subscription fires when inbox store updates - single source of truth (avoids double processMessages)
 			} catch (_error) {}
 		}
 	}
@@ -913,13 +921,7 @@ export class ActorEngine {
 				target: actorId,
 				processed: false,
 			})
-			// Defer message processing to next tick to avoid blocking current processing
-			// This ensures the current processMessages call completes before processing the new event
-			setTimeout(() => {
-				this.processMessages(actorId).catch((err) => {
-					console.error('[ActorEngine] processMessages failed:', actorId, err)
-				})
-			}, 0)
+			// Inbox subscription fires when store updates - single trigger (avoids double processMessages with subscription)
 		} catch (error) {
 			console.error(
 				'[ActorEngine] sendInternalEvent: createAndPushMessage failed:',
@@ -1013,6 +1015,7 @@ export class ActorEngine {
 		const actor = this.actors.get(actorId)
 		if (!actor || !actor.inboxCoId || !this.dbEngine || actor._isProcessing) return
 		actor._isProcessing = true
+		let hadUnhandledMessages = false
 		try {
 			const result = await this.dbEngine.execute({
 				op: 'processInbox',
@@ -1090,17 +1093,26 @@ export class ActorEngine {
 					}
 
 					// Pass plain object to avoid reactive proxy issues; state engine expects clean JSON
-					const payloadPlain =
-						payload && typeof payload === 'object' ? JSON.parse(JSON.stringify(payload)) : payload || {}
+					const payloadPlain = {
+						...(payload && typeof payload === 'object'
+							? JSON.parse(JSON.stringify(payload))
+							: payload || {}),
+						...(message._coId ? { idempotencyKey: message._coId } : {}),
+					}
 
-					if (actor.machine && this.stateEngine) {
-						await this.stateEngine.send(actor.machine.id, message.type, payloadPlain)
-					} else {
-						console.warn('[ActorEngine] processMessages: no machine or stateEngine', {
-							actorId,
-							hasMachine: !!actor.machine,
-							hasStateEngine: !!this.stateEngine,
-						})
+					if (!actor.machine || !this.stateEngine) return
+					const handled = await this.stateEngine.send(actor.machine.id, message.type, payloadPlain)
+					if (handled && message._coId) {
+						try {
+							await this.dbEngine.execute({
+								op: 'update',
+								id: message._coId,
+								data: { processed: true },
+							})
+						} catch (_markError) {}
+					}
+					if (!handled) {
+						hadUnhandledMessages = true
 					}
 				} catch (error) {
 					console.error('[ActorEngine] processMessages: message handling failed', {
@@ -1114,6 +1126,18 @@ export class ActorEngine {
 			console.error('[ActorEngine] processMessages: inbox processing failed', { actorId, error })
 		} finally {
 			actor._isProcessing = false
+			// Retry when: (1) unhandled messages (no transition), or (2) more messages arrived during our run
+			// Root cause: second SEND_MESSAGE can arrive while we're awaiting LLM; subscription fires but guard blocks.
+			// Drain inbox so messages that arrived during processing get handled.
+			const shouldRetry =
+				hadUnhandledMessages ||
+				(await this.dbEngine
+					.execute({ op: 'processInbox', actorId, inboxCoId: actor.inboxCoId })
+					.then((r) => (r.messages?.length ?? 0) > 0)
+					.catch(() => false))
+			if (shouldRetry) {
+				setTimeout(() => this.processMessages(actorId), 0)
+			}
 		}
 	}
 }

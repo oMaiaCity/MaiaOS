@@ -177,7 +177,7 @@ export function setupSyncPeers(syncDomain = null) {
 		}, 10000)
 	}
 
-	// Enable the peer immediately
+	// Enable the peer immediately (startup orchestration ensures server readiness in dev; see scripts/dev.js)
 	wsPeer.enable()
 
 	return {

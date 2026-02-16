@@ -556,13 +556,18 @@ export class ViewEngine {
 			return
 		}
 
+		// Prevent keydown Enter from also triggering button click (double CREATE_BUTTON, double chat sends)
+		// Fixes double processing in Todos, Chat, and any input+button form
+		const isUpdateInputType = eventName === 'UPDATE_INPUT' || eventName === 'UPDATE_AGENT_INPUT'
+		if (e.type === 'keydown' && e.key === 'Enter' && !isUpdateInputType) {
+			e.preventDefault()
+		}
+
 		if (eventName === 'UPDATE_INPUT' && e.type === 'input') {
 			return
 		}
 
 		// Message types that sync context from DOM - do NOT clear inputs (would overwrite user typing)
-		const isUpdateInputType = eventName === 'UPDATE_INPUT' || eventName === 'UPDATE_AGENT_INPUT'
-
 		if (this.actorEngine) {
 			const actor = this.actorEngine.getActor(actorId)
 			if (actor?.machine) {

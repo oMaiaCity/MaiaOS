@@ -91,36 +91,7 @@ async function loadSparksFromAccount(maia) {
 }
 
 /**
- * Check if a vibe has browser runtime in spark.os.runtimes (no fallback - explicit assignment required)
- * @param {Object} maia - MaiaOS instance
- * @param {Object} runtimesData - spark.os.runtimes CoMap content (key -> colist co-id)
- * @param {string} vibeCoId - Vibe co-id
- * @returns {Promise<boolean>}
- */
-async function vibeHasBrowserRuntime(maia, runtimesData, vibeCoId) {
-	if (!maia?.db || !runtimesData) return false
-	const assignmentsColistId = runtimesData[vibeCoId]
-	if (typeof assignmentsColistId !== 'string' || !assignmentsColistId.startsWith('co_')) return false
-	try {
-		const colistStore = await maia.db({ op: 'read', schema: null, key: assignmentsColistId })
-		const colistData = colistStore?.value ?? colistStore
-		const items = colistData?.items ?? (Array.isArray(colistData) ? colistData : [])
-		const itemIds = Array.isArray(items) ? items : items ? [...items] : []
-		for (const itemCoId of itemIds) {
-			if (typeof itemCoId !== 'string' || !itemCoId.startsWith('co_')) continue
-			const itemStore = await maia.db({ op: 'read', schema: null, key: itemCoId })
-			const itemData = itemStore?.value ?? itemStore
-			if (itemData?.browser) return true
-		}
-		return false
-	} catch {
-		return false
-	}
-}
-
-/**
- * Load vibes from registries.sparks[spark].vibes registry
- * STRICT: Filters by spark.os.runtimes - only shows vibes with explicit browser runtime. No fallback.
+ * Load vibes from spark.vibes registry
  * @param {Object} maia - MaiaOS instance
  * @param {string} spark - Spark name (e.g. '°Maia')
  * @returns {Promise<Array>} Array of vibe objects with {key, name, description, coId}
@@ -160,22 +131,11 @@ async function loadVibesFromSpark(maia, spark) {
 		const sparkStore = await maia.db({ op: 'read', schema: null, key: sparkCoId })
 		const sparkData = sparkStore?.value ?? sparkStore
 		const vibesId = sparkData?.vibes
-		const osId = sparkData?.os
 		if (typeof vibesId !== 'string' || !vibesId.startsWith('co_')) return vibes
 
 		const vibesStore = await maia.db({ op: 'read', schema: vibesId, key: vibesId })
 		const vibesData = vibesStore?.value ?? vibesStore
 		if (!vibesData || typeof vibesData !== 'object' || Array.isArray(vibesData)) return vibes
-
-		let runtimesData = null
-		if (typeof osId === 'string' && osId.startsWith('co_')) {
-			const osStore = await maia.db({ op: 'read', schema: null, key: osId })
-			const runtimesId = (osStore?.value ?? osStore)?.runtimes
-			if (typeof runtimesId === 'string' && runtimesId.startsWith('co_')) {
-				const runtimesStore = await maia.db({ op: 'read', schema: null, key: runtimesId })
-				runtimesData = runtimesStore?.value ?? runtimesStore
-			}
-		}
 
 		const vibeKeys = Object.keys(vibesData).filter(
 			(k) =>
@@ -190,11 +150,6 @@ async function loadVibesFromSpark(maia, spark) {
 
 		for (const vibeKey of vibeKeys) {
 			const vibeCoId = vibesData[vibeKey]
-			const hasBrowser = runtimesData
-				? await vibeHasBrowserRuntime(maia, runtimesData, vibeCoId)
-				: false
-			if (!hasBrowser) continue
-
 			const manifest = vibeManifestMap.get(vibeKey)
 			const name = manifest?.name || `${vibeKey.charAt(0).toUpperCase() + vibeKey.slice(1)}`
 			const description = manifest?.description
@@ -307,8 +262,7 @@ export async function renderDashboard(
 
 		cards = vibeCards
 
-		// Reactivity: when vibes empty but spark selected, runtimes may not be synced yet.
-		// Retry render so dashboard updates when registries/sparks/os.runtimes arrive.
+		// Reactivity: when vibes empty but spark selected, retry render so dashboard updates when registries/sparks/vibes arrive.
 		if (currentSpark && vibeCards === '' && typeof window.renderAppInternal === 'function') {
 			setTimeout(() => window.renderAppInternal(), 1500)
 			setTimeout(() => window.renderAppInternal(), 3500)

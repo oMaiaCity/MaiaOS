@@ -72,6 +72,9 @@
 				},
 				"SUCCESS": {
 					"target": "idle"
+				},
+				"ERROR": {
+					"target": "idle"
 				}
 			}
 		},
@@ -233,6 +236,27 @@
 				}
 			},
 			"on": {
+				"CREATE_BUTTON": {
+					"target": "creating",
+					"actions": [
+						{
+							"updateContext": {
+								"error": null
+							}
+						}
+					]
+				},
+				"UPDATE_INPUT": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"error": null,
+								"newTodoText": "$$value"
+							}
+						}
+					]
+				},
 				"TOGGLE_BUTTON": {
 					"target": "toggling"
 				},

@@ -2,17 +2,14 @@
 	"$schema": "°Maia/schema/meta",
 	"$id": "°Maia/schema/action",
 	"title": "°Maia/schema/action",
-	"description": "Action (tool invocation, context update, or data mapping)",
+	"description": "Action (tool invocation, context update, data mapping, or setEventPayload for deferred transitions)",
 	"cotype": "comap",
 	"indexing": true,
 	"oneOf": [
 		{
 			"type": "object",
 			"properties": {
-				"tool": {
-					"type": "string",
-					"description": "Tool identifier (e.g., '@mutation/create')"
-				},
+				"tool": { "type": "string", "description": "Tool identifier (e.g., '@mutation/create')" },
 				"payload": {
 					"description": "Tool payload (can contain expressions)",
 					"type": "object",
@@ -53,6 +50,17 @@
 				}
 			},
 			"required": ["mapData"]
+		},
+		{
+			"type": "object",
+			"properties": {
+				"setEventPayload": {
+					"type": "object",
+					"description": "Set event payload for next entry (deferred message handling)",
+					"additionalProperties": true
+				}
+			},
+			"required": ["setEventPayload"]
 		}
 	]
 }

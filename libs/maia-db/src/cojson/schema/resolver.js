@@ -169,23 +169,25 @@ export async function resolve(backend, identifier, options = {}) {
 		}
 
 		// returnType === 'schema' - extract schema definition
-		// Check if this is a schema co-value (has schema-like properties)
+		// Check if this is a schema co-value (has schema-like properties or definition wrapper)
 		const cotype = data.cotype
 		const properties = data.properties
 		const items = data.items
 		const title = data.title
-		const hasSchemaProps = cotype || properties || items || title
+		const definition = data.definition
+		const hasSchemaProps = cotype || properties || items || title || definition
 
 		if (hasSchemaProps) {
-			// This is a schema - return it as schema definition
+			// Use definition if present (meta-schema and some schemas store actual schema inside definition)
+			const rawSchema = definition && typeof definition === 'object' ? definition : data
 			// Exclude 'id' and 'type' fields (schemas use 'cotype' for CoJSON types, not 'type')
 			// Recursively remove nested 'id' fields (AJV only accepts $id, not id)
-			const { id, type, ...schemaData } = data
+			const { id, type, definition: _def, ...schemaData } = rawSchema
 			const cleanedSchema = removeIdFields(schemaData)
-			return {
-				...cleanedSchema,
-				$id: identifier, // Ensure $id is set
-			}
+			const result = { ...cleanedSchema, $id: identifier }
+			// Preserve $schema from parent when using definition (definition may not have it)
+			if (!result.$schema && data.$schema) result.$schema = data.$schema
+			return result
 		}
 
 		// Not a schema - return null for schema returnType

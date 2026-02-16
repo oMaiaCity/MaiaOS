@@ -56,7 +56,7 @@ export class StateEngine {
 		const machine = this.machines.get(machineId)
 		if (!machine) {
 			console.warn('[StateEngine] send: machine not found', { machineId, event })
-			return
+			return false
 		}
 		// CRITICAL: Payload is already resolved from view - no evaluation needed
 		// Views resolve all expressions before sending to inbox, so payloads here are clean JS objects/JSON
@@ -70,19 +70,41 @@ export class StateEngine {
 				currentState: machine.currentState,
 				event,
 			})
-			return
+			return false
 		}
-		const transition = currentStateDef.on?.[event]
-		if (!transition) {
+		const rawTransition = currentStateDef.on?.[event]
+		if (!rawTransition) {
 			console.warn('[StateEngine] send: no transition for event', {
 				machineId,
 				currentState: machine.currentState,
 				event,
 				availableEvents: Object.keys(currentStateDef.on || {}),
 			})
-			return
+			return false
 		}
+		// Support single transition or array (guarded transitions - first match wins)
+		const transitions = Array.isArray(rawTransition) ? rawTransition : [rawTransition]
+		let transition = null
+		for (const t of transitions) {
+			const guard = typeof t === 'object' && t !== null ? t.guard : null
+			if (guard === undefined || guard === null) {
+				transition = t
+				break
+			}
+			const guardResult = await this._evaluateGuard(
+				guard,
+				machine.actor.context,
+				machine.eventPayload,
+				machine.actor,
+			)
+			if (guardResult) {
+				transition = t
+				break
+			}
+		}
+		if (!transition) return false
 		await this._executeTransition(machine, transition, event, payload)
+		return true
 	}
 
 	async _executeTransition(machine, transition, event, payload) {
@@ -346,6 +368,17 @@ export class StateEngine {
 				await this._executeNamedAction(machine, action, payload)
 			} else if (action?.mapData) {
 				await this._executeMapData(machine, action.mapData, payload)
+			} else if (action?.setEventPayload) {
+				const updates = await this._evaluatePayload(
+					action.setEventPayload,
+					machine.actor.context,
+					payload,
+					machine.lastToolResult,
+					machine.actor,
+				)
+				if (updates && typeof updates === 'object' && !Array.isArray(updates)) {
+					Object.assign(machine.eventPayload, updates)
+				}
 			} else if (action?.updateContext) {
 				const updates = await this._evaluatePayload(
 					action.updateContext,
@@ -562,6 +595,15 @@ export class StateEngine {
 					})
 				}
 				return createErrorResult([createErrorEntry('schema', 'Please enter an agent ID')])
+			}
+
+			// Forward idempotencyKey from event payload to @db create (inbox message deduplication)
+			if (
+				toolName === '@db' &&
+				evaluatedPayload?.op === 'create' &&
+				machine.eventPayload?.idempotencyKey
+			) {
+				evaluatedPayload = { ...evaluatedPayload, idempotencyKey: machine.eventPayload.idempotencyKey }
 			}
 
 			// Resolve schema refs for @db tool (vibe may have human-readable schema from source)

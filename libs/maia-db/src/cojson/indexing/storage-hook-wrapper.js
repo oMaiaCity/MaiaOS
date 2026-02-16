@@ -74,7 +74,7 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
 			// For all other co-values, ENFORCE headerMeta.$schema
 			if (!msg.header || !msg.header.meta) {
 				// No header.meta at all - REJECT
-				if (process.env.DEBUG) {
+				if (typeof process !== 'undefined' && process.env?.DEBUG) {
 					if (msg.header) {
 					} else {
 					}

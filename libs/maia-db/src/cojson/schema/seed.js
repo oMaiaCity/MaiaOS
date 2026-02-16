@@ -167,8 +167,6 @@ async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
 		tempCoMap.get('°Maia/schema/os/indexes-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
 	const vibesSchemaCoId =
 		tempCoMap.get('°Maia/schema/os/vibes-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
-	const runtimesSchemaCoId =
-		tempCoMap.get('°Maia/schema/os/runtimes-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
 	const _sparksSchemaCoId =
 		tempCoMap.get('°Maia/schema/os/sparks-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
 
@@ -202,14 +200,8 @@ async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
 		null,
 		scaffoldOpts(vibesSchemaCoId, {}),
 	)
-	const { coValue: runtimes } = await createCoValueForSpark(
-		ctx,
-		null,
-		scaffoldOpts(runtimesSchemaCoId, {}),
-	)
 	os.set('schematas', schematas.id)
 	os.set('indexes', indexes.id)
-	os.set('runtimes', runtimes.id)
 	maiaSpark.set('os', os.id)
 	maiaSpark.set('vibes', vibes.id)
 	schematas.set('°Maia/schema/meta', metaSchemaCoId)
@@ -291,7 +283,7 @@ async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
 	}
 
 	console.log(
-		'✅ Bootstrap scaffold complete: account.registries, °Maia spark, os, schematas, indexes, runtimes, vibes',
+		'✅ Bootstrap scaffold complete: account.registries, °Maia spark, os, schematas, indexes, vibes',
 	)
 }
 
@@ -1907,52 +1899,6 @@ export async function seed(
 			await groups.setSparkVibesId(backend, MAIA_SPARK, vibes.id)
 		}
 
-		// Ensure spark.os.runtimes exists (create if missing for legacy accounts)
-		let runtimes = null
-		const osId = await groups.getSparkOsId(backend, MAIA_SPARK)
-		if (osId) {
-			const osCore = await ensureCoValueLoaded(backend, osId, {
-				waitForAvailable: true,
-				timeoutMs: 2000,
-			})
-			if (osCore && backend.isAvailable(osCore)) {
-				const osContent = backend.getCurrentContent(osCore)
-				if (osContent) {
-					const runtimesId = osContent.get('runtimes')
-					if (runtimesId) {
-						const runtimesCore = node.getCoValue(runtimesId)
-						if (runtimesCore && runtimesCore.type === 'comap') {
-							const runtimesContent = runtimesCore.getCurrentContent?.()
-							if (runtimesContent && typeof runtimesContent.set === 'function') {
-								runtimes = runtimesContent
-							}
-						}
-					}
-					if (!runtimes) {
-						const runtimesSchemaCoId =
-							schemaCoIdMap?.get('°Maia/schema/os/runtimes-registry') ??
-							(await (
-								await import('../schema/resolver.js')
-							).resolve(backend, '°Maia/schema/os/runtimes-registry', { returnType: 'coId' }))
-						const ctx = { node, account, guardian: maiaGroup }
-						const { coValue: runtimesCoMap } = await createCoValueForSpark(ctx, null, {
-							schema: runtimesSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
-							cotype: 'comap',
-							data: {},
-							dbEngine: backend?.dbEngine,
-						})
-						runtimes = runtimesCoMap
-						osContent.set('runtimes', runtimes.id)
-					}
-				}
-			}
-		}
-
-		const runtimeAssignmentSchemaCoId = schemaCoIdMap?.get('°Maia/schema/os/runtime-assignment')
-		const runtimeAssignmentsColistSchemaCoId = schemaCoIdMap?.get(
-			'°Maia/schema/os/runtime-assignments-colist',
-		)
-
 		// Seed each vibe
 		for (const vibe of allVibes) {
 			const originalVibeId = vibe.$id || ''
@@ -2048,29 +1994,6 @@ export async function seed(
 					instanceCoIdMap.set(originalVibeIdForRegistry, vibeCoId)
 					combinedRegistry.set(originalVibeIdForRegistry, vibeCoId) // Add to registry for future transformations
 					coIdRegistry.register(originalVibeIdForRegistry, vibeCoId)
-				}
-
-				// Add runtime assignment: runtimes[vibeCoId] = [{ browser: guardianId }] (browser = spark guardian)
-				if (
-					runtimes &&
-					runtimeAssignmentSchemaCoId &&
-					runtimeAssignmentsColistSchemaCoId &&
-					maiaGroup?.id
-				) {
-					const ctx = { node, account, guardian: maiaGroup }
-					const { coValue: assignmentCoMap } = await createCoValueForSpark(ctx, null, {
-						schema: runtimeAssignmentSchemaCoId,
-						cotype: 'comap',
-						data: { browser: maiaGroup.id },
-						dbEngine: backend?.dbEngine,
-					})
-					const { coValue: assignmentsColist } = await createCoValueForSpark(ctx, null, {
-						schema: runtimeAssignmentsColistSchemaCoId,
-						cotype: 'colist',
-						data: [assignmentCoMap.id],
-						dbEngine: backend?.dbEngine,
-					})
-					runtimes.set(vibeCoId, assignmentsColist.id)
 				}
 			}
 		}
