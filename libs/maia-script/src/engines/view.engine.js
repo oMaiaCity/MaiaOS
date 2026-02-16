@@ -614,6 +614,22 @@ export class ViewEngine {
 					return
 				}
 
+				// Guard: CREATE_BUTTON requires value - skip send when empty (prevents stuck in creating, matches ADD_AGENT pattern)
+				if (
+					eventName === 'CREATE_BUTTON' &&
+					(!payload?.value || typeof payload.value !== 'string' || !payload.value.trim())
+				) {
+					return
+				}
+
+				// Guard: SEND_MESSAGE requires inputText - skip send when empty (prevents stuck in chatting, matches CREATE_BUTTON pattern)
+				if (
+					eventName === 'SEND_MESSAGE' &&
+					(!payload?.inputText || typeof payload.inputText !== 'string' || !payload.inputText.trim())
+				) {
+					return
+				}
+
 				// CLEAN ARCHITECTURE: For update-input types on blur, only send if DOM value differs from CURRENT context
 				// This prevents repopulation after state machine explicitly clears the field
 				// State machine is single source of truth - if context already matches DOM, no update needed

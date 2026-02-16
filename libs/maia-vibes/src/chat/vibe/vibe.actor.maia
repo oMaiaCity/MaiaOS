@@ -10,10 +10,6 @@
 	"messageTypes": [
 		"SEND_MESSAGE",
 		"UPDATE_INPUT",
-		"RENDER_COMPLETE",
-		"SUCCESS",
-		"ERROR",
-		"RETRY",
-		"DISMISS"
+		"STATUS_UPDATE"
 	]
 }

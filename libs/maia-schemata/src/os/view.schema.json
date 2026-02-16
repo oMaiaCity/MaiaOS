@@ -69,12 +69,7 @@
 						]
 					}
 				},
-				"children": {
-					"type": "array",
-					"items": {
-						"$ref": "#/$defs/viewNode"
-					}
-				},
+				"children": { "type": "array", "items": { "$ref": "#/$defs/viewNode" } },
 				"$on": {
 					"type": "object",
 					"additionalProperties": {
@@ -101,9 +96,7 @@
 								{ "type": "null" }
 							]
 						},
-						"template": {
-							"$ref": "#/$defs/viewNode"
-						}
+						"template": { "$ref": "#/$defs/viewNode" }
 					},
 					"required": ["items", "template"]
 				},

@@ -1,14 +1,12 @@
 {
 	"$schema": "°Maia/schema/context",
 	"$id": "°Maia/chat/context/vibe",
-	"conversations": {
-		"schema": "°Maia/schema/data/chat"
-	},
+	"currentSection": "@messages",
 	"inputText": "",
-	"assistantResponse": null,
 	"isLoading": false,
-	"error": null,
-	"hasConversations": false,
 	"hasError": false,
-	"messageNames": {}
+	"error": null,
+	"@actors": {
+		"messages": "°Maia/chat/actor/messages"
+	}
 }

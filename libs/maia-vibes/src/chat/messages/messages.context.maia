@@ -1,0 +1,11 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/chat/context/messages",
+	"conversations": {
+		"schema": "°Maia/schema/data/chat"
+	},
+	"isLoading": false,
+	"hasError": false,
+	"error": null,
+	"hasConversations": false
+}

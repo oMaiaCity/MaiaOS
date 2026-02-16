@@ -10,10 +10,10 @@
 			"enum": ["user", "assistant", "system"],
 			"description": "The role of the message sender"
 		},
-		"content": {
+		"content": { "type": "string", "minLength": 1, "description": "The message content" },
+		"displayName": {
 			"type": "string",
-			"minLength": 1,
-			"description": "The message content"
+			"description": "Display name for view (e.g. me for user, Maia for assistant) - set by state machine, view stays dumb"
 		}
 	},
 	"required": ["role", "content"],
