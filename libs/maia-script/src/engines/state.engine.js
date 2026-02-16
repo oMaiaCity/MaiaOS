@@ -548,6 +548,22 @@ export class StateEngine {
 				])
 			}
 
+			// Guard: addSparkMember requires memberId (from $$agentId) - skip when missing/empty
+			if (
+				(toolName === '@sparks' || toolName === '@db') &&
+				evaluatedPayload?.op === 'addSparkMember' &&
+				(!evaluatedPayload?.memberId ||
+					typeof evaluatedPayload.memberId !== 'string' ||
+					!evaluatedPayload.memberId.trim())
+			) {
+				if (autoTransition && stateDef?.on?.ERROR && machine.actor?.actorEngine) {
+					await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'ERROR', {
+						errors: [createErrorEntry('schema', 'Please enter an agent ID')],
+					})
+				}
+				return createErrorResult([createErrorEntry('schema', 'Please enter an agent ID')])
+			}
+
 			// Resolve schema refs for @db tool (vibe may have human-readable schema from source)
 			if (
 				toolName === '@db' &&

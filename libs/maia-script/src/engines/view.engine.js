@@ -601,6 +601,14 @@ export class ViewEngine {
 					return
 				}
 
+				// Guard: ADD_AGENT requires agentId - skip send when empty (prevents operation failure)
+				if (
+					eventName === 'ADD_AGENT' &&
+					(!payload?.agentId || typeof payload.agentId !== 'string' || !payload.agentId.trim())
+				) {
+					return
+				}
+
 				// CLEAN ARCHITECTURE: For update-input types on blur, only send if DOM value differs from CURRENT context
 				// This prevents repopulation after state machine explicitly clears the field
 				// State machine is single source of truth - if context already matches DOM, no update needed
