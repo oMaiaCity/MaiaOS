@@ -35,7 +35,7 @@ export function createGroup(node, { name = null } = {}) {
 }
 
 /**
- * Create a child group owned by parent group (e.g. @maia spark's group)
+ * Create a child group owned by parent group (e.g. °Maia spark's group)
  * Child group extends parent with "admin" role
  *
  * @param {LocalNode} node - LocalNode instance

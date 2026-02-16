@@ -104,11 +104,11 @@ async function validateRemoteTransactions(backend, dbEngine, msg) {
 	if (!schemaCoId) {
 		return {
 			valid: false,
-			error: `Co-value ${coId} missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, @maia, and groups/accounts).`,
+			error: `Co-value ${coId} missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, °Maia, and groups/accounts).`,
 		}
 	}
 
-	// Exception schemas (@account, @group, @maia) are allowed without validation
+	// Exception schemas (@account, @group, °Maia) are allowed without validation
 	// Use universal exception schema helper
 	if (isExceptionSchema(schemaCoId)) {
 		return { valid: true, error: null }
@@ -119,7 +119,7 @@ async function validateRemoteTransactions(backend, dbEngine, msg) {
 	if (!schemaCoId.startsWith('co_z')) {
 		return {
 			valid: false,
-			error: `Co-value ${coId} has invalid schema format: ${schemaCoId}. Schema must be a co-id (co_z...) or exception schema (@account, @group, @maia).`,
+			error: `Co-value ${coId} has invalid schema format: ${schemaCoId}. Schema must be a co-id (co_z...) or exception schema (@account, @group, °Maia).`,
 		}
 	}
 

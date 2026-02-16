@@ -3,6 +3,7 @@
 export {
 	CoJSONBackend,
 	createCoJSONAPI,
+	generateRegistryName,
 	getSchema,
 	getSchemaIndexColistId,
 	resolveAccountCoIdsToProfileNames,

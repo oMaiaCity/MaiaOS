@@ -1,6 +1,6 @@
 {
-	"$schema": "@maia/schema/context",
-	"$id": "@maia/db/context/detail",
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/db/context/detail",
 	"detail": {
 		"id": "1",
 		"name": "John Doe",

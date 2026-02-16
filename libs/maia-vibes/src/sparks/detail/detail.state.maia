@@ -1,6 +1,6 @@
 {
-	"$schema": "@maia/schema/state",
-	"$id": "@maia/sparks/state/detail",
+	"$schema": "°Maia/schema/state",
+	"$id": "°Maia/sparks/state/detail",
 	"initial": "idle",
 	"states": {
 		"idle": {

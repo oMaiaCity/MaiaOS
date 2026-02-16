@@ -9,9 +9,9 @@ import {
 /**
  * Create a generic CoList with MANDATORY schema validation
  *
- * Uses @maia spark's group when account is passed.
+ * Uses °Maia spark's group when account is passed.
  *
- * @param {RawAccount|RawGroup} accountOrGroup - Account (resolves @maia spark group) or Group
+ * @param {RawAccount|RawGroup} accountOrGroup - Account (resolves °Maia spark group) or Group
  * @param {Array} init - Initial items (can be primitives or co-ids)
  * @param {string} schemaName - Schema name for headerMeta.$schema (REQUIRED)
  * @param {LocalNode} [node] - LocalNode instance (required if accountOrGroup is account)
@@ -33,17 +33,17 @@ export async function createCoList(
 		// Try to get profile - if it exists, it's an account
 		const profileId = accountOrGroup.get('profile')
 		if (profileId) {
-			// It's an account - resolve @maia spark's group via getSparkGroup
+			// It's an account - resolve °Maia spark's group via getSparkGroup
 			const backend = dbEngine?.backend
 			if (!backend) {
 				throw new Error(
-					'[createCoList] dbEngine.backend required when passing account (to resolve @maia spark group)',
+					'[createCoList] dbEngine.backend required when passing account (to resolve °Maia spark group)',
 				)
 			}
 			const { getSparkGroup } = await import('../groups/groups.js')
-			group = await getSparkGroup(backend, '@maia')
+			group = await getSparkGroup(backend, '°Maia')
 			if (!group) {
-				throw new Error('[createCoList] @maia spark group not found. Ensure bootstrap has run.')
+				throw new Error('[createCoList] °Maia spark group not found. Ensure bootstrap has run.')
 			}
 		}
 		// If profileId is null/undefined, it's a regular group, use it as-is

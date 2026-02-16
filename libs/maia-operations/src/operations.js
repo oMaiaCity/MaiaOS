@@ -38,22 +38,7 @@ async function evaluateDataWithExisting(data, existingData, evaluator) {
 
 function extractSchemaDefinition(coValueData, schemaCoId) {
 	if (!coValueData || coValueData.error) return null
-	const schemaObj = {}
-	if (coValueData.properties?.length) {
-		for (const prop of coValueData.properties) {
-			if (prop?.key !== undefined) {
-				let value = prop.value
-				if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
-					try {
-						value = JSON.parse(value)
-					} catch (_e) {}
-				}
-				schemaObj[prop.key] = value
-			}
-		}
-	} else Object.assign(schemaObj, coValueData)
-
-	const { id: _id, loading: _loading, error: _error, type, ...schemaOnly } = schemaObj
+	const { id: _id, loading: _loading, error: _error, type, ...schemaOnly } = coValueData
 	if (schemaOnly.definition) {
 		const { id: defId, type: defType, ...definitionOnly } = schemaOnly.definition
 		return { ...definitionOnly, $id: schemaCoId }
@@ -75,7 +60,7 @@ export async function readOperation(backend, params) {
 		!['@account', '@group', '@metaSchema'].includes(schema)
 	) {
 		throw new Error(
-			`[ReadOperation] Schema must be a co-id (co_z...) or special schema hint (@account, @group, @metaSchema), got: ${schema}. Runtime code must use co-ids only, not '@maia/schema/...' patterns.`,
+			`[ReadOperation] Schema must be a co-id (co_z...) or special schema hint (@account, @group, @metaSchema), got: ${schema}. Runtime code must use co-ids only, not '°Maia/schema/...' patterns.`,
 		)
 	}
 	if (keys !== undefined && !Array.isArray(keys))
@@ -90,7 +75,13 @@ export async function createOperation(backend, dbEngine, params) {
 	requireParam(data, 'data', 'CreateOperation')
 	requireDbEngine(dbEngine, 'CreateOperation', 'runtime schema validation')
 	const schemaCoId = await resolve(backend, schema, { returnType: 'coId' })
-	if (!schemaCoId) throw new Error(`[CreateOperation] Could not resolve schema: ${schema}`)
+	if (!schemaCoId) {
+		const registriesHint = backend.account?.get?.('registries')
+			? 'has registries'
+			: 'account.registries not set (link via sync?)'
+		console.error('[CreateOperation] Schema resolve failed:', schema, registriesHint)
+		throw new Error(`[CreateOperation] Could not resolve schema: ${schema}. ${registriesHint}`)
+	}
 	// Schema validation happens at gate: createCoMap/createCoList (backend)
 	const options = spark != null ? { spark } : {}
 	const result = await backend.create(schemaCoId, data, options)
@@ -175,11 +166,10 @@ export async function resolveOperation(backend, params) {
 	requireParam(humanReadableKey, 'humanReadableKey', 'ResolveOperation')
 	if (typeof humanReadableKey !== 'string')
 		throw new Error('[ResolveOperation] humanReadableKey must be a string')
-	if (
-		isSchemaRef(humanReadableKey) ||
-		humanReadableKey.startsWith('@actor/') ||
-		isVibeRef(humanReadableKey)
-	) {
+	// Support schema refs (°Maia/schema/...), vibe refs (°Maia/vibe/...), and actor refs (@actor/... or °Spark/.../actor/...)
+	const isActorRef =
+		humanReadableKey.startsWith('@actor/') || /^°[^/]+.*\/actor\//.test(humanReadableKey)
+	if (isSchemaRef(humanReadableKey) || isActorRef || isVibeRef(humanReadableKey)) {
 	}
 	const spark = params.spark ?? backend?.systemSpark
 	return await resolve(backend, humanReadableKey, { returnType: 'coId', spark })

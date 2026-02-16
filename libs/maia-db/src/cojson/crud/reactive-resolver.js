@@ -23,7 +23,7 @@ export { waitForReactiveResolution } from './read-operations.js'
  * Resolve schema reactively - returns ReactiveStore that updates when schema becomes available
  *
  * @param {Object} backend - Backend instance
- * @param {string} schemaKey - Schema key (@maia/schema/data/todos) or co-id (co_z...)
+ * @param {string} schemaKey - Schema key (°Maia/schema/data/todos) or co-id (co_z...)
  * @param {Object} [options] - Options
  * @param {number} [options.timeoutMs=10000] - Timeout for waiting (unused in reactive mode, kept for compatibility)
  * @returns {ReactiveStore} ReactiveStore that updates when schema resolves:
@@ -44,10 +44,10 @@ export function resolveSchemaReactive(backend, schemaKey, options = {}) {
 	let osUnsubscribe = null
 	let schematasUnsubscribe = null
 
-	// Set up reactive subscription to spark.os.schematas for progressive resolution (account.sparks[@maia].os.schematas)
+	// Set up reactive subscription to spark.os.schematas for progressive resolution (account.registries.sparks[°Maia].os.schematas)
 	const setupReactiveSubscription = async () => {
 		const { getSparkOsId } = await import('../groups/groups.js')
-		const spark = backend?.systemSpark ?? '@maia'
+		const spark = backend?.systemSpark ?? '°Maia'
 		const osId = await getSparkOsId(backend, spark)
 		if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
 			store._set({ loading: false, error: 'spark.os not found' })
@@ -86,9 +86,9 @@ export function resolveSchemaReactive(backend, schemaKey, options = {}) {
 					}
 
 					// Check if schema is in registry
-					const normalizedKey = schemaKey.startsWith('@maia/schema/')
+					const normalizedKey = schemaKey.startsWith('°Maia/schema/')
 						? schemaKey
-						: `@maia/schema/${schemaKey}`
+						: `°Maia/schema/${schemaKey}`
 					const registryCoId = schematasData[normalizedKey] || schematasData[schemaKey]
 
 					if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
@@ -203,7 +203,7 @@ export function resolveCoValueReactive(backend, coId, _options = {}) {
  * Resolve query reactively - returns ReactiveStore that updates when query results become available
  *
  * @param {Object} backend - Backend instance
- * @param {Object} queryDef - Query definition { schema: '@maia/schema/data/todos', filter: {...}, options: {...} }
+ * @param {Object} queryDef - Query definition { schema: '°Maia/schema/data/todos', filter: {...}, options: {...} }
  * @param {Object} [options] - Options
  * @returns {ReactiveStore} ReactiveStore that updates when query resolves:
  *   - Initial: { loading: true, items: [] }

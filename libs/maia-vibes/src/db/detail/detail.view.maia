@@ -1,6 +1,6 @@
 {
-	"$schema": "@maia/schema/view",
-	"$id": "@maia/db/view/detail",
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/db/view/detail",
 	"content": {
 		"tag": "div",
 		"class": "detail-container",

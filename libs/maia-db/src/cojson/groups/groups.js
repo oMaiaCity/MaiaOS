@@ -30,7 +30,7 @@ export async function getGroup(node, groupId) {
  * Get capability group co-id for a spark from spark.os.capabilities
  * Resolves: spark -> spark.os -> os.capabilities -> capabilities.get(capabilityName)
  * @param {Object} backend - Backend instance
- * @param {string} spark - Spark name (e.g. "@maia") or spark co-id
+ * @param {string} spark - Spark name (e.g. "°Maia") or spark co-id
  * @param {string} capabilityName - Capability key (e.g. 'guardian', 'publicReaders')
  * @returns {Promise<string|null>} Group co-id or null
  */
@@ -92,7 +92,7 @@ export async function getSparkCapabilityGroupIdFromSparkCoId(backend, sparkCoId,
  * Get guardian (admin-role) group for a spark by name
  * Resolves from spark.os.capabilities.guardian only (no spark.group; fresh DB).
  * @param {Object} backend - Backend instance with read(), getCoValue(), getCurrentContent(), account
- * @param {string} spark - Spark name (e.g. "@maia", "@handle")
+ * @param {string} spark - Spark name (e.g. "°Maia", "@handle")
  * @returns {Promise<RawGroup|null>} Group for the spark or null
  */
 export async function getSparkGroup(backend, spark) {
@@ -125,57 +125,86 @@ export async function getSparkGroup(backend, spark) {
 }
 
 /**
- * Get spark's os CoMap id (account.sparks[spark].os)
+ * Load account.registries → registries.sparks CoMap content for spark resolution.
  * @param {Object} backend
- * @param {string} spark
- * @returns {Promise<string|null>}
+ * @returns {Promise<{get(key: string): string|undefined}|null>} Sparks registry content or null
  */
-export async function getSparkOsId(backend, spark) {
-	const sparksId = backend.account.get('sparks')
+/** Get sparks registry CoMap co-id (account.registries.sparks). Returns null if not found. */
+export async function getSparksRegistryId(backend) {
+	const registriesId = backend.account?.get?.('registries')
+	if (!registriesId?.startsWith('co_z')) return null
+	const registriesStore = await backend.read(null, registriesId)
+	await waitForStoreReady(registriesStore, registriesId, 10000)
+	const registriesContent = registriesStore?.value ?? {}
+	return registriesContent.sparks ?? null
+}
+
+export async function getSparksRegistryContent(backend) {
+	const sparksId = await getSparksRegistryId(backend)
 	if (!sparksId?.startsWith('co_z')) return null
 	const sparksStore = await backend.read(null, sparksId)
 	await waitForStoreReady(sparksStore, sparksId, 10000)
-	const sparkCoId = sparksStore.value?.[spark]
+	const sparksContent = sparksStore?.value ?? {}
+	return {
+		get(key) {
+			const v = sparksContent[key]
+			return typeof v === 'string' && v.startsWith('co_z') ? v : undefined
+		},
+	}
+}
+
+/** Resolve spark key to spark co-id (from registries or use co-id directly). */
+export async function resolveSparkCoId(backend, spark) {
+	if (!spark || typeof spark !== 'string') return null
+	if (spark.startsWith('co_z')) return spark
+	const sparks = await getSparksRegistryContent(backend)
+	if (!sparks) return null
+	return sparks.get(spark) ?? null
+}
+
+/**
+ * Get spark's os CoMap id (account.registries.sparks[spark].os)
+ * @param {Object} backend
+ * @param {string} spark - Spark name (e.g. "°Maia") or spark co-id
+ * @returns {Promise<string|null>}
+ */
+export async function getSparkOsId(backend, spark) {
+	const sparkCoId = await resolveSparkCoId(backend, spark)
 	if (!sparkCoId?.startsWith('co_z')) return null
 	const sparkStore = await backend.read(null, sparkCoId)
 	await waitForStoreReady(sparkStore, sparkCoId, 10000)
-	const osId = sparkStore.value?.os || null
+	const sparkData = sparkStore?.value ?? {}
+	const osId = sparkData.os || null
 	if (osId) backend._cachedMaiaOsId = osId
 	return osId
 }
 
 /**
- * Get spark's vibes CoMap id (account.sparks[spark].vibes)
+ * Get spark's vibes CoMap id (account.registries.sparks[spark].vibes)
  * @param {Object} backend
  * @param {string} spark
  * @returns {Promise<string|null>}
  */
 export async function getSparkVibesId(backend, spark) {
-	const sparksId = backend.account.get('sparks')
-	if (!sparksId?.startsWith('co_z')) return null
-	const sparksStore = await backend.read(null, sparksId)
-	await waitForStoreReady(sparksStore, sparksId, 10000)
-	const sparkCoId = sparksStore.value?.[spark]
+	const sparkCoId = await resolveSparkCoId(backend, spark)
 	if (!sparkCoId?.startsWith('co_z')) return null
 	const sparkStore = await backend.read(null, sparkCoId)
 	await waitForStoreReady(sparkStore, sparkCoId, 10000)
-	return sparkStore.value?.vibes || null
+	const sparkData = sparkStore?.value ?? {}
+	return sparkData.vibes || null
 }
 
 /**
- * Set spark's vibes CoMap id (account.sparks[spark].vibes)
+ * Set spark's vibes CoMap id (account.registries.sparks[spark].vibes)
  * Used when creating vibes during seed.
  * @param {Object} backend
  * @param {string} spark
  * @param {string} vibesId
  */
 export async function setSparkVibesId(backend, spark, vibesId) {
-	const sparksId = backend.account.get('sparks')
-	if (!sparksId?.startsWith('co_z')) throw new Error('[setSparkVibesId] account.sparks not found')
-	const sparksStore = await backend.read(null, sparksId)
-	await waitForStoreReady(sparksStore, sparksId, 10000)
-	const sparkCoId = sparksStore.value?.[spark]
-	if (!sparkCoId?.startsWith('co_z')) throw new Error(`[setSparkVibesId] Spark ${spark} not found`)
+	const sparkCoId = await resolveSparkCoId(backend, spark)
+	if (!sparkCoId?.startsWith('co_z'))
+		throw new Error(`[setSparkVibesId] Spark ${spark} not found in registries`)
 	const sparkCore = backend.getCoValue(sparkCoId)
 	if (!sparkCore) throw new Error(`[setSparkVibesId] Spark core not found: ${sparkCoId}`)
 	const sparkContent = backend.getCurrentContent(sparkCore)
@@ -185,12 +214,12 @@ export async function setSparkVibesId(backend, spark, vibesId) {
 }
 
 /**
- * Get @maia spark's group (for create operations, seeding, etc.)
+ * Get °Maia spark's group (for create operations, seeding, etc.)
  * @param {Object} backend - Backend instance
- * @returns {Promise<RawGroup|null>} @maia spark's group
+ * @returns {Promise<RawGroup|null>} °Maia spark's group
  */
 export async function getMaiaGroup(backend) {
-	return getSparkGroup(backend, '@maia')
+	return getSparkGroup(backend, '°Maia')
 }
 
 /**

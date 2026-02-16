@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/vibe",
-	"title": "@maia/schema/vibe",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/vibe",
+	"title": "°Maia/schema/vibe",
 	"description": "Vibe manifest/metadata",
 	"cotype": "comap",
 	"indexing": true,
@@ -16,7 +16,7 @@
 			"description": "Vibe description"
 		},
 		"actor": {
-			"$co": "@maia/schema/actor",
+			"$co": "°Maia/schema/actor",
 			"description": "Co-id reference to actor definition (root actor for this vibe)"
 		}
 	}

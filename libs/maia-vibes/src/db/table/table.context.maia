@@ -1,6 +1,6 @@
 {
-	"$schema": "@maia/schema/context",
-	"$id": "@maia/db/context/table",
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/db/context/table",
 	"table": [
 		{
 			"id": "1",

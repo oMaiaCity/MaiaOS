@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/view",
-	"title": "@maia/schema/view",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/view",
+	"title": "°Maia/schema/view",
 	"description": "UI structure definition with DOM tree, expressions, loops, and event handlers (recursive viewNode structure)",
 	"cotype": "comap",
 	"indexing": true,

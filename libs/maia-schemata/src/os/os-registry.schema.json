@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/os/os-registry",
-	"title": "@maia/schema/os/os-registry",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/os/os-registry",
+	"title": "°Maia/schema/os/os-registry",
 	"description": "OS CoMap - contains capabilities, schematas, indexes. Stored in spark.os",
 	"cotype": "comap",
 	"indexing": false,

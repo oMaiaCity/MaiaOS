@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/os/runtime-assignment",
-	"title": "@maia/schema/os/runtime-assignment",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/os/runtime-assignment",
+	"title": "°Maia/schema/os/runtime-assignment",
 	"description": "Single runtime assignment: browser (account/group co-id) or server (agent account co-id)",
 	"cotype": "comap",
 	"indexing": false,

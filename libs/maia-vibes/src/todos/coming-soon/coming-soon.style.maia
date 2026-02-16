@@ -1,6 +1,6 @@
 {
-	"$schema": "@maia/schema/style",
-	"$id": "@maia/todos/style/coming-soon",
+	"$schema": "°Maia/schema/style",
+	"$id": "°Maia/todos/style/coming-soon",
 	"components": {
 		"comingSoon": {
 			"display": "flex",

@@ -34,40 +34,40 @@ export const TodosVibeRegistry = {
 	vibe: todosVibe,
 
 	styles: {
-		'@maia/style/brand': masterBrand,
-		'@maia/todos/style/brand': brandStyle,
-		'@maia/todos/style/list': listStyle,
-		'@maia/todos/style/coming-soon': comingSoonStyle,
+		'°Maia/style/brand': masterBrand,
+		'°Maia/todos/style/brand': brandStyle,
+		'°Maia/todos/style/list': listStyle,
+		'°Maia/todos/style/coming-soon': comingSoonStyle,
 	},
 
 	actors: {
-		'@maia/todos/actor/vibe': vibeActor,
-		'@maia/todos/actor/list': listActor,
-		'@maia/todos/actor/coming-soon': comingSoonActor,
+		'°Maia/todos/actor/vibe': vibeActor,
+		'°Maia/todos/actor/list': listActor,
+		'°Maia/todos/actor/coming-soon': comingSoonActor,
 	},
 
 	views: {
-		'@maia/todos/view/vibe': vibeView,
-		'@maia/todos/view/list': listView,
-		'@maia/todos/view/coming-soon': comingSoonView,
+		'°Maia/todos/view/vibe': vibeView,
+		'°Maia/todos/view/list': listView,
+		'°Maia/todos/view/coming-soon': comingSoonView,
 	},
 
 	contexts: {
-		'@maia/todos/context/vibe': vibeContext,
-		'@maia/todos/context/list': listContext,
-		'@maia/todos/context/coming-soon': comingSoonContext,
+		'°Maia/todos/context/vibe': vibeContext,
+		'°Maia/todos/context/list': listContext,
+		'°Maia/todos/context/coming-soon': comingSoonContext,
 	},
 
 	states: {
-		'@maia/todos/state/vibe': vibeState,
-		'@maia/todos/state/list': listState,
-		'@maia/todos/state/coming-soon': comingSoonState,
+		'°Maia/todos/state/vibe': vibeState,
+		'°Maia/todos/state/list': listState,
+		'°Maia/todos/state/coming-soon': comingSoonState,
 	},
 
 	inboxes: {
-		'@maia/todos/inbox/vibe': vibeInbox,
-		'@maia/todos/inbox/list': listInbox,
-		'@maia/todos/inbox/coming-soon': comingSoonInbox,
+		'°Maia/todos/inbox/vibe': vibeInbox,
+		'°Maia/todos/inbox/list': listInbox,
+		'°Maia/todos/inbox/coming-soon': comingSoonInbox,
 	},
 
 	data: {

@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/message/SELECT_SPARK",
-	"title": "@maia/schema/message/SELECT_SPARK",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/message/SELECT_SPARK",
+	"title": "°Maia/schema/message/SELECT_SPARK",
 	"description": "Message type for selecting a spark (generic, reusable across vibes)",
 	"cotype": "comap",
 	"indexing": true,

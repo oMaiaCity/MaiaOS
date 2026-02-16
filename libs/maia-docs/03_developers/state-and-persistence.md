@@ -68,14 +68,46 @@ The sync service and agent use PGlite for CoValue storage. Two modes matter:
 
 ## Seeding: Two Modes
 
-**simpleAccountSeed** – Empty `account.sparks` only. Used for all signups (human + agent).
+**simpleAccountSeed** – No account.sparks. Used for all signups (human + agent). Registries set via linkAccountToRegistries.
 
 **genesisAccountSeed** – Full scaffold + vibes. Only when **PEER_MODE=sync** (moai sync server).
 
 | Trigger | Mode | Behavior |
 |---------|------|----------|
-| **createAccountWithSecret** (human or agent) | simpleAccountSeed | Empty account.sparks. Vibes come from sync when human connects. |
+| **createAccountWithSecret** (human or agent) | simpleAccountSeed | No account.sparks. Vibes come from sync; registries via link. |
 | **Moai PEER_MODE=sync** | genesisAccountSeed | Full scaffold + vibes into sync server account. |
 | **handleSeed** (agent mode, manual) | genesisAccountSeed | Manual reseed for dev. |
 
 **SEED_VIBES** (moai env) controls which vibes moai seeds when PEER_MODE=sync: `"all"` or comma-separated `"todos,chat,db,sparks,creator"`.
+
+---
+
+## Registries (Humans and Sparks)
+
+Top-level `account.registries` stores human and spark identity mappings. Only the sync agent (moai) seeds it during genesis. Humans and agents link by setting `account.registries` to the sync server's registries co-id.
+
+### Structure
+
+- `account.registries` – CoMap co-id (Maia guardian, public read)
+- `registries.sparks` – username → spark co-id (e.g. `°Maia` → maia spark)
+- `registries.humans` – username → account co-id
+
+### GET /syncRegistry
+
+Returns `{ registries: "co_z...", "°Maia": "co_z..." }` for linking. Client calls `account.set('registries', registriesId)` once after sign-in or agent init. Sparks resolve via `registries.sparks`.
+
+### POST /register
+
+Register human or spark in the registry:
+
+```json
+{ "type": "human" | "spark", "username?": "custom-name", "accountId?": "co_z...", "sparkCoId?": "co_z..." }
+```
+
+- `type=human`: requires `accountId`; optional `username` (auto-generated if omitted).
+- `type=spark`: requires `sparkCoId`; optional `username`.
+- Uniqueness: 409 if username exists and maps to a different co-id. Same co-id is idempotent.
+
+### Auto-Register Human
+
+On sign-in and sign-up, `linkAccountToRegistries` runs and automatically calls `POST /register` with `{ type: "human", accountId }`. Fire-and-forget; server auto-generates name (e.g. `human:brave-dolphin-71234567`).

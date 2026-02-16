@@ -1,6 +1,6 @@
 {
-	"$schema": "@maia/schema/view",
-	"$id": "@maia/todos/view/coming-soon",
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/todos/view/coming-soon",
 	"content": {
 		"tag": "div",
 		"class": "coming-soon",

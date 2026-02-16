@@ -1,6 +1,6 @@
 {
-	"$schema": "@maia/schema/state",
-	"$id": "@maia/todos/state/coming-soon",
+	"$schema": "°Maia/schema/state",
+	"$id": "°Maia/todos/state/coming-soon",
 	"initial": "idle",
 	"states": {
 		"idle": {}

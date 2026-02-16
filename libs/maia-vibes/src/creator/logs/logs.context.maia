@@ -1,8 +1,8 @@
 {
-	"$schema": "@maia/schema/context",
-	"$id": "@maia/creator/context/logs",
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/creator/context/logs",
 	"messages": {
-		"schema": "@maia/schema/message",
+		"schema": "°Maia/schema/message",
 		"options": {
 			"map": {
 				"fromRole": "$$source.role",

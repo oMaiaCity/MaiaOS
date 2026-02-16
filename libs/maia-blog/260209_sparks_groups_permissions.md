@@ -39,7 +39,7 @@ This universal group is your personal space - everything you create belongs to i
 
 ### Creating Child Groups
 
-The @maia spark's group can create child groups for organizing different projects or collaborative spaces:
+The °Maia spark's group can create child groups for organizing different projects or collaborative spaces:
 
 ```javascript
 import { createChildGroup } from '@MaiaOS/db';
@@ -47,11 +47,11 @@ import { createChildGroup } from '@MaiaOS/db';
 const maiaGroup = await backend.getMaiaGroup();
 const childGroup = createChildGroup(node, maiaGroup, { name: "My Project" });
 
-// @maia group is now admin of childGroup
+// °Maia group is now admin of childGroup
 // childGroup can own its own CoValues
 ```
 
-When you create a child group, the @maia spark's group becomes its admin. The child group can then own its own CoValues, have its own members, and even extend other groups for hierarchical access.
+When you create a child group, the °Maia spark's group becomes its admin. The child group can then own its own CoValues, have its own members, and even extend other groups for hierarchical access.
 
 ## What Are Sparks? User-Friendly Group References
 

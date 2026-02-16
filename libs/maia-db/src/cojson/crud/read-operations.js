@@ -7,11 +7,7 @@
 function isReady(data, strict) {
 	if (!data || data.loading || data.error) return false
 	if (!strict) return true
-	return (
-		data.hasProperties !== false ||
-		data.properties ||
-		(typeof data === 'object' && Object.keys(data).length > 0 && data.id)
-	)
+	return typeof data === 'object' && Object.keys(data).length > 0 && data.id
 }
 
 /**

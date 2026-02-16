@@ -1,8 +1,8 @@
 /**
  * Schema Registry - JSON Schema definitions and metadata utilities for MaiaDB
  *
- * Contains hardcoded schemas ONLY for migrations and seeding (before account.os.schemata exists).
- * All runtime schema access MUST load from account.os.schemata CoList.
+ * Contains hardcoded schemas ONLY for migrations and seeding (before spark.os.schematas exists).
+ * All runtime schema access MUST load from account.registries.sparks[°Maia].os.schematas.
  *
  * Also provides metadata utilities for setting schema references in headerMeta.
  *
@@ -99,8 +99,8 @@ const ProfileSchema = {
 /**
  * Schema Registry - Maps schema names to schema definitions
  *
- * Only contains schemas needed for migrations/seeding (before account.os.schemata exists).
- * All runtime schema access MUST load from account.os.schemata CoList.
+ * Only contains schemas needed for migrations/seeding (before spark.os.schematas exists).
+ * All runtime schema access MUST load from account.registries.sparks[°Maia].os.schematas.
  */
 export const SCHEMA_REGISTRY = {
 	AccountSchema,
@@ -129,10 +129,10 @@ export function getAllSchemas() {
  * Check if schema exists in hardcoded registry (for migrations/seeding only)
  * @param {string} schemaName - Schema name
  * @returns {boolean} True if schema exists in hardcoded registry
- * @deprecated Only for use during migrations/seeding. Runtime should check account.os.schemata.
+ * @deprecated Only for use during migrations/seeding. Runtime should check spark.os.schematas.
  */
 export function hasSchemaInRegistry(schemaName) {
-	// Only check hardcoded registry (for migrations/seeding before account.os.schemata exists)
+	// Only check hardcoded registry (for migrations/seeding before spark.os.schematas exists)
 	// Exception schemas are always valid
 	const EXCEPTION_SCHEMAS_LIST = ['@account', '@group', '@metaSchema']
 	if (EXCEPTION_SCHEMAS_LIST.includes(schemaName)) {
@@ -191,7 +191,7 @@ export async function getMetaSchemaFromBackend(backend) {
 	const { resolve } = await import('../cojson/schema/resolver.js')
 
 	// Resolve metaschema co-id from registry
-	const metaSchemaCoId = await resolve(backend, '@maia/schema/meta', { returnType: 'coId' })
+	const metaSchemaCoId = await resolve(backend, '°Maia/schema/meta', { returnType: 'coId' })
 	if (!metaSchemaCoId) {
 		throw new Error('[getMetaSchemaFromBackend] Metaschema not found in registry')
 	}
@@ -235,7 +235,7 @@ export function isExceptionSchema(schema) {
 
 /**
  * Create metadata object with schema reference
- * @param {string} schemaName - Schema name or co-id (e.g., "ProfileSchema", "co_z123...", "@account", "@group", "@maia")
+ * @param {string} schemaName - Schema name or co-id (e.g., "ProfileSchema", "co_z123...", "@account", "@group", "°Maia")
  * @returns {JsonObject} Metadata object for headerMeta
  */
 export function createSchemaMeta(schemaName) {

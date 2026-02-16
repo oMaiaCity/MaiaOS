@@ -1,7 +1,7 @@
 /**
  * Unified Sync Service - WebSocket sync + Agent API + LLM proxy
  *
- * Consolidates: sync (WebSocket), agent (/register-human, /profile), api (/api/v0/llm/chat)
+ * Consolidates: sync (WebSocket), agent (/register, /profile), api (/api/v0/llm/chat)
  *
  * Port: 4201
  *
@@ -27,6 +27,7 @@ import {
 	createWebSocketPeer,
 	DBEngine,
 	filterVibesForSeeding,
+	generateRegistryName,
 	getAllSchemas,
 	getAllToolDefinitions,
 	getAllVibeRegistries,
@@ -60,6 +61,7 @@ if (!usePGlite && !usePostgres) {
 const dbPath = usePGlite ? resolve(_moaiDir, PEER_DB_PATH) : undefined
 const peerMode = process.env.PEER_MODE || 'sync'
 const syncDomain = peerMode === 'agent' ? process.env.PEER_MOAI || null : null
+const MAIA_SPARK = '°Maia'
 const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
 const peerAddGuardian = process.env.PEER_ADD_GUARDIAN === 'true'
 const peerGuardianAccountId = process.env.PEER_GUARDIAN?.trim() || null
@@ -94,10 +96,10 @@ function withTimeout(promise, ms, label) {
 	])
 }
 
-function getSparksId(account) {
-	const id = account.get('sparks')
+function getRegistriesId(account) {
+	const id = account.get('registries')
 	if (!id?.startsWith('co_z'))
-		throw new Error('account.sparks not found. Ensure bootstrap completed.')
+		throw new Error('account.registries not found. Ensure genesis seeded (PEER_FRESH_SEED=true).')
 	return id
 }
 
@@ -129,48 +131,80 @@ async function getCoIdByPath(backend, startId, path, opts = {}) {
 	}
 }
 
-/** Returns server's @maia spark co-id for frontend to link account.sparks["@maia"] */
+/** Returns account.registries + °Maia spark for human/agent to link. Set account.registries; sparks resolved via registries.sparks. */
 async function handleSyncRegistry(worker) {
 	try {
-		const sparksContent = await loadCoMap(worker.backend, getSparksId(worker.account), {
-			retries: 2,
+		const registriesId = getRegistriesId(worker.account)
+		const registriesContent = await loadCoMap(worker.backend, registriesId, { retries: 2 })
+		const sparksId = registriesContent?.get?.('sparks')
+		let maiaSparkId = null
+		if (sparksId?.startsWith('co_z')) {
+			const sparksContent = await loadCoMap(worker.backend, sparksId, { retries: 2 })
+			maiaSparkId = sparksContent?.get?.(MAIA_SPARK)
+		}
+		return jsonResponse({
+			registries: registriesId,
+			...(maiaSparkId?.startsWith('co_z') && { '°Maia': maiaSparkId }),
 		})
-		const maiaSparkId = sparksContent?.get?.('@maia')
-		if (!maiaSparkId?.startsWith('co_z'))
-			return err('@maia spark not in registry (ensure genesis seeded)', 500)
-		return jsonResponse({ '@maia': maiaSparkId })
 	} catch (e) {
 		return err(e?.message ?? 'failed to get sync registry', 500)
 	}
 }
 
 // --- Agent handlers ---
-async function handleRegisterHuman(worker, body) {
-	const { username, accountId } = body || {}
-	if (!username || typeof username !== 'string' || !username.trim())
-		return err('username required', 400, {
-			validationErrors: [{ field: 'username', message: 'required' }],
+async function handleRegister(worker, body) {
+	const { type, username, accountId, sparkCoId } = body || {}
+	if (type !== 'human' && type !== 'spark')
+		return err('type required: human or spark', 400, {
+			validationErrors: [{ field: 'type', message: 'must be human or spark' }],
 		})
-	const u = username.trim()
-	if (!accountId || typeof accountId !== 'string')
-		return err('accountId required', 400, {
+	if (type === 'human' && (!accountId || typeof accountId !== 'string'))
+		return err('accountId required for type=human', 400, {
 			validationErrors: [{ field: 'accountId', message: 'required' }],
 		})
+	if (type === 'spark' && (!sparkCoId || typeof sparkCoId !== 'string'))
+		return err('sparkCoId required for type=spark', 400, {
+			validationErrors: [{ field: 'sparkCoId', message: 'required' }],
+		})
+
+	const coId = type === 'human' ? accountId : sparkCoId
+	let u =
+		username != null && typeof username === 'string' && username.trim() ? username.trim() : null
+
 	const { backend, dbEngine } = worker
 	try {
-		const humansId = await getCoIdByPath(
-			backend,
-			getSparksId(worker.account),
-			['@maia', 'registries', 'humans'],
-			{ retries: 2 },
-		)
-		const raw = await backend.getRawRecord(humansId)
-		if (raw?.[u] != null && raw[u] !== accountId)
-			return err('username already registered to different account', 409)
-		const r = await dbEngine.execute({ op: 'update', id: humansId, data: { [u]: accountId } })
+		const registryKey = type === 'human' ? 'humans' : 'sparks'
+		const registryId = await getCoIdByPath(backend, getRegistriesId(worker.account), [registryKey], {
+			retries: 2,
+		})
+		const raw = await backend.getRawRecord(registryId)
+
+		// Human: one entry per account. If accountId already registered, return success (idempotent).
+		if (type === 'human') {
+			const existingUsername = raw ? Object.keys(raw).find((k) => raw[k] === coId) : null
+			if (existingUsername) {
+				return jsonResponse({
+					ok: true,
+					type: 'human',
+					username: existingUsername,
+					accountId: coId,
+				})
+			}
+		}
+
+		if (!u) u = generateRegistryName(type)
+		if (raw?.[u] != null && raw[u] !== coId)
+			return err(`username "${u}" already registered to different identity`, 409)
+		const r = await dbEngine.execute({ op: 'update', id: registryId, data: { [u]: coId } })
 		if (r?.ok === false)
 			return err(r.errors?.map((e) => e.message).join('; ') ?? 'update failed', 500)
-		return jsonResponse({ ok: true, username: u, accountId })
+		return jsonResponse({
+			ok: true,
+			type,
+			username: u,
+			accountId: type === 'human' ? coId : undefined,
+			sparkCoId: type === 'spark' ? coId : undefined,
+		})
 	} catch (e) {
 		return err(e?.message ?? 'failed to register', 500)
 	}
@@ -180,7 +214,27 @@ async function handleProfile(worker) {
 	try {
 		const { account, backend } = worker
 		const profileId = account?.get?.('profile')
-		const sparksId = account?.get?.('sparks')
+		const registriesId = account?.get?.('registries')
+		let sparks = null
+		if (registriesId?.startsWith('co_z')) {
+			try {
+				const registriesContent = await loadCoMap(backend, registriesId, { retries: 2 })
+				const sparksId = registriesContent?.get?.('sparks')
+				if (sparksId?.startsWith('co_z')) {
+					const c = await loadCoMap(backend, sparksId, { retries: 2 })
+					if (c?.get) {
+						sparks = {}
+						const keys = typeof c.keys === 'function' ? Array.from(c.keys()) : Object.keys(c ?? {})
+						for (const k of keys) {
+							const val = c.get(k)
+							if (val && typeof val === 'string' && val.startsWith('co_z')) sparks[k] = val
+						}
+					}
+				}
+			} catch (e) {
+				sparks = { _error: e?.message ?? 'failed to load' }
+			}
+		}
 		let profileName = null
 		if (profileId?.startsWith('co_z')) {
 			const store = await backend.read(null, profileId)
@@ -188,26 +242,10 @@ async function handleProfile(worker) {
 			const d = store?.value
 			if (d && !d.error) profileName = d?.name ?? d?.properties?.name ?? null
 		}
-		let sparks = null
-		if (sparksId?.startsWith('co_z')) {
-			try {
-				const c = await loadCoMap(backend, sparksId, { retries: 2 })
-				if (c?.get) {
-					sparks = {}
-					const keys = typeof c.keys === 'function' ? Array.from(c.keys()) : Object.keys(c ?? {})
-					for (const k of keys) {
-						const val = c.get(k)
-						if (val && typeof val === 'string' && val.startsWith('co_z')) sparks[k] = val
-					}
-				}
-			} catch (e) {
-				sparks = { _error: e?.message ?? 'failed to load' }
-			}
-		}
 		return jsonResponse({
 			accountId: account?.id ?? account?.$jazz?.id,
 			profileId,
-			sparksId,
+			registriesId: registriesId ?? null,
 			sparks,
 			profileName: profileName ?? '(not loaded)',
 		})
@@ -227,10 +265,8 @@ async function handleAgentHttp(req, worker) {
 			return err(e.message, e?.message?.includes('timed out') ? 504 : 400)
 		}
 	}
-	if (url.pathname === '/register-human' && req.method === 'POST')
-		return post(false, (w, b) =>
-			withTimeout(handleRegisterHuman(w, b), REQUEST_TIMEOUT_MS, '/register-human'),
-		)
+	if (url.pathname === '/register' && req.method === 'POST')
+		return post(false, (w, b) => withTimeout(handleRegister(w, b), REQUEST_TIMEOUT_MS, '/register'))
 	return null
 }
 
@@ -360,7 +396,7 @@ Bun.serve({
 			const agentRes = await handleAgentHttp(req, agentWorker)
 			if (agentRes) return agentRes
 		} else if (
-			url.pathname.startsWith('/register-human') ||
+			url.pathname.startsWith('/register') ||
 			url.pathname.startsWith('/profile') ||
 			url.pathname.startsWith('/syncRegistry')
 		) {
@@ -425,7 +461,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 		process.on('SIGTERM', () => shutdown())
 		process.on('SIGINT', () => shutdown())
 
-		const backend = new CoJSONBackend(localNode, result.account, { systemSpark: '@maia' })
+		const backend = new CoJSONBackend(localNode, result.account, { systemSpark: '°Maia' })
 		const dbEngine = new DBEngine(backend)
 		backend.dbEngine = dbEngine
 		agentWorker = { node: localNode, account: result.account, backend, dbEngine }
@@ -465,18 +501,18 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 			console.log('[sync] PEER_FRESH_SEED not set — using persisted scaffold (skip seed).')
 		}
 
-		// One-time: add PEER_GUARDIAN (human account co-id) as admin of @maia spark guardian group
+		// One-time: add PEER_GUARDIAN (human account co-id) as admin of °Maia spark guardian group
 		if (peerAddGuardian && peerGuardianAccountId?.startsWith('co_z')) {
 			try {
 				const guardian = await agentWorker.backend.getMaiaGroup()
 				if (guardian) {
 					await agentWorker.backend.addGroupMember(guardian, peerGuardianAccountId, 'admin')
 					console.log(
-						`[sync] Added guardian as admin of @maia spark (set PEER_ADD_GUARDIAN=false to skip on next restart)`,
+						`[sync] Added guardian as admin of °Maia spark (set PEER_ADD_GUARDIAN=false to skip on next restart)`,
 					)
 				} else {
 					console.warn(
-						'[sync] PEER_ADD_GUARDIAN=true but @maia spark guardian not found (ensure genesis seeded first)',
+						'[sync] PEER_ADD_GUARDIAN=true but °Maia spark guardian not found (ensure genesis seeded first)',
 					)
 				}
 			} catch (e) {

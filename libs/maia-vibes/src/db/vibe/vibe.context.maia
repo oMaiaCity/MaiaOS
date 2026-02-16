@@ -1,6 +1,6 @@
 {
-	"$schema": "@maia/schema/context",
-	"$id": "@maia/db/context/vibe",
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/db/context/vibe",
 	"navTitle": "MaiaDB",
 	"navCategories": [
 		{
@@ -54,7 +54,7 @@
 	"currentTable": "@table",
 	"currentDetail": "@detail",
 	"@actors": {
-		"table": "@maia/db/actor/table",
-		"detail": "@maia/db/actor/detail"
+		"table": "°Maia/db/actor/table",
+		"detail": "°Maia/db/actor/detail"
 	}
 }

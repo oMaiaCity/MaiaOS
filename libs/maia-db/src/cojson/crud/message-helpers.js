@@ -52,9 +52,9 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 			if (messageSchemaRef.startsWith('co_z')) {
 				// Already a co-id
 				messageSchemaCoId = messageSchemaRef
-			} else if (messageSchemaRef.startsWith('@maia/schema/')) {
+			} else if (messageSchemaRef.startsWith('°Maia/schema/')) {
 				// Schema reference - resolve it using operations API
-				const schemaName = messageSchemaRef.replace('@maia/schema/', '')
+				const schemaName = messageSchemaRef.replace('°Maia/schema/', '')
 				const messageSchemaStore = await dbEngine.execute({
 					op: 'schema',
 					schemaName: schemaName,
@@ -70,7 +70,7 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 		if (!messageSchemaCoId) {
 			messageSchemaCoId = await dbEngine.execute({
 				op: 'resolve',
-				humanReadableKey: '@maia/schema/message',
+				humanReadableKey: '°Maia/schema/message',
 			})
 		}
 

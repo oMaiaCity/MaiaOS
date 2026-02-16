@@ -3,9 +3,9 @@ import { assertSchemaValidForCreate, createSchemaMeta } from '../../schemas/regi
 /**
  * Create a CoStream with MANDATORY schema validation
  *
- * Automatically uses @maia spark group from account as owner/admin when account is passed.
+ * Automatically uses °Maia spark group from account as owner/admin when account is passed.
  *
- * @param {RawAccount|RawGroup} accountOrGroup - Account (to get @maia spark group) or Group
+ * @param {RawAccount|RawGroup} accountOrGroup - Account (to get °Maia spark group) or Group
  * @param {string} schemaName - Schema name for headerMeta.$schema (REQUIRED)
  * @param {LocalNode} [node] - LocalNode instance (required if accountOrGroup is account)
  * @param {Object} [dbEngine] - dbEngine with backend (required when account is passed)
@@ -20,15 +20,15 @@ export async function createCoStream(accountOrGroup, schemaName, _node = null, d
 		// Try to get profile - if it exists, it's an account
 		const profileId = accountOrGroup.get('profile')
 		if (profileId) {
-			// It's an account - resolve @maia spark's group via getSparkGroup
+			// It's an account - resolve °Maia spark's group via getSparkGroup
 			const backend = dbEngine?.backend
 			if (!backend) {
 				throw new Error('[createCoStream] dbEngine.backend required when passing account')
 			}
 			const { getSparkGroup } = await import('../groups/groups.js')
-			group = await getSparkGroup(backend, '@maia')
+			group = await getSparkGroup(backend, '°Maia')
 			if (!group) {
-				throw new Error('[createCoStream] @maia spark group not found. Ensure bootstrap has run.')
+				throw new Error('[createCoStream] °Maia spark group not found. Ensure bootstrap has run.')
 			}
 		}
 		// If profileId is null/undefined, it's a regular group, use it as-is

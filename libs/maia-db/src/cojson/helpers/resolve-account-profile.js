@@ -60,7 +60,7 @@ async function resolveOne(maia, accountCoId) {
 		const profileStore = await maia.db({ op: 'read', schema: null, key: profileCoId })
 		await waitForStore(profileStore, 5000)
 		const profileData = profileStore?.value ?? profileStore
-		const name = profileData?.name ?? profileData?.properties?.find?.((p) => p?.key === 'name')?.value
+		const name = profileData?.name
 		return typeof name === 'string' && name.length > 0 ? name : travelerFallback(accountCoId)
 	} catch (_e) {
 		return travelerFallback(accountCoId)

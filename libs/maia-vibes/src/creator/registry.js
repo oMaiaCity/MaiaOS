@@ -17,28 +17,28 @@ export const CreatorVibeRegistry = {
 	vibe: creatorVibe,
 
 	styles: {
-		'@maia/style/brand': masterBrand,
-		'@maia/creator/style/logs': logsStyle,
+		'°Maia/style/brand': masterBrand,
+		'°Maia/creator/style/logs': logsStyle,
 	},
 
 	actors: {
-		'@maia/creator/actor/vibe': vibeActor,
+		'°Maia/creator/actor/vibe': vibeActor,
 	},
 
 	views: {
-		'@maia/creator/view/logs': logsView,
+		'°Maia/creator/view/logs': logsView,
 	},
 
 	contexts: {
-		'@maia/creator/context/logs': logsContext,
+		'°Maia/creator/context/logs': logsContext,
 	},
 
 	states: {
-		'@maia/creator/state/logs': logsState,
+		'°Maia/creator/state/logs': logsState,
 	},
 
 	inboxes: {
-		'@maia/creator/inbox/logs': logsInbox,
+		'°Maia/creator/inbox/logs': logsInbox,
 	},
 
 	data: {},

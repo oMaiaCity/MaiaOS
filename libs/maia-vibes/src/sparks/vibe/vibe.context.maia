@@ -1,8 +1,8 @@
 {
-	"$schema": "@maia/schema/context",
-	"$id": "@maia/sparks/context/vibe",
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/sparks/context/vibe",
 	"sparks": {
-		"schema": "@maia/schema/data/spark"
+		"schema": "°Maia/schema/data/spark"
 	},
 	"newSparkName": "",
 	"inputPlaceholder": "Enter spark name...",
@@ -14,6 +14,6 @@
 	"selectedSparkItems": {},
 	"currentDetail": "@detail",
 	"@actors": {
-		"detail": "@maia/sparks/actor/detail"
+		"detail": "°Maia/sparks/actor/detail"
 	}
 }

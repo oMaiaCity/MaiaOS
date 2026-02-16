@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/vibe",
-	"$id": "@maia/vibe/db",
+	"$schema": "°Maia/schema/vibe",
+	"$id": "°Maia/vibe/db",
 	"name": "MaiaDB",
 	"description": "Database viewer with navigation and detail panels",
-	"actor": "@maia/db/actor/vibe"
+	"actor": "°Maia/db/actor/vibe"
 }

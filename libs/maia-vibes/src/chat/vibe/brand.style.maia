@@ -1,6 +1,6 @@
 {
-	"$schema": "@maia/schema/style",
-	"$id": "@maia/chat/style/brand",
+	"$schema": "°Maia/schema/style",
+	"$id": "°Maia/chat/style/brand",
 	"tokens": {
 		"colors": {
 			"marineBlue": "#001F33",

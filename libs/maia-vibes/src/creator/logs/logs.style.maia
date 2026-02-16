@@ -1,6 +1,6 @@
 {
-	"$schema": "@maia/schema/style",
-	"$id": "@maia/creator/style/logs",
+	"$schema": "°Maia/schema/style",
+	"$id": "°Maia/creator/style/logs",
 	"components": {
 		"vibeCreatorTitle": {
 			"fontFamily": "{typography.fontFamily.heading}",

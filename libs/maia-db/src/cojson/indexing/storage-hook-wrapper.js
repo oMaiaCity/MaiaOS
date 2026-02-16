@@ -10,6 +10,7 @@
  */
 
 import { EXCEPTION_SCHEMAS } from '../../schemas/registry.js'
+import * as groups from '../groups/groups.js'
 import {
 	extractSchemaFromMessage,
 	isAccountGroupOrProfile,
@@ -98,8 +99,8 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
 		// These checks must be fast and not trigger any storage operations
 
 		// 1. Use universal skip validation helper (consolidates all skip logic)
-		// NOTE: We DON'T skip @metaSchema here - @maia/schema/meta uses @metaSchema but should be registered!
-		// Let isSchemaCoValue() and shouldIndexCoValue() handle @maia detection properly
+		// NOTE: We DON'T skip @metaSchema here - °Maia/schema/meta uses @metaSchema but should be registered!
+		// Let isSchemaCoValue() and shouldIndexCoValue() handle °Maia detection properly
 		let shouldSkipIndexing = shouldSkipValidation(msg, backend, coId)
 
 		// Don't skip @metaSchema for indexing (it should be registered)
@@ -115,10 +116,10 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
 		if (!shouldSkipIndexing && backend.account) {
 			const osId = backend._cachedMaiaOsId
 			if (coId === osId) {
-				// This is account.os itself - skip indexing to prevent infinite loop
+				// This is spark.os itself - skip indexing to prevent infinite loop
 				shouldSkipIndexing = true
 			} else if (osId) {
-				// Check if account.os is already loaded (don't trigger loading!)
+				// Check if spark.os is already loaded (don't trigger loading!)
 				const osCore = backend.node.getCoValue(osId)
 				if (osCore && backend.isAvailable(osCore) && osCore.type === 'comap') {
 					const osContent = osCore.getCurrentContent?.()
@@ -135,13 +136,13 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
 							shouldSkipIndexing = true
 						}
 
-						// Check if it's account.os.indexes itself
+						// Check if it's spark.os.indexes itself
 						const indexesId = osContent.get('indexes')
 						if (coId === indexesId) {
 							shouldSkipIndexing = true
 						}
 
-						// Check if it's inside account.os.indexes (any schema index colist)
+						// Check if it's inside spark.os.indexes (any schema index colist)
 						if (indexesId && !shouldSkipIndexing) {
 							const indexesCore = backend.node.getCoValue(indexesId)
 							if (indexesCore && backend.isAvailable(indexesCore) && indexesCore.type === 'comap') {
@@ -171,13 +172,13 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
 						}
 					}
 				}
-				// If account.os is not loaded, we can't check - skip indexing to be safe
-				// This prevents triggering loads that might cause loops
-				else if (!osCore || !backend.isAvailable(osCore)) {
-					// Account.os not loaded - skip indexing to prevent triggering loads
-					// The CRUD hooks will handle indexing when account.os is available
-					shouldSkipIndexing = true
-				}
+				// If spark.os is not loaded yet, do NOT skip - proceed with indexing.
+				// ROOT CAUSE FIX: We previously skipped here "to prevent triggering loads", but that
+				// broke indexing entirely: spark.os is often not loaded when the first todo/message
+				// is stored (getSparkOsId only loads registries->sparks->spark, not spark.os itself).
+				// indexCoValue's shouldIndexCoValue/isInternalCoValue will correctly skip internal
+				// co-values (spark.os, schematas, indexes). Data co-values (todos, messages) must be indexed.
+				// Skipping here caused spark.os.indexes to stay empty since the registry refactor.
 			}
 		}
 
@@ -189,29 +190,26 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
 			return storeResult
 		}
 
-		// After successful store, index the co-value (fire and forget - don't block storage)
-		// Use Promise.resolve to handle both sync and async storage
-		Promise.resolve(storeResult)
+		// CRITICAL: Chain indexing to store - storage is not complete until BOTH stored AND indexed
+		// This ensures readCollection and other consumers never see unindexed data
+		return Promise.resolve(storeResult)
 			.then(async () => {
 				// Deduplication: Skip if already indexing this co-value
-				// CRITICAL: Check BEFORE setTimeout to prevent race conditions
 				if (pendingIndexing.has(coId)) {
-					return // Already indexing - skip
+					return
 				}
-
-				// Mark as pending BEFORE deferring (prevents race conditions)
 				pendingIndexing.add(coId)
 
 				try {
-					// CRITICAL: No delays or blocking waits - co-value should be immediately available after store()
-					// The storage operation completes synchronously for local writes
-					// If it's not available, it means it's a remote sync write, and we can skip indexing
-					// (remote writes will be indexed when they sync to this peer)
+					// Pre-warm getSparkOsId: ensure registries/spark/os are loaded before indexCoValue
+					if (!backend._cachedMaiaOsId && backend.account) {
+						await groups.getSparkOsId(backend, backend.systemSpark ?? '°Maia')
+					}
 
-					// Get co-value core (may need brief retries for local rapid writes during seeding)
+					// Get co-value core (may need retries for local rapid writes during seeding)
 					let coValueCore = backend.getCoValue(coId)
 					let attempts = 0
-					const maxAttempts = 5
+					const maxAttempts = 10
 					while ((!coValueCore || !backend.isAvailable(coValueCore)) && attempts < maxAttempts) {
 						if (backend.node?.loadCoValueCore) {
 							await backend.node.loadCoValueCore(coId).catch(() => {})
@@ -221,81 +219,37 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
 						attempts++
 					}
 					if (!coValueCore || !backend.isAvailable(coValueCore)) {
-						return // Remote write or still not available - explicit re-index pass will catch if local
+						// Remote write or still not available - explicit re-index pass will catch if local
+						return
 					}
 
 					const updatedCoValueCore = backend.getCoValue(coId)
 					if (!updatedCoValueCore || !backend.isAvailable(updatedCoValueCore)) {
-						// Not available - skip (likely remote write)
 						return
 					}
 
-					// CRITICAL: Check if it's a schema co-value FIRST (before checking if it's internal)
-					// Schemas need to be registered even if they're "internal" (they shouldn't be, but check first)
+					// Schema co-value - auto-register in spark.os.schematas
 					const isSchema = await isSchemaCoValue(backend, updatedCoValueCore)
-
 					if (isSchema) {
-						// Schema co-value - auto-register in account.os.schemata (skip indexing check)
-						setTimeout(() => {
-							// Double-check pendingIndexing (defensive - should already be set)
-							if (!pendingIndexing.has(coId)) {
-								return
-							}
-							registerSchemaCoValue(backend, updatedCoValueCore)
-								.then(() => {
-									// Remove from pending set after indexing completes
-									pendingIndexing.delete(coId)
-								})
-								.catch(() => {
-									// Remove from pending set even on error
-									pendingIndexing.delete(coId)
-								})
-						}, 0)
-						return // Don't proceed to indexing - schemas are registered, not indexed
+						await registerSchemaCoValue(backend, updatedCoValueCore)
+						return
 					}
 
-					// CRITICAL: Check if this co-value should be indexed (skips internal co-values like account.os, index colists, etc.)
-					// This prevents infinite loops where indexing writes to account.os, which triggers indexing again
+					// Check if this co-value should be indexed (skips internal co-values)
 					const { shouldIndex } = await shouldIndexCoValue(backend, updatedCoValueCore)
 					if (!shouldIndex) {
-						// Internal co-value - skip indexing (prevents infinite loop)
 						return
 					}
 
-					// CRITICAL: Don't await indexing - fire and forget to avoid blocking UI
-					// Indexing is non-critical for immediate correctness (co-value is already stored)
-					// Use setTimeout to defer to next event loop tick, allowing UI to update first
-					// The pendingIndexing check above prevents duplicate indexing even with setTimeout
-					// Regular co-value - index it (or add to unknown if no schema)
-					setTimeout(() => {
-						// Double-check pendingIndexing (defensive - should already be set)
-						if (!pendingIndexing.has(coId)) {
-							// This shouldn't happen - indicates race condition
-							return
-						}
-						indexCoValue(backend, updatedCoValueCore)
-							.then(() => {
-								// Remove from pending set after indexing completes
-								pendingIndexing.delete(coId)
-							})
-							.catch(() => {
-								// Remove from pending set even on error
-								pendingIndexing.delete(coId)
-							})
-					}, 0)
-				} catch (_error) {
-					// Don't fail storage if indexing fails
-					// Remove from pending set on error
+					// Regular co-value - index it (await ensures storage not complete until indexed)
+					await indexCoValue(backend, updatedCoValueCore)
+				} catch (error) {
+					console.error('[StorageHook] Indexing failed', coId, error)
+				} finally {
 					pendingIndexing.delete(coId)
 				}
 			})
-			.catch(() => {
-				// Don't fail storage if indexing fails
-				const coId = msg.id
-				pendingIndexing.delete(coId)
-			})
-
-		return storeResult
+			.then(() => storeResult)
 	}
 
 	return wrappedStorage

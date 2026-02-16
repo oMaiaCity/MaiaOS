@@ -6,7 +6,7 @@
  */
 
 import { ensureCoValueLoaded } from './collection-helpers.js'
-import { extractCoValueDataFlat } from './data-extraction.js'
+import { extractCoValueData } from './data-extraction.js'
 
 /**
  * Check if a CoValue is already resolved or being resolved
@@ -132,7 +132,7 @@ async function _waitForCoValueAvailable(backend, coId, timeoutMs = 5000) {
  */
 export async function resolveNestedReferences(backend, data, visited = new Set(), options = {}) {
 	const {
-		maxDepth = 15, // TODO: temporarily scaled up from 10 for @maia spark detail
+		maxDepth = 15, // TODO: temporarily scaled up from 10 for °Maia spark detail
 		timeoutMs = 5000, // Kept for API compatibility but not used in progressive mode
 		currentDepth = 0,
 	} = options
@@ -182,7 +182,7 @@ export async function resolveNestedReferences(backend, data, visited = new Set()
 					if (backend.isAvailable(core)) {
 						// CoValue became available - reactively resolve it
 						try {
-							const nestedData = extractCoValueDataFlat(backend, core)
+							const nestedData = extractCoValueData(backend, core)
 							// Recursively resolve nested references reactively (non-blocking)
 							await resolveNestedReferences(backend, nestedData, visited, {
 								maxDepth,
@@ -210,7 +210,7 @@ export async function resolveNestedReferences(backend, data, visited = new Set()
 
 			// CoValue is available - resolve it
 			// Extract data from nested CoValue
-			const nestedData = extractCoValueDataFlat(backend, coValueCore)
+			const nestedData = extractCoValueData(backend, coValueCore)
 
 			// Recursively resolve nested references in the nested CoValue
 			// Pass the same visited set to prevent circular resolution
@@ -226,7 +226,7 @@ export async function resolveNestedReferences(backend, data, visited = new Set()
 				if (backend.isAvailable(core)) {
 					// CoValue became available - reactively resolve its nested references
 					try {
-						const nestedData = extractCoValueDataFlat(backend, core)
+						const nestedData = extractCoValueData(backend, core)
 						// Recursively resolve nested references reactively (non-blocking)
 						resolveNestedReferences(backend, nestedData, visited, {
 							maxDepth,
@@ -275,7 +275,7 @@ export async function resolveNestedReferences(backend, data, visited = new Set()
 export async function deepResolveCoValue(backend, coId, options = {}) {
 	const {
 		deepResolve = true,
-		maxDepth = 15, // TODO: temporarily scaled up from 10 for @maia spark detail
+		maxDepth = 15, // TODO: temporarily scaled up from 10 for °Maia spark detail
 		timeoutMs = 5000,
 	} = options
 
@@ -310,7 +310,7 @@ export async function deepResolveCoValue(backend, coId, options = {}) {
 				}
 
 				// Extract data from CoValue
-				const data = extractCoValueDataFlat(backend, coValueCore)
+				const data = extractCoValueData(backend, coValueCore)
 
 				// PROGRESSIVE RESOLUTION: Resolve nested references progressively (non-blocking)
 				// Start with the root CoValue in visited set to prevent resolving it again

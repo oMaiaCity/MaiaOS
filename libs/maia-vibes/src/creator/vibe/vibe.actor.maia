@@ -1,13 +1,13 @@
 {
-	"$schema": "@maia/schema/actor",
-	"$id": "@maia/creator/actor/vibe",
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/creator/actor/vibe",
 	"role": "agent",
-	"context": "@maia/creator/context/logs",
-	"view": "@maia/creator/view/logs",
-	"state": "@maia/creator/state/logs",
-	"brand": "@maia/style/brand",
-	"style": "@maia/creator/style/logs",
-	"inbox": "@maia/creator/inbox/logs",
+	"context": "°Maia/creator/context/logs",
+	"view": "°Maia/creator/view/logs",
+	"state": "°Maia/creator/state/logs",
+	"brand": "°Maia/style/brand",
+	"style": "°Maia/creator/style/logs",
+	"inbox": "°Maia/creator/inbox/logs",
 	"messageTypes": [
 		"RETRY",
 		"DISMISS"

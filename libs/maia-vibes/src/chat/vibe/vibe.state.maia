@@ -1,6 +1,6 @@
 {
-	"$schema": "@maia/schema/state",
-	"$id": "@maia/chat/state/vibe",
+	"$schema": "°Maia/schema/state",
+	"$id": "°Maia/chat/state/vibe",
 	"initial": "idle",
 	"states": {
 		"idle": {
@@ -78,7 +78,7 @@
 					"tool": "@db",
 					"payload": {
 						"op": "create",
-						"schema": "@maia/schema/data/chat",
+						"schema": "°Maia/schema/data/chat",
 						"data": {
 							"role": "user",
 							"content": "$$inputText"
@@ -159,7 +159,7 @@
 					"tool": "@db",
 					"payload": {
 						"op": "create",
-						"schema": "@maia/schema/data/chat",
+						"schema": "°Maia/schema/data/chat",
 						"data": {
 							"role": "assistant",
 							"content": "$$result.content"

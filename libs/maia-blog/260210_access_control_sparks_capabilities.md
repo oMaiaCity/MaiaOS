@@ -38,13 +38,13 @@ You (the user) have an **account**. Your account is a special CoValue that repre
 - **profile** – Your profile CoMap (name, avatar, etc.)
 - **sparks** – A registry (a CoMap) of your collaborative spaces
 
-When you first create an account, the system sets up a default spark called **@maia**. That's your personal spark—everything you create by default lives under @maia. The `account.sparks` CoMap maps names to spark CoValues: e.g. `account.sparks["@maia"]` → the @maia spark's co-id, and `account.sparks["My Project"]` → your "My Project" spark's co-id.
+When you first create an account, the system sets up a default spark called **°Maia**. That's your personal spark—everything you create by default lives under °Maia. The `account.sparks` CoMap maps names to spark CoValues: e.g. `account.registries.sparks["°Maia"]` → the °Maia spark's co-id, and `account.sparks["My Project"]` → your "My Project" spark's co-id.
 
 So: **account.sparks** is your list of collaborative spaces. Each entry points to a **spark** CoValue.
 
 ## Sparks: Named Collaborative Spaces
 
-A **spark** is a CoMap with a name (e.g. "@maia" or "My Project"). It's the user-facing way to organize collaborative spaces. But here's the question: **where does the group live that controls who has access to this spark?**
+A **spark** is a CoMap with a name (e.g. "°Maia" or "My Project"). It's the user-facing way to organize collaborative spaces. But here's the question: **where does the group live that controls who has access to this spark?**
 
 We could put a `group` property directly on the spark: `spark.group = "co_zSomeGroupId"`. But a spark needs more than just "who has access." It also needs:
 
@@ -82,7 +82,7 @@ A few benefits:
 
 1. **Single path** – No confusion about "do I use spark.group or spark.os.capabilities.guardian?" Always the latter.
 2. **Room to grow** – Capabilities can hold more than guardian (e.g. publicReaders, future writeDelegates) without cluttering the spark.
-3. **Consistent resolution** – The same path works for @maia and every user-created spark. Same structure everywhere.
+3. **Consistent resolution** – The same path works for °Maia and every user-created spark. Same structure everywhere.
 
 ## Per-CoValue Ownership: Each Piece of Data Has Its Own Group
 
@@ -108,7 +108,7 @@ Result: the CoValue is owned by a group with **no direct members**—only the gu
 
 ### Guardian
 
-The **guardian** is the spark's admin group. For @maia, it's created during bootstrap and has your account as direct admin. For user-created sparks (e.g. "My Project"), it's a child group of @maia's guardian—so you (as @maia admin) are automatically admin of "My Project" too.
+The **guardian** is the spark's admin group. For °Maia, it's created during bootstrap and has your account as direct admin. For user-created sparks (e.g. "My Project"), it's a child group of °Maia's guardian—so you (as °Maia admin) are automatically admin of "My Project" too.
 
 When you add a member to a spark, you're adding them to the guardian. When you create a CoValue for a spark, that CoValue's group extends the guardian. All access flows through this one group.
 
@@ -126,13 +126,13 @@ CoValues owned by a group that extends publicReaders are readable by anyone. Wri
 
 When you create a spark (e.g. "My Project"), we don't just create a spark CoMap with a name. We create the **full scaffold** so every spark has the same structure:
 
-1. **Guardian** – A new child group of @maia's guardian. This is *your* spark's admin group.
+1. **Guardian** – A new child group of °Maia's guardian. This is *your* spark's admin group.
 2. **Capabilities CoMap** – With `guardian: childGroup.id`
 3. **OS CoMap** – With `capabilities: capabilities.id`
 4. **Vibes CoMap** – Empty registry for this spark's vibes
 5. **Spark CoMap** – With `{ name, os, vibes }`—no top-level `group` property
 
-So the path `spark.os.capabilities.guardian` always works. Same for @maia (created at bootstrap) and every user spark.
+So the path `spark.os.capabilities.guardian` always works. Same for °Maia (created at bootstrap) and every user spark.
 
 ## Resolving Members in the UI
 

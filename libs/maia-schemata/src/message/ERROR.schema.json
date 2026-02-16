@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/message/ERROR",
-	"title": "@maia/schema/message/ERROR",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/message/ERROR",
+	"title": "°Maia/schema/message/ERROR",
 	"description": "Message type for operation errors. Aligned with OperationResult createErrorEntry shape.",
 	"cotype": "comap",
 	"indexing": true,

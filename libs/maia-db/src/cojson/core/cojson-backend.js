@@ -34,7 +34,7 @@ export class CoJSONBackend extends DBAdapter {
 		this.node = node
 		this.account = account
 		this.dbEngine = dbEngine // Store dbEngine for runtime schema validation
-		this.systemSpark = options.systemSpark ?? '@maia' // Spark scope for registry lookups (passed from app)
+		this.systemSpark = options.systemSpark ?? '°Maia' // Spark scope for registry lookups (passed from app)
 
 		// Get node-aware unified cache (auto-clears if node changed)
 		this.subscriptionCache = getGlobalCoCache(node)
@@ -154,8 +154,8 @@ export class CoJSONBackend extends DBAdapter {
 	}
 
 	/**
-	 * Get @maia spark's group (for create operations)
-	 * @returns {Promise<RawGroup|null>} @maia spark's group
+	 * Get °Maia spark's group (for create operations)
+	 * @returns {Promise<RawGroup|null>} °Maia spark's group
 	 */
 	async getMaiaGroup() {
 		return groups.getMaiaGroup(this)
@@ -292,7 +292,7 @@ export class CoJSONBackend extends DBAdapter {
 
 	/**
 	 * Create a new Spark (CoMap that references a group)
-	 * Creates a child group owned by @maia spark's group, then creates Spark CoMap
+	 * Creates a child group owned by °Maia spark's group, then creates Spark CoMap
 	 * @param {string} name - Spark name
 	 * @returns {Promise<Object>} Created spark with co-id
 	 */
@@ -301,20 +301,24 @@ export class CoJSONBackend extends DBAdapter {
 			throw new Error('[CoJSONBackend] Account required for createSpark')
 		}
 
+		// Normalize: trim and ensure ° prefix (deduplicate if user already added °)
+		const trimmed = typeof name === 'string' ? name.trim() : ''
+		const normalizedName = trimmed && !trimmed.startsWith('°') ? `°${trimmed}` : trimmed
+
 		const maiaGuardian = await this.getMaiaGroup()
 		if (!maiaGuardian) {
-			throw new Error('[CoJSONBackend] @maia spark group not found')
+			throw new Error('[CoJSONBackend] °Maia spark group not found')
 		}
 
 		const { createChildGroup } = await import('../groups/create.js')
-		const childGroup = createChildGroup(this.node, maiaGuardian, { name })
+		const childGroup = createChildGroup(this.node, maiaGuardian, { name: normalizedName })
 
-		const sparkSchemaCoId = await resolve(this, '@maia/schema/data/spark', { returnType: 'coId' })
-		const capabilitiesSchemaCoId = await resolve(this, '@maia/schema/os/capabilities', {
+		const sparkSchemaCoId = await resolve(this, '°Maia/schema/data/spark', { returnType: 'coId' })
+		const capabilitiesSchemaCoId = await resolve(this, '°Maia/schema/os/capabilities', {
 			returnType: 'coId',
 		})
-		const osSchemaCoId = await resolve(this, '@maia/schema/os/os-registry', { returnType: 'coId' })
-		const vibesSchemaCoId = await resolve(this, '@maia/schema/os/vibes-registry', {
+		const osSchemaCoId = await resolve(this, '°Maia/schema/os/os-registry', { returnType: 'coId' })
+		const vibesSchemaCoId = await resolve(this, '°Maia/schema/os/vibes-registry', {
 			returnType: 'coId',
 		})
 		if (!sparkSchemaCoId || !capabilitiesSchemaCoId || !osSchemaCoId || !vibesSchemaCoId) {
@@ -345,15 +349,13 @@ export class CoJSONBackend extends DBAdapter {
 		const { coValue: sparkCoMap } = await createCoValueForSpark(ctx, null, {
 			schema: sparkSchemaCoId,
 			cotype: 'comap',
-			data: { name, os: os.id, vibes: vibes.id },
+			data: { name: normalizedName, os: os.id, vibes: vibes.id },
 			dbEngine: this.dbEngine,
 		})
 
-		await this._registerSparkInAccount(sparkCoMap.id)
-
 		return {
 			id: sparkCoMap.id,
-			name,
+			name: normalizedName,
 			guardian: childGroup.id,
 		}
 	}
@@ -370,8 +372,8 @@ export class CoJSONBackend extends DBAdapter {
 			return await this.read(null, id)
 		}
 
-		// Collection read - read from account.sparks or indexed colist
-		const sparkSchema = schema || '@maia/schema/data/spark'
+		// Collection read - read from account.registries.sparks or indexed colist
+		const sparkSchema = schema || '°Maia/schema/data/spark'
 		const sparkSchemaCoId = await resolve(this, sparkSchema, { returnType: 'coId' })
 		if (!sparkSchemaCoId) {
 			throw new Error(`[CoJSONBackend] Spark schema not found: ${sparkSchema}`)
@@ -389,13 +391,17 @@ export class CoJSONBackend extends DBAdapter {
 	 */
 	async updateSpark(id, data) {
 		const { group, ...allowed } = data || {}
+		if (typeof allowed.name === 'string') {
+			const trimmed = allowed.name.trim()
+			allowed.name = trimmed && !trimmed.startsWith('°') ? `°${trimmed}` : trimmed
+		}
 		const schemaCoId = await resolve(this, { fromCoValue: id }, { returnType: 'coId' })
 		return await this.update(schemaCoId, id, allowed)
 	}
 
 	/**
 	 * Delete Spark
-	 * Removes spark from account.sparks and deletes Spark CoMap
+	 * Removes spark and deletes Spark CoMap (registry updated via POST /register flow)
 	 * @param {string} id - Spark co-id
 	 * @returns {Promise<Object>} Deletion result
 	 */
@@ -405,81 +411,7 @@ export class CoJSONBackend extends DBAdapter {
 		// Delete Spark CoMap (removes from index automatically via storage hooks)
 		await this.delete(schemaCoId, id)
 
-		// Remove from account.sparks (keyed by co-id)
-		await this._unregisterSparkFromAccount(id)
-
 		return { success: true, id }
-	}
-
-	/**
-	 * Register spark in account.sparks CoMap
-	 * Stores spark keyed by co-id: account.sparks[sparkCoId] = sparkCoId
-	 * Uses read() + waitForStoreReady (proper $store architecture)
-	 * @private
-	 * @param {string} sparkCoId - Spark co-id (key and value)
-	 */
-	async _registerSparkInAccount(sparkCoId) {
-		const sparksId = this.account.get('sparks')
-		let sparks
-
-		if (sparksId) {
-			// Use read() + waitForStoreReady - proper store architecture
-			const sparksStore = await universalRead(this, sparksId, null, null, null, { deepResolve: false })
-			await waitForStoreReady(sparksStore, sparksId, 15000)
-			const sparksCore = this.node.getCoValue(sparksId)
-			if (sparksCore && this.isAvailable(sparksCore)) {
-				sparks = this.getCurrentContent(sparksCore)
-			}
-		}
-
-		// Only create new sparks CoMap when account has none (migration not run yet)
-		if (!sparks && !sparksId) {
-			const sparksSchemaCoId = await resolve(this, '@maia/schema/os/sparks-registry', {
-				returnType: 'coId',
-			})
-			const schema = sparksSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA
-			const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
-			const { coValue: sparksCoMap } = await createCoValueForSpark(this, '@maia', {
-				schema,
-				cotype: 'comap',
-				data: {},
-				dbEngine: this.dbEngine,
-			})
-			sparks = sparksCoMap
-			this.account.set('sparks', sparks.id)
-		}
-
-		if (!sparks || typeof sparks.set !== 'function') {
-			throw new Error(
-				`[_registerSparkInAccount] account.sparks not available. sparksId=${sparksId || 'null'}`,
-			)
-		}
-
-		sparks.set(sparkCoId, sparkCoId)
-	}
-
-	/**
-	 * Unregister spark from account.sparks CoMap
-	 * Uses read() + waitForStoreReady (proper $store architecture)
-	 * @private
-	 * @param {string} sparkCoId - Spark co-id (key)
-	 */
-	async _unregisterSparkFromAccount(sparkCoId) {
-		const sparksId = this.account.get('sparks')
-		if (!sparksId) return
-
-		try {
-			const sparksStore = await universalRead(this, sparksId, null, null, null, { deepResolve: false })
-			await waitForStoreReady(sparksStore, sparksId, 5000)
-			const sparksCore = this.node.getCoValue(sparksId)
-			if (!sparksCore || !this.isAvailable(sparksCore)) return
-			const sparks = this.getCurrentContent(sparksCore)
-			if (sparks && typeof sparks.delete === 'function') {
-				sparks.delete(sparkCoId)
-			}
-		} catch {
-			// Non-blocking - spark may already be deleted
-		}
 	}
 
 	// ============================================================================
@@ -506,7 +438,7 @@ export class CoJSONBackend extends DBAdapter {
 	async read(schema, key, keys, filter, options = {}) {
 		const {
 			deepResolve = true,
-			maxDepth = 15, // TODO: temporarily scaled up from 10 for @maia spark detail deep resolution
+			maxDepth = 15, // TODO: temporarily scaled up from 10 for °Maia spark detail deep resolution
 			timeoutMs = 5000,
 			resolveReferences = null,
 			map = null,
@@ -541,7 +473,7 @@ export class CoJSONBackend extends DBAdapter {
 	 * @param {string} schema - Schema co-id (co_z...) for data collections
 	 * @param {Object} data - Data to create
 	 * @param {Object} [options] - Optional settings
-	 * @param {string} [options.spark='@maia'] - Spark name for context (e.g. '@maia', '@Maia')
+	 * @param {string} [options.spark='°Maia'] - Spark name for context (e.g. '°Maia', '@Maia')
 	 * @returns {Promise<Object>} Created record with generated co-id
 	 */
 	async create(schema, data, options = {}) {
@@ -635,7 +567,7 @@ export class CoJSONBackend extends DBAdapter {
 	}
 
 	/**
-	 * Ensure spark.os (account.sparks[@maia].os) is loaded and ready for schema-dependent operations
+	 * Ensure spark.os (registries.sparks[°Maia].os) is loaded and ready for schema-dependent operations
 	 *
 	 * Progressive loading: spark.os is NOT required for account loading itself
 	 * It's only needed for schema resolution, which can happen progressively as spark.os becomes available
@@ -654,7 +586,7 @@ export class CoJSONBackend extends DBAdapter {
 			if (process.env.DEBUG) return false
 		}
 
-		const osId = await groups.getSparkOsId(this, '@maia')
+		const osId = await groups.getSparkOsId(this, '°Maia')
 		if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
 			if (process.env.DEBUG) return false
 		}
@@ -687,12 +619,12 @@ export class CoJSONBackend extends DBAdapter {
 				if (process.env.DEBUG) return false
 			}
 
-			const schematasSchemaCoId = await resolve(this, '@maia/schema/os/schematas-registry', {
+			const schematasSchemaCoId = await resolve(this, '°Maia/schema/os/schematas-registry', {
 				returnType: 'coId',
 			})
 			const schema = schematasSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA
 			const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
-			const { coValue: schematasCoMap } = await createCoValueForSpark(this, '@maia', {
+			const { coValue: schematasCoMap } = await createCoValueForSpark(this, '°Maia', {
 				schema,
 				cotype: 'comap',
 				data: {},

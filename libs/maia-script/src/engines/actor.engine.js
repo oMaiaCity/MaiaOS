@@ -899,6 +899,10 @@ export class ActorEngine {
 
 		const actor = this.actors.get(actorId)
 		if (!actor || !actor.inboxCoId || !this.dbEngine) {
+			if (!actor) console.warn('[ActorEngine] sendInternalEvent: actor not found', actorId)
+			else if (!actor.inboxCoId)
+				console.warn('[ActorEngine] sendInternalEvent: actor has no inboxCoId', actorId)
+			else if (!this.dbEngine) console.warn('[ActorEngine] sendInternalEvent: dbEngine not set')
 			return
 		}
 		try {
@@ -912,9 +916,18 @@ export class ActorEngine {
 			// Defer message processing to next tick to avoid blocking current processing
 			// This ensures the current processMessages call completes before processing the new event
 			setTimeout(() => {
-				this.processMessages(actorId).catch((_err) => {})
+				this.processMessages(actorId).catch((err) => {
+					console.error('[ActorEngine] processMessages failed:', actorId, err)
+				})
 			}, 0)
-		} catch (_error) {}
+		} catch (error) {
+			console.error(
+				'[ActorEngine] sendInternalEvent: createAndPushMessage failed:',
+				actorId,
+				eventType,
+				error,
+			)
+		}
 	}
 
 	/**
@@ -948,10 +961,8 @@ export class ActorEngine {
 		}
 
 		try {
-			// Resolve message type schema from registry
-			// Format: @domain/schema/message/{MESSAGE_TYPE}
-			const domain = this.dbEngine?.backend?.systemSpark?.replace(/^@/, '') ?? 'maia'
-			const schemaKey = `@${domain}/schema/message/${messageType}`
+			// Resolve message type schema from registry - use systemSpark directly (schema keys match spark name)
+			const schemaKey = `${this.dbEngine.backend.systemSpark}/schema/message/${messageType}`
 			const schema = await resolve(this.dbEngine.backend, schemaKey, { returnType: 'schema' })
 			return schema
 		} catch (_error) {
@@ -1008,12 +1019,22 @@ export class ActorEngine {
 					// VALIDATION LAYER: Validate message before state machine
 					// Step 1: Check actor message contract
 					if (!this._validateMessageType(actor, message.type)) {
+						console.warn('[ActorEngine] processMessages: message type not in contract', {
+							actorId,
+							messageType: message.type,
+							messageTypes: actor.messageTypes,
+						})
 						continue // Skip invalid message
 					}
 
 					// Step 2: Load message type schema (REQUIRED)
 					const messageTypeSchema = await this._loadMessageTypeSchema(message.type)
 					if (!messageTypeSchema) {
+						console.warn('[ActorEngine] processMessages: message type schema not found', {
+							actorId,
+							messageType: message.type,
+							schemaKey: `${this.dbEngine?.backend?.systemSpark ?? '°Maia'}/schema/message/${message.type}`,
+						})
 						continue // Reject message - schema is required
 					}
 
@@ -1051,10 +1072,22 @@ export class ActorEngine {
 					if (actor.machine && this.stateEngine) {
 						await this.stateEngine.send(actor.machine.id, message.type, payload)
 					} else {
+						console.warn('[ActorEngine] processMessages: no machine or stateEngine', {
+							actorId,
+							hasMachine: !!actor.machine,
+							hasStateEngine: !!this.stateEngine,
+						})
 					}
-				} catch (_error) {}
+				} catch (error) {
+					console.error('[ActorEngine] processMessages: message handling failed', {
+						actorId,
+						messageType: message.type,
+						error,
+					})
+				}
 			}
-		} catch (_error) {
+		} catch (error) {
+			console.error('[ActorEngine] processMessages: inbox processing failed', { actorId, error })
 		} finally {
 			actor._isProcessing = false
 		}

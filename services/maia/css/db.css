@@ -498,6 +498,66 @@
 	color: #2563eb; /* blue-600 */
 }
 
+/* Internal keys (sealer, signer, KEY_...) - truncate with expand button */
+.metadata-internal-keys .metadata-internal-row {
+	display: flex;
+	flex-direction: row;
+	align-items: flex-start;
+	gap: 0.5rem;
+	min-width: 0;
+}
+.metadata-internal-keys .metadata-internal-truncated,
+.metadata-internal-keys .metadata-internal-full {
+	flex: 1;
+	min-width: 0;
+	display: flex;
+	flex-direction: column;
+	gap: 0.25rem;
+	overflow-wrap: break-word;
+}
+.metadata-internal-keys .metadata-info-key-internal,
+.metadata-internal-keys .metadata-info-value-internal {
+	display: block;
+	font-size: 10px;
+	font-family: monospace;
+	color: #64748b;
+	overflow-wrap: break-word;
+	word-break: break-all;
+	max-width: 100%;
+}
+.metadata-internal-keys .metadata-internal-truncated .metadata-info-key-internal,
+.metadata-internal-keys .metadata-internal-truncated .metadata-info-value-internal {
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+}
+.metadata-internal-keys .metadata-info-value-internal {
+	color: #334155;
+}
+.metadata-internal-keys .metadata-internal-full .metadata-info-key-internal,
+.metadata-internal-keys .metadata-internal-full .metadata-info-value-internal {
+	white-space: pre-wrap;
+	word-break: break-all;
+}
+.metadata-internal-keys .metadata-expand-btn {
+	flex-shrink: 0;
+	margin-left: auto;
+	width: 1.5rem;
+	height: 1.5rem;
+	padding: 0;
+	font-size: 12px;
+	line-height: 1;
+	border: 1px solid rgba(148, 163, 184, 0.5);
+	border-radius: 6px;
+	background: rgba(255, 255, 255, 0.5);
+	color: #64748b;
+	cursor: pointer;
+	transition: background 0.2s;
+}
+.metadata-internal-keys .metadata-expand-btn:hover {
+	background: rgba(148, 163, 184, 0.2);
+}
+
 .metadata-info-value-wrap {
 	display: flex;
 	align-items: center;

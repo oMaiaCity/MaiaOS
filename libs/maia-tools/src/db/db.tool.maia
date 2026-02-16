@@ -1,9 +1,9 @@
 {
-	"$schema": "@maia/schema/tool",
+	"$schema": "°Maia/schema/tool",
 	"$id": "db",
 	"name": "Database Tool",
 	"description": "Unified API for all database operations (query, create, update, delete)",
-	"schema": "@maia/schema/tool",
+	"schema": "°Maia/schema/tool",
 	"params": {
 		"op": {
 			"type": "string",

@@ -229,7 +229,7 @@ The `@sparks` tool is a domain-specific tool for managing Sparks (collaborative 
 ```
 
 **What it does:**
-- Creates a child group owned by your @maia spark's group
+- Creates a child group owned by your °Maia spark's group
 - Creates a Spark CoMap with the name and group reference
 - Registers the spark in `account.sparks` CoMap
 - Automatically indexes the spark in the database

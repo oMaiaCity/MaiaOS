@@ -22,13 +22,13 @@ const ALL_REGISTRIES = [
 function getVibeKey(vibe) {
 	if (!vibe) return null
 	const originalVibeId = vibe.$id || ''
-	if (originalVibeId.startsWith('@maia/vibe/')) {
-		return originalVibeId.replace('@maia/vibe/', '')
+	if (originalVibeId.startsWith('°Maia/vibe/')) {
+		return originalVibeId.replace('°Maia/vibe/', '')
 	}
 	return (vibe.name || 'default').toLowerCase().replace(/\s+/g, '-')
 }
 
-const VIBE_SCHEMA = '@maia/schema/vibe'
+const VIBE_SCHEMA = '°Maia/schema/vibe'
 
 function normalizeVibeForSeeding(vibe) {
 	if (!vibe || typeof vibe !== 'object') {
@@ -39,8 +39,8 @@ function normalizeVibeForSeeding(vibe) {
 	if (!normalized.$schema || typeof normalized.$schema !== 'string') {
 		normalized.$schema = VIBE_SCHEMA
 	}
-	if (!normalized.$id || !normalized.$id.startsWith('@maia/vibe/')) {
-		normalized.$id = `@maia/vibe/${key}`
+	if (!normalized.$id || !normalized.$id.startsWith('°Maia/vibe/')) {
+		normalized.$id = `°Maia/vibe/${key}`
 	}
 	return normalized
 }

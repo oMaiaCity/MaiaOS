@@ -46,7 +46,7 @@ bun run dev:moai
 ## Endpoints
 
 - `GET /health` - Health check
-- `GET /syncRegistry` - Sync registry (@maia spark co-id)
+- `GET /syncRegistry` - Sync registry (°Maia spark co-id)
 - `WS /sync` - WebSocket sync
 - `POST /register-human`, `GET /profile` - Agent API
 - `POST /api/v0/llm/chat` - LLM proxy

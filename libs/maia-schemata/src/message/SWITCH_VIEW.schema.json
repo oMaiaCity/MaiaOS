@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/message/SWITCH_VIEW",
-	"title": "@maia/schema/message/SWITCH_VIEW",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/message/SWITCH_VIEW",
+	"title": "°Maia/schema/message/SWITCH_VIEW",
 	"description": "Message type for switching view mode",
 	"cotype": "comap",
 	"indexing": true,

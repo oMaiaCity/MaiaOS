@@ -1,8 +1,8 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/os/registries",
-	"title": "@maia/schema/os/registries",
-	"description": "Registries CoMap - contains sparks, etc. Stored in spark.registries",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/os/registries",
+	"title": "°Maia/schema/os/registries",
+	"description": "Registries CoMap - contains sparks, humans. Stored in account.registries (sync agent only).",
 	"cotype": "comap",
 	"indexing": false,
 	"properties": {

@@ -62,11 +62,11 @@ async function determineCotype(backend, schema, data) {
  * @param {string} schema - Schema co-id (co_z...) for data collections
  * @param {Object} data - Data to create
  * @param {Object} [options] - Optional settings
- * @param {string} [options.spark='@maia'] - Spark name for context (e.g. '@maia', '@Maia')
+ * @param {string} [options.spark='°Maia'] - Spark name for context (e.g. '°Maia', '@Maia')
  * @returns {Promise<Object>} Created record with generated co-id
  */
 export async function create(backend, schema, data, options = {}) {
-	const spark = options.spark ?? '@maia'
+	const spark = options.spark ?? '°Maia'
 
 	// Determine cotype from schema or data type
 	const cotype = await determineCotype(backend, schema, data)

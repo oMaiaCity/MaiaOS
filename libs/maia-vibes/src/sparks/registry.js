@@ -31,31 +31,31 @@ export const SparksVibeRegistry = {
 	vibe: sparksVibe,
 
 	styles: {
-		'@maia/sparks/style/brand': brandStyle,
+		'°Maia/sparks/style/brand': brandStyle,
 	},
 
 	actors: {
-		'@maia/sparks/actor/vibe': vibeActor,
-		'@maia/sparks/actor/detail': detailActor,
+		'°Maia/sparks/actor/vibe': vibeActor,
+		'°Maia/sparks/actor/detail': detailActor,
 	},
 
 	views: {
-		'@maia/sparks/view/vibe': vibeView,
-		'@maia/sparks/view/detail': detailView,
+		'°Maia/sparks/view/vibe': vibeView,
+		'°Maia/sparks/view/detail': detailView,
 	},
 
 	contexts: {
-		'@maia/sparks/context/vibe': vibeContext,
-		'@maia/sparks/context/detail': detailContext,
+		'°Maia/sparks/context/vibe': vibeContext,
+		'°Maia/sparks/context/detail': detailContext,
 	},
 
 	states: {
-		'@maia/sparks/state/vibe': vibeState,
-		'@maia/sparks/state/detail': detailState,
+		'°Maia/sparks/state/vibe': vibeState,
+		'°Maia/sparks/state/detail': detailState,
 	},
 
 	inboxes: {
-		'@maia/sparks/inbox/vibe': vibeInbox,
-		'@maia/sparks/inbox/detail': detailInbox,
+		'°Maia/sparks/inbox/vibe': vibeInbox,
+		'°Maia/sparks/inbox/detail': detailInbox,
 	},
 }

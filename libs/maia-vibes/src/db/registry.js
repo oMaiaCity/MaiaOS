@@ -37,37 +37,37 @@ export const DbVibeRegistry = {
 	vibe: dbVibe,
 
 	styles: {
-		'@maia/db/style/brand': brandStyle,
+		'°Maia/db/style/brand': brandStyle,
 	},
 
 	actors: {
-		'@maia/db/actor/vibe': vibeActor,
-		'@maia/db/actor/table': tableActor,
-		'@maia/db/actor/detail': detailActor,
+		'°Maia/db/actor/vibe': vibeActor,
+		'°Maia/db/actor/table': tableActor,
+		'°Maia/db/actor/detail': detailActor,
 	},
 
 	views: {
-		'@maia/db/view/vibe': vibeView,
-		'@maia/db/view/table': tableView,
-		'@maia/db/view/detail': detailView,
+		'°Maia/db/view/vibe': vibeView,
+		'°Maia/db/view/table': tableView,
+		'°Maia/db/view/detail': detailView,
 	},
 
 	contexts: {
-		'@maia/db/context/vibe': vibeContext,
-		'@maia/db/context/table': tableContext,
-		'@maia/db/context/detail': detailContext,
+		'°Maia/db/context/vibe': vibeContext,
+		'°Maia/db/context/table': tableContext,
+		'°Maia/db/context/detail': detailContext,
 	},
 
 	states: {
-		'@maia/db/state/vibe': vibeState,
-		'@maia/db/state/table': tableState,
-		'@maia/db/state/detail': detailState,
+		'°Maia/db/state/vibe': vibeState,
+		'°Maia/db/state/table': tableState,
+		'°Maia/db/state/detail': detailState,
 	},
 
 	inboxes: {
-		'@maia/db/inbox/vibe': vibeInbox,
-		'@maia/db/inbox/table': tableInbox,
-		'@maia/db/inbox/detail': detailInbox,
+		'°Maia/db/inbox/vibe': vibeInbox,
+		'°Maia/db/inbox/table': tableInbox,
+		'°Maia/db/inbox/detail': detailInbox,
 	},
 
 	// No initial data - this vibe uses mocked data in context

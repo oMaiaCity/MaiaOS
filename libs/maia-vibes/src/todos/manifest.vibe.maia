@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/vibe",
-	"$id": "@maia/vibe/todos",
+	"$schema": "°Maia/schema/vibe",
+	"$id": "°Maia/vibe/todos",
 	"name": "Todos",
 	"description": "Complete todo list with state machines and AI tools",
-	"actor": "@maia/todos/actor/vibe"
+	"actor": "°Maia/todos/actor/vibe"
 }

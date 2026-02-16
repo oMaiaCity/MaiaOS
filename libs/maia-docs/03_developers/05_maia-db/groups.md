@@ -13,16 +13,16 @@ Groups are CoMaps with special `ruleset.type === "group"` that:
 - Control access permissions (members, roles, parent groups)
 - Enable collaborative editing (multiple members can edit simultaneously)
 
-### @maia Spark's Group
+### °Maia Spark's Group
 
-Every account has the **@maia spark** with a group at `account.sparks["@maia"].group`:
-- Created during `schemaMigration()` when account is first created
+Every account has the **°Maia spark** with a group at `registries.sparks["°Maia"]`:
+- Resolved via `account.registries.sparks`; created during bootstrap when account is first seeded
 - Owns ALL user data CoValues (schemas, configs, data)
 - Single source of truth for user's data ownership
 
 ### Creating Child Groups
 
-The @maia spark's group can create child groups it owns:
+The °Maia spark's group can create child groups it owns:
 
 ```javascript
 import { createChildGroup } from '@MaiaOS/db';
@@ -30,7 +30,7 @@ import { createChildGroup } from '@MaiaOS/db';
 const maiaGroup = await backend.getMaiaGroup();
 const childGroup = createChildGroup(node, maiaGroup, { name: "My Project" });
 
-// @maia group is now admin of childGroup
+// °Maia group is now admin of childGroup
 // childGroup can own its own CoValues
 ```
 
@@ -42,7 +42,7 @@ const childGroup = createChildGroup(node, maiaGroup, { name: "My Project" });
 
 Sparks are CoMaps with schema `@schema/data/spark` that reference groups:
 - Structure: `{name: string, group: co-id}`
-- Registered in `account.sparks` CoMap (sparkName -> sparkCoId)
+- Registered in `account.registries.sparks` CoMap (sparkName -> sparkCoId)
 - Automatically indexed in `account.os.{sparkSchemaCoId}` colist
 
 ### Spark Operations
@@ -55,7 +55,7 @@ const spark = await maia.db({
   op: "createSpark",
   name: "My Project"
 });
-// Creates child group + Spark CoMap + registers in account.sparks
+// Creates child group + Spark CoMap + registers via POST /register
 ```
 
 **Read Sparks:**
@@ -85,17 +85,17 @@ await maia.db({
   op: "deleteSpark",
   id: "co_zSpark123"
 });
-// Removes from account.sparks + indexed colist
+// Removes from indexed colist (registry via POST /register)
 ```
 
-### account.sparks Registry
+### account.registries.sparks Registry
 
-Sparks are registered in `account.sparks` CoMap (similar to `account.vibes`):
-- Created during `schemaMigration()` if it doesn't exist
-- Structure: `account.sparks.sparkName = sparkCoId`
+Sparks are registered in `account.registries.sparks` CoMap:
+- Created during bootstrap (seed.js); new sparks register via POST /register
+- Structure: `registries.sparks.sparkName = sparkCoId`
 - Cross-links to indexed colist `account.os.{sparkSchemaCoId}`
 
-**Implementation:** `libs/maia-db/src/migrations/schema.migration.js`
+**Implementation:** `libs/maia-db/src/cojson/schema/seed.js` (bootstrap); `libs/maia-operations/src/operations/spark-operations.js` (POST /register after createSpark)
 
 ### Spark Indexing
 
@@ -147,7 +147,7 @@ MaiaOS standardizes on **account co-ids** (co_z...) for group member storage and
 - **Group Operations:** `libs/maia-db/src/cojson/groups/groups.js`
 - **Spark Operations:** `libs/maia-operations/src/operations/spark-operations.js`
 - **Spark Backend:** `libs/maia-db/src/cojson/core/cojson-backend.js` (spark CRUD methods)
-- **Schema Migration:** `libs/maia-db/src/migrations/schema.migration.js` (account.sparks creation)
+- **Schema Migration:** `libs/maia-db/src/migrations/schema.migration.js`
 - **Spark Schema:** `libs/maia-schemata/src/os/spark.schema.json`
 
 ## Related Documentation

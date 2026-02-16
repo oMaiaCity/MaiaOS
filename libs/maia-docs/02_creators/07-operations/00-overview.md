@@ -334,7 +334,7 @@ const processed = await maia.db({
 
 ### `createSpark` - Create New Spark (Group Reference)
 
-Create a new Spark - a CoMap that references a group for collaborative spaces. Automatically creates a child group owned by your @maia spark's group and registers the spark in `account.sparks`.
+Create a new Spark - a CoMap that references a group for collaborative spaces. Automatically creates a child group owned by your °Maia spark's group and registers the spark in `account.sparks`.
 
 ```javascript
 const spark = await maia.db({

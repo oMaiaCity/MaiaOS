@@ -153,7 +153,7 @@ flowchart TB
 
 User tools could be stored in the database:
 
-- **Schema**: e.g. `@maia/tool` with fields `name`, `definition` (JSON schema), `code` (JS string).
+- **Schema**: e.g. `°Maia/schema/tool` with fields `name`, `definition` (JSON schema), `code` (JS string).
 - **Registration**: On boot or on-demand, ToolEngine registers sandboxed tools: `registerTool(namespace, id, { definition, code })`.
 - **Lookup**: ToolEngine checks `tool.code` — if present, use sandbox path; else use native `tool.function`.
 
@@ -161,7 +161,7 @@ User tools could be stored in the database:
 
 ```json
 {
-  "$schema": "@maia/schema/tool",
+  "$schema": "°Maia/schema/tool",
   "$id": "tool_user_count_notify_001",
   "name": "@user/countAndNotify",
   "description": "Reads items from a schema, counts them, and sends a NOTIFY message",

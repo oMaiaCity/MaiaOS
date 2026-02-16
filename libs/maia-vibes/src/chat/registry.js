@@ -28,26 +28,26 @@ export const ChatVibeRegistry = {
 	vibe: chatVibe,
 
 	styles: {
-		'@maia/chat/style/brand': brandStyle,
+		'°Maia/chat/style/brand': brandStyle,
 	},
 
 	actors: {
-		'@maia/chat/actor/vibe': vibeActor,
+		'°Maia/chat/actor/vibe': vibeActor,
 	},
 
 	views: {
-		'@maia/chat/view/vibe': vibeView,
+		'°Maia/chat/view/vibe': vibeView,
 	},
 
 	contexts: {
-		'@maia/chat/context/vibe': vibeContext,
+		'°Maia/chat/context/vibe': vibeContext,
 	},
 
 	states: {
-		'@maia/chat/state/vibe': vibeState,
+		'°Maia/chat/state/vibe': vibeState,
 	},
 
 	inboxes: {
-		'@maia/chat/inbox/vibe': vibeInbox,
+		'°Maia/chat/inbox/vibe': vibeInbox,
 	},
 }

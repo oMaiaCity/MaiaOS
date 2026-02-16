@@ -38,7 +38,7 @@ export function setSchemaResolver(options) {
 			// Import resolve() dynamically to avoid circular dependencies
 			const { resolve } = await import('@MaiaOS/db')
 
-			// Use universal resolve() API - handles co-id, registry string (@maia/schema/...), etc.
+			// Use universal resolve() API - handles co-id, registry string (°Maia/schema/...), etc.
 			const schema = await resolve(dbEngine.backend, schemaKey, { returnType: 'schema' })
 
 			if (!schema) {

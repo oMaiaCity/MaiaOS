@@ -7,12 +7,12 @@ import { getAllVibeRegistries, resolveAccountCoIdsToProfileNames } from '@MaiaOS
 import { escapeHtml, getSyncStatusMessage, truncate, truncateWords } from './utils.js'
 
 /**
- * Extract vibe key from vibe $id (e.g., "@maia/vibe/todos" -> "todos")
+ * Extract vibe key from vibe $id (e.g., "°Maia/vibe/todos" -> "todos")
  */
 function getVibeKeyFromId(vibeId) {
 	if (!vibeId) return null
-	if (vibeId.startsWith('@maia/vibe/')) {
-		return vibeId.replace('@maia/vibe/', '')
+	if (vibeId.startsWith('°Maia/vibe/')) {
+		return vibeId.replace('°Maia/vibe/', '')
 	}
 	return null
 }
@@ -25,14 +25,17 @@ async function getSparkDisplayName(maia, sparkCoId) {
 		const sparkStore = await maia.db({ op: 'read', schema: null, key: sparkCoId })
 		const sparkData = sparkStore?.value ?? sparkStore
 		const name = sparkData?.name
-		return name ? (name.startsWith('@') ? name : `@${name}`) : null
+		if (!name) return null
+		// ° or @ prefix: use as-is. Otherwise prefix with °
+		if (name.startsWith('°') || name.startsWith('@')) return name
+		return `°${name}`
 	} catch {
 		return null
 	}
 }
 
 /**
- * Load available sparks (context scopes) from account.sparks
+ * Load available sparks (context scopes) from account.registries.sparks
  * @param {Object} maia - MaiaOS instance
  * @returns {Promise<Array>} Array of spark objects with {key, name, description}
  */
@@ -46,7 +49,13 @@ async function loadSparksFromAccount(maia) {
 		const accountStore = await maia.db({ op: 'read', schema: '@account', key: account.id })
 		const accountData = accountStore.value || accountStore
 
-		const sparksId = accountData?.sparks
+		const registriesId = accountData?.registries
+		if (!registriesId || typeof registriesId !== 'string' || !registriesId.startsWith('co_')) {
+			return sparks
+		}
+		const registriesStore = await maia.db({ op: 'read', schema: null, key: registriesId })
+		const registriesData = registriesStore.value || registriesStore
+		const sparksId = registriesData.sparks
 		if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_')) {
 			return sparks
 		}
@@ -68,12 +77,9 @@ async function loadSparksFromAccount(maia) {
 		)
 
 		for (const key of sparkKeys) {
-			// key is co-id (new) or name like "@maia" (system spark)
-			const displayName = key.startsWith('co_')
-				? (await getSparkDisplayName(maia, key)) || key
-				: key.startsWith('@')
-					? key
-					: `@${key}`
+			// Resolve display name from spark CoMap (key → co-id, co-id → name)
+			const coId = sparksData[key]
+			const displayName = (await getSparkDisplayName(maia, coId)) || key
 			sparks.push({
 				key,
 				name: displayName,
@@ -93,7 +99,7 @@ async function loadSparksFromAccount(maia) {
  */
 async function vibeHasBrowserRuntime(maia, runtimesData, vibeCoId) {
 	if (!maia?.db || !runtimesData) return false
-	const assignmentsColistId = runtimesData.get?.(vibeCoId) ?? runtimesData[vibeCoId]
+	const assignmentsColistId = runtimesData[vibeCoId]
 	if (typeof assignmentsColistId !== 'string' || !assignmentsColistId.startsWith('co_')) return false
 	try {
 		const colistStore = await maia.db({ op: 'read', schema: null, key: assignmentsColistId })
@@ -113,10 +119,10 @@ async function vibeHasBrowserRuntime(maia, runtimesData, vibeCoId) {
 }
 
 /**
- * Load vibes from account.sparks[spark].vibes registry
+ * Load vibes from registries.sparks[spark].vibes registry
  * STRICT: Filters by spark.os.runtimes - only shows vibes with explicit browser runtime. No fallback.
  * @param {Object} maia - MaiaOS instance
- * @param {string} spark - Spark name (e.g. '@maia')
+ * @param {string} spark - Spark name (e.g. '°Maia')
  * @returns {Promise<Array>} Array of vibe objects with {key, name, description, coId}
  */
 async function loadVibesFromSpark(maia, spark) {
@@ -138,7 +144,12 @@ async function loadVibesFromSpark(maia, spark) {
 
 		const accountStore = await maia.db({ op: 'read', schema: '@account', key: maia.id.maiaId.id })
 		const accountData = accountStore?.value ?? accountStore
-		const sparksId = accountData?.sparks
+		const registriesId = accountData?.registries
+		if (typeof registriesId !== 'string' || !registriesId.startsWith('co_')) return vibes
+
+		const registriesStore = await maia.db({ op: 'read', schema: null, key: registriesId })
+		const registriesData = registriesStore?.value ?? registriesStore
+		const sparksId = registriesData.sparks
 		if (typeof sparksId !== 'string' || !sparksId.startsWith('co_')) return vibes
 
 		const sparksStore = await maia.db({ op: 'read', schema: sparksId, key: sparksId })
@@ -295,6 +306,13 @@ export async function renderDashboard(
 			.join('')
 
 		cards = vibeCards
+
+		// Reactivity: when vibes empty but spark selected, runtimes may not be synced yet.
+		// Retry render so dashboard updates when registries/sparks/os.runtimes arrive.
+		if (currentSpark && vibeCards === '' && typeof window.renderAppInternal === 'function') {
+			setTimeout(() => window.renderAppInternal(), 1500)
+			setTimeout(() => window.renderAppInternal(), 3500)
+		}
 	}
 
 	const headerTitle = currentSpark ? `${currentSpark} Vibes` : 'Me'
@@ -392,7 +410,7 @@ export async function renderDashboard(
 
 /**
  * Render vibe viewer screen (full-screen vibe display)
- * @param {string} [currentSpark='@maia'] - Spark context scope for vibes
+ * @param {string} [currentSpark='°Maia'] - Spark context scope for vibes
  */
 export async function renderVibeViewer(
 	maia,
@@ -400,7 +418,7 @@ export async function renderVibeViewer(
 	syncState,
 	currentVibe,
 	_navigateToScreen,
-	currentSpark = '@maia',
+	currentSpark = '°Maia',
 ) {
 	const accountId = maia?.id?.maiaId?.id || ''
 	let accountDisplayName = truncate(accountId, 12)
@@ -588,8 +606,8 @@ export async function renderVibeViewer(
 			// The kernel will handle actor detachment and reuse logic
 			container.innerHTML = ''
 
-			// Load vibe from spark context (account.sparks[spark].vibes)
-			await maia.loadVibeFromAccount(currentVibe, container, currentSpark || '@maia')
+			// Load vibe from spark context (registries.sparks[spark].vibes)
+			await maia.loadVibeFromAccount(currentVibe, container, currentSpark || '°Maia')
 
 			// Add sidebar toggle handlers for maiadb vibe (after vibe loads)
 			setTimeout(() => {

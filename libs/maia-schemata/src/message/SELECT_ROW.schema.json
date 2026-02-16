@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/message/SELECT_ROW",
-	"title": "@maia/schema/message/SELECT_ROW",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/message/SELECT_ROW",
+	"title": "°Maia/schema/message/SELECT_ROW",
 	"description": "Message type for selecting a table row",
 	"cotype": "comap",
 	"indexing": true,
