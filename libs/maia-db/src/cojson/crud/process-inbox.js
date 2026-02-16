@@ -172,6 +172,16 @@ export async function processInbox(backend, actorId, inboxCoId) {
 						continue
 					}
 
+					// REMOVE_MEMBER requires payload.memberId - skip if missing (progressive loading may deliver partial data)
+					if (
+						extractedMessageData.type === 'REMOVE_MEMBER' &&
+						(!extractedMessageData.payload?.memberId ||
+							typeof extractedMessageData.payload.memberId !== 'string' ||
+							!extractedMessageData.payload.memberId.startsWith('co_'))
+					) {
+						continue
+					}
+
 					unprocessedMessages.push({
 						...extractedMessageData,
 						_coId: messageCoId, // Keep co-id for reference

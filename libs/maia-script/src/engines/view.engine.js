@@ -586,6 +586,21 @@ export class ViewEngine {
 					)
 				}
 
+				// Guard: REMOVE_MEMBER requires memberId - skip send when missing (prevents operation failure)
+				if (
+					eventName === 'REMOVE_MEMBER' &&
+					(!payload?.memberId || typeof payload.memberId !== 'string')
+				) {
+					console.warn(
+						'[ViewEngine] REMOVE_MEMBER skipped: memberId required but missing from resolved payload',
+						{
+							payload,
+							item: data.item,
+						},
+					)
+					return
+				}
+
 				// CLEAN ARCHITECTURE: For update-input types on blur, only send if DOM value differs from CURRENT context
 				// This prevents repopulation after state machine explicitly clears the field
 				// State machine is single source of truth - if context already matches DOM, no update needed

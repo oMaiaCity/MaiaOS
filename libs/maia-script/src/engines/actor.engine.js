@@ -927,6 +927,13 @@ export class ActorEngine {
 				eventType,
 				error,
 			)
+			// Fallback: when persistence fails (e.g. read key secret), process locally so UX still works
+			// The payload from the view is already resolved and valid
+			if (actor.machine && this.stateEngine) {
+				const payloadPlain =
+					payload && typeof payload === 'object' ? JSON.parse(JSON.stringify(payload)) : payload || {}
+				await this.stateEngine.send(actor.machine.id, eventType, payloadPlain)
+			}
 		}
 	}
 
@@ -1069,8 +1076,25 @@ export class ActorEngine {
 					}
 
 					// Step 4: If validation passes, send to state machine
+					// CRITICAL: REMOVE_MEMBER requires memberId - skip if missing (guards against progressive loading / sync partial data)
+					if (message.type === 'REMOVE_MEMBER') {
+						const memberId = payload?.memberId
+						if (!memberId || typeof memberId !== 'string' || !memberId.startsWith('co_')) {
+							console.warn('[ActorEngine] processMessages: REMOVE_MEMBER skipped - memberId required', {
+								actorId,
+								payload,
+								messageCoId: message._coId,
+							})
+							continue
+						}
+					}
+
+					// Pass plain object to avoid reactive proxy issues; state engine expects clean JSON
+					const payloadPlain =
+						payload && typeof payload === 'object' ? JSON.parse(JSON.stringify(payload)) : payload || {}
+
 					if (actor.machine && this.stateEngine) {
-						await this.stateEngine.send(actor.machine.id, message.type, payload)
+						await this.stateEngine.send(actor.machine.id, message.type, payloadPlain)
 					} else {
 						console.warn('[ActorEngine] processMessages: no machine or stateEngine', {
 							actorId,
