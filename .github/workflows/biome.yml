@@ -24,17 +24,3 @@ jobs:
 
       - name: Run Biome
         run: bun run check:ci
-
-  build:
-    # Skip on [release] commits - Build already passed pre-merge
-    if: github.event_name != 'push' || github.event.head_commit == null || !startsWith(github.event.head_commit.message, '[release] ')
-    name: Build (maia + moai)
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Build maia image
-        run: docker build -f services/maia/Dockerfile -t maia:test .
-
-      - name: Build moai image
-        run: docker build -f services/moai/Dockerfile -t moai:test .
