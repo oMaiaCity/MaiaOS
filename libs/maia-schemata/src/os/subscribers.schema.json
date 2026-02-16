@@ -1,12 +1,12 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/subscribers",
-	"title": "@maia/schema/subscribers",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/subscribers",
+	"title": "°Maia/schema/subscribers",
 	"description": "A colist of actor co-ids subscribed to a topic",
 	"cotype": "colist",
 	"indexing": true,
 	"items": {
-		"$co": "@maia/schema/actor",
+		"$co": "°Maia/schema/actor",
 		"description": "Each item is a co-id reference to an actor subscribed to this topic"
 	}
 }

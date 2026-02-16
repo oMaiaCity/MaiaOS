@@ -149,14 +149,14 @@ const SCHEMAS = {
 }
 
 export function getSchema(type) {
-	const key = type.startsWith('@maia/schema/') ? type.replace('@maia/schema/', '') : type
+	const key = type.startsWith('°Maia/schema/') ? type.replace('°Maia/schema/', '') : type
 	return SCHEMAS[key] || null
 }
 
 export function getAllSchemas() {
 	const msg = {}
 	for (const [k, s] of Object.entries(SCHEMAS)) {
-		if (k.startsWith('message/')) msg[`@maia/schema/${k}`] = s
+		if (k.startsWith('message/')) msg[`°Maia/schema/${k}`] = s
 	}
 	return { ...SCHEMAS, ...msg }
 }

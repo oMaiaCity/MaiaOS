@@ -37,7 +37,7 @@ let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'db-viewer' | '
 let currentView = 'account' // Current schema filter (default: 'account')
 let currentContextCoValueId = null // Currently loaded CoValue in main context (explorer-style navigation)
 let currentVibe = null // Currently loaded vibe (null = DB view mode, 'todos' = todos vibe, etc.)
-let currentSpark = null // Grid hierarchy: null = sparks level, '@maia' = vibes for that spark
+let currentSpark = null // Grid hierarchy: null = sparks level, '°Maia' = vibes for that spark
 let _currentVibeContainer = null // Currently loaded vibe container element (for cleanup on unload)
 let navigationHistory = [] // Navigation history stack for back button
 let isRendering = false // Guard to prevent render loops
@@ -262,9 +262,12 @@ async function initAgentMode() {
 			account,
 			mode: 'agent', // Explicitly set mode
 			syncDomain, // Pass sync domain to kernel
+			getMoaiBaseUrl, // For POST /register after createSpark
 			modules: ['db', 'core', 'ai', 'sparks'], // Include all modules
 		})
 		window.maia = maia
+		// CRITICAL: Await link before first render - indexing requires account.registries
+		await linkAccountToRegistries(maia).catch(() => {})
 
 		// Set auth state
 		authState = {
@@ -331,23 +334,36 @@ function getMoaiBaseUrl() {
 	return `${protocol}://${host}`
 }
 
-/** Link human account to sync server's @maia spark. Human mode only. */
-async function linkAccountToSyncRegistry(maia) {
-	if (!maia?.id?.node || !maia.id.maiaId || detectMode() === 'agent') return
+/** Link account to sync server's registries. Set account.registries only. Sparks resolved via registries.sparks. Human and agent. */
+async function linkAccountToRegistries(maia) {
+	if (!maia?.id?.node || !maia.id.maiaId) return
 	const baseUrl = getMoaiBaseUrl()
 	if (!baseUrl) return
 	try {
 		const res = await fetch(`${baseUrl}/syncRegistry`)
 		if (!res.ok) return
-		const maiaSparkId = (await res.json())?.['@maia']
-		if (!maiaSparkId?.startsWith('co_z')) return
-		const { node, maiaId: account } = maia.id
-		const sparksId = account.get('sparks')
-		if (!sparksId?.startsWith('co_z')) return
-		const sparksCore = node.getCoValue(sparksId) || (await node.loadCoValueCore(sparksId))
-		await node.load(sparksId)
-		const sparksContent = sparksCore?.getCurrentContent?.()
-		if (sparksContent?.set) sparksContent.set('@maia', maiaSparkId)
+		const data = await res.json()
+		const registriesId = data?.registries
+		const { maiaId: account } = maia.id
+		if (registriesId?.startsWith('co_z')) {
+			account.set('registries', registriesId)
+		}
+	} catch (_e) {}
+}
+
+/** Auto-register human in registry (fire-and-forget). Call after linkAccountToRegistries. Uses server-generated name only (e.g. human:brave-dolphin-71234567). */
+async function autoRegisterHuman(maia) {
+	if (!maia?.id?.maiaId || detectMode() === 'agent') return
+	const baseUrl = getMoaiBaseUrl()
+	if (!baseUrl) return
+	const accountId = maia.id.maiaId.id || maia.id.maiaId.$jazz?.id
+	if (!accountId?.startsWith('co_z')) return
+	try {
+		await fetch(`${baseUrl}/register`, {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json' },
+			body: JSON.stringify({ type: 'human', accountId }),
+		})
 	} catch (_e) {}
 }
 
@@ -388,10 +404,13 @@ async function signIn() {
 						node,
 						account,
 						syncDomain, // Pass sync domain to kernel (single source of truth)
+						getMoaiBaseUrl, // For POST /register after createSpark
 						modules: ['db', 'core', 'ai', 'sparks'], // Include all modules
 					})
 					window.maia = maia
-					linkAccountToSyncRegistry(maia).catch(() => {})
+					// CRITICAL: Await link before first render - indexing requires account.registries
+					await linkAccountToRegistries(maia).catch(() => {})
+					autoRegisterHuman(maia).catch(() => {})
 
 					// Re-render app now that maia is ready
 					if (authState.signedIn) {
@@ -515,10 +534,13 @@ async function register() {
 				node,
 				account,
 				syncDomain, // Pass sync domain to kernel (single source of truth)
+				getMoaiBaseUrl, // For POST /register after createSpark
 				modules: ['db', 'core', 'ai', 'sparks'], // Include all modules
 			})
 			window.maia = maia
-			linkAccountToSyncRegistry(maia).catch(() => {})
+			// CRITICAL: Await link before first render - indexing requires account.registries
+			await linkAccountToRegistries(maia).catch(() => {})
+			autoRegisterHuman(maia).catch(() => {})
 		} catch (bootError) {
 			throw new Error(`Failed to initialize MaiaOS: ${bootError.message}`)
 		}
@@ -791,7 +813,7 @@ function navigateToScreen(screen, options = {}) {
 
 /**
  * Load a spark context (grid hierarchy level 1 → level 2)
- * @param {string|null} spark - Spark name (e.g. '@maia') or null to go back to sparks level
+ * @param {string|null} spark - Spark name (e.g. '°Maia') or null to go back to sparks level
  */
 function loadSpark(spark) {
 	currentSpark = spark

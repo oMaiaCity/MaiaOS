@@ -1,11 +1,11 @@
 {
-	"$schema": "@maia/schema/actor",
-	"$id": "@maia/db/actor/detail",
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/db/actor/detail",
 	"role": "ui",
-	"context": "@maia/db/context/detail",
-	"view": "@maia/db/view/detail",
-	"state": "@maia/db/state/detail",
-	"brand": "@maia/db/style/brand",
-	"inbox": "@maia/db/inbox/detail",
+	"context": "°Maia/db/context/detail",
+	"view": "°Maia/db/view/detail",
+	"state": "°Maia/db/state/detail",
+	"brand": "°Maia/db/style/brand",
+	"inbox": "°Maia/db/inbox/detail",
 	"messageTypes": []
 }

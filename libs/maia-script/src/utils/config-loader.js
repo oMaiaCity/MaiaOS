@@ -86,66 +86,10 @@ function convertPropertiesArrayToPlainObject(config, requireSchema = true) {
 		return result
 	}
 
-	if (Array.isArray(config.properties)) {
-		const plainConfig = { id: config.id, type: config.type, headerMeta: config.headerMeta }
-		plainConfig.$schema = config.$schema
-		if (!plainConfig.$schema)
-			throw new Error(
-				`[convertPropertiesArrayToPlainObject] Config must have $schema. Got: ${JSON.stringify(Object.keys(config))}`,
-			)
-
-		for (const prop of config.properties) {
-			if (prop?.key !== undefined) {
-				let value = prop.value
-				if (value && typeof value === 'object' && !Array.isArray(value)) {
-					if (
-						value.get &&
-						typeof value.get === 'function' &&
-						value.keys &&
-						typeof value.keys === 'function'
-					) {
-						const nestedObj = {}
-						for (const key of value.keys()) {
-							nestedObj[key] = convertPropertiesArrayToPlainObject(
-								{ properties: [{ key, value: value.get(key) }] },
-								false,
-							)
-						}
-						value = nestedObj
-					} else if (Array.isArray(value.properties)) {
-						value = convertPropertiesArrayToPlainObject(
-							value,
-							!!(value.id || value.type || value.$schema),
-						)
-					} else {
-						value = convertPropertiesArrayToPlainObject(value, false)
-					}
-				}
-				if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
-					try {
-						const parsed = JSON.parse(value)
-						if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
-							value = convertPropertiesArrayToPlainObject(parsed, false)
-						} else {
-							value = parsed
-						}
-					} catch {}
-				}
-				plainConfig[prop.key] = value
-			}
-		}
-		return plainConfig
-	}
-
 	const result = {}
 	for (const [key, value] of Object.entries(config)) {
 		if (value && typeof value === 'object' && !Array.isArray(value)) {
-			if (Array.isArray(value.properties)) {
-				result[key] = convertPropertiesArrayToPlainObject(
-					value,
-					!!(value.id || value.type || value.$schema),
-				)
-			} else if (
+			if (
 				value.get &&
 				typeof value.get === 'function' &&
 				value.keys &&
@@ -153,10 +97,7 @@ function convertPropertiesArrayToPlainObject(config, requireSchema = true) {
 			) {
 				const nestedObj = {}
 				for (const nestedKey of value.keys()) {
-					nestedObj[nestedKey] = convertPropertiesArrayToPlainObject(
-						{ properties: [{ key: nestedKey, value: value.get(nestedKey) }] },
-						false,
-					)
+					nestedObj[nestedKey] = convertPropertiesArrayToPlainObject(value.get(nestedKey), false)
 				}
 				result[key] = nestedObj
 			} else {

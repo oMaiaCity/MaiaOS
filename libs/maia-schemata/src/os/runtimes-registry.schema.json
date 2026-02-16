@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/os/runtimes-registry",
-	"title": "@maia/schema/os/runtimes-registry",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/os/runtimes-registry",
+	"title": "°Maia/schema/os/runtimes-registry",
 	"description": "Runtimes registry CoMap - vibe co-id -> colist of runtime assignments. Stored in spark.os.runtimes. Key = vibe co-id (not human-readable). Guardian assigns which accounts run each vibe.",
 	"cotype": "comap",
 	"indexing": false,

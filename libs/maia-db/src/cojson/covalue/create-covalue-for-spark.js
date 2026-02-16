@@ -17,7 +17,7 @@ import { getSparkGroup, removeGroupMember } from '../groups/groups.js'
 /**
  * Resolve guardian from context.
  * @param {Object} context - Backend or { node, account, guardian }
- * @param {string|null} spark - Spark name (e.g. '@maia') or null when context has guardian
+ * @param {string|null} spark - Spark name (e.g. '°Maia') or null when context has guardian
  * @returns {Promise<{ node, account, guardian }>}
  */
 async function resolveContext(context, spark) {
@@ -42,7 +42,7 @@ async function resolveContext(context, spark) {
  * All create CoValue flows MUST use this util.
  *
  * @param {Object} context - Backend (has node, account, getMaiaGroup) OR { node, account, guardian }
- * @param {string|null} spark - Spark name (e.g. '@maia'). Null when context has guardian.
+ * @param {string|null} spark - Spark name (e.g. '°Maia'). Null when context has guardian.
  * @param {Object} options
  * @param {string} options.schema - Schema co-id or name for headerMeta.$schema
  * @param {'comap'|'colist'|'costream'} options.cotype

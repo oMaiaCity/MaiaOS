@@ -1,9 +1,9 @@
 {
-	"$schema": "@maia/schema/context",
-	"$id": "@maia/sparks/context/detail",
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/sparks/context/detail",
 	"sparkId": null,
 	"sparkDetails": {
-		"schema": "@maia/schema/data/spark",
+		"schema": "°Maia/schema/data/spark",
 		"filter": {
 			"id": "$sparkId"
 		},

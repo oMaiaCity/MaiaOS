@@ -1,162 +1,204 @@
 /**
  * Data Extraction Functions
  *
- * Provides functions for extracting CoValue data in normalized and flat formats.
+ * Provides extractCoValueData - single canonical extraction, always outputs flat format for CoMaps.
  */
 
 import { ensureCoValueLoaded } from './collection-helpers.js'
 
 /**
- * Extract CoValue data from CoValueCore and normalize (match IndexedDB format)
+ * Extract CoValue data from CoValueCore as flat object.
+ * One format everywhere: flat {key: value} for CoMaps, no properties array.
  * @param {Object} backend - Backend instance
  * @param {CoValueCore} coValueCore - CoValueCore instance
  * @param {string} [schemaHint] - Schema hint for special types (@group, @account, @metaSchema)
- * @returns {Object} Normalized CoValue data (flattened properties, id field added)
+ * @returns {Object} Flat CoValue data (id, $schema, type, and key-value for CoMaps)
  */
 export function extractCoValueData(backend, coValueCore, schemaHint = null) {
-	const content = backend.getCurrentContent(coValueCore)
 	const header = backend.getHeader(coValueCore)
 	const headerMeta = header?.meta || null
-	const ruleset = coValueCore.ruleset || header?.ruleset
+	const _ruleset = coValueCore.ruleset || header?.ruleset
 
-	const rawType = content?.type || 'unknown'
+	const isAccount =
+		schemaHint === '@account' ||
+		(headerMeta && headerMeta.type === 'account') ||
+		(backend.account && backend.account.id === coValueCore.id)
 
-	// Determine schema based on hint or headerMeta
-	let schema = headerMeta?.$schema || null
-
-	// Handle special types that don't have $schema
-	if (schemaHint === '@group' || (ruleset && ruleset.type === 'group')) {
-		schema = '@group' // Groups don't have $schema, use special marker
-	} else if (schemaHint === '@account' || (headerMeta && headerMeta.type === 'account')) {
-		schema = '@account' // Accounts don't have $schema, use special marker
-	} else if (schemaHint === '@metaSchema' || schema === '@metaSchema') {
-		schema = '@metaSchema' // Meta schema uses special marker
+	if (isAccount && backend.account && backend.account.id === coValueCore.id) {
+		const schema = headerMeta?.$schema || null
+		const result = {
+			id: backend.account.id,
+			type: 'comap',
+			$schema: schema,
+		}
+		try {
+			const keys =
+				backend.account.keys && typeof backend.account.keys === 'function'
+					? backend.account.keys()
+					: Object.keys(backend.account)
+			for (const key of keys) {
+				try {
+					result[key] = backend.account.get(key)
+				} catch (_e) {}
+			}
+		} catch (_e) {}
+		return result
 	}
 
-	// Normalize based on type
+	const content = backend.getCurrentContent(coValueCore)
+	if (!content) {
+		if (isAccount && backend.account && backend.account.id === coValueCore.id) {
+			const schema = headerMeta?.$schema || null
+			const result = { id: backend.account.id, type: 'comap', $schema: schema }
+			try {
+				const keys =
+					backend.account.keys && typeof backend.account.keys === 'function'
+						? backend.account.keys()
+						: Object.keys(backend.account)
+				for (const key of keys) {
+					result[key] = backend.account.get(key)
+				}
+			} catch (_e) {}
+			return result
+		}
+		const schema = headerMeta?.$schema || null
+		return { id: coValueCore.id, type: 'unknown', $schema: schema }
+	}
+
+	const rawType = content?.type || 'unknown'
+	let schema = headerMeta?.$schema || null
+
+	if (schemaHint === '@group' || (_ruleset && _ruleset.type === 'group')) {
+		schema = '@group'
+	} else if (schemaHint === '@account' || (headerMeta && headerMeta.type === 'account')) {
+		schema = '@account'
+	} else if (schemaHint === '@metaSchema' || schema === '@metaSchema') {
+		schema = '@metaSchema'
+	}
+
 	if (rawType === 'colist' && content && content.toJSON) {
-		// CoList: The list IS the content - return items directly (no properties, CoLists don't have custom properties)
 		try {
 			const items = content.toJSON()
-			return {
+			const result = {
 				id: coValueCore.id,
-				$schema: schema, // Use $schema for consistency with headerMeta.$schema
+				cotype: 'colist',
 				type: 'colist',
-				items: items, // Items ARE the CoList content (not a property)
-				// No properties array - CoLists don't have custom key-value properties, only items
+				$schema: schema,
+				items,
 			}
+			try {
+				if (typeof backend.getGroupInfo === 'function') {
+					const groupInfo = backend.getGroupInfo(coValueCore)
+					if (groupInfo) result.groupInfo = groupInfo
+				}
+			} catch (_e) {}
+			return result
 		} catch (_e) {
-			return {
+			const result = {
 				id: coValueCore.id,
-				$schema: schema, // Use $schema for consistency with headerMeta.$schema
+				cotype: 'colist',
 				type: 'colist',
+				$schema: schema,
 				items: [],
 			}
+			try {
+				if (typeof backend.getGroupInfo === 'function') {
+					const groupInfo = backend.getGroupInfo(coValueCore)
+					if (groupInfo) result.groupInfo = groupInfo
+				}
+			} catch (_e) {}
+			return result
 		}
-	} else if (rawType === 'costream' && content) {
-		// CoStream: The stream IS the content - return items directly (no properties, CoStreams don't have custom properties)
-		// CoStreams have a session-based structure: { session_id: [items...] }
-		// Use toJSON() to get the session structure, then flatten all sessions into a single array
+	}
+
+	if (rawType === 'costream' && content) {
 		try {
 			const streamData = content.toJSON()
 			const items = []
-
 			if (streamData && typeof streamData === 'object' && !(streamData instanceof Uint8Array)) {
-				// Flatten all sessions into single array
 				for (const sessionKey in streamData) {
 					if (Array.isArray(streamData[sessionKey])) {
 						items.push(...streamData[sessionKey])
 					}
 				}
 			}
-
-			return {
+			const result = {
 				id: coValueCore.id,
-				schema: schema,
+				cotype: 'costream',
 				type: 'costream',
-				items: items, // Items ARE the CoStream content (not a property)
-				// No properties array - CoStreams don't have custom key-value properties, only items
+				$schema: schema,
+				items,
 			}
-		} catch (_e) {
-			if (process.env.DEBUG)
-				return {
-					id: coValueCore.id,
-					$schema: schema, // Use $schema for consistency with headerMeta.$schema
-					type: 'costream',
-					items: [],
+			try {
+				if (typeof backend.getGroupInfo === 'function') {
+					const groupInfo = backend.getGroupInfo(coValueCore)
+					if (groupInfo) result.groupInfo = groupInfo
 				}
+			} catch (_e) {}
+			return result
+		} catch (_e) {
+			const result = {
+				id: coValueCore.id,
+				cotype: 'costream',
+				type: 'costream',
+				$schema: schema,
+				items: [],
+			}
+			try {
+				if (typeof backend.getGroupInfo === 'function') {
+					const groupInfo = backend.getGroupInfo(coValueCore)
+					if (groupInfo) result.groupInfo = groupInfo
+				}
+			} catch (_e) {}
+			return result
 		}
-	} else if (content?.get && typeof content.get === 'function') {
-		// CoMap: format properties as array for DB viewer (with key, value, type)
-		const accountType = headerMeta?.type || null // Preserve account type from headerMeta
+	}
 
-		const normalized = {
-			id: coValueCore.id, // Always add id field (derived from co-id)
-			$schema: schema, // Use $schema for consistency with headerMeta.$schema
-			type: rawType, // Add type for DB viewer
-			displayName: accountType === 'account' ? 'Account' : schema || 'CoMap', // Display name for DB viewer
-			properties: [], // Properties array for DB viewer
+	if (content?.get && typeof content.get === 'function') {
+		const cotype = content.get('cotype') || rawType
+		const result = {
+			id: coValueCore.id,
+			cotype: cotype === 'comap' ? 'comap' : cotype,
+			type: rawType,
+			$schema: schema,
 		}
-
-		// Preserve headerMeta.type for account CoMaps
-		if (accountType) {
-			normalized.headerMeta = { type: accountType }
-		}
-
-		// Extract properties as array (format expected by DB viewer)
-		// Handle both CoMap objects (with .keys() method) and plain objects
 		const keys =
 			content.keys && typeof content.keys === 'function' ? content.keys() : Object.keys(content)
+
+		const skipJsonParsingFields = ['error', 'message', 'content', 'addAgentError']
 		for (const key of keys) {
-			try {
-				const value = content.get && typeof content.get === 'function' ? content.get(key) : content[key]
-				let type = typeof value
-				let displayValue = value
-
-				// Detect co-id references
-				if (typeof value === 'string' && value.startsWith('co_')) {
-					type = 'co-id'
-				} else if (typeof value === 'string' && value.startsWith('key_')) {
-					type = 'key'
-				} else if (typeof value === 'string' && value.startsWith('sealed_')) {
-					type = 'sealed'
-					displayValue = 'sealed_***'
-				} else if (value === null) {
-					type = 'null'
-				} else if (value === undefined) {
-					type = 'undefined'
-				} else if (typeof value === 'object' && value !== null) {
-					type = 'object'
-					displayValue = JSON.stringify(value)
-				} else if (Array.isArray(value)) {
-					type = 'array'
-					displayValue = JSON.stringify(value)
-				}
-
-				normalized.properties.push({
-					key: key,
-					value: displayValue,
-					type: type,
-				})
-			} catch (e) {
-				normalized.properties.push({
-					key: key,
-					value: `<error: ${e.message}>`,
-					type: 'error',
-				})
+			let value = content.get(key)
+			if (
+				typeof value === 'string' &&
+				(value.startsWith('{') || value.startsWith('[')) &&
+				!skipJsonParsingFields.includes(key)
+			) {
+				try {
+					const parsed = JSON.parse(value)
+					value = parseNestedJsonStrings(parsed)
+				} catch (_e) {}
+			} else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+				value = parseNestedJsonStrings(value)
 			}
+			result[key] = value
 		}
-
-		return normalized
+		try {
+			if (typeof backend.getGroupInfo === 'function') {
+				const groupInfo = backend.getGroupInfo(coValueCore)
+				if (groupInfo) result.groupInfo = groupInfo
+			}
+		} catch (_e) {}
+		return result
 	}
 
-	// Fallback for other types
-	return {
-		id: coValueCore.id,
-		type: rawType,
-		$schema: schema,
-		headerMeta: headerMeta,
-	}
+	const fallbackResult = { id: coValueCore.id, type: rawType, $schema: schema }
+	try {
+		if (typeof backend.getGroupInfo === 'function') {
+			const groupInfo = backend.getGroupInfo(coValueCore)
+			if (groupInfo) fallbackResult.groupInfo = groupInfo
+		}
+	} catch (_e) {}
+	return fallbackResult
 }
 
 /**
@@ -189,349 +231,6 @@ function parseNestedJsonStrings(data) {
 }
 
 /**
- * Extract CoValue data as flat object (for SubscriptionEngine and UI)
- * Returns flat objects like {id: '...', text: '...', done: false} instead of normalized format
- * @param {Object} backend - Backend instance
- * @param {CoValueCore} coValueCore - CoValueCore instance
- * @param {string} [schemaHint] - Schema hint for special types
- * @returns {Object|Array} Flat object or array of items
- */
-export function extractCoValueDataFlat(backend, coValueCore, schemaHint = null) {
-	// Special handling for accounts - use backend.account directly if it matches
-	const header = backend.getHeader(coValueCore)
-	const headerMeta = header?.meta || null
-	const _ruleset = coValueCore.ruleset || header?.ruleset
-
-	// Detect account: schemaHint is '@account' OR headerMeta.type === 'account' OR it matches backend.account
-	const isAccount =
-		schemaHint === '@account' ||
-		(headerMeta && headerMeta.type === 'account') ||
-		(backend.account && backend.account.id === coValueCore.id)
-
-	if (isAccount && backend.account && backend.account.id === coValueCore.id) {
-		// Use the account object directly (it's a RawAccount/RawCoMap)
-		// This ensures we get the actual account properties even if CoValueCore isn't fully synced
-		const header = backend.getHeader(coValueCore)
-		const headerMeta = header?.meta || null
-		const schema = headerMeta?.$schema || null
-		const result = {
-			id: backend.account.id,
-			type: 'comap', // Accounts are CoMaps
-			$schema: schema, // Include $schema for metadata lookup
-		}
-		try {
-			const keys =
-				backend.account.keys && typeof backend.account.keys === 'function'
-					? backend.account.keys()
-					: Object.keys(backend.account)
-			for (const key of keys) {
-				try {
-					result[key] = backend.account.get(key)
-				} catch (_e) {}
-			}
-		} catch (_e) {}
-		return result
-	}
-
-	const content = backend.getCurrentContent(coValueCore)
-	if (!content) {
-		// If content is not available but it's an account, try using backend.account as fallback
-		if (isAccount && backend.account && backend.account.id === coValueCore.id) {
-			const header = backend.getHeader(coValueCore)
-			const headerMeta = header?.meta || null
-			const schema = headerMeta?.$schema || null
-			const result = {
-				id: backend.account.id,
-				type: 'comap',
-				$schema: schema,
-			}
-			try {
-				const keys =
-					backend.account.keys && typeof backend.account.keys === 'function'
-						? backend.account.keys()
-						: Object.keys(backend.account)
-				for (const key of keys) {
-					result[key] = backend.account.get(key)
-				}
-			} catch (_e) {
-				// Ignore errors
-			}
-			return result
-		}
-		const header = backend.getHeader(coValueCore)
-		const headerMeta = header?.meta || null
-		const schema = headerMeta?.$schema || null
-		return {
-			id: coValueCore.id,
-			type: 'unknown',
-			$schema: schema,
-		}
-	}
-
-	const rawType = content?.type || 'unknown'
-
-	// Determine schema from headerMeta
-	const schema = headerMeta?.$schema || null
-
-	// CoList: return object with id, cotype, type, items, and groupInfo (for DB viewer owner/members)
-	if (rawType === 'colist' && content && content.toJSON) {
-		try {
-			const items = content.toJSON()
-			const result = {
-				id: coValueCore.id,
-				cotype: 'colist',
-				type: 'colist',
-				$schema: schema,
-				items: items,
-			}
-			try {
-				if (typeof backend.getGroupInfo === 'function') {
-					const groupInfo = backend.getGroupInfo(coValueCore)
-					if (groupInfo) result.groupInfo = groupInfo
-				}
-			} catch (_e) {
-				// groupInfo is optional
-			}
-			return result
-		} catch (_e) {
-			const result = {
-				id: coValueCore.id,
-				cotype: 'colist',
-				type: 'colist',
-				$schema: schema,
-				items: [],
-			}
-			try {
-				if (typeof backend.getGroupInfo === 'function') {
-					const groupInfo = backend.getGroupInfo(coValueCore)
-					if (groupInfo) result.groupInfo = groupInfo
-				}
-			} catch (_e) {}
-			return result
-		}
-	}
-
-	// CoStream: return object with id, cotype, type, items, and groupInfo (for DB viewer owner/members)
-	if (rawType === 'costream' && content) {
-		try {
-			const streamData = content.toJSON()
-			const items = []
-
-			if (streamData && typeof streamData === 'object' && !(streamData instanceof Uint8Array)) {
-				// Flatten all sessions into single array
-				for (const sessionKey in streamData) {
-					if (Array.isArray(streamData[sessionKey])) {
-						items.push(...streamData[sessionKey])
-					}
-				}
-			}
-
-			const result = {
-				id: coValueCore.id,
-				cotype: 'costream',
-				type: 'costream',
-				$schema: schema,
-				items: items,
-			}
-			try {
-				if (typeof backend.getGroupInfo === 'function') {
-					const groupInfo = backend.getGroupInfo(coValueCore)
-					if (groupInfo) result.groupInfo = groupInfo
-				}
-			} catch (_e) {}
-			return result
-		} catch (_e) {
-			const result = {
-				id: coValueCore.id,
-				cotype: 'costream',
-				type: 'costream',
-				$schema: schema,
-				items: [],
-			}
-			try {
-				if (typeof backend.getGroupInfo === 'function') {
-					const groupInfo = backend.getGroupInfo(coValueCore)
-					if (groupInfo) result.groupInfo = groupInfo
-				}
-			} catch (_e) {}
-			return result
-		}
-	}
-
-	// CoMap: return flat object with properties directly accessible, including id, cotype, and $schema
-	if (content?.get && typeof content.get === 'function') {
-		// Always include id and cotype for DB viewer (schemas were previously omitted - caused undefined/UNKNOWN)
-		const cotype = content.get('cotype') || rawType
-		const result = {
-			id: coValueCore.id,
-			cotype: cotype === 'comap' ? 'comap' : cotype,
-			type: rawType, // Keep for backward compat; DB viewer prefers cotype
-			$schema: schema,
-		}
-		const keys =
-			content.keys && typeof content.keys === 'function' ? content.keys() : Object.keys(content)
-
-		for (const key of keys) {
-			let value = content.get(key)
-
-			// Debug: Log raw value for context objects (to diagnose options.map issue)
-			if (key === 'allMessages' || schema?.includes('context')) {
-				console.log(`[extractCoValueDataFlat] 🔍 Raw value for key "${key}":`, {
-					type: typeof value,
-					isString: typeof value === 'string',
-					isObject: typeof value === 'object' && value !== null,
-					startsWithBrace: typeof value === 'string' && value.startsWith('{'),
-					valueSample:
-						typeof value === 'string'
-							? value.substring(0, 200)
-							: typeof value === 'object'
-								? JSON.stringify(value).substring(0, 200)
-								: value,
-					hasOptions: typeof value === 'object' && value !== null ? 'options' in value : false,
-					optionsType:
-						typeof value === 'object' && value !== null && 'options' in value
-							? typeof value.options
-							: 'N/A',
-				})
-			}
-
-			// CRITICAL: CoJSON might serialize nested objects as JSON strings
-			// Parse JSON strings back to objects (especially for nested structures like states, query options)
-			// Skip JSON parsing for certain fields that should always be plain strings (like error messages)
-			const skipJsonParsingFields = ['error', 'message', 'content', 'addAgentError']
-			if (
-				typeof value === 'string' &&
-				(value.startsWith('{') || value.startsWith('[')) &&
-				!skipJsonParsingFields.includes(key)
-			) {
-				try {
-					const parsed = JSON.parse(value)
-					console.log(`[extractCoValueDataFlat] ✅ Parsed JSON string for "${key}":`, {
-						parsedType: typeof parsed,
-						parsedKeys: typeof parsed === 'object' && parsed !== null ? Object.keys(parsed) : [],
-						hasOptions: typeof parsed === 'object' && parsed !== null ? 'options' in parsed : false,
-						optionsType:
-							typeof parsed === 'object' && parsed !== null && 'options' in parsed
-								? typeof parsed.options
-								: 'N/A',
-						parsedSample: JSON.stringify(parsed).substring(0, 300),
-					})
-					// CRITICAL: Recursively parse nested JSON strings within the parsed object
-					// This handles cases where nested objects like options.map are also stored as JSON strings
-					value = parseNestedJsonStrings(parsed)
-					console.log(`[extractCoValueDataFlat] ✅ After recursive parse for "${key}":`, {
-						finalType: typeof value,
-						finalKeys: typeof value === 'object' && value !== null ? Object.keys(value) : [],
-						hasOptions: typeof value === 'object' && value !== null ? 'options' in value : false,
-						optionsKeys:
-							typeof value === 'object' &&
-							value !== null &&
-							'options' in value &&
-							typeof value.options === 'object'
-								? Object.keys(value.options)
-								: [],
-						hasMap:
-							typeof value === 'object' &&
-							value !== null &&
-							'options' in value &&
-							typeof value.options === 'object'
-								? 'map' in value.options
-								: false,
-						finalSample: JSON.stringify(value).substring(0, 400),
-					})
-				} catch (_e) {
-					// Keep as string if not valid JSON
-				}
-			} else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-				// Also check if object properties are JSON strings (for nested structures)
-				// CRITICAL: Check if 'options' property is a JSON string that needs parsing
-				if (key === 'allMessages' || schema?.includes('context')) {
-					const hasOptionsBefore = 'options' in value
-					const optionsTypeBefore = hasOptionsBefore ? typeof value.options : 'N/A'
-					const optionsIsString =
-						hasOptionsBefore &&
-						typeof value.options === 'string' &&
-						(value.options.startsWith('{') || value.options.startsWith('['))
-
-					console.log(`[extractCoValueDataFlat] 🔍 Before recursive parse for "${key}":`, {
-						hasOptions: hasOptionsBefore,
-						optionsType: optionsTypeBefore,
-						optionsIsString,
-						optionsValue: hasOptionsBefore
-							? typeof value.options === 'string'
-								? value.options.substring(0, 200)
-								: JSON.stringify(value.options).substring(0, 200)
-							: 'N/A',
-						allKeys: Object.keys(value),
-					})
-				}
-
-				const beforeParse = JSON.stringify(value).substring(0, 200)
-				value = parseNestedJsonStrings(value)
-				const afterParse = JSON.stringify(value).substring(0, 200)
-
-				if (key === 'allMessages' || schema?.includes('context')) {
-					const hasOptionsAfter = 'options' in value
-					const optionsTypeAfter = hasOptionsAfter ? typeof value.options : 'N/A'
-					const hasMap =
-						hasOptionsAfter && typeof value.options === 'object' && value.options !== null
-							? 'map' in value.options
-							: false
-
-					console.log(`[extractCoValueDataFlat] ✅ After recursive parse for "${key}":`, {
-						hasOptions: hasOptionsAfter,
-						optionsType: optionsTypeAfter,
-						hasMap,
-						optionsKeys:
-							hasOptionsAfter && typeof value.options === 'object' && value.options !== null
-								? Object.keys(value.options)
-								: [],
-						mapKeys: hasMap ? Object.keys(value.options.map) : [],
-						changed: beforeParse !== afterParse,
-						finalSample: JSON.stringify(value).substring(0, 400),
-					})
-				}
-			}
-			result[key] = value
-		}
-
-		// Add group info for ownership and access display
-		// This shows who owns the co-value and who has access to it
-		try {
-			if (typeof backend.getGroupInfo === 'function') {
-				const groupInfo = backend.getGroupInfo(coValueCore)
-				if (groupInfo) {
-					result.groupInfo = groupInfo
-				}
-			}
-		} catch (_e) {}
-
-		return result
-	}
-
-	// Fallback
-	const fallbackResult = {
-		id: coValueCore.id,
-		type: rawType,
-		$schema: schema,
-	}
-
-	// Try to add group info even for fallback cases
-	try {
-		if (typeof backend.getGroupInfo === 'function') {
-			const groupInfo = backend.getGroupInfo(coValueCore)
-			if (groupInfo) {
-				fallbackResult.groupInfo = groupInfo
-			}
-		}
-	} catch (_e) {
-		// Silently ignore errors
-	}
-
-	return fallbackResult
-}
-
-/**
  * Shallow resolve a single co-id: load CoValue and return raw data (nested co-ids stay as strings).
  * Used for map-driven on-demand resolution - only loads this CoValue, no recursive resolution.
  * Content-addressable: lookup by co-id via backend.
@@ -549,7 +248,7 @@ export async function resolveCoIdShallow(backend, coId, options = {}, visited = 
 		await ensureCoValueLoaded(backend, coId, { waitForAvailable: true, timeoutMs })
 		const coValueCore = backend.getCoValue(coId)
 		if (!coValueCore || !backend.isAvailable(coValueCore)) return { id: coId }
-		let data = extractCoValueDataFlat(backend, coValueCore)
+		let data = extractCoValueData(backend, coValueCore)
 		data = { ...data, id: data.id || coId }
 		const header = backend.getHeader(coValueCore)
 		const ruleset = coValueCore.ruleset || header?.ruleset

@@ -12,7 +12,7 @@ import { ReactiveStore } from '../reactive-store.js'
 
 /**
  * Create a new Spark
- * Creates a child group owned by @maia spark's group, then creates Spark CoMap
+ * Creates a child group owned by °Maia spark's group, then creates Spark CoMap
  * @param {Object} backend - Backend instance
  * @param {Object} dbEngine - DBEngine instance
  * @param {Object} params - Operation parameters
@@ -24,7 +24,26 @@ export async function createSparkOperation(backend, dbEngine, params) {
 	requireParam(name, 'name', 'CreateSparkOperation')
 	requireDbEngine(dbEngine, 'CreateSparkOperation', 'spark creation')
 
-	return await backend.createSpark(name)
+	const result = await backend.createSpark(name)
+
+	// Fire-and-forget: register spark in Maia genesis registry (moai) so it's discoverable
+	const getMoaiBaseUrl = dbEngine?.getMoaiBaseUrl
+	if (getMoaiBaseUrl && typeof getMoaiBaseUrl === 'function') {
+		const baseUrl = getMoaiBaseUrl()
+		if (baseUrl && result?.id) {
+			fetch(`${baseUrl.replace(/\/$/, '')}/register`, {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					type: 'spark',
+					sparkCoId: result.id,
+					username: result.name,
+				}),
+			}).catch(() => {})
+		}
+	}
+
+	return result
 }
 
 /**
@@ -44,7 +63,7 @@ export async function readSparkOperation(backend, params) {
 	}
 
 	// Collection read - use spark schema or provided schema
-	const sparkSchema = schema || '@maia/schema/data/spark'
+	const sparkSchema = schema || '°Maia/schema/data/spark'
 	return await backend.readSpark(null, sparkSchema)
 }
 

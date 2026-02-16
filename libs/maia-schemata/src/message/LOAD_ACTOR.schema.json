@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/message/LOAD_ACTOR",
-	"title": "@maia/schema/message/LOAD_ACTOR",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/message/LOAD_ACTOR",
+	"title": "°Maia/schema/message/LOAD_ACTOR",
 	"description": "Generic message type for loading actor data (reusable across vibes)",
 	"cotype": "comap",
 	"indexing": true,

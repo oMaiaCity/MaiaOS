@@ -17,22 +17,15 @@ export default {
 			return createErrorResult([createErrorEntry('structural', '[@db] Database engine not available')])
 		}
 
-		if (payload.op === 'create' && payload.schema && !payload.schema.startsWith('co_z')) {
-			return createErrorResult([
-				createErrorEntry(
-					'structural',
-					`[@db] Schema must be a co-id (co_z...), got: ${payload.schema}`,
-				),
-			])
-		}
-
 		try {
 			const data = await os.db(payload)
 			return createSuccessResult(data)
 		} catch (err) {
-			return createErrorResult(
-				err.errors ?? [createErrorEntry('structural', err.message || 'Database operation failed')],
-			)
+			const errors = err.errors ?? [
+				createErrorEntry('structural', err.message || 'Database operation failed'),
+			]
+			console.error('[@db] Operation failed:', payload?.op, errors)
+			return createErrorResult(errors)
 		}
 	},
 }

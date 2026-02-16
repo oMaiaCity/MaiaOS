@@ -70,3 +70,4 @@ export {
 	getSchema,
 	hasSchema,
 } from './schemas/registry.js'
+export { generateRegistryName } from './seed/registry-name-generator.js'

@@ -1,6 +1,6 @@
 {
-	"$schema": "@maia/schema/view",
-	"$id": "@maia/chat/view/vibe",
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/chat/view/vibe",
 	"content": {
 		"tag": "div",
 		"class": "chat-container",

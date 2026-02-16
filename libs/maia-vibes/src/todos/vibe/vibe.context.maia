@@ -1,6 +1,6 @@
 {
-	"$schema": "@maia/schema/context",
-	"$id": "@maia/todos/context/vibe",
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/todos/context/vibe",
 	"currentView": "@list",
 	"viewMode": "list",
 	"listButtonActive": true,
@@ -12,7 +12,7 @@
 	"newTodoText": "",
 	"error": null,
 	"@actors": {
-		"list": "@maia/todos/actor/list",
-		"comingSoon": "@maia/todos/actor/coming-soon"
+		"list": "°Maia/todos/actor/list",
+		"comingSoon": "°Maia/todos/actor/coming-soon"
 	}
 }

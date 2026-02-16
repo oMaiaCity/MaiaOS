@@ -50,10 +50,12 @@ export class DBEngine {
 	 * @param {DBAdapter} backend - Backend adapter instance (must implement DBAdapter interface)
 	 * @param {Object} [options] - Optional configuration
 	 * @param {Object} [options.evaluator] - Optional MaiaScript evaluator for expression evaluation in updates
+	 * @param {() => string|null} [options.getMoaiBaseUrl] - Optional fn returning moai API base URL (for POST /register after createSpark)
 	 */
 	constructor(backend, options = {}) {
 		this.backend = backend
-		const { evaluator } = options
+		const { evaluator, getMoaiBaseUrl } = options
+		this.getMoaiBaseUrl = getMoaiBaseUrl ?? null
 
 		// Pass dbEngine to backend for runtime schema validation in create functions
 		if (backend && typeof backend.setDbEngine === 'function') {
@@ -156,7 +158,7 @@ export class DBEngine {
 	 * Resolve a human-readable ID to a co-id
 	 * DEPRECATED: This method should only be used during seeding. At runtime, all IDs should already be co-ids.
 	 * @deprecated Use co-ids directly at runtime. This method is only for seeding/backward compatibility.
-	 * @param {string} humanReadableId - Human-readable ID (e.g., '@maia/vibe/todos', 'vibe/vibe')
+	 * @param {string} humanReadableId - Human-readable ID (e.g., '°Maia/vibe/todos', 'vibe/vibe')
 	 * @returns {Promise<string|null>} Co-id (co_z...) or null if not found
 	 */
 }

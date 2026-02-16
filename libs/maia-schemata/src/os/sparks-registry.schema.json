@@ -1,8 +1,8 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/os/sparks-registry",
-	"title": "@maia/schema/os/sparks-registry",
-	"description": "Sparks registry CoMap - spark name -> spark co-id. Stored in account.sparks",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/os/sparks-registry",
+	"title": "°Maia/schema/os/sparks-registry",
+	"description": "Sparks registry CoMap - spark name -> spark co-id. Stored in account.registries.sparks",
 	"cotype": "comap",
 	"indexing": false,
 	"additionalProperties": {

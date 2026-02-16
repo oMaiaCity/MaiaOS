@@ -2,10 +2,10 @@
  * Schema Index Manager
  *
  * Provides helper functions for automatic schema-based indexing of co-values.
- * Manages schema index colists keyed by schema co-id in spark.os.indexes (account.sparks[@maia].os.indexes).
+ * Manages schema index colists keyed by schema co-id in spark.os.indexes (account.registries.sparks[°Maia].os.indexes).
  *
  * Structure:
- * - spark.os.schematas: "@maia/schema/namekey" → schema co-id (registry)
+ * - spark.os.schematas: "°Maia/schema/namekey" → schema co-id (registry)
  * - spark.os.indexes: schema-co-id → colist of instance co-ids (index)
  * - spark.os.unknown: colist of co-values without schemas
  */
@@ -17,16 +17,17 @@ import { read as universalRead } from '../crud/read.js'
 import * as groups from '../groups/groups.js'
 import { resolve } from '../schema/resolver.js'
 
-const SCHEMA_REF_MATCH = /^@([a-zA-Z0-9_-]+)\/schema\/(.+)$/
+// Matches both °Spark/schema/... and @domain/schema/... (captures prefix + path)
+const SCHEMA_REF_MATCH = /^([°@][a-zA-Z0-9_-]+)\/schema\/(.+)$/
 
 /**
- * Ensure spark.os CoMap exists (account.sparks[spark].os)
+ * Ensure spark.os CoMap exists (account.registries.sparks[spark].os)
  * @param {Object} backend - Backend instance
- * @param {string} [spark='@maia'] - Spark name
+ * @param {string} [spark='°Maia'] - Spark name
  * @returns {Promise<RawCoMap|null>} spark.os CoMap
  */
 async function ensureOsCoMap(backend, spark) {
-	const effectiveSpark = spark ?? backend?.systemSpark ?? '@maia'
+	const effectiveSpark = spark ?? backend?.systemSpark ?? '°Maia'
 	if (!backend.account) {
 		throw new Error('[SchemaIndexManager] Account required')
 	}
@@ -84,7 +85,14 @@ async function ensureOsCoMap(backend, spark) {
 		}
 	}
 
-	// spark.os not ready (expected during bootstrap before scaffold creates account.sparks)
+	// spark.os not ready - fail-fast with clear error when account.registries is missing
+	// Indexing requires account.registries (set via linkAccountToRegistries). Boot/link order must run before first create.
+	const registriesId = backend.account?.get?.('registries')
+	if (!registriesId?.startsWith('co_z')) {
+		console.error(
+			'[SchemaIndexManager] account.registries not set. Indexing requires linkAccountToRegistries to complete first. Call linkAccountToRegistries during boot before user can create content.',
+		)
+	}
 	return null
 }
 
@@ -147,8 +155,8 @@ export async function ensureIndexesCoMap(backend) {
 
 	// Create new spark.os.indexes CoMap (per-CoValue group)
 	// Use proper runtime validation with dbEngine when schema is available
-	// @maia fallback when schema registry doesn't exist yet (initial setup)
-	const indexesSchemaCoId = await resolve(backend, '@maia/schema/os/indexes-registry', {
+	// °Maia fallback when schema registry doesn't exist yet (initial setup)
+	const indexesSchemaCoId = await resolve(backend, '°Maia/schema/os/indexes-registry', {
 		returnType: 'coId',
 	})
 
@@ -166,7 +174,7 @@ export async function ensureIndexesCoMap(backend) {
 		indexesCoMapId = created.id
 	} else {
 		const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
-		const { coValue: indexesCoMap } = await createCoValueForSpark(backend, '@maia', {
+		const { coValue: indexesCoMap } = await createCoValueForSpark(backend, '°Maia', {
 			schema: EXCEPTION_SCHEMAS.META_SCHEMA,
 			cotype: 'comap',
 			data: {},
@@ -254,14 +262,14 @@ async function ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSc
 	}
 
 	// Generate schema-specific index colist schema name
-	// Preserves the full path structure: @domain/schema/path → @domain/schema/index/path
+	// Preserves the full path structure: °Maia/schema/path → °Maia/schema/index/path (or @domain/...)
 	const match = schemaTitle.match(SCHEMA_REF_MATCH)
 	if (!match) {
 		if (process.env.DEBUG) console.error('schemaTitle match failed')
 		return null
 	}
-	const [, domain, path] = match
-	const indexColistSchemaTitle = `@${domain}/schema/index/${path}`
+	const [, prefix, path] = match
+	const indexColistSchemaTitle = `${prefix}/schema/index/${path}`
 
 	// Check if schema-specific index colist schema already exists
 	const existingSchemaCoId = await resolve(backend, indexColistSchemaTitle, { returnType: 'coId' })
@@ -385,7 +393,7 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
 	}
 
 	const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
-	const { coValue: indexColistRaw } = await createCoValueForSpark(backend, '@maia', {
+	const { coValue: indexColistRaw } = await createCoValueForSpark(backend, '°Maia', {
 		schema: indexSchemaCoId,
 		cotype: 'colist',
 		data: [],
@@ -439,7 +447,7 @@ export async function ensureUnknownColist(backend) {
 	}
 
 	const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
-	const { coValue: unknownColist } = await createCoValueForSpark(backend, '@maia', {
+	const { coValue: unknownColist } = await createCoValueForSpark(backend, '°Maia', {
 		schema: EXCEPTION_SCHEMAS.META_SCHEMA,
 		cotype: 'colist',
 		data: [],
@@ -465,8 +473,8 @@ async function isInternalCoValue(backend, coId) {
 		return false
 	}
 
-	// Check if it's spark.os (account.sparks[@maia].os)
-	const osId = await groups.getSparkOsId(backend, backend?.systemSpark ?? '@maia')
+	// Check if it's spark.os (account.registries.sparks[°Maia].os)
+	const osId = await groups.getSparkOsId(backend, backend?.systemSpark ?? '°Maia')
 	if (coId === osId) {
 		return true
 	}
@@ -598,12 +606,12 @@ export async function shouldIndexCoValue(backend, coValueCore) {
 }
 
 /**
- * Get metaschema co-id from spark.os.schematas registry (account.sparks[@maia].os.schematas)
+ * Get metaschema co-id from spark.os.schematas registry (account.registries.sparks[°Maia].os.schematas)
  * @param {Object} backend - Backend instance
  * @returns {Promise<string|null>} Metaschema co-id or null if not found
  */
 async function getMetaschemaCoId(backend) {
-	const spark = backend?.systemSpark ?? '@maia'
+	const spark = backend?.systemSpark ?? '°Maia'
 	const osId = await groups.getSparkOsId(backend, spark)
 	if (!osId) {
 		return null
@@ -636,7 +644,7 @@ async function getMetaschemaCoId(backend) {
 	}
 
 	// Look up metaschema from registry
-	const metaSchemaCoId = schematasContent.get('@maia/schema/meta')
+	const metaSchemaCoId = schematasContent.get('°Maia/schema/meta')
 	if (metaSchemaCoId && typeof metaSchemaCoId === 'string' && metaSchemaCoId.startsWith('co_z')) {
 		return metaSchemaCoId
 	}
@@ -645,7 +653,7 @@ async function getMetaschemaCoId(backend) {
 }
 
 /**
- * Ensure spark.os.schematas registry CoMap exists (account.sparks[@maia].os.schematas)
+ * Ensure spark.os.schematas registry CoMap exists (account.registries.sparks[°Maia].os.schematas)
  * @param {Object} backend - Backend instance
  * @returns {Promise<RawCoMap>} spark.os.schematas registry CoMap
  */
@@ -690,12 +698,12 @@ async function ensureSchemataRegistry(backend) {
 		return null
 	}
 
-	const schematasSchemaCoId = await resolve(backend, '@maia/schema/os/schematas-registry', {
+	const schematasSchemaCoId = await resolve(backend, '°Maia/schema/os/schematas-registry', {
 		returnType: 'coId',
 	})
 	const schemaForSchematas = schematasSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA
 	const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
-	const { coValue: schematasCoMap } = await createCoValueForSpark(backend, '@maia', {
+	const { coValue: schematasCoMap } = await createCoValueForSpark(backend, '°Maia', {
 		schema: schemaForSchematas,
 		cotype: 'comap',
 		data: {},
@@ -812,12 +820,12 @@ export async function isSchemaCoValue(backend, coValueCore) {
 
 	// Metaschema itself uses @metaSchema exception (can't self-reference)
 	// Special case: Check content.title to confirm it's metaschema
-	// Uses "@maia/schema/meta" (schema namekey from JSON definition - single source of truth)
+	// Uses "°Maia/schema/meta" (schema namekey from JSON definition - single source of truth)
 	if (schema === EXCEPTION_SCHEMAS.META_SCHEMA) {
 		const content = backend.getCurrentContent(coValueCore)
 		if (content && typeof content.get === 'function') {
 			const title = content.get('title')
-			if (title === '@maia/schema/meta') {
+			if (title === '°Maia/schema/meta') {
 				return true // This is the metaschema itself
 			}
 		}
@@ -849,8 +857,8 @@ export async function isSchemaCoValue(backend, coValueCore) {
 						const referencedTitle = referencedContent.get('title')
 
 						// Check if it's the metaschema by title
-						// - "@maia/schema/meta" (schema namekey from JSON definition - single source of truth)
-						if (referencedTitle === '@maia/schema/meta') {
+						// - "°Maia/schema/meta" (schema namekey from JSON definition - single source of truth)
+						if (referencedTitle === '°Maia/schema/meta') {
 							// headerMeta.$schema points to metaschema - this is a schema!
 							return true
 						}
@@ -890,6 +898,13 @@ export async function indexCoValue(backend, coValueCoreOrId) {
 	if (typeof coValueCoreOrId === 'string') {
 		coId = coValueCoreOrId
 		coValueCore = backend.getCoValue(coId)
+		if (!coValueCore || !backend.isAvailable(coValueCore)) {
+			// Try loading co-value before giving up (caller may have created it but it's not loaded yet)
+			if (backend.node?.loadCoValueCore) {
+				await backend.node.loadCoValueCore(coId).catch(() => {})
+			}
+			coValueCore = backend.getCoValue(coId)
+		}
 		if (!coValueCore || !backend.isAvailable(coValueCore)) {
 			return
 		}

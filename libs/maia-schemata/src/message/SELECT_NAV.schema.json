@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/message/SELECT_NAV",
-	"title": "@maia/schema/message/SELECT_NAV",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/message/SELECT_NAV",
+	"title": "°Maia/schema/message/SELECT_NAV",
 	"description": "Message type for selecting a navigation item",
 	"cotype": "comap",
 	"indexing": true,

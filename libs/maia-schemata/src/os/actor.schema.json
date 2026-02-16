@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/actor",
-	"title": "@maia/schema/actor",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/actor",
+	"title": "°Maia/schema/actor",
 	"description": "Pure declarative actor specification",
 	"cotype": "comap",
 	"indexing": true,
@@ -11,27 +11,27 @@
 			"description": "Actor role (e.g., 'kanban-view', 'vibe', 'composite', 'leaf')"
 		},
 		"context": {
-			"$co": "@maia/schema/context",
+			"$co": "°Maia/schema/context",
 			"description": "Co-id reference to context definition"
 		},
 		"view": {
-			"$co": "@maia/schema/view",
+			"$co": "°Maia/schema/view",
 			"description": "Co-id reference to view definition"
 		},
 		"state": {
-			"$co": "@maia/schema/state",
+			"$co": "°Maia/schema/state",
 			"description": "Co-id reference to state machine definition"
 		},
 		"brand": {
-			"$co": "@maia/schema/style",
+			"$co": "°Maia/schema/style",
 			"description": "Co-id reference to brand style definition (uses style schema)"
 		},
 		"style": {
-			"$co": "@maia/schema/style",
+			"$co": "°Maia/schema/style",
 			"description": "Co-id reference to local style definition"
 		},
 		"inbox": {
-			"$co": "@maia/schema/inbox",
+			"$co": "°Maia/schema/inbox",
 			"description": "Co-id reference to message inbox costream (append-only message feed)"
 		},
 		"messageTypes": {

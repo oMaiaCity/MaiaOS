@@ -1,7 +1,7 @@
 /**
  * Resolve capability group co-ids to human-readable names
  * Format: @SparkName/CapabilityName
- * Used by db-viewer to display "via @maia/Guardian" instead of "via co_zVvK79kWN..."
+ * Used by db-viewer to display "via °Maia/Guardian" instead of "via co_zVvK79kWN..."
  */
 
 function truncate(str, maxLen = 16) {
@@ -13,23 +13,6 @@ function truncate(str, maxLen = 16) {
 function capitalizeCapability(str) {
 	if (!str || typeof str !== 'string') return str
 	return str.charAt(0).toUpperCase() + str.slice(1)
-}
-
-/**
- * Extract flat key-value object from CoMap data (handles both flat and properties-array format)
- * @param {Object} data - Store value (flat {key: value} or normalized {properties: [{key, value}]})
- * @returns {Object} Flat {key: value}
- */
-function toFlatCoMap(data) {
-	if (!data || typeof data !== 'object') return {}
-	if (Array.isArray(data.properties) && data.properties.length > 0) {
-		const out = {}
-		for (const p of data.properties) {
-			if (p?.key !== undefined) out[p.key] = p.value
-		}
-		return out
-	}
-	return data
 }
 
 async function waitForStore(store, timeoutMs = 5000) {
@@ -56,7 +39,7 @@ async function waitForStore(store, timeoutMs = 5000) {
 
 /**
  * Build reverse map: group co-id -> @SparkName/CapabilityName
- * Traverses account.sparks -> each spark -> os -> capabilities -> guardian, publicReaders, etc.
+ * Traverses account.registries.sparks -> each spark -> os -> capabilities -> guardian, publicReaders, etc.
  * @param {Object} maia - MaiaOS instance with maia.db()
  * @param {string} accountId - Current account co-id (from maia.id.maiaId.id)
  * @returns {Promise<Map<string, string>>} Map of groupCoId -> display name
@@ -69,14 +52,20 @@ async function buildCapabilityGroupMap(maia, accountId) {
 		const accountStore = await maia.db({ op: 'read', schema: '@account', key: accountId })
 		await waitForStore(accountStore, 5000)
 		const accountData = accountStore?.value ?? accountStore
-		const sparksId = accountData?.sparks
+		const registriesId = accountData?.registries
+		if (!registriesId || typeof registriesId !== 'string' || !registriesId.startsWith('co_'))
+			return result
+		const registriesStore = await maia.db({ op: 'read', schema: null, key: registriesId })
+		await waitForStore(registriesStore, 5000)
+		const registriesData = registriesStore?.value ?? registriesStore
+		const sparksId = registriesData?.sparks
 		if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_')) return result
 
 		const sparksStore = await maia.db({ op: 'read', schema: null, key: sparksId })
 		await waitForStore(sparksStore, 5000)
 		const sparksRaw = sparksStore?.value ?? sparksStore
 		if (!sparksRaw || sparksRaw.error) return result
-		const sparksData = toFlatCoMap(sparksRaw)
+		const sparksData = sparksRaw
 
 		const skipKeys = new Set(['id', 'loading', 'error', '$schema', 'type', 'cotype'])
 		for (const key of Object.keys(sparksData)) {
@@ -93,17 +82,18 @@ async function buildCapabilityGroupMap(maia, accountId) {
 				const sparkStore = await maia.db({ op: 'read', schema: null, key: sparkCoId })
 				await waitForStore(sparkStore, 3000)
 				const sparkRaw = sparkStore?.value ?? sparkStore
-				const sparkData = toFlatCoMap(sparkRaw)
+				const sparkData = sparkRaw
 				const osId = sparkData?.os
 				if (!osId?.startsWith('co_')) continue
 
 				const sparkName = sparkData?.name ?? key
-				const displaySparkName = sparkName.startsWith('@') ? sparkName : `@${sparkName}`
+				const displaySparkName =
+					sparkName.startsWith('°') || sparkName.startsWith('@') ? sparkName : `°${sparkName}`
 
 				const osStore = await maia.db({ op: 'read', schema: null, key: osId })
 				await waitForStore(osStore, 3000)
 				const osRaw = osStore?.value ?? osStore
-				const osData = toFlatCoMap(osRaw)
+				const osData = osRaw
 				const capabilitiesId = osData?.capabilities
 				if (!capabilitiesId?.startsWith('co_')) continue
 
@@ -111,7 +101,7 @@ async function buildCapabilityGroupMap(maia, accountId) {
 				await waitForStore(capStore, 3000)
 				const capRaw = capStore?.value ?? capStore
 				if (!capRaw || capRaw.error) continue
-				const capData = toFlatCoMap(capRaw)
+				const capData = capRaw
 
 				for (const capKey of Object.keys(capData)) {
 					if (skipKeys.has(capKey)) continue
@@ -137,7 +127,7 @@ async function buildCapabilityGroupMap(maia, accountId) {
 
 /**
  * Resolve group co-ids to capability display names
- * Format: @SparkName/CapabilityName, e.g. "@maia/Guardian"
+ * Format: @SparkName/CapabilityName, e.g. "°Maia/Guardian"
  * Only resolves capability groups from the current account's sparks; others fall back to truncated co-id
  *
  * @param {Object} maia - MaiaOS instance with maia.db()

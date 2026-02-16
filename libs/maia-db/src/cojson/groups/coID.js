@@ -59,10 +59,9 @@ export async function createAccountWithSecret({
 	}
 
 	// Two modes: simpleAccountSeed (all signups) and genesisAccountSeed (PEER_MODE=sync only).
-	// createAccountWithSecret always runs simpleAccountSeed — empty account.sparks only.
+	// createAccountWithSecret always runs simpleAccountSeed — no account.sparks; registries via link.
 	try {
 		await simpleAccountSeed(rawAccount, result.node)
-		console.log('ℹ️  Simple account seed: account.sparks (vibes from sync when applicable)')
 	} catch (seedError) {
 		console.error('❌ Simple account seed failed:', seedError?.message ?? seedError)
 	}
@@ -256,21 +255,40 @@ export async function loadAccount({ accountID, agentSecret, peers = [], storage 
 		phaseTimings.profileLoadTotal = 0
 	}
 
-	// OPTIMIZATION: Prefetch account.os during account loading to avoid 5+ second delay later
-	// This ensures account.os is syncing in parallel with account/profile, not sequentially
+	// OPTIMIZATION: Prefetch spark.os (account.registries.sparks[°Maia].os) during account loading
+	// This ensures spark.os is syncing in parallel with account/profile, reducing wait in ensureAccountOsReady
 	const _osLoadRequestStartTime = performance.now()
-	const osID = rawAccount.get('os')
-	if (osID && typeof osID === 'string' && osID.startsWith('co_z')) {
-		// Trigger loading of account.os (non-blocking - let it sync in background)
-		// This ensures account.os is syncing while we continue, reducing wait time in ensureAccountOsReady
-		const osCoValue = node.getCoValue(osID)
-		if (osCoValue && !osCoValue.isAvailable()) {
-			// account.os not loaded yet - trigger load (non-blocking)
-			node.loadCoValueCore(osID).catch((_err) => {})
-		} else if (osCoValue?.isAvailable()) {
-		}
-	} else {
-	}
+	;(async () => {
+		const registriesId = rawAccount.get?.('registries')
+		if (!registriesId?.startsWith('co_z')) return
+		try {
+			await node.loadCoValueCore?.(registriesId)
+			const regCore = node.getCoValue(registriesId)
+			if (!regCore?.isAvailable?.()) return
+			const reg = regCore.getCurrentContent?.()
+			if (!reg?.get) return
+			const sparksId = reg.get('sparks')
+			if (!sparksId?.startsWith('co_z')) return
+			await node.loadCoValueCore?.(sparksId)
+			const sparksCore = node.getCoValue(sparksId)
+			if (!sparksCore?.isAvailable?.()) return
+			const sparks = sparksCore.getCurrentContent?.()
+			if (!sparks?.get) return
+			const maiaSparkId = sparks.get('°Maia')
+			if (!maiaSparkId?.startsWith('co_z')) return
+			await node.loadCoValueCore?.(maiaSparkId)
+			const sparkCore = node.getCoValue(maiaSparkId)
+			if (!sparkCore?.isAvailable?.()) return
+			const spark = sparkCore.getCurrentContent?.()
+			if (!spark?.get) return
+			const osId = spark.get('os')
+			if (!osId?.startsWith('co_z')) return
+			const osCoValue = node.getCoValue(osId)
+			if (osCoValue && !osCoValue.isAvailable()) {
+				node.loadCoValueCore?.(osId).catch(() => {})
+			}
+		} catch (_) {}
+	})()
 
 	const loadDuration = performance.now() - loadStartTime
 	phaseTimings.total = loadDuration

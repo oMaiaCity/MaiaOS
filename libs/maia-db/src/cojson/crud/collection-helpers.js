@@ -5,13 +5,14 @@
  * Uses schema-index-manager for indexing logic (single source of truth).
  */
 
+import { isSchemaRef } from '@MaiaOS/schemata'
 import { resolve } from '../schema/resolver.js'
 
 /**
  * Get schema index colist ID using schema co-id as key (all schemas indexed in spark.os.indexes)
  * Lazily creates the index colist if it doesn't exist and the schema has indexing: true
  * @param {Object} backend - Backend instance
- * @param {string} schema - Schema co-id (co_z...) or human-readable (@maia/schema/data/todos)
+ * @param {string} schema - Schema co-id (co_z...) or human-readable (°Maia/schema/data/todos)
  * @returns {Promise<string|null>} Schema index colist ID or null if not found/not indexable
  */
 export async function getSchemaIndexColistId(backend, schema) {
@@ -40,7 +41,7 @@ export async function getSchemaIndexColistId(backend, schema) {
 /**
  * Get CoList ID from spark.os.indexes.<schemaCoId> (all schema indexes in spark.os.indexes)
  * @param {Object} backend - Backend instance
- * @param {string} collectionNameOrSchema - Collection name (e.g., "todos"), schema co-id (co_z...), or namekey (@maia/schema/data/todos)
+ * @param {string} collectionNameOrSchema - Collection name (e.g., "todos"), schema co-id (co_z...), or namekey (°Maia/schema/data/todos)
  * @returns {Promise<string|null>} CoList ID or null if not found
  */
 export async function getCoListId(backend, collectionNameOrSchema) {
@@ -50,9 +51,8 @@ export async function getCoListId(backend, collectionNameOrSchema) {
 		return null
 	}
 
-	// Must be a schema co-id or human-readable schema name (@domain/schema/...)
-	const isSchemaRef = /^@[a-zA-Z0-9_-]+\/schema\//.test(collectionNameOrSchema)
-	if (!collectionNameOrSchema.startsWith('co_z') && !isSchemaRef) {
+	// Must be a schema co-id or human-readable schema name (°Maia/schema/... or @domain/schema/...)
+	if (!collectionNameOrSchema.startsWith('co_z') && !isSchemaRef(collectionNameOrSchema)) {
 		if (process.env.DEBUG) console.error('Invalid collection/schema ref:', collectionNameOrSchema)
 		return null
 	}

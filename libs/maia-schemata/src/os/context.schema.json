@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/context",
-	"title": "@maia/schema/context",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/context",
+	"title": "°Maia/schema/context",
 	"description": "Runtime data for an actor (flexible JSON structure). The context itself is a comap CoValue (for CRDT sync/versioning), but all inner properties are plain JS objects/arrays/strings - NOT CoJSON types.",
 	"cotype": "comap",
 	"indexing": true,
@@ -14,7 +14,7 @@
 				"properties": {
 					"schema": {
 						"type": "string",
-						"description": "Schema reference (e.g., '@maia/schema/message' or co-id)"
+						"description": "Schema reference (e.g., '°Maia/schema/message' or co-id)"
 					},
 					"options": {
 						"type": "object",

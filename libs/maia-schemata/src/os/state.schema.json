@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/state",
-	"title": "@maia/schema/state",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/state",
+	"title": "°Maia/schema/state",
 	"description": "XState-like state machine with states, transitions, guards, and actions",
 	"cotype": "comap",
 	"indexing": true,
@@ -127,14 +127,14 @@
 								}
 							},
 							{
-								"$co": "@maia/schema/action",
+								"$co": "°Maia/schema/action",
 								"description": "Co-id reference to action CoValue"
 							},
 							{
 								"type": "array",
 								"description": "Array of action co-id references",
 								"items": {
-									"$co": "@maia/schema/action"
+									"$co": "°Maia/schema/action"
 								}
 							}
 						]
@@ -249,14 +249,14 @@
 								}
 							},
 							{
-								"$co": "@maia/schema/action",
+								"$co": "°Maia/schema/action",
 								"description": "Co-id reference to action CoValue"
 							},
 							{
 								"type": "array",
 								"description": "Array of action co-id references",
 								"items": {
-									"$co": "@maia/schema/action"
+									"$co": "°Maia/schema/action"
 								}
 							}
 						]
@@ -314,7 +314,7 @@
 														"required": ["updateContext"]
 													},
 													{
-														"$co": "@maia/schema/action"
+														"$co": "°Maia/schema/action"
 													}
 												]
 											}
@@ -323,7 +323,7 @@
 									"required": ["target"]
 								},
 								{
-									"$co": "@maia/schema/transition",
+									"$co": "°Maia/schema/transition",
 									"description": "Co-id reference to transition CoValue"
 								}
 							]

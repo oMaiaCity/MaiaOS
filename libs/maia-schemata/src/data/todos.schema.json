@@ -1,7 +1,7 @@
 {
-	"$id": "@maia/schema/data/todos",
-	"$schema": "@maia/schema/meta",
-	"title": "@maia/schema/data/todos",
+	"$id": "°Maia/schema/data/todos",
+	"$schema": "°Maia/schema/meta",
+	"title": "°Maia/schema/data/todos",
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {

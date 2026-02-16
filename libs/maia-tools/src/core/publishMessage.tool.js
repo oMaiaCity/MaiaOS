@@ -30,7 +30,7 @@ export default {
 			])
 		}
 
-		if (target.startsWith('@actor/')) {
+		if (target.startsWith('@actor/') || (target.startsWith('°') && target.includes('/actor/'))) {
 			return createErrorResult([
 				createErrorEntry(
 					'structural',

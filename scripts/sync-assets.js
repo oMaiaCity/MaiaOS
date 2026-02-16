@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Asset sync for @maia/brand: libs/maia-brand/src/assets → target dir.
+ * Asset sync for °Maia/brand: libs/maia-brand/src/assets → target dir.
  *
  * Usage:
  *   bun scripts/sync-assets.js              # Dev: sync to services/maia/brand, watch

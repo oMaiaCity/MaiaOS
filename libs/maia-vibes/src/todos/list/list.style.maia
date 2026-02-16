@@ -1,6 +1,6 @@
 {
-	"$schema": "@maia/schema/style",
-	"$id": "@maia/todos/style/list",
+	"$schema": "°Maia/schema/style",
+	"$id": "°Maia/todos/style/list",
 	"components": {
 		"list": {
 			"display": "flex",

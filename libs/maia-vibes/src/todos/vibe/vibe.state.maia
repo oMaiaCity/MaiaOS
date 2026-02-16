@@ -1,6 +1,6 @@
 {
-	"$schema": "@maia/schema/state",
-	"$id": "@maia/todos/state/vibe",
+	"$schema": "°Maia/schema/state",
+	"$id": "°Maia/todos/state/vibe",
 	"initial": "idle",
 	"states": {
 		"idle": {
@@ -80,7 +80,7 @@
 				"tool": "@db",
 				"payload": {
 					"op": "create",
-					"schema": "@maia/schema/data/todos",
+					"schema": "°Maia/schema/data/todos",
 					"data": {
 						"text": "$$value",
 						"done": false

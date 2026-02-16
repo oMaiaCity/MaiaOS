@@ -200,7 +200,7 @@ export class ValidationEngine {
 		// JSON Schema Draft 2020-12 meta-schema
 		// This is the foundation schema that validates all other schemas
 		// The metaschema itself validates against the hardcoded standard (breaks circular dependency)
-		// All OTHER schemas validate against @maia/schema/meta-schema (dynamically loaded)
+		// All OTHER schemas validate against °Maia/schema/meta-schema (dynamically loaded)
 		// Use merged meta.schema.json - it contains all base JSON Schema 2020-12 properties
 		// The MaiaOS extensions (cotype, $co, indexing) don't interfere with base schema validation
 		return customMetaSchema
@@ -212,7 +212,7 @@ export class ValidationEngine {
 	 */
 	_loadMetaSchema() {
 		const metaSchemaId = 'https://json-schema.org/draft/2020-12/schema'
-		const metaSchemaDynamicId = '@maia/schema/meta-schema'
+		const metaSchemaDynamicId = '°Maia/schema/meta-schema'
 
 		// Temporarily disable schema validation to add meta-schema
 		// (meta-schema can't validate itself due to circular references)
@@ -226,7 +226,7 @@ export class ValidationEngine {
 				}
 
 				// CRITICAL: Always register with dynamic ID, even if standard ID exists
-				// This allows schemas to use "$schema": "@maia/schema/meta-schema"
+				// This allows schemas to use "$schema": "°Maia/schema/meta-schema"
 				if (!this.ajv.getSchema(metaSchemaDynamicId)) {
 					// Create copy with dynamic $id to ensure proper registration
 					const metaSchemaCopy = JSON.parse(JSON.stringify(metaSchema))
@@ -247,12 +247,12 @@ export class ValidationEngine {
 	 * @private
 	 */
 	_loadCoJsonMetaSchema() {
-		const customMetaSchemaId = '@maia/schema/meta'
+		const customMetaSchemaId = '°Maia/schema/meta'
 
 		// Temporarily disable schema validation to add custom meta-schema
 		try {
 			withSchemaValidationDisabled(this.ajv, () => {
-				// Register with @maia/schema/ format
+				// Register with °Maia/schema/ format
 				if (!this.ajv.getSchema(customMetaSchemaId)) {
 					this.ajv.addMetaSchema(customMetaSchema, customMetaSchemaId)
 				}
@@ -310,7 +310,7 @@ export class ValidationEngine {
 	 * Determine meta-schema type (CoJSON vs standard JSON Schema)
 	 * @private
 	 * @param {Object} metaSchemaObject - Resolved meta-schema object
-	 * @returns {string} Target meta-schema ID ('@maia/schema/meta' or standard meta-schema ID)
+	 * @returns {string} Target meta-schema ID ('°Maia/schema/meta' or standard meta-schema ID)
 	 */
 	_determineMetaSchemaType(metaSchemaObject) {
 		// Check if resolved object has properties that indicate meta-schema type
@@ -328,13 +328,13 @@ export class ValidationEngine {
 
 		if (hasCotypeProperty || hasCojsonVocabulary) {
 			// This is the CoJSON meta-schema
-			return '@maia/schema/meta'
+			return '°Maia/schema/meta'
 		} else if (metaSchemaObject.$vocabulary) {
 			// This is likely the standard JSON Schema meta-schema
 			return 'https://json-schema.org/draft/2020-12/schema'
 		} else {
 			// Default to CoJSON meta-schema for transformed schemas (most common case)
-			return '@maia/schema/meta'
+			return '°Maia/schema/meta'
 		}
 	}
 
@@ -348,10 +348,10 @@ export class ValidationEngine {
 	_getMetaSchemaValidator(resolvedMetaSchemaId, metaSchemaObject) {
 		// Check by ID first (for human-readable IDs)
 		if (
-			resolvedMetaSchemaId === '@maia/schema/meta' ||
-			resolvedMetaSchemaId === '@maia/schema/meta-schema'
+			resolvedMetaSchemaId === '°Maia/schema/meta' ||
+			resolvedMetaSchemaId === '°Maia/schema/meta-schema'
 		) {
-			return this.ajv.getSchema('@maia/schema/meta')
+			return this.ajv.getSchema('°Maia/schema/meta')
 		} else if (resolvedMetaSchemaId === 'https://json-schema.org/draft/2020-12/schema') {
 			return this.ajv.getSchema('https://json-schema.org/draft/2020-12/schema')
 		} else if (resolvedMetaSchemaId.startsWith('co_z')) {
@@ -393,7 +393,7 @@ export class ValidationEngine {
 			return metaValidator
 		} else {
 			throw new Error(
-				`[ValidationEngine] Unknown meta schema (resolved to '${resolvedMetaSchemaId}'). Expected '@maia/schema/meta' or standard JSON Schema meta schema.`,
+				`[ValidationEngine] Unknown meta schema (resolved to '${resolvedMetaSchemaId}'). Expected '°Maia/schema/meta' or standard JSON Schema meta schema.`,
 			)
 		}
 	}
@@ -430,7 +430,7 @@ export class ValidationEngine {
 		const standardMetaSchemaId = 'https://json-schema.org/draft/2020-12/schema'
 		const isSelfValidation =
 			schema.$id === standardMetaSchemaId ||
-			schema.$id === '@maia/schema/meta' ||
+			schema.$id === '°Maia/schema/meta' ||
 			(schema.$schema === standardMetaSchemaId && schema.$id && schema.$id.includes('schema'))
 
 		if (isSelfValidation) {
@@ -572,8 +572,8 @@ export class ValidationEngine {
 	 * @param {string} coId - Co-id of the schema
 	 */
 	_registerResolvedSchema(schema, ref, coId) {
-		// CRITICAL: After seeding, all $co references should be co-ids, not @maia/schema/... patterns
-		// If we see @maia/schema/... here, it means transformation failed or schema is from source files
+		// CRITICAL: After seeding, all $co references should be co-ids, not °Maia/schema/... patterns
+		// If we see °Maia/schema/... here, it means transformation failed or schema is from source files
 		if (ref && isSchemaRef(ref)) {
 			// Still register it so validation can work, but log the warning
 		}
@@ -626,10 +626,10 @@ export class ValidationEngine {
 			return // Silent skip - already resolved or in progress
 		}
 
-		// CRITICAL: After seeding, all $co references should be co-ids, not @maia/schema/... patterns
-		// If we see @maia/schema/... here, it means the schema wasn't transformed correctly
+		// CRITICAL: After seeding, all $co references should be co-ids, not °Maia/schema/... patterns
+		// If we see °Maia/schema/... here, it means the schema wasn't transformed correctly
 		if (ref && isSchemaRef(ref)) {
-			// Still try to resolve it via schema resolver (which should handle @maia/schema/... via operations API)
+			// Still try to resolve it via schema resolver (which should handle °Maia/schema/... via operations API)
 		}
 
 		resolvingSchemas.add(ref)
@@ -645,7 +645,7 @@ export class ValidationEngine {
 
 			if (!referencedSchema) {
 				// Schema not found - this is a critical error for $co references
-				const errorMsg = `[ValidationEngine] Schema resolver returned null for $co reference ${ref}. This schema must be registered before it can be referenced. If this is an @domain/schema/... reference, ensure schemas were transformed correctly during seeding.`
+				const errorMsg = `[ValidationEngine] Schema resolver returned null for $co reference ${ref}. This schema must be registered before it can be referenced. If this is a °Spark/schema/... or @domain/schema/... reference, ensure schemas were transformed correctly during seeding.`
 				throw new Error(errorMsg)
 			}
 

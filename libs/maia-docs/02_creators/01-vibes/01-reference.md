@@ -141,11 +141,11 @@ vibes/todos/
         modules: ['db', 'core', 'dragdrop']
       });
       
-      // Load the vibe (by key from account.sparks[@maia].vibes or by co-id)
+      // Load the vibe (by key from account.registries.sparks[°Maia].vibes or by co-id)
       const { vibe, actor } = await os.loadVibe(
         'todos',
         document.getElementById('actor-todo'),
-        '@maia'
+        '°Maia'
       );
       
       console.log('✅ Vibe loaded:', vibe.name);
@@ -218,7 +218,7 @@ Vibes are designed to support future marketplace features:
 
 ```javascript
 // After loading (by key or co-id from account)
-const { vibe, actor } = await os.loadVibe('todos', container, '@maia');
+const { vibe, actor } = await os.loadVibe('todos', container, '°Maia');
 // Or by co-id: os.loadVibe('co_z...', container);
 
 // Inspect vibe

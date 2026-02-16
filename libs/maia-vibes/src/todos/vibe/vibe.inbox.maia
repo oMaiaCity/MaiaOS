@@ -1,5 +1,5 @@
 {
-	"$schema": "@maia/schema/inbox",
-	"$id": "@maia/todos/inbox/vibe",
+	"$schema": "°Maia/schema/inbox",
+	"$id": "°Maia/todos/inbox/vibe",
 	"items": []
 }

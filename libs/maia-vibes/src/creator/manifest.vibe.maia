@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/vibe",
-	"$id": "@maia/vibe/creator",
+	"$schema": "°Maia/schema/vibe",
+	"$id": "°Maia/vibe/creator",
 	"name": "Creator",
 	"description": "Create and manage vibes with logs viewer",
-	"actor": "@maia/creator/actor/vibe"
+	"actor": "°Maia/creator/actor/vibe"
 }

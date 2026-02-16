@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/style",
-	"title": "@maia/schema/style",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/style",
+	"title": "°Maia/schema/style",
 	"description": "Style definition (brand or actor-specific). Brand styles typically include selectors, actor styles are overrides.",
 	"cotype": "comap",
 	"indexing": true,

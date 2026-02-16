@@ -58,6 +58,42 @@ export async function renderApp(
 	}
 
 	// Default: render DB viewer (currentScreen === 'db-viewer')
+	window.toggleMetadataInternalKey = (btn) => {
+		const row = btn.closest('.metadata-internal-row')
+		if (!row) return
+		const truncated = row.querySelector('.metadata-internal-truncated')
+		const full = row.querySelector('.metadata-internal-full')
+		if (!truncated || !full) return
+		const isExpanded = full.style.display !== 'none'
+		if (isExpanded) {
+			full.style.display = 'none'
+			truncated.style.display = ''
+			btn.textContent = '⊕'
+			btn.setAttribute('aria-label', 'Expand')
+		} else {
+			truncated.style.display = 'none'
+			full.style.display = ''
+			btn.textContent = '⊖'
+			btn.setAttribute('aria-label', 'Collapse')
+		}
+	}
+
+	// CoJSON internal keys: sealer/signer, KEY_..._FOR_SEALER_..., and agent IDs as map keys - shown in metadata sidebar
+	const isCoJsonInternalKey = (key, value) => {
+		const k = String(key).toLowerCase()
+		if (k === 'sealer' || k === 'signer') return true
+		// Keys can BE agent IDs or revelation keys (e.g. "sealer_z.../signer_z..." or "key_z..._for_sealer_z.../signer_z...")
+		if (k.startsWith('sealer_') && k.includes('/signer_')) return true
+		if (k.startsWith('key_') && k.includes('_for_sealer_')) return true
+		if (typeof value !== 'string') return false
+		const v = value.toLowerCase()
+		return (
+			v.startsWith('sealer_') ||
+			v.includes('/signer_') ||
+			(v.startsWith('key_') && v.includes('_for_sealer_'))
+		)
+	}
+
 	// Helper to render any value consistently
 	const renderValue = (value, depth = 0) => {
 		if (depth > 2) return '<span class="nested-depth">...</span>'
@@ -377,7 +413,7 @@ export async function renderApp(
 						const schema = cv.$schema // STRICT: Only $schema, no fallback
 						return (
 							schema === currentView ||
-							schema === `@maia/schema/${currentView}` ||
+							schema === `°Maia/schema/${currentView}` ||
 							cv.headerMeta?.$schema === currentView
 						)
 					})
@@ -427,7 +463,13 @@ export async function renderApp(
 			`
 		} else if ((data.cotype || data.type) === 'colist' || (data.cotype || data.type) === 'costream') {
 			// CoList/CoStream: Display items directly (they ARE the list/stream, no properties)
-			const items = data.items || []
+			// STRICT: Ensure items is always array (read API may return object/undefined for index colists)
+			const raw = data?.items
+			const items = Array.isArray(raw)
+				? raw
+				: raw && typeof raw === 'object' && !Array.isArray(raw)
+					? Object.values(raw)
+					: []
 			const isStream = (data.cotype || data.type) === 'costream'
 			const typeLabel = isStream ? 'CoStream' : 'CoList'
 
@@ -482,6 +524,7 @@ export async function renderApp(
 
 			// Extract properties from flat object (exclude metadata keys)
 			// groupInfo is backend-derived metadata (not a co-value property) - only show in metadata sidebar
+			// CoJSON internal keys (sealer, signer, KEY_..._FOR_SEALER_...) go to metadata sidebar, not main view
 			const propertyKeys = Object.keys(data).filter(
 				(k) =>
 					k !== 'id' &&
@@ -493,7 +536,8 @@ export async function renderApp(
 					k !== 'cotype' && // Display only in metadata aside, not as main content property
 					k !== 'displayName' &&
 					k !== 'headerMeta' &&
-					k !== 'groupInfo', // Backend metadata - displayed in metadata sidebar, not as a property
+					k !== 'groupInfo' && // Backend metadata - displayed in metadata sidebar, not as a property
+					!isCoJsonInternalKey(k, data[k]),
 			)
 
 			if (propertyKeys.length === 0) {
@@ -662,19 +706,9 @@ export async function renderApp(
 				const groupData = groupStore.value || groupStore
 
 				if (groupData && !groupData.error && !groupData.loading) {
-					// Groups are CoMaps, so they can have a "name" property
-					// Check both direct property access and properties array (for normalized format)
 					if (groupData.name && typeof groupData.name === 'string') {
 						groupName = groupData.name
-					} else if (groupData.properties && Array.isArray(groupData.properties)) {
-						// Check properties array format (from extractCoValueData)
-						const nameProp = groupData.properties.find((p) => p.key === 'name')
-						if (nameProp?.value && typeof nameProp.value === 'string') {
-							groupName = nameProp.value
-						}
 					}
-
-					// Group name will be available after sync if not immediately visible
 				}
 			} catch (_e) {}
 		}
@@ -688,7 +722,7 @@ export async function renderApp(
 			} catch (_e) {}
 		}
 
-		// Resolve capability group co-ids to display names (e.g. @maia/Guardian)
+		// Resolve capability group co-ids to display names (e.g. °Maia/Guardian)
 		let capabilityNames = new Map()
 		if (maia && account?.id) {
 			try {
@@ -782,7 +816,38 @@ export async function renderApp(
 								: ''
 						}
 					</div>
-					
+					${
+						// CoJSON internal keys (sealer/signer, KEY_..._FOR_SEALER_...) - only for CoMaps
+						(() => {
+							if (!data || typeof data !== 'object' || Array.isArray(data)) return ''
+							const internalKeys = Object.keys(data).filter((k) => isCoJsonInternalKey(k, data[k]))
+							if (internalKeys.length === 0) return ''
+							return `
+					<div class="metadata-section metadata-internal-keys" style="margin-top: 12px;">
+						<h4 class="metadata-section-title">Internal keys</h4>
+						<div class="metadata-info-list" style="margin-top: 4px;">
+							${internalKeys
+								.map((k) => {
+									const val = String(data[k])
+									return `
+							<div class="metadata-info-item metadata-internal-row">
+								<div class="metadata-internal-truncated">
+									<code class="metadata-info-key-internal">${escapeHtml(truncate(k, 28))}</code>
+									<code class="metadata-info-value-internal">${escapeHtml(truncate(val, 32))}</code>
+								</div>
+								<div class="metadata-internal-full" style="display:none">
+									<code class="metadata-info-key-internal">${escapeHtml(k)}</code>
+									<code class="metadata-info-value-internal">${escapeHtml(val)}</code>
+								</div>
+								<button type="button" class="metadata-expand-btn" onclick="window.toggleMetadataInternalKey(this)" aria-label="Expand">⊕</button>
+							</div>`
+								})
+								.join('')}
+						</div>
+					</div>
+							`
+						})()
+					}
 					<!-- Members with access: single flattened list (who, role, source) - no separate Parent Groups section -->
 					${
 						groupInfo

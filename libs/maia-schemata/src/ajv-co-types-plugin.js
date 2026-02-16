@@ -31,7 +31,11 @@ export function ajvCoTypesPlugin(ajv) {
 				},
 				{
 					pattern: '^@[a-zA-Z0-9_-]+/schema/',
-					description: 'Human-readable schema ID (before transformation)',
+					description: 'Human-readable schema ID with @ prefix (e.g. @domain/schema/...)',
+				},
+				{
+					pattern: '^°[a-zA-Z0-9_-]+/schema/',
+					description: 'Human-readable schema ID with ° prefix (e.g. °Maia/schema/...)',
 				},
 			],
 			description:

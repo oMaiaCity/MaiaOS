@@ -17,9 +17,9 @@ import {
 /**
  * Create a generic CoMap with MANDATORY schema validation
  *
- * Uses @maia spark's group when account is passed; uses group directly when resolved group passed.
+ * Uses °Maia spark's group when account is passed; uses group directly when resolved group passed.
  *
- * @param {RawAccount|RawGroup} accountOrGroup - Account (resolves @maia spark group) or Group
+ * @param {RawAccount|RawGroup} accountOrGroup - Account (resolves °Maia spark group) or Group
  * @param {Object} init - Initial properties
  * @param {string} schemaName - Schema name or co-id for headerMeta (REQUIRED - use "@metaSchema" for meta schema creation)
  * @param {LocalNode} [node] - LocalNode instance (required if accountOrGroup is account)
@@ -44,17 +44,17 @@ export async function createCoMap(
 		// Accounts have profile property, regular groups don't
 		const profileId = accountOrGroup.get('profile')
 		if (profileId) {
-			// It's an account - resolve @maia spark's group via getSparkGroup
+			// It's an account - resolve °Maia spark's group via getSparkGroup
 			const backend = dbEngine?.backend
 			if (!backend) {
 				throw new Error(
-					'[createCoMap] dbEngine.backend required when passing account (to resolve @maia spark group)',
+					'[createCoMap] dbEngine.backend required when passing account (to resolve °Maia spark group)',
 				)
 			}
 			const { getSparkGroup } = await import('../groups/groups.js')
-			group = await getSparkGroup(backend, '@maia')
+			group = await getSparkGroup(backend, '°Maia')
 			if (!group) {
-				throw new Error('[createCoMap] @maia spark group not found. Ensure bootstrap has run.')
+				throw new Error('[createCoMap] °Maia spark group not found. Ensure bootstrap has run.')
 			}
 		}
 		// If no profileId, accountOrGroup is a group - use as-is (group = accountOrGroup from line 27)

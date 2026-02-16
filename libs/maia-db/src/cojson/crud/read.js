@@ -10,12 +10,13 @@
 
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store'
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js'
+import { getSparksRegistryId } from '../groups/groups.js'
 import {
 	resolve as resolveSchema,
 	resolveReactive as resolveSchemaReactive,
 } from '../schema/resolver.js'
 import { ensureCoValueLoaded, getCoListId } from './collection-helpers.js'
-import { extractCoValueDataFlat, resolveCoValueReferences } from './data-extraction.js'
+import { extractCoValueData, resolveCoValueReferences } from './data-extraction.js'
 import {
 	deepResolveCoValue,
 	resolveNestedReferences,
@@ -59,7 +60,7 @@ export async function read(
 ) {
 	const {
 		deepResolve = true,
-		maxDepth = 15, // TODO: temporarily scaled up from 10 for @maia spark detail deep resolution
+		maxDepth = 15, // TODO: temporarily scaled up from 10 for °Maia spark detail deep resolution
 		timeoutMs = 5000,
 		resolveReferences = null,
 		map = null,
@@ -76,8 +77,8 @@ export async function read(
 
 	// Collection read (by schema)
 	if (schema) {
-		// Sparks: read from account.sparks (includes @maia system spark). Index only has user-created sparks.
-		const sparkSchemaCoId = await resolveSchema(backend, '@maia/schema/data/spark', {
+		// Sparks: read from account.registries.sparks (includes °Maia system spark). Index only has user-created sparks.
+		const sparkSchemaCoId = await resolveSchema(backend, '°Maia/schema/data/spark', {
 			returnType: 'coId',
 		})
 		const resolvedSchema = await resolveSchema(backend, schema, { returnType: 'coId' })
@@ -286,7 +287,7 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
 					}
 
 					if (!schemaCoId.startsWith('co_z')) {
-						if (schemaCoId.startsWith('@maia/schema/')) {
+						if (schemaCoId.startsWith('°Maia/schema/')) {
 							// Use reactive schema resolution - returns ReactiveStore that updates when schema becomes available
 							const schemaStore = resolveSchemaReactive(backend, schemaCoId, { timeoutMs })
 
@@ -567,14 +568,14 @@ function getMapDependencyCoIds(rawData, mapConfig) {
 async function processCoValueData(backend, coValueCore, schemaHint, options, visited = new Set()) {
 	const {
 		deepResolve = true,
-		maxDepth = 15, // TODO: temporarily scaled up from 10 for @maia spark detail deep resolution
+		maxDepth = 15, // TODO: temporarily scaled up from 10 for °Maia spark detail deep resolution
 		timeoutMs = 5000,
 		resolveReferences = null,
 		map = null,
 	} = options
 
 	// Extract CoValue data as flat object
-	let data = extractCoValueDataFlat(backend, coValueCore, schemaHint)
+	let data = extractCoValueData(backend, coValueCore, schemaHint)
 
 	// PROGRESSIVE DEEP RESOLUTION: Resolve nested references progressively (non-blocking)
 	// Main CoValue is already available (required for processCoValueData to be called)
@@ -628,7 +629,7 @@ async function processCoValueData(backend, coValueCore, schemaHint, options, vis
 async function readSingleCoValue(backend, coId, schemaHint = null, options = {}) {
 	const {
 		deepResolve = true,
-		maxDepth = 15, // TODO: temporarily scaled up from 10 for @maia spark detail deep resolution
+		maxDepth = 15, // TODO: temporarily scaled up from 10 for °Maia spark detail deep resolution
 		timeoutMs = 5000,
 		resolveReferences = null,
 		map = null,
@@ -657,7 +658,7 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
 			const cacheDepUnsubs = new Map()
 			const setupMapDepSubs = (mainCore) => {
 				if (!map) return
-				const rawData = extractCoValueDataFlat(backend, mainCore, schemaHint)
+				const rawData = extractCoValueData(backend, mainCore, schemaHint)
 				const newDeps = getMapDependencyCoIds(rawData, map)
 				for (const depCoId of newDeps) {
 					if (cacheDepUnsubs.has(depCoId)) continue
@@ -739,7 +740,7 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
 
 	const setupMapDependencySubscriptions = (mainCore) => {
 		if (!map) return
-		const rawData = extractCoValueDataFlat(backend, mainCore, schemaHint)
+		const rawData = extractCoValueData(backend, mainCore, schemaHint)
 		const newDeps = getMapDependencyCoIds(rawData, map)
 		for (const depCoId of newDeps) {
 			if (depUnsubscribes.has(depCoId)) continue
@@ -850,20 +851,20 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
 }
 
 /**
- * Read sparks from account.sparks CoMap (includes @maia system spark).
+ * Read sparks from account.registries.sparks CoMap (includes °Maia system spark).
  * Used when schema is spark schema - index colist only has user-created sparks.
  * @param {Object} backend - Backend instance
  * @param {Object} options - Read options
  * @returns {Promise<ReactiveStore>} ReactiveStore with array of spark items {id, name, ...}
  */
 async function readSparksFromAccount(backend, options = {}) {
-	const { deepResolve = true, maxDepth = 15, timeoutMs = 5000 } = options // TODO: maxDepth temporarily 15 for @maia spark detail
+	const { deepResolve = true, maxDepth = 15, timeoutMs = 5000 } = options // TODO: maxDepth temporarily 15 for °Maia spark detail
 	const store = backend.subscriptionCache.getOrCreateStore(
 		'sparks:account',
 		() => new ReactiveStore([]),
 	)
 
-	const sparksId = backend.account?.get?.('sparks')
+	const sparksId = await getSparksRegistryId(backend)
 	if (!sparksId || !sparksId.startsWith('co_')) {
 		return store
 	}
@@ -934,7 +935,7 @@ async function readSparksFromAccount(backend, options = {}) {
 async function readCollection(backend, schema, filter = null, options = {}) {
 	const {
 		deepResolve = true,
-		maxDepth = 15, // TODO: temporarily scaled up from 10 for @maia spark detail deep resolution
+		maxDepth = 15, // TODO: temporarily scaled up from 10 for °Maia spark detail deep resolution
 		timeoutMs = 5000,
 		resolveReferences = null,
 		map = null,
@@ -960,7 +961,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
 	})
 
 	// Get schema index colist ID from spark.os.indexes (keyed by schema co-id)
-	// Supports both schema co-ids (co_z...) and human-readable names (@maia/schema/data/todos)
+	// Supports both schema co-ids (co_z...) and human-readable names (°Maia/schema/data/todos)
 	const coListId = await getCoListId(backend, schema)
 	if (!coListId) {
 		return store
@@ -1150,7 +1151,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
 
 					const itemData = await cache.getOrCreateResolvedData(itemId, itemCacheOptions, async () => {
 						// Process and cache the item data using fresh CoValueCore reference
-						let processedData = extractCoValueDataFlat(backend, currentItemCore)
+						let processedData = extractCoValueData(backend, currentItemCore)
 
 						// Filter out empty CoMaps (defense in depth - prevents skeletons from appearing even if index removal fails)
 						// Empty CoMap = object with only id, type, $schema properties (no data properties)
@@ -1307,7 +1308,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
 async function readAllCoValues(backend, filter = null, options = {}) {
 	const {
 		deepResolve = true,
-		maxDepth = 15, // TODO: temporarily scaled up from 10 for @maia spark detail deep resolution
+		maxDepth = 15, // TODO: temporarily scaled up from 10 for °Maia spark detail deep resolution
 		timeoutMs = 5000,
 	} = options
 	const store = new ReactiveStore([])
@@ -1361,7 +1362,7 @@ async function readAllCoValues(backend, filter = null, options = {}) {
 			}
 
 			// Extract CoValue data as flat object
-			const data = extractCoValueDataFlat(backend, coValueCore)
+			const data = extractCoValueData(backend, coValueCore)
 
 			// Filter out empty CoMaps (defense in depth - prevents skeletons from appearing even if index removal fails)
 			// Empty CoMap = object with only id, type, $schema properties (no data properties)

@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/vibe",
-	"$id": "@maia/vibe/sparks",
+	"$schema": "°Maia/schema/vibe",
+	"$id": "°Maia/vibe/sparks",
 	"name": "Sparks",
 	"description": "Create and manage collaborative groups (sparks)",
-	"actor": "@maia/sparks/actor/vibe"
+	"actor": "°Maia/sparks/actor/vibe"
 }

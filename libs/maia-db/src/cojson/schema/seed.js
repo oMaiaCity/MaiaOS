@@ -9,12 +9,12 @@
  * SPECIAL HANDLING:
  * - @metaSchema (Meta Schema): Uses "@metaSchema" string in headerMeta.$schema (can't self-reference co-id)
  *   The CoMap definition has title: "Meta Schema"
- * - @maia/schema/meta: Human-readable ID for metaschema (matches schema $id format)
- *   Gets transformed to @maia co-id during transformation
+ * - °Maia/schema/meta: Human-readable ID for metaschema (matches schema $id format)
+ *   Gets transformed to °Maia co-id during transformation
  *
  * Seeding Order (matches plan):
  * 1. Migration creates account, profile only (no scaffold)
- * 2. Bootstrap (when no account.sparks): guardian, account.temp, metaschema, schemata, scaffold, cleanup temp
+ * 2. Bootstrap (when no account.registries): guardian, account.temp, metaschema, schemata, scaffold, cleanup temp
  * 3. Schemas (topologically sorted) - each with own group extending guardian
  * 4. Populate os.schematas with schema co-ids
  * 5. Configs (actors, views, contexts, etc.) - per-CoValue groups with guardian
@@ -25,6 +25,7 @@
  * @metaSchema only for metaschema; all other infra uses real schema co-ids.
  */
 
+import { SCHEMA_REF_PATTERN } from '@MaiaOS/schemata'
 import mergedMetaSchema from '@MaiaOS/schemata/os/meta.schema.json'
 import { createCoValueForSpark } from '../covalue/create-covalue-for-spark.js'
 import { ensureCoValueLoaded } from '../crud/collection-helpers.js'
@@ -34,29 +35,22 @@ import * as groups from '../groups/groups.js'
 import { ensureIndexesCoMap } from '../indexing/schema-index-manager.js'
 import { resolve } from '../schema/resolver.js'
 
-const MAIA_SPARK = '@maia'
+const MAIA_SPARK = '°Maia'
 
 /**
- * Simple account seed: empty account.sparks only.
+ * Simple account seed: no account.sparks.
  * Used for all signups (human + agent). Genesis (full scaffold + vibes) is PEER_MODE=sync only.
+ * Vibes come from sync; registries set via linkAccountToRegistries.
  * @param {RawAccount} account
  * @param {LocalNode} node
  */
-export async function simpleAccountSeed(account, node) {
-	const { EXCEPTION_SCHEMAS } = await import('../../schemas/registry.js')
-	const guardian = node.createGroup()
-	const ctx = { node, account, guardian }
-	const { coValue: sparks } = await createCoValueForSpark(ctx, null, {
-		schema: EXCEPTION_SCHEMAS.META_SCHEMA,
-		cotype: 'comap',
-		data: {},
-	})
-	account.set('sparks', sparks.id)
-	console.log('✅ Simple account seed: account.sparks (empty)')
+export async function simpleAccountSeed(_account, _node) {
+	// No account.sparks - human/agent get vibes via sync; registries via linkAccountToRegistries
+	console.log('✅ Simple account seed: (registries via link)')
 }
 
 /**
- * Bootstrap and scaffold when account.sparks doesn't exist (migration only creates account+profile).
+ * Bootstrap and scaffold when account.registries doesn't exist (migration only creates account+profile).
  * Order: guardian → account.temp → metaschema → schemata → scaffold → cleanup temp.
  * @param {RawAccount} account
  * @param {LocalNode} node
@@ -104,14 +98,14 @@ async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
 	// 4. Schemata (topologically sorted)
 	const uniqueSchemasBy$id = new Map()
 	for (const [name, schema] of Object.entries(allSchemas)) {
-		const key = schema.$id || `@maia/schema/${name}`
+		const key = schema.$id || `°Maia/schema/${name}`
 		if (!uniqueSchemasBy$id.has(key)) uniqueSchemasBy$id.set(key, { name, schema })
 	}
 	const findCoRefs = (obj, visited = new Set()) => {
 		if (!obj || typeof obj !== 'object' || visited.has(obj)) return new Set()
 		visited.add(obj)
 		const refs = new Set()
-		if (obj.$co && typeof obj.$co === 'string' && obj.$co.startsWith('@maia/schema/'))
+		if (obj.$co && typeof obj.$co === 'string' && obj.$co.startsWith('°Maia/schema/'))
 			refs.add(obj.$co)
 		for (const v of Object.values(obj)) {
 			if (v && typeof v === 'object') {
@@ -135,14 +129,14 @@ async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
 		if (doing.has(key)) return
 		doing.add(key)
 		for (const d of deps.get(key) || []) {
-			if (d.startsWith('@maia/schema/') && uniqueSchemasBy$id.has(d)) visit(d)
+			if (d.startsWith('°Maia/schema/') && uniqueSchemasBy$id.has(d)) visit(d)
 		}
 		doing.delete(key)
 		done.add(key)
 		sorted.push(key)
 	}
 	for (const key of uniqueSchemasBy$id.keys()) {
-		if (key !== '@maia/schema/meta') visit(key)
+		if (key !== '°Maia/schema/meta') visit(key)
 	}
 
 	const schemaCoIdMap = new Map()
@@ -163,27 +157,27 @@ async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
 
 	// 5. Scaffold (use real schema co-ids, @metaSchema only for metaschema)
 	// Each scaffold type gets its own group extending guardian (no shared group).
-	const sparkSchemaCoId = tempCoMap.get('@maia/schema/data/spark') || EXCEPTION_SCHEMAS.META_SCHEMA
+	const sparkSchemaCoId = tempCoMap.get('°Maia/schema/data/spark') || EXCEPTION_SCHEMAS.META_SCHEMA
 	const schematasSchemaCoId =
-		tempCoMap.get('@maia/schema/os/schematas-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
-	const osSchemaCoId = tempCoMap.get('@maia/schema/os/os-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
+		tempCoMap.get('°Maia/schema/os/schematas-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
+	const osSchemaCoId = tempCoMap.get('°Maia/schema/os/os-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
 	const capabilitiesSchemaCoId =
-		tempCoMap.get('@maia/schema/os/capabilities') || EXCEPTION_SCHEMAS.META_SCHEMA
+		tempCoMap.get('°Maia/schema/os/capabilities') || EXCEPTION_SCHEMAS.META_SCHEMA
 	const indexesSchemaCoId =
-		tempCoMap.get('@maia/schema/os/indexes-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
+		tempCoMap.get('°Maia/schema/os/indexes-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
 	const vibesSchemaCoId =
-		tempCoMap.get('@maia/schema/os/vibes-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
+		tempCoMap.get('°Maia/schema/os/vibes-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
 	const runtimesSchemaCoId =
-		tempCoMap.get('@maia/schema/os/runtimes-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
-	const sparksSchemaCoId =
-		tempCoMap.get('@maia/schema/os/sparks-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
+		tempCoMap.get('°Maia/schema/os/runtimes-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
+	const _sparksSchemaCoId =
+		tempCoMap.get('°Maia/schema/os/sparks-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
 
 	const ctx = { node, account, guardian }
 	const scaffoldOpts = (schema, data) => ({ schema, cotype: 'comap', data, dbEngine })
 	const { coValue: maiaSpark } = await createCoValueForSpark(
 		ctx,
 		null,
-		scaffoldOpts(sparkSchemaCoId, { name: MAIA_SPARK }),
+		scaffoldOpts(sparkSchemaCoId, { name: '°Maia' }),
 	)
 	const { coValue: os } = await createCoValueForSpark(ctx, null, scaffoldOpts(osSchemaCoId, {}))
 	const { coValue: capabilities } = await createCoValueForSpark(
@@ -218,20 +212,45 @@ async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
 	os.set('runtimes', runtimes.id)
 	maiaSpark.set('os', os.id)
 	maiaSpark.set('vibes', vibes.id)
-	schematas.set('@maia/schema/meta', metaSchemaCoId)
+	schematas.set('°Maia/schema/meta', metaSchemaCoId)
 	for (const [k, coId] of schemaCoIdMap) schematas.set(k, coId)
-	const { coValue: sparks } = await createCoValueForSpark(
-		ctx,
-		null,
-		scaffoldOpts(sparksSchemaCoId, {}),
-	)
-	sparks.set(MAIA_SPARK, maiaSpark.id)
-	account.set('sparks', sparks.id)
+
+	// Create account.registries with registries.sparks["°Maia"] (replaces account.sparks)
+	const { removeGroupMember } = await import('../groups/groups.js')
+	const memberIdToRemove = account?.id ?? account?.$jazz?.id
+	const registriesMeta = { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }
+
+	const registriesGroup = node.createGroup()
+	registriesGroup.extend(guardian, 'extend')
+	registriesGroup.addMember('everyone', 'reader')
+	const registries = registriesGroup.createMap({}, registriesMeta)
+
+	const sparksGroup = node.createGroup()
+	sparksGroup.extend(guardian, 'extend')
+	sparksGroup.addMember('everyone', 'reader')
+	const sparksRegistry = sparksGroup.createMap({}, registriesMeta)
+	sparksRegistry.set(MAIA_SPARK, maiaSpark.id)
+	registries.set('sparks', sparksRegistry.id)
+
+	const humansGroup = node.createGroup()
+	humansGroup.extend(guardian, 'extend')
+	humansGroup.addMember('everyone', 'reader')
+	const humans = humansGroup.createMap({}, registriesMeta)
+	registries.set('humans', humans.id)
+
+	for (const g of [registriesGroup, sparksGroup, humansGroup]) {
+		try {
+			await removeGroupMember(g, memberIdToRemove)
+		} catch (_e) {
+			/* guardian remains admin */
+		}
+	}
+	account.set('registries', registries.id)
 
 	// 6. Cleanup temp
 	if (typeof account.delete === 'function') account.delete('temp')
 
-	// 7. Persist scaffold to storage before returning (critical: account.sparks + @maia must survive restart)
+	// 7. Persist scaffold to storage before returning (critical: account.registries + °Maia must survive restart)
 	const wfs = node.syncManager?.waitForStorageSync
 	if (!node.storage) {
 		console.warn('[Bootstrap] node.storage missing - scaffold may not persist across restart')
@@ -245,7 +264,7 @@ async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
 			await Promise.race([
 				Promise.all([
 					wfs.call(node.syncManager, account.id),
-					wfs.call(node.syncManager, sparks.id),
+					wfs.call(node.syncManager, registries.id),
 					wfs.call(node.syncManager, maiaSpark.id),
 				]),
 				new Promise((_, reject) =>
@@ -272,21 +291,27 @@ async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
 	}
 
 	console.log(
-		'✅ Bootstrap scaffold complete: account.sparks, @maia spark, os, schematas, indexes, runtimes, vibes',
+		'✅ Bootstrap scaffold complete: account.registries, °Maia spark, os, schematas, indexes, runtimes, vibes',
 	)
 }
 
 /**
- * Seed util: Map account.sparks[@maia].registries.sparks["@maia"] = maiaSparkCoId
- * Creates registries and registries.sparks CoMaps if needed, uses real seeded co-id.
- * Clean architecture: each CoValue has its own group (extends guardian). publicReaders
- * is a reader member of those groups, not the owner.
+ * Bootstrap account.registries (sync agent only, during genesis seed).
+ * Creates account.registries with registries.sparks and registries.humans.
+ * Default first spark: registries.sparks["°Maia"] = maiaSparkCoId.
+ * Maia guardian owner, everyone=reader on registries/sparks/humans. Human/agent link via GET /syncRegistry.
  * @private
  * @param {Object} backend
- * @param {Object} maiaGroup - @maia spark's guardian group
+ * @param {Object} maiaGroup - °Maia spark's guardian group
  */
-async function seedMaiaSparkRegistriesSparksMapping(backend, maiaGroup) {
-	const sparksId = backend.account?.get('sparks')
+async function bootstrapAccountRegistries(backend, maiaGroup) {
+	const registriesId = backend.account?.get('registries')
+	if (!registriesId?.startsWith('co_z')) return
+	const registriesStore = await backend.read(null, registriesId)
+	await waitForStoreReady(registriesStore, registriesId, 10000)
+	const registriesData = registriesStore?.value
+	if (!registriesData || registriesData.error) return
+	const sparksId = registriesData.sparks
 	if (!sparksId?.startsWith('co_z')) return
 	const sparksStore = await backend.read(null, sparksId)
 	await waitForStoreReady(sparksStore, sparksId, 10000)
@@ -310,12 +335,12 @@ async function seedMaiaSparkRegistriesSparksMapping(backend, maiaGroup) {
 		})
 	}
 	const sparkContent = backend.getCurrentContent(sparkCore)
-	if (!sparkContent || typeof sparkContent.set !== 'function') return
+	if (!sparkContent || typeof sparkContent.get !== 'function') return
 
 	const { EXCEPTION_SCHEMAS } = await import('../../schemas/registry.js')
 	const node = backend.node
 
-	// Get capabilities from spark.os (source of truth for guardian, publicReaders)
+	// Get capabilities from spark.os (source of truth for guardian)
 	const osId = sparkContent.get('os')
 	if (!osId || !osId.startsWith('co_z')) return
 	const osCore = backend.getCoValue(osId)
@@ -329,33 +354,14 @@ async function seedMaiaSparkRegistriesSparksMapping(backend, maiaGroup) {
 	const capabilitiesContent = backend.getCurrentContent(capabilitiesCore)
 	if (!capabilitiesContent || typeof capabilitiesContent.set !== 'function') return
 
-	// Get or create publicReaders group (everyone=reader); store in capabilities
-	// publicReaders is a MEMBER (reader) of registry CoValues, not their owner
-	let publicReadersGroup = null
-	const publicReadersId = capabilitiesContent.get('publicReaders')
-	if (publicReadersId?.startsWith('co_z')) {
-		const core = node.getCoValue(publicReadersId)
-		if (core?.isGroup?.() && backend.isAvailable(core)) {
-			publicReadersGroup = backend.getCurrentContent(core)
-		}
-	}
-	if (!publicReadersGroup || typeof publicReadersGroup.createMap !== 'function') {
-		const publicGroup = node.createGroup()
-		publicGroup.addMember('everyone', 'reader')
-		publicReadersGroup = node.createGroup()
-		publicReadersGroup.extend(maiaGroup, 'extend')
-		publicReadersGroup.extend(publicGroup, 'reader')
-		capabilitiesContent.set('publicReaders', publicReadersGroup.id)
-	}
-
 	const { resolve } = await import('../schema/resolver.js')
-	const registriesSchemaCoId = await resolve(backend, '@maia/schema/os/registries', {
+	const registriesSchemaCoId = await resolve(backend, '°Maia/schema/os/registries', {
 		returnType: 'coId',
 	})
-	const sparksRegistrySchemaCoId = await resolve(backend, '@maia/schema/os/sparks-registry', {
+	const sparksRegistrySchemaCoId = await resolve(backend, '°Maia/schema/os/sparks-registry', {
 		returnType: 'coId',
 	})
-	const humansRegistrySchemaCoId = await resolve(backend, '@maia/schema/os/humans-registry', {
+	const humansRegistrySchemaCoId = await resolve(backend, '°Maia/schema/os/humans-registry', {
 		returnType: 'coId',
 	})
 	const registriesMeta = registriesSchemaCoId
@@ -368,8 +374,6 @@ async function seedMaiaSparkRegistriesSparksMapping(backend, maiaGroup) {
 		? { $schema: humansRegistrySchemaCoId }
 		: { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }
 
-	// Each CoValue has its own group (clean architecture). publicReaders is a reader member.
-	// Account leaves group (no direct members) - same as createCoValueForSpark
 	const { removeGroupMember } = await import('../groups/groups.js')
 	const account = backend.account
 	const memberIdToRemove =
@@ -377,10 +381,11 @@ async function seedMaiaSparkRegistriesSparksMapping(backend, maiaGroup) {
 			? node.getCurrentAccountOrAgentID()
 			: (account?.id ?? account?.$jazz?.id)
 
-	const registriesId = sparkContent.get('registries')
+	// account.registries (top-level, not under spark) - Maia guardian, public read
+	const existingRegistriesId = account.get('registries')
 	let registriesContent = null
-	if (registriesId) {
-		const registriesCore = backend.getCoValue(registriesId)
+	if (existingRegistriesId?.startsWith('co_z')) {
+		const registriesCore = backend.getCoValue(existingRegistriesId)
 		if (registriesCore && backend.isAvailable(registriesCore)) {
 			registriesContent = backend.getCurrentContent(registriesCore)
 		}
@@ -388,14 +393,14 @@ async function seedMaiaSparkRegistriesSparksMapping(backend, maiaGroup) {
 	if (!registriesContent || typeof registriesContent.set !== 'function') {
 		const registriesGroup = node.createGroup()
 		registriesGroup.extend(maiaGroup, 'extend')
-		registriesGroup.extend(publicReadersGroup, 'reader')
+		registriesGroup.addMember('everyone', 'reader')
 		const registries = registriesGroup.createMap({}, registriesMeta)
 		try {
 			await removeGroupMember(registriesGroup, memberIdToRemove)
 		} catch (_e) {
 			/* guardian remains admin */
 		}
-		sparkContent.set('registries', registries.id)
+		account.set('registries', registries.id)
 		registriesContent = registries
 	}
 
@@ -410,7 +415,7 @@ async function seedMaiaSparkRegistriesSparksMapping(backend, maiaGroup) {
 	if (!sparksContent || typeof sparksContent.set !== 'function') {
 		const sparksGroup = node.createGroup()
 		sparksGroup.extend(maiaGroup, 'extend')
-		sparksGroup.extend(publicReadersGroup, 'reader')
+		sparksGroup.addMember('everyone', 'reader')
 		const sparks = sparksGroup.createMap({}, sparksRegistryMeta)
 		try {
 			await removeGroupMember(sparksGroup, memberIdToRemove)
@@ -421,9 +426,10 @@ async function seedMaiaSparkRegistriesSparksMapping(backend, maiaGroup) {
 		sparksContent = sparks
 	}
 
+	// Default first spark: registries.sparks["°Maia"] = maiaSparkCoId
 	sparksContent.set(MAIA_SPARK, maiaSparkCoId)
 
-	// Ensure spark.registries.humans exists (username -> account co-id)
+	// Ensure registries.humans exists (username -> account co-id)
 	const humansRegistryId = registriesContent.get('humans')
 	let humansContent = null
 	if (humansRegistryId) {
@@ -435,7 +441,7 @@ async function seedMaiaSparkRegistriesSparksMapping(backend, maiaGroup) {
 	if (!humansContent || typeof humansContent.set !== 'function') {
 		const humansGroup = node.createGroup()
 		humansGroup.extend(maiaGroup, 'extend')
-		humansGroup.extend(publicReadersGroup, 'reader')
+		humansGroup.addMember('everyone', 'reader')
 		const humans = humansGroup.createMap({}, humansRegistryMeta)
 		try {
 			await removeGroupMember(humansGroup, memberIdToRemove)
@@ -444,6 +450,8 @@ async function seedMaiaSparkRegistriesSparksMapping(backend, maiaGroup) {
 		}
 		registriesContent.set('humans', humans.id)
 	}
+
+	console.log('✅ account.registries bootstrapped (sparks[°Maia], humans)')
 }
 
 /**
@@ -474,27 +482,27 @@ function removeIdFields(obj, inPropertiesOrItems = false) {
  *
  * This function is used before reseeding to clean up old configs and data
  * while preserving essential account structure. It:
- * 1. Queries all schema index colists from account.os.indexes
- * 2. Gets all co-value co-ids from those colists and account.os.unknown
- * 3. Filters out schemata co-values (checking account.os.schematas registry)
+ * 1. Queries all schema index colists from spark.os.indexes
+ * 2. Gets all co-value co-ids from those colists and spark.os.unknown
+ * 3. Filters out schemata co-values (checking spark.os.schematas registry)
  * 4. Deletes all non-schema co-values (configs, vibes, data entities)
- * 5. Deletes all index colists from account.os.indexes
- * 6. Clears containers: account.os.indexes, account.os.unknown, account.vibes
+ * 5. Deletes all index colists from spark.os.indexes
+ * 6. Clears containers: spark.os.indexes, spark.os.unknown, spark.vibes
  *
  * **PRESERVED** (not deleted):
  * - account (the account CoMap itself)
  * - account.profile (profile CoMap with identity info)
- * - account.sparks["@maia"] (system spark with group)
- * - account.os.schematas (schema registry - all schema co-ids)
- * - account.os.metaSchema (metaschema reference)
+ * - account.registries.sparks["°Maia"] (system spark with group)
+ * - spark.os.schematas (schema registry - all schema co-ids)
+ * - spark.os.metaSchema (metaschema reference)
  *
  * **DELETED** (cleaned up):
  * - All configs (actors, views, contexts, states, styles, inboxes)
  * - All vibes (from account.vibes)
  * - All data entities (todos, etc.)
  * - All schema index colists (will be recreated automatically)
- * - All entries in account.os.indexes (container cleared)
- * - All entries in account.os.unknown (items removed via deleteRecord)
+ * - All entries in spark.os.indexes (container cleared)
+ * - All entries in spark.os.unknown (items removed via deleteRecord)
  * - All entries in account.vibes (container cleared)
  *
  * @param {RawAccount} account - The account
@@ -507,7 +515,7 @@ async function deleteSeededCoValues(_account, _node, backend) {
 	let errorCount = 0
 
 	try {
-		// Get @maia spark's os
+		// Get °Maia spark's os
 		const osId = await groups.getSparkOsId(backend, MAIA_SPARK)
 		if (!osId) {
 			return { deleted: 0, errors: 0 }
@@ -527,7 +535,7 @@ async function deleteSeededCoValues(_account, _node, backend) {
 			return { deleted: 0, errors: 0 }
 		}
 
-		// Get account.os.schematas CoMap to build set of schema co-ids
+		// Get spark.os.schematas CoMap to build set of schema co-ids
 		const schematasId = osCoMap.get('schematas')
 		const schemaCoIds = new Set()
 
@@ -556,17 +564,17 @@ async function deleteSeededCoValues(_account, _node, backend) {
 			}
 		}
 
-		// Also add metaschema if it exists in account.os.metaSchema
+		// Also add metaschema if it exists in spark.os.metaSchema
 		const metaSchemaId = osCoMap.get('metaSchema')
 		if (metaSchemaId && typeof metaSchemaId === 'string' && metaSchemaId.startsWith('co_z')) {
 			schemaCoIds.add(metaSchemaId)
 		}
 
-		// Collect all co-value co-ids from schema index colists in account.os.indexes
+		// Collect all co-value co-ids from schema index colists in spark.os.indexes
 		const coValuesToDelete = new Set()
 		let indexesContentForCollection = null
 
-		// Get account.os.indexes CoMap
+		// Get spark.os.indexes CoMap
 		const indexesId = osCoMap.get('indexes')
 		if (indexesId) {
 			try {
@@ -578,13 +586,13 @@ async function deleteSeededCoValues(_account, _node, backend) {
 				if (indexesCore && backend.isAvailable(indexesCore)) {
 					indexesContentForCollection = backend.getCurrentContent(indexesCore)
 					if (indexesContentForCollection && typeof indexesContentForCollection.get === 'function') {
-						// Iterate all keys in account.os.indexes (all are schema index colists)
+						// Iterate all keys in spark.os.indexes (all are schema index colists)
 						const keys =
 							indexesContentForCollection.keys && typeof indexesContentForCollection.keys === 'function'
 								? indexesContentForCollection.keys()
 								: Object.keys(indexesContentForCollection)
 
-						console.log(`[Seed] Found ${keys.length} schema index colists in account.os.indexes`)
+						console.log(`[Seed] Found ${keys.length} schema index colists in spark.os.indexes`)
 
 						for (const key of keys) {
 							// All keys in indexes are schema co-ids (starts with co_z) - these are schema index colists
@@ -636,7 +644,7 @@ async function deleteSeededCoValues(_account, _node, backend) {
 					unknownContentForClearing = backend.getCurrentContent(unknownCore)
 					if (unknownContentForClearing && typeof unknownContentForClearing.toJSON === 'function') {
 						const items = unknownContentForClearing.toJSON()
-						console.log(`[Seed] Found ${items.length} co-values in account.os.unknown`)
+						console.log(`[Seed] Found ${items.length} co-values in spark.os.unknown`)
 						for (const item of items) {
 							if (item && typeof item === 'string' && item.startsWith('co_z')) {
 								coValuesToDelete.add(item)
@@ -714,7 +722,7 @@ async function deleteSeededCoValues(_account, _node, backend) {
 			}
 		}
 
-		// Also delete vibes from account.sparks[@maia].vibes
+		// Also delete vibes from registries.sparks[°Maia].vibes
 		let vibesContentForClearing = null
 		const vibesId = await groups.getSparkVibesId(backend, MAIA_SPARK)
 		if (vibesId) {
@@ -767,12 +775,12 @@ async function deleteSeededCoValues(_account, _node, backend) {
 			}
 		}
 
-		// Delete index colist co-values themselves from account.os.indexes (not just clear them)
+		// Delete index colist co-values themselves from spark.os.indexes (not just clear them)
 		// Index colists will be recreated automatically when new co-values are created
 		const indexColistsToDelete = []
 		let indexesContentForDeletion = null
 
-		// Get account.os.indexes CoMap (reuse the one we already loaded if available)
+		// Get spark.os.indexes CoMap (reuse the one we already loaded if available)
 		if (indexesContentForCollection) {
 			indexesContentForDeletion = indexesContentForCollection
 		} else {
@@ -794,13 +802,13 @@ async function deleteSeededCoValues(_account, _node, backend) {
 		}
 
 		if (indexesContentForDeletion && typeof indexesContentForDeletion.get === 'function') {
-			// Iterate all keys in account.os.indexes (all are schema index colists)
+			// Iterate all keys in spark.os.indexes (all are schema index colists)
 			const keys =
 				indexesContentForDeletion.keys && typeof indexesContentForDeletion.keys === 'function'
 					? indexesContentForDeletion.keys()
 					: Object.keys(indexesContentForDeletion)
 
-			console.log(`[Seed] Deleting ${keys.length} index colists from account.os.indexes`)
+			console.log(`[Seed] Deleting ${keys.length} index colists from spark.os.indexes`)
 
 			for (const key of keys) {
 				// All keys in indexes are schema co-ids (starts with co_z) - these are schema index colists
@@ -824,14 +832,17 @@ async function deleteSeededCoValues(_account, _node, backend) {
 					continue
 				}
 
-				// Construct the index colist schema title (e.g., "@maia/schema/index/data/todos")
+				// Construct the index colist schema title (e.g., "°Maia/schema/index/data/todos")
 				const schemaTitle = schemaDef.title
-				if (!schemaTitle.startsWith('@maia/schema/')) {
+				if (!schemaTitle || !SCHEMA_REF_PATTERN.test(schemaTitle)) {
 					continue
 				}
-
-				const schemaNamePart = schemaTitle.replace('@maia/schema/', '')
-				const indexColistSchemaTitle = `@maia/schema/index/${schemaNamePart}`
+				const match = schemaTitle.match(/^([°@][a-zA-Z0-9_-]+)\/schema\/(.+)$/)
+				if (!match) {
+					continue
+				}
+				const [, prefix, path] = match
+				const indexColistSchemaTitle = `${prefix}/schema/index/${path}`
 
 				// Resolve the index colist schema co-id
 				const indexColistSchemaCoId = await resolve(backend, indexColistSchemaTitle, {
@@ -846,7 +857,7 @@ async function deleteSeededCoValues(_account, _node, backend) {
 					await deleteRecord(backend, indexColistSchemaCoId, indexColistId)
 					deletedCount++
 
-					// Remove the entry from account.os.indexes
+					// Remove the entry from spark.os.indexes
 					if (indexesContentForDeletion && typeof indexesContentForDeletion.delete === 'function') {
 						indexesContentForDeletion.delete(schemaCoId)
 					}
@@ -861,7 +872,7 @@ async function deleteSeededCoValues(_account, _node, backend) {
 						// Subscription error during cleanup - expected and safe to ignore
 						deletedCount++
 
-						// Still remove from account.os.indexes even if subscription error occurred
+						// Still remove from spark.os.indexes even if subscription error occurred
 						if (indexesContentForDeletion && typeof indexesContentForDeletion.delete === 'function') {
 							indexesContentForDeletion.delete(schemaCoId)
 						}
@@ -878,7 +889,7 @@ async function deleteSeededCoValues(_account, _node, backend) {
 		// Clear containers after all deletions are complete
 		// This ensures containers are empty even if some deletions failed
 
-		// Clear account.os.indexes container (remove all entries)
+		// Clear spark.os.indexes container (remove all entries)
 		if (indexesContentForDeletion && typeof indexesContentForDeletion.delete === 'function') {
 			try {
 				const remainingKeys =
@@ -887,9 +898,7 @@ async function deleteSeededCoValues(_account, _node, backend) {
 						: Object.keys(indexesContentForDeletion)
 
 				if (remainingKeys.length > 0) {
-					console.log(
-						`[Seed] Clearing ${remainingKeys.length} remaining entries from account.os.indexes`,
-					)
+					console.log(`[Seed] Clearing ${remainingKeys.length} remaining entries from spark.os.indexes`)
 					for (const key of remainingKeys) {
 						indexesContentForDeletion.delete(key)
 					}
@@ -899,14 +908,14 @@ async function deleteSeededCoValues(_account, _node, backend) {
 			}
 		}
 
-		// Clear account.os.unknown container (remove all entries)
+		// Clear spark.os.unknown container (remove all entries)
 		if (unknownContentForClearing && typeof unknownContentForClearing.delete === 'function') {
 			try {
 				// For CoList, we need to clear all items
 				// Get current items and remove them
 				const currentItems = unknownContentForClearing.toJSON ? unknownContentForClearing.toJSON() : []
 				if (currentItems.length > 0) {
-					console.log(`[Seed] Clearing ${currentItems.length} remaining entries from account.os.unknown`)
+					console.log(`[Seed] Clearing ${currentItems.length} remaining entries from spark.os.unknown`)
 					// CoList doesn't have a direct clear method, but deleteRecord should have removed items
 					// We'll verify this is working correctly
 				}
@@ -965,7 +974,7 @@ function buildMetaSchemaForSeeding(metaSchemaCoId) {
 /**
  * Seed CoJSON database with configs, schemas, and data
  *
- * @param {RawAccount} account - The account (must have @maia spark)
+ * @param {RawAccount} account - The account (must have °Maia spark)
  * @param {LocalNode} node - The LocalNode instance
  * @param {Object} configs - Config registry {vibe, styles, actors, views, contexts, states, interfaces}
  * @param {Object} schemas - Schema definitions
@@ -986,16 +995,17 @@ export async function seed(
 
 	// Use existing backend if provided (has dbEngine set), otherwise create new one
 	const { CoJSONBackend } = await import('../core/cojson-backend.js')
-	const backend = existingBackend || new CoJSONBackend(node, account, { systemSpark: '@maia' })
+	const backend = existingBackend || new CoJSONBackend(node, account, { systemSpark: '°Maia' })
 
-	// Bootstrap scaffold when: forceFreshSeed, or no account.sparks, or sparks exists but @maia not present
+	// Bootstrap scaffold when: forceFreshSeed, or no account.registries, or registries.sparks lacks °Maia
 	let needsBootstrap = forceFreshSeed
 	if (!needsBootstrap) {
-		needsBootstrap = !account.get('sparks') || !String(account.get('sparks')).startsWith('co_z')
+		needsBootstrap =
+			!account.get('registries') || !String(account.get('registries')).startsWith('co_z')
 	}
 	if (!needsBootstrap) {
 		const osId = await groups.getSparkOsId(backend, MAIA_SPARK)
-		if (!osId) needsBootstrap = true // sparks exists but empty (from simpleAccountSeed)
+		if (!osId) needsBootstrap = true // registries exists but °Maia not present (e.g. from simpleAccountSeed)
 	}
 	if (needsBootstrap) {
 		const { getAllSchemas } = await import('@MaiaOS/schemata')
@@ -1091,23 +1101,23 @@ export async function seed(
 		} catch (_e) {}
 	}
 
-	// Resolve @maia spark's group (replaces old profile.group)
+	// Resolve °Maia spark's group (replaces old profile.group)
 	const maiaGroup = await groups.getMaiaGroup(backend)
 	if (!maiaGroup || typeof maiaGroup.createMap !== 'function') {
 		throw new Error(
-			'[CoJSONSeed] @maia spark group not found. Ensure bootstrap has created @maia spark.',
+			'[CoJSONSeed] °Maia spark group not found. Ensure bootstrap has created °Maia spark.',
 		)
 	}
 
-	// Seed util: account.sparks[@maia].registries.sparks["@maia"] = real co-id
-	await seedMaiaSparkRegistriesSparksMapping(backend, maiaGroup)
+	// Bootstrap account.registries (sync agent only): registries.sparks["°Maia"] = maiaSparkCoId
+	await bootstrapAccountRegistries(backend, maiaGroup)
 
 	// Starting CoJSON seeding...
 
 	// Deduplicate schemas by $id (same schema may be registered under multiple keys)
 	const uniqueSchemasBy$id = new Map()
 	for (const [name, schema] of Object.entries(schemas)) {
-		const schemaKey = schema.$id || `@maia/schema/${name}`
+		const schemaKey = schema.$id || `°Maia/schema/${name}`
 		// Only keep first occurrence of each $id (deduplicate)
 		if (!uniqueSchemasBy$id.has(schemaKey)) {
 			uniqueSchemasBy$id.set(schemaKey, { name, schema })
@@ -1123,7 +1133,7 @@ export async function seed(
 		visited.add(obj)
 
 		// Check if this object has a $co keyword
-		if (obj.$co && typeof obj.$co === 'string' && obj.$co.startsWith('@maia/schema/')) {
+		if (obj.$co && typeof obj.$co === 'string' && obj.$co.startsWith('°Maia/schema/')) {
 			refs.add(obj.$co)
 		}
 
@@ -1179,8 +1189,8 @@ export async function seed(
 		// Process dependencies first
 		const deps = schemaDependencies.get(schemaKey) || new Set()
 		for (const dep of deps) {
-			// Only process if it's a schema we're seeding (starts with @maia/schema/)
-			if (dep.startsWith('@maia/schema/') && uniqueSchemasBy$id.has(dep)) {
+			// Only process if it's a schema we're seeding (starts with °Maia/schema/)
+			if (dep.startsWith('°Maia/schema/') && uniqueSchemasBy$id.has(dep)) {
 				visitSchema(dep)
 			}
 		}
@@ -1190,14 +1200,14 @@ export async function seed(
 		sortedSchemaKeys.push(schemaKey)
 	}
 
-	// Visit all schemas (except @maia/schema/meta which is handled specially in Phase 1)
+	// Visit all schemas (except °Maia/schema/meta which is handled specially in Phase 1)
 	for (const schemaKey of uniqueSchemasBy$id.keys()) {
-		if (schemaKey !== '@maia/schema/meta') {
+		if (schemaKey !== '°Maia/schema/meta') {
 			visitSchema(schemaKey)
 		}
 	}
 
-	// Phase 0: Ensure account.os structure (schematas, indexes)
+	// Phase 0: Ensure spark.os structure (schematas, indexes)
 	await ensureSparkOs(account, node, maiaGroup, backend, undefined)
 
 	// Phase 1: Create or update metaschema FIRST (needed for schema CoMaps)
@@ -1215,8 +1225,8 @@ export async function seed(
 		if (osCore && backend.isAvailable(osCore)) {
 			const osContent = backend.getCurrentContent(osCore)
 			if (osContent && typeof osContent.get === 'function') {
-				// STRICT: Only check account.os.schematas registry - no legacy metaSchema
-				// Check account.os.schematas registry
+				// STRICT: Only check spark.os.schematas registry - no legacy metaSchema
+				// Check spark.os.schematas registry
 				if (!metaSchemaCoId) {
 					const schematasId = osContent.get('schematas')
 					if (schematasId) {
@@ -1227,7 +1237,7 @@ export async function seed(
 						if (schematasCore && backend.isAvailable(schematasCore)) {
 							const schematasContent = backend.getCurrentContent(schematasCore)
 							if (schematasContent && typeof schematasContent.get === 'function') {
-								metaSchemaCoId = schematasContent.get('@maia/schema/meta')
+								metaSchemaCoId = schematasContent.get('°Maia/schema/meta')
 							}
 						}
 					}
@@ -1295,13 +1305,13 @@ export async function seed(
 		}
 	}
 
-	// Register metaschema with @maia/schema/meta key (matches schema title format)
+	// Register metaschema with °Maia/schema/meta key (matches schema title format)
 	// Only register if not already registered (idempotent - allows re-seeding)
-	if (!coIdRegistry.has('@maia/schema/meta')) {
-		coIdRegistry.register('@maia/schema/meta', metaSchemaCoId)
+	if (!coIdRegistry.has('°Maia/schema/meta')) {
+		coIdRegistry.register('°Maia/schema/meta', metaSchemaCoId)
 	} else {
 		// If already registered, verify it matches (if not, that's an error)
-		const existingCoId = coIdRegistry.get('@maia/schema/meta')
+		const existingCoId = coIdRegistry.get('°Maia/schema/meta')
 		if (existingCoId !== metaSchemaCoId) {
 			metaSchemaCoId = existingCoId
 		}
@@ -1316,7 +1326,7 @@ export async function seed(
 	const crudCreate = await import('../crud/create.js')
 	const crudUpdate = await import('../crud/update.js')
 
-	// Get existing schema registry from account.os.schematas
+	// Get existing schema registry from spark.os.schematas
 	const existingSchemaRegistry = new Map() // schemaKey -> schemaCoId
 	if (osId) {
 		const osCore = await ensureCoValueLoaded(backend, osId, {
@@ -1402,9 +1412,9 @@ export async function seed(
 	}
 
 	// Phase 3: Now transform all schemas with actual co-ids and update CoMaps
-	// CRITICAL: Add metaschema to schemaCoIdMap so transformSchemaForSeeding can replace @maia/schema/meta references
-	if (metaSchemaCoId && !schemaCoIdMap.has('@maia/schema/meta')) {
-		schemaCoIdMap.set('@maia/schema/meta', metaSchemaCoId)
+	// CRITICAL: Add metaschema to schemaCoIdMap so transformSchemaForSeeding can replace °Maia/schema/meta references
+	if (metaSchemaCoId && !schemaCoIdMap.has('°Maia/schema/meta')) {
+		schemaCoIdMap.set('°Maia/schema/meta', metaSchemaCoId)
 	}
 
 	const transformedSchemas = {}
@@ -1415,17 +1425,17 @@ export async function seed(
 		const schemaCoId = schemaCoIdMap.get(schemaKey)
 		const schemaCoMap = schemaCoMaps.get(schemaKey)
 
-		// Transform schema with actual co-ids (includes @maia/schema/meta → metaSchemaCoId mapping)
+		// Transform schema with actual co-ids (includes °Maia/schema/meta → metaSchemaCoId mapping)
 		const transformedSchema = transformForSeeding(schema, schemaCoIdMap)
 		transformedSchema.$id = `https://maia.city/${schemaCoId}`
 
-		// Verify no @maia/schema/... references remain after transformation
+		// Verify no °Maia/schema/... references remain after transformation
 		const verificationErrors = validateSchemaStructure(transformedSchema, schemaKey, {
 			checkSchemaReferences: true,
 			checkNestedCoTypes: false,
 		})
 		if (verificationErrors.length > 0) {
-			const errorMsg = `[Seed] Schema ${schemaKey} still contains @maia/schema/ references after transformation:\n${verificationErrors.join('\n')}`
+			const errorMsg = `[Seed] Schema ${schemaKey} still contains °Maia/schema/ references after transformation:\n${verificationErrors.join('\n')}`
 			throw new Error(errorMsg)
 		}
 
@@ -1512,9 +1522,9 @@ export async function seed(
 			for (const [schemaKey, actualCoId] of schemaCoIdMap.entries()) {
 				schemaRegistry.set(schemaKey, actualCoId)
 			}
-			// Also add metaschema if we have it (as @maia/schema/meta to match schema title)
+			// Also add metaschema if we have it (as °Maia/schema/meta to match schema title)
 			if (metaSchemaCoId) {
-				schemaRegistry.set('@maia/schema/meta', metaSchemaCoId)
+				schemaRegistry.set('°Maia/schema/meta', metaSchemaCoId)
 			}
 		}
 
@@ -1524,19 +1534,23 @@ export async function seed(
 	let combinedRegistry = await getCombinedRegistry()
 
 	// Step 2: Register data collection schema co-ids (for query object transformations)
-	// Some configs have query objects that reference data collection schemas (e.g., @maia/schema/todos)
-	// We need these in the registry before transforming configs
+	// Some configs have query objects and tool payloads that reference data collection schemas
+	// (e.g., °Maia/schema/todos, °Maia/schema/data/todos in vibe state machine tool payloads)
+	// We need BOTH keys in the registry before transforming configs - vibes use °Maia/schema/data/todos
 	if (data) {
 		for (const [collectionName] of Object.entries(data)) {
-			const schemaKey = `@maia/schema/${collectionName}`
-			const dataSchemaKey = `@maia/schema/data/${collectionName}`
+			const schemaKey = `°Maia/schema/${collectionName}`
+			const dataSchemaKey = `°Maia/schema/data/${collectionName}`
 
-			// Check if data schema exists in schema registry
-			const dataSchemaCoId = combinedRegistry.get(dataSchemaKey)
+			// Check if data schema exists in schema registry (try both key formats)
+			const dataSchemaCoId = combinedRegistry.get(dataSchemaKey) || combinedRegistry.get(schemaKey)
 			if (dataSchemaCoId) {
-				// Register both @maia/schema/todos and @maia/schema/data/todos → same co-id
+				// Register BOTH °Maia/schema/todos AND °Maia/schema/data/todos → same co-id
+				// Vibes use °Maia/schema/data/todos in tool payloads; both must resolve correctly
 				combinedRegistry.set(schemaKey, dataSchemaCoId)
+				combinedRegistry.set(dataSchemaKey, dataSchemaCoId)
 				coIdRegistry.register(schemaKey, dataSchemaCoId)
+				coIdRegistry.register(dataSchemaKey, dataSchemaCoId)
 			}
 		}
 	}
@@ -1570,7 +1584,7 @@ export async function seed(
 		const transformed = JSON.parse(JSON.stringify(instance))
 
 		// Transform $schema reference only
-		if (transformed.$schema?.startsWith('@maia/schema/')) {
+		if (transformed.$schema?.startsWith('°Maia/schema/')) {
 			const coId = schemaRegistry.get(transformed.$schema)
 			if (coId) {
 				transformed.$schema = coId
@@ -1600,7 +1614,7 @@ export async function seed(
 
 	// Helper to rebuild combined registry with latest registrations
 	const refreshCombinedRegistry = () => {
-		// Start with schema registry (from account.os.schematas)
+		// Start with schema registry (from spark.os.schematas)
 		const refreshed = new Map(combinedRegistry)
 
 		// Add all instance co-ids registered so far
@@ -1858,7 +1872,7 @@ export async function seed(
 		// REFRESH REGISTRY before transforming vibes (actors are now registered)
 		combinedRegistry = refreshCombinedRegistry()
 
-		// Anchor: account.sparks[@maia].vibes must exist (scaffolded in bootstrap) before we populate it.
+		// Anchor: registries.sparks[°Maia].vibes must exist (scaffolded in bootstrap) before we populate it.
 		// Ensure vibes CoMap is loaded and writable before seeding entries.
 		const vibesId = await groups.getSparkVibesId(backend, MAIA_SPARK)
 		let vibes
@@ -1878,10 +1892,10 @@ export async function seed(
 
 		if (!vibes) {
 			const vibesSchemaCoId =
-				schemaCoIdMap?.get('@maia/schema/os/vibes-registry') ??
+				schemaCoIdMap?.get('°Maia/schema/os/vibes-registry') ??
 				(await (
 					await import('../schema/resolver.js')
-				).resolve(backend, '@maia/schema/os/vibes-registry', { returnType: 'coId' }))
+				).resolve(backend, '°Maia/schema/os/vibes-registry', { returnType: 'coId' }))
 			const ctx = { node, account, guardian: maiaGroup }
 			const { coValue: vibesCoMap } = await createCoValueForSpark(ctx, null, {
 				schema: vibesSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
@@ -1916,10 +1930,10 @@ export async function seed(
 					}
 					if (!runtimes) {
 						const runtimesSchemaCoId =
-							schemaCoIdMap?.get('@maia/schema/os/runtimes-registry') ??
+							schemaCoIdMap?.get('°Maia/schema/os/runtimes-registry') ??
 							(await (
 								await import('../schema/resolver.js')
-							).resolve(backend, '@maia/schema/os/runtimes-registry', { returnType: 'coId' }))
+							).resolve(backend, '°Maia/schema/os/runtimes-registry', { returnType: 'coId' }))
 						const ctx = { node, account, guardian: maiaGroup }
 						const { coValue: runtimesCoMap } = await createCoValueForSpark(ctx, null, {
 							schema: runtimesSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
@@ -1934,21 +1948,25 @@ export async function seed(
 			}
 		}
 
-		const runtimeAssignmentSchemaCoId = schemaCoIdMap?.get('@maia/schema/os/runtime-assignment')
+		const runtimeAssignmentSchemaCoId = schemaCoIdMap?.get('°Maia/schema/os/runtime-assignment')
 		const runtimeAssignmentsColistSchemaCoId = schemaCoIdMap?.get(
-			'@maia/schema/os/runtime-assignments-colist',
+			'°Maia/schema/os/runtime-assignments-colist',
 		)
 
 		// Seed each vibe
 		for (const vibe of allVibes) {
 			const originalVibeId = vibe.$id || ''
-			const vibeKey = originalVibeId.startsWith('@maia/vibe/')
-				? originalVibeId.replace('@maia/vibe/', '')
+			const vibeKey = originalVibeId.startsWith('°Maia/vibe/')
+				? originalVibeId.replace('°Maia/vibe/', '')
 				: (vibe.name || 'default').toLowerCase().replace(/\s+/g, '-')
 
 			// Ensure schema and actor refs are in combinedRegistry before transform
 			const schemaRef = vibe.$schema
-			if (schemaRef?.startsWith('@') && !combinedRegistry.has(schemaRef)) {
+			if (
+				schemaRef &&
+				(schemaRef.startsWith('@') || schemaRef.startsWith('°')) &&
+				!combinedRegistry.has(schemaRef)
+			) {
 				const schemaCoId =
 					schemaCoIdMap?.get(schemaRef) ??
 					(await (
@@ -1976,7 +1994,7 @@ export async function seed(
 			if (!retransformedVibe.$schema || !retransformedVibe.$schema.startsWith('co_z')) {
 				throw new Error(
 					`[sync] Vibe "${vibeKey}": $schema missing or not resolved (got ${retransformedVibe.$schema ?? 'undefined'}). ` +
-						`Ensure @maia/schema/vibe is in schema registry.`,
+						`Ensure °Maia/schema/vibe is in schema registry.`,
 				)
 			}
 
@@ -2024,7 +2042,7 @@ export async function seed(
 				}
 
 				// Register REAL co-id from CoJSON (never pre-generate!)
-				const originalVibeIdForRegistry = vibe.$id // Original $id (e.g., @maia/vibe/todos)
+				const originalVibeIdForRegistry = vibe.$id // Original $id (e.g., °Maia/vibe/todos)
 				// STRICT: Only register by original vibe ID - no backward compat 'vibe' key
 				if (originalVibeIdForRegistry) {
 					instanceCoIdMap.set(originalVibeIdForRegistry, vibeCoId)
@@ -2057,7 +2075,7 @@ export async function seed(
 			}
 		}
 
-		// Verify all vibes were stored in spark.vibes (account.sparks[@maia].vibes)
+		// Verify all vibes were stored in spark.vibes (registries.sparks[°Maia].vibes)
 		if (vibes && typeof vibes.get === 'function') {
 			const storedKeys =
 				typeof vibes.keys === 'function' ? Array.from(vibes.keys()) : Object.keys(vibes ?? {})
@@ -2075,8 +2093,8 @@ export async function seed(
 			}
 			for (const vibe of allVibes) {
 				const originalVibeId = vibe.$id || ''
-				const vibeKey = originalVibeId.startsWith('@maia/vibe/')
-					? originalVibeId.replace('@maia/vibe/', '')
+				const vibeKey = originalVibeId.startsWith('°Maia/vibe/')
+					? originalVibeId.replace('°Maia/vibe/', '')
 					: (vibe.name || 'default').toLowerCase().replace(/\s+/g, '-')
 				const storedValue = vibes.get(vibeKey)
 				if (!storedValue) {
@@ -2087,7 +2105,7 @@ export async function seed(
 	}
 
 	// Phase 8: Seed data entities to CoJSON
-	// Creates individual CoMap items - storage hooks automatically index them into account.os.{schemaCoId}
+	// Creates individual CoMap items - storage hooks automatically index them into spark.os.indexes[schemaCoId]
 	const seededData = await seedData(account, node, maiaGroup, backend, data, coIdRegistry)
 
 	// Phase 9: Store registry in spark.os.schematas CoMap
@@ -2114,8 +2132,14 @@ export async function seed(
 	for (const coId of allSeededCoIds) {
 		if (coId && typeof coId === 'string' && coId.startsWith('co_z')) {
 			try {
+				// Pre-load co-value so indexCoValue can access it (we created it locally)
+				if (backend.node?.loadCoValueCore) {
+					await backend.node.loadCoValueCore(coId).catch(() => {})
+				}
 				await indexCoValue(backend, coId)
-			} catch (_e) {}
+			} catch (e) {
+				console.error('[Seed] Re-index pass failed for', coId, e)
+			}
 		}
 	}
 
@@ -2263,9 +2287,9 @@ async function seedConfigs(
  * Seed data entities to CoJSON
  *
  * Creates individual CoMap items for each data entity. Items are automatically indexed
- * into account.os.{schemaCoId} via storage hooks (schema-index-manager.js).
+ * into spark.os.indexes[schemaCoId] via storage hooks (schema-index-manager.js).
  *
- * The read() query reads from account.os.{schemaCoId} schema index CoLists, not from
+ * The read() query reads from spark.os.indexes[schemaCoId] schema index CoLists, not from
  * account.data.{collectionName} CoLists (which are deprecated).
  *
  * @private
@@ -2286,7 +2310,7 @@ async function seedData(account, node, maiaGroup, backend, data, coIdRegistry) {
 	let totalItems = 0
 
 	// Create individual CoMap items for each collection
-	// Storage hooks will automatically index them into account.os.{schemaCoId}
+	// Storage hooks will automatically index them into spark.os.indexes[schemaCoId]
 	for (const [collectionName, collectionItems] of Object.entries(data)) {
 		if (!Array.isArray(collectionItems)) {
 			continue
@@ -2295,11 +2319,11 @@ async function seedData(account, node, maiaGroup, backend, data, coIdRegistry) {
 		// Get schema co-id for this collection
 		// Try multiple possible schema key formats:
 		// 1. "data/todos" (direct schema name)
-		// 2. "@maia/schema/data/todos" (with @maia/schema prefix)
-		// 3. "@maia/schema/todos" (without data prefix, for backward compatibility)
+		// 2. "°Maia/schema/data/todos" (with °Maia/schema prefix)
+		// 3. "°Maia/schema/todos" (without data prefix, for backward compatibility)
 		const schemaKey1 = `data/${collectionName}`
-		const schemaKey2 = `@maia/schema/data/${collectionName}`
-		const schemaKey3 = `@maia/schema/${collectionName}`
+		const schemaKey2 = `°Maia/schema/data/${collectionName}`
+		const schemaKey3 = `°Maia/schema/${collectionName}`
 
 		const schemaCoId =
 			coIdRegistry.registry.get(schemaKey1) ||
@@ -2352,7 +2376,7 @@ async function seedData(account, node, maiaGroup, backend, data, coIdRegistry) {
 }
 
 /**
- * Ensure account.os CoMap exists (creates if needed)
+ * Ensure spark.os CoMap exists (creates if needed)
  * Also ensures spark.os.schematas, spark.os.indexes, spark.vibes
  * Uses real schema co-ids where available
  * @private
@@ -2360,16 +2384,16 @@ async function seedData(account, node, maiaGroup, backend, data, coIdRegistry) {
 async function ensureSparkOs(account, node, maiaGroup, backend, schemaCoIdMap) {
 	const osId = await groups.getSparkOsId(backend, MAIA_SPARK)
 	if (!osId) {
-		throw new Error('[Seed] @maia spark.os not found. Ensure bootstrap has run.')
+		throw new Error('[Seed] °Maia spark.os not found. Ensure bootstrap has run.')
 	}
 
 	const { resolve } = await import('../schema/resolver.js')
 	const schematasSchemaCoId =
-		schemaCoIdMap?.get('@maia/schema/os/schematas-registry') ??
-		(await resolve(backend, '@maia/schema/os/schematas-registry', { returnType: 'coId' }))
+		schemaCoIdMap?.get('°Maia/schema/os/schematas-registry') ??
+		(await resolve(backend, '°Maia/schema/os/schematas-registry', { returnType: 'coId' }))
 	const vibesSchemaCoId =
-		schemaCoIdMap?.get('@maia/schema/os/vibes-registry') ??
-		(await resolve(backend, '@maia/schema/os/vibes-registry', { returnType: 'coId' }))
+		schemaCoIdMap?.get('°Maia/schema/os/vibes-registry') ??
+		(await resolve(backend, '°Maia/schema/os/vibes-registry', { returnType: 'coId' }))
 	const _schematasMeta = schematasSchemaCoId
 		? { $schema: schematasSchemaCoId }
 		: { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }
@@ -2428,14 +2452,15 @@ async function ensureSparkOs(account, node, maiaGroup, backend, schemaCoIdMap) {
 	}
 
 	// Ensure spark.vibes exists (for old scaffolds) - only when we have schemaCoIdMap for proper schema
+	// Use account.registries.sparks (new path); legacy account.sparks no longer exists
 	const vibesId = await groups.getSparkVibesId(backend, MAIA_SPARK)
 	if (!vibesId && schemaCoIdMap) {
-		const sparksId = backend.account?.get('sparks')
+		const sparksId = await groups.getSparksRegistryId(backend)
 		if (sparksId?.startsWith('co_z')) {
 			const sparksStore = await backend.read(null, sparksId)
 			await waitForStoreReady(sparksStore, sparksId, 10000)
-			const sparksData = sparksStore?.value
-			const maiaSparkCoId = sparksData?.[MAIA_SPARK]
+			const sparksData = sparksStore?.value ?? {}
+			const maiaSparkCoId = sparksData?.[MAIA_SPARK] ?? sparksData?.['°Maia']
 			if (maiaSparkCoId?.startsWith('co_z')) {
 				const sparkCore = backend.getCoValue(maiaSparkCoId)
 				if (sparkCore && backend.isAvailable(sparkCore)) {
@@ -2457,8 +2482,8 @@ async function ensureSparkOs(account, node, maiaGroup, backend, schemaCoIdMap) {
 }
 
 /**
- * Store registry in account.os.schematas CoMap
- * Also creates account.os CoMap (if not already created by ensureSparkOs)
+ * Store registry in spark.os.schematas CoMap
+ * Also ensures spark.os CoMap (if not already created by ensureSparkOs)
  * @private
  */
 async function storeRegistry(
@@ -2479,7 +2504,7 @@ async function storeRegistry(
 		return
 	}
 
-	// Get account.os CoMap
+	// Get spark.os CoMap
 	let osCore = node.getCoValue(osId)
 	if (!osCore && node.loadCoValueCore) {
 		await node.loadCoValueCore(osId)
@@ -2495,7 +2520,7 @@ async function storeRegistry(
 		return
 	}
 
-	// Get or create account.os.schematas CoMap
+	// Get or create spark.os.schematas CoMap
 	const schematasId = osContent.get('schematas')
 	let schematas
 
@@ -2511,11 +2536,11 @@ async function storeRegistry(
 
 	if (!schematas) {
 		// Create schematas CoMap if it doesn't exist
-		// Try to use proper schema (@maia/schema/os/schematas-registry), fallback to @maia if not available
-		// Note: During initial seeding, the schema might not be registered yet, so we fallback to @maia
+		// Try to use proper schema (°Maia/schema/os/schematas-registry), fallback to °Maia if not available
+		// Note: During initial seeding, the schema might not be registered yet, so we fallback to °Maia
 		let schematasSchemaCoId = null
-		if (schemaCoIdMap?.has('@maia/schema/os/schematas-registry')) {
-			schematasSchemaCoId = schemaCoIdMap.get('@maia/schema/os/schematas-registry')
+		if (schemaCoIdMap?.has('°Maia/schema/os/schematas-registry')) {
+			schematasSchemaCoId = schemaCoIdMap.get('°Maia/schema/os/schematas-registry')
 		}
 		const schemaForSchematas = schematasSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA
 		const ctx = { node, account, guardian: maiaGroup }
@@ -2539,16 +2564,16 @@ async function storeRegistry(
 
 	// CRITICAL: Storage hook automatically registers ALL schemas when they're created via CRUD API
 	// However, metaschema is created directly (not via CRUD API) so it needs manual registration
-	// All other schemas (@maia/schema/* except @maia/schema/meta) are auto-registered by storage hook
+	// All other schemas (°Maia/schema/* except °Maia/schema/meta) are auto-registered by storage hook
 	// They're created via CRUD API, so the hook fires automatically
-	const metaschemaCoId = coIdRegistry.get('@maia/schema/meta')
+	const metaschemaCoId = coIdRegistry.get('°Maia/schema/meta')
 
 	if (metaschemaCoId) {
 		// Metaschema is created directly (not via CRUD API), so storage hook won't register it
 		// Manually register it here as a fallback
-		const existingCoId = schematas.get('@maia/schema/meta')
+		const existingCoId = schematas.get('°Maia/schema/meta')
 		if (!existingCoId) {
-			schematas.set('@maia/schema/meta', metaschemaCoId)
+			schematas.set('°Maia/schema/meta', metaschemaCoId)
 		} else if (existingCoId !== metaschemaCoId) {
 		} else {
 		}

@@ -1,8 +1,8 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/os/humans-registry",
-	"title": "@maia/schema/os/humans-registry",
-	"description": "Humans registry CoMap - username -> account co-id. Stored in spark.registries.humans",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/os/humans-registry",
+	"title": "°Maia/schema/os/humans-registry",
+	"description": "Humans registry CoMap - username -> account co-id. Stored in account.registries.humans",
 	"cotype": "comap",
 	"indexing": false,
 	"additionalProperties": {

@@ -6,7 +6,7 @@
   - `guardian` - Guardian group co-id (resolved via `spark.os.capabilities.guardian`)
 
 **What happens:**
-1. Creates a new guardian group (child of @maia spark's guardian)
+1. Creates a new guardian group (child of °Maia spark's guardian)
 2. Creates full scaffold: capabilities, os, vibes, spark with `{name, os, vibes}` (no `group`; guardian is in `os.capabilities.guardian`)
 3. Registers spark in `account.sparks` CoMap
 4. Automatically indexes spark in `account.os.{sparkSchemaCoId}` colist

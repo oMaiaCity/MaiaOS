@@ -2,10 +2,10 @@
 
 > **Note:** This document describes the OLD architecture (universal group via `account.profile.group`).
 > As of the Registry Scopes and Spark Bootstrapping refactor, the architecture uses:
-> - **@maia spark** at `account.sparks["@maia"]` with `{ name, group, os, vibes }`
-> - Group resolved via `backend.getMaiaGroup()` → `getSparkGroup(backend, '@maia')`
+> - **°Maia spark** at `account.registries.sparks["°Maia"]` with `{ name, group, os, vibes }`
+> - Group resolved via `backend.getMaiaGroup()` → `getSparkGroup(backend, '°Maia')`
 > - Profile: `{ name }` only (no group)
-> - Schematas at `account.sparks["@maia"].os.schematas`, vibes at `account.sparks["@maia"].vibes`
+> - Schematas at `account.registries.sparks["°Maia"].os.schematas`, vibes at `account.registries.sparks["°Maia"].vibes`
 
 ## Analogy Overview
 
@@ -18,8 +18,8 @@
 **Group (Smart Contract Account / Safe-like):**
 - Data ownership primitive
 - Like Safe multisig - controls and owns all user data
-- Created during `schemaMigration()` as @maia spark's group
-- Stored in `account.sparks["@maia"].group`
+- Created during `schemaMigration()` as °Maia spark's group
+- Stored in `account.registries.sparks["°Maia"].group`
 - **ALL user data CoValues are owned by this group**
 
 ---

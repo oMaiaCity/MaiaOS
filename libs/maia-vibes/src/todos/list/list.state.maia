@@ -1,6 +1,6 @@
 {
-	"$schema": "@maia/schema/state",
-	"$id": "@maia/todos/state/list",
+	"$schema": "°Maia/schema/state",
+	"$id": "°Maia/todos/state/list",
 	"initial": "idle",
 	"states": {
 		"idle": {
@@ -16,7 +16,7 @@
 									"id": "$$id",
 									"done": "$$done"
 								},
-								"target": "@maia/todos/actor/vibe"
+								"target": "°Maia/todos/actor/vibe"
 							}
 						}
 					]
@@ -31,7 +31,7 @@
 								"payload": {
 									"id": "$$id"
 								},
-								"target": "@maia/todos/actor/vibe"
+								"target": "°Maia/todos/actor/vibe"
 							}
 						}
 					]

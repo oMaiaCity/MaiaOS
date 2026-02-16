@@ -16,9 +16,11 @@
  * All consumers use resolve() directly - no wrappers, no scattered functions.
  */
 
+import { SCHEMA_REF_PATTERN, VIBE_REF_PATTERN } from '@MaiaOS/schemata'
 import { resolveReactive as resolveReactiveBase } from '../crud/reactive-resolver.js'
 import { read as universalRead } from '../crud/read.js'
 import { waitForStoreReady } from '../crud/read-operations.js'
+import { resolveSparkCoId } from '../groups/groups.js'
 
 /**
  * Recursively remove 'id' fields from schema objects (AJV only accepts $id, not id)
@@ -69,7 +71,7 @@ function removeIdFields(obj, inPropertiesOrItems = false) {
  * @param {Object} backend - Backend instance
  * @param {string|Object} identifier - Identifier:
  *   - Co-id: 'co_z...' → returns co-value/schema
- *   - Registry key: '@maia/schema/...' or '@maia/vibe/...' → resolves to co-id, then returns co-value/schema
+ *   - Registry key: '°Maia/schema/...' or '°Maia/vibe/...' → resolves to co-id, then returns co-value/schema
  *   - Options: {fromCoValue: 'co_z...'} → extracts schema from headerMeta, then returns schema
  * @param {Object} [options] - Options
  * @param {string} [options.returnType='schema'] - Return type: 'coId' | 'schema' | 'coValue'
@@ -80,9 +82,6 @@ function removeIdFields(obj, inPropertiesOrItems = false) {
  *   - 'schema': returns Object (schema definition)
  *   - 'coValue': returns ReactiveStore (full co-value data)
  */
-const SCHEMA_REF_PATTERN = /^@[a-zA-Z0-9_-]+\/schema\//
-const VIBE_REF_PATTERN = /^@[a-zA-Z0-9_-]+\/vibe\//
-
 export async function resolve(backend, identifier, options = {}) {
 	const { returnType = 'schema', deepResolve = false, timeoutMs = 5000, spark } = options
 
@@ -193,10 +192,11 @@ export async function resolve(backend, identifier, options = {}) {
 		return null
 	}
 
-	// Registry key lookup (@domain/schema/... or @domain/vibe/...)
+	// Registry key lookup (°Maia/schema/... or °Maia/vibe/... - spark name as prefix)
 	const isSchemaKeyMatch = SCHEMA_REF_PATTERN.test(identifier)
 	const isVibeKeyMatch = VIBE_REF_PATTERN.test(identifier)
-	const isBareKey = !identifier.startsWith('@') && !identifier.startsWith('co_z')
+	const isBareKey =
+		!identifier.startsWith('°') && !identifier.startsWith('@') && !identifier.startsWith('co_z')
 	if (isSchemaKeyMatch || isVibeKeyMatch || isBareKey) {
 		const effectiveSpark = spark ?? backend?.systemSpark
 		if (!effectiveSpark && (isSchemaKeyMatch || isVibeKeyMatch || isBareKey)) {
@@ -204,18 +204,18 @@ export async function resolve(backend, identifier, options = {}) {
 				`[resolve] spark required for registry lookup of ${identifier}. Pass options.spark or set backend.systemSpark.`,
 			)
 		}
-		// Normalize key format: bare key → @domain/schema/key (derive domain from spark, e.g. @maia → maia)
+		// Normalize key format: bare key → sparkName/schema/key (use spark name directly as prefix)
 		let normalizedKey = identifier
 		if (
 			!SCHEMA_REF_PATTERN.test(normalizedKey) &&
 			!VIBE_REF_PATTERN.test(normalizedKey) &&
+			!normalizedKey.startsWith('°') &&
 			!normalizedKey.startsWith('@')
 		) {
-			const domain = effectiveSpark?.replace(/^@/, '') ?? 'maia'
-			normalizedKey = `@${domain}/schema/${normalizedKey}`
+			normalizedKey = `${effectiveSpark}/schema/${normalizedKey}`
 		}
 
-		// Use read() API to load account.os or account.vibes registry
+		// Use read() API to load spark.os (account.registries.sparks[spark].os) or spark.vibes registry
 		if (!backend.account || typeof backend.account.get !== 'function') {
 			return null
 		}
@@ -223,23 +223,8 @@ export async function resolve(backend, identifier, options = {}) {
 		const isSchemaKey = SCHEMA_REF_PATTERN.test(normalizedKey)
 
 		if (isSchemaKey) {
-			// Schema keys → account.sparks[spark].os.schematas
-			const sparksId = backend.account.get('sparks')
-			if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_z')) {
-				return null
-			}
-			const sparksStore = await universalRead(backend, sparksId, null, null, null, {
-				deepResolve: false,
-				timeoutMs,
-			})
-			try {
-				await waitForStoreReady(sparksStore, sparksId, timeoutMs)
-			} catch {
-				return null
-			}
-			const sparksData = sparksStore.value
-			if (!sparksData || sparksData.error) return null
-			const sparkCoId = sparksData[effectiveSpark]
+			// Schema keys → account.registries.sparks[spark].os.schematas
+			const sparkCoId = await resolveSparkCoId(backend, effectiveSpark)
 			if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_z')) {
 				return null
 			}
@@ -275,6 +260,7 @@ export async function resolve(backend, identifier, options = {}) {
 			if (!osData || osData.error) {
 				return null
 			}
+			// osData is flat from extractCoValueData
 
 			// Get schematas registry co-id from os data (flat object from read() API)
 			const schematasId = osData.schematas
@@ -311,29 +297,14 @@ export async function resolve(backend, identifier, options = {}) {
 			} else {
 				// Schema not found in registry - this is a permanent failure
 				// Don't warn for index schemas - they're created on-demand
-				const isIndexSchema = /^@[a-zA-Z0-9_-]+\/schema\/index\//.test(normalizedKey)
+				const isIndexSchema = /^°[a-zA-Z0-9_-]+\/schema\/index\//.test(normalizedKey)
 				if (!isIndexSchema) {
 				}
 				return null
 			}
-		} else if (VIBE_REF_PATTERN.test(identifier) || !identifier.startsWith('@')) {
-			// Vibe instance keys → account.sparks[spark].vibes
-			const sparksId = backend.account.get('sparks')
-			if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_z')) {
-				return null
-			}
-			const sparksStore = await universalRead(backend, sparksId, null, null, null, {
-				deepResolve: false,
-				timeoutMs,
-			})
-			try {
-				await waitForStoreReady(sparksStore, sparksId, timeoutMs)
-			} catch {
-				return null
-			}
-			const sparksData = sparksStore.value
-			if (!sparksData || sparksData.error) return null
-			const sparkCoId = sparksData[effectiveSpark]
+		} else if (VIBE_REF_PATTERN.test(identifier)) {
+			// Vibe instance keys → account.registries.sparks[spark].vibes
+			const sparkCoId = await resolveSparkCoId(backend, effectiveSpark)
 			if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_z')) {
 				return null
 			}
@@ -498,8 +469,52 @@ export async function checkCotype(backend, schemaCoId, expectedCotype) {
 	return cotype === expectedCotype
 }
 
+/** Wait for co-value to become available (node-only, no backend) */
+async function waitForCoValueAvailable(core, timeoutMs = 5000) {
+	if (!core) return false
+	const deadline = Date.now() + timeoutMs
+	while (Date.now() < deadline) {
+		if (core.isAvailable?.()) return true
+		await new Promise((r) => setTimeout(r, 50))
+	}
+	return false
+}
+
 /**
- * Load all schemas from account.os.schemata CoList (MIGRATIONS ONLY)
+ * Resolve spark.os id from account via account.registries.sparks[spark].os (node-only, no backend.read)
+ * @param {LocalNode} node
+ * @param {RawAccount} account
+ * @param {string} spark - Spark name (e.g. '°Maia')
+ * @returns {Promise<string|null>} os co-id or null
+ */
+async function resolveSparkOsIdFromNode(node, account, spark) {
+	const registriesId = account.get?.('registries')
+	if (!registriesId?.startsWith('co_z')) return null
+	const registriesCore =
+		node.getCoValue(registriesId) || (await node.loadCoValueCore?.(registriesId))
+	if (!(await waitForCoValueAvailable(registriesCore))) return null
+	const registries = registriesCore?.getCurrentContent?.()
+	if (!registries || typeof registries.get !== 'function') return null
+	const sparksId = registries.get('sparks')
+	if (!sparksId?.startsWith('co_z')) return null
+
+	const sparksCore = node.getCoValue(sparksId) || (await node.loadCoValueCore?.(sparksId))
+	if (!(await waitForCoValueAvailable(sparksCore))) return null
+	const sparks = sparksCore?.getCurrentContent?.()
+	if (!sparks || typeof sparks.get !== 'function') return null
+	const sparkCoId = sparks.get(spark)
+	if (!sparkCoId?.startsWith('co_z')) return null
+
+	const sparkCore = node.getCoValue(sparkCoId) || (await node.loadCoValueCore?.(sparkCoId))
+	if (!(await waitForCoValueAvailable(sparkCore))) return null
+	const sparkContent = sparkCore?.getCurrentContent?.()
+	if (!sparkContent || typeof sparkContent.get !== 'function') return null
+	return sparkContent.get('os') || null
+}
+
+/**
+ * Load all schemas from spark.os.schematas (account.registries.sparks[°Maia].os.schematas)
+ * MIGRATIONS ONLY - uses node directly, no backend.read
  *
  * @param {LocalNode} node - LocalNode instance
  * @param {RawAccount} account - Account CoMap
@@ -510,87 +525,63 @@ export async function loadSchemasFromAccount(node, account) {
 		throw new Error('[loadSchemasFromAccount] Node and account required')
 	}
 
-	// Create a minimal backend-like object for resolve() to work
-	// This is a migration-only function, so we need to work with node directly
-	const backend = {
-		account,
-		node,
-		getCoValue: (coId) => node.getCoValue(coId),
-		isAvailable: (coValueCore) => coValueCore?.isAvailable() || false,
-		getCurrentContent: (coValueCore) => coValueCore?.getCurrentContent() || null,
-		getHeader: (coValueCore) => coValueCore?.verified?.header || null,
-	}
-
 	try {
-		// Get account.os using read() API
-		const osId = account.get('os')
-		if (!osId) {
-			return {}
+		const osId = await resolveSparkOsIdFromNode(node, account, '°Maia')
+		if (!osId?.startsWith('co_z')) return {}
+
+		const osCore = node.getCoValue(osId) || (await node.loadCoValueCore?.(osId))
+		if (!(await waitForCoValueAvailable(osCore))) return {}
+		const osContent = osCore?.getCurrentContent?.()
+		if (!osContent || typeof osContent.get !== 'function') return {}
+
+		const schematasId = osContent.get('schematas')
+		if (!schematasId?.startsWith('co_z')) return {}
+
+		const schematasCore = node.getCoValue(schematasId) || (await node.loadCoValueCore?.(schematasId))
+		if (!(await waitForCoValueAvailable(schematasCore))) return {}
+		const schematasContent = schematasCore?.getCurrentContent?.()
+		if (!schematasContent || typeof schematasContent.get !== 'function') return {}
+
+		const schemaCoIds = []
+		const keys =
+			schematasContent.keys && typeof schematasContent.keys === 'function'
+				? Array.from(schematasContent.keys())
+				: Object.keys(schematasContent ?? {})
+		for (const key of keys) {
+			const coId = schematasContent.get(key)
+			if (coId && typeof coId === 'string' && coId.startsWith('co_')) schemaCoIds.push(coId)
 		}
 
-		// Use resolve() to load account.os
-		const osStore = await universalRead(backend, osId, null, null, null, {
-			deepResolve: false,
-			timeoutMs: 5000,
-		})
+		if (schemaCoIds.length === 0) return {}
 
-		try {
-			await waitForStoreReady(osStore, osId, 5000)
-		} catch (_error) {
-			return {}
-		}
-
-		const osData = osStore.value
-		if (!osData || osData.error) {
-			return {}
-		}
-
-		// Get os.schemata CoList co-id (flat object from read() API)
-		const osSchemataId = osData.schemata
-		if (!osSchemataId) {
-			return {}
-		}
-
-		// Load os.schemata CoList using read() API
-		const schemataStore = await universalRead(backend, osSchemataId, null, null, null, {
-			deepResolve: false,
-			timeoutMs: 5000,
-		})
-
-		try {
-			await waitForStoreReady(schemataStore, osSchemataId, 5000)
-		} catch (_error) {
-			return {}
-		}
-
-		const schemataData = schemataStore.value
-		if (!schemataData || schemataData.error) {
-			return {}
-		}
-
-		// Extract schema co-ids from CoList data
-		const schemaCoIds = schemataData.items || schemataData.toJSON?.() || []
-
-		if (!Array.isArray(schemaCoIds) || schemaCoIds.length === 0) {
-			return {}
-		}
-
-		// Load each schema using resolve()
 		const schemas = {}
-
 		for (const schemaCoId of schemaCoIds) {
-			if (typeof schemaCoId !== 'string' || !schemaCoId.startsWith('co_')) {
-				continue
-			}
-
+			if (typeof schemaCoId !== 'string' || !schemaCoId.startsWith('co_z')) continue
 			try {
-				const schema = await resolve(backend, schemaCoId, { returnType: 'schema' })
-				if (schema) {
-					schemas[schemaCoId] = schema
+				const schemaCore = node.getCoValue(schemaCoId) || (await node.loadCoValueCore?.(schemaCoId))
+				if (!(await waitForCoValueAvailable(schemaCore))) continue
+				const content = schemaCore?.getCurrentContent?.()
+				if (!content || typeof content.get !== 'function') continue
+				const header = schemaCore?.verified?.header
+				const headerMeta = header?.meta || {}
+				const title = content.get?.('title')
+				const cotype = content.get?.('cotype')
+				const properties = content.get?.('properties')
+				const items = content.get?.('items')
+				if (!title && !cotype && !properties && !items) continue
+				const schemaData = { $id: schemaCoId, $schema: headerMeta.$schema }
+				const keys =
+					content.keys && typeof content.keys === 'function'
+						? Array.from(content.keys())
+						: Object.keys(content ?? {})
+				for (const k of keys) {
+					if (k === 'id' || k === 'type') continue
+					const v = content.get(k)
+					if (v !== undefined) schemaData[k] = v
 				}
+				schemas[schemaCoId] = removeIdFields(schemaData)
 			} catch (_error) {}
 		}
-
 		return schemas
 	} catch (_error) {
 		return {}

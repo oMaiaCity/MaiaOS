@@ -1,8 +1,8 @@
 {
-	"$schema": "@maia/schema/context",
-	"$id": "@maia/chat/context/vibe",
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/chat/context/vibe",
 	"conversations": {
-		"schema": "@maia/schema/data/chat"
+		"schema": "°Maia/schema/data/chat"
 	},
 	"inputText": "",
 	"assistantResponse": null,

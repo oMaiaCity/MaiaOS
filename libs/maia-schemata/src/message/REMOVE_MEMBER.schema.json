@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/message/REMOVE_MEMBER",
-	"title": "@maia/schema/message/REMOVE_MEMBER",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/message/REMOVE_MEMBER",
+	"title": "°Maia/schema/message/REMOVE_MEMBER",
 	"description": "Message type for removing a member from a Spark's group",
 	"cotype": "comap",
 	"indexing": true,

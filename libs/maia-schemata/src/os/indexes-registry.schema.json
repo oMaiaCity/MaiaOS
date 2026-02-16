@@ -1,7 +1,7 @@
 {
-	"$schema": "@maia/schema/meta",
-	"$id": "@maia/schema/os/indexes-registry",
-	"title": "@maia/schema/os/indexes-registry",
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/os/indexes-registry",
+	"title": "°Maia/schema/os/indexes-registry",
 	"description": "Indexes registry CoMap - schema co-id -> index colist. Stored in spark.os.indexes",
 	"cotype": "comap",
 	"indexing": false,

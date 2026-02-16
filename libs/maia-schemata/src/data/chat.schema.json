@@ -1,7 +1,7 @@
 {
-	"$id": "@maia/schema/data/chat",
-	"$schema": "@maia/schema/meta",
-	"title": "@maia/schema/data/chat",
+	"$id": "°Maia/schema/data/chat",
+	"$schema": "°Maia/schema/meta",
+	"title": "°Maia/schema/data/chat",
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {

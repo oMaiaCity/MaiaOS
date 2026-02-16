@@ -1,6 +1,6 @@
 {
-	"$schema": "@maia/schema/view",
-	"$id": "@maia/todos/view/list",
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/todos/view/list",
 	"content": {
 		"class": "list",
 		"$each": {

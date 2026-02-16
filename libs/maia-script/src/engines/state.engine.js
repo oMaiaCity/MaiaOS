@@ -50,6 +50,7 @@ export class StateEngine {
 	async send(machineId, event, payload = {}) {
 		const machine = this.machines.get(machineId)
 		if (!machine) {
+			console.warn('[StateEngine] send: machine not found', { machineId, event })
 			return
 		}
 		// CRITICAL: Payload is already resolved from view - no evaluation needed
@@ -59,10 +60,21 @@ export class StateEngine {
 
 		const currentStateDef = machine.definition.states[machine.currentState]
 		if (!currentStateDef) {
+			console.warn('[StateEngine] send: currentStateDef not found', {
+				machineId,
+				currentState: machine.currentState,
+				event,
+			})
 			return
 		}
 		const transition = currentStateDef.on?.[event]
 		if (!transition) {
+			console.warn('[StateEngine] send: no transition for event', {
+				machineId,
+				currentState: machine.currentState,
+				event,
+				availableEvents: Object.keys(currentStateDef.on || {}),
+			})
 			return
 		}
 		await this._executeTransition(machine, transition, event, payload)
@@ -420,9 +432,11 @@ export class StateEngine {
 						if (resolved?.startsWith('co_z')) {
 							params.schema = resolved
 						} else {
+							console.warn('[StateEngine] mapData schema resolve failed:', params.schema)
 							continue
 						}
-					} catch (_error) {
+					} catch (err) {
+						console.error('[StateEngine] mapData schema resolve error:', params.schema, err?.message)
 						continue
 					}
 				} else {
@@ -464,7 +478,9 @@ export class StateEngine {
 					}
 				} else {
 				}
-			} catch (_error) {}
+			} catch (err) {
+				console.error('[StateEngine] mapData operation failed:', operationConfig?.op, err?.message)
+			}
 		}
 	}
 
@@ -499,13 +515,38 @@ export class StateEngine {
 
 		try {
 			// CRITICAL: Tool payloads from action configs may contain expressions (e.g., { text: "$context.title" })
-			const evaluatedPayload = await this._evaluatePayload(
+			let evaluatedPayload = await this._evaluatePayload(
 				payload,
 				machine.actor.context,
 				machine.eventPayload || {},
 				machine.lastToolResult,
 				machine.actor,
 			)
+			// Resolve schema refs for @db tool (vibe may have human-readable schema from source)
+			if (
+				toolName === '@db' &&
+				evaluatedPayload?.schema &&
+				typeof evaluatedPayload.schema === 'string' &&
+				!evaluatedPayload.schema.startsWith('co_z') &&
+				isSchemaRef(evaluatedPayload.schema) &&
+				this.dbEngine
+			) {
+				try {
+					const resolved = await this.dbEngine.execute({
+						op: 'resolve',
+						humanReadableKey: evaluatedPayload.schema,
+					})
+					if (resolved?.startsWith('co_z')) {
+						evaluatedPayload = { ...evaluatedPayload, schema: resolved }
+					}
+				} catch (resolveErr) {
+					console.error(
+						'[StateEngine] Schema resolve for @db payload failed:',
+						evaluatedPayload.schema,
+						resolveErr?.message,
+					)
+				}
+			}
 			const rawResult = await this.toolEngine.execute(toolName, machine.actor, evaluatedPayload)
 
 			// Tools return OperationResult: { ok: true, data } | { ok: false, errors }
@@ -531,6 +572,13 @@ export class StateEngine {
 			}
 			return rawResult
 		} catch (error) {
+			console.error(
+				'[StateEngine] Tool failed:',
+				toolName,
+				'machine:',
+				machine?.actor?.id,
+				error?.message ?? error,
+			)
 			if (autoTransition && stateDef?.on?.ERROR && machine.actor?.actorEngine) {
 				const errors = error.errors ?? [
 					createErrorEntry(isPermissionError(error) ? 'permission' : 'structural', error.message),

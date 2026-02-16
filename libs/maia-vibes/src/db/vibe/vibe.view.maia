@@ -1,6 +1,6 @@
 {
-	"$schema": "@maia/schema/view",
-	"$id": "@maia/db/view/vibe",
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/db/view/vibe",
 	"content": {
 		"tag": "div",
 		"class": "db-viewer",
