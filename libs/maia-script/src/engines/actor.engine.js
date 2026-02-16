@@ -7,12 +7,7 @@
  */
 
 // Import message helper
-import {
-	createAndPushMessage,
-	resolve,
-	resolveReactive,
-	waitForReactiveResolution,
-} from '@MaiaOS/db'
+import { createAndPushMessage, resolve } from '@MaiaOS/db'
 import { containsExpressions } from '@MaiaOS/schemata/expression-resolver.js'
 import { validateAgainstSchema } from '@MaiaOS/schemata/validation.helper.js'
 
@@ -45,9 +40,7 @@ export class ActorEngine {
 	}
 
 	async updateContextCoValue(actor, updates) {
-		if (!actor.contextCoId || !this.dbEngine) {
-			if (!actor.contextCoId) return
-		}
+		if (!actor.contextCoId || !this.dbEngine) return
 		const contextSchemaCoId =
 			actor.contextSchemaCoId ||
 			(await resolve(
@@ -71,38 +64,44 @@ export class ActorEngine {
 		}
 	}
 
+	async _readStore(coId) {
+		const schemaCoId = await resolve(
+			this.dbEngine.backend,
+			{ fromCoValue: coId },
+			{ returnType: 'coId' },
+		)
+		if (!schemaCoId) return null
+		return this.dbEngine.execute({ op: 'read', schema: schemaCoId, key: coId })
+	}
+
+	_makeStyleRerenderSubscribe(actorId) {
+		return async () => {
+			const actor = this.actors.get(actorId)
+			if (actor && this.styleEngine) {
+				try {
+					actor.shadowRoot.adoptedStyleSheets = await this.styleEngine.getStyleSheets(
+						actor.config,
+						actor.id,
+					)
+					if (actor._renderState === RENDER_STATES.READY) {
+						actor._renderState = RENDER_STATES.UPDATING
+						this._scheduleRerender(actorId)
+					}
+				} catch {}
+			}
+		}
+	}
+
 	async _loadActorConfigs(actorConfig) {
 		if (!actorConfig.view) throw new Error(`[ActorEngine] Actor config must have 'view' property`)
 
 		const actorId = actorConfig.id || 'temp'
 		const configUnsubscribes = []
 
-		// UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
-		const viewSchemaStore = resolveReactive(
-			this.dbEngine.backend,
-			{ fromCoValue: actorConfig.view },
-			{ returnType: 'coId' },
-		)
-		const viewSchemaState = await waitForReactiveResolution(viewSchemaStore, { timeoutMs: 10000 })
-		const viewSchemaCoId = viewSchemaState.schemaCoId
-
-		if (!viewSchemaCoId) {
-			throw new Error(
-				`[ActorEngine] Failed to extract schema co-id from view CoValue ${actorConfig.view}: ${viewSchemaState.error || 'Schema not found'}`,
-			)
+		const viewStore2 = await this._readStore(actorConfig.view)
+		if (!viewStore2) {
+			throw new Error(`[ActorEngine] Failed to load view CoValue ${actorConfig.view}`)
 		}
-
-		// Load view config with resolved schema
-		const _viewStore = await this.dbEngine.execute({
-			op: 'read',
-			schema: null,
-			key: actorConfig.view,
-		})
-		const viewStore2 = await this.dbEngine.execute({
-			op: 'read',
-			schema: viewSchemaCoId,
-			key: actorConfig.view,
-		})
 		const viewDef = viewStore2.value
 
 		// Subscribe for reactivity (rerender on view changes) - must unsubscribe on destroy
@@ -128,31 +127,23 @@ export class ActorEngine {
 		let contextPromise = null
 		if (actorConfig.context) {
 			contextPromise = (async () => {
-				const coId = actorConfig.context
-				// Resolve context reference to actual co-id (handles both co-ids and human-readable refs)
-				let actualContextCoId = coId
-				if (typeof coId === 'string' && !coId.startsWith('co_z')) {
-					const resolved = await this.dbEngine.execute({ op: 'resolve', humanReadableKey: coId })
-					if (resolved?.startsWith('co_z')) {
-						actualContextCoId = resolved
-					} else {
-						throw new Error(`[ActorEngine] Failed to resolve context reference "${coId}"`)
-					}
+				let actualContextCoId = actorConfig.context
+				if (typeof actualContextCoId === 'string' && !actualContextCoId.startsWith('co_z')) {
+					const resolved = await this.dbEngine.execute({
+						op: 'resolve',
+						humanReadableKey: actualContextCoId,
+					})
+					if (resolved?.startsWith('co_z')) actualContextCoId = resolved
+					else
+						throw new Error(`[ActorEngine] Failed to resolve context reference "${actualContextCoId}"`)
 				}
-
-				// Backend read() automatically detects query objects and returns unified store with merged data
+				const contextStore = await this._readStore(actualContextCoId)
+				if (!contextStore) throw new Error(`[ActorEngine] Failed to load context ${actualContextCoId}`)
 				const contextSchemaCoId = await resolve(
 					this.dbEngine.backend,
 					{ fromCoValue: actualContextCoId },
 					{ returnType: 'coId' },
 				)
-				const contextStore = await this.dbEngine.execute({
-					op: 'read',
-					schema: contextSchemaCoId,
-					key: actualContextCoId,
-				})
-
-				// Backend handles query merging automatically - just use store directly
 				return {
 					context: contextStore,
 					contextCoId: actualContextCoId,
@@ -169,36 +160,13 @@ export class ActorEngine {
 		if (actorConfig.style) {
 			stylePromise = (async () => {
 				try {
-					const styleSchemaCoId = await resolve(
-						this.dbEngine.backend,
-						{ fromCoValue: actorConfig.style },
-						{ returnType: 'coId' },
+					const styleStore = await this._readStore(actorConfig.style)
+					if (!styleStore) return null
+					configUnsubscribes.push(
+						styleStore.subscribe(this._makeStyleRerenderSubscribe(actorId), { skipInitial: true }),
 					)
-					const styleStore = await this.dbEngine.execute({
-						op: 'read',
-						schema: styleSchemaCoId,
-						key: actorConfig.style,
-					})
-					const styleUnsub = styleStore.subscribe(
-						async (_updatedStyle) => {
-							const actor = this.actors.get(actorId)
-							if (actor && this.styleEngine) {
-								try {
-									const styleSheets = await this.styleEngine.getStyleSheets(actor.config, actor.id)
-									actor.shadowRoot.adoptedStyleSheets = styleSheets
-									// Only rerender if state is READY (initial render complete)
-									if (actor._renderState === RENDER_STATES.READY) {
-										actor._renderState = RENDER_STATES.UPDATING
-										this._scheduleRerender(actor.id)
-									}
-								} catch (_error) {}
-							}
-						},
-						{ skipInitial: true },
-					)
-					configUnsubscribes.push(styleUnsub)
 					return styleStore
-				} catch (_error) {
+				} catch {
 					return null
 				}
 			})()
@@ -208,56 +176,41 @@ export class ActorEngine {
 		if (actorConfig.brand) {
 			brandPromise = (async () => {
 				try {
-					const brandSchemaCoId = await resolve(
-						this.dbEngine.backend,
-						{ fromCoValue: actorConfig.brand },
-						{ returnType: 'coId' },
+					const brandStore = await this._readStore(actorConfig.brand)
+					if (!brandStore) return null
+					configUnsubscribes.push(
+						brandStore.subscribe(this._makeStyleRerenderSubscribe(actorId), { skipInitial: true }),
 					)
-					const brandStore = await this.dbEngine.execute({
-						op: 'read',
-						schema: brandSchemaCoId,
-						key: actorConfig.brand,
-					})
-					const brandUnsub = brandStore.subscribe(
-						async (_updatedBrand) => {
-							const actor = this.actors.get(actorId)
-							if (actor && this.styleEngine) {
-								try {
-									const styleSheets = await this.styleEngine.getStyleSheets(actor.config, actor.id)
-									actor.shadowRoot.adoptedStyleSheets = styleSheets
-									// Only rerender if state is READY (initial render complete)
-									if (actor._renderState === RENDER_STATES.READY) {
-										actor._renderState = RENDER_STATES.UPDATING
-										this._scheduleRerender(actor.id)
-									}
-								} catch (_error) {}
-							}
-						},
-						{ skipInitial: true },
-					)
-					configUnsubscribes.push(brandUnsub)
 					return brandStore
-				} catch (_error) {
+				} catch {
 					return null
 				}
 			})()
 			loadPromises.push(brandPromise)
 		}
 
-		// Inbox loading
 		let inboxPromise = null
 		if (actorConfig.inbox) {
 			inboxPromise = (async () => {
-				const inboxSchemaCoId = await resolve(
-					this.dbEngine.backend,
-					{ fromCoValue: actorConfig.inbox },
-					{ returnType: 'coId' },
-				)
-				return await this.dbEngine.execute({
-					op: 'read',
-					schema: inboxSchemaCoId,
-					key: actorConfig.inbox,
+				const inboxStore = await this._readStore(actorConfig.inbox)
+				if (!inboxStore) return null
+				let debounceTimeout = null
+				const inboxUnsub = inboxStore.subscribe((updatedCostream) => {
+					if (!this.actors.has(actorId) || !updatedCostream?.items) return
+					if (debounceTimeout) clearTimeout(debounceTimeout)
+					debounceTimeout = setTimeout(() => {
+						debounceTimeout = null
+						this.processMessages(actorId)
+					}, 50)
 				})
+				configUnsubscribes.push(() => {
+					if (debounceTimeout) {
+						clearTimeout(debounceTimeout)
+						debounceTimeout = null
+					}
+					inboxUnsub()
+				})
+				return inboxStore
 			})()
 			loadPromises.push(inboxPromise)
 		}
@@ -287,82 +240,15 @@ export class ActorEngine {
 		return { viewDef, context, contextCoId, contextSchemaCoId, inbox, inboxCoId, configUnsubscribes }
 	}
 
-	/**
-	 * Set up reactive subscriptions for inbox costream
-	 * @param {Object} actor - Actor instance
-	 * @param {Object} actorConfig - The actor configuration
-	 * @returns {Promise<void>}
-	 * @private
-	 */
-	async _setupMessageSubscriptions(actor, actorConfig) {
-		// Use direct read() API - no wrapper needed
-		if (actorConfig.inbox) {
-			try {
-				const inboxSchemaCoId = await resolve(
-					this.dbEngine.backend,
-					{ fromCoValue: actorConfig.inbox },
-					{ returnType: 'coId' },
-				)
-				const store = await this.dbEngine.execute({
-					op: 'read',
-					schema: inboxSchemaCoId,
-					key: actorConfig.inbox,
-				})
-				let debounceTimeout = null
-				const inboxUnsub = store.subscribe((updatedCostream) => {
-					if (!this.actors.has(actor.id) || !updatedCostream?.items) return
-					if (debounceTimeout) clearTimeout(debounceTimeout)
-					debounceTimeout = setTimeout(() => {
-						debounceTimeout = null
-						this.processMessages(actor.id)
-					}, 50)
-				})
-				const wrappedUnsub = () => {
-					if (debounceTimeout) {
-						clearTimeout(debounceTimeout)
-						debounceTimeout = null
-					}
-					inboxUnsub()
-				}
-				if (actor._configUnsubscribes) actor._configUnsubscribes.push(wrappedUnsub)
-			} catch (_error) {}
-		}
-	}
-
-	/**
-	 * Initialize actor state (state machine)
-	 * @param {Object} actor - Actor instance
-	 * @param {Object} actorConfig - The actor configuration
-	 * @returns {Promise<void>}
-	 * @private
-	 */
+	/** @private */
 	async _initializeActorState(actor, actorConfig) {
 		if (this.stateEngine && actorConfig.state && !actor.machine) {
 			try {
-				// UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
-				const stateSchemaStore = resolveReactive(
-					this.dbEngine.backend,
-					{ fromCoValue: actorConfig.state },
-					{ returnType: 'coId' },
-				)
-				const stateSchemaState = await waitForReactiveResolution(stateSchemaStore, { timeoutMs: 10000 })
-				const stateSchemaCoId = stateSchemaState.schemaCoId
-
-				if (!stateSchemaCoId) {
-					throw new Error(
-						`[ActorEngine] Failed to extract schema co-id from state CoValue ${actorConfig.state}: ${stateSchemaState.error || 'Schema not found'}`,
-					)
+				const stateStore = await this._readStore(actorConfig.state)
+				if (!stateStore) {
+					throw new Error(`[ActorEngine] Failed to load state CoValue ${actorConfig.state}`)
 				}
-				const stateStore = await this.dbEngine.execute({
-					op: 'read',
-					schema: stateSchemaCoId,
-					key: actorConfig.state,
-				})
 				const stateDef = stateStore.value
-
-				// Backend's read() operation handles deep resolution automatically (deepResolve: true by default)
-				// State definitions should already be fully resolved - no manual resolution needed
-
 				const actorId = actor.id
 				const stateUnsub = stateStore.subscribe(
 					async (updatedStateDef) => {
@@ -387,8 +273,6 @@ export class ActorEngine {
 		}
 	}
 
-	// Query resolution handled by backend unified store automatically
-
 	/**
 	 * Determine if an actor is a service actor (orchestrator) vs UI actor (presentation)
 	 * Service actors: Have role "agent" OR have minimal view (only renders child actors via $slot)
@@ -402,29 +286,9 @@ export class ActorEngine {
 		if (actorConfig.role === 'agent' || !actorConfig.view) return true
 		if (!viewDef) {
 			try {
-				// UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
-				try {
-					const viewSchemaStore = resolveReactive(
-						this.dbEngine.backend,
-						{ fromCoValue: actorConfig.view },
-						{ returnType: 'coId' },
-					)
-					const viewSchemaState = await waitForReactiveResolution(viewSchemaStore, { timeoutMs: 10000 })
-					const viewSchemaCoId = viewSchemaState.schemaCoId
-
-					if (!viewSchemaCoId) {
-						return false // Silently fail for service actor detection
-					}
-				} catch {
-					return false // Silently fail for service actor detection
-				}
-
-				const viewStore2 = await this.dbEngine.execute({
-					op: 'read',
-					schema: viewSchemaCoId,
-					key: actorConfig.view,
-				})
-				viewDef = viewStore2.value
+				const viewStore = await this._readStore(actorConfig.view)
+				if (!viewStore) return false
+				viewDef = viewStore.value
 			} catch {
 				return false
 			}
@@ -465,26 +329,10 @@ export class ActorEngine {
 			throw new Error(`[ActorEngine] Child actor ID must be co-id: ${childActorCoId}`)
 		}
 		try {
-			// UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
-			const actorSchemaStore = resolveReactive(
-				this.dbEngine.backend,
-				{ fromCoValue: childActorCoId },
-				{ returnType: 'coId' },
-			)
-			const actorSchemaState = await waitForReactiveResolution(actorSchemaStore, { timeoutMs: 10000 })
-			const actorSchemaCoId = actorSchemaState.schemaCoId
-
-			if (!actorSchemaCoId) {
-				throw new Error(
-					`[ActorEngine] Failed to extract schema co-id from child actor CoValue ${childActorCoId}: ${actorSchemaState.error || 'Schema not found'}`,
-				)
+			const store = await this._readStore(childActorCoId)
+			if (!store) {
+				throw new Error(`[ActorEngine] Failed to load child actor CoValue ${childActorCoId}`)
 			}
-
-			const store = await this.dbEngine.execute({
-				op: 'read',
-				schema: actorSchemaCoId,
-				key: childActorCoId,
-			})
 			const childActorConfig = store.value
 			if (childActorConfig.$id !== childActorCoId) childActorConfig.$id = childActorCoId
 			const childContainer = document.createElement('div')
@@ -506,20 +354,10 @@ export class ActorEngine {
 				? await this.reuseActor(actorId, containerElement, vibeKey)
 				: this.actors.get(actorId)
 		}
-		if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
-		}
 		const shadowRoot = containerElement.attachShadow({ mode: 'open' })
 		const styleSheets = await this.styleEngine.getStyleSheets(actorConfig, actorId)
-		const {
-			viewDef,
-			context,
-			contextCoId,
-			contextSchemaCoId,
-			inbox,
-			inboxCoId,
-			tempSubscriptions: _tempSubscriptions,
-			configUnsubscribes,
-		} = await this._loadActorConfigs(actorConfig)
+		const { viewDef, context, contextCoId, contextSchemaCoId, inbox, inboxCoId, configUnsubscribes } =
+			await this._loadActorConfigs(actorConfig)
 		const actorType = (await this._isServiceActor(actorConfig, viewDef)) ? 'service' : 'ui'
 		const actor = {
 			id: actorId,
@@ -541,7 +379,6 @@ export class ActorEngine {
 			_configUnsubscribes: configUnsubscribes || [],
 		}
 
-		await this._setupMessageSubscriptions(actor, actorConfig)
 		this.actors.set(actorId, actor)
 
 		// $stores Architecture: Subscribe to context changes AFTER actor is created
@@ -657,42 +494,14 @@ export class ActorEngine {
 	 */
 	async rerender(actorId) {
 		const actor = this.actors.get(actorId)
-		if (!actor) return // Expected when destroy races with subscription callback - silent no-op
-
-		// State machine: Only rerender if state is UPDATING (data changed) or READY (post-init rerender)
-		// Prevents renders during INITIALIZING or RENDERING states
-		if (actor._renderState !== RENDER_STATES.UPDATING && actor._renderState !== RENDER_STATES.READY) {
-			return // Skip rerender if not in valid state
-		}
-
-		// Transition to RENDERING state to prevent nested renders
-		actor._renderState = RENDER_STATES.RENDERING
-
-		// UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
-		const viewSchemaStore = resolveReactive(
-			this.dbEngine.backend,
-			{ fromCoValue: actor.config.view },
-			{ returnType: 'coId' },
+		if (
+			!actor ||
+			(actor._renderState !== RENDER_STATES.UPDATING && actor._renderState !== RENDER_STATES.READY)
 		)
-		const viewSchemaState = await waitForReactiveResolution(viewSchemaStore, { timeoutMs: 10000 })
-		const viewSchemaCoId = viewSchemaState.schemaCoId
-
-		if (!viewSchemaCoId) {
-			throw new Error(
-				`[ActorEngine] Failed to extract schema co-id from view CoValue ${actor.config.view}: ${viewSchemaState.error || 'Schema not found'}`,
-			)
-		}
-
-		const viewStore2 = await this.dbEngine.execute({
-			op: 'read',
-			schema: viewSchemaCoId,
-			key: actor.config.view,
-		})
-		const viewDef = viewStore2.value
+			return
+		actor._renderState = RENDER_STATES.RENDERING
 		const styleSheets = await this.styleEngine.getStyleSheets(actor.config, actorId)
-		await this.viewEngine.render(viewDef, actor.context, actor.shadowRoot, styleSheets, actorId)
-
-		// Transition back to READY state after render completes
+		await this.viewEngine.render(actor.viewDef, actor.context, actor.shadowRoot, styleSheets, actorId)
 		actor._renderState = RENDER_STATES.READY
 	}
 
@@ -771,8 +580,6 @@ export class ActorEngine {
 	destroyActor(actorId) {
 		const actor = this.actors.get(actorId)
 		if (!actor) return
-		if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
-		}
 		actor.shadowRoot.innerHTML = ''
 		if (this.viewEngine) this.viewEngine.cleanupActor(actorId)
 
@@ -850,16 +657,7 @@ export class ActorEngine {
 		this._vibeActors.delete(vibeKey)
 	}
 
-	// ============================================
-	// MESSAGE PASSING SYSTEM (v0.2)
-	// ============================================
-
-	/**
-	 * Send a message to an actor's inbox
-	 * CRDT handles persistence and sync automatically - no MessageQueue needed
-	 * @param {string} actorId - Target actor ID
-	 * @param {Object} message - Message object { type, payload, from, timestamp }
-	 */
+	/** Send a message to an actor's inbox */
 	async sendMessage(actorId, message) {
 		// CRITICAL: Validate payload is resolved before sending between actors
 		// In distributed systems, only resolved clean JS objects/JSON can be sent
@@ -1052,45 +850,7 @@ export class ActorEngine {
 					// Ensure payload is always an object (never undefined/null)
 					const payload = message.payload || {}
 					const validation = await this._validateMessagePayload(messageTypeSchema, payload, message.type)
-					if (!validation.valid) {
-						const _errorDetails =
-							validation.errors
-								?.map((err) => `  - ${err.instancePath || err.path || 'root'}: ${err.message || err}`)
-								.join('\n') || 'Unknown validation error'
-						const isEmptyValueRejection =
-							message.type === 'CREATE_BUTTON' &&
-							(payload?.value === '' || payload?.value === undefined) &&
-							validation.errors?.every((e) => {
-								const msg = typeof e === 'string' ? e : (e?.message ?? '')
-								const path = e?.instancePath ?? e?.path ?? ''
-								return (
-									(path === '/value' || path.endsWith('/value')) &&
-									(msg.includes('fewer than 1') ||
-										msg.includes('pattern') ||
-										msg.includes('match') ||
-										msg.includes('minLength'))
-								)
-							})
-						if (isEmptyValueRejection) {
-							// Expected when user presses Enter/clicks with empty input; no need to log as error
-							continue
-						}
-						continue // Skip invalid message
-					}
-
-					// Step 4: If validation passes, send to state machine
-					// CRITICAL: REMOVE_MEMBER requires memberId - skip if missing (guards against progressive loading / sync partial data)
-					if (message.type === 'REMOVE_MEMBER') {
-						const memberId = payload?.memberId
-						if (!memberId || typeof memberId !== 'string' || !memberId.startsWith('co_')) {
-							console.warn('[ActorEngine] processMessages: REMOVE_MEMBER skipped - memberId required', {
-								actorId,
-								payload,
-								messageCoId: message._coId,
-							})
-							continue
-						}
-					}
+					if (!validation.valid) continue
 
 					// Pass plain object to avoid reactive proxy issues; state engine expects clean JSON
 					const payloadPlain = {
