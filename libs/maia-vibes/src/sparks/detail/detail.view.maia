@@ -158,7 +158,7 @@
 									"click": {
 										"send": "ADD_AGENT",
 										"payload": {
-											"agentId": "@inputValue"
+											"agentId": "$agentIdInput"
 										}
 									}
 								}
