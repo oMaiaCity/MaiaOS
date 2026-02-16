@@ -1,4 +1,9 @@
-import { createErrorEntry, isPermissionError, isSuccessResult } from '@MaiaOS/operations'
+import {
+	createErrorEntry,
+	createErrorResult,
+	isPermissionError,
+	isSuccessResult,
+} from '@MaiaOS/operations'
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store'
 import { isSchemaRef } from '@MaiaOS/schemata'
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js'
@@ -522,6 +527,27 @@ export class StateEngine {
 				machine.lastToolResult,
 				machine.actor,
 			)
+			// Guard: removeSparkMember requires memberId from event payload ($$memberId)
+			// Skip tool call when missing to avoid operation failure and repeated ERROR transitions
+			if (
+				(toolName === '@sparks' || toolName === '@db') &&
+				evaluatedPayload?.op === 'removeSparkMember' &&
+				!evaluatedPayload?.memberId
+			) {
+				console.warn(
+					'[StateEngine] removeSparkMember skipped: memberId required but missing from event payload',
+					{ machineId: machine.id, eventPayload: machine.eventPayload },
+				)
+				if (autoTransition && stateDef?.on?.ERROR && machine.actor?.actorEngine) {
+					await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'ERROR', {
+						errors: [createErrorEntry('schema', '[RemoveSparkMemberOperation] memberId required')],
+					})
+				}
+				return createErrorResult([
+					createErrorEntry('schema', '[RemoveSparkMemberOperation] memberId required'),
+				])
+			}
+
 			// Resolve schema refs for @db tool (vibe may have human-readable schema from source)
 			if (
 				toolName === '@db' &&
