@@ -45,21 +45,22 @@ async function ensureOsCoMap(backend, spark) {
 
 			// Check if read succeeded (store has data, not error)
 			if (!osStore || osStore.value?.error) {
-				if (process.env.DEBUG) console.error('osStore missing or error')
+				if (typeof process !== 'undefined' && process.env?.DEBUG)
+					console.error('osStore missing or error')
 				return null
 			}
 
 			// Get the raw CoValueCore and content after read() has loaded it
 			const osCore = backend.getCoValue(osId)
 			if (!osCore || !osCore.isAvailable()) {
-				if (process.env.DEBUG) console.error('osCore unavailable')
+				if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('osCore unavailable')
 				return null
 			}
 
 			// Get the content - should work now since read() ensured it's loaded
 			const osContent = osCore.getCurrentContent?.()
 			if (!osContent) {
-				if (process.env.DEBUG) console.error('osContent missing')
+				if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('osContent missing')
 				return null
 			}
 
@@ -73,14 +74,14 @@ async function ensureOsCoMap(backend, spark) {
 			const isCoMap = contentType === 'comap' && typeof osContent.get === 'function'
 
 			if (!isCoMap) {
-				if (process.env.DEBUG) console.error('osContent not CoMap')
+				if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('osContent not CoMap')
 				return null
 			}
 
 			// Successfully got CoMap content - return it
 			return osContent
 		} catch (_e) {
-			if (process.env.DEBUG) console.error(_e)
+			if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_e)
 			return null
 		}
 	}
@@ -119,19 +120,22 @@ export async function ensureIndexesCoMap(backend) {
 			})
 
 			if (!indexesStore || indexesStore.value?.error) {
-				if (process.env.DEBUG) console.error('indexesStore missing or error')
+				if (typeof process !== 'undefined' && process.env?.DEBUG)
+					console.error('indexesStore missing or error')
 				return null
 			}
 
 			const indexesCore = backend.getCoValue(indexesId)
 			if (!indexesCore || !indexesCore.isAvailable()) {
-				if (process.env.DEBUG) console.error('indexesCore unavailable')
+				if (typeof process !== 'undefined' && process.env?.DEBUG)
+					console.error('indexesCore unavailable')
 				return null
 			}
 
 			const indexesContent = indexesCore.getCurrentContent?.()
 			if (!indexesContent) {
-				if (process.env.DEBUG) console.error('indexesContent missing')
+				if (typeof process !== 'undefined' && process.env?.DEBUG)
+					console.error('indexesContent missing')
 				return null
 			}
 
@@ -142,13 +146,14 @@ export async function ensureIndexesCoMap(backend) {
 
 			const isCoMap = contentType === 'comap' && typeof indexesContent.get === 'function'
 			if (!isCoMap) {
-				if (process.env.DEBUG) console.error('indexesContent not CoMap')
+				if (typeof process !== 'undefined' && process.env?.DEBUG)
+					console.error('indexesContent not CoMap')
 				return null
 			}
 
 			return indexesContent
 		} catch (_e) {
-			if (process.env.DEBUG) console.error(_e)
+			if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_e)
 			return null
 		}
 	}
@@ -202,7 +207,7 @@ export async function ensureIndexesCoMap(backend) {
 			}
 		}
 	} catch (_e) {
-		if (process.env.DEBUG) console.error(_e)
+		if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_e)
 	}
 
 	// Fallback: return null if not available yet (caller should handle this gracefully)
@@ -243,21 +248,21 @@ async function ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSc
 	}
 
 	if (!metaSchemaCoId || !metaSchemaCoId.startsWith('co_z')) {
-		if (process.env.DEBUG) console.error('metaSchemaCoId invalid')
+		if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('metaSchemaCoId invalid')
 		return null
 	}
 
 	// Load schema definition to get its title
 	const schemaDef = await resolve(backend, schemaCoId, { returnType: 'schema' })
 	if (!schemaDef) {
-		if (process.env.DEBUG) console.error('schemaDef missing')
+		if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('schemaDef missing')
 		return null
 	}
 
 	// Extract schema title (e.g., "@domain/schema/data/todos")
 	const schemaTitle = schemaDef.title || schemaDef.$id
 	if (!schemaTitle || typeof schemaTitle !== 'string' || !SCHEMA_REF_PATTERN.test(schemaTitle)) {
-		if (process.env.DEBUG) console.error('schemaTitle invalid')
+		if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('schemaTitle invalid')
 		return null
 	}
 
@@ -265,7 +270,8 @@ async function ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSc
 	// Preserves the full path structure: °Maia/schema/path → °Maia/schema/index/path (or @domain/...)
 	const match = schemaTitle.match(SCHEMA_REF_MATCH)
 	if (!match) {
-		if (process.env.DEBUG) console.error('schemaTitle match failed')
+		if (typeof process !== 'undefined' && process.env?.DEBUG)
+			console.error('schemaTitle match failed')
 		return null
 	}
 	const [, prefix, path] = match
@@ -303,7 +309,7 @@ async function ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSc
 
 		return indexColistSchemaCoId
 	} catch (_error) {
-		if (process.env.DEBUG) console.error(_error)
+		if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_error)
 		return null
 	}
 }
@@ -329,7 +335,7 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
 	// Skip creating index colists if indexing is not true (defaults to false)
 	const schemaDef = await resolve(backend, schemaCoId, { returnType: 'schema' })
 	if (!schemaDef) {
-		if (process.env.DEBUG) console.error('schemaDef missing')
+		if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('schemaDef missing')
 		return null
 	}
 
@@ -372,7 +378,7 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
 				}
 			}
 		} catch (_e) {
-			if (process.env.DEBUG) console.error(_e)
+			if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_e)
 		}
 
 		// If indexColistId exists but couldn't be loaded, DON'T create a new one
@@ -388,7 +394,7 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
 		metaSchemaCoId,
 	)
 	if (!indexSchemaCoId) {
-		if (process.env.DEBUG) console.error('indexSchemaCoId missing')
+		if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('indexSchemaCoId missing')
 		return null
 	}
 
@@ -430,7 +436,7 @@ export async function ensureUnknownColist(backend) {
 	const osCoMap = await ensureOsCoMap(backend)
 
 	if (!osCoMap) {
-		if (process.env.DEBUG) console.error('osCoMap missing')
+		if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('osCoMap missing')
 		return null
 	}
 
@@ -691,7 +697,7 @@ async function ensureSchemataRegistry(backend) {
 				}
 			}
 		} catch (_e) {
-			if (process.env.DEBUG) console.error(_e)
+			if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_e)
 		}
 
 		// If schematasId exists but couldn't be loaded, DON'T create a new one

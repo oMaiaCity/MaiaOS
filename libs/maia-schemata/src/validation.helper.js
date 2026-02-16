@@ -153,7 +153,12 @@ export async function validateAgainstSchema(schema, data, context = '', throwOnE
 			}
 		}
 
-		// Schema compilation error - throw it instead of masking it
+		// Validation errors (from handleValidationResult) - rethrow as-is
+		if (error.message?.includes('Validation failed')) {
+			throw error
+		}
+
+		// Schema compilation error
 		throw new Error(`[Validation] Failed to compile schema for ${context}: ${error.message}`)
 	}
 }
@@ -274,6 +279,21 @@ export async function loadSchemaAndValidate(backend, schemaRef, data, context, o
 		const schemaDef = await resolve(backend, schemaRef, { returnType: 'schema' })
 		if (!schemaDef) {
 			throw new Error(`[${context}] Schema not found in database: ${schemaRef}`)
+		}
+
+		// Fill required fields when undefined only if schema allows empty (avoids minLength/pattern failures)
+		// Skip fill for string fields with minLength > 0 - let validation fail with clear "required" message
+		const required = schemaDef?.required
+		if (Array.isArray(required) && data && typeof data === 'object') {
+			for (const key of required) {
+				if (data[key] === undefined) {
+					const prop = schemaDef?.properties?.[key]
+					const isString = prop?.type === 'string'
+					const minLength = prop?.minLength ?? 0
+					if (isString && minLength > 0) continue // Don't fill - would fail minLength/pattern
+					data[key] = isString ? '' : null
+				}
+			}
 		}
 
 		// Validate data against runtime schema

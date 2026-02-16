@@ -70,7 +70,7 @@ export async function readOperation(backend, params) {
 }
 
 export async function createOperation(backend, dbEngine, params) {
-	const { schema, data, spark } = params
+	const { schema, data, spark, idempotencyKey } = params
 	requireParam(schema, 'schema', 'CreateOperation')
 	requireParam(data, 'data', 'CreateOperation')
 	requireDbEngine(dbEngine, 'CreateOperation', 'runtime schema validation')
@@ -82,9 +82,32 @@ export async function createOperation(backend, dbEngine, params) {
 		console.error('[CreateOperation] Schema resolve failed:', schema, registriesHint)
 		throw new Error(`[CreateOperation] Could not resolve schema: ${schema}. ${registriesHint}`)
 	}
+
+	// Idempotency: lightweight findFirst (no store) - keeps read path pure progressive $stores
+	if (idempotencyKey && typeof idempotencyKey === 'string') {
+		const existing = await backend.findFirst(
+			schemaCoId,
+			{ sourceMessageId: idempotencyKey },
+			{ timeoutMs: 2000 },
+		)
+		if (existing?.id) return createSuccessResult(existing, { op: 'create' })
+	}
+
 	// Schema validation happens at gate: createCoMap/createCoList (backend)
+	// STRICT: Strip to schema-defined properties only - prevents "additional properties" validation errors
+	// when payload accidentally includes idempotencyKey, value, or other non-schema keys
+	const schemaDef = await resolve(backend, schemaCoId, { returnType: 'schema' })
+	const allowedKeys =
+		schemaDef?.properties && typeof schemaDef.properties === 'object'
+			? new Set(Object.keys(schemaDef.properties))
+			: null
+	const rawData = idempotencyKey ? { ...data, sourceMessageId: idempotencyKey } : data
+	const dataToCreate =
+		allowedKeys && rawData && typeof rawData === 'object' && !Array.isArray(rawData)
+			? Object.fromEntries(Object.entries(rawData).filter(([k]) => allowedKeys.has(k)))
+			: rawData
 	const options = spark != null ? { spark } : {}
-	const result = await backend.create(schemaCoId, data, options)
+	const result = await backend.create(schemaCoId, dataToCreate, options)
 	return createSuccessResult(result, { op: 'create' })
 }
 

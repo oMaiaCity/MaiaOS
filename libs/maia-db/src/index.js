@@ -44,6 +44,7 @@ export {
 	waitForReactiveResolution,
 } from './cojson/crud/reactive-resolver.js'
 // Read Operations (store-based loading with proper $store architecture)
+export { findFirst } from './cojson/crud/read.js'
 export { waitForStoreReady } from './cojson/crud/read-operations.js'
 // Re-export services for external use
 // STRICT: No createAccount() - only createAccountWithSecret() and loadAccount()

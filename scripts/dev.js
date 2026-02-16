@@ -182,6 +182,28 @@ function checkAllReady() {
 	}
 }
 
+/** Poll service /health until ready (orchestration at dev boundary — no client polling) */
+async function waitForServiceReady(healthUrl, timeoutMs = 30000, pollMs = 300) {
+	const logger = createLogger('dev')
+	const deadline = Date.now() + timeoutMs
+	while (Date.now() < deadline) {
+		try {
+			const res = await fetch(healthUrl)
+			if (res.ok) {
+				const data = await res.json()
+				if (data?.ready) return true
+			}
+		} catch (_e) {
+			// Server not yet listening
+		}
+		await new Promise((r) => setTimeout(r, pollMs))
+	}
+	logger.warn(
+		`Sync server not ready after ${timeoutMs}ms – maia will start anyway (WebSocket retries)`,
+	)
+	return false
+}
+
 async function startMaia() {
 	const logger = createLogger('maia')
 
@@ -465,12 +487,15 @@ async function main() {
 	// Generate favicons first (runs once, then exits)
 	generateFavicons()
 
-	// Wait a bit for favicon generation to start, then start services
-	// maia (4200) + moai (4201) in parallel - sync peer retries until moai ready
+	// Orchestrated startup: moai first, wait for sync ready, then maia
+	// Ensures WebSocket connects on first attempt (no "bad response" on sign-in)
 	setTimeout(async () => {
 		startAssetSync()
 		startDocsWatcher()
 		await startMoai()
+		const logger = createLogger('dev')
+		logger.status('Waiting for sync server...')
+		await waitForServiceReady('http://localhost:4201/health')
 		await startMaia()
 	}, 1000)
 

@@ -75,123 +75,102 @@ export async function processInbox(backend, actorId, inboxCoId) {
 
 	// Read inbox with session structure
 	const inboxData = backend.readInboxWithSessions(inboxCoId)
-	if (!inboxData || !inboxData.sessions) {
+	if (!inboxData?.sessions) {
+		return { messages: [] }
+	}
+	const ourMessages = inboxData.sessions[currentSessionID]
+	if (!Array.isArray(ourMessages)) {
 		return { messages: [] }
 	}
 
-	// Collect unprocessed messages from all sessions
 	const unprocessedMessages = []
+	for (const message of ourMessages) {
+		// Skip system messages (INIT, etc.) - they're just for debugging/display
+		const isSystemMessage = message.type === 'INIT' || message.from === 'system'
+		if (isSystemMessage) {
+			continue
+		}
 
-	// Process each session
-	for (const [sessionID, messages] of Object.entries(inboxData.sessions)) {
-		for (const message of messages) {
-			// Skip system messages (INIT, etc.) - they're just for debugging/display
-			const isSystemMessage = message.type === 'INIT' || message.from === 'system'
-			if (isSystemMessage) {
+		const madeAt = message._madeAt || 0
+
+		// Message must be a CoMap CoValue reference (co-id)
+		// REJECT legacy plain object messages - they should not exist anymore
+		const messageCoId = message._coId
+
+		if (!messageCoId) {
+			continue // Skip legacy messages - they're invalid
+		}
+
+		// Message is a CoMap CoValue reference - read using universal read() API
+		try {
+			// Use universal read() API to handle progressive loading
+			const messageStore = await universalRead(backend, messageCoId, messageSchemaCoId)
+
+			// Wait for store to be ready (handles progressive loading)
+			try {
+				await waitForStoreReady(messageStore, messageCoId, 2000)
+			} catch (_waitError) {
 				continue
 			}
 
-			const madeAt = message._madeAt || 0
-
-			// Message must be a CoMap CoValue reference (co-id)
-			// REJECT legacy plain object messages - they should not exist anymore
-			const messageCoId = message._coId
-
-			if (!messageCoId) {
-				continue // Skip legacy messages - they're invalid
+			// Extract message data from store.value
+			const messageData = messageStore.value
+			if (!messageData || messageData.error) {
+				continue
 			}
 
-			// Message is a CoMap CoValue reference - read using universal read() API
-			try {
-				// Use universal read() API to handle progressive loading
-				const messageStore = await universalRead(backend, messageCoId, messageSchemaCoId)
+			// Read processed flag from message data
+			const isProcessed = messageData.processed === true
 
-				// Wait for store to be ready (handles progressive loading)
-				try {
-					await waitForStoreReady(messageStore, messageCoId, 2000)
-				} catch (_waitError) {
-					continue
-				}
+			if (!isProcessed) {
+				// Defer marking until ActorEngine has processed the message.
+				// Marking here caused race: SEND_MESSAGE could arrive during saving_response,
+				// get marked processed, state machine would skip (no transition), message lost forever.
+				// Now ActorEngine marks only when state machine handles the message.
 
-				// Extract message data from store.value
-				const messageData = messageStore.value
-				if (!messageData || messageData.error) {
-					continue
-				}
-
-				// Read processed flag from message data
-				const isProcessed = messageData.processed === true
-
-				if (!isProcessed) {
-					// CRITICAL: Mark as processed IMMEDIATELY to prevent race conditions
-					// This ensures that if processInbox is called again before ActorEngine processes,
-					// the message will already be marked as processed
-					try {
-						const updateResult = await dbEngine.execute({
-							op: 'update',
-							schema: messageSchemaCoId,
-							id: messageCoId,
-							data: { processed: true },
-						})
-						if (!updateResult.ok) {
-							throw new Error(updateResult.errors?.map((e) => e.message).join('; ') || 'Update failed')
-						}
-						// Verify update succeeded by reading using universal read() API
-						try {
-							const verifyStore = await universalRead(backend, messageCoId, messageSchemaCoId)
-							await waitForStoreReady(verifyStore, messageCoId, 1000)
-							const verifyData = verifyStore.value
-							if (verifyData && verifyData.processed !== true) {
-							}
-						} catch (_verifyError) {}
-					} catch (_updateError) {
-						// Continue processing - don't skip the message if update fails
-					}
-
-					// Message not processed - add to unprocessed list
-					// Extract message data from store.value (universal read API already extracts all fields)
+				// Message not processed - add to unprocessed list
+				// Extract message data from store.value (universal read API already extracts all fields)
+				// Skip internal fields and processed flag
+				const extractedMessageData = {}
+				const keys = Object.keys(messageData)
+				for (const key of keys) {
 					// Skip internal fields and processed flag
-					const extractedMessageData = {}
-					const keys = Object.keys(messageData)
-					for (const key of keys) {
-						// Skip internal fields and processed flag
-						if (
-							key !== 'processed' &&
-							!key.startsWith('_') &&
-							key !== 'id' &&
-							key !== '$schema' &&
-							key !== 'hasProperties' &&
-							key !== 'properties'
-						) {
-							extractedMessageData[key] = messageData[key]
-						}
-					}
-
-					// Ensure required fields exist
-					if (!extractedMessageData.type) {
-						continue
-					}
-
-					// REMOVE_MEMBER requires payload.memberId - skip if missing (progressive loading may deliver partial data)
 					if (
-						extractedMessageData.type === 'REMOVE_MEMBER' &&
-						(!extractedMessageData.payload?.memberId ||
-							typeof extractedMessageData.payload.memberId !== 'string' ||
-							!extractedMessageData.payload.memberId.startsWith('co_'))
+						key !== 'processed' &&
+						!key.startsWith('_') &&
+						key !== 'id' &&
+						key !== '$schema' &&
+						key !== 'hasProperties' &&
+						key !== 'properties'
 					) {
-						continue
+						extractedMessageData[key] = messageData[key]
 					}
-
-					unprocessedMessages.push({
-						...extractedMessageData,
-						_coId: messageCoId, // Keep co-id for reference
-						_sessionID: sessionID,
-						_madeAt: madeAt,
-					})
 				}
-			} catch (_error) {
-				// Continue processing other messages
+
+				// Ensure required fields exist
+				if (!extractedMessageData.type) {
+					continue
+				}
+
+				// REMOVE_MEMBER requires payload.memberId - skip if missing (progressive loading may deliver partial data)
+				if (
+					extractedMessageData.type === 'REMOVE_MEMBER' &&
+					(!extractedMessageData.payload?.memberId ||
+						typeof extractedMessageData.payload.memberId !== 'string' ||
+						!extractedMessageData.payload.memberId.startsWith('co_'))
+				) {
+					continue
+				}
+
+				unprocessedMessages.push({
+					...extractedMessageData,
+					_coId: messageCoId,
+					_sessionID: currentSessionID,
+					_madeAt: madeAt,
+				})
 			}
+		} catch (_error) {
+			// Continue processing other messages
 		}
 	}
 
@@ -200,5 +179,6 @@ export async function processInbox(backend, actorId, inboxCoId) {
 
 	return {
 		messages: unprocessedMessages,
+		messageSchemaCoId,
 	}
 }

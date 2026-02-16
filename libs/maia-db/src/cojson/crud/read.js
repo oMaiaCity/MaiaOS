@@ -60,7 +60,7 @@ export async function read(
 ) {
 	const {
 		deepResolve = true,
-		maxDepth = 15, // TODO: temporarily scaled up from 10 for °Maia spark detail deep resolution
+		maxDepth = 15,
 		timeoutMs = 5000,
 		resolveReferences = null,
 		map = null,
@@ -77,7 +77,7 @@ export async function read(
 
 	// Collection read (by schema)
 	if (schema) {
-		// Sparks: read from account.registries.sparks (includes °Maia system spark). Index only has user-created sparks.
+		// Sparks: read from account.registries.sparks (index only has user-created sparks)
 		const sparkSchemaCoId = await resolveSchema(backend, '°Maia/schema/data/spark', {
 			returnType: 'coId',
 		})
@@ -102,6 +102,54 @@ export async function read(
  * @returns {Promise<ReactiveStore>} Unified ReactiveStore with merged data
  * @private
  */
+/** Detect findOne pattern: filter with single id field pointing to co-id */
+function isFindOneFilter(filter) {
+	return (
+		filter &&
+		typeof filter === 'object' &&
+		Object.keys(filter).length === 1 &&
+		filter.id &&
+		typeof filter.id === 'string' &&
+		filter.id.startsWith('co_z')
+	)
+}
+
+/** Execute read for schema+filter and wire query store. Shared by reactive and co-id branches. */
+async function wireQueryStoreForSchema(
+	backend,
+	readFn,
+	key,
+	resolvedSchemaCoId,
+	evaluatedFilter,
+	value,
+	queryStores,
+	queryDefinitions,
+	queryIsFindOne,
+	enqueueUpdate,
+	options,
+	timeoutMs,
+) {
+	const isFindOne = isFindOneFilter(evaluatedFilter)
+	const singleCoId = isFindOne ? evaluatedFilter.id : null
+	const queryOptions = { ...options, timeoutMs, ...(value.options || {}) }
+	const queryStore =
+		isFindOne && singleCoId
+			? await readFn(backend, singleCoId, resolvedSchemaCoId, null, null, queryOptions)
+			: await readFn(backend, null, resolvedSchemaCoId, evaluatedFilter, null, queryOptions)
+
+	queryIsFindOne.set(key, isFindOne)
+	queryDefinitions.set(key, {
+		schema: value.schema,
+		...(value.options ? { options: value.options } : {}),
+		filter: evaluatedFilter,
+	})
+
+	const unsub = queryStore.subscribe(() => enqueueUpdate())
+	queryStore._queryUnsubscribe = unsub
+	queryStores.set(key, queryStore)
+	enqueueUpdate()
+}
+
 /**
  * Evaluate filter expressions using context values
  * @param {Object|null} filter - Filter object that may contain expressions (e.g., { "id": "$sparkId" })
@@ -143,7 +191,7 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
 		_updateQueuePending = true
 
 		// Schedule batch processing if not already scheduled
-		// CRITICAL: Only one microtask per event loop tick, even if multiple stores update
+		// Batch updates: one microtask per tick
 		if (!queueTimer) {
 			queueTimer = queueMicrotask(() => {
 				queueTimer = null
@@ -167,8 +215,7 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
 				}
 
 				// Merge query store values (resolved arrays or single objects at root level, same key as query name)
-				// CRITICAL: Always merge query store values, even if they're empty arrays or null
-				// This ensures progressive loading works - empty arrays become populated arrays reactively
+				// Always merge query values (even empty) so progressive loading works
 				for (const [key, queryStore] of queryStores.entries()) {
 					if (queryStore && typeof queryStore.subscribe === 'function' && 'value' in queryStore) {
 						// Remove the query object from mergedValue (if present) and replace with resolved value
@@ -189,15 +236,14 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
 							}
 						} else {
 							// Collection query: return array
-							// CRITICAL: Always set query store value, even if it's undefined/null/empty array
-							// This ensures reactivity works - when query store updates from [] to [items], unified store updates
+							// Set even empty arrays so reactivity works
 							mergedValue[key] = storeValue
 						}
 					}
 				}
 
 				// Only update if value actually changed (deep comparison)
-				// CRITICAL: JSON.stringify comparison detects array content changes ([] vs [item1, item2])
+				// Deep change detection via JSON.stringify
 				const currentValueStr = JSON.stringify(mergedValue)
 				const lastValueStr = lastUnifiedValue ? JSON.stringify(lastUnifiedValue) : null
 
@@ -247,21 +293,7 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
 				// Check if we already have this query store
 				const existingStore = queryStores.get(key)
 
-				// Evaluate filter expressions using current context value
-				// This enables dynamic filters like { "id": "$sparkId" }
 				const evaluatedFilter = await evaluateFilter(value.filter || null, contextValue, evaluator)
-
-				// Detect "findOne" pattern: filter with single "id" field pointing to a co-id
-				// When filtering by a single ID, we should return a single object instead of an array
-				const isFindOneQuery =
-					evaluatedFilter &&
-					typeof evaluatedFilter === 'object' &&
-					Object.keys(evaluatedFilter).length === 1 &&
-					evaluatedFilter.id &&
-					typeof evaluatedFilter.id === 'string' &&
-					evaluatedFilter.id.startsWith('co_z')
-
-				const singleCoId = isFindOneQuery ? evaluatedFilter.id : null
 
 				// Get stored query definition to compare filters
 				const storedQueryDef = queryDefinitions.get(key)
@@ -296,19 +328,12 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
 								if (schemaState.loading) {
 									// Still loading - create empty query store to show loading state
 									if (!queryStores.has(key)) {
-										// Re-evaluate filter to check if it's a findOne query
 										const currentEvaluatedFilter = await evaluateFilter(
 											value.filter || null,
 											contextValue,
 											evaluator,
 										)
-										const isFindOne =
-											currentEvaluatedFilter &&
-											typeof currentEvaluatedFilter === 'object' &&
-											Object.keys(currentEvaluatedFilter).length === 1 &&
-											currentEvaluatedFilter.id &&
-											typeof currentEvaluatedFilter.id === 'string' &&
-											currentEvaluatedFilter.id.startsWith('co_z')
+										const isFindOne = isFindOneFilter(currentEvaluatedFilter)
 
 										// Use null for findOne queries, [] for collection queries
 										const loadingStore = new ReactiveStore(isFindOne ? null : [])
@@ -336,29 +361,11 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
 								const resolvedSchemaCoId = schemaState.schemaCoId
 
 								try {
-									const queryOptions = {
-										...options,
-										timeoutMs,
-										...(value.options || {}),
-									}
-
-									// Re-evaluate filter in case context changed during schema resolution
 									const currentEvaluatedFilter = await evaluateFilter(
 										value.filter || null,
 										contextValue,
 										evaluator,
 									)
-
-									// Detect "findOne" pattern: filter with single "id" field pointing to a co-id
-									const isFindOne =
-										currentEvaluatedFilter &&
-										typeof currentEvaluatedFilter === 'object' &&
-										Object.keys(currentEvaluatedFilter).length === 1 &&
-										currentEvaluatedFilter.id &&
-										typeof currentEvaluatedFilter.id === 'string' &&
-										currentEvaluatedFilter.id.startsWith('co_z')
-
-									const singleCoId = isFindOne ? currentEvaluatedFilter.id : null
 
 									// Check if filter changed since we stored it (or if query store doesn't exist)
 									const storedQueryDef = queryDefinitions.get(key)
@@ -366,46 +373,25 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
 									const filterChanged =
 										JSON.stringify(currentEvaluatedFilter) !== JSON.stringify(storedFilter)
 
-									// Only recreate query store if filter changed or store doesn't exist
 									if (filterChanged || !queryStores.has(key)) {
-										// Unsubscribe from existing store if it exists
 										const existingQueryStore = queryStores.get(key)
 										if (existingQueryStore?._queryUnsubscribe) {
 											existingQueryStore._queryUnsubscribe()
 										}
-
-										// Use findOne pattern: read single CoValue directly instead of collection query
-										const queryStore =
-											isFindOne && singleCoId
-												? await read(backend, singleCoId, resolvedSchemaCoId, null, null, queryOptions)
-												: await read(
-														backend,
-														null,
-														resolvedSchemaCoId,
-														currentEvaluatedFilter,
-														null,
-														queryOptions,
-													)
-
-										// Store whether this is a findOne query
-										queryIsFindOne.set(key, isFindOne)
-
-										// Store query definition with evaluated filter
-										queryDefinitions.set(key, {
-											schema: value.schema,
-											...(value.options ? { options: value.options } : {}),
-											filter: currentEvaluatedFilter,
-										})
-
-										// Subscribe to query store updates
-										const queryUnsubscribe = queryStore.subscribe(() => {
-											enqueueUpdate()
-										})
-										queryStore._queryUnsubscribe = queryUnsubscribe
-										queryStores.set(key, queryStore)
-
-										// Initial update now that query is ready
-										enqueueUpdate()
+										await wireQueryStoreForSchema(
+											backend,
+											read,
+											key,
+											resolvedSchemaCoId,
+											currentEvaluatedFilter,
+											value,
+											queryStores,
+											queryDefinitions,
+											queryIsFindOne,
+											enqueueUpdate,
+											options,
+											timeoutMs,
+										)
 									}
 
 									schemaUnsubscribe()
@@ -423,42 +409,25 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
 							}
 						}
 					} else if (schemaCoId && typeof schemaCoId === 'string' && schemaCoId.startsWith('co_z')) {
-						// Schema is already a co-id - check if filter changed or query store needs to be recreated
 						if (filterChanged || !existingStore) {
-							// Filter changed or query doesn't exist - recreate query store with new filter
 							if (existingStore?._queryUnsubscribe) {
 								existingStore._queryUnsubscribe()
 							}
-
-							const queryOptions = {
-								...options,
+							await wireQueryStoreForSchema(
+								backend,
+								read,
+								key,
+								schemaCoId,
+								evaluatedFilter,
+								value,
+								queryStores,
+								queryDefinitions,
+								queryIsFindOne,
+								enqueueUpdate,
+								options,
 								timeoutMs,
-								...(value.options || {}),
-							}
-
-							// Use findOne pattern: read single CoValue directly instead of collection query
-							const queryStore =
-								isFindOneQuery && singleCoId
-									? await read(backend, singleCoId, schemaCoId, null, null, queryOptions)
-									: await read(backend, null, schemaCoId, evaluatedFilter, null, queryOptions)
-
-							// Store whether this is a findOne query
-							queryIsFindOne.set(key, isFindOneQuery)
-
-							// Store query definition with evaluated filter
-							queryDefinitions.set(key, {
-								schema: value.schema,
-								...(value.options ? { options: value.options } : {}),
-								filter: evaluatedFilter,
-							})
-
-							const unsubscribe = queryStore.subscribe(() => {
-								enqueueUpdate()
-							})
-							queryStore._queryUnsubscribe = unsubscribe
-							queryStores.set(key, queryStore)
+							)
 						}
-						// If filter didn't change and store exists, keep using existing store
 					}
 				} catch (_error) {
 					if (process.env.DEBUG) console.error(_error)
@@ -568,7 +537,7 @@ function getMapDependencyCoIds(rawData, mapConfig) {
 async function processCoValueData(backend, coValueCore, schemaHint, options, visited = new Set()) {
 	const {
 		deepResolve = true,
-		maxDepth = 15, // TODO: temporarily scaled up from 10 for °Maia spark detail deep resolution
+		maxDepth = 15,
 		timeoutMs = 5000,
 		resolveReferences = null,
 		map = null,
@@ -629,13 +598,13 @@ async function processCoValueData(backend, coValueCore, schemaHint, options, vis
 async function readSingleCoValue(backend, coId, schemaHint = null, options = {}) {
 	const {
 		deepResolve = true,
-		maxDepth = 15, // TODO: temporarily scaled up from 10 for °Maia spark detail deep resolution
+		maxDepth = 15,
 		timeoutMs = 5000,
 		resolveReferences = null,
 		map = null,
 	} = options
 
-	// CRITICAL OPTIMIZATION: Check cache for resolved+mapped data before processing
+	// Check cache for resolved data before processing
 	const cache = backend.subscriptionCache
 	const cacheOptions = { deepResolve, resolveReferences, map, maxDepth, timeoutMs }
 	const cachedData = cache.getResolvedData(coId, cacheOptions)
@@ -851,14 +820,14 @@ async function readSingleCoValue(backend, coId, schemaHint = null, options = {})
 }
 
 /**
- * Read sparks from account.registries.sparks CoMap (includes °Maia system spark).
+ * Read sparks from account.registries.sparks CoMap.
  * Used when schema is spark schema - index colist only has user-created sparks.
  * @param {Object} backend - Backend instance
  * @param {Object} options - Read options
  * @returns {Promise<ReactiveStore>} ReactiveStore with array of spark items {id, name, ...}
  */
 async function readSparksFromAccount(backend, options = {}) {
-	const { deepResolve = true, maxDepth = 15, timeoutMs = 5000 } = options // TODO: maxDepth temporarily 15 for °Maia spark detail
+	const { deepResolve = true, maxDepth = 15, timeoutMs = 5000 } = options
 	const store = backend.subscriptionCache.getOrCreateStore(
 		'sparks:account',
 		() => new ReactiveStore([]),
@@ -919,6 +888,56 @@ async function readSparksFromAccount(backend, options = {}) {
 }
 
 /**
+ * Lightweight existence check - first matching item by filter.
+ * No store, no subscriptions. Used for gate checks (e.g. idempotency).
+ * Keeps read/display path pure progressive $stores.
+ *
+ * @param {Object} backend - Backend instance
+ * @param {string} schema - Schema co-id (co_z...)
+ * @param {Object} filter - Filter criteria (e.g. { sourceMessageId: 'xyz' })
+ * @param {Object} [options] - Options
+ * @param {number} [options.timeoutMs=2000] - Timeout for loading colist/items
+ * @returns {Promise<Object|null>} First matching item with id, or null
+ */
+export async function findFirst(backend, schema, filter, options = {}) {
+	const { timeoutMs = 2000 } = options
+	if (!filter || typeof filter !== 'object') return null
+
+	const coListId = await getCoListId(backend, schema)
+	if (!coListId) return null
+
+	const coListCore = backend.getCoValue(coListId)
+	if (!coListCore) return null
+
+	await ensureCoValueLoaded(backend, coListId, { waitForAvailable: true, timeoutMs })
+	if (!backend.isAvailable(coListCore)) return null
+
+	const content = backend.getCurrentContent(coListCore)
+	if (!content?.toJSON) return null
+
+	const itemIds = content.toJSON()
+	const seenIds = new Set()
+
+	for (const itemId of itemIds) {
+		if (typeof itemId !== 'string' || !itemId.startsWith('co_') || seenIds.has(itemId)) continue
+		seenIds.add(itemId)
+
+		await ensureCoValueLoaded(backend, itemId, { waitForAvailable: true, timeoutMs })
+		const itemCore = backend.getCoValue(itemId)
+		if (!itemCore || !backend.isAvailable(itemCore)) continue
+
+		const itemData = extractCoValueData(backend, itemCore)
+		const dataKeys = Object.keys(itemData).filter((k) => !['id', 'type', '$schema'].includes(k))
+		if (dataKeys.length === 0 && itemData.type === 'comap') continue
+
+		if (matchesFilter(itemData, filter)) {
+			return { ...itemData, id: itemId }
+		}
+	}
+	return null
+}
+
+/**
  * Read a collection of CoValues by schema (CoList)
  *
  * Returns array of items from the CoList, with progressive loading.
@@ -935,15 +954,13 @@ async function readSparksFromAccount(backend, options = {}) {
 async function readCollection(backend, schema, filter = null, options = {}) {
 	const {
 		deepResolve = true,
-		maxDepth = 15, // TODO: temporarily scaled up from 10 for °Maia spark detail deep resolution
+		maxDepth = 15,
 		timeoutMs = 5000,
 		resolveReferences = null,
 		map = null,
 	} = options
 
-	// CRITICAL FIX: Cache stores by schema+filter+options to allow multiple actors to share the same store
-	// This prevents creating duplicate stores when navigating back to a vibe
-	// IMPORTANT: Include options in cache key so queries with different map/resolveReferences get different stores
+	// Cache stores by schema+filter+options so multiple actors share same store
 	const optionsKey =
 		options && (options.map || options.resolveReferences)
 			? JSON.stringify({
@@ -976,9 +993,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
 	// Track item IDs we've subscribed to (for cleanup)
 	const subscribedItemIds = new Set()
 
-	// CRITICAL OPTIMIZATION: Persistent shared visited set across ALL updateStore() calls
-	// This prevents duplicate deep resolution work when updateStore() is called multiple times
-	// (e.g., from subscription callbacks firing repeatedly)
+	// Shared visited set prevents duplicate work across updateStore calls
 	const sharedVisited = new Set()
 
 	// Cache for resolved+mapped item data (keyed by itemId)
@@ -989,8 +1004,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
 	// Initialize to no-op function to prevent temporal dead zone errors when subscriptions fire synchronously
 	let updateStore = async () => {} // Will be reassigned below
 
-	// CRITICAL: Progressive loading - don't block if index colist isn't available yet
-	// Trigger loading (fire and forget) - subscription will update store when ready
+	// Progressive loading: trigger load, return store, subscription updates when ready
 	if (!backend.isAvailable(coListCore)) {
 		// Trigger loading (non-blocking)
 		ensureCoValueLoaded(backend, coListId, { waitForAvailable: false }).catch((_err) => {
@@ -1035,8 +1049,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
 					const loadedItemCore = backend.getCoValue(itemId)
 					if (loadedItemCore && backend.isAvailable(loadedItemCore)) {
 						// Subscribe to item changes (fires when item becomes available or updates)
-						// CRITICAL: Invalidate cache BEFORE processing to ensure fresh data is processed
-						// The promise-based cache in getOrCreateResolvedData() will handle concurrent calls
+						// Invalidate cache before processing for fresh data
 						const unsubscribeItem = loadedItemCore.subscribe(() => {
 							// Invalidate cache BEFORE processing - ensures getOrCreateResolvedData() processes fresh data
 							cache.invalidateResolvedData(itemId)
@@ -1054,9 +1067,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
 							unsubscribe: unsubscribeItem,
 						}))
 
-						// CRITICAL FIX: Trigger updateStore immediately after item is available
-						// This ensures items that just loaded are included in the store
-						// Guard: Check if updateStore is defined (may not be initialized yet)
+						// Trigger updateStore when item becomes available
 						if (updateStore) {
 							updateStore().catch((_err) => {
 								if (process.env.DEBUG) console.error(_err)
@@ -1071,7 +1082,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
 		}
 
 		// Subscribe to item changes (fires when item becomes available or updates)
-		// CRITICAL: Invalidate cache BEFORE processing to ensure fresh data is processed
+		// Invalidate cache before processing for fresh data
 		// The promise-based cache in getOrCreateResolvedData() will handle concurrent calls
 		const unsubscribeItem = itemCore.subscribe(() => {
 			// Invalidate cache BEFORE processing - ensures getOrCreateResolvedData() processes fresh data
@@ -1113,6 +1124,9 @@ async function readCollection(backend, schema, filter = null, options = {}) {
 		try {
 			const itemIdsArray = content.toJSON() // Array of item co-ids
 
+			// Deduplicate by co-id: schema index colist can contain same co-id twice (sync race)
+			const seenIds = new Set()
+
 			// Process each item ID
 			let _availableCount = 0
 			let _unavailableCount = 0
@@ -1121,6 +1135,9 @@ async function readCollection(backend, schema, filter = null, options = {}) {
 				if (typeof itemId !== 'string' || !itemId.startsWith('co_')) {
 					continue
 				}
+
+				if (seenIds.has(itemId)) continue
+				seenIds.add(itemId)
 
 				// Subscribe to item (if not already subscribed) - this ensures reactive updates
 				subscribeToItem(itemId)
@@ -1137,12 +1154,10 @@ async function readCollection(backend, schema, filter = null, options = {}) {
 				if (backend.isAvailable(itemCore)) {
 					_availableCount++
 
-					// CRITICAL OPTIMIZATION: Use getOrCreateResolvedData to prevent concurrent processing
-					// This ensures that if updateStore is called multiple times, only one processing happens
+					// getOrCreateResolvedData prevents concurrent processing
 					const itemCacheOptions = { deepResolve, resolveReferences, map, maxDepth, timeoutMs }
 
-					// CRITICAL: Get fresh itemCore reference each time to ensure we read latest data
-					// The itemCore reference might be stale if item changed between subscription and processing
+					// Get fresh itemCore for latest data
 					const currentItemCore = backend.getCoValue(itemId)
 					if (!currentItemCore || !backend.isAvailable(currentItemCore)) {
 						// Item no longer available - skip it (will be handled by subscription)
@@ -1231,8 +1246,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
 		}
 
 		// Update store with current results (progressive loading - may be partial, updates reactively)
-		// CRITICAL: Always update store, even if results array is empty, to ensure reactivity works
-		// This ensures that when items become available later, the store update triggers subscribers
+		// Always update store (even empty) for reactivity
 		store._set(results)
 	}
 
@@ -1249,8 +1263,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
 		unsubscribe: unsubscribeCoList,
 	}))
 
-	// CRITICAL FIX: Trigger immediate loading of all items before initial updateStore()
-	// This ensures items are loaded synchronously, not reactively after view renders
+	// Trigger immediate load before initial updateStore
 	// Read CoList content to get all item IDs
 	if (backend.isAvailable(coListCore)) {
 		const content = backend.getCurrentContent(coListCore)
@@ -1306,11 +1319,7 @@ async function readCollection(backend, schema, filter = null, options = {}) {
  * @returns {Promise<ReactiveStore>} ReactiveStore with array of all CoValue data
  */
 async function readAllCoValues(backend, filter = null, options = {}) {
-	const {
-		deepResolve = true,
-		maxDepth = 15, // TODO: temporarily scaled up from 10 for °Maia spark detail deep resolution
-		timeoutMs = 5000,
-	} = options
+	const { deepResolve = true, maxDepth = 15, timeoutMs = 5000 } = options
 	const store = new ReactiveStore([])
 
 	// Track CoValue IDs we've subscribed to (for cleanup)

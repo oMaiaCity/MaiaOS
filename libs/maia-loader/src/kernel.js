@@ -605,58 +605,6 @@ export class MaiaOS {
 			)
 		}
 
-		// STRICT: Require explicit browser runtime in spark.os.runtimes (no fallback)
-		const osId = sparkData.os
-		if (osId && typeof osId === 'string' && osId.startsWith('co_')) {
-			const osStore = await this.dbEngine.execute({ op: 'read', schema: null, key: osId })
-			let osContent = osStore?.value
-			osContent = osContent ?? {}
-			const runtimesId = osContent.runtimes
-			if (runtimesId && typeof runtimesId === 'string' && runtimesId.startsWith('co_')) {
-				const runtimesStore = await this.dbEngine.execute({ op: 'read', schema: null, key: runtimesId })
-				let runtimesData = runtimesStore?.value
-				runtimesData = runtimesData ?? {}
-				const assignmentsColistId = runtimesData[vibeCoId]
-				if (assignmentsColistId) {
-					const colistStore = await this.dbEngine.execute({
-						op: 'read',
-						schema: null,
-						key: assignmentsColistId,
-					})
-					let colistData = colistStore?.value
-					colistData = colistData ?? {}
-					const items = colistData.items ?? []
-					const itemIds = Array.isArray(items) ? items : []
-					let hasBrowser = false
-					for (const itemCoId of itemIds) {
-						if (typeof itemCoId !== 'string' || !itemCoId.startsWith('co_')) continue
-						const itemStore = await this.dbEngine.execute({ op: 'read', schema: null, key: itemCoId })
-						let itemData = itemStore?.value
-						itemData = itemData ?? {}
-						if (itemData.browser) {
-							hasBrowser = true
-							break
-						}
-					}
-					if (!hasBrowser) {
-						throw new Error(
-							`[Kernel] Vibe '${vibeKeyOrCoId}' has no browser runtime in spark.os.runtimes. Access denied.`,
-						)
-					}
-				} else {
-					throw new Error(
-						`[Kernel] Vibe '${vibeKeyOrCoId}' has no runtimes entry in spark.os.runtimes. Access denied.`,
-					)
-				}
-			} else {
-				throw new Error(
-					`[Kernel] Spark "${spark}" has no runtimes registry. Vibe loading requires spark.os.runtimes.`,
-				)
-			}
-		} else {
-			throw new Error(`[Kernel] Spark "${spark}" has no os. Vibe loading requires spark.os.runtimes.`)
-		}
-
 		return await this.loadVibeFromDatabase(vibeCoId, container, vibeKeyOrCoId)
 	}
 

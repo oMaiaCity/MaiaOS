@@ -11,7 +11,7 @@ import { getGlobalCoCache } from '../cache/coCache.js'
 import * as crudCreate from '../crud/create.js'
 import { extractCoStreamWithSessions } from '../crud/data-extraction.js'
 import * as crudDelete from '../crud/delete.js'
-import { read as universalRead } from '../crud/read.js'
+import { findFirst as findFirstByFilter, read as universalRead } from '../crud/read.js'
 import { waitForStoreReady } from '../crud/read-operations.js'
 import * as crudUpdate from '../crud/update.js'
 import * as groups from '../groups/groups.js'
@@ -466,6 +466,18 @@ export class CoJSONBackend extends DBAdapter {
 		}
 
 		return await universalRead(this, null, schema, filter, null, readOptions)
+	}
+
+	/**
+	 * Lightweight existence check - first match by filter. No store/subscriptions.
+	 * Use for gate checks (idempotency). Keeps read path pure progressive $stores.
+	 * @param {string} schema - Schema co-id
+	 * @param {Object} filter - Filter (e.g. { sourceMessageId: 'x' })
+	 * @param {Object} [options] - { timeoutMs }
+	 * @returns {Promise<Object|null>} First match or null
+	 */
+	async findFirst(schema, filter, options = {}) {
+		return await findFirstByFilter(this, schema, filter, options)
 	}
 
 	/**

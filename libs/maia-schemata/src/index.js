@@ -77,9 +77,6 @@ import messagePayloadSchema from './os/messagePayload.schema.json'
 import messageTypeSchema from './os/messageType.schema.json'
 import osRegistrySchema from './os/os-registry.schema.json'
 import registriesSchema from './os/registries.schema.json'
-import runtimeAssignmentSchema from './os/runtime-assignment.schema.json'
-import runtimeAssignmentsColistSchema from './os/runtime-assignments-colist.schema.json'
-import runtimesRegistrySchema from './os/runtimes-registry.schema.json'
 // Import OS infrastructure schemas
 import schematasRegistrySchema from './os/schematas-registry.schema.json'
 import sparksRegistrySchema from './os/sparks-registry.schema.json'
@@ -120,9 +117,6 @@ const SCHEMAS = {
 	'os/capabilities': capabilitiesSchema,
 	'os/indexes-registry': indexesRegistrySchema,
 	'os/vibes-registry': vibesRegistrySchema,
-	'os/runtimes-registry': runtimesRegistrySchema,
-	'os/runtime-assignment': runtimeAssignmentSchema,
-	'os/runtime-assignments-colist': runtimeAssignmentsColistSchema,
 	'os/sparks-registry': sparksRegistrySchema,
 	'os/humans-registry': humansRegistrySchema,
 	'os/registries': registriesSchema,
