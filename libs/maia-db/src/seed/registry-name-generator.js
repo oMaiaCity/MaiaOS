@@ -2,8 +2,8 @@
  * Registry Name Generator
  *
  * Generates human-readable default names for humans and sparks.
- * Format: {type}:{adjective}-{animal}-{8digits}
- * Example: human:sparkling-elephant-52341938
+ * Humans: adjective-animal-{8digits} (e.g. sparkling-elephant-52341938)
+ * Format sparks: spark:{adjective}-{animal}-{8digits}
  *
  * Uses adjectives.json and animals.json (100 items each) with modulo for iteration.
  * Collision check is done by the caller (e.g. /register handler); this is a pure generator.
@@ -34,7 +34,7 @@ function random8Digits() {
  *
  * @param {'human'|'spark'} type - Registry type
  * @param {number} [seed] - Optional seed for deterministic adjective/animal (e.g. from timestamp or retry count)
- * @returns {string} Format: human:adjective-animal-12345678 or spark:adjective-animal-12345678
+ * @returns {string} Format: adjective-animal-12345678 (human) or spark:adjective-animal-12345678
  */
 export function generateRegistryName(type, seed = null) {
 	const base = seed ?? Date.now() + Math.random() * 1e9
@@ -43,6 +43,6 @@ export function generateRegistryName(type, seed = null) {
 	const adjective = adjectives[adjIndex]
 	const animal = animals[animalIndex]
 	const digits = random8Digits()
-	const prefix = type === 'human' ? 'human' : 'spark'
-	return `${prefix}:${adjective}-${animal}-${digits}`
+	const namePart = `${adjective}-${animal}-${digits}`
+	return type === 'human' ? namePart : `spark:${namePart}`
 }

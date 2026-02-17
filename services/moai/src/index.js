@@ -32,14 +32,16 @@ import {
 	getAllToolDefinitions,
 	getAllVibeRegistries,
 	loadOrCreateAgentAccount,
+	removeGroupMember,
+	resolve,
 	schemaMigration,
 	waitForStoreReady,
 } from '@MaiaOS/loader'
-import { dirname, resolve } from 'node:path'
+import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // Resolve db path relative to moai package root (not process.cwd) so persistence is stable across restarts
-const _moaiDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const _moaiDir = pathResolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 const PORT = process.env.PORT || 4201
 const PEER_DB_PATH = process.env.PEER_DB_PATH || './local-sync.db'
@@ -58,7 +60,7 @@ if (!usePGlite && !usePostgres) {
 	throw new Error(`[moai] PEER_STORAGE must be pglite or postgres. Got: ${storageType}`)
 }
 // Resolve relative to moai package dir (stable across runs regardless of cwd)
-const dbPath = usePGlite ? resolve(_moaiDir, PEER_DB_PATH) : undefined
+const dbPath = usePGlite ? pathResolve(_moaiDir, PEER_DB_PATH) : undefined
 const peerMode = process.env.PEER_MODE || 'sync'
 const syncDomain = peerMode === 'agent' ? process.env.PEER_MOAI || null : null
 const MAIA_SPARK = '°Maia'
@@ -153,7 +155,7 @@ async function handleSyncRegistry(worker) {
 
 // --- Agent handlers ---
 async function handleRegister(worker, body) {
-	const { type, username, accountId, sparkCoId } = body || {}
+	const { type, username, accountId, profileId, sparkCoId } = body || {}
 	if (type !== 'human' && type !== 'spark')
 		return err('type required: human or spark', 400, {
 			validationErrors: [{ field: 'type', message: 'must be human or spark' }],
@@ -161,6 +163,13 @@ async function handleRegister(worker, body) {
 	if (type === 'human' && (!accountId || typeof accountId !== 'string'))
 		return err('accountId required for type=human', 400, {
 			validationErrors: [{ field: 'accountId', message: 'required' }],
+		})
+	if (
+		type === 'human' &&
+		(!profileId || typeof profileId !== 'string' || !profileId.startsWith('co_z'))
+	)
+		return err('profileId required for type=human', 400, {
+			validationErrors: [{ field: 'profileId', message: 'required (co_z...)' }],
 		})
 	if (type === 'spark' && (!sparkCoId || typeof sparkCoId !== 'string'))
 		return err('sparkCoId required for type=spark', 400, {
@@ -179,19 +188,61 @@ async function handleRegister(worker, body) {
 		})
 		const raw = await backend.getRawRecord(registryId)
 
-		// Human: one entry per account. If accountId already registered, return success (idempotent).
 		if (type === 'human') {
-			const existingUsername = raw ? Object.keys(raw).find((k) => raw[k] === coId) : null
-			if (existingUsername) {
+			// Idempotency: accountId already registered (by username or by accountId key)
+			const existingHumanId = raw?.[accountId]
+			if (existingHumanId?.startsWith('co_z')) {
+				const existingUsername = raw
+					? Object.keys(raw).find((k) => raw[k] === existingHumanId && k !== accountId)
+					: null
 				return jsonResponse({
 					ok: true,
 					type: 'human',
-					username: existingUsername,
+					username: existingUsername ?? generateRegistryName(type),
 					accountId: coId,
 				})
 			}
+			const existingUsername = raw ? Object.keys(raw).find((k) => raw[k] === coId) : null
+			if (!u) u = existingUsername ?? generateRegistryName(type)
+			if (raw?.[u] != null && raw[u] !== coId)
+				return err(`username "${u}" already registered to different identity`, 409)
+
+			// Create Human CoMap (public: everyone reader) and dual-key registry
+			const humanSchemaCoId = await resolve(backend, '°Maia/schema/os/human', { returnType: 'coId' })
+			if (!humanSchemaCoId) return err('Human schema not found. Ensure genesis seed has run.', 500)
+
+			const guardian = await backend.getMaiaGroup()
+			if (!guardian) return err('Guardian not found', 500)
+
+			const node = backend.node
+			const humanGroup = node.createGroup()
+			humanGroup.extend(guardian, 'extend')
+			humanGroup.addMember('everyone', 'reader')
+			const humanCoMap = humanGroup.createMap(
+				{ account: accountId, profile: profileId },
+				{ $schema: humanSchemaCoId },
+			)
+			const memberIdToRemove =
+				typeof node.getCurrentAccountOrAgentID === 'function'
+					? node.getCurrentAccountOrAgentID()
+					: (worker.account?.id ?? worker.account?.$jazz?.id)
+			try {
+				await removeGroupMember(humanGroup, memberIdToRemove)
+			} catch (_e) {}
+
+			const registryData = { [u]: humanCoMap.id, [accountId]: humanCoMap.id }
+			const r = await dbEngine.execute({ op: 'update', id: registryId, data: registryData })
+			if (r?.ok === false)
+				return err(r.errors?.map((e) => e.message).join('; ') ?? 'update failed', 500)
+			return jsonResponse({
+				ok: true,
+				type: 'human',
+				username: u,
+				accountId: coId,
+			})
 		}
 
+		// Spark registration (unchanged)
 		if (!u) u = generateRegistryName(type)
 		if (raw?.[u] != null && raw[u] !== coId)
 			return err(`username "${u}" already registered to different identity`, 409)
