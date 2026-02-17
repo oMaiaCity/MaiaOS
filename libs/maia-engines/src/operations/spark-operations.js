@@ -5,7 +5,6 @@
  * their data into separate collaborative spaces.
  */
 
-import { getSparkCapabilityGroupIdFromSparkCoId, ReactiveStore } from '@MaiaOS/db'
 import { requireDataEngine, requireParam, validateCoId } from '@MaiaOS/schemata/validation.helper'
 import { createErrorEntry, createErrorResult } from './operation-result.js'
 
@@ -111,7 +110,7 @@ export async function deleteSparkOperation(peer, dataEngine, params) {
 async function getSparkGroup(peer, sparkId) {
 	validateCoId(sparkId, 'GetSparkGroup')
 
-	const groupId = await getSparkCapabilityGroupIdFromSparkCoId(peer, sparkId, 'guardian')
+	const groupId = await peer.getSparkCapabilityGroupIdFromSparkCoId(sparkId, 'guardian')
 	if (!groupId || typeof groupId !== 'string' || !groupId.startsWith('co_z')) {
 		throw new Error(`[GetSparkGroup] Spark has no guardian in os.capabilities: ${sparkId}`)
 	}

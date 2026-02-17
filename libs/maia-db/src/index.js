@@ -19,8 +19,6 @@ export {
 	getGlobalCoCache,
 	resetGlobalCoCache,
 } from './cojson/cache/coCache.js'
-// CoJSON Mini CRUD API (database-level wrapper)
-export { createCoJSONAPI } from './cojson/core/factory.js'
 // MaiaDB - single data layer implementation (was CoJSONBackend)
 export { MaiaDB } from './cojson/core/MaiaDB.js'
 export { createCoList } from './cojson/cotypes/coList.js'
@@ -49,8 +47,7 @@ export {
 export { findFirst } from './cojson/crud/read.js'
 export { waitForStoreReady } from './cojson/crud/read-operations.js'
 // Re-export services for external use
-// STRICT: No createAccount() - only createAccountWithSecret() and loadAccount()
-export { createAccountWithSecret, loadAccount } from './cojson/groups/coID.js'
+// Account primitives moved to @MaiaOS/peer (createAccountWithSecret, loadAccount). Migration/seed stay here.
 export { createGroup, createProfile } from './cojson/groups/create.js'
 export {
 	getSparkCapabilityGroupIdFromSparkCoId,

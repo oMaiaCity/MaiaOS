@@ -3,10 +3,9 @@
  *
  * DataEngine: maia.do({ op, schema, key, filter, ... })
  * Engines: Actor, View, Style, State, Tool
- * ReactiveStore: re-exported from @MaiaOS/db
+ * ReactiveStore: use peer.createReactiveStore() or get from @MaiaOS/db
  */
 
-export { ReactiveStore } from '@MaiaOS/db'
 export { ActorEngine } from './engines/actor.engine.js'
 export { DataEngine } from './engines/data.engine.js'
 export { StateEngine } from './engines/state.engine.js'

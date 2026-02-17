@@ -1,5 +1,4 @@
 // loadSchemaFromDB removed - use resolve() from @MaiaOS/db if needed
-import { ReactiveStore } from '@MaiaOS/db'
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper'
 
 // getContextValue removed - Backend unified store provides merged value directly via context.value
@@ -302,8 +301,8 @@ export class Evaluator {
 		// $stores Architecture: data.context is already the unwrapped value from peer unified store
 		// ViewEngine passes context.value as data.context, so we use it directly
 		const resolved = resolvePath(data.context, path)
-		// Query stores are ReactiveStore objects - unwrap them for evaluation
-		if (resolved instanceof ReactiveStore) {
+		// Query stores are ReactiveStore objects - unwrap them for evaluation (duck-typing)
+		if (resolved && typeof resolved.subscribe === 'function' && 'value' in resolved) {
 			return resolved.value
 		}
 		return resolved
