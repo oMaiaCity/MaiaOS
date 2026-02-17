@@ -43,6 +43,7 @@
 						"tag": "button",
 						"class": "button",
 						"attrs": {
+							"type": "button",
 							"disabled": "$isLoading"
 						},
 						"text": "Send",
@@ -50,7 +51,7 @@
 							"click": {
 								"send": "SEND_MESSAGE",
 								"payload": {
-									"inputText": "$inputText"
+									"inputText": "@inputValue"
 								}
 							}
 						}

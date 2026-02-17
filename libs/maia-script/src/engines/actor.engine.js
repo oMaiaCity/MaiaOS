@@ -809,6 +809,20 @@ export class ActorEngine {
 		}
 	}
 
+	/**
+	 * Validate message payload before send (runtime schema only, from backend registry).
+	 * Used by ViewEngine to skip sending invalid payloads.
+	 * @param {string} eventType - Message type (e.g. 'CREATE_BUTTON', 'SEND_MESSAGE')
+	 * @param {Object} payload - Resolved payload to validate
+	 * @returns {Promise<boolean>} True if valid or no schema found, false otherwise
+	 */
+	async validateMessagePayloadForSend(eventType, payload) {
+		const schema = await this._loadMessageTypeSchema(eventType)
+		if (!schema) return true
+		const result = await this._validateMessagePayload(schema, payload || {}, eventType)
+		return result.valid
+	}
+
 	async processMessages(actorId) {
 		const actor = this.actors.get(actorId)
 		if (!actor || !actor.inboxCoId || !this.dbEngine || actor._isProcessing) return

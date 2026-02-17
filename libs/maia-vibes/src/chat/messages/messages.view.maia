@@ -3,7 +3,7 @@
 	"$id": "°Maia/chat/view/messages",
 	"content": {
 		"tag": "div",
-		"class": "messages-container",
+		"class": "messages-content",
 		"children": [
 			{
 				"tag": "div",
