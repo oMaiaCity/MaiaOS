@@ -10,7 +10,7 @@
 
 import { ReactiveStore } from '@MaiaOS/operations/reactive-store'
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js'
-import { getSparksRegistryId } from '../groups/groups.js'
+import { getHumansRegistryId, getSparksRegistryId } from '../groups/groups.js'
 import {
 	resolve as resolveSchema,
 	resolveReactive as resolveSchemaReactive,
@@ -81,9 +81,16 @@ export async function read(
 		const sparkSchemaCoId = await resolveSchema(backend, '°Maia/schema/data/spark', {
 			returnType: 'coId',
 		})
+		// Humans: read from account.registries.humans (no schema index)
+		const humanSchemaCoId = await resolveSchema(backend, '°Maia/schema/data/human', {
+			returnType: 'coId',
+		})
 		const resolvedSchema = await resolveSchema(backend, schema, { returnType: 'coId' })
 		if (sparkSchemaCoId && resolvedSchema === sparkSchemaCoId) {
 			return await readSparksFromAccount(backend, readOptions)
+		}
+		if (humanSchemaCoId && resolvedSchema === humanSchemaCoId) {
+			return await readHumansFromRegistries(backend, readOptions)
 		}
 		return await readCollection(backend, schema, filter, readOptions)
 	}
@@ -887,6 +894,131 @@ async function readSparksFromAccount(backend, options = {}) {
 	const unsub = sparksStore?.subscribe?.(() => updateSparks())
 	if (unsub) {
 		backend.subscriptionCache.getOrCreate(`subscription:sparks:${sparksId}`, () => ({
+			unsubscribe: unsub,
+		}))
+	}
+	return store
+}
+
+/**
+ * Fallback when profile has no name: "Traveler " + short id
+ */
+function travelerFallback(accountCoId) {
+	const shortId = typeof accountCoId === 'string' ? accountCoId.slice(-12) : ''
+	return `Traveler ${shortId}`
+}
+
+/**
+ * Read humans from account.registries.humans CoMap.
+ * Used when schema is human schema - data from humans registry, not schema index.
+ * @param {Object} backend - Backend instance
+ * @param {Object} options - Read options
+ * @returns {Promise<ReactiveStore>} ReactiveStore with array of {id, accountId, registryName, profileName}
+ */
+async function readHumansFromRegistries(backend, options = {}) {
+	const { timeoutMs = 5000 } = options
+	const store = backend.subscriptionCache.getOrCreateStore(
+		'humans:registries',
+		() => new ReactiveStore([]),
+	)
+
+	const humansId = await getHumansRegistryId(backend)
+	if (!humansId || !humansId.startsWith('co_')) {
+		return store
+	}
+
+	const updateHumans = async () => {
+		const humansStore = await readSingleCoValue(backend, humansId, null, { deepResolve: false })
+		try {
+			await waitForStoreReady(humansStore, humansId, timeoutMs)
+		} catch {
+			return
+		}
+		const humansData = humansStore?.value ?? {}
+		if (humansData?.error) return
+
+		// humans CoMap: keys = registry name or account co-id, values = human CoMap co-id (dual-key)
+		// Dedupe by human co-id; find registry name (key that does NOT start with co_z)
+		const humanCoIdToRegistryName = new Map()
+		for (const k of Object.keys(humansData)) {
+			if (k === 'id' || k === 'loading' || k === 'error' || k === '$schema' || k === 'type') continue
+			const humanCoId = humansData[k]
+			if (typeof humanCoId !== 'string' || !humanCoId.startsWith('co_')) continue
+			const isRegistryName = !k.startsWith('co_z')
+			// Prefer registry name (animal key); only set account id if no registry name exists
+			if (isRegistryName) {
+				humanCoIdToRegistryName.set(humanCoId, k)
+			} else if (!humanCoIdToRegistryName.has(humanCoId)) {
+				humanCoIdToRegistryName.set(humanCoId, k)
+			}
+		}
+
+		const uniqueHumanCoIds = [...new Set(humanCoIdToRegistryName.keys())]
+		const items = []
+
+		for (const humanCoId of uniqueHumanCoIds) {
+			const registryName = humanCoIdToRegistryName.get(humanCoId) ?? humanCoId
+			try {
+				const humanStore = await readSingleCoValue(backend, humanCoId, null, {
+					deepResolve: false,
+					timeoutMs,
+				})
+				await waitForStoreReady(humanStore, humanCoId, Math.min(timeoutMs, 2000))
+				const humanData = humanStore?.value ?? {}
+				if (humanData?.error) {
+					items.push({
+						id: humanCoId,
+						accountId: humanCoId,
+						registryName,
+						profileName: travelerFallback(humanCoId),
+					})
+					continue
+				}
+				const accountId = humanData.account ?? humanCoId
+				const profileCoId = humanData.profile
+
+				let profileName = travelerFallback(accountId)
+				if (profileCoId && typeof profileCoId === 'string' && profileCoId.startsWith('co_')) {
+					try {
+						const profileStore = await readSingleCoValue(backend, profileCoId, null, {
+							deepResolve: false,
+							timeoutMs: Math.min(timeoutMs, 2000),
+						})
+						await waitForStoreReady(profileStore, profileCoId, 2000)
+						const profileData = profileStore?.value ?? {}
+						const name = profileData?.name
+						if (typeof name === 'string' && name.length > 0) {
+							profileName = name
+						}
+					} catch {
+						/* use fallback */
+					}
+				}
+
+				items.push({
+					id: humanCoId,
+					accountId,
+					registryName,
+					profileName,
+				})
+			} catch {
+				items.push({
+					id: humanCoId,
+					accountId: humanCoId,
+					registryName,
+					profileName: travelerFallback(humanCoId),
+				})
+			}
+		}
+
+		store._set(items)
+	}
+
+	await updateHumans()
+	const humansStore = await readSingleCoValue(backend, humansId, null, { deepResolve: false })
+	const unsub = humansStore?.subscribe?.(() => updateHumans())
+	if (unsub) {
+		backend.subscriptionCache.getOrCreate(`subscription:humans:${humansId}`, () => ({
 			unsubscribe: unsub,
 		}))
 	}

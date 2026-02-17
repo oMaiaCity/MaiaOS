@@ -139,6 +139,16 @@ export async function getSparksRegistryId(backend) {
 	return registriesContent.sparks ?? null
 }
 
+/** Get humans registry CoMap co-id (account.registries.humans). Returns null if not found. */
+export async function getHumansRegistryId(backend) {
+	const registriesId = backend.account?.get?.('registries')
+	if (!registriesId?.startsWith('co_z')) return null
+	const registriesStore = await backend.read(null, registriesId)
+	await waitForStoreReady(registriesStore, registriesId, 10000)
+	const registriesContent = registriesStore?.value ?? {}
+	return registriesContent.humans ?? null
+}
+
 export async function getSparksRegistryContent(backend) {
 	const sparksId = await getSparksRegistryId(backend)
 	if (!sparksId?.startsWith('co_z')) return null

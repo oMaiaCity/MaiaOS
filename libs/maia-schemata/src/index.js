@@ -38,6 +38,7 @@ export function getMetaSchema() {
 }
 
 import chatDataSchema from './data/chat.schema.json'
+import humanDataSchema from './data/human.schema.json'
 import sparkDataSchema from './data/spark.schema.json'
 // Import data schemas
 import todosDataSchema from './data/todos.schema.json'
@@ -125,6 +126,7 @@ const SCHEMAS = {
 	'os/registries': registriesSchema,
 	'data/todos': todosDataSchema,
 	'data/chat': chatDataSchema,
+	'data/human': humanDataSchema,
 	'data/spark': sparkDataSchema,
 	'message/CREATE_BUTTON': createButtonMessageSchema,
 	'message/TOGGLE_BUTTON': toggleButtonMessageSchema,

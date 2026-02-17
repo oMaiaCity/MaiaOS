@@ -112,6 +112,9 @@
 	margin: 0;
 	letter-spacing: -0.02em;
 	font-style: normal;
+	line-height: 1;
+	/* Optical alignment: handwritten font renders high; nudge down to vertically center with sync dot */
+	padding-top: 4px;
 }
 
 .db-status {
