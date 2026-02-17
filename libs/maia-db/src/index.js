@@ -72,7 +72,6 @@ export {
 } from './cojson/schema/resolver.js'
 export { simpleAccountSeed } from './cojson/seeding/seed.js'
 export { schemaMigration } from './migrations/schema.migration.js'
-export { simpleAccountSeed } from './migrations/seeding/seed.js'
 // ReactiveStore - reactive data store pattern (owned by maia-db; engines import from here)
 export { ReactiveStore } from './reactive-store.js'
 export {

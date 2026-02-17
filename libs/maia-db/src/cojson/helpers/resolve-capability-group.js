@@ -39,7 +39,7 @@ async function waitForStore(store, timeoutMs = 5000) {
 
 /**
  * Build reverse map: group co-id -> @SparkName/CapabilityName
- * Traverses account.registries.sparks -> each spark -> os -> groups -> guardian, publicReaders, etc.
+ * Traverses account.registries.sparks -> each spark -> os -> capabilities -> guardian, publicReaders, etc.
  * @param {Object} maia - MaiaOS instance with maia.do()
  * @param {string} accountId - Current account co-id (from maia.id.maiaId.id)
  * @returns {Promise<Map<string, string>>} Map of groupCoId -> display name
@@ -97,11 +97,11 @@ async function buildCapabilityGroupMap(maia, accountId) {
 				const groupsId = osData?.groups
 				if (!groupsId?.startsWith('co_')) continue
 
-				const groupsStore = await maia.do({ op: 'read', schema: null, key: groupsId })
-				await waitForStore(groupsStore, 3000)
-				const groupsRaw = groupsStore?.value ?? groupsStore
-				if (!groupsRaw || groupsRaw.error) continue
-				const groupsData = groupsRaw
+				const capStore = await maia.do({ op: 'read', schema: null, key: capabilitiesId })
+				await waitForStore(capStore, 3000)
+				const capRaw = capStore?.value ?? capStore
+				if (!capRaw || capRaw.error) continue
+				const capData = capRaw
 
 				for (const capKey of Object.keys(groupsData)) {
 					if (skipKeys.has(capKey)) continue

@@ -54,7 +54,7 @@ export async function createCoList(
 	// STRICT: Always validate using runtime schema from database (no fallbacks, no legacy hacks)
 	if (!isExceptionSchema(schemaName)) {
 		// Use consolidated universal validation function (single source of truth)
-		await loadSchemaAndValidate(dbEngine?.peer || null, schemaName, init, 'createCoList', {
+		await loadSchemaAndValidate(dbEngine?.backend || null, schemaName, init, 'createCoList', {
 			dataEngine: dbEngine,
 			getAllSchemas,
 		})

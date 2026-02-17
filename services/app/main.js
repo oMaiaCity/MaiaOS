@@ -613,9 +613,9 @@ async function loadLinkedCoValues() {
 	try {
 		const accountStore = await maia.do({ op: 'read', schema: '@account', key: maia.id.maiaId.id })
 		const accountData = accountStore?.value ?? accountStore
-		const registriesId = accountData?.registries
-		if (typeof registriesId === 'string' && registriesId.startsWith('co_')) {
-			await maia.do({ op: 'read', schema: registriesId, key: registriesId, deepResolve: true })
+		const vibesId = accountData?.vibes
+		if (typeof vibesId === 'string' && vibesId.startsWith('co_')) {
+			await maia.do({ op: 'read', schema: vibesId, key: vibesId, deepResolve: true })
 		}
 	} catch (_e) {}
 }
@@ -823,6 +823,90 @@ function cleanupLoadingScreenSync() {
 	if (loadingScreenSyncUnsubscribe) {
 		loadingScreenSyncUnsubscribe()
 		loadingScreenSyncUnsubscribe = null
+	}
+}
+
+/**
+ * Handle seed button click - reseed database (idempotent: preserves schemata, recreates configs/data)
+ * @param {string|Array|null} seedVibesConfig - Optional config override:
+ *   - `null` or `undefined` = use env var or default (no vibes)
+ *   - `"all"` = seed all vibes
+ *   - `["todos", "maia"]` = seed specific vibes
+ */
+async function handleSeed(seedVibesConfig = null) {
+	// Seeding is agent/sync mode only. Human mode gets vibes from sync server.
+	if (detectMode() !== 'agent') {
+		showToast('Seeding is agent/sync mode only. Vibes sync from server.', 'info', 3000)
+		return
+	}
+	if (!maia || !maia.id) {
+		showToast('Please sign in first', 'error', 3000)
+		return
+	}
+
+	try {
+		showToast('🌱 Reseeding database (preserving schemata)...', 'info', 2000)
+
+		// Get seeding config from parameter, environment variable, or default ("all" = seed all vibes)
+		// SEED_VIBES can be: null/undefined = use env/default, "all" = all vibes, or ["todos", "chat", "sparks", "logs"] = specific vibes
+		// Check VITE_MAIA_CITY_SEED_VIBES (maia-city specific) or VITE_SEED_VIBES or SEED_VIBES
+		const envVar =
+			typeof import.meta !== 'undefined'
+				? import.meta.env?.VITE_MAIA_CITY_SEED_VIBES ||
+					import.meta.env?.VITE_SEED_VIBES ||
+					import.meta.env?.SEED_VIBES
+				: null
+		const config =
+			seedVibesConfig !== null
+				? seedVibesConfig
+				: envVar
+					? envVar === 'all'
+						? 'all'
+						: envVar.split(',').map((s) => s.trim())
+					: 'all' // Default: seed all vibes (changed from null to "all")
+
+		// Automatically discover and import all vibe registries
+		const allVibeRegistries = await getAllVibeRegistries()
+
+		// Filter vibes based on config
+		const vibeRegistries = await filterVibesForSeeding(allVibeRegistries, config)
+
+		if (vibeRegistries.length === 0) {
+			if (allVibeRegistries.length === 0) {
+				showToast('No vibe registries found to seed', 'warning', 3000)
+			} else {
+				showToast(
+					`Seeding config filters out all vibes (config: ${JSON.stringify(config)})`,
+					'warning',
+					3000,
+				)
+			}
+			return
+		}
+
+		console.log(
+			`🌱 Seeding ${vibeRegistries.length} vibe(s) based on config: ${JSON.stringify(config)}`,
+		)
+
+		const { configs: mergedConfigs, data } = await buildSeedConfig(vibeRegistries)
+		const configsWithTools = { ...mergedConfigs, tool: getAllToolDefinitions() }
+		const schemas = getAllSchemas()
+		await maia.do({
+			op: 'seed',
+			configs: configsWithTools,
+			schemas,
+			data,
+		})
+
+		// Reload linked CoValues to see seeded data
+		await loadLinkedCoValues()
+
+		// Re-render
+		renderAppInternal()
+
+		showToast('✅ Database reseeded successfully!', 'success', 3000)
+	} catch (error) {
+		showToast(`Seeding failed: ${error.message}`, 'error', 5000)
 	}
 }
 

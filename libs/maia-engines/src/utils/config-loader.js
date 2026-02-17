@@ -142,7 +142,8 @@ export async function loadConfigOrUseProvided(
 		if (!configCoId.startsWith('co_z')) {
 			throw new Error(`[${configType}] Config $id must be a co-id (co_z...), got: ${configCoId}`)
 		}
-		const schema = await dataEngine.peer.resolve(
+		const schema = await resolve(
+			dataEngine.backend,
 			{ fromCoValue: configCoId },
 			{ returnType: 'schema' },
 		)
