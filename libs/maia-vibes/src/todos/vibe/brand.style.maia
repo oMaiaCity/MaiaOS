@@ -169,7 +169,7 @@
 			"padding": "0.25rem 0.5rem",
 			"border": "none",
 			"background": "transparent",
-			"fontSize": "0.6rem",
+			"fontSize": "16px",
 			"color": "{colors.marineBlue}",
 			"fontFamily": "{typography.fontFamily.body}",
 			"fontWeight": "{typography.fontWeight.light}",
@@ -241,7 +241,7 @@
 			},
 			".input": {
 				"padding": "0.375rem 0.625rem",
-				"fontSize": "0.7rem"
+				"fontSize": "16px"
 			},
 			".button": {
 				"padding": "0.375rem 0.625rem",
@@ -278,7 +278,7 @@
 			},
 			".input": {
 				"padding": "0.375rem 0.5rem",
-				"fontSize": "0.65rem"
+				"fontSize": "16px"
 			},
 			".button": {
 				"padding": "0.375rem 0.5rem",
@@ -317,7 +317,7 @@
 			".input": {
 				"minHeight": "36px",
 				"padding": "0.25rem 0.5rem",
-				"fontSize": "0.7rem"
+				"fontSize": "16px"
 			},
 			".button": {
 				"minHeight": "36px",
@@ -358,7 +358,7 @@
 			".input": {
 				"minHeight": "36px",
 				"padding": "0.25rem 0.5rem",
-				"fontSize": "0.75rem"
+				"fontSize": "16px"
 			},
 			".button": {
 				"minHeight": "36px",
@@ -399,7 +399,7 @@
 			".input": {
 				"minHeight": "36px",
 				"padding": "0.25rem 0.5rem",
-				"fontSize": "0.8rem"
+				"fontSize": "16px"
 			},
 			".button": {
 				"minHeight": "36px",
@@ -440,7 +440,7 @@
 			".input": {
 				"minHeight": "36px",
 				"padding": "0.3rem 0.5rem",
-				"fontSize": "0.85rem"
+				"fontSize": "16px"
 			},
 			".button": {
 				"minHeight": "36px",
