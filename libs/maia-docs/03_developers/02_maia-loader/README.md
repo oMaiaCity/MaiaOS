@@ -85,7 +85,7 @@ const os = await MaiaOS.boot({
 - `os.loadVibe()` - Load app manifests from files
 - `os.loadVibeFromDatabase()` - Load app manifests from database
 - `os.getActor()` - Get actor by ID
-- `os.deliverEvent()` - Deliver events to actors
+- `os.sendMessage()` - Send messages to actors
 - `os.do()` - Execute data operations (**maia.do({ op, schema, key, ... })**)
 - `os.getEngines()` - Access all engines for debugging
 

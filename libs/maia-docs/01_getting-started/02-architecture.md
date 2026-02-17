@@ -333,7 +333,7 @@ Agent sends event to actor via StateEngine
 - **maia-engines** – DataEngine (maia.do), Actor/View/Style/State/Tool engines, modules
 - **maia-db** – MaiaDB (CRUD, resolve, indexing, seeding)
 - **maia-peer** – Node, account, sync (P2P layer)
-- **maia-actors** – Actor definitions (@db, @core/*, @ai/chat, etc.)
+- **maia-tools** – Tool definitions (@db, @core/*, etc.)
 
 ```
 libs/maia-engines/src/
@@ -358,7 +358,7 @@ MaiaOS/
 │   ├── maia-engines/           # Engines (DataEngine, Actor, View, etc.)
 │   ├── maia-db/                # MaiaDB (CoJSON CRDT, seeding in migrations/)
 │   ├── maia-peer/              # P2P layer (node, account, sync)
-│   ├── maia-actors/            # Actor definitions
+│   ├── maia-tools/             # Tool definitions
 │   ├── maia-schemata/          # Schema validation
 │   ├── maia-vibes/             # Example vibes/apps
 │   └── maia-self/              # Self-sovereign identity
@@ -444,9 +444,10 @@ Each actor renders into its own shadow root:
 Actors communicate asynchronously:
 
 ```javascript
-// Deliver event to actor
-os.deliverEvent(senderId, 'actor_todo_001', 'notification', {
-  text: 'Task completed!'
+// Send message
+os.sendMessage('actor_todo_001', {
+  type: 'notification',
+  data: {text: 'Task completed!'}
 });
 
 // Subscribe to messages

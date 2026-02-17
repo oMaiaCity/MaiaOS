@@ -206,7 +206,7 @@ Database
    - Routes operations to handlers
    - Supports swappable backends
 
-2. **Operation Handlers** (`libs/maia-engines/src/engines/data.engine.js`)
+2. **Operation Handlers** (`libs/maia-engines/src/operations/`)
    - `read.js` - Read operation handler (always returns reactive store)
    - `create.js` - Create operation handler
    - `update.js` - Update operation handler (supports MaiaScript expressions)
