@@ -1,0 +1,52 @@
+# Version Tag & Release
+# Runs on merge/push to next when commit is NOT [release]. Creates [release] commit, pushes, tags, GitHub release.
+# Skipped when commit already starts with [release] (deploy-next runs instead).
+# Manual trigger: workflow_dispatch
+
+name: Version Tag & Release
+
+on:
+  push:
+    branches: [next]
+  workflow_dispatch:
+
+jobs:
+  version-tag:
+    if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && !startsWith(github.event.head_commit.message, '[release] '))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Generate version
+        id: version
+        run: |
+          VERSION=$(date -u +%y.%m%d.%H%M)
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Generated version: $VERSION"
+
+      - name: Sync version across all packages
+        run: bun run version:sync ${{ steps.version.outputs.version }}
+
+      - name: Commit and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add 'services/*/package.json' 'libs/*/package.json'
+          git diff --staged --quiet || git commit -m "[release] ${{ steps.version.outputs.version }}"
+          git tag -a "v${{ steps.version.outputs.version }}" -m "Release ${{ steps.version.outputs.version }}"
+
+      - name: Push and create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git push origin next
+          git push origin "v${{ steps.version.outputs.version }}"
+          gh release create "v${{ steps.version.outputs.version }}" \
+            --title "v${{ steps.version.outputs.version }}" \
+            --notes "Auto-generated release from merge to next"
