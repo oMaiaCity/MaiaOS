@@ -1,20 +1,14 @@
 /**
- * Store registry - populate spark.os.schematas with schema + instance config co-ids
+ * Store registry - populate spark.os.schematas
  */
 
-import {
-	ACTOR_CONFIG_REF_PATTERN,
-	AVEN_ACTOR_REF_PATTERN,
-	INSTANCE_REF_PATTERN,
-} from '@MaiaOS/schemata'
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import * as groups from '../../cojson/groups/groups.js'
 
 const MAIA_SPARK = '°Maia'
 
 /**
- * Store registry in spark.os.schematas CoMap.
- * Schematas holds: schema defs (°Maia/schema/...) + instance config co-ids (°Maia/.../actor/..., inbox, etc.)
+ * Store registry in spark.os.schematas CoMap
  */
 export async function storeRegistry(
 	account,
@@ -23,7 +17,7 @@ export async function storeRegistry(
 	peer,
 	coIdRegistry,
 	schemaCoIdMap,
-	instanceCoIdMap,
+	_instanceCoIdMap,
 	_configs,
 	_seededSchemas,
 ) {
@@ -85,23 +79,6 @@ export async function storeRegistry(
 		const existingCoId = schematas.get('°Maia/schema/meta')
 		if (!existingCoId) {
 			schematas.set('°Maia/schema/meta', metaschemaCoId)
-		}
-	}
-
-	// Instance config co-ids (actors, inboxes, views, contexts, states, styles) for resolve() to find
-	const entries =
-		instanceCoIdMap instanceof Map ? instanceCoIdMap.entries() : Object.entries(instanceCoIdMap ?? {})
-	for (const [key, coId] of entries) {
-		if (
-			typeof key === 'string' &&
-			typeof coId === 'string' &&
-			coId.startsWith('co_z') &&
-			(INSTANCE_REF_PATTERN.test(key) ||
-				ACTOR_CONFIG_REF_PATTERN.test(key) ||
-				AVEN_ACTOR_REF_PATTERN.test(key))
-		) {
-			const existing = schematas.get(key)
-			if (!existing) schematas.set(key, coId)
 		}
 	}
 }
