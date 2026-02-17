@@ -6,18 +6,11 @@
  */
 
 import { ChatVibeRegistry } from './chat/registry.js'
-import { CreatorVibeRegistry } from './creator/registry.js'
-import { DbVibeRegistry } from './db/registry.js'
+import { LogsVibeRegistry } from './creator/registry.js'
 import { SparksVibeRegistry } from './sparks/registry.js'
 import { TodosVibeRegistry } from './todos/registry.js'
 
-const ALL_REGISTRIES = [
-	TodosVibeRegistry,
-	ChatVibeRegistry,
-	DbVibeRegistry,
-	SparksVibeRegistry,
-	CreatorVibeRegistry,
-]
+const ALL_REGISTRIES = [TodosVibeRegistry, ChatVibeRegistry, SparksVibeRegistry, LogsVibeRegistry]
 
 function getVibeKey(vibe) {
 	if (!vibe) return null
