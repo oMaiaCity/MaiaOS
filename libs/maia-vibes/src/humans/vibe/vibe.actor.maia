@@ -1,0 +1,13 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/humans/actor/vibe",
+	"type": "service",
+	"state": "°Maia/humans/state/vibe",
+	"view": "°Maia/humans/view/vibe",
+	"context": "°Maia/humans/context/vibe",
+	"brand": "°Maia/humans/style/brand",
+	"inbox": "°Maia/humans/inbox/vibe",
+	"messageTypes": [
+		"DISMISS"
+	]
+}

@@ -47,6 +47,8 @@ export function getMetaSchema() {
 }
 
 import chatDataSchema from './data/chat.schema.json'
+import humanDataSchema from './data/human.schema.json'
+import sparkDataSchema from './data/spark.schema.json'
 // Import data schemas
 import cobinaryDataSchema from './data/cobinary.schema.json'
 import notesDataSchema from './data/notes.schema.json'
@@ -130,6 +132,7 @@ const SCHEMAS = {
 	'data/profile': profileDataSchema,
 	'data/todos': todosDataSchema,
 	'data/chat': chatDataSchema,
+	'data/human': humanDataSchema,
 	'data/spark': sparkDataSchema,
 }
 
