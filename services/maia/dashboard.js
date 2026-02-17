@@ -276,9 +276,6 @@ export async function renderDashboard(
 			<header class="db-header whitish-card">
 				<div class="header-content">
 					<div class="header-left">
-						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}" title="${getSyncStatusMessage(syncState)}" aria-label="${getSyncStatusMessage(syncState)}">
-							<span class="sync-dot"></span>
-						</div>
 						<h1>${escapeHtml(headerTitle)}</h1>
 					</div>
 					<div class="header-center">
@@ -286,25 +283,13 @@ export async function renderDashboard(
 						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
 					</div>
 					<div class="header-right">
+						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}" title="${getSyncStatusMessage(syncState)}" aria-label="${getSyncStatusMessage(syncState)}">
+							<span class="sync-dot"></span>
+						</div>
 						${
 							authState.signedIn
 								? `
-							<span class="db-status db-status-name" title="Account: ${accountId}">${escapeHtml(accountDisplayName)}</span>
-						`
-								: ''
-						}
-						<!-- Hamburger menu button (mobile only) -->
-						<button class="hamburger-btn" onclick="window.toggleMobileMenu()" aria-label="Toggle menu">
-							<span></span>
-							<span></span>
-							<span></span>
-						</button>
-						${
-							authState.signedIn
-								? `
-							<button class="sign-out-btn" onclick="window.handleSignOut()">
-								Sign Out
-							</button>
+							<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId}" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${escapeHtml(accountDisplayName)}</button>
 						`
 								: ''
 						}
@@ -316,8 +301,8 @@ export async function renderDashboard(
 						authState.signedIn && accountId
 							? `
 						<div class="mobile-menu-account-id">
-							<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
 							<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
+							<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
 						</div>
 					`
 							: ''
@@ -408,9 +393,6 @@ export async function renderVibeViewer(
 			<header class="db-header whitish-card">
 				<div class="header-content">
 					<div class="header-left">
-						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}" title="${getSyncStatusMessage(syncState)}" aria-label="${getSyncStatusMessage(syncState)}">
-							<span class="sync-dot"></span>
-						</div>
 						<h1>${escapeHtml(vibeLabel)}</h1>
 					</div>
 					<div class="header-center">
@@ -418,25 +400,13 @@ export async function renderVibeViewer(
 						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
 					</div>
 					<div class="header-right">
+						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}" title="${getSyncStatusMessage(syncState)}" aria-label="${getSyncStatusMessage(syncState)}">
+							<span class="sync-dot"></span>
+						</div>
 						${
 							authState.signedIn
 								? `
-							<span class="db-status db-status-name" title="Account: ${accountId}">${escapeHtml(accountDisplayName)}</span>
-						`
-								: ''
-						}
-						<!-- Hamburger menu button (mobile only) -->
-						<button class="hamburger-btn" onclick="window.toggleMobileMenu()" aria-label="Toggle menu">
-							<span></span>
-							<span></span>
-							<span></span>
-						</button>
-						${
-							authState.signedIn
-								? `
-							<button class="sign-out-btn" onclick="window.handleSignOut()">
-								Sign Out
-							</button>
+							<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId}" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${escapeHtml(accountDisplayName)}</button>
 						`
 								: ''
 						}
@@ -448,8 +418,8 @@ export async function renderVibeViewer(
 						authState.signedIn && accountId
 							? `
 						<div class="mobile-menu-account-id">
-							<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
 							<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
+							<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
 						</div>
 					`
 							: ''

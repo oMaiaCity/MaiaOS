@@ -105,7 +105,7 @@
 }
 
 .db-header h1 {
-	font-family: "Indie Flower", var(--font-heading), cursive;
+	font-family: var(--font-heading);
 	font-size: 1.5rem;
 	font-weight: 400;
 	color: var(--color-marine-blue);
@@ -113,8 +113,7 @@
 	letter-spacing: -0.02em;
 	font-style: normal;
 	line-height: 1;
-	/* Optical alignment: handwritten font renders high; nudge down to vertically center with sync dot */
-	padding-top: 4px;
+	padding-top: var(--font-heading-optical-shift);
 }
 
 .db-status {
@@ -136,7 +135,35 @@
 	font-family: var(--font-body), system-ui, sans-serif;
 }
 
-/* Account ID in hamburger menu (full length + copy button) */
+/* Account menu toggle (click username to open dropdown: account ID + sign out) */
+.account-menu-toggle {
+	background: inherit;
+	border: none;
+	padding: inherit;
+	font: inherit;
+	color: inherit;
+	cursor: pointer;
+	min-height: 28px;
+	display: inline-flex;
+	align-items: center;
+}
+
+/* Desktop/tablet: compact label, balanced padding (match mobile proportions) */
+@media (min-width: 1025px) {
+	.header-right .account-menu-toggle {
+		font-size: 0.65rem;
+		padding: 0.25rem 0.6rem;
+	}
+}
+.account-menu-toggle:hover {
+	opacity: 0.85;
+}
+.account-menu-toggle.active {
+	background: rgba(255, 255, 255, 0.2);
+	border-radius: 9999px;
+}
+
+/* Account ID in dropdown (copy button left, full ID right) */
 .mobile-menu-account-id {
 	display: flex;
 	align-items: center;
@@ -146,6 +173,22 @@
 	margin-bottom: 0.25rem;
 	min-width: 0;
 }
+.mobile-menu-copy-id {
+	flex-shrink: 0;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: none;
+	border-radius: 6px;
+	background: rgba(255, 255, 255, 0.15);
+	color: var(--color-marine-blue);
+	font-size: 0.9rem;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: background 0.2s;
+}
 .mobile-menu-account-id-value {
 	flex: 1;
 	min-width: 0;
@@ -154,22 +197,6 @@
 	word-break: break-all;
 	overflow-wrap: break-word;
 	color: var(--color-marine-blue-muted);
-}
-.mobile-menu-copy-id {
-	flex-shrink: 0;
-	width: 24px;
-	height: 24px;
-	padding: 0;
-	border: none;
-	border-radius: 4px;
-	background: rgba(255, 255, 255, 0.15);
-	color: var(--color-marine-blue);
-	font-size: 0.75rem;
-	cursor: pointer;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	transition: background 0.2s;
 }
 .mobile-menu-copy-id:hover {
 	background: rgba(255, 255, 255, 0.25);
@@ -1962,8 +1989,13 @@ pre {
 .loading-connecting-overlay {
 	position: fixed;
 	inset: 0;
-	background: rgba(0, 0, 0, 0.85);
-	backdrop-filter: blur(10px);
+	background: var(--color-soft-clay);
+	background-image:
+		radial-gradient(at 0% 0%, rgba(0, 189, 214, 0.08) 0px, transparent 50%),
+		radial-gradient(at 100% 0%, rgba(78, 154, 88, 0.08) 0px, transparent 50%),
+		radial-gradient(at 100% 100%, rgba(194, 123, 102, 0.08) 0px, transparent 50%),
+		radial-gradient(at 0% 100%, rgba(230, 185, 77, 0.08) 0px, transparent 50%);
+	backdrop-filter: blur(12px);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -1971,14 +2003,35 @@ pre {
 	gap: 2rem;
 	z-index: 1000;
 	text-align: center;
-	color: white;
+	color: var(--color-marine-blue);
+	font-family: var(--font-body);
+}
+
+.loading-connecting-content {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.loading-connecting-overlay h2 {
+	font-family: var(--font-heading);
+	font-size: 1.5rem;
+	font-weight: 400;
+	margin: 0;
+}
+
+.loading-connecting-subtitle {
+	font-size: 1rem;
+	color: var(--color-marine-blue-muted);
+	margin-bottom: 0.5rem;
 }
 
 .loading-connecting-overlay .loading-spinner {
 	width: 64px;
 	height: 64px;
-	border: 4px solid rgba(255, 255, 255, 0.2);
-	border-top-color: rgba(255, 255, 255, 0.8);
+	border: 4px solid rgba(0, 31, 51, 0.12);
+	border-top-color: var(--color-marine-blue);
 	animation: spin 1s linear infinite;
 }
 
@@ -1987,10 +2040,14 @@ pre {
 	align-items: center;
 	gap: 0.5rem;
 	padding: 0.5rem 1rem;
-	background: rgba(255, 255, 255, 0.1);
-	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.5);
+	backdrop-filter: blur(8px) saturate(150%);
+	border: 1px solid rgba(255, 255, 255, 0.4);
+	border-radius: 9999px;
+	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 	font-size: 0.875rem;
 	margin-top: 1rem;
+	color: var(--color-marine-blue);
 }
 
 .loading-connecting-indicator {
@@ -2344,43 +2401,6 @@ pre {
 	font-size: 0.8rem;
 }
 
-/* Hamburger Menu Button (mobile only) */
-.hamburger-btn {
-	display: none; /* Hidden on desktop */
-	flex-direction: column;
-	justify-content: space-around;
-	width: 20px;
-	height: 20px;
-	background: transparent;
-	border: none;
-	cursor: pointer;
-	padding: 0;
-	z-index: 1001;
-	gap: 3px;
-	flex-shrink: 0;
-}
-
-.hamburger-btn span {
-	width: 100%;
-	height: 2px;
-	background: var(--color-marine-blue);
-	border-radius: 1px;
-	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-	transform-origin: center;
-}
-
-.hamburger-btn.active span:nth-child(1) {
-	transform: rotate(45deg) translate(5px, 5px);
-}
-
-.hamburger-btn.active span:nth-child(2) {
-	opacity: 0;
-}
-
-.hamburger-btn.active span:nth-child(3) {
-	transform: rotate(-45deg) translate(5px, -5px);
-}
-
 /* Mobile Menu */
 .mobile-menu {
 	display: none; /* Hidden by default */
@@ -2405,21 +2425,8 @@ pre {
 
 /* Mobile & Tablet Responsive Styles */
 @media (max-width: 1024px) {
-	/* Show hamburger, hide desktop header-right items except account info */
-	.hamburger-btn {
-		display: flex;
-	}
-
-	/* Hide right-side items except account info, sync status, and hamburger */
-	.header-right .sign-out-btn {
-		display: none;
-	}
-
-	/* Keep account info and hamburger visible */
-	.header-right .db-status,
-	.header-right .db-status-name {
-		display: inline-flex;
-		align-items: center;
+	/* Account username smaller on mobile */
+	.header-right .account-menu-toggle {
 		font-size: 0.65rem;
 		padding: 0.25rem 0.5rem;
 	}
