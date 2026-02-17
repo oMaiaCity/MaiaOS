@@ -32,14 +32,14 @@ import { resolveCoIdShallow } from './data-extraction.js'
 /**
  * Traverse path step-by-step. When value is co-id, resolve by id (content-addressable).
  * Only loads CoValues along the path – never siblings.
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {any} item - Root item
  * @param {string} path - Dot path (e.g. "os.capabilities.guardian.accountMembers")
  * @param {Set<string>} visited - Visited co-ids for circular ref detection
  * @param {Object} options - Options { timeoutMs }
  * @returns {Promise<any>} Value at path, or undefined
  */
-async function getValueAtPathWithResolution(backend, item, path, visited, options = {}) {
+async function getValueAtPathWithResolution(peer, item, path, visited, options = {}) {
 	const parts = path.split('.')
 	let current = item
 	for (const part of parts) {
@@ -48,7 +48,7 @@ async function getValueAtPathWithResolution(backend, item, path, visited, option
 		let value = current[key]
 		while (typeof value === 'string' && value.startsWith('co_z')) {
 			if (visited.has(value)) return undefined
-			const resolved = await resolveCoIdShallow(backend, value, options, visited)
+			const resolved = await resolveCoIdShallow(peer, value, options, visited)
 			value = resolved
 		}
 		current = value
@@ -59,13 +59,13 @@ async function getValueAtPathWithResolution(backend, item, path, visited, option
 /**
  * Apply map transformation to a single item
  * Uses map-driven on-demand resolution: only resolves CoValues along expression paths.
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {Object} item - Item data to transform
  * @param {Object} mapConfig - Map configuration object (e.g., { "sender": "$$source.role" })
  * @param {Object} options - Options for resolution
  * @returns {Promise<Object>} Transformed item with mapped fields
  */
-export async function applyMapTransform(backend, item, mapConfig, options = {}) {
+export async function applyMapTransform(peer, item, mapConfig, options = {}) {
 	if (!mapConfig || typeof mapConfig !== 'object') {
 		return item
 	}
@@ -92,7 +92,7 @@ export async function applyMapTransform(backend, item, mapConfig, options = {}) 
 				}
 			}
 
-			const mappedValue = await getValueAtPathWithResolution(backend, item, path, visited, {
+			const mappedValue = await getValueAtPathWithResolution(peer, item, path, visited, {
 				timeoutMs,
 			})
 			mappedItem[targetField] = mappedValue
@@ -110,16 +110,16 @@ export async function applyMapTransform(backend, item, mapConfig, options = {}) 
 
 /**
  * Apply map transformation to an array of items
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {Array} items - Array of items to transform
  * @param {Object} mapConfig - Map configuration object
  * @param {Object} options - Options for resolution
  * @returns {Promise<Array>} Array of transformed items
  */
-export async function applyMapTransformToArray(backend, items, mapConfig, options = {}) {
+export async function applyMapTransformToArray(peer, items, mapConfig, options = {}) {
 	if (!Array.isArray(items)) {
 		return items
 	}
 
-	return Promise.all(items.map((item) => applyMapTransform(backend, item, mapConfig, options)))
+	return Promise.all(items.map((item) => applyMapTransform(peer, item, mapConfig, options)))
 }

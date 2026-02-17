@@ -42,7 +42,7 @@ export class ViewEngine {
 	async loadView(coId) {
 		// UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
 		const viewSchemaStore = resolveReactive(
-			this.dataEngine.backend,
+			this.dataEngine.peer,
 			{ fromCoValue: coId },
 			{ returnType: 'coId' },
 		)

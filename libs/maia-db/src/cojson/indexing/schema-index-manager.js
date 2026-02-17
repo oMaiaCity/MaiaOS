@@ -22,23 +22,23 @@ const SCHEMA_REF_MATCH = /^([°@][a-zA-Z0-9_-]+)\/schema\/(.+)$/
 
 /**
  * Ensure spark.os CoMap exists (account.registries.sparks[spark].os)
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} [spark='°Maia'] - Spark name
  * @returns {Promise<RawCoMap|null>} spark.os CoMap
  */
-async function ensureOsCoMap(backend, spark) {
-	const effectiveSpark = spark ?? backend?.systemSpark ?? '°Maia'
-	if (!backend.account) {
+async function ensureOsCoMap(peer, spark) {
+	const effectiveSpark = spark ?? peer?.systemSpark ?? '°Maia'
+	if (!peer.account) {
 		throw new Error('[SchemaIndexManager] Account required')
 	}
 
-	const osId = await groups.getSparkOsId(backend, effectiveSpark)
+	const osId = await groups.getSparkOsId(peer, effectiveSpark)
 
 	if (osId) {
 		// spark.os exists - use universal read() API to load and resolve it
 		try {
 			// Use universal read() API to ensure spark.os is loaded and resolved
-			const osStore = await universalRead(backend, osId, null, null, null, {
+			const osStore = await universalRead(peer, osId, null, null, null, {
 				deepResolve: false, // Don't need deep resolution for infrastructure
 				timeoutMs: 10000, // 10 second timeout for critical infrastructure
 			})
@@ -51,7 +51,7 @@ async function ensureOsCoMap(backend, spark) {
 			}
 
 			// Get the raw CoValueCore and content after read() has loaded it
-			const osCore = backend.getCoValue(osId)
+			const osCore = peer.getCoValue(osId)
 			if (!osCore || !osCore.isAvailable()) {
 				if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('osCore unavailable')
 				return null
@@ -66,7 +66,7 @@ async function ensureOsCoMap(backend, spark) {
 
 			// Check if content is a CoMap using content.cotype and header $schema
 			const contentType = osContent.cotype || osContent.type
-			const header = backend.getHeader(osCore)
+			const header = peer.getHeader(osCore)
 			const headerMeta = header?.meta || null
 			const _schema = headerMeta?.$schema || null
 
@@ -88,7 +88,7 @@ async function ensureOsCoMap(backend, spark) {
 
 	// spark.os not ready - fail-fast with clear error when account.registries is missing
 	// Indexing requires account.registries (set via linkAccountToRegistries). Boot/link order must run before first create.
-	const registriesId = backend.account?.get?.('registries')
+	const registriesId = peer.account?.get?.('registries')
 	if (!registriesId?.startsWith('co_z')) {
 		console.error(
 			'[SchemaIndexManager] account.registries not set. Indexing requires linkAccountToRegistries to complete first. Call linkAccountToRegistries during boot before user can create content.',
@@ -99,12 +99,12 @@ async function ensureOsCoMap(backend, spark) {
 
 /**
  * Ensure spark.os.indexes CoMap exists (dedicated container for schema indexes)
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @returns {Promise<RawCoMap>} spark.os.indexes CoMap
  */
-export async function ensureIndexesCoMap(backend) {
+export async function ensureIndexesCoMap(peer) {
 	// First ensure spark.os exists
-	const osCoMap = await ensureOsCoMap(backend)
+	const osCoMap = await ensureOsCoMap(peer)
 	if (!osCoMap) {
 		return null
 	}
@@ -114,7 +114,7 @@ export async function ensureIndexesCoMap(backend) {
 	if (indexesId) {
 		// Use universal read() API to load and resolve it
 		try {
-			const indexesStore = await universalRead(backend, indexesId, null, null, null, {
+			const indexesStore = await universalRead(peer, indexesId, null, null, null, {
 				deepResolve: false,
 				timeoutMs: 10000,
 			})
@@ -125,7 +125,7 @@ export async function ensureIndexesCoMap(backend) {
 				return null
 			}
 
-			const indexesCore = backend.getCoValue(indexesId)
+			const indexesCore = peer.getCoValue(indexesId)
 			if (!indexesCore || !indexesCore.isAvailable()) {
 				if (typeof process !== 'undefined' && process.env?.DEBUG)
 					console.error('indexesCore unavailable')
@@ -140,7 +140,7 @@ export async function ensureIndexesCoMap(backend) {
 			}
 
 			const contentType = indexesContent.cotype || indexesContent.type
-			const header = backend.getHeader(indexesCore)
+			const header = peer.getHeader(indexesCore)
 			const headerMeta = header?.meta || null
 			const _schema = headerMeta?.$schema || null
 
@@ -161,7 +161,7 @@ export async function ensureIndexesCoMap(backend) {
 	// Create new spark.os.indexes CoMap (per-CoValue group)
 	// Use proper runtime validation with dbEngine when schema is available
 	// °Maia fallback when schema registry doesn't exist yet (initial setup)
-	const indexesSchemaCoId = await resolve(backend, '°Maia/schema/os/indexes-registry', {
+	const indexesSchemaCoId = await resolve(peer, '°Maia/schema/os/indexes-registry', {
 		returnType: 'coId',
 	})
 
@@ -171,15 +171,15 @@ export async function ensureIndexesCoMap(backend) {
 		indexesSchemaCoId &&
 		typeof indexesSchemaCoId === 'string' &&
 		indexesSchemaCoId.startsWith('co_z') &&
-		backend.dbEngine
+		peer.dbEngine
 	) {
 		// Proper runtime validation: Use CRUD create() with dbEngine for schema validation
 		const { create } = await import('../crud/create.js')
-		const created = await create(backend, indexesSchemaCoId, {})
+		const created = await create(peer, indexesSchemaCoId, {})
 		indexesCoMapId = created.id
 	} else {
 		const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
-		const { coValue: indexesCoMap } = await createCoValueForSpark(backend, '°Maia', {
+		const { coValue: indexesCoMap } = await createCoValueForSpark(peer, '°Maia', {
 			schema: EXCEPTION_SCHEMAS.META_SCHEMA,
 			cotype: 'comap',
 			data: {},
@@ -192,14 +192,14 @@ export async function ensureIndexesCoMap(backend) {
 
 	// Use universal read() API to load and resolve the newly created indexes CoMap
 	try {
-		const indexesStore = await universalRead(backend, indexesCoMapId, null, null, null, {
+		const indexesStore = await universalRead(peer, indexesCoMapId, null, null, null, {
 			deepResolve: false,
 			timeoutMs: 5000,
 		})
 
 		if (indexesStore && !indexesStore.value?.error) {
-			const indexesCore = backend.getCoValue(indexesCoMapId)
-			if (indexesCore && backend.isAvailable(indexesCore)) {
+			const indexesCore = peer.getCoValue(indexesCoMapId)
+			if (indexesCore && peer.isAvailable(indexesCore)) {
 				const indexesContent = indexesCore.getCurrentContent?.()
 				if (indexesContent && typeof indexesContent.get === 'function') {
 					return indexesContent
@@ -217,33 +217,33 @@ export async function ensureIndexesCoMap(backend) {
 /**
  * Generate schema-specific index colist schema for a given schema
  * Creates a schema that enforces type safety using $co keyword
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} schemaCoId - Schema co-id (e.g., "co_z123...")
  * @param {string} [metaSchemaCoId] - Optional metaSchema co-id (if not provided, will be extracted from schema's headerMeta)
  * @returns {Promise<string|null>} Schema-specific index colist schema co-id or null if failed
  */
-async function ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSchemaCoId = null) {
+async function ensureSchemaSpecificIndexColistSchema(peer, schemaCoId, metaSchemaCoId = null) {
 	if (!schemaCoId || !schemaCoId.startsWith('co_z')) {
 		throw new Error(`[SchemaIndexManager] Invalid schema co-id: ${schemaCoId}`)
 	}
 
 	// Get metaSchema co-id - prefer provided parameter, otherwise extract from schema's headerMeta
 	if (!metaSchemaCoId) {
-		const schemaCoValueCore = backend.getCoValue(schemaCoId)
+		const schemaCoValueCore = peer.getCoValue(schemaCoId)
 		if (schemaCoValueCore) {
-			const header = backend.getHeader(schemaCoValueCore)
+			const header = peer.getHeader(schemaCoValueCore)
 			const headerMeta = header?.meta
 			metaSchemaCoId = headerMeta?.$schema
 
 			// If it's a human-readable key, try to resolve it
 			if (metaSchemaCoId && !metaSchemaCoId.startsWith('co_z')) {
-				metaSchemaCoId = await resolve(backend, metaSchemaCoId, { returnType: 'coId' })
+				metaSchemaCoId = await resolve(peer, metaSchemaCoId, { returnType: 'coId' })
 			}
 		}
 
 		// Fallback: try registry lookup
 		if (!metaSchemaCoId || !metaSchemaCoId.startsWith('co_z')) {
-			metaSchemaCoId = await getMetaschemaCoId(backend)
+			metaSchemaCoId = await getMetaschemaCoId(peer)
 		}
 	}
 
@@ -253,7 +253,7 @@ async function ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSc
 	}
 
 	// Load schema definition to get its title
-	const schemaDef = await resolve(backend, schemaCoId, { returnType: 'schema' })
+	const schemaDef = await resolve(peer, schemaCoId, { returnType: 'schema' })
 	if (!schemaDef) {
 		if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('schemaDef missing')
 		return null
@@ -278,7 +278,7 @@ async function ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSc
 	const indexColistSchemaTitle = `${prefix}/schema/index/${path}`
 
 	// Check if schema-specific index colist schema already exists
-	const existingSchemaCoId = await resolve(backend, indexColistSchemaTitle, { returnType: 'coId' })
+	const existingSchemaCoId = await resolve(peer, indexColistSchemaTitle, { returnType: 'coId' })
 	if (existingSchemaCoId?.startsWith('co_z')) {
 		return existingSchemaCoId
 	}
@@ -298,11 +298,11 @@ async function ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSc
 
 	// Create the schema as a CoValue
 	try {
-		const createdSchema = await create(backend, metaSchemaCoId, indexColistSchemaDef)
+		const createdSchema = await create(peer, metaSchemaCoId, indexColistSchemaDef)
 		const indexColistSchemaCoId = createdSchema.id
 
 		// Register the schema in the registry
-		const schematasRegistry = await ensureSchemataRegistry(backend)
+		const schematasRegistry = await ensureSchemataRegistry(peer)
 		if (schematasRegistry) {
 			schematasRegistry.set(indexColistSchemaTitle, indexColistSchemaCoId)
 		}
@@ -318,12 +318,12 @@ async function ensureSchemaSpecificIndexColistSchema(backend, schemaCoId, metaSc
  * Ensure schema index colist exists for a given schema co-id
  * Creates the colist in spark.os.indexes[<schemaCoId>] (all schemas indexed in spark.os.indexes)
  * Uses schema-specific index colist schema for type safety
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} schemaCoId - Schema co-id (e.g., "co_z123...")
  * @param {string} [metaSchemaCoId] - Optional metaSchema co-id (if not provided, will be extracted from schema)
  * @returns {Promise<RawCoList>} Schema index colist
  */
-export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoId = null) {
+export async function ensureSchemaIndexColist(peer, schemaCoId, metaSchemaCoId = null) {
 	// Validate schemaCoId is a string
 	if (!schemaCoId || typeof schemaCoId !== 'string' || !schemaCoId.startsWith('co_z')) {
 		throw new Error(
@@ -333,7 +333,7 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
 
 	// Check indexing property from schema definition
 	// Skip creating index colists if indexing is not true (defaults to false)
-	const schemaDef = await resolve(backend, schemaCoId, { returnType: 'schema' })
+	const schemaDef = await resolve(peer, schemaCoId, { returnType: 'schema' })
 	if (!schemaDef) {
 		if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('schemaDef missing')
 		return null
@@ -345,7 +345,7 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
 	}
 
 	// All schema indexes go in spark.os.indexes, keyed by schema co-id
-	const indexesCoMap = await ensureIndexesCoMap(backend)
+	const indexesCoMap = await ensureIndexesCoMap(peer)
 
 	if (!indexesCoMap) {
 		// spark.os.indexes not ready (expected during bootstrap) - skip indexing for now
@@ -357,7 +357,7 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
 	if (indexColistId) {
 		// Use universal read() API to load and resolve index colist
 		try {
-			const indexColistStore = await universalRead(backend, indexColistId, null, null, null, {
+			const indexColistStore = await universalRead(peer, indexColistId, null, null, null, {
 				deepResolve: false, // Don't need deep resolution for index colists
 				timeoutMs: 5000,
 			})
@@ -365,7 +365,7 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
 			// Check if read succeeded
 			if (indexColistStore && !indexColistStore.value?.error) {
 				// Get the raw CoValueCore and content after read() has loaded it
-				const indexColistCore = backend.getCoValue(indexColistId)
+				const indexColistCore = peer.getCoValue(indexColistId)
 				if (indexColistCore?.isAvailable()) {
 					const indexColistContent = indexColistCore.getCurrentContent?.()
 					if (indexColistContent && typeof indexColistContent.append === 'function') {
@@ -389,7 +389,7 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
 	// Ensure schema-specific index colist schema exists
 	// Pass metaSchema co-id if provided to avoid registry lookup issues
 	const indexSchemaCoId = await ensureSchemaSpecificIndexColistSchema(
-		backend,
+		peer,
 		schemaCoId,
 		metaSchemaCoId,
 	)
@@ -399,11 +399,11 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
 	}
 
 	const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
-	const { coValue: indexColistRaw } = await createCoValueForSpark(backend, '°Maia', {
+	const { coValue: indexColistRaw } = await createCoValueForSpark(peer, '°Maia', {
 		schema: indexSchemaCoId,
 		cotype: 'colist',
 		data: [],
-		dataEngine: backend.dbEngine,
+		dataEngine: peer.dbEngine,
 	})
 	indexColistId = indexColistRaw.id
 
@@ -415,7 +415,7 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
 	// Storage sync happens asynchronously in the background
 
 	// Return the CoList content (for append operations)
-	const indexColistCore = backend.node.getCoValue(indexColistId)
+	const indexColistCore = peer.node.getCoValue(indexColistId)
 	if (indexColistCore && indexColistCore.type === 'colist') {
 		const indexColistContent = indexColistCore.getCurrentContent?.()
 		if (indexColistContent && typeof indexColistContent.append === 'function') {
@@ -429,11 +429,11 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
 
 /**
  * Ensure spark.os.unknown colist exists for tracking co-values without schemas
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @returns {Promise<RawCoList>} spark.os.unknown colist
  */
-export async function ensureUnknownColist(backend) {
-	const osCoMap = await ensureOsCoMap(backend)
+export async function ensureUnknownColist(peer) {
+	const osCoMap = await ensureOsCoMap(peer)
 
 	if (!osCoMap) {
 		if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('osCoMap missing')
@@ -443,7 +443,7 @@ export async function ensureUnknownColist(backend) {
 	// Check if unknown colist already exists
 	const unknownColistId = osCoMap.get('unknown')
 	if (unknownColistId) {
-		const unknownColistCore = backend.node.getCoValue(unknownColistId)
+		const unknownColistCore = peer.node.getCoValue(unknownColistId)
 		if (unknownColistCore && unknownColistCore.type === 'colist') {
 			const unknownColistContent = unknownColistCore.getCurrentContent?.()
 			if (unknownColistContent && typeof unknownColistContent.append === 'function') {
@@ -453,7 +453,7 @@ export async function ensureUnknownColist(backend) {
 	}
 
 	const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
-	const { coValue: unknownColist } = await createCoValueForSpark(backend, '°Maia', {
+	const { coValue: unknownColist } = await createCoValueForSpark(peer, '°Maia', {
 		schema: EXCEPTION_SCHEMAS.META_SCHEMA,
 		cotype: 'colist',
 		data: [],
@@ -470,24 +470,24 @@ export async function ensureUnknownColist(backend) {
 /**
  * Check if a co-value is an internal co-value that should NOT be indexed
  * Internal co-values include: account.data, spark.os, schema index colists, schematas registry, unknown colist
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} coId - Co-value co-id
  * @returns {Promise<boolean>} True if internal co-value (should not be indexed)
  */
-async function isInternalCoValue(backend, coId) {
-	if (!backend.account || !coId) {
+async function isInternalCoValue(peer, coId) {
+	if (!peer.account || !coId) {
 		return false
 	}
 
 	// Check if it's spark.os (account.registries.sparks[°Maia].os)
-	const osId = await groups.getSparkOsId(backend, backend?.systemSpark ?? '°Maia')
+	const osId = await groups.getSparkOsId(peer, peer?.systemSpark ?? '°Maia')
 	if (coId === osId) {
 		return true
 	}
 
 	// Check if it's inside spark.os (schematas registry, unknown colist, or indexes container)
 	if (osId) {
-		const osCore = backend.node.getCoValue(osId)
+		const osCore = peer.node.getCoValue(osId)
 		if (osCore && osCore.type === 'comap') {
 			const osContent = osCore.getCurrentContent?.()
 			if (osContent && typeof osContent.get === 'function') {
@@ -511,7 +511,7 @@ async function isInternalCoValue(backend, coId) {
 
 				// Check if it's inside spark.os.indexes (any schema index colist)
 				if (indexesId) {
-					const indexesCore = backend.node.getCoValue(indexesId)
+					const indexesCore = peer.node.getCoValue(indexesId)
 					if (indexesCore && indexesCore.type === 'comap') {
 						const indexesContent = indexesCore.getCurrentContent?.()
 						if (indexesContent && typeof indexesContent.get === 'function') {
@@ -537,23 +537,23 @@ async function isInternalCoValue(backend, coId) {
 
 /**
  * Check if a co-value should be indexed (excludes exception schemas and internal co-values)
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {CoValueCore} coValueCore - CoValueCore instance
  * @returns {Promise<{shouldIndex: boolean, schemaCoId: string | null}>} Result with shouldIndex flag and schema co-id
  */
-export async function shouldIndexCoValue(backend, coValueCore) {
+export async function shouldIndexCoValue(peer, coValueCore) {
 	if (!coValueCore) {
 		return { shouldIndex: false, schemaCoId: null }
 	}
 
 	// Check if it's an internal co-value (account.data, spark.os, index colists, etc.)
-	const isInternal = await isInternalCoValue(backend, coValueCore.id)
+	const isInternal = await isInternalCoValue(peer, coValueCore.id)
 	if (isInternal) {
 		return { shouldIndex: false, schemaCoId: null }
 	}
 
 	// Get header metadata
-	const header = backend.getHeader(coValueCore)
+	const header = peer.getHeader(coValueCore)
 	if (!header || !header.meta) {
 		return { shouldIndex: false, schemaCoId: null }
 	}
@@ -585,7 +585,7 @@ export async function shouldIndexCoValue(backend, coValueCore) {
 	if (schema && typeof schema === 'string' && schema.startsWith('co_z')) {
 		// Load schema definition to check indexing property
 		try {
-			const schemaDef = await resolve(backend, schema, { returnType: 'schema' })
+			const schemaDef = await resolve(peer, schema, { returnType: 'schema' })
 			if (schemaDef) {
 				// Check indexing property (defaults to false if not present)
 				const indexing = schemaDef.indexing
@@ -613,17 +613,17 @@ export async function shouldIndexCoValue(backend, coValueCore) {
 
 /**
  * Get metaschema co-id from spark.os.schematas registry (account.registries.sparks[°Maia].os.schematas)
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @returns {Promise<string|null>} Metaschema co-id or null if not found
  */
-async function getMetaschemaCoId(backend) {
-	const spark = backend?.systemSpark ?? '°Maia'
-	const osId = await groups.getSparkOsId(backend, spark)
+async function getMetaschemaCoId(peer) {
+	const spark = peer?.systemSpark ?? '°Maia'
+	const osId = await groups.getSparkOsId(peer, spark)
 	if (!osId) {
 		return null
 	}
 
-	const osCore = backend.node.getCoValue(osId)
+	const osCore = peer.node.getCoValue(osId)
 	if (!osCore || osCore.type !== 'comap') {
 		return null
 	}
@@ -639,7 +639,7 @@ async function getMetaschemaCoId(backend) {
 		return null
 	}
 
-	const schematasCore = backend.node.getCoValue(schematasId)
+	const schematasCore = peer.node.getCoValue(schematasId)
 	if (!schematasCore || schematasCore.type !== 'comap') {
 		return null
 	}
@@ -660,11 +660,11 @@ async function getMetaschemaCoId(backend) {
 
 /**
  * Ensure spark.os.schematas registry CoMap exists (account.registries.sparks[°Maia].os.schematas)
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @returns {Promise<RawCoMap>} spark.os.schematas registry CoMap
  */
-async function ensureSchemataRegistry(backend) {
-	const osCoMap = await ensureOsCoMap(backend)
+async function ensureSchemataRegistry(peer) {
+	const osCoMap = await ensureOsCoMap(peer)
 
 	if (!osCoMap) {
 		// spark.os not ready (expected during bootstrap) - skip creating schematas registry
@@ -676,7 +676,7 @@ async function ensureSchemataRegistry(backend) {
 	if (schematasId) {
 		// Use universal read() API to load and resolve schematas registry
 		try {
-			const schematasStore = await universalRead(backend, schematasId, null, null, null, {
+			const schematasStore = await universalRead(peer, schematasId, null, null, null, {
 				deepResolve: false, // Don't need deep resolution for registry
 				timeoutMs: 5000,
 			})
@@ -684,7 +684,7 @@ async function ensureSchemataRegistry(backend) {
 			// Check if read succeeded
 			if (schematasStore && !schematasStore.value?.error) {
 				// Get the raw CoValueCore and content after read() has loaded it
-				const schematasCore = backend.getCoValue(schematasId)
+				const schematasCore = peer.getCoValue(schematasId)
 				if (schematasCore?.isAvailable()) {
 					const schematasContent = schematasCore.getCurrentContent?.()
 					if (schematasContent && typeof schematasContent.set === 'function') {
@@ -704,16 +704,16 @@ async function ensureSchemataRegistry(backend) {
 		return null
 	}
 
-	const schematasSchemaCoId = await resolve(backend, '°Maia/schema/os/schematas-registry', {
+	const schematasSchemaCoId = await resolve(peer, '°Maia/schema/os/schematas-registry', {
 		returnType: 'coId',
 	})
 	const schemaForSchematas = schematasSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA
 	const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
-	const { coValue: schematasCoMap } = await createCoValueForSpark(backend, '°Maia', {
+	const { coValue: schematasCoMap } = await createCoValueForSpark(peer, '°Maia', {
 		schema: schemaForSchematas,
 		cotype: 'comap',
 		data: {},
-		dataEngine: backend.dbEngine,
+		dataEngine: peer.dbEngine,
 	})
 	osCoMap.set('schematas', schematasCoMap.id)
 
@@ -726,17 +726,17 @@ async function ensureSchemataRegistry(backend) {
 
 /**
  * Register a schema co-value in spark.os.schematas registry
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {CoValueCore} schemaCoValueCore - Schema co-value core
  * @returns {Promise<void>}
  */
-export async function registerSchemaCoValue(backend, schemaCoValueCore) {
+export async function registerSchemaCoValue(peer, schemaCoValueCore) {
 	if (!schemaCoValueCore || !schemaCoValueCore.id) {
 		return
 	}
 
 	// Get schema content to extract title
-	const content = backend.getCurrentContent(schemaCoValueCore)
+	const content = peer.getCurrentContent(schemaCoValueCore)
 	if (!content || typeof content.get !== 'function') {
 		return
 	}
@@ -748,7 +748,7 @@ export async function registerSchemaCoValue(backend, schemaCoValueCore) {
 	}
 
 	// Ensure schematas registry exists
-	const schematasRegistry = await ensureSchemataRegistry(backend)
+	const schematasRegistry = await ensureSchemataRegistry(peer)
 
 	if (!schematasRegistry) {
 		// spark.os not available - skip registration for now
@@ -784,34 +784,34 @@ export async function registerSchemaCoValue(backend, schemaCoValueCore) {
 	}
 
 	// Get metaSchema co-id from schema's headerMeta for creating schema-specific index colist schema
-	const header = backend.getHeader(schemaCoValueCore)
+	const header = peer.getHeader(schemaCoValueCore)
 	const headerMeta = header?.meta
 	let metaSchemaCoId = headerMeta?.$schema
 
 	// If it's a human-readable key, try to resolve it
 	if (metaSchemaCoId && !metaSchemaCoId.startsWith('co_z')) {
-		metaSchemaCoId = await resolve(backend, metaSchemaCoId, { returnType: 'coId' })
+		metaSchemaCoId = await resolve(peer, metaSchemaCoId, { returnType: 'coId' })
 	}
 
 	// Create schema index colist for this schema (in spark.os, keyed by schema co-id)
 	// Pass metaSchema co-id to avoid registry lookup issues
-	await ensureSchemaIndexColist(backend, schemaCoValueCore.id, metaSchemaCoId)
+	await ensureSchemaIndexColist(peer, schemaCoValueCore.id, metaSchemaCoId)
 }
 
 /**
  * Check if a co-value is a schema co-value (has metaschema co-id as $schema or has schema-like content)
  * Uses multiple heuristics to detect schemas, including content-based detection
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {CoValueCore} coValueCore - CoValueCore instance
  * @returns {Promise<boolean>} True if schema co-value
  */
-export async function isSchemaCoValue(backend, coValueCore) {
+export async function isSchemaCoValue(peer, coValueCore) {
 	if (!coValueCore) {
 		return false
 	}
 
 	// PRIMARY: Check headerMeta.$schema FIRST (always available immediately, most reliable)
-	const header = backend.getHeader(coValueCore)
+	const header = peer.getHeader(coValueCore)
 	if (!header || !header.meta) {
 		return false
 	}
@@ -828,7 +828,7 @@ export async function isSchemaCoValue(backend, coValueCore) {
 	// Special case: Check content.title to confirm it's metaschema
 	// Uses "°Maia/schema/meta" (schema namekey from JSON definition - single source of truth)
 	if (schema === EXCEPTION_SCHEMAS.META_SCHEMA) {
-		const content = backend.getCurrentContent(coValueCore)
+		const content = peer.getCurrentContent(coValueCore)
 		if (content && typeof content.get === 'function') {
 			const title = content.get('title')
 			if (title === '°Maia/schema/meta') {
@@ -846,7 +846,7 @@ export async function isSchemaCoValue(backend, coValueCore) {
 		// Use universal read() API to load and resolve the referenced co-value
 		try {
 			// Use universal read() API to ensure referenced co-value is loaded and resolved
-			const referencedStore = await universalRead(backend, schema, null, null, null, {
+			const referencedStore = await universalRead(peer, schema, null, null, null, {
 				deepResolve: false, // Don't need deep resolution for schema detection
 				timeoutMs: 5000, // 5 second timeout - metaschema should be available but may need more time during seeding
 			})
@@ -854,10 +854,10 @@ export async function isSchemaCoValue(backend, coValueCore) {
 			// Check if read succeeded
 			if (referencedStore && !referencedStore.value?.error) {
 				// Get the raw CoValueCore and content after read() has loaded it
-				const referencedCoValueCore = backend.getCoValue(schema)
+				const referencedCoValueCore = peer.getCoValue(schema)
 
 				if (referencedCoValueCore?.isAvailable()) {
-					const referencedContent = backend.getCurrentContent(referencedCoValueCore)
+					const referencedContent = peer.getCurrentContent(referencedCoValueCore)
 
 					if (referencedContent && typeof referencedContent.get === 'function') {
 						const referencedTitle = referencedContent.get('title')
@@ -877,7 +877,7 @@ export async function isSchemaCoValue(backend, coValueCore) {
 
 		// FALLBACK: Try registry lookup (for runtime cases when registry exists)
 		// This is a fallback for cases where metaschema co-value isn't available yet
-		const metaSchemaCoId = await getMetaschemaCoId(backend)
+		const metaSchemaCoId = await getMetaschemaCoId(peer)
 		if (metaSchemaCoId && schema === metaSchemaCoId) {
 			// This co-value's $schema points to metaschema - it's a schema co-value
 			return true
@@ -889,29 +889,29 @@ export async function isSchemaCoValue(backend, coValueCore) {
 
 /**
  * Index a co-value in its schema's index colist or add to unknown colist
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {CoValueCore|string} coValueCoreOrId - CoValueCore instance or co-id string
  * @returns {Promise<void>}
  */
 // Track co-values currently being indexed to prevent duplicate work
 const indexingInProgress = new Set()
 
-export async function indexCoValue(backend, coValueCoreOrId) {
+export async function indexCoValue(peer, coValueCoreOrId) {
 	// Handle both CoValueCore and co-id string
 	let coValueCore = coValueCoreOrId
 	let coId = null
 
 	if (typeof coValueCoreOrId === 'string') {
 		coId = coValueCoreOrId
-		coValueCore = backend.getCoValue(coId)
-		if (!coValueCore || !backend.isAvailable(coValueCore)) {
+		coValueCore = peer.getCoValue(coId)
+		if (!coValueCore || !peer.isAvailable(coValueCore)) {
 			// Try loading co-value before giving up (caller may have created it but it's not loaded yet)
-			if (backend.node?.loadCoValueCore) {
-				await backend.node.loadCoValueCore(coId).catch(() => {})
+			if (peer.node?.loadCoValueCore) {
+				await peer.node.loadCoValueCore(coId).catch(() => {})
 			}
-			coValueCore = backend.getCoValue(coId)
+			coValueCore = peer.getCoValue(coId)
 		}
-		if (!coValueCore || !backend.isAvailable(coValueCore)) {
+		if (!coValueCore || !peer.isAvailable(coValueCore)) {
 			return
 		}
 	} else {
@@ -932,12 +932,12 @@ export async function indexCoValue(backend, coValueCoreOrId) {
 
 	try {
 		// Check if should be indexed
-		const { shouldIndex, schemaCoId } = await shouldIndexCoValue(backend, coValueCore)
+		const { shouldIndex, schemaCoId } = await shouldIndexCoValue(peer, coValueCore)
 
 		if (shouldIndex && schemaCoId) {
 			// Has schema - index it
 			// Ensure schema index colist exists (in spark.os, keyed by schema co-id)
-			const indexColist = await ensureSchemaIndexColist(backend, schemaCoId)
+			const indexColist = await ensureSchemaIndexColist(peer, schemaCoId)
 
 			if (!indexColist) {
 				// spark.os not available OR schema has indexing: false - skip indexing
@@ -947,7 +947,7 @@ export async function indexCoValue(backend, coValueCoreOrId) {
 
 			// CRITICAL: Validate that co-value actually matches the schema before indexing
 			// This prevents legacy/invalid entries from being indexed
-			const header = backend.getHeader(coValueCore)
+			const header = peer.getHeader(coValueCore)
 			const headerMeta = header?.meta
 			const coValueSchemaCoId = headerMeta?.$schema
 
@@ -982,7 +982,7 @@ export async function indexCoValue(backend, coValueCoreOrId) {
 			// This allows instant local-first UI updates without waiting for persistence
 		} else {
 			// No schema - add to unknown colist
-			const unknownColist = await ensureUnknownColist(backend)
+			const unknownColist = await ensureUnknownColist(peer)
 
 			if (!unknownColist) {
 				// spark.os not available - skip indexing for now
@@ -1016,20 +1016,20 @@ export async function indexCoValue(backend, coValueCoreOrId) {
 /**
  * Reconcile indexes - ensure all co-values with schemas are indexed
  * This is a background job that can be run periodically to ensure index completeness
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {Object} [options] - Options
  * @param {number} [options.batchSize=100] - Number of co-values to process per batch
  * @param {number} [options.delayMs=10] - Delay between batches (ms) to avoid blocking UI
  * @returns {Promise<{indexed: number, skipped: number, errors: number}>} Reconciliation results
  */
-export async function reconcileIndexes(backend, options = {}) {
+export async function reconcileIndexes(peer, options = {}) {
 	const { batchSize: _batchSize = 100, delayMs: _delayMs = 10 } = options
 
-	if (!backend.account) {
+	if (!peer.account) {
 		return { indexed: 0, skipped: 0, errors: 0 }
 	}
 
-	const indexesCoMap = await ensureIndexesCoMap(backend)
+	const indexesCoMap = await ensureIndexesCoMap(peer)
 	if (!indexesCoMap) {
 		return { indexed: 0, skipped: 0, errors: 0 }
 	}
@@ -1046,7 +1046,7 @@ export async function reconcileIndexes(backend, options = {}) {
 			if (indexColistId) {
 				// Use universal read() API to load and resolve index colist
 				try {
-					const indexColistStore = await universalRead(backend, indexColistId, null, null, null, {
+					const indexColistStore = await universalRead(peer, indexColistId, null, null, null, {
 						deepResolve: false, // Don't need deep resolution for reconciliation
 						timeoutMs: 2000,
 					})
@@ -1054,7 +1054,7 @@ export async function reconcileIndexes(backend, options = {}) {
 					// Check if read succeeded
 					if (indexColistStore && !indexColistStore.value?.error) {
 						// Get the raw CoValueCore and content after read() has loaded it
-						const indexColistCore = backend.getCoValue(indexColistId)
+						const indexColistCore = peer.getCoValue(indexColistId)
 						if (indexColistCore?.isAvailable()) {
 							const indexColistContent = indexColistCore.getCurrentContent?.()
 							if (indexColistContent && typeof indexColistContent.toJSON === 'function') {
@@ -1069,7 +1069,7 @@ export async function reconcileIndexes(backend, options = {}) {
 		}
 	}
 
-	// Get all co-values from backend node and check if they're indexed
+	// Get all co-values from peer node and check if they're indexed
 	// Note: This is a simplified approach - in practice, you might want to iterate through
 	// all known co-values more efficiently
 	const indexed = 0
@@ -1086,21 +1086,21 @@ export async function reconcileIndexes(backend, options = {}) {
  * Get schema index colist for removal (doesn't check indexing property)
  * Used when removing co-values from indexes - we need to remove even if indexing is currently disabled
  * This is different from ensureSchemaIndexColist which only returns colists for schemas with indexing: true
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} schemaCoId - Schema co-id (e.g., "co_z123...")
  * @returns {Promise<RawCoList|null>} Schema index colist or null if not found
  */
-async function getSchemaIndexColistForRemoval(backend, schemaCoId) {
+async function getSchemaIndexColistForRemoval(peer, schemaCoId) {
 	if (!schemaCoId || !schemaCoId.startsWith('co_z')) {
 		return null
 	}
 
-	if (!backend.account) {
+	if (!peer.account) {
 		return null
 	}
 
 	// Get spark.os.indexes CoMap using ensureIndexesCoMap helper
-	const indexesCoMap = await ensureIndexesCoMap(backend)
+	const indexesCoMap = await ensureIndexesCoMap(peer)
 	if (!indexesCoMap) {
 		return null
 	}
@@ -1113,7 +1113,7 @@ async function getSchemaIndexColistForRemoval(backend, schemaCoId) {
 
 	// Use universal read() API to load and resolve index colist
 	try {
-		const indexColistStore = await universalRead(backend, indexColistId, null, null, null, {
+		const indexColistStore = await universalRead(peer, indexColistId, null, null, null, {
 			deepResolve: false, // Don't need deep resolution for removal
 			timeoutMs: 2000,
 		})
@@ -1121,9 +1121,9 @@ async function getSchemaIndexColistForRemoval(backend, schemaCoId) {
 		// Check if read succeeded
 		if (indexColistStore && !indexColistStore.value?.error) {
 			// Get the raw CoValueCore and content after read() has loaded it
-			const indexColistCore = backend.getCoValue(indexColistId)
-			if (indexColistCore && backend.isAvailable(indexColistCore)) {
-				const indexColistContent = backend.getCurrentContent(indexColistCore)
+			const indexColistCore = peer.getCoValue(indexColistId)
+			if (indexColistCore && peer.isAvailable(indexColistCore)) {
+				const indexColistContent = peer.getCurrentContent(indexColistCore)
 				if (
 					indexColistContent &&
 					typeof indexColistContent.toJSON === 'function' &&
@@ -1145,21 +1145,21 @@ async function getSchemaIndexColistForRemoval(backend, schemaCoId) {
 
 /**
  * Remove a co-value from its schema's index colist or from unknown colist
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} coId - Co-value co-id to remove
  * @param {string} [schemaCoId] - Optional schema co-id (if known, avoids lookup)
  * @returns {Promise<void>}
  */
-export async function removeFromIndex(backend, coId, schemaCoId = null) {
+export async function removeFromIndex(peer, coId, schemaCoId = null) {
 	if (!coId || !coId.startsWith('co_z')) {
 		return
 	}
 
 	// Get co-value core to determine schema if not provided
 	if (!schemaCoId) {
-		const coValueCore = backend.getCoValue(coId)
-		if (coValueCore && backend.isAvailable(coValueCore)) {
-			const header = backend.getHeader(coValueCore)
+		const coValueCore = peer.getCoValue(coId)
+		if (coValueCore && peer.isAvailable(coValueCore)) {
+			const header = peer.getHeader(coValueCore)
 			if (header?.meta) {
 				schemaCoId = header.meta.$schema
 			}
@@ -1170,7 +1170,7 @@ export async function removeFromIndex(backend, coId, schemaCoId = null) {
 	if (schemaCoId && typeof schemaCoId === 'string' && schemaCoId.startsWith('co_z')) {
 		// Get schema index colist for removal (doesn't check indexing property)
 		// We need to remove co-values even if indexing is currently disabled
-		const indexColist = await getSchemaIndexColistForRemoval(backend, schemaCoId)
+		const indexColist = await getSchemaIndexColistForRemoval(peer, schemaCoId)
 
 		// Remove co-value co-id from index colist
 		if (
@@ -1186,7 +1186,7 @@ export async function removeFromIndex(backend, coId, schemaCoId = null) {
 		}
 	} else {
 		// No schema - remove from unknown colist
-		const unknownColist = await ensureUnknownColist(backend)
+		const unknownColist = await ensureUnknownColist(peer)
 
 		if (
 			unknownColist &&

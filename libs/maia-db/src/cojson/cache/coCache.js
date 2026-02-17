@@ -356,7 +356,7 @@ export class CoCache {
 
 	/**
 	 * Debug: Get cache stats for subscription/freeze investigation
-	 * Call via: maia.dataEngine?.backend?.subscriptionCache.getStats()
+	 * Call via: maia.dataEngine?.peer?.subscriptionCache.getStats()
 	 * @returns {{ cacheSize: number, subscriptions: number, stores: number, pendingCleanups: number }}
 	 */
 	getStats() {

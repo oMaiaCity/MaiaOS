@@ -31,15 +31,15 @@ export function setSchemaResolver(options) {
 	const operationsResolver = async (schemaKey) => {
 		// Use universal resolve() API directly (single source of truth)
 		try {
-			if (!dataEngine.backend) {
-				throw new Error('[SchemaResolver] dataEngine.backend is required')
+			if (!dataEngine.peer) {
+				throw new Error('[SchemaResolver] dataEngine.peer is required')
 			}
 
 			// Import resolve() dynamically to avoid circular dependencies
 			const { resolve } = await import('@MaiaOS/db')
 
 			// Use universal resolve() API - handles co-id, registry string (°Maia/schema/...), etc.
-			const schema = await resolve(dataEngine.backend, schemaKey, { returnType: 'schema' })
+			const schema = await resolve(dataEngine.peer, schemaKey, { returnType: 'schema' })
 
 			if (!schema) {
 				throw new Error(`[SchemaResolver] Schema ${schemaKey} not found`)

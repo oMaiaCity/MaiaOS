@@ -11,7 +11,7 @@ import { resolve } from '../schema/resolver.js'
 /**
  * Create a message CoMap and push its co-id to an inbox CoStream
  *
- * Schema validation happens at gate: createCoMap (backend).
+ * Schema validation happens at gate: createCoMap (peer).
  * This function enforces: containsExpressions check (payload must be resolved before persist).
  *
  * @param {Object} dbEngine - Database engine instance
@@ -85,7 +85,7 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 
 	// 2. CRITICAL: Load and validate message data against message schema before creating
 	//    This ensures type, payload, source, target, processed fields are valid
-	const messageSchema = await resolve(dbEngine.backend, messageSchemaCoId, { returnType: 'schema' })
+	const messageSchema = await resolve(dbEngine.peer, messageSchemaCoId, { returnType: 'schema' })
 	if (!messageSchema) {
 		throw new Error(`[createAndPushMessage] Message schema not found: ${messageSchemaCoId}`)
 	}
@@ -105,7 +105,7 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 		)
 	}
 
-	// Schema validation happens at gate: createCoMap (backend)
+	// Schema validation happens at gate: createCoMap (peer)
 	// 3. Create message CoMap using create operation
 	const createResult = await dbEngine.execute({
 		op: 'create',

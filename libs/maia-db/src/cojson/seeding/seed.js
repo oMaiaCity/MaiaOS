@@ -298,32 +298,32 @@ async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
  * Default first spark: registries.sparks["°Maia"] = maiaSparkCoId.
  * Maia guardian owner, everyone=reader on registries/sparks/humans. Human/agent link via GET /syncRegistry.
  * @private
- * @param {Object} backend
+ * @param {Object} peer
  * @param {Object} maiaGroup - °Maia spark's guardian group
  */
-async function bootstrapAccountRegistries(backend, maiaGroup) {
-	const registriesId = backend.account?.get('registries')
+async function bootstrapAccountRegistries(peer, maiaGroup) {
+	const registriesId = peer.account?.get('registries')
 	if (!registriesId?.startsWith('co_z')) return
-	const registriesStore = await backend.read(null, registriesId)
+	const registriesStore = await peer.read(null, registriesId)
 	await waitForStoreReady(registriesStore, registriesId, 10000)
 	const registriesData = registriesStore?.value
 	if (!registriesData || registriesData.error) return
 	const sparksId = registriesData.sparks
 	if (!sparksId?.startsWith('co_z')) return
-	const sparksStore = await backend.read(null, sparksId)
+	const sparksStore = await peer.read(null, sparksId)
 	await waitForStoreReady(sparksStore, sparksId, 10000)
 	const sparksData = sparksStore?.value
 	if (!sparksData || sparksData.error) return
 	const maiaSparkCoId = sparksData[MAIA_SPARK]
 	if (!maiaSparkCoId || !maiaSparkCoId.startsWith('co_z')) return
 
-	const sparkCore = backend.getCoValue(maiaSparkCoId)
+	const sparkCore = peer.getCoValue(maiaSparkCoId)
 	if (!sparkCore) return
-	if (!backend.isAvailable(sparkCore)) {
+	if (!peer.isAvailable(sparkCore)) {
 		await new Promise((resolve, reject) => {
 			const t = setTimeout(() => reject(new Error('Timeout')), 10000)
 			const unsub = sparkCore.subscribe((c) => {
-				if (c && backend.isAvailable(c)) {
+				if (c && peer.isAvailable(c)) {
 					clearTimeout(t)
 					unsub?.()
 					resolve()
@@ -331,34 +331,34 @@ async function bootstrapAccountRegistries(backend, maiaGroup) {
 			})
 		})
 	}
-	const sparkContent = backend.getCurrentContent(sparkCore)
+	const sparkContent = peer.getCurrentContent(sparkCore)
 	if (!sparkContent || typeof sparkContent.get !== 'function') return
 
 	const { EXCEPTION_SCHEMAS } = await import('../../schemas/registry.js')
-	const node = backend.node
+	const node = peer.node
 
 	// Get capabilities from spark.os (source of truth for guardian)
 	const osId = sparkContent.get('os')
 	if (!osId || !osId.startsWith('co_z')) return
-	const osCore = backend.getCoValue(osId)
-	if (!osCore || !backend.isAvailable(osCore)) return
-	const osContent = backend.getCurrentContent(osCore)
+	const osCore = peer.getCoValue(osId)
+	if (!osCore || !peer.isAvailable(osCore)) return
+	const osContent = peer.getCurrentContent(osCore)
 	if (!osContent || typeof osContent.get !== 'function') return
 	const capabilitiesId = osContent.get('capabilities')
 	if (!capabilitiesId || !capabilitiesId.startsWith('co_z')) return
-	const capabilitiesCore = backend.getCoValue(capabilitiesId)
-	if (!capabilitiesCore || !backend.isAvailable(capabilitiesCore)) return
-	const capabilitiesContent = backend.getCurrentContent(capabilitiesCore)
+	const capabilitiesCore = peer.getCoValue(capabilitiesId)
+	if (!capabilitiesCore || !peer.isAvailable(capabilitiesCore)) return
+	const capabilitiesContent = peer.getCurrentContent(capabilitiesCore)
 	if (!capabilitiesContent || typeof capabilitiesContent.set !== 'function') return
 
 	const { resolve } = await import('../schema/resolver.js')
-	const registriesSchemaCoId = await resolve(backend, '°Maia/schema/os/registries', {
+	const registriesSchemaCoId = await resolve(peer, '°Maia/schema/os/registries', {
 		returnType: 'coId',
 	})
-	const sparksRegistrySchemaCoId = await resolve(backend, '°Maia/schema/os/sparks-registry', {
+	const sparksRegistrySchemaCoId = await resolve(peer, '°Maia/schema/os/sparks-registry', {
 		returnType: 'coId',
 	})
-	const humansRegistrySchemaCoId = await resolve(backend, '°Maia/schema/os/humans-registry', {
+	const humansRegistrySchemaCoId = await resolve(peer, '°Maia/schema/os/humans-registry', {
 		returnType: 'coId',
 	})
 	const registriesMeta = registriesSchemaCoId
@@ -372,7 +372,7 @@ async function bootstrapAccountRegistries(backend, maiaGroup) {
 		: { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }
 
 	const { removeGroupMember } = await import('../groups/groups.js')
-	const account = backend.account
+	const account = peer.account
 	const memberIdToRemove =
 		typeof node.getCurrentAccountOrAgentID === 'function'
 			? node.getCurrentAccountOrAgentID()
@@ -382,9 +382,9 @@ async function bootstrapAccountRegistries(backend, maiaGroup) {
 	const existingRegistriesId = account.get('registries')
 	let registriesContent = null
 	if (existingRegistriesId?.startsWith('co_z')) {
-		const registriesCore = backend.getCoValue(existingRegistriesId)
-		if (registriesCore && backend.isAvailable(registriesCore)) {
-			registriesContent = backend.getCurrentContent(registriesCore)
+		const registriesCore = peer.getCoValue(existingRegistriesId)
+		if (registriesCore && peer.isAvailable(registriesCore)) {
+			registriesContent = peer.getCurrentContent(registriesCore)
 		}
 	}
 	if (!registriesContent || typeof registriesContent.set !== 'function') {
@@ -404,9 +404,9 @@ async function bootstrapAccountRegistries(backend, maiaGroup) {
 	const sparksRegistryId = registriesContent.get('sparks')
 	let sparksContent = null
 	if (sparksRegistryId) {
-		const sparksCore = backend.getCoValue(sparksRegistryId)
-		if (sparksCore && backend.isAvailable(sparksCore)) {
-			sparksContent = backend.getCurrentContent(sparksCore)
+		const sparksCore = peer.getCoValue(sparksRegistryId)
+		if (sparksCore && peer.isAvailable(sparksCore)) {
+			sparksContent = peer.getCurrentContent(sparksCore)
 		}
 	}
 	if (!sparksContent || typeof sparksContent.set !== 'function') {
@@ -430,9 +430,9 @@ async function bootstrapAccountRegistries(backend, maiaGroup) {
 	const humansRegistryId = registriesContent.get('humans')
 	let humansContent = null
 	if (humansRegistryId) {
-		const humansCore = backend.getCoValue(humansRegistryId)
-		if (humansCore && backend.isAvailable(humansCore)) {
-			humansContent = backend.getCurrentContent(humansCore)
+		const humansCore = peer.getCoValue(humansRegistryId)
+		if (humansCore && peer.isAvailable(humansCore)) {
+			humansContent = peer.getCurrentContent(humansCore)
 		}
 	}
 	if (!humansContent || typeof humansContent.set !== 'function') {
@@ -504,30 +504,30 @@ function removeIdFields(obj, inPropertiesOrItems = false) {
  *
  * @param {RawAccount} account - The account
  * @param {LocalNode} node - The LocalNode instance
- * @param {MaiaDB} backend - Backend instance
+ * @param {MaiaDB} peer - Backend instance
  * @returns {Promise<{deleted: number, errors: number}>} Summary of deletion
  */
-async function deleteSeededCoValues(_account, _node, backend) {
+async function deleteSeededCoValues(_account, _node, peer) {
 	let deletedCount = 0
 	let errorCount = 0
 
 	try {
 		// Get °Maia spark's os
-		const osId = await groups.getSparkOsId(backend, MAIA_SPARK)
+		const osId = await groups.getSparkOsId(peer, MAIA_SPARK)
 		if (!osId) {
 			return { deleted: 0, errors: 0 }
 		}
 
-		const osCore = await ensureCoValueLoaded(backend, osId, {
+		const osCore = await ensureCoValueLoaded(peer, osId, {
 			waitForAvailable: true,
 			timeoutMs: 5000,
 		})
 
-		if (!osCore || !backend.isAvailable(osCore)) {
+		if (!osCore || !peer.isAvailable(osCore)) {
 			return { deleted: 0, errors: 0 }
 		}
 
-		const osCoMap = backend.getCurrentContent(osCore)
+		const osCoMap = peer.getCurrentContent(osCore)
 		if (!osCoMap || typeof osCoMap.get !== 'function') {
 			return { deleted: 0, errors: 0 }
 		}
@@ -537,13 +537,13 @@ async function deleteSeededCoValues(_account, _node, backend) {
 		const schemaCoIds = new Set()
 
 		if (schematasId) {
-			const schematasCore = await ensureCoValueLoaded(backend, schematasId, {
+			const schematasCore = await ensureCoValueLoaded(peer, schematasId, {
 				waitForAvailable: true,
 				timeoutMs: 5000,
 			})
 
-			if (schematasCore && backend.isAvailable(schematasCore)) {
-				const schematasContent = backend.getCurrentContent(schematasCore)
+			if (schematasCore && peer.isAvailable(schematasCore)) {
+				const schematasContent = peer.getCurrentContent(schematasCore)
 				if (schematasContent && typeof schematasContent.get === 'function') {
 					// Get all schema co-ids from registry (values are schema co-ids)
 					const keys =
@@ -575,13 +575,13 @@ async function deleteSeededCoValues(_account, _node, backend) {
 		const indexesId = osCoMap.get('indexes')
 		if (indexesId) {
 			try {
-				const indexesCore = await ensureCoValueLoaded(backend, indexesId, {
+				const indexesCore = await ensureCoValueLoaded(peer, indexesId, {
 					waitForAvailable: true,
 					timeoutMs: 5000,
 				})
 
-				if (indexesCore && backend.isAvailable(indexesCore)) {
-					indexesContentForCollection = backend.getCurrentContent(indexesCore)
+				if (indexesCore && peer.isAvailable(indexesCore)) {
+					indexesContentForCollection = peer.getCurrentContent(indexesCore)
 					if (indexesContentForCollection && typeof indexesContentForCollection.get === 'function') {
 						// Iterate all keys in spark.os.indexes (all are schema index colists)
 						const keys =
@@ -597,13 +597,13 @@ async function deleteSeededCoValues(_account, _node, backend) {
 								const indexColistId = indexesContentForCollection.get(key)
 								if (indexColistId) {
 									try {
-										const indexColistCore = await ensureCoValueLoaded(backend, indexColistId, {
+										const indexColistCore = await ensureCoValueLoaded(peer, indexColistId, {
 											waitForAvailable: true,
 											timeoutMs: 2000,
 										})
 
-										if (indexColistCore && backend.isAvailable(indexColistCore)) {
-											const indexColistContent = backend.getCurrentContent(indexColistCore)
+										if (indexColistCore && peer.isAvailable(indexColistCore)) {
+											const indexColistContent = peer.getCurrentContent(indexColistCore)
 											if (indexColistContent && typeof indexColistContent.toJSON === 'function') {
 												const items = indexColistContent.toJSON()
 												// Add all co-value co-ids from this index colist
@@ -632,13 +632,13 @@ async function deleteSeededCoValues(_account, _node, backend) {
 		const unknownId = osCoMap.get('unknown')
 		if (unknownId) {
 			try {
-				const unknownCore = await ensureCoValueLoaded(backend, unknownId, {
+				const unknownCore = await ensureCoValueLoaded(peer, unknownId, {
 					waitForAvailable: true,
 					timeoutMs: 2000,
 				})
 
-				if (unknownCore && backend.isAvailable(unknownCore)) {
-					unknownContentForClearing = backend.getCurrentContent(unknownCore)
+				if (unknownCore && peer.isAvailable(unknownCore)) {
+					unknownContentForClearing = peer.getCurrentContent(unknownCore)
 					if (unknownContentForClearing && typeof unknownContentForClearing.toJSON === 'function') {
 						const items = unknownContentForClearing.toJSON()
 						console.log(`[Seed] Found ${items.length} co-values in spark.os.unknown`)
@@ -674,13 +674,13 @@ async function deleteSeededCoValues(_account, _node, backend) {
 		for (const coId of coValuesToDeleteFiltered) {
 			try {
 				// Get schema co-id from co-value headerMeta
-				const coValueCore = backend.getCoValue(coId)
+				const coValueCore = peer.getCoValue(coId)
 				if (!coValueCore) {
 					// Co-value doesn't exist, skip
 					continue
 				}
 
-				const header = backend.getHeader(coValueCore)
+				const header = peer.getHeader(coValueCore)
 				const headerMeta = header?.meta || null
 				const schemaCoId = headerMeta?.$schema
 
@@ -694,7 +694,7 @@ async function deleteSeededCoValues(_account, _node, backend) {
 				// These subscription errors are expected during cleanup and can be safely ignored
 				// The co-value is still deleted successfully even if subscriptions fail
 				try {
-					await deleteRecord(backend, schemaCoId || null, coId)
+					await deleteRecord(peer, schemaCoId || null, coId)
 					deletedCount++
 				} catch (deleteError) {
 					// Check if this is a subscription/actor engine error (expected during cleanup)
@@ -721,16 +721,16 @@ async function deleteSeededCoValues(_account, _node, backend) {
 
 		// Also delete vibes from registries.sparks[°Maia].vibes
 		let vibesContentForClearing = null
-		const vibesId = await groups.getSparkVibesId(backend, MAIA_SPARK)
+		const vibesId = await groups.getSparkVibesId(peer, MAIA_SPARK)
 		if (vibesId) {
 			try {
-				const vibesCore = await ensureCoValueLoaded(backend, vibesId, {
+				const vibesCore = await ensureCoValueLoaded(peer, vibesId, {
 					waitForAvailable: true,
 					timeoutMs: 2000,
 				})
 
-				if (vibesCore && backend.isAvailable(vibesCore)) {
-					vibesContentForClearing = backend.getCurrentContent(vibesCore)
+				if (vibesCore && peer.isAvailable(vibesCore)) {
+					vibesContentForClearing = peer.getCurrentContent(vibesCore)
 					if (vibesContentForClearing && typeof vibesContentForClearing.get === 'function') {
 						const vibeKeys =
 							vibesContentForClearing.keys && typeof vibesContentForClearing.keys === 'function'
@@ -744,13 +744,13 @@ async function deleteSeededCoValues(_account, _node, backend) {
 							if (vibeCoId && typeof vibeCoId === 'string' && vibeCoId.startsWith('co_z')) {
 								try {
 									// Get schema from vibe co-value
-									const vibeCore = backend.getCoValue(vibeCoId)
+									const vibeCore = peer.getCoValue(vibeCoId)
 									if (vibeCore) {
-										const header = backend.getHeader(vibeCore)
+										const header = peer.getHeader(vibeCore)
 										const headerMeta = header?.meta || null
 										const schemaCoId = headerMeta?.$schema
 
-										await deleteRecord(backend, schemaCoId || null, vibeCoId)
+										await deleteRecord(peer, schemaCoId || null, vibeCoId)
 										deletedCount++
 									}
 								} catch (_e) {
@@ -784,13 +784,13 @@ async function deleteSeededCoValues(_account, _node, backend) {
 			const indexesIdForDeletion = osCoMap.get('indexes')
 			if (indexesIdForDeletion) {
 				try {
-					const indexesCore = await ensureCoValueLoaded(backend, indexesIdForDeletion, {
+					const indexesCore = await ensureCoValueLoaded(peer, indexesIdForDeletion, {
 						waitForAvailable: true,
 						timeoutMs: 5000,
 					})
 
-					if (indexesCore && backend.isAvailable(indexesCore)) {
-						indexesContentForDeletion = backend.getCurrentContent(indexesCore)
+					if (indexesCore && peer.isAvailable(indexesCore)) {
+						indexesContentForDeletion = peer.getCurrentContent(indexesCore)
 					}
 				} catch (_e) {
 					errorCount++
@@ -824,7 +824,7 @@ async function deleteSeededCoValues(_account, _node, backend) {
 		for (const { schemaCoId, indexColistId } of indexColistsToDelete) {
 			try {
 				// Get the schema definition to construct the index colist schema title
-				const schemaDef = await resolve(backend, schemaCoId, { returnType: 'schema' })
+				const schemaDef = await resolve(peer, schemaCoId, { returnType: 'schema' })
 				if (!schemaDef || !schemaDef.title) {
 					continue
 				}
@@ -842,7 +842,7 @@ async function deleteSeededCoValues(_account, _node, backend) {
 				const indexColistSchemaTitle = `${prefix}/schema/index/${path}`
 
 				// Resolve the index colist schema co-id
-				const indexColistSchemaCoId = await resolve(backend, indexColistSchemaTitle, {
+				const indexColistSchemaCoId = await resolve(peer, indexColistSchemaTitle, {
 					returnType: 'coId',
 				})
 				if (!indexColistSchemaCoId) {
@@ -851,7 +851,7 @@ async function deleteSeededCoValues(_account, _node, backend) {
 
 				// Delete the index colist co-value itself
 				try {
-					await deleteRecord(backend, indexColistSchemaCoId, indexColistId)
+					await deleteRecord(peer, indexColistSchemaCoId, indexColistId)
 					deletedCount++
 
 					// Remove the entry from spark.os.indexes
@@ -976,7 +976,7 @@ function buildMetaSchemaForSeeding(metaSchemaCoId) {
  * @param {Object} configs - Config registry {vibe, styles, actors, views, contexts, states, interfaces}
  * @param {Object} schemas - Schema definitions
  * @param {Object} data - Initial application data {todos: [], ...}
- * @param {MaiaDB} [existingBackend] - Optional existing backend instance (with dbEngine set)
+ * @param {MaiaDB} [existingBackend] - Optional existing peer instance (with dbEngine set)
  * @returns {Promise<Object>} Summary of what was seeded
  */
 export async function seed(
@@ -990,9 +990,9 @@ export async function seed(
 ) {
 	const { forceFreshSeed = false } = options
 
-	// Use existing backend if provided (has dbEngine set), otherwise create new one
+	// Use existing peer if provided (has dbEngine set), otherwise create new one
 	const { MaiaDB } = await import('../core/MaiaDB.js')
-	const backend = existingBackend || new MaiaDB({ node, account }, { systemSpark: '°Maia' })
+	const peer = existingBackend || new MaiaDB({ node, account }, { systemSpark: '°Maia' })
 
 	// Bootstrap scaffold when: forceFreshSeed, or no account.registries, or registries.sparks lacks °Maia
 	let needsBootstrap = forceFreshSeed
@@ -1001,36 +1001,36 @@ export async function seed(
 			!account.get('registries') || !String(account.get('registries')).startsWith('co_z')
 	}
 	if (!needsBootstrap) {
-		const osId = await groups.getSparkOsId(backend, MAIA_SPARK)
+		const osId = await groups.getSparkOsId(peer, MAIA_SPARK)
 		if (!osId) needsBootstrap = true // registries exists but °Maia not present (e.g. from simpleAccountSeed)
 	}
 	if (needsBootstrap) {
 		const { getAllSchemas } = await import('@MaiaOS/schemata')
-		await bootstrapAndScaffold(account, node, schemas || getAllSchemas(), backend.dbEngine)
+		await bootstrapAndScaffold(account, node, schemas || getAllSchemas(), peer.dbEngine)
 	}
 
 	// IDEMPOTENCY CHECK: Only skip if account is already seeded AND no configs provided AND not forceFreshSeed
 	// forceFreshSeed bypasses this (explicit overwrite from PEER_FRESH_SEED=true)
 	try {
-		const osId = await groups.getSparkOsId(backend, MAIA_SPARK)
+		const osId = await groups.getSparkOsId(peer, MAIA_SPARK)
 		if (osId) {
-			const osCore = await ensureCoValueLoaded(backend, osId, {
+			const osCore = await ensureCoValueLoaded(peer, osId, {
 				waitForAvailable: true,
 				timeoutMs: 2000,
 			})
 
-			if (osCore && backend.isAvailable(osCore)) {
-				const osContent = backend.getCurrentContent(osCore)
+			if (osCore && peer.isAvailable(osCore)) {
+				const osContent = peer.getCurrentContent(osCore)
 				if (osContent && typeof osContent.get === 'function') {
 					const schematasId = osContent.get('schematas')
 					if (schematasId) {
-						const schematasCore = await ensureCoValueLoaded(backend, schematasId, {
+						const schematasCore = await ensureCoValueLoaded(peer, schematasId, {
 							waitForAvailable: true,
 							timeoutMs: 2000,
 						})
 
-						if (schematasCore && backend.isAvailable(schematasCore)) {
-							const schematasContent = backend.getCurrentContent(schematasCore)
+						if (schematasCore && peer.isAvailable(schematasCore)) {
+							const schematasContent = peer.getCurrentContent(schematasCore)
 							if (schematasContent && typeof schematasContent.get === 'function') {
 								const keys =
 									schematasContent.keys && typeof schematasContent.keys === 'function'
@@ -1073,22 +1073,22 @@ export async function seed(
 	// - deleteRecord() automatically removes co-values from schema indexes via removeFromIndex()
 	// - create() operations automatically add co-values to schema indexes via storage hooks
 	// No manual index management needed during reseeding
-	const osIdForCleanup = needsBootstrap ? null : await groups.getSparkOsId(backend, MAIA_SPARK)
+	const osIdForCleanup = needsBootstrap ? null : await groups.getSparkOsId(peer, MAIA_SPARK)
 	if (osIdForCleanup) {
 		try {
-			const osCoreForCleanup = await ensureCoValueLoaded(backend, osIdForCleanup, {
+			const osCoreForCleanup = await ensureCoValueLoaded(peer, osIdForCleanup, {
 				waitForAvailable: true,
 				timeoutMs: 2000,
 			})
 
-			if (osCoreForCleanup && backend.isAvailable(osCoreForCleanup)) {
-				const osContentForCleanup = backend.getCurrentContent(osCoreForCleanup)
+			if (osCoreForCleanup && peer.isAvailable(osCoreForCleanup)) {
+				const osContentForCleanup = peer.getCurrentContent(osCoreForCleanup)
 				if (osContentForCleanup && typeof osContentForCleanup.get === 'function') {
 					const schematasIdForCleanup = osContentForCleanup.get('schematas')
 					if (schematasIdForCleanup) {
 						// Account has schematas - run cleanup before reseeding
 						console.log('🌱 Cleaning up existing seeded data before reseeding...')
-						const cleanupResult = await deleteSeededCoValues(account, node, backend)
+						const cleanupResult = await deleteSeededCoValues(account, node, peer)
 						console.log(
 							`[Seed] Cleanup complete: deleted ${cleanupResult.deleted} co-values, ${cleanupResult.errors} errors`,
 						)
@@ -1099,7 +1099,7 @@ export async function seed(
 	}
 
 	// Resolve °Maia spark's group (replaces old profile.group)
-	const maiaGroup = await groups.getMaiaGroup(backend)
+	const maiaGroup = await groups.getMaiaGroup(peer)
 	if (!maiaGroup || typeof maiaGroup.createMap !== 'function') {
 		throw new Error(
 			'[CoJSONSeed] °Maia spark group not found. Ensure bootstrap has created °Maia spark.',
@@ -1107,7 +1107,7 @@ export async function seed(
 	}
 
 	// Bootstrap account.registries (sync agent only): registries.sparks["°Maia"] = maiaSparkCoId
-	await bootstrapAccountRegistries(backend, maiaGroup)
+	await bootstrapAccountRegistries(peer, maiaGroup)
 
 	// Starting CoJSON seeding...
 
@@ -1205,7 +1205,7 @@ export async function seed(
 	}
 
 	// Phase 0: Ensure spark.os structure (schematas, indexes)
-	await ensureSparkOs(account, node, maiaGroup, backend, undefined)
+	await ensureSparkOs(account, node, maiaGroup, peer, undefined)
 
 	// Phase 1: Create or update metaschema FIRST (needed for schema CoMaps)
 	// SPECIAL HANDLING: Metaschema uses "@metaSchema" as exception since headerMeta is read-only after creation
@@ -1213,26 +1213,26 @@ export async function seed(
 
 	// Check if metaschema exists in spark.os.schematas registry
 	let metaSchemaCoId = null
-	const osId = await groups.getSparkOsId(backend, MAIA_SPARK)
+	const osId = await groups.getSparkOsId(peer, MAIA_SPARK)
 	if (osId) {
-		const osCore = await ensureCoValueLoaded(backend, osId, {
+		const osCore = await ensureCoValueLoaded(peer, osId, {
 			waitForAvailable: true,
 			timeoutMs: 2000,
 		})
-		if (osCore && backend.isAvailable(osCore)) {
-			const osContent = backend.getCurrentContent(osCore)
+		if (osCore && peer.isAvailable(osCore)) {
+			const osContent = peer.getCurrentContent(osCore)
 			if (osContent && typeof osContent.get === 'function') {
 				// STRICT: Only check spark.os.schematas registry - no legacy metaSchema
 				// Check spark.os.schematas registry
 				if (!metaSchemaCoId) {
 					const schematasId = osContent.get('schematas')
 					if (schematasId) {
-						const schematasCore = await ensureCoValueLoaded(backend, schematasId, {
+						const schematasCore = await ensureCoValueLoaded(peer, schematasId, {
 							waitForAvailable: true,
 							timeoutMs: 2000,
 						})
-						if (schematasCore && backend.isAvailable(schematasCore)) {
-							const schematasContent = backend.getCurrentContent(schematasCore)
+						if (schematasCore && peer.isAvailable(schematasCore)) {
+							const schematasContent = peer.getCurrentContent(schematasCore)
 							if (schematasContent && typeof schematasContent.get === 'function') {
 								metaSchemaCoId = schematasContent.get('°Maia/schema/meta')
 							}
@@ -1287,12 +1287,12 @@ export async function seed(
 		const cleanedProperties = removeIdFields(directProperties)
 
 		// Get metaschema CoMap and update it
-		const metaSchemaCore = await ensureCoValueLoaded(backend, metaSchemaCoId, {
+		const metaSchemaCore = await ensureCoValueLoaded(peer, metaSchemaCoId, {
 			waitForAvailable: true,
 			timeoutMs: 2000,
 		})
-		if (metaSchemaCore && backend.isAvailable(metaSchemaCore)) {
-			const metaSchemaCoMap = backend.getCurrentContent(metaSchemaCore)
+		if (metaSchemaCore && peer.isAvailable(metaSchemaCore)) {
+			const metaSchemaCoMap = peer.getCurrentContent(metaSchemaCore)
 			if (metaSchemaCoMap && typeof metaSchemaCoMap.set === 'function') {
 				// Update all properties
 				for (const [key, value] of Object.entries(cleanedProperties)) {
@@ -1326,21 +1326,21 @@ export async function seed(
 	// Get existing schema registry from spark.os.schematas
 	const existingSchemaRegistry = new Map() // schemaKey -> schemaCoId
 	if (osId) {
-		const osCore = await ensureCoValueLoaded(backend, osId, {
+		const osCore = await ensureCoValueLoaded(peer, osId, {
 			waitForAvailable: true,
 			timeoutMs: 2000,
 		})
-		if (osCore && backend.isAvailable(osCore)) {
-			const osContent = backend.getCurrentContent(osCore)
+		if (osCore && peer.isAvailable(osCore)) {
+			const osContent = peer.getCurrentContent(osCore)
 			if (osContent && typeof osContent.get === 'function') {
 				const schematasId = osContent.get('schematas')
 				if (schematasId) {
-					const schematasCore = await ensureCoValueLoaded(backend, schematasId, {
+					const schematasCore = await ensureCoValueLoaded(peer, schematasId, {
 						waitForAvailable: true,
 						timeoutMs: 2000,
 					})
-					if (schematasCore && backend.isAvailable(schematasCore)) {
-						const schematasContent = backend.getCurrentContent(schematasCore)
+					if (schematasCore && peer.isAvailable(schematasCore)) {
+						const schematasContent = peer.getCurrentContent(schematasCore)
 						if (schematasContent && typeof schematasContent.get === 'function') {
 							// Read all schema mappings from registry
 							const keys =
@@ -1380,7 +1380,7 @@ export async function seed(
 			// Schema exists - update it instead of creating new one
 
 			// Update schema CoMap with new definition
-			await crudUpdate.update(backend, metaSchemaCoId, existingSchemaCoId, cleanedProperties)
+			await crudUpdate.update(peer, metaSchemaCoId, existingSchemaCoId, cleanedProperties)
 
 			actualCoId = existingSchemaCoId
 		} else {
@@ -1388,7 +1388,7 @@ export async function seed(
 
 			// Create schema CoMap using CRUD API (hooks will fire automatically)
 			// Pass metaSchema co-id as schema parameter (CRUD will use it in headerMeta)
-			const createdSchema = await crudCreate.create(backend, metaSchemaCoId, cleanedProperties)
+			const createdSchema = await crudCreate.create(peer, metaSchemaCoId, cleanedProperties)
 
 			// CRUD API returns the created record with id
 			actualCoId = createdSchema.id
@@ -1397,9 +1397,9 @@ export async function seed(
 		schemaCoIdMap.set(schemaKey, actualCoId)
 
 		// Get the actual CoMap instance for later updates
-		const schemaCoValueCore = backend.getCoValue(actualCoId)
-		if (schemaCoValueCore && backend.isAvailable(schemaCoValueCore)) {
-			const schemaCoMapContent = backend.getCurrentContent(schemaCoValueCore)
+		const schemaCoValueCore = peer.getCoValue(actualCoId)
+		if (schemaCoValueCore && peer.isAvailable(schemaCoValueCore)) {
+			const schemaCoMapContent = peer.getCurrentContent(schemaCoValueCore)
 			if (schemaCoMapContent && typeof schemaCoMapContent.set === 'function') {
 				schemaCoMaps.set(schemaKey, schemaCoMapContent)
 			}
@@ -1469,7 +1469,7 @@ export async function seed(
 	}
 
 	// Phase 3b: Ensure spark.vibes exists (with proper schema) - now that schemaCoIdMap is ready
-	await ensureSparkOs(account, node, maiaGroup, backend, schemaCoIdMap)
+	await ensureSparkOs(account, node, maiaGroup, peer, schemaCoIdMap)
 
 	// Empty maps for now (data is commented out)
 	const instanceCoIdMap = new Map()
@@ -1485,7 +1485,7 @@ export async function seed(
 		const schemaRegistry = new Map()
 
 		// Try to read from persisted registry first
-		const osId = await groups.getSparkOsId(backend, MAIA_SPARK)
+		const osId = await groups.getSparkOsId(peer, MAIA_SPARK)
 		if (osId) {
 			const osCore = node.getCoValue(osId)
 			if (osCore && osCore.type === 'comap') {
@@ -1653,7 +1653,7 @@ export async function seed(
 			account,
 			node,
 			maiaGroup,
-			backend,
+			peer,
 			configsToSeed,
 			instanceCoIdMap,
 			schemaCoMaps,
@@ -1871,15 +1871,15 @@ export async function seed(
 
 		// Anchor: registries.sparks[°Maia].vibes must exist (scaffolded in bootstrap) before we populate it.
 		// Ensure vibes CoMap is loaded and writable before seeding entries.
-		const vibesId = await groups.getSparkVibesId(backend, MAIA_SPARK)
+		const vibesId = await groups.getSparkVibesId(peer, MAIA_SPARK)
 		let vibes
 
 		if (vibesId) {
-			const vibesCore = await ensureCoValueLoaded(backend, vibesId, {
+			const vibesCore = await ensureCoValueLoaded(peer, vibesId, {
 				waitForAvailable: true,
 				timeoutMs: 5000,
 			})
-			if (vibesCore && vibesCore.type === 'comap' && backend.isAvailable(vibesCore)) {
+			if (vibesCore && vibesCore.type === 'comap' && peer.isAvailable(vibesCore)) {
 				const vibesContent = vibesCore.getCurrentContent?.()
 				if (vibesContent && typeof vibesContent.set === 'function') {
 					vibes = vibesContent
@@ -1892,16 +1892,16 @@ export async function seed(
 				schemaCoIdMap?.get('°Maia/schema/os/vibes-registry') ??
 				(await (
 					await import('../schema/resolver.js')
-				).resolve(backend, '°Maia/schema/os/vibes-registry', { returnType: 'coId' }))
+				).resolve(peer, '°Maia/schema/os/vibes-registry', { returnType: 'coId' }))
 			const ctx = { node, account, guardian: maiaGroup }
 			const { coValue: vibesCoMap } = await createCoValueForSpark(ctx, null, {
 				schema: vibesSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
 				cotype: 'comap',
 				data: {},
-				dataEngine: backend?.dbEngine,
+				dataEngine: peer?.dbEngine,
 			})
 			vibes = vibesCoMap
-			await groups.setSparkVibesId(backend, MAIA_SPARK, vibes.id)
+			await groups.setSparkVibesId(peer, MAIA_SPARK, vibes.id)
 		}
 
 		// Seed each vibe
@@ -1922,7 +1922,7 @@ export async function seed(
 					schemaCoIdMap?.get(schemaRef) ??
 					(await (
 						await import('../schema/resolver.js')
-					).resolve(backend, schemaRef, { returnType: 'coId' }))
+					).resolve(peer, schemaRef, { returnType: 'coId' }))
 				if (schemaCoId) combinedRegistry.set(schemaRef, schemaCoId)
 			}
 			const actorRef = vibe.actor
@@ -1956,7 +1956,7 @@ export async function seed(
 					account,
 					node,
 					maiaGroup,
-					backend,
+					peer,
 					vibeConfigs,
 					instanceCoIdMap,
 					schemaCoMaps,
@@ -2034,14 +2034,14 @@ export async function seed(
 
 	// Phase 8: Seed data entities to CoJSON
 	// Creates individual CoMap items - storage hooks automatically index them into spark.os.indexes[schemaCoId]
-	const seededData = await seedData(account, node, maiaGroup, backend, data, coIdRegistry)
+	const seededData = await seedData(account, node, maiaGroup, peer, data, coIdRegistry)
 
 	// Phase 9: Store registry in spark.os.schematas CoMap
 	await storeRegistry(
 		account,
 		node,
 		maiaGroup,
-		backend,
+		peer,
 		coIdRegistry,
 		schemaCoIdMap,
 		instanceCoIdMap,
@@ -2061,10 +2061,10 @@ export async function seed(
 		if (coId && typeof coId === 'string' && coId.startsWith('co_z')) {
 			try {
 				// Pre-load co-value so indexCoValue can access it (we created it locally)
-				if (backend.node?.loadCoValueCore) {
-					await backend.node.loadCoValueCore(coId).catch(() => {})
+				if (peer.node?.loadCoValueCore) {
+					await peer.node.loadCoValueCore(coId).catch(() => {})
 				}
-				await indexCoValue(backend, coId)
+				await indexCoValue(peer, coId)
 			} catch (e) {
 				console.error('[Seed] Re-index pass failed for', coId, e)
 			}
@@ -2091,7 +2091,7 @@ async function seedConfigs(
 	account,
 	node,
 	maiaGroup,
-	backend,
+	peer,
 	transformedConfigs,
 	instanceCoIdMap,
 	schemaCoMaps,
@@ -2155,7 +2155,7 @@ async function seedConfigs(
 				schema: schemaCoId,
 				cotype,
 				data,
-				dataEngine: backend?.dbEngine,
+				dataEngine: peer?.dbEngine,
 			})
 			const actualCoId = coValue.id
 
@@ -2239,7 +2239,7 @@ async function seedConfigs(
  *
  * @private
  */
-async function seedData(account, node, maiaGroup, backend, data, coIdRegistry) {
+async function seedData(account, node, maiaGroup, peer, data, coIdRegistry) {
 	// Import transformer for data items
 	const { transformForSeeding } = await import('@MaiaOS/schemata/schema-transformer')
 
@@ -2296,7 +2296,7 @@ async function seedData(account, node, maiaGroup, backend, data, coIdRegistry) {
 				schema: schemaCoId,
 				cotype: 'comap',
 				data: itemWithoutId,
-				dataEngine: backend?.dbEngine,
+				dataEngine: peer?.dbEngine,
 			})
 			coIds.push(itemCoMap.id)
 			itemCount++
@@ -2326,8 +2326,8 @@ async function seedData(account, node, maiaGroup, backend, data, coIdRegistry) {
  * Uses real schema co-ids where available
  * @private
  */
-async function ensureSparkOs(account, node, maiaGroup, backend, schemaCoIdMap) {
-	const osId = await groups.getSparkOsId(backend, MAIA_SPARK)
+async function ensureSparkOs(account, node, maiaGroup, peer, schemaCoIdMap) {
+	const osId = await groups.getSparkOsId(peer, MAIA_SPARK)
 	if (!osId) {
 		throw new Error('[Seed] °Maia spark.os not found. Ensure bootstrap has run.')
 	}
@@ -2335,10 +2335,10 @@ async function ensureSparkOs(account, node, maiaGroup, backend, schemaCoIdMap) {
 	const { resolve } = await import('../schema/resolver.js')
 	const schematasSchemaCoId =
 		schemaCoIdMap?.get('°Maia/schema/os/schematas-registry') ??
-		(await resolve(backend, '°Maia/schema/os/schematas-registry', { returnType: 'coId' }))
+		(await resolve(peer, '°Maia/schema/os/schematas-registry', { returnType: 'coId' }))
 	const vibesSchemaCoId =
 		schemaCoIdMap?.get('°Maia/schema/os/vibes-registry') ??
-		(await resolve(backend, '°Maia/schema/os/vibes-registry', { returnType: 'coId' }))
+		(await resolve(peer, '°Maia/schema/os/vibes-registry', { returnType: 'coId' }))
 	const _schematasMeta = schematasSchemaCoId
 		? { $schema: schematasSchemaCoId }
 		: { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }
@@ -2379,7 +2379,7 @@ async function ensureSparkOs(account, node, maiaGroup, backend, schemaCoIdMap) {
 					schema: schematasSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
 					cotype: 'comap',
 					data: {},
-					dataEngine: backend?.dbEngine,
+					dataEngine: peer?.dbEngine,
 				})
 				osContent.set('schematas', schematas.id)
 				if (node.storage?.syncManager) {
@@ -2390,33 +2390,33 @@ async function ensureSparkOs(account, node, maiaGroup, backend, schemaCoIdMap) {
 				}
 			}
 			const indexesId = osContent.get('indexes')
-			if (!indexesId && backend) {
-				await ensureIndexesCoMap(backend)
+			if (!indexesId && peer) {
+				await ensureIndexesCoMap(peer)
 			}
 		}
 	}
 
 	// Ensure spark.vibes exists (for old scaffolds) - only when we have schemaCoIdMap for proper schema
 	// Use account.registries.sparks (new path); legacy account.sparks no longer exists
-	const vibesId = await groups.getSparkVibesId(backend, MAIA_SPARK)
+	const vibesId = await groups.getSparkVibesId(peer, MAIA_SPARK)
 	if (!vibesId && schemaCoIdMap) {
-		const sparksId = await groups.getSparksRegistryId(backend)
+		const sparksId = await groups.getSparksRegistryId(peer)
 		if (sparksId?.startsWith('co_z')) {
-			const sparksStore = await backend.read(null, sparksId)
+			const sparksStore = await peer.read(null, sparksId)
 			await waitForStoreReady(sparksStore, sparksId, 10000)
 			const sparksData = sparksStore?.value ?? {}
 			const maiaSparkCoId = sparksData?.[MAIA_SPARK] ?? sparksData?.['°Maia']
 			if (maiaSparkCoId?.startsWith('co_z')) {
-				const sparkCore = backend.getCoValue(maiaSparkCoId)
-				if (sparkCore && backend.isAvailable(sparkCore)) {
-					const sparkContent = backend.getCurrentContent(sparkCore)
+				const sparkCore = peer.getCoValue(maiaSparkCoId)
+				if (sparkCore && peer.isAvailable(sparkCore)) {
+					const sparkContent = peer.getCurrentContent(sparkCore)
 					if (sparkContent && typeof sparkContent.set === 'function') {
 						const ctx = { node, account, guardian: maiaGroup }
 						const { coValue: vibes } = await createCoValueForSpark(ctx, null, {
 							schema: vibesSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
 							cotype: 'comap',
 							data: {},
-							dataEngine: backend?.dbEngine,
+							dataEngine: peer?.dbEngine,
 						})
 						sparkContent.set('vibes', vibes.id)
 					}
@@ -2435,7 +2435,7 @@ async function storeRegistry(
 	account,
 	node,
 	maiaGroup,
-	backend,
+	peer,
 	coIdRegistry,
 	schemaCoIdMap,
 	_instanceCoIdMap,
@@ -2444,7 +2444,7 @@ async function storeRegistry(
 ) {
 	// spark.os should already exist (created by ensureSparkOs in Phase 0)
 	// Schemas are auto-registered by storage hook
-	const osId = await groups.getSparkOsId(backend, MAIA_SPARK)
+	const osId = await groups.getSparkOsId(peer, MAIA_SPARK)
 	if (!osId) {
 		return
 	}
@@ -2493,7 +2493,7 @@ async function storeRegistry(
 			schema: schemaForSchematas,
 			cotype: 'comap',
 			data: {},
-			dataEngine: backend?.dbEngine,
+			dataEngine: peer?.dbEngine,
 		})
 		schematas = schematasCreated
 		osContent.set('schematas', schematas.id)

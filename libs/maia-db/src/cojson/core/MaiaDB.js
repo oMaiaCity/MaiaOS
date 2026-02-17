@@ -29,7 +29,7 @@ export class MaiaDB {
 		const isOptions =
 			dbEngineOrOptions &&
 			typeof dbEngineOrOptions === 'object' &&
-			!dbEngineOrOptions.backend &&
+			!dbEngineOrOptions.peer &&
 			typeof dbEngineOrOptions.execute !== 'function'
 		const dbEngine = isOptions ? null : dbEngineOrOptions
 		const options = isOptions ? dbEngineOrOptions : {}

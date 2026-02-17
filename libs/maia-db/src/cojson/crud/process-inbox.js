@@ -1,5 +1,5 @@
 /**
- * Process Inbox - Backend-to-backend inbox processing with CRDT-native `processed` flag
+ * Process Inbox - Backend-to-peer inbox processing with CRDT-native `processed` flag
  *
  * Handles all inbox/message processing logic internally (infrastructure concern).
  * Uses `processed` flag on message CoMaps for CRDT-native deduplication.
@@ -16,25 +16,25 @@ import { waitForStoreReady } from './read-operations.js'
 
 /**
  * Process inbox and return unprocessed messages
- * Backend-to-backend operation - handles all infrastructure concerns
- * @param {Object} backend - Backend instance (must have dbEngine set)
+ * Backend-to-peer operation - handles all infrastructure concerns
+ * @param {Object} peer - Backend instance (must have dbEngine set)
  * @param {string} actorId - Actor co-id
  * @param {string} inboxCoId - Inbox CoStream co-id
  * @returns {Promise<Object>} Unprocessed messages
  */
-export async function processInbox(backend, actorId, inboxCoId) {
-	if (!backend || !actorId || !inboxCoId) {
-		throw new Error('[processInbox] backend, actorId, and inboxCoId are required')
+export async function processInbox(peer, actorId, inboxCoId) {
+	if (!peer || !actorId || !inboxCoId) {
+		throw new Error('[processInbox] peer, actorId, and inboxCoId are required')
 	}
 
 	// Get current session ID
-	const currentSessionID = backend.getCurrentSessionID()
+	const currentSessionID = peer.getCurrentSessionID()
 	if (!currentSessionID) {
-		throw new Error('[processInbox] Cannot get current session ID from backend')
+		throw new Error('[processInbox] Cannot get current session ID from peer')
 	}
 
-	// Get dbEngine from backend (needed for operations API)
-	const dbEngine = backend.dbEngine
+	// Get dbEngine from peer (needed for operations API)
+	const dbEngine = peer.dbEngine
 	if (!dbEngine) {
 		throw new Error('[processInbox] Backend must have dbEngine set')
 	}
@@ -74,7 +74,7 @@ export async function processInbox(backend, actorId, inboxCoId) {
 	} catch (_error) {}
 
 	// Read inbox with session structure
-	const inboxData = backend.readInboxWithSessions(inboxCoId)
+	const inboxData = peer.readInboxWithSessions(inboxCoId)
 	if (!inboxData?.sessions) {
 		return { messages: [] }
 	}
@@ -104,7 +104,7 @@ export async function processInbox(backend, actorId, inboxCoId) {
 		// Message is a CoMap CoValue reference - read using universal read() API
 		try {
 			// Use universal read() API to handle progressive loading
-			const messageStore = await universalRead(backend, messageCoId, messageSchemaCoId)
+			const messageStore = await universalRead(peer, messageCoId, messageSchemaCoId)
 
 			// Wait for store to be ready (handles progressive loading)
 			try {

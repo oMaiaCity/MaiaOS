@@ -9,54 +9,54 @@ import { ensureCoValueLoaded } from './collection-helpers.js'
 /**
  * Extract CoValue data from CoValueCore as flat object.
  * One format everywhere: flat {key: value} for CoMaps, no properties array.
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {CoValueCore} coValueCore - CoValueCore instance
  * @param {string} [schemaHint] - Schema hint for special types (@group, @account, @metaSchema)
  * @returns {Object} Flat CoValue data (id, $schema, type, and key-value for CoMaps)
  */
-export function extractCoValueData(backend, coValueCore, schemaHint = null) {
-	const header = backend.getHeader(coValueCore)
+export function extractCoValueData(peer, coValueCore, schemaHint = null) {
+	const header = peer.getHeader(coValueCore)
 	const headerMeta = header?.meta || null
 	const _ruleset = coValueCore.ruleset || header?.ruleset
 
 	const isAccount =
 		schemaHint === '@account' ||
 		(headerMeta && headerMeta.type === 'account') ||
-		(backend.account && backend.account.id === coValueCore.id)
+		(peer.account && peer.account.id === coValueCore.id)
 
-	if (isAccount && backend.account && backend.account.id === coValueCore.id) {
+	if (isAccount && peer.account && peer.account.id === coValueCore.id) {
 		const schema = headerMeta?.$schema || null
 		const result = {
-			id: backend.account.id,
+			id: peer.account.id,
 			type: 'comap',
 			$schema: schema,
 		}
 		try {
 			const keys =
-				backend.account.keys && typeof backend.account.keys === 'function'
-					? backend.account.keys()
-					: Object.keys(backend.account)
+				peer.account.keys && typeof peer.account.keys === 'function'
+					? peer.account.keys()
+					: Object.keys(peer.account)
 			for (const key of keys) {
 				try {
-					result[key] = backend.account.get(key)
+					result[key] = peer.account.get(key)
 				} catch (_e) {}
 			}
 		} catch (_e) {}
 		return result
 	}
 
-	const content = backend.getCurrentContent(coValueCore)
+	const content = peer.getCurrentContent(coValueCore)
 	if (!content) {
-		if (isAccount && backend.account && backend.account.id === coValueCore.id) {
+		if (isAccount && peer.account && peer.account.id === coValueCore.id) {
 			const schema = headerMeta?.$schema || null
-			const result = { id: backend.account.id, type: 'comap', $schema: schema }
+			const result = { id: peer.account.id, type: 'comap', $schema: schema }
 			try {
 				const keys =
-					backend.account.keys && typeof backend.account.keys === 'function'
-						? backend.account.keys()
-						: Object.keys(backend.account)
+					peer.account.keys && typeof peer.account.keys === 'function'
+						? peer.account.keys()
+						: Object.keys(peer.account)
 				for (const key of keys) {
-					result[key] = backend.account.get(key)
+					result[key] = peer.account.get(key)
 				}
 			} catch (_e) {}
 			return result
@@ -87,8 +87,8 @@ export function extractCoValueData(backend, coValueCore, schemaHint = null) {
 				items,
 			}
 			try {
-				if (typeof backend.getGroupInfo === 'function') {
-					const groupInfo = backend.getGroupInfo(coValueCore)
+				if (typeof peer.getGroupInfo === 'function') {
+					const groupInfo = peer.getGroupInfo(coValueCore)
 					if (groupInfo) result.groupInfo = groupInfo
 				}
 			} catch (_e) {}
@@ -102,8 +102,8 @@ export function extractCoValueData(backend, coValueCore, schemaHint = null) {
 				items: [],
 			}
 			try {
-				if (typeof backend.getGroupInfo === 'function') {
-					const groupInfo = backend.getGroupInfo(coValueCore)
+				if (typeof peer.getGroupInfo === 'function') {
+					const groupInfo = peer.getGroupInfo(coValueCore)
 					if (groupInfo) result.groupInfo = groupInfo
 				}
 			} catch (_e) {}
@@ -130,8 +130,8 @@ export function extractCoValueData(backend, coValueCore, schemaHint = null) {
 				items,
 			}
 			try {
-				if (typeof backend.getGroupInfo === 'function') {
-					const groupInfo = backend.getGroupInfo(coValueCore)
+				if (typeof peer.getGroupInfo === 'function') {
+					const groupInfo = peer.getGroupInfo(coValueCore)
 					if (groupInfo) result.groupInfo = groupInfo
 				}
 			} catch (_e) {}
@@ -145,8 +145,8 @@ export function extractCoValueData(backend, coValueCore, schemaHint = null) {
 				items: [],
 			}
 			try {
-				if (typeof backend.getGroupInfo === 'function') {
-					const groupInfo = backend.getGroupInfo(coValueCore)
+				if (typeof peer.getGroupInfo === 'function') {
+					const groupInfo = peer.getGroupInfo(coValueCore)
 					if (groupInfo) result.groupInfo = groupInfo
 				}
 			} catch (_e) {}
@@ -183,8 +183,8 @@ export function extractCoValueData(backend, coValueCore, schemaHint = null) {
 			result[key] = value
 		}
 		try {
-			if (typeof backend.getGroupInfo === 'function') {
-				const groupInfo = backend.getGroupInfo(coValueCore)
+			if (typeof peer.getGroupInfo === 'function') {
+				const groupInfo = peer.getGroupInfo(coValueCore)
 				if (groupInfo) result.groupInfo = groupInfo
 			}
 		} catch (_e) {}
@@ -193,8 +193,8 @@ export function extractCoValueData(backend, coValueCore, schemaHint = null) {
 
 	const fallbackResult = { id: coValueCore.id, type: rawType, $schema: schema }
 	try {
-		if (typeof backend.getGroupInfo === 'function') {
-			const groupInfo = backend.getGroupInfo(coValueCore)
+		if (typeof peer.getGroupInfo === 'function') {
+			const groupInfo = peer.getGroupInfo(coValueCore)
 			if (groupInfo) fallbackResult.groupInfo = groupInfo
 		}
 	} catch (_e) {}
@@ -233,27 +233,27 @@ function parseNestedJsonStrings(data) {
 /**
  * Shallow resolve a single co-id: load CoValue and return raw data (nested co-ids stay as strings).
  * Used for map-driven on-demand resolution - only loads this CoValue, no recursive resolution.
- * Content-addressable: lookup by co-id via backend.
- * @param {Object} backend - Backend instance
+ * Content-addressable: lookup by co-id via peer.
+ * @param {Object} peer - Backend instance
  * @param {string} coId - Co-id to resolve
  * @param {Object} options - Options { timeoutMs }
  * @param {Set<string>} visited - Set of already visited co-ids (prevents circular references)
  * @returns {Promise<Object>} Raw CoValue data with nested co-ids as strings, or { id: coId } on error/circular
  */
-export async function resolveCoIdShallow(backend, coId, options = {}, visited = new Set()) {
+export async function resolveCoIdShallow(peer, coId, options = {}, visited = new Set()) {
 	const { timeoutMs = 2000 } = options
 	if (visited.has(coId)) return { id: coId }
 	visited.add(coId)
 	try {
-		await ensureCoValueLoaded(backend, coId, { waitForAvailable: true, timeoutMs })
-		const coValueCore = backend.getCoValue(coId)
-		if (!coValueCore || !backend.isAvailable(coValueCore)) return { id: coId }
-		let data = extractCoValueData(backend, coValueCore)
+		await ensureCoValueLoaded(peer, coId, { waitForAvailable: true, timeoutMs })
+		const coValueCore = peer.getCoValue(coId)
+		if (!coValueCore || !peer.isAvailable(coValueCore)) return { id: coId }
+		let data = extractCoValueData(peer, coValueCore)
 		data = { ...data, id: data.id || coId }
-		const header = backend.getHeader(coValueCore)
+		const header = peer.getHeader(coValueCore)
 		const ruleset = coValueCore.ruleset || header?.ruleset
 		if (ruleset && ruleset.type === 'group') {
-			const groupContent = backend.getCurrentContent(coValueCore)
+			const groupContent = peer.getCurrentContent(coValueCore)
 			if (groupContent && typeof groupContent.addMember === 'function') {
 				const { getGroupInfoFromGroup } = await import('../groups/groups.js')
 				const groupInfo = getGroupInfoFromGroup(groupContent)
@@ -275,7 +275,7 @@ export async function resolveCoIdShallow(backend, coId, options = {}, visited = 
 /**
  * Resolve CoValue references in data object
  * Replaces co-id strings with resolved CoValue objects based on configuration
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {any} data - Data object to process (may contain co-id references)
  * @param {Object} options - Resolution options
  * @param {string[]} [options.fields] - Specific field names to resolve (e.g., ['source', 'target']). If not provided, resolves all co-id references
@@ -286,7 +286,7 @@ export async function resolveCoIdShallow(backend, coId, options = {}, visited = 
  * @returns {Promise<any>} Data object with CoValue references resolved
  */
 export async function resolveCoValueReferences(
-	backend,
+	peer,
 	data,
 	options = {},
 	visited = new Set(),
@@ -310,7 +310,7 @@ export async function resolveCoValueReferences(
 		// Check if it's a co-id string that should be resolved
 		if (typeof data === 'string' && data.startsWith('co_z')) {
 			// CRITICAL: Pass maxDepth and currentDepth to ensure recursive resolution works
-			const resolved = await resolveCoId(backend, data, options, visited, maxDepth, currentDepth)
+			const resolved = await resolveCoId(peer, data, options, visited, maxDepth, currentDepth)
 			// resolveCoId always returns an object now, so return it directly
 			return resolved
 		}
@@ -321,7 +321,7 @@ export async function resolveCoValueReferences(
 	if (Array.isArray(data)) {
 		return Promise.all(
 			data.map((item) =>
-				resolveCoValueReferences(backend, item, options, visited, maxDepth, currentDepth + 1),
+				resolveCoValueReferences(peer, item, options, visited, maxDepth, currentDepth + 1),
 			),
 		)
 	}
@@ -349,7 +349,7 @@ export async function resolveCoValueReferences(
 		if (shouldResolve && typeof value === 'string' && value.startsWith('co_z')) {
 			// Resolve this co-id reference (with depth tracking for recursion)
 			const resolved = await resolveCoId(
-				backend,
+				peer,
 				value,
 				{ ...options, timeoutMs, maxDepth, currentDepth },
 				visited,
@@ -360,7 +360,7 @@ export async function resolveCoValueReferences(
 		} else {
 			// Recursively process nested values (preserves non-co-id values like strings, numbers, etc.)
 			result[key] = await resolveCoValueReferences(
-				backend,
+				peer,
 				value,
 				options,
 				visited,
@@ -378,7 +378,7 @@ export async function resolveCoValueReferences(
 /**
  * Resolve a single co-id to its CoValue data using the universal resolver
  * Uses the same read() API as all other co-id resolution in the codebase
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} coId - Co-id to resolve
  * @param {Object} options - Resolution options
  * @param {string[]} [options.schemas] - Specific schema co-ids to resolve
@@ -387,7 +387,7 @@ export async function resolveCoValueReferences(
  * @returns {Promise<any>} Resolved CoValue data or original co-id if not resolved
  */
 async function resolveCoId(
-	backend,
+	peer,
 	coId,
 	options = {},
 	visited = new Set(),
@@ -402,9 +402,9 @@ async function resolveCoId(
 		return { id: coId } // Already processing this co-id, return object with id to prevent circular reference
 	}
 
-	// CRITICAL OPTIMIZATION: Check cache BEFORE calling backend.read() to prevent expensive re-resolution
+	// CRITICAL OPTIMIZATION: Check cache BEFORE calling peer.read() to prevent expensive re-resolution
 	// Use the same cache key format as read.js so we can reuse cached resolved data
-	const cache = backend.subscriptionCache
+	const cache = peer.subscriptionCache
 	const cacheOptions = {
 		deepResolve: false, // We don't need deep resolution here
 		resolveReferences: options, // Use the same resolution options
@@ -427,14 +427,14 @@ async function resolveCoId(
 	}
 
 	try {
-		// Use backend.read() directly (same universal API used everywhere)
+		// Use peer.read() directly (same universal API used everywhere)
 		// CRITICAL: Do NOT use resolveReferences here to avoid infinite loop
-		// (resolveCoId -> backend.read(resolveReferences) -> resolveCoValueReferences -> resolveCoId)
+		// (resolveCoId -> peer.read(resolveReferences) -> resolveCoValueReferences -> resolveCoId)
 		const { waitForStoreReady } = await import('./read-operations.js')
 
-		// Read the co-value using backend.read() API (reuses its caching)
+		// Read the co-value using peer.read() API (reuses its caching)
 		// Use deepResolve: false to get raw data, then we'll resolve nested co-ids ourselves
-		const coValueStore = await backend.read(null, coId, null, null, {
+		const coValueStore = await peer.read(null, coId, null, null, {
 			deepResolve: false, // Don't deep resolve here - we'll resolve nested refs ourselves
 			timeoutMs,
 		})
@@ -480,7 +480,7 @@ async function resolveCoId(
 
 		// Resolve nested co-id references recursively
 		const resolved = await resolveCoValueReferences(
-			backend,
+			peer,
 			coValueData,
 			options,
 			visited,
@@ -490,14 +490,14 @@ async function resolveCoId(
 
 		// CRITICAL: If this is a group, automatically include members
 		// Check if this is a group by checking the CoValueCore ruleset
-		const coValueCore = backend.getCoValue(coId)
+		const coValueCore = peer.getCoValue(coId)
 		if (coValueCore) {
-			const header = backend.getHeader(coValueCore)
+			const header = peer.getHeader(coValueCore)
 			const ruleset = coValueCore.ruleset || header?.ruleset
 
 			if (ruleset && ruleset.type === 'group') {
 				// This is a group - automatically extract and include members
-				const groupContent = backend.getCurrentContent(coValueCore)
+				const groupContent = peer.getCurrentContent(coValueCore)
 				if (groupContent && typeof groupContent.addMember === 'function') {
 					// Import groups helper dynamically to avoid circular dependencies
 					const { getGroupInfoFromGroup } = await import('../groups/groups.js')
@@ -531,14 +531,14 @@ async function resolveCoId(
 
 /**
  * Extract CoStream with session structure preserved and CRDT metadata
- * Backend-to-backend helper for inbox processing
- * @param {Object} backend - Backend instance
+ * Backend-to-peer helper for inbox processing
+ * @param {Object} peer - Backend instance
  * @param {CoValueCore} coValueCore - CoValueCore instance
  * @returns {Object|null} CoStream data with sessions and CRDT metadata, or null if not a CoStream
  */
-export function extractCoStreamWithSessions(backend, coValueCore) {
-	const content = backend.getCurrentContent(coValueCore)
-	const header = backend.getHeader(coValueCore)
+export function extractCoStreamWithSessions(peer, coValueCore) {
+	const content = peer.getCurrentContent(coValueCore)
+	const header = peer.getHeader(coValueCore)
 	const headerMeta = header?.meta || null
 	const rawType = content?.type || 'unknown'
 

@@ -29,7 +29,7 @@ export async function getGroup(node, groupId) {
 /**
  * Get capability group co-id for a spark from spark.os.capabilities
  * Resolves: spark -> spark.os -> os.capabilities -> capabilities.get(capabilityName)
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} spark - Spark name (e.g. "°Maia") or spark co-id
  * @param {string} capabilityName - Capability key (e.g. 'guardian', 'publicReaders')
  * @returns {Promise<string|null>} Group co-id or null
@@ -38,121 +38,120 @@ export async function getGroup(node, groupId) {
  * Get capability group co-id from os CoMap id (os -> capabilities -> capabilityName)
  * Uses read() + waitForStoreReady to ensure os/capabilities are synced (e.g. when agent
  * loads human's spark via sync - os and capabilities must be fetched before access).
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} osId - OS CoMap co-id
  * @param {string} capabilityName - Capability key (e.g. 'guardian', 'publicReaders')
  * @returns {Promise<string|null>} Group co-id or null
  */
-export async function getCapabilityGroupIdFromOsId(backend, osId, capabilityName) {
+export async function getCapabilityGroupIdFromOsId(peer, osId, capabilityName) {
 	if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) return null
-	const osStore = await backend.read(null, osId)
+	const osStore = await peer.read(null, osId)
 	await waitForStoreReady(osStore, osId, 15000)
-	const osCore = backend.getCoValue(osId)
-	if (!osCore || !backend.isAvailable(osCore)) return null
-	const osContent = backend.getCurrentContent(osCore)
+	const osCore = peer.getCoValue(osId)
+	if (!osCore || !peer.isAvailable(osCore)) return null
+	const osContent = peer.getCurrentContent(osCore)
 	if (!osContent || typeof osContent.get !== 'function') return null
 	const capabilitiesId = osContent.get('capabilities')
 	if (!capabilitiesId || typeof capabilitiesId !== 'string' || !capabilitiesId.startsWith('co_z'))
 		return null
-	const capabilitiesStore = await backend.read(null, capabilitiesId)
+	const capabilitiesStore = await peer.read(null, capabilitiesId)
 	await waitForStoreReady(capabilitiesStore, capabilitiesId, 15000)
-	const capabilitiesCore = backend.getCoValue(capabilitiesId)
-	if (!capabilitiesCore || !backend.isAvailable(capabilitiesCore)) return null
-	const capabilitiesContent = backend.getCurrentContent(capabilitiesCore)
+	const capabilitiesCore = peer.getCoValue(capabilitiesId)
+	if (!capabilitiesCore || !peer.isAvailable(capabilitiesCore)) return null
+	const capabilitiesContent = peer.getCurrentContent(capabilitiesCore)
 	if (!capabilitiesContent || typeof capabilitiesContent.get !== 'function') return null
 	const groupId = capabilitiesContent.get(capabilityName)
 	if (!groupId || typeof groupId !== 'string' || !groupId.startsWith('co_z')) return null
 	return groupId
 }
 
-export async function getSparkCapabilityGroupId(backend, spark, capabilityName) {
-	const osId = await getSparkOsId(backend, spark)
-	return getCapabilityGroupIdFromOsId(backend, osId, capabilityName)
+export async function getSparkCapabilityGroupId(peer, spark, capabilityName) {
+	const osId = await getSparkOsId(peer, spark)
+	return getCapabilityGroupIdFromOsId(peer, osId, capabilityName)
 }
 
 /**
  * Get capability group co-id for a spark by spark co-id (not spark name)
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} sparkCoId - Spark CoMap co-id
  * @param {string} capabilityName - Capability key (e.g. 'guardian', 'publicReaders')
  * @returns {Promise<string|null>} Group co-id or null
  */
-export async function getSparkCapabilityGroupIdFromSparkCoId(backend, sparkCoId, capabilityName) {
+export async function getSparkCapabilityGroupIdFromSparkCoId(peer, sparkCoId, capabilityName) {
 	if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_z')) return null
-	const sparkCore =
-		backend.getCoValue(sparkCoId) || (await backend.node?.loadCoValueCore?.(sparkCoId))
-	if (!sparkCore || !backend.isAvailable?.(sparkCore)) return null
-	const sparkContent = backend.getCurrentContent?.(sparkCore)
+	const sparkCore = peer.getCoValue(sparkCoId) || (await peer.node?.loadCoValueCore?.(sparkCoId))
+	if (!sparkCore || !peer.isAvailable?.(sparkCore)) return null
+	const sparkContent = peer.getCurrentContent?.(sparkCore)
 	if (!sparkContent || typeof sparkContent.get !== 'function') return null
 	const osId = sparkContent.get('os')
-	return getCapabilityGroupIdFromOsId(backend, osId, capabilityName)
+	return getCapabilityGroupIdFromOsId(peer, osId, capabilityName)
 }
 
 /**
  * Get guardian (admin-role) group for a spark by name
  * Resolves from spark.os.capabilities.guardian only (no spark.group; fresh DB).
- * @param {Object} backend - Backend instance with read(), getCoValue(), getCurrentContent(), account
+ * @param {Object} peer - Backend instance with read(), getCoValue(), getCurrentContent(), account
  * @param {string} spark - Spark name (e.g. "°Maia", "@handle")
  * @returns {Promise<RawGroup|null>} Group for the spark or null
  */
-export async function getSparkGroup(backend, spark) {
+export async function getSparkGroup(peer, spark) {
 	if (!spark || typeof spark !== 'string') {
 		throw new Error('[getSparkGroup] spark is required')
 	}
 	const cacheKey = `_cachedSparkGroup_${spark}`
-	if (backend[cacheKey]) {
-		return backend[cacheKey]
+	if (peer[cacheKey]) {
+		return peer[cacheKey]
 	}
-	const groupId = await getSparkCapabilityGroupId(backend, spark, 'guardian')
+	const groupId = await getSparkCapabilityGroupId(peer, spark, 'guardian')
 	if (!groupId || typeof groupId !== 'string' || !groupId.startsWith('co_z')) {
 		throw new Error(`[getSparkGroup] Spark ${spark} has no guardian in os.capabilities`)
 	}
-	const groupStore = await backend.read('@group', groupId)
+	const groupStore = await peer.read('@group', groupId)
 	if (!groupStore || groupStore.value?.error) {
 		throw new Error(`[getSparkGroup] Group for spark ${spark} not available: ${groupId}`)
 	}
 	await waitForStoreReady(groupStore, groupId, 10000)
-	const groupCore = backend.getCoValue(groupId)
+	const groupCore = peer.getCoValue(groupId)
 	if (!groupCore) {
 		throw new Error(`[getSparkGroup] Group core not found: ${groupId}`)
 	}
-	const group = backend.getCurrentContent(groupCore)
+	const group = peer.getCurrentContent(groupCore)
 	if (!group || typeof group.createMap !== 'function') {
 		throw new Error(`[getSparkGroup] Group content not available: ${groupId}`)
 	}
-	backend[cacheKey] = group
+	peer[cacheKey] = group
 	return group
 }
 
 /**
  * Load account.registries → registries.sparks CoMap content for spark resolution.
- * @param {Object} backend
+ * @param {Object} peer
  * @returns {Promise<{get(key: string): string|undefined}|null>} Sparks registry content or null
  */
 /** Get sparks registry CoMap co-id (account.registries.sparks). Returns null if not found. */
-export async function getSparksRegistryId(backend) {
-	const registriesId = backend.account?.get?.('registries')
+export async function getSparksRegistryId(peer) {
+	const registriesId = peer.account?.get?.('registries')
 	if (!registriesId?.startsWith('co_z')) return null
-	const registriesStore = await backend.read(null, registriesId)
+	const registriesStore = await peer.read(null, registriesId)
 	await waitForStoreReady(registriesStore, registriesId, 10000)
 	const registriesContent = registriesStore?.value ?? {}
 	return registriesContent.sparks ?? null
 }
 
 /** Get humans registry CoMap co-id (account.registries.humans). Returns null if not found. */
-export async function getHumansRegistryId(backend) {
-	const registriesId = backend.account?.get?.('registries')
+export async function getHumansRegistryId(peer) {
+	const registriesId = peer.account?.get?.('registries')
 	if (!registriesId?.startsWith('co_z')) return null
-	const registriesStore = await backend.read(null, registriesId)
+	const registriesStore = await peer.read(null, registriesId)
 	await waitForStoreReady(registriesStore, registriesId, 10000)
 	const registriesContent = registriesStore?.value ?? {}
 	return registriesContent.humans ?? null
 }
 
-export async function getSparksRegistryContent(backend) {
-	const sparksId = await getSparksRegistryId(backend)
+export async function getSparksRegistryContent(peer) {
+	const sparksId = await getSparksRegistryId(peer)
 	if (!sparksId?.startsWith('co_z')) return null
-	const sparksStore = await backend.read(null, sparksId)
+	const sparksStore = await peer.read(null, sparksId)
 	await waitForStoreReady(sparksStore, sparksId, 10000)
 	const sparksContent = sparksStore?.value ?? {}
 	return {
@@ -164,41 +163,41 @@ export async function getSparksRegistryContent(backend) {
 }
 
 /** Resolve spark key to spark co-id (from registries or use co-id directly). */
-export async function resolveSparkCoId(backend, spark) {
+export async function resolveSparkCoId(peer, spark) {
 	if (!spark || typeof spark !== 'string') return null
 	if (spark.startsWith('co_z')) return spark
-	const sparks = await getSparksRegistryContent(backend)
+	const sparks = await getSparksRegistryContent(peer)
 	if (!sparks) return null
 	return sparks.get(spark) ?? null
 }
 
 /**
  * Get spark's os CoMap id (account.registries.sparks[spark].os)
- * @param {Object} backend
+ * @param {Object} peer
  * @param {string} spark - Spark name (e.g. "°Maia") or spark co-id
  * @returns {Promise<string|null>}
  */
-export async function getSparkOsId(backend, spark) {
-	const sparkCoId = await resolveSparkCoId(backend, spark)
+export async function getSparkOsId(peer, spark) {
+	const sparkCoId = await resolveSparkCoId(peer, spark)
 	if (!sparkCoId?.startsWith('co_z')) return null
-	const sparkStore = await backend.read(null, sparkCoId)
+	const sparkStore = await peer.read(null, sparkCoId)
 	await waitForStoreReady(sparkStore, sparkCoId, 10000)
 	const sparkData = sparkStore?.value ?? {}
 	const osId = sparkData.os || null
-	if (osId) backend._cachedMaiaOsId = osId
+	if (osId) peer._cachedMaiaOsId = osId
 	return osId
 }
 
 /**
  * Get spark's vibes CoMap id (account.registries.sparks[spark].vibes)
- * @param {Object} backend
+ * @param {Object} peer
  * @param {string} spark
  * @returns {Promise<string|null>}
  */
-export async function getSparkVibesId(backend, spark) {
-	const sparkCoId = await resolveSparkCoId(backend, spark)
+export async function getSparkVibesId(peer, spark) {
+	const sparkCoId = await resolveSparkCoId(peer, spark)
 	if (!sparkCoId?.startsWith('co_z')) return null
-	const sparkStore = await backend.read(null, sparkCoId)
+	const sparkStore = await peer.read(null, sparkCoId)
 	await waitForStoreReady(sparkStore, sparkCoId, 10000)
 	const sparkData = sparkStore?.value ?? {}
 	return sparkData.vibes || null
@@ -207,17 +206,17 @@ export async function getSparkVibesId(backend, spark) {
 /**
  * Set spark's vibes CoMap id (account.registries.sparks[spark].vibes)
  * Used when creating vibes during seed.
- * @param {Object} backend
+ * @param {Object} peer
  * @param {string} spark
  * @param {string} vibesId
  */
-export async function setSparkVibesId(backend, spark, vibesId) {
-	const sparkCoId = await resolveSparkCoId(backend, spark)
+export async function setSparkVibesId(peer, spark, vibesId) {
+	const sparkCoId = await resolveSparkCoId(peer, spark)
 	if (!sparkCoId?.startsWith('co_z'))
 		throw new Error(`[setSparkVibesId] Spark ${spark} not found in registries`)
-	const sparkCore = backend.getCoValue(sparkCoId)
+	const sparkCore = peer.getCoValue(sparkCoId)
 	if (!sparkCore) throw new Error(`[setSparkVibesId] Spark core not found: ${sparkCoId}`)
-	const sparkContent = backend.getCurrentContent(sparkCore)
+	const sparkContent = peer.getCurrentContent(sparkCore)
 	if (!sparkContent || typeof sparkContent.set !== 'function')
 		throw new Error(`[setSparkVibesId] Spark content not available`)
 	sparkContent.set('vibes', vibesId)
@@ -225,11 +224,11 @@ export async function setSparkVibesId(backend, spark, vibesId) {
 
 /**
  * Get °Maia spark's group (for create operations, seeding, etc.)
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @returns {Promise<RawGroup|null>} °Maia spark's group
  */
-export async function getMaiaGroup(backend) {
-	return getSparkGroup(backend, '°Maia')
+export async function getMaiaGroup(peer) {
+	return getSparkGroup(peer, '°Maia')
 }
 
 /**
@@ -510,10 +509,10 @@ export function getGroupInfoFromGroup(group) {
  * @param {RawGroup} group - Group CoValue
  * @param {string} accountCoId - Account co-id (co_z...) - REQUIRED
  * @param {string} role - Role name
- * @param {Object} [backend] - Optional backend (for ensureCoValueLoaded)
+ * @param {Object} [peer] - Optional peer (for ensureCoValueLoaded)
  * @returns {Promise<void>}
  */
-export async function addGroupMember(node, group, accountCoId, role, backend = null) {
+export async function addGroupMember(node, group, accountCoId, role, peer = null) {
 	if (typeof group.addMember !== 'function') {
 		throw new Error('[MaiaDB] Group does not support addMember')
 	}
@@ -524,9 +523,9 @@ export async function addGroupMember(node, group, accountCoId, role, backend = n
 		)
 	}
 
-	if (backend) {
+	if (peer) {
 		const { ensureCoValueLoaded } = await import('../crud/collection-helpers.js')
-		await ensureCoValueLoaded(backend, accountCoId, { waitForAvailable: true, timeoutMs: 10000 })
+		await ensureCoValueLoaded(peer, accountCoId, { waitForAvailable: true, timeoutMs: 10000 })
 	}
 	const accountCore = node.expectCoValueLoaded(
 		accountCoId,

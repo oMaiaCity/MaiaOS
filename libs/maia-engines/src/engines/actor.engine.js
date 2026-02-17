@@ -1,7 +1,5 @@
 /**
  * ActorEngine - Orchestrates actors, views, styles, and actions
- * v0.2: Added message passing (inbox/subscriptions) for AI agent coordination
- * v0.4: Added maia.do() for unified data operations (replaced ReactiveStore)
  * Handles: Actor lifecycle, action registry, context updates, message passing, reactive data
  * Generic and universal - no domain-specific logic
  */
@@ -43,11 +41,7 @@ export class ActorEngine {
 		if (!actor.contextCoId || !this.dataEngine) return
 		const contextSchemaCoId =
 			actor.contextSchemaCoId ||
-			(await resolve(
-				this.dataEngine.backend,
-				{ fromCoValue: actor.contextCoId },
-				{ returnType: 'coId' },
-			))
+			(await resolve(this.dataEngine.peer, { fromCoValue: actor.contextCoId }, { returnType: 'coId' }))
 		const sanitizedUpdates = {}
 		for (const [key, value] of Object.entries(updates)) {
 			sanitizedUpdates[key] = value === undefined ? null : value
@@ -66,7 +60,7 @@ export class ActorEngine {
 
 	async _readStore(coId) {
 		const schemaCoId = await resolve(
-			this.dataEngine.backend,
+			this.dataEngine.peer,
 			{ fromCoValue: coId },
 			{ returnType: 'coId' },
 		)
@@ -140,7 +134,7 @@ export class ActorEngine {
 				const contextStore = await this._readStore(actualContextCoId)
 				if (!contextStore) throw new Error(`[ActorEngine] Failed to load context ${actualContextCoId}`)
 				const contextSchemaCoId = await resolve(
-					this.dataEngine.backend,
+					this.dataEngine.peer,
 					{ fromCoValue: actualContextCoId },
 					{ returnType: 'coId' },
 				)
@@ -763,14 +757,14 @@ export class ActorEngine {
 	 * @returns {Promise<Object|null>} Message type schema or null if not found
 	 */
 	async _loadMessageTypeSchema(messageType) {
-		if (!this.dataEngine || !this.dataEngine.backend) {
+		if (!this.dataEngine || !this.dataEngine.peer) {
 			return null
 		}
 
 		try {
 			// Resolve message type schema from registry - use systemSpark directly (schema keys match spark name)
-			const schemaKey = `${this.dataEngine.backend.systemSpark}/schema/message/${messageType}`
-			const schema = await resolve(this.dataEngine.backend, schemaKey, { returnType: 'schema' })
+			const schemaKey = `${this.dataEngine.peer.systemSpark}/schema/message/${messageType}`
+			const schema = await resolve(this.dataEngine.peer, schemaKey, { returnType: 'schema' })
 			return schema
 		} catch (_error) {
 			return null
@@ -855,7 +849,7 @@ export class ActorEngine {
 						console.warn('[ActorEngine] processMessages: message type schema not found', {
 							actorId,
 							messageType: message.type,
-							schemaKey: `${this.dataEngine?.backend?.systemSpark ?? '°Maia'}/schema/message/${message.type}`,
+							schemaKey: `${this.dataEngine?.peer?.systemSpark ?? '°Maia'}/schema/message/${message.type}`,
 						})
 						continue // Reject message - schema is required
 					}

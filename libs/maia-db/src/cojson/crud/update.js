@@ -13,33 +13,33 @@ import * as dataExtraction from './data-extraction.js'
 /**
  * Update existing record - directly updates CoValue using CoJSON raw methods
  * Validates updates BEFORE applying them to CRDT (before content.set() calls)
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} schema - Schema co-id (co_z...)
  * @param {string} id - Record co-id to update
  * @param {Object} data - Data to update
  * @returns {Promise<Object>} Updated record
  */
-export async function update(backend, _schema, id, data) {
+export async function update(peer, _schema, id, data) {
 	// Ensure CoValue is loaded before updating (jazz-tools pattern)
-	const coValueCore = await collectionHelpers.ensureCoValueLoaded(backend, id, {
+	const coValueCore = await collectionHelpers.ensureCoValueLoaded(peer, id, {
 		waitForAvailable: true,
 	})
 	if (!coValueCore) {
 		throw new Error(`[MaiaDB] CoValue not found: ${id}`)
 	}
 
-	if (!backend.isAvailable(coValueCore)) {
+	if (!peer.isAvailable(coValueCore)) {
 		throw new Error(`[MaiaDB] CoValue not available: ${id}`)
 	}
 
-	const content = backend.getCurrentContent(coValueCore)
+	const content = peer.getCurrentContent(coValueCore)
 	const rawType = content?.type || 'unknown'
 
 	// CRITICAL: Validate updates BEFORE applying to CRDT (before content.set())
 	// Extract schema co-id from co-value headerMeta
 	let schemaCoId = null
 	try {
-		schemaCoId = await resolve(backend, { fromCoValue: id }, { returnType: 'coId' })
+		schemaCoId = await resolve(peer, { fromCoValue: id }, { returnType: 'coId' })
 	} catch (error) {
 		// Schema extraction failed - skip validation (co-values without schemas, like context co-values)
 		console.log(`[Update] Skipping validation for ${id}: ${error.message}`)
@@ -49,7 +49,7 @@ export async function update(backend, _schema, id, data) {
 	// 1. No schema found (co-values without schemas, like context co-values)
 	// 2. Exception schemas (@account, @group, °Maia)
 	// 3. No dbEngine available
-	if (schemaCoId && backend.dbEngine && schemaCoId.startsWith('co_z')) {
+	if (schemaCoId && peer.dbEngine && schemaCoId.startsWith('co_z')) {
 		// Import exception schema checker
 		const { isExceptionSchema } = await import('../../schemas/registry.js')
 
@@ -57,7 +57,7 @@ export async function update(backend, _schema, id, data) {
 		if (!isExceptionSchema(schemaCoId)) {
 			// Get existing data (current state) - use getRawRecord which returns actual properties
 			// getRawRecord returns data with $schema but without id (perfect for validation)
-			const existingDataRaw = await backend.getRawRecord(id)
+			const existingDataRaw = await peer.getRawRecord(id)
 
 			if (existingDataRaw) {
 				// Strip $schema metadata before validation (schema validation expects only data properties)
@@ -68,8 +68,8 @@ export async function update(backend, _schema, id, data) {
 
 				// Validate merged data against schema BEFORE applying to CRDT
 				try {
-					await loadSchemaAndValidate(backend, schemaCoId, mergedData, `update for ${id}`, {
-						dataEngine: backend.dbEngine,
+					await loadSchemaAndValidate(peer, schemaCoId, mergedData, `update for ${id}`, {
+						dataEngine: peer.dbEngine,
 					})
 				} catch (error) {
 					// If validation fails, throw error (operation never applied to CRDT)
@@ -90,10 +90,10 @@ export async function update(backend, _schema, id, data) {
 	}
 
 	// LOCAL-FIRST: Updates are instant, sync happens in background
-	// REMOVED: await backend.node.syncManager.waitForStorageSync(id);
+	// REMOVED: await peer.node.syncManager.waitForStorageSync(id);
 	// This was blocking the event loop unnecessarily - local-first architecture means
 	// updates are immediately available locally, and sync happens asynchronously
 
 	// Return updated data
-	return dataExtraction.extractCoValueData(backend, coValueCore)
+	return dataExtraction.extractCoValueData(peer, coValueCore)
 }

@@ -11,15 +11,15 @@ import { extractCoValueData } from './data-extraction.js'
 /**
  * Check if a CoValue is already resolved or being resolved
  * @param {string} coId - CoValue ID
- * @param {Object} [backend] - Backend instance (optional, for cache access)
+ * @param {Object} [peer] - Backend instance (optional, for cache access)
  * @returns {boolean} True if already resolved or being resolved
  */
-export function isDeepResolvedOrResolving(coId, backend = null) {
-	if (backend?.subscriptionCache) {
-		// Use unified cache from backend
-		return backend.subscriptionCache.isResolved(coId)
+export function isDeepResolvedOrResolving(coId, peer = null) {
+	if (peer?.subscriptionCache) {
+		// Use unified cache from peer
+		return peer.subscriptionCache.isResolved(coId)
 	}
-	// No fallback - backend is required
+	// No fallback - peer is required
 	return false
 }
 
@@ -87,27 +87,27 @@ function extractCoValueIds(data, visited = new Set(), depth = 0, maxDepth = 15) 
 
 /**
  * Wait for a CoValue to be available
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} coId - CoValue ID
  * @param {number} timeoutMs - Timeout in milliseconds
  * @returns {Promise<void>} Resolves when CoValue is available
  */
-async function _waitForCoValueAvailable(backend, coId, timeoutMs = 5000) {
-	const coValueCore = backend.getCoValue(coId)
+async function _waitForCoValueAvailable(peer, coId, timeoutMs = 5000) {
+	const coValueCore = peer.getCoValue(coId)
 	if (!coValueCore) {
 		throw new Error(`CoValue ${coId} not found`)
 	}
 
-	if (backend.isAvailable(coValueCore)) {
+	if (peer.isAvailable(coValueCore)) {
 		return // Already available
 	}
 
 	// Trigger loading
-	await ensureCoValueLoaded(backend, coId, { waitForAvailable: true, timeoutMs })
+	await ensureCoValueLoaded(peer, coId, { waitForAvailable: true, timeoutMs })
 
 	// Double-check it's available
-	const updatedCore = backend.getCoValue(coId)
-	if (!updatedCore || !backend.isAvailable(updatedCore)) {
+	const updatedCore = peer.getCoValue(coId)
+	if (!updatedCore || !peer.isAvailable(updatedCore)) {
 		throw new Error(`CoValue ${coId} failed to load within ${timeoutMs}ms`)
 	}
 }
@@ -121,7 +121,7 @@ async function _waitForCoValueAvailable(backend, coId, timeoutMs = 5000) {
  * - Subscriptions handle progressive updates as CoValues become available
  * - This prevents timeouts in fresh browser instances where CoValues need to sync from server
  *
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {any} data - Data object containing CoValue references
  * @param {Set<string>} visited - Set of already visited CoValue IDs (prevents infinite loops)
  * @param {Object} options - Options
@@ -130,7 +130,7 @@ async function _waitForCoValueAvailable(backend, coId, timeoutMs = 5000) {
  * @param {number} options.currentDepth - Current recursion depth (internal)
  * @returns {Promise<void>} Resolves immediately (progressive resolution doesn't block)
  */
-export async function resolveNestedReferences(backend, data, visited = new Set(), options = {}) {
+export async function resolveNestedReferences(peer, data, visited = new Set(), options = {}) {
 	const {
 		maxDepth = 15, // TODO: temporarily scaled up from 10 for °Maia spark detail
 		timeoutMs = 5000, // Kept for API compatibility but not used in progressive mode
@@ -164,27 +164,27 @@ export async function resolveNestedReferences(backend, data, visited = new Set()
 
 		try {
 			// Get CoValueCore (creates if doesn't exist)
-			const coValueCore = backend.getCoValue(coId)
+			const coValueCore = peer.getCoValue(coId)
 			if (!coValueCore) {
 				return // CoValueCore doesn't exist
 			}
 
 			// REACTIVE PROGRESSIVE RESOLUTION: Subscribe to CoValue for reactive updates
 			// When CoValue becomes available, automatically resolve it
-			if (!backend.isAvailable(coValueCore)) {
+			if (!peer.isAvailable(coValueCore)) {
 				// Not available - trigger loading and subscribe for reactive resolution
-				ensureCoValueLoaded(backend, coId, { waitForAvailable: false }).catch((_err) => {
+				ensureCoValueLoaded(peer, coId, { waitForAvailable: false }).catch((_err) => {
 					// Silently handle errors - loading will retry via subscription
 				})
 
 				// Subscribe to CoValueCore for reactive resolution when it becomes available
 				const loadingUnsubscribe = coValueCore.subscribe(async (core) => {
-					if (backend.isAvailable(core)) {
+					if (peer.isAvailable(core)) {
 						// CoValue became available - reactively resolve it
 						try {
-							const nestedData = extractCoValueData(backend, core)
+							const nestedData = extractCoValueData(peer, core)
 							// Recursively resolve nested references reactively (non-blocking)
-							await resolveNestedReferences(backend, nestedData, visited, {
+							await resolveNestedReferences(peer, nestedData, visited, {
 								maxDepth,
 								timeoutMs,
 								currentDepth: currentDepth + 1,
@@ -194,7 +194,7 @@ export async function resolveNestedReferences(backend, data, visited = new Set()
 							const nestedUnsubscribe = core.subscribe(() => {
 								// Keep subscription active for updates
 							})
-							backend.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({
+							peer.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({
 								unsubscribe: nestedUnsubscribe,
 							}))
 
@@ -210,11 +210,11 @@ export async function resolveNestedReferences(backend, data, visited = new Set()
 
 			// CoValue is available - resolve it
 			// Extract data from nested CoValue
-			const nestedData = extractCoValueData(backend, coValueCore)
+			const nestedData = extractCoValueData(peer, coValueCore)
 
 			// Recursively resolve nested references in the nested CoValue
 			// Pass the same visited set to prevent circular resolution
-			await resolveNestedReferences(backend, nestedData, visited, {
+			await resolveNestedReferences(peer, nestedData, visited, {
 				maxDepth,
 				timeoutMs,
 				currentDepth: currentDepth + 1,
@@ -223,12 +223,12 @@ export async function resolveNestedReferences(backend, data, visited = new Set()
 			// REACTIVE PROGRESSIVE RESOLUTION: Subscribe to nested CoValue for reactive updates
 			// When CoValue becomes available, automatically resolve its nested references
 			const unsubscribe = coValueCore.subscribe(async (core) => {
-				if (backend.isAvailable(core)) {
+				if (peer.isAvailable(core)) {
 					// CoValue became available - reactively resolve its nested references
 					try {
-						const nestedData = extractCoValueData(backend, core)
+						const nestedData = extractCoValueData(peer, core)
 						// Recursively resolve nested references reactively (non-blocking)
-						resolveNestedReferences(backend, nestedData, visited, {
+						resolveNestedReferences(peer, nestedData, visited, {
 							maxDepth,
 							timeoutMs,
 							currentDepth: currentDepth + 1,
@@ -242,7 +242,7 @@ export async function resolveNestedReferences(backend, data, visited = new Set()
 			})
 
 			// Store subscription in cache
-			backend.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({ unsubscribe }))
+			peer.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({ unsubscribe }))
 		} catch (_error) {
 			// Silently continue - errors are logged at top level if needed
 			// Continue with other CoValues even if one fails
@@ -264,7 +264,7 @@ export async function resolveNestedReferences(backend, data, visited = new Set()
  * - Nested CoValues are resolved progressively (only if already available)
  * - This prevents timeouts in fresh browser instances where nested CoValues need to sync from server
  *
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} coId - CoValue ID to resolve
  * @param {Object} options - Options
  * @param {boolean} options.deepResolve - Enable/disable deep resolution (default: true)
@@ -272,7 +272,7 @@ export async function resolveNestedReferences(backend, data, visited = new Set()
  * @param {number} options.timeoutMs - Timeout for waiting for main CoValue (default: 5000)
  * @returns {Promise<void>} Resolves when main CoValue is available (nested resolution is progressive)
  */
-export async function deepResolveCoValue(backend, coId, options = {}) {
+export async function deepResolveCoValue(peer, coId, options = {}) {
 	const {
 		deepResolve = true,
 		maxDepth = 15, // TODO: temporarily scaled up from 10 for °Maia spark detail
@@ -286,7 +286,7 @@ export async function deepResolveCoValue(backend, coId, options = {}) {
 	}
 
 	// Use unified cache for resolution tracking
-	const cache = backend.subscriptionCache
+	const cache = peer.subscriptionCache
 
 	// CRITICAL OPTIMIZATION: Check if resolution is already completed or in progress
 	if (cache.isResolved(coId)) {
@@ -302,22 +302,22 @@ export async function deepResolveCoValue(backend, coId, options = {}) {
 
 				// PROGRESSIVE: Only wait for main CoValue (required for read operation)
 				// Nested CoValues will be resolved progressively if available
-				await ensureCoValueLoaded(backend, coId, { waitForAvailable: true, timeoutMs })
+				await ensureCoValueLoaded(peer, coId, { waitForAvailable: true, timeoutMs })
 
-				const coValueCore = backend.getCoValue(coId)
-				if (!coValueCore || !backend.isAvailable(coValueCore)) {
+				const coValueCore = peer.getCoValue(coId)
+				if (!coValueCore || !peer.isAvailable(coValueCore)) {
 					throw new Error(`CoValue ${coId} failed to load`)
 				}
 
 				// Extract data from CoValue
-				const data = extractCoValueData(backend, coValueCore)
+				const data = extractCoValueData(peer, coValueCore)
 
 				// PROGRESSIVE RESOLUTION: Resolve nested references progressively (non-blocking)
 				// Start with the root CoValue in visited set to prevent resolving it again
 				const visited = new Set([coId])
 
 				// Don't await - let nested resolution happen progressively in background
-				resolveNestedReferences(backend, data, visited, {
+				resolveNestedReferences(peer, data, visited, {
 					maxDepth,
 					timeoutMs,
 					currentDepth: 0,
@@ -347,13 +347,13 @@ export async function deepResolveCoValue(backend, coId, options = {}) {
 
 /**
  * Resolve nested CoValue references in data (public API)
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {any} data - Data object containing CoValue references
  * @param {Object} options - Options
  * @param {number} options.maxDepth - Maximum depth for recursive resolution (default: 10)
  * @param {number} options.timeoutMs - Timeout for waiting for nested CoValues (default: 5000)
  * @returns {Promise<void>} Resolves when all nested CoValues are loaded
  */
-export async function resolveNestedReferencesPublic(backend, data, options = {}) {
-	return await resolveNestedReferences(backend, data, new Set(), options)
+export async function resolveNestedReferencesPublic(peer, data, options = {}) {
+	return await resolveNestedReferences(peer, data, new Set(), options)
 }
