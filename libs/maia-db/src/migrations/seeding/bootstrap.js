@@ -102,7 +102,6 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 			cotype: 'comap',
 			data: cleaned,
 			dataEngine: dbEngine,
-			isSchemaDefinition: true,
 		})
 		const coId = schemaCoMap.id
 		schemaCoIdMap.set(schemaKey, coId)
@@ -113,13 +112,12 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	const schematasSchemaCoId =
 		tempCoMap.get('°Maia/schema/os/schematas-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
 	const osSchemaCoId = tempCoMap.get('°Maia/schema/os/os-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
-	const groupsSchemaCoId = tempCoMap.get('°Maia/schema/os/groups') || EXCEPTION_SCHEMAS.META_SCHEMA
-	const capabilitiesStreamSchemaCoId =
-		tempCoMap.get('°Maia/schema/os/capabilities-stream') || EXCEPTION_SCHEMAS.META_SCHEMA
+	const capabilitiesSchemaCoId =
+		tempCoMap.get('°Maia/schema/os/capabilities') || EXCEPTION_SCHEMAS.META_SCHEMA
 	const indexesSchemaCoId =
 		tempCoMap.get('°Maia/schema/os/indexes-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
-	const avensRegistrySchemaCoId =
-		tempCoMap.get('°Maia/schema/os/avens-registry') ?? EXCEPTION_SCHEMAS.META_SCHEMA
+	const vibesSchemaCoId =
+		tempCoMap.get('°Maia/schema/os/vibes-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
 
 	const ctx = { node, account, guardian }
 	const scaffoldOpts = (schema, data) => ({ schema, cotype: 'comap', data, dataEngine: dbEngine })
@@ -129,19 +127,13 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		scaffoldOpts(sparkSchemaCoId, { name: '°Maia' }),
 	)
 	const { coValue: os } = await createCoValueForSpark(ctx, null, scaffoldOpts(osSchemaCoId, {}))
-	const { coValue: groups } = await createCoValueForSpark(
+	const { coValue: capabilities } = await createCoValueForSpark(
 		ctx,
 		null,
-		scaffoldOpts(groupsSchemaCoId, {}),
+		scaffoldOpts(capabilitiesSchemaCoId, {}),
 	)
-	groups.set('guardian', guardian.id)
-	os.set('groups', groups.id)
-	const { coValue: capabilitiesStream } = await createCoValueForSpark(ctx, null, {
-		schema: capabilitiesStreamSchemaCoId,
-		cotype: 'costream',
-		dataEngine: dbEngine,
-	})
-	os.set('capabilities', capabilitiesStream.id)
+	capabilities.set('guardian', guardian.id)
+	os.set('capabilities', capabilities.id)
 	const { coValue: schematas } = await createCoValueForSpark(
 		ctx,
 		null,
@@ -152,15 +144,15 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		null,
 		scaffoldOpts(indexesSchemaCoId, {}),
 	)
-	const { coValue: avens } = await createCoValueForSpark(
+	const { coValue: vibes } = await createCoValueForSpark(
 		ctx,
 		null,
-		scaffoldOpts(avensRegistrySchemaCoId, {}),
+		scaffoldOpts(vibesSchemaCoId, {}),
 	)
 	os.set('schematas', schematas.id)
 	os.set('indexes', indexes.id)
 	maiaSpark.set('os', os.id)
-	maiaSpark.set('avens', avens.id)
+	maiaSpark.set('vibes', vibes.id)
 	schematas.set('°Maia/schema/meta', metaSchemaCoId)
 	for (const [k, coId] of schemaCoIdMap) schematas.set(k, coId)
 
@@ -186,13 +178,7 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	const humans = humansGroup.createMap({}, registriesMeta)
 	registries.set('humans', humans.id)
 
-	const avensGroup = node.createGroup()
-	avensGroup.extend(guardian, 'extend')
-	avensGroup.addMember('everyone', 'reader')
-	const avensIdentityRegistry = avensGroup.createMap({}, registriesMeta)
-	registries.set('avens', avensIdentityRegistry.id)
-
-	for (const g of [registriesGroup, sparksGroup, humansGroup, avensGroup]) {
+	for (const g of [registriesGroup, sparksGroup, humansGroup]) {
 		try {
 			await removeGroupMember(g, memberIdToRemove)
 		} catch (_e) {}
@@ -240,7 +226,7 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	}
 
 	console.log(
-		'✅ Bootstrap scaffold complete: account.registries, °Maia spark, os, schematas, indexes, avens',
+		'✅ Bootstrap scaffold complete: account.registries, °Maia spark, os, schematas, indexes, vibes',
 	)
 }
 
@@ -289,12 +275,12 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 	if (!osCore || !peer.isAvailable(osCore)) return
 	const osContent = peer.getCurrentContent(osCore)
 	if (!osContent || typeof osContent.get !== 'function') return
-	const groupsId = osContent.get('groups')
-	if (!groupsId || !groupsId.startsWith('co_z')) return
-	const groupsCore = peer.getCoValue(groupsId)
-	if (!groupsCore || !peer.isAvailable(groupsCore)) return
-	const groupsContent = peer.getCurrentContent(groupsCore)
-	if (!groupsContent || typeof groupsContent.set !== 'function') return
+	const capabilitiesId = osContent.get('capabilities')
+	if (!capabilitiesId || !capabilitiesId.startsWith('co_z')) return
+	const capabilitiesCore = peer.getCoValue(capabilitiesId)
+	if (!capabilitiesCore || !peer.isAvailable(capabilitiesCore)) return
+	const capabilitiesContent = peer.getCurrentContent(capabilitiesCore)
+	if (!capabilitiesContent || typeof capabilitiesContent.set !== 'function') return
 
 	const { resolve } = await import('../../cojson/schema/resolver.js')
 	const registriesSchemaCoId = await resolve(peer, '°Maia/schema/os/registries', {
@@ -306,13 +292,6 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 	const humansRegistrySchemaCoId = await resolve(peer, '°Maia/schema/os/humans-registry', {
 		returnType: 'coId',
 	})
-	const avensIdentityRegistrySchemaCoId = await resolve(
-		peer,
-		'°Maia/schema/os/avens-identity-registry',
-		{
-			returnType: 'coId',
-		},
-	)
 	const registriesMeta = registriesSchemaCoId
 		? { $schema: registriesSchemaCoId }
 		: { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }
@@ -321,9 +300,6 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 		: { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }
 	const humansRegistryMeta = humansRegistrySchemaCoId
 		? { $schema: humansRegistrySchemaCoId }
-		: { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }
-	const avensIdentityRegistryMeta = avensIdentityRegistrySchemaCoId
-		? { $schema: avensIdentityRegistrySchemaCoId }
 		: { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }
 
 	const { removeGroupMember } = await import('../../cojson/groups/groups.js')
@@ -394,24 +370,5 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 		registriesContent.set('humans', humans.id)
 	}
 
-	const avensRegistryId = registriesContent.get('avens')
-	let avensContent = null
-	if (avensRegistryId) {
-		const avensCore = peer.getCoValue(avensRegistryId)
-		if (avensCore && peer.isAvailable(avensCore)) {
-			avensContent = peer.getCurrentContent(avensCore)
-		}
-	}
-	if (!avensContent || typeof avensContent.set !== 'function') {
-		const avensGroup = node.createGroup()
-		avensGroup.extend(maiaGroup, 'extend')
-		avensGroup.addMember('everyone', 'reader')
-		const avens = avensGroup.createMap({}, avensIdentityRegistryMeta)
-		try {
-			await removeGroupMember(avensGroup, memberIdToRemove)
-		} catch (_e) {}
-		registriesContent.set('avens', avens.id)
-	}
-
-	console.log('✅ account.registries bootstrapped (sparks[°Maia], humans, avens)')
+	console.log('✅ account.registries bootstrapped (sparks[°Maia], humans)')
 }

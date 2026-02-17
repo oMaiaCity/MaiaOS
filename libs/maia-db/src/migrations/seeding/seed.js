@@ -1,17 +1,15 @@
 /**
  * CoJSON Seed Operation - Seed database with configs, schemas, and initial data
  *
- * Model: PEER_FRESH_SEED=true → bootstrap + seed (clean slate).
- *        PEER_FRESH_SEED=false → use existing scaffold, no seed, no cleanup.
- *
- * Seeding Order: Bootstrap → Schemas → Configs → Data → Registry
- * Extracted modules: bootstrap, configs, data, store-registry, helpers
+ * Seeding Order: Bootstrap (if needed) → Schemas → Configs → Data → Registry
+ * Extracted modules: bootstrap, cleanup, configs, data, store-registry, helpers
  */
 
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import { ensureCoValueLoaded } from '../../cojson/crud/collection-helpers.js'
 import * as groups from '../../cojson/groups/groups.js'
 import { bootstrapAccountRegistries, bootstrapAndScaffold } from './bootstrap.js'
+import { deleteSeededCoValues } from './cleanup.js'
 import { seedConfigs } from './configs.js'
 import { seedData } from './data.js'
 import { buildMetaSchemaForSeeding, ensureSparkOs, removeIdFields } from './helpers.js'
@@ -24,13 +22,10 @@ const REFERENCE_PROPS = [
 	'context',
 	'view',
 	'state',
-	'process',
 	'brand',
 	'style',
 	'inbox',
 	'subscribers',
-	'tool',
-	'interface',
 ]
 const NESTED_REF_PROPS = ['states']
 
@@ -49,28 +44,73 @@ export async function seed(
 ) {
 	const { forceFreshSeed = false } = options
 
-	if (!forceFreshSeed) {
-		return { skipped: true, reason: 'seed_requires_forceFreshSeed' }
-	}
-
 	const { MaiaDB } = await import('../../cojson/core/MaiaDB.js')
 	const peer = existingBackend || new MaiaDB({ node, account }, { systemSpark: '°Maia' })
 
-	let needsBootstrap = true
+	let needsBootstrap = forceFreshSeed
 	if (!needsBootstrap) {
 		needsBootstrap =
 			!account.get('registries') || !String(account.get('registries')).startsWith('co_z')
+	}
+	if (!needsBootstrap) {
+		const osId = await groups.getSparkOsId(peer, MAIA_SPARK)
+		if (!osId) needsBootstrap = true
 	}
 	if (needsBootstrap) {
 		const { getAllSchemas } = await import('@MaiaOS/schemata')
 		await bootstrapAndScaffold(account, node, schemas || getAllSchemas(), peer.dbEngine)
 	}
 
+	try {
+		const osId = await groups.getSparkOsId(peer, MAIA_SPARK)
+		if (osId) {
+			const osCore = await ensureCoValueLoaded(peer, osId, { waitForAvailable: true, timeoutMs: 2000 })
+			if (osCore && peer.isAvailable(osCore)) {
+				const osContent = peer.getCurrentContent(osCore)
+				const schematasId = osContent?.get?.('schematas')
+				if (schematasId) {
+					const schematasCore = await ensureCoValueLoaded(peer, schematasId, {
+						waitForAvailable: true,
+						timeoutMs: 2000,
+					})
+					if (schematasCore && peer.isAvailable(schematasCore)) {
+						const schematasContent = peer.getCurrentContent(schematasCore)
+						const keys = schematasContent?.keys?.() ?? Object.keys(schematasContent ?? {})
+						if (keys.length > 0 && !forceFreshSeed) {
+							if (!configs || (!configs.vibes?.length && Object.keys(configs.actors || {}).length === 0)) {
+								console.log('ℹ️  Account already seeded and no configs provided, skipping')
+								return { skipped: true, reason: 'already_seeded_no_configs' }
+							}
+						}
+					}
+				}
+			}
+		}
+	} catch (_e) {}
+
 	const { CoIdRegistry } = await import('@MaiaOS/schemata/co-id-generator')
 	const { transformForSeeding, validateSchemaStructure } = await import(
 		'@MaiaOS/schemata/schema-transformer'
 	)
 	const coIdRegistry = new CoIdRegistry()
+
+	const osIdForCleanup = needsBootstrap ? null : await groups.getSparkOsId(peer, MAIA_SPARK)
+	if (osIdForCleanup) {
+		try {
+			const osCoreForCleanup = await ensureCoValueLoaded(peer, osIdForCleanup, {
+				waitForAvailable: true,
+				timeoutMs: 2000,
+			})
+			if (osCoreForCleanup && peer.isAvailable(osCoreForCleanup)) {
+				const osContentForCleanup = peer.getCurrentContent(osCoreForCleanup)
+				const schematasIdForCleanup = osContentForCleanup?.get?.('schematas')
+				if (schematasIdForCleanup) {
+					console.log('🌱 Cleaning up existing seeded data before reseeding...')
+					await deleteSeededCoValues(account, node, peer)
+				}
+			}
+		} catch (_e) {}
+	}
 
 	const maiaGroup = await groups.getMaiaGroup(peer)
 	if (!maiaGroup || typeof maiaGroup.createMap !== 'function') {
@@ -194,7 +234,6 @@ export async function seed(
 	const { update: crudUpdate } = await import('../../cojson/crud/update.js')
 
 	const existingSchemaRegistry = new Map()
-	let schematasContent = null
 	if (osId) {
 		const osCore = await ensureCoValueLoaded(peer, osId, { waitForAvailable: true, timeoutMs: 2000 })
 		if (osCore && peer.isAvailable(osCore)) {
@@ -206,7 +245,7 @@ export async function seed(
 					timeoutMs: 2000,
 				})
 				if (schematasCore && peer.isAvailable(schematasCore)) {
-					schematasContent = peer.getCurrentContent(schematasCore)
+					const schematasContent = peer.getCurrentContent(schematasCore)
 					const keys = schematasContent?.keys?.() ?? Object.keys(schematasContent ?? {})
 					for (const key of keys) {
 						const schemaCoId = schematasContent.get(key)
@@ -241,21 +280,6 @@ export async function seed(
 
 	if (metaSchemaCoId && !schemaCoIdMap.has('°Maia/schema/meta')) {
 		schemaCoIdMap.set('°Maia/schema/meta', metaSchemaCoId)
-	}
-
-	// Schema definitions (meta-schema children) must always be CoMaps (have .get for resolution)
-	for (const [schemaKey, schemaCoId] of schemaCoIdMap) {
-		const core = peer.getCoValue(schemaCoId)
-		if (!core || !peer.isAvailable(core)) continue
-		const content = peer.getCurrentContent(core)
-		const isCoMap = content && typeof content.get === 'function'
-		if (!isCoMap) {
-			const rawType = content?.type ?? core?.type ?? 'unknown'
-			throw new Error(
-				`[Seed] Schema definition ${schemaKey} must be CoMap but is ${rawType}. ` +
-					'Corrupt data. Clear storage (delete DB file or IndexedDB) and run with PEER_FRESH_SEED=true.',
-			)
-		}
 	}
 
 	const seededSchemas = []
@@ -386,19 +410,17 @@ export async function seed(
 		return seeded
 	}
 
-	// Interfaces before actors (actors reference interface). Process before actors (actors reference process).
 	const CONFIG_ORDER = [
 		['styles', 'styles'],
-		['inboxes', 'inboxes'],
-		['tools', 'tools'],
-		['processes', 'processes'],
-		['interfaces', 'interfaces'],
 		['actors', 'actors'],
 		['views', 'views'],
 		['contexts', 'contexts'],
 		['states', 'states'],
+		['interfaces', 'interfaces'],
 		['subscriptions', 'subscriptions'],
+		['inboxes', 'inboxes'],
 		['children', 'children'],
+		['tool', 'tool'],
 	]
 
 	if (configs) {
@@ -423,19 +445,6 @@ export async function seed(
 				: null
 			if (!originalConfig) continue
 			const fullyTransformed = transformForSeeding(originalConfig, latestRegistry)
-			// Post-transform validation: actor configs must have co-ids for process, context, view
-			if (configInfo.type === 'actor') {
-				const refProps = ['process', 'context', 'view', 'interface']
-				for (const prop of refProps) {
-					const val = fullyTransformed[prop]
-					if (val && typeof val === 'string' && !val.startsWith('co_z')) {
-						throw new Error(
-							`[Seed] Actor config ${configInfo.expectedCoId} has unresolved ref in ${prop}: ${val}. ` +
-								`All refs must be transformed to co-ids during seed. Check transformForSeeding and coIdMap coverage.`,
-						)
-					}
-				}
-			}
 			const coValue = configInfo.coMap
 			const cotype = configInfo.cotype || 'comap'
 			if (cotype === 'colist' && coValue?.append) {
@@ -458,11 +467,9 @@ export async function seed(
 			['subscription', 'subscriptions'],
 			['inbox', 'inboxes'],
 			['children', 'children'],
-			['tool', 'tools'],
 			['actor', 'actors'],
 			['view', 'views'],
 			['context', 'contexts'],
-			['process', 'processes'],
 			['state', 'states'],
 			['interface', 'interfaces'],
 		]
@@ -473,48 +480,48 @@ export async function seed(
 		}
 	}
 
-	const allAvens = configs?.avens || []
-	if (allAvens.length > 0) {
+	const allVibes = configs?.vibes || []
+	if (allVibes.length > 0) {
 		combinedRegistry = refreshCombinedRegistry()
-		let avens = null
-		const avensId = await groups.getSparkAvensId(peer, MAIA_SPARK)
-		if (avensId) {
-			const avensCore = await ensureCoValueLoaded(peer, avensId, {
+		let vibes = null
+		const vibesId = await groups.getSparkVibesId(peer, MAIA_SPARK)
+		if (vibesId) {
+			const vibesCore = await ensureCoValueLoaded(peer, vibesId, {
 				waitForAvailable: true,
 				timeoutMs: 5000,
 			})
-			if (avensCore?.type === 'comap' && peer.isAvailable(avensCore)) {
-				avens = avensCore.getCurrentContent?.()
+			if (vibesCore?.type === 'comap' && peer.isAvailable(vibesCore)) {
+				vibes = vibesCore.getCurrentContent?.()
 			}
 		}
-		if (!avens) {
+		if (!vibes) {
 			const { EXCEPTION_SCHEMAS } = await import('../../schemas/registry.js')
-			const avensRegistrySchemaCoId =
-				schemaCoIdMap?.get('°Maia/schema/os/avens-registry') ??
+			const vibesSchemaCoId =
+				schemaCoIdMap?.get('°Maia/schema/os/vibes-registry') ??
 				(await (
 					await import('../../cojson/schema/resolver.js')
-				).resolve(peer, '°Maia/schema/os/avens-registry', {
+				).resolve(peer, '°Maia/schema/os/vibes-registry', {
 					returnType: 'coId',
 				}))
-			const { coValue: avensCoMap } = await createCoValueForSpark(
+			const { coValue: vibesCoMap } = await createCoValueForSpark(
 				{ node, account, guardian: maiaGroup },
 				null,
 				{
-					schema: avensRegistrySchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
+					schema: vibesSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
 					cotype: 'comap',
 					data: {},
 					dataEngine: peer?.dbEngine,
 				},
 			)
-			avens = avensCoMap
-			await groups.setSparkAvensId(peer, MAIA_SPARK, avens.id)
+			vibes = vibesCoMap
+			await groups.setSparkVibesId(peer, MAIA_SPARK, vibes.id)
 		}
-		for (const aven of allAvens) {
-			const originalAvenId = aven.$id || ''
-			const avenKey = originalAvenId.startsWith('°Maia/aven/')
-				? originalAvenId.replace('°Maia/aven/', '')
-				: (aven.name || 'default').toLowerCase().replace(/\s+/g, '-')
-			const schemaRef = aven.$schema
+		for (const vibe of allVibes) {
+			const originalVibeId = vibe.$id || ''
+			const vibeKey = originalVibeId.startsWith('°Maia/vibe/')
+				? originalVibeId.replace('°Maia/vibe/', '')
+				: (vibe.name || 'default').toLowerCase().replace(/\s+/g, '-')
+			const schemaRef = vibe.$schema
 			if (
 				schemaRef &&
 				(schemaRef.startsWith('@') || schemaRef.startsWith('°')) &&
@@ -527,31 +534,31 @@ export async function seed(
 					).resolve(peer, schemaRef, { returnType: 'coId' }))
 				if (schemaCoId) combinedRegistry.set(schemaRef, schemaCoId)
 			}
-			const retransformedAven = transformForSeeding(aven, combinedRegistry)
-			if (!retransformedAven.$schema?.startsWith('co_z')) {
+			const retransformedVibe = transformForSeeding(vibe, combinedRegistry)
+			if (!retransformedVibe.$schema?.startsWith('co_z')) {
 				throw new Error(
-					`[sync] Aven "${avenKey}": $schema missing or not resolved. Ensure °Maia/schema/aven is in schema registry.`,
+					`[sync] Vibe "${vibeKey}": $schema missing or not resolved. Ensure °Maia/schema/vibe is in schema registry.`,
 				)
 			}
-			const avenSeeded = await seedConfigs(
+			const vibeSeeded = await seedConfigs(
 				account,
 				node,
 				maiaGroup,
 				peer,
-				{ aven: retransformedAven },
+				{ vibe: retransformedVibe },
 				instanceCoIdMap,
 				schemaCoMaps,
 				schemaCoIdMap,
 			)
-			seededConfigs.configs.push(...(avenSeeded.configs || []))
-			seededConfigs.count += avenSeeded.count || 0
-			if (avenSeeded.configs?.length > 0) {
-				const avenCoId = avenSeeded.configs[0].coId
-				avens?.set?.(avenKey, avenCoId)
-				if (aven.$id) {
-					instanceCoIdMap.set(aven.$id, avenCoId)
-					combinedRegistry.set(aven.$id, avenCoId)
-					coIdRegistry.register(aven.$id, avenCoId)
+			seededConfigs.configs.push(...(vibeSeeded.configs || []))
+			seededConfigs.count += vibeSeeded.count || 0
+			if (vibeSeeded.configs?.length > 0) {
+				const vibeCoId = vibeSeeded.configs[0].coId
+				vibes?.set?.(vibeKey, vibeCoId)
+				if (vibe.$id) {
+					instanceCoIdMap.set(vibe.$id, vibeCoId)
+					combinedRegistry.set(vibe.$id, vibeCoId)
+					coIdRegistry.register(vibe.$id, vibeCoId)
 				}
 			}
 		}

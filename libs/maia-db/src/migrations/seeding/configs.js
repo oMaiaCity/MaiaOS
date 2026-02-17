@@ -48,12 +48,7 @@ export async function seedConfigs(
 
 		const { $id, $schema, ...configWithoutId } = config
 		const ctx = { node, account, guardian: maiaGroup }
-		const data =
-			cotype === 'colist'
-				? []
-				: cotype === 'costream' || cotype === 'cobinary'
-					? undefined
-					: configWithoutId
+		const data = cotype === 'colist' ? [] : cotype === 'costream' ? undefined : configWithoutId
 		let schemaKeyForError = null
 		for (const [k, cid] of schemaCoIdMap.entries()) {
 			if (cid === schemaCoId) {
@@ -95,10 +90,9 @@ export async function seedConfigs(
 		}
 	}
 
-	const avenConfig = transformedConfigs.aven
-	if (avenConfig) {
-		const avenInfo = await createConfig(avenConfig, 'aven', 'aven')
-		seededConfigs.push(avenInfo)
+	if (transformedConfigs.vibe) {
+		const vibeInfo = await createConfig(transformedConfigs.vibe, 'vibe', 'vibe')
+		seededConfigs.push(vibeInfo)
 		totalCount++
 	}
 
@@ -116,8 +110,6 @@ export async function seedConfigs(
 	}
 
 	totalCount += await seedConfigType('style', transformedConfigs.styles)
-	totalCount += await seedConfigType('tool', transformedConfigs.tools)
-	totalCount += await seedConfigType('process', transformedConfigs.processes)
 	totalCount += await seedConfigType('actor', transformedConfigs.actors)
 	totalCount += await seedConfigType('view', transformedConfigs.views)
 	totalCount += await seedConfigType('context', transformedConfigs.contexts)
@@ -126,6 +118,8 @@ export async function seedConfigs(
 	totalCount += await seedConfigType('subscription', transformedConfigs.subscriptions)
 	totalCount += await seedConfigType('inbox', transformedConfigs.inboxes)
 	totalCount += await seedConfigType('children', transformedConfigs.children)
+	totalCount += await seedConfigType('tool', transformedConfigs.tool)
+
 	return {
 		count: totalCount,
 		types: [...new Set(seededConfigs.map((c) => c.type))],
