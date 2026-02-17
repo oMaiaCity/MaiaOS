@@ -13,7 +13,7 @@ import {
 	isPRFSupported,
 	loadOrCreateAgentAccount,
 	MaiaOS,
-	resolveAccountCoIdsToProfiles,
+	resolveAccountToProfileCoId,
 	signInWithPasskey,
 	signUpWithPasskey,
 	subscribeSyncState,
@@ -378,13 +378,14 @@ async function linkAccountToRegistries(maia) {
 async function registerHuman(account) {
 	if (!account || detectMode() === 'agent') return false
 	const baseUrl = getMoaiBaseUrl()
-	if (!baseUrl) return false
-	const accountId = account.id ?? account.$jazz?.id
-	if (!accountId?.startsWith('co_z')) return false
+	if (!baseUrl) return
+	const account = maia.id.maiaId
+	const accountId = account.id || account.$jazz?.id
+	if (!accountId?.startsWith('co_z')) return
 	const profileId = account.get?.('profile')
-	if (!profileId?.startsWith('co_z')) return false
-	const doRegister = () =>
-		fetch(`${baseUrl}/register`, {
+	if (!profileId?.startsWith('co_z')) return
+	try {
+		await fetch(`${baseUrl}/register`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ type: 'human', accountId, profileId }),
@@ -909,10 +910,9 @@ function selectCoValueInternal(coId, skipHistory = false) {
 /** Resolve account co-id to profile when possible (for clicks); then select. */
 async function selectCoValue(coId, skipHistory = false) {
 	let targetCoId = coId
-	if (coId?.startsWith('co_z') && maia?.do) {
+	if (coId?.startsWith('co_z') && maia?.db) {
 		try {
-			const profiles = await resolveAccountCoIdsToProfiles(maia, [coId])
-			const profileId = profiles.get(coId)?.id
+			const profileId = await resolveAccountToProfileCoId(maia, coId)
 			if (profileId) targetCoId = profileId
 		} catch (_e) {}
 	}

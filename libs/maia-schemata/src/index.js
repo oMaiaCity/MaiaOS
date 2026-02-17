@@ -122,7 +122,6 @@ const SCHEMAS = {
 	'os/avens-identity-registry': avensIdentityRegistrySchema,
 	'os/avens-registry': avensRegistrySchema,
 	'os/sparks-registry': sparksRegistrySchema,
-	'os/cotext': cotextSchema,
 	'os/human': humanSchema,
 	'os/humans-registry': humansRegistrySchema,
 	'os/registries': registriesSchema,

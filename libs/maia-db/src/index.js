@@ -56,8 +56,10 @@ export {
 	getSparkCapabilityGroupIdFromSparkCoId,
 	removeGroupMember,
 } from './cojson/groups/groups.js'
-export { loadCapabilitiesGrants } from './cojson/helpers/load-capabilities-grants.js'
-export { resolveAccountCoIdsToProfiles } from './cojson/helpers/resolve-account-profile.js'
+export {
+	resolveAccountCoIdsToProfileNames,
+	resolveAccountToProfileCoId,
+} from './cojson/helpers/resolve-account-profile.js'
 export { resolveGroupCoIdsToCapabilityNames } from './cojson/helpers/resolve-capability-group.js'
 // Universal Schema Resolver (single source of truth)
 export {
