@@ -1,7 +1,7 @@
 /**
  * Resolve capability group co-ids to human-readable names
  * Format: @SparkName/CapabilityName
- * Used by db-viewer to display "via °Maia/Guardian" instead of "via co_zVvK79kWN..."
+ * Used by maia-db to display "via °Maia/Guardian" instead of "via co_zVvK79kWN..."
  */
 
 function truncate(str, maxLen = 16) {

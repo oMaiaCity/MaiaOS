@@ -57,7 +57,7 @@ export async function renderApp(
 		return
 	}
 
-	// Default: render DB viewer (currentScreen === 'db-viewer')
+	// Default: render MaiaDB (currentScreen === 'maia-db')
 	window.toggleMetadataInternalKey = (btn) => {
 		const row = btn.closest('.metadata-internal-row')
 		if (!row) return

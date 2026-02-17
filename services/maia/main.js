@@ -33,7 +33,7 @@ import {
 import { getSyncStatusMessage } from './utils.js'
 
 let maia
-let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'db-viewer' | 'vibe-viewer'
+let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'vibe-viewer'
 let currentView = 'account' // Current schema filter (default: 'account')
 let currentContextCoValueId = null // Currently loaded CoValue in main context (explorer-style navigation)
 let currentVibe = null // Currently loaded vibe (null = DB view mode, 'todos' = todos vibe, etc.)
@@ -715,7 +715,7 @@ async function handleSeed(seedVibesConfig = null) {
 		showToast('🌱 Reseeding database (preserving schemata)...', 'info', 2000)
 
 		// Get seeding config from parameter, environment variable, or default ("all" = seed all vibes)
-		// SEED_VIBES can be: null/undefined = use env/default, "all" = all vibes, or ["todos", "chat", "sparks", "creator"] = specific vibes
+		// SEED_VIBES can be: null/undefined = use env/default, "all" = all vibes, or ["todos", "chat", "sparks", "logs"] = specific vibes
 		// Check VITE_MAIA_CITY_SEED_VIBES (maia-city specific) or VITE_SEED_VIBES or SEED_VIBES
 		const envVar =
 			typeof import.meta !== 'undefined'
@@ -847,7 +847,7 @@ function selectCoValue(coId, skipHistory = false) {
 
 	// Explorer-style navigation: load CoValue into main container context
 	currentContextCoValueId = coId
-	currentScreen = 'db-viewer' // Navigate to DB viewer when selecting a CoValue
+	currentScreen = 'maia-db' // Navigate to DB viewer when selecting a CoValue
 	renderAppInternal()
 	// read() API in db-view.js handles loading and reactivity automatically
 }
@@ -887,8 +887,8 @@ function goBack() {
 		return
 	}
 
-	// If we're in db-viewer, navigate back in history or go to dashboard
-	if (currentScreen === 'db-viewer') {
+	// If we're in maia-db, navigate back in history or go to dashboard
+	if (currentScreen === 'maia-db') {
 		if (navigationHistory.length > 0) {
 			const previousCoId = navigationHistory.pop()
 			selectCoValue(previousCoId, true) // Skip adding to history
@@ -906,7 +906,7 @@ function switchView(view) {
 	currentView = view
 	currentContextCoValueId = null // Reset context when switching views
 	navigationHistory = [] // Clear navigation history when switching views
-	currentScreen = 'db-viewer' // Ensure we're in DB viewer when switching views
+	currentScreen = 'maia-db' // Ensure we're in DB viewer when switching views
 	renderAppInternal()
 }
 

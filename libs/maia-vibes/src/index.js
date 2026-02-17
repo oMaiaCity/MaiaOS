@@ -9,8 +9,6 @@
  */
 
 export { MaiaOS } from '@MaiaOS/loader'
-export { DbVibeRegistry, loadDbVibe } from './db/loader.js'
-export { DbVibeRegistry as DbRegistry } from './db/registry.js'
 export { loadSparksVibe, SparksVibeRegistry } from './sparks/loader.js'
 export { SparksVibeRegistry as SparksRegistry } from './sparks/registry.js'
 // Re-export todos loader and registry for convenience
@@ -18,19 +16,12 @@ export { loadTodosVibe, TodosVibeRegistry } from './todos/loader.js'
 export { TodosVibeRegistry as TodosRegistry } from './todos/registry.js'
 
 import { ChatVibeRegistry } from './chat/registry.js'
-import { CreatorVibeRegistry } from './creator/registry.js'
-import { DbVibeRegistry } from './db/registry.js'
+import { LogsVibeRegistry } from './creator/registry.js'
 import { SparksVibeRegistry } from './sparks/registry.js'
 // Static imports - no dynamic import() so bundle works in production (avoids 404→index.html→text/html MIME error)
 import { TodosVibeRegistry } from './todos/registry.js'
 
-const ALL_REGISTRIES = [
-	TodosVibeRegistry,
-	ChatVibeRegistry,
-	DbVibeRegistry,
-	SparksVibeRegistry,
-	CreatorVibeRegistry,
-]
+const ALL_REGISTRIES = [TodosVibeRegistry, ChatVibeRegistry, SparksVibeRegistry, LogsVibeRegistry]
 
 /**
  * Return all vibe registries (statically imported - no runtime fetch).

@@ -1,5 +1,5 @@
 /**
- * Vibe Creator Registry
+ * Logs Vibe Registry
  * Pre-loads all .maia configs as ES module imports
  * Exports everything as JS objects - no runtime file loading needed
  */
@@ -10,11 +10,11 @@ import logsInbox from './logs/logs.inbox.maia'
 import logsState from './logs/logs.state.maia'
 import logsStyle from './logs/logs.style.maia'
 import logsView from './logs/logs.view.maia'
-import creatorVibe from './manifest.vibe.maia'
+import logsVibe from './manifest.vibe.maia'
 import vibeActor from './vibe/vibe.actor.maia'
 
-export const CreatorVibeRegistry = {
-	vibe: creatorVibe,
+export const LogsVibeRegistry = {
+	vibe: logsVibe,
 
 	styles: {
 		'°Maia/style/brand': masterBrand,

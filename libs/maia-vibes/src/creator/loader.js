@@ -1,10 +1,10 @@
 /**
- * Creator Vibe Loader
+ * Logs Vibe Loader
  */
 
 import { createVibeLoader } from '../loader.js'
-import { CreatorVibeRegistry } from './registry.js'
+import { LogsVibeRegistry } from './registry.js'
 
-export const loadCreatorVibe = createVibeLoader('creator', CreatorVibeRegistry, ['db', 'core'])
+export const loadLogsVibe = createVibeLoader('logs', LogsVibeRegistry, ['db', 'core'])
 export { MaiaOS } from '../loader.js'
-export { CreatorVibeRegistry } from './registry.js'
+export { LogsVibeRegistry } from './registry.js'

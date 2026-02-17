@@ -1,6 +1,6 @@
 /**
  * Resolve account co-ids to their profile names
- * Used by db-viewer and other UIs to display human-readable names instead of opaque co-ids
+ * Used by maia-db and other UIs to display human-readable names instead of opaque co-ids
  */
 
 /**

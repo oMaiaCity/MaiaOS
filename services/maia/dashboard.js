@@ -202,19 +202,19 @@ export async function renderDashboard(
 	let cards = ''
 
 	if (!currentSpark) {
-		// Level 1: Show sparks (context scopes) + DB Viewer
+		// Level 1: Show sparks (context scopes) + DB Viewer (hardcoded CoJSON inspector)
 		const sparks = await loadSparksFromAccount(maia)
 
 		const dbViewerCard = `
-			<div class="dashboard-card whitish-card" onclick="window.navigateToScreen('db-viewer')">
+			<div class="dashboard-card whitish-card" onclick="window.navigateToScreen('maia-db')">
 				<div class="dashboard-card-content">
 					<div class="dashboard-card-icon">
 						<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
 							<path d="M4 7h16M4 12h16M4 17h16"/>
 						</svg>
 					</div>
-					<h3 class="dashboard-card-title">DB Viewer</h3>
-					<p class="dashboard-card-description">Explore and inspect your CoValues</p>
+					<h3 class="dashboard-card-title">MaiaDB</h3>
+					<p class="dashboard-card-description">Explore and inspect your data</p>
 				</div>
 			</div>
 		`
