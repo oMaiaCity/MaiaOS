@@ -11,9 +11,11 @@ export {
 // Peer setup, sync state, backend for operations
 // Re-export ReactiveStore from db
 export {
+	createCoJSONAPI,
 	generateRegistryName,
 	getSchema,
 	getSchemaIndexColistId,
+	MaiaDB,
 	removeGroupMember,
 	resolve,
 	resolveAccountCoIdsToProfileNames,

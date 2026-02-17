@@ -17,7 +17,7 @@ export class ReactiveStore {
 	constructor(initialValue) {
 		this._value = initialValue
 		this._subscribers = new Set()
-		this._unsubscribe = null // Optional cleanup function set by peer (e.g., MaiaDB)
+		this._unsubscribe = null // Optional cleanup function set by backend (e.g., MaiaDB)
 	}
 
 	/**
@@ -49,7 +49,7 @@ export class ReactiveStore {
 
 			// CRITICAL FIX: Auto-call _unsubscribe() when last subscriber unsubscribes
 			// This ensures MaiaDB._storeSubscriptions is cleaned up automatically
-			// when all actors unsubscribe from a store (e.g., when aven is unloaded)
+			// when all actors unsubscribe from a store (e.g., when vibe is unloaded)
 			if (this._subscribers.size === 0 && this._unsubscribe) {
 				this._unsubscribe()
 			}

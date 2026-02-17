@@ -5,25 +5,18 @@
  * No DBAdapter interface. Direct CoJSON operations.
  */
 
-import { seed } from '../../migrations/seeding/seed.js'
-import { ReactiveStore } from '../../reactive-store.js'
 import { EXCEPTION_SCHEMAS } from '../../schemas/registry.js'
 import { getGlobalCoCache } from '../cache/coCache.js'
 import * as crudCreate from '../crud/create.js'
 import { extractCoStreamWithSessions } from '../crud/data-extraction.js'
 import * as crudDelete from '../crud/delete.js'
-import { createAndPushMessage as createAndPushMessageFn } from '../crud/message-helpers.js'
-import { processInbox as processInboxFn } from '../crud/process-inbox.js'
-import { resolveReactive as resolveReactiveFn } from '../crud/reactive-resolver.js'
 import { findFirst as findFirstByFilter, read as universalRead } from '../crud/read.js'
-import {
-	waitForReactiveResolution as waitForReactiveResolutionFn,
-	waitForStoreReady,
-} from '../crud/read-operations.js'
+import { waitForStoreReady } from '../crud/read-operations.js'
 import * as crudUpdate from '../crud/update.js'
 import * as groups from '../groups/groups.js'
 import { wrapStorageWithIndexingHooks } from '../indexing/storage-hook-wrapper.js'
-import { checkCotype as checkCotypeFn, resolve } from '../schema/resolver.js'
+import { resolve } from '../schema/resolver.js'
+import { seed } from '../seeding/seed.js'
 import { wrapSyncManagerWithValidation } from '../sync/validation-hook-wrapper.js'
 
 export class MaiaDB {
@@ -36,7 +29,7 @@ export class MaiaDB {
 		const isOptions =
 			dbEngineOrOptions &&
 			typeof dbEngineOrOptions === 'object' &&
-			!dbEngineOrOptions.peer &&
+			!dbEngineOrOptions.backend &&
 			typeof dbEngineOrOptions.execute !== 'function'
 		const dbEngine = isOptions ? null : dbEngineOrOptions
 		const options = isOptions ? dbEngineOrOptions : {}
@@ -49,10 +42,8 @@ export class MaiaDB {
 		if (node.storage) {
 			node.storage = wrapStorageWithIndexingHooks(node.storage, this)
 		}
-		if (node.syncManager && (dbEngine || options?.beforeAcceptWrite)) {
-			wrapSyncManagerWithValidation(node.syncManager, this, dbEngine, {
-				beforeAcceptWrite: options?.beforeAcceptWrite,
-			})
+		if (node.syncManager && dbEngine) {
+			wrapSyncManagerWithValidation(node.syncManager, this, dbEngine)
 		}
 	}
 
@@ -156,41 +147,41 @@ export class MaiaDB {
 		const { createChildGroup } = await import('../groups/create.js')
 		const childGroup = createChildGroup(this.node, maiaGuardian, { name: normalizedName })
 		const sparkSchemaCoId = await resolve(this, '°Maia/schema/data/spark', { returnType: 'coId' })
-		const groupsSchemaCoId = await resolve(this, '°Maia/schema/os/groups', {
+		const capabilitiesSchemaCoId = await resolve(this, '°Maia/schema/os/capabilities', {
 			returnType: 'coId',
 		})
 		const osSchemaCoId = await resolve(this, '°Maia/schema/os/os-registry', { returnType: 'coId' })
-		const avensRegistrySchemaCoId = await resolve(this, '°Maia/schema/os/avens-registry', {
+		const vibesSchemaCoId = await resolve(this, '°Maia/schema/os/vibes-registry', {
 			returnType: 'coId',
 		})
-		if (!sparkSchemaCoId || !groupsSchemaCoId || !osSchemaCoId || !avensRegistrySchemaCoId) {
+		if (!sparkSchemaCoId || !capabilitiesSchemaCoId || !osSchemaCoId || !vibesSchemaCoId) {
 			throw new Error('[MaiaDB] Spark scaffold schemas not found')
 		}
 		const ctx = { node: this.node, account: this.account, guardian: childGroup }
 		const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
-		const { coValue: groups } = await createCoValueForSpark(ctx, null, {
-			schema: groupsSchemaCoId,
+		const { coValue: capabilities } = await createCoValueForSpark(ctx, null, {
+			schema: capabilitiesSchemaCoId,
 			cotype: 'comap',
 			data: { guardian: childGroup.id },
-			dataEngine: this.dbEngine,
+			dbEngine: this.dbEngine,
 		})
 		const { coValue: os } = await createCoValueForSpark(ctx, null, {
 			schema: osSchemaCoId,
 			cotype: 'comap',
-			data: { groups: groups.id },
-			dataEngine: this.dbEngine,
+			data: { capabilities: capabilities.id },
+			dbEngine: this.dbEngine,
 		})
-		const { coValue: avens } = await createCoValueForSpark(ctx, null, {
-			schema: avensRegistrySchemaCoId,
+		const { coValue: vibes } = await createCoValueForSpark(ctx, null, {
+			schema: vibesSchemaCoId,
 			cotype: 'comap',
 			data: {},
-			dataEngine: this.dbEngine,
+			dbEngine: this.dbEngine,
 		})
 		const { coValue: sparkCoMap } = await createCoValueForSpark(ctx, null, {
 			schema: sparkSchemaCoId,
 			cotype: 'comap',
-			data: { name: normalizedName, os: os.id, avens: avens.id },
-			dataEngine: this.dbEngine,
+			data: { name: normalizedName, os: os.id, vibes: vibes.id },
+			dbEngine: this.dbEngine,
 		})
 		return { id: sparkCoMap.id, name: normalizedName, guardian: childGroup.id }
 	}
@@ -224,10 +215,11 @@ export class MaiaDB {
 			deepResolve = true,
 			maxDepth = 15,
 			timeoutMs = 5000,
+			resolveReferences = null,
 			map = null,
 			onChange = null,
 		} = options
-		const readOptions = { deepResolve, maxDepth, timeoutMs, map, onChange }
+		const readOptions = { deepResolve, maxDepth, timeoutMs, resolveReferences, map, onChange }
 		if (keys && Array.isArray(keys)) {
 			const stores = await Promise.all(
 				keys.map((coId) => universalRead(this, coId, schema, null, schema, readOptions)),
@@ -256,15 +248,29 @@ export class MaiaDB {
 	}
 
 	async getRawRecord(id) {
-		const store = await universalRead(this, id, null, null, null, { deepResolve: false })
-		try {
-			await waitForStoreReady(store, id, 5000)
-		} catch (_e) {
-			return null
+		const coValueCore = this.getCoValue(id)
+		if (!coValueCore || !this.isAvailable(coValueCore)) return null
+		const content = this.getCurrentContent(coValueCore)
+		const header = this.getHeader(coValueCore)
+		const headerMeta = header?.meta || null
+		const schema = headerMeta?.$schema || null
+		if (content?.get && typeof content.get === 'function') {
+			const raw = { $schema: schema }
+			const keys =
+				content.keys && typeof content.keys === 'function' ? content.keys() : Object.keys(content)
+			for (const k of keys) {
+				raw[k] = content.get && typeof content.get === 'function' ? content.get(k) : content[k]
+			}
+			return raw
 		}
-		const data = store.value
-		if (!data || data.error) return null
-		return data
+		if (content?.toJSON) {
+			try {
+				return content.toJSON()
+			} catch (_e) {
+				return null
+			}
+		}
+		return null
 	}
 
 	async seed(configs, schemas, data, options = {}) {
@@ -274,10 +280,10 @@ export class MaiaDB {
 
 	async ensureAccountOsReady(options = {}) {
 		const { timeoutMs = 10000 } = options
-		if (!this.account && typeof process !== 'undefined' && process.env?.DEBUG) return false
+		if (!this.account && process.env.DEBUG) return false
 		const osId = await groups.getSparkOsId(this, '°Maia')
 		if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
-			if (typeof process !== 'undefined' && process.env?.DEBUG) return false
+			if (process.env.DEBUG) return false
 		}
 		const osStore = await universalRead(this, osId, null, null, null, {
 			deepResolve: false,
@@ -286,21 +292,21 @@ export class MaiaDB {
 		try {
 			await waitForStoreReady(osStore, osId, timeoutMs)
 		} catch (_error) {
-			if (typeof process !== 'undefined' && process.env?.DEBUG) return false
+			if (process.env.DEBUG) return false
 		}
 		const osData = osStore.value
 		if (!osData || osData.error) {
-			if (typeof process !== 'undefined' && process.env?.DEBUG) return false
+			if (process.env.DEBUG) return false
 		}
 		let schematasId = osData.schematas
 		if (!schematasId || typeof schematasId !== 'string' || !schematasId.startsWith('co_z')) {
 			const osCore = this.getCoValue(osId)
 			if (!osCore || !osCore.isAvailable()) {
-				if (typeof process !== 'undefined' && process.env?.DEBUG) return false
+				if (process.env.DEBUG) return false
 			}
 			const osContent = this.getCurrentContent(osCore)
 			if (!osContent || typeof osContent.set !== 'function') {
-				if (typeof process !== 'undefined' && process.env?.DEBUG) return false
+				if (process.env.DEBUG) return false
 			}
 			const schematasSchemaCoId = await resolve(this, '°Maia/schema/os/schematas-registry', {
 				returnType: 'coId',
@@ -311,7 +317,7 @@ export class MaiaDB {
 				schema,
 				cotype: 'comap',
 				data: {},
-				dataEngine: this.dbEngine,
+				dbEngine: this.dbEngine,
 			})
 			osContent.set('schematas', schematasCoMap.id)
 			schematasId = schematasCoMap.id
@@ -325,33 +331,8 @@ export class MaiaDB {
 				if (osData2 && !osData2.error) schematasId = osData2.schematas || schematasId
 			} catch (_error) {}
 		}
-		let capabilitiesId = osData.capabilities
-		if (!capabilitiesId || typeof capabilitiesId !== 'string' || !capabilitiesId.startsWith('co_z')) {
-			const osCore = this.getCoValue(osId)
-			if (osCore && this.isAvailable(osCore)) {
-				const osContent = this.getCurrentContent(osCore)
-				if (osContent && typeof osContent.set === 'function') {
-					const capabilitiesStreamSchemaCoId = await resolve(
-						this,
-						'°Maia/schema/os/capabilities-stream',
-						{
-							returnType: 'coId',
-						},
-					)
-					const capSchema = capabilitiesStreamSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA
-					const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
-					const { coValue: capabilitiesStream } = await createCoValueForSpark(this, '°Maia', {
-						schema: capSchema,
-						cotype: 'costream',
-						dataEngine: this.dbEngine,
-					})
-					osContent.set('capabilities', capabilitiesStream.id)
-					capabilitiesId = capabilitiesStream.id
-				}
-			}
-		}
 		if (!schematasId || typeof schematasId !== 'string' || !schematasId.startsWith('co_z')) {
-			if (typeof process !== 'undefined' && process.env?.DEBUG) return false
+			if (process.env.DEBUG) return false
 		}
 		const schematasStore = await universalRead(this, schematasId, null, null, null, {
 			deepResolve: false,
@@ -360,41 +341,12 @@ export class MaiaDB {
 		try {
 			await waitForStoreReady(schematasStore, schematasId, timeoutMs)
 		} catch (_error) {
-			if (typeof process !== 'undefined' && process.env?.DEBUG) return false
+			if (process.env.DEBUG) return false
 		}
 		const schematasData = schematasStore.value
 		if (!schematasData || schematasData.error) {
-			if (typeof process !== 'undefined' && process.env?.DEBUG) return false
+			if (process.env.DEBUG) return false
 		}
 		return true
-	}
-
-	// Delegate methods for engines (Phase 4: route through peer, no direct db imports in engines)
-	async resolve(identifier, opts = {}) {
-		return resolve(this, identifier, opts)
-	}
-	async checkCotype(schemaCoId, expectedCotype) {
-		return checkCotypeFn(this, schemaCoId, expectedCotype)
-	}
-	createReactiveStore(initialValue) {
-		return new ReactiveStore(initialValue)
-	}
-	async getSparkCapabilityGroupIdFromSparkCoId(sparkCoId, capabilityName = 'guardian') {
-		return groups.getSparkCapabilityGroupIdFromSparkCoId(this, sparkCoId, capabilityName)
-	}
-	resolveReactive(identifier, opts = {}) {
-		return resolveReactiveFn(this, identifier, opts)
-	}
-	async waitForReactiveResolution(store, opts = {}) {
-		return waitForReactiveResolutionFn(store, opts)
-	}
-	async processInbox(actorId, inboxCoId) {
-		return processInboxFn(this, actorId, inboxCoId)
-	}
-	async createAndPushMessage(inboxCoId, messageData) {
-		if (!this.dbEngine) {
-			throw new Error('[MaiaDB.createAndPushMessage] dbEngine required (set via DataEngine)')
-		}
-		return createAndPushMessageFn(this.dbEngine, inboxCoId, messageData)
 	}
 }
