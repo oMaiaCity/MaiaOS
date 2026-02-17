@@ -17,7 +17,7 @@ import {
   ToolEngine,
   MaiaScriptEvaluator,
   ModuleRegistry,
-  DBEngine,
+  DataEngine,
   IndexedDBBackend,
   SubscriptionEngine,
   MessageQueue
@@ -73,17 +73,13 @@ const viewEngine = new ViewEngine(evaluator, null, registry);
 await viewEngine.render(viewDef, { context: {} }, shadowRoot, [], 'custom');
 ```
 
-### Custom Database Operations
+### Data Operations (maia.do)
 
 ```javascript
-import { DBEngine, IndexedDBBackend } from '@MaiaOS/script';
+// maia = booted MaiaOS instance
 
-const backend = new IndexedDBBackend();
-await backend.init();
-const dbEngine = new DBEngine(backend);
-
-// Use read() API (always returns reactive store)
-const store = await dbEngine.execute({
+// Read (always returns reactive store)
+const store = await maia.do({
   op: 'read',
   schema: 'co_zTodos123'  // Schema co-id (co_z...)
 });
@@ -101,7 +97,7 @@ const unsubscribe = store.subscribe((data) => {
 
 ## Package Exports
 
-The package exports are defined in `libs/maia-script/package.json`:
+The package exports are defined in `libs/maia-engines/package.json`:
 
 ```json
 {

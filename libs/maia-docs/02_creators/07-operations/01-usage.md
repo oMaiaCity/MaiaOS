@@ -17,7 +17,7 @@ Read a single spark or all sparks. Returns a reactive store that automatically u
 
 ```javascript
 // Read all sparks
-const sparksStore = await maia.db({
+const sparksStore = await maia.do({
   op: "readSpark"
 });
 
@@ -30,7 +30,7 @@ const unsubscribe = sparksStore.subscribe((sparks) => {
 });
 
 // Read single spark
-const sparkStore = await maia.db({
+const sparkStore = await maia.do({
   op: "readSpark",
   id: "co_zSpark123"
 });
@@ -52,7 +52,7 @@ const sparkStore = await maia.db({
 Update a spark's name or group reference.
 
 ```javascript
-const updated = await maia.db({
+const updated = await maia.do({
   op: "updateSpark",
   id: "co_zSpark123",
   data: {
@@ -73,7 +73,7 @@ const updated = await maia.db({
 Delete a spark and remove it from `account.sparks` registry.
 
 ```javascript
-const deleted = await maia.db({
+const deleted = await maia.do({
   op: "deleteSpark",
   id: "co_zSpark123"
 });
@@ -189,9 +189,9 @@ Use the `@db` tool in your state machine definitions:
 ```
 @db tool (in state machine)
   ↓
-maia.db({op: ...})
+maia.do({op: ...})
   ↓
-DBEngine.execute()
+DataEngine.execute()
   ↓
 Operation Handler (query/create/update/delete/toggle/seed)
   ↓
@@ -202,11 +202,11 @@ Database
 
 **Key Components:**
 
-1. **DBEngine** (`libs/maia-script/src/o/engines/maiadb/db.engine.js`)
+1. **DataEngine** (`libs/maia-engines/src/engines/data.engine.js`)
    - Routes operations to handlers
    - Supports swappable backends
 
-2. **Operation Handlers** (`libs/maia-operations/src/operations/`)
+2. **Operation Handlers** (`libs/maia-engines/src/operations/`)
    - `read.js` - Read operation handler (always returns reactive store)
    - `create.js` - Create operation handler
    - `update.js` - Update operation handler (supports MaiaScript expressions)
@@ -217,7 +217,7 @@ Database
    - `append.js` - CoList/CoStream append operation handler
    - `process-inbox.js` - Inbox processing operation handler
 
-3. **Backend** (`libs/maia-script/src/engines/db-engine/backend/`)
+3. **Storage** – MaiaDB (`libs/maia-db/`) uses MaiaPeer for CoJSON
    - `indexeddb/` - IndexedDB backend (current)
    - Future: CoJSON CRDT backend
 

@@ -10,8 +10,8 @@ The `@MaiaOS/tools` package provides a centralized registry for all MaiaScript t
 - ✅ **Tool implementations** - JavaScript functions that execute tools
 
 **What it isn't:**
-- ❌ **Not the tool engine** - Tool execution is in `maia-script` (ToolEngine)
-- ❌ **Not tool registration** - Tools are registered by modules in `maia-script`
+- ❌ **Not the tool engine** - Tool execution is in `maia-engines` (ToolEngine)
+- ❌ **Not tool registration** - Tools are registered by modules in `maia-engines`
 - ❌ **Not business logic** - Tools are generic, reusable operations
 
 ---
@@ -238,8 +238,8 @@ const definitions = getAllToolDefinitions();
 
 **`@db/*`** (Deprecated)
 - Database tools have been replaced by the unified `@db` API
-- Use `maia.db({ op: 'read', ... })` instead
-- See: [maia-script DBEngine](../04_maia-script/engines/#dbengine)
+- Use `maia.do({ op: 'read', ... })` instead
+- See: [maia-engines DataEngine](../04_maia-engines/README.md)
 
 ---
 
@@ -301,7 +301,7 @@ export const TOOLS = {
 
 ### Step 4: Register Tool in Module
 
-**`libs/maia-script/src/modules/my-namespace.module.js`:**
+**`libs/maia-engines/src/modules/my-namespace.module.js`:**
 ```javascript
 import { getTool } from '@MaiaOS/tools';
 
@@ -324,14 +324,14 @@ export async function register(registry) {
 
 ## Integration Points
 
-### With maia-script
+### With maia-engines
 
-The `maia-script` package uses tools for:
+The `maia-engines` package uses tools for:
 - Tool execution via ToolEngine
 - Tool registration via modules
 - Tool validation against definitions
 
-**See:** `libs/maia-script/src/engines/tool.engine.js`
+**See:** `libs/maia-engines/src/engines/tool.engine.js`
 
 ### With maia-schemata
 
@@ -362,7 +362,7 @@ When a tool executes, it receives:
   - `actor.id` - Actor ID
   - `actor.context` - Actor context (read-only)
   - `actor.actorEngine` - ActorEngine reference (for sending messages, etc.)
-  - `actor.dbEngine` - DBEngine reference (for data operations)
+  - `actor.dataEngine` / `maia.do` - DataEngine reference (for data operations)
 
 - **`payload`** - Validated payload matching tool definition parameters
 
@@ -437,8 +437,8 @@ export default {
 
 ## Related Documentation
 
-- [maia-script: ToolEngine](../04_maia-script/engines/#toolengine) - How tools are executed
-- [maia-script: Modules](../04_maia-script/modules.md) - How tools are registered
+- [maia-engines: ToolEngine](../04_maia-engines/engines/) - How tools are executed
+- [maia-engines: Modules](../04_maia-engines/modules.md) - How tools are registered
 - [Creator Docs: Tools](../../02_creators/06-tools.md) - How to use tools as a creator
 
 ---

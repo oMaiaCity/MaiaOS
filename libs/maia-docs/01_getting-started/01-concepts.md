@@ -1,8 +1,5 @@
 # MaiaOS Concepts and Terminology
 
-**Version:** 0.4  
-**Last Updated:** January 2026
-
 ## The Simple Version
 
 MaiaOS lets you build apps by writing **JSON files** instead of code. You describe what your app should do (like a recipe), and engines run it. No building, no compiling—just save a file and see it run. AI can read and edit these files too, so you can build apps by talking to an AI.
@@ -36,7 +33,7 @@ Hot reload everything: change a view, modify a state machine, update styles—in
 
 **Definition Layer:** Pure JSON (actor, context, state, view, style, skill). No logic, just configuration.
 
-**Execution Layer:** JavaScript engines interpret definitions (ActorEngine, StateEngine, ViewEngine, ToolEngine, StyleEngine, DBEngine, SubscriptionEngine, MessageQueue).
+**Execution Layer:** JavaScript engines interpret definitions (ActorEngine, StateEngine, ViewEngine, ToolEngine, StyleEngine, DataEngine, SubscriptionEngine, MessageQueue).
 
 **Intelligence Layer:** AI agents orchestrate via skills. Agents generate events based on user intent; system executes via state machines.
 
@@ -71,7 +68,7 @@ Hot reload everything: change a view, modify a state machine, update styles—in
 
 **MaiaOS** - The operating system. A runtime-based, AI-native platform for declarative applications. Think: "an OS for apps" that runs in the browser.
 
-**Kernel** - Single entry point (`o/kernel.js`). Boots the system, loads modules, initializes engines.
+**Loader** - Single entry point (`loader.js`). Boots the system, loads modules, initializes engines.
 
 **MaiaScript** - JSON-based DSL for defining actors, views, states, styles, tools. Expressions: `$context`, `$$item`, `@inputValue`.
 
@@ -91,7 +88,7 @@ Hot reload everything: change a view, modify a state machine, update styles—in
 
 ### Execution Layer
 
-**Engine** - JavaScript machinery that interprets definitions. ActorEngine, StateEngine, ViewEngine, ToolEngine, StyleEngine, DBEngine, SubscriptionEngine, MessageQueue, MaiaScriptEvaluator.
+**Engine** - JavaScript machinery that interprets definitions. ActorEngine, StateEngine, ViewEngine, ToolEngine, StyleEngine, DataEngine, SubscriptionEngine, MessageQueue, MaiaScriptEvaluator.
 
 **Tool** - Executable function (`.tool.js` + `.tool.maia`). The ONLY place imperative code lives. Tools mutate context or execute operations.
 
@@ -127,5 +124,6 @@ Hot reload everything: change a view, modify a state machine, update styles—in
 
 ## Next Steps
 
-- [Architecture](./03_architecture/) - Deep dive into system design
-- [Installation](./04_install.md) - Get started building
+- [Architecture](./02-architecture.md) – System design and API hierarchy
+- [Install](./03-install.md) – Get MaiaOS running locally
+- [Overview](./00-overview.md) – Full reading path

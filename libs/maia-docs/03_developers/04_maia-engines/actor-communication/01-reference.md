@@ -103,17 +103,17 @@ The view subscribes to context changes:
 
 ### Core Engine Files
 
-- **Actor Engine** (`libs/maia-script/src/engines/actor.engine.js`):
+- **Actor Engine** (`libs/maia-engines/src/engines/actor.engine.js`):
   - `sendMessage()` - Send message to actor inbox
   - `sendInternalEvent()` - Send internal event to own inbox
   - `processMessages()` - Process messages from inbox
   - `_createChildActorIfNeeded()` - Create child actor lazily
 
-- **State Engine** (`libs/maia-script/src/engines/state.engine.js`):
+- **State Engine** (`libs/maia-engines/src/engines/state.engine.js`):
   - `send()` - Route event to state machine
   - `_executeNamedAction()` - Execute custom actions (e.g., `sendToDetailActor`)
 
-- **View Engine** (`libs/maia-script/src/engines/view.engine.js`):
+- **View Engine** (`libs/maia-engines/src/engines/view.engine.js`):
   - `_renderSlot()` - Render child actors in slots
   - `_handleEvent()` - Handle DOM events, resolve expressions, send to inbox
 
@@ -228,7 +228,7 @@ The view subscribes to context changes:
 - [State Engine API](../engines/#state-engine) - State machine execution
 - [View Engine API](../engines/#view-engine) - View rendering and events
 - [Query Reactivity](../05_maia-db/README.md) - How queries work with dynamic filters
-- [MaiaScript Expressions](../04_maia-script/expressions.md) - Expression syntax and evaluation
+- [MaiaScript Expressions](../expressions.md) - Expression syntax and evaluation
 
 ---
 
@@ -242,8 +242,8 @@ The view subscribes to context changes:
 5. ✅ **CRDT-native** - All messages persist to CRDTs, sync across devices
 
 **Key Files**:
-- `libs/maia-script/src/engines/actor.engine.js` - Message passing
-- `libs/maia-script/src/engines/state.engine.js` - State machine execution
+- `libs/maia-engines/src/engines/actor.engine.js` - Message passing
+- `libs/maia-engines/src/engines/state.engine.js` - State machine execution
 - `libs/maia-db/src/cojson/crud/read.js` - Query reactivity
 
 **Example**: Sparks vibe agent → detail actor communication flow (documented above)

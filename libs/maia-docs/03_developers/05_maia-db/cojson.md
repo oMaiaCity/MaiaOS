@@ -303,12 +303,7 @@ const profile = group.createMap({ name: "Alice" }, profileMeta);
 
 ## Operations Layer Integration
 
-The CoJSON backend will implement the `DBAdapter` interface from `@MaiaOS/operations`, allowing it to use the same unified operations layer as the IndexedDB backend.
-
-**Future Integration:**
-- CoJSON backend will implement `DBAdapter` interface
-- Operations (read, create, update, delete) will work identically for both backends
-- Same `DBEngine` API regardless of backend choice
+MaiaDB (in maia-db) is the storage layer. DataEngine (maia.do in maia-engines) calls MaiaDB for all operations.
 
 **Related Documentation:**
-- [maia-operations Package](../06_maia-operations/README.md) - Shared operations layer and DBAdapter interface
+- [maia-engines Package](../04_maia-engines/README.md) - DataEngine (maia.do)

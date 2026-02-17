@@ -38,7 +38,7 @@ When you call `MaiaOS.boot()`, here's what happens:
 ```
 1. Initialize Database
    └─> Creates IndexedDBBackend
-   └─> Creates DBEngine
+   └─> Creates DataEngine
 
 2. Seed Database (if registry provided)
    └─> Collects schemas from @MaiaOS/schemata
@@ -55,7 +55,7 @@ When you call `MaiaOS.boot()`, here's what happens:
    └─> ViewEngine (view renderer)
    └─> ActorEngine (actor lifecycle)
    └─> SubscriptionEngine (reactive subscriptions)
-   └─> DBEngine (database operations)
+   └─> DataEngine (maia.do – data operations)
 
 4. Wire Dependencies
    └─> Pass engines to each other
@@ -85,7 +85,7 @@ Engines are initialized in a specific order due to dependencies:
 5. StyleEngine (no dependencies)
 6. ViewEngine (needs Evaluator, ModuleRegistry)
 7. ActorEngine (needs StyleEngine, ViewEngine, ModuleRegistry, ToolEngine, StateEngine)
-8. SubscriptionEngine (needs DBEngine, ActorEngine)
+8. SubscriptionEngine (needs DataEngine, ActorEngine)
 ```
 
 ---
@@ -187,7 +187,7 @@ Gets all engines for debugging.
 - `styleEngine` - StyleEngine
 - `stateEngine` - StateEngine
 - `toolEngine` - ToolEngine
-- `dbEngine` - DBEngine
+- `dataEngine` / `maia.do` - DataEngine
 - `evaluator` - MaiaScriptEvaluator
 - `moduleRegistry` - ModuleRegistry
 
