@@ -214,7 +214,7 @@ Gets all engines for debugging.
 - `styleEngine` - StyleEngine
 - `stateEngine` - StateEngine
 - `toolEngine` - ToolEngine
-- `dbEngine` - DBEngine
+- `maia.do` - DataEngine (data operations)
 - `evaluator` - MaiaScriptEvaluator
 - `moduleRegistry` - ModuleRegistry
 

@@ -2,7 +2,7 @@
  * CoJSON API Factory - Create cojson API instance
  *
  * Creates a standalone cojson API that works directly with CoJSON raw types.
- * Uses shared DBEngine from @MaiaOS/operations with MaiaDB.
+ * MaiaDB - used by DataEngine (maia.do) in @MaiaOS/engines.
  *
  * Usage:
  *   import { createCoJSONAPI } from '@MaiaOS/db';

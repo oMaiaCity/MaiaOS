@@ -81,6 +81,6 @@ Runtime code MUST use co-ids (`co_z...`), never human-readable IDs. `ReadOperati
 
 ## References
 
-- Source: `libs/maia-script/src/engines/subscription-engine/`
-- DB Engine: `libs/maia-script/src/engines/db-engine/`
-- Reactive Store: `libs/maia-script/src/utils/reactive-store.js`
+- Source: `libs/maia-engines/src/engines/subscription-engine/`
+- DB Engine: `libs/maia-engines/src/engines/data.engine/`
+- Reactive Store: `libs/maia-engines/src/utils/reactive-store.js`

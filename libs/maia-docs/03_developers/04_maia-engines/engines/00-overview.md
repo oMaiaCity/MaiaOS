@@ -44,7 +44,7 @@ const title = await evaluator.evaluate('$context.title', { context: { title: 'He
 - Sandboxed - only whitelisted operations allowed
 - No code execution - pure JSON expression evaluation
 
-**Source:** `libs/maia-script/src/utils/evaluator.js`
+**Source:** `libs/maia-engines/src/utils/evaluator.js`
 
 ---
 
@@ -112,7 +112,7 @@ const actor = await actorEngine.createActor(
 );
 ```
 
-**Source:** `libs/maia-script/src/engines/actor-engine/actor.engine.js`
+**Source:** `libs/maia-engines/src/engines/actor-engine/actor.engine.js`
 
 ---
 
@@ -209,7 +209,7 @@ await viewEngine.render(
 - Sanitizes attribute values
 - Shadow DOM isolation prevents style leakage
 
-**Source:** `libs/maia-script/src/engines/view-engine/view.engine.js`
+**Source:** `libs/maia-engines/src/engines/view-engine/view.engine.js`
 
 ---
 
@@ -230,7 +230,7 @@ await viewEngine.render(
 - `clearCache()` - Clear style cache (dev only)
 
 **Dependencies:**
-- `DBEngine` - For loading style definitions
+- `maia.do` (DataEngine) - For loading style definitions
 
 **Example:**
 ```javascript
@@ -245,7 +245,7 @@ const styleSheets = await styleEngine.compile(
 );
 ```
 
-**Source:** `libs/maia-script/src/engines/style-engine/style.engine.js`
+**Source:** `libs/maia-engines/src/engines/style-engine/style.engine.js`
 
 ---
 
@@ -305,7 +305,7 @@ const machine = await stateEngine.createMachine(stateDef, actor);
 stateEngine.sendEvent('actor-123', { type: 'CLICK_BUTTON' });
 ```
 
-**Source:** `libs/maia-script/src/engines/state-engine/state.engine.js`
+**Source:** `libs/maia-engines/src/engines/state-engine/state.engine.js`
 
 ---
 
@@ -341,7 +341,7 @@ const result = await toolEngine.executeTool(
 );
 ```
 
-**Source:** `libs/maia-script/src/engines/tool-engine/tool.engine.js`
+**Source:** `libs/maia-engines/src/engines/tool-engine/tool.engine.js`
 
 ---
 

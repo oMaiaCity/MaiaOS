@@ -7,7 +7,7 @@ When config CRDTs change (view, style, state, etc.), SubscriptionEngine automati
 - Reloads stylesheets (for style changes)
 - Recreates state machines (for state changes)
 
-**Source:** `libs/maia-script/src/engines/subscription-engine/subscription.engine.js`
+**Source:** `libs/maia-engines/src/engines/subscription-engine/subscription.engine.js`
 
 **See also:** [subscriptions.md](./subscriptions.md) - Detailed subscription architecture documentation
 
@@ -45,7 +45,7 @@ registry.registerModule('myModule', MyModuleClass, {
 await registry.loadModule('db');
 ```
 
-**Source:** `libs/maia-script/src/engines/ModuleRegistry.js`
+**Source:** `libs/maia-engines/src/engines/ModuleRegistry.js`
 
 ---
 
@@ -71,7 +71,7 @@ await registry.loadModule('db');
 - Dead letter queue
 - At-least-once delivery semantics
 
-**Source:** `libs/maia-script/src/engines/message-queue/message.queue.js`
+**Source:** `libs/maia-engines/src/engines/message-queue/message.queue.js`
 
 ---
 

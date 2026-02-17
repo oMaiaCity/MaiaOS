@@ -14,7 +14,6 @@
 	"dependencies": {
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/loader": "workspace:*",
-		"@MaiaOS/operations": "workspace:*",
 		"@MaiaOS/schemata": "workspace:*",
 		"@MaiaOS/tools": "workspace:*",
 		"@MaiaOS/vibes": "workspace:*",

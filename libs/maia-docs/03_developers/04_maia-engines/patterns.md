@@ -48,7 +48,7 @@ const result = await evaluator.evaluate(expression, { context: myData });
 ```javascript
 const backend = new IndexedDBBackend();
 await backend.init();
-const dbEngine = new DBEngine(backend);
+const dbEngine = new DataEngine(backend);
 
 // Use read() API (always returns reactive store)
 const store = await dbEngine.execute({

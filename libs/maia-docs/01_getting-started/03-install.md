@@ -23,13 +23,12 @@ cd MaiaOS
 bun install
 
 # Start dev server (from root or specific service)
-bun dev:app  # Main app service (port 4202)
+bun dev:maia  # Maia frontend (4200)
 # OR
-cd libs/maia-script
-bun dev  # MaiaScript dev server
+bun dev
 
 # Open browser
-open http://localhost:4202/  # or appropriate port
+open http://localhost:4200/  # maia dev server
 ```
 
 ## File Structure
@@ -206,21 +205,21 @@ my-app/
 }
 ```
 
-
-
 ## Next Steps
 
-- [Vibecreators Docs](../02_creators/) - Learn to build apps
-- [Examples](../../maia-vibes/src/todos/) - See complete working app
-- [Developers Docs](../03_developers/) - Extend MaiaOS core
+- [Concepts](./01-concepts.md) – Philosophy, terminology, three layers
+- [Architecture](./02-architecture.md) – System design and API hierarchy
+- [Creators](../02_creators/) – Vibes, actors, tools, operations
+- [Examples](../../maia-vibes/src/todos/) – See complete working app
+- [Developers](../03_developers/) – Extend MaiaOS core
 
 ## Resources
 
 - **Examples:** `libs/maia-vibes/src/todos/`
-- **Kernel:** `libs/maia-script/src/o/kernel.js`
-- **Engines:** `libs/maia-script/src/o/engines/`
-- **Tools:** `libs/maia-script/src/o/tools/`
-- **Modules:** `libs/maia-script/src/o/modules/`
+- **Loader:** `libs/maia-loader/src/loader.js`
+- **Engines:** `libs/maia-engines/src/engines/`
+- **Tools:** `libs/maia-tools/`
+- **Modules:** `libs/maia-engines/src/modules/`
 - **Docs:** `libs/maia-docs/`
 
 ## Support

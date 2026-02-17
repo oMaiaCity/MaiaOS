@@ -107,7 +107,7 @@ The agent state machine receives `SELECT_SPARK`:
 
 ### 3. Custom Action: Sending Message to Detail Actor
 
-**Location**: `libs/maia-script/src/engines/state.engine.js:464-475`
+**Location**: `libs/maia-engines/src/engines/state.engine.js:464-475`
 
 The `sendToDetailActor` custom action:
 ```javascript
@@ -135,7 +135,7 @@ if (actionName === 'sendToDetailActor') {
 
 ### 4. Message Persistence to Inbox
 
-**Location**: `libs/maia-script/src/engines/actor.engine.js:753-784`
+**Location**: `libs/maia-engines/src/engines/actor.engine.js:753-784`
 
 The `sendMessage()` function:
 ```javascript
@@ -171,7 +171,7 @@ async sendMessage(actorId, message) {
 
 ### 5. Message Processing
 
-**Location**: `libs/maia-script/src/engines/actor.engine.js:899-950`
+**Location**: `libs/maia-engines/src/engines/actor.engine.js:899-950`
 
 The `processMessages()` function subscribes to inbox CoStream:
 ```javascript

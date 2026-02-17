@@ -143,8 +143,8 @@ Check: batching (pendingRerenders), deduplication, cache hit rate. Fix: Verify b
 
 ## References
 
-- Config: `libs/maia-script/src/engines/subscription-engine/config-subscriptions.js`
-- Data: `libs/maia-script/src/engines/subscription-engine/data-subscriptions.js`
-- Handlers: `libs/maia-script/src/engines/subscription-engine/update-handlers.js`
-- DB: `libs/maia-script/src/engines/db-engine/operations/read.js`
-- Store: `libs/maia-script/src/utils/reactive-store.js`
+- Config: `libs/maia-engines/src/engines/subscription-engine/config-subscriptions.js`
+- Data: `libs/maia-engines/src/engines/subscription-engine/data-subscriptions.js`
+- Handlers: `libs/maia-engines/src/engines/subscription-engine/update-handlers.js`
+- DB: `libs/maia-engines/src/engines/data.engine/operations/read.js`
+- Store: `libs/maia-engines/src/utils/reactive-store.js`

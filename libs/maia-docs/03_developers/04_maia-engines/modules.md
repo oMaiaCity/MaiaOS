@@ -104,7 +104,7 @@ const config = registry.getModule('dragdrop').query('config');
 
 ### Step 1: Create Module File
 
-Create `libs/maia-script/src/modules/mymodule.module.js`:
+Create `libs/maia-engines/src/modules/mymodule.module.js`:
 
 ```javascript
 import { getToolEngine, registerToolsFromRegistry, registerModuleConfig } from '../utils/module-registration.js';

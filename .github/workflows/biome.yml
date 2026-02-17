@@ -24,3 +24,26 @@ jobs:
 
       - name: Run Biome
         run: bun run check:ci
+
+  build:
+    if: github.event_name != 'push' || github.event.head_commit == null || !startsWith(github.event.head_commit.message, '[release] ')
+    name: Build (maia + moai)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Build distros
+        run: bun run distros:build
+
+      - name: Build maia (Docker)
+        run: docker build -f services/maia/Dockerfile --build-arg VITE_PEER_MOAI=moai.next.maia.city -t maia-build . 2>&1 | tail -30
+
+      - name: Build moai (Docker)
+        run: docker build -f services/moai/Dockerfile -t moai-build . 2>&1 | tail -30

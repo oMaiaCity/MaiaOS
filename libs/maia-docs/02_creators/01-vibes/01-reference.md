@@ -185,7 +185,7 @@ vibes/todos/
 
 Vibes are designed to support future marketplace features:
 
-**Planned Fields (v0.5+):**
+**Planned Fields:**
 - `icon` - Path to app icon
 - `screenshots` - Array of screenshot paths
 - `tags` - Array of category tags
@@ -252,7 +252,7 @@ console.log(actor.context);    // Runtime state
 
 ## Next Steps
 
-- [Kernel](../02-kernel.md) - How to boot MaiaOS and load vibes
+- [Loader](../02-loader.md) - How to boot MaiaOS and load vibes
 - [Actors](../03-actors/) - What vibes reference
 - [State Machines](../05-state/) - Actor behavior
 - [Views](../08-views/) - Actor UI

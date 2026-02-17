@@ -277,14 +277,14 @@ const coId = registry.get('@schema/actor'); // Returns 'co_z123...'
 
 ## Integration Points
 
-### With maia-script
+### With maia-engines
 
-The `maia-script` package uses `maia-schemata` for:
+The `maia-engines` package uses `maia-schemata` for:
 - Validating `.maia` files during parsing
 - Transforming schemas/instances before seeding to IndexedDB
 - Runtime validation of data operations
 
-**See:** `libs/maia-script/src/o/engines/db-engine/backend/indexeddb.js`
+**See:** `libs/maia-engines/src/engines/data.engine.js`
 
 ### With maia-db
 

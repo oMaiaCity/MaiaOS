@@ -6,11 +6,11 @@
 >
 > **Status:** Design phase
 >
-> **Related:** [maia-tools](../../03_developers/08_maia-tools/README.md), [maia-script engines](../../03_developers/04_maia-script/engines/00-overview.md)
+> **Related:** [maia-tools](../../03_developers/08_maia-tools/README.md), [maia-script engines](../../03_developers/04_maia-engines/engines/00-overview.md)
 
 ## Overview
 
-The MaiaOS tools engine ([maia-tools](../../03_developers/08_maia-tools/README.md), [maia-script engines](../../03_developers/04_maia-script/engines/00-overview.md)) currently executes only **native ES module tools** with full host access. This document outlines a design to run **user-written tools** in isolated QuickJS WebAssembly sandboxes, allowing users to create custom tools that integrate with the system via a capability-based IPC bridge.
+The MaiaOS tools engine ([maia-tools](../../03_developers/08_maia-tools/README.md), [maia-script engines](../../03_developers/04_maia-engines/engines/00-overview.md)) currently executes only **native ES module tools** with full host access. This document outlines a design to run **user-written tools** in isolated QuickJS WebAssembly sandboxes, allowing users to create custom tools that integrate with the system via a capability-based IPC bridge.
 
 ## Goals
 
@@ -70,7 +70,7 @@ User tools are JavaScript strings. Convention: must implement `execute(actor, pa
 // Example user tool code (string evaluated in QuickJS):
 export default {
   async execute(actor, payload) {
-    const items = await maia.db({ op: 'read', schema: payload.schema, filter: payload.filter });
+    const items = await maia.do({ op: 'read', schema: payload.schema, filter: payload.filter });
     if (items.ok && items.data?.value?.length > 0) {
       await maia.publishMessage(payload.target, 'NOTIFY', { count: items.data.value.length });
     }
@@ -109,7 +109,7 @@ flowchart TB
     TE -->|native?| T3
     TE -->|sandboxed?| QJS
     QJS --> UserCode
-    UserCode -->|maia.db| maia
+    UserCode -->|maia.do| maia
     UserCode -->|maia.publishMessage| maia
     maia --> Bridge
     Bridge --> OS
@@ -128,7 +128,7 @@ flowchart TB
 |----------|-----------------|
 | **Per-invocation vs pooled sandbox** | Fresh QuickJS context per invocation — better isolation, no cross-run state leakage. |
 | **System tools in QuickJS?** | No — keep them native for performance and simplicity. |
-| **Capabilities to expose** | `maia.db`, `maia.publishMessage`, `maia.memory`, `maia.ai`, `maia.log`. No raw `fetch`, `require`, or DOM. |
+| **Capabilities to expose** | `maia.do`, `maia.publishMessage`, `maia.memory`, `maia.ai`, `maia.log`. No raw `fetch`, `require`, or DOM. |
 | **User tool registration** | Store in DB (e.g. tool schema with `definition` + `code`); module registry or ToolEngine loads and marks as sandboxed. |
 | **Async** | Use QuickJS async/ASYNCIFY build; user tools are async and await `maia.*` calls. |
 | **Execution limits** | Configure memory limit (`setMemoryLimit`), CPU interrupt handler, and timeouts via quickjs-emscripten. |
@@ -181,7 +181,7 @@ User tools could be stored in the database:
 // code (stored as string):
 export default {
   async execute(actor, payload) {
-    const result = await maia.db({
+    const result = await maia.do({
       op: 'read',
       schema: payload.schema,
       filter: payload.filter || null
@@ -197,5 +197,5 @@ export default {
 ## Related Documents
 
 - [maia-tools README](../../03_developers/08_maia-tools/README.md)
-- [maia-script engines](../../03_developers/04_maia-script/engines/00-overview.md)
+- [maia-script engines](../../03_developers/04_maia-engines/engines/00-overview.md)
 - [Skills (AI Agent Interface)](./skills.md) — tool discovery for AI agents

@@ -1,6 +1,6 @@
-# Kernel Loader (Getting Started)
+# Loader (Getting Started)
 
-The **Kernel** is the single entry point for MaiaOS. It boots the operating system, loads modules, and creates your first actor.
+The **Loader** is the single entry point for MaiaOS. It boots the operating system, loads modules, and creates your first actor.
 
 ## Quick Start
 
@@ -16,7 +16,7 @@ The **Kernel** is the single entry point for MaiaOS. It boots the operating syst
   <!-- Actor container -->
   <div id="actor-todo"></div>
 
-  <!-- Import MaiaOS Kernel -->
+  <!-- Import MaiaOS Loader -->
   <script type="module">
     import { MaiaOS } from '@MaiaOS/loader';
     
@@ -61,7 +61,7 @@ const os = await MaiaOS.boot({
    - `ToolEngine` - Executes tools
    - `StyleEngine` - Compiles styles
    - `MaiaScriptEvaluator` - Evaluates DSL expressions
-   - `DBEngine` - Unified database operations (universal `read()` API)
+   - `DataEngine` - Unified data operations via **maia.do({ op, schema, key, ... })**
 4. **Load Modules** - Dynamically loads specified modules (default: `['db', 'core']`)
 5. **Register Tools** - Each module registers its tools
 
@@ -178,7 +178,6 @@ my-app/
 For development with hot reload:
 
 ```bash
-cd libs/maia-script
 bun dev
 ```
 
@@ -189,8 +188,8 @@ Then navigate to `http://localhost:4200/examples/todos/`
 On successful boot, you'll see:
 
 ```
-🚀 Booting MaiaOS v0.4...
-📦 Kernel: Module-based architecture
+🚀 Booting MaiaOS...
+📦 Loader: Module-based architecture
 🤖 State Machines: AI-compatible actor coordination
 📨 Message Passing: Actor-to-actor communication
 🔧 Tools: Dynamic modular loading
@@ -205,10 +204,11 @@ On successful boot, you'll see:
 
 ## Next Steps
 
-- Learn about [Actors](./02-actors.md) - The building blocks
-- Understand [State Machines](./05-state.md) - Actor behavior
-- Explore [Tools](./06-tools.md) - Executable actions
-- Add [Views](./07-views.md) - UI representation
+- [Actors](./03-actors/) – Building blocks
+- [State Machines](./05-state/) – Actor behavior
+- [Tools](./06-tools/) – Executable actions
+- [Views](./08-views/) – UI representation
+- [Creator Overview](./00-overview.md) – Full creator docs path
 
 ## Troubleshooting
 
@@ -216,7 +216,7 @@ On successful boot, you'll see:
 ```
 Error: Failed to load module "dragdrop"
 ```
-**Solution:** Check that the module file exists at `o/modules/dragdrop.module.js`
+**Solution:** Check that the module file exists at `libs/maia-engines/src/modules/dragdrop.module.js`
 
 ### Tool not found
 ```

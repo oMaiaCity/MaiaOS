@@ -85,15 +85,15 @@ Infrastructure (ActorEngine, ViewEngine) → sends events → inbox (CRDT) → p
 
 ---
 
-## DBEngine
+## DataEngine
 
-**Purpose:** Unified database operation router (extends shared operations layer).
+**Purpose:** Public data API – **maia.do({ op, schema, key, filter, ... })**
 
 **What it does:**
-- Extends `DBEngine` from `@MaiaOS/operations` with MaiaScript evaluator support
+- Executes all data operations (read, create, update, delete, seed, etc.)
 - Routes operations to modular handlers
 - Supports operations: `read`, `create`, `update`, `delete`, `seed`
-- Works with swappable backends (IndexedDB, CoJSON CRDT)
+- Uses MaiaDB (CoJSON CRDT) for storage
 - Validates operations against schemas
 - **Unified `read()` API** - Always returns reactive stores
 - **MaiaScript expression evaluation** - Supports expressions in update operations
@@ -112,14 +112,10 @@ Infrastructure (ActorEngine, ViewEngine) → sends events → inbox (CRDT) → p
 
 **Example:**
 ```javascript
-import { DBEngine, IndexedDBBackend } from '@MaiaOS/script';
+// maia = booted MaiaOS instance (from MaiaOS.boot())
 
-const backend = new IndexedDBBackend();
-await backend.init();
-const dbEngine = new DBEngine(backend);
-
-// Read (unified API - always returns reactive store)
-const store = await dbEngine.execute({
+// Read (always returns reactive store)
+const store = await maia.do({
   op: 'read',
   schema: 'co_zTodos123',  // Schema co-id (co_z...)
   filter: { completed: false }
@@ -134,16 +130,15 @@ const unsubscribe = store.subscribe((data) => {
 });
 
 // Create
-const newTodo = await dbEngine.execute({
+const newTodo = await maia.do({
   op: 'create',
   schema: 'co_zTodos123',
   data: { text: 'Buy milk', completed: false }
 });
 
-// Update with MaiaScript expression (maia-script specific)
-const updated = await dbEngine.execute({
+// Update with MaiaScript expression
+const updated = await maia.do({
   op: 'update',
-  schema: 'co_zTodos123',
   id: 'co_zTodo456',
   data: {
     done: { $not: '$existing.done' }  // Toggle using MaiaScript
@@ -153,17 +148,16 @@ const updated = await dbEngine.execute({
 
 **Important:** 
 - All schemas must be co-ids (`co_z...`). Human-readable IDs (`@schema/...`) are transformed to co-ids during seeding.
-- The `DBEngine` in `maia-script` extends the shared `DBEngine` from `@MaiaOS/operations` to add MaiaScript evaluator support.
-- Operations are implemented in `@MaiaOS/operations` and shared across all backends.
+- DataEngine lives in maia-engines; all engines use maia.do for data.
+- Operations are in `libs/maia-engines/src/operations/`.
 
 **Dependencies:**
-- `@MaiaOS/operations` - Shared operations layer (DBEngine, operations, ReactiveStore)
+- `@MaiaOS/db` - MaiaDB (storage layer)
 - `Evaluator` - For expression evaluation in updates
 
 **Source:** 
-- `libs/maia-script/src/engines/db-engine/db.engine.js` - maia-script wrapper
-- `libs/maia-operations/src/engine.js` - Shared DBEngine implementation
-- `libs/maia-operations/src/operations/` - Shared operation implementations
+- `libs/maia-engines/src/engines/data.engine.js` - DataEngine
+- `libs/maia-engines/src/operations/` - Operation implementations
 
 ---
 
@@ -191,7 +185,7 @@ const updated = await dbEngine.execute({
 3. **Message Subscriptions** - Subscriptions/inbox colists (handled in ActorEngine)
 
 **Dependencies:**
-- `DBEngine` - For read operations (unified `read()` API)
+- `maia.do` - For all data operations (read, create, update, delete, etc.)
 - `ActorEngine` - For triggering re-renders and loading configs
 - `ViewEngine` - For view subscriptions
 - `StyleEngine` - For style/brand subscriptions
