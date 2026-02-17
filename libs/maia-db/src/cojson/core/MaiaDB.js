@@ -163,25 +163,25 @@ export class MaiaDB {
 			schema: capabilitiesSchemaCoId,
 			cotype: 'comap',
 			data: { guardian: childGroup.id },
-			dbEngine: this.dbEngine,
+			dataEngine: this.dbEngine,
 		})
 		const { coValue: os } = await createCoValueForSpark(ctx, null, {
 			schema: osSchemaCoId,
 			cotype: 'comap',
 			data: { capabilities: capabilities.id },
-			dbEngine: this.dbEngine,
+			dataEngine: this.dbEngine,
 		})
 		const { coValue: vibes } = await createCoValueForSpark(ctx, null, {
 			schema: vibesSchemaCoId,
 			cotype: 'comap',
 			data: {},
-			dbEngine: this.dbEngine,
+			dataEngine: this.dbEngine,
 		})
 		const { coValue: sparkCoMap } = await createCoValueForSpark(ctx, null, {
 			schema: sparkSchemaCoId,
 			cotype: 'comap',
 			data: { name: normalizedName, os: os.id, vibes: vibes.id },
-			dbEngine: this.dbEngine,
+			dataEngine: this.dbEngine,
 		})
 		return { id: sparkCoMap.id, name: normalizedName, guardian: childGroup.id }
 	}
@@ -317,7 +317,7 @@ export class MaiaDB {
 				schema,
 				cotype: 'comap',
 				data: {},
-				dbEngine: this.dbEngine,
+				dataEngine: this.dbEngine,
 			})
 			osContent.set('schematas', schematasCoMap.id)
 			schematasId = schematasCoMap.id

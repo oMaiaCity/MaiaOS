@@ -86,7 +86,7 @@ export async function create(backend, schema, data, options = {}) {
 		schema,
 		cotype,
 		data: cotype === 'comap' ? data : cotype === 'colist' ? data : undefined,
-		dbEngine: backend.dbEngine,
+		dataEngine: backend.dbEngine,
 	})
 
 	// CRITICAL: Don't wait for storage sync - it blocks the UI!

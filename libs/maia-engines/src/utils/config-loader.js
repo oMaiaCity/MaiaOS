@@ -39,19 +39,19 @@ function stripMetadataForValidation(config) {
 	return cleanQueryObjects(cleanConfig)
 }
 
-export async function subscribeConfig(dbEngine, schemaRef, coId, configType, _cache = null) {
+export async function subscribeConfig(dataEngine, schemaRef, coId, configType, _cache = null) {
 	if (!schemaRef || !schemaRef.startsWith('co_z')) {
 		throw new Error(`[${configType}] schemaRef must be a co-id (co_z...), got: ${schemaRef}`)
 	}
 	validateCoId(coId, configType)
-	if (!dbEngine) throw new Error(`[${configType}] Database engine not available`)
+	if (!dataEngine) throw new Error(`[${configType}] Database engine not available`)
 
 	// Return store directly - caller subscribes (pure stores pattern)
-	const store = await dbEngine.execute({ op: 'read', schema: schemaRef, key: coId })
+	const store = await dataEngine.execute({ op: 'read', schema: schemaRef, key: coId })
 	return store
 }
 
-export async function subscribeConfigsBatch(dbEngine, requests) {
+export async function subscribeConfigsBatch(dataEngine, requests) {
 	if (!requests || requests.length === 0) return []
 
 	for (const req of requests) {
@@ -61,13 +61,13 @@ export async function subscribeConfigsBatch(dbEngine, requests) {
 		validateCoId(req.coId, req.configType)
 	}
 
-	if (!dbEngine) throw new Error(`[subscribeConfigsBatch] Database engine not available`)
+	if (!dataEngine) throw new Error(`[subscribeConfigsBatch] Database engine not available`)
 
 	// Return stores directly - caller subscribes (pure stores pattern)
 	const allCoIds = requests.map((req) => req.coId)
 	const stores =
 		allCoIds.length > 0
-			? await dbEngine.execute({ op: 'read', schema: requests[0].schemaRef, keys: allCoIds })
+			? await dataEngine.execute({ op: 'read', schema: requests[0].schemaRef, keys: allCoIds })
 			: []
 
 	return stores
@@ -123,7 +123,7 @@ function convertPropertiesArrayToPlainObject(config, requireSchema = true) {
 }
 
 export async function loadConfigOrUseProvided(
-	dbEngine,
+	dataEngine,
 	schemaRef,
 	coIdOrConfig,
 	configType,
@@ -144,7 +144,7 @@ export async function loadConfigOrUseProvided(
 			throw new Error(`[${configType}] Config $id must be a co-id (co_z...), got: ${configCoId}`)
 		}
 		const schema = await resolve(
-			dbEngine.backend,
+			dataEngine.backend,
 			{ fromCoValue: configCoId },
 			{ returnType: 'schema' },
 		)
@@ -154,7 +154,7 @@ export async function loadConfigOrUseProvided(
 		return plainConfig
 	}
 	// Get store and use current value (pure stores pattern)
-	const store = await subscribeConfig(dbEngine, schemaRef, coIdOrConfig, configType, cache)
+	const store = await subscribeConfig(dataEngine, schemaRef, coIdOrConfig, configType, cache)
 	const config = store.value
 	if (!config) {
 		throw new Error(`Failed to load ${configType} from database by co-id: ${coIdOrConfig}`)

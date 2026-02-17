@@ -69,7 +69,7 @@ export async function update(backend, _schema, id, data) {
 				// Validate merged data against schema BEFORE applying to CRDT
 				try {
 					await loadSchemaAndValidate(backend, schemaCoId, mergedData, `update for ${id}`, {
-						dbEngine: backend.dbEngine,
+						dataEngine: backend.dbEngine,
 					})
 				} catch (error) {
 					// If validation fails, throw error (operation never applied to CRDT)

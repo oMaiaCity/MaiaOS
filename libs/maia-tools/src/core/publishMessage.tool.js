@@ -5,7 +5,7 @@
  * Topics infrastructure removed - all messages use direct messaging with target parameter
  */
 
-import { createErrorEntry, createErrorResult, createSuccessResult } from '@MaiaOS/operations'
+import { createErrorEntry, createErrorResult, createSuccessResult } from '@MaiaOS/engines'
 
 export default {
 	async execute(actor, payload) {

@@ -82,7 +82,12 @@ async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
 	const { coValue: metaSchemaCoMap } = await createCoValueForSpark(
 		{ node, account, guardian },
 		null,
-		{ schema: EXCEPTION_SCHEMAS.META_SCHEMA, cotype: 'comap', data: cleanedTempDef, dbEngine },
+		{
+			schema: EXCEPTION_SCHEMAS.META_SCHEMA,
+			cotype: 'comap',
+			data: cleanedTempDef,
+			dataEngine: dbEngine,
+		},
 	)
 	const metaSchemaCoId = metaSchemaCoMap.id
 	const updatedMetaSchemaDef = buildMetaSchemaForSeeding(metaSchemaCoId)
@@ -148,7 +153,7 @@ async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
 			schema: metaSchemaCoId,
 			cotype: 'comap',
 			data: cleaned,
-			dbEngine,
+			dataEngine: dbEngine,
 		})
 		const coId = schemaCoMap.id
 		schemaCoIdMap.set(schemaKey, coId)
@@ -171,7 +176,7 @@ async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
 		tempCoMap.get('°Maia/schema/os/sparks-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
 
 	const ctx = { node, account, guardian }
-	const scaffoldOpts = (schema, data) => ({ schema, cotype: 'comap', data, dbEngine })
+	const scaffoldOpts = (schema, data) => ({ schema, cotype: 'comap', data, dataEngine: dbEngine })
 	const { coValue: maiaSpark } = await createCoValueForSpark(
 		ctx,
 		null,
@@ -1893,7 +1898,7 @@ export async function seed(
 				schema: vibesSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
 				cotype: 'comap',
 				data: {},
-				dbEngine: backend?.dbEngine,
+				dataEngine: backend?.dbEngine,
 			})
 			vibes = vibesCoMap
 			await groups.setSparkVibesId(backend, MAIA_SPARK, vibes.id)
@@ -2150,7 +2155,7 @@ async function seedConfigs(
 				schema: schemaCoId,
 				cotype,
 				data,
-				dbEngine: backend?.dbEngine,
+				dataEngine: backend?.dbEngine,
 			})
 			const actualCoId = coValue.id
 
@@ -2291,7 +2296,7 @@ async function seedData(account, node, maiaGroup, backend, data, coIdRegistry) {
 				schema: schemaCoId,
 				cotype: 'comap',
 				data: itemWithoutId,
-				dbEngine: backend?.dbEngine,
+				dataEngine: backend?.dbEngine,
 			})
 			coIds.push(itemCoMap.id)
 			itemCount++
@@ -2374,7 +2379,7 @@ async function ensureSparkOs(account, node, maiaGroup, backend, schemaCoIdMap) {
 					schema: schematasSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
 					cotype: 'comap',
 					data: {},
-					dbEngine: backend?.dbEngine,
+					dataEngine: backend?.dbEngine,
 				})
 				osContent.set('schematas', schematas.id)
 				if (node.storage?.syncManager) {
@@ -2411,7 +2416,7 @@ async function ensureSparkOs(account, node, maiaGroup, backend, schemaCoIdMap) {
 							schema: vibesSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
 							cotype: 'comap',
 							data: {},
-							dbEngine: backend?.dbEngine,
+							dataEngine: backend?.dbEngine,
 						})
 						sparkContent.set('vibes', vibes.id)
 					}
@@ -2488,7 +2493,7 @@ async function storeRegistry(
 			schema: schemaForSchematas,
 			cotype: 'comap',
 			data: {},
-			dbEngine: backend?.dbEngine,
+			dataEngine: backend?.dbEngine,
 		})
 		schematas = schematasCreated
 		osContent.set('schematas', schematas.id)

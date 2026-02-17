@@ -1,5 +1,5 @@
 // loadSchemaFromDB removed - use resolve() from @MaiaOS/db if needed
-import { ReactiveStore } from '@MaiaOS/operations/reactive-store'
+import { ReactiveStore } from '@MaiaOS/db'
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper'
 
 // getContextValue removed - Backend unified store provides merged value directly via context.value
@@ -41,7 +41,7 @@ export class Evaluator {
 		this.registry = moduleRegistry
 		this.maxDepth = options.maxDepth || 50 // Maximum recursion depth to prevent DoS
 		this.validateExpressions = options.validateExpressions !== false // Enable validation by default
-		this.dbEngine = options.dbEngine || null // Optional dbEngine for schema loading via operations API
+		this.dataEngine = options.dataEngine ?? null
 	}
 
 	/**

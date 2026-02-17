@@ -47,11 +47,11 @@ async function resolveContext(context, spark) {
  * @param {string} options.schema - Schema co-id or name for headerMeta.$schema
  * @param {'comap'|'colist'|'costream'} options.cotype
  * @param {Object} [options.data] - Init data for map (object) or list (array). Required for comap/colist.
- * @param {Object} [options.dbEngine] - For schema validation (optional during seed)
+ * @param {Object} [options.dataEngine] - For schema validation (optional during seed)
  * @returns {Promise<{ coValue: RawCoValue }>}
  */
 export async function createCoValueForSpark(context, spark, options) {
-	const { schema, cotype, data, dbEngine } = options
+	const { schema, cotype, data, dataEngine } = options
 	if (!schema || typeof schema !== 'string') {
 		throw new Error('[createCoValueForSpark] options.schema is required')
 	}
@@ -75,13 +75,13 @@ export async function createCoValueForSpark(context, spark, options) {
 	const _meta = { $schema: schema }
 	switch (cotype) {
 		case 'comap':
-			coValue = await createCoMap(group, data ?? {}, schema, node, dbEngine)
+			coValue = await createCoMap(group, data ?? {}, schema, node, dataEngine)
 			break
 		case 'colist':
-			coValue = await createCoList(group, Array.isArray(data) ? data : [], schema, node, dbEngine)
+			coValue = await createCoList(group, Array.isArray(data) ? data : [], schema, node, dataEngine)
 			break
 		case 'costream':
-			coValue = await createCoStream(group, schema, node, dbEngine)
+			coValue = await createCoStream(group, schema, node, dataEngine)
 			break
 		default:
 			throw new Error(`[createCoValueForSpark] Unsupported cotype: ${cotype}`)

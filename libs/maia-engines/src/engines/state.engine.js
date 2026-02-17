@@ -1,13 +1,13 @@
+import { ReactiveStore } from '@MaiaOS/db'
+import { isSchemaRef } from '@MaiaOS/schemata'
+import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver'
+import { validateAgainstSchema } from '@MaiaOS/schemata/validation.helper'
 import {
 	createErrorEntry,
 	createErrorResult,
 	isPermissionError,
 	isSuccessResult,
-} from '@MaiaOS/operations'
-import { ReactiveStore } from '@MaiaOS/operations/reactive-store'
-import { isSchemaRef } from '@MaiaOS/schemata'
-import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js'
-import { validateAgainstSchema } from '@MaiaOS/schemata/validation.helper.js'
+} from '../operations/operation-result.js'
 import { RENDER_STATES } from './actor.engine.js'
 
 /**
@@ -27,7 +27,7 @@ export class StateEngine {
 		this.evaluator = evaluator
 		this.actorEngine = actorEngine // ActorEngine reference (set by kernel after ActorEngine creation)
 		this.machines = new Map() // machineId → machine instance
-		this.dbEngine = null // Database operation engine (set by kernel)
+		this.dataEngine = null
 	}
 
 	async createMachine(stateDef, actor) {
@@ -426,7 +426,7 @@ export class StateEngine {
 			return
 		}
 
-		if (!this.dbEngine) {
+		if (!this.dataEngine) {
 			return
 		}
 
@@ -463,7 +463,7 @@ export class StateEngine {
 			if (params.schema && typeof params.schema === 'string' && !params.schema.startsWith('co_z')) {
 				if (isSchemaRef(params.schema)) {
 					try {
-						const resolved = await this.dbEngine.execute({
+						const resolved = await this.dataEngine.execute({
 							op: 'resolve',
 							humanReadableKey: params.schema,
 						})
@@ -485,7 +485,7 @@ export class StateEngine {
 			// Execute operation via operations engine
 			try {
 				const operationParams = { op, ...params }
-				const result = await this.dbEngine.execute(operationParams)
+				const result = await this.dataEngine.execute(operationParams)
 
 				// mapData operations are read-only (mutations belong in tool calls)
 				// Check if result is a ReactiveStore (read operations and read-like operations return ReactiveStore)
@@ -613,10 +613,10 @@ export class StateEngine {
 				typeof evaluatedPayload.schema === 'string' &&
 				!evaluatedPayload.schema.startsWith('co_z') &&
 				isSchemaRef(evaluatedPayload.schema) &&
-				this.dbEngine
+				this.dataEngine
 			) {
 				try {
-					const resolved = await this.dbEngine.execute({
+					const resolved = await this.dataEngine.execute({
 						op: 'resolve',
 						humanReadableKey: evaluatedPayload.schema,
 					})

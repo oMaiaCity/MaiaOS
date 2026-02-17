@@ -270,7 +270,7 @@ export async function renderApp(
 			// Use unified read API - query by ID (key parameter)
 			// Note: schema is required by ReadOperation, but backend handles key-only reads
 			// Using the coId as schema is a workaround - backend will use key parameter
-			const store = await maia.db({
+			const store = await maia.do({
 				op: 'read',
 				schema: currentContextCoValueId,
 				key: currentContextCoValueId,
@@ -370,7 +370,7 @@ export async function renderApp(
 		try {
 			if (currentView.startsWith('co_z')) {
 				// Schema is already a co-id - use unified read API
-				const store = await maia.db({ op: 'read', schema: currentView })
+				const store = await maia.do({ op: 'read', schema: currentView })
 				// ReadOperation returns a ReactiveStore - get current value
 				const result = store.value || store
 				data = Array.isArray(result) ? result : []
@@ -661,7 +661,7 @@ export async function renderApp(
 		if (schemaCoId?.startsWith('co_z') && maia) {
 			try {
 				// Use unified read API - same pattern as loading main context data
-				const schemaStore = await maia.db({ op: 'read', schema: schemaCoId, key: schemaCoId })
+				const schemaStore = await maia.do({ op: 'read', schema: schemaCoId, key: schemaCoId })
 				const schemaData = schemaStore.value || schemaStore
 
 				if (schemaData && !schemaData.error && !schemaData.loading) {
@@ -685,7 +685,7 @@ export async function renderApp(
 		if (groupInfo?.groupId && maia) {
 			try {
 				// Use unified read API with @group schema hint (groups don't have $schema)
-				const groupStore = await maia.db({ op: 'read', schema: '@group', key: groupInfo.groupId })
+				const groupStore = await maia.do({ op: 'read', schema: '@group', key: groupInfo.groupId })
 
 				// Wait for group data to be available (if it's loading)
 				if (groupStore.loading) {

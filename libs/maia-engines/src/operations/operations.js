@@ -2,18 +2,17 @@
  * Operations - Consolidated database operations
  */
 
-import { checkCotype, resolve } from '@MaiaOS/db'
+import { checkCotype, ReactiveStore, resolve } from '@MaiaOS/db'
 import { isSchemaRef, isVibeRef } from '@MaiaOS/schemata'
-import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js'
+import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver'
 import {
 	ensureCoValueAvailable,
-	requireDbEngine,
+	requireDataEngine,
 	requireParam,
 	validateCoId,
 	validateItems,
 } from '@MaiaOS/schemata/validation.helper'
 import { createSuccessResult } from './operation-result.js'
-import { ReactiveStore } from './reactive-store.js'
 
 async function resolveSchemaFromCoValue(backend, coId, _opName) {
 	try {
@@ -69,11 +68,11 @@ export async function readOperation(backend, params) {
 	return await backend.read(schema, key, keys, filter, options)
 }
 
-export async function createOperation(backend, dbEngine, params) {
+export async function createOperation(backend, dataEngine, params) {
 	const { schema, data, spark, idempotencyKey } = params
 	requireParam(schema, 'schema', 'CreateOperation')
 	requireParam(data, 'data', 'CreateOperation')
-	requireDbEngine(dbEngine, 'CreateOperation', 'runtime schema validation')
+	requireDataEngine(dataEngine, 'CreateOperation', 'runtime schema validation')
 	const schemaCoId = await resolve(backend, schema, { returnType: 'coId' })
 	if (!schemaCoId) {
 		const registriesHint = backend.account?.get?.('registries')
@@ -111,12 +110,12 @@ export async function createOperation(backend, dbEngine, params) {
 	return createSuccessResult(result, { op: 'create' })
 }
 
-export async function updateOperation(backend, dbEngine, evaluator, params) {
+export async function updateOperation(backend, dataEngine, evaluator, params) {
 	const { id, data } = params
 	requireParam(id, 'id', 'UpdateOperation')
 	validateCoId(id, 'UpdateOperation')
 	requireParam(data, 'data', 'UpdateOperation')
-	requireDbEngine(dbEngine, 'UpdateOperation', 'schema validation')
+	requireDataEngine(dataEngine, 'UpdateOperation', 'schema validation')
 	const rawExistingData = await backend.getRawRecord(id)
 	if (!rawExistingData) throw new Error(`[UpdateOperation] Record not found: ${id}`)
 	const schemaCoId = await resolveSchemaFromCoValue(backend, id, 'UpdateOperation')
@@ -130,12 +129,12 @@ export async function updateOperation(backend, dbEngine, evaluator, params) {
 	return createSuccessResult(result, { op: 'update' })
 }
 
-export async function deleteOperation(backend, dbEngine, params) {
+export async function deleteOperation(backend, dataEngine, params) {
 	const { id } = params
 	requireParam(id, 'id', 'DeleteOperation')
 	validateCoId(id, 'DeleteOperation')
-	requireDbEngine(dbEngine, 'DeleteOperation', 'extract schema from CoValue headerMeta')
-	const schemaCoId = await resolveSchemaFromCoValue(dbEngine.backend, id, 'DeleteOperation')
+	requireDataEngine(dataEngine, 'DeleteOperation', 'extract schema from CoValue headerMeta')
+	const schemaCoId = await resolveSchemaFromCoValue(dataEngine.backend, id, 'DeleteOperation')
 	const result = await backend.delete(schemaCoId, id)
 	return createSuccessResult(result, { op: 'delete' })
 }
@@ -149,7 +148,7 @@ export async function seedOperation(backend, params) {
 	return createSuccessResult(result, { op: 'seed' })
 }
 
-export async function schemaOperation(backend, _dbEngine, params) {
+export async function schemaOperation(backend, _dataEngine, params) {
 	const { coId, fromCoValue } = params
 	const paramCount = [coId, fromCoValue].filter(Boolean).length
 	if (paramCount === 0)
@@ -198,11 +197,11 @@ export async function resolveOperation(backend, params) {
 	return await resolve(backend, humanReadableKey, { returnType: 'coId', spark })
 }
 
-export async function appendOperation(backend, dbEngine, params) {
+export async function appendOperation(backend, dataEngine, params) {
 	const { coId, item, items, cotype } = params
 	requireParam(coId, 'coId', 'AppendOperation')
 	validateCoId(coId, 'AppendOperation')
-	requireDbEngine(dbEngine, 'AppendOperation', 'check schema cotype')
+	requireDataEngine(dataEngine, 'AppendOperation', 'check schema cotype')
 	const coValueCore = await ensureCoValueAvailable(backend, coId, 'AppendOperation')
 	const schemaCoId = await resolveSchemaFromCoValue(backend, coId, 'AppendOperation')
 	let targetCotype = cotype
@@ -259,7 +258,7 @@ export async function appendOperation(backend, dbEngine, params) {
 	return createSuccessResult(result, { op: 'append' })
 }
 
-export async function processInboxOperation(backend, _dbEngine, params) {
+export async function processInboxOperation(backend, _dataEngine, params) {
 	const { actorId, inboxCoId } = params
 	requireParam(actorId, 'actorId', 'ProcessInboxOperation')
 	requireParam(inboxCoId, 'inboxCoId', 'ProcessInboxOperation')

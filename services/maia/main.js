@@ -488,11 +488,11 @@ async function signIn() {
 async function loadLinkedCoValues() {
 	if (!maia?.id?.maiaId) return
 	try {
-		const accountStore = await maia.db({ op: 'read', schema: '@account', key: maia.id.maiaId.id })
+		const accountStore = await maia.do({ op: 'read', schema: '@account', key: maia.id.maiaId.id })
 		const accountData = accountStore?.value ?? accountStore
 		const vibesId = accountData?.vibes
 		if (typeof vibesId === 'string' && vibesId.startsWith('co_')) {
-			await maia.db({ op: 'read', schema: vibesId, key: vibesId, deepResolve: true })
+			await maia.do({ op: 'read', schema: vibesId, key: vibesId, deepResolve: true })
 		}
 	} catch (_e) {}
 }
@@ -766,7 +766,7 @@ async function handleSeed(seedVibesConfig = null) {
 		const { configs: mergedConfigs, data } = await buildSeedConfig(vibeRegistries)
 		const configsWithTools = { ...mergedConfigs, tool: getAllToolDefinitions() }
 		const schemas = getAllSchemas()
-		await maia.db({
+		await maia.do({
 			op: 'seed',
 			configs: configsWithTools,
 			schemas,

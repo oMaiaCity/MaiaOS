@@ -8,8 +8,8 @@
  * ONE universal function that works for CoMap, CoList, and CoStream.
  */
 
-import { ReactiveStore } from '@MaiaOS/operations/reactive-store'
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js'
+import { ReactiveStore } from '../../reactive-store.js'
 import { getHumansRegistryId, getSparksRegistryId } from '../groups/groups.js'
 import {
 	resolve as resolveSchema,
@@ -182,10 +182,13 @@ async function createUnifiedStore(backend, contextStore, options = {}) {
 	const schemaSubscriptions = new Map() // key -> unsubscribe function for schema resolution
 	const { timeoutMs = 5000, onChange: _onChange } = options
 
-	// Create evaluator for expression evaluation in filters
-	// Import dynamically to avoid circular dependencies
-	const { Evaluator } = await import('@MaiaOS/script/utils/evaluator.js')
-	const evaluator = new Evaluator()
+	// Evaluator injected at boot (avoids maia-db → maia-engines dependency)
+	const evaluator = backend.evaluator
+	if (!evaluator) {
+		throw new Error(
+			'[read] Evaluator required for reactive resolution. Inject via DataEngine options at boot.',
+		)
+	}
 
 	// Update Queue: batches all updates within a single event loop tick
 	// Prevents duplicate renders when multiple query stores update simultaneously

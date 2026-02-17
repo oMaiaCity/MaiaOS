@@ -1,11 +1,13 @@
 // Re-export db functions (bundled in core)
 // Peer setup, sync state, backend for operations
+// Re-export ReactiveStore from db
 export {
 	createCoJSONAPI,
 	generateRegistryName,
 	getSchema,
 	getSchemaIndexColistId,
 	MaiaDB,
+	ReactiveStore,
 	removeGroupMember,
 	resolve,
 	resolveAccountCoIdsToProfileNames,
@@ -16,11 +18,9 @@ export {
 	subscribeSyncState,
 	waitForStoreReady,
 } from '@MaiaOS/db'
-// Re-export DBEngine for server/agent (moai)
-export { DBEngine } from '@MaiaOS/operations'
+// Re-export DataEngine and MaiaScriptEvaluator for server/agent (moai)
+export { DataEngine, MaiaScriptEvaluator } from '@MaiaOS/engines'
 export { getAllSchemas } from '@MaiaOS/schemata'
-// Re-export ReactiveStore from script (bundled in kernel)
-export { ReactiveStore } from '@MaiaOS/script'
 // Re-export auth functions for convenience
 export {
 	createAgentAccount,
@@ -41,4 +41,4 @@ export {
 	getAllVibeRegistries,
 } from '@MaiaOS/vibes/seeding'
 export { createWebSocketPeer } from 'cojson-transport-ws'
-export { MaiaOS } from './kernel.js'
+export { MaiaOS } from './loader.js'

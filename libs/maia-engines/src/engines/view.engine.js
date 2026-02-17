@@ -1,6 +1,6 @@
 import { resolveReactive, waitForReactiveResolution } from '@MaiaOS/db'
-import { containsExpressions, resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js'
-import { extractDOMValues } from '@MaiaOS/schemata/payload-resolver.js'
+import { containsExpressions, resolveExpressions } from '@MaiaOS/schemata/expression-resolver'
+import { extractDOMValues } from '@MaiaOS/schemata/payload-resolver'
 import { RENDER_STATES } from './actor.engine.js'
 
 function sanitizeAttribute(value) {
@@ -33,7 +33,7 @@ export class ViewEngine {
 		this.evaluator = evaluator
 		this.actorEngine = actorEngine
 		this.moduleRegistry = moduleRegistry
-		this.dbEngine = null
+		this.dataEngine = null
 		this.actorInputCounters = new Map()
 		this._scrollToBottomPrev = new Map()
 		this._scrollMutationObservers = new Map()
@@ -42,7 +42,7 @@ export class ViewEngine {
 	async loadView(coId) {
 		// UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
 		const viewSchemaStore = resolveReactive(
-			this.dbEngine.backend,
+			this.dataEngine.backend,
 			{ fromCoValue: coId },
 			{ returnType: 'coId' },
 		)
@@ -55,13 +55,13 @@ export class ViewEngine {
 			)
 		}
 
-		const _viewStore = await this.dbEngine.execute({
+		const _viewStore = await this.dataEngine.execute({
 			op: 'read',
 			schema: null,
 			key: coId,
 		})
 
-		const store = await this.dbEngine.execute({
+		const store = await this.dataEngine.execute({
 			op: 'read',
 			schema: viewSchemaCoId,
 			key: coId,

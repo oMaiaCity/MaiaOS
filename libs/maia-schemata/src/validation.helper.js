@@ -14,32 +14,32 @@ let pendingSchemaResolver = null // Store resolver if set before engine initiali
 /**
  * Set schema resolver for dynamic $schema reference resolution
  * @param {Object} options - Options object
- * @param {Object} options.dbEngine - Database engine instance (REQUIRED - uses operations API)
+ * @param {Object} options.dataEngine - DataEngine instance (REQUIRED - uses operations API)
  */
 export function setSchemaResolver(options) {
 	if (!options || typeof options !== 'object') {
-		throw new Error('[setSchemaResolver] Options object required: { dbEngine }')
+		throw new Error('[setSchemaResolver] Options object required: { dataEngine }')
 	}
 
-	const { dbEngine } = options
+	const { dataEngine } = options
 
-	if (!dbEngine) {
-		throw new Error('[setSchemaResolver] dbEngine is REQUIRED. No fallbacks allowed.')
+	if (!dataEngine) {
+		throw new Error('[setSchemaResolver] dataEngine is REQUIRED. No fallbacks allowed.')
 	}
 
 	// Create resolver that uses universal resolve() API (single source of truth)
 	const operationsResolver = async (schemaKey) => {
 		// Use universal resolve() API directly (single source of truth)
 		try {
-			if (!dbEngine.backend) {
-				throw new Error('[SchemaResolver] dbEngine.backend is required')
+			if (!dataEngine.backend) {
+				throw new Error('[SchemaResolver] dataEngine.backend is required')
 			}
 
 			// Import resolve() dynamically to avoid circular dependencies
 			const { resolve } = await import('@MaiaOS/db')
 
 			// Use universal resolve() API - handles co-id, registry string (°Maia/schema/...), etc.
-			const schema = await resolve(dbEngine.backend, schemaKey, { returnType: 'schema' })
+			const schema = await resolve(dataEngine.backend, schemaKey, { returnType: 'schema' })
 
 			if (!schema) {
 				throw new Error(`[SchemaResolver] Schema ${schemaKey} not found`)
@@ -229,16 +229,16 @@ export function requireParam(param, paramName, operationName) {
 }
 
 /**
- * Require dbEngine to be present
- * @param {*} dbEngine - dbEngine instance to check
+ * Require dataEngine to be present
+ * @param {*} dataEngine - DataEngine instance to check
  * @param {string} operationName - Operation name for error messages
- * @param {string} [reason] - Reason dbEngine is required (optional)
- * @throws {Error} If dbEngine is missing
+ * @param {string} [reason] - Reason dataEngine is required (optional)
+ * @throws {Error} If dataEngine is missing
  */
-export function requireDbEngine(dbEngine, operationName, reason = '') {
-	if (!dbEngine) {
+export function requireDataEngine(dataEngine, operationName, reason = '') {
+	if (!dataEngine) {
 		const reasonText = reason ? ` (${reason})` : ''
-		throw new Error(`[${operationName}] dbEngine required${reasonText}`)
+		throw new Error(`[${operationName}] dataEngine required${reasonText}`)
 	}
 }
 
@@ -255,23 +255,23 @@ export function requireDbEngine(dbEngine, operationName, reason = '') {
  * @param {any} data - Data to validate
  * @param {string} context - Context for error messages (e.g., 'createCoMap')
  * @param {Object} [options] - Options object
- * @param {Object} [options.dbEngine] - Database engine (REQUIRED for co-id schemas)
+ * @param {Object} [options.dataEngine] - DataEngine (REQUIRED for co-id schemas)
  * @param {Object} [options.registrySchemas] - Registry schemas map (ONLY for migrations/seeding)
  * @param {Function} [options.getAllSchemas] - Function to get all schemas (for migrations)
  * @throws {Error} If schema not found or validation fails
  * @returns {Promise<Object>} Loaded schema definition
  */
 export async function loadSchemaAndValidate(backend, schemaRef, data, context, options = {}) {
-	const { dbEngine, registrySchemas, getAllSchemas } = options
+	const { dataEngine, registrySchemas, getAllSchemas } = options
 
 	// Dynamic import to avoid circular dependencies
 	const { resolve } = await import('@MaiaOS/db')
 
 	if (schemaRef.startsWith('co_z')) {
 		// Schema co-id - MUST validate using runtime schema from database
-		if (!dbEngine) {
+		if (!dataEngine) {
 			throw new Error(
-				`[${context}] dbEngine is REQUIRED for co-id schema validation. Schema: ${schemaRef}. Pass dbEngine in options.`,
+				`[${context}] dataEngine is REQUIRED for co-id schema validation. Schema: ${schemaRef}. Pass dataEngine in options.`,
 			)
 		}
 
