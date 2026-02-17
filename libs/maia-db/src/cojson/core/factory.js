@@ -2,7 +2,7 @@
  * CoJSON API Factory - Create cojson API instance
  *
  * Creates a standalone cojson API that works directly with CoJSON raw types.
- * Uses shared DBEngine from @MaiaOS/operations with CoJSONBackend adapter.
+ * Uses shared DBEngine from @MaiaOS/operations with MaiaDB.
  *
  * Usage:
  *   import { createCoJSONAPI } from '@MaiaOS/db';
@@ -12,7 +12,7 @@
  */
 
 import { DBEngine } from '@MaiaOS/operations'
-import { CoJSONBackend } from './cojson-backend.js'
+import { MaiaDB } from './MaiaDB.js'
 
 /**
  * Create a CoJSON API instance
@@ -29,8 +29,7 @@ export function createCoJSONAPI(node, account) {
 		throw new Error('[createCoJSONAPI] Account required')
 	}
 
-	// Create backend (implements DBAdapter)
-	const backend = new CoJSONBackend(node, account, { systemSpark: '°Maia' })
+	const backend = new MaiaDB({ node, account }, { systemSpark: '°Maia' })
 
 	// Create shared DBEngine with backend
 	const dbEngine = new DBEngine(backend)

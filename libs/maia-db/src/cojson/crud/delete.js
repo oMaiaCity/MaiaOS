@@ -27,11 +27,11 @@ export async function deleteRecord(backend, schema, id) {
 		waitForAvailable: true,
 	})
 	if (!coValueCore) {
-		throw new Error(`[CoJSONBackend] CoValue not found: ${id}`)
+		throw new Error(`[MaiaDB] CoValue not found: ${id}`)
 	}
 
 	if (!backend.isAvailable(coValueCore)) {
-		throw new Error(`[CoJSONBackend] CoValue not available: ${id}`)
+		throw new Error(`[MaiaDB] CoValue not available: ${id}`)
 	}
 
 	const content = backend.getCurrentContent(coValueCore)
@@ -106,7 +106,7 @@ export async function deleteRecord(backend, schema, id) {
 		deletionSuccessful = true
 	} else {
 		throw new Error(
-			`[CoJSONBackend] Delete not supported for type: ${rawType}. Supported types: comap, colist, costream, coplaintext`,
+			`[MaiaDB] Delete not supported for type: ${rawType}. Supported types: comap, colist, costream, coplaintext`,
 		)
 	}
 

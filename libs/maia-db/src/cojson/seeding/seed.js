@@ -499,7 +499,7 @@ function removeIdFields(obj, inPropertiesOrItems = false) {
  *
  * @param {RawAccount} account - The account
  * @param {LocalNode} node - The LocalNode instance
- * @param {CoJSONBackend} backend - Backend instance
+ * @param {MaiaDB} backend - Backend instance
  * @returns {Promise<{deleted: number, errors: number}>} Summary of deletion
  */
 async function deleteSeededCoValues(_account, _node, backend) {
@@ -971,7 +971,7 @@ function buildMetaSchemaForSeeding(metaSchemaCoId) {
  * @param {Object} configs - Config registry {vibe, styles, actors, views, contexts, states, interfaces}
  * @param {Object} schemas - Schema definitions
  * @param {Object} data - Initial application data {todos: [], ...}
- * @param {CoJSONBackend} [existingBackend] - Optional existing backend instance (with dbEngine set)
+ * @param {MaiaDB} [existingBackend] - Optional existing backend instance (with dbEngine set)
  * @returns {Promise<Object>} Summary of what was seeded
  */
 export async function seed(
@@ -986,8 +986,8 @@ export async function seed(
 	const { forceFreshSeed = false } = options
 
 	// Use existing backend if provided (has dbEngine set), otherwise create new one
-	const { CoJSONBackend } = await import('../core/cojson-backend.js')
-	const backend = existingBackend || new CoJSONBackend(node, account, { systemSpark: '°Maia' })
+	const { MaiaDB } = await import('../core/MaiaDB.js')
+	const backend = existingBackend || new MaiaDB({ node, account }, { systemSpark: '°Maia' })
 
 	// Bootstrap scaffold when: forceFreshSeed, or no account.registries, or registries.sparks lacks °Maia
 	let needsBootstrap = forceFreshSeed

@@ -515,12 +515,12 @@ export function getGroupInfoFromGroup(group) {
  */
 export async function addGroupMember(node, group, accountCoId, role, backend = null) {
 	if (typeof group.addMember !== 'function') {
-		throw new Error('[CoJSONBackend] Group does not support addMember')
+		throw new Error('[MaiaDB] Group does not support addMember')
 	}
 
 	if (!accountCoId || !accountCoId.startsWith('co_z')) {
 		throw new Error(
-			'[CoJSONBackend] accountCoId required (co_z...). Human must sign in from maia first so account syncs.',
+			'[MaiaDB] accountCoId required (co_z...). Human must sign in from maia first so account syncs.',
 		)
 	}
 
@@ -588,7 +588,7 @@ export async function removeGroupMember(group, member) {
 		throw new Error('[removeGroupMember] member must be co-id (co_z...) or account content with .id')
 	}
 	if (typeof group.removeMember !== 'function') {
-		throw new Error('[CoJSONBackend] Group does not support removeMember')
+		throw new Error('[MaiaDB] Group does not support removeMember')
 	}
 	if (wouldLeaveNoAdmins(group, memberId)) {
 		throw new Error(
@@ -613,6 +613,6 @@ export async function setGroupMemberRole(node, group, memberId, role) {
 		group.removeMember(memberId)
 		await addGroupMember(node, group, memberId, role, null)
 	} else {
-		throw new Error('[CoJSONBackend] Group does not support role changes')
+		throw new Error('[MaiaDB] Group does not support role changes')
 	}
 }

@@ -303,7 +303,7 @@ export class MaiaOS {
 	 * @param {Object} [config.node] - LocalNode instance (required for CoJSON backend)
 	 * @param {Object} [config.account] - RawAccount instance (required for CoJSON backend)
 	 * @param {Object} [config.backend] - Pre-initialized backend (alternative to node+account)
-	 * @returns {Promise<DBAdapter>} Initialized backend
+	 * @returns {Promise<Object>} Initialized backend (MaiaDB or provided backend)
 	 * @throws {Error} If neither backend nor node+account is provided
 	 */
 	static async _initializeDatabase(os, config = {}) {
@@ -322,19 +322,20 @@ export class MaiaOS {
 
 		// If node and account are provided, use CoJSON backend
 		if (config.node && config.account) {
-			const { CoJSONBackend } = await import('@MaiaOS/db')
-			const backend = new CoJSONBackend(config.node, config.account, { systemSpark: '°Maia' })
-			os.dbEngine = new DBEngine(backend, dbOptions)
-			// Set dbEngine on backend for runtime schema validation in create functions
-			backend.dbEngine = os.dbEngine
-			// Using CoJSON backend
-			return backend
+			const { MaiaDB } = await import('@MaiaOS/db')
+			const maiaDB = new MaiaDB(
+				{ node: config.node, account: config.account },
+				{ systemSpark: '°Maia' },
+			)
+			os.dbEngine = new DBEngine(maiaDB, dbOptions)
+			maiaDB.dbEngine = os.dbEngine
+			return maiaDB
 		}
 
 		// No backend provided - throw error
 		throw new Error(
 			'MaiaOS.boot() requires either a backend or node+account for CoJSON backend. ' +
-				'Provide either: { backend: <DBAdapter> } or { node: <LocalNode>, account: <RawAccount> }',
+				'Provide either: { backend } or { node, account }',
 		)
 	}
 

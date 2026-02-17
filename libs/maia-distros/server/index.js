@@ -4,8 +4,8 @@
  * Core re-exports db, operations, self internally.
  */
 export {
-	CoJSONBackend,
 	DBEngine,
 	loadOrCreateAgentAccount,
+	MaiaDB,
 	waitForStoreReady,
 } from '@MaiaOS/loader'

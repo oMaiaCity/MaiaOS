@@ -19,10 +19,10 @@ export {
 	getGlobalCoCache,
 	resetGlobalCoCache,
 } from './cojson/cache/coCache.js'
-// CoJSON Backend (for MaiaOS.boot() compatibility)
-export { CoJSONBackend } from './cojson/core/cojson-backend.js'
 // CoJSON Mini CRUD API (database-level wrapper)
 export { createCoJSONAPI } from './cojson/core/factory.js'
+// MaiaDB - single data layer implementation (was CoJSONBackend)
+export { MaiaDB } from './cojson/core/MaiaDB.js'
 export { createCoList } from './cojson/cotypes/coList.js'
 export { createCoMap } from './cojson/cotypes/coMap.js'
 export { createCoStream } from './cojson/cotypes/coStream.js'
