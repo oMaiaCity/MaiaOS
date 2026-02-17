@@ -17,11 +17,18 @@ export { TodosVibeRegistry as TodosRegistry } from './todos/registry.js'
 
 import { ChatVibeRegistry } from './chat/registry.js'
 import { LogsVibeRegistry } from './creator/registry.js'
+import { HumansVibeRegistry } from './humans/registry.js'
 import { SparksVibeRegistry } from './sparks/registry.js'
 // Static imports - no dynamic import() so bundle works in production (avoids 404→index.html→text/html MIME error)
 import { TodosVibeRegistry } from './todos/registry.js'
 
-const ALL_REGISTRIES = [TodosVibeRegistry, ChatVibeRegistry, SparksVibeRegistry, LogsVibeRegistry]
+const ALL_REGISTRIES = [
+	TodosVibeRegistry,
+	ChatVibeRegistry,
+	SparksVibeRegistry,
+	LogsVibeRegistry,
+	HumansVibeRegistry,
+]
 
 /**
  * Return all vibe registries (statically imported - no runtime fetch).

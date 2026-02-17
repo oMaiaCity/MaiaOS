@@ -385,6 +385,7 @@ export async function renderVibeViewer(
 	// Map vibe keys to display names
 	const vibeNameMap = {
 		db: 'MaiaDB',
+		humans: 'Human Book',
 		todos: 'Todos',
 	}
 	const vibeLabel = currentVibe
