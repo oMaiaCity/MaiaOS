@@ -22,7 +22,7 @@ export { waitForReactiveResolution } from './read-operations.js'
 /**
  * Resolve schema reactively - returns ReactiveStore that updates when schema becomes available
  *
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} schemaKey - Schema key (°Maia/schema/data/todos) or co-id (co_z...)
  * @param {Object} [options] - Options
  * @param {number} [options.timeoutMs=10000] - Timeout for waiting (unused in reactive mode, kept for compatibility)
@@ -30,7 +30,7 @@ export { waitForReactiveResolution } from './read-operations.js'
  *   - Initial: { loading: true }
  *   - When resolved: { loading: false, schemaCoId: 'co_z...' }
  */
-export function resolveSchemaReactive(backend, schemaKey, options = {}) {
+export function resolveSchemaReactive(peer, schemaKey, options = {}) {
 	const { timeoutMs = 10000 } = options
 	const store = new ReactiveStore({ loading: true })
 
@@ -47,15 +47,15 @@ export function resolveSchemaReactive(backend, schemaKey, options = {}) {
 	// Set up reactive subscription to spark.os.schematas for progressive resolution (account.registries.sparks[°Maia].os.schematas)
 	const setupReactiveSubscription = async () => {
 		const { getSparkOsId } = await import('../groups/groups.js')
-		const spark = backend?.systemSpark ?? '°Maia'
-		const osId = await getSparkOsId(backend, spark)
+		const spark = peer?.systemSpark ?? '°Maia'
+		const osId = await getSparkOsId(peer, spark)
 		if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
 			store._set({ loading: false, error: 'spark.os not found' })
 			return
 		}
 
 		// Load spark.os store reactively
-		const osStore = await universalRead(backend, osId, null, null, null, {
+		const osStore = await universalRead(peer, osId, null, null, null, {
 			deepResolve: false,
 			timeoutMs,
 		})
@@ -74,7 +74,7 @@ export function resolveSchemaReactive(backend, schemaKey, options = {}) {
 
 			// Load schematas store reactively (only if not already subscribed)
 			if (!schematasUnsubscribe) {
-				const schematasStore = await universalRead(backend, schematasId, null, null, null, {
+				const schematasStore = await universalRead(peer, schematasId, null, null, null, {
 					deepResolve: false,
 					timeoutMs,
 				})
@@ -123,7 +123,7 @@ export function resolveSchemaReactive(backend, schemaKey, options = {}) {
 	}
 
 	// Try to resolve schema immediately (non-blocking check)
-	resolve(backend, schemaKey, { returnType: 'coId', timeoutMs: 2000 })
+	resolve(peer, schemaKey, { returnType: 'coId', timeoutMs: 2000 })
 		.then((schemaCoId) => {
 			if (schemaCoId?.startsWith('co_z')) {
 				// Schema resolved immediately - update store
@@ -148,14 +148,14 @@ export function resolveSchemaReactive(backend, schemaKey, options = {}) {
 /**
  * Resolve CoValue reactively - returns ReactiveStore that updates when CoValue becomes available
  *
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} coId - CoValue ID
  * @param {Object} [options] - Options
  * @returns {ReactiveStore} ReactiveStore that updates when CoValue resolves:
  *   - Initial: { loading: true }
  *   - When resolved: { loading: false, coValueCore: CoValueCore }
  */
-export function resolveCoValueReactive(backend, coId, _options = {}) {
+export function resolveCoValueReactive(peer, coId, _options = {}) {
 	const store = new ReactiveStore({ loading: true })
 
 	if (!coId || !coId.startsWith('co_z')) {
@@ -164,26 +164,26 @@ export function resolveCoValueReactive(backend, coId, _options = {}) {
 	}
 
 	// Get CoValueCore (creates if doesn't exist)
-	const coValueCore = backend.getCoValue(coId)
+	const coValueCore = peer.getCoValue(coId)
 	if (!coValueCore) {
 		store._set({ loading: false, error: 'CoValueCore not found' })
 		return store
 	}
 
 	// Check if already available
-	if (backend.isAvailable(coValueCore)) {
+	if (peer.isAvailable(coValueCore)) {
 		store._set({ loading: false, coValueCore })
 		return store
 	}
 
 	// Trigger loading
-	ensureCoValueLoaded(backend, coId, { waitForAvailable: false }).catch((_err) => {
+	ensureCoValueLoaded(peer, coId, { waitForAvailable: false }).catch((_err) => {
 		// Silently handle errors - subscription will handle updates
 	})
 
 	// Subscribe to CoValueCore updates
 	const unsubscribe = coValueCore.subscribe((core) => {
-		if (backend.isAvailable(core)) {
+		if (peer.isAvailable(core)) {
 			store._set({ loading: false, coValueCore: core })
 			unsubscribe()
 		}
@@ -202,14 +202,14 @@ export function resolveCoValueReactive(backend, coId, _options = {}) {
 /**
  * Resolve query reactively - returns ReactiveStore that updates when query results become available
  *
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {Object} queryDef - Query definition { schema: '°Maia/schema/data/todos', filter: {...}, options: {...} }
  * @param {Object} [options] - Options
  * @returns {ReactiveStore} ReactiveStore that updates when query resolves:
  *   - Initial: { loading: true, items: [] }
  *   - When resolved: { loading: false, items: [...] }
  */
-export function resolveQueryReactive(backend, queryDef, options = {}) {
+export function resolveQueryReactive(peer, queryDef, options = {}) {
 	const store = new ReactiveStore({ loading: true, items: [] })
 
 	if (!queryDef || !queryDef.schema) {
@@ -218,7 +218,7 @@ export function resolveQueryReactive(backend, queryDef, options = {}) {
 	}
 
 	// Resolve schema reactively
-	const schemaStore = resolveSchemaReactive(backend, queryDef.schema, options)
+	const schemaStore = resolveSchemaReactive(peer, queryDef.schema, options)
 
 	// Subscribe to schema resolution
 	const schemaUnsubscribe = schemaStore.subscribe(async (schemaState) => {
@@ -235,7 +235,7 @@ export function resolveQueryReactive(backend, queryDef, options = {}) {
 		// Schema resolved - execute query
 		try {
 			const queryStore = await universalRead(
-				backend,
+				peer,
 				null,
 				schemaState.schemaCoId,
 				queryDef.filter || null,
@@ -271,21 +271,21 @@ export function resolveQueryReactive(backend, queryDef, options = {}) {
 /**
  * Universal reactive resolver - handles any dependency type
  *
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string|Object} identifier - Identifier (co-id, schema key, or query definition)
  * @param {Object} [options] - Options
  * @returns {ReactiveStore} ReactiveStore that updates when dependency resolves
  */
-export function resolveReactive(backend, identifier, options = {}) {
+export function resolveReactive(peer, identifier, options = {}) {
 	// Handle query definition objects
 	if (identifier && typeof identifier === 'object' && !Array.isArray(identifier)) {
 		if (identifier.schema) {
 			// Query definition
-			return resolveQueryReactive(backend, identifier, options)
+			return resolveQueryReactive(peer, identifier, options)
 		}
 		if (identifier.fromCoValue) {
 			// Extract schema from CoValue reactively
-			const coValueStore = resolveCoValueReactive(backend, identifier.fromCoValue, options)
+			const coValueStore = resolveCoValueReactive(peer, identifier.fromCoValue, options)
 			const schemaStore = new ReactiveStore({ loading: true })
 
 			// Track subscriptions for cleanup
@@ -305,13 +305,13 @@ export function resolveReactive(backend, identifier, options = {}) {
 				}
 
 				// Extract schema from headerMeta
-				const header = backend.getHeader(coValueState.coValueCore)
+				const header = peer.getHeader(coValueState.coValueCore)
 				const headerMeta = header?.meta || null
 				const schemaCoId = headerMeta?.$schema || null
 
 				if (schemaCoId && typeof schemaCoId === 'string' && schemaCoId.startsWith('co_z')) {
 					// Resolve schema reactively
-					const resolvedSchemaStore = resolveSchemaReactive(backend, schemaCoId, options)
+					const resolvedSchemaStore = resolveSchemaReactive(peer, schemaCoId, options)
 					schemaResolveUnsubscribe = resolvedSchemaStore.subscribe((schemaState) => {
 						schemaStore._set(schemaState)
 						if (!schemaState.loading) {
@@ -322,7 +322,7 @@ export function resolveReactive(backend, identifier, options = {}) {
 				} else {
 					// Subscribe to CoValueCore updates to wait for headerMeta.$schema
 					headerUnsubscribe = coValueState.coValueCore.subscribe((core) => {
-						const updatedHeader = backend.getHeader(core)
+						const updatedHeader = peer.getHeader(core)
 						const updatedHeaderMeta = updatedHeader?.meta || null
 						const updatedSchemaCoId = updatedHeaderMeta?.$schema || null
 
@@ -332,7 +332,7 @@ export function resolveReactive(backend, identifier, options = {}) {
 							updatedSchemaCoId.startsWith('co_z')
 						) {
 							// Resolve schema reactively
-							const resolvedSchemaStore = resolveSchemaReactive(backend, updatedSchemaCoId, options)
+							const resolvedSchemaStore = resolveSchemaReactive(peer, updatedSchemaCoId, options)
 							schemaResolveUnsubscribe = resolvedSchemaStore.subscribe((schemaState) => {
 								schemaStore._set(schemaState)
 								if (!schemaState.loading) {
@@ -363,10 +363,10 @@ export function resolveReactive(backend, identifier, options = {}) {
 	if (typeof identifier === 'string') {
 		if (identifier.startsWith('co_z')) {
 			// Co-id - resolve CoValue reactively
-			return resolveCoValueReactive(backend, identifier, options)
+			return resolveCoValueReactive(peer, identifier, options)
 		} else {
 			// Schema key - resolve schema reactively
-			return resolveSchemaReactive(backend, identifier, options)
+			return resolveSchemaReactive(peer, identifier, options)
 		}
 	}
 

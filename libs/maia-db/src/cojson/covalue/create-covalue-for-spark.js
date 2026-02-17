@@ -33,7 +33,7 @@ async function resolveContext(context, spark) {
 		return { node: context.node, account: context.account, guardian }
 	}
 	throw new Error(
-		'[createCoValueForSpark] Invalid context. Provide backend (with node, account) + spark, or { node, account, guardian }.',
+		'[createCoValueForSpark] Invalid context. Provide peer (with node, account) + spark, or { node, account, guardian }.',
 	)
 }
 

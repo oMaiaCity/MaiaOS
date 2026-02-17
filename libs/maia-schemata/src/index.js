@@ -21,7 +21,7 @@ export {
 } from './validation.helper.js'
 
 // Meta schema is now loaded from os/meta.schema.json directly (seeding) or from backend (runtime)
-// No exports needed - use ValidationEngine.getMetaSchema() for validation engine, or getMetaSchemaFromBackend() for runtime access
+// No exports needed - use ValidationEngine.getMetaSchema() for validation engine, or getMetaSchemaFromPeer() for runtime access
 
 // Export schema loader functions (runtime) - consolidated into resolver.js
 export { loadSchemasFromAccount, resolve } from '@MaiaOS/db'

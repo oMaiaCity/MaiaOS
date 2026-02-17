@@ -30,7 +30,7 @@ function resolvePath(obj, path) {
 
 /**
  * Evaluator - Minimal DSL evaluator for MaiaScript expressions
- * v0.2 Syntax: $key (context), $$key (item)
+ * Syntax: $key (context), $$key (item)
  * Supports: $context, $item, $if, $$shorthand
  * Registry-aware for extensible DSL operations
  *
@@ -281,7 +281,7 @@ export class Evaluator {
 
 	/**
 	 * Evaluate compact shortcut syntax: $key or $$key
-	 * v0.2 syntax:
+	 * Syntax:
 	 * - $key → context.key (implicit context)
 	 * - $$key → item.key (explicit item with double-dollar)
 	 * - $$result → result (tool result with double-dollar)
@@ -299,7 +299,7 @@ export class Evaluator {
 			return resolvePath(data.item, shortcut.substring(2))
 		}
 		const path = shortcut.substring(1)
-		// $stores Architecture: data.context is already the unwrapped value from backend unified store
+		// $stores Architecture: data.context is already the unwrapped value from peer unified store
 		// ViewEngine passes context.value as data.context, so we use it directly
 		const resolved = resolvePath(data.context, path)
 		// Query stores are ReactiveStore objects - unwrap them for evaluation

@@ -46,65 +46,65 @@ import {
 
 export class DataEngine {
 	/**
-	 * @param {Object} backend - MaiaDB or backend with read/create/update/delete interface
+	 * @param {Object} peer - MaiaDB or peer with read/create/update/delete interface
 	 * @param {Object} [options]
 	 * @param {Object} [options.evaluator] - MaiaScript evaluator (injected at boot; required for read reactive resolution)
 	 * @param {() => string|null} [options.getMoaiBaseUrl] - For POST /register after createSpark
 	 */
-	constructor(backend, options = {}) {
-		this.backend = backend
+	constructor(peer, options = {}) {
+		this.peer = peer
 		const { evaluator, getMoaiBaseUrl } = options
 		this.getMoaiBaseUrl = getMoaiBaseUrl ?? null
 
 		// Inject evaluator for read reactive resolution (avoids maia-db → maia-engines)
 		// Always inject when we have evaluator - constructor.name check breaks under minification
-		if (backend && evaluator) {
-			backend.evaluator = evaluator
+		if (peer && evaluator) {
+			peer.evaluator = evaluator
 		}
-		if (backend && typeof backend.setDbEngine === 'function') {
-			backend.setDbEngine(this)
-		} else if (backend && backend.node && backend.account) {
-			backend.dbEngine = this
+		if (peer && typeof peer.setDbEngine === 'function') {
+			peer.setDbEngine(this)
+		} else if (peer && peer.node && peer.account) {
+			peer.dbEngine = this
 		}
 
 		this.operations = {
-			read: { execute: (params) => readOperation(this.backend, params) },
-			create: { execute: (params) => createOperation(this.backend, this, params) },
+			read: { execute: (params) => readOperation(this.peer, params) },
+			create: { execute: (params) => createOperation(this.peer, this, params) },
 			update: {
-				execute: (params) => updateOperation(this.backend, this, evaluator, params),
+				execute: (params) => updateOperation(this.peer, this, evaluator, params),
 			},
-			delete: { execute: (params) => deleteOperation(this.backend, this, params) },
-			seed: { execute: (params) => seedOperation(this.backend, params) },
-			schema: { execute: (params) => schemaOperation(this.backend, this, params) },
-			resolve: { execute: (params) => resolveOperation(this.backend, params) },
-			append: { execute: (params) => appendOperation(this.backend, this, params) },
+			delete: { execute: (params) => deleteOperation(this.peer, this, params) },
+			seed: { execute: (params) => seedOperation(this.peer, params) },
+			schema: { execute: (params) => schemaOperation(this.peer, this, params) },
+			resolve: { execute: (params) => resolveOperation(this.peer, params) },
+			append: { execute: (params) => appendOperation(this.peer, this, params) },
 			push: {
-				execute: (params) => appendOperation(this.backend, this, { ...params, cotype: 'costream' }),
+				execute: (params) => appendOperation(this.peer, this, { ...params, cotype: 'costream' }),
 			},
 			processInbox: {
-				execute: (params) => processInboxOperation(this.backend, this, params),
+				execute: (params) => processInboxOperation(this.peer, this, params),
 			},
-			createSpark: { execute: (params) => createSparkOperation(this.backend, this, params) },
-			readSpark: { execute: (params) => readSparkOperation(this.backend, params) },
-			updateSpark: { execute: (params) => updateSparkOperation(this.backend, this, params) },
-			deleteSpark: { execute: (params) => deleteSparkOperation(this.backend, this, params) },
+			createSpark: { execute: (params) => createSparkOperation(this.peer, this, params) },
+			readSpark: { execute: (params) => readSparkOperation(this.peer, params) },
+			updateSpark: { execute: (params) => updateSparkOperation(this.peer, this, params) },
+			deleteSpark: { execute: (params) => deleteSparkOperation(this.peer, this, params) },
 			addSparkMember: {
-				execute: (params) => addSparkMemberOperation(this.backend, this, params),
+				execute: (params) => addSparkMemberOperation(this.peer, this, params),
 			},
 			removeSparkMember: {
-				execute: (params) => removeSparkMemberOperation(this.backend, this, params),
+				execute: (params) => removeSparkMemberOperation(this.peer, this, params),
 			},
 			addSparkParentGroup: {
-				execute: (params) => addSparkParentGroupOperation(this.backend, this, params),
+				execute: (params) => addSparkParentGroupOperation(this.peer, this, params),
 			},
 			removeSparkParentGroup: {
-				execute: (params) => removeSparkParentGroupOperation(this.backend, this, params),
+				execute: (params) => removeSparkParentGroupOperation(this.peer, this, params),
 			},
 			getSparkMembers: {
-				execute: (params) => getSparkMembersOperation(this.backend, params),
+				execute: (params) => getSparkMembersOperation(this.peer, params),
 			},
 			updateSparkMemberRole: {
-				execute: (params) => updateSparkMemberRoleOperation(this.backend, this, params),
+				execute: (params) => updateSparkMemberRoleOperation(this.peer, this, params),
 			},
 		}
 	}

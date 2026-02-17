@@ -13,19 +13,19 @@ import * as dataExtraction from './data-extraction.js'
 
 /**
  * Determine cotype from schema or data type
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} schema - Schema co-id
  * @param {*} data - Data to create
  * @returns {Promise<string>} Cotype (comap, colist, costream)
  */
-async function determineCotype(backend, schema, data) {
+async function determineCotype(peer, schema, data) {
 	// Try to load schema to get cotype using generic method
 	try {
-		const schemaCore = await collectionHelpers.ensureCoValueLoaded(backend, schema, {
+		const schemaCore = await collectionHelpers.ensureCoValueLoaded(peer, schema, {
 			waitForAvailable: true,
 		})
-		if (schemaCore && backend.isAvailable(schemaCore)) {
-			const schemaContent = backend.getCurrentContent(schemaCore)
+		if (schemaCore && peer.isAvailable(schemaCore)) {
+			const schemaContent = peer.getCurrentContent(schemaCore)
 			if (schemaContent?.get) {
 				const definition = schemaContent.get('definition')
 				if (definition?.cotype) {
@@ -58,20 +58,20 @@ async function determineCotype(backend, schema, data) {
 
 /**
  * Create new record - directly creates CoValue using CoJSON raw methods
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} schema - Schema co-id (co_z...) for data collections
  * @param {Object} data - Data to create
  * @param {Object} [options] - Optional settings
  * @param {string} [options.spark='°Maia'] - Spark name for context (e.g. '°Maia', '@Maia')
  * @returns {Promise<Object>} Created record with generated co-id
  */
-export async function create(backend, schema, data, options = {}) {
+export async function create(peer, schema, data, options = {}) {
 	const spark = options.spark ?? '°Maia'
 
 	// Determine cotype from schema or data type
-	const cotype = await determineCotype(backend, schema, data)
+	const cotype = await determineCotype(peer, schema, data)
 
-	if (!backend.account) {
+	if (!peer.account) {
 		throw new Error('[MaiaDB] Account required for create')
 	}
 
@@ -82,11 +82,11 @@ export async function create(backend, schema, data, options = {}) {
 		throw new Error('[MaiaDB] Data must be array for colist')
 	}
 
-	const { coValue } = await createCoValueForSpark(backend, spark, {
+	const { coValue } = await createCoValueForSpark(peer, spark, {
 		schema,
 		cotype,
 		data: cotype === 'comap' ? data : cotype === 'colist' ? data : undefined,
-		dataEngine: backend.dbEngine,
+		dataEngine: peer.dbEngine,
 	})
 
 	// CRITICAL: Don't wait for storage sync - it blocks the UI!
@@ -103,9 +103,9 @@ export async function create(backend, schema, data, options = {}) {
 	// CRITICAL: Always include original data as fallback to ensure all properties are available
 	// This ensures $lastCreatedText and other properties are accessible even if CoValue extraction fails
 	// Get CoValueCore from node to check availability
-	const coValueCore = backend.node.getCoValue(coValue.id)
-	if (coValueCore && backend.isAvailable(coValueCore)) {
-		const content = backend.getCurrentContent(coValueCore)
+	const coValueCore = peer.node.getCoValue(coValue.id)
+	if (coValueCore && peer.isAvailable(coValueCore)) {
+		const content = peer.getCurrentContent(coValueCore)
 		if (content && typeof content.get === 'function') {
 			// Extract properties as flat object (for tool access like $lastCreatedText)
 			const result = { id: coValue.id, ...data } // Start with original data to ensure all properties
@@ -118,7 +118,7 @@ export async function create(backend, schema, data, options = {}) {
 			return result
 		}
 		// Fallback to normalized format, but include original data
-		const extracted = dataExtraction.extractCoValueData(backend, coValueCore)
+		const extracted = dataExtraction.extractCoValueData(peer, coValueCore)
 		return { ...data, id: coValue.id, ...extracted } // Merge original data with extracted
 	}
 

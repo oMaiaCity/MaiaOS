@@ -106,15 +106,15 @@ function getRegistriesId(account) {
 	return id
 }
 
-async function loadCoMap(backend, coId, opts = {}) {
+async function loadCoMap(peer, coId, opts = {}) {
 	const { timeout = LOAD_TIMEOUT_MS, retries = 1 } = opts
 	let lastErr
 	for (let i = 1; i <= retries; i++) {
 		try {
-			const store = await backend.read(null, coId)
+			const store = await peer.read(null, coId)
 			await withTimeout(waitForStoreReady(store, coId, timeout), timeout, `load(${coId.slice(0, 12)})`)
-			const core = backend.node.getCoValue(coId)
-			if (core && backend.isAvailable(core)) return backend.getCurrentContent(core)
+			const core = peer.node.getCoValue(coId)
+			if (core && peer.isAvailable(core)) return peer.getCurrentContent(core)
 			lastErr = new Error(`CoMap ${coId.slice(0, 12)}... not available`)
 		} catch (e) {
 			lastErr = e
@@ -124,13 +124,13 @@ async function loadCoMap(backend, coId, opts = {}) {
 	throw lastErr
 }
 
-async function getCoIdByPath(backend, startId, path, opts = {}) {
-	let content = await loadCoMap(backend, startId, opts)
+async function getCoIdByPath(peer, startId, path, opts = {}) {
+	let content = await loadCoMap(peer, startId, opts)
 	for (let i = 0; i < path.length; i++) {
 		const nextId = content?.get?.(path[i])
 		if (!nextId?.startsWith('co_z')) throw new Error(`Path ${path[i]} not found`)
 		if (i === path.length - 1) return nextId
-		content = await loadCoMap(backend, nextId, opts)
+		content = await loadCoMap(peer, nextId, opts)
 	}
 }
 
@@ -138,11 +138,11 @@ async function getCoIdByPath(backend, startId, path, opts = {}) {
 async function handleSyncRegistry(worker) {
 	try {
 		const registriesId = getRegistriesId(worker.account)
-		const registriesContent = await loadCoMap(worker.backend, registriesId, { retries: 2 })
+		const registriesContent = await loadCoMap(worker.peer, registriesId, { retries: 2 })
 		const sparksId = registriesContent?.get?.('sparks')
 		let maiaSparkId = null
 		if (sparksId?.startsWith('co_z')) {
-			const sparksContent = await loadCoMap(worker.backend, sparksId, { retries: 2 })
+			const sparksContent = await loadCoMap(worker.peer, sparksId, { retries: 2 })
 			maiaSparkId = sparksContent?.get?.(MAIA_SPARK)
 		}
 		return jsonResponse({
@@ -181,13 +181,13 @@ async function handleRegister(worker, body) {
 	let u =
 		username != null && typeof username === 'string' && username.trim() ? username.trim() : null
 
-	const { backend, dataEngine } = worker
+	const { peer, dataEngine } = worker
 	try {
 		const registryKey = type === 'human' ? 'humans' : 'sparks'
-		const registryId = await getCoIdByPath(backend, getRegistriesId(worker.account), [registryKey], {
+		const registryId = await getCoIdByPath(peer, getRegistriesId(worker.account), [registryKey], {
 			retries: 2,
 		})
-		const raw = await backend.getRawRecord(registryId)
+		const raw = await peer.getRawRecord(registryId)
 
 		if (type === 'human') {
 			// Idempotency: accountId already registered (by username or by accountId key)
@@ -209,13 +209,13 @@ async function handleRegister(worker, body) {
 				return err(`username "${u}" already registered to different identity`, 409)
 
 			// Create Human CoMap (public: everyone reader) and dual-key registry
-			const humanSchemaCoId = await resolve(backend, '°Maia/schema/os/human', { returnType: 'coId' })
+			const humanSchemaCoId = await resolve(peer, '°Maia/schema/os/human', { returnType: 'coId' })
 			if (!humanSchemaCoId) return err('Human schema not found. Ensure genesis seed has run.', 500)
 
-			const guardian = await backend.getMaiaGroup()
+			const guardian = await peer.getMaiaGroup()
 			if (!guardian) return err('Guardian not found', 500)
 
-			const node = backend.node
+			const node = peer.node
 			const humanGroup = node.createGroup()
 			humanGroup.extend(guardian, 'extend')
 			humanGroup.addMember('everyone', 'reader')
@@ -264,7 +264,7 @@ async function handleRegister(worker, body) {
 
 async function handleProfile(worker) {
 	try {
-		const { account, backend } = worker
+		const { account, peer } = worker
 		const profileId = account?.get?.('profile')
 		const registriesId = account?.get?.('registries')
 		let sparks = null
@@ -273,7 +273,7 @@ async function handleProfile(worker) {
 				const registriesContent = await loadCoMap(backend, registriesId, { retries: 2 })
 				const sparksId = registriesContent?.get?.('sparks')
 				if (sparksId?.startsWith('co_z')) {
-					const c = await loadCoMap(backend, sparksId, { retries: 2 })
+					const c = await loadCoMap(peer, sparksId, { retries: 2 })
 					if (c?.get) {
 						sparks = {}
 						const keys = typeof c.keys === 'function' ? Array.from(c.keys()) : Object.keys(c ?? {})
@@ -289,7 +289,7 @@ async function handleProfile(worker) {
 		}
 		let profileName = null
 		if (profileId?.startsWith('co_z')) {
-			const store = await backend.read(null, profileId)
+			const store = await peer.read(null, profileId)
 			await waitForStoreReady(store, profileId, 5000).catch(() => {})
 			const d = store?.value
 			if (d && !d.error) profileName = d?.name ?? d?.properties?.name ?? null
@@ -513,11 +513,11 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 		process.on('SIGTERM', () => shutdown())
 		process.on('SIGINT', () => shutdown())
 
-		const backend = new MaiaDB({ node: localNode, account: result.account }, { systemSpark: '°Maia' })
+		const peer = new MaiaDB({ node: localNode, account: result.account }, { systemSpark: '°Maia' })
 		const evaluator = new MaiaScriptEvaluator()
-		const dataEngine = new DataEngine(backend, { evaluator })
-		backend.dbEngine = dataEngine
-		agentWorker = { node: localNode, account: result.account, backend, dataEngine }
+		const dataEngine = new DataEngine(peer, { evaluator })
+		peer.dbEngine = dataEngine
+		agentWorker = { node: localNode, account: result.account, peer, dataEngine }
 
 		// Ensure migration completes before seed (sparkGuardian -> guardian, registries.humans)
 		// loadAccount defers migration; seed needs guardian in os.capabilities
@@ -557,9 +557,9 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 		// One-time: add PEER_GUARDIAN (human account co-id) as admin of °Maia spark guardian group
 		if (peerAddGuardian && peerGuardianAccountId?.startsWith('co_z')) {
 			try {
-				const guardian = await agentWorker.backend.getMaiaGroup()
+				const guardian = await agentWorker.peer.getMaiaGroup()
 				if (guardian) {
-					await agentWorker.backend.addGroupMember(guardian, peerGuardianAccountId, 'admin')
+					await agentWorker.peer.addGroupMember(guardian, peerGuardianAccountId, 'admin')
 					console.log(
 						`[sync] Added guardian as admin of °Maia spark (set PEER_ADD_GUARDIAN=false to skip on next restart)`,
 					)

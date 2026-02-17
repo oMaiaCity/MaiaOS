@@ -45,14 +45,14 @@ export async function createCoMap(
 		const profileId = accountOrGroup.get('profile')
 		if (profileId) {
 			// It's an account - resolve °Maia spark's group via getSparkGroup
-			const backend = dbEngine?.backend
-			if (!backend) {
+			const peer = dbEngine?.peer
+			if (!peer) {
 				throw new Error(
-					'[createCoMap] dbEngine.backend required when passing account (to resolve °Maia spark group)',
+					'[createCoMap] dbEngine.peer required when passing account (to resolve °Maia spark group)',
 				)
 			}
 			const { getSparkGroup } = await import('../groups/groups.js')
-			group = await getSparkGroup(backend, '°Maia')
+			group = await getSparkGroup(peer, '°Maia')
 			if (!group) {
 				throw new Error('[createCoMap] °Maia spark group not found. Ensure bootstrap has run.')
 			}
@@ -70,7 +70,7 @@ export async function createCoMap(
 	// STRICT: Always validate using runtime schema from database (no fallbacks, no legacy hacks)
 	if (!isExceptionSchema(schemaName)) {
 		// Use consolidated universal validation function (single source of truth)
-		await loadSchemaAndValidate(dbEngine?.backend || null, schemaName, init, 'createCoMap', {
+		await loadSchemaAndValidate(dbEngine?.peer || null, schemaName, init, 'createCoMap', {
 			dataEngine: dbEngine,
 			getAllSchemas,
 		})

@@ -176,30 +176,30 @@ export function getCoTypeDefs() {
 }
 
 /**
- * Get meta schema definition from backend (runtime access)
- * Always reads from CoJSON backend - single source of truth after seeding
+ * Get meta schema definition from peer (runtime access)
+ * Always reads from CoJSON - single source of truth after seeding
  *
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Peer instance (MaiaDB)
  * @returns {Promise<Object>} Meta schema definition
  */
-export async function getMetaSchemaFromBackend(backend) {
-	if (!backend) {
-		throw new Error('[getMetaSchemaFromBackend] Backend required')
+export async function getMetaSchemaFromPeer(peer) {
+	if (!peer) {
+		throw new Error('[getMetaSchemaFromPeer] Peer required')
 	}
 
 	// Import resolver dynamically to avoid circular dependencies
 	const { resolve } = await import('../cojson/schema/resolver.js')
 
 	// Resolve metaschema co-id from registry
-	const metaSchemaCoId = await resolve(backend, '°Maia/schema/meta', { returnType: 'coId' })
+	const metaSchemaCoId = await resolve(peer, '°Maia/schema/meta', { returnType: 'coId' })
 	if (!metaSchemaCoId) {
-		throw new Error('[getMetaSchemaFromBackend] Metaschema not found in registry')
+		throw new Error('[getMetaSchemaFromPeer] Metaschema not found in registry')
 	}
 
-	// Read metaschema CoMap from backend using universal read() API
-	const metaSchemaStore = await backend.read(null, metaSchemaCoId)
+	// Read metaschema CoMap from peer using universal read() API
+	const metaSchemaStore = await peer.read(null, metaSchemaCoId)
 	if (!metaSchemaStore || metaSchemaStore.value?.error) {
-		throw new Error('[getMetaSchemaFromBackend] Failed to read metaschema from backend')
+		throw new Error('[getMetaSchemaFromPeer] Failed to read metaschema from peer')
 	}
 
 	// Extract definition from CoMap content

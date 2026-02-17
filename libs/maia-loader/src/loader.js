@@ -1,5 +1,5 @@
 /**
- * MaiaOS Loader - v0.4
+ * MaiaOS Loader
  *
  * Single entry point for the MaiaOS Operating System
  * Central source of truth for booting and managing the OS
@@ -51,7 +51,7 @@ export class MaiaOS {
 		this.subscriptionEngine = null // Subscription management engine
 		this.dataEngine = null // DataEngine - maia.do({ op, schema, key, ... })
 
-		// CoJSON backend support (for maia-city compatibility)
+		// Peer layer (node + account) for maia-city compatibility
 		this._node = null
 		this._account = null
 
@@ -61,7 +61,7 @@ export class MaiaOS {
 
 	/**
 	 * Compatibility property for maia-city and other tools
-	 * Exposes node and account for CoJSON backend access
+	 * Exposes node and account for peer access
 	 */
 	get id() {
 		if (!this._node || !this._account) {
@@ -81,9 +81,9 @@ export class MaiaOS {
 		if (this._node && this._account) {
 			return { node: this._node, account: this._account }
 		}
-		const backend = this.dataEngine?.backend
-		if (backend?.node && backend?.account) {
-			return { node: backend.node, account: backend.account }
+		const peer = this.dataEngine?.peer
+		if (peer?.node && peer?.account) {
+			return { node: peer.node, account: peer.account }
 		}
 		return null
 	}
@@ -201,13 +201,13 @@ export class MaiaOS {
 	/**
 	 * Boot the operating system
 	 * @param {Object} config - Boot configuration
-	 * @param {Object} [config.node] - LocalNode instance (required for CoJSON backend if backend not provided)
-	 * @param {Object} [config.account] - RawAccount instance (required for CoJSON backend if backend not provided)
-	 * @param {Object} [config.backend] - Pre-initialized backend (alternative to node+account)
+	 * @param {Object} [config.node] - LocalNode instance (required if peer not provided)
+	 * @param {Object} [config.account] - RawAccount instance (required if peer not provided)
+	 * @param {Object} [config.peer] - Pre-initialized peer/MaiaDB (alternative to node+account)
 	 * @param {string} [config.syncDomain] - Sync service domain (overrides env vars, single source of truth)
 	 * @param {'human' | 'agent'} [config.mode] - Operational mode (default: detect from env vars)
 	 * @returns {Promise<MaiaOS>} Booted OS instance
-	 * @throws {Error} If neither backend nor node+account is provided (or agent mode credentials missing)
+	 * @throws {Error} If neither peer nor node+account is provided (or agent mode credentials missing)
 	 */
 	static async boot(config = {}) {
 		const os = new MaiaOS()
@@ -229,7 +229,7 @@ export class MaiaOS {
 		}
 
 		// Handle agent mode: automatically load/create account if node/account not provided
-		if (mode === 'agent' && !config.node && !config.account && !config.backend) {
+		if (mode === 'agent' && !config.node && !config.account && !config.peer) {
 			// Import agent mode functions dynamically (to avoid circular dependencies)
 			const { loadOrCreateAgentAccount } = await import('@MaiaOS/self')
 
@@ -268,17 +268,17 @@ export class MaiaOS {
 			}
 		}
 
-		// Initialize database (requires CoJSON backend via node+account or pre-initialized backend)
-		const backend = await MaiaOS._initializeDatabase(os, config)
+		// Initialize database (requires peer via node+account or pre-initialized peer)
+		const peer = await MaiaOS._initializeDatabase(os, config)
 
 		// OPTIMIZATION: Start loading spark.os (account.registries.sparks[°Maia].os) in background (non-blocking)
 		// spark.os is NOT required for account loading - it's only needed for schema resolution
 		// Schema resolution can happen progressively as spark.os becomes available
 		// This allows MaiaOS to boot immediately without waiting 5+ seconds for spark.os to sync
-		if (backend && typeof backend.ensureAccountOsReady === 'function') {
+		if (peer && typeof peer.ensureAccountOsReady === 'function') {
 			// Start loading spark.os in background (non-blocking)
 			// 15s timeout for slow sync (e.g. first load to moai.next.maia.city)
-			backend
+			peer
 				.ensureAccountOsReady({ timeoutMs: 15000 })
 				.then((accountOsReady) => {
 					if (!accountOsReady) {
@@ -304,15 +304,15 @@ export class MaiaOS {
 	}
 
 	/**
-	 * Initialize database backend and engine
-	 * Requires either a pre-initialized backend or CoJSON node+account
+	 * Initialize database peer and engine
+	 * Requires either a pre-initialized peer (MaiaDB) or CoJSON node+account
 	 * @param {MaiaOS} os - OS instance
 	 * @param {Object} config - Boot configuration
-	 * @param {Object} [config.node] - LocalNode instance (required for CoJSON backend)
-	 * @param {Object} [config.account] - RawAccount instance (required for CoJSON backend)
-	 * @param {Object} [config.backend] - Pre-initialized backend (alternative to node+account)
-	 * @returns {Promise<Object>} Initialized backend (MaiaDB or provided backend)
-	 * @throws {Error} If neither backend nor node+account is provided
+	 * @param {Object} [config.node] - LocalNode instance (required if peer not provided)
+	 * @param {Object} [config.account] - RawAccount instance (required if peer not provided)
+	 * @param {Object} [config.peer] - Pre-initialized peer/MaiaDB (alternative to node+account)
+	 * @returns {Promise<Object>} Initialized peer (MaiaDB or provided peer)
+	 * @throws {Error} If neither peer nor node+account is provided
 	 */
 	static async _initializeDatabase(os, config = {}) {
 		// Create minimal evaluator for DataEngine (expression evaluation in updates)
@@ -322,13 +322,13 @@ export class MaiaOS {
 			getMoaiBaseUrl: config.getMoaiBaseUrl ?? null,
 		}
 
-		// If backend is provided, use it
-		if (config.backend) {
-			os.dataEngine = new DataEngine(config.backend, dbOptions)
-			return config.backend
+		// If peer is provided, use it
+		if (config.peer) {
+			os.dataEngine = new DataEngine(config.peer, dbOptions)
+			return config.peer
 		}
 
-		// If node and account are provided, use CoJSON backend
+		// If node and account are provided, create MaiaDB peer
 		if (config.node && config.account) {
 			const { MaiaDB } = await import('@MaiaOS/db')
 			const maiaDB = new MaiaDB(
@@ -340,10 +340,10 @@ export class MaiaOS {
 			return maiaDB
 		}
 
-		// No backend provided - throw error
+		// No peer provided - throw error
 		throw new Error(
-			'MaiaOS.boot() requires either a backend or node+account for CoJSON backend. ' +
-				'Provide either: { backend } or { node, account }',
+			'MaiaOS.boot() requires either a peer or node+account. ' +
+				'Provide either: { peer } or { node, account }',
 		)
 	}
 
@@ -443,7 +443,7 @@ export class MaiaOS {
 		} else if (typeof actorPath === 'string' && actorPath.startsWith('co_z')) {
 			// Load actor config using read() directly
 			const actorSchemaCoId = await resolve(
-				this.actorEngine.dataEngine.backend,
+				this.actorEngine.dataEngine.peer,
 				{ fromCoValue: actorPath },
 				{ returnType: 'coId' },
 			)
@@ -660,7 +660,7 @@ export class MaiaOS {
 		// Use the store we already have (vibeStore contains the vibe data)
 		const store = vibeStore
 
-		// Store is already loaded by backend (operations API abstraction)
+		// Store is already loaded by peer (operations API abstraction)
 		let vibe = store.value
 
 		// Debug: Check what we got
@@ -680,9 +680,9 @@ export class MaiaOS {
 			throw new Error(`Vibe not found in database: ${vibeId} (co-id: ${vibeCoId})`)
 		}
 
-		// Convert CoJSON backend format (properties array) to plain object if needed
+		// Convert CoJSON format (properties array) to plain object if needed
 		if (vibe.properties && Array.isArray(vibe.properties)) {
-			// CoJSON backend returns objects with properties array - convert to plain object
+			// CoJSON returns objects with properties array - convert to plain object
 			const plainVibe = {}
 			for (const prop of vibe.properties) {
 				plainVibe[prop.key] = prop.value
@@ -719,7 +719,7 @@ export class MaiaOS {
 		// UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
 		// Returns ReactiveStore that updates when schema becomes available
 		const actorSchemaStore = resolveReactive(
-			this.dataEngine.backend,
+			this.dataEngine.peer,
 			{ fromCoValue: actorCoId },
 			{ returnType: 'coId' },
 		)
