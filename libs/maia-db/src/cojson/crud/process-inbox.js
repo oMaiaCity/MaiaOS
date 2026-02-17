@@ -35,7 +35,13 @@ export async function processInbox(peer, actorId, inboxCoId) {
 		throw new Error('[processInbox] Cannot get current session ID from peer')
 	}
 
-	// Get message schema co-id via resolve() (uses CoCache / universalRead)
+	// Get dbEngine from peer (needed for operations API)
+	const dbEngine = peer.dbEngine
+	if (!dbEngine) {
+		throw new Error('[processInbox] Backend must have dbEngine set')
+	}
+
+	// Get message schema co-id (needed for reading/updating message CoMaps)
 	let messageSchemaCoId = null
 	try {
 		const inboxSchema = await resolve(peer, { fromCoValue: inboxCoId }, { returnType: 'schema' })
@@ -96,7 +102,8 @@ export async function processInbox(peer, actorId, inboxCoId) {
 
 		// Message is a CoMap CoValue reference - read using universal read() API
 		try {
-			let messageData = null
+			// Use universal read() API to handle progressive loading
+			const messageStore = await universalRead(peer, messageCoId, messageSchemaCoId)
 
 			// Fast path: message already in node (just created locally)
 			const core = peer.getCoValue?.(messageCoId)

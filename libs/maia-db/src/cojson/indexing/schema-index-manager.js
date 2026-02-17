@@ -403,7 +403,7 @@ export async function ensureSchemaIndexColist(peer, schemaCoId, metaSchemaCoId =
 		schema: indexSchemaCoId,
 		cotype: 'colist',
 		data: [],
-		dataEngine: backend.dbEngine,
+		dataEngine: peer.dbEngine,
 	})
 	indexColistId = indexColistRaw.id
 
@@ -712,7 +712,7 @@ async function ensureSchemataRegistry(peer) {
 		schema: schemaForSchematas,
 		cotype: 'comap',
 		data: {},
-		dataEngine: backend.dbEngine,
+		dataEngine: peer.dbEngine,
 	})
 	osCoMap.set('schematas', schematasCoMap.id)
 
@@ -979,10 +979,8 @@ export async function indexCoValue(peer, coValueCoreOrId) {
 			// The append() operation is already queued in CoJSON's CRDT, so it will persist eventually
 			// Storage sync happens asynchronously in the background - no need to block here
 			// This allows instant local-first UI updates without waiting for persistence
-		} else if (!schemaCoId) {
-			// ROOT CAUSE FIX: Only add to UNKNOWN when CoValue has NO schema at all.
-			// CoValues with a schema that has indexing: false (e.g. CoTexts) must NOT go to UNKNOWN -
-			// they have a valid schema, they're just not in a schema index. Skip indexing entirely.
+		} else {
+			// No schema - add to unknown colist
 			const unknownColist = await ensureUnknownColist(peer)
 
 			if (!unknownColist) {
@@ -1152,14 +1150,8 @@ async function getSchemaIndexColistForRemoval(peer, schemaCoId) {
  * @returns {Promise<void>}
  */
 export async function removeFromIndex(peer, coId, schemaCoId = null) {
-	if (!coId || !coId.startsWith('co_z')) return
-
-	function removeAllFromColist(colist, id) {
-		if (!colist?.toJSON || !colist?.delete) return
-		const items = colist.toJSON()
-		for (let i = items.length - 1; i >= 0; i--) {
-			if (items[i] === id) colist.delete(i)
-		}
+	if (!coId || !coId.startsWith('co_z')) {
+		return
 	}
 
 	if (!schemaCoId) {
@@ -1173,10 +1165,36 @@ export async function removeFromIndex(peer, coId, schemaCoId = null) {
 	}
 
 	if (schemaCoId && typeof schemaCoId === 'string' && schemaCoId.startsWith('co_z')) {
+		// Get schema index colist for removal (doesn't check indexing property)
+		// We need to remove co-values even if indexing is currently disabled
 		const indexColist = await getSchemaIndexColistForRemoval(peer, schemaCoId)
-		removeAllFromColist(indexColist, coId)
+
+		// Remove co-value co-id from index colist
+		if (
+			indexColist &&
+			typeof indexColist.toJSON === 'function' &&
+			typeof indexColist.delete === 'function'
+		) {
+			const items = indexColist.toJSON()
+			const itemIndex = items.indexOf(coId)
+			if (itemIndex !== -1) {
+				indexColist.delete(itemIndex)
+			}
+		}
 	} else {
+		// No schema - remove from unknown colist
 		const unknownColist = await ensureUnknownColist(peer)
-		removeAllFromColist(unknownColist, coId)
+
+		if (
+			unknownColist &&
+			typeof unknownColist.toJSON === 'function' &&
+			typeof unknownColist.delete === 'function'
+		) {
+			const items = unknownColist.toJSON()
+			const itemIndex = items.indexOf(coId)
+			if (itemIndex !== -1) {
+				unknownColist.delete(itemIndex)
+			}
+		}
 	}
 }

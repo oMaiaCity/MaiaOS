@@ -30,7 +30,7 @@ export async function deleteRecord(peer, schema, id) {
 		throw new Error(`[MaiaDB] CoValue not found: ${id}`)
 	}
 
-	if (!backend.isAvailable(coValueCore)) {
+	if (!peer.isAvailable(coValueCore)) {
 		throw new Error(`[MaiaDB] CoValue not available: ${id}`)
 	}
 
