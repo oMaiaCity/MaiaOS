@@ -1207,14 +1207,39 @@ export async function renderApp(
 						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
 					</div>
 					<div class="header-right">
+						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}" title="${getSyncStatusMessage(syncState)}" aria-label="${getSyncStatusMessage(syncState)}">
+							<span class="sync-dot"></span>
+						</div>
 						${
 							authState.signedIn
 								? `
-							${accountAvatarHtml ? `<div class="account-nav-group"><span class="account-display-name">${escapeHtml(accountDisplayName)}</span><button type="button" class="db-status account-menu-toggle" title="Account: ${accountId} (${getSyncStatusMessage(syncState)})" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${accountAvatarHtml}</button></div>` : `<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId} (${getSyncStatusMessage(syncState)})" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${escapeHtml(accountDisplayName)}</button>`}
+							<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId}" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${escapeHtml(accountDisplayName)}</button>
 						`
 								: ''
 						}
 					</div>
+				</div>
+				<!-- Mobile menu (collapsed by default) - account ID shown inside -->
+				<div class="mobile-menu" id="mobile-menu">
+					${
+						authState.signedIn && accountId
+							? `
+						<div class="mobile-menu-account-id">
+							<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
+							<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
+						</div>
+					`
+							: ''
+					}
+					${
+						authState.signedIn
+							? `
+						<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">
+							Sign Out
+						</button>
+					`
+							: ''
+					}
 				</div>
 			</header>
 			<!-- Account dropdown - standalone card below navbar -->

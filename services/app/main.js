@@ -783,14 +783,7 @@ function renderLoadingConnectingScreen() {
 	const isConnected = syncState.connected && syncState.status === 'connected'
 	const isReadOnly = syncState.connected && syncState.writeEnabled === false
 	const hasError = syncState.status === 'error' || syncState.error
-	const indicatorColor = isConnected
-		? isReadOnly
-			? 'var(--color-sun-yellow)'
-			: 'var(--color-lush-green)'
-		: hasError
-			? 'var(--brand-red)'
-			: 'var(--color-sun-yellow)'
-	const indicatorStyle = `background: ${indicatorColor}; animation: ${isConnected && !isReadOnly ? 'none' : 'pulse 2s ease-in-out infinite'};`
+	const indicatorStyle = `background: ${isConnected ? 'var(--color-lush-green)' : hasError ? 'var(--brand-red)' : 'var(--color-sun-yellow)'}; animation: ${isConnected ? 'none' : 'pulse 2s ease-in-out infinite'};`
 	document.getElementById('app').innerHTML = LOADING_SCREEN_HTML(syncMsg, indicatorStyle)
 	if (!loadingScreenSyncUnsubscribe) {
 		loadingScreenSyncUnsubscribe = subscribeSyncState((state) => {
@@ -814,16 +807,12 @@ function updateLoadingConnectingScreen() {
 		const isConnected = syncState.connected && syncState.status === 'connected'
 		const isReadOnly = syncState.connected && syncState.writeEnabled === false
 		const hasError = syncState.status === 'error' || syncState.error
-		const color = isConnected
-			? isReadOnly
-				? 'var(--color-sun-yellow)'
-				: 'var(--color-lush-green)'
+		syncIndicator.style.background = isConnected
+			? 'var(--color-lush-green)'
 			: hasError
 				? 'var(--brand-red)'
 				: 'var(--color-sun-yellow)'
-		syncIndicator.style.background = color
-		syncIndicator.style.animation =
-			isConnected && !isReadOnly ? 'none' : 'pulse 2s ease-in-out infinite'
+		syncIndicator.style.animation = isConnected ? 'none' : 'pulse 2s ease-in-out infinite'
 	}
 }
 
@@ -1162,27 +1151,14 @@ window.navigateToScreen = navigateToScreen
 window.getMoaiBaseUrl = getMoaiBaseUrl
 window.toggleExpand = toggleExpand
 
-// Global state for account menu
-let isMobileMenuOpen = false
-
 // Account menu toggle (username opens dropdown with account ID + sign out)
 window.toggleMobileMenu = () => {
 	isMobileMenuOpen = !isMobileMenuOpen
 	const menu = document.getElementById('mobile-menu')
 	if (!menu) return
-	menu.classList.toggle('active', isMobileMenuOpen)
+	menu.classList.toggle('active')
 	const trigger = document.querySelector('.account-menu-toggle')
-	if (trigger) trigger.classList.toggle('active', isMobileMenuOpen)
-}
-
-/** Restore menu state after re-render */
-window.restoreMenuState = () => {
-	if (isMobileMenuOpen) {
-		const menu = document.getElementById('mobile-menu')
-		if (menu) menu.classList.add('active')
-		const trigger = document.querySelector('.account-menu-toggle')
-		if (trigger) trigger.classList.add('active')
-	}
+	if (trigger) trigger.classList.toggle('active', menu.classList.contains('active'))
 }
 
 /** Toggle sidebar (DB viewer or aven viewer). Pass containerSelector for Shadow DOM. */

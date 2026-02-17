@@ -137,8 +137,7 @@
 	letter-spacing: -0.02em;
 	font-style: normal;
 	line-height: 1;
-	/* Optical alignment: handwritten font renders high; nudge down to vertically center with sync dot */
-	padding-top: 4px;
+	padding-top: var(--font-heading-optical-shift);
 }
 
 .db-status {
@@ -179,9 +178,6 @@
 		font-size: 0.65rem;
 		padding: 0.25rem 0.6rem;
 	}
-	.account-display-name {
-		font-size: 0.65rem;
-	}
 }
 .account-menu-toggle:hover {
 	opacity: 0.85;
@@ -191,127 +187,7 @@
 	border-radius: 9999px;
 }
 
-/* Account display: name (static) + avatar (toggle button) */
-.account-nav-group {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	margin-left: auto;
-}
-.account-display-name {
-	font-family: var(--font-body), system-ui, sans-serif;
-	font-size: 0.7rem;
-	font-weight: 500;
-	color: var(--color-marine-blue);
-}
-/* Avatar as toggle button - no outer border, only sync state border on avatar */
-.account-menu-toggle:has(.navbar-avatar) {
-	padding: 0;
-	gap: 0;
-	margin-left: 0.25rem;
-	display: inline-flex;
-	align-items: center;
-	justify-content: center;
-	overflow: visible;
-	border-radius: 50%;
-	width: 44px;
-	height: 44px;
-	min-width: 44px;
-	min-height: 44px;
-	flex-shrink: 0;
-	border: none;
-	background: transparent;
-	box-shadow: none;
-}
-.navbar-avatar {
-	border-radius: 50%;
-	object-fit: cover;
-	object-position: 50% 50%;
-	aspect-ratio: 1;
-	flex-shrink: 0;
-	display: block;
-	margin: 0;
-	height: 44px;
-	width: 44px;
-	/* Cap to navbar content height - do not overscale */
-	max-height: 48px;
-	max-width: 48px;
-	/* Sync status border */
-	border: 2px solid transparent;
-	transition: border-color 0.3s ease;
-}
-
-.navbar-avatar.connected {
-	border-color: var(--color-lush-green);
-}
-
-.navbar-avatar.read-only {
-	border-color: var(--color-sun-yellow);
-}
-
-.navbar-avatar.disconnected {
-	border-color: #ef4444;
-}
-
-/* Fallback avatar (SVG) - used when no profile image; inherits size from parent class */
-.avatar-fallback {
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	border-radius: 50%;
-	flex-shrink: 0;
-	overflow: hidden;
-	color: var(--color-marine-blue-muted, #64748b);
-}
-.avatar-fallback-svg {
-	width: 100%;
-	height: 100%;
-	object-fit: contain;
-}
-.mobile-menu-account-avatar {
-	display: flex;
-	flex-shrink: 0;
-	overflow: hidden;
-	border-radius: 50%;
-}
-.mobile-menu-account-avatar .navbar-avatar {
-	width: 40px;
-	height: 40px;
-	margin: 0;
-	object-position: 50% 50%;
-}
-
-/* Account block in dropdown (name + ID) */
-.mobile-menu-account {
-	display: flex;
-	align-items: flex-start;
-	gap: 0.75rem;
-	padding-bottom: 0.75rem;
-	border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-	margin-bottom: 0.25rem;
-	min-width: 0;
-}
-.mobile-menu-account-info {
-	display: flex;
-	flex-direction: column;
-	gap: 0.35rem;
-	flex: 1;
-	min-width: 0;
-}
-.mobile-menu-account-name {
-	font-family: var(--font-body), system-ui, sans-serif;
-	font-size: 0.85rem;
-	font-weight: 600;
-	color: var(--color-marine-blue);
-}
-.mobile-menu-account-id-row {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	min-width: 0;
-}
-
-/* Account ID in dropdown (copy button left, full ID right) - legacy/simple layout */
+/* Account ID in dropdown (copy button left, full ID right) */
 .mobile-menu-account-id {
 	display: flex;
 	align-items: center;
@@ -2544,14 +2420,7 @@ pre {
 	font-size: 0.8rem;
 }
 
-/* Icon-only home button (bottom-left in vibe viewer) */
-.bottom-home-btn.home-btn-icon-only {
-	width: 40px;
-	padding: 0;
-	min-width: 40px;
-}
-
-/* Mobile Menu - card-style dropdown, floats above content (no layout push) */
+/* Mobile Menu */
 .mobile-menu {
 	display: none; /* Hidden by default */
 	flex-direction: column;
@@ -2584,31 +2453,7 @@ pre {
 
 /* Mobile & Tablet Responsive Styles */
 @media (max-width: 1024px) {
-	/* Mobile: smaller navbar height */
-	.db-header.whitish-card {
-		padding: 0.35rem 0.25rem 0.35rem 1rem;
-	}
-
-	/* Mobile: hide name in navbar, show only avatar (name lives in dropdown) */
-	.account-nav-group .account-display-name {
-		display: none;
-	}
-
-	/* Mobile: smaller profile avatar */
-	.account-menu-toggle:has(.navbar-avatar) {
-		width: 36px;
-		height: 36px;
-		min-width: 36px;
-		min-height: 36px;
-	}
-	.header-right .navbar-avatar {
-		width: 36px;
-		height: 36px;
-		max-width: 36px;
-		max-height: 36px;
-	}
-
-	/* Account username smaller on mobile (when no avatar, name is the toggle) */
+	/* Account username smaller on mobile */
 	.header-right .account-menu-toggle {
 		font-size: 0.65rem;
 		padding: 0.25rem 0.5rem;
