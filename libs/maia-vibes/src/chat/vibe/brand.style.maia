@@ -476,7 +476,7 @@
 			},
 			".input": {
 				"padding": "{spacing.xs} {spacing.md}",
-				"fontSize": "0.75rem"
+				"fontSize": "16px"
 			},
 			".button": {
 				"padding": "{spacing.xs} {spacing.md}",
@@ -511,7 +511,7 @@
 			},
 			".input": {
 				"padding": "{spacing.xs} {spacing.md}",
-				"fontSize": "0.8rem"
+				"fontSize": "16px"
 			},
 			".button": {
 				"padding": "{spacing.xs} {spacing.md}",
@@ -546,7 +546,7 @@
 			},
 			".input": {
 				"padding": "{spacing.xs} {spacing.md}",
-				"fontSize": "0.85rem"
+				"fontSize": "16px"
 			},
 			".button": {
 				"padding": "{spacing.xs} {spacing.md}",
@@ -581,7 +581,7 @@
 			},
 			".input": {
 				"padding": "{spacing.xs} {spacing.md}",
-				"fontSize": "0.9rem"
+				"fontSize": "16px"
 			},
 			".button": {
 				"padding": "{spacing.xs} {spacing.md}",
