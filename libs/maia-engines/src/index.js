@@ -3,23 +3,22 @@
  *
  * DataEngine: maia.do({ op, schema, key, filter, ... })
  * Engines: Actor, View, Style, State, Tool
- * ReactiveStore: use peer.createReactiveStore() or get from @MaiaOS/db
+ * ReactiveStore: re-exported from @MaiaOS/db
  */
 
+export { ReactiveStore } from '@MaiaOS/db'
+export { ActorEngine } from './engines/actor.engine.js'
+export { DataEngine } from './engines/data.engine.js'
+export { StateEngine } from './engines/state.engine.js'
+export { StyleEngine } from './engines/style.engine.js'
+export { ToolEngine } from './engines/tool.engine.js'
+export { ViewEngine } from './engines/view.engine.js'
+export { Registry as ModuleRegistry } from './modules/registry.js'
 export {
 	createErrorEntry,
 	createErrorResult,
 	createSuccessResult,
 	isPermissionError,
 	isSuccessResult,
-} from '@MaiaOS/schemata/operation-result'
-export { ActorEngine } from './engines/actor.engine.js'
-export { BlobEngine } from './engines/blob.engine.js'
-export { DataEngine } from './engines/data.engine.js'
-export { InboxEngine } from './engines/inbox.engine.js'
-export { ProcessEngine } from './engines/process.engine.js'
-export { StyleEngine } from './engines/style.engine.js'
-export { ViewEngine } from './engines/view.engine.js'
-export { Registry as ModuleRegistry } from './modules/registry.js'
-export { Runtime } from './runtimes/browser.js'
+} from './operations/operation-result.js'
 export { Evaluator as MaiaScriptEvaluator } from './utils/evaluator.js'

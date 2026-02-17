@@ -84,8 +84,8 @@ export async function update(peer, _schema, id, data) {
 
 				// Validate merged data against schema BEFORE applying to CRDT
 				try {
-					await loadSchemaAndValidate(peer, schemaCoId, mergedData, `update for ${id}`, {
-						dataEngine: peer.dbEngine,
+					await loadSchemaAndValidate(backend, schemaCoId, mergedData, `update for ${id}`, {
+						dataEngine: backend.dbEngine,
 					})
 				} catch (error) {
 					// If validation fails, throw error (operation never applied to CRDT)

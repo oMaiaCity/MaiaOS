@@ -11,7 +11,6 @@
  *   const result = await cojsonAPI.cojson({op: 'read', schema: 'co_z...', key: 'co_z...'});
  */
 
-import { DBEngine } from '@MaiaOS/operations'
 import { MaiaDB } from './MaiaDB.js'
 
 /**
@@ -31,12 +30,13 @@ export async function createCoJSONAPI(node, account) {
 
 	const backend = new MaiaDB({ node, account }, { systemSpark: '°Maia' })
 
-	const dataEngine = new DataEngine(peer, {
+	const { DataEngine, MaiaScriptEvaluator } = await import('@MaiaOS/engines')
+	const dataEngine = new DataEngine(backend, {
 		evaluator: new MaiaScriptEvaluator(),
 	})
 
-	// Set dbEngine on peer for runtime schema validation in create functions
-	peer.dbEngine = dataEngine
+	// Set dbEngine on backend for runtime schema validation in create functions
+	backend.dbEngine = dataEngine
 
 	// Return API object
 	return {

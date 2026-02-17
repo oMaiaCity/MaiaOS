@@ -112,8 +112,7 @@ export async function create(peer, schema, data, options = {}) {
 		schema,
 		cotype,
 		data: cotype === 'comap' ? data : cotype === 'colist' ? data : undefined,
-		dataEngine: peer.dbEngine,
-		isSchemaDefinition,
+		dataEngine: backend.dbEngine,
 	})
 
 	if (isChatMessage) {

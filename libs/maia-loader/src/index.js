@@ -16,6 +16,7 @@ export {
 	getSchema,
 	getSchemaIndexColistId,
 	MaiaDB,
+	ReactiveStore,
 	removeGroupMember,
 	resolve,
 	resolveAccountCoIdsToProfileNames,
@@ -43,5 +44,4 @@ export {
 	// NO SYNC STATE: subscribeSyncState moved to @MaiaOS/db
 } from '@MaiaOS/self'
 export { createWebSocketPeer } from 'cojson-transport-ws'
-export { createCoJSONAPI } from './cojson-factory.js'
 export { MaiaOS } from './loader.js'

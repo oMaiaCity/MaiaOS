@@ -9,6 +9,7 @@
  */
 
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js'
+import { ReactiveStore } from '../../reactive-store.js'
 import { getHumansRegistryId, getSparksRegistryId } from '../groups/groups.js'
 import {
 	resolve as resolveSchema,
@@ -205,7 +206,7 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 	const { timeoutMs = 5000 } = options
 
 	// Evaluator injected at boot (avoids maia-db → maia-engines dependency)
-	const evaluator = peer.evaluator
+	const evaluator = backend.evaluator
 	if (!evaluator) {
 		throw new Error(
 			'[read] Evaluator required for reactive resolution. Inject via DataEngine options at boot.',

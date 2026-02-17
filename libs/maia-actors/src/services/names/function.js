@@ -1,3 +1,5 @@
+import { createSuccessResult } from '@MaiaOS/engines'
+
 /**
  * Compute Message Names Actor - @maia/actor/services/names
  * Computes a lookup object mapping message IDs to display names based on role.

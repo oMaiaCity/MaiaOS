@@ -70,7 +70,7 @@ export async function createCoMap(
 	// STRICT: Always validate using runtime schema from database (no fallbacks, no legacy hacks)
 	if (!isExceptionSchema(schemaName)) {
 		// Use consolidated universal validation function (single source of truth)
-		await loadSchemaAndValidate(dbEngine?.peer || null, schemaName, init, 'createCoMap', {
+		await loadSchemaAndValidate(dbEngine?.backend || null, schemaName, init, 'createCoMap', {
 			dataEngine: dbEngine,
 			getAllSchemas,
 		})

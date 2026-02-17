@@ -1,5 +1,5 @@
 /**
- * MaiaOS Loader
+ * MaiaOS Loader - v0.4
  *
  * Single entry point for the MaiaOS Operating System
  * Central source of truth for booting and managing the OS
@@ -14,9 +14,7 @@
 import { resolve, resolveReactive } from '@MaiaOS/db'
 import {
 	ActorEngine,
-	BlobEngine,
 	DataEngine,
-	InboxEngine,
 	MaiaScriptEvaluator,
 	ModuleRegistry,
 	ProcessEngine,
@@ -27,6 +25,7 @@ import {
 import * as aiModule from '@MaiaOS/engines/modules/ai.module.js'
 import * as coreModule from '@MaiaOS/engines/modules/core.module.js'
 import * as dbModule from '@MaiaOS/engines/modules/db.module.js'
+import * as sparksModule from '@MaiaOS/engines/modules/sparks.module.js'
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper'
 
 // Store pre-loaded modules for registry
@@ -292,6 +291,23 @@ export class MaiaOS {
 		// Initialize database (requires peer via node+account or pre-initialized peer)
 		await MaiaOS._initializeDatabase(os, config)
 
+		// OPTIMIZATION: Start loading spark.os (account.registries.sparks[°Maia].os) in background (non-blocking)
+		// spark.os is NOT required for account loading - it's only needed for schema resolution
+		// Schema resolution can happen progressively as spark.os becomes available
+		// This allows MaiaOS to boot immediately without waiting 5+ seconds for spark.os to sync
+		if (backend && typeof backend.ensureAccountOsReady === 'function') {
+			// Start loading spark.os in background (non-blocking)
+			// 15s timeout for slow sync (e.g. first load to moai.next.maia.city)
+			backend
+				.ensureAccountOsReady({ timeoutMs: 15000 })
+				.then((accountOsReady) => {
+					if (!accountOsReady) {
+					}
+				})
+				.catch((_err) => {})
+			// Don't await - let it load in background while we continue booting
+		}
+
 		// Set schema resolver for runtime validation (engines need dataEngine for schema lookups)
 		const { setSchemaResolver } = await import('@MaiaOS/schemata/validation.helper')
 		setSchemaResolver({ dataEngine: os.dataEngine })
@@ -336,10 +352,10 @@ export class MaiaOS {
 			getMoaiBaseUrl: config.getMoaiBaseUrl ?? null,
 		}
 
-		// If peer is provided, use it
-		if (config.peer) {
-			os.dataEngine = new DataEngine(config.peer, dbOptions)
-			return config.peer
+		// If backend is provided, use it
+		if (config.backend) {
+			os.dataEngine = new DataEngine(config.backend, dbOptions)
+			return config.backend
 		}
 
 		// If node and account are provided, create MaiaDB peer
@@ -349,8 +365,8 @@ export class MaiaOS {
 				{ node: config.node, account: config.account },
 				{ systemSpark: '°Maia' },
 			)
-			os.dbEngine = new DBEngine(maiaDB, dbOptions)
-			maiaDB.dbEngine = os.dbEngine
+			os.dataEngine = new DataEngine(maiaDB, dbOptions)
+			maiaDB.dbEngine = os.dataEngine
 			return maiaDB
 		}
 
@@ -373,10 +389,11 @@ export class MaiaOS {
 		// Initialize engines
 		// CRITICAL: Pass dataEngine to evaluator for runtime schema validation (no fallbacks)
 		os.evaluator = new MaiaScriptEvaluator(os.moduleRegistry, { dataEngine: os.dataEngine })
+		os.toolEngine = new ToolEngine(os.moduleRegistry)
 
 		// Store engines in registry for module access
+		os.moduleRegistry._toolEngine = os.toolEngine
 		os.moduleRegistry._dataEngine = os.dataEngine
-		os.blobEngine = new BlobEngine(os.dataEngine)
 
 		os.processEngine = new ProcessEngine(os.evaluator)
 		os.styleEngine = new StyleEngine()
@@ -391,14 +408,13 @@ export class MaiaOS {
 		os.actorEngine = new ActorEngine(os.styleEngine, os.viewEngine, os.processEngine, os.inboxEngine)
 		os.inboxEngine.actorEngine = os.actorEngine
 
+		// SubscriptionEngine eliminated - all subscriptions handled via direct read() + ReactiveStore
+
 		// Pass DataEngine to engines (for internal config loading)
 		os.actorEngine.dataEngine = os.dataEngine
-		os.inboxEngine.dataEngine = os.dataEngine
 		os.viewEngine.dataEngine = os.dataEngine
-		os.viewEngine.styleEngine = os.styleEngine
 		os.styleEngine.dataEngine = os.dataEngine
-		os.processEngine.dataEngine = os.dataEngine
-		os.processEngine.actorOps = os.actorEngine
+		os.stateEngine.dataEngine = os.dataEngine
 
 		// Store reference to MaiaOS in actorEngine (for @db tool access)
 		os.actorEngine.os = os
@@ -463,8 +479,8 @@ export class MaiaOS {
 				}
 			}
 			const actorSchemaCoId = await resolve(
-				this.actorEngine.dataEngine.peer,
-				{ fromCoValue: actorCoId },
+				this.actorEngine.dataEngine.backend,
+				{ fromCoValue: actorPath },
 				{ returnType: 'coId' },
 			)
 			const store = await this.actorEngine.dataEngine.execute({
@@ -502,9 +518,9 @@ export class MaiaOS {
 	 * @param {string} [spark='°Maia'] - Spark name (used only when avenKeyOrCoId is a key, not a co-id)
 	 * @returns {Promise<{aven: Object, actor: Object}>} Aven metadata and actor instance
 	 */
-	async loadAvenFromAccount(avenKeyOrCoId, container, spark = '°Maia') {
+	async loadVibeFromAccount(vibeKeyOrCoId, container, spark = '°Maia') {
 		if (!this.dataEngine || !this._account) {
-			throw new Error('[Loader] Cannot load aven from account - dataEngine or account not available')
+			throw new Error('[Loader] Cannot load vibe from account - dataEngine or account not available')
 		}
 
 		// Co-id: load directly from database (skip spark.avens lookup)
@@ -584,7 +600,7 @@ export class MaiaOS {
 			)
 		}
 
-		// Step 5: Read spark CoMap to get spark.avens (by co-id)
+		// Step 5: Read spark CoMap to get spark.vibes (by co-id)
 		const sparkStore = await this.dataEngine.execute({
 			op: 'read',
 			schema: null,
@@ -604,8 +620,8 @@ export class MaiaOS {
 			throw new Error(`[Kernel] Spark "${spark}" has no avens registry. Ensure seeding has run.`)
 		}
 
-		// Step 6: Read spark.avens CoMap
-		const avensStore = await this.dataEngine.execute({
+		// Step 6: Read spark.vibes CoMap
+		const vibesStore = await this.dataEngine.execute({
 			op: 'read',
 			schema: avensId,
 			key: avensId,
@@ -652,12 +668,17 @@ export class MaiaOS {
 		}
 		const avenCoId = avenId
 
-		const avenStore = await this.dataEngine.execute({
+		// Load vibe CoValue first (without schema filter - read CoValue directly)
+		// This allows us to extract schema co-id from headerMeta.$schema
+		// Loading vibe from database
+
+		const vibeStore = await this.dataEngine.execute({
 			op: 'read',
 			schema: null,
 			key: avenCoId,
 		})
 
+		// Extract schema co-id from vibe's headerMeta.$schema using fromCoValue pattern
 		const schemaStore = await this.dataEngine.execute({
 			op: 'schema',
 			fromCoValue: avenCoId,
@@ -675,7 +696,7 @@ export class MaiaOS {
 
 		if (!aven || aven.error) {
 			try {
-				await this.dataEngine.execute({
+				const directStore = await this.dataEngine.execute({
 					op: 'read',
 					schema: null,
 					key: avenCoId,
@@ -706,7 +727,7 @@ export class MaiaOS {
 		// UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
 		// Returns ReactiveStore that updates when schema becomes available
 		const actorSchemaStore = resolveReactive(
-			this.dataEngine.peer,
+			this.dataEngine.backend,
 			{ fromCoValue: actorCoId },
 			{ returnType: 'coId' },
 		)
@@ -836,7 +857,8 @@ export class MaiaOS {
 			actorEngine: this.actorEngine,
 			viewEngine: this.viewEngine,
 			styleEngine: this.styleEngine,
-			processEngine: this.processEngine,
+			stateEngine: this.stateEngine,
+			toolEngine: this.toolEngine,
 			dataEngine: this.dataEngine,
 			evaluator: this.evaluator,
 			moduleRegistry: this.moduleRegistry,
