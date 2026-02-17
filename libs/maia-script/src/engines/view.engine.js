@@ -556,9 +556,11 @@ export class ViewEngine {
 			return
 		}
 
+		const UPDATE_INPUT_TYPES = ['UPDATE_INPUT', 'UPDATE_AGENT_INPUT']
+		const isUpdateInputType = UPDATE_INPUT_TYPES.includes(eventName)
+
 		// Prevent keydown Enter from also triggering button click (double CREATE_BUTTON, double chat sends)
 		// Fixes double processing in Todos, Chat, and any input+button form
-		const isUpdateInputType = eventName === 'UPDATE_INPUT' || eventName === 'UPDATE_AGENT_INPUT'
 		if (e.type === 'keydown' && e.key === 'Enter' && !isUpdateInputType) {
 			e.preventDefault()
 		}
@@ -591,44 +593,9 @@ export class ViewEngine {
 					)
 				}
 
-				// Guard: REMOVE_MEMBER requires memberId - skip send when missing (prevents operation failure)
-				if (
-					eventName === 'REMOVE_MEMBER' &&
-					(!payload?.memberId || typeof payload.memberId !== 'string')
-				) {
-					console.warn(
-						'[ViewEngine] REMOVE_MEMBER skipped: memberId required but missing from resolved payload',
-						{
-							payload,
-							item: data.item,
-						},
-					)
-					return
-				}
-
-				// Guard: ADD_AGENT requires agentId - skip send when empty (prevents operation failure)
-				if (
-					eventName === 'ADD_AGENT' &&
-					(!payload?.agentId || typeof payload.agentId !== 'string' || !payload.agentId.trim())
-				) {
-					return
-				}
-
-				// Guard: CREATE_BUTTON requires value - skip send when empty (prevents stuck in creating, matches ADD_AGENT pattern)
-				if (
-					eventName === 'CREATE_BUTTON' &&
-					(!payload?.value || typeof payload.value !== 'string' || !payload.value.trim())
-				) {
-					return
-				}
-
-				// Guard: SEND_MESSAGE requires inputText - skip send when empty (prevents stuck in chatting, matches CREATE_BUTTON pattern)
-				if (
-					eventName === 'SEND_MESSAGE' &&
-					(!payload?.inputText || typeof payload.inputText !== 'string' || !payload.inputText.trim())
-				) {
-					return
-				}
+				// Runtime schema validation (from backend registry) - skip send if payload invalid
+				const payloadValid = await this.actorEngine.validateMessagePayloadForSend(eventName, payload)
+				if (!payloadValid) return
 
 				// CLEAN ARCHITECTURE: For update-input types on blur, only send if DOM value differs from CURRENT context
 				// This prevents repopulation after state machine explicitly clears the field

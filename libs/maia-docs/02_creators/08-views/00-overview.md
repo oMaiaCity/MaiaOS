@@ -278,6 +278,32 @@ Data-attributes are the primary mechanism for conditional styling. The state mac
 - `@checked` - Checkbox/radio checked state
 - `@selectedValue` - Select element value
 
+### Universal Input+Submit Pattern
+
+Use this canonical pattern for input fields with a submit button. Both Enter key and button click must use `@inputValue` (DOM at event time), not context (`$field`):
+
+```json
+{
+  "tag": "input",
+  "value": "$fieldName",
+  "$on": {
+    "input": { "send": "UPDATE_INPUT", "payload": { "value": "@inputValue" } },
+    "keydown": { "send": "SUBMIT_EVENT", "payload": { "value": "@inputValue" }, "key": "Enter" }
+  }
+},
+{
+  "tag": "button",
+  "attrs": { "type": "button" },
+  "text": "Submit",
+  "$on": { "click": { "send": "SUBMIT_EVENT", "payload": { "value": "@inputValue" } } }
+}
+```
+
+- `SUBMIT_EVENT` = CREATE_BUTTON | SEND_MESSAGE | ADD_AGENT (vibe-specific)
+- `value` = generic key; some schemas use `inputText` or `agentId`
+- `type="button"` = prevents accidental form submit
+- Always use `@inputValue` for the button payload; `$fieldName` can be stale when clicked
+
 ## Conditional Styling (No Conditional Logic in Views!)
 
 **CRITICAL:** Views are **"dumb" templates** - they contain **zero conditional logic**. All conditionals are handled by the state machine and CSS:

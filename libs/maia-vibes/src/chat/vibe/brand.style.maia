@@ -103,6 +103,13 @@
 			"border": "1px solid {colors.border}",
 			"boxShadow": "{shadows.md}"
 		},
+		".messagesContent": {
+			"display": "flex",
+			"flexDirection": "column",
+			"gap": "{spacing.md}",
+			"minHeight": "0",
+			"flex": "1"
+		},
 		".message-wrapper": {
 			"display": "flex",
 			"flexDirection": "column",
@@ -142,10 +149,7 @@
 		},
 		".messageAssistant": {
 			"alignSelf": "flex-start",
-			"background": "rgba(255, 255, 255, 0.6)",
-			"color": "{colors.marineBlue}",
-			"border": "1px solid {colors.border}",
-			"boxShadow": "{shadows.sm}"
+			"color": "{colors.marineBlue}"
 		},
 		".messageUser": {
 			"alignSelf": "flex-end",
@@ -155,9 +159,7 @@
 		},
 		".message[data-role='assistant']": {
 			"alignSelf": "flex-start",
-			"background": "rgba(255, 255, 255, 0.6)",
-			"color": "{colors.marineBlue}",
-			"border": "1px solid {colors.border}"
+			"color": "{colors.marineBlue}"
 		},
 		".message[data-role='user']": {
 			"alignSelf": "flex-end",
@@ -221,7 +223,7 @@
 			"padding": "{spacing.xs} {spacing.md}",
 			"border": "none",
 			"background": "transparent",
-			"fontSize": "0.7rem",
+			"fontSize": "16px",
 			"color": "{colors.marineBlue}",
 			"fontFamily": "{typography.fontFamily.body}",
 			"fontWeight": "{typography.fontWeight.light}",
@@ -320,7 +322,7 @@
 			},
 			".input": {
 				"padding": "{spacing.xs} {spacing.md}",
-				"fontSize": "0.7rem"
+				"fontSize": "16px"
 			},
 			".button": {
 				"padding": "{spacing.xs} {spacing.md}",
@@ -355,7 +357,7 @@
 			},
 			".input": {
 				"padding": "{spacing.xs} {spacing.md}",
-				"fontSize": "0.7rem"
+				"fontSize": "16px"
 			},
 			".button": {
 				"padding": "{spacing.xs} {spacing.md}",
