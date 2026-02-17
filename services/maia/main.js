@@ -18,6 +18,7 @@ import {
 	isPRFSupported,
 	loadOrCreateAgentAccount,
 	MaiaOS,
+	resolveAccountToProfileCoId,
 	signInWithPasskey,
 	signUpWithPasskey,
 	subscribeSyncState,
@@ -356,13 +357,16 @@ async function autoRegisterHuman(maia) {
 	if (!maia?.id?.maiaId || detectMode() === 'agent') return
 	const baseUrl = getMoaiBaseUrl()
 	if (!baseUrl) return
-	const accountId = maia.id.maiaId.id || maia.id.maiaId.$jazz?.id
+	const account = maia.id.maiaId
+	const accountId = account.id || account.$jazz?.id
 	if (!accountId?.startsWith('co_z')) return
+	const profileId = account.get?.('profile')
+	if (!profileId?.startsWith('co_z')) return
 	try {
 		await fetch(`${baseUrl}/register`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ type: 'human', accountId }),
+			body: JSON.stringify({ type: 'human', accountId, profileId }),
 		})
 	} catch (_e) {}
 }
@@ -824,7 +828,7 @@ function loadSpark(spark) {
 
 // switchView moved above selectCoValue
 
-function selectCoValue(coId, skipHistory = false) {
+function selectCoValueInternal(coId, skipHistory = false) {
 	// Collapse sidebars when selecting a co-value
 	collapseAllSidebars()
 
@@ -850,6 +854,18 @@ function selectCoValue(coId, skipHistory = false) {
 	currentScreen = 'maia-db' // Navigate to DB viewer when selecting a CoValue
 	renderAppInternal()
 	// read() API in db-view.js handles loading and reactivity automatically
+}
+
+/** Resolve account co-id to profile when possible (for clicks); then select. */
+async function selectCoValue(coId, skipHistory = false) {
+	let targetCoId = coId
+	if (coId?.startsWith('co_z') && maia?.db) {
+		try {
+			const profileId = await resolveAccountToProfileCoId(maia, coId)
+			if (profileId) targetCoId = profileId
+		} catch (_e) {}
+	}
+	selectCoValueInternal(targetCoId, skipHistory)
 }
 
 /**

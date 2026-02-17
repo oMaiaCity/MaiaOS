@@ -50,8 +50,14 @@ export { waitForStoreReady } from './cojson/crud/read-operations.js'
 // STRICT: No createAccount() - only createAccountWithSecret() and loadAccount()
 export { createAccountWithSecret, loadAccount } from './cojson/groups/coID.js'
 export { createGroup, createProfile } from './cojson/groups/create.js'
-export { getSparkCapabilityGroupIdFromSparkCoId } from './cojson/groups/groups.js'
-export { resolveAccountCoIdsToProfileNames } from './cojson/helpers/resolve-account-profile.js'
+export {
+	getSparkCapabilityGroupIdFromSparkCoId,
+	removeGroupMember,
+} from './cojson/groups/groups.js'
+export {
+	resolveAccountCoIdsToProfileNames,
+	resolveAccountToProfileCoId,
+} from './cojson/helpers/resolve-account-profile.js'
 export { resolveGroupCoIdsToCapabilityNames } from './cojson/helpers/resolve-capability-group.js'
 // Sync Peer Setup (client-side peer configuration for LocalNode)
 export { setupSyncPeers, subscribeSyncState } from './cojson/peers/sync-peers.js'

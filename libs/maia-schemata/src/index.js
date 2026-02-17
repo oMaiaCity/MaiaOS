@@ -68,6 +68,7 @@ import childrenSchema from './os/children.schema.json'
 import contextSchema from './os/context.schema.json'
 // Import extracted $defs as separate schemas
 import guardSchema from './os/guard.schema.json'
+import humanSchema from './os/human.schema.json'
 import humansRegistrySchema from './os/humans-registry.schema.json'
 import inboxSchema from './os/inbox.schema.json'
 import indexesRegistrySchema from './os/indexes-registry.schema.json'
@@ -119,6 +120,7 @@ const SCHEMAS = {
 	'os/indexes-registry': indexesRegistrySchema,
 	'os/vibes-registry': vibesRegistrySchema,
 	'os/sparks-registry': sparksRegistrySchema,
+	'os/human': humanSchema,
 	'os/humans-registry': humansRegistrySchema,
 	'os/registries': registriesSchema,
 	'data/todos': todosDataSchema,
