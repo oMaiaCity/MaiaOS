@@ -74,6 +74,21 @@ export class MaiaOS {
 	}
 
 	/**
+	 * MaiaPeer - P2P layer (node + account) for tools that need direct peer access
+	 * @returns {{ node: LocalNode, account: RawAccount }|null}
+	 */
+	get peer() {
+		if (this._node && this._account) {
+			return { node: this._node, account: this._account }
+		}
+		const backend = this.dataEngine?.backend
+		if (backend?.node && backend?.account) {
+			return { node: backend.node, account: backend.account }
+		}
+		return null
+	}
+
+	/**
 	 * Get all CoValues from the node (for maia-city compatibility)
 	 * @returns {Array} Array of CoValue metadata
 	 */
@@ -603,7 +618,7 @@ export class MaiaOS {
 	}
 
 	/**
-	 * Load a vibe from database (maia.db)
+	 * Load a vibe from database (maia.do)
 	 * @param {string} vibeId - Vibe ID (co-id or human-readable like "°Maia/vibe/todos")
 	 * @param {HTMLElement} container - Container element
 	 * @param {string} [vibeKey] - Optional vibe key for actor reuse tracking (e.g., 'todos')

@@ -1,7 +1,7 @@
 /**
  * ActorEngine - Orchestrates actors, views, styles, and actions
  * v0.2: Added message passing (inbox/subscriptions) for AI agent coordination
- * v0.4: Added maia.db() for unified data operations (replaced ReactiveStore)
+ * v0.4: Added maia.do() for unified data operations (replaced ReactiveStore)
  * Handles: Actor lifecycle, action registry, context updates, message passing, reactive data
  * Generic and universal - no domain-specific logic
  */
