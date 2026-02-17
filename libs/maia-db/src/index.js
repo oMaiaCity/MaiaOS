@@ -68,8 +68,8 @@ export {
 	resolve,
 	resolveReactive,
 } from './cojson/schema/resolver.js'
-export { simpleAccountSeed } from './cojson/seeding/seed.js'
 export { schemaMigration } from './migrations/schema.migration.js'
+export { simpleAccountSeed } from './migrations/seeding/seed.js'
 // ReactiveStore - reactive data store pattern (owned by maia-db; engines import from here)
 export { ReactiveStore } from './reactive-store.js'
 export {
@@ -79,4 +79,4 @@ export {
 	getSchema,
 	hasSchema,
 } from './schemas/registry.js'
-export { generateRegistryName } from './seed/registry-name-generator.js'
+export { generateRegistryName } from './utils/registry-name-generator.js'

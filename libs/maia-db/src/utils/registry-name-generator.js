@@ -17,7 +17,7 @@ const ANIMALS_LEN = animals.length
 
 if (ADJECTIVES_LEN < 100 || ANIMALS_LEN < 100) {
 	console.warn(
-		`[registry-name] Seed data incomplete: adjectives=${ADJECTIVES_LEN}, animals=${ANIMALS_LEN}. Need 100 each.`,
+		`[registry-name] Data incomplete: adjectives=${ADJECTIVES_LEN}, animals=${ANIMALS_LEN}. Need 100 each.`,
 	)
 }
 
