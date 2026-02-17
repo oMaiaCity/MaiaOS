@@ -238,6 +238,8 @@
 
     "@MaiaOS/peer": ["@MaiaOS/peer@workspace:libs/maia-peer"],
 
+    "@MaiaOS/peer": ["@MaiaOS/peer@workspace:libs/maia-peer"],
+
     "@MaiaOS/schemata": ["@MaiaOS/schemata@workspace:libs/maia-schemata"],
 
     "@MaiaOS/self": ["@MaiaOS/self@workspace:libs/maia-self"],
