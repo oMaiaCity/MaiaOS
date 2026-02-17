@@ -1,11 +1,11 @@
 // Re-export db functions (bundled in core)
 // Peer setup, sync state, backend for operations
 export {
-	CoJSONBackend,
 	createCoJSONAPI,
 	generateRegistryName,
 	getSchema,
 	getSchemaIndexColistId,
+	MaiaDB,
 	removeGroupMember,
 	resolve,
 	resolveAccountCoIdsToProfileNames,

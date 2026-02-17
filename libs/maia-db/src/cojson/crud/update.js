@@ -25,11 +25,11 @@ export async function update(backend, _schema, id, data) {
 		waitForAvailable: true,
 	})
 	if (!coValueCore) {
-		throw new Error(`[CoJSONBackend] CoValue not found: ${id}`)
+		throw new Error(`[MaiaDB] CoValue not found: ${id}`)
 	}
 
 	if (!backend.isAvailable(coValueCore)) {
-		throw new Error(`[CoJSONBackend] CoValue not available: ${id}`)
+		throw new Error(`[MaiaDB] CoValue not available: ${id}`)
 	}
 
 	const content = backend.getCurrentContent(coValueCore)
@@ -86,7 +86,7 @@ export async function update(backend, _schema, id, data) {
 			content.set(key, value)
 		}
 	} else {
-		throw new Error(`[CoJSONBackend] Update not supported for type: ${rawType}`)
+		throw new Error(`[MaiaDB] Update not supported for type: ${rawType}`)
 	}
 
 	// LOCAL-FIRST: Updates are instant, sync happens in background

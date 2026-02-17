@@ -32,7 +32,7 @@ async function determineCotype(backend, schema, data) {
 					// CoText support eliminated - throw error if schema specifies cotext
 					if (definition.cotype === 'cotext' || definition.cotype === 'coplaintext') {
 						throw new Error(
-							`[CoJSONBackend] CoText (cotext) support has been eliminated. Schema ${schema} specifies cotext, which is no longer supported.`,
+							`[MaiaDB] CoText (cotext) support has been eliminated. Schema ${schema} specifies cotext, which is no longer supported.`,
 						)
 					}
 					return definition.cotype
@@ -47,12 +47,12 @@ async function determineCotype(backend, schema, data) {
 	} else if (typeof data === 'string') {
 		// CoText support eliminated - strings are not valid CoValue types
 		throw new Error(
-			`[CoJSONBackend] Cannot determine cotype from data type for schema ${schema}. String data type is not supported (CoText/cotext support has been eliminated). Use CoMap or CoList instead.`,
+			`[MaiaDB] Cannot determine cotype from data type for schema ${schema}. String data type is not supported (CoText/cotext support has been eliminated). Use CoMap or CoList instead.`,
 		)
 	} else if (typeof data === 'object' && data !== null) {
 		return 'comap'
 	} else {
-		throw new Error(`[CoJSONBackend] Cannot determine cotype from data type for schema ${schema}`)
+		throw new Error(`[MaiaDB] Cannot determine cotype from data type for schema ${schema}`)
 	}
 }
 
@@ -72,14 +72,14 @@ export async function create(backend, schema, data, options = {}) {
 	const cotype = await determineCotype(backend, schema, data)
 
 	if (!backend.account) {
-		throw new Error('[CoJSONBackend] Account required for create')
+		throw new Error('[MaiaDB] Account required for create')
 	}
 
 	if (cotype === 'comap' && (!data || typeof data !== 'object' || Array.isArray(data))) {
-		throw new Error('[CoJSONBackend] Data must be object for comap')
+		throw new Error('[MaiaDB] Data must be object for comap')
 	}
 	if (cotype === 'colist' && !Array.isArray(data)) {
-		throw new Error('[CoJSONBackend] Data must be array for colist')
+		throw new Error('[MaiaDB] Data must be array for colist')
 	}
 
 	const { coValue } = await createCoValueForSpark(backend, spark, {

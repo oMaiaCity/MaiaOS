@@ -23,7 +23,6 @@
 
 import {
 	buildSeedConfig,
-	CoJSONBackend,
 	createWebSocketPeer,
 	DBEngine,
 	filterVibesForSeeding,
@@ -32,6 +31,7 @@ import {
 	getAllToolDefinitions,
 	getAllVibeRegistries,
 	loadOrCreateAgentAccount,
+	MaiaDB,
 	removeGroupMember,
 	resolve,
 	schemaMigration,
@@ -512,7 +512,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 		process.on('SIGTERM', () => shutdown())
 		process.on('SIGINT', () => shutdown())
 
-		const backend = new CoJSONBackend(localNode, result.account, { systemSpark: '°Maia' })
+		const backend = new MaiaDB({ node: localNode, account: result.account }, { systemSpark: '°Maia' })
 		const dbEngine = new DBEngine(backend)
 		backend.dbEngine = dbEngine
 		agentWorker = { node: localNode, account: result.account, backend, dbEngine }

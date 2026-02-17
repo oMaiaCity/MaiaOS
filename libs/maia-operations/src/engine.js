@@ -47,7 +47,7 @@ import {
 export class DBEngine {
 	/**
 	 * Create a new DBEngine instance
-	 * @param {DBAdapter} backend - Backend adapter instance (must implement DBAdapter interface)
+	 * @param {Object} backend - MaiaDB or backend with read/create/update/delete interface
 	 * @param {Object} [options] - Optional configuration
 	 * @param {Object} [options.evaluator] - Optional MaiaScript evaluator for expression evaluation in updates
 	 * @param {() => string|null} [options.getMoaiBaseUrl] - Optional fn returning moai API base URL (for POST /register after createSpark)
@@ -60,8 +60,7 @@ export class DBEngine {
 		// Pass dbEngine to backend for runtime schema validation in create functions
 		if (backend && typeof backend.setDbEngine === 'function') {
 			backend.setDbEngine(this)
-		} else if (backend && backend.constructor.name === 'CoJSONBackend') {
-			// CoJSONBackend stores dbEngine in constructor
+		} else if (backend && backend.constructor.name === 'MaiaDB') {
 			backend.dbEngine = this
 		}
 
