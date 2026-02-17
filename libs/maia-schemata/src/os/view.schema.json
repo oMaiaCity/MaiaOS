@@ -110,6 +110,10 @@
 						{ "type": "boolean" },
 						{ "type": "null" }
 					]
+				},
+				"scrollToBottomOn": {
+					"type": "string",
+					"description": "Context key (e.g. $conversations). When array length increases, scrolls this scroll container to bottom."
 				}
 			},
 			"additionalProperties": false

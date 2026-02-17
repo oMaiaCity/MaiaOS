@@ -18,7 +18,7 @@
 		},
 		"selectors": {
 			"type": "object",
-			"description": "CSS selector-based styles (typically used in brand styles)",
+			"description": "CSS selector-based styles and at-rules (@keyframes, @container, @media). Typically used in brand styles",
 			"additionalProperties": {
 				"type": "object",
 				"description": "CSS properties and values",

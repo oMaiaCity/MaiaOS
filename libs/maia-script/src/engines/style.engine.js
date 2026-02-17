@@ -280,11 +280,25 @@ export class StyleEngine {
 			// Interpolate tokens in the selector itself (for container query breakpoints)
 			const interpolatedSelector = this._interpolateTokens(selector, tokens)
 
-			// Check if this is a container query or media query (starts with @)
+			// Check if this is a container query, media query, or keyframes (starts with @)
 			const isAtRule =
 				interpolatedSelector.startsWith('@container') || interpolatedSelector.startsWith('@media')
+			const isKeyframes = interpolatedSelector.startsWith('@keyframes')
 
-			if (isAtRule) {
+			if (isKeyframes) {
+				// @keyframes: styles = { "0%": { "transform": "..." }, "30%": { "transform": "..." } }
+				// All values flow through compileModifierStyles → _interpolateTokens → sanitization
+				const keyframeSteps = []
+				for (const [stepSelector, stepStyles] of Object.entries(styles)) {
+					if (typeof stepStyles === 'object' && stepStyles !== null && !Array.isArray(stepStyles)) {
+						const cssProps = this.compileModifierStyles(stepStyles, tokens)
+						keyframeSteps.push(`  ${stepSelector} {\n${cssProps}\n  }`)
+					}
+				}
+				if (keyframeSteps.length > 0) {
+					cssRules.push(`${interpolatedSelector} {\n${keyframeSteps.join('\n')}\n}`)
+				}
+			} else if (isAtRule) {
 				// For container/media queries, styles contains nested selectors (e.g., ".stack", ".form")
 				const nestedRules = []
 				for (const [nestedSelector, nestedStyles] of Object.entries(styles)) {
@@ -342,11 +356,10 @@ export class StyleEngine {
 		return cssRules.join('\n\n')
 	}
 
-	compileToCSS(tokens, components, selectors = {}, rawCSS = '', containerName = null) {
+	compileToCSS(tokens, components, selectors = {}, containerName = null) {
 		let css = `${this.compileTokensToCSS(tokens, containerName)}\n${this.compileComponentsToCSS(components, tokens)}`
 		const selectorCSS = this.compileSelectors(selectors, tokens)
 		if (selectorCSS) css += `\n\n/* State-based selectors */\n${selectorCSS}`
-		if (rawCSS) css += `\n\n/* Raw CSS fallback */\n${rawCSS}`
 
 		return css
 	}
@@ -420,15 +433,8 @@ export class StyleEngine {
 		const mergedTokens = this.deepMerge(brandTokensWithDefaults, actor.tokens || {})
 		const mergedComponents = this.deepMerge(brand.components || {}, actor.components || {})
 		const mergedSelectors = this.deepMerge(brand.selectors || {}, actor.selectors || {})
-		const rawCSS = [brand.rawCSS, actor.rawCSS].filter(Boolean).join('\n\n')
 
-		const css = this.compileToCSS(
-			mergedTokens,
-			mergedComponents,
-			mergedSelectors,
-			rawCSS,
-			containerName,
-		)
+		const css = this.compileToCSS(mergedTokens, mergedComponents, mergedSelectors, containerName)
 		const sheet = new CSSStyleSheet()
 		sheet.replaceSync(css)
 
