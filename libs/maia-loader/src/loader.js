@@ -72,24 +72,6 @@ export class MaiaOS {
 	}
 
 	/**
-	 * Create UCAN-like capability token for protected API calls
-	 * @param {Object} opts
-	 * @param {string} opts.cmd - e.g. "/test-ucan"
-	 * @param {Object} [opts.args={}]
-	 * @returns {Promise<string>} JWT-style token (Bearer)
-	 * @throws {Error} If not signed in or agentSecret not available
-	 */
-	async getCapabilityToken(opts = {}) {
-		const { cmd, args = {} } = opts
-		if (!cmd || typeof cmd !== 'string') throw new Error('cmd required')
-		if (!this._agentSecret) throw new Error('Agent secret not available (sign in required)')
-		const accountID = this._account?.id ?? this._account?.$jazz?.id
-		if (!accountID?.startsWith('co_z')) throw new Error('Account not ready')
-		const { createInvocationToken } = await import('@MaiaOS/maia-ucan')
-		return createInvocationToken(this._agentSecret, accountID, { cmd, args })
-	}
-
-	/**
 	 * MaiaPeer - P2P layer (node + account) for tools that need direct peer access
 	 * @returns {{ node: LocalNode, account: RawAccount }|null}
 	 */
@@ -97,9 +79,9 @@ export class MaiaOS {
 		if (this._node && this._account) {
 			return { node: this._node, account: this._account }
 		}
-		const peer = this.dataEngine?.peer
-		if (peer?.node && peer?.account) {
-			return { node: peer.node, account: peer.account }
+		const backend = this.dataEngine?.backend
+		if (backend?.node && backend?.account) {
+			return { node: backend.node, account: backend.account }
 		}
 		return null
 	}
@@ -654,8 +636,8 @@ export class MaiaOS {
 	}
 
 	/**
-	 * Load an aven from database (maia.do)
-	 * @param {string} avenId - Aven ID (co-id)
+	 * Load a vibe from database (maia.do)
+	 * @param {string} vibeId - Vibe ID (co-id or human-readable like "°Maia/vibe/todos")
 	 * @param {HTMLElement} container - Container element
 	 * @param {string} [avenKey] - Optional aven key for actor reuse tracking (e.g., 'todos')
 	 * @returns {Promise<{aven: Object, actor: Object}>} Aven metadata and actor instance
