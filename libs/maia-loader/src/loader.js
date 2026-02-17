@@ -322,11 +322,11 @@ export class MaiaOS {
 	 * Requires either a pre-initialized peer (MaiaDB) or CoJSON node+account
 	 * @param {MaiaOS} os - OS instance
 	 * @param {Object} config - Boot configuration
-	 * @param {Object} [config.node] - LocalNode instance (required if peer not provided)
-	 * @param {Object} [config.account] - RawAccount instance (required if peer not provided)
-	 * @param {Object} [config.peer] - Pre-initialized peer/MaiaDB (alternative to node+account)
-	 * @returns {Promise<Object>} Initialized peer (MaiaDB or provided peer)
-	 * @throws {Error} If neither peer nor node+account is provided
+	 * @param {Object} [config.node] - LocalNode instance (required for CoJSON backend)
+	 * @param {Object} [config.account] - RawAccount instance (required for CoJSON backend)
+	 * @param {Object} [config.backend] - Pre-initialized backend (alternative to node+account)
+	 * @returns {Promise<Object>} Initialized backend (MaiaDB or provided backend)
+	 * @throws {Error} If neither backend nor node+account is provided
 	 */
 	static async _initializeDatabase(os, config = {}) {
 		// Create minimal evaluator for DataEngine (expression evaluation in updates)
@@ -349,15 +349,15 @@ export class MaiaOS {
 				{ node: config.node, account: config.account },
 				{ systemSpark: '°Maia' },
 			)
-			os.dataEngine = new DataEngine(maiaDB, dbOptions)
-			maiaDB.dbEngine = os.dataEngine
+			os.dbEngine = new DBEngine(maiaDB, dbOptions)
+			maiaDB.dbEngine = os.dbEngine
 			return maiaDB
 		}
 
 		// No peer provided - throw error
 		throw new Error(
-			'MaiaOS.boot() requires either a peer or node+account. ' +
-				'Provide either: { peer } or { node, account }',
+			'MaiaOS.boot() requires either a backend or node+account for CoJSON backend. ' +
+				'Provide either: { backend } or { node, account }',
 		)
 	}
 

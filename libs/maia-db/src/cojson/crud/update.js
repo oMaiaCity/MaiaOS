@@ -29,7 +29,7 @@ export async function update(peer, _schema, id, data) {
 		throw new Error(`[MaiaDB] CoValue not found: ${id}`)
 	}
 
-	if (!peer.isAvailable(coValueCore)) {
+	if (!backend.isAvailable(coValueCore)) {
 		throw new Error(`[MaiaDB] CoValue not available: ${id}`)
 	}
 

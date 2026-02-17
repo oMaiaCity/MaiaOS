@@ -93,7 +93,7 @@ export async function create(peer, schema, data, options = {}) {
 	// Determine cotype from schema or data type
 	const { cotype, isSchemaDefinition } = await determineCotypeAndFlag(peer, schema, data)
 
-	if (!peer.account) {
+	if (!backend.account) {
 		throw new Error('[MaiaDB] Account required for create')
 	}
 

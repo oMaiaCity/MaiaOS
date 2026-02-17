@@ -4,7 +4,7 @@
  * Core re-exports db, operations, self internally.
  */
 export {
-	DataEngine,
+	DBEngine,
 	loadOrCreateAgentAccount,
 	MaiaDB,
 	waitForStoreReady,
