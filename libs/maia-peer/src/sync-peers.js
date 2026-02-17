@@ -1,9 +1,7 @@
 /**
  * Sync Peer Setup - Client-side peer configuration for LocalNode
  *
- * These functions configure LocalNode to connect as a peer to sync servers.
- * Moved from @MaiaOS/self to @MaiaOS/db where they belong (LocalNode/CoJSON layer).
- *
+ * MaiaPeer: P2P layer. Configures LocalNode to connect as a peer to sync servers.
  * Only supports our own sync service - no Jazz sync fallback.
  */
 
@@ -39,18 +37,15 @@ function notifySyncStateChange() {
  * Create sync peer array
  * Creates WebSocketPeer that connects to the sync server
  *
- * @param {string} [syncDomain] - Sync domain from kernel (single source of truth, overrides env vars)
+ * @param {string} [syncDomain] - Sync domain from loader (single source of truth, overrides env vars)
  * @returns {{peers: Array, setNode: Function, wsPeer: Object}} Peers array and node setter
  */
 export function setupSyncPeers(syncDomain = null) {
-	// Determine sync server URL based on environment
-	// Priority: 1) syncDomain from kernel, 2) runtime-injected env var, 3) build-time env var, 4) fallback
+	// Priority: 1) syncDomain from loader, 2) runtime-injected env var, 3) build-time env var, 4) fallback
 	const isDev =
 		import.meta.env?.DEV ||
 		(typeof window !== 'undefined' && window.location.hostname === 'localhost')
 
-	// Use syncDomain from kernel if provided (single source of truth)
-	// Browser: VITE_PEER_MOAI (build-time, from fly.toml [build.args]). Node: process.env.PEER_MOAI (agent mode)
 	const apiDomain =
 		syncDomain ||
 		import.meta.env?.VITE_PEER_MOAI ||
@@ -58,24 +53,17 @@ export function setupSyncPeers(syncDomain = null) {
 
 	let syncServerUrl
 	if (typeof window === 'undefined') {
-		// Node.js/server environment - agent mode
-		// Sync server doesn't connect to other sync servers (it IS the sync server)
-		// Return empty peers array - no sync setup needed
 		if (!syncDomain) {
-			// No sync domain provided in Node.js - return empty peers (sync server doesn't sync to itself)
 			return { peers: [], setNode: () => {}, wsPeer: null }
 		}
-		// Use provided sync domain (for client agents that connect to sync server)
 		const protocol =
 			syncDomain.includes('localhost') || syncDomain.includes('127.0.0.1') ? 'ws:' : 'wss:'
 		syncServerUrl = `${protocol}//${syncDomain}/sync`
 	} else if (isDev) {
-		// Browser dev: Connect directly to moai (no proxy). Maia=4200, moai=4201.
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 		const devMoai = apiDomain || 'localhost:4201'
 		syncServerUrl = `${protocol}//${devMoai}/sync`
 	} else if (apiDomain) {
-		// Browser production: Use configured API domain (from kernel or env var)
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 		syncServerUrl = `${protocol}//${apiDomain}/sync`
 	} else {
@@ -83,11 +71,10 @@ export function setupSyncPeers(syncDomain = null) {
 		syncServerUrl = `${protocol}//${window.location.host}/sync`
 	}
 
-	if (isDev) {
-	} else {
+	if (!isDev) {
 		console.log(`   Sync Domain: ${apiDomain || '(not set - using same origin fallback)'}`)
 		console.log(
-			`   Source: ${syncDomain ? 'kernel' : import.meta.env?.VITE_PEER_MOAI ? 'build-time' : 'fallback'}`,
+			`   Source: ${syncDomain ? 'loader' : import.meta.env?.VITE_PEER_MOAI ? 'build-time' : 'fallback'}`,
 		)
 	}
 
@@ -96,16 +83,12 @@ export function setupSyncPeers(syncDomain = null) {
 	let connectionTimeout = null
 	let websocketConnected = false
 	let websocketConnectedResolve = null
-	// Debounce connection-lost logs: reconnection attempts spam when server is down.
-	// Use time-based debounce: log at most once per 60s per disconnection session
 	let connectionLostLoggedAt = 0
 	const CONNECTION_LOST_LOG_COOLDOWN_MS = 60000
 	const websocketConnectedPromise = new Promise((resolve) => {
 		websocketConnectedResolve = resolve
 	})
 
-	// Setting up sync peer to connect to sync server
-	// Skip in Node.js if no syncServerUrl (sync server doesn't connect to itself)
 	if (!syncServerUrl) {
 		return { peers: [], setNode: () => {}, wsPeer: null }
 	}
@@ -118,20 +101,16 @@ export function setupSyncPeers(syncDomain = null) {
 				clearTimeout(connectionTimeout)
 				connectionTimeout = null
 			}
-			// Always add to peers array first (for waitForPeer to detect)
 			peers.push(peer)
 			if (node) {
-				// If node is already set, also add to node's sync manager
 				node.syncManager.addPeer(peer)
 			}
-			// Note: WebSocket might not be connected yet - wait for subscribe callback
 		},
 		removePeer: (peer) => {
 			const index = peers.indexOf(peer)
 			if (index > -1) {
 				peers.splice(index, 1)
 			}
-			// Only log if we had a connection and cooldown elapsed (reconnection retries spam)
 			const now = Date.now()
 			if (syncState.connected && now - connectionLostLoggedAt > CONNECTION_LOST_LOG_COOLDOWN_MS) {
 				connectionLostLoggedAt = now
@@ -142,16 +121,12 @@ export function setupSyncPeers(syncDomain = null) {
 		},
 	})
 
-	// Subscribe to connection changes (for WebSocket-level status)
-	// This fires when WebSocket is ACTUALLY connected, not just when peer object is created
-	// Debounce "connection lost" log: reconnection retries fire every 5s when server is down
 	wsPeer.subscribe((connected) => {
 		if (connected && !websocketConnected) {
 			websocketConnected = true
-			connectionLostLoggedAt = 0 // Reset so we'll log again on next disconnection
+			connectionLostLoggedAt = 0
 			syncState = { connected: true, syncing: true, error: null, status: 'syncing' }
 			notifySyncStateChange()
-			// Resolve the promise when WebSocket is actually connected
 			if (websocketConnectedResolve) {
 				websocketConnectedResolve()
 				websocketConnectedResolve = null
@@ -167,7 +142,6 @@ export function setupSyncPeers(syncDomain = null) {
 		}
 	})
 
-	// Set a timeout to detect if connection never establishes (browser only)
 	if (typeof window !== 'undefined') {
 		connectionTimeout = setTimeout(() => {
 			if (!syncState.connected) {
@@ -177,30 +151,24 @@ export function setupSyncPeers(syncDomain = null) {
 		}, 10000)
 	}
 
-	// Enable the peer immediately (startup orchestration ensures server readiness in dev; see scripts/dev.js)
 	wsPeer.enable()
 
 	return {
 		peers,
 		wsPeer,
-		// Wait for WebSocket to be actually connected (not just peer object created)
 		waitForPeer: () => {
 			return new Promise((resolve) => {
-				// If WebSocket already connected, resolve immediately
 				if (websocketConnected && peers.length > 0) {
 					resolve(true)
 					return
 				}
-
 				let resolved = false
 				const timeout = setTimeout(() => {
 					if (!resolved) {
 						resolved = true
-						resolve(false) // Resolve with false if timeout
+						resolve(false)
 					}
-				}, 2000) // 2 second timeout (optimized for initial load - proceed if not connected)
-
-				// Wait for WebSocket connection promise
+				}, 2000)
 				websocketConnectedPromise
 					.then(() => {
 						if (!resolved && peers.length > 0) {
@@ -220,13 +188,10 @@ export function setupSyncPeers(syncDomain = null) {
 		},
 		setNode: (n) => {
 			node = n
-			// Add any peers that were queued before node was available
-			// This happens asynchronously as peers connect
 			if (peers.length > 0) {
 				for (const peer of peers) {
 					node.syncManager.addPeer(peer)
 				}
-				// Don't clear peers array - peers remain available for future use
 			}
 		},
 	}

@@ -17,13 +17,14 @@
     },
     "libs/maia-brand": {
       "name": "@MaiaOS/brand",
-      "version": "26.214.822",
+      "version": "26.217.1432",
     },
     "libs/maia-db": {
       "name": "@MaiaOS/db",
-      "version": "26.214.822",
+      "version": "26.217.1432",
       "dependencies": {
         "@MaiaOS/operations": "workspace:*",
+        "@MaiaOS/peer": "workspace:*",
         "@MaiaOS/schemata": "workspace:*",
         "@MaiaOS/script": "workspace:*",
         "@MaiaOS/storage": "workspace:*",
@@ -34,7 +35,7 @@
     },
     "libs/maia-distros": {
       "name": "@MaiaOS/maia-distros",
-      "version": "26.214.822",
+      "version": "26.217.1432",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/loader": "workspace:*",
@@ -47,15 +48,15 @@
     },
     "libs/maia-docs": {
       "name": "@MaiaOS/docs",
-      "version": "26.214.822",
+      "version": "26.217.1432",
     },
     "libs/maia-language": {
       "name": "@maia/language",
-      "version": "26.214.822",
+      "version": "26.217.1432",
     },
     "libs/maia-loader": {
       "name": "@MaiaOS/loader",
-      "version": "26.214.822",
+      "version": "26.217.1432",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/operations": "workspace:*",
@@ -69,15 +70,22 @@
     },
     "libs/maia-operations": {
       "name": "@MaiaOS/operations",
-      "version": "26.214.822",
+      "version": "26.217.1432",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/schemata": "workspace:*",
       },
     },
+    "libs/maia-peer": {
+      "name": "@MaiaOS/peer",
+      "version": "26.217.1432",
+      "dependencies": {
+        "cojson-transport-ws": "0.20.7",
+      },
+    },
     "libs/maia-schemata": {
       "name": "@MaiaOS/schemata",
-      "version": "26.214.822",
+      "version": "26.217.1432",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "ajv": "^8.12.0",
@@ -85,7 +93,7 @@
     },
     "libs/maia-script": {
       "name": "@MaiaOS/script",
-      "version": "26.214.822",
+      "version": "26.217.1432",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/operations": "workspace:*",
@@ -98,16 +106,17 @@
     },
     "libs/maia-self": {
       "name": "@MaiaOS/self",
-      "version": "26.214.822",
+      "version": "26.217.1432",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
+        "@MaiaOS/peer": "workspace:*",
         "@MaiaOS/storage": "workspace:*",
         "cojson": "0.20.7",
       },
     },
     "libs/maia-storage": {
       "name": "@MaiaOS/storage",
-      "version": "26.214.822",
+      "version": "26.217.1432",
       "dependencies": {
         "@electric-sql/pglite": "latest",
         "cojson": "0.20.7",
@@ -117,7 +126,7 @@
     },
     "libs/maia-sync": {
       "name": "@MaiaOS/sync",
-      "version": "26.214.822",
+      "version": "26.217.1432",
       "dependencies": {
         "@MaiaOS/loader": "workspace:*",
         "cojson": "0.20.7",
@@ -126,7 +135,7 @@
     },
     "libs/maia-tools": {
       "name": "@MaiaOS/tools",
-      "version": "26.214.822",
+      "version": "26.217.1432",
       "dependencies": {
         "@MaiaOS/operations": "workspace:*",
         "@MaiaOS/schemata": "workspace:*",
@@ -134,14 +143,14 @@
     },
     "libs/maia-vibes": {
       "name": "@MaiaOS/vibes",
-      "version": "26.214.822",
+      "version": "26.217.1432",
       "dependencies": {
         "@MaiaOS/loader": "workspace:*",
       },
     },
     "services/maia": {
       "name": "@MaiaOS/maia",
-      "version": "26.214.822",
+      "version": "26.217.1432",
       "dependencies": {
         "@MaiaOS/loader": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
@@ -149,7 +158,7 @@
     },
     "services/moai": {
       "name": "@MaiaOS/moai",
-      "version": "26.214.822",
+      "version": "26.217.1432",
       "dependencies": {
         "@MaiaOS/loader": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
@@ -172,6 +181,8 @@
     "@MaiaOS/moai": ["@MaiaOS/moai@workspace:services/moai"],
 
     "@MaiaOS/operations": ["@MaiaOS/operations@workspace:libs/maia-operations"],
+
+    "@MaiaOS/peer": ["@MaiaOS/peer@workspace:libs/maia-peer"],
 
     "@MaiaOS/schemata": ["@MaiaOS/schemata@workspace:libs/maia-schemata"],
 

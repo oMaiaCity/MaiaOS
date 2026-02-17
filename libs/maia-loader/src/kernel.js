@@ -778,26 +778,6 @@ export class MaiaOS {
 	}
 
 	/**
-	 * Debug helper to list coIdRegistry keys (for troubleshooting)
-	 * @private
-	 */
-	async _debugCoIdRegistry() {
-		try {
-			// Get all keys from coIdRegistry store
-			const transaction = this.dbEngine.backend.db.transaction(['coIdRegistry'], 'readonly')
-			const store = transaction.objectStore('coIdRegistry')
-			const request = store.getAllKeys()
-			const keys = await new Promise((resolve, reject) => {
-				request.onsuccess = () => resolve(request.result)
-				request.onerror = () => reject(request.error)
-			})
-			return keys.filter((k) => k && (k.includes('actor') || k.includes('agent')))
-		} catch (error) {
-			return [`Error: ${error.message}`]
-		}
-	}
-
-	/**
 	 * Get actor by ID
 	 * @param {string} actorId - Actor ID
 	 * @returns {Object|null} Actor instance

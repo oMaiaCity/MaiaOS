@@ -11,6 +11,8 @@
  * - Memory-efficient cleanup
  */
 
+// Sync Peer Setup (client-side peer configuration for LocalNode) - re-exported from @MaiaOS/peer
+export { setupSyncPeers, subscribeSyncState } from '@MaiaOS/peer'
 // Unified cache (subscriptions, stores, resolutions, resolved data)
 export {
 	CoCache,
@@ -59,8 +61,6 @@ export {
 	resolveAccountToProfileCoId,
 } from './cojson/helpers/resolve-account-profile.js'
 export { resolveGroupCoIdsToCapabilityNames } from './cojson/helpers/resolve-capability-group.js'
-// Sync Peer Setup (client-side peer configuration for LocalNode)
-export { setupSyncPeers, subscribeSyncState } from './cojson/peers/sync-peers.js'
 // Universal Schema Resolver (single source of truth)
 export {
 	checkCotype,
@@ -68,7 +68,7 @@ export {
 	resolve,
 	resolveReactive,
 } from './cojson/schema/resolver.js'
-export { simpleAccountSeed } from './cojson/schema/seed.js'
+export { simpleAccountSeed } from './cojson/seeding/seed.js'
 export { schemaMigration } from './migrations/schema.migration.js'
 export {
 	createSchemaMeta,
