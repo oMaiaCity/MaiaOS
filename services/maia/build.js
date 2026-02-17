@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs'
+import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 /**
  * Bun build for maia SPA - SPA mode intact.
  * Requires distros built first (maia-client.mjs, vibes.mjs).
@@ -87,11 +87,39 @@ const buildId = Date.now().toString(36)
 const indexHtml = await Bun.file(join(serviceDir, 'index.html')).text()
 const indexWithCacheBust = indexHtml.replace('src="/main.js"', `src="/main.js?v=${buildId}"`)
 await Bun.write(join(distDir, 'index.html'), indexWithCacheBust)
-cpSync(join(serviceDir, 'style.css'), join(distDir, 'style.css'))
-const cssSrc = join(serviceDir, 'css')
-if (existsSync(cssSrc)) {
-	cpSync(cssSrc, join(distDir, 'css'), { recursive: true })
-}
+
+// Bundle CSS into single file: resolve @imports and output one style.css
+// Eliminates runtime @import resolution (dev vs prod parity) and reduces requests
+const styleCss = await Bun.file(join(serviceDir, 'style.css')).text()
+const importRegex = /@import\s+["']\.\/([^"']+)["']\s*;/g
+let bundledCss = styleCss.replace(importRegex, (_match, importPath) => {
+	const fullPath = join(serviceDir, importPath)
+	if (!existsSync(fullPath)) return `/* missing: ${importPath} */`
+	return readFileSync(fullPath, 'utf-8')
+})
+// Rewrite url("../brand/...") to url("/brand/...") for consistent resolution from /
+bundledCss = bundledCss.replace(
+	/url\s*\(\s*["']?\.\.\/brand\/([^"')]+)["']?\s*\)/g,
+	'url("/brand/$1")',
+)
+await Bun.write(join(distDir, 'style.css'), bundledCss)
+
 // brand/ already in dist via sync-assets above
+
+// Verify critical assets
+const distHas = (p) => existsSync(join(distDir, p))
+const checks = [
+	['style.css', distHas('style.css')],
+	['brand/images/banner.png', distHas('brand/images/banner.png')],
+	[
+		'brand/fonts/IndieFlower/IndieFlower-Regular.ttf',
+		distHas('brand/fonts/IndieFlower/IndieFlower-Regular.ttf'),
+	],
+]
+const missing = checks.filter(([, ok]) => !ok).map(([p]) => p)
+if (missing.length > 0) {
+	console.error('Build verification failed - missing:', missing.join(', '))
+	process.exit(1)
+}
 
 console.log('Maia SPA build complete')
