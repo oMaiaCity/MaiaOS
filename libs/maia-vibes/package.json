@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/vibes",
-	"version": "26.0217.1432",
+	"version": "26.0217.1438",
 	"type": "module",
 	"main": "src/index.js",
 	"exports": {
