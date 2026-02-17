@@ -13,10 +13,10 @@ todos:
     status: pending
   - id: milestone-3
     content: Merge maia-operations + maia-script into maia-engines, DataEngine, maia.db → maia.do, kernel → loader
-    status: pending
+    status: completed
   - id: milestone-4
     content: Apply MaiaPeer naming, wire API hierarchy
-    status: pending
+    status: in_progress
   - id: milestone-5
     content: Split seed.js, per-file simplifications
     status: pending
