@@ -5,6 +5,7 @@
  * No DBAdapter interface. Direct CoJSON operations.
  */
 
+import { seed } from '../../migrations/seeding/seed.js'
 import { EXCEPTION_SCHEMAS } from '../../schemas/registry.js'
 import { getGlobalCoCache } from '../cache/coCache.js'
 import * as crudCreate from '../crud/create.js'
@@ -16,7 +17,6 @@ import * as crudUpdate from '../crud/update.js'
 import * as groups from '../groups/groups.js'
 import { wrapStorageWithIndexingHooks } from '../indexing/storage-hook-wrapper.js'
 import { resolve } from '../schema/resolver.js'
-import { seed } from '../seeding/seed.js'
 import { wrapSyncManagerWithValidation } from '../sync/validation-hook-wrapper.js'
 
 export class MaiaDB {
