@@ -79,7 +79,7 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 
 	// 2. CRITICAL: Load and validate message data against message schema before creating
 	//    This ensures type, payload, source, target, processed fields are valid
-	const messageSchema = await resolve(peer, messageSchemaCoId, { returnType: 'schema' })
+	const messageSchema = await resolve(dbEngine.peer, messageSchemaCoId, { returnType: 'schema' })
 	if (!messageSchema) {
 		throw new Error(`[createAndPushMessage] Message schema not found: ${messageSchemaCoId}`)
 	}

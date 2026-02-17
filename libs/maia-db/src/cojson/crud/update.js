@@ -29,7 +29,7 @@ export async function update(peer, _schema, id, data) {
 		throw new Error(`[MaiaDB] CoValue not found: ${id}`)
 	}
 
-	if (!backend.isAvailable(coValueCore)) {
+	if (!peer.isAvailable(coValueCore)) {
 		throw new Error(`[MaiaDB] CoValue not available: ${id}`)
 	}
 
@@ -57,6 +57,7 @@ export async function update(peer, _schema, id, data) {
 		// Skip validation for exception schemas
 		if (!isExceptionSchema(schemaCoId)) {
 			// Get existing data (current state) - use getRawRecord which returns actual properties
+			// getRawRecord returns data with $schema but without id (perfect for validation)
 			const existingDataRaw = await peer.getRawRecord(id)
 
 			if (existingDataRaw) {
@@ -84,8 +85,8 @@ export async function update(peer, _schema, id, data) {
 
 				// Validate merged data against schema BEFORE applying to CRDT
 				try {
-					await loadSchemaAndValidate(backend, schemaCoId, mergedData, `update for ${id}`, {
-						dataEngine: backend.dbEngine,
+					await loadSchemaAndValidate(peer, schemaCoId, mergedData, `update for ${id}`, {
+						dataEngine: peer.dbEngine,
 					})
 				} catch (error) {
 					// If validation fails, throw error (operation never applied to CRDT)

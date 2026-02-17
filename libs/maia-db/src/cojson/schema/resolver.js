@@ -211,9 +211,9 @@ export async function resolve(peer, identifier, options = {}) {
 		AVEN_ACTOR_REF_PATTERN.test(identifier)
 	const isBareKey =
 		!identifier.startsWith('°') && !identifier.startsWith('@') && !identifier.startsWith('co_z')
-	if (isSchemaKeyMatch || isAvenKeyMatch || isInstanceKeyMatch || isBareKey) {
+	if (isSchemaKeyMatch || isVibeKeyMatch || isBareKey) {
 		const effectiveSpark = spark ?? peer?.systemSpark
-		if (!effectiveSpark && (isSchemaKeyMatch || isAvenKeyMatch || isInstanceKeyMatch || isBareKey)) {
+		if (!effectiveSpark && (isSchemaKeyMatch || isVibeKeyMatch || isBareKey)) {
 			throw new Error(
 				`[resolve] spark required for registry lookup of ${identifier}. Pass options.spark or set peer.systemSpark.`,
 			)
@@ -229,7 +229,7 @@ export async function resolve(peer, identifier, options = {}) {
 			normalizedKey = `${effectiveSpark}/schema/${normalizedKey}`
 		}
 
-		// Use read() API to load spark.os (account.registries.sparks[spark].os) or spark.avens registry
+		// Use read() API to load spark.os (account.registries.sparks[spark].os) or spark.vibes registry
 		if (!peer.account || typeof peer.account.get !== 'function') {
 			return null
 		}
@@ -316,8 +316,8 @@ export async function resolve(peer, identifier, options = {}) {
 				}
 				return null
 			}
-		} else if (AVEN_REF_PATTERN.test(identifier)) {
-			// Aven instance keys → account.registries.sparks[spark].avens
+		} else if (VIBE_REF_PATTERN.test(identifier)) {
+			// Vibe instance keys → account.registries.sparks[spark].vibes
 			const sparkCoId = await resolveSparkCoId(peer, effectiveSpark)
 			if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_z')) {
 				return null
@@ -338,7 +338,8 @@ export async function resolve(peer, identifier, options = {}) {
 				return null
 			}
 
-			const avensStore = await universalRead(peer, avensId, null, null, null, {
+			// Load spark.vibes using read() API
+			const vibesStore = await universalRead(peer, vibesId, null, null, null, {
 				deepResolve: false,
 				timeoutMs,
 			})
@@ -612,8 +613,8 @@ async function resolveSparkOsIdFromNode(node, account, spark) {
 }
 
 /**
- * Load all schemas from spark.os.schematas via read() API
- * MIGRATIONS ONLY - uses resolve(peer, schemaCoId, { returnType: 'schema' }) for each schema
+ * Load all schemas from spark.os.schematas (account.registries.sparks[°Maia].os.schematas)
+ * MIGRATIONS ONLY - uses node directly, no peer.read
  *
  * @param {LocalNode} node - LocalNode instance
  * @param {RawAccount} account - Account CoMap

@@ -17,7 +17,7 @@ export class ReactiveStore {
 	constructor(initialValue) {
 		this._value = initialValue
 		this._subscribers = new Set()
-		this._unsubscribe = null // Optional cleanup function set by backend (e.g., MaiaDB)
+		this._unsubscribe = null // Optional cleanup function set by peer (e.g., MaiaDB)
 	}
 
 	/**

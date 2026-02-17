@@ -22,16 +22,14 @@ import * as collectionHelpers from './collection-helpers.js'
 // No CRUD-level hooks needed - storage hook catches ALL writes
 
 /**
- * Determine cotype from schema or data type.
- * CRITICAL: Schema definitions (derived from meta-schema) must ALWAYS be CoMaps.
- * The cotype in the schema describes instance types (colist/comap), not the schema document's type.
- *
+ * Determine cotype from schema or data type
  * @param {Object} peer - Backend instance
  * @param {string} schema - Schema co-id
  * @param {*} data - Data to create
  * @returns {Promise<{ cotype: string, isSchemaDefinition: boolean }>} Cotype and schema-definition flag
  */
-async function determineCotypeAndFlag(peer, schema, data) {
+async function determineCotype(peer, schema, data) {
+	// Try to load schema to get cotype using generic method
 	try {
 		const schemaCore = await collectionHelpers.ensureCoValueLoaded(peer, schema, {
 			waitForAvailable: true,
@@ -91,9 +89,9 @@ export async function create(peer, schema, data, options = {}) {
 	const spark = options.spark ?? '°Maia'
 
 	// Determine cotype from schema or data type
-	const { cotype, isSchemaDefinition } = await determineCotypeAndFlag(peer, schema, data)
+	const cotype = await determineCotype(peer, schema, data)
 
-	if (!backend.account) {
+	if (!peer.account) {
 		throw new Error('[MaiaDB] Account required for create')
 	}
 
@@ -104,30 +102,38 @@ export async function create(peer, schema, data, options = {}) {
 		throw new Error('[MaiaDB] Data must be array for colist')
 	}
 
-	// Chat message: { role, content, displayName }
-	const isChatMessage = data && 'role' in data && 'content' in data
-	const t0 = isChatMessage ? _perfChat.now() : 0
-
 	const { coValue } = await createCoValueForSpark(peer, spark, {
 		schema,
 		cotype,
 		data: cotype === 'comap' ? data : cotype === 'colist' ? data : undefined,
-		dataEngine: backend.dbEngine,
+		dataEngine: peer.dbEngine,
 	})
 
 	if (isChatMessage) {
 		_perfChat.log('create.createCoValueForSpark', Math.round((_perfChat.now() - t0) * 100) / 100)
 	}
 
-	// Fast path: coValue is local and available—extract from node, no read/store wait
-	// coValue from createCoValueForSpark is RawCoMap/RawCoList (content); peer.isAvailable expects CoValueCore
-	const coValueCore = peer.getCoValue?.(coValue?.id) ?? coValue
+	// Return created CoValue data (extract properties as flat object for tool access)
+	// CRITICAL: Always include original data as fallback to ensure all properties are available
+	// This ensures $lastCreatedText and other properties are accessible even if CoValue extraction fails
+	// Get CoValueCore from node to check availability
+	const coValueCore = peer.node.getCoValue(coValue.id)
 	if (coValueCore && peer.isAvailable(coValueCore)) {
-		const extracted = extractCoValueData(peer, coValueCore, schema)
-		if (extracted && !extracted.error) {
-			return { id: coValue.id, ...data, ...extracted }
+		const content = peer.getCurrentContent(coValueCore)
+		if (content && typeof content.get === 'function') {
+			// Extract properties as flat object (for tool access like $lastCreatedText)
+			const result = { id: coValue.id, ...data } // Start with original data to ensure all properties
+			const keys =
+				content.keys && typeof content.keys === 'function' ? content.keys() : Object.keys(content)
+			for (const key of keys) {
+				// Override with actual CoValue content if available (more accurate)
+				result[key] = content.get(key)
+			}
+			return result
 		}
-		return { id: coValue.id, ...data, type: cotype, schema }
+		// Fallback to normalized format, but include original data
+		const extracted = dataExtraction.extractCoValueData(peer, coValueCore)
+		return { ...data, id: coValue.id, ...extracted } // Merge original data with extracted
 	}
 
 	// Fallback: coValue not yet available (rare remote/edge case)

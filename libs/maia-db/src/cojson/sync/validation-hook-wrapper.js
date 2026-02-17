@@ -161,7 +161,7 @@ async function validateRemoteTransactions(peer, dbEngine, msg) {
 	// Note: Full validation would require merging transactions, which is complex
 	// This approach ensures schema is available and validates current state
 	try {
-		await loadSchemaAndValidate(backend, schemaCoId, content, `remote sync for ${coId}`, {
+		await loadSchemaAndValidate(peer, schemaCoId, content, `remote sync for ${coId}`, {
 			dataEngine: dbEngine,
 		})
 
@@ -182,7 +182,7 @@ async function validateRemoteTransactions(peer, dbEngine, msg) {
  * @param {Object} [opts] - Optional { beforeAcceptWrite: async (peer, msg, from) => Promise<{ok: boolean, error?: string}> }
  * @returns {Object} Wrapped sync manager with validation
  */
-export function wrapSyncManagerWithValidation(syncManager, peer, dbEngine, opts = {}) {
+export function wrapSyncManagerWithValidation(syncManager, peer, dbEngine) {
 	if (!syncManager || !peer) {
 		return syncManager
 	}
