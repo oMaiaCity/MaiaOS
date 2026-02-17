@@ -12,7 +12,7 @@
  * - Universal - works for any dependency type (schemas, queries, configs, nested CoValues)
  */
 
-import { ReactiveStore } from '@MaiaOS/operations/reactive-store'
+import { ReactiveStore } from '../../reactive-store.js'
 import { resolve } from '../schema/resolver.js'
 import { ensureCoValueLoaded } from './collection-helpers.js'
 import { read as universalRead } from './read.js'

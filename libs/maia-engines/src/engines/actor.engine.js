@@ -8,8 +8,8 @@
 
 // Import message helper
 import { createAndPushMessage, resolve } from '@MaiaOS/db'
-import { containsExpressions } from '@MaiaOS/schemata/expression-resolver.js'
-import { validateAgainstSchema } from '@MaiaOS/schemata/validation.helper.js'
+import { containsExpressions } from '@MaiaOS/schemata/expression-resolver'
+import { validateAgainstSchema } from '@MaiaOS/schemata/validation.helper'
 
 // Render state machine - prevents race conditions by ensuring renders only happen when state allows
 export const RENDER_STATES = {
@@ -28,7 +28,7 @@ export class ActorEngine {
 		this.stateEngine = stateEngine
 		this.actors = new Map()
 		this.pendingMessages = new Map()
-		this.dbEngine = null
+		this.dataEngine = null
 		this.os = null
 		this._containerActors = new Map()
 		this._vibeActors = new Map()
@@ -40,11 +40,11 @@ export class ActorEngine {
 	}
 
 	async updateContextCoValue(actor, updates) {
-		if (!actor.contextCoId || !this.dbEngine) return
+		if (!actor.contextCoId || !this.dataEngine) return
 		const contextSchemaCoId =
 			actor.contextSchemaCoId ||
 			(await resolve(
-				this.dbEngine.backend,
+				this.dataEngine.backend,
 				{ fromCoValue: actor.contextCoId },
 				{ returnType: 'coId' },
 			))
@@ -52,7 +52,7 @@ export class ActorEngine {
 		for (const [key, value] of Object.entries(updates)) {
 			sanitizedUpdates[key] = value === undefined ? null : value
 		}
-		const updateResult = await this.dbEngine.execute({
+		const updateResult = await this.dataEngine.execute({
 			op: 'update',
 			schema: contextSchemaCoId,
 			id: actor.contextCoId,
@@ -66,12 +66,12 @@ export class ActorEngine {
 
 	async _readStore(coId) {
 		const schemaCoId = await resolve(
-			this.dbEngine.backend,
+			this.dataEngine.backend,
 			{ fromCoValue: coId },
 			{ returnType: 'coId' },
 		)
 		if (!schemaCoId) return null
-		return this.dbEngine.execute({ op: 'read', schema: schemaCoId, key: coId })
+		return this.dataEngine.execute({ op: 'read', schema: schemaCoId, key: coId })
 	}
 
 	_makeStyleRerenderSubscribe(actorId) {
@@ -129,7 +129,7 @@ export class ActorEngine {
 			contextPromise = (async () => {
 				let actualContextCoId = actorConfig.context
 				if (typeof actualContextCoId === 'string' && !actualContextCoId.startsWith('co_z')) {
-					const resolved = await this.dbEngine.execute({
+					const resolved = await this.dataEngine.execute({
 						op: 'resolve',
 						humanReadableKey: actualContextCoId,
 					})
@@ -140,7 +140,7 @@ export class ActorEngine {
 				const contextStore = await this._readStore(actualContextCoId)
 				if (!contextStore) throw new Error(`[ActorEngine] Failed to load context ${actualContextCoId}`)
 				const contextSchemaCoId = await resolve(
-					this.dbEngine.backend,
+					this.dataEngine.backend,
 					{ fromCoValue: actualContextCoId },
 					{ returnType: 'coId' },
 				)
@@ -678,7 +678,7 @@ export class ActorEngine {
 			}
 			return
 		}
-		if (actor.inboxCoId && this.dbEngine) {
+		if (actor.inboxCoId && this.dataEngine) {
 			try {
 				const messageData = {
 					type: message.type,
@@ -687,7 +687,7 @@ export class ActorEngine {
 					target: actorId,
 					processed: false,
 				}
-				await createAndPushMessage(this.dbEngine, actor.inboxCoId, messageData)
+				await createAndPushMessage(this.dataEngine, actor.inboxCoId, messageData)
 				// Subscription fires when inbox store updates - single source of truth (avoids double processMessages)
 			} catch (_error) {}
 		}
@@ -704,15 +704,15 @@ export class ActorEngine {
 		}
 
 		const actor = this.actors.get(actorId)
-		if (!actor || !actor.inboxCoId || !this.dbEngine) {
+		if (!actor || !actor.inboxCoId || !this.dataEngine) {
 			if (!actor) console.warn('[ActorEngine] sendInternalEvent: actor not found', actorId)
 			else if (!actor.inboxCoId)
 				console.warn('[ActorEngine] sendInternalEvent: actor has no inboxCoId', actorId)
-			else if (!this.dbEngine) console.warn('[ActorEngine] sendInternalEvent: dbEngine not set')
+			else if (!this.dataEngine) console.warn('[ActorEngine] sendInternalEvent: dataEngine not set')
 			return
 		}
 		try {
-			await createAndPushMessage(this.dbEngine, actor.inboxCoId, {
+			await createAndPushMessage(this.dataEngine, actor.inboxCoId, {
 				type: eventType,
 				payload,
 				source: actorId,
@@ -763,14 +763,14 @@ export class ActorEngine {
 	 * @returns {Promise<Object|null>} Message type schema or null if not found
 	 */
 	async _loadMessageTypeSchema(messageType) {
-		if (!this.dbEngine || !this.dbEngine.backend) {
+		if (!this.dataEngine || !this.dataEngine.backend) {
 			return null
 		}
 
 		try {
 			// Resolve message type schema from registry - use systemSpark directly (schema keys match spark name)
-			const schemaKey = `${this.dbEngine.backend.systemSpark}/schema/message/${messageType}`
-			const schema = await resolve(this.dbEngine.backend, schemaKey, { returnType: 'schema' })
+			const schemaKey = `${this.dataEngine.backend.systemSpark}/schema/message/${messageType}`
+			const schema = await resolve(this.dataEngine.backend, schemaKey, { returnType: 'schema' })
 			return schema
 		} catch (_error) {
 			return null
@@ -825,11 +825,11 @@ export class ActorEngine {
 
 	async processMessages(actorId) {
 		const actor = this.actors.get(actorId)
-		if (!actor || !actor.inboxCoId || !this.dbEngine || actor._isProcessing) return
+		if (!actor || !actor.inboxCoId || !this.dataEngine || actor._isProcessing) return
 		actor._isProcessing = true
 		let hadUnhandledMessages = false
 		try {
-			const result = await this.dbEngine.execute({
+			const result = await this.dataEngine.execute({
 				op: 'processInbox',
 				actorId,
 				inboxCoId: actor.inboxCoId,
@@ -855,7 +855,7 @@ export class ActorEngine {
 						console.warn('[ActorEngine] processMessages: message type schema not found', {
 							actorId,
 							messageType: message.type,
-							schemaKey: `${this.dbEngine?.backend?.systemSpark ?? '°Maia'}/schema/message/${message.type}`,
+							schemaKey: `${this.dataEngine?.backend?.systemSpark ?? '°Maia'}/schema/message/${message.type}`,
 						})
 						continue // Reject message - schema is required
 					}
@@ -878,7 +878,7 @@ export class ActorEngine {
 					const handled = await this.stateEngine.send(actor.machine.id, message.type, payloadPlain)
 					if (handled && message._coId) {
 						try {
-							await this.dbEngine.execute({
+							await this.dataEngine.execute({
 								op: 'update',
 								id: message._coId,
 								data: { processed: true },
@@ -905,7 +905,7 @@ export class ActorEngine {
 			// Drain inbox so messages that arrived during processing get handled.
 			const shouldRetry =
 				hadUnhandledMessages ||
-				(await this.dbEngine
+				(await this.dataEngine
 					.execute({ op: 'processInbox', actorId, inboxCoId: actor.inboxCoId })
 					.then((r) => (r.messages?.length ?? 0) > 0)
 					.catch(() => false))

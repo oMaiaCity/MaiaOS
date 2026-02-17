@@ -22,7 +22,7 @@ function getVibeKeyFromId(vibeId) {
  */
 async function getSparkDisplayName(maia, sparkCoId) {
 	try {
-		const sparkStore = await maia.db({ op: 'read', schema: null, key: sparkCoId })
+		const sparkStore = await maia.do({ op: 'read', schema: null, key: sparkCoId })
 		const sparkData = sparkStore?.value ?? sparkStore
 		const name = sparkData?.name
 		if (!name) return null
@@ -46,21 +46,21 @@ async function loadSparksFromAccount(maia) {
 
 	try {
 		const account = maia.id.maiaId
-		const accountStore = await maia.db({ op: 'read', schema: '@account', key: account.id })
+		const accountStore = await maia.do({ op: 'read', schema: '@account', key: account.id })
 		const accountData = accountStore.value || accountStore
 
 		const registriesId = accountData?.registries
 		if (!registriesId || typeof registriesId !== 'string' || !registriesId.startsWith('co_')) {
 			return sparks
 		}
-		const registriesStore = await maia.db({ op: 'read', schema: null, key: registriesId })
+		const registriesStore = await maia.do({ op: 'read', schema: null, key: registriesId })
 		const registriesData = registriesStore.value || registriesStore
 		const sparksId = registriesData.sparks
 		if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_')) {
 			return sparks
 		}
 
-		const sparksStore = await maia.db({ op: 'read', schema: sparksId, key: sparksId })
+		const sparksStore = await maia.do({ op: 'read', schema: sparksId, key: sparksId })
 		const sparksData = sparksStore.value || sparksStore
 
 		if (!sparksData || typeof sparksData !== 'object' || Array.isArray(sparksData)) return sparks
@@ -113,27 +113,27 @@ async function loadVibesFromSpark(maia, spark) {
 			}
 		}
 
-		const accountStore = await maia.db({ op: 'read', schema: '@account', key: maia.id.maiaId.id })
+		const accountStore = await maia.do({ op: 'read', schema: '@account', key: maia.id.maiaId.id })
 		const accountData = accountStore?.value ?? accountStore
 		const registriesId = accountData?.registries
 		if (typeof registriesId !== 'string' || !registriesId.startsWith('co_')) return vibes
 
-		const registriesStore = await maia.db({ op: 'read', schema: null, key: registriesId })
+		const registriesStore = await maia.do({ op: 'read', schema: null, key: registriesId })
 		const registriesData = registriesStore?.value ?? registriesStore
 		const sparksId = registriesData.sparks
 		if (typeof sparksId !== 'string' || !sparksId.startsWith('co_')) return vibes
 
-		const sparksStore = await maia.db({ op: 'read', schema: sparksId, key: sparksId })
+		const sparksStore = await maia.do({ op: 'read', schema: sparksId, key: sparksId })
 		const sparksData = sparksStore?.value ?? sparksStore
 		const sparkCoId = sparksData?.[spark]
 		if (typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_')) return vibes
 
-		const sparkStore = await maia.db({ op: 'read', schema: null, key: sparkCoId })
+		const sparkStore = await maia.do({ op: 'read', schema: null, key: sparkCoId })
 		const sparkData = sparkStore?.value ?? sparkStore
 		const vibesId = sparkData?.vibes
 		if (typeof vibesId !== 'string' || !vibesId.startsWith('co_')) return vibes
 
-		const vibesStore = await maia.db({ op: 'read', schema: vibesId, key: vibesId })
+		const vibesStore = await maia.do({ op: 'read', schema: vibesId, key: vibesId })
 		const vibesData = vibesStore?.value ?? vibesStore
 		if (!vibesData || typeof vibesData !== 'object' || Array.isArray(vibesData)) return vibes
 

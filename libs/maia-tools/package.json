@@ -13,7 +13,7 @@
 		"./sparks/*": "./src/sparks/*"
 	},
 	"dependencies": {
-		"@MaiaOS/operations": "workspace:*",
+		"@MaiaOS/engines": "workspace:*",
 		"@MaiaOS/schemata": "workspace:*"
 	},
 	"files": [

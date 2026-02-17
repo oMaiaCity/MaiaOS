@@ -1,10 +1,10 @@
-import { createErrorEntry, createErrorResult, createSuccessResult } from '@MaiaOS/operations'
+import { createErrorEntry, createErrorResult, createSuccessResult } from '@MaiaOS/engines'
 
 /**
  * Database Tool - @db
  *
  * Unified API for all database operations.
- * Returns OperationResult; kernel.db() throws on write failure, we catch and convert.
+ * Returns OperationResult; maia.do() throws on write failure, we catch and convert.
  */
 export default {
 	async execute(actor, payload) {
@@ -13,12 +13,12 @@ export default {
 		}
 
 		const os = actor.actorEngine?.os
-		if (!os || !os.db) {
+		if (!os || !os.do) {
 			return createErrorResult([createErrorEntry('structural', '[@db] Database engine not available')])
 		}
 
 		try {
-			const data = await os.db(payload)
+			const data = await os.do(payload)
 			return createSuccessResult(data)
 		} catch (err) {
 			const errors = err.errors ?? [

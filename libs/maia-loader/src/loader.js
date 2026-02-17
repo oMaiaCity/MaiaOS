@@ -1,39 +1,32 @@
 /**
- * MaiaOS Kernel - v0.4
+ * MaiaOS Loader - v0.4
  *
  * Single entry point for the MaiaOS Operating System
  * Central source of truth for booting and managing the OS
- * Imports engines from @MaiaOS/script and orchestrates them
+ * Imports engines from @MaiaOS/engines and orchestrates them
  *
  * Usage:
  *   import { MaiaOS } from '@MaiaOS/loader';
- *   const os = await MaiaOS.boot(config);
+ *   const maia = await MaiaOS.boot(config);
+ *   maia.do({ op: 'read', schema, key, filter, ... });
  */
 
 import { resolve, resolveReactive } from '@MaiaOS/db'
-// Import validation helper
-import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper'
-// Import all engines from @MaiaOS/script
-// SubscriptionEngine eliminated - all subscriptions handled via direct read() + ReactiveStore
 import {
 	ActorEngine,
-	DBEngine,
+	DataEngine,
 	MaiaScriptEvaluator,
 	ModuleRegistry,
 	StateEngine,
 	StyleEngine,
 	ToolEngine,
 	ViewEngine,
-} from '@MaiaOS/script'
-
-// Schema loading uses resolve() from @MaiaOS/db
-
-import * as aiModule from '@MaiaOS/script/modules/ai.module.js'
-import * as coreModule from '@MaiaOS/script/modules/core.module.js'
-// Pre-import default modules so they're bundled (for standalone bundle)
-// This ensures db, core, ai, and sparks modules are included in the bundle
-import * as dbModule from '@MaiaOS/script/modules/db.module.js'
-import * as sparksModule from '@MaiaOS/script/modules/sparks.module.js'
+} from '@MaiaOS/engines'
+import * as aiModule from '@MaiaOS/engines/modules/ai.module.js'
+import * as coreModule from '@MaiaOS/engines/modules/core.module.js'
+import * as dbModule from '@MaiaOS/engines/modules/db.module.js'
+import * as sparksModule from '@MaiaOS/engines/modules/sparks.module.js'
+import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper'
 
 // Store pre-loaded modules for registry
 const preloadedModules = {
@@ -56,7 +49,7 @@ export class MaiaOS {
 		this.viewEngine = null
 		this.actorEngine = null
 		this.subscriptionEngine = null // Subscription management engine
-		this.dbEngine = null // Database operation engine
+		this.dataEngine = null // DataEngine - maia.do({ op, schema, key, ... })
 
 		// CoJSON backend support (for maia-city compatibility)
 		this._node = null
@@ -280,9 +273,9 @@ export class MaiaOS {
 			// Don't await - let it load in background while we continue booting
 		}
 
-		// Set schema resolver for runtime validation (engines need dbEngine for schema lookups)
+		// Set schema resolver for runtime validation (engines need dataEngine for schema lookups)
 		const { setSchemaResolver } = await import('@MaiaOS/schemata/validation.helper')
-		setSchemaResolver({ dbEngine: os.dbEngine })
+		setSchemaResolver({ dataEngine: os.dataEngine })
 
 		// Initialize engines
 		MaiaOS._initializeEngines(os, config)
@@ -307,7 +300,7 @@ export class MaiaOS {
 	 * @throws {Error} If neither backend nor node+account is provided
 	 */
 	static async _initializeDatabase(os, config = {}) {
-		// Create minimal evaluator for DBEngine (expression evaluation in updates)
+		// Create minimal evaluator for DataEngine (expression evaluation in updates)
 		const evaluator = new MaiaScriptEvaluator()
 		const dbOptions = {
 			evaluator,
@@ -316,7 +309,7 @@ export class MaiaOS {
 
 		// If backend is provided, use it
 		if (config.backend) {
-			os.dbEngine = new DBEngine(config.backend, dbOptions)
+			os.dataEngine = new DataEngine(config.backend, dbOptions)
 			return config.backend
 		}
 
@@ -327,8 +320,8 @@ export class MaiaOS {
 				{ node: config.node, account: config.account },
 				{ systemSpark: '°Maia' },
 			)
-			os.dbEngine = new DBEngine(maiaDB, dbOptions)
-			maiaDB.dbEngine = os.dbEngine
+			os.dataEngine = new DataEngine(maiaDB, dbOptions)
+			maiaDB.dbEngine = os.dataEngine
 			return maiaDB
 		}
 
@@ -349,13 +342,13 @@ export class MaiaOS {
 		os.moduleRegistry = new ModuleRegistry()
 
 		// Initialize engines
-		// CRITICAL: Pass dbEngine to evaluator for runtime schema validation (no fallbacks)
-		os.evaluator = new MaiaScriptEvaluator(os.moduleRegistry, { dbEngine: os.dbEngine })
+		// CRITICAL: Pass dataEngine to evaluator for runtime schema validation (no fallbacks)
+		os.evaluator = new MaiaScriptEvaluator(os.moduleRegistry, { dataEngine: os.dataEngine })
 		os.toolEngine = new ToolEngine(os.moduleRegistry)
 
 		// Store engines in registry for module access
 		os.moduleRegistry._toolEngine = os.toolEngine
-		os.moduleRegistry._dbEngine = os.dbEngine
+		os.moduleRegistry._dataEngine = os.dataEngine
 
 		os.stateEngine = new StateEngine(os.toolEngine, os.evaluator)
 		os.styleEngine = new StyleEngine()
@@ -376,11 +369,11 @@ export class MaiaOS {
 
 		// SubscriptionEngine eliminated - all subscriptions handled via direct read() + ReactiveStore
 
-		// Pass database engine to engines (for internal config loading)
-		os.actorEngine.dbEngine = os.dbEngine
-		os.viewEngine.dbEngine = os.dbEngine
-		os.styleEngine.dbEngine = os.dbEngine
-		os.stateEngine.dbEngine = os.dbEngine
+		// Pass DataEngine to engines (for internal config loading)
+		os.actorEngine.dataEngine = os.dataEngine
+		os.viewEngine.dataEngine = os.dataEngine
+		os.styleEngine.dataEngine = os.dataEngine
+		os.stateEngine.dataEngine = os.dataEngine
 
 		// Store reference to MaiaOS in actorEngine (for @db tool access)
 		os.actorEngine.os = os
@@ -435,11 +428,11 @@ export class MaiaOS {
 		} else if (typeof actorPath === 'string' && actorPath.startsWith('co_z')) {
 			// Load actor config using read() directly
 			const actorSchemaCoId = await resolve(
-				this.actorEngine.dbEngine.backend,
+				this.actorEngine.dataEngine.backend,
 				{ fromCoValue: actorPath },
 				{ returnType: 'coId' },
 			)
-			const store = await this.actorEngine.dbEngine.execute({
+			const store = await this.actorEngine.dataEngine.execute({
 				op: 'read',
 				schema: actorSchemaCoId,
 				key: actorPath,
@@ -475,8 +468,8 @@ export class MaiaOS {
 	 * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
 	 */
 	async loadVibeFromAccount(vibeKeyOrCoId, container, spark = '°Maia') {
-		if (!this.dbEngine || !this._account) {
-			throw new Error('[Kernel] Cannot load vibe from account - dbEngine or account not available')
+		if (!this.dataEngine || !this._account) {
+			throw new Error('[Loader] Cannot load vibe from account - dataEngine or account not available')
 		}
 
 		// Co-id: load directly from database (skip spark.vibes lookup)
@@ -487,7 +480,7 @@ export class MaiaOS {
 		const account = this._account
 
 		// Step 1: Read account CoMap
-		const accountStore = await this.dbEngine.execute({
+		const accountStore = await this.dataEngine.execute({
 			op: 'read',
 			schema: '@account',
 			key: account.id,
@@ -506,7 +499,7 @@ export class MaiaOS {
 			)
 		}
 
-		const registriesStore = await this.dbEngine.execute({
+		const registriesStore = await this.dataEngine.execute({
 			op: 'read',
 			schema: null,
 			key: registriesId,
@@ -524,7 +517,7 @@ export class MaiaOS {
 		}
 
 		// Step 3: Read registries.sparks CoMap
-		const sparksStore = await this.dbEngine.execute({
+		const sparksStore = await this.dataEngine.execute({
 			op: 'read',
 			schema: sparksId,
 			key: sparksId,
@@ -557,7 +550,7 @@ export class MaiaOS {
 		}
 
 		// Step 5: Read spark CoMap to get spark.vibes (by co-id)
-		const sparkStore = await this.dbEngine.execute({
+		const sparkStore = await this.dataEngine.execute({
 			op: 'read',
 			schema: null,
 			key: sparkCoId,
@@ -577,7 +570,7 @@ export class MaiaOS {
 		}
 
 		// Step 6: Read spark.vibes CoMap
-		const vibesStore = await this.dbEngine.execute({
+		const vibesStore = await this.dataEngine.execute({
 			op: 'read',
 			schema: vibesId,
 			key: vibesId,
@@ -630,14 +623,14 @@ export class MaiaOS {
 		// This allows us to extract schema co-id from headerMeta.$schema
 		// Loading vibe from database
 
-		const vibeStore = await this.dbEngine.execute({
+		const vibeStore = await this.dataEngine.execute({
 			op: 'read',
 			schema: null, // No schema filter - read CoValue directly
 			key: vibeCoId,
 		})
 
 		// Extract schema co-id from vibe's headerMeta.$schema using fromCoValue pattern
-		const schemaStore = await this.dbEngine.execute({
+		const schemaStore = await this.dataEngine.execute({
 			op: 'schema',
 			fromCoValue: vibeCoId, // ✅ Extracts headerMeta.$schema internally
 		})
@@ -661,7 +654,7 @@ export class MaiaOS {
 		if (!vibe || vibe.error) {
 			// Try direct read to see what's returned
 			try {
-				const directStore = await this.dbEngine.execute({
+				const directStore = await this.dataEngine.execute({
 					op: 'read',
 					schema: null, // Read CoValue directly
 					key: vibeCoId,
@@ -711,7 +704,7 @@ export class MaiaOS {
 		// UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
 		// Returns ReactiveStore that updates when schema becomes available
 		const actorSchemaStore = resolveReactive(
-			this.dbEngine.backend,
+			this.dataEngine.backend,
 			{ fromCoValue: actorCoId },
 			{ returnType: 'coId' },
 		)
@@ -749,7 +742,7 @@ export class MaiaOS {
 		})
 
 		// Verify actor exists in database (using read operation with reactive store)
-		const actorStore = await this.dbEngine.execute({
+		const actorStore = await this.dataEngine.execute({
 			op: 'read',
 			schema: actorSchemaCoId,
 			key: actorCoId,
@@ -801,8 +794,8 @@ export class MaiaOS {
 	 * @param {Object} payload - Operation payload {op: 'query|create|update|delete|seed', ...}
 	 * @returns {Promise<any>} Operation result; for write ops: throws on error, returns data on success (backward compat for state machines)
 	 */
-	async db(payload) {
-		const result = await this.dbEngine.execute(payload)
+	async do(payload) {
+		const result = await this.dataEngine.execute(payload)
 		const WRITE_OPS = new Set([
 			'create',
 			'update',
@@ -844,7 +837,7 @@ export class MaiaOS {
 			styleEngine: this.styleEngine,
 			stateEngine: this.stateEngine,
 			toolEngine: this.toolEngine,
-			dbEngine: this.dbEngine,
+			dataEngine: this.dataEngine,
 			evaluator: this.evaluator,
 			moduleRegistry: this.moduleRegistry,
 		}

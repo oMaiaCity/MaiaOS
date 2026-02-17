@@ -55,7 +55,7 @@ export async function createCoList(
 	if (!isExceptionSchema(schemaName)) {
 		// Use consolidated universal validation function (single source of truth)
 		await loadSchemaAndValidate(dbEngine?.backend || null, schemaName, init, 'createCoList', {
-			dbEngine,
+			dataEngine: dbEngine,
 			getAllSchemas,
 		})
 	}

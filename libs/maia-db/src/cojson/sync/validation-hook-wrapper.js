@@ -161,7 +161,9 @@ async function validateRemoteTransactions(backend, dbEngine, msg) {
 	// Note: Full validation would require merging transactions, which is complex
 	// This approach ensures schema is available and validates current state
 	try {
-		await loadSchemaAndValidate(backend, schemaCoId, content, `remote sync for ${coId}`, { dbEngine })
+		await loadSchemaAndValidate(backend, schemaCoId, content, `remote sync for ${coId}`, {
+			dataEngine: dbEngine,
+		})
 
 		return { valid: true, error: null }
 	} catch (error) {

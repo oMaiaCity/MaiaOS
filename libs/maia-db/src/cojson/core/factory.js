@@ -7,20 +7,19 @@
  * Usage:
  *   import { createCoJSONAPI } from '@MaiaOS/db';
  *   const { node, account } = maia.id;
- *   const cojsonAPI = createCoJSONAPI(node, account);
+ *   const cojsonAPI = await createCoJSONAPI(node, account);
  *   const result = await cojsonAPI.cojson({op: 'read', schema: 'co_z...', key: 'co_z...'});
  */
 
-import { DBEngine } from '@MaiaOS/operations'
 import { MaiaDB } from './MaiaDB.js'
 
 /**
  * Create a CoJSON API instance
  * @param {LocalNode} node - LocalNode instance
  * @param {RawAccount} account - Account CoMap
- * @returns {Object} API object with cojson method
+ * @returns {Promise<Object>} API object with cojson method
  */
-export function createCoJSONAPI(node, account) {
+export async function createCoJSONAPI(node, account) {
 	if (!node) {
 		throw new Error('[createCoJSONAPI] Node required')
 	}
@@ -31,11 +30,13 @@ export function createCoJSONAPI(node, account) {
 
 	const backend = new MaiaDB({ node, account }, { systemSpark: '°Maia' })
 
-	// Create shared DBEngine with backend
-	const dbEngine = new DBEngine(backend)
+	const { DataEngine, MaiaScriptEvaluator } = await import('@MaiaOS/engines')
+	const dataEngine = new DataEngine(backend, {
+		evaluator: new MaiaScriptEvaluator(),
+	})
 
 	// Set dbEngine on backend for runtime schema validation in create functions
-	backend.dbEngine = dbEngine
+	backend.dbEngine = dataEngine
 
 	// Return API object
 	return {
@@ -47,7 +48,7 @@ export function createCoJSONAPI(node, account) {
 		 * @returns {Promise<any>} Operation result
 		 */
 		cojson: async (payload) => {
-			return await dbEngine.execute(payload)
+			return await dataEngine.execute(payload)
 		},
 	}
 }

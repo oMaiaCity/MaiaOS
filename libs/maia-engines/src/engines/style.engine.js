@@ -48,7 +48,7 @@ function sanitizeCSSInterpolatedValue(value) {
 export class StyleEngine {
 	constructor() {
 		this.cache = new Map()
-		this.dbEngine = null
+		this.dataEngine = null
 	}
 
 	resolveStyleRef(ref) {
@@ -384,11 +384,11 @@ export class StyleEngine {
 
 		const brandResolved = this.resolveStyleRef(brandCoId)
 		const brandSchemaCoId = await resolve(
-			this.dbEngine.backend,
+			this.dataEngine.backend,
 			{ fromCoValue: brandResolved },
 			{ returnType: 'coId' },
 		)
-		const brandStore = await this.dbEngine.execute({
+		const brandStore = await this.dataEngine.execute({
 			op: 'read',
 			schema: brandSchemaCoId,
 			key: brandResolved,
@@ -399,11 +399,11 @@ export class StyleEngine {
 		if (styleCoId) {
 			const styleResolved = this.resolveStyleRef(styleCoId)
 			const styleSchemaCoId = await resolve(
-				this.dbEngine.backend,
+				this.dataEngine.backend,
 				{ fromCoValue: styleResolved },
 				{ returnType: 'coId' },
 			)
-			const styleStore = await this.dbEngine.execute({
+			const styleStore = await this.dataEngine.execute({
 				op: 'read',
 				schema: styleSchemaCoId,
 				key: styleResolved,

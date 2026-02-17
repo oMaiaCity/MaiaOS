@@ -403,7 +403,7 @@ export async function ensureSchemaIndexColist(backend, schemaCoId, metaSchemaCoI
 		schema: indexSchemaCoId,
 		cotype: 'colist',
 		data: [],
-		dbEngine: backend.dbEngine,
+		dataEngine: backend.dbEngine,
 	})
 	indexColistId = indexColistRaw.id
 
@@ -713,7 +713,7 @@ async function ensureSchemataRegistry(backend) {
 		schema: schemaForSchematas,
 		cotype: 'comap',
 		data: {},
-		dbEngine: backend.dbEngine,
+		dataEngine: backend.dbEngine,
 	})
 	osCoMap.set('schematas', schematasCoMap.id)
 

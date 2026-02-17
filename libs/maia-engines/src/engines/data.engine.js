@@ -1,25 +1,36 @@
 /**
- * DBEngine - Unified database operation router
+ * DataEngine - Unified database operation router
  *
- * Single API for all data operations: maia.db({op: ...})
+ * Single API for all data operations: maia.do({op: ...})
  * Routes operations to modular sub-operation handlers
- * Supports swappable backends (IndexedDB, CoJSON CRDT)
  *
  * Operations:
  * - read: Load configs/schemas/data (always returns reactive store)
  * - create: Create new records
- * - update: Update existing records (unified for data collections and configs)
+ * - update: Update existing records
  * - delete: Delete records
  * - seed: Flush + seed (dev only)
  * - schema: Load schema definitions by co-id, schema name, or from CoValue headerMeta
  * - resolve: Resolve human-readable keys to co-ids
- * - createSpark: Create new Spark (group reference)
- * - readSpark: Read Spark(s)
- * - updateSpark: Update Spark
- * - deleteSpark: Delete Spark
+ * - createSpark, readSpark, updateSpark, deleteSpark
  */
 
-import { createErrorEntry, createErrorResult, isPermissionError } from './operation-result.js'
+import {
+	createErrorEntry,
+	createErrorResult,
+	isPermissionError,
+} from '../operations/operation-result.js'
+import {
+	appendOperation,
+	createOperation,
+	deleteOperation,
+	processInboxOperation,
+	readOperation,
+	resolveOperation,
+	schemaOperation,
+	seedOperation,
+	updateOperation,
+} from '../operations/operations.js'
 import {
 	addSparkMemberOperation,
 	addSparkParentGroupOperation,
@@ -31,44 +42,37 @@ import {
 	removeSparkParentGroupOperation,
 	updateSparkMemberRoleOperation,
 	updateSparkOperation,
-} from './operations/spark-operations.js'
-import {
-	appendOperation,
-	createOperation,
-	deleteOperation,
-	processInboxOperation,
-	readOperation,
-	resolveOperation,
-	schemaOperation,
-	seedOperation,
-	updateOperation,
-} from './operations.js'
+} from '../operations/spark-operations.js'
 
-export class DBEngine {
+export class DataEngine {
 	/**
-	 * Create a new DBEngine instance
 	 * @param {Object} backend - MaiaDB or backend with read/create/update/delete interface
-	 * @param {Object} [options] - Optional configuration
-	 * @param {Object} [options.evaluator] - Optional MaiaScript evaluator for expression evaluation in updates
-	 * @param {() => string|null} [options.getMoaiBaseUrl] - Optional fn returning moai API base URL (for POST /register after createSpark)
+	 * @param {Object} [options]
+	 * @param {Object} [options.evaluator] - MaiaScript evaluator (injected at boot; required for read reactive resolution)
+	 * @param {() => string|null} [options.getMoaiBaseUrl] - For POST /register after createSpark
 	 */
 	constructor(backend, options = {}) {
 		this.backend = backend
 		const { evaluator, getMoaiBaseUrl } = options
 		this.getMoaiBaseUrl = getMoaiBaseUrl ?? null
 
-		// Pass dbEngine to backend for runtime schema validation in create functions
+		// Inject evaluator for read reactive resolution (avoids maia-db → maia-engines)
+		// Always inject when we have evaluator - constructor.name check breaks under minification
+		if (backend && evaluator) {
+			backend.evaluator = evaluator
+		}
 		if (backend && typeof backend.setDbEngine === 'function') {
 			backend.setDbEngine(this)
-		} else if (backend && backend.constructor.name === 'MaiaDB') {
+		} else if (backend && backend.node && backend.account) {
 			backend.dbEngine = this
 		}
 
-		// Initialize operations as execute wrappers (maintains same interface)
 		this.operations = {
 			read: { execute: (params) => readOperation(this.backend, params) },
 			create: { execute: (params) => createOperation(this.backend, this, params) },
-			update: { execute: (params) => updateOperation(this.backend, this, evaluator, params) },
+			update: {
+				execute: (params) => updateOperation(this.backend, this, evaluator, params),
+			},
 			delete: { execute: (params) => deleteOperation(this.backend, this, params) },
 			seed: { execute: (params) => seedOperation(this.backend, params) },
 			schema: { execute: (params) => schemaOperation(this.backend, this, params) },
@@ -77,12 +81,16 @@ export class DBEngine {
 			push: {
 				execute: (params) => appendOperation(this.backend, this, { ...params, cotype: 'costream' }),
 			},
-			processInbox: { execute: (params) => processInboxOperation(this.backend, this, params) },
+			processInbox: {
+				execute: (params) => processInboxOperation(this.backend, this, params),
+			},
 			createSpark: { execute: (params) => createSparkOperation(this.backend, this, params) },
 			readSpark: { execute: (params) => readSparkOperation(this.backend, params) },
 			updateSpark: { execute: (params) => updateSparkOperation(this.backend, this, params) },
 			deleteSpark: { execute: (params) => deleteSparkOperation(this.backend, this, params) },
-			addSparkMember: { execute: (params) => addSparkMemberOperation(this.backend, this, params) },
+			addSparkMember: {
+				execute: (params) => addSparkMemberOperation(this.backend, this, params),
+			},
 			removeSparkMember: {
 				execute: (params) => removeSparkMemberOperation(this.backend, this, params),
 			},
@@ -92,39 +100,31 @@ export class DBEngine {
 			removeSparkParentGroup: {
 				execute: (params) => removeSparkParentGroupOperation(this.backend, this, params),
 			},
-			getSparkMembers: { execute: (params) => getSparkMembersOperation(this.backend, params) },
+			getSparkMembers: {
+				execute: (params) => getSparkMembersOperation(this.backend, params),
+			},
 			updateSparkMemberRole: {
 				execute: (params) => updateSparkMemberRoleOperation(this.backend, this, params),
 			},
 		}
 	}
 
-	/**
-	 * Execute a database operation
-	 * @param {Object} payload - Operation payload
-	 * @param {string} payload.op - Operation name (read, create, update, delete, seed)
-	 * @param {Object} payload params - Operation-specific parameters
-	 * @returns {Promise<any>} Operation result
-	 */
 	async execute(payload) {
 		const { op, ...params } = payload
 
 		if (!op) {
 			throw new Error(
-				'[DBEngine] Operation required: {op: "read|create|update|delete|seed|schema|resolve|append|push|createSpark|readSpark|updateSpark|deleteSpark|addSparkMember|removeSparkMember|addSparkParentGroup|removeSparkParentGroup|getSparkMembers|updateSparkMemberRole"}',
+				'[DataEngine] Operation required: {op: "read|create|update|delete|seed|schema|resolve|append|push|createSpark|readSpark|updateSpark|deleteSpark|addSparkMember|removeSparkMember|addSparkParentGroup|removeSparkParentGroup|getSparkMembers|updateSparkMemberRole"}',
 			)
 		}
 
-		// Debug logging removed - too verbose
-
-		// Route 'push' operation to 'append' with cotype='costream'
 		if (op === 'push') {
 			return await this.operations.append.execute({ ...params, cotype: 'costream' })
 		}
 
 		const operation = this.operations[op]
 		if (!operation) {
-			throw new Error(`[DBEngine] Unknown operation: ${op}`)
+			throw new Error(`[DataEngine] Unknown operation: ${op}`)
 		}
 
 		const WRITE_OPS = new Set([
@@ -138,8 +138,7 @@ export class DBEngine {
 			'removeSparkMember',
 		])
 		try {
-			const result = await operation.execute(params)
-			return result
+			return await operation.execute(params)
 		} catch (error) {
 			if (WRITE_OPS.has(op)) {
 				const errors = [
@@ -152,12 +151,4 @@ export class DBEngine {
 			throw error
 		}
 	}
-
-	/**
-	 * Resolve a human-readable ID to a co-id
-	 * DEPRECATED: This method should only be used during seeding. At runtime, all IDs should already be co-ids.
-	 * @deprecated Use co-ids directly at runtime. This method is only for seeding/backward compatibility.
-	 * @param {string} humanReadableId - Human-readable ID (e.g., '°Maia/vibe/todos', 'vibe/vibe')
-	 * @returns {Promise<string|null>} Co-id (co_z...) or null if not found
-	 */
 }

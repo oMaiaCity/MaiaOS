@@ -24,7 +24,7 @@
 import {
 	buildSeedConfig,
 	createWebSocketPeer,
-	DBEngine,
+	DataEngine,
 	filterVibesForSeeding,
 	generateRegistryName,
 	getAllSchemas,
@@ -32,6 +32,7 @@ import {
 	getAllVibeRegistries,
 	loadOrCreateAgentAccount,
 	MaiaDB,
+	MaiaScriptEvaluator,
 	removeGroupMember,
 	resolve,
 	schemaMigration,
@@ -180,7 +181,7 @@ async function handleRegister(worker, body) {
 	let u =
 		username != null && typeof username === 'string' && username.trim() ? username.trim() : null
 
-	const { backend, dbEngine } = worker
+	const { backend, dataEngine } = worker
 	try {
 		const registryKey = type === 'human' ? 'humans' : 'sparks'
 		const registryId = await getCoIdByPath(backend, getRegistriesId(worker.account), [registryKey], {
@@ -231,7 +232,7 @@ async function handleRegister(worker, body) {
 			} catch (_e) {}
 
 			const registryData = { [u]: humanCoMap.id, [accountId]: humanCoMap.id }
-			const r = await dbEngine.execute({ op: 'update', id: registryId, data: registryData })
+			const r = await dataEngine.execute({ op: 'update', id: registryId, data: registryData })
 			if (r?.ok === false)
 				return err(r.errors?.map((e) => e.message).join('; ') ?? 'update failed', 500)
 			return jsonResponse({
@@ -246,7 +247,7 @@ async function handleRegister(worker, body) {
 		if (!u) u = generateRegistryName(type)
 		if (raw?.[u] != null && raw[u] !== coId)
 			return err(`username "${u}" already registered to different identity`, 409)
-		const r = await dbEngine.execute({ op: 'update', id: registryId, data: { [u]: coId } })
+		const r = await dataEngine.execute({ op: 'update', id: registryId, data: { [u]: coId } })
 		if (r?.ok === false)
 			return err(r.errors?.map((e) => e.message).join('; ') ?? 'update failed', 500)
 		return jsonResponse({
@@ -513,9 +514,10 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 		process.on('SIGINT', () => shutdown())
 
 		const backend = new MaiaDB({ node: localNode, account: result.account }, { systemSpark: '°Maia' })
-		const dbEngine = new DBEngine(backend)
-		backend.dbEngine = dbEngine
-		agentWorker = { node: localNode, account: result.account, backend, dbEngine }
+		const evaluator = new MaiaScriptEvaluator()
+		const dataEngine = new DataEngine(backend, { evaluator })
+		backend.dbEngine = dataEngine
+		agentWorker = { node: localNode, account: result.account, backend, dataEngine }
 
 		// Ensure migration completes before seed (sparkGuardian -> guardian, registries.humans)
 		// loadAccount defers migration; seed needs guardian in os.capabilities
@@ -534,7 +536,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 			const { configs: mergedConfigs, data } = await buildSeedConfig(vibeRegistries)
 			const configsWithTools = { ...mergedConfigs, tool: getAllToolDefinitions() }
 			const schemas = getAllSchemas()
-			const seedResult = await dbEngine.execute({
+			const seedResult = await dataEngine.execute({
 				op: 'seed',
 				configs: configsWithTools,
 				schemas,
