@@ -40,7 +40,7 @@ function travelerFallback(accountCoId) {
 
 /**
  * Resolve account co-id to profile co-id via humans registry (public lookup)
- * @param {Object} maia - MaiaOS instance with maia.do()
+ * @param {Object} maia - MaiaOS instance with maia.db()
  * @param {string} accountCoId - Account co-id (co_z...)
  * @returns {Promise<string|null>} Profile co-id or null if not found
  */
@@ -48,20 +48,47 @@ async function resolveAccountToProfileCoIdViaHumans(maia, accountCoId) {
 	try {
 		const registriesId = maia?.id?.maiaId?.get?.('registries')
 		if (!registriesId?.startsWith('co_z')) return null
-		const registriesStore = await maia.do({ op: 'read', schema: null, key: registriesId })
+		const registriesStore = await maia.db({ op: 'read', schema: null, key: registriesId })
 		await waitForStore(registriesStore, 5000)
 		const registriesData = registriesStore?.value ?? registriesStore
 		if (!registriesData?.humans?.startsWith('co_z')) return null
-		const humansStore = await maia.do({ op: 'read', schema: null, key: registriesData.humans })
+		const humansStore = await maia.db({ op: 'read', schema: null, key: registriesData.humans })
 		await waitForStore(humansStore, 5000)
 		const humansData = humansStore?.value ?? humansStore
 		const humanCoId = humansData?.[accountCoId]
 		if (!humanCoId?.startsWith('co_z')) return null
-		const humanStore = await maia.do({ op: 'read', schema: null, key: humanCoId })
+		const humanStore = await maia.db({ op: 'read', schema: null, key: humanCoId })
 		await waitForStore(humanStore, 5000)
 		const humanData = humanStore?.value ?? humanStore
 		const profileCoId = humanData?.profile
 		return profileCoId?.startsWith('co_z') ? profileCoId : null
+	} catch (_e) {
+		return null
+	}
+}
+
+/**
+ * Resolve a single account co-id to its profile name
+ * Uses humans registry (public) first; falls back to account read for self.
+ * @param {Object} maia - MaiaOS instance with maia.db()
+ * @param {string} accountCoId - Account co-id (co_z...)
+ * @returns {Promise<string|null>} Profile co-id or null if not found
+ */
+async function resolveAccountToProfileCoIdViaHumans(maia, accountCoId) {
+	try {
+		let profileCoId = await resolveAccountToProfileCoIdViaHumans(maia, accountCoId)
+		if (!profileCoId) {
+			const accountStore = await maia.db({ op: 'read', schema: '@account', key: accountCoId })
+			await waitForStore(accountStore, 5000)
+			const accountData = accountStore?.value ?? accountStore
+			profileCoId = accountData?.profile?.startsWith('co_') ? accountData.profile : null
+		}
+		if (!profileCoId) return travelerFallback(accountCoId)
+		const profileStore = await maia.db({ op: 'read', schema: null, key: profileCoId })
+		await waitForStore(profileStore, 5000)
+		const profileData = profileStore?.value ?? profileStore
+		const name = profileData?.name
+		return typeof name === 'string' && name.length > 0 ? name : travelerFallback(accountCoId)
 	} catch (_e) {
 		return null
 	}
@@ -169,4 +196,15 @@ export async function resolveAccountCoIdsToProfiles(maia, accountCoIds) {
 	}
 
 	return result
+}
+
+/**
+ * Resolve account co-id to profile co-id for navigation (e.g. selectCoValue)
+ * Uses humans registry when available; falls back to null.
+ * @param {Object} maia - MaiaOS instance with maia.db()
+ * @param {string} accountCoId - Account co-id (co_z...)
+ * @returns {Promise<string|null>} Profile co-id or null
+ */
+export async function resolveAccountToProfileCoId(maia, accountCoId) {
+	return resolveAccountToProfileCoIdViaHumans(maia, accountCoId)
 }
