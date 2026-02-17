@@ -8,7 +8,7 @@ import { getStorage } from '@MaiaOS/storage'
 import { LocalNode } from 'cojson'
 import { WasmCrypto } from 'cojson/crypto/WasmCrypto'
 import { schemaMigration } from '../../migrations/schema.migration.js'
-import { simpleAccountSeed } from '../schema/seed.js'
+import { simpleAccountSeed } from '../seeding/seed.js'
 
 /**
  * Create a new MaiaID (Account) with provided agentSecret

@@ -1,0 +1,13 @@
+{
+	"name": "@MaiaOS/peer",
+	"version": "26.0217.1432",
+	"type": "module",
+	"main": "./src/index.js",
+	"exports": {
+		".": "./src/index.js"
+	},
+	"dependencies": {
+		"cojson-transport-ws": "0.20.7"
+	},
+	"description": "MaiaPeer - Node + account + storage wiring + sync. P2P layer for MaiaOS."
+}

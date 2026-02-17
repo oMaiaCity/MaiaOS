@@ -17,7 +17,7 @@ import * as crudUpdate from '../crud/update.js'
 import * as groups from '../groups/groups.js'
 import { wrapStorageWithIndexingHooks } from '../indexing/storage-hook-wrapper.js'
 import { resolve } from '../schema/resolver.js'
-import { seed } from '../schema/seed.js'
+import { seed } from '../seeding/seed.js'
 import { wrapSyncManagerWithValidation } from '../sync/validation-hook-wrapper.js'
 
 export class CoJSONBackend extends DBAdapter {
