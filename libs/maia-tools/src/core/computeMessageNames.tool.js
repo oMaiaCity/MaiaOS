@@ -1,4 +1,4 @@
-import { createSuccessResult } from '@MaiaOS/engines'
+import { createSuccessResult } from '@MaiaOS/schemata/operation-result'
 
 /**
  * Compute Message Names Tool

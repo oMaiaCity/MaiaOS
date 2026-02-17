@@ -1,9 +1,8 @@
 /**
  * Operations - Consolidated database operations
+ * Uses peer (MaiaDB) methods only - no direct @MaiaOS/db imports
  */
 
-import { checkCotype, ReactiveStore, resolve } from '@MaiaOS/db'
-import { isSchemaRef, isVibeRef } from '@MaiaOS/schemata'
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver'
 import {
 	ensureCoValueAvailable,
@@ -16,7 +15,7 @@ import { createSuccessResult } from './operation-result.js'
 
 async function resolveSchemaFromCoValue(peer, coId, _opName) {
 	try {
-		const schemaCoId = await resolve(peer, { fromCoValue: coId }, { returnType: 'coId' })
+		const schemaCoId = await peer.resolve({ fromCoValue: coId }, { returnType: 'coId' })
 		if (!schemaCoId) {
 			// Schema not found - this is OK for co-values without schemas (like context co-values)
 			// Return null to indicate no schema (caller should skip validation)
@@ -73,7 +72,7 @@ export async function createOperation(peer, dataEngine, params) {
 	requireParam(schema, 'schema', 'CreateOperation')
 	requireParam(data, 'data', 'CreateOperation')
 	requireDataEngine(dataEngine, 'CreateOperation', 'runtime schema validation')
-	const schemaCoId = await resolve(peer, schema, { returnType: 'coId' })
+	const schemaCoId = await peer.resolve(schema, { returnType: 'coId' })
 	if (!schemaCoId) {
 		const registriesHint = peer.account?.get?.('registries')
 			? 'has registries'
@@ -95,7 +94,7 @@ export async function createOperation(peer, dataEngine, params) {
 	// Schema validation happens at gate: createCoMap/createCoList (peer)
 	// STRICT: Strip to schema-defined properties only - prevents "additional properties" validation errors
 	// when payload accidentally includes idempotencyKey, value, or other non-schema keys
-	const schemaDef = await resolve(peer, schemaCoId, { returnType: 'schema' })
+	const schemaDef = await peer.resolve(schemaCoId, { returnType: 'schema' })
 	const allowedKeys =
 		schemaDef?.properties && typeof schemaDef.properties === 'object'
 			? new Set(Object.keys(schemaDef.properties))
@@ -164,13 +163,13 @@ export async function schemaOperation(peer, _dataEngine, params) {
 	}
 	if (fromCoValue) {
 		validateCoId(fromCoValue, 'SchemaOperation')
-		schemaCoId = await resolve(peer, { fromCoValue }, { returnType: 'coId' })
+		schemaCoId = await peer.resolve({ fromCoValue }, { returnType: 'coId' })
 		if (!schemaCoId) {
-			return new ReactiveStore(null)
+			return peer.createReactiveStore(null)
 		}
 	}
 	const schemaCoMapStore = await peer.read(null, schemaCoId)
-	const schemaStore = new ReactiveStore(null)
+	const schemaStore = peer.createReactiveStore(null)
 	const updateSchema = (coValueData) =>
 		schemaStore._set(extractSchemaDefinition(coValueData, schemaCoId))
 	const unsubscribe = schemaCoMapStore.subscribe(updateSchema)
@@ -184,17 +183,21 @@ export async function schemaOperation(peer, _dataEngine, params) {
 }
 
 export async function resolveOperation(peer, params) {
-	const { humanReadableKey } = params
-	requireParam(humanReadableKey, 'humanReadableKey', 'ResolveOperation')
-	if (typeof humanReadableKey !== 'string')
+	const { humanReadableKey, fromCoValue, returnType = 'coId' } = params
+	const hasKey = humanReadableKey != null
+	const hasFromCoValue = fromCoValue != null
+	if (!hasKey && !hasFromCoValue) {
+		throw new Error('[ResolveOperation] humanReadableKey or fromCoValue required')
+	}
+	if (hasKey && hasFromCoValue) {
+		throw new Error('[ResolveOperation] Provide humanReadableKey OR fromCoValue, not both')
+	}
+	const identifier = hasFromCoValue ? { fromCoValue } : humanReadableKey
+	if (typeof identifier === 'string' && typeof humanReadableKey !== 'string') {
 		throw new Error('[ResolveOperation] humanReadableKey must be a string')
-	// Support schema refs (°Maia/schema/...), vibe refs (°Maia/vibe/...), and actor refs (@actor/... or °Spark/.../actor/...)
-	const isActorRef =
-		humanReadableKey.startsWith('@actor/') || /^°[^/]+.*\/actor\//.test(humanReadableKey)
-	if (isSchemaRef(humanReadableKey) || isActorRef || isVibeRef(humanReadableKey)) {
 	}
 	const spark = params.spark ?? peer?.systemSpark
-	return await resolve(peer, humanReadableKey, { returnType: 'coId', spark })
+	return await peer.resolve(identifier, { returnType, spark })
 }
 
 export async function appendOperation(peer, dataEngine, params) {
@@ -206,8 +209,8 @@ export async function appendOperation(peer, dataEngine, params) {
 	const schemaCoId = await resolveSchemaFromCoValue(peer, coId, 'AppendOperation')
 	let targetCotype = cotype
 	if (!targetCotype) {
-		const isColist = await checkCotype(peer, schemaCoId, 'colist')
-		const isCoStream = await checkCotype(peer, schemaCoId, 'costream')
+		const isColist = await peer.checkCotype(schemaCoId, 'colist')
+		const isCoStream = await peer.checkCotype(schemaCoId, 'costream')
 		if (isColist) targetCotype = 'colist'
 		else if (isCoStream) targetCotype = 'costream'
 		else
@@ -215,11 +218,11 @@ export async function appendOperation(peer, dataEngine, params) {
 				`[AppendOperation] CoValue ${coId} must be a CoList (colist) or CoStream (costream), got schema cotype: ${schemaCoId}`,
 			)
 	}
-	if (!(await checkCotype(peer, schemaCoId, targetCotype)))
+	if (!(await peer.checkCotype(schemaCoId, targetCotype)))
 		throw new Error(
 			`[AppendOperation] CoValue ${coId} is not a ${targetCotype} (schema cotype check failed)`,
 		)
-	const schema = await resolve(peer, schemaCoId, { returnType: 'schema' })
+	const schema = await peer.resolve(schemaCoId, { returnType: 'schema' })
 	if (!schema) throw new Error(`[AppendOperation] Schema ${schemaCoId} not found`)
 	const content = peer.getCurrentContent(coValueCore)
 	const methodName = targetCotype === 'colist' ? 'append' : 'push'
@@ -264,6 +267,5 @@ export async function processInboxOperation(peer, _dataEngine, params) {
 	requireParam(inboxCoId, 'inboxCoId', 'ProcessInboxOperation')
 	validateCoId(actorId, 'ProcessInboxOperation')
 	validateCoId(inboxCoId, 'ProcessInboxOperation')
-	const { processInbox } = await import('@MaiaOS/db')
-	return await processInbox(peer, actorId, inboxCoId)
+	return await peer.processInbox(actorId, inboxCoId)
 }

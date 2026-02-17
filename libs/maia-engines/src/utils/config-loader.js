@@ -1,4 +1,3 @@
-import { resolve } from '@MaiaOS/db'
 import { validateAgainstSchemaOrThrow, validateCoId } from '@MaiaOS/schemata/validation.helper'
 
 function stripMetadataForValidation(config) {
@@ -143,8 +142,7 @@ export async function loadConfigOrUseProvided(
 		if (!configCoId.startsWith('co_z')) {
 			throw new Error(`[${configType}] Config $id must be a co-id (co_z...), got: ${configCoId}`)
 		}
-		const schema = await resolve(
-			dataEngine.peer,
+		const schema = await dataEngine.peer.resolve(
 			{ fromCoValue: configCoId },
 			{ returnType: 'schema' },
 		)

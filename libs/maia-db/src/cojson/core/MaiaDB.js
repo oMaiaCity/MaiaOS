@@ -6,17 +6,24 @@
  */
 
 import { seed } from '../../migrations/seeding/seed.js'
+import { ReactiveStore } from '../../reactive-store.js'
 import { EXCEPTION_SCHEMAS } from '../../schemas/registry.js'
 import { getGlobalCoCache } from '../cache/coCache.js'
 import * as crudCreate from '../crud/create.js'
 import { extractCoStreamWithSessions } from '../crud/data-extraction.js'
 import * as crudDelete from '../crud/delete.js'
+import { createAndPushMessage as createAndPushMessageFn } from '../crud/message-helpers.js'
+import { processInbox as processInboxFn } from '../crud/process-inbox.js'
+import { resolveReactive as resolveReactiveFn } from '../crud/reactive-resolver.js'
 import { findFirst as findFirstByFilter, read as universalRead } from '../crud/read.js'
-import { waitForStoreReady } from '../crud/read-operations.js'
+import {
+	waitForReactiveResolution as waitForReactiveResolutionFn,
+	waitForStoreReady,
+} from '../crud/read-operations.js'
 import * as crudUpdate from '../crud/update.js'
 import * as groups from '../groups/groups.js'
 import { wrapStorageWithIndexingHooks } from '../indexing/storage-hook-wrapper.js'
-import { resolve } from '../schema/resolver.js'
+import { checkCotype as checkCotypeFn, resolve } from '../schema/resolver.js'
 import { wrapSyncManagerWithValidation } from '../sync/validation-hook-wrapper.js'
 
 export class MaiaDB {
@@ -348,5 +355,34 @@ export class MaiaDB {
 			if (process.env.DEBUG) return false
 		}
 		return true
+	}
+
+	// Delegate methods for engines (Phase 4: route through peer, no direct db imports in engines)
+	async resolve(identifier, opts = {}) {
+		return resolve(this, identifier, opts)
+	}
+	async checkCotype(schemaCoId, expectedCotype) {
+		return checkCotypeFn(this, schemaCoId, expectedCotype)
+	}
+	createReactiveStore(initialValue) {
+		return new ReactiveStore(initialValue)
+	}
+	async getSparkCapabilityGroupIdFromSparkCoId(sparkCoId, capabilityName = 'guardian') {
+		return groups.getSparkCapabilityGroupIdFromSparkCoId(this, sparkCoId, capabilityName)
+	}
+	resolveReactive(identifier, opts = {}) {
+		return resolveReactiveFn(this, identifier, opts)
+	}
+	async waitForReactiveResolution(store, opts = {}) {
+		return waitForReactiveResolutionFn(store, opts)
+	}
+	async processInbox(actorId, inboxCoId) {
+		return processInboxFn(this, actorId, inboxCoId)
+	}
+	async createAndPushMessage(inboxCoId, messageData) {
+		if (!this.dbEngine) {
+			throw new Error('[MaiaDB.createAndPushMessage] dbEngine required (set via DataEngine)')
+		}
+		return createAndPushMessageFn(this.dbEngine, inboxCoId, messageData)
 	}
 }

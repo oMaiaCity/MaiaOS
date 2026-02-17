@@ -7,6 +7,8 @@
 		".": "./src/index.js"
 	},
 	"dependencies": {
+		"@MaiaOS/storage": "workspace:*",
+		"cojson": "^0.20.7",
 		"cojson-transport-ws": "0.20.7"
 	},
 	"description": "MaiaPeer - Node + account + storage wiring + sync. P2P layer for MaiaOS."

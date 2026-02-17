@@ -1,4 +1,3 @@
-import { resolveReactive, waitForReactiveResolution } from '@MaiaOS/db'
 import { containsExpressions, resolveExpressions } from '@MaiaOS/schemata/expression-resolver'
 import { extractDOMValues } from '@MaiaOS/schemata/payload-resolver'
 import { RENDER_STATES } from './actor.engine.js'
@@ -41,12 +40,13 @@ export class ViewEngine {
 
 	async loadView(coId) {
 		// UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
-		const viewSchemaStore = resolveReactive(
-			this.dataEngine.peer,
+		const viewSchemaStore = this.dataEngine.peer.resolveReactive(
 			{ fromCoValue: coId },
 			{ returnType: 'coId' },
 		)
-		const viewSchemaState = await waitForReactiveResolution(viewSchemaStore, { timeoutMs: 10000 })
+		const viewSchemaState = await this.dataEngine.peer.waitForReactiveResolution(viewSchemaStore, {
+			timeoutMs: 10000,
+		})
 		const viewSchemaCoId = viewSchemaState.schemaCoId
 
 		if (!viewSchemaCoId) {

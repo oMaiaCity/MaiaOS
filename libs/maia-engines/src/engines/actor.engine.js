@@ -4,8 +4,6 @@
  * Generic and universal - no domain-specific logic
  */
 
-// Import message helper
-import { createAndPushMessage, resolve } from '@MaiaOS/db'
 import { containsExpressions } from '@MaiaOS/schemata/expression-resolver'
 import { validateAgainstSchema } from '@MaiaOS/schemata/validation.helper'
 
@@ -41,7 +39,7 @@ export class ActorEngine {
 		if (!actor.contextCoId || !this.dataEngine) return
 		const contextSchemaCoId =
 			actor.contextSchemaCoId ||
-			(await resolve(this.dataEngine.peer, { fromCoValue: actor.contextCoId }, { returnType: 'coId' }))
+			(await this.dataEngine.peer.resolve({ fromCoValue: actor.contextCoId }, { returnType: 'coId' }))
 		const sanitizedUpdates = {}
 		for (const [key, value] of Object.entries(updates)) {
 			sanitizedUpdates[key] = value === undefined ? null : value
@@ -59,8 +57,7 @@ export class ActorEngine {
 	}
 
 	async _readStore(coId) {
-		const schemaCoId = await resolve(
-			this.dataEngine.peer,
+		const schemaCoId = await this.dataEngine.peer.resolve(
 			{ fromCoValue: coId },
 			{ returnType: 'coId' },
 		)
@@ -133,8 +130,7 @@ export class ActorEngine {
 				}
 				const contextStore = await this._readStore(actualContextCoId)
 				if (!contextStore) throw new Error(`[ActorEngine] Failed to load context ${actualContextCoId}`)
-				const contextSchemaCoId = await resolve(
-					this.dataEngine.peer,
+				const contextSchemaCoId = await this.dataEngine.peer.resolve(
 					{ fromCoValue: actualContextCoId },
 					{ returnType: 'coId' },
 				)
@@ -681,7 +677,7 @@ export class ActorEngine {
 					target: actorId,
 					processed: false,
 				}
-				await createAndPushMessage(this.dataEngine, actor.inboxCoId, messageData)
+				await this.dataEngine.peer.createAndPushMessage(actor.inboxCoId, messageData)
 				// Subscription fires when inbox store updates - single source of truth (avoids double processMessages)
 			} catch (_error) {}
 		}
@@ -706,7 +702,7 @@ export class ActorEngine {
 			return
 		}
 		try {
-			await createAndPushMessage(this.dataEngine, actor.inboxCoId, {
+			await this.dataEngine.peer.createAndPushMessage(actor.inboxCoId, {
 				type: eventType,
 				payload,
 				source: actorId,
@@ -764,7 +760,7 @@ export class ActorEngine {
 		try {
 			// Resolve message type schema from registry - use systemSpark directly (schema keys match spark name)
 			const schemaKey = `${this.dataEngine.peer.systemSpark}/schema/message/${messageType}`
-			const schema = await resolve(this.dataEngine.peer, schemaKey, { returnType: 'schema' })
+			const schema = await this.dataEngine.peer.resolve(schemaKey, { returnType: 'schema' })
 			return schema
 		} catch (_error) {
 			return null

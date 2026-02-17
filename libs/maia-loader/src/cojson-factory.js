@@ -4,14 +4,17 @@
  * Creates a standalone cojson API that works directly with CoJSON raw types.
  * MaiaDB - used by DataEngine (maia.do) in @MaiaOS/engines.
  *
+ * Lives in loader (orchestrator) so db stays decoupled from engines.
+ *
  * Usage:
- *   import { createCoJSONAPI } from '@MaiaOS/db';
+ *   import { createCoJSONAPI } from '@MaiaOS/loader';
  *   const { node, account } = maia.id;
  *   const cojsonAPI = await createCoJSONAPI(node, account);
  *   const result = await cojsonAPI.cojson({op: 'read', schema: 'co_z...', key: 'co_z...'});
  */
 
-import { MaiaDB } from './MaiaDB.js'
+import { MaiaDB } from '@MaiaOS/db'
+import { DataEngine, MaiaScriptEvaluator } from '@MaiaOS/engines'
 
 /**
  * Create a CoJSON API instance
@@ -30,7 +33,6 @@ export async function createCoJSONAPI(node, account) {
 
 	const peer = new MaiaDB({ node, account }, { systemSpark: '°Maia' })
 
-	const { DataEngine, MaiaScriptEvaluator } = await import('@MaiaOS/engines')
 	const dataEngine = new DataEngine(peer, {
 		evaluator: new MaiaScriptEvaluator(),
 	})

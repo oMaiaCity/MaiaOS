@@ -12,7 +12,8 @@
 		"./expression-resolver": "./src/expression-resolver.js",
 		"./payload-resolver": "./src/payload-resolver.js",
 		"./co-types.defs.json": "./src/co-types.defs.json",
-		"./os/meta.schema.json": "./src/os/meta.schema.json"
+		"./os/meta.schema.json": "./src/os/meta.schema.json",
+		"./operation-result": "./src/operation-result.js"
 	},
 	"dependencies": {
 		"@MaiaOS/db": "workspace:*",

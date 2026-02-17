@@ -23,8 +23,7 @@ export {
 // Meta schema is now loaded from os/meta.schema.json directly (seeding) or from backend (runtime)
 // No exports needed - use ValidationEngine.getMetaSchema() for validation engine, or getMetaSchemaFromPeer() for runtime access
 
-// Export schema loader functions (runtime) - consolidated into resolver.js
-export { loadSchemasFromAccount, resolve } from '@MaiaOS/db'
+// loadSchemasFromAccount, resolve: import from @MaiaOS/db directly (schemata must not depend on db)
 // Export co-id registry (seeding only)
 export { CoIdRegistry } from './co-id-generator.js'
 // Export co-type definitions

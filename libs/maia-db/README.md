@@ -26,8 +26,8 @@ MaiaOS Operations (maia.db({ op: 'read', ... }))
 
 ## Key Exports
 
-- `CoJSONBackend`, `createCoJSONAPI` - Database backend for operations layer
-- `loadAccount`, `createAccountWithSecret` - Account management
+- `CoJSONBackend` - Database backend for operations layer
+- Account primitives (`createAccountWithSecret`, `loadAccount`) - in @MaiaOS/peer; db exports `schemaMigration`, `simpleAccountSeed` for wiring
 - `resolve`, `resolveReactive`, `checkCotype`, `loadSchemasFromAccount` - Schema/co-value resolution
 - `waitForStoreReady`, `waitForReactiveResolution` - Store access helpers
 - `setupSyncPeers`, `subscribeSyncState` - Sync peer configuration
@@ -42,7 +42,7 @@ libs/maia-db/
 ├── src/
 │   ├── cojson/           # CoJSON layer
 │   │   ├── cache/        # CoCache
-│   │   ├── core/         # CoJSONBackend, factory
+│   │   ├── core/         # CoJSONBackend (MaiaDB)
 │   │   ├── crud/         # read, create, update, delete, collection-helpers
 │   │   ├── indexing/     # schema-index-manager, storage-hook-wrapper
 │   │   ├── schema/       # resolver, seed

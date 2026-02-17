@@ -1,4 +1,8 @@
-import { createErrorEntry, createErrorResult, createSuccessResult } from '@MaiaOS/engines'
+import {
+	createErrorEntry,
+	createErrorResult,
+	createSuccessResult,
+} from '@MaiaOS/schemata/operation-result'
 
 /**
  * Database Tool - @db
