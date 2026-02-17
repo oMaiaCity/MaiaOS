@@ -35,6 +35,8 @@ export class ViewEngine {
 		this.moduleRegistry = moduleRegistry
 		this.dbEngine = null
 		this.actorInputCounters = new Map()
+		this._scrollToBottomPrev = new Map()
+		this._scrollMutationObservers = new Map()
 	}
 
 	async loadView(coId) {
@@ -75,6 +77,13 @@ export class ViewEngine {
 		// Reset input counter for this actor at start of render
 		// This ensures inputs get consistent IDs across re-renders (same position = same ID)
 		this.actorInputCounters.set(actorId, 0)
+		this._pendingScrollToBottom = []
+		// Disconnect MutationObservers from previous render (element is about to be replaced)
+		const prevObservers = this._scrollMutationObservers.get(actorId)
+		if (prevObservers) {
+			for (const { observer } of prevObservers) observer.disconnect()
+			this._scrollMutationObservers.delete(actorId)
+		}
 
 		// CRITICAL: Clear shadow root on re-render (prevents duplicates)
 		// This ensures that when rerender is triggered by context subscription, old DOM is cleared first
@@ -101,8 +110,36 @@ export class ViewEngine {
 			// Only set dataset for identification
 			element.dataset.actorId = actorId
 			shadowRoot.appendChild(element)
+			this._processScrollToBottom(actorId)
 		} else {
 		}
+	}
+
+	_processScrollToBottom(actorId) {
+		if (!this._pendingScrollToBottom?.length) return
+		const scrollToEl = (el) => {
+			if (el.isConnected) el.scrollTop = el.scrollHeight
+		}
+		for (const { element, exprKey, currentLen } of this._pendingScrollToBottom) {
+			const mapKey = `${actorId}:${exprKey}`
+			this._scrollToBottomPrev.set(mapKey, currentLen)
+
+			// IMMEDIATE scroll: DOM is complete; reading scrollHeight forces layout. Prevents split-second "flash at top" before paint.
+			scrollToEl(element)
+
+			// MutationObserver: scroll when children are added (new messages via incremental updates)
+			const observer = new MutationObserver(() => {
+				scrollToEl(element)
+			})
+			observer.observe(element, { childList: true, subtree: true })
+			if (!this._scrollMutationObservers.has(actorId)) this._scrollMutationObservers.set(actorId, [])
+			this._scrollMutationObservers.get(actorId).push({ observer, element })
+
+			// Fallbacks for async layout (images, fonts): rAF + short setTimeout
+			requestAnimationFrame(() => scrollToEl(element))
+			setTimeout(() => scrollToEl(element), 50)
+		}
+		this._pendingScrollToBottom = []
 	}
 
 	async renderNode(node, data, actorId) {
@@ -135,6 +172,16 @@ export class ViewEngine {
 		// Don't render children if $each is present (children would overwrite $each content)
 		if (!node.$each) {
 			await this._renderNodeChildren(element, node, data, actorId)
+		}
+
+		if (node.scrollToBottomOn && typeof node.scrollToBottomOn === 'string') {
+			const exprKey = node.scrollToBottomOn.replace(/^\$/, '')
+			let currentLen = 0
+			try {
+				const val = await this.evaluator.evaluate(node.scrollToBottomOn, data)
+				currentLen = Array.isArray(val) ? val.length : val != null ? 1 : 0
+			} catch (_e) {}
+			this._pendingScrollToBottom.push({ element, exprKey, currentLen })
 		}
 
 		return element
@@ -667,8 +714,14 @@ export class ViewEngine {
 		this.actorEngine = actorEngine
 	}
 
-	cleanupActor(_actorId) {
-		// $stores Architecture: Backend handles all subscription cleanup automatically via subscriptionCache
-		// No manual cleanup needed
+	cleanupActor(actorId) {
+		const observers = this._scrollMutationObservers.get(actorId)
+		if (observers) {
+			for (const { observer } of observers) observer.disconnect()
+			this._scrollMutationObservers.delete(actorId)
+		}
+		for (const k of this._scrollToBottomPrev.keys()) {
+			if (k.startsWith(`${actorId}:`)) this._scrollToBottomPrev.delete(k)
+		}
 	}
 }

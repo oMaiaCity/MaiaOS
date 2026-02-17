@@ -12,49 +12,89 @@
 			},
 			{
 				"tag": "div",
-				"class": "input-container",
+				"class": "input-area",
+				"attrs": {
+					"data": {
+						"loading": "$isLoading"
+					}
+				},
 				"children": [
 					{
-						"tag": "input",
-						"class": "input",
-						"attrs": {
-							"type": "text",
-							"placeholder": "Type your message...",
-							"disabled": "$isLoading"
-						},
-						"value": "$inputText",
-						"$on": {
-							"input": {
-								"send": "UPDATE_INPUT",
-								"payload": {
-									"value": "@inputValue"
+						"tag": "div",
+						"class": "input-container",
+						"children": [
+							{
+								"tag": "input",
+								"class": "input",
+								"attrs": {
+									"type": "text",
+									"placeholder": "Type your message...",
+									"disabled": "$isLoading"
+								},
+								"value": "$inputText",
+								"$on": {
+									"input": {
+										"send": "UPDATE_INPUT",
+										"payload": {
+											"value": "@inputValue"
+										}
+									},
+									"keydown": {
+										"send": "SEND_MESSAGE",
+										"payload": {
+											"inputText": "@inputValue"
+										},
+										"key": "Enter"
+									}
 								}
 							},
-							"keydown": {
-								"send": "SEND_MESSAGE",
-								"payload": {
-									"inputText": "@inputValue"
+							{
+								"tag": "button",
+								"class": "button",
+								"attrs": {
+									"type": "button",
+									"disabled": "$isLoading"
 								},
-								"key": "Enter"
-							}
-						}
-					},
-					{
-						"tag": "button",
-						"class": "button",
-						"attrs": {
-							"type": "button",
-							"disabled": "$isLoading"
-						},
-						"text": "Send",
-						"$on": {
-							"click": {
-								"send": "SEND_MESSAGE",
-								"payload": {
-									"inputText": "@inputValue"
+								"text": "Send",
+								"$on": {
+									"click": {
+										"send": "SEND_MESSAGE",
+										"payload": {
+											"inputText": "@inputValue"
+										}
+									}
 								}
 							}
-						}
+						]
+					},
+					{
+						"tag": "div",
+						"class": "thinking-badge",
+						"children": [
+							{
+								"tag": "span",
+								"class": "thinking-label",
+								"text": "Thinking"
+							},
+							{
+								"tag": "div",
+								"class": "thinking-bubbles",
+								"children": [
+									{
+										"tag": "span",
+										"class": "thinking-bubble"
+									},
+									{
+										"tag": "span",
+										"class": "thinking-bubble"
+									},
+									{
+										"tag": "span",
+										"class": "thinking-bubble"
+									}
+								]
+							}
+						]
 					}
 				]
 			}

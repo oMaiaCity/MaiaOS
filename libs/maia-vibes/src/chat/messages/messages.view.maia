@@ -4,6 +4,7 @@
 	"content": {
 		"tag": "div",
 		"class": "messages-content",
+		"scrollToBottomOn": "$conversations",
 		"children": [
 			{
 				"tag": "div",

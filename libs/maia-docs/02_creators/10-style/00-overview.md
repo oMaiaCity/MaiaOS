@@ -235,6 +235,9 @@ Inject into Shadow DOM
 ```
 
 ### Animation Styles (Selectors Section)
+
+Use `@keyframes` in the selectors section for animations. Keyframe steps (`from`, `to`, `0%`, `50%`, etc.) map to CSS property objects. All values flow through token interpolation and sanitization.
+
 ```json
 {
   "selectors": {
