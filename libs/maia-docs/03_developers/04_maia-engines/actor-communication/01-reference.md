@@ -104,13 +104,14 @@ The view subscribes to context changes:
 ### Core Engine Files
 
 - **Actor Engine** (`libs/maia-engines/src/engines/actor.engine.js`):
-  - `deliverEvent()` - Deliver event to actor inbox
-  - `processEvents()` - Process messages from inbox
+  - `sendMessage()` - Send message to actor inbox
+  - `sendInternalEvent()` - Send internal event to own inbox
+  - `processMessages()` - Process messages from inbox
   - `_createChildActorIfNeeded()` - Create child actor lazily
 
-- **Process Engine** (`libs/maia-engines/src/engines/process.engine.js`):
-  - `send(processId, event, payload)` - Route event to handlers[event]
-  - `_executeActions()` - Execute ctx, op, tell, ask, function actions
+- **State Engine** (`libs/maia-engines/src/engines/state.engine.js`):
+  - `send()` - Route event to state machine
+  - `_executeNamedAction()` - Execute custom actions (e.g., `sendToDetailActor`)
 
 - **View Engine** (`libs/maia-engines/src/engines/view.engine.js`):
   - `_renderSlot()` - Render child actors in slots
@@ -242,7 +243,7 @@ The view subscribes to context changes:
 
 **Key Files**:
 - `libs/maia-engines/src/engines/actor.engine.js` - Message passing
-- `libs/maia-engines/src/engines/process.engine.js` - Event handler execution
+- `libs/maia-engines/src/engines/state.engine.js` - State machine execution
 - `libs/maia-db/src/cojson/crud/read.js` - Query reactivity
 
 **Example**: Sparks vibe agent → detail actor communication flow (documented above)
