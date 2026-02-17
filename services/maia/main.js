@@ -644,9 +644,9 @@ const LOADING_SCREEN_HTML = (syncMessage, indicatorStyle) => `
 	</div>
 	<div class="loading-connecting-overlay">
 		<div class="loading-spinner"></div>
-		<div>
-			<h2 style="font-size: 1.5rem; margin: 0 0 0.5rem 0; font-weight: 600;">Initializing your account</h2>
-			<div style="font-size: 1rem; opacity: 0.8; margin-bottom: 1rem;">Setting up your sovereign self...</div>
+		<div class="loading-connecting-content">
+			<h2>Initializing your account</h2>
+			<div class="loading-connecting-subtitle">Setting up your sovereign self...</div>
 			<div class="sync-status loading-connecting-sync">
 				<div class="sync-indicator loading-connecting-indicator" style="${indicatorStyle}"></div>
 				<span class="sync-message">${syncMessage}</span>
@@ -659,7 +659,7 @@ function renderLoadingConnectingScreen() {
 	const syncMsg = getSyncStatusMessage(syncState, 'Connecting to sync...')
 	const isConnected = syncState.connected && syncState.status === 'connected'
 	const hasError = syncState.status === 'error' || syncState.error
-	const indicatorStyle = `background: ${isConnected ? '#4ade80' : hasError ? '#ef4444' : '#fbbf24'}; animation: ${isConnected ? 'none' : 'pulse 2s ease-in-out infinite'};`
+	const indicatorStyle = `background: ${isConnected ? 'var(--color-lush-green)' : hasError ? 'var(--brand-red)' : 'var(--color-sun-yellow)'}; animation: ${isConnected ? 'none' : 'pulse 2s ease-in-out infinite'};`
 	document.getElementById('app').innerHTML = LOADING_SCREEN_HTML(syncMsg, indicatorStyle)
 	if (!loadingScreenSyncUnsubscribe) {
 		loadingScreenSyncUnsubscribe = subscribeSyncState((state) => {
@@ -682,7 +682,11 @@ function updateLoadingConnectingScreen() {
 		syncMessageElement.textContent = syncMessage
 		const isConnected = syncState.connected && syncState.status === 'connected'
 		const hasError = syncState.status === 'error' || syncState.error
-		syncIndicator.style.background = isConnected ? '#4ade80' : hasError ? '#ef4444' : '#fbbf24'
+		syncIndicator.style.background = isConnected
+			? 'var(--color-lush-green)'
+			: hasError
+				? 'var(--brand-red)'
+				: 'var(--color-sun-yellow)'
 		syncIndicator.style.animation = isConnected ? 'none' : 'pulse 2s ease-in-out infinite'
 	}
 }
@@ -1041,16 +1045,13 @@ window.loadSpark = loadSpark
 window.navigateToScreen = navigateToScreen
 window.toggleExpand = toggleExpand
 
-// Mobile menu toggle
+// Account menu toggle (username opens dropdown with account ID + sign out)
 window.toggleMobileMenu = () => {
 	const menu = document.getElementById('mobile-menu')
-	if (menu) {
-		menu.classList.toggle('active')
-		const hamburger = document.querySelector('.hamburger-btn')
-		if (hamburger) {
-			hamburger.classList.toggle('active')
-		}
-	}
+	if (!menu) return
+	menu.classList.toggle('active')
+	const trigger = document.querySelector('.account-menu-toggle')
+	if (trigger) trigger.classList.toggle('active', menu.classList.contains('active'))
 }
 
 /** Toggle sidebar (DB viewer or vibe viewer). Pass containerSelector for Shadow DOM (vibe). */
