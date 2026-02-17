@@ -138,27 +138,17 @@ export async function getSparksRegistryId(peer) {
 }
 
 /** Get humans registry CoMap co-id (account.registries.humans). Returns null if not found. */
-export async function getHumansRegistryId(peer) {
-	const registriesId = peer.account?.get?.('registries')
+export async function getHumansRegistryId(backend) {
+	const registriesId = backend.account?.get?.('registries')
 	if (!registriesId?.startsWith('co_z')) return null
-	const registriesStore = await peer.read(null, registriesId)
+	const registriesStore = await backend.read(null, registriesId)
 	await waitForStoreReady(registriesStore, registriesId, 10000)
 	const registriesContent = registriesStore?.value ?? {}
 	return registriesContent.humans ?? null
 }
 
-/** Get avens registry CoMap co-id (account.registries.avens). Returns null if not found. */
-export async function getAvensRegistryId(peer) {
-	const registriesId = peer.account?.get?.('registries')
-	if (!registriesId?.startsWith('co_z')) return null
-	const registriesStore = await peer.read(null, registriesId)
-	await waitForStoreReady(registriesStore, registriesId, 10000)
-	const registriesContent = registriesStore?.value ?? {}
-	return registriesContent.avens ?? null
-}
-
-export async function getSparksRegistryContent(peer) {
-	const sparksId = await getSparksRegistryId(peer)
+export async function getSparksRegistryContent(backend) {
+	const sparksId = await getSparksRegistryId(backend)
 	if (!sparksId?.startsWith('co_z')) return null
 	const sparksStore = await peer.read(null, sparksId)
 	await waitForStoreReady(sparksStore, sparksId, 10000)
