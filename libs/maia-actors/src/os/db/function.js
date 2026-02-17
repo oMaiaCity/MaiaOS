@@ -1,3 +1,9 @@
+import {
+	createErrorEntry,
+	createErrorResult,
+	createSuccessResult,
+} from '@MaiaOS/schemata/operation-result'
+
 /**
  * Database Actor - @db
  * Unified API for all database operations.

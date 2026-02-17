@@ -381,8 +381,7 @@ export class StyleEngine {
 		}
 
 		const brandResolved = this.resolveStyleRef(brandCoId)
-		const brandSchemaCoId = await resolve(
-			this.dataEngine.peer,
+		const brandSchemaCoId = await this.dataEngine.peer.resolve(
 			{ fromCoValue: brandResolved },
 			{ returnType: 'coId' },
 		)
@@ -396,8 +395,7 @@ export class StyleEngine {
 		let actor = { tokens: {}, components: {} }
 		if (styleCoId) {
 			const styleResolved = this.resolveStyleRef(styleCoId)
-			const styleSchemaCoId = await resolve(
-				this.dataEngine.peer,
+			const styleSchemaCoId = await this.dataEngine.peer.resolve(
 				{ fromCoValue: styleResolved },
 				{ returnType: 'coId' },
 			)

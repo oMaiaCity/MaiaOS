@@ -1,5 +1,4 @@
 // loadSchemaFromDB removed - use resolve() from @MaiaOS/db if needed
-import { ReactiveStore } from '@MaiaOS/db'
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper'
 
 // getContextValue removed - Backend unified store provides merged value directly via context.value

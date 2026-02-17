@@ -5,8 +5,8 @@
  * STRICT: PRF required, no fallbacks
  */
 
-import { createAccountWithSecret, loadAccount } from '@MaiaOS/db'
-import { setupSyncPeers } from '@MaiaOS/peer'
+import { schemaMigration, simpleAccountSeed } from '@MaiaOS/db'
+import { createAccountWithSecret, loadAccount, setupSyncPeers } from '@MaiaOS/peer'
 // Import dependencies directly (workspace imports work in dev)
 // In Docker: These will be resolved via the kernel bundle or copied files
 import { getStorage } from '@MaiaOS/storage'
@@ -285,8 +285,8 @@ export async function createAgentAccount({
 	const createResult = await createAccountWithSecret({
 		agentSecret,
 		name,
-		peers: syncSetup?.peers ?? [],
-		storage,
+		peers: syncSetup ? syncSetup.peers : [],
+		storage: storage,
 		migration: schemaMigration,
 		seed: simpleAccountSeed,
 	})
@@ -358,8 +358,8 @@ export async function loadAgentAccount({
 	const loadResult = await loadAccount({
 		accountID,
 		agentSecret,
-		peers: syncSetup?.peers ?? [],
-		storage,
+		peers: syncSetup ? syncSetup.peers : [],
+		storage: storage,
 		migration: schemaMigration,
 	})
 

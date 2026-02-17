@@ -20,8 +20,6 @@ export {
 	invalidateResolvedDataForMutatedCoValue,
 	resetGlobalCoCache,
 } from './cojson/cache/coCache.js'
-// CoJSON Mini CRUD API (database-level wrapper)
-export { createCoJSONAPI } from './cojson/core/factory.js'
 // MaiaDB - single data layer implementation (was CoJSONBackend)
 export { MaiaDB } from './cojson/core/MaiaDB.js'
 export { createCoList } from './cojson/cotypes/coList.js'

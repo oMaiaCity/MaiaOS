@@ -10,7 +10,6 @@
 		"@MaiaOS/peer": "workspace:*",
 		"@MaiaOS/schemata": "workspace:*",
 		"@MaiaOS/storage": "workspace:*",
-		"@MaiaOS/tools": "workspace:*",
 		"cojson": "^0.20.7",
 		"cojson-transport-ws": "0.20.7"
 	}

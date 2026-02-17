@@ -78,7 +78,6 @@
       "name": "@MaiaOS/engines",
       "version": "26.217.1432",
       "dependencies": {
-        "@MaiaOS/db": "workspace:*",
         "@MaiaOS/schemata": "workspace:*",
         "@MaiaOS/tools": "workspace:*",
       },
@@ -107,6 +106,8 @@
       "name": "@MaiaOS/peer",
       "version": "26.217.1432",
       "dependencies": {
+        "@MaiaOS/storage": "workspace:*",
+        "cojson": "^0.20.7",
         "cojson-transport-ws": "0.20.7",
       },
     },

@@ -24,20 +24,21 @@ import { WasmCrypto } from 'cojson/crypto/WasmCrypto'
  * @param {Function} [options.seed] - (account, node) => Promise<void> - post-creation seed (e.g. simpleAccountSeed)
  * @returns {Promise<{node, account, accountID, profile, group}>}
  */
-export async function createAccountWithSecret(options) {
-	const { agentSecret, name, peers = [], storage, migration = undefined, seed = undefined } = options
-
+export async function createAccountWithSecret({
+	agentSecret,
+	name,
+	peers = [],
+	storage = undefined,
+	migration = undefined,
+	seed = undefined,
+}) {
 	if (!agentSecret) {
 		throw new Error('agentSecret is required. Use signInWithPasskey() to get agentSecret.')
 	}
 
 	const crypto = await WasmCrypto.create()
 
-	// Use human storage by default ONLY if storage property is missing.
-	// If storage is passed as undefined, it means explicitly in-memory.
-	const finalStorage = Object.hasOwn(options, 'storage')
-		? storage
-		: await getStorage({ mode: 'human' })
+	const finalStorage = storage !== undefined ? storage : await getStorage({ mode: 'human' })
 
 	const result = await LocalNode.withNewlyCreatedAccount({
 		creationProps: { name },
@@ -86,9 +87,13 @@ export async function createAccountWithSecret(options) {
  * @param {Function} [options.migration] - (account, node) => Promise<void> - idempotent migration on load
  * @returns {Promise<{node, account, accountID}>}
  */
-export async function loadAccount(options) {
-	const { accountID, agentSecret, peers = [], storage, migration = undefined } = options
-
+export async function loadAccount({
+	accountID,
+	agentSecret,
+	peers = [],
+	storage = undefined,
+	migration = undefined,
+}) {
 	if (!agentSecret) {
 		throw new Error('agentSecret is required. Use signInWithPasskey() to get agentSecret.')
 	}
@@ -98,14 +103,24 @@ export async function loadAccount(options) {
 
 	const crypto = await WasmCrypto.create()
 
-	// Use human storage by default ONLY if storage property is missing.
-	// If storage is passed as undefined, it means explicitly in-memory.
-	const finalStorage = Object.hasOwn(options, 'storage')
-		? storage
-		: await getStorage({ mode: 'human' })
+	const finalStorage = storage !== undefined ? storage : await getStorage({ mode: 'human' })
+
+	const loadStartTime = performance.now()
+	const phaseTimings = {
+		setup: 0,
+		storageCheck: 0,
+		accountLoadRequest: 0,
+		accountLoadResponse: 0,
+		accountLoadTotal: 0,
+		profileLoadRequest: 0,
+		profileLoadResponse: 0,
+		profileLoadTotal: 0,
+		migration: 0,
+		total: 0,
+	}
 
 	console.log('   Sync peers:', peers.length > 0 ? `${peers.length} peer(s)` : 'none')
-	const storageLabel = finalStorage
+	const storageLabel = storage
 		? typeof process !== 'undefined' && process.versions?.node
 			? `${
 					process.env.PEER_STORAGE === 'postgres'
@@ -114,25 +129,28 @@ export async function loadAccount(options) {
 							? 'PGlite'
 							: process.env.PEER_STORAGE || 'storage'
 				} available (local-first)`
-			: finalStorage?.__maiaBackend === 'opfs'
-				? 'OPFS available (local-first)'
-				: 'IndexedDB available (local-first)'
+			: 'IndexedDB available (local-first)'
 		: 'no storage (sync-only)'
 	console.log('   Storage:', storageLabel)
 
+	const setupStartTime = performance.now()
+
+	const storageCheckStartTime = performance.now()
 	if (storage) {
 		console.log('   💾 Storage available')
 	}
+	phaseTimings.storageCheck = performance.now() - storageCheckStartTime
 
-	// CRITICAL: Must AWAIT migration so profile is created before cojson validates.
-	// Fire-and-forget caused "Account has no profile" when storage returned incomplete data (OPFS restart).
+	let migrationPromise = null
 	const deferredMigration = migration
 		? async (account, node) => {
-				await migration(account, node)
+				migrationPromise = migration(account, node).catch(() => {})
+				return Promise.resolve()
 			}
 		: undefined
 
 	const INITIAL_LOAD_TIMEOUT = 3000
+	const accountLoadRequestStartTime = performance.now()
 
 	const loadPromise = LocalNode.withLoadedAccount({
 		crypto,
@@ -169,19 +187,33 @@ export async function loadAccount(options) {
 		return result
 	})
 
-	const rawAccount = node.expectCurrentAccount('oID/loadAccount')
+	const accountLoadResponseTime = performance.now()
+	phaseTimings.setup = setupStartTime - loadStartTime
+	phaseTimings.accountLoadRequest = accountLoadRequestStartTime - loadStartTime
+	phaseTimings.accountLoadResponse = accountLoadResponseTime - loadStartTime
+	phaseTimings.accountLoadTotal = accountLoadResponseTime - accountLoadRequestStartTime
 
-	// Guard: Storage may return incomplete account (OPFS format change, corrupt data). Run migration if profile missing.
-	if (!rawAccount.get('profile') && migration) {
-		await migration(rawAccount, node)
+	if (migrationPromise) {
+		migrationPromise
+			.then(() => {
+				phaseTimings.migration = performance.now() - loadStartTime - phaseTimings.setup
+			})
+			.catch(() => {})
 	}
 
+	const rawAccount = node.expectCurrentAccount('oID/loadAccount')
+
+	const profileLoadRequestStartTime = performance.now()
 	const profileID = rawAccount.get('profile')
 	if (profileID) {
 		const profileCoValue = node.getCoValue(profileID)
 		if (profileCoValue && !profileCoValue.isAvailable()) {
 			await node.load(profileID)
 		}
+		const profileLoadResponseTime = performance.now()
+		phaseTimings.profileLoadRequest = profileLoadRequestStartTime - loadStartTime
+		phaseTimings.profileLoadResponse = profileLoadResponseTime - loadStartTime
+		phaseTimings.profileLoadTotal = profileLoadResponseTime - profileLoadRequestStartTime
 	}
 
 	;(async () => {
@@ -215,6 +247,9 @@ export async function loadAccount(options) {
 			}
 		} catch (_) {}
 	})()
+
+	const loadDuration = performance.now() - loadStartTime
+	phaseTimings.total = loadDuration
 
 	return {
 		node,
