@@ -6,6 +6,7 @@
 	"isLoading": false,
 	"hasError": false,
 	"error": null,
+	"popupOpen": false,
 	"@actors": {
 		"messages": "°Maia/chat/actor/messages"
 	}

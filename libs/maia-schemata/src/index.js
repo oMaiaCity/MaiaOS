@@ -42,12 +42,14 @@ import sparkDataSchema from './data/spark.schema.json'
 // Import data schemas
 import todosDataSchema from './data/todos.schema.json'
 import addAgentMessageSchema from './message/ADD_AGENT.schema.json'
+import closePopupMessageSchema from './message/CLOSE_POPUP.schema.json'
 // Import message type schemas
 import createButtonMessageSchema from './message/CREATE_BUTTON.schema.json'
 import deleteButtonMessageSchema from './message/DELETE_BUTTON.schema.json'
 import dismissMessageSchema from './message/DISMISS.schema.json'
 import errorMessageSchema from './message/ERROR.schema.json'
 import loadActorMessageSchema from './message/LOAD_ACTOR.schema.json'
+import openPopupMessageSchema from './message/OPEN_POPUP.schema.json'
 import removeMemberMessageSchema from './message/REMOVE_MEMBER.schema.json'
 import retryMessageSchema from './message/RETRY.schema.json'
 import selectNavMessageSchema from './message/SELECT_NAV.schema.json'
@@ -145,6 +147,8 @@ const SCHEMAS = {
 	'message/UPDATE_AGENT_INPUT': updateAgentInputMessageSchema,
 	'message/ADD_AGENT': addAgentMessageSchema,
 	'message/REMOVE_MEMBER': removeMemberMessageSchema,
+	'message/OPEN_POPUP': openPopupMessageSchema,
+	'message/CLOSE_POPUP': closePopupMessageSchema,
 }
 
 export function getSchema(type) {
