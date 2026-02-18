@@ -1,0 +1,16 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/message/CLOSE_POPUP",
+	"title": "°Maia/schema/message/CLOSE_POPUP",
+	"description": "Message type for closing the popup chat modal",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {
+		"popupOpen": {
+			"type": "boolean",
+			"description": "Set to false to close the popup"
+		}
+	},
+	"additionalProperties": true
+}

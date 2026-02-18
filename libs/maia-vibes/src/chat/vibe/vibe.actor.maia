@@ -10,6 +10,8 @@
 	"messageTypes": [
 		"SEND_MESSAGE",
 		"UPDATE_INPUT",
-		"STATUS_UPDATE"
+		"STATUS_UPDATE",
+		"OPEN_POPUP",
+		"CLOSE_POPUP"
 	]
 }
