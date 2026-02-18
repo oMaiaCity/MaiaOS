@@ -5,9 +5,8 @@
  * Runs app (4200) and sync (4201)
  */
 
-import { execSync, spawn } from 'node:child_process'
-import { existsSync, rmSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { spawn } from 'node:child_process'
+import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { freePort } from './free-port.js'
 import { bootFooter, bootHeader, createLogger } from './logger.js'
@@ -154,8 +153,8 @@ function processOutput(service, data, isError = false) {
 			continue
 		}
 
-		// Passthrough: sync init progress
-		if (service === 'sync' && trimmed.startsWith('[sync]')) {
+		// Passthrough: moai/sync init progress
+		if (service === 'moai' && trimmed.startsWith('[sync]')) {
 			logger.log(trimmed)
 			continue
 		}
@@ -211,12 +210,12 @@ async function waitForServiceReady(healthUrl, timeoutMs = 30000, pollMs = 300) {
 	return false
 }
 
-async function startApp() {
-	const logger = createLogger('app')
+async function startMaia() {
+	const logger = createLogger('maia')
 	const ok = await freePort(4200, (msg) => logger.warn(msg))
 	if (!ok) process.exit(1)
 
-	appProcess = spawn('bun', ['--env-file=.env', '--filter', '@MaiaOS/app', 'dev'], {
+	maiaProcess = spawn('bun', ['--env-file=.env', '--filter', '@MaiaOS/maia', 'dev'], {
 		cwd: rootDir,
 		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,
@@ -239,8 +238,8 @@ async function startApp() {
 	})
 }
 
-async function startSync() {
-	const logger = createLogger('sync')
+async function startMoai() {
+	const logger = createLogger('moai')
 	const ok = await freePort(4201, (msg) => logger.warn(msg))
 	if (!ok) process.exit(1)
 
@@ -482,7 +481,7 @@ async function main() {
 	setTimeout(async () => {
 		startAssetSync()
 		startDocsWatcher()
-		await startSync()
+		await startMoai()
 		await waitForServiceReady('http://localhost:4201/health')
 		await startApp()
 	}, 1000)

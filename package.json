@@ -8,9 +8,9 @@
 	],
 	"type": "module",
 	"scripts": {
-		"dev": "bun --silent scripts/dev.js",
-		"dev:app": "bun scripts/dev-app.js",
-		"dev:sync": "bun scripts/dev-sync.js",
+		"dev": "bun scripts/dev.js",
+		"dev:maia": "bun scripts/dev-maia.js",
+		"dev:moai": "bun scripts/dev-moai.js",
 		"deploy": "./scripts/deploy-all.sh",
 		"deploy:app": "cd services/app && ./deploy.sh",
 		"deploy:app:verify": "bun scripts/fly-build-args-verify.js",

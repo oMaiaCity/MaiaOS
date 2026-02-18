@@ -2,7 +2,7 @@
 
 /**
  * Free a port by killing the process listening on it.
- * Used by dev.js, dev-app.js, dev-sync.js
+ * Used by dev.js, dev-maia.js, dev-moai.js
  */
 
 import { execSync } from 'node:child_process'
