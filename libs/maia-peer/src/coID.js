@@ -105,20 +105,6 @@ export async function loadAccount({
 
 	const finalStorage = storage !== undefined ? storage : await getStorage({ mode: 'human' })
 
-	const loadStartTime = performance.now()
-	const phaseTimings = {
-		setup: 0,
-		storageCheck: 0,
-		accountLoadRequest: 0,
-		accountLoadResponse: 0,
-		accountLoadTotal: 0,
-		profileLoadRequest: 0,
-		profileLoadResponse: 0,
-		profileLoadTotal: 0,
-		migration: 0,
-		total: 0,
-	}
-
 	console.log('   Sync peers:', peers.length > 0 ? `${peers.length} peer(s)` : 'none')
 	const storageLabel = storage
 		? typeof process !== 'undefined' && process.versions?.node
@@ -133,24 +119,18 @@ export async function loadAccount({
 		: 'no storage (sync-only)'
 	console.log('   Storage:', storageLabel)
 
-	const setupStartTime = performance.now()
-
-	const storageCheckStartTime = performance.now()
 	if (storage) {
 		console.log('   💾 Storage available')
 	}
-	phaseTimings.storageCheck = performance.now() - storageCheckStartTime
 
-	let migrationPromise = null
 	const deferredMigration = migration
 		? async (account, node) => {
-				migrationPromise = migration(account, node).catch(() => {})
+				migration(account, node).catch(() => {})
 				return Promise.resolve()
 			}
 		: undefined
 
 	const INITIAL_LOAD_TIMEOUT = 3000
-	const accountLoadRequestStartTime = performance.now()
 
 	const loadPromise = LocalNode.withLoadedAccount({
 		crypto,
@@ -187,33 +167,14 @@ export async function loadAccount({
 		return result
 	})
 
-	const accountLoadResponseTime = performance.now()
-	phaseTimings.setup = setupStartTime - loadStartTime
-	phaseTimings.accountLoadRequest = accountLoadRequestStartTime - loadStartTime
-	phaseTimings.accountLoadResponse = accountLoadResponseTime - loadStartTime
-	phaseTimings.accountLoadTotal = accountLoadResponseTime - accountLoadRequestStartTime
-
-	if (migrationPromise) {
-		migrationPromise
-			.then(() => {
-				phaseTimings.migration = performance.now() - loadStartTime - phaseTimings.setup
-			})
-			.catch(() => {})
-	}
-
 	const rawAccount = node.expectCurrentAccount('oID/loadAccount')
 
-	const profileLoadRequestStartTime = performance.now()
 	const profileID = rawAccount.get('profile')
 	if (profileID) {
 		const profileCoValue = node.getCoValue(profileID)
 		if (profileCoValue && !profileCoValue.isAvailable()) {
 			await node.load(profileID)
 		}
-		const profileLoadResponseTime = performance.now()
-		phaseTimings.profileLoadRequest = profileLoadRequestStartTime - loadStartTime
-		phaseTimings.profileLoadResponse = profileLoadResponseTime - loadStartTime
-		phaseTimings.profileLoadTotal = profileLoadResponseTime - profileLoadRequestStartTime
 	}
 
 	;(async () => {
@@ -247,9 +208,6 @@ export async function loadAccount({
 			}
 		} catch (_) {}
 	})()
-
-	const loadDuration = performance.now() - loadStartTime
-	phaseTimings.total = loadDuration
 
 	return {
 		node,

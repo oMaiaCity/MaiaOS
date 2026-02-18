@@ -9,8 +9,8 @@
 	"type": "module",
 	"scripts": {
 		"dev": "bun scripts/dev.js",
-		"dev:maia": "bun --filter @MaiaOS/maia dev",
-		"dev:moai": "bun --env-file=.env --filter @MaiaOS/moai dev",
+		"dev:maia": "bun scripts/dev-maia.js",
+		"dev:moai": "bun scripts/dev-moai.js",
 		"deploy": "./scripts/deploy-all.sh",
 		"deploy:maia": "cd services/maia && ./deploy.sh",
 		"deploy:maia:verify": "bun scripts/fly-build-args-verify.js",

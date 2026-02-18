@@ -403,9 +403,6 @@ export async function createPGliteAdapter(dbPath) {
 	}
 
 	const db = await PGlite.create(dbPath, wasmModule ? { wasmModule } : undefined)
-	if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
-		console.log('[STORAGE] PGlite created, running migrations...')
-	}
 	await runMigrations(db)
 	return new PGliteClient(db)
 }
