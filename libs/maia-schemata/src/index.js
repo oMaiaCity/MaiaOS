@@ -55,6 +55,27 @@ import notesDataSchema from './data/notes.schema.json'
 import profileDataSchema from './data/profile.schema.json'
 import sparkDataSchema from './data/spark.schema.json'
 import todosDataSchema from './data/todos.schema.json'
+import addAgentMessageSchema from './message/ADD_AGENT.schema.json'
+import closePopupMessageSchema from './message/CLOSE_POPUP.schema.json'
+// Import message type schemas
+import createButtonMessageSchema from './message/CREATE_BUTTON.schema.json'
+import deleteButtonMessageSchema from './message/DELETE_BUTTON.schema.json'
+import dismissMessageSchema from './message/DISMISS.schema.json'
+import errorMessageSchema from './message/ERROR.schema.json'
+import loadActorMessageSchema from './message/LOAD_ACTOR.schema.json'
+import openPopupMessageSchema from './message/OPEN_POPUP.schema.json'
+import removeMemberMessageSchema from './message/REMOVE_MEMBER.schema.json'
+import retryMessageSchema from './message/RETRY.schema.json'
+import selectNavMessageSchema from './message/SELECT_NAV.schema.json'
+import selectRowMessageSchema from './message/SELECT_ROW.schema.json'
+import selectSparkMessageSchema from './message/SELECT_SPARK.schema.json'
+import sendMessageMessageSchema from './message/SEND_MESSAGE.schema.json'
+import statusUpdateMessageSchema from './message/STATUS_UPDATE.schema.json'
+import successMessageSchema from './message/SUCCESS.schema.json'
+import switchViewMessageSchema from './message/SWITCH_VIEW.schema.json'
+import toggleButtonMessageSchema from './message/TOGGLE_BUTTON.schema.json'
+import updateAgentInputMessageSchema from './message/UPDATE_AGENT_INPUT.schema.json'
+import updateInputMessageSchema from './message/UPDATE_INPUT.schema.json'
 import actionSchema from './os/action.schema.json'
 // Import all schema definitions directly as JSON
 import actorSchema from './os/actor.schema.json'
@@ -134,6 +155,26 @@ const SCHEMAS = {
 	'data/chat': chatDataSchema,
 	'data/human': humanDataSchema,
 	'data/spark': sparkDataSchema,
+	'message/CREATE_BUTTON': createButtonMessageSchema,
+	'message/TOGGLE_BUTTON': toggleButtonMessageSchema,
+	'message/DELETE_BUTTON': deleteButtonMessageSchema,
+	'message/UPDATE_INPUT': updateInputMessageSchema,
+	'message/SWITCH_VIEW': switchViewMessageSchema,
+	'message/SUCCESS': successMessageSchema,
+	'message/ERROR': errorMessageSchema,
+	'message/SEND_MESSAGE': sendMessageMessageSchema,
+	'message/STATUS_UPDATE': statusUpdateMessageSchema,
+	'message/RETRY': retryMessageSchema,
+	'message/DISMISS': dismissMessageSchema,
+	'message/SELECT_NAV': selectNavMessageSchema,
+	'message/SELECT_ROW': selectRowMessageSchema,
+	'message/SELECT_SPARK': selectSparkMessageSchema,
+	'message/LOAD_ACTOR': loadActorMessageSchema,
+	'message/UPDATE_AGENT_INPUT': updateAgentInputMessageSchema,
+	'message/ADD_AGENT': addAgentMessageSchema,
+	'message/REMOVE_MEMBER': removeMemberMessageSchema,
+	'message/OPEN_POPUP': openPopupMessageSchema,
+	'message/CLOSE_POPUP': closePopupMessageSchema,
 }
 
 export function getSchema(type) {
