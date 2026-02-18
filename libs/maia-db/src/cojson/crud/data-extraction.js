@@ -155,11 +155,14 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 	}
 
 	if (content?.get && typeof content.get === 'function') {
-		const cotype = content.get('cotype') || rawType
+		// _coValueType = the actual CRDT type of this CoValue (always 'comap' for schema definitions
+		// stored as CoMaps, regardless of what `cotype` says in their content).
+		// `cotype` in a schema's content is NOT the CoValue's CRDT type — it describes what type
+		// the schema's *instances* should be (e.g. cotext schema: cotype="colist" means instances are colists).
+		// We preserve `cotype` from content as-is; `_coValueType` is the display-layer source of truth.
 		const result = {
 			id: coValueCore.id,
-			cotype: cotype === 'comap' ? 'comap' : cotype,
-			type: rawType,
+			_coValueType: rawType,
 			$schema: schema,
 		}
 		const keys =

@@ -261,6 +261,60 @@ export async function appendOperation(peer, dataEngine, params) {
 	return createSuccessResult(result, { op: 'append' })
 }
 
+/**
+ * Splice CoList - delete and/or insert at index (for CoText editing)
+ * @param {Object} params
+ * @param {string} params.coId - CoList co-id
+ * @param {number} params.start - Index to delete from / insert at
+ * @param {number} [params.deleteCount=0] - Number of items to delete
+ * @param {Array} [params.items=[]] - Items to insert at start index
+ */
+export async function spliceCoListOperation(peer, dataEngine, params) {
+	const { coId, start, deleteCount = 0, items = [] } = params
+	requireParam(coId, 'coId', 'SpliceCoListOperation')
+	validateCoId(coId, 'SpliceCoListOperation')
+	requireDataEngine(dataEngine, 'SpliceCoListOperation', 'check schema')
+	const coValueCore = await ensureCoValueAvailable(peer, coId, 'SpliceCoListOperation')
+	const schemaCoId = await resolveSchemaFromCoValue(peer, coId, 'SpliceCoListOperation')
+	if (!(await peer.checkCotype(schemaCoId, 'colist'))) {
+		throw new Error(`[SpliceCoListOperation] CoValue ${coId} must be a CoList`)
+	}
+	const schema = await peer.resolve(schemaCoId, { returnType: 'schema' })
+	if (!schema) throw new Error(`[SpliceCoListOperation] Schema ${schemaCoId} not found`)
+	const content = peer.getCurrentContent(coValueCore)
+	if (!content || typeof content.delete !== 'function' || typeof content.append !== 'function') {
+		throw new Error(`[SpliceCoListOperation] CoList ${coId} missing delete/append methods`)
+	}
+	const startIdx = Math.max(0, Math.floor(Number(start)) || 0)
+	const toDelete = Math.max(0, Math.floor(Number(deleteCount)) || 0)
+
+	// Delete from end to start to avoid index shifting
+	if (toDelete > 0) {
+		const current = (typeof content.toJSON === 'function' && content.toJSON()) || []
+		for (let i = startIdx + toDelete - 1; i >= startIdx; i--) {
+			if (i < current.length && typeof content.delete === 'function') {
+				content.delete(i)
+			}
+		}
+	}
+
+	// Insert items at start (only supports append for now - CoJSON RawCoList has append)
+	if (items.length > 0) {
+		validateItems(schema, items)
+		// Insert at position: CoJSON list has append; for middle insert we'd need different API
+		// For CoText: append works for typing at end; use append for simplicity
+		for (const it of items) {
+			content.append(it)
+		}
+	}
+
+	if (peer.node?.storage) await peer.node.syncManager.waitForStorageSync(coId)
+	return createSuccessResult(
+		{ coId, deleted: toDelete, inserted: items.length },
+		{ op: 'spliceCoList' },
+	)
+}
+
 export async function processInboxOperation(peer, _dataEngine, params) {
 	const { actorId, inboxCoId } = params
 	requireParam(actorId, 'actorId', 'ProcessInboxOperation')

@@ -440,19 +440,18 @@ export async function renderVibeViewer(
 				<div class="vibe-card">
 					<div id="vibe-container-${escapeHtml(currentVibe)}" class="vibe-container"></div>
 				</div>
-				<!-- Bottom navbar area for mobile - only home button (vibe-specific buttons handled by vibes) -->
+				<!-- Bottom navbar area for mobile - home button bottom-left (vibe-specific buttons handled by vibes) -->
 				<div class="bottom-navbar">
 					<div class="bottom-navbar-left">
-						<!-- Left buttons are vibe-specific, not global -->
-					</div>
-					<div class="bottom-navbar-center">
-						<button class="home-btn bottom-home-btn" onclick="window.loadVibe(null)" title="Home">
+						<button class="home-btn bottom-home-btn home-btn-icon-only" onclick="window.loadVibe(null)" title="Home" aria-label="Home">
 							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 								<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
 								<polyline points="9 22 9 12 15 12 15 22"></polyline>
 							</svg>
-							<span class="home-label">Home</span>
 						</button>
+					</div>
+					<div class="bottom-navbar-center">
+						<!-- Center reserved for vibe-specific -->
 					</div>
 					<div class="bottom-navbar-right">
 						<!-- Right buttons are vibe-specific, not global -->

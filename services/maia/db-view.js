@@ -5,11 +5,34 @@
 
 // Import from kernel bundle - everything bundled (no direct @MaiaOS/db in production)
 import {
-	getAllSchemas,
-	getSchema,
 	resolveAccountCoIdsToProfileNames,
 	resolveGroupCoIdsToCapabilityNames,
 } from '@MaiaOS/loader'
+
+/** Resolve schema definition from DB (dynamic - no static registry fallback) */
+async function getSchemaFromDb(maia, schemaRef) {
+	if (!schemaRef || !maia?.do) return null
+	let schemaCoId = schemaRef
+	if (!schemaRef.startsWith('co_z')) {
+		try {
+			schemaCoId = await maia.do({
+				op: 'resolve',
+				humanReadableKey: schemaRef,
+				returnType: 'coId',
+			})
+		} catch (_e) {
+			return null
+		}
+		if (!schemaCoId || !schemaCoId.startsWith('co_z')) return null
+	}
+	try {
+		const schemaStore = await maia.do({ op: 'schema', coId: schemaCoId })
+		return schemaStore?.value ?? null
+	} catch (_e) {
+		return null
+	}
+}
+
 import { renderDashboard, renderVibeViewer } from './dashboard.js'
 import { escapeHtml, getSyncStatusMessage, truncate } from './utils.js'
 
@@ -252,9 +275,6 @@ export async function renderApp(
 	// Get data based on current view
 	let data, viewTitle, _viewSubtitle
 
-	// Load schemas from hardcoded registry (no dynamic loading)
-	const allSchemas = getAllSchemas()
-
 	// Get account and node for navigation
 	const account = maia.id.maiaId
 	const _node = maia.id.node
@@ -425,7 +445,7 @@ export async function renderApp(
 		} catch (_err) {
 			data = []
 		}
-		const schema = getSchema(currentView) || allSchemas[currentView]
+		const schema = await getSchemaFromDb(maia, currentView)
 		viewTitle = schema?.title || currentView
 		_viewSubtitle = `${Array.isArray(data) ? data.length : 0} CoValue(s)`
 	} else {
@@ -461,7 +481,10 @@ export async function renderApp(
 					<p class="mt-4 font-medium text-slate-500">Loading CoValue... (waiting for verified state)</p>
 				</div>
 			`
-		} else if ((data.cotype || data.type) === 'colist' || (data.cotype || data.type) === 'costream') {
+		} else if (
+			(data._coValueType || data.cotype || data.type) === 'colist' ||
+			(data._coValueType || data.cotype || data.type) === 'costream'
+		) {
 			// CoList/CoStream: Display items directly (they ARE the list/stream, no properties)
 			// STRICT: Ensure items is always array (read API may return object/undefined for index colists)
 			const raw = data?.items
@@ -470,12 +493,12 @@ export async function renderApp(
 				: raw && typeof raw === 'object' && !Array.isArray(raw)
 					? Object.values(raw)
 					: []
-			const isStream = (data.cotype || data.type) === 'costream'
+			const isStream = (data._coValueType || data.cotype || data.type) === 'costream'
 			const typeLabel = isStream ? 'CoStream' : 'CoList'
 
 			// Store header info for display in inspector-header
 			headerInfo = {
-				type: data.cotype || data.type,
+				type: data._coValueType || data.cotype || data.type,
 				typeLabel: typeLabel,
 				itemCount: items.length,
 				description: isStream ? 'Append-only stream' : 'Ordered list',
@@ -520,7 +543,7 @@ export async function renderApp(
 			// CoMap: Display properties from flat object format (operations API)
 			// Convert flat object to normalized format for display
 			const schemaCoId = data.$schema // STRICT: Only $schema, no fallback
-			const schemaDef = schemaCoId ? getSchema(schemaCoId) : null
+			const schemaDef = schemaCoId ? await getSchemaFromDb(maia, schemaCoId) : null
 
 			// Extract properties from flat object (exclude metadata keys)
 			// groupInfo is backend-derived metadata (not a co-value property) - only show in metadata sidebar
@@ -534,6 +557,7 @@ export async function renderApp(
 					k !== 'schema' &&
 					k !== 'type' &&
 					k !== 'cotype' && // Display only in metadata aside, not as main content property
+					k !== '_coValueType' && // Internal: actual CRDT type of this CoValue (display metadata)
 					k !== 'displayName' &&
 					k !== 'headerMeta' &&
 					k !== 'groupInfo' && // Backend metadata - displayed in metadata sidebar, not as a property
@@ -784,9 +808,9 @@ export async function renderApp(
 						}
 						<div class="metadata-info-item">
 							<span class="metadata-info-key">CO TYPE</span>
-							<span class="badge badge-type badge-${String(data.cotype || data.type || 'unknown').replace(/-/g, '')}">
-								${(data.cotype || data.type) === 'colist' ? 'COLIST' : (data.cotype || data.type) === 'costream' ? 'COSTREAM' : String(data.cotype || data.type || 'unknown').toUpperCase()}
-							</span>
+						<span class="badge badge-type badge-${String(data._coValueType || data.cotype || data.type || 'unknown').replace(/-/g, '')}">
+							${(data._coValueType || data.cotype || data.type) === 'colist' ? 'COLIST' : (data._coValueType || data.cotype || data.type) === 'costream' ? 'COSTREAM' : String(data._coValueType || data.cotype || data.type || 'unknown').toUpperCase()}
+						</span>
 						</div>
 						${
 							groupInfo?.groupId
@@ -1008,10 +1032,10 @@ export async function renderApp(
 											: ''
 									}
 									${
-										!headerInfo && (data?.cotype || data?.type)
+										!headerInfo && (data?._coValueType || data?.cotype || data?.type)
 											? `
-										<span class="badge badge-type badge-${String(data.cotype || data.type || 'comap').replace(/-/g, '')} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${(data.cotype || data.type) === 'colist' ? 'COLIST' : (data.cotype || data.type) === 'costream' ? 'COSTREAM' : String(data.cotype || data.type || 'COMAP').toUpperCase()}</span>
-									`
+									<span class="badge badge-type badge-${String(data._coValueType || data.cotype || data.type || 'comap').replace(/-/g, '')} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${(data._coValueType || data.cotype || data.type) === 'colist' ? 'COLIST' : (data._coValueType || data.cotype || data.type) === 'costream' ? 'COSTREAM' : String(data._coValueType || data.cotype || data.type || 'COMAP').toUpperCase()}</span>
+								`
 											: ''
 									}
 								</div>

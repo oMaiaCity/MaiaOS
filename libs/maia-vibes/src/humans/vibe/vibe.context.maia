@@ -2,6 +2,12 @@
 	"$schema": "°Maia/schema/context",
 	"$id": "°Maia/humans/context/vibe",
 	"humans": {
-		"schema": "°Maia/schema/data/human"
+		"schema": "°Maia/schema/data/human",
+		"map": {
+			"id": "id",
+			"accountId": "accountId",
+			"registryName": "registryName",
+			"profileName": "profileName"
+		}
 	}
 }

@@ -1,0 +1,37 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/chat/view/paper",
+	"content": {
+		"tag": "div",
+		"class": "paper-background",
+		"children": [
+			{
+				"tag": "button",
+				"class": "paper-randomize-button",
+				"attrs": {
+					"type": "button",
+					"aria-label": "Randomize paper text"
+				},
+				"text": "🎲 Randomize",
+				"$on": {
+					"click": {
+						"send": "RANDOMIZE_PAPER",
+						"payload": {}
+					}
+				}
+			},
+			{
+				"tag": "p",
+				"class": "paper-example-text",
+				"text": {
+					"$join": [
+						{
+							"$context": "notes.0.content.items"
+						},
+						""
+					]
+				}
+			}
+		]
+	}
+}

@@ -694,35 +694,31 @@ export class ActorEngine {
 		}
 
 		const actor = this.actors.get(actorId)
-		if (!actor || !actor.inboxCoId || !this.dataEngine) {
-			if (!actor) console.warn('[ActorEngine] sendInternalEvent: actor not found', actorId)
-			else if (!actor.inboxCoId)
-				console.warn('[ActorEngine] sendInternalEvent: actor has no inboxCoId', actorId)
-			else if (!this.dataEngine) console.warn('[ActorEngine] sendInternalEvent: dataEngine not set')
+		if (!actor) {
+			console.warn('[ActorEngine] sendInternalEvent: actor not found', actorId)
 			return
 		}
-		try {
-			await this.dataEngine.peer.createAndPushMessage(actor.inboxCoId, {
-				type: eventType,
-				payload,
-				source: actorId,
-				target: actorId,
-				processed: false,
-			})
-			// Inbox subscription fires when store updates - single trigger (avoids double processMessages with subscription)
-		} catch (error) {
-			console.error(
-				'[ActorEngine] sendInternalEvent: createAndPushMessage failed:',
-				actorId,
-				eventType,
-				error,
-			)
-			// Fallback: when persistence fails (e.g. read key secret), process locally so UX still works
-			// The payload from the view is already resolved and valid
-			if (actor.machine && this.stateEngine) {
-				const payloadPlain =
-					payload && typeof payload === 'object' ? JSON.parse(JSON.stringify(payload)) : payload || {}
-				await this.stateEngine.send(actor.machine.id, eventType, payloadPlain)
+
+		const payloadPlain =
+			payload && typeof payload === 'object' ? JSON.parse(JSON.stringify(payload)) : payload || {}
+
+		// Primary: direct state send for immediate execution (works without inbox schema seeding)
+		if (actor.machine && this.stateEngine) {
+			await this.stateEngine.send(actor.machine.id, eventType, payloadPlain)
+		}
+
+		// Secondary: persist to inbox for cross-tab/sync (best-effort; requires message type schema in DB)
+		if (actor.inboxCoId && this.dataEngine) {
+			try {
+				await this.dataEngine.peer.createAndPushMessage(actor.inboxCoId, {
+					type: eventType,
+					payload,
+					source: actorId,
+					target: actorId,
+					processed: true, // Already handled via direct send above
+				})
+			} catch (_error) {
+				// Inbox persistence optional; UI already responded
 			}
 		}
 	}
@@ -753,18 +749,14 @@ export class ActorEngine {
 	 * @returns {Promise<Object|null>} Message type schema or null if not found
 	 */
 	async _loadMessageTypeSchema(messageType) {
-		if (!this.dataEngine || !this.dataEngine.peer) {
-			return null
+		if (this.dataEngine?.peer) {
+			try {
+				const schemaKey = `${this.dataEngine.peer.systemSpark}/schema/message/${messageType}`
+				const schema = await this.dataEngine.peer.resolve(schemaKey, { returnType: 'schema' })
+				if (schema) return schema
+			} catch (_error) {}
 		}
-
-		try {
-			// Resolve message type schema from registry - use systemSpark directly (schema keys match spark name)
-			const schemaKey = `${this.dataEngine.peer.systemSpark}/schema/message/${messageType}`
-			const schema = await this.dataEngine.peer.resolve(schemaKey, { returnType: 'schema' })
-			return schema
-		} catch (_error) {
-			return null
-		}
+		return null
 	}
 
 	/**
@@ -829,6 +821,19 @@ export class ActorEngine {
 				if (message.type === 'INIT' || message.from === 'system') continue
 				try {
 					// VALIDATION LAYER: Validate message before state machine
+					// CRITICAL: Mark rejected messages as processed to prevent infinite retry loop
+					const markRejectedAsProcessed = async () => {
+						if (message._coId) {
+							try {
+								await this.dataEngine.execute({
+									op: 'update',
+									id: message._coId,
+									data: { processed: true },
+								})
+							} catch (_e) {}
+						}
+					}
+
 					// Step 1: Check actor message contract
 					if (!this._validateMessageType(actor, message.type)) {
 						console.warn('[ActorEngine] processMessages: message type not in contract', {
@@ -836,6 +841,7 @@ export class ActorEngine {
 							messageType: message.type,
 							messageTypes: actor.messageTypes,
 						})
+						await markRejectedAsProcessed()
 						continue // Skip invalid message
 					}
 
@@ -847,6 +853,7 @@ export class ActorEngine {
 							messageType: message.type,
 							schemaKey: `${this.dataEngine?.peer?.systemSpark ?? '°Maia'}/schema/message/${message.type}`,
 						})
+						await markRejectedAsProcessed()
 						continue // Reject message - schema is required
 					}
 
@@ -854,7 +861,10 @@ export class ActorEngine {
 					// Ensure payload is always an object (never undefined/null)
 					const payload = message.payload || {}
 					const validation = await this._validateMessagePayload(messageTypeSchema, payload, message.type)
-					if (!validation.valid) continue
+					if (!validation.valid) {
+						await markRejectedAsProcessed()
+						continue
+					}
 
 					// Pass plain object to avoid reactive proxy issues; state engine expects clean JSON
 					const payloadPlain = {

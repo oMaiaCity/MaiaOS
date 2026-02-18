@@ -11,6 +11,11 @@ import messagesContext from './messages/messages.context.maia'
 import messagesInbox from './messages/messages.inbox.maia'
 import messagesState from './messages/messages.state.maia'
 import messagesView from './messages/messages.view.maia'
+import paperActor from './paper/paper.actor.maia'
+import paperContext from './paper/paper.context.maia'
+import paperInbox from './paper/paper.inbox.maia'
+import paperState from './paper/paper.state.maia'
+import paperView from './paper/paper.view.maia'
 import brandStyle from './vibe/brand.style.maia'
 // Import all actors
 import vibeActor from './vibe/vibe.actor.maia'
@@ -37,25 +42,38 @@ export const ChatVibeRegistry = {
 	actors: {
 		'°Maia/chat/actor/vibe': vibeActor,
 		'°Maia/chat/actor/messages': messagesActor,
+		'°Maia/chat/actor/paper': paperActor,
 	},
 
 	views: {
 		'°Maia/chat/view/vibe': vibeView,
 		'°Maia/chat/view/messages': messagesView,
+		'°Maia/chat/view/paper': paperView,
 	},
 
 	contexts: {
 		'°Maia/chat/context/vibe': vibeContext,
 		'°Maia/chat/context/messages': messagesContext,
+		'°Maia/chat/context/paper': paperContext,
 	},
 
 	states: {
 		'°Maia/chat/state/vibe': vibeState,
 		'°Maia/chat/state/messages': messagesState,
+		'°Maia/chat/state/paper': paperState,
 	},
 
 	inboxes: {
 		'°Maia/chat/inbox/vibe': vibeInbox,
 		'°Maia/chat/inbox/messages': messagesInbox,
+		'°Maia/chat/inbox/paper': paperInbox,
+	},
+
+	data: {
+		notes: [
+			{
+				content: "Dear future us, what we're creating together... — [this is coming from CoText]",
+			},
+		],
 	},
 }

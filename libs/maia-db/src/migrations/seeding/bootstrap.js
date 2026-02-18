@@ -102,6 +102,7 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 			cotype: 'comap',
 			data: cleaned,
 			dataEngine: dbEngine,
+			isSchemaDefinition: true,
 		})
 		const coId = schemaCoMap.id
 		schemaCoIdMap.set(schemaKey, coId)

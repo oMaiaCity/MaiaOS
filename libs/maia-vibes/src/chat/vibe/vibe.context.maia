@@ -2,12 +2,14 @@
 	"$schema": "°Maia/schema/context",
 	"$id": "°Maia/chat/context/vibe",
 	"currentSection": "@messages",
+	"currentPaper": "@paper",
 	"inputText": "",
 	"isLoading": false,
 	"hasError": false,
 	"error": null,
 	"popupOpen": false,
 	"@actors": {
-		"messages": "°Maia/chat/actor/messages"
+		"messages": "°Maia/chat/actor/messages",
+		"paper": "°Maia/chat/actor/paper"
 	}
 }

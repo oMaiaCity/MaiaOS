@@ -20,7 +20,7 @@ export {
 	waitForStoreReady,
 } from '@MaiaOS/db'
 // Re-export DataEngine and MaiaScriptEvaluator for server/agent (moai)
-export { DataEngine, MaiaScriptEvaluator } from '@MaiaOS/engines'
+export { DataEngine, MaiaScriptEvaluator, registerOperations } from '@MaiaOS/engines'
 export { getAllSchemas } from '@MaiaOS/schemata'
 // Re-export auth functions for convenience
 export {

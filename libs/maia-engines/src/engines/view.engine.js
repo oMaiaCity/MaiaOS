@@ -519,10 +519,12 @@ export class ViewEngine {
 		}
 
 		if (childActor.containerElement) {
+			// Only destroy children that were previously in THIS slot (same wrapper)
+			// Keeps sibling actors in other slots (e.g. paper + messages in chat)
 			if (actor?.children) {
 				for (const [key, child] of Object.entries(actor.children)) {
 					if (key === namekey) continue
-					if (child.actorType === 'ui') {
+					if (child.actorType === 'ui' && child.containerElement?.parentNode === wrapperElement) {
 						this.actorEngine.destroyActor(child.id)
 						delete actor.children[key]
 					}

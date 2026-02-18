@@ -21,6 +21,7 @@
  *     - false/unset: Skip seed, use persisted data. Never overwrite on restart.
  */
 
+import { findFirst } from '@MaiaOS/db'
 import {
 	buildSeedConfig,
 	createWebSocketPeer,
@@ -33,6 +34,7 @@ import {
 	loadOrCreateAgentAccount,
 	MaiaDB,
 	MaiaScriptEvaluator,
+	registerOperations,
 	removeGroupMember,
 	resolve,
 	schemaMigration,
@@ -40,6 +42,7 @@ import {
 } from '@MaiaOS/loader'
 import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { splitGraphemes } from 'unicode-segmenter/grapheme'
 
 // Resolve db path relative to moai package root (not process.cwd) so persistence is stable across restarts
 const _moaiDir = pathResolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -306,6 +309,63 @@ async function handleProfile(worker) {
 	}
 }
 
+/**
+ * POST /api/v0/write-note — Direct write to paper CoText for testing
+ * Body: { text: "Hello from curl" }
+ * Bypasses actor/state chain; tests DB op flow directly with proper logs.
+ */
+async function handleWriteNote(worker, body) {
+	const text = body?.text
+	if (text == null || typeof text !== 'string') {
+		return err('text (string) required in body', 400)
+	}
+	const { peer, dataEngine } = worker
+	try {
+		console.log('[write-note] Resolving notes schema...')
+		const notesSchemaCoId = await resolve(peer, '°Maia/schema/data/notes', { returnType: 'coId' })
+		if (!notesSchemaCoId?.startsWith('co_z')) {
+			console.error('[write-note] Notes schema not resolved')
+			return err('Notes schema not found. Ensure genesis seeded (PEER_FRESH_SEED=true).', 500)
+		}
+		console.log('[write-note] Finding first note...')
+		const firstNote = await findFirst(peer, notesSchemaCoId, {}, { timeoutMs: 5000 })
+		if (!firstNote?.id) {
+			console.error('[write-note] No notes found')
+			return err('No notes found. Ensure data.notes seeded.', 500)
+		}
+		const contentId = firstNote.content?.id ?? firstNote.content
+		if (!contentId || typeof contentId !== 'string' || !contentId.startsWith('co_z')) {
+			console.error('[write-note] No CoText ref:', firstNote)
+			return err('First note has no content CoText.', 500)
+		}
+		console.log('[write-note] CoText co-id:', contentId.slice(0, 16) + '...')
+		const graphemes = [...splitGraphemes(text)]
+		// Single atomic splice: delete all + insert new (avoids empty intermediate state that triggered subscription)
+		console.log('[write-note] Replacing content with', graphemes.length, 'graphemes...')
+		const spliceResult = await dataEngine.execute({
+			op: 'spliceCoList',
+			coId: contentId,
+			start: 0,
+			deleteCount: 99999,
+			items: graphemes,
+		})
+		if (spliceResult?.ok === false) {
+			console.error('[write-note] Splice failed:', spliceResult.errors)
+			return err(spliceResult.errors?.map((e) => e.message).join('; ') ?? 'splice failed', 500)
+		}
+		console.log('[write-note] Success:', text.slice(0, 50) + (text.length > 50 ? '...' : ''))
+		return jsonResponse({
+			ok: true,
+			coId: contentId,
+			length: graphemes.length,
+			preview: text.slice(0, 80),
+		})
+	} catch (e) {
+		console.error('[write-note] Error:', e?.message ?? e)
+		return err(e?.message ?? 'write-note failed', 500)
+	}
+}
+
 async function handleAgentHttp(req, worker) {
 	const url = new URL(req.url)
 	if (url.pathname === '/profile' && req.method === 'GET') return handleProfile(worker)
@@ -319,6 +379,10 @@ async function handleAgentHttp(req, worker) {
 	}
 	if (url.pathname === '/register' && req.method === 'POST')
 		return post(false, (w, b) => withTimeout(handleRegister(w, b), REQUEST_TIMEOUT_MS, '/register'))
+	if (url.pathname === '/api/v0/write-note' && req.method === 'POST')
+		return post(true, (w, b) =>
+			withTimeout(handleWriteNote(w, b), REQUEST_TIMEOUT_MS, '/api/v0/write-note'),
+		)
 	return null
 }
 
@@ -517,6 +581,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 		const peer = new MaiaDB({ node: localNode, account: result.account }, { systemSpark: '°Maia' })
 		const evaluator = new MaiaScriptEvaluator()
 		const dataEngine = new DataEngine(peer, { evaluator })
+		registerOperations(dataEngine)
 		peer.dbEngine = dataEngine
 		agentWorker = { node: localNode, account: result.account, peer, dataEngine }
 

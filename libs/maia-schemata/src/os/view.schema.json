@@ -27,7 +27,8 @@
 						{ "type": "string" },
 						{ "type": "number" },
 						{ "type": "boolean" },
-						{ "type": "null" }
+						{ "type": "null" },
+						{ "$ref": "#/$defs/expressionValue" }
 					]
 				},
 				"value": {
@@ -38,7 +39,8 @@
 						{ "type": "string" },
 						{ "type": "number" },
 						{ "type": "boolean" },
-						{ "type": "null" }
+						{ "type": "null" },
+						{ "$ref": "#/$defs/expressionValue" }
 					]
 				},
 				"attrs": {
@@ -117,6 +119,10 @@
 				}
 			},
 			"additionalProperties": false
+		},
+		"expressionValue": {
+			"type": "object",
+			"description": "MaiaScript expression (e.g. $join, $context)"
 		}
 	},
 	"additionalProperties": false

@@ -43,7 +43,20 @@ export async function register(registry) {
 
 ### db.module.js
 
-**Purpose:** Database operations module.
+**Purpose:** Database operations module. Owns all built-in `maia.do` operations.
+
+**Operations:** The db module registers operations with `DataEngine.registerOperation()` on load. Built-in ops: read, create, update, delete, seed, schema, resolve, append, push, processInbox, createSpark, readSpark, updateSpark, deleteSpark, addSparkMember, removeSparkMember, addSparkParentGroup, removeSparkParentGroup, getSparkMembers, updateSparkMemberRole.
+
+**Extending with custom operations:**
+```javascript
+// In your module's register():
+const dataEngine = registry._dataEngine
+if (dataEngine) {
+  dataEngine.registerOperation('myOp', {
+    execute: async (params) => { /* ... */ }
+  })
+}
+```
 
 **Tools:**
 - `@db` - Unified database operations
