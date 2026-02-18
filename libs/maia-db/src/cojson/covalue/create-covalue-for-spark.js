@@ -82,6 +82,15 @@ export async function createCoValueForSpark(context, spark, options) {
 		)
 	}
 
+	// Schema definitions (meta-schema and its children) must ALWAYS be CoMaps.
+	// The cotype in schema JSON describes instance types (e.g. inbox has cotype:costream for its instances), not the document.
+	if ((schema === EXCEPTION_SCHEMAS.META_SCHEMA || isSchemaDefinition) && cotype !== 'comap') {
+		throw new Error(
+			`[createCoValueForSpark] Schema definitions must be CoMap, not ${cotype}. ` +
+				'The cotype in schema JSON describes instances (inbox instances are CoStreams), not the schema document.',
+		)
+	}
+
 	const { node, account, guardian } = await resolveContext(context, spark)
 	if (!account) {
 		throw new Error('[createCoValueForSpark] Account required')
