@@ -499,16 +499,13 @@ export class StateEngine {
 					// Backend unified store will then handle merging automatically
 					const actor = machine.actor
 					if (actor?.contextCoId && actor.contextSchemaCoId && this.actorEngine) {
-						// Extract query object from mapData config
 						const queryConfig = mapData[contextKey]
 						if (queryConfig && queryConfig.op === 'read' && queryConfig.schema) {
-							// Update context CoValue with query object
-							// Backend unified store will detect it and merge results automatically
 							await this.actorEngine.updateContextCoValue(actor, {
 								[contextKey]: {
 									schema: queryConfig.schema,
-									filter: queryConfig.filter || null,
-									options: queryConfig.options || null,
+									...(queryConfig.filter ? { filter: queryConfig.filter } : {}),
+									...(queryConfig.map ? { map: queryConfig.map } : {}),
 								},
 							})
 						}

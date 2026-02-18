@@ -222,11 +222,10 @@ export class MaiaDB {
 			deepResolve = true,
 			maxDepth = 15,
 			timeoutMs = 5000,
-			resolveReferences = null,
 			map = null,
 			onChange = null,
 		} = options
-		const readOptions = { deepResolve, maxDepth, timeoutMs, resolveReferences, map, onChange }
+		const readOptions = { deepResolve, maxDepth, timeoutMs, map, onChange }
 		if (keys && Array.isArray(keys)) {
 			const stores = await Promise.all(
 				keys.map((coId) => universalRead(this, coId, schema, null, schema, readOptions)),

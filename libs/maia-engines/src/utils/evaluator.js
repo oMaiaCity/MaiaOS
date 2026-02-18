@@ -66,10 +66,14 @@ export class Evaluator {
 			!Array.isArray(expression)
 		) {
 			try {
-				const { getSchema } = await import('@MaiaOS/schemata')
-				const expressionSchema = getSchema('maia-script-expression')
-				if (expressionSchema) {
-					await validateAgainstSchemaOrThrow(expressionSchema, expression, 'maia-script-expression')
+				if (this.dataEngine?.peer) {
+					const schemaKey = `${this.dataEngine.peer.systemSpark}/schema/maia-script-expression`
+					const expressionSchema = await this.dataEngine.peer.resolve(schemaKey, {
+						returnType: 'schema',
+					})
+					if (expressionSchema) {
+						await validateAgainstSchemaOrThrow(expressionSchema, expression, 'maia-script-expression')
+					}
 				}
 			} catch (error) {
 				throw new Error(`[Evaluator] Invalid MaiaScript expression: ${error.message}`)
@@ -181,6 +185,15 @@ export class Evaluator {
 				.filter((arr) => arr != null)
 				.map((arr) => (Array.isArray(arr) ? arr : [arr]))
 			return validArrays.flat()
+		}
+
+		// Handle $join operation - join array elements with separator
+		if ('$join' in expression) {
+			const [arrayExpr, separator = ''] = Array.isArray(expression.$join)
+				? expression.$join
+				: [expression.$join, '']
+			const arr = await this.evaluate(arrayExpr, data, depth + 1)
+			return Array.isArray(arr) ? arr.join(separator) : (arr ?? '')
 		}
 
 		// Handle $map operation (map over array)
@@ -331,6 +344,7 @@ export class Evaluator {
 			'$gt' in expression ||
 			'$length' in expression ||
 			'$concat' in expression ||
+			'$join' in expression ||
 			'$map' in expression
 		)
 	}

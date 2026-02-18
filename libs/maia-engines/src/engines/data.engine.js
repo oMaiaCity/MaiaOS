@@ -2,17 +2,9 @@
  * DataEngine - Unified database operation router
  *
  * Single API for all data operations: maia.do({op: ...})
- * Routes operations to modular sub-operation handlers
+ * Routes operations to modular sub-operation handlers.
  *
- * Operations:
- * - read: Load configs/schemas/data (always returns reactive store)
- * - create: Create new records
- * - update: Update existing records
- * - delete: Delete records
- * - seed: Flush + seed (dev only)
- * - schema: Load schema definitions by co-id, schema name, or from CoValue headerMeta
- * - resolve: Resolve human-readable keys to co-ids
- * - createSpark, readSpark, updateSpark, deleteSpark
+ * Operations are registered by the db module via registerOperation().
  */
 
 import {
@@ -20,29 +12,6 @@ import {
 	createErrorResult,
 	isPermissionError,
 } from '../operations/operation-result.js'
-import {
-	appendOperation,
-	createOperation,
-	deleteOperation,
-	processInboxOperation,
-	readOperation,
-	resolveOperation,
-	schemaOperation,
-	seedOperation,
-	updateOperation,
-} from '../operations/operations.js'
-import {
-	addSparkMemberOperation,
-	addSparkParentGroupOperation,
-	createSparkOperation,
-	deleteSparkOperation,
-	getSparkMembersOperation,
-	readSparkOperation,
-	removeSparkMemberOperation,
-	removeSparkParentGroupOperation,
-	updateSparkMemberRoleOperation,
-	updateSparkOperation,
-} from '../operations/spark-operations.js'
 
 export class DataEngine {
 	/**
@@ -67,46 +36,23 @@ export class DataEngine {
 			peer.dbEngine = this
 		}
 
-		this.operations = {
-			read: { execute: (params) => readOperation(this.peer, params) },
-			create: { execute: (params) => createOperation(this.peer, this, params) },
-			update: {
-				execute: (params) => updateOperation(this.peer, this, evaluator, params),
-			},
-			delete: { execute: (params) => deleteOperation(this.peer, this, params) },
-			seed: { execute: (params) => seedOperation(this.peer, params) },
-			schema: { execute: (params) => schemaOperation(this.peer, this, params) },
-			resolve: { execute: (params) => resolveOperation(this.peer, params) },
-			append: { execute: (params) => appendOperation(this.peer, this, params) },
-			push: {
-				execute: (params) => appendOperation(this.peer, this, { ...params, cotype: 'costream' }),
-			},
-			processInbox: {
-				execute: (params) => processInboxOperation(this.peer, this, params),
-			},
-			createSpark: { execute: (params) => createSparkOperation(this.peer, this, params) },
-			readSpark: { execute: (params) => readSparkOperation(this.peer, params) },
-			updateSpark: { execute: (params) => updateSparkOperation(this.peer, this, params) },
-			deleteSpark: { execute: (params) => deleteSparkOperation(this.peer, this, params) },
-			addSparkMember: {
-				execute: (params) => addSparkMemberOperation(this.peer, this, params),
-			},
-			removeSparkMember: {
-				execute: (params) => removeSparkMemberOperation(this.peer, this, params),
-			},
-			addSparkParentGroup: {
-				execute: (params) => addSparkParentGroupOperation(this.peer, this, params),
-			},
-			removeSparkParentGroup: {
-				execute: (params) => removeSparkParentGroupOperation(this.peer, this, params),
-			},
-			getSparkMembers: {
-				execute: (params) => getSparkMembersOperation(this.peer, params),
-			},
-			updateSparkMemberRole: {
-				execute: (params) => updateSparkMemberRoleOperation(this.peer, this, params),
-			},
+		// Pluggable operations - db module registers built-in ops on load
+		this.operations = {}
+	}
+
+	/**
+	 * Register an operation for maia.do({op: name, ...})
+	 * @param {string} opName - Operation name (e.g. 'read', 'create')
+	 * @param {Object} def - { execute: (params) => Promise }
+	 */
+	registerOperation(opName, def) {
+		if (!opName || typeof opName !== 'string') {
+			throw new Error('[DataEngine] registerOperation: opName must be a non-empty string')
 		}
+		if (!def?.execute || typeof def.execute !== 'function') {
+			throw new Error('[DataEngine] registerOperation: def.execute must be a function')
+		}
+		this.operations[opName] = def
 	}
 
 	async execute(payload) {
@@ -116,10 +62,6 @@ export class DataEngine {
 			throw new Error(
 				'[DataEngine] Operation required: {op: "read|create|update|delete|seed|schema|resolve|append|push|createSpark|readSpark|updateSpark|deleteSpark|addSparkMember|removeSparkMember|addSparkParentGroup|removeSparkParentGroup|getSparkMembers|updateSparkMemberRole"}',
 			)
-		}
-
-		if (op === 'push') {
-			return await this.operations.append.execute({ ...params, cotype: 'costream' })
 		}
 
 		const operation = this.operations[op]

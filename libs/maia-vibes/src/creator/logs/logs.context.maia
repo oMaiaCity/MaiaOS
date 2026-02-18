@@ -3,15 +3,17 @@
 	"$id": "°Maia/creator/context/logs",
 	"messages": {
 		"schema": "°Maia/schema/message",
-		"options": {
-			"map": {
-				"fromRole": "$$source.role",
-				"toRole": "$$target.role",
-				"fromId": "$$source.id",
-				"toId": "$$target.id",
-				"recipient": "$$target.role",
-				"targetId": "$$target.id"
-			}
+		"map": {
+			"id": "id",
+			"type": "type",
+			"processed": "processed",
+			"payload": "payload",
+			"fromRole": "$source.role",
+			"toRole": "$target.role",
+			"fromId": "$source.id",
+			"toId": "$target.id",
+			"recipient": "$target.role",
+			"targetId": "$target.id"
 		}
 	},
 	"payloadLabel": "payload"

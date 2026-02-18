@@ -1,0 +1,18 @@
+{
+	"$schema": "°Maia/schema/tool",
+	"$id": "tool_update_paper_content_001",
+	"name": "@core/updatePaperContent",
+	"description": "Updates CoText content for the paper area (full replace). Used by chat vibe for auto-save on each keystroke.",
+	"parameters": {
+		"type": "object",
+		"properties": {
+			"value": {
+				"type": "string",
+				"description": "New text content (will be split into graphemes)"
+			}
+		},
+		"required": [
+			"value"
+		]
+	}
+}

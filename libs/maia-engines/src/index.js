@@ -12,6 +12,7 @@ export { StateEngine } from './engines/state.engine.js'
 export { StyleEngine } from './engines/style.engine.js'
 export { ToolEngine } from './engines/tool.engine.js'
 export { ViewEngine } from './engines/view.engine.js'
+export { registerOperations } from './modules/db/register-operations.js'
 export { Registry as ModuleRegistry } from './modules/registry.js'
 export {
 	createErrorEntry,

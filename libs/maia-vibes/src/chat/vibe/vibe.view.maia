@@ -12,14 +12,8 @@
 		"children": [
 			{
 				"tag": "div",
-				"class": "paper-background",
-				"children": [
-					{
-						"tag": "p",
-						"class": "paper-example-text",
-						"text": "Dear future us, what we're creating together..."
-					}
-				]
+				"class": "paper-area",
+				"$slot": "$currentPaper"
 			},
 			{
 				"tag": "button",
@@ -61,17 +55,6 @@
 				"children": [
 					{
 						"tag": "div",
-						"class": "paper-background",
-						"children": [
-							{
-								"tag": "p",
-								"class": "paper-example-text",
-								"text": "Dear future us, what we're creating together..."
-							}
-						]
-					},
-					{
-						"tag": "div",
 						"class": "modal-content liquid-glass",
 						"children": [
 							{
@@ -108,6 +91,23 @@
 												"tag": "div",
 												"class": "input-row",
 												"children": [
+													{
+														"tag": "button",
+														"class": "modal-close-button",
+														"attrs": {
+															"type": "button",
+															"aria-label": "Close"
+														},
+														"text": "×",
+														"$on": {
+															"click": {
+																"send": "CLOSE_POPUP",
+																"payload": {
+																	"popupOpen": false
+																}
+															}
+														}
+													},
 													{
 														"tag": "div",
 														"class": "input-container",
@@ -193,23 +193,6 @@
 								]
 							}
 						]
-					},
-					{
-						"tag": "button",
-						"class": "modal-close-button",
-						"attrs": {
-							"type": "button",
-							"aria-label": "Close"
-						},
-						"text": "×",
-						"$on": {
-							"click": {
-								"send": "CLOSE_POPUP",
-								"payload": {
-									"popupOpen": false
-								}
-							}
-						}
 					},
 					{
 						"tag": "div",

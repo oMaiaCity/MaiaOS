@@ -2,7 +2,11 @@
 	"$schema": "°Maia/schema/context",
 	"$id": "°Maia/sparks/context/vibe",
 	"sparks": {
-		"schema": "°Maia/schema/data/spark"
+		"schema": "°Maia/schema/data/spark",
+		"map": {
+			"id": "id",
+			"name": "name"
+		}
 	},
 	"newSparkName": "",
 	"inputPlaceholder": "Enter spark name...",

@@ -14,7 +14,8 @@
 	},
 	"dependencies": {
 		"@MaiaOS/engines": "workspace:*",
-		"@MaiaOS/schemata": "workspace:*"
+		"@MaiaOS/schemata": "workspace:*",
+		"unicode-segmenter": "^0.15.0"
 	},
 	"files": [
 		"src"

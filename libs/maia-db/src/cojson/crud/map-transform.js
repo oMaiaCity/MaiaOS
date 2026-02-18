@@ -1,30 +1,14 @@
 /**
  * Map Transform - Apply mapping transformations to read data
  *
- * Supports MaiaScript expressions in map definitions to transform data during read operations.
- * Fully generic - can map ANY property path, not limited to specific properties.
+ * Unified map syntax:
+ * - $path = resolve path from current item (e.g. $content, $source.replyTo.author.name)
+ * - $$path = same as $path (legacy support; both mean "resolve from current item")
+ * - path without $ = pass-through (direct property, e.g. "id" → item.id)
+ * - "*": "N" = all keys up to depth N (1-8)
  *
  * MAP-DRIVEN ON-DEMAND RESOLUTION: Only resolves CoValues along the expression path.
  * Content-addressable: resolves by co-id when traversing. Never pre-resolves everything.
- *
- * Example:
- * {
- *   "op": "read",
- *   "schema": "°Maia/schema/data/message",
- *   "map": {
- *     "fromRole": "$$source.role",
- *     "toRole": "$$target.role",
- *     "nestedValue": "$$nested.deep.property",
- *     "anyField": "$$anyProperty.anyNested.field"
- *   }
- * }
- *
- * Note: Expressions MUST use $$ (double dollar) prefix for item access - strict syntax required
- * - $$source.role → accesses item.source.role
- * - $$target.id → accesses item.target.id
- * - $$nested.deep.property → accesses item.nested.deep.property (fully generic)
- * - Any property path is supported - no hardcoded restrictions
- * - Expressions without $$ prefix will throw an error
  */
 
 import { resolveCoIdShallow } from './data-extraction.js'
@@ -57,11 +41,58 @@ async function getValueAtPathWithResolution(peer, item, path, visited, options =
 }
 
 /**
+ * Extract resolution path and path type from map expression
+ * @param {string} expression - Map expression (e.g. "$content", "$$source.role", "id")
+ * @returns {{ path: string, isResolve: boolean }|null} Path and whether it needs resolution
+ */
+function parseMapExpression(expression) {
+	if (typeof expression !== 'string') return null
+	if (expression.startsWith('$$')) {
+		return { path: expression.substring(2), isResolve: true }
+	}
+	if (expression.startsWith('$')) {
+		return { path: expression.substring(1), isResolve: true }
+	}
+	// Pass-through: direct property access
+	return { path: expression, isResolve: false }
+}
+
+/**
+ * Collect all keys from item up to given depth (for "*" wildcard).
+ * Shallow copy: at each level, include primitive/array values; recurse into objects.
+ * @param {Object} obj - Source object
+ * @param {number} maxDepth - Maximum depth (1-8)
+ * @param {number} currentDepth - Current depth
+ * @returns {Object} Object with keys up to maxDepth (no co-id resolution)
+ */
+function collectKeysToDepth(obj, maxDepth, currentDepth = 0) {
+	if (currentDepth >= maxDepth || !obj || typeof obj !== 'object' || Array.isArray(obj)) {
+		return {}
+	}
+	const result = {}
+	for (const [key, value] of Object.entries(obj)) {
+		if (key === '$schema') continue
+		if (
+			value != null &&
+			typeof value === 'object' &&
+			!Array.isArray(value) &&
+			typeof value !== 'string'
+		) {
+			const nested = collectKeysToDepth(value, maxDepth, currentDepth + 1)
+			result[key] = Object.keys(nested).length ? nested : value
+		} else {
+			result[key] = value
+		}
+	}
+	return result
+}
+
+/**
  * Apply map transformation to a single item
  * Uses map-driven on-demand resolution: only resolves CoValues along expression paths.
  * @param {Object} peer - Backend instance
  * @param {Object} item - Item data to transform
- * @param {Object} mapConfig - Map configuration object (e.g., { "sender": "$$source.role" })
+ * @param {Object} mapConfig - Map configuration object (e.g., { "content": "$content", "id": "id" })
  * @param {Object} options - Options for resolution
  * @returns {Promise<Object>} Transformed item with mapped fields
  */
@@ -77,15 +108,34 @@ export async function applyMapTransform(peer, item, mapConfig, options = {}) {
 
 	for (const [targetField, expression] of Object.entries(mapConfig)) {
 		try {
-			if (typeof expression !== 'string' || !expression.startsWith('$$')) {
-				throw new Error(
-					`Map expression for "${targetField}" must use strict $$ syntax. Got: "${expression}". Expected format: "$$property.path"`,
-				)
+			// Wildcard: "*": "N" = all keys up to depth N
+			if (targetField === '*' && typeof expression === 'string') {
+				const depth = parseInt(expression, 10)
+				if (depth >= 1 && depth <= 8) {
+					const expanded = collectKeysToDepth(item, depth)
+					for (const [k, v] of Object.entries(expanded)) {
+						mappedItem[k] = v
+					}
+				}
+				continue
 			}
 
-			const path = expression.substring(2)
+			const parsed = parseMapExpression(expression)
+			if (!parsed) {
+				mappedItem[targetField] = undefined
+				continue
+			}
+
+			if (!parsed.isResolve) {
+				// Pass-through: direct property access
+				mappedItem[targetField] = item[parsed.path]
+				continue
+			}
+
+			const path = parsed.path
 			const rootProperty = path.split('.')[0]
-			if (rootProperty && rootProperty in item) {
+			// Only remove raw co-id when we're mapping to a *different* key (we replace, not remove, when targetField === rootProperty)
+			if (rootProperty && rootProperty in item && rootProperty !== targetField) {
 				const originalValue = item[rootProperty]
 				if (originalValue && typeof originalValue === 'string' && originalValue.startsWith('co_z')) {
 					coIdsToRemove.add(rootProperty)
@@ -104,7 +154,6 @@ export async function applyMapTransform(peer, item, mapConfig, options = {}) {
 	for (const coIdKey of coIdsToRemove) {
 		delete mappedItem[coIdKey]
 	}
-
 	return mappedItem
 }
 

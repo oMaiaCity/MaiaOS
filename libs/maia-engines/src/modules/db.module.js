@@ -1,4 +1,5 @@
 import { getTool } from '@MaiaOS/tools'
+import { registerOperations } from './db/register-operations.js'
 
 export const config = {
 	version: '1.0.0',
@@ -8,6 +9,11 @@ export const config = {
 }
 
 export async function register(registry) {
+	const dataEngine = registry._dataEngine
+	if (dataEngine) {
+		registerOperations(dataEngine)
+	}
+
 	const tool = getTool('db/db')
 	if (!tool) return
 	const toolEngine = registry._getToolEngine('DBModule')

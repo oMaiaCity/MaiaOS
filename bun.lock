@@ -17,22 +17,23 @@
     },
     "libs/maia-brand": {
       "name": "@MaiaOS/brand",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
     },
     "libs/maia-db": {
       "name": "@MaiaOS/db",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/peer": "workspace:*",
         "@MaiaOS/schemata": "workspace:*",
         "@MaiaOS/storage": "workspace:*",
         "cojson": "^0.20.7",
         "cojson-transport-ws": "0.20.7",
+        "unicode-segmenter": "^0.15.0",
       },
     },
     "libs/maia-distros": {
       "name": "@MaiaOS/maia-distros",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/loader": "workspace:*",
@@ -44,7 +45,7 @@
     },
     "libs/maia-docs": {
       "name": "@MaiaOS/docs",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
     },
     "libs/maia-engines": {
       "name": "@MaiaOS/engines",
@@ -59,11 +60,11 @@
     },
     "libs/maia-language": {
       "name": "@maia/language",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
     },
     "libs/maia-loader": {
       "name": "@MaiaOS/loader",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/engines": "workspace:*",
@@ -85,15 +86,16 @@
     },
     "libs/maia-schemata": {
       "name": "@MaiaOS/schemata",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "ajv": "^8.12.0",
+        "unicode-segmenter": "^0.15.0",
       },
     },
     "libs/maia-self": {
       "name": "@MaiaOS/self",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
@@ -103,7 +105,7 @@
     },
     "libs/maia-storage": {
       "name": "@MaiaOS/storage",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@electric-sql/pglite": "latest",
         "cojson": "0.20.7",
@@ -113,7 +115,7 @@
     },
     "libs/maia-sync": {
       "name": "@MaiaOS/sync",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/loader": "workspace:*",
         "cojson": "0.20.7",
@@ -122,22 +124,23 @@
     },
     "libs/maia-tools": {
       "name": "@MaiaOS/tools",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/engines": "workspace:*",
         "@MaiaOS/schemata": "workspace:*",
+        "unicode-segmenter": "^0.15.0",
       },
     },
     "libs/maia-vibes": {
       "name": "@MaiaOS/vibes",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/loader": "workspace:*",
       },
     },
     "services/maia": {
       "name": "@MaiaOS/maia",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/loader": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
@@ -145,10 +148,11 @@
     },
     "services/moai": {
       "name": "@MaiaOS/moai",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/loader": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
+        "unicode-segmenter": "^0.15.0",
       },
     },
   },
@@ -933,7 +937,7 @@
 
     "unicode-properties": ["unicode-properties@1.4.1", "", { "dependencies": { "base64-js": "^1.3.0", "unicode-trie": "^2.0.0" } }, "sha512-CLjCCLQ6UuMxWnbIylkisbRj31qxHPAurvena/0iwSVbQ2G1VY5/HjV0IRabOEbDHlzZlRdCrD4NhB0JtU40Pg=="],
 
-    "unicode-segmenter": ["unicode-segmenter@0.12.0", "", {}, "sha512-PK6M1A1tt3ky6cFAJW/JOO9ml/sbEvim+SL75FM8slck08ACbF0TZj+tdUd3Mh8Tk5XieqUDPwmLjiyRQvb4pw=="],
+    "unicode-segmenter": ["unicode-segmenter@0.15.0", "", {}, "sha512-Xmvwqx4F8nGuCv2eGPJVJq73NMTfpqx2Xe9/v5hQoyAUnERVhX+sRkyYVdYoBUbnTok2FTBOlstUeQ5sRleXSA=="],
 
     "unicode-trie": ["unicode-trie@2.0.0", "", { "dependencies": { "pako": "^0.2.5", "tiny-inflate": "^1.0.0" } }, "sha512-x7bc76x0bm4prf1VLg79uhAzKw8DVboClSN5VxJuQ+LKDOVEW9CdH+VY7SP+vX7xCYQqzzgQpFqz15zeLvAtZQ=="],
 
@@ -986,6 +990,8 @@
     "cliui/strip-ansi": ["strip-ansi@6.0.1", "", { "dependencies": { "ansi-regex": "^5.0.1" } }, "sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A=="],
 
     "cliui/wrap-ansi": ["wrap-ansi@7.0.0", "", { "dependencies": { "ansi-styles": "^4.0.0", "string-width": "^4.1.0", "strip-ansi": "^6.0.0" } }, "sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q=="],
+
+    "cojson/unicode-segmenter": ["unicode-segmenter@0.12.0", "", {}, "sha512-PK6M1A1tt3ky6cFAJW/JOO9ml/sbEvim+SL75FM8slck08ACbF0TZj+tdUd3Mh8Tk5XieqUDPwmLjiyRQvb4pw=="],
 
     "connect/debug": ["debug@2.6.9", "", { "dependencies": { "ms": "2.0.0" } }, "sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA=="],
 

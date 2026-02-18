@@ -587,10 +587,9 @@ export async function shouldIndexCoValue(peer, coValueCore) {
 		try {
 			const schemaDef = await resolve(peer, schema, { returnType: 'schema' })
 			if (schemaDef) {
-				// Check indexing property (defaults to false if not present)
+				// Default indexing: false. Only index when explicitly set to true.
 				const indexing = schemaDef.indexing
 				if (indexing !== true) {
-					// Schema has indexing: false or undefined - don't index
 					return { shouldIndex: false, schemaCoId: schema }
 				}
 			}
@@ -935,7 +934,7 @@ export async function indexCoValue(peer, coValueCoreOrId) {
 		const { shouldIndex, schemaCoId } = await shouldIndexCoValue(peer, coValueCore)
 
 		if (shouldIndex && schemaCoId) {
-			// Has schema - index it
+			// Has schema with indexing: true - index it in schema's index colist
 			// Ensure schema index colist exists (in spark.os, keyed by schema co-id)
 			const indexColist = await ensureSchemaIndexColist(peer, schemaCoId)
 
@@ -980,8 +979,10 @@ export async function indexCoValue(peer, coValueCoreOrId) {
 			// The append() operation is already queued in CoJSON's CRDT, so it will persist eventually
 			// Storage sync happens asynchronously in the background - no need to block here
 			// This allows instant local-first UI updates without waiting for persistence
-		} else {
-			// No schema - add to unknown colist
+		} else if (!schemaCoId) {
+			// ROOT CAUSE FIX: Only add to UNKNOWN when CoValue has NO schema at all.
+			// CoValues with a schema that has indexing: false (e.g. CoTexts) must NOT go to UNKNOWN -
+			// they have a valid schema, they're just not in a schema index. Skip indexing entirely.
 			const unknownColist = await ensureUnknownColist(peer)
 
 			if (!unknownColist) {

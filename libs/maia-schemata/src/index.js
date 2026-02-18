@@ -11,7 +11,6 @@ import { ValidationEngine } from './validation.engine.js'
 
 export { ValidationEngine }
 export { isSchemaRef, isVibeRef, SCHEMA_REF_PATTERN, VIBE_REF_PATTERN } from './patterns.js'
-
 // Export validation helper functions
 export {
 	getValidationEngine,
@@ -19,6 +18,7 @@ export {
 	validateAgainstSchema,
 	validateAgainstSchemaOrThrow,
 } from './validation.helper.js'
+export { ValidationPluginRegistry } from './validation-plugin-registry.js'
 
 // Meta schema is now loaded from os/meta.schema.json directly (seeding) or from backend (runtime)
 // No exports needed - use ValidationEngine.getMetaSchema() for validation engine, or getMetaSchemaFromPeer() for runtime access
@@ -37,9 +37,11 @@ export function getMetaSchema() {
 }
 
 import chatDataSchema from './data/chat.schema.json'
-import humanDataSchema from './data/human.schema.json'
-import sparkDataSchema from './data/spark.schema.json'
 // Import data schemas
+import cotextDataSchema from './data/cotext.schema.json'
+import humanDataSchema from './data/human.schema.json'
+import notesDataSchema from './data/notes.schema.json'
+import sparkDataSchema from './data/spark.schema.json'
 import todosDataSchema from './data/todos.schema.json'
 import addAgentMessageSchema from './message/ADD_AGENT.schema.json'
 import closePopupMessageSchema from './message/CLOSE_POPUP.schema.json'
@@ -50,6 +52,7 @@ import dismissMessageSchema from './message/DISMISS.schema.json'
 import errorMessageSchema from './message/ERROR.schema.json'
 import loadActorMessageSchema from './message/LOAD_ACTOR.schema.json'
 import openPopupMessageSchema from './message/OPEN_POPUP.schema.json'
+import randomizePaperMessageSchema from './message/RANDOMIZE_PAPER.schema.json'
 import removeMemberMessageSchema from './message/REMOVE_MEMBER.schema.json'
 import retryMessageSchema from './message/RETRY.schema.json'
 import selectNavMessageSchema from './message/SELECT_NAV.schema.json'
@@ -62,6 +65,7 @@ import switchViewMessageSchema from './message/SWITCH_VIEW.schema.json'
 import toggleButtonMessageSchema from './message/TOGGLE_BUTTON.schema.json'
 import updateAgentInputMessageSchema from './message/UPDATE_AGENT_INPUT.schema.json'
 import updateInputMessageSchema from './message/UPDATE_INPUT.schema.json'
+import updatePaperMessageSchema from './message/UPDATE_PAPER.schema.json'
 import actionSchema from './os/action.schema.json'
 // Import all schema definitions directly as JSON
 import actorSchema from './os/actor.schema.json'
@@ -125,6 +129,8 @@ const SCHEMAS = {
 	'os/human': humanSchema,
 	'os/humans-registry': humansRegistrySchema,
 	'os/registries': registriesSchema,
+	'data/cotext': cotextDataSchema,
+	'data/notes': notesDataSchema,
 	'data/todos': todosDataSchema,
 	'data/chat': chatDataSchema,
 	'data/human': humanDataSchema,
@@ -133,6 +139,8 @@ const SCHEMAS = {
 	'message/TOGGLE_BUTTON': toggleButtonMessageSchema,
 	'message/DELETE_BUTTON': deleteButtonMessageSchema,
 	'message/UPDATE_INPUT': updateInputMessageSchema,
+	'message/UPDATE_PAPER': updatePaperMessageSchema,
+	'message/RANDOMIZE_PAPER': randomizePaperMessageSchema,
 	'message/SWITCH_VIEW': switchViewMessageSchema,
 	'message/SUCCESS': successMessageSchema,
 	'message/ERROR': errorMessageSchema,

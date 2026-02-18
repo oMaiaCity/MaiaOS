@@ -12,14 +12,16 @@ import * as dataExtraction from './data-extraction.js'
 // No CRUD-level hooks needed - storage hook catches ALL writes
 
 /**
- * Determine cotype from schema or data type
+ * Determine cotype from schema or data type.
+ * CRITICAL: Schema definitions (derived from meta-schema) must ALWAYS be CoMaps.
+ * The cotype in the schema describes instance types (colist/comap), not the schema document's type.
+ *
  * @param {Object} peer - Backend instance
  * @param {string} schema - Schema co-id
  * @param {*} data - Data to create
- * @returns {Promise<string>} Cotype (comap, colist, costream)
+ * @returns {Promise<{ cotype: string, isSchemaDefinition: boolean }>} Cotype and schema-definition flag
  */
-async function determineCotype(peer, schema, data) {
-	// Try to load schema to get cotype using generic method
+async function determineCotypeAndFlag(peer, schema, data) {
 	try {
 		const schemaCore = await collectionHelpers.ensureCoValueLoaded(peer, schema, {
 			waitForAvailable: true,
@@ -27,15 +29,25 @@ async function determineCotype(peer, schema, data) {
 		if (schemaCore && peer.isAvailable(schemaCore)) {
 			const schemaContent = peer.getCurrentContent(schemaCore)
 			if (schemaContent?.get) {
+				// Schema definitions (parent = meta-schema) must ALWAYS be CoMaps
+				const title = schemaContent.get('title')
+				if (title === '°Maia/schema/meta') {
+					return { cotype: 'comap', isSchemaDefinition: true }
+				}
+
+				// For instance schemas: use cotype from definition or root
 				const definition = schemaContent.get('definition')
-				if (definition?.cotype) {
-					// CoText support eliminated - throw error if schema specifies cotext
-					if (definition.cotype === 'cotext' || definition.cotype === 'coplaintext') {
+				const cotype =
+					definition?.cotype && typeof definition.cotype === 'string'
+						? definition.cotype
+						: schemaContent.get('cotype')
+				if (cotype && typeof cotype === 'string') {
+					if (cotype === 'cotext' || cotype === 'coplaintext') {
 						throw new Error(
 							`[MaiaDB] CoText (cotext) support has been eliminated. Schema ${schema} specifies cotext, which is no longer supported.`,
 						)
 					}
-					return definition.cotype
+					return { cotype, isSchemaDefinition: false }
 				}
 			}
 		}
@@ -43,14 +55,14 @@ async function determineCotype(peer, schema, data) {
 
 	// Fallback: infer from data type
 	if (Array.isArray(data)) {
-		return 'colist'
+		return { cotype: 'colist', isSchemaDefinition: false }
 	} else if (typeof data === 'string') {
 		// CoText support eliminated - strings are not valid CoValue types
 		throw new Error(
 			`[MaiaDB] Cannot determine cotype from data type for schema ${schema}. String data type is not supported (CoText/cotext support has been eliminated). Use CoMap or CoList instead.`,
 		)
 	} else if (typeof data === 'object' && data !== null) {
-		return 'comap'
+		return { cotype: 'comap', isSchemaDefinition: false }
 	} else {
 		throw new Error(`[MaiaDB] Cannot determine cotype from data type for schema ${schema}`)
 	}
@@ -69,7 +81,7 @@ export async function create(peer, schema, data, options = {}) {
 	const spark = options.spark ?? '°Maia'
 
 	// Determine cotype from schema or data type
-	const cotype = await determineCotype(peer, schema, data)
+	const { cotype, isSchemaDefinition } = await determineCotypeAndFlag(peer, schema, data)
 
 	if (!peer.account) {
 		throw new Error('[MaiaDB] Account required for create')
@@ -87,6 +99,7 @@ export async function create(peer, schema, data, options = {}) {
 		cotype,
 		data: cotype === 'comap' ? data : cotype === 'colist' ? data : undefined,
 		dataEngine: peer.dbEngine,
+		isSchemaDefinition,
 	})
 
 	// CRITICAL: Don't wait for storage sync - it blocks the UI!

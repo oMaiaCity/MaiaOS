@@ -4,14 +4,17 @@
  * Provides unified validation API for all MaiaOS data types (actor, context, state, view, etc.)
  * Uses AJV for fast, cached schema validation with clear error messages.
  *
- * Supports CoJSON types via custom meta-schema and AJV plugin.
+ * Supports CoJSON types via ValidationPluginRegistry and pluggable plugins.
  */
-import { ajvCoTypesPlugin } from './ajv-co-types-plugin.js'
+
 // Use merged meta.schema.json (contains everything: base JSON Schema 2020-12 + MaiaOS extensions)
 // This is the single source of truth for metaschema
 import customMetaSchema from './os/meta.schema.json'
 import { isSchemaRef } from './patterns.js'
+import { plugin as cojsonPlugin, pluginId as cojsonPluginId } from './plugins/cojson.plugin.js'
+import { plugin as cotextPlugin, pluginId as cotextPluginId } from './plugins/cotext.plugin.js'
 import { formatValidationErrors, withSchemaValidationDisabled } from './validation.utils.js'
+import { ValidationPluginRegistry } from './validation-plugin-registry.js'
 
 export class ValidationEngine {
 	constructor(options = {}) {
@@ -27,6 +30,13 @@ export class ValidationEngine {
 
 		// Registry schemas (ONLY for migrations/seeding - human-readable ID lookup)
 		this.registrySchemas = options.registrySchemas || null
+
+		// Pluggable validation (keywords, formats). Uses provided registry or creates default with cojson.
+		this.validationPluginRegistry = options.validationPluginRegistry || new ValidationPluginRegistry()
+		if (!options.validationPluginRegistry) {
+			this.validationPluginRegistry.registerPlugin(cojsonPluginId, cojsonPlugin)
+			this.validationPluginRegistry.registerPlugin(cotextPluginId, cotextPlugin)
+		}
 	}
 
 	/**
@@ -166,9 +176,9 @@ export class ValidationEngine {
 			// Note: If using Ajv2020, meta-schema might already be included
 			this._loadMetaSchema()
 
-			// Register CoJSON custom meta-schema and plugin
+			// Register CoJSON custom meta-schema and pluggable validation
 			this._loadCoJsonMetaSchema()
-			ajvCoTypesPlugin(this.ajv)
+			this.validationPluginRegistry.applyTo(this.ajv)
 
 			// ALWAYS register co-type definitions (REQUIRED, not optional)
 			await this._loadCoTypeDefinitions()
