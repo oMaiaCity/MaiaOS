@@ -488,6 +488,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 		const storageLabel = usePostgres ? 'Postgres' : `PGlite at ${dbPath || './local-sync.db'}`
 		console.log('[sync] Loading account (%s)...', storageLabel)
 		console.log('[sync] accountID=%s', `${accountID?.slice(0, 12)}...`)
+
 		const result = await loadOrCreateAgentAccount({
 			accountID,
 			agentSecret,
@@ -620,7 +621,6 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 					} catch (_e) {}
 			},
 		}
-
 		console.log('[sync] Ready')
 	} catch (e) {
 		console.error('[sync] Init failed:', e?.message ?? e)

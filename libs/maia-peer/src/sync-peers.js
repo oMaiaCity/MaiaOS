@@ -95,7 +95,7 @@ export function setupSyncPeers(syncDomain = null) {
 
 	const wsPeer = new WebSocketPeerWithReconnection({
 		peer: syncServerUrl,
-		reconnectionTimeout: 5000,
+		reconnectionTimeout: 1500,
 		addPeer: (peer) => {
 			if (connectionTimeout) {
 				clearTimeout(connectionTimeout)
