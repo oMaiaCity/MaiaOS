@@ -52,45 +52,44 @@ export async function renderVoicePage(maia, authState, syncState, _navigateToScr
 			</header>
 
 			<div class="voice-main">
-				<div class="voice-controls whitish-card">
-					<button type="button" id="voice-asr-btn" class="voice-asr-btn voice-asr-idle ${!isVoiceSupported() ? 'voice-asr-disabled' : ''}" data-state="idle" aria-label="Start voice input" ${!isVoiceSupported() ? 'disabled aria-disabled="true"' : ''}>
-						<svg class="voice-asr-icon voice-asr-icon-mic" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-							<path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-							<line x1="12" y1="19" x2="12" y2="23"/>
-							<line x1="8" y1="23" x2="16" y2="23"/>
-						</svg>
-						<svg class="voice-asr-icon voice-asr-icon-loader" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<circle cx="12" cy="12" r="10" stroke-dasharray="16 48" stroke-linecap="round" />
-						</svg>
-						<svg class="voice-asr-icon voice-asr-icon-close" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-							<line x1="18" y1="6" x2="6" y2="18"/>
-							<line x1="6" y1="6" x2="18" y2="18"/>
-						</svg>
-					</button>
-				</div>
 				<div id="voice-transcript" class="voice-transcript whitish-card ${!isVoiceSupported() ? 'voice-transcript-active' : ''}">
 					${
 						!isVoiceSupported()
 							? '<p class="voice-unsupported">Voice works best in Chrome. Safari has known memory limits with on-device speech.</p>'
-							: '<p class="voice-transcript-placeholder">Click Start to begin. Your speech will appear here in real time.</p>'
+							: '<p class="voice-transcript-placeholder">Tap the mic to begin. Your speech will appear here in real time.</p>'
 					}
 				</div>
 			</div>
 
-			<div class="bottom-navbar">
-				<div class="bottom-navbar-left"></div>
-				<div class="bottom-navbar-center">
-					<button type="button" class="home-btn bottom-home-btn" onclick="window.navigateTo('/me')" title="Home">
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-							<polyline points="9 22 9 12 15 12 15 22"/>
-						</svg>
-						<span class="home-label">Home</span>
-					</button>
-				</div>
-				<div class="bottom-navbar-right"></div>
-			</div>
+			<nav class="voice-navpill" aria-label="Voice controls">
+				<button type="button" class="voice-navpill-wing voice-navpill-left" onclick="window.navigateTo('/me')" title="Home" aria-label="Home">
+					<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+						<polyline points="9 22 9 12 15 12 15 22"/>
+					</svg>
+				</button>
+				<button type="button" id="voice-asr-btn" class="voice-asr-btn voice-asr-idle ${!isVoiceSupported() ? 'voice-asr-disabled' : ''}" data-state="idle" aria-label="Start voice input" ${!isVoiceSupported() ? 'disabled aria-disabled="true"' : ''}>
+					<svg class="voice-asr-icon voice-asr-icon-mic" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+						<path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+						<line x1="12" y1="19" x2="12" y2="23"/>
+						<line x1="8" y1="23" x2="16" y2="23"/>
+					</svg>
+					<svg class="voice-asr-icon voice-asr-icon-loader" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<circle cx="12" cy="12" r="10" stroke-dasharray="16 48" stroke-linecap="round" />
+					</svg>
+					<svg class="voice-asr-icon voice-asr-icon-close" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+						<line x1="18" y1="6" x2="6" y2="18"/>
+						<line x1="6" y1="6" x2="18" y2="18"/>
+					</svg>
+				</button>
+				<button type="button" class="voice-navpill-wing voice-navpill-right" title="History" aria-label="History (coming soon)" disabled>
+					<svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+						<circle cx="12" cy="12" r="10"/>
+						<polyline points="12 6 12 12 16 14"/>
+					</svg>
+				</button>
+			</nav>
 		</div>
 	`
 
@@ -117,13 +116,43 @@ export async function renderVoicePage(maia, authState, syncState, _navigateToScr
 	const voiceDebug =
 		typeof window !== 'undefined' && window.location?.search?.includes('voice_debug=1')
 
-	/** Wrap wake words in badge span for display. */
-	function formatWithWakeWordBadge(text) {
+	const WAKE_WORD_RE = /\b(?:hey\s+)?ma[iy]a\b/i
+	const VAD_TIMEOUT_MS = 5000
+
+	/** Format one segment. greenMode = was green active when this segment arrived (old green segments stay green). */
+	function formatSegment(text, greenMode) {
 		if (!text) return ''
-		return escapeHtml(text).replace(
-			/\b(hey\s+)?ma[iy]a\b/gi,
-			() => '<span class="voice-wake-badge" aria-label="Wake word detected">Maia</span>',
-		)
+		const escaped = escapeHtml(text)
+		const hasWakeWord = WAKE_WORD_RE.test(escaped)
+		if (!hasWakeWord && greenMode) {
+			return `<span class="voice-after-wake">${escaped}</span>`
+		}
+		const parts = escaped.split(/(\b(?:hey\s+)?ma[iy]a\b)/gi)
+		let out = ''
+		let seenWake = false
+		for (let i = 0; i < parts.length; i++) {
+			const p = parts[i]
+			if (!p) continue
+			const isWakeWord = WAKE_WORD_RE.test(p)
+			if (isWakeWord) {
+				out += `<span class="voice-wake-word" aria-label="Wake word detected">${p}</span>`
+				seenWake = true
+			} else if (seenWake && greenMode) {
+				out += `<span class="voice-after-wake">${p}</span>`
+			} else {
+				out += p
+			}
+		}
+		return out
+	}
+
+	/** Format all segments (each keeps its own color; only new segments after timeout are normal). */
+	function formatAllSegments(segments, streamingText, streamingGreenMode) {
+		let out = segments.map((s) => formatSegment(s.text, s.greenMode)).join(' ')
+		if (streamingText) {
+			out += (out ? ' ' : '') + formatSegment(streamingText, streamingGreenMode)
+		}
+		return out
 	}
 
 	asrBtn?.addEventListener('click', async () => {
@@ -150,7 +179,9 @@ export async function renderVoicePage(maia, authState, syncState, _navigateToScr
 			transcriptEl.classList.remove('voice-transcript-placeholder')
 			transcriptEl.classList.add('voice-transcript-active')
 
-			let committedText = ''
+			const segments = [] // { text, greenMode } - each segment keeps its color
+			let lastCommitTime = 0
+			let greenMode = false
 
 			const transcriber = createMicrophoneTranscriber({
 				useVAD: true,
@@ -170,17 +201,27 @@ export async function renderVoicePage(maia, authState, syncState, _navigateToScr
 				},
 				onUpdate(text) {
 					if (voiceDebug) console.log('[voice] onUpdate', JSON.stringify(text))
-					const display = committedText
-						? `${formatWithWakeWordBadge(committedText)} ${formatWithWakeWordBadge(text)}`
-						: formatWithWakeWordBadge(text)
 					transcriptEl.innerHTML =
-						display || '<span class="voice-transcript-placeholder">Speaking…</span>'
+						formatAllSegments(segments, text, greenMode) ||
+						'<span class="voice-transcript-placeholder">Speaking…</span>'
 				},
 				onCommit(text) {
 					if (voiceDebug) console.log('[voice] onCommit', JSON.stringify(text))
 					if (text?.trim()) {
-						committedText = committedText ? `${committedText} ${text}` : text
-						transcriptEl.innerHTML = formatWithWakeWordBadge(committedText)
+						const now = Date.now()
+						const gap = lastCommitTime > 0 ? now - lastCommitTime : 0
+						if (gap > VAD_TIMEOUT_MS) {
+							greenMode = false
+						}
+						lastCommitTime = now
+						if (WAKE_WORD_RE.test(text)) {
+							greenMode = true
+							try {
+								window.focus()
+							} catch (_) {}
+						}
+						segments.push({ text, greenMode })
+						transcriptEl.innerHTML = formatAllSegments(segments)
 					}
 				},
 			})
