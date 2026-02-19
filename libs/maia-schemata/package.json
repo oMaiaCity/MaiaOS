@@ -12,11 +12,13 @@
 		"./expression-resolver": "./src/expression-resolver.js",
 		"./payload-resolver": "./src/payload-resolver.js",
 		"./co-types.defs.json": "./src/co-types.defs.json",
-		"./os/meta.schema.json": "./src/os/meta.schema.json"
+		"./os/meta.schema.json": "./src/os/meta.schema.json",
+		"./operation-result": "./src/operation-result.js"
 	},
 	"dependencies": {
 		"@MaiaOS/db": "workspace:*",
-		"ajv": "^8.12.0"
+		"ajv": "^8.12.0",
+		"unicode-segmenter": "^0.15.0"
 	},
 	"files": [
 		"src"

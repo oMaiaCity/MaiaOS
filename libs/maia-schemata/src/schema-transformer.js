@@ -613,7 +613,7 @@ function transformTargetReference(targetRef, coIdMap, context = '') {
 
 /**
  * Transform a query object schema reference
- * Preserves all properties including options (map, resolveReferences, etc.)
+ * Preserves all properties including map and filter.
  * @param {Object} queryObj - Query object with schema property
  * @param {Map} coIdMap - Map of human-readable IDs to co-ids
  */
@@ -634,10 +634,9 @@ function transformQueryObjectSchema(queryObj, coIdMap) {
 		}
 	}
 
-	// CRITICAL: Preserve ALL properties including options (map, resolveReferences, etc.)
-	// Query objects can have: {schema: "co_z...", filter?: {...}, options?: {map: {...}, ...}}
-	// Options can contain map, resolveReferences, etc. - these must be preserved
-	// Only transform the schema field, preserve all other properties (filter, options, etc.)
+	// CRITICAL: Preserve ALL properties including map and filter.
+	// Query objects have: {schema: "co_z...", filter?: {...}, map?: {...}}
+	// Only transform the schema field, preserve all other properties.
 	// No cleaning/deletion needed - just transform schema reference
 }
 

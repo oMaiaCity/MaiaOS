@@ -7,11 +7,11 @@
 		"filter": {
 			"id": "$sparkId"
 		},
-		"options": {
-			"map": {
-				"members": "$$os.capabilities.guardian.accountMembers",
-				"groupId": "$$os.capabilities.guardian.id"
-			}
+		"map": {
+			"id": "id",
+			"name": "name",
+			"members": "$os.capabilities.guardian.accountMembers",
+			"groupId": "$os.capabilities.guardian.id"
 		}
 	},
 	"hasSpark": false,

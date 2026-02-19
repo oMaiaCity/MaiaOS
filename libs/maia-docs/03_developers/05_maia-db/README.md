@@ -1,18 +1,18 @@
-# maia-db: Database Backends
+# maia-db: MaiaDB Storage Layer
 
 ## Overview
 
-The `@MaiaOS/db` package provides database backends for MaiaOS. Currently, it includes the CoJSON CRDT backend implementation, with plans to implement the `DBAdapter` interface from `@MaiaOS/operations` to unify operations across backends.
+The `@MaiaOS/db` package provides **MaiaDB** – the storage layer for MaiaOS. CoJSON CRDT backend. DataEngine (maia.do) in maia-engines calls MaiaDB for all data operations.
 
 **What it is:**
-- ✅ **CoJSON backend** - CRDT-based collaborative database backend
+- ✅ **MaiaDB** - Single class: CRUD, resolve, indexing, seeding
 - ✅ **CoValue services** - Services for creating and managing CoValues
+- ✅ **Seeding** - `migrations/seeding/` (bootstrap, configs, data, helpers)
 - ✅ **Schema integration** - Schema metadata utilities for CoValues
 
 **What it isn't:**
-- ❌ **Not the operations layer** - Operations are in `@MaiaOS/operations`
-- ❌ **Not the IndexedDB backend** - IndexedDB backend is in `@MaiaOS/script`
-- ❌ **Not the database engine** - DBEngine is in `@MaiaOS/operations`
+- ❌ **Not the data API** - **maia.do()** (DataEngine) is in `@MaiaOS/engines`
+- ❌ **Not the P2P layer** - Node, account, sync are in `@MaiaOS/peer`
 
 ---
 
@@ -25,55 +25,30 @@ Think of `maia-db` like a specialized storage system:
 - **Schema integration** = Connects your schemas to the collaborative storage
 
 **Analogy:**
-Imagine you have two storage systems:
-- **IndexedDB** = A local filing cabinet (fast, local-only)
-- **CoJSON** = A shared Google Doc (collaborative, syncs across devices)
-
-Both storage systems will eventually speak the same language (`DBAdapter` interface) so you can use the same operations regardless of which one you choose.
+MaiaDB is the storage layer – CoJSON CRDT (collaborative, syncs). DataEngine (maia.do) is the public API; it calls MaiaDB for all operations.
 
 ---
 
 ## Architecture
 
-### Current Structure
+### Structure
 
 ```
 libs/maia-db/src/
-├── cojson/                    # CoJSON backend implementation
-│   ├── backend/               # Backend adapter (future: implements DBAdapter)
-│   ├── operations/             # CoJSON-specific operations
-│   └── factory.js             # Factory for creating CoJSON instances
-├── services/                  # CoValue creation services
-│   ├── oGroup.js              # Group creation
-│   ├── oID.js                 # ID generation
-│   ├── oMap.js                # CoMap creation
-│   ├── oList.js               # CoList creation
+├── cojson/                    # CoJSON / MaiaDB implementation
+│   ├── core/MaiaDB.js         # MaiaDB – single storage class
+│   ├── crud/                  # read, create, update, delete
+│   ├── groups/                # Groups, sparks, coID
 │   └── ...
-├── schemas/                   # Schema system integration
-│   ├── registry.js            # Schema registry
-│   ├── validation.js          # Schema validation
-│   └── ...
-└── migrations/                # Database migrations
+├── migrations/seeding/        # Bootstrap, configs, data, helpers
+├── schemas/                   # Schema registry, validation
+└── utils/                     # registry-name-generator, etc.
 ```
 
-### Future Integration
-
-The CoJSON backend will implement the `DBAdapter` interface from `@MaiaOS/operations`:
+### API Flow
 
 ```
-┌─────────────────────────────────────────┐
-│         @MaiaOS/operations               │
-│  (DBEngine, Operations, DBAdapter)       │
-└─────────────────┬───────────────────────┘
-                  │
-        ┌─────────┴─────────┐
-        ↓                   ↓
-┌───────────────┐   ┌───────────────┐
-│ IndexedDB     │   │ CoJSON        │
-│ Backend       │   │ Backend       │
-│ (implements   │   │ (implements   │
-│  DBAdapter)   │   │  DBAdapter)   │
-└───────────────┘   └───────────────┘
+maia.do({ op, schema, key, ... })  →  DataEngine  →  MaiaDB  →  MaiaPeer / storage
 ```
 
 ---
@@ -86,8 +61,7 @@ The CoJSON backend will implement the `DBAdapter` interface from `@MaiaOS/operat
 
 ## Related Documentation
 
-- [maia-operations Package](../06_maia-operations/README.md) - Shared operations layer and DBAdapter interface
-- [maia-script Package](../04_maia-script/README.md) - IndexedDB backend implementation
+- [maia-engines Package](../04_maia-engines/README.md) - DataEngine (maia.do)
 - [maia-schemata Package](../03_maia-schemata/README.md) - Schema validation and transformation
 
 ---
@@ -98,7 +72,7 @@ The CoJSON backend will implement the `DBAdapter` interface from `@MaiaOS/operat
 
 **Key Files:**
 - `src/cojson/` - CoJSON backend implementation
-- `src/services/` - CoValue creation services
+- `src/cojson/core/MaiaDB.js` - MaiaDB
 - `src/schemas/` - Schema system integration
 
 **Dependencies:**

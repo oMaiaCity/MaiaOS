@@ -41,7 +41,7 @@
 		"indexing": {
 			"type": "boolean",
 			"default": false,
-			"description": "Whether instances of this schema should be indexed in account.os.{schemaCoId}"
+			"description": "Whether instances of this schema should be indexed in spark.os.indexes. Default: false. Set explicitly to true to index."
 		}
 	},
 	"required": ["title", "cotype"],

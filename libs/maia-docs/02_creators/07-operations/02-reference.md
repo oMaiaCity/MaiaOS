@@ -245,9 +245,9 @@ The `@db` tool validates operations against this schema:
 
 ## References
 
-- **DBEngine:** `libs/maia-operations/src/engine.js`
+- **DataEngine:** `libs/maia-engines/src/engines/data.engine.js`
 - **Operation Handlers:** `libs/maia-operations/src/operations/`
-- **Backend:** `libs/maia-script/src/backends/indexeddb/`
+- **Storage:** MaiaDB (`libs/maia-db/`) – CoJSON CRDT
 - **Tool Definition:** `libs/maia-tools/src/db/db.tool.js`
 - **Example Vibe:** `libs/maia-vibes/src/todos/`
 

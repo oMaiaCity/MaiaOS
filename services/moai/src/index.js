@@ -21,25 +21,31 @@
  *     - false/unset: Skip seed, use persisted data. Never overwrite on restart.
  */
 
+import { findFirst } from '@MaiaOS/db'
 import {
 	buildSeedConfig,
-	CoJSONBackend,
 	createWebSocketPeer,
-	DBEngine,
+	DataEngine,
 	filterVibesForSeeding,
 	generateRegistryName,
 	getAllSchemas,
 	getAllToolDefinitions,
 	getAllVibeRegistries,
 	loadOrCreateAgentAccount,
+	MaiaDB,
+	MaiaScriptEvaluator,
+	registerOperations,
+	removeGroupMember,
+	resolve,
 	schemaMigration,
 	waitForStoreReady,
 } from '@MaiaOS/loader'
-import { dirname, resolve } from 'node:path'
+import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { splitGraphemes } from 'unicode-segmenter/grapheme'
 
 // Resolve db path relative to moai package root (not process.cwd) so persistence is stable across restarts
-const _moaiDir = resolve(dirname(fileURLToPath(import.meta.url)), '..')
+const _moaiDir = pathResolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 const PORT = process.env.PORT || 4201
 const PEER_DB_PATH = process.env.PEER_DB_PATH || './local-sync.db'
@@ -58,11 +64,23 @@ if (!usePGlite && !usePostgres) {
 	throw new Error(`[moai] PEER_STORAGE must be pglite or postgres. Got: ${storageType}`)
 }
 // Resolve relative to moai package dir (stable across runs regardless of cwd)
-const dbPath = usePGlite ? resolve(_moaiDir, PEER_DB_PATH) : undefined
+const dbPath = usePGlite ? pathResolve(_moaiDir, PEER_DB_PATH) : undefined
 const peerMode = process.env.PEER_MODE || 'sync'
 const syncDomain = peerMode === 'agent' ? process.env.PEER_MOAI || null : null
 const MAIA_SPARK = '°Maia'
 const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
+
+/** OpenAI-format tools for LLM (paper write + future tools). Uses existing tool defs (already OpenAI-compatible). */
+function toOpenAITools() {
+	const defs = getAllToolDefinitions()
+	const paths = ['core/updatePaperContent']
+	const tools = []
+	for (const p of paths) {
+		const def = defs[p]
+		if (def?.type === 'function' && def?.function) tools.push(def)
+	}
+	return tools
+}
 const peerAddGuardian = process.env.PEER_ADD_GUARDIAN === 'true'
 const peerGuardianAccountId = process.env.PEER_GUARDIAN?.trim() || null
 const peerFreshSeed = process.env.PEER_FRESH_SEED === 'true'
@@ -103,15 +121,15 @@ function getRegistriesId(account) {
 	return id
 }
 
-async function loadCoMap(backend, coId, opts = {}) {
+async function loadCoMap(peer, coId, opts = {}) {
 	const { timeout = LOAD_TIMEOUT_MS, retries = 1 } = opts
 	let lastErr
 	for (let i = 1; i <= retries; i++) {
 		try {
-			const store = await backend.read(null, coId)
+			const store = await peer.read(null, coId)
 			await withTimeout(waitForStoreReady(store, coId, timeout), timeout, `load(${coId.slice(0, 12)})`)
-			const core = backend.node.getCoValue(coId)
-			if (core && backend.isAvailable(core)) return backend.getCurrentContent(core)
+			const core = peer.node.getCoValue(coId)
+			if (core && peer.isAvailable(core)) return peer.getCurrentContent(core)
 			lastErr = new Error(`CoMap ${coId.slice(0, 12)}... not available`)
 		} catch (e) {
 			lastErr = e
@@ -121,13 +139,13 @@ async function loadCoMap(backend, coId, opts = {}) {
 	throw lastErr
 }
 
-async function getCoIdByPath(backend, startId, path, opts = {}) {
-	let content = await loadCoMap(backend, startId, opts)
+async function getCoIdByPath(peer, startId, path, opts = {}) {
+	let content = await loadCoMap(peer, startId, opts)
 	for (let i = 0; i < path.length; i++) {
 		const nextId = content?.get?.(path[i])
 		if (!nextId?.startsWith('co_z')) throw new Error(`Path ${path[i]} not found`)
 		if (i === path.length - 1) return nextId
-		content = await loadCoMap(backend, nextId, opts)
+		content = await loadCoMap(peer, nextId, opts)
 	}
 }
 
@@ -135,11 +153,11 @@ async function getCoIdByPath(backend, startId, path, opts = {}) {
 async function handleSyncRegistry(worker) {
 	try {
 		const registriesId = getRegistriesId(worker.account)
-		const registriesContent = await loadCoMap(worker.backend, registriesId, { retries: 2 })
+		const registriesContent = await loadCoMap(worker.peer, registriesId, { retries: 2 })
 		const sparksId = registriesContent?.get?.('sparks')
 		let maiaSparkId = null
 		if (sparksId?.startsWith('co_z')) {
-			const sparksContent = await loadCoMap(worker.backend, sparksId, { retries: 2 })
+			const sparksContent = await loadCoMap(worker.peer, sparksId, { retries: 2 })
 			maiaSparkId = sparksContent?.get?.(MAIA_SPARK)
 		}
 		return jsonResponse({
@@ -153,7 +171,7 @@ async function handleSyncRegistry(worker) {
 
 // --- Agent handlers ---
 async function handleRegister(worker, body) {
-	const { type, username, accountId, sparkCoId } = body || {}
+	const { type, username, accountId, profileId, sparkCoId } = body || {}
 	if (type !== 'human' && type !== 'spark')
 		return err('type required: human or spark', 400, {
 			validationErrors: [{ field: 'type', message: 'must be human or spark' }],
@@ -161,6 +179,13 @@ async function handleRegister(worker, body) {
 	if (type === 'human' && (!accountId || typeof accountId !== 'string'))
 		return err('accountId required for type=human', 400, {
 			validationErrors: [{ field: 'accountId', message: 'required' }],
+		})
+	if (
+		type === 'human' &&
+		(!profileId || typeof profileId !== 'string' || !profileId.startsWith('co_z'))
+	)
+		return err('profileId required for type=human', 400, {
+			validationErrors: [{ field: 'profileId', message: 'required (co_z...)' }],
 		})
 	if (type === 'spark' && (!sparkCoId || typeof sparkCoId !== 'string'))
 		return err('sparkCoId required for type=spark', 400, {
@@ -171,31 +196,73 @@ async function handleRegister(worker, body) {
 	let u =
 		username != null && typeof username === 'string' && username.trim() ? username.trim() : null
 
-	const { backend, dbEngine } = worker
+	const { peer, dataEngine } = worker
 	try {
 		const registryKey = type === 'human' ? 'humans' : 'sparks'
-		const registryId = await getCoIdByPath(backend, getRegistriesId(worker.account), [registryKey], {
+		const registryId = await getCoIdByPath(peer, getRegistriesId(worker.account), [registryKey], {
 			retries: 2,
 		})
-		const raw = await backend.getRawRecord(registryId)
+		const raw = await peer.getRawRecord(registryId)
 
-		// Human: one entry per account. If accountId already registered, return success (idempotent).
 		if (type === 'human') {
-			const existingUsername = raw ? Object.keys(raw).find((k) => raw[k] === coId) : null
-			if (existingUsername) {
+			// Idempotency: accountId already registered (by username or by accountId key)
+			const existingHumanId = raw?.[accountId]
+			if (existingHumanId?.startsWith('co_z')) {
+				const existingUsername = raw
+					? Object.keys(raw).find((k) => raw[k] === existingHumanId && k !== accountId)
+					: null
 				return jsonResponse({
 					ok: true,
 					type: 'human',
-					username: existingUsername,
+					username: existingUsername ?? generateRegistryName(type),
 					accountId: coId,
 				})
 			}
+			const existingUsername = raw ? Object.keys(raw).find((k) => raw[k] === coId) : null
+			if (!u) u = existingUsername ?? generateRegistryName(type)
+			if (raw?.[u] != null && raw[u] !== coId)
+				return err(`username "${u}" already registered to different identity`, 409)
+
+			// Create Human CoMap (public: everyone reader) and dual-key registry
+			const humanSchemaCoId = await resolve(peer, '°Maia/schema/os/human', { returnType: 'coId' })
+			if (!humanSchemaCoId) return err('Human schema not found. Ensure genesis seed has run.', 500)
+
+			const guardian = await peer.getMaiaGroup()
+			if (!guardian) return err('Guardian not found', 500)
+
+			const node = peer.node
+			const humanGroup = node.createGroup()
+			humanGroup.extend(guardian, 'extend')
+			humanGroup.addMember('everyone', 'reader')
+			const humanCoMap = humanGroup.createMap(
+				{ account: accountId, profile: profileId },
+				{ $schema: humanSchemaCoId },
+			)
+			const memberIdToRemove =
+				typeof node.getCurrentAccountOrAgentID === 'function'
+					? node.getCurrentAccountOrAgentID()
+					: (worker.account?.id ?? worker.account?.$jazz?.id)
+			try {
+				await removeGroupMember(humanGroup, memberIdToRemove)
+			} catch (_e) {}
+
+			const registryData = { [u]: humanCoMap.id, [accountId]: humanCoMap.id }
+			const r = await dataEngine.execute({ op: 'update', id: registryId, data: registryData })
+			if (r?.ok === false)
+				return err(r.errors?.map((e) => e.message).join('; ') ?? 'update failed', 500)
+			return jsonResponse({
+				ok: true,
+				type: 'human',
+				username: u,
+				accountId: coId,
+			})
 		}
 
+		// Spark registration (unchanged)
 		if (!u) u = generateRegistryName(type)
 		if (raw?.[u] != null && raw[u] !== coId)
 			return err(`username "${u}" already registered to different identity`, 409)
-		const r = await dbEngine.execute({ op: 'update', id: registryId, data: { [u]: coId } })
+		const r = await dataEngine.execute({ op: 'update', id: registryId, data: { [u]: coId } })
 		if (r?.ok === false)
 			return err(r.errors?.map((e) => e.message).join('; ') ?? 'update failed', 500)
 		return jsonResponse({
@@ -212,7 +279,7 @@ async function handleRegister(worker, body) {
 
 async function handleProfile(worker) {
 	try {
-		const { account, backend } = worker
+		const { account, peer } = worker
 		const profileId = account?.get?.('profile')
 		const registriesId = account?.get?.('registries')
 		let sparks = null
@@ -221,7 +288,7 @@ async function handleProfile(worker) {
 				const registriesContent = await loadCoMap(backend, registriesId, { retries: 2 })
 				const sparksId = registriesContent?.get?.('sparks')
 				if (sparksId?.startsWith('co_z')) {
-					const c = await loadCoMap(backend, sparksId, { retries: 2 })
+					const c = await loadCoMap(peer, sparksId, { retries: 2 })
 					if (c?.get) {
 						sparks = {}
 						const keys = typeof c.keys === 'function' ? Array.from(c.keys()) : Object.keys(c ?? {})
@@ -237,7 +304,7 @@ async function handleProfile(worker) {
 		}
 		let profileName = null
 		if (profileId?.startsWith('co_z')) {
-			const store = await backend.read(null, profileId)
+			const store = await peer.read(null, profileId)
 			await waitForStoreReady(store, profileId, 5000).catch(() => {})
 			const d = store?.value
 			if (d && !d.error) profileName = d?.name ?? d?.properties?.name ?? null
@@ -252,6 +319,42 @@ async function handleProfile(worker) {
 	} catch (e) {
 		return err(e.message, 500)
 	}
+}
+
+/**
+ * Shared logic: write text into the paper CoText (first note's content).
+ * Used by LLM tool @core/updatePaperContent and formerly by the write-note test endpoint.
+ */
+async function writeToPaperCoText(worker, value) {
+	if (value == null || typeof value !== 'string') {
+		return { ok: false, error: 'value (string) required' }
+	}
+	const { peer, dataEngine } = worker
+	const notesSchemaCoId = await resolve(peer, '°Maia/schema/data/notes', { returnType: 'coId' })
+	if (!notesSchemaCoId?.startsWith('co_z'))
+		return {
+			ok: false,
+			error: 'Notes schema not found. Ensure genesis seeded (PEER_FRESH_SEED=true).',
+		}
+	const firstNote = await findFirst(peer, notesSchemaCoId, {}, { timeoutMs: 5000 })
+	if (!firstNote?.id) return { ok: false, error: 'No notes found. Ensure data.notes seeded.' }
+	const contentId = firstNote.content?.id ?? firstNote.content
+	if (!contentId || typeof contentId !== 'string' || !contentId.startsWith('co_z'))
+		return { ok: false, error: 'First note has no content CoText.' }
+	const graphemes = [...splitGraphemes(value)]
+	const spliceResult = await dataEngine.execute({
+		op: 'spliceCoList',
+		coId: contentId,
+		start: 0,
+		deleteCount: 99999,
+		items: graphemes,
+	})
+	if (spliceResult?.ok === false)
+		return {
+			ok: false,
+			error: spliceResult.errors?.map((e) => e.message).join('; ') ?? 'splice failed',
+		}
+	return { ok: true, coId: contentId, length: graphemes.length }
 }
 
 async function handleAgentHttp(req, worker) {
@@ -270,6 +373,28 @@ async function handleAgentHttp(req, worker) {
 	return null
 }
 
+/** Execute LLM tool call server-side (e.g. @core/updatePaperContent). */
+async function executeLLMTool(worker, toolName, args) {
+	try {
+		if (toolName === '@core/updatePaperContent') {
+			// Accept value, content, or text (some models use different param names)
+			let value = args?.value ?? args?.content ?? args?.text
+			if (value != null && typeof value !== 'string') {
+				value =
+					typeof value === 'object' && (value?.text ?? value?.content) != null
+						? String(value.text ?? value.content)
+						: String(value)
+			}
+			const result = await writeToPaperCoText(worker, value)
+			return JSON.stringify(result)
+		}
+		return JSON.stringify({ ok: false, error: `Unknown tool: ${toolName}` })
+	} catch (e) {
+		console.error('[executeLLMTool]', toolName, e?.message ?? e)
+		return JSON.stringify({ ok: false, error: e?.message ?? String(e) })
+	}
+}
+
 // --- API (LLM) handler ---
 async function handleLLMChat(req) {
 	if (!RED_PILL_API_KEY) return jsonResponse({ error: 'RED_PILL_API_KEY not configured' }, 500)
@@ -278,28 +403,73 @@ async function handleLLMChat(req) {
 		const { messages, model = 'qwen/qwen3-30b-a3b-instruct-2507', temperature = 1 } = body
 		if (!messages || !Array.isArray(messages) || messages.length === 0)
 			return jsonResponse({ error: 'messages array required' }, 400)
-		const res = await fetch('https://api.redpill.ai/v1/chat/completions', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RED_PILL_API_KEY}` },
-			body: JSON.stringify({ model, messages, temperature }),
-		})
-		if (!res.ok) {
-			const txt = await res.text()
-			let data = { error: 'LLM request failed' }
-			try {
-				data = JSON.parse(txt)
-			} catch {}
-			return jsonResponse(
-				{ error: data.error || `HTTP ${res.status}`, message: data.message || txt.slice(0, 200) },
-				500,
-			)
+
+		const tools = agentWorker ? toOpenAITools() : []
+		const currentMessages = [...messages]
+		const MAX_TURNS = 4
+
+		for (let turn = 0; turn < MAX_TURNS; turn++) {
+			// Only pass tools on first turn; after tool execution, request without tools to get final text (prevents loop)
+			const passTools = turn === 0 && tools.length > 0
+			const reqBody = {
+				model,
+				messages: currentMessages,
+				temperature,
+				...(passTools && { tools }),
+			}
+			const res = await fetch('https://api.redpill.ai/v1/chat/completions', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RED_PILL_API_KEY}` },
+				body: JSON.stringify(reqBody),
+			})
+			if (!res.ok) {
+				const txt = await res.text()
+				let data = { error: 'LLM request failed' }
+				try {
+					data = JSON.parse(txt)
+				} catch {}
+				return jsonResponse(
+					{ error: data.error || `HTTP ${res.status}`, message: data.message || txt.slice(0, 200) },
+					500,
+				)
+			}
+			const data = await res.json()
+			const choice = data.choices?.[0]
+			const msg = choice?.message
+			if (!msg) return jsonResponse({ content: '', role: 'assistant', usage: data.usage ?? null })
+
+			const toolCalls = msg.tool_calls
+			if (!toolCalls || toolCalls.length === 0) {
+				return jsonResponse({
+					content: msg.content ?? '',
+					role: 'assistant',
+					usage: data.usage ?? null,
+					toolCalls: undefined,
+				})
+			}
+
+			currentMessages.push({ role: 'assistant', content: msg.content ?? null, tool_calls: toolCalls })
+			for (const tc of toolCalls) {
+				const name = tc.function?.name ?? tc.name
+				let raw = tc.function?.arguments ?? tc.arguments ?? '{}'
+				if (typeof raw !== 'string') raw = JSON.stringify(raw)
+				let args = {}
+				try {
+					args = JSON.parse(raw)
+				} catch {}
+				const result = await executeLLMTool(agentWorker, name, args)
+				currentMessages.push({
+					role: 'tool',
+					tool_call_id: tc.id,
+					content: result,
+				})
+			}
 		}
-		const data = await res.json()
-		const choice = data.choices?.[0]
+
 		return jsonResponse({
-			content: choice?.message?.content ?? '',
+			content: '[Max tool turns reached]',
 			role: 'assistant',
-			usage: data.usage ?? null,
+			usage: null,
 		})
 	} catch (e) {
 		const msg = e?.message ?? String(e)
@@ -436,6 +606,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 		const storageLabel = usePostgres ? 'Postgres' : `PGlite at ${dbPath || './local-sync.db'}`
 		console.log('[sync] Loading account (%s)...', storageLabel)
 		console.log('[sync] accountID=%s', `${accountID?.slice(0, 12)}...`)
+
 		const result = await loadOrCreateAgentAccount({
 			accountID,
 			agentSecret,
@@ -461,10 +632,12 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 		process.on('SIGTERM', () => shutdown())
 		process.on('SIGINT', () => shutdown())
 
-		const backend = new CoJSONBackend(localNode, result.account, { systemSpark: '°Maia' })
-		const dbEngine = new DBEngine(backend)
-		backend.dbEngine = dbEngine
-		agentWorker = { node: localNode, account: result.account, backend, dbEngine }
+		const peer = new MaiaDB({ node: localNode, account: result.account }, { systemSpark: '°Maia' })
+		const evaluator = new MaiaScriptEvaluator()
+		const dataEngine = new DataEngine(peer, { evaluator })
+		registerOperations(dataEngine)
+		peer.dbEngine = dataEngine
+		agentWorker = { node: localNode, account: result.account, peer, dataEngine }
 
 		// Ensure migration completes before seed (sparkGuardian -> guardian, registries.humans)
 		// loadAccount defers migration; seed needs guardian in os.capabilities
@@ -483,7 +656,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 			const { configs: mergedConfigs, data } = await buildSeedConfig(vibeRegistries)
 			const configsWithTools = { ...mergedConfigs, tool: getAllToolDefinitions() }
 			const schemas = getAllSchemas()
-			const seedResult = await dbEngine.execute({
+			const seedResult = await dataEngine.execute({
 				op: 'seed',
 				configs: configsWithTools,
 				schemas,
@@ -504,9 +677,9 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 		// One-time: add PEER_GUARDIAN (human account co-id) as admin of °Maia spark guardian group
 		if (peerAddGuardian && peerGuardianAccountId?.startsWith('co_z')) {
 			try {
-				const guardian = await agentWorker.backend.getMaiaGroup()
+				const guardian = await agentWorker.peer.getMaiaGroup()
 				if (guardian) {
-					await agentWorker.backend.addGroupMember(guardian, peerGuardianAccountId, 'admin')
+					await agentWorker.peer.addGroupMember(guardian, peerGuardianAccountId, 'admin')
 					console.log(
 						`[sync] Added guardian as admin of °Maia spark (set PEER_ADD_GUARDIAN=false to skip on next restart)`,
 					)
@@ -567,7 +740,6 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 					} catch (_e) {}
 			},
 		}
-
 		console.log('[sync] Ready')
 	} catch (e) {
 		console.error('[sync] Init failed:', e?.message ?? e)

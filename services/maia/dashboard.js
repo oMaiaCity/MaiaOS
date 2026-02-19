@@ -22,7 +22,7 @@ function getVibeKeyFromId(vibeId) {
  */
 async function getSparkDisplayName(maia, sparkCoId) {
 	try {
-		const sparkStore = await maia.db({ op: 'read', schema: null, key: sparkCoId })
+		const sparkStore = await maia.do({ op: 'read', schema: null, key: sparkCoId })
 		const sparkData = sparkStore?.value ?? sparkStore
 		const name = sparkData?.name
 		if (!name) return null
@@ -46,21 +46,21 @@ async function loadSparksFromAccount(maia) {
 
 	try {
 		const account = maia.id.maiaId
-		const accountStore = await maia.db({ op: 'read', schema: '@account', key: account.id })
+		const accountStore = await maia.do({ op: 'read', schema: '@account', key: account.id })
 		const accountData = accountStore.value || accountStore
 
 		const registriesId = accountData?.registries
 		if (!registriesId || typeof registriesId !== 'string' || !registriesId.startsWith('co_')) {
 			return sparks
 		}
-		const registriesStore = await maia.db({ op: 'read', schema: null, key: registriesId })
+		const registriesStore = await maia.do({ op: 'read', schema: null, key: registriesId })
 		const registriesData = registriesStore.value || registriesStore
 		const sparksId = registriesData.sparks
 		if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_')) {
 			return sparks
 		}
 
-		const sparksStore = await maia.db({ op: 'read', schema: sparksId, key: sparksId })
+		const sparksStore = await maia.do({ op: 'read', schema: sparksId, key: sparksId })
 		const sparksData = sparksStore.value || sparksStore
 
 		if (!sparksData || typeof sparksData !== 'object' || Array.isArray(sparksData)) return sparks
@@ -113,27 +113,27 @@ async function loadVibesFromSpark(maia, spark) {
 			}
 		}
 
-		const accountStore = await maia.db({ op: 'read', schema: '@account', key: maia.id.maiaId.id })
+		const accountStore = await maia.do({ op: 'read', schema: '@account', key: maia.id.maiaId.id })
 		const accountData = accountStore?.value ?? accountStore
 		const registriesId = accountData?.registries
 		if (typeof registriesId !== 'string' || !registriesId.startsWith('co_')) return vibes
 
-		const registriesStore = await maia.db({ op: 'read', schema: null, key: registriesId })
+		const registriesStore = await maia.do({ op: 'read', schema: null, key: registriesId })
 		const registriesData = registriesStore?.value ?? registriesStore
 		const sparksId = registriesData.sparks
 		if (typeof sparksId !== 'string' || !sparksId.startsWith('co_')) return vibes
 
-		const sparksStore = await maia.db({ op: 'read', schema: sparksId, key: sparksId })
+		const sparksStore = await maia.do({ op: 'read', schema: sparksId, key: sparksId })
 		const sparksData = sparksStore?.value ?? sparksStore
 		const sparkCoId = sparksData?.[spark]
 		if (typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_')) return vibes
 
-		const sparkStore = await maia.db({ op: 'read', schema: null, key: sparkCoId })
+		const sparkStore = await maia.do({ op: 'read', schema: null, key: sparkCoId })
 		const sparkData = sparkStore?.value ?? sparkStore
 		const vibesId = sparkData?.vibes
 		if (typeof vibesId !== 'string' || !vibesId.startsWith('co_')) return vibes
 
-		const vibesStore = await maia.db({ op: 'read', schema: vibesId, key: vibesId })
+		const vibesStore = await maia.do({ op: 'read', schema: vibesId, key: vibesId })
 		const vibesData = vibesStore?.value ?? vibesStore
 		if (!vibesData || typeof vibesData !== 'object' || Array.isArray(vibesData)) return vibes
 
@@ -218,6 +218,22 @@ export async function renderDashboard(
 				</div>
 			</div>
 		`
+		const voiceCard = `
+			<div class="dashboard-card whitish-card" onclick="window.navigateTo('/voice')">
+				<div class="dashboard-card-content">
+					<div class="dashboard-card-icon">
+						<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+							<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
+							<path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
+							<line x1="12" y1="19" x2="12" y2="23"/>
+							<line x1="8" y1="23" x2="16" y2="23"/>
+						</svg>
+					</div>
+					<h3 class="dashboard-card-title">Voice</h3>
+					<p class="dashboard-card-description">Real-time speech-to-text</p>
+				</div>
+			</div>
+		`
 
 		const sparkCards = sparks
 			.map(
@@ -237,7 +253,7 @@ export async function renderDashboard(
 			)
 			.join('')
 
-		cards = dbViewerCard + sparkCards
+		cards = dbViewerCard + voiceCard + sparkCards
 	} else {
 		// Level 2: Show vibes for the selected spark (no back card - Switch Spark in bottom navbar)
 		const vibes = await loadVibesFromSpark(maia, currentSpark)
@@ -276,9 +292,6 @@ export async function renderDashboard(
 			<header class="db-header whitish-card">
 				<div class="header-content">
 					<div class="header-left">
-						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}" title="${getSyncStatusMessage(syncState)}" aria-label="${getSyncStatusMessage(syncState)}">
-							<span class="sync-dot"></span>
-						</div>
 						<h1>${escapeHtml(headerTitle)}</h1>
 					</div>
 					<div class="header-center">
@@ -286,25 +299,13 @@ export async function renderDashboard(
 						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
 					</div>
 					<div class="header-right">
+						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}" title="${getSyncStatusMessage(syncState)}" aria-label="${getSyncStatusMessage(syncState)}">
+							<span class="sync-dot"></span>
+						</div>
 						${
 							authState.signedIn
 								? `
-							<span class="db-status db-status-name" title="Account: ${accountId}">${escapeHtml(accountDisplayName)}</span>
-						`
-								: ''
-						}
-						<!-- Hamburger menu button (mobile only) -->
-						<button class="hamburger-btn" onclick="window.toggleMobileMenu()" aria-label="Toggle menu">
-							<span></span>
-							<span></span>
-							<span></span>
-						</button>
-						${
-							authState.signedIn
-								? `
-							<button class="sign-out-btn" onclick="window.handleSignOut()">
-								Sign Out
-							</button>
+							<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId}" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${escapeHtml(accountDisplayName)}</button>
 						`
 								: ''
 						}
@@ -316,8 +317,8 @@ export async function renderDashboard(
 						authState.signedIn && accountId
 							? `
 						<div class="mobile-menu-account-id">
-							<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
 							<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
+							<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
 						</div>
 					`
 							: ''
@@ -385,6 +386,7 @@ export async function renderVibeViewer(
 	// Map vibe keys to display names
 	const vibeNameMap = {
 		db: 'MaiaDB',
+		humans: 'Human Book',
 		todos: 'Todos',
 	}
 	const vibeLabel = currentVibe
@@ -407,9 +409,6 @@ export async function renderVibeViewer(
 			<header class="db-header whitish-card">
 				<div class="header-content">
 					<div class="header-left">
-						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}" title="${getSyncStatusMessage(syncState)}" aria-label="${getSyncStatusMessage(syncState)}">
-							<span class="sync-dot"></span>
-						</div>
 						<h1>${escapeHtml(vibeLabel)}</h1>
 					</div>
 					<div class="header-center">
@@ -417,25 +416,13 @@ export async function renderVibeViewer(
 						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
 					</div>
 					<div class="header-right">
+						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}" title="${getSyncStatusMessage(syncState)}" aria-label="${getSyncStatusMessage(syncState)}">
+							<span class="sync-dot"></span>
+						</div>
 						${
 							authState.signedIn
 								? `
-							<span class="db-status db-status-name" title="Account: ${accountId}">${escapeHtml(accountDisplayName)}</span>
-						`
-								: ''
-						}
-						<!-- Hamburger menu button (mobile only) -->
-						<button class="hamburger-btn" onclick="window.toggleMobileMenu()" aria-label="Toggle menu">
-							<span></span>
-							<span></span>
-							<span></span>
-						</button>
-						${
-							authState.signedIn
-								? `
-							<button class="sign-out-btn" onclick="window.handleSignOut()">
-								Sign Out
-							</button>
+							<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId}" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${escapeHtml(accountDisplayName)}</button>
 						`
 								: ''
 						}
@@ -447,8 +434,8 @@ export async function renderVibeViewer(
 						authState.signedIn && accountId
 							? `
 						<div class="mobile-menu-account-id">
-							<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
 							<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
+							<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
 						</div>
 					`
 							: ''
@@ -469,19 +456,18 @@ export async function renderVibeViewer(
 				<div class="vibe-card">
 					<div id="vibe-container-${escapeHtml(currentVibe)}" class="vibe-container"></div>
 				</div>
-				<!-- Bottom navbar area for mobile - only home button (vibe-specific buttons handled by vibes) -->
+				<!-- Bottom navbar area for mobile - home button bottom-left (vibe-specific buttons handled by vibes) -->
 				<div class="bottom-navbar">
 					<div class="bottom-navbar-left">
-						<!-- Left buttons are vibe-specific, not global -->
-					</div>
-					<div class="bottom-navbar-center">
-						<button class="home-btn bottom-home-btn" onclick="window.loadVibe(null)" title="Home">
+						<button class="home-btn bottom-home-btn home-btn-icon-only" onclick="window.loadVibe(null)" title="Home" aria-label="Home">
 							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 								<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
 								<polyline points="9 22 9 12 15 12 15 22"></polyline>
 							</svg>
-							<span class="home-label">Home</span>
 						</button>
+					</div>
+					<div class="bottom-navbar-center">
+						<!-- Center reserved for vibe-specific -->
 					</div>
 					<div class="bottom-navbar-right">
 						<!-- Right buttons are vibe-specific, not global -->

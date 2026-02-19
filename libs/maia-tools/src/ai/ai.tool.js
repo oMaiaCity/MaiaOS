@@ -15,7 +15,11 @@
  *   {"tool": "@ai/chat", "payload": {"context": [...], "model": "custom-model-name"}}
  */
 
-import { createErrorEntry, createErrorResult, createSuccessResult } from '@MaiaOS/operations'
+import {
+	createErrorEntry,
+	createErrorResult,
+	createSuccessResult,
+} from '@MaiaOS/schemata/operation-result'
 import { getApiBaseUrl, toStructuredErrors } from '../core/api-helpers.js'
 
 export default {

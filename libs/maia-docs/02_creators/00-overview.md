@@ -13,11 +13,11 @@ Read the documentation in the following order for a complete understanding:
 - Vibe composition and structure
 - Vibe ecosystem
 
-### 2. [Kernel](./02-kernel.md)
-**MaiaOS Kernel Fundamentals**
-- Kernel architecture
-- Core concepts
-- System initialization
+### 2. [Loader](./02-loader.md)
+**MaiaOS Loader**
+- Boot process and modules
+- Boot process
+- Module loading
 
 ### 3. [Actors](./03-actors/)
 **Actor-Based Component System**
@@ -55,7 +55,7 @@ Read the documentation in the following order for a complete understanding:
 ### 7. [Operations](./07-operations/)
 **Database Operations API**
 - Universal `read()` API - Every CoValue accessible as ReactiveStore
-- Unified database operations (`maia.db()`)
+- Unified data operations (`maia.do()`)
 - Query, create, update, delete, toggle operations
 - Reactive subscriptions via ReactiveStore pattern
 - Co-id usage and schema transformation

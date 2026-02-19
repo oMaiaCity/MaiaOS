@@ -1,0 +1,10 @@
+{
+	"$schema": "°Maia/schema/state",
+	"$id": "°Maia/chat/state/paper",
+	"initial": "idle",
+	"states": {
+		"idle": {
+			"on": {}
+		}
+	}
+}

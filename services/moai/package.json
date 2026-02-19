@@ -10,6 +10,7 @@
 	},
 	"dependencies": {
 		"@MaiaOS/loader": "workspace:*",
-		"@MaiaOS/maia-distros": "workspace:*"
+		"@MaiaOS/maia-distros": "workspace:*",
+		"unicode-segmenter": "^0.15.0"
 	}
 }

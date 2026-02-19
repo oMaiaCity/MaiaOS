@@ -59,3 +59,10 @@ pre,
 code {
 	font-family: "Monaco", "Menlo", "Courier New", monospace;
 }
+
+/* Heading font with optical alignment - use where Indie Flower needs to align vertically (navbar, flex/grid) */
+.font-heading-optical {
+	font-family: var(--font-heading);
+	line-height: 1;
+	padding-top: var(--font-heading-optical-shift);
+}

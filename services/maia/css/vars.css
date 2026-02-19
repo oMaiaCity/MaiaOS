@@ -21,6 +21,8 @@
 	/* Typography */
 	--font-heading: "Indie Flower", cursive;
 	--font-body: "Plus Jakarta Sans", sans-serif;
+	/* Optical alignment: Indie Flower renders high; nudge down when vertically centered (e.g. navbar) */
+	--font-heading-optical-shift: 4px;
 	--font-weight-normal: 300;
 	--font-weight-label: 600;
 

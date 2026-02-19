@@ -1,13 +1,13 @@
 # Database Operations API
 
-MaiaOS uses a **flexible, composable database operations API** through a single unified entry point: `maia.db({op: ...})`.
+MaiaOS uses a **flexible, composable database operations API** through a single unified entry point: `maia.do({op: ...})`.
 
 ## Core Concept
 
 All database operations flow through one simple API:
 
 ```javascript
-await maia.db({ op: "operationName", ...params })
+await maia.do({ op: "operationName", ...params })
 ```
 
 Where:
@@ -30,7 +30,7 @@ Load data, configs, or schemas from the database. **Always returns a reactive st
 
 **Load a specific config:**
 ```javascript
-const store = await maia.db({
+const store = await maia.do({
   op: "read",
   schema: "co_zActor123",  // Schema co-id (co_z...)
   key: "co_zAgent456"      // Config co-id (co_z...)
@@ -47,7 +47,7 @@ const unsubscribe = store.subscribe((data) => {
 
 **Read a collection:**
 ```javascript
-const store = await maia.db({
+const store = await maia.do({
   op: "read",
   schema: "co_zTodos123"  // Schema co-id (co_z...)
 });
@@ -63,7 +63,7 @@ const unsubscribe = store.subscribe((todos) => {
 
 **Read with filter:**
 ```javascript
-const store = await maia.db({
+const store = await maia.do({
   op: "read",
   schema: "co_zTodos123",  // Schema co-id (co_z...)
   filter: { done: false }
@@ -98,7 +98,7 @@ const unsubscribe = store.subscribe((todos) => {
 Create a new record with schema validation.
 
 ```javascript
-const newTodo = await maia.db({
+const newTodo = await maia.do({
   op: "create",
   schema: "co_z...",  // Co-id (transformed from @schema/todos during seeding)
   data: {
@@ -121,14 +121,14 @@ console.log("Created:", newTodo.id); // Auto-generated ID (co-id)
 - Automatically validates against the schema definition
 - Throws error if validation fails (schema or permission)
 
-**Error handling:** When using `maia.db()`, write operations throw on failure. Wrap in try/catch to handle validation or permission errors.
+**Error handling:** When using `maia.do()`, write operations throw on failure. Wrap in try/catch to handle validation or permission errors.
 
 ### `update` - Update Existing Records
 
 Update an existing record with partial validation. Supports MaiaScript expressions in data.
 
 ```javascript
-const updated = await maia.db({
+const updated = await maia.do({
   op: "update",
   id: "co_z...",  // Co-id of record to update
   data: {
@@ -156,7 +156,7 @@ const updated = await maia.db({
 Toggle is not a separate operation. Use `update` with an expression:
 
 ```javascript
-const updated = await maia.db({
+const updated = await maia.do({
   op: "update",
   id: "co_z...",
   data: {
@@ -170,7 +170,7 @@ const updated = await maia.db({
 Delete a record from the database.
 
 ```javascript
-const deleted = await maia.db({
+const deleted = await maia.do({
   op: "delete",
   id: "co_z..."  // Co-id of record to delete
 });
@@ -195,7 +195,7 @@ Reseed the database with initial data. **Idempotent** - can be called multiple t
 - **Idempotent**: Safe to call multiple times - schemata co-ids remain stable across reseeds
 
 ```javascript
-await maia.db({
+await maia.do({
   op: "seed",
   configs: {
     "vibe/vibe": { /* vibe config */ },
@@ -233,13 +233,13 @@ await maia.db({
 Load schema definitions by co-id, schema name, or from CoValue headerMeta.
 
 ```javascript
-const schemaStore = await maia.db({
+const schemaStore = await maia.do({
   op: "schema",
   coId: "co_zActor123"  // Co-id of schema or CoValue
 });
 
 // Or resolve from human-readable ID (during seeding only)
-const schemaStore = await maia.db({
+const schemaStore = await maia.do({
   op: "schema",
   humanReadableKey: "@schema/actor"
 });
@@ -257,7 +257,7 @@ const schemaStore = await maia.db({
 Resolve human-readable keys (like `@schema/todos`) to co-ids. **Only for use during seeding.**
 
 ```javascript
-const coId = await maia.db({
+const coId = await maia.do({
   op: "resolve",
   humanReadableKey: "@schema/todos"
 });
@@ -278,7 +278,7 @@ console.log("Resolved:", coId); // "co_zTodos123..."
 Append items to a CoList (ordered array).
 
 ```javascript
-const result = await maia.db({
+const result = await maia.do({
   op: "append",
   id: "co_zList123",  // Co-id of CoList
   items: ["item1", "item2"]
@@ -297,7 +297,7 @@ const result = await maia.db({
 Append items to a CoStream (append-only stream). This is an alias for `append` with `cotype: "costream"`.
 
 ```javascript
-const result = await maia.db({
+const result = await maia.do({
   op: "push",
   id: "co_zStream123",  // Co-id of CoStream
   items: ["message1", "message2"]
@@ -316,7 +316,7 @@ const result = await maia.db({
 Process messages in an actor's inbox with session-based watermarks.
 
 ```javascript
-const processed = await maia.db({
+const processed = await maia.do({
   op: "processInbox",
   actorId: "co_zActor123",
   sessionId: "session-abc"
@@ -337,7 +337,7 @@ const processed = await maia.db({
 Create a new Spark - a CoMap that references a group for collaborative spaces. Automatically creates a child group owned by your °Maia spark's group and registers the spark in `account.sparks`.
 
 ```javascript
-const spark = await maia.db({
+const spark = await maia.do({
   op: "createSpark",
   name: "My Project"
 });
