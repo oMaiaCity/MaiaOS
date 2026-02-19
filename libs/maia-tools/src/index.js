@@ -8,8 +8,6 @@ import computeMessageNamesFn from './core/computeMessageNames.tool.js'
 import computeMessageNamesDef from './core/computeMessageNames.tool.maia'
 import publishMessageFn from './core/publishMessage.tool.js'
 import publishMessageDef from './core/publishMessage.tool.maia'
-import randomizePaperContentFn from './core/randomizePaperContent.tool.js'
-import randomizePaperContentDef from './core/randomizePaperContent.tool.maia'
 import updatePaperContentFn from './core/updatePaperContent.tool.js'
 import updatePaperContentDef from './core/updatePaperContent.tool.maia'
 import dbFn from './db/db.tool.js'
@@ -22,10 +20,6 @@ export const TOOLS = {
 	'core/updatePaperContent': {
 		definition: updatePaperContentDef,
 		function: updatePaperContentFn,
-	},
-	'core/randomizePaperContent': {
-		definition: randomizePaperContentDef,
-		function: randomizePaperContentFn,
 	},
 	'core/computeMessageNames': {
 		definition: computeMessageNamesDef,

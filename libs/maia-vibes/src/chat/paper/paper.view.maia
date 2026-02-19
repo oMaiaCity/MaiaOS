@@ -6,31 +6,28 @@
 		"class": "paper-background",
 		"children": [
 			{
-				"tag": "button",
-				"class": "paper-randomize-button",
-				"attrs": {
-					"type": "button",
-					"aria-label": "Randomize paper text"
-				},
-				"text": "🎲 Randomize",
-				"$on": {
-					"click": {
-						"send": "RANDOMIZE_PAPER",
-						"payload": {}
+				"tag": "div",
+				"class": "paper-scroll",
+				"children": [
+					{
+						"tag": "div",
+						"class": "paper-content",
+						"children": [
+							{
+								"tag": "p",
+								"class": "paper-example-text",
+								"text": {
+									"$join": [
+										{
+											"$context": "notes.0.content.items"
+										},
+										""
+									]
+								}
+							}
+						]
 					}
-				}
-			},
-			{
-				"tag": "p",
-				"class": "paper-example-text",
-				"text": {
-					"$join": [
-						{
-							"$context": "notes.0.content.items"
-						},
-						""
-					]
-				}
+				]
 			}
 		]
 	}

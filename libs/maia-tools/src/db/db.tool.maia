@@ -1,48 +1,51 @@
 {
 	"$schema": "°Maia/schema/tool",
 	"$id": "@db/db",
-	"name": "@db/db",
-	"description": "Unified API for all database operations (query, create, update, delete)",
-	"parameters": {
-		"type": "object",
-		"properties": {
-			"op": {
-				"type": "string",
-				"enum": [
-					"query",
-					"create",
-					"update",
-					"delete",
-					"seed"
-				],
-				"description": "Database operation to execute"
+	"type": "function",
+	"function": {
+		"name": "@db/db",
+		"description": "Unified API for all database operations (query, create, update, delete)",
+		"parameters": {
+			"type": "object",
+			"properties": {
+				"op": {
+					"type": "string",
+					"enum": [
+						"query",
+						"create",
+						"update",
+						"delete",
+						"seed"
+					],
+					"description": "Database operation to execute"
+				},
+				"schema": {
+					"type": "string",
+					"description": "Schema reference (co-id) - REQUIRED for 'create' operation only (no CoValue exists yet). OPTIONAL for 'update' and 'delete' operations (schema is extracted from CoValue headerMeta internally by operations)."
+				},
+				"key": {
+					"type": "string",
+					"description": "Optional: Specific key for config queries"
+				},
+				"filter": {
+					"type": "object",
+					"description": "Optional: Filter criteria for data queries"
+				},
+				"callback": {
+					"description": "Optional: Callback function for reactive subscriptions (not validated - runtime only)"
+				},
+				"id": {
+					"type": "string",
+					"description": "Optional: Record ID for update/delete operations"
+				},
+				"data": {
+					"type": "object",
+					"description": "Optional: Data for create/update operations"
+				}
 			},
-			"schema": {
-				"type": "string",
-				"description": "Schema reference (co-id) - REQUIRED for 'create' operation only (no CoValue exists yet). OPTIONAL for 'update' and 'delete' operations (schema is extracted from CoValue headerMeta internally by operations)."
-			},
-			"key": {
-				"type": "string",
-				"description": "Optional: Specific key for config queries"
-			},
-			"filter": {
-				"type": "object",
-				"description": "Optional: Filter criteria for data queries"
-			},
-			"callback": {
-				"description": "Optional: Callback function for reactive subscriptions (not validated - runtime only)"
-			},
-			"id": {
-				"type": "string",
-				"description": "Optional: Record ID for update/delete operations"
-			},
-			"data": {
-				"type": "object",
-				"description": "Optional: Data for create/update operations"
-			}
-		},
-		"required": [
-			"op"
-		]
+			"required": [
+				"op"
+			]
+		}
 	}
 }

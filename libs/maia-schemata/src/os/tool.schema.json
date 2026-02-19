@@ -2,60 +2,56 @@
 	"$schema": "°Maia/schema/meta",
 	"$id": "°Maia/schema/tool",
 	"title": "°Maia/schema/tool",
-	"description": "Tool metadata (AI-compatible JSON schema)",
+	"description": "Tool definition (OpenAI/RedPill-compatible format)",
 	"cotype": "comap",
 	"indexing": true,
-	"required": ["name", "description", "parameters"],
+	"required": ["type", "function"],
 	"properties": {
-		"name": {
+		"type": {
 			"type": "string",
-			"description": "Tool identifier (e.g., '@mutation/create')",
-			"pattern": "^@"
+			"const": "function",
+			"description": "OpenAI tool type (always 'function')"
 		},
-		"description": {
-			"type": "string",
-			"description": "Tool description"
-		},
-		"parameters": {
+		"function": {
 			"type": "object",
-			"description": "JSON Schema for tool parameters (standard JSON Schema format)",
+			"description": "OpenAI function descriptor",
+			"required": ["name", "description", "parameters"],
 			"properties": {
-				"type": {
+				"name": {
 					"type": "string",
-					"enum": ["object", "array", "string", "number", "boolean", "null"]
+					"description": "Tool identifier (e.g. '@core/updatePaperContent')",
+					"pattern": "^@"
 				},
-				"properties": {
+				"description": { "type": "string", "description": "Tool description" },
+				"parameters": {
 					"type": "object",
-					"additionalProperties": {
-						"type": "object",
-						"description": "Parameter property schema",
+					"description": "JSON Schema for tool parameters",
+					"properties": {
+						"type": {
+							"type": "string",
+							"enum": ["object", "array", "string", "number", "boolean", "null"]
+						},
 						"properties": {
-							"type": {
-								"type": "string"
-							},
-							"description": {
-								"type": "string"
-							},
-							"required": {
-								"type": "boolean"
-							},
-							"properties": {
+							"type": "object",
+							"additionalProperties": {
 								"type": "object",
+								"properties": {
+									"type": { "type": "string" },
+									"description": { "type": "string" },
+									"required": { "type": "boolean" },
+									"properties": { "type": "object", "additionalProperties": true }
+								},
 								"additionalProperties": true
 							}
 						},
-						"additionalProperties": true
-					}
-				},
-				"required": {
-					"type": "array",
-					"items": {
-						"type": "string"
-					}
+						"required": { "type": "array", "items": { "type": "string" } }
+					},
+					"required": ["type"],
+					"additionalProperties": true
 				}
 			},
-			"required": ["type"],
-			"additionalProperties": true
+			"additionalProperties": false
 		}
-	}
+	},
+	"additionalProperties": true
 }

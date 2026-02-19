@@ -115,35 +115,32 @@
 			"inset": "0",
 			"zIndex": "0",
 			"pointerEvents": "none",
-			"background": "#F5F0E8",
-			"backgroundImage": "repeating-linear-gradient(to bottom, transparent 0px, transparent 27px, rgba(0, 31, 51, 0.04) 27px, rgba(0, 31, 51, 0.04) 28px)"
+			"background": "#F5F0E8"
 		},
 		".modalOverlay .paperBackground": {
 			"position": "fixed"
 		},
-		".paperRandomizeButton": {
-			"position": "absolute",
-			"top": "{spacing.sm}",
-			"right": "{spacing.lg}",
-			"zIndex": "1",
-			"pointerEvents": "auto",
-			"padding": "0.25rem 0.5rem",
-			"fontSize": "0.75rem",
-			"borderRadius": "{radii.sm}",
-			"border": "1px solid rgba(0, 31, 51, 0.2)",
-			"background": "rgba(255, 255, 255, 0.8)",
-			"cursor": "pointer",
-			"color": "{colors.marineBlue}"
-		},
-		".paperExampleText": {
+		".paperScroll": {
 			"position": "absolute",
 			"top": "{spacing.xl}",
 			"left": "{spacing.lg}",
 			"right": "{spacing.lg}",
+			"bottom": "0",
+			"overflowY": "auto",
+			"overflowX": "hidden",
+			"WebkitOverflowScrolling": "touch",
+			"paddingRight": "0.5rem",
+			"pointerEvents": "auto"
+		},
+		".paperContent": {
+			"minHeight": "100%",
+			"backgroundImage": "repeating-linear-gradient(to bottom, transparent 0px, transparent 27px, rgba(0, 31, 51, 0.04) 27px, rgba(0, 31, 51, 0.04) 28px)"
+		},
+		".paperExampleText": {
 			"fontFamily": "{typography.fontFamily.heading}",
 			"fontSize": "1rem",
 			"lineHeight": "1.75",
-			"color": "rgba(0, 31, 51, 0.42)",
+			"color": "rgba(0, 31, 51, 0.62)",
 			"margin": "0",
 			"whiteSpace": "pre-wrap"
 		},
