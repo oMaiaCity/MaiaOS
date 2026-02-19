@@ -2613,3 +2613,204 @@ pre {
 
 /* For Shadow DOM access, we'll use CSS custom properties and JavaScript */
 /* The actual sliding will be handled by the vibe style system */
+
+/* Voice page styles */
+.voice-container .voice-main {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+	padding: 1rem 0;
+	overflow: hidden;
+}
+
+.voice-controls {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 1.25rem;
+}
+
+.voice-asr-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 80px;
+	height: 80px;
+	border-radius: 50%;
+	border: none;
+	cursor: pointer;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	position: relative;
+}
+
+.voice-asr-btn.voice-asr-disabled,
+.voice-asr-btn:disabled {
+	cursor: not-allowed;
+	opacity: 0.7;
+}
+
+.voice-asr-icon {
+	position: absolute;
+	inset: 0;
+	margin: auto;
+}
+
+.voice-asr-icon-loader {
+	animation: voice-asr-spin 0.8s linear infinite;
+}
+
+.voice-asr-icon-close {
+	display: none;
+}
+
+.voice-asr-icon-loader {
+	display: none;
+}
+
+/* idle / stopped: red, mic */
+.voice-asr-idle {
+	background: var(--brand-red);
+	color: white;
+}
+
+.voice-asr-idle:hover {
+	transform: scale(1.05);
+	box-shadow: 0 8px 24px rgba(239, 68, 68, 0.4);
+}
+
+.voice-asr-idle .voice-asr-icon-mic {
+	display: block;
+}
+.voice-asr-idle .voice-asr-icon-loader {
+	display: none;
+}
+.voice-asr-idle .voice-asr-icon-close {
+	display: none;
+}
+
+/* request mic: blue-gray, mic */
+.voice-asr-request-mic {
+	background: var(--slate-500);
+	color: white;
+	cursor: wait;
+}
+
+.voice-asr-request-mic .voice-asr-icon-mic {
+	display: block;
+}
+.voice-asr-request-mic .voice-asr-icon-loader {
+	display: none;
+}
+.voice-asr-request-mic .voice-asr-icon-close {
+	display: none;
+}
+
+/* loading: yellow, spinner */
+.voice-asr-loading {
+	background: var(--color-sun-yellow);
+	color: var(--color-sun-yellow-text);
+	cursor: wait;
+}
+
+.voice-asr-loading .voice-asr-icon-mic {
+	display: none;
+}
+.voice-asr-loading .voice-asr-icon-loader {
+	display: block;
+}
+.voice-asr-loading .voice-asr-icon-close {
+	display: none;
+}
+
+/* ready: green, X */
+.voice-asr-ready {
+	background: var(--color-lush-green);
+	color: var(--color-green-text);
+}
+
+.voice-asr-ready:hover {
+	transform: scale(1.05);
+	box-shadow: 0 8px 24px rgba(78, 154, 88, 0.4);
+}
+
+.voice-asr-ready .voice-asr-icon-mic {
+	display: none;
+}
+.voice-asr-ready .voice-asr-icon-loader {
+	display: none;
+}
+.voice-asr-ready .voice-asr-icon-close {
+	display: block;
+}
+
+/* listening: blue, X */
+.voice-asr-listening {
+	background: var(--color-paradise-water);
+	color: var(--color-water-text);
+}
+
+.voice-asr-listening:hover {
+	transform: scale(1.05);
+	box-shadow: 0 8px 24px rgba(0, 189, 214, 0.4);
+}
+
+.voice-asr-listening .voice-asr-icon-mic {
+	display: none;
+}
+.voice-asr-listening .voice-asr-icon-loader {
+	display: none;
+}
+.voice-asr-listening .voice-asr-icon-close {
+	display: block;
+}
+
+@keyframes voice-asr-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.voice-transcript {
+	flex: 1;
+	min-height: 8rem;
+	padding: 1.5rem;
+	overflow-y: auto;
+	font-size: 1.1rem;
+	line-height: 1.6;
+	color: var(--color-marine-blue);
+}
+
+.voice-transcript-placeholder {
+	color: var(--color-marine-blue);
+	opacity: 0.6;
+	font-style: italic;
+	margin: 0;
+}
+
+.voice-transcript-active .voice-transcript-placeholder {
+	opacity: 0.5;
+}
+
+.voice-error {
+	color: var(--color-terracotta);
+	margin: 0;
+}
+
+.voice-unsupported {
+	color: var(--color-marine-blue);
+	opacity: 0.8;
+	margin: 0;
+}
+
+.voice-wake-badge {
+	display: inline-block;
+	padding: 0.15em 0.5em;
+	margin: 0 0.15em;
+	font-size: 0.85em;
+	font-weight: 600;
+	color: var(--color-marine-blue);
+	background: rgba(0, 189, 214, 0.2);
+	border-radius: 6px;
+	border: 1px solid rgba(0, 189, 214, 0.4);
+}

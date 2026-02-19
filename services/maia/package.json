@@ -12,7 +12,8 @@
 	},
 	"dependencies": {
 		"@MaiaOS/loader": "workspace:*",
-		"@MaiaOS/maia-distros": "workspace:*"
+		"@MaiaOS/maia-distros": "workspace:*",
+		"@MaiaOS/maia-voice": "workspace:*"
 	},
 	"devDependencies": {}
 }
