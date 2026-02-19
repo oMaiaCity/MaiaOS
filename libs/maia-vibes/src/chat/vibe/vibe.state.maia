@@ -6,7 +6,7 @@
 		"idle": {
 			"on": {
 				"SEND_MESSAGE": {
-					"target": "idle",
+					"target": "sending",
 					"actions": [
 						{
 							"tool": "@core/publishMessage",
@@ -59,6 +59,52 @@
 				},
 				"CLOSE_POPUP": {
 					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"popupOpen": "$$popupOpen"
+							}
+						}
+					]
+				}
+			}
+		},
+		"sending": {
+			"on": {
+				"STATUS_UPDATE": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"isLoading": "$$isLoading",
+								"hasError": "$$hasError",
+								"error": "$$error"
+							}
+						}
+					]
+				},
+				"UPDATE_INPUT": {
+					"target": "sending",
+					"actions": [
+						{
+							"updateContext": {
+								"inputText": "$$value"
+							}
+						}
+					]
+				},
+				"OPEN_POPUP": {
+					"target": "sending",
+					"actions": [
+						{
+							"updateContext": {
+								"popupOpen": "$$popupOpen"
+							}
+						}
+					]
+				},
+				"CLOSE_POPUP": {
+					"target": "sending",
 					"actions": [
 						{
 							"updateContext": {

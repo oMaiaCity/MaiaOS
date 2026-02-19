@@ -21,7 +21,9 @@ export class ToolEngine {
 			const availableTools = Array.from(this.tools.keys())
 			throw new Error(`Tool not found: ${actionName}. Available tools: ${availableTools.join(', ')}`)
 		}
-		const parametersSchema = tool.definition.parameters || tool.definition.params
+		const fn = tool.definition?.function ?? tool.definition
+		const parametersSchema =
+			fn?.parameters ?? fn?.params ?? tool.definition?.parameters ?? tool.definition?.params
 		if (parametersSchema) {
 			await validateAgainstSchemaOrThrow(
 				this._normalizeToolSchema(parametersSchema),
