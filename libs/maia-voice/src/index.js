@@ -1,6 +1,7 @@
 /**
  * Maia Voice - On-device speech-to-text via MoonshineJS
  * Wraps MicrophoneTranscriber with a clean API for streaming transcription.
+ * We capture the mic stream ourselves so we can stop it when ASR ends.
  */
 
 import * as Moonshine from '@usefulsensors/moonshine-js'
@@ -22,6 +23,14 @@ const WAKE_WORD_RE = /\b(hey\s+)?ma[iy]a\b/i
 
 function log(...args) {
 	if (DEBUG) console.log('[maia-voice]', ...args)
+}
+
+function stopStream(stream) {
+	try {
+		if (stream && typeof stream.getTracks === 'function') {
+			for (const t of stream.getTracks()) t.stop()
+		}
+	} catch (_) {}
 }
 
 /**
@@ -67,56 +76,81 @@ export function createMicrophoneTranscriber(opts = {}) {
 		}
 	}
 
-	const transcriber = new Moonshine.MicrophoneTranscriber(
-		'model/base',
-		{
-			onPermissionsRequested: () => {
-				log('onPermissionsRequested')
-				if (typeof onPermissionsRequested === 'function') onPermissionsRequested()
-			},
-			onModelLoadStarted: () => {
-				log('onModelLoadStarted')
-				if (typeof onModelLoadStarted === 'function') onModelLoadStarted()
-			},
-			onModelLoaded: () => {
-				log('onModelLoaded')
-				if (typeof onModelLoaded === 'function') onModelLoaded()
-			},
-			onTranscribeStarted: () => {
-				log('onTranscribeStarted')
-				if (typeof onTranscribeStarted === 'function') onTranscribeStarted()
-			},
-			onTranscribeStopped: () => {
-				log('onTranscribeStopped')
-				if (typeof onTranscribeStopped === 'function') onTranscribeStopped()
-			},
-			onError: (err) => {
-				log('onError', err)
-				if (typeof onError === 'function') onError(err)
-			},
-			onTranscriptionUpdated: (text) => {
-				log('onTranscriptionUpdated', JSON.stringify(text))
-				checkWakeWord(text)
-				if (typeof onUpdate === 'function') onUpdate(text)
-			},
-			onTranscriptionCommitted: (text) => {
-				log('onTranscriptionCommitted', JSON.stringify(text))
-				checkWakeWord(text)
-				if (typeof onCommit === 'function') onCommit(text)
-			},
+	const callbacks = {
+		onPermissionsRequested: () => {
+			log('onPermissionsRequested')
+			if (typeof onPermissionsRequested === 'function') onPermissionsRequested()
 		},
-		useVAD,
-	)
+		onModelLoadStarted: () => {
+			log('onModelLoadStarted')
+			if (typeof onModelLoadStarted === 'function') onModelLoadStarted()
+		},
+		onModelLoaded: () => {
+			log('onModelLoaded')
+			if (typeof onModelLoaded === 'function') onModelLoaded()
+		},
+		onTranscribeStarted: () => {
+			log('onTranscribeStarted')
+			if (typeof onTranscribeStarted === 'function') onTranscribeStarted()
+		},
+		onTranscribeStopped: () => {
+			log('onTranscribeStopped')
+			if (typeof onTranscribeStopped === 'function') onTranscribeStopped()
+		},
+		onError: (err) => {
+			log('onError', err)
+			if (typeof onError === 'function') onError(err)
+		},
+		onTranscriptionUpdated: (text) => {
+			log('onTranscriptionUpdated', JSON.stringify(text))
+			checkWakeWord(text)
+			if (typeof onUpdate === 'function') onUpdate(text)
+		},
+		onTranscriptionCommitted: (text) => {
+			log('onTranscriptionCommitted', JSON.stringify(text))
+			checkWakeWord(text)
+			if (typeof onCommit === 'function') onCommit(text)
+		},
+	}
+
+	// Use Transcriber directly so we control the stream and can stop it on end
+	const transcriber = new Moonshine.Transcriber('model/base', callbacks, useVAD)
+	let micStream = null
 
 	return {
 		async start() {
 			log('start() called')
-			await transcriber.start()
-			log('start() completed')
+			const status = await navigator.permissions.query({ name: 'microphone' })
+			if (status.state === 'denied') {
+				callbacks.onError({ message: 'Microphone permission denied' })
+				return
+			}
+			try {
+				callbacks.onPermissionsRequested()
+				micStream = await navigator.mediaDevices.getUserMedia({
+					audio: {
+						channelCount: 1,
+						echoCancellation: true,
+						autoGainControl: true,
+						noiseSuppression: true,
+						sampleRate: 16000,
+					},
+				})
+				transcriber.attachStream(micStream)
+				await transcriber.start()
+				log('start() completed')
+			} catch (err) {
+				callbacks.onError(err)
+				stopStream(micStream)
+				micStream = null
+				throw err
+			}
 		},
 		stop() {
 			log('stop() called')
 			transcriber.stop()
+			stopStream(micStream)
+			micStream = null
 		},
 	}
 }
