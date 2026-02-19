@@ -7,7 +7,5 @@
 	"state": "°Maia/chat/state/paper",
 	"brand": "°Maia/chat/style/brand",
 	"inbox": "°Maia/chat/inbox/paper",
-	"messageTypes": [
-		"RANDOMIZE_PAPER"
-	]
+	"messageTypes": []
 }

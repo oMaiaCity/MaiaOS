@@ -69,6 +69,18 @@ const peerMode = process.env.PEER_MODE || 'sync'
 const syncDomain = peerMode === 'agent' ? process.env.PEER_MOAI || null : null
 const MAIA_SPARK = '°Maia'
 const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
+
+/** OpenAI-format tools for LLM (paper write + future tools). Uses existing tool defs (already OpenAI-compatible). */
+function toOpenAITools() {
+	const defs = getAllToolDefinitions()
+	const paths = ['core/updatePaperContent']
+	const tools = []
+	for (const p of paths) {
+		const def = defs[p]
+		if (def?.type === 'function' && def?.function) tools.push(def)
+	}
+	return tools
+}
 const peerAddGuardian = process.env.PEER_ADD_GUARDIAN === 'true'
 const peerGuardianAccountId = process.env.PEER_GUARDIAN?.trim() || null
 const peerFreshSeed = process.env.PEER_FRESH_SEED === 'true'
@@ -310,60 +322,39 @@ async function handleProfile(worker) {
 }
 
 /**
- * POST /api/v0/write-note — Direct write to paper CoText for testing
- * Body: { text: "Hello from curl" }
- * Bypasses actor/state chain; tests DB op flow directly with proper logs.
+ * Shared logic: write text into the paper CoText (first note's content).
+ * Used by LLM tool @core/updatePaperContent and formerly by the write-note test endpoint.
  */
-async function handleWriteNote(worker, body) {
-	const text = body?.text
-	if (text == null || typeof text !== 'string') {
-		return err('text (string) required in body', 400)
+async function writeToPaperCoText(worker, value) {
+	if (value == null || typeof value !== 'string') {
+		return { ok: false, error: 'value (string) required' }
 	}
 	const { peer, dataEngine } = worker
-	try {
-		console.log('[write-note] Resolving notes schema...')
-		const notesSchemaCoId = await resolve(peer, '°Maia/schema/data/notes', { returnType: 'coId' })
-		if (!notesSchemaCoId?.startsWith('co_z')) {
-			console.error('[write-note] Notes schema not resolved')
-			return err('Notes schema not found. Ensure genesis seeded (PEER_FRESH_SEED=true).', 500)
+	const notesSchemaCoId = await resolve(peer, '°Maia/schema/data/notes', { returnType: 'coId' })
+	if (!notesSchemaCoId?.startsWith('co_z'))
+		return {
+			ok: false,
+			error: 'Notes schema not found. Ensure genesis seeded (PEER_FRESH_SEED=true).',
 		}
-		console.log('[write-note] Finding first note...')
-		const firstNote = await findFirst(peer, notesSchemaCoId, {}, { timeoutMs: 5000 })
-		if (!firstNote?.id) {
-			console.error('[write-note] No notes found')
-			return err('No notes found. Ensure data.notes seeded.', 500)
+	const firstNote = await findFirst(peer, notesSchemaCoId, {}, { timeoutMs: 5000 })
+	if (!firstNote?.id) return { ok: false, error: 'No notes found. Ensure data.notes seeded.' }
+	const contentId = firstNote.content?.id ?? firstNote.content
+	if (!contentId || typeof contentId !== 'string' || !contentId.startsWith('co_z'))
+		return { ok: false, error: 'First note has no content CoText.' }
+	const graphemes = [...splitGraphemes(value)]
+	const spliceResult = await dataEngine.execute({
+		op: 'spliceCoList',
+		coId: contentId,
+		start: 0,
+		deleteCount: 99999,
+		items: graphemes,
+	})
+	if (spliceResult?.ok === false)
+		return {
+			ok: false,
+			error: spliceResult.errors?.map((e) => e.message).join('; ') ?? 'splice failed',
 		}
-		const contentId = firstNote.content?.id ?? firstNote.content
-		if (!contentId || typeof contentId !== 'string' || !contentId.startsWith('co_z')) {
-			console.error('[write-note] No CoText ref:', firstNote)
-			return err('First note has no content CoText.', 500)
-		}
-		console.log('[write-note] CoText co-id:', contentId.slice(0, 16) + '...')
-		const graphemes = [...splitGraphemes(text)]
-		// Single atomic splice: delete all + insert new (avoids empty intermediate state that triggered subscription)
-		console.log('[write-note] Replacing content with', graphemes.length, 'graphemes...')
-		const spliceResult = await dataEngine.execute({
-			op: 'spliceCoList',
-			coId: contentId,
-			start: 0,
-			deleteCount: 99999,
-			items: graphemes,
-		})
-		if (spliceResult?.ok === false) {
-			console.error('[write-note] Splice failed:', spliceResult.errors)
-			return err(spliceResult.errors?.map((e) => e.message).join('; ') ?? 'splice failed', 500)
-		}
-		console.log('[write-note] Success:', text.slice(0, 50) + (text.length > 50 ? '...' : ''))
-		return jsonResponse({
-			ok: true,
-			coId: contentId,
-			length: graphemes.length,
-			preview: text.slice(0, 80),
-		})
-	} catch (e) {
-		console.error('[write-note] Error:', e?.message ?? e)
-		return err(e?.message ?? 'write-note failed', 500)
-	}
+	return { ok: true, coId: contentId, length: graphemes.length }
 }
 
 async function handleAgentHttp(req, worker) {
@@ -379,11 +370,29 @@ async function handleAgentHttp(req, worker) {
 	}
 	if (url.pathname === '/register' && req.method === 'POST')
 		return post(false, (w, b) => withTimeout(handleRegister(w, b), REQUEST_TIMEOUT_MS, '/register'))
-	if (url.pathname === '/api/v0/write-note' && req.method === 'POST')
-		return post(true, (w, b) =>
-			withTimeout(handleWriteNote(w, b), REQUEST_TIMEOUT_MS, '/api/v0/write-note'),
-		)
 	return null
+}
+
+/** Execute LLM tool call server-side (e.g. @core/updatePaperContent). */
+async function executeLLMTool(worker, toolName, args) {
+	try {
+		if (toolName === '@core/updatePaperContent') {
+			// Accept value, content, or text (some models use different param names)
+			let value = args?.value ?? args?.content ?? args?.text
+			if (value != null && typeof value !== 'string') {
+				value =
+					typeof value === 'object' && (value?.text ?? value?.content) != null
+						? String(value.text ?? value.content)
+						: String(value)
+			}
+			const result = await writeToPaperCoText(worker, value)
+			return JSON.stringify(result)
+		}
+		return JSON.stringify({ ok: false, error: `Unknown tool: ${toolName}` })
+	} catch (e) {
+		console.error('[executeLLMTool]', toolName, e?.message ?? e)
+		return JSON.stringify({ ok: false, error: e?.message ?? String(e) })
+	}
 }
 
 // --- API (LLM) handler ---
@@ -394,28 +403,73 @@ async function handleLLMChat(req) {
 		const { messages, model = 'qwen/qwen3-30b-a3b-instruct-2507', temperature = 1 } = body
 		if (!messages || !Array.isArray(messages) || messages.length === 0)
 			return jsonResponse({ error: 'messages array required' }, 400)
-		const res = await fetch('https://api.redpill.ai/v1/chat/completions', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RED_PILL_API_KEY}` },
-			body: JSON.stringify({ model, messages, temperature }),
-		})
-		if (!res.ok) {
-			const txt = await res.text()
-			let data = { error: 'LLM request failed' }
-			try {
-				data = JSON.parse(txt)
-			} catch {}
-			return jsonResponse(
-				{ error: data.error || `HTTP ${res.status}`, message: data.message || txt.slice(0, 200) },
-				500,
-			)
+
+		const tools = agentWorker ? toOpenAITools() : []
+		const currentMessages = [...messages]
+		const MAX_TURNS = 4
+
+		for (let turn = 0; turn < MAX_TURNS; turn++) {
+			// Only pass tools on first turn; after tool execution, request without tools to get final text (prevents loop)
+			const passTools = turn === 0 && tools.length > 0
+			const reqBody = {
+				model,
+				messages: currentMessages,
+				temperature,
+				...(passTools && { tools }),
+			}
+			const res = await fetch('https://api.redpill.ai/v1/chat/completions', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RED_PILL_API_KEY}` },
+				body: JSON.stringify(reqBody),
+			})
+			if (!res.ok) {
+				const txt = await res.text()
+				let data = { error: 'LLM request failed' }
+				try {
+					data = JSON.parse(txt)
+				} catch {}
+				return jsonResponse(
+					{ error: data.error || `HTTP ${res.status}`, message: data.message || txt.slice(0, 200) },
+					500,
+				)
+			}
+			const data = await res.json()
+			const choice = data.choices?.[0]
+			const msg = choice?.message
+			if (!msg) return jsonResponse({ content: '', role: 'assistant', usage: data.usage ?? null })
+
+			const toolCalls = msg.tool_calls
+			if (!toolCalls || toolCalls.length === 0) {
+				return jsonResponse({
+					content: msg.content ?? '',
+					role: 'assistant',
+					usage: data.usage ?? null,
+					toolCalls: undefined,
+				})
+			}
+
+			currentMessages.push({ role: 'assistant', content: msg.content ?? null, tool_calls: toolCalls })
+			for (const tc of toolCalls) {
+				const name = tc.function?.name ?? tc.name
+				let raw = tc.function?.arguments ?? tc.arguments ?? '{}'
+				if (typeof raw !== 'string') raw = JSON.stringify(raw)
+				let args = {}
+				try {
+					args = JSON.parse(raw)
+				} catch {}
+				const result = await executeLLMTool(agentWorker, name, args)
+				currentMessages.push({
+					role: 'tool',
+					tool_call_id: tc.id,
+					content: result,
+				})
+			}
 		}
-		const data = await res.json()
-		const choice = data.choices?.[0]
+
 		return jsonResponse({
-			content: choice?.message?.content ?? '',
+			content: '[Max tool turns reached]',
 			role: 'assistant',
-			usage: data.usage ?? null,
+			usage: null,
 		})
 	} catch (e) {
 		const msg = e?.message ?? String(e)
