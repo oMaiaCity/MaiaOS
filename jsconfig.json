@@ -9,7 +9,8 @@
 			"@MaiaOS/schemata/*": ["./libs/maia-schemata/src/*"],
 			"@MaiaOS/self": ["./libs/maia-self/src/index.js"],
 			"@MaiaOS/tools": ["./libs/maia-tools/src"],
-			"@MaiaOS/vibes": ["./libs/maia-vibes/src"]
+			"@MaiaOS/vibes": ["./libs/maia-vibes/src"],
+			"@MaiaOS/maia-voice": ["./libs/maia-voice/src/index.js"]
 		}
 	}
 }

@@ -11,6 +11,7 @@ services/maia/
 ├── index.html          # Main app (database inspector)
 ├── main.js             # Main app logic
 ├── db-view.js          # Database viewer and dynamic vibe renderer
+├── voice.js            # Voice page (real-time speech-to-text)
 ├── vibes/
 │   └── todos/          # Todos vibe components
 │       ├── todos.vibe.maia
@@ -27,7 +28,9 @@ services/maia/
 
 ## Dependencies
 
-- `@MaiaOS/maia-distros` only. All bundling happens in maia-distros; maia uses pre-built bundles (maia-client.mjs, vibes.mjs) via jsconfig path overrides.
+- `@MaiaOS/loader` (via maia-distros) - MaiaOS kernel, auth
+- `@MaiaOS/maia-distros` - Pre-built bundles (maia-client.mjs, vibes.mjs)
+- `@MaiaOS/maia-voice` - On-device speech-to-text for the /voice route
 
 ## Development
 
@@ -46,8 +49,12 @@ Server runs on **http://localhost:4200**
 
 ## Routes
 
-- **/** - Database inspector (requires passkey auth)
+- **/** - Landing (or redirect to signin/me)
+- **/signin**, **/signup** - Authentication
+- **/me**, **/dashboard** - Database inspector (requires passkey auth)
   - Includes dynamic vibe rendering - navigate to "Todos Vibe" in the sidebar to load vibes dynamically
+- **/voice** - Real-time speech-to-text (requires passkey auth)
+  - On-device transcription via MoonshineJS; Start/Stop buttons, live transcript display
 
 ## Architecture
 

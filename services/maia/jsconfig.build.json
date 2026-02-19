@@ -3,7 +3,8 @@
 		"baseUrl": ".",
 		"paths": {
 			"@MaiaOS/loader": ["../../libs/maia-distros/output/maia-client.mjs"],
-			"@MaiaOS/vibes": ["../../libs/maia-distros/output/vibes.mjs"]
+			"@MaiaOS/vibes": ["../../libs/maia-distros/output/vibes.mjs"],
+			"@MaiaOS/maia-voice": ["../../libs/maia-voice/src/index.js"]
 		}
 	}
 }

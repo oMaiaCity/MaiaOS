@@ -44,5 +44,8 @@
 	},
 	"dependencies": {
 		"@electric-sql/pglite": "^0.3.15"
+	},
+	"patchedDependencies": {
+		"@usefulsensors/moonshine-js@0.1.21": "patches/@usefulsensors%2Fmoonshine-js@0.1.21.patch"
 	}
 }
