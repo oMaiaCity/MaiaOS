@@ -4,17 +4,7 @@
 	"initial": "idle",
 	"states": {
 		"idle": {
-			"on": {
-				"RANDOMIZE_PAPER": {
-					"target": "idle",
-					"actions": [
-						{
-							"tool": "@core/randomizePaperContent",
-							"payload": {}
-						}
-					]
-				}
-			}
+			"on": {}
 		}
 	}
 }

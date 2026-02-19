@@ -612,6 +612,7 @@ export class ViewEngine {
 		// Fixes double processing in Todos, Chat, and any input+button form
 		if (e.type === 'keydown' && e.key === 'Enter' && !isUpdateInputType) {
 			e.preventDefault()
+			e.stopPropagation()
 		}
 
 		if (eventName === 'UPDATE_INPUT' && e.type === 'input') {
