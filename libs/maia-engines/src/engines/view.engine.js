@@ -666,7 +666,7 @@ export class ViewEngine {
 					}
 				}
 
-				await this.actorEngine.sendInternalEvent(actorId, eventName, payload)
+				await this.actorEngine.deliverEvent(actorId, actorId, eventName, payload)
 
 				// AUTO-CLEAR INPUTS: After form submission (any event except update-input types), clear all input fields
 				// This ensures forms reset after submission without manual clearing workarounds

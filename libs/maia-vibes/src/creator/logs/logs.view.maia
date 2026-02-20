@@ -6,9 +6,28 @@
 		"class": "stack",
 		"children": [
 			{
-				"tag": "h2",
-				"class": "vibe-creator-title",
-				"text": "Logs"
+				"tag": "div",
+				"class": "logs-header",
+				"children": [
+					{
+						"tag": "h2",
+						"class": "vibe-creator-title",
+						"text": "Logs"
+					},
+					{
+						"tag": "button",
+						"class": "copy-logs-btn",
+						"attrs": {
+							"type": "button"
+						},
+						"text": "$$copyButtonLabel",
+						"$on": {
+							"click": {
+								"send": "COPY_LOGS"
+							}
+						}
+					}
+				]
 			},
 			{
 				"tag": "div",

@@ -6,6 +6,13 @@
  * ReactiveStore: use peer.createReactiveStore() or get from @MaiaOS/db
  */
 
+export {
+	createErrorEntry,
+	createErrorResult,
+	createSuccessResult,
+	isPermissionError,
+	isSuccessResult,
+} from '@MaiaOS/schemata/operation-result'
 export { ActorEngine } from './engines/actor.engine.js'
 export { DataEngine } from './engines/data.engine.js'
 export { StateEngine } from './engines/state.engine.js'
@@ -14,11 +21,4 @@ export { ToolEngine } from './engines/tool.engine.js'
 export { ViewEngine } from './engines/view.engine.js'
 export { registerOperations } from './modules/db/register-operations.js'
 export { Registry as ModuleRegistry } from './modules/registry.js'
-export {
-	createErrorEntry,
-	createErrorResult,
-	createSuccessResult,
-	isPermissionError,
-	isSuccessResult,
-} from './operations/operation-result.js'
 export { Evaluator as MaiaScriptEvaluator } from './utils/evaluator.js'

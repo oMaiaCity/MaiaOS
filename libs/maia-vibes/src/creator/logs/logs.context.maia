@@ -16,5 +16,6 @@
 			"targetId": "$target.id"
 		}
 	},
-	"payloadLabel": "payload"
+	"payloadLabel": "payload",
+	"copyButtonLabel": "Copy all logs"
 }

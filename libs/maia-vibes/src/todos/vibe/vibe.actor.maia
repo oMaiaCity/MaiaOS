@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/actor",
 	"$id": "°Maia/todos/actor/vibe",
-	"role": "agent",
+	"role": "@todos/vibe",
 	"context": "°Maia/todos/context/vibe",
 	"view": "°Maia/todos/view/vibe",
 	"state": "°Maia/todos/state/vibe",

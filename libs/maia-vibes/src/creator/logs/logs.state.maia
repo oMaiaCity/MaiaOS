@@ -3,7 +3,21 @@
 	"$id": "°Maia/creator/state/logs",
 	"initial": "idle",
 	"states": {
-		"idle": {},
+		"idle": {
+			"on": {
+				"COPY_LOGS": {
+					"target": "copied",
+					"actions": [
+						{
+							"tool": "@core/copyLogsToClipboard",
+							"payload": {
+								"messages": "$context.messages"
+							}
+						}
+					]
+				}
+			}
+		},
 		"error": {
 			"entry": {
 				"updateContext": {
@@ -27,6 +41,25 @@
 						{
 							"updateContext": {
 								"error": null
+							}
+						}
+					]
+				}
+			}
+		},
+		"copied": {
+			"entry": {
+				"updateContext": {
+					"copyButtonLabel": "✓ Copied!"
+				}
+			},
+			"on": {
+				"COPY_LOGS": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"copyButtonLabel": "Copy all logs"
 							}
 						}
 					]

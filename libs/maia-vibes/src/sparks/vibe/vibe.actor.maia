@@ -14,5 +14,6 @@
 		"SUCCESS",
 		"ERROR",
 		"DISMISS"
-	]
+	],
+	"role": "@sparks/vibe"
 }

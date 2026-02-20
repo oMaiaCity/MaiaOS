@@ -6,6 +6,8 @@ import aiFn from './ai/ai.tool.js'
 import aiDef from './ai/ai.tool.maia'
 import computeMessageNamesFn from './core/computeMessageNames.tool.js'
 import computeMessageNamesDef from './core/computeMessageNames.tool.maia'
+import copyLogsToClipboardFn from './core/copyLogsToClipboard.tool.js'
+import copyLogsToClipboardDef from './core/copyLogsToClipboard.tool.maia'
 import publishMessageFn from './core/publishMessage.tool.js'
 import publishMessageDef from './core/publishMessage.tool.maia'
 import updatePaperContentFn from './core/updatePaperContent.tool.js'
@@ -24,6 +26,10 @@ export const TOOLS = {
 	'core/computeMessageNames': {
 		definition: computeMessageNamesDef,
 		function: computeMessageNamesFn,
+	},
+	'core/copyLogsToClipboard': {
+		definition: copyLogsToClipboardDef,
+		function: copyLogsToClipboardFn,
 	},
 	'ai/chat': { definition: aiDef, function: aiFn },
 	'sparks/sparks': { definition: sparksDef, function: sparksFn },

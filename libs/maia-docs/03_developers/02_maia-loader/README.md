@@ -77,7 +77,7 @@ const os = await MaiaOS.boot({
 // Now you can:
 // - os.createActor() - Create actors
 // - os.loadVibe() - Load app manifests
-// - os.sendMessage() - Send messages between actors
+// - os.deliverEvent() - Deliver events to actors
 ```
 
 **What you get:**
@@ -85,7 +85,7 @@ const os = await MaiaOS.boot({
 - `os.loadVibe()` - Load app manifests from files
 - `os.loadVibeFromDatabase()` - Load app manifests from database
 - `os.getActor()` - Get actor by ID
-- `os.sendMessage()` - Send messages to actors
+- `os.deliverEvent()` - Deliver events to actors
 - `os.do()` - Execute data operations (**maia.do({ op, schema, key, ... })**)
 - `os.getEngines()` - Access all engines for debugging
 

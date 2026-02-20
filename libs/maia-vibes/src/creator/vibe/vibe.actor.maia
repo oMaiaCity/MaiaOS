@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/actor",
 	"$id": "°Maia/creator/actor/vibe",
-	"role": "agent",
+	"role": "@creator/vibe",
 	"context": "°Maia/creator/context/logs",
 	"view": "°Maia/creator/view/logs",
 	"state": "°Maia/creator/state/logs",
@@ -10,6 +10,7 @@
 	"inbox": "°Maia/creator/inbox/logs",
 	"messageTypes": [
 		"RETRY",
-		"DISMISS"
+		"DISMISS",
+		"COPY_LOGS"
 	]
 }

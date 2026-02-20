@@ -442,10 +442,9 @@ Each actor renders into its own shadow root:
 Actors communicate asynchronously:
 
 ```javascript
-// Send message
-os.sendMessage('actor_todo_001', {
-  type: 'notification',
-  data: {text: 'Task completed!'}
+// Deliver event to actor
+os.deliverEvent(senderId, 'actor_todo_001', 'notification', {
+  text: 'Task completed!'
 });
 
 // Subscribe to messages

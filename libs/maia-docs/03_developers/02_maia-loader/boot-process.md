@@ -26,7 +26,7 @@ const os = await MaiaOS.boot({
 // Now you can:
 // - os.createActor() - Create actors
 // - os.loadVibe() - Load app manifests
-// - os.sendMessage() - Send messages between actors
+// - os.deliverEvent() - Deliver events to actors
 ```
 
 ---
@@ -158,13 +158,15 @@ Gets an actor by ID.
 
 **Returns:** `Object|null` - Actor instance or null
 
-### `os.sendMessage(actorId, message)`
+### `os.deliverEvent(senderId, targetId, type, payload)`
 
-Sends a message to an actor.
+Delivers an event to a target actor (inbox-only, persisted via CoJSON).
 
 **Parameters:**
-- `actorId` (string) - Target actor ID
-- `message` (Object) - Message object
+- `senderId` (string) - Sender actor co-id
+- `targetId` (string) - Target actor co-id (or human-readable; resolved via CoJSON)
+- `type` (string) - Message type
+- `payload` (Object) - Resolved payload (no expressions)
 
 ### `os.db(payload)`
 

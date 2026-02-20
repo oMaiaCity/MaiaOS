@@ -27,11 +27,11 @@ sequenceDiagram
 
     User->>AgentView: Click spark item
     AgentView->>AgentView: resolveExpressions()<br/>($$id → "co_z123...")
-    AgentView->>AgentState: sendInternalEvent()<br/>{type: "SELECT_SPARK",<br/>payload: {sparkId: "co_z123..."}}
+    AgentView->>AgentState: deliverEvent()<br/>{type: "SELECT_SPARK",<br/>payload: {sparkId: "co_z123..."}}
     Note over AgentView,AgentState: Message persisted to Agent Inbox<br/>(CoStream - CRDT)
     AgentState->>AgentContext: updateContext<br/>{selectedSparkId: "co_z123..."}
     AgentState->>AgentState: sendToDetailActor<br/>(custom action)
-    AgentState->>DetailInbox: sendMessage()<br/>{type: "LOAD_ACTOR",<br/>payload: {id: "co_z123..."}}
+    AgentState->>DetailInbox: deliverEvent()<br/>{type: "LOAD_ACTOR",<br/>payload: {id: "co_z123..."}}
     Note over DetailInbox: Message persisted to Detail Inbox<br/>(CoStream - CRDT)
     DetailInbox->>DetailProcess: Subscription fires<br/>(new message detected)
     DetailProcess->>DetailProcess: Validate message type<br/>(check messageTypes: ["LOAD_ACTOR"])
@@ -69,7 +69,7 @@ When a user clicks a spark item:
 
 **What happens**:
 - View engine resolves `$$id` to actual co-id (e.g., `"co_z123..."`)
-- View engine calls `sendInternalEvent()` with resolved payload
+- View engine calls `deliverEvent()` with resolved payload
 - Message is persisted to agent actor's inbox (CoStream)
 
 **Key Point**: All expressions are resolved **before** sending to inbox. Only clean JSON is persisted.
@@ -107,7 +107,7 @@ The agent state machine receives `SELECT_SPARK`:
 
 ### 3. Custom Action: Sending Message to Detail Actor
 
-**Location**: `libs/maia-engines/src/engines/state.engine.js:464-475`
+**Location**: `libs/maia-engines/src/engines/state.engine.js`
 
 The `sendToDetailActor` custom action:
 ```javascript
@@ -115,10 +115,8 @@ if (actionName === 'sendToDetailActor') {
   const sparkId = machine.actor.context.value?.selectedSparkId;
   if (sparkId && machine.actor?.children?.detail) {
     const detailActor = machine.actor.children.detail;
-    await machine.actor.actorEngine.sendMessage(detailActor.id, {
-      type: 'LOAD_ACTOR',
-      payload: { id: sparkId },
-      from: machine.actor.id
+    await machine.actor.actorEngine.deliverEvent(machine.actor.id, detailActor.id, 'LOAD_ACTOR', {
+      id: sparkId
     });
   }
 }
@@ -127,7 +125,7 @@ if (actionName === 'sendToDetailActor') {
 **What happens**:
 1. Reads `selectedSparkId` from agent context
 2. Gets reference to detail actor (child actor)
-3. Sends `LOAD_ACTOR` message to detail actor's inbox via `sendMessage()`
+3. Sends `LOAD_ACTOR` message to detail actor's inbox via `deliverEvent()`
 
 **Key Point**: Messages are sent to actor inboxes (CoStreams), not directly to state machines. This ensures CRDT-native persistence and sync.
 
@@ -135,34 +133,26 @@ if (actionName === 'sendToDetailActor') {
 
 ### 4. Message Persistence to Inbox
 
-**Location**: `libs/maia-engines/src/engines/actor.engine.js:753-784`
+**Location**: `libs/maia-engines/src/engines/actor.engine.js`
 
-The `sendMessage()` function:
+The `deliverEvent()` function pushes to inbox via `_pushToInbox()`:
 ```javascript
-async sendMessage(actorId, message) {
+async deliverEvent(senderId, targetId, type, payload = {}) {
   // Validate payload is resolved (no expressions)
-  if (message.payload && containsExpressions(message.payload)) {
-    throw new Error(`[ActorEngine] Message payload contains unresolved expressions...`);
-  }
+  if (containsExpressions(payload)) throw new Error(...);
   
-  const actor = this.actors.get(actorId);
-  if (actor.inboxCoId && this.dbEngine) {
-    const messageData = {
-      type: message.type,
-      payload: message.payload || {},
-      source: message.from || message.source,
-      target: actorId,
-      processed: false
-    };
-    await createAndPushMessage(this.dbEngine, actor.inboxCoId, messageData);
-  }
+  await this._pushToInbox(targetId, {
+    type, payload: payload ?? {}, source: senderId, target: targetId, processed: false
+  });
+  // Same-actor: trigger processMessages immediately
+  if (senderId === targetId) await this.processMessages(targetId);
 }
 ```
 
 **What happens**:
 1. Validates payload is resolved (no expressions)
-2. Creates message object with metadata
-3. Persists to detail actor's inbox CoStream (CRDT)
+2. Resolves target to inbox co-id (actor in memory or via CoJSON)
+3. Persists to target's inbox CoStream (CRDT)
 4. Message syncs across devices automatically
 
 **Key Point**: Inbox is a CoStream (append-only list), providing CRDT-native deduplication and sync.

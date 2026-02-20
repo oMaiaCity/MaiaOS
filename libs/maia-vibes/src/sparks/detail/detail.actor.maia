@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/actor",
 	"$id": "°Maia/sparks/actor/detail",
-	"role": "ui",
+	"role": "@sparks/detail",
 	"context": "°Maia/sparks/context/detail",
 	"view": "°Maia/sparks/view/detail",
 	"state": "°Maia/sparks/state/detail",

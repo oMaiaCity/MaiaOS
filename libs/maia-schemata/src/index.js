@@ -46,6 +46,7 @@ import todosDataSchema from './data/todos.schema.json'
 import addAgentMessageSchema from './message/ADD_AGENT.schema.json'
 import closePopupMessageSchema from './message/CLOSE_POPUP.schema.json'
 // Import message type schemas
+import copyLogsMessageSchema from './message/COPY_LOGS.schema.json'
 import createButtonMessageSchema from './message/CREATE_BUTTON.schema.json'
 import deleteButtonMessageSchema from './message/DELETE_BUTTON.schema.json'
 import dismissMessageSchema from './message/DISMISS.schema.json'
@@ -157,6 +158,7 @@ const SCHEMAS = {
 	'message/REMOVE_MEMBER': removeMemberMessageSchema,
 	'message/OPEN_POPUP': openPopupMessageSchema,
 	'message/CLOSE_POPUP': closePopupMessageSchema,
+	'message/COPY_LOGS': copyLogsMessageSchema,
 }
 
 export function getSchema(type) {

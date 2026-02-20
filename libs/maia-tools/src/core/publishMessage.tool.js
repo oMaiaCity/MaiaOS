@@ -43,12 +43,7 @@ export default {
 			])
 		}
 
-		await actor.actorEngine.sendMessage(target, {
-			type,
-			payload: messagePayload,
-			from: actor.id,
-			timestamp: Date.now(),
-		})
+		await actor.actorEngine.deliverEvent(actor.id, target, type, messagePayload)
 		return createSuccessResult({})
 	},
 }

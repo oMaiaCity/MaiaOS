@@ -166,7 +166,7 @@ The state machine is like a traffic controller - it decides what happens next!
 ```
 User clicks button
   ↓
-View sends event → sendInternalEvent()
+View sends event → deliverEvent()
   ↓
 Event added to inbox
   ↓
