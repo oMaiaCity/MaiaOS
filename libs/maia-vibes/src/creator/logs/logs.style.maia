@@ -2,6 +2,23 @@
 	"$schema": "°Maia/schema/style",
 	"$id": "°Maia/creator/style/logs",
 	"components": {
+		"logsHeader": {
+			"display": "flex",
+			"alignItems": "center",
+			"justifyContent": "space-between",
+			"gap": "0.5rem",
+			"marginBottom": "0.5rem"
+		},
+		"copyLogsBtn": {
+			"padding": "0.25rem 0.5rem",
+			"fontSize": "0.75rem",
+			"borderRadius": "6px",
+			"border": "1px solid rgba(0, 31, 51, 0.2)",
+			"background": "rgba(255, 255, 255, 0.6)",
+			"cursor": "pointer",
+			"color": "#001F33",
+			"flexShrink": 0
+		},
 		"vibeCreatorTitle": {
 			"fontFamily": "{typography.fontFamily.heading}",
 			"fontSize": "0.9rem",

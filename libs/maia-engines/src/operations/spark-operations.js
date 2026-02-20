@@ -5,8 +5,8 @@
  * their data into separate collaborative spaces.
  */
 
+import { createErrorEntry, createErrorResult } from '@MaiaOS/schemata/operation-result'
 import { requireDataEngine, requireParam, validateCoId } from '@MaiaOS/schemata/validation.helper'
-import { createErrorEntry, createErrorResult } from './operation-result.js'
 
 /**
  * Create a new Spark

@@ -143,10 +143,9 @@ The booted OS instance provides:
 // Get an actor by ID
 const actor = os.getActor('actor_todo_001');
 
-// Send a message to an actor
-os.sendMessage('actor_todo_001', {
-  type: 'notification',
-  data: {text: 'Task completed!'}
+// Deliver an event to an actor
+os.deliverEvent(senderId, 'actor_todo_001', 'notification', {
+  text: 'Task completed!'
 });
 
 // Access engines for debugging

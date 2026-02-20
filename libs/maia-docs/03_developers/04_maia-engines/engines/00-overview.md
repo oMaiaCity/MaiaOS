@@ -63,7 +63,7 @@ const title = await evaluator.evaluate('$context.title', { context: { title: 'He
 **Key Methods:**
 - `createActor(actorConfig, container)` - Create an actor
 - `loadActor(actorId)` - Load actor config from database
-- `sendMessage(actorId, message)` - Send message to actor
+- `deliverEvent(senderId, targetId, type, payload)` - Deliver event to actor inbox
 - `processMessages(actorId)` - Process pending messages sequentially (guarded against concurrent execution)
 - `getActor(actorId)` - Get actor by ID
 - `rerenderActor(actorId)` - Re-render actor view

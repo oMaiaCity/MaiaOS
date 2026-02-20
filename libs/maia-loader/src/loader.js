@@ -796,12 +796,14 @@ export class MaiaOS {
 	}
 
 	/**
-	 * Send message to actor
-	 * @param {string} actorId - Target actor ID
-	 * @param {Object} message - Message object
+	 * Deliver event to target actor (inbox-only, persisted via CoJSON)
+	 * @param {string} senderId - Sender actor co-id
+	 * @param {string} targetId - Target actor co-id (or human-readable; resolved via CoJSON)
+	 * @param {string} type - Message type
+	 * @param {Object} payload - Resolved payload (no expressions)
 	 */
-	sendMessage(actorId, message) {
-		this.actorEngine.sendMessage(actorId, message)
+	deliverEvent(senderId, targetId, type, payload) {
+		return this.actorEngine.deliverEvent(senderId, targetId, type, payload)
 	}
 
 	/**

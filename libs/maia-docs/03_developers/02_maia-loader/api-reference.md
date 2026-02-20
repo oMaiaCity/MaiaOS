@@ -148,18 +148,21 @@ Gets an actor by ID.
 
 ---
 
-## `os.sendMessage(actorId, message)`
+## `os.deliverEvent(senderId, targetId, type, payload)`
 
-Sends a message to an actor.
+Delivers an event to a target actor (inbox-only, persisted via CoJSON).
 
 **Parameters:**
-- `actorId` (string) - Target actor ID
-- `message` (Object) - Message object
+- `senderId` (string) - Sender actor co-id
+- `targetId` (string) - Target actor co-id (or human-readable; resolved via CoJSON)
+- `type` (string) - Message type
+- `payload` (Object) - Resolved payload (no expressions)
+
+**Returns:** `Promise<void>`
 
 **Example:**
 ```javascript
-os.sendMessage('actor-123', {
-  type: 'click',
+await os.deliverEvent('co_z...', 'actor-123', 'click', {
   target: 'button-1'
 });
 ```
