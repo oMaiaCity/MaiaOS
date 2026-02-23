@@ -9,14 +9,21 @@
 		{
 			"type": "object",
 			"properties": {
-				"tool": { "type": "string", "description": "Tool identifier (e.g., '@mutation/create')" },
+				"actor": {
+					"type": "string",
+					"description": "Target actor $id (e.g. °Maia/actor/db) - id-based registry lookup"
+				},
+				"sendToActor": {
+					"type": "string",
+					"description": "Target actor $id - same as actor, id-based only"
+				},
 				"payload": {
-					"description": "Tool payload (can contain expressions)",
+					"description": "Event payload (expressions evaluated before delivery)",
 					"type": "object",
 					"additionalProperties": true
 				}
 			},
-			"required": ["tool"]
+			"anyOf": [{ "required": ["actor"] }, { "required": ["sendToActor"] }]
 		},
 		{
 			"type": "object",

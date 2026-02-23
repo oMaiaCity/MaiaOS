@@ -1,0 +1,11 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/event/UPDATE_PAPER",
+	"title": "°Maia/schema/event/UPDATE_PAPER",
+	"description": "Message type for updating paper/CoText content (chat agent paper area)",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": { "value": { "type": "string", "description": "New paper text content" } },
+	"additionalProperties": true
+}

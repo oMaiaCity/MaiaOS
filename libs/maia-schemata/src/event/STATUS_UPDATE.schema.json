@@ -1,0 +1,15 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/event/STATUS_UPDATE",
+	"title": "°Maia/schema/event/STATUS_UPDATE",
+	"description": "Message type for status updates from child actors to parent (e.g. isLoading, hasError)",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {
+		"isLoading": { "type": "boolean", "description": "Whether an async operation is in progress" },
+		"hasError": { "type": "boolean", "description": "Whether an error occurred" },
+		"error": { "type": ["string", "null"], "description": "Error message if hasError is true" }
+	},
+	"additionalProperties": true
+}

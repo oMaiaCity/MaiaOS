@@ -1,0 +1,18 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sparks</title>
+  <style>*{margin:0;padding:0;box-sizing:border-box}body{background:#f8f9fa;font-family:system-ui,sans-serif;overflow:hidden;width:100vw;height:100vh}.host-wrapper{width:100vw;height:100vh;background:#f8f9fa;overflow:hidden}</style>
+</head>
+<body>
+  <div class="host-wrapper"><div id="actor-sparks"></div></div>
+  <script type="module">
+    import { bootAgent } from '../boot.js';
+    import { loadSparksAgent } from './loader.js';
+
+    bootAgent(loadSparksAgent, 'actor-sparks', 'sparksActor').catch(_e => {});
+  </script>
+</body>
+</html>

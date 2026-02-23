@@ -1,0 +1,17 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/chat/actor/intent",
+	"role": "@chat/intent",
+	"context": "°Maia/chat/context/intent",
+	"view": "°Maia/chat/view/intent",
+	"state": "°Maia/chat/state/intent",
+	"brand": "°Maia/chat/style/brand",
+	"inbox": "°Maia/chat/inbox/intent",
+	"interface": [
+		"SEND_MESSAGE",
+		"UPDATE_INPUT",
+		"STATUS_UPDATE",
+		"OPEN_POPUP",
+		"CLOSE_POPUP"
+	]
+}

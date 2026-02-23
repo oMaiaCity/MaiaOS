@@ -189,37 +189,36 @@ export async function getSparkOsId(peer, spark) {
 }
 
 /**
- * Get spark's vibes CoMap id (account.registries.sparks[spark].vibes)
+ * Get spark's agents CoMap id (account.registries.sparks[spark].agents)
  * @param {Object} peer
  * @param {string} spark
  * @returns {Promise<string|null>}
  */
-export async function getSparkVibesId(peer, spark) {
+export async function getSparkAgentsId(peer, spark) {
 	const sparkCoId = await resolveSparkCoId(peer, spark)
 	if (!sparkCoId?.startsWith('co_z')) return null
 	const sparkStore = await peer.read(null, sparkCoId)
 	await waitForStoreReady(sparkStore, sparkCoId, 10000)
 	const sparkData = sparkStore?.value ?? {}
-	return sparkData.vibes || null
+	return sparkData.agents ?? null
 }
 
 /**
- * Set spark's vibes CoMap id (account.registries.sparks[spark].vibes)
- * Used when creating vibes during seed.
+ * Set spark's agents CoMap id
  * @param {Object} peer
  * @param {string} spark
- * @param {string} vibesId
+ * @param {string} agentsId
  */
-export async function setSparkVibesId(peer, spark, vibesId) {
+export async function setSparkAgentsId(peer, spark, agentsId) {
 	const sparkCoId = await resolveSparkCoId(peer, spark)
 	if (!sparkCoId?.startsWith('co_z'))
-		throw new Error(`[setSparkVibesId] Spark ${spark} not found in registries`)
+		throw new Error(`[setSparkAgentsId] Spark ${spark} not found in registries`)
 	const sparkCore = peer.getCoValue(sparkCoId)
-	if (!sparkCore) throw new Error(`[setSparkVibesId] Spark core not found: ${sparkCoId}`)
+	if (!sparkCore) throw new Error(`[setSparkAgentsId] Spark core not found: ${sparkCoId}`)
 	const sparkContent = peer.getCurrentContent(sparkCore)
 	if (!sparkContent || typeof sparkContent.set !== 'function')
-		throw new Error(`[setSparkVibesId] Spark content not available`)
-	sparkContent.set('vibes', vibesId)
+		throw new Error(`[setSparkAgentsId] Spark content not available`)
+	sparkContent.set('agents', agentsId)
 }
 
 /**

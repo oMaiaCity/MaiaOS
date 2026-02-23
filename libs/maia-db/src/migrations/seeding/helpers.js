@@ -49,7 +49,7 @@ export function buildMetaSchemaForSeeding(metaSchemaCoId) {
 
 /**
  * Ensure spark.os CoMap exists (creates if needed)
- * Also ensures spark.os.schematas, spark.os.indexes, spark.vibes
+ * Also ensures spark.os.schematas, spark.os.indexes, spark.agents
  */
 export async function ensureSparkOs(account, node, maiaGroup, peer, schemaCoIdMap) {
 	const { EXCEPTION_SCHEMAS } = await import('../../schemas/registry.js')
@@ -63,9 +63,9 @@ export async function ensureSparkOs(account, node, maiaGroup, peer, schemaCoIdMa
 	const schematasSchemaCoId =
 		schemaCoIdMap?.get('°Maia/schema/os/schematas-registry') ??
 		(await resolve(peer, '°Maia/schema/os/schematas-registry', { returnType: 'coId' }))
-	const vibesSchemaCoId =
-		schemaCoIdMap?.get('°Maia/schema/os/vibes-registry') ??
-		(await resolve(peer, '°Maia/schema/os/vibes-registry', { returnType: 'coId' }))
+	const agentsSchemaCoId =
+		schemaCoIdMap?.get('°Maia/schema/os/agents-registry') ??
+		(await resolve(peer, '°Maia/schema/os/agents-registry', { returnType: 'coId' }))
 
 	let osCore = node.getCoValue(osId)
 	if (!osCore && node.loadCoValueCore) {
@@ -117,8 +117,8 @@ export async function ensureSparkOs(account, node, maiaGroup, peer, schemaCoIdMa
 		}
 	}
 
-	const vibesId = await groups.getSparkVibesId(peer, MAIA_SPARK)
-	if (!vibesId && schemaCoIdMap) {
+	const agentsId = await groups.getSparkAgentsId(peer, MAIA_SPARK)
+	if (!agentsId && schemaCoIdMap) {
 		const sparksId = await groups.getSparksRegistryId(peer)
 		if (sparksId?.startsWith('co_z')) {
 			const sparksStore = await peer.read(null, sparksId)
@@ -131,13 +131,13 @@ export async function ensureSparkOs(account, node, maiaGroup, peer, schemaCoIdMa
 					const sparkContent = peer.getCurrentContent(sparkCore)
 					if (sparkContent && typeof sparkContent.set === 'function') {
 						const ctx = { node, account, guardian: maiaGroup }
-						const { coValue: vibes } = await createCoValueForSpark(ctx, null, {
-							schema: vibesSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
+						const { coValue: agents } = await createCoValueForSpark(ctx, null, {
+							schema: agentsSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
 							cotype: 'comap',
 							data: {},
 							dataEngine: peer?.dbEngine,
 						})
-						sparkContent.set('vibes', vibes.id)
+						sparkContent.set('agents', agents.id)
 					}
 				}
 			}

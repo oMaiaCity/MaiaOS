@@ -24,7 +24,7 @@ export function transformForSeeding(schemaOrInstance, coIdMap, options = {}) {
 	// Detect if this is a schema or instance
 	// KEY DIFFERENCE:
 	// - Schemas have $schema: "°Maia/schema/meta" (or "https://json-schema.org/...")
-	// - Instances have $schema: "°Maia/schema/vibe", "°Maia/schema/actor", etc. (pointing to their schema)
+	// - Instances have $schema: "°Maia/schema/agent", "°Maia/schema/actor", etc. (pointing to their schema)
 	const schemaRef = schemaOrInstance.$schema
 
 	// Check if $schema points to meta-schema (indicates this IS a schema definition)
@@ -39,7 +39,7 @@ export function transformForSeeding(schemaOrInstance, coIdMap, options = {}) {
 		return transformSchemaForSeeding(schemaOrInstance, coIdMap)
 	}
 
-	// If $schema points to a data schema (e.g., "°Maia/schema/vibe", "°Maia/schema/actor"), it's an instance
+	// If $schema points to a data schema (e.g., "°Maia/schema/agent", "°Maia/schema/actor"), it's an instance
 	// Also check for instance-specific properties as additional confirmation
 	const hasInstanceProperties =
 		schemaOrInstance.actor !== undefined ||
@@ -271,7 +271,7 @@ function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 			// Check if it's a human-readable ID pattern or a plain string that needs mapping
 			const isHumanReadablePattern =
 				isSchemaRef(transformed.$id) ||
-				transformed.$id.startsWith('vibe/') ||
+				transformed.$id.startsWith('agent/') ||
 				transformed.$id.startsWith('actor/') ||
 				transformed.$id.startsWith('view/') ||
 				transformed.$id.startsWith('context/') ||
@@ -307,6 +307,7 @@ function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 		'style',
 		'inbox',
 		'subscribers',
+		'tool',
 	]
 	for (const prop of referenceProps) {
 		if (transformed[prop] && typeof transformed[prop] === 'string') {
@@ -317,7 +318,7 @@ function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 				continue
 			}
 
-			// Must be @maiatype/instance or °Spark/... format (e.g., @actor/vibe, °Maia/todos/context/vibe)
+			// Must be @maiatype/instance or °Spark/... format (e.g., @actor/agent, °Maia/todos/actor/intent)
 			if (!ref.startsWith('@') && !ref.startsWith('°')) {
 				throw new Error(
 					`[SchemaTransformer] ${prop} reference must use @maiatype/instance or °Spark/... format, got: ${ref}`,
@@ -407,6 +408,27 @@ function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 
 	// Note: subscriptions and inbox are now in separate .maia files (already clean at definition level)
 	// No legacy extraction/transformation logic needed
+
+	// Transform agent dependencies array (actor refs to watch at runtime)
+	if (
+		transformed.dependencies &&
+		Array.isArray(transformed.dependencies) &&
+		transformed.dependencies.some(
+			(item) =>
+				typeof item === 'string' &&
+				(item.startsWith('°') || item.startsWith('@')) &&
+				!item.startsWith('co_z'),
+		)
+	) {
+		transformed.dependencies = transformed.dependencies.map((ref) => {
+			if (typeof ref !== 'string' || ref.startsWith('co_z')) return ref
+			const coId = transformTargetReference(ref, coIdMap, 'agent.dependencies')
+			if (coId) return coId
+			throw new Error(
+				`[SchemaTransformer] No co-id found for agent dependency: ${ref}. Ensure the actor exists.`,
+			)
+		})
+	}
 
 	// Transform items array for colist/costream schemas (fully generic - works for ANY schema with items array)
 	// If items array contains string references (starting with @), transform them to co-ids
@@ -530,6 +552,12 @@ function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 				} else if (Array.isArray(stateDef.entry)) {
 					// Entry is an array of actions - transform each action
 					transformArrayItems(stateDef.entry, coIdMap, transformQueryObjects)
+				} else if (stateDef.entry.sendToActor || stateDef.entry.actor) {
+					// Entry is object with sendToActor/actor - transform to co-id
+					transformSendToActorRef(stateDef.entry, coIdMap)
+					if (stateDef.entry.payload) {
+						transformToolPayload(stateDef.entry.payload, coIdMap, transformQueryObjects)
+					}
 				} else if (stateDef.entry.payload) {
 					// Entry might be just a payload object
 					transformToolPayload(stateDef.entry.payload, coIdMap, transformQueryObjects)
@@ -551,7 +579,7 @@ function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 	// Transform query objects in context properties
 	// Query objects have structure: {schema: "°Maia/schema/todos", filter: {...}}
 	// Transform schema field from human-readable reference to co-id
-	// Also transform target fields in tool payloads (for @core/publishMessage)
+	// Also transform target fields in action payloads (for sendEvent)
 	transformQueryObjects(transformed, coIdMap)
 
 	return transformed
@@ -585,8 +613,23 @@ function transformSchemaReference(schemaRef, coIdMap, _context = '') {
 }
 
 /**
+ * Transform sendToActor or actor ref in action object to co-id
+ * @param {Object} action - Action object with sendToActor or actor property
+ * @param {Map} coIdMap - Map of human-readable IDs to co-ids
+ */
+function transformSendToActorRef(action, coIdMap) {
+	const ref = action.sendToActor ?? action.actor
+	if (!ref || typeof ref !== 'string' || ref.startsWith('co_z')) return
+	const coId = transformTargetReference(ref, coIdMap, 'sendToActor/actor')
+	if (coId) {
+		if (action.sendToActor) action.sendToActor = coId
+		if (action.actor) action.actor = coId
+	}
+}
+
+/**
  * Transform a target reference to co-id
- * @param {string} targetRef - Target reference (e.g., "@actor/vibe")
+ * @param {string} targetRef - Target reference (e.g., "@actor/agent")
  * @param {Map} coIdMap - Map of human-readable IDs to co-ids
  * @param {string} context - Context for error messages
  * @returns {string|null} Co-id or null if not found
@@ -599,7 +642,7 @@ function transformTargetReference(targetRef, coIdMap, context = '') {
 			return coId
 		} else {
 			const actorKeys = Array.from(coIdMap.keys()).filter(
-				(k) => k.includes('actor') || k.includes('vibe') || k.includes('composite'),
+				(k) => k.includes('actor') || k.includes('agent') || k.includes('composite'),
 			)
 			const keyCount = actorKeys.length
 			const _keySample = actorKeys.slice(0, context.includes('array') ? 10 : 20).join(', ')
@@ -662,7 +705,7 @@ function transformToolPayload(payload, coIdMap, transformRecursive) {
 		}
 	}
 
-	// Check for target reference in payload (for @core/publishMessage tool)
+	// Check for target reference in payload (for sendEvent)
 	// The recursive call above should have already transformed it, but this is a fallback
 	if (payload.target && typeof payload.target === 'string') {
 		const coId = transformTargetReference(payload.target, coIdMap, 'tool payload')
@@ -705,8 +748,15 @@ function transformArrayItems(arr, coIdMap, transformRecursive) {
 	for (let i = 0; i < arr.length; i++) {
 		const item = arr[i]
 		if (item && typeof item === 'object') {
+			// Check if this is a sendToActor/actor action object
+			if (item.sendToActor || item.actor) {
+				transformSendToActorRef(item, coIdMap)
+				if (item.payload && typeof item.payload === 'object') {
+					transformToolPayload(item.payload, coIdMap, transformRecursive)
+				}
+			}
 			// Check if this is a mapData action
-			if (item.mapData && typeof item.mapData === 'object') {
+			else if (item.mapData && typeof item.mapData === 'object') {
 				// Transform schema references in each operation config
 				for (const [contextKey, operationConfig] of Object.entries(item.mapData)) {
 					if (
@@ -829,7 +879,7 @@ function transformQueryObjects(obj, coIdMap, depth = 0) {
 			)
 		}
 
-		// Check for target field at any level (for @core/publishMessage tool payloads)
+		// Check for target field at any level (for sendEvent payloads)
 		if (key === 'target' && typeof value === 'string') {
 			const coId = transformTargetReference(value, coIdMap, 'target field')
 			if (coId) {

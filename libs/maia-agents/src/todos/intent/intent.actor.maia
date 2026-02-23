@@ -1,0 +1,17 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/todos/actor/intent",
+	"role": "@todos/intent",
+	"context": "°Maia/todos/context/intent",
+	"view": "°Maia/todos/view/intent",
+	"state": "°Maia/todos/state/intent",
+	"brand": "°Maia/todos/style/brand",
+	"inbox": "°Maia/todos/inbox/intent",
+	"interface": [
+		"CREATE_BUTTON",
+		"UPDATE_INPUT",
+		"SWITCH_VIEW",
+		"SUCCESS",
+		"ERROR"
+	]
+}

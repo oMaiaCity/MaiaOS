@@ -1,0 +1,15 @@
+{
+	"$schema": "°Maia/schema/agent",
+	"$id": "°Maia/agent/chat",
+	"name": "Chat",
+	"description": "CTO-level AI assistant for MaiaOS codebase",
+	"actor": "°Maia/chat/actor/intent",
+	"dependencies": [
+		"°Maia/chat/actor/intent",
+		"°Maia/chat/actor/messages",
+		"°Maia/chat/actor/paper",
+		"°Maia/actor/db",
+		"°Maia/actor/aiChat",
+		"°Maia/actor/updatePaperContent"
+	]
+}

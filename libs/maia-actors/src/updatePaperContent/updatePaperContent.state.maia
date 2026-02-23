@@ -1,0 +1,29 @@
+{
+	"$schema": "°Maia/schema/state",
+	"$id": "°Maia/actor/updatePaperContent/state",
+	"initial": "idle",
+	"states": {
+		"idle": {
+			"on": {
+				"UPDATE_PAPER": {
+					"target": "processing"
+				}
+			}
+		},
+		"processing": {
+			"entry": [
+				{
+					"function": true
+				}
+			],
+			"on": {
+				"SUCCESS": {
+					"target": "idle"
+				},
+				"ERROR": {
+					"target": "idle"
+				}
+			}
+		}
+	}
+}

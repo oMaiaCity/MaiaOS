@@ -118,6 +118,17 @@ function isFindOneFilter(filter) {
 	)
 }
 
+/**
+ * True if value looks like a context query object (has schema for reads), not a DB_OP payload.
+ * DB_OP payloads have { op, schema, data } - schema is operation target, not a read query.
+ */
+function isQueryObject(value) {
+	if (!value || typeof value !== 'object' || Array.isArray(value) || !value.schema) return false
+	if (value.op && !['query', 'read'].includes(value.op) && typeof value.schema === 'string')
+		return false
+	return true
+}
+
 /** Execute read for schema+filter and wire query store. Shared by reactive and co-id branches. */
 async function wireQueryStoreForSchema(
 	peer,
@@ -299,8 +310,8 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 			)
 				continue
 
-			// Check if this is a query object (has schema property)
-			if (value && typeof value === 'object' && !Array.isArray(value) && value.schema) {
+			// Check if this is a query object (has schema for reads), exclude DB_OP payloads
+			if (isQueryObject(value)) {
 				currentQueryKeys.add(key)
 
 				// Check if we already have this query store
@@ -327,7 +338,8 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 
 					// Validate schemaCoId is a string
 					if (typeof schemaCoId !== 'string') {
-						if (process.env.DEBUG) console.error('Invalid schemaCoId:', schemaCoId)
+						if (typeof process !== 'undefined' && process.env?.DEBUG)
+							console.error('Invalid schemaCoId:', schemaCoId)
 						continue
 					}
 
@@ -365,7 +377,8 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 								}
 
 								if (schemaState.error || !schemaState.schemaCoId) {
-									if (process.env.DEBUG) console.error('Schema resolution failed:', schemaState.error)
+									if (typeof process !== 'undefined' && process.env?.DEBUG)
+										console.error('Schema resolution failed:', schemaState.error)
 									schemaUnsubscribe()
 									return
 								}
@@ -409,7 +422,7 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 
 									schemaUnsubscribe()
 								} catch (_error) {
-									if (process.env.DEBUG) console.error(_error)
+									if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_error)
 									schemaUnsubscribe()
 								}
 							})
@@ -417,7 +430,7 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 							// Store schema subscription for cleanup
 							schemaSubscriptions.set(key, schemaUnsubscribe)
 						} else {
-							if (process.env.DEBUG) {
+							if (typeof process !== 'undefined' && process.env?.DEBUG) {
 								/* no-op */
 							}
 						}
@@ -443,7 +456,7 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 						}
 					}
 				} catch (_error) {
-					if (process.env.DEBUG) console.error(_error)
+					if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_error)
 				}
 			}
 		}
@@ -580,7 +593,7 @@ async function processCoValueData(peer, coValueCore, schemaHint, options, _visit
 		try {
 			data = await applyMapTransform(peer, data, map, { timeoutMs })
 		} catch (_err) {
-			if (process.env.DEBUG) console.error(_err)
+			if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
 			// Continue with unmapped data
 		}
 	}
@@ -607,11 +620,7 @@ async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
 
 	if (cachedData) {
 		const hasQueryObjects =
-			cachedData &&
-			typeof cachedData === 'object' &&
-			Object.values(cachedData).some(
-				(value) => value && typeof value === 'object' && !Array.isArray(value) && value.schema,
-			)
+			cachedData && typeof cachedData === 'object' && Object.values(cachedData).some(isQueryObject)
 		const ctxStore = new ReactiveStore(cachedData)
 		const coValueCore = peer.getCoValue(coId)
 		if (coValueCore) {
@@ -736,11 +745,7 @@ async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
 		const data = await processAndCache(core)
 		setupMapDependencySubscriptions(core)
 		const hasQueryObjects =
-			data &&
-			typeof data === 'object' &&
-			Object.values(data).some(
-				(value) => value && typeof value === 'object' && !Array.isArray(value) && value.schema,
-			)
+			data && typeof data === 'object' && Object.values(data).some(isQueryObject)
 		if (hasQueryObjects) {
 			if (!queryCtxStore) {
 				queryCtxStore = new ReactiveStore(data)
@@ -763,11 +768,7 @@ async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
 		const data = await processAndCache(coValueCore)
 		setupMapDependencySubscriptions(coValueCore)
 		const hasQueryObjects =
-			data &&
-			typeof data === 'object' &&
-			Object.values(data).some(
-				(value) => value && typeof value === 'object' && !Array.isArray(value) && value.schema,
-			)
+			data && typeof data === 'object' && Object.values(data).some(isQueryObject)
 		if (hasQueryObjects) {
 			store._set(data)
 			const unified = await createUnifiedStore(peer, store, options)
@@ -1117,7 +1118,7 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 	if (!peer.isAvailable(coListCore)) {
 		// Trigger loading (non-blocking)
 		ensureCoValueLoaded(peer, coListId, { waitForAvailable: false }).catch((_err) => {
-			if (process.env.DEBUG) console.error(_err)
+			if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
 		})
 
 		// Set up subscription to update store when colist becomes available
@@ -1126,7 +1127,7 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 				if (core && peer.isAvailable(core)) {
 					// Colist is now available - trigger store update
 					updateStore().catch((_err) => {
-						if (process.env.DEBUG) console.error(_err)
+						if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
 					})
 				}
 			})
@@ -1195,7 +1196,7 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 							// Guard: Check if updateStore is defined (may not be initialized yet if subscription fires synchronously)
 							if (updateStore) {
 								updateStore().catch((_err) => {
-									if (process.env.DEBUG) console.error(_err)
+									if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
 								})
 							}
 						})
@@ -1208,13 +1209,13 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 						// Trigger updateStore when item becomes available
 						if (updateStore) {
 							updateStore().catch((_err) => {
-								if (process.env.DEBUG) console.error(_err)
+								if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
 							})
 						}
 					}
 				})
 				.catch((_err) => {
-					if (process.env.DEBUG) console.error(_err)
+					if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
 				})
 			return
 		}
@@ -1229,7 +1230,7 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 			// Guard: Check if updateStore is assigned before calling (prevents temporal dead zone error)
 			if (updateStore) {
 				updateStore().catch((_err) => {
-					if (process.env.DEBUG) console.error(_err)
+					if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
 				})
 			}
 		})
@@ -1249,7 +1250,7 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 		if (!peer.isAvailable(coListCore)) {
 			// CoList became unavailable - trigger reload
 			ensureCoValueLoaded(peer, coListId).catch((_err) => {
-				if (process.env.DEBUG) console.error(_err)
+				if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
 			})
 			return
 		}
@@ -1343,7 +1344,7 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 							try {
 								processedData = await applyMapTransform(peer, processedData, map, { timeoutMs })
 							} catch (_err) {
-								if (process.env.DEBUG) console.error(_err)
+								if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
 							}
 						}
 
@@ -1368,7 +1369,7 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 				// If item not available yet, subscription will fire when it becomes available
 			}
 		} catch (_e) {
-			if (process.env.DEBUG) console.error(_e)
+			if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_e)
 		}
 
 		// Update store with current results (progressive loading - may be partial, updates reactively)
@@ -1380,7 +1381,7 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 	const unsubscribeCoList = coListCore.subscribe(() => {
 		// Fire and forget - don't await async updateStore in subscription callback
 		updateStore().catch((_err) => {
-			if (process.env.DEBUG) console.error(_err)
+			if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
 		})
 	})
 
@@ -1404,7 +1405,7 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 						if (itemCore && !peer.isAvailable(itemCore)) {
 							// Trigger loading immediately (don't wait - parallel loading)
 							ensureCoValueLoaded(peer, itemId).catch((_err) => {
-								if (process.env.DEBUG) console.error(_err)
+								if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
 							})
 						}
 					}
@@ -1494,7 +1495,7 @@ async function readAllCoValues(peer, filter = null, options = {}) {
 			// Trigger loading for unavailable CoValues
 			if (!peer.isAvailable(coValueCore)) {
 				ensureCoValueLoaded(peer, coId).catch((_err) => {
-					if (process.env.DEBUG) console.error(_err)
+					if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
 				})
 				continue
 			}

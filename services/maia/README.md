@@ -2,7 +2,7 @@
 
 The main UI service for MaiaOS, featuring:
 - **Database Inspector** at `/` (root) - Explore Jazz CoValues with authentication
-- **Dynamic Vibe Rendering** - Load and render vibes dynamically (e.g., Todos Vibe via navigation)
+- **Dynamic Agent Rendering** - Load and render agents dynamically (e.g., Todos Agent via navigation)
 
 ## Structure
 
@@ -10,18 +10,9 @@ The main UI service for MaiaOS, featuring:
 services/maia/
 ├── index.html          # Main app (database inspector)
 ├── main.js             # Main app logic
-├── db-view.js          # Database viewer and dynamic vibe renderer
+├── db-view.js          # Database viewer and dynamic agent renderer
 ├── voice.js            # Voice page (real-time speech-to-text)
-├── vibes/
-│   └── todos/          # Todos vibe components
-│       ├── todos.vibe.maia
-│       ├── brand.style.maia
-│       ├── todo.style.maia
-│       ├── vibe/       # Vibe actor files
-│       ├── composite/  # Composite actor files
-│       ├── list/       # List actor files
-│       ├── list-item/  # List item actor files
-│       └── kanban/     # Kanban actor files
+└── # Agents live in libs/maia-agents/ (todos, chat, sparks, etc.)
 └── css/                # Global styles
 
 ```
@@ -29,7 +20,7 @@ services/maia/
 ## Dependencies
 
 - `@MaiaOS/loader` (via maia-distros) - MaiaOS kernel, auth
-- `@MaiaOS/maia-distros` - Pre-built bundles (maia-client.mjs, vibes.mjs)
+- `@MaiaOS/maia-distros` - Pre-built bundles (maia-client.mjs, agents.mjs)
 - `@MaiaOS/maia-voice` - On-device speech-to-text for the /voice route
 
 ## Development
@@ -52,28 +43,28 @@ Server runs on **http://localhost:4200**
 - **/** - Landing (or redirect to signin/me)
 - **/signin**, **/signup** - Authentication
 - **/me**, **/dashboard** - Database inspector (requires passkey auth)
-  - Includes dynamic vibe rendering - navigate to "Todos Vibe" in the sidebar to load vibes dynamically
+  - Includes dynamic agent rendering - navigate to "Todos" in the sidebar to load agents dynamically
 - **/voice** - Real-time speech-to-text (requires passkey auth)
   - On-device transcription via MoonshineJS; Start/Stop buttons, live transcript display
 
 ## Architecture
 
-### Dynamic Vibe Rendering
+### Dynamic Agent Rendering
 
-Vibes are loaded dynamically within the main maia app. When a user navigates to a vibe (e.g., "Todos Vibe" in the sidebar), the app:
+Agents are loaded dynamically within the main maia app. When a user navigates to an agent (e.g., "Todos" in the sidebar), the app:
 
-1. Calls `loadVibe('todos')` which sets `currentVibe = 'todos'`
+1. Calls `loadAgent('todos')` which sets `currentAgent = 'todos'`
 2. Renders a container div in the main view area
-3. Calls `maia.loadVibeFromAccount('todos', container)` to load the vibe from the account's vibes registry
-4. The vibe renders inline within the database inspector interface
+3. Calls `maia.loadAgentFromAccount('todos', container)` to load the agent from `account.registries.sparks[°Maia].agents`
+4. The agent renders inline within the database inspector interface
 
 **Example:**
 ```javascript
 // In services/maia/main.js
-async function loadVibe(vibeKey) {
-  currentVibe = vibeKey;
-  await renderAppInternal(); // Renders vibe container
-  // db-view.js handles actual vibe loading via maia.loadVibeFromAccount()
+async function loadAgent(agentKey) {
+  currentAgent = agentKey;
+  await renderAppInternal(); // Renders agent container
+  // db-view.js handles actual agent loading via maia.loadAgentFromAccount()
 }
 ```
 
@@ -100,7 +91,7 @@ const os = await MaiaOS.boot({ node, account });
 
 **Bun resolves imports** via `jsconfig.build.json`:
 - **Dev mode**: Source files served directly for HMR
-- **Production builds**: maia-distros bundles (maia-client.mjs, vibes.mjs)
+- **Production builds**: maia-distros bundles (maia-client.mjs, agents.mjs)
 
 Production builds run `distros:build` then `bun build.js`.
 

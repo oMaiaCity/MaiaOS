@@ -1,0 +1,59 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/humans/view/intent",
+	"content": {
+		"tag": "div",
+		"class": "stack",
+		"children": [
+			{
+				"tag": "div",
+				"class": "header-section",
+				"children": [
+					{
+						"tag": "h2",
+						"class": "humans-title",
+						"text": "Human Book"
+					}
+				]
+			},
+			{
+				"tag": "div",
+				"class": "humans-grid",
+				"$each": {
+					"items": "$humans",
+					"template": {
+						"tag": "div",
+						"class": "human-card",
+						"children": [
+							{
+								"tag": "div",
+								"class": "human-name",
+								"text": "$$profileName"
+							},
+							{
+								"tag": "div",
+								"class": "human-label",
+								"text": "Registry name"
+							},
+							{
+								"tag": "div",
+								"class": "human-value",
+								"text": "$$registryName"
+							},
+							{
+								"tag": "div",
+								"class": "human-label",
+								"text": "Account ID"
+							},
+							{
+								"tag": "div",
+								"class": "human-value human-value-id",
+								"text": "$$accountId"
+							}
+						]
+					}
+				}
+			}
+		]
+	}
+}

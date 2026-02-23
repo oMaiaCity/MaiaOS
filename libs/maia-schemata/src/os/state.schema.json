@@ -21,19 +21,19 @@
 						"oneOf": [
 							{
 								"type": "object",
-								"description": "Inline tool action object",
+								"description": "Inline actor action object",
 								"properties": {
-									"tool": {
+									"actor": {
 										"type": "string",
-										"description": "Tool identifier"
+										"description": "Actor identifier"
 									},
 									"payload": {
 										"type": "object",
-										"description": "Tool payload",
+										"description": "Actor payload",
 										"additionalProperties": true
 									}
 								},
-								"required": ["tool"]
+								"required": ["actor"]
 							},
 							{
 								"type": "object",
@@ -78,17 +78,17 @@
 										{
 											"type": "object",
 											"properties": {
-												"tool": {
+												"actor": {
 													"type": "string",
-													"description": "Tool identifier"
+													"description": "Actor identifier"
 												},
 												"payload": {
 													"type": "object",
-													"description": "Tool payload",
+													"description": "Actor payload",
 													"additionalProperties": true
 												}
 											},
-											"required": ["tool"]
+											"required": ["actor"]
 										},
 										{
 											"type": "object",
@@ -143,19 +143,19 @@
 						"oneOf": [
 							{
 								"type": "object",
-								"description": "Inline tool action object",
+								"description": "Inline actor action object",
 								"properties": {
-									"tool": {
+									"actor": {
 										"type": "string",
-										"description": "Tool identifier"
+										"description": "Actor identifier"
 									},
 									"payload": {
 										"type": "object",
-										"description": "Tool payload",
+										"description": "Actor payload",
 										"additionalProperties": true
 									}
 								},
-								"required": ["tool"]
+								"required": ["actor"]
 							},
 							{
 								"type": "object",
@@ -200,17 +200,17 @@
 										{
 											"type": "object",
 											"properties": {
-												"tool": {
+												"actor": {
 													"type": "string",
-													"description": "Tool identifier"
+													"description": "Actor identifier"
 												},
 												"payload": {
 													"type": "object",
-													"description": "Tool payload",
+													"description": "Actor payload",
 													"additionalProperties": true
 												}
 											},
-											"required": ["tool"]
+											"required": ["actor"]
 										},
 										{
 											"type": "object",
@@ -291,16 +291,16 @@
 													{
 														"type": "object",
 														"properties": {
-															"tool": {
+															"actor": {
 																"type": "string",
-																"description": "Tool identifier"
+																"description": "Actor identifier"
 															},
 															"payload": {
 																"type": "object",
 																"additionalProperties": true
 															}
 														},
-														"required": ["tool"]
+														"required": ["actor"]
 													},
 													{
 														"type": "object",

@@ -1,0 +1,213 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/chat/view/intent",
+	"content": {
+		"tag": "div",
+		"class": "chat-container",
+		"attrs": {
+			"data": {
+				"popupOpen": "$popupOpen"
+			}
+		},
+		"children": [
+			{
+				"tag": "div",
+				"class": "paper-area",
+				"$slot": "$currentPaper"
+			},
+			{
+				"tag": "button",
+				"class": "popup-button",
+				"attrs": {
+					"type": "button",
+					"data": {
+						"popupOpen": "$popupOpen"
+					},
+					"aria-label": "Open chat"
+				},
+				"children": [
+					{
+						"tag": "img",
+						"attrs": {
+							"src": "/brand/chat-bubble.svg",
+							"alt": "",
+							"class": "popup-button-icon"
+						}
+					}
+				],
+				"$on": {
+					"click": {
+						"send": "OPEN_POPUP",
+						"payload": {
+							"popupOpen": true
+						}
+					}
+				}
+			},
+			{
+				"tag": "div",
+				"class": "modal-overlay",
+				"attrs": {
+					"data": {
+						"popupOpen": "$popupOpen"
+					}
+				},
+				"children": [
+					{
+						"tag": "div",
+						"class": "modal-content liquid-glass",
+						"children": [
+							{
+								"tag": "div",
+								"class": "liquid-glass--bend"
+							},
+							{
+								"tag": "div",
+								"class": "liquid-glass--face"
+							},
+							{
+								"tag": "div",
+								"class": "liquid-glass--edge"
+							},
+							{
+								"tag": "div",
+								"class": "modal-inner liquid-glass-inner",
+								"children": [
+									{
+										"tag": "div",
+										"class": "messages-section",
+										"$slot": "$currentSection"
+									},
+									{
+										"tag": "div",
+										"class": "input-section",
+										"attrs": {
+											"data": {
+												"loading": "$isLoading"
+											}
+										},
+										"children": [
+											{
+												"tag": "div",
+												"class": "input-row",
+												"children": [
+													{
+														"tag": "button",
+														"class": "modal-close-button",
+														"attrs": {
+															"type": "button",
+															"aria-label": "Close"
+														},
+														"text": "×",
+														"$on": {
+															"click": {
+																"send": "CLOSE_POPUP",
+																"payload": {
+																	"popupOpen": false
+																}
+															}
+														}
+													},
+													{
+														"tag": "div",
+														"class": "input-container",
+														"children": [
+															{
+																"tag": "input",
+																"class": "input",
+																"attrs": {
+																	"type": "text",
+																	"placeholder": "Type your message...",
+																	"disabled": "$isLoading"
+																},
+																"value": "$inputText",
+																"$on": {
+																	"input": {
+																		"send": "UPDATE_INPUT",
+																		"payload": {
+																			"value": "@inputValue"
+																		}
+																	},
+																	"keydown": {
+																		"send": "SEND_MESSAGE",
+																		"payload": {
+																			"inputText": "@inputValue"
+																		},
+																		"key": "Enter"
+																	}
+																}
+															},
+															{
+																"tag": "button",
+																"class": "button send-button",
+																"attrs": {
+																	"type": "button",
+																	"disabled": "$isLoading",
+																	"aria-label": "Send"
+																},
+																"text": "➤",
+																"$on": {
+																	"click": {
+																		"send": "SEND_MESSAGE",
+																		"payload": {
+																			"inputText": "@inputValue"
+																		}
+																	}
+																}
+															}
+														]
+													}
+												]
+											},
+											{
+												"tag": "div",
+												"class": "thinking-badge",
+												"children": [
+													{
+														"tag": "span",
+														"class": "thinking-label",
+														"text": "Thinking"
+													},
+													{
+														"tag": "div",
+														"class": "thinking-bubbles",
+														"children": [
+															{
+																"tag": "span",
+																"class": "thinking-bubble"
+															},
+															{
+																"tag": "span",
+																"class": "thinking-bubble"
+															},
+															{
+																"tag": "span",
+																"class": "thinking-bubble"
+															}
+														]
+													}
+												]
+											}
+										]
+									}
+								]
+							}
+						]
+					},
+					{
+						"tag": "div",
+						"class": "modal-backdrop",
+						"$on": {
+							"click": {
+								"send": "CLOSE_POPUP",
+								"payload": {
+									"popupOpen": false
+								}
+							}
+						}
+					}
+				]
+			}
+		]
+	}
+}

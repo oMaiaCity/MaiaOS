@@ -1,0 +1,118 @@
+{
+	"$schema": "°Maia/schema/state",
+	"$id": "°Maia/chat/state/intent",
+	"initial": "idle",
+	"states": {
+		"idle": {
+			"on": {
+				"SEND_MESSAGE": {
+					"target": "sending",
+					"actions": [
+						{
+							"sendEvent": {
+								"target": "°Maia/chat/actor/messages",
+								"type": "SEND_MESSAGE",
+								"payload": {
+									"inputText": "$$inputText"
+								}
+							}
+						},
+						{
+							"updateContext": {
+								"inputText": ""
+							}
+						}
+					]
+				},
+				"UPDATE_INPUT": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"inputText": "$$value"
+							}
+						}
+					]
+				},
+				"STATUS_UPDATE": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"isLoading": "$$isLoading",
+								"hasError": "$$hasError",
+								"error": "$$error"
+							}
+						}
+					]
+				},
+				"OPEN_POPUP": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"popupOpen": "$$popupOpen"
+							}
+						}
+					]
+				},
+				"CLOSE_POPUP": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"popupOpen": "$$popupOpen"
+							}
+						}
+					]
+				}
+			}
+		},
+		"sending": {
+			"on": {
+				"STATUS_UPDATE": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"isLoading": "$$isLoading",
+								"hasError": "$$hasError",
+								"error": "$$error"
+							}
+						}
+					]
+				},
+				"UPDATE_INPUT": {
+					"target": "sending",
+					"actions": [
+						{
+							"updateContext": {
+								"inputText": "$$value"
+							}
+						}
+					]
+				},
+				"OPEN_POPUP": {
+					"target": "sending",
+					"actions": [
+						{
+							"updateContext": {
+								"popupOpen": "$$popupOpen"
+							}
+						}
+					]
+				},
+				"CLOSE_POPUP": {
+					"target": "sending",
+					"actions": [
+						{
+							"updateContext": {
+								"popupOpen": "$$popupOpen"
+							}
+						}
+					]
+				}
+			}
+		}
+	}
+}

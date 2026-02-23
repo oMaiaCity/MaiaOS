@@ -6,11 +6,11 @@
 >
 > **Status:** Design phase
 >
-> **Related:** [maia-tools](../../03_developers/08_maia-tools/README.md), [maia-script engines](../../03_developers/04_maia-engines/engines/00-overview.md)
+> **Related:** [maia-actors](../../03_developers/08_maia-actors/README.md), [maia-script engines](../../03_developers/04_maia-engines/engines/00-overview.md)
 
 ## Overview
 
-The MaiaOS tools engine ([maia-tools](../../03_developers/08_maia-tools/README.md), [maia-script engines](../../03_developers/04_maia-engines/engines/00-overview.md)) currently executes only **native ES module tools** with full host access. This document outlines a design to run **user-written tools** in isolated QuickJS WebAssembly sandboxes, allowing users to create custom tools that integrate with the system via a capability-based IPC bridge.
+The MaiaOS tools engine ([maia-actors](../../03_developers/08_maia-actors/README.md), [maia-script engines](../../03_developers/04_maia-engines/engines/00-overview.md)) currently executes only **native ES module tools** with full host access. This document outlines a design to run **user-written tools** in isolated QuickJS WebAssembly sandboxes, allowing users to create custom tools that integrate with the system via a capability-based IPC bridge.
 
 ## Goals
 
@@ -196,6 +196,6 @@ export default {
 
 ## Related Documents
 
-- [maia-tools README](../../03_developers/08_maia-tools/README.md)
+- [maia-actors README](../../03_developers/08_maia-actors/README.md)
 - [maia-script engines](../../03_developers/04_maia-engines/engines/00-overview.md)
 - [Skills (AI Agent Interface)](./skills.md) — tool discovery for AI agents

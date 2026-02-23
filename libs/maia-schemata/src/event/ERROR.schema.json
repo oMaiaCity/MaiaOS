@@ -1,0 +1,26 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/event/ERROR",
+	"title": "°Maia/schema/event/ERROR",
+	"description": "Message type for operation errors. Aligned with OperationResult createErrorEntry shape.",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {
+		"errors": {
+			"type": "array",
+			"description": "Structured error entries. Same shape as OperationResult.",
+			"items": {
+				"type": "object",
+				"required": ["type", "message"],
+				"properties": {
+					"type": { "type": "string", "description": "Error type: schema | permission | structural" },
+					"message": { "type": "string", "description": "Error message" },
+					"path": { "type": "string", "description": "Optional path (e.g. /field)" }
+				}
+			}
+		}
+	},
+	"required": ["errors"],
+	"additionalProperties": false
+}

@@ -65,5 +65,5 @@ libs/maia-docs/04_agents/LLM_*.md
 # maia-distros output (built during Docker/production build only, not used in dev)
 libs/maia-distros/output/
 
-# maia-vibes dist (build output, not used in dev - we use source)
-libs/maia-vibes/dist/
+# maia-agents dist (build output, not used in dev - we use source)
+libs/maia-agents/dist/

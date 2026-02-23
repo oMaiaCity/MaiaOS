@@ -1,4 +1,3 @@
-import { isSchemaRef } from '@MaiaOS/schemata'
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver'
 import {
 	createErrorEntry,
@@ -11,7 +10,7 @@ import { RENDER_STATES } from './actor.engine.js'
 
 /**
  * StateEngine - XState-like State Machine Interpreter
- * All events flow: inbox → processMessages() → StateEngine.send() → state machine → context
+ * All events flow: inbox → processEvents() → StateEngine.send() → state machine → context
  *
  * ARCHITECTURAL BOUNDARIES:
  * - State Engine ONLY updates state transitions and context
@@ -21,10 +20,9 @@ import { RENDER_STATES } from './actor.engine.js'
  * - For reactive UI behavior (like auto-focus), use data attributes in views (e.g., data-auto-focus)
  */
 export class StateEngine {
-	constructor(toolEngine, evaluator, actorEngine = null) {
-		this.toolEngine = toolEngine
+	constructor(evaluator, actorOps = null) {
 		this.evaluator = evaluator
-		this.actorEngine = actorEngine // ActorEngine reference (set by kernel after ActorEngine creation)
+		this.actorOps = actorOps // Injected by Loader; ActorEngine implements ActorOps
 		this.machines = new Map() // machineId → machine instance
 		this.dataEngine = null
 	}
@@ -73,12 +71,6 @@ export class StateEngine {
 		}
 		const rawTransition = currentStateDef.on?.[event]
 		if (!rawTransition) {
-			console.warn('[StateEngine] send: no transition for event', {
-				machineId,
-				currentState: machine.currentState,
-				event,
-				availableEvents: Object.keys(currentStateDef.on || {}),
-			})
 			return false
 		}
 		// Support single transition or array (guarded transitions - first match wins)
@@ -143,9 +135,9 @@ export class StateEngine {
 		machine.currentState = targetState
 
 		// Persist currentState to context CoValue so it survives page reload / reconnect
-		if (machine.actor.contextCoId && machine.actor.actorEngine) {
+		if (machine.actor.contextCoId && machine.actor.actorOps) {
 			try {
-				await machine.actor.actorEngine.updateContextCoValue(machine.actor, {
+				await machine.actor.actorOps.updateContextCoValue(machine.actor, {
 					_currentState: targetState,
 				})
 			} catch (_e) {}
@@ -160,16 +152,19 @@ export class StateEngine {
 			await this._executeEntry(machine, targetState)
 		}
 
+		// Same-state transitions with actions (e.g. LOAD_ACTOR updating context) need rerender
+		const hadActions = Array.isArray(actions) ? actions.length > 0 : !!actions
 		const shouldRerender =
-			previousState !== targetState &&
+			(previousState !== targetState || hadActions) &&
 			targetState !== 'dragging' &&
 			!machine._isInitialCreation &&
 			!(previousState === 'init' && targetState === 'idle') &&
+			machine.actor.viewDef &&
 			machine.actor._renderState === RENDER_STATES.READY &&
-			machine.actor.actorEngine
+			machine.actor.actorOps
 		if (shouldRerender) {
 			machine.actor._renderState = RENDER_STATES.UPDATING
-			machine.actor.actorEngine._scheduleRerender(machine.actor.id)
+			machine.actor.actorOps._scheduleRerender(machine.actor.id)
 		}
 	}
 
@@ -271,14 +266,24 @@ export class StateEngine {
 				return
 			}
 
-			if (actions.tool) {
+			// Actor-to-actor inbox forwarding: { actor, payload } or { sendToActor, payload }
+			// Delivers event to target actor's inbox via deliverEvent (not local tool invocation)
+			const actorRef = actions.actor ?? actions.sendToActor
+			if (actorRef) {
 				const isEntry = type === 'entry'
-				const result = await this._invokeTool(machine, actions.tool, actions.payload, true, isEntry)
-				if (result && isSuccessResult(result)) {
+				const result = await this._invokeActor(machine, actorRef, actions.payload ?? {}, true, isEntry)
+				if (result && isSuccessResult(result) && !result.inboxDeferred) {
 					machine.lastToolResult = result.data
 				}
 
-				if (isEntry && isSuccessResult(result) && stateDef.on?.SUCCESS && machine.actor?.actorEngine) {
+				// Inbox-deferred: service actor will reply SUCCESS/ERROR via inbox. Do NOT auto-deliver.
+				if (
+					isEntry &&
+					isSuccessResult(result) &&
+					!result.inboxDeferred &&
+					stateDef.on?.SUCCESS &&
+					machine.actor?.actorOps
+				) {
 					const originalEventPayload = machine.eventPayload || {}
 					const cleanedResult =
 						machine.lastToolResult != null ? this._cleanToolResult(machine.lastToolResult) : null
@@ -287,7 +292,7 @@ export class StateEngine {
 						result: cleanedResult,
 					}
 					try {
-						await machine.actor.actorEngine.deliverEvent(
+						await machine.actor.actorOps.deliverEvent(
 							machine.actor.id,
 							machine.actor.id,
 							'SUCCESS',
@@ -302,7 +307,7 @@ export class StateEngine {
 				await this._executeActions(machine, actions, machine.eventPayload)
 
 				// CRITICAL: Always send SUCCESS for entry actions if handler exists
-				const conditionCheck = type === 'entry' && stateDef.on?.SUCCESS && machine.actor?.actorEngine
+				const conditionCheck = type === 'entry' && stateDef.on?.SUCCESS && machine.actor?.actorOps
 
 				if (conditionCheck) {
 					// Include original event payload AND tool result in SUCCESS so $$id and $$result references work
@@ -315,7 +320,7 @@ export class StateEngine {
 						result: cleanedResult, // CRITICAL: result must come AFTER spread to override any result in originalEventPayload
 					}
 					try {
-						await machine.actor.actorEngine.deliverEvent(
+						await machine.actor.actorOps.deliverEvent(
 							machine.actor.id,
 							machine.actor.id,
 							'SUCCESS',
@@ -328,7 +333,7 @@ export class StateEngine {
 				// ARCHITECTURE: Preserve original eventPayload for SUCCESS events so $$id references work
 				const originalEventPayload = machine.eventPayload || {}
 				await this._executeActions(machine, actions, machine.eventPayload)
-				if (type === 'entry' && stateDef.on?.SUCCESS && machine.actor?.actorEngine) {
+				if (type === 'entry' && stateDef.on?.SUCCESS && machine.actor?.actorOps) {
 					// Include original event payload AND tool result in SUCCESS so $$id and $$result references work
 					// Clean tool result to remove CoJSON metadata (groupInfo) - it's metadata, not data
 					const cleanedResult = machine.lastToolResult
@@ -338,7 +343,7 @@ export class StateEngine {
 						...originalEventPayload,
 						result: cleanedResult, // CRITICAL: result must come AFTER spread to override any result in originalEventPayload
 					}
-					await machine.actor.actorEngine.deliverEvent(
+					await machine.actor.actorOps.deliverEvent(
 						machine.actor.id,
 						machine.actor.id,
 						'SUCCESS',
@@ -403,8 +408,14 @@ export class StateEngine {
 				)
 				// Collect updates in batch instead of writing immediately
 				Object.assign(contextUpdates, this._sanitizeUpdates(updates, machine.lastToolResult || {}))
-			} else if (action?.tool) {
-				const result = await this._invokeTool(machine, action.tool, action.payload, false)
+			} else if (action?.sendEvent) {
+				await this._executeSendEvent(machine, action.sendEvent, payload)
+			} else if (action?.function === true) {
+				// Actor function action: invoke this actor's function, deliver SUCCESS/ERROR to caller
+				await this._executeFunctionAction(machine)
+			} else if (action?.actor || action?.sendToActor) {
+				const actorRef = action.actor ?? action.sendToActor
+				const result = await this._invokeActor(machine, actorRef, action.payload ?? {}, false)
 				if (result && isSuccessResult(result)) {
 					machine.lastToolResult = result.data
 				}
@@ -422,8 +433,8 @@ export class StateEngine {
 		}
 
 		// Single CoValue write for all batched context updates
-		if (Object.keys(contextUpdates).length > 0 && machine.actor?.actorEngine) {
-			await machine.actor.actorEngine.updateContextCoValue(machine.actor, contextUpdates)
+		if (Object.keys(contextUpdates).length > 0 && machine.actor?.actorOps) {
+			await machine.actor.actorOps.updateContextCoValue(machine.actor, contextUpdates)
 		}
 	}
 
@@ -473,27 +484,10 @@ export class StateEngine {
 				continue
 			}
 
-			// Resolve schema references to co-ids if needed (for read operations)
-			if (params.schema && typeof params.schema === 'string' && !params.schema.startsWith('co_z')) {
-				if (isSchemaRef(params.schema)) {
-					try {
-						const resolved = await this.dataEngine.execute({
-							op: 'resolve',
-							humanReadableKey: params.schema,
-						})
-						if (resolved?.startsWith('co_z')) {
-							params.schema = resolved
-						} else {
-							console.warn('[StateEngine] mapData schema resolve failed:', params.schema)
-							continue
-						}
-					} catch (err) {
-						console.error('[StateEngine] mapData schema resolve error:', params.schema, err?.message)
-						continue
-					}
-				} else {
-					continue
-				}
+			// mapData schema must be co-id (from transformed configs)
+			if (params.schema && (typeof params.schema !== 'string' || !params.schema.startsWith('co_z'))) {
+				console.warn('[StateEngine] mapData schema must be co-id, skipping:', params.schema)
+				continue
 			}
 
 			// Execute operation via operations engine
@@ -513,10 +507,10 @@ export class StateEngine {
 					// For dynamic queries from mapData, we need to update the context CoValue with the query object
 					// Backend unified store will then handle merging automatically
 					const actor = machine.actor
-					if (actor?.contextCoId && actor.contextSchemaCoId && this.actorEngine) {
+					if (actor?.contextCoId && actor.contextSchemaCoId && this.actorOps) {
 						const queryConfig = mapData[contextKey]
 						if (queryConfig && queryConfig.op === 'read' && queryConfig.schema) {
-							await this.actorEngine.updateContextCoValue(actor, {
+							await this.actorOps.updateContextCoValue(actor, {
 								[contextKey]: {
 									schema: queryConfig.schema,
 									...(queryConfig.filter ? { filter: queryConfig.filter } : {}),
@@ -540,7 +534,7 @@ export class StateEngine {
 			clearLoading: { isLoading: false },
 		}
 		const updates = commonActions[actionName]
-		if (updates) await machine.actor.actorEngine.updateContextCoValue(machine.actor, updates)
+		if (updates) await machine.actor.actorOps.updateContextCoValue(machine.actor, updates)
 
 		// Custom action: sendToDetailActor - sends LOAD_ACTOR message to detail actor via inbox
 		if (actionName === 'sendToDetailActor') {
@@ -549,15 +543,107 @@ export class StateEngine {
 			if (sparkId && machine.actor?.children?.detail) {
 				const detailActor = machine.actor.children.detail
 				// Send generic LOAD_ACTOR message to detail actor's inbox (proper actor-to-actor communication)
-				await machine.actor.actorEngine.deliverEvent(machine.actor.id, detailActor.id, 'LOAD_ACTOR', {
+				await machine.actor.actorOps.deliverEvent(machine.actor.id, detailActor.id, 'LOAD_ACTOR', {
 					id: sparkId,
 				})
 			}
 		}
 	}
 
-	async _invokeTool(machine, toolName, payload = {}, autoTransition = true, isEntryAction = false) {
-		const originalEventPayload = machine.eventPayload || {}
+	/**
+	 * Execute sendEvent action: deliver event to target actor's inbox (actor primitive).
+	 * Replaces @core/publishMessage - no service actor needed.
+	 */
+	async _executeSendEvent(machine, config, payload = {}) {
+		if (!machine?.actor?.actorOps) return
+		const evaluated = await this._evaluatePayload(
+			config,
+			machine.actor.context,
+			payload,
+			machine.lastToolResult,
+			machine.actor,
+		)
+		const { target, type, payload: eventPayload = {} } = evaluated
+		if (!target || !type) return
+		if (typeof target !== 'string' || !target.startsWith('co_z')) {
+			throw new Error(
+				`[StateEngine] sendEvent target must be co-id (transformed at seed). Got: ${target}. ` +
+					'Ensure schema transformer runs on all state configs during seeding.',
+			)
+		}
+		await machine.actor.actorOps.deliverEvent(
+			machine.actor.id,
+			target,
+			type,
+			eventPayload && typeof eventPayload === 'object' ? eventPayload : {},
+		)
+	}
+
+	/**
+	 * Execute function action: actor invokes its own function, delivers SUCCESS/ERROR to caller.
+	 * Used when state machine entry has {"function": true}. Works for any actor with function + code.
+	 */
+	async _executeFunctionAction(machine) {
+		const role = machine.actor?.config?.role
+		if (
+			!role ||
+			typeof machine.actor?.executableFunction?.execute !== 'function' ||
+			!machine.actor?.actorOps
+		) {
+			return
+		}
+
+		const callerId = machine.actor._lastEventSource
+		const payload = machine.eventPayload || {}
+
+		try {
+			const rawResult = await machine.actor.executableFunction.execute(machine.actor, payload)
+			if (!isSuccessResult(rawResult)) {
+				if (callerId) {
+					await machine.actor.actorOps.deliverEvent(machine.actor.id, callerId, 'ERROR', {
+						errors: rawResult.errors,
+					})
+				}
+				await machine.actor.actorOps.deliverEvent(machine.actor.id, machine.actor.id, 'ERROR', {
+					errors: rawResult.errors,
+				})
+				return
+			}
+			const data = rawResult.data
+			machine.lastToolResult = data
+			const cleanedResult = data != null ? this._cleanToolResult(data) : null
+			const successPayload = { ...(machine.eventPayload || {}), result: cleanedResult }
+			if (callerId) {
+				await machine.actor.actorOps.deliverEvent(machine.actor.id, callerId, 'SUCCESS', successPayload)
+			}
+			await machine.actor.actorOps.deliverEvent(
+				machine.actor.id,
+				machine.actor.id,
+				'SUCCESS',
+				successPayload,
+			)
+		} catch (error) {
+			const errors = error?.errors ?? [
+				createErrorEntry(isPermissionError(error) ? 'permission' : 'structural', error?.message),
+			]
+			if (callerId) {
+				await machine.actor.actorOps.deliverEvent(machine.actor.id, callerId, 'ERROR', {
+					errors,
+				})
+			}
+			await machine.actor.actorOps.deliverEvent(machine.actor.id, machine.actor.id, 'ERROR', {
+				errors,
+			})
+		}
+	}
+
+	async _invokeActor(
+		machine,
+		actorName,
+		payload = {},
+		autoTransition = true,
+		_isEntryAction = false,
+	) {
 		const stateDef = machine.definition.states[machine.currentState]
 
 		try {
@@ -571,17 +657,13 @@ export class StateEngine {
 			)
 			// Guard: removeSparkMember requires memberId from event payload ($$memberId)
 			// Skip tool call when missing to avoid operation failure and repeated ERROR transitions
-			if (
-				(toolName === '@sparks' || toolName === '@db') &&
-				evaluatedPayload?.op === 'removeSparkMember' &&
-				!evaluatedPayload?.memberId
-			) {
+			if (evaluatedPayload?.op === 'removeSparkMember' && !evaluatedPayload?.memberId) {
 				console.warn(
 					'[StateEngine] removeSparkMember skipped: memberId required but missing from event payload',
 					{ machineId: machine.id, eventPayload: machine.eventPayload },
 				)
-				if (autoTransition && stateDef?.on?.ERROR && machine.actor?.actorEngine) {
-					await machine.actor.actorEngine.deliverEvent(machine.actor.id, machine.actor.id, 'ERROR', {
+				if (autoTransition && stateDef?.on?.ERROR && machine.actor?.actorOps) {
+					await machine.actor.actorOps.deliverEvent(machine.actor.id, machine.actor.id, 'ERROR', {
 						errors: [createErrorEntry('schema', '[RemoveSparkMemberOperation] memberId required')],
 					})
 				}
@@ -590,98 +672,127 @@ export class StateEngine {
 				])
 			}
 
-			// Guard: addSparkMember requires memberId (from $$agentId) - skip when missing/empty
+			// Guard: addSparkMember requires memberId — generic payload check
 			if (
-				(toolName === '@sparks' || toolName === '@db') &&
 				evaluatedPayload?.op === 'addSparkMember' &&
 				(!evaluatedPayload?.memberId ||
 					typeof evaluatedPayload.memberId !== 'string' ||
 					!evaluatedPayload.memberId.trim())
 			) {
-				if (autoTransition && stateDef?.on?.ERROR && machine.actor?.actorEngine) {
-					await machine.actor.actorEngine.deliverEvent(machine.actor.id, machine.actor.id, 'ERROR', {
+				if (autoTransition && stateDef?.on?.ERROR && machine.actor?.actorOps) {
+					await machine.actor.actorOps.deliverEvent(machine.actor.id, machine.actor.id, 'ERROR', {
 						errors: [createErrorEntry('schema', 'Please enter an agent ID')],
 					})
 				}
 				return createErrorResult([createErrorEntry('schema', 'Please enter an agent ID')])
 			}
 
-			// Forward idempotencyKey from event payload to @db create (inbox message deduplication)
+			// Guard: createSpark requires name — generic payload check
 			if (
-				toolName === '@db' &&
-				evaluatedPayload?.op === 'create' &&
-				machine.eventPayload?.idempotencyKey
+				evaluatedPayload?.op === 'createSpark' &&
+				(!evaluatedPayload?.name ||
+					typeof evaluatedPayload.name !== 'string' ||
+					!evaluatedPayload.name.trim())
 			) {
+				if (autoTransition && stateDef?.on?.ERROR && machine.actor?.actorOps) {
+					await machine.actor.actorOps.deliverEvent(machine.actor.id, machine.actor.id, 'ERROR', {
+						errors: [createErrorEntry('schema', 'Please enter a spark name')],
+					})
+				}
+				return createErrorResult([createErrorEntry('schema', 'Please enter a spark name')])
+			}
+
+			// Forward idempotencyKey from event payload to create operations (inbox message deduplication)
+			if (evaluatedPayload?.op === 'create' && machine.eventPayload?.idempotencyKey) {
 				evaluatedPayload = { ...evaluatedPayload, idempotencyKey: machine.eventPayload.idempotencyKey }
 			}
 
-			// Resolve schema refs for @db tool (vibe may have human-readable schema from source)
+			// actorName must be co-id (from transformed state machine sendToActor/actor)
+			if (typeof actorName !== 'string' || !actorName.startsWith('co_z')) {
+				throw new Error(`[StateEngine] _invokeActor: actorName must be co-id, got: ${actorName}`)
+			}
+			const targetCoId = actorName
+
+			// Payload schema must be co-id (from transformed configs)
 			if (
-				toolName === '@db' &&
 				evaluatedPayload?.schema &&
-				typeof evaluatedPayload.schema === 'string' &&
-				!evaluatedPayload.schema.startsWith('co_z') &&
-				isSchemaRef(evaluatedPayload.schema) &&
-				this.dataEngine
+				(typeof evaluatedPayload.schema !== 'string' || !evaluatedPayload.schema.startsWith('co_z'))
 			) {
-				try {
-					const resolved = await this.dataEngine.execute({
-						op: 'resolve',
-						humanReadableKey: evaluatedPayload.schema,
-					})
-					if (resolved?.startsWith('co_z')) {
-						evaluatedPayload = { ...evaluatedPayload, schema: resolved }
-					}
-				} catch (resolveErr) {
-					console.error(
-						'[StateEngine] Schema resolve for @db payload failed:',
-						evaluatedPayload.schema,
-						resolveErr?.message,
-					)
-				}
-			}
-			const rawResult = await this.toolEngine.execute(toolName, machine.actor, evaluatedPayload)
-
-			// Tools return OperationResult: { ok: true, data } | { ok: false, errors }
-			if (!isSuccessResult(rawResult)) {
-				if (autoTransition && stateDef?.on?.ERROR && machine.actor?.actorEngine) {
-					await machine.actor.actorEngine.deliverEvent(machine.actor.id, machine.actor.id, 'ERROR', {
-						errors: rawResult.errors,
-					})
-				} else if (autoTransition && !stateDef?.on?.ERROR) {
-				}
-				return rawResult
+				throw new Error(`[StateEngine] Payload schema must be co-id, got: ${evaluatedPayload.schema}`)
 			}
 
-			const data = rawResult.data
-			machine.lastToolResult = data
-
-			if (autoTransition && !isEntryAction && stateDef?.on?.SUCCESS && machine.actor?.actorEngine) {
-				const cleanedResult = data != null ? this._cleanToolResult(data) : null
-				await machine.actor.actorEngine.deliverEvent(machine.actor.id, machine.actor.id, 'SUCCESS', {
-					...originalEventPayload,
-					result: cleanedResult,
+			// Inbox-based invocation: deliver to service actor's inbox. Do NOT deliver SUCCESS here.
+			// Service actor will reply with SUCCESS/ERROR to caller when done. Caller must stay in state
+			const actorConfig = this.actorOps?.runtime
+				? await this.actorOps.runtime.getActorConfig(targetCoId)
+				: await this._getActorConfigFromDb(targetCoId)
+			const eventType = actorConfig?.interface?.[0]
+			if (!eventType || !machine.actor?.actorOps) {
+				throw new Error(`[StateEngine] Cannot invoke actor: no inbox routing found for ${targetCoId}`)
+			}
+			if (typeof window !== 'undefined') {
+				console.log('[sendToActor] 1.stateEngine: delivering', {
+					eventType,
+					sender: machine.actor.id,
+					targetCoId,
 				})
 			}
-			return rawResult
+			await machine.actor.actorOps.deliverEvent(
+				machine.actor.id,
+				targetCoId,
+				eventType,
+				evaluatedPayload,
+			)
+			// Return "deferred" - caller must NOT auto-deliver SUCCESS; wait for service actor's reply
+			return { ok: true, data: null, inboxDeferred: true }
 		} catch (error) {
 			console.error(
-				'[StateEngine] Tool failed:',
-				toolName,
+				'[StateEngine] Actor invocation failed:',
+				actorName,
 				'machine:',
 				machine?.actor?.id,
 				error?.message ?? error,
 			)
-			if (autoTransition && stateDef?.on?.ERROR && machine.actor?.actorEngine) {
+			if (autoTransition && stateDef?.on?.ERROR && machine.actor?.actorOps) {
 				const errors = error.errors ?? [
 					createErrorEntry(isPermissionError(error) ? 'permission' : 'structural', error.message),
 				]
-				await machine.actor.actorEngine.deliverEvent(machine.actor.id, machine.actor.id, 'ERROR', {
+				await machine.actor.actorOps.deliverEvent(machine.actor.id, machine.actor.id, 'ERROR', {
 					errors,
 				})
 			} else if (autoTransition && !stateDef?.on?.ERROR) {
 			}
 			throw error
+		}
+	}
+
+	/**
+	 * Load actor config from CoJSON DB by co-id.
+	 * @param {string} actorCoId - Actor co-id (co_z...)
+	 * @returns {Promise<Object|null>} Actor config or null
+	 */
+	async _getActorConfigFromDb(actorCoId) {
+		if (!this.dataEngine?.peer) return null
+		if (typeof actorCoId !== 'string' || !actorCoId.startsWith('co_z')) {
+			throw new Error(
+				`[StateEngine] _getActorConfigFromDb: actorCoId must be co-id, got: ${actorCoId}`,
+			)
+		}
+		try {
+			const schemaCoId = await this.dataEngine.peer.resolve(
+				{ fromCoValue: actorCoId },
+				{ returnType: 'coId' },
+			)
+			if (!schemaCoId) return null
+			const store = await this.dataEngine.execute({
+				op: 'read',
+				schema: schemaCoId,
+				key: actorCoId,
+			})
+			const config = store?.value
+			return config && !config.error ? config : null
+		} catch (_e) {
+			return null
 		}
 	}
 

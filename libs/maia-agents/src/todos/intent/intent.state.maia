@@ -1,0 +1,204 @@
+{
+	"$schema": "°Maia/schema/state",
+	"$id": "°Maia/todos/state/intent",
+	"initial": "idle",
+	"states": {
+		"idle": {
+			"on": {
+				"CREATE_BUTTON": {
+					"target": "creating"
+				},
+				"SWITCH_VIEW": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"viewMode": "$$viewMode"
+							}
+						},
+						{
+							"updateContext": {
+								"currentView": {
+									"$if": {
+										"condition": {
+											"$eq": [
+												"$$viewMode",
+												"list"
+											]
+										},
+										"then": "@list",
+										"else": "@comingSoon"
+									}
+								}
+							}
+						},
+						{
+							"updateContext": {
+								"listButtonActive": {
+									"$eq": [
+										"$$viewMode",
+										"list"
+									]
+								}
+							}
+						},
+						{
+							"updateContext": {
+								"comingSoonButtonActive": {
+									"$eq": [
+										"$$viewMode",
+										"comingSoon"
+									]
+								}
+							}
+						}
+					]
+				},
+				"UPDATE_INPUT": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"newTodoText": "$$value"
+							}
+						}
+					]
+				},
+				"SUCCESS": {
+					"target": "idle"
+				},
+				"ERROR": {
+					"target": "idle"
+				}
+			}
+		},
+		"creating": {
+			"entry": {
+				"sendToActor": "°Maia/actor/db",
+				"payload": {
+					"op": "create",
+					"schema": "°Maia/schema/data/todos",
+					"data": {
+						"text": "$$value",
+						"done": false
+					}
+				}
+			},
+			"on": {
+				"UPDATE_INPUT": {
+					"target": "idle"
+				},
+				"CREATE_BUTTON": {
+					"target": "creating"
+				},
+				"SWITCH_VIEW": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"viewMode": "$$viewMode"
+							}
+						},
+						{
+							"updateContext": {
+								"currentView": {
+									"$if": {
+										"condition": {
+											"$eq": [
+												"$$viewMode",
+												"list"
+											]
+										},
+										"then": "@list",
+										"else": "@comingSoon"
+									}
+								}
+							}
+						},
+						{
+							"updateContext": {
+								"listButtonActive": {
+									"$eq": [
+										"$$viewMode",
+										"list"
+									]
+								}
+							}
+						},
+						{
+							"updateContext": {
+								"comingSoonButtonActive": {
+									"$eq": [
+										"$$viewMode",
+										"comingSoon"
+									]
+								}
+							}
+						}
+					]
+				},
+				"SUCCESS": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"newTodoText": ""
+							}
+						}
+					]
+				},
+				"ERROR": "error"
+			}
+		},
+		"error": {
+			"entry": {
+				"updateContext": {
+					"error": "$$errors.0.message"
+				}
+			},
+			"on": {
+				"CREATE_BUTTON": {
+					"target": "creating",
+					"actions": [
+						{
+							"updateContext": {
+								"error": null
+							}
+						}
+					]
+				},
+				"UPDATE_INPUT": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"error": null,
+								"newTodoText": "$$value"
+							}
+						}
+					]
+				},
+				"RETRY": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"error": null
+							}
+						}
+					]
+				},
+				"DISMISS": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"error": null
+							}
+						}
+					]
+				}
+			}
+		}
+	}
+}

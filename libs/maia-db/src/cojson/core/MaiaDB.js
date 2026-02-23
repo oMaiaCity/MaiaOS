@@ -158,10 +158,10 @@ export class MaiaDB {
 			returnType: 'coId',
 		})
 		const osSchemaCoId = await resolve(this, '°Maia/schema/os/os-registry', { returnType: 'coId' })
-		const vibesSchemaCoId = await resolve(this, '°Maia/schema/os/vibes-registry', {
+		const agentsSchemaCoId = await resolve(this, '°Maia/schema/os/agents-registry', {
 			returnType: 'coId',
 		})
-		if (!sparkSchemaCoId || !capabilitiesSchemaCoId || !osSchemaCoId || !vibesSchemaCoId) {
+		if (!sparkSchemaCoId || !capabilitiesSchemaCoId || !osSchemaCoId || !agentsSchemaCoId) {
 			throw new Error('[MaiaDB] Spark scaffold schemas not found')
 		}
 		const ctx = { node: this.node, account: this.account, guardian: childGroup }
@@ -178,8 +178,8 @@ export class MaiaDB {
 			data: { capabilities: capabilities.id },
 			dataEngine: this.dbEngine,
 		})
-		const { coValue: vibes } = await createCoValueForSpark(ctx, null, {
-			schema: vibesSchemaCoId,
+		const { coValue: agents } = await createCoValueForSpark(ctx, null, {
+			schema: agentsSchemaCoId,
 			cotype: 'comap',
 			data: {},
 			dataEngine: this.dbEngine,
@@ -187,7 +187,7 @@ export class MaiaDB {
 		const { coValue: sparkCoMap } = await createCoValueForSpark(ctx, null, {
 			schema: sparkSchemaCoId,
 			cotype: 'comap',
-			data: { name: normalizedName, os: os.id, vibes: vibes.id },
+			data: { name: normalizedName, os: os.id, agents: agents.id },
 			dataEngine: this.dbEngine,
 		})
 		return { id: sparkCoMap.id, name: normalizedName, guardian: childGroup.id }
@@ -286,10 +286,10 @@ export class MaiaDB {
 
 	async ensureAccountOsReady(options = {}) {
 		const { timeoutMs = 10000 } = options
-		if (!this.account && process.env.DEBUG) return false
+		if (!this.account && typeof process !== 'undefined' && process.env?.DEBUG) return false
 		const osId = await groups.getSparkOsId(this, '°Maia')
 		if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
-			if (process.env.DEBUG) return false
+			if (typeof process !== 'undefined' && process.env?.DEBUG) return false
 		}
 		const osStore = await universalRead(this, osId, null, null, null, {
 			deepResolve: false,
@@ -298,21 +298,21 @@ export class MaiaDB {
 		try {
 			await waitForStoreReady(osStore, osId, timeoutMs)
 		} catch (_error) {
-			if (process.env.DEBUG) return false
+			if (typeof process !== 'undefined' && process.env?.DEBUG) return false
 		}
 		const osData = osStore.value
 		if (!osData || osData.error) {
-			if (process.env.DEBUG) return false
+			if (typeof process !== 'undefined' && process.env?.DEBUG) return false
 		}
 		let schematasId = osData.schematas
 		if (!schematasId || typeof schematasId !== 'string' || !schematasId.startsWith('co_z')) {
 			const osCore = this.getCoValue(osId)
 			if (!osCore || !osCore.isAvailable()) {
-				if (process.env.DEBUG) return false
+				if (typeof process !== 'undefined' && process.env?.DEBUG) return false
 			}
 			const osContent = this.getCurrentContent(osCore)
 			if (!osContent || typeof osContent.set !== 'function') {
-				if (process.env.DEBUG) return false
+				if (typeof process !== 'undefined' && process.env?.DEBUG) return false
 			}
 			const schematasSchemaCoId = await resolve(this, '°Maia/schema/os/schematas-registry', {
 				returnType: 'coId',
@@ -338,7 +338,7 @@ export class MaiaDB {
 			} catch (_error) {}
 		}
 		if (!schematasId || typeof schematasId !== 'string' || !schematasId.startsWith('co_z')) {
-			if (process.env.DEBUG) return false
+			if (typeof process !== 'undefined' && process.env?.DEBUG) return false
 		}
 		const schematasStore = await universalRead(this, schematasId, null, null, null, {
 			deepResolve: false,
@@ -347,11 +347,11 @@ export class MaiaDB {
 		try {
 			await waitForStoreReady(schematasStore, schematasId, timeoutMs)
 		} catch (_error) {
-			if (process.env.DEBUG) return false
+			if (typeof process !== 'undefined' && process.env?.DEBUG) return false
 		}
 		const schematasData = schematasStore.value
 		if (!schematasData || schematasData.error) {
-			if (process.env.DEBUG) return false
+			if (typeof process !== 'undefined' && process.env?.DEBUG) return false
 		}
 		return true
 	}

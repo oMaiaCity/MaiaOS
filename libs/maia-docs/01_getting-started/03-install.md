@@ -218,7 +218,7 @@ my-app/
 - **Examples:** `libs/maia-vibes/src/todos/`
 - **Loader:** `libs/maia-loader/src/loader.js`
 - **Engines:** `libs/maia-engines/src/engines/`
-- **Tools:** `libs/maia-tools/`
+- **Actors:** `libs/maia-actors/`
 - **Modules:** `libs/maia-engines/src/modules/`
 - **Docs:** `libs/maia-docs/`
 

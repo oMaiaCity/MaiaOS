@@ -1,0 +1,11 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/event/UPDATE_AGENT_INPUT",
+	"title": "°Maia/schema/event/UPDATE_AGENT_INPUT",
+	"description": "Message type for updating agent ID input field in Spark detail view",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": { "value": { "type": "string", "description": "Agent account co-id input value" } },
+	"additionalProperties": true
+}

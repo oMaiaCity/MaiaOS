@@ -1,0 +1,12 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/updatePaperContent",
+	"role": "@core/updatePaperContent",
+	"interface": [
+		"UPDATE_PAPER",
+		"SUCCESS",
+		"ERROR"
+	],
+	"state": "°Maia/actor/updatePaperContent/state",
+	"tool": "°Maia/actor/updatePaperContent/tool"
+}

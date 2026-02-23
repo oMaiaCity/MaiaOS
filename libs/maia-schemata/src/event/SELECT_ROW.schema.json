@@ -1,0 +1,17 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/event/SELECT_ROW",
+	"title": "°Maia/schema/event/SELECT_ROW",
+	"description": "Message type for selecting a table row",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {
+		"rowId": {
+			"type": "string",
+			"description": "Row ID (required)"
+		}
+	},
+	"required": ["rowId"],
+	"additionalProperties": false
+}

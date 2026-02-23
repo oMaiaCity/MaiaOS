@@ -1,0 +1,12 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/todos/actor/coming-soon",
+	"role": "@todos/coming-soon",
+	"context": "°Maia/todos/context/coming-soon",
+	"view": "°Maia/todos/view/coming-soon",
+	"state": "°Maia/todos/state/coming-soon",
+	"brand": "°Maia/style/brand",
+	"style": "°Maia/todos/style/coming-soon",
+	"inbox": "°Maia/todos/inbox/coming-soon",
+	"interface": []
+}

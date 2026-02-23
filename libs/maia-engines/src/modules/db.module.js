@@ -1,4 +1,3 @@
-import { getTool } from '@MaiaOS/tools'
 import { registerOperations } from './db/register-operations.js'
 
 export const config = {
@@ -14,14 +13,6 @@ export async function register(registry) {
 		registerOperations(dataEngine)
 	}
 
-	const tool = getTool('db/db')
-	if (!tool) return
-	const toolEngine = registry._getToolEngine('DBModule')
-	toolEngine.tools.set('@db', {
-		definition: tool.definition,
-		function: tool.function,
-		namespacePath: 'db/db',
-	})
 	registry.registerModule(
 		'db',
 		{ config, query: (q) => (q === 'tools' ? ['@db'] : null) },

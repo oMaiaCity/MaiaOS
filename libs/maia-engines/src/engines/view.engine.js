@@ -28,14 +28,167 @@ function containsDangerousHTML(str) {
 }
 
 export class ViewEngine {
-	constructor(evaluator, actorEngine, moduleRegistry) {
+	constructor(evaluator, actorOps, moduleRegistry) {
 		this.evaluator = evaluator
-		this.actorEngine = actorEngine
+		this.actorOps = actorOps // Injected by Loader; ActorEngine implements ActorOps
 		this.moduleRegistry = moduleRegistry
 		this.dataEngine = null
+		this.styleEngine = null
 		this.actorInputCounters = new Map()
 		this._scrollToBottomPrev = new Map()
 		this._scrollMutationObservers = new Map()
+	}
+
+	async _readStore(coId) {
+		if (!this.dataEngine?.peer) return null
+		const schemaCoId = await this.dataEngine.peer.resolve(
+			{ fromCoValue: coId },
+			{ returnType: 'coId' },
+		)
+		if (!schemaCoId) return null
+		return this.dataEngine.execute({ op: 'read', schema: schemaCoId, key: coId })
+	}
+
+	_makeStyleRerenderSubscribe(actorId) {
+		return async () => {
+			const actor = this.actorOps?.getActor?.(actorId)
+			if (actor && this.styleEngine) {
+				try {
+					actor.shadowRoot.adoptedStyleSheets = await this.styleEngine.getStyleSheets(
+						actor.config,
+						actor.id,
+					)
+					if (actor._renderState === RENDER_STATES.READY) {
+						actor._renderState = RENDER_STATES.UPDATING
+						this.actorOps?._scheduleRerender?.(actorId)
+					}
+				} catch {}
+			}
+		}
+	}
+
+	/**
+	 * Load view-related configs (view, context, style, brand). Returns viewDef, context, subscriptions.
+	 * @param {Object} actorConfig - Actor config
+	 * @param {string} actorId - Actor ID
+	 * @returns {Promise<{viewDef, context, contextCoId, contextSchemaCoId, configUnsubscribes}>}
+	 */
+	async loadViewConfigs(actorConfig, actorId) {
+		if (!actorConfig.view) throw new Error(`[ViewEngine] Actor config must have 'view' property`)
+		const configUnsubscribes = []
+
+		const viewStore2 = await this._readStore(actorConfig.view)
+		if (!viewStore2) throw new Error(`[ViewEngine] Failed to load view CoValue ${actorConfig.view}`)
+		const viewDef = viewStore2.value
+		configUnsubscribes.push(
+			viewStore2.subscribe(
+				(updatedView) => {
+					const actor = this.actorOps?.getActor?.(actorId)
+					if (actor) {
+						actor.viewDef = updatedView
+						if (actor._renderState === RENDER_STATES.READY) {
+							actor._renderState = RENDER_STATES.UPDATING
+							this.actorOps?._scheduleRerender?.(actorId)
+						}
+					}
+				},
+				{ skipInitial: true },
+			),
+		)
+
+		let context = null,
+			contextCoId = null,
+			contextSchemaCoId = null
+		if (actorConfig.context) {
+			const contextCoIdVal = actorConfig.context
+			if (typeof contextCoIdVal !== 'string' || !contextCoIdVal.startsWith('co_z')) {
+				throw new Error(`[ViewEngine] Actor config context must be co-id, got: ${contextCoIdVal}`)
+			}
+			const contextStore = await this._readStore(contextCoIdVal)
+			if (!contextStore) throw new Error(`[ViewEngine] Failed to load context ${contextCoIdVal}`)
+			contextSchemaCoId = await this.dataEngine.peer.resolve(
+				{ fromCoValue: contextCoIdVal },
+				{ returnType: 'coId' },
+			)
+			context = contextStore
+			contextCoId = contextCoIdVal
+		}
+
+		if (actorConfig.style) {
+			try {
+				const styleStore = await this._readStore(actorConfig.style)
+				if (styleStore) {
+					configUnsubscribes.push(
+						styleStore.subscribe(this._makeStyleRerenderSubscribe(actorId), {
+							skipInitial: true,
+						}),
+					)
+				}
+			} catch {}
+		}
+		if (actorConfig.brand) {
+			try {
+				const brandStore = await this._readStore(actorConfig.brand)
+				if (brandStore) {
+					configUnsubscribes.push(
+						brandStore.subscribe(this._makeStyleRerenderSubscribe(actorId), {
+							skipInitial: true,
+						}),
+					)
+				}
+			} catch {}
+		}
+		return { viewDef, context, contextCoId, contextSchemaCoId, configUnsubscribes }
+	}
+
+	/**
+	 * Attach view to actor: load configs, shadowRoot, styleSheets, render.
+	 * @param {Object} actor - Actor instance
+	 * @param {HTMLElement} containerElement - Container element
+	 * @param {Object} actorConfig - Actor config
+	 * @param {string|null} agentKey - Optional agent key
+	 * @param {() => Promise<void>} [onBeforeRender] - Callback before render (e.g. state init)
+	 */
+	async attachViewToActor(actor, containerElement, actorConfig, agentKey, onBeforeRender) {
+		const actorId = actor.id
+		const { viewDef, context, contextCoId, contextSchemaCoId, configUnsubscribes } =
+			await this.loadViewConfigs(actorConfig, actorId)
+
+		actor.shadowRoot = containerElement.attachShadow({ mode: 'open' })
+		actor.context = context
+		actor.contextCoId = contextCoId
+		actor.contextSchemaCoId = contextSchemaCoId
+		actor.viewDef = viewDef
+		actor.agentKey = agentKey
+		actor.containerElement = containerElement
+		actor._renderState = RENDER_STATES.INITIALIZING
+		for (const unsub of configUnsubscribes) actor._configUnsubscribes.push(unsub)
+
+		if (actor.context?.subscribe) {
+			let lastContextValue = JSON.stringify(actor.context.value || {})
+			actor._contextUnsubscribe = actor.context.subscribe(
+				(newValue) => {
+					const currentContextValue = JSON.stringify(newValue || {})
+					const contextChanged = currentContextValue !== lastContextValue
+					lastContextValue = currentContextValue
+					if (actor._renderState === RENDER_STATES.READY && contextChanged) {
+						actor._renderState = RENDER_STATES.UPDATING
+						this.actorOps?._scheduleRerender?.(actorId)
+					}
+				},
+				{ skipInitial: true },
+			)
+		}
+
+		if (onBeforeRender) await onBeforeRender()
+		actor._renderState = RENDER_STATES.RENDERING
+		const styleSheets = await this.styleEngine.getStyleSheets(actorConfig, actorId)
+		await this.render(viewDef, actor.context, actor.shadowRoot, styleSheets, actorId)
+		actor._renderState = RENDER_STATES.READY
+		if (actor._needsPostInitRerender) {
+			delete actor._needsPostInitRerender
+			this.actorOps?._scheduleRerender?.(actorId)
+		}
 	}
 
 	async loadView(coId) {
@@ -498,7 +651,7 @@ export class ViewEngine {
 			return
 		}
 
-		const actor = this.actorEngine?.getActor(actorId)
+		const actor = this.actorOps?.getActor?.(actorId)
 
 		if (!actor) {
 			return
@@ -507,8 +660,8 @@ export class ViewEngine {
 		let childActor = actor.children?.[namekey]
 
 		if (!childActor) {
-			const vibeKey = actor.vibeKey || null
-			childActor = await this.actorEngine._createChildActorIfNeeded(actor, namekey, vibeKey)
+			const agentKey = actor.agentKey || null
+			childActor = await this.actorOps?._createChildActorIfNeeded?.(actor, namekey, agentKey)
 
 			if (!childActor) {
 				// Only warn if actor is READY (initial render complete)
@@ -524,17 +677,17 @@ export class ViewEngine {
 			if (actor?.children) {
 				for (const [key, child] of Object.entries(actor.children)) {
 					if (key === namekey) continue
-					if (child.actorType === 'ui' && child.containerElement?.parentNode === wrapperElement) {
-						this.actorEngine.destroyActor(child.id)
+					if (child.viewDef && child.containerElement?.parentNode === wrapperElement) {
+						this.runtime?.destroyActor?.(child.id) ?? this.actorOps?.destroyActor?.(child.id)
 						delete actor.children[key]
 					}
 				}
 			}
 
 			// Only rerender child if its state is READY (initial render complete)
-			if (childActor._renderState === RENDER_STATES.READY && this.actorEngine) {
+			if (childActor._renderState === RENDER_STATES.READY && this.actorOps) {
 				childActor._renderState = RENDER_STATES.UPDATING
-				this.actorEngine._scheduleRerender(childActor.id)
+				this.actorOps._scheduleRerender?.(childActor.id)
 			}
 
 			if (childActor.containerElement.parentNode !== wrapperElement) {
@@ -620,8 +773,8 @@ export class ViewEngine {
 		}
 
 		// Message types that sync context from DOM - do NOT clear inputs (would overwrite user typing)
-		if (this.actorEngine) {
-			const actor = this.actorEngine.getActor(actorId)
+		if (this.actorOps) {
+			const actor = this.actorOps.getActor?.(actorId)
 			if (actor?.machine) {
 				payload = extractDOMValues(payload, element)
 
@@ -644,7 +797,7 @@ export class ViewEngine {
 				}
 
 				// Runtime schema validation (from backend registry) - skip send if payload invalid
-				const payloadValid = await this.actorEngine.validateMessagePayloadForSend(eventName, payload)
+				const payloadValid = await this.actorOps.validateEventPayloadForSend?.(eventName, payload)
 				if (!payloadValid) return
 
 				// CLEAN ARCHITECTURE: For update-input types on blur, only send if DOM value differs from CURRENT context
@@ -666,7 +819,7 @@ export class ViewEngine {
 					}
 				}
 
-				await this.actorEngine.deliverEvent(actorId, actorId, eventName, payload)
+				await this.actorOps?.deliverEvent?.(actorId, actorId, eventName, payload)
 
 				// AUTO-CLEAR INPUTS: After form submission (any event except update-input types), clear all input fields
 				// This ensures forms reset after submission without manual clearing workarounds
@@ -690,8 +843,8 @@ export class ViewEngine {
 	_clearInputFields(element, actorId) {
 		// Find the closest form element, or fall back to actor's shadow root
 		let container = element.closest('form')
-		if (!container && this.actorEngine) {
-			const actor = this.actorEngine.getActor(actorId)
+		if (!container && this.actorOps) {
+			const actor = this.actorOps.getActor?.(actorId)
 			if (actor?.shadowRoot) {
 				container = actor.shadowRoot
 			}
@@ -711,10 +864,6 @@ export class ViewEngine {
 				}
 			}
 		})
-	}
-
-	setActorEngine(actorEngine) {
-		this.actorEngine = actorEngine
 	}
 
 	cleanupActor(actorId) {

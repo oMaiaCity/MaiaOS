@@ -26,7 +26,7 @@ MaiaOS/ (root)
 │       ├── package.json
 │       └── deploy.sh     # Runs moai-server.mjs from maia-distros output
 └── libs/                 # Shared libraries (@MaiaOS/*)
-    └── maia-*/           # maia-db, maia-loader, maia-tools, etc.
+    └── maia-*/           # maia-db, maia-loader, maia-actors, etc.
         ├── package.json
         └── src/
 ```
@@ -76,7 +76,7 @@ Each workspace can depend on other workspaces (services or libs) using the `work
 // services/maia/package.json - only maia-distros (loader/vibes via jsconfig)
 // services/moai/package.json - maia-distros + @MaiaOS/loader
 ```
-Services depend only on `@MaiaOS/loader`. Loader re-exports everything needed: db, schemata, tools, vibes (via dynamic import), cojson-transport-ws. maia-distros has no app logic—only bundling. Services own logic; distros produces bundles (maia-client, vibes, moai-server). Prod runs bundles.
+Services depend only on `@MaiaOS/loader`. Loader re-exports everything needed: db, schemata, actors, vibes (via dynamic import), cojson-transport-ws. maia-distros has no app logic—only bundling. Services own logic; distros produces bundles (maia-client, vibes, moai-server). Prod runs bundles.
 
 2. **Library depends on another Library:**
 ```json
@@ -84,7 +84,7 @@ Services depend only on `@MaiaOS/loader`. Loader re-exports everything needed: d
 {
   "dependencies": {
     "@MaiaOS/db": "workspace:*",
-    "@MaiaOS/tools": "workspace:*"
+    "@MaiaOS/actors": "workspace:*"
   }
 }
 ```
@@ -92,7 +92,7 @@ Services depend only on `@MaiaOS/loader`. Loader re-exports everything needed: d
 **Usage in Code:**
 ```javascript
 import { setupSyncPeers } from "@MaiaOS/db";
-import { getApiBaseUrl } from "@MaiaOS/tools";
+import { getApiBaseUrl } from "@MaiaOS/actors";
 ```
 
 **Important Notes:**
