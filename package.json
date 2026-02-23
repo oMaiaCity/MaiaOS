@@ -12,10 +12,10 @@
 		"dev:maia": "bun scripts/dev-maia.js",
 		"dev:moai": "bun scripts/dev-moai.js",
 		"deploy": "./scripts/deploy-all.sh",
-		"deploy:app": "cd services/app && ./deploy.sh",
-		"deploy:app:verify": "bun scripts/fly-build-args-verify.js",
-		"deploy:sync": "cd services/sync && ./deploy.sh",
-		"avens:build": "cd libs/maia-avens && bun run build",
+		"deploy:maia": "cd services/maia && ./deploy.sh",
+		"deploy:maia:verify": "bun scripts/fly-build-args-verify.js",
+		"deploy:moai": "cd services/moai && ./deploy.sh",
+		"agents:build": "cd libs/maia-agents && bun run build",
 		"distros:build": "bun run --filter @MaiaOS/maia-distros build",
 		"docs:generate": "bun scripts/generate-llm-docs.js",
 		"docs:watch": "bun scripts/generate-llm-docs.js --watch",
@@ -45,8 +45,5 @@
 	},
 	"dependencies": {
 		"@electric-sql/pglite": "^0.3.15"
-	},
-	"patchedDependencies": {
-		"@usefulsensors/moonshine-js@0.1.21": "patches/@usefulsensors%2Fmoonshine-js@0.1.21.patch"
 	}
 }

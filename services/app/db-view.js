@@ -33,7 +33,7 @@ async function getSchemaFromDb(maia, schemaRef) {
 	}
 }
 
-import { renderDashboard, renderVibeViewer } from './dashboard.js'
+import { renderAgentViewer, renderDashboard } from './dashboard.js'
 import { escapeHtml, getSyncStatusMessage, truncate } from './utils.js'
 
 export async function renderApp(
@@ -43,11 +43,11 @@ export async function renderApp(
 	currentScreen,
 	currentView,
 	currentContextCoValueId,
-	currentAven,
+	currentAgent,
 	currentSpark,
 	switchView,
 	selectCoValue,
-	loadAven,
+	loadAgent,
 	loadSpark,
 	navigateToScreen,
 ) {
@@ -59,24 +59,15 @@ export async function renderApp(
 			navigateToScreen,
 			currentSpark,
 			loadSpark,
-			loadAven,
+			loadAgent,
 		)
 		hydrateCobinaryPreviews(maia)
 		setTimeout(() => hydrateCobinaryPreviews(maia), 500)
 		return
 	}
 
-	if (currentScreen === 'maia-ai') {
-		await renderMaiaAIView(maia, authState, syncState, navigateToScreen)
-		hydrateCobinaryPreviews(maia)
-		setTimeout(() => hydrateCobinaryPreviews(maia), 500)
-		return
-	}
-
-	if (currentScreen === 'aven-viewer' && currentAven) {
-		await renderAvenViewer(maia, authState, syncState, currentAven, navigateToScreen, currentSpark)
-		hydrateCobinaryPreviews(maia)
-		setTimeout(() => hydrateCobinaryPreviews(maia), 500)
+	if (currentScreen === 'agent-viewer' && currentAgent) {
+		await renderAgentViewer(maia, authState, syncState, currentAgent, navigateToScreen, currentSpark)
 		return
 	}
 
@@ -453,11 +444,11 @@ export async function renderApp(
 								currentScreen,
 								currentView,
 								currentContextCoValueId,
-								currentAven,
+								currentAgent,
 								currentSpark,
 								switchView,
 								selectCoValue,
-								loadAven,
+								loadAgent,
 								loadSpark,
 								navigateToScreen,
 							)
@@ -502,11 +493,11 @@ export async function renderApp(
 									currentScreen,
 									currentView,
 									currentContextCoValueId,
-									currentAven,
+									currentAgent,
 									currentSpark,
 									switchView,
 									selectCoValue,
-									loadAven,
+									loadAgent,
 									loadSpark,
 									navigateToScreen,
 								)
@@ -545,7 +536,7 @@ export async function renderApp(
 		_viewSubtitle = ''
 	}
 
-	// Build account structure navigation (Account + Capabilities)
+	// Build account structure navigation (Account only - agents in spark.agents)
 	const navigationItems = []
 
 	// Entry 1: Account itself
@@ -561,7 +552,10 @@ export async function renderApp(
 		type: 'capabilities',
 	})
 
-	// Build table content based on view (tableContent/headerInfo already set by capabilities branch if applicable)
+	// Build table content based on view
+	let tableContent = ''
+	let headerInfo = null // Store header info for colist/costream to display in inspector-header
+
 	// DB Viewer only shows DB content (no agent rendering here)
 	if (currentContextCoValueId && data) {
 		// Capabilities view: tableContent already set above
@@ -660,22 +654,22 @@ export async function renderApp(
 					!isCoJsonInternalKey(k, data[k]),
 			)
 
-				if (propertyKeys.length === 0) {
-					// No properties - show empty state (with hint for avens/schematas/indexes)
-					const schemaId = (data.$schema || schemaCoId || '').toString()
-					const isRegistryEmpty =
-						schemaId.includes('avens-registry') ||
-						schemaId.includes('schematas-registry') ||
-						schemaId.includes('indexes-registry')
-					const emptyHint = isRegistryEmpty
-						? '<p class="mt-3 text-sm text-amber-600 max-w-md mx-auto">Vibes/schemas come from the sync server. Run <code class="bg-amber-100 px-1 rounded">bun dev</code> (moai on :4201), sign in, and check console for <code class="bg-amber-100 px-1 rounded">linkAccountToSyncRegistry</code>.</p>'
-						: ''
-					tableContent = `<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">No properties available${emptyHint}</div>`
-				} else {
-					const propertyItems = propertyKeys
-						.map((key) => {
-							const value = data[key]
-							let propType = typeof value
+			if (propertyKeys.length === 0) {
+				// No properties - show empty state (with hint for agents/schematas/indexes)
+				const schemaId = (data.$schema || schemaCoId || '').toString()
+				const isRegistryEmpty =
+					schemaId.includes('agents-registry') ||
+					schemaId.includes('schematas-registry') ||
+					schemaId.includes('indexes-registry')
+				const emptyHint = isRegistryEmpty
+					? '<p class="mt-3 text-sm text-amber-600 max-w-md mx-auto">Vibes/schemas come from the sync server. Run <code class="bg-amber-100 px-1 rounded">bun dev</code> (moai on :4201), sign in, and check console for <code class="bg-amber-100 px-1 rounded">linkAccountToSyncRegistry</code>.</p>'
+					: ''
+				tableContent = `<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">No properties available${emptyHint}</div>`
+			} else {
+				const propertyItems = propertyKeys
+					.map((key) => {
+						const value = data[key]
+						let propType = typeof value
 
 							// Detect co-id references
 							if (typeof value === 'string' && value.startsWith('co_')) {
@@ -1030,7 +1024,7 @@ export async function renderApp(
 		`
 	}
 
-	// Build sidebar navigation items (Account only - avens via spark.avens)
+	// Build sidebar navigation items (Account only - agents via spark.agents)
 	const sidebarItems = navigationItems
 		.map((item) => {
 			// Account navigation - select account CoValue

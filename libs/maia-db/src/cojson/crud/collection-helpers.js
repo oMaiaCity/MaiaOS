@@ -96,7 +96,8 @@ export async function ensureCoValueLoaded(peer, coId, options = {}) {
 
 	// Not available - trigger loading from IndexedDB (jazz-tools pattern)
 	peer.node.loadCoValueCore(coId).catch((_err) => {
-		if (process.env.DEBUG) console.log('[CoValue load error]', _err)
+		if (typeof process !== 'undefined' && process.env?.DEBUG)
+			console.log('[CoValue load error]', _err)
 	})
 
 	// If waitForAvailable is true, wait for it to become available

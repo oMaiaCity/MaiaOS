@@ -92,7 +92,7 @@ For full system usage, see the [maia-loader Package](../02_maia-loader/README.md
 - [maia-loader Package](../02_maia-loader/README.md) - Boot process and orchestration
 - [maia-db Package](../05_maia-db/README.md) - MaiaDB (storage layer)
 - [maia-schemata Package](../03_maia-schemata/README.md) - Schema validation
-- [maia-tools Package](../08_maia-tools/README.md) - Tool definitions
+- [maia-actors Package](../08_maia-actors/README.md) - Actor definitions
 
 ---
 

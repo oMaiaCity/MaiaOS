@@ -1,0 +1,13 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/os/agents-registry",
+	"title": "°Maia/schema/os/agents-registry",
+	"description": "Agents registry CoMap - agent key -> agent co-id. Stored in spark.agents",
+	"cotype": "comap",
+	"indexing": false,
+	"additionalProperties": {
+		"type": "string",
+		"pattern": "^co_z[a-zA-Z0-9]+$",
+		"description": "Agent key -> agent CoMap co-id"
+	}
+}

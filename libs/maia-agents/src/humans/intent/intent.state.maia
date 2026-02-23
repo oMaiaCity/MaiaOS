@@ -1,0 +1,14 @@
+{
+	"$schema": "°Maia/schema/state",
+	"$id": "°Maia/humans/state/intent",
+	"initial": "idle",
+	"states": {
+		"idle": {
+			"on": {
+				"DISMISS": {
+					"target": "idle"
+				}
+			}
+		}
+	}
+}

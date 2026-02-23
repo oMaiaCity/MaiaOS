@@ -16,7 +16,7 @@
  *   PEER_MOAI: Required when PEER_MODE=agent (where to connect). Ignored when sync.
  *   PEER_ADD_GUARDIAN: Default false. Set true to add PEER_GUARDIAN as admin on startup (one-time genesis).
  *   PEER_GUARDIAN: Human account co-id (co_z...). Human must sign in from maia first so account syncs.
- *   PEER_FRESH_SEED: Default false. Set true to run genesis seed (bootstrap + schemas + vibes).
+ *   PEER_FRESH_SEED: Default false. Set true to run genesis seed (bootstrap + schemas + agents).
  *     - true: Fresh seed (first deploy or intentional reset). May overwrite existing scaffold.
  *     - false/unset: Skip seed, use persisted data. Never overwrite on restart.
  */
@@ -26,11 +26,12 @@ import {
 	buildSeedConfig,
 	createWebSocketPeer,
 	DataEngine,
-	filterVibesForSeeding,
+	filterAgentsForSeeding,
 	generateRegistryName,
+	getAllActorDefinitions,
+	getAllAgentRegistries,
 	getAllSchemas,
-	getAllToolDefinitions,
-	getAllVibeRegistries,
+	getSeedConfig,
 	loadOrCreateAgentAccount,
 	MaiaDB,
 	MaiaScriptEvaluator,
@@ -72,7 +73,7 @@ const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
 
 /** OpenAI-format tools for LLM (paper write + future tools). Uses existing tool defs (already OpenAI-compatible). */
 function toOpenAITools() {
-	const defs = getAllToolDefinitions()
+	const defs = getAllActorDefinitions()
 	const paths = ['core/updatePaperContent']
 	const tools = []
 	for (const p of paths) {
@@ -84,7 +85,7 @@ function toOpenAITools() {
 const peerAddGuardian = process.env.PEER_ADD_GUARDIAN === 'true'
 const peerGuardianAccountId = process.env.PEER_GUARDIAN?.trim() || null
 const peerFreshSeed = process.env.PEER_FRESH_SEED === 'true'
-// Sync mode seeds all vibes by default (internal, not configurable)
+// Sync mode seeds all agents by default (internal, not configurable)
 const seedVibesConfig = 'all'
 
 let localNode = null
@@ -644,21 +645,33 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 		await schemaMigration(result.account, localNode)
 
 		// Genesis sync mode: seed only when PEER_FRESH_SEED=true (explicit, no co-value inference).
-		// Agent mode never seeds (minimal account, no vibes).
+		// Agent mode never seeds (minimal account, no agents).
 		if (peerMode === 'sync' && peerFreshSeed) {
-			const allVibeRegistries = await getAllVibeRegistries()
-			const vibeRegistries = await filterVibesForSeeding(allVibeRegistries, seedVibesConfig)
-			if (vibeRegistries.length === 0) {
+			const allAgentRegistries = await getAllAgentRegistries()
+			const agentRegistries = await filterAgentsForSeeding(allAgentRegistries, seedVibesConfig)
+			if (agentRegistries.length === 0) {
 				throw new Error(
-					'[sync] Genesis sync requires vibes. getAllVibeRegistries returned none or SEED_VIBES filtered all.',
+					'[sync] Genesis sync requires agents. getAllAgentRegistries returned none or SEED_AGENTS filtered all.',
 				)
 			}
-			const { configs: mergedConfigs, data } = await buildSeedConfig(vibeRegistries)
-			const configsWithTools = { ...mergedConfigs, tool: getAllToolDefinitions() }
+			const { configs: mergedConfigs, data } = await buildSeedConfig(agentRegistries)
+			const {
+				actors: serviceActors,
+				states: serviceStates,
+				tools: serviceTools,
+				inboxes: serviceInboxes,
+			} = getSeedConfig()
+			const configsForSeed = {
+				...mergedConfigs,
+				actors: { ...mergedConfigs.actors, ...serviceActors },
+				states: { ...mergedConfigs.states, ...serviceStates },
+				tools: { ...(mergedConfigs.tools || {}), ...serviceTools },
+				inboxes: { ...mergedConfigs.inboxes, ...serviceInboxes },
+			}
 			const schemas = getAllSchemas()
 			const seedResult = await dataEngine.execute({
 				op: 'seed',
-				configs: configsWithTools,
+				configs: configsForSeed,
 				schemas,
 				data,
 				forceFreshSeed: true, // PEER_FRESH_SEED=true: always bootstrap, bypass idempotency
@@ -668,7 +681,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 				throw new Error(`[sync] Genesis seed failed: ${msg}`)
 			}
 			console.log(
-				`[sync] Genesis seeded: ${vibeRegistries.length} vibe(s) (schemas + scaffold). Set PEER_FRESH_SEED=false for subsequent restarts.`,
+				`[sync] Genesis seeded: ${agentRegistries.length} agent(s) (schemas + scaffold). Set PEER_FRESH_SEED=false for subsequent restarts.`,
 			)
 		} else if (peerMode === 'sync' && !peerFreshSeed) {
 			console.log('[sync] PEER_FRESH_SEED not set — using persisted scaffold (skip seed).')

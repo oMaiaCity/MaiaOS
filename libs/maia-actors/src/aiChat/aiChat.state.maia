@@ -1,0 +1,29 @@
+{
+	"$schema": "°Maia/schema/state",
+	"$id": "°Maia/actor/aiChat/state",
+	"initial": "idle",
+	"states": {
+		"idle": {
+			"on": {
+				"CHAT": {
+					"target": "processing"
+				}
+			}
+		},
+		"processing": {
+			"entry": [
+				{
+					"function": true
+				}
+			],
+			"on": {
+				"SUCCESS": {
+					"target": "idle"
+				},
+				"ERROR": {
+					"target": "idle"
+				}
+			}
+		}
+	}
+}

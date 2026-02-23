@@ -64,7 +64,10 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 		}
 
 		if (!messageSchemaCoId) {
-			messageSchemaCoId = await resolve(peer, '°Maia/schema/event', { returnType: 'coId' })
+			messageSchemaCoId = await dbEngine.execute({
+				op: 'resolve',
+				humanReadableKey: '°Maia/schema/event',
+			})
 		}
 
 		if (!messageSchemaCoId || !messageSchemaCoId.startsWith('co_z')) {
@@ -123,7 +126,13 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 		throw new Error(`[createAndPushMessage] Invalid message co-id returned: ${messageCoId}`)
 	}
 	// 4. Push message co-id to inbox CoStream (not plain object)
-	t0 = _perf.now()
+	if (typeof window !== 'undefined') {
+		console.log('[sendToActor] 3b.createAndPushMessage: pushing to inbox', {
+			type: messageDataWithDefaults.type,
+			inboxCoId,
+			messageCoId,
+		})
+	}
 	const pushResult = await dbEngine.execute({
 		op: 'push',
 		coId: inboxCoId,
@@ -132,6 +141,9 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 	_perf.log('createAndPushMessage.push', Math.round((_perf.now() - t0) * 100) / 100)
 	if (!pushResult.ok) {
 		const msgs = pushResult.errors?.map((e) => e.message).join('; ') || 'Push failed'
+		if (typeof window !== 'undefined') {
+			console.error('[sendToActor] 3b.createAndPushMessage: push failed', { inboxCoId, msgs })
+		}
 		throw new Error(`[createAndPushMessage] Failed to push message to inbox: ${msgs}`)
 	}
 

@@ -1,48 +1,51 @@
 /**
- * Actors Registry - Central export for actor definitions and executable functions
- * Service actors: definition (actor.maia with interface ref) + function.execute(actor, payload)
- * Interface schemas define accepted events; execution in .function.js
+ * Actors Registry - Central export for all actor definitions and functions
+ * Service actors: definition (actor.maia + tool.maia merged) + function.execute(actor, payload)
+ * Tool descriptor in tool.maia; execution in .function.js
  */
 
-import aiChatDef from './os/ai/actor.maia'
-import aiChatFn from './os/ai/function.js'
-import dbDef from './os/db/actor.maia'
-import dbFn from './os/db/function.js'
-import computeMessageNamesDef from './services/names/actor.maia'
-import computeMessageNamesFn from './services/names/function.js'
-import paperDef from './services/paper/actor.maia'
-import paperFn from './services/paper/function.js'
-import profileImageDef from './services/profile-image/actor.maia'
-import profileImageFn from './services/profile-image/function.js'
-import todosDef from './services/todos/actor.maia'
+import aiChatDef from './aiChat/aiChat.actor.maia'
+import aiChatFn from './aiChat/aiChat.function.js'
+import aiChatTool from './aiChat/aiChat.tool.maia'
+import computeMessageNamesDef from './computeMessageNames/computeMessageNames.actor.maia'
+import computeMessageNamesFn from './computeMessageNames/computeMessageNames.function.js'
+import computeMessageNamesTool from './computeMessageNames/computeMessageNames.tool.maia'
+import dbDef from './db/db.actor.maia'
+import dbFn from './db/db.function.js'
+import dbTool from './db/db.tool.maia'
+import sparksDef from './sparks/sparks.actor.maia'
+import sparksFn from './sparks/sparks.function.js'
+import sparksTool from './sparks/sparks.tool.maia'
+import updatePaperContentDef from './updatePaperContent/updatePaperContent.actor.maia'
+import updatePaperContentFn from './updatePaperContent/updatePaperContent.function.js'
+import updatePaperContentTool from './updatePaperContent/updatePaperContent.tool.maia'
+
+/** Merge actor def + tool def for consumers that expect definition.function (tool descriptor) */
+function withTool(actorDef, toolDef) {
+	if (!toolDef) return actorDef
+	return { ...actorDef, function: toolDef }
+}
 
 export const ACTORS = {
-	'maia/actor/os/ai': { definition: aiChatDef, function: aiChatFn },
-	'maia/actor/services/names': {
-		definition: computeMessageNamesDef,
+	'ai/chat': { definition: withTool(aiChatDef, aiChatTool), function: aiChatFn },
+	'core/computeMessageNames': {
+		definition: withTool(computeMessageNamesDef, computeMessageNamesTool),
 		function: computeMessageNamesFn,
 	},
-	'maia/actor/services/paper': {
-		definition: paperDef,
-		function: paperFn,
+	'core/updatePaperContent': {
+		definition: withTool(updatePaperContentDef, updatePaperContentTool),
+		function: updatePaperContentFn,
 	},
-	'maia/actor/services/profile-image': {
-		definition: profileImageDef,
-		function: profileImageFn,
-	},
-	'maia/actor/services/todos': {
-		definition: todosDef,
-		function: null,
-	},
-	'maia/actor/os/db': { definition: dbDef, function: dbFn },
+	'db/db': { definition: withTool(dbDef, dbTool), function: dbFn },
+	'sparks/sparks': { definition: withTool(sparksDef, sparksTool), function: sparksFn },
 }
 
 export function getActor(namespacePath) {
 	let mod = ACTORS[namespacePath]
 	if (mod) return mod
-	// Fallback: role @db → "maia/actor/os/db" for single-part lookups
+	// Fallback: role @sparks → "sparks" but ACTORS key is "sparks/sparks"
 	if (namespacePath && !namespacePath.includes('/')) {
-		mod = ACTORS[`maia/actor/os/${namespacePath}`]
+		mod = ACTORS[`${namespacePath}/${namespacePath}`]
 		if (mod) return mod
 	}
 	return null
@@ -62,7 +65,3 @@ export {
 	ROLE_TO_FOLDER,
 	resolveServiceActorCoId,
 } from './seed-config.js'
-
-if (import.meta.hot) {
-	import.meta.hot.accept()
-}

@@ -66,11 +66,28 @@ export async function processInbox(peer, actorId, inboxCoId) {
 	if (!inboxData?.sessions) {
 		return { messages: [] }
 	}
-	// CRITICAL: Process ALL sessions - client must see server replies (e.g. SUCCESS from aiChat on moai)
-	// Session-only processing caused: maia never saw SUCCESS (moai's session) → result: null, no LLM response
-	const allItems = []
-	for (const items of Object.values(inboxData.sessions || {})) {
-		if (Array.isArray(items)) allItems.push(...items)
+	const ourMessages = inboxData.sessions[currentSessionID]
+	const sessionKeys = Object.keys(inboxData.sessions || {})
+	const totalInOtherSessions = sessionKeys.reduce(
+		(sum, k) => sum + (Array.isArray(inboxData.sessions[k]) ? inboxData.sessions[k].length : 0),
+		0,
+	)
+	if (typeof window !== 'undefined' && totalInOtherSessions > 0) {
+		const ourCount = Array.isArray(ourMessages) ? ourMessages.length : 0
+		if (ourCount === 0) {
+			console.warn(
+				'[sendToActor] processInbox: SESSION MISMATCH? Inbox has messages in other sessions but none in ours',
+				{
+					currentSessionID,
+					inboxCoId,
+					totalInOtherSessions,
+					sessionKeys: sessionKeys.slice(0, 3),
+				},
+			)
+		}
+	}
+	if (!Array.isArray(ourMessages)) {
+		return { messages: [] }
 	}
 	// Deduplicate by _coId: same message can appear via multiple sessions (e.g. cross-peer sync)
 	// Without this, CHAT is processed twice → 2x LLM calls, 2x latency

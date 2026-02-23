@@ -1,0 +1,24 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/event/DB_OP",
+	"title": "°Maia/schema/event/DB_OP",
+	"description": "Message type for database operations (create, update, delete, query, seed) routed to @db actor",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {
+		"op": {
+			"type": "string",
+			"enum": ["query", "create", "update", "delete", "seed"],
+			"description": "Database operation to execute"
+		},
+		"schema": { "type": "string", "description": "Schema co-id - required for create" },
+		"key": { "type": "string", "description": "Optional key for config queries" },
+		"filter": { "type": "object", "description": "Optional filter for data queries" },
+		"id": { "type": "string", "description": "Record ID for update/delete" },
+		"data": { "type": "object", "description": "Data for create/update" },
+		"idempotencyKey": { "type": "string", "description": "Optional deduplication key" }
+	},
+	"required": ["op"],
+	"additionalProperties": true
+}

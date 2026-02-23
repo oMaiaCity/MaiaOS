@@ -11,8 +11,9 @@
 		"./utils/*": "./src/utils/*"
 	},
 	"dependencies": {
-		"@MaiaOS/schemata": "workspace:*",
-		"@MaiaOS/tools": "workspace:*"
+		"@MaiaOS/actors": "workspace:*",
+		"@MaiaOS/agents": "workspace:*",
+		"@MaiaOS/schemata": "workspace:*"
 	},
 	"devDependencies": {
 		"cojson": "^0.20.7"

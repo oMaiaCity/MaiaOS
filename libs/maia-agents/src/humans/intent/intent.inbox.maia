@@ -1,0 +1,5 @@
+{
+	"$schema": "°Maia/schema/inbox",
+	"$id": "°Maia/humans/inbox/intent",
+	"cotype": "costream"
+}

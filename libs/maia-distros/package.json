@@ -5,8 +5,8 @@
 	"private": true,
 	"exports": {
 		"./client": "./output/maia-client.mjs",
-		"./server": "./output/sync-server.mjs",
-		"./avens": "./output/avens.mjs"
+		"./server": "./output/moai-server.mjs",
+		"./agents": "./output/agents.mjs"
 	},
 	"files": [
 		"output"
@@ -16,7 +16,7 @@
 		"@MaiaOS/loader": "workspace:*",
 		"@MaiaOS/schemata": "workspace:*",
 		"@MaiaOS/actors": "workspace:*",
-		"@MaiaOS/avens": "workspace:*",
+		"@MaiaOS/agents": "workspace:*",
 		"cojson-transport-ws": "0.20.7"
 	},
 	"devDependencies": {},

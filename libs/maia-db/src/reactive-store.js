@@ -49,7 +49,7 @@ export class ReactiveStore {
 
 			// CRITICAL FIX: Auto-call _unsubscribe() when last subscriber unsubscribes
 			// This ensures MaiaDB._storeSubscriptions is cleaned up automatically
-			// when all actors unsubscribe from a store (e.g., when vibe is unloaded)
+			// when all actors unsubscribe from a store (e.g., when agent is unloaded)
 			if (this._subscribers.size === 0 && this._unsubscribe) {
 				this._unsubscribe()
 			}

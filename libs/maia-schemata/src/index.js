@@ -10,7 +10,16 @@
 import { ValidationEngine } from './validation.engine.js'
 
 export { ValidationEngine }
-export { isSchemaRef, isVibeRef, SCHEMA_REF_PATTERN, VIBE_REF_PATTERN } from './patterns.js'
+export {
+	ACTOR_CONFIG_REF_PATTERN,
+	AGENT_ACTOR_REF_PATTERN,
+	AGENT_REF_PATTERN,
+	INSTANCE_REF_PATTERN,
+	isAgentRef,
+	isInstanceRef,
+	isSchemaRef,
+	SCHEMA_REF_PATTERN,
+} from './patterns.js'
 // Export validation helper functions
 export {
 	getValidationEngine,
@@ -43,44 +52,41 @@ import humanDataSchema from './data/human.schema.json'
 import notesDataSchema from './data/notes.schema.json'
 import sparkDataSchema from './data/spark.schema.json'
 import todosDataSchema from './data/todos.schema.json'
-import addAgentMessageSchema from './message/ADD_AGENT.schema.json'
-import closePopupMessageSchema from './message/CLOSE_POPUP.schema.json'
-// Import message type schemas
-import copyLogsMessageSchema from './message/COPY_LOGS.schema.json'
-import createButtonMessageSchema from './message/CREATE_BUTTON.schema.json'
-import deleteButtonMessageSchema from './message/DELETE_BUTTON.schema.json'
-import dismissMessageSchema from './message/DISMISS.schema.json'
-import errorMessageSchema from './message/ERROR.schema.json'
-import loadActorMessageSchema from './message/LOAD_ACTOR.schema.json'
-import openPopupMessageSchema from './message/OPEN_POPUP.schema.json'
-import randomizePaperMessageSchema from './message/RANDOMIZE_PAPER.schema.json'
-import removeMemberMessageSchema from './message/REMOVE_MEMBER.schema.json'
-import retryMessageSchema from './message/RETRY.schema.json'
-import selectNavMessageSchema from './message/SELECT_NAV.schema.json'
-import selectRowMessageSchema from './message/SELECT_ROW.schema.json'
-import selectSparkMessageSchema from './message/SELECT_SPARK.schema.json'
-import sendMessageMessageSchema from './message/SEND_MESSAGE.schema.json'
-import statusUpdateMessageSchema from './message/STATUS_UPDATE.schema.json'
-import successMessageSchema from './message/SUCCESS.schema.json'
-import switchViewMessageSchema from './message/SWITCH_VIEW.schema.json'
-import toggleButtonMessageSchema from './message/TOGGLE_BUTTON.schema.json'
-import updateAgentInputMessageSchema from './message/UPDATE_AGENT_INPUT.schema.json'
-import updateInputMessageSchema from './message/UPDATE_INPUT.schema.json'
-import updatePaperMessageSchema from './message/UPDATE_PAPER.schema.json'
+import addAgentEventSchema from './event/ADD_AGENT.schema.json'
+import chatEventSchema from './event/CHAT.schema.json'
+import closePopupEventSchema from './event/CLOSE_POPUP.schema.json'
+import copyLogsEventSchema from './event/COPY_LOGS.schema.json'
+import createButtonEventSchema from './event/CREATE_BUTTON.schema.json'
+import dbOpEventSchema from './event/DB_OP.schema.json'
+import deleteButtonEventSchema from './event/DELETE_BUTTON.schema.json'
+import dismissEventSchema from './event/DISMISS.schema.json'
+import errorEventSchema from './event/ERROR.schema.json'
+import loadActorEventSchema from './event/LOAD_ACTOR.schema.json'
+import openPopupEventSchema from './event/OPEN_POPUP.schema.json'
+import randomizePaperEventSchema from './event/RANDOMIZE_PAPER.schema.json'
+import removeMemberEventSchema from './event/REMOVE_MEMBER.schema.json'
+import retryEventSchema from './event/RETRY.schema.json'
+import selectNavEventSchema from './event/SELECT_NAV.schema.json'
+import selectRowEventSchema from './event/SELECT_ROW.schema.json'
+import selectSparkEventSchema from './event/SELECT_SPARK.schema.json'
+import sendMessageEventSchema from './event/SEND_MESSAGE.schema.json'
+import sparkOpEventSchema from './event/SPARK_OP.schema.json'
+import statusUpdateEventSchema from './event/STATUS_UPDATE.schema.json'
+import successEventSchema from './event/SUCCESS.schema.json'
+import switchViewEventSchema from './event/SWITCH_VIEW.schema.json'
+import toggleButtonEventSchema from './event/TOGGLE_BUTTON.schema.json'
+import updateAgentInputEventSchema from './event/UPDATE_AGENT_INPUT.schema.json'
+import updateInputEventSchema from './event/UPDATE_INPUT.schema.json'
+import updatePaperEventSchema from './event/UPDATE_PAPER.schema.json'
 import actionSchema from './os/action.schema.json'
 // Import all schema definitions directly as JSON
 import actorSchema from './os/actor.schema.json'
-import avenSchema from './os/aven.schema.json'
-import avenIdentitySchema from './os/aven-identity.schema.json'
-import avensIdentityRegistrySchema from './os/avens-identity-registry.schema.json'
-import avensRegistrySchema from './os/avens-registry.schema.json'
-import capabilitiesStreamSchema from './os/capabilities-stream.schema.json'
-import capabilitySchema from './os/capability.schema.json'
+import agentSchema from './os/agent.schema.json'
+import agentsRegistrySchema from './os/agents-registry.schema.json'
+import capabilitiesSchema from './os/capabilities.schema.json'
 import childrenSchema from './os/children.schema.json'
 import contextSchema from './os/context.schema.json'
-import cotextSchema from './os/cotext.schema.json'
 import eventSchema from './os/event.schema.json'
-import groupsSchema from './os/groups.schema.json'
 // Import extracted $defs as separate schemas
 import guardSchema from './os/guard.schema.json'
 import humanSchema from './os/human.schema.json'
@@ -107,6 +113,7 @@ import viewSchema from './os/view.schema.json'
 // Unified schema registry (os + data + message)
 const SCHEMAS = {
 	actor: actorSchema,
+	tool: toolSchema,
 	context: contextSchema,
 	process: processSchema,
 	state: stateSchema,
@@ -115,7 +122,7 @@ const SCHEMAS = {
 	brand: styleSchema,
 	'brand.style': styleSchema,
 	'actor.style': styleSchema,
-	aven: avenSchema,
+	agent: agentSchema,
 	event: eventSchema,
 	guard: guardSchema,
 	action: actionSchema,
@@ -132,9 +139,7 @@ const SCHEMAS = {
 	'os/capabilities-stream': capabilitiesStreamSchema,
 	'os/groups': groupsSchema,
 	'os/indexes-registry': indexesRegistrySchema,
-	'os/aven-identity': avenIdentitySchema,
-	'os/avens-identity-registry': avensIdentityRegistrySchema,
-	'os/avens-registry': avensRegistrySchema,
+	'os/agents-registry': agentsRegistrySchema,
 	'os/sparks-registry': sparksRegistrySchema,
 	'os/human': humanSchema,
 	'os/humans-registry': humansRegistrySchema,
@@ -145,29 +150,32 @@ const SCHEMAS = {
 	'data/chat': chatDataSchema,
 	'data/human': humanDataSchema,
 	'data/spark': sparkDataSchema,
-	'message/CREATE_BUTTON': createButtonMessageSchema,
-	'message/TOGGLE_BUTTON': toggleButtonMessageSchema,
-	'message/DELETE_BUTTON': deleteButtonMessageSchema,
-	'message/UPDATE_INPUT': updateInputMessageSchema,
-	'message/UPDATE_PAPER': updatePaperMessageSchema,
-	'message/RANDOMIZE_PAPER': randomizePaperMessageSchema,
-	'message/SWITCH_VIEW': switchViewMessageSchema,
-	'message/SUCCESS': successMessageSchema,
-	'message/ERROR': errorMessageSchema,
-	'message/SEND_MESSAGE': sendMessageMessageSchema,
-	'message/STATUS_UPDATE': statusUpdateMessageSchema,
-	'message/RETRY': retryMessageSchema,
-	'message/DISMISS': dismissMessageSchema,
-	'message/SELECT_NAV': selectNavMessageSchema,
-	'message/SELECT_ROW': selectRowMessageSchema,
-	'message/SELECT_SPARK': selectSparkMessageSchema,
-	'message/LOAD_ACTOR': loadActorMessageSchema,
-	'message/UPDATE_AGENT_INPUT': updateAgentInputMessageSchema,
-	'message/ADD_AGENT': addAgentMessageSchema,
-	'message/REMOVE_MEMBER': removeMemberMessageSchema,
-	'message/OPEN_POPUP': openPopupMessageSchema,
-	'message/CLOSE_POPUP': closePopupMessageSchema,
-	'message/COPY_LOGS': copyLogsMessageSchema,
+	'event/CREATE_BUTTON': createButtonEventSchema,
+	'event/CHAT': chatEventSchema,
+	'event/DB_OP': dbOpEventSchema,
+	'event/SPARK_OP': sparkOpEventSchema,
+	'event/TOGGLE_BUTTON': toggleButtonEventSchema,
+	'event/DELETE_BUTTON': deleteButtonEventSchema,
+	'event/UPDATE_INPUT': updateInputEventSchema,
+	'event/UPDATE_PAPER': updatePaperEventSchema,
+	'event/RANDOMIZE_PAPER': randomizePaperEventSchema,
+	'event/SWITCH_VIEW': switchViewEventSchema,
+	'event/SUCCESS': successEventSchema,
+	'event/ERROR': errorEventSchema,
+	'event/SEND_MESSAGE': sendMessageEventSchema,
+	'event/STATUS_UPDATE': statusUpdateEventSchema,
+	'event/RETRY': retryEventSchema,
+	'event/DISMISS': dismissEventSchema,
+	'event/SELECT_NAV': selectNavEventSchema,
+	'event/SELECT_ROW': selectRowEventSchema,
+	'event/SELECT_SPARK': selectSparkEventSchema,
+	'event/LOAD_ACTOR': loadActorEventSchema,
+	'event/UPDATE_AGENT_INPUT': updateAgentInputEventSchema,
+	'event/ADD_AGENT': addAgentEventSchema,
+	'event/REMOVE_MEMBER': removeMemberEventSchema,
+	'event/OPEN_POPUP': openPopupEventSchema,
+	'event/CLOSE_POPUP': closePopupEventSchema,
+	'event/COPY_LOGS': copyLogsEventSchema,
 }
 
 export function getSchema(type) {
@@ -176,5 +184,9 @@ export function getSchema(type) {
 }
 
 export function getAllSchemas() {
-	return { ...SCHEMAS }
+	const msg = {}
+	for (const [k, s] of Object.entries(SCHEMAS)) {
+		if (k.startsWith('event/')) msg[`°Maia/schema/${k}`] = s
+	}
+	return { ...SCHEMAS, ...msg }
 }

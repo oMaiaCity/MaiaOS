@@ -90,9 +90,10 @@ export async function seedConfigs(
 		}
 	}
 
-	if (transformedConfigs.vibe) {
-		const vibeInfo = await createConfig(transformedConfigs.vibe, 'vibe', 'vibe')
-		seededConfigs.push(vibeInfo)
+	const agentConfig = transformedConfigs.agent
+	if (agentConfig) {
+		const agentInfo = await createConfig(agentConfig, 'agent', 'agent')
+		seededConfigs.push(agentInfo)
 		totalCount++
 	}
 
@@ -110,6 +111,7 @@ export async function seedConfigs(
 	}
 
 	totalCount += await seedConfigType('style', transformedConfigs.styles)
+	totalCount += await seedConfigType('tool', transformedConfigs.tools)
 	totalCount += await seedConfigType('actor', transformedConfigs.actors)
 	totalCount += await seedConfigType('view', transformedConfigs.views)
 	totalCount += await seedConfigType('context', transformedConfigs.contexts)
@@ -118,8 +120,6 @@ export async function seedConfigs(
 	totalCount += await seedConfigType('subscription', transformedConfigs.subscriptions)
 	totalCount += await seedConfigType('inbox', transformedConfigs.inboxes)
 	totalCount += await seedConfigType('children', transformedConfigs.children)
-	totalCount += await seedConfigType('tool', transformedConfigs.tool)
-
 	return {
 		count: totalCount,
 		types: [...new Set(seededConfigs.map((c) => c.type))],
