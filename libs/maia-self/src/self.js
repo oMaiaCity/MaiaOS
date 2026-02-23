@@ -73,7 +73,7 @@ export async function signUpWithPasskey({ name, salt = 'maia.city' } = {}) {
 	const computedAccountID = idforHeader(accountHeader, crypto)
 
 	// Use createAccountWithSecret() abstraction from @MaiaOS/db
-	// Human signup always minimal (no vibe seeding); server seeds vibes
+	// Human signup always minimal (no agent seeding); server seeds agents
 	const createResult = await createAccountWithSecret({
 		agentSecret,
 		name,

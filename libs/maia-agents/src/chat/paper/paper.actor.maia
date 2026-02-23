@@ -1,0 +1,11 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/chat/actor/paper",
+	"role": "@chat/paper",
+	"context": "°Maia/chat/context/paper",
+	"view": "°Maia/chat/view/paper",
+	"state": "°Maia/chat/state/paper",
+	"brand": "°Maia/chat/style/brand",
+	"inbox": "°Maia/chat/inbox/paper",
+	"interface": []
+}

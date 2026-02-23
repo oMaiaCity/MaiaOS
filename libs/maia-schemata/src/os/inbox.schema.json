@@ -6,7 +6,7 @@
 	"cotype": "costream",
 	"indexing": true,
 	"items": {
-		"$co": "°Maia/schema/message",
+		"$co": "°Maia/schema/event",
 		"description": "Each item is a co-id reference to a message"
 	}
 }

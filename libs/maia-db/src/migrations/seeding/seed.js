@@ -28,6 +28,7 @@ const REFERENCE_PROPS = [
 	'style',
 	'inbox',
 	'subscribers',
+	'tool',
 ]
 const NESTED_REF_PROPS = ['states']
 
@@ -385,15 +386,15 @@ export async function seed(
 
 	const CONFIG_ORDER = [
 		['styles', 'styles'],
+		['inboxes', 'inboxes'],
+		['tools', 'tools'],
 		['actors', 'actors'],
 		['views', 'views'],
 		['contexts', 'contexts'],
 		['states', 'states'],
 		['interfaces', 'interfaces'],
 		['subscriptions', 'subscriptions'],
-		['inboxes', 'inboxes'],
 		['children', 'children'],
-		['tool', 'tool'],
 	]
 
 	if (configs) {
@@ -440,6 +441,7 @@ export async function seed(
 			['subscription', 'subscriptions'],
 			['inbox', 'inboxes'],
 			['children', 'children'],
+			['tool', 'tools'],
 			['actor', 'actors'],
 			['view', 'views'],
 			['context', 'contexts'],
@@ -453,48 +455,48 @@ export async function seed(
 		}
 	}
 
-	const allVibes = configs?.vibes || []
-	if (allVibes.length > 0) {
+	const allAgents = configs?.agents || []
+	if (allAgents.length > 0) {
 		combinedRegistry = refreshCombinedRegistry()
-		let vibes = null
-		const vibesId = await groups.getSparkVibesId(peer, MAIA_SPARK)
-		if (vibesId) {
-			const vibesCore = await ensureCoValueLoaded(peer, vibesId, {
+		let agents = null
+		const agentsId = await groups.getSparkAgentsId(peer, MAIA_SPARK)
+		if (agentsId) {
+			const agentsCore = await ensureCoValueLoaded(peer, agentsId, {
 				waitForAvailable: true,
 				timeoutMs: 5000,
 			})
-			if (vibesCore?.type === 'comap' && peer.isAvailable(vibesCore)) {
-				vibes = vibesCore.getCurrentContent?.()
+			if (agentsCore?.type === 'comap' && peer.isAvailable(agentsCore)) {
+				agents = agentsCore.getCurrentContent?.()
 			}
 		}
-		if (!vibes) {
+		if (!agents) {
 			const { EXCEPTION_SCHEMAS } = await import('../../schemas/registry.js')
-			const vibesSchemaCoId =
-				schemaCoIdMap?.get('°Maia/schema/os/vibes-registry') ??
+			const agentsSchemaCoId =
+				schemaCoIdMap?.get('°Maia/schema/os/agents-registry') ??
 				(await (
 					await import('../../cojson/schema/resolver.js')
-				).resolve(peer, '°Maia/schema/os/vibes-registry', {
+				).resolve(peer, '°Maia/schema/os/agents-registry', {
 					returnType: 'coId',
 				}))
-			const { coValue: vibesCoMap } = await createCoValueForSpark(
+			const { coValue: agentsCoMap } = await createCoValueForSpark(
 				{ node, account, guardian: maiaGroup },
 				null,
 				{
-					schema: vibesSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
+					schema: agentsSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
 					cotype: 'comap',
 					data: {},
 					dataEngine: peer?.dbEngine,
 				},
 			)
-			vibes = vibesCoMap
-			await groups.setSparkVibesId(peer, MAIA_SPARK, vibes.id)
+			agents = agentsCoMap
+			await groups.setSparkAgentsId(peer, MAIA_SPARK, agents.id)
 		}
-		for (const vibe of allVibes) {
-			const originalVibeId = vibe.$id || ''
-			const vibeKey = originalVibeId.startsWith('°Maia/vibe/')
-				? originalVibeId.replace('°Maia/vibe/', '')
-				: (vibe.name || 'default').toLowerCase().replace(/\s+/g, '-')
-			const schemaRef = vibe.$schema
+		for (const agent of allAgents) {
+			const originalAgentId = agent.$id || ''
+			const agentKey = originalAgentId.startsWith('°Maia/agent/')
+				? originalAgentId.replace('°Maia/agent/', '')
+				: (agent.name || 'default').toLowerCase().replace(/\s+/g, '-')
+			const schemaRef = agent.$schema
 			if (
 				schemaRef &&
 				(schemaRef.startsWith('@') || schemaRef.startsWith('°')) &&
@@ -507,31 +509,31 @@ export async function seed(
 					).resolve(peer, schemaRef, { returnType: 'coId' }))
 				if (schemaCoId) combinedRegistry.set(schemaRef, schemaCoId)
 			}
-			const retransformedVibe = transformForSeeding(vibe, combinedRegistry)
-			if (!retransformedVibe.$schema?.startsWith('co_z')) {
+			const retransformedAgent = transformForSeeding(agent, combinedRegistry)
+			if (!retransformedAgent.$schema?.startsWith('co_z')) {
 				throw new Error(
-					`[sync] Vibe "${vibeKey}": $schema missing or not resolved. Ensure °Maia/schema/vibe is in schema registry.`,
+					`[sync] Agent "${agentKey}": $schema missing or not resolved. Ensure °Maia/schema/agent is in schema registry.`,
 				)
 			}
-			const vibeSeeded = await seedConfigs(
+			const agentSeeded = await seedConfigs(
 				account,
 				node,
 				maiaGroup,
 				peer,
-				{ vibe: retransformedVibe },
+				{ agent: retransformedAgent },
 				instanceCoIdMap,
 				schemaCoMaps,
 				schemaCoIdMap,
 			)
-			seededConfigs.configs.push(...(vibeSeeded.configs || []))
-			seededConfigs.count += vibeSeeded.count || 0
-			if (vibeSeeded.configs?.length > 0) {
-				const vibeCoId = vibeSeeded.configs[0].coId
-				vibes?.set?.(vibeKey, vibeCoId)
-				if (vibe.$id) {
-					instanceCoIdMap.set(vibe.$id, vibeCoId)
-					combinedRegistry.set(vibe.$id, vibeCoId)
-					coIdRegistry.register(vibe.$id, vibeCoId)
+			seededConfigs.configs.push(...(agentSeeded.configs || []))
+			seededConfigs.count += agentSeeded.count || 0
+			if (agentSeeded.configs?.length > 0) {
+				const agentCoId = agentSeeded.configs[0].coId
+				agents?.set?.(agentKey, agentCoId)
+				if (agent.$id) {
+					instanceCoIdMap.set(agent.$id, agentCoId)
+					combinedRegistry.set(agent.$id, agentCoId)
+					coIdRegistry.register(agent.$id, agentCoId)
 				}
 			}
 		}

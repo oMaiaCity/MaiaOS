@@ -16,7 +16,13 @@
  * All consumers use resolve() directly - no wrappers, no scattered functions.
  */
 
-import { SCHEMA_REF_PATTERN, VIBE_REF_PATTERN } from '@MaiaOS/schemata'
+import {
+	ACTOR_CONFIG_REF_PATTERN,
+	AGENT_ACTOR_REF_PATTERN,
+	AGENT_REF_PATTERN,
+	INSTANCE_REF_PATTERN,
+	SCHEMA_REF_PATTERN,
+} from '@MaiaOS/schemata'
 import { resolveReactive as resolveReactiveBase } from '../crud/reactive-resolver.js'
 import { read as universalRead } from '../crud/read.js'
 import { waitForStoreReady } from '../crud/read-operations.js'
@@ -71,7 +77,7 @@ function removeIdFields(obj, inPropertiesOrItems = false) {
  * @param {Object} peer - Backend instance
  * @param {string|Object} identifier - Identifier:
  *   - Co-id: 'co_z...' → returns co-value/schema
- *   - Registry key: '°Maia/schema/...' or '°Maia/vibe/...' → resolves to co-id, then returns co-value/schema
+ *   - Registry key: '°Maia/schema/...' or '°Maia/agent/...' → resolves to co-id, then returns co-value/schema
  *   - Options: {fromCoValue: 'co_z...'} → extracts schema from headerMeta, then returns schema
  * @param {Object} [options] - Options
  * @param {string} [options.returnType='schema'] - Return type: 'coId' | 'schema' | 'coValue'
@@ -194,14 +200,18 @@ export async function resolve(peer, identifier, options = {}) {
 		return null
 	}
 
-	// Registry key lookup (°Maia/schema/... or °Maia/vibe/... - spark name as prefix)
+	// Registry key lookup (°Maia/schema/..., °Maia/agent/..., °Maia/.../actor/..., °Maia/.../inbox/... - spark prefix)
 	const isSchemaKeyMatch = SCHEMA_REF_PATTERN.test(identifier)
-	const isVibeKeyMatch = VIBE_REF_PATTERN.test(identifier)
+	const isAgentKeyMatch = AGENT_REF_PATTERN.test(identifier)
+	const isInstanceKeyMatch =
+		INSTANCE_REF_PATTERN.test(identifier) ||
+		ACTOR_CONFIG_REF_PATTERN.test(identifier) ||
+		AGENT_ACTOR_REF_PATTERN.test(identifier)
 	const isBareKey =
 		!identifier.startsWith('°') && !identifier.startsWith('@') && !identifier.startsWith('co_z')
-	if (isSchemaKeyMatch || isVibeKeyMatch || isBareKey) {
+	if (isSchemaKeyMatch || isAgentKeyMatch || isInstanceKeyMatch || isBareKey) {
 		const effectiveSpark = spark ?? peer?.systemSpark
-		if (!effectiveSpark && (isSchemaKeyMatch || isVibeKeyMatch || isBareKey)) {
+		if (!effectiveSpark && (isSchemaKeyMatch || isAgentKeyMatch || isInstanceKeyMatch || isBareKey)) {
 			throw new Error(
 				`[resolve] spark required for registry lookup of ${identifier}. Pass options.spark or set peer.systemSpark.`,
 			)
@@ -210,14 +220,14 @@ export async function resolve(peer, identifier, options = {}) {
 		let normalizedKey = identifier
 		if (
 			!SCHEMA_REF_PATTERN.test(normalizedKey) &&
-			!VIBE_REF_PATTERN.test(normalizedKey) &&
+			!AGENT_REF_PATTERN.test(normalizedKey) &&
 			!normalizedKey.startsWith('°') &&
 			!normalizedKey.startsWith('@')
 		) {
 			normalizedKey = `${effectiveSpark}/schema/${normalizedKey}`
 		}
 
-		// Use read() API to load spark.os (account.registries.sparks[spark].os) or spark.vibes registry
+		// Use read() API to load spark.os (account.registries.sparks[spark].os) or spark.agents registry
 		if (!peer.account || typeof peer.account.get !== 'function') {
 			return null
 		}
@@ -304,8 +314,8 @@ export async function resolve(peer, identifier, options = {}) {
 				}
 				return null
 			}
-		} else if (VIBE_REF_PATTERN.test(identifier)) {
-			// Vibe instance keys → account.registries.sparks[spark].vibes
+		} else if (AGENT_REF_PATTERN.test(identifier)) {
+			// Agent instance keys → account.registries.sparks[spark].agents
 			const sparkCoId = await resolveSparkCoId(peer, effectiveSpark)
 			if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_z')) {
 				return null
@@ -321,35 +331,32 @@ export async function resolve(peer, identifier, options = {}) {
 			}
 			const sparkData = sparkStore.value
 			if (!sparkData || sparkData.error) return null
-			const vibesId = sparkData.vibes
-			if (!vibesId || typeof vibesId !== 'string' || !vibesId.startsWith('co_z')) {
+			const agentsId = sparkData.agents
+			if (!agentsId || typeof agentsId !== 'string' || !agentsId.startsWith('co_z')) {
 				return null
 			}
 
-			// Load spark.vibes using read() API
-			const vibesStore = await universalRead(peer, vibesId, null, null, null, {
+			const agentsStore = await universalRead(peer, agentsId, null, null, null, {
 				deepResolve: false,
 				timeoutMs,
 			})
 
 			try {
-				await waitForStoreReady(vibesStore, vibesId, timeoutMs)
+				await waitForStoreReady(agentsStore, agentsId, timeoutMs)
 			} catch (_error) {
 				return null
 			}
 
-			const vibesData = vibesStore.value
-			if (!vibesData || vibesData.error) {
+			const agentsData = agentsStore.value
+			if (!agentsData || agentsData.error) {
 				return null
 			}
 
-			// Extract vibe name (remove @domain/vibe/ prefix if present)
-			const vibeName = VIBE_REF_PATTERN.test(identifier)
-				? identifier.replace(VIBE_REF_PATTERN, '')
+			const agentName = AGENT_REF_PATTERN.test(identifier)
+				? identifier.replace(AGENT_REF_PATTERN, '')
 				: identifier
 
-			// Lookup vibe in registry (flat object from read() API - properties directly accessible)
-			const registryCoId = vibesData[vibeName]
+			const registryCoId = agentsData[agentName]
 			if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
 				// Found registry entry - resolve the co-id
 				if (returnType === 'coId') {
@@ -359,6 +366,94 @@ export async function resolve(peer, identifier, options = {}) {
 				return await resolve(peer, registryCoId, { returnType, deepResolve, timeoutMs })
 			}
 
+			return null
+		} else if (isInstanceKeyMatch) {
+			// Instance config keys (actor, inbox, view, context, state, style) → spark.os.schematas
+			const sparkCoId = await resolveSparkCoId(peer, effectiveSpark)
+			if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_z')) {
+				if (typeof window !== 'undefined') {
+					console.warn('[resolve] instance key: spark not resolved', identifier)
+				}
+				return null
+			}
+			const sparkStore = await universalRead(peer, sparkCoId, null, null, null, {
+				deepResolve: false,
+				timeoutMs,
+			})
+			try {
+				await waitForStoreReady(sparkStore, sparkCoId, timeoutMs)
+			} catch {
+				if (typeof window !== 'undefined') {
+					console.warn('[resolve] instance key: spark store timeout', identifier)
+				}
+				return null
+			}
+			const sparkData = sparkStore.value
+			if (!sparkData || sparkData.error) return null
+			const osId = sparkData.os
+			if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
+				if (typeof window !== 'undefined') {
+					console.warn('[resolve] instance key: os missing from spark', identifier)
+				}
+				return null
+			}
+
+			const osStore = await universalRead(peer, osId, null, null, null, {
+				deepResolve: false,
+				timeoutMs,
+			})
+			try {
+				await waitForStoreReady(osStore, osId, timeoutMs)
+			} catch (_error) {
+				if (typeof window !== 'undefined') {
+					console.warn('[resolve] instance key: os store timeout', identifier)
+				}
+				return null
+			}
+			const osData = osStore.value
+			if (!osData || osData.error) return null
+
+			const schematasId = osData.schematas
+			if (!schematasId || typeof schematasId !== 'string' || !schematasId.startsWith('co_z')) {
+				if (typeof window !== 'undefined') {
+					console.warn('[resolve] instance key: schematas missing from os', identifier)
+				}
+				return null
+			}
+
+			const schematasStore = await universalRead(peer, schematasId, null, null, null, {
+				deepResolve: false,
+				timeoutMs,
+			})
+			try {
+				await waitForStoreReady(schematasStore, schematasId, timeoutMs)
+			} catch (_error) {
+				if (typeof window !== 'undefined') {
+					console.warn('[resolve] instance key: schematas store timeout', identifier)
+				}
+				return null
+			}
+			const schematasData = schematasStore.value
+			if (!schematasData || schematasData.error) return null
+
+			const registryCoId = schematasData[identifier]
+			if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
+				if (returnType === 'coId') {
+					return registryCoId
+				}
+				return await resolve(peer, registryCoId, { returnType, deepResolve, timeoutMs })
+			}
+			if (typeof window !== 'undefined') {
+				const keys = Object.keys(schematasData).filter(
+					(k) => !['id', 'loading', 'error', '$schema', 'type', '_coValueType'].includes(k),
+				)
+				console.warn(
+					'[resolve] instance key not in schematas:',
+					identifier,
+					'| schematas keys:',
+					keys.slice(0, 20).join(', '),
+				)
+			}
 			return null
 		}
 	}

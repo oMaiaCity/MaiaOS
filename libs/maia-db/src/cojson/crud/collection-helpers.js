@@ -53,7 +53,8 @@ export async function getCoListId(peer, collectionNameOrSchema) {
 
 	// Must be a schema co-id or human-readable schema name (°Maia/schema/... or @domain/schema/...)
 	if (!collectionNameOrSchema.startsWith('co_z') && !isSchemaRef(collectionNameOrSchema)) {
-		if (process.env.DEBUG) console.error('Invalid collection/schema ref:', collectionNameOrSchema)
+		if (typeof process !== 'undefined' && process.env?.DEBUG)
+			console.error('Invalid collection/schema ref:', collectionNameOrSchema)
 		return null
 	}
 
@@ -95,7 +96,8 @@ export async function ensureCoValueLoaded(peer, coId, options = {}) {
 
 	// Not available - trigger loading from IndexedDB (jazz-tools pattern)
 	peer.node.loadCoValueCore(coId).catch((_err) => {
-		if (process.env.DEBUG) console.log('[CoValue load error]', _err)
+		if (typeof process !== 'undefined' && process.env?.DEBUG)
+			console.log('[CoValue load error]', _err)
 	})
 
 	// If waitForAvailable is true, wait for it to become available
@@ -104,7 +106,7 @@ export async function ensureCoValueLoaded(peer, coId, options = {}) {
 			// Fix: Declare unsubscribe before subscribe call to avoid temporal dead zone
 			let unsubscribe
 			const timeout = setTimeout(() => {
-				if (process.env.DEBUG) console.log('[CoValue timeout]', coId)
+				if (typeof process !== 'undefined' && process.env?.DEBUG) console.log('[CoValue timeout]', coId)
 				unsubscribe()
 				reject(new Error(`Timeout waiting for CoValue ${coId} to load after ${timeoutMs}ms`))
 			}, timeoutMs)

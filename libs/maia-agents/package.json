@@ -1,0 +1,22 @@
+{
+	"name": "@MaiaOS/agents",
+	"version": "26.0217.1438",
+	"type": "module",
+	"main": "src/index.js",
+	"exports": {
+		".": "./src/index.js",
+		"./seeding": "./src/seeding.js",
+		"./todos/loader": "./src/todos/loader.js",
+		"./todos/registry": "./src/todos/registry.js"
+	},
+	"dependencies": {
+		"@MaiaOS/loader": "workspace:*"
+	},
+	"devDependencies": {},
+	"scripts": {
+		"build": "echo 'No build - use source via @MaiaOS/agents'"
+	},
+	"files": [
+		"src"
+	]
+}

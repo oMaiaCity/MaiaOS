@@ -245,7 +245,7 @@ export class CoCache {
 
 	/**
 	 * Debug: Log cache stats when window._maiaDebugSubscriptions is true
-	 * Helps diagnose subscription buildup / vibe freeze issues
+	 * Helps diagnose subscription buildup / agent freeze issues
 	 * @private
 	 */
 	_maybeLogStats() {

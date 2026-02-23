@@ -1,0 +1,89 @@
+{
+	"$schema": "°Maia/schema/state",
+	"$id": "°Maia/sparks/state/intent",
+	"initial": "idle",
+	"states": {
+		"idle": {
+			"on": {
+				"CREATE_BUTTON": {
+					"target": "creating"
+				},
+				"UPDATE_INPUT": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"newSparkName": "$$value"
+							}
+						}
+					]
+				},
+				"SELECT_SPARK": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"selectedSparkId": "$$sparkId"
+							}
+						},
+						"sendToDetailActor"
+					]
+				}
+			}
+		},
+		"creating": {
+			"entry": {
+				"sendToActor": "°Maia/actor/sparks",
+				"payload": {
+					"op": "createSpark",
+					"name": "$$value"
+				}
+			},
+			"on": {
+				"SUCCESS": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"newSparkName": "",
+								"error": null,
+								"hasError": false
+							}
+						}
+					]
+				},
+				"ERROR": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"error": "$$errors.0.message",
+								"hasError": true
+							}
+						}
+					]
+				}
+			}
+		},
+		"error": {
+			"entry": {
+				"updateContext": {
+					"error": "$$errors.0.message"
+				}
+			},
+			"on": {
+				"DISMISS": {
+					"target": "idle",
+					"actions": [
+						{
+							"updateContext": {
+								"error": null,
+								"hasError": false
+							}
+						}
+					]
+				}
+			}
+		}
+	}
+}

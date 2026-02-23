@@ -18,10 +18,10 @@
 			"pattern": "^co_z[a-zA-Z0-9]+$",
 			"description": "OS CoMap - contains schematas, indexes. Owned by group."
 		},
-		"vibes": {
+		"agents": {
 			"type": "string",
 			"pattern": "^co_z[a-zA-Z0-9]+$",
-			"description": "Vibes registry CoMap for this spark (owned by group)"
+			"description": "Agents registry CoMap for this spark (owned by group)"
 		}
 	}
 }

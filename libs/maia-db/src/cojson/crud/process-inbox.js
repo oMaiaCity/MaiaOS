@@ -79,6 +79,25 @@ export async function processInbox(peer, actorId, inboxCoId) {
 		return { messages: [] }
 	}
 	const ourMessages = inboxData.sessions[currentSessionID]
+	const sessionKeys = Object.keys(inboxData.sessions || {})
+	const totalInOtherSessions = sessionKeys.reduce(
+		(sum, k) => sum + (Array.isArray(inboxData.sessions[k]) ? inboxData.sessions[k].length : 0),
+		0,
+	)
+	if (typeof window !== 'undefined' && totalInOtherSessions > 0) {
+		const ourCount = Array.isArray(ourMessages) ? ourMessages.length : 0
+		if (ourCount === 0) {
+			console.warn(
+				'[sendToActor] processInbox: SESSION MISMATCH? Inbox has messages in other sessions but none in ours',
+				{
+					currentSessionID,
+					inboxCoId,
+					totalInOtherSessions,
+					sessionKeys: sessionKeys.slice(0, 3),
+				},
+			)
+		}
+	}
 	if (!Array.isArray(ourMessages)) {
 		return { messages: [] }
 	}

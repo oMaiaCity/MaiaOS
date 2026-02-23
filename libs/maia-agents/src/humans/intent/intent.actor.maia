@@ -1,0 +1,14 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/humans/actor/intent",
+	"type": "service",
+	"state": "°Maia/humans/state/intent",
+	"view": "°Maia/humans/view/intent",
+	"context": "°Maia/humans/context/intent",
+	"brand": "°Maia/humans/style/brand",
+	"inbox": "°Maia/humans/inbox/intent",
+	"interface": [
+		"DISMISS"
+	],
+	"role": "@humans/intent"
+}

@@ -57,7 +57,7 @@ app (composite)
 
 ## Message Passing Between Actors
 
-Actors communicate via **inbox costreams**, not props. Use `@core/publishMessage` in state machine actions. Messages auto-route to state machine.
+Actors communicate via **inbox costreams**, not props. Use the `sendEvent` action in state machines: `{"sendEvent":{"target":"°Maia/...","type":"EVENT_TYPE","payload":{...}}}`. Messages auto-route to the target's state machine.
 
 ## Common Patterns
 

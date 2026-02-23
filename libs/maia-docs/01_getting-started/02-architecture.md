@@ -331,7 +331,7 @@ Agent sends event to actor via StateEngine
 - **maia-engines** – DataEngine (maia.do), Actor/View/Style/State/Tool engines, modules
 - **maia-db** – MaiaDB (CRUD, resolve, indexing, seeding)
 - **maia-peer** – Node, account, sync (P2P layer)
-- **maia-tools** – Tool definitions (@db, @core/*, etc.)
+- **maia-actors** – Actor definitions (@db, @core/*, @ai/chat, etc.)
 
 ```
 libs/maia-engines/src/
@@ -356,7 +356,7 @@ MaiaOS/
 │   ├── maia-engines/           # Engines (DataEngine, Actor, View, etc.)
 │   ├── maia-db/                # MaiaDB (CoJSON CRDT, seeding in migrations/)
 │   ├── maia-peer/              # P2P layer (node, account, sync)
-│   ├── maia-tools/             # Tool definitions
+│   ├── maia-actors/            # Actor definitions
 │   ├── maia-schemata/          # Schema validation
 │   ├── maia-vibes/             # Example vibes/apps
 │   └── maia-self/              # Self-sovereign identity

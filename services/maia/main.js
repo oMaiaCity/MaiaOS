@@ -30,12 +30,12 @@ import { getSyncStatusMessage } from './utils.js'
 import { renderVoicePage } from './voice.js'
 
 let maia
-let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'vibe-viewer'
+let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'agent-viewer'
 let currentView = 'account' // Current schema filter (default: 'account')
 let currentContextCoValueId = null // Currently loaded CoValue in main context (explorer-style navigation)
-let currentVibe = null // Currently loaded vibe (null = DB view mode, 'todos' = todos vibe, etc.)
-let currentSpark = null // Grid hierarchy: null = sparks level, '°Maia' = vibes for that spark
-let _currentVibeContainer = null // Currently loaded vibe container element (for cleanup on unload)
+let currentAgent = null // Currently loaded agent (null = DB view mode, 'todos' = todos agent, etc.)
+let currentSpark = null // Grid hierarchy: null = sparks level, '°Maia' = agents for that spark
+let _currentAgentContainer = null // Currently loaded agent container element (for cleanup on unload)
 let navigationHistory = [] // Navigation history stack for back button
 let isRendering = false // Guard to prevent render loops
 let authState = {
@@ -517,15 +517,15 @@ async function signIn() {
 	}
 }
 
-/** Load linked CoValues from account (vibes via deep resolution) */
+/** Load linked CoValues from account (registries via deep resolution) */
 async function loadLinkedCoValues() {
 	if (!maia?.id?.maiaId) return
 	try {
 		const accountStore = await maia.do({ op: 'read', schema: '@account', key: maia.id.maiaId.id })
 		const accountData = accountStore?.value ?? accountStore
-		const vibesId = accountData?.vibes
-		if (typeof vibesId === 'string' && vibesId.startsWith('co_')) {
-			await maia.do({ op: 'read', schema: vibesId, key: vibesId, deepResolve: true })
+		const registriesId = accountData?.registries
+		if (typeof registriesId === 'string' && registriesId.startsWith('co_')) {
+			await maia.do({ op: 'read', schema: registriesId, key: registriesId, deepResolve: true })
 		}
 	} catch (_e) {}
 }
@@ -748,11 +748,11 @@ window.showToast = showToast // Expose for debugging
 // Navigation function for screen transitions
 // @param {string} screen - Screen to navigate to
 // @param {Object} [options] - Options
-// @param {boolean} [options.preserveSpark] - If true, keep currentSpark (Home from vibe → vibes grid, not sparks root)
+// @param {boolean} [options.preserveSpark] - If true, keep currentSpark (Home from agent → agents grid, not sparks root)
 function navigateToScreen(screen, options = {}) {
 	currentScreen = screen
 	if (screen === 'dashboard') {
-		currentVibe = null
+		currentAgent = null
 		currentContextCoValueId = null
 		if (!options.preserveSpark) {
 			currentSpark = null
@@ -779,9 +779,9 @@ function selectCoValueInternal(coId, skipHistory = false) {
 	// Collapse sidebars when selecting a co-value
 	collapseAllSidebars()
 
-	// If we're in vibe mode and selecting account, exit vibe mode first
-	if (currentVibe !== null && coId === maia?.id?.maiaId?.id) {
-		currentVibe = null
+	// If we're in agent mode and selecting account, exit agent mode first
+	if (currentAgent !== null && coId === maia?.id?.maiaId?.id) {
+		currentAgent = null
 		// If there's navigation history, restore the previous context instead of going to account
 		if (navigationHistory.length > 0) {
 			const previousCoId = navigationHistory.pop()
@@ -816,7 +816,7 @@ async function selectCoValue(coId, skipHistory = false) {
 }
 
 /**
- * Collapse all sidebars (both DB viewer and vibe viewer)
+ * Collapse all sidebars (both DB viewer and agent viewer)
  */
 function collapseAllSidebars() {
 	// Collapse DB viewer sidebars
@@ -829,11 +829,11 @@ function collapseAllSidebars() {
 		dbMetadata.classList.add('collapsed')
 	}
 
-	// Collapse vibe viewer sidebars (in Shadow DOM)
-	const vibeContainer = document.querySelector('.vibe-container')
-	if (vibeContainer?.shadowRoot) {
-		const navAside = vibeContainer.shadowRoot.querySelector('.nav-aside')
-		const detailAside = vibeContainer.shadowRoot.querySelector('.detail-aside')
+	// Collapse agent viewer sidebars (in Shadow DOM)
+	const agentContainer = document.querySelector('.agent-container')
+	if (agentContainer?.shadowRoot) {
+		const navAside = agentContainer.shadowRoot.querySelector('.nav-aside')
+		const detailAside = agentContainer.shadowRoot.querySelector('.detail-aside')
 		if (navAside) {
 			navAside.classList.add('collapsed')
 		}
@@ -844,9 +844,9 @@ function collapseAllSidebars() {
 }
 
 function goBack() {
-	// If we're in vibe mode, exit vibe mode first
-	if (currentVibe !== null) {
-		loadVibe(null)
+	// If we're in agent mode, exit agent mode first
+	if (currentAgent !== null) {
+		loadAgent(null)
 		return
 	}
 
@@ -889,11 +889,11 @@ async function renderAppInternal() {
 			currentScreen,
 			currentView,
 			currentContextCoValueId,
-			currentVibe,
+			currentAgent,
 			currentSpark,
 			switchView,
 			selectCoValue,
-			loadVibe,
+			loadAgent,
 			loadSpark,
 			navigateToScreen,
 		)
@@ -906,57 +906,49 @@ async function renderAppInternal() {
 window.renderAppInternal = renderAppInternal
 
 /**
- * Load a vibe inline in the main context area
- * @param {string|null} vibeKey - Vibe key (e.g., 'todos') or null to exit vibe mode
+ * Load an agent inline in the main context area
+ * @param {string|null} agentKey - Agent key (e.g., 'todos') or null to exit agent mode
  */
-async function loadVibe(vibeKey) {
-	if (!maia && vibeKey !== null) {
+async function loadAgent(agentKey) {
+	if (!maia && agentKey !== null) {
 		return
 	}
 
-	// Ensure vibeKey is a string or null (not a function)
-	if (vibeKey !== null && typeof vibeKey !== 'string') {
+	if (agentKey !== null && typeof agentKey !== 'string') {
 		return
 	}
 
 	try {
 		if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
 		}
-		if (vibeKey === null) {
-			// Unloading vibe - destroy actors (cleanup subscriptions, prevent leak)
-			if (currentVibe && maia && maia.actorEngine) {
-				maia.actorEngine.destroyActorsForVibe(currentVibe)
+		if (agentKey === null) {
+			if (currentAgent && maia?.runtime) {
+				maia.runtime.destroyActorsForAgent(currentAgent)
 			}
 
-			// Clear container reference
-			_currentVibeContainer = null
-			window.currentVibeContainer = null
+			_currentAgentContainer = null
+			window.currentAgentContainer = null
 
-			currentVibe = null
-			// Navigate to vibes grid (preserve spark context)
+			currentAgent = null
 			navigateToScreen('dashboard', { preserveSpark: true })
 		} else {
-			// Destroy actors from previous vibe (cleanup subscriptions, prevent leak)
-			if (currentVibe && currentVibe !== vibeKey && maia && maia.actorEngine) {
-				maia.actorEngine.destroyActorsForVibe(currentVibe)
+			if (currentAgent && currentAgent !== agentKey && maia?.runtime) {
+				maia.runtime.destroyActorsForAgent(currentAgent)
 			}
 
-			// Save current context to history before entering vibe mode
 			if (currentContextCoValueId !== null) {
 				navigationHistory.push(currentContextCoValueId)
 			}
-			// Set current vibe state and navigate to vibe viewer
-			currentVibe = vibeKey
-			currentContextCoValueId = null // Clear DB context
-			currentScreen = 'vibe-viewer'
+			currentAgent = agentKey
+			currentContextCoValueId = null
+			currentScreen = 'agent-viewer'
 		}
 
-		// Re-render to show vibe content or return to dashboard
 		await renderAppInternal()
 		if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
 		}
 	} catch (_error) {
-		currentVibe = null
+		currentAgent = null
 		await renderAppInternal()
 	}
 }
@@ -983,7 +975,7 @@ function toggleExpand(expandId) {
 window.switchView = switchView
 window.selectCoValue = selectCoValue
 window.goBack = goBack
-window.loadVibe = loadVibe
+window.loadAgent = loadAgent
 window.loadSpark = loadSpark
 window.navigateToScreen = navigateToScreen
 window.toggleExpand = toggleExpand
@@ -997,7 +989,7 @@ window.toggleMobileMenu = () => {
 	if (trigger) trigger.classList.toggle('active', menu.classList.contains('active'))
 }
 
-/** Toggle sidebar (DB viewer or vibe viewer). Pass containerSelector for Shadow DOM (vibe). */
+/** Toggle sidebar (DB viewer or agent viewer). Pass containerSelector for Shadow DOM. */
 function toggleSidebar(sidebarSelector, otherSidebarSelector, containerSelector) {
 	const root = containerSelector ? document.querySelector(containerSelector)?.shadowRoot : document
 	if (!root) return
@@ -1014,7 +1006,7 @@ function toggleSidebar(sidebarSelector, otherSidebarSelector, containerSelector)
 
 window.toggleDBLeftSidebar = () => toggleSidebar('.db-sidebar', '.db-metadata')
 window.toggleDBRightSidebar = () => toggleSidebar('.db-metadata', '.db-sidebar')
-window.toggleLeftSidebar = () => toggleSidebar('.nav-aside', '.detail-aside', '.vibe-container')
-window.toggleRightSidebar = () => toggleSidebar('.detail-aside', '.nav-aside', '.vibe-container')
+window.toggleLeftSidebar = () => toggleSidebar('.nav-aside', '.detail-aside', '.agent-container')
+window.toggleRightSidebar = () => toggleSidebar('.detail-aside', '.nav-aside', '.agent-container')
 
 init()

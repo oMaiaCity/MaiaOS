@@ -2,56 +2,24 @@
 	"$schema": "°Maia/schema/meta",
 	"$id": "°Maia/schema/tool",
 	"title": "°Maia/schema/tool",
-	"description": "Tool definition (OpenAI/RedPill-compatible format)",
+	"description": "LLM tool descriptor (name, description, parameters) for service actors",
 	"cotype": "comap",
 	"indexing": true,
-	"required": ["type", "function"],
 	"properties": {
-		"type": {
+		"name": {
 			"type": "string",
-			"const": "function",
-			"description": "OpenAI tool type (always 'function')"
+			"pattern": "^@",
+			"description": "Tool name for LLM/OpenAI (e.g. @sparks, @db/db)"
 		},
-		"function": {
+		"description": {
+			"type": "string",
+			"description": "Human-readable description for LLM"
+		},
+		"parameters": {
 			"type": "object",
-			"description": "OpenAI function descriptor",
-			"required": ["name", "description", "parameters"],
-			"properties": {
-				"name": {
-					"type": "string",
-					"description": "Tool identifier (e.g. '@core/updatePaperContent')",
-					"pattern": "^@"
-				},
-				"description": { "type": "string", "description": "Tool description" },
-				"parameters": {
-					"type": "object",
-					"description": "JSON Schema for tool parameters",
-					"properties": {
-						"type": {
-							"type": "string",
-							"enum": ["object", "array", "string", "number", "boolean", "null"]
-						},
-						"properties": {
-							"type": "object",
-							"additionalProperties": {
-								"type": "object",
-								"properties": {
-									"type": { "type": "string" },
-									"description": { "type": "string" },
-									"required": { "type": "boolean" },
-									"properties": { "type": "object", "additionalProperties": true }
-								},
-								"additionalProperties": true
-							}
-						},
-						"required": { "type": "array", "items": { "type": "string" } }
-					},
-					"required": ["type"],
-					"additionalProperties": true
-				}
-			},
-			"additionalProperties": false
+			"additionalProperties": true,
+			"description": "JSON Schema for tool parameters"
 		}
 	},
-	"additionalProperties": true
+	"required": ["name", "description", "parameters"]
 }

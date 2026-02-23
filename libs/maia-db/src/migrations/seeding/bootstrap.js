@@ -117,8 +117,8 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		tempCoMap.get('°Maia/schema/os/capabilities') || EXCEPTION_SCHEMAS.META_SCHEMA
 	const indexesSchemaCoId =
 		tempCoMap.get('°Maia/schema/os/indexes-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
-	const vibesSchemaCoId =
-		tempCoMap.get('°Maia/schema/os/vibes-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
+	const agentsSchemaCoId =
+		tempCoMap.get('°Maia/schema/os/agents-registry') ?? EXCEPTION_SCHEMAS.META_SCHEMA
 
 	const ctx = { node, account, guardian }
 	const scaffoldOpts = (schema, data) => ({ schema, cotype: 'comap', data, dataEngine: dbEngine })
@@ -145,15 +145,15 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		null,
 		scaffoldOpts(indexesSchemaCoId, {}),
 	)
-	const { coValue: vibes } = await createCoValueForSpark(
+	const { coValue: agents } = await createCoValueForSpark(
 		ctx,
 		null,
-		scaffoldOpts(vibesSchemaCoId, {}),
+		scaffoldOpts(agentsSchemaCoId, {}),
 	)
 	os.set('schematas', schematas.id)
 	os.set('indexes', indexes.id)
 	maiaSpark.set('os', os.id)
-	maiaSpark.set('vibes', vibes.id)
+	maiaSpark.set('agents', agents.id)
 	schematas.set('°Maia/schema/meta', metaSchemaCoId)
 	for (const [k, coId] of schemaCoIdMap) schematas.set(k, coId)
 
@@ -227,7 +227,7 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	}
 
 	console.log(
-		'✅ Bootstrap scaffold complete: account.registries, °Maia spark, os, schematas, indexes, vibes',
+		'✅ Bootstrap scaffold complete: account.registries, °Maia spark, os, schematas, indexes, agents',
 	)
 }
 

@@ -2,8 +2,6 @@
  * Registry - Central plugin system for MaiaScript module extensions
  */
 
-import { getTool } from '@MaiaOS/tools'
-
 export class Registry {
 	constructor() {
 		this.modules = new Map() // moduleName → module instance
@@ -123,50 +121,5 @@ export class Registry {
 		if (typeof module.query === 'function') return module.query(query)
 		if (module.config && query in module.config) return module.config[query]
 		return null
-	}
-
-	/**
-	 * Get tool engine from registry
-	 * @param {string} moduleName - Module name for error messages
-	 * @returns {Object} ToolEngine instance
-	 */
-	_getToolEngine(moduleName) {
-		const toolEngine = this._toolEngine
-		if (!toolEngine) {
-			throw new Error(`[${moduleName}] ToolEngine not available in registry`)
-		}
-		return toolEngine
-	}
-
-	/**
-	 * Register tools from tools registry
-	 * @param {string} moduleName - Module name
-	 * @param {Array<string>} toolNames - Array of tool names
-	 * @param {string} namespace - Namespace prefix (e.g., '@core')
-	 * @param {Object} options - Options (silent, etc.)
-	 * @returns {Promise<Array<string>>} Array of registered tool names
-	 */
-	async _registerToolsFromRegistry(moduleName, toolNames, namespace, options = {}) {
-		const { silent = false } = options
-		const toolEngine = this._getToolEngine(moduleName)
-		const registeredTools = []
-
-		for (const toolName of toolNames) {
-			try {
-				const tool = getTool(`${moduleName}/${toolName}`)
-				if (tool) {
-					await toolEngine.registerTool(`${moduleName}/${toolName}`, `${namespace}/${toolName}`, {
-						definition: tool.definition,
-						function: tool.function,
-					})
-					registeredTools.push(`${namespace}/${toolName}`)
-				}
-			} catch (_error) {
-				if (!silent) {
-				}
-			}
-		}
-
-		return registeredTools
 	}
 }

@@ -35,7 +35,7 @@ The sync service consolidates WebSocket sync, agent API, and LLM proxy in one pr
 
 ## Dependencies
 
-- `@MaiaOS/maia-distros` + `@MaiaOS/loader`. Moai imports only from loader; loader re-exports schemata, tools, vibes, cojson-transport-ws. maia-distros has no app logic—only bundling. Moai owns the logic (src/index.js); distros bundles it to moai-server.mjs. Prod runs the bundle; dev runs source.
+- `@MaiaOS/maia-distros` + `@MaiaOS/loader`. Moai imports only from loader; loader re-exports schemata, tools, agents, cojson-transport-ws. maia-distros has no app logic—only bundling. Moai owns the logic (src/index.js); distros bundles it to moai-server.mjs. Prod runs the bundle; dev runs source.
 
 ## Development
 

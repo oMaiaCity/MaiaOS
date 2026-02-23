@@ -2044,7 +2044,7 @@ pre {
 	margin-top: 0.5rem;
 }
 
-.vibe-card {
+.agent-card {
 	flex: 1;
 	height: 100%;
 	display: flex;
@@ -2059,8 +2059,8 @@ pre {
 	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
 }
 
-/* Vibe Container - Full width/height for inline vibe rendering */
-.vibe-container {
+/* Agent Container - Full width/height for inline agent rendering */
+.agent-container {
 	width: 100%;
 	height: 100%;
 	flex: 1;
@@ -2214,8 +2214,8 @@ pre {
 	}
 }
 
-/* Vibe Viewer Main - spans full height to bottom minus margin/padding on all viewports */
-.vibe-viewer-main {
+/* Agent Viewer Main - spans full height to bottom minus margin/padding on all viewports */
+.agent-viewer-main {
 	flex: 1 1 0;
 	min-height: 0;
 	height: 100%;
@@ -2591,9 +2591,9 @@ pre {
 		padding-bottom: 0; /* Remove bottom padding from list container */
 	}
 
-	/* Vibe viewer spans full height – navbar overlays bottom, no gap */
+	/* Agent viewer spans full height – navbar overlays bottom, no gap */
 
-	.vibe-card {
+	.agent-card {
 		margin-bottom: 0; /* Remove any extra margin */
 	}
 
@@ -2603,9 +2603,8 @@ pre {
 }
 
 /* Global styles for sliding sidebars (affects Shadow DOM) */
-/* These target the vibe container's Shadow DOM content */
-.vibe-container .nav-aside,
-.vibe-container .detail-aside {
+.agent-container .nav-aside,
+.agent-container .detail-aside {
 	transition:
 		transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
 		opacity 0.3s ease;

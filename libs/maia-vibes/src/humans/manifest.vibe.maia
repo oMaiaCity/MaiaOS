@@ -1,7 +1,0 @@
-{
-	"$schema": "°Maia/schema/vibe",
-	"$id": "°Maia/vibe/humans",
-	"name": "Human Book",
-	"description": "Browse all humans in the Maia registry — account ID, registry name, profile name",
-	"actor": "°Maia/humans/actor/vibe"
-}

@@ -33,7 +33,7 @@ async function getSchemaFromDb(maia, schemaRef) {
 	}
 }
 
-import { renderDashboard, renderVibeViewer } from './dashboard.js'
+import { renderAgentViewer, renderDashboard } from './dashboard.js'
 import { escapeHtml, getSyncStatusMessage, truncate } from './utils.js'
 
 export async function renderApp(
@@ -43,15 +43,14 @@ export async function renderApp(
 	currentScreen,
 	currentView,
 	currentContextCoValueId,
-	currentVibe,
+	currentAgent,
 	currentSpark,
 	switchView,
 	selectCoValue,
-	loadVibe,
+	loadAgent,
 	loadSpark,
 	navigateToScreen,
 ) {
-	// Route to appropriate screen based on currentScreen
 	if (currentScreen === 'dashboard') {
 		await renderDashboard(
 			maia,
@@ -60,13 +59,13 @@ export async function renderApp(
 			navigateToScreen,
 			currentSpark,
 			loadSpark,
-			loadVibe,
+			loadAgent,
 		)
 		return
 	}
 
-	if (currentScreen === 'vibe-viewer' && currentVibe) {
-		await renderVibeViewer(maia, authState, syncState, currentVibe, navigateToScreen, currentSpark)
+	if (currentScreen === 'agent-viewer' && currentAgent) {
+		await renderAgentViewer(maia, authState, syncState, currentAgent, navigateToScreen, currentSpark)
 		return
 	}
 
@@ -297,7 +296,7 @@ export async function renderApp(
 			})
 			// ReadOperation returns a ReactiveStore - get current value
 			const contextData = store.value || store
-			// Operations API returns flat objects: {id: '...', profile: '...', vibes: '...'}
+			// Operations API returns flat objects: {id: '...', profile: '...', registries: '...'}
 			// Convert to normalized format for DB Viewer display
 			const hasProperties =
 				contextData &&
@@ -362,11 +361,11 @@ export async function renderApp(
 								currentScreen,
 								currentView,
 								currentContextCoValueId,
-								currentVibe,
+								currentAgent,
 								currentSpark,
 								switchView,
 								selectCoValue,
-								loadVibe,
+								loadAgent,
 								loadSpark,
 								navigateToScreen,
 							)
@@ -411,11 +410,11 @@ export async function renderApp(
 									currentScreen,
 									currentView,
 									currentContextCoValueId,
-									currentVibe,
+									currentAgent,
 									currentSpark,
 									switchView,
 									selectCoValue,
-									loadVibe,
+									loadAgent,
 									loadSpark,
 									navigateToScreen,
 								)
@@ -454,7 +453,7 @@ export async function renderApp(
 		_viewSubtitle = ''
 	}
 
-	// Build account structure navigation (Account only - vibes removed from sidebar)
+	// Build account structure navigation (Account only - agents in spark.agents)
 	const navigationItems = []
 
 	// Entry 1: Account itself
@@ -468,7 +467,7 @@ export async function renderApp(
 	let tableContent = ''
 	let headerInfo = null // Store header info for colist/costream to display in inspector-header
 
-	// DB Viewer only shows DB content (no vibe rendering here)
+	// DB Viewer only shows DB content (no agent rendering here)
 	if (currentContextCoValueId && data) {
 		// Explorer-style: if context CoValue is loaded, show its properties in main container
 		// Show CoValue properties in main container (reuse property rendering from detail view)
@@ -565,10 +564,10 @@ export async function renderApp(
 			)
 
 			if (propertyKeys.length === 0) {
-				// No properties - show empty state (with hint for vibes/schematas/indexes)
+				// No properties - show empty state (with hint for agents/schematas/indexes)
 				const schemaId = (data.$schema || schemaCoId || '').toString()
 				const isRegistryEmpty =
-					schemaId.includes('vibes-registry') ||
+					schemaId.includes('agents-registry') ||
 					schemaId.includes('schematas-registry') ||
 					schemaId.includes('indexes-registry')
 				const emptyHint = isRegistryEmpty
@@ -928,7 +927,7 @@ export async function renderApp(
 		`
 	}
 
-	// Build sidebar navigation items (Account only - no vibes)
+	// Build sidebar navigation items (Account only - agents via spark.agents)
 	const sidebarItems = navigationItems
 		.map((item) => {
 			// Account navigation - select account CoValue
