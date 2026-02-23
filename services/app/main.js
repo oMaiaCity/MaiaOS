@@ -31,12 +31,12 @@ import { getSyncStatusMessage } from './utils.js'
 import { renderVoicePage } from './voice.js'
 
 let maia
-let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'aven-viewer'
+let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'agent-viewer'
 let currentView = 'account' // Current schema filter (default: 'account')
 let currentContextCoValueId = null // Currently loaded CoValue in main context (explorer-style navigation)
-let currentAven = null // Currently loaded aven (null = DB view mode, 'todos' = todos aven, etc.)
-let currentSpark = null // Grid hierarchy: null = sparks level, '°Maia' = avens for that spark
-let _currentAvenContainer = null // Currently loaded aven container element (for cleanup on unload)
+let currentAgent = null // Currently loaded agent (null = DB view mode, 'todos' = todos agent, etc.)
+let currentSpark = null // Grid hierarchy: null = sparks level, '°Maia' = agents for that spark
+let _currentAgentContainer = null // Currently loaded agent container element (for cleanup on unload)
 let navigationHistory = [] // Navigation history stack for back button
 let isRendering = false // Guard to prevent render loops
 let authState = {
@@ -651,9 +651,9 @@ async function loadLinkedCoValues() {
 	try {
 		const accountStore = await maia.do({ op: 'read', schema: '@account', key: maia.id.maiaId.id })
 		const accountData = accountStore?.value ?? accountStore
-		const vibesId = accountData?.vibes
-		if (typeof vibesId === 'string' && vibesId.startsWith('co_')) {
-			await maia.do({ op: 'read', schema: vibesId, key: vibesId, deepResolve: true })
+		const registriesId = accountData?.registries
+		if (typeof registriesId === 'string' && registriesId.startsWith('co_')) {
+			await maia.do({ op: 'read', schema: registriesId, key: registriesId, deepResolve: true })
 		}
 	} catch (_e) {}
 }
@@ -878,11 +878,11 @@ window.showToast = showToast // Expose for debugging
 // Navigation function for screen transitions
 // @param {string} screen - Screen to navigate to
 // @param {Object} [options] - Options
-// @param {boolean} [options.preserveSpark] - If true, keep currentSpark (Home from aven → avens grid, not sparks root)
+// @param {boolean} [options.preserveSpark] - If true, keep currentSpark (Home from agent → agents grid, not sparks root)
 function navigateToScreen(screen, options = {}) {
 	currentScreen = screen
 	if (screen === 'dashboard') {
-		currentAven = null
+		currentAgent = null
 		currentContextCoValueId = null
 		if (!options.preserveSpark) {
 			currentSpark = null
@@ -910,8 +910,8 @@ function selectCoValueInternal(coId, skipHistory = false) {
 	collapseAllSidebars()
 
 	// If we're in agent mode and selecting account, exit agent mode first
-	if (currentAven !== null && coId === maia?.id?.maiaId?.id) {
-		currentAven = null
+	if (currentAgent !== null && coId === maia?.id?.maiaId?.id) {
+		currentAgent = null
 		// If there's navigation history, restore the previous context instead of going to account
 		if (navigationHistory.length > 0) {
 			const previousCoId = navigationHistory.pop()
@@ -960,7 +960,7 @@ function collapseAllSidebars() {
 	}
 
 	// Collapse agent viewer sidebars (in Shadow DOM)
-	const agentContainer = document.querySelector('.aven-container')
+	const agentContainer = document.querySelector('.agent-container')
 	if (agentContainer?.shadowRoot) {
 		const navAside = agentContainer.shadowRoot.querySelector('.nav-aside')
 		const detailAside = agentContainer.shadowRoot.querySelector('.detail-aside')
@@ -975,14 +975,8 @@ function collapseAllSidebars() {
 
 function goBack() {
 	// If we're in agent mode, exit agent mode first
-	if (currentAven !== null) {
-		loadAven(null)
-		return
-	}
-
-	// If we're in Maia AI, go to dashboard
-	if (currentScreen === 'maia-ai') {
-		navigateToScreen('dashboard')
+	if (currentAgent !== null) {
+		loadAgent(null)
 		return
 	}
 
@@ -1025,11 +1019,11 @@ async function renderAppInternal() {
 			currentScreen,
 			currentView,
 			currentContextCoValueId,
-			currentAven,
+			currentAgent,
 			currentSpark,
 			switchView,
 			selectCoValue,
-			loadAven,
+			loadAgent,
 			loadSpark,
 			navigateToScreen,
 		)
@@ -1042,120 +1036,49 @@ async function renderAppInternal() {
 window.renderAppInternal = renderAppInternal
 
 /**
- * Revoke a capability grant by setting exp to past. Requires write access to the capability CoMap.
- * @param {string} capabilityId - Co-id of the capability grant to revoke
- * @param {{ cmd?: string, sub?: string }} [grant] - Optional grant info; if cmd is /sync/write and sub is current account, updates sync writeEnabled
+ * Load an agent inline in the main context area
+ * @param {string|null} agentKey - Agent key (e.g., 'todos') or null to exit agent mode
  */
-async function revokeCapability(capabilityId, grant = {}) {
-	const m = maia ?? window.maia
-	if (!m) {
-		showToast('Maia not ready', 'error')
-		return
-	}
-	try {
-		await m.do({
-			op: 'update',
-			id: capabilityId,
-			data: { exp: Math.floor(Date.now() / 1000) - 1 },
-		})
-		if (grant?.cmd === '/sync/write' && grant?.sub === authState.accountID) {
-			updateSyncState({ writeEnabled: false })
-		}
-		showToast('Capability revoked', 'success')
-		await renderAppInternal()
-	} catch (error) {
-		showToast(`Failed to revoke: ${error?.message ?? error}`, 'error')
-	}
-}
-window.revokeCapability = revokeCapability
-
-/**
- * Extend a capability grant by 1 day. For expired capabilities, re-enables from now.
- * Uses server endpoint to avoid chicken-and-egg (client needs /sync/write to sync the update).
- * @param {string} capabilityId - Co-id of the capability grant
- * @param {number} [currentExp=0] - Unused; server computes new exp from capability
- */
-async function extendCapability(capabilityId, _currentExp = 0) {
-	const m = maia ?? window.maia
-	if (!m) {
-		showToast('Maia not ready', 'error')
-		return
-	}
-	const baseUrl = getMoaiBaseUrl()
-	if (!baseUrl) {
-		showToast('Sync server not configured', 'error')
-		return
-	}
-	try {
-		const token = await m.getCapabilityToken({
-			cmd: '/extend-capability',
-			args: { capabilityId },
-		})
-		const res = await fetch(`${baseUrl}/extend-capability`, {
-			method: 'POST',
-			headers: {
-				'Content-Type': 'application/json',
-				Authorization: `Bearer ${token}`,
-			},
-			body: JSON.stringify({ capabilityId }),
-		})
-		const data = await res.json().catch(() => ({}))
-		if (!res.ok) {
-			showToast(data?.error ?? `Failed to extend: ${res.status}`, 'error')
-			return
-		}
-		showToast('Capability extended', 'success')
-		await renderAppInternal()
-	} catch (error) {
-		showToast(`Failed to extend: ${error?.message ?? error}`, 'error')
-	}
-}
-window.extendCapability = extendCapability
-
-/**
- * Load an aven inline in the main context area
- * @param {string|null} avenKey - Aven key (e.g., 'todos') or null to exit aven mode
- */
-async function loadAven(avenKey) {
-	if (!maia && avenKey !== null) {
+async function loadAgent(agentKey) {
+	if (!maia && agentKey !== null) {
 		return
 	}
 
-	if (avenKey !== null && typeof avenKey !== 'string') {
+	if (agentKey !== null && typeof agentKey !== 'string') {
 		return
 	}
 
 	try {
 		if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
 		}
-		if (avenKey === null) {
-			if (currentAven && maia?.runtime) {
-				maia.runtime.destroyActorsForAven(currentAven)
+		if (agentKey === null) {
+			if (currentAgent && maia?.runtime) {
+				maia.runtime.destroyActorsForAgent(currentAgent)
 			}
 
-			_currentAvenContainer = null
-			window.currentAvenContainer = null
+			_currentAgentContainer = null
+			window.currentAgentContainer = null
 
-			currentAven = null
+			currentAgent = null
 			navigateToScreen('dashboard', { preserveSpark: true })
 		} else {
-			if (currentAven && currentAven !== avenKey && maia?.runtime) {
-				maia.runtime.destroyActorsForAven(currentAven)
+			if (currentAgent && currentAgent !== agentKey && maia?.runtime) {
+				maia.runtime.destroyActorsForAgent(currentAgent)
 			}
 
 			if (currentContextCoValueId !== null) {
 				navigationHistory.push(currentContextCoValueId)
 			}
-			currentAven = avenKey
+			currentAgent = agentKey
 			currentContextCoValueId = null
-			currentScreen = 'aven-viewer'
+			currentScreen = 'agent-viewer'
 		}
 
 		await renderAppInternal()
 		if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
 		}
 	} catch (_error) {
-		currentAven = null
+		currentAgent = null
 		await renderAppInternal()
 	}
 }
@@ -1182,7 +1105,7 @@ function toggleExpand(expandId) {
 window.switchView = switchView
 window.selectCoValue = selectCoValue
 window.goBack = goBack
-window.loadAven = loadAven
+window.loadAgent = loadAgent
 window.loadSpark = loadSpark
 window.navigateToScreen = navigateToScreen
 window.getMoaiBaseUrl = getMoaiBaseUrl
@@ -1198,7 +1121,7 @@ window.toggleMobileMenu = () => {
 	if (trigger) trigger.classList.toggle('active', menu.classList.contains('active'))
 }
 
-/** Toggle sidebar (DB viewer or aven viewer). Pass containerSelector for Shadow DOM. */
+/** Toggle sidebar (DB viewer or agent viewer). Pass containerSelector for Shadow DOM. */
 function toggleSidebar(sidebarSelector, otherSidebarSelector, containerSelector) {
 	const root = containerSelector ? document.querySelector(containerSelector)?.shadowRoot : document
 	if (!root) return
@@ -1215,7 +1138,7 @@ function toggleSidebar(sidebarSelector, otherSidebarSelector, containerSelector)
 
 window.toggleDBLeftSidebar = () => toggleSidebar('.db-sidebar', '.db-metadata')
 window.toggleDBRightSidebar = () => toggleSidebar('.db-metadata', '.db-sidebar')
-window.toggleLeftSidebar = () => toggleSidebar('.nav-aside', '.detail-aside', '.aven-container')
-window.toggleRightSidebar = () => toggleSidebar('.detail-aside', '.nav-aside', '.aven-container')
+window.toggleLeftSidebar = () => toggleSidebar('.nav-aside', '.detail-aside', '.agent-container')
+window.toggleRightSidebar = () => toggleSidebar('.detail-aside', '.nav-aside', '.agent-container')
 
 init()

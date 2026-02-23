@@ -1,0 +1,19 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/event/CREATE_BUTTON",
+	"title": "°Maia/schema/event/CREATE_BUTTON",
+	"description": "Message type for creating a new item via button click (generic, reusable across agents)",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {
+		"value": {
+			"type": "string",
+			"minLength": 1,
+			"pattern": "^\\S",
+			"description": "Item value/text (required, non-empty, must contain at least one non-whitespace character). Generic property name for reuse across agents."
+		}
+	},
+	"required": ["value"],
+	"additionalProperties": true
+}

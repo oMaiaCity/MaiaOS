@@ -17,8 +17,8 @@ import {
 	DataEngine,
 	MaiaScriptEvaluator,
 	ModuleRegistry,
-	ProcessEngine,
 	Runtime,
+	StateEngine,
 	StyleEngine,
 	ViewEngine,
 } from '@MaiaOS/engines'
@@ -42,7 +42,7 @@ export class MaiaOS {
 	constructor() {
 		this.moduleRegistry = null
 		this.evaluator = null
-		this.processEngine = null
+		this.stateEngine = null
 		this.styleEngine = null
 		this.viewEngine = null
 		this.actorEngine = null
@@ -271,24 +271,7 @@ export class MaiaOS {
 		}
 
 		// Initialize database (requires peer via node+account or pre-initialized peer)
-		const peer = await MaiaOS._initializeDatabase(os, config)
-
-		// OPTIMIZATION: Start loading spark.os (account.registries.sparks[°Maia].os) in background (non-blocking)
-		// spark.os is NOT required for account loading - it's only needed for schema resolution
-		// Schema resolution can happen progressively as spark.os becomes available
-		// This allows MaiaOS to boot immediately without waiting 5+ seconds for spark.os to sync
-		if (peer && typeof peer.ensureAccountOsReady === 'function') {
-			// Start loading spark.os in background (non-blocking)
-			// 15s timeout for slow sync (e.g. first load to moai.next.maia.city)
-			peer
-				.ensureAccountOsReady({ timeoutMs: 15000 })
-				.then((accountOsReady) => {
-					if (!accountOsReady) {
-					}
-				})
-				.catch((_err) => {})
-			// Don't await - let it load in background while we continue booting
-		}
+		await MaiaOS._initializeDatabase(os, config)
 
 		// Set schema resolver for runtime validation (engines need dataEngine for schema lookups)
 		const { setSchemaResolver } = await import('@MaiaOS/schemata/validation.helper')
@@ -302,9 +285,7 @@ export class MaiaOS {
 
 		// Start Runtime (inbox watching for browser agents)
 		const runtimeType = config.runtimeType || 'browser'
-		const runtime = new Runtime(os.dataEngine, os.actorEngine, runtimeType, {
-			getCapabilityToken: (opts) => os.getCapabilityToken(opts),
-		})
+		const runtime = new Runtime(os.dataEngine, os.actorEngine, runtimeType)
 		os.actorEngine.runtime = runtime
 		os.viewEngine.runtime = runtime
 		os.runtime = runtime
@@ -371,13 +352,11 @@ export class MaiaOS {
 		// Initialize engines
 		// CRITICAL: Pass dataEngine to evaluator for runtime schema validation (no fallbacks)
 		os.evaluator = new MaiaScriptEvaluator(os.moduleRegistry, { dataEngine: os.dataEngine })
-		os.toolEngine = new ToolEngine(os.moduleRegistry)
 
 		// Store engines in registry for module access
-		os.moduleRegistry._toolEngine = os.toolEngine
 		os.moduleRegistry._dataEngine = os.dataEngine
 
-		os.processEngine = new ProcessEngine(os.evaluator)
+		os.stateEngine = new StateEngine(os.evaluator)
 		os.styleEngine = new StyleEngine()
 		// Clear cache on boot in development only
 		if (config.isDevelopment || import.meta.env?.DEV) {
@@ -385,25 +364,24 @@ export class MaiaOS {
 		}
 		os.viewEngine = new ViewEngine(os.evaluator, null, os.moduleRegistry)
 
-		// InboxEngine: validation + delivery (injected into ActorEngine)
-		os.inboxEngine = new InboxEngine(os.dataEngine)
-		os.actorEngine = new ActorEngine(os.styleEngine, os.viewEngine, os.processEngine, os.inboxEngine)
-		os.inboxEngine.actorEngine = os.actorEngine
+		// Initialize ActorEngine (will receive SubscriptionEngine after it's created)
+		os.actorEngine = new ActorEngine(os.styleEngine, os.viewEngine, os.stateEngine)
 
 		// SubscriptionEngine eliminated - all subscriptions handled via direct read() + ReactiveStore
 
 		// Pass DataEngine to engines (for internal config loading)
 		os.actorEngine.dataEngine = os.dataEngine
 		os.viewEngine.dataEngine = os.dataEngine
+		os.viewEngine.styleEngine = os.styleEngine
 		os.styleEngine.dataEngine = os.dataEngine
 		os.stateEngine.dataEngine = os.dataEngine
 
 		// Store reference to MaiaOS in actorEngine (for @db tool access)
 		os.actorEngine.os = os
 
-		// Pass ActorOps and BlobEngine to ViewEngine (Loader wires; no circular ref)
+		// Pass ActorOps to ViewEngine and StateEngine (Loader wires; no circular ref)
 		os.viewEngine.actorOps = os.actorEngine
-		os.viewEngine.blobEngine = os.blobEngine
+		os.stateEngine.actorOps = os.actorEngine
 	}
 
 	/**
@@ -462,7 +440,7 @@ export class MaiaOS {
 			}
 			const actorSchemaCoId = await resolve(
 				this.actorEngine.dataEngine.peer,
-				{ fromCoValue: actorPath },
+				{ fromCoValue: actorCoId },
 				{ returnType: 'coId' },
 			)
 			const store = await this.actorEngine.dataEngine.execute({
@@ -481,33 +459,33 @@ export class MaiaOS {
 	}
 
 	/**
-	 * Load an aven by key or co-id from account/database (no arbitrary URL loading)
-	 * @param {string} avenKeyOrCoId - Aven key (e.g., "todos") or co-id (co_z...) to lookup from account
+	 * Load an agent by key or co-id from account/database (no arbitrary URL loading)
+	 * @param {string} agentKeyOrCoId - Agent key (e.g., "todos") or co-id (co_z...) to lookup from account
 	 * @param {HTMLElement} container - Container element
 	 * @param {string} [spark='°Maia'] - Spark name when using key lookup
-	 * @returns {Promise<{aven: Object, actor: Object}>} Aven metadata and actor instance
+	 * @returns {Promise<{agent: Object, actor: Object}>} Agent metadata and actor instance
 	 */
-	async loadAven(avenKeyOrCoId, container, spark = '°Maia') {
-		return await this.loadAvenFromAccount(avenKeyOrCoId, container, spark)
+	async loadAgent(agentKeyOrCoId, container, spark = '°Maia') {
+		return await this.loadAgentFromAccount(agentKeyOrCoId, container, spark)
 	}
 
 	/**
-	 * Load an aven from registries.sparks[spark].avens or directly by co-id
-	 * Supports: (1) aven key (e.g., "todos") - lookup via spark.avens map, (2) co-id (co_z...) - direct load from database
-	 * SECURITY: No arbitrary URL loading - avens load only from CoJSON database (account-scoped)
-	 * @param {string} avenKeyOrCoId - Aven key in spark's avens (e.g., "todos") or aven co-id (co_z...)
+	 * Load an agent from registries.sparks[spark].agents or directly by co-id
+	 * Supports: (1) agent key (e.g., "todos") - lookup via spark.agents map, (2) co-id (co_z...) - direct load from database
+	 * SECURITY: No arbitrary URL loading - agents load only from CoJSON database (account-scoped)
+	 * @param {string} agentKeyOrCoId - Agent key in spark's agents (e.g., "todos") or agent co-id (co_z...)
 	 * @param {HTMLElement} container - Container element
-	 * @param {string} [spark='°Maia'] - Spark name (used only when avenKeyOrCoId is a key, not a co-id)
-	 * @returns {Promise<{aven: Object, actor: Object}>} Aven metadata and actor instance
+	 * @param {string} [spark='°Maia'] - Spark name (used only when agentKeyOrCoId is a key, not a co-id)
+	 * @returns {Promise<{agent: Object, actor: Object}>} Agent metadata and actor instance
 	 */
-	async loadVibeFromAccount(vibeKeyOrCoId, container, spark = '°Maia') {
+	async loadAgentFromAccount(agentKeyOrCoId, container, spark = '°Maia') {
 		if (!this.dataEngine || !this._account) {
-			throw new Error('[Loader] Cannot load vibe from account - dataEngine or account not available')
+			throw new Error('[Loader] Cannot load agent from account - dataEngine or account not available')
 		}
 
-		// Co-id: load directly from database (skip spark.avens lookup)
-		if (typeof avenKeyOrCoId === 'string' && avenKeyOrCoId.startsWith('co_z')) {
-			return await this.loadAvenFromDatabase(avenKeyOrCoId, container, null)
+		// Co-id: load directly from database (skip spark.agents lookup)
+		if (typeof agentKeyOrCoId === 'string' && agentKeyOrCoId.startsWith('co_z')) {
+			return await this.loadAgentFromDatabase(agentKeyOrCoId, container, null)
 		}
 
 		const account = this._account
@@ -582,7 +560,7 @@ export class MaiaOS {
 			)
 		}
 
-		// Step 5: Read spark CoMap to get spark.vibes (by co-id)
+		// Step 5: Read spark CoMap to get spark.agents (by co-id)
 		const sparkStore = await this.dataEngine.execute({
 			op: 'read',
 			schema: null,
@@ -597,128 +575,112 @@ export class MaiaOS {
 		}
 		// sparkData is flat from extractCoValueData
 
-		const avensId = sparkData.avens
-		if (!avensId || typeof avensId !== 'string' || !avensId.startsWith('co_')) {
-			throw new Error(`[Kernel] Spark "${spark}" has no avens registry. Ensure seeding has run.`)
+		const agentsId = sparkData.agents
+		if (!agentsId || typeof agentsId !== 'string' || !agentsId.startsWith('co_')) {
+			throw new Error(`[Kernel] Spark "${spark}" has no agents registry. Ensure seeding has run.`)
 		}
 
-		// Step 6: Read spark.vibes CoMap
-		const vibesStore = await this.dataEngine.execute({
+		// Step 6: Read spark.agents CoMap
+		const agentsStore = await this.dataEngine.execute({
 			op: 'read',
-			schema: avensId,
-			key: avensId,
+			schema: agentsId,
+			key: agentsId,
 		})
 
-		const avensData = avensStore.value
-		if (!avensData || avensData.error) {
+		const agentsData = agentsStore.value
+		if (!agentsData || agentsData.error) {
 			throw new Error(
-				`[Kernel] Spark "${spark}" avens not available: ${avensData?.error || 'Unknown error'}`,
+				`[Kernel] Spark "${spark}" agents not available: ${agentsData?.error || 'Unknown error'}`,
 			)
 		}
-		// avensData is flat from extractCoValueData
+		// agentsData is flat from extractCoValueData
 
-		const avenCoId = avensData[avenKeyOrCoId]
-		if (!avenCoId || typeof avenCoId !== 'string' || !avenCoId.startsWith('co_')) {
-			const availableAvens = Object.keys(avensData).filter(
+		const agentCoId = agentsData[agentKeyOrCoId]
+		if (!agentCoId || typeof agentCoId !== 'string' || !agentCoId.startsWith('co_')) {
+			const availableAgents = Object.keys(agentsData).filter(
 				(k) =>
 					k !== 'id' &&
 					k !== '$schema' &&
 					k !== 'type' &&
-					typeof avensData[k] === 'string' &&
-					avensData[k].startsWith('co_'),
+					typeof agentsData[k] === 'string' &&
+					agentsData[k].startsWith('co_'),
 			)
 			throw new Error(
-				`[Kernel] Aven '${avenKeyOrCoId}' not found in ${spark}.avens. Available: ${availableAvens.join(', ') || 'none'}`,
+				`[Kernel] Agent '${agentKeyOrCoId}' not found in ${spark}.agents. Available: ${availableAgents.join(', ') || 'none'}`,
 			)
 		}
 
-		return await this.loadAvenFromDatabase(avenCoId, container, avenKeyOrCoId)
+		return await this.loadAgentFromDatabase(agentCoId, container, agentKeyOrCoId)
 	}
 
 	/**
-	 * Load a vibe from database (maia.do)
-	 * @param {string} vibeId - Vibe ID (co-id or human-readable like "°Maia/vibe/todos")
+	 * Load an agent from database (maia.do)
+	 * @param {string} agentId - Agent ID (co-id)
 	 * @param {HTMLElement} container - Container element
-	 * @param {string} [avenKey] - Optional aven key for actor reuse tracking (e.g., 'todos')
-	 * @returns {Promise<{aven: Object, actor: Object}>} Aven metadata and actor instance
+	 * @param {string} [agentKey] - Optional agent key for actor reuse tracking (e.g., 'todos')
+	 * @returns {Promise<{agent: Object, actor: Object}>} Agent metadata and actor instance
 	 */
-	async loadAvenFromDatabase(avenId, container, avenKey = null) {
-		if (!avenId.startsWith('co_z')) {
+	async loadAgentFromDatabase(agentId, container, agentKey = null) {
+		if (!agentId.startsWith('co_z')) {
 			throw new Error(
-				`[Kernel] Aven ID must be co-id at runtime: ${avenId}. This should have been resolved during seeding.`,
+				`[Kernel] Agent ID must be co-id at runtime: ${agentId}. This should have been resolved during seeding.`,
 			)
 		}
-		const avenCoId = avenId
+		const agentCoId = agentId
 
-		// Load vibe CoValue first (without schema filter - read CoValue directly)
-		// This allows us to extract schema co-id from headerMeta.$schema
-		// Loading vibe from database
-
-		const vibeStore = await this.dataEngine.execute({
+		const agentStore = await this.dataEngine.execute({
 			op: 'read',
 			schema: null,
-			key: avenCoId,
+			key: agentCoId,
 		})
 
-		// Extract schema co-id from vibe's headerMeta.$schema using fromCoValue pattern
 		const schemaStore = await this.dataEngine.execute({
 			op: 'schema',
-			fromCoValue: avenCoId,
+			fromCoValue: agentCoId,
 		})
-		const avenSchemaCoId = schemaStore.value?.$id || avenStore.value?.$schema
+		const agentSchemaCoId = schemaStore.value?.$id || agentStore.value?.$schema
 
-		if (!avenSchemaCoId) {
+		if (!agentSchemaCoId) {
 			throw new Error(
-				`[Kernel] Failed to extract schema co-id from aven ${avenCoId}. Aven must have $schema in headerMeta.`,
+				`[Kernel] Failed to extract schema co-id from agent ${agentCoId}. Agent must have $schema in headerMeta.`,
 			)
 		}
 
-		const store = avenStore
-		const aven = store.value
+		const store = agentStore
+		let agent = store.value
 
-		// Store is already loaded by peer (operations API abstraction)
-		let vibe = store.value
-
-		// Debug: Check what we got
-		// Store value loaded
-
-		if (!vibe || vibe.error) {
-			// Try direct read to see what's returned
+		if (!agent || agent.error) {
 			try {
-				const directStore = await this.dataEngine.execute({
+				await this.dataEngine.execute({
 					op: 'read',
 					schema: null,
-					key: avenCoId,
+					key: agentCoId,
 				})
 			} catch (_err) {}
-			throw new Error(`Aven not found in database: ${avenId} (co-id: ${avenCoId})`)
+			throw new Error(`Agent not found in database: ${agentId} (co-id: ${agentCoId})`)
 		}
 
-		// Convert CoJSON format (properties array) to plain object if needed
-		if (vibe.properties && Array.isArray(vibe.properties)) {
-			// CoJSON returns objects with properties array - convert to plain object
-			const plainVibe = {}
-			for (const prop of vibe.properties) {
-				plainVibe[prop.key] = prop.value
+		if (agent.properties && Array.isArray(agent.properties)) {
+			const plainAgent = {}
+			for (const prop of agent.properties) {
+				plainAgent[prop.key] = prop.value
 			}
-			// Preserve metadata
-			if (vibe.id) plainVibe.id = vibe.id
-			if (vibe.$schema) plainVibe.$schema = vibe.$schema // Use $schema from headerMeta
-			if (vibe.type) plainVibe.type = vibe.type
-			vibe = plainVibe
+			if (agent.id) plainAgent.id = agent.id
+			if (agent.$schema) plainAgent.$schema = agent.$schema
+			if (agent.type) plainAgent.type = agent.type
+			agent = plainAgent
 		}
 
-		// Validate vibe structure using schema (load from schemaStore we already have)
 		const schema = schemaStore.value
 		if (schema) {
-			await validateAgainstSchemaOrThrow(schema, aven, 'aven')
+			await validateAgainstSchemaOrThrow(schema, agent, 'agent')
 		}
 
-		const actorCoId = aven.actor
+		const actorCoId = agent.actor
 
 		if (!actorCoId) {
 			throw new Error(
-				`[MaiaOS] Aven ${avenId} (${avenCoId}) does not have an 'actor' property. Aven structure: ${JSON.stringify(Object.keys(aven))}`,
+				`[MaiaOS] Agent ${agentId} (${agentCoId}) does not have an 'actor' property. Agent structure: ${JSON.stringify(Object.keys(agent))}`,
 			)
 		}
 
@@ -781,18 +743,15 @@ export class MaiaOS {
 			)
 		}
 
-		// Destroy any existing actors for this aven (destroy-on-switch lifecycle)
-		if (avenKey) {
-			this.runtime.destroyActorsForAven(avenKey)
+		// Destroy any existing actors for this agent (destroy-on-switch lifecycle)
+		if (agentKey) {
+			this.runtime.destroyActorsForAgent(agentKey)
 		}
 
 		const actorConfig = actorStore.value
-		const actor = await this.runtime.createActorForView(actorConfig, container, avenKey)
+		const actor = await this.runtime.createActorForView(actorConfig, container, agentKey)
 
-		// Create root actor with vibeKey for tracking
-		const actor = await this.actorEngine.createActor(actorConfig, container, vibeKey)
-
-		return { vibe, actor }
+		return { agent, actor }
 	}
 
 	/**
@@ -862,7 +821,6 @@ export class MaiaOS {
 			viewEngine: this.viewEngine,
 			styleEngine: this.styleEngine,
 			stateEngine: this.stateEngine,
-			toolEngine: this.toolEngine,
 			dataEngine: this.dataEngine,
 			evaluator: this.evaluator,
 			moduleRegistry: this.moduleRegistry,

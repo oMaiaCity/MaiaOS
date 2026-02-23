@@ -1,0 +1,8 @@
+{
+	"$schema": "°Maia/schema/state",
+	"$id": "°Maia/todos/state/coming-soon",
+	"initial": "idle",
+	"states": {
+		"idle": {}
+	}
+}

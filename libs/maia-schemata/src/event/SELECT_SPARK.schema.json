@@ -1,0 +1,17 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/event/SELECT_SPARK",
+	"title": "°Maia/schema/event/SELECT_SPARK",
+	"description": "Message type for selecting a spark (generic, reusable across agents)",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {
+		"sparkId": {
+			"type": "string",
+			"description": "Spark co-id (required, generic property name for reuse across agents)"
+		}
+	},
+	"required": ["sparkId"],
+	"additionalProperties": true
+}

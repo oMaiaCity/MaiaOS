@@ -1,0 +1,18 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/event/SWITCH_VIEW",
+	"title": "°Maia/schema/event/SWITCH_VIEW",
+	"description": "Message type for switching view mode",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {
+		"viewMode": {
+			"type": "string",
+			"enum": ["list", "logs", "comingSoon"],
+			"description": "View mode to switch to (required)"
+		}
+	},
+	"required": ["viewMode"],
+	"additionalProperties": false
+}

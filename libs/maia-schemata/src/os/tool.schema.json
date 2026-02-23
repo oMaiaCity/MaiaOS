@@ -1,0 +1,25 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/tool",
+	"title": "°Maia/schema/tool",
+	"description": "LLM tool descriptor (name, description, parameters) for service actors",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"name": {
+			"type": "string",
+			"pattern": "^@",
+			"description": "Tool name for LLM/OpenAI (e.g. @sparks, @db/db)"
+		},
+		"description": {
+			"type": "string",
+			"description": "Human-readable description for LLM"
+		},
+		"parameters": {
+			"type": "object",
+			"additionalProperties": true,
+			"description": "JSON Schema for tool parameters"
+		}
+	},
+	"required": ["name", "description", "parameters"]
+}

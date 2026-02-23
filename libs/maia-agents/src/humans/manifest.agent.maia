@@ -1,0 +1,10 @@
+{
+	"$schema": "°Maia/schema/agent",
+	"$id": "°Maia/agent/humans",
+	"name": "Human Book",
+	"description": "Browse all humans in the Maia registry — account ID, registry name, profile name",
+	"actor": "°Maia/humans/actor/intent",
+	"dependencies": [
+		"°Maia/humans/actor/intent"
+	]
+}

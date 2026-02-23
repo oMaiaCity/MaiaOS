@@ -23,13 +23,7 @@ The `@MaiaOS/actors` package provides a centralized registry for all MaiaScript 
 ```
 libs/maia-actors/src/
 ├── index.js                    # Main exports (ACTORS, getActor, getSeedConfig)
-├── seed-config.js              # Service actor seeding (actors, states; inboxes derived from actors)
-├── views/                      # Layout actors (headless intent pattern)
-│   ├── tabs/  # Todos, Creator
-│   ├── sparks/                 # Sparks layout
-│   ├── grid/                   # Humans
-│   ├── layout-chat/            # Chat (messages + input)
-│   └── layout-paper/            # Paper
+├── seed-config.js              # Service actor seeding (actors, states, inboxes)
 ├── aiChat/
 │   ├── aiChat.actor.maia       # Actor definition ($schema: °Maia/schema/actor)
 │   ├── aiChat.state.maia       # State machine (idle→processing on CHAT)
@@ -129,7 +123,7 @@ const definitions = getAllActorDefinitions();
 
 ### Sparks
 
-- **`@db`** - Spark operations (createSpark, readSpark, addSparkMember, etc.) via `°Maia/actor/os/db` with type `SPARK_OP`
+- **`@sparks/sparks`** - Spark management (thin wrapper over @db)
 
 ### UI
 

@@ -1,0 +1,40 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/event/SPARK_OP",
+	"title": "°Maia/schema/event/SPARK_OP",
+	"description": "Message type for spark operations routed to @sparks actor",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {
+		"op": {
+			"type": "string",
+			"enum": [
+				"createSpark",
+				"readSpark",
+				"updateSpark",
+				"deleteSpark",
+				"addSparkMember",
+				"removeSparkMember",
+				"addSparkParentGroup",
+				"removeSparkParentGroup",
+				"getSparkMembers",
+				"updateSparkMemberRole"
+			],
+			"description": "Spark operation to execute"
+		},
+		"name": { "type": "string", "description": "Spark name (required for createSpark)" },
+		"id": { "type": "string", "description": "Spark co-id (required for most operations)" },
+		"data": { "type": "object", "description": "Update data for updateSpark" },
+		"schema": { "type": "string", "description": "Schema co-id (optional for readSpark)" },
+		"memberId": { "type": "string", "description": "Member account/group co-id" },
+		"role": {
+			"type": "string",
+			"enum": ["reader", "writer", "admin", "manager", "writeOnly"],
+			"description": "Member role"
+		},
+		"parentGroupId": { "type": "string", "description": "Parent group co-id" }
+	},
+	"required": ["op"],
+	"additionalProperties": true
+}

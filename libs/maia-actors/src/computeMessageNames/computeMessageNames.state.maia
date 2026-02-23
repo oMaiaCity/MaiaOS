@@ -1,0 +1,29 @@
+{
+	"$schema": "°Maia/schema/state",
+	"$id": "°Maia/actor/computeMessageNames/state",
+	"initial": "idle",
+	"states": {
+		"idle": {
+			"on": {
+				"COMPUTE_NAMES": {
+					"target": "processing"
+				}
+			}
+		},
+		"processing": {
+			"entry": [
+				{
+					"function": true
+				}
+			],
+			"on": {
+				"SUCCESS": {
+					"target": "idle"
+				},
+				"ERROR": {
+					"target": "idle"
+				}
+			}
+		}
+	}
+}
