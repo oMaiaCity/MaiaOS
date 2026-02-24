@@ -11,11 +11,6 @@ import intentInbox from './intent/intent.inbox.maia'
 import intentProcess from './intent/intent.process.maia'
 import intentView from './intent/intent.view.maia'
 import chatAgent from './manifest.agent.maia'
-import paperActor from './paper/paper.actor.maia'
-import paperContext from './paper/paper.context.maia'
-import paperInbox from './paper/paper.inbox.maia'
-import paperProcess from './paper/paper.process.maia'
-import paperView from './paper/paper.view.maia'
 
 /**
  * Chat Vibe Registry
@@ -30,27 +25,22 @@ export const ChatAgentRegistry = {
 
 	actors: {
 		'°Maia/chat/actor/intent': intentActor,
-		'°Maia/chat/actor/paper': paperActor,
 	},
 
 	views: {
 		'°Maia/chat/view/intent': intentView,
-		'°Maia/chat/view/paper': paperView,
 	},
 
 	contexts: {
 		'°Maia/chat/context/intent': intentContext,
-		'°Maia/chat/context/paper': paperContext,
 	},
 
 	processes: {
 		'°Maia/chat/process/intent': intentProcess,
-		'°Maia/chat/process/paper': paperProcess,
 	},
 
 	inboxes: {
 		'°Maia/chat/inbox/intent': intentInbox,
-		'°Maia/chat/inbox/paper': paperInbox,
 	},
 
 	data: {
