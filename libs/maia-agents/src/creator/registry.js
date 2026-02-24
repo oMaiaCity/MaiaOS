@@ -1,16 +1,16 @@
 /**
- * Logs Vibe Registry
+ * Creator Vibe Registry
  * Pre-loads all .maia configs as ES module imports
- * Exports everything as JS objects - no runtime file loading needed
+ * coming-soon actor from @MaiaOS/actors (seeded separately)
  */
 
 import masterBrand from '../shared/brand.style.maia'
 import intentActor from './intent/intent.actor.maia'
-import logsContext from './logs/logs.context.maia'
-import logsInbox from './logs/logs.inbox.maia'
-import logsProcess from './logs/logs.process.maia'
+import intentContext from './intent/intent.context.maia'
+import intentInbox from './intent/intent.inbox.maia'
+import intentProcess from './intent/intent.process.maia'
+import intentView from './intent/intent.view.maia'
 import logsStyle from './logs/logs.style.maia'
-import logsView from './logs/logs.view.maia'
 import logsAgent from './manifest.agent.maia'
 
 export const LogsAgentRegistry = {
@@ -26,19 +26,19 @@ export const LogsAgentRegistry = {
 	},
 
 	views: {
-		'°Maia/creator/view/logs': logsView,
+		'°Maia/creator/view/intent': intentView,
 	},
 
 	contexts: {
-		'°Maia/creator/context/logs': logsContext,
+		'°Maia/creator/context/intent': intentContext,
 	},
 
 	processes: {
-		'°Maia/creator/process/logs': logsProcess,
+		'°Maia/creator/process/intent': intentProcess,
 	},
 
 	inboxes: {
-		'°Maia/creator/inbox/logs': logsInbox,
+		'°Maia/creator/inbox/intent': intentInbox,
 	},
 
 	data: {},

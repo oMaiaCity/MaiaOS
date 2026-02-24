@@ -388,6 +388,7 @@ export async function renderAgentViewer(
 		db: 'MaiaDB',
 		humans: 'Human Book',
 		todos: 'Todos',
+		logs: 'Creator',
 	}
 	const agentLabel = currentAgent
 		? agentNameMap[currentAgent] || `${currentAgent.charAt(0).toUpperCase() + currentAgent.slice(1)}`
