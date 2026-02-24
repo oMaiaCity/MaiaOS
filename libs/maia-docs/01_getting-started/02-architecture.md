@@ -48,7 +48,7 @@
 {
   "$schema": "@schema/actor",
   "$id": "@actor/todo",
-  "role": "todo-list",
+  "@label": "todo-list",
   "context": "@context/todo",
   "state": "@state/todo",
   "view": "@view/todo",

@@ -6,9 +6,9 @@
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {
-		"role": {
+		"@label": {
 			"type": "string",
-			"description": "Actor role (e.g., '@ai/chat', 'kanban-view', 'agent')"
+			"description": "Actor label (e.g., '@ai/chat', 'kanban-view', 'agent')"
 		},
 		"context": {
 			"$co": "°Maia/schema/context",

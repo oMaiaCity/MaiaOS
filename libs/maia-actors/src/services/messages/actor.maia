@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/actor",
 	"$id": "°Maia/actor/services/messages",
-	"role": "@maia/actor/services/messages",
+	"@label": "@maia/actor/services/messages",
 	"context": "°Maia/actor/services/messages/context",
 	"view": "°Maia/actor/services/messages/view",
 	"process": "°Maia/actor/services/messages/process",

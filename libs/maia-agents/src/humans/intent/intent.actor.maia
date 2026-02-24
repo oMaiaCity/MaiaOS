@@ -10,5 +10,5 @@
 	"interface": [
 		"DISMISS"
 	],
-	"role": "@humans/intent"
+	"@label": "@humans/intent"
 }

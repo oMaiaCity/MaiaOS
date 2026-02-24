@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/actor",
 	"$id": "°Maia/actor/coming-soon",
-	"role": "@maia/actor/coming-soon",
+	"@label": "@maia/actor/coming-soon",
 	"context": "°Maia/actor/coming-soon/context",
 	"view": "°Maia/actor/coming-soon/view",
 	"process": "°Maia/actor/coming-soon/process",

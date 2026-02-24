@@ -167,13 +167,12 @@ Create a file named `{name}.actor.maia`:
 {
   "$schema": "@schema/actor",
   "$id": "@actor/todo",
-  "role": "todo-list",
+  "@label": "todo-list",
   "context": "@context/todo",
-  "state": "@state/todo",
   "view": "@view/todo",
   "brand": "@style/brand",
   "style": "@style/todo",
-  "inbox": "@inbox/todo"
+
 }
 ```
 
@@ -185,7 +184,7 @@ Create a file named `{name}.actor.maia`:
 |----------|------|----------|-------------|
 | `$schema` | string | Yes | Schema reference (`@schema/actor`) |
 | `$id` | string | Yes | Unique actor identifier (`@actor/todo`) |
-| `role` | string | No | Actor role (e.g., `"agent"`, `"composite"`, `"todo-list"`) |
+| `@label` | string | No | Actor label (e.g., `"agent"`, `"composite"`, `"todo-list"`) |
 | `context` | string | No | Co-id reference to context |
 | `state` | string | Yes | Co-id reference to state machine |
 | `view` | string | No | Co-id reference to view (optional for service actors) |
@@ -237,7 +236,7 @@ Orchestrating actors: business logic, data management. Typically minimal or no v
 {
   "$schema": "@schema/actor",
   "$id": "@actor/vibe",
-  "role": "agent",
+  "@label": "agent",
   "context": "@context/agent",
   "view": "@view/agent",
   "state": "@state/agent",

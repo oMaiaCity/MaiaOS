@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/actor",
 	"$id": "°Maia/todos/actor/intent",
-	"role": "@todos/intent",
+	"@label": "@todos/intent",
 	"context": "°Maia/todos/context/intent",
 	"view": "°Maia/todos/view/intent",
 	"process": "°Maia/todos/process/intent",
