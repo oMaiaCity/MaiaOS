@@ -10,7 +10,7 @@
 			},
 			{
 				"ask": {
-					"target": "°Maia/actor/os/spark",
+					"target": "°Maia/actor/os/db",
 					"type": "SPARK_OP",
 					"payload": {
 						"op": "createSpark",

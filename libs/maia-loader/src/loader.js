@@ -26,7 +26,6 @@ import {
 import * as aiModule from '@MaiaOS/engines/modules/ai.module.js'
 import * as coreModule from '@MaiaOS/engines/modules/core.module.js'
 import * as dbModule from '@MaiaOS/engines/modules/db.module.js'
-import * as sparksModule from '@MaiaOS/engines/modules/sparks.module.js'
 import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper'
 
 // Store pre-loaded modules for registry
@@ -34,7 +33,6 @@ const preloadedModules = {
 	db: dbModule,
 	core: coreModule,
 	ai: aiModule,
-	sparks: sparksModule,
 }
 
 /**
@@ -389,8 +387,8 @@ export class MaiaOS {
 	 * @param {Object} config - Boot configuration
 	 */
 	static async _loadModules(os, config) {
-		// Load modules (default: db, core, sparks)
-		const modules = config.modules || ['db', 'core', 'sparks']
+		// Load modules (default: db, core)
+		const modules = config.modules || ['db', 'core']
 
 		for (const moduleName of modules) {
 			try {

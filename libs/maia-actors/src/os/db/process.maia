@@ -6,6 +6,11 @@
 			{
 				"function": true
 			}
+		],
+		"SPARK_OP": [
+			{
+				"function": true
+			}
 		]
 	}
 }

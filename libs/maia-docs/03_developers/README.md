@@ -76,7 +76,7 @@ Read the documentation in the following order for a complete understanding:
 ### 6. [maia-operations (merged)](./06_maia-operations/README.md)
 **Operations are now part of maia-engines**
 - DataEngine (data.engine.js) executes **maia.do({ op, schema, key, ... })**
-- Operations live in `libs/maia-engines/src/operations/`
+- Operations live in `libs/maia-engines/src/engines/data.engine.js`
 - MaiaDB (maia-db) is the storage layer; no DBAdapter interface
 
 ### 7. [State and Persistence](./state-and-persistence.md)

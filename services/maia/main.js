@@ -297,7 +297,7 @@ async function initAgentMode() {
 			mode: 'agent', // Explicitly set mode
 			syncDomain, // Pass sync domain to kernel
 			getMoaiBaseUrl, // For POST /register after createSpark
-			modules: ['db', 'core', 'ai', 'sparks'], // Include all modules
+			modules: ['db', 'core', 'ai'], // Include all modules
 		})
 		window.maia = maia
 		// CRITICAL: Await link before first render - indexing requires account.registries
@@ -442,7 +442,7 @@ async function signIn() {
 						account,
 						syncDomain, // Pass sync domain to kernel (single source of truth)
 						getMoaiBaseUrl, // For POST /register after createSpark
-						modules: ['db', 'core', 'ai', 'sparks'], // Include all modules
+						modules: ['db', 'core', 'ai'], // Include all modules
 					})
 					window.maia = maia
 					// CRITICAL: Await link before first render - indexing requires account.registries
@@ -572,7 +572,7 @@ async function register() {
 				account,
 				syncDomain, // Pass sync domain to kernel (single source of truth)
 				getMoaiBaseUrl, // For POST /register after createSpark
-				modules: ['db', 'core', 'ai', 'sparks'], // Include all modules
+				modules: ['db', 'core', 'ai'], // Include all modules
 			})
 			window.maia = maia
 			// CRITICAL: Await link before first render - indexing requires account.registries

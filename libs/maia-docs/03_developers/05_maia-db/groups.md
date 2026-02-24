@@ -95,7 +95,7 @@ Sparks are registered in `account.registries.sparks` CoMap:
 - Structure: `registries.sparks.sparkName = sparkCoId`
 - Cross-links to indexed colist `account.os.{sparkSchemaCoId}`
 
-**Implementation:** `libs/maia-db/src/migrations/seeding/` (bootstrap); `libs/maia-engines/src/operations/spark-operations.js` (POST /register after createSpark)
+**Implementation:** `libs/maia-db/src/migrations/seeding/` (bootstrap); `libs/maia-engines/src/engines/data.engine.js` (POST /register after createSpark)
 
 ### Spark Indexing
 
@@ -145,7 +145,7 @@ MaiaOS standardizes on **account co-ids** (co_z...) for group member storage and
 
 - **Group Creation:** `libs/maia-db/src/cojson/groups/create.js`
 - **Group Operations:** `libs/maia-db/src/cojson/groups/groups.js`
-- **Spark Operations:** `libs/maia-engines/src/operations/spark-operations.js`
+- **Spark Operations:** `libs/maia-engines/src/engines/data.engine.js` (merged)
 - **Spark Backend:** `libs/maia-db/src/cojson/core/cojson-backend.js` (spark CRUD methods)
 - **Schema Migration:** `libs/maia-db/src/migrations/schema.migration.js`
 - **Spark Schema:** `libs/maia-schemata/src/os/spark.schema.json`
