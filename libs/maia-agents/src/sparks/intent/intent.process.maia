@@ -1,0 +1,71 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/sparks/process/intent",
+	"handlers": {
+		"CREATE_BUTTON": [
+			{
+				"ctx": {
+					"error": null
+				}
+			},
+			{
+				"ask": {
+					"target": "°Maia/actor/os/spark",
+					"type": "SPARK_OP",
+					"payload": {
+						"op": "createSpark",
+						"name": "$$value"
+					}
+				}
+			}
+		],
+		"UPDATE_INPUT": [
+			{
+				"ctx": {
+					"newSparkName": "$$value"
+				}
+			}
+		],
+		"SELECT_SPARK": [
+			{
+				"ctx": {
+					"selectedSparkId": "$$sparkId"
+				}
+			},
+			{
+				"tell": {
+					"target": "°Maia/sparks/actor/detail",
+					"type": "LOAD_ACTOR",
+					"payload": {
+						"id": "$$sparkId"
+					}
+				}
+			}
+		],
+		"SUCCESS": [
+			{
+				"ctx": {
+					"newSparkName": "",
+					"error": null,
+					"hasError": false
+				}
+			}
+		],
+		"ERROR": [
+			{
+				"ctx": {
+					"error": "$$errors.0.message",
+					"hasError": true
+				}
+			}
+		],
+		"DISMISS": [
+			{
+				"ctx": {
+					"error": null,
+					"hasError": false
+				}
+			}
+		]
+	}
+}

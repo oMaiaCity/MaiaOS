@@ -1,0 +1,93 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/todos/process/intent",
+	"handlers": {
+		"CREATE_BUTTON": [
+			{
+				"ctx": {
+					"error": null
+				}
+			},
+			{
+				"op": {
+					"create": {
+						"schema": "°Maia/schema/data/todos",
+						"data": {
+							"text": "$$value",
+							"done": false
+						}
+					}
+				}
+			},
+			{
+				"ctx": {
+					"newTodoText": ""
+				}
+			}
+		],
+		"UPDATE_INPUT": [
+			{
+				"ctx": {
+					"newTodoText": "$$value"
+				}
+			}
+		],
+		"SWITCH_VIEW": [
+			{
+				"ctx": {
+					"viewMode": "$$viewMode"
+				}
+			},
+			{
+				"ctx": {
+					"currentView": {
+						"$if": {
+							"condition": {
+								"$eq": [
+									"$$viewMode",
+									"list"
+								]
+							},
+							"then": "@list",
+							"else": "@comingSoon"
+						}
+					}
+				}
+			},
+			{
+				"ctx": {
+					"listButtonActive": {
+						"$eq": [
+							"$$viewMode",
+							"list"
+						]
+					}
+				}
+			},
+			{
+				"ctx": {
+					"comingSoonButtonActive": {
+						"$eq": [
+							"$$viewMode",
+							"comingSoon"
+						]
+					}
+				}
+			}
+		],
+		"SUCCESS": [
+			{
+				"ctx": {
+					"newTodoText": ""
+				}
+			}
+		],
+		"ERROR": [
+			{
+				"ctx": {
+					"error": "$$errors.0.message"
+				}
+			}
+		]
+	}
+}

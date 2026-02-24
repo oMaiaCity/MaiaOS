@@ -7,13 +7,13 @@
 import detailActor from './detail/detail.actor.maia'
 import detailContext from './detail/detail.context.maia'
 import detailInbox from './detail/detail.inbox.maia'
-import detailState from './detail/detail.state.maia'
+import detailProcess from './detail/detail.process.maia'
 import detailView from './detail/detail.view.maia'
 import brandStyle from './intent/brand.style.maia'
 import intentActor from './intent/intent.actor.maia'
 import intentContext from './intent/intent.context.maia'
 import intentInbox from './intent/intent.inbox.maia'
-import intentState from './intent/intent.state.maia'
+import intentProcess from './intent/intent.process.maia'
 import intentView from './intent/intent.view.maia'
 import sparksAgent from './manifest.agent.maia'
 
@@ -43,9 +43,9 @@ export const SparksAgentRegistry = {
 		'°Maia/sparks/context/detail': detailContext,
 	},
 
-	states: {
-		'°Maia/sparks/state/intent': intentState,
-		'°Maia/sparks/state/detail': detailState,
+	processes: {
+		'°Maia/sparks/process/intent': intentProcess,
+		'°Maia/sparks/process/detail': detailProcess,
 	},
 
 	inboxes: {

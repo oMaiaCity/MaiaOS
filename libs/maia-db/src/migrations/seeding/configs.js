@@ -112,6 +112,7 @@ export async function seedConfigs(
 
 	totalCount += await seedConfigType('style', transformedConfigs.styles)
 	totalCount += await seedConfigType('tool', transformedConfigs.tools)
+	totalCount += await seedConfigType('process', transformedConfigs.processes)
 	totalCount += await seedConfigType('actor', transformedConfigs.actors)
 	totalCount += await seedConfigType('view', transformedConfigs.views)
 	totalCount += await seedConfigType('context', transformedConfigs.contexts)

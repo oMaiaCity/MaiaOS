@@ -1,0 +1,11 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/humans/process/intent",
+	"handlers": {
+		"DISMISS": [
+			{
+				"ctx": {}
+			}
+		]
+	}
+}

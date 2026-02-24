@@ -9,10 +9,12 @@
 
 // Use merged meta.schema.json (contains everything: base JSON Schema 2020-12 + MaiaOS extensions)
 // This is the single source of truth for metaschema
+import { normalizeCoValueData } from '@MaiaOS/db'
 import customMetaSchema from './os/meta.schema.json'
 import { isSchemaRef } from './patterns.js'
 import { plugin as cojsonPlugin, pluginId as cojsonPluginId } from './plugins/cojson.plugin.js'
 import { plugin as cotextPlugin, pluginId as cotextPluginId } from './plugins/cotext.plugin.js'
+import { normalizeSchemaReferencesWithResolver } from './schema-ref-resolver.js'
 import { formatValidationErrors, withSchemaValidationDisabled } from './validation.utils.js'
 import { ValidationPluginRegistry } from './validation-plugin-registry.js'
 
@@ -106,6 +108,11 @@ export class ValidationEngine {
 								// Handle reference objects (from IndexedDB mapping)
 								if (schema?.$coId && !schema.$schema) {
 									schema = await this.schemaResolver(schema.$coId)
+								}
+								// Resolve properties/items that are co-id refs (AJV requires plain objects)
+								if (schema) {
+									schema = await normalizeSchemaReferencesWithResolver(this.schemaResolver, schema)
+									schema = normalizeCoValueData(schema)
 								}
 								return schema || undefined
 							} catch (_error) {
@@ -497,12 +504,15 @@ export class ValidationEngine {
 			return this.schemas.get(type)
 		}
 
+		// Defensive normalization: CoMap array/CoMap-like properties/items → plain objects (AJV requires plain objects)
+		const normalizedSchema = normalizeCoValueData(schema)
+
 		// Resolve and register all schema dependencies ($schema and $co references)
-		await this._resolveAndRegisterSchemaDependencies(schema)
+		await this._resolveAndRegisterSchemaDependencies(normalizedSchema)
 
 		// Check if schema is already registered in AJV by $id
-		if (schema.$id) {
-			const existingValidator = this.ajv.getSchema(schema.$id)
+		if (normalizedSchema.$id) {
+			const existingValidator = this.ajv.getSchema(normalizedSchema.$id)
 			if (existingValidator) {
 				this.schemas.set(type, existingValidator)
 				return existingValidator
@@ -512,13 +522,13 @@ export class ValidationEngine {
 		// Compile and cache schema
 		// AJV automatically resolves $schema and $ref via its registry
 		try {
-			const validate = this.ajv.compile(schema)
+			const validate = this.ajv.compile(normalizedSchema)
 			this.schemas.set(type, validate)
 			return validate
 		} catch (error) {
 			// If schema already exists, try to retrieve it
-			if (error.message?.includes('already exists') && schema.$id) {
-				const existingValidator = this.ajv.getSchema(schema.$id)
+			if (error.message?.includes('already exists') && normalizedSchema.$id) {
+				const existingValidator = this.ajv.getSchema(normalizedSchema.$id)
 				if (existingValidator) {
 					this.schemas.set(type, existingValidator)
 					return existingValidator
@@ -550,6 +560,9 @@ export class ValidationEngine {
 			if (metaSchema?.$coId && !metaSchema.$schema) {
 				metaSchema = await this.schemaResolver(metaSchema.$coId)
 			}
+
+			// Defensive normalization: CoMap array/CoMap-like → plain objects (AJV requires plain objects)
+			if (metaSchema) metaSchema = normalizeCoValueData(metaSchema)
 
 			if (metaSchema) {
 				// Recursively resolve references in the meta-schema FIRST
@@ -667,6 +680,13 @@ export class ValidationEngine {
 				resolvingSchemas.delete(ref)
 				return // Silent skip - already resolved
 			}
+
+			// Resolve properties/items that are co-id refs (AJV requires plain objects)
+			referencedSchema = await normalizeSchemaReferencesWithResolver(
+				this.schemaResolver,
+				referencedSchema,
+			)
+			referencedSchema = normalizeCoValueData(referencedSchema)
 
 			// CRITICAL: Resolve ALL dependencies of the referenced schema FIRST
 			// before registering it, so AJV can compile it successfully
@@ -890,14 +910,17 @@ export class ValidationEngine {
 		}
 
 		// Get schema from registry by human-readable name
-		const schema = this.registrySchemas[schemaName]
+		const rawSchema = this.registrySchemas[schemaName]
 
-		if (!schema) {
+		if (!rawSchema) {
 			return {
 				valid: false,
 				errors: [{ message: `Schema '${schemaName}' not found in registry` }],
 			}
 		}
+
+		// Defensive normalization: CoMap array/CoMap-like → plain objects (AJV requires plain objects)
+		const schema = normalizeCoValueData(rawSchema)
 
 		// Check if schema is already compiled in AJV
 		let validate

@@ -7,7 +7,7 @@
 	"dependencies": [
 		"°Maia/todos/actor/intent",
 		"°Maia/todos/actor/list",
-		"°Maia/todos/actor/coming-soon",
-		"°Maia/actor/db"
+		"°Maia/actor/coming-soon",
+		"°Maia/actor/os/db"
 	]
 }

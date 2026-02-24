@@ -13,6 +13,7 @@ import { EXCEPTION_SCHEMAS } from '../../schemas/registry.js'
 import { createCoList } from '../cotypes/coList.js'
 import { createCoMap } from '../cotypes/coMap.js'
 import { createCoStream } from '../cotypes/coStream.js'
+import { normalizeCoValueData } from '../crud/data-extraction.js'
 import { getSparkGroup, removeGroupMember } from '../groups/groups.js'
 
 /**
@@ -81,15 +82,21 @@ export async function createCoValueForSpark(context, spark, options) {
 	// Step 2: Add guardian as admin
 	group.extend(guardian, 'admin')
 
-	// Create CoValue
+	// Create CoValue - normalize before storage (single gate, same function as read path)
 	let coValue
 	const _meta = { $schema: schema }
 	switch (cotype) {
 		case 'comap':
-			coValue = await createCoMap(group, data ?? {}, schema, node, dataEngine)
+			coValue = await createCoMap(group, normalizeCoValueData(data ?? {}), schema, node, dataEngine)
 			break
 		case 'colist':
-			coValue = await createCoList(group, Array.isArray(data) ? data : [], schema, node, dataEngine)
+			coValue = await createCoList(
+				group,
+				Array.isArray(data) ? data.map((item) => normalizeCoValueData(item)) : [],
+				schema,
+				node,
+				dataEngine,
+			)
 			break
 		case 'costream':
 			coValue = await createCoStream(group, schema, node, dataEngine)

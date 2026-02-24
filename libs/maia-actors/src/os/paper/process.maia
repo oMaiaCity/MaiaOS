@@ -1,0 +1,11 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/os/paper/process",
+	"handlers": {
+		"UPDATE_PAPER": [
+			{
+				"function": true
+			}
+		]
+	}
+}

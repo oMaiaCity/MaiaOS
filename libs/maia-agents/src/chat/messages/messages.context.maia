@@ -10,6 +10,7 @@
 			"content": "content"
 		}
 	},
+	"phase": "idle",
 	"isLoading": false,
 	"hasError": false,
 	"error": null,

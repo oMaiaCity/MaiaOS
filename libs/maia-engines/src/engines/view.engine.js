@@ -733,7 +733,11 @@ export class ViewEngine {
 			element.addEventListener(eventName, async (e) => {
 				try {
 					await this._handleEvent(e, eventDef, data, element, actorId)
-				} catch (_error) {}
+				} catch (error) {
+					if (typeof window !== 'undefined' && (import.meta?.env?.DEV ?? false)) {
+						console.error('[ViewEngine] Event handler error:', eventDef?.send || eventName, error)
+					}
+				}
 			})
 		}
 	}
@@ -775,7 +779,7 @@ export class ViewEngine {
 		// Message types that sync context from DOM - do NOT clear inputs (would overwrite user typing)
 		if (this.actorOps) {
 			const actor = this.actorOps.getActor?.(actorId)
-			if (actor?.machine) {
+			if (actor?.machine || actor?.process) {
 				payload = extractDOMValues(payload, element)
 
 				// $stores Architecture: Read CURRENT context from actor.context.value (backend unified store)
@@ -827,9 +831,18 @@ export class ViewEngine {
 				if (!isUpdateInputType) {
 					this._clearInputFields(element, actorId)
 				}
-			} else {
+			} else if (typeof window !== 'undefined' && (import.meta?.env?.DEV ?? false) && eventDef?.send) {
+				const hasActor = !!actor
+				const hasMachine = !!actor?.machine
+				const hasProcess = !!actor?.process
+				console.warn('[ViewEngine] Event not delivered - actor missing machine/process:', {
+					event: eventDef.send,
+					actorId,
+					hasActor,
+					hasMachine,
+					hasProcess,
+				})
 			}
-		} else {
 		}
 	}
 

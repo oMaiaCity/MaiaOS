@@ -1,0 +1,27 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/creator/process/logs",
+	"handlers": {
+		"ERROR": [
+			{
+				"ctx": {
+					"error": "$$errors.0.message"
+				}
+			}
+		],
+		"RETRY": [
+			{
+				"ctx": {
+					"error": null
+				}
+			}
+		],
+		"DISMISS": [
+			{
+				"ctx": {
+					"error": null
+				}
+			}
+		]
+	}
+}

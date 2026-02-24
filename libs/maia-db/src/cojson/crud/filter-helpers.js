@@ -1,52 +1,8 @@
 /**
  * Filter Helpers
  *
- * Provides helpers for filtering CoValue data and extracting data from content.
+ * Provides helpers for filtering CoValue data.
  */
-
-/**
- * Extract CoValue data from RawCoValue content
- * @param {RawCoValue} content - RawCoValue content
- * @returns {Object} Extracted data
- */
-export function extractCoValueDataFromContent(content) {
-	if (!content) return null
-
-	const rawType = content.type || 'unknown'
-	const properties = {}
-
-	if (content.get && typeof content.get === 'function') {
-		// CoMap object - use .keys() method
-		const keys =
-			content.keys && typeof content.keys === 'function' ? content.keys() : Object.keys(content)
-		for (const key of keys) {
-			properties[key] = content.get(key)
-		}
-	} else {
-		// Plain object - use Object.keys()
-		const keys = Object.keys(content)
-		for (const key of keys) {
-			properties[key] = content[key]
-		}
-	}
-
-	let items = null
-	if (rawType === 'colist' && content.toJSON) {
-		try {
-			items = content.toJSON()
-		} catch (_e) {
-			// Ignore
-		}
-	}
-
-	return {
-		id: content.id,
-		type: rawType,
-		properties: properties,
-		items: items,
-		content: content,
-	}
-}
 
 /**
  * Check if CoValue data matches filter criteria

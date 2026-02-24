@@ -13,6 +13,6 @@
 	"error": null,
 	"@actors": {
 		"list": "°Maia/todos/actor/list",
-		"comingSoon": "°Maia/todos/actor/coming-soon"
+		"comingSoon": "°Maia/actor/coming-soon"
 	}
 }

@@ -23,6 +23,7 @@ import {
 	INSTANCE_REF_PATTERN,
 	SCHEMA_REF_PATTERN,
 } from '@MaiaOS/schemata'
+import { normalizeCoValueData } from '../crud/data-extraction.js'
 import { resolveReactive as resolveReactiveBase } from '../crud/reactive-resolver.js'
 import { read as universalRead } from '../crud/read.js'
 import { waitForStoreReady } from '../crud/read-operations.js'
@@ -193,7 +194,8 @@ export async function resolve(peer, identifier, options = {}) {
 			const result = { ...cleanedSchema, $id: identifier }
 			// Preserve $schema from parent when using definition (definition may not have it)
 			if (!result.$schema && data.$schema) result.$schema = data.$schema
-			return result
+			// Normalize CoMap array/CoMap-like properties/items → plain objects (AJV requires plain objects)
+			return normalizeCoValueData(result)
 		}
 
 		// Not a schema - return null for schema returnType
@@ -610,8 +612,8 @@ async function resolveSparkOsIdFromNode(node, account, spark) {
 }
 
 /**
- * Load all schemas from spark.os.schematas (account.registries.sparks[°Maia].os.schematas)
- * MIGRATIONS ONLY - uses node directly, no peer.read
+ * Load all schemas from spark.os.schematas via read() API
+ * MIGRATIONS ONLY - uses resolve(peer, schemaCoId, { returnType: 'schema' }) for each schema
  *
  * @param {LocalNode} node - LocalNode instance
  * @param {RawAccount} account - Account CoMap
@@ -623,30 +625,38 @@ export async function loadSchemasFromAccount(node, account) {
 	}
 
 	try {
+		const { getGlobalCoCache } = await import('../cache/coCache.js')
+		const peer = {
+			node,
+			account,
+			getCoValue: (id) => node.getCoValue(id),
+			isAvailable: (c) => c?.isAvailable?.() ?? false,
+			getHeader: (c) => c?.verified?.header ?? null,
+			getCurrentContent: (c) => c?.getCurrentContent?.() ?? null,
+			subscriptionCache: getGlobalCoCache(node),
+			systemSpark: '°Maia',
+		}
+
 		const osId = await resolveSparkOsIdFromNode(node, account, '°Maia')
 		if (!osId?.startsWith('co_z')) return {}
 
-		const osCore = node.getCoValue(osId) || (await node.loadCoValueCore?.(osId))
-		if (!(await waitForCoValueAvailable(osCore))) return {}
-		const osContent = osCore?.getCurrentContent?.()
-		if (!osContent || typeof osContent.get !== 'function') return {}
+		const osStore = await universalRead(peer, osId, null, null, null, { deepResolve: false })
+		await waitForStoreReady(osStore, osId, 5000)
+		const osData = osStore.value
+		const schematasId = osData?.schematas
+		if (!schematasId?.startsWith?.('co_z')) return {}
 
-		const schematasId = osContent.get('schematas')
-		if (!schematasId?.startsWith('co_z')) return {}
-
-		const schematasCore = node.getCoValue(schematasId) || (await node.loadCoValueCore?.(schematasId))
-		if (!(await waitForCoValueAvailable(schematasCore))) return {}
-		const schematasContent = schematasCore?.getCurrentContent?.()
-		if (!schematasContent || typeof schematasContent.get !== 'function') return {}
+		const schematasStore = await universalRead(peer, schematasId, null, null, null, {
+			deepResolve: false,
+		})
+		await waitForStoreReady(schematasStore, schematasId, 5000)
+		const schematasData = schematasStore.value
+		if (!schematasData || schematasData.error) return {}
 
 		const schemaCoIds = []
-		const keys =
-			schematasContent.keys && typeof schematasContent.keys === 'function'
-				? Array.from(schematasContent.keys())
-				: Object.keys(schematasContent ?? {})
-		for (const key of keys) {
-			const coId = schematasContent.get(key)
-			if (coId && typeof coId === 'string' && coId.startsWith('co_')) schemaCoIds.push(coId)
+		for (const [key, val] of Object.entries(schematasData)) {
+			if (key === 'id' || key === '$schema' || key === 'type') continue
+			if (typeof val === 'string' && val.startsWith('co_')) schemaCoIds.push(val)
 		}
 
 		if (schemaCoIds.length === 0) return {}
@@ -655,28 +665,8 @@ export async function loadSchemasFromAccount(node, account) {
 		for (const schemaCoId of schemaCoIds) {
 			if (typeof schemaCoId !== 'string' || !schemaCoId.startsWith('co_z')) continue
 			try {
-				const schemaCore = node.getCoValue(schemaCoId) || (await node.loadCoValueCore?.(schemaCoId))
-				if (!(await waitForCoValueAvailable(schemaCore))) continue
-				const content = schemaCore?.getCurrentContent?.()
-				if (!content || typeof content.get !== 'function') continue
-				const header = schemaCore?.verified?.header
-				const headerMeta = header?.meta || {}
-				const title = content.get?.('title')
-				const cotype = content.get?.('cotype')
-				const properties = content.get?.('properties')
-				const items = content.get?.('items')
-				if (!title && !cotype && !properties && !items) continue
-				const schemaData = { $id: schemaCoId, $schema: headerMeta.$schema }
-				const keys =
-					content.keys && typeof content.keys === 'function'
-						? Array.from(content.keys())
-						: Object.keys(content ?? {})
-				for (const k of keys) {
-					if (k === 'id' || k === 'type') continue
-					const v = content.get(k)
-					if (v !== undefined) schemaData[k] = v
-				}
-				schemas[schemaCoId] = removeIdFields(schemaData)
+				const schema = await resolve(peer, schemaCoId, { returnType: 'schema', timeoutMs: 5000 })
+				if (schema) schemas[schemaCoId] = schema
 			} catch (_error) {}
 		}
 		return schemas

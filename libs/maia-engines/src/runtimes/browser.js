@@ -240,14 +240,19 @@ export class Runtime {
 		}
 
 		const resolveAndSpawnIfNeeded = async () => {
-			if (this.actorEngine.actors.has(actorId)) return
-
 			const result = await this.dataEngine.execute({
 				op: 'processInbox',
 				actorId,
 				inboxCoId,
 			})
 			const count = result?.messages?.length ?? 0
+
+			if (this.actorEngine.actors.has(actorId)) {
+				// Actor exists: process new messages (e.g. SUCCESS from AI reply)
+				if (count > 0) await this.actorEngine.processEvents(actorId)
+				return
+			}
+
 			if (count === 0) return
 
 			const actor = await this.actorEngine.spawnActor(actorConfig)

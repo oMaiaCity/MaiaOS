@@ -71,14 +71,23 @@ const syncDomain = peerMode === 'agent' ? process.env.PEER_MOAI || null : null
 const MAIA_SPARK = '°Maia'
 const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
 
-/** OpenAI-format tools for LLM (paper write + future tools). Uses existing tool defs (already OpenAI-compatible). */
+/** OpenAI-format tools for LLM. Uses actor tool defs (name, description, parameters). */
 function toOpenAITools() {
 	const defs = getAllActorDefinitions()
-	const paths = ['core/updatePaperContent']
+	const toolPaths = ['maia/actor/os/paper']
 	const tools = []
-	for (const p of paths) {
-		const def = defs[p]
-		if (def?.type === 'function' && def?.function) tools.push(def)
+	for (const path of toolPaths) {
+		const def = defs[path]
+		const toolDef = def?.function ?? def?.tool
+		if (!toolDef?.name || !toolDef?.parameters) continue
+		tools.push({
+			type: 'function',
+			function: {
+				name: toolDef.name,
+				description: toolDef.description ?? '',
+				parameters: toolDef.parameters,
+			},
+		})
 	}
 	return tools
 }
@@ -324,7 +333,7 @@ async function handleProfile(worker) {
 
 /**
  * Shared logic: write text into the paper CoText (first note's content).
- * Used by LLM tool @core/updatePaperContent and formerly by the write-note test endpoint.
+ * Used by LLM tool @maia/actor/os/paper.
  */
 async function writeToPaperCoText(worker, value) {
 	if (value == null || typeof value !== 'string') {
@@ -374,10 +383,10 @@ async function handleAgentHttp(req, worker) {
 	return null
 }
 
-/** Execute LLM tool call server-side (e.g. @core/updatePaperContent). */
+/** Execute LLM tool call server-side. */
 async function executeLLMTool(worker, toolName, args) {
 	try {
-		if (toolName === '@core/updatePaperContent') {
+		if (toolName === '@maia/actor/os/paper') {
 			// Accept value, content, or text (some models use different param names)
 			let value = args?.value ?? args?.content ?? args?.text
 			if (value != null && typeof value !== 'string') {
@@ -607,6 +616,11 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 		const storageLabel = usePostgres ? 'Postgres' : `PGlite at ${dbPath || './local-sync.db'}`
 		console.log('[sync] Loading account (%s)...', storageLabel)
 		console.log('[sync] accountID=%s', `${accountID?.slice(0, 12)}...`)
+		if (!RED_PILL_API_KEY) {
+			console.warn(
+				'[sync] RED_PILL_API_KEY not set — LLM chat will return 500. Add to root .env and restart.',
+			)
+		}
 
 		const result = await loadOrCreateAgentAccount({
 			accountID,
@@ -657,16 +671,23 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 			const { configs: mergedConfigs, data } = await buildSeedConfig(agentRegistries)
 			const {
 				actors: serviceActors,
-				states: serviceStates,
 				tools: serviceTools,
 				inboxes: serviceInboxes,
+				contexts: actorContexts,
+				views: actorViews,
+				processes: actorProcesses,
+				styles: actorStyles,
 			} = getSeedConfig()
 			const configsForSeed = {
 				...mergedConfigs,
 				actors: { ...mergedConfigs.actors, ...serviceActors },
-				states: { ...mergedConfigs.states, ...serviceStates },
+				states: mergedConfigs.states,
 				tools: { ...(mergedConfigs.tools || {}), ...serviceTools },
 				inboxes: { ...mergedConfigs.inboxes, ...serviceInboxes },
+				contexts: { ...mergedConfigs.contexts, ...(actorContexts || {}) },
+				views: { ...mergedConfigs.views, ...(actorViews || {}) },
+				processes: { ...mergedConfigs.processes, ...(actorProcesses || {}) },
+				styles: { ...mergedConfigs.styles, ...(actorStyles || {}) },
 			}
 			const schemas = getAllSchemas()
 			const seedResult = await dataEngine.execute({

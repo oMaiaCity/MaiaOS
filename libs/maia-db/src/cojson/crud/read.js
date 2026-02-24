@@ -11,10 +11,7 @@
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js'
 import { ReactiveStore } from '../../reactive-store.js'
 import { getHumansRegistryId, getSparksRegistryId } from '../groups/groups.js'
-import {
-	resolve as resolveSchema,
-	resolveReactive as resolveSchemaReactive,
-} from '../schema/resolver.js'
+import { resolve as resolveSchema } from '../schema/resolver.js'
 import { ensureCoValueLoaded, getCoListId } from './collection-helpers.js'
 import { extractCoValueData } from './data-extraction.js'
 import {
@@ -266,6 +263,18 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 					}
 				}
 
+				// Replace skipped query objects with [] so views don't crash on $each (expect array, not {schema,map})
+				for (const [key, value] of Object.entries(contextValue || {})) {
+					if (key !== '$schema' && key !== '$id' && isQueryObject(value) && !queryStores.has(key)) {
+						delete mergedValue[key]
+						mergedValue[key] = []
+						const hasKey = `has${key.charAt(0).toUpperCase()}${key.slice(1)}`
+						if (hasKey in contextValue) {
+							mergedValue[hasKey] = false
+						}
+					}
+				}
+
 				// Only update if value actually changed (deep comparison)
 				// Deep change detection via JSON.stringify
 				const currentValueStr = JSON.stringify(mergedValue)
@@ -343,98 +352,26 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 						continue
 					}
 
+					// Runtime: resolve human-readable schema refs to co-id (seed should transform; resolve handles edge cases)
 					if (!schemaCoId.startsWith('co_z')) {
-						if (schemaCoId.startsWith('°Maia/schema/')) {
-							// Use reactive schema resolution - returns ReactiveStore that updates when schema becomes available
-							const schemaStore = resolveSchemaReactive(peer, schemaCoId, { timeoutMs })
-
-							// Subscribe to schema resolution - execute query when schema becomes available
-							const schemaUnsubscribe = schemaStore.subscribe(async (schemaState) => {
-								if (schemaState.loading) {
-									// Still loading - create empty query store to show loading state
-									if (!queryStores.has(key)) {
-										const currentEvaluatedFilter = await evaluateFilter(
-											value.filter || null,
-											contextValue,
-											evaluator,
-										)
-										const isFindOne = isFindOneFilter(currentEvaluatedFilter)
-
-										// Use null for findOne queries, [] for collection queries
-										const loadingStore = new ReactiveStore(isFindOne ? null : [])
-										queryStores.set(key, loadingStore)
-										queryIsFindOne.set(key, isFindOne)
-
-										// Store evaluated filter in query definition (re-evaluate in case context changed)
-										queryDefinitions.set(key, {
-											schema: value.schema,
-											...(value.options ? { options: value.options } : {}),
-											filter: currentEvaluatedFilter,
-										})
-										enqueueUpdate()
-									}
-									return
-								}
-
-								if (schemaState.error || !schemaState.schemaCoId) {
-									if (typeof process !== 'undefined' && process.env?.DEBUG)
-										console.error('Schema resolution failed:', schemaState.error)
-									schemaUnsubscribe()
-									return
-								}
-
-								// Schema resolved - execute query with evaluated filter
-								const resolvedSchemaCoId = schemaState.schemaCoId
-
-								try {
-									const currentEvaluatedFilter = await evaluateFilter(
-										value.filter || null,
-										contextValue,
-										evaluator,
-									)
-
-									// Check if filter changed since we stored it (or if query store doesn't exist)
-									const storedQueryDef = queryDefinitions.get(key)
-									const storedFilter = storedQueryDef?.filter || null
-									const filterChanged =
-										JSON.stringify(currentEvaluatedFilter) !== JSON.stringify(storedFilter)
-
-									if (filterChanged || !queryStores.has(key)) {
-										const existingQueryStore = queryStores.get(key)
-										if (existingQueryStore?._queryUnsubscribe) {
-											existingQueryStore._queryUnsubscribe()
-										}
-										await wireQueryStoreForSchema(
-											peer,
-											read,
-											key,
-											resolvedSchemaCoId,
-											currentEvaluatedFilter,
-											value,
-											queryStores,
-											queryDefinitions,
-											queryIsFindOne,
-											enqueueUpdate,
-											options,
-											timeoutMs,
-										)
-									}
-
-									schemaUnsubscribe()
-								} catch (_error) {
-									if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_error)
-									schemaUnsubscribe()
-								}
+						try {
+							const resolved = await resolveSchema(peer, schemaCoId, {
+								returnType: 'coId',
+								timeoutMs,
 							})
-
-							// Store schema subscription for cleanup
-							schemaSubscriptions.set(key, schemaUnsubscribe)
-						} else {
-							if (typeof process !== 'undefined' && process.env?.DEBUG) {
-								/* no-op */
+							if (resolved && typeof resolved === 'string' && resolved.startsWith('co_z')) {
+								schemaCoId = resolved
 							}
+						} catch (_) {
+							console.error(
+								'[createUnifiedStore] Query schema must be co-id or resolve to co-id. Got:',
+								schemaCoId,
+							)
+							continue
 						}
-					} else if (schemaCoId && typeof schemaCoId === 'string' && schemaCoId.startsWith('co_z')) {
+						if (!schemaCoId.startsWith('co_z')) continue
+					}
+					if (schemaCoId && typeof schemaCoId === 'string' && schemaCoId.startsWith('co_z')) {
 						if (filterChanged || !existingStore) {
 							if (existingStore?._queryUnsubscribe) {
 								existingStore._queryUnsubscribe()

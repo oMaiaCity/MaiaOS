@@ -23,10 +23,10 @@ export const RENDER_STATES = {
 }
 
 export class ActorEngine {
-	constructor(styleEngine, viewEngine, stateEngine = null) {
+	constructor(styleEngine, viewEngine, processEngine) {
 		this.styleEngine = styleEngine
 		this.viewEngine = viewEngine
-		this.stateEngine = stateEngine
+		this.processEngine = processEngine
 		this.actors = new Map()
 		this.dataEngine = null
 		this.os = null
@@ -92,43 +92,24 @@ export class ActorEngine {
 	async _ensureActor(actorConfig) {
 		const actorId = actorConfig.$id || actorConfig.id
 		if (this.actors.has(actorId)) return this.actors.get(actorId)
-		if (!actorConfig.inbox || !actorConfig.state) {
-			throw new Error(
-				`[ActorEngine] Actor config must have inbox and state (full config required): ${actorId}`,
-			)
+		if (!actorConfig.inbox) {
+			throw new Error(`[ActorEngine] Actor config must have inbox: ${actorId}`)
+		}
+		if (!actorConfig.process) {
+			throw new Error(`[ActorEngine] Actor config must have process: ${actorId}`)
 		}
 		return this.spawnActor(actorConfig)
 	}
 
 	/** @private */
 	async _initializeActorState(actor, actorConfig) {
-		if (this.stateEngine && actorConfig.state && !actor.machine) {
+		if (this.processEngine && actorConfig.process && !actor.process) {
 			try {
-				const stateStore = await this._readStore(actorConfig.state)
-				if (!stateStore) {
-					throw new Error(`[ActorEngine] Failed to load state CoValue ${actorConfig.state}`)
-				}
-				const stateDef = stateStore.value
-				const actorId = actor.id
-				const stateUnsub = stateStore.subscribe(
-					async (updatedStateDef) => {
-						const currentActor = this.actors.get(actorId)
-						if (currentActor && this.stateEngine) {
-							try {
-								if (currentActor.machine) this.stateEngine.destroyMachine(currentActor.machine.id)
-								currentActor.machine = await this.stateEngine.createMachine(updatedStateDef, currentActor)
-								if (currentActor._renderState === RENDER_STATES.READY) {
-									currentActor._renderState = RENDER_STATES.UPDATING
-									this._scheduleRerender(actorId)
-								}
-							} catch (_error) {}
-						}
-					},
-					{ skipInitial: true },
-				)
-				if (actor._configUnsubscribes) actor._configUnsubscribes.push(stateUnsub)
-
-				actor.machine = await this.stateEngine.createMachine(stateDef, actor)
+				const processStore = await this._readStore(actorConfig.process)
+				if (!processStore) return
+				const processDef = processStore.value
+				if (!processDef?.handlers) return
+				actor.process = await this.processEngine.createProcess(processDef, actor)
 			} catch (_error) {}
 		}
 	}
@@ -371,7 +352,7 @@ export class ActorEngine {
 
 		// $stores Architecture: Backend handles subscription cleanup automatically via subscriptionCache
 		// But we also explicitly unsubscribe to ensure immediate cleanup
-		if (actor.machine && this.stateEngine) this.stateEngine.destroyMachine(actor.machine.id)
+		if (actor.process && this.processEngine) this.processEngine.destroyProcess(actor.process.id)
 		if (actor._processedMessageKeys) {
 			actor._processedMessageKeys.clear()
 			delete actor._processedMessageKeys
@@ -442,7 +423,7 @@ export class ActorEngine {
 	 * @returns {Promise<Object|null>} Created actor or null
 	 */
 	async spawnActor(actorConfig, options = {}) {
-		if (!this.dataEngine || !this.stateEngine) return null
+		if (!this.dataEngine) return null
 		const actorId = actorConfig.$id || actorConfig.id
 		if (!actorId || typeof actorId !== 'string' || !actorId.startsWith('co_z')) {
 			throw new Error(`[ActorEngine] spawnActor: actorConfig.$id must be co-id, got: ${actorId}`)
@@ -450,22 +431,34 @@ export class ActorEngine {
 		if (this.actors.has(actorId)) return this.actors.get(actorId)
 
 		const inboxRef = actorConfig.inbox
-		const stateRef = actorConfig.state
-		if (!inboxRef || !stateRef) return null
+		const processRef = actorConfig.process
+		if (!inboxRef || !processRef) return null
 		if (typeof inboxRef !== 'string' || !inboxRef.startsWith('co_z')) {
 			throw new Error(`[ActorEngine] spawnActor: inbox must be co-id, got: ${inboxRef}`)
 		}
-		if (typeof stateRef !== 'string' || !stateRef.startsWith('co_z')) {
-			throw new Error(`[ActorEngine] spawnActor: state must be co-id, got: ${stateRef}`)
-		}
 		const inboxCoId = inboxRef
-		const stateCoId = stateRef
 
-		const stateStore = await this._readStore(stateCoId)
-		if (!stateStore) return null
+		let configCoId = processRef
+		if (typeof configCoId !== 'string') {
+			throw new Error(`[ActorEngine] spawnActor: process must be string, got: ${typeof configCoId}`)
+		}
+		if (!configCoId.startsWith('co_z') && this.dataEngine?.peer) {
+			const resolved = await this.dataEngine.peer.resolve(configCoId, { returnType: 'coId' })
+			if (resolved && typeof resolved === 'string' && resolved.startsWith('co_z')) {
+				configCoId = resolved
+			}
+		}
+		if (!configCoId.startsWith('co_z')) {
+			throw new Error(
+				`[ActorEngine] spawnActor: process must be co-id (or resolve to co-id). Got: ${processRef}. Run PEER_FRESH_SEED=true to seed configs with co-ids.`,
+			)
+		}
+		const configStore = await this._readStore(configCoId)
+		if (!configStore) return null
 
-		const stateDef = stateStore.value
-		if (!stateDef?.states) return null
+		const configDef = configStore.value
+		const hasProcess = processRef && configDef?.handlers
+		if (!hasProcess) return null
 
 		const { getActor } = await import('@MaiaOS/actors')
 		const role = actorConfig.role
@@ -496,7 +489,9 @@ export class ActorEngine {
 			_configUnsubscribes: configUnsubscribes,
 		}
 
-		actor.machine = await this.stateEngine.createMachine(stateDef, actor)
+		if (hasProcess && this.processEngine) {
+			actor.process = await this.processEngine.createProcess(configDef, actor)
+		}
 		if (!options.skipInboxSubscription) {
 			await this._attachInboxSubscription(actorId, inboxCoId, configUnsubscribes)
 		}
@@ -541,7 +536,6 @@ export class ActorEngine {
 	 * @param {Object} payload - Resolved payload (no expressions)
 	 */
 	async deliverEvent(senderId, targetId, type, payload = {}) {
-		this._log('[sendToActor] 2.deliverEvent:', { type, senderId, targetId })
 		if (containsExpressions(payload)) {
 			throw new Error(
 				`[ActorEngine] Payload contains unresolved expressions. Payload: ${JSON.stringify(payload).substring(0, 200)}`,
@@ -603,14 +597,7 @@ export class ActorEngine {
 			target: targetCoId,
 			processed: false,
 		}
-		this._log('[sendToActor] 3._pushToInbox: pushing to inbox', {
-			type: message.type,
-			inboxCoId,
-			targetCoId,
-			sourceCoId,
-		})
 		await this.dataEngine.peer.createAndPushMessage(inboxCoId, messageData)
-		this._log('[sendToActor] 4._pushToInbox: createAndPushMessage done')
 	}
 
 	/**
@@ -639,6 +626,13 @@ export class ActorEngine {
 		}
 		const { inboxCoId, targetActorConfig } = resolved
 		const messageWithTarget = { ...message, target: resolved.resolvedTargetId }
+		if (message.type === 'STATUS_UPDATE') {
+			this._log('[ActorEngine] _pushToInbox STATUS_UPDATE', {
+				targetId,
+				resolvedTargetId: resolved.resolvedTargetId,
+				actorExists: !targetActorConfig,
+			})
+		}
 		await this._pushMessage(inboxCoId, messageWithTarget)
 		// Headless spawn: delegate to Runtime when available; else inline spawn; else notify inbox watcher
 		if (targetActorConfig) {
@@ -656,11 +650,17 @@ export class ActorEngine {
 		} else {
 			// Actor exists: process immediately so messages show without waiting for inbox subscription
 			const actorId = resolved.resolvedTargetId
+			if (message.type === 'STATUS_UPDATE' && actorId) {
+				this._log('[ActorEngine] _pushToInbox calling processEvents', {
+					actorId,
+					hasActor: this.actors.has(actorId),
+				})
+			}
 			if (actorId && this.actors.has(actorId)) {
 				await this.processEvents(actorId)
-			} else {
-				this.runtime?.notifyInboxPush?.(inboxCoId)
 			}
+			// Fallback: notify inbox watcher so Runtime's resolveAndSpawnIfNeeded runs (processes if actor exists, handles sync edge cases)
+			this.runtime?.notifyInboxPush?.(inboxCoId)
 		}
 	}
 
@@ -805,7 +805,6 @@ export class ActorEngine {
 	async processEvents(actorId) {
 		const actor = this.actors.get(actorId)
 		if (!actor || !actor.inboxCoId || !this.dataEngine || actor._isProcessing) return
-		this._log('[sendToActor] 6.processEvents: starting', { actorId, inboxCoId: actor.inboxCoId })
 		actor._isProcessing = true
 		let hadUnhandledMessages = false
 		try {
@@ -815,13 +814,6 @@ export class ActorEngine {
 				inboxCoId: actor.inboxCoId,
 			})
 			const messages = result.messages || []
-			if (messages.length > 0) {
-				this._log('[sendToActor] 6.processEvents: processing', {
-					actorId,
-					count: messages.length,
-					types: messages.map((m) => m.type),
-				})
-			}
 			for (const message of messages) {
 				if (message.type === 'INIT' || message.from === 'system') continue
 				try {
@@ -842,14 +834,15 @@ export class ActorEngine {
 						continue
 					}
 					if (message.source) actor._lastEventSource = message.source
-					if (!actor.machine || !this.stateEngine) return
-					const handled = await this.stateEngine.send(
-						actor.machine.id,
-						message.type,
-						validated.payloadPlain,
-					)
-					await markProcessed()
-					if (!handled) hadUnhandledMessages = true
+					if (actor.process && this.processEngine) {
+						const handled = await this.processEngine.send(
+							actor.process.id,
+							message.type,
+							validated.payloadPlain,
+						)
+						await markProcessed()
+						if (!handled) hadUnhandledMessages = true
+					}
 				} catch (error) {
 					this._logError('[ActorEngine] processEvents: message handling failed', {
 						actorId,

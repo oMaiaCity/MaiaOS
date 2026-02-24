@@ -1,0 +1,18 @@
+{
+	"$schema": "°Maia/schema/tool",
+	"$id": "°Maia/actor/os/names/tool",
+	"name": "@maia/actor/os/names",
+	"description": "Computes a lookup object mapping message IDs to display names based on role",
+	"parameters": {
+		"type": "object",
+		"properties": {
+			"conversations": {
+				"type": "array",
+				"description": "Array of conversation messages with id and role properties"
+			}
+		},
+		"required": [
+			"conversations"
+		]
+	}
+}

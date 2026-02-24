@@ -8,7 +8,7 @@ import brandStyle from './intent/brand.style.maia'
 import intentActor from './intent/intent.actor.maia'
 import intentContext from './intent/intent.context.maia'
 import intentInbox from './intent/intent.inbox.maia'
-import intentState from './intent/intent.state.maia'
+import intentProcess from './intent/intent.process.maia'
 import intentView from './intent/intent.view.maia'
 import humansAgent from './manifest.agent.maia'
 
@@ -35,8 +35,8 @@ export const HumansAgentRegistry = {
 		'°Maia/humans/context/intent': intentContext,
 	},
 
-	states: {
-		'°Maia/humans/state/intent': intentState,
+	processes: {
+		'°Maia/humans/process/intent': intentProcess,
 	},
 
 	inboxes: {

@@ -1,0 +1,12 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/os/ai",
+	"role": "@maia/actor/os/ai",
+	"interface": [
+		"CHAT",
+		"SUCCESS",
+		"ERROR"
+	],
+	"process": "°Maia/actor/os/ai/process",
+	"tool": "°Maia/actor/os/ai/tool"
+}

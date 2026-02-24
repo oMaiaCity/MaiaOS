@@ -4,7 +4,7 @@
 	"role": "@todos/intent",
 	"context": "°Maia/todos/context/intent",
 	"view": "°Maia/todos/view/intent",
-	"state": "°Maia/todos/state/intent",
+	"process": "°Maia/todos/process/intent",
 	"brand": "°Maia/todos/style/brand",
 	"inbox": "°Maia/todos/inbox/intent",
 	"interface": [

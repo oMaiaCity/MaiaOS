@@ -262,6 +262,8 @@ During vibe loading, all human-readable references are transformed to co-ids:
 - Runtime uses co-ids for efficient lookups and CoJSON integration
 - Transformation happens automatically during seeding
 
+**Runtime Invariant:** Config-derived refs (schema, target, actor) must be co-ids. Human-readable refs exist only in source `.maia` files; seeding transforms them. At runtime, engines reject human-readable refs—no `peer.resolve()` of human-readable from config-derived payloads. Fail-fast with clear errors if unseeded configs reach runtime.
+
 ## Data Flow
 
 ### User Interaction Flow
