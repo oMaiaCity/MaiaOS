@@ -4,12 +4,6 @@
  * Also includes standalone UI actors (e.g. coming-soon).
  */
 
-import comingSoonActor from './library/comingSoon/actor.maia'
-import comingSoonContext from './library/comingSoon/context.maia'
-import comingSoonInbox from './library/comingSoon/inbox.maia'
-import comingSoonProcess from './library/comingSoon/process.maia'
-import comingSoonStyle from './library/comingSoon/style.maia'
-import comingSoonView from './library/comingSoon/view.maia'
 import aiChatActor from './os/ai/actor.maia'
 import aiChatProcess from './os/ai/process.maia'
 import aiChatTool from './os/ai/tool.maia'
@@ -25,6 +19,32 @@ import updatePaperContentTool from './os/paper/tool.maia'
 import sparksActor from './os/spark/actor.maia'
 import sparksProcess from './os/spark/process.maia'
 import sparksTool from './os/spark/tool.maia'
+import detailActor from './services/detail/actor.maia'
+import detailContext from './services/detail/context.maia'
+import detailInbox from './services/detail/inbox.maia'
+import detailProcess from './services/detail/process.maia'
+import detailView from './services/detail/view.maia'
+import listActor from './services/list/actor.maia'
+import listContext from './services/list/context.maia'
+import listInbox from './services/list/inbox.maia'
+import listProcess from './services/list/process.maia'
+import listView from './services/list/view.maia'
+import logsActor from './services/logs/actor.maia'
+import logsContext from './services/logs/context.maia'
+import logsInbox from './services/logs/inbox.maia'
+import logsProcess from './services/logs/process.maia'
+import logsView from './services/logs/view.maia'
+import messagesActor from './services/messages/actor.maia'
+import messagesContext from './services/messages/context.maia'
+import messagesInbox from './services/messages/inbox.maia'
+import messagesProcess from './services/messages/process.maia'
+import messagesView from './services/messages/view.maia'
+import comingSoonActor from './views/comingSoon/actor.maia'
+import comingSoonContext from './views/comingSoon/context.maia'
+import comingSoonInbox from './views/comingSoon/inbox.maia'
+import comingSoonProcess from './views/comingSoon/process.maia'
+import comingSoonStyle from './views/comingSoon/style.maia'
+import comingSoonView from './views/comingSoon/view.maia'
 
 /** Map role to folder name for consistent °Maia/actor/{folder} $ids */
 export const ROLE_TO_FOLDER = {
@@ -113,8 +133,8 @@ export function getSeedConfig() {
 		inboxes[inboxId] = toInboxConfig(folder)
 	}
 
-	// Standalone UI actors (process-based, no state/function)
-	const uiActors = [
+	// View actors (UI components)
+	const viewActors = [
 		{
 			actor: comingSoonActor,
 			context: comingSoonContext,
@@ -128,7 +148,7 @@ export function getSeedConfig() {
 	const uiViews = {}
 	const uiProcesses = {}
 	const uiStyles = {}
-	for (const { actor, context, view, process, style, inbox } of uiActors) {
+	for (const { actor, context, view, process, style, inbox } of viewActors) {
 		if (actor?.$id) actors[actor.$id] = actor
 		if (context?.$id) uiContexts[context.$id] = context
 		if (view?.$id) uiViews[view.$id] = view
@@ -137,7 +157,46 @@ export function getSeedConfig() {
 		if (inbox?.$id) inboxes[inbox.$id] = inbox
 	}
 
-	// Merge service actor processes with UI processes
+	// Service actors (messages, logs, list, detail)
+	const serviceActors = [
+		{
+			actor: messagesActor,
+			context: messagesContext,
+			view: messagesView,
+			process: messagesProcess,
+			inbox: messagesInbox,
+		},
+		{
+			actor: logsActor,
+			context: logsContext,
+			view: logsView,
+			process: logsProcess,
+			inbox: logsInbox,
+		},
+		{
+			actor: listActor,
+			context: listContext,
+			view: listView,
+			process: listProcess,
+			inbox: listInbox,
+		},
+		{
+			actor: detailActor,
+			context: detailContext,
+			view: detailView,
+			process: detailProcess,
+			inbox: detailInbox,
+		},
+	]
+	for (const { actor, context, view, process: proc, inbox: inboxCfg } of serviceActors) {
+		if (actor?.$id) actors[actor.$id] = actor
+		if (context?.$id) uiContexts[context.$id] = context
+		if (view?.$id) uiViews[view.$id] = view
+		if (proc?.$id) uiProcesses[proc.$id] = proc
+		if (inboxCfg?.$id) inboxes[inboxCfg.$id] = inboxCfg
+	}
+
+	// Merge all processes
 	const allProcesses = { ...processes, ...uiProcesses }
 
 	return {

@@ -1,0 +1,18 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/services/detail",
+	"role": "@maia/actor/services/detail",
+	"context": "°Maia/actor/services/detail/context",
+	"view": "°Maia/actor/services/detail/view",
+	"process": "°Maia/actor/services/detail/process",
+	"brand": "°Maia/sparks/style/brand",
+	"inbox": "°Maia/actor/services/detail/inbox",
+	"interface": [
+		"LOAD_ACTOR",
+		"SUCCESS",
+		"ADD_AGENT",
+		"REMOVE_MEMBER",
+		"UPDATE_AGENT_INPUT",
+		"ERROR"
+	]
+}

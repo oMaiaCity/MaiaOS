@@ -1,6 +1,6 @@
 {
 	"$schema": "°Maia/schema/context",
-	"$id": "°Maia/creator/context/logs",
+	"$id": "°Maia/actor/services/logs/context",
 	"messages": {
 		"schema": "°Maia/schema/event",
 		"map": {

@@ -1,6 +1,6 @@
 {
 	"$schema": "°Maia/schema/process",
-	"$id": "°Maia/chat/process/messages",
+	"$id": "°Maia/actor/services/messages/process",
 	"handlers": {
 		"SEND_MESSAGE": [
 			{
@@ -83,11 +83,6 @@
 			}
 		],
 		"SUCCESS": [
-			{
-				"guard": {
-					"phase": "calling_llm"
-				}
-			},
 			{
 				"op": {
 					"create": {

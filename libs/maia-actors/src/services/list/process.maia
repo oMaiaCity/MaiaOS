@@ -1,7 +1,37 @@
 {
 	"$schema": "°Maia/schema/process",
-	"$id": "°Maia/todos/process/list",
+	"$id": "°Maia/actor/services/list/process",
 	"handlers": {
+		"CREATE_BUTTON": [
+			{
+				"ctx": {
+					"error": null
+				}
+			},
+			{
+				"op": {
+					"create": {
+						"schema": "°Maia/schema/data/todos",
+						"data": {
+							"text": "$$value",
+							"done": false
+						}
+					}
+				}
+			},
+			{
+				"ctx": {
+					"newTodoText": ""
+				}
+			}
+		],
+		"UPDATE_INPUT": [
+			{
+				"ctx": {
+					"newTodoText": "$$value"
+				}
+			}
+		],
 		"TOGGLE_BUTTON": [
 			{
 				"op": {

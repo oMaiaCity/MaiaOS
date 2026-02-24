@@ -9,7 +9,7 @@
 	"error": null,
 	"popupOpen": false,
 	"@actors": {
-		"messages": "°Maia/chat/actor/messages",
+		"messages": "°Maia/actor/services/messages",
 		"paper": "°Maia/chat/actor/paper"
 	}
 }

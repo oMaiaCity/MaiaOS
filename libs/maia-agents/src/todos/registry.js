@@ -12,12 +12,7 @@ import intentContext from './intent/intent.context.maia'
 import intentInbox from './intent/intent.inbox.maia'
 import intentProcess from './intent/intent.process.maia'
 import intentView from './intent/intent.view.maia'
-import listActor from './list/list.actor.maia'
-import listContext from './list/list.context.maia'
-import listInbox from './list/list.inbox.maia'
-import listProcess from './list/list.process.maia'
 import listStyle from './list/list.style.maia'
-import listView from './list/list.view.maia'
 import todosAgent from './manifest.agent.maia'
 
 /**
@@ -35,27 +30,22 @@ export const TodosAgentRegistry = {
 
 	actors: {
 		'°Maia/todos/actor/intent': intentActor,
-		'°Maia/todos/actor/list': listActor,
 	},
 
 	views: {
 		'°Maia/todos/view/intent': intentView,
-		'°Maia/todos/view/list': listView,
 	},
 
 	contexts: {
 		'°Maia/todos/context/intent': intentContext,
-		'°Maia/todos/context/list': listContext,
 	},
 
 	processes: {
 		'°Maia/todos/process/intent': intentProcess,
-		'°Maia/todos/process/list': listProcess,
 	},
 
 	inboxes: {
 		'°Maia/todos/inbox/intent': intentInbox,
-		'°Maia/todos/inbox/list': listInbox,
 	},
 
 	data: {

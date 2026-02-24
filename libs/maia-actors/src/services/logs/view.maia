@@ -1,21 +1,10 @@
 {
 	"$schema": "°Maia/schema/view",
-	"$id": "°Maia/creator/view/logs",
+	"$id": "°Maia/actor/services/logs/view",
 	"content": {
 		"tag": "div",
 		"class": "stack",
 		"children": [
-			{
-				"tag": "div",
-				"class": "logs-header",
-				"children": [
-					{
-						"tag": "h2",
-						"class": "agent-creator-title",
-						"text": "Logs"
-					}
-				]
-			},
 			{
 				"tag": "div",
 				"class": "logs",

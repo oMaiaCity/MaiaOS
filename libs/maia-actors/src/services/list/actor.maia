@@ -1,0 +1,21 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/services/list",
+	"role": "@maia/actor/services/list",
+	"context": "°Maia/actor/services/list/context",
+	"view": "°Maia/actor/services/list/view",
+	"process": "°Maia/actor/services/list/process",
+	"brand": "°Maia/style/brand",
+	"style": "°Maia/todos/style/list",
+	"inbox": "°Maia/actor/services/list/inbox",
+	"interface": [
+		"CREATE_BUTTON",
+		"UPDATE_INPUT",
+		"TOGGLE_BUTTON",
+		"DELETE_BUTTON",
+		"SUCCESS",
+		"ERROR",
+		"RETRY",
+		"DISMISS"
+	]
+}

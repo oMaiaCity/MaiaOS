@@ -1,6 +1,6 @@
 {
 	"$schema": "°Maia/schema/process",
-	"$id": "°Maia/todos/process/intent",
+	"$id": "°Maia/creator/process/intent",
 	"handlers": {
 		"SWITCH_VIEW": [
 			{
@@ -15,10 +15,10 @@
 							"condition": {
 								"$eq": [
 									"$$viewMode",
-									"list"
+									"logs"
 								]
 							},
-							"then": "@list",
+							"then": "@logs",
 							"else": "@comingSoon"
 						}
 					}
@@ -26,10 +26,10 @@
 			},
 			{
 				"ctx": {
-					"listButtonActive": {
+					"logsButtonActive": {
 						"$eq": [
 							"$$viewMode",
-							"list"
+							"logs"
 						]
 					}
 				}
