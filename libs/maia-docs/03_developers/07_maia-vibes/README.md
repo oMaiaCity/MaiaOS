@@ -47,7 +47,7 @@ libs/maia-vibes/src/
 │   │   ├── agent.context.maia
 │   │   ├── agent.state.maia
 │   │   ├── agent.view.maia
-│   │   ├── agent.inbox.maia
+│   │   # inbox derived by convention from actor $id (no agent.inbox.maia)
 │   │   └── brand.style.maia
 │   ├── list/                  # List UI actor
 │   └── logs/                  # Logs UI actor
@@ -254,7 +254,7 @@ vibe-name/
     ├── [actor].context.maia
     ├── [actor].state.maia
     ├── [actor].view.maia
-    ├── [actor].inbox.maia
+    # inbox derived by convention (no [actor].inbox.maia)
     └── brand.style.maia    # Shared brand style
 ```
 
@@ -339,7 +339,7 @@ my-vibe/
     ├── agent.context.maia
     ├── agent.state.maia
     ├── agent.view.maia
-    ├── agent.inbox.maia
+    # inbox derived by convention (no agent.inbox.maia)
     └── brand.style.maia
 ```
 
