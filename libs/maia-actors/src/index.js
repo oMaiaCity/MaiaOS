@@ -16,9 +16,6 @@ import computeMessageNamesTool from './os/names/tool.maia'
 import updatePaperContentDef from './os/paper/actor.maia'
 import updatePaperContentFn from './os/paper/function.js'
 import updatePaperContentTool from './os/paper/tool.maia'
-import sparksDef from './os/spark/actor.maia'
-import sparksFn from './os/spark/function.js'
-import sparksTool from './os/spark/tool.maia'
 
 /** Merge actor def + tool def for consumers that expect definition.function (tool descriptor) */
 function withTool(actorDef, toolDef) {
@@ -37,13 +34,12 @@ export const ACTORS = {
 		function: updatePaperContentFn,
 	},
 	'maia/actor/os/db': { definition: withTool(dbDef, dbTool), function: dbFn },
-	'maia/actor/os/spark': { definition: withTool(sparksDef, sparksTool), function: sparksFn },
 }
 
 export function getActor(namespacePath) {
 	let mod = ACTORS[namespacePath]
 	if (mod) return mod
-	// Fallback: role @spark → "maia/actor/os/spark" for legacy single-part lookups
+	// Fallback: role @db → "maia/actor/os/db" for single-part lookups
 	if (namespacePath && !namespacePath.includes('/')) {
 		mod = ACTORS[`maia/actor/os/${namespacePath}`]
 		if (mod) return mod

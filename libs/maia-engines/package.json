@@ -5,7 +5,6 @@
 	"main": "src/index.js",
 	"exports": {
 		".": "./src/index.js",
-		"./operations": "./src/operations/index.js",
 		"./engines/*": "./src/engines/*",
 		"./modules/*": "./src/modules/*",
 		"./utils/*": "./src/utils/*"
@@ -13,6 +12,7 @@
 	"dependencies": {
 		"@MaiaOS/actors": "workspace:*",
 		"@MaiaOS/agents": "workspace:*",
+		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/schemata": "workspace:*"
 	},
 	"devDependencies": {

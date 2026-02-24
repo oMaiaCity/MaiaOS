@@ -123,7 +123,7 @@ const definitions = getAllActorDefinitions();
 
 ### Sparks
 
-- **`@sparks/sparks`** - Spark management (thin wrapper over @db)
+- **`@db`** - Spark operations (createSpark, readSpark, addSparkMember, etc.) via `°Maia/actor/os/db` with type `SPARK_OP`
 
 ### UI
 

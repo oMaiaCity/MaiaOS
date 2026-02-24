@@ -45,7 +45,7 @@ export async function register(registry) {
 
 **Purpose:** Database operations module. Owns all built-in `maia.do` operations.
 
-**Operations:** The db module registers operations with `DataEngine.registerOperation()` on load. Built-in ops: read, create, update, delete, seed, schema, resolve, append, push, processInbox, createSpark, readSpark, updateSpark, deleteSpark, addSparkMember, removeSparkMember, addSparkParentGroup, removeSparkParentGroup, getSparkMembers, updateSparkMemberRole.
+**Operations:** DataEngine self-wires all built-in ops at construction. Built-in ops: read, create, update, delete, seed, schema, resolve, append, push, processInbox, createSpark, readSpark, updateSpark, deleteSpark, addSparkMember, removeSparkMember, addSparkParentGroup, removeSparkParentGroup, getSparkMembers, updateSparkMemberRole.
 
 **Extending with custom operations:**
 ```javascript

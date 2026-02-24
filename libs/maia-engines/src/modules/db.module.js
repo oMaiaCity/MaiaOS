@@ -1,5 +1,3 @@
-import { registerOperations } from './db/register-operations.js'
-
 export const config = {
 	version: '1.0.0',
 	description: 'Unified database operation API',
@@ -8,11 +6,6 @@ export const config = {
 }
 
 export async function register(registry) {
-	const dataEngine = registry._dataEngine
-	if (dataEngine) {
-		registerOperations(dataEngine)
-	}
-
 	registry.registerModule(
 		'db',
 		{ config, query: (q) => (q === 'tools' ? ['@maia/actor/os/db'] : null) },

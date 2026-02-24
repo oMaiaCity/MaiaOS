@@ -149,7 +149,7 @@ const updated = await maia.do({
 **Important:** 
 - All schemas must be co-ids (`co_z...`). Human-readable IDs (`@schema/...`) are transformed to co-ids during seeding.
 - DataEngine lives in maia-engines; all engines use maia.do for data.
-- Operations are in `libs/maia-engines/src/operations/`.
+- Operations are in `libs/maia-engines/src/engines/data.engine.js`.
 
 **Dependencies:**
 - `@MaiaOS/db` - MaiaDB (storage layer)
@@ -157,7 +157,7 @@ const updated = await maia.do({
 
 **Source:** 
 - `libs/maia-engines/src/engines/data.engine.js` - DataEngine
-- `libs/maia-engines/src/operations/` - Operation implementations
+- `libs/maia-engines/src/engines/data.engine.js` - Operation implementations
 
 ---
 
