@@ -10,30 +10,20 @@ Modules are plugins that extend MaiaOS functionality. They register tools and pr
 
 **Module Structure:**
 ```javascript
-export class MyModule {
-  static async register(registry) {
-    const toolEngine = getToolEngine(registry, 'MyModule');
-    
-    // Register tools
-    await registerToolsFromRegistry(registry, toolEngine, 'mymodule', ['tool1', 'tool2'], '@mymodule');
-    
-    // Register module config
-    registerModuleConfig(registry, 'mymodule', MyModule, {
-      version: '1.0.0',
-      description: 'My module description',
-      namespace: '@mymodule',
-      tools: ['@mymodule/tool1', '@mymodule/tool2']
-    });
-  }
-  
-  static query(query) {
-    // Return module configuration
-    return null;
-  }
-}
+export const config = {
+  version: '1.0.0',
+  description: 'My module description',
+  namespace: '@mymodule',
+  tools: ['@mymodule/tool1', '@mymodule/tool2'],
+};
 
 export async function register(registry) {
-  return await MyModule.register(registry);
+  registry.registerModule('mymodule', { config, query: (q) => (q === 'tools' ? config.tools : null) }, {
+    version: config.version,
+    description: config.description,
+    namespace: config.namespace,
+    tools: config.tools,
+  });
 }
 ```
 
@@ -64,17 +54,11 @@ if (dataEngine) {
 **Usage:**
 ```javascript
 // Tools are automatically available after module loads
-// Use in state machines or views:
-{
-  tool: '@db',
-  payload: {
-    op: 'read',
-    schema: 'co_zTodos123'  // Schema co-id (co_z...)
-  }
-}
+// Use in process handlers via op action:
+{ "op": { "read": { "schema": "co_zTodos123", "filter": { "completed": false } } } }
 
-// read() always returns a reactive store
-const store = await os.db({op: 'read', schema: 'co_zTodos123'});
+// maia.do (DataEngine) - always returns reactive store:
+const store = await maia.do({ op: 'read', schema: 'co_zTodos123' });
 console.log('Current todos:', store.value);
 store.subscribe((todos) => {
   console.log('Todos updated:', todos);
@@ -122,29 +106,20 @@ Create `libs/maia-engines/src/modules/mymodule.module.js`:
 ```javascript
 import { getToolEngine, registerToolsFromRegistry, registerModuleConfig } from '../utils/module-registration.js';
 
-export class MyModule {
-  static async register(registry) {
-    const toolEngine = getToolEngine(registry, 'MyModule');
-    
-    const toolNames = ['tool1', 'tool2'];
-    
-    await registerToolsFromRegistry(registry, toolEngine, 'mymodule', toolNames, '@mymodule');
-    
-    registerModuleConfig(registry, 'mymodule', MyModule, {
-      version: '1.0.0',
-      description: 'My custom module',
-      namespace: '@mymodule',
-      tools: toolNames.map(t => `@mymodule/${t}`)
-    });
-  }
-  
-  static query(query) {
-    return null;
-  }
-}
+export const config = {
+  version: '1.0.0',
+  description: 'My custom module',
+  namespace: '@mymodule',
+  tools: ['@mymodule/tool1', '@mymodule/tool2'],
+};
 
 export async function register(registry) {
-  return await MyModule.register(registry);
+  registry.registerModule('mymodule', { config, query: (q) => (q === 'tools' ? config.tools : null) }, {
+    version: config.version,
+    description: config.description,
+    namespace: config.namespace,
+    tools: config.tools,
+  });
 }
 ```
 
@@ -164,15 +139,15 @@ const os = await MaiaOS.boot({
 
 ---
 
-## Module Registration Utilities
+## Module Registration
 
-Modules use shared utilities from `module-registration.js`:
+Modules use `registry.registerModule(name, module, config)`:
 
-- `getToolEngine(registry, moduleName)` - Get ToolEngine from registry
-- `registerToolsFromRegistry(registry, toolEngine, moduleName, toolNames, namespace)` - Register tools
-- `registerModuleConfig(registry, moduleName, ModuleClass, config)` - Register module config
+- **name** - Module identifier (e.g., 'db', 'core', 'ai')
+- **module** - Object with `config` and `query(q)` function
+- **config** - Metadata: version, description, namespace, tools
 
-These utilities ensure consistent module registration patterns across all modules.
+Tools are executed via ProcessEngine `op` actions. DataEngine operations are registered via `dataEngine.registerOperation()`.
 
 ---
 

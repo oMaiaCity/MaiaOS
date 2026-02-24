@@ -6,9 +6,10 @@ The `@MaiaOS/engines` package provides the execution components that power MaiaO
 
 **What it is:**
 - ✅ **DataEngine** – Public data API: **maia.do({ op, schema, key, filter, ... })**
-- ✅ **Execution engines** – ActorEngine, ViewEngine, StateEngine, StyleEngine, ToolEngine
-- ✅ **Module system** – Plugin architecture for extending functionality
+- ✅ **Execution engines** – ActorEngine, ViewEngine, ProcessEngine, StyleEngine, InboxEngine
+- ✅ **Module system** – Plugin architecture (tools in core, ai, db modules; ProcessEngine executes them)
 - ✅ **MaiaScript evaluator** – Evaluates JSON-based expressions safely
+- ✅ **Runtime** – Browser runtime for actor lifecycle and inbox watching
 
 **What it isn't:**
 - ❌ **Not the loader** – Boot process is in `@MaiaOS/loader`
@@ -21,13 +22,16 @@ The `@MaiaOS/engines` package provides the execution components that power MaiaO
 
 Think of `maia-engines` like a factory with specialized workers:
 
-- **DataEngine** = The librarian – **maia.do()** executes all data operations (read, create, update, delete, etc.)
+- **DataEngine** = The librarian – **maia.do()** executes all data operations (read, create, update, delete, sparks, etc.)
 - **ActorEngine** = The manager (orchestrates everything)
 - **ViewEngine** = The painter (renders UI)
 - **StyleEngine** = The stylist (compiles CSS)
-- **StateEngine** = The conductor (runs state machines)
-- **ToolEngine** = The executor (runs tools)
-- **SubscriptionEngine** = The watcher (keeps data in sync)
+- **ProcessEngine** = The switchboard operator (routes events to handlers; GenServer-style, no state machines)
+- **InboxEngine** = The mailroom (validates messages, resolves inboxes, delivers to CoStreams)
+
+**Subscriptions** – Backend $stores architecture (CoCache, unified store); no separate SubscriptionEngine.
+
+**Tools** – Live in modules (core, ai, db); ProcessEngine executes them via `op` actions.
 
 **All engines use maia.do for data** – no direct MaiaDB access.
 
@@ -39,17 +43,17 @@ Think of `maia-engines` like a factory with specialized workers:
 
 ```
 libs/maia-engines/src/
-├── engines/                  # Core execution engines
-│   ├── data.engine.js        # DataEngine – maia.do({ op, schema, key, ... })
+├── engines/                  # Core execution engines (flat structure)
+│   ├── data.engine.js        # DataEngine – maia.do({ op, schema, key, ... }) self-wires ops
 │   ├── actor.engine.js
-│   ├── state.engine.js
+│   ├── process.engine.js     # GenServer-style event handlers
 │   ├── view.engine.js
 │   ├── style.engine.js
-│   ├── tool.engine.js
-│   └── ...
-├── operations/               # Operation implementations (read, create, update, etc.)
-├── modules/                 # db, core, ai, sparks
-└── utils/                   # Evaluator, config-loader
+│   └── inbox.engine.js
+├── runtimes/
+│   └── browser.js            # Runtime – actor lifecycle, inbox watching
+├── modules/                  # db, core, ai
+└── utils/                    # Evaluator, config-loader, store-reader
 ```
 
 ### API Hierarchy
@@ -101,9 +105,9 @@ For full system usage, see the [maia-loader Package](../02_maia-loader/README.md
 **Package:** `libs/maia-engines/`
 
 **Key Files:**
-- `src/engines/data.engine.js` - DataEngine (maia.do)
+- `src/engines/data.engine.js` - DataEngine (maia.do) + built-in operations
 - `src/engines/` - All engine implementations
-- `src/operations/` - Operation handlers
+- `src/runtimes/browser.js` - Runtime (actor lifecycle, inbox watchers)
 - `src/modules/` - Module definitions
 
 **Dependencies:**

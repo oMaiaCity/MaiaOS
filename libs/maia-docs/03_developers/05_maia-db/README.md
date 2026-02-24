@@ -55,7 +55,11 @@ maia.do({ op, schema, key, ... })  →  DataEngine  →  MaiaDB  →  MaiaPeer /
 
 ## Documentation
 
-- **[CoJSON Architecture](./cojson.md)** - Complete layer hierarchy from cryptographic primitives to high-level CoValues
+- **[cojson.md](./cojson.md)** - Complete layer hierarchy (cryptographic primitives to CoValues)
+- **[storage-layer.md](./storage-layer.md)** - CRUD flow, universal read API, CoCache
+- **[schema-indexing.md](./schema-indexing.md)** - Automatic schema-based indexing
+- **[seeding.md](./seeding.md)** - Bootstrap and seed system
+- **[groups.md](./groups.md)** - Groups and sparks
 
 ---
 

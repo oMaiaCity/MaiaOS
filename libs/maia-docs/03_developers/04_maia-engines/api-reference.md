@@ -1,58 +1,49 @@
 # API Reference
 
-Complete API reference for `@MaiaOS/script` package.
+Complete API reference for `@MaiaOS/engines` package.
 
 ---
 
-## Exported Engines
+## Exported Engines and Runtime
 
-All engines are exported from `@MaiaOS/script`:
+All engines are exported from `@MaiaOS/engines`:
 
 ```javascript
 import {
   ActorEngine,
   ViewEngine,
+  ProcessEngine,
   StyleEngine,
-  StateEngine,
-  ToolEngine,
+  InboxEngine,
+  DataEngine,
   MaiaScriptEvaluator,
   ModuleRegistry,
-  DataEngine,
-  IndexedDBBackend,
-  SubscriptionEngine,
-  MessageQueue
-} from '@MaiaOS/script';
+  Runtime,
+} from '@MaiaOS/engines';
 ```
 
 ---
 
 ## Subpath Exports
 
-Modules and engines are available via subpath exports:
-
 ```javascript
 // Modules
-import { register } from '@MaiaOS/script/modules/db.module.js';
+import { register } from '@MaiaOS/engines/modules/db.module.js';
 
 // Engines (if needed)
-import { ActorEngine } from '@MaiaOS/script/engines/actor-engine/actor.engine.js';
+import { ActorEngine } from '@MaiaOS/engines/engines/actor.engine.js';
 ```
 
 ---
 
 ## Using Engines Directly
 
-For advanced use cases, you can use engines independently:
-
 ### Custom Evaluator
 
 ```javascript
-import { MaiaScriptEvaluator } from '@MaiaOS/script';
+import { Evaluator as MaiaScriptEvaluator } from '@MaiaOS/engines';
 
-const evaluator = new MaiaScriptEvaluator(null, {
-  maxDepth: 100,
-  validateExpressions: true
-});
+const evaluator = new MaiaScriptEvaluator();
 
 const result = await evaluator.evaluate(
   { $if: { condition: true, then: 'yes', else: 'no' } },
@@ -63,31 +54,27 @@ const result = await evaluator.evaluate(
 ### Custom View Renderer
 
 ```javascript
-import { ViewEngine, MaiaScriptEvaluator, ModuleRegistry } from '@MaiaOS/script';
+import { ViewEngine, MaiaScriptEvaluator, ModuleRegistry } from '@MaiaOS/engines';
 
 const evaluator = new MaiaScriptEvaluator();
 const registry = new ModuleRegistry();
 const viewEngine = new ViewEngine(evaluator, null, registry);
 
-// Render a view without full actor system
 await viewEngine.render(viewDef, { context: {} }, shadowRoot, [], 'custom');
 ```
 
 ### Data Operations (maia.do)
 
 ```javascript
-// maia = booted MaiaOS instance
+// maia = booted MaiaOS instance (from MaiaOS.boot())
 
-// Read (always returns reactive store)
 const store = await maia.do({
   op: 'read',
-  schema: 'co_zTodos123'  // Schema co-id (co_z...)
+  schema: 'co_zTodos123'
 });
 
-// Store has current value
 console.log('Current data:', store.value);
 
-// Subscribe to updates
 const unsubscribe = store.subscribe((data) => {
   console.log('Data updated:', data);
 });
@@ -97,7 +84,7 @@ const unsubscribe = store.subscribe((data) => {
 
 ## Package Exports
 
-The package exports are defined in `libs/maia-engines/package.json`:
+Defined in `libs/maia-engines/package.json`:
 
 ```json
 {
@@ -113,7 +100,7 @@ The package exports are defined in `libs/maia-engines/package.json`:
 
 ## Related Documentation
 
-- [Main README](./README.md) - Package overview
+- [README.md](./README.md) - Package overview
 - [engines/](./engines/) - Detailed engine descriptions
 - [modules.md](./modules.md) - Module system
 - [expressions.md](./expressions.md) - Expression language

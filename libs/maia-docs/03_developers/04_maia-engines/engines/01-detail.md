@@ -1,194 +1,142 @@
+# Engine Details
 
-### Architecture: Everything Through State Machines
+---
 
-**Strict Rule:** All tool calls MUST flow through state machines. No exceptions.
+## Architecture: Process Handlers (100% Inbox → Process → Actions)
+
+**Strict Rule:** All tool calls and context updates flow through process handlers. No exceptions.
 
 **Event Flow Pattern:**
 ```
-Infrastructure (ActorEngine, ViewEngine) → sends events → inbox (CRDT) → processMessages() → StateEngine.send() → state machine → tool
+Infrastructure (ActorEngine, ViewEngine) → deliverEvent() → inbox (CoStream CRDT) 
+  → processEvents() → ProcessEngine.send() → handlers[event] → actions
 ```
 
 **Key Principles:**
-- ✅ **Single source of truth**: State machines
-- ✅ **Fully traceable**: All operations flow through inbox → state machine → tool
-- ✅ **Consistent**: One pattern for everything
-- ✅ **Declarative**: All behavior defined in state machine configs
-- ✅ **CRDT-aligned**: Events persisted in inbox costream, context updates via operations API
+- Single source of truth: Process handlers
+- Fully traceable: All operations flow through inbox → ProcessEngine → actions
+- GenServer-style: Handlers keyed by event type, no state machine states/transitions
+- CRDT-aligned: Events persisted in inbox costream, context updates via operations API
 
-### What Flows Through State Machines
+### What Flows Through Process Handlers
 
-**✅ All Tool Calls:**
-- All `tool:` actions in state machine definitions
-- All business logic operations (`@db`, `@core/publishMessage`, `@dragdrop/*`)
-- All lifecycle hooks (RENDER_COMPLETE events)
-
-**✅ All Context Updates:**
-- All context updates via `updateContext` action (infrastructure, not a tool)
-- Context updates flow: state machine → `updateContextCoValue()` → operations API → CRDT
-
-**❌ NO Infrastructure Tool Calls:**
-- ❌ NO direct tool calls from engines (ActorEngine, ViewEngine, etc.)
-- ❌ NO fallback patterns - all actors must have state machines
-- ❌ NO hardcoded workarounds - everything declarative via state machines
-
-### Infrastructure Actions vs Tools
-
-**Infrastructure Actions** (not tools):
-- `updateContext` - Infrastructure action, directly calls `updateContextCoValue()` → operations API
-- SubscriptionEngine updates - Read-only reactive subscriptions (infrastructure)
-- Config subscriptions - View/style/state changes (infrastructure)
-
-**State Machine Actions:**
-- All `tool:` actions in state machine definitions
+**All Tool Calls:**
+- `op` actions in process definitions (DB operations via maia.do)
 - All business logic operations
-- All context updates via `updateContext` action
 
-### RENDER_COMPLETE Event Pattern
+**All Context Updates:**
+- `ctx` action - Direct context updates evaluated by ProcessEngine
+- Context updates flow: ProcessEngine → `updateContextCoValue()` → operations API → CRDT
 
-**Lifecycle Hook Pattern:**
-- ActorEngine sends `RENDER_COMPLETE` event to inbox after render completes
-- State machine handles `RENDER_COMPLETE` event and calls tools as needed
-- Use for post-render actions like cleanup or state updates
+**Infrastructure (not process handlers):**
+- Config subscriptions - View/style/process changes (backend $stores)
+- Backend unified store - Query objects in context, reactive resolution
 
-### All Actors Must Have State Machines
+### All Actors Must Have Process Definitions
 
-**Requirement:** All actors MUST have state machines. No exceptions.
+**Requirement:** All actors MUST have process definitions with handlers. No exceptions.
 
-**Enforcement:**
-- If actor has no state machine, `processMessages()` logs error and skips message
-- No fallback pattern - all messages MUST flow through state machines
-- Single pattern: inbox → state machine → tool
-
-**Why This Matters:**
-- **Predictable:** All behavior flows through one path
-- **Debuggable:** Easy to trace where operations come from
-- **Testable:** State machines define clear contracts
-- **AI-friendly:** LLMs can understand and generate correct patterns
+**Flow:** inbox → processEvents() → ProcessEngine.send() → handlers[event] → _executeActions()
 
 ### CRDT Alignment
 
-**Single Source of Truth:**
-- Co-values are ALWAYS the single source of truth (under the hood)
+- Co-values are ALWAYS the single source of truth
 - ReactiveStore pattern: Stores subscribe to co-value changes
-- 100% reactive: Everything updates reactively when co-values change
-- All mutations via operations API (`dbEngine.execute({ op: 'update', ... })`)
-
-**Context Updates:**
-- `updateContext` action → `updateContextCoValue()` → `dbEngine.execute({ op: 'update', ... })`
-- Operations API → `update()` → `content.set(key, value)` on CoMap CRDT
-- Context co-value changes → ReactiveStore updates → Views re-render
-
-**Event Flow:**
-- Events sent to inbox costream (CRDT)
-- Events persisted for traceability
-- Events marked as `processed: true` after handling
+- All mutations via operations API (`maia.do({ op: 'update', ... })`)
+- Events sent to inbox costream, marked `processed: true` after handling
 
 ---
 
-## DataEngine
+## DataEngine (Full Operations Reference)
 
-**Purpose:** Public data API – **maia.do({ op, schema, key, filter, ... })**
+**Purpose:** maia.do({ op, schema, key, filter, ... })
 
-**What it does:**
-- Executes all data operations (read, create, update, delete, seed, etc.)
-- Routes operations to modular handlers
-- Supports operations: `read`, `create`, `update`, `delete`, `seed`
-- Uses MaiaDB (CoJSON CRDT) for storage
-- Validates operations against schemas
-- **Unified `read()` API** - Always returns reactive stores
-- **MaiaScript expression evaluation** - Supports expressions in update operations
+### CRUD Operations
+- **read** - Load configs/schemas/data (always returns reactive store)
+- **create** - Create new records (supports idempotencyKey)
+- **update** - Update records (supports MaiaScript expressions in data)
+- **delete** - Delete records
 
-**Key Methods:**
-- `execute(payload)` - Execute a database operation
-- `getSchemaCoId(schemaName)` - Resolve human-readable schema name to co-id
-- `resolveCoId(humanReadableId)` - Resolve human-readable ID to co-id
+### Schema & Resolution
+- **schema** - Load schema definition
+- **resolve** - Resolve identifier to co-id/schema/coValue
 
-**Operations:**
-- `read` - **Primary API** - Load configs/schemas/data (always returns reactive store)
-- `create` - Create new records
-- `update` - Update existing records (unified for data collections and configs, supports MaiaScript expressions)
-- `delete` - Delete records
-- `seed` - Flush + seed database (dev only, IndexedDB backend)
+### Collection Operations
+- **append** - Append to CoList
+- **push** - Push to CoStream
+- **spliceCoList** - Splice CoList
 
-**Example:**
+### Inbox
+- **processInbox** - Process unprocessed inbox messages (called by ActorEngine)
+
+### Spark Operations
+- createSpark, readSpark, updateSpark, deleteSpark
+- addSparkMember, removeSparkMember, updateSparkMemberRole
+- addSparkParentGroup, removeSparkParentGroup
+- getSparkMembers
+
+### Extensibility
 ```javascript
-// maia = booted MaiaOS instance (from MaiaOS.boot())
-
-// Read (always returns reactive store)
-const store = await maia.do({
-  op: 'read',
-  schema: 'co_zTodos123',  // Schema co-id (co_z...)
-  filter: { completed: false }
-});
-
-// Store has current value
-console.log('Current todos:', store.value);
-
-// Subscribe to updates
-const unsubscribe = store.subscribe((data) => {
-  console.log('Todos updated:', data);
-});
-
-// Create
-const newTodo = await maia.do({
-  op: 'create',
-  schema: 'co_zTodos123',
-  data: { text: 'Buy milk', completed: false }
-});
-
-// Update with MaiaScript expression
-const updated = await maia.do({
-  op: 'update',
-  id: 'co_zTodo456',
-  data: {
-    done: { $not: '$existing.done' }  // Toggle using MaiaScript
-  }
+dataEngine.registerOperation('myOp', {
+  execute: async (params) => { /* ... */ }
 });
 ```
 
-**Important:** 
-- All schemas must be co-ids (`co_z...`). Human-readable IDs (`@schema/...`) are transformed to co-ids during seeding.
-- DataEngine lives in maia-engines; all engines use maia.do for data.
-- Operations are in `libs/maia-engines/src/engines/data.engine.js`.
-
-**Dependencies:**
-- `@MaiaOS/db` - MaiaDB (storage layer)
-- `Evaluator` - For expression evaluation in updates
-
-**Source:** 
-- `libs/maia-engines/src/engines/data.engine.js` - DataEngine
-- `libs/maia-engines/src/engines/data.engine.js` - Operation implementations
+**Example:**
+```javascript
+const store = await maia.do({ op: 'read', schema: 'co_z...', filter: { done: false } });
+const created = await maia.do({ op: 'create', schema: 'co_z...', data: { text: 'New' } });
+const updated = await maia.do({ op: 'update', id: 'co_z...', data: { done: { $not: '$existing.done' } } });
+```
 
 ---
 
-## SubscriptionEngine
+## Subscriptions (Backend Architecture, Not an Engine)
 
-**Purpose:** Context-driven reactive subscription manager with end-to-end reactivity.
+Subscriptions are handled by the **backend $stores architecture** (CoCache, unified store in maia-db). No SubscriptionEngine.
 
-**What it does:**
-- Watches actor context for query objects (data subscriptions)
-- Auto-subscribes to reactive data
-- **Subscribes to config CRDTs** (view, style, state, interface, context, brand) for runtime-editable configs
-- Auto-resolves `@` references
-- Batches re-renders for performance
-- Updates actor context automatically (infrastructure exception)
-- Handles config updates reactively (view/style/state changes trigger re-renders)
+**How it works:**
+- Query objects in context: `{ schema: "co_z...", filter: {...} }`
+- Backend unified store merges context + query results
+- Subscriptions managed by CoCache (5s timeout, auto-cleanup)
+- Config CRDTs (view, style, process) subscribed by backend
 
-**Key Methods:**
-- `initialize(actor)` - Initialize subscriptions for an actor (data + config)
-- `setEngines(engines)` - Set view/style/state engines for config subscriptions
-- `cleanup(actor)` - Clean up all subscriptions when actor is destroyed
+**See:** [subscriptions-overview.md](../subscriptions-overview.md)
 
-**Subscription Types:**
-1. **Data Subscriptions** - Query objects in context (`{schema: "co_z...", filter: {...}}`)
-2. **Config Subscriptions** - Config CRDTs (view, style, state, interface, context, brand)
-3. **Message Subscriptions** - Subscriptions/inbox colists (handled in ActorEngine)
+---
 
-**Dependencies:**
-- `maia.do` - For all data operations (read, create, update, delete, etc.)
-- `ActorEngine` - For triggering re-renders and loading configs
-- `ViewEngine` - For view subscriptions
-- `StyleEngine` - For style/brand subscriptions
-- `StateEngine` - For state machine subscriptions
+## ModuleRegistry
 
-**Important:** This engine directly updates actor context for reactive query objects. This is the ONLY exception to the rule that state machines are the single source of truth for context changes.
+**Purpose:** Central plugin system for MaiaScript extensions.
+
+**What it does:** Registers modules (core, ai, db) that provide tools. ProcessEngine executes tools via `op` actions.
+
+**Key Methods:** `registerModule()`, `getModule()`, `loadModule()`, `listModules()`
+
+**Source:** `libs/maia-engines/src/modules/registry.js`
+
+---
+
+## Separation of Concerns
+
+**ProcessEngine:**
+- Updates context via `ctx` actions
+- Calls maia.do via `op` actions
+- Does NOT manipulate views directly
+
+**ViewEngine:**
+- Renders DOM from context reactively
+- Sends events (never updates context directly)
+- Resolves ALL expressions before sending to inbox
+
+**ActorEngine:**
+- Orchestrates actors and engines
+- Routes messages (inbox → ProcessEngine)
+
+---
+
+## Related Documentation
+
+- [00-overview.md](./00-overview.md) - Engine summaries
+- [02-reference.md](./02-reference.md) - Method signatures
+- [../subscriptions-overview.md](../subscriptions-overview.md) - Subscription architecture
