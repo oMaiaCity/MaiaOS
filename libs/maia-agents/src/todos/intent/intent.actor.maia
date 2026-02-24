@@ -7,11 +7,5 @@
 	"process": "°Maia/todos/process/intent",
 	"brand": "°Maia/todos/style/brand",
 	"inbox": "°Maia/todos/inbox/intent",
-	"interface": [
-		"CREATE_BUTTON",
-		"UPDATE_INPUT",
-		"SWITCH_VIEW",
-		"SUCCESS",
-		"ERROR"
-	]
+	"interface": []
 }

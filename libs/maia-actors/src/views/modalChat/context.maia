@@ -1,0 +1,15 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/layout-chat/context",
+	"currentSection": "@messages",
+	"currentPaper": "@paper",
+	"inputText": "",
+	"isLoading": false,
+	"hasError": false,
+	"error": null,
+	"popupOpen": false,
+	"@actors": {
+		"messages": "°Maia/actor/services/messages",
+		"paper": "°Maia/actor/services/paper"
+	}
+}

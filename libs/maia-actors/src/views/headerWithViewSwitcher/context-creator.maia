@@ -1,0 +1,16 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/layout-creator/context",
+	"title": "Creator",
+	"primaryView": "logs",
+	"primaryViewLabel": "Logs",
+	"secondaryViewLabel": "Soon",
+	"viewMode": "logs",
+	"primaryButtonActive": true,
+	"secondaryButtonActive": false,
+	"currentView": "@logs",
+	"@actors": {
+		"logs": "°Maia/actor/services/logs",
+		"comingSoon": "°Maia/actor/coming-soon"
+	}
+}

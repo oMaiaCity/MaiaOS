@@ -6,6 +6,7 @@
 	"actor": "°Maia/chat/actor/intent",
 	"dependencies": [
 		"°Maia/chat/actor/intent",
+		"°Maia/actor/views/layout-chat",
 		"°Maia/actor/services/messages",
 		"°Maia/actor/services/paper",
 		"°Maia/actor/os/db",

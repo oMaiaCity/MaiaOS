@@ -1,14 +1,8 @@
 {
 	"$schema": "°Maia/schema/context",
 	"$id": "°Maia/creator/context/intent",
-	"currentView": "@logs",
-	"viewMode": "logs",
-	"logsButtonActive": true,
-	"comingSoonButtonActive": false,
-	"logsViewLabel": "Logs",
-	"comingSoonViewLabel": "Soon",
+	"layout": "@layout",
 	"@actors": {
-		"logs": "°Maia/actor/services/logs",
-		"comingSoon": "°Maia/actor/coming-soon"
+		"layout": "°Maia/actor/views/layout-creator"
 	}
 }

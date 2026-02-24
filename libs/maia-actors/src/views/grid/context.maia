@@ -1,0 +1,14 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/layout-humans/context",
+	"title": "Human Book",
+	"humans": {
+		"schema": "°Maia/schema/data/human",
+		"map": {
+			"id": "id",
+			"accountId": "accountId",
+			"registryName": "registryName",
+			"profileName": "profileName"
+		}
+	}
+}

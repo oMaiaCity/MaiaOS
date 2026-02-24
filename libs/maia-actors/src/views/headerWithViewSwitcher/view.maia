@@ -1,0 +1,70 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/actor/views/headerWithViewSwitcher/view",
+	"content": {
+		"tag": "div",
+		"class": "stack",
+		"children": [
+			{
+				"tag": "div",
+				"class": "header-section",
+				"children": [
+					{
+						"tag": "h2",
+						"class": "layout-title",
+						"text": "$title"
+					},
+					{
+						"tag": "div",
+						"class": "view-switcher",
+						"children": [
+							{
+								"tag": "button",
+								"class": "button-view-switch",
+								"attrs": {
+									"data-view": "primary",
+									"data": {
+										"active": "$primaryButtonActive"
+									}
+								},
+								"text": "$primaryViewLabel",
+								"$on": {
+									"click": {
+										"send": "SWITCH_VIEW",
+										"payload": {
+											"viewMode": "$primaryView"
+										}
+									}
+								}
+							},
+							{
+								"tag": "button",
+								"class": "button-view-switch",
+								"attrs": {
+									"data-view": "comingSoon",
+									"data": {
+										"active": "$secondaryButtonActive"
+									}
+								},
+								"text": "$secondaryViewLabel",
+								"$on": {
+									"click": {
+										"send": "SWITCH_VIEW",
+										"payload": {
+											"viewMode": "comingSoon"
+										}
+									}
+								}
+							}
+						]
+					}
+				]
+			},
+			{
+				"tag": "main",
+				"class": "content-area",
+				"$slot": "$currentView"
+			}
+		]
+	}
+}
