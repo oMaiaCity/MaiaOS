@@ -5,14 +5,10 @@
 	"viewMode": "list",
 	"listButtonActive": true,
 	"comingSoonButtonActive": false,
-	"inputPlaceholder": "Add a new todo...",
-	"addButtonText": "Add",
 	"listViewLabel": "List",
 	"comingSoonViewLabel": "Soon",
-	"newTodoText": "",
-	"error": null,
 	"@actors": {
-		"list": "°Maia/todos/actor/list",
+		"list": "°Maia/actor/services/list",
 		"comingSoon": "°Maia/actor/coming-soon"
 	}
 }

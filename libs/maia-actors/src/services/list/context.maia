@@ -1,6 +1,6 @@
 {
 	"$schema": "°Maia/schema/context",
-	"$id": "°Maia/todos/context/list",
+	"$id": "°Maia/actor/services/list/context",
 	"list": {
 		"schema": "°Maia/schema/data/todos",
 		"map": {
@@ -9,6 +9,10 @@
 			"done": "done"
 		}
 	},
+	"newTodoText": "",
+	"inputPlaceholder": "Add a new todo...",
+	"addButtonText": "Add",
 	"toggleButtonText": "✓",
-	"deleteButtonText": "✕"
+	"deleteButtonText": "✕",
+	"error": null
 }

@@ -1,0 +1,96 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/actor/services/messages/view",
+	"content": {
+		"tag": "div",
+		"class": "messages-content",
+		"scrollToBottomOn": "$conversations",
+		"children": [
+			{
+				"tag": "div",
+				"class": "welcome-section",
+				"children": [
+					{
+						"tag": "div",
+						"class": "message message-assistant welcome-message",
+						"attrs": {
+							"data": {
+								"hasConversations": "$hasConversations"
+							}
+						},
+						"text": "$welcomeText"
+					},
+					{
+						"$each": {
+							"items": "$conversations",
+							"template": {
+								"tag": "div",
+								"class": "message-wrapper",
+								"attrs": {
+									"data": {
+										"role": "$$role"
+									}
+								},
+								"children": [
+									{
+										"tag": "div",
+										"class": "message-name",
+										"text": "$$displayName"
+									},
+									{
+										"tag": "div",
+										"class": "message",
+										"attrs": {
+											"data": {
+												"role": "$$role"
+											}
+										},
+										"text": "$$content"
+									}
+								]
+							}
+						}
+					},
+					{
+						"tag": "div",
+						"class": "loading",
+						"attrs": {
+							"data": {
+								"isLoading": "$isLoading"
+							}
+						},
+						"text": "Maia is thinking..."
+					},
+					{
+						"tag": "div",
+						"class": "error",
+						"attrs": {
+							"data": {
+								"hasError": "$hasError"
+							}
+						},
+						"children": [
+							{
+								"tag": "strong",
+								"text": "Error: "
+							},
+							{
+								"text": "$error"
+							},
+							{
+								"tag": "button",
+								"class": "button",
+								"text": "Dismiss",
+								"$on": {
+									"click": {
+										"send": "DISMISS"
+									}
+								}
+							}
+						]
+					}
+				]
+			}
+		]
+	}
+}

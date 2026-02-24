@@ -1,6 +1,6 @@
 {
 	"$schema": "°Maia/schema/view",
-	"$id": "°Maia/todos/view/intent",
+	"$id": "°Maia/creator/view/intent",
 	"content": {
 		"tag": "div",
 		"class": "stack",
@@ -11,8 +11,8 @@
 				"children": [
 					{
 						"tag": "h2",
-						"class": "todo-title",
-						"text": "Daily Focus"
+						"class": "agent-creator-title",
+						"text": "Creator"
 					},
 					{
 						"tag": "div",
@@ -22,17 +22,17 @@
 								"tag": "button",
 								"class": "button-view-switch",
 								"attrs": {
-									"data-view": "list",
+									"data-view": "logs",
 									"data": {
-										"active": "$listButtonActive"
+										"active": "$logsButtonActive"
 									}
 								},
-								"text": "$listViewLabel",
+								"text": "$logsViewLabel",
 								"$on": {
 									"click": {
 										"send": "SWITCH_VIEW",
 										"payload": {
-											"viewMode": "list"
+											"viewMode": "logs"
 										}
 									}
 								}

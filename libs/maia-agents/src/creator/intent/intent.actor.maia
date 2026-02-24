@@ -2,14 +2,12 @@
 	"$schema": "°Maia/schema/actor",
 	"$id": "°Maia/creator/actor/intent",
 	"role": "@creator/intent",
-	"context": "°Maia/creator/context/logs",
-	"view": "°Maia/creator/view/logs",
-	"process": "°Maia/creator/process/logs",
+	"context": "°Maia/creator/context/intent",
+	"view": "°Maia/creator/view/intent",
+	"process": "°Maia/creator/process/intent",
 	"brand": "°Maia/style/brand",
-	"style": "°Maia/creator/style/logs",
-	"inbox": "°Maia/creator/inbox/logs",
+	"inbox": "°Maia/creator/inbox/intent",
 	"interface": [
-		"RETRY",
-		"DISMISS"
+		"SWITCH_VIEW"
 	]
 }
