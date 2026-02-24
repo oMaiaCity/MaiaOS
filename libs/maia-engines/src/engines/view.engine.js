@@ -1,5 +1,6 @@
 import { containsExpressions, resolveExpressions } from '@MaiaOS/schemata/expression-resolver'
 import { extractDOMValues } from '@MaiaOS/schemata/payload-resolver'
+import { readStore } from '../utils/store-reader.js'
 import { RENDER_STATES } from './actor.engine.js'
 
 function sanitizeAttribute(value) {
@@ -39,16 +40,6 @@ export class ViewEngine {
 		this._scrollMutationObservers = new Map()
 	}
 
-	async _readStore(coId) {
-		if (!this.dataEngine?.peer) return null
-		const schemaCoId = await this.dataEngine.peer.resolve(
-			{ fromCoValue: coId },
-			{ returnType: 'coId' },
-		)
-		if (!schemaCoId) return null
-		return this.dataEngine.execute({ op: 'read', schema: schemaCoId, key: coId })
-	}
-
 	_makeStyleRerenderSubscribe(actorId) {
 		return async () => {
 			const actor = this.actorOps?.getActor?.(actorId)
@@ -77,7 +68,7 @@ export class ViewEngine {
 		if (!actorConfig.view) throw new Error(`[ViewEngine] Actor config must have 'view' property`)
 		const configUnsubscribes = []
 
-		const viewStore2 = await this._readStore(actorConfig.view)
+		const viewStore2 = await readStore(this.dataEngine, actorConfig.view)
 		if (!viewStore2) throw new Error(`[ViewEngine] Failed to load view CoValue ${actorConfig.view}`)
 		const viewDef = viewStore2.value
 		configUnsubscribes.push(
@@ -104,7 +95,7 @@ export class ViewEngine {
 			if (typeof contextCoIdVal !== 'string' || !contextCoIdVal.startsWith('co_z')) {
 				throw new Error(`[ViewEngine] Actor config context must be co-id, got: ${contextCoIdVal}`)
 			}
-			const contextStore = await this._readStore(contextCoIdVal)
+			const contextStore = await readStore(this.dataEngine, contextCoIdVal)
 			if (!contextStore) throw new Error(`[ViewEngine] Failed to load context ${contextCoIdVal}`)
 			contextSchemaCoId = await this.dataEngine.peer.resolve(
 				{ fromCoValue: contextCoIdVal },
@@ -116,7 +107,7 @@ export class ViewEngine {
 
 		if (actorConfig.style) {
 			try {
-				const styleStore = await this._readStore(actorConfig.style)
+				const styleStore = await readStore(this.dataEngine, actorConfig.style)
 				if (styleStore) {
 					configUnsubscribes.push(
 						styleStore.subscribe(this._makeStyleRerenderSubscribe(actorId), {
@@ -128,7 +119,7 @@ export class ViewEngine {
 		}
 		if (actorConfig.brand) {
 			try {
-				const brandStore = await this._readStore(actorConfig.brand)
+				const brandStore = await readStore(this.dataEngine, actorConfig.brand)
 				if (brandStore) {
 					configUnsubscribes.push(
 						brandStore.subscribe(this._makeStyleRerenderSubscribe(actorId), {
