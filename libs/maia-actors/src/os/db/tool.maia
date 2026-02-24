@@ -2,43 +2,101 @@
 	"$schema": "°Maia/schema/tool",
 	"$id": "°Maia/actor/os/db/tool",
 	"name": "@maia/actor/os/db",
-	"description": "Unified API for all database operations (query, create, update, delete)",
+	"description": "Unified API for all database and spark operations (read, create, update, delete, seed, schema, resolve, append, push, processInbox, createSpark, readSpark, updateSpark, deleteSpark, addSparkMember, removeSparkMember, addSparkParentGroup, removeSparkParentGroup, getSparkMembers, updateSparkMemberRole)",
 	"parameters": {
 		"type": "object",
 		"properties": {
 			"op": {
 				"type": "string",
 				"enum": [
-					"query",
+					"read",
 					"create",
 					"update",
 					"delete",
-					"seed"
+					"seed",
+					"schema",
+					"resolve",
+					"append",
+					"push",
+					"processInbox",
+					"createSpark",
+					"readSpark",
+					"updateSpark",
+					"deleteSpark",
+					"addSparkMember",
+					"removeSparkMember",
+					"addSparkParentGroup",
+					"removeSparkParentGroup",
+					"getSparkMembers",
+					"updateSparkMemberRole"
 				],
-				"description": "Database operation to execute"
+				"description": "Operation to execute"
 			},
 			"schema": {
 				"type": "string",
-				"description": "Schema reference (co-id) - REQUIRED for 'create' operation only (no CoValue exists yet). OPTIONAL for 'update' and 'delete' operations (schema is extracted from CoValue headerMeta internally by operations)."
+				"description": "Schema co-id - REQUIRED for create; optional for read/update/delete; optional for readSpark"
 			},
 			"key": {
 				"type": "string",
-				"description": "Optional: Specific key for config queries"
+				"description": "Specific key for read queries"
+			},
+			"keys": {
+				"type": "array",
+				"description": "Array of keys for bulk read"
 			},
 			"filter": {
 				"type": "object",
-				"description": "Optional: Filter criteria for data queries"
-			},
-			"callback": {
-				"description": "Optional: Callback function for reactive subscriptions (not validated - runtime only)"
+				"description": "Filter criteria for read"
 			},
 			"id": {
 				"type": "string",
-				"description": "Optional: Record ID for update/delete operations"
+				"description": "Record/spark co-id for update/delete/spark ops"
 			},
 			"data": {
 				"type": "object",
-				"description": "Optional: Data for create/update operations"
+				"description": "Data for create/update"
+			},
+			"name": {
+				"type": "string",
+				"description": "Spark name (createSpark)"
+			},
+			"memberId": {
+				"type": "string",
+				"description": "Member co-id for addSparkMember, removeSparkMember, updateSparkMemberRole"
+			},
+			"role": {
+				"type": "string",
+				"enum": [
+					"reader",
+					"writer",
+					"admin",
+					"manager",
+					"writeOnly"
+				],
+				"description": "Role for addSparkMember, updateSparkMemberRole"
+			},
+			"parentGroupId": {
+				"type": "string",
+				"description": "Parent group co-id for addSparkParentGroup, removeSparkParentGroup"
+			},
+			"coId": {
+				"type": "string",
+				"description": "CoList/CoStream co-id for append, spliceCoList"
+			},
+			"item": {
+				"description": "Item for append"
+			},
+			"items": {
+				"type": "array",
+				"description": "Items for append or spliceCoList"
+			},
+			"actorId": {
+				"type": "string",
+				"description": "Actor co-id for processInbox"
+			},
+			"inboxCoId": {
+				"type": "string",
+				"description": "Inbox co-id for processInbox"
 			}
 		},
 		"required": [

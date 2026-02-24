@@ -7,6 +7,6 @@
 	"dependencies": [
 		"°Maia/sparks/actor/intent",
 		"°Maia/actor/services/detail",
-		"°Maia/actor/os/spark"
+		"°Maia/actor/os/db"
 	]
 }
