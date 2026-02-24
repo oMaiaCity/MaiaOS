@@ -9,7 +9,6 @@ import masterBrand from '../shared/brand.style.maia'
 import brandStyle from './intent/brand.style.maia'
 import intentActor from './intent/intent.actor.maia'
 import intentContext from './intent/intent.context.maia'
-import intentInbox from './intent/intent.inbox.maia'
 import intentProcess from './intent/intent.process.maia'
 import intentView from './intent/intent.view.maia'
 import todosAgent from './manifest.agent.maia'
@@ -40,10 +39,6 @@ export const TodosAgentRegistry = {
 
 	processes: {
 		'°Maia/todos/process/intent': intentProcess,
-	},
-
-	inboxes: {
-		'°Maia/todos/inbox/intent': intentInbox,
 	},
 
 	data: {

@@ -6,6 +6,7 @@
  */
 
 import { validateAgainstSchema } from '@MaiaOS/schemata/validation.helper'
+import { deriveInboxRef } from '../utils/inbox-convention.js'
 import { readStore } from '../utils/store-reader.js'
 
 export class InboxEngine {
@@ -28,9 +29,22 @@ export class InboxEngine {
 		const actorStore = await readStore(this.dataEngine, targetId)
 		if (!actorStore) throw new Error(`[InboxEngine] Failed to read actor config: ${targetId}`)
 		const targetActorConfig = actorStore?.value
-		const inboxCoId = targetActorConfig?.inbox
+		let inboxCoId =
+			targetActorConfig?.inbox ??
+			deriveInboxRef(targetActorConfig?.$id || targetActorConfig?.id || targetId)
+		if (
+			inboxCoId &&
+			typeof inboxCoId === 'string' &&
+			!inboxCoId.startsWith('co_z') &&
+			this.dataEngine?.peer
+		) {
+			const resolved = await this.dataEngine.peer.resolve(inboxCoId, { returnType: 'coId' })
+			if (resolved && typeof resolved === 'string' && resolved.startsWith('co_z')) inboxCoId = resolved
+		}
 		if (!inboxCoId || typeof inboxCoId !== 'string' || !inboxCoId.startsWith('co_z')) {
-			throw new Error(`[InboxEngine] Actor config inbox must be co-id: ${targetId}`)
+			throw new Error(
+				`[InboxEngine] Actor config inbox must be co-id (or derivable from $id): ${targetId}`,
+			)
 		}
 		return { inboxCoId, targetActorConfig, resolvedTargetId: targetId }
 	}
