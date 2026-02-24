@@ -8,5 +8,5 @@
 	"brand": "°Maia/sparks/style/brand",
 	"inbox": "°Maia/sparks/inbox/intent",
 	"interface": [],
-	"role": "@sparks/intent"
+	"@label": "@sparks/intent"
 }

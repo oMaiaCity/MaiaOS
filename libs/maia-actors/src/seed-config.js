@@ -90,13 +90,14 @@ export const ACTOR_ID_TO_EVENT_TYPE = {
 
 /** Build actor config for seeding - uses actor schema */
 function toActorConfig(raw, inboxId) {
-	const { role, interface: iface, process: processRef, tool } = raw
-	if (!role || !iface || !processRef) return null
-	const folder = ROLE_TO_FOLDER[role] ?? role.replace('@', '').replace(/\//g, '-')
+	const label = raw['@label']
+	const { interface: iface, process: processRef, tool } = raw
+	if (!label || !iface || !processRef) return null
+	const folder = ROLE_TO_FOLDER[label] ?? label.replace('@', '').replace(/\//g, '-')
 	return {
 		$schema: '°Maia/schema/actor',
 		$id: `°Maia/actor/${folder}`,
-		role,
+		'@label': label,
 		interface: iface,
 		process: processRef,
 		tool: tool || null,

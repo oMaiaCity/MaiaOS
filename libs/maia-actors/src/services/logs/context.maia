@@ -8,11 +8,11 @@
 			"type": "type",
 			"processed": "processed",
 			"payload": "payload",
-			"fromRole": "$source.role",
-			"toRole": "$target.role",
+			"fromRole": "$source.@label",
+			"toRole": "$target.@label",
 			"fromId": "$source.id",
 			"toId": "$target.id",
-			"recipient": "$target.role",
+			"recipient": "$target.@label",
 			"targetId": "$target.id"
 		}
 	},

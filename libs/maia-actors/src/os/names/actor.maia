@@ -2,7 +2,7 @@
 	"$schema": "°Maia/schema/actor",
 	"$id": "°Maia/actor/os/names",
 	"type": "function",
-	"role": "@maia/actor/os/names",
+	"@label": "@maia/actor/os/names",
 	"interface": [
 		"COMPUTE_NAMES",
 		"SUCCESS",
