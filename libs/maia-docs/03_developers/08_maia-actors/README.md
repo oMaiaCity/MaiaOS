@@ -23,7 +23,7 @@ The `@MaiaOS/actors` package provides a centralized registry for all MaiaScript 
 ```
 libs/maia-actors/src/
 ├── index.js                    # Main exports (ACTORS, getActor, getSeedConfig)
-├── seed-config.js              # Service actor seeding (actors, states, inboxes)
+├── seed-config.js              # Service actor seeding (actors, states; inboxes derived from actors)
 ├── views/                      # Layout actors (headless intent pattern)
 │   ├── headerWithViewSwitcher/  # Todos, Creator
 │   ├── formWithSplit/          # Sparks

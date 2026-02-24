@@ -15,47 +15,39 @@ import computeMessageNamesProcess from './os/names/process.maia'
 import computeMessageNamesTool from './os/names/tool.maia'
 import detailActor from './services/detail/actor.maia'
 import detailContext from './services/detail/context.maia'
-import detailInbox from './services/detail/inbox.maia'
 import detailProcess from './services/detail/process.maia'
 import detailView from './services/detail/view.maia'
 import listActor from './services/list/actor.maia'
 import listContext from './services/list/context.maia'
-import listInbox from './services/list/inbox.maia'
 import listStyle from './services/list/list.style.maia'
 import listProcess from './services/list/process.maia'
 import listView from './services/list/view.maia'
 import logsActor from './services/logs/actor.maia'
 import logsContext from './services/logs/context.maia'
-import logsInbox from './services/logs/inbox.maia'
 import logsStyle from './services/logs/logs.style.maia'
 import logsProcess from './services/logs/process.maia'
 import logsView from './services/logs/view.maia'
 import messagesActor from './services/messages/actor.maia'
 import messagesContext from './services/messages/context.maia'
-import messagesInbox from './services/messages/inbox.maia'
 import messagesProcess from './services/messages/process.maia'
 import messagesView from './services/messages/view.maia'
 import paperActor from './services/paper/actor.maia'
 import paperContext from './services/paper/context.maia'
-import paperInbox from './services/paper/inbox.maia'
 import paperProcess from './services/paper/process.maia'
 import paperTool from './services/paper/tool.maia'
 import paperView from './services/paper/view.maia'
 import comingSoonActor from './views/comingSoon/actor.maia'
 import comingSoonContext from './views/comingSoon/context.maia'
-import comingSoonInbox from './views/comingSoon/inbox.maia'
 import comingSoonProcess from './views/comingSoon/process.maia'
 import comingSoonStyle from './views/comingSoon/style.maia'
 import comingSoonView from './views/comingSoon/view.maia'
 import layoutSparksActor from './views/formWithSplit/actor.maia'
 import layoutSparksContext from './views/formWithSplit/context.maia'
-import layoutSparksInbox from './views/formWithSplit/inbox.maia'
 import layoutSparksProcess from './views/formWithSplit/process.maia'
 import formWithSplitStyle from './views/formWithSplit/style.maia'
 import formWithSplitView from './views/formWithSplit/view.maia'
 import layoutHumansActor from './views/grid/actor.maia'
 import layoutHumansContext from './views/grid/context.maia'
-import layoutHumansInbox from './views/grid/inbox.maia'
 import layoutHumansProcess from './views/grid/process.maia'
 import gridStyle from './views/grid/style.maia'
 import gridView from './views/grid/view.maia'
@@ -63,15 +55,12 @@ import layoutCreatorActor from './views/headerWithViewSwitcher/actor-creator.mai
 import layoutTodosActor from './views/headerWithViewSwitcher/actor-todos.maia'
 import layoutCreatorContext from './views/headerWithViewSwitcher/context-creator.maia'
 import layoutTodosContext from './views/headerWithViewSwitcher/context-todos.maia'
-import layoutCreatorInbox from './views/headerWithViewSwitcher/inbox-creator.maia'
-import layoutTodosInbox from './views/headerWithViewSwitcher/inbox-todos.maia'
 import layoutCreatorProcess from './views/headerWithViewSwitcher/process-creator.maia'
 import layoutTodosProcess from './views/headerWithViewSwitcher/process-todos.maia'
 import headerWithViewSwitcherStyle from './views/headerWithViewSwitcher/style.maia'
 import headerWithViewSwitcherView from './views/headerWithViewSwitcher/view.maia'
 import layoutChatActor from './views/modalChat/actor.maia'
 import layoutChatContext from './views/modalChat/context.maia'
-import layoutChatInbox from './views/modalChat/inbox.maia'
 import layoutChatProcess from './views/modalChat/process.maia'
 import modalChatView from './views/modalChat/view.maia'
 
@@ -117,12 +106,21 @@ function toActorConfig(raw, inboxId) {
 	}
 }
 
-/** Build inbox config for seeding - one CoStream per service actor */
-function toInboxConfig(folder) {
+/** Derive inbox namekey from actor $id (same convention as engine). */
+function deriveInboxId(actorId) {
+	if (!actorId || typeof actorId !== 'string') return null
+	if (actorId.includes('/actor/') && !actorId.startsWith('°Maia/actor/')) {
+		return actorId.replace('/actor/', '/inbox/')
+	}
+	if (actorId.includes('/')) return `${actorId}/inbox`
+	return null
+}
+
+/** Build minimal inbox config for seeding - cotype comes from schema. */
+function toInboxConfig(inboxId) {
 	return {
 		$schema: '°Maia/schema/inbox',
-		$id: `°Maia/actor/${folder}/inbox`,
-		cotype: 'costream',
+		$id: inboxId,
 	}
 }
 
@@ -144,17 +142,17 @@ export function getSeedConfig() {
 	const inboxes = {}
 
 	for (const [actorDef, processDef, toolDef] of actorDefs) {
-		const folder =
-			ROLE_TO_FOLDER[actorDef?.role] ?? actorDef?.role?.replace('@', '')?.replace(/\//g, '-')
-		const inboxId = `°Maia/actor/${folder}/inbox`
-		const actorConfig = toActorConfig(actorDef, inboxId)
+		const actorConfig = toActorConfig(actorDef, null)
 		if (!actorConfig) continue
+		const inboxId = deriveInboxId(actorConfig.$id)
+		if (!inboxId) continue
+		actorConfig.inbox = inboxId
 		const processId = processDef?.$id || actorDef?.process
 		if (!processId) continue
 		actors[actorConfig.$id] = actorConfig
 		processes[processId] = processDef
 		if (toolDef?.$id) tools[toolDef.$id] = toolDef
-		inboxes[inboxId] = toInboxConfig(folder)
+		inboxes[inboxId] = toInboxConfig(inboxId)
 	}
 
 	// View actors (UI components)
@@ -165,7 +163,6 @@ export function getSeedConfig() {
 			view: comingSoonView,
 			process: comingSoonProcess,
 			style: comingSoonStyle,
-			inbox: comingSoonInbox,
 		},
 		{
 			actor: layoutTodosActor,
@@ -173,7 +170,6 @@ export function getSeedConfig() {
 			view: headerWithViewSwitcherView,
 			process: layoutTodosProcess,
 			style: headerWithViewSwitcherStyle,
-			inbox: layoutTodosInbox,
 		},
 		{
 			actor: layoutCreatorActor,
@@ -181,7 +177,6 @@ export function getSeedConfig() {
 			view: headerWithViewSwitcherView,
 			process: layoutCreatorProcess,
 			style: headerWithViewSwitcherStyle,
-			inbox: layoutCreatorInbox,
 		},
 		{
 			actor: layoutSparksActor,
@@ -189,7 +184,6 @@ export function getSeedConfig() {
 			view: formWithSplitView,
 			process: layoutSparksProcess,
 			style: formWithSplitStyle,
-			inbox: layoutSparksInbox,
 		},
 		{
 			actor: layoutHumansActor,
@@ -197,27 +191,32 @@ export function getSeedConfig() {
 			view: gridView,
 			process: layoutHumansProcess,
 			style: gridStyle,
-			inbox: layoutHumansInbox,
 		},
 		{
 			actor: layoutChatActor,
 			context: layoutChatContext,
 			view: modalChatView,
 			process: layoutChatProcess,
-			inbox: layoutChatInbox,
 		},
 	]
 	const uiContexts = {}
 	const uiViews = {}
 	const uiProcesses = {}
 	const uiStyles = {}
-	for (const { actor, context, view, process, style, inbox } of viewActors) {
-		if (actor?.$id) actors[actor.$id] = actor
+	for (const { actor, context, view, process, style } of viewActors) {
+		if (actor?.$id) {
+			const config = { ...actor }
+			const inboxId = deriveInboxId(config.$id)
+			if (inboxId) {
+				config.inbox = inboxId
+				inboxes[inboxId] = toInboxConfig(inboxId)
+			}
+			actors[config.$id] = config
+		}
 		if (context?.$id) uiContexts[context.$id] = context
 		if (view?.$id) uiViews[view.$id] = view
 		if (process?.$id) uiProcesses[process.$id] = process
 		if (style?.$id) uiStyles[style.$id] = style
-		if (inbox?.$id) inboxes[inbox.$id] = inbox
 	}
 
 	// Service actors (messages, logs, list, detail, paper)
@@ -228,14 +227,12 @@ export function getSeedConfig() {
 			view: paperView,
 			process: paperProcess,
 			tool: paperTool,
-			inbox: paperInbox,
 		},
 		{
 			actor: messagesActor,
 			context: messagesContext,
 			view: messagesView,
 			process: messagesProcess,
-			inbox: messagesInbox,
 		},
 		{
 			actor: logsActor,
@@ -243,7 +240,6 @@ export function getSeedConfig() {
 			view: logsView,
 			process: logsProcess,
 			style: logsStyle,
-			inbox: logsInbox,
 		},
 		{
 			actor: listActor,
@@ -251,14 +247,12 @@ export function getSeedConfig() {
 			view: listView,
 			process: listProcess,
 			style: listStyle,
-			inbox: listInbox,
 		},
 		{
 			actor: detailActor,
 			context: detailContext,
 			view: detailView,
 			process: detailProcess,
-			inbox: detailInbox,
 		},
 	]
 	for (const {
@@ -268,15 +262,21 @@ export function getSeedConfig() {
 		process: proc,
 		style: styleCfg,
 		tool: toolCfg,
-		inbox: inboxCfg,
 	} of serviceActors) {
-		if (actor?.$id) actors[actor.$id] = actor
+		if (actor?.$id) {
+			const config = { ...actor }
+			const inboxId = deriveInboxId(config.$id)
+			if (inboxId) {
+				config.inbox = inboxId
+				inboxes[inboxId] = toInboxConfig(inboxId)
+			}
+			actors[config.$id] = config
+		}
 		if (context?.$id) uiContexts[context.$id] = context
 		if (view?.$id) uiViews[view.$id] = view
 		if (proc?.$id) uiProcesses[proc.$id] = proc
 		if (styleCfg?.$id) uiStyles[styleCfg.$id] = styleCfg
 		if (toolCfg?.$id) tools[toolCfg.$id] = toolCfg
-		if (inboxCfg?.$id) inboxes[inboxCfg.$id] = inboxCfg
 	}
 
 	// Merge all processes

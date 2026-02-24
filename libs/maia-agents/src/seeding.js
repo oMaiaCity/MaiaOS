@@ -29,6 +29,17 @@ function getAgentKey(agent) {
 }
 
 const AGENT_SCHEMA = '°Maia/schema/agent'
+const INBOX_SCHEMA = '°Maia/schema/inbox'
+
+/** Derive inbox namekey from actor $id (same convention as engine). */
+function deriveInboxId(actorId) {
+	if (!actorId || typeof actorId !== 'string') return null
+	if (actorId.includes('/actor/') && !actorId.startsWith('°Maia/actor/')) {
+		return actorId.replace('/actor/', '/inbox/')
+	}
+	if (actorId.includes('/')) return `${actorId}/inbox`
+	return null
+}
 
 function normalizeAgentForSeeding(agent) {
 	if (!agent || typeof agent !== 'object') {
@@ -73,9 +84,15 @@ export function buildSeedConfig(agentRegistries) {
 		Object.assign(merged.views, registry.views || {})
 		Object.assign(merged.contexts, registry.contexts || {})
 		Object.assign(merged.processes, registry.processes || {})
-		Object.assign(merged.states, registry.states || {})
-		Object.assign(merged.inboxes, registry.inboxes || {})
 		Object.assign(merged.data, registry.data || {})
+	}
+	// Inbox by convention: derive from actors (no registry.inboxes)
+	for (const [actorId, config] of Object.entries(merged.actors)) {
+		const inboxId = deriveInboxId(actorId)
+		if (inboxId) {
+			config.inbox = inboxId
+			merged.inboxes[inboxId] = { $schema: INBOX_SCHEMA, $id: inboxId }
+		}
 	}
 	return { configs: merged, data: merged.data || {} }
 }

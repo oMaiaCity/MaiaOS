@@ -191,7 +191,7 @@ Create a file named `{name}.actor.maia`:
 | `view` | string | No | Co-id reference to view (optional for service actors) |
 | `brand` | string | Yes | Co-id reference to brand style (required) |
 | `style` | string | No | Co-id reference to local style (optional) |
-| `inbox` | string | No | Co-id reference to inbox costream |
+| `inbox` | string | No | **Derived by convention** from actor `$id`; do not define in config. Each actor has an inbox costream at a derived namekey; the engine and seed set this automatically. |
 | `messageTypes` | array | No | Array of message types this actor accepts |
 
 **Note:** Children are defined in context files via the `@actors` system property. See [01-vibe-pattern.md](./01-vibe-pattern.md#system-properties-in-context).
