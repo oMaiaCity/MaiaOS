@@ -12,7 +12,7 @@ Backend subscribes to config CRDTs: `view`, `style`, `brand`, `process`, `interf
 
 ### Engine vs Direct Subscriptions
 
-**View/Style/Process:** Backend config subscriptions. View subscriptions set up in `attachViewToActor`.
+**View/Style/State:** Go through engines (caching, batch subscriptions). View subscriptions are set up in `loadViewConfigs`; use `attachViewToActor` to attach view to an actor.
 
 **Interface/Context:** Use read() API directly.
 
