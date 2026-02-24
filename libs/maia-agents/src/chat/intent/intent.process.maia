@@ -5,7 +5,7 @@
 		"SEND_MESSAGE": [
 			{
 				"tell": {
-					"target": "°Maia/chat/actor/messages",
+					"target": "°Maia/actor/services/messages",
 					"type": "SEND_MESSAGE",
 					"payload": {
 						"inputText": "$$inputText"
@@ -14,7 +14,10 @@
 			},
 			{
 				"ctx": {
-					"inputText": ""
+					"inputText": "",
+					"isLoading": true,
+					"hasError": false,
+					"error": null
 				}
 			}
 		],

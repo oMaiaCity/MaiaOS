@@ -1,10 +1,12 @@
 {
 	"$schema": "°Maia/schema/agent",
 	"$id": "°Maia/agent/logs",
-	"name": "Logs",
+	"name": "Creator",
 	"description": "Developer logs and diagnostics",
 	"actor": "°Maia/creator/actor/intent",
 	"dependencies": [
-		"°Maia/creator/actor/intent"
+		"°Maia/creator/actor/intent",
+		"°Maia/actor/services/logs",
+		"°Maia/actor/coming-soon"
 	]
 }

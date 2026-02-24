@@ -1,6 +1,6 @@
 {
 	"$schema": "°Maia/schema/context",
-	"$id": "°Maia/chat/context/messages",
+	"$id": "°Maia/actor/services/messages/context",
 	"conversations": {
 		"schema": "°Maia/schema/data/chat",
 		"map": {
@@ -14,5 +14,6 @@
 	"isLoading": false,
 	"hasError": false,
 	"error": null,
-	"hasConversations": false
+	"hasConversations": false,
+	"welcomeText": "Hello! How can I assist you today?"
 }

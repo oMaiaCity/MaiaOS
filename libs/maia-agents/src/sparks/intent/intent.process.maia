@@ -34,7 +34,7 @@
 			},
 			{
 				"tell": {
-					"target": "°Maia/sparks/actor/detail",
+					"target": "°Maia/actor/services/detail",
 					"type": "LOAD_ACTOR",
 					"payload": {
 						"id": "$$sparkId"
