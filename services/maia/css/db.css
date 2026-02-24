@@ -2743,8 +2743,8 @@ pre {
 }
 
 /* idle / stopped: marine blue slightly lighter than wings */
-.voice-asr-idle {
-	background: var(--color-marine-blue-muted) !important; /* Lighter than navpill wings */
+.voice-asr-btn.voice-asr-idle {
+	background: var(--color-marine-blue-muted); /* Lighter than navpill wings */
 	color: white;
 }
 
@@ -2764,8 +2764,8 @@ pre {
 }
 
 /* request mic: blue-gray, mic */
-.voice-asr-request-mic {
-	background: var(--slate-500) !important;
+.voice-asr-btn.voice-asr-request-mic {
+	background: var(--slate-500);
 	color: white;
 	cursor: wait;
 }
@@ -2782,8 +2782,8 @@ pre {
 }
 
 /* loading: yellow, spinner */
-.voice-asr-loading {
-	background: var(--color-sun-yellow) !important;
+.voice-asr-btn.voice-asr-loading {
+	background: var(--color-sun-yellow);
 	color: var(--color-sun-yellow-text);
 	cursor: wait;
 }
@@ -2800,8 +2800,8 @@ pre {
 }
 
 /* ready: green, X */
-.voice-asr-ready {
-	background: var(--color-lush-green) !important;
+.voice-asr-btn.voice-asr-ready {
+	background: var(--color-lush-green);
 	color: var(--color-green-text);
 }
 
@@ -2821,8 +2821,8 @@ pre {
 }
 
 /* listening: blue, X */
-.voice-asr-listening {
-	background: var(--color-paradise-water) !important;
+.voice-asr-btn.voice-asr-listening {
+	background: var(--color-paradise-water);
 	color: var(--color-water-text);
 }
 
