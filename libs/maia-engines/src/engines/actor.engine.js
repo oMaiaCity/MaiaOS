@@ -12,6 +12,7 @@
  */
 
 import { containsExpressions } from '@MaiaOS/schemata/expression-resolver'
+import { deriveInboxRef } from '../utils/inbox-convention.js'
 import { readStore } from '../utils/store-reader.js'
 
 // Render state machine - prevents race conditions by ensuring renders only happen when state allows
@@ -123,7 +124,15 @@ export class ActorEngine {
 				? await this.reuseActor(actorId, containerElement, agentKey)
 				: this.actors.get(actorId)
 		}
-		if (!actorConfig.inbox) throw new Error(`[ActorEngine] Actor config must have inbox: ${actorId}`)
+		// Inbox by convention: derive when missing so config always has inbox set
+		let inboxRef = actorConfig.inbox ?? deriveInboxRef(actorConfig.$id || actorConfig.id)
+		if (inboxRef && !inboxRef.startsWith('co_z') && this.dataEngine?.peer) {
+			const resolved = await this.dataEngine.peer.resolve(inboxRef, { returnType: 'coId' })
+			if (resolved && typeof resolved === 'string' && resolved.startsWith('co_z')) inboxRef = resolved
+		}
+		if (!inboxRef)
+			throw new Error(`[ActorEngine] Actor config must have inbox (or derivable from $id): ${actorId}`)
+		actorConfig.inbox = inboxRef
 		if (!actorConfig.process)
 			throw new Error(`[ActorEngine] Actor config must have process: ${actorId}`)
 		const actor = await this.spawnActor(actorConfig)
@@ -393,13 +402,16 @@ export class ActorEngine {
 		}
 		if (this.actors.has(actorId)) return this.actors.get(actorId)
 
-		const inboxRef = actorConfig.inbox
-		const processRef = actorConfig.process
-		if (!inboxRef || !processRef) return null
-		if (typeof inboxRef !== 'string' || !inboxRef.startsWith('co_z')) {
-			throw new Error(`[ActorEngine] spawnActor: inbox must be co-id, got: ${inboxRef}`)
+		let inboxRef = actorConfig.inbox ?? deriveInboxRef(actorConfig.$id || actorConfig.id)
+		if (!inboxRef || !actorConfig.process) return null
+		if (typeof inboxRef !== 'string') return null
+		if (!inboxRef.startsWith('co_z') && this.dataEngine?.peer) {
+			const resolved = await this.dataEngine.peer.resolve(inboxRef, { returnType: 'coId' })
+			if (resolved && typeof resolved === 'string' && resolved.startsWith('co_z')) inboxRef = resolved
 		}
+		if (!inboxRef.startsWith('co_z')) return null
 		const inboxCoId = inboxRef
+		const processRef = actorConfig.process
 
 		let configCoId = processRef
 		if (typeof configCoId !== 'string') {

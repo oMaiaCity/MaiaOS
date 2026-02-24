@@ -6,6 +6,8 @@
  * For each dependency: when inbox has unprocessed messages, spawns headless actor.
  */
 
+import { deriveInboxRef } from '../utils/inbox-convention.js'
+
 const DEBOUNCE_MS = 50
 
 export class Runtime {
@@ -316,13 +318,16 @@ export class Runtime {
 				continue
 			}
 			const actorConfig = await this.getActorConfig(actorCoId)
-			if (!actorConfig?.inbox) continue
-
-			const inboxCoId = actorConfig.inbox
-			const actorId = actorConfig.$id || actorConfig.id || actorCoId
-			if (typeof inboxCoId !== 'string' || !inboxCoId.startsWith('co_z')) {
-				throw new Error(`[Runtime] start: actor config inbox must be co-id: ${actorCoId}`)
+			let inboxCoId =
+				actorConfig?.inbox ?? deriveInboxRef(actorConfig?.$id || actorConfig?.id || actorCoId)
+			if (!inboxCoId) continue
+			if (typeof inboxCoId === 'string' && !inboxCoId.startsWith('co_z') && this.dataEngine?.peer) {
+				const resolved = await this.dataEngine.peer.resolve(inboxCoId, { returnType: 'coId' })
+				if (resolved && typeof resolved === 'string' && resolved.startsWith('co_z'))
+					inboxCoId = resolved
 			}
+			if (typeof inboxCoId !== 'string' || !inboxCoId.startsWith('co_z')) continue
+			const actorId = actorConfig.$id || actorConfig.id || actorCoId
 			if (typeof actorId !== 'string' || !actorId.startsWith('co_z')) {
 				throw new Error(`[Runtime] start: actor config $id must be co-id: ${actorCoId}`)
 			}
