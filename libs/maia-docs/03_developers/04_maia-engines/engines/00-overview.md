@@ -1,6 +1,6 @@
 # Engines
 
-The `@MaiaOS/script` package provides 10 core engines that work together to execute MaiaScript and manage actor lifecycles.
+The `@MaiaOS/engines` package provides the core engines that execute MaiaScript and manage actor lifecycles. Six engines work together: ActorEngine, ViewEngine, ProcessEngine, StyleEngine, DataEngine, InboxEngine. Plus the MaiaScriptEvaluator and Runtime.
 
 ---
 
@@ -15,34 +15,7 @@ The `@MaiaOS/script` package provides 10 core engines that work together to exec
 - Enforces depth limits to prevent DoS attacks
 - Supports shortcut syntax: `$key` (context) and `$$key` (item)
 
-**Key Methods:**
-- `evaluate(expression, data, depth)` - Evaluate an expression
-- `evaluateShortcut(expression, data)` - Handle `$key` and `$$key` shortcuts
-- `isDSLOperation(value)` - Check if value is a DSL operation
-
-**Example:**
-```javascript
-import { Evaluator as MaiaScriptEvaluator } from '@MaiaOS/script';
-
-const evaluator = new MaiaScriptEvaluator();
-
-// Evaluate a simple expression
-const result = await evaluator.evaluate(
-  { $if: { condition: { $eq: ['$context.status', 'active'] }, then: 'green', else: 'gray' } },
-  { context: { status: 'active' } }
-);
-// Returns: 'green'
-
-// Shortcut syntax
-const title = await evaluator.evaluate('$context.title', { context: { title: 'Hello' } });
-// Returns: 'Hello'
-```
-
-**Security:**
-- Validates expressions against `maia-script-expression` schema before evaluation
-- Enforces maximum recursion depth (default: 50) to prevent DoS
-- Sandboxed - only whitelisted operations allowed
-- No code execution - pure JSON expression evaluation
+**Key Methods:** `evaluate(expression, data, depth)`, `evaluateShortcut(expression, data)`, `isDSLOperation(value)`
 
 **Source:** `libs/maia-engines/src/utils/evaluator.js`
 
@@ -53,66 +26,24 @@ const title = await evaluator.evaluate('$context.title', { context: { title: 'He
 **Purpose:** Orchestrates actor lifecycle and coordinates all engines.
 
 **What it does:**
-- Creates and manages actors
-- Handles message passing (inbox/subscriptions)
-- Coordinates ViewEngine, StyleEngine, StateEngine
-- Manages actor context and state
-- Processes messages and triggers state transitions
-- **Sequential processing**: Ensures events process one at a time (deterministic state machines)
+- Creates and manages actors (`createActor`, `spawnActor`, `destroyActor`)
+- Handles message delivery via InboxEngine (`deliverEvent`)
+- Processes inbox messages sequentially (`processEvents`)
+- Coordinates ViewEngine, StyleEngine, ProcessEngine
+- Batches rerenders (Svelte-style microtask queue)
+- Manages child actors (`_createChildActorIfNeeded`)
 
 **Key Methods:**
-- `createActor(actorConfig, container)` - Create an actor
-- `loadActor(actorId)` - Load actor config from database
+- `createActor(actorConfig, containerElement, agentKey)` - Create view-attached actor
+- `spawnActor(actorConfig, options)` - Spawn headless actor
+- `destroyActor(actorId)` - Destroy single actor
 - `deliverEvent(senderId, targetId, type, payload)` - Deliver event to actor inbox
-- `processMessages(actorId)` - Process pending messages sequentially (guarded against concurrent execution)
-- `getActor(actorId)` - Get actor by ID
-- `rerenderActor(actorId)` - Re-render actor view
+- `processEvents(actorId)` - Process pending inbox messages
+- `rerender(actorId)` - Trigger rerender (batched)
 
-**Sequential Processing:**
-- `processMessages()` uses `_isProcessing` guard to prevent concurrent execution
-- Events process one at a time, ensuring deterministic state transitions
-- Unhandled events are marked as processed (not rejected)
-- Sequential processing handled generically in engine - no need to handle in state configs
+**Dependencies:** StyleEngine, ViewEngine, ProcessEngine, InboxEngine, ModuleRegistry
 
-**Message Validation Pipeline:**
-- **Step 1: Message Contract Validation** - Checks if message type is in actor's `messageTypes` array
-- **Step 2: Message Type Schema Loading** - Loads message type schema from registry (`@schema/message/{TYPE}`)
-- **Step 3: Payload Validation** - Validates message payload against the message type schema (the schema IS the payload schema - merged concept)
-- **Step 4: State Machine Routing** - If validation passes, routes validated message to StateEngine
-- Invalid messages are rejected early with clear error messages before reaching the state machine
-
-**Note:** Message type schemas directly represent the payload schema. There is no separate `payloadSchema` property - the message type schema itself validates the payload.
-
-**Dependencies:**
-- `StyleEngine` - For style compilation
-- `ViewEngine` - For view rendering
-- `ModuleRegistry` - For module access
-- `ToolEngine` - For tool execution
-- `StateEngine` - For state machine interpretation
-- `SubscriptionEngine` - For reactive subscriptions
-
-**Example:**
-```javascript
-import { ActorEngine } from '@MaiaOS/script';
-
-// ActorEngine is typically created by kernel during boot
-// But you can create it manually for advanced use cases:
-const actorEngine = new ActorEngine(
-  styleEngine,
-  viewEngine,
-  moduleRegistry,
-  toolEngine,
-  stateEngine
-);
-
-// Create an actor
-const actor = await actorEngine.createActor(
-  actorConfig,
-  document.getElementById('container')
-);
-```
-
-**Source:** `libs/maia-engines/src/engines/actor-engine/actor.engine.js`
+**Source:** `libs/maia-engines/src/engines/actor.engine.js`
 
 ---
 
@@ -122,95 +53,34 @@ const actor = await actorEngine.createActor(
 
 **What it does:**
 - Converts view definitions to DOM elements
-- Handles `$each` loops for iteration
-- Processes `$slot` for actor composition
-- Manages event handlers (`$on`)
+- Handles `$each` loops, `$slot` for actor composition, `$on` event handlers
 - Uses Shadow DOM for style isolation
 - Sanitizes HTML to prevent XSS
-- **Reactive rendering** - Automatically re-renders when context changes
-- **Resolves ALL expressions before sending to inbox** - Only resolved values (clean JS objects/JSON) are sent
-- **Rejects conditional logic** - Views are "dumb" templates, no `$if`, `$eq`, ternary operators allowed
+- **Reactive rendering** - Re-renders when context changes
+- **Resolves ALL expressions before sending to inbox** - Only resolved values persist to CoJSON
+
+**Key Methods:** `attachViewToActor()`, `render()`, `renderNode()`, `renderEach()`, `_handleEvent()`
+
+**Source:** `libs/maia-engines/src/engines/view.engine.js`
+
+---
+
+## ProcessEngine
+
+**Purpose:** GenServer-style flat event handlers. Routes events to handler actions. No state machines.
+
+**What it does:**
+- Creates process instances (`createProcess`)
+- Routes events to handlers keyed by message type: `handlers[event]` → array of actions
+- Executes actions: `ctx` (context updates), `op` (DB operations), `tell`/`ask` (messaging), `function` (executable)
+
+**Flow:** `inbox → processEvents() → ProcessEngine.send(processId, event, payload) → handlers[event] → _executeActions()`
 
 **Key Methods:**
-- `loadViewConfigs(actorConfig, actorId)` - Load view, context, style, brand; validate view; set up subscriptions
-- `attachViewToActor(actor, containerElement, actorConfig, ...)` - Full attach: configs, shadowRoot, render
-- `render(viewDef, context, shadowRoot, styleSheets, actorId)` - Render view
-- `renderNode(nodeDef, data, actorId)` - Render a single node
-- `_handleEvent(event, element, actorId)` - Handle view events, resolves expressions, validates payloads
+- `createProcess(processDef, actor)` - Create process instance
+- `send(processId, event, payload)` - Send event to process (routes to handlers)
 
-**Dependencies:**
-- `Evaluator` - For expression evaluation
-- `ActorEngine` - For action handling
-- `ModuleRegistry` - For module access
-
-**Architectural Boundaries:**
-- ✅ **ONLY displays current state** - Views read from context reactively (ReactiveStore subscriptions)
-- ✅ **ONLY sends events** - Views send events via `send` syntax, never update context directly
-- ✅ **ONLY manipulates DOM reactively** - DOM updates happen in response to context changes
-- ✅ **Resolves ALL expressions before sending** - ViewEngine fully resolves all expressions before sending to inbox (only clean JS objects/JSON persist to CoJSON)
-- ✅ **Validates payloads are resolved** - Throws error if unresolved expressions found in payloads
-- ❌ **SHOULD NOT update context directly** - All context updates flow through state machines
-- ❌ **SHOULD NOT trigger state transitions directly** - Views send events, state machines handle transitions
-- ❌ **Should NOT contain conditional logic** (`$if`, `$eq`, ternary operators) - All conditionals belong in state machines
-- ❌ **Should NOT contain DSL operations** - Views only resolve simple context/item references (`$key`, `$$key`)
-- **Reactive UI behavior** - Use data attributes (e.g., `data-auto-focus="true"`) for declarative UI behavior
-
-**Expression Resolution:**
-- Views resolve ALL expressions before sending to inbox via `resolveExpressions()`
-- Only resolved values (clean JS objects/JSON) are persisted to CoJSON
-- State machines receive pre-resolved payloads (no re-evaluation needed)
-- Action configs in state machines still support expressions (evaluated in state machine context)
-
-**Correct Pattern - Views Handle UI Reactively:**
-```json
-// State machine computes boolean flag
-{
-  "updateContext": {
-    "isSelected": {"$eq": ["$$id", "$selectedId"]}
-  }
-}
-
-// View references resolved context value
-{
-  "tag": "div",
-  "attrs": {
-    "data-selected": "$isSelected"  // Simple context reference, resolved to true/false
-  }
-}
-
-// CSS handles conditional styling
-{
-  "div": {
-    "data-selected": {
-      "true": { "background": "blue" }
-    }
-  }
-}
-```
-
-**Example:**
-```javascript
-import { ViewEngine } from '@MaiaOS/script';
-
-const viewEngine = new ViewEngine(evaluator, actorEngine, moduleRegistry);
-
-// Render a view
-await viewEngine.render(
-  viewDef,
-  { context: { title: 'Hello' } },
-  shadowRoot,
-  styleSheets,
-  'actor-123'
-);
-```
-
-**Security:**
-- Uses `textContent` for text (auto-escapes HTML)
-- Uses `createElement`/`appendChild` for DOM (safe)
-- Sanitizes attribute values
-- Shadow DOM isolation prevents style leakage
-
-**Source:** `libs/maia-engines/src/engines/view-engine/view.engine.js`
+**Source:** `libs/maia-engines/src/engines/process.engine.js`
 
 ---
 
@@ -220,132 +90,70 @@ await viewEngine.render(
 
 **What it does:**
 - Compiles style definitions to Constructable Stylesheets
-- Merges brand styles with actor overrides
+- Merges brand styles with actor overrides (deep merge)
 - Interpolates token references (`{token.color}`)
 - Caches compiled stylesheets
-- Supports CSS-in-JS approach
+- Blocks CSS injection (url(), expression(), etc.)
 
 **Key Methods:**
-- `loadStyle(coId)` - Load style definition from database
-- `compile(brandStyleId, actorStyleId)` - Compile styles
-- `clearCache()` - Clear style cache (dev only)
+- `getStyleSheets(actorConfig, actorId)` - Get compiled CSSStyleSheet array
+- `compileToCSS(tokens, components, selectors, containerName)` - Compile full CSS
 
-**Dependencies:**
-- `maia.do` (DataEngine) - For loading style definitions
-
-**Example:**
-```javascript
-import { StyleEngine } from '@MaiaOS/script';
-
-const styleEngine = new StyleEngine();
-
-// Compile styles
-const styleSheets = await styleEngine.compile(
-  'co_z...brand',  // Brand style co-id
-  'co_z...actor'   // Actor style co-id (optional)
-);
-```
-
-**Source:** `libs/maia-engines/src/engines/style-engine/style.engine.js`
+**Source:** `libs/maia-engines/src/engines/style.engine.js`
 
 ---
 
-## StateEngine
+## InboxEngine
 
-**Purpose:** Interprets state machine definitions (XState-like).
+**Purpose:** Message validation and inbox delivery.
 
 **What it does:**
-- Loads state machine definitions from `.state.maia` files
-- Creates state machine instances
-- Handles state transitions with schema-based guards (JSON Schema validation)
-- Executes entry/exit actions
-- Processes events (`send('EVENT_NAME')`)
-- Supports side effects (invoke, after delays)
-- **Deterministic**: Only one state at a time, sequential transitions
+- Validates messages (`validateMessage`, `validatePayload`)
+- Resolves inbox for target (`resolveInboxForTarget`)
+- Delivers messages (`deliver`, `_pushMessage`)
+- Interface validation (checks actor `interface` array)
+- Schema-based payload validation from backend registry
 
-**Key Methods:**
-- `loadStateDef(stateRef)` - Load state definition
-- `createMachine(stateDef, actor)` - Create state machine instance
-- `send(machineId, event, payload)` - Send event to state machine (called only from ActorEngine.processMessages())
-- `_evaluateGuard(guard, context, payload, actor)` - Evaluate guard using JSON Schema validation
-
-**Dependencies:**
-- `ToolEngine` - For executing actions
-- `ValidationEngine` - For schema-based guard evaluation (JSON Schema validation)
-- `ActorEngine` - For unified event flow and sequential processing
-
-**Guard Evaluation:**
-- Guards use JSON Schema to validate against current state and context
-- Guards check conditional logic (should transition happen?), NOT payload validation
-- Payload validation happens in ActorEngine BEFORE messages reach the state machine
-
-**Architectural Boundaries:**
-- ✅ **ONLY updates state transitions and context** - State machines are the single source of truth for context changes
-- ✅ **ONLY calls tools that update state/context** - Tools should update state, not manipulate views
-- ❌ **SHOULD NOT manipulate views directly** - No DOM operations, no view manipulation
-- ❌ **SHOULD NOT call view manipulation tools** - State machines should not manipulate views directly
-
-**Deterministic State Machines:**
-- State machines are deterministic - only ONE state at a time
-- Events process sequentially (guarded by ActorEngine)
-- No parallel states possible
-- Unhandled events are processed and removed (not rejected)
-- Sequential processing handled generically - state configs don't need "what if already in state X" logic
-
-**Example:**
-```javascript
-import { StateEngine } from '@MaiaOS/script';
-
-const stateEngine = new StateEngine(toolEngine, evaluator);
-
-// Load and create state machine
-const stateDef = await stateEngine.loadStateDef('co_z...');
-const machine = await stateEngine.createMachine(stateDef, actor);
-
-// Send event
-stateEngine.sendEvent('actor-123', { type: 'CLICK_BUTTON' });
-```
-
-**Source:** `libs/maia-engines/src/engines/state-engine/state.engine.js`
+**Source:** `libs/maia-engines/src/engines/inbox.engine.js`
 
 ---
 
-## ToolEngine
+## DataEngine
 
-**Purpose:** Executes tools with parameter validation.
+**Purpose:** Public data API – **maia.do({ op, schema, key, filter, ... })**
 
 **What it does:**
-- Registers tools from modules
-- Validates tool parameters against schemas
-- Executes tool functions
-- Supports namespaced tools (`@core/noop`, `@db/query`)
+- Single API for all data operations
+- Self-wires built-in operations at construction
+- Extensible via `registerOperation(opName, {execute})`
 
-**Key Methods:**
-- `registerTool(namespacePath, toolId, options)` - Register a tool
-- `executeTool(toolId, payload, actor)` - Execute a tool
-- `getTool(toolId)` - Get tool definition
+**Operations:** read, create, update, delete, schema, resolve, append, push, spliceCoList, processInbox, seed, createSpark, readSpark, updateSpark, deleteSpark, addSparkMember, removeSparkMember, addSparkParentGroup, removeSparkParentGroup, getSparkMembers, updateSparkMemberRole
 
-**Dependencies:**
-- `ModuleRegistry` - For module access
+**Key Method:** `execute({ op, ...params })` - Execute any operation
 
-**Example:**
-```javascript
-import { ToolEngine } from '@MaiaOS/script';
-
-const toolEngine = new ToolEngine(moduleRegistry);
-
-// Execute a tool
-const result = await toolEngine.executeTool(
-  '@db/query',
-  { schema: '@schema/todos', filter: { completed: false } },
-  actor
-);
-```
-
-**Source:** `libs/maia-engines/src/engines/tool-engine/tool.engine.js`
+**Source:** `libs/maia-engines/src/engines/data.engine.js`
 
 ---
 
-## Tool Call Architecture
+## Runtime
 
-**CRITICAL PRINCIPLE:** **100% State Machine Pattern - All tool calls MUST flow through state machines.**
+**Purpose:** Browser runtime for actor lifecycle and inbox watching.
+
+**What it does:**
+- Creates view-attached actors (`createActorForView`)
+- Destroys actors (`destroyActor`, `destroyActorsForAgent`, `destroyActorsForContainer`)
+- Loads actor config from DB (`getActorConfig`)
+- Watches inboxes for unprocessed messages (`watchInbox`, `start`)
+- Ensures headless actors spawn when messages arrive (`ensureActorSpawned`)
+
+**Key Methods:** `createActorForView()`, `destroyActor()`, `getActorConfig()`, `start()`, `watchInbox()`
+
+**Source:** `libs/maia-engines/src/runtimes/browser.js`
+
+---
+
+## Related Documentation
+
+- [01-detail.md](./01-detail.md) - Architecture, DataEngine operations, patterns
+- [02-reference.md](./02-reference.md) - Method signatures
+- [../../api-reference.md](../api-reference.md) - Complete API reference

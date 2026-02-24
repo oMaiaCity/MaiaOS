@@ -12,7 +12,7 @@ Backend subscribes to config CRDTs: `view`, `style`, `brand`, `process`, `interf
 
 ### Engine vs Direct Subscriptions
 
-**View/Style/State:** Go through engines (caching, batch subscriptions). View subscriptions are set up in `loadViewConfigs`; use `attachViewToActor` to attach view to an actor.
+**View/Style/Process:** Backend config subscriptions. View subscriptions set up in `attachViewToActor`.
 
 **Interface/Context:** Use read() API directly.
 
@@ -137,8 +137,8 @@ Check: batching (pendingRerenders), deduplication, cache hit rate. Fix: Verify b
 
 ## References
 
-- Config: `libs/maia-engines/src/engines/subscription-engine/config-subscriptions.js`
-- Data: `libs/maia-engines/src/engines/subscription-engine/data-subscriptions.js`
-- Handlers: `libs/maia-engines/src/engines/subscription-engine/update-handlers.js`
-- DB: `libs/maia-engines/src/engines/data.engine.js` (readOp)
-- Store: `libs/maia-engines/src/utils/reactive-store.js`
+- Config/data subscriptions: Backend unified store in maia-db
+- CoCache: `libs/maia-db/src/cojson/cache/coCache.js`
+- Read: `libs/maia-db/src/cojson/crud/read.js`
+- DataEngine: `libs/maia-engines/src/engines/data.engine.js`
+- ReactiveStore: `libs/maia-db` (exported from maia-db)
