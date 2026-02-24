@@ -20,7 +20,18 @@
 								]
 							},
 							"then": "@logs",
-							"else": "@comingSoon"
+							"else": {
+								"$if": {
+									"condition": {
+										"$eq": [
+											"$$viewMode",
+											"actors"
+										]
+									},
+									"then": "@actors",
+									"else": "@schemata"
+								}
+							}
 						}
 					}
 				}
@@ -40,7 +51,17 @@
 					"secondaryButtonActive": {
 						"$eq": [
 							"$$viewMode",
-							"comingSoon"
+							"actors"
+						]
+					}
+				}
+			},
+			{
+				"ctx": {
+					"tertiaryButtonActive": {
+						"$eq": [
+							"$$viewMode",
+							"schemata"
 						]
 					}
 				}

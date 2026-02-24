@@ -1,0 +1,12 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/schemata-list/context",
+	"@label": "@maia/actor/views/schemata-list/context",
+	"title": "Schemata",
+	"schemaList": [],
+	"selectedSchema": {
+		"id": "",
+		"label": "",
+		"definition": ""
+	}
+}

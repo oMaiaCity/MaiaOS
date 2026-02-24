@@ -1,0 +1,40 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/views/schemata-list/process",
+	"@label": "@maia/actor/views/schemata-list/process",
+	"handlers": {
+		"SELECT_SCHEMA": [
+			{
+				"ctx": {
+					"selectedSchema": {
+						"id": "$$id",
+						"label": "$$label",
+						"definition": ""
+					}
+				}
+			},
+			{
+				"op": {
+					"readSchema": {
+						"schemaRef": "$$id"
+					}
+				}
+			},
+			{
+				"ctx": {
+					"selectedSchema": {
+						"id": "$selectedSchema.id",
+						"label": "$selectedSchema.label",
+						"definition": {
+							"$if": {
+								"condition": "$$result",
+								"then": "$$result.definition",
+								"else": ""
+							}
+						}
+					}
+				}
+			}
+		]
+	}
+}

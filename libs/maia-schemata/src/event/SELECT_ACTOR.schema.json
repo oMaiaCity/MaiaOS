@@ -1,0 +1,19 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/event/SELECT_ACTOR",
+	"title": "°Maia/schema/event/SELECT_ACTOR",
+	"description": "Message type for selecting an actor from the list to display its interface",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {
+		"id": { "type": "string", "description": "Actor co-id" },
+		"label": { "type": "string", "description": "Actor @label" },
+		"interface": {
+			"type": "array",
+			"items": { "type": "string" },
+			"description": "Actor message types (interface items)"
+		}
+	},
+	"additionalProperties": true
+}

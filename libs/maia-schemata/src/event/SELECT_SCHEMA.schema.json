@@ -1,0 +1,15 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/event/SELECT_SCHEMA",
+	"title": "°Maia/schema/event/SELECT_SCHEMA",
+	"description": "Message type for selecting a schema to display its definition",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {
+		"id": { "type": "string", "description": "Schema identifier" },
+		"label": { "type": "string", "description": "Display label" },
+		"definition": { "type": "string", "description": "JSON stringified schema definition" }
+	},
+	"additionalProperties": true
+}

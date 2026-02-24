@@ -198,7 +198,7 @@ export class ProcessEngine {
 				id: config.id,
 			})
 		} else {
-			return null
+			result = await this.dataEngine.execute({ op: opKey, ...config })
 		}
 		return result
 	}
@@ -333,15 +333,19 @@ export class ProcessEngine {
 	_sanitizeUpdates(updates, fallback = {}) {
 		if (typeof updates === 'string' && updates === '$$result') return fallback
 		if (typeof updates !== 'object' || updates === null || Array.isArray(updates)) return {}
-		return Object.fromEntries(
+		const sanitized = Object.fromEntries(
 			Object.entries(updates).map(([k, v]) => [k, v === undefined ? null : v]),
 		)
+		delete sanitized.$event
+		return sanitized
 	}
 
 	async _evaluatePayload(payload, context, eventPayload = {}, lastToolResult = null, _actor = null) {
 		const contextValue = context?.value ?? {}
+		// Inject $event so expressions (e.g. $map) can access the event payload alongside $$item
+		const contextForEval = { ...contextValue, $event: eventPayload || {} }
 		const result = eventPayload?.result ?? lastToolResult ?? null
-		const data = { context: contextValue, item: eventPayload || {}, result }
+		const data = { context: contextForEval, item: eventPayload || {}, result }
 		return resolveExpressions(payload, this.evaluator, data)
 	}
 

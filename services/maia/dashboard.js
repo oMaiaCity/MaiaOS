@@ -148,10 +148,15 @@ async function loadAgentsFromSpark(maia, spark) {
 				agentsData[k].startsWith('co_'),
 		)
 
+		// Display name overrides: agent key -> user-facing label (e.g. logs -> Creator)
+		const agentDisplayNameOverrides = { logs: 'Creator' }
 		for (const agentKey of agentKeys) {
 			const agentCoId = agentsData[agentKey]
 			const manifest = manifestMap.get(agentKey)
-			const name = manifest?.name || `${agentKey.charAt(0).toUpperCase() + agentKey.slice(1)}`
+			const name =
+				agentDisplayNameOverrides[agentKey] ??
+				manifest?.name ??
+				`${agentKey.charAt(0).toUpperCase() + agentKey.slice(1)}`
 			const description = manifest?.description
 				? truncateWords(manifest.description, 10)
 				: `Open ${name}`

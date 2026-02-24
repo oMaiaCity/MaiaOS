@@ -8,6 +8,7 @@
 		"°Maia/creator/actor/intent",
 		"°Maia/actor/views/layout-creator",
 		"°Maia/actor/services/logs",
-		"°Maia/actor/coming-soon"
+		"°Maia/actor/views/actor-list",
+		"°Maia/actor/views/schemata-list"
 	]
 }

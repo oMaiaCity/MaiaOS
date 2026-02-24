@@ -4,6 +4,7 @@
  * Also includes standalone UI actors (e.g. coming-soon).
  */
 
+import { getAllSchemas } from '@MaiaOS/schemata'
 import aiChatActor from './os/ai/actor.maia'
 import aiChatProcess from './os/ai/process.maia'
 import aiChatTool from './os/ai/tool.maia'
@@ -36,6 +37,11 @@ import paperContext from './services/paper/context.maia'
 import paperProcess from './services/paper/process.maia'
 import paperTool from './services/paper/tool.maia'
 import paperView from './services/paper/view.maia'
+import actorListActor from './views/actorList/actor.maia'
+import actorListContext from './views/actorList/context.maia'
+import actorListProcess from './views/actorList/process.maia'
+import actorListStyle from './views/actorList/style.maia'
+import actorListView from './views/actorList/view.maia'
 import comingSoonActor from './views/comingSoon/actor.maia'
 import comingSoonContext from './views/comingSoon/context.maia'
 import comingSoonProcess from './views/comingSoon/process.maia'
@@ -59,10 +65,29 @@ import layoutCreatorProcess from './views/headerWithViewSwitcher/process-creator
 import layoutTodosProcess from './views/headerWithViewSwitcher/process-todos.maia'
 import headerWithViewSwitcherStyle from './views/headerWithViewSwitcher/style.maia'
 import headerWithViewSwitcherView from './views/headerWithViewSwitcher/view.maia'
+import viewCreatorView from './views/headerWithViewSwitcher/view-creator.maia'
 import layoutChatActor from './views/modalChat/actor.maia'
 import layoutChatContext from './views/modalChat/context.maia'
 import layoutChatProcess from './views/modalChat/process.maia'
 import modalChatView from './views/modalChat/view.maia'
+import schemataListActor from './views/schemataList/actor.maia'
+import schemataListContextBase from './views/schemataList/context.maia'
+import schemataListProcess from './views/schemataList/process.maia'
+import schemataListStyle from './views/schemataList/style.maia'
+import schemataListView from './views/schemataList/view.maia'
+
+/** Build schema list from getAllSchemas() for schemata-list view */
+function buildSchemataListContext() {
+	const allSchemas = getAllSchemas()
+	const schemaList = Object.entries(allSchemas).map(([id, def]) => ({
+		id,
+		label: id.startsWith('°Maia/schema/') ? id.replace('°Maia/schema/', '') : id,
+		definition: JSON.stringify(def, null, 2),
+	}))
+	return { ...schemataListContextBase, schemaList }
+}
+
+const schemataListContext = buildSchemataListContext()
 
 /** Map role to folder name for consistent °Maia/actor/{folder} $ids */
 export const ROLE_TO_FOLDER = {
@@ -159,6 +184,20 @@ export function getSeedConfig() {
 	// View actors (UI components)
 	const viewActors = [
 		{
+			actor: actorListActor,
+			context: actorListContext,
+			view: actorListView,
+			process: actorListProcess,
+			style: actorListStyle,
+		},
+		{
+			actor: schemataListActor,
+			context: schemataListContext,
+			view: schemataListView,
+			process: schemataListProcess,
+			style: schemataListStyle,
+		},
+		{
 			actor: comingSoonActor,
 			context: comingSoonContext,
 			view: comingSoonView,
@@ -175,7 +214,7 @@ export function getSeedConfig() {
 		{
 			actor: layoutCreatorActor,
 			context: layoutCreatorContext,
-			view: headerWithViewSwitcherView,
+			view: viewCreatorView,
 			process: layoutCreatorProcess,
 			style: headerWithViewSwitcherStyle,
 		},

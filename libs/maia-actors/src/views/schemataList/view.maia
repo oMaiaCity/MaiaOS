@@ -1,0 +1,65 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/actor/views/schemata-list/view",
+	"@label": "@maia/actor/views/schemata-list/view",
+	"content": {
+		"tag": "div",
+		"class": "layout-row",
+		"children": [
+			{
+				"tag": "aside",
+				"class": "aside-list",
+				"children": [
+					{
+						"tag": "div",
+						"class": "list-title",
+						"text": "$title"
+					},
+					{
+						"tag": "ul",
+						"class": "list",
+						"$each": {
+							"items": "$schemaList",
+							"template": {
+								"tag": "li",
+								"class": "list-item",
+								"children": [
+									{
+										"tag": "span",
+										"class": "list-item-label",
+										"text": "$$label"
+									}
+								],
+								"$on": {
+									"click": {
+										"send": "SELECT_SCHEMA",
+										"payload": {
+											"id": "$$id",
+											"label": "$$label"
+										}
+									}
+								}
+							}
+						}
+					}
+				]
+			},
+			{
+				"tag": "main",
+				"class": "main-area",
+				"children": [
+					{
+						"tag": "h2",
+						"class": "main-title",
+						"text": "$selectedSchema.label"
+					},
+					{
+						"tag": "pre",
+						"class": "schema-json",
+						"text": "$selectedSchema.definition"
+					}
+				]
+			}
+		]
+	}
+}

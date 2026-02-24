@@ -1,0 +1,19 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/actor-list/context",
+	"@label": "@maia/actor/views/actor-list/context",
+	"title": "Actors",
+	"actorList": {
+		"schema": "°Maia/schema/actor",
+		"map": {
+			"id": "id",
+			"label": "@label",
+			"interface": "interface"
+		}
+	},
+	"selectedActor": {
+		"label": "",
+		"interface": [],
+		"interfaceItems": []
+	}
+}
