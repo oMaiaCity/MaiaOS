@@ -6,6 +6,10 @@
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {
+		"@label": {
+			"type": "string",
+			"description": "Human-readable label (namekey, e.g. '@maia/actor/views/grid/style')"
+		},
 		"tokens": {
 			"type": "object",
 			"description": "Design tokens (colors, spacing, typography, etc.)",

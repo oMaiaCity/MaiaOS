@@ -1,5 +1,6 @@
 {
 	"$schema": "°Maia/schema/process",
 	"$id": "°Maia/actor/coming-soon/process",
+	"@label": "@maia/actor/coming-soon/process",
 	"handlers": {}
 }
