@@ -1,6 +1,7 @@
 {
 	"$schema": "°Maia/schema/style",
 	"$id": "°Maia/actor/views/grid/style",
+	"@label": "@maia/actor/views/grid/style",
 	"components": {
 		"stack": {
 			"display": "flex",

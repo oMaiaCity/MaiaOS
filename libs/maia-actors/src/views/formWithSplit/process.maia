@@ -1,6 +1,7 @@
 {
 	"$schema": "°Maia/schema/process",
 	"$id": "°Maia/actor/views/layout-sparks/process",
+	"@label": "@maia/actor/views/layout-sparks/process",
 	"handlers": {
 		"CREATE_BUTTON": [
 			{

@@ -1,6 +1,7 @@
 {
 	"$schema": "°Maia/schema/view",
 	"$id": "°Maia/actor/coming-soon/view",
+	"@label": "@maia/actor/coming-soon/view",
 	"content": {
 		"tag": "div",
 		"class": "coming-soon",

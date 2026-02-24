@@ -7,6 +7,10 @@
 	"indexing": true,
 	"required": ["handlers"],
 	"properties": {
+		"@label": {
+			"type": "string",
+			"description": "Human-readable label (namekey, e.g. '@maia/actor/views/layout-humans/process')"
+		},
 		"handlers": {
 			"type": "object",
 			"description": "Event type → array of actions",
