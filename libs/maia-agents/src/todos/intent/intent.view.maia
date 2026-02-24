@@ -4,67 +4,6 @@
 	"content": {
 		"tag": "div",
 		"class": "stack",
-		"children": [
-			{
-				"tag": "div",
-				"class": "header-section",
-				"children": [
-					{
-						"tag": "h2",
-						"class": "todo-title",
-						"text": "Daily Focus"
-					},
-					{
-						"tag": "div",
-						"class": "view-switcher",
-						"children": [
-							{
-								"tag": "button",
-								"class": "button-view-switch",
-								"attrs": {
-									"data-view": "list",
-									"data": {
-										"active": "$listButtonActive"
-									}
-								},
-								"text": "$listViewLabel",
-								"$on": {
-									"click": {
-										"send": "SWITCH_VIEW",
-										"payload": {
-											"viewMode": "list"
-										}
-									}
-								}
-							},
-							{
-								"tag": "button",
-								"class": "button-view-switch",
-								"attrs": {
-									"data-view": "comingSoon",
-									"data": {
-										"active": "$comingSoonButtonActive"
-									}
-								},
-								"text": "$comingSoonViewLabel",
-								"$on": {
-									"click": {
-										"send": "SWITCH_VIEW",
-										"payload": {
-											"viewMode": "comingSoon"
-										}
-									}
-								}
-							}
-						]
-					}
-				]
-			},
-			{
-				"tag": "main",
-				"class": "content-area",
-				"$slot": "$currentView"
-			}
-		]
+		"$slot": "$layout"
 	}
 }

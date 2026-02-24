@@ -1,0 +1,17 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/views/layout-chat",
+	"role": "@maia/actor/views/layout-chat",
+	"context": "°Maia/actor/views/layout-chat/context",
+	"view": "°Maia/actor/views/modalChat/view",
+	"process": "°Maia/actor/views/layout-chat/process",
+	"brand": "°Maia/chat/style/brand",
+	"inbox": "°Maia/actor/views/layout-chat/inbox",
+	"interface": [
+		"SEND_MESSAGE",
+		"UPDATE_INPUT",
+		"STATUS_UPDATE",
+		"OPEN_POPUP",
+		"CLOSE_POPUP"
+	]
+}

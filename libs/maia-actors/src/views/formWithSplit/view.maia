@@ -1,0 +1,146 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/actor/views/formWithSplit/view",
+	"content": {
+		"tag": "div",
+		"class": "stack",
+		"children": [
+			{
+				"tag": "div",
+				"class": "header-section",
+				"children": [
+					{
+						"tag": "h2",
+						"class": "layout-title",
+						"text": "$title"
+					}
+				]
+			},
+			{
+				"class": "form",
+				"children": [
+					{
+						"tag": "input",
+						"class": "input",
+						"attrs": {
+							"type": "text",
+							"placeholder": "$inputPlaceholder"
+						},
+						"value": "$newSparkName",
+						"$on": {
+							"input": {
+								"send": "UPDATE_INPUT",
+								"payload": {
+									"value": "@inputValue"
+								}
+							},
+							"blur": {
+								"send": "UPDATE_INPUT",
+								"payload": {
+									"value": "@inputValue"
+								}
+							},
+							"keydown": {
+								"send": "CREATE_BUTTON",
+								"payload": {
+									"value": "@inputValue"
+								},
+								"key": "Enter"
+							}
+						}
+					},
+					{
+						"tag": "button",
+						"class": "button",
+						"text": "$createButtonText",
+						"$on": {
+							"click": {
+								"send": "CREATE_BUTTON",
+								"payload": {
+									"value": "@inputValue"
+								}
+							}
+						}
+					}
+				]
+			},
+			{
+				"tag": "div",
+				"class": "error-message",
+				"attrs": {
+					"data": {
+						"hasError": "$hasError"
+					}
+				},
+				"children": [
+					{
+						"tag": "strong",
+						"text": "Error: "
+					},
+					{
+						"text": "$error"
+					},
+					{
+						"tag": "button",
+						"class": "button-dismiss",
+						"text": "Dismiss",
+						"$on": {
+							"click": {
+								"send": "DISMISS"
+							}
+						}
+					}
+				]
+			},
+			{
+				"tag": "div",
+				"class": "split-container",
+				"children": [
+					{
+						"tag": "div",
+						"class": "list-panel",
+						"children": [
+							{
+								"tag": "div",
+								"class": "item-list",
+								"$each": {
+									"items": "$sparks",
+									"template": {
+										"tag": "div",
+										"class": "item",
+										"children": [
+											{
+												"tag": "h3",
+												"class": "item-name",
+												"text": "$$name"
+											}
+										],
+										"$on": {
+											"click": {
+												"send": "SELECT_SPARK",
+												"payload": {
+													"sparkId": "$$id"
+												}
+											}
+										}
+									}
+								}
+							}
+						]
+					},
+					{
+						"tag": "div",
+						"class": "detail-panel",
+						"children": [
+							{
+								"tag": "div",
+								"class": "detail-content-wrapper",
+								"$slot": "$currentDetail"
+							}
+						]
+					}
+				]
+			}
+		]
+	}
+}

@@ -1,0 +1,19 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/views/layout-sparks",
+	"role": "@maia/actor/views/layout-sparks",
+	"context": "°Maia/actor/views/layout-sparks/context",
+	"view": "°Maia/actor/views/formWithSplit/view",
+	"process": "°Maia/actor/views/layout-sparks/process",
+	"brand": "°Maia/style/brand",
+	"style": "°Maia/actor/views/formWithSplit/style",
+	"inbox": "°Maia/actor/views/layout-sparks/inbox",
+	"interface": [
+		"CREATE_BUTTON",
+		"UPDATE_INPUT",
+		"SELECT_SPARK",
+		"SUCCESS",
+		"ERROR",
+		"DISMISS"
+	]
+}

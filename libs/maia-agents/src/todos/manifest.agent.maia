@@ -6,6 +6,7 @@
 	"actor": "°Maia/todos/actor/intent",
 	"dependencies": [
 		"°Maia/todos/actor/intent",
+		"°Maia/actor/views/layout-todos",
 		"°Maia/actor/services/list",
 		"°Maia/actor/coming-soon",
 		"°Maia/actor/os/db"

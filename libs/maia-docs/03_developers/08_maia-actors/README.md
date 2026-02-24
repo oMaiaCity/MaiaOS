@@ -24,6 +24,11 @@ The `@MaiaOS/actors` package provides a centralized registry for all MaiaScript 
 libs/maia-actors/src/
 ├── index.js                    # Main exports (ACTORS, getActor, getSeedConfig)
 ├── seed-config.js              # Service actor seeding (actors, states, inboxes)
+├── views/                      # Layout actors (headless intent pattern)
+│   ├── headerWithViewSwitcher/  # Todos, Creator
+│   ├── formWithSplit/          # Sparks
+│   ├── grid/                   # Humans
+│   └── modalChat/              # Chat
 ├── aiChat/
 │   ├── aiChat.actor.maia       # Actor definition ($schema: °Maia/schema/actor)
 │   ├── aiChat.state.maia       # State machine (idle→processing on CHAT)

@@ -1,23 +1,8 @@
 {
 	"$schema": "°Maia/schema/context",
 	"$id": "°Maia/sparks/context/intent",
-	"sparks": {
-		"schema": "°Maia/schema/data/spark",
-		"map": {
-			"id": "id",
-			"name": "name"
-		}
-	},
-	"newSparkName": "",
-	"inputPlaceholder": "Enter spark name...",
-	"createButtonText": "Create Spark",
-	"error": null,
-	"hasError": false,
-	"loading": false,
-	"selectedSparkId": null,
-	"selectedSparkItems": {},
-	"currentDetail": "@detail",
+	"layout": "@layout",
 	"@actors": {
-		"detail": "°Maia/actor/services/detail"
+		"layout": "°Maia/actor/views/layout-sparks"
 	}
 }

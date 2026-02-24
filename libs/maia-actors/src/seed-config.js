@@ -35,18 +35,45 @@ import messagesContext from './services/messages/context.maia'
 import messagesInbox from './services/messages/inbox.maia'
 import messagesProcess from './services/messages/process.maia'
 import messagesView from './services/messages/view.maia'
-import paperActor from './services/paper/paper.actor.maia'
-import paperContext from './services/paper/paper.context.maia'
-import paperInbox from './services/paper/paper.inbox.maia'
-import paperProcess from './services/paper/paper.process.maia'
-import paperTool from './services/paper/paper.tool.maia'
-import paperView from './services/paper/paper.view.maia'
+import paperActor from './services/paper/actor.maia'
+import paperContext from './services/paper/context.maia'
+import paperInbox from './services/paper/inbox.maia'
+import paperProcess from './services/paper/process.maia'
+import paperTool from './services/paper/tool.maia'
+import paperView from './services/paper/view.maia'
 import comingSoonActor from './views/comingSoon/actor.maia'
 import comingSoonContext from './views/comingSoon/context.maia'
 import comingSoonInbox from './views/comingSoon/inbox.maia'
 import comingSoonProcess from './views/comingSoon/process.maia'
 import comingSoonStyle from './views/comingSoon/style.maia'
 import comingSoonView from './views/comingSoon/view.maia'
+import layoutSparksActor from './views/formWithSplit/actor.maia'
+import layoutSparksContext from './views/formWithSplit/context.maia'
+import layoutSparksInbox from './views/formWithSplit/inbox.maia'
+import layoutSparksProcess from './views/formWithSplit/process.maia'
+import formWithSplitStyle from './views/formWithSplit/style.maia'
+import formWithSplitView from './views/formWithSplit/view.maia'
+import layoutHumansActor from './views/grid/actor.maia'
+import layoutHumansContext from './views/grid/context.maia'
+import layoutHumansInbox from './views/grid/inbox.maia'
+import layoutHumansProcess from './views/grid/process.maia'
+import gridStyle from './views/grid/style.maia'
+import gridView from './views/grid/view.maia'
+import layoutCreatorActor from './views/headerWithViewSwitcher/actor-creator.maia'
+import layoutTodosActor from './views/headerWithViewSwitcher/actor-todos.maia'
+import layoutCreatorContext from './views/headerWithViewSwitcher/context-creator.maia'
+import layoutTodosContext from './views/headerWithViewSwitcher/context-todos.maia'
+import layoutCreatorInbox from './views/headerWithViewSwitcher/inbox-creator.maia'
+import layoutTodosInbox from './views/headerWithViewSwitcher/inbox-todos.maia'
+import layoutCreatorProcess from './views/headerWithViewSwitcher/process-creator.maia'
+import layoutTodosProcess from './views/headerWithViewSwitcher/process-todos.maia'
+import headerWithViewSwitcherStyle from './views/headerWithViewSwitcher/style.maia'
+import headerWithViewSwitcherView from './views/headerWithViewSwitcher/view.maia'
+import layoutChatActor from './views/modalChat/actor.maia'
+import layoutChatContext from './views/modalChat/context.maia'
+import layoutChatInbox from './views/modalChat/inbox.maia'
+import layoutChatProcess from './views/modalChat/process.maia'
+import modalChatView from './views/modalChat/view.maia'
 
 /** Map role to folder name for consistent °Maia/actor/{folder} $ids */
 export const ROLE_TO_FOLDER = {
@@ -139,6 +166,45 @@ export function getSeedConfig() {
 			process: comingSoonProcess,
 			style: comingSoonStyle,
 			inbox: comingSoonInbox,
+		},
+		{
+			actor: layoutTodosActor,
+			context: layoutTodosContext,
+			view: headerWithViewSwitcherView,
+			process: layoutTodosProcess,
+			style: headerWithViewSwitcherStyle,
+			inbox: layoutTodosInbox,
+		},
+		{
+			actor: layoutCreatorActor,
+			context: layoutCreatorContext,
+			view: headerWithViewSwitcherView,
+			process: layoutCreatorProcess,
+			style: headerWithViewSwitcherStyle,
+			inbox: layoutCreatorInbox,
+		},
+		{
+			actor: layoutSparksActor,
+			context: layoutSparksContext,
+			view: formWithSplitView,
+			process: layoutSparksProcess,
+			style: formWithSplitStyle,
+			inbox: layoutSparksInbox,
+		},
+		{
+			actor: layoutHumansActor,
+			context: layoutHumansContext,
+			view: gridView,
+			process: layoutHumansProcess,
+			style: gridStyle,
+			inbox: layoutHumansInbox,
+		},
+		{
+			actor: layoutChatActor,
+			context: layoutChatContext,
+			view: modalChatView,
+			process: layoutChatProcess,
+			inbox: layoutChatInbox,
 		},
 	]
 	const uiContexts = {}

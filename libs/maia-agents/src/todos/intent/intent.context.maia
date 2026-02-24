@@ -1,14 +1,8 @@
 {
 	"$schema": "°Maia/schema/context",
 	"$id": "°Maia/todos/context/intent",
-	"currentView": "@list",
-	"viewMode": "list",
-	"listButtonActive": true,
-	"comingSoonButtonActive": false,
-	"listViewLabel": "List",
-	"comingSoonViewLabel": "Soon",
+	"layout": "@layout",
 	"@actors": {
-		"list": "°Maia/actor/services/list",
-		"comingSoon": "°Maia/actor/coming-soon"
+		"layout": "°Maia/actor/views/layout-todos"
 	}
 }

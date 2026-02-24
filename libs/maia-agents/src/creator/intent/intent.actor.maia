@@ -7,7 +7,5 @@
 	"process": "°Maia/creator/process/intent",
 	"brand": "°Maia/style/brand",
 	"inbox": "°Maia/creator/inbox/intent",
-	"interface": [
-		"SWITCH_VIEW"
-	]
+	"interface": []
 }
