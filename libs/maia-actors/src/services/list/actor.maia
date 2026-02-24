@@ -6,7 +6,7 @@
 	"view": "°Maia/actor/services/list/view",
 	"process": "°Maia/actor/services/list/process",
 	"brand": "°Maia/style/brand",
-	"style": "°Maia/todos/style/list",
+	"style": "°Maia/actor/services/list/style",
 	"inbox": "°Maia/actor/services/list/inbox",
 	"interface": [
 		"CREATE_BUTTON",
