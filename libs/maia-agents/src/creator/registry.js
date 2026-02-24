@@ -8,7 +8,7 @@ import masterBrand from '../shared/brand.style.maia'
 import intentActor from './intent/intent.actor.maia'
 import logsContext from './logs/logs.context.maia'
 import logsInbox from './logs/logs.inbox.maia'
-import logsState from './logs/logs.state.maia'
+import logsProcess from './logs/logs.process.maia'
 import logsStyle from './logs/logs.style.maia'
 import logsView from './logs/logs.view.maia'
 import logsAgent from './manifest.agent.maia'
@@ -33,8 +33,8 @@ export const LogsAgentRegistry = {
 		'°Maia/creator/context/logs': logsContext,
 	},
 
-	states: {
-		'°Maia/creator/state/logs': logsState,
+	processes: {
+		'°Maia/creator/process/logs': logsProcess,
 	},
 
 	inboxes: {

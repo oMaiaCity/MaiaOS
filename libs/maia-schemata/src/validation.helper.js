@@ -2,6 +2,8 @@
  * Validation Helper - Initializes validation engine with all schemas
  */
 
+import { normalizeCoValueData } from '@MaiaOS/db'
+import { normalizeSchemaReferencesWithResolver } from './schema-ref-resolver.js'
 import { ValidationEngine } from './validation.engine.js'
 import { formatValidationErrors, handleValidationResult } from './validation.utils.js'
 
@@ -101,6 +103,7 @@ export async function getValidationEngine(options = null) {
 
 /**
  * Validate data against a raw JSON Schema object (single source of truth)
+ * Schemas are normalized at read time (data-extraction.js) - CoMap array format → plain object
  * @param {Object} schema - JSON Schema object
  * @param {any} data - Data to validate
  * @param {string} context - Optional context for error messages (e.g., 'tool-payload')
@@ -112,27 +115,37 @@ export async function validateAgainstSchema(schema, data, context = '', throwOnE
 	const engine = await getValidationEngine()
 	await engine.initialize()
 
+	// Resolve properties/items/$defs that are co-id strings (references to other CoValues) into plain schema objects.
+	// Required for agent loading path: schema from op:'schema' can have properties as co-id refs; AJV expects objects.
+	let schemaToNormalize = schema
+	if (engine.schemaResolver) {
+		schemaToNormalize = await normalizeSchemaReferencesWithResolver(engine.schemaResolver, schema)
+	}
+
+	// Defensive normalization: CoMap array/CoMap-like properties/items → plain objects (AJV requires plain objects)
+	const normalizedSchema = normalizeCoValueData(schemaToNormalize)
+
 	try {
 		// Before compiling, ensure all referenced schemas are loaded and registered
 		// This is critical for schemas loaded from IndexedDB with co-id references
-		await engine._resolveAndRegisterSchemaDependencies(schema)
+		await engine._resolveAndRegisterSchemaDependencies(normalizedSchema)
 
 		// AJV automatically resolves $schema and $ref via its registry
 		// Compile the schema (AJV caches by $id for performance)
 		let validate
 
-		if (schema.$id) {
+		if (normalizedSchema.$id) {
 			// Try to get existing validator from cache
-			const existingValidator = engine.ajv.getSchema(schema.$id)
+			const existingValidator = engine.ajv.getSchema(normalizedSchema.$id)
 			if (existingValidator) {
 				validate = existingValidator
 			} else {
 				// Not in cache, compile it
-				validate = engine.ajv.compile(schema)
+				validate = engine.ajv.compile(normalizedSchema)
 			}
 		} else {
 			// Schema without $id - compile fresh (partial schemas, dynamic schemas)
-			validate = engine.ajv.compile(schema)
+			validate = engine.ajv.compile(normalizedSchema)
 		}
 
 		const valid = validate(data)
@@ -261,6 +274,62 @@ export function requireDataEngine(dataEngine, operationName, reason = '') {
  * @throws {Error} If schema not found or validation fails
  * @returns {Promise<Object>} Loaded schema definition
  */
+/**
+ * Resolve properties/items that are co-id strings (references to other CoValues) into plain schema objects.
+ * Recursively walks schema; uses visited set to prevent circular references.
+ * @param {Object} peer - Backend instance for resolve()
+ * @param {Object} schema - Schema object (may have properties/items as co-id strings)
+ * @param {Set<string>} visited - Set of co-ids already visited (prevents circular refs)
+ * @returns {Promise<Object>} Schema with co-id references resolved
+ */
+async function normalizeSchemaReferences(peer, schema, visited = new Set()) {
+	if (!schema || typeof schema !== 'object') return schema
+
+	const resolveAsync = (await import('@MaiaOS/db')).resolve
+
+	const resolveIfCoId = async (val) => {
+		if (typeof val === 'string' && val.startsWith('co_z') && !visited.has(val)) {
+			visited.add(val)
+			try {
+				const resolved = await resolveAsync(peer, val, { returnType: 'schema' })
+				if (resolved) return await normalizeSchemaReferences(peer, resolved, visited)
+			} finally {
+				visited.delete(val)
+			}
+		}
+		return val
+	}
+
+	const result = { ...schema }
+
+	if (result.properties !== undefined) {
+		result.properties = await resolveIfCoId(result.properties)
+		if (
+			result.properties &&
+			typeof result.properties === 'object' &&
+			!Array.isArray(result.properties)
+		) {
+			const next = {}
+			for (const [k, v] of Object.entries(result.properties)) {
+				next[k] = await normalizeSchemaReferences(peer, v, visited)
+			}
+			result.properties = next
+		}
+	}
+	if (result.items !== undefined) {
+		result.items = await resolveIfCoId(result.items)
+		if (Array.isArray(result.items)) {
+			result.items = await Promise.all(
+				result.items.map((item) => normalizeSchemaReferences(peer, item, visited)),
+			)
+		} else if (result.items && typeof result.items === 'object') {
+			result.items = await normalizeSchemaReferences(peer, result.items, visited)
+		}
+	}
+
+	return result
+}
+
 export async function loadSchemaAndValidate(backend, schemaRef, data, context, options = {}) {
 	const { dataEngine, registrySchemas, getAllSchemas } = options
 
@@ -276,10 +345,13 @@ export async function loadSchemaAndValidate(backend, schemaRef, data, context, o
 		}
 
 		// Load schema from database (runtime schema - single source of truth)
-		const schemaDef = await resolve(backend, schemaRef, { returnType: 'schema' })
+		let schemaDef = await resolve(backend, schemaRef, { returnType: 'schema' })
 		if (!schemaDef) {
 			throw new Error(`[${context}] Schema not found in database: ${schemaRef}`)
 		}
+
+		// Resolve properties/items that are co-id references (AJV requires plain objects)
+		schemaDef = await normalizeSchemaReferences(backend, schemaDef)
 
 		// Fill required fields when undefined only if schema allows empty (avoids minLength/pattern failures)
 		// Skip fill for string fields with minLength > 0 - let validation fail with clear "required" message

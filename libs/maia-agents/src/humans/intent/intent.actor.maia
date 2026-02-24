@@ -2,7 +2,7 @@
 	"$schema": "°Maia/schema/actor",
 	"$id": "°Maia/humans/actor/intent",
 	"type": "service",
-	"state": "°Maia/humans/state/intent",
+	"process": "°Maia/humans/process/intent",
 	"view": "°Maia/humans/view/intent",
 	"context": "°Maia/humans/context/intent",
 	"brand": "°Maia/humans/style/brand",

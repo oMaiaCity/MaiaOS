@@ -154,7 +154,7 @@ Delivers an event to a target actor (inbox-only, persisted via CoJSON).
 
 **Parameters:**
 - `senderId` (string) - Sender actor co-id
-- `targetId` (string) - Target actor co-id (or human-readable; resolved via CoJSON)
+- `targetId` (string) - Target actor co-id (co-id only; config-derived refs must be transformed at seed)
 - `type` (string) - Message type
 - `payload` (Object) - Resolved payload (no expressions)
 

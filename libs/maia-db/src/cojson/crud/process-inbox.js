@@ -78,32 +78,15 @@ export async function processInbox(peer, actorId, inboxCoId) {
 	if (!inboxData?.sessions) {
 		return { messages: [] }
 	}
-	const ourMessages = inboxData.sessions[currentSessionID]
-	const sessionKeys = Object.keys(inboxData.sessions || {})
-	const totalInOtherSessions = sessionKeys.reduce(
-		(sum, k) => sum + (Array.isArray(inboxData.sessions[k]) ? inboxData.sessions[k].length : 0),
-		0,
-	)
-	if (typeof window !== 'undefined' && totalInOtherSessions > 0) {
-		const ourCount = Array.isArray(ourMessages) ? ourMessages.length : 0
-		if (ourCount === 0) {
-			console.warn(
-				'[sendToActor] processInbox: SESSION MISMATCH? Inbox has messages in other sessions but none in ours',
-				{
-					currentSessionID,
-					inboxCoId,
-					totalInOtherSessions,
-					sessionKeys: sessionKeys.slice(0, 3),
-				},
-			)
-		}
-	}
-	if (!Array.isArray(ourMessages)) {
-		return { messages: [] }
+	// CRITICAL: Process ALL sessions - client must see server replies (e.g. SUCCESS from aiChat on moai)
+	// Session-only processing caused: maia never saw SUCCESS (moai's session) → result: null, no LLM response
+	const allMessages = []
+	for (const items of Object.values(inboxData.sessions || {})) {
+		if (Array.isArray(items)) allMessages.push(...items)
 	}
 
 	const unprocessedMessages = []
-	for (const message of ourMessages) {
+	for (const message of allMessages) {
 		// Skip system messages (INIT, etc.) - they're just for debugging/display
 		const isSystemMessage = message.type === 'INIT' || message.from === 'system'
 		if (isSystemMessage) {
@@ -184,7 +167,7 @@ export async function processInbox(peer, actorId, inboxCoId) {
 				unprocessedMessages.push({
 					...extractedMessageData,
 					_coId: messageCoId,
-					_sessionID: currentSessionID,
+					_sessionID: message._sessionID ?? currentSessionID,
 					_madeAt: madeAt,
 				})
 			}
@@ -196,6 +179,18 @@ export async function processInbox(peer, actorId, inboxCoId) {
 	// Sort messages by madeAt (oldest first) for processing order
 	unprocessedMessages.sort((a, b) => (a._madeAt || 0) - (b._madeAt || 0))
 
+	// Debug: log session info when STATUS_UPDATE messages present (trace "Thinking" stuck)
+	const hasStatusUpdate = unprocessedMessages.some((m) => m.type === 'STATUS_UPDATE')
+	if (
+		hasStatusUpdate &&
+		(typeof import.meta !== 'undefined' ? import.meta?.env?.DEV : process.env?.MAIA_DEBUG)
+	) {
+		console.log('[processInbox] STATUS_UPDATE messages', {
+			actorId,
+			currentSessionID,
+			count: unprocessedMessages.filter((m) => m.type === 'STATUS_UPDATE').length,
+		})
+	}
 	return {
 		messages: unprocessedMessages,
 		messageSchemaCoId,

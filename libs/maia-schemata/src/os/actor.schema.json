@@ -19,6 +19,10 @@
 			"$co": "°Maia/schema/state",
 			"description": "Co-id reference to state machine definition"
 		},
+		"process": {
+			"$co": "°Maia/schema/process",
+			"description": "Co-id reference to process config (GenServer-style handlers)"
+		},
 		"brand": {
 			"$co": "°Maia/schema/style",
 			"description": "Co-id reference to brand style definition (uses style schema)"

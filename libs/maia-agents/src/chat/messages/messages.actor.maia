@@ -4,7 +4,7 @@
 	"role": "@chat/messages",
 	"context": "°Maia/chat/context/messages",
 	"view": "°Maia/chat/view/messages",
-	"state": "°Maia/chat/state/messages",
+	"process": "°Maia/chat/process/messages",
 	"brand": "°Maia/chat/style/brand",
 	"style": "°Maia/chat/style/brand",
 	"inbox": "°Maia/chat/inbox/messages",

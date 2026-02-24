@@ -98,6 +98,7 @@ import expressionSchema from './os/maia-script-expression.schema.json'
 import messagePayloadSchema from './os/messagePayload.schema.json'
 import messageTypeSchema from './os/messageType.schema.json'
 import osRegistrySchema from './os/os-registry.schema.json'
+import processSchema from './os/process.schema.json'
 import registriesSchema from './os/registries.schema.json'
 // Import OS infrastructure schemas
 import schematasRegistrySchema from './os/schematas-registry.schema.json'
@@ -115,6 +116,7 @@ const SCHEMAS = {
 	actor: actorSchema,
 	tool: toolSchema,
 	context: contextSchema,
+	process: processSchema,
 	state: stateSchema,
 	view: viewSchema,
 	style: styleSchema,

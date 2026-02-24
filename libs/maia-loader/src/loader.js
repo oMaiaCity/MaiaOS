@@ -17,8 +17,8 @@ import {
 	DataEngine,
 	MaiaScriptEvaluator,
 	ModuleRegistry,
+	ProcessEngine,
 	Runtime,
-	StateEngine,
 	StyleEngine,
 	ViewEngine,
 } from '@MaiaOS/engines'
@@ -43,7 +43,7 @@ export class MaiaOS {
 	constructor() {
 		this.moduleRegistry = null
 		this.evaluator = null
-		this.stateEngine = null
+		this.processEngine = null
 		this.styleEngine = null
 		this.viewEngine = null
 		this.actorEngine = null
@@ -353,7 +353,7 @@ export class MaiaOS {
 		// Store engines in registry for module access
 		os.moduleRegistry._dataEngine = os.dataEngine
 
-		os.stateEngine = new StateEngine(os.evaluator)
+		os.processEngine = new ProcessEngine(os.evaluator)
 		os.styleEngine = new StyleEngine()
 		// Clear cache on boot in development only
 		if (config.isDevelopment || import.meta.env?.DEV) {
@@ -362,7 +362,7 @@ export class MaiaOS {
 		os.viewEngine = new ViewEngine(os.evaluator, null, os.moduleRegistry)
 
 		// Initialize ActorEngine (will receive SubscriptionEngine after it's created)
-		os.actorEngine = new ActorEngine(os.styleEngine, os.viewEngine, os.stateEngine)
+		os.actorEngine = new ActorEngine(os.styleEngine, os.viewEngine, os.processEngine)
 
 		// SubscriptionEngine eliminated - all subscriptions handled via direct read() + ReactiveStore
 
@@ -371,14 +371,14 @@ export class MaiaOS {
 		os.viewEngine.dataEngine = os.dataEngine
 		os.viewEngine.styleEngine = os.styleEngine
 		os.styleEngine.dataEngine = os.dataEngine
-		os.stateEngine.dataEngine = os.dataEngine
+		os.processEngine.dataEngine = os.dataEngine
+		os.processEngine.actorOps = os.actorEngine
 
 		// Store reference to MaiaOS in actorEngine (for @db tool access)
 		os.actorEngine.os = os
 
-		// Pass ActorOps to ViewEngine and StateEngine (Loader wires; no circular ref)
+		// Pass ActorOps to ViewEngine (Loader wires; no circular ref)
 		os.viewEngine.actorOps = os.actorEngine
-		os.stateEngine.actorOps = os.actorEngine
 	}
 
 	/**
@@ -644,7 +644,7 @@ export class MaiaOS {
 		}
 
 		const store = agentStore
-		let agent = store.value
+		const agent = store.value
 
 		if (!agent || agent.error) {
 			try {
@@ -655,17 +655,6 @@ export class MaiaOS {
 				})
 			} catch (_err) {}
 			throw new Error(`Agent not found in database: ${agentId} (co-id: ${agentCoId})`)
-		}
-
-		if (agent.properties && Array.isArray(agent.properties)) {
-			const plainAgent = {}
-			for (const prop of agent.properties) {
-				plainAgent[prop.key] = prop.value
-			}
-			if (agent.id) plainAgent.id = agent.id
-			if (agent.$schema) plainAgent.$schema = agent.$schema
-			if (agent.type) plainAgent.type = agent.type
-			agent = plainAgent
 		}
 
 		const schema = schemaStore.value
@@ -817,7 +806,7 @@ export class MaiaOS {
 			actorEngine: this.actorEngine,
 			viewEngine: this.viewEngine,
 			styleEngine: this.styleEngine,
-			stateEngine: this.stateEngine,
+			processEngine: this.processEngine,
 			dataEngine: this.dataEngine,
 			evaluator: this.evaluator,
 			moduleRegistry: this.moduleRegistry,

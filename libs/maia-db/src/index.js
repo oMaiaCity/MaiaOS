@@ -31,6 +31,8 @@ export {
 	getCoListId,
 	getSchemaIndexColistId,
 } from './cojson/crud/collection-helpers.js'
+// Data extraction (single canonical read format; normalizeCoValueData for CoMap/CoList shapes)
+export { extractCoValueData, normalizeCoValueData } from './cojson/crud/data-extraction.js'
 // Message Helpers (create and push message CoMaps)
 export { createAndPushMessage } from './cojson/crud/message-helpers.js'
 // Process Inbox (peer-to-peer inbox processing)

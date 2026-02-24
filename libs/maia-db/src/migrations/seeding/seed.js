@@ -24,6 +24,7 @@ const REFERENCE_PROPS = [
 	'context',
 	'view',
 	'state',
+	'process',
 	'brand',
 	'style',
 	'inbox',
@@ -384,10 +385,12 @@ export async function seed(
 		return seeded
 	}
 
+	// Process before actors: actor configs reference process, so process must be seeded first
 	const CONFIG_ORDER = [
 		['styles', 'styles'],
 		['inboxes', 'inboxes'],
 		['tools', 'tools'],
+		['processes', 'processes'],
 		['actors', 'actors'],
 		['views', 'views'],
 		['contexts', 'contexts'],
@@ -445,6 +448,7 @@ export async function seed(
 			['actor', 'actors'],
 			['view', 'views'],
 			['context', 'contexts'],
+			['process', 'processes'],
 			['state', 'states'],
 			['interface', 'interfaces'],
 		]

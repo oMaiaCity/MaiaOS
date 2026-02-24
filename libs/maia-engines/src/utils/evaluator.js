@@ -251,6 +251,20 @@ export class Evaluator {
 			}
 		}
 
+		// Recursively evaluate arrays (e.g. $concat elements like [{role:"user", content:"$pendingInputText"}])
+		if (Array.isArray(expression)) {
+			return Promise.all(expression.map((item) => this.evaluate(item, data, depth + 1)))
+		}
+
+		// Recursively evaluate plain objects (not DSL ops) so nested expressions like content:"$pendingInputText" resolve
+		if (typeof expression === 'object' && expression !== null) {
+			const result = {}
+			for (const [k, v] of Object.entries(expression)) {
+				result[k] = await this.evaluate(v, data, depth + 1)
+			}
+			return result
+		}
+
 		// If no DSL operation, return as-is
 		return expression
 	}

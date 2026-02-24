@@ -1,0 +1,89 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/sparks/process/detail",
+	"handlers": {
+		"LOAD_ACTOR": [
+			{
+				"ctx": {
+					"sparkId": "$$id",
+					"hasSpark": {
+						"$ne": [
+							"$$id",
+							null
+						]
+					},
+					"showEmptyState": {
+						"$eq": [
+							"$$id",
+							null
+						]
+					},
+					"showContent": {
+						"$ne": [
+							"$$id",
+							null
+						]
+					}
+				}
+			}
+		],
+		"UPDATE_AGENT_INPUT": [
+			{
+				"ctx": {
+					"agentIdInput": "$$value",
+					"addButtonDisabled": {
+						"$eq": [
+							"$$value",
+							""
+						]
+					}
+				}
+			}
+		],
+		"ADD_AGENT": [
+			{
+				"ask": {
+					"target": "°Maia/actor/os/spark",
+					"type": "SPARK_OP",
+					"payload": {
+						"op": "addSparkMember",
+						"id": "$sparkId",
+						"memberId": "$$agentId",
+						"role": "writer"
+					}
+				}
+			}
+		],
+		"REMOVE_MEMBER": [
+			{
+				"ask": {
+					"target": "°Maia/actor/os/spark",
+					"type": "SPARK_OP",
+					"payload": {
+						"op": "removeSparkMember",
+						"id": "$sparkId",
+						"memberId": "$$memberId"
+					}
+				}
+			}
+		],
+		"SUCCESS": [
+			{
+				"ctx": {
+					"agentIdInput": "",
+					"addAgentError": null,
+					"addAgentHasError": false,
+					"addButtonDisabled": true
+				}
+			}
+		],
+		"ERROR": [
+			{
+				"ctx": {
+					"addAgentError": "$$errors.0.message",
+					"addAgentHasError": true
+				}
+			}
+		]
+	}
+}

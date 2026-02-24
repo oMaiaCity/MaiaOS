@@ -178,10 +178,11 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 			) {
 				try {
 					const parsed = JSON.parse(value)
-					value = parseNestedJsonStrings(parsed)
+					value = normalizeCoValueData(parsed)
 				} catch (_e) {}
-			} else if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-				value = parseNestedJsonStrings(value)
+			} else if (typeof value === 'object' && value !== null) {
+				// Arrays and objects: normalize CoMap [{key,value}] format, parse JSON strings recursively
+				value = normalizeCoValueData(value)
 			}
 			result[key] = value
 		}
@@ -205,28 +206,57 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 }
 
 /**
- * Recursively parse JSON strings within an object/array
- * Handles cases where nested objects are stored as JSON strings in CoJSON
- * @param {any} data - Data to parse (object, array, or primitive)
- * @returns {any} Data with JSON strings parsed recursively
+ * CoMap array format: [{key, value}, ...] → {key: value, ...}
+ * CoJSON may store nested maps this way. Normalize once at extraction so all consumers get plain objects.
  */
-function parseNestedJsonStrings(data) {
+function isCoMapKeyValueArray(arr) {
+	return (
+		Array.isArray(arr) &&
+		arr.length > 0 &&
+		arr.every((x) => x && typeof x === 'object' && 'key' in x && 'value' in x)
+	)
+}
+
+/**
+ * Normalize CoValue data to plain JS (single implementation for read and write).
+ * Handles: CoMap array [{key,value}], CoMap-like (.get/.keys), JSON strings.
+ * @param {any} data - Data to normalize
+ * @returns {any} Normalized plain JS (objects, arrays, primitives)
+ */
+export function normalizeCoValueData(data) {
 	if (typeof data === 'string' && (data.startsWith('{') || data.startsWith('['))) {
 		try {
 			const parsed = JSON.parse(data)
-			// Recursively parse nested JSON strings
-			return parseNestedJsonStrings(parsed)
+			return normalizeCoValueData(parsed)
 		} catch (_e) {
 			return data // Keep as string if not valid JSON
 		}
 	} else if (Array.isArray(data)) {
-		return data.map((item) => parseNestedJsonStrings(item))
+		// CoMap array format [{key, value}] → convert to object for JSON Schema / consumers
+		if (isCoMapKeyValueArray(data)) {
+			const obj = {}
+			for (const { key, value: v } of data) {
+				obj[key] = normalizeCoValueData(v)
+			}
+			return obj
+		}
+		return data.map((item) => normalizeCoValueData(item))
+	} else if (
+		typeof data === 'object' &&
+		data !== null &&
+		typeof data.get === 'function' &&
+		typeof data.keys === 'function'
+	) {
+		// CoMap-like (nested CoMap): Object.entries() does not extract content; use .keys() and .get()
+		const result = {}
+		for (const k of data.keys()) {
+			result[k] = normalizeCoValueData(data.get(k))
+		}
+		return result
 	} else if (typeof data === 'object' && data !== null) {
 		const result = {}
 		for (const [key, val] of Object.entries(data)) {
-			// CRITICAL: Recursively parse each value - this handles cases where
-			// nested properties like 'options' are stored as JSON strings
-			result[key] = parseNestedJsonStrings(val)
+			result[key] = normalizeCoValueData(val)
 		}
 		return result
 	}

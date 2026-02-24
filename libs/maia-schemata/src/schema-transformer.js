@@ -303,6 +303,7 @@ function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 		'context',
 		'view',
 		'state',
+		'process',
 		'brand',
 		'style',
 		'inbox',
@@ -576,6 +577,15 @@ function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 		}
 	}
 
+	// Transform process handlers (tell/ask targets, op schema)
+	if (transformed.handlers && typeof transformed.handlers === 'object') {
+		for (const [_eventType, actions] of Object.entries(transformed.handlers)) {
+			if (Array.isArray(actions)) {
+				transformArrayItems(actions, coIdMap, transformQueryObjects)
+			}
+		}
+	}
+
 	// Transform query objects in context properties
 	// Query objects have structure: {schema: "°Maia/schema/todos", filter: {...}}
 	// Transform schema field from human-readable reference to co-id
@@ -753,6 +763,64 @@ function transformArrayItems(arr, coIdMap, transformRecursive) {
 				transformSendToActorRef(item, coIdMap)
 				if (item.payload && typeof item.payload === 'object') {
 					transformToolPayload(item.payload, coIdMap, transformRecursive)
+				}
+			}
+			// Check if this is a sendEvent action - MUST transform target to co-id at seed (no runtime resolution)
+			else if (item.sendEvent && typeof item.sendEvent === 'object') {
+				const cfg = item.sendEvent
+				if (cfg.target && typeof cfg.target === 'string' && !cfg.target.startsWith('co_z')) {
+					const coId = transformTargetReference(cfg.target, coIdMap, 'sendEvent.target')
+					if (coId) cfg.target = coId
+					else
+						throw new Error(
+							`[SchemaTransformer] No co-id found for sendEvent target: ${cfg.target}. Ensure actor exists and is seeded before state config.`,
+						)
+				}
+				if (cfg.payload && typeof cfg.payload === 'object') {
+					transformToolPayload(cfg.payload, coIdMap, transformRecursive)
+				}
+			}
+			// Process config: tell and ask - MUST transform target to co-id at seed
+			else if (item.tell && typeof item.tell === 'object') {
+				const cfg = item.tell
+				if (cfg.target && typeof cfg.target === 'string' && !cfg.target.startsWith('co_z')) {
+					const coId = transformTargetReference(cfg.target, coIdMap, 'tell.target')
+					if (coId) cfg.target = coId
+					else
+						throw new Error(
+							`[SchemaTransformer] No co-id found for tell target: ${cfg.target}. Ensure actor exists and is seeded before process config.`,
+						)
+				}
+				if (cfg.payload && typeof cfg.payload === 'object') {
+					transformToolPayload(cfg.payload, coIdMap, transformRecursive)
+				}
+			} else if (item.ask && typeof item.ask === 'object') {
+				const cfg = item.ask
+				if (cfg.target && typeof cfg.target === 'string' && !cfg.target.startsWith('co_z')) {
+					const coId = transformTargetReference(cfg.target, coIdMap, 'ask.target')
+					if (coId) cfg.target = coId
+					else
+						throw new Error(
+							`[SchemaTransformer] No co-id found for ask target: ${cfg.target}. Ensure actor exists and is seeded before process config.`,
+						)
+				}
+				if (cfg.payload && typeof cfg.payload === 'object') {
+					transformToolPayload(cfg.payload, coIdMap, transformRecursive)
+				}
+			}
+			// Process config: op create - transform schema reference
+			else if (item.op && typeof item.op === 'object') {
+				const createConfig = item.op.create
+				if (
+					createConfig?.schema &&
+					typeof createConfig.schema === 'string' &&
+					!createConfig.schema.startsWith('co_z')
+				) {
+					const coId = transformSchemaReference(createConfig.schema, coIdMap, 'op.create.schema')
+					if (coId) createConfig.schema = coId
+				}
+				if (createConfig?.data && typeof createConfig.data === 'object') {
+					transformToolPayload(createConfig.data, coIdMap, transformRecursive)
 				}
 			}
 			// Check if this is a mapData action
@@ -937,6 +1005,25 @@ function transformQueryObjects(obj, coIdMap, depth = 0) {
 				typeof value.payload === 'object'
 			) {
 				transformActionPayload(value, coIdMap, transformQueryObjects)
+			}
+			// Check for sendEvent config - MUST transform target to co-id at seed (no runtime resolution)
+			else if (
+				key === 'sendEvent' &&
+				value &&
+				typeof value === 'object' &&
+				value.target &&
+				typeof value.target === 'string' &&
+				!value.target.startsWith('co_z')
+			) {
+				const coId = transformTargetReference(value.target, coIdMap, 'sendEvent.target')
+				if (coId) value.target = coId
+				else
+					throw new Error(
+						`[SchemaTransformer] No co-id found for sendEvent target: ${value.target}. Ensure actor exists and is seeded before state config.`,
+					)
+				if (value.payload && typeof value.payload === 'object') {
+					transformToolPayload(value.payload, coIdMap, transformQueryObjects)
+				}
 			}
 			// Check for generic payload pattern (object with payload but no tool)
 			else if (value.payload && typeof value.payload === 'object') {

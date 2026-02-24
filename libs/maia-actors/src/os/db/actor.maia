@@ -1,0 +1,12 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/os/db",
+	"role": "@maia/actor/os/db",
+	"interface": [
+		"DB_OP",
+		"SUCCESS",
+		"ERROR"
+	],
+	"process": "°Maia/actor/os/db/process",
+	"tool": "°Maia/actor/os/db/tool"
+}

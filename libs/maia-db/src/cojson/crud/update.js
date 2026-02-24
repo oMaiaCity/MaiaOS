@@ -56,15 +56,30 @@ export async function update(peer, _schema, id, data) {
 		// Skip validation for exception schemas
 		if (!isExceptionSchema(schemaCoId)) {
 			// Get existing data (current state) - use getRawRecord which returns actual properties
-			// getRawRecord returns data with $schema but without id (perfect for validation)
 			const existingDataRaw = await peer.getRawRecord(id)
 
 			if (existingDataRaw) {
-				// Strip $schema metadata before validation (schema validation expects only data properties)
-				const { $schema: _schema, ...existingDataWithoutMetadata } = existingDataRaw
+				// Load schema to get allowed properties (additionalProperties: false → must strip metadata)
+				const schemaDef = await resolve(peer, schemaCoId, { returnType: 'schema' })
+				const allowedKeys =
+					schemaDef?.properties && typeof schemaDef.properties === 'object'
+						? new Set(Object.keys(schemaDef.properties))
+						: null
 
-				// Merge existing data with update data
-				const mergedData = { ...existingDataWithoutMetadata, ...data }
+				// Strip metadata (id, _coValueType, $schema, type, groupInfo, etc.) — keep only schema-defined properties
+				const stripToSchema = (obj) =>
+					allowedKeys
+						? Object.fromEntries(Object.entries(obj).filter(([k]) => allowedKeys.has(k)))
+						: Object.fromEntries(
+								Object.entries(obj).filter(
+									([k]) =>
+										!['id', '$schema', '_coValueType', 'type', 'loading', 'error', 'groupInfo'].includes(k),
+								),
+							)
+				const existingDataOnly = stripToSchema(existingDataRaw)
+
+				// Merge existing (schema props only) with update data
+				const mergedData = { ...existingDataOnly, ...data }
 
 				// Validate merged data against schema BEFORE applying to CRDT
 				try {
