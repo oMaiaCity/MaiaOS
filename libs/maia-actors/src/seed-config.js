@@ -13,9 +13,6 @@ import dbTool from './os/db/tool.maia'
 import computeMessageNamesActor from './os/names/actor.maia'
 import computeMessageNamesProcess from './os/names/process.maia'
 import computeMessageNamesTool from './os/names/tool.maia'
-import updatePaperContentActor from './os/paper/actor.maia'
-import updatePaperContentProcess from './os/paper/process.maia'
-import updatePaperContentTool from './os/paper/tool.maia'
 import detailActor from './services/detail/actor.maia'
 import detailContext from './services/detail/context.maia'
 import detailInbox from './services/detail/inbox.maia'
@@ -24,11 +21,13 @@ import detailView from './services/detail/view.maia'
 import listActor from './services/list/actor.maia'
 import listContext from './services/list/context.maia'
 import listInbox from './services/list/inbox.maia'
+import listStyle from './services/list/list.style.maia'
 import listProcess from './services/list/process.maia'
 import listView from './services/list/view.maia'
 import logsActor from './services/logs/actor.maia'
 import logsContext from './services/logs/context.maia'
 import logsInbox from './services/logs/inbox.maia'
+import logsStyle from './services/logs/logs.style.maia'
 import logsProcess from './services/logs/process.maia'
 import logsView from './services/logs/view.maia'
 import messagesActor from './services/messages/actor.maia'
@@ -36,6 +35,12 @@ import messagesContext from './services/messages/context.maia'
 import messagesInbox from './services/messages/inbox.maia'
 import messagesProcess from './services/messages/process.maia'
 import messagesView from './services/messages/view.maia'
+import paperActor from './services/paper/paper.actor.maia'
+import paperContext from './services/paper/paper.context.maia'
+import paperInbox from './services/paper/paper.inbox.maia'
+import paperProcess from './services/paper/paper.process.maia'
+import paperTool from './services/paper/paper.tool.maia'
+import paperView from './services/paper/paper.view.maia'
 import comingSoonActor from './views/comingSoon/actor.maia'
 import comingSoonContext from './views/comingSoon/context.maia'
 import comingSoonInbox from './views/comingSoon/inbox.maia'
@@ -48,7 +53,6 @@ export const ROLE_TO_FOLDER = {
 	'@maia/actor/os/ai': 'os/ai',
 	'@maia/actor/os/db': 'os/db',
 	'@maia/actor/os/names': 'os/names',
-	'@maia/actor/os/paper': 'os/paper',
 	'@maia/actor/coming-soon': 'coming-soon',
 }
 
@@ -65,7 +69,7 @@ export const ACTOR_ID_TO_EVENT_TYPE = {
 	'°Maia/actor/os/ai': 'CHAT',
 	'°Maia/actor/os/db': 'DB_OP',
 	'°Maia/actor/os/names': 'COMPUTE_NAMES',
-	'°Maia/actor/os/paper': 'UPDATE_PAPER',
+	'°Maia/actor/services/paper': 'UPDATE_PAPER',
 }
 
 /** Build actor config for seeding - uses actor schema */
@@ -105,7 +109,6 @@ export function getSeedConfig() {
 		[aiChatActor, aiChatProcess, aiChatTool],
 		[computeMessageNamesActor, computeMessageNamesProcess, computeMessageNamesTool],
 		[dbActor, dbProcess, dbTool],
-		[updatePaperContentActor, updatePaperContentProcess, updatePaperContentTool],
 	]
 
 	const actors = {}
@@ -151,8 +154,16 @@ export function getSeedConfig() {
 		if (inbox?.$id) inboxes[inbox.$id] = inbox
 	}
 
-	// Service actors (messages, logs, list, detail)
+	// Service actors (messages, logs, list, detail, paper)
 	const serviceActors = [
+		{
+			actor: paperActor,
+			context: paperContext,
+			view: paperView,
+			process: paperProcess,
+			tool: paperTool,
+			inbox: paperInbox,
+		},
 		{
 			actor: messagesActor,
 			context: messagesContext,
@@ -165,6 +176,7 @@ export function getSeedConfig() {
 			context: logsContext,
 			view: logsView,
 			process: logsProcess,
+			style: logsStyle,
 			inbox: logsInbox,
 		},
 		{
@@ -172,6 +184,7 @@ export function getSeedConfig() {
 			context: listContext,
 			view: listView,
 			process: listProcess,
+			style: listStyle,
 			inbox: listInbox,
 		},
 		{
@@ -182,11 +195,21 @@ export function getSeedConfig() {
 			inbox: detailInbox,
 		},
 	]
-	for (const { actor, context, view, process: proc, inbox: inboxCfg } of serviceActors) {
+	for (const {
+		actor,
+		context,
+		view,
+		process: proc,
+		style: styleCfg,
+		tool: toolCfg,
+		inbox: inboxCfg,
+	} of serviceActors) {
 		if (actor?.$id) actors[actor.$id] = actor
 		if (context?.$id) uiContexts[context.$id] = context
 		if (view?.$id) uiViews[view.$id] = view
 		if (proc?.$id) uiProcesses[proc.$id] = proc
+		if (styleCfg?.$id) uiStyles[styleCfg.$id] = styleCfg
+		if (toolCfg?.$id) tools[toolCfg.$id] = toolCfg
 		if (inboxCfg?.$id) inboxes[inboxCfg.$id] = inboxCfg
 	}
 

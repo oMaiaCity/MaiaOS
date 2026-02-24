@@ -6,7 +6,7 @@
 	"view": "°Maia/actor/services/logs/view",
 	"process": "°Maia/actor/services/logs/process",
 	"brand": "°Maia/style/brand",
-	"style": "°Maia/creator/style/logs",
+	"style": "°Maia/actor/services/logs/style",
 	"inbox": "°Maia/actor/services/logs/inbox",
 	"interface": [
 		"RETRY",

@@ -12,7 +12,6 @@ import intentContext from './intent/intent.context.maia'
 import intentInbox from './intent/intent.inbox.maia'
 import intentProcess from './intent/intent.process.maia'
 import intentView from './intent/intent.view.maia'
-import listStyle from './list/list.style.maia'
 import todosAgent from './manifest.agent.maia'
 
 /**
@@ -25,7 +24,6 @@ export const TodosAgentRegistry = {
 	styles: {
 		'°Maia/style/brand': masterBrand,
 		'°Maia/todos/style/brand': brandStyle,
-		'°Maia/todos/style/list': listStyle,
 	},
 
 	actors: {

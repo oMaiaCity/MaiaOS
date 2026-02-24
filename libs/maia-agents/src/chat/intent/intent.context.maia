@@ -10,6 +10,6 @@
 	"popupOpen": false,
 	"@actors": {
 		"messages": "°Maia/actor/services/messages",
-		"paper": "°Maia/chat/actor/paper"
+		"paper": "°Maia/actor/services/paper"
 	}
 }
