@@ -1,0 +1,16 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/layout-todos/context",
+	"title": "Daily Focus",
+	"primaryView": "list",
+	"primaryViewLabel": "List",
+	"secondaryViewLabel": "Soon",
+	"viewMode": "list",
+	"primaryButtonActive": true,
+	"secondaryButtonActive": false,
+	"currentView": "@list",
+	"@actors": {
+		"list": "°Maia/actor/services/list",
+		"comingSoon": "°Maia/actor/coming-soon"
+	}
+}
