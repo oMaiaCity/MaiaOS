@@ -3,7 +3,7 @@
 	"$id": "°Maia/actor/views/layout-creator",
 	"@label": "@maia/actor/views/layout-creator",
 	"context": "°Maia/actor/views/layout-creator/context",
-	"view": "°Maia/actor/views/headerWithViewSwitcher/view",
+	"view": "°Maia/actor/views/headerWithViewSwitcher/view-creator",
 	"process": "°Maia/actor/views/layout-creator/process",
 	"brand": "°Maia/style/brand",
 	"style": "°Maia/actor/views/headerWithViewSwitcher/style",

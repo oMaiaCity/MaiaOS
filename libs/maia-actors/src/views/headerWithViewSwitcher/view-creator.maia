@@ -1,0 +1,93 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/actor/views/headerWithViewSwitcher/view-creator",
+	"@label": "°Maia/actor/views/headerWithViewSwitcher/view-creator",
+	"content": {
+		"tag": "div",
+		"class": "stack",
+		"children": [
+			{
+				"tag": "div",
+				"class": "header-section",
+				"children": [
+					{
+						"tag": "h2",
+						"class": "layout-title",
+						"text": "$title"
+					},
+					{
+						"tag": "div",
+						"class": "view-switcher",
+						"children": [
+							{
+								"tag": "button",
+								"class": "button-view-switch",
+								"attrs": {
+									"type": "button",
+									"data-view": "logs",
+									"data": {
+										"active": "$primaryButtonActive"
+									}
+								},
+								"text": "$primaryViewLabel",
+								"$on": {
+									"click": {
+										"send": "SWITCH_VIEW",
+										"payload": {
+											"viewMode": "logs"
+										}
+									}
+								}
+							},
+							{
+								"tag": "button",
+								"class": "button-view-switch",
+								"attrs": {
+									"type": "button",
+									"data-view": "actors",
+									"data": {
+										"active": "$secondaryButtonActive"
+									}
+								},
+								"text": "$secondaryViewLabel",
+								"$on": {
+									"click": {
+										"send": "SWITCH_VIEW",
+										"payload": {
+											"viewMode": "actors"
+										}
+									}
+								}
+							},
+							{
+								"tag": "button",
+								"class": "button-view-switch",
+								"attrs": {
+									"type": "button",
+									"data-view": "schemata",
+									"data": {
+										"active": "$tertiaryButtonActive"
+									}
+								},
+								"text": "$tertiaryViewLabel",
+								"$on": {
+									"click": {
+										"send": "SWITCH_VIEW",
+										"payload": {
+											"viewMode": "schemata"
+										}
+									}
+								}
+							}
+						]
+					}
+				]
+			},
+			{
+				"tag": "main",
+				"class": "content-area",
+				"$slot": "$currentView"
+			}
+		]
+	}
+}

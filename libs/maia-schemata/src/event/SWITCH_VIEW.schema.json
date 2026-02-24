@@ -9,8 +9,12 @@
 	"properties": {
 		"viewMode": {
 			"type": "string",
-			"enum": ["list", "logs", "comingSoon"],
+			"enum": ["list", "logs", "comingSoon", "actors", "schemata"],
 			"description": "View mode to switch to (required)"
+		},
+		"slotRef": {
+			"type": "string",
+			"description": "Slot reference for the view (e.g. @logs, @actors). Used by generic tab switchers."
 		}
 	},
 	"required": ["viewMode"],
