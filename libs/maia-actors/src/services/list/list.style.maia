@@ -1,6 +1,7 @@
 {
 	"$schema": "°Maia/schema/style",
 	"$id": "°Maia/actor/services/list/style",
+	"@label": "@maia/actor/services/list/style",
 	"components": {
 		"list": {
 			"display": "flex",

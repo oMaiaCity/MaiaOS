@@ -1,6 +1,7 @@
 {
 	"$schema": "°Maia/schema/process",
 	"$id": "°Maia/actor/views/layout-creator/process",
+	"@label": "@maia/actor/views/layout-creator/process",
 	"handlers": {
 		"SWITCH_VIEW": [
 			{

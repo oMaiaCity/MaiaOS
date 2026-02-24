@@ -1,6 +1,7 @@
 {
 	"$schema": "°Maia/schema/tool",
 	"$id": "°Maia/actor/os/ai/tool",
+	"@label": "@maia/actor/os/ai/tool",
 	"name": "@maia/actor/os/ai",
 	"description": "Unified AI chat tool using OpenAI-compatible API (RedPill) for LLM interactions. Model can be configured dynamically via payload - RedPill API endpoint is hardcoded, but each call can specify which LLM model to query. LLMs are stateless - each request sends the full context (complete conversation history).",
 	"parameters": {

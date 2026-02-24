@@ -1,6 +1,7 @@
 {
 	"$schema": "°Maia/schema/tool",
 	"$id": "°Maia/actor/services/paper/tool",
+	"@label": "@maia/actor/services/paper/tool",
 	"name": "@maia/actor/services/paper",
 	"description": "Updates CoText content for the paper area (full replace). Used by chat agent for auto-save on each keystroke. Use when the user asks you to write something into the paper or notes.",
 	"parameters": {
