@@ -12,7 +12,7 @@
  */
 
 import { containsExpressions } from '@MaiaOS/schemata/expression-resolver'
-import { validateAgainstSchema } from '@MaiaOS/schemata/validation.helper'
+import { readStore } from '../utils/store-reader.js'
 
 // Render state machine - prevents race conditions by ensuring renders only happen when state allows
 export const RENDER_STATES = {
@@ -23,10 +23,11 @@ export const RENDER_STATES = {
 }
 
 export class ActorEngine {
-	constructor(styleEngine, viewEngine, processEngine) {
+	constructor(styleEngine, viewEngine, processEngine, inboxEngine = null) {
 		this.styleEngine = styleEngine
 		this.viewEngine = viewEngine
 		this.processEngine = processEngine
+		this.inboxEngine = inboxEngine
 		this.actors = new Map()
 		this.dataEngine = null
 		this.os = null
@@ -39,18 +40,6 @@ export class ActorEngine {
 		this.batchTimer = null // Track if microtask is scheduled
 
 		this.runtime = null
-	}
-
-	_isDebug() {
-		return typeof window !== 'undefined' && (import.meta?.env?.DEV ?? false)
-	}
-
-	_log(...args) {
-		if (this._isDebug()) console.log(...args)
-	}
-
-	_logError(...args) {
-		if (this._isDebug()) console.error(...args)
 	}
 
 	async updateContextCoValue(actor, updates) {
@@ -74,38 +63,11 @@ export class ActorEngine {
 		}
 	}
 
-	async _readStore(coId) {
-		const schemaCoId = await this.dataEngine.peer.resolve(
-			{ fromCoValue: coId },
-			{ returnType: 'coId' },
-		)
-		if (!schemaCoId) return null
-		return this.dataEngine.execute({ op: 'read', schema: schemaCoId, key: coId })
-	}
-
-	/**
-	 * Ensure actor exists. Single spawn path: spawnActor. Requires inbox+state (full actor config).
-	 * @returns {Promise<Object>} Actor (existing or newly spawned)
-	 * @throws {Error} If config lacks inbox or state
-	 * @private
-	 */
-	async _ensureActor(actorConfig) {
-		const actorId = actorConfig.$id || actorConfig.id
-		if (this.actors.has(actorId)) return this.actors.get(actorId)
-		if (!actorConfig.inbox) {
-			throw new Error(`[ActorEngine] Actor config must have inbox: ${actorId}`)
-		}
-		if (!actorConfig.process) {
-			throw new Error(`[ActorEngine] Actor config must have process: ${actorId}`)
-		}
-		return this.spawnActor(actorConfig)
-	}
-
 	/** @private */
 	async _initializeActorState(actor, actorConfig) {
 		if (this.processEngine && actorConfig.process && !actor.process) {
 			try {
-				const processStore = await this._readStore(actorConfig.process)
+				const processStore = await readStore(this.dataEngine, actorConfig.process)
 				if (!processStore) return
 				const processDef = processStore.value
 				if (!processDef?.handlers) return
@@ -136,7 +98,7 @@ export class ActorEngine {
 			throw new Error(`[ActorEngine] Child actor ID must be co-id: ${childActorCoId}`)
 		}
 		try {
-			const store = await this._readStore(childActorCoId)
+			const store = await readStore(this.dataEngine, childActorCoId)
 			if (!store) {
 				throw new Error(`[ActorEngine] Failed to load child actor CoValue ${childActorCoId}`)
 			}
@@ -161,9 +123,10 @@ export class ActorEngine {
 				? await this.reuseActor(actorId, containerElement, agentKey)
 				: this.actors.get(actorId)
 		}
-
-		// Single spawn path: spawnActor (requires full config: inbox+state)
-		const actor = await this._ensureActor(actorConfig)
+		if (!actorConfig.inbox) throw new Error(`[ActorEngine] Actor config must have inbox: ${actorId}`)
+		if (!actorConfig.process)
+			throw new Error(`[ActorEngine] Actor config must have process: ${actorId}`)
+		const actor = await this.spawnActor(actorConfig)
 
 		// Container/agent registration (ActorEngine)
 		if (containerElement) {
@@ -453,7 +416,7 @@ export class ActorEngine {
 				`[ActorEngine] spawnActor: process must be co-id (or resolve to co-id). Got: ${processRef}. Run PEER_FRESH_SEED=true to seed configs with co-ids.`,
 			)
 		}
-		const configStore = await this._readStore(configCoId)
+		const configStore = await readStore(this.dataEngine, configCoId)
 		if (!configStore) return null
 
 		const configDef = configStore.value
@@ -550,261 +513,21 @@ export class ActorEngine {
 			target: targetId,
 			processed: false,
 		}
-		await this._pushToInbox(targetId, message)
+		if (!this.inboxEngine) {
+			throw new Error('[ActorEngine] InboxEngine not set. Ensure Loader booted with InboxEngine.')
+		}
+		await this.inboxEngine.deliver(targetId, message)
 	}
 
-	/**
-	 * Resolve target to inbox co-id. Returns inboxCoId and targetActorConfig (when target not running).
-	 * @param {string} targetId - Actor co-id or human-readable ref
-	 * @returns {Promise<{inboxCoId: string, targetActorConfig: Object|null, resolvedTargetId: string}>}
-	 */
-	async _resolveInboxForTarget(targetId) {
-		if (typeof targetId !== 'string' || !targetId.startsWith('co_z')) {
-			throw new Error(`[ActorEngine] _resolveInboxForTarget: targetId must be co-id, got: ${targetId}`)
-		}
-		const actor = this.actors.get(targetId)
-		if (actor?.inboxCoId) {
-			return { inboxCoId: actor.inboxCoId, targetActorConfig: null, resolvedTargetId: targetId }
-		}
-		const actorStore = await this._readStore(targetId)
-		if (!actorStore) throw new Error(`[ActorEngine] Failed to read actor config: ${targetId}`)
-		const targetActorConfig = actorStore?.value
-		const inboxCoId = targetActorConfig?.inbox
-		if (!inboxCoId || typeof inboxCoId !== 'string' || !inboxCoId.startsWith('co_z')) {
-			throw new Error(`[ActorEngine] Actor config inbox must be co-id: ${targetId}`)
-		}
-		return { inboxCoId, targetActorConfig, resolvedTargetId: targetId }
-	}
-
-	/**
-	 * Push message to inbox. Resolves source/target to co-ids for schema.
-	 * @param {string} inboxCoId - Resolved inbox co-id
-	 * @param {Object} message - { type, payload, source, target }
-	 */
-	async _pushMessage(inboxCoId, message) {
-		const sourceCoId = message.source
-		const targetCoId = message.target
-		if (sourceCoId && (typeof sourceCoId !== 'string' || !sourceCoId.startsWith('co_z'))) {
-			throw new Error(`[ActorEngine] _pushMessage: source must be co-id, got: ${sourceCoId}`)
-		}
-		if (targetCoId && (typeof targetCoId !== 'string' || !targetCoId.startsWith('co_z'))) {
-			throw new Error(`[ActorEngine] _pushMessage: target must be co-id, got: ${targetCoId}`)
-		}
-		const messageData = {
-			type: message.type,
-			payload: message.payload || {},
-			source: sourceCoId,
-			target: targetCoId,
-			processed: false,
-		}
-		await this.dataEngine.peer.createAndPushMessage(inboxCoId, messageData)
-	}
-
-	/**
-	 * Push message to target's inbox. Resolves target, pushes message, spawns headless if needed.
-	 * @param {string} targetId - Actor co-id (or human-readable ref)
-	 * @param {Object} message - { type, payload, source, target, processed }
-	 */
-	async _pushToInbox(targetId, message) {
-		if (!this.dataEngine?.peer) {
-			throw new Error(
-				'[ActorEngine] Cannot push to inbox: dataEngine or peer not set. Ensure MaiaOS is booted before deliverEvent.',
-			)
-		}
-		let resolved
-		try {
-			resolved = await this._resolveInboxForTarget(targetId)
-		} catch (err) {
-			this._logError('[sendToActor] 3._pushToInbox: resolve failed', {
-				targetId,
-				messageType: message?.type,
-				error: err?.message,
-			})
-			throw new Error(
-				`[ActorEngine] _pushToInbox: cannot resolve target to inbox. ${err?.message || err}`,
-			)
-		}
-		const { inboxCoId, targetActorConfig } = resolved
-		const messageWithTarget = { ...message, target: resolved.resolvedTargetId }
-		if (message.type === 'STATUS_UPDATE') {
-			this._log('[ActorEngine] _pushToInbox STATUS_UPDATE', {
-				targetId,
-				resolvedTargetId: resolved.resolvedTargetId,
-				actorExists: !targetActorConfig,
-			})
-		}
-		await this._pushMessage(inboxCoId, messageWithTarget)
-		// Headless spawn: delegate to Runtime when available; else inline spawn; else notify inbox watcher
-		if (targetActorConfig) {
-			if (this.runtime) {
-				await this.runtime.ensureActorSpawned(targetActorConfig, inboxCoId)
-			} else {
-				const actorId = targetActorConfig.$id || targetActorConfig.id
-				if (actorId && !this.actors.has(actorId)) {
-					try {
-						const spawned = await this.spawnActor(targetActorConfig)
-						if (spawned) await this.processEvents(actorId)
-					} catch (_e) {}
-				}
-			}
-		} else {
-			// Actor exists: process immediately so messages show without waiting for inbox subscription
-			const actorId = resolved.resolvedTargetId
-			if (message.type === 'STATUS_UPDATE' && actorId) {
-				this._log('[ActorEngine] _pushToInbox calling processEvents', {
-					actorId,
-					hasActor: this.actors.has(actorId),
-				})
-			}
-			if (actorId && this.actors.has(actorId)) {
-				await this.processEvents(actorId)
-			}
-			// Fallback: notify inbox watcher so Runtime's resolveAndSpawnIfNeeded runs (processes if actor exists, handles sync edge cases)
-			this.runtime?.notifyInboxPush?.(inboxCoId)
-		}
-	}
-
-	/**
-	 * Validate message type against actor's message contract
-	 * @param {Object} actor - Actor instance
-	 * @param {string} messageType - Message type to validate
-	 * @returns {boolean} True if message type is accepted, false otherwise
-	 */
-	_validateEventType(actor, messageType) {
-		// REQUIRED: All actors must declare interface (exhaustive list - like sealed protocol)
-		const iface = actor.interface || actor.messageTypes
-		if (!iface || !Array.isArray(iface)) {
-			return false
-		}
-
-		// Check if message type is in contract
-		if (!iface.includes(messageType)) {
-			return false
-		}
-
-		return true
-	}
-
-	/**
-	 * Load message type schema from registry
-	 * @param {string} messageType - Message type name (e.g., 'CREATE_BUTTON')
-	 * @returns {Promise<Object|null>} Message type schema or null if not found
-	 */
-	async _loadEventTypeSchema(messageType) {
-		if (this.dataEngine?.peer) {
-			try {
-				const schemaKey = `${this.dataEngine.peer.systemSpark}/schema/event/${messageType}`
-				const schema = await this.dataEngine.peer.resolve(schemaKey, { returnType: 'schema' })
-				if (schema) return schema
-			} catch (_error) {}
-		}
-		return null
-	}
-
-	/**
-	 * Validate message payload against message type schema
-	 * Message type schema IS the payload schema (merged concept)
-	 * @param {Object} messageTypeSchema - Message type schema definition (this IS the payload schema)
-	 * @param {Object} payload - Message payload to validate
-	 * @param {string} messageType - Message type name (for error messages)
-	 * @returns {Promise<{valid: boolean, errors: Array|null}>} Validation result
-	 */
-	async _validateEventPayload(messageTypeSchema, payload, messageType) {
-		if (!messageTypeSchema) {
-			// Schema is required - this should never happen if _loadEventTypeSchema is called first
-			return { valid: false, errors: [`Message type schema is required for ${messageType}`] }
-		}
-
-		try {
-			// Filter out CoJSON/schema metadata that describes the message envelope, not the payload structure
-			// cotype, indexing, groupInfo apply to the message CoMap itself, not the payload
-			const { groupInfo, cotype, indexing, ...schemaForValidation } = messageTypeSchema
-
-			// Message type schema IS the payload schema - validate directly
-			const result = await validateAgainstSchema(
-				schemaForValidation,
-				payload || {},
-				`message payload for ${messageType}`,
-			)
-			return result
-		} catch (error) {
-			return { valid: false, errors: [error.message] }
-		}
-	}
-
-	/**
-	 * Validate message payload before send (runtime schema only, from backend registry).
-	 * Used by ViewEngine to skip sending invalid payloads.
-	 * @param {string} eventType - Message type (e.g. 'CREATE_BUTTON', 'SEND_MESSAGE')
-	 * @param {Object} payload - Resolved payload to validate
-	 * @returns {Promise<boolean>} True if valid or no schema found, false otherwise
-	 */
 	async validateEventPayloadForSend(eventType, payload) {
-		const schema = await this._loadEventTypeSchema(eventType)
-		if (!schema) return true
-		const result = await this._validateEventPayload(schema, payload || {}, eventType)
-		return result.valid
-	}
-
-	/**
-	 * Validate message: contract, schema, payload, DB_OP shape.
-	 * @param {Object} actor - Actor instance
-	 * @param {Object} message - Inbox message { type, payload, source, _coId }
-	 * @returns {Promise<{valid: true, payloadPlain: Object}|{valid: false}>}
-	 */
-	async _validateMessage(actor, message) {
-		// Step 1: Contract check
-		if (!this._validateEventType(actor, message.type)) {
-			this._log('[ActorEngine] _validateMessage: message type not in contract', {
-				actorId: actor.id,
-				messageType: message.type,
-				interface: actor.interface || actor.messageTypes,
-			})
-			return { valid: false }
-		}
-		// Step 2: Load schema (required)
-		const messageTypeSchema = await this._loadEventTypeSchema(message.type)
-		if (!messageTypeSchema) {
-			this._log('[ActorEngine] _validateMessage: schema not found', {
-				actorId: actor.id,
-				messageType: message.type,
-			})
-			return { valid: false }
-		}
-		// Step 3: Payload shape
-		const payload = message.payload || {}
-		if (
-			message.type === 'DB_OP' &&
-			(Array.isArray(payload) || !payload || typeof payload !== 'object' || !('op' in payload))
-		) {
-			this._log('[ActorEngine] _validateMessage: DB_OP payload invalid', {
-				actorId: actor.id,
-				payloadType: Array.isArray(payload) ? 'array' : typeof payload,
-			})
-			return { valid: false }
-		}
-		// Step 4: Schema validation
-		const validation = await this._validateEventPayload(messageTypeSchema, payload, message.type)
-		if (!validation.valid) {
-			this._log('[ActorEngine] _validateMessage: payload validation failed', {
-				actorId: actor.id,
-				messageType: message.type,
-				errors: validation.errors,
-			})
-			return { valid: false }
-		}
-		const payloadPlain = {
-			...(payload && typeof payload === 'object'
-				? JSON.parse(JSON.stringify(payload))
-				: payload || {}),
-			...(message._coId ? { idempotencyKey: message._coId } : {}),
-		}
-		return { valid: true, payloadPlain }
+		if (!this.inboxEngine) return true
+		return this.inboxEngine.validatePayload(eventType, payload)
 	}
 
 	async processEvents(actorId) {
 		const actor = this.actors.get(actorId)
-		if (!actor || !actor.inboxCoId || !this.dataEngine || actor._isProcessing) return
+		if (!actor || !actor.inboxCoId || !this.dataEngine || !this.inboxEngine || actor._isProcessing)
+			return
 		actor._isProcessing = true
 		let hadUnhandledMessages = false
 		try {
@@ -828,7 +551,7 @@ export class ActorEngine {
 							} catch (_e) {}
 						}
 					}
-					const validated = await this._validateMessage(actor, message)
+					const validated = await this.inboxEngine.validateMessage(actor, message)
 					if (!validated.valid) {
 						await markProcessed()
 						continue
@@ -843,16 +566,9 @@ export class ActorEngine {
 						await markProcessed()
 						if (!handled) hadUnhandledMessages = true
 					}
-				} catch (error) {
-					this._logError('[ActorEngine] processEvents: message handling failed', {
-						actorId,
-						messageType: message.type,
-						error,
-					})
-				}
+				} catch (_error) {}
 			}
-		} catch (error) {
-			this._logError('[ActorEngine] processEvents: inbox processing failed', { actorId, error })
+		} catch (_error) {
 		} finally {
 			actor._isProcessing = false
 			// Retry when: (1) unhandled messages (no transition), or (2) more messages arrived during our run

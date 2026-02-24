@@ -15,6 +15,7 @@ import { resolve, resolveReactive } from '@MaiaOS/db'
 import {
 	ActorEngine,
 	DataEngine,
+	InboxEngine,
 	MaiaScriptEvaluator,
 	ModuleRegistry,
 	ProcessEngine,
@@ -361,13 +362,14 @@ export class MaiaOS {
 		}
 		os.viewEngine = new ViewEngine(os.evaluator, null, os.moduleRegistry)
 
-		// Initialize ActorEngine (will receive SubscriptionEngine after it's created)
-		os.actorEngine = new ActorEngine(os.styleEngine, os.viewEngine, os.processEngine)
-
-		// SubscriptionEngine eliminated - all subscriptions handled via direct read() + ReactiveStore
+		// InboxEngine: validation + delivery (injected into ActorEngine)
+		os.inboxEngine = new InboxEngine(os.dataEngine)
+		os.actorEngine = new ActorEngine(os.styleEngine, os.viewEngine, os.processEngine, os.inboxEngine)
+		os.inboxEngine.actorEngine = os.actorEngine
 
 		// Pass DataEngine to engines (for internal config loading)
 		os.actorEngine.dataEngine = os.dataEngine
+		os.inboxEngine.dataEngine = os.dataEngine
 		os.viewEngine.dataEngine = os.dataEngine
 		os.viewEngine.styleEngine = os.styleEngine
 		os.styleEngine.dataEngine = os.dataEngine
