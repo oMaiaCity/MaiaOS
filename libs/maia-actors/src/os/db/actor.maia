@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/actor",
 	"$id": "°Maia/actor/os/db",
-	"role": "@maia/actor/os/db",
+	"@label": "@maia/actor/os/db",
 	"interface": [
 		"DB_OP",
 		"SPARK_OP",

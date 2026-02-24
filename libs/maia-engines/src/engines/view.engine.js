@@ -364,10 +364,10 @@ export class ViewEngine {
 			const textValue = await this.evaluator.evaluate(node.text, data)
 			// Format objects/arrays as JSON strings for display
 			if (textValue && typeof textValue === 'object') {
-				// Special handling for resolved actor objects (has role and id)
-				if (textValue.role && textValue.id && textValue.id.startsWith('co_z')) {
+				// Special handling for resolved actor objects (has @label and id)
+				if (textValue['@label'] && textValue.id && textValue.id.startsWith('co_z')) {
 					const truncatedId = `${textValue.id.substring(0, 15)}...`
-					element.textContent = `${textValue.role} (${truncatedId})`
+					element.textContent = `${textValue['@label']} (${truncatedId})`
 				} else {
 					try {
 						element.textContent = JSON.stringify(textValue, null, 2)

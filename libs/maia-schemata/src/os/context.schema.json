@@ -22,7 +22,7 @@
 						"properties": {
 							"map": {
 								"type": "object",
-								"description": "Map transformation expressions (e.g., { sender: '$$source.role' })",
+								"description": "Map transformation expressions (e.g., { sender: '$$source.@label' })",
 								"additionalProperties": {
 									"type": "string"
 								}

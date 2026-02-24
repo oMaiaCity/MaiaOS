@@ -101,9 +101,9 @@ Every schema must have:
   "cotype": "comap",
   "indexing": true,
   "properties": {
-    "role": {
+    "@label": {
       "type": "string",
-      "description": "Actor role (e.g., 'kanban-view', 'vibe', 'composite', 'leaf')"
+      "description": "Actor label (e.g., 'kanban-view', 'vibe', 'composite', 'leaf')"
     },
     "context": {
       "$co": "@schema/context",  // ← CoValue reference

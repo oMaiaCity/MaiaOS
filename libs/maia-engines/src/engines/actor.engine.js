@@ -436,8 +436,8 @@ export class ActorEngine {
 		if (!hasProcess) return null
 
 		const { getActor } = await import('@MaiaOS/actors')
-		const role = actorConfig.role
-		const namespacePath = typeof role === 'string' ? role.replace(/^@/, '') : null
+		const label = actorConfig['@label']
+		const namespacePath = typeof label === 'string' ? label.replace(/^@/, '') : null
 		const actorModule = namespacePath ? getActor(namespacePath) : null
 		const executableFunction = actorModule?.function ?? null
 

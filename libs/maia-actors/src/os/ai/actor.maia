@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/actor",
 	"$id": "°Maia/actor/os/ai",
-	"role": "@maia/actor/os/ai",
+	"@label": "@maia/actor/os/ai",
 	"interface": [
 		"CHAT",
 		"SUCCESS",
