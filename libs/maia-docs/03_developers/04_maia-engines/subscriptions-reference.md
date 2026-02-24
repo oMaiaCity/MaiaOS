@@ -12,13 +12,7 @@ SubscriptionEngine subscribes to: `view`, `style`, `brand`, `state`, `interface`
 
 ### Engine vs Direct Subscriptions
 
-**View/Style/State:** Go through engines (caching, batch subscriptions).
-
-```javascript
-await viewEngine.loadView(config.view, (updatedView) => {
-  handleViewUpdate(actorId, updatedView);
-});
-```
+**View/Style/State:** Go through engines (caching, batch subscriptions). View subscriptions are set up in `loadViewConfigs`; use `attachViewToActor` to attach view to an actor.
 
 **Interface/Context:** Use read() API directly.
 
@@ -119,7 +113,7 @@ Check: `_configSubscriptions` has unsubscribe, co-id valid, handler called, cach
 
 ### Duplicate Subscriptions
 
-Check: loadView() called multiple times, cleanup on destroy. Fix: initialize() once, cleanup() on destroy.
+Check: loadViewConfigs or view subscription called multiple times, cleanup on destroy. Fix: initialize() once, cleanup() on destroy.
 
 ### Data Not Updating
 
