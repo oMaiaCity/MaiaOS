@@ -1,6 +1,7 @@
 {
 	"$schema": "°Maia/schema/process",
 	"$id": "°Maia/actor/services/messages/process",
+	"@label": "@maia/actor/services/messages/process",
 	"handlers": {
 		"SEND_MESSAGE": [
 			{

@@ -1,6 +1,7 @@
 {
 	"$schema": "°Maia/schema/tool",
 	"$id": "°Maia/actor/os/db/tool",
+	"@label": "@maia/actor/os/db/tool",
 	"name": "@maia/actor/os/db",
 	"description": "Unified API for all database and spark operations (read, create, update, delete, seed, schema, resolve, append, push, processInbox, createSpark, readSpark, updateSpark, deleteSpark, addSparkMember, removeSparkMember, addSparkParentGroup, removeSparkParentGroup, getSparkMembers, updateSparkMemberRole)",
 	"parameters": {

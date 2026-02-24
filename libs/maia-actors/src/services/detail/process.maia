@@ -1,6 +1,7 @@
 {
 	"$schema": "°Maia/schema/process",
 	"$id": "°Maia/actor/services/detail/process",
+	"@label": "@maia/actor/services/detail/process",
 	"handlers": {
 		"LOAD_ACTOR": [
 			{

@@ -1,6 +1,7 @@
 {
 	"$schema": "°Maia/schema/process",
 	"$id": "°Maia/actor/services/logs/process",
+	"@label": "@maia/actor/services/logs/process",
 	"handlers": {
 		"ERROR": [
 			{

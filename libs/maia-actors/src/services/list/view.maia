@@ -1,6 +1,7 @@
 {
 	"$schema": "°Maia/schema/view",
 	"$id": "°Maia/actor/services/list/view",
+	"@label": "@maia/actor/services/list/view",
 	"content": {
 		"class": "list",
 		"children": [

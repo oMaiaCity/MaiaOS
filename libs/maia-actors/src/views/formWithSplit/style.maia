@@ -1,6 +1,7 @@
 {
 	"$schema": "°Maia/schema/style",
 	"$id": "°Maia/actor/views/formWithSplit/style",
+	"@label": "@maia/actor/views/formWithSplit/style",
 	"components": {
 		"stack": {
 			"display": "flex",

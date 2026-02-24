@@ -1,6 +1,7 @@
 {
 	"$schema": "°Maia/schema/view",
 	"$id": "°Maia/actor/services/messages/view",
+	"@label": "@maia/actor/services/messages/view",
 	"content": {
 		"tag": "div",
 		"class": "messages-content",

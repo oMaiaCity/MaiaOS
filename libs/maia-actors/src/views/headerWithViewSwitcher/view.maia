@@ -1,6 +1,7 @@
 {
 	"$schema": "°Maia/schema/view",
 	"$id": "°Maia/actor/views/headerWithViewSwitcher/view",
+	"@label": "@maia/actor/views/headerWithViewSwitcher/view",
 	"content": {
 		"tag": "div",
 		"class": "stack",
