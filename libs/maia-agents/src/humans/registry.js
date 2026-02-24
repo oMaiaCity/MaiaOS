@@ -38,3 +38,7 @@ export const HumansAgentRegistry = {
 		'°Maia/humans/process/intent': intentProcess,
 	},
 }
+
+if (import.meta.hot) {
+	import.meta.hot.accept()
+}

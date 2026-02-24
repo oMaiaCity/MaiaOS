@@ -61,3 +61,7 @@ export {
 	ROLE_TO_FOLDER,
 	resolveServiceActorCoId,
 } from './seed-config.js'
+
+if (import.meta.hot) {
+	import.meta.hot.accept()
+}
