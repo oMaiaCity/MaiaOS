@@ -1,5 +1,5 @@
 {
 	"$schema": "°Maia/schema/process",
-	"$id": "°Maia/creator/process/intent",
+	"$id": "°Maia/actor/views/layout-humans/process",
 	"handlers": {}
 }

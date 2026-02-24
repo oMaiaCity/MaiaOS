@@ -1,0 +1,49 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/views/layout-creator/process",
+	"handlers": {
+		"SWITCH_VIEW": [
+			{
+				"ctx": {
+					"viewMode": "$$viewMode"
+				}
+			},
+			{
+				"ctx": {
+					"currentView": {
+						"$if": {
+							"condition": {
+								"$eq": [
+									"$$viewMode",
+									"logs"
+								]
+							},
+							"then": "@logs",
+							"else": "@comingSoon"
+						}
+					}
+				}
+			},
+			{
+				"ctx": {
+					"primaryButtonActive": {
+						"$eq": [
+							"$$viewMode",
+							"logs"
+						]
+					}
+				}
+			},
+			{
+				"ctx": {
+					"secondaryButtonActive": {
+						"$eq": [
+							"$$viewMode",
+							"comingSoon"
+						]
+					}
+				}
+			}
+		]
+	}
+}

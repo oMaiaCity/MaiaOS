@@ -1,13 +1,8 @@
 {
 	"$schema": "°Maia/schema/context",
 	"$id": "°Maia/humans/context/intent",
-	"humans": {
-		"schema": "°Maia/schema/data/human",
-		"map": {
-			"id": "id",
-			"accountId": "accountId",
-			"registryName": "registryName",
-			"profileName": "profileName"
-		}
+	"layout": "@layout",
+	"@actors": {
+		"layout": "°Maia/actor/views/layout-humans"
 	}
 }

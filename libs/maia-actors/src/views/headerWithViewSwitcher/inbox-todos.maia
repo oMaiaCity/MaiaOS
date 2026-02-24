@@ -1,0 +1,5 @@
+{
+	"$schema": "°Maia/schema/inbox",
+	"$id": "°Maia/actor/views/layout-todos/inbox",
+	"cotype": "costream"
+}

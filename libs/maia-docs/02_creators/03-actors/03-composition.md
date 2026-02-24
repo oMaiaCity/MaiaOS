@@ -67,11 +67,44 @@ Actors communicate via **inbox costreams**, not props. Use the `sendEvent` actio
 
 **View switching:** State machine `updateContext` sets `currentView` to `@list` or `@kanban`.
 
+## Headless Intent Pattern
+
+**Intent actors** should be minimal orchestrators: a root container with a single `$slot` to a **layout actor**. All concrete UI lives in maia-actors layout components.
+
+**Benefits:**
+- Intent views contain only structure (e.g. `{"tag":"div","class":"stack","$slot":"$layout"}`)
+- Layout actors are reusable across agents (e.g. `headerWithViewSwitcher` for Todos and Creator)
+- New agents can reuse layouts without copying view markup
+
+**Example - Headless Todos Intent:**
+```json
+// intent.view.maia
+{"content":{"tag":"div","class":"stack","$slot":"$layout"}}
+
+// intent.context.maia
+{"layout":"@layout","@actors":{"layout":"°Maia/actor/views/layout-todos"}}
+```
+
+The layout actor (`layout-todos`) owns the header, view switcher, and content slot. See `libs/maia-actors/src/views/` for available layouts.
+
+## Layout Actors (maia-actors)
+
+Layout actors encapsulate shared UI patterns. Available layouts:
+
+| Layout | Used By | Structure |
+|--------|---------|-----------|
+| `headerWithViewSwitcher` | Todos, Creator | Title + 2 view buttons + content slot |
+| `formWithSplit` | Sparks | Form + error + split (list + detail slot) |
+| `grid` | Humans | Header + grid of cards |
+| `modalChat` | Chat | Paper slot + modal (messages + input) |
+
+Create new layouts in `libs/maia-actors/src/views/{layoutName}/` and register in `seed-config.js`.
+
 ## Best Practices
 
-**✅ DO:** Small focused actors, clear slot names, message-based communication, define children in context `@actors`.
+**✅ DO:** Small focused actors, clear slot names, message-based communication, define children in context `@actors`. Use headless intents with layout actors.
 
-**❌ DON'T:** Monolithic actors, prop drilling, circular dependencies, conditional logic in views.
+**❌ DON'T:** Monolithic actors, prop drilling, circular dependencies, conditional logic in views. Don't embed full UI in intent views.
 
 ---
 

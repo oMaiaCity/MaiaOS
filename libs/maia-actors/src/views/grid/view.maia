@@ -1,0 +1,59 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/actor/views/grid/view",
+	"content": {
+		"tag": "div",
+		"class": "stack",
+		"children": [
+			{
+				"tag": "div",
+				"class": "header-section",
+				"children": [
+					{
+						"tag": "h2",
+						"class": "layout-title",
+						"text": "$title"
+					}
+				]
+			},
+			{
+				"tag": "div",
+				"class": "grid",
+				"$each": {
+					"items": "$humans",
+					"template": {
+						"tag": "div",
+						"class": "card",
+						"children": [
+							{
+								"tag": "div",
+								"class": "card-name",
+								"text": "$$profileName"
+							},
+							{
+								"tag": "div",
+								"class": "card-label",
+								"text": "Registry name"
+							},
+							{
+								"tag": "div",
+								"class": "card-value",
+								"text": "$$registryName"
+							},
+							{
+								"tag": "div",
+								"class": "card-label",
+								"text": "Account ID"
+							},
+							{
+								"tag": "div",
+								"class": "card-value card-value-id",
+								"text": "$$accountId"
+							}
+						]
+					}
+				}
+			}
+		]
+	}
+}

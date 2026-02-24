@@ -5,6 +5,7 @@
 	"description": "Browse all humans in the Maia registry — account ID, registry name, profile name",
 	"actor": "°Maia/humans/actor/intent",
 	"dependencies": [
-		"°Maia/humans/actor/intent"
+		"°Maia/humans/actor/intent",
+		"°Maia/actor/views/layout-humans"
 	]
 }
