@@ -6,21 +6,6 @@ MaiaDB is the single storage layer for MaiaOS. It provides CRUD operations, a un
 
 ---
 
-## Browser Storage Backends
-
-In the browser, CoValue persistence uses **OPFS** (Origin Private File System) when available, with automatic fallback to **IndexedDB** when OPFS fails (e.g. Firefox private mode, older Safari).
-
-| Backend | When used | Notes |
-|---------|-----------|-------|
-| **OPFS** | Chrome 108+, Edge, Firefox 111+, Safari 16.4+ | ~4× faster for large data (e.g. CoBinary uploads) |
-| **IndexedDB** | Fallback when OPFS unavailable | Same interface, slower for large blobs |
-
-OPFS and IndexedDB use **separate storage roots**. There is no automatic migration between them. First run with OPFS creates a fresh store; existing IndexedDB data is not migrated.
-
-**Source:** `libs/maia-storage/src/getStorage.js`, `libs/maia-storage/src/adapters/opfs.js`, `libs/maia-storage/src/adapters/indexeddb.js`
-
----
-
 ## The Simple Version
 
 Think of MaiaDB like a collaborative filing cabinet. When you ask for something, it returns a live document that updates automatically when anyone changes it. The CoCache keeps everything organized and avoids duplicate lookups.

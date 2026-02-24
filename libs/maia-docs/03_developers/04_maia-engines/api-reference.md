@@ -18,11 +18,8 @@ import {
   DataEngine,
   MaiaScriptEvaluator,
   ModuleRegistry,
-  DataEngine,
-  IndexedDBBackend,
-  SubscriptionEngine,
-  MessageQueue
-} from '@MaiaOS/script';
+  Runtime,
+} from '@MaiaOS/engines';
 ```
 
 ---
@@ -69,9 +66,8 @@ await viewEngine.render(viewDef, { context: {} }, shadowRoot, [], 'custom');
 ### Data Operations (maia.do)
 
 ```javascript
-// maia = booted MaiaOS instance
+// maia = booted MaiaOS instance (from MaiaOS.boot())
 
-// Read (always returns reactive store)
 const store = await maia.do({
   op: 'read',
   schema: 'co_zTodos123'
@@ -88,7 +84,7 @@ const unsubscribe = store.subscribe((data) => {
 
 ## Package Exports
 
-The package exports are defined in `libs/maia-engines/package.json`:
+Defined in `libs/maia-engines/package.json`:
 
 ```json
 {

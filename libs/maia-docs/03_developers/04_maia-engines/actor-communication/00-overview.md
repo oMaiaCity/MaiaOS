@@ -4,7 +4,7 @@
 
 This document explains how actors communicate with each other in MaiaOS, using the Sparks vibe as a concrete example. Actors communicate via **inbox-based messaging** (CoStreams), not direct references, ensuring clean separation and distributed system compatibility.
 
-**Key Principle**: Every actor is independent with its own context, state machine, view, and inbox. Actors communicate by sending messages to each other's inboxes, not by accessing each other's internal state.
+**Key Principle**: Every actor is independent with its own context, process handlers, view, and inbox. Actors communicate by sending messages to each other's inboxes, not by accessing each other's internal state.
 
 ---
 
@@ -16,33 +16,34 @@ This document explains how actors communicate with each other in MaiaOS, using t
 sequenceDiagram
     participant User as User
     participant AgentView as Agent View
-    participant AgentState as Agent State Machine
+    participant AgentProcess as Agent Process
     participant AgentContext as Agent Context
     participant DetailInbox as Detail Actor Inbox<br/>(CoStream)
-    participant DetailProcess as Detail processMessages
-    participant DetailState as Detail State Machine
+    participant DetailProcess as Detail processEvents
+    participant DetailProcessHandlers as Detail Process Handlers
     participant DetailContext as Detail Context
     participant DetailQuery as sparkDetails Query
     participant DetailView as Detail View
 
     User->>AgentView: Click spark item
     AgentView->>AgentView: resolveExpressions()<br/>($$id → "co_z123...")
-    AgentView->>AgentState: deliverEvent()<br/>{type: "SELECT_SPARK",<br/>payload: {sparkId: "co_z123..."}}
-    Note over AgentView,AgentState: Message persisted to Agent Inbox<br/>(CoStream - CRDT)
-    AgentState->>AgentContext: updateContext<br/>{selectedSparkId: "co_z123..."}
-    AgentState->>AgentState: sendToDetailActor<br/>(custom action)
-    AgentState->>DetailInbox: deliverEvent()<br/>{type: "LOAD_ACTOR",<br/>payload: {id: "co_z123..."}}
+    AgentView->>AgentProcess: deliverEvent()<br/>{type: "SELECT_SPARK",<br/>payload: {sparkId: "co_z123..."}}
+    Note over AgentView,AgentProcess: Message persisted to Agent Inbox<br/>(CoStream - CRDT)
+    AgentProcess->>AgentContext: ctx action<br/>{selectedSparkId: "co_z123..."}
+    AgentProcess->>AgentProcess: tell action<br/>(sendToDetail)
+    AgentProcess->>DetailInbox: deliverEvent()<br/>{type: "LOAD_ACTOR",<br/>payload: {id: "co_z123..."}}
     Note over DetailInbox: Message persisted to Detail Inbox<br/>(CoStream - CRDT)
     DetailInbox->>DetailProcess: Subscription fires<br/>(new message detected)
-    DetailProcess->>DetailProcess: Validate message type<br/>(check messageTypes: ["LOAD_ACTOR"])
-    DetailProcess->>DetailProcess: Load & validate schema<br/>(@schema/message/LOAD_ACTOR)
-    DetailProcess->>DetailState: stateEngine.send()<br/>("LOAD_ACTOR", payload)
-    DetailState->>DetailContext: updateContext<br/>{sparkId: "$$id"} → {sparkId: "co_z123..."}
+    DetailProcess->>DetailProcess: Validate message type<br/>(check interface: ["LOAD_ACTOR"])
+    DetailProcess->>DetailProcess: Load & validate schema<br/>(@schema/event/LOAD_ACTOR)
+    DetailProcess->>DetailProcessHandlers: ProcessEngine.send()<br/>("LOAD_ACTOR", payload)
+    DetailProcessHandlers->>DetailContext: ctx action<br/>{sparkId: "$$id"} → {sparkId: "co_z123..."}
     DetailContext->>DetailQuery: Filter re-evaluated<br/>{id: "$sparkId"} → {id: "co_z123..."}
     DetailQuery->>DetailQuery: Query re-executed<br/>(readSingleCoValue with new filter)
     DetailQuery->>DetailContext: Query results updated<br/>(sparkDetails: {...})
     DetailContext->>DetailState: Entry action triggered<br/>(context changed)
     DetailState->>DetailState: Evaluate entry actions<br/>(spark: "$sparkDetails",<br/>showEmptyMembers: ...)
+    DetailProcessHandlers->>DetailContext: Entry actions<br/>(spark, showContent, showEmptyMembers)
     DetailContext->>DetailView: Context updated<br/>(subscription fires)
     DetailView->>DetailView: Re-render<br/>(shows spark details)
 ```
@@ -76,58 +77,44 @@ When a user clicks a spark item:
 
 ---
 
-### 2. Agent State Machine Processing
+### 2. Agent Process Handling
 
-**Location**: `libs/maia-vibes/src/sparks/agent/agent.state.maia`
+**Location**: `libs/maia-vibes/src/sparks/agent/agent.process.maia` (or process definition)
 
-The agent state machine receives `SELECT_SPARK`:
+The agent process receives `SELECT_SPARK` via `handlers.SELECT_SPARK`:
 ```json
 {
-  "on": {
-    "SELECT_SPARK": {
-      "target": "idle",
-      "actions": [
-        {
-          "updateContext": {
-            "selectedSparkId": "$$sparkId"
-          }
-        },
-        "sendToDetailActor"
-      ]
-    }
+  "handlers": {
+    "SELECT_SPARK": [
+      { "ctx": { "selectedSparkId": "$$sparkId" } },
+      { "tell": { "target": "@detail", "type": "LOAD_ACTOR", "payload": { "id": "$selectedSparkId" } } }
+    ]
   }
 }
 ```
 
 **What happens**:
-1. Updates context: `selectedSparkId: "co_z123..."`
-2. Executes custom action: `sendToDetailActor`
+1. `ctx` action updates context: `selectedSparkId: "co_z123..."`
+2. `tell` action sends message to detail actor inbox
 
 ---
 
-### 3. Custom Action: Sending Message to Detail Actor
+### 3. Tell Action: Sending Message to Detail Actor
 
-**Location**: `libs/maia-engines/src/engines/state.engine.js`
+**Location**: `libs/maia-engines/src/engines/process.engine.js`
 
-The `sendToDetailActor` custom action:
-```javascript
-if (actionName === 'sendToDetailActor') {
-  const sparkId = machine.actor.context.value?.selectedSparkId;
-  if (sparkId && machine.actor?.children?.detail) {
-    const detailActor = machine.actor.children.detail;
-    await machine.actor.actorEngine.deliverEvent(machine.actor.id, detailActor.id, 'LOAD_ACTOR', {
-      id: sparkId
-    });
-  }
-}
+The `tell` action config specifies target and payload. ProcessEngine evaluates expressions and calls `deliverEvent()`:
+
+```json
+{ "tell": { "target": "@detail", "type": "LOAD_ACTOR", "payload": { "id": "$selectedSparkId" } } }
 ```
 
 **What happens**:
-1. Reads `selectedSparkId` from agent context
-2. Gets reference to detail actor (child actor)
-3. Sends `LOAD_ACTOR` message to detail actor's inbox via `deliverEvent()`
+1. ProcessEngine resolves `target` (e.g., child actor reference)
+2. Evaluates `payload` with context (`$selectedSparkId` → `"co_z123..."`)
+3. Calls `ActorEngine.deliverEvent()` to push message to detail inbox
 
-**Key Point**: Messages are sent to actor inboxes (CoStreams), not directly to state machines. This ensures CRDT-native persistence and sync.
+**Key Point**: Messages are sent to actor inboxes (CoStreams), not directly to process handlers. This ensures CRDT-native persistence and sync.
 
 ---
 
@@ -144,8 +131,8 @@ async deliverEvent(senderId, targetId, type, payload = {}) {
   await this._pushToInbox(targetId, {
     type, payload: payload ?? {}, source: senderId, target: targetId, processed: false
   });
-  // Same-actor: trigger processMessages immediately
-  if (senderId === targetId) await this.processMessages(targetId);
+  // Same-actor: trigger processEvents immediately
+  if (senderId === targetId) await this.processEvents(targetId);
 }
 ```
 
@@ -161,76 +148,47 @@ async deliverEvent(senderId, targetId, type, payload = {}) {
 
 ### 5. Message Processing
 
-**Location**: `libs/maia-engines/src/engines/actor.engine.js:899-950`
+**Location**: `libs/maia-engines/src/engines/actor.engine.js`
 
-The `processMessages()` function subscribes to inbox CoStream:
+The `processEvents()` function processes inbox messages. Inbox subscription fires when new messages arrive:
 ```javascript
-async processMessages(actor) {
-  // Subscribe to inbox CoStream
-  const inboxStore = await this.dbEngine.execute({
-    op: 'read',
-    schema: actor.inboxSchemaCoId,
-    key: actor.inboxCoId
-  });
-  
-  // When new message arrives, subscription fires
-  inboxStore.subscribe(async (inboxValue) => {
-    // Process unprocessed messages
-    for (const message of unprocessedMessages) {
-      // Validate message type
-      if (!actor.messageTypes.includes(message.type)) {
-        console.warn(`[ActorEngine] Message type ${message.type} not in messageTypes`);
-        continue;
-      }
-      
-      // Load and validate message schema
-      const messageSchema = await loadMessageSchema(message.type);
-      await validatePayload(message.payload, messageSchema);
-      
-      // Route to state machine
-      await this.stateEngine.send(actor.machine.id, message.type, message.payload);
-    }
-  });
-}
+// For each unprocessed message:
+// 1. InboxEngine validates message type (actor.interface)
+// 2. InboxEngine validates payload against schema
+// 3. ProcessEngine.send(processId, message.type, message.payload)
+// 4. handlers[event] actions execute
 ```
 
 **What happens**:
-1. Subscribes to inbox CoStream
-2. When new message arrives, subscription fires
-3. Validates message type against `messageTypes` array
-4. Loads and validates message schema
-5. Routes to state machine via `stateEngine.send()`
+1. Inbox subscription fires when new message arrives
+2. InboxEngine validates message type against `interface` array
+3. Loads and validates message schema
+4. Routes to ProcessEngine via `ProcessEngine.send(processId, event, payload)`
+5. Handlers[event] actions execute
 
-**Key Point**: Message validation ensures type safety and prevents invalid messages from reaching state machines.
+**Key Point**: Message validation ensures type safety and prevents invalid messages from reaching process handlers.
 
 ---
 
-### 6. Detail State Machine Processing
+### 6. Detail Process Handling
 
-**Location**: `libs/maia-vibes/src/sparks/detail/detail.state.maia`
+**Location**: `libs/maia-vibes/src/sparks/detail/` (process definition)
 
-The detail state machine receives `LOAD_ACTOR`:
+The detail process receives `LOAD_ACTOR` via `handlers.LOAD_ACTOR`:
 ```json
 {
-  "on": {
-    "LOAD_ACTOR": {
-      "target": "idle",
-      "actions": [
-        {
-          "updateContext": {
-            "sparkId": "$$id"
-          }
-        }
-      ]
-    }
+  "handlers": {
+    "LOAD_ACTOR": [
+      { "ctx": { "sparkId": "$$id" } }
+    ]
   }
 }
 ```
 
 **What happens**:
 1. Receives `LOAD_ACTOR` message with `payload: {id: "co_z123..."}`
-2. Updates context: `sparkId: "co_z123..."`
-3. Entry action runs (because state is `idle`)
+2. `ctx` action updates context: `sparkId: "co_z123..."`
+3. Context change triggers query re-evaluation
 
 ---
 
@@ -263,11 +221,11 @@ The detail context contains a query with dynamic filter:
 
 ---
 
-### 8. Entry Action: Deriving UI State
+### 8. Context-Driven UI State
 
-**Location**: `libs/maia-vibes/src/sparks/detail/detail.state.maia:25-51`
+**Location**: `libs/maia-vibes/src/sparks/detail/` (process definition or separate handler)
 
-The entry action runs when context changes:
+When context changes (e.g., sparkDetails from query), handlers can derive UI flags. Or use reactive expressions in view via data attributes:
 ```json
 {
   "entry": {
