@@ -132,7 +132,8 @@ const actor = await actorEngine.createActor(
 - **Rejects conditional logic** - Views are "dumb" templates, no `$if`, `$eq`, ternary operators allowed
 
 **Key Methods:**
-- `loadView(coId)` - Load view definition from database
+- `loadViewConfigs(actorConfig, actorId)` - Load view, context, style, brand; validate view; set up subscriptions
+- `attachViewToActor(actor, containerElement, actorConfig, ...)` - Full attach: configs, shadowRoot, render
 - `render(viewDef, context, shadowRoot, styleSheets, actorId)` - Render view
 - `renderNode(nodeDef, data, actorId)` - Render a single node
 - `_handleEvent(event, element, actorId)` - Handle view events, resolves expressions, validates payloads

@@ -1,3 +1,4 @@
+import { validateViewDef } from '@MaiaOS/schemata'
 import { containsExpressions, resolveExpressions } from '@MaiaOS/schemata/expression-resolver'
 import { extractDOMValues } from '@MaiaOS/schemata/payload-resolver'
 import { readStore } from '../utils/store-reader.js'
@@ -26,6 +27,30 @@ function containsDangerousHTML(str) {
 		/<meta/i,
 		/<style/i,
 	].some((pattern) => pattern.test(str))
+}
+
+const BOOLEAN_ATTRS = new Set([
+	'disabled',
+	'readonly',
+	'checked',
+	'selected',
+	'autofocus',
+	'required',
+	'multiple',
+])
+
+function setAttr(element, name, value) {
+	if (value === undefined || value === null) return
+	if (BOOLEAN_ATTRS.has(name.toLowerCase())) {
+		const bool = Boolean(value)
+		element[name] = bool
+		if (bool) element.setAttribute(name, '')
+		else element.removeAttribute(name)
+	} else {
+		let s = typeof value === 'boolean' ? String(value) : String(value)
+		if (containsDangerousHTML(s)) s = sanitizeAttribute(s)
+		element.setAttribute(name, s)
+	}
 }
 
 export class ViewEngine {
@@ -71,9 +96,11 @@ export class ViewEngine {
 		const viewStore2 = await readStore(this.dataEngine, actorConfig.view)
 		if (!viewStore2) throw new Error(`[ViewEngine] Failed to load view CoValue ${actorConfig.view}`)
 		const viewDef = viewStore2.value
+		validateViewDef(viewDef)
 		configUnsubscribes.push(
 			viewStore2.subscribe(
 				(updatedView) => {
+					validateViewDef(updatedView)
 					const actor = this.actorOps?.getActor?.(actorId)
 					if (actor) {
 						actor.viewDef = updatedView
@@ -182,38 +209,6 @@ export class ViewEngine {
 		}
 	}
 
-	async loadView(coId) {
-		// UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema extraction
-		const viewSchemaStore = this.dataEngine.peer.resolveReactive(
-			{ fromCoValue: coId },
-			{ returnType: 'coId' },
-		)
-		const viewSchemaState = await this.dataEngine.peer.waitForReactiveResolution(viewSchemaStore, {
-			timeoutMs: 10000,
-		})
-		const viewSchemaCoId = viewSchemaState.schemaCoId
-
-		if (!viewSchemaCoId) {
-			throw new Error(
-				`[ViewEngine] Failed to extract schema co-id from view CoValue ${coId}: ${viewSchemaState.error || 'Schema not found'}`,
-			)
-		}
-
-		const _viewStore = await this.dataEngine.execute({
-			op: 'read',
-			schema: null,
-			key: coId,
-		})
-
-		const store = await this.dataEngine.execute({
-			op: 'read',
-			schema: viewSchemaCoId,
-			key: coId,
-		})
-
-		return store
-	}
-
 	async render(viewDef, context, shadowRoot, styleSheets, actorId) {
 		// $stores Architecture: Backend unified store handles reactivity automatically
 		// No manual subscriptions needed - backend handles everything via subscriptionCache
@@ -250,12 +245,9 @@ export class ViewEngine {
 		const element = await this.renderNode(viewNode, { context: contextForRender }, actorId)
 
 		if (element) {
-			// Container-type and container-name are set via CSS in component definition
-			// Only set dataset for identification
 			element.dataset.actorId = actorId
 			shadowRoot.appendChild(element)
 			this._processScrollToBottom(actorId)
-		} else {
 		}
 	}
 
@@ -333,19 +325,6 @@ export class ViewEngine {
 
 	async _applyNodeAttributes(element, node, data, actorId) {
 		if (node.class) {
-			// CRITICAL: Reject all conditional logic in class property
-			if (typeof node.class === 'object' && this._isDSLOperation(node.class)) {
-				const opName = Object.keys(node.class)[0]
-				throw new Error(
-					`[ViewEngine] Conditional logic (${opName}) is not allowed in class property. Use state machines to compute boolean flags and reference them via context, then use data-attributes and CSS.`,
-				)
-			}
-			// Reject ternary operators
-			if (typeof node.class === 'string' && node.class.includes('?') && node.class.includes(':')) {
-				throw new Error(
-					'[ViewEngine] Ternary operators are not allowed in class property. Use state machines to compute values and reference them via context.',
-				)
-			}
 			const classValue = await this.evaluator.evaluate(node.class, data)
 			if (classValue) {
 				element.className = classValue
@@ -357,69 +336,13 @@ export class ViewEngine {
 				if (attrName === 'data') {
 					await this._resolveDataAttributes(attrValue, data, element)
 				} else {
-					// CRITICAL: Reject conditional logic in regular attributes
-					if (typeof attrValue === 'object' && this._isDSLOperation(attrValue)) {
-						const opName = Object.keys(attrValue)[0]
-						throw new Error(
-							`[ViewEngine] Conditional logic (${opName}) is not allowed in attributes. Use state machines to compute values and reference them via context.`,
-						)
-					}
-					// Reject ternary operators
-					if (typeof attrValue === 'string' && attrValue.includes('?') && attrValue.includes(':')) {
-						throw new Error(
-							'[ViewEngine] Ternary operators are not allowed in attributes. Use state machines to compute values and reference them via context.',
-						)
-					}
-					const resolvedValue = await this.evaluator.evaluate(attrValue, data)
-					if (resolvedValue !== undefined && resolvedValue !== null) {
-						// CRITICAL: Handle boolean attributes (disabled, readonly, checked, etc.) as properties, not attributes
-						// setAttribute('disabled', 'false') still sets the attribute (makes it disabled)
-						// We need to use the property instead: element.disabled = false
-						const booleanAttributes = [
-							'disabled',
-							'readonly',
-							'checked',
-							'selected',
-							'autofocus',
-							'required',
-							'multiple',
-						]
-						if (booleanAttributes.includes(attrName.toLowerCase())) {
-							const boolValue = Boolean(resolvedValue)
-							element[attrName] = boolValue
-							// Also set/remove attribute for proper HTML representation
-							if (boolValue) {
-								element.setAttribute(attrName, '')
-							} else {
-								element.removeAttribute(attrName)
-							}
-						} else {
-							let stringValue =
-								typeof resolvedValue === 'boolean' ? String(resolvedValue) : String(resolvedValue)
-							if (containsDangerousHTML(stringValue)) {
-								stringValue = sanitizeAttribute(stringValue)
-							}
-							element.setAttribute(attrName, stringValue)
-						}
-					}
+					const resolved = await this.evaluator.evaluate(attrValue, data)
+					setAttr(element, attrName, resolved)
 				}
 			}
 		}
 
 		if (node.value !== undefined) {
-			// CRITICAL: Reject conditional logic in value property
-			if (typeof node.value === 'object' && this._isDSLOperation(node.value)) {
-				const opName = Object.keys(node.value)[0]
-				throw new Error(
-					`[ViewEngine] Conditional logic (${opName}) is not allowed in value property. Use state machines to compute values and reference them via context.`,
-				)
-			}
-			// Reject ternary operators
-			if (typeof node.value === 'string' && node.value.includes('?') && node.value.includes(':')) {
-				throw new Error(
-					'[ViewEngine] Ternary operators are not allowed in value property. Use state machines to compute values and reference them via context.',
-				)
-			}
 			const resolvedValue = await this.evaluator.evaluate(node.value, data)
 			if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
 				const newValue = resolvedValue || ''
@@ -438,19 +361,6 @@ export class ViewEngine {
 		}
 
 		if (node.text !== undefined) {
-			// CRITICAL: Reject conditional logic in text property
-			if (typeof node.text === 'object' && this._isDSLOperation(node.text)) {
-				const opName = Object.keys(node.text)[0]
-				throw new Error(
-					`[ViewEngine] Conditional logic (${opName}) is not allowed in text property. Use state machines to compute values and reference them via context.`,
-				)
-			}
-			// Reject ternary operators
-			if (typeof node.text === 'string' && node.text.includes('?') && node.text.includes(':')) {
-				throw new Error(
-					'[ViewEngine] Ternary operators are not allowed in text property. Use state machines to compute values and reference them via context.',
-				)
-			}
 			const textValue = await this.evaluator.evaluate(node.text, data)
 			// Format objects/arrays as JSON strings for display
 			if (textValue && typeof textValue === 'object') {
@@ -479,13 +389,6 @@ export class ViewEngine {
 	async _renderNodeChildren(element, node, data, actorId) {
 		if (node.children && Array.isArray(node.children)) {
 			for (const child of node.children) {
-				// CRITICAL: Reject all conditional logic in children
-				if (child && typeof child === 'object' && this._isDSLOperation(child)) {
-					const opName = Object.keys(child)[0]
-					throw new Error(
-						`[ViewEngine] Conditional logic (${opName}) is not allowed in view templates. Use state machines to compute boolean flags and reference them via context, then use data-attributes and CSS.`,
-					)
-				}
 				const childElement = await this.renderNode(child, data, actorId)
 				if (childElement) {
 					element.appendChild(childElement)
@@ -494,119 +397,40 @@ export class ViewEngine {
 		}
 	}
 
+	async _resolveDataAttrValue(spec, data) {
+		if (typeof spec === 'string' && spec.includes('.$$')) {
+			const [contextKey, itemKey] = spec.split('.')
+			const contextObj = await this.evaluator.evaluate(contextKey, data)
+			const itemId = await this.evaluator.evaluate(itemKey, data)
+			if (contextObj && typeof contextObj === 'object' && itemId) {
+				return contextObj[itemId]
+			}
+			return undefined
+		}
+		return this.evaluator.evaluate(spec, data)
+	}
+
 	async _resolveDataAttributes(dataSpec, data, element) {
-		if (typeof dataSpec === 'string') {
-			// CRITICAL: Views are dumb templates - only allow simple context/item references
-			// Reject conditional logic (expressions starting with $ that aren't simple references)
-			if (this._containsConditionalLogic(dataSpec)) {
-				throw new Error(
-					`[ViewEngine] Conditional logic is not allowed in data attributes. Use state machines to compute boolean flags and reference them via context. Found: ${dataSpec}`,
-				)
-			}
+		const entries =
+			typeof dataSpec === 'string'
+				? [
+						[
+							dataSpec.includes('.$$')
+								? dataSpec.split('.')[0].slice(1)
+								: dataSpec.startsWith('$$')
+									? dataSpec.slice(2)
+									: dataSpec.slice(1),
+							dataSpec,
+						],
+					]
+				: Object.entries(dataSpec ?? {})
 
-			if (dataSpec.includes('.$$')) {
-				const [contextKey, itemKey] = dataSpec.split('.')
-				const contextObj = await this.evaluator.evaluate(contextKey, data)
-				const itemId = await this.evaluator.evaluate(itemKey, data)
-
-				if (contextObj && typeof contextObj === 'object' && itemId) {
-					const value = contextObj[itemId]
-					if (value !== null && value !== undefined) {
-						const key = contextKey.substring(1)
-						const attrName = `data-${this._toKebabCase(key)}`
-						element.setAttribute(attrName, String(value))
-					}
-				}
-			} else {
-				const value = await this.evaluator.evaluate(dataSpec, data)
-				if (value !== null && value !== undefined) {
-					const key = dataSpec.startsWith('$$') ? dataSpec.substring(2) : dataSpec.substring(1)
-					const attrName = `data-${this._toKebabCase(key)}`
-					element.setAttribute(attrName, String(value))
-				}
-			}
-		} else if (typeof dataSpec === 'object' && dataSpec !== null) {
-			for (const [key, valueSpec] of Object.entries(dataSpec)) {
-				// CRITICAL: Reject conditional logic in data attributes
-				// $eq, $if, ternary operators, etc. are not allowed - state machines must compute flags
-				if (typeof valueSpec === 'object' && valueSpec !== null) {
-					if (this._isDSLOperation(valueSpec)) {
-						throw new Error(
-							`[ViewEngine] Conditional logic (${Object.keys(valueSpec)[0]}) is not allowed in data attributes. Use state machines to compute boolean flags and reference them via context.`,
-						)
-					}
-				}
-
-				// Reject ternary operators in strings
-				if (typeof valueSpec === 'string' && valueSpec.includes('?') && valueSpec.includes(':')) {
-					throw new Error(
-						`[ViewEngine] Ternary operators are not allowed in views. Use state machines to compute values and reference them via context.`,
-					)
-				}
-
-				let value
-
-				if (typeof valueSpec === 'string' && valueSpec.includes('.$$')) {
-					const [contextKey, itemKey] = valueSpec.split('.')
-					const contextObj = await this.evaluator.evaluate(contextKey, data)
-					const itemId = await this.evaluator.evaluate(itemKey, data)
-
-					if (contextObj && typeof contextObj === 'object' && itemId) {
-						value = contextObj[itemId]
-					}
-				} else {
-					// Only evaluate simple context/item references - no DSL operations
-					value = await this.evaluator.evaluate(valueSpec, data)
-				}
-
-				if (value !== null && value !== undefined) {
-					const attrName = `data-${this._toKebabCase(key)}`
-					element.setAttribute(attrName, String(value))
-				}
+		for (const [key, spec] of entries) {
+			const value = await this._resolveDataAttrValue(spec, data)
+			if (value !== null && value !== undefined) {
+				element.setAttribute(`data-${this._toKebabCase(key)}`, String(value))
 			}
 		}
-	}
-
-	/**
-	 * Check if a value contains conditional logic (DSL operations or ternary operators)
-	 * Views should only contain simple context/item references
-	 */
-	_containsConditionalLogic(value) {
-		if (typeof value !== 'string') return false
-		// Check for ternary operators
-		if (value.includes('?') && value.includes(':')) return true
-		// Check for DSL operation patterns (but allow simple $key and $$key references)
-		// Simple references: $key, $$key, $context.key, $$item.key
-		// Conditional logic: $if, $eq, $and, etc. (but these would be objects, not strings)
-		return false // String values are simple references, objects are checked separately
-	}
-
-	/**
-	 * Check if a value is a DSL operation (conditional logic)
-	 */
-	_isDSLOperation(value) {
-		if (!value || typeof value !== 'object' || Array.isArray(value)) return false
-		const keys = Object.keys(value)
-		if (keys.length === 0) return false
-		// DSL operations have keys starting with $ (except simple $context, $item which are data access)
-		const firstKey = keys[0]
-		if (!firstKey.startsWith('$')) return false
-		// Simple data access operations are allowed (but shouldn't appear in views anyway)
-		// Conditional logic operations: $if, $eq, $ne, $and, $or, $not, $switch, etc.
-		const conditionalOps = [
-			'$if',
-			'$eq',
-			'$ne',
-			'$and',
-			'$or',
-			'$not',
-			'$switch',
-			'$gt',
-			'$lt',
-			'$gte',
-			'$lte',
-		]
-		return conditionalOps.includes(firstKey)
 	}
 
 	_toKebabCase(str) {
@@ -632,13 +456,8 @@ export class ViewEngine {
 		let namekey
 		if (typeof slotValue === 'string' && slotValue.startsWith('@')) {
 			namekey = slotValue.slice(1)
-
-			// CLEAN ARCHITECTURE: Context is always ReactiveStore
-			const actorsMap = contextValue['@actors']
-			if (actorsMap && !actorsMap[namekey]) {
-			}
 		} else {
-			wrapperElement.textContent = String(contextValue)
+			wrapperElement.textContent = String(slotValue)
 			return
 		}
 
@@ -651,15 +470,12 @@ export class ViewEngine {
 		let childActor = actor.children?.[namekey]
 
 		if (!childActor) {
-			const agentKey = actor.agentKey || null
-			childActor = await this.actorOps?._createChildActorIfNeeded?.(actor, namekey, agentKey)
-
-			if (!childActor) {
-				// Only warn if actor is READY (initial render complete)
-				if (actor._renderState === RENDER_STATES.READY) {
-				}
-				return
-			}
+			childActor = await this.actorOps?._createChildActorIfNeeded?.(
+				actor,
+				namekey,
+				actor.agentKey ?? null,
+			)
+			if (!childActor) return
 		}
 
 		if (childActor.containerElement) {
@@ -688,7 +504,6 @@ export class ViewEngine {
 				wrapperElement.innerHTML = ''
 				wrapperElement.appendChild(childActor.containerElement)
 			}
-		} else {
 		}
 	}
 

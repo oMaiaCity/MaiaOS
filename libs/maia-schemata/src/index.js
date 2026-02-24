@@ -28,6 +28,7 @@ export {
 	validateAgainstSchemaOrThrow,
 } from './validation.helper.js'
 export { ValidationPluginRegistry } from './validation-plugin-registry.js'
+export { validateViewDef } from './view-validator.js'
 
 // Meta schema is now loaded from os/meta.schema.json directly (seeding) or from backend (runtime)
 // No exports needed - use ValidationEngine.getMetaSchema() for validation engine, or getMetaSchemaFromPeer() for runtime access
