@@ -4,13 +4,18 @@
 	"title": "Creator",
 	"primaryView": "logs",
 	"primaryViewLabel": "Logs",
-	"secondaryViewLabel": "Soon",
+	"secondaryView": "actors",
+	"secondaryViewLabel": "Actors",
+	"tertiaryView": "schemata",
+	"tertiaryViewLabel": "Schemata",
 	"viewMode": "logs",
 	"primaryButtonActive": true,
 	"secondaryButtonActive": false,
+	"tertiaryButtonActive": false,
 	"currentView": "@logs",
 	"@actors": {
 		"logs": "°Maia/actor/services/logs",
-		"comingSoon": "°Maia/actor/coming-soon"
+		"actors": "°Maia/actor/views/actor-list",
+		"schemata": "°Maia/actor/views/schemata-list"
 	}
 }

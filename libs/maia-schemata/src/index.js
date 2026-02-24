@@ -67,8 +67,10 @@ import openPopupEventSchema from './event/OPEN_POPUP.schema.json'
 import randomizePaperEventSchema from './event/RANDOMIZE_PAPER.schema.json'
 import removeMemberEventSchema from './event/REMOVE_MEMBER.schema.json'
 import retryEventSchema from './event/RETRY.schema.json'
+import selectActorEventSchema from './event/SELECT_ACTOR.schema.json'
 import selectNavEventSchema from './event/SELECT_NAV.schema.json'
 import selectRowEventSchema from './event/SELECT_ROW.schema.json'
+import selectSchemaEventSchema from './event/SELECT_SCHEMA.schema.json'
 import selectSparkEventSchema from './event/SELECT_SPARK.schema.json'
 import sendMessageEventSchema from './event/SEND_MESSAGE.schema.json'
 import sparkOpEventSchema from './event/SPARK_OP.schema.json'
@@ -168,6 +170,8 @@ const SCHEMAS = {
 	'event/DISMISS': dismissEventSchema,
 	'event/SELECT_NAV': selectNavEventSchema,
 	'event/SELECT_ROW': selectRowEventSchema,
+	'event/SELECT_ACTOR': selectActorEventSchema,
+	'event/SELECT_SCHEMA': selectSchemaEventSchema,
 	'event/SELECT_SPARK': selectSparkEventSchema,
 	'event/LOAD_ACTOR': loadActorEventSchema,
 	'event/UPDATE_AGENT_INPUT': updateAgentInputEventSchema,

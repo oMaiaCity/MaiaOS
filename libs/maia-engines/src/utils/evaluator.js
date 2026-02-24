@@ -19,7 +19,8 @@ function assertSafePath(path, context = 'path resolution') {
 }
 
 function resolvePath(obj, path) {
-	if (!obj || !path) return undefined
+	if (!path) return obj
+	if (!obj) return undefined
 	assertSafePath(path, 'path resolution')
 	return path.split('.').reduce((acc, key) => {
 		assertSafePath(key, 'path segment')
@@ -199,7 +200,8 @@ export class Evaluator {
 		// Handle $map operation (map over array)
 		if ('$map' in expression) {
 			const mapConfig = expression.$map
-			const array = await this.evaluate(mapConfig.array, data, depth + 1)
+			const arrayExpr = mapConfig.array ?? mapConfig.items
+			const array = await this.evaluate(arrayExpr, data, depth + 1)
 			// Handle null/undefined or non-array values - return empty array
 			if (!array || !Array.isArray(array)) {
 				return []
