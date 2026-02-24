@@ -4,7 +4,7 @@
 	"role": "@chat/paper",
 	"context": "°Maia/chat/context/paper",
 	"view": "°Maia/chat/view/paper",
-	"state": "°Maia/chat/state/paper",
+	"process": "°Maia/chat/process/paper",
 	"brand": "°Maia/chat/style/brand",
 	"inbox": "°Maia/chat/inbox/paper",
 	"interface": []

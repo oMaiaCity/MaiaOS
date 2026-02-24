@@ -116,40 +116,13 @@ export async function create(peer, schema, data, options = {}) {
 		_perfChat.log('create.createCoValueForSpark', Math.round((_perfChat.now() - t0) * 100) / 100)
 	}
 
-	// Return created CoValue data (extract properties as flat object for tool access)
-	// CRITICAL: Always include original data as fallback to ensure all properties are available
-	// This ensures $lastCreatedText and other properties are accessible even if CoValue extraction fails
-	// Get CoValueCore from node to check availability
-	const coValueCore = peer.node.getCoValue(coValue.id)
-	if (coValueCore && peer.isAvailable(coValueCore)) {
-		const content = peer.getCurrentContent(coValueCore)
-		if (content && typeof content.get === 'function') {
-			// Extract properties as flat object (for tool access like $lastCreatedText)
-			const result = { id: coValue.id, ...data } // Start with original data to ensure all properties
-			const keys =
-				content.keys && typeof content.keys === 'function' ? content.keys() : Object.keys(content)
-			for (const key of keys) {
-				// Override with actual CoValue content if available (more accurate)
-				result[key] = content.get(key)
-			}
-			return result
-		}
-		// Fallback to normalized format, but include original data
-		const extracted = dataExtraction.extractCoValueData(peer, coValueCore)
-		return { ...data, id: coValue.id, ...extracted } // Merge original data with extracted
-	}
-
-	// Fallback: coValue not yet available (rare remote/edge case)
+	// Return created CoValue data via read() API (single gate, normalized)
 	const store = await peer.read(null, coValue.id, null, null, { deepResolve: false })
 	const { waitForStoreReady } = await import('./read-operations.js')
-	const t1 = isChatMessage ? _perfChat.now() : 0
 	try {
 		await waitForStoreReady(store, coValue.id, 5000)
 	} catch (_e) {
 		return { id: coValue.id, ...data, type: cotype, schema }
-	}
-	if (isChatMessage) {
-		_perfChat.log('create.waitForStoreReady', Math.round((_perfChat.now() - t1) * 100) / 100)
 	}
 	const extracted = store.value
 	if (extracted && !extracted.error) {

@@ -57,7 +57,6 @@ export async function update(peer, _schema, id, data) {
 		// Skip validation for exception schemas
 		if (!isExceptionSchema(schemaCoId)) {
 			// Get existing data (current state) - use getRawRecord which returns actual properties
-			// getRawRecord returns data with $schema but without id (perfect for validation)
 			const existingDataRaw = await peer.getRawRecord(id)
 
 			if (existingDataRaw) {

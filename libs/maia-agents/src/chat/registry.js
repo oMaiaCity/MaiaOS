@@ -8,18 +8,18 @@ import brandStyle from './intent/brand.style.maia'
 import intentActor from './intent/intent.actor.maia'
 import intentContext from './intent/intent.context.maia'
 import intentInbox from './intent/intent.inbox.maia'
-import intentState from './intent/intent.state.maia'
+import intentProcess from './intent/intent.process.maia'
 import intentView from './intent/intent.view.maia'
 import chatAgent from './manifest.agent.maia'
 import messagesActor from './messages/messages.actor.maia'
 import messagesContext from './messages/messages.context.maia'
 import messagesInbox from './messages/messages.inbox.maia'
-import messagesState from './messages/messages.state.maia'
+import messagesProcess from './messages/messages.process.maia'
 import messagesView from './messages/messages.view.maia'
 import paperActor from './paper/paper.actor.maia'
 import paperContext from './paper/paper.context.maia'
 import paperInbox from './paper/paper.inbox.maia'
-import paperState from './paper/paper.state.maia'
+import paperProcess from './paper/paper.process.maia'
 import paperView from './paper/paper.view.maia'
 
 /**
@@ -51,10 +51,10 @@ export const ChatAgentRegistry = {
 		'°Maia/chat/context/paper': paperContext,
 	},
 
-	states: {
-		'°Maia/chat/state/intent': intentState,
-		'°Maia/chat/state/messages': messagesState,
-		'°Maia/chat/state/paper': paperState,
+	processes: {
+		'°Maia/chat/process/intent': intentProcess,
+		'°Maia/chat/process/messages': messagesProcess,
+		'°Maia/chat/process/paper': paperProcess,
 	},
 
 	inboxes: {
@@ -64,6 +64,7 @@ export const ChatAgentRegistry = {
 	},
 
 	data: {
+		chat: [],
 		notes: [
 			{
 				content: "Dear future us, what we're creating together... — [this is coming from CoText]",

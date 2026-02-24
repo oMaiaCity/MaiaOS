@@ -107,10 +107,16 @@ export async function createCoValueForSpark(context, spark, options) {
 	const _meta = { $schema: schema }
 	switch (cotype) {
 		case 'comap':
-			coValue = await createCoMap(group, data ?? {}, schema, node, dataEngine)
+			coValue = await createCoMap(group, normalizeCoValueData(data ?? {}), schema, node, dataEngine)
 			break
 		case 'colist':
-			coValue = await createCoList(group, Array.isArray(data) ? data : [], schema, node, dataEngine)
+			coValue = await createCoList(
+				group,
+				Array.isArray(data) ? data.map((item) => normalizeCoValueData(item)) : [],
+				schema,
+				node,
+				dataEngine,
+			)
 			break
 		case 'costream':
 			coValue = await createCoStream(group, schema, node, dataEngine)

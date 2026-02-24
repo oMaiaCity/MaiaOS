@@ -254,29 +254,15 @@ export class MaiaDB {
 	}
 
 	async getRawRecord(id) {
-		const coValueCore = this.getCoValue(id)
-		if (!coValueCore || !this.isAvailable(coValueCore)) return null
-		const content = this.getCurrentContent(coValueCore)
-		const header = this.getHeader(coValueCore)
-		const headerMeta = header?.meta || null
-		const schema = headerMeta?.$schema || null
-		if (content?.get && typeof content.get === 'function') {
-			const raw = { $schema: schema }
-			const keys =
-				content.keys && typeof content.keys === 'function' ? content.keys() : Object.keys(content)
-			for (const k of keys) {
-				raw[k] = content.get && typeof content.get === 'function' ? content.get(k) : content[k]
-			}
-			return raw
+		const store = await universalRead(this, id, null, null, null, { deepResolve: false })
+		try {
+			await waitForStoreReady(store, id, 5000)
+		} catch (_e) {
+			return null
 		}
-		if (content?.toJSON) {
-			try {
-				return content.toJSON()
-			} catch (_e) {
-				return null
-			}
-		}
-		return null
+		const data = store.value
+		if (!data || data.error) return null
+		return data
 	}
 
 	async seed(configs, schemas, data, options = {}) {

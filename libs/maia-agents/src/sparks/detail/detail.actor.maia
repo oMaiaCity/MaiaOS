@@ -4,7 +4,7 @@
 	"role": "@sparks/detail",
 	"context": "°Maia/sparks/context/detail",
 	"view": "°Maia/sparks/view/detail",
-	"state": "°Maia/sparks/state/detail",
+	"process": "°Maia/sparks/process/detail",
 	"brand": "°Maia/sparks/style/brand",
 	"inbox": "°Maia/sparks/inbox/detail",
 	"interface": [
