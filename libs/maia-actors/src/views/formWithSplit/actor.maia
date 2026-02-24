@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/actor",
 	"$id": "°Maia/actor/views/layout-sparks",
-	"role": "@maia/actor/views/layout-sparks",
+	"@label": "@maia/actor/views/layout-sparks",
 	"context": "°Maia/actor/views/layout-sparks/context",
 	"view": "°Maia/actor/views/formWithSplit/view",
 	"process": "°Maia/actor/views/layout-sparks/process",
