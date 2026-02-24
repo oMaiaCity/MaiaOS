@@ -10,7 +10,6 @@ import intentContext from './intent/intent.context.maia'
 import intentInbox from './intent/intent.inbox.maia'
 import intentProcess from './intent/intent.process.maia'
 import intentView from './intent/intent.view.maia'
-import logsStyle from './logs/logs.style.maia'
 import logsAgent from './manifest.agent.maia'
 
 export const LogsAgentRegistry = {
@@ -18,7 +17,6 @@ export const LogsAgentRegistry = {
 
 	styles: {
 		'°Maia/style/brand': masterBrand,
-		'°Maia/creator/style/logs': logsStyle,
 	},
 
 	actors: {

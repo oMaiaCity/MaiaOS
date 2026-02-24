@@ -38,10 +38,9 @@ src/
 ├── os/               # OS service actors (@maia/actor/os/*)
 │   ├── ai/           # LLM chat (actor, process, tool, function)
 │   ├── names/        # Compute message names
-│   ├── db/           # Database operations
-│   ├── spark/        # Spark CRUD
-│   └── paper/        # Update paper content
-└── library/         # Standalone UI actors
+│   └── db/           # Database operations
+├── services/        # View + process actors (list, logs, messages, detail, paper)
+└── views/           # Standalone UI actors
     └── comingSoon/   # Coming soon placeholder view
 ```
 

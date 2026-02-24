@@ -73,7 +73,7 @@ const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
 /** OpenAI-format tools for LLM. Uses actor tool defs (name, description, parameters). */
 function toOpenAITools() {
 	const defs = getAllActorDefinitions()
-	const toolPaths = ['maia/actor/os/paper']
+	const toolPaths = ['maia/actor/services/paper']
 	const tools = []
 	for (const path of toolPaths) {
 		const def = defs[path]
@@ -332,7 +332,7 @@ async function handleProfile(worker) {
 
 /**
  * Shared logic: write text into the paper CoText (first note's content).
- * Used by LLM tool @maia/actor/os/paper.
+ * Used by LLM tool @maia/actor/services/paper.
  */
 async function writeToPaperCoText(worker, value) {
 	if (value == null || typeof value !== 'string') {
@@ -385,7 +385,7 @@ async function handleAgentHttp(req, worker) {
 /** Execute LLM tool call server-side. */
 async function executeLLMTool(worker, toolName, args) {
 	try {
-		if (toolName === '@maia/actor/os/paper') {
+		if (toolName === '@maia/actor/services/paper' || toolName === '@maia/actor/os/paper') {
 			// Accept value, content, or text (some models use different param names)
 			let value = args?.value ?? args?.content ?? args?.text
 			if (value != null && typeof value !== 'string') {

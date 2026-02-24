@@ -1,7 +1,6 @@
 {
 	"$schema": "°Maia/schema/style",
-	"$id": "°Maia/actor/views/logs/style",
-	"@label": "@maia/actor/views/logs/style",
+	"$id": "°Maia/actor/services/logs/style",
 	"components": {
 		"logsHeader": {
 			"display": "flex",

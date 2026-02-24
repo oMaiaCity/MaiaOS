@@ -1,6 +1,6 @@
 {
 	"$schema": "°Maia/schema/view",
-	"$id": "°Maia/chat/view/paper",
+	"$id": "°Maia/actor/services/paper/view",
 	"content": {
 		"tag": "div",
 		"class": "paper-background",

@@ -1,6 +1,6 @@
 {
 	"$schema": "°Maia/schema/context",
-	"$id": "°Maia/chat/context/paper",
+	"$id": "°Maia/actor/services/paper/context",
 	"notes": {
 		"schema": "°Maia/schema/data/notes",
 		"map": {
