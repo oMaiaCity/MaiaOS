@@ -61,6 +61,7 @@ export function buildSeedConfig(agentRegistries) {
 		actors: {},
 		views: {},
 		contexts: {},
+		processes: {},
 		states: {},
 		inboxes: {},
 		agents: validRegistries.map((r) => normalizeAgentForSeeding(r.agent)),
@@ -71,6 +72,7 @@ export function buildSeedConfig(agentRegistries) {
 		Object.assign(merged.actors, registry.actors || {})
 		Object.assign(merged.views, registry.views || {})
 		Object.assign(merged.contexts, registry.contexts || {})
+		Object.assign(merged.processes, registry.processes || {})
 		Object.assign(merged.states, registry.states || {})
 		Object.assign(merged.inboxes, registry.inboxes || {})
 		Object.assign(merged.data, registry.data || {})

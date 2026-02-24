@@ -27,8 +27,31 @@ export function getApiBaseUrl() {
 }
 
 /**
+ * Extract human-readable message from API error (handles nested structures like RedPill/upstream).
+ */
+function extractErrorMessage(apiError) {
+	if (!apiError || typeof apiError !== 'object') return 'Unknown error'
+	// Nested error object: { error: { message: "...", type: "upstream_error", code: 502 } }
+	const nested = apiError.error
+	if (nested && typeof nested === 'object' && typeof nested.message === 'string') {
+		return nested.message
+	}
+	// Top-level message
+	if (typeof apiError.message === 'string') return apiError.message
+	// Legacy: err + msg
+	const err = apiError.error
+	const msg = apiError.message || ''
+	if (typeof err === 'string' && typeof msg === 'string') {
+		return err && msg && msg !== 'Unknown' ? `${err}: ${msg}` : err || msg
+	}
+	if (typeof err === 'string') return err
+	return 'Unknown error'
+}
+
+/**
  * Map API error response to structured errors (createErrorEntry shape).
  * Handles { error, validationErrors } from services like agent, LLM proxy.
+ * Extracts nested error.message from upstream/RedPill-style responses.
  */
 export function toStructuredErrors(apiError) {
 	if (!apiError || typeof apiError !== 'object') {
@@ -44,8 +67,6 @@ export function toStructuredErrors(apiError) {
 			),
 		)
 	}
-	const err = apiError.error || ''
-	const msg = apiError.message || ''
-	const combined = err && msg && msg !== 'Unknown' ? `${err}: ${msg}` : err || msg || 'Unknown error'
-	return [createErrorEntry('structural', typeof combined === 'string' ? combined : String(combined))]
+	const message = extractErrorMessage(apiError)
+	return [createErrorEntry('structural', message)]
 }

@@ -14,6 +14,7 @@ import customMetaSchema from './os/meta.schema.json'
 import { isSchemaRef } from './patterns.js'
 import { plugin as cojsonPlugin, pluginId as cojsonPluginId } from './plugins/cojson.plugin.js'
 import { plugin as cotextPlugin, pluginId as cotextPluginId } from './plugins/cotext.plugin.js'
+import { normalizeSchemaReferencesWithResolver } from './schema-ref-resolver.js'
 import { formatValidationErrors, withSchemaValidationDisabled } from './validation.utils.js'
 import { ValidationPluginRegistry } from './validation-plugin-registry.js'
 

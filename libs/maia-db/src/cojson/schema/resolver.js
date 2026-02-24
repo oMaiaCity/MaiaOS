@@ -23,6 +23,7 @@ import {
 	INSTANCE_REF_PATTERN,
 	SCHEMA_REF_PATTERN,
 } from '@MaiaOS/schemata'
+import { normalizeCoValueData } from '../crud/data-extraction.js'
 import { resolveReactive as resolveReactiveBase } from '../crud/reactive-resolver.js'
 import { read as universalRead } from '../crud/read.js'
 import { waitForStoreReady } from '../crud/read-operations.js'
@@ -611,8 +612,8 @@ async function resolveSparkOsIdFromNode(node, account, spark) {
 }
 
 /**
- * Load all schemas from spark.os.schematas (account.registries.sparks[°Maia].os.schematas)
- * MIGRATIONS ONLY - uses node directly, no peer.read
+ * Load all schemas from spark.os.schematas via read() API
+ * MIGRATIONS ONLY - uses resolve(peer, schemaCoId, { returnType: 'schema' }) for each schema
  *
  * @param {LocalNode} node - LocalNode instance
  * @param {RawAccount} account - Account CoMap

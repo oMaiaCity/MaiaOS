@@ -21,7 +21,7 @@ This package contains all actor definitions and implementations for MaiaOS. Acto
 import { getActor, getAllActorDefinitions } from '@MaiaOS/actors';
 
 // Get an actor by namespace path
-const actor = getActor('db/db');
+const actor = getActor('maia/actor/os/db');
 // Returns: { definition: {...}, function: execute(...) }
 
 // Get all actor definitions
@@ -32,18 +32,24 @@ const definitions = getAllActorDefinitions();
 
 ```
 src/
-├── index.js          # Main entry point (tool registry)
-├── core/             # Core UI tools (noop, publishMessage, etc.)
-├── db/               # Database tools
-├── dragdrop/         # Drag and drop tools
-└── context/          # Context update tools
+├── index.js          # Main entry point (actor registry)
+├── seed-config.js    # Genesis seed config (actors, processes, tools)
+├── shared/           # Shared utilities (api-helpers)
+├── os/               # OS service actors (@maia/actor/os/*)
+│   ├── ai/           # LLM chat (actor, process, tool, function)
+│   ├── names/        # Compute message names
+│   ├── db/           # Database operations
+│   ├── spark/        # Spark CRUD
+│   └── paper/        # Update paper content
+└── library/         # Standalone UI actors
+    └── comingSoon/   # Coming soon placeholder view
 ```
 
 ## API
 
 ### `getActor(namespacePath)`
 
-Get an actor by its namespace path (e.g., `"db/db"`).
+Get an actor by its namespace path (e.g., `"maia/actor/os/db"`).
 
 Returns: `{ definition: Object, function: Function }` or `null`
 

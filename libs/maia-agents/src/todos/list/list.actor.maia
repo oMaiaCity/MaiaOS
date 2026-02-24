@@ -4,7 +4,7 @@
 	"role": "@todos/list",
 	"context": "°Maia/todos/context/list",
 	"view": "°Maia/todos/view/list",
-	"state": "°Maia/todos/state/list",
+	"process": "°Maia/todos/process/list",
 	"brand": "°Maia/todos/style/brand",
 	"style": "°Maia/todos/style/list",
 	"inbox": "°Maia/todos/inbox/list",

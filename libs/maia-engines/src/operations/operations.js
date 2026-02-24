@@ -3,6 +3,7 @@
  * Uses peer (MaiaDB) methods only - no direct @MaiaOS/db imports
  */
 
+import { normalizeCoValueData } from '@MaiaOS/db'
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver'
 import { createSuccessResult } from '@MaiaOS/schemata/operation-result'
 import {
@@ -37,17 +38,21 @@ async function evaluateDataWithExisting(data, existingData, evaluator) {
 function extractSchemaDefinition(coValueData, schemaCoId) {
 	if (!coValueData || coValueData.error) return null
 	const { id: _id, loading: _loading, error: _error, type, ...schemaOnly } = coValueData
+	let result
 	if (schemaOnly.definition) {
 		const { id: defId, type: defType, ...definitionOnly } = schemaOnly.definition
-		return { ...definitionOnly, $id: schemaCoId }
+		result = { ...definitionOnly, $id: schemaCoId }
+	} else {
+		const hasSchemaProps =
+			schemaOnly.cotype ||
+			schemaOnly.properties ||
+			schemaOnly.items ||
+			schemaOnly.title ||
+			schemaOnly.description
+		result = hasSchemaProps ? { ...schemaOnly, $id: schemaCoId } : null
 	}
-	const hasSchemaProps =
-		schemaOnly.cotype ||
-		schemaOnly.properties ||
-		schemaOnly.items ||
-		schemaOnly.title ||
-		schemaOnly.description
-	return hasSchemaProps ? { ...schemaOnly, $id: schemaCoId } : null
+	// Normalize CoMap array/CoMap-like properties/items → plain objects (AJV requires plain objects)
+	return result ? normalizeCoValueData(result) : null
 }
 
 export async function readOperation(peer, params) {
@@ -68,17 +73,21 @@ export async function readOperation(peer, params) {
 }
 
 export async function createOperation(peer, dataEngine, params) {
-	const { schema, data, spark, idempotencyKey } = params
-	requireParam(schema, 'schema', 'CreateOperation')
+	const { schema: schemaParam, data, spark, idempotencyKey } = params
+	requireParam(schemaParam, 'schema', 'CreateOperation')
 	requireParam(data, 'data', 'CreateOperation')
 	requireDataEngine(dataEngine, 'CreateOperation', 'runtime schema validation')
-	const schemaCoId = await peer.resolve(schema, { returnType: 'coId' })
+	// Resolve schema to co-id (handles both co-id and human-readable refs)
+	const schemaCoId =
+		typeof schemaParam === 'string' && schemaParam.startsWith('co_z')
+			? schemaParam
+			: await peer.resolve(schemaParam, { returnType: 'coId' })
 	if (!schemaCoId) {
 		const registriesHint = peer.account?.get?.('registries')
 			? 'has registries'
 			: 'account.registries not set (link via sync?)'
-		console.error('[CreateOperation] Schema resolve failed:', schema, registriesHint)
-		throw new Error(`[CreateOperation] Could not resolve schema: ${schema}. ${registriesHint}`)
+		console.error('[CreateOperation] Schema resolve failed:', schemaParam, registriesHint)
+		throw new Error(`[CreateOperation] Could not resolve schema: ${schemaParam}. ${registriesHint}`)
 	}
 
 	// Idempotency: lightweight findFirst (no store) - keeps read path pure progressive $stores

@@ -1,0 +1,12 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/os/spark",
+	"role": "@maia/actor/os/spark",
+	"interface": [
+		"SPARK_OP",
+		"SUCCESS",
+		"ERROR"
+	],
+	"process": "°Maia/actor/os/spark/process",
+	"tool": "°Maia/actor/os/spark/tool"
+}

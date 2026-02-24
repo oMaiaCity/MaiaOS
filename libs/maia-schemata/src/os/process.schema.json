@@ -7,10 +7,6 @@
 	"indexing": true,
 	"required": ["handlers"],
 	"properties": {
-		"@label": {
-			"type": "string",
-			"description": "Human-readable label (namekey, e.g. '@maia/actor/views/layout-humans/process')"
-		},
 		"handlers": {
 			"type": "object",
 			"description": "Event type → array of actions",
@@ -58,10 +54,7 @@
 				"tell": {
 					"type": "object",
 					"properties": {
-						"target": {
-							"oneOf": [{ "type": "string" }, { "type": "object" }],
-							"description": "Actor co-id or expression ($if, $$source, etc.)"
-						},
+						"target": { "type": "string", "description": "Actor co-id" },
 						"type": { "type": "string" },
 						"payload": { "type": "object" }
 					},
@@ -77,10 +70,7 @@
 				"ask": {
 					"type": "object",
 					"properties": {
-						"target": {
-							"oneOf": [{ "type": "string" }, { "type": "object" }],
-							"description": "Actor co-id or expression ($if, $$source, etc.)"
-						},
+						"target": { "type": "string", "description": "Actor co-id" },
 						"type": { "type": "string" },
 						"payload": { "type": "object" }
 					},

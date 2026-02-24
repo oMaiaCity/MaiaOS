@@ -1,16 +1,10 @@
 {
 	"$schema": "°Maia/schema/process",
 	"$id": "°Maia/actor/os/ai/process",
-	"@label": "@maia/actor/os/ai/process",
 	"handlers": {
 		"CHAT": [
 			{
 				"function": true
-			}
-		],
-		"ERROR": [
-			{
-				"ctx": {}
 			}
 		]
 	}

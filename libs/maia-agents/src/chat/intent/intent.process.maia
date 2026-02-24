@@ -1,0 +1,52 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/chat/process/intent",
+	"handlers": {
+		"SEND_MESSAGE": [
+			{
+				"tell": {
+					"target": "°Maia/chat/actor/messages",
+					"type": "SEND_MESSAGE",
+					"payload": {
+						"inputText": "$$inputText"
+					}
+				}
+			},
+			{
+				"ctx": {
+					"inputText": ""
+				}
+			}
+		],
+		"UPDATE_INPUT": [
+			{
+				"ctx": {
+					"inputText": "$$value"
+				}
+			}
+		],
+		"STATUS_UPDATE": [
+			{
+				"ctx": {
+					"isLoading": "$$isLoading",
+					"hasError": "$$hasError",
+					"error": "$$error"
+				}
+			}
+		],
+		"OPEN_POPUP": [
+			{
+				"ctx": {
+					"popupOpen": "$$popupOpen"
+				}
+			}
+		],
+		"CLOSE_POPUP": [
+			{
+				"ctx": {
+					"popupOpen": "$$popupOpen"
+				}
+			}
+		]
+	}
+}

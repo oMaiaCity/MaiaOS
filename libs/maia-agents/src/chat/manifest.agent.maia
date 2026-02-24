@@ -8,8 +8,8 @@
 		"°Maia/chat/actor/intent",
 		"°Maia/chat/actor/messages",
 		"°Maia/chat/actor/paper",
-		"°Maia/actor/db",
-		"°Maia/actor/aiChat",
-		"°Maia/actor/updatePaperContent"
+		"°Maia/actor/os/db",
+		"°Maia/actor/os/ai",
+		"°Maia/actor/os/paper"
 	]
 }

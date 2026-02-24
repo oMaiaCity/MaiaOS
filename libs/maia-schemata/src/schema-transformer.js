@@ -765,6 +765,64 @@ function transformArrayItems(arr, coIdMap, transformRecursive) {
 					transformToolPayload(item.payload, coIdMap, transformRecursive)
 				}
 			}
+			// Check if this is a sendEvent action - MUST transform target to co-id at seed (no runtime resolution)
+			else if (item.sendEvent && typeof item.sendEvent === 'object') {
+				const cfg = item.sendEvent
+				if (cfg.target && typeof cfg.target === 'string' && !cfg.target.startsWith('co_z')) {
+					const coId = transformTargetReference(cfg.target, coIdMap, 'sendEvent.target')
+					if (coId) cfg.target = coId
+					else
+						throw new Error(
+							`[SchemaTransformer] No co-id found for sendEvent target: ${cfg.target}. Ensure actor exists and is seeded before state config.`,
+						)
+				}
+				if (cfg.payload && typeof cfg.payload === 'object') {
+					transformToolPayload(cfg.payload, coIdMap, transformRecursive)
+				}
+			}
+			// Process config: tell and ask - MUST transform target to co-id at seed
+			else if (item.tell && typeof item.tell === 'object') {
+				const cfg = item.tell
+				if (cfg.target && typeof cfg.target === 'string' && !cfg.target.startsWith('co_z')) {
+					const coId = transformTargetReference(cfg.target, coIdMap, 'tell.target')
+					if (coId) cfg.target = coId
+					else
+						throw new Error(
+							`[SchemaTransformer] No co-id found for tell target: ${cfg.target}. Ensure actor exists and is seeded before process config.`,
+						)
+				}
+				if (cfg.payload && typeof cfg.payload === 'object') {
+					transformToolPayload(cfg.payload, coIdMap, transformRecursive)
+				}
+			} else if (item.ask && typeof item.ask === 'object') {
+				const cfg = item.ask
+				if (cfg.target && typeof cfg.target === 'string' && !cfg.target.startsWith('co_z')) {
+					const coId = transformTargetReference(cfg.target, coIdMap, 'ask.target')
+					if (coId) cfg.target = coId
+					else
+						throw new Error(
+							`[SchemaTransformer] No co-id found for ask target: ${cfg.target}. Ensure actor exists and is seeded before process config.`,
+						)
+				}
+				if (cfg.payload && typeof cfg.payload === 'object') {
+					transformToolPayload(cfg.payload, coIdMap, transformRecursive)
+				}
+			}
+			// Process config: op create - transform schema reference
+			else if (item.op && typeof item.op === 'object') {
+				const createConfig = item.op.create
+				if (
+					createConfig?.schema &&
+					typeof createConfig.schema === 'string' &&
+					!createConfig.schema.startsWith('co_z')
+				) {
+					const coId = transformSchemaReference(createConfig.schema, coIdMap, 'op.create.schema')
+					if (coId) createConfig.schema = coId
+				}
+				if (createConfig?.data && typeof createConfig.data === 'object') {
+					transformToolPayload(createConfig.data, coIdMap, transformRecursive)
+				}
+			}
 			// Check if this is a mapData action
 			else if (item.mapData && typeof item.mapData === 'object') {
 				// Transform schema references in each operation config
