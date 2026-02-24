@@ -293,3 +293,7 @@ export function getSeedConfig() {
 		styles: uiStyles,
 	}
 }
+
+if (import.meta.hot) {
+	import.meta.hot.accept()
+}

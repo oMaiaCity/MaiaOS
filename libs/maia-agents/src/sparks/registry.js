@@ -38,3 +38,7 @@ export const SparksAgentRegistry = {
 		'°Maia/sparks/process/intent': intentProcess,
 	},
 }
+
+if (import.meta.hot) {
+	import.meta.hot.accept()
+}

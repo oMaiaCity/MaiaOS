@@ -47,3 +47,7 @@ export const ChatAgentRegistry = {
 		],
 	},
 }
+
+if (import.meta.hot) {
+	import.meta.hot.accept()
+}

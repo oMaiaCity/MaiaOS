@@ -169,3 +169,7 @@ export function filterAgentsForSeeding(agentRegistries, config = null) {
 	}
 	return []
 }
+
+if (import.meta.hot) {
+	import.meta.hot.accept()
+}
