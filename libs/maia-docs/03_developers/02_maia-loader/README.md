@@ -11,7 +11,7 @@ The `@MaiaOS/loader` package provides the foundational services that power MaiaO
 - ✅ **Re-exports** - Schemas, tools, vibes seeding helpers, WebSocket peer (services import only from loader)
 
 **What it doesn't do:**
-- ❌ Execute MaiaScript (that's `@MaiaOS/script`)
+- ❌ Execute MaiaScript (that's `@MaiaOS/engines`)
 - ❌ Store data (that's `@MaiaOS/db`)
 - ❌ Validate schemas (that's `@MaiaOS/schemata`)
 

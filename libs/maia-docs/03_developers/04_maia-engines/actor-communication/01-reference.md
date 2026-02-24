@@ -16,7 +16,7 @@
 2. Computes `showContent` (boolean flag for UI)
 3. Computes `showEmptyMembers` (boolean flag for UI)
 
-**Key Point**: UI flags are computed in state machines, not views. Views only reference boolean flags from context.
+**Key Point**: UI flags are computed in process handlers, not views. Views only reference boolean flags from context.
 
 ---
 
@@ -94,7 +94,7 @@ The view subscribes to context changes:
 **How**:
 - Views resolve ALL expressions before sending to inbox
 - Messages contain only resolved values (no expressions)
-- State machines receive resolved payloads
+- Process handlers receive resolved payloads
 - Filters re-evaluated when context changes
 
 ---
@@ -104,13 +104,13 @@ The view subscribes to context changes:
 ### Core Engine Files
 
 - **Actor Engine** (`libs/maia-engines/src/engines/actor.engine.js`):
-  - `deliverEvent()` - Deliver event to actor inbox (inbox-only, persisted via CoJSON)
-  - `processMessages()` - Process messages from inbox
+  - `deliverEvent()` - Deliver event to actor inbox
+  - `processEvents()` - Process messages from inbox
   - `_createChildActorIfNeeded()` - Create child actor lazily
 
-- **State Engine** (`libs/maia-engines/src/engines/state.engine.js`):
-  - `send()` - Route event to state machine
-  - `_executeNamedAction()` - Execute custom actions (e.g., `sendToDetailActor`)
+- **Process Engine** (`libs/maia-engines/src/engines/process.engine.js`):
+  - `send(processId, event, payload)` - Route event to handlers[event]
+  - `_executeActions()` - Execute ctx, op, tell, ask, function actions
 
 - **View Engine** (`libs/maia-engines/src/engines/view.engine.js`):
   - `_renderSlot()` - Render child actors in slots
@@ -125,13 +125,13 @@ The view subscribes to context changes:
 
 - **Agent Actor** (`libs/maia-vibes/src/sparks/agent/`):
   - `agent.view.maia` - Renders spark list, sends `SELECT_SPARK` event
-  - `agent.state.maia` - Handles `SELECT_SPARK`, calls `sendToDetailActor`
+  - Process definition - Handlers for `SELECT_SPARK`, `tell` to detail
   - `agent.context.maia` - Contains `sparks` query, `selectedSparkId`, `@actors`
 
 - **Detail Actor** (`libs/maia-vibes/src/sparks/detail/`):
-  - `detail.actor.maia` - Defines `messageTypes: ["LOAD_ACTOR"]`
+  - `detail.actor.maia` - Defines `interface: ["LOAD_ACTOR"]`
   - `detail.context.maia` - Contains `sparkDetails` query with dynamic filter
-  - `detail.state.maia` - Handles `LOAD_ACTOR`, computes UI flags
+  - Process definition - Handlers for `LOAD_ACTOR`, computes UI flags
   - `detail.view.maia` - Renders spark details and members
 
 ---
@@ -143,12 +143,12 @@ The view subscribes to context changes:
 **Use Case**: Parent actor needs to send data to child actor
 
 **Steps**:
-1. Parent state machine updates its context
-2. Parent state machine calls custom action (e.g., `sendToDetailActor`)
-3. Custom action reads from parent context
-4. Custom action sends message to child inbox
-5. Child processes message, updates its context
-6. Child queries re-evaluate if filters changed
+1. Parent process handler updates context via `ctx` action
+2. Parent process handler runs `tell` action to child
+3. `tell` evaluates payload from parent context
+4. Message delivered to child inbox via `deliverEvent()`
+5. Child processEvents → ProcessEngine.send → handlers update context
+6. Child queries re-evaluate when filters change
 
 **Example**: Agent actor → Detail actor (Sparks vibe)
 
@@ -189,32 +189,32 @@ The view subscribes to context changes:
 **Symptoms**: Clicking spark item doesn't update detail view
 
 **Possible Causes**:
-1. Expression validation error in state machine entry action
+1. Expression validation error in process handler
 2. Message not being sent to detail actor inbox
 3. Detail actor not created yet
 4. Query filter not re-evaluating
 
 **Debug Steps**:
 1. Check console for expression validation errors
-2. Verify `sendToDetailActor` action is called
+2. Verify `tell` action sends to detail inbox
 3. Verify message appears in detail actor inbox
 4. Verify `sparkId` updates in detail context
 5. Verify query filter re-evaluates
 
-**Fix**: Use `$sparkDetails.members` instead of `$spark.members` in entry action (see bug fix above)
+**Fix**: Use `$sparkDetails.members` instead of `$spark.members` in handler (see bug fix above)
 
 ### Issue: Messages not being processed
 
-**Symptoms**: Messages sent but not reaching state machine
+**Symptoms**: Messages sent but not reaching process handlers
 
 **Possible Causes**:
-1. Message type not in `messageTypes` array
+1. Message type not in `interface` array
 2. Message schema validation failing
 3. Inbox subscription not set up
 4. Actor not created yet
 
 **Debug Steps**:
-1. Verify message type in `messageTypes` array
+1. Verify message type in `interface` array
 2. Check message schema exists and validates
 3. Verify inbox subscription is active
 4. Verify actor exists before sending message
@@ -223,9 +223,9 @@ The view subscribes to context changes:
 
 ## Related Documentation
 
-- [Actor Engine API](../engines/#actor-engine) - Actor lifecycle and messaging
-- [State Engine API](../engines/#state-engine) - State machine execution
-- [View Engine API](../engines/#view-engine) - View rendering and events
+- [Actor Engine API](../engines/00-overview.md#actorengine) - Actor lifecycle and messaging
+- [Process Engine API](../engines/00-overview.md#processengine) - Event handler execution
+- [View Engine API](../engines/00-overview.md#viewengine) - View rendering and events
 - [Query Reactivity](../05_maia-db/README.md) - How queries work with dynamic filters
 - [MaiaScript Expressions](../expressions.md) - Expression syntax and evaluation
 
@@ -235,14 +235,14 @@ The view subscribes to context changes:
 
 **Actor-to-actor communication in MaiaOS**:
 1. ✅ **Inbox-based** - Messages sent to actor inboxes (CoStreams)
-2. ✅ **Independent** - Each actor has its own context, state, view, inbox
+2. ✅ **Independent** - Each actor has its own context, process, view, inbox
 3. ✅ **Reactive** - Queries re-execute when filters change
-4. ✅ **Validated** - Messages validated before routing to state machines
+4. ✅ **Validated** - InboxEngine validates before routing to ProcessEngine
 5. ✅ **CRDT-native** - All messages persist to CRDTs, sync across devices
 
 **Key Files**:
 - `libs/maia-engines/src/engines/actor.engine.js` - Message passing
-- `libs/maia-engines/src/engines/state.engine.js` - State machine execution
+- `libs/maia-engines/src/engines/process.engine.js` - Event handler execution
 - `libs/maia-db/src/cojson/crud/read.js` - Query reactivity
 
 **Example**: Sparks vibe agent → detail actor communication flow (documented above)

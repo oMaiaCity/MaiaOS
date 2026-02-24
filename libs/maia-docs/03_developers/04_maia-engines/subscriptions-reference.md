@@ -8,11 +8,11 @@ Detailed reference for config subscriptions, data subscriptions, patterns, and t
 
 ### Config Types
 
-SubscriptionEngine subscribes to: `view`, `style`, `brand`, `state`, `interface`, `context`.
+Backend subscribes to config CRDTs: `view`, `style`, `brand`, `process`, `interface`, `context`.
 
 ### Engine vs Direct Subscriptions
 
-**View/Style/State:** Go through engines (caching, batch subscriptions). View subscriptions are set up in `loadViewConfigs`; use `attachViewToActor` to attach view to an actor.
+**View/Style/Process:** Backend config subscriptions. View subscriptions set up in `attachViewToActor`.
 
 **Interface/Context:** Use read() API directly.
 
@@ -31,7 +31,7 @@ store.subscribe((updatedInterface) => handleInterfaceUpdate(actorId, updatedInte
 |--------|---------|--------|
 | View | `_handleViewUpdate` | Invalidate cache, update viewDef, re-render |
 | Style | `_handleStyleUpdate` | Reload stylesheets, update shadowRoot, re-render |
-| State | `_handleStateUpdate` | Destroy old machine, create new, re-render |
+| Process | `_handleProcessUpdate` | Destroy old process, create new, re-render |
 | Interface | `_handleInterfaceUpdate` | Update interface, re-validate (no re-render) |
 | Context | `_handleContextUpdate` | Merge context, re-subscribe queries, re-render |
 
@@ -45,7 +45,7 @@ View/state updates invalidate caches before applying changes. Caches repopulate 
 
 ### Query Objects
 
-Objects in context with `schema` (co-id) and optional `filter`. SubscriptionEngine scans context, subscribes automatically.
+Objects in context with `schema` (co-id) and optional `filter`. Backend unified store detects queries, subscribes automatically.
 
 ```javascript
 actor.context = {
@@ -63,7 +63,7 @@ Collection queries auto-load CoLists from IndexedDB before querying. Ensures dat
 
 ### Deduplication
 
-SubscriptionEngine checks `isSameData()` before updating context to avoid redundant re-renders.
+Backend checks `isSameData()` before updating context to avoid redundant re-renders.
 
 ---
 
@@ -91,7 +91,7 @@ Distributed inboxes (CoStreams) across browsers require watermark to prevent dup
 
 **Rule:** Read watermark from persisted config before processing. Update with max(current, new) logic. Prevents duplicate actions when two browsers process same message.
 
-**Implementation:** `ActorEngine.processMessages()` reads persisted watermark. `_persistWatermark()` uses max() logic.
+**Implementation:** `ActorEngine.processEvents()` reads persisted watermark. `_persistWatermark()` uses max() logic.
 
 ---
 
@@ -99,7 +99,7 @@ Distributed inboxes (CoStreams) across browsers require watermark to prevent dup
 
 **Container tracking:** Actors registered with container. `destroyActorsForContainer()` bulk cleanup on vibe unload.
 
-**Automatic cleanup:** `destroyActor()` → `SubscriptionEngine.cleanup()` → unsubscribe all → ReactiveStore auto-cleans backend when last subscriber leaves.
+**Automatic cleanup:** `destroyActor()` → config subscriptions cleaned up → ReactiveStore auto-cleans when last subscriber leaves (CoCache 5s timeout).
 
 **Flow:** destroyActor → cleanup → unsubscribe → last subscriber leaves → store._unsubscribe() → backend cleanup.
 
@@ -137,8 +137,8 @@ Check: batching (pendingRerenders), deduplication, cache hit rate. Fix: Verify b
 
 ## References
 
-- Config: `libs/maia-engines/src/engines/subscription-engine/config-subscriptions.js`
-- Data: `libs/maia-engines/src/engines/subscription-engine/data-subscriptions.js`
-- Handlers: `libs/maia-engines/src/engines/subscription-engine/update-handlers.js`
-- DB: `libs/maia-engines/src/engines/data.engine.js` (readOp)
-- Store: `libs/maia-engines/src/utils/reactive-store.js`
+- Config/data subscriptions: Backend unified store in maia-db
+- CoCache: `libs/maia-db/src/cojson/cache/coCache.js`
+- Read: `libs/maia-db/src/cojson/crud/read.js`
+- DataEngine: `libs/maia-engines/src/engines/data.engine.js`
+- ReactiveStore: `libs/maia-db` (exported from maia-db)

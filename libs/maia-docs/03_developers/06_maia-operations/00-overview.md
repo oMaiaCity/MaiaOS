@@ -178,7 +178,7 @@ Write operations (create, update, delete, append, push, seed) return a standardi
 
 ```javascript
 import { DBEngine, DBAdapter } from '@MaiaOS/operations';
-import { IndexedDBBackend } from '@MaiaOS/script';
+import { MaiaDB } from '@MaiaOS/db';
 
 // Create backend (must implement DBAdapter)
 const backend = new IndexedDBBackend();
@@ -205,7 +205,7 @@ store.subscribe((todos) => {
 
 ```javascript
 import { DBEngine } from '@MaiaOS/operations';
-import { MaiaScriptEvaluator } from '@MaiaOS/script';
+import { Evaluator as MaiaScriptEvaluator } from '@MaiaOS/engines';
 
 const backend = new IndexedDBBackend();
 await backend.init();

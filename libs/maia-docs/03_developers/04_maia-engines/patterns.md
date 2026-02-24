@@ -12,7 +12,7 @@ Common usage patterns and solutions to frequent problems.
 // 1. Create module
 export class MyModule {
   static async register(registry) {
-    const toolEngine = getToolEngine(registry, 'MyModule');
+    // Modules register via registry.registerModule()
     await registerToolsFromRegistry(registry, toolEngine, 'mymodule', ['tool1'], '@mymodule');
     registerModuleConfig(registry, 'mymodule', MyModule, {
       version: '1.0.0',

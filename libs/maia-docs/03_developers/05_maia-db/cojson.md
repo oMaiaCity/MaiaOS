@@ -288,22 +288,7 @@ const profile = group.createMap({ name: "Alice" }, profileMeta);
 
 ## References
 
-- **Source**: `libs/maia-db/node_modules/cojson/src/`
-  - `coValue.ts` - RawCoValue interface
-  - `coreToCoValue.ts` - Type discrimination logic
-  - `coValueCore/coValueCore.ts` - CRDT engine
-  - `coValues/` - All CoValue implementations
+- **cojson:** `node_modules/cojson/src/` - RawCoValue, coreToCoValue, coValueCore, coValues
+- **MaiaOS:** `libs/maia-db/src/cojson/` - MaiaDB, CRUD, schema resolution
 
-- **MaiaOS Extensions**:
-  - `libs/maia-db/src/services/` - CoValue creation services
-  - `libs/maia-db/src/utils/meta.js` - Schema metadata utilities
-  - `libs/maia-loader/src/o.js` - Inspector with schema support
-
----
-
-## Operations Layer Integration
-
-MaiaDB (in maia-db) is the storage layer. DataEngine (maia.do in maia-engines) calls MaiaDB for all operations.
-
-**Related Documentation:**
-- [maia-engines Package](../04_maia-engines/README.md) - DataEngine (maia.do)
+**Related:** [maia-engines](../04_maia-engines/README.md) - DataEngine (maia.do) calls MaiaDB
