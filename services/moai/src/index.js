@@ -35,7 +35,6 @@ import {
 	loadOrCreateAgentAccount,
 	MaiaDB,
 	MaiaScriptEvaluator,
-	registerOperations,
 	removeGroupMember,
 	resolve,
 	schemaMigration,
@@ -650,7 +649,6 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 		const peer = new MaiaDB({ node: localNode, account: result.account }, { systemSpark: '°Maia' })
 		const evaluator = new MaiaScriptEvaluator()
 		const dataEngine = new DataEngine(peer, { evaluator })
-		registerOperations(dataEngine)
 		peer.dbEngine = dataEngine
 		agentWorker = { node: localNode, account: result.account, peer, dataEngine }
 

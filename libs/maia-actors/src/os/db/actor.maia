@@ -4,6 +4,7 @@
 	"role": "@maia/actor/os/db",
 	"interface": [
 		"DB_OP",
+		"SPARK_OP",
 		"SUCCESS",
 		"ERROR"
 	],

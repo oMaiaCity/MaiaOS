@@ -43,7 +43,7 @@
 		"ADD_AGENT": [
 			{
 				"ask": {
-					"target": "°Maia/actor/os/spark",
+					"target": "°Maia/actor/os/db",
 					"type": "SPARK_OP",
 					"payload": {
 						"op": "addSparkMember",
@@ -57,7 +57,7 @@
 		"REMOVE_MEMBER": [
 			{
 				"ask": {
-					"target": "°Maia/actor/os/spark",
+					"target": "°Maia/actor/os/db",
 					"type": "SPARK_OP",
 					"payload": {
 						"op": "removeSparkMember",

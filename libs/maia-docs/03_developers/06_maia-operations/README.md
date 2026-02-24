@@ -5,7 +5,7 @@ The operations layer has been **merged into maia-engines**. There is no separate
 ## Current Architecture
 
 - **DataEngine** (`libs/maia-engines/src/engines/data.engine.js`) – Executes **maia.do({ op, schema, key, filter, ... })**
-- **Operations** (`libs/maia-engines/src/operations/`) – read, create, update, delete, spark operations, etc.
+- **Operations** (`libs/maia-engines/src/engines/data.engine.js`) – read, create, update, delete, spark operations, etc.
 - **MaiaDB** (`libs/maia-db/`) – Storage layer; DataEngine calls MaiaDB
 
 ## Key Changes

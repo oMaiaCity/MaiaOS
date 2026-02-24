@@ -16,9 +16,6 @@ import computeMessageNamesTool from './os/names/tool.maia'
 import updatePaperContentActor from './os/paper/actor.maia'
 import updatePaperContentProcess from './os/paper/process.maia'
 import updatePaperContentTool from './os/paper/tool.maia'
-import sparksActor from './os/spark/actor.maia'
-import sparksProcess from './os/spark/process.maia'
-import sparksTool from './os/spark/tool.maia'
 import detailActor from './services/detail/actor.maia'
 import detailContext from './services/detail/context.maia'
 import detailInbox from './services/detail/inbox.maia'
@@ -52,7 +49,6 @@ export const ROLE_TO_FOLDER = {
 	'@maia/actor/os/db': 'os/db',
 	'@maia/actor/os/names': 'os/names',
 	'@maia/actor/os/paper': 'os/paper',
-	'@maia/actor/os/spark': 'os/spark',
 	'@maia/actor/coming-soon': 'coming-soon',
 }
 
@@ -70,7 +66,6 @@ export const ACTOR_ID_TO_EVENT_TYPE = {
 	'°Maia/actor/os/db': 'DB_OP',
 	'°Maia/actor/os/names': 'COMPUTE_NAMES',
 	'°Maia/actor/os/paper': 'UPDATE_PAPER',
-	'°Maia/actor/os/spark': 'SPARK_OP',
 }
 
 /** Build actor config for seeding - uses actor schema */
@@ -110,7 +105,6 @@ export function getSeedConfig() {
 		[aiChatActor, aiChatProcess, aiChatTool],
 		[computeMessageNamesActor, computeMessageNamesProcess, computeMessageNamesTool],
 		[dbActor, dbProcess, dbTool],
-		[sparksActor, sparksProcess, sparksTool],
 		[updatePaperContentActor, updatePaperContentProcess, updatePaperContentTool],
 	]
 
