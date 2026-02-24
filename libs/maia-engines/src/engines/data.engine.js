@@ -56,6 +56,22 @@ function extractSchemaDefinition(coValueData, schemaCoId) {
 	return result ? normalizeCoValueData(result) : null
 }
 
+async function readSchemaOp(peer, params) {
+	const { schemaRef } = params
+	if (!schemaRef || typeof schemaRef !== 'string') {
+		throw new Error('[ReadSchemaOperation] schemaRef (schema namekey) is required')
+	}
+	const normalizedRef =
+		schemaRef.startsWith('°') || schemaRef.startsWith('@') ? schemaRef : `°Maia/schema/${schemaRef}`
+	const schemaDef = await peer.resolve(normalizedRef, { returnType: 'schema' })
+	if (!schemaDef) return null
+	const definition =
+		typeof schemaDef === 'object' && schemaDef !== null
+			? JSON.stringify(schemaDef, null, 2)
+			: String(schemaDef)
+	return createSuccessResult({ definition }, { op: 'readSchema' })
+}
+
 async function readOp(peer, params) {
 	const { schema, key, keys, filter, options } = params
 	if (
@@ -494,6 +510,7 @@ export class DataEngine {
 		if (peer) {
 			const ev = peer.evaluator ?? null
 			this.registerOperation('read', { execute: (params) => readOp(peer, params) })
+			this.registerOperation('readSchema', { execute: (params) => readSchemaOp(peer, params) })
 			this.registerOperation('create', {
 				execute: (params) => createOp(peer, this, params),
 			})
