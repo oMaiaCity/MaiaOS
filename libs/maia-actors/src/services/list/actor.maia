@@ -9,8 +9,6 @@
 	"style": "°Maia/actor/services/list/style",
 	"inbox": "°Maia/actor/services/list/inbox",
 	"interface": [
-		"CREATE_BUTTON",
-		"UPDATE_INPUT",
 		"TOGGLE_BUTTON",
 		"DELETE_BUTTON",
 		"SUCCESS",

@@ -9,11 +9,9 @@
 	"style": "°Maia/actor/views/formWithSplit/style",
 	"inbox": "°Maia/actor/views/layout-sparks/inbox",
 	"interface": [
-		"CREATE_BUTTON",
-		"UPDATE_INPUT",
+		"FORM_SUBMIT",
 		"SELECT_SPARK",
 		"SUCCESS",
-		"ERROR",
-		"DISMISS"
+		"ERROR"
 	]
 }
