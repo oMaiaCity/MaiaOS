@@ -73,7 +73,7 @@ Actors communicate via **inbox costreams**, not props. Use the `sendEvent` actio
 
 **Benefits:**
 - Intent views contain only structure (e.g. `{"tag":"div","class":"stack","$slot":"$layout"}`)
-- Layout actors are reusable across agents (e.g. `headerWithViewSwitcher` for Todos and Creator)
+- Layout actors are reusable across agents (e.g. `tabs` for Todos and Creator)
 - New agents can reuse layouts without copying view markup
 
 **Example - Headless Todos Intent:**
@@ -93,10 +93,10 @@ Layout actors encapsulate shared UI patterns. Available layouts:
 
 | Layout | Used By | Structure |
 |--------|---------|-----------|
-| `headerWithViewSwitcher` | Todos, Creator | Title + 2 view buttons + content slot |
+| `tabs` | Todos, Creator | Title + 2 view buttons + content slot |
 | `sparks` | Sparks | Form + error + split (list + detail slot) |
 | `grid` | Humans | Header + grid of cards |
-| `modalChat` | Chat | Paper slot + modal (messages + input) |
+| `modal-chat` | Chat | Paper slot + modal (messages + input) |
 
 Create new layouts in `libs/maia-actors/src/views/{layoutName}/` and register in `seed-config.js`.
 

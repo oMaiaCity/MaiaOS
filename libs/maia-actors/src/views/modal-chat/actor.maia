@@ -3,7 +3,7 @@
 	"$id": "°Maia/actor/views/layout-chat",
 	"@label": "@maia/actor/views/layout-chat",
 	"context": "°Maia/actor/views/layout-chat/context",
-	"view": "°Maia/actor/views/modalChat/view",
+	"view": "°Maia/actor/views/modal-chat/view",
 	"process": "°Maia/actor/views/layout-chat/process",
 	"brand": "°Maia/chat/style/brand",
 	"inbox": "°Maia/actor/views/layout-chat/inbox",
