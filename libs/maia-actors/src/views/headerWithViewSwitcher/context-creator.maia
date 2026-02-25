@@ -2,17 +2,45 @@
 	"$schema": "°Maia/schema/context",
 	"$id": "°Maia/actor/views/layout-creator/context",
 	"title": "Creator",
-	"primaryView": "logs",
-	"primaryViewLabel": "Logs",
-	"secondaryView": "actors",
-	"secondaryViewLabel": "Actors",
-	"tertiaryView": "schemata",
-	"tertiaryViewLabel": "Schemata",
+	"tabs": [
+		{
+			"id": "logs",
+			"label": "Logs",
+			"actor": "@logs"
+		},
+		{
+			"id": "actors",
+			"label": "Actors",
+			"actor": "@actors"
+		},
+		{
+			"id": "schemata",
+			"label": "Schemata",
+			"actor": "@schemata"
+		}
+	],
 	"viewMode": "logs",
-	"primaryButtonActive": true,
-	"secondaryButtonActive": false,
-	"tertiaryButtonActive": false,
 	"currentView": "@logs",
+	"tabsWithActive": [
+		{
+			"id": "logs",
+			"label": "Logs",
+			"actor": "@logs",
+			"isActive": true
+		},
+		{
+			"id": "actors",
+			"label": "Actors",
+			"actor": "@actors",
+			"isActive": false
+		},
+		{
+			"id": "schemata",
+			"label": "Schemata",
+			"actor": "@schemata",
+			"isActive": false
+		}
+	],
 	"@actors": {
 		"logs": "°Maia/actor/services/logs",
 		"actors": "°Maia/actor/views/actor-list",

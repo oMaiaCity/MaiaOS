@@ -17,6 +17,14 @@ Think of seeding like setting up a new house. First you install the plumbing (bo
 - **PEER_FRESH_SEED=true** → Full bootstrap + seed (clean slate)
 - **PEER_FRESH_SEED=false** → Use existing scaffold, no seed, no cleanup
 
+### When to Re-seed
+
+**Re-seed when actor, process, view, or context configs change.** Runtime expects all config references to be co-ids. Refs are transformed to co-ids only during seeding. If you modify `.maia` files (actors, processes, views, contexts) or the seed config, run with `PEER_FRESH_SEED=true` before testing. Otherwise the app may fail with "Expected co-id, got ref" or process load errors.
+
+```bash
+PEER_FRESH_SEED=true bun dev:moai
+```
+
 ---
 
 ## Seeding Order
