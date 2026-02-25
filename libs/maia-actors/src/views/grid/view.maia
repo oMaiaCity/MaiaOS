@@ -21,7 +21,7 @@
 				"tag": "div",
 				"class": "grid",
 				"$each": {
-					"items": "$humans",
+					"items": "$items",
 					"template": {
 						"tag": "div",
 						"class": "card",

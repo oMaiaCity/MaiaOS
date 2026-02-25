@@ -1,9 +1,9 @@
 {
 	"$schema": "°Maia/schema/context",
-	"$id": "°Maia/actor/views/layout-humans/context",
-	"@label": "@maia/actor/views/layout-humans/context",
+	"$id": "°Maia/actor/views/humans/context",
+	"@label": "@maia/actor/views/humans/context",
 	"title": "Human Book",
-	"humans": {
+	"items": {
 		"schema": "°Maia/schema/data/human",
 		"map": {
 			"id": "id",
