@@ -61,6 +61,11 @@
 				"boxShadow": "{shadows.md}"
 			}
 		},
+		"cardRow": {
+			"display": "flex",
+			"flexDirection": "column",
+			"gap": "0.125rem"
+		},
 		"cardName": {
 			"fontFamily": "{typography.fontFamily.heading}",
 			"fontSize": "1rem",

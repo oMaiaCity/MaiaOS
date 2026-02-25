@@ -110,53 +110,8 @@
 														}
 													},
 													{
-														"tag": "div",
-														"class": "input-container",
-														"children": [
-															{
-																"tag": "input",
-																"class": "input",
-																"attrs": {
-																	"type": "text",
-																	"placeholder": "Type your message...",
-																	"disabled": "$isLoading"
-																},
-																"value": "$inputText",
-																"$on": {
-																	"input": {
-																		"send": "UPDATE_INPUT",
-																		"payload": {
-																			"value": "@inputValue"
-																		}
-																	},
-																	"keydown": {
-																		"send": "SEND_MESSAGE",
-																		"payload": {
-																			"inputText": "@inputValue"
-																		},
-																		"key": "Enter"
-																	}
-																}
-															},
-															{
-																"tag": "button",
-																"class": "button send-button",
-																"attrs": {
-																	"type": "button",
-																	"disabled": "$isLoading",
-																	"aria-label": "Send"
-																},
-																"text": "➤",
-																"$on": {
-																	"click": {
-																		"send": "SEND_MESSAGE",
-																		"payload": {
-																			"inputText": "@inputValue"
-																		}
-																	}
-																}
-															}
-														]
+														"$slot": "$inputActor",
+														"class": "input-container"
 													}
 												]
 											},

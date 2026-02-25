@@ -532,7 +532,7 @@ export class ViewEngine {
 			const item = items[i]
 			const itemData = {
 				context: data.context,
-				item: item,
+				item,
 				index: i,
 			}
 

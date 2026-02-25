@@ -3,9 +3,10 @@
 	"$id": "°Maia/actor/services/detail",
 	"@label": "@maia/actor/services/detail",
 	"context": "°Maia/actor/services/detail/context",
-	"view": "°Maia/actor/services/detail/view",
+	"view": "°Maia/actor/views/detail-panel/view",
 	"process": "°Maia/actor/services/detail/process",
 	"brand": "°Maia/sparks/style/brand",
+	"style": "°Maia/actor/views/detail-panel/style",
 	"inbox": "°Maia/actor/services/detail/inbox",
 	"interface": [
 		"LOAD_ACTOR",

@@ -113,6 +113,7 @@ export class ActorEngine {
 			const childActorConfig = store.value
 			if (childActorConfig.$id !== childActorCoId) childActorConfig.$id = childActorCoId
 			const childContainer = document.createElement('div')
+			childContainer.style.display = 'contents'
 			childContainer.dataset.namekey = namekey
 			childContainer.dataset.childActorId = childActorCoId
 			const childActor = await this.createActor(childActorConfig, childContainer, agentKey)

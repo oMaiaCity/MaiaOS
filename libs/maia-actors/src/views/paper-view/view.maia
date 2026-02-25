@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/view",
-	"$id": "°Maia/actor/services/paper/view",
-	"@label": "@maia/actor/services/paper/view",
+	"$id": "°Maia/actor/views/paper-view/view",
+	"@label": "@maia/actor/views/paper-view/view",
 	"content": {
 		"tag": "div",
 		"class": "paper-background",

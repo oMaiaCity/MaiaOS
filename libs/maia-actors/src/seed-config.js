@@ -17,38 +17,38 @@ import computeMessageNamesTool from './os/names/tool.maia'
 import detailActor from './services/detail/actor.maia'
 import detailContext from './services/detail/context.maia'
 import detailProcess from './services/detail/process.maia'
-import detailView from './services/detail/view.maia'
 import listActor from './services/list/actor.maia'
 import listContext from './services/list/context.maia'
-import listStyle from './services/list/list.style.maia'
 import listProcess from './services/list/process.maia'
-import listView from './services/list/view.maia'
 import logsActor from './services/logs/actor.maia'
 import logsContext from './services/logs/context.maia'
-import logsStyle from './services/logs/logs.style.maia'
 import logsProcess from './services/logs/process.maia'
-import logsView from './services/logs/view.maia'
 import messagesActor from './services/messages/actor.maia'
 import messagesContext from './services/messages/context.maia'
 import messagesProcess from './services/messages/process.maia'
-import messagesView from './services/messages/view.maia'
 import paperActor from './services/paper/actor.maia'
 import paperContext from './services/paper/context.maia'
 import paperProcess from './services/paper/process.maia'
 import paperTool from './services/paper/tool.maia'
-import paperView from './services/paper/view.maia'
+import messagesStyle from './views/conversation/style.maia'
+import messagesView from './views/conversation/view.maia'
+import detailStyle from './views/detail-panel/style.maia'
+import detailView from './views/detail-panel/view.maia'
 import gridStyle from './views/grid/style.maia'
 import gridView from './views/grid/view.maia'
 import layoutHumansActor from './views/humans/actor.maia'
 import layoutHumansContext from './views/humans/context.maia'
 import layoutHumansProcess from './views/humans/process.maia'
+import inputForChatActor from './views/input/actor-for-chat.maia'
 import inputForDetailActor from './views/input/actor-for-detail.maia'
 import inputForListActor from './views/input/actor-for-list.maia'
 import inputForSparksActor from './views/input/actor-for-sparks.maia'
+import inputForChatContext from './views/input/context-for-chat.maia'
 import inputForDetailContext from './views/input/context-for-detail.maia'
 import inputForListContext from './views/input/context-for-list.maia'
 import inputForSparksContext from './views/input/context-for-sparks.maia'
 import inputProcess from './views/input/process.maia'
+import inputForChatProcess from './views/input/process-for-chat.maia'
 import inputForListProcess from './views/input/process-for-list.maia'
 import inputStyle from './views/input/style.maia'
 import inputView from './views/input/view.maia'
@@ -68,10 +68,16 @@ import listDetailForActorsProcess from './views/list-detail/process-for-actors.m
 import listDetailForSchemasProcess from './views/list-detail/process-for-schemas.maia'
 import listDetailStyle from './views/list-detail/style.maia'
 import listDetailView from './views/list-detail/view.maia'
+import listStyle from './views/list-view/style.maia'
+import listView from './views/list-view/view.maia'
+import logsStyle from './views/log-viewer/style.maia'
+import logsView from './views/log-viewer/view.maia'
 import layoutChatActor from './views/modal-chat/actor.maia'
 import layoutChatContext from './views/modal-chat/context.maia'
 import layoutChatProcess from './views/modal-chat/process.maia'
 import modalChatView from './views/modal-chat/view.maia'
+import paperStyle from './views/paper-view/style.maia'
+import paperView from './views/paper-view/view.maia'
 import placeholderActor from './views/placeholder/actor.maia'
 import placeholderContext from './views/placeholder/context.maia'
 import placeholderProcess from './views/placeholder/process.maia'
@@ -268,6 +274,13 @@ export function getSeedConfig() {
 			style: inputStyle,
 		},
 		{
+			actor: inputForChatActor,
+			context: inputForChatContext,
+			view: inputView,
+			process: inputForChatProcess,
+			style: inputStyle,
+		},
+		{
 			actor: inputForDetailActor,
 			context: inputForDetailContext,
 			view: inputView,
@@ -315,6 +328,7 @@ export function getSeedConfig() {
 			context: paperContext,
 			view: paperView,
 			process: paperProcess,
+			style: paperStyle,
 			tool: paperTool,
 		},
 		{
@@ -322,6 +336,7 @@ export function getSeedConfig() {
 			context: messagesContext,
 			view: messagesView,
 			process: messagesProcess,
+			style: messagesStyle,
 		},
 		{
 			actor: logsActor,
@@ -342,6 +357,7 @@ export function getSeedConfig() {
 			context: detailContext,
 			view: detailView,
 			process: detailProcess,
+			style: detailStyle,
 		},
 	]
 	for (const {

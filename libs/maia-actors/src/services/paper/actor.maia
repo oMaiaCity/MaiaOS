@@ -3,10 +3,11 @@
 	"$id": "°Maia/actor/services/paper",
 	"@label": "@maia/actor/services/paper",
 	"context": "°Maia/actor/services/paper/context",
-	"view": "°Maia/actor/services/paper/view",
+	"view": "°Maia/actor/views/paper-view/view",
 	"process": "°Maia/actor/services/paper/process",
 	"tool": "°Maia/actor/services/paper/tool",
 	"brand": "°Maia/chat/style/brand",
+	"style": "°Maia/actor/views/paper-view/style",
 	"inbox": "°Maia/actor/services/paper/inbox",
 	"interface": [
 		"UPDATE_PAPER",

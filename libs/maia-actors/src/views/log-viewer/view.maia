@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/view",
-	"$id": "°Maia/actor/services/logs/view",
-	"@label": "@maia/actor/services/logs/view",
+	"$id": "°Maia/actor/views/log-viewer/view",
+	"@label": "@maia/actor/views/log-viewer/view",
 	"content": {
 		"tag": "div",
 		"class": "stack",
