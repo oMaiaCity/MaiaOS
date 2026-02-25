@@ -391,52 +391,33 @@ function startAssetSync() {
 	})
 }
 
-/** Kill zombie sync-assets and docs watchers from previous dev runs (prevents ghost dirs) */
-function killZombieDevProcesses() {
-	try {
-		execSync('pkill -f "node scripts/sync-assets.js" 2>/dev/null || true', { timeout: 2000 })
-		execSync('pkill -f "bun scripts/generate-llm-docs.js --watch" 2>/dev/null || true', {
-			timeout: 2000,
-		})
-		execSync('pkill -f "bun run scripts/generate-llm-docs.js --watch" 2>/dev/null || true', {
-			timeout: 2000,
-		})
-	} catch (_) {}
-}
-
-async function killChildren() {
-	const procs = [faviconProcess, assetSyncProcess, docsWatcherProcess, syncProcess, appProcess]
-	const toWait = []
+async function killChildrenAndFreePorts() {
+	const logger = createLogger('dev')
+	const procs = [faviconProcess, assetSyncProcess, docsWatcherProcess, moaiProcess, maiaProcess]
 	for (const p of procs) {
 		if (p && !p.killed) {
 			try {
-				p.kill('SIGTERM')
-				toWait.push(
-					Promise.race([
-						new Promise((r) => p.once('exit', r)),
-						new Promise((r) => setTimeout(r, 1500)),
-					]).then(() => {
-						if (p && !p.killed) p.kill('SIGKILL')
-					}),
-				)
+				p.kill('SIGKILL')
 			} catch (_e) {}
 		}
 	}
-	await Promise.all(toWait)
+	await Promise.all([
+		freePort(4200, (msg) => logger.warn(msg)),
+		freePort(4201, (msg) => logger.warn(msg)),
+	])
 }
 
 function setupSignalHandlers() {
+	const logger = createLogger('dev')
 	let shuttingDown = false
 
 	async function onShutdown() {
 		if (shuttingDown) return
 		shuttingDown = true
-		process.exitCode = 0
-		try {
-			await killChildren()
-		} finally {
-			process.exit(0)
-		}
+		console.log()
+		logger.status('Shutting down...')
+		await killChildrenAndFreePorts()
+		process.exit(0)
 	}
 
 	process.on('SIGINT', () => {
@@ -466,7 +447,7 @@ async function main() {
 	bootHeader()
 	setupSignalHandlers()
 
-	// Free ports first so we start with a clean slate (kills any leftover app/sync from crashed runs)
+	// Free ports first so we start with a clean slate (kills any leftover maia/moai from crashed runs)
 	const logger = createLogger('dev')
 	await Promise.all([
 		freePort(4200, (msg) => logger.warn(msg)),

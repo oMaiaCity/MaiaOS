@@ -64,8 +64,10 @@ import layoutTodosContext from './views/headerWithViewSwitcher/context-todos.mai
 import headerWithViewSwitcherProcess from './views/headerWithViewSwitcher/process.maia'
 import headerWithViewSwitcherStyle from './views/headerWithViewSwitcher/style.maia'
 import headerWithViewSwitcherView from './views/headerWithViewSwitcher/view.maia'
+import inputForDetailActor from './views/input/actor-for-detail.maia'
 import inputForListActor from './views/input/actor-for-list.maia'
 import inputForSparksActor from './views/input/actor-for-sparks.maia'
+import inputForDetailContext from './views/input/context-for-detail.maia'
 import inputForListContext from './views/input/context-for-list.maia'
 import inputForSparksContext from './views/input/context-for-sparks.maia'
 import inputProcess from './views/input/process.maia'
@@ -241,6 +243,13 @@ export function getSeedConfig() {
 		{
 			actor: inputForSparksActor,
 			context: inputForSparksContext,
+			view: inputView,
+			process: inputProcess,
+			style: inputStyle,
+		},
+		{
+			actor: inputForDetailActor,
+			context: inputForDetailContext,
 			view: inputView,
 			process: inputProcess,
 			style: inputStyle,
