@@ -6,6 +6,6 @@
 	"actor": "°Maia/humans/actor/intent",
 	"dependencies": [
 		"°Maia/humans/actor/intent",
-		"°Maia/actor/views/layout-humans"
+		"°Maia/actor/views/humans"
 	]
 }
