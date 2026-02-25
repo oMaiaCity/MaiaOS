@@ -17,8 +17,8 @@
 	"hasSpark": false,
 	"showEmptyState": true,
 	"showContent": false,
-	"agentIdInput": "",
-	"addAgentError": null,
-	"addAgentHasError": false,
-	"addButtonDisabled": true
+	"inputActor": "@input",
+	"@actors": {
+		"input": "°Maia/actor/views/input/for-detail"
+	}
 }
