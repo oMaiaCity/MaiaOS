@@ -422,6 +422,19 @@ export async function seed(
 				: null
 			if (!originalConfig) continue
 			const fullyTransformed = transformForSeeding(originalConfig, latestRegistry)
+			// Post-transform validation: actor configs must have co-ids for process, context, view
+			if (configInfo.type === 'actor') {
+				const refProps = ['process', 'context', 'view']
+				for (const prop of refProps) {
+					const val = fullyTransformed[prop]
+					if (val && typeof val === 'string' && !val.startsWith('co_z')) {
+						throw new Error(
+							`[Seed] Actor config ${configInfo.expectedCoId} has unresolved ref in ${prop}: ${val}. ` +
+								`All refs must be transformed to co-ids during seed. Check transformForSeeding and coIdMap coverage.`,
+						)
+					}
+				}
+			}
 			const coValue = configInfo.coMap
 			const cotype = configInfo.cotype || 'comap'
 			if (cotype === 'colist' && coValue?.append) {

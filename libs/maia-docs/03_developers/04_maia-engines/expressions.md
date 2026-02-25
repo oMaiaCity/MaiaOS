@@ -22,7 +22,15 @@ MaiaScript expressions are JSON-based and evaluated safely by `MaiaScriptEvaluat
 - `$context` - Access context data: `{ "$context": "title" }`
 - `$item` - Access item data (in loops): `{ "$item": "id" }`
 - `$` - Shortcut: `"$title"` = `{ "$context": "title" }`
-- `$$` - Shortcut: `"$$id"` = `{ "$item": "id" }`
+- `$$` - Shortcut: `"$$id"` = `{ "$item": "id" }` (inside `$map`/`$find`, refers to current array item)
+- `$event.field` - Process engine: event payload injected as `context.event` when evaluating action expressions. Use `"$event.viewMode"` or `"$event.target.value"` to read event fields.
+
+**`$$key` vs `$event.key`:**
+
+| Shortcut | Resolves to | Use when |
+|----------|-------------|----------|
+| `$$key` | `item.key` | Inside `$map` or `$find`, refers to the current array item |
+| `$event.key` | `context.event.key` | In process engine actions, refers to the event payload (e.g. `viewMode`, `target.value`) |
 
 ### Comparison
 
@@ -60,6 +68,7 @@ MaiaScript expressions are JSON-based and evaluated safely by `MaiaScriptEvaluat
 - `$length` - Get array length
 - `$includes` - Check if array includes value
 - `$map` - Map over array
+- `$find` - Find first matching item in array (see below)
 - `$filter` - Filter array
 
 ### Math
@@ -126,12 +135,36 @@ await evaluator.evaluate(expression, data);
 
 ### Array Operations
 
+**`$map`** - Transform each item:
+
 ```json
 {
   "$map": {
     "array": "$context.items",
     "as": "item",
     "do": { "$item": "name" }
+  }
+}
+```
+
+`items` is an alias for `array`. The `as` property (default `"item"`) names the loop variable; use `$$itemKey.path` to reference it.
+
+**`$find`** - Find first matching item, optionally return a property:
+
+| Property | Required | Description |
+|----------|----------|-------------|
+| `array` or `items` | Yes | Expression evaluating to array to search |
+| `where` | No | Condition expression (evaluated per item; first match wins) |
+| `return` | No | Expression to return for the match (default: the matched item itself) |
+| `as` | No | Variable name for each item (default: `"item"`); use `$$as.path` in `where`/`return` |
+
+```json
+{
+  "$find": {
+    "array": "$tabs",
+    "where": { "$eq": ["$$id", "$event.viewMode"] },
+    "return": "$$actor",
+    "as": "item"
   }
 }
 ```

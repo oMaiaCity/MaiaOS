@@ -18,46 +18,29 @@
 					{
 						"tag": "div",
 						"class": "view-switcher",
-						"children": [
-							{
+						"$each": {
+							"items": "$tabsWithActive",
+							"template": {
 								"tag": "button",
 								"class": "button-view-switch",
 								"attrs": {
-									"data-view": "primary",
+									"type": "button",
+									"data-view": "$$id",
 									"data": {
-										"active": "$primaryButtonActive"
+										"active": "$$isActive"
 									}
 								},
-								"text": "$primaryViewLabel",
+								"text": "$$label",
 								"$on": {
 									"click": {
 										"send": "SWITCH_VIEW",
 										"payload": {
-											"viewMode": "$primaryView"
-										}
-									}
-								}
-							},
-							{
-								"tag": "button",
-								"class": "button-view-switch",
-								"attrs": {
-									"data-view": "comingSoon",
-									"data": {
-										"active": "$secondaryButtonActive"
-									}
-								},
-								"text": "$secondaryViewLabel",
-								"$on": {
-									"click": {
-										"send": "SWITCH_VIEW",
-										"payload": {
-											"viewMode": "comingSoon"
+											"viewMode": "$$id"
 										}
 									}
 								}
 							}
-						]
+						}
 					}
 				]
 			},

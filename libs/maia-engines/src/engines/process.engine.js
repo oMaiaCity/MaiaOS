@@ -79,6 +79,7 @@ export class ProcessEngine {
 						payload,
 						process.lastToolResult,
 						process.actor,
+						contextUpdates,
 					)
 					if (updates && typeof updates === 'object' && !Array.isArray(updates)) {
 						Object.assign(contextUpdates, this._sanitizeUpdates(updates, process.lastToolResult || {}))
@@ -336,14 +337,23 @@ export class ProcessEngine {
 		const sanitized = Object.fromEntries(
 			Object.entries(updates).map(([k, v]) => [k, v === undefined ? null : v]),
 		)
-		delete sanitized.$event
+		delete sanitized.event
 		return sanitized
 	}
 
-	async _evaluatePayload(payload, context, eventPayload = {}, lastToolResult = null, _actor = null) {
+	async _evaluatePayload(
+		payload,
+		context,
+		eventPayload = {},
+		lastToolResult = null,
+		_actor = null,
+		pendingContextUpdates = null,
+	) {
 		const contextValue = context?.value ?? {}
-		// Inject $event so expressions (e.g. $map) can access the event payload alongside $$item
-		const contextForEval = { ...contextValue, $event: eventPayload || {} }
+		const merged = pendingContextUpdates
+			? { ...contextValue, ...pendingContextUpdates }
+			: contextValue
+		const contextForEval = { ...merged, event: eventPayload || {} }
 		const result = eventPayload?.result ?? lastToolResult ?? null
 		const data = { context: contextForEval, item: eventPayload || {}, result }
 		return resolveExpressions(payload, this.evaluator, data)

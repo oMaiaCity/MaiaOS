@@ -4,7 +4,7 @@
 	"@label": "@maia/actor/views/layout-todos",
 	"context": "°Maia/actor/views/layout-todos/context",
 	"view": "°Maia/actor/views/headerWithViewSwitcher/view",
-	"process": "°Maia/actor/views/layout-todos/process",
+	"process": "°Maia/actor/views/headerWithViewSwitcher/process",
 	"brand": "°Maia/style/brand",
 	"style": "°Maia/actor/views/headerWithViewSwitcher/style",
 	"inbox": "°Maia/actor/views/layout-todos/inbox",

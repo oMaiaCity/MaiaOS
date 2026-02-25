@@ -2,13 +2,34 @@
 	"$schema": "°Maia/schema/context",
 	"$id": "°Maia/actor/views/layout-todos/context",
 	"title": "Daily Focus",
-	"primaryView": "list",
-	"primaryViewLabel": "List",
-	"secondaryViewLabel": "Soon",
+	"tabs": [
+		{
+			"id": "list",
+			"label": "List",
+			"actor": "@list"
+		},
+		{
+			"id": "comingSoon",
+			"label": "Soon",
+			"actor": "@comingSoon"
+		}
+	],
 	"viewMode": "list",
-	"primaryButtonActive": true,
-	"secondaryButtonActive": false,
 	"currentView": "@list",
+	"tabsWithActive": [
+		{
+			"id": "list",
+			"label": "List",
+			"actor": "@list",
+			"isActive": true
+		},
+		{
+			"id": "comingSoon",
+			"label": "Soon",
+			"actor": "@comingSoon",
+			"isActive": false
+		}
+	],
 	"@actors": {
 		"list": "°Maia/actor/services/list",
 		"comingSoon": "°Maia/actor/coming-soon"

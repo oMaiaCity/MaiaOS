@@ -6,6 +6,7 @@
  */
 
 import { loadSchemaAndValidate } from '@MaiaOS/schemata/validation.helper'
+import { invalidateResolvedDataForMutatedCoValue } from '../cache/coCache.js'
 import { resolve } from '../schema/resolver.js'
 import * as collectionHelpers from './collection-helpers.js'
 import * as dataExtraction from './data-extraction.js'
@@ -103,6 +104,8 @@ export async function update(peer, _schema, id, data) {
 	} else {
 		throw new Error(`[MaiaDB] Update not supported for type: ${rawType}`)
 	}
+
+	invalidateResolvedDataForMutatedCoValue(peer, id)
 
 	// LOCAL-FIRST: Updates are instant, sync happens in background
 	// REMOVED: await peer.node.syncManager.waitForStorageSync(id);
