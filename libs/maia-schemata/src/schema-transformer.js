@@ -947,9 +947,20 @@ function transformQueryObjects(obj, coIdMap, depth = 0) {
 			)
 		}
 
-		// Check for target field at any level (for sendEvent payloads)
-		if (key === 'target' && typeof value === 'string') {
-			const coId = transformTargetReference(value, coIdMap, 'target field')
+		// Check for target/targetActor field (for tell/sendEvent; actor-to-actor messaging)
+		// NOTE: inputActor is intentionally excluded - it stays as "@namekey" for the view engine's $slot resolver
+		if ((key === 'target' || key === 'targetActor') && typeof value === 'string') {
+			let refToTransform = value
+			if (
+				value.startsWith('@') &&
+				obj['@actors'] &&
+				typeof obj['@actors'][value.slice(1)] === 'string'
+			) {
+				refToTransform = obj['@actors'][value.slice(1)]
+			}
+			const coId = refToTransform.startsWith('co_z')
+				? refToTransform
+				: transformTargetReference(refToTransform, coIdMap, `${key} field`)
 			if (coId) {
 				obj[key] = coId
 			}

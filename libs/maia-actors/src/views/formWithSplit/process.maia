@@ -3,12 +3,7 @@
 	"$id": "°Maia/actor/views/layout-sparks/process",
 	"@label": "@maia/actor/views/layout-sparks/process",
 	"handlers": {
-		"CREATE_BUTTON": [
-			{
-				"ctx": {
-					"error": null
-				}
-			},
+		"FORM_SUBMIT": [
 			{
 				"ask": {
 					"target": "°Maia/actor/os/db",
@@ -17,13 +12,6 @@
 						"op": "createSpark",
 						"name": "$$value"
 					}
-				}
-			}
-		],
-		"UPDATE_INPUT": [
-			{
-				"ctx": {
-					"newSparkName": "$$value"
 				}
 			}
 		],
@@ -45,26 +33,21 @@
 		],
 		"SUCCESS": [
 			{
-				"ctx": {
-					"newSparkName": "",
-					"error": null,
-					"hasError": false
+				"tell": {
+					"target": "$inputActor",
+					"type": "SUCCESS",
+					"payload": {}
 				}
 			}
 		],
 		"ERROR": [
 			{
-				"ctx": {
-					"error": "$$errors.0.message",
-					"hasError": true
-				}
-			}
-		],
-		"DISMISS": [
-			{
-				"ctx": {
-					"error": null,
-					"hasError": false
+				"tell": {
+					"target": "$inputActor",
+					"type": "ERROR",
+					"payload": {
+						"errors": "$$errors"
+					}
 				}
 			}
 		]
