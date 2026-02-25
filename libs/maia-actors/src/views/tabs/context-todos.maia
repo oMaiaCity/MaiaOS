@@ -9,9 +9,9 @@
 			"actor": "@list"
 		},
 		{
-			"id": "comingSoon",
+			"id": "placeholder",
 			"label": "Soon",
-			"actor": "@comingSoon"
+			"actor": "@placeholder"
 		}
 	],
 	"viewMode": "list",
@@ -24,14 +24,14 @@
 			"isActive": true
 		},
 		{
-			"id": "comingSoon",
+			"id": "placeholder",
 			"label": "Soon",
-			"actor": "@comingSoon",
+			"actor": "@placeholder",
 			"isActive": false
 		}
 	],
 	"@actors": {
 		"list": "°Maia/actor/services/list",
-		"comingSoon": "°Maia/actor/coming-soon"
+		"placeholder": "°Maia/actor/views/placeholder"
 	}
 }

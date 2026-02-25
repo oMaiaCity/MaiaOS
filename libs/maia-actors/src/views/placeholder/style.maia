@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/style",
-	"$id": "°Maia/actor/coming-soon/style",
-	"@label": "@maia/actor/coming-soon/style",
+	"$id": "°Maia/actor/views/placeholder/style",
+	"@label": "@maia/actor/views/placeholder/style",
 	"components": {
 		"placeholder": {
 			"display": "flex",

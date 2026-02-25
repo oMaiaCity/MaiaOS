@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/view",
-	"$id": "°Maia/actor/views/modalChat/view",
-	"@label": "@maia/actor/views/modalChat/view",
+	"$id": "°Maia/actor/views/modal-chat/view",
+	"@label": "@maia/actor/views/modal-chat/view",
 	"content": {
 		"tag": "div",
 		"class": "chat-container",

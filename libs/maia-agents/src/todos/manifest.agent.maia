@@ -8,7 +8,7 @@
 		"°Maia/todos/actor/intent",
 		"°Maia/actor/views/layout-todos",
 		"°Maia/actor/services/list",
-		"°Maia/actor/coming-soon",
+		"°Maia/actor/views/placeholder",
 		"°Maia/actor/os/db"
 	]
 }

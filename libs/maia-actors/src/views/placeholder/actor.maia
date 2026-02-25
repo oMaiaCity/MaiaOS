@@ -5,8 +5,8 @@
 	"context": "°Maia/actor/views/placeholder/context",
 	"view": "°Maia/actor/views/placeholder/view",
 	"process": "°Maia/actor/views/placeholder/process",
-	"brand": "°Maia/brand/maiacity",
+	"brand": "°Maia/style/brand",
 	"style": "°Maia/actor/views/placeholder/style",
 	"inbox": "°Maia/actor/views/placeholder/inbox",
-	"interface": "°Maia/actor/views/placeholder/interface"
+	"interface": []
 }
