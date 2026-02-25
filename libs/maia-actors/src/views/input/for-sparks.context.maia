@@ -7,6 +7,8 @@
 	"submitButtonText": "Create Spark",
 	"hasError": false,
 	"error": null,
+	"errorLabel": "Error: ",
+	"dismissButtonText": "Dismiss",
 	"@actors": {
 		"target": "°Maia/actor/views/sparks"
 	},

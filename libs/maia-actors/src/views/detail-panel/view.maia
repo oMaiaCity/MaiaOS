@@ -17,7 +17,7 @@
 				"children": [
 					{
 						"tag": "p",
-						"text": "Select a spark to view details and members"
+						"text": "$emptyStateMessage"
 					}
 				]
 			},
@@ -33,7 +33,7 @@
 					{
 						"tag": "span",
 						"class": "detail-category",
-						"text": "Spark Details"
+						"text": "$categoryLabel"
 					},
 					{
 						"tag": "h2",
@@ -51,7 +51,7 @@
 									{
 										"tag": "span",
 										"class": "detail-label",
-										"text": "Group ID"
+										"text": "$groupIdLabel"
 									},
 									{
 										"tag": "span",
@@ -65,7 +65,7 @@
 					{
 						"tag": "h3",
 						"class": "members-title",
-						"text": "Members"
+						"text": "$membersLabel"
 					},
 					{
 						"tag": "div",
@@ -94,7 +94,7 @@
 									{
 										"tag": "button",
 										"class": "member-remove-button",
-										"text": "×",
+										"text": "$memberRemoveButtonText",
 										"$on": {
 											"click": {
 												"send": "REMOVE_MEMBER",
@@ -111,7 +111,7 @@
 					{
 						"tag": "h3",
 						"class": "members-title add-agent-title",
-						"text": "Add Agent"
+						"text": "$addAgentLabel"
 					},
 					{
 						"$slot": "$inputActor"

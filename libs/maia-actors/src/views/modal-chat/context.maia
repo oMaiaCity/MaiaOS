@@ -8,6 +8,8 @@
 	"hasError": false,
 	"error": null,
 	"popupOpen": false,
+	"loadingLabel": "Thinking",
+	"closeButtonText": "×",
 	"@actors": {
 		"messages": "°Maia/actor/services/messages",
 		"paper": "°Maia/actor/services/paper",
