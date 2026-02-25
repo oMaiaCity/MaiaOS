@@ -42,11 +42,6 @@ import comingSoonContext from './views/comingSoon/context.maia'
 import comingSoonProcess from './views/comingSoon/process.maia'
 import comingSoonStyle from './views/comingSoon/style.maia'
 import comingSoonView from './views/comingSoon/view.maia'
-import layoutSparksActor from './views/formWithSplit/actor.maia'
-import layoutSparksContext from './views/formWithSplit/context.maia'
-import layoutSparksProcess from './views/formWithSplit/process.maia'
-import formWithSplitStyle from './views/formWithSplit/style.maia'
-import formWithSplitView from './views/formWithSplit/view.maia'
 import gridStyle from './views/grid/style.maia'
 import gridView from './views/grid/view.maia'
 import layoutCreatorActor from './views/headerWithViewSwitcher/actor-creator.maia'
@@ -89,6 +84,11 @@ import layoutChatActor from './views/modalChat/actor.maia'
 import layoutChatContext from './views/modalChat/context.maia'
 import layoutChatProcess from './views/modalChat/process.maia'
 import modalChatView from './views/modalChat/view.maia'
+import layoutSparksActor from './views/sparks/actor.maia'
+import layoutSparksContext from './views/sparks/context.maia'
+import layoutSparksProcess from './views/sparks/process.maia'
+import sparksStyle from './views/sparks/style.maia'
+import sparksView from './views/sparks/view.maia'
 
 /** Build listItems from getAllSchemas() for list-detail/for-schemas */
 function buildListDetailSchemasContext() {
@@ -249,9 +249,9 @@ export function getSeedConfig() {
 		{
 			actor: layoutSparksActor,
 			context: layoutSparksContext,
-			view: formWithSplitView,
+			view: sparksView,
 			process: layoutSparksProcess,
-			style: formWithSplitStyle,
+			style: sparksStyle,
 		},
 		{
 			actor: inputForListActor,

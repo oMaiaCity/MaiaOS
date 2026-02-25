@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/process",
-	"$id": "°Maia/actor/views/layout-sparks/process",
-	"@label": "@maia/actor/views/layout-sparks/process",
+	"$id": "°Maia/actor/views/sparks/process",
+	"@label": "@maia/actor/views/sparks/process",
 	"handlers": {
 		"FORM_SUBMIT": [
 			{
@@ -34,7 +34,7 @@
 		"SUCCESS": [
 			{
 				"tell": {
-					"target": "$inputActor",
+					"target": "°Maia/actor/views/input/for-sparks",
 					"type": "SUCCESS",
 					"payload": {}
 				}
@@ -43,7 +43,7 @@
 		"ERROR": [
 			{
 				"tell": {
-					"target": "$inputActor",
+					"target": "°Maia/actor/views/input/for-sparks",
 					"type": "ERROR",
 					"payload": {
 						"errors": "$$errors"

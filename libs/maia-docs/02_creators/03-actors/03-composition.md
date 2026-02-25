@@ -94,7 +94,7 @@ Layout actors encapsulate shared UI patterns. Available layouts:
 | Layout | Used By | Structure |
 |--------|---------|-----------|
 | `headerWithViewSwitcher` | Todos, Creator | Title + 2 view buttons + content slot |
-| `formWithSplit` | Sparks | Form + error + split (list + detail slot) |
+| `sparks` | Sparks | Form + error + split (list + detail slot) |
 | `grid` | Humans | Header + grid of cards |
 | `modalChat` | Chat | Paper slot + modal (messages + input) |
 
