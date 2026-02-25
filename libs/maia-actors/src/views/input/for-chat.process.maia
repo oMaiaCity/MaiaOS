@@ -25,6 +25,31 @@
 					"inputValue": ""
 				}
 			}
+		],
+		"DISMISS": [
+			{
+				"ctx": {
+					"hasError": false,
+					"error": null
+				}
+			}
+		],
+		"SUCCESS": [
+			{
+				"ctx": {
+					"inputValue": "",
+					"hasError": false,
+					"error": null
+				}
+			}
+		],
+		"ERROR": [
+			{
+				"ctx": {
+					"hasError": true,
+					"error": "$$errors.0.message"
+				}
+			}
 		]
 	}
 }

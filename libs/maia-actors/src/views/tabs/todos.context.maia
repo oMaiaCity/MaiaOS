@@ -31,7 +31,7 @@
 		}
 	],
 	"@actors": {
-		"list": "°Maia/actor/views/list",
+		"list": "°Maia/actor/services/list",
 		"placeholder": "°Maia/actor/views/placeholder"
 	}
 }
