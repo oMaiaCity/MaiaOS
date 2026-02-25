@@ -228,6 +228,28 @@ export class Evaluator {
 			return results
 		}
 
+		// Handle $find operation (find first matching item, return specified property)
+		if ('$find' in expression) {
+			const findConfig = expression.$find
+			const arrayExpr = findConfig.array ?? findConfig.items
+			const array = await this.evaluate(arrayExpr, data, depth + 1)
+			if (!array || !Array.isArray(array)) return undefined
+			const whereExpr = findConfig.where
+			const returnExpr = findConfig.return
+			const itemKey = findConfig.as || 'item'
+			for (const item of array) {
+				const itemData = { ...data, item }
+				const match = whereExpr ? await this.evaluate(whereExpr, itemData, depth + 1) : true
+				if (match) {
+					if (returnExpr !== undefined) {
+						return await this.evaluateMapReturn(returnExpr, itemData, itemKey, item, depth + 1)
+					}
+					return item
+				}
+			}
+			return undefined
+		}
+
 		if ('$if' in expression) {
 			let condition = expression.$if.condition
 			if (typeof condition === 'string' && condition.startsWith('$')) {
@@ -361,7 +383,8 @@ export class Evaluator {
 			'$length' in expression ||
 			'$concat' in expression ||
 			'$join' in expression ||
-			'$map' in expression
+			'$map' in expression ||
+			'$find' in expression
 		)
 	}
 }

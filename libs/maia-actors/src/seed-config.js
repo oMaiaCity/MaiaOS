@@ -61,11 +61,9 @@ import layoutCreatorActor from './views/headerWithViewSwitcher/actor-creator.mai
 import layoutTodosActor from './views/headerWithViewSwitcher/actor-todos.maia'
 import layoutCreatorContext from './views/headerWithViewSwitcher/context-creator.maia'
 import layoutTodosContext from './views/headerWithViewSwitcher/context-todos.maia'
-import layoutCreatorProcess from './views/headerWithViewSwitcher/process-creator.maia'
-import layoutTodosProcess from './views/headerWithViewSwitcher/process-todos.maia'
+import headerWithViewSwitcherProcess from './views/headerWithViewSwitcher/process.maia'
 import headerWithViewSwitcherStyle from './views/headerWithViewSwitcher/style.maia'
 import headerWithViewSwitcherView from './views/headerWithViewSwitcher/view.maia'
-import viewCreatorView from './views/headerWithViewSwitcher/view-creator.maia'
 import layoutChatActor from './views/modalChat/actor.maia'
 import layoutChatContext from './views/modalChat/context.maia'
 import layoutChatProcess from './views/modalChat/process.maia'
@@ -208,14 +206,14 @@ export function getSeedConfig() {
 			actor: layoutTodosActor,
 			context: layoutTodosContext,
 			view: headerWithViewSwitcherView,
-			process: layoutTodosProcess,
+			process: headerWithViewSwitcherProcess,
 			style: headerWithViewSwitcherStyle,
 		},
 		{
 			actor: layoutCreatorActor,
 			context: layoutCreatorContext,
-			view: viewCreatorView,
-			process: layoutCreatorProcess,
+			view: headerWithViewSwitcherView,
+			process: headerWithViewSwitcherProcess,
 			style: headerWithViewSwitcherStyle,
 		},
 		{

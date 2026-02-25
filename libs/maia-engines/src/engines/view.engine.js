@@ -118,9 +118,22 @@ export class ViewEngine {
 			contextCoId = null,
 			contextSchemaCoId = null
 		if (actorConfig.context) {
-			const contextCoIdVal = actorConfig.context
-			if (typeof contextCoIdVal !== 'string' || !contextCoIdVal.startsWith('co_z')) {
-				throw new Error(`[ViewEngine] Actor config context must be co-id, got: ${contextCoIdVal}`)
+			let contextCoIdVal = actorConfig.context
+			if (typeof contextCoIdVal !== 'string') {
+				throw new Error(
+					`[ViewEngine] Actor config context must be string (co-id or ref), got: ${typeof contextCoIdVal}`,
+				)
+			}
+			if (!contextCoIdVal.startsWith('co_z') && this.dataEngine?.peer) {
+				const resolved = await this.dataEngine.peer.resolve(contextCoIdVal, { returnType: 'coId' })
+				if (resolved && typeof resolved === 'string' && resolved.startsWith('co_z')) {
+					contextCoIdVal = resolved
+				}
+			}
+			if (!contextCoIdVal.startsWith('co_z')) {
+				throw new Error(
+					`[ViewEngine] Actor config context must be co-id (or resolve to co-id). Got: ${actorConfig.context}. Run with PEER_FRESH_SEED=true to re-seed.`,
+				)
 			}
 			const contextStore = await readStore(this.dataEngine, contextCoIdVal)
 			if (!contextStore) throw new Error(`[ViewEngine] Failed to load context ${contextCoIdVal}`)
@@ -444,8 +457,6 @@ export class ViewEngine {
 		}
 		const contextKey = slotKey.slice(1)
 
-		// $stores Architecture: Context is ReactiveStore with merged query results from backend
-		// data.context is already the resolved value (plain object), not a ReactiveStore
 		const contextValue = data.context || {}
 		const slotValue = contextValue[contextKey]
 

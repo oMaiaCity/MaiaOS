@@ -449,3 +449,15 @@ export function resetGlobalCoCache() {
 	}
 	currentNode = null
 }
+
+/**
+ * Invalidate resolved data cache when a CoValue is mutated.
+ * Call from CRUD operations (update, etc.) so next read sees persisted CRDT state.
+ * Keeps invalidation logic in cache layer; callers just notify.
+ *
+ * @param {Object} peer - Peer instance (must have subscriptionCache)
+ * @param {string} coId - CoValue ID that was mutated
+ */
+export function invalidateResolvedDataForMutatedCoValue(peer, coId) {
+	peer?.subscriptionCache?.invalidateResolvedData(coId)
+}

@@ -67,13 +67,20 @@ export class ActorEngine {
 	/** @private */
 	async _initializeActorState(actor, actorConfig) {
 		if (this.processEngine && actorConfig.process && !actor.process) {
-			try {
-				const processStore = await readStore(this.dataEngine, actorConfig.process)
-				if (!processStore) return
-				const processDef = processStore.value
-				if (!processDef?.handlers) return
-				actor.process = await this.processEngine.createProcess(processDef, actor)
-			} catch (_error) {}
+			const processStore = await readStore(this.dataEngine, actorConfig.process)
+			if (!processStore) {
+				throw new Error(
+					`[ActorEngine] Failed to load process for actor ${actor.id}: process co-id ${actorConfig.process} returned null. ` +
+						`Run with PEER_FRESH_SEED=true to re-seed configs.`,
+				)
+			}
+			const processDef = processStore.value
+			if (!processDef?.handlers) {
+				throw new Error(
+					`[ActorEngine] Process for actor ${actor.id} has no handlers. Process co-id: ${actorConfig.process}`,
+				)
+			}
+			actor.process = await this.processEngine.createProcess(processDef, actor)
 		}
 	}
 
@@ -112,7 +119,12 @@ export class ActorEngine {
 			childActor.namekey = namekey
 			actor.children[namekey] = childActor
 			return childActor
-		} catch (_error) {
+		} catch (error) {
+			console.error('[ActorEngine] _createChildActorIfNeeded FAILED:', {
+				namekey,
+				childActorCoId,
+				error: error.message,
+			})
 			return null
 		}
 	}
@@ -325,10 +337,6 @@ export class ActorEngine {
 		// $stores Architecture: Backend handles subscription cleanup automatically via subscriptionCache
 		// But we also explicitly unsubscribe to ensure immediate cleanup
 		if (actor.process && this.processEngine) this.processEngine.destroyProcess(actor.process.id)
-		if (actor._processedMessageKeys) {
-			actor._processedMessageKeys.clear()
-			delete actor._processedMessageKeys
-		}
 		if (actor.containerElement && this._containerActors.has(actor.containerElement)) {
 			const containerActors = this._containerActors.get(actor.containerElement)
 			containerActors.delete(actorId)
@@ -577,15 +585,36 @@ export class ActorEngine {
 						)
 						await markProcessed()
 						if (!handled) hadUnhandledMessages = true
+					} else {
+						console.warn('[ActorEngine] Message skipped - no process:', {
+							actorId,
+							messageType: message.type,
+						})
 					}
-				} catch (_error) {}
+				} catch (error) {
+					console.error('[ActorEngine] processEvents error for message:', {
+						actorId,
+						type: message.type,
+						error: error.message,
+						stack: error.stack,
+					})
+					if (message._coId) {
+						try {
+							await this.dataEngine.execute({
+								op: 'update',
+								id: message._coId,
+								data: { processed: true },
+							})
+						} catch (_e) {}
+					}
+				}
 			}
-		} catch (_error) {
+		} catch (error) {
+			console.error('[ActorEngine] processEvents outer error:', { actorId, error: error.message })
 		} finally {
 			actor._isProcessing = false
-			// Retry when: (1) unhandled messages (no transition), or (2) more messages arrived during our run
-			// Root cause: second SEND_MESSAGE can arrive while we're awaiting LLM; subscription fires but guard blocks.
-			// Drain inbox so messages that arrived during processing get handled.
+			// Retry when: (1) unhandled messages (no transition), or (2) more messages arrived during our run.
+			// processInbox reads persisted processed flag; update invalidates cache so next read sees it.
 			const shouldRetry =
 				hadUnhandledMessages ||
 				(await this.dataEngine

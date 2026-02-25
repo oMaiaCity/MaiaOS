@@ -17,6 +17,7 @@ export { setupSyncPeers, subscribeSyncState } from '@MaiaOS/peer'
 export {
 	CoCache,
 	getGlobalCoCache,
+	invalidateResolvedDataForMutatedCoValue,
 	resetGlobalCoCache,
 } from './cojson/cache/coCache.js'
 // MaiaDB - single data layer implementation (was CoJSONBackend)
