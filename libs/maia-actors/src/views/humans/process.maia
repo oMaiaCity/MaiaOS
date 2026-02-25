@@ -1,0 +1,6 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/views/humans/process",
+	"@label": "@maia/actor/views/humans/process",
+	"handlers": {}
+}

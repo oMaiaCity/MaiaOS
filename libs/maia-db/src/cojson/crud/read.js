@@ -304,13 +304,13 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 		// Detect and resolve query objects
 		for (const [key, value] of Object.entries(contextValue)) {
 			// Skip special fields and schema definition properties (not queries)
-			// Schema definition properties like 'properties', 'items', '$defs' are part of schema structure, not queries
+			// Schema definition properties like 'properties', '$defs' are part of schema structure, not queries
+			// Note: 'items' is a valid context query key (e.g. grid items); only skip if not a query object
 			if (
 				key === '$schema' ||
 				key === '$id' ||
 				key === '@stores' ||
 				key === 'properties' ||
-				key === 'items' ||
 				key === '$defs' ||
 				key === 'cotype' ||
 				key === 'indexing' ||
