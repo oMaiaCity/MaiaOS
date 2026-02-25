@@ -1,0 +1,55 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/views/input/process",
+	"@label": "@maia/actor/views/input/process",
+	"handlers": {
+		"UPDATE_INPUT": [
+			{
+				"ctx": {
+					"inputValue": "$$value"
+				}
+			}
+		],
+		"FORM_SUBMIT": [
+			{
+				"tell": {
+					"target": "$targetActor",
+					"type": "FORM_SUBMIT",
+					"payload": {
+						"value": "$$value"
+					}
+				}
+			},
+			{
+				"ctx": {
+					"inputValue": ""
+				}
+			}
+		],
+		"DISMISS": [
+			{
+				"ctx": {
+					"hasError": false,
+					"error": null
+				}
+			}
+		],
+		"SUCCESS": [
+			{
+				"ctx": {
+					"inputValue": "",
+					"hasError": false,
+					"error": null
+				}
+			}
+		],
+		"ERROR": [
+			{
+				"ctx": {
+					"hasError": true,
+					"error": "$$errors.0.message"
+				}
+			}
+		]
+	}
+}

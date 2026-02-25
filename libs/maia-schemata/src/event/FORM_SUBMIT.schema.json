@@ -1,0 +1,17 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/event/FORM_SUBMIT",
+	"title": "°Maia/schema/event/FORM_SUBMIT",
+	"description": "Message type for form submission (generic, reusable across agents)",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {
+		"value": {
+			"type": "string",
+			"description": "Submitted form value/text"
+		}
+	},
+	"required": ["value"],
+	"additionalProperties": true
+}

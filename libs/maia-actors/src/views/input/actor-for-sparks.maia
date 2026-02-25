@@ -1,0 +1,18 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/views/input/for-sparks",
+	"@label": "@maia/actor/views/input/for-sparks",
+	"context": "°Maia/actor/views/input/for-sparks/context",
+	"view": "°Maia/actor/views/input/view",
+	"process": "°Maia/actor/views/input/process",
+	"brand": "°Maia/style/brand",
+	"style": "°Maia/actor/views/input/style",
+	"inbox": "°Maia/actor/views/input/for-sparks/inbox",
+	"interface": [
+		"UPDATE_INPUT",
+		"FORM_SUBMIT",
+		"DISMISS",
+		"SUCCESS",
+		"ERROR"
+	]
+}
