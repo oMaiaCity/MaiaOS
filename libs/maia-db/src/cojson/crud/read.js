@@ -23,6 +23,10 @@ import { matchesFilter } from './filter-helpers.js'
 import { applyMapTransform, applyMapTransformToArray } from './map-transform.js'
 import { waitForStoreReady } from './read-operations.js'
 
+function debugLog(...args) {
+	if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(...args)
+}
+
 /**
  * Universal read() function - works for ANY CoValue type
  *
@@ -66,7 +70,7 @@ export async function read(
 	// Single item read (by coId)
 	if (coId) {
 		// Use schema as schemaHint if provided
-		return await readSingleCoValue(peer, coId, schemaHint || schema, readOptions)
+		return readSingleCoValue(peer, coId, schemaHint || schema, readOptions)
 	}
 
 	// Collection read (by schema)
@@ -81,16 +85,16 @@ export async function read(
 		})
 		const resolvedSchema = await resolveSchema(peer, schema, { returnType: 'coId' })
 		if (sparkSchemaCoId && resolvedSchema === sparkSchemaCoId) {
-			return await readSparksFromAccount(peer, readOptions)
+			return readSparksFromAccount(peer, readOptions)
 		}
 		if (humanSchemaCoId && resolvedSchema === humanSchemaCoId) {
-			return await readHumansFromRegistries(peer, readOptions)
+			return readHumansFromRegistries(peer, readOptions)
 		}
-		return await readCollection(peer, schema, filter, readOptions)
+		return readCollection(peer, schema, filter, readOptions)
 	}
 
 	// All CoValues read (no schema) - returns array of all CoValues
-	return await readAllCoValues(peer, filter, { deepResolve, maxDepth, timeoutMs })
+	return readAllCoValues(peer, filter, { deepResolve, maxDepth, timeoutMs })
 }
 
 /**
@@ -103,6 +107,18 @@ export async function read(
  * @returns {Promise<ReactiveStore>} Unified ReactiveStore with merged data
  * @private
  */
+/** Shared cleanup for single CoValue subscriptions: origUnsub, coUnsub, depUnsubs, scheduleCleanup. */
+function makeSingleCoCleanup(peer, coId, coUnsub, depUnsubs, origUnsub, extra = null) {
+	return () => {
+		if (origUnsub) origUnsub()
+		if (extra) extra()
+		coUnsub()
+		for (const u of depUnsubs.values()) u()
+		depUnsubs.clear()
+		peer.subscriptionCache.scheduleCleanup(`subscription:${coId}`)
+	}
+}
+
 /** Detect findOne pattern: filter with single id field pointing to co-id */
 function isFindOneFilter(filter) {
 	return (
@@ -176,7 +192,7 @@ async function evaluateFilter(filter, contextValue, evaluator) {
 
 	// Use resolveExpressions to evaluate filter values that reference context
 	// This handles expressions like "$sparkId" → actual co-id value
-	return await resolveExpressions(filter, evaluator, { context: contextValue, item: {} })
+	return resolveExpressions(filter, evaluator, { context: contextValue, item: {} })
 }
 
 async function createUnifiedStore(peer, contextStore, options = {}) {
@@ -184,8 +200,7 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 	const queryStores = new Map() // key -> ReactiveStore
 	const queryDefinitions = new Map() // key -> query definition object (for $op) - stores evaluated filters
 	const queryIsFindOne = new Map() // key -> boolean (true if query should return single object instead of array)
-	const schemaSubscriptions = new Map() // key -> unsubscribe function for schema resolution
-	const { timeoutMs = 5000, onChange: _onChange } = options
+	const { timeoutMs = 5000 } = options
 
 	// Evaluator injected at boot (avoids maia-db → maia-engines dependency)
 	const evaluator = peer.evaluator
@@ -198,13 +213,9 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 	// Update Queue: batches all updates within a single event loop tick
 	// Prevents duplicate renders when multiple query stores update simultaneously
 	let lastUnifiedValue = null
-	let _updateQueuePending = false
 	let queueTimer = null
 
 	const enqueueUpdate = () => {
-		// Mark that an update is pending
-		_updateQueuePending = true
-
 		// Schedule batch processing if not already scheduled
 		// Batch updates: one microtask per tick
 		if (!queueTimer) {
@@ -285,9 +296,6 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 					// _set() automatically notifies all subscribers (including the one set up in ActorEngine)
 					unifiedStore._set(mergedValue)
 				}
-
-				// Clear pending flag after processing
-				_updateQueuePending = false
 			})
 		}
 	}
@@ -347,8 +355,7 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 
 					// Validate schemaCoId is a string
 					if (typeof schemaCoId !== 'string') {
-						if (typeof process !== 'undefined' && process.env?.DEBUG)
-							console.error('Invalid schemaCoId:', schemaCoId)
+						debugLog('Invalid schemaCoId:', schemaCoId)
 						continue
 					}
 
@@ -393,7 +400,7 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 						}
 					}
 				} catch (_error) {
-					if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_error)
+					debugLog(_error)
 				}
 			}
 		}
@@ -408,14 +415,6 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 				queryStores.delete(key)
 				queryDefinitions.delete(key)
 				queryIsFindOne.delete(key)
-			}
-		}
-
-		// Clean up schema subscriptions for queries that are no longer in context
-		for (const [key, unsubscribe] of schemaSubscriptions.entries()) {
-			if (!currentQueryKeys.has(key)) {
-				if (unsubscribe) unsubscribe()
-				schemaSubscriptions.delete(key)
 			}
 		}
 
@@ -434,11 +433,6 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 	unifiedStore._unsubscribe = () => {
 		if (originalUnsubscribe) originalUnsubscribe()
 		contextUnsubscribe()
-		// Clean up schema subscriptions
-		for (const unsubscribe of schemaSubscriptions.values()) {
-			if (unsubscribe) unsubscribe()
-		}
-		schemaSubscriptions.clear()
 		// Clean up query stores: our subscription + schedule cache cleanup (store may be shared, so don't call _unsubscribe directly)
 		for (const store of queryStores.values()) {
 			if (store._queryUnsubscribe) {
@@ -504,7 +498,7 @@ function getMapDependencyCoIds(rawData, mapConfig) {
  * @param {Set<string>} [visited] - Visited set for circular reference detection
  * @returns {Promise<Object>} Processed CoValue data
  */
-async function processCoValueData(peer, coValueCore, schemaHint, options, _visited = new Set()) {
+async function processCoValueData(peer, coValueCore, schemaHint, options) {
 	const { deepResolve = true, maxDepth = 15, timeoutMs = 5000, map = null } = options
 
 	// Extract CoValue data as flat object
@@ -530,7 +524,7 @@ async function processCoValueData(peer, coValueCore, schemaHint, options, _visit
 		try {
 			data = await applyMapTransform(peer, data, map, { timeoutMs })
 		} catch (_err) {
-			if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
+			debugLog(_err)
 			// Continue with unmapped data
 		}
 	}
@@ -562,7 +556,7 @@ async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
 		const coValueCore = peer.getCoValue(coId)
 		if (coValueCore) {
 			const processAndCacheCached = async (core) => {
-				const newData = await processCoValueData(peer, core, schemaHint, options, new Set())
+				const newData = await processCoValueData(peer, core, schemaHint, options)
 				cache.setResolvedData(coId, cacheOptions, newData)
 				return newData
 			}
@@ -604,26 +598,24 @@ async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
 
 			if (hasQueryObjects) {
 				const unified = await createUnifiedStore(peer, ctxStore, options)
-				const origUnsub = unified._unsubscribe
-				unified._unsubscribe = () => {
-					if (origUnsub) origUnsub()
-					cacheCoUnsub()
-					for (const unsub of cacheDepUnsubs.values()) unsub()
-					cacheDepUnsubs.clear()
-					peer.subscriptionCache.scheduleCleanup(`subscription:${coId}`)
-				}
+				unified._unsubscribe = makeSingleCoCleanup(
+					peer,
+					coId,
+					cacheCoUnsub,
+					cacheDepUnsubs,
+					unified._unsubscribe,
+				)
 				return unified
 			}
-			const origUnsub = ctxStore._unsubscribe
-			ctxStore._unsubscribe = () => {
-				if (origUnsub) origUnsub()
-				cacheCoUnsub()
-				for (const unsub of cacheDepUnsubs.values()) unsub()
-				cacheDepUnsubs.clear()
-				peer.subscriptionCache.scheduleCleanup(`subscription:${coId}`)
-			}
+			ctxStore._unsubscribe = makeSingleCoCleanup(
+				peer,
+				coId,
+				cacheCoUnsub,
+				cacheDepUnsubs,
+				ctxStore._unsubscribe,
+			)
 		}
-		return hasQueryObjects ? await createUnifiedStore(peer, ctxStore, options) : ctxStore
+		return ctxStore
 	}
 
 	const coValueCore = peer.getCoValue(coId)
@@ -635,7 +627,7 @@ async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
 
 	// Helper to process and cache CoValue data (fresh visited set per run for correct re-processing)
 	const processAndCache = async (core) => {
-		const processedData = await processCoValueData(peer, core, schemaHint, options, new Set())
+		const processedData = await processCoValueData(peer, core, schemaHint, options)
 
 		// Cache the processed data
 		cache.setResolvedData(coId, cacheOptions, processedData)
@@ -709,25 +701,23 @@ async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
 		if (hasQueryObjects) {
 			store._set(data)
 			const unified = await createUnifiedStore(peer, store, options)
-			const origUnsub = unified._unsubscribe
-			unified._unsubscribe = () => {
-				if (origUnsub) origUnsub()
-				coUnsubscribe()
-				for (const unsub of depUnsubscribes.values()) unsub()
-				depUnsubscribes.clear()
-				peer.subscriptionCache.scheduleCleanup(`subscription:${coId}`)
-			}
+			unified._unsubscribe = makeSingleCoCleanup(
+				peer,
+				coId,
+				coUnsubscribe,
+				depUnsubscribes,
+				unified._unsubscribe,
+			)
 			return unified
 		}
 		store._set(data)
-		const origUnsub = store._unsubscribe
-		store._unsubscribe = () => {
-			if (origUnsub) origUnsub()
-			coUnsubscribe()
-			for (const unsub of depUnsubscribes.values()) unsub()
-			depUnsubscribes.clear()
-			peer.subscriptionCache.scheduleCleanup(`subscription:${coId}`)
-		}
+		store._unsubscribe = makeSingleCoCleanup(
+			peer,
+			coId,
+			coUnsubscribe,
+			depUnsubscribes,
+			store._unsubscribe,
+		)
 		return store
 	}
 
@@ -738,18 +728,19 @@ async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
 			store._set({ error: err.message, id: coId })
 		})
 
-	const origUnsub = store._unsubscribe
-	store._unsubscribe = () => {
-		if (origUnsub) origUnsub()
-		if (unifiedPipeUnsub) {
-			unifiedPipeUnsub()
-			unifiedPipeUnsub = null
-		}
-		coUnsubscribe()
-		for (const unsub of depUnsubscribes.values()) unsub()
-		depUnsubscribes.clear()
-		peer.subscriptionCache.scheduleCleanup(`subscription:${coId}`)
-	}
+	store._unsubscribe = makeSingleCoCleanup(
+		peer,
+		coId,
+		coUnsubscribe,
+		depUnsubscribes,
+		store._unsubscribe,
+		() => {
+			if (unifiedPipeUnsub) {
+				unifiedPipeUnsub()
+				unifiedPipeUnsub = null
+			}
+		},
+	)
 	return store
 }
 
@@ -1053,18 +1044,14 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 	// Progressive loading: trigger load, return store, subscription updates when ready
 	if (!peer.isAvailable(coListCore)) {
 		// Trigger loading (non-blocking)
-		ensureCoValueLoaded(peer, coListId, { waitForAvailable: false }).catch((_err) => {
-			if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
-		})
+		ensureCoValueLoaded(peer, coListId, { waitForAvailable: false }).catch(debugLog)
 
 		// Set up subscription to update store when colist becomes available
 		if (coListCore) {
 			const unsubscribeColist = coListCore.subscribe((core) => {
 				if (core && peer.isAvailable(core)) {
 					// Colist is now available - trigger store update
-					updateStore().catch((_err) => {
-						if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
-					})
+					updateStore().catch(debugLog)
 				}
 			})
 			peer.subscriptionCache.getOrCreate(`subscription:${coListId}`, () => ({
@@ -1106,75 +1093,27 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 		}
 	}
 
-	// Helper to subscribe to an item CoValue
+	const onItemChange = (id) => {
+		cache.invalidateResolvedData(id)
+		if (updateStore) updateStore().catch(debugLog)
+	}
+	const wireItemSubscription = (core, id) => {
+		if (!core || !peer.isAvailable(core)) return
+		const unsub = core.subscribe(() => onItemChange(id))
+		peer.subscriptionCache.getOrCreate(`subscription:${id}`, () => ({ unsubscribe: unsub }))
+		if (updateStore) updateStore().catch(debugLog)
+	}
 	const subscribeToItem = (itemId) => {
-		// Skip if already subscribed
-		if (subscribedItemIds.has(itemId)) {
-			return
-		}
-
+		if (subscribedItemIds.has(itemId)) return
 		subscribedItemIds.add(itemId)
-
 		const itemCore = peer.getCoValue(itemId)
 		if (!itemCore || !peer.isAvailable(itemCore)) {
-			// Item not in memory or not available yet - trigger loading and wait for it to be available
 			ensureCoValueLoaded(peer, itemId, { waitForAvailable: true, timeoutMs: 2000 })
-				.then(() => {
-					// Item is now loaded and available - set up subscription
-					const loadedItemCore = peer.getCoValue(itemId)
-					if (loadedItemCore && peer.isAvailable(loadedItemCore)) {
-						// Subscribe to item changes (fires when item becomes available or updates)
-						// Invalidate cache before processing for fresh data
-						const unsubscribeItem = loadedItemCore.subscribe(() => {
-							// Invalidate cache BEFORE processing - ensures getOrCreateResolvedData() processes fresh data
-							cache.invalidateResolvedData(itemId)
-							// Fire and forget - don't await async updateStore in subscription callback
-							// Guard: Check if updateStore is defined (may not be initialized yet if subscription fires synchronously)
-							if (updateStore) {
-								updateStore().catch((_err) => {
-									if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
-								})
-							}
-						})
-
-						// Use subscriptionCache for each item (same pattern for all CoValue references)
-						peer.subscriptionCache.getOrCreate(`subscription:${itemId}`, () => ({
-							unsubscribe: unsubscribeItem,
-						}))
-
-						// Trigger updateStore when item becomes available
-						if (updateStore) {
-							updateStore().catch((_err) => {
-								if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
-							})
-						}
-					}
-				})
-				.catch((_err) => {
-					if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
-				})
+				.then(() => wireItemSubscription(peer.getCoValue(itemId), itemId))
+				.catch(debugLog)
 			return
 		}
-
-		// Subscribe to item changes (fires when item becomes available or updates)
-		// Invalidate cache before processing for fresh data
-		// The promise-based cache in getOrCreateResolvedData() will handle concurrent calls
-		const unsubscribeItem = itemCore.subscribe(() => {
-			// Invalidate cache BEFORE processing - ensures getOrCreateResolvedData() processes fresh data
-			cache.invalidateResolvedData(itemId)
-			// Fire and forget - don't await async updateStore in subscription callback
-			// Guard: Check if updateStore is assigned before calling (prevents temporal dead zone error)
-			if (updateStore) {
-				updateStore().catch((_err) => {
-					if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
-				})
-			}
-		})
-
-		// Use subscriptionCache for each item (same pattern for all CoValue references)
-		peer.subscriptionCache.getOrCreate(`subscription:${itemId}`, () => ({
-			unsubscribe: unsubscribeItem,
-		}))
+		wireItemSubscription(itemCore, itemId)
 	}
 
 	// Helper to update store with current items
@@ -1185,9 +1124,7 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 		// Get current CoList content (should be available now, but check anyway)
 		if (!peer.isAvailable(coListCore)) {
 			// CoList became unavailable - trigger reload
-			ensureCoValueLoaded(peer, coListId).catch((_err) => {
-				if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
-			})
+			ensureCoValueLoaded(peer, coListId).catch(debugLog)
 			return
 		}
 
@@ -1203,9 +1140,6 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 			const seenIds = new Set()
 
 			// Process each item ID
-			let _availableCount = 0
-			let _unavailableCount = 0
-
 			for (const itemId of itemIdsArray) {
 				if (typeof itemId !== 'string' || !itemId.startsWith('co_')) {
 					continue
@@ -1221,14 +1155,11 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 				const itemCore = peer.getCoValue(itemId)
 				if (!itemCore) {
 					// Item not in memory - subscribeToItem already triggered loading
-					_unavailableCount++
 					continue
 				}
 
 				// Extract item if available (progressive loading - show available items immediately)
 				if (peer.isAvailable(itemCore)) {
-					_availableCount++
-
 					// getOrCreateResolvedData prevents concurrent processing
 					const itemCacheOptions = { deepResolve, map, maxDepth, timeoutMs }
 
@@ -1280,7 +1211,7 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 							try {
 								processedData = await applyMapTransform(peer, processedData, map, { timeoutMs })
 							} catch (_err) {
-								if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
+								debugLog(_err)
 							}
 						}
 
@@ -1300,12 +1231,12 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 						results.push(itemData)
 					}
 				} else {
-					_unavailableCount++
+					// Item not available yet, subscription will fire when ready
 				}
 				// If item not available yet, subscription will fire when it becomes available
 			}
 		} catch (_e) {
-			if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_e)
+			debugLog(_e)
 		}
 
 		// Update store with current results (progressive loading - may be partial, updates reactively)
@@ -1316,9 +1247,7 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 	// Subscribe to CoList changes (fires when items are added/removed or CoList updates)
 	const unsubscribeCoList = coListCore.subscribe(() => {
 		// Fire and forget - don't await async updateStore in subscription callback
-		updateStore().catch((_err) => {
-			if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
-		})
+		updateStore().catch(debugLog)
 	})
 
 	// Use subscriptionCache for CoList
@@ -1340,9 +1269,7 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 						const itemCore = peer.getCoValue(itemId)
 						if (itemCore && !peer.isAvailable(itemCore)) {
 							// Trigger loading immediately (don't wait - parallel loading)
-							ensureCoValueLoaded(peer, itemId).catch((_err) => {
-								if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
-							})
+							ensureCoValueLoaded(peer, itemId).catch(debugLog)
 						}
 					}
 				}
@@ -1430,9 +1357,7 @@ async function readAllCoValues(peer, filter = null, options = {}) {
 
 			// Trigger loading for unavailable CoValues
 			if (!peer.isAvailable(coValueCore)) {
-				ensureCoValueLoaded(peer, coId).catch((_err) => {
-					if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_err)
-				})
+				ensureCoValueLoaded(peer, coId).catch(debugLog)
 				continue
 			}
 
