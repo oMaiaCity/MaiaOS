@@ -60,7 +60,7 @@
 								"isLoading": "$isLoading"
 							}
 						},
-						"text": "Maia is thinking..."
+						"text": "$loadingText"
 					},
 					{
 						"tag": "div",
@@ -73,7 +73,7 @@
 						"children": [
 							{
 								"tag": "strong",
-								"text": "Error: "
+								"text": "$errorLabel"
 							},
 							{
 								"text": "$error"
@@ -81,7 +81,7 @@
 							{
 								"tag": "button",
 								"class": "button",
-								"text": "Dismiss",
+								"text": "$dismissButtonText",
 								"$on": {
 									"click": {
 										"send": "DISMISS"

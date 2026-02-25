@@ -8,6 +8,8 @@
 	"hasError": false,
 	"error": null,
 	"isLoading": false,
+	"errorLabel": "Error: ",
+	"dismissButtonText": "Dismiss",
 	"@actors": {
 		"messages": "°Maia/actor/services/messages"
 	}

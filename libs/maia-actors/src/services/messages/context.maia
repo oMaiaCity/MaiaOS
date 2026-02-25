@@ -15,5 +15,8 @@
 	"hasError": false,
 	"error": null,
 	"hasConversations": false,
-	"welcomeText": "Hello! How can I assist you today?"
+	"welcomeText": "Hello! How can I assist you today?",
+	"loadingText": "Maia is thinking...",
+	"errorLabel": "Error: ",
+	"dismissButtonText": "Dismiss"
 }

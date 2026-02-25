@@ -6,5 +6,7 @@
 	"submitButtonText": "Add",
 	"hasError": false,
 	"error": null,
-	"isLoading": false
+	"isLoading": false,
+	"errorLabel": "Error: ",
+	"dismissButtonText": "Dismiss"
 }
