@@ -1,0 +1,17 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/views/sparks",
+	"@label": "@maia/actor/views/sparks",
+	"context": "°Maia/actor/views/sparks/context",
+	"view": "°Maia/actor/views/sparks/view",
+	"process": "°Maia/actor/views/sparks/process",
+	"brand": "°Maia/style/brand",
+	"style": "°Maia/actor/views/sparks/style",
+	"inbox": "°Maia/actor/views/sparks/inbox",
+	"interface": [
+		"FORM_SUBMIT",
+		"SELECT_SPARK",
+		"SUCCESS",
+		"ERROR"
+	]
+}

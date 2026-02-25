@@ -8,7 +8,7 @@
 	"hasError": false,
 	"error": null,
 	"@actors": {
-		"target": "°Maia/actor/views/layout-sparks"
+		"target": "°Maia/actor/views/sparks"
 	},
 	"isLoading": false
 }

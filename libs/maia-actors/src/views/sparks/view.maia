@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/view",
-	"$id": "°Maia/actor/views/formWithSplit/view",
-	"@label": "@maia/actor/views/formWithSplit/view",
+	"$id": "°Maia/actor/views/sparks/view",
+	"@label": "@maia/actor/views/sparks/view",
 	"content": {
 		"tag": "div",
 		"class": "stack",

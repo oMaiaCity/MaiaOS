@@ -1,6 +1,6 @@
 {
 	"$schema": "°Maia/schema/context",
-	"$id": "°Maia/actor/views/layout-sparks/context",
+	"$id": "°Maia/actor/views/sparks/context",
 	"title": "My Sparks",
 	"sparks": {
 		"schema": "°Maia/schema/data/spark",

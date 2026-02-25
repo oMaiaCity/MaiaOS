@@ -26,7 +26,7 @@ libs/maia-actors/src/
 ├── seed-config.js              # Service actor seeding (actors, states; inboxes derived from actors)
 ├── views/                      # Layout actors (headless intent pattern)
 │   ├── headerWithViewSwitcher/  # Todos, Creator
-│   ├── formWithSplit/          # Sparks
+│   ├── sparks/                 # Sparks layout
 │   ├── grid/                   # Humans
 │   └── modalChat/              # Chat
 ├── aiChat/

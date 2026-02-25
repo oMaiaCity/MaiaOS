@@ -3,6 +3,6 @@
 	"$id": "°Maia/sparks/context/intent",
 	"layout": "@layout",
 	"@actors": {
-		"layout": "°Maia/actor/views/layout-sparks"
+		"layout": "°Maia/actor/views/sparks"
 	}
 }
