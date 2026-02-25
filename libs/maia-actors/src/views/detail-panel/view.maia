@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/view",
-	"$id": "°Maia/actor/services/detail/view",
-	"@label": "@maia/actor/services/detail/view",
+	"$id": "°Maia/actor/views/detail-panel/view",
+	"@label": "@maia/actor/views/detail-panel/view",
 	"content": {
 		"tag": "div",
 		"class": "detail-container",

@@ -1,0 +1,18 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/views/input/for-chat",
+	"@label": "@maia/actor/views/input/for-chat",
+	"context": "°Maia/actor/views/input/for-chat/context",
+	"view": "°Maia/actor/views/input/view",
+	"process": "°Maia/actor/views/input/for-chat/process",
+	"brand": "°Maia/chat/style/brand",
+	"style": "°Maia/actor/views/input/style",
+	"inbox": "°Maia/actor/views/input/for-chat/inbox",
+	"interface": [
+		"UPDATE_INPUT",
+		"FORM_SUBMIT",
+		"DISMISS",
+		"SUCCESS",
+		"ERROR"
+	]
+}
