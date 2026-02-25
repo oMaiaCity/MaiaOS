@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/style",
-	"$id": "°Maia/actor/views/headerWithViewSwitcher/style",
-	"@label": "@maia/actor/views/headerWithViewSwitcher/style",
+	"$id": "°Maia/actor/views/tabs/style",
+	"@label": "@maia/actor/views/tabs/style",
 	"components": {
 		"stack": {
 			"display": "flex",

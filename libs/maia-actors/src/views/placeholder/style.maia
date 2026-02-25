@@ -1,9 +1,9 @@
 {
 	"$schema": "°Maia/schema/style",
-	"$id": "°Maia/actor/coming-soon/style",
-	"@label": "@maia/actor/coming-soon/style",
+	"$id": "°Maia/actor/views/placeholder/style",
+	"@label": "@maia/actor/views/placeholder/style",
 	"components": {
-		"comingSoon": {
+		"placeholder": {
 			"display": "flex",
 			"flexDirection": "column",
 			"alignItems": "center",
@@ -11,7 +11,7 @@
 			"padding": "{spacing.xl}",
 			"minHeight": "200px"
 		},
-		"comingSoonText": {
+		"placeholderText": {
 			"fontFamily": "{typography.fontFamily.heading}",
 			"fontSize": "1.2rem",
 			"color": "{colors.marineBlueLight}",

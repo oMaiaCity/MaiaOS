@@ -41,7 +41,7 @@ src/
 │   └── db/           # Database operations
 ├── services/        # View + process actors (list, logs, messages, detail, paper)
 └── views/           # Standalone UI actors
-    └── comingSoon/   # Coming soon placeholder view
+    └── placeholder/  # Placeholder view (coming soon)
 ```
 
 ## API

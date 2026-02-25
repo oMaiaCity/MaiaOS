@@ -1,0 +1,12 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/views/placeholder",
+	"@label": "@maia/actor/views/placeholder",
+	"context": "°Maia/actor/views/placeholder/context",
+	"view": "°Maia/actor/views/placeholder/view",
+	"process": "°Maia/actor/views/placeholder/process",
+	"brand": "°Maia/style/brand",
+	"style": "°Maia/actor/views/placeholder/style",
+	"inbox": "°Maia/actor/views/placeholder/inbox",
+	"interface": []
+}
