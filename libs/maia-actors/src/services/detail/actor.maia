@@ -9,10 +9,9 @@
 	"inbox": "°Maia/actor/services/detail/inbox",
 	"interface": [
 		"LOAD_ACTOR",
-		"SUCCESS",
-		"ADD_AGENT",
+		"FORM_SUBMIT",
 		"REMOVE_MEMBER",
-		"UPDATE_AGENT_INPUT",
+		"SUCCESS",
 		"ERROR"
 	]
 }

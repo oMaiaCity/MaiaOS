@@ -386,55 +386,54 @@ function startAssetSync() {
 	})
 }
 
+async function killChildrenAndFreePorts() {
+	const logger = createLogger('dev')
+	const procs = [faviconProcess, assetSyncProcess, docsWatcherProcess, moaiProcess, maiaProcess]
+	for (const p of procs) {
+		if (p && !p.killed) {
+			try {
+				p.kill('SIGKILL')
+			} catch (_e) {}
+		}
+	}
+	await Promise.all([
+		freePort(4200, (msg) => logger.warn(msg)),
+		freePort(4201, (msg) => logger.warn(msg)),
+	])
+}
+
 function setupSignalHandlers() {
 	const logger = createLogger('dev')
+	let shuttingDown = false
 
-	process.on('SIGINT', () => {
+	async function onShutdown() {
+		if (shuttingDown) return
+		shuttingDown = true
 		console.log()
 		logger.status('Shutting down...')
-		if (faviconProcess && !faviconProcess.killed) {
-			faviconProcess.kill('SIGTERM')
-		}
-		if (assetSyncProcess && !assetSyncProcess.killed) {
-			assetSyncProcess.kill('SIGTERM')
-		}
-		if (docsWatcherProcess && !docsWatcherProcess.killed) {
-			docsWatcherProcess.kill('SIGTERM')
-		}
-		if (moaiProcess && !moaiProcess.killed) {
-			moaiProcess.kill('SIGTERM')
-		}
-		if (maiaProcess && !maiaProcess.killed) {
-			maiaProcess.kill('SIGTERM')
-		}
+		await killChildrenAndFreePorts()
 		process.exit(0)
+	}
+
+	process.on('SIGINT', () => {
+		onShutdown()
 	})
 
 	process.on('SIGTERM', () => {
-		console.log()
-		logger.status('Shutting down...')
-		if (faviconProcess && !faviconProcess.killed) {
-			faviconProcess.kill('SIGTERM')
-		}
-		if (assetSyncProcess && !assetSyncProcess.killed) {
-			assetSyncProcess.kill('SIGTERM')
-		}
-		if (docsWatcherProcess && !docsWatcherProcess.killed) {
-			docsWatcherProcess.kill('SIGTERM')
-		}
-		if (moaiProcess && !moaiProcess.killed) {
-			moaiProcess.kill('SIGTERM')
-		}
-		if (maiaProcess && !maiaProcess.killed) {
-			maiaProcess.kill('SIGTERM')
-		}
-		process.exit(0)
+		onShutdown()
 	})
 }
 
 async function main() {
 	bootHeader()
 	setupSignalHandlers()
+
+	// Free ports first so we start with a clean slate (kills any leftover maia/moai from crashed runs)
+	const logger = createLogger('dev')
+	await Promise.all([
+		freePort(4200, (msg) => logger.warn(msg)),
+		freePort(4201, (msg) => logger.warn(msg)),
+	])
 
 	// Generate favicons first (runs once, then exits)
 	generateFavicons()

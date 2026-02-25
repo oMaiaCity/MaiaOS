@@ -9,5 +9,6 @@
 	"error": null,
 	"@actors": {
 		"target": "°Maia/actor/views/layout-sparks"
-	}
+	},
+	"isLoading": false
 }

@@ -28,33 +28,6 @@
 				}
 			}
 		],
-		"UPDATE_AGENT_INPUT": [
-			{
-				"ctx": {
-					"agentIdInput": "$$value",
-					"addButtonDisabled": {
-						"$eq": [
-							"$$value",
-							""
-						]
-					}
-				}
-			}
-		],
-		"ADD_AGENT": [
-			{
-				"ask": {
-					"target": "°Maia/actor/os/db",
-					"type": "SPARK_OP",
-					"payload": {
-						"op": "addSparkMember",
-						"id": "$sparkId",
-						"memberId": "$$agentId",
-						"role": "writer"
-					}
-				}
-			}
-		],
 		"REMOVE_MEMBER": [
 			{
 				"ask": {
@@ -70,19 +43,35 @@
 		],
 		"SUCCESS": [
 			{
-				"ctx": {
-					"agentIdInput": "",
-					"addAgentError": null,
-					"addAgentHasError": false,
-					"addButtonDisabled": true
+				"tell": {
+					"target": "$inputActor",
+					"type": "SUCCESS",
+					"payload": {}
 				}
 			}
 		],
 		"ERROR": [
 			{
-				"ctx": {
-					"addAgentError": "$$errors.0.message",
-					"addAgentHasError": true
+				"tell": {
+					"target": "$inputActor",
+					"type": "ERROR",
+					"payload": {
+						"errors": "$$errors"
+					}
+				}
+			}
+		],
+		"FORM_SUBMIT": [
+			{
+				"ask": {
+					"target": "°Maia/actor/os/db",
+					"type": "SPARK_OP",
+					"payload": {
+						"op": "addSparkMember",
+						"id": "$sparkId",
+						"memberId": "$$value",
+						"role": "writer"
+					}
 				}
 			}
 		]
