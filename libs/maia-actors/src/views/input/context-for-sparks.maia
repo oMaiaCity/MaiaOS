@@ -1,0 +1,13 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/input/for-sparks/context",
+	"targetActor": "@target",
+	"inputPlaceholder": "Enter spark name...",
+	"inputValue": "",
+	"submitButtonText": "Create Spark",
+	"hasError": false,
+	"error": null,
+	"@actors": {
+		"target": "°Maia/actor/views/layout-sparks"
+	}
+}

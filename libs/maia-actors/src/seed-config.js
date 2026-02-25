@@ -64,6 +64,14 @@ import layoutTodosContext from './views/headerWithViewSwitcher/context-todos.mai
 import headerWithViewSwitcherProcess from './views/headerWithViewSwitcher/process.maia'
 import headerWithViewSwitcherStyle from './views/headerWithViewSwitcher/style.maia'
 import headerWithViewSwitcherView from './views/headerWithViewSwitcher/view.maia'
+import inputForListActor from './views/input/actor-for-list.maia'
+import inputForSparksActor from './views/input/actor-for-sparks.maia'
+import inputForListContext from './views/input/context-for-list.maia'
+import inputForSparksContext from './views/input/context-for-sparks.maia'
+import inputProcess from './views/input/process.maia'
+import inputForListProcess from './views/input/process-for-list.maia'
+import inputStyle from './views/input/style.maia'
+import inputView from './views/input/view.maia'
 import layoutChatActor from './views/modalChat/actor.maia'
 import layoutChatContext from './views/modalChat/context.maia'
 import layoutChatProcess from './views/modalChat/process.maia'
@@ -222,6 +230,20 @@ export function getSeedConfig() {
 			view: formWithSplitView,
 			process: layoutSparksProcess,
 			style: formWithSplitStyle,
+		},
+		{
+			actor: inputForListActor,
+			context: inputForListContext,
+			view: inputView,
+			process: inputForListProcess,
+			style: inputStyle,
+		},
+		{
+			actor: inputForSparksActor,
+			context: inputForSparksContext,
+			view: inputView,
+			process: inputProcess,
+			style: inputStyle,
 		},
 		{
 			actor: layoutHumansActor,

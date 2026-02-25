@@ -9,10 +9,11 @@
 			"done": "done"
 		}
 	},
-	"newTodoText": "",
-	"inputPlaceholder": "Add a new todo...",
-	"addButtonText": "Add",
+	"inputActor": "@input",
 	"toggleButtonText": "✓",
 	"deleteButtonText": "✕",
-	"error": null
+	"error": null,
+	"@actors": {
+		"input": "°Maia/actor/views/input/for-list"
+	}
 }

@@ -9,16 +9,13 @@
 			"name": "name"
 		}
 	},
-	"newSparkName": "",
-	"inputPlaceholder": "Enter spark name...",
-	"createButtonText": "Create Spark",
-	"error": null,
-	"hasError": false,
+	"inputActor": "@input",
 	"loading": false,
 	"selectedSparkId": null,
 	"selectedSparkItems": {},
 	"currentDetail": "@detail",
 	"@actors": {
+		"input": "°Maia/actor/views/input/for-sparks",
 		"detail": "°Maia/actor/services/detail"
 	}
 }

@@ -6,52 +6,7 @@
 		"class": "list",
 		"children": [
 			{
-				"class": "form",
-				"children": [
-					{
-						"tag": "input",
-						"class": "input",
-						"attrs": {
-							"type": "text",
-							"placeholder": "$inputPlaceholder"
-						},
-						"value": "$newTodoText",
-						"$on": {
-							"input": {
-								"send": "UPDATE_INPUT",
-								"payload": {
-									"value": "@inputValue"
-								}
-							},
-							"blur": {
-								"send": "UPDATE_INPUT",
-								"payload": {
-									"value": "@inputValue"
-								}
-							},
-							"keydown": {
-								"send": "CREATE_BUTTON",
-								"payload": {
-									"value": "@inputValue"
-								},
-								"key": "Enter"
-							}
-						}
-					},
-					{
-						"tag": "button",
-						"class": "button",
-						"text": "$addButtonText",
-						"$on": {
-							"click": {
-								"send": "CREATE_BUTTON",
-								"payload": {
-									"value": "$newTodoText"
-								}
-							}
-						}
-					}
-				]
+				"$slot": "$inputActor"
 			},
 			{
 				"$each": {

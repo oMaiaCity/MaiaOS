@@ -62,6 +62,7 @@ import dbOpEventSchema from './event/DB_OP.schema.json'
 import deleteButtonEventSchema from './event/DELETE_BUTTON.schema.json'
 import dismissEventSchema from './event/DISMISS.schema.json'
 import errorEventSchema from './event/ERROR.schema.json'
+import formSubmitEventSchema from './event/FORM_SUBMIT.schema.json'
 import loadActorEventSchema from './event/LOAD_ACTOR.schema.json'
 import openPopupEventSchema from './event/OPEN_POPUP.schema.json'
 import randomizePaperEventSchema from './event/RANDOMIZE_PAPER.schema.json'
@@ -153,6 +154,7 @@ const SCHEMAS = {
 	'data/human': humanDataSchema,
 	'data/spark': sparkDataSchema,
 	'event/CREATE_BUTTON': createButtonEventSchema,
+	'event/FORM_SUBMIT': formSubmitEventSchema,
 	'event/CHAT': chatEventSchema,
 	'event/DB_OP': dbOpEventSchema,
 	'event/SPARK_OP': sparkOpEventSchema,
