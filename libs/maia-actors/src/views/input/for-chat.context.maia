@@ -5,7 +5,12 @@
 	"inputPlaceholder": "Type your message...",
 	"inputValue": "",
 	"submitButtonText": "➤",
+	"hasError": false,
+	"error": null,
+	"isLoading": false,
+	"errorLabel": "Error: ",
+	"dismissButtonText": "Dismiss",
 	"@actors": {
-		"messages": "°Maia/actor/views/messages"
+		"messages": "°Maia/actor/services/messages"
 	}
 }

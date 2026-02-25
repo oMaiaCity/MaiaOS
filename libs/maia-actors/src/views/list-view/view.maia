@@ -25,7 +25,7 @@
 							{
 								"tag": "button",
 								"class": "button-small",
-								"text": "✓",
+								"text": "$toggleButtonText",
 								"$on": {
 									"click": {
 										"send": "TOGGLE_BUTTON",
