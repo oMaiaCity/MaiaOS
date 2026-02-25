@@ -25,10 +25,10 @@ libs/maia-actors/src/
 ├── index.js                    # Main exports (ACTORS, getActor, getSeedConfig)
 ├── seed-config.js              # Service actor seeding (actors, states; inboxes derived from actors)
 ├── views/                      # Layout actors (headless intent pattern)
-│   ├── headerWithViewSwitcher/  # Todos, Creator
+│   ├── tabs/  # Todos, Creator
 │   ├── sparks/                 # Sparks layout
 │   ├── grid/                   # Humans
-│   └── modalChat/              # Chat
+│   └── modal-chat/             # Chat
 ├── aiChat/
 │   ├── aiChat.actor.maia       # Actor definition ($schema: °Maia/schema/actor)
 │   ├── aiChat.state.maia       # State machine (idle→processing on CHAT)

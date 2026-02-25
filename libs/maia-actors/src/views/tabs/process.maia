@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/process",
-	"$id": "°Maia/actor/views/headerWithViewSwitcher/process",
-	"@label": "@maia/actor/views/headerWithViewSwitcher/process",
+	"$id": "°Maia/actor/views/tabs/process",
+	"@label": "@maia/actor/views/tabs/process",
 	"handlers": {
 		"SWITCH_VIEW": [
 			{

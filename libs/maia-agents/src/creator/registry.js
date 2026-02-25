@@ -1,7 +1,7 @@
 /**
  * Creator Vibe Registry
  * Pre-loads all .maia configs as ES module imports
- * coming-soon actor from @MaiaOS/actors (seeded separately)
+ * placeholder actor from @MaiaOS/actors (seeded separately)
  */
 
 import masterBrand from '../shared/brand.style.maia'

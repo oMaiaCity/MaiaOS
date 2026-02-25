@@ -9,7 +9,7 @@
 	"properties": {
 		"viewMode": {
 			"type": "string",
-			"enum": ["list", "logs", "comingSoon", "actors", "schemata"],
+			"enum": ["list", "logs", "placeholder", "actors", "schemata"],
 			"description": "View mode to switch to (required)"
 		},
 		"slotRef": {

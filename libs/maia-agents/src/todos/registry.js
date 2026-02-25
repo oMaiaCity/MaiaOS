@@ -2,7 +2,7 @@
  * Todos Vibe Registry
  * Pre-loads all .maia configs as ES module imports
  * Exports everything as JS objects - no runtime file loading needed
- * coming-soon actor from @MaiaOS/actors (seeded separately)
+ * placeholder actor from @MaiaOS/actors (seeded separately)
  */
 
 import masterBrand from '../shared/brand.style.maia'

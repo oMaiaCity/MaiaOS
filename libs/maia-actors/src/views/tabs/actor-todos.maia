@@ -3,10 +3,10 @@
 	"$id": "°Maia/actor/views/layout-todos",
 	"@label": "@maia/actor/views/layout-todos",
 	"context": "°Maia/actor/views/layout-todos/context",
-	"view": "°Maia/actor/views/headerWithViewSwitcher/view",
-	"process": "°Maia/actor/views/headerWithViewSwitcher/process",
+	"view": "°Maia/actor/views/tabs/view",
+	"process": "°Maia/actor/views/tabs/process",
 	"brand": "°Maia/style/brand",
-	"style": "°Maia/actor/views/headerWithViewSwitcher/style",
+	"style": "°Maia/actor/views/tabs/style",
 	"inbox": "°Maia/actor/views/layout-todos/inbox",
 	"interface": [
 		"SWITCH_VIEW"

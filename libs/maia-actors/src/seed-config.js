@@ -1,7 +1,7 @@
 /**
  * Seed config for service actors - contributes actors and states to genesis seed.
  * Merged by moai into buildSeedConfig output; replaces separate tool config.
- * Also includes standalone UI actors (e.g. coming-soon).
+ * Also includes standalone UI actors (e.g. placeholder).
  */
 
 import { getAllSchemas } from '@MaiaOS/schemata'
@@ -37,20 +37,8 @@ import paperContext from './services/paper/context.maia'
 import paperProcess from './services/paper/process.maia'
 import paperTool from './services/paper/tool.maia'
 import paperView from './services/paper/view.maia'
-import comingSoonActor from './views/comingSoon/actor.maia'
-import comingSoonContext from './views/comingSoon/context.maia'
-import comingSoonProcess from './views/comingSoon/process.maia'
-import comingSoonStyle from './views/comingSoon/style.maia'
-import comingSoonView from './views/comingSoon/view.maia'
 import gridStyle from './views/grid/style.maia'
 import gridView from './views/grid/view.maia'
-import layoutCreatorActor from './views/headerWithViewSwitcher/actor-creator.maia'
-import layoutTodosActor from './views/headerWithViewSwitcher/actor-todos.maia'
-import layoutCreatorContext from './views/headerWithViewSwitcher/context-creator.maia'
-import layoutTodosContext from './views/headerWithViewSwitcher/context-todos.maia'
-import headerWithViewSwitcherProcess from './views/headerWithViewSwitcher/process.maia'
-import headerWithViewSwitcherStyle from './views/headerWithViewSwitcher/style.maia'
-import headerWithViewSwitcherView from './views/headerWithViewSwitcher/view.maia'
 import layoutHumansActor from './views/humans/actor.maia'
 import layoutHumansContext from './views/humans/context.maia'
 import layoutHumansProcess from './views/humans/process.maia'
@@ -80,15 +68,27 @@ import listDetailForActorsProcess from './views/list-detail/process-for-actors.m
 import listDetailForSchemasProcess from './views/list-detail/process-for-schemas.maia'
 import listDetailStyle from './views/list-detail/style.maia'
 import listDetailView from './views/list-detail/view.maia'
-import layoutChatActor from './views/modalChat/actor.maia'
-import layoutChatContext from './views/modalChat/context.maia'
-import layoutChatProcess from './views/modalChat/process.maia'
-import modalChatView from './views/modalChat/view.maia'
+import layoutChatActor from './views/modal-chat/actor.maia'
+import layoutChatContext from './views/modal-chat/context.maia'
+import layoutChatProcess from './views/modal-chat/process.maia'
+import modalChatView from './views/modal-chat/view.maia'
+import placeholderActor from './views/placeholder/actor.maia'
+import placeholderContext from './views/placeholder/context.maia'
+import placeholderProcess from './views/placeholder/process.maia'
+import placeholderStyle from './views/placeholder/style.maia'
+import placeholderView from './views/placeholder/view.maia'
 import layoutSparksActor from './views/sparks/actor.maia'
 import layoutSparksContext from './views/sparks/context.maia'
 import layoutSparksProcess from './views/sparks/process.maia'
 import sparksStyle from './views/sparks/style.maia'
 import sparksView from './views/sparks/view.maia'
+import layoutCreatorActor from './views/tabs/actor-creator.maia'
+import layoutTodosActor from './views/tabs/actor-todos.maia'
+import layoutCreatorContext from './views/tabs/context-creator.maia'
+import layoutTodosContext from './views/tabs/context-todos.maia'
+import tabsProcess from './views/tabs/process.maia'
+import tabsStyle from './views/tabs/style.maia'
+import tabsView from './views/tabs/view.maia'
 
 /** Build listItems from getAllSchemas() for list-detail/for-schemas */
 function buildListDetailSchemasContext() {
@@ -108,7 +108,7 @@ export const ROLE_TO_FOLDER = {
 	'@maia/actor/os/ai': 'os/ai',
 	'@maia/actor/os/db': 'os/db',
 	'@maia/actor/os/names': 'os/names',
-	'@maia/actor/coming-soon': 'coming-soon',
+	'@maia/actor/views/placeholder': 'views/placeholder',
 }
 
 /** Resolve actor ref to registry key. Only accepts °Maia/actor/... $ids (id-based lookup). */
@@ -226,25 +226,25 @@ export function getSeedConfig() {
 			style: listDetailStyle,
 		},
 		{
-			actor: comingSoonActor,
-			context: comingSoonContext,
-			view: comingSoonView,
-			process: comingSoonProcess,
-			style: comingSoonStyle,
+			actor: placeholderActor,
+			context: placeholderContext,
+			view: placeholderView,
+			process: placeholderProcess,
+			style: placeholderStyle,
 		},
 		{
 			actor: layoutTodosActor,
 			context: layoutTodosContext,
-			view: headerWithViewSwitcherView,
-			process: headerWithViewSwitcherProcess,
-			style: headerWithViewSwitcherStyle,
+			view: tabsView,
+			process: tabsProcess,
+			style: tabsStyle,
 		},
 		{
 			actor: layoutCreatorActor,
 			context: layoutCreatorContext,
-			view: headerWithViewSwitcherView,
-			process: headerWithViewSwitcherProcess,
-			style: headerWithViewSwitcherStyle,
+			view: tabsView,
+			process: tabsProcess,
+			style: tabsStyle,
 		},
 		{
 			actor: layoutSparksActor,
