@@ -1,0 +1,18 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/views/list-detail/detail-schemas/process",
+	"@label": "@maia/actor/views/list-detail/detail-schemas/process",
+	"handlers": {
+		"SELECT_ITEM": [
+			{
+				"ctx": {
+					"selectedItem": {
+						"id": "$$item.id",
+						"label": "$$item.label",
+						"definition": "$$item.definition"
+					}
+				}
+			}
+		]
+	}
+}
