@@ -3,6 +3,6 @@
 	"$id": "°Maia/humans/context/intent",
 	"layout": "@layout",
 	"@actors": {
-		"layout": "°Maia/actor/views/layout-humans"
+		"layout": "°Maia/actor/views/humans"
 	}
 }
