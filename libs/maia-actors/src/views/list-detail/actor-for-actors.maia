@@ -1,0 +1,14 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/views/list-detail/for-actors",
+	"@label": "@maia/actor/views/list-detail/for-actors",
+	"context": "°Maia/actor/views/list-detail/for-actors/context",
+	"view": "°Maia/actor/views/list-detail/view",
+	"process": "°Maia/actor/views/list-detail/for-actors/process",
+	"brand": "°Maia/style/brand",
+	"style": "°Maia/actor/views/list-detail/style",
+	"inbox": "°Maia/actor/views/list-detail/for-actors/inbox",
+	"interface": [
+		"SELECT_ITEM"
+	]
+}

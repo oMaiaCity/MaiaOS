@@ -37,11 +37,6 @@ import paperContext from './services/paper/context.maia'
 import paperProcess from './services/paper/process.maia'
 import paperTool from './services/paper/tool.maia'
 import paperView from './services/paper/view.maia'
-import actorListActor from './views/actorList/actor.maia'
-import actorListContext from './views/actorList/context.maia'
-import actorListProcess from './views/actorList/process.maia'
-import actorListStyle from './views/actorList/style.maia'
-import actorListView from './views/actorList/view.maia'
 import comingSoonActor from './views/comingSoon/actor.maia'
 import comingSoonContext from './views/comingSoon/context.maia'
 import comingSoonProcess from './views/comingSoon/process.maia'
@@ -74,28 +69,39 @@ import inputProcess from './views/input/process.maia'
 import inputForListProcess from './views/input/process-for-list.maia'
 import inputStyle from './views/input/style.maia'
 import inputView from './views/input/view.maia'
+import listDetailForActorsActor from './views/list-detail/actor-for-actors.maia'
+import listDetailForSchemasActor from './views/list-detail/actor-for-schemas.maia'
+import listDetailForActorsContext from './views/list-detail/context-for-actors.maia'
+import listDetailForSchemasContextBase from './views/list-detail/context-for-schemas.maia'
+import listDetailDetailActorsActor from './views/list-detail/detail-actors-actor.maia'
+import listDetailDetailActorsContext from './views/list-detail/detail-actors-context.maia'
+import listDetailDetailActorsProcess from './views/list-detail/detail-actors-process.maia'
+import listDetailDetailActorsView from './views/list-detail/detail-actors-view.maia'
+import listDetailDetailSchemasActor from './views/list-detail/detail-schemas-actor.maia'
+import listDetailDetailSchemasContext from './views/list-detail/detail-schemas-context.maia'
+import listDetailDetailSchemasProcess from './views/list-detail/detail-schemas-process.maia'
+import listDetailDetailSchemasView from './views/list-detail/detail-schemas-view.maia'
+import listDetailForActorsProcess from './views/list-detail/process-for-actors.maia'
+import listDetailForSchemasProcess from './views/list-detail/process-for-schemas.maia'
+import listDetailStyle from './views/list-detail/style.maia'
+import listDetailView from './views/list-detail/view.maia'
 import layoutChatActor from './views/modalChat/actor.maia'
 import layoutChatContext from './views/modalChat/context.maia'
 import layoutChatProcess from './views/modalChat/process.maia'
 import modalChatView from './views/modalChat/view.maia'
-import schemataListActor from './views/schemataList/actor.maia'
-import schemataListContextBase from './views/schemataList/context.maia'
-import schemataListProcess from './views/schemataList/process.maia'
-import schemataListStyle from './views/schemataList/style.maia'
-import schemataListView from './views/schemataList/view.maia'
 
-/** Build schema list from getAllSchemas() for schemata-list view */
-function buildSchemataListContext() {
+/** Build listItems from getAllSchemas() for list-detail/for-schemas */
+function buildListDetailSchemasContext() {
 	const allSchemas = getAllSchemas()
-	const schemaList = Object.entries(allSchemas).map(([id, def]) => ({
+	const listItems = Object.entries(allSchemas).map(([id, def]) => ({
 		id,
 		label: id.startsWith('°Maia/schema/') ? id.replace('°Maia/schema/', '') : id,
 		definition: JSON.stringify(def, null, 2),
 	}))
-	return { ...schemataListContextBase, schemaList }
+	return { ...listDetailForSchemasContextBase, listItems }
 }
 
-const schemataListContext = buildSchemataListContext()
+const listDetailForSchemasContext = buildListDetailSchemasContext()
 
 /** Map role to folder name for consistent °Maia/actor/{folder} $ids */
 export const ROLE_TO_FOLDER = {
@@ -192,18 +198,32 @@ export function getSeedConfig() {
 	// View actors (UI components)
 	const viewActors = [
 		{
-			actor: actorListActor,
-			context: actorListContext,
-			view: actorListView,
-			process: actorListProcess,
-			style: actorListStyle,
+			actor: listDetailDetailActorsActor,
+			context: listDetailDetailActorsContext,
+			view: listDetailDetailActorsView,
+			process: listDetailDetailActorsProcess,
+			style: listDetailStyle,
 		},
 		{
-			actor: schemataListActor,
-			context: schemataListContext,
-			view: schemataListView,
-			process: schemataListProcess,
-			style: schemataListStyle,
+			actor: listDetailDetailSchemasActor,
+			context: listDetailDetailSchemasContext,
+			view: listDetailDetailSchemasView,
+			process: listDetailDetailSchemasProcess,
+			style: listDetailStyle,
+		},
+		{
+			actor: listDetailForActorsActor,
+			context: listDetailForActorsContext,
+			view: listDetailView,
+			process: listDetailForActorsProcess,
+			style: listDetailStyle,
+		},
+		{
+			actor: listDetailForSchemasActor,
+			context: listDetailForSchemasContext,
+			view: listDetailView,
+			process: listDetailForSchemasProcess,
+			style: listDetailStyle,
 		},
 		{
 			actor: comingSoonActor,

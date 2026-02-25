@@ -43,7 +43,7 @@
 	],
 	"@actors": {
 		"logs": "°Maia/actor/services/logs",
-		"actors": "°Maia/actor/views/actor-list",
-		"schemata": "°Maia/actor/views/schemata-list"
+		"actors": "°Maia/actor/views/list-detail/for-actors",
+		"schemata": "°Maia/actor/views/list-detail/for-schemas"
 	}
 }

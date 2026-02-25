@@ -1,0 +1,53 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/views/list-detail/for-schemas/process",
+	"@label": "@maia/actor/views/list-detail/for-schemas/process",
+	"handlers": {
+		"SELECT_ITEM": [
+			{
+				"ctx": {
+					"selectedItem": {
+						"id": "$$item.id",
+						"label": "$$item.label",
+						"definition": ""
+					}
+				}
+			},
+			{
+				"op": {
+					"readSchema": {
+						"schemaRef": "$$item.id"
+					}
+				}
+			},
+			{
+				"ctx": {
+					"selectedItem": {
+						"id": "$selectedItem.id",
+						"label": "$selectedItem.label",
+						"definition": {
+							"$if": {
+								"condition": "$$result",
+								"then": "$$result.definition",
+								"else": ""
+							}
+						}
+					}
+				}
+			},
+			{
+				"tell": {
+					"target": "°Maia/actor/views/list-detail/detail-schemas",
+					"type": "SELECT_ITEM",
+					"payload": {
+						"item": {
+							"id": "$selectedItem.id",
+							"label": "$selectedItem.label",
+							"definition": "$selectedItem.definition"
+						}
+					}
+				}
+			}
+		]
+	}
+}
