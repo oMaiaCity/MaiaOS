@@ -3,13 +3,14 @@
 	"$id": "°Maia/actor/views/layout-chat/context",
 	"currentSection": "@messages",
 	"currentPaper": "@paper",
-	"inputText": "",
+	"inputActor": "@input",
 	"isLoading": false,
 	"hasError": false,
 	"error": null,
 	"popupOpen": false,
 	"@actors": {
 		"messages": "°Maia/actor/services/messages",
-		"paper": "°Maia/actor/services/paper"
+		"paper": "°Maia/actor/services/paper",
+		"input": "°Maia/actor/views/input/for-chat"
 	}
 }

@@ -20,7 +20,7 @@ import {
 	resolveNestedReferencesPublic,
 } from './deep-resolution.js'
 import { matchesFilter } from './filter-helpers.js'
-import { applyMapTransform } from './map-transform.js'
+import { applyMapTransform, applyMapTransformToArray } from './map-transform.js'
 import { waitForStoreReady } from './read-operations.js'
 
 /**
@@ -837,11 +837,9 @@ function travelerFallback(accountCoId) {
  * @returns {Promise<ReactiveStore>} ReactiveStore with array of {id, accountId, registryName, profileName}
  */
 async function readHumansFromRegistries(peer, options = {}) {
-	const { timeoutMs = 5000 } = options
-	const store = peer.subscriptionCache.getOrCreateStore(
-		'humans:registries',
-		() => new ReactiveStore([]),
-	)
+	const { timeoutMs = 5000, map = null } = options
+	const cacheKey = map ? `humans:registries:${JSON.stringify(map)}` : 'humans:registries'
+	const store = peer.subscriptionCache.getOrCreateStore(cacheKey, () => new ReactiveStore([]))
 
 	const humansId = await getHumansRegistryId(peer)
 	if (!humansId || !humansId.startsWith('co_')) {
@@ -932,7 +930,8 @@ async function readHumansFromRegistries(peer, options = {}) {
 			}
 		}
 
-		store._set(items)
+		const finalItems = map ? await applyMapTransformToArray(peer, items, map, { timeoutMs }) : items
+		store._set(finalItems)
 	}
 
 	await updateHumans()

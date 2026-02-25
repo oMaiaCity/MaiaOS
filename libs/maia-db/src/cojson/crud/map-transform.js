@@ -45,6 +45,11 @@ async function getValueAtPathWithResolution(peer, item, path, visited, options =
  * @param {string} expression - Map expression (e.g. "$content", "$$source.role", "id")
  * @returns {{ path: string, isResolve: boolean }|null} Path and whether it needs resolution
  */
+function getValueAtPathNoResolve(item, path) {
+	if (!item || typeof path !== 'string') return undefined
+	return path.split('.').reduce((acc, key) => acc?.[key], item)
+}
+
 function parseMapExpression(expression) {
 	if (typeof expression !== 'string') return null
 	if (expression.startsWith('$$')) {
@@ -117,6 +122,19 @@ export async function applyMapTransform(peer, item, mapConfig, options = {}) {
 						mappedItem[k] = v
 					}
 				}
+				continue
+			}
+
+			// $mapFields: generic reshape – [{label, valuePath}] → [{label, value: item[valuePath]}]
+			if (
+				typeof expression === 'object' &&
+				expression !== null &&
+				Array.isArray(expression.$mapFields)
+			) {
+				mappedItem[targetField] = expression.$mapFields.map((f) => ({
+					label: f?.label ?? '',
+					value: f?.valuePath ? getValueAtPathNoResolve(item, f.valuePath) : '',
+				}))
 				continue
 			}
 

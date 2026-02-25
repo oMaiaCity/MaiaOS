@@ -32,24 +32,25 @@
 								"text": "$$profileName"
 							},
 							{
-								"tag": "div",
-								"class": "card-label",
-								"text": "Registry name"
-							},
-							{
-								"tag": "div",
-								"class": "card-value",
-								"text": "$$registryName"
-							},
-							{
-								"tag": "div",
-								"class": "card-label",
-								"text": "Account ID"
-							},
-							{
-								"tag": "div",
-								"class": "card-value card-value-id",
-								"text": "$$accountId"
+								"$each": {
+									"items": "$$cardRows",
+									"template": {
+										"tag": "div",
+										"class": "card-row",
+										"children": [
+											{
+												"tag": "div",
+												"class": "card-label",
+												"text": "$$label"
+											},
+											{
+												"tag": "div",
+												"class": "card-value",
+												"text": "$$value"
+											}
+										]
+									}
+								}
 							}
 						]
 					}

@@ -1,0 +1,14 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/input/for-chat/context",
+	"targetActor": "@messages",
+	"inputPlaceholder": "Type your message...",
+	"inputValue": "",
+	"submitButtonText": "➤",
+	"hasError": false,
+	"error": null,
+	"isLoading": false,
+	"@actors": {
+		"messages": "°Maia/actor/services/messages"
+	}
+}

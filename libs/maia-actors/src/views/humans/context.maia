@@ -9,7 +9,19 @@
 			"id": "id",
 			"accountId": "accountId",
 			"registryName": "registryName",
-			"profileName": "profileName"
+			"profileName": "profileName",
+			"cardRows": {
+				"$mapFields": [
+					{
+						"label": "Registry name",
+						"valuePath": "registryName"
+					},
+					{
+						"label": "Account ID",
+						"valuePath": "accountId"
+					}
+				]
+			}
 		}
 	}
 }

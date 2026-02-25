@@ -3,10 +3,10 @@
 	"$id": "°Maia/actor/services/list",
 	"@label": "@maia/actor/services/list",
 	"context": "°Maia/actor/services/list/context",
-	"view": "°Maia/actor/services/list/view",
+	"view": "°Maia/actor/views/list-view/view",
 	"process": "°Maia/actor/services/list/process",
 	"brand": "°Maia/style/brand",
-	"style": "°Maia/actor/services/list/style",
+	"style": "°Maia/actor/views/list-view/style",
 	"inbox": "°Maia/actor/services/list/inbox",
 	"interface": [
 		"TOGGLE_BUTTON",
