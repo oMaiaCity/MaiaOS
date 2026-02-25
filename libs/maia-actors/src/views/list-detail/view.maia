@@ -33,7 +33,6 @@
 								"$on": {
 									"click": {
 										"send": "SELECT_ITEM",
-										"$debounce": 300,
 										"payload": {
 											"item": "$$"
 										}
