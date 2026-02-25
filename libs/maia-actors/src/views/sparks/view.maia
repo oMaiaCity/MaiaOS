@@ -46,9 +46,8 @@
 										"$on": {
 											"click": {
 												"send": "SELECT_SPARK",
-												"$debounce": 300,
 												"payload": {
-													"id": "$$id"
+													"sparkId": "$$id"
 												}
 											}
 										}
