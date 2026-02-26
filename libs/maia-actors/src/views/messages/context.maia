@@ -1,10 +1,6 @@
 {
 	"$schema": "°Maia/schema/context",
 	"$id": "°Maia/actor/views/messages/context",
-	"targetInfoCard": "@infoCard",
-	"@actors": {
-		"infoCard": "°Maia/actor/views/info-card"
-	},
 	"conversations": {
 		"schema": "°Maia/schema/data/chat",
 		"map": {
@@ -14,8 +10,13 @@
 			"content": "content"
 		}
 	},
+	"phase": "idle",
 	"isLoading": false,
+	"hasError": false,
+	"error": null,
 	"hasConversations": false,
 	"welcomeText": "Hello! How can I assist you today?",
-	"loadingText": "Maia is thinking..."
+	"loadingText": "Maia is thinking...",
+	"errorLabel": "Error: ",
+	"dismissButtonText": "Dismiss"
 }

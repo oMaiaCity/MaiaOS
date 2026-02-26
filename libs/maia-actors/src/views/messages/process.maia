@@ -6,30 +6,32 @@
 		"SEND_MESSAGE": [
 			{
 				"guard": {
-					"isLoading": false
+					"phase": "idle"
 				}
 			},
 			{
 				"ctx": {
+					"phase": "creating",
 					"isLoading": true,
+					"hasError": false,
+					"error": null,
 					"pendingInputText": "$$inputText"
 				}
 			},
 			{
-				"op": {
-					"create": {
-						"schema": "°Maia/schema/data/chat",
-						"data": {
-							"role": "user",
-							"content": "$$inputText",
-							"displayName": "me"
-						}
+				"tell": {
+					"target": "°Maia/actor/views/layout-chat",
+					"type": "STATUS_UPDATE",
+					"payload": {
+						"isLoading": true,
+						"hasError": false,
+						"error": null
 					}
 				}
 			},
 			{
 				"tell": {
-					"target": "°Maia/actor/os/messages",
+					"target": "°Maia/actor/services/messages-ops",
 					"type": "SEND_MESSAGE",
 					"payload": {
 						"inputText": "$$inputText"
@@ -52,32 +54,62 @@
 			},
 			{
 				"ctx": {
+					"phase": "idle",
 					"isLoading": false,
+					"hasError": false,
+					"error": null,
 					"hasConversations": true,
 					"pendingInputText": null
 				}
 			},
 			{
 				"tell": {
-					"target": "$targetInfoCard",
-					"type": "DISMISS",
-					"payload": {}
+					"target": "°Maia/actor/views/layout-chat",
+					"type": "STATUS_UPDATE",
+					"payload": {
+						"isLoading": false,
+						"hasError": false,
+						"error": null
+					}
 				}
 			}
 		],
 		"ERROR": [
 			{
 				"ctx": {
-					"isLoading": false
+					"isLoading": false,
+					"hasError": true,
+					"error": "$$errors.0.message",
+					"phase": "error"
 				}
 			},
 			{
 				"tell": {
-					"target": "$targetInfoCard",
-					"type": "ERROR",
+					"target": "°Maia/actor/views/layout-chat",
+					"type": "STATUS_UPDATE",
 					"payload": {
-						"errors": "$$errors"
+						"isLoading": false,
+						"hasError": true,
+						"error": "$$errors.0.message"
 					}
+				}
+			}
+		],
+		"RETRY": [
+			{
+				"ctx": {
+					"phase": "idle",
+					"error": null,
+					"hasError": false
+				}
+			}
+		],
+		"DISMISS": [
+			{
+				"ctx": {
+					"phase": "idle",
+					"error": null,
+					"hasError": false
 				}
 			}
 		]

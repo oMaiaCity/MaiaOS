@@ -14,24 +14,22 @@
 				}
 			},
 			{
-				"op": {
-					"readSchema": {
+				"tell": {
+					"target": "°Maia/actor/services/schema-ops",
+					"type": "READ_SCHEMA",
+					"payload": {
 						"schemaRef": "$$item.id"
 					}
 				}
-			},
+			}
+		],
+		"SUCCESS": [
 			{
 				"ctx": {
 					"selectedItem": {
 						"id": "$selectedItem.id",
 						"label": "$selectedItem.label",
-						"definition": {
-							"$if": {
-								"condition": "$$result",
-								"then": "$$result.definition",
-								"else": ""
-							}
-						}
+						"definition": "$$definition"
 					}
 				}
 			},

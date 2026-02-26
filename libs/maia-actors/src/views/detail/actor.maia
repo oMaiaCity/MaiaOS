@@ -5,8 +5,14 @@
 	"context": "°Maia/actor/views/detail/context",
 	"view": "°Maia/actor/views/detail/view",
 	"process": "°Maia/actor/views/detail/process",
-	"brand": "°Maia/brand/maiacity",
+	"brand": "°Maia/sparks/style/brand",
 	"style": "°Maia/actor/views/detail/style",
 	"inbox": "°Maia/actor/views/detail/inbox",
-	"interface": "°Maia/actor/views/detail/interface"
+	"interface": [
+		"LOAD_ACTOR",
+		"FORM_SUBMIT",
+		"REMOVE_MEMBER",
+		"SUCCESS",
+		"ERROR"
+	]
 }

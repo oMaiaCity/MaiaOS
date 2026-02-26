@@ -7,8 +7,10 @@
 	"dependencies": [
 		"°Maia/chat/actor/intent",
 		"°Maia/actor/views/layout-chat",
-		"°Maia/actor/services/messages",
-		"°Maia/actor/services/paper",
+		"°Maia/actor/views/messages",
+		"°Maia/actor/views/paper",
+		"°Maia/actor/services/messages-ops",
+		"°Maia/actor/services/paper-ops",
 		"°Maia/actor/os/db",
 		"°Maia/actor/os/ai"
 	]

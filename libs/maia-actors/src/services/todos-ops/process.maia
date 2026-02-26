@@ -1,0 +1,76 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/services/todos-ops/process",
+	"@label": "@maia/actor/services/todos-ops/process",
+	"handlers": {
+		"CREATE_TODO": [
+			{
+				"op": {
+					"create": {
+						"schema": "°Maia/schema/data/todos",
+						"data": {
+							"text": "$$value",
+							"done": false
+						}
+					}
+				}
+			},
+			{
+				"tell": {
+					"target": "$$source",
+					"type": "SUCCESS",
+					"payload": {}
+				}
+			}
+		],
+		"TOGGLE_TODO": [
+			{
+				"op": {
+					"update": {
+						"id": "$$id",
+						"data": {
+							"done": {
+								"$not": "$$done"
+							}
+						}
+					}
+				}
+			},
+			{
+				"tell": {
+					"target": "$$source",
+					"type": "SUCCESS",
+					"payload": {}
+				}
+			}
+		],
+		"DELETE_TODO": [
+			{
+				"op": {
+					"delete": {
+						"id": "$$id"
+					}
+				}
+			},
+			{
+				"tell": {
+					"target": "$$source",
+					"type": "SUCCESS",
+					"payload": {}
+				}
+			}
+		],
+		"SUCCESS": [
+			{
+				"ctx": {}
+			}
+		],
+		"ERROR": [
+			{
+				"ctx": {
+					"error": "$$errors.0.message"
+				}
+			}
+		]
+	}
+}
