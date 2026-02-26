@@ -36,6 +36,11 @@ export class ProcessEngine {
 	}
 
 	async send(processId, event, payload = {}) {
+		const DEBUG =
+			typeof window !== 'undefined' &&
+			(window.location?.hostname === 'localhost' || import.meta?.env?.DEV) &&
+			event === 'UPLOAD_PROFILE_IMAGE'
+		if (DEBUG) console.log('[ProfileImagePipe] ProcessEngine.send', { processId, event })
 		const process = this.processes.get(processId)
 		if (!process) {
 			console.warn('[ProcessEngine] send: process not found', { processId, event })
@@ -51,9 +56,16 @@ export class ProcessEngine {
 		}
 
 		const actions = handlers[event]
+		if (DEBUG)
+			console.log('[ProfileImagePipe] ProcessEngine.send: handlers', {
+				event,
+				hasActions: !!actions?.length,
+				actionCount: actions?.length ?? 0,
+			})
 		if (!Array.isArray(actions) || actions.length === 0) return false
 
 		await this._executeActions(process, actions)
+		if (DEBUG) console.log('[ProfileImagePipe] ProcessEngine.send: _executeActions done')
 		return true
 	}
 
@@ -123,7 +135,22 @@ export class ProcessEngine {
 					return true // ask = stop processing (request-response)
 				}
 				if (act.function === true) {
+					const isProfileImage = process?.eventPayload?.fileBase64 !== undefined
+					if (
+						isProfileImage &&
+						typeof window !== 'undefined' &&
+						(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
+					) {
+						console.log('[ProfileImagePipe] ProcessEngine: calling _executeFunction')
+					}
 					await this._executeFunction(process, payload)
+					if (
+						isProfileImage &&
+						typeof window !== 'undefined' &&
+						(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
+					) {
+						console.log('[ProfileImagePipe] ProcessEngine: _executeFunction completed')
+					}
 					return true // function delivers SUCCESS/ERROR to caller; stop
 				}
 				return false
@@ -271,13 +298,34 @@ export class ProcessEngine {
 	 */
 	async _executeFunction(process, payload) {
 		const actor = process?.actor
+		const DEBUG =
+			typeof window !== 'undefined' &&
+			(window.location?.hostname === 'localhost' || import.meta?.env?.DEV) &&
+			process?.eventPayload?.fileBase64 !== undefined
+		if (DEBUG) {
+			console.log('[ProfileImagePipe] ProcessEngine._executeFunction', {
+				hasActor: !!actor,
+				hasActorOps: !!actor?.actorOps,
+				hasExecutableFunction: !!actor?.executableFunction,
+				hasExecute: typeof actor?.executableFunction?.execute === 'function',
+			})
+		}
 		if (!actor?.actorOps || typeof actor?.executableFunction?.execute !== 'function') {
+			if (DEBUG)
+				console.warn(
+					'[ProfileImagePipe] ProcessEngine._executeFunction: abort - missing actorOps or executableFunction',
+				)
 			return
 		}
 		const eventPayload = process.eventPayload || payload || {}
 		const callerId = eventPayload.replyTo ?? actor._lastEventSource
 		try {
 			const rawResult = await actor.executableFunction.execute(actor, eventPayload)
+			if (DEBUG)
+				console.log('[ProfileImagePipe] ProcessEngine._executeFunction: result', {
+					ok: rawResult?.ok,
+					hasData: !!rawResult?.data,
+				})
 			if (!isSuccessResult(rawResult)) {
 				if (callerId) {
 					await actor.actorOps.deliverEvent(actor.id, callerId, 'ERROR', {
@@ -297,7 +345,13 @@ export class ProcessEngine {
 				await actor.actorOps.deliverEvent(actor.id, callerId, 'SUCCESS', successPayload)
 			}
 			await actor.actorOps.deliverEvent(actor.id, actor.id, 'SUCCESS', successPayload)
+			if (DEBUG) console.log('[ProfileImagePipe] ProcessEngine._executeFunction: delivered SUCCESS')
 		} catch (error) {
+			if (DEBUG)
+				console.error(
+					'[ProfileImagePipe] ProcessEngine._executeFunction: error',
+					error?.message ?? error,
+				)
 			const errors = error?.errors ?? [
 				createErrorEntry(isPermissionError(error) ? 'permission' : 'structural', error?.message),
 			]

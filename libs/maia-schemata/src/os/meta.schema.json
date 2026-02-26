@@ -163,12 +163,16 @@
 			}
 		},
 		"cobinary": {
-			"description": "CoBinary - CRDT-based binary stream for files. Uses RawBinaryCoStream. Metadata: mimeType (required), totalSizeBytes.",
+			"description": "CoBinary - CRDT-based binary stream for files. Uses RawBinaryCoStream. Metadata: mimeType (required), fileName, totalSizeBytes.",
 			"type": "object",
 			"properties": {
 				"mimeType": {
 					"type": "string",
 					"description": "MIME type (e.g. application/pdf, image/png)"
+				},
+				"fileName": {
+					"type": "string",
+					"description": "Original file name"
 				},
 				"totalSizeBytes": {
 					"type": "integer",

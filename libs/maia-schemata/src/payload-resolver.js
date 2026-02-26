@@ -6,17 +6,25 @@
  */
 
 /**
- * Return File + mimeType for streaming upload. BlobEngine does chunked read with progress.
- * Avoids blocking readAsDataURL (10MB = several seconds, no progress).
- *
+ * Read file from input as base64 (async)
  * @param {HTMLInputElement} input - File input element
- * @returns {Promise<{file: File, mimeType: string}|null>}
+ * @returns {Promise<{fileBase64: string, mimeType: string, fileName: string}|null>}
  */
 export async function readFileAsUploadPayload(input) {
 	const file = input?.files?.[0]
 	if (!file) return null
-	const mimeType = file.type || 'application/octet-stream'
-	return { file, mimeType }
+	return new Promise((resolve) => {
+		const reader = new FileReader()
+		reader.onload = () => {
+			const dataUrl = reader.result
+			const [header, base64] =
+				typeof dataUrl === 'string' && dataUrl.includes(',') ? dataUrl.split(',') : ['', '']
+			const mime = header.match(/:(.*?);/)?.[1] || file.type || 'application/octet-stream'
+			resolve({ fileBase64: base64, mimeType: mime, fileName: file.name })
+		}
+		reader.onerror = () => resolve(null)
+		reader.readAsDataURL(file)
+	})
 }
 
 /**
@@ -88,10 +96,10 @@ export async function extractDOMValuesAsync(payload, element) {
 			? element
 			: element?.querySelector?.('input[type=file]') ||
 				element
-					?.closest?.('form, [class*="upload"], [class*="file"], [class*="wrapper"]')
+					?.closest?.('form, [class*="upload"], [class*="profile-image"], [class*="wrapper"]')
 					?.querySelector?.('input[type=file]')
 	if (DEBUG && Object.values(result || {}).includes('@fileFromInput')) {
-		console.log('[PayloadResolver] extractDOMValuesAsync: @fileFromInput detected', {
+		console.log('[ProfileImagePipe] extractDOMValuesAsync: @fileFromInput detected', {
 			hasFileInput: !!fileInput,
 			fileInputHasFiles: !!fileInput?.files?.[0],
 			elementTag: element?.tagName,
@@ -106,10 +114,11 @@ export async function extractDOMValuesAsync(payload, element) {
 	) {
 		const fileData = await readFileAsUploadPayload(fileInput)
 		if (DEBUG) {
-			console.log('[PayloadResolver] extractDOMValuesAsync: fileData resolved', {
-				hasFile: !!fileData?.file,
+			console.log('[ProfileImagePipe] extractDOMValuesAsync: fileData resolved', {
+				hasFileData: !!fileData,
 				mimeType: fileData?.mimeType,
-				fileSize: fileData?.file?.size ?? 0,
+				fileName: fileData?.fileName,
+				base64Length: fileData?.fileBase64?.length ?? 0,
 			})
 		}
 		if (fileData) {

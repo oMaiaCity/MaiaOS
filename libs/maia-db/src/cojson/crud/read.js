@@ -901,6 +901,7 @@ async function readHumansFromRegistries(peer, options = {}) {
 						accountId: humanCoId,
 						registryName,
 						profileName: travelerFallback(humanCoId),
+						profile: null,
 					})
 					continue
 				}
@@ -930,6 +931,7 @@ async function readHumansFromRegistries(peer, options = {}) {
 					accountId,
 					registryName,
 					profileName,
+					profile: profileCoId,
 				})
 			} catch {
 				items.push({
@@ -937,6 +939,7 @@ async function readHumansFromRegistries(peer, options = {}) {
 					accountId: humanCoId,
 					registryName,
 					profileName: travelerFallback(humanCoId),
+					profile: null,
 				})
 			}
 		}

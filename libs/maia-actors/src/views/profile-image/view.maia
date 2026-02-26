@@ -18,7 +18,7 @@
 					{
 						"tag": "img",
 						"attrs": {
-							"data-co-id": "$profile.avatar",
+							"src": "$profile.avatarDataUrl",
 							"alt": "Profile avatar",
 							"class": "profile-avatar"
 						}
@@ -27,27 +27,8 @@
 			},
 			{
 				"tag": "div",
-				"class": "$uploadProgressSectionClass",
-				"children": [
-					{
-						"tag": "div",
-						"class": "upload-progress-track",
-						"children": [
-							{
-								"tag": "div",
-								"class": "upload-progress-fill",
-								"attrs": {
-									"style": "$uploadProgressStyle"
-								}
-							}
-						]
-					},
-					{
-						"tag": "div",
-						"class": "upload-status",
-						"text": "$uploadStatus"
-					}
-				]
+				"class": "upload-status",
+				"text": "$uploadStatus"
 			},
 			{
 				"tag": "div",
@@ -84,7 +65,7 @@
 							"click": {
 								"send": "UPLOAD_PROFILE_IMAGE",
 								"payload": {
-									"file": "@fileFromInput"
+									"fileBase64": "@fileFromInput"
 								}
 							}
 						}

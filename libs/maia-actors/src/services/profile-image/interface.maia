@@ -7,21 +7,38 @@
 	"indexing": true,
 	"properties": {
 		"UPLOAD_PROFILE_IMAGE": {
-			"$blobRefKey": "avatar",
 			"type": "object",
-			"description": "Set profile.avatar to pre-uploaded CoBinary co-id. ViewEngine/BlobEngine resolves file input before deliver.",
+			"description": "Upload image as CoBinary and set profile.avatar",
 			"properties": {
+				"fileBase64": {
+					"type": "string",
+					"description": "Base64-encoded file content"
+				},
 				"avatar": {
 					"type": "string",
-					"description": "Pre-uploaded CoBinary co-id (BlobEngine uploads before deliver)"
+					"description": "Pre-uploaded CoBinary co-id (InboxEngine uploads before persist)"
 				},
 				"mimeType": {
 					"type": "string",
 					"description": "MIME type (e.g. image/png, image/jpeg)"
+				},
+				"fileName": {
+					"type": "string",
+					"description": "Original file name (optional)"
 				}
 			},
-			"required": [
-				"avatar"
+			"oneOf": [
+				{
+					"required": [
+						"fileBase64",
+						"mimeType"
+					]
+				},
+				{
+					"required": [
+						"avatar"
+					]
+				}
 			],
 			"additionalProperties": false
 		}

@@ -26,6 +26,9 @@ import paperServiceActor from './services/paper/actor.maia'
 import paperServiceContext from './services/paper/context.maia'
 import paperActorInterface from './services/paper/interface.maia'
 import paperServiceProcess from './services/paper/process.maia'
+import profileImageServiceActor from './services/profile-image/actor.maia'
+import profileImageServiceInterface from './services/profile-image/interface.maia'
+import profileImageServiceProcess from './services/profile-image/process.maia'
 import sparkActor from './services/spark/actor.maia'
 import sparkContext from './services/spark/context.maia'
 import sparkActorInterface from './services/spark/interface.maia'
@@ -123,6 +126,9 @@ import placeholderInterface from './views/placeholder/interface.maia'
 import placeholderProcess from './views/placeholder/process.maia'
 import placeholderStyle from './views/placeholder/style.maia'
 import placeholderView from './views/placeholder/view.maia'
+import profileImageContext from './views/profile-image/context.maia'
+import profileImageStyle from './views/profile-image/style.maia'
+import profileImageView from './views/profile-image/view.maia'
 import layoutSparksActor from './views/sparks/actor.maia'
 import layoutSparksContext from './views/sparks/context.maia'
 import layoutSparksInterface from './views/sparks/interface.maia'
@@ -249,6 +255,7 @@ export function getSeedConfig() {
 		computeMessageNamesInterface,
 		osMessagesInterface,
 		paperActorInterface,
+		profileImageServiceInterface,
 		osSchemaInterface,
 		sparkActorInterface,
 		todosActorInterface,
@@ -459,6 +466,13 @@ export function getSeedConfig() {
 			actor: paperServiceActor,
 			context: paperServiceContext,
 			process: paperServiceProcess,
+		},
+		{
+			actor: profileImageServiceActor,
+			context: profileImageContext,
+			process: profileImageServiceProcess,
+			view: profileImageView,
+			style: profileImageStyle,
 		},
 		{
 			actor: osMessagesActor,

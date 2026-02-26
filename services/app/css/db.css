@@ -1040,21 +1040,6 @@
 	color: #3730a3; /* indigo-800 */
 }
 
-/* CoBinary image preview: constrain to parent, no overflow */
-.cobinary-container {
-	width: 100%;
-	max-width: 100%;
-	min-width: 0;
-}
-.cobinary-container img[data-co-id] {
-	width: 100%;
-	max-width: 100%;
-	max-height: 280px;
-	height: auto;
-	object-fit: contain;
-	display: block;
-}
-
 /* List/Stream Container Styles */
 .list-stream-container {
 	width: 100%;

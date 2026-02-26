@@ -9,6 +9,11 @@
 			"actor": "@logs"
 		},
 		{
+			"id": "profile",
+			"label": "Profile",
+			"actor": "@profile"
+		},
+		{
 			"id": "actors",
 			"label": "Actors",
 			"actor": "@actors"
@@ -29,6 +34,12 @@
 			"isActive": true
 		},
 		{
+			"id": "profile",
+			"label": "Profile",
+			"actor": "@profile",
+			"isActive": false
+		},
+		{
 			"id": "actors",
 			"label": "Actors",
 			"actor": "@actors",
@@ -43,6 +54,7 @@
 	],
 	"@actors": {
 		"logs": "°Maia/actor/views/logs",
+		"profile": "°Maia/actor/services/profile-image",
 		"actors": "°Maia/actor/views/list-detail/for-actors",
 		"schemata": "°Maia/actor/views/list-detail/for-schemas"
 	}
