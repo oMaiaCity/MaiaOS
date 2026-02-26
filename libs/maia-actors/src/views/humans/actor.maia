@@ -3,10 +3,10 @@
 	"$id": "°Maia/actor/views/humans",
 	"@label": "@maia/actor/views/humans",
 	"context": "°Maia/actor/views/humans/context",
-	"view": "°Maia/actor/views/grid/view",
+	"view": "°Maia/actor/views/humans/view",
 	"process": "°Maia/actor/views/humans/process",
 	"brand": "°Maia/style/brand",
-	"style": "°Maia/actor/views/grid/style",
+	"style": "°Maia/actor/views/humans/style",
 	"inbox": "°Maia/actor/views/humans/inbox",
 	"interface": []
 }

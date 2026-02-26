@@ -7,7 +7,7 @@
 	"dependencies": [
 		"°Maia/creator/actor/intent",
 		"°Maia/actor/views/layout-creator",
-		"°Maia/actor/services/logs",
+		"°Maia/actor/views/logs",
 		"°Maia/actor/views/list-detail/for-actors",
 		"°Maia/actor/views/list-detail/for-schemas"
 	]

@@ -1,0 +1,19 @@
+{
+	"$schema": "°Maia/schema/tool",
+	"$id": "°Maia/actor/services/todos-ops/tool",
+	"@label": "@maia/actor/services/todos-ops/tool",
+	"name": "@maia/actor/services/todos-ops",
+	"description": "Creates a todo in the list. Use when the user asks you to add a task, create a todo, or remember something to do.",
+	"parameters": {
+		"type": "object",
+		"properties": {
+			"text": {
+				"type": "string",
+				"description": "The todo item text (must contain at least one non-whitespace character)"
+			}
+		},
+		"required": [
+			"text"
+		]
+	}
+}

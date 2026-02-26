@@ -31,7 +31,7 @@
 		"REMOVE_MEMBER": [
 			{
 				"tell": {
-					"target": "°Maia/actor/services/spark",
+					"target": "°Maia/actor/services/spark-ops",
 					"type": "REMOVE_MEMBER",
 					"payload": {
 						"id": "$sparkId",
@@ -63,7 +63,7 @@
 		"FORM_SUBMIT": [
 			{
 				"tell": {
-					"target": "°Maia/actor/services/spark",
+					"target": "°Maia/actor/services/spark-ops",
 					"type": "ADD_MEMBER",
 					"payload": {
 						"id": "$sparkId",

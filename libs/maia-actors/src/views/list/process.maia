@@ -6,7 +6,7 @@
 		"TOGGLE_BUTTON": [
 			{
 				"tell": {
-					"target": "°Maia/actor/services/todos",
+					"target": "°Maia/actor/services/todos-ops",
 					"type": "TOGGLE_TODO",
 					"payload": {
 						"id": "$$id",
@@ -18,7 +18,7 @@
 		"DELETE_BUTTON": [
 			{
 				"tell": {
-					"target": "°Maia/actor/services/todos",
+					"target": "°Maia/actor/services/todos-ops",
 					"type": "DELETE_TODO",
 					"payload": {
 						"id": "$$id"

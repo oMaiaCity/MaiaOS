@@ -10,8 +10,8 @@
 		"map": {
 			"id": "id",
 			"name": "name",
-			"members": "$os.groups.guardian.accountMembers",
-			"groupId": "$os.groups.guardian.id"
+			"members": "$os.capabilities.guardian.accountMembers",
+			"groupId": "$os.capabilities.guardian.id"
 		}
 	},
 	"hasSpark": false,
@@ -22,7 +22,7 @@
 	"categoryLabel": "Spark Details",
 	"groupIdLabel": "Group ID",
 	"membersLabel": "Members",
-	"addAvenLabel": "Add Aven",
+	"addAgentLabel": "Add Agent",
 	"memberRemoveButtonText": "×",
 	"@actors": {
 		"input": "°Maia/actor/views/input/for-detail"

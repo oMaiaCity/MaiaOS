@@ -99,6 +99,18 @@ export class ProcessEngine {
 					)
 					const result = await this._executeOp(opKey, evaluated, process, payload)
 					if (result?.ok && result?.data) process.lastToolResult = result.data
+					if (!isSuccessResult(result) && process.actor._lastEventSource) {
+						const errors = result?.errors ?? [
+							createErrorEntry('structural', result?.message || 'Operation failed'),
+						]
+						await process.actor.actorOps.deliverEvent(
+							process.actor.id,
+							process.actor._lastEventSource,
+							'ERROR',
+							{ errors },
+						)
+						return true
+					}
 					return false
 				}
 				if (act.tell) {
@@ -243,10 +255,10 @@ export class ProcessEngine {
 		const actorConfig = this.actorOps?.runtime
 			? await this.actorOps.runtime.getActorConfig(target)
 			: await this._getActorConfigFromDb(target)
-		const eventType = actorConfig?.interface?.[0]
-		if (!eventType) {
+		const iface = actorConfig?.interface
+		if (!iface || !Array.isArray(iface))
 			throw new Error(`[ProcessEngine] Cannot ask actor: no interface for ${target}`)
-		}
+		const eventType = type && iface.includes(type) ? type : iface[0]
 		await process.actor.actorOps.deliverEvent(
 			process.actor.id,
 			target,
@@ -264,9 +276,8 @@ export class ProcessEngine {
 		if (!actor?.actorOps || typeof actor?.executableFunction?.execute !== 'function') {
 			return
 		}
-		const callerId = actor._lastEventSource
 		const eventPayload = process.eventPayload || payload || {}
-
+		const callerId = eventPayload.replyTo ?? actor._lastEventSource
 		try {
 			const rawResult = await actor.executableFunction.execute(actor, eventPayload)
 			if (!isSuccessResult(rawResult)) {
