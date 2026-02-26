@@ -17,7 +17,7 @@
 		"SELECT_SPARK": [
 			{
 				"ctx": {
-					"selectedSparkId": "$$sparkId"
+					"selectedSparkId": "$$id"
 				}
 			},
 			{
@@ -25,7 +25,7 @@
 					"target": "°Maia/actor/views/detail",
 					"type": "LOAD_ACTOR",
 					"payload": {
-						"id": "$$sparkId"
+						"id": "$$id"
 					}
 				}
 			}

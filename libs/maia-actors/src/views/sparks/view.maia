@@ -47,7 +47,7 @@
 											"click": {
 												"send": "SELECT_SPARK",
 												"payload": {
-													"sparkId": "$$id"
+													"id": "$$id"
 												}
 											}
 										}

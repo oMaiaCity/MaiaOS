@@ -45,11 +45,17 @@
 					"type": "number",
 					"description": "Temperature for response (0-2, default: 1)",
 					"default": 1
+				},
+				"replyTo": {
+					"type": "string",
+					"description": "Actor co-id to send SUCCESS/ERROR response to (ask protocol)"
 				}
 			},
 			"required": [
 				"context"
-			]
+			],
+			"additionalProperties": false
 		}
-	}
+	},
+	"additionalProperties": false
 }

@@ -9,17 +9,29 @@
 		"SEND_MESSAGE": {
 			"type": "object",
 			"description": "Send message",
-			"additionalProperties": true
+			"properties": {
+				"inputText": {
+					"type": "string",
+					"description": "Message content"
+				}
+			},
+			"required": [
+				"inputText"
+			],
+			"additionalProperties": false
 		},
 		"RETRY": {
 			"type": "object",
 			"description": "Retry",
-			"additionalProperties": true
+			"properties": {},
+			"additionalProperties": false
 		},
 		"DISMISS": {
 			"type": "object",
 			"description": "Dismiss",
-			"additionalProperties": true
+			"properties": {},
+			"additionalProperties": false
 		}
-	}
+	},
+	"additionalProperties": false
 }

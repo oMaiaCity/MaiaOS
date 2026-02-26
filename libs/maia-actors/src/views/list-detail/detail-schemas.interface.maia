@@ -9,7 +9,33 @@
 		"SELECT_ITEM": {
 			"type": "object",
 			"description": "Select item",
-			"additionalProperties": true
+			"properties": {
+				"item": {
+					"type": "object",
+					"description": "Schema item forwarded from list",
+					"properties": {
+						"id": {
+							"type": "string"
+						},
+						"label": {
+							"type": "string"
+						},
+						"definition": {
+							"type": "string"
+						}
+					},
+					"required": [
+						"id",
+						"label"
+					],
+					"additionalProperties": false
+				}
+			},
+			"required": [
+				"item"
+			],
+			"additionalProperties": false
 		}
-	}
+	},
+	"additionalProperties": false
 }
