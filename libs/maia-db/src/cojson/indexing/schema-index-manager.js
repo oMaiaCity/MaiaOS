@@ -1180,9 +1180,10 @@ export async function removeFromIndex(peer, coId, schemaCoId = null) {
 			typeof indexColist.delete === 'function'
 		) {
 			const items = indexColist.toJSON()
-			const itemIndex = items.indexOf(coId)
-			if (itemIndex !== -1) {
-				indexColist.delete(itemIndex)
+			for (let i = items.length - 1; i >= 0; i--) {
+				if (items[i] === coId) {
+					indexColist.delete(i)
+				}
 			}
 		}
 	} else {
@@ -1195,9 +1196,10 @@ export async function removeFromIndex(peer, coId, schemaCoId = null) {
 			typeof unknownColist.delete === 'function'
 		) {
 			const items = unknownColist.toJSON()
-			const itemIndex = items.indexOf(coId)
-			if (itemIndex !== -1) {
-				unknownColist.delete(itemIndex)
+			for (let i = items.length - 1; i >= 0; i--) {
+				if (items[i] === coId) {
+					unknownColist.delete(i)
+				}
 			}
 		}
 	}
