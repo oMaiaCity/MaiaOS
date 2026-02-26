@@ -8,8 +8,5 @@
 	"brand": "°Maia/chat/style/brand",
 	"style": "°Maia/actor/views/paper/style",
 	"inbox": "°Maia/actor/views/paper/inbox",
-	"interface": [
-		"SUCCESS",
-		"ERROR"
-	]
+	"interface": "°Maia/actor/views/paper/interface"
 }

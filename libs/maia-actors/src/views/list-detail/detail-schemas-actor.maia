@@ -8,7 +8,5 @@
 	"brand": "°Maia/style/brand",
 	"style": "°Maia/actor/views/list-detail/style",
 	"inbox": "°Maia/actor/views/list-detail/detail-schemas/inbox",
-	"interface": [
-		"SELECT_ITEM"
-	]
+	"interface": "°Maia/actor/views/list-detail/detail-schemas/interface"
 }

@@ -1,0 +1,23 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/actor/services/names/interface",
+	"title": "°Maia/actor/services/names/interface",
+	"description": "Computes a lookup object mapping message IDs to display names based on role",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"COMPUTE_NAMES": {
+			"type": "object",
+			"description": "Compute message IDs to display names map",
+			"properties": {
+				"conversations": {
+					"type": "array",
+					"description": "Array of conversation messages with id and role properties"
+				}
+			},
+			"required": [
+				"conversations"
+			]
+		}
+	}
+}

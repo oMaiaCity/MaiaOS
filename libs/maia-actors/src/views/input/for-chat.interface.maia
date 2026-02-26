@@ -1,0 +1,25 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/actor/views/input/for-chat/interface",
+	"title": "°Maia/actor/views/input/for-chat/interface",
+	"description": "Chat input view",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"UPDATE_INPUT": {
+			"type": "object",
+			"description": "Update input",
+			"additionalProperties": true
+		},
+		"FORM_SUBMIT": {
+			"type": "object",
+			"description": "Form submit",
+			"additionalProperties": true
+		},
+		"DISMISS": {
+			"type": "object",
+			"description": "Dismiss",
+			"additionalProperties": true
+		}
+	}
+}

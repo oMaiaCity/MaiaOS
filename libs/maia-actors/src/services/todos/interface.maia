@@ -1,0 +1,54 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/actor/services/todos/interface",
+	"title": "°Maia/actor/services/todos/interface",
+	"description": "Manages todo items - create, toggle, and delete todos",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"CREATE_TODO": {
+			"type": "object",
+			"description": "Creates a new todo item. Use when the user asks you to add a task, create a todo, or remember something to do.",
+			"properties": {
+				"value": {
+					"type": "string",
+					"description": "The todo item text (must contain at least one non-whitespace character)"
+				}
+			},
+			"required": [
+				"value"
+			]
+		},
+		"TOGGLE_TODO": {
+			"type": "object",
+			"description": "Toggles a todo's done state",
+			"properties": {
+				"id": {
+					"type": "string",
+					"description": "Co-id of the todo"
+				},
+				"done": {
+					"type": "boolean",
+					"description": "Current done state"
+				}
+			},
+			"required": [
+				"id",
+				"done"
+			]
+		},
+		"DELETE_TODO": {
+			"type": "object",
+			"description": "Deletes a todo item",
+			"properties": {
+				"id": {
+					"type": "string",
+					"description": "Co-id of the todo"
+				}
+			},
+			"required": [
+				"id"
+			]
+		}
+	}
+}

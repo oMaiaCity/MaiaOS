@@ -1,0 +1,15 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/actor/views/list-detail/for-schemas/interface",
+	"title": "°Maia/actor/views/list-detail/for-schemas/interface",
+	"description": "List-detail schemas view",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"SELECT_ITEM": {
+			"type": "object",
+			"description": "Select item",
+			"additionalProperties": true
+		}
+	}
+}

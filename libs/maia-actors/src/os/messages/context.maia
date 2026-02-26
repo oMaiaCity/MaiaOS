@@ -1,0 +1,13 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/os/messages/context",
+	"conversations": {
+		"schema": "°Maia/schema/data/chat",
+		"map": {
+			"id": "id",
+			"role": "role",
+			"displayName": "displayName",
+			"content": "content"
+		}
+	}
+}

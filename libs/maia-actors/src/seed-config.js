@@ -6,37 +6,43 @@
 
 import { getAllSchemas } from '@MaiaOS/schemata'
 import aiChatActor from './os/ai/actor.maia'
+import aiChatInterface from './os/ai/interface.maia'
 import aiChatProcess from './os/ai/process.maia'
-import aiChatTool from './os/ai/tool.maia'
 import dbActor from './os/db/actor.maia'
+import dbInterface from './os/db/interface.maia'
 import dbProcess from './os/db/process.maia'
-import dbTool from './os/db/tool.maia'
-import computeMessageNamesActor from './os/names/actor.maia'
-import computeMessageNamesProcess from './os/names/process.maia'
-import computeMessageNamesTool from './os/names/tool.maia'
-import messagesOpsActor from './services/messages-ops/actor.maia'
-import messagesOpsContext from './services/messages-ops/context.maia'
-import messagesOpsProcess from './services/messages-ops/process.maia'
-import paperOpsActor from './services/paper-ops/actor.maia'
-import paperOpsContext from './services/paper-ops/context.maia'
-import paperOpsProcess from './services/paper-ops/process.maia'
-import paperOpsTool from './services/paper-ops/tool.maia'
-import schemaOpsActor from './services/schema-ops/actor.maia'
-import schemaOpsContext from './services/schema-ops/context.maia'
-import schemaOpsProcess from './services/schema-ops/process.maia'
-import sparkOpsActor from './services/spark-ops/actor.maia'
-import sparkOpsContext from './services/spark-ops/context.maia'
-import sparkOpsProcess from './services/spark-ops/process.maia'
-import todosOpsActor from './services/todos-ops/actor.maia'
-import todosOpsContext from './services/todos-ops/context.maia'
-import todosOpsProcess from './services/todos-ops/process.maia'
+import osMessagesActor from './os/messages/actor.maia'
+import osMessagesContext from './os/messages/context.maia'
+import osMessagesInterface from './os/messages/interface.maia'
+import osMessagesProcess from './os/messages/process.maia'
+import schemaActor from './os/schema/actor.maia'
+import schemaContext from './os/schema/context.maia'
+import osSchemaInterface from './os/schema/interface.maia'
+import schemaProcess from './os/schema/process.maia'
+import computeMessageNamesActor from './services/names/actor.maia'
+import computeMessageNamesInterface from './services/names/interface.maia'
+import computeMessageNamesProcess from './services/names/process.maia'
+import paperServiceActor from './services/paper/actor.maia'
+import paperServiceContext from './services/paper/context.maia'
+import paperActorInterface from './services/paper/interface.maia'
+import paperServiceProcess from './services/paper/process.maia'
+import sparkActor from './services/spark/actor.maia'
+import sparkContext from './services/spark/context.maia'
+import sparkActorInterface from './services/spark/interface.maia'
+import sparkProcess from './services/spark/process.maia'
+import todosActor from './services/todos/actor.maia'
+import todosContext from './services/todos/context.maia'
+import todosActorInterface from './services/todos/interface.maia'
+import todosProcess from './services/todos/process.maia'
 import detailActor from './views/detail/actor.maia'
 import detailContext from './views/detail/context.maia'
+import detailInterface from './views/detail/interface.maia'
 import detailProcess from './views/detail/process.maia'
 import detailStyle from './views/detail/style.maia'
 import detailView from './views/detail/view.maia'
 import layoutHumansActor from './views/humans/actor.maia'
 import layoutHumansContext from './views/humans/context.maia'
+import layoutHumansInterface from './views/humans/interface.maia'
 import layoutHumansProcess from './views/humans/process.maia'
 import layoutHumansStyle from './views/humans/style.maia'
 import layoutHumansView from './views/humans/view.maia'
@@ -45,42 +51,54 @@ import inputForDetailActor from './views/input/actor-for-detail.maia'
 import inputForListActor from './views/input/actor-for-list.maia'
 import inputForSparksActor from './views/input/actor-for-sparks.maia'
 import inputForChatContext from './views/input/for-chat.context.maia'
+import inputForChatInterface from './views/input/for-chat.interface.maia'
 import inputForChatProcess from './views/input/for-chat.process.maia'
 import inputForDetailContext from './views/input/for-detail.context.maia'
+import inputForDetailInterface from './views/input/for-detail.interface.maia'
 import inputForListContext from './views/input/for-list.context.maia'
+import inputForListInterface from './views/input/for-list.interface.maia'
 import inputForListProcess from './views/input/for-list.process.maia'
 import inputForSparksContext from './views/input/for-sparks.context.maia'
+import inputForSparksInterface from './views/input/for-sparks.interface.maia'
 import inputProcess from './views/input/process.maia'
 import inputStyle from './views/input/style.maia'
 import inputView from './views/input/view.maia'
+import layoutChatInterface from './views/layout-chat/interface.maia'
 import listActor from './views/list/actor.maia'
 import listContext from './views/list/context.maia'
+import listInterface from './views/list/interface.maia'
 import listProcess from './views/list/process.maia'
 import listStyle from './views/list/style.maia'
 import listView from './views/list/view.maia'
 import listDetailForActorsActor from './views/list-detail/actor-for-actors.maia'
 import listDetailForSchemasActor from './views/list-detail/actor-for-schemas.maia'
 import listDetailDetailActorsContext from './views/list-detail/detail-actors.context.maia'
+import listDetailDetailActorsInterface from './views/list-detail/detail-actors.interface.maia'
 import listDetailDetailActorsProcess from './views/list-detail/detail-actors.process.maia'
 import listDetailDetailActorsActor from './views/list-detail/detail-actors-actor.maia'
 import listDetailDetailActorsView from './views/list-detail/detail-actors-view.maia'
 import listDetailDetailSchemasContext from './views/list-detail/detail-schemas.context.maia'
+import listDetailDetailSchemasInterface from './views/list-detail/detail-schemas.interface.maia'
 import listDetailDetailSchemasProcess from './views/list-detail/detail-schemas.process.maia'
 import listDetailDetailSchemasActor from './views/list-detail/detail-schemas-actor.maia'
 import listDetailDetailSchemasView from './views/list-detail/detail-schemas-view.maia'
 import listDetailForActorsContext from './views/list-detail/for-actors.context.maia'
+import listDetailForActorsInterface from './views/list-detail/for-actors.interface.maia'
 import listDetailForActorsProcess from './views/list-detail/for-actors.process.maia'
 import listDetailForSchemasContextBase from './views/list-detail/for-schemas.context.maia'
+import listDetailForSchemasInterface from './views/list-detail/for-schemas.interface.maia'
 import listDetailForSchemasProcess from './views/list-detail/for-schemas.process.maia'
 import listDetailStyle from './views/list-detail/style.maia'
 import listDetailView from './views/list-detail/view.maia'
 import logsActor from './views/logs/actor.maia'
 import logsContext from './views/logs/context.maia'
+import logsInterface from './views/logs/interface.maia'
 import logsProcess from './views/logs/process.maia'
 import logsStyle from './views/logs/style.maia'
 import logsView from './views/logs/view.maia'
 import messagesActor from './views/messages/actor.maia'
 import messagesContext from './views/messages/context.maia'
+import messagesInterface from './views/messages/interface.maia'
 import messagesProcess from './views/messages/process.maia'
 import messagesStyle from './views/messages/style.maia'
 import messagesView from './views/messages/view.maia'
@@ -90,25 +108,30 @@ import layoutChatProcess from './views/modal-chat/process.maia'
 import modalChatView from './views/modal-chat/view.maia'
 import paperActor from './views/paper/actor.maia'
 import paperContext from './views/paper/context.maia'
+import paperInterface from './views/paper/interface.maia'
 import paperProcess from './views/paper/process.maia'
 import paperStyle from './views/paper/style.maia'
 import paperView from './views/paper/view.maia'
 import placeholderActor from './views/placeholder/actor.maia'
 import placeholderContext from './views/placeholder/context.maia'
+import placeholderInterface from './views/placeholder/interface.maia'
 import placeholderProcess from './views/placeholder/process.maia'
 import placeholderStyle from './views/placeholder/style.maia'
 import placeholderView from './views/placeholder/view.maia'
 import layoutSparksActor from './views/sparks/actor.maia'
 import layoutSparksContext from './views/sparks/context.maia'
+import layoutSparksInterface from './views/sparks/interface.maia'
 import layoutSparksProcess from './views/sparks/process.maia'
 import sparksStyle from './views/sparks/style.maia'
 import sparksView from './views/sparks/view.maia'
-import layoutCreatorActor from './views/tabs/actor-creator.maia'
-import layoutTodosActor from './views/tabs/actor-todos.maia'
+import layoutCreatorActor from './views/tabs/creator.actor.maia'
 import layoutCreatorContext from './views/tabs/creator.context.maia'
+import layoutCreatorInterface from './views/tabs/creator.interface.maia'
 import tabsProcess from './views/tabs/process.maia'
 import tabsStyle from './views/tabs/style.maia'
+import layoutTodosActor from './views/tabs/todos.actor.maia'
 import layoutTodosContext from './views/tabs/todos.context.maia'
+import layoutTodosInterface from './views/tabs/todos.interface.maia'
 import tabsView from './views/tabs/view.maia'
 
 /** Build listItems from getAllSchemas() for list-detail/for-schemas */
@@ -128,7 +151,7 @@ const listDetailForSchemasContext = buildListDetailSchemasContext()
 export const ROLE_TO_FOLDER = {
 	'@maia/actor/os/ai': 'os/ai',
 	'@maia/actor/os/db': 'os/db',
-	'@maia/actor/os/names': 'os/names',
+	'@maia/actor/services/names': 'services/names',
 	'@maia/actor/views/placeholder': 'views/placeholder',
 }
 
@@ -144,14 +167,14 @@ export function resolveServiceActorCoId(actorRef) {
 export const ACTOR_ID_TO_EVENT_TYPE = {
 	'°Maia/actor/os/ai': 'CHAT',
 	'°Maia/actor/os/db': 'DB_OP',
-	'°Maia/actor/os/names': 'COMPUTE_NAMES',
-	'°Maia/actor/services/paper-ops': 'UPDATE_PAPER',
+	'°Maia/actor/services/names': 'COMPUTE_NAMES',
+	'°Maia/actor/services/paper': 'UPDATE_PAPER',
 }
 
 /** Build actor config for seeding - uses actor schema */
 function toActorConfig(raw, inboxId) {
 	const label = raw['@label']
-	const { interface: iface, process: processRef, tool } = raw
+	const { interface: iface, process: processRef } = raw
 	if (!label || !iface || !processRef) return null
 	const folder = ROLE_TO_FOLDER[label] ?? label.replace('@', '').replace(/\//g, '-')
 	return {
@@ -160,7 +183,6 @@ function toActorConfig(raw, inboxId) {
 		'@label': label,
 		interface: iface,
 		process: processRef,
-		tool: tool || null,
 		view: null,
 		context: null,
 		inbox: inboxId || null,
@@ -192,17 +214,17 @@ function toInboxConfig(inboxId) {
  */
 export function getSeedConfig() {
 	const actorDefs = [
-		[aiChatActor, aiChatProcess, aiChatTool],
-		[computeMessageNamesActor, computeMessageNamesProcess, computeMessageNamesTool],
-		[dbActor, dbProcess, dbTool],
+		[aiChatActor, aiChatProcess],
+		[computeMessageNamesActor, computeMessageNamesProcess],
+		[dbActor, dbProcess],
 	]
 
 	const actors = {}
 	const processes = {}
-	const tools = {}
+	const interfaces = {}
 	const inboxes = {}
 
-	for (const [actorDef, processDef, toolDef] of actorDefs) {
+	for (const [actorDef, processDef] of actorDefs) {
 		const actorConfig = toActorConfig(actorDef, null)
 		if (!actorConfig) continue
 		const inboxId = deriveInboxId(actorConfig.$id)
@@ -212,8 +234,41 @@ export function getSeedConfig() {
 		if (!processId) continue
 		actors[actorConfig.$id] = actorConfig
 		processes[processId] = processDef
-		if (toolDef?.$id) tools[toolDef.$id] = toolDef
 		inboxes[inboxId] = toInboxConfig(inboxId)
+	}
+
+	// Interface schemas (keyed by $id) - must be seeded before actors
+	const interfaceDefs = [
+		aiChatInterface,
+		dbInterface,
+		computeMessageNamesInterface,
+		osMessagesInterface,
+		paperActorInterface,
+		osSchemaInterface,
+		sparkActorInterface,
+		todosActorInterface,
+		detailInterface,
+		layoutHumansInterface,
+		inputForChatInterface,
+		inputForDetailInterface,
+		inputForListInterface,
+		inputForSparksInterface,
+		listInterface,
+		listDetailForActorsInterface,
+		listDetailForSchemasInterface,
+		listDetailDetailActorsInterface,
+		listDetailDetailSchemasInterface,
+		logsInterface,
+		messagesInterface,
+		layoutChatInterface,
+		paperInterface,
+		placeholderInterface,
+		layoutSparksInterface,
+		layoutCreatorInterface,
+		layoutTodosInterface,
+	]
+	for (const iface of interfaceDefs) {
+		if (iface?.$id) interfaces[iface.$id] = iface
 	}
 
 	// View actors (UI components)
@@ -371,43 +426,35 @@ export function getSeedConfig() {
 		if (style?.$id) uiStyles[style.$id] = style
 	}
 
-	// Service actors (messages, logs, list, detail, paper, todos-ops)
+	// Service actors (messages, logs, list, detail, paper, todos)
 	const serviceActors = [
 		{
-			actor: todosOpsActor,
-			context: todosOpsContext,
-			process: todosOpsProcess,
+			actor: todosActor,
+			context: todosContext,
+			process: todosProcess,
 		},
 		{
-			actor: schemaOpsActor,
-			context: schemaOpsContext,
-			process: schemaOpsProcess,
+			actor: schemaActor,
+			context: schemaContext,
+			process: schemaProcess,
 		},
 		{
-			actor: sparkOpsActor,
-			context: sparkOpsContext,
-			process: sparkOpsProcess,
+			actor: sparkActor,
+			context: sparkContext,
+			process: sparkProcess,
 		},
 		{
-			actor: paperOpsActor,
-			context: paperOpsContext,
-			process: paperOpsProcess,
-			tool: paperOpsTool,
+			actor: paperServiceActor,
+			context: paperServiceContext,
+			process: paperServiceProcess,
 		},
 		{
-			actor: messagesOpsActor,
-			context: messagesOpsContext,
-			process: messagesOpsProcess,
+			actor: osMessagesActor,
+			context: osMessagesContext,
+			process: osMessagesProcess,
 		},
 	]
-	for (const {
-		actor,
-		context,
-		view,
-		process: proc,
-		style: styleCfg,
-		tool: toolCfg,
-	} of serviceActors) {
+	for (const { actor, context, view, process: proc, style: styleCfg } of serviceActors) {
 		if (actor?.$id) {
 			const config = { ...actor }
 			const inboxId = deriveInboxId(config.$id)
@@ -421,7 +468,6 @@ export function getSeedConfig() {
 		if (view?.$id) uiViews[view.$id] = view
 		if (proc?.$id) uiProcesses[proc.$id] = proc
 		if (styleCfg?.$id) uiStyles[styleCfg.$id] = styleCfg
-		if (toolCfg?.$id) tools[toolCfg.$id] = toolCfg
 	}
 
 	// Merge all processes
@@ -430,7 +476,7 @@ export function getSeedConfig() {
 	return {
 		actors,
 		processes: allProcesses,
-		tools,
+		interfaces,
 		inboxes,
 		contexts: uiContexts,
 		views: uiViews,

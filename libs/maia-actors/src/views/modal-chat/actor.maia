@@ -7,11 +7,5 @@
 	"process": "°Maia/actor/views/layout-chat/process",
 	"brand": "°Maia/chat/style/brand",
 	"inbox": "°Maia/actor/views/layout-chat/inbox",
-	"interface": [
-		"SEND_MESSAGE",
-		"UPDATE_INPUT",
-		"STATUS_UPDATE",
-		"OPEN_POPUP",
-		"CLOSE_POPUP"
-	]
+	"interface": "°Maia/actor/views/layout-chat/interface"
 }

@@ -15,7 +15,7 @@
 			},
 			{
 				"tell": {
-					"target": "°Maia/actor/services/schema-ops",
+					"target": "°Maia/actor/os/schema",
 					"type": "READ_SCHEMA",
 					"payload": {
 						"schemaRef": "$$item.id"

@@ -1,0 +1,23 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/actor/os/schema/interface",
+	"title": "°Maia/actor/os/schema/interface",
+	"description": "Reads schema definitions from the registry",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"READ_SCHEMA": {
+			"type": "object",
+			"description": "Read a schema definition by reference",
+			"properties": {
+				"schemaRef": {
+					"type": "string",
+					"description": "Schema reference (e.g. °Maia/schema/actor or co-id)"
+				}
+			},
+			"required": [
+				"schemaRef"
+			]
+		}
+	}
+}

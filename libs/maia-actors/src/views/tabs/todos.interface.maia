@@ -1,0 +1,15 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/actor/views/layout-todos/interface",
+	"title": "°Maia/actor/views/layout-todos/interface",
+	"description": "Todos layout tabs",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"SWITCH_VIEW": {
+			"type": "object",
+			"description": "Switch view",
+			"additionalProperties": true
+		}
+	}
+}

@@ -21,14 +21,12 @@
  *     - false/unset: Skip seed, use persisted data. Never overwrite on restart.
  */
 
-import { findFirst } from '@MaiaOS/db'
 import {
 	buildSeedConfig,
 	createWebSocketPeer,
 	DataEngine,
 	filterAgentsForSeeding,
 	generateRegistryName,
-	getAllActorDefinitions,
 	getAllAgentRegistries,
 	getAllSchemas,
 	getSeedConfig,
@@ -42,7 +40,6 @@ import {
 } from '@MaiaOS/loader'
 import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { splitGraphemes } from 'unicode-segmenter/grapheme'
 
 // Resolve db path relative to moai package root (not process.cwd) so persistence is stable across restarts
 const _moaiDir = pathResolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -70,26 +67,6 @@ const syncDomain = peerMode === 'agent' ? process.env.PEER_MOAI || null : null
 const MAIA_SPARK = '°Maia'
 const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
 
-/** OpenAI-format tools for LLM. Uses actor tool defs (name, description, parameters). */
-function toOpenAITools() {
-	const defs = getAllActorDefinitions()
-	const toolPaths = ['maia/actor/services/paper-ops', 'maia/actor/services/todos-ops']
-	const tools = []
-	for (const path of toolPaths) {
-		const def = defs[path]
-		const toolDef = def?.function ?? def?.tool
-		if (!toolDef?.name || !toolDef?.parameters) continue
-		tools.push({
-			type: 'function',
-			function: {
-				name: toolDef.name,
-				description: toolDef.description ?? '',
-				parameters: toolDef.parameters,
-			},
-		})
-	}
-	return tools
-}
 const peerAddGuardian = process.env.PEER_ADD_GUARDIAN === 'true'
 const peerGuardianAccountId = process.env.PEER_GUARDIAN?.trim() || null
 const peerFreshSeed = process.env.PEER_FRESH_SEED === 'true'
@@ -330,70 +307,6 @@ async function handleProfile(worker) {
 	}
 }
 
-/**
- * Shared logic: write text into the paper CoText (first note's content).
- * Used by LLM tool @maia/actor/services/paper-ops.
- */
-async function writeToPaperCoText(worker, value) {
-	if (value == null || typeof value !== 'string') {
-		return { ok: false, error: 'value (string) required' }
-	}
-	const { peer, dataEngine } = worker
-	const notesSchemaCoId = await resolve(peer, '°Maia/schema/data/notes', { returnType: 'coId' })
-	if (!notesSchemaCoId?.startsWith('co_z'))
-		return {
-			ok: false,
-			error: 'Notes schema not found. Ensure genesis seeded (PEER_FRESH_SEED=true).',
-		}
-	const firstNote = await findFirst(peer, notesSchemaCoId, {}, { timeoutMs: 5000 })
-	if (!firstNote?.id) return { ok: false, error: 'No notes found. Ensure data.notes seeded.' }
-	const contentId = firstNote.content?.id ?? firstNote.content
-	if (!contentId || typeof contentId !== 'string' || !contentId.startsWith('co_z'))
-		return { ok: false, error: 'First note has no content CoText.' }
-	const graphemes = [...splitGraphemes(value)]
-	const spliceResult = await dataEngine.execute({
-		op: 'spliceCoList',
-		coId: contentId,
-		start: 0,
-		deleteCount: 99999,
-		items: graphemes,
-	})
-	if (spliceResult?.ok === false)
-		return {
-			ok: false,
-			error: spliceResult.errors?.map((e) => e.message).join('; ') ?? 'splice failed',
-		}
-	return { ok: true, coId: contentId, length: graphemes.length }
-}
-
-/** Create a todo in the todos collection. Used by LLM tool @maia/actor/services/todos-ops. */
-async function createTodoInDb(worker, text) {
-	if (text == null || typeof text !== 'string') {
-		return { ok: false, error: 'text (string) required' }
-	}
-	const trimmed = text.trim()
-	if (!trimmed)
-		return { ok: false, error: 'text must contain at least one non-whitespace character' }
-	const { peer, dataEngine } = worker
-	const todosSchemaCoId = await resolve(peer, '°Maia/schema/data/todos', { returnType: 'coId' })
-	if (!todosSchemaCoId?.startsWith('co_z'))
-		return {
-			ok: false,
-			error: 'Todos schema not found. Ensure genesis seeded (PEER_FRESH_SEED=true).',
-		}
-	const result = await dataEngine.execute({
-		op: 'create',
-		schema: todosSchemaCoId,
-		data: { text: trimmed, done: false },
-	})
-	if (result?.ok === false)
-		return {
-			ok: false,
-			error: result.errors?.map((e) => e.message).join('; ') ?? 'create failed',
-		}
-	return { ok: true, id: result?.data?.id, text: trimmed }
-}
-
 async function handleAgentHttp(req, worker) {
 	const url = new URL(req.url)
 	if (url.pathname === '/profile' && req.method === 'GET') return handleProfile(worker)
@@ -410,113 +323,39 @@ async function handleAgentHttp(req, worker) {
 	return null
 }
 
-/** Execute LLM tool call server-side. */
-async function executeLLMTool(worker, toolName, args) {
-	try {
-		if (
-			toolName === '@maia/actor/services/paper-ops' ||
-			toolName === '@maia/actor/services/paper' ||
-			toolName === '@maia/actor/os/paper'
-		) {
-			// Accept value, content, or text (some models use different param names)
-			let value = args?.value ?? args?.content ?? args?.text
-			if (value != null && typeof value !== 'string') {
-				value =
-					typeof value === 'object' && (value?.text ?? value?.content) != null
-						? String(value.text ?? value.content)
-						: String(value)
-			}
-			const result = await writeToPaperCoText(worker, value)
-			return JSON.stringify(result)
-		}
-		if (toolName === '@maia/actor/services/todos-ops' || toolName === '@maia/actor/services/todos') {
-			const text = args?.text ?? args?.value
-			const result = await createTodoInDb(worker, text)
-			return JSON.stringify(result)
-		}
-		return JSON.stringify({ ok: false, error: `Unknown tool: ${toolName}` })
-	} catch (e) {
-		console.error('[executeLLMTool]', toolName, e?.message ?? e)
-		return JSON.stringify({ ok: false, error: e?.message ?? String(e) })
-	}
-}
-
-// --- API (LLM) handler ---
+/** LLM proxy: forwards request to RedPill, returns response. Tool execution is client-side (Runtime). */
 async function handleLLMChat(req) {
 	if (!RED_PILL_API_KEY) return jsonResponse({ error: 'RED_PILL_API_KEY not configured' }, 500)
 	try {
 		const body = await req.json()
-		const { messages, model = 'qwen/qwen3-30b-a3b-instruct-2507', temperature = 1 } = body
+		const { messages, model = 'qwen/qwen3-30b-a3b-instruct-2507', temperature = 1, tools } = body
 		if (!messages || !Array.isArray(messages) || messages.length === 0)
 			return jsonResponse({ error: 'messages array required' }, 400)
 
-		const tools = agentWorker ? toOpenAITools() : []
-		const currentMessages = [...messages]
-		const MAX_TURNS = 4
-
-		for (let turn = 0; turn < MAX_TURNS; turn++) {
-			// Only pass tools on first turn; after tool execution, request without tools to get final text (prevents loop)
-			const passTools = turn === 0 && tools.length > 0
-			const reqBody = {
-				model,
-				messages: currentMessages,
-				temperature,
-				...(passTools && { tools }),
-			}
-			const res = await fetch('https://api.redpill.ai/v1/chat/completions', {
-				method: 'POST',
-				headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RED_PILL_API_KEY}` },
-				body: JSON.stringify(reqBody),
-			})
-			if (!res.ok) {
-				const txt = await res.text()
-				let data = { error: 'LLM request failed' }
-				try {
-					data = JSON.parse(txt)
-				} catch {}
-				return jsonResponse(
-					{ error: data.error || `HTTP ${res.status}`, message: data.message || txt.slice(0, 200) },
-					500,
-				)
-			}
-			const data = await res.json()
-			const choice = data.choices?.[0]
-			const msg = choice?.message
-			if (!msg) return jsonResponse({ content: '', role: 'assistant', usage: data.usage ?? null })
-
-			const toolCalls = msg.tool_calls
-			if (!toolCalls || toolCalls.length === 0) {
-				return jsonResponse({
-					content: msg.content ?? '',
-					role: 'assistant',
-					usage: data.usage ?? null,
-					toolCalls: undefined,
-				})
-			}
-
-			currentMessages.push({ role: 'assistant', content: msg.content ?? null, tool_calls: toolCalls })
-			for (const tc of toolCalls) {
-				const name = tc.function?.name ?? tc.name
-				let raw = tc.function?.arguments ?? tc.arguments ?? '{}'
-				if (typeof raw !== 'string') raw = JSON.stringify(raw)
-				let args = {}
-				try {
-					args = JSON.parse(raw)
-				} catch {}
-				const result = await executeLLMTool(agentWorker, name, args)
-				currentMessages.push({
-					role: 'tool',
-					tool_call_id: tc.id,
-					content: result,
-				})
-			}
+		const reqBody = {
+			model,
+			messages,
+			temperature,
+			...(Array.isArray(tools) && tools.length > 0 && { tools }),
 		}
-
-		return jsonResponse({
-			content: '[Max tool turns reached]',
-			role: 'assistant',
-			usage: null,
+		const res = await fetch('https://api.redpill.ai/v1/chat/completions', {
+			method: 'POST',
+			headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RED_PILL_API_KEY}` },
+			body: JSON.stringify(reqBody),
 		})
+		const txt = await res.text()
+		if (!res.ok) {
+			let data = { error: 'LLM request failed' }
+			try {
+				data = JSON.parse(txt)
+			} catch {}
+			return jsonResponse(
+				{ error: data.error || `HTTP ${res.status}`, message: data.message || txt.slice(0, 200) },
+				500,
+			)
+		}
+		const data = JSON.parse(txt)
+		return jsonResponse(data)
 	} catch (e) {
 		const msg = e?.message ?? String(e)
 		console.error('[llm]', msg, e)
@@ -706,7 +545,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 			const { configs: mergedConfigs, data } = await buildSeedConfig(agentRegistries)
 			const {
 				actors: serviceActors,
-				tools: serviceTools,
+				interfaces: serviceInterfaces,
 				inboxes: serviceInboxes,
 				contexts: actorContexts,
 				views: actorViews,
@@ -717,7 +556,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 				...mergedConfigs,
 				actors: { ...mergedConfigs.actors, ...serviceActors },
 				states: mergedConfigs.states,
-				tools: { ...(mergedConfigs.tools || {}), ...serviceTools },
+				interfaces: { ...(mergedConfigs.interfaces || {}), ...serviceInterfaces },
 				inboxes: { ...mergedConfigs.inboxes, ...serviceInboxes },
 				contexts: { ...mergedConfigs.contexts, ...(actorContexts || {}) },
 				views: { ...mergedConfigs.views, ...(actorViews || {}) },

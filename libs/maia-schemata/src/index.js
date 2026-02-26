@@ -53,42 +53,6 @@ import humanDataSchema from './data/human.schema.json'
 import notesDataSchema from './data/notes.schema.json'
 import sparkDataSchema from './data/spark.schema.json'
 import todosDataSchema from './data/todos.schema.json'
-import addAgentEventSchema from './event/ADD_AGENT.schema.json'
-import addMemberEventSchema from './event/ADD_MEMBER.schema.json'
-import chatEventSchema from './event/CHAT.schema.json'
-import closePopupEventSchema from './event/CLOSE_POPUP.schema.json'
-import copyLogsEventSchema from './event/COPY_LOGS.schema.json'
-import createButtonEventSchema from './event/CREATE_BUTTON.schema.json'
-import createSparkEventSchema from './event/CREATE_SPARK.schema.json'
-import createTodoEventSchema from './event/CREATE_TODO.schema.json'
-import dbOpEventSchema from './event/DB_OP.schema.json'
-import deleteButtonEventSchema from './event/DELETE_BUTTON.schema.json'
-import deleteTodoEventSchema from './event/DELETE_TODO.schema.json'
-import dismissEventSchema from './event/DISMISS.schema.json'
-import errorEventSchema from './event/ERROR.schema.json'
-import formSubmitEventSchema from './event/FORM_SUBMIT.schema.json'
-import loadActorEventSchema from './event/LOAD_ACTOR.schema.json'
-import openPopupEventSchema from './event/OPEN_POPUP.schema.json'
-import randomizePaperEventSchema from './event/RANDOMIZE_PAPER.schema.json'
-import readSchemaEventSchema from './event/READ_SCHEMA.schema.json'
-import removeMemberEventSchema from './event/REMOVE_MEMBER.schema.json'
-import retryEventSchema from './event/RETRY.schema.json'
-import selectActorEventSchema from './event/SELECT_ACTOR.schema.json'
-import selectItemEventSchema from './event/SELECT_ITEM.schema.json'
-import selectNavEventSchema from './event/SELECT_NAV.schema.json'
-import selectRowEventSchema from './event/SELECT_ROW.schema.json'
-import selectSchemaEventSchema from './event/SELECT_SCHEMA.schema.json'
-import selectSparkEventSchema from './event/SELECT_SPARK.schema.json'
-import sendMessageEventSchema from './event/SEND_MESSAGE.schema.json'
-import sparkOpEventSchema from './event/SPARK_OP.schema.json'
-import statusUpdateEventSchema from './event/STATUS_UPDATE.schema.json'
-import successEventSchema from './event/SUCCESS.schema.json'
-import switchViewEventSchema from './event/SWITCH_VIEW.schema.json'
-import toggleButtonEventSchema from './event/TOGGLE_BUTTON.schema.json'
-import toggleTodoEventSchema from './event/TOGGLE_TODO.schema.json'
-import updateAgentInputEventSchema from './event/UPDATE_AGENT_INPUT.schema.json'
-import updateInputEventSchema from './event/UPDATE_INPUT.schema.json'
-import updatePaperEventSchema from './event/UPDATE_PAPER.schema.json'
 import actionSchema from './os/action.schema.json'
 // Import all schema definitions directly as JSON
 import actorSchema from './os/actor.schema.json'
@@ -118,14 +82,12 @@ import stateSchema from './os/state.schema.json'
 import styleSchema from './os/style.schema.json'
 // Import CoValue schemas
 import subscribersSchema from './os/subscribers.schema.json'
-import toolSchema from './os/tool.schema.json'
 import transitionSchema from './os/transition.schema.json'
 import viewSchema from './os/view.schema.json'
 
 // Unified schema registry (os + data + message)
 const SCHEMAS = {
 	actor: actorSchema,
-	tool: toolSchema,
 	context: contextSchema,
 	process: processSchema,
 	state: stateSchema,
@@ -160,42 +122,6 @@ const SCHEMAS = {
 	'data/chat': chatDataSchema,
 	'data/human': humanDataSchema,
 	'data/spark': sparkDataSchema,
-	'event/CREATE_BUTTON': createButtonEventSchema,
-	'event/CREATE_TODO': createTodoEventSchema,
-	'event/FORM_SUBMIT': formSubmitEventSchema,
-	'event/CHAT': chatEventSchema,
-	'event/DB_OP': dbOpEventSchema,
-	'event/SPARK_OP': sparkOpEventSchema,
-	'event/TOGGLE_BUTTON': toggleButtonEventSchema,
-	'event/TOGGLE_TODO': toggleTodoEventSchema,
-	'event/DELETE_BUTTON': deleteButtonEventSchema,
-	'event/DELETE_TODO': deleteTodoEventSchema,
-	'event/UPDATE_INPUT': updateInputEventSchema,
-	'event/UPDATE_PAPER': updatePaperEventSchema,
-	'event/RANDOMIZE_PAPER': randomizePaperEventSchema,
-	'event/SWITCH_VIEW': switchViewEventSchema,
-	'event/SUCCESS': successEventSchema,
-	'event/ERROR': errorEventSchema,
-	'event/SEND_MESSAGE': sendMessageEventSchema,
-	'event/STATUS_UPDATE': statusUpdateEventSchema,
-	'event/RETRY': retryEventSchema,
-	'event/DISMISS': dismissEventSchema,
-	'event/SELECT_NAV': selectNavEventSchema,
-	'event/SELECT_ROW': selectRowEventSchema,
-	'event/SELECT_ACTOR': selectActorEventSchema,
-	'event/SELECT_ITEM': selectItemEventSchema,
-	'event/SELECT_SCHEMA': selectSchemaEventSchema,
-	'event/SELECT_SPARK': selectSparkEventSchema,
-	'event/LOAD_ACTOR': loadActorEventSchema,
-	'event/READ_SCHEMA': readSchemaEventSchema,
-	'event/UPDATE_AGENT_INPUT': updateAgentInputEventSchema,
-	'event/ADD_AGENT': addAgentEventSchema,
-	'event/ADD_MEMBER': addMemberEventSchema,
-	'event/CREATE_SPARK': createSparkEventSchema,
-	'event/REMOVE_MEMBER': removeMemberEventSchema,
-	'event/OPEN_POPUP': openPopupEventSchema,
-	'event/CLOSE_POPUP': closePopupEventSchema,
-	'event/COPY_LOGS': copyLogsEventSchema,
 }
 
 export function getSchema(type) {
@@ -204,9 +130,5 @@ export function getSchema(type) {
 }
 
 export function getAllSchemas() {
-	const msg = {}
-	for (const [k, s] of Object.entries(SCHEMAS)) {
-		if (k.startsWith('event/')) msg[`°Maia/schema/${k}`] = s
-	}
-	return { ...SCHEMAS, ...msg }
+	return { ...SCHEMAS }
 }

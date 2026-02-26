@@ -1,0 +1,12 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/services/names/process",
+	"@label": "@maia/actor/services/names/process",
+	"handlers": {
+		"COMPUTE_NAMES": [
+			{
+				"function": true
+			}
+		]
+	}
+}
