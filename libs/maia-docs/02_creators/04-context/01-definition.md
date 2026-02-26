@@ -60,8 +60,8 @@ See [Reactive Data System](../developers/06_reactive-queries.md) for detailed ex
     "schema": "@schema/message",
     "options": {
       "map": {
-        "fromRole": "$$source.role",
-        "toRole": "$$target.role",
+        "fromRole": "$$source.@label",
+        "toRole": "$$target.@label",
         "fromId": "$$source.id",
         "toId": "$$target.id"
       }
@@ -70,10 +70,10 @@ See [Reactive Data System](../developers/06_reactive-queries.md) for detailed ex
 }
 ```
 
-**What this means:** "Give me all messages, but transform each item so that `source.role` becomes `fromRole`, `target.role` becomes `toRole`, etc."
+**What this means:** "Give me all messages, but transform each item so that `source.@label` becomes `fromRole`, `target.@label` becomes `toRole`, etc."
 
 **Key Rules:**
-- ✅ **Strict `$$` syntax required** - All map expressions MUST use `$$` prefix (e.g., `$$source.role`, not `source.role`)
+- ✅ **Strict `$$` syntax required** - All map expressions MUST use `$$` prefix (e.g., `$$source.@label`, not `source.@label`)
 - ✅ **Generic placeholder names** - Use reusable names that fit your view template slots (e.g., `fromRole`, `toRole`, `fromId`, `toId` for log entries)
 - ✅ **Works with any property path** - You can map nested properties like `$$nested.deep.property`
 
@@ -86,8 +86,8 @@ See [Reactive Data System](../developers/06_reactive-queries.md) for detailed ex
     "schema": "@schema/message",
     "options": {
       "map": {
-        "fromRole": "$$source.role",
-        "toRole": "$$target.role",
+        "fromRole": "$$source.@label",
+        "toRole": "$$target.@label",
         "fromId": "$$source.id",
         "toId": "$$target.id"
       }
@@ -170,8 +170,8 @@ See [Reactive Data System](../developers/06_reactive-queries.md) for detailed ex
     "options": {
       "filter": { "type": "notification" },
       "map": {
-        "fromRole": "$$source.role",
-        "toRole": "$$target.role"
+        "fromRole": "$$source.@label",
+        "toRole": "$$target.@label"
       }
     }
   }

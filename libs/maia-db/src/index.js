@@ -11,16 +11,17 @@
  * - Memory-efficient cleanup
  */
 
+// Sync Peer Setup (client-side peer configuration for LocalNode) - re-exported from @MaiaOS/peer
+export { setupSyncPeers, subscribeSyncState } from '@MaiaOS/peer'
 // Unified cache (subscriptions, stores, resolutions, resolved data)
 export {
 	CoCache,
 	getGlobalCoCache,
+	invalidateResolvedDataForMutatedCoValue,
 	resetGlobalCoCache,
 } from './cojson/cache/coCache.js'
-// CoJSON Backend (for MaiaOS.boot() compatibility)
-export { CoJSONBackend } from './cojson/core/cojson-backend.js'
-// CoJSON Mini CRUD API (database-level wrapper)
-export { createCoJSONAPI } from './cojson/core/factory.js'
+// MaiaDB - single data layer implementation (was CoJSONBackend)
+export { MaiaDB } from './cojson/core/MaiaDB.js'
 export { createCoList } from './cojson/cotypes/coList.js'
 export { createCoMap } from './cojson/cotypes/coMap.js'
 export { createCoStream } from './cojson/cotypes/coStream.js'
@@ -31,9 +32,11 @@ export {
 	getCoListId,
 	getSchemaIndexColistId,
 } from './cojson/crud/collection-helpers.js'
+// Data extraction (single canonical read format; normalizeCoValueData for CoMap/CoList shapes)
+export { extractCoValueData, normalizeCoValueData } from './cojson/crud/data-extraction.js'
 // Message Helpers (create and push message CoMaps)
 export { createAndPushMessage } from './cojson/crud/message-helpers.js'
-// Process Inbox (backend-to-backend inbox processing)
+// Process Inbox (peer-to-peer inbox processing)
 export { processInbox } from './cojson/crud/process-inbox.js'
 // Reactive Dependency Resolver (universal progressive reactive resolution)
 // Note: resolveReactive is exported from resolver.js (wraps reactive-resolver.js)
@@ -47,14 +50,17 @@ export {
 export { findFirst } from './cojson/crud/read.js'
 export { waitForStoreReady } from './cojson/crud/read-operations.js'
 // Re-export services for external use
-// STRICT: No createAccount() - only createAccountWithSecret() and loadAccount()
-export { createAccountWithSecret, loadAccount } from './cojson/groups/coID.js'
+// Account primitives moved to @MaiaOS/peer (createAccountWithSecret, loadAccount). Migration/seed stay here.
 export { createGroup, createProfile } from './cojson/groups/create.js'
-export { getSparkCapabilityGroupIdFromSparkCoId } from './cojson/groups/groups.js'
-export { resolveAccountCoIdsToProfileNames } from './cojson/helpers/resolve-account-profile.js'
+export {
+	getSparkCapabilityGroupIdFromSparkCoId,
+	removeGroupMember,
+} from './cojson/groups/groups.js'
+export {
+	resolveAccountCoIdsToProfileNames,
+	resolveAccountToProfileCoId,
+} from './cojson/helpers/resolve-account-profile.js'
 export { resolveGroupCoIdsToCapabilityNames } from './cojson/helpers/resolve-capability-group.js'
-// Sync Peer Setup (client-side peer configuration for LocalNode)
-export { setupSyncPeers, subscribeSyncState } from './cojson/peers/sync-peers.js'
 // Universal Schema Resolver (single source of truth)
 export {
 	checkCotype,
@@ -62,8 +68,10 @@ export {
 	resolve,
 	resolveReactive,
 } from './cojson/schema/resolver.js'
-export { simpleAccountSeed } from './cojson/schema/seed.js'
 export { schemaMigration } from './migrations/schema.migration.js'
+export { simpleAccountSeed } from './migrations/seeding/seed.js'
+// ReactiveStore - reactive data store pattern (owned by maia-db; engines import from here)
+export { ReactiveStore } from './reactive-store.js'
 export {
 	createSchemaMeta,
 	EXCEPTION_SCHEMAS,
@@ -71,4 +79,4 @@ export {
 	getSchema,
 	hasSchema,
 } from './schemas/registry.js'
-export { generateRegistryName } from './seed/registry-name-generator.js'
+export { generateRegistryName } from './utils/registry-name-generator.js'

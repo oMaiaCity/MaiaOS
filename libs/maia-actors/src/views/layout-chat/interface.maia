@@ -1,0 +1,86 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/actor/views/layout-chat/interface",
+	"title": "°Maia/actor/views/layout-chat/interface",
+	"description": "Chat layout view",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"SEND_MESSAGE": {
+			"type": "object",
+			"description": "Send message",
+			"properties": {
+				"inputText": {
+					"type": "string",
+					"description": "Message content"
+				}
+			},
+			"required": [
+				"inputText"
+			],
+			"additionalProperties": false
+		},
+		"UPDATE_INPUT": {
+			"type": "object",
+			"description": "Update input",
+			"properties": {
+				"value": {
+					"type": "string",
+					"description": "Input value"
+				}
+			},
+			"required": [
+				"value"
+			],
+			"additionalProperties": false
+		},
+		"STATUS_UPDATE": {
+			"type": "object",
+			"description": "Status update",
+			"properties": {
+				"isLoading": {
+					"type": "boolean"
+				},
+				"hasError": {
+					"type": "boolean"
+				},
+				"error": {
+					"type": "string",
+					"description": "Error message (null when no error)"
+				}
+			},
+			"required": [
+				"isLoading",
+				"hasError"
+			],
+			"additionalProperties": false
+		},
+		"OPEN_POPUP": {
+			"type": "object",
+			"description": "Open popup",
+			"properties": {
+				"popupOpen": {
+					"type": "boolean"
+				}
+			},
+			"required": [
+				"popupOpen"
+			],
+			"additionalProperties": false
+		},
+		"CLOSE_POPUP": {
+			"type": "object",
+			"description": "Close popup",
+			"properties": {
+				"popupOpen": {
+					"type": "boolean"
+				}
+			},
+			"required": [
+				"popupOpen"
+			],
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

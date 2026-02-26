@@ -334,4 +334,4 @@ transformSchemaForSeeding(schema, coIdMap);
 ## Source Files
 
 - Co-ID generator: `libs/maia-schemata/src/co-id-generator.js`
-- Usage in seeding: `libs/maia-script/src/o/engines/db-engine/backend/indexeddb.js`
+- Usage in seeding: `libs/maia-engines/src/o/engines/db-engine/backend/indexeddb.js`

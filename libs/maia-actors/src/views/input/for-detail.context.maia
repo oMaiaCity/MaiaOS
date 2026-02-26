@@ -1,0 +1,16 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/input/for-detail/context",
+	"targetActor": "@target",
+	"inputPlaceholder": "Agent account co-id (e.g. co_z...)",
+	"inputValue": "",
+	"submitButtonText": "Add as writer",
+	"hasError": false,
+	"error": null,
+	"isLoading": false,
+	"errorLabel": "Error: ",
+	"dismissButtonText": "Dismiss",
+	"@actors": {
+		"target": "°Maia/actor/views/detail"
+	}
+}

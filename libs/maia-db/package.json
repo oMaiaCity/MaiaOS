@@ -7,12 +7,11 @@
 		".": "./src/index.js"
 	},
 	"dependencies": {
+		"@MaiaOS/peer": "workspace:*",
+		"@MaiaOS/schemata": "workspace:*",
+		"@MaiaOS/storage": "workspace:*",
 		"cojson": "^0.20.7",
 		"cojson-transport-ws": "0.20.7",
-		"@MaiaOS/operations": "workspace:*",
-		"@MaiaOS/schemata": "workspace:*",
-		"@MaiaOS/script": "workspace:*",
-		"@MaiaOS/storage": "workspace:*",
-		"@MaiaOS/tools": "workspace:*"
+		"unicode-segmenter": "^0.15.0"
 	}
 }

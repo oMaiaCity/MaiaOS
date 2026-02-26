@@ -1,0 +1,45 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/actor/views/input/for-list/interface",
+	"title": "°Maia/actor/views/input/for-list/interface",
+	"description": "List input view",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"UPDATE_INPUT": {
+			"type": "object",
+			"description": "Update input",
+			"properties": {
+				"value": {
+					"type": "string",
+					"description": "Input value"
+				}
+			},
+			"required": [
+				"value"
+			],
+			"additionalProperties": false
+		},
+		"FORM_SUBMIT": {
+			"type": "object",
+			"description": "Form submit",
+			"properties": {
+				"value": {
+					"type": "string",
+					"description": "Form value (todo text)"
+				}
+			},
+			"required": [
+				"value"
+			],
+			"additionalProperties": false
+		},
+		"DISMISS": {
+			"type": "object",
+			"description": "Dismiss",
+			"properties": {},
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

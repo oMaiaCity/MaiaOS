@@ -1,0 +1,56 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/actor/views/modal/interface",
+	"title": "°Maia/actor/views/modal/interface",
+	"description": "Modal chrome - popup button, overlay, close, loading status",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"OPEN_POPUP": {
+			"type": "object",
+			"description": "Open popup",
+			"properties": {
+				"popupOpen": {
+					"type": "boolean"
+				}
+			},
+			"required": [
+				"popupOpen"
+			],
+			"additionalProperties": false
+		},
+		"CLOSE_POPUP": {
+			"type": "object",
+			"description": "Close popup",
+			"properties": {
+				"popupOpen": {
+					"type": "boolean"
+				}
+			},
+			"required": [
+				"popupOpen"
+			],
+			"additionalProperties": false
+		},
+		"STATUS_UPDATE": {
+			"type": "object",
+			"description": "Update loading/error status from messages",
+			"properties": {
+				"isLoading": {
+					"type": "boolean"
+				},
+				"hasError": {
+					"type": "boolean"
+				},
+				"error": {
+					"type": [
+						"string",
+						"null"
+					]
+				}
+			},
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

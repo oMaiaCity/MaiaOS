@@ -1,0 +1,16 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/actor/views/placeholder/view",
+	"@label": "@maia/actor/views/placeholder/view",
+	"content": {
+		"tag": "div",
+		"class": "placeholder",
+		"children": [
+			{
+				"tag": "p",
+				"class": "placeholder-text",
+				"text": "$message"
+			}
+		]
+	}
+}

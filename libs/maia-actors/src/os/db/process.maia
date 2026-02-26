@@ -1,0 +1,17 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/os/db/process",
+	"@label": "@maia/actor/os/db/process",
+	"handlers": {
+		"DB_OP": [
+			{
+				"function": true
+			}
+		],
+		"SPARK_OP": [
+			{
+				"function": true
+			}
+		]
+	}
+}

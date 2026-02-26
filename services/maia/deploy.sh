@@ -20,11 +20,9 @@ retry_flyctl_deploy() {
   while [ $retry_count -lt $max_retries ]; do
     echo "Attempt $((retry_count + 1))/$max_retries: Deploying $app_name..."
     
-    # VITE_SEED_VIBES defaults to "all" in Dockerfile (seeds all vibes)
-    # To override, pass --build-arg VITE_SEED_VIBES="todos,maia" manually
-    # Or set as Fly.io secret and it will be available as env var (but needs build-time injection)
-    # For now, default to "all" - users can override via fly.toml [build] section if needed
-    echo "   Using VITE_SEED_VIBES=all (default - seeds all vibes)"
+    # VITE_SEED_AGENTS defaults to "all" in build (seeds all agents)
+    # To override, pass --build-arg VITE_SEED_AGENTS="todos,chat" manually
+    echo "   Using VITE_SEED_AGENTS=all (default - seeds all agents)"
     
     # Run deploy - explicit build args ensure VITE_PEER_MOAI is in bundle (sync domain)
     flyctl deploy \

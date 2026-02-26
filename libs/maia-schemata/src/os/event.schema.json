@@ -1,0 +1,23 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/event",
+	"title": "°Maia/schema/event",
+	"description": "Actor event for state machine transitions",
+	"cotype": "comap",
+	"indexing": true,
+	"required": ["type"],
+	"properties": {
+		"type": { "type": "string", "description": "Event type (event name)" },
+		"payload": { "type": "object", "description": "Event payload data" },
+		"source": { "$co": "°Maia/schema/actor", "description": "Co-id reference to source actor" },
+		"target": {
+			"$co": "°Maia/schema/actor",
+			"description": "Co-id reference to target actor (required for direct messaging)"
+		},
+		"processed": {
+			"type": "boolean",
+			"description": "Whether this event has been processed",
+			"default": false
+		}
+	}
+}

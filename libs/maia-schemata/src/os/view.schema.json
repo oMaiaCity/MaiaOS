@@ -6,6 +6,10 @@
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {
+		"@label": {
+			"type": "string",
+			"description": "Human-readable label (namekey, e.g. '@maia/actor/views/grid/view')"
+		},
 		"content": {
 			"type": "object",
 			"description": "View content structure (recursive viewNode)",
@@ -27,7 +31,8 @@
 						{ "type": "string" },
 						{ "type": "number" },
 						{ "type": "boolean" },
-						{ "type": "null" }
+						{ "type": "null" },
+						{ "$ref": "#/$defs/expressionValue" }
 					]
 				},
 				"value": {
@@ -38,7 +43,8 @@
 						{ "type": "string" },
 						{ "type": "number" },
 						{ "type": "boolean" },
-						{ "type": "null" }
+						{ "type": "null" },
+						{ "$ref": "#/$defs/expressionValue" }
 					]
 				},
 				"attrs": {
@@ -117,6 +123,10 @@
 				}
 			},
 			"additionalProperties": false
+		},
+		"expressionValue": {
+			"type": "object",
+			"description": "MaiaScript expression (e.g. $join, $context)"
 		}
 	},
 	"additionalProperties": false

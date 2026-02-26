@@ -11,12 +11,11 @@
 	],
 	"dependencies": {
 		"@MaiaOS/db": "workspace:*",
-		"@MaiaOS/self": "workspace:*",
-		"@MaiaOS/script": "workspace:*",
+		"@MaiaOS/engines": "workspace:*",
 		"@MaiaOS/schemata": "workspace:*",
-		"@MaiaOS/operations": "workspace:*",
-		"@MaiaOS/tools": "workspace:*",
-		"@MaiaOS/vibes": "workspace:*",
+		"@MaiaOS/self": "workspace:*",
+		"@MaiaOS/actors": "workspace:*",
+		"@MaiaOS/agents": "workspace:*",
 		"cojson-transport-ws": "0.20.7"
 	}
 }

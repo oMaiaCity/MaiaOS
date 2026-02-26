@@ -1,0 +1,87 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/actor/views/input/view",
+	"@label": "@maia/actor/views/input/view",
+	"content": {
+		"tag": "div",
+		"class": "input-wrapper",
+		"children": [
+			{
+				"class": "form",
+				"children": [
+					{
+						"tag": "input",
+						"class": "input",
+						"attrs": {
+							"type": "text",
+							"placeholder": "$inputPlaceholder"
+						},
+						"value": "$inputValue",
+						"$on": {
+							"input": {
+								"send": "UPDATE_INPUT",
+								"payload": {
+									"value": "@inputValue"
+								}
+							},
+							"blur": {
+								"send": "UPDATE_INPUT",
+								"payload": {
+									"value": "@inputValue"
+								}
+							},
+							"keydown": {
+								"send": "FORM_SUBMIT",
+								"payload": {
+									"value": "@inputValue"
+								},
+								"key": "Enter"
+							}
+						}
+					},
+					{
+						"tag": "button",
+						"class": "button",
+						"text": "$submitButtonText",
+						"$on": {
+							"click": {
+								"send": "FORM_SUBMIT",
+								"payload": {
+									"value": "$inputValue"
+								}
+							}
+						}
+					}
+				]
+			},
+			{
+				"tag": "div",
+				"class": "error-message",
+				"attrs": {
+					"data": {
+						"hasError": "$hasError"
+					}
+				},
+				"children": [
+					{
+						"tag": "strong",
+						"text": "$errorLabel"
+					},
+					{
+						"text": "$error"
+					},
+					{
+						"tag": "button",
+						"class": "button-dismiss",
+						"text": "$dismissButtonText",
+						"$on": {
+							"click": {
+								"send": "DISMISS"
+							}
+						}
+					}
+				]
+			}
+		]
+	}
+}

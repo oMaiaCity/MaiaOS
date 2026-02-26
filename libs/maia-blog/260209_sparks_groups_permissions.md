@@ -556,4 +556,4 @@ The next time you create a spark or add a member, remember that behind the scene
 
 ---
 
-**Want to learn more?** Check out our [groups documentation](../../libs/maia-docs/03_developers/05_maia-db/groups.md) or dive into the [sparks operations](../../libs/maia-operations/src/operations/spark-operations.js)!
+**Want to learn more?** Check out our [groups documentation](../../libs/maia-docs/03_developers/05_maia-db/groups.md) or dive into the [operations](../../libs/maia-engines/src/engines/data.engine.js)!

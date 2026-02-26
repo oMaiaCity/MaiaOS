@@ -1,0 +1,8 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/todos/context/intent",
+	"layout": "@layout",
+	"@actors": {
+		"layout": "°Maia/actor/views/layout-todos"
+	}
+}

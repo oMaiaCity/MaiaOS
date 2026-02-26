@@ -1,0 +1,18 @@
+{
+	"$id": "°Maia/schema/data/profile",
+	"$schema": "°Maia/schema/meta",
+	"title": "°Maia/schema/data/profile",
+	"description": "Profile CoMap (account-owned, identity). Used for profile-image context.",
+	"cotype": "comap",
+	"indexing": false,
+	"properties": {
+		"name": { "type": "string", "minLength": 1, "description": "User's display name" },
+		"avatar": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "CoBinary co-id for profile image"
+		}
+	},
+	"required": ["name"],
+	"additionalProperties": false
+}

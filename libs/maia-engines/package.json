@@ -1,0 +1,21 @@
+{
+	"name": "@MaiaOS/engines",
+	"version": "26.0217.1432",
+	"type": "module",
+	"main": "src/index.js",
+	"exports": {
+		".": "./src/index.js",
+		"./engines/*": "./src/engines/*",
+		"./modules/*": "./src/modules/*",
+		"./utils/*": "./src/utils/*"
+	},
+	"dependencies": {
+		"@MaiaOS/actors": "workspace:*",
+		"@MaiaOS/agents": "workspace:*",
+		"@MaiaOS/db": "workspace:*",
+		"@MaiaOS/schemata": "workspace:*"
+	},
+	"devDependencies": {
+		"cojson": "^0.20.7"
+	}
+}

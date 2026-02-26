@@ -48,23 +48,22 @@ Read the documentation in the following order for a complete understanding:
 - [CoJSON Integration](./03_maia-schemata/cojson-integration.md) - CoJSON types integration
 - [Co-ID Generation](./03_maia-schemata/co-id-generation.md) - Co-ID generation and registry
 
-### 4. [maia-script Package](./04_maia-script/README.md)
-**Execution engines and modules**
-- Engine architecture and relationships
-- Individual engine details (ActorEngine, ViewEngine, StateEngine, etc.)
+### 4. [maia-engines Package](./04_maia-engines/README.md)
+**Execution engines and modules** (merged from maia-script + maia-operations)
+- DataEngine – **maia.do({ op, schema, key, filter, ... })** (public data API)
+- Engine architecture (ActorEngine, ViewEngine, StateEngine, etc.)
 - Module system and custom module creation
 - MaiaScript expression language reference
-- Using engines independently for advanced use cases
 - Complete API reference
 
 **Sub-topics:**
-- [Engines](./04_maia-script/engines/) - Detailed engine descriptions
-- [Modules](./04_maia-script/modules.md) - Module system and custom modules
-- [Expressions](./04_maia-script/expressions.md) - MaiaScript expression language
-- [API Reference](./04_maia-script/api-reference.md) - Complete API reference
-- [Patterns](./04_maia-script/patterns.md) - Common patterns and troubleshooting
+- [Engines](./04_maia-engines/engines/) - Detailed engine descriptions
+- [Modules](./04_maia-engines/modules.md) - Module system and custom modules
+- [Expressions](./04_maia-engines/expressions.md) - MaiaScript expression language
+- [API Reference](./04_maia-engines/api-reference.md) - Complete API reference
+- [Patterns](./04_maia-engines/patterns.md) - Common patterns and troubleshooting
 
-### 5. [maia-db Package](./05_maia-db/cojson.md)
+### 5. [maia-db Package](./05_maia-db/README.md)
 **CRDT-based collaborative data layer**
 - Complete cojson architecture hierarchy
 - Cryptographic primitives to high-level CoValues
@@ -74,16 +73,11 @@ Read the documentation in the following order for a complete understanding:
 **Sub-topics:**
 - [CoJSON Architecture](./05_maia-db/cojson.md) - Complete layer hierarchy from primitives to CoValues
 
-### 6. [maia-operations Package](./06_maia-operations/README.md)
-**Shared database operations layer**
-- Unified operations that work with any backend
-- DBAdapter interface for backend implementations
-- DBEngine operation router
-- ReactiveStore reactive data pattern
-- Shared by maia-script and maia-db packages
-
-**Sub-topics:**
-- [README](./06_maia-operations/README.md) - Complete operations layer documentation
+### 6. [maia-operations (merged)](./06_maia-operations/README.md)
+**Operations are now part of maia-engines**
+- DataEngine (data.engine.js) executes **maia.do({ op, schema, key, ... })**
+- Operations live in `libs/maia-engines/src/engines/data.engine.js`
+- MaiaDB (maia-db) is the storage layer; no DBAdapter interface
 
 ### 7. [State and Persistence](./state-and-persistence.md)
 **Ephemeral vs persistable state and storage configuration**
@@ -117,6 +111,6 @@ When updating these docs:
 
 ## Quick Links
 
-- [Creator Documentation](../creators/) - For creators (user-facing)
-- [Agent Documentation](../agents/) - For LLM agents (auto-generated)
-- [Getting Started](../getting-started/) - Quick start guides
+- [Creator Documentation](../02_creators/) - For creators (user-facing)
+- [Agent Documentation](../04_agents/) - For LLM agents (auto-generated)
+- [Getting Started](../01_getting-started/) - Quick start guides

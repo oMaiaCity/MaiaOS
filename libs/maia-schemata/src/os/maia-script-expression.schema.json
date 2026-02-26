@@ -28,8 +28,8 @@
 					"properties": {
 						"$context": {
 							"type": "string",
-							"description": "Dot-separated path in context object (e.g., 'user.name')",
-							"pattern": "^(?!.*(__proto__|constructor|prototype))[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*$"
+							"description": "Dot-separated path in context (e.g. 'user.name', 'event.viewMode')",
+							"pattern": "^(?!.*(__proto__|constructor|prototype)).+$"
 						}
 					},
 					"required": ["$context"],
@@ -40,8 +40,8 @@
 					"properties": {
 						"$item": {
 							"type": "string",
-							"description": "Dot-separated path in item object (e.g., 'id', 'status.value')",
-							"pattern": "^(?!.*(__proto__|constructor|prototype))[a-zA-Z_][a-zA-Z0-9_]*(\\.[a-zA-Z_][a-zA-Z0-9_]*)*$"
+							"description": "Dot-separated path in item (e.g. 'id', 'status.value')",
+							"pattern": "^(?!.*(__proto__|constructor|prototype)).+$"
 						}
 					},
 					"required": ["$item"],
@@ -94,12 +94,15 @@
 					"description": "$and operation - logical AND (all operands must be truthy)",
 					"properties": {
 						"$and": {
-							"type": "array",
-							"description": "Array of expressions to evaluate (all must be truthy)",
-							"items": {
-								"$ref": "#"
-							},
-							"minItems": 1
+							"oneOf": [
+								{
+									"type": "array",
+									"description": "Array of expressions (all must be truthy)",
+									"items": { "$ref": "#" },
+									"minItems": 1
+								},
+								{ "$ref": "#" }
+							]
 						}
 					},
 					"required": ["$and"],
@@ -109,12 +112,15 @@
 					"description": "$or operation - logical OR (at least one operand must be truthy)",
 					"properties": {
 						"$or": {
-							"type": "array",
-							"description": "Array of expressions to evaluate (at least one must be truthy)",
-							"items": {
-								"$ref": "#"
-							},
-							"minItems": 1
+							"oneOf": [
+								{
+									"type": "array",
+									"description": "Array of expressions (at least one must be truthy)",
+									"items": { "$ref": "#" },
+									"minItems": 1
+								},
+								{ "$ref": "#" }
+							]
 						}
 					},
 					"required": ["$or"],
@@ -181,6 +187,37 @@
 					"additionalProperties": false
 				},
 				{
+					"description": "$join operation - join array elements with separator",
+					"properties": {
+						"$join": {
+							"oneOf": [
+								{
+									"type": "array",
+									"description": "[arrayExpr, separator] - array expression and separator string",
+									"items": {
+										"anyOf": [
+											{
+												"$ref": "#"
+											},
+											{
+												"type": "string"
+											}
+										]
+									},
+									"minItems": 1,
+									"maxItems": 2
+								},
+								{
+									"$ref": "#",
+									"description": "Array expression (separator defaults to empty string)"
+								}
+							]
+						}
+					},
+					"required": ["$join"],
+					"additionalProperties": false
+				},
+				{
 					"description": "$map operation - map over array",
 					"properties": {
 						"$map": {
@@ -190,6 +227,10 @@
 								"array": {
 									"$ref": "#",
 									"description": "Expression evaluating to array to map over"
+								},
+								"items": {
+									"$ref": "#",
+									"description": "Alias for 'array' - expression evaluating to array to map over"
 								},
 								"as": {
 									"type": "string",
@@ -218,11 +259,35 @@
 									]
 								}
 							},
-							"required": ["array"],
+							"oneOf": [{ "required": ["array"] }, { "required": ["items"] }],
 							"additionalProperties": false
 						}
 					},
 					"required": ["$map"],
+					"additionalProperties": false
+				},
+				{
+					"description": "$find operation - find first matching item in array",
+					"properties": {
+						"$find": {
+							"type": "object",
+							"properties": {
+								"array": { "$ref": "#", "description": "Expression evaluating to array to search" },
+								"items": { "$ref": "#", "description": "Alias for 'array'" },
+								"where": { "$ref": "#" },
+								"return": {
+									"anyOf": [
+										{ "$ref": "#" },
+										{ "type": ["object", "array", "string", "number", "boolean", "null"] }
+									]
+								},
+								"as": { "type": "string" }
+							},
+							"oneOf": [{ "required": ["array"] }, { "required": ["items"] }],
+							"additionalProperties": false
+						}
+					},
+					"required": ["$find"],
 					"additionalProperties": false
 				},
 				{

@@ -1,0 +1,54 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/actor/views/tabs/view",
+	"@label": "@maia/actor/views/tabs/view",
+	"content": {
+		"tag": "div",
+		"class": "stack",
+		"children": [
+			{
+				"tag": "div",
+				"class": "header-section",
+				"children": [
+					{
+						"tag": "h2",
+						"class": "layout-title",
+						"text": "$title"
+					},
+					{
+						"tag": "div",
+						"class": "view-switcher",
+						"$each": {
+							"items": "$tabsWithActive",
+							"template": {
+								"tag": "button",
+								"class": "button-view-switch",
+								"attrs": {
+									"type": "button",
+									"data-view": "$$id",
+									"data": {
+										"active": "$$isActive"
+									}
+								},
+								"text": "$$label",
+								"$on": {
+									"click": {
+										"send": "SWITCH_VIEW",
+										"payload": {
+											"viewMode": "$$id"
+										}
+									}
+								}
+							}
+						}
+					}
+				]
+			},
+			{
+				"tag": "main",
+				"class": "content-area",
+				"$slot": "$currentView"
+			}
+		]
+	}
+}

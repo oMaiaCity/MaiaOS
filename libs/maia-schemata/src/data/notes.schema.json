@@ -1,0 +1,15 @@
+{
+	"$id": "°Maia/schema/data/notes",
+	"$schema": "°Maia/schema/meta",
+	"title": "°Maia/schema/data/notes",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"content": {
+			"$co": "°Maia/schema/os/cotext",
+			"description": "CoText (colist of graphemes) - collaborative plaintext"
+		}
+	},
+	"required": ["content"],
+	"additionalProperties": false
+}

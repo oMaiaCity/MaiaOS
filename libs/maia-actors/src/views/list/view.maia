@@ -1,0 +1,58 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/actor/views/list/view",
+	"@label": "@maia/actor/views/list/view",
+	"content": {
+		"class": "list",
+		"children": [
+			{
+				"$slot": "$inputActor"
+			},
+			{
+				"$each": {
+					"items": "$list",
+					"template": {
+						"class": "card",
+						"attrs": {
+							"data-done": "$$done"
+						},
+						"children": [
+							{
+								"tag": "span",
+								"class": "body",
+								"text": "$$text"
+							},
+							{
+								"tag": "button",
+								"class": "button-small",
+								"text": "$toggleButtonText",
+								"$on": {
+									"click": {
+										"send": "TOGGLE_BUTTON",
+										"payload": {
+											"id": "$$id",
+											"done": "$$done"
+										}
+									}
+								}
+							},
+							{
+								"tag": "button",
+								"class": "button-small button-danger",
+								"text": "$deleteButtonText",
+								"$on": {
+									"click": {
+										"send": "DELETE_BUTTON",
+										"payload": {
+											"id": "$$id"
+										}
+									}
+								}
+							}
+						]
+					}
+				}
+			}
+		]
+	}
+}

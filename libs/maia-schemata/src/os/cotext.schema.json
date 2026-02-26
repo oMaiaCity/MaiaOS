@@ -1,0 +1,12 @@
+{
+	"$id": "°Maia/schema/os/cotext",
+	"$schema": "°Maia/schema/meta",
+	"title": "°Maia/schema/os/cotext",
+	"cotype": "colist",
+	"indexing": true,
+	"items": {
+		"type": "string",
+		"format": "grapheme",
+		"description": "Single grapheme cluster (Unicode extended grapheme cluster)"
+	}
+}

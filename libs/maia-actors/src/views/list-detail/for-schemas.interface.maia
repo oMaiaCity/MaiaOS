@@ -1,0 +1,41 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/actor/views/list-detail/for-schemas/interface",
+	"title": "°Maia/actor/views/list-detail/for-schemas/interface",
+	"description": "List-detail schemas view",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"SELECT_ITEM": {
+			"type": "object",
+			"description": "Select item",
+			"properties": {
+				"item": {
+					"type": "object",
+					"description": "Schema item",
+					"properties": {
+						"id": {
+							"type": "string"
+						},
+						"label": {
+							"type": "string"
+						},
+						"definition": {
+							"type": "string"
+						}
+					},
+					"required": [
+						"id",
+						"label"
+					],
+					"additionalProperties": false
+				}
+			},
+			"required": [
+				"item"
+			],
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

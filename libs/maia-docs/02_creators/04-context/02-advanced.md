@@ -110,7 +110,7 @@ Generic context field update (infrastructure, not a tool):
 - **Don't compute in views** - All computation happens in state machine
 - **Don't hardcode strings in views** - Extract all UI text to context variables
 - **Don't use specific names** - Avoid `todos`, `allMessages` - use generic `list`, `messages` instead
-- **Don't skip `$$` prefix** - Map expressions must use strict `$$` syntax (e.g., `$$source.role`, not `source.role`)
+- **Don't skip `$$` prefix** - Map expressions must use strict `$$` syntax (e.g., `$$source.@label`, not `source.@label`)
 
 ## Extracting Hardcoded Strings to Context Variables
 

@@ -10,14 +10,10 @@
  */
 
 import {
-	buildSeedConfig,
-	filterVibesForSeeding,
-	getAllSchemas,
-	getAllToolDefinitions,
-	getAllVibeRegistries,
 	isPRFSupported,
 	loadOrCreateAgentAccount,
 	MaiaOS,
+	resolveAccountToProfileCoId,
 	signInWithPasskey,
 	signUpWithPasskey,
 	subscribeSyncState,
@@ -31,14 +27,15 @@ import {
 	renderUnsupportedBrowser,
 } from './signin.js'
 import { getSyncStatusMessage } from './utils.js'
+import { renderVoicePage } from './voice.js'
 
 let maia
-let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'vibe-viewer'
+let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'agent-viewer'
 let currentView = 'account' // Current schema filter (default: 'account')
 let currentContextCoValueId = null // Currently loaded CoValue in main context (explorer-style navigation)
-let currentVibe = null // Currently loaded vibe (null = DB view mode, 'todos' = todos vibe, etc.)
-let currentSpark = null // Grid hierarchy: null = sparks level, '°Maia' = vibes for that spark
-let _currentVibeContainer = null // Currently loaded vibe container element (for cleanup on unload)
+let currentAgent = null // Currently loaded agent (null = DB view mode, 'todos' = todos agent, etc.)
+let currentSpark = null // Grid hierarchy: null = sparks level, '°Maia' = agents for that spark
+let _currentAgentContainer = null // Currently loaded agent container element (for cleanup on unload)
 let navigationHistory = [] // Navigation history stack for back button
 let isRendering = false // Guard to prevent render loops
 let authState = {
@@ -146,6 +143,43 @@ async function handleRoute() {
 		} catch (error) {
 			renderUnsupportedBrowser(error.message)
 		}
+		return
+	}
+
+	if (path === '/voice') {
+		removeSigninKeyHandler()
+		const ready = detectMode() === 'agent' || (authState.signedIn && maia)
+		if (ready) {
+			try {
+				await renderVoicePage(maia, authState, syncState, navigateToScreen)
+			} catch (error) {
+				showToast(`Failed to render voice: ${error.message}`, 'error')
+			}
+			return
+		}
+		if (authState.signedIn && !maia) {
+			renderLoadingConnectingScreen()
+			let waitCount = 0
+			const checkMaia = setInterval(() => {
+				waitCount++
+				if (maia) {
+					clearInterval(checkMaia)
+					cleanupLoadingScreenSync()
+					renderVoicePage(maia, authState, syncState, navigateToScreen).catch((e) =>
+						showToast(`Failed to render voice: ${e.message}`, 'error'),
+					)
+				} else if (waitCount > 20) {
+					clearInterval(checkMaia)
+					cleanupLoadingScreenSync()
+					authState = { signedIn: false, accountID: null }
+					navigateTo('/signin')
+				} else {
+					updateLoadingConnectingScreen()
+				}
+			}, 500)
+			return
+		}
+		navigateTo('/signin')
 		return
 	}
 
@@ -263,7 +297,7 @@ async function initAgentMode() {
 			mode: 'agent', // Explicitly set mode
 			syncDomain, // Pass sync domain to kernel
 			getMoaiBaseUrl, // For POST /register after createSpark
-			modules: ['db', 'core', 'ai', 'sparks'], // Include all modules
+			modules: ['db', 'core', 'ai'], // Include all modules
 		})
 		window.maia = maia
 		// CRITICAL: Await link before first render - indexing requires account.registries
@@ -356,13 +390,16 @@ async function autoRegisterHuman(maia) {
 	if (!maia?.id?.maiaId || detectMode() === 'agent') return
 	const baseUrl = getMoaiBaseUrl()
 	if (!baseUrl) return
-	const accountId = maia.id.maiaId.id || maia.id.maiaId.$jazz?.id
+	const account = maia.id.maiaId
+	const accountId = account.id || account.$jazz?.id
 	if (!accountId?.startsWith('co_z')) return
+	const profileId = account.get?.('profile')
+	if (!profileId?.startsWith('co_z')) return
 	try {
 		await fetch(`${baseUrl}/register`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ type: 'human', accountId }),
+			body: JSON.stringify({ type: 'human', accountId, profileId }),
 		})
 	} catch (_e) {}
 }
@@ -405,7 +442,7 @@ async function signIn() {
 						account,
 						syncDomain, // Pass sync domain to kernel (single source of truth)
 						getMoaiBaseUrl, // For POST /register after createSpark
-						modules: ['db', 'core', 'ai', 'sparks'], // Include all modules
+						modules: ['db', 'core', 'ai'], // Include all modules
 					})
 					window.maia = maia
 					// CRITICAL: Await link before first render - indexing requires account.registries
@@ -480,15 +517,15 @@ async function signIn() {
 	}
 }
 
-/** Load linked CoValues from account (vibes via deep resolution) */
+/** Load linked CoValues from account (registries via deep resolution) */
 async function loadLinkedCoValues() {
 	if (!maia?.id?.maiaId) return
 	try {
-		const accountStore = await maia.db({ op: 'read', schema: '@account', key: maia.id.maiaId.id })
+		const accountStore = await maia.do({ op: 'read', schema: '@account', key: maia.id.maiaId.id })
 		const accountData = accountStore?.value ?? accountStore
-		const vibesId = accountData?.vibes
-		if (typeof vibesId === 'string' && vibesId.startsWith('co_')) {
-			await maia.db({ op: 'read', schema: vibesId, key: vibesId, deepResolve: true })
+		const registriesId = accountData?.registries
+		if (typeof registriesId === 'string' && registriesId.startsWith('co_')) {
+			await maia.do({ op: 'read', schema: registriesId, key: registriesId, deepResolve: true })
 		}
 	} catch (_e) {}
 }
@@ -535,7 +572,7 @@ async function register() {
 				account,
 				syncDomain, // Pass sync domain to kernel (single source of truth)
 				getMoaiBaseUrl, // For POST /register after createSpark
-				modules: ['db', 'core', 'ai', 'sparks'], // Include all modules
+				modules: ['db', 'core', 'ai'], // Include all modules
 			})
 			window.maia = maia
 			// CRITICAL: Await link before first render - indexing requires account.registries
@@ -640,9 +677,9 @@ const LOADING_SCREEN_HTML = (syncMessage, indicatorStyle) => `
 	</div>
 	<div class="loading-connecting-overlay">
 		<div class="loading-spinner"></div>
-		<div>
-			<h2 style="font-size: 1.5rem; margin: 0 0 0.5rem 0; font-weight: 600;">Initializing your account</h2>
-			<div style="font-size: 1rem; opacity: 0.8; margin-bottom: 1rem;">Setting up your sovereign self...</div>
+		<div class="loading-connecting-content">
+			<h2>Initializing your account</h2>
+			<div class="loading-connecting-subtitle">Setting up your sovereign self...</div>
 			<div class="sync-status loading-connecting-sync">
 				<div class="sync-indicator loading-connecting-indicator" style="${indicatorStyle}"></div>
 				<span class="sync-message">${syncMessage}</span>
@@ -655,7 +692,7 @@ function renderLoadingConnectingScreen() {
 	const syncMsg = getSyncStatusMessage(syncState, 'Connecting to sync...')
 	const isConnected = syncState.connected && syncState.status === 'connected'
 	const hasError = syncState.status === 'error' || syncState.error
-	const indicatorStyle = `background: ${isConnected ? '#4ade80' : hasError ? '#ef4444' : '#fbbf24'}; animation: ${isConnected ? 'none' : 'pulse 2s ease-in-out infinite'};`
+	const indicatorStyle = `background: ${isConnected ? 'var(--color-lush-green)' : hasError ? 'var(--brand-red)' : 'var(--color-sun-yellow)'}; animation: ${isConnected ? 'none' : 'pulse 2s ease-in-out infinite'};`
 	document.getElementById('app').innerHTML = LOADING_SCREEN_HTML(syncMsg, indicatorStyle)
 	if (!loadingScreenSyncUnsubscribe) {
 		loadingScreenSyncUnsubscribe = subscribeSyncState((state) => {
@@ -678,7 +715,11 @@ function updateLoadingConnectingScreen() {
 		syncMessageElement.textContent = syncMessage
 		const isConnected = syncState.connected && syncState.status === 'connected'
 		const hasError = syncState.status === 'error' || syncState.error
-		syncIndicator.style.background = isConnected ? '#4ade80' : hasError ? '#ef4444' : '#fbbf24'
+		syncIndicator.style.background = isConnected
+			? 'var(--color-lush-green)'
+			: hasError
+				? 'var(--brand-red)'
+				: 'var(--color-sun-yellow)'
 		syncIndicator.style.animation = isConnected ? 'none' : 'pulse 2s ease-in-out infinite'
 	}
 }
@@ -693,98 +734,8 @@ function cleanupLoadingScreenSync() {
 	}
 }
 
-/**
- * Handle seed button click - reseed database (idempotent: preserves schemata, recreates configs/data)
- * @param {string|Array|null} seedVibesConfig - Optional config override:
- *   - `null` or `undefined` = use env var or default (no vibes)
- *   - `"all"` = seed all vibes
- *   - `["todos", "maia"]` = seed specific vibes
- */
-async function handleSeed(seedVibesConfig = null) {
-	// Seeding is agent/sync mode only. Human mode gets vibes from sync server.
-	if (detectMode() !== 'agent') {
-		showToast('Seeding is agent/sync mode only. Vibes sync from server.', 'info', 3000)
-		return
-	}
-	if (!maia || !maia.id) {
-		showToast('Please sign in first', 'error', 3000)
-		return
-	}
-
-	try {
-		showToast('🌱 Reseeding database (preserving schemata)...', 'info', 2000)
-
-		// Get seeding config from parameter, environment variable, or default ("all" = seed all vibes)
-		// SEED_VIBES can be: null/undefined = use env/default, "all" = all vibes, or ["todos", "chat", "sparks", "logs"] = specific vibes
-		// Check VITE_MAIA_CITY_SEED_VIBES (maia-city specific) or VITE_SEED_VIBES or SEED_VIBES
-		const envVar =
-			typeof import.meta !== 'undefined'
-				? import.meta.env?.VITE_MAIA_CITY_SEED_VIBES ||
-					import.meta.env?.VITE_SEED_VIBES ||
-					import.meta.env?.SEED_VIBES
-				: null
-		const config =
-			seedVibesConfig !== null
-				? seedVibesConfig
-				: envVar
-					? envVar === 'all'
-						? 'all'
-						: envVar.split(',').map((s) => s.trim())
-					: 'all' // Default: seed all vibes (changed from null to "all")
-
-		// Automatically discover and import all vibe registries
-		const allVibeRegistries = await getAllVibeRegistries()
-
-		// Filter vibes based on config
-		const vibeRegistries = await filterVibesForSeeding(allVibeRegistries, config)
-
-		if (vibeRegistries.length === 0) {
-			if (allVibeRegistries.length === 0) {
-				showToast('No vibe registries found to seed', 'warning', 3000)
-			} else {
-				showToast(
-					`Seeding config filters out all vibes (config: ${JSON.stringify(config)})`,
-					'warning',
-					3000,
-				)
-			}
-			return
-		}
-
-		console.log(
-			`🌱 Seeding ${vibeRegistries.length} vibe(s) based on config: ${JSON.stringify(config)}`,
-		)
-
-		const { configs: mergedConfigs, data } = await buildSeedConfig(vibeRegistries)
-		const configsWithTools = { ...mergedConfigs, tool: getAllToolDefinitions() }
-		const schemas = getAllSchemas()
-		await maia.db({
-			op: 'seed',
-			configs: configsWithTools,
-			schemas,
-			data,
-		})
-
-		// Reload linked CoValues to see seeded data
-		await loadLinkedCoValues()
-
-		// Re-render
-		renderAppInternal()
-
-		showToast('✅ Database reseeded successfully!', 'success', 3000)
-	} catch (error) {
-		showToast(`Seeding failed: ${error.message}`, 'error', 5000)
-	}
-}
-
 // Expose globally for onclick handlers
 window.handleSignIn = signIn
-// Seeding: agent/sync mode only. Human mode gets vibes from sync server.
-if (detectMode() === 'agent') {
-	window.handleSeed = handleSeed
-	window.seedAllVibes = () => handleSeed('all')
-	window.seedVibes = (vibeKeys) => handleSeed(Array.isArray(vibeKeys) ? vibeKeys : [vibeKeys])
-}
 window.handleRegister = register
 
 // Swap signin/signup view mode (link-style toggle)
@@ -797,11 +748,11 @@ window.showToast = showToast // Expose for debugging
 // Navigation function for screen transitions
 // @param {string} screen - Screen to navigate to
 // @param {Object} [options] - Options
-// @param {boolean} [options.preserveSpark] - If true, keep currentSpark (Home from vibe → vibes grid, not sparks root)
+// @param {boolean} [options.preserveSpark] - If true, keep currentSpark (Home from agent → agents grid, not sparks root)
 function navigateToScreen(screen, options = {}) {
 	currentScreen = screen
 	if (screen === 'dashboard') {
-		currentVibe = null
+		currentAgent = null
 		currentContextCoValueId = null
 		if (!options.preserveSpark) {
 			currentSpark = null
@@ -824,13 +775,13 @@ function loadSpark(spark) {
 
 // switchView moved above selectCoValue
 
-function selectCoValue(coId, skipHistory = false) {
+function selectCoValueInternal(coId, skipHistory = false) {
 	// Collapse sidebars when selecting a co-value
 	collapseAllSidebars()
 
-	// If we're in vibe mode and selecting account, exit vibe mode first
-	if (currentVibe !== null && coId === maia?.id?.maiaId?.id) {
-		currentVibe = null
+	// If we're in agent mode and selecting account, exit agent mode first
+	if (currentAgent !== null && coId === maia?.id?.maiaId?.id) {
+		currentAgent = null
 		// If there's navigation history, restore the previous context instead of going to account
 		if (navigationHistory.length > 0) {
 			const previousCoId = navigationHistory.pop()
@@ -852,8 +803,20 @@ function selectCoValue(coId, skipHistory = false) {
 	// read() API in db-view.js handles loading and reactivity automatically
 }
 
+/** Resolve account co-id to profile when possible (for clicks); then select. */
+async function selectCoValue(coId, skipHistory = false) {
+	let targetCoId = coId
+	if (coId?.startsWith('co_z') && maia?.db) {
+		try {
+			const profileId = await resolveAccountToProfileCoId(maia, coId)
+			if (profileId) targetCoId = profileId
+		} catch (_e) {}
+	}
+	selectCoValueInternal(targetCoId, skipHistory)
+}
+
 /**
- * Collapse all sidebars (both DB viewer and vibe viewer)
+ * Collapse all sidebars (both DB viewer and agent viewer)
  */
 function collapseAllSidebars() {
 	// Collapse DB viewer sidebars
@@ -866,11 +829,11 @@ function collapseAllSidebars() {
 		dbMetadata.classList.add('collapsed')
 	}
 
-	// Collapse vibe viewer sidebars (in Shadow DOM)
-	const vibeContainer = document.querySelector('.vibe-container')
-	if (vibeContainer?.shadowRoot) {
-		const navAside = vibeContainer.shadowRoot.querySelector('.nav-aside')
-		const detailAside = vibeContainer.shadowRoot.querySelector('.detail-aside')
+	// Collapse agent viewer sidebars (in Shadow DOM)
+	const agentContainer = document.querySelector('.agent-container')
+	if (agentContainer?.shadowRoot) {
+		const navAside = agentContainer.shadowRoot.querySelector('.nav-aside')
+		const detailAside = agentContainer.shadowRoot.querySelector('.detail-aside')
 		if (navAside) {
 			navAside.classList.add('collapsed')
 		}
@@ -881,9 +844,9 @@ function collapseAllSidebars() {
 }
 
 function goBack() {
-	// If we're in vibe mode, exit vibe mode first
-	if (currentVibe !== null) {
-		loadVibe(null)
+	// If we're in agent mode, exit agent mode first
+	if (currentAgent !== null) {
+		loadAgent(null)
 		return
 	}
 
@@ -926,11 +889,11 @@ async function renderAppInternal() {
 			currentScreen,
 			currentView,
 			currentContextCoValueId,
-			currentVibe,
+			currentAgent,
 			currentSpark,
 			switchView,
 			selectCoValue,
-			loadVibe,
+			loadAgent,
 			loadSpark,
 			navigateToScreen,
 		)
@@ -943,57 +906,49 @@ async function renderAppInternal() {
 window.renderAppInternal = renderAppInternal
 
 /**
- * Load a vibe inline in the main context area
- * @param {string|null} vibeKey - Vibe key (e.g., 'todos') or null to exit vibe mode
+ * Load an agent inline in the main context area
+ * @param {string|null} agentKey - Agent key (e.g., 'todos') or null to exit agent mode
  */
-async function loadVibe(vibeKey) {
-	if (!maia && vibeKey !== null) {
+async function loadAgent(agentKey) {
+	if (!maia && agentKey !== null) {
 		return
 	}
 
-	// Ensure vibeKey is a string or null (not a function)
-	if (vibeKey !== null && typeof vibeKey !== 'string') {
+	if (agentKey !== null && typeof agentKey !== 'string') {
 		return
 	}
 
 	try {
 		if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
 		}
-		if (vibeKey === null) {
-			// Unloading vibe - destroy actors (cleanup subscriptions, prevent leak)
-			if (currentVibe && maia && maia.actorEngine) {
-				maia.actorEngine.destroyActorsForVibe(currentVibe)
+		if (agentKey === null) {
+			if (currentAgent && maia?.runtime) {
+				maia.runtime.destroyActorsForAgent(currentAgent)
 			}
 
-			// Clear container reference
-			_currentVibeContainer = null
-			window.currentVibeContainer = null
+			_currentAgentContainer = null
+			window.currentAgentContainer = null
 
-			currentVibe = null
-			// Navigate to vibes grid (preserve spark context)
+			currentAgent = null
 			navigateToScreen('dashboard', { preserveSpark: true })
 		} else {
-			// Destroy actors from previous vibe (cleanup subscriptions, prevent leak)
-			if (currentVibe && currentVibe !== vibeKey && maia && maia.actorEngine) {
-				maia.actorEngine.destroyActorsForVibe(currentVibe)
+			if (currentAgent && currentAgent !== agentKey && maia?.runtime) {
+				maia.runtime.destroyActorsForAgent(currentAgent)
 			}
 
-			// Save current context to history before entering vibe mode
 			if (currentContextCoValueId !== null) {
 				navigationHistory.push(currentContextCoValueId)
 			}
-			// Set current vibe state and navigate to vibe viewer
-			currentVibe = vibeKey
-			currentContextCoValueId = null // Clear DB context
-			currentScreen = 'vibe-viewer'
+			currentAgent = agentKey
+			currentContextCoValueId = null
+			currentScreen = 'agent-viewer'
 		}
 
-		// Re-render to show vibe content or return to dashboard
 		await renderAppInternal()
 		if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
 		}
 	} catch (_error) {
-		currentVibe = null
+		currentAgent = null
 		await renderAppInternal()
 	}
 }
@@ -1020,24 +975,21 @@ function toggleExpand(expandId) {
 window.switchView = switchView
 window.selectCoValue = selectCoValue
 window.goBack = goBack
-window.loadVibe = loadVibe
+window.loadAgent = loadAgent
 window.loadSpark = loadSpark
 window.navigateToScreen = navigateToScreen
 window.toggleExpand = toggleExpand
 
-// Mobile menu toggle
+// Account menu toggle (username opens dropdown with account ID + sign out)
 window.toggleMobileMenu = () => {
 	const menu = document.getElementById('mobile-menu')
-	if (menu) {
-		menu.classList.toggle('active')
-		const hamburger = document.querySelector('.hamburger-btn')
-		if (hamburger) {
-			hamburger.classList.toggle('active')
-		}
-	}
+	if (!menu) return
+	menu.classList.toggle('active')
+	const trigger = document.querySelector('.account-menu-toggle')
+	if (trigger) trigger.classList.toggle('active', menu.classList.contains('active'))
 }
 
-/** Toggle sidebar (DB viewer or vibe viewer). Pass containerSelector for Shadow DOM (vibe). */
+/** Toggle sidebar (DB viewer or agent viewer). Pass containerSelector for Shadow DOM. */
 function toggleSidebar(sidebarSelector, otherSidebarSelector, containerSelector) {
 	const root = containerSelector ? document.querySelector(containerSelector)?.shadowRoot : document
 	if (!root) return
@@ -1054,7 +1006,7 @@ function toggleSidebar(sidebarSelector, otherSidebarSelector, containerSelector)
 
 window.toggleDBLeftSidebar = () => toggleSidebar('.db-sidebar', '.db-metadata')
 window.toggleDBRightSidebar = () => toggleSidebar('.db-metadata', '.db-sidebar')
-window.toggleLeftSidebar = () => toggleSidebar('.nav-aside', '.detail-aside', '.vibe-container')
-window.toggleRightSidebar = () => toggleSidebar('.detail-aside', '.nav-aside', '.vibe-container')
+window.toggleLeftSidebar = () => toggleSidebar('.nav-aside', '.detail-aside', '.agent-container')
+window.toggleRightSidebar = () => toggleSidebar('.detail-aside', '.nav-aside', '.agent-container')
 
 init()

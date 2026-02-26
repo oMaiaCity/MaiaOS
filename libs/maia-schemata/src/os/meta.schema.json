@@ -21,8 +21,8 @@
 			"description": "Human-readable schema title (required)"
 		},
 		"cotype": {
-			"enum": ["comap", "colist", "costream"],
-			"description": "CRDT type at schema root. Schemas can be comap (with properties), colist (with items), or costream (with items). CoText is modeled as colist with string items."
+			"enum": ["comap", "colist", "costream", "cobinary"],
+			"description": "CRDT type at schema root. Schemas can be comap (with properties), colist (with items), or costream (with items). CoText is modeled as colist with string items. CoBinary is a binary stream for files."
 		},
 		"$co": {
 			"type": "string",
@@ -41,7 +41,7 @@
 		"indexing": {
 			"type": "boolean",
 			"default": false,
-			"description": "Whether instances of this schema should be indexed in account.os.{schemaCoId}"
+			"description": "Whether instances of this schema should be indexed in spark.os.indexes. Default: false. Set explicitly to true to index."
 		}
 	},
 	"required": ["title", "cotype"],
@@ -161,6 +161,26 @@
 					}
 				]
 			}
+		},
+		"cobinary": {
+			"description": "CoBinary - CRDT-based binary stream for files. Uses RawBinaryCoStream. Metadata: mimeType (required), fileName, totalSizeBytes.",
+			"type": "object",
+			"properties": {
+				"mimeType": {
+					"type": "string",
+					"description": "MIME type (e.g. application/pdf, image/png)"
+				},
+				"fileName": {
+					"type": "string",
+					"description": "Original file name"
+				},
+				"totalSizeBytes": {
+					"type": "integer",
+					"minimum": 0,
+					"description": "Total file size in bytes"
+				}
+			},
+			"required": ["mimeType"]
 		}
 	}
 }

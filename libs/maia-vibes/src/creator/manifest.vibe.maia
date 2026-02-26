@@ -1,7 +1,0 @@
-{
-	"$schema": "°Maia/schema/vibe",
-	"$id": "°Maia/vibe/logs",
-	"name": "Logs",
-	"description": "View logs",
-	"actor": "°Maia/creator/actor/vibe"
-}

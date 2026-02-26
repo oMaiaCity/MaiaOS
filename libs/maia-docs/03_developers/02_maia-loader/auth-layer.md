@@ -128,7 +128,7 @@ console.log("CoValues:", coValues);
 - **Purpose:** Run your app
 - **When:** After authentication
 - **What it gives:** Engines, actors, DSL execution
-- **Dependencies:** `@MaiaOS/script`, `@MaiaOS/db`, `@MaiaOS/schemata`
+- **Dependencies:** `@MaiaOS/engines`, `@MaiaOS/db`, `@MaiaOS/schemata`
 
 ---
 

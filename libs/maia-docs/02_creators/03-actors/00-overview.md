@@ -167,13 +167,12 @@ Create a file named `{name}.actor.maia`:
 {
   "$schema": "@schema/actor",
   "$id": "@actor/todo",
-  "role": "todo-list",
+  "@label": "todo-list",
   "context": "@context/todo",
-  "state": "@state/todo",
   "view": "@view/todo",
   "brand": "@style/brand",
   "style": "@style/todo",
-  "inbox": "@inbox/todo"
+
 }
 ```
 
@@ -185,13 +184,13 @@ Create a file named `{name}.actor.maia`:
 |----------|------|----------|-------------|
 | `$schema` | string | Yes | Schema reference (`@schema/actor`) |
 | `$id` | string | Yes | Unique actor identifier (`@actor/todo`) |
-| `role` | string | No | Actor role (e.g., `"agent"`, `"composite"`, `"todo-list"`) |
+| `@label` | string | No | Actor label (e.g., `"agent"`, `"composite"`, `"todo-list"`) |
 | `context` | string | No | Co-id reference to context |
 | `state` | string | Yes | Co-id reference to state machine |
 | `view` | string | No | Co-id reference to view (optional for service actors) |
 | `brand` | string | Yes | Co-id reference to brand style (required) |
 | `style` | string | No | Co-id reference to local style (optional) |
-| `inbox` | string | No | Co-id reference to inbox costream |
+| `inbox` | string | No | **Derived by convention** from actor `$id`; do not define in config. Each actor has an inbox costream at a derived namekey; the engine and seed set this automatically. |
 | `messageTypes` | array | No | Array of message types this actor accepts |
 
 **Note:** Children are defined in context files via the `@actors` system property. See [01-vibe-pattern.md](./01-vibe-pattern.md#system-properties-in-context).
@@ -237,7 +236,7 @@ Orchestrating actors: business logic, data management. Typically minimal or no v
 {
   "$schema": "@schema/actor",
   "$id": "@actor/vibe",
-  "role": "agent",
+  "@label": "agent",
   "context": "@context/agent",
   "view": "@view/agent",
   "state": "@state/agent",

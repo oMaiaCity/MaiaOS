@@ -19,22 +19,22 @@ import { resolve } from '../schema/resolver.js'
  * Note: This validates current state, not the merged state after transactions
  * Full validation of merged state would require merging transactions, which is complex
  * This ensures schema is available and validates current state as a proxy
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} coId - Co-value ID
  * @returns {Promise<Object|null>} Current content or null if can't extract
  */
-async function extractCurrentContent(backend, coId) {
+async function extractCurrentContent(peer, coId) {
 	try {
 		// Get existing co-value if available
-		const coValueCore = backend.getCoValue(coId)
-		if (!coValueCore || !backend.isAvailable(coValueCore)) {
+		const coValueCore = peer.getCoValue(coId)
+		if (!coValueCore || !peer.isAvailable(coValueCore)) {
 			// Co-value not available - this is OK for new co-values
 			// Validation will happen when they're created via CRUD API
 			return null
 		}
 
 		// Get current content
-		const currentContent = backend.getCurrentContent(coValueCore)
+		const currentContent = peer.getCurrentContent(coValueCore)
 		if (!currentContent) {
 			return null
 		}
@@ -52,17 +52,17 @@ async function extractCurrentContent(backend, coId) {
 
 /**
  * Wait for schema to sync if not available
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} schemaCoId - Schema co-id to wait for
  * @param {number} timeoutMs - Timeout in milliseconds (default: 5000)
  * @returns {Promise<Object|null>} Schema definition or null if timeout
  */
-async function waitForSchemaSync(backend, schemaCoId, timeoutMs = 5000) {
+async function waitForSchemaSync(peer, schemaCoId, timeoutMs = 5000) {
 	const startTime = Date.now()
 
 	while (Date.now() - startTime < timeoutMs) {
 		try {
-			const schema = await resolve(backend, schemaCoId, { returnType: 'schema' })
+			const schema = await resolve(peer, schemaCoId, { returnType: 'schema' })
 			if (schema) {
 				return schema
 			}
@@ -80,16 +80,16 @@ async function waitForSchemaSync(backend, schemaCoId, timeoutMs = 5000) {
 
 /**
  * Validate remote transactions before they enter CRDT
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {Object} dbEngine - Database engine (for schema resolution)
  * @param {Object} msg - NewContentMessage from sync
  * @returns {Promise<{valid: boolean, error: string|null}>} Validation result
  */
-async function validateRemoteTransactions(backend, dbEngine, msg) {
+async function validateRemoteTransactions(peer, dbEngine, msg) {
 	const coId = msg.id
 
 	// Use universal detection helper (consolidates all detection logic)
-	const detection = isAccountGroupOrProfile(msg, backend, coId)
+	const detection = isAccountGroupOrProfile(msg, peer, coId)
 
 	// Groups, accounts, and profiles don't need headerMeta.$schema (they're created by CoJSON without it)
 	if (detection.isGroup || detection.isAccount || detection.isProfile) {
@@ -125,11 +125,11 @@ async function validateRemoteTransactions(backend, dbEngine, msg) {
 
 	// CRITICAL: Wait for schema to sync if not available
 	// This ensures schema is available before validating data
-	let schema = await resolve(backend, schemaCoId, { returnType: 'schema' })
+	let schema = await resolve(peer, schemaCoId, { returnType: 'schema' })
 	if (!schema) {
 		// Schema not available - wait for it to sync
 		console.log(`[ValidationHook] Schema ${schemaCoId} not available, waiting for sync...`)
-		schema = await waitForSchemaSync(backend, schemaCoId, 5000)
+		schema = await waitForSchemaSync(peer, schemaCoId, 5000)
 
 		if (!schema) {
 			// Schema still not available after timeout - REJECT transactions
@@ -144,7 +144,7 @@ async function validateRemoteTransactions(backend, dbEngine, msg) {
 	// Note: We validate current state as a proxy for merged state
 	// Full validation of merged state would require merging transactions (complex)
 	// This ensures schema is available and validates current state
-	const content = await extractCurrentContent(backend, coId)
+	const content = await extractCurrentContent(peer, coId)
 
 	// If content can't be extracted (new co-value), skip validation
 	// Validation will happen when co-value is created via CRUD API
@@ -161,7 +161,9 @@ async function validateRemoteTransactions(backend, dbEngine, msg) {
 	// Note: Full validation would require merging transactions, which is complex
 	// This approach ensures schema is available and validates current state
 	try {
-		await loadSchemaAndValidate(backend, schemaCoId, content, `remote sync for ${coId}`, { dbEngine })
+		await loadSchemaAndValidate(peer, schemaCoId, content, `remote sync for ${coId}`, {
+			dataEngine: dbEngine,
+		})
 
 		return { valid: true, error: null }
 	} catch (error) {
@@ -175,12 +177,12 @@ async function validateRemoteTransactions(backend, dbEngine, msg) {
 /**
  * Wrap sync manager's handleNewContent method with validation
  * @param {Object} syncManager - Original sync manager instance
- * @param {Object} backend - Backend instance (for validation)
+ * @param {Object} peer - Backend instance (for validation)
  * @param {Object} dbEngine - Database engine (for schema resolution)
  * @returns {Object} Wrapped sync manager with validation
  */
-export function wrapSyncManagerWithValidation(syncManager, backend, dbEngine) {
-	if (!syncManager || !backend) {
+export function wrapSyncManagerWithValidation(syncManager, peer, dbEngine) {
+	if (!syncManager || !peer) {
 		return syncManager
 	}
 
@@ -196,7 +198,7 @@ export function wrapSyncManagerWithValidation(syncManager, backend, dbEngine) {
 	syncManager.handleNewContent = async (msg, from) => {
 		// Validate remote transactions BEFORE they enter CRDT
 		if (msg?.id && dbEngine) {
-			const validation = await validateRemoteTransactions(backend, dbEngine, msg)
+			const validation = await validateRemoteTransactions(peer, dbEngine, msg)
 
 			if (!validation.valid) {
 				// Return error to sync manager (prevents transactions from being merged)

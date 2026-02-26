@@ -1,0 +1,11 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/todos/actor/intent",
+	"@label": "@todos/intent",
+	"context": "°Maia/todos/context/intent",
+	"view": "°Maia/todos/view/intent",
+	"process": "°Maia/todos/process/intent",
+	"brand": "°Maia/brand/maiacity",
+	"inbox": "°Maia/todos/inbox/intent",
+	"interface": []
+}

@@ -35,9 +35,8 @@ Child actors created only when referenced by `context.currentView`. Service chil
 
 **External (actor-to-actor):**
 ```javascript
-os.sendMessage('actor_todo_001', {
-  type: 'notification',
-  payload: { text: 'Reminder' }  // Resolved value, not expressions
+os.deliverEvent(senderId, 'actor_todo_001', 'notification', {
+  text: 'Reminder'  // Resolved value, not expressions
 });
 ```
 

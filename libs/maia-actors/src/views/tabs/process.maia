@@ -1,0 +1,46 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/views/tabs/process",
+	"@label": "@maia/actor/views/tabs/process",
+	"handlers": {
+		"SWITCH_VIEW": [
+			{
+				"ctx": {
+					"viewMode": "$$viewMode"
+				}
+			},
+			{
+				"ctx": {
+					"currentView": {
+						"$find": {
+							"array": "$tabs",
+							"where": {
+								"$eq": [
+									"$$id",
+									"$event.viewMode"
+								]
+							},
+							"return": "$$actor"
+						}
+					},
+					"tabsWithActive": {
+						"$map": {
+							"array": "$tabs",
+							"return": {
+								"id": "$$id",
+								"label": "$$label",
+								"actor": "$$actor",
+								"isActive": {
+									"$eq": [
+										"$$id",
+										"$event.viewMode"
+									]
+								}
+							}
+						}
+					}
+				}
+			}
+		]
+	}
+}

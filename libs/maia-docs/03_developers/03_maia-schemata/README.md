@@ -145,18 +145,41 @@ Two-stage payload resolution: DOM markers → MaiaScript expressions.
 
 **See:** `libs/maia-schemata/src/payload-resolver.js`
 
-### 6. AJV CoJSON Plugin
+### 6. Validation Plugin Registry (Pluggable Validation)
 
-Custom AJV plugin that adds support for CoJSON types.
+Validation is extensible via `ValidationPluginRegistry`. Plugins register keywords and formats with AJV.
 
-**What it does:**
-- Adds `cotype` keyword (validates comap/colist/costream at schema root)
-- Adds `$co` keyword (macro for co-id references in properties)
-- Handles both direct arrays and wrapped objects for colist/costream
+**Built-in plugins:**
+- **@schemata/cojson** – `cotype`, `$co`, `indexing` keywords
+- **@schemata/cotext** – `grapheme` format, `cotext` keyword for plaintext colists
+
+**Adding custom plugins:**
+```javascript
+import { ValidationEngine, ValidationPluginRegistry } from '@MaiaOS/schemata'
+
+const registry = new ValidationPluginRegistry()
+registry.registerPlugin('my-plugin', {
+  keywords: [{ keyword: 'myKeyword', validate: () => true, metaSchema: { type: 'boolean' } }],
+  formats: [{ name: 'myFormat', definition: { type: 'string', validate: (s) => s.length > 0 } }]
+})
+
+const engine = new ValidationEngine({ validationPluginRegistry: registry })
+```
 
 **See:** [CoJSON Integration](./cojson-integration.md)
 
-### 7. Message Type Schemas
+### 7. CoText Schema (Plaintext Colists)
+
+CoText = `cotype: colist` with `items.format: grapheme`. Extends colist, no new root keywords.
+
+**Schema:** `°Maia/schema/os/cotext`
+```json
+{ "cotype": "colist", "items": { "type": "string", "format": "grapheme" } }
+```
+
+**Valid data:** `['H','e','l','l','o']` – each item is one Unicode grapheme.
+
+### 8. Message Type Schemas
 
 Schemas for validating message payloads in actor communication.
 
@@ -277,14 +300,14 @@ const coId = registry.get('@schema/actor'); // Returns 'co_z123...'
 
 ## Integration Points
 
-### With maia-script
+### With maia-engines
 
-The `maia-script` package uses `maia-schemata` for:
+The `maia-engines` package uses `maia-schemata` for:
 - Validating `.maia` files during parsing
 - Transforming schemas/instances before seeding to IndexedDB
 - Runtime validation of data operations
 
-**See:** `libs/maia-script/src/o/engines/db-engine/backend/indexeddb.js`
+**See:** `libs/maia-engines/src/engines/data.engine.js`
 
 ### With maia-db
 
@@ -411,5 +434,6 @@ transformInstanceForSeeding(instance, coIdMap);
 - Co-ID generator: `libs/maia-schemata/src/co-id-generator.js`
 - Expression resolver: `libs/maia-schemata/src/expression-resolver.js`
 - Payload resolver: `libs/maia-schemata/src/payload-resolver.js`
-- AJV plugin: `libs/maia-schemata/src/ajv-co-types-plugin.js`
+- Validation plugins: `libs/maia-schemata/src/plugins/` (cojson.plugin.js, cotext.plugin.js)
+- AJV plugin (deprecated): `libs/maia-schemata/src/ajv-co-types-plugin.js`
 - Message schemas: `libs/maia-schemata/src/message/`

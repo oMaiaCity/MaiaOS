@@ -6,21 +6,18 @@
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {
-		"role": {
+		"@label": {
 			"type": "string",
-			"description": "Actor role (e.g., 'kanban-view', 'vibe', 'composite', 'leaf')"
+			"description": "Actor label (e.g., '@ai/chat', 'kanban-view', 'agent')"
 		},
 		"context": {
 			"$co": "°Maia/schema/context",
 			"description": "Co-id reference to context definition"
 		},
-		"view": {
-			"$co": "°Maia/schema/view",
-			"description": "Co-id reference to view definition"
-		},
-		"state": {
-			"$co": "°Maia/schema/state",
-			"description": "Co-id reference to state machine definition"
+		"view": { "$co": "°Maia/schema/view", "description": "Co-id reference to view definition" },
+		"process": {
+			"$co": "°Maia/schema/process",
+			"description": "Co-id reference to process config (GenServer-style handlers)"
 		},
 		"brand": {
 			"$co": "°Maia/schema/style",
@@ -34,12 +31,9 @@
 			"$co": "°Maia/schema/inbox",
 			"description": "Co-id reference to message inbox costream (append-only message feed)"
 		},
-		"messageTypes": {
-			"type": "array",
-			"items": {
-				"type": "string"
-			},
-			"description": "REQUIRED: Message types this actor accepts (exhaustive list - like sealed protocol). All actors must declare their message contracts."
+		"interface": {
+			"$co": "°Maia/schema/meta",
+			"description": "Co-id reference to interface schema (standard Maia schema whose properties define accepted events with typed payloads). Every actor with an interface is LLM-callable by default."
 		}
 	}
 }

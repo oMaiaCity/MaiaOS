@@ -1,0 +1,28 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/views/logs/process",
+	"@label": "@maia/actor/views/logs/process",
+	"handlers": {
+		"ERROR": [
+			{
+				"ctx": {
+					"error": "$$errors.0.message"
+				}
+			}
+		],
+		"RETRY": [
+			{
+				"ctx": {
+					"error": null
+				}
+			}
+		],
+		"DISMISS": [
+			{
+				"ctx": {
+					"error": null
+				}
+			}
+		]
+	}
+}

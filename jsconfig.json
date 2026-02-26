@@ -1,16 +1,16 @@
 {
 	"compilerOptions": {
 		"paths": {
-			"@MaiaOS/loader": ["./libs/maia-loader/src/index.js"],
 			"@MaiaOS/db": ["./libs/maia-db/src/index.js"],
-			"@MaiaOS/self": ["./libs/maia-self/src/index.js"],
-			"@MaiaOS/script": ["./libs/maia-script/src"],
-			"@MaiaOS/script/*": ["./libs/maia-script/src/*"],
+			"@MaiaOS/engines": ["./libs/maia-engines/src"],
+			"@MaiaOS/engines/*": ["./libs/maia-engines/src/*"],
+			"@MaiaOS/loader": ["./libs/maia-loader/src/index.js"],
 			"@MaiaOS/schemata": ["./libs/maia-schemata/src"],
-			"@MaiaOS/operations": ["./libs/maia-operations/src"],
-			"@MaiaOS/operations/*": ["./libs/maia-operations/src/*"],
-			"@MaiaOS/tools": ["./libs/maia-tools/src"],
-			"@MaiaOS/vibes": ["./libs/maia-vibes/src"]
+			"@MaiaOS/schemata/*": ["./libs/maia-schemata/src/*"],
+			"@MaiaOS/self": ["./libs/maia-self/src/index.js"],
+			"@MaiaOS/actors": ["./libs/maia-actors/src"],
+			"@MaiaOS/agents": ["./libs/maia-agents/src"],
+			"@MaiaOS/maia-voice": ["./libs/maia-voice/src/index.js"]
 		}
 	}
 }

@@ -16,36 +16,36 @@ import * as collectionHelpers from './collection-helpers.js'
  * ARCHITECTURE: Unified delete for all co-types with automatic schema indexing.
  * Flow: Remove from index -> Clear content -> Sync storage
  *
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} schema - Schema co-id (co_z...)
  * @param {string} id - Record co-id to delete
  * @returns {Promise<boolean>} true if deleted successfully
  */
-export async function deleteRecord(backend, schema, id) {
+export async function deleteRecord(peer, schema, id) {
 	// Ensure CoValue is loaded before deleting (jazz-tools pattern)
-	const coValueCore = await collectionHelpers.ensureCoValueLoaded(backend, id, {
+	const coValueCore = await collectionHelpers.ensureCoValueLoaded(peer, id, {
 		waitForAvailable: true,
 	})
 	if (!coValueCore) {
-		throw new Error(`[CoJSONBackend] CoValue not found: ${id}`)
+		throw new Error(`[MaiaDB] CoValue not found: ${id}`)
 	}
 
-	if (!backend.isAvailable(coValueCore)) {
-		throw new Error(`[CoJSONBackend] CoValue not available: ${id}`)
+	if (!peer.isAvailable(coValueCore)) {
+		throw new Error(`[MaiaDB] CoValue not available: ${id}`)
 	}
 
-	const content = backend.getCurrentContent(coValueCore)
+	const content = peer.getCurrentContent(coValueCore)
 	const rawType = content?.cotype || content?.type
 
 	// Step 1: Remove from schema index (MUST succeed before clearing content)
 	// This ensures the co-value is removed from all indexes before clearing content
 	// CRITICAL: If index removal fails, error propagates and deletion aborts (prevents orphaned skeletons)
 	// Atomic deletion guarantee: either fully delete (index removal + property clearing) or fully fail (nothing changes)
-	const itemHeader = backend.getHeader(coValueCore)
+	const itemHeader = peer.getHeader(coValueCore)
 	const itemHeaderMeta = itemHeader?.meta || null
 	const itemSchemaCoId = itemHeaderMeta?.$schema || schema
 
-	await removeFromIndex(backend, id, itemSchemaCoId)
+	await removeFromIndex(peer, id, itemSchemaCoId)
 	// If this fails, error propagates and deletion aborts (prevents orphaned skeletons)
 
 	// Step 2: Clear content based on co-type (unified handling for all types)
@@ -106,13 +106,13 @@ export async function deleteRecord(backend, schema, id) {
 		deletionSuccessful = true
 	} else {
 		throw new Error(
-			`[CoJSONBackend] Delete not supported for type: ${rawType}. Supported types: comap, colist, costream, coplaintext`,
+			`[MaiaDB] Delete not supported for type: ${rawType}. Supported types: comap, colist, costream, coplaintext`,
 		)
 	}
 
 	// Step 3: Wait for storage sync to ensure deletion is persisted
-	if (deletionSuccessful && backend.node.storage) {
-		await backend.node.syncManager.waitForStorageSync(id)
+	if (deletionSuccessful && peer.node.storage) {
+		await peer.node.syncManager.waitForStorageSync(id)
 	}
 
 	return deletionSuccessful

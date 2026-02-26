@@ -28,7 +28,7 @@ App Service Actor
 {
   "$schema": "@schema/actor",
   "$id": "@actor/vibe",
-  "role": "agent",
+  "@label": "agent",
   "context": "@context/vibe",
   "state": "@state/vibe",
   "view": "@view/vibe",
@@ -73,7 +73,7 @@ App Composite Actor
 {
   "$schema": "@schema/actor",
   "$id": "@actor/composite",
-  "role": "composite",
+  "@label": "composite",
   "context": "@context/composite",
   "view": "@view/composite",
   "state": "@state/composite",

@@ -1,0 +1,53 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/actor/views/list-detail/view",
+	"@label": "@maia/actor/views/list-detail/view",
+	"content": {
+		"tag": "div",
+		"class": "layout-row",
+		"children": [
+			{
+				"tag": "aside",
+				"class": "aside-list",
+				"children": [
+					{
+						"tag": "div",
+						"class": "list-title",
+						"text": "$title"
+					},
+					{
+						"tag": "ul",
+						"class": "list",
+						"$each": {
+							"items": "$listItems",
+							"template": {
+								"tag": "li",
+								"class": "list-item",
+								"children": [
+									{
+										"tag": "span",
+										"class": "list-item-label",
+										"text": "$$label"
+									}
+								],
+								"$on": {
+									"click": {
+										"send": "SELECT_ITEM",
+										"payload": {
+											"item": "$$"
+										}
+									}
+								}
+							}
+						}
+					}
+				]
+			},
+			{
+				"tag": "main",
+				"class": "main-area",
+				"$slot": "$mainContentActor"
+			}
+		]
+	}
+}

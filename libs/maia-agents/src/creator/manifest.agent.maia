@@ -1,0 +1,15 @@
+{
+	"$schema": "°Maia/schema/agent",
+	"$id": "°Maia/agent/logs",
+	"name": "Creator",
+	"description": "Developer logs and diagnostics",
+	"actor": "°Maia/creator/actor/intent",
+	"dependencies": [
+		"°Maia/creator/actor/intent",
+		"°Maia/actor/views/layout-creator",
+		"°Maia/actor/views/logs",
+		"°Maia/actor/services/profile-image",
+		"°Maia/actor/views/list-detail/for-actors",
+		"°Maia/actor/views/list-detail/for-schemas"
+	]
+}

@@ -10,12 +10,19 @@
 		radial-gradient(at 100% 0%, rgba(78, 154, 88, 0.05) 0px, transparent 50%),
 		radial-gradient(at 100% 100%, rgba(194, 123, 102, 0.05) 0px, transparent 50%),
 		radial-gradient(at 0% 100%, rgba(230, 185, 77, 0.05) 0px, transparent 50%);
-	padding: 1.25rem;
-	gap: 1.25rem;
+	padding: 0.5rem 1.25rem 1.25rem;
+	gap: 0.5rem;
 	font-family: var(--font-body);
 	font-weight: var(--font-weight-normal);
 	overflow: hidden;
 	position: relative;
+}
+
+@supports (height: 100dvh) {
+	.db-container {
+		min-height: 100dvh;
+		height: 100dvh;
+	}
 }
 
 /* Liquid Glass Card Design - Brand Guidelines */
@@ -41,7 +48,7 @@
 
 .db-header.whitish-card {
 	padding: 0.5rem 1.25rem;
-	margin: 0 0 0.25rem 0;
+	margin: 0;
 	border-radius: 24px;
 	background: rgba(255, 255, 255, 0.3);
 	border: 1px solid rgba(255, 255, 255, 0.2);
@@ -105,13 +112,15 @@
 }
 
 .db-header h1 {
-	font-family: "Indie Flower", var(--font-heading), cursive;
+	font-family: var(--font-heading);
 	font-size: 1.5rem;
 	font-weight: 400;
 	color: var(--color-marine-blue);
 	margin: 0;
 	letter-spacing: -0.02em;
 	font-style: normal;
+	line-height: 1;
+	padding-top: var(--font-heading-optical-shift);
 }
 
 .db-status {
@@ -133,7 +142,35 @@
 	font-family: var(--font-body), system-ui, sans-serif;
 }
 
-/* Account ID in hamburger menu (full length + copy button) */
+/* Account menu toggle (click username to open dropdown: account ID + sign out) */
+.account-menu-toggle {
+	background: inherit;
+	border: none;
+	padding: inherit;
+	font: inherit;
+	color: inherit;
+	cursor: pointer;
+	min-height: 28px;
+	display: inline-flex;
+	align-items: center;
+}
+
+/* Desktop/tablet: compact label, balanced padding (match mobile proportions) */
+@media (min-width: 1025px) {
+	.header-right .account-menu-toggle {
+		font-size: 0.65rem;
+		padding: 0.25rem 0.6rem;
+	}
+}
+.account-menu-toggle:hover {
+	opacity: 0.85;
+}
+.account-menu-toggle.active {
+	background: rgba(255, 255, 255, 0.2);
+	border-radius: 9999px;
+}
+
+/* Account ID in dropdown (copy button left, full ID right) */
 .mobile-menu-account-id {
 	display: flex;
 	align-items: center;
@@ -143,6 +180,22 @@
 	margin-bottom: 0.25rem;
 	min-width: 0;
 }
+.mobile-menu-copy-id {
+	flex-shrink: 0;
+	width: 28px;
+	height: 28px;
+	padding: 0;
+	border: none;
+	border-radius: 6px;
+	background: rgba(255, 255, 255, 0.15);
+	color: var(--color-marine-blue);
+	font-size: 0.9rem;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	transition: background 0.2s;
+}
 .mobile-menu-account-id-value {
 	flex: 1;
 	min-width: 0;
@@ -151,22 +204,6 @@
 	word-break: break-all;
 	overflow-wrap: break-word;
 	color: var(--color-marine-blue-muted);
-}
-.mobile-menu-copy-id {
-	flex-shrink: 0;
-	width: 24px;
-	height: 24px;
-	padding: 0;
-	border: none;
-	border-radius: 4px;
-	background: rgba(255, 255, 255, 0.15);
-	color: var(--color-marine-blue);
-	font-size: 0.75rem;
-	cursor: pointer;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	transition: background 0.2s;
 }
 .mobile-menu-copy-id:hover {
 	background: rgba(255, 255, 255, 0.25);
@@ -789,31 +826,6 @@
 	margin-bottom: 0;
 }
 
-.seed-sidebar-item {
-	display: flex;
-	align-items: center;
-	padding: 0.6rem 0.75rem;
-	border-radius: 0.75rem;
-	cursor: pointer;
-	transition: all 0.2s;
-	color: #065f46; /* emerald-800 */
-	background: #ecfdf5; /* emerald-50 */
-	border: 1px solid #d1fae5; /* emerald-100 */
-	font-size: 0.85rem;
-	font-weight: 600;
-}
-
-.seed-sidebar-item:hover {
-	background: #d1fae5; /* emerald-100 */
-	border-color: #a7f3d0; /* emerald-200 */
-}
-
-.seed-sidebar-item .sidebar-label {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-}
-
 .back-sidebar-item {
 	display: flex;
 	align-items: center;
@@ -1006,6 +1018,11 @@
 .badge-costream {
 	background: #fef3c7; /* amber-100 */
 	color: #92400e; /* amber-800 */
+}
+
+.badge-cobinary {
+	background: #e0e7ff; /* indigo-100 */
+	color: #3730a3; /* indigo-800 */
 }
 
 /* List/Stream Container Styles */
@@ -1959,8 +1976,13 @@ pre {
 .loading-connecting-overlay {
 	position: fixed;
 	inset: 0;
-	background: rgba(0, 0, 0, 0.85);
-	backdrop-filter: blur(10px);
+	background: var(--color-soft-clay);
+	background-image:
+		radial-gradient(at 0% 0%, rgba(0, 189, 214, 0.08) 0px, transparent 50%),
+		radial-gradient(at 100% 0%, rgba(78, 154, 88, 0.08) 0px, transparent 50%),
+		radial-gradient(at 100% 100%, rgba(194, 123, 102, 0.08) 0px, transparent 50%),
+		radial-gradient(at 0% 100%, rgba(230, 185, 77, 0.08) 0px, transparent 50%);
+	backdrop-filter: blur(12px);
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -1968,14 +1990,35 @@ pre {
 	gap: 2rem;
 	z-index: 1000;
 	text-align: center;
-	color: white;
+	color: var(--color-marine-blue);
+	font-family: var(--font-body);
+}
+
+.loading-connecting-content {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.loading-connecting-overlay h2 {
+	font-family: var(--font-heading);
+	font-size: 1.5rem;
+	font-weight: 400;
+	margin: 0;
+}
+
+.loading-connecting-subtitle {
+	font-size: 1rem;
+	color: var(--color-marine-blue-muted);
+	margin-bottom: 0.5rem;
 }
 
 .loading-connecting-overlay .loading-spinner {
 	width: 64px;
 	height: 64px;
-	border: 4px solid rgba(255, 255, 255, 0.2);
-	border-top-color: rgba(255, 255, 255, 0.8);
+	border: 4px solid rgba(0, 31, 51, 0.12);
+	border-top-color: var(--color-marine-blue);
 	animation: spin 1s linear infinite;
 }
 
@@ -1984,10 +2027,14 @@ pre {
 	align-items: center;
 	gap: 0.5rem;
 	padding: 0.5rem 1rem;
-	background: rgba(255, 255, 255, 0.1);
-	border-radius: 8px;
+	background: rgba(255, 255, 255, 0.5);
+	backdrop-filter: blur(8px) saturate(150%);
+	border: 1px solid rgba(255, 255, 255, 0.4);
+	border-radius: 9999px;
+	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.04);
 	font-size: 0.875rem;
 	margin-top: 1rem;
+	color: var(--color-marine-blue);
 }
 
 .loading-connecting-indicator {
@@ -2002,7 +2049,7 @@ pre {
 	margin-top: 0.5rem;
 }
 
-.vibe-card {
+.agent-card {
 	flex: 1;
 	height: 100%;
 	display: flex;
@@ -2017,8 +2064,8 @@ pre {
 	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
 }
 
-/* Vibe Container - Full width/height for inline vibe rendering */
-.vibe-container {
+/* Agent Container - Full width/height for inline agent rendering */
+.agent-container {
 	width: 100%;
 	height: 100%;
 	flex: 1;
@@ -2033,34 +2080,35 @@ pre {
 .dashboard-main {
 	flex: 1;
 	overflow-y: auto;
-	padding: 0.5rem 0 1rem;
+	padding: 0 0 1rem;
 	z-index: 10;
 }
 @media (min-width: 600px) {
 	.dashboard-main {
-		padding: 1rem 0;
+		padding: 0 0 1rem;
 	}
 }
 
 .dashboard-grid {
 	display: grid;
 	grid-template-columns: repeat(2, 1fr);
-	gap: 0.75rem;
+	gap: 0.5rem;
 	max-width: 100%;
-	margin: 0 auto;
-	padding: 0 0.5rem;
+	margin: 0;
+	padding: 0;
 }
 @media (min-width: 600px) {
 	.dashboard-grid {
 		grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-		gap: 1.25rem;
+		gap: 0.75rem;
 		max-width: 1200px;
-		padding: 0 1rem;
+		margin: 0 auto;
+		padding: 0;
 	}
 }
 @media (min-width: 900px) {
 	.dashboard-grid {
-		gap: 1.5rem;
+		gap: 0.875rem;
 	}
 }
 
@@ -2073,8 +2121,8 @@ pre {
 
 @media (hover: hover) {
 	.dashboard-card:hover {
-		transform: translateY(-10px);
-		box-shadow: 0 30px 60px rgba(0, 0, 0, 0.1);
+		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+		background: rgba(255, 255, 255, 0.5);
 	}
 }
 
@@ -2171,16 +2219,16 @@ pre {
 	}
 }
 
-/* Vibe Viewer Main */
-.vibe-viewer-main {
-	flex: 1;
+/* Agent Viewer Main - spans full height to bottom minus margin/padding on all viewports */
+.agent-viewer-main {
+	flex: 1 1 0;
+	min-height: 0;
 	height: 100%;
 	overflow: hidden;
 	z-index: 10;
 	padding: 0;
 	display: flex;
 	flex-direction: column;
-	min-height: 0;
 	position: relative;
 }
 
@@ -2218,7 +2266,7 @@ pre {
 	gap: 0.5rem;
 	justify-content: flex-start;
 	flex-shrink: 0;
-	padding: 0.75rem 1rem;
+	padding: 1rem 1rem 0 1rem; /* Same spacing from left (1rem), button at bottom edge for equal bottom spacing */
 }
 
 .bottom-navbar-center {
@@ -2236,7 +2284,7 @@ pre {
 	align-items: center;
 	justify-content: flex-end;
 	flex-shrink: 0;
-	padding: 0.75rem 1rem;
+	padding: 1rem 1rem 0 1rem; /* Mirror left: same spacing from right/bottom */
 }
 
 /* Bottom Corner Sidebar Toggle Buttons */
@@ -2341,41 +2389,11 @@ pre {
 	font-size: 0.8rem;
 }
 
-/* Hamburger Menu Button (mobile only) */
-.hamburger-btn {
-	display: none; /* Hidden on desktop */
-	flex-direction: column;
-	justify-content: space-around;
-	width: 20px;
-	height: 20px;
-	background: transparent;
-	border: none;
-	cursor: pointer;
+/* Icon-only home button (bottom-left in vibe viewer) */
+.bottom-home-btn.home-btn-icon-only {
+	width: 40px;
 	padding: 0;
-	z-index: 1001;
-	gap: 3px;
-	flex-shrink: 0;
-}
-
-.hamburger-btn span {
-	width: 100%;
-	height: 2px;
-	background: var(--color-marine-blue);
-	border-radius: 1px;
-	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-	transform-origin: center;
-}
-
-.hamburger-btn.active span:nth-child(1) {
-	transform: rotate(45deg) translate(5px, 5px);
-}
-
-.hamburger-btn.active span:nth-child(2) {
-	opacity: 0;
-}
-
-.hamburger-btn.active span:nth-child(3) {
-	transform: rotate(-45deg) translate(5px, -5px);
+	min-width: 40px;
 }
 
 /* Mobile Menu */
@@ -2402,21 +2420,8 @@ pre {
 
 /* Mobile & Tablet Responsive Styles */
 @media (max-width: 1024px) {
-	/* Show hamburger, hide desktop header-right items except account info */
-	.hamburger-btn {
-		display: flex;
-	}
-
-	/* Hide right-side items except account info, sync status, and hamburger */
-	.header-right .sign-out-btn {
-		display: none;
-	}
-
-	/* Keep account info and hamburger visible */
-	.header-right .db-status,
-	.header-right .db-status-name {
-		display: inline-flex;
-		align-items: center;
+	/* Account username smaller on mobile */
+	.header-right .account-menu-toggle {
 		font-size: 0.65rem;
 		padding: 0.25rem 0.5rem;
 	}
@@ -2591,13 +2596,9 @@ pre {
 		padding-bottom: 0; /* Remove bottom padding from list container */
 	}
 
-	/* Ensure vibe viewer doesn't overflow below bottom navbar */
-	.vibe-viewer-main {
-		padding-bottom: 60px; /* Account for bottom navbar height */
-		box-sizing: border-box; /* Ensure padding is included in height */
-	}
+	/* Agent viewer spans full height – navbar overlays bottom, no gap */
 
-	.vibe-card {
+	.agent-card {
 		margin-bottom: 0; /* Remove any extra margin */
 	}
 
@@ -2607,9 +2608,8 @@ pre {
 }
 
 /* Global styles for sliding sidebars (affects Shadow DOM) */
-/* These target the vibe container's Shadow DOM content */
-.vibe-container ::slotted(.nav-aside),
-.vibe-container ::slotted(.detail-aside) {
+.agent-container .nav-aside,
+.agent-container .detail-aside {
 	transition:
 		transform 0.3s cubic-bezier(0.4, 0, 0.2, 1),
 		opacity 0.3s ease;
@@ -2617,3 +2617,280 @@ pre {
 
 /* For Shadow DOM access, we'll use CSS custom properties and JavaScript */
 /* The actual sliding will be handled by the vibe style system */
+
+/* Voice page styles */
+.voice-container .voice-main {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	gap: 0;
+	padding: 1rem 0;
+	padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px) + 64px); /* Space for fixed navpill */
+	overflow: hidden;
+}
+
+/* Voice navpill - fixed bottom bar with home | ASR | notifications */
+.voice-navpill {
+	position: fixed;
+	bottom: 0;
+	left: 50%;
+	transform: translateX(-50%);
+	display: flex;
+	align-items: flex-end; /* Align all items to the bottom edge */
+	justify-content: center;
+	gap: 0;
+	z-index: 1000;
+	padding: 0;
+	margin: 0;
+	pointer-events: none;
+	width: auto;
+}
+
+/* Fill the gap behind the circle, matching wing height */
+.voice-navpill::before {
+	content: "";
+	position: absolute;
+	bottom: 0;
+	left: 50%;
+	transform: translateX(-50%);
+	width: 64px; /* Match updated ASR button width */
+	height: 40px; /* Match wing height */
+	background: var(--color-marine-blue);
+	z-index: 0;
+	pointer-events: none;
+}
+
+.voice-navpill > * {
+	pointer-events: auto;
+	z-index: 1; /* Ensure buttons are above the background fill */
+}
+
+.voice-navpill-wing {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 52px; /* More compact */
+	height: 40px; /* More compact */
+	border: none;
+	background: var(--color-marine-blue);
+	color: rgba(255, 255, 255, 0.9);
+	cursor: pointer;
+	transition: opacity 0.2s;
+	padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+.voice-navpill-wing:hover:not(:disabled) {
+	opacity: 0.9;
+}
+
+.voice-navpill-wing:disabled {
+	background: var(--color-marine-blue); /* Same background as others */
+	opacity: 1; /* Keep container opaque */
+	cursor: default;
+}
+
+.voice-navpill-wing:disabled svg {
+	opacity: 0.4; /* Only the icon looks disabled */
+}
+
+.voice-navpill-left {
+	border-radius: 20px 0 0 0; /* Proportional rounding */
+}
+
+.voice-navpill-right {
+	border-radius: 0 20px 0 0; /* Proportional rounding */
+}
+
+.voice-navpill .voice-asr-btn {
+	flex-shrink: 0;
+	z-index: 1;
+	margin-bottom: 0;
+}
+
+.voice-asr-btn {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	width: 64px; /* Reduced from 72px */
+	height: 64px; /* Reduced from 72px */
+	border-radius: 50%;
+	border: 4px solid var(--color-marine-blue); /* Thinner border for smaller size */
+	cursor: pointer;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	position: relative;
+	padding: 0;
+	/* Circle background matches wings when not active/listening */
+	background: var(--color-marine-blue);
+}
+
+.voice-asr-btn.voice-asr-disabled,
+.voice-asr-btn:disabled {
+	cursor: not-allowed;
+	opacity: 0.7;
+}
+
+.voice-asr-icon {
+	position: absolute;
+	inset: 0;
+	margin: auto;
+}
+
+.voice-asr-icon-loader {
+	animation: voice-asr-spin 0.8s linear infinite;
+}
+
+.voice-asr-icon-close {
+	display: none;
+}
+
+.voice-asr-icon-loader {
+	display: none;
+}
+
+/* idle / stopped: marine blue slightly lighter than wings */
+.voice-asr-btn.voice-asr-idle {
+	background: var(--color-marine-blue-muted); /* Lighter than navpill wings */
+	color: white;
+}
+
+.voice-asr-idle:hover {
+	transform: scale(1.02);
+}
+
+.voice-asr-idle .voice-asr-icon-mic {
+	display: block;
+	transform: scale(0.6); /* ~25% smaller than 0.8 */
+}
+.voice-asr-idle .voice-asr-icon-loader {
+	display: none;
+}
+.voice-asr-idle .voice-asr-icon-close {
+	display: none;
+}
+
+/* request mic: blue-gray, mic */
+.voice-asr-btn.voice-asr-request-mic {
+	background: var(--slate-500);
+	color: white;
+	cursor: wait;
+}
+
+.voice-asr-request-mic .voice-asr-icon-mic {
+	display: block;
+	transform: scale(0.6); /* ~25% smaller */
+}
+.voice-asr-request-mic .voice-asr-icon-loader {
+	display: none;
+}
+.voice-asr-request-mic .voice-asr-icon-close {
+	display: none;
+}
+
+/* loading: yellow, spinner */
+.voice-asr-btn.voice-asr-loading {
+	background: var(--color-sun-yellow);
+	color: var(--color-sun-yellow-text);
+	cursor: wait;
+}
+
+.voice-asr-loading .voice-asr-icon-mic {
+	display: none;
+}
+.voice-asr-loading .voice-asr-icon-loader {
+	display: block;
+	transform: scale(0.6); /* ~25% smaller */
+}
+.voice-asr-loading .voice-asr-icon-close {
+	display: none;
+}
+
+/* ready: green, X */
+.voice-asr-btn.voice-asr-ready {
+	background: var(--color-lush-green);
+	color: var(--color-green-text);
+}
+
+.voice-asr-ready:hover {
+	transform: scale(1.02);
+}
+
+.voice-asr-ready .voice-asr-icon-mic {
+	display: none;
+}
+.voice-asr-ready .voice-asr-icon-loader {
+	display: none;
+}
+.voice-asr-ready .voice-asr-icon-close {
+	display: block;
+	transform: scale(0.6); /* ~25% smaller */
+}
+
+/* listening: blue, X */
+.voice-asr-btn.voice-asr-listening {
+	background: var(--color-paradise-water);
+	color: var(--color-water-text);
+}
+
+.voice-asr-listening:hover {
+	transform: scale(1.02);
+}
+
+.voice-asr-listening .voice-asr-icon-mic {
+	display: none;
+}
+.voice-asr-listening .voice-asr-icon-loader {
+	display: none;
+}
+.voice-asr-listening .voice-asr-icon-close {
+	display: block;
+	transform: scale(0.6); /* ~25% smaller */
+}
+
+@keyframes voice-asr-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+.voice-transcript {
+	flex: 1;
+	min-height: 8rem;
+	padding: 1.5rem;
+	overflow-y: auto;
+	font-size: 1.1rem;
+	line-height: 1.6;
+	color: var(--color-marine-blue);
+}
+
+.voice-transcript-placeholder {
+	color: var(--color-marine-blue);
+	opacity: 0.6;
+	font-style: italic;
+	margin: 0;
+}
+
+.voice-transcript-active .voice-transcript-placeholder {
+	opacity: 0.5;
+}
+
+.voice-error {
+	color: var(--color-terracotta);
+	margin: 0;
+}
+
+.voice-unsupported {
+	color: var(--color-marine-blue);
+	opacity: 0.8;
+	margin: 0;
+}
+
+/* Wake word: color only, no badge/background */
+.voice-wake-word {
+	color: var(--color-paradise-water);
+	font-weight: 700;
+}
+
+/* All text after wake word: lush vibrant green */
+.voice-after-wake {
+	color: var(--color-lush-green);
+}

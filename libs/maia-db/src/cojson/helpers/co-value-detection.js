@@ -12,18 +12,18 @@ import { isExceptionSchema } from '../../schemas/registry.js'
  * Consolidates all detection logic from storage-hook-wrapper.js and validation-hook-wrapper.js
  *
  * @param {Object} msg - Message object with header (from storage/sync)
- * @param {Object} backend - Backend instance (for account detection)
+ * @param {Object} peer - Backend instance (for account detection)
  * @param {string} coId - Co-value ID
  * @returns {{isAccount: boolean, isGroup: boolean, isProfile: boolean, isException: boolean}}
  */
-export function isAccountGroupOrProfile(msg, backend, coId) {
-	// CRITICAL: Check backend.account.id FIRST - most definitive account detection
+export function isAccountGroupOrProfile(msg, peer, coId) {
+	// CRITICAL: Check peer.account.id FIRST - most definitive account detection
 	// This works even if header structure is incomplete during account creation
-	const isAccountById = backend?.account && backend.account.id === coId
+	const isAccountById = peer?.account && peer.account.id === coId
 
 	// Check if this is the profile co-value (referenced by account.profile)
 	// During account creation, profile might be stored with header: null
-	const isProfile = backend?.account?.get && backend.account.get('profile') === coId
+	const isProfile = peer?.account?.get && peer.account.get('profile') === coId
 
 	// Also check for account by meta.type (if meta exists)
 	const isAccountByMeta = msg.header?.meta?.type === 'account'
@@ -34,9 +34,9 @@ export function isAccountGroupOrProfile(msg, backend, coId) {
 	const isGroupOrAccount = ruleset?.type === 'group'
 
 	// ROOT CAUSE: During account creation, header might be null for some co-values
-	// If header is null but this is account creation (backend.account exists), allow it to pass
+	// If header is null but this is account creation (peer.account exists), allow it to pass
 	// The header will be set in a later transaction
-	const isAccountCreation = backend?.account && !msg.header
+	const isAccountCreation = peer?.account && !msg.header
 
 	// Determine types
 	// Accounts: identified by ID, meta.type, or account creation context (when header is null)
@@ -76,12 +76,12 @@ export function extractSchemaFromMessage(msg) {
  * Uses isAccountGroupOrProfile() + isExceptionSchema() to determine skip logic
  *
  * @param {Object} msg - Message object with header (from storage/sync)
- * @param {Object} backend - Backend instance (for account detection)
+ * @param {Object} peer - Backend instance (for account detection)
  * @param {string} coId - Co-value ID
  * @returns {boolean} True if validation/indexing should be skipped
  */
-export function shouldSkipValidation(msg, backend, coId) {
-	const detection = isAccountGroupOrProfile(msg, backend, coId)
+export function shouldSkipValidation(msg, peer, coId) {
+	const detection = isAccountGroupOrProfile(msg, peer, coId)
 
 	// Skip for accounts, groups, profiles, or exception schemas
 	return detection.isAccount || detection.isGroup || detection.isProfile || detection.isException

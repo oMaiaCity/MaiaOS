@@ -1,0 +1,28 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/humans/context",
+	"@label": "@maia/actor/views/humans/context",
+	"title": "Human Book",
+	"items": {
+		"schema": "°Maia/schema/os/human",
+		"map": {
+			"id": "id",
+			"accountId": "accountId",
+			"registryName": "registryName",
+			"profileName": "profileName",
+			"avatarDataUrl": "$profile.avatar:asDataUrl",
+			"cardRows": {
+				"$mapFields": [
+					{
+						"label": "Registry name",
+						"valuePath": "registryName"
+					},
+					{
+						"label": "Account ID",
+						"valuePath": "accountId"
+					}
+				]
+			}
+		}
+	}
+}

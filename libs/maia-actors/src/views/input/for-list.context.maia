@@ -1,0 +1,12 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/input/for-list/context",
+	"inputPlaceholder": "Add a new todo...",
+	"inputValue": "",
+	"submitButtonText": "Add",
+	"hasError": false,
+	"error": null,
+	"isLoading": false,
+	"errorLabel": "Error: ",
+	"dismissButtonText": "Dismiss"
+}

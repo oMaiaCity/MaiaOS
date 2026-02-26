@@ -29,11 +29,11 @@ const pendingIndexing = new Set()
 /**
  * Create a storage wrapper that hooks into store() for schema indexing
  * @param {StorageAPI} storage - Original storage instance
- * @param {Object} backend - Backend instance (for schema indexing functions)
+ * @param {Object} peer - Backend instance (for schema indexing functions)
  * @returns {StorageAPI} Wrapped storage with indexing hooks
  */
-export function wrapStorageWithIndexingHooks(storage, backend) {
-	if (!storage || !backend) {
+export function wrapStorageWithIndexingHooks(storage, peer) {
+	if (!storage || !peer) {
 		return storage
 	}
 
@@ -67,7 +67,7 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
 		// Exception: Groups and accounts are created by CoJSON without schemas, but we detect them by ruleset/type
 
 		// Use universal detection helper (consolidates all detection logic)
-		const detection = isAccountGroupOrProfile(msg, backend, coId)
+		const detection = isAccountGroupOrProfile(msg, peer, coId)
 
 		// Groups, accounts, and profiles during account creation are allowed without headerMeta.$schema
 		if (!detection.isAccount && !detection.isGroup && !detection.isProfile) {
@@ -101,7 +101,7 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
 		// 1. Use universal skip validation helper (consolidates all skip logic)
 		// NOTE: We DON'T skip @metaSchema here - °Maia/schema/meta uses @metaSchema but should be registered!
 		// Let isSchemaCoValue() and shouldIndexCoValue() handle °Maia detection properly
-		let shouldSkipIndexing = shouldSkipValidation(msg, backend, coId)
+		let shouldSkipIndexing = shouldSkipValidation(msg, peer, coId)
 
 		// Don't skip @metaSchema for indexing (it should be registered)
 		if (shouldSkipIndexing) {
@@ -113,15 +113,15 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
 
 		// 2. Skip indexing if this is spark.os, schematas, indexes, or any index colist (they're internal)
 		// Use cached osId (set when getSparkOsId is first called - don't trigger async here!)
-		if (!shouldSkipIndexing && backend.account) {
-			const osId = backend._cachedMaiaOsId
+		if (!shouldSkipIndexing && peer.account) {
+			const osId = peer._cachedMaiaOsId
 			if (coId === osId) {
 				// This is spark.os itself - skip indexing to prevent infinite loop
 				shouldSkipIndexing = true
 			} else if (osId) {
 				// Check if spark.os is already loaded (don't trigger loading!)
-				const osCore = backend.node.getCoValue(osId)
-				if (osCore && backend.isAvailable(osCore) && osCore.type === 'comap') {
+				const osCore = peer.node.getCoValue(osId)
+				if (osCore && peer.isAvailable(osCore) && osCore.type === 'comap') {
 					const osContent = osCore.getCurrentContent?.()
 					if (osContent && typeof osContent.get === 'function') {
 						// Check if it's schematas registry
@@ -144,8 +144,8 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
 
 						// Check if it's inside spark.os.indexes (any schema index colist)
 						if (indexesId && !shouldSkipIndexing) {
-							const indexesCore = backend.node.getCoValue(indexesId)
-							if (indexesCore && backend.isAvailable(indexesCore) && indexesCore.type === 'comap') {
+							const indexesCore = peer.node.getCoValue(indexesId)
+							if (indexesCore && peer.isAvailable(indexesCore) && indexesCore.type === 'comap') {
 								const indexesContent = indexesCore.getCurrentContent?.()
 								if (indexesContent && typeof indexesContent.get === 'function') {
 									// Only check if we can do it synchronously without triggering loads
@@ -202,47 +202,47 @@ export function wrapStorageWithIndexingHooks(storage, backend) {
 
 				try {
 					// Pre-warm getSparkOsId: ensure registries/spark/os are loaded before indexCoValue
-					if (!backend._cachedMaiaOsId && backend.account) {
-						await groups.getSparkOsId(backend, backend.systemSpark ?? '°Maia')
+					if (!peer._cachedMaiaOsId && peer.account) {
+						await groups.getSparkOsId(peer, peer.systemSpark ?? '°Maia')
 					}
 
 					// Get co-value core (may need retries for local rapid writes during seeding)
-					let coValueCore = backend.getCoValue(coId)
+					let coValueCore = peer.getCoValue(coId)
 					let attempts = 0
 					const maxAttempts = 10
-					while ((!coValueCore || !backend.isAvailable(coValueCore)) && attempts < maxAttempts) {
-						if (backend.node?.loadCoValueCore) {
-							await backend.node.loadCoValueCore(coId).catch(() => {})
+					while ((!coValueCore || !peer.isAvailable(coValueCore)) && attempts < maxAttempts) {
+						if (peer.node?.loadCoValueCore) {
+							await peer.node.loadCoValueCore(coId).catch(() => {})
 						}
 						await new Promise((r) => setTimeout(r, 10 * (attempts + 1)))
-						coValueCore = backend.getCoValue(coId)
+						coValueCore = peer.getCoValue(coId)
 						attempts++
 					}
-					if (!coValueCore || !backend.isAvailable(coValueCore)) {
+					if (!coValueCore || !peer.isAvailable(coValueCore)) {
 						// Remote write or still not available - explicit re-index pass will catch if local
 						return
 					}
 
-					const updatedCoValueCore = backend.getCoValue(coId)
-					if (!updatedCoValueCore || !backend.isAvailable(updatedCoValueCore)) {
+					const updatedCoValueCore = peer.getCoValue(coId)
+					if (!updatedCoValueCore || !peer.isAvailable(updatedCoValueCore)) {
 						return
 					}
 
 					// Schema co-value - auto-register in spark.os.schematas
-					const isSchema = await isSchemaCoValue(backend, updatedCoValueCore)
+					const isSchema = await isSchemaCoValue(peer, updatedCoValueCore)
 					if (isSchema) {
-						await registerSchemaCoValue(backend, updatedCoValueCore)
+						await registerSchemaCoValue(peer, updatedCoValueCore)
 						return
 					}
 
 					// Check if this co-value should be indexed (skips internal co-values)
-					const { shouldIndex } = await shouldIndexCoValue(backend, updatedCoValueCore)
+					const { shouldIndex } = await shouldIndexCoValue(peer, updatedCoValueCore)
 					if (!shouldIndex) {
 						return
 					}
 
 					// Regular co-value - index it (await ensures storage not complete until indexed)
-					await indexCoValue(backend, updatedCoValueCore)
+					await indexCoValue(peer, updatedCoValueCore)
 				} catch (error) {
 					console.error('[StorageHook] Indexing failed', coId, error)
 				} finally {

@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `@MaiaOS/loader` package provides the foundational services that power MaiaOS. Think of it as the operating system kernel - it doesn't do much on its own, but everything else depends on it.
+The `@MaiaOS/loader` package provides the foundational services that power MaiaOS. Think of it as the OS loader - it doesn't do much on its own, but everything else depends on it.
 
 **What it does:**
 - ✅ **Identity & Authentication** - Creates authenticated MaiaOS instances (`createMaiaOS`)
@@ -11,7 +11,7 @@ The `@MaiaOS/loader` package provides the foundational services that power MaiaO
 - ✅ **Re-exports** - Schemas, tools, vibes seeding helpers, WebSocket peer (services import only from loader)
 
 **What it doesn't do:**
-- ❌ Execute MaiaScript (that's `@MaiaOS/script`)
+- ❌ Execute MaiaScript (that's `@MaiaOS/engines`)
 - ❌ Store data (that's `@MaiaOS/db`)
 - ❌ Validate schemas (that's `@MaiaOS/schemata`)
 
@@ -31,7 +31,7 @@ Think of `maia-loader` like the foundation of a house. Before you can build anyt
 
 ## Two Layers, One Package
 
-The kernel provides **two distinct layers** that work together:
+The loader provides **two distinct layers** that work together:
 
 ### Layer 1: Identity & Authentication (`createMaiaOS`)
 
@@ -77,7 +77,7 @@ const os = await MaiaOS.boot({
 // Now you can:
 // - os.createActor() - Create actors
 // - os.loadVibe() - Load app manifests
-// - os.sendMessage() - Send messages between actors
+// - os.deliverEvent() - Deliver events to actors
 ```
 
 **What you get:**
@@ -85,8 +85,8 @@ const os = await MaiaOS.boot({
 - `os.loadVibe()` - Load app manifests from files
 - `os.loadVibeFromDatabase()` - Load app manifests from database
 - `os.getActor()` - Get actor by ID
-- `os.sendMessage()` - Send messages to actors
-- `os.db()` - Execute database operations
+- `os.deliverEvent()` - Deliver events to actors
+- `os.do()` - Execute data operations (**maia.do({ op, schema, key, ... })**)
 - `os.getEngines()` - Access all engines for debugging
 
 ---
@@ -138,7 +138,7 @@ async function startApp() {
 
 ## Related Documentation
 
-- [maia-script Package](../04_maia-script/README.md) - Execution engines
+- [maia-engines Package](../04_maia-engines/README.md) - Execution engines
 - [MaiaOS Architecture](../01_maiaos.md) - Overall system architecture
 - [Authentication](../09_authentication.md) - Authentication flow
 - [CoJSON Integration](../07_cojson.md) - Database layer
@@ -152,10 +152,10 @@ async function startApp() {
 **Key Files:**
 - `src/index.js` - Public API exports
 - `src/auth.js` - Identity/authentication layer (`createMaiaOS`)
-- `src/kernel.js` - Execution layer (`MaiaOS.boot()`)
+- `src/loader.js` - Execution layer (`MaiaOS.boot()`)
 
 **Dependencies:**
 - `@MaiaOS/self` - Authentication
-- `@MaiaOS/script` - Engines and DSL execution
+- `@MaiaOS/engines` - Engines and DSL execution
 - `@MaiaOS/db` - Database operations
 - `@MaiaOS/schemata` - Schema validation

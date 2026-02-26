@@ -146,7 +146,7 @@ todos/
 {
   "$schema": "@schema/actor",
   "$id": "@actor/vibe",
-  "role": "agent",
+  "@label": "agent",
   "context": "@context/vibe",
   "state": "@state/vibe",
   "view": "@view/vibe",
