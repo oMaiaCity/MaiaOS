@@ -1,0 +1,23 @@
+{
+	"name": "@MaiaOS/maia-voice2",
+	"version": "1.0.0",
+	"description": "LFM2.5-Audio ASR - Speech-to-text in the browser via WebGPU/ONNX",
+	"type": "module",
+	"scripts": {
+		"dev": "vite",
+		"build": "vite build",
+		"prebuild": "bun run copy:vad",
+		"preview": "vite preview",
+		"download:model": "bun run scripts/download-model.js",
+		"copy:vad": "bun run scripts/copy-vad-assets.js",
+		"prepare": "bun run copy:vad"
+	},
+	"dependencies": {
+		"@huggingface/transformers": "^3.8.1",
+		"@ricky0123/vad-web": "^0.0.30",
+		"onnxruntime-web": "^1.24.2"
+	},
+	"devDependencies": {
+		"vite": "^7.3.1"
+	}
+}
