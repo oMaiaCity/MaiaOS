@@ -9,17 +9,45 @@
 		"LOAD_ACTOR": {
 			"type": "object",
 			"description": "Load actor",
-			"additionalProperties": true
+			"properties": {
+				"id": {
+					"type": "string",
+					"description": "Spark/actor co-id to load"
+				}
+			},
+			"required": [
+				"id"
+			],
+			"additionalProperties": false
 		},
 		"FORM_SUBMIT": {
 			"type": "object",
 			"description": "Form submit",
-			"additionalProperties": true
+			"properties": {
+				"value": {
+					"type": "string",
+					"description": "Form value (e.g. member id)"
+				}
+			},
+			"required": [
+				"value"
+			],
+			"additionalProperties": false
 		},
 		"REMOVE_MEMBER": {
 			"type": "object",
 			"description": "Remove member",
-			"additionalProperties": true
+			"properties": {
+				"memberId": {
+					"type": "string",
+					"description": "Member co-id to remove"
+				}
+			},
+			"required": [
+				"memberId"
+			],
+			"additionalProperties": false
 		}
-	}
+	},
+	"additionalProperties": false
 }
