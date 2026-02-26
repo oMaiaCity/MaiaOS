@@ -5,5 +5,6 @@
 	"description": "Humans view - no domain events",
 	"cotype": "comap",
 	"indexing": true,
-	"properties": {}
+	"properties": {},
+	"additionalProperties": false
 }

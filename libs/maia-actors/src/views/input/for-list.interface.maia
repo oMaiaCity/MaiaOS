@@ -9,17 +9,37 @@
 		"UPDATE_INPUT": {
 			"type": "object",
 			"description": "Update input",
-			"additionalProperties": true
+			"properties": {
+				"value": {
+					"type": "string",
+					"description": "Input value"
+				}
+			},
+			"required": [
+				"value"
+			],
+			"additionalProperties": false
 		},
 		"FORM_SUBMIT": {
 			"type": "object",
 			"description": "Form submit",
-			"additionalProperties": true
+			"properties": {
+				"value": {
+					"type": "string",
+					"description": "Form value (todo text)"
+				}
+			},
+			"required": [
+				"value"
+			],
+			"additionalProperties": false
 		},
 		"DISMISS": {
 			"type": "object",
 			"description": "Dismiss",
-			"additionalProperties": true
+			"properties": {},
+			"additionalProperties": false
 		}
-	}
+	},
+	"additionalProperties": false
 }

@@ -9,7 +9,41 @@
 		"SELECT_ITEM": {
 			"type": "object",
 			"description": "Select item",
-			"additionalProperties": true
+			"properties": {
+				"item": {
+					"type": "object",
+					"description": "Actor item forwarded from list",
+					"properties": {
+						"id": {
+							"type": "string"
+						},
+						"label": {
+							"type": "string"
+						},
+						"interface": {
+							"type": "array",
+							"items": {
+								"type": "object",
+								"properties": {
+									"name": {
+										"type": "string"
+									}
+								},
+								"additionalProperties": false
+							}
+						}
+					},
+					"required": [
+						"label"
+					],
+					"additionalProperties": false
+				}
+			},
+			"required": [
+				"item"
+			],
+			"additionalProperties": false
 		}
-	}
+	},
+	"additionalProperties": false
 }

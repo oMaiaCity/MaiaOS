@@ -9,12 +9,15 @@
 		"RETRY": {
 			"type": "object",
 			"description": "Retry",
-			"additionalProperties": true
+			"properties": {},
+			"additionalProperties": false
 		},
 		"DISMISS": {
 			"type": "object",
 			"description": "Dismiss",
-			"additionalProperties": true
+			"properties": {},
+			"additionalProperties": false
 		}
-	}
+	},
+	"additionalProperties": false
 }

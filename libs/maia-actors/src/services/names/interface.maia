@@ -12,12 +12,35 @@
 			"properties": {
 				"conversations": {
 					"type": "array",
-					"description": "Array of conversation messages with id and role properties"
+					"description": "Array of conversation messages with id and role properties",
+					"items": {
+						"type": "object",
+						"properties": {
+							"id": {
+								"type": "string"
+							},
+							"role": {
+								"type": "string",
+								"enum": [
+									"user",
+									"assistant",
+									"system"
+								]
+							}
+						},
+						"required": [
+							"id",
+							"role"
+						],
+						"additionalProperties": false
+					}
 				}
 			},
 			"required": [
 				"conversations"
-			]
+			],
+			"additionalProperties": false
 		}
-	}
+	},
+	"additionalProperties": false
 }
