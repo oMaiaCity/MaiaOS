@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/process",
-	"$id": "°Maia/actor/views/layout-chat/process",
-	"@label": "@maia/actor/views/layout-chat/process",
+	"$id": "°Maia/actor/views/modal/process",
+	"@label": "@maia/actor/views/modal/process",
 	"handlers": {
 		"STATUS_UPDATE": [
 			{
