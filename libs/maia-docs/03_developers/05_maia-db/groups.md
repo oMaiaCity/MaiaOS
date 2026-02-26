@@ -148,7 +148,7 @@ MaiaOS standardizes on **account co-ids** (co_z...) for group member storage and
 - **Spark Operations:** `libs/maia-engines/src/engines/data.engine.js` (merged)
 - **Spark Backend:** `libs/maia-db/src/cojson/core/cojson-backend.js` (spark CRUD methods)
 - **Schema Migration:** `libs/maia-db/src/migrations/schema.migration.js`
-- **Spark Schema:** `libs/maia-schemata/src/os/spark.schema.json`
+- **Spark Schema:** `libs/maia-schemata/src/data/spark.schema.json`
 
 ## Related Documentation
 
