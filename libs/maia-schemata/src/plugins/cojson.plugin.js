@@ -3,7 +3,7 @@
  *
  * Registers AJV keywords:
  * - $co: Co-id reference macro
- * - cotype: CRDT type (comap, colist, costream) at schema root
+ * - cotype: CRDT type (comap, colist, costream, cobinary) at schema root
  * - indexing: Metadata for schema indexing (always passes)
  */
 
@@ -53,10 +53,15 @@ export const keywords = [
 				}
 				return false
 			}
+			// cobinary: RawBinaryCoStream - binary data, validated via schema properties at creation
+			if (schema === 'cobinary') {
+				// At schema validation time, data is the schema object; cotype validate passes
+				return true
+			}
 			return false
 		},
 		metaSchema: {
-			enum: ['comap', 'colist', 'costream'],
+			enum: ['comap', 'colist', 'costream', 'cobinary'],
 		},
 	},
 	{

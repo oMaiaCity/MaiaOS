@@ -1,6 +1,6 @@
 import { validateViewDef } from '@MaiaOS/schemata'
 import { containsExpressions, resolveExpressions } from '@MaiaOS/schemata/expression-resolver'
-import { extractDOMValues } from '@MaiaOS/schemata/payload-resolver'
+import { extractDOMValuesAsync } from '@MaiaOS/schemata/payload-resolver'
 import { readStore } from '../utils/store-reader.js'
 import { RENDER_STATES } from './actor.engine.js'
 
@@ -551,7 +551,10 @@ export class ViewEngine {
 				try {
 					await this._handleEvent(e, eventDef, data, element, actorId)
 				} catch (error) {
-					if (typeof window !== 'undefined' && (import.meta?.env?.DEV ?? false)) {
+					if (
+						typeof window !== 'undefined' &&
+						(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
+					) {
 						console.error('[ViewEngine] Event handler error:', eventDef?.send || eventName, error)
 					}
 				}
@@ -597,7 +600,20 @@ export class ViewEngine {
 		if (this.actorOps) {
 			const actor = this.actorOps.getActor?.(actorId)
 			if (actor?.machine || actor?.process) {
-				payload = extractDOMValues(payload, element)
+				if (
+					eventName === 'UPLOAD_PROFILE_IMAGE' &&
+					typeof window !== 'undefined' &&
+					(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
+				) {
+					console.log(
+						'[ProfileImagePipe] ViewEngine: UPLOAD_PROFILE_IMAGE before extractDOMValuesAsync',
+						{
+							actorId,
+							rawPayload: JSON.stringify(payload).slice(0, 200),
+						},
+					)
+				}
+				payload = await extractDOMValuesAsync(payload, element)
 
 				// $stores Architecture: Read CURRENT context from actor.context.value (backend unified store)
 				const currentContext = actor.context.value
@@ -623,6 +639,18 @@ export class ViewEngine {
 					eventName,
 					payload,
 				)
+				if (
+					eventName === 'UPLOAD_PROFILE_IMAGE' &&
+					typeof window !== 'undefined' &&
+					(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
+				) {
+					console.log('[ProfileImagePipe] ViewEngine: after resolve/validate', {
+						payloadValid,
+						hasFileBase64: !!payload?.fileBase64,
+						hasMimeType: !!payload?.mimeType,
+						payloadKeys: payload ? Object.keys(payload) : [],
+					})
+				}
 				if (!payloadValid) return
 
 				// CLEAN ARCHITECTURE: For update-input types on blur, only send if DOM value differs from CURRENT context
@@ -644,6 +672,13 @@ export class ViewEngine {
 					}
 				}
 
+				if (
+					eventName === 'UPLOAD_PROFILE_IMAGE' &&
+					typeof window !== 'undefined' &&
+					(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
+				) {
+					console.log('[ProfileImagePipe] ViewEngine: calling deliverEvent', { actorId, eventName })
+				}
 				await this.actorOps?.deliverEvent?.(actorId, actorId, eventName, payload)
 
 				// AUTO-CLEAR INPUTS: After form submission (any event except update-input types), clear all input fields
@@ -652,7 +687,11 @@ export class ViewEngine {
 				if (!isUpdateInputType) {
 					this._clearInputFields(element, actorId)
 				}
-			} else if (typeof window !== 'undefined' && (import.meta?.env?.DEV ?? false) && eventDef?.send) {
+			} else if (
+				typeof window !== 'undefined' &&
+				(window.location?.hostname === 'localhost' || import.meta?.env?.DEV) &&
+				eventDef?.send
+			) {
 				const hasActor = !!actor
 				const hasMachine = !!actor?.machine
 				const hasProcess = !!actor?.process

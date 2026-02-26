@@ -568,6 +568,18 @@ export class ActorEngine {
 	 * @param {Object} payload - Resolved payload (no expressions)
 	 */
 	async deliverEvent(senderId, targetId, type, payload = {}) {
+		if (
+			type === 'UPLOAD_PROFILE_IMAGE' &&
+			typeof window !== 'undefined' &&
+			(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
+		) {
+			console.log('[ProfileImagePipe] ActorEngine.deliverEvent', {
+				senderId,
+				targetId,
+				type,
+				hasFileBase64: !!payload?.fileBase64,
+			})
+		}
 		if (containsExpressions(payload)) {
 			throw new Error(
 				`[ActorEngine] Payload contains unresolved expressions. Payload: ${JSON.stringify(payload).substring(0, 200)}`,
@@ -626,6 +638,17 @@ export class ActorEngine {
 						continue
 					}
 					if (message.source) actor._lastEventSource = message.source
+					if (
+						message.type === 'UPLOAD_PROFILE_IMAGE' &&
+						typeof window !== 'undefined' &&
+						(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
+					) {
+						console.log('[ProfileImagePipe] ActorEngine.processEvents: dispatching to ProcessEngine', {
+							actorId,
+							messageType: message.type,
+							hasProcess: !!actor.process,
+						})
+					}
 					if (actor.process && this.processEngine) {
 						const payloadWithSource = {
 							...validated.payloadPlain,
@@ -636,6 +659,15 @@ export class ActorEngine {
 							message.type,
 							payloadWithSource,
 						)
+						if (
+							message.type === 'UPLOAD_PROFILE_IMAGE' &&
+							typeof window !== 'undefined' &&
+							(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
+						) {
+							console.log('[ProfileImagePipe] ActorEngine.processEvents: ProcessEngine.send returned', {
+								handled,
+							})
+						}
 						await markProcessed()
 						if (!handled) hadUnhandledMessages = true
 					} else {

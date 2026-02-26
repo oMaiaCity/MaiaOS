@@ -58,14 +58,68 @@ export class InboxEngine {
 		if (targetCoId && (typeof targetCoId !== 'string' || !targetCoId.startsWith('co_z'))) {
 			throw new Error(`[InboxEngine] target must be co-id, got: ${targetCoId}`)
 		}
+		let payload = message.payload || {}
+
+		// UPLOAD_PROFILE_IMAGE: Upload binary BEFORE persisting to inbox. Large base64 payloads
+		// exceed CoJSON/IndexedDB limits when stored in event CoMaps.
+		if (
+			message.type === 'UPLOAD_PROFILE_IMAGE' &&
+			payload.fileBase64 &&
+			typeof payload.fileBase64 === 'string' &&
+			this.dataEngine
+		) {
+			payload = await this._uploadProfileImagePayload(payload)
+		}
+
 		const messageData = {
 			type: message.type,
-			payload: message.payload || {},
+			payload,
 			source: sourceCoId,
 			target: targetCoId,
 			processed: false,
 		}
 		await this.dataEngine.peer.createAndPushMessage(inboxCoId, messageData)
+	}
+
+	/**
+	 * Upload file to CoBinary and return lightweight payload { avatar, mimeType, fileName }.
+	 * Called before persisting UPLOAD_PROFILE_IMAGE to avoid storing large base64 in event CoMap.
+	 */
+	async _uploadProfileImagePayload(payload) {
+		const CHUNK_SIZE = 64 * 1024
+		const chunkBase64 = (base64, size) => {
+			const chunks = []
+			for (let i = 0; i < base64.length; i += size) chunks.push(base64.slice(i, i + size))
+			return chunks
+		}
+
+		const createRes = await this.dataEngine.execute({
+			op: 'create',
+			schema: '°Maia/schema/data/cobinary',
+			data: {},
+		})
+		const cobinaryData = createRes?.ok === true ? createRes.data : createRes
+		const coBinaryId = cobinaryData?.id
+		if (!coBinaryId?.startsWith('co_z')) {
+			throw new Error('[InboxEngine] Failed to create CoBinary for profile image upload')
+		}
+
+		const chunks = chunkBase64(payload.fileBase64, CHUNK_SIZE)
+		const totalSizeBytes = Math.floor((payload.fileBase64.length * 3) / 4)
+		await this.dataEngine.execute({
+			op: 'uploadBinary',
+			coId: coBinaryId,
+			mimeType: payload.mimeType || 'image/png',
+			fileName: payload.fileName || undefined,
+			totalSizeBytes,
+			chunks,
+		})
+
+		return {
+			avatar: coBinaryId,
+			mimeType: payload.mimeType || 'image/png',
+			fileName: payload.fileName || undefined,
+		}
 	}
 
 	/** System events accepted by all actors implicitly */
@@ -148,6 +202,12 @@ export class InboxEngine {
 	}
 
 	async deliver(targetId, message) {
+		const DEBUG =
+			typeof window !== 'undefined' &&
+			(window.location?.hostname === 'localhost' || import.meta?.env?.DEV) &&
+			message?.type === 'UPLOAD_PROFILE_IMAGE'
+		if (DEBUG)
+			console.log('[ProfileImagePipe] InboxEngine.deliver: start', { targetId, type: message?.type })
 		if (!this.dataEngine?.peer) {
 			throw new Error(
 				'[InboxEngine] Cannot push to inbox: dataEngine or peer not set. Ensure MaiaOS is booted before deliverEvent.',
@@ -161,6 +221,11 @@ export class InboxEngine {
 		}
 		const { inboxCoId, targetActorConfig } = resolved
 		const messageWithTarget = { ...message, target: resolved.resolvedTargetId }
+		if (DEBUG)
+			console.log('[ProfileImagePipe] InboxEngine.deliver: pushing message', {
+				inboxCoId: inboxCoId?.slice(0, 20) + '...',
+				hasTargetActorConfig: !!targetActorConfig,
+			})
 		await this._pushMessage(inboxCoId, messageWithTarget)
 
 		if (targetActorConfig) {
@@ -177,10 +242,16 @@ export class InboxEngine {
 			}
 		} else {
 			const actorId = resolved.resolvedTargetId
+			if (DEBUG)
+				console.log('[ProfileImagePipe] InboxEngine.deliver: actor already spawned?', {
+					actorId: actorId?.slice(0, 20) + '...',
+					hasActor: actorId && this.actorEngine?.actors?.has(actorId),
+				})
 			if (actorId && this.actorEngine?.actors?.has(actorId)) {
 				await this.actorEngine.processEvents(actorId)
 			}
 			this.actorEngine?.runtime?.notifyInboxPush?.(inboxCoId)
 		}
+		if (DEBUG) console.log('[ProfileImagePipe] InboxEngine.deliver: done')
 	}
 }
