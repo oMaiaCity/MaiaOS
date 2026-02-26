@@ -5,7 +5,7 @@
 	"context": "°Maia/actor/views/messages/context",
 	"view": "°Maia/actor/views/messages/view",
 	"process": "°Maia/actor/views/messages/process",
-	"brand": "°Maia/chat/style/brand",
+	"brand": "°Maia/brand/maiacity",
 	"style": "°Maia/actor/views/messages/style",
 	"inbox": "°Maia/actor/views/messages/inbox",
 	"interface": "°Maia/actor/views/messages/interface"

@@ -1,0 +1,16 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/modal/context",
+	"popupOpen": false,
+	"closeButtonText": "×",
+	"loadingLabel": "Thinking",
+	"isLoading": false,
+	"hasError": false,
+	"error": null,
+	"currentSection": "@messages",
+	"inputActor": "@input",
+	"@actors": {
+		"messages": "°Maia/actor/views/messages",
+		"input": "°Maia/actor/views/input/for-chat"
+	}
+}

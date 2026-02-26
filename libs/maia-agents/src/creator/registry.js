@@ -4,7 +4,7 @@
  * placeholder actor from @MaiaOS/actors (seeded separately)
  */
 
-import masterBrand from '../shared/brand.style.maia'
+import maiacityBrand from '../brand/maiacity.style.maia'
 import intentActor from './intent/intent.actor.maia'
 import intentContext from './intent/intent.context.maia'
 import intentProcess from './intent/intent.process.maia'
@@ -15,7 +15,7 @@ export const LogsAgentRegistry = {
 	agent: logsAgent,
 
 	styles: {
-		'°Maia/style/brand': masterBrand,
+		'°Maia/brand/maiacity': maiacityBrand,
 	},
 
 	actors: {

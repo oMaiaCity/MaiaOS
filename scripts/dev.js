@@ -386,8 +386,7 @@ function startAssetSync() {
 	})
 }
 
-async function killChildrenAndFreePorts() {
-	const logger = createLogger('dev')
+async function killChildren() {
 	const procs = [faviconProcess, assetSyncProcess, docsWatcherProcess, moaiProcess, maiaProcess]
 	for (const p of procs) {
 		if (p && !p.killed) {
@@ -396,10 +395,6 @@ async function killChildrenAndFreePorts() {
 			} catch (_e) {}
 		}
 	}
-	await Promise.all([
-		freePort(4200, (msg) => logger.warn(msg)),
-		freePort(4201, (msg) => logger.warn(msg)),
-	])
 }
 
 function setupSignalHandlers() {
@@ -411,7 +406,7 @@ function setupSignalHandlers() {
 		shuttingDown = true
 		console.log()
 		logger.status('Shutting down...')
-		await killChildrenAndFreePorts()
+		await killChildren()
 		process.exit(0)
 	}
 

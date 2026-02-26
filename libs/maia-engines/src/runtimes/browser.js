@@ -154,12 +154,25 @@ export class Runtime {
 			if (!schema?.properties || typeof schema.properties !== 'object') continue
 			for (const [eventType, eventSchema] of Object.entries(schema.properties)) {
 				if (eventType.startsWith('@') || eventType.startsWith('$')) continue
+				const { properties = {}, required = [], ...rest } = eventSchema
+				const parameters = {
+					...rest,
+					properties: {
+						...properties,
+						actionSummary: {
+							type: 'string',
+							description:
+								'Brief human-readable summary of this action (1 short sentence). Generated dynamically based on what you are doing.',
+						},
+					},
+					required: [...required, 'actionSummary'],
+				}
 				tools.push({
 					type: 'function',
 					function: {
 						name: `${actorCoId}/${eventType}`,
 						description: eventSchema.description ?? schema.description ?? '',
-						parameters: eventSchema,
+						parameters,
 					},
 				})
 			}
@@ -185,6 +198,9 @@ export class Runtime {
 			return { ok: false, error: `Invalid tool name: ${toolName}` }
 		}
 
+		const { actionSummary, ...actorPayload } = payload
+		// actionSummary is system-injected, stripped before delivery to actor
+
 		const callerId = callerActor?.id || callerActor?.config?.$id
 		if (!callerId || !callerId.startsWith('co_z')) {
 			return { ok: false, error: 'Caller actor must have co-id' }
@@ -203,7 +219,7 @@ export class Runtime {
 			return { ok: false, error: 'Could not resolve target inbox' }
 		}
 
-		await this.actorEngine.deliverEvent(callerId, targetActorCoId, eventType, payload || {})
+		await this.actorEngine.deliverEvent(callerId, targetActorCoId, eventType, actorPayload || {})
 		await this.ensureActorSpawned(targetConfig, inboxCoId)
 		await this.actorEngine.processEvents(targetActorCoId)
 

@@ -7,7 +7,6 @@
 	"submitButtonText": "➤",
 	"hasError": false,
 	"error": null,
-	"isLoading": false,
 	"errorLabel": "Error: ",
 	"dismissButtonText": "Dismiss",
 	"@actors": {

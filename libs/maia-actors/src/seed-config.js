@@ -46,45 +46,49 @@ import layoutHumansInterface from './views/humans/interface.maia'
 import layoutHumansProcess from './views/humans/process.maia'
 import layoutHumansStyle from './views/humans/style.maia'
 import layoutHumansView from './views/humans/view.maia'
-import inputForChatActor from './views/input/actor-for-chat.maia'
-import inputForDetailActor from './views/input/actor-for-detail.maia'
-import inputForListActor from './views/input/actor-for-list.maia'
-import inputForSparksActor from './views/input/actor-for-sparks.maia'
+import inputForChatActor from './views/input/for-chat.actor.maia'
 import inputForChatContext from './views/input/for-chat.context.maia'
 import inputForChatInterface from './views/input/for-chat.interface.maia'
 import inputForChatProcess from './views/input/for-chat.process.maia'
+import inputForDetailActor from './views/input/for-detail.actor.maia'
 import inputForDetailContext from './views/input/for-detail.context.maia'
 import inputForDetailInterface from './views/input/for-detail.interface.maia'
+import inputForListActor from './views/input/for-list.actor.maia'
 import inputForListContext from './views/input/for-list.context.maia'
 import inputForListInterface from './views/input/for-list.interface.maia'
 import inputForListProcess from './views/input/for-list.process.maia'
+import inputForSparksActor from './views/input/for-sparks.actor.maia'
 import inputForSparksContext from './views/input/for-sparks.context.maia'
 import inputForSparksInterface from './views/input/for-sparks.interface.maia'
 import inputProcess from './views/input/process.maia'
 import inputStyle from './views/input/style.maia'
 import inputView from './views/input/view.maia'
+import layoutChatActor from './views/layout-chat/actor.maia'
+import layoutChatContext from './views/layout-chat/context.maia'
 import layoutChatInterface from './views/layout-chat/interface.maia'
+import layoutChatProcess from './views/layout-chat/process.maia'
+import layoutChatView from './views/layout-chat/view.maia'
 import listActor from './views/list/actor.maia'
 import listContext from './views/list/context.maia'
 import listInterface from './views/list/interface.maia'
 import listProcess from './views/list/process.maia'
 import listStyle from './views/list/style.maia'
 import listView from './views/list/view.maia'
-import listDetailForActorsActor from './views/list-detail/actor-for-actors.maia'
-import listDetailForSchemasActor from './views/list-detail/actor-for-schemas.maia'
+import listDetailDetailActorsActor from './views/list-detail/detail-actors.actor.maia'
 import listDetailDetailActorsContext from './views/list-detail/detail-actors.context.maia'
 import listDetailDetailActorsInterface from './views/list-detail/detail-actors.interface.maia'
 import listDetailDetailActorsProcess from './views/list-detail/detail-actors.process.maia'
-import listDetailDetailActorsActor from './views/list-detail/detail-actors-actor.maia'
 import listDetailDetailActorsView from './views/list-detail/detail-actors-view.maia'
+import listDetailDetailSchemasActor from './views/list-detail/detail-schemas.actor.maia'
 import listDetailDetailSchemasContext from './views/list-detail/detail-schemas.context.maia'
 import listDetailDetailSchemasInterface from './views/list-detail/detail-schemas.interface.maia'
 import listDetailDetailSchemasProcess from './views/list-detail/detail-schemas.process.maia'
-import listDetailDetailSchemasActor from './views/list-detail/detail-schemas-actor.maia'
 import listDetailDetailSchemasView from './views/list-detail/detail-schemas-view.maia'
+import listDetailForActorsActor from './views/list-detail/for-actors.actor.maia'
 import listDetailForActorsContext from './views/list-detail/for-actors.context.maia'
 import listDetailForActorsInterface from './views/list-detail/for-actors.interface.maia'
 import listDetailForActorsProcess from './views/list-detail/for-actors.process.maia'
+import listDetailForSchemasActor from './views/list-detail/for-schemas.actor.maia'
 import listDetailForSchemasContextBase from './views/list-detail/for-schemas.context.maia'
 import listDetailForSchemasInterface from './views/list-detail/for-schemas.interface.maia'
 import listDetailForSchemasProcess from './views/list-detail/for-schemas.process.maia'
@@ -102,10 +106,11 @@ import messagesInterface from './views/messages/interface.maia'
 import messagesProcess from './views/messages/process.maia'
 import messagesStyle from './views/messages/style.maia'
 import messagesView from './views/messages/view.maia'
-import layoutChatActor from './views/modal-chat/actor.maia'
-import layoutChatContext from './views/modal-chat/context.maia'
-import layoutChatProcess from './views/modal-chat/process.maia'
-import modalChatView from './views/modal-chat/view.maia'
+import modalActor from './views/modal/actor.maia'
+import modalContext from './views/modal/context.maia'
+import modalInterface from './views/modal/interface.maia'
+import modalProcess from './views/modal/process.maia'
+import modalView from './views/modal/view.maia'
 import paperActor from './views/paper/actor.maia'
 import paperContext from './views/paper/context.maia'
 import paperInterface from './views/paper/interface.maia'
@@ -260,6 +265,7 @@ export function getSeedConfig() {
 		listDetailDetailSchemasInterface,
 		logsInterface,
 		messagesInterface,
+		modalInterface,
 		layoutChatInterface,
 		paperInterface,
 		placeholderInterface,
@@ -374,8 +380,14 @@ export function getSeedConfig() {
 		{
 			actor: layoutChatActor,
 			context: layoutChatContext,
-			view: modalChatView,
+			view: layoutChatView,
 			process: layoutChatProcess,
+		},
+		{
+			actor: modalActor,
+			context: modalContext,
+			view: modalView,
+			process: modalProcess,
 		},
 		{
 			actor: messagesActor,

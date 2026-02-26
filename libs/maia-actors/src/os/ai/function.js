@@ -86,6 +86,8 @@ export default {
 				tool_calls: toolCalls,
 			})
 
+			let lastActionSummary = null
+			let anyToolFailed = false
 			for (const tc of toolCalls) {
 				const name = tc.function?.name ?? tc.name
 				let raw = tc.function?.arguments ?? tc.arguments ?? '{}'
@@ -94,11 +96,21 @@ export default {
 				try {
 					args = JSON.parse(raw)
 				} catch {}
+				lastActionSummary =
+					typeof args.actionSummary === 'string' ? args.actionSummary : lastActionSummary
 				const result = await runtime.executeToolCall(actor, name, args)
+				if (result?.ok === false) anyToolFailed = true
 				currentMessages.push({
 					role: 'tool',
 					tool_call_id: tc.id,
 					content: typeof result === 'string' ? result : JSON.stringify(result ?? {}),
+				})
+			}
+
+			if (!anyToolFailed && lastActionSummary) {
+				return createSuccessResult({
+					content: lastActionSummary,
+					model: data.model ?? model,
 				})
 			}
 		}
