@@ -309,7 +309,7 @@ export class ActorEngine {
 	destroyActor(actorId) {
 		const actor = this.actors.get(actorId)
 		if (!actor) return
-		actor.shadowRoot.innerHTML = ''
+		if (actor.shadowRoot) actor.shadowRoot.innerHTML = ''
 		if (this.viewEngine) this.viewEngine.cleanupActor(actorId)
 
 		// Clean up context subscription if it exists

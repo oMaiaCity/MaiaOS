@@ -58,7 +58,10 @@
 				"tell": {
 					"type": "object",
 					"properties": {
-						"target": { "type": "string", "description": "Actor co-id" },
+						"target": {
+							"oneOf": [{ "type": "string" }, { "type": "object" }],
+							"description": "Actor co-id or expression ($if, $$source, etc.)"
+						},
 						"type": { "type": "string" },
 						"payload": { "type": "object" }
 					},
@@ -74,7 +77,10 @@
 				"ask": {
 					"type": "object",
 					"properties": {
-						"target": { "type": "string", "description": "Actor co-id" },
+						"target": {
+							"oneOf": [{ "type": "string" }, { "type": "object" }],
+							"description": "Actor co-id or expression ($if, $$source, etc.)"
+						},
 						"type": { "type": "string" },
 						"payload": { "type": "object" }
 					},

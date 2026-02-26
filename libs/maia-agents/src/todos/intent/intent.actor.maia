@@ -5,7 +5,7 @@
 	"context": "°Maia/todos/context/intent",
 	"view": "°Maia/todos/view/intent",
 	"process": "°Maia/todos/process/intent",
-	"brand": "°Maia/todos/style/brand",
+	"brand": "°Maia/brand/maiacity",
 	"inbox": "°Maia/todos/inbox/intent",
 	"interface": []
 }

@@ -1,12 +1,10 @@
 {
 	"$schema": "°Maia/schema/context",
 	"$id": "°Maia/actor/views/layout-chat/context",
-	"messages": "@messages",
-	"infoCard": "@infoCard",
-	"input": "@input",
+	"currentPaper": "@paper",
+	"modal": "@modal",
 	"@actors": {
-		"messages": "°Maia/actor/views/messages",
-		"infoCard": "°Maia/actor/views/info-card",
-		"input": "°Maia/actor/views/input/for-chat"
+		"paper": "°Maia/actor/views/paper",
+		"modal": "°Maia/actor/views/modal"
 	}
 }
