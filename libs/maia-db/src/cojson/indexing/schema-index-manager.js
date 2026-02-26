@@ -1152,11 +1152,16 @@ async function getSchemaIndexColistForRemoval(peer, schemaCoId) {
  * @returns {Promise<void>}
  */
 export async function removeFromIndex(peer, coId, schemaCoId = null) {
-	if (!coId || !coId.startsWith('co_z')) {
-		return
+	if (!coId || !coId.startsWith('co_z')) return
+
+	function removeAllFromColist(colist, id) {
+		if (!colist?.toJSON || !colist?.delete) return
+		const items = colist.toJSON()
+		for (let i = items.length - 1; i >= 0; i--) {
+			if (items[i] === id) colist.delete(i)
+		}
 	}
 
-	// Get co-value core to determine schema if not provided
 	if (!schemaCoId) {
 		const coValueCore = peer.getCoValue(coId)
 		if (coValueCore && peer.isAvailable(coValueCore)) {
@@ -1167,40 +1172,11 @@ export async function removeFromIndex(peer, coId, schemaCoId = null) {
 		}
 	}
 
-	// Remove from schema index if schema exists
 	if (schemaCoId && typeof schemaCoId === 'string' && schemaCoId.startsWith('co_z')) {
-		// Get schema index colist for removal (doesn't check indexing property)
-		// We need to remove co-values even if indexing is currently disabled
 		const indexColist = await getSchemaIndexColistForRemoval(peer, schemaCoId)
-
-		// Remove co-value co-id from index colist
-		if (
-			indexColist &&
-			typeof indexColist.toJSON === 'function' &&
-			typeof indexColist.delete === 'function'
-		) {
-			const items = indexColist.toJSON()
-			for (let i = items.length - 1; i >= 0; i--) {
-				if (items[i] === coId) {
-					indexColist.delete(i)
-				}
-			}
-		}
+		removeAllFromColist(indexColist, coId)
 	} else {
-		// No schema - remove from unknown colist
 		const unknownColist = await ensureUnknownColist(peer)
-
-		if (
-			unknownColist &&
-			typeof unknownColist.toJSON === 'function' &&
-			typeof unknownColist.delete === 'function'
-		) {
-			const items = unknownColist.toJSON()
-			for (let i = items.length - 1; i >= 0; i--) {
-				if (items[i] === coId) {
-					unknownColist.delete(i)
-				}
-			}
-		}
+		removeAllFromColist(unknownColist, coId)
 	}
 }
