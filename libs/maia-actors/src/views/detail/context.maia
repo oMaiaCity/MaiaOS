@@ -1,0 +1,30 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/detail/context",
+	"sparkId": null,
+	"sparkDetails": {
+		"schema": "°Maia/schema/data/spark",
+		"filter": {
+			"id": "$sparkId"
+		},
+		"map": {
+			"id": "id",
+			"name": "name",
+			"members": "$os.capabilities.guardian.accountMembers",
+			"groupId": "$os.capabilities.guardian.id"
+		}
+	},
+	"hasSpark": false,
+	"showEmptyState": true,
+	"showContent": false,
+	"inputActor": "@input",
+	"emptyStateMessage": "Select a spark to view details and members",
+	"categoryLabel": "Spark Details",
+	"groupIdLabel": "Group ID",
+	"membersLabel": "Members",
+	"addAgentLabel": "Add Agent",
+	"memberRemoveButtonText": "×",
+	"@actors": {
+		"input": "°Maia/actor/views/input/for-detail"
+	}
+}

@@ -1,0 +1,19 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/list/context",
+	"list": {
+		"schema": "°Maia/schema/data/todos",
+		"map": {
+			"id": "id",
+			"text": "text",
+			"done": "done"
+		}
+	},
+	"inputActor": "@input",
+	"toggleButtonText": "✓",
+	"deleteButtonText": "✕",
+	"error": null,
+	"@actors": {
+		"input": "°Maia/actor/views/input/for-list"
+	}
+}

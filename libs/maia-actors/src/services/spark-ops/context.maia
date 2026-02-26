@@ -1,0 +1,5 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/services/spark-ops/context",
+	"@label": "@maia/actor/services/spark-ops/context"
+}

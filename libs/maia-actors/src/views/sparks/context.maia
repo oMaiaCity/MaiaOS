@@ -16,6 +16,6 @@
 	"currentDetail": "@detail",
 	"@actors": {
 		"input": "°Maia/actor/views/input/for-sparks",
-		"detail": "°Maia/actor/services/detail"
+		"detail": "°Maia/actor/views/detail"
 	}
 }

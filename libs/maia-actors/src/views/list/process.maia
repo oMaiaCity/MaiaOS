@@ -1,0 +1,56 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/views/list/process",
+	"@label": "@maia/actor/views/list/process",
+	"handlers": {
+		"TOGGLE_BUTTON": [
+			{
+				"tell": {
+					"target": "°Maia/actor/services/todos-ops",
+					"type": "TOGGLE_TODO",
+					"payload": {
+						"id": "$$id",
+						"done": "$$done"
+					}
+				}
+			}
+		],
+		"DELETE_BUTTON": [
+			{
+				"tell": {
+					"target": "°Maia/actor/services/todos-ops",
+					"type": "DELETE_TODO",
+					"payload": {
+						"id": "$$id"
+					}
+				}
+			}
+		],
+		"SUCCESS": [
+			{
+				"ctx": {}
+			}
+		],
+		"ERROR": [
+			{
+				"ctx": {
+					"error": "$$errors.0.message"
+				}
+			}
+		],
+		"RETRY": [
+			{
+				"ctx": {
+					"error": null
+				}
+			}
+		],
+		"DISMISS": [
+			{
+				"ctx": {
+					"error": null
+				}
+			}
+		]
+	}
+}

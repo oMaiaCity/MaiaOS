@@ -579,10 +579,14 @@ export class ActorEngine {
 					}
 					if (message.source) actor._lastEventSource = message.source
 					if (actor.process && this.processEngine) {
+						const payloadWithSource = {
+							...validated.payloadPlain,
+							...(message.source ? { source: message.source } : {}),
+						}
 						const handled = await this.processEngine.send(
 							actor.process.id,
 							message.type,
-							validated.payloadPlain,
+							payloadWithSource,
 						)
 						await markProcessed()
 						if (!handled) hadUnhandledMessages = true
