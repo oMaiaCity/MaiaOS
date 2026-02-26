@@ -9,6 +9,7 @@
 	"style": "°Maia/actor/views/list-detail/style",
 	"inbox": "°Maia/actor/views/list-detail/for-schemas/inbox",
 	"interface": [
-		"SELECT_ITEM"
+		"SELECT_ITEM",
+		"SUCCESS"
 	]
 }

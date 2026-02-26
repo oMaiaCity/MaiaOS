@@ -73,7 +73,7 @@ const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
 /** OpenAI-format tools for LLM. Uses actor tool defs (name, description, parameters). */
 function toOpenAITools() {
 	const defs = getAllActorDefinitions()
-	const toolPaths = ['maia/actor/services/paper']
+	const toolPaths = ['maia/actor/services/paper-ops', 'maia/actor/services/todos-ops']
 	const tools = []
 	for (const path of toolPaths) {
 		const def = defs[path]
@@ -332,7 +332,7 @@ async function handleProfile(worker) {
 
 /**
  * Shared logic: write text into the paper CoText (first note's content).
- * Used by LLM tool @maia/actor/services/paper.
+ * Used by LLM tool @maia/actor/services/paper-ops.
  */
 async function writeToPaperCoText(worker, value) {
 	if (value == null || typeof value !== 'string') {
@@ -366,6 +366,34 @@ async function writeToPaperCoText(worker, value) {
 	return { ok: true, coId: contentId, length: graphemes.length }
 }
 
+/** Create a todo in the todos collection. Used by LLM tool @maia/actor/services/todos-ops. */
+async function createTodoInDb(worker, text) {
+	if (text == null || typeof text !== 'string') {
+		return { ok: false, error: 'text (string) required' }
+	}
+	const trimmed = text.trim()
+	if (!trimmed)
+		return { ok: false, error: 'text must contain at least one non-whitespace character' }
+	const { peer, dataEngine } = worker
+	const todosSchemaCoId = await resolve(peer, '°Maia/schema/data/todos', { returnType: 'coId' })
+	if (!todosSchemaCoId?.startsWith('co_z'))
+		return {
+			ok: false,
+			error: 'Todos schema not found. Ensure genesis seeded (PEER_FRESH_SEED=true).',
+		}
+	const result = await dataEngine.execute({
+		op: 'create',
+		schema: todosSchemaCoId,
+		data: { text: trimmed, done: false },
+	})
+	if (result?.ok === false)
+		return {
+			ok: false,
+			error: result.errors?.map((e) => e.message).join('; ') ?? 'create failed',
+		}
+	return { ok: true, id: result?.data?.id, text: trimmed }
+}
+
 async function handleAgentHttp(req, worker) {
 	const url = new URL(req.url)
 	if (url.pathname === '/profile' && req.method === 'GET') return handleProfile(worker)
@@ -385,7 +413,11 @@ async function handleAgentHttp(req, worker) {
 /** Execute LLM tool call server-side. */
 async function executeLLMTool(worker, toolName, args) {
 	try {
-		if (toolName === '@maia/actor/services/paper' || toolName === '@maia/actor/os/paper') {
+		if (
+			toolName === '@maia/actor/services/paper-ops' ||
+			toolName === '@maia/actor/services/paper' ||
+			toolName === '@maia/actor/os/paper'
+		) {
 			// Accept value, content, or text (some models use different param names)
 			let value = args?.value ?? args?.content ?? args?.text
 			if (value != null && typeof value !== 'string') {
@@ -395,6 +427,11 @@ async function executeLLMTool(worker, toolName, args) {
 						: String(value)
 			}
 			const result = await writeToPaperCoText(worker, value)
+			return JSON.stringify(result)
+		}
+		if (toolName === '@maia/actor/services/todos-ops' || toolName === '@maia/actor/services/todos') {
+			const text = args?.text ?? args?.value
+			const result = await createTodoInDb(worker, text)
 			return JSON.stringify(result)
 		}
 		return JSON.stringify({ ok: false, error: `Unknown tool: ${toolName}` })

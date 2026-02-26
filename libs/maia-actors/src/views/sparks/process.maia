@@ -5,11 +5,10 @@
 	"handlers": {
 		"FORM_SUBMIT": [
 			{
-				"ask": {
-					"target": "°Maia/actor/os/db",
-					"type": "SPARK_OP",
+				"tell": {
+					"target": "°Maia/actor/services/spark-ops",
+					"type": "CREATE_SPARK",
 					"payload": {
-						"op": "createSpark",
 						"name": "$$value"
 					}
 				}
@@ -23,7 +22,7 @@
 			},
 			{
 				"tell": {
-					"target": "°Maia/actor/services/detail",
+					"target": "°Maia/actor/views/detail",
 					"type": "LOAD_ACTOR",
 					"payload": {
 						"id": "$$sparkId"

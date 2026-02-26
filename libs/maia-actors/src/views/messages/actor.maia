@@ -1,0 +1,18 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/views/messages",
+	"@label": "@maia/actor/views/messages",
+	"context": "°Maia/actor/views/messages/context",
+	"view": "°Maia/actor/views/messages/view",
+	"process": "°Maia/actor/views/messages/process",
+	"brand": "°Maia/chat/style/brand",
+	"style": "°Maia/actor/views/messages/style",
+	"inbox": "°Maia/actor/views/messages/inbox",
+	"interface": [
+		"SEND_MESSAGE",
+		"SUCCESS",
+		"ERROR",
+		"RETRY",
+		"DISMISS"
+	]
+}

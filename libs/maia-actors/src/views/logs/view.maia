@@ -1,0 +1,97 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/actor/views/logs/view",
+	"@label": "@maia/actor/views/logs/view",
+	"content": {
+		"tag": "div",
+		"class": "stack",
+		"children": [
+			{
+				"tag": "div",
+				"class": "logs",
+				"attrs": {
+					"data": "log-viewer"
+				},
+				"children": [
+					{
+						"tag": "div",
+						"class": "log-entries",
+						"$each": {
+							"items": "$messages",
+							"template": {
+								"class": "log-entry-container",
+								"children": [
+									{
+										"tag": "div",
+										"class": "log-entry",
+										"attrs": {
+											"data": {
+												"eventType": "$$type",
+												"processed": "$$processed"
+											}
+										},
+										"children": [
+											{
+												"tag": "span",
+												"class": "log-type",
+												"text": "$$type"
+											},
+											{
+												"tag": "span",
+												"class": "log-source",
+												"children": [
+													{
+														"tag": "span",
+														"class": "log-source-role",
+														"text": "$$fromRole"
+													},
+													{
+														"tag": "span",
+														"class": "log-source-id",
+														"text": "$$fromId"
+													}
+												]
+											},
+											{
+												"tag": "span",
+												"class": "log-target",
+												"children": [
+													{
+														"tag": "span",
+														"class": "log-target-role",
+														"text": "$$recipient"
+													},
+													{
+														"tag": "span",
+														"class": "log-target-id",
+														"text": "$$targetId"
+													}
+												]
+											},
+											{
+												"tag": "details",
+												"class": "log-payload-details",
+												"children": [
+													{
+														"tag": "summary",
+														"class": "log-payload-toggle",
+														"text": "$payloadLabel"
+													},
+													{
+														"tag": "pre",
+														"class": "log-payload",
+														"text": "$$payload"
+													}
+												]
+											}
+										]
+									}
+								]
+							}
+						}
+					}
+				]
+			}
+		]
+	}
+}

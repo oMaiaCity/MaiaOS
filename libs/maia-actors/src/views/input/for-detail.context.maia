@@ -11,6 +11,6 @@
 	"errorLabel": "Error: ",
 	"dismissButtonText": "Dismiss",
 	"@actors": {
-		"target": "°Maia/actor/services/detail"
+		"target": "°Maia/actor/views/detail"
 	}
 }

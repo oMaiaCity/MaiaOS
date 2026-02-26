@@ -1,0 +1,5 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/services/schema-ops/context",
+	"@label": "@maia/actor/services/schema-ops/context"
+}

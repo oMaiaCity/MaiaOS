@@ -13,9 +13,11 @@ import dbTool from './os/db/tool.maia'
 import computeMessageNamesDef from './os/names/actor.maia'
 import computeMessageNamesFn from './os/names/function.js'
 import computeMessageNamesTool from './os/names/tool.maia'
-import paperDef from './services/paper/actor.maia'
-import paperFn from './services/paper/function.js'
-import paperTool from './services/paper/tool.maia'
+import paperOpsDef from './services/paper-ops/actor.maia'
+import paperOpsFn from './services/paper-ops/function.js'
+import paperOpsTool from './services/paper-ops/tool.maia'
+import todosOpsDef from './services/todos-ops/actor.maia'
+import todosOpsTool from './services/todos-ops/tool.maia'
 
 /** Merge actor def + tool def for consumers that expect definition.function (tool descriptor) */
 function withTool(actorDef, toolDef) {
@@ -29,9 +31,13 @@ export const ACTORS = {
 		definition: withTool(computeMessageNamesDef, computeMessageNamesTool),
 		function: computeMessageNamesFn,
 	},
-	'maia/actor/services/paper': {
-		definition: withTool(paperDef, paperTool),
-		function: paperFn,
+	'maia/actor/services/paper-ops': {
+		definition: withTool(paperOpsDef, paperOpsTool),
+		function: paperOpsFn,
+	},
+	'maia/actor/services/todos-ops': {
+		definition: withTool(todosOpsDef, todosOpsTool),
+		function: null,
 	},
 	'maia/actor/os/db': { definition: withTool(dbDef, dbTool), function: dbFn },
 }

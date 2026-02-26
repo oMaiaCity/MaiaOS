@@ -12,19 +12,17 @@
 		],
 		"FORM_SUBMIT": [
 			{
-				"op": {
-					"create": {
-						"schema": "°Maia/schema/data/todos",
-						"data": {
-							"text": "$$value",
-							"done": false
-						}
-					}
+				"ctx": {
+					"inputValue": ""
 				}
 			},
 			{
-				"ctx": {
-					"inputValue": ""
+				"tell": {
+					"target": "°Maia/actor/services/todos-ops",
+					"type": "CREATE_TODO",
+					"payload": {
+						"value": "$$value"
+					}
 				}
 			}
 		],

@@ -1,0 +1,15 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/services/spark-ops",
+	"@label": "@maia/actor/services/spark-ops",
+	"context": "°Maia/actor/services/spark-ops/context",
+	"process": "°Maia/actor/services/spark-ops/process",
+	"inbox": "°Maia/actor/services/spark-ops/inbox",
+	"interface": [
+		"CREATE_SPARK",
+		"ADD_MEMBER",
+		"REMOVE_MEMBER",
+		"SUCCESS",
+		"ERROR"
+	]
+}

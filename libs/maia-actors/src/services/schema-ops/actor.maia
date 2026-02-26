@@ -1,0 +1,13 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/services/schema-ops",
+	"@label": "@maia/actor/services/schema-ops",
+	"context": "°Maia/actor/services/schema-ops/context",
+	"process": "°Maia/actor/services/schema-ops/process",
+	"inbox": "°Maia/actor/services/schema-ops/inbox",
+	"interface": [
+		"READ_SCHEMA",
+		"SUCCESS",
+		"ERROR"
+	]
+}

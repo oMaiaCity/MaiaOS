@@ -1,0 +1,20 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/logs/context",
+	"messages": {
+		"schema": "°Maia/schema/event",
+		"map": {
+			"id": "id",
+			"type": "type",
+			"processed": "processed",
+			"payload": "payload",
+			"fromRole": "$source.@label",
+			"toRole": "$target.@label",
+			"fromId": "$source.id",
+			"toId": "$target.id",
+			"recipient": "$target.@label",
+			"targetId": "$target.id"
+		}
+	},
+	"payloadLabel": "payload"
+}

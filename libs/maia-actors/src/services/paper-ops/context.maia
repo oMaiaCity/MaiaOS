@@ -1,0 +1,11 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/services/paper-ops/context",
+	"notes": {
+		"schema": "°Maia/schema/data/notes",
+		"map": {
+			"id": "id",
+			"content": "$content"
+		}
+	}
+}

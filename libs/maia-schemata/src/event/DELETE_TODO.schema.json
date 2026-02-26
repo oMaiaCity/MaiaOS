@@ -1,0 +1,18 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/event/DELETE_TODO",
+	"title": "°Maia/schema/event/DELETE_TODO",
+	"description": "Message type for deleting a todo item via todos-ops",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"properties": {
+		"id": {
+			"type": "string",
+			"pattern": "^co_z",
+			"description": "Todo item co-id (required)"
+		}
+	},
+	"required": ["id"],
+	"additionalProperties": false
+}

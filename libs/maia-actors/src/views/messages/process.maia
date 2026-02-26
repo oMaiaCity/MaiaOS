@@ -1,0 +1,117 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/views/messages/process",
+	"@label": "@maia/actor/views/messages/process",
+	"handlers": {
+		"SEND_MESSAGE": [
+			{
+				"guard": {
+					"phase": "idle"
+				}
+			},
+			{
+				"ctx": {
+					"phase": "creating",
+					"isLoading": true,
+					"hasError": false,
+					"error": null,
+					"pendingInputText": "$$inputText"
+				}
+			},
+			{
+				"tell": {
+					"target": "°Maia/actor/views/layout-chat",
+					"type": "STATUS_UPDATE",
+					"payload": {
+						"isLoading": true,
+						"hasError": false,
+						"error": null
+					}
+				}
+			},
+			{
+				"tell": {
+					"target": "°Maia/actor/services/messages-ops",
+					"type": "SEND_MESSAGE",
+					"payload": {
+						"inputText": "$$inputText"
+					}
+				}
+			}
+		],
+		"SUCCESS": [
+			{
+				"op": {
+					"create": {
+						"schema": "°Maia/schema/data/chat",
+						"data": {
+							"role": "assistant",
+							"content": "$$result.content",
+							"displayName": "Maia"
+						}
+					}
+				}
+			},
+			{
+				"ctx": {
+					"phase": "idle",
+					"isLoading": false,
+					"hasError": false,
+					"error": null,
+					"hasConversations": true,
+					"pendingInputText": null
+				}
+			},
+			{
+				"tell": {
+					"target": "°Maia/actor/views/layout-chat",
+					"type": "STATUS_UPDATE",
+					"payload": {
+						"isLoading": false,
+						"hasError": false,
+						"error": null
+					}
+				}
+			}
+		],
+		"ERROR": [
+			{
+				"ctx": {
+					"isLoading": false,
+					"hasError": true,
+					"error": "$$errors.0.message",
+					"phase": "error"
+				}
+			},
+			{
+				"tell": {
+					"target": "°Maia/actor/views/layout-chat",
+					"type": "STATUS_UPDATE",
+					"payload": {
+						"isLoading": false,
+						"hasError": true,
+						"error": "$$errors.0.message"
+					}
+				}
+			}
+		],
+		"RETRY": [
+			{
+				"ctx": {
+					"phase": "idle",
+					"error": null,
+					"hasError": false
+				}
+			}
+		],
+		"DISMISS": [
+			{
+				"ctx": {
+					"phase": "idle",
+					"error": null,
+					"hasError": false
+				}
+			}
+		]
+	}
+}

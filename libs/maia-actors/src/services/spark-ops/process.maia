@@ -1,0 +1,83 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/services/spark-ops/process",
+	"@label": "@maia/actor/services/spark-ops/process",
+	"handlers": {
+		"CREATE_SPARK": [
+			{
+				"ctx": {
+					"_caller": "$$source"
+				}
+			},
+			{
+				"ask": {
+					"target": "°Maia/actor/os/db",
+					"type": "SPARK_OP",
+					"payload": {
+						"op": "createSpark",
+						"name": "$$name"
+					}
+				}
+			}
+		],
+		"ADD_MEMBER": [
+			{
+				"ctx": {
+					"_caller": "$$source"
+				}
+			},
+			{
+				"ask": {
+					"target": "°Maia/actor/os/db",
+					"type": "SPARK_OP",
+					"payload": {
+						"op": "addSparkMember",
+						"id": "$$id",
+						"memberId": "$$memberId",
+						"role": "$$role"
+					}
+				}
+			}
+		],
+		"REMOVE_MEMBER": [
+			{
+				"ctx": {
+					"_caller": "$$source"
+				}
+			},
+			{
+				"ask": {
+					"target": "°Maia/actor/os/db",
+					"type": "SPARK_OP",
+					"payload": {
+						"op": "removeSparkMember",
+						"id": "$$id",
+						"memberId": "$$memberId"
+					}
+				}
+			}
+		],
+		"SUCCESS": [
+			{
+				"tell": {
+					"target": "$_caller",
+					"type": "SUCCESS",
+					"payload": {
+						"result": "$$result"
+					}
+				}
+			}
+		],
+		"ERROR": [
+			{
+				"tell": {
+					"target": "$_caller",
+					"type": "ERROR",
+					"payload": {
+						"errors": "$$errors"
+					}
+				}
+			}
+		]
+	}
+}

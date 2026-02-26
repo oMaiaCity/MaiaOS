@@ -1,0 +1,12 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/services/paper-ops/process",
+	"@label": "@maia/actor/services/paper-ops/process",
+	"handlers": {
+		"UPDATE_PAPER": [
+			{
+				"function": true
+			}
+		]
+	}
+}
