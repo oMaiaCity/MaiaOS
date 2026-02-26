@@ -2,7 +2,7 @@
 	"$schema": "°Maia/schema/meta",
 	"$id": "°Maia/schema/os/human",
 	"title": "°Maia/schema/os/human",
-	"description": "Canonical public identity: account + profile. Referenced by humans registry.",
+	"description": "Canonical public identity: account + profile. Referenced by humans registry. View shape includes derived fields (id, accountId, registryName, profileName).",
 	"cotype": "comap",
 	"indexing": false,
 	"properties": {
@@ -15,6 +15,24 @@
 			"type": "string",
 			"pattern": "^co_z[a-zA-Z0-9]{20,}$",
 			"description": "Profile co-id"
+		},
+		"id": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "Human CoMap co-id (derived when read)"
+		},
+		"accountId": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "Same as account, for view"
+		},
+		"registryName": {
+			"type": "string",
+			"description": "Registry key (animal-generated, e.g. brave-dolphin-71234567)"
+		},
+		"profileName": {
+			"type": "string",
+			"description": "Profile display name from profile.name (resolved when read)"
 		}
 	},
 	"required": ["account", "profile"],

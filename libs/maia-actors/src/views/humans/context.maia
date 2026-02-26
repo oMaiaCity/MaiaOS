@@ -4,7 +4,7 @@
 	"@label": "@maia/actor/views/humans/context",
 	"title": "Human Book",
 	"items": {
-		"schema": "°Maia/schema/data/human",
+		"schema": "°Maia/schema/os/human",
 		"map": {
 			"id": "id",
 			"accountId": "accountId",

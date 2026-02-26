@@ -36,7 +36,7 @@ export async function seedData(account, node, maiaGroup, peer, data, coIdRegistr
 
 		// Special handling for Notes: create CoText (colist) first, then Note (comap) with content ref
 		if (collectionName === 'notes') {
-			const cotextSchemaCoId = registry.get('°Maia/schema/data/cotext') || registry.get('data/cotext')
+			const cotextSchemaCoId = registry.get('°Maia/schema/os/cotext') || registry.get('os/cotext')
 			if (!cotextSchemaCoId) continue
 
 			let itemCount = 0

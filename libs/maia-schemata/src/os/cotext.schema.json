@@ -1,7 +1,7 @@
 {
-	"$id": "°Maia/schema/data/cotext",
+	"$id": "°Maia/schema/os/cotext",
 	"$schema": "°Maia/schema/meta",
-	"title": "°Maia/schema/data/cotext",
+	"title": "°Maia/schema/os/cotext",
 	"cotype": "colist",
 	"indexing": true,
 	"items": {

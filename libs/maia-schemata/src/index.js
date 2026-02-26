@@ -47,9 +47,6 @@ export function getMetaSchema() {
 }
 
 import chatDataSchema from './data/chat.schema.json'
-// Import data schemas
-import cotextDataSchema from './data/cotext.schema.json'
-import humanDataSchema from './data/human.schema.json'
 import notesDataSchema from './data/notes.schema.json'
 import sparkDataSchema from './data/spark.schema.json'
 import todosDataSchema from './data/todos.schema.json'
@@ -61,6 +58,8 @@ import agentsRegistrySchema from './os/agents-registry.schema.json'
 import capabilitiesSchema from './os/capabilities.schema.json'
 import childrenSchema from './os/children.schema.json'
 import contextSchema from './os/context.schema.json'
+// Import data schemas
+import cotextSchema from './os/cotext.schema.json'
 import eventSchema from './os/event.schema.json'
 // Import extracted $defs as separate schemas
 import guardSchema from './os/guard.schema.json'
@@ -116,11 +115,10 @@ const SCHEMAS = {
 	'os/human': humanSchema,
 	'os/humans-registry': humansRegistrySchema,
 	'os/registries': registriesSchema,
-	'data/cotext': cotextDataSchema,
+	'os/cotext': cotextSchema,
 	'data/notes': notesDataSchema,
 	'data/todos': todosDataSchema,
 	'data/chat': chatDataSchema,
-	'data/human': humanDataSchema,
 	'data/spark': sparkDataSchema,
 }
 

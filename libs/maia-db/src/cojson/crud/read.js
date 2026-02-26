@@ -80,7 +80,7 @@ export async function read(
 			returnType: 'coId',
 		})
 		// Humans: read from account.registries.humans (no schema index)
-		const humanSchemaCoId = await resolveSchema(peer, '°Maia/schema/data/human', {
+		const humanSchemaCoId = await resolveSchema(peer, '°Maia/schema/os/human', {
 			returnType: 'coId',
 		})
 		const resolvedSchema = await resolveSchema(peer, schema, { returnType: 'coId' })
