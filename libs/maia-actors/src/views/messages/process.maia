@@ -31,7 +31,7 @@
 			},
 			{
 				"tell": {
-					"target": "°Maia/actor/services/messages-ops",
+					"target": "°Maia/actor/os/messages",
 					"type": "SEND_MESSAGE",
 					"payload": {
 						"inputText": "$$inputText"

@@ -17,9 +17,7 @@
 			},
 			"required": [
 				"inputText"
-			],
-			"additionalProperties": false
+			]
 		}
-	},
-	"additionalProperties": false
+	}
 }

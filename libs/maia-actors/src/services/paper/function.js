@@ -1,5 +1,5 @@
 /**
- * Update Paper Content - @maia/actor/services/paper-ops
+ * Update Paper Content - @maia/actor/services/paper
  * Full-replace CoText content for the chat paper area.
  * Used for auto-save on each keystroke (local-first CRDT).
  */

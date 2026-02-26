@@ -17,8 +17,7 @@
 			},
 			"required": [
 				"value"
-			],
-			"additionalProperties": false
+			]
 		},
 		"TOGGLE_TODO": {
 			"type": "object",
@@ -36,8 +35,7 @@
 			"required": [
 				"id",
 				"done"
-			],
-			"additionalProperties": false
+			]
 		},
 		"DELETE_TODO": {
 			"type": "object",
@@ -50,9 +48,7 @@
 			},
 			"required": [
 				"id"
-			],
-			"additionalProperties": false
+			]
 		}
-	},
-	"additionalProperties": false
+	}
 }

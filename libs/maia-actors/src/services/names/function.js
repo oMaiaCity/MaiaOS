@@ -1,5 +1,5 @@
 /**
- * Compute Message Names Actor - @maia/actor/os/names
+ * Compute Message Names Actor - @maia/actor/services/names
  * Computes a lookup object mapping message IDs to display names based on role.
  */
 import { createSuccessResult } from '@MaiaOS/schemata/operation-result'

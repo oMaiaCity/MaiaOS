@@ -11,6 +11,7 @@
  * destroyActor, destroyActorsForAgent, destroyActorsForContainer for teardown.
  */
 
+import { waitForStoreReady } from '@MaiaOS/db'
 import { containsExpressions } from '@MaiaOS/schemata/expression-resolver'
 import { deriveInboxRef } from '../utils/inbox-convention.js'
 import { readStore } from '../utils/store-reader.js'
@@ -444,6 +445,25 @@ export class ActorEngine {
 		const hasProcess = processRef && configDef?.handlers
 		if (!hasProcess) return null
 
+		// Resolve interface schema (co-id ref) for validation
+		let interfaceSchema = null
+		const interfaceRef = actorConfig.interface
+		if (interfaceRef && typeof interfaceRef === 'string' && this.dataEngine?.peer) {
+			let interfaceCoId = interfaceRef
+			if (!interfaceCoId.startsWith('co_z')) {
+				const resolved = await this.dataEngine.peer.resolve(interfaceRef, { returnType: 'coId' })
+				if (resolved && typeof resolved === 'string' && resolved.startsWith('co_z')) {
+					interfaceCoId = resolved
+				}
+			}
+			if (interfaceCoId.startsWith('co_z')) {
+				const ifaceStore = await readStore(this.dataEngine, interfaceCoId)
+				if (ifaceStore?.value) {
+					interfaceSchema = ifaceStore.value
+				}
+			}
+		}
+
 		const { getActor } = await import('@MaiaOS/actors')
 		const label = actorConfig['@label']
 		const namespacePath = typeof label === 'string' ? label.replace(/^@/, '') : null
@@ -453,13 +473,40 @@ export class ActorEngine {
 		const minimalContext = { value: {}, subscribe: () => () => {} }
 		const configUnsubscribes = []
 
+		// Load context for headless actors (paper, todos, etc.) so execute() has notes/todos
+		let contextStore = minimalContext
+		let contextCoId = null
+		let contextSchemaCoId = null
+		const contextRef = actorConfig.context
+		if (contextRef && typeof contextRef === 'string' && this.dataEngine?.peer) {
+			const resolvedContextCoId = contextRef.startsWith('co_z')
+				? contextRef
+				: await this.dataEngine.peer.resolve(contextRef, { returnType: 'coId' })
+			if (resolvedContextCoId?.startsWith?.('co_z')) {
+				const store = await readStore(this.dataEngine, resolvedContextCoId)
+				if (store) {
+					await waitForStoreReady(store, resolvedContextCoId, 3000).catch(() => {})
+					contextStore = store
+					contextCoId = resolvedContextCoId
+					contextSchemaCoId =
+						(await this.dataEngine.peer.resolve(
+							{ fromCoValue: resolvedContextCoId },
+							{ returnType: 'coId' },
+						)) ?? null
+					if (store._unsubscribe) {
+						configUnsubscribes.push(() => store._unsubscribe())
+					}
+				}
+			}
+		}
+
 		const actor = {
 			id: actorId,
 			config: { ...actorConfig, $id: actorId },
 			shadowRoot: null,
-			context: minimalContext,
-			contextCoId: null,
-			contextSchemaCoId: null,
+			context: contextStore,
+			contextCoId,
+			contextSchemaCoId,
 			containerElement: null,
 			actorOps: this, // ActorEngine implements ActorOps interface
 			viewDef: null,
@@ -467,6 +514,7 @@ export class ActorEngine {
 			inbox: null,
 			inboxCoId,
 			interface: actorConfig.interface || null,
+			interfaceSchema,
 			executableFunction,
 			_renderState: 'ready',
 			children: {},
@@ -540,9 +588,9 @@ export class ActorEngine {
 		await this.inboxEngine.deliver(targetId, message)
 	}
 
-	async validateEventPayloadForSend(eventType, payload) {
+	async validateEventPayloadForSend(actorId, eventType, payload) {
 		if (!this.inboxEngine) return true
-		return this.inboxEngine.validatePayload(eventType, payload)
+		return this.inboxEngine.validatePayloadForActor(actorId, eventType, payload)
 	}
 
 	async processEvents(actorId) {

@@ -617,8 +617,12 @@ export class ViewEngine {
 					)
 				}
 
-				// Runtime schema validation (from backend registry) - skip send if payload invalid
-				const payloadValid = await this.actorOps.validateEventPayloadForSend?.(eventName, payload)
+				// Runtime schema validation (from actor's interface) - skip send if payload invalid
+				const payloadValid = await this.actorOps.validateEventPayloadForSend?.(
+					actorId,
+					eventName,
+					payload,
+				)
 				if (!payloadValid) return
 
 				// CLEAN ARCHITECTURE: For update-input types on blur, only send if DOM value differs from CURRENT context

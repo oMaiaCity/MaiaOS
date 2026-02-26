@@ -9,48 +9,22 @@
 		"TOGGLE_BUTTON": {
 			"type": "object",
 			"description": "Toggle todo button",
-			"properties": {
-				"id": {
-					"type": "string",
-					"description": "Co-id of the todo"
-				},
-				"done": {
-					"type": "boolean",
-					"description": "Current done state"
-				}
-			},
-			"required": [
-				"id",
-				"done"
-			],
-			"additionalProperties": false
+			"additionalProperties": true
 		},
 		"DELETE_BUTTON": {
 			"type": "object",
 			"description": "Delete todo button",
-			"properties": {
-				"id": {
-					"type": "string",
-					"description": "Co-id of the todo"
-				}
-			},
-			"required": [
-				"id"
-			],
-			"additionalProperties": false
+			"additionalProperties": true
 		},
 		"RETRY": {
 			"type": "object",
 			"description": "Retry action",
-			"properties": {},
-			"additionalProperties": false
+			"additionalProperties": true
 		},
 		"DISMISS": {
 			"type": "object",
 			"description": "Dismiss",
-			"properties": {},
-			"additionalProperties": false
+			"additionalProperties": true
 		}
-	},
-	"additionalProperties": false
+	}
 }

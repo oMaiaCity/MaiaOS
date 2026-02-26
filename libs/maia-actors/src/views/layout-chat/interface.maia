@@ -9,78 +9,27 @@
 		"SEND_MESSAGE": {
 			"type": "object",
 			"description": "Send message",
-			"properties": {
-				"inputText": {
-					"type": "string",
-					"description": "Message content"
-				}
-			},
-			"required": [
-				"inputText"
-			],
-			"additionalProperties": false
+			"additionalProperties": true
 		},
 		"UPDATE_INPUT": {
 			"type": "object",
 			"description": "Update input",
-			"properties": {
-				"value": {
-					"type": "string",
-					"description": "Input value"
-				}
-			},
-			"required": [
-				"value"
-			],
-			"additionalProperties": false
+			"additionalProperties": true
 		},
 		"STATUS_UPDATE": {
 			"type": "object",
 			"description": "Status update",
-			"properties": {
-				"isLoading": {
-					"type": "boolean"
-				},
-				"hasError": {
-					"type": "boolean"
-				},
-				"error": {
-					"type": "string",
-					"description": "Error message (null when no error)"
-				}
-			},
-			"required": [
-				"isLoading",
-				"hasError"
-			],
-			"additionalProperties": false
+			"additionalProperties": true
 		},
 		"OPEN_POPUP": {
 			"type": "object",
 			"description": "Open popup",
-			"properties": {
-				"popupOpen": {
-					"type": "boolean"
-				}
-			},
-			"required": [
-				"popupOpen"
-			],
-			"additionalProperties": false
+			"additionalProperties": true
 		},
 		"CLOSE_POPUP": {
 			"type": "object",
 			"description": "Close popup",
-			"properties": {
-				"popupOpen": {
-					"type": "boolean"
-				}
-			},
-			"required": [
-				"popupOpen"
-			],
-			"additionalProperties": false
+			"additionalProperties": true
 		}
-	},
-	"additionalProperties": false
+	}
 }

@@ -30,6 +30,7 @@ const REFERENCE_PROPS = [
 	'inbox',
 	'subscribers',
 	'tool',
+	'interface',
 ]
 const NESTED_REF_PROPS = ['states']
 
@@ -385,17 +386,17 @@ export async function seed(
 		return seeded
 	}
 
-	// Process before actors: actor configs reference process, so process must be seeded first
+	// Interfaces before actors (actors reference interface). Process before actors (actors reference process).
 	const CONFIG_ORDER = [
 		['styles', 'styles'],
 		['inboxes', 'inboxes'],
 		['tools', 'tools'],
 		['processes', 'processes'],
+		['interfaces', 'interfaces'],
 		['actors', 'actors'],
 		['views', 'views'],
 		['contexts', 'contexts'],
 		['states', 'states'],
-		['interfaces', 'interfaces'],
 		['subscriptions', 'subscriptions'],
 		['children', 'children'],
 	]
@@ -424,7 +425,7 @@ export async function seed(
 			const fullyTransformed = transformForSeeding(originalConfig, latestRegistry)
 			// Post-transform validation: actor configs must have co-ids for process, context, view
 			if (configInfo.type === 'actor') {
-				const refProps = ['process', 'context', 'view']
+				const refProps = ['process', 'context', 'view', 'interface']
 				for (const prop of refProps) {
 					const val = fullyTransformed[prop]
 					if (val && typeof val === 'string' && !val.startsWith('co_z')) {
