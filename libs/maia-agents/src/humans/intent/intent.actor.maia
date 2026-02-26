@@ -5,7 +5,7 @@
 	"process": "°Maia/humans/process/intent",
 	"view": "°Maia/humans/view/intent",
 	"context": "°Maia/humans/context/intent",
-	"brand": "°Maia/humans/style/brand",
+	"brand": "°Maia/brand/maiacity",
 	"inbox": "°Maia/humans/inbox/intent",
 	"interface": [
 		"DISMISS"

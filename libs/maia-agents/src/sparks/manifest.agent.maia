@@ -8,6 +8,7 @@
 		"°Maia/sparks/actor/intent",
 		"°Maia/actor/views/sparks",
 		"°Maia/actor/views/detail",
+		"°Maia/actor/services/spark",
 		"°Maia/actor/os/db"
 	]
 }

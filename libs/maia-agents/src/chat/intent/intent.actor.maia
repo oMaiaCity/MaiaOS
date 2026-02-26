@@ -5,7 +5,7 @@
 	"context": "°Maia/chat/context/intent",
 	"view": "°Maia/chat/view/intent",
 	"process": "°Maia/chat/process/intent",
-	"brand": "°Maia/chat/style/brand",
+	"brand": "°Maia/brand/maiacity",
 	"inbox": "°Maia/chat/inbox/intent",
 	"interface": []
 }

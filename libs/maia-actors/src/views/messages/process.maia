@@ -20,7 +20,7 @@
 			},
 			{
 				"tell": {
-					"target": "°Maia/actor/views/layout-chat",
+					"target": "°Maia/actor/views/modal",
 					"type": "STATUS_UPDATE",
 					"payload": {
 						"isLoading": true,
@@ -64,7 +64,7 @@
 			},
 			{
 				"tell": {
-					"target": "°Maia/actor/views/layout-chat",
+					"target": "°Maia/actor/views/modal",
 					"type": "STATUS_UPDATE",
 					"payload": {
 						"isLoading": false,
@@ -85,7 +85,7 @@
 			},
 			{
 				"tell": {
-					"target": "°Maia/actor/views/layout-chat",
+					"target": "°Maia/actor/views/modal",
 					"type": "STATUS_UPDATE",
 					"payload": {
 						"isLoading": false,

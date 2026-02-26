@@ -4,7 +4,7 @@
  * Exports everything as JS objects - no runtime file loading needed
  */
 
-import brandStyle from './intent/brand.style.maia'
+import maiacityBrand from '../brand/maiacity.style.maia'
 import intentActor from './intent/intent.actor.maia'
 import intentContext from './intent/intent.context.maia'
 import intentProcess from './intent/intent.process.maia'
@@ -19,7 +19,7 @@ export const SparksAgentRegistry = {
 	agent: sparksAgent,
 
 	styles: {
-		'°Maia/sparks/style/brand': brandStyle,
+		'°Maia/brand/maiacity': maiacityBrand,
 	},
 
 	actors: {

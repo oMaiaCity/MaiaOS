@@ -5,7 +5,7 @@
 	"context": "°Maia/actor/views/list-detail/for-schemas/context",
 	"view": "°Maia/actor/views/list-detail/view",
 	"process": "°Maia/actor/views/list-detail/for-schemas/process",
-	"brand": "°Maia/style/brand",
+	"brand": "°Maia/brand/maiacity",
 	"style": "°Maia/actor/views/list-detail/style",
 	"inbox": "°Maia/actor/views/list-detail/for-schemas/inbox",
 	"interface": "°Maia/actor/views/list-detail/for-schemas/interface"

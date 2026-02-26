@@ -1,0 +1,10 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/layout-chat/context",
+	"currentPaper": "@paper",
+	"modal": "@modal",
+	"@actors": {
+		"paper": "°Maia/actor/views/paper",
+		"modal": "°Maia/actor/views/modal"
+	}
+}
