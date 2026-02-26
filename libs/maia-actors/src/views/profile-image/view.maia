@@ -1,0 +1,77 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/actor/views/profile-image/view",
+	"@label": "@maia/actor/views/profile-image/view",
+	"content": {
+		"tag": "div",
+		"class": "profile-image-wrapper",
+		"children": [
+			{
+				"tag": "h2",
+				"class": "profile-image-title",
+				"text": "$title"
+			},
+			{
+				"tag": "div",
+				"class": "profile-image-display",
+				"children": [
+					{
+						"tag": "img",
+						"attrs": {
+							"src": "$profile.avatarDataUrl",
+							"alt": "Profile avatar",
+							"class": "profile-avatar"
+						}
+					}
+				]
+			},
+			{
+				"tag": "div",
+				"class": "upload-status",
+				"text": "$uploadStatus"
+			},
+			{
+				"tag": "div",
+				"class": "upload-error",
+				"text": "$uploadError"
+			},
+			{
+				"tag": "div",
+				"class": "profile-image-upload",
+				"children": [
+					{
+						"tag": "label",
+						"class": "upload-label",
+						"text": "Upload avatar",
+						"children": [
+							{
+								"tag": "input",
+								"attrs": {
+									"type": "file",
+									"accept": "image/*",
+									"class": "upload-input"
+								}
+							}
+						]
+					},
+					{
+						"tag": "button",
+						"class": "button",
+						"text": "Upload",
+						"attrs": {
+							"type": "button"
+						},
+						"$on": {
+							"click": {
+								"send": "UPLOAD_PROFILE_IMAGE",
+								"payload": {
+									"fileBase64": "@fileFromInput"
+								}
+							}
+						}
+					}
+				]
+			}
+		]
+	}
+}

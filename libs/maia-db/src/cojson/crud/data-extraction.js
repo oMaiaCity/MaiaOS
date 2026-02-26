@@ -112,6 +112,46 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 	}
 
 	if (rawType === 'costream' && content) {
+		const isBinary =
+			headerMeta?.type === 'binary' || typeof content.getBinaryStreamInfo === 'function'
+		if (isBinary && typeof content.getBinaryStreamInfo === 'function') {
+			try {
+				const binaryInfo = content.getBinaryStreamInfo()
+				const chunks = content.getBinaryChunks?.(true)
+				const result = {
+					id: coValueCore.id,
+					cotype: 'cobinary',
+					type: 'cobinary',
+					$schema: schema,
+					mimeType: binaryInfo?.mimeType,
+					fileName: binaryInfo?.fileName,
+					totalSizeBytes: binaryInfo?.totalSizeBytes,
+					finished: chunks?.finished ?? content.isBinaryStreamEnded?.() ?? false,
+				}
+				try {
+					if (typeof peer.getGroupInfo === 'function') {
+						const groupInfo = peer.getGroupInfo(coValueCore)
+						if (groupInfo) result.groupInfo = groupInfo
+					}
+				} catch (_e) {}
+				return result
+			} catch (_e) {
+				const result = {
+					id: coValueCore.id,
+					cotype: 'cobinary',
+					type: 'cobinary',
+					$schema: schema,
+					items: [],
+				}
+				try {
+					if (typeof peer.getGroupInfo === 'function') {
+						const groupInfo = peer.getGroupInfo(coValueCore)
+						if (groupInfo) result.groupInfo = groupInfo
+					}
+				} catch (_e) {}
+				return result
+			}
+		}
 		try {
 			const streamData = content.toJSON()
 			const items = []

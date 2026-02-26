@@ -52,14 +52,16 @@ function getValueAtPathNoResolve(item, path) {
 
 function parseMapExpression(expression) {
 	if (typeof expression !== 'string') return null
-	if (expression.startsWith('$$')) {
-		return { path: expression.substring(2), isResolve: true }
-	}
-	if (expression.startsWith('$')) {
-		return { path: expression.substring(1), isResolve: true }
-	}
-	// Pass-through: direct property access
-	return { path: expression, isResolve: false }
+	const pathExpr = expression.startsWith('$$')
+		? expression.substring(2)
+		: expression.startsWith('$')
+			? expression.substring(1)
+			: expression
+	const isResolve = expression.startsWith('$$') || expression.startsWith('$')
+	// Support :asDataUrl suffix for cobinary co-ids (e.g. "$avatar:asDataUrl")
+	const asDataUrl = pathExpr.endsWith(':asDataUrl')
+	const path = asDataUrl ? pathExpr.slice(0, -10) : pathExpr
+	return { path, isResolve, asDataUrl }
 }
 
 /**
@@ -160,9 +162,30 @@ export async function applyMapTransform(peer, item, mapConfig, options = {}) {
 				}
 			}
 
-			const mappedValue = await getValueAtPathWithResolution(peer, item, path, visited, {
+			let mappedValue = await getValueAtPathWithResolution(peer, item, path, visited, {
 				timeoutMs,
 			})
+			// :asDataUrl suffix: resolve cobinary co-id to data URL for img src
+			if (parsed.asDataUrl && peer.dbEngine) {
+				const coId =
+					typeof mappedValue === 'string' && mappedValue.startsWith('co_z')
+						? mappedValue
+						: mappedValue?.id && typeof mappedValue.id === 'string' && mappedValue.id.startsWith('co_z')
+							? mappedValue.id
+							: null
+				const PLACEHOLDER =
+					'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+				if (coId) {
+					try {
+						const r = await peer.dbEngine.execute({ op: 'loadBinaryAsBlob', coId })
+						mappedValue = r?.ok && r?.data?.dataUrl ? r.data.dataUrl : PLACEHOLDER
+					} catch (_e) {
+						mappedValue = PLACEHOLDER
+					}
+				} else {
+					mappedValue = PLACEHOLDER
+				}
+			}
 			mappedItem[targetField] = mappedValue
 		} catch (_err) {
 			mappedItem[targetField] = undefined

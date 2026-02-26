@@ -47,7 +47,10 @@ export function getMetaSchema() {
 }
 
 import chatDataSchema from './data/chat.schema.json'
+// Import data schemas
+import cobinaryDataSchema from './data/cobinary.schema.json'
 import notesDataSchema from './data/notes.schema.json'
+import profileDataSchema from './data/profile.schema.json'
 import sparkDataSchema from './data/spark.schema.json'
 import todosDataSchema from './data/todos.schema.json'
 import actionSchema from './os/action.schema.json'
@@ -58,7 +61,6 @@ import agentsRegistrySchema from './os/agents-registry.schema.json'
 import capabilitiesSchema from './os/capabilities.schema.json'
 import childrenSchema from './os/children.schema.json'
 import contextSchema from './os/context.schema.json'
-// Import data schemas
 import cotextSchema from './os/cotext.schema.json'
 import eventSchema from './os/event.schema.json'
 // Import extracted $defs as separate schemas
@@ -112,11 +114,13 @@ const SCHEMAS = {
 	'os/indexes-registry': indexesRegistrySchema,
 	'os/agents-registry': agentsRegistrySchema,
 	'os/sparks-registry': sparksRegistrySchema,
+	'os/cotext': cotextSchema,
 	'os/human': humanSchema,
 	'os/humans-registry': humansRegistrySchema,
 	'os/registries': registriesSchema,
-	'os/cotext': cotextSchema,
+	'data/cobinary': cobinaryDataSchema,
 	'data/notes': notesDataSchema,
+	'data/profile': profileDataSchema,
 	'data/todos': todosDataSchema,
 	'data/chat': chatDataSchema,
 	'data/spark': sparkDataSchema,

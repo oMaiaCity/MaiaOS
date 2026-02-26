@@ -22,7 +22,10 @@ export class Runtime {
 	}
 
 	_isDebug() {
-		return typeof window !== 'undefined' && (import.meta?.env?.DEV ?? false)
+		return (
+			typeof window !== 'undefined' &&
+			(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
+		)
 	}
 
 	_log(...args) {

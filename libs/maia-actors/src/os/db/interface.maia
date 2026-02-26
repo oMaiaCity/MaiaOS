@@ -2,7 +2,7 @@
 	"$schema": "°Maia/schema/meta",
 	"$id": "°Maia/actor/os/db/interface",
 	"title": "°Maia/actor/os/db/interface",
-	"description": "Unified API for all database and spark operations (read, create, update, delete, seed, schema, resolve, append, push, processInbox, createSpark, readSpark, updateSpark, deleteSpark, addSparkMember, removeSparkMember, addSparkParentGroup, removeSparkParentGroup, getSparkMembers, updateSparkMemberRole)",
+	"description": "Unified API for all database and spark operations (read, create, update, delete, seed, schema, resolve, append, push, processInbox, uploadBinary, loadBinaryAsBlob, createSpark, readSpark, updateSpark, deleteSpark, addSparkMember, removeSparkMember, addSparkParentGroup, removeSparkParentGroup, getSparkMembers, updateSparkMemberRole)",
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {
@@ -22,7 +22,9 @@
 						"resolve",
 						"append",
 						"push",
-						"processInbox"
+						"processInbox",
+						"uploadBinary",
+						"loadBinaryAsBlob"
 					],
 					"description": "Operation to execute"
 				},
@@ -68,6 +70,22 @@
 				"inboxCoId": {
 					"type": "string",
 					"description": "Inbox co-id for processInbox"
+				},
+				"mimeType": {
+					"type": "string",
+					"description": "MIME type for uploadBinary (e.g. image/png)"
+				},
+				"fileName": {
+					"type": "string",
+					"description": "Original file name for uploadBinary"
+				},
+				"totalSizeBytes": {
+					"type": "integer",
+					"description": "Total file size in bytes for uploadBinary"
+				},
+				"chunks": {
+					"type": "array",
+					"description": "Base64-encoded chunks for uploadBinary"
 				}
 			},
 			"required": [

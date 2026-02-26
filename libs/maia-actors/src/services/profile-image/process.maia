@@ -1,0 +1,28 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/services/profile-image/process",
+	"@label": "@maia/actor/services/profile-image/process",
+	"handlers": {
+		"UPLOAD_PROFILE_IMAGE": [
+			{
+				"function": true
+			}
+		],
+		"SUCCESS": [
+			{
+				"ctx": {
+					"uploadStatus": "Avatar updated!",
+					"uploadError": null
+				}
+			}
+		],
+		"ERROR": [
+			{
+				"ctx": {
+					"uploadStatus": null,
+					"uploadError": "$$errors.0.message"
+				}
+			}
+		]
+	}
+}

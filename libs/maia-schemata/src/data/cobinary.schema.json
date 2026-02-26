@@ -1,0 +1,23 @@
+{
+	"$id": "°Maia/schema/data/cobinary",
+	"$schema": "°Maia/schema/meta",
+	"title": "°Maia/schema/data/cobinary",
+	"cotype": "cobinary",
+	"indexing": true,
+	"properties": {
+		"mimeType": {
+			"type": "string",
+			"description": "MIME type of the file (e.g. application/pdf, image/png)"
+		},
+		"fileName": {
+			"type": "string",
+			"description": "Original file name"
+		},
+		"totalSizeBytes": {
+			"type": "integer",
+			"minimum": 0,
+			"description": "Total file size in bytes"
+		}
+	},
+	"required": ["mimeType"]
+}

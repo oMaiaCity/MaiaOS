@@ -91,6 +91,11 @@ const ProfileSchema = {
 			minLength: 1,
 			description: "User's display name",
 		},
+		avatar: {
+			type: 'string',
+			pattern: '^co_z[a-zA-Z0-9]+$',
+			description: 'CoBinary co-id for profile image',
+		},
 	},
 	required: ['name'],
 	$defs: coTypesDefs.$defs,

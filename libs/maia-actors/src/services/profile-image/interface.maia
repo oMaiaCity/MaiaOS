@@ -1,0 +1,47 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/actor/services/profile-image/interface",
+	"title": "°Maia/actor/services/profile-image/interface",
+	"description": "Upload profile image (avatar) to CoBinary and set profile.avatar. Used when user uploads an image for their profile.",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"UPLOAD_PROFILE_IMAGE": {
+			"type": "object",
+			"description": "Upload image as CoBinary and set profile.avatar",
+			"properties": {
+				"fileBase64": {
+					"type": "string",
+					"description": "Base64-encoded file content"
+				},
+				"avatar": {
+					"type": "string",
+					"description": "Pre-uploaded CoBinary co-id (InboxEngine uploads before persist)"
+				},
+				"mimeType": {
+					"type": "string",
+					"description": "MIME type (e.g. image/png, image/jpeg)"
+				},
+				"fileName": {
+					"type": "string",
+					"description": "Original file name (optional)"
+				}
+			},
+			"oneOf": [
+				{
+					"required": [
+						"fileBase64",
+						"mimeType"
+					]
+				},
+				{
+					"required": [
+						"avatar"
+					]
+				}
+			],
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

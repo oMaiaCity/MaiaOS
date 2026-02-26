@@ -36,6 +36,49 @@ async function getSchemaFromDb(maia, schemaRef) {
 import { renderAgentViewer, renderDashboard } from './dashboard.js'
 import { escapeHtml, getSyncStatusMessage, truncate } from './utils.js'
 
+// Cache for CoBinary image data URLs - survives re-renders, enables progressive reactive preview
+const cobinaryPreviewCache = new Map()
+
+/** Hydrate cobinary image previews: load from cache or fetch, then set img.src. Runs after DOM update. */
+function hydrateCobinaryPreviews(maia) {
+	if (!maia?.do) return
+	document.querySelectorAll('img[data-co-id]').forEach((img) => {
+		const coId = img.getAttribute('data-co-id')
+		if (!coId || img.src?.startsWith('data:')) return
+		const cached = cobinaryPreviewCache.get(coId)
+		if (cached?.dataUrl) {
+			img.src = cached.dataUrl
+			return
+		}
+		if (cached?.loading) {
+			cached.loading.then((dataUrl) => {
+				const current = document.querySelector(`img[data-co-id="${coId}"]`)
+				if (current) {
+					if (dataUrl) current.src = dataUrl
+					else current.alt = 'Preview unavailable'
+				}
+			})
+			return
+		}
+		const loading = maia
+			.do({ op: 'loadBinaryAsBlob', coId })
+			.then((res) => {
+				const dataUrl = res?.dataUrl ?? res?.data?.dataUrl
+				cobinaryPreviewCache.set(coId, { dataUrl })
+				return dataUrl
+			})
+			.catch(() => null)
+		cobinaryPreviewCache.set(coId, { loading })
+		loading.then((dataUrl) => {
+			const current = document.querySelector(`img[data-co-id="${coId}"]`)
+			if (current) {
+				if (dataUrl) current.src = dataUrl
+				else current.alt = 'Preview unavailable'
+			}
+		})
+	})
+}
+
 export async function renderApp(
 	maia,
 	authState,
@@ -480,6 +523,44 @@ export async function renderApp(
 					<p class="mt-4 font-medium text-slate-500">Loading CoValue... (waiting for verified state)</p>
 				</div>
 			`
+		} else if ((data._coValueType || data.cotype || data.type) === 'cobinary') {
+			// CoBinary: Display binary stream metadata (mimeType, fileName, size, finished)
+			headerInfo = {
+				type: 'cobinary',
+				typeLabel: 'CoBinary',
+				description: 'Binary file stream',
+			}
+			const mimeType = data.mimeType || 'application/octet-stream'
+			const fileName = data.fileName || '(unnamed)'
+			const totalSizeBytes = data.totalSizeBytes ?? null
+			const finished = data.finished ?? false
+			const sizeStr = totalSizeBytes != null ? `${(totalSizeBytes / 1024).toFixed(1)} KB` : '?'
+			const isImage = mimeType.startsWith('image/')
+			let previewHtml = ''
+			if (isImage && data.id && maia?.do) {
+				previewHtml = `
+					<div class="mt-4 p-4 bg-slate-50/50 rounded-xl border border-slate-200 overflow-hidden">
+						<p class="text-xs text-slate-500 mb-2">Image preview (loads on demand)</p>
+						<img id="cobinary-preview-${data.id.replace(/[^a-zA-Z0-9]/g, '_')}" class="max-w-full max-h-[280px] w-auto h-auto object-contain rounded border border-slate-200" alt="Binary preview" data-co-id="${escapeHtml(data.id)}" />
+					</div>
+				`
+			}
+			tableContent = `
+				<div class="space-y-4 cobinary-container">
+					<div class="grid grid-cols-2 gap-3 text-sm">
+						<div class="font-medium text-slate-500">MIME type</div>
+						<div class="text-marine-blue-muted">${escapeHtml(mimeType)}</div>
+						<div class="font-medium text-slate-500">File name</div>
+						<div class="text-marine-blue-muted">${escapeHtml(fileName)}</div>
+						<div class="font-medium text-slate-500">Size</div>
+						<div class="text-marine-blue-muted">${sizeStr}</div>
+						<div class="font-medium text-slate-500">Complete</div>
+						<div class="text-marine-blue-muted">${finished ? 'Yes' : 'No'}</div>
+					</div>
+					${previewHtml}
+				</div>
+			`
+			// Image preview loaded reactively via hydrateCobinaryPreviews (after innerHTML)
 		} else if (
 			(data._coValueType || data.cotype || data.type) === 'colist' ||
 			(data._coValueType || data.cotype || data.type) === 'costream'
@@ -808,7 +889,7 @@ export async function renderApp(
 						<div class="metadata-info-item">
 							<span class="metadata-info-key">CO TYPE</span>
 						<span class="badge badge-type badge-${String(data._coValueType || data.cotype || data.type || 'unknown').replace(/-/g, '')}">
-							${(data._coValueType || data.cotype || data.type) === 'colist' ? 'COLIST' : (data._coValueType || data.cotype || data.type) === 'costream' ? 'COSTREAM' : String(data._coValueType || data.cotype || data.type || 'unknown').toUpperCase()}
+							${(data._coValueType || data.cotype || data.type) === 'colist' ? 'COLIST' : (data._coValueType || data.cotype || data.type) === 'costream' ? 'COSTREAM' : (data._coValueType || data.cotype || data.type) === 'cobinary' ? 'COBINARY' : String(data._coValueType || data.cotype || data.type || 'unknown').toUpperCase()}
 						</span>
 						</div>
 						${
@@ -1092,6 +1173,9 @@ export async function renderApp(
 			</div>
 		</div>
 	`
+
+	// Hydrate CoBinary image previews (reactive: cache survives re-renders, updates when data arrives)
+	hydrateCobinaryPreviews(maia)
 
 	// Add sidebar toggle handlers for DB viewer
 	setTimeout(() => {

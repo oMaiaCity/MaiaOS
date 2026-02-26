@@ -8,6 +8,7 @@
 		"./shared/*": "./src/shared/*"
 	},
 	"dependencies": {
+		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/engines": "workspace:*",
 		"@MaiaOS/schemata": "workspace:*",
 		"unicode-segmenter": "^0.15.0"
