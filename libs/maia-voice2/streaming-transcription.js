@@ -1,22 +1,25 @@
 /**
  * Streaming transcription with VAD.
- * Uses @ricky0123/vad-web to segment speech from the mic, then transcribes each chunk.
+ * Transcription runs on VAD-detected speech segments only (no silence hallucination).
+ * VAD provides audio chunks that contain actual speech; we transcribe those.
+ * VAD badge marks natural utterance boundaries for future LLM integration.
  * Processes chunks sequentially to avoid overloading WebGPU/WASM.
  */
 
-const MIN_CHUNK_SAMPLES = 8000 // 0.5s at 16kHz - skip shorter segments
 const VAD_SAMPLE_RATE = 16000
+const MIN_CHUNK_SAMPLES = 8000 // 0.5s at 16kHz - skip shorter segments
 
 /**
  * Create a streaming transcription controller.
  * @param {object} options
  * @param {import('./audio-model.js').AudioModel} options.audioModel - Loaded ASR model
  * @param {(text: string) => void} options.onTranscript - Called when a chunk is transcribed
+ * @param {() => void} [options.onVadBoundary] - Called when VAD detects speech end (insert badge)
  * @param {() => void} [options.onSpeechStart] - Called when speech starts
  * @param {(listening: boolean) => void} [options.onListeningChange] - Called when VAD listening state changes
  */
 export async function createStreamingTranscription(options) {
-	const { audioModel, onTranscript, onSpeechStart, onListeningChange } = options
+	const { audioModel, onTranscript, onVadBoundary, onSpeechStart, onListeningChange } = options
 	const vad = globalThis.vad
 	if (!vad?.MicVAD) {
 		throw new Error(
@@ -58,6 +61,7 @@ export async function createStreamingTranscription(options) {
 		},
 		onSpeechEnd: (audio) => {
 			if (audio.length < MIN_CHUNK_SAMPLES) return
+			onVadBoundary?.()
 			chunkQueue.push(audio)
 			processQueue()
 		},

@@ -189,9 +189,18 @@ streamBtn.addEventListener('click', async () => {
 		streamingVad = await createStreamingTranscription({
 			audioModel,
 			onTranscript: (text) => {
-				const current = streamingTranscriptEl?.textContent ?? ''
-				const sep = current ? ' ' : ''
-				streamingTranscriptEl.textContent = current + sep + text
+				const sep = streamingTranscriptEl?.childNodes?.length ? ' ' : ''
+				streamingTranscriptEl?.appendChild(document.createTextNode(sep + text))
+				chatContainer.scrollTop = chatContainer.scrollHeight
+			},
+			onVadBoundary: () => {
+				if (!streamingTranscriptEl) return
+				const badge = document.createElement('span')
+				badge.className = 'vad-badge'
+				badge.textContent = 'VAD'
+				streamingTranscriptEl.appendChild(document.createTextNode(' '))
+				streamingTranscriptEl.appendChild(badge)
+				streamingTranscriptEl.appendChild(document.createTextNode(' '))
 				chatContainer.scrollTop = chatContainer.scrollHeight
 			},
 			onSpeechStart: () => {
