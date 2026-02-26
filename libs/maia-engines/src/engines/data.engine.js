@@ -316,6 +316,96 @@ async function spliceCoListOp(peer, dataEngine, params) {
 	)
 }
 
+function base64ToUint8Array(base64) {
+	const binary = atob(base64)
+	const bytes = new Uint8Array(binary.length)
+	for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
+	return bytes
+}
+
+function chunksToDataUrl(chunks, mimeType) {
+	if (!chunks.length) return null
+	let totalLength = 0
+	for (const c of chunks) totalLength += c.length
+	const merged = new Uint8Array(totalLength)
+	let offset = 0
+	for (const c of chunks) {
+		merged.set(c, offset)
+		offset += c.length
+	}
+	let binary = ''
+	for (let i = 0; i < merged.length; i++) binary += String.fromCharCode(merged[i])
+	return `data:${mimeType};base64,${btoa(binary)}`
+}
+
+async function uploadBinaryOp(peer, dataEngine, params) {
+	const { coId, mimeType, fileName, totalSizeBytes, chunks } = params
+	requireParam(coId, 'coId', 'UploadBinaryOperation')
+	validateCoId(coId, 'UploadBinaryOperation')
+	requireParam(mimeType, 'mimeType', 'UploadBinaryOperation')
+	requireParam(chunks, 'chunks', 'UploadBinaryOperation')
+	requireDataEngine(dataEngine, 'UploadBinaryOperation', 'binary stream validation')
+	const coValueCore = await ensureCoValueAvailable(peer, coId, 'UploadBinaryOperation')
+	const schemaCoId = await resolveSchemaFromCoValue(peer, coId, 'UploadBinaryOperation')
+	if (!(await peer.checkCotype(schemaCoId, 'cobinary'))) {
+		throw new Error(`[UploadBinaryOperation] CoValue ${coId} must be a CoBinary`)
+	}
+	const content = peer.getCurrentContent(coValueCore)
+	if (
+		!content ||
+		typeof content.startBinaryStream !== 'function' ||
+		typeof content.pushBinaryStreamChunk !== 'function' ||
+		typeof content.endBinaryStream !== 'function'
+	) {
+		throw new Error(`[UploadBinaryOperation] CoValue ${coId} is not a RawBinaryCoStream`)
+	}
+	const settings = { mimeType, fileName, totalSizeBytes }
+	content.startBinaryStream(settings)
+	if (!Array.isArray(chunks) || chunks.length === 0) {
+		content.endBinaryStream()
+		if (peer.node?.storage) await peer.node.syncManager.waitForStorageSync(coId)
+		return createSuccessResult({ coId }, { op: 'uploadBinary' })
+	}
+	for (const chunk of chunks) {
+		const bytes =
+			chunk instanceof Uint8Array
+				? chunk
+				: base64ToUint8Array(typeof chunk === 'string' ? chunk : String(chunk))
+		content.pushBinaryStreamChunk(bytes)
+	}
+	content.endBinaryStream()
+	if (peer.node?.storage) await peer.node.syncManager.waitForStorageSync(coId)
+	return createSuccessResult({ coId }, { op: 'uploadBinary' })
+}
+
+async function loadBinaryAsBlobOp(peer, params) {
+	const { coId } = params
+	requireParam(coId, 'coId', 'LoadBinaryAsBlobOperation')
+	validateCoId(coId, 'LoadBinaryAsBlobOperation')
+	const coValueCore = await ensureCoValueAvailable(peer, coId, 'LoadBinaryAsBlobOperation')
+	const content = peer.getCurrentContent(coValueCore)
+	if (!content || typeof content.getBinaryChunks !== 'function') {
+		throw new Error(
+			`[LoadBinaryAsBlobOperation] CoValue ${coId} is not a CoBinary or has no getBinaryChunks`,
+		)
+	}
+	const result = content.getBinaryChunks(false)
+	if (!result) {
+		throw new Error(
+			`[LoadBinaryAsBlobOperation] CoBinary ${coId} has no binary data or stream not finished`,
+		)
+	}
+	const { chunks, mimeType, finished } = result
+	if (!finished || !chunks?.length) {
+		throw new Error(`[LoadBinaryAsBlobOperation] CoBinary ${coId} stream not finished or empty`)
+	}
+	const dataUrl = chunksToDataUrl(chunks, mimeType || 'application/octet-stream')
+	return createSuccessResult(
+		{ dataUrl, mimeType: mimeType || 'application/octet-stream' },
+		{ op: 'loadBinaryAsBlob' },
+	)
+}
+
 async function processInboxOp(peer, _dataEngine, params) {
 	const { actorId, inboxCoId } = params
 	requireParam(actorId, 'actorId', 'ProcessInboxOperation')
@@ -537,6 +627,12 @@ export class DataEngine {
 			this.registerOperation('processInbox', {
 				execute: (params) => processInboxOp(peer, this, params),
 			})
+			this.registerOperation('uploadBinary', {
+				execute: (params) => uploadBinaryOp(peer, this, params),
+			})
+			this.registerOperation('loadBinaryAsBlob', {
+				execute: (params) => loadBinaryAsBlobOp(peer, params),
+			})
 			this.registerOperation('createSpark', {
 				execute: (params) => createSparkOp(peer, this, params),
 			})
@@ -605,6 +701,7 @@ export class DataEngine {
 			'delete',
 			'append',
 			'push',
+			'uploadBinary',
 			'seed',
 			'addSparkMember',
 			'removeSparkMember',

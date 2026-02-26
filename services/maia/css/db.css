@@ -1020,6 +1020,11 @@
 	color: #92400e; /* amber-800 */
 }
 
+.badge-cobinary {
+	background: #e0e7ff; /* indigo-100 */
+	color: #3730a3; /* indigo-800 */
+}
+
 /* List/Stream Container Styles */
 .list-stream-container {
 	width: 100%;

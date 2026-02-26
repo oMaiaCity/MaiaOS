@@ -48,7 +48,12 @@ export async function seedConfigs(
 
 		const { $id, $schema, ...configWithoutId } = config
 		const ctx = { node, account, guardian: maiaGroup }
-		const data = cotype === 'colist' ? [] : cotype === 'costream' ? undefined : configWithoutId
+		const data =
+			cotype === 'colist'
+				? []
+				: cotype === 'costream' || cotype === 'cobinary'
+					? undefined
+					: configWithoutId
 		let schemaKeyForError = null
 		for (const [k, cid] of schemaCoIdMap.entries()) {
 			if (cid === schemaCoId) {

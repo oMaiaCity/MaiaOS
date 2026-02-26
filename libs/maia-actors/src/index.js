@@ -12,6 +12,8 @@ import computeMessageNamesDef from './services/names/actor.maia'
 import computeMessageNamesFn from './services/names/function.js'
 import paperDef from './services/paper/actor.maia'
 import paperFn from './services/paper/function.js'
+import profileImageDef from './services/profile-image/actor.maia'
+import profileImageFn from './services/profile-image/function.js'
 import todosDef from './services/todos/actor.maia'
 
 export const ACTORS = {
@@ -23,6 +25,10 @@ export const ACTORS = {
 	'maia/actor/services/paper': {
 		definition: paperDef,
 		function: paperFn,
+	},
+	'maia/actor/services/profile-image': {
+		definition: profileImageDef,
+		function: profileImageFn,
 	},
 	'maia/actor/services/todos': {
 		definition: todosDef,

@@ -1,0 +1,22 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/profile-image/context",
+	"title": "Profile Image",
+	"scope": {
+		"schema": "@scope"
+	},
+	"profile": {
+		"schema": "°Maia/schema/data/profile",
+		"filter": {
+			"id": "$scope.profileId"
+		},
+		"map": {
+			"id": "id",
+			"name": "name",
+			"avatar": "avatar",
+			"avatarDataUrl": "$avatar:asDataUrl"
+		}
+	},
+	"uploadStatus": null,
+	"uploadError": null
+}

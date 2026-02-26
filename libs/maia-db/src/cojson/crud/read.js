@@ -309,6 +309,23 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 
 		const currentQueryKeys = new Set()
 
+		// Pre-pass: resolve @scope to inject accountId/profileId for filter evaluation
+		const scopeInject = {}
+		for (const [key, value] of Object.entries(contextValue || {})) {
+			if (isQueryObject(value) && value.schema === '@scope' && peer.account) {
+				scopeInject[key] = {
+					accountId: peer.account.id,
+					profileId: peer.account.get?.('profile') ?? null,
+				}
+				currentQueryKeys.add(key)
+				const scopeStore = new ReactiveStore(scopeInject[key])
+				queryStores.set(key, scopeStore)
+				queryDefinitions.set(key, { schema: '@scope', filter: null })
+				queryIsFindOne.set(key, true)
+			}
+		}
+		const contextWithScope = { ...contextValue, ...scopeInject }
+
 		// Detect and resolve query objects
 		for (const [key, value] of Object.entries(contextValue)) {
 			// Skip special fields and schema definition properties (not queries)
@@ -331,10 +348,13 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 			if (isQueryObject(value)) {
 				currentQueryKeys.add(key)
 
+				// @scope already handled in pre-pass
+				if (value.schema === '@scope') continue
+
 				// Check if we already have this query store
 				const existingStore = queryStores.get(key)
 
-				const evaluatedFilter = await evaluateFilter(value.filter || null, contextValue, evaluator)
+				const evaluatedFilter = await evaluateFilter(value.filter || null, contextWithScope, evaluator)
 
 				// Get stored query definition to compare filters
 				const storedQueryDef = queryDefinitions.get(key)
@@ -881,6 +901,7 @@ async function readHumansFromRegistries(peer, options = {}) {
 						accountId: humanCoId,
 						registryName,
 						profileName: travelerFallback(humanCoId),
+						profile: null,
 					})
 					continue
 				}
@@ -910,6 +931,7 @@ async function readHumansFromRegistries(peer, options = {}) {
 					accountId,
 					registryName,
 					profileName,
+					profile: profileCoId,
 				})
 			} catch {
 				items.push({
@@ -917,6 +939,7 @@ async function readHumansFromRegistries(peer, options = {}) {
 					accountId: humanCoId,
 					registryName,
 					profileName: travelerFallback(humanCoId),
+					profile: null,
 				})
 			}
 		}

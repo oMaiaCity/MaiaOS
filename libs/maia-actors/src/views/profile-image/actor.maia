@@ -1,0 +1,10 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/views/profile-image",
+	"@label": "@maia/actor/views/profile-image",
+	"context": "°Maia/actor/views/profile-image/context",
+	"view": "°Maia/actor/views/profile-image/view",
+	"process": "°Maia/actor/views/profile-image/process",
+	"interface": "°Maia/actor/views/profile-image/interface",
+	"style": "°Maia/actor/views/profile-image/style"
+}

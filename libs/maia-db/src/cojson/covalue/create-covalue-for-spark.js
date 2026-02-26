@@ -10,6 +10,7 @@
  */
 
 import { EXCEPTION_SCHEMAS } from '../../schemas/registry.js'
+import { createCoBinary } from '../cotypes/coBinary.js'
 import { createCoList } from '../cotypes/coList.js'
 import { createCoMap } from '../cotypes/coMap.js'
 import { createCoStream } from '../cotypes/coStream.js'
@@ -47,7 +48,7 @@ async function resolveContext(context, spark) {
  * @param {string|null} spark - Spark name (e.g. '°Maia'). Null when context has guardian.
  * @param {Object} options
  * @param {string} options.schema - Schema co-id or name for headerMeta.$schema
- * @param {'comap'|'colist'|'costream'} options.cotype
+ * @param {'comap'|'colist'|'costream'|'cobinary'} options.cotype
  * @param {Object} [options.data] - Init data for map (object) or list (array). Required for comap/colist.
  * @param {Object} [options.dataEngine] - For schema validation (optional during seed)
  * @param {boolean} [options.isSchemaDefinition] - When true, enforces cotype='comap' (schema defs must be CoMaps)
@@ -58,8 +59,10 @@ export async function createCoValueForSpark(context, spark, options) {
 	if (!schema || typeof schema !== 'string') {
 		throw new Error('[createCoValueForSpark] options.schema is required')
 	}
-	if (!cotype || !['comap', 'colist', 'costream'].includes(cotype)) {
-		throw new Error('[createCoValueForSpark] options.cotype must be comap, colist, or costream')
+	if (!cotype || !['comap', 'colist', 'costream', 'cobinary'].includes(cotype)) {
+		throw new Error(
+			'[createCoValueForSpark] options.cotype must be comap, colist, costream, or cobinary',
+		)
 	}
 
 	// Schema definitions (meta-schema and its children) must ALWAYS be CoMaps.
@@ -100,6 +103,9 @@ export async function createCoValueForSpark(context, spark, options) {
 			break
 		case 'costream':
 			coValue = await createCoStream(group, schema, node, dataEngine)
+			break
+		case 'cobinary':
+			coValue = await createCoBinary(group, schema, node, dataEngine)
 			break
 		default:
 			throw new Error(`[createCoValueForSpark] Unsupported cotype: ${cotype}`)

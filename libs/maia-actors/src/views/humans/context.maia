@@ -10,6 +10,7 @@
 			"accountId": "accountId",
 			"registryName": "registryName",
 			"profileName": "profileName",
+			"avatarDataUrl": "$profile.avatar:asDataUrl",
 			"cardRows": {
 				"$mapFields": [
 					{
