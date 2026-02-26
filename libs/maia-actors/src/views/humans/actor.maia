@@ -8,5 +8,5 @@
 	"brand": "°Maia/style/brand",
 	"style": "°Maia/actor/views/humans/style",
 	"inbox": "°Maia/actor/views/humans/inbox",
-	"interface": []
+	"interface": "°Maia/actor/views/humans/interface"
 }

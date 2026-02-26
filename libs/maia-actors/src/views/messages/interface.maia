@@ -9,17 +9,17 @@
 		"SEND_MESSAGE": {
 			"type": "object",
 			"description": "Send message",
-			"properties": {
-				"inputText": {
-					"type": "string",
-					"description": "Message content"
-				}
-			},
-			"required": [
-				"inputText"
-			],
-			"additionalProperties": false
+			"additionalProperties": true
+		},
+		"RETRY": {
+			"type": "object",
+			"description": "Retry",
+			"additionalProperties": true
+		},
+		"DISMISS": {
+			"type": "object",
+			"description": "Dismiss",
+			"additionalProperties": true
 		}
-	},
-	"additionalProperties": false
+	}
 }

@@ -5,6 +5,5 @@
 	"description": "Placeholder view - no domain events",
 	"cotype": "comap",
 	"indexing": true,
-	"properties": {},
-	"additionalProperties": false
+	"properties": {}
 }

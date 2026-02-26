@@ -8,11 +8,5 @@
 	"brand": "°Maia/style/brand",
 	"style": "°Maia/actor/views/input/style",
 	"inbox": "°Maia/actor/views/input/for-list/inbox",
-	"interface": [
-		"UPDATE_INPUT",
-		"FORM_SUBMIT",
-		"DISMISS",
-		"SUCCESS",
-		"ERROR"
-	]
+	"interface": "°Maia/actor/views/input/for-list/interface"
 }

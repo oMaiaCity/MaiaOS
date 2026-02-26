@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/process",
-	"$id": "°Maia/actor/services/paper-ops/process",
-	"@label": "@maia/actor/services/paper-ops/process",
+	"$id": "°Maia/actor/services/paper/process",
+	"@label": "@maia/actor/services/paper/process",
 	"handlers": {
 		"UPDATE_PAPER": [
 			{

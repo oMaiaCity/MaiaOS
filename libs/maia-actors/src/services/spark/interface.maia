@@ -17,8 +17,7 @@
 			},
 			"required": [
 				"name"
-			],
-			"additionalProperties": false
+			]
 		},
 		"ADD_MEMBER": {
 			"type": "object",
@@ -66,9 +65,7 @@
 			"required": [
 				"id",
 				"memberId"
-			],
-			"additionalProperties": false
+			]
 		}
-	},
-	"additionalProperties": false
+	}
 }

@@ -18,7 +18,7 @@
 			},
 			{
 				"tell": {
-					"target": "°Maia/actor/services/todos-ops",
+					"target": "°Maia/actor/services/todos",
 					"type": "CREATE_TODO",
 					"payload": {
 						"value": "$$value"

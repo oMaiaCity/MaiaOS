@@ -8,10 +8,5 @@
 	"brand": "°Maia/style/brand",
 	"style": "°Maia/actor/views/sparks/style",
 	"inbox": "°Maia/actor/views/sparks/inbox",
-	"interface": [
-		"FORM_SUBMIT",
-		"SELECT_SPARK",
-		"SUCCESS",
-		"ERROR"
-	]
+	"interface": "°Maia/actor/views/sparks/interface"
 }

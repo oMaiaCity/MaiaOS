@@ -8,8 +8,5 @@
 	"brand": "°Maia/style/brand",
 	"style": "°Maia/actor/views/logs/style",
 	"inbox": "°Maia/actor/views/logs/inbox",
-	"interface": [
-		"RETRY",
-		"DISMISS"
-	]
+	"interface": "°Maia/actor/views/logs/interface"
 }

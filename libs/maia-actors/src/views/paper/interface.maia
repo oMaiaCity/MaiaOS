@@ -5,6 +5,5 @@
 	"description": "Paper view - receives SUCCESS/ERROR from paper",
 	"cotype": "comap",
 	"indexing": true,
-	"properties": {},
-	"additionalProperties": false
+	"properties": {}
 }
