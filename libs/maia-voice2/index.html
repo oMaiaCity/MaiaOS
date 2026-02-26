@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LFM2.5-Audio ASR - WebGPU Demo</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'JetBrains Mono', monospace;
+      background: #fafafa;
+      color: #0a0a0a;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    header {
+      background: #fff;
+      padding: 1.25rem 1.5rem;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    header .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    header .logo svg {
+      width: 28px;
+      height: 28px;
+    }
+
+    header h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: -0.02em;
+    }
+
+    header .badge {
+      font-size: 0.65rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 4px;
+      font-weight: 500;
+      background: #0a0a0a;
+      color: #fff;
+      letter-spacing: 0.02em;
+    }
+
+    .controls {
+      display: flex;
+      gap: 1rem;
+      padding: 1rem 1.5rem;
+      background: #fff;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .controls label {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      font-weight: 500;
+      color: #666;
+    }
+
+    .controls select {
+      padding: 0.5rem 0.75rem;
+      border-radius: 6px;
+      border: 1px solid rgba(0, 0, 0, 0.12);
+      background: #fff;
+      color: #0a0a0a;
+      font-size: 0.8rem;
+      font-family: 'JetBrains Mono', monospace;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .controls select:hover {
+      border-color: rgba(0, 0, 0, 0.24);
+    }
+
+    .controls select:focus {
+      outline: none;
+      border-color: #0a0a0a;
+    }
+
+    .controls button {
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      border: 1px solid #0a0a0a;
+      background: #0a0a0a;
+      color: #fff;
+      font-size: 0.8rem;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .controls button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .controls button:hover:not(:disabled) {
+      background: #333;
+    }
+
+    .controls button.secondary {
+      background: transparent;
+      color: #0a0a0a;
+    }
+
+    .controls button.secondary:hover:not(:disabled) {
+      background: rgba(0, 0, 0, 0.05);
+    }
+
+    .storage-info {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-left: auto;
+      font-size: 0.75rem;
+      color: #888;
+    }
+
+    .text-btn {
+      background: none;
+      border: none;
+      padding: 0.25rem 0.5rem;
+      font-size: 0.7rem;
+      font-family: 'JetBrains Mono', monospace;
+      cursor: pointer;
+      color: #888;
+      transition: color 0.2s ease;
+    }
+
+    .text-btn:hover:not(:disabled) {
+      color: #0a0a0a;
+    }
+
+    .text-btn.danger {
+      color: #dc2626;
+    }
+
+    .text-btn.danger:hover:not(:disabled) {
+      color: #b91c1c;
+    }
+
+    .text-btn:disabled {
+      color: #ccc;
+      cursor: not-allowed;
+    }
+
+    #status {
+      padding: 0.6rem 1.5rem;
+      background: #f5f5f5;
+      font-size: 0.75rem;
+      color: #666;
+      border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+    }
+
+    #status.error {
+      background: #fef2f2;
+      color: #dc2626;
+    }
+
+    #status.success {
+      background: #f0fdf4;
+      color: #16a34a;
+    }
+
+    .chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+      background: #fafafa;
+    }
+
+    .message {
+      max-width: 75%;
+      padding: 1rem 1.25rem;
+      border-radius: 12px;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      font-size: 0.85rem;
+    }
+
+    .message.user {
+      align-self: flex-end;
+      background: #0a0a0a;
+      color: #fff;
+    }
+
+    .message.assistant {
+      align-self: flex-start;
+      background: #fff;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+    }
+
+    .message.generating {
+      opacity: 0.7;
+    }
+
+    .input-area {
+      padding: 1.25rem 1.5rem;
+      background: #fff;
+      border-top: 1px solid rgba(0, 0, 0, 0.08);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #streamBtn {
+      padding: 0.85rem 2rem;
+      border-radius: 12px;
+      border: none;
+      background: #0a0a0a;
+      color: #fff;
+      font-size: 1rem;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      min-width: 180px;
+    }
+
+    #streamBtn:hover:not(:disabled) {
+      background: #333;
+    }
+
+    #streamBtn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    #streamBtn.streaming {
+      background: #dc2626;
+    }
+
+    #streamBtn.streaming:hover:not(:disabled) {
+      background: #b91c1c;
+    }
+
+    .stats {
+      font-size: 0.65rem;
+      color: #888;
+      margin-top: 0.5rem;
+      font-weight: 400;
+    }
+
+    .progress-bar {
+      position: relative;
+      height: 3px;
+      background: #eee;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: #0a0a0a;
+      width: 0%;
+      transition: width 0.3s ease;
+    }
+
+    .progress-text {
+      position: absolute;
+      top: 8px;
+      left: 1.5rem;
+      font-size: 0.7rem;
+      color: #666;
+    }
+
+    .info-box {
+      background: #fff;
+      border: 1px solid rgba(0, 0, 0, 0.08);
+      border-radius: 12px;
+      padding: 1.5rem;
+      font-size: 0.8rem;
+      line-height: 1.7;
+    }
+
+    .info-box h3 {
+      margin-bottom: 0.75rem;
+      font-size: 0.9rem;
+      font-weight: 600;
+      letter-spacing: -0.01em;
+    }
+
+    .info-box p {
+      color: #444;
+      margin-bottom: 1rem;
+    }
+
+    .info-box ul {
+      margin-left: 1.25rem;
+      color: #444;
+    }
+
+    .info-box li {
+      margin-bottom: 0.5rem;
+    }
+
+    .info-box strong {
+      color: #0a0a0a;
+      font-weight: 600;
+    }
+
+    .info-box .note {
+      margin-top: 1rem;
+      padding-top: 1rem;
+      border-top: 1px solid rgba(0, 0, 0, 0.06);
+      font-size: 0.75rem;
+      color: #888;
+    }
+
+    /* Scrollbar styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: rgba(0, 0, 0, 0.15);
+      border-radius: 3px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(0, 0, 0, 0.25);
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="logo">
+      <svg viewBox="0 0 100 100" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="45" stroke="#0a0a0a" stroke-width="6"/>
+        <circle cx="50" cy="50" r="20" fill="#0a0a0a"/>
+      </svg>
+      <h1>LFM2.5-Audio ASR <span class="badge">WebGPU</span></h1>
+    </div>
+  </header>
+
+  <div class="controls">
+    <label>
+      Model
+      <select id="modelSelect"></select>
+    </label>
+    <button id="loadBtn">Load Model</button>
+    <div class="storage-info">
+      <span id="cacheInfo"></span>
+      <button id="clearCacheBtn" class="text-btn danger" title="Delete downloaded model files">Clear Cache</button>
+    </div>
+  </div>
+
+  <div id="progressBar" class="progress-bar" style="display: none;">
+    <div id="progressFill" class="progress-fill"></div>
+    <span id="progressText" class="progress-text"></span>
+  </div>
+
+  <div id="status">Select a model and click "Load Model" to start</div>
+
+  <div class="chat-container" id="chatContainer">
+    <div class="info-box">
+      <h3>LFM2.5-Audio ASR Demo</h3>
+      <p>Transcribe speech to text running entirely in your browser.</p>
+      <ul>
+        <li><strong>Load Model</strong> — Load the pre-downloaded ASR model (run <code>bun run download:model</code> first)</li>
+        <li><strong>Start</strong> — Open mic and speak; each phrase is transcribed live</li>
+      </ul>
+      <p class="note">Requires WebGPU-enabled browser (Chrome/Edge 113+). Enable at chrome://flags if needed.</p>
+    </div>
+  </div>
+
+  <div class="input-area">
+    <button id="streamBtn" disabled>Start</button>
+  </div>
+
+  <!-- VAD: Load via script tags to avoid Vite's ESM bundling of CommonJS require("onnxruntime-web/wasm") -->
+  <script src="/vad/ort.wasm.min.js"></script>
+  <script src="/vad/bundle.min.js"></script>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
