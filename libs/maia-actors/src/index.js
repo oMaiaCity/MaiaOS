@@ -1,45 +1,34 @@
 /**
- * Actors Registry - Central export for all actor definitions and functions
- * Service actors: definition (actor.maia + tool.maia merged) + function.execute(actor, payload)
- * Tool descriptor in tool.maia; execution in .function.js
+ * Actors Registry - Central export for actor definitions and executable functions
+ * Service actors: definition (actor.maia with interface ref) + function.execute(actor, payload)
+ * Interface schemas define accepted events; execution in .function.js
  */
 
 import aiChatDef from './os/ai/actor.maia'
 import aiChatFn from './os/ai/function.js'
-import aiChatTool from './os/ai/tool.maia'
 import dbDef from './os/db/actor.maia'
 import dbFn from './os/db/function.js'
-import dbTool from './os/db/tool.maia'
-import computeMessageNamesDef from './os/names/actor.maia'
-import computeMessageNamesFn from './os/names/function.js'
-import computeMessageNamesTool from './os/names/tool.maia'
-import paperOpsDef from './services/paper-ops/actor.maia'
-import paperOpsFn from './services/paper-ops/function.js'
-import paperOpsTool from './services/paper-ops/tool.maia'
-import todosOpsDef from './services/todos-ops/actor.maia'
-import todosOpsTool from './services/todos-ops/tool.maia'
-
-/** Merge actor def + tool def for consumers that expect definition.function (tool descriptor) */
-function withTool(actorDef, toolDef) {
-	if (!toolDef) return actorDef
-	return { ...actorDef, function: toolDef }
-}
+import computeMessageNamesDef from './services/names/actor.maia'
+import computeMessageNamesFn from './services/names/function.js'
+import paperDef from './services/paper/actor.maia'
+import paperFn from './services/paper/function.js'
+import todosDef from './services/todos/actor.maia'
 
 export const ACTORS = {
-	'maia/actor/os/ai': { definition: withTool(aiChatDef, aiChatTool), function: aiChatFn },
-	'maia/actor/os/names': {
-		definition: withTool(computeMessageNamesDef, computeMessageNamesTool),
+	'maia/actor/os/ai': { definition: aiChatDef, function: aiChatFn },
+	'maia/actor/services/names': {
+		definition: computeMessageNamesDef,
 		function: computeMessageNamesFn,
 	},
-	'maia/actor/services/paper-ops': {
-		definition: withTool(paperOpsDef, paperOpsTool),
-		function: paperOpsFn,
+	'maia/actor/services/paper': {
+		definition: paperDef,
+		function: paperFn,
 	},
-	'maia/actor/services/todos-ops': {
-		definition: withTool(todosOpsDef, todosOpsTool),
+	'maia/actor/services/todos': {
+		definition: todosDef,
 		function: null,
 	},
-	'maia/actor/os/db': { definition: withTool(dbDef, dbTool), function: dbFn },
+	'maia/actor/os/db': { definition: dbDef, function: dbFn },
 }
 
 export function getActor(namespacePath) {

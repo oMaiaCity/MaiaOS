@@ -1,0 +1,25 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/actor/views/messages/interface",
+	"title": "°Maia/actor/views/messages/interface",
+	"description": "Messages view",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"SEND_MESSAGE": {
+			"type": "object",
+			"description": "Send message",
+			"additionalProperties": true
+		},
+		"RETRY": {
+			"type": "object",
+			"description": "Retry",
+			"additionalProperties": true
+		},
+		"DISMISS": {
+			"type": "object",
+			"description": "Dismiss",
+			"additionalProperties": true
+		}
+	}
+}

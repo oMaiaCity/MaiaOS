@@ -1,0 +1,9 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/services/todos",
+	"@label": "@maia/actor/services/todos",
+	"context": "°Maia/actor/services/todos/context",
+	"process": "°Maia/actor/services/todos/process",
+	"inbox": "°Maia/actor/services/todos/inbox",
+	"interface": "°Maia/actor/services/todos/interface"
+}

@@ -8,11 +8,5 @@
 	"brand": "°Maia/chat/style/brand",
 	"style": "°Maia/actor/views/messages/style",
 	"inbox": "°Maia/actor/views/messages/inbox",
-	"interface": [
-		"SEND_MESSAGE",
-		"SUCCESS",
-		"ERROR",
-		"RETRY",
-		"DISMISS"
-	]
+	"interface": "°Maia/actor/views/messages/interface"
 }

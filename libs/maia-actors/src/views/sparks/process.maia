@@ -6,7 +6,7 @@
 		"FORM_SUBMIT": [
 			{
 				"tell": {
-					"target": "°Maia/actor/services/spark-ops",
+					"target": "°Maia/actor/services/spark",
 					"type": "CREATE_SPARK",
 					"payload": {
 						"name": "$$value"

@@ -2,11 +2,6 @@
 	"$schema": "°Maia/schema/actor",
 	"$id": "°Maia/actor/os/ai",
 	"@label": "@maia/actor/os/ai",
-	"interface": [
-		"CHAT",
-		"SUCCESS",
-		"ERROR"
-	],
-	"process": "°Maia/actor/os/ai/process",
-	"tool": "°Maia/actor/os/ai/tool"
+	"interface": "°Maia/actor/os/ai/interface",
+	"process": "°Maia/actor/os/ai/process"
 }

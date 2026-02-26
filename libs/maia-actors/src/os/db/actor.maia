@@ -2,12 +2,6 @@
 	"$schema": "°Maia/schema/actor",
 	"$id": "°Maia/actor/os/db",
 	"@label": "@maia/actor/os/db",
-	"interface": [
-		"DB_OP",
-		"SPARK_OP",
-		"SUCCESS",
-		"ERROR"
-	],
-	"process": "°Maia/actor/os/db/process",
-	"tool": "°Maia/actor/os/db/tool"
+	"interface": "°Maia/actor/os/db/interface",
+	"process": "°Maia/actor/os/db/process"
 }

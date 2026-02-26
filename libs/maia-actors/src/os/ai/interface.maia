@@ -1,0 +1,55 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/actor/os/ai/interface",
+	"title": "°Maia/actor/os/ai/interface",
+	"description": "Unified AI chat using OpenAI-compatible API (RedPill) for LLM interactions. Model can be configured dynamically via payload. LLMs are stateless - each request sends the full context (complete conversation history).",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"CHAT": {
+			"type": "object",
+			"description": "Send conversation context to LLM and get a response",
+			"properties": {
+				"context": {
+					"type": "array",
+					"description": "Complete conversation context to send to the LLM. LLMs are stateless - this represents the full context/history for this request.",
+					"items": {
+						"type": "object",
+						"properties": {
+							"role": {
+								"type": "string",
+								"enum": [
+									"system",
+									"user",
+									"assistant"
+								],
+								"description": "Message role"
+							},
+							"content": {
+								"type": "string",
+								"description": "Message content"
+							}
+						},
+						"required": [
+							"role",
+							"content"
+						]
+					}
+				},
+				"model": {
+					"type": "string",
+					"description": "LLM model to query (dynamically configurable per call)",
+					"default": "qwen/qwen3-30b-a3b-instruct-2507"
+				},
+				"temperature": {
+					"type": "number",
+					"description": "Temperature for response (0-2, default: 1)",
+					"default": 1
+				}
+			},
+			"required": [
+				"context"
+			]
+		}
+	}
+}

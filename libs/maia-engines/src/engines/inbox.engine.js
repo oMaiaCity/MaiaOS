@@ -68,21 +68,19 @@ export class InboxEngine {
 		await this.dataEngine.peer.createAndPushMessage(inboxCoId, messageData)
 	}
 
+	/** System events accepted by all actors implicitly */
+	static SYSTEM_EVENTS = new Set(['SUCCESS', 'ERROR'])
+
 	_validateEventType(actor, messageType) {
-		const iface = actor.interface
-		if (!iface || !Array.isArray(iface)) return false
-		return iface.includes(messageType)
+		if (InboxEngine.SYSTEM_EVENTS.has(messageType)) return true
+		const schema = actor.interfaceSchema
+		if (!schema?.properties || typeof schema.properties !== 'object') return false
+		return messageType in schema.properties
 	}
 
-	async _loadEventTypeSchema(messageType) {
-		if (this.dataEngine?.peer) {
-			try {
-				const schemaKey = `${this.dataEngine.peer.systemSpark}/schema/event/${messageType}`
-				const schema = await this.dataEngine.peer.resolve(schemaKey, { returnType: 'schema' })
-				if (schema) return schema
-			} catch (_error) {}
-		}
-		return null
+	_getPayloadSchemaFromActor(actor, messageType) {
+		if (!actor.interfaceSchema?.properties) return null
+		return actor.interfaceSchema.properties[messageType] ?? null
 	}
 
 	async _validateEventPayload(messageTypeSchema, payload, messageType) {
@@ -102,8 +100,17 @@ export class InboxEngine {
 		}
 	}
 
-	async validatePayload(eventType, payload) {
-		const schema = await this._loadEventTypeSchema(eventType)
+	/**
+	 * Validate payload for an event type. Requires actor to have interface schema (resolved at spawn).
+	 * @param {string} actorId - Actor co-id (to look up actor and its interfaceSchema)
+	 * @param {string} eventType - Event type
+	 * @param {Object} payload - Payload to validate
+	 * @returns {Promise<boolean>} True if valid or if actor has no interface (skip validation)
+	 */
+	async validatePayloadForActor(actorId, eventType, payload) {
+		const actor = this.actorEngine?.getActor?.(actorId)
+		if (!actor) return true
+		const schema = this._getPayloadSchemaFromActor(actor, eventType)
 		if (!schema) return true
 		const result = await this._validateEventPayload(schema, payload || {}, eventType)
 		return result.valid
@@ -111,8 +118,17 @@ export class InboxEngine {
 
 	async validateMessage(actor, message) {
 		if (!this._validateEventType(actor, message.type)) return { valid: false }
-		const messageTypeSchema = await this._loadEventTypeSchema(message.type)
-		if (!messageTypeSchema) return { valid: false }
+		if (InboxEngine.SYSTEM_EVENTS.has(message.type)) {
+			const payloadPlain = {
+				...(message.payload && typeof message.payload === 'object'
+					? JSON.parse(JSON.stringify(message.payload))
+					: message.payload || {}),
+				...(message._coId ? { idempotencyKey: message._coId } : {}),
+			}
+			return { valid: true, payloadPlain }
+		}
+		const payloadSchema = this._getPayloadSchemaFromActor(actor, message.type)
+		if (!payloadSchema) return { valid: false }
 		const payload = message.payload || {}
 		if (
 			message.type === 'DB_OP' &&
@@ -120,7 +136,7 @@ export class InboxEngine {
 		) {
 			return { valid: false }
 		}
-		const validation = await this._validateEventPayload(messageTypeSchema, payload, message.type)
+		const validation = await this._validateEventPayload(payloadSchema, payload, message.type)
 		if (!validation.valid) return { valid: false }
 		const payloadPlain = {
 			...(payload && typeof payload === 'object'

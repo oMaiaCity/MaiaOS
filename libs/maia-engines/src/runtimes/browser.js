@@ -120,6 +120,118 @@ export class Runtime {
 	}
 
 	/**
+	 * Collect OpenAI-format tools from actor interface schemas.
+	 * Enumerates agents' dependency actors, loads each config + interface schema, maps properties to tool definitions.
+	 * @returns {Promise<Array>} OpenAI tools array { type: 'function', function: { name, description, parameters } }
+	 */
+	async collectTools() {
+		if (!this.dataEngine?.peer) return []
+		const { actorRefs } = await this._getAgentsAndDependenciesFromDb()
+		const tools = []
+		const actorSchemaCoId = await this.dataEngine.peer.resolve('°Maia/schema/actor', {
+			returnType: 'coId',
+		})
+		const metaSchemaCoId = await this.dataEngine.peer.resolve('°Maia/schema/meta', {
+			returnType: 'coId',
+		})
+		if (!actorSchemaCoId || !metaSchemaCoId) return []
+
+		for (const actorCoId of actorRefs) {
+			if (typeof actorCoId !== 'string' || !actorCoId.startsWith('co_z')) continue
+			const actorConfig = await this.getActorConfig(actorCoId)
+			const interfaceRef = actorConfig?.interface
+			if (!interfaceRef || typeof interfaceRef !== 'string') continue
+			const interfaceCoId = interfaceRef.startsWith('co_z')
+				? interfaceRef
+				: await this.dataEngine.peer.resolve(interfaceRef, { returnType: 'coId' })
+			if (!interfaceCoId?.startsWith?.('co_z')) continue
+			const ifaceStore = await this.dataEngine.execute({
+				op: 'read',
+				schema: metaSchemaCoId,
+				key: interfaceCoId,
+			})
+			const schema = ifaceStore?.value
+			if (!schema?.properties || typeof schema.properties !== 'object') continue
+			for (const [eventType, eventSchema] of Object.entries(schema.properties)) {
+				if (eventType.startsWith('@') || eventType.startsWith('$')) continue
+				tools.push({
+					type: 'function',
+					function: {
+						name: `${actorCoId}/${eventType}`,
+						description: eventSchema.description ?? schema.description ?? '',
+						parameters: eventSchema,
+					},
+				})
+			}
+		}
+		return tools
+	}
+
+	/**
+	 * Execute a tool call: deliver event to actor, run process, capture SUCCESS response.
+	 * @param {Object} callerActor - Actor making the call (has .id, .config.inbox)
+	 * @param {string} toolName - Format "actorCoId/eventType" (e.g. co_z.../CREATE_TODO)
+	 * @param {Object} payload - Event payload
+	 * @returns {Promise<Object>} Result from SUCCESS reply or { ok: false, error }
+	 */
+	async executeToolCall(callerActor, toolName, payload = {}) {
+		const slash = toolName.lastIndexOf('/')
+		if (slash < 0) {
+			return { ok: false, error: `Invalid tool name: ${toolName}` }
+		}
+		const targetActorCoId = toolName.substring(0, slash)
+		const eventType = toolName.substring(slash + 1)
+		if (!targetActorCoId.startsWith('co_z') || !eventType) {
+			return { ok: false, error: `Invalid tool name: ${toolName}` }
+		}
+
+		const callerId = callerActor?.id || callerActor?.config?.$id
+		if (!callerId || !callerId.startsWith('co_z')) {
+			return { ok: false, error: 'Caller actor must have co-id' }
+		}
+
+		const targetConfig = await this.getActorConfig(targetActorCoId)
+		if (!targetConfig?.inbox) {
+			return { ok: false, error: `Target actor not found: ${targetActorCoId}` }
+		}
+
+		let inboxCoId = targetConfig.inbox
+		if (!inboxCoId.startsWith('co_z') && this.dataEngine?.peer) {
+			inboxCoId = await this.dataEngine.peer.resolve(inboxCoId, { returnType: 'coId' })
+		}
+		if (!inboxCoId?.startsWith?.('co_z')) {
+			return { ok: false, error: 'Could not resolve target inbox' }
+		}
+
+		await this.actorEngine.deliverEvent(callerId, targetActorCoId, eventType, payload || {})
+		await this.ensureActorSpawned(targetConfig, inboxCoId)
+		await this.actorEngine.processEvents(targetActorCoId)
+
+		const callerInboxRef = callerActor?.config?.inbox ?? deriveInboxRef(callerId)
+		let callerInboxCoId = callerInboxRef
+		if (callerInboxCoId && !callerInboxCoId.startsWith('co_z') && this.dataEngine?.peer) {
+			callerInboxCoId = await this.dataEngine.peer.resolve(callerInboxRef, { returnType: 'coId' })
+		}
+		if (!callerInboxCoId?.startsWith?.('co_z')) {
+			return { ok: true, delivered: true }
+		}
+
+		const result = await this.dataEngine.execute({
+			op: 'processInbox',
+			actorId: callerId,
+			inboxCoId: callerInboxCoId,
+		})
+		const messages = result?.messages ?? []
+		const successMsg = messages.find((m) => m.type === 'SUCCESS' && m.source === targetActorCoId)
+		if (successMsg?.payload) {
+			await this.actorEngine.processEvents(callerId)
+			return successMsg.payload
+		}
+		await this.actorEngine.processEvents(callerId)
+		return { ok: true, delivered: true }
+	}
+
+	/**
 	 * Load actor config from CoJSON DB by co-id.
 	 * @param {string} actorCoId - Actor co-id (co_z...)
 	 * @returns {Promise<Object|null>} Actor config with inbox, state, etc.

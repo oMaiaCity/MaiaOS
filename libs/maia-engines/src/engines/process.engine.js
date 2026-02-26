@@ -12,6 +12,7 @@ import {
 	isPermissionError,
 	isSuccessResult,
 } from '@MaiaOS/schemata/operation-result'
+import { readStore } from '../utils/store-reader.js'
 
 export class ProcessEngine {
 	constructor(evaluator, actorOps = null) {
@@ -252,13 +253,10 @@ export class ProcessEngine {
 		if (typeof target !== 'string' || !target.startsWith('co_z')) {
 			throw new Error(`[ProcessEngine] ask target must be co-id (transform at seed). Got: ${target}`)
 		}
-		const actorConfig = this.actorOps?.runtime
-			? await this.actorOps.runtime.getActorConfig(target)
-			: await this._getActorConfigFromDb(target)
-		const iface = actorConfig?.interface
-		if (!iface || !Array.isArray(iface))
+		const acceptedTypes = await this._getAcceptedEventTypes(target)
+		if (!acceptedTypes?.length)
 			throw new Error(`[ProcessEngine] Cannot ask actor: no interface for ${target}`)
-		const eventType = type && iface.includes(type) ? type : iface[0]
+		const eventType = type && acceptedTypes.includes(type) ? type : acceptedTypes[0]
 		await process.actor.actorOps.deliverEvent(
 			process.actor.id,
 			target,
@@ -319,6 +317,33 @@ export class ProcessEngine {
 			finalCleaned[key] = this._cleanToolResult(value)
 		}
 		return finalCleaned
+	}
+
+	/**
+	 * Get accepted event types for an actor (from interface schema properties + SUCCESS, ERROR)
+	 * @param {string} targetActorId - Actor co-id
+	 * @returns {Promise<string[]>} Event types the actor accepts
+	 */
+	async _getAcceptedEventTypes(targetActorId) {
+		const actor = this.actorOps?.getActor?.(targetActorId)
+		if (actor?.interfaceSchema?.properties) {
+			return [...Object.keys(actor.interfaceSchema.properties), 'SUCCESS', 'ERROR']
+		}
+		const actorConfig = this.actorOps?.runtime
+			? await this.actorOps.runtime.getActorConfig(targetActorId)
+			: await this._getActorConfigFromDb(targetActorId)
+		const interfaceRef = actorConfig?.interface
+		if (!interfaceRef || typeof interfaceRef !== 'string') return []
+		let interfaceCoId = interfaceRef
+		if (!interfaceCoId.startsWith('co_z') && this.dataEngine?.peer) {
+			const resolved = await this.dataEngine.peer.resolve(interfaceRef, { returnType: 'coId' })
+			if (resolved?.startsWith?.('co_z')) interfaceCoId = resolved
+		}
+		if (!interfaceCoId.startsWith('co_z')) return []
+		const ifaceStore = await readStore(this.dataEngine, interfaceCoId)
+		const schema = ifaceStore?.value
+		if (!schema?.properties) return []
+		return [...Object.keys(schema.properties), 'SUCCESS', 'ERROR']
 	}
 
 	async _getActorConfigFromDb(actorCoId) {

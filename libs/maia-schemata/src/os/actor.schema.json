@@ -15,10 +15,6 @@
 			"description": "Co-id reference to context definition"
 		},
 		"view": { "$co": "°Maia/schema/view", "description": "Co-id reference to view definition" },
-		"state": {
-			"$co": "°Maia/schema/state",
-			"description": "Co-id reference to state machine definition"
-		},
 		"process": {
 			"$co": "°Maia/schema/process",
 			"description": "Co-id reference to process config (GenServer-style handlers)"
@@ -36,13 +32,8 @@
 			"description": "Co-id reference to message inbox costream (append-only message feed)"
 		},
 		"interface": {
-			"type": "array",
-			"items": { "type": "string" },
-			"description": "REQUIRED: Message types this actor accepts (exhaustive list - like sealed protocol). All actors must declare their message contracts."
-		},
-		"tool": {
-			"$co": "°Maia/schema/tool",
-			"description": "Optional: Co-id reference to tool descriptor (LLM integration). Execution in .function.js"
+			"$co": "°Maia/schema/meta",
+			"description": "Co-id reference to interface schema (standard Maia schema whose properties define accepted events with typed payloads). Every actor with an interface is LLM-callable by default."
 		}
 	}
 }

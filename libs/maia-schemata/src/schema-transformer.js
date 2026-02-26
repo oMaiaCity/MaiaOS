@@ -309,6 +309,7 @@ function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 		'inbox',
 		'subscribers',
 		'tool',
+		'interface',
 	]
 	for (const prop of referenceProps) {
 		if (transformed[prop] && typeof transformed[prop] === 'string') {
