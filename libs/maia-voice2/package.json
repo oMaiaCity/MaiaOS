@@ -9,6 +9,7 @@
 		"prebuild": "bun run copy:vad",
 		"preview": "vite preview",
 		"download:model": "bun run scripts/download-model.js",
+		"download:moonshine": "bun run scripts/download-moonshine.js",
 		"copy:vad": "bun run scripts/copy-vad-assets.js",
 		"prepare": "bun run copy:vad"
 	},

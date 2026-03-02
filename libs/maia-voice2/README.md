@@ -20,23 +20,37 @@ tags:
 short_description: Speech-to-text in your browser
 ---
 
-# LFM2.5-Audio ASR Demo
+# maia-voice2 — ASR Demo
 
-Transcription only (speech → text) using [LFM2.5-Audio-1.5B](https://huggingface.co/LiquidAI/LFM2.5-Audio-1.5B) in your browser via WebGPU and ONNX Runtime Web.
+Speech-to-text in your browser via WebGPU and ONNX Runtime Web. Supports LFM2.5-Audio and Moonshine Streaming.
 
 ## Features
 
-- **ASR (Speech Recognition)**: Record or upload audio to transcribe to text
+- **ASR (Speech Recognition)**: Live microphone transcription with VAD
+- **Model choice**: LFM2.5-Audio-1.5B or Moonshine Streaming medium
+- **VAD badges**: Marks utterance boundaries in the transcript
 
 ## Requirements
 
-- A browser with WebGPU support (Chrome/Edge 113+)
-- Enable WebGPU at `chrome://flags/#enable-unsafe-webgpu` if needed
+- WebGPU support (Chrome/Edge 113+)
+- Enable at `chrome://flags/#enable-unsafe-webgpu` if needed
 
-## Model
+## Models
 
-Uses quantized ONNX models (decoder, audio_encoder, embed_tokens) from [LiquidAI/LFM2.5-Audio-1.5B-ONNX](https://huggingface.co/LiquidAI/LFM2.5-Audio-1.5B-ONNX).
+Pre-download models before running:
+
+```bash
+# LFM2.5-Audio Q4 (~1.6 GB)
+bun run download:model
+
+# Moonshine Streaming medium (~530 MB)
+bun run download:moonshine
+```
+
+- **LFM2.5-Audio-1.5B-Q4**: [LiquidAI/LFM2.5-Audio-1.5B-ONNX](https://huggingface.co/LiquidAI/LFM2.5-Audio-1.5B-ONNX)
+- **Moonshine Streaming medium**: [UsefulSensors/moonshine-streaming](https://huggingface.co/UsefulSensors/moonshine-streaming)
 
 ## License
 
-Model weights are released under the [LFM 1.0 License](https://huggingface.co/LiquidAI/LFM2.5-Audio-1.5B-ONNX/blob/main/LICENSE).
+- LFM2.5-Audio: [LFM 1.0 License](https://huggingface.co/LiquidAI/LFM2.5-Audio-1.5B-ONNX/blob/main/LICENSE)
+- Moonshine Streaming: MIT
