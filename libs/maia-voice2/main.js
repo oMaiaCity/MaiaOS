@@ -5,21 +5,25 @@
  */
 
 import { AudioModel, clearModelCache, getCacheInfo } from './audio-model.js'
-import { createStreamingTranscription } from './streaming-transcription.js'
+import { MoonshineModel } from './moonshine-model.js'
+import {
+	createMoonshineStreamingTranscription,
+	createStreamingTranscription,
+} from './streaming-transcription.js'
 
-// Model path: local only (pre-download with `bun run download:model`)
-const MODEL_URL =
-	typeof window !== 'undefined' ? `${window.location.origin}/LFM2.5-Audio-1.5B-ONNX` : ''
-
-// Model configurations (ASR only)
+// Models load from local public/ only (pre-download with download:model / download:moonshine)
 const MODELS = {
 	'LFM2.5-Audio-1.5B-Q4': {
-		path: MODEL_URL,
+		modelClass: AudioModel,
+		path: '/LFM2.5-Audio-1.5B-ONNX',
 		label: 'LFM2.5-Audio-1.5B Q4 (~1.6 GB)',
-		quantization: {
-			decoder: 'q4',
-			audioEncoder: 'q4',
-		},
+		quantization: { decoder: 'q4', audioEncoder: 'q4' },
+	},
+	'Moonshine-Streaming-medium': {
+		modelClass: MoonshineModel,
+		path: '/Moonshine-Streaming-medium',
+		label: 'Moonshine Streaming Medium (~530 MB)',
+		quantization: null,
 	},
 }
 
@@ -136,10 +140,10 @@ async function loadModel() {
 		const device = useWebGPU ? 'webgpu' : 'wasm'
 		setStatus(`Loading audio model (${device})...`)
 
-		audioModel = new AudioModel()
+		audioModel = new modelConfig.modelClass()
 		await audioModel.load(modelConfig.path, {
 			device,
-			quantization: modelConfig.quantization || null,
+			quantization: modelConfig.quantization ?? null,
 			progressCallback: (progress) => {
 				if (progress.status === 'loading') {
 					updateProgress(progress.progress, `Loading ${progress.file}...`)
@@ -183,36 +187,54 @@ streamBtn.addEventListener('click', async () => {
 	}
 	try {
 		streamBtn.disabled = true
-		setStatus('Starting VAD...', '')
+		const isMoonshine = modelSelect.value === 'Moonshine-Streaming-medium'
+		setStatus(isMoonshine ? 'Starting Moonshine streaming...' : 'Starting VAD...', '')
 		const { textEl } = addMessage('assistant', '', true)
 		streamingTranscriptEl = textEl
-		streamingVad = await createStreamingTranscription({
-			audioModel,
-			onTranscript: (text) => {
-				const sep = streamingTranscriptEl?.childNodes?.length ? ' ' : ''
-				streamingTranscriptEl?.appendChild(document.createTextNode(sep + text))
-				chatContainer.scrollTop = chatContainer.scrollHeight
-			},
-			onVadBoundary: () => {
-				if (!streamingTranscriptEl) return
-				const badge = document.createElement('span')
-				badge.className = 'vad-badge'
-				badge.textContent = 'VAD'
-				streamingTranscriptEl.appendChild(document.createTextNode(' '))
-				streamingTranscriptEl.appendChild(badge)
-				streamingTranscriptEl.appendChild(document.createTextNode(' '))
-				chatContainer.scrollTop = chatContainer.scrollHeight
-			},
-			onSpeechStart: () => {
-				setStatus('Speaking...', 'success')
-			},
-			onListeningChange: (listening) => {
-				if (listening) {
-					setStatus('Listening... Speak to transcribe', 'success')
-				}
-			},
-		})
-		streamingVad.start()
+
+		if (isMoonshine) {
+			streamingVad = await createMoonshineStreamingTranscription({
+				audioModel,
+				onTranscript: (text) => {
+					const sep = streamingTranscriptEl?.childNodes?.length ? ' ' : ''
+					streamingTranscriptEl?.appendChild(document.createTextNode(sep + text))
+					chatContainer.scrollTop = chatContainer.scrollHeight
+				},
+				onListeningChange: (listening) => {
+					if (listening) {
+						setStatus('Moonshine streaming... Speak to transcribe', 'success')
+					}
+				},
+			})
+		} else {
+			streamingVad = await createStreamingTranscription({
+				audioModel,
+				onTranscript: (text) => {
+					const sep = streamingTranscriptEl?.childNodes?.length ? ' ' : ''
+					streamingTranscriptEl?.appendChild(document.createTextNode(sep + text))
+					chatContainer.scrollTop = chatContainer.scrollHeight
+				},
+				onVadBoundary: () => {
+					if (!streamingTranscriptEl) return
+					const badge = document.createElement('span')
+					badge.className = 'vad-badge'
+					badge.textContent = 'VAD'
+					streamingTranscriptEl.appendChild(document.createTextNode(' '))
+					streamingTranscriptEl.appendChild(badge)
+					streamingTranscriptEl.appendChild(document.createTextNode(' '))
+					chatContainer.scrollTop = chatContainer.scrollHeight
+				},
+				onSpeechStart: () => {
+					setStatus('Speaking...', 'success')
+				},
+				onListeningChange: (listening) => {
+					if (listening) {
+						setStatus('Listening... Speak to transcribe', 'success')
+					}
+				},
+			})
+			streamingVad.start()
+		}
 		isStreaming = true
 		streamBtn.textContent = 'Stop'
 		streamBtn.classList.add('streaming')

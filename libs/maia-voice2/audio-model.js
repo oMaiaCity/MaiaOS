@@ -11,61 +11,9 @@ import { AutoTokenizer, env } from '@huggingface/transformers'
 import * as ort from 'onnxruntime-web'
 import { computeMelSpectrogram, loadAudioFile, loadMelConfig } from './audio-processor.js'
 
-// Cache configuration
+// clearModelCache deletes these if present (legacy from when remote fetch was supported)
 const CACHE_NAME = 'onnx-models-v1'
 const IDB_NAME = 'onnx-model-cache'
-const IDB_STORE = 'models'
-
-// IndexedDB helpers for fallback caching
-let idbPromise = null
-
-function openIDB() {
-	if (idbPromise) return idbPromise
-
-	idbPromise = new Promise((resolve, reject) => {
-		const request = indexedDB.open(IDB_NAME, 1)
-		request.onerror = () => reject(request.error)
-		request.onsuccess = () => resolve(request.result)
-		request.onupgradeneeded = (event) => {
-			const db = event.target.result
-			if (!db.objectStoreNames.contains(IDB_STORE)) {
-				db.createObjectStore(IDB_STORE)
-			}
-		}
-	})
-
-	return idbPromise
-}
-
-async function idbGet(key) {
-	try {
-		const db = await openIDB()
-		return new Promise((resolve, reject) => {
-			const tx = db.transaction(IDB_STORE, 'readonly')
-			const store = tx.objectStore(IDB_STORE)
-			const request = store.get(key)
-			request.onerror = () => reject(request.error)
-			request.onsuccess = () => resolve(request.result)
-		})
-	} catch (_e) {
-		return null
-	}
-}
-
-async function idbSet(key, value) {
-	try {
-		const db = await openIDB()
-		return new Promise((resolve, reject) => {
-			const tx = db.transaction(IDB_STORE, 'readwrite')
-			const store = tx.objectStore(IDB_STORE)
-			const request = store.put(value, key)
-			request.onerror = () => reject(request.error)
-			request.onsuccess = () => resolve()
-		})
-	} catch (_e) {
-		// Ignore cache write failures
-	}
-}
 
 // Special tokens for ASR
 const SPECIAL_TOKENS = {
@@ -86,67 +34,6 @@ function log(...args) {
 }
 function logReset() {
 	_logStartTime = performance.now()
-}
-
-/** Small files to cache in IDB. Excludes onnx, onnx_data, embed_tokens.bin (large). */
-const CACHEABLE_SUFFIXES = [
-	'tokenizer.json',
-	'tokenizer_config.json',
-	'config.json',
-	'embed_tokens.json',
-]
-
-function isCacheableUrl(url) {
-	const fileName = url.split('/').pop() || ''
-	return CACHEABLE_SUFFIXES.some((s) => fileName.endsWith(s))
-}
-
-/**
- * Fetch with caching support for small files only. IDB cache for tokenizer, config,
- * embed_tokens. Large onnx/onnx_data bypass cache and rely on browser HTTP cache.
- */
-async function fetchWithCache(url, options = {}) {
-	if (!url.startsWith('http://') && !url.startsWith('https://')) {
-		return fetch(url, options)
-	}
-
-	const fileName = url.split('/').pop()
-
-	if (!isCacheableUrl(url)) {
-		return fetch(url, options)
-	}
-
-	if (typeof indexedDB !== 'undefined') {
-		try {
-			const cached = await idbGet(url)
-			if (cached) {
-				console.log(`[IDB HIT] ${fileName}`)
-				return new Response(cached.data, {
-					status: 200,
-					headers: { 'Content-Type': cached.contentType || 'application/octet-stream' },
-				})
-			}
-		} catch (e) {
-			console.warn('IndexedDB read failed:', e)
-		}
-	}
-
-	console.log(`[Cache MISS] Fetching ${fileName}...`)
-	const response = await fetch(url, options)
-	if (!response.ok) return response
-
-	const data = await response.arrayBuffer()
-	const contentType = response.headers.get('Content-Type') || 'application/octet-stream'
-
-	if (typeof indexedDB !== 'undefined') {
-		try {
-			await idbSet(url, { data, contentType })
-		} catch (_e) {
-			// Ignore
-		}
-	}
-
-	return new Response(data, { status: 200, headers: { 'Content-Type': contentType } })
 }
 
 /**
@@ -172,7 +59,6 @@ export async function clearModelCache() {
 				request.onerror = () => reject(request.error)
 				request.onsuccess = () => resolve()
 			})
-			idbPromise = null // Reset the cached promise
 			deleted = true
 		} catch (_e) {
 			// Ignore
@@ -204,8 +90,8 @@ async function loadTokenizerFromPath(modelPath) {
 	console.log(`Loading tokenizer from ${modelPath}`)
 
 	const [tokenizerResponse, configResponse] = await Promise.all([
-		fetchWithCache(`${modelPath}/tokenizer.json`),
-		fetchWithCache(`${modelPath}/tokenizer_config.json`),
+		fetch(`${modelPath}/tokenizer.json`),
+		fetch(`${modelPath}/tokenizer_config.json`),
 	])
 
 	if (!tokenizerResponse.ok) {
@@ -454,7 +340,7 @@ export class AudioModel {
 	 */
 	async loadEmbedTokensWeight(modelPath) {
 		// Load metadata
-		const metaResponse = await fetchWithCache(`${modelPath}/onnx/embed_tokens.json`)
+		const metaResponse = await fetch(`${modelPath}/onnx/embed_tokens.json`)
 		if (!metaResponse.ok) {
 			throw new Error('embed_tokens.json not found - required for ASR')
 		}
@@ -462,7 +348,7 @@ export class AudioModel {
 		console.log('embed_tokens metadata:', meta)
 
 		// Load binary weight
-		const binResponse = await fetchWithCache(`${modelPath}/onnx/embed_tokens.bin`)
+		const binResponse = await fetch(`${modelPath}/onnx/embed_tokens.bin`)
 		if (!binResponse.ok) {
 			throw new Error('embed_tokens.bin not found - required for ASR')
 		}
