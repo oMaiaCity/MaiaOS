@@ -1,22 +1,132 @@
 /**
- * Streaming transcription with VAD.
- * Transcription runs on VAD-detected speech segments only (no silence hallucination).
- * VAD provides audio chunks that contain actual speech; we transcribe those.
- * VAD badge marks natural utterance boundaries for future LLM integration.
- * Processes chunks sequentially to avoid overloading WebGPU/WASM.
+ * Streaming transcription.
+ *
+ * Two modes:
+ * - VAD mode (LFM2.5): Transcription on VAD-detected speech segments.
+ * - Moonshine mode: Continuous incremental streaming per Moonshine design
+ *   (https://huggingface.co/UsefulSensors/moonshine-streaming-medium) — no VAD,
+ *   add_audio in chunks, update_interval-based transcription.
  */
 
 const VAD_SAMPLE_RATE = 16000
 const MIN_CHUNK_SAMPLES = 8000 // 0.5s at 16kHz - skip shorter segments
+const MOONSHINE_UPDATE_INTERVAL_MS = 2000
+const MOONSHINE_MIN_SAMPLES = 32000 // 2s at 16kHz — decoder needs enough encoder frames
 
 /**
- * Create a streaming transcription controller.
- * @param {object} options
- * @param {import('./audio-model.js').AudioModel} options.audioModel - Loaded ASR model
- * @param {(text: string) => void} options.onTranscript - Called when a chunk is transcribed
- * @param {() => void} [options.onVadBoundary] - Called when VAD detects speech end (insert badge)
- * @param {() => void} [options.onSpeechStart] - Called when speech starts
- * @param {(listening: boolean) => void} [options.onListeningChange] - Called when VAD listening state changes
+ * Moonshine streaming: continuous audio capture, no VAD.
+ * Matches Moonshine intended architecture: chunk-wise add_audio, update_interval.
+ */
+export async function createMoonshineStreamingTranscription(options) {
+	const { audioModel, onTranscript, onListeningChange } = options
+
+	let stream = null
+	let audioContext = null
+	let source = null
+	let processor = null
+	let intervalId = null
+	const buffer = []
+	let isProcessing = false
+
+	async function processChunk() {
+		if (buffer.length < MOONSHINE_MIN_SAMPLES || isProcessing) return
+		const samples = buffer.splice(0, buffer.length)
+		isProcessing = true
+		try {
+			const audio = new Float32Array(samples)
+			const text = await audioModel.transcribe(audio, VAD_SAMPLE_RATE)
+			const trimmed = text?.trim()
+			if (trimmed) {
+				onTranscript(trimmed)
+			}
+		} catch (err) {
+			console.error('[moonshine streaming] transcribe failed:', err)
+		} finally {
+			isProcessing = false
+		}
+	}
+
+	function resampleTo16k(input, fromRate) {
+		if (fromRate === 16000) return new Float32Array(input)
+		const ratio = fromRate / 16000
+		const outLen = Math.floor(input.length / ratio)
+		const output = new Float32Array(outLen)
+		for (let i = 0; i < outLen; i++) {
+			const srcIdx = i * ratio
+			const srcLo = Math.floor(srcIdx)
+			const srcHi = Math.min(srcLo + 1, input.length - 1)
+			const t = srcIdx - srcLo
+			output[i] = input[srcLo] * (1 - t) + input[srcHi] * t
+		}
+		return output
+	}
+
+	try {
+		stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+		audioContext = new (window.AudioContext || window.webkitAudioContext)()
+		source = audioContext.createMediaStreamSource(stream)
+
+		processor = audioContext.createScriptProcessor(4096, 1, 1)
+		processor.onaudioprocess = (e) => {
+			const input = e.inputBuffer.getChannelData(0)
+			const resampled = resampleTo16k(input, audioContext.sampleRate)
+			for (let i = 0; i < resampled.length; i++) {
+				buffer.push(resampled[i])
+			}
+		}
+		source.connect(processor)
+		const silence = audioContext.createGain()
+		silence.gain.value = 0
+		processor.connect(silence)
+		silence.connect(audioContext.destination)
+
+		intervalId = setInterval(processChunk, MOONSHINE_UPDATE_INTERVAL_MS)
+		onListeningChange?.(true)
+
+		return {
+			start() {
+				/* already started */
+			},
+			pause() {
+				if (intervalId) {
+					clearInterval(intervalId)
+					intervalId = null
+				}
+				onListeningChange?.(false)
+			},
+			destroy() {
+				if (intervalId) {
+					clearInterval(intervalId)
+					intervalId = null
+				}
+				if (processor && source) {
+					processor.disconnect()
+					source.disconnect()
+				}
+				if (stream) {
+					for (const t of stream.getTracks()) {
+						t.stop()
+					}
+				}
+				if (audioContext) {
+					audioContext.close()
+				}
+				buffer.length = 0
+				onListeningChange?.(false)
+			},
+			get listening() {
+				return !!intervalId
+			},
+		}
+	} catch (err) {
+		console.error('[moonshine streaming] failed to start:', err)
+		throw err
+	}
+}
+
+/**
+ * VAD-based streaming (for LFM2.5-Audio).
+ * Transcription runs on VAD-detected speech segments only.
  */
 export async function createStreamingTranscription(options) {
 	const { audioModel, onTranscript, onVadBoundary, onSpeechStart, onListeningChange } = options
