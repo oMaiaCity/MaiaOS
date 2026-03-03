@@ -21,7 +21,6 @@ primary_region = "fra"
 # PEER_ID, PEER_SECRET - required
 # PEER_DB_URL - from Fly Postgres Connect tab (PEER_STORAGE=postgres)
 # PEER_DB_PATH - PGlite data path (PEER_STORAGE=pglite, e.g. /data/sync.db)
-# JAZZ_SYNC_API_KEY - Jazz Cloud API key (PEER_STORAGE=jazz-cloud). Get at dashboard.jazz.tools
 # RED_PILL_API_KEY - Optional, for LLM chat
 
 [[services]]

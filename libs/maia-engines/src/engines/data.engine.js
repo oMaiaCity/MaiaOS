@@ -22,6 +22,12 @@ import {
 	validateItems,
 } from '@MaiaOS/schemata/validation.helper'
 
+// Enable: localStorage.setItem('maia:debug:loadBinary', '1')
+const DEBUG_LOAD_BINARY =
+	typeof window !== 'undefined' &&
+	(window.location?.hostname === 'localhost' || import.meta?.env?.DEV) &&
+	!!(typeof localStorage !== 'undefined' && localStorage.getItem('maia:debug:loadBinary'))
+
 async function resolveSchemaFromCoValue(peer, coId, _opName) {
 	try {
 		const schemaCoId = await peer.resolve({ fromCoValue: coId }, { returnType: 'coId' })
@@ -316,13 +322,6 @@ async function spliceCoListOp(peer, dataEngine, params) {
 	)
 }
 
-function base64ToUint8Array(base64) {
-	const binary = atob(base64)
-	const bytes = new Uint8Array(binary.length)
-	for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i)
-	return bytes
-}
-
 /** Create object URL from chunks - no copy, Blob accepts chunk array directly (faster for large files) */
 function chunksToBlobUrl(chunks, mimeType) {
 	if (!chunks?.length) return null
@@ -337,11 +336,13 @@ async function uploadBinaryOp(peer, dataEngine, params) {
 	requireParam(mimeType, 'mimeType', 'UploadBinaryOperation')
 	requireParam(chunks, 'chunks', 'UploadBinaryOperation')
 	requireDataEngine(dataEngine, 'UploadBinaryOperation', 'binary stream validation')
+
 	const coValueCore = await ensureCoValueAvailable(peer, coId, 'UploadBinaryOperation')
 	const schemaCoId = await resolveSchemaFromCoValue(peer, coId, 'UploadBinaryOperation')
 	if (!(await peer.checkCotype(schemaCoId, 'cobinary'))) {
 		throw new Error(`[UploadBinaryOperation] CoValue ${coId} must be a CoBinary`)
 	}
+
 	const content = peer.getCurrentContent(coValueCore)
 	if (
 		!content ||
@@ -356,30 +357,33 @@ async function uploadBinaryOp(peer, dataEngine, params) {
 	const totalBytes = Number(totalSizeBytes) || 0
 	if (!Array.isArray(chunks) || chunks.length === 0) {
 		content.endBinaryStream()
-		onProgress?.(0, totalBytes)
-		if (peer.node?.storage) await peer.node.syncManager.waitForStorageSync(coId)
+		onProgress?.(0, totalBytes, 'storing')
+		if (peer.node?.storage) {
+			await peer.node.syncManager.waitForStorageSync(coId)
+		}
+		onProgress?.(0, totalBytes, 'done')
 		return createSuccessResult({ coId }, { op: 'uploadBinary' })
 	}
+
 	let loadedBytes = 0
-	const YIELD_EVERY_CHUNKS = 8
 	let chunkIndex = 0
 	for (const chunk of chunks) {
-		const bytes =
-			chunk instanceof Uint8Array
-				? chunk
-				: base64ToUint8Array(typeof chunk === 'string' ? chunk : String(chunk))
-		content.pushBinaryStreamChunk(bytes)
-		loadedBytes += bytes.length
-		onProgress?.(loadedBytes, totalBytes)
-		chunkIndex++
-		if (onProgress && chunkIndex % YIELD_EVERY_CHUNKS === 0) {
-			await new Promise((r) => setTimeout(r, 0))
+		if (!(chunk instanceof Uint8Array)) {
+			throw new Error('[UploadBinaryOperation] chunks must be Uint8Array[]. No base64.')
 		}
+		content.pushBinaryStreamChunk(chunk)
+		loadedBytes += chunk.byteLength
+		onProgress?.(loadedBytes, totalBytes)
+		if (onProgress && ++chunkIndex % 6 === 0) await Promise.resolve()
 	}
 	content.endBinaryStream()
-	onProgress?.(totalBytes, totalBytes)
+	onProgress?.(totalBytes, totalBytes, 'storing')
+
 	// DURABILITY: Wait for IndexedDB persistence. In-memory-only is lossy (tab close = data lost).
-	if (peer.node?.storage) await peer.node.syncManager.waitForStorageSync(coId)
+	if (peer.node?.storage) {
+		await peer.node.syncManager.waitForStorageSync(coId)
+	}
+	onProgress?.(totalBytes, totalBytes, 'done')
 	return createSuccessResult({ coId }, { op: 'uploadBinary' })
 }
 
@@ -394,23 +398,61 @@ async function loadBinaryAsBlobOp(peer, params) {
 			`[LoadBinaryAsBlobOperation] CoValue ${coId} is not a CoBinary or has no getBinaryChunks`,
 		)
 	}
-	// allowUnfinished=true: returns chunks even if stream end hasn't synced yet (Jazz lazy-loading)
+	// allowUnfinished=true to get chunks; but we require finished=true for display (partial = corrupt image)
 	let result = content.getBinaryChunks(true)
-	for (let i = 0; !result && i < 8; i++) {
-		await new Promise((r) => setTimeout(r, 150))
+	if (DEBUG_LOAD_BINARY) {
+		console.log('[LoadBinaryAsBlob] getBinaryChunks(1) initial', {
+			coId,
+			hasResult: !!result,
+			finished: result?.finished,
+		})
+	}
+	for (let i = 0; i < 40; i++) {
+		if (result?.chunks?.length && result.finished) break
+		await new Promise((r) => setTimeout(r, 120))
 		result = content.getBinaryChunks(true)
+		if (DEBUG_LOAD_BINARY && (i === 0 || result))
+			console.log('[LoadBinaryAsBlob] getBinaryChunks retry', {
+				coId,
+				attempt: i + 1,
+				hasResult: !!result,
+				chunkCount: result?.chunks?.length,
+				finished: result?.finished,
+			})
 	}
 	if (!result) {
+		if (DEBUG_LOAD_BINARY) console.warn('[LoadBinaryAsBlob] no result after retries', { coId })
 		throw new Error(
 			`[LoadBinaryAsBlobOperation] CoBinary ${coId} has no binary data (stream may still be loading)`,
 		)
 	}
+	if (!result.finished) {
+		throw new Error(
+			`[LoadBinaryAsBlobOperation] CoBinary ${coId} stream not finished (partial data would render corrupt image)`,
+		)
+	}
 	const { chunks, mimeType } = result
+	if (DEBUG_LOAD_BINARY) {
+		console.log('[LoadBinaryAsBlob] chunks info', {
+			coId,
+			chunkCount: chunks?.length ?? 0,
+			firstChunkIsUint8Array: chunks?.[0] instanceof Uint8Array,
+			mimeType,
+			finished: result.finished,
+		})
+	}
 	if (!chunks?.length) {
 		throw new Error(`[LoadBinaryAsBlobOperation] CoBinary ${coId} has no chunks`)
 	}
 	// Use Blob URL instead of data URL - no base64 conversion, works for any size, displays correctly
 	const dataUrl = chunksToBlobUrl(chunks, mimeType || 'application/octet-stream')
+	if (DEBUG_LOAD_BINARY) {
+		console.log('[LoadBinaryAsBlob] blob URL created', {
+			coId,
+			hasDataUrl: !!dataUrl,
+			prefix: dataUrl?.slice(0, 20),
+		})
+	}
 	return createSuccessResult(
 		{ dataUrl, mimeType: mimeType || 'application/octet-stream' },
 		{ op: 'loadBinaryAsBlob' },

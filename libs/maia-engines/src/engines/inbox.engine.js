@@ -61,9 +61,9 @@ export class InboxEngine {
 		const payload = message.payload || {}
 
 		// Binary content not allowed in inbox. Resolve to CoBinary ref before deliver.
-		if (payload?.fileBase64) {
+		if (payload?.file instanceof File || payload?.fileBase64) {
 			throw new Error(
-				'[InboxEngine] Binary content not allowed in inbox. Resolve to CoBinary ref before deliver. Payload must contain co-id, not fileBase64.',
+				'[InboxEngine] Binary not allowed in inbox. Use BlobEngine first. Payload must contain co-id (avatar), not file/fileBase64.',
 			)
 		}
 
@@ -159,10 +159,8 @@ export class InboxEngine {
 	async deliver(targetId, message) {
 		const DEBUG =
 			typeof window !== 'undefined' &&
-			(window.location?.hostname === 'localhost' || import.meta?.env?.DEV) &&
-			message?.type === 'UPLOAD_PROFILE_IMAGE'
-		if (DEBUG)
-			console.log('[ProfileImagePipe] InboxEngine.deliver: start', { targetId, type: message?.type })
+			(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
+		if (DEBUG) console.log('[InboxEngine] deliver: start', { targetId, type: message?.type })
 		if (!this.dataEngine?.peer) {
 			throw new Error(
 				'[InboxEngine] Cannot push to inbox: dataEngine or peer not set. Ensure MaiaOS is booted before deliverEvent.',
@@ -174,10 +172,11 @@ export class InboxEngine {
 		} catch (err) {
 			throw new Error(`[InboxEngine] cannot resolve target to inbox. ${err?.message || err}`)
 		}
+
 		const { inboxCoId, targetActorConfig } = resolved
 		const messageWithTarget = { ...message, target: resolved.resolvedTargetId }
 		if (DEBUG)
-			console.log('[ProfileImagePipe] InboxEngine.deliver: pushing message', {
+			console.log('[InboxEngine] deliver: pushing message', {
 				inboxCoId: `${inboxCoId?.slice(0, 20)}...`,
 				hasTargetActorConfig: !!targetActorConfig,
 			})
@@ -198,7 +197,7 @@ export class InboxEngine {
 		} else {
 			const actorId = resolved.resolvedTargetId
 			if (DEBUG)
-				console.log('[ProfileImagePipe] InboxEngine.deliver: actor already spawned?', {
+				console.log('[InboxEngine] deliver: actor already spawned?', {
 					actorId: `${actorId?.slice(0, 20)}...`,
 					hasActor: actorId && this.actorEngine?.actors?.has(actorId),
 				})
@@ -207,6 +206,6 @@ export class InboxEngine {
 			}
 			this.actorEngine?.runtime?.notifyInboxPush?.(inboxCoId)
 		}
-		if (DEBUG) console.log('[ProfileImagePipe] InboxEngine.deliver: done')
+		if (DEBUG) console.log('[InboxEngine] deliver: done')
 	}
 }
