@@ -66,18 +66,34 @@ export async function getStorage(options = {}) {
 		const finalDbPath = dbPath || (typeof process !== 'undefined' && process.env?.PEER_DB_PATH)
 		const databaseUrl = typeof process !== 'undefined' && process.env?.PEER_DB_URL
 
-		// Agent/server mode: ONLY pglite or postgres. Never fall back to in-memory.
+		// Agent/server mode: pglite, postgres, or jazz-cloud. Never fall back to in-memory (except jazz-cloud).
 		if (mode === 'agent' && !forceInMemory) {
 			if (storageType === 'in-memory') {
 				throw new Error(
-					'[STORAGE] Agent/server mode does not support in-memory storage. Use PEER_STORAGE=pglite or PEER_STORAGE=postgres.',
+					'[STORAGE] Agent/server mode does not support in-memory storage. Use PEER_STORAGE=pglite, PEER_STORAGE=postgres, or PEER_STORAGE=jazz-cloud.',
 				)
 			}
-			if (storageType && storageType !== 'pglite' && storageType !== 'postgres') {
+			if (
+				storageType &&
+				storageType !== 'pglite' &&
+				storageType !== 'postgres' &&
+				storageType !== 'jazz-cloud'
+			) {
 				throw new Error(
-					`[STORAGE] Agent/server mode requires PEER_STORAGE=pglite or PEER_STORAGE=postgres. Got: ${storageType}`,
+					`[STORAGE] Agent/server mode requires PEER_STORAGE=pglite, PEER_STORAGE=postgres, or PEER_STORAGE=jazz-cloud. Got: ${storageType}`,
 				)
 			}
+		}
+
+		// Jazz Cloud (remote sync/persistence via wss://cloud.jazz.tools)
+		if (storageType === 'jazz-cloud') {
+			const apiKey = typeof process !== 'undefined' && process.env?.JAZZ_SYNC_API_KEY?.trim?.()
+			if (!apiKey) {
+				throw new Error(
+					'[STORAGE] PEER_STORAGE=jazz-cloud requires JAZZ_SYNC_API_KEY. Get a key at dashboard.jazz.tools or use your email as a temporary key.',
+				)
+			}
+			return inMemory()
 		}
 
 		// Postgres (Fly MPG or any Postgres)
@@ -116,7 +132,7 @@ export async function getStorage(options = {}) {
 		// Agent mode with no valid storage → fail hard
 		if (mode === 'agent') {
 			throw new Error(
-				'[STORAGE] Agent mode requires PEER_STORAGE=pglite (with PEER_DB_PATH) or PEER_STORAGE=postgres (with PEER_DB_URL).',
+				'[STORAGE] Agent mode requires PEER_STORAGE=pglite (with PEER_DB_PATH), PEER_STORAGE=postgres (with PEER_DB_URL), or PEER_STORAGE=jazz-cloud (with JAZZ_SYNC_API_KEY).',
 			)
 		}
 	}

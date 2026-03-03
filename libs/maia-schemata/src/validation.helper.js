@@ -410,7 +410,15 @@ export async function loadSchemaAndValidate(backend, schemaRef, data, context, o
  * @throws {Error} If CoValue cannot be loaded or is not available
  */
 export async function ensureCoValueAvailable(backend, coId, operationName) {
-	const coValueCore = backend.getCoValue(coId)
+	let coValueCore = backend.getCoValue(coId)
+	// Jazz lazy-loading: trigger load when not yet in cache (refs don't auto-load)
+	if (!coValueCore && backend.node?.loadCoValueCore) {
+		await backend.node.loadCoValueCore(coId).catch(() => {})
+		for (let i = 0; i < 12 && !coValueCore; i++) {
+			coValueCore = backend.getCoValue(coId)
+			if (!coValueCore) await new Promise((r) => setTimeout(r, 100))
+		}
+	}
 	if (!coValueCore) {
 		throw new Error(`[${operationName}] CoValue not found: ${coId}`)
 	}

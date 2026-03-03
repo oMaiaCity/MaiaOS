@@ -8,7 +8,7 @@
 /**
  * Read file from input as base64 (async)
  * @param {HTMLInputElement} input - File input element
- * @returns {Promise<{fileBase64: string, mimeType: string, fileName: string}|null>}
+ * @returns {Promise<{fileBase64: string, mimeType: string}|null>}
  */
 export async function readFileAsUploadPayload(input) {
 	const file = input?.files?.[0]
@@ -20,7 +20,7 @@ export async function readFileAsUploadPayload(input) {
 			const [header, base64] =
 				typeof dataUrl === 'string' && dataUrl.includes(',') ? dataUrl.split(',') : ['', '']
 			const mime = header.match(/:(.*?);/)?.[1] || file.type || 'application/octet-stream'
-			resolve({ fileBase64: base64, mimeType: mime, fileName: file.name })
+			resolve({ fileBase64: base64, mimeType: mime })
 		}
 		reader.onerror = () => resolve(null)
 		reader.readAsDataURL(file)
@@ -117,7 +117,6 @@ export async function extractDOMValuesAsync(payload, element) {
 			console.log('[ProfileImagePipe] extractDOMValuesAsync: fileData resolved', {
 				hasFileData: !!fileData,
 				mimeType: fileData?.mimeType,
-				fileName: fileData?.fileName,
 				base64Length: fileData?.fileBase64?.length ?? 0,
 			})
 		}

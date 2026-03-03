@@ -1,6 +1,6 @@
 # Engines
 
-The `@MaiaOS/engines` package provides the core engines that execute MaiaScript and manage actor lifecycles. Six engines work together: ActorEngine, ViewEngine, ProcessEngine, StyleEngine, DataEngine, InboxEngine. Plus the MaiaScriptEvaluator and Runtime.
+The `@MaiaOS/engines` package provides the core engines that execute MaiaScript and manage actor lifecycles. Seven engines work together: ActorEngine, ViewEngine, ProcessEngine, StyleEngine, DataEngine, BlobEngine, InboxEngine. Plus the MaiaScriptEvaluator and Runtime.
 
 ---
 
@@ -132,6 +132,24 @@ The `@MaiaOS/engines` package provides the core engines that execute MaiaScript 
 **Key Method:** `execute({ op, ...params })` - Execute any operation
 
 **Source:** `libs/maia-engines/src/engines/data.engine.js`
+
+---
+
+## BlobEngine
+
+**Purpose:** Single owner of binary upload to CoBinary. Enforces the rule: *Binary lives only in storage; events carry refs and metadata.*
+
+**What it does:**
+- Uploads binary to CoBinary and returns metadata (`coId`, `mimeType`)
+- Callers (ViewEngine, programmatic code) use BlobEngine **before** emitting events
+- InboxEngine never sees or transforms binary; it rejects payloads containing `fileBase64`
+- Supports progress callbacks via `onProgress(loadedBytes, totalBytes)`
+
+**Rule:** Upload via BlobEngine before deliver. Inbox carries refs only.
+
+**Key Method:** `uploadToCoBinary(payload, { onProgress })` - Upload `{ fileBase64, mimeType }` and return `{ coId, mimeType }`
+
+**Source:** `libs/maia-engines/src/engines/blob.engine.js`
 
 ---
 

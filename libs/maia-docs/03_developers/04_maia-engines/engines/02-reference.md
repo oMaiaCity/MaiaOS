@@ -6,6 +6,7 @@ Quick reference for engine methods. See [00-overview.md](./00-overview.md) for d
 
 ## ActorEngine
 
+- `reportUploadProgress(actorId, loadedBytes, totalBytes)` - Update actor context with upload progress (used by BlobEngine onProgress)
 - `createActor(actorConfig, containerElement, agentKey)` - Create view-attached actor
 - `spawnActor(actorConfig, options)` - Spawn headless actor
 - `destroyActor(actorId)` - Destroy single actor
@@ -54,6 +55,13 @@ Quick reference for engine methods. See [00-overview.md](./00-overview.md) for d
 
 - `execute({ op, ...params })` - Execute any operation
 - `registerOperation(opName, { execute })` - Register custom operation
+
+---
+
+## BlobEngine
+
+- `uploadToCoBinary(payload, { onProgress })` - Upload binary to CoBinary; returns `{ coId, mimeType }`
+- Rule: Binary content goes through BlobEngine before events; inbox carries refs only
 
 ---
 

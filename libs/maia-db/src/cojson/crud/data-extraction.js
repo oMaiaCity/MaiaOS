@@ -124,7 +124,6 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 					type: 'cobinary',
 					$schema: schema,
 					mimeType: binaryInfo?.mimeType,
-					fileName: binaryInfo?.fileName,
 					totalSizeBytes: binaryInfo?.totalSizeBytes,
 					finished: chunks?.finished ?? content.isBinaryStreamEnded?.() ?? false,
 				}

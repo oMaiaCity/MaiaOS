@@ -13,10 +13,15 @@
 		"map": {
 			"id": "id",
 			"name": "name",
-			"avatar": "avatar",
-			"avatarDataUrl": "$avatar:asDataUrl"
+			"avatar": "avatar"
 		}
 	},
 	"uploadStatus": null,
-	"uploadError": null
+	"uploadError": null,
+	"uploadProgressVisible": false,
+	"uploadProgressSectionClass": "upload-progress-section upload-progress-section--hidden",
+	"uploadProgressPercent": null,
+	"uploadProgressStyle": "width: 0%",
+	"uploadLoadedBytes": null,
+	"uploadTotalBytes": null
 }

@@ -42,6 +42,7 @@ export class ActorEngine {
 		this.batchTimer = null // Track if microtask is scheduled
 
 		this.runtime = null
+		this._uploadProgressLastReport = new Map()
 	}
 
 	async updateContextCoValue(actor, updates) {
@@ -63,6 +64,49 @@ export class ActorEngine {
 			const msgs = updateResult.errors?.map((e) => e.message).join('; ') || 'Update failed'
 			throw new Error(`[ActorEngine] Context update failed: ${msgs}`)
 		}
+	}
+
+	/**
+	 * Report upload progress to actor context. Called by ViewEngine's onProgress during BlobEngine upload.
+	 * @param {string} actorId - Actor to show progress (has context with uploadStatus, etc.)
+	 * @param {number} loadedBytes - Bytes uploaded so far
+	 * @param {number} totalBytes - Total bytes to upload
+	 */
+	reportUploadProgress(actorId, loadedBytes, totalBytes) {
+		const actor = this.actors.get(actorId)
+		if (!actor?.contextCoId || !this.dataEngine) return
+		const PROGRESS_THROTTLE_MS = 120
+		const now = Date.now()
+		if (loadedBytes < totalBytes) {
+			const last = this._uploadProgressLastReport.get(actorId) ?? 0
+			if (now - last < PROGRESS_THROTTLE_MS) return
+			this._uploadProgressLastReport.set(actorId, now)
+		} else {
+			this._uploadProgressLastReport.delete(actorId)
+		}
+		const formatBytes = (bytes) => {
+			if (bytes == null || bytes < 0) return '0 B'
+			if (bytes < 1024) return `${bytes} B`
+			if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+			return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+		}
+		const pct = totalBytes > 0 ? Math.round((loadedBytes / totalBytes) * 100) : 0
+		const isComplete = loadedBytes >= totalBytes
+		const status = isComplete
+			? 'Saving to storage...'
+			: `Saving... ${pct}% (${formatBytes(loadedBytes)} / ${formatBytes(totalBytes)})`
+		const style = `width: ${isComplete ? 100 : pct}%`
+		const updates = {
+			uploadStatus: status,
+			uploadError: null,
+			uploadProgressVisible: true,
+			uploadProgressSectionClass: 'upload-progress-section',
+			uploadProgressPercent: isComplete ? null : pct,
+			uploadProgressStyle: style,
+			uploadLoadedBytes: loadedBytes,
+			uploadTotalBytes: totalBytes,
+		}
+		this.updateContextCoValue(actor, updates).catch(() => {})
 	}
 
 	/** @private */
@@ -230,7 +274,16 @@ export class ActorEngine {
 		}
 		actor._renderState = RENDER_STATES.RENDERING
 		const styleSheets = await this.styleEngine.getStyleSheets(actor.config, actorId)
-		await this.viewEngine.render(actor.viewDef, actor.context, actor.shadowRoot, styleSheets, actorId)
+		await this.viewEngine.render(
+			actor.viewDef,
+			actor.context,
+			actor.shadowRoot,
+			styleSheets,
+			actorId,
+			{
+				dataEngine: this.dataEngine,
+			},
+		)
 		actor._renderState = RENDER_STATES.READY
 	}
 

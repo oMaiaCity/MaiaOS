@@ -7,4 +7,4 @@
  */
 
 export { createAccountWithSecret, loadAccount } from './coID.js'
-export { setupSyncPeers, subscribeSyncState } from './sync-peers.js'
+export { setupJazzCloudPeer, setupSyncPeers, subscribeSyncState } from './sync-peers.js'
