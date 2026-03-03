@@ -41,17 +41,17 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 		throw new Error('[createAndPushMessage] messageData must be an object')
 	}
 
-	const peer = dbEngine.peer
-	if (!peer) {
-		throw new Error('[createAndPushMessage] dbEngine.peer is required')
-	}
-
 	let t0 = _perf.now()
-	// 1. Get message schema co-id from inbox schema via resolve() (uses CoCache / universalRead)
+	// 1. Get message schema co-id from inbox schema (preferred - avoids resolve warnings)
+	// Extract from inbox schema's items.$co property (same pattern as processInbox)
 	let messageSchemaCoId = null
-	let inboxSchema = null
 	try {
-		inboxSchema = await resolve(peer, { fromCoValue: inboxCoId }, { returnType: 'schema' })
+		// Get inbox schema to find message schema reference
+		const inboxSchemaStore = await dbEngine.execute({
+			op: 'schema',
+			fromCoValue: inboxCoId,
+		})
+		const inboxSchema = inboxSchemaStore.value
 
 		if (inboxSchema?.items?.$co) {
 			const messageSchemaRef = inboxSchema.items.$co
@@ -126,6 +126,7 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 		throw new Error(`[createAndPushMessage] Invalid message co-id returned: ${messageCoId}`)
 	}
 	// 4. Push message co-id to inbox CoStream (not plain object)
+	t0 = _perf.now()
 	const pushResult = await dbEngine.execute({
 		op: 'push',
 		coId: inboxCoId,

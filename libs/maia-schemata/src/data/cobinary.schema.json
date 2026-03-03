@@ -3,7 +3,7 @@
 	"$schema": "°Maia/schema/meta",
 	"title": "°Maia/schema/data/cobinary",
 	"cotype": "cobinary",
-	"indexing": true,
+	"indexing": false,
 	"properties": {
 		"mimeType": {
 			"type": "string",

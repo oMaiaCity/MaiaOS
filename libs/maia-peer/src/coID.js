@@ -38,7 +38,8 @@ export async function createAccountWithSecret({
 
 	const crypto = await WasmCrypto.create()
 
-	const finalStorage = storage !== undefined ? storage : await getStorage({ mode: 'human' })
+	// undefined = caller omitted → use default (human storage). null = explicitly no local storage.
+	const finalStorage = storage === undefined ? await getStorage({ mode: 'human' }) : storage
 
 	const result = await LocalNode.withNewlyCreatedAccount({
 		creationProps: { name },
@@ -103,10 +104,11 @@ export async function loadAccount({
 
 	const crypto = await WasmCrypto.create()
 
-	const finalStorage = storage !== undefined ? storage : await getStorage({ mode: 'human' })
+	// undefined = caller omitted → use default (human storage). null = explicitly no local storage.
+	const finalStorage = storage === undefined ? await getStorage({ mode: 'human' }) : storage
 
 	console.log('   Sync peers:', peers.length > 0 ? `${peers.length} peer(s)` : 'none')
-	const storageLabel = storage
+	const storageLabel = finalStorage
 		? typeof process !== 'undefined' && process.versions?.node
 			? `${
 					process.env.PEER_STORAGE === 'postgres'
@@ -115,7 +117,9 @@ export async function loadAccount({
 							? 'PGlite'
 							: process.env.PEER_STORAGE || 'storage'
 				} available (local-first)`
-			: 'IndexedDB available (local-first)'
+			: finalStorage?.__maiaBackend === 'opfs'
+				? 'OPFS available (local-first)'
+				: 'IndexedDB available (local-first)'
 		: 'no storage (sync-only)'
 	console.log('   Storage:', storageLabel)
 
@@ -123,10 +127,11 @@ export async function loadAccount({
 		console.log('   💾 Storage available')
 	}
 
+	// CRITICAL: Must AWAIT migration so profile is created before cojson validates.
+	// Fire-and-forget caused "Account has no profile" when storage returned incomplete data (OPFS restart).
 	const deferredMigration = migration
 		? async (account, node) => {
-				migration(account, node).catch(() => {})
-				return Promise.resolve()
+				await migration(account, node)
 			}
 		: undefined
 
@@ -168,6 +173,11 @@ export async function loadAccount({
 	})
 
 	const rawAccount = node.expectCurrentAccount('oID/loadAccount')
+
+	// Guard: Storage may return incomplete account (OPFS format change, corrupt data). Run migration if profile missing.
+	if (!rawAccount.get('profile') && migration) {
+		await migration(rawAccount, node)
+	}
 
 	const profileID = rawAccount.get('profile')
 	if (profileID) {

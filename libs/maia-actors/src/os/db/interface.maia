@@ -81,7 +81,7 @@
 				},
 				"chunks": {
 					"type": "array",
-					"description": "Base64-encoded chunks for uploadBinary"
+					"description": "Uint8Array chunks only. No base64."
 				}
 			},
 			"required": [

@@ -56,20 +56,34 @@ const cobinaryPreviewCache = new Map()
 const COBINARY_PLACEHOLDER =
 	'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
 
+function extractDataUrl(res) {
+	const dataUrl = res?.dataUrl ?? res?.data?.dataUrl ?? (res?.ok === true && res?.data?.dataUrl)
+	if (DEBUG_COBINARY && res && !dataUrl) {
+		console.warn('[CoBinary] extractDataUrl: no dataUrl in response', {
+			keys: Object.keys(res || {}),
+			hasData: !!res?.data,
+			dataKeys: res?.data ? Object.keys(res.data) : [],
+		})
+	}
+	return dataUrl ?? null
+}
+
 function loadBinaryWithRetry(dataEngine, coId, maxAttempts = 4) {
 	const attempt = (n) =>
 		dataEngine
 			.execute({ op: 'loadBinaryAsBlob', coId })
-			.then((res) => res?.dataUrl ?? res?.data?.dataUrl)
+			.then((res) => extractDataUrl(res))
 			.catch((err) => {
 				const msg = err?.message ?? ''
 				const retryable =
 					msg.includes('not found') ||
 					msg.includes('not available') ||
 					msg.includes('still be loading') ||
-					msg.includes('no binary data')
+					msg.includes('no binary data') ||
+					msg.includes('stream not finished') ||
+					err?.name === 'NotReadableError'
 				if (n < maxAttempts && retryable) {
-					return new Promise((r) => setTimeout(r, 300)).then(() => attempt(n + 1))
+					return new Promise((r) => setTimeout(r, 400)).then(() => attempt(n + 1))
 				}
 				throw err
 			})
@@ -210,6 +224,8 @@ export class ViewEngine {
 		this.actorInputCounters = new Map()
 		this._scrollToBottomPrev = new Map()
 		this._scrollMutationObservers = new Map()
+		/** Track last-rendered profile.avatar coId per actor for reactive re-hydration on avatar change */
+		this._lastAvatarCoIdPerActor = new Map()
 	}
 
 	_makeStyleRerenderSubscribe(actorId) {
@@ -431,6 +447,23 @@ export class ViewEngine {
 									: 'none',
 				})
 			hydrateCobinaryPreviews(shadowRoot, dataEngine)
+			// Staggered re-hydration: CoBinary finished state may lag; multiple passes ensure display
+			for (const delay of [200, 500, 1200, 2500, 4000]) {
+				setTimeout(() => hydrateCobinaryPreviews(shadowRoot, dataEngine), delay)
+			}
+			// Reactive re-hydration on avatar change: when profile.avatar coId changes, extra passes at 100ms and 600ms
+			const avatarCoId =
+				typeof contextForRender?.profile?.avatar === 'string' &&
+				contextForRender.profile.avatar.startsWith('co_z')
+					? contextForRender.profile.avatar
+					: null
+			const prevAvatar = this._lastAvatarCoIdPerActor.get(actorId)
+			if (avatarCoId && avatarCoId !== prevAvatar && dataEngine) {
+				this._lastAvatarCoIdPerActor.set(actorId, avatarCoId)
+				for (const delay of [50, 150, 400, 800]) {
+					setTimeout(() => hydrateCobinaryPreviews(shadowRoot, dataEngine), delay)
+				}
+			}
 		}
 	}
 
@@ -787,19 +820,6 @@ export class ViewEngine {
 		if (this.actorOps) {
 			const actor = this.actorOps.getActor?.(actorId)
 			if (actor?.machine || actor?.process) {
-				if (
-					eventName === 'UPLOAD_PROFILE_IMAGE' &&
-					typeof window !== 'undefined' &&
-					(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
-				) {
-					console.log(
-						'[ProfileImagePipe] ViewEngine: UPLOAD_PROFILE_IMAGE before extractDOMValuesAsync',
-						{
-							actorId,
-							rawPayload: JSON.stringify(payload).slice(0, 200),
-						},
-					)
-				}
 				payload = await extractDOMValuesAsync(payload, element)
 
 				// $stores Architecture: Read CURRENT context from actor.context.value (backend unified store)
@@ -820,22 +840,18 @@ export class ViewEngine {
 					)
 				}
 
-				// BlobEngine: Convert fileBase64 to CoBinary ref BEFORE validation/deliver
+				// BlobEngine: Convert file to CoBinary ref BEFORE validation/deliver (generic)
 				// Rule: Binary lives only in storage; inbox carries refs and metadata only.
+				const hasBinaryPayload = payload?.file instanceof File
 				let payloadToValidate = payload
-				if (
-					eventName === 'UPLOAD_PROFILE_IMAGE' &&
-					payload?.fileBase64 &&
-					typeof payload.fileBase64 === 'string' &&
-					this.blobEngine
-				) {
+				if (hasBinaryPayload && this.blobEngine) {
+					const eventSchema = actor?.interfaceSchema?.properties?.[eventName]
+					const blobRefKey = eventSchema?.required?.[0] ?? eventSchema?.['$blobRefKey'] ?? 'coId'
 					const result = await this.blobEngine.uploadToCoBinary(payload, {
-						onProgress: (loaded, total) => this.actorOps?.reportUploadProgress?.(actorId, loaded, total),
+						onProgress: (loaded, total, phase) =>
+							this.actorOps?.reportUploadProgress?.(actorId, loaded, total, phase),
 					})
-					payloadToValidate = {
-						avatar: result.coId,
-						mimeType: result.mimeType,
-					}
+					payloadToValidate = { [blobRefKey]: result.coId, mimeType: result.mimeType }
 				}
 
 				// Runtime schema validation (from actor's interface) - skip send if payload invalid
@@ -844,17 +860,6 @@ export class ViewEngine {
 					eventName,
 					payloadToValidate,
 				)
-				if (
-					eventName === 'UPLOAD_PROFILE_IMAGE' &&
-					typeof window !== 'undefined' &&
-					(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
-				) {
-					console.log('[ProfileImagePipe] ViewEngine: after resolve/validate', {
-						payloadValid,
-						hasAvatar: !!payloadToValidate?.avatar,
-						payloadKeys: payloadToValidate ? Object.keys(payloadToValidate) : [],
-					})
-				}
 				if (!payloadValid) return
 
 				// CLEAN ARCHITECTURE: For update-input types on blur, only send if DOM value differs from CURRENT context
@@ -876,13 +881,6 @@ export class ViewEngine {
 					}
 				}
 
-				if (
-					eventName === 'UPLOAD_PROFILE_IMAGE' &&
-					typeof window !== 'undefined' &&
-					(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
-				) {
-					console.log('[ProfileImagePipe] ViewEngine: calling deliverEvent', { actorId, eventName })
-				}
 				await this.actorOps?.deliverEvent?.(actorId, actorId, eventName, payloadToValidate)
 
 				// AUTO-CLEAR INPUTS: After form submission (any event except update-input types), clear all input fields
