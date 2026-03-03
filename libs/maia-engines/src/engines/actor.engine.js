@@ -68,20 +68,24 @@ export class ActorEngine {
 
 	/**
 	 * Report upload progress to actor context. Called by ViewEngine's onProgress during BlobEngine upload.
+	 * Unified pipeline: bytes → storing → done.
 	 * @param {string} actorId - Actor to show progress (has context with uploadStatus, etc.)
 	 * @param {number} loadedBytes - Bytes uploaded so far
 	 * @param {number} totalBytes - Total bytes to upload
+	 * @param {'reading'|'bytes'|'storing'|'done'} [phase] - Pipeline phase
 	 */
-	reportUploadProgress(actorId, loadedBytes, totalBytes) {
+	reportUploadProgress(actorId, loadedBytes, totalBytes, phase) {
 		const actor = this.actors.get(actorId)
 		if (!actor?.contextCoId || !this.dataEngine) return
-		const PROGRESS_THROTTLE_MS = 120
+		const PROGRESS_THROTTLE_MS = 150
 		const now = Date.now()
-		if (loadedBytes < totalBytes) {
+		if (phase !== 'reading' && phase !== 'storing' && phase !== 'done' && loadedBytes < totalBytes) {
 			const last = this._uploadProgressLastReport.get(actorId) ?? 0
 			if (now - last < PROGRESS_THROTTLE_MS) return
 			this._uploadProgressLastReport.set(actorId, now)
-		} else {
+		} else if (phase === 'done') {
+			this._uploadProgressLastReport.delete(actorId)
+		} else if (loadedBytes >= totalBytes && phase !== 'storing') {
 			this._uploadProgressLastReport.delete(actorId)
 		}
 		const formatBytes = (bytes) => {
@@ -90,12 +94,26 @@ export class ActorEngine {
 			if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
 			return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
 		}
-		const pct = totalBytes > 0 ? Math.round((loadedBytes / totalBytes) * 100) : 0
-		const isComplete = loadedBytes >= totalBytes
-		const status = isComplete
-			? 'Saving to storage...'
-			: `Saving... ${pct}% (${formatBytes(loadedBytes)} / ${formatBytes(totalBytes)})`
-		const style = `width: ${isComplete ? 100 : pct}%`
+		const pct =
+			phase === 'reading'
+				? 0
+				: phase === 'storing'
+					? 95
+					: phase === 'done'
+						? 100
+						: totalBytes > 0
+							? Math.round((loadedBytes / totalBytes) * 95)
+							: 0
+		const isComplete = phase === 'done'
+		const status =
+			phase === 'reading'
+				? `Reading file... (${formatBytes(totalBytes)})`
+				: phase === 'storing'
+					? `Persisting to storage... (${formatBytes(totalBytes)})`
+					: phase === 'done'
+						? 'Done'
+						: `Saving... ${pct}% (${formatBytes(loadedBytes)} / ${formatBytes(totalBytes)})`
+		const style = `width: ${pct}%`
 		const updates = {
 			uploadStatus: status,
 			uploadError: null,
@@ -621,18 +639,6 @@ export class ActorEngine {
 	 * @param {Object} payload - Resolved payload (no expressions)
 	 */
 	async deliverEvent(senderId, targetId, type, payload = {}) {
-		if (
-			type === 'UPLOAD_PROFILE_IMAGE' &&
-			typeof window !== 'undefined' &&
-			(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
-		) {
-			console.log('[ProfileImagePipe] ActorEngine.deliverEvent', {
-				senderId,
-				targetId,
-				type,
-				hasFileBase64: !!payload?.fileBase64,
-			})
-		}
 		if (containsExpressions(payload)) {
 			throw new Error(
 				`[ActorEngine] Payload contains unresolved expressions. Payload: ${JSON.stringify(payload).substring(0, 200)}`,
@@ -691,17 +697,6 @@ export class ActorEngine {
 						continue
 					}
 					if (message.source) actor._lastEventSource = message.source
-					if (
-						message.type === 'UPLOAD_PROFILE_IMAGE' &&
-						typeof window !== 'undefined' &&
-						(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
-					) {
-						console.log('[ProfileImagePipe] ActorEngine.processEvents: dispatching to ProcessEngine', {
-							actorId,
-							messageType: message.type,
-							hasProcess: !!actor.process,
-						})
-					}
 					if (actor.process && this.processEngine) {
 						const payloadWithSource = {
 							...validated.payloadPlain,
@@ -712,15 +707,6 @@ export class ActorEngine {
 							message.type,
 							payloadWithSource,
 						)
-						if (
-							message.type === 'UPLOAD_PROFILE_IMAGE' &&
-							typeof window !== 'undefined' &&
-							(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
-						) {
-							console.log('[ProfileImagePipe] ActorEngine.processEvents: ProcessEngine.send returned', {
-								handled,
-							})
-						}
 						await markProcessed()
 						if (!handled) hadUnhandledMessages = true
 					} else {

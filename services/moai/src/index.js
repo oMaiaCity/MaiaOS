@@ -10,10 +10,9 @@
  *   PEER_MODE=sync | agent
  *     - sync: I host /sync (moai). Never connect to another. syncDomain=null.
  *     - agent: Client agent. Connects to sync at PEER_MOAI. Use for future pure agent workers.
- *   PEER_STORAGE=pglite | postgres | jazz-cloud
+ *   PEER_STORAGE=pglite | postgres (required - server never runs without persistent storage)
  *     - pglite: PEER_DB_PATH (default ./local-sync.db)
  *     - postgres: PEER_DB_URL (required)
- *     - jazz-cloud: JAZZ_SYNC_API_KEY (required). No local persistence; Jazz Cloud persists.
  *   PEER_MOAI: Required when PEER_MODE=agent (where to connect). Ignored when sync.
  *   PEER_ADD_GUARDIAN: Default false. Set true to add PEER_GUARDIAN as admin on startup (one-time genesis).
  *   PEER_GUARDIAN: Human account co-id (co_z...). Human must sign in from maia first so account syncs.
@@ -51,16 +50,15 @@ const PEER_DB_PATH = process.env.PEER_DB_PATH || './local-sync.db'
 const accountID = process.env.PEER_ID
 const agentSecret = process.env.PEER_SECRET
 const storageType = process.env.PEER_STORAGE || 'pglite'
-if (storageType === 'in-memory') {
+if (storageType === 'in-memory' || storageType === 'jazz-cloud') {
 	throw new Error(
-		'[moai] PEER_STORAGE=in-memory is not allowed. Use PEER_STORAGE=pglite, PEER_STORAGE=postgres, or PEER_STORAGE=jazz-cloud.',
+		'[moai] Server requires persistent storage. Use PEER_STORAGE=pglite or PEER_STORAGE=postgres. No in-memory or jazz-cloud.',
 	)
 }
 const usePGlite = storageType === 'pglite'
 const usePostgres = storageType === 'postgres'
-const useJazzCloud = storageType === 'jazz-cloud'
-if (!usePGlite && !usePostgres && !useJazzCloud) {
-	throw new Error(`[moai] PEER_STORAGE must be pglite, postgres, or jazz-cloud. Got: ${storageType}`)
+if (!usePGlite && !usePostgres) {
+	throw new Error(`[moai] PEER_STORAGE must be pglite or postgres. Got: ${storageType}`)
 }
 // Resolve relative to moai package dir (stable across runs regardless of cwd)
 const dbPath = usePGlite ? pathResolve(_moaiDir, PEER_DB_PATH) : undefined
@@ -490,11 +488,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 
 		if (dbPath && !process.env.PEER_DB_PATH) process.env.PEER_DB_PATH = dbPath
 
-		const storageLabel = useJazzCloud
-			? 'Jazz Cloud'
-			: usePostgres
-				? 'Postgres'
-				: `PGlite at ${dbPath || './local-sync.db'}`
+		const storageLabel = usePostgres ? 'Postgres' : `PGlite at ${dbPath || './local-sync.db'}`
 		console.log('[sync] Loading account (%s)...', storageLabel)
 		console.log('[sync] accountID=%s', `${accountID?.slice(0, 12)}...`)
 		if (!RED_PILL_API_KEY) {
@@ -507,7 +501,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 			accountID,
 			agentSecret,
 			syncDomain,
-			dbPath: usePGlite ? dbPath : undefined,
+			dbPath,
 			createName: 'Agent Moai',
 		})
 

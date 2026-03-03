@@ -28,6 +28,11 @@ export async function resolveExpressions(payload, evaluator, data) {
 		return payload
 	}
 
+	// Preserve File/Blob — do NOT recurse (would rebuild as plain object, break instanceof File)
+	if (typeof File !== 'undefined' && payload instanceof File) return payload
+	if (typeof Blob !== 'undefined' && payload instanceof Blob && !(payload instanceof File))
+		return payload
+
 	// Handle arrays - recursively resolve each element
 	if (Array.isArray(payload)) {
 		return Promise.all(payload.map((item) => resolveExpressions(item, evaluator, data)))

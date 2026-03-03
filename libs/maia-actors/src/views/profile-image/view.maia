@@ -84,7 +84,7 @@
 							"click": {
 								"send": "UPLOAD_PROFILE_IMAGE",
 								"payload": {
-									"fileBase64": "@fileFromInput"
+									"file": "@fileFromInput"
 								}
 							}
 						}

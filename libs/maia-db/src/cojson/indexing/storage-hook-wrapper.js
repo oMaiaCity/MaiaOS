@@ -98,6 +98,11 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 		// CRITICAL: Synchronous checks to prevent infinite loops BEFORE any async work
 		// These checks must be fast and not trigger any storage operations
 
+		// 0. Binary streams (CoBinary) - skip indexing entirely (schema has indexing: false anyway)
+		if (msg.header?.meta?.type === 'binary') {
+			return originalStore(msg, correctionCallback)
+		}
+
 		// 1. Use universal skip validation helper (consolidates all skip logic)
 		// NOTE: We DON'T skip @metaSchema here - °Maia/schema/meta uses @metaSchema but should be registered!
 		// Let isSchemaCoValue() and shouldIndexCoValue() handle °Maia detection properly
