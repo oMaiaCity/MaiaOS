@@ -6,7 +6,7 @@
 	"exports": {
 		"./client": "./output/maia-client.mjs",
 		"./server": "./output/moai-server.mjs",
-		"./vibes": "./output/vibes.mjs"
+		"./agents": "./output/agents.mjs"
 	},
 	"files": [
 		"output"
@@ -14,10 +14,9 @@
 	"dependencies": {
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/loader": "workspace:*",
-		"@MaiaOS/operations": "workspace:*",
 		"@MaiaOS/schemata": "workspace:*",
-		"@MaiaOS/tools": "workspace:*",
-		"@MaiaOS/vibes": "workspace:*",
+		"@MaiaOS/actors": "workspace:*",
+		"@MaiaOS/agents": "workspace:*",
 		"cojson-transport-ws": "0.20.7"
 	},
 	"devDependencies": {},

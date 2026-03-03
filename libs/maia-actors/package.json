@@ -1,0 +1,19 @@
+{
+	"name": "@MaiaOS/actors",
+	"version": "26.0217.1438",
+	"type": "module",
+	"main": "src/index.js",
+	"exports": {
+		".": "./src/index.js",
+		"./shared/*": "./src/shared/*"
+	},
+	"dependencies": {
+		"@MaiaOS/db": "workspace:*",
+		"@MaiaOS/engines": "workspace:*",
+		"@MaiaOS/schemata": "workspace:*",
+		"unicode-segmenter": "^0.15.0"
+	},
+	"files": [
+		"src"
+	]
+}

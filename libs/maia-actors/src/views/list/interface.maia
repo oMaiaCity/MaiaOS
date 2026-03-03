@@ -1,0 +1,56 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/actor/views/list/interface",
+	"title": "°Maia/actor/views/list/interface",
+	"description": "List view - todo list with toggle and delete",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"TOGGLE_BUTTON": {
+			"type": "object",
+			"description": "Toggle todo button",
+			"properties": {
+				"id": {
+					"type": "string",
+					"description": "Co-id of the todo"
+				},
+				"done": {
+					"type": "boolean",
+					"description": "Current done state"
+				}
+			},
+			"required": [
+				"id",
+				"done"
+			],
+			"additionalProperties": false
+		},
+		"DELETE_BUTTON": {
+			"type": "object",
+			"description": "Delete todo button",
+			"properties": {
+				"id": {
+					"type": "string",
+					"description": "Co-id of the todo"
+				}
+			},
+			"required": [
+				"id"
+			],
+			"additionalProperties": false
+		},
+		"RETRY": {
+			"type": "object",
+			"description": "Retry action",
+			"properties": {},
+			"additionalProperties": false
+		},
+		"DISMISS": {
+			"type": "object",
+			"description": "Dismiss",
+			"properties": {},
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

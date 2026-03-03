@@ -78,9 +78,9 @@
 
 **Event Flow Pattern:**
 ```
-View Event → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
-Tool SUCCESS → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
-Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngine.send()
+View Event → deliverEvent() → inbox → processMessages() → StateEngine.send()
+Tool SUCCESS → deliverEvent() → inbox → processMessages() → StateEngine.send()
+Tool ERROR → deliverEvent() → inbox → processMessages() → StateEngine.send()
 ```
 
 **Why this matters:**
@@ -187,7 +187,7 @@ Tool ERROR → sendInternalEvent() → inbox → processMessages() → StateEngi
 
 **Event Flow:**
 ```
-View Event → resolveExpressions() (FULLY resolve) → sendInternalEvent() → inbox (CoJSON - only clean JSON) → processMessages() → StateEngine.send() (payload already resolved)
+View Event → resolveExpressions() (FULLY resolve) → deliverEvent() → inbox (CoJSON - only clean JSON) → processMessages() → StateEngine.send() (payload already resolved)
 ```
 
 **Validation:**

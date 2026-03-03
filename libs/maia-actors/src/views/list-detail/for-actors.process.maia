@@ -1,0 +1,34 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/views/list-detail/for-actors/process",
+	"@label": "@maia/actor/views/list-detail/for-actors/process",
+	"handlers": {
+		"SELECT_ITEM": [
+			{
+				"ctx": {
+					"selectedItem": {
+						"label": "$$item.label",
+						"interfaceItems": {
+							"$map": {
+								"array": "$$item.interface",
+								"as": "item",
+								"return": {
+									"name": "$$"
+								}
+							}
+						}
+					}
+				}
+			},
+			{
+				"tell": {
+					"target": "°Maia/actor/views/list-detail/detail-actors",
+					"type": "SELECT_ITEM",
+					"payload": {
+						"item": "$$item"
+					}
+				}
+			}
+		]
+	}
+}

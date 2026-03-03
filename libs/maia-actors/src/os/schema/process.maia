@@ -1,0 +1,37 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/os/schema/process",
+	"@label": "@maia/actor/os/schema/process",
+	"handlers": {
+		"READ_SCHEMA": [
+			{
+				"op": {
+					"readSchema": {
+						"schemaRef": "$$schemaRef"
+					}
+				}
+			},
+			{
+				"tell": {
+					"target": "$$source",
+					"type": "SUCCESS",
+					"payload": {
+						"definition": "$$result.definition"
+					}
+				}
+			}
+		],
+		"SUCCESS": [
+			{
+				"ctx": {}
+			}
+		],
+		"ERROR": [
+			{
+				"ctx": {
+					"error": "$$errors.0.message"
+				}
+			}
+		]
+	}
+}

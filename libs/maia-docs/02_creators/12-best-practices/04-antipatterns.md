@@ -100,7 +100,7 @@
 {
   "$schema": "@schema/actor",
   "$id": "@actor/vibe",
-  "role": "agent",
+  "@label": "agent",
   "state": "@state/monolithic-service"  // ❌ Everything in one service
 }
 ```
@@ -110,7 +110,7 @@
 {
   "$schema": "@schema/actor",
   "$id": "@actor/vibe",
-  "role": "agent",
+  "@label": "agent",
   "children": {
     "todos": "@actor/todos-service",    // ✅ Domain separation
     "notes": "@actor/notes-service",   // ✅ Domain separation

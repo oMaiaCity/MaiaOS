@@ -5,13 +5,137 @@
 
 // Import from kernel bundle - everything bundled (no direct @MaiaOS/db in production)
 import {
-	getAllSchemas,
-	getSchema,
 	resolveAccountCoIdsToProfileNames,
 	resolveGroupCoIdsToCapabilityNames,
 } from '@MaiaOS/loader'
-import { renderDashboard, renderVibeViewer } from './dashboard.js'
+
+/** Resolve schema definition from DB (dynamic - no static registry fallback) */
+async function getSchemaFromDb(maia, schemaRef) {
+	if (!schemaRef || !maia?.do) return null
+	let schemaCoId = schemaRef
+	if (!schemaRef.startsWith('co_z')) {
+		try {
+			schemaCoId = await maia.do({
+				op: 'resolve',
+				humanReadableKey: schemaRef,
+				returnType: 'coId',
+			})
+		} catch (_e) {
+			return null
+		}
+		if (!schemaCoId || !schemaCoId.startsWith('co_z')) return null
+	}
+	try {
+		const schemaStore = await maia.do({ op: 'schema', coId: schemaCoId })
+		return schemaStore?.value ?? null
+	} catch (_e) {
+		return null
+	}
+}
+
+import { renderAgentViewer, renderDashboard } from './dashboard.js'
 import { escapeHtml, getSyncStatusMessage, truncate } from './utils.js'
+
+// Cache for CoBinary image data URLs - survives re-renders, enables progressive reactive preview
+const cobinaryPreviewCache = new Map()
+
+const DEBUG_COBINARY =
+	typeof window !== 'undefined' &&
+	(window.location?.hostname === 'localhost' || import.meta?.env?.DEV) &&
+	false
+
+function extractDataUrl(res) {
+	const dataUrl = res?.dataUrl ?? res?.data?.dataUrl ?? (res?.ok === true && res?.data?.dataUrl)
+	if (DEBUG_COBINARY && res && !dataUrl) {
+		console.warn('[CoBinary db-view] extractDataUrl: no dataUrl in response', {
+			keys: Object.keys(res || {}),
+			hasData: !!res?.data,
+			dataKeys: res?.data ? Object.keys(res.data) : [],
+		})
+	}
+	return dataUrl ?? null
+}
+
+function loadBinaryWithRetry(maia, coId, maxAttempts = 4) {
+	const attempt = (n) =>
+		maia
+			.do({ op: 'loadBinaryAsBlob', coId })
+			.then((res) => extractDataUrl(res))
+			.catch((err) => {
+				const msg = err?.message ?? ''
+				const retryable =
+					msg.includes('not found') ||
+					msg.includes('not available') ||
+					msg.includes('still be loading') ||
+					msg.includes('no binary data') ||
+					msg.includes('stream not finished') ||
+					err?.name === 'NotReadableError'
+				if (n < maxAttempts && retryable) {
+					return new Promise((r) => setTimeout(r, 300)).then(() => attempt(n + 1))
+				}
+				throw err
+			})
+	return attempt(0)
+}
+
+/** Hydrate cobinary image previews: load from cache or fetch, then set img.src. Runs after DOM update. */
+function hydrateCobinaryPreviews(maia) {
+	if (DEBUG_COBINARY)
+		console.log('[CoBinary db-view] hydrateCobinaryPreviews', { hasMaia: !!maia?.do })
+	if (!maia?.do) return
+	const imgs = document.querySelectorAll('img[data-co-id]')
+	if (DEBUG_COBINARY)
+		console.log('[CoBinary db-view] hydrateCobinaryPreviews found imgs', imgs.length)
+	imgs.forEach((img) => {
+		const coId = img.getAttribute('data-co-id')
+		if (!coId || !coId.startsWith('co_z')) {
+			if (DEBUG_COBINARY)
+				console.log('[CoBinary db-view] hydrateCobinaryPreviews skip invalid coId', { coId })
+			return
+		}
+		if (img.src && (img.src.startsWith('data:') || img.src.startsWith('blob:'))) return
+		const cached = cobinaryPreviewCache.get(coId)
+		if (cached?.dataUrl) {
+			img.src = cached.dataUrl
+			return
+		}
+		if (cached?.loading) {
+			cached.loading.then((dataUrl) => {
+				const current = document.querySelector(`img[data-co-id="${coId}"]`)
+				if (current) {
+					if (dataUrl) current.src = dataUrl
+					else current.alt = 'Preview unavailable'
+				}
+			})
+			return
+		}
+		if (DEBUG_COBINARY) console.log('[CoBinary db-view] loadBinaryAsBlob start', { coId })
+		const loading = loadBinaryWithRetry(maia, coId)
+			.then((dataUrl) => {
+				cobinaryPreviewCache.set(coId, { dataUrl })
+				if (DEBUG_COBINARY)
+					console.log('[CoBinary db-view] loadBinaryAsBlob done', {
+						coId,
+						hasDataUrl: !!dataUrl,
+						len: dataUrl?.length,
+					})
+				return dataUrl
+			})
+			.catch((err) => {
+				if (DEBUG_COBINARY)
+					console.warn('[CoBinary db-view] loadBinaryAsBlob failed', { coId, err: err?.message })
+				return null
+			})
+		cobinaryPreviewCache.set(coId, { loading })
+		loading.then((dataUrl) => {
+			const current = document.querySelector(`img[data-co-id="${coId}"]`)
+			if (current) {
+				if (dataUrl) current.src = dataUrl
+				else current.alt = 'Preview unavailable'
+			}
+		})
+	})
+}
 
 export async function renderApp(
 	maia,
@@ -20,15 +144,14 @@ export async function renderApp(
 	currentScreen,
 	currentView,
 	currentContextCoValueId,
-	currentVibe,
+	currentAgent,
 	currentSpark,
 	switchView,
 	selectCoValue,
-	loadVibe,
+	loadAgent,
 	loadSpark,
 	navigateToScreen,
 ) {
-	// Route to appropriate screen based on currentScreen
 	if (currentScreen === 'dashboard') {
 		await renderDashboard(
 			maia,
@@ -37,13 +160,13 @@ export async function renderApp(
 			navigateToScreen,
 			currentSpark,
 			loadSpark,
-			loadVibe,
+			loadAgent,
 		)
 		return
 	}
 
-	if (currentScreen === 'vibe-viewer' && currentVibe) {
-		await renderVibeViewer(maia, authState, syncState, currentVibe, navigateToScreen, currentSpark)
+	if (currentScreen === 'agent-viewer' && currentAgent) {
+		await renderAgentViewer(maia, authState, syncState, currentAgent, navigateToScreen, currentSpark)
 		return
 	}
 
@@ -252,9 +375,6 @@ export async function renderApp(
 	// Get data based on current view
 	let data, viewTitle, _viewSubtitle
 
-	// Load schemas from hardcoded registry (no dynamic loading)
-	const allSchemas = getAllSchemas()
-
 	// Get account and node for navigation
 	const account = maia.id.maiaId
 	const _node = maia.id.node
@@ -270,14 +390,14 @@ export async function renderApp(
 			// Use unified read API - query by ID (key parameter)
 			// Note: schema is required by ReadOperation, but backend handles key-only reads
 			// Using the coId as schema is a workaround - backend will use key parameter
-			const store = await maia.db({
+			const store = await maia.do({
 				op: 'read',
 				schema: currentContextCoValueId,
 				key: currentContextCoValueId,
 			})
 			// ReadOperation returns a ReactiveStore - get current value
 			const contextData = store.value || store
-			// Operations API returns flat objects: {id: '...', profile: '...', vibes: '...'}
+			// Operations API returns flat objects: {id: '...', profile: '...', registries: '...'}
 			// Convert to normalized format for DB Viewer display
 			const hasProperties =
 				contextData &&
@@ -342,11 +462,11 @@ export async function renderApp(
 								currentScreen,
 								currentView,
 								currentContextCoValueId,
-								currentVibe,
+								currentAgent,
 								currentSpark,
 								switchView,
 								selectCoValue,
-								loadVibe,
+								loadAgent,
 								loadSpark,
 								navigateToScreen,
 							)
@@ -370,7 +490,7 @@ export async function renderApp(
 		try {
 			if (currentView.startsWith('co_z')) {
 				// Schema is already a co-id - use unified read API
-				const store = await maia.db({ op: 'read', schema: currentView })
+				const store = await maia.do({ op: 'read', schema: currentView })
 				// ReadOperation returns a ReactiveStore - get current value
 				const result = store.value || store
 				data = Array.isArray(result) ? result : []
@@ -391,11 +511,11 @@ export async function renderApp(
 									currentScreen,
 									currentView,
 									currentContextCoValueId,
-									currentVibe,
+									currentAgent,
 									currentSpark,
 									switchView,
 									selectCoValue,
-									loadVibe,
+									loadAgent,
 									loadSpark,
 									navigateToScreen,
 								)
@@ -425,7 +545,7 @@ export async function renderApp(
 		} catch (_err) {
 			data = []
 		}
-		const schema = getSchema(currentView) || allSchemas[currentView]
+		const schema = await getSchemaFromDb(maia, currentView)
 		viewTitle = schema?.title || currentView
 		_viewSubtitle = `${Array.isArray(data) ? data.length : 0} CoValue(s)`
 	} else {
@@ -434,7 +554,7 @@ export async function renderApp(
 		_viewSubtitle = ''
 	}
 
-	// Build account structure navigation (Account only - vibes removed from sidebar)
+	// Build account structure navigation (Account only - agents in spark.agents)
 	const navigationItems = []
 
 	// Entry 1: Account itself
@@ -448,7 +568,7 @@ export async function renderApp(
 	let tableContent = ''
 	let headerInfo = null // Store header info for colist/costream to display in inspector-header
 
-	// DB Viewer only shows DB content (no vibe rendering here)
+	// DB Viewer only shows DB content (no agent rendering here)
 	if (currentContextCoValueId && data) {
 		// Explorer-style: if context CoValue is loaded, show its properties in main container
 		// Show CoValue properties in main container (reuse property rendering from detail view)
@@ -461,7 +581,49 @@ export async function renderApp(
 					<p class="mt-4 font-medium text-slate-500">Loading CoValue... (waiting for verified state)</p>
 				</div>
 			`
-		} else if ((data.cotype || data.type) === 'colist' || (data.cotype || data.type) === 'costream') {
+		} else if ((data._coValueType || data.cotype || data.type) === 'cobinary') {
+			// CoBinary: Display binary stream metadata (co-id, mimeType, size, finished)
+			headerInfo = {
+				type: 'cobinary',
+				typeLabel: 'CoBinary',
+				description: 'Binary file stream',
+			}
+			const mimeType = data.mimeType || 'application/octet-stream'
+			const totalSizeBytes = data.totalSizeBytes ?? null
+			const finished = data.finished ?? false
+			const sizeStr = totalSizeBytes != null ? `${(totalSizeBytes / 1024).toFixed(1)} KB` : '?'
+			const isImage = mimeType.startsWith('image/')
+			let previewHtml = ''
+			if (isImage && data.id && maia?.do) {
+				previewHtml = `
+					<div class="mt-4 p-4 bg-slate-50/50 rounded-xl border border-slate-200" style="width:100%;max-width:100%;min-width:0;overflow:hidden">
+						<p class="text-xs text-slate-500 mb-2">Image preview (loads on demand)</p>
+						<div style="width:100%;max-width:100%;min-width:0;overflow:hidden">
+							<img id="cobinary-preview-${data.id.replace(/[^a-zA-Z0-9]/g, '_')}" style="width:100%;max-width:100%;max-height:280px;height:auto;object-fit:contain;display:block;border-radius:6px;border:1px solid #e2e8f0" alt="Binary preview" data-co-id="${escapeHtml(data.id)}" />
+						</div>
+					</div>
+				`
+			}
+			tableContent = `
+				<div class="space-y-4 cobinary-container">
+					<div class="grid grid-cols-2 gap-3 text-sm">
+						<div class="font-medium text-slate-500">Co-ID</div>
+						<div class="text-marine-blue-muted font-mono text-xs">${escapeHtml(data.id || '')}</div>
+						<div class="font-medium text-slate-500">MIME type</div>
+						<div class="text-marine-blue-muted">${escapeHtml(mimeType)}</div>
+						<div class="font-medium text-slate-500">Size</div>
+						<div class="text-marine-blue-muted">${sizeStr}</div>
+						<div class="font-medium text-slate-500">Complete</div>
+						<div class="text-marine-blue-muted">${finished ? 'Yes' : 'No'}</div>
+					</div>
+					${previewHtml}
+				</div>
+			`
+			// Image preview loaded reactively via hydrateCobinaryPreviews (after innerHTML)
+		} else if (
+			(data._coValueType || data.cotype || data.type) === 'colist' ||
+			(data._coValueType || data.cotype || data.type) === 'costream'
+		) {
 			// CoList/CoStream: Display items directly (they ARE the list/stream, no properties)
 			// STRICT: Ensure items is always array (read API may return object/undefined for index colists)
 			const raw = data?.items
@@ -470,12 +632,12 @@ export async function renderApp(
 				: raw && typeof raw === 'object' && !Array.isArray(raw)
 					? Object.values(raw)
 					: []
-			const isStream = (data.cotype || data.type) === 'costream'
+			const isStream = (data._coValueType || data.cotype || data.type) === 'costream'
 			const typeLabel = isStream ? 'CoStream' : 'CoList'
 
 			// Store header info for display in inspector-header
 			headerInfo = {
-				type: data.cotype || data.type,
+				type: data._coValueType || data.cotype || data.type,
 				typeLabel: typeLabel,
 				itemCount: items.length,
 				description: isStream ? 'Append-only stream' : 'Ordered list',
@@ -520,7 +682,7 @@ export async function renderApp(
 			// CoMap: Display properties from flat object format (operations API)
 			// Convert flat object to normalized format for display
 			const schemaCoId = data.$schema // STRICT: Only $schema, no fallback
-			const schemaDef = schemaCoId ? getSchema(schemaCoId) : null
+			const schemaDef = schemaCoId ? await getSchemaFromDb(maia, schemaCoId) : null
 
 			// Extract properties from flat object (exclude metadata keys)
 			// groupInfo is backend-derived metadata (not a co-value property) - only show in metadata sidebar
@@ -534,6 +696,7 @@ export async function renderApp(
 					k !== 'schema' &&
 					k !== 'type' &&
 					k !== 'cotype' && // Display only in metadata aside, not as main content property
+					k !== '_coValueType' && // Internal: actual CRDT type of this CoValue (display metadata)
 					k !== 'displayName' &&
 					k !== 'headerMeta' &&
 					k !== 'groupInfo' && // Backend metadata - displayed in metadata sidebar, not as a property
@@ -541,10 +704,10 @@ export async function renderApp(
 			)
 
 			if (propertyKeys.length === 0) {
-				// No properties - show empty state (with hint for vibes/schematas/indexes)
+				// No properties - show empty state (with hint for agents/schematas/indexes)
 				const schemaId = (data.$schema || schemaCoId || '').toString()
 				const isRegistryEmpty =
-					schemaId.includes('vibes-registry') ||
+					schemaId.includes('agents-registry') ||
 					schemaId.includes('schematas-registry') ||
 					schemaId.includes('indexes-registry')
 				const emptyHint = isRegistryEmpty
@@ -661,7 +824,7 @@ export async function renderApp(
 		if (schemaCoId?.startsWith('co_z') && maia) {
 			try {
 				// Use unified read API - same pattern as loading main context data
-				const schemaStore = await maia.db({ op: 'read', schema: schemaCoId, key: schemaCoId })
+				const schemaStore = await maia.do({ op: 'read', schema: schemaCoId, key: schemaCoId })
 				const schemaData = schemaStore.value || schemaStore
 
 				if (schemaData && !schemaData.error && !schemaData.loading) {
@@ -685,7 +848,7 @@ export async function renderApp(
 		if (groupInfo?.groupId && maia) {
 			try {
 				// Use unified read API with @group schema hint (groups don't have $schema)
-				const groupStore = await maia.db({ op: 'read', schema: '@group', key: groupInfo.groupId })
+				const groupStore = await maia.do({ op: 'read', schema: '@group', key: groupInfo.groupId })
 
 				// Wait for group data to be available (if it's loading)
 				if (groupStore.loading) {
@@ -784,9 +947,9 @@ export async function renderApp(
 						}
 						<div class="metadata-info-item">
 							<span class="metadata-info-key">CO TYPE</span>
-							<span class="badge badge-type badge-${String(data.cotype || data.type || 'unknown').replace(/-/g, '')}">
-								${(data.cotype || data.type) === 'colist' ? 'COLIST' : (data.cotype || data.type) === 'costream' ? 'COSTREAM' : String(data.cotype || data.type || 'unknown').toUpperCase()}
-							</span>
+						<span class="badge badge-type badge-${String(data._coValueType || data.cotype || data.type || 'unknown').replace(/-/g, '')}">
+							${(data._coValueType || data.cotype || data.type) === 'colist' ? 'COLIST' : (data._coValueType || data.cotype || data.type) === 'costream' ? 'COSTREAM' : (data._coValueType || data.cotype || data.type) === 'cobinary' ? 'COBINARY' : String(data._coValueType || data.cotype || data.type || 'unknown').toUpperCase()}
+						</span>
 						</div>
 						${
 							groupInfo?.groupId
@@ -904,7 +1067,7 @@ export async function renderApp(
 		`
 	}
 
-	// Build sidebar navigation items (Account only - no vibes)
+	// Build sidebar navigation items (Account only - agents via spark.agents)
 	const sidebarItems = navigationItems
 		.map((item) => {
 			// Account navigation - select account CoValue
@@ -929,9 +1092,6 @@ export async function renderApp(
 			<header class="db-header whitish-card">
 				<div class="header-content">
 					<div class="header-left">
-						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}" title="${getSyncStatusMessage(syncState)}" aria-label="${getSyncStatusMessage(syncState)}">
-							<span class="sync-dot"></span>
-						</div>
 						<h1>Maia DB</h1>
 					</div>
 					<div class="header-center">
@@ -939,25 +1099,13 @@ export async function renderApp(
 						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
 					</div>
 					<div class="header-right">
+						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}" title="${getSyncStatusMessage(syncState)}" aria-label="${getSyncStatusMessage(syncState)}">
+							<span class="sync-dot"></span>
+						</div>
 						${
 							authState.signedIn
 								? `
-							<span class="db-status db-status-name" title="Account: ${accountId}">${escapeHtml(accountDisplayName)}</span>
-						`
-								: ''
-						}
-						<!-- Hamburger menu button (mobile only) -->
-						<button class="hamburger-btn" onclick="window.toggleMobileMenu()" aria-label="Toggle menu">
-							<span></span>
-							<span></span>
-							<span></span>
-						</button>
-						${
-							authState.signedIn
-								? `
-							<button class="sign-out-btn" onclick="window.handleSignOut()">
-								Sign Out
-							</button>
+							<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId}" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${escapeHtml(accountDisplayName)}</button>
 						`
 								: ''
 						}
@@ -969,8 +1117,8 @@ export async function renderApp(
 						authState.signedIn && accountId
 							? `
 						<div class="mobile-menu-account-id">
-							<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
 							<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
+							<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
 						</div>
 					`
 							: ''
@@ -1017,16 +1165,16 @@ export async function renderApp(
 										headerInfo
 											? `
 										<span class="badge badge-type badge-${headerInfo.type} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${headerInfo.typeLabel}</span>
-										<span class="text-sm font-semibold text-marine-blue">${headerInfo.itemCount} ${headerInfo.itemCount === 1 ? 'Item' : 'Items'}</span>
+										${headerInfo.itemCount != null ? `<span class="text-sm font-semibold text-marine-blue">${headerInfo.itemCount} ${headerInfo.itemCount === 1 ? 'Item' : 'Items'}</span>` : ''}
 										<span class="text-xs italic font-medium text-marine-blue-light">${headerInfo.description}</span>
 									`
 											: ''
 									}
 									${
-										!headerInfo && (data?.cotype || data?.type)
+										!headerInfo && (data?._coValueType || data?.cotype || data?.type)
 											? `
-										<span class="badge badge-type badge-${String(data.cotype || data.type || 'comap').replace(/-/g, '')} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${(data.cotype || data.type) === 'colist' ? 'COLIST' : (data.cotype || data.type) === 'costream' ? 'COSTREAM' : String(data.cotype || data.type || 'COMAP').toUpperCase()}</span>
-									`
+									<span class="badge badge-type badge-${String(data._coValueType || data.cotype || data.type || 'comap').replace(/-/g, '')} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${(data._coValueType || data.cotype || data.type) === 'colist' ? 'COLIST' : (data._coValueType || data.cotype || data.type) === 'costream' ? 'COSTREAM' : String(data._coValueType || data.cotype || data.type || 'COMAP').toUpperCase()}</span>
+								`
 											: ''
 									}
 								</div>
@@ -1084,6 +1232,11 @@ export async function renderApp(
 			</div>
 		</div>
 	`
+
+	// Hydrate CoBinary image previews (loadBinaryAsBlob uses chunked async conversion for large files)
+	hydrateCobinaryPreviews(maia)
+	// Deferred re-hydration: CoBinary may not be ready immediately (sync/lazy-load)
+	setTimeout(() => hydrateCobinaryPreviews(maia), 500)
 
 	// Add sidebar toggle handlers for DB viewer
 	setTimeout(() => {

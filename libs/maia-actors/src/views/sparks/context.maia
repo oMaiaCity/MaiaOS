@@ -1,0 +1,21 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/sparks/context",
+	"title": "My Sparks",
+	"sparks": {
+		"schema": "°Maia/schema/data/spark",
+		"map": {
+			"id": "id",
+			"name": "name"
+		}
+	},
+	"inputActor": "@input",
+	"loading": false,
+	"selectedSparkId": null,
+	"selectedSparkItems": {},
+	"currentDetail": "@detail",
+	"@actors": {
+		"input": "°Maia/actor/views/input/for-sparks",
+		"detail": "°Maia/actor/views/detail"
+	}
+}

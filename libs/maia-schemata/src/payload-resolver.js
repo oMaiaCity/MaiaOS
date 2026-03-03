@@ -1,9 +1,23 @@
 /**
  * Universal Payload Resolution Interface
  *
- * DOM markers (view layer) - @inputValue, @dataColumn
+ * DOM markers (view layer) - @inputValue, @dataColumn, @fileFromInput
  * MaiaScript expressions: Use resolveExpressions from expression-resolver directly
  */
+
+/**
+ * Return File + mimeType for streaming upload. BlobEngine does chunked read with progress.
+ * Avoids blocking readAsDataURL (10MB = several seconds, no progress).
+ *
+ * @param {HTMLInputElement} input - File input element
+ * @returns {Promise<{file: File, mimeType: string}|null>}
+ */
+export async function readFileAsUploadPayload(input) {
+	const file = input?.files?.[0]
+	if (!file) return null
+	const mimeType = file.type || 'application/octet-stream'
+	return { file, mimeType }
+}
 
 /**
  * Extract DOM marker values ONLY (view layer)
@@ -41,6 +55,10 @@ export function extractDOMValues(payload, element) {
 		else if (value === '@dataColumn') {
 			result[key] = element.dataset.column || element.getAttribute('data-column') || null
 		}
+		// @fileFromInput: async - caller must use extractDOMValuesAsync for file inputs
+		else if (value === '@fileFromInput') {
+			result[key] = value // Leave as marker; extractDOMValuesAsync handles it
+		}
 		// Handle nested objects/arrays - recursively extract DOM markers
 		else if (typeof value === 'object' && value !== null) {
 			result[key] = extractDOMValues(value, element)
@@ -51,5 +69,55 @@ export function extractDOMValues(payload, element) {
 		}
 	}
 
+	return result
+}
+
+/**
+ * Async variant: when payload contains @fileFromInput, read file and merge result
+ * @param {any} payload - The payload to process
+ * @param {HTMLElement} element - The DOM element (event target, or file input)
+ * @returns {Promise<any>} Payload with DOM values extracted, file data merged when @fileFromInput
+ */
+export async function extractDOMValuesAsync(payload, element) {
+	const DEBUG =
+		typeof window !== 'undefined' &&
+		(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
+	let result = extractDOMValues(payload, element)
+	const fileInput =
+		element?.tagName === 'INPUT' && element?.type === 'file'
+			? element
+			: element?.querySelector?.('input[type=file]') ||
+				element
+					?.closest?.('form, [class*="upload"], [class*="file"], [class*="wrapper"]')
+					?.querySelector?.('input[type=file]')
+	if (DEBUG && Object.values(result || {}).includes('@fileFromInput')) {
+		console.log('[PayloadResolver] extractDOMValuesAsync: @fileFromInput detected', {
+			hasFileInput: !!fileInput,
+			fileInputHasFiles: !!fileInput?.files?.[0],
+			elementTag: element?.tagName,
+			elementClass: element?.className,
+		})
+	}
+	if (
+		fileInput &&
+		result &&
+		typeof result === 'object' &&
+		Object.values(result).includes('@fileFromInput')
+	) {
+		const fileData = await readFileAsUploadPayload(fileInput)
+		if (DEBUG) {
+			console.log('[PayloadResolver] extractDOMValuesAsync: fileData resolved', {
+				hasFile: !!fileData?.file,
+				mimeType: fileData?.mimeType,
+				fileSize: fileData?.file?.size ?? 0,
+			})
+		}
+		if (fileData) {
+			result = { ...result, ...fileData }
+			for (const k of Object.keys(result)) {
+				if (result[k] === '@fileFromInput') delete result[k]
+			}
+		}
+	}
 	return result
 }

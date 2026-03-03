@@ -1,0 +1,58 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/os/messages/process",
+	"@label": "@maia/actor/os/messages/process",
+	"handlers": {
+		"SEND_MESSAGE": [
+			{
+				"op": {
+					"create": {
+						"schema": "°Maia/schema/data/chat",
+						"data": {
+							"role": "user",
+							"content": "$$inputText",
+							"displayName": "me"
+						}
+					}
+				}
+			},
+			{
+				"ask": {
+					"target": "°Maia/actor/os/ai",
+					"type": "CHAT",
+					"payload": {
+						"replyTo": "$$source",
+						"model": "qwen/qwen3-30b-a3b-instruct-2507",
+						"temperature": 1,
+						"context": {
+							"$concat": [
+								[
+									{
+										"role": "system",
+										"content": "You are Maia. Be helpful, technical, and concise. Never use emoticons in your responses. When calling tools, provide actionSummary: a brief human-readable sentence describing what you are doing."
+									}
+								],
+								{
+									"$map": {
+										"array": "$conversations",
+										"as": "msg",
+										"return": {
+											"role": "$$msg.role",
+											"content": "$$msg.content"
+										}
+									}
+								},
+								[
+									{
+										"role": "user",
+										"content": "$$inputText"
+									}
+								]
+							]
+						}
+					}
+				}
+			}
+		]
+	}
+}

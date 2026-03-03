@@ -1,0 +1,15 @@
+{
+	"$schema": "°Maia/schema/agent",
+	"$id": "°Maia/agent/todos",
+	"name": "Todos",
+	"description": "Complete todo list with state machines and AI tools",
+	"actor": "°Maia/todos/actor/intent",
+	"dependencies": [
+		"°Maia/todos/actor/intent",
+		"°Maia/actor/views/layout-todos",
+		"°Maia/actor/views/list",
+		"°Maia/actor/services/todos",
+		"°Maia/actor/views/placeholder",
+		"°Maia/actor/os/db"
+	]
+}

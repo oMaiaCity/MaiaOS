@@ -5,7 +5,8 @@
  * STRICT: PRF required, no fallbacks
  */
 
-import { createAccountWithSecret, loadAccount, setupSyncPeers } from '@MaiaOS/db'
+import { schemaMigration, simpleAccountSeed } from '@MaiaOS/db'
+import { createAccountWithSecret, loadAccount, setupSyncPeers } from '@MaiaOS/peer'
 // Import dependencies directly (workspace imports work in dev)
 // In Docker: These will be resolved via the kernel bundle or copied files
 import { getStorage } from '@MaiaOS/storage'
@@ -44,45 +45,42 @@ export async function signUpWithPasskey({ name, salt = 'maia.city' } = {}) {
 
 	const saltBytes = stringToUint8Array(salt)
 	const crypto = await WasmCrypto.create()
-	// Passkey requires a string; use firstName or "Traveler " + short random id
 	const webCrypto = globalThis.crypto ?? globalThis.window?.crypto
 	const passkeyName =
 		name && typeof name === 'string' && name.trim()
 			? name.trim()
 			: `Traveler ${(webCrypto?.randomUUID?.() ?? '').slice(0, 8)}`
 
-	// STEP 1: Create single passkey and evaluate PRF
-	const { credentialId, prfOutput } = await createPasskeyWithPRF({
-		name: passkeyName,
-		userId: globalThis.crypto.getRandomValues(new Uint8Array(32)), // Random userID - we don't store anything!
-		salt: saltBytes,
-	})
+	// Start WebSocket connection immediately (during passkey creation)
+	const syncSetup = setupSyncPeers()
+
+	// Run getStorage in parallel with passkey creation — overlap I/O with user interaction
+	const [{ credentialId, prfOutput }, storage] = await Promise.all([
+		createPasskeyWithPRF({
+			name: passkeyName,
+			userId: globalThis.crypto.getRandomValues(new Uint8Array(32)),
+			salt: saltBytes,
+		}),
+		getStorage({ mode: 'human' }),
+	])
 
 	if (!prfOutput) {
 		throw new Error('PRF evaluation failed')
 	}
 
-	// STEP 2: Compute accountID deterministically
 	const agentSecret = crypto.agentSecretFromSecretSeed(prfOutput)
 	const accountHeader = accountHeaderForInitialAgentSecret(agentSecret, crypto)
 	const computedAccountID = idforHeader(accountHeader, crypto)
 
-	// STEP 3: Create account using abstraction layer
-	// Get storage for persistence (BEFORE account creation!)
-	// Human mode defaults to IndexedDB in browser
-	const storage = await getStorage({ mode: 'human' })
-
-	// Setup sync peers BEFORE account creation
-	// Always use our own sync service (no Jazz fallback)
-	const syncSetup = setupSyncPeers()
-
 	// Use createAccountWithSecret() abstraction from @MaiaOS/db
-	// Human signup always minimal (no vibe seeding); server seeds vibes
+	// Human signup always minimal (no agent seeding); server seeds agents
 	const createResult = await createAccountWithSecret({
 		agentSecret,
 		name,
 		peers: syncSetup ? syncSetup.peers : [],
 		storage: storage,
+		migration: schemaMigration,
+		seed: simpleAccountSeed,
 	})
 
 	const { node, account, accountID: createdAccountID } = createResult
@@ -137,39 +135,33 @@ export async function signInWithPasskey({ salt = 'maia.city' } = {}) {
 
 	const saltBytes = stringToUint8Array(salt)
 
-	// Re-evaluate PRF to get prfOutput (same as signup!)
-	const { prfOutput } = await evaluatePRF({ salt: saltBytes })
+	// Start WebSocket connection immediately (during passkey prompt) — no accountID needed
+	const syncSetup = setupSyncPeers()
+
+	// Run getStorage in parallel with passkey prompt — overlap I/O with user interaction
+	const [{ prfOutput }, storage] = await Promise.all([
+		evaluatePRF({ salt: saltBytes }),
+		getStorage({ mode: 'human' }),
+	])
 
 	if (!prfOutput) {
 		throw new Error('PRF evaluation failed during sign-in')
 	}
 
-	// STEP 2: Derive agentSecret from prfOutput
+	// Derive agentSecret and compute accountID deterministically
 	const crypto = await WasmCrypto.create()
 	const agentSecret = crypto.agentSecretFromSecretSeed(prfOutput)
-
-	// STEP 3: ⚡ COMPUTE ACCOUNT ID DETERMINISTICALLY (same as signup!)
 	const accountHeader = accountHeaderForInitialAgentSecret(agentSecret, crypto)
 	const accountID = idforHeader(accountHeader, crypto)
 
-	// STEP 4: Setup sync peers and storage (for background account loading)
-	const storage = await getStorage({ mode: 'human' })
-
-	// Setup sync peers BEFORE loading account
-	// Always use our own sync service (no Jazz fallback)
-	const syncSetup = setupSyncPeers()
-
 	// Start account loading in background (non-blocking)
 	// Use loadAccount() abstraction from @MaiaOS/db instead of direct withLoadedAccount()
-	const _handshakeStartTime = performance.now()
-
 	const accountLoadingPromise = (async () => {
 		try {
 			// OPTIMIZATION: Wait for WebSocket connection before loading account (or timeout gracefully)
 			// This ensures sync server is ready before we try to load, reducing unnecessary waits
-			let _websocketReady = false
 			if (syncSetup?.waitForPeer) {
-				_websocketReady = await syncSetup.waitForPeer()
+				await syncSetup.waitForPeer()
 			}
 
 			// Use loadAccount() abstraction - goes through proper abstraction layer
@@ -178,6 +170,7 @@ export async function signInWithPasskey({ salt = 'maia.city' } = {}) {
 				agentSecret,
 				peers: syncSetup ? syncSetup.peers : [],
 				storage: storage,
+				migration: schemaMigration,
 			})
 
 			const { node, account } = loadResult
@@ -281,13 +274,10 @@ export async function createAgentAccount({
 	const accountHeader = accountHeaderForInitialAgentSecret(agentSecret, crypto)
 	const computedAccountID = idforHeader(accountHeader, crypto)
 
-	// Get storage for agent mode (PEER_STORAGE, PEER_DB_PATH from env)
+	// Get storage for agent mode (PEER_STORAGE=pglite|postgres required)
 	const storage = await getStorage({ mode: 'agent', dbPath, inMemory })
 
 	// Setup sync peers BEFORE account creation
-	// Always use our own sync service (no Jazz fallback)
-	// Note: For agent accounts, sync peers are typically empty (sync server doesn't connect to other sync servers)
-	// But we support it for flexibility
 	const syncSetup = setupSyncPeers(syncDomain)
 
 	// Use createAccountWithSecret() abstraction from @MaiaOS/db
@@ -295,16 +285,16 @@ export async function createAgentAccount({
 	const createResult = await createAccountWithSecret({
 		agentSecret,
 		name,
-		peers: syncSetup ? syncSetup.peers : [],
-		storage: storage,
+		peers: syncSetup?.peers ?? [],
+		storage,
+		migration: schemaMigration,
+		seed: simpleAccountSeed,
 	})
 
 	const { node, account, accountID: createdAccountID } = createResult
 
 	// Assign node to peer callbacks
-	if (syncSetup) {
-		syncSetup.setNode(node)
-	}
+	if (syncSetup) syncSetup.setNode(node)
 
 	// VERIFICATION: Computed accountID MUST match created accountID!
 	if (createdAccountID !== computedAccountID) {
@@ -358,27 +348,25 @@ export async function loadAgentAccount({
 		)
 	}
 
-	// Get storage for agent mode (PEER_STORAGE, PEER_DB_PATH from env)
+	// Get storage for agent mode (PEER_STORAGE=pglite|postgres required)
 	const storage = await getStorage({ mode: 'agent', dbPath, inMemory })
 
 	// Setup sync peers BEFORE loading account
-	// Always use our own sync service (no Jazz fallback)
 	const syncSetup = setupSyncPeers(syncDomain)
 
 	// Load account using abstraction from @MaiaOS/db
 	const loadResult = await loadAccount({
 		accountID,
 		agentSecret,
-		peers: syncSetup ? syncSetup.peers : [],
-		storage: storage,
+		peers: syncSetup?.peers ?? [],
+		storage,
+		migration: schemaMigration,
 	})
 
 	const { node, account } = loadResult
 
 	// Assign node to peer callbacks
-	if (syncSetup) {
-		syncSetup.setNode(node)
-	}
+	if (syncSetup) syncSetup.setNode(node)
 
 	// Initial sync handshake complete
 	// Sync state is managed by setupSyncPeers in @MaiaOS/db

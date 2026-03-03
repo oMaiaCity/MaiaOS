@@ -9,9 +9,12 @@
  * Exception: guardian itself is NOT created via this util - it keeps the account.
  */
 
+import { EXCEPTION_SCHEMAS } from '../../schemas/registry.js'
+import { createCoBinary } from '../cotypes/coBinary.js'
 import { createCoList } from '../cotypes/coList.js'
 import { createCoMap } from '../cotypes/coMap.js'
 import { createCoStream } from '../cotypes/coStream.js'
+import { normalizeCoValueData } from '../crud/data-extraction.js'
 import { getSparkGroup, removeGroupMember } from '../groups/groups.js'
 
 /**
@@ -33,7 +36,7 @@ async function resolveContext(context, spark) {
 		return { node: context.node, account: context.account, guardian }
 	}
 	throw new Error(
-		'[createCoValueForSpark] Invalid context. Provide backend (with node, account) + spark, or { node, account, guardian }.',
+		'[createCoValueForSpark] Invalid context. Provide peer (with node, account) + spark, or { node, account, guardian }.',
 	)
 }
 
@@ -45,18 +48,30 @@ async function resolveContext(context, spark) {
  * @param {string|null} spark - Spark name (e.g. '°Maia'). Null when context has guardian.
  * @param {Object} options
  * @param {string} options.schema - Schema co-id or name for headerMeta.$schema
- * @param {'comap'|'colist'|'costream'} options.cotype
+ * @param {'comap'|'colist'|'costream'|'cobinary'} options.cotype
  * @param {Object} [options.data] - Init data for map (object) or list (array). Required for comap/colist.
- * @param {Object} [options.dbEngine] - For schema validation (optional during seed)
+ * @param {Object} [options.dataEngine] - For schema validation (optional during seed)
+ * @param {boolean} [options.isSchemaDefinition] - When true, enforces cotype='comap' (schema defs must be CoMaps)
  * @returns {Promise<{ coValue: RawCoValue }>}
  */
 export async function createCoValueForSpark(context, spark, options) {
-	const { schema, cotype, data, dbEngine } = options
+	const { schema, cotype, data, dataEngine, isSchemaDefinition } = options
 	if (!schema || typeof schema !== 'string') {
 		throw new Error('[createCoValueForSpark] options.schema is required')
 	}
-	if (!cotype || !['comap', 'colist', 'costream'].includes(cotype)) {
-		throw new Error('[createCoValueForSpark] options.cotype must be comap, colist, or costream')
+	if (!cotype || !['comap', 'colist', 'costream', 'cobinary'].includes(cotype)) {
+		throw new Error(
+			'[createCoValueForSpark] options.cotype must be comap, colist, costream, or cobinary',
+		)
+	}
+
+	// Schema definitions (meta-schema and its children) must ALWAYS be CoMaps.
+	// The cotype in schema JSON describes instance types (e.g. inbox has cotype:costream for its instances), not the document.
+	if ((schema === EXCEPTION_SCHEMAS.META_SCHEMA || isSchemaDefinition) && cotype !== 'comap') {
+		throw new Error(
+			`[createCoValueForSpark] Schema definitions must be CoMap, not ${cotype}. ` +
+				'The cotype in schema JSON describes instances (inbox instances are CoStreams), not the schema document.',
+		)
 	}
 
 	const { node, account, guardian } = await resolveContext(context, spark)
@@ -70,18 +85,27 @@ export async function createCoValueForSpark(context, spark, options) {
 	// Step 2: Add guardian as admin
 	group.extend(guardian, 'admin')
 
-	// Create CoValue
+	// Create CoValue - normalize before storage (single gate, same function as read path)
 	let coValue
 	const _meta = { $schema: schema }
 	switch (cotype) {
 		case 'comap':
-			coValue = await createCoMap(group, data ?? {}, schema, node, dbEngine)
+			coValue = await createCoMap(group, normalizeCoValueData(data ?? {}), schema, node, dataEngine)
 			break
 		case 'colist':
-			coValue = await createCoList(group, Array.isArray(data) ? data : [], schema, node, dbEngine)
+			coValue = await createCoList(
+				group,
+				Array.isArray(data) ? data.map((item) => normalizeCoValueData(item)) : [],
+				schema,
+				node,
+				dataEngine,
+			)
 			break
 		case 'costream':
-			coValue = await createCoStream(group, schema, node, dbEngine)
+			coValue = await createCoStream(group, schema, node, dataEngine)
+			break
+		case 'cobinary':
+			coValue = await createCoBinary(group, schema, node, dataEngine)
 			break
 		default:
 			throw new Error(`[createCoValueForSpark] Unsupported cotype: ${cotype}`)

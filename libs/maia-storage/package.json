@@ -20,6 +20,5 @@
 		"cojson": "0.20.7",
 		"pg": "^8.13.0"
 	},
-	"devDependencies": {},
-	"description": "Centralized storage adapters for MaiaOS - IndexedDB, PGlite (dev), Postgres"
+	"description": "Centralized storage adapters for MaiaOS - OPFS, IndexedDB, PGlite (dev), Postgres"
 }

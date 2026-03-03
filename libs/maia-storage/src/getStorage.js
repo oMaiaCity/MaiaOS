@@ -2,11 +2,15 @@
  * Unified Storage Factory
  * Runtime-aware storage selection based on environment and configuration
  *
- * PGlite is server-only (Node.js) - imported dynamically to avoid pulling fs/path
- * into browser bundles. Browser always uses IndexedDB.
+ * Browser: OPFS first (~4x faster for blobs), IndexedDB fallback when OPFS unavailable.
+ * Node: PGlite or Postgres for agent mode.
  */
 
 import { getIndexedDBStorageAdapter } from './adapters/indexeddb.js'
+import {
+	getOPFSStorageAdapter,
+	isOPFSAvailableAdapter as isOPFSAvailable,
+} from './adapters/opfs.js'
 
 function detectRuntime() {
 	if (typeof EdgeRuntime !== 'undefined' || typeof Deno !== 'undefined') return 'edge'
@@ -29,7 +33,7 @@ const inMemory = () => undefined
 /**
  * Get storage instance based on runtime and configuration
  * Agent mode: PEER_STORAGE, PEER_DB_PATH
- * Human mode: MAIA_STORAGE (defaults to indexeddb in browser)
+ * Human mode (browser): OPFS first, IndexedDB fallback (MAIA_STORAGE=indexeddb to force)
  *
  * @param {Object} [options]
  * @param {'human' | 'agent'} [options.mode='human']
@@ -45,32 +49,47 @@ export async function getStorage(options = {}) {
 			? typeof process !== 'undefined' && process.env?.PEER_STORAGE
 			: getEnvVar('MAIA_STORAGE')
 
-	if (forceInMemory === true || runtime === 'edge' || storageType === 'in-memory') {
-		if (mode === 'agent') {
-			throw new Error(
-				'[STORAGE] Agent/server mode does not support in-memory storage. Use PEER_STORAGE=pglite or PEER_STORAGE=postgres.',
-			)
-		}
+	if (runtime === 'edge') {
+		throw new Error('[STORAGE] Edge runtime has no persistent storage. No in-memory fallback.')
+	}
+	if (storageType === 'in-memory') {
+		throw new Error('[STORAGE] in-memory storage disabled. Use OPFS, IndexedDB, PGlite, or Postgres.')
+	}
+	if (forceInMemory === true) {
+		// Explicit opt-in only (e.g. tests). No silent fallback.
 		return inMemory()
 	}
 
 	if (runtime === 'browser') {
-		if (storageType === 'indexeddb' || (!storageType && mode === 'human')) {
-			const storage = await getIndexedDBStorageAdapter()
-			return storage ?? inMemory()
+		// OPFS first (best for blob-heavy local-first). IndexedDB fallback when OPFS unavailable.
+		if (storageType !== 'indexeddb' && isOPFSAvailable()) {
+			const storage = await getOPFSStorageAdapter()
+			if (storage) {
+				storage.__maiaBackend = 'opfs'
+				console.log('[Storage] Using OPFS (File System Access API)')
+				return storage
+			}
 		}
-		return inMemory()
+		const storage = await getIndexedDBStorageAdapter()
+		if (storage) {
+			storage.__maiaBackend = 'indexeddb'
+			console.log('[Storage] Using IndexedDB (OPFS unavailable or MAIA_STORAGE=indexeddb)')
+			return storage
+		}
+		throw new Error(
+			'[STORAGE] Browser storage failed. OPFS and IndexedDB both unavailable. Use a supported browser (Chrome, Safari, Edge).',
+		)
 	}
 
 	if (runtime === 'node') {
 		const finalDbPath = dbPath || (typeof process !== 'undefined' && process.env?.PEER_DB_PATH)
 		const databaseUrl = typeof process !== 'undefined' && process.env?.PEER_DB_URL
 
-		// Agent/server mode: ONLY pglite or postgres. Never fall back to in-memory.
+		// Agent/server mode: pglite or postgres only. No in-memory or jazz-cloud.
 		if (mode === 'agent' && !forceInMemory) {
-			if (storageType === 'in-memory') {
+			if (storageType === 'in-memory' || storageType === 'jazz-cloud') {
 				throw new Error(
-					'[STORAGE] Agent/server mode does not support in-memory storage. Use PEER_STORAGE=pglite or PEER_STORAGE=postgres.',
+					'[STORAGE] Agent/server requires persistent storage. Use PEER_STORAGE=pglite or PEER_STORAGE=postgres. No in-memory or jazz-cloud.',
 				)
 			}
 			if (storageType && storageType !== 'pglite' && storageType !== 'postgres') {
@@ -121,5 +140,7 @@ export async function getStorage(options = {}) {
 		}
 	}
 
-	return inMemory()
+	throw new Error(
+		`[STORAGE] No persistent storage configured for runtime=${runtime} mode=${mode}. No in-memory fallback.`,
+	)
 }

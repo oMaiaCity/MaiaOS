@@ -1,0 +1,105 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/process",
+	"title": "°Maia/schema/process",
+	"description": "Flat event handlers (GenServer-style). No FSM—handlers keyed by message type.",
+	"cotype": "comap",
+	"indexing": true,
+	"required": ["handlers"],
+	"properties": {
+		"@label": {
+			"type": "string",
+			"description": "Human-readable label (namekey, e.g. '@maia/actor/views/layout-humans/process')"
+		},
+		"handlers": {
+			"type": "object",
+			"description": "Event type → array of actions",
+			"additionalProperties": {
+				"type": "array",
+				"items": {
+					"oneOf": [
+						{ "$ref": "#/$defs/ctx" },
+						{ "$ref": "#/$defs/op" },
+						{ "$ref": "#/$defs/tell" },
+						{ "$ref": "#/$defs/ask" },
+						{ "$ref": "#/$defs/guard" },
+						{ "$ref": "#/$defs/function" }
+					]
+				}
+			}
+		}
+	},
+	"$defs": {
+		"ctx": {
+			"type": "object",
+			"description": "Update context CoValue",
+			"properties": { "ctx": { "type": "object", "additionalProperties": true } },
+			"required": ["ctx"]
+		},
+		"op": {
+			"type": "object",
+			"description": "Data operation (create, update, delete)",
+			"properties": {
+				"op": {
+					"type": "object",
+					"properties": {
+						"create": { "type": "object" },
+						"update": { "type": "object" },
+						"delete": { "type": "object" }
+					}
+				}
+			},
+			"required": ["op"]
+		},
+		"tell": {
+			"type": "object",
+			"description": "Fire-and-forget to another actor",
+			"properties": {
+				"tell": {
+					"type": "object",
+					"properties": {
+						"target": {
+							"oneOf": [{ "type": "string" }, { "type": "object" }],
+							"description": "Actor co-id or expression ($if, $$source, etc.)"
+						},
+						"type": { "type": "string" },
+						"payload": { "type": "object" }
+					},
+					"required": ["target", "type"]
+				}
+			},
+			"required": ["tell"]
+		},
+		"ask": {
+			"type": "object",
+			"description": "Request-response; replyTo = sender",
+			"properties": {
+				"ask": {
+					"type": "object",
+					"properties": {
+						"target": {
+							"oneOf": [{ "type": "string" }, { "type": "object" }],
+							"description": "Actor co-id or expression ($if, $$source, etc.)"
+						},
+						"type": { "type": "string" },
+						"payload": { "type": "object" }
+					},
+					"required": ["target", "type"]
+				}
+			},
+			"required": ["ask"]
+		},
+		"guard": {
+			"type": "object",
+			"description": "Guard condition (phase, etc.)",
+			"properties": { "guard": { "type": "object", "additionalProperties": true } },
+			"required": ["guard"]
+		},
+		"function": {
+			"type": "object",
+			"description": "Run actor executableFunction, deliver SUCCESS/ERROR to caller",
+			"properties": { "function": { "type": "boolean", "const": true } },
+			"required": ["function"]
+		}
+	}
+}

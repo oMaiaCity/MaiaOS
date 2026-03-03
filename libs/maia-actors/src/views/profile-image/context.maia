@@ -1,0 +1,27 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/profile-image/context",
+	"title": "Profile Image",
+	"scope": {
+		"schema": "@scope"
+	},
+	"profile": {
+		"schema": "°Maia/schema/data/profile",
+		"filter": {
+			"id": "$scope.profileId"
+		},
+		"map": {
+			"id": "id",
+			"name": "name",
+			"avatar": "avatar"
+		}
+	},
+	"uploadStatus": null,
+	"uploadError": null,
+	"uploadProgressVisible": false,
+	"uploadProgressSectionClass": "upload-progress-section upload-progress-section--hidden",
+	"uploadProgressPercent": null,
+	"uploadProgressStyle": "width: 0%",
+	"uploadLoadedBytes": null,
+	"uploadTotalBytes": null
+}

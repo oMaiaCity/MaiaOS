@@ -204,7 +204,7 @@ const schemaCoId = await dbEngine.getSchemaCoId('actor');
 const coId = await dbEngine.resolveCoId('@vibe/todos');
 
 // Using utilities that use operations API
-import { subscribeConfig } from '@MaiaOS/script/utils';
+// Config subscriptions handled by backend (maia-db CoCache)
 const { config } = await subscribeConfig(dbEngine, schemaCoId, coId, 'actor');
 ```
 

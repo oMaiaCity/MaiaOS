@@ -6,15 +6,13 @@
 
 ```
 maia-docs/
-├── getting-started/    # Onboarding, concepts, architecture
-├── creators/           # Creator-focused docs (Vibes, Actors, etc.)
-├── developers/         # Developer-focused docs (DSL, Schemas, APIs)
-├── architecture/       # Deep technical architecture docs
-├── concept/            # Core concepts and terminology
-└── agents/             # Auto-generated LLM-optimized docs
-    ├── LLM_Creators.md
-    └── LLM_Developers.md
+├── 01_getting-started/   # Start here: concepts → architecture → install
+├── 02_creators/          # Vibes, Loader, Actors, Operations, Views, Style
+├── 03_developers/        # maia-self, maia-loader, maia-engines, maia-db
+└── 04_agents/            # Auto-generated LLM docs (do not edit)
 ```
+
+**Reading path:** [01_getting-started/00-overview.md](./01_getting-started/00-overview.md)
 
 ## Scripts
 
@@ -42,11 +40,11 @@ bun run generate:watch
 
 LLM documentation is automatically generated from source docs:
 
-- **LLM_Creators.md**: `getting-started/` + `creators/`
-- **LLM_Developers.md**: `getting-started/` + `developers/`
+- **LLM_Creators.md**: `01_getting-started/` + `02_creators/`
+- **LLM_Developers.md**: `01_getting-started/` + `03_developers/`
 
 These files are optimized for LLM context windows and updated automatically.
 
 ## Versioning
 
-This package shares the monorepo version (`0.1.23`) and is automatically synced during releases.
+This package shares the monorepo version and is automatically synced during releases.

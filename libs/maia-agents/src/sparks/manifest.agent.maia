@@ -1,0 +1,14 @@
+{
+	"$schema": "°Maia/schema/agent",
+	"$id": "°Maia/agent/sparks",
+	"name": "Sparks",
+	"description": "Create and manage collaborative groups (sparks)",
+	"actor": "°Maia/sparks/actor/intent",
+	"dependencies": [
+		"°Maia/sparks/actor/intent",
+		"°Maia/actor/views/sparks",
+		"°Maia/actor/views/detail",
+		"°Maia/actor/services/spark",
+		"°Maia/actor/os/db"
+	]
+}

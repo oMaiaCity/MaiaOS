@@ -1,0 +1,19 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/actor/views/layout-chat/view",
+	"@label": "@maia/actor/views/layout-chat/view",
+	"content": {
+		"tag": "div",
+		"class": "chat-container",
+		"children": [
+			{
+				"tag": "div",
+				"class": "paper-area",
+				"$slot": "$currentPaper"
+			},
+			{
+				"$slot": "$modal"
+			}
+		]
+	}
+}

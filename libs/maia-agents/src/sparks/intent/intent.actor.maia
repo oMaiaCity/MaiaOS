@@ -1,0 +1,12 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/sparks/actor/intent",
+	"type": "service",
+	"process": "°Maia/sparks/process/intent",
+	"view": "°Maia/sparks/view/intent",
+	"context": "°Maia/sparks/context/intent",
+	"brand": "°Maia/brand/maiacity",
+	"inbox": "°Maia/sparks/inbox/intent",
+	"interface": [],
+	"@label": "@sparks/intent"
+}

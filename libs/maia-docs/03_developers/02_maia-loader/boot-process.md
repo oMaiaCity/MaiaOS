@@ -26,7 +26,7 @@ const os = await MaiaOS.boot({
 // Now you can:
 // - os.createActor() - Create actors
 // - os.loadVibe() - Load app manifests
-// - os.sendMessage() - Send messages between actors
+// - os.deliverEvent() - Deliver events to actors
 ```
 
 ---
@@ -38,7 +38,7 @@ When you call `MaiaOS.boot()`, here's what happens:
 ```
 1. Initialize Database
    └─> Creates IndexedDBBackend
-   └─> Creates DBEngine
+   └─> Creates DataEngine
 
 2. Seed Database (if registry provided)
    └─> Collects schemas from @MaiaOS/schemata
@@ -55,7 +55,7 @@ When you call `MaiaOS.boot()`, here's what happens:
    └─> ViewEngine (view renderer)
    └─> ActorEngine (actor lifecycle)
    └─> SubscriptionEngine (reactive subscriptions)
-   └─> DBEngine (database operations)
+   └─> DataEngine (maia.do – data operations)
 
 4. Wire Dependencies
    └─> Pass engines to each other
@@ -85,7 +85,7 @@ Engines are initialized in a specific order due to dependencies:
 5. StyleEngine (no dependencies)
 6. ViewEngine (needs Evaluator, ModuleRegistry)
 7. ActorEngine (needs StyleEngine, ViewEngine, ModuleRegistry, ToolEngine, StateEngine)
-8. SubscriptionEngine (needs DBEngine, ActorEngine)
+8. SubscriptionEngine (needs DataEngine, ActorEngine)
 ```
 
 ---
@@ -158,13 +158,15 @@ Gets an actor by ID.
 
 **Returns:** `Object|null` - Actor instance or null
 
-### `os.sendMessage(actorId, message)`
+### `os.deliverEvent(senderId, targetId, type, payload)`
 
-Sends a message to an actor.
+Delivers an event to a target actor (inbox-only, persisted via CoJSON).
 
 **Parameters:**
-- `actorId` (string) - Target actor ID
-- `message` (Object) - Message object
+- `senderId` (string) - Sender actor co-id
+- `targetId` (string) - Target actor co-id (co-id only; config-derived refs must be transformed at seed)
+- `type` (string) - Message type
+- `payload` (Object) - Resolved payload (no expressions)
 
 ### `os.db(payload)`
 
@@ -187,7 +189,7 @@ Gets all engines for debugging.
 - `styleEngine` - StyleEngine
 - `stateEngine` - StateEngine
 - `toolEngine` - ToolEngine
-- `dbEngine` - DBEngine
+- `dataEngine` / `maia.do` - DataEngine
 - `evaluator` - MaiaScriptEvaluator
 - `moduleRegistry` - ModuleRegistry
 

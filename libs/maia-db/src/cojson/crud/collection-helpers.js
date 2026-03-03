@@ -11,18 +11,18 @@ import { resolve } from '../schema/resolver.js'
 /**
  * Get schema index colist ID using schema co-id as key (all schemas indexed in spark.os.indexes)
  * Lazily creates the index colist if it doesn't exist and the schema has indexing: true
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} schema - Schema co-id (co_z...) or human-readable (°Maia/schema/data/todos)
  * @returns {Promise<string|null>} Schema index colist ID or null if not found/not indexable
  */
-export async function getSchemaIndexColistId(backend, schema) {
-	const schemaCoId = await resolve(backend, schema, { returnType: 'coId' })
+export async function getSchemaIndexColistId(peer, schema) {
+	const schemaCoId = await resolve(peer, schema, { returnType: 'coId' })
 	if (!schemaCoId) return null
 
 	const { ensureIndexesCoMap, ensureSchemaIndexColist } = await import(
 		'../indexing/schema-index-manager.js'
 	)
-	const indexesCoMap = await ensureIndexesCoMap(backend)
+	const indexesCoMap = await ensureIndexesCoMap(peer)
 	if (!indexesCoMap) return null
 
 	const indexColistId = indexesCoMap.get(schemaCoId)
@@ -31,7 +31,7 @@ export async function getSchemaIndexColistId(backend, schema) {
 	}
 
 	try {
-		const indexColist = await ensureSchemaIndexColist(backend, schemaCoId)
+		const indexColist = await ensureSchemaIndexColist(peer, schemaCoId)
 		return indexColist?.id ?? null
 	} catch {
 		return null
@@ -40,11 +40,11 @@ export async function getSchemaIndexColistId(backend, schema) {
 
 /**
  * Get CoList ID from spark.os.indexes.<schemaCoId> (all schema indexes in spark.os.indexes)
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} collectionNameOrSchema - Collection name (e.g., "todos"), schema co-id (co_z...), or namekey (°Maia/schema/data/todos)
  * @returns {Promise<string|null>} CoList ID or null if not found
  */
-export async function getCoListId(backend, collectionNameOrSchema) {
+export async function getCoListId(peer, collectionNameOrSchema) {
 	// STRICT: Only schema-based lookup - no backward compatibility layers
 	// All collections must be resolved via schema registry
 	if (!collectionNameOrSchema || typeof collectionNameOrSchema !== 'string') {
@@ -53,11 +53,12 @@ export async function getCoListId(backend, collectionNameOrSchema) {
 
 	// Must be a schema co-id or human-readable schema name (°Maia/schema/... or @domain/schema/...)
 	if (!collectionNameOrSchema.startsWith('co_z') && !isSchemaRef(collectionNameOrSchema)) {
-		if (process.env.DEBUG) console.error('Invalid collection/schema ref:', collectionNameOrSchema)
+		if (typeof process !== 'undefined' && process.env?.DEBUG)
+			console.error('Invalid collection/schema ref:', collectionNameOrSchema)
 		return null
 	}
 
-	const colistId = await getSchemaIndexColistId(backend, collectionNameOrSchema)
+	const colistId = await getSchemaIndexColistId(peer, collectionNameOrSchema)
 	// Don't warn if colistId is null - getSchemaIndexColistId already handles creation
 	// and will return null silently if schema doesn't have indexing: true (which is expected)
 	return colistId
@@ -68,14 +69,14 @@ export async function getCoListId(backend, collectionNameOrSchema) {
  * Generic method that works for ANY CoValue type (CoMap, CoList, CoStream, etc.)
  * After re-login, CoValues exist in IndexedDB but aren't loaded into node memory
  * This method explicitly loads them before accessing, just like jazz-tools does
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} coId - CoValue ID (co-id)
  * @param {Object} [options] - Options
  * @param {boolean} [options.waitForAvailable=false] - Wait for CoValue to become available
  * @param {number} [options.timeoutMs=2000] - Timeout in milliseconds
  * @returns {Promise<CoValueCore|null>} CoValueCore or null if not found
  */
-export async function ensureCoValueLoaded(backend, coId, options = {}) {
+export async function ensureCoValueLoaded(peer, coId, options = {}) {
 	const { waitForAvailable = false, timeoutMs = 2000 } = options
 
 	if (!coId || !coId.startsWith('co_')) {
@@ -83,7 +84,7 @@ export async function ensureCoValueLoaded(backend, coId, options = {}) {
 	}
 
 	// Get CoValueCore (creates if doesn't exist)
-	const coValueCore = backend.getCoValue(coId)
+	const coValueCore = peer.getCoValue(coId)
 	if (!coValueCore) {
 		return null // CoValueCore doesn't exist (shouldn't happen)
 	}
@@ -94,8 +95,9 @@ export async function ensureCoValueLoaded(backend, coId, options = {}) {
 	}
 
 	// Not available - trigger loading from IndexedDB (jazz-tools pattern)
-	backend.node.loadCoValueCore(coId).catch((_err) => {
-		if (process.env.DEBUG) console.log('[CoValue load error]', _err)
+	peer.node.loadCoValueCore(coId).catch((_err) => {
+		if (typeof process !== 'undefined' && process.env?.DEBUG)
+			console.log('[CoValue load error]', _err)
 	})
 
 	// If waitForAvailable is true, wait for it to become available
@@ -104,7 +106,7 @@ export async function ensureCoValueLoaded(backend, coId, options = {}) {
 			// Fix: Declare unsubscribe before subscribe call to avoid temporal dead zone
 			let unsubscribe
 			const timeout = setTimeout(() => {
-				if (process.env.DEBUG) console.log('[CoValue timeout]', coId)
+				if (typeof process !== 'undefined' && process.env?.DEBUG) console.log('[CoValue timeout]', coId)
 				unsubscribe()
 				reject(new Error(`Timeout waiting for CoValue ${coId} to load after ${timeoutMs}ms`))
 			}, timeoutMs)
@@ -130,14 +132,14 @@ export async function ensureCoValueLoaded(backend, coId, options = {}) {
  * - Subscribes to CoValueCore updates and checks headerMeta.$schema on each update
  * - This prevents race conditions where isAvailable() returns true but headerMeta isn't synced yet
  *
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} coId - CoValue ID (co-id)
  * @param {Object} [options] - Options
  * @param {number} [options.timeoutMs=10000] - Timeout in milliseconds (default: 10 seconds for fresh browser instances)
  * @returns {Promise<string>} Schema co-id from headerMeta.$schema
  * @throws {Error} If headerMeta.$schema doesn't become available within timeout
  */
-export async function waitForHeaderMetaSchema(backend, coId, options = {}) {
+export async function waitForHeaderMetaSchema(peer, coId, options = {}) {
 	const { timeoutMs = 10000 } = options
 
 	if (!coId || !coId.startsWith('co_')) {
@@ -145,16 +147,16 @@ export async function waitForHeaderMetaSchema(backend, coId, options = {}) {
 	}
 
 	// Get CoValueCore (creates if doesn't exist)
-	const coValueCore = backend.getCoValue(coId)
+	const coValueCore = peer.getCoValue(coId)
 	if (!coValueCore) {
 		throw new Error(`[waitForHeaderMetaSchema] CoValueCore not found: ${coId}`)
 	}
 
 	// Ensure CoValue is loaded first
-	await ensureCoValueLoaded(backend, coId, { waitForAvailable: true, timeoutMs })
+	await ensureCoValueLoaded(peer, coId, { waitForAvailable: true, timeoutMs })
 
 	// Check if headerMeta.$schema is already available
-	const header = backend.getHeader(coValueCore)
+	const header = peer.getHeader(coValueCore)
 	const headerMeta = header?.meta || null
 	const schemaCoId = headerMeta?.$schema || null
 
@@ -183,7 +185,7 @@ export async function waitForHeaderMetaSchema(backend, coId, options = {}) {
 			if (resolved) return
 
 			// Check headerMeta.$schema on each update
-			const updatedHeader = backend.getHeader(core)
+			const updatedHeader = peer.getHeader(core)
 			const updatedHeaderMeta = updatedHeader?.meta || null
 			const updatedSchemaCoId = updatedHeaderMeta?.$schema || null
 
@@ -200,7 +202,7 @@ export async function waitForHeaderMetaSchema(backend, coId, options = {}) {
 		})
 
 		// Check one more time after subscription setup (might have changed during setup)
-		const currentHeader = backend.getHeader(coValueCore)
+		const currentHeader = peer.getHeader(coValueCore)
 		const currentHeaderMeta = currentHeader?.meta || null
 		const currentSchemaCoId = currentHeaderMeta?.$schema || null
 

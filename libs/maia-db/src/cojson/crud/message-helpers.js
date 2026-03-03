@@ -8,10 +8,17 @@
 import { containsExpressions } from '@MaiaOS/schemata/expression-resolver.js'
 import { resolve } from '../schema/resolver.js'
 
+const _perf =
+	typeof window !== 'undefined' &&
+	typeof localStorage !== 'undefined' &&
+	localStorage?.getItem('maia:perf:upload') === '1'
+		? { now: () => performance.now(), log: (s, ms, e = '') => console.log(`[Perf] ${s}: ${ms}ms`, e) }
+		: { now: () => 0, log: () => {} }
+
 /**
  * Create a message CoMap and push its co-id to an inbox CoStream
  *
- * Schema validation happens at gate: createCoMap (backend).
+ * Schema validation happens at gate: createCoMap (peer).
  * This function enforces: containsExpressions check (payload must be resolved before persist).
  *
  * @param {Object} dbEngine - Database engine instance
@@ -34,6 +41,7 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 		throw new Error('[createAndPushMessage] messageData must be an object')
 	}
 
+	let t0 = _perf.now()
 	// 1. Get message schema co-id from inbox schema (preferred - avoids resolve warnings)
 	// Extract from inbox schema's items.$co property (same pattern as processInbox)
 	let messageSchemaCoId = null
@@ -70,7 +78,7 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 		if (!messageSchemaCoId) {
 			messageSchemaCoId = await dbEngine.execute({
 				op: 'resolve',
-				humanReadableKey: '°Maia/schema/message',
+				humanReadableKey: '°Maia/schema/event',
 			})
 		}
 
@@ -82,10 +90,11 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 	} catch (error) {
 		throw new Error(`[createAndPushMessage] Failed to get message schema co-id: ${error.message}`)
 	}
+	_perf.log('createAndPushMessage.getSchema', Math.round((_perf.now() - t0) * 100) / 100)
 
 	// 2. CRITICAL: Load and validate message data against message schema before creating
 	//    This ensures type, payload, source, target, processed fields are valid
-	const messageSchema = await resolve(dbEngine.backend, messageSchemaCoId, { returnType: 'schema' })
+	const messageSchema = await resolve(dbEngine.peer, messageSchemaCoId, { returnType: 'schema' })
 	if (!messageSchema) {
 		throw new Error(`[createAndPushMessage] Message schema not found: ${messageSchemaCoId}`)
 	}
@@ -105,13 +114,15 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 		)
 	}
 
-	// Schema validation happens at gate: createCoMap (backend)
+	// Schema validation happens at gate: createCoMap (peer)
 	// 3. Create message CoMap using create operation
+	t0 = _perf.now()
 	const createResult = await dbEngine.execute({
 		op: 'create',
 		schema: messageSchemaCoId,
 		data: messageDataWithDefaults,
 	})
+	_perf.log('createAndPushMessage.create', Math.round((_perf.now() - t0) * 100) / 100)
 	if (!createResult.ok) {
 		const msgs = createResult.errors?.map((e) => e.message).join('; ') || 'Create failed'
 		throw new Error(`[createAndPushMessage] Failed to create message: ${msgs}`)
@@ -127,11 +138,13 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 		throw new Error(`[createAndPushMessage] Invalid message co-id returned: ${messageCoId}`)
 	}
 	// 4. Push message co-id to inbox CoStream (not plain object)
+	t0 = _perf.now()
 	const pushResult = await dbEngine.execute({
 		op: 'push',
 		coId: inboxCoId,
 		item: messageCoId,
 	})
+	_perf.log('createAndPushMessage.push', Math.round((_perf.now() - t0) * 100) / 100)
 	if (!pushResult.ok) {
 		const msgs = pushResult.errors?.map((e) => e.message).join('; ') || 'Push failed'
 		throw new Error(`[createAndPushMessage] Failed to push message to inbox: ${msgs}`)

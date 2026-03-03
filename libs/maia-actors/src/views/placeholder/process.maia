@@ -1,0 +1,6 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/views/placeholder/process",
+	"@label": "@maia/actor/views/placeholder/process",
+	"handlers": {}
+}

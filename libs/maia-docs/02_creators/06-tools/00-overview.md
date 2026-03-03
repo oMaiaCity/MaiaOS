@@ -209,18 +209,14 @@ Toggle is not a separate operation. Use `update` with an expression:
 }
 ```
 
-### Sparks Module (`@sparks`)
+### Spark Operations (via `@db`)
 
-The `@sparks` tool is a domain-specific tool for managing Sparks (collaborative spaces/groups). Sparks are CoMaps that reference groups, allowing users to organize their data into separate collaborative spaces.
-
-**When to use `@sparks` vs `@db`:**
-- Use `@sparks` for spark-specific operations (creating sparks, managing spark groups, future member/permission management)
-- Use `@db` for generic CRUD operations on data collections (todos, notes, etc.)
+Spark operations (createSpark, readSpark, updateSpark, deleteSpark, addSparkMember, etc.) use the consolidated `@db` tool. Target `°Maia/actor/os/db` with type `SPARK_OP`.
 
 #### Create Spark Operation
 ```json
 {
-  "tool": "@sparks",
+  "tool": "@maia/actor/os/db",
   "payload": {
     "op": "createSpark",
     "name": "My Project"
@@ -239,7 +235,7 @@ The `@sparks` tool is a domain-specific tool for managing Sparks (collaborative 
 #### Read Spark Operation
 ```json
 {
-  "tool": "@sparks",
+  "tool": "@maia/actor/os/db",
   "payload": {
     "op": "readSpark"
   }
@@ -249,7 +245,7 @@ The `@sparks` tool is a domain-specific tool for managing Sparks (collaborative 
 Read all sparks (returns reactive store):
 ```json
 {
-  "tool": "@sparks",
+  "tool": "@maia/actor/os/db",
   "payload": {
     "op": "readSpark",
     "id": "co_z..."
@@ -264,7 +260,7 @@ Read a specific spark by co-id.
 #### Update Spark Operation
 ```json
 {
-  "tool": "@sparks",
+  "tool": "@maia/actor/os/db",
   "payload": {
     "op": "updateSpark",
     "id": "co_z...",
@@ -280,7 +276,7 @@ Read a specific spark by co-id.
 #### Delete Spark Operation
 ```json
 {
-  "tool": "@sparks",
+  "tool": "@maia/actor/os/db",
   "payload": {
     "op": "deleteSpark",
     "id": "co_z..."

@@ -277,7 +277,9 @@ Validate accountID format (should start with "co_z").
 
 ### `getStorage()`
 
-Get IndexedDB storage for CoValue persistence.
+Get browser storage for CoValue persistence. Uses **OPFS** when available (~4× faster for large data), falls back to **IndexedDB** otherwise (e.g. Firefox private mode, older Safari).
+
+OPFS and IndexedDB use separate storage roots; there is no automatic migration between them. First run with OPFS creates a fresh store.
 
 **Returns:** `Promise<StorageAPI | undefined>` - Storage instance or undefined if unavailable
 
@@ -288,9 +290,9 @@ import { getStorage } from '@MaiaOS/self';
 const storage = await getStorage();
 
 if (storage) {
-  console.log("IndexedDB available for local caching");
+  console.log("Storage available (OPFS or IndexedDB)");
 } else {
-  console.log("IndexedDB unavailable (incognito mode?)");
+  console.log("Storage unavailable (incognito mode?)");
 }
 ```
 

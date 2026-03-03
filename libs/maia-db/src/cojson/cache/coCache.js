@@ -245,7 +245,7 @@ export class CoCache {
 
 	/**
 	 * Debug: Log cache stats when window._maiaDebugSubscriptions is true
-	 * Helps diagnose subscription buildup / vibe freeze issues
+	 * Helps diagnose subscription buildup / agent freeze issues
 	 * @private
 	 */
 	_maybeLogStats() {
@@ -356,7 +356,7 @@ export class CoCache {
 
 	/**
 	 * Debug: Get cache stats for subscription/freeze investigation
-	 * Call via: maia.dbEngine.backend.subscriptionCache.getStats()
+	 * Call via: maia.dataEngine?.peer?.subscriptionCache.getStats()
 	 * @returns {{ cacheSize: number, subscriptions: number, stores: number, pendingCleanups: number }}
 	 */
 	getStats() {
@@ -448,4 +448,16 @@ export function resetGlobalCoCache() {
 		globalCache = null
 	}
 	currentNode = null
+}
+
+/**
+ * Invalidate resolved data cache when a CoValue is mutated.
+ * Call from CRUD operations (update, etc.) so next read sees persisted CRDT state.
+ * Keeps invalidation logic in cache layer; callers just notify.
+ *
+ * @param {Object} peer - Peer instance (must have subscriptionCache)
+ * @param {string} coId - CoValue ID that was mutated
+ */
+export function invalidateResolvedDataForMutatedCoValue(peer, coId) {
+	peer?.subscriptionCache?.invalidateResolvedData(coId)
 }

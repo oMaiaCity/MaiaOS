@@ -1,0 +1,7 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/os/ai",
+	"@label": "@maia/actor/os/ai",
+	"interface": "°Maia/actor/os/ai/interface",
+	"process": "°Maia/actor/os/ai/process"
+}

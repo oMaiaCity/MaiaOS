@@ -1,0 +1,9 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/actor/views/profile-image/interface",
+	"title": "°Maia/actor/views/profile-image/interface",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {},
+	"additionalProperties": false
+}

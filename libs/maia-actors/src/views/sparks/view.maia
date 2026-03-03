@@ -1,0 +1,74 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/actor/views/sparks/view",
+	"@label": "@maia/actor/views/sparks/view",
+	"content": {
+		"tag": "div",
+		"class": "stack",
+		"children": [
+			{
+				"tag": "div",
+				"class": "header-section",
+				"children": [
+					{
+						"tag": "h2",
+						"class": "layout-title",
+						"text": "$title"
+					}
+				]
+			},
+			{
+				"$slot": "$inputActor"
+			},
+			{
+				"tag": "div",
+				"class": "split-container",
+				"children": [
+					{
+						"tag": "div",
+						"class": "list-panel",
+						"children": [
+							{
+								"tag": "div",
+								"class": "item-list",
+								"$each": {
+									"items": "$sparks",
+									"template": {
+										"tag": "div",
+										"class": "item",
+										"children": [
+											{
+												"tag": "h3",
+												"class": "item-name",
+												"text": "$$name"
+											}
+										],
+										"$on": {
+											"click": {
+												"send": "SELECT_SPARK",
+												"payload": {
+													"id": "$$id"
+												}
+											}
+										}
+									}
+								}
+							}
+						]
+					},
+					{
+						"tag": "div",
+						"class": "detail-panel",
+						"children": [
+							{
+								"tag": "div",
+								"class": "detail-content-wrapper",
+								"$slot": "$currentDetail"
+							}
+						]
+					}
+				]
+			}
+		]
+	}
+}

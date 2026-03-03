@@ -4,7 +4,7 @@ A collaborative database layer built on cojson with automatic CoValue loading, s
 
 ## Overview
 
-- **CoJSONBackend**: Implements `DBAdapter` for MaiaOS operations (read, create, update, delete)
+- **MaiaDB**: Single storage class for CRUD, resolve, indexing, seeding
 - **Schema indexing**: Automatic schema-based indexing in `spark.os.indexes`
 - **Universal resolver**: Single `resolve()` API for schemas, co-values, and reactive resolution
 - **CoCache**: Unified cache for subscriptions, stores, and resolved data
@@ -13,9 +13,9 @@ A collaborative database layer built on cojson with automatic CoValue loading, s
 ## Architecture
 
 ```
-MaiaOS Operations (maia.db({ op: 'read', ... }))
+MaiaOS Operations (maia.do({ op: 'read', ... }))
         ↓
-  DBEngine → CoJSONBackend (DBAdapter)
+  DataEngine → MaiaDB
         ↓
   Universal read() + resolve() + schema-index-manager
         ↓
@@ -26,8 +26,8 @@ MaiaOS Operations (maia.db({ op: 'read', ... }))
 
 ## Key Exports
 
-- `CoJSONBackend`, `createCoJSONAPI` - Database backend for operations layer
-- `loadAccount`, `createAccountWithSecret` - Account management
+- `MaiaDB` - Single database class (storage layer)
+- Account primitives (`createAccountWithSecret`, `loadAccount`) - in @MaiaOS/peer; db exports `schemaMigration`, `simpleAccountSeed` for wiring
 - `resolve`, `resolveReactive`, `checkCotype`, `loadSchemasFromAccount` - Schema/co-value resolution
 - `waitForStoreReady`, `waitForReactiveResolution` - Store access helpers
 - `setupSyncPeers`, `subscribeSyncState` - Sync peer configuration
@@ -42,7 +42,7 @@ libs/maia-db/
 ├── src/
 │   ├── cojson/           # CoJSON layer
 │   │   ├── cache/        # CoCache
-│   │   ├── core/         # CoJSONBackend, factory
+│   │   ├── core/         # MaiaDB
 │   │   ├── crud/         # read, create, update, delete, collection-helpers
 │   │   ├── indexing/     # schema-index-manager, storage-hook-wrapper
 │   │   ├── schema/       # resolver, seed
@@ -114,7 +114,7 @@ unsubscribe();
 
 - **cojson** - RawCoMap, RawCoList, LocalNode
 - **cojson-transport-ws** - WebSocket transport for sync
-- **@MaiaOS/operations** - DBAdapter, DBEngine
+- **@MaiaOS/engines** - DataEngine (maia.do) calls MaiaDB
 - **@MaiaOS/schemata** - Schema registry, validation
 - **@MaiaOS/storage** - Storage adapters
 

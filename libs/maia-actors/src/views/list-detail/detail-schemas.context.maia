@@ -1,0 +1,9 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/list-detail/detail-schemas/context",
+	"selectedItem": {
+		"id": "",
+		"label": "",
+		"definition": ""
+	}
+}

@@ -1,0 +1,15 @@
+{
+	"name": "@MaiaOS/maia-voice",
+	"version": "26.0217.1438",
+	"type": "module",
+	"main": "src/index.js",
+	"exports": {
+		".": "./src/index.js"
+	},
+	"dependencies": {
+		"@usefulsensors/moonshine-js": "^0.1.21"
+	},
+	"files": [
+		"src"
+	]
+}

@@ -1,0 +1,9 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/chat/view/intent",
+	"content": {
+		"tag": "div",
+		"class": "chat-container",
+		"$slot": "$layout"
+	}
+}

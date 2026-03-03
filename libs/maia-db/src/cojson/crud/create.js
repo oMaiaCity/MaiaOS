@@ -6,36 +6,47 @@
 
 import { createCoValueForSpark } from '../covalue/create-covalue-for-spark.js'
 import * as collectionHelpers from './collection-helpers.js'
-import * as dataExtraction from './data-extraction.js'
 
 // Schema indexing is handled by storage-level hooks (more resilient than API hooks)
 // No CRUD-level hooks needed - storage hook catches ALL writes
 
 /**
- * Determine cotype from schema or data type
- * @param {Object} backend - Backend instance
+ * Determine cotype from schema or data type.
+ * CRITICAL: Schema definitions (derived from meta-schema) must ALWAYS be CoMaps.
+ * The cotype in the schema describes instance types (colist/comap), not the schema document's type.
+ *
+ * @param {Object} peer - Backend instance
  * @param {string} schema - Schema co-id
  * @param {*} data - Data to create
- * @returns {Promise<string>} Cotype (comap, colist, costream)
+ * @returns {Promise<{ cotype: string, isSchemaDefinition: boolean }>} Cotype and schema-definition flag
  */
-async function determineCotype(backend, schema, data) {
-	// Try to load schema to get cotype using generic method
+async function determineCotypeAndFlag(peer, schema, data) {
 	try {
-		const schemaCore = await collectionHelpers.ensureCoValueLoaded(backend, schema, {
+		const schemaCore = await collectionHelpers.ensureCoValueLoaded(peer, schema, {
 			waitForAvailable: true,
 		})
-		if (schemaCore && backend.isAvailable(schemaCore)) {
-			const schemaContent = backend.getCurrentContent(schemaCore)
+		if (schemaCore && peer.isAvailable(schemaCore)) {
+			const schemaContent = peer.getCurrentContent(schemaCore)
 			if (schemaContent?.get) {
+				// Schema definitions (parent = meta-schema) must ALWAYS be CoMaps
+				const title = schemaContent.get('title')
+				if (title === '°Maia/schema/meta') {
+					return { cotype: 'comap', isSchemaDefinition: true }
+				}
+
+				// For instance schemas: use cotype from definition or root
 				const definition = schemaContent.get('definition')
-				if (definition?.cotype) {
-					// CoText support eliminated - throw error if schema specifies cotext
-					if (definition.cotype === 'cotext' || definition.cotype === 'coplaintext') {
+				const cotype =
+					definition?.cotype && typeof definition.cotype === 'string'
+						? definition.cotype
+						: schemaContent.get('cotype')
+				if (cotype && typeof cotype === 'string') {
+					if (cotype === 'cotext' || cotype === 'coplaintext') {
 						throw new Error(
-							`[CoJSONBackend] CoText (cotext) support has been eliminated. Schema ${schema} specifies cotext, which is no longer supported.`,
+							`[MaiaDB] CoText (cotext) support has been eliminated. Schema ${schema} specifies cotext, which is no longer supported.`,
 						)
 					}
-					return definition.cotype
+					return { cotype, isSchemaDefinition: false }
 				}
 			}
 		}
@@ -43,50 +54,51 @@ async function determineCotype(backend, schema, data) {
 
 	// Fallback: infer from data type
 	if (Array.isArray(data)) {
-		return 'colist'
+		return { cotype: 'colist', isSchemaDefinition: false }
 	} else if (typeof data === 'string') {
 		// CoText support eliminated - strings are not valid CoValue types
 		throw new Error(
-			`[CoJSONBackend] Cannot determine cotype from data type for schema ${schema}. String data type is not supported (CoText/cotext support has been eliminated). Use CoMap or CoList instead.`,
+			`[MaiaDB] Cannot determine cotype from data type for schema ${schema}. String data type is not supported (CoText/cotext support has been eliminated). Use CoMap or CoList instead.`,
 		)
 	} else if (typeof data === 'object' && data !== null) {
-		return 'comap'
+		return { cotype: 'comap', isSchemaDefinition: false }
 	} else {
-		throw new Error(`[CoJSONBackend] Cannot determine cotype from data type for schema ${schema}`)
+		throw new Error(`[MaiaDB] Cannot determine cotype from data type for schema ${schema}`)
 	}
 }
 
 /**
  * Create new record - directly creates CoValue using CoJSON raw methods
- * @param {Object} backend - Backend instance
+ * @param {Object} peer - Backend instance
  * @param {string} schema - Schema co-id (co_z...) for data collections
  * @param {Object} data - Data to create
  * @param {Object} [options] - Optional settings
  * @param {string} [options.spark='°Maia'] - Spark name for context (e.g. '°Maia', '@Maia')
  * @returns {Promise<Object>} Created record with generated co-id
  */
-export async function create(backend, schema, data, options = {}) {
+export async function create(peer, schema, data, options = {}) {
 	const spark = options.spark ?? '°Maia'
 
 	// Determine cotype from schema or data type
-	const cotype = await determineCotype(backend, schema, data)
+	const { cotype, isSchemaDefinition } = await determineCotypeAndFlag(peer, schema, data)
 
-	if (!backend.account) {
-		throw new Error('[CoJSONBackend] Account required for create')
+	if (!peer.account) {
+		throw new Error('[MaiaDB] Account required for create')
 	}
 
 	if (cotype === 'comap' && (!data || typeof data !== 'object' || Array.isArray(data))) {
-		throw new Error('[CoJSONBackend] Data must be object for comap')
+		throw new Error('[MaiaDB] Data must be object for comap')
 	}
 	if (cotype === 'colist' && !Array.isArray(data)) {
-		throw new Error('[CoJSONBackend] Data must be array for colist')
+		throw new Error('[MaiaDB] Data must be array for colist')
 	}
 
-	const { coValue } = await createCoValueForSpark(backend, spark, {
+	const { coValue } = await createCoValueForSpark(peer, spark, {
 		schema,
 		cotype,
 		data: cotype === 'comap' ? data : cotype === 'colist' ? data : undefined,
-		dbEngine: backend.dbEngine,
+		dataEngine: peer.dbEngine,
+		isSchemaDefinition,
 	})
 
 	// CRITICAL: Don't wait for storage sync - it blocks the UI!
@@ -99,34 +111,17 @@ export async function create(backend, schema, data, options = {}) {
 	// - Writes from direct CoJSON operations
 	// No need for CRUD-level hooks here
 
-	// Return created CoValue data (extract properties as flat object for tool access)
-	// CRITICAL: Always include original data as fallback to ensure all properties are available
-	// This ensures $lastCreatedText and other properties are accessible even if CoValue extraction fails
-	// Get CoValueCore from node to check availability
-	const coValueCore = backend.node.getCoValue(coValue.id)
-	if (coValueCore && backend.isAvailable(coValueCore)) {
-		const content = backend.getCurrentContent(coValueCore)
-		if (content && typeof content.get === 'function') {
-			// Extract properties as flat object (for tool access like $lastCreatedText)
-			const result = { id: coValue.id, ...data } // Start with original data to ensure all properties
-			const keys =
-				content.keys && typeof content.keys === 'function' ? content.keys() : Object.keys(content)
-			for (const key of keys) {
-				// Override with actual CoValue content if available (more accurate)
-				result[key] = content.get(key)
-			}
-			return result
-		}
-		// Fallback to normalized format, but include original data
-		const extracted = dataExtraction.extractCoValueData(backend, coValueCore)
-		return { ...data, id: coValue.id, ...extracted } // Merge original data with extracted
+	// Return created CoValue data via read() API (single gate, normalized)
+	const store = await peer.read(null, coValue.id, null, null, { deepResolve: false })
+	const { waitForStoreReady } = await import('./read-operations.js')
+	try {
+		await waitForStoreReady(store, coValue.id, 5000)
+	} catch (_e) {
+		return { id: coValue.id, ...data, type: cotype, schema }
 	}
-
-	// Final fallback: return original data with id (ensures all properties including text are available)
-	return {
-		id: coValue.id,
-		...data, // Include original data to ensure text and other properties are available
-		type: cotype,
-		schema: schema,
+	const extracted = store.value
+	if (extracted && !extracted.error) {
+		return { id: coValue.id, ...data, ...extracted }
 	}
+	return { id: coValue.id, ...data, type: cotype, schema }
 }

@@ -1,0 +1,35 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/actor/views/paper/view",
+	"@label": "@maia/actor/views/paper/view",
+	"content": {
+		"tag": "div",
+		"class": "paper-background",
+		"children": [
+			{
+				"tag": "div",
+				"class": "paper-scroll",
+				"children": [
+					{
+						"tag": "div",
+						"class": "paper-content",
+						"children": [
+							{
+								"tag": "p",
+								"class": "paper-example-text",
+								"text": {
+									"$join": [
+										{
+											"$context": "notes.0.content.items"
+										},
+										""
+									]
+								}
+							}
+						]
+					}
+				]
+			}
+		]
+	}
+}

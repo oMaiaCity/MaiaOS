@@ -51,7 +51,7 @@ Sparks have dedicated operations in the operations API:
 
 **Create Spark:**
 ```javascript
-const spark = await maia.db({
+const spark = await maia.do({
   op: "createSpark",
   name: "My Project"
 });
@@ -61,10 +61,10 @@ const spark = await maia.db({
 **Read Sparks:**
 ```javascript
 // Read all sparks (from indexed colist)
-const sparksStore = await maia.db({ op: "readSpark" });
+const sparksStore = await maia.do({ op: "readSpark" });
 
 // Read single spark
-const sparkStore = await maia.db({ 
+const sparkStore = await maia.do({ 
   op: "readSpark", 
   id: "co_zSpark123" 
 });
@@ -72,7 +72,7 @@ const sparkStore = await maia.db({
 
 **Update Spark:**
 ```javascript
-await maia.db({
+await maia.do({
   op: "updateSpark",
   id: "co_zSpark123",
   data: { name: "Updated Name" }
@@ -81,7 +81,7 @@ await maia.db({
 
 **Delete Spark:**
 ```javascript
-await maia.db({
+await maia.do({
   op: "deleteSpark",
   id: "co_zSpark123"
 });
@@ -95,7 +95,7 @@ Sparks are registered in `account.registries.sparks` CoMap:
 - Structure: `registries.sparks.sparkName = sparkCoId`
 - Cross-links to indexed colist `account.os.{sparkSchemaCoId}`
 
-**Implementation:** `libs/maia-db/src/cojson/schema/seed.js` (bootstrap); `libs/maia-operations/src/operations/spark-operations.js` (POST /register after createSpark)
+**Implementation:** `libs/maia-db/src/migrations/seeding/` (bootstrap); `libs/maia-engines/src/engines/data.engine.js` (POST /register after createSpark)
 
 ### Spark Indexing
 
@@ -145,13 +145,13 @@ MaiaOS standardizes on **account co-ids** (co_z...) for group member storage and
 
 - **Group Creation:** `libs/maia-db/src/cojson/groups/create.js`
 - **Group Operations:** `libs/maia-db/src/cojson/groups/groups.js`
-- **Spark Operations:** `libs/maia-operations/src/operations/spark-operations.js`
+- **Spark Operations:** `libs/maia-engines/src/engines/data.engine.js` (merged)
 - **Spark Backend:** `libs/maia-db/src/cojson/core/cojson-backend.js` (spark CRUD methods)
 - **Schema Migration:** `libs/maia-db/src/migrations/schema.migration.js`
-- **Spark Schema:** `libs/maia-schemata/src/os/spark.schema.json`
+- **Spark Schema:** `libs/maia-schemata/src/data/spark.schema.json`
 
 ## Related Documentation
 
 - [CoJSON Architecture](./cojson.md) - Complete CoJSON layer hierarchy
-- [Operations API](../06_maia-operations/README.md) - Database operations API
+- [Operations API](../04_maia-engines/README.md) - maia.do data API
 - [Sparks Vibe](../../02_creators/01-vibes.md) - Using Sparks in vibes

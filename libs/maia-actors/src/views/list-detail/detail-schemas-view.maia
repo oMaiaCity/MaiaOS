@@ -1,0 +1,21 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/actor/views/list-detail/detail-schemas/view",
+	"@label": "@maia/actor/views/list-detail/detail-schemas/view",
+	"content": {
+		"tag": "div",
+		"class": "detail-content",
+		"children": [
+			{
+				"tag": "h2",
+				"class": "main-title",
+				"text": "$selectedItem.label"
+			},
+			{
+				"tag": "pre",
+				"class": "schema-json",
+				"text": "$selectedItem.definition"
+			}
+		]
+	}
+}

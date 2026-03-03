@@ -2,12 +2,12 @@
 	"$schema": "°Maia/schema/meta",
 	"$id": "°Maia/schema/os/humans-registry",
 	"title": "°Maia/schema/os/humans-registry",
-	"description": "Humans registry CoMap - username -> account co-id. Stored in account.registries.humans",
+	"description": "Humans registry. Keys: username or account co-id. Values: human comap co-id.",
 	"cotype": "comap",
 	"indexing": false,
 	"additionalProperties": {
 		"type": "string",
 		"pattern": "^co_z[a-zA-Z0-9]{20,}$",
-		"description": "Username -> account co-id"
+		"description": "Human CoMap co-id"
 	}
 }

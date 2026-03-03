@@ -8,7 +8,7 @@ import { assertSchemaValidForCreate, createSchemaMeta } from '../../schemas/regi
  * @param {RawAccount|RawGroup} accountOrGroup - Account (to get °Maia spark group) or Group
  * @param {string} schemaName - Schema name for headerMeta.$schema (REQUIRED)
  * @param {LocalNode} [node] - LocalNode instance (required if accountOrGroup is account)
- * @param {Object} [dbEngine] - dbEngine with backend (required when account is passed)
+ * @param {Object} [dbEngine] - dbEngine with peer (required when account is passed)
  * @returns {RawCoStream|Promise<RawCoStream>} The created CoStream
  */
 export async function createCoStream(accountOrGroup, schemaName, _node = null, dbEngine = null) {
@@ -21,12 +21,12 @@ export async function createCoStream(accountOrGroup, schemaName, _node = null, d
 		const profileId = accountOrGroup.get('profile')
 		if (profileId) {
 			// It's an account - resolve °Maia spark's group via getSparkGroup
-			const backend = dbEngine?.backend
-			if (!backend) {
-				throw new Error('[createCoStream] dbEngine.backend required when passing account')
+			const peer = dbEngine?.peer
+			if (!peer) {
+				throw new Error('[createCoStream] dbEngine.peer required when passing account')
 			}
 			const { getSparkGroup } = await import('../groups/groups.js')
-			group = await getSparkGroup(backend, '°Maia')
+			group = await getSparkGroup(peer, '°Maia')
 			if (!group) {
 				throw new Error('[createCoStream] °Maia spark group not found. Ensure bootstrap has run.')
 			}
