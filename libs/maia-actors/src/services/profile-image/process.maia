@@ -12,7 +12,13 @@
 			{
 				"ctx": {
 					"uploadStatus": "Avatar updated!",
-					"uploadError": null
+					"uploadError": null,
+					"uploadProgressVisible": false,
+					"uploadProgressSectionClass": "upload-progress-section upload-progress-section--hidden",
+					"uploadProgressPercent": null,
+					"uploadProgressStyle": "width: 0%",
+					"uploadLoadedBytes": null,
+					"uploadTotalBytes": null
 				}
 			}
 		],
@@ -20,7 +26,13 @@
 			{
 				"ctx": {
 					"uploadStatus": null,
-					"uploadError": "$$errors.0.message"
+					"uploadError": "$$errors.0.message",
+					"uploadProgressVisible": false,
+					"uploadProgressSectionClass": "upload-progress-section upload-progress-section--hidden",
+					"uploadProgressPercent": null,
+					"uploadProgressStyle": "width: 0%",
+					"uploadLoadedBytes": null,
+					"uploadTotalBytes": null
 				}
 			}
 		]

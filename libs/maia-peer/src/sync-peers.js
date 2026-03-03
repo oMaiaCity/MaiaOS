@@ -219,3 +219,95 @@ export function setupSyncPeers(syncDomain = null) {
 		},
 	}
 }
+
+/**
+ * Jazz Cloud peer setup - server-side only
+ * Creates outbound WebSocket peer to Jazz Cloud for persistence/sync.
+ * Used when PEER_STORAGE=jazz-cloud (no local PGlite/Postgres).
+ *
+ * @param {string} apiKey - Jazz Cloud API key (dashboard.jazz.tools or email as temp key)
+ * @returns {{peers: Array, setNode: Function, waitForPeer: () => Promise<boolean>, wsPeer: Object}} Peer setup
+ */
+export function setupJazzCloudPeer(apiKey) {
+	if (!apiKey || typeof apiKey !== 'string') {
+		throw new Error(
+			'setupJazzCloudPeer requires apiKey. Set JAZZ_SYNC_API_KEY when PEER_STORAGE=jazz-cloud.',
+		)
+	}
+
+	const syncServerUrl = `wss://cloud.jazz.tools/?key=${encodeURIComponent(apiKey)}`
+
+	let node
+	const peers = []
+	let websocketConnected = false
+	let websocketConnectedResolve = null
+	const JAZZ_CONNECTION_TIMEOUT_MS = 15000
+	const websocketConnectedPromise = new Promise((resolve) => {
+		websocketConnectedResolve = resolve
+	})
+
+	const wsPeer = new WebSocketPeerWithReconnection({
+		peer: syncServerUrl,
+		reconnectionTimeout: 1500,
+		addPeer: (peer) => {
+			peers.push(peer)
+			if (node) {
+				node.syncManager.addPeer(peer)
+			}
+		},
+		removePeer: (peer) => {
+			const index = peers.indexOf(peer)
+			if (index > -1) peers.splice(index, 1)
+			websocketConnected = false
+		},
+	})
+
+	wsPeer.subscribe((connected) => {
+		if (connected && !websocketConnected) {
+			websocketConnected = true
+			if (websocketConnectedResolve) {
+				websocketConnectedResolve()
+				websocketConnectedResolve = null
+			}
+		} else if (!connected) {
+			websocketConnected = false
+		}
+	})
+
+	wsPeer.enable()
+
+	return {
+		peers,
+		wsPeer,
+		waitForPeer: () => {
+			return new Promise((resolve) => {
+				if (websocketConnected && peers.length > 0) {
+					resolve(true)
+					return
+				}
+				let resolved = false
+				const timeout = setTimeout(() => {
+					if (!resolved) {
+						resolved = true
+						resolve(false)
+					}
+				}, JAZZ_CONNECTION_TIMEOUT_MS)
+				websocketConnectedPromise.then(() => {
+					if (!resolved && peers.length > 0) {
+						resolved = true
+						clearTimeout(timeout)
+						resolve(true)
+					}
+				})
+			})
+		},
+		setNode: (n) => {
+			node = n
+			if (peers.length > 0) {
+				for (const peer of peers) {
+					node.syncManager.addPeer(peer)
+				}
+			}
+		},
+	}
+}

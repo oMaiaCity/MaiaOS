@@ -6,7 +6,12 @@
  */
 
 import { schemaMigration, simpleAccountSeed } from '@MaiaOS/db'
-import { createAccountWithSecret, loadAccount, setupSyncPeers } from '@MaiaOS/peer'
+import {
+	createAccountWithSecret,
+	loadAccount,
+	setupJazzCloudPeer,
+	setupSyncPeers,
+} from '@MaiaOS/peer'
 // Import dependencies directly (workspace imports work in dev)
 // In Docker: These will be resolved via the kernel bundle or copied files
 import { getStorage } from '@MaiaOS/storage'
@@ -278,14 +283,26 @@ export async function createAgentAccount({
 	const storage = await getStorage({ mode: 'agent', dbPath, inMemory })
 
 	// Setup sync peers BEFORE account creation
-	const syncSetup = setupSyncPeers(syncDomain)
+	const isJazzCloud = typeof process !== 'undefined' && process.env?.PEER_STORAGE === 'jazz-cloud'
+	let syncSetup = null
+	let jazzSetup = null
+
+	if (isJazzCloud) {
+		jazzSetup = setupJazzCloudPeer(process.env.JAZZ_SYNC_API_KEY)
+		const connected = await jazzSetup.waitForPeer()
+		if (!connected) {
+			throw new Error('[sync] Failed to connect to Jazz Cloud. Check JAZZ_SYNC_API_KEY and network.')
+		}
+	} else {
+		syncSetup = setupSyncPeers(syncDomain)
+	}
 
 	// Use createAccountWithSecret() abstraction from @MaiaOS/db
 	// All signups get simpleAccountSeed; genesis (full scaffold) is PEER_MODE=sync only
 	const createResult = await createAccountWithSecret({
 		agentSecret,
 		name,
-		peers: syncSetup ? syncSetup.peers : [],
+		peers: jazzSetup ? jazzSetup.peers : syncSetup ? syncSetup.peers : [],
 		storage: storage,
 		migration: schemaMigration,
 		seed: simpleAccountSeed,
@@ -294,7 +311,8 @@ export async function createAgentAccount({
 	const { node, account, accountID: createdAccountID } = createResult
 
 	// Assign node to peer callbacks
-	if (syncSetup) syncSetup.setNode(node)
+	if (jazzSetup) jazzSetup.setNode(node)
+	else if (syncSetup) syncSetup.setNode(node)
 
 	// VERIFICATION: Computed accountID MUST match created accountID!
 	if (createdAccountID !== computedAccountID) {
@@ -352,13 +370,25 @@ export async function loadAgentAccount({
 	const storage = await getStorage({ mode: 'agent', dbPath, inMemory })
 
 	// Setup sync peers BEFORE loading account
-	const syncSetup = setupSyncPeers(syncDomain)
+	const isJazzCloud = typeof process !== 'undefined' && process.env?.PEER_STORAGE === 'jazz-cloud'
+	let syncSetup = null
+	let jazzSetup = null
+
+	if (isJazzCloud) {
+		jazzSetup = setupJazzCloudPeer(process.env.JAZZ_SYNC_API_KEY)
+		const connected = await jazzSetup.waitForPeer()
+		if (!connected) {
+			throw new Error('[sync] Failed to connect to Jazz Cloud. Check JAZZ_SYNC_API_KEY and network.')
+		}
+	} else {
+		syncSetup = setupSyncPeers(syncDomain)
+	}
 
 	// Load account using abstraction from @MaiaOS/db
 	const loadResult = await loadAccount({
 		accountID,
 		agentSecret,
-		peers: syncSetup ? syncSetup.peers : [],
+		peers: jazzSetup ? jazzSetup.peers : syncSetup ? syncSetup.peers : [],
 		storage: storage,
 		migration: schemaMigration,
 	})
@@ -366,7 +396,8 @@ export async function loadAgentAccount({
 	const { node, account } = loadResult
 
 	// Assign node to peer callbacks
-	if (syncSetup) syncSetup.setNode(node)
+	if (jazzSetup) jazzSetup.setNode(node)
+	else if (syncSetup) syncSetup.setNode(node)
 
 	// Initial sync handshake complete
 	// Sync state is managed by setupSyncPeers in @MaiaOS/db

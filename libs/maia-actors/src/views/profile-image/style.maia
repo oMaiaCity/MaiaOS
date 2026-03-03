@@ -18,6 +18,27 @@
 		".upload-input": {
 			"display": "block"
 		},
+		".upload-progress-section": {
+			"display": "flex",
+			"flexDirection": "column",
+			"gap": "0.5rem",
+			"width": "100%"
+		},
+		".upload-progress-section--hidden .upload-progress-track": {
+			"display": "none"
+		},
+		".upload-progress-track": {
+			"height": "6px",
+			"backgroundColor": "#E8E8E8",
+			"borderRadius": "3px",
+			"overflow": "hidden"
+		},
+		".upload-progress-fill": {
+			"height": "100%",
+			"backgroundColor": "#4E9A58",
+			"borderRadius": "3px",
+			"transition": "width 0.15s ease-out"
+		},
 		".upload-status": {
 			"fontSize": "0.875rem",
 			"color": "#4E9A58"

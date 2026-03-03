@@ -75,10 +75,6 @@
 					"type": "string",
 					"description": "MIME type for uploadBinary (e.g. image/png)"
 				},
-				"fileName": {
-					"type": "string",
-					"description": "Original file name for uploadBinary"
-				},
 				"totalSizeBytes": {
 					"type": "integer",
 					"description": "Total file size in bytes for uploadBinary"
