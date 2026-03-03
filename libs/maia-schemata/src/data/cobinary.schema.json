@@ -9,10 +9,6 @@
 			"type": "string",
 			"description": "MIME type of the file (e.g. application/pdf, image/png)"
 		},
-		"fileName": {
-			"type": "string",
-			"description": "Original file name"
-		},
 		"totalSizeBytes": {
 			"type": "integer",
 			"minimum": 0,

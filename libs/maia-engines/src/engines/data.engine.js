@@ -323,23 +323,15 @@ function base64ToUint8Array(base64) {
 	return bytes
 }
 
-function chunksToDataUrl(chunks, mimeType) {
-	if (!chunks.length) return null
-	let totalLength = 0
-	for (const c of chunks) totalLength += c.length
-	const merged = new Uint8Array(totalLength)
-	let offset = 0
-	for (const c of chunks) {
-		merged.set(c, offset)
-		offset += c.length
-	}
-	let binary = ''
-	for (let i = 0; i < merged.length; i++) binary += String.fromCharCode(merged[i])
-	return `data:${mimeType};base64,${btoa(binary)}`
+/** Create object URL from chunks - no copy, Blob accepts chunk array directly (faster for large files) */
+function chunksToBlobUrl(chunks, mimeType) {
+	if (!chunks?.length) return null
+	const blob = new Blob(chunks, { type: mimeType || 'application/octet-stream' })
+	return URL.createObjectURL(blob)
 }
 
 async function uploadBinaryOp(peer, dataEngine, params) {
-	const { coId, mimeType, fileName, totalSizeBytes, chunks } = params
+	const { coId, mimeType, totalSizeBytes, chunks, onProgress } = params
 	requireParam(coId, 'coId', 'UploadBinaryOperation')
 	validateCoId(coId, 'UploadBinaryOperation')
 	requireParam(mimeType, 'mimeType', 'UploadBinaryOperation')
@@ -359,21 +351,34 @@ async function uploadBinaryOp(peer, dataEngine, params) {
 	) {
 		throw new Error(`[UploadBinaryOperation] CoValue ${coId} is not a RawBinaryCoStream`)
 	}
-	const settings = { mimeType, fileName, totalSizeBytes }
+	const settings = { mimeType, totalSizeBytes }
 	content.startBinaryStream(settings)
+	const totalBytes = Number(totalSizeBytes) || 0
 	if (!Array.isArray(chunks) || chunks.length === 0) {
 		content.endBinaryStream()
+		onProgress?.(0, totalBytes)
 		if (peer.node?.storage) await peer.node.syncManager.waitForStorageSync(coId)
 		return createSuccessResult({ coId }, { op: 'uploadBinary' })
 	}
+	let loadedBytes = 0
+	const YIELD_EVERY_CHUNKS = 8
+	let chunkIndex = 0
 	for (const chunk of chunks) {
 		const bytes =
 			chunk instanceof Uint8Array
 				? chunk
 				: base64ToUint8Array(typeof chunk === 'string' ? chunk : String(chunk))
 		content.pushBinaryStreamChunk(bytes)
+		loadedBytes += bytes.length
+		onProgress?.(loadedBytes, totalBytes)
+		chunkIndex++
+		if (onProgress && chunkIndex % YIELD_EVERY_CHUNKS === 0) {
+			await new Promise((r) => setTimeout(r, 0))
+		}
 	}
 	content.endBinaryStream()
+	onProgress?.(totalBytes, totalBytes)
+	// DURABILITY: Wait for IndexedDB persistence. In-memory-only is lossy (tab close = data lost).
 	if (peer.node?.storage) await peer.node.syncManager.waitForStorageSync(coId)
 	return createSuccessResult({ coId }, { op: 'uploadBinary' })
 }
@@ -389,17 +394,23 @@ async function loadBinaryAsBlobOp(peer, params) {
 			`[LoadBinaryAsBlobOperation] CoValue ${coId} is not a CoBinary or has no getBinaryChunks`,
 		)
 	}
-	const result = content.getBinaryChunks(false)
+	// allowUnfinished=true: returns chunks even if stream end hasn't synced yet (Jazz lazy-loading)
+	let result = content.getBinaryChunks(true)
+	for (let i = 0; !result && i < 8; i++) {
+		await new Promise((r) => setTimeout(r, 150))
+		result = content.getBinaryChunks(true)
+	}
 	if (!result) {
 		throw new Error(
-			`[LoadBinaryAsBlobOperation] CoBinary ${coId} has no binary data or stream not finished`,
+			`[LoadBinaryAsBlobOperation] CoBinary ${coId} has no binary data (stream may still be loading)`,
 		)
 	}
-	const { chunks, mimeType, finished } = result
-	if (!finished || !chunks?.length) {
-		throw new Error(`[LoadBinaryAsBlobOperation] CoBinary ${coId} stream not finished or empty`)
+	const { chunks, mimeType } = result
+	if (!chunks?.length) {
+		throw new Error(`[LoadBinaryAsBlobOperation] CoBinary ${coId} has no chunks`)
 	}
-	const dataUrl = chunksToDataUrl(chunks, mimeType || 'application/octet-stream')
+	// Use Blob URL instead of data URL - no base64 conversion, works for any size, displays correctly
+	const dataUrl = chunksToBlobUrl(chunks, mimeType || 'application/octet-stream')
 	return createSuccessResult(
 		{ dataUrl, mimeType: mimeType || 'application/octet-stream' },
 		{ op: 'loadBinaryAsBlob' },

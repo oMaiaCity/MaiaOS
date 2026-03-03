@@ -39,12 +39,47 @@ import { escapeHtml, getSyncStatusMessage, truncate } from './utils.js'
 // Cache for CoBinary image data URLs - survives re-renders, enables progressive reactive preview
 const cobinaryPreviewCache = new Map()
 
+const DEBUG_COBINARY =
+	typeof window !== 'undefined' &&
+	(window.location?.hostname === 'localhost' || import.meta?.env?.DEV) &&
+	false
+
+function loadBinaryWithRetry(maia, coId, maxAttempts = 4) {
+	const attempt = (n) =>
+		maia
+			.do({ op: 'loadBinaryAsBlob', coId })
+			.then((res) => res?.dataUrl ?? res?.data?.dataUrl)
+			.catch((err) => {
+				const msg = err?.message ?? ''
+				const retryable =
+					msg.includes('not found') ||
+					msg.includes('not available') ||
+					msg.includes('still be loading') ||
+					msg.includes('no binary data')
+				if (n < maxAttempts && retryable) {
+					return new Promise((r) => setTimeout(r, 300)).then(() => attempt(n + 1))
+				}
+				throw err
+			})
+	return attempt(0)
+}
+
 /** Hydrate cobinary image previews: load from cache or fetch, then set img.src. Runs after DOM update. */
 function hydrateCobinaryPreviews(maia) {
+	if (DEBUG_COBINARY)
+		console.log('[CoBinary db-view] hydrateCobinaryPreviews', { hasMaia: !!maia?.do })
 	if (!maia?.do) return
-	document.querySelectorAll('img[data-co-id]').forEach((img) => {
+	const imgs = document.querySelectorAll('img[data-co-id]')
+	if (DEBUG_COBINARY)
+		console.log('[CoBinary db-view] hydrateCobinaryPreviews found imgs', imgs.length)
+	imgs.forEach((img) => {
 		const coId = img.getAttribute('data-co-id')
-		if (!coId || img.src?.startsWith('data:')) return
+		if (!coId || !coId.startsWith('co_z')) {
+			if (DEBUG_COBINARY)
+				console.log('[CoBinary db-view] hydrateCobinaryPreviews skip invalid coId', { coId })
+			return
+		}
+		if (img.src && (img.src.startsWith('data:') || img.src.startsWith('blob:'))) return
 		const cached = cobinaryPreviewCache.get(coId)
 		if (cached?.dataUrl) {
 			img.src = cached.dataUrl
@@ -60,14 +95,23 @@ function hydrateCobinaryPreviews(maia) {
 			})
 			return
 		}
-		const loading = maia
-			.do({ op: 'loadBinaryAsBlob', coId })
-			.then((res) => {
-				const dataUrl = res?.dataUrl ?? res?.data?.dataUrl
+		if (DEBUG_COBINARY) console.log('[CoBinary db-view] loadBinaryAsBlob start', { coId })
+		const loading = loadBinaryWithRetry(maia, coId)
+			.then((dataUrl) => {
 				cobinaryPreviewCache.set(coId, { dataUrl })
+				if (DEBUG_COBINARY)
+					console.log('[CoBinary db-view] loadBinaryAsBlob done', {
+						coId,
+						hasDataUrl: !!dataUrl,
+						len: dataUrl?.length,
+					})
 				return dataUrl
 			})
-			.catch(() => null)
+			.catch((err) => {
+				if (DEBUG_COBINARY)
+					console.warn('[CoBinary db-view] loadBinaryAsBlob failed', { coId, err: err?.message })
+				return null
+			})
 		cobinaryPreviewCache.set(coId, { loading })
 		loading.then((dataUrl) => {
 			const current = document.querySelector(`img[data-co-id="${coId}"]`)
@@ -524,14 +568,13 @@ export async function renderApp(
 				</div>
 			`
 		} else if ((data._coValueType || data.cotype || data.type) === 'cobinary') {
-			// CoBinary: Display binary stream metadata (mimeType, fileName, size, finished)
+			// CoBinary: Display binary stream metadata (co-id, mimeType, size, finished)
 			headerInfo = {
 				type: 'cobinary',
 				typeLabel: 'CoBinary',
 				description: 'Binary file stream',
 			}
 			const mimeType = data.mimeType || 'application/octet-stream'
-			const fileName = data.fileName || '(unnamed)'
 			const totalSizeBytes = data.totalSizeBytes ?? null
 			const finished = data.finished ?? false
 			const sizeStr = totalSizeBytes != null ? `${(totalSizeBytes / 1024).toFixed(1)} KB` : '?'
@@ -548,10 +591,10 @@ export async function renderApp(
 			tableContent = `
 				<div class="space-y-4 cobinary-container">
 					<div class="grid grid-cols-2 gap-3 text-sm">
+						<div class="font-medium text-slate-500">Co-ID</div>
+						<div class="text-marine-blue-muted font-mono text-xs">${escapeHtml(data.id || '')}</div>
 						<div class="font-medium text-slate-500">MIME type</div>
 						<div class="text-marine-blue-muted">${escapeHtml(mimeType)}</div>
-						<div class="font-medium text-slate-500">File name</div>
-						<div class="text-marine-blue-muted">${escapeHtml(fileName)}</div>
 						<div class="font-medium text-slate-500">Size</div>
 						<div class="text-marine-blue-muted">${sizeStr}</div>
 						<div class="font-medium text-slate-500">Complete</div>
@@ -1106,7 +1149,7 @@ export async function renderApp(
 										headerInfo
 											? `
 										<span class="badge badge-type badge-${headerInfo.type} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${headerInfo.typeLabel}</span>
-										<span class="text-sm font-semibold text-marine-blue">${headerInfo.itemCount} ${headerInfo.itemCount === 1 ? 'Item' : 'Items'}</span>
+										${headerInfo.itemCount != null ? `<span class="text-sm font-semibold text-marine-blue">${headerInfo.itemCount} ${headerInfo.itemCount === 1 ? 'Item' : 'Items'}</span>` : ''}
 										<span class="text-xs italic font-medium text-marine-blue-light">${headerInfo.description}</span>
 									`
 											: ''
@@ -1174,7 +1217,7 @@ export async function renderApp(
 		</div>
 	`
 
-	// Hydrate CoBinary image previews (reactive: cache survives re-renders, updates when data arrives)
+	// Hydrate CoBinary image previews (loadBinaryAsBlob uses chunked async conversion for large files)
 	hydrateCobinaryPreviews(maia)
 
 	// Add sidebar toggle handlers for DB viewer

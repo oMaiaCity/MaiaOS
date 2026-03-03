@@ -19,6 +19,7 @@
       "name": "@MaiaOS/actors",
       "version": "26.217.1438",
       "dependencies": {
+        "@MaiaOS/db": "workspace:*",
         "@MaiaOS/engines": "workspace:*",
         "@MaiaOS/schemata": "workspace:*",
         "unicode-segmenter": "^0.15.0",
