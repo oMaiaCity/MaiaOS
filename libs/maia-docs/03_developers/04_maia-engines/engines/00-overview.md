@@ -142,12 +142,12 @@ The `@MaiaOS/engines` package provides the core engines that execute MaiaScript 
 **What it does:**
 - Uploads binary to CoBinary and returns metadata (`coId`, `mimeType`)
 - Callers (ViewEngine, programmatic code) use BlobEngine **before** emitting events
-- InboxEngine never sees or transforms binary; it rejects payloads containing `fileBase64`
+- InboxEngine never sees or transforms binary; it rejects payloads containing `file` or `fileBase64`
 - Supports progress callbacks via `onProgress(loadedBytes, totalBytes)`
 
 **Rule:** Upload via BlobEngine before deliver. Inbox carries refs only.
 
-**Key Method:** `uploadToCoBinary(payload, { onProgress })` - Upload `{ fileBase64, mimeType }` and return `{ coId, mimeType }`
+**Key Method:** `uploadToCoBinary(payload, { onProgress })` - Upload `{ file, mimeType }` (File → Uint8Array chunks) and return `{ coId, mimeType }`
 
 **Source:** `libs/maia-engines/src/engines/blob.engine.js`
 

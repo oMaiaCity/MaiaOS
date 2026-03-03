@@ -44,18 +44,32 @@ const DEBUG_COBINARY =
 	(window.location?.hostname === 'localhost' || import.meta?.env?.DEV) &&
 	false
 
+function extractDataUrl(res) {
+	const dataUrl = res?.dataUrl ?? res?.data?.dataUrl ?? (res?.ok === true && res?.data?.dataUrl)
+	if (DEBUG_COBINARY && res && !dataUrl) {
+		console.warn('[CoBinary db-view] extractDataUrl: no dataUrl in response', {
+			keys: Object.keys(res || {}),
+			hasData: !!res?.data,
+			dataKeys: res?.data ? Object.keys(res.data) : [],
+		})
+	}
+	return dataUrl ?? null
+}
+
 function loadBinaryWithRetry(maia, coId, maxAttempts = 4) {
 	const attempt = (n) =>
 		maia
 			.do({ op: 'loadBinaryAsBlob', coId })
-			.then((res) => res?.dataUrl ?? res?.data?.dataUrl)
+			.then((res) => extractDataUrl(res))
 			.catch((err) => {
 				const msg = err?.message ?? ''
 				const retryable =
 					msg.includes('not found') ||
 					msg.includes('not available') ||
 					msg.includes('still be loading') ||
-					msg.includes('no binary data')
+					msg.includes('no binary data') ||
+					msg.includes('stream not finished') ||
+					err?.name === 'NotReadableError'
 				if (n < maxAttempts && retryable) {
 					return new Promise((r) => setTimeout(r, 300)).then(() => attempt(n + 1))
 				}
@@ -582,9 +596,11 @@ export async function renderApp(
 			let previewHtml = ''
 			if (isImage && data.id && maia?.do) {
 				previewHtml = `
-					<div class="mt-4 p-4 bg-slate-50/50 rounded-xl border border-slate-200 overflow-hidden">
+					<div class="mt-4 p-4 bg-slate-50/50 rounded-xl border border-slate-200" style="width:100%;max-width:100%;min-width:0;overflow:hidden">
 						<p class="text-xs text-slate-500 mb-2">Image preview (loads on demand)</p>
-						<img id="cobinary-preview-${data.id.replace(/[^a-zA-Z0-9]/g, '_')}" class="max-w-full max-h-[280px] w-auto h-auto object-contain rounded border border-slate-200" alt="Binary preview" data-co-id="${escapeHtml(data.id)}" />
+						<div style="width:100%;max-width:100%;min-width:0;overflow:hidden">
+							<img id="cobinary-preview-${data.id.replace(/[^a-zA-Z0-9]/g, '_')}" style="width:100%;max-width:100%;max-height:280px;height:auto;object-fit:contain;display:block;border-radius:6px;border:1px solid #e2e8f0" alt="Binary preview" data-co-id="${escapeHtml(data.id)}" />
+						</div>
 					</div>
 				`
 			}
@@ -1219,6 +1235,8 @@ export async function renderApp(
 
 	// Hydrate CoBinary image previews (loadBinaryAsBlob uses chunked async conversion for large files)
 	hydrateCobinaryPreviews(maia)
+	// Deferred re-hydration: CoBinary may not be ready immediately (sync/lazy-load)
+	setTimeout(() => hydrateCobinaryPreviews(maia), 500)
 
 	// Add sidebar toggle handlers for DB viewer
 	setTimeout(() => {

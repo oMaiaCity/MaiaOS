@@ -29,9 +29,9 @@ The sync service consolidates WebSocket sync, agent API, and LLM proxy in one pr
 - `PEER_MODE=sync` - Moai hosts /sync (default). Never connects to another.
 - `PEER_MODE=agent` - Client agent. Connects to sync at `PEER_MOAI`. For future pure agent workers.
 - `PEER_ID`, `PEER_SECRET` - Required (run `bun agent:generate`)
-- `PEER_STORAGE=pglite | postgres | jazz-cloud`
-- `PEER_DB_PATH` - Default: `./local-sync.db` (dev), `/data/sync.db` (prod). Ignored when `jazz-cloud`.
-- `JAZZ_SYNC_API_KEY` - Required when `PEER_STORAGE=jazz-cloud`. Get at dashboard.jazz.tools
+- `PEER_STORAGE=pglite | postgres` (required - server never runs without persistent storage)
+- `PEER_DB_PATH` - Default: `./local-sync.db` (pglite). Ignored when `postgres`.
+- `PEER_DB_URL` - Required when `PEER_STORAGE=postgres` (e.g. Fly Postgres)
 - `PEER_MOAI` - Required when `PEER_MODE=agent` (sync server URL). Ignored when `sync`.
 
 ## Dependencies
@@ -71,11 +71,10 @@ The client connects directly to moai (CORS enabled). Sync server URL:
 
 ## Storage
 
-The sync server supports multiple storage backends:
+The sync server requires persistent storage (never in-memory or sync-only):
 
 - **PGlite** (`PEER_STORAGE=pglite`): Local WASM Postgres. Dev: `./local-sync.db`, prod: `/data/sync.db`.
 - **Postgres** (`PEER_STORAGE=postgres`): Remote Postgres via `PEER_DB_URL` (e.g. Fly Postgres).
-- **Jazz Cloud** (`PEER_STORAGE=jazz-cloud`): Remote sync/persistence via Jazz Cloud. Set `JAZZ_SYNC_API_KEY` (dashboard.jazz.tools). No local DB or volume.
 
 ## How It Works
 

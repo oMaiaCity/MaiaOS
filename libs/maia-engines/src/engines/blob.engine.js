@@ -3,16 +3,24 @@
  *
  * Rule: Binary lives only in storage; events carry refs and metadata.
  *
+ * Blob format: Uint8Array only. No base64.
+ *
  * Callers (ViewEngine, programmatic code) use BlobEngine BEFORE emitting events.
  * InboxEngine never sees or transforms binary.
  */
 
-const CHUNK_SIZE = 64 * 1024
+/** 100KB chunks: distributed-optimized, matches CoJSON internal split. */
+const CHUNK_SIZE = 100 * 1024
 
-function chunkBase64(base64, size = CHUNK_SIZE) {
+/** Read File via single arrayBuffer() + slice. Much faster than N sequential FileReader calls. */
+async function readFileAsChunks(file, chunkSize, onProgress) {
+	const totalSize = file.size
+	onProgress?.(0, totalSize, 'reading')
+	const ab = await file.arrayBuffer()
 	const chunks = []
-	for (let i = 0; i < base64.length; i += size) {
-		chunks.push(base64.slice(i, i + size))
+	for (let offset = 0; offset < ab.byteLength; offset += chunkSize) {
+		chunks.push(new Uint8Array(ab, offset, Math.min(chunkSize, ab.byteLength - offset)))
+		onProgress?.(Math.min(offset + chunkSize, totalSize), totalSize)
 	}
 	return chunks
 }
@@ -25,7 +33,7 @@ export class BlobEngine {
 	/**
 	 * Upload binary to CoBinary and return metadata.
 	 *
-	 * @param {Object} payload - { fileBase64, mimeType }
+	 * @param {Object} payload - { file, mimeType } (File only; Uint8Array chunks internally)
 	 * @param {Object} [options] - { onProgress: (loadedBytes, totalBytes) => void | Promise<void> }
 	 * @returns {Promise<{coId: string, mimeType: string}>}
 	 */
@@ -33,11 +41,16 @@ export class BlobEngine {
 		if (!this.dataEngine?.peer) {
 			throw new Error('[BlobEngine] dataEngine required for uploadToCoBinary')
 		}
-		const { fileBase64, mimeType } = payload
-		if (!fileBase64 || typeof fileBase64 !== 'string') {
-			throw new Error('[BlobEngine] payload.fileBase64 (string) is required')
-		}
+		const { file, mimeType } = payload
+		const mime = mimeType || 'application/octet-stream'
 
+		if (!file || !(file instanceof File)) {
+			throw new Error('[BlobEngine] payload.file (File) is required. No base64.')
+		}
+		const totalSizeBytes = file.size
+		onProgress?.(0, totalSizeBytes)
+
+		const chunks = await readFileAsChunks(file, CHUNK_SIZE, onProgress)
 		const createRes = await this.dataEngine.execute({
 			op: 'create',
 			schema: '°Maia/schema/data/cobinary',
@@ -48,23 +61,17 @@ export class BlobEngine {
 		if (!coId?.startsWith('co_z')) {
 			throw new Error('[BlobEngine] Failed to create CoBinary')
 		}
-
-		const chunks = chunkBase64(fileBase64, CHUNK_SIZE)
-		const totalSizeBytes = Math.floor((fileBase64.length * 3) / 4)
-
-		onProgress?.(0, totalSizeBytes)
 		await this.dataEngine.execute({
 			op: 'uploadBinary',
 			coId,
-			mimeType: mimeType || 'application/octet-stream',
+			mimeType: mime,
 			totalSizeBytes,
 			chunks,
 			onProgress,
 		})
-
 		return {
 			coId,
-			mimeType: mimeType || 'application/octet-stream',
+			mimeType: mime,
 		}
 	}
 }
