@@ -4,6 +4,11 @@ import { extractDOMValuesAsync } from '@MaiaOS/schemata/payload-resolver'
 import { readStore } from '../utils/store-reader.js'
 import { RENDER_STATES } from './actor.engine.js'
 
+const DEBUG_COBINARY =
+	typeof window !== 'undefined' &&
+	(window.location?.hostname === 'localhost' || import.meta?.env?.DEV) &&
+	false // Set true to debug CoBinary hydration
+
 function sanitizeAttribute(value) {
 	if (value === null || value === undefined) return ''
 	return String(value)
@@ -39,8 +44,150 @@ const BOOLEAN_ATTRS = new Set([
 	'multiple',
 ])
 
+/** Cache for CoBinary image data URLs - shared across actor views, enables progressive reactive preview */
+const cobinaryPreviewCache = new Map()
+
+/**
+ * Hydrate cobinary image previews within a root (shadow DOM or element).
+ * Finds img[data-co-id], loads binary via loadBinaryAsBlob, sets img.src.
+ * Skips imgs that already have a valid data: URL in src.
+ */
+/** 1x1 transparent GIF - placeholder when no co-id or load fails (avoids broken-image icon) */
+const COBINARY_PLACEHOLDER =
+	'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+
+function loadBinaryWithRetry(dataEngine, coId, maxAttempts = 4) {
+	const attempt = (n) =>
+		dataEngine
+			.execute({ op: 'loadBinaryAsBlob', coId })
+			.then((res) => res?.dataUrl ?? res?.data?.dataUrl)
+			.catch((err) => {
+				const msg = err?.message ?? ''
+				const retryable =
+					msg.includes('not found') ||
+					msg.includes('not available') ||
+					msg.includes('still be loading') ||
+					msg.includes('no binary data')
+				if (n < maxAttempts && retryable) {
+					return new Promise((r) => setTimeout(r, 300)).then(() => attempt(n + 1))
+				}
+				throw err
+			})
+	return attempt(0)
+}
+
+function hydrateCobinaryPreviews(root, dataEngine) {
+	if (DEBUG_COBINARY)
+		console.log('[CoBinary] hydrateCobinaryPreviews', {
+			hasRoot: !!root,
+			rootTag: root?.tagName,
+			rootInShadow: !!root?.host,
+			hasDataEngine: !!dataEngine?.execute,
+		})
+	if (!root || !dataEngine?.execute) return
+	const imgs = root.querySelectorAll('img[data-co-id]')
+	const allImgs = root.querySelectorAll('img')
+	if (DEBUG_COBINARY)
+		console.log('[CoBinary] hydrateCobinaryPreviews', {
+			foundWithAttr: imgs.length,
+			totalImgs: allImgs.length,
+			imgAttrs: Array.from(allImgs).map((img) => ({
+				hasDataCoId: img.hasAttribute('data-co-id'),
+				dataCoId: img.getAttribute('data-co-id'),
+			})),
+		})
+	imgs.forEach((img) => {
+		const coId = img.getAttribute('data-co-id')
+		if (!coId || !coId.startsWith('co_z')) {
+			if (DEBUG_COBINARY) console.log('[CoBinary] hydrateCobinaryPreviews skip invalid coId', { coId })
+			if (!img.src) img.src = COBINARY_PLACEHOLDER
+			return
+		}
+		// Skip if already has valid src (data: or blob:)
+		if (img.src && (img.src.startsWith('data:') || img.src.startsWith('blob:'))) {
+			if (DEBUG_COBINARY) console.log('[CoBinary] hydrateCobinaryPreviews skip (has src)', { coId })
+			return
+		}
+		const cached = cobinaryPreviewCache.get(coId)
+		if (cached?.dataUrl) {
+			img.src = cached.dataUrl
+			if (DEBUG_COBINARY) console.log('[CoBinary] hydrateCobinaryPreviews from cache', { coId })
+			return
+		}
+		if (cached?.loading) {
+			cached.loading.then((dataUrl) => {
+				const current = root.querySelector(`img[data-co-id="${coId}"]`)
+				if (current) current.src = dataUrl || COBINARY_PLACEHOLDER
+			})
+			if (DEBUG_COBINARY)
+				console.log('[CoBinary] hydrateCobinaryPreviews waiting for loading', { coId })
+			return
+		}
+		if (DEBUG_COBINARY)
+			console.log('[CoBinary] hydrateCobinaryPreviews loadBinaryAsBlob start', { coId })
+		const loading = loadBinaryWithRetry(dataEngine, coId)
+			.then((dataUrl) => {
+				cobinaryPreviewCache.set(coId, { dataUrl })
+				if (DEBUG_COBINARY)
+					console.log('[CoBinary] hydrateCobinaryPreviews loadBinaryAsBlob done', {
+						coId,
+						hasDataUrl: !!dataUrl,
+						len: dataUrl?.length,
+					})
+				return dataUrl
+			})
+			.catch((err) => {
+				if (DEBUG_COBINARY)
+					console.warn('[CoBinary] hydrateCobinaryPreviews loadBinaryAsBlob failed', {
+						coId,
+						err: err?.message,
+					})
+				return null
+			})
+		cobinaryPreviewCache.set(coId, { loading })
+		loading.then((dataUrl) => {
+			const current = root.querySelector(`img[data-co-id="${coId}"]`)
+			if (current) current.src = dataUrl || COBINARY_PLACEHOLDER
+		})
+	})
+}
+
+/**
+ * Extract co-id string from a value (handles CoValue objects resolved by context map).
+ * Returns the co-id string or null if not a valid co-id.
+ */
+function toCoIdString(value) {
+	if (!value) return null
+	if (typeof value === 'string' && value.startsWith('co_z')) return value
+	if (typeof value === 'object') {
+		const id = value.id ?? value.$id ?? value.coId
+		if (typeof id === 'string' && id.startsWith('co_z')) return id
+	}
+	return null
+}
+
 function setAttr(element, name, value) {
-	if (value === undefined || value === null) return
+	// data-co-id: ALWAYS set (use "" when undefined/null) so img[data-co-id] matches for hydration
+	if (name === 'data-co-id') {
+		const coId = value != null ? toCoIdString(value) : null
+		if (DEBUG_COBINARY)
+			console.log('[CoBinary] setAttr data-co-id', {
+				rawType: typeof value,
+				rawPreview:
+					value == null
+						? '(null/undefined)'
+						: typeof value === 'string'
+							? value.slice(0, 30) + (value.length > 30 ? '...' : '')
+							: value && typeof value === 'object'
+								? `{id:${value?.id ?? '?'},...}`
+								: String(value),
+				coId: coId ?? '(empty)',
+			})
+		value = coId ?? ''
+		// fall through to set the attribute
+	} else if (value === undefined || value === null) {
+		return
+	}
 	if (BOOLEAN_ATTRS.has(name.toLowerCase())) {
 		const bool = Boolean(value)
 		element[name] = bool
@@ -214,7 +361,9 @@ export class ViewEngine {
 		if (onBeforeRender) await onBeforeRender()
 		actor._renderState = RENDER_STATES.RENDERING
 		const styleSheets = await this.styleEngine.getStyleSheets(actorConfig, actorId)
-		await this.render(viewDef, actor.context, actor.shadowRoot, styleSheets, actorId)
+		await this.render(viewDef, actor.context, actor.shadowRoot, styleSheets, actorId, {
+			dataEngine: this.actorOps?.dataEngine,
+		})
 		actor._renderState = RENDER_STATES.READY
 		if (actor._needsPostInitRerender) {
 			delete actor._needsPostInitRerender
@@ -222,7 +371,7 @@ export class ViewEngine {
 		}
 	}
 
-	async render(viewDef, context, shadowRoot, styleSheets, actorId) {
+	async render(viewDef, context, shadowRoot, styleSheets, actorId, options = {}) {
 		// $stores Architecture: Backend unified store handles reactivity automatically
 		// No manual subscriptions needed - backend handles everything via subscriptionCache
 
@@ -261,6 +410,27 @@ export class ViewEngine {
 			element.dataset.actorId = actorId
 			shadowRoot.appendChild(element)
 			this._processScrollToBottom(actorId)
+			// Use explicitly passed dataEngine (from ActorEngine) - same peer as maia.do() in db-view
+			const dataEngine =
+				options.dataEngine ??
+				this.dataEngine ??
+				this.actorOps?.dataEngine ??
+				this.actorOps?.os?.dataEngine
+			if (DEBUG_COBINARY)
+				console.log('[CoBinary] render calling hydrateCobinaryPreviews', {
+					actorId,
+					hasDataEngine: !!dataEngine,
+					source: options.dataEngine
+						? 'options'
+						: this.dataEngine
+							? 'this'
+							: this.actorOps?.dataEngine
+								? 'actorOps'
+								: this.actorOps?.os?.dataEngine
+									? 'actorOps.os'
+									: 'none',
+				})
+			hydrateCobinaryPreviews(shadowRoot, dataEngine)
 		}
 	}
 
@@ -296,7 +466,10 @@ export class ViewEngine {
 
 		const tag = node.tag || 'div'
 		const element = document.createElement(tag)
-
+		if (DEBUG_COBINARY && tag.toLowerCase() === 'img' && node.attrs?.['data-co-id'])
+			console.log('[CoBinary] renderNode img with data-co-id', {
+				attrExpr: node.attrs['data-co-id'],
+			})
 		await this._applyNodeAttributes(element, node, data, actorId)
 
 		if (node.$each) {
@@ -350,6 +523,20 @@ export class ViewEngine {
 					await this._resolveDataAttributes(attrValue, data, element)
 				} else {
 					const resolved = await this.evaluator.evaluate(attrValue, data)
+					if (DEBUG_COBINARY && attrName === 'data-co-id')
+						console.log('[CoBinary] _applyNodeAttributes data-co-id', {
+							tag: element?.tagName,
+							attrValue: typeof attrValue === 'string' ? attrValue.slice(0, 25) : attrValue,
+							resolvedType: typeof resolved,
+							resolvedPreview:
+								resolved == null
+									? '(null/undefined)'
+									: typeof resolved === 'string'
+										? resolved.slice(0, 30)
+										: resolved && typeof resolved === 'object'
+											? `{id:${resolved?.id ?? '?'}}`
+											: String(resolved),
+						})
 					setAttr(element, attrName, resolved)
 				}
 			}
@@ -633,11 +820,29 @@ export class ViewEngine {
 					)
 				}
 
+				// BlobEngine: Convert fileBase64 to CoBinary ref BEFORE validation/deliver
+				// Rule: Binary lives only in storage; inbox carries refs and metadata only.
+				let payloadToValidate = payload
+				if (
+					eventName === 'UPLOAD_PROFILE_IMAGE' &&
+					payload?.fileBase64 &&
+					typeof payload.fileBase64 === 'string' &&
+					this.blobEngine
+				) {
+					const result = await this.blobEngine.uploadToCoBinary(payload, {
+						onProgress: (loaded, total) => this.actorOps?.reportUploadProgress?.(actorId, loaded, total),
+					})
+					payloadToValidate = {
+						avatar: result.coId,
+						mimeType: result.mimeType,
+					}
+				}
+
 				// Runtime schema validation (from actor's interface) - skip send if payload invalid
 				const payloadValid = await this.actorOps.validateEventPayloadForSend?.(
 					actorId,
 					eventName,
-					payload,
+					payloadToValidate,
 				)
 				if (
 					eventName === 'UPLOAD_PROFILE_IMAGE' &&
@@ -646,9 +851,8 @@ export class ViewEngine {
 				) {
 					console.log('[ProfileImagePipe] ViewEngine: after resolve/validate', {
 						payloadValid,
-						hasFileBase64: !!payload?.fileBase64,
-						hasMimeType: !!payload?.mimeType,
-						payloadKeys: payload ? Object.keys(payload) : [],
+						hasAvatar: !!payloadToValidate?.avatar,
+						payloadKeys: payloadToValidate ? Object.keys(payloadToValidate) : [],
 					})
 				}
 				if (!payloadValid) return
@@ -679,7 +883,7 @@ export class ViewEngine {
 				) {
 					console.log('[ProfileImagePipe] ViewEngine: calling deliverEvent', { actorId, eventName })
 				}
-				await this.actorOps?.deliverEvent?.(actorId, actorId, eventName, payload)
+				await this.actorOps?.deliverEvent?.(actorId, actorId, eventName, payloadToValidate)
 
 				// AUTO-CLEAR INPUTS: After form submission (any event except update-input types), clear all input fields
 				// This ensures forms reset after submission without manual clearing workarounds

@@ -90,7 +90,7 @@ retry_flyctl_deploy() {
 echo "🚀 Deploying all MaiaOS services to Fly.io..."
 echo ""
 
-# Sync deploy - requires manual secrets: AVEN_MAIA_ACCOUNT, AVEN_MAIA_SECRET, and PEER_DB_URL (postgres)
+# Moai deploy - requires manual secrets: PEER_ID, PEER_SECRET, and PEER_DB_URL (postgres) or JAZZ_SYNC_API_KEY (jazz-cloud)
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "📦 Step 1/2: Deploying sync service (moai-next-maia-city)..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
@@ -139,7 +139,8 @@ echo "   Frontend: https://next-maia-city.fly.dev"
 echo "   Sync:     https://moai-next-maia-city.fly.dev/health"
 echo ""
 echo "⚠️  Set secrets manually before first deploy:"
-echo "   PEER_SYNC_STORAGE=postgres: fly secrets set AVEN_MAIA_ACCOUNT=... AVEN_MAIA_SECRET=... PEER_DB_URL=... --app moai-next-maia-city"
+echo "   PEER_STORAGE=postgres: fly secrets set PEER_ID=... PEER_SECRET=... PEER_DB_URL=... --app moai-next-maia-city"
+echo "   PEER_STORAGE=jazz-cloud: fly secrets set PEER_ID=... PEER_SECRET=... JAZZ_SYNC_API_KEY=... --app moai-next-maia-city"
 echo ""
 echo "🔍 Verify deployment:"
 echo "   flyctl status --app next-maia-city"

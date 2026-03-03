@@ -58,10 +58,10 @@ function parseMapExpression(expression) {
 			? expression.substring(1)
 			: expression
 	const isResolve = expression.startsWith('$$') || expression.startsWith('$')
-	// Support :asDataUrl suffix for cobinary co-ids (e.g. "$avatar:asDataUrl")
-	const asDataUrl = pathExpr.endsWith(':asDataUrl')
-	const path = asDataUrl ? pathExpr.slice(0, -10) : pathExpr
-	return { path, isResolve, asDataUrl }
+	// :asDataUrl suffix stripped - path resolves to co-id; CoBinary loads via data-co-id + hydration (never blocks read)
+	const asDataUrlSuffix = pathExpr.endsWith(':asDataUrl')
+	const path = asDataUrlSuffix ? pathExpr.slice(0, -10) : pathExpr
+	return { path, isResolve, asDataUrl: false }
 }
 
 /**
@@ -162,30 +162,10 @@ export async function applyMapTransform(peer, item, mapConfig, options = {}) {
 				}
 			}
 
-			let mappedValue = await getValueAtPathWithResolution(peer, item, path, visited, {
+			const mappedValue = await getValueAtPathWithResolution(peer, item, path, visited, {
 				timeoutMs,
 			})
-			// :asDataUrl suffix: resolve cobinary co-id to data URL for img src
-			if (parsed.asDataUrl && peer.dbEngine) {
-				const coId =
-					typeof mappedValue === 'string' && mappedValue.startsWith('co_z')
-						? mappedValue
-						: mappedValue?.id && typeof mappedValue.id === 'string' && mappedValue.id.startsWith('co_z')
-							? mappedValue.id
-							: null
-				const PLACEHOLDER =
-					'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
-				if (coId) {
-					try {
-						const r = await peer.dbEngine.execute({ op: 'loadBinaryAsBlob', coId })
-						mappedValue = r?.ok && r?.data?.dataUrl ? r.data.dataUrl : PLACEHOLDER
-					} catch (_e) {
-						mappedValue = PLACEHOLDER
-					}
-				} else {
-					mappedValue = PLACEHOLDER
-				}
-			}
+			// CoBinary co-ids pass through - hydration loads them progressively after render (never blocks read)
 			mappedItem[targetField] = mappedValue
 		} catch (_err) {
 			mappedItem[targetField] = undefined
