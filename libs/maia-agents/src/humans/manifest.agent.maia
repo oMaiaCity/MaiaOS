@@ -4,6 +4,9 @@
 	"name": "Human Book",
 	"description": "Browse all humans in the Maia registry — account ID, registry name, profile name",
 	"actor": "°Maia/humans/actor/intent",
+	"runtime": [
+		"browser"
+	],
 	"dependencies": [
 		"°Maia/humans/actor/intent",
 		"°Maia/actor/views/humans"

@@ -21,7 +21,14 @@
 							"type": "string"
 						},
 						"definition": {
-							"type": "string"
+							"anyOf": [
+								{
+									"type": "string"
+								},
+								{
+									"type": "object"
+								}
+							]
 						}
 					},
 					"required": [

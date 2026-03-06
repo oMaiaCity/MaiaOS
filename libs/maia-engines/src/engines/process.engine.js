@@ -12,6 +12,8 @@ import {
 	isPermissionError,
 	isSuccessResult,
 } from '@MaiaOS/schemata/operation-result'
+import { perfChatEnd, perfChatMeasure, perfChatStep } from '../utils/perf-chat.js'
+import { perfPipelineMeasure, perfPipelineStep } from '../utils/perf-pipeline.js'
 import { readStore } from '../utils/store-reader.js'
 
 export class ProcessEngine {
@@ -36,6 +38,7 @@ export class ProcessEngine {
 	}
 
 	async send(processId, event, payload = {}) {
+		perfPipelineStep('process:send:start', { event, processId: processId?.slice(0, 30) })
 		const DEBUG =
 			typeof window !== 'undefined' &&
 			(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
@@ -63,6 +66,7 @@ export class ProcessEngine {
 			})
 		if (!Array.isArray(actions) || actions.length === 0) return false
 
+		perfPipelineStep('process:send', { event })
 		await this._executeActions(process, actions)
 		if (DEBUG) console.log('[ProcessEngine] send: _executeActions done')
 		return true
@@ -112,7 +116,16 @@ export class ProcessEngine {
 						process.lastToolResult,
 						process.actor,
 					)
-					const result = await this._executeOp(opKey, evaluated, process, payload)
+					const isChatCreate =
+						opKey === 'create' &&
+						typeof evaluated?.schema === 'string' &&
+						evaluated.schema.includes('chat')
+					const runOp = () => this._executeOp(opKey, evaluated, process, payload)
+					const result = await (isChatCreate
+						? perfChatMeasure('op.create (chat)', runOp)
+						: opKey === 'read'
+							? perfPipelineMeasure(`op.${opKey}`, runOp)
+							: runOp())
 					if (result?.ok && result?.data) process.lastToolResult = result.data
 					if (!isSuccessResult(result) && process.actor._lastEventSource) {
 						const errors = result?.errors ?? [
@@ -129,11 +142,15 @@ export class ProcessEngine {
 					return false
 				}
 				if (act.tell) {
-					await this._executeTell(process, act.tell, payload)
+					await this._executeTell(process, act.tell, payload, contextUpdates)
 					return false
 				}
 				if (act.ask) {
-					await this._executeAsk(process, act.ask, payload)
+					// Chat flow: user msg in costream; ask delivers CHAT (LLM runs async on AI actor)
+					const isChatAsk = act.ask?.type === 'CHAT'
+					if (isChatAsk) perfChatStep('ask CHAT delivered (user msg path complete)')
+					await this._executeAsk(process, act.ask, payload, contextUpdates)
+					if (isChatAsk) perfChatEnd('user message → costream')
 					return true // ask = stop processing (request-response)
 				}
 				if (act.function === true) {
@@ -233,7 +250,7 @@ export class ProcessEngine {
 		return result
 	}
 
-	async _executeTell(process, config, payload) {
+	async _executeTell(process, config, payload, pendingContextUpdates = null) {
 		if (!process?.actor?.actorOps) return
 		const evaluated = await this._evaluatePayload(
 			config,
@@ -241,12 +258,18 @@ export class ProcessEngine {
 			payload,
 			process.lastToolResult,
 			process.actor,
+			pendingContextUpdates,
 		)
 		const { target, type, payload: eventPayload = {} } = evaluated
 		if (!target || !type) return
 		if (typeof target !== 'string' || !target.startsWith('co_z')) {
 			throw new Error(`[ProcessEngine] tell target must be co-id (transform at seed). Got: ${target}`)
 		}
+		perfPipelineStep('process:tell', { type, target: target?.slice(0, 20) })
+		const DEBUG =
+			typeof window !== 'undefined' &&
+			(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
+		if (DEBUG) console.log('[ProcessEngine] tell', { type, target: target?.slice(0, 20) })
 		await process.actor.actorOps.deliverEvent(
 			process.actor.id,
 			target,
@@ -255,7 +278,7 @@ export class ProcessEngine {
 		)
 	}
 
-	async _executeAsk(process, config, payload) {
+	async _executeAsk(process, config, payload, pendingContextUpdates = null) {
 		if (!process?.actor?.actorOps) return
 		const evaluated = await this._evaluatePayload(
 			config,
@@ -263,6 +286,7 @@ export class ProcessEngine {
 			payload,
 			process.lastToolResult,
 			process.actor,
+			pendingContextUpdates,
 		)
 		const { target, type, payload: eventPayload = {} } = evaluated
 		if (!target || !type) return

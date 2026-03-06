@@ -41,45 +41,30 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 		throw new Error('[createAndPushMessage] messageData must be an object')
 	}
 
-	let t0 = _perf.now()
-	// 1. Get message schema co-id from inbox schema (preferred - avoids resolve warnings)
-	// Extract from inbox schema's items.$co property (same pattern as processInbox)
-	let messageSchemaCoId = null
-	try {
-		// Get inbox schema to find message schema reference
-		const inboxSchemaStore = await dbEngine.execute({
-			op: 'schema',
-			fromCoValue: inboxCoId,
-		})
-		const inboxSchema = inboxSchemaStore.value
+	const peer = dbEngine.peer
+	if (!peer) {
+		throw new Error('[createAndPushMessage] dbEngine.peer is required')
+	}
 
-		// Extract message schema co-id from inbox schema's items.$co property
+	let t0 = _perf.now()
+	// 1. Get message schema co-id from inbox schema via resolve() (uses CoCache / universalRead)
+	let messageSchemaCoId = null
+	let inboxSchema = null
+	try {
+		inboxSchema = await resolve(peer, { fromCoValue: inboxCoId }, { returnType: 'schema' })
+
 		if (inboxSchema?.items?.$co) {
 			const messageSchemaRef = inboxSchema.items.$co
 
 			if (messageSchemaRef.startsWith('co_z')) {
-				// Already a co-id
 				messageSchemaCoId = messageSchemaRef
 			} else if (messageSchemaRef.startsWith('°Maia/schema/')) {
-				// Schema reference - resolve it using operations API
-				const schemaName = messageSchemaRef.replace('°Maia/schema/', '')
-				const messageSchemaStore = await dbEngine.execute({
-					op: 'schema',
-					schemaName: schemaName,
-				})
-				const messageSchema = messageSchemaStore.value
-				if (messageSchema?.$id) {
-					messageSchemaCoId = messageSchema.$id
-				}
+				messageSchemaCoId = await resolve(peer, messageSchemaRef, { returnType: 'coId' })
 			}
 		}
 
-		// Fallback: If not found in inbox schema, use resolve operation
 		if (!messageSchemaCoId) {
-			messageSchemaCoId = await dbEngine.execute({
-				op: 'resolve',
-				humanReadableKey: '°Maia/schema/event',
-			})
+			messageSchemaCoId = await resolve(peer, '°Maia/schema/event', { returnType: 'coId' })
 		}
 
 		if (!messageSchemaCoId || !messageSchemaCoId.startsWith('co_z')) {
@@ -94,7 +79,7 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 
 	// 2. CRITICAL: Load and validate message data against message schema before creating
 	//    This ensures type, payload, source, target, processed fields are valid
-	const messageSchema = await resolve(dbEngine.peer, messageSchemaCoId, { returnType: 'schema' })
+	const messageSchema = await resolve(peer, messageSchemaCoId, { returnType: 'schema' })
 	if (!messageSchema) {
 		throw new Error(`[createAndPushMessage] Message schema not found: ${messageSchemaCoId}`)
 	}

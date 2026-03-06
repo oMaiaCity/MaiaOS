@@ -430,41 +430,17 @@ export class ActorEngine {
 	}
 
 	/**
-	 * Attach inbox subscription for debounced processEvents. Shared by spawnActor and view actors.
+	 * Attach inbox watcher via InboxEngine. Shared by spawnActor and view actors.
 	 * @param {string} actorId - Actor ID
 	 * @param {string} inboxCoId - Inbox CoStream co-id
+	 * @param {Object} actorConfig - Actor config (for spawn if needed)
 	 * @param {Array} configUnsubscribes - Array to push unsubscribe function to
-	 * @returns {Promise<Object|null>} Inbox store or null
 	 * @private
 	 */
-	async _attachInboxSubscription(actorId, inboxCoId, configUnsubscribes) {
-		const schemaCoId = await this.dataEngine?.peer?.resolve?.(
-			{ fromCoValue: inboxCoId },
-			{ returnType: 'coId' },
-		)
-		const inboxStore = schemaCoId
-			? await this.dataEngine
-					?.execute({ op: 'read', schema: schemaCoId, key: inboxCoId })
-					.catch(() => null)
-			: null
-		if (!inboxStore?.subscribe || !configUnsubscribes) return inboxStore
-		let debounceTimeout = null
-		const inboxUnsub = inboxStore.subscribe(() => {
-			if (!this.actors.has(actorId)) return
-			if (debounceTimeout) clearTimeout(debounceTimeout)
-			debounceTimeout = setTimeout(() => {
-				debounceTimeout = null
-				this.processEvents(actorId)
-			}, 50)
-		})
-		configUnsubscribes.push(() => {
-			if (debounceTimeout) {
-				clearTimeout(debounceTimeout)
-				debounceTimeout = null
-			}
-			inboxUnsub?.()
-		})
-		return inboxStore
+	_attachInboxSubscription(actorId, inboxCoId, actorConfig, configUnsubscribes) {
+		if (!this.inboxEngine || !configUnsubscribes) return
+		const unsub = this.inboxEngine.watchInbox(inboxCoId, actorId, actorConfig)
+		configUnsubscribes.push(unsub)
 	}
 
 	/**
@@ -596,7 +572,7 @@ export class ActorEngine {
 			actor.process = await this.processEngine.createProcess(configDef, actor)
 		}
 		if (!options.skipInboxSubscription) {
-			await this._attachInboxSubscription(actorId, inboxCoId, configUnsubscribes)
+			this._attachInboxSubscription(actorId, inboxCoId, actorConfig, configUnsubscribes)
 		}
 		this.actors.set(actorId, actor)
 		return actor
@@ -664,6 +640,12 @@ export class ActorEngine {
 		return this.inboxEngine.validatePayloadForActor(actorId, eventType, payload)
 	}
 
+	/** Returns { valid, errors } for detailed logging when validation fails */
+	async validateEventPayloadForSendWithDetails(actorId, eventType, payload) {
+		if (!this.inboxEngine) return { valid: true, errors: null }
+		return this.inboxEngine.validatePayloadForActorWithDetails(actorId, eventType, payload)
+	}
+
 	async processEvents(actorId) {
 		const actor = this.actors.get(actorId)
 		if (!actor || !actor.inboxCoId || !this.dataEngine || !this.inboxEngine || actor._isProcessing)
@@ -693,6 +675,16 @@ export class ActorEngine {
 					}
 					const validated = await this.inboxEngine.validateMessage(actor, message)
 					if (!validated.valid) {
+						if (
+							typeof window !== 'undefined' &&
+							(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
+						) {
+							console.warn('[ActorEngine] Message validation failed (skipped):', {
+								actorId: actorId?.slice(0, 24),
+								messageType: message.type,
+								payloadKeys: message.payload ? Object.keys(message.payload) : [],
+							})
+						}
 						await markProcessed()
 						continue
 					}

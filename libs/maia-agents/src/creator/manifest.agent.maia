@@ -4,6 +4,9 @@
 	"name": "Creator",
 	"description": "Developer logs and diagnostics",
 	"actor": "°Maia/creator/actor/intent",
+	"runtime": [
+		"browser"
+	],
 	"dependencies": [
 		"°Maia/creator/actor/intent",
 		"°Maia/actor/views/layout-creator",
