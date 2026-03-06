@@ -1,6 +1,9 @@
+import { normalizeCoValueData } from '@MaiaOS/db'
 import { validateViewDef } from '@MaiaOS/schemata'
 import { containsExpressions, resolveExpressions } from '@MaiaOS/schemata/expression-resolver'
 import { extractDOMValuesAsync } from '@MaiaOS/schemata/payload-resolver'
+import { sanitizePayloadForValidation } from '../utils/payload-sanitizer.js'
+import { perfPipelineStart, perfPipelineStep } from '../utils/perf-pipeline.js'
 import { readStore } from '../utils/store-reader.js'
 import { RENDER_STATES } from './actor.engine.js'
 
@@ -226,6 +229,8 @@ export class ViewEngine {
 		this._scrollMutationObservers = new Map()
 		/** Track last-rendered profile.avatar coId per actor for reactive re-hydration on avatar change */
 		this._lastAvatarCoIdPerActor = new Map()
+		/** Debounce: eventDef.$debounce ms (schema-driven), key -> lastFireTime */
+		this._eventDebounce = new Map()
 	}
 
 	_makeStyleRerenderSubscribe(actorId) {
@@ -784,6 +789,24 @@ export class ViewEngine {
 
 	async _handleEvent(e, eventDef, data, element, actorId) {
 		const eventName = eventDef.send
+		const DEBUG =
+			typeof window !== 'undefined' &&
+			(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
+
+		// Schema-driven debounce: eventDef.$debounce (ms) prevents event storms from rapid clicks
+		// Use actorId:eventName key so any rapid click on this list is coalesced (itemId can be unstable)
+		const debounceMs = eventDef.$debounce
+		if (typeof debounceMs === 'number' && debounceMs > 0) {
+			const key = `${actorId}:${eventName}`
+			const now = Date.now()
+			const last = this._eventDebounce.get(key)
+			if (last != null && now - last < debounceMs) return
+			this._eventDebounce.set(key, now)
+			setTimeout(() => this._eventDebounce.delete(key), debounceMs)
+		}
+
+		perfPipelineStart(`view:${eventName}`)
+		if (DEBUG) console.log('[ViewEngine] Event:', { eventName, actorId: actorId?.slice(0, 24) })
 		let payload = eventDef.payload || {}
 
 		if (e.type === 'dragover' || e.type === 'drop' || e.type === 'dragenter') {
@@ -852,15 +875,33 @@ export class ViewEngine {
 							this.actorOps?.reportUploadProgress?.(actorId, loaded, total, phase),
 					})
 					payloadToValidate = { [blobRefKey]: result.coId, mimeType: result.mimeType }
+				} else if (payloadToValidate && typeof payloadToValidate === 'object') {
+					// Plain-ify: CoMap/Proxy from context have extra props; additionalProperties fails
+					payloadToValidate = normalizeCoValueData(payloadToValidate)
+					// Strip CoJSON metadata (_coValueType etc.) and ensure definition is string for schema items
+					payloadToValidate = sanitizePayloadForValidation(payloadToValidate)
 				}
 
 				// Runtime schema validation (from actor's interface) - skip send if payload invalid
-				const payloadValid = await this.actorOps.validateEventPayloadForSend?.(
+				const validation = (await this.actorOps.validateEventPayloadForSendWithDetails?.(
 					actorId,
 					eventName,
 					payloadToValidate,
-				)
-				if (!payloadValid) return
+				)) ?? { valid: true, errors: null }
+				if (!validation.valid) {
+					if (
+						typeof window !== 'undefined' &&
+						(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
+					) {
+						console.warn('[ViewEngine] Payload validation failed - event not delivered:', {
+							event: eventName,
+							actorId: actorId?.slice(0, 24),
+							payloadKeys: payloadToValidate ? Object.keys(payloadToValidate) : [],
+							errors: validation.errors,
+						})
+					}
+					return
+				}
 
 				// CLEAN ARCHITECTURE: For update-input types on blur, only send if DOM value differs from CURRENT context
 				// This prevents repopulation after state machine explicitly clears the field
@@ -881,6 +922,7 @@ export class ViewEngine {
 					}
 				}
 
+				perfPipelineStep('view:deliver', { event: eventName })
 				await this.actorOps?.deliverEvent?.(actorId, actorId, eventName, payloadToValidate)
 
 				// AUTO-CLEAR INPUTS: After form submission (any event except update-input types), clear all input fields

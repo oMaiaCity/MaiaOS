@@ -11,6 +11,8 @@
  * - Trust CRDT sync - CoJSON handles reactivity automatically
  */
 
+import { resolve } from '../schema/resolver.js'
+import { extractCoValueData } from './data-extraction.js'
 import { read as universalRead } from './read.js'
 import { waitForStoreReady } from './read-operations.js'
 
@@ -33,43 +35,23 @@ export async function processInbox(peer, actorId, inboxCoId) {
 		throw new Error('[processInbox] Cannot get current session ID from peer')
 	}
 
-	// Get dbEngine from peer (needed for operations API)
-	const dbEngine = peer.dbEngine
-	if (!dbEngine) {
-		throw new Error('[processInbox] Backend must have dbEngine set')
-	}
-
-	// Get message schema co-id (needed for reading/updating message CoMaps)
+	// Get message schema co-id via resolve() (uses CoCache / universalRead)
 	let messageSchemaCoId = null
 	try {
-		// Get inbox schema to find message schema reference
-		const inboxSchemaStore = await dbEngine.execute({
-			op: 'schema',
-			fromCoValue: inboxCoId,
-		})
-		const inboxSchema = inboxSchemaStore.value
+		const inboxSchema = await resolve(peer, { fromCoValue: inboxCoId }, { returnType: 'schema' })
 
-		// Extract message schema co-id from inbox schema's items.$co property
 		if (inboxSchema?.items?.$co) {
 			const messageSchemaRef = inboxSchema.items.$co
 
 			if (messageSchemaRef.startsWith('co_z')) {
-				// Already a co-id
 				messageSchemaCoId = messageSchemaRef
 			} else if (messageSchemaRef.startsWith('°Maia/schema/')) {
-				// Schema reference - resolve it using operations API
-				const schemaName = messageSchemaRef.replace('°Maia/schema/', '')
-				const messageSchemaStore = await dbEngine.execute({
-					op: 'schema',
-					schemaName: schemaName,
-				})
-				const messageSchema = messageSchemaStore.value
-				if (messageSchema?.$id) {
-					messageSchemaCoId = messageSchema.$id
-				} else {
-				}
-			} else {
+				messageSchemaCoId = await resolve(peer, messageSchemaRef, { returnType: 'coId' })
 			}
+		}
+
+		if (!messageSchemaCoId) {
+			messageSchemaCoId = await resolve(peer, '°Maia/schema/event', { returnType: 'coId' })
 		}
 	} catch (_error) {}
 
@@ -80,10 +62,19 @@ export async function processInbox(peer, actorId, inboxCoId) {
 	}
 	// CRITICAL: Process ALL sessions - client must see server replies (e.g. SUCCESS from aiChat on moai)
 	// Session-only processing caused: maia never saw SUCCESS (moai's session) → result: null, no LLM response
-	const allMessages = []
+	const allItems = []
 	for (const items of Object.values(inboxData.sessions || {})) {
-		if (Array.isArray(items)) allMessages.push(...items)
+		if (Array.isArray(items)) allItems.push(...items)
 	}
+	// Deduplicate by _coId: same message can appear via multiple sessions (e.g. cross-peer sync)
+	// Without this, CHAT is processed twice → 2x LLM calls, 2x latency
+	const seenCoIds = new Set()
+	const allMessages = allItems.filter((m) => {
+		const cid = m._coId
+		if (!cid || seenCoIds.has(cid)) return false
+		seenCoIds.add(cid)
+		return true
+	})
 
 	const unprocessedMessages = []
 	for (const message of allMessages) {
@@ -105,18 +96,27 @@ export async function processInbox(peer, actorId, inboxCoId) {
 
 		// Message is a CoMap CoValue reference - read using universal read() API
 		try {
-			// Use universal read() API to handle progressive loading
-			const messageStore = await universalRead(peer, messageCoId, messageSchemaCoId)
+			let messageData = null
 
-			// Wait for store to be ready (handles progressive loading)
-			try {
-				await waitForStoreReady(messageStore, messageCoId, 2000)
-			} catch (_waitError) {
-				continue
+			// Fast path: message already in node (just created locally)
+			const core = peer.getCoValue?.(messageCoId)
+			if (core && peer.isAvailable(core)) {
+				messageData = extractCoValueData(peer, core, messageSchemaCoId)
 			}
 
-			// Extract message data from store.value
-			const messageData = messageStore.value
+			// Fallback: progressive loading via universalRead + waitForStoreReady
+			if (!messageData || messageData.error) {
+				const messageStore = await universalRead(peer, messageCoId, messageSchemaCoId, null, null, {
+					deepResolve: false,
+				})
+				try {
+					await waitForStoreReady(messageStore, messageCoId, 2000)
+				} catch (_waitError) {
+					continue
+				}
+				messageData = messageStore.value
+			}
+
 			if (!messageData || messageData.error) {
 				continue
 			}

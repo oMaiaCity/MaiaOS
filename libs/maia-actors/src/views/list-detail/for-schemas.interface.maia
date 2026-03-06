@@ -28,7 +28,7 @@
 						"id",
 						"label"
 					],
-					"additionalProperties": false
+					"additionalProperties": true
 				}
 			},
 			"required": [

@@ -53,6 +53,9 @@ function normalizeAgentForSeeding(agent) {
 	if (!normalized.$id || !normalized.$id.startsWith('°Maia/agent/')) {
 		normalized.$id = `°Maia/agent/${key}`
 	}
+	if (!Array.isArray(normalized.runtime)) {
+		normalized.runtime = ['browser']
+	}
 	return normalized
 }
 
@@ -95,22 +98,6 @@ export function buildSeedConfig(agentRegistries) {
 		}
 	}
 	return { configs: merged, data: merged.data || {} }
-}
-
-/** Runtime config (v1: static). Maps runtime type to agents list. */
-const RUNTIME_CONFIGS = {
-	browser: ['todos', 'chat', 'sparks', 'logs', 'humans'],
-}
-
-/**
- * Get runtime config for a given runtime type.
- * @param {string} runtimeType - e.g. 'browser'
- * @returns {{ agents: string[] }} Agent keys for this runtime
- */
-export function getRuntimeConfig(runtimeType) {
-	const agents = RUNTIME_CONFIGS[runtimeType]
-	if (!agents) return { agents: [] }
-	return { agents: [...agents] }
 }
 
 /**

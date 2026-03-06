@@ -274,7 +274,8 @@ async function appendOp(peer, dataEngine, params) {
 			appendedCount++
 		}
 	}
-	if (peer.node?.storage) await peer.node.syncManager.waitForStorageSync(coId)
+	// CRITICAL: Don't wait for storage sync - it blocks the UI (inbox push ~12s).
+	// Storage sync happens asynchronously; reactive subscriptions fire when data arrives.
 	const result = {
 		coId,
 		[targetCotype === 'colist' ? 'itemsAppended' : 'itemsPushed']: appendedCount,
@@ -315,7 +316,7 @@ async function spliceCoListOp(peer, dataEngine, params) {
 			content.append(it)
 		}
 	}
-	if (peer.node?.storage) await peer.node.syncManager.waitForStorageSync(coId)
+	// CRITICAL: Don't wait for storage sync - it blocks the UI (same as append/push).
 	return createSuccessResult(
 		{ coId, deleted: toDelete, inserted: items.length },
 		{ op: 'spliceCoList' },

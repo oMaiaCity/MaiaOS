@@ -5,6 +5,17 @@
  */
 
 import { createCoValueForSpark } from '../covalue/create-covalue-for-spark.js'
+import { extractCoValueData } from './data-extraction.js'
+
+// Enable: localStorage.setItem('maia:perf:chat', '1')
+const _perfChat =
+	typeof window !== 'undefined' && localStorage?.getItem('maia:perf:chat') === '1'
+		? {
+				now: () => performance.now(),
+				log: (label, ms) => console.log(`[Perf:chat] ${label}: ${ms}ms`),
+			}
+		: { now: () => 0, log: () => {} }
+
 import * as collectionHelpers from './collection-helpers.js'
 
 // Schema indexing is handled by storage-level hooks (more resilient than API hooks)
@@ -93,6 +104,10 @@ export async function create(peer, schema, data, options = {}) {
 		throw new Error('[MaiaDB] Data must be array for colist')
 	}
 
+	// Chat message: { role, content, displayName }
+	const isChatMessage = data && 'role' in data && 'content' in data
+	const t0 = isChatMessage ? _perfChat.now() : 0
+
 	const { coValue } = await createCoValueForSpark(peer, spark, {
 		schema,
 		cotype,
@@ -101,23 +116,32 @@ export async function create(peer, schema, data, options = {}) {
 		isSchemaDefinition,
 	})
 
-	// CRITICAL: Don't wait for storage sync - it blocks the UI!
-	// The co-value is already created and available locally
-	// Storage sync happens asynchronously in the background
-	// Schema indexing is handled by storage-level hooks (storage-hook-wrapper.js)
-	// This is more resilient than CRUD hooks because it catches ALL writes:
-	// - Writes from CRUD API
-	// - Writes from sync (remote peers)
-	// - Writes from direct CoJSON operations
-	// No need for CRUD-level hooks here
+	if (isChatMessage) {
+		_perfChat.log('create.createCoValueForSpark', Math.round((_perfChat.now() - t0) * 100) / 100)
+	}
 
-	// Return created CoValue data via read() API (single gate, normalized)
+	// Fast path: coValue is local and available—extract from node, no read/store wait
+	// coValue from createCoValueForSpark is RawCoMap/RawCoList (content); peer.isAvailable expects CoValueCore
+	const coValueCore = peer.getCoValue?.(coValue?.id) ?? coValue
+	if (coValueCore && peer.isAvailable(coValueCore)) {
+		const extracted = extractCoValueData(peer, coValueCore, schema)
+		if (extracted && !extracted.error) {
+			return { id: coValue.id, ...data, ...extracted }
+		}
+		return { id: coValue.id, ...data, type: cotype, schema }
+	}
+
+	// Fallback: coValue not yet available (rare remote/edge case)
 	const store = await peer.read(null, coValue.id, null, null, { deepResolve: false })
 	const { waitForStoreReady } = await import('./read-operations.js')
+	const t1 = isChatMessage ? _perfChat.now() : 0
 	try {
 		await waitForStoreReady(store, coValue.id, 5000)
 	} catch (_e) {
 		return { id: coValue.id, ...data, type: cotype, schema }
+	}
+	if (isChatMessage) {
+		_perfChat.log('create.waitForStoreReady', Math.round((_perfChat.now() - t1) * 100) / 100)
 	}
 	const extracted = store.value
 	if (extracted && !extracted.error) {
