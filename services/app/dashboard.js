@@ -239,23 +239,21 @@ export async function renderDashboard(
 				</div>
 			</div>
 		`
-		const voiceCard = `
-			<div class="dashboard-card whitish-card" onclick="window.navigateTo('/voice')">
+		const maiaAICard = `
+			<div class="dashboard-card whitish-card" onclick="window.navigateToScreen('maia-ai')">
 				<div class="dashboard-card-content">
 					<div class="dashboard-card-icon">
 						<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-							<path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/>
-							<path d="M19 10v2a7 7 0 0 1-14 0v-2"/>
-							<line x1="12" y1="19" x2="12" y2="23"/>
-							<line x1="8" y1="23" x2="16" y2="23"/>
+							<path d="M12 2a2 2 0 0 0-2 2c0 .74.4 1.39 1 1.73V7h2V5.73c.6-.34 1-.99 1-1.73a2 2 0 0 0-2-2z"/>
+							<path d="M15 10h-6a3 3 0 0 0-3 3v6a3 3 0 0 0 3 3h6a3 3 0 0 0 3-3v-6a3 3 0 0 0-3-3z"/>
+							<path d="M10 14l1.5 1.5L14 13"/>
 						</svg>
 					</div>
-					<h3 class="dashboard-card-title">Voice</h3>
-					<p class="dashboard-card-description">Real-time speech-to-text</p>
+					<h3 class="dashboard-card-title">Maia AI</h3>
+					<p class="dashboard-card-description">On-device chat & voice</p>
 				</div>
 			</div>
 		`
-
 		const sparkCards = sparks
 			.map(
 				(spark) => `
@@ -274,7 +272,7 @@ export async function renderDashboard(
 			)
 			.join('')
 
-		cards = dbViewerCard + voiceCard + sparkCards
+		cards = dbViewerCard + maiaAICard + sparkCards
 	} else {
 		// Level 2: Show agents for the selected spark (no back card - Switch Spark in bottom navbar)
 		const agents = await loadAgentsFromSpark(maia, currentSpark)
