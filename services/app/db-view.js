@@ -34,6 +34,7 @@ async function getSchemaFromDb(maia, schemaRef) {
 }
 
 import { renderAgentViewer, renderDashboard } from './dashboard.js'
+import { renderMaiaAIView } from './maia-ai-view.js'
 import { escapeHtml, getSyncStatusMessage, truncate } from './utils.js'
 
 // Cache for CoBinary image data URLs - survives re-renders, enables progressive reactive preview
@@ -164,6 +165,11 @@ export async function renderApp(
 		)
 		hydrateCobinaryPreviews(maia)
 		setTimeout(() => hydrateCobinaryPreviews(maia), 500)
+		return
+	}
+
+	if (currentScreen === 'maia-ai') {
+		await renderMaiaAIView(maia, authState, syncState, navigateToScreen)
 		return
 	}
 
