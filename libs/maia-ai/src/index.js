@@ -70,7 +70,7 @@ export async function initialize(opts = {}) {
 		typeof window !== 'undefined' ? `${window.location.origin}/runanywhere-wasm/` : MAIA_AI_WASM_BASE
 	LlamaCppBridge.shared.wasmUrl = `${base}racommons-llamacpp.js`
 	LlamaCppBridge.shared.webgpuWasmUrl = `${base}racommons-llamacpp-webgpu.js`
-	await LlamaCPP.register({ acceleration: 'webgpu' })
+	await LlamaCPP.register({ acceleration: 'auto' })
 	ToolCalling.registerTool(
 		{
 			name: 'get_current_time',
