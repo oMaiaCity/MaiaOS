@@ -77,6 +77,10 @@ Bun.serve({
 	port: 4200,
 	strictPort: true,
 	development: { hmr: true, console: true },
+	headers: [
+		['Cross-Origin-Opener-Policy', 'same-origin'],
+		['Cross-Origin-Embedder-Policy', 'credentialless'],
+	],
 	routes: {
 		// Internal: raw index - only our wrappers should serve this with COOP/COEP
 		'/__index_raw': index,
