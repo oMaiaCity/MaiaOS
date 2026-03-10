@@ -9,8 +9,7 @@
 			"@MaiaOS/schemata/*": ["./libs/maia-schemata/src/*"],
 			"@MaiaOS/self": ["./libs/maia-self/src/index.js"],
 			"@MaiaOS/actors": ["./libs/maia-actors/src"],
-			"@MaiaOS/agents": ["./libs/maia-agents/src"],
-			"@MaiaOS/maia-voice": ["./libs/maia-voice/src/index.js"]
+			"@MaiaOS/agents": ["./libs/maia-agents/src"]
 		}
 	}
 }

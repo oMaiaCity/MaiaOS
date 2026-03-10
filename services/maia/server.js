@@ -32,10 +32,15 @@ const MIME_TYPES = {
 	'.ttf': 'font/ttf',
 	'.webmanifest': 'application/manifest+json',
 	'.map': 'application/json',
+	'.wasm': 'application/wasm',
 }
 
 serve({
 	port: PORT,
+	headers: [
+		['Cross-Origin-Opener-Policy', 'same-origin'],
+		['Cross-Origin-Embedder-Policy', 'credentialless'],
+	],
 	async fetch(req) {
 		const url = new URL(req.url)
 		const pathname = url.pathname

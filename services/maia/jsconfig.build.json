@@ -3,8 +3,7 @@
 		"baseUrl": ".",
 		"paths": {
 			"@MaiaOS/loader": ["../../libs/maia-distros/output/maia-client.mjs"],
-			"@MaiaOS/agents": ["../../libs/maia-distros/output/agents.mjs"],
-			"@MaiaOS/maia-voice": ["../../libs/maia-voice/src/index.js"]
+			"@MaiaOS/agents": ["../../libs/maia-distros/output/agents.mjs"]
 		}
 	}
 }

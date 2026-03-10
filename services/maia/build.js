@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { spawnSync } from 'node:child_process'
-import { existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 /**
  * Bun build for maia SPA - SPA mode intact.
  * Requires distros built first (maia-client.mjs, agents.mjs).
@@ -106,6 +106,33 @@ await Bun.write(join(distDir, 'style.css'), bundledCss)
 
 // brand/ already in dist via sync-assets above
 
+// Copy RunAnywhere WASM (llamacpp + sherpa) from node_modules to dist
+const repoRoot = join(serviceDir, '../..')
+const llamaWasmSrc = join(repoRoot, 'node_modules/@runanywhere/web-llamacpp/wasm')
+const onnxSherpaSrc = join(repoRoot, 'node_modules/@runanywhere/web-onnx/wasm/sherpa')
+const wasmOutDir = join(distDir, 'runanywhere-wasm')
+if (existsSync(llamaWasmSrc)) {
+	mkdirSync(wasmOutDir, { recursive: true })
+	for (const file of [
+		'racommons-llamacpp.wasm',
+		'racommons-llamacpp.js',
+		'racommons-llamacpp-webgpu.wasm',
+		'racommons-llamacpp-webgpu.js',
+	]) {
+		const src = join(llamaWasmSrc, file)
+		if (existsSync(src)) {
+			cpSync(src, join(wasmOutDir, file))
+		}
+	}
+}
+if (existsSync(onnxSherpaSrc)) {
+	const sherpaOut = join(wasmOutDir, 'sherpa')
+	mkdirSync(sherpaOut, { recursive: true })
+	for (const file of readdirSync(onnxSherpaSrc)) {
+		cpSync(join(onnxSherpaSrc, file), join(sherpaOut, file))
+	}
+}
+
 // Verify critical assets
 const distHas = (p) => existsSync(join(distDir, p))
 const checks = [
@@ -114,6 +141,10 @@ const checks = [
 	[
 		'brand/fonts/IndieFlower/IndieFlower-Regular.ttf',
 		distHas('brand/fonts/IndieFlower/IndieFlower-Regular.ttf'),
+	],
+	[
+		'runanywhere-wasm/racommons-llamacpp-webgpu.js',
+		distHas('runanywhere-wasm/racommons-llamacpp-webgpu.js'),
 	],
 ]
 const missing = checks.filter(([, ok]) => !ok).map(([p]) => p)
