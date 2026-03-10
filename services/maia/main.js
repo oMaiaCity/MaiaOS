@@ -27,7 +27,6 @@ import {
 	renderUnsupportedBrowser,
 } from './signin.js'
 import { getSyncStatusMessage } from './utils.js'
-import { renderVoicePage } from './voice.js'
 
 let maia
 let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'agent-viewer'
@@ -143,43 +142,6 @@ async function handleRoute() {
 		} catch (error) {
 			renderUnsupportedBrowser(error.message)
 		}
-		return
-	}
-
-	if (path === '/voice') {
-		removeSigninKeyHandler()
-		const ready = detectMode() === 'agent' || (authState.signedIn && maia)
-		if (ready) {
-			try {
-				await renderVoicePage(maia, authState, syncState, navigateToScreen)
-			} catch (error) {
-				showToast(`Failed to render voice: ${error.message}`, 'error')
-			}
-			return
-		}
-		if (authState.signedIn && !maia) {
-			renderLoadingConnectingScreen()
-			let waitCount = 0
-			const checkMaia = setInterval(() => {
-				waitCount++
-				if (maia) {
-					clearInterval(checkMaia)
-					cleanupLoadingScreenSync()
-					renderVoicePage(maia, authState, syncState, navigateToScreen).catch((e) =>
-						showToast(`Failed to render voice: ${e.message}`, 'error'),
-					)
-				} else if (waitCount > 20) {
-					clearInterval(checkMaia)
-					cleanupLoadingScreenSync()
-					authState = { signedIn: false, accountID: null }
-					navigateTo('/signin')
-				} else {
-					updateLoadingConnectingScreen()
-				}
-			}, 500)
-			return
-		}
-		navigateTo('/signin')
 		return
 	}
 
@@ -847,6 +809,12 @@ function goBack() {
 	// If we're in agent mode, exit agent mode first
 	if (currentAgent !== null) {
 		loadAgent(null)
+		return
+	}
+
+	// If we're in Maia AI, go to dashboard
+	if (currentScreen === 'maia-ai') {
+		navigateToScreen('dashboard')
 		return
 	}
 

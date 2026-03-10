@@ -21,7 +21,6 @@ services/maia/
 
 - `@MaiaOS/loader` (via maia-distros) - MaiaOS kernel, auth
 - `@MaiaOS/maia-distros` - Pre-built bundles (maia-client.mjs, agents.mjs)
-- `@MaiaOS/maia-voice` - On-device speech-to-text for the /voice route
 
 ## Development
 
@@ -44,8 +43,6 @@ Server runs on **http://localhost:4200**
 - **/signin**, **/signup** - Authentication
 - **/me**, **/dashboard** - Database inspector (requires passkey auth)
   - Includes dynamic agent rendering - navigate to "Todos" in the sidebar to load agents dynamically
-- **/voice** - Real-time speech-to-text (requires passkey auth)
-  - On-device transcription via MoonshineJS; Start/Stop buttons, live transcript display
 
 ## Architecture
 
