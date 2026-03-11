@@ -223,13 +223,10 @@ async function startApp() {
 		env: { ...process.env },
 	})
 
-	appProcess.stdout.on('data', (data) => {
-		processOutput('app', data)
-	})
-
-	appProcess.stderr.on('data', (data) => {
-		processOutput('app', data, true)
-	})
+	appProcess.stdout.on('data', (data) => processOutput('app', data))
+	appProcess.stdout.on('error', () => {})
+	appProcess.stderr.on('data', (data) => processOutput('app', data, true))
+	appProcess.stderr.on('error', () => {})
 
 	appProcess.on('error', (_error) => {
 		process.exit(1)
@@ -254,13 +251,10 @@ async function startSync() {
 		env: { ...process.env },
 	})
 
-	syncProcess.stdout.on('data', (data) => {
-		processOutput('sync', data)
-	})
-
-	syncProcess.stderr.on('data', (data) => {
-		processOutput('sync', data, true)
-	})
+	syncProcess.stdout.on('data', (data) => processOutput('sync', data))
+	syncProcess.stdout.on('error', () => {})
+	syncProcess.stderr.on('data', (data) => processOutput('sync', data, true))
+	syncProcess.stderr.on('error', () => {})
 
 	syncProcess.on('error', (_error) => {
 		// Non-fatal - sync service is optional
@@ -433,15 +427,12 @@ async function killChildren() {
 }
 
 function setupSignalHandlers() {
-	const logger = createLogger('dev')
 	let shuttingDown = false
 
 	async function onShutdown() {
 		if (shuttingDown) return
 		shuttingDown = true
 		process.exitCode = 0
-		console.log()
-		logger.log('Shutting down...')
 		try {
 			await killChildren()
 		} finally {

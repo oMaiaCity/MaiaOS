@@ -46,18 +46,12 @@ export function renderSignInPrompt(hasExistingAccount, viewMode, showTestAven = 
 	// State 2: Signin – big Unlock button only, link to switch to signup
 
 	const isSignupMode = mode === 'signup'
-	const testAvenNameRaw =
-		(typeof import.meta !== 'undefined' && import.meta.env?.VITE_AVEN_TEST_NAME) ||
-		window.__MAIA_DEV_ENV__?.VITE_AVEN_TEST_NAME ||
-		'Test'
-	const testAvenName = testAvenNameRaw.startsWith('Aven ')
-		? testAvenNameRaw
-		: `Aven ${testAvenNameRaw}`
 	const testAvenButton = showTestAven
 		? `
 						<button class="btn btn-outline" onclick="window.handleSignInWithTestAven()" style="margin-top: 0.5rem;">
-							Sign in with ${testAvenName}
+							Sign in / Register with Test AVEN
 						</button>
+						<p class="sign-in-test-hint" style="font-size: 0.75rem; color: var(--color-muted, #666); margin-top: 0.25rem;">Local dev only · no passkeys</p>
 					`
 		: ''
 
