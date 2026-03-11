@@ -1,4 +1,4 @@
-# Root Bun config - applies to maia, moai, and libs
+# Root Bun config - applies to app, sync, and libs
 # .maia files treated as JSON (required for @MaiaOS/vibes imports)
 [loader]
 ".maia" = "json"

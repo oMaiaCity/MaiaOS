@@ -6,17 +6,17 @@
 import { createErrorEntry } from '@MaiaOS/schemata/operation-result'
 
 /**
- * Get API base URL for moai service (LLM, sync, agent API).
- * Client connects directly to moai (no proxy). CORS enabled on moai.
+ * Get API base URL for sync service (LLM, sync, agent API).
+ * Client connects directly to sync (no proxy). CORS enabled on sync.
  *
- * Browser: VITE_PEER_MOAI (build-time from fly.toml [build.args]).
- * Node: process.env.PEER_MOAI (agent mode).
- * Dev: localhost:4201. Prod: moai.next.maia.city
+ * Browser: VITE_PEER_SYNC_HOST (build-time from fly.toml [build.args]).
+ * Node: process.env.PEER_SYNC_HOST (agent mode).
+ * Dev: localhost:4201. Prod: sync.next.maia.city
  */
 export function getApiBaseUrl() {
 	const domain =
-		import.meta.env?.VITE_PEER_MOAI ||
-		(typeof process !== 'undefined' && process.env?.PEER_MOAI) ||
+		import.meta.env?.VITE_PEER_SYNC_HOST ||
+		(typeof process !== 'undefined' && process.env?.PEER_SYNC_HOST) ||
 		'localhost:4201'
 	if (domain.startsWith('http://') || domain.startsWith('https://')) {
 		return domain

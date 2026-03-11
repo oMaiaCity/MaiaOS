@@ -32,7 +32,7 @@ const inMemory = () => undefined
 
 /**
  * Get storage instance based on runtime and configuration
- * Agent mode: PEER_STORAGE, PEER_DB_PATH
+ * Agent mode: PEER_SYNC_STORAGE, PEER_DB_PATH
  * Human mode (browser): OPFS first, IndexedDB fallback (MAIA_STORAGE=indexeddb to force)
  *
  * @param {Object} [options]
@@ -46,7 +46,7 @@ export async function getStorage(options = {}) {
 	const runtime = detectRuntime()
 	const storageType =
 		mode === 'agent'
-			? typeof process !== 'undefined' && process.env?.PEER_STORAGE
+			? typeof process !== 'undefined' && process.env?.PEER_SYNC_STORAGE
 			: getEnvVar('MAIA_STORAGE')
 
 	if (runtime === 'edge') {
@@ -89,12 +89,12 @@ export async function getStorage(options = {}) {
 		if (mode === 'agent' && !forceInMemory) {
 			if (storageType === 'in-memory' || storageType === 'jazz-cloud') {
 				throw new Error(
-					'[STORAGE] Agent/server requires persistent storage. Use PEER_STORAGE=pglite or PEER_STORAGE=postgres. No in-memory or jazz-cloud.',
+					'[STORAGE] Agent/server requires persistent storage. Use PEER_SYNC_STORAGE=pglite or PEER_SYNC_STORAGE=postgres. No in-memory or jazz-cloud.',
 				)
 			}
 			if (storageType && storageType !== 'pglite' && storageType !== 'postgres') {
 				throw new Error(
-					`[STORAGE] Agent/server mode requires PEER_STORAGE=pglite or PEER_STORAGE=postgres. Got: ${storageType}`,
+					`[STORAGE] Agent/server mode requires PEER_SYNC_STORAGE=pglite or PEER_SYNC_STORAGE=postgres. Got: ${storageType}`,
 				)
 			}
 		}
@@ -102,7 +102,7 @@ export async function getStorage(options = {}) {
 		// Postgres (Fly MPG or any Postgres)
 		if (storageType === 'postgres' && !forceInMemory) {
 			if (!databaseUrl) {
-				throw new Error('[STORAGE] PEER_STORAGE=postgres requires PEER_DB_URL env var')
+				throw new Error('[STORAGE] PEER_SYNC_STORAGE=postgres requires PEER_DB_URL env var')
 			}
 			try {
 				const { getPostgresStorage } = await import('@MaiaOS/storage/adapters/postgres.js')
@@ -135,7 +135,7 @@ export async function getStorage(options = {}) {
 		// Agent mode with no valid storage → fail hard
 		if (mode === 'agent') {
 			throw new Error(
-				'[STORAGE] Agent mode requires PEER_STORAGE=pglite (with PEER_DB_PATH) or PEER_STORAGE=postgres (with PEER_DB_URL).',
+				'[STORAGE] Agent mode requires PEER_SYNC_STORAGE=pglite (with PEER_DB_PATH) or PEER_SYNC_STORAGE=postgres (with PEER_DB_URL).',
 			)
 		}
 	}

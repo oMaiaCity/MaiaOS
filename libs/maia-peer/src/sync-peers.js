@@ -48,8 +48,8 @@ export function setupSyncPeers(syncDomain = null) {
 
 	const apiDomain =
 		syncDomain ||
-		import.meta.env?.VITE_PEER_MOAI ||
-		(typeof process !== 'undefined' && process.env?.PEER_MOAI)
+		import.meta.env?.VITE_PEER_SYNC_HOST ||
+		(typeof process !== 'undefined' && process.env?.PEER_SYNC_HOST)
 
 	let syncServerUrl
 	if (typeof window === 'undefined') {
@@ -74,7 +74,7 @@ export function setupSyncPeers(syncDomain = null) {
 	if (!isDev) {
 		console.log(`   Sync Domain: ${apiDomain || '(not set - using same origin fallback)'}`)
 		console.log(
-			`   Source: ${syncDomain ? 'loader' : import.meta.env?.VITE_PEER_MOAI ? 'build-time' : 'fallback'}`,
+			`   Source: ${syncDomain ? 'loader' : import.meta.env?.VITE_PEER_SYNC_HOST ? 'build-time' : 'fallback'}`,
 		)
 	}
 

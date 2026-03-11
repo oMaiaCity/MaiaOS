@@ -2,7 +2,7 @@
 
 /**
  * Development script for MaiaOS
- * Runs maia (4200) and moai (4201)
+ * Runs app (4200) and sync (4201)
  */
 
 import { spawn } from 'node:child_process'
@@ -14,8 +14,8 @@ import { bootFooter, bootHeader, createLogger } from './logger.js'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = resolve(__dirname, '..')
 
-let maiaProcess = null
-let moaiProcess = null
+let appProcess = null
+let syncProcess = null
 let docsWatcherProcess = null
 let assetSyncProcess = null
 let faviconProcess = null
@@ -25,8 +25,8 @@ const serviceStatus = {
 	favicons: false,
 	assets: false,
 	docs: false,
-	moai: false,
-	maia: false,
+	sync: false,
+	app: false,
 }
 
 // Filter verbose output from child processes
@@ -124,7 +124,7 @@ function processOutput(service, data, isError = false) {
 			!serviceStatus[service]
 		) {
 			const portMatch = trimmed.match(/port\s+(\d+)/i) || trimmed.match(/:(\d+)/)
-			const knownPort = service === 'moai' ? 4201 : null
+			const knownPort = service === 'sync' ? 4201 : null
 			const port =
 				portMatch?.[1] ?? (knownPort && trimmed.includes(`[${service}]`) ? String(knownPort) : null)
 			if (port) {
@@ -148,8 +148,8 @@ function processOutput(service, data, isError = false) {
 			continue
 		}
 
-		// Passthrough: moai/sync init progress
-		if (service === 'moai' && trimmed.startsWith('[sync]')) {
+		// Passthrough: sync init progress
+		if (service === 'sync' && trimmed.startsWith('[sync]')) {
 			logger.log(trimmed)
 			continue
 		}
@@ -169,7 +169,7 @@ function maybeLogBrandReady() {
 
 function checkAllReady() {
 	// Main services (sync = unified WebSocket + agent + LLM)
-	const mainServices = ['moai', 'maia']
+	const mainServices = ['sync', 'app']
 	const mainReady = mainServices.every((service) => serviceStatus[service] === true)
 
 	// Helper services (brand = favicons + assets combined; nice to have but not critical)
@@ -200,67 +200,67 @@ async function waitForServiceReady(healthUrl, timeoutMs = 30000, pollMs = 300) {
 		await new Promise((r) => setTimeout(r, pollMs))
 	}
 	logger.warn(
-		`Sync server not ready after ${timeoutMs}ms – maia will start anyway (WebSocket retries)`,
+		`Sync server not ready after ${timeoutMs}ms – app will start anyway (WebSocket retries)`,
 	)
 	return false
 }
 
-async function startMaia() {
-	const logger = createLogger('maia')
+async function startApp() {
+	const logger = createLogger('app')
 	const ok = await freePort(4200, (msg) => logger.warn(msg))
 	if (!ok) process.exit(1)
 
-	maiaProcess = spawn('bun', ['--env-file=.env', '--filter', '@MaiaOS/maia', 'dev'], {
+	appProcess = spawn('bun', ['--env-file=.env', '--filter', '@MaiaOS/app', 'dev'], {
 		cwd: rootDir,
 		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,
 		env: { ...process.env },
 	})
 
-	maiaProcess.stdout.on('data', (data) => {
-		processOutput('maia', data)
+	appProcess.stdout.on('data', (data) => {
+		processOutput('app', data)
 	})
 
-	maiaProcess.stderr.on('data', (data) => {
-		processOutput('maia', data, true)
+	appProcess.stderr.on('data', (data) => {
+		processOutput('app', data, true)
 	})
 
-	maiaProcess.on('error', (_error) => {
+	appProcess.on('error', (_error) => {
 		process.exit(1)
 	})
 
-	maiaProcess.on('exit', (code) => {
+	appProcess.on('exit', (code) => {
 		if (code !== 0 && code !== null) {
 			process.exit(code)
 		}
 	})
 }
 
-async function startMoai() {
-	const logger = createLogger('moai')
+async function startSync() {
+	const logger = createLogger('sync')
 	const ok = await freePort(4201, (msg) => logger.warn(msg))
 	if (!ok) process.exit(1)
 
-	moaiProcess = spawn('bun', ['--env-file=.env', '--filter', '@MaiaOS/moai', 'dev'], {
+	syncProcess = spawn('bun', ['--env-file=.env', '--filter', '@MaiaOS/sync', 'dev'], {
 		cwd: rootDir,
 		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,
 		env: { ...process.env },
 	})
 
-	moaiProcess.stdout.on('data', (data) => {
-		processOutput('moai', data)
+	syncProcess.stdout.on('data', (data) => {
+		processOutput('sync', data)
 	})
 
-	moaiProcess.stderr.on('data', (data) => {
-		processOutput('moai', data, true)
+	syncProcess.stderr.on('data', (data) => {
+		processOutput('sync', data, true)
 	})
 
-	moaiProcess.on('error', (_error) => {
-		// Non-fatal - moai service is optional
+	syncProcess.on('error', (_error) => {
+		// Non-fatal - sync service is optional
 	})
 
-	moaiProcess.on('exit', (code) => {
+	syncProcess.on('exit', (code) => {
 		if (code !== 0 && code !== null) {
 			// Non-fatal
 		}
@@ -387,7 +387,7 @@ function startAssetSync() {
 }
 
 async function killChildren() {
-	const procs = [faviconProcess, assetSyncProcess, docsWatcherProcess, moaiProcess, maiaProcess]
+	const procs = [faviconProcess, assetSyncProcess, docsWatcherProcess, syncProcess, appProcess]
 	for (const p of procs) {
 		if (p && !p.killed) {
 			try {
@@ -423,7 +423,7 @@ async function main() {
 	bootHeader()
 	setupSignalHandlers()
 
-	// Free ports first so we start with a clean slate (kills any leftover maia/moai from crashed runs)
+	// Free ports first so we start with a clean slate (kills any leftover app/sync from crashed runs)
 	const logger = createLogger('dev')
 	await Promise.all([
 		freePort(4200, (msg) => logger.warn(msg)),
@@ -433,14 +433,14 @@ async function main() {
 	// Generate favicons first (runs once, then exits)
 	generateFavicons()
 
-	// Orchestrated startup: moai first, wait for sync ready, then maia
+	// Orchestrated startup: sync first, wait for sync ready, then app
 	// Ensures WebSocket connects on first attempt (no "bad response" on sign-in)
 	setTimeout(async () => {
 		startAssetSync()
 		startDocsWatcher()
-		await startMoai()
+		await startSync()
 		await waitForServiceReady('http://localhost:4201/health')
-		await startMaia()
+		await startApp()
 	}, 1000)
 
 	process.stdin.resume()

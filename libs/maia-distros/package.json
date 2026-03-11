@@ -5,7 +5,7 @@
 	"private": true,
 	"exports": {
 		"./client": "./output/maia-client.mjs",
-		"./server": "./output/moai-server.mjs",
+		"./server": "./output/sync-server.mjs",
 		"./avens": "./output/avens.mjs"
 	},
 	"files": [

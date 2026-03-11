@@ -250,19 +250,19 @@ export class MaiaOS {
 			// Import agent mode functions dynamically (to avoid circular dependencies)
 			const { loadOrCreateAgentAccount } = await import('@MaiaOS/self')
 
-			// Get credentials from environment variables (PEER_ID, PEER_SECRET)
+			// Get credentials from environment variables (AVEN_MAIA_ACCOUNT, AVEN_MAIA_SECRET)
 			const accountID =
-				(typeof process !== 'undefined' && process.env?.PEER_ID) ||
-				(typeof import.meta !== 'undefined' && import.meta.env?.PEER_ID) ||
-				(typeof import.meta !== 'undefined' && import.meta.env?.VITE_PEER_ID)
+				(typeof process !== 'undefined' && process.env?.AVEN_MAIA_ACCOUNT) ||
+				(typeof import.meta !== 'undefined' && import.meta.env?.AVEN_MAIA_ACCOUNT) ||
+				(typeof import.meta !== 'undefined' && import.meta.env?.VITE_AVEN_MAIA_ACCOUNT)
 			const agentSecret =
-				(typeof process !== 'undefined' && process.env?.PEER_SECRET) ||
-				(typeof import.meta !== 'undefined' && import.meta.env?.PEER_SECRET) ||
-				(typeof import.meta !== 'undefined' && import.meta.env?.VITE_PEER_SECRET)
+				(typeof process !== 'undefined' && process.env?.AVEN_MAIA_SECRET) ||
+				(typeof import.meta !== 'undefined' && import.meta.env?.AVEN_MAIA_SECRET) ||
+				(typeof import.meta !== 'undefined' && import.meta.env?.VITE_AVEN_MAIA_SECRET)
 
 			if (!accountID || !agentSecret) {
 				throw new Error(
-					'Agent mode requires PEER_ID and PEER_SECRET environment variables. Run `bun agent:generate` to generate credentials.',
+					'Agent mode requires AVEN_MAIA_ACCOUNT and AVEN_MAIA_SECRET environment variables. Run `bun agent:generate` to generate credentials.',
 				)
 			}
 

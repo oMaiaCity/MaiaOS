@@ -83,11 +83,11 @@ Read the documentation in the following order for a complete understanding:
 **Ephemeral vs persistable state and storage configuration**
 - What stays in memory by design
 - What could be persisted (machine state, history)
-- maia-sync `inMemory` vs `dbPath` for production
+- Sync service `PEER_SYNC_STORAGE` (pglite/postgres) for production
 
 ### 8. [Deployment](./09_deployment/README.md)
 **Production deployment and DNS setup**
-- Fly.io deployment (maia + moai services)
+- Fly.io deployment (app + sync services)
 - Custom domain and DNS configuration (Hetzner)
 - Troubleshooting sync, WebSocket, and TLS
 

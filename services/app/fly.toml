@@ -1,15 +1,15 @@
-# Fly.io configuration for maia
+# Fly.io configuration for app
 app = "next-maia-city"
 org = "maia-city"
 primary_region = "fra"
 
 [build]
-  # Build from monorepo root with Dockerfile in services/maia/
-  # Use: flyctl deploy --dockerfile services/maia/Dockerfile --config services/maia/fly.toml
+  # Build from monorepo root with Dockerfile in services/app/
+  # Use: flyctl deploy --dockerfile services/app/Dockerfile --config services/app/fly.toml
   # VITE_* from [build.args] - normal Vite env vars at build time (no runtime injection)
   [build.args]
-  VITE_PEER_MOAI = "moai.next.maia.city"
-  VITE_PEER_MAIA = "next.maia.city"
+  VITE_PEER_SYNC_HOST = "sync.next.maia.city"
+  VITE_PEER_APP_HOST = "next.maia.city"
 
 [env]
   PORT = "8080"

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Deploy script for maia
+# Deploy script for app
 # No build secrets needed - sync service handles sync API key
 
 set -e
@@ -24,14 +24,14 @@ retry_flyctl_deploy() {
     # To override, pass --build-arg VITE_SEED_AVENS="todos,chat" manually
     echo "   Using VITE_SEED_AVENS=all (default - seeds all avens)"
     
-    # Run deploy - explicit build args ensure VITE_PEER_MOAI is in bundle (sync domain)
+    # Run deploy - explicit build args ensure VITE_PEER_SYNC_HOST is in bundle (sync domain)
     flyctl deploy \
       --dockerfile "$dockerfile" \
       --config "$config" \
       --app "$app_name" \
       --wait-timeout 600 \
-      --build-arg VITE_PEER_MOAI="${VITE_PEER_MOAI}" \
-      --build-arg VITE_PEER_MAIA=next.maia.city 2>&1 | tee /tmp/flyctl-deploy.log
+      --build-arg VITE_PEER_SYNC_HOST="${VITE_PEER_SYNC_HOST}" \
+      --build-arg VITE_PEER_APP_HOST=next.maia.city 2>&1 | tee /tmp/flyctl-deploy.log
     
     local deploy_exit_code=${PIPESTATUS[0]}
     
@@ -88,29 +88,29 @@ retry_flyctl_deploy() {
   return 1
 }
 
-echo "🚀 Deploying maia to Fly.io..."
+echo "🚀 Deploying app to Fly.io..."
 echo "   App: next-maia-city"
 echo ""
 
 cd "$MONOREPO_ROOT"
 
-# Verify build args before deploy (VITE_PEER_MOAI = moai sync domain, not maia)
+# Verify build args before deploy (VITE_PEER_SYNC_HOST = sync domain, not app)
 bun scripts/fly-build-args-verify.js || exit 1
 echo ""
 
-# Optional: override via env - VITE_PEER_MOAI must be moai domain (not maia)
-VITE_PEER_MOAI="${VITE_PEER_MOAI:-moai.next.maia.city}"
-export VITE_PEER_MOAI
-if [[ "$VITE_PEER_MOAI" != "moai.next.maia.city" ]] && [[ "$VITE_PEER_MOAI" != "moai-next-maia-city.fly.dev" ]]; then
-  echo "⚠️  VITE_PEER_MOAI=$VITE_PEER_MOAI (custom - ensure moai sync is at this domain)"
+# Optional: override via env - VITE_PEER_SYNC_HOST must be sync domain (not app)
+VITE_PEER_SYNC_HOST="${VITE_PEER_SYNC_HOST:-sync.next.maia.city}"
+export VITE_PEER_SYNC_HOST
+if [[ "$VITE_PEER_SYNC_HOST" != "sync.next.maia.city" ]] && [[ "$VITE_PEER_SYNC_HOST" != "moai-next-maia-city.fly.dev" ]]; then
+  echo "⚠️  VITE_PEER_SYNC_HOST=$VITE_PEER_SYNC_HOST (custom - ensure sync is at this domain)"
 fi
 
-# Maia build runs in Docker - VITE_PEER_MOAI passed as --build-arg
+# App build runs in Docker - VITE_PEER_SYNC_HOST passed as --build-arg
 if ! retry_flyctl_deploy \
   "next-maia-city" \
-  "services/maia/Dockerfile" \
-  "services/maia/fly.toml"; then
-  echo "❌ Failed to deploy maia service after retries"
+  "services/app/Dockerfile" \
+  "services/app/fly.toml"; then
+  echo "❌ Failed to deploy app service after retries"
   exit 1
 fi
 
@@ -125,5 +125,5 @@ echo ""
 echo "✅ Deployment complete!"
 echo "   URL: https://next-maia-city.fly.dev"
 echo ""
-echo "   Sync domain: VITE_PEER_MOAI from fly.toml [build.args] (moai.next.maia.city)"
-echo "   To override: fly deploy --build-arg VITE_PEER_MOAI=custom.domain.com --app next-maia-city"
+echo "   Sync domain: VITE_PEER_SYNC_HOST from fly.toml [build.args] (sync.next.maia.city)"
+echo "   To override: fly deploy --build-arg VITE_PEER_SYNC_HOST=custom.domain.com --app next-maia-city"

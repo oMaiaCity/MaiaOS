@@ -1,11 +1,11 @@
 {
-	"name": "@MaiaOS/maia",
+	"name": "@MaiaOS/app",
 	"version": "26.0217.1438",
 	"type": "module",
 	"private": true,
 	"scripts": {
 		"dev": "PORT=4200 bun dev-server.js",
-		"build": "cd ../.. && bun run distros:build && cd services/maia && bun build.js",
+		"build": "cd ../.. && bun run distros:build && cd services/app && bun build.js",
 		"preview": "bun server.js",
 		"start": "bun server.js",
 		"deploy": "./deploy.sh"

@@ -73,7 +73,7 @@ The sync server currently uses **in-memory storage** (no persistence). When the 
 ### Current State
 
 ```
-Sync Server (libs/maia-sync/src/sync-server.js)
+Sync Server (services/sync/src/sync-server.js)
 ├─ LocalNode (cojson)
 ├─ Storage: In-memory (no persistence) ❌
 └─ WebSocket: Receives messages from browsers ✅
@@ -82,7 +82,7 @@ Sync Server (libs/maia-sync/src/sync-server.js)
 ### Target State
 
 ```
-Sync Server (libs/maia-sync/src/sync-server.js)
+Sync Server (services/sync/src/sync-server.js)
 ├─ LocalNode (cojson)
 ├─ Storage: Hyperbee/Corestore (persistent) ✅
 │  ├─ Group Hypercores (group metadata)
@@ -204,7 +204,7 @@ Hyperbee Value: CoValueKnownState (JSON)
 
 **System Audit:**
 
-- Audit sync server (`libs/maia-sync/src/sync-server.js`)
+- Audit sync server (`services/sync/src/sync-server.js`)
   - Current storage: in-memory only
   - LocalNode initialization
   - WebSocket handling
@@ -240,12 +240,12 @@ Hyperbee Value: CoValueKnownState (JSON)
   - `hyperbee` package
   - `hypercore` package (if needed)
   - **Note:** Using default disk storage (no `hypercore-storage`/RocksDB needed for testing phase)
-- Create `libs/maia-sync/src/storage/corestore-adapter.ts`
+- Create `services/sync/src/storage/corestore-adapter.ts`
   - Initialize Corestore instance with storage path (string path = default disk storage)
   - Uses `random-access-file` automatically (no explicit storage backend needed)
   - Create/retrieve Hypercores by name
   - Handle Corestore lifecycle (ready, close)
-- Create `libs/maia-sync/src/storage/hyperbee-adapter.ts`
+- Create `services/sync/src/storage/hyperbee-adapter.ts`
   - Create Hyperbee instance on top of Hypercore
   - Key-value operations (put, get, del)
   - Batch operations support
@@ -315,7 +315,7 @@ export class CorestoreAdapter {
 
 **Implementation:**
 
-- Create `libs/maia-sync/src/storage/hyperbee-storage.ts`
+- Create `services/sync/src/storage/hyperbee-storage.ts`
   - Implement `StorageAPI` interface
   - Map `store()` → Hyperbee/Corestore operations
   - Map `load()` → Load from Hyperbee/Corestore
@@ -456,7 +456,7 @@ export class HyperbeeStorage implements StorageAPI {
 
 **Implementation:**
 
-- Create `libs/maia-sync/src/storage/session-to-hypercore.ts`
+- Create `services/sync/src/storage/session-to-hypercore.ts`
   - Map SessionID → Hypercore name (deterministic)
   - Map Transaction → Hypercore block
   - Load transactions from session Hypercores
@@ -526,7 +526,7 @@ async function loadCoValueSessions(
 
 **Implementation:**
 
-- Create `libs/maia-sync/src/storage/group-permissions.ts`
+- Create `services/sync/src/storage/group-permissions.ts`
   - Map group ownership model
   - Groups own CoValues (`ruleset.type === "ownedByGroup"`)
   - Group's Hypercore key controls replication
@@ -630,16 +630,16 @@ async function getCoValuesForGroup(
 
 **New Files:**
 
-- `libs/maia-sync/src/storage/corestore-adapter.ts` - Corestore adapter
-- `libs/maia-sync/src/storage/hyperbee-adapter.ts` - Hyperbee adapter
-- `libs/maia-sync/src/storage/hyperbee-storage.ts` - Hyperbee StorageAPI implementation
-- `libs/maia-sync/src/storage/session-to-hypercore.ts` - Session-to-Hypercore mapping
-- `libs/maia-sync/src/storage/group-permissions.ts` - Group permissions mapping
+- `services/sync/src/storage/corestore-adapter.ts` - Corestore adapter
+- `services/sync/src/storage/hyperbee-adapter.ts` - Hyperbee adapter
+- `services/sync/src/storage/hyperbee-storage.ts` - Hyperbee StorageAPI implementation
+- `services/sync/src/storage/session-to-hypercore.ts` - Session-to-Hypercore mapping
+- `services/sync/src/storage/group-permissions.ts` - Group permissions mapping
 
 **Modified Files:**
 
-- `libs/maia-sync/src/sync-server.js` - Add Hyperbee storage backend
-- `libs/maia-sync/package.json` - Add Corestore/Hyperbee dependencies
+- `services/sync/src/sync-server.js` - Add Hyperbee storage backend
+- `services/sync/package.json` - Add Corestore/Hyperbee dependencies
   - Required: `corestore`, `hyperbee`
   - Optional (not needed for testing): `hypercore-storage` (RocksDB backend - can add later if needed)
 

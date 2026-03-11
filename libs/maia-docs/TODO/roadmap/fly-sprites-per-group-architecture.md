@@ -63,7 +63,7 @@ After implementing server-side Hypercore persistence in the sync service itself,
 ### Current State (After First Implementation)
 
 ```
-Sync Server (libs/maia-sync/src/sync-server.js)
+Sync Server (services/sync/src/sync-server.js)
 ├─ LocalNode (cojson)
 ├─ Storage: Hyperbee/Corestore (persistent) ✅
 │  ├─ ALL groups' data in one Corestore
@@ -194,12 +194,12 @@ Hypercore/RocksDB → Sprite Filesystem → JuiceFS → Object Storage (S3)
 
 **Implementation:**
 
-- Create `libs/maia-sync/src/sprite-gateway.js`
+- Create `services/sync/src/sprite-gateway.js`
   - Extract `groupID` from WebSocket messages
   - Route to appropriate Sprite
   - Handle Sprite creation (if doesn't exist)
   - Handle Sprite wake (if sleeping)
-- Update `libs/maia-sync/src/sync-server.js`
+- Update `services/sync/src/sync-server.js`
   - Remove storage initialization
   - Remove Corestore/Hyperbee setup
   - Add Sprite routing logic
@@ -213,7 +213,7 @@ Hypercore/RocksDB → Sprite Filesystem → JuiceFS → Object Storage (S3)
 **Key Implementation:**
 
 ```javascript
-// libs/maia-sync/src/sprite-gateway.js
+// services/sync/src/sprite-gateway.js
 import { FlyAPI } from '@fly.io/api'; // Hypothetical Fly.io API client
 
 export class SpriteGateway {
@@ -282,7 +282,7 @@ export class SpriteGateway {
   - Base image with Node.js/Bun
   - Install `hypercore-storage`, `corestore`, `hyperbee`
   - Copy sync server code (Sprite version)
-- Create `libs/maia-sync/src/sprite-sync-server.js`
+- Create `services/sync/src/sprite-sync-server.js`
   - Similar to current sync server, but runs in Sprite
   - Initialize Corestore with `hypercore-storage` (RocksDB)
   - Storage path: `/data/hypercore-storage` (Sprite's persistent filesystem)
@@ -296,7 +296,7 @@ export class SpriteGateway {
 **Key Implementation:**
 
 ```javascript
-// libs/maia-sync/src/sprite-sync-server.js
+// services/sync/src/sprite-sync-server.js
 import { LocalNode } from 'cojson';
 import { WasmCrypto } from 'cojson/crypto/WasmCrypto';
 import Corestore from 'corestore';
@@ -376,7 +376,7 @@ export async function createSpriteSyncServer(groupID) {
 **Key Implementation:**
 
 ```javascript
-// libs/maia-sync/src/sprite-lifecycle.js
+// services/sync/src/sprite-lifecycle.js
 export class SpriteLifecycle {
   async ensureSpriteExists(groupID) {
     const spriteName = `group-${groupID}`;
@@ -486,16 +486,16 @@ export class SpriteLifecycle {
 
 **New Files:**
 
-- `libs/maia-sync/src/sprite-gateway.js` - Sprite routing/gateway logic
-- `libs/maia-sync/src/sprite-lifecycle.js` - Sprite creation/wake lifecycle
-- `libs/maia-sync/src/sprite-sync-server.js` - Sync server running in Sprite
-- `libs/maia-sync/Dockerfile.sprite` - Sprite container image
-- `libs/maia-sync/fly.toml.sprite` - Fly.io Sprite configuration
+- `services/sync/src/sprite-gateway.js` - Sprite routing/gateway logic
+- `services/sync/src/sprite-lifecycle.js` - Sprite creation/wake lifecycle
+- `services/sync/src/sprite-sync-server.js` - Sync server running in Sprite
+- `services/sync/Dockerfile.sprite` - Sprite container image
+- `services/sync/fly.toml.sprite` - Fly.io Sprite configuration
 
 **Modified Files:**
 
-- `libs/maia-sync/src/sync-server.js` - Transform to stateless gateway
-- `libs/maia-sync/package.json` - Add Fly.io API client, hypercore-storage
+- `services/sync/src/sync-server.js` - Transform to stateless gateway
+- `services/sync/package.json` - Add Fly.io API client, hypercore-storage
 
 **Files NOT Modified:**
 

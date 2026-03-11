@@ -1,4 +1,4 @@
-# Fly.io configuration for moai service
+# Fly.io configuration for sync service
 # Single machine only: deploy uses --ha=false and post-deploy runs fly scale count 1
 app = "moai-next-maia-city"
 org = "maia-city"
@@ -9,19 +9,18 @@ primary_region = "fra"
   swap_size_mb = 128
 
 [build]
-  # Build from monorepo root with Dockerfile in services/moai/
-  # Use: flyctl deploy --dockerfile services/moai/Dockerfile --config services/moai/fly.toml
+  # Build from monorepo root with Dockerfile in services/sync/
+  # Use: flyctl deploy --dockerfile services/sync/Dockerfile --config services/sync/fly.toml
 
 [env]
   PORT = "4201"
   NODE_ENV = "production"
-  PEER_MODE = "sync"
-  PEER_STORAGE = "postgres"
+  PEER_SYNC_STORAGE = "postgres"
 
 # Secrets: set manually via fly secrets set
-# PEER_ID, PEER_SECRET - required
-# PEER_DB_URL - from Fly Postgres Connect tab (PEER_STORAGE=postgres)
-# PEER_DB_PATH - PGlite data path (PEER_STORAGE=pglite, e.g. /data/sync.db)
+# AVEN_MAIA_ACCOUNT, AVEN_MAIA_SECRET - required
+# PEER_DB_URL - from Fly Postgres Connect tab (PEER_SYNC_STORAGE=postgres)
+# PEER_DB_PATH - PGlite data path (PEER_SYNC_STORAGE=pglite, e.g. /data/sync.db)
 # RED_PILL_API_KEY - Optional, for LLM chat
 
 [[services]]

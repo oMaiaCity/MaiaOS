@@ -1,6 +1,6 @@
 #!/bin/bash
 # Deploy all MaiaOS services to Fly.io
-# Deploys: moai service (moai-next-maia-city) and maia (next-maia-city)
+# Deploys: sync service (moai-next-maia-city) and app (next-maia-city)
 
 set -e
 
@@ -90,23 +90,23 @@ retry_flyctl_deploy() {
 echo "🚀 Deploying all MaiaOS services to Fly.io..."
 echo ""
 
-# Moai deploy - requires manual secrets: PEER_ID, PEER_SECRET, and PEER_DB_URL (postgres)
+# Sync deploy - requires manual secrets: AVEN_MAIA_ACCOUNT, AVEN_MAIA_SECRET, and PEER_DB_URL (postgres)
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "📦 Step 1/2: Deploying moai service (moai-next-maia-city)..."
+echo "📦 Step 1/2: Deploying sync service (moai-next-maia-city)..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 cd "$MONOREPO_ROOT"
 
 if ! retry_flyctl_deploy \
   "moai-next-maia-city" \
-  "services/moai/Dockerfile" \
-  "services/moai/fly.toml" \
+  "services/sync/Dockerfile" \
+  "services/sync/fly.toml" \
   "--ha=false"; then
-  echo "❌ Failed to deploy moai service after retries"
+  echo "❌ Failed to deploy sync service after retries"
   exit 1
 fi
 
-# Enforce single machine for moai (sync service must not scale beyond 1)
-echo "Enforcing single machine for moai..."
+# Enforce single machine for sync (sync service must not scale beyond 1)
+echo "Enforcing single machine for sync..."
 flyctl scale count 1 --app moai-next-maia-city --yes
 
 echo ""
@@ -114,18 +114,18 @@ echo "✅ Sync service deployed!"
 echo "   Health check: https://moai-next-maia-city.fly.dev/health"
 echo ""
 
-# Deploy maia service
+# Deploy app service
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "📦 Step 2/2: Deploying maia service (next-maia-city)..."
+echo "📦 Step 2/2: Deploying app service (next-maia-city)..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 cd "$MONOREPO_ROOT"
 
 if ! retry_flyctl_deploy \
   "next-maia-city" \
-  "services/maia/Dockerfile" \
-  "services/maia/fly.toml" \
-  "--build-arg VITE_PEER_MOAI=moai.next.maia.city --build-arg VITE_PEER_MAIA=next.maia.city"; then
-  echo "❌ Failed to deploy maia service after retries"
+  "services/app/Dockerfile" \
+  "services/app/fly.toml" \
+  "--build-arg VITE_PEER_SYNC_HOST=sync.next.maia.city --build-arg VITE_PEER_APP_HOST=next.maia.city"; then
+  echo "❌ Failed to deploy app service after retries"
   exit 1
 fi
 
@@ -136,10 +136,10 @@ echo "━━━━━━━━━━━━━━━━━━━━━━━━�
 echo ""
 echo "📋 Service URLs:"
 echo "   Frontend: https://next-maia-city.fly.dev"
-echo "   Moai:     https://moai-next-maia-city.fly.dev/health"
+echo "   Sync:     https://moai-next-maia-city.fly.dev/health"
 echo ""
 echo "⚠️  Set secrets manually before first deploy:"
-echo "   PEER_STORAGE=postgres: fly secrets set PEER_ID=... PEER_SECRET=... PEER_DB_URL=... --app moai-next-maia-city"
+echo "   PEER_SYNC_STORAGE=postgres: fly secrets set AVEN_MAIA_ACCOUNT=... AVEN_MAIA_SECRET=... PEER_DB_URL=... --app moai-next-maia-city"
 echo ""
 echo "🔍 Verify deployment:"
 echo "   flyctl status --app next-maia-city"

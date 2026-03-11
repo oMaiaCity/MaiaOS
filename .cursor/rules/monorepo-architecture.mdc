@@ -18,13 +18,13 @@ MaiaOS/ (root)
 ├── .cursor/
 │   └── rules/            # Cursor IDE rules
 ├── services/             # Application services
-│   ├── maia/             # Frontend SPA (next.maia.city)
+│   ├── app/              # Frontend SPA (next.maia.city)
 │   │   ├── package.json
 │   │   ├── main.js       # Bun-built SPA entry
 │   │   └── server.js     # Static file server (Bun)
-│   └── moai/             # Sync + API service (moai.next.maia.city)
+│   └── sync/             # Sync + API service (sync.next.maia.city)
 │       ├── package.json
-│       └── deploy.sh     # Runs moai-server.mjs from maia-distros output
+│       └── deploy.sh     # Runs sync-server.mjs from maia-distros output
 └── libs/                 # Shared libraries (@MaiaOS/*)
     └── maia-*/           # maia-db, maia-loader, maia-actors, etc.
         ├── package.json
@@ -55,7 +55,7 @@ Reusable packages that can be shared across multiple workspaces:
 
 ### Root Package.json
 - **NO dependencies or devDependencies** at root level
-- Contains workspace configuration: `"workspaces": ["services/maia", "services/moai", "libs/*"]`
+- Contains workspace configuration: `"workspaces": ["services/app", "services/sync", "libs/*"]`
 - **Root-level scripts**: Delegates to workspaces using `bun --filter`
 - All common commands can be run from root (dev, build, release, etc.)
 - Keeps the monorepo structure clean and maintainable
@@ -73,10 +73,10 @@ Each workspace can depend on other workspaces (services or libs) using the `work
 
 1. **Single-entry pattern: services import only from loader**
 ```json
-// services/maia/package.json - only maia-distros (loader/vibes via jsconfig)
-// services/moai/package.json - maia-distros + @MaiaOS/loader
+// services/app/package.json - only maia-distros (loader/vibes via jsconfig)
+// services/sync/package.json - maia-distros + @MaiaOS/loader
 ```
-Services depend only on `@MaiaOS/loader`. Loader re-exports everything needed: db, schemata, actors, vibes (via dynamic import), cojson-transport-ws. maia-distros has no app logic—only bundling. Services own logic; distros produces bundles (maia-client, vibes, moai-server). Prod runs bundles.
+Services depend only on `@MaiaOS/loader`. Loader re-exports everything needed: db, schemata, actors, vibes (via dynamic import), cojson-transport-ws. maia-distros has no app logic—only bundling. Services own logic; distros produces bundles (maia-client, avens, sync-server). Prod runs bundles.
 
 2. **Library depends on another Library:**
 ```json
@@ -155,24 +155,24 @@ import { getApiBaseUrl } from "@MaiaOS/actors";
 **From root (recommended - single command for everything):**
 ```bash
 bun install                    # Install dependencies for all workspaces
-bun dev                        # Run maia (4200) and moai (4201) in parallel
-bun dev:maia                   # Run only maia dev server (port 4200)
-bun dev:moai                   # Run only moai dev server (port 4201)
+bun dev                        # Run app (4200) and sync (4201) in parallel
+bun dev:app                    # Run only app dev server (port 4200)
+bun dev:sync                   # Run only sync dev server (port 4201)
 bun run version:sync <version>  # Sync version (CI does this on merge to next)
-bun deploy                     # Deploy maia + moai to Fly.io
+bun deploy                     # Deploy app + sync to Fly.io
 ```
 
-**Note:** `bun dev` runs maia (4200) and moai (4201) in parallel. Use `bun dev:maia` or `bun dev:moai` for a single service.
+**Note:** `bun dev` runs app (4200) and sync (4201) in parallel. Use `bun dev:app` or `bun dev:sync` for a single service.
 
 **From specific workspace (alternative):**
 ```bash
-cd services/maia
-bun run dev                    # Run maia dev server (4200)
-bun run build                  # Build maia (Bun)
+cd services/app
+bun run dev                    # Run app dev server (4200)
+bun run build                  # Build app (Bun)
 
-cd services/moai
-bun run dev                    # Run moai dev server (4201)
-bun run build                  # Build moai
+cd services/sync
+bun run dev                    # Run sync dev server (4201)
+bun run build                  # Build sync
 ```
 
 ### Building
@@ -228,8 +228,8 @@ Each service in the monorepo has a **hardcoded development port** to avoid confl
 **Current Port Assignments:**
 | Service | Port | Notes |
 |---------|------|-------|
-| `services/maia` | `4200` | Frontend SPA (default `bun dev`) |
-| `services/moai` | `4201` | Unified sync (WebSocket + agent API + LLM proxy) |
+| `services/app` | `4200` | Frontend SPA (default `bun dev`) |
+| `services/sync` | `4201` | Unified sync (WebSocket + agent API + LLM proxy) |
 | `4202-4210` | Reserved | |
 
 **Configuration:**
@@ -271,9 +271,9 @@ MaiaOS/
 - Create `.env.example` at root documenting all required variables (without sensitive values)
 
 **Peer / Sync Domain:**
-- **Maia (frontend)**: `VITE_PEER_MOAI` at build time only (fly.toml [build.args]). No PEER_MOAI Fly secret.
-- **Moai (agent mode)**: `PEER_MOAI` when PEER_MODE=agent (future). Not used for normal sync deployment.
-- **PEER_MAIA**: Not used in code at present. Leave unset.
+- **App (frontend)**: `VITE_PEER_SYNC_HOST` at build time only (fly.toml [build.args]). No PEER_SYNC_HOST Fly secret.
+- **Sync**: `PEER_SYNC_HOST` for agent mode (future). Not used for normal sync deployment.
+- **PEER_APP_HOST**: Not used in code at present. Leave unset.
 
 ## Common Commands
 
@@ -295,7 +295,7 @@ cd services/maia && bun add <package>
 cd libs/maia-db && bun add <package>
 
 # Run script in specific workspace
-bun --filter maia dev
+bun --filter app dev
 ```
 
 ## Notes
