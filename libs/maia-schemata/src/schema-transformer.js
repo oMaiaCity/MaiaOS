@@ -948,9 +948,16 @@ function transformQueryObjects(obj, coIdMap, depth = 0) {
 			)
 		}
 
-		// Check for target/targetActor field (for tell/sendEvent; actor-to-actor messaging)
+		// Check for target/targetActor/targetInput/targetMessages/targetInfoCard field (for tell/sendEvent; actor-to-actor messaging)
 		// NOTE: inputActor is intentionally excluded - it stays as "@namekey" for the view engine's $slot resolver
-		if ((key === 'target' || key === 'targetActor') && typeof value === 'string') {
+		if (
+			(key === 'target' ||
+				key === 'targetActor' ||
+				key === 'targetInput' ||
+				key === 'targetMessages' ||
+				key === 'targetInfoCard') &&
+			typeof value === 'string'
+		) {
 			let refToTransform = value
 			if (
 				value.startsWith('@') &&

@@ -15,6 +15,7 @@ import {
 import { perfChatEnd, perfChatMeasure, perfChatStep } from '../utils/perf-chat.js'
 import { perfPipelineMeasure, perfPipelineStep } from '../utils/perf-pipeline.js'
 import { readStore } from '../utils/store-reader.js'
+import { traceContextOnError, traceProcess } from '../utils/trace.js'
 
 export class ProcessEngine {
 	constructor(evaluator, actorOps = null) {
@@ -39,10 +40,6 @@ export class ProcessEngine {
 
 	async send(processId, event, payload = {}) {
 		perfPipelineStep('process:send:start', { event, processId: processId?.slice(0, 30) })
-		const DEBUG =
-			typeof window !== 'undefined' &&
-			(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
-		if (DEBUG) console.log('[ProcessEngine] send', { processId, event })
 		const process = this.processes.get(processId)
 		if (!process) {
 			console.warn('[ProcessEngine] send: process not found', { processId, event })
@@ -51,6 +48,11 @@ export class ProcessEngine {
 		process.eventPayload = payload || {}
 		process.lastToolResult = payload?.result ?? process.lastToolResult
 
+		traceProcess(processId, event, payload?.source)
+		if (event === 'ERROR' && process?.actor?.context) {
+			traceContextOnError(process.actor.id, process.actor.context)
+		}
+
 		const handlers = process.definition?.handlers
 		if (!handlers || typeof handlers !== 'object') {
 			console.warn('[ProcessEngine] send: no handlers', { processId, event })
@@ -58,17 +60,10 @@ export class ProcessEngine {
 		}
 
 		const actions = handlers[event]
-		if (DEBUG)
-			console.log('[ProcessEngine] send: handlers', {
-				event,
-				hasActions: !!actions?.length,
-				actionCount: actions?.length ?? 0,
-			})
 		if (!Array.isArray(actions) || actions.length === 0) return false
 
 		perfPipelineStep('process:send', { event })
 		await this._executeActions(process, actions)
-		if (DEBUG) console.log('[ProcessEngine] send: _executeActions done')
 		return true
 	}
 
@@ -273,10 +268,6 @@ export class ProcessEngine {
 			throw new Error(`[ProcessEngine] tell target must be co-id (transform at seed). Got: ${target}`)
 		}
 		perfPipelineStep('process:tell', { type, target: target?.slice(0, 20) })
-		const DEBUG =
-			typeof window !== 'undefined' &&
-			(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
-		if (DEBUG) console.log('[ProcessEngine] tell', { type, target: target?.slice(0, 20) })
 		await process.actor.actorOps.deliverEvent(
 			process.actor.id,
 			target,

@@ -1,0 +1,25 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/views/info-card/process",
+	"@label": "@maia/actor/views/info-card/process",
+	"handlers": {
+		"ERROR": [
+			{
+				"ctx": {
+					"visible": true,
+					"type": "error",
+					"label": "Error: ",
+					"message": "$$errors.0.message"
+				}
+			}
+		],
+		"DISMISS": [
+			{
+				"ctx": {
+					"visible": false,
+					"message": null
+				}
+			}
+		]
+	}
+}

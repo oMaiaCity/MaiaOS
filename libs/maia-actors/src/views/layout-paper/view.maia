@@ -1,0 +1,14 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/actor/views/layout-paper/view",
+	"@label": "@maia/actor/views/layout-paper/view",
+	"content": {
+		"tag": "div",
+		"class": "paper-area",
+		"children": [
+			{
+				"$slot": "$paper"
+			}
+		]
+	}
+}

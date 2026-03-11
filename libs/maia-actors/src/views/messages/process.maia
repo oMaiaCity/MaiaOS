@@ -6,26 +6,24 @@
 		"SEND_MESSAGE": [
 			{
 				"guard": {
-					"phase": "idle"
+					"isLoading": false
 				}
 			},
 			{
 				"ctx": {
-					"phase": "creating",
 					"isLoading": true,
-					"hasError": false,
-					"error": null,
 					"pendingInputText": "$$inputText"
 				}
 			},
 			{
-				"tell": {
-					"target": "°Maia/actor/views/modal",
-					"type": "STATUS_UPDATE",
-					"payload": {
-						"isLoading": true,
-						"hasError": false,
-						"error": null
+				"op": {
+					"create": {
+						"schema": "°Maia/schema/data/chat",
+						"data": {
+							"role": "user",
+							"content": "$$inputText",
+							"displayName": "me"
+						}
 					}
 				}
 			},
@@ -45,18 +43,6 @@
 					"create": {
 						"schema": "°Maia/schema/data/chat",
 						"data": {
-							"role": "user",
-							"content": "$pendingInputText",
-							"displayName": "me"
-						}
-					}
-				}
-			},
-			{
-				"op": {
-					"create": {
-						"schema": "°Maia/schema/data/chat",
-						"data": {
 							"role": "assistant",
 							"content": "$$result.content",
 							"displayName": "Maia"
@@ -66,83 +52,32 @@
 			},
 			{
 				"ctx": {
-					"phase": "idle",
 					"isLoading": false,
-					"hasError": false,
-					"error": null,
 					"hasConversations": true,
 					"pendingInputText": null
 				}
 			},
 			{
 				"tell": {
-					"target": "°Maia/actor/views/modal",
-					"type": "STATUS_UPDATE",
-					"payload": {
-						"isLoading": false,
-						"hasError": false,
-						"error": null
-					}
+					"target": "$targetInfoCard",
+					"type": "DISMISS",
+					"payload": {}
 				}
 			}
 		],
 		"ERROR": [
 			{
 				"ctx": {
-					"isLoading": false,
-					"hasError": true,
-					"error": "$$errors.0.message",
-					"phase": "error"
+					"isLoading": false
 				}
 			},
 			{
 				"tell": {
-					"target": "°Maia/actor/views/modal",
-					"type": "STATUS_UPDATE",
-					"payload": {
-						"isLoading": false,
-						"hasError": true,
-						"error": "$$errors.0.message"
-					}
-				}
-			},
-			{
-				"tell": {
-					"target": "°Maia/actor/views/input/for-chat",
+					"target": "$targetInfoCard",
 					"type": "ERROR",
 					"payload": {
 						"errors": "$$errors"
 					}
-				}
-			}
-		],
-		"RETRY": [
-			{
-				"ctx": {
-					"phase": "idle",
-					"error": null,
-					"hasError": false
-				}
-			}
-		],
-		"DISMISS": [
-			{
-				"ctx": {
-					"phase": "idle",
-					"error": null,
-					"hasError": false
-				}
-			},
-			{
-				"guard": {
-					"$onlyWhenOriginated": true
-				}
-			},
-			{
-				"tell": {
-					"target": "°Maia/actor/views/input/for-chat",
-					"type": "DISMISS",
-					"payload": {}
 				}
 			}
 		]

@@ -33,12 +33,6 @@
 				"value"
 			],
 			"additionalProperties": false
-		},
-		"DISMISS": {
-			"type": "object",
-			"description": "Dismiss",
-			"properties": {},
-			"additionalProperties": false
 		}
 	},
 	"additionalProperties": false

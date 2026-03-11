@@ -1,0 +1,11 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/paper/actor/intent",
+	"@label": "@paper/intent",
+	"context": "°Maia/paper/context/intent",
+	"view": "°Maia/paper/view/intent",
+	"process": "°Maia/paper/process/intent",
+	"brand": "°Maia/brand/maiacity",
+	"inbox": "°Maia/paper/inbox/intent",
+	"interface": []
+}

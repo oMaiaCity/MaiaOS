@@ -8,11 +8,18 @@
 		"children": [
 			{
 				"tag": "div",
-				"class": "paper-area",
-				"$slot": "$currentPaper"
+				"class": "messages-area",
+				"$slot": "$messages"
 			},
 			{
-				"$slot": "$modal"
+				"tag": "div",
+				"class": "info-area",
+				"$slot": "$infoCard"
+			},
+			{
+				"tag": "div",
+				"class": "input-area",
+				"$slot": "$input"
 			}
 		]
 	}
