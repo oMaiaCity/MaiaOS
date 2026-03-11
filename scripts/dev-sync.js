@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * Run moai dev server (port 4201).
+ * Run sync dev server (port 4201).
  * Kills any process on 4201 before starting, like bun dev.
  */
 
@@ -13,13 +13,13 @@ import { createLogger } from './logger.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = resolve(__dirname, '..')
-const logger = createLogger('moai')
+const logger = createLogger('sync')
 
 ;(async () => {
 	const ok = await freePort(4201, (msg) => logger.warn(msg))
 	if (!ok) process.exit(1)
 
-	const proc = spawn('bun', ['--env-file=.env', '--filter', '@MaiaOS/moai', 'dev'], {
+	const proc = spawn('bun', ['--env-file=.env', '--filter', '@MaiaOS/sync', 'dev'], {
 		cwd: rootDir,
 		stdio: 'inherit',
 		shell: false,

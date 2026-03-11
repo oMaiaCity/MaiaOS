@@ -3,8 +3,8 @@
  * Asset sync for °Maia/brand: libs/maia-brand/src/assets → target dir.
  *
  * Usage:
- *   bun scripts/sync-assets.js              # Dev: sync to services/maia/brand, watch
- *   bun scripts/sync-assets.js --no-watch   # One-time sync to services/maia/brand
+ *   bun scripts/sync-assets.js              # Dev: sync to services/app/brand, watch
+ *   bun scripts/sync-assets.js --no-watch   # One-time sync to services/app/brand
  *   bun scripts/sync-assets.js --out <dir>  # Sync to custom dir (e.g. dist/brand for build)
  */
 
@@ -25,9 +25,7 @@ import { fileURLToPath } from 'node:url'
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const monorepoRoot = resolve(__dirname, '..')
 const brandAssetsDir = resolve(monorepoRoot, 'libs/maia-brand/src/assets')
-const defaultTarget = resolve(monorepoRoot, 'services/maia/brand')
-const legacyMaiaCityDir = resolve(monorepoRoot, 'services/maia-city')
-const legacyPublicBrandDir = resolve(monorepoRoot, 'services/maia/public')
+const defaultTarget = resolve(monorepoRoot, 'services/app/brand')
 
 const args = process.argv.slice(2)
 const outIdx = args.indexOf('--out')
@@ -117,16 +115,9 @@ function getAllFiles(dirPath, basePath = '') {
 }
 
 /**
- * Sync all assets from brand package to maia service (preserves folder structure)
+ * Sync all assets from brand package to target dir (services/app/brand or --out path)
  */
 function syncAllAssets() {
-	// Remove legacy dirs (no longer used - brand lives in services/maia/brand or dist/brand)
-	if (existsSync(legacyMaiaCityDir)) {
-		rmSync(legacyMaiaCityDir, { recursive: true, force: true })
-	}
-	if (existsSync(legacyPublicBrandDir)) {
-		rmSync(legacyPublicBrandDir, { recursive: true, force: true })
-	}
 	// Replace symlink with real dir (brand may have been a symlink to public/brand)
 	serviceStaticDirs.forEach((staticDir) => {
 		if (existsSync(staticDir)) {
