@@ -405,7 +405,7 @@ function setupSignalHandlers() {
 		if (shuttingDown) return
 		shuttingDown = true
 		console.log()
-		logger.status('Shutting down...')
+		logger.log('Shutting down...')
 		await killChildren()
 		process.exit(0)
 	}

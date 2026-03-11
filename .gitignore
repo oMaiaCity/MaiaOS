@@ -48,13 +48,14 @@ vite.config.ts.timestamp-*
 local-sync.db
 /tmp/pglite/
 
-# Legacy maia-city (removed - use services/maia)
+# Legacy (removed - use services/app)
+services/maia/
 services/maia-city/
 
-# Brand assets (synced from libs/maia-brand/src/assets to services/maia/brand or dist/brand)
+# Brand assets (synced from libs/maia-brand/src/assets to services/app/brand or dist/brand)
 **/static/brand/
-services/maia/brand/
-services/maia/public/
+services/app/brand/
+services/app/public/
 **/node_modules
 
 debug.log*
