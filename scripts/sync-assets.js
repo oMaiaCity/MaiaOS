@@ -31,6 +31,17 @@ const args = process.argv.slice(2)
 const outIdx = args.indexOf('--out')
 const outDir =
 	outIdx >= 0 && args[outIdx + 1] ? resolve(process.cwd(), args[outIdx + 1]) : defaultTarget
+// Guard: never write to legacy paths (would recreate ghost dirs on each dev start)
+const outDirNormalized = outDir.replace(/\\/g, '/')
+if (
+	(outDirNormalized.includes('/services/maia/') ||
+		outDirNormalized.includes('/services/maia-city/')) &&
+	!outDirNormalized.includes('/services/app/')
+) {
+	console.error('[sync-assets] REFUSING legacy path:', outDir)
+	console.error('[sync-assets] Expected: services/app/brand or --out <path>')
+	process.exit(1)
+}
 const serviceStaticDirs = [outDir]
 
 /**
@@ -71,10 +82,22 @@ function copyAssetToServices(relativePath) {
 		return
 	}
 
+	const rejectLegacyPath = (p) => {
+		const n = String(p).replace(/\\/g, '/')
+		if (
+			(n.includes('/services/maia/') || n.includes('/services/maia-city/')) &&
+			!n.includes('/services/app/')
+		) {
+			throw new Error(`[sync-assets] BUG: would write to legacy path: ${p}`)
+		}
+	}
+
 	let _copied = false
 	serviceStaticDirs.forEach((staticDir) => {
 		try {
+			rejectLegacyPath(staticDir)
 			const targetPath = join(staticDir, relativePath)
+			rejectLegacyPath(targetPath)
 			const targetDir = dirname(targetPath)
 
 			// Create directory if it doesn't exist (preserves subfolder structure)
