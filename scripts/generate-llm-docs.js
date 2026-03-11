@@ -22,15 +22,28 @@
 
 import { watch } from 'node:fs'
 import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises'
-import { dirname, join, relative } from 'node:path'
+import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
+const REPO_ROOT = resolve(__dirname, '..')
 
-const DOCS_DIR = join(__dirname, '../libs/maia-docs')
-const OUTPUT_AGENTS_DIR = join(DOCS_DIR, '04_agents')
+// Use absolute paths to avoid cwd-dependent resolution (prevents ghost services/maia, services/maia-city)
+const DOCS_DIR = resolve(REPO_ROOT, 'libs/maia-docs')
+const OUTPUT_AGENTS_DIR = resolve(DOCS_DIR, '04_agents')
 const GETTING_STARTED_DIR = join(DOCS_DIR, '01_getting-started')
+
+/** Ensure path is within docs output; never write to services/maia or services/maia-city */
+function assertWithinDocsDir(filePath) {
+	const normalized = resolve(filePath).replace(/\\/g, '/')
+	if (normalized.includes('/services/maia/') || normalized.includes('/services/maia-city/')) {
+		throw new Error(`[generate-llm-docs] REFUSING path outside docs: ${filePath}`)
+	}
+	if (!normalized.startsWith(resolve(OUTPUT_AGENTS_DIR).replace(/\\/g, '/'))) {
+		throw new Error(`[generate-llm-docs] Path outside OUTPUT_AGENTS_DIR: ${filePath}`)
+	}
+}
 
 /**
  * Read all markdown files from a directory recursively
@@ -122,6 +135,7 @@ async function generatePackageDoc(packageDir, packageName) {
 
 	const packageLLM = await generateLLMDoc(packageName, sections)
 	const outputFile = join(OUTPUT_AGENTS_DIR, `LLM_${packageName}.md`)
+	assertWithinDocsDir(outputFile)
 	await writeFile(outputFile, packageLLM, 'utf-8')
 	// Individual file logs removed - only show summary at end
 }
@@ -130,7 +144,8 @@ async function generatePackageDoc(packageDir, packageName) {
  * Main generation function
  */
 async function generate() {
-	// Ensure agents directory exists
+	// Ensure agents directory exists (path is within libs/maia-docs)
+	assertWithinDocsDir(OUTPUT_AGENTS_DIR)
 	await mkdir(OUTPUT_AGENTS_DIR, { recursive: true })
 
 	// Read getting-started docs (prefix for both)
@@ -157,7 +172,9 @@ async function generate() {
 	]
 
 	const creatorLLM = await generateLLMDoc('Creators', creatorSections)
-	await writeFile(join(OUTPUT_AGENTS_DIR, 'LLM_Creators.md'), creatorLLM, 'utf-8')
+	const creatorPath = join(OUTPUT_AGENTS_DIR, 'LLM_Creators.md')
+	assertWithinDocsDir(creatorPath)
+	await writeFile(creatorPath, creatorLLM, 'utf-8')
 	// Individual file logs removed - only show summary at end
 
 	// Generate Developer LLM doc
@@ -186,7 +203,9 @@ async function generate() {
 	]
 
 	const developerLLM = await generateLLMDoc('Developers', developerSections)
-	await writeFile(join(OUTPUT_AGENTS_DIR, 'LLM_Developers.md'), developerLLM, 'utf-8')
+	const developerPath = join(OUTPUT_AGENTS_DIR, 'LLM_Developers.md')
+	assertWithinDocsDir(developerPath)
+	await writeFile(developerPath, developerLLM, 'utf-8')
 	// Individual file logs removed - only show summary at end
 
 	// Generate package-specific docs

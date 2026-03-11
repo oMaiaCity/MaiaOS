@@ -2,13 +2,13 @@
 
 /**
  * Generate favicons using @realfavicongenerator/generate-favicon Node.js API
- * Outputs to libs/maia-brand/src/assets/favicon/
+ * Outputs ONLY to libs/maia-brand/src/assets/favicon/ (brand package)
  *
- * logo_dark.svg is for light backgrounds (used as main icon)
- * logo.svg is for dark backgrounds (used as darkIcon)
+ * Runs library with cwd=faviconDir so any cwd-relative ghost dirs stay inside brand package.
+ * Removes ghost dirs at repo root before and after (library/deps may create them).
  */
 
-import { existsSync, mkdirSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, rmSync, writeFileSync } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import {
@@ -20,22 +20,35 @@ import { getNodeImageAdapter, loadAndConvertToSvg } from '@realfavicongenerator/
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = resolve(__dirname, '..')
-
-const logoPath = resolve(rootDir, 'libs/maia-brand/src/assets/logo_dark.svg') // For light backgrounds
-const logoDarkPath = resolve(rootDir, 'libs/maia-brand/src/assets/logo.svg') // For dark backgrounds
 const faviconDir = resolve(rootDir, 'libs/maia-brand/src/assets/favicon')
+const logoPath = resolve(rootDir, 'libs/maia-brand/src/assets/logo_dark.svg')
+const logoDarkPath = resolve(rootDir, 'libs/maia-brand/src/assets/logo.svg')
 
 // Ensure favicon directory exists
 if (!existsSync(faviconDir)) {
 	mkdirSync(faviconDir, { recursive: true })
 }
 
+const ghostDirs = [resolve(rootDir, 'services/maia'), resolve(rootDir, 'services/maia-city')]
+function removeGhostDirs() {
+	for (const d of ghostDirs) {
+		try {
+			if (existsSync(d)) rmSync(d, { recursive: true, force: true })
+		} catch (_) {}
+	}
+}
+
 async function generateFavicons() {
+	removeGhostDirs()
+	const origCwd = process.cwd()
 	try {
+		// Run library with cwd=faviconDir so any cwd-relative writes go inside brand package
+		process.chdir(faviconDir)
+
 		// Get image adapter
 		const imageAdapter = await getNodeImageAdapter()
 
-		// Load master icons
+		// Load master icons (use absolute paths - not affected by chdir)
 		// logo_dark.svg is for light backgrounds (main icon)
 		// logo.svg is for dark backgrounds (darkIcon)
 		const masterIcon = {
@@ -80,32 +93,42 @@ async function generateFavicons() {
 			path: '/brand/favicon/',
 		}
 
-		// Generate favicon files
+		// Generate favicon files (library returns buffers; we write to brand package only)
 		const files = await generateFaviconFiles(masterIcon, faviconSettings, imageAdapter)
 
-		// Write files to output directory
-		// files is an object with file names as keys and contents as values
+		// Restore cwd before writing (we use absolute paths)
+		process.chdir(origCwd)
+
+		// Write ONLY to libs/maia-brand/src/assets/favicon/
 		for (const [fileName, contents] of Object.entries(files)) {
-			const filePath = resolve(faviconDir, fileName)
-			writeFileSync(filePath, contents)
-			// Individual file logs removed - only show summary at end
+			if (fileName.includes('..') || fileName.includes('/') || fileName.includes('\\')) {
+				throw new Error(`[favicons] Invalid fileName from library: ${fileName}`)
+			}
+			writeFileSync(resolve(faviconDir, fileName), contents)
 		}
 
 		// Generate HTML markup (optional - for reference)
 		try {
 			const html = await generateFaviconHtml(faviconSettings)
-			const htmlPath = resolve(faviconDir, 'favicon-markup.html')
-			// Ensure html is a string
 			const htmlString = typeof html === 'string' ? html : String(html)
-			writeFileSync(htmlPath, htmlString)
-			// HTML markup log removed - only show summary at end
+			writeFileSync(resolve(faviconDir, 'favicon-markup.html'), htmlString)
 		} catch (_htmlError) {
-			// Non-fatal - continue silently
+			// Non-fatal
 		}
 
 		console.log('[favicons] ✓ All favicons generated successfully!')
 	} catch (_error) {
 		// Don't throw - make it non-fatal so dev server can continue
+	} finally {
+		process.chdir(origCwd)
+		removeGhostDirs()
+		// Also remove if created inside faviconDir
+		try {
+			for (const rel of ['services/maia', 'services/maia-city']) {
+				const d = resolve(faviconDir, rel)
+				if (existsSync(d)) rmSync(d, { recursive: true, force: true })
+			}
+		} catch (_) {}
 	}
 }
 
