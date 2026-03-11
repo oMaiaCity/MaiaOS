@@ -89,7 +89,6 @@ Bun.serve({
 					VITE_AVEN_TEST_MODE: process.env.VITE_AVEN_TEST_MODE || '',
 					VITE_AVEN_TEST_ACCOUNT: process.env.VITE_AVEN_TEST_ACCOUNT || '',
 					VITE_AVEN_TEST_SECRET: process.env.VITE_AVEN_TEST_SECRET || '',
-					VITE_AVEN_TEST_NAME: process.env.VITE_AVEN_TEST_NAME || '',
 				}),
 				{ headers: { 'Content-Type': 'application/json' } },
 			),
