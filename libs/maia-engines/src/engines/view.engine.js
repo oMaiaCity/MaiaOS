@@ -8,11 +8,6 @@ import { readStore } from '../utils/store-reader.js'
 import { traceView } from '../utils/trace.js'
 import { RENDER_STATES } from './actor.engine.js'
 
-const DEBUG_COBINARY =
-	typeof window !== 'undefined' &&
-	(window.location?.hostname === 'localhost' || import.meta?.env?.DEV) &&
-	false // Set true to debug CoBinary hydration
-
 function sanitizeAttribute(value) {
 	if (value === null || value === undefined) return ''
 	return String(value)
@@ -62,13 +57,6 @@ const COBINARY_PLACEHOLDER =
 
 function extractDataUrl(res) {
 	const dataUrl = res?.dataUrl ?? res?.data?.dataUrl ?? (res?.ok === true && res?.data?.dataUrl)
-	if (DEBUG_COBINARY && res && !dataUrl) {
-		console.warn('[CoBinary] extractDataUrl: no dataUrl in response', {
-			keys: Object.keys(res || {}),
-			hasData: !!res?.data,
-			dataKeys: res?.data ? Object.keys(res.data) : [],
-		})
-	}
 	return dataUrl ?? null
 }
 
@@ -95,41 +83,18 @@ function loadBinaryWithRetry(dataEngine, coId, maxAttempts = 4) {
 }
 
 function hydrateCobinaryPreviews(root, dataEngine) {
-	if (DEBUG_COBINARY)
-		console.log('[CoBinary] hydrateCobinaryPreviews', {
-			hasRoot: !!root,
-			rootTag: root?.tagName,
-			rootInShadow: !!root?.host,
-			hasDataEngine: !!dataEngine?.execute,
-		})
 	if (!root || !dataEngine?.execute) return
 	const imgs = root.querySelectorAll('img[data-co-id]')
-	const allImgs = root.querySelectorAll('img')
-	if (DEBUG_COBINARY)
-		console.log('[CoBinary] hydrateCobinaryPreviews', {
-			foundWithAttr: imgs.length,
-			totalImgs: allImgs.length,
-			imgAttrs: Array.from(allImgs).map((img) => ({
-				hasDataCoId: img.hasAttribute('data-co-id'),
-				dataCoId: img.getAttribute('data-co-id'),
-			})),
-		})
 	imgs.forEach((img) => {
 		const coId = img.getAttribute('data-co-id')
 		if (!coId || !coId.startsWith('co_z')) {
-			if (DEBUG_COBINARY) console.log('[CoBinary] hydrateCobinaryPreviews skip invalid coId', { coId })
 			if (!img.src) img.src = COBINARY_PLACEHOLDER
 			return
 		}
-		// Skip if already has valid src (data: or blob:)
-		if (img.src && (img.src.startsWith('data:') || img.src.startsWith('blob:'))) {
-			if (DEBUG_COBINARY) console.log('[CoBinary] hydrateCobinaryPreviews skip (has src)', { coId })
-			return
-		}
+		if (img.src && (img.src.startsWith('data:') || img.src.startsWith('blob:'))) return
 		const cached = cobinaryPreviewCache.get(coId)
 		if (cached?.dataUrl) {
 			img.src = cached.dataUrl
-			if (DEBUG_COBINARY) console.log('[CoBinary] hydrateCobinaryPreviews from cache', { coId })
 			return
 		}
 		if (cached?.loading) {
@@ -137,31 +102,14 @@ function hydrateCobinaryPreviews(root, dataEngine) {
 				const current = root.querySelector(`img[data-co-id="${coId}"]`)
 				if (current) current.src = dataUrl || COBINARY_PLACEHOLDER
 			})
-			if (DEBUG_COBINARY)
-				console.log('[CoBinary] hydrateCobinaryPreviews waiting for loading', { coId })
 			return
 		}
-		if (DEBUG_COBINARY)
-			console.log('[CoBinary] hydrateCobinaryPreviews loadBinaryAsBlob start', { coId })
 		const loading = loadBinaryWithRetry(dataEngine, coId)
 			.then((dataUrl) => {
 				cobinaryPreviewCache.set(coId, { dataUrl })
-				if (DEBUG_COBINARY)
-					console.log('[CoBinary] hydrateCobinaryPreviews loadBinaryAsBlob done', {
-						coId,
-						hasDataUrl: !!dataUrl,
-						len: dataUrl?.length,
-					})
 				return dataUrl
 			})
-			.catch((err) => {
-				if (DEBUG_COBINARY)
-					console.warn('[CoBinary] hydrateCobinaryPreviews loadBinaryAsBlob failed', {
-						coId,
-						err: err?.message,
-					})
-				return null
-			})
+			.catch(() => null)
 		cobinaryPreviewCache.set(coId, { loading })
 		loading.then((dataUrl) => {
 			const current = root.querySelector(`img[data-co-id="${coId}"]`)
@@ -185,22 +133,8 @@ function toCoIdString(value) {
 }
 
 function setAttr(element, name, value) {
-	// data-co-id: ALWAYS set (use "" when undefined/null) so img[data-co-id] matches for hydration
 	if (name === 'data-co-id') {
 		const coId = value != null ? toCoIdString(value) : null
-		if (DEBUG_COBINARY)
-			console.log('[CoBinary] setAttr data-co-id', {
-				rawType: typeof value,
-				rawPreview:
-					value == null
-						? '(null/undefined)'
-						: typeof value === 'string'
-							? value.slice(0, 30) + (value.length > 30 ? '...' : '')
-							: value && typeof value === 'object'
-								? `{id:${value?.id ?? '?'},...}`
-								: String(value),
-				coId: coId ?? '(empty)',
-			})
 		value = coId ?? ''
 		// fall through to set the attribute
 	} else if (value === undefined || value === null) {
@@ -228,8 +162,6 @@ export class ViewEngine {
 		this.actorInputCounters = new Map()
 		this._scrollToBottomPrev = new Map()
 		this._scrollMutationObservers = new Map()
-		/** Track last-rendered profile.avatar coId per actor for reactive re-hydration on avatar change */
-		this._lastAvatarCoIdPerActor = new Map()
 		/** Debounce: eventDef.$debounce ms (schema-driven), key -> lastFireTime */
 		this._eventDebounce = new Map()
 		/** Cooling: ignore FORM_SUBMIT for this ms after OPEN_POPUP (prevents ghost clicks when overlay appears) */
@@ -500,38 +432,7 @@ export class ViewEngine {
 				this.dataEngine ??
 				this.actorOps?.dataEngine ??
 				this.actorOps?.os?.dataEngine
-			if (DEBUG_COBINARY)
-				console.log('[CoBinary] render calling hydrateCobinaryPreviews', {
-					actorId,
-					hasDataEngine: !!dataEngine,
-					source: options.dataEngine
-						? 'options'
-						: this.dataEngine
-							? 'this'
-							: this.actorOps?.dataEngine
-								? 'actorOps'
-								: this.actorOps?.os?.dataEngine
-									? 'actorOps.os'
-									: 'none',
-				})
 			hydrateCobinaryPreviews(shadowRoot, dataEngine)
-			// Staggered re-hydration: CoBinary finished state may lag; multiple passes ensure display
-			for (const delay of [200, 500, 1200, 2500, 4000]) {
-				setTimeout(() => hydrateCobinaryPreviews(shadowRoot, dataEngine), delay)
-			}
-			// Reactive re-hydration on avatar change: when profile.avatar coId changes, extra passes at 100ms and 600ms
-			const avatarCoId =
-				typeof contextForRender?.profile?.avatar === 'string' &&
-				contextForRender.profile.avatar.startsWith('co_z')
-					? contextForRender.profile.avatar
-					: null
-			const prevAvatar = this._lastAvatarCoIdPerActor.get(actorId)
-			if (avatarCoId && avatarCoId !== prevAvatar && dataEngine) {
-				this._lastAvatarCoIdPerActor.set(actorId, avatarCoId)
-				for (const delay of [50, 150, 400, 800]) {
-					setTimeout(() => hydrateCobinaryPreviews(shadowRoot, dataEngine), delay)
-				}
-			}
 		}
 	}
 
@@ -567,10 +468,6 @@ export class ViewEngine {
 
 		const tag = node.tag || 'div'
 		const element = document.createElement(tag)
-		if (DEBUG_COBINARY && tag.toLowerCase() === 'img' && node.attrs?.['data-co-id'])
-			console.log('[CoBinary] renderNode img with data-co-id', {
-				attrExpr: node.attrs['data-co-id'],
-			})
 		await this._applyNodeAttributes(element, node, data, actorId)
 
 		if (node.$each) {
@@ -624,20 +521,6 @@ export class ViewEngine {
 					await this._resolveDataAttributes(attrValue, data, element)
 				} else {
 					const resolved = await this.evaluator.evaluate(attrValue, data)
-					if (DEBUG_COBINARY && attrName === 'data-co-id')
-						console.log('[CoBinary] _applyNodeAttributes data-co-id', {
-							tag: element?.tagName,
-							attrValue: typeof attrValue === 'string' ? attrValue.slice(0, 25) : attrValue,
-							resolvedType: typeof resolved,
-							resolvedPreview:
-								resolved == null
-									? '(null/undefined)'
-									: typeof resolved === 'string'
-										? resolved.slice(0, 30)
-										: resolved && typeof resolved === 'object'
-											? `{id:${resolved?.id ?? '?'}}`
-											: String(resolved),
-						})
 					setAttr(element, attrName, resolved)
 				}
 			}
@@ -647,8 +530,7 @@ export class ViewEngine {
 			const resolvedValue = await this.evaluator.evaluate(node.value, data)
 			if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
 				const newValue = resolvedValue || ''
-				// CRITICAL: Don't overwrite input value if user is currently typing (element has focus)
-				// This prevents race conditions where rerenders reset user input mid-typing
+				// Don't overwrite input value if user is typing (element has focus)
 				const isFocused = document.activeElement === element
 				if (!isFocused) {
 					if (element.tagName === 'INPUT') element.value = newValue
@@ -975,7 +857,7 @@ export class ViewEngine {
 				let payloadToValidate = payload
 				if (hasBinaryPayload && this.blobEngine) {
 					const eventSchema = actor?.interfaceSchema?.properties?.[eventName]
-					const blobRefKey = eventSchema?.required?.[0] ?? eventSchema?.['$blobRefKey'] ?? 'coId'
+					const blobRefKey = eventSchema?.required?.[0] ?? eventSchema?.$blobRefKey ?? 'coId'
 					const result = await this.blobEngine.uploadToCoBinary(payload, {
 						onProgress: (loaded, total, phase) =>
 							this.actorOps?.reportUploadProgress?.(actorId, loaded, total, phase),
@@ -1073,31 +955,54 @@ export class ViewEngine {
 	}
 
 	/**
+	 * Walk viewDef tree and return context keys bound to input/textarea elements.
+	 * Keys are extracted from node.value like "$inputValue" -> "inputValue".
+	 * @param {Object} viewDef - View definition (content or root)
+	 * @returns {string[]} Context keys bound to inputs
+	 * @private
+	 */
+	_getInputContextKeys(viewDef) {
+		const keys = new Set()
+		const root = viewDef?.content ?? viewDef
+		if (!root) return []
+
+		function walk(node) {
+			if (!node || typeof node !== 'object') return
+			const tag = (node.tag ?? '').toLowerCase()
+			if ((tag === 'input' || tag === 'textarea') && node.value !== undefined) {
+				const v = node.value
+				if (typeof v === 'string' && v.startsWith('$') && !v.startsWith('$$')) {
+					keys.add(v.slice(1))
+				}
+			}
+			for (const child of node.children ?? []) walk(child)
+		}
+		walk(root)
+		return [...keys]
+	}
+
+	/**
 	 * Clear all input and textarea fields in the form containing the element
-	 * If no form found, clears inputs in the actor's shadow root
+	 * If no form found, clears inputs in the actor's shadow root.
+	 * Also clears bound context keys via updateContextCoValue (CoJSON single source of truth).
 	 * @param {HTMLElement} element - The element that triggered the event
 	 * @param {string} actorId - The actor ID
 	 * @private
 	 */
 	_clearInputFields(element, actorId) {
-		// Find the closest form element, form-like container (.form), or fall back to actor's shadow root
 		let container = element.closest('form') || element.closest('.form')
-		if (!container && this.actorOps) {
-			const actor = this.actorOps.getActor?.(actorId)
-			if (actor?.shadowRoot) {
-				container = actor.shadowRoot
-			}
-		}
-
+		const actor = this.actorOps?.getActor?.(actorId)
+		if (!container && actor?.shadowRoot) container = actor.shadowRoot
 		if (!container) return
-
-		// Clear all input and textarea fields within the container
-		const inputs = container.querySelectorAll('input, textarea')
-		for (const input of inputs) {
-			if (input.tagName === 'INPUT') {
-				input.value = ''
-			} else if (input.tagName === 'TEXTAREA') {
-				input.value = ''
+		for (const input of container.querySelectorAll('input, textarea')) {
+			input.value = ''
+		}
+		// Clear bound context keys via CoJSON (single source of truth)
+		if (actor?.viewDef && this.actorOps?.updateContextCoValue) {
+			const keys = this._getInputContextKeys(actor.viewDef)
+			if (keys.length) {
+				const updates = Object.fromEntries(keys.map((k) => [k, '']))
+				this.actorOps.updateContextCoValue(actor, updates).catch(() => {})
 			}
 		}
 	}
