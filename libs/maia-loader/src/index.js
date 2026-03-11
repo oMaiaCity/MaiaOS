@@ -1,7 +1,7 @@
 // CoJSON API factory - lives in loader (orchestrator) to keep db decoupled from engines
 
 export { getAllActorDefinitions, getSeedConfig } from '@MaiaOS/actors'
-// Avens seeding (static import from cycle-free @MaiaOS/avens/seeding - bundles correctly in moai-server.mjs)
+// Avens seeding (static import from cycle-free @MaiaOS/avens/seeding - bundles correctly in sync-server.mjs)
 export {
 	buildSeedConfig,
 	filterAvensForSeeding,

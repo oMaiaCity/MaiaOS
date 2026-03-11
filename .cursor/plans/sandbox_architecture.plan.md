@@ -9,7 +9,7 @@ isProject: false
 
 ## Overview
 
-End-to-end secure environment for untrusted user agents/actors. Three control planes with clear responsibilities. We control the full pipeline: [libs/maia-peer](libs/maia-peer), [libs/maia-sync](libs/maia-sync), [services/maia](services/maia), [services/moai](services/moai).
+End-to-end secure environment for untrusted user agents/actors. Three control planes with clear responsibilities. We control the full pipeline: [libs/maia-peer](libs/maia-peer), [services/sync](services/sync), [services/app](services/app), [services/sync](services/sync).
 
 **QuickJS actor functions = LLM-inspired sandboxed REPL.** Ingest + output + code imports. No maia.* direct access.
 
@@ -166,7 +166,7 @@ flowchart LR
 - Connects to `wss://{syncDomain}/sync`
 - `node.syncManager.addPeer(wsPeer)` — one LocalNode, one WebSocket per account
 
-**Server ([services/moai](services/moai), [libs/maia-sync](libs/maia-sync)):**
+**Server ([services/sync](services/sync)):**
 
 - One LocalNode (server account)
 - Each client WebSocket → createWebSocketPeer → addPeer
@@ -219,7 +219,7 @@ Host adds agent public key to CoJSON group rules
 
 ```
 libs/maia-peer/          # setupSyncPeers, local relay (future)
-libs/maia-sync/          # createSyncServer (moai uses)
+services/sync/           # Sync service (WebSocket + agent API + LLM)
 libs/maia-runtime/       # QuickJS + ingest/output bridge
 services/maia/           # Host shell, iframe orchestration
 services/moai/           # Sync server, /sync WebSocket

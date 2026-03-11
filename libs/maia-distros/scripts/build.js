@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 import { cpSync, existsSync, mkdirSync } from 'node:fs'
 /**
- * Bun-native build for maia-client, moai-server, avens.
+ * Bun-native build for maia-client, sync-server, avens.
  * Uses root jsconfig.json paths for @MaiaOS/* resolution (self-contained bundle).
  */
 import { join } from 'node:path'
@@ -55,7 +55,7 @@ async function build(entry, outfile, target, opts = {}) {
 
 async function main() {
 	await build('libs/maia-distros/client/index.js', 'maia-client.mjs', 'browser')
-	await build('services/moai/src/index.js', 'moai-server.mjs', 'node')
+	await build('services/sync/src/index.js', 'sync-server.mjs', 'node')
 	await build('libs/maia-distros/avens/index.js', 'avens.mjs', 'browser')
 
 	const wasmSource = join(repoRoot, 'node_modules/@electric-sql/pglite/dist/pglite.wasm')

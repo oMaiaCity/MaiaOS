@@ -26,17 +26,16 @@ The sync service consolidates WebSocket sync, agent API, and LLM proxy in one pr
 
 ## Environment Variables
 
-- `PEER_MODE=sync` - Moai hosts /sync (default). Never connects to another.
-- `PEER_MODE=agent` - Client agent. Connects to sync at `PEER_MOAI`. For future pure agent workers.
-- `PEER_ID`, `PEER_SECRET` - Required (run `bun agent:generate`)
-- `PEER_STORAGE=pglite | postgres` (required - server never runs without persistent storage)
+- `AVEN_MAIA_ACCOUNT`, `AVEN_MAIA_SECRET` - Required (run `bun agent:generate`)
+- `PEER_SYNC_STORAGE=pglite | postgres` (required - server never runs without persistent storage)
 - `PEER_DB_PATH` - Default: `./local-sync.db` (pglite). Ignored when `postgres`.
-- `PEER_DB_URL` - Required when `PEER_STORAGE=postgres` (e.g. Fly Postgres)
-- `PEER_MOAI` - Required when `PEER_MODE=agent` (sync server URL). Ignored when `sync`.
+- `PEER_DB_URL` - Required when `PEER_SYNC_STORAGE=postgres` (e.g. Fly Postgres)
+- `AVEN_MAIA_GUARDIAN` - Optional. If set (human account co-id), add as admin on startup (one-time genesis).
+- `PEER_SYNC_SEED` - Set `true` for genesis seed (bootstrap + schemas + avens). Default: `false`.
 
 ## Dependencies
 
-- `@MaiaOS/maia-distros` + `@MaiaOS/loader`. Moai imports only from loader; loader re-exports schemata, tools, agents, cojson-transport-ws. maia-distros has no app logic—only bundling. Moai owns the logic (src/index.js); distros bundles it to moai-server.mjs. Prod runs the bundle; dev runs source.
+- `@MaiaOS/maia-distros` + `@MaiaOS/loader`. Sync imports only from loader; loader re-exports schemata, tools, avens, cojson-transport-ws. maia-distros has no app logic—only bundling. Sync owns the logic (src/index.js); distros bundles it to sync-server.mjs. Prod runs the bundle; dev runs source.
 
 ## Development
 
@@ -79,8 +78,8 @@ The client connects directly to sync (CORS enabled). Sync server URL:
 
 The sync server requires persistent storage (never in-memory or sync-only):
 
-- **PGlite** (`PEER_STORAGE=pglite`): Local WASM Postgres. Dev: `./local-sync.db`, prod: `/data/sync.db`.
-- **Postgres** (`PEER_STORAGE=postgres`): Remote Postgres via `PEER_DB_URL` (e.g. Fly Postgres).
+- **PGlite** (`PEER_SYNC_STORAGE=pglite`): Local WASM Postgres. Dev: `./local-sync.db`, prod: `/data/sync.db`.
+- **Postgres** (`PEER_SYNC_STORAGE=postgres`): Remote Postgres via `PEER_DB_URL` (e.g. Fly Postgres).
 
 ## How It Works
 

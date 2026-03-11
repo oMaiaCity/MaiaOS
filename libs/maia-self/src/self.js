@@ -274,7 +274,7 @@ export async function createAgentAccount({
 	const accountHeader = accountHeaderForInitialAgentSecret(agentSecret, crypto)
 	const computedAccountID = idforHeader(accountHeader, crypto)
 
-	// Get storage for agent mode (PEER_STORAGE=pglite|postgres required)
+	// Get storage for agent mode (PEER_SYNC_STORAGE=pglite|postgres required)
 	const storage = await getStorage({ mode: 'agent', dbPath, inMemory })
 
 	// Setup sync peers BEFORE account creation
@@ -348,7 +348,7 @@ export async function loadAgentAccount({
 		)
 	}
 
-	// Get storage for agent mode (PEER_STORAGE=pglite|postgres required)
+	// Get storage for agent mode (PEER_SYNC_STORAGE=pglite|postgres required)
 	const storage = await getStorage({ mode: 'agent', dbPath, inMemory })
 
 	// Setup sync peers BEFORE loading account

@@ -27,7 +27,7 @@ jobs:
 
   build:
     if: github.event_name != 'push' || github.event.head_commit == null || !startsWith(github.event.head_commit.message, '[release] ')
-    name: Build (maia + moai)
+    name: Build (app + sync)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -42,8 +42,8 @@ jobs:
       - name: Build distros
         run: bun run distros:build
 
-      - name: Build maia (Docker)
-        run: docker build -f services/maia/Dockerfile --build-arg VITE_PEER_MOAI=moai.next.maia.city -t maia-build . 2>&1 | tail -30
+      - name: Build app (Docker)
+        run: docker build -f services/app/Dockerfile --build-arg VITE_PEER_SYNC_HOST=sync.next.maia.city -t app-build . 2>&1 | tail -30
 
-      - name: Build moai (Docker)
-        run: docker build -f services/moai/Dockerfile -t moai-build . 2>&1 | tail -30
+      - name: Build sync (Docker)
+        run: docker build -f services/sync/Dockerfile -t sync-build . 2>&1 | tail -30
