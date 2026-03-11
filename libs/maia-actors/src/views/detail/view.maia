@@ -110,8 +110,8 @@
 					},
 					{
 						"tag": "h3",
-						"class": "members-title add-agent-title",
-						"text": "$addAgentLabel"
+						"class": "members-title add-aven-title",
+						"text": "$addAvenLabel"
 					},
 					{
 						"$slot": "$inputActor"

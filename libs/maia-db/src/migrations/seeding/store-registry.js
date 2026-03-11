@@ -4,7 +4,7 @@
 
 import {
 	ACTOR_CONFIG_REF_PATTERN,
-	AGENT_ACTOR_REF_PATTERN,
+	AVEN_ACTOR_REF_PATTERN,
 	INSTANCE_REF_PATTERN,
 } from '@MaiaOS/schemata'
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
@@ -98,7 +98,7 @@ export async function storeRegistry(
 			coId.startsWith('co_z') &&
 			(INSTANCE_REF_PATTERN.test(key) ||
 				ACTOR_CONFIG_REF_PATTERN.test(key) ||
-				AGENT_ACTOR_REF_PATTERN.test(key))
+				AVEN_ACTOR_REF_PATTERN.test(key))
 		) {
 			const existing = schematas.get(key)
 			if (!existing) schematas.set(key, coId)

@@ -158,10 +158,10 @@ export class MaiaDB {
 			returnType: 'coId',
 		})
 		const osSchemaCoId = await resolve(this, '°Maia/schema/os/os-registry', { returnType: 'coId' })
-		const agentsSchemaCoId = await resolve(this, '°Maia/schema/os/agents-registry', {
+		const avensRegistrySchemaCoId = await resolve(this, '°Maia/schema/os/avens-registry', {
 			returnType: 'coId',
 		})
-		if (!sparkSchemaCoId || !groupsSchemaCoId || !osSchemaCoId || !agentsSchemaCoId) {
+		if (!sparkSchemaCoId || !groupsSchemaCoId || !osSchemaCoId || !avensRegistrySchemaCoId) {
 			throw new Error('[MaiaDB] Spark scaffold schemas not found')
 		}
 		const ctx = { node: this.node, account: this.account, guardian: childGroup }
@@ -178,8 +178,8 @@ export class MaiaDB {
 			data: { groups: groups.id },
 			dataEngine: this.dbEngine,
 		})
-		const { coValue: agents } = await createCoValueForSpark(ctx, null, {
-			schema: agentsSchemaCoId,
+		const { coValue: avens } = await createCoValueForSpark(ctx, null, {
+			schema: avensRegistrySchemaCoId,
 			cotype: 'comap',
 			data: {},
 			dataEngine: this.dbEngine,
@@ -187,7 +187,7 @@ export class MaiaDB {
 		const { coValue: sparkCoMap } = await createCoValueForSpark(ctx, null, {
 			schema: sparkSchemaCoId,
 			cotype: 'comap',
-			data: { name: normalizedName, os: os.id, agents: agents.id },
+			data: { name: normalizedName, os: os.id, avens: avens.id },
 			dataEngine: this.dbEngine,
 		})
 		return { id: sparkCoMap.id, name: normalizedName, guardian: childGroup.id }

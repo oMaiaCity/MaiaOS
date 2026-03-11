@@ -34,7 +34,7 @@ async function getSchemaFromDb(maia, schemaRef) {
 	}
 }
 
-import { renderAgentViewer, renderDashboard } from './dashboard.js'
+import { renderAvenViewer, renderDashboard } from './dashboard.js'
 import { renderMaiaAIView } from './maia-ai-view.js'
 import { escapeHtml, getSyncStatusMessage, truncate } from './utils.js'
 
@@ -146,11 +146,11 @@ export async function renderApp(
 	currentScreen,
 	currentView,
 	currentContextCoValueId,
-	currentAgent,
+	currentAven,
 	currentSpark,
 	switchView,
 	selectCoValue,
-	loadAgent,
+	loadAven,
 	loadSpark,
 	navigateToScreen,
 ) {
@@ -162,7 +162,7 @@ export async function renderApp(
 			navigateToScreen,
 			currentSpark,
 			loadSpark,
-			loadAgent,
+			loadAven,
 		)
 		hydrateCobinaryPreviews(maia)
 		setTimeout(() => hydrateCobinaryPreviews(maia), 500)
@@ -174,8 +174,8 @@ export async function renderApp(
 		return
 	}
 
-	if (currentScreen === 'agent-viewer' && currentAgent) {
-		await renderAgentViewer(maia, authState, syncState, currentAgent, navigateToScreen, currentSpark)
+	if (currentScreen === 'aven-viewer' && currentAven) {
+		await renderAvenViewer(maia, authState, syncState, currentAven, navigateToScreen, currentSpark)
 		return
 	}
 
@@ -553,11 +553,11 @@ export async function renderApp(
 								currentScreen,
 								currentView,
 								currentContextCoValueId,
-								currentAgent,
+								currentAven,
 								currentSpark,
 								switchView,
 								selectCoValue,
-								loadAgent,
+								loadAven,
 								loadSpark,
 								navigateToScreen,
 							)
@@ -602,11 +602,11 @@ export async function renderApp(
 									currentScreen,
 									currentView,
 									currentContextCoValueId,
-									currentAgent,
+									currentAven,
 									currentSpark,
 									switchView,
 									selectCoValue,
-									loadAgent,
+									loadAven,
 									loadSpark,
 									navigateToScreen,
 								)
@@ -800,10 +800,10 @@ export async function renderApp(
 				)
 
 				if (propertyKeys.length === 0) {
-					// No properties - show empty state (with hint for agents/schematas/indexes)
+					// No properties - show empty state (with hint for avens/schematas/indexes)
 					const schemaId = (data.$schema || schemaCoId || '').toString()
 					const isRegistryEmpty =
-						schemaId.includes('agents-registry') ||
+						schemaId.includes('avens-registry') ||
 						schemaId.includes('schematas-registry') ||
 						schemaId.includes('indexes-registry')
 					const emptyHint = isRegistryEmpty
@@ -1168,7 +1168,7 @@ export async function renderApp(
 		`
 	}
 
-	// Build sidebar navigation items (Account only - agents via spark.agents)
+	// Build sidebar navigation items (Account only - avens via spark.avens)
 	const sidebarItems = navigationItems
 		.map((item) => {
 			// Account navigation - select account CoValue

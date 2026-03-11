@@ -483,33 +483,33 @@ export class MaiaOS {
 	}
 
 	/**
-	 * Load an agent by key or co-id from account/database (no arbitrary URL loading)
-	 * @param {string} agentKeyOrCoId - Agent key (e.g., "todos") or co-id (co_z...) to lookup from account
+	 * Load an aven by key or co-id from account/database (no arbitrary URL loading)
+	 * @param {string} avenKeyOrCoId - Aven key (e.g., "todos") or co-id (co_z...) to lookup from account
 	 * @param {HTMLElement} container - Container element
 	 * @param {string} [spark='°Maia'] - Spark name when using key lookup
-	 * @returns {Promise<{agent: Object, actor: Object}>} Agent metadata and actor instance
+	 * @returns {Promise<{aven: Object, actor: Object}>} Aven metadata and actor instance
 	 */
-	async loadAgent(agentKeyOrCoId, container, spark = '°Maia') {
-		return await this.loadAgentFromAccount(agentKeyOrCoId, container, spark)
+	async loadAven(avenKeyOrCoId, container, spark = '°Maia') {
+		return await this.loadAvenFromAccount(avenKeyOrCoId, container, spark)
 	}
 
 	/**
-	 * Load an agent from registries.sparks[spark].agents or directly by co-id
-	 * Supports: (1) agent key (e.g., "todos") - lookup via spark.agents map, (2) co-id (co_z...) - direct load from database
-	 * SECURITY: No arbitrary URL loading - agents load only from CoJSON database (account-scoped)
-	 * @param {string} agentKeyOrCoId - Agent key in spark's agents (e.g., "todos") or agent co-id (co_z...)
+	 * Load an aven from registries.sparks[spark].avens or directly by co-id
+	 * Supports: (1) aven key (e.g., "todos") - lookup via spark.avens map, (2) co-id (co_z...) - direct load from database
+	 * SECURITY: No arbitrary URL loading - avens load only from CoJSON database (account-scoped)
+	 * @param {string} avenKeyOrCoId - Aven key in spark's avens (e.g., "todos") or aven co-id (co_z...)
 	 * @param {HTMLElement} container - Container element
-	 * @param {string} [spark='°Maia'] - Spark name (used only when agentKeyOrCoId is a key, not a co-id)
-	 * @returns {Promise<{agent: Object, actor: Object}>} Agent metadata and actor instance
+	 * @param {string} [spark='°Maia'] - Spark name (used only when avenKeyOrCoId is a key, not a co-id)
+	 * @returns {Promise<{aven: Object, actor: Object}>} Aven metadata and actor instance
 	 */
-	async loadAgentFromAccount(agentKeyOrCoId, container, spark = '°Maia') {
+	async loadAvenFromAccount(avenKeyOrCoId, container, spark = '°Maia') {
 		if (!this.dataEngine || !this._account) {
-			throw new Error('[Loader] Cannot load agent from account - dataEngine or account not available')
+			throw new Error('[Loader] Cannot load aven from account - dataEngine or account not available')
 		}
 
-		// Co-id: load directly from database (skip spark.agents lookup)
-		if (typeof agentKeyOrCoId === 'string' && agentKeyOrCoId.startsWith('co_z')) {
-			return await this.loadAgentFromDatabase(agentKeyOrCoId, container, null)
+		// Co-id: load directly from database (skip spark.avens lookup)
+		if (typeof avenKeyOrCoId === 'string' && avenKeyOrCoId.startsWith('co_z')) {
+			return await this.loadAvenFromDatabase(avenKeyOrCoId, container, null)
 		}
 
 		const account = this._account
@@ -584,7 +584,7 @@ export class MaiaOS {
 			)
 		}
 
-		// Step 5: Read spark CoMap to get spark.agents (by co-id)
+		// Step 5: Read spark CoMap to get spark.avens (by co-id)
 		const sparkStore = await this.dataEngine.execute({
 			op: 'read',
 			schema: null,
@@ -599,101 +599,101 @@ export class MaiaOS {
 		}
 		// sparkData is flat from extractCoValueData
 
-		const agentsId = sparkData.agents
-		if (!agentsId || typeof agentsId !== 'string' || !agentsId.startsWith('co_')) {
-			throw new Error(`[Kernel] Spark "${spark}" has no agents registry. Ensure seeding has run.`)
+		const avensId = sparkData.avens
+		if (!avensId || typeof avensId !== 'string' || !avensId.startsWith('co_')) {
+			throw new Error(`[Kernel] Spark "${spark}" has no avens registry. Ensure seeding has run.`)
 		}
 
-		// Step 6: Read spark.agents CoMap
-		const agentsStore = await this.dataEngine.execute({
+		// Step 6: Read spark.avens CoMap
+		const avensStore = await this.dataEngine.execute({
 			op: 'read',
-			schema: agentsId,
-			key: agentsId,
+			schema: avensId,
+			key: avensId,
 		})
 
-		const agentsData = agentsStore.value
-		if (!agentsData || agentsData.error) {
+		const avensData = avensStore.value
+		if (!avensData || avensData.error) {
 			throw new Error(
-				`[Kernel] Spark "${spark}" agents not available: ${agentsData?.error || 'Unknown error'}`,
+				`[Kernel] Spark "${spark}" avens not available: ${avensData?.error || 'Unknown error'}`,
 			)
 		}
-		// agentsData is flat from extractCoValueData
+		// avensData is flat from extractCoValueData
 
-		const agentCoId = agentsData[agentKeyOrCoId]
-		if (!agentCoId || typeof agentCoId !== 'string' || !agentCoId.startsWith('co_')) {
-			const availableAgents = Object.keys(agentsData).filter(
+		const avenCoId = avensData[avenKeyOrCoId]
+		if (!avenCoId || typeof avenCoId !== 'string' || !avenCoId.startsWith('co_')) {
+			const availableAvens = Object.keys(avensData).filter(
 				(k) =>
 					k !== 'id' &&
 					k !== '$schema' &&
 					k !== 'type' &&
-					typeof agentsData[k] === 'string' &&
-					agentsData[k].startsWith('co_'),
+					typeof avensData[k] === 'string' &&
+					avensData[k].startsWith('co_'),
 			)
 			throw new Error(
-				`[Kernel] Agent '${agentKeyOrCoId}' not found in ${spark}.agents. Available: ${availableAgents.join(', ') || 'none'}`,
+				`[Kernel] Aven '${avenKeyOrCoId}' not found in ${spark}.avens. Available: ${availableAvens.join(', ') || 'none'}`,
 			)
 		}
 
-		return await this.loadAgentFromDatabase(agentCoId, container, agentKeyOrCoId)
+		return await this.loadAvenFromDatabase(avenCoId, container, avenKeyOrCoId)
 	}
 
 	/**
-	 * Load an agent from database (maia.do)
-	 * @param {string} agentId - Agent ID (co-id)
+	 * Load an aven from database (maia.do)
+	 * @param {string} avenId - Aven ID (co-id)
 	 * @param {HTMLElement} container - Container element
-	 * @param {string} [agentKey] - Optional agent key for actor reuse tracking (e.g., 'todos')
-	 * @returns {Promise<{agent: Object, actor: Object}>} Agent metadata and actor instance
+	 * @param {string} [avenKey] - Optional aven key for actor reuse tracking (e.g., 'todos')
+	 * @returns {Promise<{aven: Object, actor: Object}>} Aven metadata and actor instance
 	 */
-	async loadAgentFromDatabase(agentId, container, agentKey = null) {
-		if (!agentId.startsWith('co_z')) {
+	async loadAvenFromDatabase(avenId, container, avenKey = null) {
+		if (!avenId.startsWith('co_z')) {
 			throw new Error(
-				`[Kernel] Agent ID must be co-id at runtime: ${agentId}. This should have been resolved during seeding.`,
+				`[Kernel] Aven ID must be co-id at runtime: ${avenId}. This should have been resolved during seeding.`,
 			)
 		}
-		const agentCoId = agentId
+		const avenCoId = avenId
 
-		const agentStore = await this.dataEngine.execute({
+		const avenStore = await this.dataEngine.execute({
 			op: 'read',
 			schema: null,
-			key: agentCoId,
+			key: avenCoId,
 		})
 
 		const schemaStore = await this.dataEngine.execute({
 			op: 'schema',
-			fromCoValue: agentCoId,
+			fromCoValue: avenCoId,
 		})
-		const agentSchemaCoId = schemaStore.value?.$id || agentStore.value?.$schema
+		const avenSchemaCoId = schemaStore.value?.$id || avenStore.value?.$schema
 
-		if (!agentSchemaCoId) {
+		if (!avenSchemaCoId) {
 			throw new Error(
-				`[Kernel] Failed to extract schema co-id from agent ${agentCoId}. Agent must have $schema in headerMeta.`,
+				`[Kernel] Failed to extract schema co-id from aven ${avenCoId}. Aven must have $schema in headerMeta.`,
 			)
 		}
 
-		const store = agentStore
-		const agent = store.value
+		const store = avenStore
+		const aven = store.value
 
-		if (!agent || agent.error) {
+		if (!aven || aven.error) {
 			try {
 				await this.dataEngine.execute({
 					op: 'read',
 					schema: null,
-					key: agentCoId,
+					key: avenCoId,
 				})
 			} catch (_err) {}
-			throw new Error(`Agent not found in database: ${agentId} (co-id: ${agentCoId})`)
+			throw new Error(`Aven not found in database: ${avenId} (co-id: ${avenCoId})`)
 		}
 
 		const schema = schemaStore.value
 		if (schema) {
-			await validateAgainstSchemaOrThrow(schema, agent, 'agent')
+			await validateAgainstSchemaOrThrow(schema, aven, 'aven')
 		}
 
-		const actorCoId = agent.actor
+		const actorCoId = aven.actor
 
 		if (!actorCoId) {
 			throw new Error(
-				`[MaiaOS] Agent ${agentId} (${agentCoId}) does not have an 'actor' property. Agent structure: ${JSON.stringify(Object.keys(agent))}`,
+				`[MaiaOS] Aven ${avenId} (${avenCoId}) does not have an 'actor' property. Aven structure: ${JSON.stringify(Object.keys(aven))}`,
 			)
 		}
 
@@ -756,15 +756,15 @@ export class MaiaOS {
 			)
 		}
 
-		// Destroy any existing actors for this agent (destroy-on-switch lifecycle)
-		if (agentKey) {
-			this.runtime.destroyActorsForAgent(agentKey)
+		// Destroy any existing actors for this aven (destroy-on-switch lifecycle)
+		if (avenKey) {
+			this.runtime.destroyActorsForAven(avenKey)
 		}
 
 		const actorConfig = actorStore.value
-		const actor = await this.runtime.createActorForView(actorConfig, container, agentKey)
+		const actor = await this.runtime.createActorForView(actorConfig, container, avenKey)
 
-		return { agent, actor }
+		return { aven, actor }
 	}
 
 	/**

@@ -3,7 +3,7 @@
 		"baseUrl": ".",
 		"paths": {
 			"@MaiaOS/loader": ["../../libs/maia-loader/src/index.js"],
-			"@MaiaOS/agents": ["../../libs/maia-agents/src/index.js"]
+			"@MaiaOS/avens": ["../../libs/maia-avens/src/index.js"]
 		}
 	}
 }

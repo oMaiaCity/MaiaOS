@@ -188,36 +188,36 @@ export async function getSparkOsId(peer, spark) {
 }
 
 /**
- * Get spark's agents CoMap id (account.registries.sparks[spark].agents)
+ * Get spark's avens CoMap id (account.registries.sparks[spark].avens)
  * @param {Object} peer
  * @param {string} spark
  * @returns {Promise<string|null>}
  */
-export async function getSparkAgentsId(peer, spark) {
+export async function getSparkAvensId(peer, spark) {
 	const sparkCoId = await resolveSparkCoId(peer, spark)
 	if (!sparkCoId?.startsWith('co_z')) return null
 	const sparkStore = await peer.read(null, sparkCoId)
 	await waitForStoreReady(sparkStore, sparkCoId, 10000)
 	const sparkData = sparkStore?.value ?? {}
-	return sparkData.agents ?? null
+	return sparkData.avens ?? null
 }
 
 /**
- * Set spark's agents CoMap id
+ * Set spark's avens CoMap id
  * @param {Object} peer
  * @param {string} spark
- * @param {string} agentsId
+ * @param {string} avensId
  */
-export async function setSparkAgentsId(peer, spark, agentsId) {
+export async function setSparkAvensId(peer, spark, avensId) {
 	const sparkCoId = await resolveSparkCoId(peer, spark)
 	if (!sparkCoId?.startsWith('co_z'))
-		throw new Error(`[setSparkAgentsId] Spark ${spark} not found in registries`)
+		throw new Error(`[setSparkAvensId] Spark ${spark} not found in registries`)
 	const sparkCore = peer.getCoValue(sparkCoId)
-	if (!sparkCore) throw new Error(`[setSparkAgentsId] Spark core not found: ${sparkCoId}`)
+	if (!sparkCore) throw new Error(`[setSparkAvensId] Spark core not found: ${sparkCoId}`)
 	const sparkContent = peer.getCurrentContent(sparkCore)
 	if (!sparkContent || typeof sparkContent.set !== 'function')
-		throw new Error(`[setSparkAgentsId] Spark content not available`)
-	sparkContent.set('agents', agentsId)
+		throw new Error(`[setSparkAvensId] Spark content not available`)
+	sparkContent.set('avens', avensId)
 }
 
 /**

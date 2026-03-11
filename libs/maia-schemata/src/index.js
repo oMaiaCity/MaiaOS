@@ -12,10 +12,10 @@ import { ValidationEngine } from './validation.engine.js'
 export { ValidationEngine }
 export {
 	ACTOR_CONFIG_REF_PATTERN,
-	AGENT_ACTOR_REF_PATTERN,
-	AGENT_REF_PATTERN,
+	AVEN_ACTOR_REF_PATTERN,
+	AVEN_REF_PATTERN,
 	INSTANCE_REF_PATTERN,
-	isAgentRef,
+	isAvenRef,
 	isInstanceRef,
 	isSchemaRef,
 	SCHEMA_REF_PATTERN,
@@ -56,8 +56,8 @@ import todosDataSchema from './data/todos.schema.json'
 import actionSchema from './os/action.schema.json'
 // Import all schema definitions directly as JSON
 import actorSchema from './os/actor.schema.json'
-import agentSchema from './os/agent.schema.json'
-import agentsRegistrySchema from './os/agents-registry.schema.json'
+import avenSchema from './os/aven.schema.json'
+import avensRegistrySchema from './os/avens-registry.schema.json'
 import capabilitiesStreamSchema from './os/capabilities-stream.schema.json'
 import capabilitySchema from './os/capability.schema.json'
 import childrenSchema from './os/children.schema.json'
@@ -99,7 +99,7 @@ const SCHEMAS = {
 	brand: styleSchema,
 	'brand.style': styleSchema,
 	'actor.style': styleSchema,
-	agent: agentSchema,
+	aven: avenSchema,
 	event: eventSchema,
 	guard: guardSchema,
 	action: actionSchema,
@@ -116,7 +116,7 @@ const SCHEMAS = {
 	'os/capabilities-stream': capabilitiesStreamSchema,
 	'os/groups': groupsSchema,
 	'os/indexes-registry': indexesRegistrySchema,
-	'os/agents-registry': agentsRegistrySchema,
+	'os/avens-registry': avensRegistrySchema,
 	'os/sparks-registry': sparksRegistrySchema,
 	'os/cotext': cotextSchema,
 	'os/human': humanSchema,

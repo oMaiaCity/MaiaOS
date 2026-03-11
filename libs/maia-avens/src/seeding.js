@@ -1,7 +1,7 @@
 /**
  * Avens Seeding API - Cycle-free entry for moai genesis
  *
- * No dependency on @MaiaOS/loader - safe for static import in bundled sync-server.mjs.
+ * No dependency on @MaiaOS/loader - safe for static import in bundled moai-server.mjs.
  * Used by loader for getAllAvenRegistries, buildSeedConfig, filterAvensForSeeding.
  */
 

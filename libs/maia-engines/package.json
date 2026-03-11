@@ -12,7 +12,7 @@
 	},
 	"dependencies": {
 		"@MaiaOS/actors": "workspace:*",
-		"@MaiaOS/agents": "workspace:*",
+		"@MaiaOS/avens": "workspace:*",
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/schemata": "workspace:*"
 	},

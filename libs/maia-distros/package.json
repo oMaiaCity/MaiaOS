@@ -6,7 +6,7 @@
 	"exports": {
 		"./client": "./output/maia-client.mjs",
 		"./server": "./output/moai-server.mjs",
-		"./agents": "./output/agents.mjs"
+		"./avens": "./output/avens.mjs"
 	},
 	"files": [
 		"output"
@@ -16,7 +16,7 @@
 		"@MaiaOS/loader": "workspace:*",
 		"@MaiaOS/schemata": "workspace:*",
 		"@MaiaOS/actors": "workspace:*",
-		"@MaiaOS/agents": "workspace:*",
+		"@MaiaOS/avens": "workspace:*",
 		"cojson-transport-ws": "0.20.7"
 	},
 	"devDependencies": {},

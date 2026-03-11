@@ -26,13 +26,6 @@
         "unicode-segmenter": "^0.15.0",
       },
     },
-    "libs/maia-agents": {
-      "name": "@MaiaOS/agents",
-      "version": "26.217.1438",
-      "dependencies": {
-        "@MaiaOS/loader": "workspace:*",
-      },
-    },
     "libs/maia-ai": {
       "name": "@MaiaOS/maia-ai",
       "version": "26.217.1438",
@@ -40,6 +33,13 @@
         "@runanywhere/web": "0.1.0-beta.10",
         "@runanywhere/web-llamacpp": "0.1.0-beta.10",
         "@runanywhere/web-onnx": "0.1.0-beta.10",
+      },
+    },
+    "libs/maia-avens": {
+      "name": "@MaiaOS/avens",
+      "version": "26.217.1438",
+      "dependencies": {
+        "@MaiaOS/loader": "workspace:*",
       },
     },
     "libs/maia-brand": {
@@ -63,7 +63,7 @@
       "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/actors": "workspace:*",
-        "@MaiaOS/agents": "workspace:*",
+        "@MaiaOS/avens": "workspace:*",
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/loader": "workspace:*",
         "@MaiaOS/schemata": "workspace:*",
@@ -79,7 +79,7 @@
       "version": "26.217.1432",
       "dependencies": {
         "@MaiaOS/actors": "workspace:*",
-        "@MaiaOS/agents": "workspace:*",
+        "@MaiaOS/avens": "workspace:*",
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/schemata": "workspace:*",
       },
@@ -96,7 +96,7 @@
       "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/actors": "workspace:*",
-        "@MaiaOS/agents": "workspace:*",
+        "@MaiaOS/avens": "workspace:*",
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/engines": "workspace:*",
         "@MaiaOS/maia-ucan": "workspace:*",
@@ -200,7 +200,7 @@
   "packages": {
     "@MaiaOS/actors": ["@MaiaOS/actors@workspace:libs/maia-actors"],
 
-    "@MaiaOS/agents": ["@MaiaOS/agents@workspace:libs/maia-agents"],
+    "@MaiaOS/avens": ["@MaiaOS/avens@workspace:libs/maia-avens"],
 
     "@MaiaOS/brand": ["@MaiaOS/brand@workspace:libs/maia-brand"],
 

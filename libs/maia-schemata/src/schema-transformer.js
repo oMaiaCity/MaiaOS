@@ -24,7 +24,7 @@ export function transformForSeeding(schemaOrInstance, coIdMap, options = {}) {
 	// Detect if this is a schema or instance
 	// KEY DIFFERENCE:
 	// - Schemas have $schema: "°Maia/schema/meta" (or "https://json-schema.org/...")
-	// - Instances have $schema: "°Maia/schema/agent", "°Maia/schema/actor", etc. (pointing to their schema)
+	// - Instances have $schema: "°Maia/schema/aven", "°Maia/schema/actor", etc. (pointing to their schema)
 	const schemaRef = schemaOrInstance.$schema
 
 	// Check if $schema points to meta-schema (indicates this IS a schema definition)
@@ -39,7 +39,7 @@ export function transformForSeeding(schemaOrInstance, coIdMap, options = {}) {
 		return transformSchemaForSeeding(schemaOrInstance, coIdMap)
 	}
 
-	// If $schema points to a data schema (e.g., "°Maia/schema/agent", "°Maia/schema/actor"), it's an instance
+	// If $schema points to a data schema (e.g., "°Maia/schema/aven", "°Maia/schema/actor"), it's an instance
 	// Also check for instance-specific properties as additional confirmation
 	const hasInstanceProperties =
 		schemaOrInstance.actor !== undefined ||
@@ -271,7 +271,7 @@ function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 			// Check if it's a human-readable ID pattern or a plain string that needs mapping
 			const isHumanReadablePattern =
 				isSchemaRef(transformed.$id) ||
-				transformed.$id.startsWith('agent/') ||
+				transformed.$id.startsWith('aven/') ||
 				transformed.$id.startsWith('actor/') ||
 				transformed.$id.startsWith('view/') ||
 				transformed.$id.startsWith('context/') ||
@@ -411,7 +411,7 @@ function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 	// Note: subscriptions and inbox are now in separate .maia files (already clean at definition level)
 	// No legacy extraction/transformation logic needed
 
-	// Transform agent dependencies array (actor refs to watch at runtime)
+	// Transform aven dependencies array (actor refs to watch at runtime)
 	if (
 		transformed.dependencies &&
 		Array.isArray(transformed.dependencies) &&
@@ -424,10 +424,10 @@ function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 	) {
 		transformed.dependencies = transformed.dependencies.map((ref) => {
 			if (typeof ref !== 'string' || ref.startsWith('co_z')) return ref
-			const coId = transformTargetReference(ref, coIdMap, 'agent.dependencies')
+			const coId = transformTargetReference(ref, coIdMap, 'aven.dependencies')
 			if (coId) return coId
 			throw new Error(
-				`[SchemaTransformer] No co-id found for agent dependency: ${ref}. Ensure the actor exists.`,
+				`[SchemaTransformer] No co-id found for aven dependency: ${ref}. Ensure the actor exists.`,
 			)
 		})
 	}
@@ -653,7 +653,7 @@ function transformTargetReference(targetRef, coIdMap, context = '') {
 			return coId
 		} else {
 			const actorKeys = Array.from(coIdMap.keys()).filter(
-				(k) => k.includes('actor') || k.includes('agent') || k.includes('composite'),
+				(k) => k.includes('actor') || k.includes('aven') || k.includes('composite'),
 			)
 			const keyCount = actorKeys.length
 			const _keySample = actorKeys.slice(0, context.includes('array') ? 10 : 20).join(', ')

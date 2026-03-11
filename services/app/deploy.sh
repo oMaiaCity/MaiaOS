@@ -20,9 +20,9 @@ retry_flyctl_deploy() {
   while [ $retry_count -lt $max_retries ]; do
     echo "Attempt $((retry_count + 1))/$max_retries: Deploying $app_name..."
     
-    # VITE_SEED_AGENTS defaults to "all" in build (seeds all agents)
-    # To override, pass --build-arg VITE_SEED_AGENTS="todos,chat" manually
-    echo "   Using VITE_SEED_AGENTS=all (default - seeds all agents)"
+    # VITE_SEED_AVENS defaults to "all" in build (seeds all avens)
+    # To override, pass --build-arg VITE_SEED_AVENS="todos,chat" manually
+    echo "   Using VITE_SEED_AVENS=all (default - seeds all avens)"
     
     # Run deploy - explicit build args ensure VITE_PEER_SYNC_HOST is in bundle (sync domain)
     flyctl deploy \

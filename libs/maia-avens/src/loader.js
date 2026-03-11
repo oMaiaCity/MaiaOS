@@ -1,6 +1,6 @@
 /**
- * Universal Agent Loader
- * Boots MaiaOS with CoJSON backend, loads agent from account.registries.sparks[spark].agents[agentKey]
+ * Universal Aven Loader
+ * Boots MaiaOS with CoJSON backend, loads aven from account.registries.sparks[spark].avens[avenKey]
  * Reuses existing MaiaOS session from main app if available
  */
 
@@ -18,16 +18,14 @@ function checkForExistingSession() {
 }
 
 /**
- * @param {string} agentKey - Key in spark.agents (e.g. 'todos', 'chat')
- * @param {Object} Registry - Agent registry (e.g. TodosAgentRegistry)
+ * @param {string} avenKey - Key in spark.avens (e.g. 'todos', 'chat')
+ * @param {Object} Registry - Aven registry (e.g. TodosAvenRegistry)
  * @param {string[]} [modules=['db','core']] - MaiaOS modules to load
- * @returns {(container: HTMLElement) => Promise<{os: MaiaOS, agent: Object, actor: Object}>}
+ * @returns {(container: HTMLElement) => Promise<{os: MaiaOS, aven: Object, actor: Object}>}
  */
-export function createAgentLoader(agentKey, Registry, modules = ['db', 'core']) {
+export function createAvenLoader(avenKey, Registry, modules = ['db', 'core']) {
 	return async (container) => {
-		console.log(
-			`🚀 Booting MaiaOS for ${agentKey.charAt(0).toUpperCase() + agentKey.slice(1)} Agent...`,
-		)
+		console.log(`🚀 Booting MaiaOS for ${avenKey.charAt(0).toUpperCase() + avenKey.slice(1)} Aven...`)
 		let os = checkForExistingSession()
 		if (os) {
 			console.log('ℹ️  Reusing existing MaiaOS session from main app')
@@ -36,8 +34,8 @@ export function createAgentLoader(agentKey, Registry, modules = ['db', 'core']) 
 			const { node, account } = await signInWithPasskey({ salt: 'maia.city' })
 			os = await MaiaOS.boot({ node, account, modules, registry: Registry })
 		}
-		const { agent, actor } = await os.loadAgentFromAccount(agentKey, container)
-		return { os, agent, actor }
+		const { aven, actor } = await os.loadAvenFromAccount(avenKey, container)
+		return { os, aven, actor }
 	}
 }
 

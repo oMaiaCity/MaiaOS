@@ -9,10 +9,10 @@
 <body>
   <div class="host-wrapper"><div id="actor-todo"></div></div>
   <script type="module">
-    import { bootAgent } from '../boot.js';
-    import { loadTodosAgent } from './loader.js';
+    import { bootAven } from '../boot.js';
+    import { loadTodosAven } from './loader.js';
 
-    bootAgent(loadTodosAgent, 'actor-todo', 'todoActor').catch(_e => {});
+    bootAven(loadTodosAven, 'actor-todo', 'todoActor').catch(_e => {});
   </script>
 </body>
 </html>
