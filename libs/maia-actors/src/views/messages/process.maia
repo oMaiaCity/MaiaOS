@@ -45,6 +45,18 @@
 					"create": {
 						"schema": "°Maia/schema/data/chat",
 						"data": {
+							"role": "user",
+							"content": "$pendingInputText",
+							"displayName": "me"
+						}
+					}
+				}
+			},
+			{
+				"op": {
+					"create": {
+						"schema": "°Maia/schema/data/chat",
+						"data": {
 							"role": "assistant",
 							"content": "$$result.content",
 							"displayName": "Maia"
@@ -93,6 +105,15 @@
 						"error": "$$errors.0.message"
 					}
 				}
+			},
+			{
+				"tell": {
+					"target": "°Maia/actor/views/input/for-chat",
+					"type": "ERROR",
+					"payload": {
+						"errors": "$$errors"
+					}
+				}
 			}
 		],
 		"RETRY": [
@@ -110,6 +131,18 @@
 					"phase": "idle",
 					"error": null,
 					"hasError": false
+				}
+			},
+			{
+				"guard": {
+					"$onlyWhenOriginated": true
+				}
+			},
+			{
+				"tell": {
+					"target": "°Maia/actor/views/input/for-chat",
+					"type": "DISMISS",
+					"payload": {}
 				}
 			}
 		]

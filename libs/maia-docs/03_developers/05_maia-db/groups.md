@@ -136,7 +136,7 @@ MaiaOS standardizes on **account co-ids** (co_z...) for group member storage and
 
 **API and display:**
 - Accept and expose **account co-id only**. Agent ID is internal (used for crypto/key revelation) and never accepted, returned, or logged at the API boundary.
-- `resolveAccountCoIdsToProfileNames` expects account co-ids; agent IDs are never resolved (by design).
+- `resolveAccountCoIdsToProfiles` expects account co-ids; agent IDs are never resolved (by design).
 - For legacy data that may contain agent IDs, the frontend displays "Agent X" as a fallback instead of raw sealer_z/signer_z strings.
 
 **Implementation:** `addGroupMember` passes an account-like object `{ id: accountCoId, currentAgentID: () => agentId }` to CoJSON, so the group stores `account.id` (co_z) as the member key while using agent ID only for cryptographic operations.

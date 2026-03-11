@@ -2622,6 +2622,202 @@ pre {
 	/* We also add global styles that can affect Shadow DOM content */
 }
 
+/* Capabilities table (guardian visibility) */
+.capabilities-table-wrap {
+	overflow-x: auto;
+	border-radius: 16px;
+	border: 1px solid rgba(255, 255, 255, 0.35);
+	background: rgba(255, 255, 255, 0.25);
+	backdrop-filter: blur(8px);
+}
+.capabilities-table {
+	width: 100%;
+	border-collapse: collapse;
+	font-size: 0.9rem;
+}
+.capabilities-th {
+	text-align: left;
+	padding: 0.75rem 1rem;
+	font-weight: 600;
+	font-size: 0.7rem;
+	letter-spacing: 0.08em;
+	text-transform: uppercase;
+	color: var(--color-marine-blue-muted);
+	background: rgba(255, 255, 255, 0.4);
+	border-bottom: 1px solid rgba(0, 31, 51, 0.08);
+}
+.capabilities-th:first-child {
+	border-top-left-radius: 16px;
+}
+.capabilities-th:last-child {
+	border-top-right-radius: 16px;
+}
+.capabilities-row {
+	transition:
+		background 0.15s ease,
+		border-color 0.15s ease,
+		box-shadow 0.15s ease;
+}
+.capabilities-row-even {
+	background: rgba(255, 255, 255, 0.15);
+}
+.capabilities-row-odd {
+	background: transparent;
+}
+.capabilities-row:hover {
+	background: rgba(255, 255, 255, 0.4);
+}
+
+/* Active capability: prominent green accent */
+.capabilities-row-active .capabilities-cell:first-child {
+	border-left: 4px solid var(--color-lush-green);
+}
+.capabilities-row-active.capabilities-row-odd {
+	background: rgba(78, 154, 88, 0.06);
+}
+.capabilities-row-active.capabilities-row-even {
+	background: rgba(78, 154, 88, 0.1);
+}
+.capabilities-row-active:hover {
+	background: rgba(78, 154, 88, 0.14);
+}
+
+/* Expired/revoked capability: muted, red accent */
+.capabilities-row-expired .capabilities-cell:first-child {
+	border-left: 4px solid var(--color-terracotta);
+}
+.capabilities-row-expired.capabilities-row-odd {
+	background: rgba(194, 123, 102, 0.06);
+	opacity: 0.75;
+}
+.capabilities-row-expired.capabilities-row-even {
+	background: rgba(194, 123, 102, 0.1);
+	opacity: 0.75;
+}
+.capabilities-row-expired .capabilities-cmd {
+	text-decoration: line-through;
+	color: var(--color-marine-blue-muted);
+}
+.capabilities-row-expired .capabilities-subject,
+.capabilities-row-expired .capabilities-expiry {
+	color: var(--color-marine-blue-muted);
+}
+.capabilities-row-expired:hover {
+	background: rgba(194, 123, 102, 0.12);
+	opacity: 0.9;
+}
+.capabilities-cell {
+	padding: 0.875rem 1rem;
+	border-bottom: 1px solid rgba(0, 31, 51, 0.05);
+	color: var(--color-marine-blue);
+}
+.capabilities-row:last-child .capabilities-cell {
+	border-bottom: none;
+}
+.capabilities-subject {
+	font-weight: 500;
+	color: var(--color-marine-blue);
+}
+.capabilities-subject-wrap {
+	display: inline-flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+.capabilities-avatar {
+	width: 24px;
+	height: 24px;
+	border-radius: 50%;
+	object-fit: cover;
+	flex-shrink: 0;
+}
+.capabilities-cmd {
+	display: inline-block;
+	font-family: var(--font-mono, ui-monospace, monospace);
+	font-size: 0.8rem;
+	font-weight: 500;
+	padding: 0.2rem 0.5rem;
+	border-radius: 6px;
+	background: rgba(0, 189, 214, 0.12);
+	color: var(--color-marine-blue);
+	border: 1px solid rgba(0, 189, 214, 0.2);
+}
+.capabilities-expiry {
+	color: var(--color-marine-blue-muted);
+	font-size: 0.85rem;
+}
+.capabilities-policy {
+	color: var(--color-marine-blue-light);
+	font-size: 0.85rem;
+}
+.capabilities-id {
+	font-size: 0.75rem;
+	font-family: var(--font-mono, ui-monospace, monospace);
+	cursor: pointer;
+	color: var(--color-paradise-water);
+	text-decoration: none;
+	padding: 0.15rem 0.35rem;
+	border-radius: 4px;
+	transition:
+		background 0.15s ease,
+		color 0.15s ease;
+}
+.capabilities-id:hover {
+	background: rgba(0, 189, 214, 0.15);
+	color: var(--color-marine-blue);
+	text-decoration: underline;
+}
+.capabilities-empty td {
+	padding: 2.5rem 1rem;
+	text-align: center;
+	color: var(--color-marine-blue-light);
+	font-style: italic;
+	font-size: 0.9rem;
+}
+.capabilities-th-actions {
+	width: 1%;
+	white-space: nowrap;
+}
+.capabilities-actions {
+	text-align: right;
+}
+.capabilities-actions .capabilities-extend-btn {
+	margin-right: 0.5rem;
+}
+.capabilities-extend-btn {
+	padding: 0.25rem 0.5rem;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: var(--color-paradise-water);
+	background: rgba(0, 189, 214, 0.15);
+	border: 1px solid rgba(0, 189, 214, 0.4);
+	border-radius: 8px;
+	cursor: pointer;
+	transition:
+		background 0.15s ease,
+		border-color 0.15s ease;
+}
+.capabilities-extend-btn:hover {
+	background: rgba(0, 189, 214, 0.25);
+	border-color: rgba(0, 189, 214, 0.6);
+}
+.capabilities-revoke-btn {
+	padding: 0.25rem 0.5rem;
+	font-size: 0.75rem;
+	font-weight: 600;
+	color: var(--color-terracotta);
+	background: rgba(255, 82, 82, 0.15);
+	border: 1px solid rgba(255, 82, 82, 0.4);
+	border-radius: 8px;
+	cursor: pointer;
+	transition:
+		background 0.15s ease,
+		border-color 0.15s ease;
+}
+.capabilities-revoke-btn:hover {
+	background: rgba(255, 82, 82, 0.25);
+	border-color: rgba(255, 82, 82, 0.6);
+}
+
 /* Global styles for sliding sidebars (affects Shadow DOM) */
 .agent-container .nav-aside,
 .agent-container .detail-aside {

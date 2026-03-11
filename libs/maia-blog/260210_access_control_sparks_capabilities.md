@@ -7,7 +7,7 @@ tags: ["architecture", "access-control", "sparks", "capabilities", "groups"]
 
 # Access Control: Sparks, Capabilities, and Per-CoValue Ownership
 
-When building collaborative applications, one of the most fundamental questions is: **who can access what?** Every piece of data needs clear ownership and access rules. If you're new to MaiaOS, you might not yet know what CoValues are, what an account looks like, or why we use paths like `spark.os.capabilities.guardian`. This article builds up from the ground floor—no prior knowledge assumed. By the end, you'll understand how access control works in MaiaOS and why we structure things the way we do.
+When building collaborative applications, one of the most fundamental questions is: **who can access what?** Every piece of data needs clear ownership and access rules. If you're new to MaiaOS, you might not yet know what CoValues are, what an account looks like, or why we use paths like `spark.os.groups.guardian`. This article builds up from the ground floor—no prior knowledge assumed. By the end, you'll understand how access control works in MaiaOS and why we structure things the way we do.
 
 Let's start at the beginning.
 
@@ -51,7 +51,7 @@ We could put a `group` property directly on the spark: `spark.group = "co_zSomeG
 - **Schematas** – What schemas exist in this spark (for validation)
 - **Indexes** – How to query data in this spark
 - **Vibes** – What vibes (apps/UI) are available
-- **Capabilities** – The actual access primitives (who is admin, who can read publicly, etc.)
+- **Groups** – The actual access primitives (who is admin, who can read publicly, etc.)
 
 Putting all of that on the spark would make it messy. So we introduced the **OS** (operating system) metaphor.
 
@@ -61,9 +61,9 @@ Each spark has an **OS CoMap** (`spark.os`). Think of it as the spark's "control
 
 - `os.schematas` – Schema registry for this spark
 - `os.indexes` – Index registry for querying
-- `os.capabilities` – Access control primitives
+- `os.groups` – Access control groups (guardian, publicReaders)
 
-The **capabilities** CoMap (`os.capabilities`) is where we store *who has access*. It holds:
+The **groups** CoMap (`os.groups`) is where we store *who has access*. It holds:
 
 - **guardian** – The group that is the admin for this spark. Add someone to the guardian = they get admin access to everything in the spark.
 - **publicReaders** – (Optional) A group that gives "everyone" read access, for publicly readable data like schema registries.
@@ -71,7 +71,7 @@ The **capabilities** CoMap (`os.capabilities`) is where we store *who has access
 So the path to find "who controls this spark?" is:
 
 ```
-spark → spark.os → os.capabilities → capabilities.guardian
+spark → spark.os → os.groups → groups.guardian
 ```
 
 That's the **canonical path**. Any code that needs the spark's admin group follows this path. No duplicate `group` property on the spark—one source of truth, one path.
@@ -80,8 +80,8 @@ That's the **canonical path**. Any code that needs the spark's admin group follo
 
 A few benefits:
 
-1. **Single path** – No confusion about "do I use spark.group or spark.os.capabilities.guardian?" Always the latter.
-2. **Room to grow** – Capabilities can hold more than guardian (e.g. publicReaders, future writeDelegates) without cluttering the spark.
+1. **Single path** – No confusion about "do I use spark.group or spark.os.groups.guardian?" Always the latter.
+2. **Room to grow** – Groups can hold more than guardian (e.g. publicReaders, future writeDelegates) without cluttering the spark.
 3. **Consistent resolution** – The same path works for °Maia and every user-created spark. Same structure everywhere.
 
 ## Per-CoValue Ownership: Each Piece of Data Has Its Own Group
@@ -104,7 +104,7 @@ When you create a todo (or any CoValue) for a spark, we use a 3-step flow:
 
 Result: the CoValue is owned by a group with **no direct members**—only the guardian as parent. You don't stay as direct admin; you control things through the spark's guardian (because you're in the guardian). This keeps the model consistent: access always flows through the guardian, not through "creator" as a special case.
 
-## Capabilities in Detail
+## Groups in Detail
 
 ### Guardian
 
@@ -118,7 +118,7 @@ Sometimes you want data to be **publicly readable**—e.g. schema definitions, v
 
 1. Create a group with `everyone` as `reader`
 2. Create a "registry group" that extends the guardian (for write) and the public group (for read)
-3. Store that registry group's co-id in `capabilities.publicReaders`
+3. Store that registry group's co-id in `groups.publicReaders`
 
 CoValues owned by a group that extends publicReaders are readable by anyone. Write access still goes through the guardian.
 
@@ -127,19 +127,19 @@ CoValues owned by a group that extends publicReaders are readable by anyone. Wri
 When you create a spark (e.g. "My Project"), we don't just create a spark CoMap with a name. We create the **full scaffold** so every spark has the same structure:
 
 1. **Guardian** – A new child group of °Maia's guardian. This is *your* spark's admin group.
-2. **Capabilities CoMap** – With `guardian: childGroup.id`
-3. **OS CoMap** – With `capabilities: capabilities.id`
+2. **Groups CoMap** – With `guardian: childGroup.id`
+3. **OS CoMap** – With `groups: groups.id`
 4. **Vibes CoMap** – Empty registry for this spark's vibes
 5. **Spark CoMap** – With `{ name, os, vibes }`—no top-level `group` property
 
-So the path `spark.os.capabilities.guardian` always works. Same for °Maia (created at bootstrap) and every user spark.
+So the path `spark.os.groups.guardian` always works. Same for °Maia (created at bootstrap) and every user spark.
 
 ## Resolving Members in the UI
 
 The Sparks vibe shows spark details, including members. The detail view queries the spark and uses a `map` to follow the path and extract members:
 
 ```
-spark → os → capabilities → guardian → accountMembers
+spark → os → groups → guardian → accountMembers
 ```
 
 The query config looks like:
@@ -147,13 +147,13 @@ The query config looks like:
 ```json
 {
   "map": {
-    "members": "$$os.capabilities.guardian.accountMembers",
-    "groupId": "$$os.capabilities.guardian.id"
+    "members": "$$os.groups.guardian.accountMembers",
+    "groupId": "$$os.groups.guardian.id"
   }
 }
 ```
 
-The `$$` syntax means "follow this path on the loaded spark." The engine deep-resolves `os`, then `capabilities`, then `guardian`, and for groups it auto-injects `accountMembers`. So you get the member list without any manual fetching. One path, one query.
+The `$$` syntax means "follow this path on the loaded spark." The engine deep-resolves `os`, then `groups`, then `guardian`, and for groups it auto-injects `accountMembers`. So you get the member list without any manual fetching. One path, one query.
 
 ## Summary: The Mental Model
 
@@ -162,12 +162,12 @@ The `$$` syntax means "follow this path on the loaded spark." The engine deep-re
 - **Accounts** – Your identity. Has `profile` and `sparks` (a registry of your collaborative spaces).
 - **Sparks** – Named entries in `account.sparks`. Each has `name`, `os`, `vibes`.
 - **spark.os** – The spark's "control panel": schematas, indexes, capabilities.
-- **spark.os.capabilities** – Access primitives: `guardian` (admin group), `publicReaders` (optional).
-- **Canonical path** – `spark.os.capabilities.guardian` is the single source of truth for who controls a spark.
+- **spark.os.groups** – Access groups: `guardian` (admin group), `publicReaders` (optional).
+- **Canonical path** – `spark.os.groups.guardian` is the single source of truth for who controls a spark.
 - **Per-CoValue ownership** – Each CoValue has its own group that extends the guardian. Creator leaves; access flows through the guardian.
 - **Public read** – Use `publicReaders` (a group with `everyone` as reader) for publicly readable data.
 
-Once you have this model, the code paths make sense: we always resolve the guardian via `spark.os.capabilities.guardian`, and we always create CoValues with their own group that extends that guardian.
+Once you have this model, the code paths make sense: we always resolve the guardian via `spark.os.groups.guardian`, and we always create CoValues with their own group that extends that guardian.
 
 ---
 

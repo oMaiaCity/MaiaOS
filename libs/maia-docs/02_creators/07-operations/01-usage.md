@@ -3,11 +3,11 @@
 - Created spark object with:
   - `id` - Spark CoMap co-id
   - `name` - Spark name
-  - `guardian` - Guardian group co-id (resolved via `spark.os.capabilities.guardian`)
+  - `guardian` - Guardian group co-id (resolved via `spark.os.groups.guardian`)
 
 **What happens:**
 1. Creates a new guardian group (child of °Maia spark's guardian)
-2. Creates full scaffold: capabilities, os, vibes, spark with `{name, os, vibes}` (no `group`; guardian is in `os.capabilities.guardian`)
+2. Creates full scaffold: groups, os, vibes, spark with `{name, os, vibes}` (no `group`; guardian is in `os.groups.guardian`)
 3. Registers spark in `account.sparks` CoMap
 4. Automatically indexes spark in `account.os.{sparkSchemaCoId}` colist
 

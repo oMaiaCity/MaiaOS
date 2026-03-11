@@ -68,13 +68,13 @@ async function resolveAccountToProfileCoIdViaHumans(maia, accountCoId) {
 }
 
 /**
- * Resolve a single account co-id to its profile name
+ * Resolve a single account co-id to profile id, name, and image
  * Uses humans registry (public) first; falls back to account read for self.
  * @param {Object} maia - MaiaOS instance with maia.do()
  * @param {string} accountCoId - Account co-id (co_z...)
- * @returns {Promise<string>} Profile name, or "Traveler " + short id when profile has no name
+ * @returns {Promise<{ id: string|null, name: string, image: string|null }>}
  */
-async function resolveOne(maia, accountCoId) {
+async function resolveOneToProfile(maia, accountCoId) {
 	try {
 		let profileCoId = await resolveAccountToProfileCoIdViaHumans(maia, accountCoId)
 		if (!profileCoId) {
@@ -83,29 +83,40 @@ async function resolveOne(maia, accountCoId) {
 			const accountData = accountStore?.value ?? accountStore
 			profileCoId = accountData?.profile?.startsWith('co_') ? accountData.profile : null
 		}
-		if (!profileCoId) return travelerFallback(accountCoId)
+		if (!profileCoId) {
+			return { id: null, name: travelerFallback(accountCoId), image: null }
+		}
 		const profileStore = await maia.do({ op: 'read', schema: null, key: profileCoId })
 		await waitForStore(profileStore, 5000)
 		const profileData = profileStore?.value ?? profileStore
 		const name = profileData?.name
-		return typeof name === 'string' && name.length > 0 ? name : travelerFallback(accountCoId)
+		const image =
+			typeof profileData?.avatar === 'string' && profileData.avatar.startsWith('co_z')
+				? profileData.avatar
+				: null
+		return {
+			id: profileCoId,
+			name: typeof name === 'string' && name.length > 0 ? name : travelerFallback(accountCoId),
+			image,
+		}
 	} catch (_e) {
-		return travelerFallback(accountCoId)
+		return { id: null, name: travelerFallback(accountCoId), image: null }
 	}
 }
 
 /**
- * Resolve account co-ids to their profile names
+ * Resolve account co-ids to profiles (id, name, image)
+ * Unified utility: one pass returns profile co-id, display name, and avatar image co-id.
  * @param {Object} maia - MaiaOS instance with maia.do() (operations API)
  * @param {string[]} accountCoIds - Array of account co-ids (co_z...); skips 'everyone' and non-co_z
- * @returns {Promise<Map<string, string>>} Map of accountCoId → profile name (or "Traveler " + short id when empty)
+ * @returns {Promise<Map<string, { id: string|null, name: string, image: string|null }>>} Map of accountCoId → { id, name, image }
  */
-export async function resolveAccountCoIdsToProfileNames(maia, accountCoIds) {
+export async function resolveAccountCoIdsToProfiles(maia, accountCoIds) {
 	const result = new Map()
-	if (!maia?.db || !Array.isArray(accountCoIds)) return result
+	if (!maia?.do || !Array.isArray(accountCoIds)) return result
 
 	// Pre-populate "everyone"
-	result.set('everyone', 'Everyone')
+	result.set('everyone', { id: null, name: 'Everyone', image: null })
 
 	// Deduplicate and filter to account co-ids only
 	const toResolve = [...new Set(accountCoIds)].filter(
@@ -116,25 +127,14 @@ export async function resolveAccountCoIdsToProfileNames(maia, accountCoIds) {
 
 	const resolved = await Promise.all(
 		toResolve.map(async (coId) => {
-			const name = await resolveOne(maia, coId)
-			return [coId, name]
+			const profile = await resolveOneToProfile(maia, coId)
+			return [coId, profile]
 		}),
 	)
 
-	for (const [coId, name] of resolved) {
-		result.set(coId, name)
+	for (const [coId, profile] of resolved) {
+		result.set(coId, profile)
 	}
 
 	return result
-}
-
-/**
- * Resolve account co-id to profile co-id for navigation (e.g. selectCoValue)
- * Uses humans registry when available; falls back to null.
- * @param {Object} maia - MaiaOS instance with maia.do()
- * @param {string} accountCoId - Account co-id (co_z...)
- * @returns {Promise<string|null>} Profile co-id or null
- */
-export async function resolveAccountToProfileCoId(maia, accountCoId) {
-	return resolveAccountToProfileCoIdViaHumans(maia, accountCoId)
 }

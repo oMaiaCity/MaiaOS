@@ -73,6 +73,24 @@ export class MaiaOS {
 	}
 
 	/**
+	 * Create UCAN-like capability token for protected API calls
+	 * @param {Object} opts
+	 * @param {string} opts.cmd - e.g. "/test-ucan"
+	 * @param {Object} [opts.args={}]
+	 * @returns {Promise<string>} JWT-style token (Bearer)
+	 * @throws {Error} If not signed in or agentSecret not available
+	 */
+	async getCapabilityToken(opts = {}) {
+		const { cmd, args = {} } = opts
+		if (!cmd || typeof cmd !== 'string') throw new Error('cmd required')
+		if (!this._agentSecret) throw new Error('Agent secret not available (sign in required)')
+		const accountID = this._account?.id ?? this._account?.$jazz?.id
+		if (!accountID?.startsWith('co_z')) throw new Error('Account not ready')
+		const { createInvocationToken } = await import('@MaiaOS/maia-ucan')
+		return createInvocationToken(this._agentSecret, accountID, { cmd, args })
+	}
+
+	/**
 	 * MaiaPeer - P2P layer (node + account) for tools that need direct peer access
 	 * @returns {{ node: LocalNode, account: RawAccount }|null}
 	 */
@@ -265,6 +283,10 @@ export class MaiaOS {
 				os._node = config.node
 				os._account = config.account
 			}
+			// Store agentSecret for getCapabilityToken (UCAN-like auth, in-memory only)
+			if (config.agentSecret) {
+				os._agentSecret = config.agentSecret
+			}
 		}
 
 		// Initialize database (requires peer via node+account or pre-initialized peer)
@@ -282,7 +304,9 @@ export class MaiaOS {
 
 		// Start Runtime (inbox watching for browser agents)
 		const runtimeType = config.runtimeType || 'browser'
-		const runtime = new Runtime(os.dataEngine, os.actorEngine, runtimeType)
+		const runtime = new Runtime(os.dataEngine, os.actorEngine, runtimeType, {
+			getCapabilityToken: (opts) => os.getCapabilityToken(opts),
+		})
 		os.actorEngine.runtime = runtime
 		os.viewEngine.runtime = runtime
 		os.runtime = runtime

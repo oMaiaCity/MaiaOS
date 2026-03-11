@@ -99,6 +99,7 @@
         "@MaiaOS/agents": "workspace:*",
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/engines": "workspace:*",
+        "@MaiaOS/maia-ucan": "workspace:*",
         "@MaiaOS/schemata": "workspace:*",
         "@MaiaOS/self": "workspace:*",
         "cojson-transport-ws": "0.20.7",
@@ -151,6 +152,15 @@
         "cojson-transport-ws": "0.20.7",
       },
     },
+    "libs/maia-ucan": {
+      "name": "@MaiaOS/maia-ucan",
+      "version": "26.217.1438",
+      "dependencies": {
+        "@noble/ed25519": "^2.1.0",
+        "@noble/hashes": "^1.4.0",
+        "@scure/base": "^1.2.0",
+      },
+    },
     "services/maia": {
       "name": "@MaiaOS/maia",
       "version": "26.217.1438",
@@ -165,6 +175,7 @@
       "dependencies": {
         "@MaiaOS/loader": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
+        "@MaiaOS/maia-ucan": "workspace:*",
         "unicode-segmenter": "^0.15.0",
       },
     },
@@ -189,6 +200,8 @@
     "@MaiaOS/maia-ai": ["@MaiaOS/maia-ai@workspace:libs/maia-ai"],
 
     "@MaiaOS/maia-distros": ["@MaiaOS/maia-distros@workspace:libs/maia-distros"],
+
+    "@MaiaOS/maia-ucan": ["@MaiaOS/maia-ucan@workspace:libs/maia-ucan"],
 
     "@MaiaOS/moai": ["@MaiaOS/moai@workspace:services/moai"],
 
@@ -373,6 +386,8 @@
     "@jridgewell/trace-mapping": ["@jridgewell/trace-mapping@0.3.31", "", { "dependencies": { "@jridgewell/resolve-uri": "^3.1.0", "@jridgewell/sourcemap-codec": "^1.4.14" } }, "sha512-zzNR+SdQSDJzc8joaeP8QQoCQr8NuYx2dIIytl1QeBEZHJ9uW6hebsrYgbz8hJwUQao3TWCMtmfV8Nu1twOLAw=="],
 
     "@maia/language": ["@maia/language@workspace:libs/maia-language"],
+
+    "@noble/ed25519": ["@noble/ed25519@2.3.0", "", {}, "sha512-M7dvXL2B92/M7dw9+gzuydL8qn/jiqNHaoR3Q+cb1q1GHV7uwE17WCyFMG+Y+TZb5izcaXk5TdJRrDUxHXL78A=="],
 
     "@noble/hashes": ["@noble/hashes@1.8.0", "", {}, "sha512-jCs9ldd7NwzpgXDIf6P3+NrHh9/sD6CQdxHyjQI+h/6rDNo88ypBxxz45UDuZHz9r3tNz7N/VInSVoVdtXEI4A=="],
 
@@ -1003,6 +1018,8 @@
     "yargs": ["yargs@17.7.2", "", { "dependencies": { "cliui": "^8.0.1", "escalade": "^3.1.1", "get-caller-file": "^2.0.5", "require-directory": "^2.1.1", "string-width": "^4.2.3", "y18n": "^5.0.5", "yargs-parser": "^21.1.1" } }, "sha512-7dSzzRQ++CKnNI/krKnYRV7JKKPUXMEh61soaHKg9mrWEhzFWhFnxPxGl+69cD1Ou63C13NUPCnmIcrvqCuM6w=="],
 
     "yargs-parser": ["yargs-parser@21.1.1", "", {}, "sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw=="],
+
+    "@MaiaOS/storage/@electric-sql/pglite": ["@electric-sql/pglite@0.3.16", "", {}, "sha512-mZkZfOd9OqTMHsK+1cje8OSzfAQcpD7JmILXTl5ahdempjUDdmg4euf1biDex5/LfQIDJ3gvCu6qDgdnDxfJmA=="],
 
     "@babel/core/semver": ["semver@6.3.1", "", { "bin": { "semver": "bin/semver.js" } }, "sha512-BR7VvDCVHO+q2xBEWskxS6DJE1qRnb7DxzUrogb71CWoSficBxYsiAGd+Kl0mmq/MprG9yArRkyrQxTO6XjMzA=="],
 

@@ -3,7 +3,7 @@
  * Handles dashboard screen and agent viewer rendering
  */
 
-import { getAllAgentRegistries, resolveAccountCoIdsToProfileNames } from '@MaiaOS/loader'
+import { getAllAgentRegistries, resolveAccountCoIdsToProfiles } from '@MaiaOS/loader'
 import { escapeHtml, getSyncStatusMessage, truncate, truncateWords } from './utils.js'
 
 /**
@@ -187,9 +187,15 @@ export async function renderDashboard(
 ) {
 	// Require signed-in account (maia.id = { maiaId, node })
 	if (!maia?.id?.maiaId || !maia.id.node) {
+		const isLoading = authState?.signedIn
+		const message = isLoading ? 'Loading account…' : 'Please sign in.'
 		document.getElementById('app').innerHTML = `
-			<div class="flex flex-col justify-center items-center min-h-[60vh] text-slate-500">
-				<p class="font-medium">${authState?.signedIn ? 'Loading account…' : 'Please sign in.'}</p>
+			<div class="loading-connecting-overlay">
+				${isLoading ? '<div class="loading-spinner"></div>' : ''}
+				<div class="loading-connecting-content">
+					<h2>${message}</h2>
+					${isLoading ? '<div class="loading-connecting-subtitle">Setting up your sovereign self…</div>' : ''}
+				</div>
 			</div>
 		`
 		return
@@ -197,10 +203,10 @@ export async function renderDashboard(
 
 	const accountId = maia?.id?.maiaId?.id || ''
 	let accountDisplayName = truncate(accountId, 12)
-	if (accountId?.startsWith('co_z') && maia?.db) {
+	if (accountId?.startsWith('co_z') && maia?.do) {
 		try {
-			const profileNames = await resolveAccountCoIdsToProfileNames(maia, [accountId])
-			accountDisplayName = profileNames.get(accountId) ?? accountDisplayName
+			const profiles = await resolveAccountCoIdsToProfiles(maia, [accountId])
+			accountDisplayName = profiles.get(accountId)?.name ?? accountDisplayName
 		} catch (_e) {}
 	}
 
@@ -380,10 +386,10 @@ export async function renderAgentViewer(
 ) {
 	const accountId = maia?.id?.maiaId?.id || ''
 	let accountDisplayName = truncate(accountId, 12)
-	if (accountId?.startsWith('co_z') && maia?.db) {
+	if (accountId?.startsWith('co_z') && maia?.do) {
 		try {
-			const profileNames = await resolveAccountCoIdsToProfileNames(maia, [accountId])
-			accountDisplayName = profileNames.get(accountId) ?? accountDisplayName
+			const profiles = await resolveAccountCoIdsToProfiles(maia, [accountId])
+			accountDisplayName = profiles.get(accountId)?.name ?? accountDisplayName
 		} catch (_e) {}
 	}
 	// Map agent keys to display names

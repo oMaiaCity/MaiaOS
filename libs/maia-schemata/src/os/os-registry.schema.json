@@ -2,14 +2,19 @@
 	"$schema": "°Maia/schema/meta",
 	"$id": "°Maia/schema/os/os-registry",
 	"title": "°Maia/schema/os/os-registry",
-	"description": "OS CoMap - contains capabilities, schematas, indexes. Stored in spark.os",
+	"description": "OS CoMap - contains groups, schematas, indexes. Stored in spark.os",
 	"cotype": "comap",
 	"indexing": false,
 	"properties": {
+		"groups": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "Groups CoMap co-id (guardian, publicReaders)"
+		},
 		"capabilities": {
 			"type": "string",
 			"pattern": "^co_z[a-zA-Z0-9]+$",
-			"description": "Capabilities CoMap co-id (guardian, publicReaders)"
+			"description": "CoStream of Capability CoMap co-ids (UCAN-aligned grants)"
 		},
 		"schematas": {
 			"type": "string",

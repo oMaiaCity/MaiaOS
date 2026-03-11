@@ -33,6 +33,10 @@
 		"profileName": {
 			"type": "string",
 			"description": "Profile display name from profile.name (resolved when read)"
+		},
+		"llmExp": {
+			"type": "integer",
+			"description": "Capability expiry for /llm/chat (Unix seconds). Set at register."
 		}
 	},
 	"required": ["account", "profile"],
