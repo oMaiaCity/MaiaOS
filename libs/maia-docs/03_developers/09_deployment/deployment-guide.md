@@ -23,8 +23,8 @@ Complete guide for deploying MaiaOS services to Fly.io, including DNS setup. Con
 
 ## Services Overview
 
-1. **next-maia-city** (`services/maia/`) - Frontend SPA (port 8080)
-2. **moai-next-maia-city** (`services/moai/`) - Sync + API (port 4201, WebSocket /sync)
+1. **next-maia-city** (`services/app/`) - Frontend SPA (port 8080)
+2. **moai-next-maia-city** (`services/sync/`) - Sync + API (port 4201, WebSocket /sync)
 
 ## Quick Start
 
@@ -38,7 +38,7 @@ bun run deploy
 ./scripts/deploy-all.sh
 ```
 
-Deploys moai first, then maia.
+Deploys sync first, then app.
 
 ### First-Time Setup
 
@@ -49,7 +49,7 @@ Before first deployment:
 flyctl apps create moai-next-maia-city --org maia-city
 flyctl apps create next-maia-city --org maia-city
 
-# Moai needs a volume for PGlite persistence
+# Sync needs a volume for PGlite persistence
 flyctl volumes create moai_data --app moai-next-maia-city --region fra --size 3
 
 # Generate credentials and sync to Fly secrets
@@ -60,30 +60,30 @@ bun run deploy:secrets
 bun run deploy
 ```
 
-**Secrets:** Moai requires `PEER_ID` and `PEER_SECRET` (from `bun agent:generate`). Maia needs no secrets—sync domain comes from fly.toml [build.args] at build time.
+**Secrets:** Sync requires `AVEN_MAIA_ACCOUNT` and `AVEN_MAIA_SECRET` (from `bun agent:generate`). App needs no secrets—sync domain comes from fly.toml [build.args] at build time.
 
 ### Deploy Individual Services
 
 ```bash
-bun run deploy:moai    # Moai only
-bun run deploy:maia   # Maia only
+bun run deploy:sync    # Sync only
+bun run deploy:app    # App only
 ```
 
-### Local Testing (Maia)
+### Local Testing (App)
 
 Test the production build locally before deploying:
 
 ```bash
-cd services/maia
+cd services/app
 bun run build
 PORT=8080 bun run start
 ```
 
 Then open http://localhost:8080
 
-## Moai Volume Configuration
+## Sync Volume Configuration
 
-Moai uses a Fly volume for PGlite persistence. Volume name must match `fly.toml` [mounts]:
+Sync uses a Fly volume for PGlite persistence. Volume name must match `fly.toml` [mounts]:
 
 - **Volume name:** `moai_data`
 - **Mount point:** `/data` (database at `/data/sync.db`)
@@ -116,9 +116,9 @@ bun run deploy:secrets
 bun run deploy
 
 # 4. DNS + certs if using custom domain
-flyctl certs create moai.next.maia.city --app moai-next-maia-city
+flyctl certs create sync.next.maia.city --app moai-next-maia-city
 
-# 5. Update fly.toml [build.args] VITE_PEER_MOAI if using Fly.io domain
+# 5. Update fly.toml [build.args] VITE_PEER_SYNC_HOST if using Fly.io domain
 
 # 6. (Optional) Destroy old app
 flyctl apps destroy sync-next-maia-city
@@ -133,17 +133,17 @@ flyctl apps destroy sync-next-maia-city
 
 ### Custom Domains
 
-To use custom domains (`next.maia.city` and `moai.next.maia.city`):
+To use custom domains (`next.maia.city` and `sync.next.maia.city`):
 
 1. **Set up DNS** (see [DNS Setup](#dns-setup) below)
 2. **Add SSL certificates**:
    ```bash
    flyctl certs create next.maia.city --app next-maia-city
-   flyctl certs create moai.next.maia.city --app moai-next-maia-city
+   flyctl certs create sync.next.maia.city --app moai-next-maia-city
    ```
 3. **Update fly.toml** [build.args] if using Fly.io domain:
    ```toml
-   VITE_PEER_MOAI = "moai-next-maia-city.fly.dev"
+   VITE_PEER_SYNC_HOST = "moai-next-maia-city.fly.dev"
    ```
 
 ---
@@ -158,11 +158,11 @@ If you see the error: **"Record verweist auf ein Ziel innerhalb dieser Zone, das
 
 ### Correct DNS Configuration
 
-#### For `moai.next.maia.city` CNAME Record
+#### For `sync.next.maia.city` CNAME Record
 
 **Correct Configuration:**
 - **Type:** CNAME
-- **Name:** `moai.next` (or `moai.next.maia.city` depending on Hetzner's interface)
+- **Name:** `sync.next` (or `sync.next.maia.city` depending on Hetzner's interface)
 - **Value:** `moai-next-maia-city.fly.dev.` (note the trailing dot!)
 - **TTL:** 3600
 
@@ -181,13 +181,13 @@ If you see the error: **"Record verweist auf ein Ziel innerhalb dieser Zone, das
 1. **Log into Hetzner DNS Console**
    - Go to your Hetzner DNS zone for `maia.city`
 
-2. **Add CNAME for moai subdomain:**
+2. **Add CNAME for sync subdomain:**
    - Click "Add Record" or "New Record"
    - **Type:** Select `CNAME`
-   - **Name:** Enter `moai.next` (Hetzner will automatically append `.maia.city`)
+   - **Name:** Enter `sync.next` (Hetzner will automatically append `.maia.city`)
    - **Value:** Enter `moai-next-maia-city.fly.dev.` (with trailing dot!)
    - **TTL:** 3600
-   - **Comment:** (optional) "Moai (sync+API) service"
+   - **Comment:** (optional) "Sync (sync+API) service"
    - Save
 
 3. **Add CNAME for main domain:**
@@ -212,17 +212,17 @@ After setting up DNS:
 
 1. **Check DNS propagation:**
    ```bash
-   dig moai.next.maia.city CNAME
+   dig sync.next.maia.city CNAME
    dig next.maia.city CNAME
    ```
 
 2. **Test connectivity:**
    ```bash
-   curl https://moai.next.maia.city/health
+   curl https://sync.next.maia.city/health
    curl https://next.maia.city/
    ```
 
-3. **Sync domain** for maia is set at build time (fly.toml [build.args] VITE_PEER_MOAI). Redeploy if you change domains.
+3. **Sync domain** for maia is set at build time (fly.toml [build.args] VITE_PEER_SYNC_HOST). Redeploy if you change domains.
 
 ### DNS Common Issues
 
@@ -233,35 +233,35 @@ After setting up DNS:
 
 **DNS not resolving**
 1. Wait for DNS propagation (can take up to 48 hours, usually < 1 hour)
-2. Check DNS with: `dig moai.next.maia.city CNAME`
+2. Check DNS with: `dig sync.next.maia.city CNAME`
 3. Verify Fly.io app is running: `flyctl status --app moai-next-maia-city`
 
 **SSL certificate errors**
-1. Add SSL certificate in Fly.io: `flyctl certs create moai.next.maia.city --app moai-next-maia-city`
+1. Add SSL certificate in Fly.io: `flyctl certs create sync.next.maia.city --app moai-next-maia-city`
 2. Wait for certificate provisioning (usually < 5 minutes)
-3. Verify: `flyctl certs show moai.next.maia.city --app moai-next-maia-city`
+3. Verify: `flyctl certs show sync.next.maia.city --app moai-next-maia-city`
 
 ---
 
 ## Environment Variables
 
-### Moai Service (`moai-next-maia-city`)
+### Sync Service (`moai-next-maia-city`)
 
 **Required Fly secrets** (app crashes without these):
-- `PEER_ID` - Account ID (from `bun agent:generate`)
-- `PEER_SECRET` - Agent secret (from `bun agent:generate`)
+- `AVEN_MAIA_ACCOUNT` - Account ID (from `bun agent:generate`)
+- `AVEN_MAIA_SECRET` - Agent secret (from `bun agent:generate`)
 
 **Optional:** `RED_PILL_API_KEY` for LLM chat.
 
-**Sync from .env:** `bun run deploy:secrets` copies PEER_ID, PEER_SECRET, RED_PILL_API_KEY from root `.env` to Fly.
+**Sync from .env:** `bun run deploy:secrets` copies AVEN_MAIA_ACCOUNT, AVEN_MAIA_SECRET, RED_PILL_API_KEY from root `.env` to Fly.
 
 **fly.toml:** `PORT` (4201), `PEER_DB_PATH` (`/data/sync.db`)
 
 ### Maia City (`next-maia-city`)
 
 **No Fly secrets.** Sync domain is build-time only:
-- `VITE_PEER_MOAI` from fly.toml [build.args] (default: `moai.next.maia.city`)
-- Override: `fly deploy --build-arg VITE_PEER_MOAI=moai-next-maia-city.fly.dev`
+- `VITE_PEER_SYNC_HOST` from fly.toml [build.args] (default: `sync.next.maia.city`)
+- Override: `fly deploy --build-arg VITE_PEER_SYNC_HOST=moai-next-maia-city.fly.dev` (or sync.next.maia.city for custom domain)
 
 **fly.toml:** `PORT` (8080)
 
@@ -269,14 +269,14 @@ After setting up DNS:
 
 ```
 ┌─────────────────┐
-│  maia-city      │  (Frontend SPA)
+│  app            │  (Frontend SPA)
 │  (Port 8080)    │
 └────────┬────────┘
          │ WebSocket
          │ /sync
          ▼
 ┌─────────────────┐
-│  moai           │  (Self-Hosted Sync Server)
+│  sync           │  (Self-Hosted Sync Server)
 │  (Port 4201)    │
 │  PGlite Storage │
 └─────────────────┘
@@ -299,7 +299,7 @@ curl https://next-maia-city.fly.dev/
 
 Clients connect to moai sync via:
 - **Fly.io:** `wss://moai-next-maia-city.fly.dev/sync`
-- **Custom domain:** `wss://moai.next.maia.city/sync`
+- **Custom domain:** `wss://sync.next.maia.city/sync`
 
 ## Monitoring
 
@@ -319,31 +319,31 @@ flyctl status --app moai-next-maia-city
 
 1. **Verify TLS cert for custom domain** (required for wss://):
    ```bash
-   flyctl certs create moai.next.maia.city --app moai-next-maia-city
-   flyctl certs show moai.next.maia.city --app moai-next-maia-city
+   flyctl certs create sync.next.maia.city --app moai-next-maia-city
+   flyctl certs show sync.next.maia.city --app moai-next-maia-city
    ```
 
 2. **Verify sync domain in build** (from fly.toml [build.args]):
    ```bash
-   # Check fly.toml has: VITE_PEER_MOAI = "moai.next.maia.city"
+   # Check fly.toml has: VITE_PEER_SYNC_HOST = "sync.next.maia.city"
    # Redeploy if you changed domains
    ```
 
 3. **Test sync service health**:
    ```bash
-   curl https://moai.next.maia.city/health
+   curl https://sync.next.maia.city/health
    # or: curl https://moai-next-maia-city.fly.dev/health
    ```
 
-4. **Verify DNS**: `moai.next.maia.city` → CNAME to `moai-next-maia-city.fly.dev.`
+4. **Verify DNS**: `sync.next.maia.city` → CNAME to `moai-next-maia-city.fly.dev.`
 
 ### API calls to localhost / Mixed content blocked
 
-The API (LLM chat) and sync use the same domain. Sync domain comes from `VITE_PEER_MOAI` in fly.toml [build.args] (build-time). Ensure fly.toml has the correct domain and redeploy.
+The API (LLM chat) and sync use the same domain. Sync domain comes from `VITE_PEER_SYNC_HOST` in fly.toml [build.args] (build-time). Ensure fly.toml has the correct domain and redeploy.
 
 ### Frontend can't connect to server
 
-1. Verify fly.toml [build.args] VITE_PEER_MOAI matches your moai domain
+1. Verify fly.toml [build.args] VITE_PEER_SYNC_HOST matches your moai domain
 2. Check sync service is running: `curl https://moai-next-maia-city.fly.dev/health`
 3. Verify DNS/domain configuration if using custom domains
 

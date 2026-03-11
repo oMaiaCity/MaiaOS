@@ -1,7 +1,7 @@
 #!/usr/bin/env bun
 
 /**
- * Run maia dev server (port 4200).
+ * Run app dev server (port 4200).
  * Kills any process on 4200 before starting, like bun dev.
  */
 
@@ -13,13 +13,13 @@ import { createLogger } from './logger.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = resolve(__dirname, '..')
-const logger = createLogger('maia')
+const logger = createLogger('app')
 
 ;(async () => {
 	const ok = await freePort(4200, (msg) => logger.warn(msg))
 	if (!ok) process.exit(1)
 
-	const proc = spawn('bun', ['--env-file=.env', '--filter', '@MaiaOS/maia', 'dev'], {
+	const proc = spawn('bun', ['--env-file=.env', '--filter', '@MaiaOS/app', 'dev'], {
 		cwd: rootDir,
 		stdio: 'inherit',
 		shell: false,

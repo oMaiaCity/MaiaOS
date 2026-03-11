@@ -264,7 +264,7 @@ export async function createAgentAccount({
 } = {}) {
 	if (!agentSecret) {
 		throw new Error(
-			'agentSecret is required. Set PEER_SECRET env var. Run `bun agent:generate` to generate credentials.',
+			'agentSecret is required. Set AVEN_MAIA_SECRET env var. Run `bun agent:generate` to generate credentials.',
 		)
 	}
 
@@ -274,7 +274,7 @@ export async function createAgentAccount({
 	const accountHeader = accountHeaderForInitialAgentSecret(agentSecret, crypto)
 	const computedAccountID = idforHeader(accountHeader, crypto)
 
-	// Get storage for agent mode (PEER_STORAGE=pglite|postgres required)
+	// Get storage for agent mode (PEER_SYNC_STORAGE=pglite|postgres required)
 	const storage = await getStorage({ mode: 'agent', dbPath, inMemory })
 
 	// Setup sync peers BEFORE account creation
@@ -339,16 +339,16 @@ export async function loadAgentAccount({
 } = {}) {
 	if (!agentSecret) {
 		throw new Error(
-			'agentSecret is required. Set PEER_SECRET env var. Run `bun agent:generate` to generate credentials.',
+			'agentSecret is required. Set AVEN_MAIA_SECRET env var. Run `bun agent:generate` to generate credentials.',
 		)
 	}
 	if (!accountID) {
 		throw new Error(
-			'accountID is required. Set PEER_ID env var. Run `bun agent:generate` to generate credentials.',
+			'accountID is required. Set AVEN_MAIA_ACCOUNT env var. Run `bun agent:generate` to generate credentials.',
 		)
 	}
 
-	// Get storage for agent mode (PEER_STORAGE=pglite|postgres required)
+	// Get storage for agent mode (PEER_SYNC_STORAGE=pglite|postgres required)
 	const storage = await getStorage({ mode: 'agent', dbPath, inMemory })
 
 	// Setup sync peers BEFORE loading account

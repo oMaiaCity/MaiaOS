@@ -1,8 +1,8 @@
-# Deploy maia + moai to Fly.io
+# Deploy app + sync to Fly.io
 # Runs on [release] commits (created by version-tag workflow). Skipped on [feat]/merge.
 # Manual trigger: workflow_dispatch
 
-name: Deploy Next (maia + moai)
+name: Deploy Next (app + sync)
 
 on:
   push:
@@ -10,13 +10,13 @@ on:
   workflow_dispatch:
 
 jobs:
-  deploy-moai:
+  deploy-sync:
     if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && startsWith(github.event.head_commit.message, '[release] '))
-    name: Deploy moai
+    name: Deploy sync
     runs-on: ubuntu-latest
     environment:
       name: Next
-      url: https://moai.next.maia.city/health
+      url: https://sync.next.maia.city/health
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
     steps:
@@ -27,12 +27,12 @@ jobs:
         with:
           version: latest
 
-      - name: Deploy moai
-        run: ./services/moai/deploy.sh
+      - name: Deploy sync
+        run: ./services/sync/deploy.sh
 
-  deploy-maia:
+  deploy-app:
     if: github.event_name == 'workflow_dispatch' || (github.event.head_commit != null && startsWith(github.event.head_commit.message, '[release] '))
-    name: Deploy maia
+    name: Deploy app
     runs-on: ubuntu-latest
     environment:
       name: Next
@@ -51,5 +51,5 @@ jobs:
         with:
           version: latest
 
-      - name: Deploy maia
-        run: ./services/maia/deploy.sh
+      - name: Deploy app
+        run: ./services/app/deploy.sh

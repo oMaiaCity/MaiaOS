@@ -5,18 +5,13 @@
  *
  * Port: 4201
  *
- * Env vars (required - moai never generates credentials, only reads from env):
- *   PEER_ID, PEER_SECRET - From Fly secrets (sync from .env: bun run deploy:secrets)
- *   PEER_MODE=sync | agent
- *     - sync: I host /sync (moai). Never connect to another. syncDomain=null.
- *     - agent: Client agent. Connects to sync at PEER_MOAI. Use for future pure agent workers.
- *   PEER_STORAGE=pglite | postgres (required - server never runs without persistent storage)
+ * Env vars (required - sync never generates credentials, only reads from env):
+ *   AVEN_MAIA_ACCOUNT, AVEN_MAIA_SECRET - From Fly secrets (sync from .env: bun run agent:generate)
+ *   PEER_SYNC_STORAGE=pglite | postgres (required - server never runs without persistent storage)
  *     - pglite: PEER_DB_PATH (default ./local-sync.db)
  *     - postgres: PEER_DB_URL (required)
- *   PEER_MOAI: Required when PEER_MODE=agent (where to connect). Ignored when sync.
- *   PEER_ADD_GUARDIAN: Default false. Set true to add PEER_GUARDIAN as admin on startup (one-time genesis).
- *   PEER_GUARDIAN: Human account co-id (co_z...). Human must sign in from maia first so account syncs.
- *   PEER_FRESH_SEED: Default false. Set true to run genesis seed (bootstrap + schemas + avens).
+ *   AVEN_MAIA_GUARDIAN: Human account co-id (co_z...). If set, add as admin on startup (one-time genesis). If empty/unset, skip.
+ *   PEER_SYNC_SEED: Default false. Set true to run genesis seed (bootstrap + schemas + avens).
  *     - true: Fresh seed (first deploy or intentional reset). May overwrite existing scaffold.
  *     - false/unset: Skip seed, use persisted data. Never overwrite on restart.
  */
@@ -42,35 +37,32 @@ import { agentIDToDidKey, verifyInvocationToken } from '@MaiaOS/maia-ucan'
 import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
-// Resolve db path relative to moai package root (not process.cwd) so persistence is stable across restarts
-const _moaiDir = pathResolve(dirname(fileURLToPath(import.meta.url)), '..')
+// Resolve db path relative to sync package root (not process.cwd) so persistence is stable across restarts
+const _syncDir = pathResolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 const PORT = process.env.PORT || 4201
 const PEER_DB_PATH = process.env.PEER_DB_PATH || './local-sync.db'
 
-const accountID = process.env.PEER_ID
-const agentSecret = process.env.PEER_SECRET
-const storageType = process.env.PEER_STORAGE || 'pglite'
+const accountID = process.env.AVEN_MAIA_ACCOUNT
+const agentSecret = process.env.AVEN_MAIA_SECRET
+const storageType = process.env.PEER_SYNC_STORAGE || 'pglite'
 if (storageType === 'in-memory' || storageType === 'jazz-cloud') {
 	throw new Error(
-		'[moai] Server requires persistent storage. Use PEER_STORAGE=pglite or PEER_STORAGE=postgres. No in-memory or jazz-cloud.',
+		'[sync] Server requires persistent storage. Use PEER_SYNC_STORAGE=pglite or PEER_SYNC_STORAGE=postgres. No in-memory or jazz-cloud.',
 	)
 }
 const usePGlite = storageType === 'pglite'
 const usePostgres = storageType === 'postgres'
 if (!usePGlite && !usePostgres) {
-	throw new Error(`[moai] PEER_STORAGE must be pglite or postgres. Got: ${storageType}`)
+	throw new Error(`[sync] PEER_SYNC_STORAGE must be pglite or postgres. Got: ${storageType}`)
 }
-// Resolve relative to moai package dir (stable across runs regardless of cwd)
-const dbPath = usePGlite ? pathResolve(_moaiDir, PEER_DB_PATH) : undefined
-const peerMode = process.env.PEER_MODE || 'sync'
-const syncDomain = peerMode === 'agent' ? process.env.PEER_MOAI || null : null
+// Resolve relative to sync package dir (stable across runs regardless of cwd)
+const dbPath = usePGlite ? pathResolve(_syncDir, PEER_DB_PATH) : undefined
 const MAIA_SPARK = '°Maia'
 const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
 
-const peerAddGuardian = process.env.PEER_ADD_GUARDIAN === 'true'
-const peerGuardianAccountId = process.env.PEER_GUARDIAN?.trim() || null
-const peerFreshSeed = process.env.PEER_FRESH_SEED === 'true'
+const avenMaiaGuardian = process.env.AVEN_MAIA_GUARDIAN?.trim() || null
+const peerSyncSeed = process.env.PEER_SYNC_SEED === 'true'
 // Sync mode seeds all avens by default (internal, not configurable)
 const seedVibesConfig = 'all'
 
@@ -644,7 +636,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 ;(async () => {
 	try {
 		if (!accountID || !agentSecret) {
-			throw new Error('PEER_ID and PEER_SECRET required. Run: bun agent:generate')
+			throw new Error('AVEN_MAIA_ACCOUNT and AVEN_MAIA_SECRET required. Run: bun agent:generate')
 		}
 
 		if (dbPath && !process.env.PEER_DB_PATH) process.env.PEER_DB_PATH = dbPath
@@ -661,7 +653,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 		const result = await loadOrCreateAgentAccount({
 			accountID,
 			agentSecret,
-			syncDomain,
+			syncDomain: null,
 			dbPath,
 			createName: 'Agent Moai',
 		})
@@ -693,9 +685,8 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 		// loadAccount defers migration; seed needs guardian in os.groups
 		await schemaMigration(result.account, localNode)
 
-		// Genesis sync mode: seed only when PEER_FRESH_SEED=true (explicit, no co-value inference).
-		// Agent mode never seeds (minimal account, no avens).
-		if (peerMode === 'sync' && peerFreshSeed) {
+		// Genesis: seed only when PEER_SYNC_SEED=true (explicit, no co-value inference).
+		if (peerSyncSeed) {
 			const allAvenRegistries = await getAllAvenRegistries()
 			const avenRegistries = await filterAvensForSeeding(allAvenRegistries, seedVibesConfig)
 			if (avenRegistries.length === 0) {
@@ -730,40 +721,34 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 				configs: configsForSeed,
 				schemas,
 				data,
-				forceFreshSeed: true, // PEER_FRESH_SEED=true: always bootstrap, bypass idempotency
+				forceFreshSeed: true, // PEER_SYNC_SEED=true: always bootstrap, bypass idempotency
 			})
 			if (seedResult?.ok === false && seedResult?.errors?.length) {
 				const msg = seedResult.errors.map((e) => e?.message ?? e).join('; ')
 				throw new Error(`[sync] Genesis seed failed: ${msg}`)
 			}
 			console.log(
-				`[sync] Genesis seeded: ${avenRegistries.length} aven(s) (schemas + scaffold). Set PEER_FRESH_SEED=false for subsequent restarts.`,
+				`[sync] Genesis seeded: ${avenRegistries.length} aven(s) (schemas + scaffold). Set PEER_SYNC_SEED=false for subsequent restarts.`,
 			)
-		} else if (peerMode === 'sync' && !peerFreshSeed) {
-			console.log('[sync] PEER_FRESH_SEED not set — using persisted scaffold (skip seed).')
+		} else {
+			console.log('[sync] PEER_SYNC_SEED not set — using persisted scaffold (skip seed).')
 		}
 
-		// One-time: add PEER_GUARDIAN (human account co-id) as admin of °Maia spark guardian group
-		if (peerAddGuardian && peerGuardianAccountId?.startsWith('co_z')) {
+		// One-time: add AVEN_MAIA_GUARDIAN (human account co-id) as admin of °Maia spark guardian group
+		if (avenMaiaGuardian?.startsWith('co_z')) {
 			try {
 				const guardian = await agentWorker.peer.getMaiaGroup()
 				if (guardian) {
-					await agentWorker.peer.addGroupMember(guardian, peerGuardianAccountId, 'admin')
-					console.log(
-						`[sync] Added guardian as admin of °Maia spark (set PEER_ADD_GUARDIAN=false to skip on next restart)`,
-					)
+					await agentWorker.peer.addGroupMember(guardian, avenMaiaGuardian, 'admin')
+					console.log('[sync] Added guardian as admin of °Maia spark.')
 				} else {
 					console.warn(
-						'[sync] PEER_ADD_GUARDIAN=true but °Maia spark guardian not found (ensure genesis seeded first)',
+						'[sync] AVEN_MAIA_GUARDIAN set but °Maia spark guardian not found (ensure genesis seeded first)',
 					)
 				}
 			} catch (e) {
 				console.error('[sync] Failed to add guardian:', e?.message ?? e)
 			}
-		} else if (peerAddGuardian && !peerGuardianAccountId?.startsWith('co_z')) {
-			console.warn(
-				'[sync] PEER_ADD_GUARDIAN=true but PEER_GUARDIAN missing. Set PEER_GUARDIAN=co_z... (human account co-id, from /me after sign-in).',
-			)
 		}
 
 		syncHandler = {

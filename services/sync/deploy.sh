@@ -1,5 +1,5 @@
 #!/bin/bash
-# Deploy script for moai service to Fly.io
+# Deploy script for sync service to Fly.io
 
 set -e
 
@@ -72,22 +72,22 @@ retry_flyctl_deploy() {
   return 1
 }
 
-echo "🚀 Deploying moai service to Fly.io..."
+echo "🚀 Deploying sync service to Fly.io..."
 echo "   App: moai-next-maia-city"
 echo ""
 
 cd "$MONOREPO_ROOT"
 
-# Secrets (PEER_ID, PEER_SECRET, PEER_DB_URL) must be set manually before deploy
+# Secrets (AVEN_MAIA_ACCOUNT, AVEN_MAIA_SECRET, PEER_DB_URL) must be set manually before deploy
 if ! retry_flyctl_deploy \
   "moai-next-maia-city" \
-  "services/moai/Dockerfile" \
-  "services/moai/fly.toml"; then
-  echo "❌ Failed to deploy moai service after retries"
+  "services/sync/Dockerfile" \
+  "services/sync/fly.toml"; then
+  echo "❌ Failed to deploy sync service after retries"
   exit 1
 fi
 
-# Enforce single machine for moai (sync service must not scale beyond 1)
+# Enforce single machine for sync (sync service must not scale beyond 1)
 echo "Enforcing single machine..."
 flyctl scale count 1 --app moai-next-maia-city --yes
 

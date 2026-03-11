@@ -191,10 +191,7 @@ async function handleRoute() {
  * @returns {'human' | 'agent'} Operational mode
  */
 function detectMode() {
-	const mode =
-		(typeof import.meta !== 'undefined' && import.meta.env?.PEER_MODE) ||
-		(typeof import.meta !== 'undefined' && import.meta.env?.VITE_PEER_MODE) ||
-		'human'
+	const mode = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PEER_MODE) || 'human'
 	return mode === 'agent' ? 'agent' : 'human'
 }
 
@@ -229,12 +226,12 @@ async function initAgentMode() {
 	try {
 		console.log('🤖 [AGENT MODE] Initializing agent mode...')
 
-		const accountID = import.meta.env?.PEER_ID || import.meta.env?.VITE_PEER_ID
-		const agentSecret = import.meta.env?.PEER_SECRET || import.meta.env?.VITE_PEER_SECRET
+		const accountID = import.meta.env?.AVEN_MAIA_ACCOUNT || import.meta.env?.VITE_AVEN_MAIA_ACCOUNT
+		const agentSecret = import.meta.env?.AVEN_MAIA_SECRET || import.meta.env?.VITE_AVEN_MAIA_SECRET
 
 		if (!accountID || !agentSecret) {
 			throw new Error(
-				'Agent mode requires PEER_ID and PEER_SECRET. Run `bun agent:generate` to generate credentials.',
+				'Agent mode requires AVEN_MAIA_ACCOUNT and AVEN_MAIA_SECRET. Run `bun agent:generate` to generate credentials.',
 			)
 		}
 
@@ -302,22 +299,22 @@ async function initAgentMode() {
 /**
  * Determine sync domain from environment (runtime injection or build-time env var)
  * Single source of truth for sync domain configuration
- * In dev: null (sync-peers uses localhost:4201). In prod: VITE_PEER_MOAI
+ * In dev: null (sync-peers uses localhost:4201). In prod: VITE_PEER_SYNC_HOST
  * @returns {string|null} Sync domain or null if not set
  */
 function getSyncDomain() {
 	const isDev = import.meta.env?.DEV || window.location.hostname === 'localhost'
 	if (isDev) return null // sync-peers defaults to localhost:4201
-	return import.meta.env?.VITE_PEER_MOAI || null
+	return import.meta.env?.VITE_PEER_SYNC_HOST || null
 }
 
-/** Base URL for moai HTTP API (syncRegistry, etc.) */
+/** Base URL for sync HTTP API (syncRegistry, etc.) */
 function getMoaiBaseUrl() {
 	const isDev =
 		import.meta.env?.DEV ||
 		(typeof window !== 'undefined' &&
 			(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
-	const apiDomain = getSyncDomain() || import.meta.env?.VITE_PEER_MOAI
+	const apiDomain = getSyncDomain() || import.meta.env?.VITE_PEER_SYNC_HOST
 	if (!apiDomain && isDev) return 'http://localhost:4201'
 	if (!apiDomain) return null
 	const host = apiDomain.replace(/^https?:\/\//, '').split('/')[0]

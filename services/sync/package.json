@@ -1,11 +1,11 @@
 {
-	"name": "@MaiaOS/moai",
+	"name": "@MaiaOS/sync",
 	"version": "26.0217.1438",
 	"type": "module",
 	"private": true,
 	"scripts": {
 		"dev": "bun run --env-file=../../.env src/index.js",
-		"start": "bun run --env-file=../../.env ../../libs/maia-distros/output/moai-server.mjs",
+		"start": "bun run --env-file=../../.env ../../libs/maia-distros/output/sync-server.mjs",
 		"deploy": "./deploy.sh"
 	},
 	"dependencies": {

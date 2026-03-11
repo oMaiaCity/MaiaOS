@@ -41,10 +41,8 @@ const serviceColors = {
 	docs: colors.yellow,
 	api: colors.green,
 	sync: colors.green,
-	moai: colors.green,
-	agent: colors.magenta,
 	server: colors.cyan,
-	maia: colors.bright + colors.cyan,
+	app: colors.bright + colors.cyan,
 	kernel: colors.dim + colors.cyan,
 	vibes: colors.dim + colors.cyan,
 }

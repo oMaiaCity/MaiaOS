@@ -30,16 +30,16 @@ The following state is correctly held in memory only. Don't persist it:
 | Location | Current | Persist To | Benefit |
 | -------- | ------- | ---------- | ------- |
 | `machine.history` | In-memory array | CoStream (audit log) | Time-travel, debugging, compliance |
-| maia-sync `inMemory=true` | PGlite in-memory | PGlite on disk (`dbPath`) | Sync server survives restart |
+| sync service `inMemory=true` | PGlite in-memory | PGlite on disk (`dbPath`) | Sync server survives restart |
 
 ### Recommendations
 
 - **machine.history** – Persist transitions to a CoStream; CRDT handles ordering/replication automatically.
-- **maia-sync** – Use `inMemory: false` and `dbPath` in production (see below).
+- **sync service** – Use `inMemory: false` and `dbPath` in production (see below).
 
 ---
 
-## maia-sync: inMemory vs dbPath
+## sync service: inMemory vs dbPath
 
 The sync service and agent use PGlite for CoValue storage. Two modes matter:
 

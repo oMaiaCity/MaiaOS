@@ -76,7 +76,7 @@ const { node, account } = await signUpWithPasskey();
 // Configure sync peers (connects to sync service automatically)
 await setupSyncPeers({
   node,
-  syncDomain: 'moai.next.maia.city' // Optional, defaults to relative path in dev
+  syncDomain: 'sync.next.maia.city' // Optional, defaults to relative path in dev
 });
 ```
 
