@@ -49,6 +49,12 @@ import layoutHumansInterface from './views/humans/interface.maia'
 import layoutHumansProcess from './views/humans/process.maia'
 import layoutHumansStyle from './views/humans/style.maia'
 import layoutHumansView from './views/humans/view.maia'
+import infoCardActor from './views/info-card/actor.maia'
+import infoCardContext from './views/info-card/context.maia'
+import infoCardInterface from './views/info-card/interface.maia'
+import infoCardProcess from './views/info-card/process.maia'
+import infoCardStyle from './views/info-card/style.maia'
+import infoCardView from './views/info-card/view.maia'
 import inputForChatActor from './views/input/for-chat.actor.maia'
 import inputForChatContext from './views/input/for-chat.context.maia'
 import inputForChatInterface from './views/input/for-chat.interface.maia'
@@ -71,6 +77,11 @@ import layoutChatContext from './views/layout-chat/context.maia'
 import layoutChatInterface from './views/layout-chat/interface.maia'
 import layoutChatProcess from './views/layout-chat/process.maia'
 import layoutChatView from './views/layout-chat/view.maia'
+import layoutPaperActor from './views/layout-paper/actor.maia'
+import layoutPaperContext from './views/layout-paper/context.maia'
+import layoutPaperInterface from './views/layout-paper/interface.maia'
+import layoutPaperProcess from './views/layout-paper/process.maia'
+import layoutPaperView from './views/layout-paper/view.maia'
 import listActor from './views/list/actor.maia'
 import listContext from './views/list/context.maia'
 import listInterface from './views/list/interface.maia'
@@ -109,11 +120,6 @@ import messagesInterface from './views/messages/interface.maia'
 import messagesProcess from './views/messages/process.maia'
 import messagesStyle from './views/messages/style.maia'
 import messagesView from './views/messages/view.maia'
-import modalActor from './views/modal/actor.maia'
-import modalContext from './views/modal/context.maia'
-import modalInterface from './views/modal/interface.maia'
-import modalProcess from './views/modal/process.maia'
-import modalView from './views/modal/view.maia'
 import paperActor from './views/paper/actor.maia'
 import paperContext from './views/paper/context.maia'
 import paperInterface from './views/paper/interface.maia'
@@ -272,8 +278,9 @@ export function getSeedConfig() {
 		listDetailDetailSchemasInterface,
 		logsInterface,
 		messagesInterface,
-		modalInterface,
+		infoCardInterface,
 		layoutChatInterface,
+		layoutPaperInterface,
 		paperInterface,
 		placeholderInterface,
 		layoutSparksInterface,
@@ -391,10 +398,17 @@ export function getSeedConfig() {
 			process: layoutChatProcess,
 		},
 		{
-			actor: modalActor,
-			context: modalContext,
-			view: modalView,
-			process: modalProcess,
+			actor: infoCardActor,
+			context: infoCardContext,
+			view: infoCardView,
+			process: infoCardProcess,
+			style: infoCardStyle,
+		},
+		{
+			actor: layoutPaperActor,
+			context: layoutPaperContext,
+			view: layoutPaperView,
+			process: layoutPaperProcess,
 		},
 		{
 			actor: messagesActor,

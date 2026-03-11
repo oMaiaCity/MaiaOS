@@ -1,0 +1,55 @@
+{
+	"$schema": "°Maia/schema/style",
+	"$id": "°Maia/actor/views/info-card/style",
+	"@label": "@maia/actor/views/info-card/style",
+	"components": {
+		"infoCard": {
+			"display": "none",
+			"flexDirection": "column",
+			"gap": "{spacing.sm}",
+			"padding": "{spacing.md}",
+			"borderRadius": "{radii.md}",
+			"boxShadow": "{shadows.sm}",
+			"border": "1px solid {colors.border}",
+			"background": "{colors.softClay}",
+			"color": "{colors.terracotta}",
+			"data": {
+				"visible": {
+					"true": {
+						"display": "flex"
+					}
+				},
+				"type": {
+					"error": {
+						"background": "{colors.errorBg}",
+						"color": "{colors.terracotta}",
+						"borderColor": "{colors.terracotta}"
+					},
+					"success": {
+						"background": "rgba(34, 139, 34, 0.08)",
+						"color": "{colors.lushGreen}",
+						"borderColor": "{colors.lushGreen}"
+					},
+					"info": {
+						"background": "rgba(59, 130, 246, 0.08)",
+						"color": "{colors.marineBlue}",
+						"borderColor": "{colors.marineBlue}"
+					}
+				}
+			}
+		}
+	},
+	"selectors": {
+		".info-card .button": {
+			"alignSelf": "flex-start",
+			"marginTop": "{spacing.xs}",
+			"padding": "{spacing.xs} {spacing.sm}",
+			"background": "transparent",
+			"border": "none",
+			"cursor": "pointer",
+			"fontSize": "0.9em",
+			"opacity": "0.85",
+			"color": "inherit"
+		}
+	}
+}

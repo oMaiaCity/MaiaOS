@@ -1,0 +1,9 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/info-card/context",
+	"visible": false,
+	"type": "error",
+	"label": "Error: ",
+	"message": null,
+	"dismissButtonText": "Dismiss"
+}

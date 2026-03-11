@@ -1,0 +1,8 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/actor/views/layout-paper/context",
+	"paper": "@paper",
+	"@actors": {
+		"paper": "°Maia/actor/views/paper"
+	}
+}

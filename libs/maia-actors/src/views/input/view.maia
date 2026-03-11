@@ -42,6 +42,9 @@
 					{
 						"tag": "button",
 						"class": "button",
+						"attrs": {
+							"type": "button"
+						},
 						"text": "$submitButtonText",
 						"$on": {
 							"click": {
@@ -49,37 +52,6 @@
 								"payload": {
 									"value": "$inputValue"
 								}
-							}
-						}
-					}
-				]
-			},
-			{
-				"tag": "div",
-				"class": "error-message",
-				"attrs": {
-					"data": {
-						"hasError": "$hasError"
-					}
-				},
-				"children": [
-					{
-						"tag": "strong",
-						"text": "$errorLabel"
-					},
-					{
-						"text": "$error"
-					},
-					{
-						"tag": "button",
-						"class": "button-dismiss",
-						"attrs": {
-							"type": "button"
-						},
-						"text": "$dismissButtonText",
-						"$on": {
-							"click": {
-								"send": "DISMISS"
 							}
 						}
 					}

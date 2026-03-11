@@ -1,0 +1,35 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/actor/views/info-card/interface",
+	"title": "°Maia/actor/views/info-card/interface",
+	"description": "Info card view (info, success, error)",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"ERROR": {
+			"type": "object",
+			"description": "Show error",
+			"properties": {
+				"errors": {
+					"type": "array",
+					"items": {
+						"type": "object",
+						"properties": {
+							"message": {
+								"type": "string"
+							}
+						}
+					}
+				}
+			},
+			"additionalProperties": false
+		},
+		"DISMISS": {
+			"type": "object",
+			"description": "Dismiss card",
+			"properties": {},
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

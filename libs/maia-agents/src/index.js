@@ -9,6 +9,8 @@
  */
 
 export { MaiaOS } from '@MaiaOS/loader'
+export { ChatAgentRegistry, loadChatAgent } from './chat/loader.js'
+export { loadPaperAgent, PaperAgentRegistry } from './paper/loader.js'
 export { loadSparksAgent, SparksAgentRegistry } from './sparks/loader.js'
 export { SparksAgentRegistry as SparksRegistry } from './sparks/registry.js'
 export { loadTodosAgent, TodosAgentRegistry } from './todos/loader.js'
@@ -17,12 +19,14 @@ export { TodosAgentRegistry as TodosRegistry } from './todos/registry.js'
 import { ChatAgentRegistry } from './chat/registry.js'
 import { LogsAgentRegistry } from './creator/registry.js'
 import { HumansAgentRegistry } from './humans/registry.js'
+import { PaperAgentRegistry } from './paper/registry.js'
 import { SparksAgentRegistry } from './sparks/registry.js'
 import { TodosAgentRegistry } from './todos/registry.js'
 
 const ALL_REGISTRIES = [
 	TodosAgentRegistry,
 	ChatAgentRegistry,
+	PaperAgentRegistry,
 	SparksAgentRegistry,
 	LogsAgentRegistry,
 	HumansAgentRegistry,

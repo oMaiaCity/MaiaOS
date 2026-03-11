@@ -12,11 +12,6 @@
 		],
 		"FORM_SUBMIT": [
 			{
-				"guard": {
-					"hasError": false
-				}
-			},
-			{
 				"tell": {
 					"target": "$targetActor",
 					"type": "SEND_MESSAGE",
@@ -28,43 +23,6 @@
 			{
 				"ctx": {
 					"inputValue": ""
-				}
-			}
-		],
-		"DISMISS": [
-			{
-				"ctx": {
-					"hasError": false,
-					"error": null
-				}
-			},
-			{
-				"guard": {
-					"$onlyWhenOriginated": true
-				}
-			},
-			{
-				"tell": {
-					"target": "°Maia/actor/views/messages",
-					"type": "DISMISS",
-					"payload": {}
-				}
-			}
-		],
-		"SUCCESS": [
-			{
-				"ctx": {
-					"inputValue": "",
-					"hasError": false,
-					"error": null
-				}
-			}
-		],
-		"ERROR": [
-			{
-				"ctx": {
-					"hasError": true,
-					"error": "$$errors.0.message"
 				}
 			}
 		]

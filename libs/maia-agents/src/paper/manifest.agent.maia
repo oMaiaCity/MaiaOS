@@ -1,0 +1,15 @@
+{
+	"$schema": "°Maia/schema/agent",
+	"$id": "°Maia/agent/paper",
+	"name": "Paper",
+	"description": "Paper display for notes",
+	"actor": "°Maia/paper/actor/intent",
+	"runtime": [
+		"browser"
+	],
+	"dependencies": [
+		"°Maia/paper/actor/intent",
+		"°Maia/actor/views/layout-paper",
+		"°Maia/actor/views/paper"
+	]
+}

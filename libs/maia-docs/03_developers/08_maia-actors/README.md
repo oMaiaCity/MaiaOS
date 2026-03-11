@@ -28,7 +28,8 @@ libs/maia-actors/src/
 │   ├── tabs/  # Todos, Creator
 │   ├── sparks/                 # Sparks layout
 │   ├── grid/                   # Humans
-│   └── modal-chat/             # Chat
+│   ├── layout-chat/            # Chat (messages + input)
+│   └── layout-paper/            # Paper
 ├── aiChat/
 │   ├── aiChat.actor.maia       # Actor definition ($schema: °Maia/schema/actor)
 │   ├── aiChat.state.maia       # State machine (idle→processing on CHAT)
