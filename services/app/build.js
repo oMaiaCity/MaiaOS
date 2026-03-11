@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs'
 /**
  * Bun build for maia SPA - SPA mode intact.
- * Requires distros built first (maia-client.mjs, agents.mjs).
+ * Requires distros built first (maia-client.mjs, avens.mjs).
  * Sync-assets runs directly into dist/brand (single source: libs/maia-brand).
  */
 import { join } from 'node:path'
@@ -36,8 +36,8 @@ if (syncResult.status !== 0) {
 // maia-storage uses package.json "browser" exports for postgres/pglite → stubs in client builds
 
 const clientPath = join(serviceDir, '../../libs/maia-distros/output/maia-client.mjs')
-const agentsPath = join(serviceDir, '../../libs/maia-distros/output/agents.mjs')
-if (!existsSync(clientPath) || !existsSync(agentsPath)) {
+const avensPath = join(serviceDir, '../../libs/maia-distros/output/avens.mjs')
+if (!existsSync(clientPath) || !existsSync(avensPath)) {
 	console.error('Run bun run distros:build first')
 	process.exit(1)
 }
@@ -50,15 +50,15 @@ const envDefine = {
 	'import.meta.env.VITE_PEER_SYNC_HOST': JSON.stringify(
 		process.env.VITE_PEER_SYNC_HOST || 'sync.next.maia.city',
 	),
-	'import.meta.env.VITE_SEED_AGENTS': JSON.stringify(process.env.VITE_SEED_AGENTS || 'all'),
+	'import.meta.env.VITE_SEED_AVENS': JSON.stringify(process.env.VITE_SEED_AVENS || 'all'),
 }
 
 // Banner: ensure import.meta.env exists with production values (Bun doesn't inject like Vite)
 const moaiDomain = process.env.VITE_PEER_MOAI || 'moai.next.maia.city'
-const seedAgents = process.env.VITE_SEED_AGENTS || 'all'
+const seedAvens = process.env.VITE_SEED_AVENS || 'all'
 const envObj = JSON.stringify({
 	VITE_PEER_MOAI: moaiDomain,
-	VITE_SEED_AGENTS: seedAgents,
+	VITE_SEED_AVENS: seedAvens,
 	DEV: false,
 })
 const banner = `(function(){try{var m=typeof import.meta!=="undefined"?import.meta:{};var e=${envObj};if(!m.env){try{Object.defineProperty(m,"env",{value:e,writable:!0,configurable:!0})}catch(_){m.env=e}}else{Object.assign(m.env,e)}}catch(_){}})();`

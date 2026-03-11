@@ -397,14 +397,14 @@ export class ViewEngine {
 	 * @param {Object} actor - Actor instance
 	 * @param {HTMLElement} containerElement - Container element
 	 * @param {Object} actorConfig - Actor config
-	 * @param {string|null} agentKey - Optional agent key
+	 * @param {string|null} avenKey - Optional aven key
 	 * @param {() => Promise<void>} [onBeforeRender] - Callback before render (e.g. state init)
 	 */
 	async attachViewToActor(
 		actor,
 		containerElement,
 		actorConfig,
-		agentKey,
+		avenKey,
 		onBeforeRender,
 		parentActor = null,
 		namekey = null,
@@ -418,7 +418,7 @@ export class ViewEngine {
 		actor.contextCoId = contextCoId
 		actor.contextSchemaCoId = contextSchemaCoId
 		actor.viewDef = viewDef
-		actor.agentKey = agentKey
+		actor.avenKey = avenKey
 		actor.containerElement = containerElement
 		actor._renderState = RENDER_STATES.INITIALIZING
 		for (const unsub of configUnsubscribes) actor._configUnsubscribes.push(unsub)
@@ -772,7 +772,7 @@ export class ViewEngine {
 			childActor = await this.actorOps?._createChildActorIfNeeded?.(
 				actor,
 				namekey,
-				actor.agentKey ?? null,
+				actor.avenKey ?? null,
 			)
 			if (!childActor) return
 		}

@@ -1,5 +1,5 @@
 {
-	"name": "@MaiaOS/agents",
+	"name": "@MaiaOS/avens",
 	"version": "26.0217.1438",
 	"type": "module",
 	"main": "src/index.js",
@@ -14,7 +14,7 @@
 	},
 	"devDependencies": {},
 	"scripts": {
-		"build": "echo 'No build - use source via @MaiaOS/agents'"
+		"build": "echo 'No build - use source via @MaiaOS/avens'"
 	},
 	"files": [
 		"src"

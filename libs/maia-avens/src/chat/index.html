@@ -9,10 +9,10 @@
 <body>
   <div class="host-wrapper"><div id="actor-chat"></div></div>
   <script type="module">
-    import { bootAgent } from '../boot.js';
-    import { loadChatAgent } from './loader.js';
+    import { bootAven } from '../boot.js';
+    import { loadChatAven } from './loader.js';
 
-    bootAgent(loadChatAgent, 'actor-chat', 'chatActor').catch(_e => {});
+    bootAven(loadChatAven, 'actor-chat', 'chatActor').catch(_e => {});
   </script>
 </body>
 </html>

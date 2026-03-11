@@ -30,12 +30,12 @@ import {
 import { getSyncStatusMessage } from './utils.js'
 
 let maia
-let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'agent-viewer'
+let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'aven-viewer'
 let currentView = 'account' // Current schema filter (default: 'account')
 let currentContextCoValueId = null // Currently loaded CoValue in main context (explorer-style navigation)
-let currentAgent = null // Currently loaded agent (null = DB view mode, 'todos' = todos agent, etc.)
-let currentSpark = null // Grid hierarchy: null = sparks level, '°Maia' = agents for that spark
-let _currentAgentContainer = null // Currently loaded agent container element (for cleanup on unload)
+let currentAven = null // Currently loaded aven (null = DB view mode, 'todos' = todos aven, etc.)
+let currentSpark = null // Grid hierarchy: null = sparks level, '°Maia' = avens for that spark
+let _currentAvenContainer = null // Currently loaded aven container element (for cleanup on unload)
 let navigationHistory = [] // Navigation history stack for back button
 let isRendering = false // Guard to prevent render loops
 let authState = {
@@ -840,11 +840,11 @@ window.showToast = showToast // Expose for debugging
 // Navigation function for screen transitions
 // @param {string} screen - Screen to navigate to
 // @param {Object} [options] - Options
-// @param {boolean} [options.preserveSpark] - If true, keep currentSpark (Home from agent → agents grid, not sparks root)
+// @param {boolean} [options.preserveSpark] - If true, keep currentSpark (Home from aven → avens grid, not sparks root)
 function navigateToScreen(screen, options = {}) {
 	currentScreen = screen
 	if (screen === 'dashboard') {
-		currentAgent = null
+		currentAven = null
 		currentContextCoValueId = null
 		if (!options.preserveSpark) {
 			currentSpark = null
@@ -872,8 +872,8 @@ function selectCoValueInternal(coId, skipHistory = false) {
 	collapseAllSidebars()
 
 	// If we're in agent mode and selecting account, exit agent mode first
-	if (currentAgent !== null && coId === maia?.id?.maiaId?.id) {
-		currentAgent = null
+	if (currentAven !== null && coId === maia?.id?.maiaId?.id) {
+		currentAven = null
 		// If there's navigation history, restore the previous context instead of going to account
 		if (navigationHistory.length > 0) {
 			const previousCoId = navigationHistory.pop()
@@ -923,7 +923,7 @@ function collapseAllSidebars() {
 	}
 
 	// Collapse agent viewer sidebars (in Shadow DOM)
-	const agentContainer = document.querySelector('.agent-container')
+	const agentContainer = document.querySelector('.aven-container')
 	if (agentContainer?.shadowRoot) {
 		const navAside = agentContainer.shadowRoot.querySelector('.nav-aside')
 		const detailAside = agentContainer.shadowRoot.querySelector('.detail-aside')
@@ -938,8 +938,8 @@ function collapseAllSidebars() {
 
 function goBack() {
 	// If we're in agent mode, exit agent mode first
-	if (currentAgent !== null) {
-		loadAgent(null)
+	if (currentAven !== null) {
+		loadAven(null)
 		return
 	}
 
@@ -988,11 +988,11 @@ async function renderAppInternal() {
 			currentScreen,
 			currentView,
 			currentContextCoValueId,
-			currentAgent,
+			currentAven,
 			currentSpark,
 			switchView,
 			selectCoValue,
-			loadAgent,
+			loadAven,
 			loadSpark,
 			navigateToScreen,
 		)
@@ -1057,49 +1057,49 @@ async function extendCapability(capabilityId, currentExp = 0) {
 window.extendCapability = extendCapability
 
 /**
- * Load an agent inline in the main context area
- * @param {string|null} agentKey - Agent key (e.g., 'todos') or null to exit agent mode
+ * Load an aven inline in the main context area
+ * @param {string|null} avenKey - Aven key (e.g., 'todos') or null to exit aven mode
  */
-async function loadAgent(agentKey) {
-	if (!maia && agentKey !== null) {
+async function loadAven(avenKey) {
+	if (!maia && avenKey !== null) {
 		return
 	}
 
-	if (agentKey !== null && typeof agentKey !== 'string') {
+	if (avenKey !== null && typeof avenKey !== 'string') {
 		return
 	}
 
 	try {
 		if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
 		}
-		if (agentKey === null) {
-			if (currentAgent && maia?.runtime) {
-				maia.runtime.destroyActorsForAgent(currentAgent)
+		if (avenKey === null) {
+			if (currentAven && maia?.runtime) {
+				maia.runtime.destroyActorsForAven(currentAven)
 			}
 
-			_currentAgentContainer = null
-			window.currentAgentContainer = null
+			_currentAvenContainer = null
+			window.currentAvenContainer = null
 
-			currentAgent = null
+			currentAven = null
 			navigateToScreen('dashboard', { preserveSpark: true })
 		} else {
-			if (currentAgent && currentAgent !== agentKey && maia?.runtime) {
-				maia.runtime.destroyActorsForAgent(currentAgent)
+			if (currentAven && currentAven !== avenKey && maia?.runtime) {
+				maia.runtime.destroyActorsForAven(currentAven)
 			}
 
 			if (currentContextCoValueId !== null) {
 				navigationHistory.push(currentContextCoValueId)
 			}
-			currentAgent = agentKey
+			currentAven = avenKey
 			currentContextCoValueId = null
-			currentScreen = 'agent-viewer'
+			currentScreen = 'aven-viewer'
 		}
 
 		await renderAppInternal()
 		if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
 		}
 	} catch (_error) {
-		currentAgent = null
+		currentAven = null
 		await renderAppInternal()
 	}
 }
@@ -1126,7 +1126,7 @@ function toggleExpand(expandId) {
 window.switchView = switchView
 window.selectCoValue = selectCoValue
 window.goBack = goBack
-window.loadAgent = loadAgent
+window.loadAven = loadAven
 window.loadSpark = loadSpark
 window.navigateToScreen = navigateToScreen
 window.getMoaiBaseUrl = getMoaiBaseUrl
@@ -1142,7 +1142,7 @@ window.toggleMobileMenu = () => {
 	if (trigger) trigger.classList.toggle('active', menu.classList.contains('active'))
 }
 
-/** Toggle sidebar (DB viewer or agent viewer). Pass containerSelector for Shadow DOM. */
+/** Toggle sidebar (DB viewer or aven viewer). Pass containerSelector for Shadow DOM. */
 function toggleSidebar(sidebarSelector, otherSidebarSelector, containerSelector) {
 	const root = containerSelector ? document.querySelector(containerSelector)?.shadowRoot : document
 	if (!root) return
@@ -1159,7 +1159,7 @@ function toggleSidebar(sidebarSelector, otherSidebarSelector, containerSelector)
 
 window.toggleDBLeftSidebar = () => toggleSidebar('.db-sidebar', '.db-metadata')
 window.toggleDBRightSidebar = () => toggleSidebar('.db-metadata', '.db-sidebar')
-window.toggleLeftSidebar = () => toggleSidebar('.nav-aside', '.detail-aside', '.agent-container')
-window.toggleRightSidebar = () => toggleSidebar('.detail-aside', '.nav-aside', '.agent-container')
+window.toggleLeftSidebar = () => toggleSidebar('.nav-aside', '.detail-aside', '.aven-container')
+window.toggleRightSidebar = () => toggleSidebar('.detail-aside', '.nav-aside', '.aven-container')
 
 init()

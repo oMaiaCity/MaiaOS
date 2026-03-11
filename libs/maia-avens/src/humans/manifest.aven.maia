@@ -1,8 +1,8 @@
 {
 	"$schema": "°Maia/schema/aven",
 	"$id": "°Maia/aven/humans",
-	"name": "Addressbook",
-	"description": "Browse humans and avens in the Maia registry — account ID, registry name, profile name",
+	"name": "Human Book",
+	"description": "Browse all humans in the Maia registry — account ID, registry name, profile name",
 	"actor": "°Maia/humans/actor/intent",
 	"runtime": [
 		"browser"
