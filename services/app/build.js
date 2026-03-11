@@ -43,6 +43,7 @@ if (!existsSync(clientPath) || !existsSync(avensPath)) {
 }
 
 // Bun doesn't inject import.meta.env like Vite - must define at build time for production
+// VITE_AVEN_TEST_MODE: NEVER add to production - test mode is localhost-only, in-memory
 const envDefine = {
 	global: 'globalThis',
 	'import.meta.env.DEV': 'false',

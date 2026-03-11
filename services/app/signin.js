@@ -36,8 +36,9 @@ export function getFirstNameForRegister() {
 /**
  * @param {() => boolean} hasExistingAccount
  * @param {'signup' | 'signin'} [viewMode] - Override; default: hasAccount ? 'signin' : 'signup'
+ * @param {boolean} [showTestAven] - Show "Sign in with Test AVEN" (local dev only, no passkeys)
  */
-export function renderSignInPrompt(hasExistingAccount, viewMode) {
+export function renderSignInPrompt(hasExistingAccount, viewMode, showTestAven = false) {
 	const hasAccount = hasExistingAccount()
 	const mode = viewMode ?? (hasAccount ? 'signin' : 'signup')
 
@@ -45,6 +46,14 @@ export function renderSignInPrompt(hasExistingAccount, viewMode) {
 	// State 2: Signin – big Unlock button only, link to switch to signup
 
 	const isSignupMode = mode === 'signup'
+	const testAvenButton = showTestAven
+		? `
+						<button class="btn btn-outline" onclick="window.handleSignInWithTestAven()" style="margin-top: 0.5rem;">
+							Sign in / Register with Test AVEN
+						</button>
+						<p class="sign-in-test-hint" style="font-size: 0.75rem; color: var(--color-muted, #666); margin-top: 0.25rem;">Local dev only · no passkeys</p>
+					`
+		: ''
 
 	document.getElementById('app').innerHTML = `
 		<div class="sign-in-container">
@@ -82,6 +91,7 @@ export function renderSignInPrompt(hasExistingAccount, viewMode) {
 							<button class="btn btn-solid-water" onclick="window.handleRegister()">
 								Create new Self
 							</button>
+							${testAvenButton}
 							<a href="#" class="sign-in-swap-link" onclick="window.switchToSigninView(); return false;">&mdash; signin instead &mdash;</a>
 						</div>
 					`
@@ -90,6 +100,7 @@ export function renderSignInPrompt(hasExistingAccount, viewMode) {
 							<button class="btn btn-solid-water" onclick="window.handleSignIn()">
 								Unlock your Self
 							</button>
+							${testAvenButton}
 							<a href="#" class="sign-in-swap-link" onclick="window.switchToSignupView(); return false;">&mdash; register new &mdash;</a>
 						</div>
 					`

@@ -46,6 +46,11 @@ function shouldFilterLine(line) {
 		return true
 	}
 
+	// Filter EIO/pipe errors on Ctrl+C shutdown
+	if (trimmed.includes('EIO:') || trimmed.includes('i/o error') || trimmed.includes('errno: -5')) {
+		return true
+	}
+
 	// Filter verbose seed logs ([Seed], Bootstrap scaffold, Auto-seeding, etc.)
 	if (
 		trimmed.startsWith('[Seed]') ||
@@ -218,13 +223,10 @@ async function startApp() {
 		env: { ...process.env },
 	})
 
-	appProcess.stdout.on('data', (data) => {
-		processOutput('app', data)
-	})
-
-	appProcess.stderr.on('data', (data) => {
-		processOutput('app', data, true)
-	})
+	appProcess.stdout.on('data', (data) => processOutput('app', data))
+	appProcess.stdout.on('error', () => {})
+	appProcess.stderr.on('data', (data) => processOutput('app', data, true))
+	appProcess.stderr.on('error', () => {})
 
 	appProcess.on('error', (_error) => {
 		process.exit(1)
@@ -249,13 +251,10 @@ async function startSync() {
 		env: { ...process.env },
 	})
 
-	syncProcess.stdout.on('data', (data) => {
-		processOutput('sync', data)
-	})
-
-	syncProcess.stderr.on('data', (data) => {
-		processOutput('sync', data, true)
-	})
+	syncProcess.stdout.on('data', (data) => processOutput('sync', data))
+	syncProcess.stdout.on('error', () => {})
+	syncProcess.stderr.on('data', (data) => processOutput('sync', data, true))
+	syncProcess.stderr.on('error', () => {})
 
 	syncProcess.on('error', (_error) => {
 		// Non-fatal - sync service is optional
@@ -277,6 +276,8 @@ function startDocsWatcher() {
 		env: { ...process.env },
 	})
 
+	docsWatcherProcess.stdout.on('error', () => {})
+	docsWatcherProcess.stderr.on('error', () => {})
 	docsWatcherProcess.stdout.on('data', (data) => {
 		const output = data.toString()
 		if (
@@ -318,6 +319,8 @@ function generateFavicons() {
 		env: { ...process.env },
 	})
 
+	faviconProcess.stdout.on('error', () => {})
+	faviconProcess.stderr.on('error', () => {})
 	faviconProcess.stdout.on('data', (data) => {
 		const output = data.toString()
 		if (output.includes('generated successfully')) {
@@ -356,6 +359,8 @@ function startAssetSync() {
 		env: { ...process.env },
 	})
 
+	assetSyncProcess.stdout.on('error', () => {})
+	assetSyncProcess.stderr.on('error', () => {})
 	assetSyncProcess.stdout.on('data', (data) => {
 		const output = data.toString()
 		if (
@@ -422,15 +427,12 @@ async function killChildren() {
 }
 
 function setupSignalHandlers() {
-	const logger = createLogger('dev')
 	let shuttingDown = false
 
 	async function onShutdown() {
 		if (shuttingDown) return
 		shuttingDown = true
 		process.exitCode = 0
-		console.log()
-		logger.log('Shutting down...')
 		try {
 			await killChildren()
 		} finally {
