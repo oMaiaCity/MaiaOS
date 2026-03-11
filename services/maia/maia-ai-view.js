@@ -60,7 +60,7 @@ export async function renderMaiaAIView(maia, authState, syncState, navigateToScr
 					${authState.signedIn ? `<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">Sign Out</button>` : ''}
 				</div>
 			</header>
-			<div class="agent-viewer-main">
+			<div class="aven-viewer-main">
 				<div class="maia-ai-chat">
 					<div class="maia-ai-status" id="maia-ai-status">Initializing…</div>
 					<div class="maia-ai-progress" id="maia-ai-progress" style="display:none;">

@@ -207,7 +207,7 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 		const keys =
 			content.keys && typeof content.keys === 'function' ? content.keys() : Object.keys(content)
 
-		const skipJsonParsingFields = ['error', 'message', 'content', 'addAgentError']
+		const skipJsonParsingFields = ['error', 'message', 'content', 'addAgentError', 'addAvenError']
 		for (const key of keys) {
 			let value = content.get(key)
 			if (

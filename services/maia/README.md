@@ -2,7 +2,7 @@
 
 The main UI service for MaiaOS, featuring:
 - **Database Inspector** at `/` (root) - Explore Jazz CoValues with authentication
-- **Dynamic Agent Rendering** - Load and render agents dynamically (e.g., Todos Agent via navigation)
+- **Dynamic Aven Rendering** - Load and render avens dynamically (e.g., Todos Aven via navigation)
 
 ## Structure
 
@@ -10,9 +10,9 @@ The main UI service for MaiaOS, featuring:
 services/maia/
 ├── index.html          # Main app (database inspector)
 ├── main.js             # Main app logic
-├── db-view.js          # Database viewer and dynamic agent renderer
+├── db-view.js          # Database viewer and dynamic aven renderer
 ├── voice.js            # Voice page (real-time speech-to-text)
-└── # Agents live in libs/maia-agents/ (todos, chat, sparks, etc.)
+└── # Avens live in libs/maia-avens/ (todos, chat, sparks, etc.)
 └── css/                # Global styles
 
 ```
@@ -20,7 +20,7 @@ services/maia/
 ## Dependencies
 
 - `@MaiaOS/loader` (via maia-distros) - MaiaOS kernel, auth
-- `@MaiaOS/maia-distros` - Pre-built bundles (maia-client.mjs, agents.mjs)
+- `@MaiaOS/maia-distros` - Pre-built bundles (maia-client.mjs, avens.mjs)
 
 ## Development
 
@@ -42,26 +42,26 @@ Server runs on **http://localhost:4200**
 - **/** - Landing (or redirect to signin/me)
 - **/signin**, **/signup** - Authentication
 - **/me**, **/dashboard** - Database inspector (requires passkey auth)
-  - Includes dynamic agent rendering - navigate to "Todos" in the sidebar to load agents dynamically
+  - Includes dynamic aven rendering - navigate to "Todos" in the sidebar to load avens dynamically
 
 ## Architecture
 
-### Dynamic Agent Rendering
+### Dynamic Aven Rendering
 
-Agents are loaded dynamically within the main maia app. When a user navigates to an agent (e.g., "Todos" in the sidebar), the app:
+Avens are loaded dynamically within the main maia app. When a user navigates to an aven (e.g., "Todos" in the sidebar), the app:
 
-1. Calls `loadAgent('todos')` which sets `currentAgent = 'todos'`
+1. Calls `loadAven('todos')` which sets `currentAven = 'todos'`
 2. Renders a container div in the main view area
-3. Calls `maia.loadAgentFromAccount('todos', container)` to load the agent from `account.registries.sparks[°Maia].agents`
-4. The agent renders inline within the database inspector interface
+3. Calls `maia.loadAvenFromAccount('todos', container)` to load the aven from `account.registries.sparks[°Maia].avens`
+4. The aven renders inline within the database inspector interface
 
 **Example:**
 ```javascript
 // In services/maia/main.js
-async function loadAgent(agentKey) {
-  currentAgent = agentKey;
-  await renderAppInternal(); // Renders agent container
-  // db-view.js handles actual agent loading via maia.loadAgentFromAccount()
+async function loadAven(avenKey) {
+  currentAven = avenKey;
+  await renderAppInternal(); // Renders aven container
+  // db-view.js handles actual aven loading via maia.loadAvenFromAccount()
 }
 ```
 
@@ -88,7 +88,7 @@ const os = await MaiaOS.boot({ node, account });
 
 **Bun resolves imports** via `jsconfig.build.json`:
 - **Dev mode**: Source files served directly for HMR
-- **Production builds**: maia-distros bundles (maia-client.mjs, agents.mjs)
+- **Production builds**: maia-distros bundles (maia-client.mjs, avens.mjs)
 
 Production builds run `distros:build` then `bun build.js`.
 
