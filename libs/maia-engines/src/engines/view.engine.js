@@ -5,6 +5,7 @@ import { extractDOMValuesAsync } from '@MaiaOS/schemata/payload-resolver'
 import { sanitizePayloadForValidation } from '../utils/payload-sanitizer.js'
 import { perfPipelineStart, perfPipelineStep } from '../utils/perf-pipeline.js'
 import { readStore } from '../utils/store-reader.js'
+import { traceView } from '../utils/trace.js'
 import { RENDER_STATES } from './actor.engine.js'
 
 const DEBUG_COBINARY =
@@ -267,9 +268,13 @@ export class ViewEngine {
 		const parentValue = parentActor?.context?.value
 		if (parentValue?.['@actors'] && typeof parentValue?.['@actors'] === 'object') {
 			base['@actors'] = { ...parentValue['@actors'] }
-			// When input child: targetActor = @actors.messages so tell resolves (convention from layout-chat)
+			// When input child: targetActor = @actors.messages (layout-chat convention)
 			if (namekey === 'input' && base['@actors'].messages) {
 				base.targetActor = base['@actors'].messages
+			}
+			// When messages child: targetInput = @actors.input (layout-chat convention)
+			if (namekey === 'messages' && base['@actors'].input) {
+				base.targetInput = base['@actors'].input
 			}
 		}
 		return new ReactiveStore(base)
@@ -434,10 +439,8 @@ export class ViewEngine {
 			)
 		}
 
-		// Session-scoped: clear persisted error state on fresh mount (fixes UI break after restart)
-		if (context?.value && (context.value.hasError === true || context.value.error)) {
-			await this.actorOps?.updateContextCoValue?.(actor, { hasError: false, error: null })
-		}
+		// Do NOT clear info-card state on mount: error should persist until DISMISS or SUCCESS.
+		// Clearing here caused the error to disappear on reopen even when caps were still missing.
 
 		if (onBeforeRender) await onBeforeRender()
 		actor._renderState = RENDER_STATES.RENDERING
@@ -849,9 +852,6 @@ export class ViewEngine {
 
 	async _handleEvent(e, eventDef, data, element, actorId) {
 		const eventName = eventDef.send
-		const DEBUG =
-			typeof window !== 'undefined' &&
-			(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
 
 		// CRITICAL: Ignore events from elements torn down during rerender (blur/focusout fire when removed)
 		// Prevents FORM_SUBMIT/UPDATE_INPUT feedback loop: rerender → clear DOM → blur → deliver → process → ctx → rerender
@@ -860,12 +860,15 @@ export class ViewEngine {
 		const FORM_INPUT_EVENTS = ['FORM_SUBMIT', 'UPDATE_INPUT', 'UPDATE_AGENT_INPUT']
 
 		// Schema-driven debounce: eventDef.$debounce (ms) prevents event storms
-		// Universal: FORM_SUBMIT/UPDATE_INPUT share a key so they throttle each other (breaks feedback loop)
-		// Rerender→blur→UPDATE_INPUT→ctx→rerender or submit→clear→blur→UPDATE_INPUT→...
-		const debounceMs = eventDef.$debounce ?? (FORM_INPUT_EVENTS.includes(eventName) ? 150 : 0)
-		const debounceKey = FORM_INPUT_EVENTS.includes(eventName)
-			? `${actorId}:form-input`
-			: `${actorId}:${eventName}`
+		// CRITICAL: Use separate keys per event type. Shared key caused double-submit bug:
+		// click submit → blur fires UPDATE_INPUT → debounce set → FORM_SUBMIT blocked (same key).
+		// Each event type throttles only itself (double FORM_SUBMIT, duplicate UPDATE_INPUT).
+		// FORM_SUBMIT: 100ms (prevents accidental double-submit; 400ms felt like double-click needed)
+		// UPDATE_INPUT: 400ms (prevents storm from input/blur)
+		const defaultDebounce =
+			eventName === 'FORM_SUBMIT' ? 100 : FORM_INPUT_EVENTS.includes(eventName) ? 400 : 0
+		const debounceMs = eventDef.$debounce ?? defaultDebounce
+		const debounceKey = `${actorId}:${eventName}`
 		if (typeof debounceMs === 'number' && debounceMs > 0) {
 			const now = Date.now()
 			const last = this._eventDebounce.get(debounceKey)
@@ -887,7 +890,7 @@ export class ViewEngine {
 		}
 
 		perfPipelineStart(`view:${eventName}`)
-		if (DEBUG) console.log('[ViewEngine] Event:', { eventName, actorId: actorId?.slice(0, 24) })
+		traceView(eventName, actorId)
 		let payload = eventDef.payload || {}
 
 		if (e.type === 'dragover' || e.type === 'drop' || e.type === 'dragenter') {
@@ -911,8 +914,25 @@ export class ViewEngine {
 			return
 		}
 
+		// Ignore key repeat for FORM_SUBMIT (user holding Enter fires keydown repeatedly)
+		if (eventName === 'FORM_SUBMIT' && e.type === 'keydown' && e.repeat) {
+			return
+		}
+
 		const UPDATE_INPUT_TYPES = ['UPDATE_INPUT', 'UPDATE_AGENT_INPUT']
 		const isUpdateInputType = UPDATE_INPUT_TYPES.includes(eventName)
+
+		// ROOT CAUSE FIX: Skip blur's UPDATE_INPUT when focus moves to a sibling element (e.g. submit button).
+		// Blur → UPDATE_INPUT → ctx → rerender replaces DOM → click targets removed button → isConnected=false → FORM_SUBMIT dropped.
+		// By skipping blur when clicking within same actor, the click's FORM_SUBMIT runs against a connected element.
+		if (
+			isUpdateInputType &&
+			e.type === 'blur' &&
+			e.relatedTarget &&
+			element.getRootNode?.()?.contains?.(e.relatedTarget)
+		) {
+			return
+		}
 
 		// Prevent keydown Enter from also triggering button click (double CREATE_BUTTON, double chat sends)
 		// Fixes double processing in Todos, Chat, and any input+button form
@@ -966,6 +986,17 @@ export class ViewEngine {
 					payloadToValidate = normalizeCoValueData(payloadToValidate)
 					// Strip CoJSON metadata (_coValueType etc.) and ensure definition is string for schema items
 					payloadToValidate = sanitizePayloadForValidation(payloadToValidate)
+					// Ensure FORM_SUBMIT/UPDATE_INPUT value is string (context/Proxy can yield undefined)
+					if (
+						payloadToValidate &&
+						(eventName === 'FORM_SUBMIT' || eventName === 'UPDATE_INPUT') &&
+						actor?.interfaceSchema?.properties?.[eventName]?.properties?.value?.type === 'string'
+					) {
+						const v = payloadToValidate.value
+						if (v === undefined || v === null || typeof v !== 'string') {
+							payloadToValidate = { ...payloadToValidate, value: v == null ? '' : String(v) }
+						}
+					}
 				}
 
 				// Runtime schema validation (from actor's interface) - skip send if payload invalid
@@ -983,7 +1014,12 @@ export class ViewEngine {
 							event: eventName,
 							actorId: actorId?.slice(0, 24),
 							payloadKeys: payloadToValidate ? Object.keys(payloadToValidate) : [],
+							payloadValueType:
+								payloadToValidate?.value != null ? typeof payloadToValidate.value : 'missing',
 							errors: validation.errors,
+							errorSummary: (validation.errors || [])
+								.map((e) => `${e.instancePath || '/'}: ${e.message || ''}`)
+								.join('; '),
 						})
 					}
 					return
@@ -1044,8 +1080,8 @@ export class ViewEngine {
 	 * @private
 	 */
 	_clearInputFields(element, actorId) {
-		// Find the closest form element, or fall back to actor's shadow root
-		let container = element.closest('form')
+		// Find the closest form element, form-like container (.form), or fall back to actor's shadow root
+		let container = element.closest('form') || element.closest('.form')
 		if (!container && this.actorOps) {
 			const actor = this.actorOps.getActor?.(actorId)
 			if (actor?.shadowRoot) {
@@ -1057,16 +1093,13 @@ export class ViewEngine {
 
 		// Clear all input and textarea fields within the container
 		const inputs = container.querySelectorAll('input, textarea')
-		inputs.forEach((input) => {
-			// Only clear if input has data-actor-input attribute (managed by view engine)
-			if (input.hasAttribute('data-actor-input')) {
-				if (input.tagName === 'INPUT') {
-					input.value = ''
-				} else if (input.tagName === 'TEXTAREA') {
-					input.value = ''
-				}
+		for (const input of inputs) {
+			if (input.tagName === 'INPUT') {
+				input.value = ''
+			} else if (input.tagName === 'TEXTAREA') {
+				input.value = ''
 			}
-		})
+		}
 	}
 
 	cleanupActor(actorId) {

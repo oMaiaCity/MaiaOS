@@ -96,7 +96,8 @@ Layout actors encapsulate shared UI patterns. Available layouts:
 | `tabs` | Todos, Creator | Title + 2 view buttons + content slot |
 | `sparks` | Sparks | Form + error + split (list + detail slot) |
 | `grid` | Humans | Header + grid of cards |
-| `modal-chat` | Chat | Paper slot + modal (messages + input) |
+| `layout-chat` | Chat | Messages + input |
+| `layout-paper` | Paper | Paper slot |
 
 Create new layouts in `libs/maia-actors/src/views/{layoutName}/` and register in `seed-config.js`.
 

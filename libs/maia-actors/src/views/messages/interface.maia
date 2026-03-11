@@ -19,18 +19,6 @@
 				"inputText"
 			],
 			"additionalProperties": false
-		},
-		"RETRY": {
-			"type": "object",
-			"description": "Retry",
-			"properties": {},
-			"additionalProperties": false
-		},
-		"DISMISS": {
-			"type": "object",
-			"description": "Dismiss",
-			"properties": {},
-			"additionalProperties": false
 		}
 	},
 	"additionalProperties": false
