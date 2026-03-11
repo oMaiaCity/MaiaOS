@@ -113,8 +113,9 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	const schematasSchemaCoId =
 		tempCoMap.get('°Maia/schema/os/schematas-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
 	const osSchemaCoId = tempCoMap.get('°Maia/schema/os/os-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
-	const capabilitiesSchemaCoId =
-		tempCoMap.get('°Maia/schema/os/capabilities') || EXCEPTION_SCHEMAS.META_SCHEMA
+	const groupsSchemaCoId = tempCoMap.get('°Maia/schema/os/groups') || EXCEPTION_SCHEMAS.META_SCHEMA
+	const capabilitiesStreamSchemaCoId =
+		tempCoMap.get('°Maia/schema/os/capabilities-stream') || EXCEPTION_SCHEMAS.META_SCHEMA
 	const indexesSchemaCoId =
 		tempCoMap.get('°Maia/schema/os/indexes-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
 	const agentsSchemaCoId =
@@ -128,13 +129,19 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		scaffoldOpts(sparkSchemaCoId, { name: '°Maia' }),
 	)
 	const { coValue: os } = await createCoValueForSpark(ctx, null, scaffoldOpts(osSchemaCoId, {}))
-	const { coValue: capabilities } = await createCoValueForSpark(
+	const { coValue: groups } = await createCoValueForSpark(
 		ctx,
 		null,
-		scaffoldOpts(capabilitiesSchemaCoId, {}),
+		scaffoldOpts(groupsSchemaCoId, {}),
 	)
-	capabilities.set('guardian', guardian.id)
-	os.set('capabilities', capabilities.id)
+	groups.set('guardian', guardian.id)
+	os.set('groups', groups.id)
+	const { coValue: capabilitiesStream } = await createCoValueForSpark(ctx, null, {
+		schema: capabilitiesStreamSchemaCoId,
+		cotype: 'costream',
+		dataEngine: dbEngine,
+	})
+	os.set('capabilities', capabilitiesStream.id)
 	const { coValue: schematas } = await createCoValueForSpark(
 		ctx,
 		null,
@@ -276,12 +283,12 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 	if (!osCore || !peer.isAvailable(osCore)) return
 	const osContent = peer.getCurrentContent(osCore)
 	if (!osContent || typeof osContent.get !== 'function') return
-	const capabilitiesId = osContent.get('capabilities')
-	if (!capabilitiesId || !capabilitiesId.startsWith('co_z')) return
-	const capabilitiesCore = peer.getCoValue(capabilitiesId)
-	if (!capabilitiesCore || !peer.isAvailable(capabilitiesCore)) return
-	const capabilitiesContent = peer.getCurrentContent(capabilitiesCore)
-	if (!capabilitiesContent || typeof capabilitiesContent.set !== 'function') return
+	const groupsId = osContent.get('groups')
+	if (!groupsId || !groupsId.startsWith('co_z')) return
+	const groupsCore = peer.getCoValue(groupsId)
+	if (!groupsCore || !peer.isAvailable(groupsCore)) return
+	const groupsContent = peer.getCurrentContent(groupsCore)
+	if (!groupsContent || typeof groupsContent.set !== 'function') return
 
 	const { resolve } = await import('../../cojson/schema/resolver.js')
 	const registriesSchemaCoId = await resolve(peer, '°Maia/schema/os/registries', {

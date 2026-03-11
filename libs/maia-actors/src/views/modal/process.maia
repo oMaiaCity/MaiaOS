@@ -15,14 +15,48 @@
 		"OPEN_POPUP": [
 			{
 				"ctx": {
-					"popupOpen": "$$popupOpen"
+					"popupOpen": "$$popupOpen",
+					"hasError": false,
+					"error": null,
+					"isLoading": false
+				}
+			},
+			{
+				"tell": {
+					"target": "°Maia/actor/views/messages",
+					"type": "DISMISS",
+					"payload": {}
+				}
+			},
+			{
+				"tell": {
+					"target": "°Maia/actor/views/input/for-chat",
+					"type": "DISMISS",
+					"payload": {}
 				}
 			}
 		],
 		"CLOSE_POPUP": [
 			{
 				"ctx": {
-					"popupOpen": "$$popupOpen"
+					"popupOpen": "$$popupOpen",
+					"hasError": false,
+					"error": null,
+					"isLoading": false
+				}
+			},
+			{
+				"tell": {
+					"target": "°Maia/actor/views/messages",
+					"type": "DISMISS",
+					"payload": {}
+				}
+			},
+			{
+				"tell": {
+					"target": "°Maia/actor/views/input/for-chat",
+					"type": "DISMISS",
+					"payload": {}
 				}
 			}
 		]

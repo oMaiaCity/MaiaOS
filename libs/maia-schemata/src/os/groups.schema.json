@@ -1,8 +1,8 @@
 {
 	"$schema": "°Maia/schema/meta",
-	"$id": "°Maia/schema/os/capabilities",
-	"title": "°Maia/schema/os/capabilities",
-	"description": "Capabilities CoMap - guardian, publicReaders. Stored in spark.os.capabilities",
+	"$id": "°Maia/schema/os/groups",
+	"title": "°Maia/schema/os/groups",
+	"description": "Groups CoMap - guardian, publicReaders. Stored in spark.os.groups",
 	"cotype": "comap",
 	"indexing": false,
 	"properties": {

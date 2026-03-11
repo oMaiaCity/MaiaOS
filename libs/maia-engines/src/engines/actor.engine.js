@@ -45,25 +45,25 @@ export class ActorEngine {
 		this._uploadProgressLastReport = new Map()
 	}
 
+	/**
+	 * Update actor context. Zero in-memory mutation: write only to CoValue.
+	 * Context store subscribes to CoValue; when CoValue updates, store updates and UI rerenders.
+	 */
 	async updateContextCoValue(actor, updates) {
-		if (!actor.contextCoId || !this.dataEngine) return
-		const contextSchemaCoId =
-			actor.contextSchemaCoId ||
-			(await this.dataEngine.peer.resolve({ fromCoValue: actor.contextCoId }, { returnType: 'coId' }))
 		const sanitizedUpdates = {}
 		for (const [key, value] of Object.entries(updates)) {
 			sanitizedUpdates[key] = value === undefined ? null : value
 		}
-		const updateResult = await this.dataEngine.execute({
+		if (!actor.contextCoId || !this.dataEngine) return
+		const contextSchemaCoId =
+			actor.contextSchemaCoId ||
+			(await this.dataEngine.peer.resolve({ fromCoValue: actor.contextCoId }, { returnType: 'coId' }))
+		await this.dataEngine.execute({
 			op: 'update',
 			schema: contextSchemaCoId,
 			id: actor.contextCoId,
 			data: sanitizedUpdates,
 		})
-		if (!updateResult.ok) {
-			const msgs = updateResult.errors?.map((e) => e.message).join('; ') || 'Update failed'
-			throw new Error(`[ActorEngine] Context update failed: ${msgs}`)
-		}
 	}
 
 	/**
@@ -179,7 +179,13 @@ export class ActorEngine {
 			childContainer.style.display = 'contents'
 			childContainer.dataset.namekey = namekey
 			childContainer.dataset.childActorId = childActorCoId
-			const childActor = await this.createActor(childActorConfig, childContainer, agentKey)
+			const childActor = await this.createActor(
+				childActorConfig,
+				childContainer,
+				agentKey,
+				actor,
+				namekey,
+			)
 			childActor.namekey = namekey
 			actor.children[namekey] = childActor
 			return childActor
@@ -193,7 +199,13 @@ export class ActorEngine {
 		}
 	}
 
-	async createActor(actorConfig, containerElement, agentKey = null) {
+	async createActor(
+		actorConfig,
+		containerElement,
+		agentKey = null,
+		parentActor = null,
+		namekey = null,
+	) {
 		const actorId = actorConfig.$id || actorConfig.id
 		if (this.actors.has(actorId)) {
 			return agentKey
@@ -229,6 +241,8 @@ export class ActorEngine {
 			actorConfig,
 			agentKey,
 			onBeforeRender,
+			parentActor,
+			namekey,
 		)
 		return actor
 	}

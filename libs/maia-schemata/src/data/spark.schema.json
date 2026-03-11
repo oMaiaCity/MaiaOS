@@ -2,7 +2,7 @@
 	"$schema": "°Maia/schema/meta",
 	"$id": "°Maia/schema/data/spark",
 	"title": "°Maia/schema/data/spark",
-	"description": "Spark CoMap. Guardian (admin) group is spark.os.capabilities.guardian.",
+	"description": "Spark CoMap. Guardian (admin) group is spark.os.groups.guardian.",
 	"cotype": "comap",
 	"indexing": true,
 	"required": ["name"],
@@ -11,7 +11,7 @@
 		"os": {
 			"type": "string",
 			"pattern": "^co_z[a-zA-Z0-9]+$",
-			"description": "OS CoMap - contains schematas, indexes, capabilities (guardian, publicReaders)."
+			"description": "OS CoMap - contains schematas, indexes, groups (guardian, publicReaders)."
 		},
 		"agents": {
 			"type": "string",

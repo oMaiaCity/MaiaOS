@@ -66,11 +66,15 @@
 			"borderRadius": "{radii.md}",
 			"border": "1px solid {colors.errorBorder}",
 			"margin": "{spacing.md} 0",
-			"display": "none",
+			"visibility": "hidden",
+			"pointerEvents": "none",
+			"minHeight": 0,
+			"overflow": "hidden",
 			"data": {
 				"hasError": {
 					"true": {
-						"display": "block"
+						"visibility": "visible",
+						"pointerEvents": "auto"
 					}
 				}
 			}

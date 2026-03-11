@@ -9,11 +9,13 @@
 import { deriveInboxRef } from '../utils/inbox-convention.js'
 
 export class Runtime {
-	constructor(dataEngine, actorEngine, runtimeType) {
+	constructor(dataEngine, actorEngine, runtimeType, opts = {}) {
 		this.dataEngine = dataEngine
 		this.actorEngine = actorEngine
 		this.runtimeType = runtimeType
+		this._getCapabilityToken = opts.getCapabilityToken ?? null
 		this._inboxWatcherUnsubscribes = []
+		this._watchedInboxCoIds = new Set()
 		this._started = false
 		this._listeners = new Map() // event -> Set<callback>
 	}
@@ -239,6 +241,19 @@ export class Runtime {
 	}
 
 	/**
+	 * Create UCAN-like capability token for protected API calls (e.g. /llm/chat).
+	 * Delegates to Loader when provided at construction.
+	 * @param {Object} opts - e.g. { cmd: '/llm/chat', args: {} }
+	 * @returns {Promise<string>} JWT-style Bearer token
+	 */
+	async getCapabilityToken(opts = {}) {
+		if (typeof this._getCapabilityToken !== 'function') {
+			throw new Error('getCapabilityToken not available (Loader not wired)')
+		}
+		return this._getCapabilityToken(opts)
+	}
+
+	/**
 	 * Load actor config from CoJSON DB by co-id.
 	 * @param {string} actorCoId - Actor co-id (co_z...)
 	 * @returns {Promise<Object|null>} Actor config with inbox, state, etc.
@@ -356,9 +371,12 @@ export class Runtime {
 	 */
 	watchInbox(inboxCoId, actorId, actorConfig) {
 		const inboxEngine = this.actorEngine?.inboxEngine
-		if (!inboxEngine) return
+		if (!inboxEngine) return () => {}
+		if (this._watchedInboxCoIds.has(inboxCoId)) return () => {}
+		this._watchedInboxCoIds.add(inboxCoId)
 		const unsub = inboxEngine.watchInbox(inboxCoId, actorId, actorConfig)
 		this._inboxWatcherUnsubscribes.push(unsub)
+		return unsub
 	}
 
 	/**

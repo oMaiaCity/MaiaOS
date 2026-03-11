@@ -18,7 +18,7 @@ import { resolveCoIdShallow } from './data-extraction.js'
  * Only loads CoValues along the path – never siblings.
  * @param {Object} peer - Backend instance
  * @param {any} item - Root item
- * @param {string} path - Dot path (e.g. "os.capabilities.guardian.accountMembers")
+ * @param {string} path - Dot path (e.g. "os.groups.guardian.accountMembers")
  * @param {Set<string>} visited - Visited co-ids for circular ref detection
  * @param {Object} options - Options { timeoutMs }
  * @returns {Promise<any>} Value at path, or undefined
