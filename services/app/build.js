@@ -54,10 +54,10 @@ const envDefine = {
 }
 
 // Banner: ensure import.meta.env exists with production values (Bun doesn't inject like Vite)
-const moaiDomain = process.env.VITE_PEER_MOAI || 'moai.next.maia.city'
+const syncHost = process.env.VITE_PEER_SYNC_HOST || 'sync.next.maia.city'
 const seedAvens = process.env.VITE_SEED_AVENS || 'all'
 const envObj = JSON.stringify({
-	VITE_PEER_MOAI: moaiDomain,
+	VITE_PEER_SYNC_HOST: syncHost,
 	VITE_SEED_AVENS: seedAvens,
 	DEV: false,
 })

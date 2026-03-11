@@ -322,22 +322,6 @@ function getSyncDomain() {
 	return import.meta.env?.VITE_PEER_SYNC_HOST || null
 }
 
-/**
- * AVEN_TEST_MODE: Non-human test login for local dev (no passkeys).
- * NEVER allowed in production - double-gated by env and hostname.
- * In-memory only - no localStorage.
- */
-function isAvenTestModeEnabled() {
-	// Dev: env injected by dev-server; fallback to window.__MAIA_DEV_ENV__ if script ran
-	const env = import.meta.env ?? window.__MAIA_DEV_ENV__
-	if (env?.VITE_AVEN_TEST_MODE !== 'true') return false
-	const isLocal =
-		env?.DEV ||
-		(typeof window !== 'undefined' &&
-			(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
-	return isLocal
-}
-
 /** Base URL for sync HTTP API (syncRegistry, etc.) */
 function getMoaiBaseUrl() {
 	const isDev =

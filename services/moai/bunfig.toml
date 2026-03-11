@@ -1,3 +1,0 @@
-# Moai service - .maia files must load as JSON for @MaiaOS/avens imports
-[loader]
-".maia" = "json"

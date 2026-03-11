@@ -1,4 +1,4 @@
-# App Service
+# Maia Service
 
 The main UI service for MaiaOS, featuring:
 - **Database Inspector** at `/` (root) - Explore Jazz CoValues with authentication
@@ -7,7 +7,7 @@ The main UI service for MaiaOS, featuring:
 ## Structure
 
 ```
-services/app/
+services/maia/
 ├── index.html          # Main app (database inspector)
 ├── main.js             # Main app logic
 ├── db-view.js          # Database viewer and dynamic aven renderer
@@ -29,13 +29,13 @@ services/app/
 bun dev
 
 # Or directly
-cd services/app
+cd services/maia
 bun run dev
 ```
 
 Server runs on **http://localhost:4200**
 
-**Note**: In dev mode, app uses source files directly (not bundles) for Bun HMR. Client connects directly to sync (4201) for sync/API — no proxy.
+**Note**: In dev mode, maia uses source files directly (not bundles) for Bun HMR. Client connects directly to moai (4201) for sync/API — no proxy.
 
 ## Routes
 
@@ -81,7 +81,7 @@ export { ActorEngine, ViewEngine, StyleEngine, ... } from "./engines/...";
 
 **maia imports:**
 ```javascript
-// services/app/main.js
+// services/maia/main.js
 import { MaiaOS } from '@MaiaOS/loader';
 const os = await MaiaOS.boot({ node, account });
 ```

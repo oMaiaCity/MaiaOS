@@ -76,7 +76,7 @@ Each workspace can depend on other workspaces (services or libs) using the `work
 // services/app/package.json - only maia-distros (loader/vibes via jsconfig)
 // services/sync/package.json - maia-distros + @MaiaOS/loader
 ```
-Services depend only on `@MaiaOS/loader`. Loader re-exports everything needed: db, schemata, actors, vibes (via dynamic import), cojson-transport-ws. maia-distros has no app logic—only bundling. Services own logic; distros produces bundles (maia-client, vibes, moai-server). Prod runs bundles.
+Services depend only on `@MaiaOS/loader`. Loader re-exports everything needed: db, schemata, actors, vibes (via dynamic import), cojson-transport-ws. maia-distros has no app logic—only bundling. Services own logic; distros produces bundles (maia-client, avens, sync-server). Prod runs bundles.
 
 2. **Library depends on another Library:**
 ```json
