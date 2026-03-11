@@ -22,7 +22,7 @@
 	"categoryLabel": "Spark Details",
 	"groupIdLabel": "Group ID",
 	"membersLabel": "Members",
-	"addAgentLabel": "Add Agent",
+	"addAvenLabel": "Add Aven",
 	"memberRemoveButtonText": "×",
 	"@actors": {
 		"input": "°Maia/actor/views/input/for-detail"

@@ -1,12 +1,12 @@
 // CoJSON API factory - lives in loader (orchestrator) to keep db decoupled from engines
 
 export { getAllActorDefinitions, getSeedConfig } from '@MaiaOS/actors'
-// Agents seeding (static import from cycle-free @MaiaOS/agents/seeding - bundles correctly in moai-server.mjs)
+// Avens seeding (static import from cycle-free @MaiaOS/avens/seeding - bundles correctly in moai-server.mjs)
 export {
 	buildSeedConfig,
-	filterAgentsForSeeding,
-	getAllAgentRegistries,
-} from '@MaiaOS/agents/seeding'
+	filterAvensForSeeding,
+	getAllAvenRegistries,
+} from '@MaiaOS/avens/seeding'
 // Re-export db functions (bundled in core)
 // Peer setup, sync state, backend for operations
 // Re-export ReactiveStore from db

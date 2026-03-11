@@ -8,7 +8,7 @@
  * machine, and children. View-attached actors have viewDef + containerElement; headless have null.
  *
  * **Lifecycle:** spawnActor (headless, inbox+state) | createActor (view-attached via container).
- * destroyActor, destroyActorsForAgent, destroyActorsForContainer for teardown.
+ * destroyActor, destroyActorsForAven, destroyActorsForContainer for teardown.
  */
 
 import { waitForStoreReady } from '@MaiaOS/db'
@@ -34,7 +34,7 @@ export class ActorEngine {
 		this.dataEngine = null
 		this.os = null
 		this._containerActors = new Map()
-		this._agentActors = new Map()
+		this._avenActors = new Map()
 		// ViewEngine/StateEngine receive ActorOps via Loader - no circular ref from here
 
 		// Svelte-style rerender batching (microtask queue)
@@ -158,11 +158,11 @@ export class ActorEngine {
 	 * Only creates the child actor when it's actually needed (referenced by context.currentView)
 	 * @param {Object} actor - Parent actor instance
 	 * @param {string} namekey - Child actor namekey (e.g., "list", "kanban")
-	 * @param {string} [agentKey] - Optional agent key for tracking child actors
+	 * @param {string} [avenKey] - Optional aven key for tracking child actors
 	 * @returns {Promise<Object|null>} The child actor instance, or null if not found/created
 	 * @private
 	 */
-	async _createChildActorIfNeeded(actor, namekey, agentKey = null) {
+	async _createChildActorIfNeeded(actor, namekey, avenKey = null) {
 		if (actor.children?.[namekey]) return actor.children[namekey]
 		if (!actor.children) actor.children = {}
 
@@ -188,7 +188,7 @@ export class ActorEngine {
 			const childActor = await this.createActor(
 				childActorConfig,
 				childContainer,
-				agentKey,
+				avenKey,
 				actor,
 				namekey,
 			)
@@ -208,14 +208,14 @@ export class ActorEngine {
 	async createActor(
 		actorConfig,
 		containerElement,
-		agentKey = null,
+		avenKey = null,
 		parentActor = null,
 		namekey = null,
 	) {
 		const actorId = actorConfig.$id || actorConfig.id
 		if (this.actors.has(actorId)) {
-			return agentKey
-				? await this.reuseActor(actorId, containerElement, agentKey)
+			return avenKey
+				? await this.reuseActor(actorId, containerElement, avenKey)
 				: this.actors.get(actorId)
 		}
 		// Inbox by convention: derive when missing so config always has inbox set
@@ -231,13 +231,13 @@ export class ActorEngine {
 			throw new Error(`[ActorEngine] Actor config must have process: ${actorId}`)
 		const actor = await this.spawnActor(actorConfig)
 
-		// Container/agent registration (ActorEngine)
+		// Container/aven registration (ActorEngine)
 		if (containerElement) {
 			if (!this._containerActors.has(containerElement))
 				this._containerActors.set(containerElement, new Set())
 			this._containerActors.get(containerElement).add(actorId)
 		}
-		if (agentKey) this.registerActorForAgent(actorId, agentKey)
+		if (avenKey) this.registerActorForAven(actorId, avenKey)
 
 		// View/DOM: delegate to ViewEngine
 		const onBeforeRender = () => this._initializeActorState(actor, actorConfig)
@@ -245,7 +245,7 @@ export class ActorEngine {
 			actor,
 			containerElement,
 			actorConfig,
-			agentKey,
+			avenKey,
 			onBeforeRender,
 			parentActor,
 			namekey,
@@ -335,36 +335,36 @@ export class ActorEngine {
 	}
 
 	/**
-	 * Register an actor with an agent key for reuse tracking
+	 * Register an actor with an aven key for reuse tracking
 	 * @param {string} actorId - The actor ID
-	 * @param {string} agentKey - The agent key (e.g., 'todos')
+	 * @param {string} avenKey - The aven key (e.g., 'todos')
 	 */
-	registerActorForAgent(actorId, agentKey) {
-		if (!agentKey) return
+	registerActorForAven(actorId, avenKey) {
+		if (!avenKey) return
 
-		if (!this._agentActors.has(agentKey)) {
-			this._agentActors.set(agentKey, new Set())
+		if (!this._avenActors.has(avenKey)) {
+			this._avenActors.set(avenKey, new Set())
 		}
-		this._agentActors.get(agentKey).add(actorId)
+		this._avenActors.get(avenKey).add(actorId)
 	}
 
 	/**
-	 * Get all actors for an agent
-	 * @param {string} agentKey - The agent key (e.g., 'todos')
-	 * @returns {Set<string>|undefined} Set of actor IDs for the agent
+	 * Get all actors for an aven
+	 * @param {string} avenKey - The aven key (e.g., 'todos')
+	 * @returns {Set<string>|undefined} Set of actor IDs for the aven
 	 */
-	getActorsForAgent(agentKey) {
-		return this._agentActors.get(agentKey)
+	getActorsForAven(avenKey) {
+		return this._avenActors.get(avenKey)
 	}
 
 	/**
 	 * Reuse an existing actor by reattaching it to a new container
 	 * @param {string} actorId - The actor ID
 	 * @param {HTMLElement} containerElement - The new container to attach to
-	 * @param {string} agentKey - The agent key (e.g., 'todos')
+	 * @param {string} avenKey - The aven key (e.g., 'todos')
 	 * @returns {Promise<Object>} The reused actor instance
 	 */
-	async reuseActor(actorId, containerElement, agentKey) {
+	async reuseActor(actorId, containerElement, avenKey) {
 		const actor = this.actors.get(actorId)
 		if (!actor) throw new Error(`[ActorEngine] Cannot reuse actor ${actorId}`)
 		const oldContainer = actor.containerElement
@@ -379,7 +379,7 @@ export class ActorEngine {
 				this._containerActors.set(containerElement, new Set())
 			this._containerActors.get(containerElement).add(actorId)
 		}
-		this.registerActorForAgent(actorId, agentKey)
+		this.registerActorForAven(actorId, avenKey)
 		if (actor.shadowRoot) {
 			const oldHost = actor.shadowRoot.host
 			if (oldHost && oldHost !== containerElement) {
@@ -420,7 +420,7 @@ export class ActorEngine {
 		delete actor._configUnsubscribes
 
 		// CRITICAL: Call context store's _unsubscribe to release query stores, readCollection subscriptions, etc.
-		// Without this, colist + per-item subscriptions leak when switching agents (detach keeps actors, but destroy must clean)
+		// Without this, colist + per-item subscriptions leak when switching avens (detach keeps actors, but destroy must clean)
 		if (actor.context?._unsubscribe && typeof actor.context._unsubscribe === 'function') {
 			try {
 				actor.context._unsubscribe()
@@ -435,10 +435,10 @@ export class ActorEngine {
 			containerActors.delete(actorId)
 			if (containerActors.size === 0) this._containerActors.delete(actor.containerElement)
 		}
-		for (const [agentKey, agentActorIds] of this._agentActors.entries()) {
-			if (agentActorIds.has(actorId)) {
-				agentActorIds.delete(actorId)
-				if (agentActorIds.size === 0) this._agentActors.delete(agentKey)
+		for (const [avenKey, avenActorIds] of this._avenActors.entries()) {
+			if (avenActorIds.has(actorId)) {
+				avenActorIds.delete(actorId)
+				if (avenActorIds.size === 0) this._avenActors.delete(avenKey)
 				break
 			}
 		}
@@ -577,7 +577,7 @@ export class ActorEngine {
 			containerElement: null,
 			actorOps: this, // ActorEngine implements ActorOps interface
 			viewDef: null,
-			agentKey: null,
+			avenKey: null,
 			inbox: null,
 			inboxCoId,
 			interface: actorConfig.interface || null,
@@ -600,7 +600,7 @@ export class ActorEngine {
 
 	/**
 	 * Destroy all actors for a given container
-	 * Used when unloading an agent to clean up all actors associated with that container
+	 * Used when unloading an aven to clean up all actors associated with that container
 	 * @param {HTMLElement} containerElement - The container element
 	 */
 	destroyActorsForContainer(containerElement) {
@@ -613,17 +613,17 @@ export class ActorEngine {
 	}
 
 	/**
-	 * Destroy all actors for an agent (complete cleanup)
+	 * Destroy all actors for an aven (complete cleanup)
 	 * Used for explicit cleanup when needed (e.g., app shutdown)
-	 * @param {string} agentKey - The agent key (e.g., 'todos')
+	 * @param {string} avenKey - The aven key (e.g., 'todos')
 	 */
-	destroyActorsForAgent(agentKey) {
-		const actorIds = this._agentActors.get(agentKey)
-		if (!agentKey || !actorIds?.size) return
+	destroyActorsForAven(avenKey) {
+		const actorIds = this._avenActors.get(avenKey)
+		if (!avenKey || !actorIds?.size) return
 		for (const actorId of Array.from(actorIds)) {
 			this.destroyActor(actorId)
 		}
-		this._agentActors.delete(agentKey)
+		this._avenActors.delete(avenKey)
 	}
 
 	/**

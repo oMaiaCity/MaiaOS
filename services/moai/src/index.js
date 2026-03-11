@@ -16,7 +16,7 @@
  *   PEER_MOAI: Required when PEER_MODE=agent (where to connect). Ignored when sync.
  *   PEER_ADD_GUARDIAN: Default false. Set true to add PEER_GUARDIAN as admin on startup (one-time genesis).
  *   PEER_GUARDIAN: Human account co-id (co_z...). Human must sign in from maia first so account syncs.
- *   PEER_FRESH_SEED: Default false. Set true to run genesis seed (bootstrap + schemas + agents).
+ *   PEER_FRESH_SEED: Default false. Set true to run genesis seed (bootstrap + schemas + avens).
  *     - true: Fresh seed (first deploy or intentional reset). May overwrite existing scaffold.
  *     - false/unset: Skip seed, use persisted data. Never overwrite on restart.
  */
@@ -25,9 +25,9 @@ import {
 	buildSeedConfig,
 	createWebSocketPeer,
 	DataEngine,
-	filterAgentsForSeeding,
+	filterAvensForSeeding,
 	generateRegistryName,
-	getAllAgentRegistries,
+	getAllAvenRegistries,
 	getAllSchemas,
 	getSeedConfig,
 	loadOrCreateAgentAccount,
@@ -71,7 +71,7 @@ const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
 const peerAddGuardian = process.env.PEER_ADD_GUARDIAN === 'true'
 const peerGuardianAccountId = process.env.PEER_GUARDIAN?.trim() || null
 const peerFreshSeed = process.env.PEER_FRESH_SEED === 'true'
-// Sync mode seeds all agents by default (internal, not configurable)
+// Sync mode seeds all avens by default (internal, not configurable)
 const seedVibesConfig = 'all'
 
 let localNode = null
@@ -694,16 +694,16 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 		await schemaMigration(result.account, localNode)
 
 		// Genesis sync mode: seed only when PEER_FRESH_SEED=true (explicit, no co-value inference).
-		// Agent mode never seeds (minimal account, no agents).
+		// Agent mode never seeds (minimal account, no avens).
 		if (peerMode === 'sync' && peerFreshSeed) {
-			const allAgentRegistries = await getAllAgentRegistries()
-			const agentRegistries = await filterAgentsForSeeding(allAgentRegistries, seedVibesConfig)
-			if (agentRegistries.length === 0) {
+			const allAvenRegistries = await getAllAvenRegistries()
+			const avenRegistries = await filterAvensForSeeding(allAvenRegistries, seedVibesConfig)
+			if (avenRegistries.length === 0) {
 				throw new Error(
-					'[sync] Genesis sync requires agents. getAllAgentRegistries returned none or SEED_AGENTS filtered all.',
+					'[sync] Genesis sync requires avens. getAllAvenRegistries returned none or SEED_AVENS filtered all.',
 				)
 			}
-			const { configs: mergedConfigs, data } = await buildSeedConfig(agentRegistries)
+			const { configs: mergedConfigs, data } = await buildSeedConfig(avenRegistries)
 			const {
 				actors: serviceActors,
 				interfaces: serviceInterfaces,
@@ -737,7 +737,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 				throw new Error(`[sync] Genesis seed failed: ${msg}`)
 			}
 			console.log(
-				`[sync] Genesis seeded: ${agentRegistries.length} agent(s) (schemas + scaffold). Set PEER_FRESH_SEED=false for subsequent restarts.`,
+				`[sync] Genesis seeded: ${avenRegistries.length} aven(s) (schemas + scaffold). Set PEER_FRESH_SEED=false for subsequent restarts.`,
 			)
 		} else if (peerMode === 'sync' && !peerFreshSeed) {
 			console.log('[sync] PEER_FRESH_SEED not set — using persisted scaffold (skip seed).')

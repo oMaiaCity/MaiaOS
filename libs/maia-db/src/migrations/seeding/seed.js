@@ -473,48 +473,48 @@ export async function seed(
 		}
 	}
 
-	const allAgents = configs?.agents || []
-	if (allAgents.length > 0) {
+	const allAvens = configs?.avens || []
+	if (allAvens.length > 0) {
 		combinedRegistry = refreshCombinedRegistry()
-		let agents = null
-		const agentsId = await groups.getSparkAgentsId(peer, MAIA_SPARK)
-		if (agentsId) {
-			const agentsCore = await ensureCoValueLoaded(peer, agentsId, {
+		let avens = null
+		const avensId = await groups.getSparkAvensId(peer, MAIA_SPARK)
+		if (avensId) {
+			const avensCore = await ensureCoValueLoaded(peer, avensId, {
 				waitForAvailable: true,
 				timeoutMs: 5000,
 			})
-			if (agentsCore?.type === 'comap' && peer.isAvailable(agentsCore)) {
-				agents = agentsCore.getCurrentContent?.()
+			if (avensCore?.type === 'comap' && peer.isAvailable(avensCore)) {
+				avens = avensCore.getCurrentContent?.()
 			}
 		}
-		if (!agents) {
+		if (!avens) {
 			const { EXCEPTION_SCHEMAS } = await import('../../schemas/registry.js')
-			const agentsSchemaCoId =
-				schemaCoIdMap?.get('°Maia/schema/os/agents-registry') ??
+			const avensRegistrySchemaCoId =
+				schemaCoIdMap?.get('°Maia/schema/os/avens-registry') ??
 				(await (
 					await import('../../cojson/schema/resolver.js')
-				).resolve(peer, '°Maia/schema/os/agents-registry', {
+				).resolve(peer, '°Maia/schema/os/avens-registry', {
 					returnType: 'coId',
 				}))
-			const { coValue: agentsCoMap } = await createCoValueForSpark(
+			const { coValue: avensCoMap } = await createCoValueForSpark(
 				{ node, account, guardian: maiaGroup },
 				null,
 				{
-					schema: agentsSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
+					schema: avensRegistrySchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
 					cotype: 'comap',
 					data: {},
 					dataEngine: peer?.dbEngine,
 				},
 			)
-			agents = agentsCoMap
-			await groups.setSparkAgentsId(peer, MAIA_SPARK, agents.id)
+			avens = avensCoMap
+			await groups.setSparkAvensId(peer, MAIA_SPARK, avens.id)
 		}
-		for (const agent of allAgents) {
-			const originalAgentId = agent.$id || ''
-			const agentKey = originalAgentId.startsWith('°Maia/agent/')
-				? originalAgentId.replace('°Maia/agent/', '')
-				: (agent.name || 'default').toLowerCase().replace(/\s+/g, '-')
-			const schemaRef = agent.$schema
+		for (const aven of allAvens) {
+			const originalAvenId = aven.$id || ''
+			const avenKey = originalAvenId.startsWith('°Maia/aven/')
+				? originalAvenId.replace('°Maia/aven/', '')
+				: (aven.name || 'default').toLowerCase().replace(/\s+/g, '-')
+			const schemaRef = aven.$schema
 			if (
 				schemaRef &&
 				(schemaRef.startsWith('@') || schemaRef.startsWith('°')) &&
@@ -527,31 +527,31 @@ export async function seed(
 					).resolve(peer, schemaRef, { returnType: 'coId' }))
 				if (schemaCoId) combinedRegistry.set(schemaRef, schemaCoId)
 			}
-			const retransformedAgent = transformForSeeding(agent, combinedRegistry)
-			if (!retransformedAgent.$schema?.startsWith('co_z')) {
+			const retransformedAven = transformForSeeding(aven, combinedRegistry)
+			if (!retransformedAven.$schema?.startsWith('co_z')) {
 				throw new Error(
-					`[sync] Agent "${agentKey}": $schema missing or not resolved. Ensure °Maia/schema/agent is in schema registry.`,
+					`[sync] Aven "${avenKey}": $schema missing or not resolved. Ensure °Maia/schema/aven is in schema registry.`,
 				)
 			}
-			const agentSeeded = await seedConfigs(
+			const avenSeeded = await seedConfigs(
 				account,
 				node,
 				maiaGroup,
 				peer,
-				{ agent: retransformedAgent },
+				{ aven: retransformedAven },
 				instanceCoIdMap,
 				schemaCoMaps,
 				schemaCoIdMap,
 			)
-			seededConfigs.configs.push(...(agentSeeded.configs || []))
-			seededConfigs.count += agentSeeded.count || 0
-			if (agentSeeded.configs?.length > 0) {
-				const agentCoId = agentSeeded.configs[0].coId
-				agents?.set?.(agentKey, agentCoId)
-				if (agent.$id) {
-					instanceCoIdMap.set(agent.$id, agentCoId)
-					combinedRegistry.set(agent.$id, agentCoId)
-					coIdRegistry.register(agent.$id, agentCoId)
+			seededConfigs.configs.push(...(avenSeeded.configs || []))
+			seededConfigs.count += avenSeeded.count || 0
+			if (avenSeeded.configs?.length > 0) {
+				const avenCoId = avenSeeded.configs[0].coId
+				avens?.set?.(avenKey, avenCoId)
+				if (aven.$id) {
+					instanceCoIdMap.set(aven.$id, avenCoId)
+					combinedRegistry.set(aven.$id, avenCoId)
+					coIdRegistry.register(aven.$id, avenCoId)
 				}
 			}
 		}

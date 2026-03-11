@@ -95,10 +95,10 @@ export async function seedConfigs(
 		}
 	}
 
-	const agentConfig = transformedConfigs.agent
-	if (agentConfig) {
-		const agentInfo = await createConfig(agentConfig, 'agent', 'agent')
-		seededConfigs.push(agentInfo)
+	const avenConfig = transformedConfigs.aven
+	if (avenConfig) {
+		const avenInfo = await createConfig(avenConfig, 'aven', 'aven')
+		seededConfigs.push(avenInfo)
 		totalCount++
 	}
 

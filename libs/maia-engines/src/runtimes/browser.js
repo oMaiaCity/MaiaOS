@@ -1,8 +1,8 @@
 /**
  * Runtime (browser) - Manages actor lifecycles, inbox watching, getActorConfig
  *
- * Loads ALL config from CoJSON DB dynamically (agents, dependencies, actor configs).
- * No hardcoded .maia configs — runtime reads account → spark.agents → agent deps → actor refs.
+ * Loads ALL config from CoJSON DB dynamically (avens, dependencies, actor configs).
+ * No hardcoded .maia configs — runtime reads account → spark.avens → aven deps → actor refs.
  * For each dependency: when inbox has unprocessed messages, spawns headless actor.
  */
 
@@ -54,11 +54,11 @@ export class Runtime {
 	 * Create actor with view attached. Delegates to actorEngine.createActor.
 	 * @param {Object} config - Actor config
 	 * @param {HTMLElement} container - Container element
-	 * @param {string|null} agentKey - Optional agent key for tracking
+	 * @param {string|null} avenKey - Optional aven key for tracking
 	 * @returns {Promise<Object>} Created actor
 	 */
-	async createActorForView(config, container, agentKey = null) {
-		const actor = await this.actorEngine.createActor(config, container, agentKey)
+	async createActorForView(config, container, avenKey = null) {
+		const actor = await this.actorEngine.createActor(config, container, avenKey)
 		if (actor) this._emit('actorSpawned', { actorId: actor.id, config, source: 'view' })
 		return actor
 	}
@@ -73,13 +73,13 @@ export class Runtime {
 	}
 
 	/**
-	 * Destroy all actors for an agent key (e.g. on agent switch).
+	 * Destroy all actors for an aven key (e.g. on aven switch).
 	 * @param {string} key - Agent key
 	 */
-	destroyActorsForAgent(key) {
-		this.actorEngine.destroyActorsForAgent(key)
+	destroyActorsForAven(key) {
+		this.actorEngine.destroyActorsForAven(key)
 		// Emit per-actor would require iterating; bulk emit for now
-		this._emit('actorDestroyed', { agentKey: key, reason: 'agentSwitch' })
+		this._emit('actorDestroyed', { avenKey: key, reason: 'avenSwitch' })
 	}
 
 	/**
@@ -144,12 +144,12 @@ export class Runtime {
 
 	/**
 	 * Collect OpenAI-format tools from actor interface schemas.
-	 * Enumerates agents' dependency actors, loads each config + interface schema, maps properties to tool definitions.
+	 * Enumerates avens' dependency actors, loads each config + interface schema, maps properties to tool definitions.
 	 * @returns {Promise<Array>} OpenAI tools array { type: 'function', function: { name, description, parameters } }
 	 */
 	async collectTools() {
 		if (!this.dataEngine?.peer) return []
-		const { actorRefs } = await this._getAgentsAndDependenciesFromDb()
+		const { actorRefs } = await this._getAvensAndDependenciesFromDb()
 		const tools = []
 		const actorSchemaCoId = await this.dataEngine.peer.resolve('°Maia/schema/actor', {
 			returnType: 'coId',
@@ -311,10 +311,10 @@ export class Runtime {
 	}
 
 	/**
-	 * Load agents and union of their dependencies from DB (account.registries.sparks[°Maia].agents).
+	 * Load avens and union of their dependencies from DB (account.registries.sparks[°Maia].avens).
 	 * @returns {Promise<{actorRefs: string[]}>} Deduped actor refs to watch
 	 */
-	async _getAgentsAndDependenciesFromDb() {
+	async _getAvensAndDependenciesFromDb() {
 		const peer = this.dataEngine?.peer
 		const account = peer?.account
 		if (!account?.id) return { actorRefs: [] }
@@ -350,36 +350,36 @@ export class Runtime {
 				schema: null,
 				key: sparkCoId,
 			})
-			const agentsId = sparkStore?.value?.agents
-			if (!agentsId?.startsWith?.('co_z')) return { actorRefs: [] }
-			const agentsStore = await this.dataEngine.execute({
+			const avensId = sparkStore?.value?.avens
+			if (!avensId?.startsWith?.('co_z')) return { actorRefs: [] }
+			const avensStore = await this.dataEngine.execute({
 				op: 'read',
-				schema: agentsId,
-				key: agentsId,
+				schema: avensId,
+				key: avensId,
 			})
-			const agentsData = agentsStore?.value
-			if (!agentsData || agentsData.error) return { actorRefs: [] }
-			const agentKeys = Object.keys(agentsData || {}).filter(
+			const avensData = avensStore?.value
+			if (!avensData || avensData.error) return { actorRefs: [] }
+			const avenKeys = Object.keys(avensData || {}).filter(
 				(k) =>
 					k !== 'id' &&
 					k !== '$schema' &&
 					k !== 'type' &&
-					typeof agentsData[k] === 'string' &&
-					agentsData[k].startsWith('co_'),
+					typeof avensData[k] === 'string' &&
+					avensData[k].startsWith('co_'),
 			)
 			const actorRefs = new Set()
-			for (const key of agentKeys) {
-				const agentCoId = agentsData[key]
+			for (const key of avenKeys) {
+				const avenCoId = avensData[key]
 				try {
-					const agentStore = await this.dataEngine.execute({
+					const avenStore = await this.dataEngine.execute({
 						op: 'read',
 						schema: null,
-						key: agentCoId,
+						key: avenCoId,
 					})
-					const agent = agentStore?.value
-					if (!agent) continue
-					if (!Array.isArray(agent.runtime) || !agent.runtime.includes(this.runtimeType)) continue
-					const deps = agent.dependencies
+					const aven = avenStore?.value
+					if (!aven) continue
+					if (!Array.isArray(aven.runtime) || !aven.runtime.includes(this.runtimeType)) continue
+					const deps = aven.dependencies
 					if (Array.isArray(deps)) for (const ref of deps) actorRefs.add(ref)
 				} catch (_e) {}
 			}
@@ -410,7 +410,7 @@ export class Runtime {
 		if (!this.dataEngine || this._started) return
 		this._started = true
 
-		const { actorRefs } = await this._getAgentsAndDependenciesFromDb()
+		const { actorRefs } = await this._getAvensAndDependenciesFromDb()
 		if (!actorRefs?.length) return
 
 		for (const actorCoId of actorRefs) {

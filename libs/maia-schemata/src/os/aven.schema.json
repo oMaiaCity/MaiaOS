@@ -1,0 +1,27 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/aven",
+	"title": "°Maia/schema/aven",
+	"description": "Aven manifest/metadata",
+	"cotype": "comap",
+	"indexing": true,
+	"required": ["name", "description", "actor"],
+	"properties": {
+		"name": { "type": "string", "description": "Aven name" },
+		"description": { "type": "string", "description": "Aven description" },
+		"actor": {
+			"$co": "°Maia/schema/actor",
+			"description": "Co-id reference to actor definition (root actor for this aven)"
+		},
+		"dependencies": {
+			"type": "array",
+			"items": { "type": "string" },
+			"description": "Explicit actor $ids whose inboxes must be watched (service actors this aven sends to)"
+		},
+		"runtime": {
+			"type": "array",
+			"items": { "type": "string" },
+			"description": "Runtime colocation - which runtimes this aven runs on (e.g. browser, server)"
+		}
+	}
+}

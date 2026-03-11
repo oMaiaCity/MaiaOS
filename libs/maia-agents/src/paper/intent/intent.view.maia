@@ -1,9 +1,0 @@
-{
-	"$schema": "°Maia/schema/view",
-	"$id": "°Maia/paper/view/intent",
-	"content": {
-		"tag": "div",
-		"class": "paper-container",
-		"$slot": "$layout"
-	}
-}
