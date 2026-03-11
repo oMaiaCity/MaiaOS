@@ -82,6 +82,16 @@ Bun.serve({
 		['Cross-Origin-Embedder-Policy', 'credentialless'],
 	],
 	routes: {
+		// Dev env endpoint (client fetches when import.meta.env not populated)
+		'/__maia_env': () =>
+			new Response(
+				JSON.stringify({
+					VITE_AVEN_TEST_MODE: process.env.VITE_AVEN_TEST_MODE || '',
+					VITE_AVEN_TEST_ACCOUNT: process.env.VITE_AVEN_TEST_ACCOUNT || '',
+					VITE_AVEN_TEST_SECRET: process.env.VITE_AVEN_TEST_SECRET || '',
+				}),
+				{ headers: { 'Content-Type': 'application/json' } },
+			),
 		// Internal: raw index - only our wrappers should serve this with COOP/COEP
 		'/__index_raw': index,
 		// Main doc and SPA roots get index with COOP/COEP for SharedArrayBuffer

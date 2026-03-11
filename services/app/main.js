@@ -138,7 +138,7 @@ async function handleRoute() {
 		if (redirectIfSignedIn()) return
 		try {
 			await isPRFSupported()
-			renderSignInPrompt(hasExistingAccount)
+			renderSignInPrompt(hasExistingAccount, undefined, isAvenTestModeEnabled())
 		} catch (error) {
 			renderUnsupportedBrowser(error.message)
 		}
@@ -197,6 +197,19 @@ function detectMode() {
 
 async function init() {
 	try {
+		// Dev: fetch env from server (Bun dev doesn't inject VITE_* like Vite)
+		if (
+			typeof window !== 'undefined' &&
+			(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
+		) {
+			try {
+				const res = await fetch('/__maia_env')
+				if (res.ok) {
+					window.__MAIA_DEV_ENV__ = await res.json()
+				}
+			} catch (_e) {}
+		}
+
 		// Check if we're in agent mode
 		const mode = detectMode()
 
@@ -308,6 +321,22 @@ function getSyncDomain() {
 	return import.meta.env?.VITE_PEER_SYNC_HOST || null
 }
 
+/**
+ * AVEN_TEST_MODE: Non-human test login for local dev (no passkeys).
+ * NEVER allowed in production - double-gated by env and hostname.
+ * In-memory only - no localStorage.
+ */
+function isAvenTestModeEnabled() {
+	// Dev: env injected by dev-server; fallback to window.__MAIA_DEV_ENV__ if script ran
+	const env = import.meta.env ?? window.__MAIA_DEV_ENV__
+	if (env?.VITE_AVEN_TEST_MODE !== 'true') return false
+	const isLocal =
+		env?.DEV ||
+		(typeof window !== 'undefined' &&
+			(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+	return isLocal
+}
+
 /** Base URL for sync HTTP API (syncRegistry, etc.) */
 function getMoaiBaseUrl() {
 	const isDev =
@@ -361,6 +390,68 @@ async function autoRegisterHuman(maia) {
 			body: JSON.stringify({ type: 'human', accountId, profileId }),
 		})
 	} catch (_e) {}
+}
+
+/**
+ * Sign in with Test AVEN (local dev only, no passkeys).
+ * In-memory only - no markAccountExists, no localStorage.
+ * NEVER in production (isAvenTestModeEnabled gates this).
+ */
+async function signInWithTestAven() {
+	if (!isAvenTestModeEnabled()) {
+		showToast('Test AVEN mode is not available.', 'error')
+		return
+	}
+	const env = import.meta.env ?? window.__MAIA_DEV_ENV__
+	const accountID = env?.VITE_AVEN_TEST_ACCOUNT
+	const agentSecret = env?.VITE_AVEN_TEST_SECRET
+	if (!accountID || !agentSecret) {
+		showToast(
+			'VITE_AVEN_TEST_ACCOUNT and VITE_AVEN_TEST_SECRET required. Run `bun agent:generate`.',
+			'error',
+		)
+		return
+	}
+	try {
+		const syncDomain = getSyncDomain()
+		const agentResult = await loadOrCreateAgentAccount({
+			accountID,
+			agentSecret,
+			syncDomain: syncDomain || null,
+			inMemory: true,
+			createName: 'Aven Test',
+		})
+		const { node, account } = agentResult
+
+		authState = { signedIn: true, accountID: account.id }
+
+		// NO markAccountExists() - in-memory only, no localStorage
+
+		maia = await MaiaOS.boot({
+			node,
+			account,
+			agentSecret,
+			syncDomain,
+			getMoaiBaseUrl,
+			modules: ['db', 'core', 'ai'],
+		})
+		window.maia = maia
+		await linkAccountToRegistries(maia).catch(() => {})
+		autoRegisterHuman(maia).catch(() => {})
+
+		setupSyncSubscription()
+		currentScreen = 'dashboard'
+		currentContextCoValueId = null
+
+		window.history.pushState({}, '', '/me')
+		await handleRoute()
+		loadLinkedCoValues().catch(() => {})
+	} catch (error) {
+		authState = { signedIn: false, accountID: null }
+		maia = null
+		showToast(`Test AVEN sign-in failed: ${error.message}`, 'error')
+		renderSignInPrompt(hasExistingAccount, undefined, true)
+	}
 }
 
 /**
@@ -696,6 +787,7 @@ function cleanupLoadingScreenSync() {
 
 // Expose globally for onclick handlers
 window.handleSignIn = signIn
+window.handleSignInWithTestAven = signInWithTestAven
 window.handleRegister = register
 
 // Swap signin/signup view mode (link-style toggle)
