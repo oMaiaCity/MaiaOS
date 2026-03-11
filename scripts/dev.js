@@ -5,8 +5,9 @@
  * Runs app (4200) and sync (4201)
  */
 
-import { spawn } from 'node:child_process'
-import { dirname, resolve } from 'node:path'
+import { execSync, spawn } from 'node:child_process'
+import { existsSync, rmSync } from 'node:fs'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { freePort } from './free-port.js'
 import { bootFooter, bootHeader, createLogger } from './logger.js'
@@ -397,15 +398,38 @@ function startAssetSync() {
 	})
 }
 
+/** Kill zombie sync-assets and docs watchers from previous dev runs (prevents ghost dirs) */
+function killZombieDevProcesses() {
+	try {
+		execSync('pkill -f "node scripts/sync-assets.js" 2>/dev/null || true', { timeout: 2000 })
+		execSync('pkill -f "bun scripts/generate-llm-docs.js --watch" 2>/dev/null || true', {
+			timeout: 2000,
+		})
+		execSync('pkill -f "bun run scripts/generate-llm-docs.js --watch" 2>/dev/null || true', {
+			timeout: 2000,
+		})
+	} catch (_) {}
+}
+
 async function killChildren() {
 	const procs = [faviconProcess, assetSyncProcess, docsWatcherProcess, syncProcess, appProcess]
+	const toWait = []
 	for (const p of procs) {
 		if (p && !p.killed) {
 			try {
-				p.kill('SIGKILL')
+				p.kill('SIGTERM')
+				toWait.push(
+					Promise.race([
+						new Promise((r) => p.once('exit', r)),
+						new Promise((r) => setTimeout(r, 1500)),
+					]).then(() => {
+						if (p && !p.killed) p.kill('SIGKILL')
+					}),
+				)
 			} catch (_e) {}
 		}
 	}
+	await Promise.all(toWait)
 }
 
 function setupSignalHandlers() {
@@ -415,10 +439,14 @@ function setupSignalHandlers() {
 	async function onShutdown() {
 		if (shuttingDown) return
 		shuttingDown = true
+		process.exitCode = 0
 		console.log()
 		logger.log('Shutting down...')
-		await killChildren()
-		process.exit(0)
+		try {
+			await killChildren()
+		} finally {
+			process.exit(0)
+		}
 	}
 
 	process.on('SIGINT', () => {
