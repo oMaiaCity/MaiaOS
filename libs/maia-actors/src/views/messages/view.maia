@@ -61,34 +61,6 @@
 							}
 						},
 						"text": "$loadingText"
-					},
-					{
-						"tag": "div",
-						"class": "error",
-						"attrs": {
-							"data": {
-								"hasError": "$hasError"
-							}
-						},
-						"children": [
-							{
-								"tag": "strong",
-								"text": "$errorLabel"
-							},
-							{
-								"text": "$error"
-							},
-							{
-								"tag": "button",
-								"class": "button",
-								"text": "$dismissButtonText",
-								"$on": {
-									"click": {
-										"send": "DISMISS"
-									}
-								}
-							}
-						]
 					}
 				]
 			}

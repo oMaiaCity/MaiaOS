@@ -8,12 +8,14 @@
 import { ChatAgentRegistry } from './chat/registry.js'
 import { LogsAgentRegistry } from './creator/registry.js'
 import { HumansAgentRegistry } from './humans/registry.js'
+import { PaperAgentRegistry } from './paper/registry.js'
 import { SparksAgentRegistry } from './sparks/registry.js'
 import { TodosAgentRegistry } from './todos/registry.js'
 
 const ALL_REGISTRIES = [
 	TodosAgentRegistry,
 	ChatAgentRegistry,
+	PaperAgentRegistry,
 	SparksAgentRegistry,
 	LogsAgentRegistry,
 	HumansAgentRegistry,

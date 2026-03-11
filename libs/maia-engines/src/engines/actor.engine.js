@@ -46,8 +46,8 @@ export class ActorEngine {
 	}
 
 	/**
-	 * Update actor context. Zero in-memory mutation: write only to CoValue.
-	 * Context store subscribes to CoValue; when CoValue updates, store updates and UI rerenders.
+	 * Update actor context. Writes to CoValue and eagerly merges into context store
+	 * so UI rerenders immediately (CoValue propagation to store may lag).
 	 */
 	async updateContextCoValue(actor, updates) {
 		const sanitizedUpdates = {}
@@ -64,6 +64,12 @@ export class ActorEngine {
 			id: actor.contextCoId,
 			data: sanitizedUpdates,
 		})
+		// Eager merge: store reflects change immediately so rerender uses fresh data
+		if (actor.context && typeof actor.context._set === 'function') {
+			const merged = { ...(actor.context.value || {}), ...sanitizedUpdates }
+			actor.context._set(merged)
+		}
+		this._scheduleRerender(actor.id)
 	}
 
 	/**
@@ -660,19 +666,23 @@ export class ActorEngine {
 		return this.inboxEngine.validatePayloadForActorWithDetails(actorId, eventType, payload)
 	}
 
-	async processEvents(actorId) {
+	async processEvents(actorId, preloadedMessages = null) {
 		const actor = this.actors.get(actorId)
 		if (!actor || !actor.inboxCoId || !this.dataEngine || !this.inboxEngine || actor._isProcessing)
 			return
 		actor._isProcessing = true
 		let hadUnhandledMessages = false
 		try {
-			const result = await this.dataEngine.execute({
-				op: 'processInbox',
-				actorId,
-				inboxCoId: actor.inboxCoId,
-			})
-			const messages = result.messages || []
+			const messages =
+				Array.isArray(preloadedMessages) && preloadedMessages.length > 0
+					? preloadedMessages
+					: (
+							await this.dataEngine.execute({
+								op: 'processInbox',
+								actorId,
+								inboxCoId: actor.inboxCoId,
+							})
+						).messages || []
 			for (const message of messages) {
 				if (message.type === 'INIT' || message.from === 'system') continue
 				try {
@@ -744,11 +754,10 @@ export class ActorEngine {
 		} finally {
 			actor._isProcessing = false
 			// Retry when: (1) unhandled messages (no transition), or (2) more messages arrived during our run.
-			// processInbox reads persisted processed flag; update invalidates cache so next read sees it.
 			const shouldRetry =
 				hadUnhandledMessages ||
-				(await this.dataEngine
-					.execute({ op: 'processInbox', actorId, inboxCoId: actor.inboxCoId })
+				(await this.inboxEngine
+					?.getUnprocessedMessages?.(actor.inboxCoId, actorId)
 					.then((r) => (r.messages?.length ?? 0) > 0)
 					.catch(() => false))
 			if (shouldRetry) {

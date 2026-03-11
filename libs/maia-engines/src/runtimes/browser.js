@@ -14,8 +14,7 @@ export class Runtime {
 		this.actorEngine = actorEngine
 		this.runtimeType = runtimeType
 		this._getCapabilityToken = opts.getCapabilityToken ?? null
-		this._inboxWatcherUnsubscribes = []
-		this._watchedInboxCoIds = new Set()
+		this._processingByInbox = new Map()
 		this._started = false
 		this._listeners = new Map() // event -> Set<callback>
 	}
@@ -98,6 +97,37 @@ export class Runtime {
 	 * @param {Object} targetActorConfig - Actor config from DB
 	 * @param {string} inboxCoId - Resolved inbox co-id
 	 */
+	/**
+	 * Process inbox for actor: read unprocessed messages, spawn if needed, process.
+	 * Sole executor path — InboxEngine delegates here; holds lock.
+	 */
+	async processInboxForActor(inboxCoId, actorId, actorConfig) {
+		if (this._processingByInbox.get(inboxCoId)) return
+		this._processingByInbox.set(inboxCoId, true)
+		try {
+			const inboxEngine = this.actorEngine?.inboxEngine
+			const { messages } = inboxEngine
+				? await inboxEngine.getUnprocessedMessages(inboxCoId, actorId)
+				: { messages: [] }
+			const count = messages.length
+
+			if (this.actorEngine?.actors?.has(actorId)) {
+				if (count > 0) await this.actorEngine.processEvents(actorId, messages)
+				return
+			}
+
+			if (count === 0) return
+
+			const actor = await this.actorEngine?.spawnActor?.(actorConfig, { skipInboxSubscription: true })
+			if (actor) {
+				this._emit('actorSpawned', { actorId, config: actorConfig, source: 'inbox' })
+				await this.actorEngine.processEvents(actorId, messages)
+			}
+		} finally {
+			this._processingByInbox.delete(inboxCoId)
+		}
+	}
+
 	async ensureActorSpawned(targetActorConfig, _inboxCoId) {
 		const actorId = targetActorConfig.$id || targetActorConfig.id
 		if (!actorId || this.actorEngine.actors.has(actorId)) return
@@ -225,12 +255,10 @@ export class Runtime {
 			return { ok: true, delivered: true }
 		}
 
-		const result = await this.dataEngine.execute({
-			op: 'processInbox',
-			actorId: callerId,
-			inboxCoId: callerInboxCoId,
-		})
-		const messages = result?.messages ?? []
+		const { messages } = (await this.actorEngine?.inboxEngine?.getUnprocessedMessages?.(
+			callerInboxCoId,
+			callerId,
+		)) ?? { messages: [] }
 		const successMsg = messages.find((m) => m.type === 'SUCCESS' && m.source === targetActorCoId)
 		if (successMsg?.payload) {
 			await this.actorEngine.processEvents(callerId)
@@ -370,13 +398,8 @@ export class Runtime {
 	 * @param {Object} actorConfig - Full actor config (for spawnActor)
 	 */
 	watchInbox(inboxCoId, actorId, actorConfig) {
-		const inboxEngine = this.actorEngine?.inboxEngine
-		if (!inboxEngine) return () => {}
-		if (this._watchedInboxCoIds.has(inboxCoId)) return () => {}
-		this._watchedInboxCoIds.add(inboxCoId)
-		const unsub = inboxEngine.watchInbox(inboxCoId, actorId, actorConfig)
-		this._inboxWatcherUnsubscribes.push(unsub)
-		return unsub
+		const unsub = this.actorEngine?.inboxEngine?.watchInbox(inboxCoId, actorId, actorConfig)
+		return unsub ?? (() => {})
 	}
 
 	/**

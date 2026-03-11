@@ -10,9 +10,8 @@
 	"dependencies": [
 		"°Maia/chat/actor/intent",
 		"°Maia/actor/views/layout-chat",
-		"°Maia/actor/views/modal",
 		"°Maia/actor/views/messages",
-		"°Maia/actor/views/paper",
+		"°Maia/actor/views/input/for-chat",
 		"°Maia/actor/os/messages",
 		"°Maia/actor/services/paper",
 		"°Maia/actor/os/db",

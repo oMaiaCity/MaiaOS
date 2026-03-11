@@ -13,6 +13,7 @@ import { sanitizePayloadForValidation } from '../utils/payload-sanitizer.js'
 import { perfChatStart, perfChatStep } from '../utils/perf-chat.js'
 import { perfPipelineStep } from '../utils/perf-pipeline.js'
 import { readStore } from '../utils/store-reader.js'
+import { traceInbox } from '../utils/trace.js'
 
 const DEBOUNCE_MS = 0
 
@@ -20,7 +21,6 @@ export class InboxEngine {
 	constructor(dataEngine = null) {
 		this.dataEngine = dataEngine
 		this.actorEngine = null // Set by Loader after ActorEngine creation
-		this._processingByInbox = new Map()
 	}
 
 	async resolveInboxForTarget(targetId) {
@@ -139,9 +139,30 @@ export class InboxEngine {
 		return { valid: result.valid, errors: result.errors }
 	}
 
+	/**
+	 * Get unprocessed messages from inbox. Single source for inbox read — no other engine/Runtime calls processInbox directly.
+	 * @param {string} inboxCoId - Inbox CoStream co-id
+	 * @param {string} actorId - Actor co-id
+	 * @returns {Promise<Object>} { messages: Array }
+	 */
+	async getUnprocessedMessages(inboxCoId, actorId) {
+		const result = await this.dataEngine?.execute?.({
+			op: 'processInbox',
+			actorId,
+			inboxCoId,
+		})
+		return { messages: result?.messages ?? [] }
+	}
+
 	async validateMessage(actor, message) {
 		if (!this._validateEventType(actor, message.type)) return { valid: false }
 		if (InboxEngine.SYSTEM_EVENTS.has(message.type)) {
+			if (message.type === 'ERROR') {
+				const errors = message.payload?.errors
+				if (!Array.isArray(errors)) {
+					return { valid: false }
+				}
+			}
 			const payloadPlain = {
 				...(message.payload && typeof message.payload === 'object'
 					? JSON.parse(JSON.stringify(message.payload))
@@ -175,42 +196,15 @@ export class InboxEngine {
 	}
 
 	/**
-	 * Orchestrate processing of unprocessed inbox messages. Spawns actor if needed, delegates to ActorEngine.processEvents.
-	 * Back pressure: guarded by _processingByInbox; ActorEngine.processEvents has _isProcessing + shouldRetry for drain.
+	 * Process unprocessed inbox messages. Delegates to Runtime (sole executor).
 	 * @param {string} inboxCoId - Inbox CoStream co-id
 	 * @param {string} actorId - Actor co-id
 	 * @param {Object} actorConfig - Actor config (for spawnActor)
 	 */
 	async processUnprocessedMessages(inboxCoId, actorId, actorConfig) {
-		if (this._processingByInbox.get(inboxCoId)) return
-		this._processingByInbox.set(inboxCoId, true)
-		try {
-			const result = await this.dataEngine?.execute?.({
-				op: 'processInbox',
-				actorId,
-				inboxCoId,
-			})
-			const count = result?.messages?.length ?? 0
-
-			if (this.actorEngine?.actors?.has(actorId)) {
-				if (count > 0) await this.actorEngine.processEvents(actorId)
-				return
-			}
-
-			if (count === 0) return
-
-			const actor = await this.actorEngine?.spawnActor?.(actorConfig, { skipInboxSubscription: true })
-			if (actor) {
-				this.actorEngine?.runtime?._emit?.('actorSpawned', {
-					actorId,
-					config: actorConfig,
-					source: 'inbox',
-				})
-				await this.actorEngine?.processEvents?.(actorId)
-			}
-		} finally {
-			this._processingByInbox.delete(inboxCoId)
-		}
+		const runtime = this.actorEngine?.runtime
+		if (!runtime?.processInboxForActor) return
+		await runtime.processInboxForActor(inboxCoId, actorId, actorConfig)
 	}
 
 	/**
@@ -230,7 +224,7 @@ export class InboxEngine {
 		if (typeof inboxCoId !== 'string' || !inboxCoId.startsWith('co_z')) {
 			throw new Error(`[InboxEngine] watchInbox: inboxCoId must be co-id, got: ${inboxCoId}`)
 		}
-
+		// No dedup: multiple subscriptions OK. _processingByInbox serializes; second run sees 0 unprocessed.
 		const process = () => {
 			this.processUnprocessedMessages(inboxCoId, actorId, actorConfig)
 		}
@@ -279,10 +273,7 @@ export class InboxEngine {
 		if (isChatSend) perfChatStart(`deliver SEND_MESSAGE → ${String(targetId).slice(0, 24)}...`)
 
 		perfPipelineStep('inbox:deliver:start', { type: message?.type, targetId: targetId?.slice(0, 20) })
-		const DEBUG =
-			typeof window !== 'undefined' &&
-			(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
-		if (DEBUG) console.log('[InboxEngine] deliver: start', { targetId, type: message?.type })
+		traceInbox(message?.source, targetId, message?.type)
 		if (!this.dataEngine?.peer) {
 			throw new Error(
 				'[InboxEngine] Cannot push to inbox: dataEngine or peer not set. Ensure MaiaOS is booted before deliverEvent.',
@@ -298,41 +289,20 @@ export class InboxEngine {
 
 		const { inboxCoId, targetActorConfig } = resolved
 		const messageWithTarget = { ...message, target: resolved.resolvedTargetId }
-		if (DEBUG)
-			console.log('[InboxEngine] deliver: pushing message', {
-				inboxCoId: `${inboxCoId?.slice(0, 20)}...`,
-				hasTargetActorConfig: !!targetActorConfig,
-			})
 		if (isChatSend) perfChatStep('_pushMessage (createAndPushMessage)')
 		await this._pushMessage(inboxCoId, messageWithTarget)
 		perfPipelineStep('inbox:pushMessage')
 		if (isChatSend) perfChatStep('_pushMessage done')
 
-		if (targetActorConfig) {
-			if (isChatSend) perfChatStep('ensureActorSpawned / processEvents (targetActorConfig)')
-			if (this.actorEngine?.runtime) {
-				await this.actorEngine.runtime.ensureActorSpawned(targetActorConfig, inboxCoId)
-			} else {
-				const actorId = targetActorConfig.$id || targetActorConfig.id
-				if (actorId && !this.actorEngine?.actors?.has(actorId)) {
-					try {
-						const spawned = await this.actorEngine.spawnActor(targetActorConfig)
-						if (spawned) await this.actorEngine.processEvents(actorId)
-					} catch (_e) {}
-				}
-			}
-			if (isChatSend) perfChatStep('ensureActorSpawned / processEvents done')
-		} else {
-			const actorId = resolved.resolvedTargetId
-			if (DEBUG)
-				console.log('[InboxEngine] deliver: actor already spawned?', {
-					actorId: `${actorId?.slice(0, 20)}...`,
-					hasActor: actorId && this.actorEngine?.actors?.has(actorId),
-				})
-			// Do NOT call processEvents here - inbox subscription handles it. Calling both caused
-			// duplicate processing (same message processed twice → 2x SUCCESS, 2x tell SELECT_ITEM)
-			// and 2x latency. Subscription fires when costream updates; DEBOUNCE_MS=0 so it runs next tick.
+		// When target not yet spawned, ensure via Runtime (sole executor). Subscription alone can miss unspawned actors.
+		if (targetActorConfig && this.actorEngine?.runtime) {
+			if (isChatSend) perfChatStep('ensureActorSpawned (targetActorConfig)')
+			await this.actorEngine.runtime.ensureActorSpawned(targetActorConfig, inboxCoId)
+			if (isChatSend) perfChatStep('ensureActorSpawned done')
 		}
-		if (DEBUG) console.log('[InboxEngine] deliver: done')
+		// When target already spawned: process immediately (inbox subscription may not have fired yet)
+		if (this.actorEngine?.actors?.has(resolved.resolvedTargetId)) {
+			await this.actorEngine.processEvents(resolved.resolvedTargetId)
+		}
 	}
 }
