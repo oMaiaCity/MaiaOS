@@ -44,11 +44,11 @@
     },
     "libs/maia-brand": {
       "name": "@MaiaOS/brand",
-      "version": "26.217.1438",
+      "version": "26.312.1518",
     },
     "libs/maia-db": {
       "name": "@MaiaOS/db",
-      "version": "26.217.1438",
+      "version": "26.312.1518",
       "dependencies": {
         "@MaiaOS/peer": "workspace:*",
         "@MaiaOS/schemata": "workspace:*",
@@ -60,7 +60,7 @@
     },
     "libs/maia-distros": {
       "name": "@MaiaOS/maia-distros",
-      "version": "26.217.1438",
+      "version": "26.312.1518",
       "dependencies": {
         "@MaiaOS/actors": "workspace:*",
         "@MaiaOS/avens": "workspace:*",
@@ -69,10 +69,14 @@
         "@MaiaOS/schemata": "workspace:*",
         "cojson-transport-ws": "0.20.7",
       },
+      "devDependencies": {
+        "@runanywhere/web-llamacpp": "0.1.0-beta.10",
+        "@runanywhere/web-onnx": "0.1.0-beta.10",
+      },
     },
     "libs/maia-docs": {
       "name": "@MaiaOS/docs",
-      "version": "26.217.1438",
+      "version": "26.312.1518",
     },
     "libs/maia-engines": {
       "name": "@MaiaOS/engines",
@@ -89,11 +93,11 @@
     },
     "libs/maia-language": {
       "name": "@maia/language",
-      "version": "26.217.1438",
+      "version": "26.312.1518",
     },
     "libs/maia-loader": {
       "name": "@MaiaOS/loader",
-      "version": "26.217.1438",
+      "version": "26.312.1518",
       "dependencies": {
         "@MaiaOS/actors": "workspace:*",
         "@MaiaOS/avens": "workspace:*",
@@ -116,7 +120,7 @@
     },
     "libs/maia-schemata": {
       "name": "@MaiaOS/schemata",
-      "version": "26.217.1438",
+      "version": "26.312.1518",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "ajv": "^8.12.0",
@@ -125,7 +129,7 @@
     },
     "libs/maia-self": {
       "name": "@MaiaOS/self",
-      "version": "26.217.1438",
+      "version": "26.312.1518",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
@@ -135,7 +139,7 @@
     },
     "libs/maia-storage": {
       "name": "@MaiaOS/storage",
-      "version": "26.217.1438",
+      "version": "26.312.1518",
       "dependencies": {
         "@electric-sql/pglite": "latest",
         "cojson": "0.20.7",

@@ -101,7 +101,7 @@ echo ""
 # Optional: override via env - VITE_PEER_SYNC_HOST must be sync domain (not app)
 VITE_PEER_SYNC_HOST="${VITE_PEER_SYNC_HOST:-sync.next.maia.city}"
 export VITE_PEER_SYNC_HOST
-if [[ "$VITE_PEER_SYNC_HOST" != "sync.next.maia.city" ]] && [[ "$VITE_PEER_SYNC_HOST" != "moai-next-maia-city.fly.dev" ]]; then
+if [[ "$VITE_PEER_SYNC_HOST" != "sync.next.maia.city" ]] && [[ "$VITE_PEER_SYNC_HOST" != "sync-next-maia-city.fly.dev" ]]; then
   echo "⚠️  VITE_PEER_SYNC_HOST=$VITE_PEER_SYNC_HOST (custom - ensure sync is at this domain)"
 fi
 

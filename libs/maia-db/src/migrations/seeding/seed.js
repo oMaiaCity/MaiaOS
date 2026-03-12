@@ -8,6 +8,7 @@
  * Extracted modules: bootstrap, configs, data, store-registry, helpers
  */
 
+import { COJSON_PRIVACY } from '../../cojson/constants.js'
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import { ensureCoValueLoaded } from '../../cojson/crud/collection-helpers.js'
 import * as groups from '../../cojson/groups/groups.js'
@@ -163,7 +164,8 @@ export async function seed(
 		const { $schema, $id, id, ...directProperties } =
 			updatedMetaSchemaDef.definition || updatedMetaSchemaDef
 		const cleanedProperties = removeIdFields(directProperties)
-		for (const [key, value] of Object.entries(cleanedProperties)) metaSchemaCoMap.set(key, value)
+		for (const [key, value] of Object.entries(cleanedProperties))
+			metaSchemaCoMap.set(key, value, COJSON_PRIVACY)
 		metaSchemaCoId = actualMetaSchemaCoId
 	} else {
 		const updatedMetaSchemaDef = buildMetaSchemaForSeeding(metaSchemaCoId)
@@ -178,7 +180,7 @@ export async function seed(
 			const metaSchemaCoMap = peer.getCurrentContent(metaSchemaCore)
 			if (metaSchemaCoMap?.set) {
 				for (const [key, value] of Object.entries(cleanedProperties)) {
-					metaSchemaCoMap.set(key, value)
+					metaSchemaCoMap.set(key, value, COJSON_PRIVACY)
 				}
 			}
 		}
@@ -276,7 +278,8 @@ export async function seed(
 		}
 		const { $schema: _s, $id: _i, id: _id, ...directProps } = transformedSchema
 		const cleanedProperties = removeIdFields(directProps)
-		for (const [key, value] of Object.entries(cleanedProperties)) schemaCoMap?.set(key, value)
+		for (const [key, value] of Object.entries(cleanedProperties))
+			schemaCoMap?.set(key, value, COJSON_PRIVACY)
 		seededSchemas.push({ name, key: schemaKey, coId: schemaCoId, coMapId: schemaCoMap?.id })
 	}
 
@@ -439,14 +442,14 @@ export async function seed(
 			const coValue = configInfo.coMap
 			const cotype = configInfo.cotype || 'comap'
 			if (cotype === 'colist' && coValue?.append) {
-				for (const item of fullyTransformed.items || []) coValue.append(item)
+				for (const item of fullyTransformed.items || []) coValue.append(item, COJSON_PRIVACY)
 				updatedCount++
 			} else if (cotype === 'costream' && coValue?.push) {
-				for (const item of fullyTransformed.items || []) coValue.push(item)
+				for (const item of fullyTransformed.items || []) coValue.push(item, COJSON_PRIVACY)
 				updatedCount++
 			} else if (coValue?.set) {
 				const { $id, $schema, ...propsToSet } = fullyTransformed
-				for (const [key, value] of Object.entries(propsToSet)) coValue.set(key, value)
+				for (const [key, value] of Object.entries(propsToSet)) coValue.set(key, value, COJSON_PRIVACY)
 				updatedCount++
 			}
 		}

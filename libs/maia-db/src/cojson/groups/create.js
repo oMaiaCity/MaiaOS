@@ -5,6 +5,7 @@
  */
 
 import { createSchemaMeta } from '../../schemas/registry.js'
+import { COJSON_PRIVACY } from '../constants.js'
 
 /**
  * Create a new Group with optional name property
@@ -21,7 +22,7 @@ export function createGroup(node, { name = null } = {}) {
 
 	// Set name property if provided (groups are CoMaps, so they can have properties)
 	if (name) {
-		group.set('name', name, 'trusting')
+		group.set('name', name, COJSON_PRIVACY)
 	}
 
 	console.log('✅ Group created:', group.id)
@@ -54,7 +55,7 @@ export function createChildGroup(node, parentGroup, { name = null } = {}) {
 	}
 
 	if (name) {
-		childGroup.set('name', name, 'trusting')
+		childGroup.set('name', name, COJSON_PRIVACY)
 	}
 
 	console.log('✅ Child group created:', childGroup.id)

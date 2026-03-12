@@ -1,6 +1,6 @@
 #!/bin/bash
 # Deploy all MaiaOS services to Fly.io
-# Deploys: sync service (moai-next-maia-city) and app (next-maia-city)
+# Deploys: sync service (sync-next-maia-city) and app (next-maia-city)
 
 set -e
 
@@ -90,14 +90,14 @@ retry_flyctl_deploy() {
 echo "🚀 Deploying all MaiaOS services to Fly.io..."
 echo ""
 
-# Sync deploy - requires manual secrets: AVEN_MAIA_ACCOUNT, AVEN_MAIA_SECRET, and PEER_DB_URL (postgres)
+# Sync deploy - requires manual secrets: AVEN_MAIA_ACCOUNT, AVEN_MAIA_SECRET, and PEER_SYNC_DB_URL (postgres)
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-echo "📦 Step 1/2: Deploying sync service (moai-next-maia-city)..."
+echo "📦 Step 1/2: Deploying sync service (sync-next-maia-city)..."
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 cd "$MONOREPO_ROOT"
 
 if ! retry_flyctl_deploy \
-  "moai-next-maia-city" \
+  "sync-next-maia-city" \
   "services/sync/Dockerfile" \
   "services/sync/fly.toml" \
   "--ha=false"; then
@@ -107,11 +107,11 @@ fi
 
 # Enforce single machine for sync (sync service must not scale beyond 1)
 echo "Enforcing single machine for sync..."
-flyctl scale count 1 --app moai-next-maia-city --yes
+flyctl scale count 1 --app sync-next-maia-city --yes
 
 echo ""
 echo "✅ Sync service deployed!"
-echo "   Health check: https://moai-next-maia-city.fly.dev/health"
+echo "   Health check: https://sync.next.maia.city/health"
 echo ""
 
 # Deploy app service
@@ -135,13 +135,14 @@ echo "✅ All services deployed successfully!"
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo ""
 echo "📋 Service URLs:"
-echo "   Frontend: https://next-maia-city.fly.dev"
-echo "   Sync:     https://moai-next-maia-city.fly.dev/health"
+echo "   Frontend: https://next.maia.city"
+echo "   Sync:     https://sync.next.maia.city/health"
 echo ""
 echo "⚠️  Set secrets manually before first deploy:"
-echo "   PEER_SYNC_STORAGE=postgres: fly secrets set AVEN_MAIA_ACCOUNT=... AVEN_MAIA_SECRET=... PEER_DB_URL=... --app moai-next-maia-city"
+echo "   See scripts/fly-next-setup.md"
+echo "   fly secrets set AVEN_MAIA_ACCOUNT=... AVEN_MAIA_SECRET=... PEER_SYNC_DB_URL=... --app sync-next-maia-city"
 echo ""
 echo "🔍 Verify deployment:"
 echo "   flyctl status --app next-maia-city"
-echo "   flyctl status --app moai-next-maia-city"
+echo "   flyctl status --app sync-next-maia-city"
 echo ""

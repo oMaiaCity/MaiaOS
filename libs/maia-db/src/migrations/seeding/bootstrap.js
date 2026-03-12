@@ -2,6 +2,7 @@
  * Bootstrap - guardian, scaffold, account.registries
  */
 
+import { COJSON_PRIVACY } from '../../cojson/constants.js'
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import { waitForStoreReady } from '../../cojson/crud/read-operations.js'
 import { buildMetaSchemaForSeeding, removeIdFields } from './helpers.js'
@@ -21,8 +22,8 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	const tempGroup = node.createGroup()
 	tempGroup.extend(guardian, 'extend')
 	const tempCoMap = tempGroup.createMap({}, { $schema: EXCEPTION_SCHEMAS.META_SCHEMA })
-	account.set('temp', tempCoMap.id)
-	tempCoMap.set('guardian', guardian.id)
+	account.set('temp', tempCoMap.id, COJSON_PRIVACY)
+	tempCoMap.set('guardian', guardian.id, COJSON_PRIVACY)
 
 	const _metaSchemaMeta = { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }
 	const tempMetaSchemaDef = buildMetaSchemaForSeeding('co_zTEMP')
@@ -47,8 +48,9 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		id: _id,
 		...directProps
 	} = updatedMetaSchemaDef.definition || updatedMetaSchemaDef
-	for (const [k, v] of Object.entries(removeIdFields(directProps))) metaSchemaCoMap.set(k, v)
-	tempCoMap.set('metaschema', metaSchemaCoId)
+	for (const [k, v] of Object.entries(removeIdFields(directProps)))
+		metaSchemaCoMap.set(k, v, COJSON_PRIVACY)
+	tempCoMap.set('metaschema', metaSchemaCoId, COJSON_PRIVACY)
 
 	const uniqueSchemasBy$id = new Map()
 	for (const [name, schema] of Object.entries(allSchemas)) {
@@ -106,7 +108,7 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		})
 		const coId = schemaCoMap.id
 		schemaCoIdMap.set(schemaKey, coId)
-		tempCoMap.set(schemaKey, coId)
+		tempCoMap.set(schemaKey, coId, COJSON_PRIVACY)
 	}
 
 	const sparkSchemaCoId = tempCoMap.get('°Maia/schema/data/spark') || EXCEPTION_SCHEMAS.META_SCHEMA
@@ -134,14 +136,14 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		null,
 		scaffoldOpts(groupsSchemaCoId, {}),
 	)
-	groups.set('guardian', guardian.id)
-	os.set('groups', groups.id)
+	groups.set('guardian', guardian.id, COJSON_PRIVACY)
+	os.set('groups', groups.id, COJSON_PRIVACY)
 	const { coValue: capabilitiesStream } = await createCoValueForSpark(ctx, null, {
 		schema: capabilitiesStreamSchemaCoId,
 		cotype: 'costream',
 		dataEngine: dbEngine,
 	})
-	os.set('capabilities', capabilitiesStream.id)
+	os.set('capabilities', capabilitiesStream.id, COJSON_PRIVACY)
 	const { coValue: schematas } = await createCoValueForSpark(
 		ctx,
 		null,
@@ -157,12 +159,12 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		null,
 		scaffoldOpts(avensRegistrySchemaCoId, {}),
 	)
-	os.set('schematas', schematas.id)
-	os.set('indexes', indexes.id)
-	maiaSpark.set('os', os.id)
-	maiaSpark.set('avens', avens.id)
-	schematas.set('°Maia/schema/meta', metaSchemaCoId)
-	for (const [k, coId] of schemaCoIdMap) schematas.set(k, coId)
+	os.set('schematas', schematas.id, COJSON_PRIVACY)
+	os.set('indexes', indexes.id, COJSON_PRIVACY)
+	maiaSpark.set('os', os.id, COJSON_PRIVACY)
+	maiaSpark.set('avens', avens.id, COJSON_PRIVACY)
+	schematas.set('°Maia/schema/meta', metaSchemaCoId, COJSON_PRIVACY)
+	for (const [k, coId] of schemaCoIdMap) schematas.set(k, coId, COJSON_PRIVACY)
 
 	const { removeGroupMember } = await import('../../cojson/groups/groups.js')
 	const memberIdToRemove = account?.id ?? account?.$jazz?.id
@@ -177,27 +179,27 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	sparksGroup.extend(guardian, 'extend')
 	sparksGroup.addMember('everyone', 'reader')
 	const sparksRegistry = sparksGroup.createMap({}, registriesMeta)
-	sparksRegistry.set(MAIA_SPARK, maiaSpark.id)
-	registries.set('sparks', sparksRegistry.id)
+	sparksRegistry.set(MAIA_SPARK, maiaSpark.id, COJSON_PRIVACY)
+	registries.set('sparks', sparksRegistry.id, COJSON_PRIVACY)
 
 	const humansGroup = node.createGroup()
 	humansGroup.extend(guardian, 'extend')
 	humansGroup.addMember('everyone', 'reader')
 	const humans = humansGroup.createMap({}, registriesMeta)
-	registries.set('humans', humans.id)
+	registries.set('humans', humans.id, COJSON_PRIVACY)
 
 	const avensGroup = node.createGroup()
 	avensGroup.extend(guardian, 'extend')
 	avensGroup.addMember('everyone', 'reader')
 	const avensIdentityRegistry = avensGroup.createMap({}, registriesMeta)
-	registries.set('avens', avensIdentityRegistry.id)
+	registries.set('avens', avensIdentityRegistry.id, COJSON_PRIVACY)
 
 	for (const g of [registriesGroup, sparksGroup, humansGroup, avensGroup]) {
 		try {
 			await removeGroupMember(g, memberIdToRemove)
 		} catch (_e) {}
 	}
-	account.set('registries', registries.id)
+	account.set('registries', registries.id, COJSON_PRIVACY)
 
 	if (typeof account.delete === 'function') account.delete('temp')
 
@@ -349,7 +351,7 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 		try {
 			await removeGroupMember(registriesGroup, memberIdToRemove)
 		} catch (_e) {}
-		account.set('registries', registries.id)
+		account.set('registries', registries.id, COJSON_PRIVACY)
 		registriesContent = registries
 	}
 
@@ -369,11 +371,11 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 		try {
 			await removeGroupMember(sparksGroup, memberIdToRemove)
 		} catch (_e) {}
-		registriesContent.set('sparks', sparks.id)
+		registriesContent.set('sparks', sparks.id, COJSON_PRIVACY)
 		sparksContent = sparks
 	}
 
-	sparksContent.set(MAIA_SPARK, maiaSparkCoId)
+	sparksContent.set(MAIA_SPARK, maiaSparkCoId, COJSON_PRIVACY)
 
 	const humansRegistryId = registriesContent.get('humans')
 	let humansContent = null
@@ -391,7 +393,7 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 		try {
 			await removeGroupMember(humansGroup, memberIdToRemove)
 		} catch (_e) {}
-		registriesContent.set('humans', humans.id)
+		registriesContent.set('humans', humans.id, COJSON_PRIVACY)
 	}
 
 	const avensRegistryId = registriesContent.get('avens')
@@ -410,7 +412,7 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 		try {
 			await removeGroupMember(avensGroup, memberIdToRemove)
 		} catch (_e) {}
-		registriesContent.set('avens', avens.id)
+		registriesContent.set('avens', avens.id, COJSON_PRIVACY)
 	}
 
 	console.log('✅ account.registries bootstrapped (sparks[°Maia], humans, avens)')
