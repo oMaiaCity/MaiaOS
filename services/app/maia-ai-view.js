@@ -21,6 +21,29 @@ import {
 } from '@MaiaOS/maia-ai'
 import { escapeHtml, getProfileAvatarHtml, getSyncStatusMessage, truncate } from './utils.js'
 
+/** Format tool result for display: extract values from ToolValue, show error or message */
+function formatToolResult(tr) {
+	if (!tr) return '?'
+	if (tr.error) return `Error: ${typeof tr.error === 'string' ? tr.error : tr.error}`
+	if (tr.success === false && tr.result?.error) {
+		const err = tr.result.error
+		return `Error: ${typeof err === 'object' && err?.value != null ? err.value : err}`
+	}
+	if (tr.result && typeof tr.result === 'object') {
+		const msg = tr.result.message ?? tr.result.error
+		if (msg != null) {
+			const val = typeof msg === 'object' && 'value' in msg ? msg.value : msg
+			return String(val)
+		}
+		return JSON.stringify(
+			Object.fromEntries(
+				Object.entries(tr.result).map(([k, v]) => [k, typeof v === 'object' && v?.value != null ? v.value : v]),
+			),
+		)
+	}
+	return tr.success ? 'OK' : '?'
+}
+
 export async function renderMaiaAIView(maia, authState, syncState, navigateToScreen) {
 	const accountId = maia?.id?.maiaId?.id || ''
 	let accountDisplayName = truncate(accountId, 12)
@@ -418,19 +441,21 @@ export async function renderMaiaAIView(maia, authState, syncState, navigateToScr
 				maxTokens: 150,
 				temperature: 0.3,
 				systemPrompt:
-					'You are a helpful voice assistant. Keep responses concise — 1-2 sentences max. For time or date questions you MUST call get_current_time — never guess or invent a time.',
+					'You are a helpful voice assistant. Keep responses concise — 1-2 sentences max. For time or date questions you MUST call get_current_time — never guess or invent a time. When the user asks to add a todo or create a task, call add_todo with the task text. When using a tool, output ONLY the tool call — no conversational text.',
 			})
 
-			let display = llmResult.text?.trim() || ''
 			const toolNames = []
+			let display = ''
 			if (llmResult.toolCalls?.length > 0 && llmResult.toolResults?.length > 0) {
 				for (let i = 0; i < llmResult.toolCalls.length; i++) {
 					const tc = llmResult.toolCalls[i]
 					const tr = llmResult.toolResults[i]
 					if (tc?.toolName) toolNames.push(tc.toolName)
-					const resStr = tr?.success && tr?.result ? JSON.stringify(tr.result) : tr?.error || '?'
-					display += `\n\n[Tool: ${tc?.toolName || '?'} → ${resStr}]`
+					const resStr = formatToolResult(tr)
+					display += (display ? '\n\n' : '') + `[Tool: ${tc?.toolName || '?'} → ${resStr}]`
 				}
+			} else {
+				display = llmResult.text?.trim() || ''
 			}
 
 			messages[assistantIdx] = {
@@ -440,7 +465,9 @@ export async function renderMaiaAIView(maia, authState, syncState, navigateToScr
 			}
 			renderMessages()
 
-			const textToSpeak = llmResult.text?.trim() || ''
+			// For TTS: use result text when no tools; when tools used, skip TTS (tool result is shown in UI)
+			const textToSpeak =
+				llmResult.toolCalls?.length > 0 ? '' : (llmResult.text?.trim() || '')
 			if (textToSpeak) {
 				voiceState = 'speaking'
 				renderVoiceUI()
@@ -523,19 +550,22 @@ export async function renderMaiaAIView(maia, authState, syncState, navigateToScr
 				maxTokens: 512,
 				temperature: 0.3,
 				systemPrompt:
-					'You are a helpful assistant. Be concise. For time or date questions, you MUST call get_current_time — never guess or invent a time.',
+					'You are a helpful assistant. Be concise. For time or date questions, you MUST call get_current_time — never guess or invent a time. When the user asks to add a todo, create a task, or remember something to do, you MUST call add_todo with the task text. When using a tool, output ONLY the tool call — no conversational text before or after.',
 			})
 
-			let display = result.text?.trim() || ''
 			const toolNames = []
+			let display = ''
 			if (result.toolCalls?.length > 0 && result.toolResults?.length > 0) {
+				// When tools were used: show only tool call results, no extra conversational text
 				for (let i = 0; i < result.toolCalls.length; i++) {
 					const tc = result.toolCalls[i]
 					const tr = result.toolResults[i]
 					if (tc?.toolName) toolNames.push(tc.toolName)
-					const resStr = tr?.success && tr?.result ? JSON.stringify(tr.result) : tr?.error || '?'
-					display += `\n\n[Tool: ${tc?.toolName || '?'} → ${resStr}]`
+					const resStr = formatToolResult(tr)
+					display += (display ? '\n\n' : '') + `[Tool: ${tc?.toolName || '?'} → ${resStr}]`
 				}
+			} else {
+				display = result.text?.trim() || ''
 			}
 			messages[assistantIdx] = {
 				role: 'assistant',
@@ -599,7 +629,21 @@ export async function renderMaiaAIView(maia, authState, syncState, navigateToScr
 	}
 
 	try {
-		await initialize({ environment: 'development', debug: false })
+		const addTodoExecutor =
+			maia?.deliverEvent && typeof maia.deliverEvent === 'function'
+				? async (text) => {
+						const senderId = maia?.id?.maiaId?.id ?? 'maia-ai'
+						await maia.deliverEvent(senderId, '°Maia/actor/services/todos', 'CREATE_TODO', {
+							value: text,
+						})
+						return { success: true, message: `Added: ${text}` }
+					}
+				: undefined
+		await initialize({
+			environment: 'development',
+			debug: false,
+			addTodoExecutor,
+		})
 		showReady(true)
 	} catch (err) {
 		statusEl.textContent = `Failed to initialize: ${escapeHtml(err?.message || String(err))}`
