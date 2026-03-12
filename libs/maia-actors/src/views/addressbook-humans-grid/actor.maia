@@ -1,0 +1,12 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/views/addressbook-humans-grid",
+	"@label": "@maia/actor/views/addressbook-humans-grid",
+	"context": "°Maia/actor/views/addressbook-humans-grid/context",
+	"view": "°Maia/actor/views/addressbook-humans-grid/view",
+	"process": "°Maia/actor/views/addressbook-humans-grid/process",
+	"brand": "°Maia/brand/maiacity",
+	"style": "°Maia/actor/views/addressbook-humans-grid/style",
+	"inbox": "°Maia/actor/views/addressbook-humans-grid/inbox",
+	"interface": "°Maia/actor/views/addressbook-humans-grid/interface"
+}

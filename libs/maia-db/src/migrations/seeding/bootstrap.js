@@ -186,7 +186,13 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	const humans = humansGroup.createMap({}, registriesMeta)
 	registries.set('humans', humans.id)
 
-	for (const g of [registriesGroup, sparksGroup, humansGroup]) {
+	const avensGroup = node.createGroup()
+	avensGroup.extend(guardian, 'extend')
+	avensGroup.addMember('everyone', 'reader')
+	const avensIdentityRegistry = avensGroup.createMap({}, registriesMeta)
+	registries.set('avens', avensIdentityRegistry.id)
+
+	for (const g of [registriesGroup, sparksGroup, humansGroup, avensGroup]) {
 		try {
 			await removeGroupMember(g, memberIdToRemove)
 		} catch (_e) {}
@@ -300,6 +306,13 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 	const humansRegistrySchemaCoId = await resolve(peer, '°Maia/schema/os/humans-registry', {
 		returnType: 'coId',
 	})
+	const avensIdentityRegistrySchemaCoId = await resolve(
+		peer,
+		'°Maia/schema/os/avens-identity-registry',
+		{
+			returnType: 'coId',
+		},
+	)
 	const registriesMeta = registriesSchemaCoId
 		? { $schema: registriesSchemaCoId }
 		: { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }
@@ -308,6 +321,9 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 		: { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }
 	const humansRegistryMeta = humansRegistrySchemaCoId
 		? { $schema: humansRegistrySchemaCoId }
+		: { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }
+	const avensIdentityRegistryMeta = avensIdentityRegistrySchemaCoId
+		? { $schema: avensIdentityRegistrySchemaCoId }
 		: { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }
 
 	const { removeGroupMember } = await import('../../cojson/groups/groups.js')
@@ -378,5 +394,24 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 		registriesContent.set('humans', humans.id)
 	}
 
-	console.log('✅ account.registries bootstrapped (sparks[°Maia], humans)')
+	const avensRegistryId = registriesContent.get('avens')
+	let avensContent = null
+	if (avensRegistryId) {
+		const avensCore = peer.getCoValue(avensRegistryId)
+		if (avensCore && peer.isAvailable(avensCore)) {
+			avensContent = peer.getCurrentContent(avensCore)
+		}
+	}
+	if (!avensContent || typeof avensContent.set !== 'function') {
+		const avensGroup = node.createGroup()
+		avensGroup.extend(maiaGroup, 'extend')
+		avensGroup.addMember('everyone', 'reader')
+		const avens = avensGroup.createMap({}, avensIdentityRegistryMeta)
+		try {
+			await removeGroupMember(avensGroup, memberIdToRemove)
+		} catch (_e) {}
+		registriesContent.set('avens', avens.id)
+	}
+
+	console.log('✅ account.registries bootstrapped (sparks[°Maia], humans, avens)')
 }

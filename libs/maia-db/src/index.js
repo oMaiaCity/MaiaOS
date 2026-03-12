@@ -12,7 +12,7 @@
  */
 
 // Sync Peer Setup (client-side peer configuration for LocalNode) - re-exported from @MaiaOS/peer
-export { setupSyncPeers, subscribeSyncState } from '@MaiaOS/peer'
+export { setupSyncPeers, subscribeSyncState, updateSyncState } from '@MaiaOS/peer'
 // Unified cache (subscriptions, stores, resolutions, resolved data)
 export {
 	CoCache,

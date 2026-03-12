@@ -1,0 +1,6 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/views/addressbook-avens-grid/process",
+	"@label": "@maia/actor/views/addressbook-avens-grid/process",
+	"handlers": {}
+}

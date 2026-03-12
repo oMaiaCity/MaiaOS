@@ -4,7 +4,13 @@
  */
 
 import { getAllAvenRegistries, resolveAccountCoIdsToProfiles } from '@MaiaOS/loader'
-import { escapeHtml, getSyncStatusMessage, truncate, truncateWords } from './utils.js'
+import {
+	escapeHtml,
+	getProfileAvatarHtml,
+	getSyncStatusMessage,
+	truncate,
+	truncateWords,
+} from './utils.js'
 
 /**
  * Extract aven key from aven $id (e.g., "°Maia/aven/todos" -> "todos")
@@ -203,11 +209,21 @@ export async function renderDashboard(
 
 	const accountId = maia?.id?.maiaId?.id || ''
 	let accountDisplayName = truncate(accountId, 12)
+	let accountAvatarHtml = ''
 	if (accountId?.startsWith('co_z') && maia?.do) {
 		try {
 			const profiles = await resolveAccountCoIdsToProfiles(maia, [accountId])
-			accountDisplayName = profiles.get(accountId)?.name ?? accountDisplayName
+			const accountProfile = profiles.get(accountId) ?? null
+			accountDisplayName = accountProfile?.name ?? accountDisplayName
+			accountAvatarHtml = getProfileAvatarHtml(accountProfile?.image, {
+				size: 44,
+				className: 'navbar-avatar',
+				syncState,
+			})
 		} catch (_e) {}
+	}
+	if (accountId && !accountAvatarHtml) {
+		accountAvatarHtml = getProfileAvatarHtml(null, { size: 44, className: 'navbar-avatar' })
 	}
 
 	let cards = ''
@@ -298,6 +314,7 @@ export async function renderDashboard(
 
 	document.getElementById('app').innerHTML = `
 		<div class="db-container">
+			<div class="navbar-section">
 			<header class="db-header whitish-card">
 				<div class="header-content">
 					<div class="header-left">
@@ -308,41 +325,44 @@ export async function renderDashboard(
 						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
 					</div>
 					<div class="header-right">
-						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}" title="${getSyncStatusMessage(syncState)}" aria-label="${getSyncStatusMessage(syncState)}">
-							<span class="sync-dot"></span>
-						</div>
 						${
 							authState.signedIn
 								? `
-							<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId}" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${escapeHtml(accountDisplayName)}</button>
+							${accountAvatarHtml ? `<div class="account-nav-group"><span class="account-display-name">${escapeHtml(accountDisplayName)}</span><button type="button" class="db-status account-menu-toggle" title="Account: ${accountId} (${getSyncStatusMessage(syncState)})" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${accountAvatarHtml}</button></div>` : `<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId} (${getSyncStatusMessage(syncState)})" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${escapeHtml(accountDisplayName)}</button>`}
 						`
 								: ''
 						}
 					</div>
 				</div>
-				<!-- Mobile menu (collapsed by default) - account ID shown inside -->
-				<div class="mobile-menu" id="mobile-menu">
-					${
-						authState.signedIn && accountId
-							? `
-						<div class="mobile-menu-account-id">
-							<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
-							<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
-						</div>
-					`
-							: ''
-					}
-					${
-						authState.signedIn
-							? `
-						<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">
-							Sign Out
-						</button>
-					`
-							: ''
-					}
-				</div>
 			</header>
+			<!-- Account dropdown - standalone card below navbar -->
+			<div class="mobile-menu" id="mobile-menu">
+				${
+					authState.signedIn && accountId
+						? `
+					<div class="mobile-menu-account">
+						<div class="mobile-menu-account-info">
+							<span class="mobile-menu-account-name">${escapeHtml(accountDisplayName)}</span>
+							<div class="mobile-menu-account-id-row">
+								<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
+								<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
+							</div>
+						</div>
+					</div>
+				`
+						: ''
+				}
+				${
+					authState.signedIn
+						? `
+					<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">
+						Sign Out
+					</button>
+				`
+						: ''
+				}
+			</div>
+			</div>
 
 			<div class="dashboard-main ${currentSpark ? 'has-bottom-navbar' : ''}">
 				<div class="dashboard-grid">
@@ -386,16 +406,26 @@ export async function renderAvenViewer(
 ) {
 	const accountId = maia?.id?.maiaId?.id || ''
 	let accountDisplayName = truncate(accountId, 12)
+	let accountAvatarHtml = ''
 	if (accountId?.startsWith('co_z') && maia?.do) {
 		try {
 			const profiles = await resolveAccountCoIdsToProfiles(maia, [accountId])
-			accountDisplayName = profiles.get(accountId)?.name ?? accountDisplayName
+			const accountProfile = profiles.get(accountId) ?? null
+			accountDisplayName = accountProfile?.name ?? accountDisplayName
+			accountAvatarHtml = getProfileAvatarHtml(accountProfile?.image, {
+				size: 44,
+				className: 'navbar-avatar',
+				syncState,
+			})
 		} catch (_e) {}
+	}
+	if (accountId && !accountAvatarHtml) {
+		accountAvatarHtml = getProfileAvatarHtml(null, { size: 44, className: 'navbar-avatar' })
 	}
 	// Map aven keys to display names
 	const avenNameMap = {
 		db: 'MaiaDB',
-		humans: 'Human Book',
+		humans: 'Addressbook',
 		todos: 'Todos',
 		logs: 'Creator',
 	}
@@ -416,6 +446,7 @@ export async function renderAvenViewer(
 
 	app.innerHTML = `
 		<div class="db-container">
+			<div class="navbar-section">
 			<header class="db-header whitish-card">
 				<div class="header-content">
 					<div class="header-left">
@@ -426,41 +457,44 @@ export async function renderAvenViewer(
 						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
 					</div>
 					<div class="header-right">
-						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}" title="${getSyncStatusMessage(syncState)}" aria-label="${getSyncStatusMessage(syncState)}">
-							<span class="sync-dot"></span>
-						</div>
 						${
 							authState.signedIn
 								? `
-							<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId}" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${escapeHtml(accountDisplayName)}</button>
+							${accountAvatarHtml ? `<div class="account-nav-group"><span class="account-display-name">${escapeHtml(accountDisplayName)}</span><button type="button" class="db-status account-menu-toggle" title="Account: ${accountId} (${getSyncStatusMessage(syncState)})" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${accountAvatarHtml}</button></div>` : `<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId} (${getSyncStatusMessage(syncState)})" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${escapeHtml(accountDisplayName)}</button>`}
 						`
 								: ''
 						}
 					</div>
 				</div>
-				<!-- Mobile menu (collapsed by default) - account ID shown inside -->
-				<div class="mobile-menu" id="mobile-menu">
-					${
-						authState.signedIn && accountId
-							? `
-						<div class="mobile-menu-account-id">
-							<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
-							<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
-						</div>
-					`
-							: ''
-					}
-					${
-						authState.signedIn
-							? `
-						<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">
-							Sign Out
-						</button>
-					`
-							: ''
-					}
-				</div>
 			</header>
+			<!-- Account dropdown - standalone card below navbar -->
+			<div class="mobile-menu" id="mobile-menu">
+				${
+					authState.signedIn && accountId
+						? `
+					<div class="mobile-menu-account">
+						<div class="mobile-menu-account-info">
+							<span class="mobile-menu-account-name">${escapeHtml(accountDisplayName)}</span>
+							<div class="mobile-menu-account-id-row">
+								<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
+								<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
+							</div>
+						</div>
+					</div>
+				`
+						: ''
+				}
+				${
+					authState.signedIn
+						? `
+					<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">
+						Sign Out
+					</button>
+				`
+						: ''
+				}
+			</div>
+			</div>
 
 			<div class="aven-viewer-main">
 				<div class="aven-card">

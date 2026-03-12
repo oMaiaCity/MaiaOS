@@ -24,6 +24,7 @@ export {
 	schemaMigration,
 	setupSyncPeers,
 	subscribeSyncState,
+	updateSyncState,
 	waitForStoreReady,
 } from '@MaiaOS/db'
 // Re-export DataEngine and MaiaScriptEvaluator for server/agent (moai)

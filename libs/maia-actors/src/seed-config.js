@@ -37,6 +37,18 @@ import todosActor from './services/todos/actor.maia'
 import todosContext from './services/todos/context.maia'
 import todosActorInterface from './services/todos/interface.maia'
 import todosProcess from './services/todos/process.maia'
+import addressbookAvensGridActor from './views/addressbook-avens-grid/actor.maia'
+import addressbookAvensGridContext from './views/addressbook-avens-grid/context.maia'
+import addressbookAvensGridInterface from './views/addressbook-avens-grid/interface.maia'
+import addressbookAvensGridProcess from './views/addressbook-avens-grid/process.maia'
+import addressbookAvensGridStyle from './views/addressbook-avens-grid/style.maia'
+import addressbookAvensGridView from './views/addressbook-avens-grid/view.maia'
+import addressbookHumansGridActor from './views/addressbook-humans-grid/actor.maia'
+import addressbookHumansGridContext from './views/addressbook-humans-grid/context.maia'
+import addressbookHumansGridInterface from './views/addressbook-humans-grid/interface.maia'
+import addressbookHumansGridProcess from './views/addressbook-humans-grid/process.maia'
+import addressbookHumansGridStyle from './views/addressbook-humans-grid/style.maia'
+import addressbookHumansGridView from './views/addressbook-humans-grid/view.maia'
 import detailActor from './views/detail/actor.maia'
 import detailContext from './views/detail/context.maia'
 import detailInterface from './views/detail/interface.maia'
@@ -46,9 +58,6 @@ import detailView from './views/detail/view.maia'
 import layoutHumansActor from './views/humans/actor.maia'
 import layoutHumansContext from './views/humans/context.maia'
 import layoutHumansInterface from './views/humans/interface.maia'
-import layoutHumansProcess from './views/humans/process.maia'
-import layoutHumansStyle from './views/humans/style.maia'
-import layoutHumansView from './views/humans/view.maia'
 import infoCardActor from './views/info-card/actor.maia'
 import infoCardContext from './views/info-card/context.maia'
 import infoCardInterface from './views/info-card/interface.maia'
@@ -286,6 +295,8 @@ export function getSeedConfig() {
 		layoutSparksInterface,
 		layoutCreatorInterface,
 		layoutTodosInterface,
+		addressbookHumansGridInterface,
+		addressbookAvensGridInterface,
 	]
 	for (const iface of interfaceDefs) {
 		if (iface?.$id) interfaces[iface.$id] = iface
@@ -387,9 +398,23 @@ export function getSeedConfig() {
 		{
 			actor: layoutHumansActor,
 			context: layoutHumansContext,
-			view: layoutHumansView,
-			process: layoutHumansProcess,
-			style: layoutHumansStyle,
+			view: tabsView,
+			process: tabsProcess,
+			style: tabsStyle,
+		},
+		{
+			actor: addressbookHumansGridActor,
+			context: addressbookHumansGridContext,
+			view: addressbookHumansGridView,
+			process: addressbookHumansGridProcess,
+			style: addressbookHumansGridStyle,
+		},
+		{
+			actor: addressbookAvensGridActor,
+			context: addressbookAvensGridContext,
+			view: addressbookAvensGridView,
+			process: addressbookAvensGridProcess,
+			style: addressbookAvensGridStyle,
 		},
 		{
 			actor: layoutChatActor,

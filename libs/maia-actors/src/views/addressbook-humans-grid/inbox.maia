@@ -1,0 +1,5 @@
+{
+	"$schema": "°Maia/schema/inbox",
+	"$id": "°Maia/actor/views/addressbook-humans-grid/inbox",
+	"@label": "@maia/actor/views/addressbook-humans-grid/inbox"
+}

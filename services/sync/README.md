@@ -21,7 +21,7 @@ This architecture ensures:
 
 The sync service consolidates WebSocket sync, agent API, and LLM proxy in one process. Endpoints:
 - `WS /sync` - CoJSON sync
-- `POST /register-human`, `GET /profile` - Agent API
+- `POST /register` - Agent API
 - `POST /api/v0/llm/chat` - LLM proxy (RedPill)
 
 ## Environment Variables
@@ -47,9 +47,15 @@ bun run dev:sync
 
 - `GET /health` - Health check
 - `GET /syncRegistry` - Sync registry (°Maia spark co-id)
-- `WS /sync` - WebSocket sync
-- `POST /register-human`, `GET /profile` - Agent API
-- `POST /api/v0/llm/chat` - LLM proxy
+- `WS /sync` - CoJSON sync (open read, protected write)
+- `POST /register` - Agent API (grants `/sync/write` + `/llm/chat` for humans)
+- `POST /api/v0/llm/chat` - LLM proxy (UCAN-protected)
+
+## Sync Access Control
+
+- **Read**: Open — anyone can connect and receive data.
+- **Write**: Protected — only accounts with `/sync/write` capability can push transactions.
+- **Capability**: Granted at `POST /register` (type: human). Unregistered clients see read-only (orange dot in UI).
 
 ## Client Usage
 
