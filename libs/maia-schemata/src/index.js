@@ -57,6 +57,8 @@ import actionSchema from './os/action.schema.json'
 // Import all schema definitions directly as JSON
 import actorSchema from './os/actor.schema.json'
 import avenSchema from './os/aven.schema.json'
+import avenIdentitySchema from './os/aven-identity.schema.json'
+import avensIdentityRegistrySchema from './os/avens-identity-registry.schema.json'
 import avensRegistrySchema from './os/avens-registry.schema.json'
 import capabilitiesStreamSchema from './os/capabilities-stream.schema.json'
 import capabilitySchema from './os/capability.schema.json'
@@ -116,6 +118,8 @@ const SCHEMAS = {
 	'os/capabilities-stream': capabilitiesStreamSchema,
 	'os/groups': groupsSchema,
 	'os/indexes-registry': indexesRegistrySchema,
+	'os/aven-identity': avenIdentitySchema,
+	'os/avens-identity-registry': avensIdentityRegistrySchema,
 	'os/avens-registry': avensRegistrySchema,
 	'os/sparks-registry': sparksRegistrySchema,
 	'os/cotext': cotextSchema,

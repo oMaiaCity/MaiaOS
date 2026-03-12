@@ -56,8 +56,11 @@ export async function getStorage(options = {}) {
 		throw new Error('[STORAGE] in-memory storage disabled. Use OPFS, IndexedDB, PGlite, or Postgres.')
 	}
 	if (forceInMemory === true) {
-		// Explicit opt-in only (e.g. tests). No silent fallback.
-		return inMemory()
+		// STRICT: in-memory storage is forbidden in MaiaOS.
+		// Fallback to human storage (OPFS/IndexedDB) even if inMemory was requested.
+		console.warn(
+			'[STORAGE] in-memory storage requested but forbidden. Falling back to persistent storage.',
+		)
 	}
 
 	if (runtime === 'browser') {

@@ -68,6 +68,35 @@ async function resolveAccountToProfileCoIdViaHumans(maia, accountCoId) {
 }
 
 /**
+ * Resolve account co-id to profile co-id via avens registry (public lookup)
+ * @param {Object} maia - MaiaOS instance with maia.do()
+ * @param {string} accountCoId - Account co-id (co_z...)
+ * @returns {Promise<string|null>} Profile co-id or null if not found
+ */
+async function resolveAccountToProfileCoIdViaAvens(maia, accountCoId) {
+	try {
+		const registriesId = maia?.id?.maiaId?.get?.('registries')
+		if (!registriesId?.startsWith('co_z')) return null
+		const registriesStore = await maia.do({ op: 'read', schema: null, key: registriesId })
+		await waitForStore(registriesStore, 5000)
+		const registriesData = registriesStore?.value ?? registriesStore
+		if (!registriesData?.avens?.startsWith('co_z')) return null
+		const avensStore = await maia.do({ op: 'read', schema: null, key: registriesData.avens })
+		await waitForStore(avensStore, 5000)
+		const avensData = avensStore?.value ?? avensStore
+		const avenIdentityCoId = avensData?.[accountCoId]
+		if (!avenIdentityCoId?.startsWith('co_z')) return null
+		const avenIdentityStore = await maia.do({ op: 'read', schema: null, key: avenIdentityCoId })
+		await waitForStore(avenIdentityStore, 5000)
+		const avenIdentityData = avenIdentityStore?.value ?? avenIdentityStore
+		const profileCoId = avenIdentityData?.profile
+		return profileCoId?.startsWith('co_z') ? profileCoId : null
+	} catch (_e) {
+		return null
+	}
+}
+
+/**
  * Resolve a single account co-id to profile id, name, and image
  * Uses humans registry (public) first; falls back to account read for self.
  * @param {Object} maia - MaiaOS instance with maia.do()
@@ -77,6 +106,9 @@ async function resolveAccountToProfileCoIdViaHumans(maia, accountCoId) {
 async function resolveOneToProfile(maia, accountCoId) {
 	try {
 		let profileCoId = await resolveAccountToProfileCoIdViaHumans(maia, accountCoId)
+		if (!profileCoId) {
+			profileCoId = await resolveAccountToProfileCoIdViaAvens(maia, accountCoId)
+		}
 		if (!profileCoId) {
 			const accountStore = await maia.do({ op: 'read', schema: '@account', key: accountCoId })
 			await waitForStore(accountStore, 5000)

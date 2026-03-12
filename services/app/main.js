@@ -378,14 +378,13 @@ async function linkAccountToRegistries(maia) {
 async function registerHuman(account) {
 	if (!account || detectMode() === 'agent') return false
 	const baseUrl = getMoaiBaseUrl()
-	if (!baseUrl) return
-	const account = maia.id.maiaId
-	const accountId = account.id || account.$jazz?.id
-	if (!accountId?.startsWith('co_z')) return
+	if (!baseUrl) return false
+	const accountId = account.id ?? account.$jazz?.id
+	if (!accountId?.startsWith('co_z')) return false
 	const profileId = account.get?.('profile')
-	if (!profileId?.startsWith('co_z')) return
-	try {
-		await fetch(`${baseUrl}/register`, {
+	if (!profileId?.startsWith('co_z')) return false
+	const doRegister = () =>
+		fetch(`${baseUrl}/register`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ type: 'human', accountId, profileId }),
@@ -478,68 +477,6 @@ async function signInWithTestAven() {
 		})
 		window.maia = maia
 		await linkAccountToRegistries(maia).catch(() => {})
-
-		setupSyncSubscription()
-		currentScreen = 'dashboard'
-		currentContextCoValueId = null
-
-		window.history.pushState({}, '', '/me')
-		await handleRoute()
-		loadLinkedCoValues().catch(() => {})
-	} catch (error) {
-		authState = { signedIn: false, accountID: null }
-		maia = null
-		showToast(`Test AVEN sign-in failed: ${error.message}`, 'error')
-		renderSignInPrompt(hasExistingAccount, undefined, true)
-	}
-}
-
-/**
- * Sign in with Test AVEN (local dev only, no passkeys).
- * In-memory only - no markAccountExists, no localStorage.
- * NEVER in production (isAvenTestModeEnabled gates this).
- */
-async function signInWithTestAven() {
-	if (!isAvenTestModeEnabled()) {
-		showToast('Test AVEN mode is not available.', 'error')
-		return
-	}
-	const env = import.meta.env ?? window.__MAIA_DEV_ENV__
-	const accountID = env?.VITE_AVEN_TEST_ACCOUNT
-	const agentSecret = env?.VITE_AVEN_TEST_SECRET
-	if (!accountID || !agentSecret) {
-		showToast(
-			'VITE_AVEN_TEST_ACCOUNT and VITE_AVEN_TEST_SECRET required. Run `bun agent:generate`.',
-			'error',
-		)
-		return
-	}
-	try {
-		const syncDomain = getSyncDomain()
-		const agentResult = await loadOrCreateAgentAccount({
-			accountID,
-			agentSecret,
-			syncDomain: syncDomain || null,
-			inMemory: true,
-			createName: 'Aven Test',
-		})
-		const { node, account } = agentResult
-
-		authState = { signedIn: true, accountID: account.id }
-
-		// NO markAccountExists() - in-memory only, no localStorage
-
-		maia = await MaiaOS.boot({
-			node,
-			account,
-			agentSecret,
-			syncDomain,
-			getMoaiBaseUrl,
-			modules: ['db', 'core', 'ai'],
-		})
-		window.maia = maia
-		await linkAccountToRegistries(maia).catch(() => {})
-		autoRegisterHuman(maia).catch(() => {})
 
 		setupSyncSubscription()
 		currentScreen = 'dashboard'
@@ -845,7 +782,14 @@ function renderLoadingConnectingScreen() {
 	const isConnected = syncState.connected && syncState.status === 'connected'
 	const isReadOnly = syncState.connected && syncState.writeEnabled === false
 	const hasError = syncState.status === 'error' || syncState.error
-	const indicatorStyle = `background: ${isConnected ? 'var(--color-lush-green)' : hasError ? 'var(--brand-red)' : 'var(--color-sun-yellow)'}; animation: ${isConnected ? 'none' : 'pulse 2s ease-in-out infinite'};`
+	const indicatorColor = isConnected
+		? isReadOnly
+			? 'var(--color-sun-yellow)'
+			: 'var(--color-lush-green)'
+		: hasError
+			? 'var(--brand-red)'
+			: 'var(--color-sun-yellow)'
+	const indicatorStyle = `background: ${indicatorColor}; animation: ${isConnected && !isReadOnly ? 'none' : 'pulse 2s ease-in-out infinite'};`
 	document.getElementById('app').innerHTML = LOADING_SCREEN_HTML(syncMsg, indicatorStyle)
 	if (!loadingScreenSyncUnsubscribe) {
 		loadingScreenSyncUnsubscribe = subscribeSyncState((state) => {
@@ -869,12 +813,16 @@ function updateLoadingConnectingScreen() {
 		const isConnected = syncState.connected && syncState.status === 'connected'
 		const isReadOnly = syncState.connected && syncState.writeEnabled === false
 		const hasError = syncState.status === 'error' || syncState.error
-		syncIndicator.style.background = isConnected
-			? 'var(--color-lush-green)'
+		const color = isConnected
+			? isReadOnly
+				? 'var(--color-sun-yellow)'
+				: 'var(--color-lush-green)'
 			: hasError
 				? 'var(--brand-red)'
 				: 'var(--color-sun-yellow)'
-		syncIndicator.style.animation = isConnected ? 'none' : 'pulse 2s ease-in-out infinite'
+		syncIndicator.style.background = color
+		syncIndicator.style.animation =
+			isConnected && !isReadOnly ? 'none' : 'pulse 2s ease-in-out infinite'
 	}
 }
 
@@ -1070,8 +1018,9 @@ window.renderAppInternal = renderAppInternal
 /**
  * Revoke a capability grant by setting exp to past. Requires write access to the capability CoMap.
  * @param {string} capabilityId - Co-id of the capability grant to revoke
+ * @param {{ cmd?: string, sub?: string }} [grant] - Optional grant info; if cmd is /sync/write and sub is current account, updates sync writeEnabled
  */
-async function revokeCapability(capabilityId) {
+async function revokeCapability(capabilityId, grant = {}) {
 	const m = maia ?? window.maia
 	if (!m) {
 		showToast('Maia not ready', 'error')
@@ -1083,6 +1032,9 @@ async function revokeCapability(capabilityId) {
 			id: capabilityId,
 			data: { exp: Math.floor(Date.now() / 1000) - 1 },
 		})
+		if (grant?.cmd === '/sync/write' && grant?.sub === authState.accountID) {
+			updateSyncState({ writeEnabled: false })
+		}
 		showToast('Capability revoked', 'success')
 		await renderAppInternal()
 	} catch (error) {
@@ -1093,24 +1045,39 @@ window.revokeCapability = revokeCapability
 
 /**
  * Extend a capability grant by 1 day. For expired capabilities, re-enables from now.
+ * Uses server endpoint to avoid chicken-and-egg (client needs /sync/write to sync the update).
  * @param {string} capabilityId - Co-id of the capability grant
- * @param {number} [currentExp=0] - Current expiry timestamp (Unix sec); used to compute new exp
+ * @param {number} [currentExp=0] - Unused; server computes new exp from capability
  */
-async function extendCapability(capabilityId, currentExp = 0) {
+async function extendCapability(capabilityId, _currentExp = 0) {
 	const m = maia ?? window.maia
 	if (!m) {
 		showToast('Maia not ready', 'error')
 		return
 	}
-	const now = Math.floor(Date.now() / 1000)
-	const oneDay = 86400
-	const newExp = Math.max(now, currentExp || 0) + oneDay
+	const baseUrl = getMoaiBaseUrl()
+	if (!baseUrl) {
+		showToast('Sync server not configured', 'error')
+		return
+	}
 	try {
-		await m.do({
-			op: 'update',
-			id: capabilityId,
-			data: { exp: newExp },
+		const token = await m.getCapabilityToken({
+			cmd: '/extend-capability',
+			args: { capabilityId },
 		})
+		const res = await fetch(`${baseUrl}/extend-capability`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`,
+			},
+			body: JSON.stringify({ capabilityId }),
+		})
+		const data = await res.json().catch(() => ({}))
+		if (!res.ok) {
+			showToast(data?.error ?? `Failed to extend: ${res.status}`, 'error')
+			return
+		}
 		showToast('Capability extended', 'success')
 		await renderAppInternal()
 	} catch (error) {
@@ -1195,14 +1162,27 @@ window.navigateToScreen = navigateToScreen
 window.getMoaiBaseUrl = getMoaiBaseUrl
 window.toggleExpand = toggleExpand
 
+// Global state for account menu
+let isMobileMenuOpen = false
+
 // Account menu toggle (username opens dropdown with account ID + sign out)
 window.toggleMobileMenu = () => {
 	isMobileMenuOpen = !isMobileMenuOpen
 	const menu = document.getElementById('mobile-menu')
 	if (!menu) return
-	menu.classList.toggle('active')
+	menu.classList.toggle('active', isMobileMenuOpen)
 	const trigger = document.querySelector('.account-menu-toggle')
-	if (trigger) trigger.classList.toggle('active', menu.classList.contains('active'))
+	if (trigger) trigger.classList.toggle('active', isMobileMenuOpen)
+}
+
+/** Restore menu state after re-render */
+window.restoreMenuState = () => {
+	if (isMobileMenuOpen) {
+		const menu = document.getElementById('mobile-menu')
+		if (menu) menu.classList.add('active')
+		const trigger = document.querySelector('.account-menu-toggle')
+		if (trigger) trigger.classList.add('active')
+	}
 }
 
 /** Toggle sidebar (DB viewer or aven viewer). Pass containerSelector for Shadow DOM. */

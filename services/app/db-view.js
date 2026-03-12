@@ -36,7 +36,7 @@ async function getSchemaFromDb(maia, schemaRef) {
 
 import { renderAvenViewer, renderDashboard } from './dashboard.js'
 import { renderMaiaAIView } from './maia-ai-view.js'
-import { escapeHtml, getSyncStatusMessage, truncate } from './utils.js'
+import { escapeHtml, getProfileAvatarHtml, getSyncStatusMessage, truncate } from './utils.js'
 
 // Cache for CoBinary image data URLs - survives re-renders, enables progressive reactive preview
 const cobinaryPreviewCache = new Map()
@@ -81,7 +81,7 @@ function loadBinaryWithRetry(maia, coId, maxAttempts = 4) {
 }
 
 /** Hydrate cobinary image previews: load from cache or fetch, then set img.src. Runs after DOM update. */
-function hydrateCobinaryPreviews(maia) {
+export function hydrateCobinaryPreviews(maia) {
 	if (DEBUG_COBINARY)
 		console.log('[CoBinary db-view] hydrateCobinaryPreviews', { hasMaia: !!maia?.do })
 	if (!maia?.do) return
@@ -171,11 +171,15 @@ export async function renderApp(
 
 	if (currentScreen === 'maia-ai') {
 		await renderMaiaAIView(maia, authState, syncState, navigateToScreen)
+		hydrateCobinaryPreviews(maia)
+		setTimeout(() => hydrateCobinaryPreviews(maia), 500)
 		return
 	}
 
 	if (currentScreen === 'aven-viewer' && currentAven) {
 		await renderAvenViewer(maia, authState, syncState, currentAven, navigateToScreen, currentSpark)
+		hydrateCobinaryPreviews(maia)
+		setTimeout(() => hydrateCobinaryPreviews(maia), 500)
 		return
 	}
 
@@ -425,10 +429,11 @@ export async function renderApp(
 			.map((g, i) => {
 				const profile = profiles.get(g.sub)
 				const displayName = profile?.name ?? truncate(g.sub, 16)
-				const image = profile?.image ?? null
-				const subjectHtml = image
-					? `<span class="capabilities-subject-wrap"><img class="capabilities-avatar" data-co-id="${escapeHtml(image)}" alt="" width="24" height="24" /><span>${escapeHtml(displayName)}</span></span>`
-					: escapeHtml(displayName)
+				const avatarHtml = getProfileAvatarHtml(profile?.image ?? null, {
+					size: 24,
+					className: 'capabilities-avatar',
+				})
+				const subjectHtml = `<span class="capabilities-subject-wrap">${avatarHtml}<span>${escapeHtml(displayName)}</span></span>`
 				const expired = typeof g.exp === 'number' && g.exp > 0 && g.exp < nowSec
 				const rowClass = `capabilities-row ${i % 2 === 0 ? 'capabilities-row-even' : 'capabilities-row-odd'}${expired ? ' capabilities-row-expired' : ' capabilities-row-active'}`
 				const currentExp = typeof g.exp === 'number' ? g.exp : 0
@@ -441,7 +446,7 @@ export async function renderApp(
 				<td class="capabilities-cell"><code class="capabilities-id" onclick="selectCoValue('${g.id}')" title="${escapeHtml(g.id)}">${truncate(g.id, 12)}</code></td>
 				<td class="capabilities-cell capabilities-actions">
 					<button type="button" class="capabilities-extend-btn" onclick="window.extendCapability && window.extendCapability('${g.id}', ${currentExp})" title="Extend expiry by 1 day">+1 day</button>
-					<button type="button" class="capabilities-revoke-btn" onclick="window.revokeCapability && window.revokeCapability('${g.id}')" title="Revoke capability">Delete</button>
+					<button type="button" class="capabilities-revoke-btn" data-cmd="${escapeHtml(g.cmd || '')}" data-sub="${escapeHtml(g.sub || '')}" onclick="window.revokeCapability && window.revokeCapability('${escapeHtml(g.id)}', { cmd: this.dataset.cmd, sub: this.dataset.sub })" title="Revoke capability">Delete</button>
 				</td>
 			</tr>
 		`
@@ -874,9 +879,10 @@ export async function renderApp(
 		} catch (_e) {}
 	}
 	const accountDisplayName = accountProfile?.name ?? truncate(accountId, 12)
-	const accountAvatarHtml = accountProfile?.image
-		? `<img class="navbar-avatar" data-co-id="${escapeHtml(accountProfile.image)}" alt="" width="24" height="24" />`
-		: ''
+	const accountAvatarHtml = getProfileAvatarHtml(accountProfile?.image, {
+		size: 44,
+		className: 'navbar-avatar',
+	})
 	// Metadata sidebar (explorer-style navigation; skip for capabilities view)
 	let metadataSidebar = ''
 	if (currentContextCoValueId && data && !data.error && !data.loading && !data._capabilitiesView) {
@@ -1201,45 +1207,14 @@ export async function renderApp(
 						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
 					</div>
 					<div class="header-right">
-						<div class="sync-status ${syncState.connected ? 'connected' : 'disconnected'}" title="${getSyncStatusMessage(syncState)}" aria-label="${getSyncStatusMessage(syncState)}">
-							<span class="sync-dot"></span>
-						</div>
 						${
 							authState.signedIn
 								? `
-							<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId}" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${accountAvatarHtml}<span>${escapeHtml(accountDisplayName)}</span></button>
+							${accountAvatarHtml ? `<div class="account-nav-group"><span class="account-display-name">${escapeHtml(accountDisplayName)}</span><button type="button" class="db-status account-menu-toggle" title="Account: ${accountId} (${getSyncStatusMessage(syncState)})" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${accountAvatarHtml}</button></div>` : `<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId} (${getSyncStatusMessage(syncState)})" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${escapeHtml(accountDisplayName)}</button>`}
 						`
 								: ''
 						}
 					</div>
-				</div>
-				<!-- Mobile menu (collapsed by default) - account ID shown inside -->
-				<div class="mobile-menu" id="mobile-menu">
-					${
-						authState.signedIn && accountId
-							? `
-						<div class="mobile-menu-account">
-							${accountAvatarHtml ? `<div class="mobile-menu-account-avatar">${accountAvatarHtml}</div>` : ''}
-							<div class="mobile-menu-account-info">
-								<span class="mobile-menu-account-name">${escapeHtml(accountDisplayName)}</span>
-								<div class="mobile-menu-account-id-row">
-									<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
-									<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(truncate(accountId, 24))}</code>
-								</div>
-							</div>
-						</div>
-					`
-							: ''
-					}
-					${
-						authState.signedIn
-							? `
-						<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">
-							Sign Out
-						</button>
-					`
-							: ''
-					}
 				</div>
 			</header>
 			<!-- Account dropdown - standalone card below navbar -->
