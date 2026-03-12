@@ -11,7 +11,7 @@ import {
 	createErrorEntry,
 	createErrorResult,
 	isPermissionError,
-} from '../operations/operation-result.js'
+} from '@MaiaOS/schemata/operation-result'
 
 export class DataEngine {
 	/**

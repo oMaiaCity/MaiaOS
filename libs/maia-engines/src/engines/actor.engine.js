@@ -23,7 +23,6 @@ export class ActorEngine {
 		this.toolEngine = toolEngine
 		this.stateEngine = stateEngine
 		this.actors = new Map()
-		this.pendingMessages = new Map()
 		this.dataEngine = null
 		this.os = null
 		this._containerActors = new Map()
@@ -265,7 +264,7 @@ export class ActorEngine {
 
 	/**
 	 * Determine if an actor is a service actor (orchestrator) vs UI actor (presentation)
-	 * Service actors: Have role "agent" OR have minimal view (only renders child actors via $slot)
+	 * Service actors: type "service" OR role ends with /vibe (except @creator/vibe) OR have minimal view (only $slot)
 	 * UI actors: Have full view (render actual UI components)
 	 * @param {Object} actorConfig - Actor configuration
 	 * @param {Object} viewDef - View definition (optional, will be loaded if not provided)
@@ -273,7 +272,10 @@ export class ActorEngine {
 	 * @private
 	 */
 	async _isServiceActor(actorConfig, viewDef = null) {
-		if (actorConfig.role === 'agent' || !actorConfig.view) return true
+		if (!actorConfig.view) return true
+		if (actorConfig.type === 'service') return true
+		const role = actorConfig.role
+		if (typeof role === 'string' && role.endsWith('/vibe') && role !== '@creator/vibe') return true
 		if (!viewDef) {
 			try {
 				const viewStore = await this._readStore(actorConfig.view)
@@ -427,12 +429,6 @@ export class ActorEngine {
 			delete actor._needsPostInitRerender
 			// Schedule rerender (will be batched with other updates)
 			this._scheduleRerender(actorId)
-		}
-		if (this.pendingMessages.has(actorId)) {
-			for (const message of this.pendingMessages.get(actorId)) {
-				await this.sendMessage(actorId, message)
-			}
-			this.pendingMessages.delete(actorId)
 		}
 		return actor
 	}
@@ -647,80 +643,89 @@ export class ActorEngine {
 		this._vibeActors.delete(vibeKey)
 	}
 
-	/** Send a message to an actor's inbox */
-	async sendMessage(actorId, message) {
-		// CRITICAL: Validate payload is resolved before sending between actors
-		// In distributed systems, only resolved clean JS objects/JSON can be sent
-		if (message.payload && containsExpressions(message.payload)) {
+	/**
+	 * Deliver event to target actor. Inbox-only: all events go to CoStream first.
+	 * processMessages is the only caller of stateEngine.send.
+	 * @param {string} senderId - Sender actor co-id
+	 * @param {string} targetId - Target actor co-id (or human-readable; resolved via CoJSON)
+	 * @param {string} type - Message type
+	 * @param {Object} payload - Resolved payload (no expressions)
+	 */
+	async deliverEvent(senderId, targetId, type, payload = {}) {
+		if (containsExpressions(payload)) {
 			throw new Error(
-				`[ActorEngine] Message payload contains unresolved expressions. Only resolved values can be sent between actors. Payload: ${JSON.stringify(message.payload).substring(0, 200)}`,
+				`[ActorEngine] Payload contains unresolved expressions. Payload: ${JSON.stringify(payload).substring(0, 200)}`,
 			)
 		}
-
-		const actor = this.actors.get(actorId)
-		if (!actor) {
-			if (!this.pendingMessages.has(actorId)) this.pendingMessages.set(actorId, [])
-			const pending = this.pendingMessages.get(actorId)
-			const key =
-				message.id || `${message.type}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
-			if (!pending.some((m) => m.id === key || (!m.id && !message.id && m.type === message.type))) {
-				pending.push(message)
-			}
-			return
+		const payloadPlain =
+			payload && typeof payload === 'object' ? JSON.parse(JSON.stringify(payload)) : payload || {}
+		const message = {
+			type,
+			payload: payloadPlain,
+			source: senderId,
+			target: targetId,
+			processed: false,
 		}
-		if (actor.inboxCoId && this.dataEngine) {
-			try {
-				const messageData = {
-					type: message.type,
-					payload: message.payload || {},
-					source: message.from || message.source,
-					target: actorId,
-					processed: false,
-				}
-				await this.dataEngine.peer.createAndPushMessage(actor.inboxCoId, messageData)
-				// Subscription fires when inbox store updates - single source of truth (avoids double processMessages)
-			} catch (_error) {}
+		await this._pushToInbox(targetId, message)
+		// Same-actor: trigger processMessages immediately (bypass 50ms subscription debounce)
+		if (senderId === targetId) {
+			const actor = this.actors.get(targetId)
+			if (actor?.inboxCoId && this.dataEngine) await this.processMessages(targetId)
 		}
 	}
 
-	async sendInternalEvent(actorId, eventType, payload = {}) {
-		// CRITICAL: Validate payload is resolved before sending to inbox
-		// Views must resolve all expressions before calling sendInternalEvent()
-		// In distributed systems, only resolved clean JS objects/JSON can be persisted to CoJSON
-		if (containsExpressions(payload)) {
-			throw new Error(
-				`[ActorEngine] Payload contains unresolved expressions. Views must resolve all expressions before sending to inbox. Payload: ${JSON.stringify(payload).substring(0, 200)}`,
-			)
-		}
-
-		const actor = this.actors.get(actorId)
-		if (!actor) {
-			console.warn('[ActorEngine] sendInternalEvent: actor not found', actorId)
-			return
-		}
-
-		const payloadPlain =
-			payload && typeof payload === 'object' ? JSON.parse(JSON.stringify(payload)) : payload || {}
-
-		// Primary: direct state send for immediate execution (works without inbox schema seeding)
-		if (actor.machine && this.stateEngine) {
-			await this.stateEngine.send(actor.machine.id, eventType, payloadPlain)
-		}
-
-		// Secondary: persist to inbox for cross-tab/sync (best-effort; requires message type schema in DB)
-		if (actor.inboxCoId && this.dataEngine) {
+	/**
+	 * Push message to target's inbox. Resolves target to inbox co-id via CoJSON. No in-memory queue.
+	 * @param {string} targetId - Actor co-id (or human-readable ref)
+	 * @param {Object} message - { type, payload, source, target, processed }
+	 */
+	async _pushToInbox(targetId, message) {
+		if (!this.dataEngine?.peer) return
+		let inboxCoId = null
+		const actor = this.actors.get(targetId)
+		if (actor?.inboxCoId) {
+			inboxCoId = actor.inboxCoId
+		} else {
+			// Resolve targetId to inbox co-id: read actor config from CoJSON, get inbox ref, resolve to co-id
 			try {
-				await this.dataEngine.peer.createAndPushMessage(actor.inboxCoId, {
-					type: eventType,
-					payload,
-					source: actorId,
-					target: actorId,
-					processed: true, // Already handled via direct send above
-				})
-			} catch (_error) {
-				// Inbox persistence optional; UI already responded
+				if (!targetId.startsWith('co_z')) {
+					const resolved = await this.dataEngine.execute({
+						op: 'resolve',
+						humanReadableKey: targetId,
+					})
+					if (resolved?.startsWith?.('co_z')) targetId = resolved
+					else throw new Error(`[ActorEngine] Failed to resolve target: ${targetId}`)
+				}
+				const actorStore = await this._readStore(targetId)
+				if (!actorStore) throw new Error(`[ActorEngine] Failed to read actor config: ${targetId}`)
+				const inboxRef = actorStore?.value?.inbox
+				if (!inboxRef) throw new Error(`[ActorEngine] Actor config has no inbox: ${targetId}`)
+				const inboxRefStr = typeof inboxRef === 'string' ? inboxRef : (inboxRef?.id ?? String(inboxRef))
+				if (inboxRefStr.startsWith('co_z')) {
+					inboxCoId = inboxRefStr
+				} else {
+					inboxCoId = await this.dataEngine.execute({
+						op: 'resolve',
+						humanReadableKey: inboxRefStr,
+					})
+				}
+				if (!inboxCoId?.startsWith?.('co_z')) {
+					throw new Error(`[ActorEngine] Failed to resolve inbox ref: ${inboxRefStr}`)
+				}
+			} catch (err) {
+				throw new Error(
+					`[ActorEngine] _pushToInbox: cannot resolve target to inbox. ${err?.message || err}`,
+				)
 			}
 		}
+		const messageData = {
+			type: message.type,
+			payload: message.payload || {},
+			source: message.source,
+			target: targetId,
+			processed: false,
+		}
+		await this.dataEngine.peer.createAndPushMessage(inboxCoId, messageData)
 	}
 
 	/**

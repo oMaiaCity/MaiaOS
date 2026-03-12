@@ -1,12 +1,12 @@
 import { isSchemaRef } from '@MaiaOS/schemata'
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver'
-import { validateAgainstSchema } from '@MaiaOS/schemata/validation.helper'
 import {
 	createErrorEntry,
 	createErrorResult,
 	isPermissionError,
 	isSuccessResult,
-} from '../operations/operation-result.js'
+} from '@MaiaOS/schemata/operation-result'
+import { validateAgainstSchema } from '@MaiaOS/schemata/validation.helper'
 import { RENDER_STATES } from './actor.engine.js'
 
 /**
@@ -287,7 +287,12 @@ export class StateEngine {
 						result: cleanedResult,
 					}
 					try {
-						await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', successPayload)
+						await machine.actor.actorEngine.deliverEvent(
+							machine.actor.id,
+							machine.actor.id,
+							'SUCCESS',
+							successPayload,
+						)
 					} catch (_error) {}
 				}
 			} else if (Array.isArray(actions)) {
@@ -310,7 +315,12 @@ export class StateEngine {
 						result: cleanedResult, // CRITICAL: result must come AFTER spread to override any result in originalEventPayload
 					}
 					try {
-						await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', successPayload)
+						await machine.actor.actorEngine.deliverEvent(
+							machine.actor.id,
+							machine.actor.id,
+							'SUCCESS',
+							successPayload,
+						)
 					} catch (_error) {}
 				}
 			} else if (typeof actions === 'object' && actions !== null) {
@@ -328,7 +338,12 @@ export class StateEngine {
 						...originalEventPayload,
 						result: cleanedResult, // CRITICAL: result must come AFTER spread to override any result in originalEventPayload
 					}
-					await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', successPayload)
+					await machine.actor.actorEngine.deliverEvent(
+						machine.actor.id,
+						machine.actor.id,
+						'SUCCESS',
+						successPayload,
+					)
 				}
 			}
 		} catch (_error) {
@@ -534,10 +549,8 @@ export class StateEngine {
 			if (sparkId && machine.actor?.children?.detail) {
 				const detailActor = machine.actor.children.detail
 				// Send generic LOAD_ACTOR message to detail actor's inbox (proper actor-to-actor communication)
-				await machine.actor.actorEngine.sendMessage(detailActor.id, {
-					type: 'LOAD_ACTOR',
-					payload: { id: sparkId },
-					from: machine.actor.id,
+				await machine.actor.actorEngine.deliverEvent(machine.actor.id, detailActor.id, 'LOAD_ACTOR', {
+					id: sparkId,
 				})
 			}
 		}
@@ -568,7 +581,7 @@ export class StateEngine {
 					{ machineId: machine.id, eventPayload: machine.eventPayload },
 				)
 				if (autoTransition && stateDef?.on?.ERROR && machine.actor?.actorEngine) {
-					await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'ERROR', {
+					await machine.actor.actorEngine.deliverEvent(machine.actor.id, machine.actor.id, 'ERROR', {
 						errors: [createErrorEntry('schema', '[RemoveSparkMemberOperation] memberId required')],
 					})
 				}
@@ -586,7 +599,7 @@ export class StateEngine {
 					!evaluatedPayload.memberId.trim())
 			) {
 				if (autoTransition && stateDef?.on?.ERROR && machine.actor?.actorEngine) {
-					await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'ERROR', {
+					await machine.actor.actorEngine.deliverEvent(machine.actor.id, machine.actor.id, 'ERROR', {
 						errors: [createErrorEntry('schema', 'Please enter an agent ID')],
 					})
 				}
@@ -632,7 +645,7 @@ export class StateEngine {
 			// Tools return OperationResult: { ok: true, data } | { ok: false, errors }
 			if (!isSuccessResult(rawResult)) {
 				if (autoTransition && stateDef?.on?.ERROR && machine.actor?.actorEngine) {
-					await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'ERROR', {
+					await machine.actor.actorEngine.deliverEvent(machine.actor.id, machine.actor.id, 'ERROR', {
 						errors: rawResult.errors,
 					})
 				} else if (autoTransition && !stateDef?.on?.ERROR) {
@@ -645,7 +658,7 @@ export class StateEngine {
 
 			if (autoTransition && !isEntryAction && stateDef?.on?.SUCCESS && machine.actor?.actorEngine) {
 				const cleanedResult = data != null ? this._cleanToolResult(data) : null
-				await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'SUCCESS', {
+				await machine.actor.actorEngine.deliverEvent(machine.actor.id, machine.actor.id, 'SUCCESS', {
 					...originalEventPayload,
 					result: cleanedResult,
 				})
@@ -663,7 +676,9 @@ export class StateEngine {
 				const errors = error.errors ?? [
 					createErrorEntry(isPermissionError(error) ? 'permission' : 'structural', error.message),
 				]
-				await machine.actor.actorEngine.sendInternalEvent(machine.actor.id, 'ERROR', { errors })
+				await machine.actor.actorEngine.deliverEvent(machine.actor.id, machine.actor.id, 'ERROR', {
+					errors,
+				})
 			} else if (autoTransition && !stateDef?.on?.ERROR) {
 			}
 			throw error
