@@ -17,6 +17,7 @@ import {
 	signInWithPasskey,
 	signUpWithPasskey,
 	subscribeSyncState,
+	updateSyncState,
 } from '@MaiaOS/loader'
 import { renderApp } from './db-view.js'
 import { renderLandingPage } from './landing.js'
@@ -373,23 +374,41 @@ async function linkAccountToRegistries(maia) {
 	} catch (_e) {}
 }
 
-/** Auto-register human in registry (fire-and-forget). Call after linkAccountToRegistries. Uses server-generated name only (e.g. human:brave-dolphin-71234567). */
-async function autoRegisterHuman(maia) {
-	if (!maia?.id?.maiaId || detectMode() === 'agent') return
+/** Register human with sync server. Call before boot so server has registry entry before any sync writes. */
+async function registerHuman(account) {
+	if (!account || detectMode() === 'agent') return false
 	const baseUrl = getMoaiBaseUrl()
-	if (!baseUrl) return
-	const account = maia.id.maiaId
-	const accountId = account.id || account.$jazz?.id
-	if (!accountId?.startsWith('co_z')) return
+	if (!baseUrl) return false
+	const accountId = account.id ?? account.$jazz?.id
+	if (!accountId?.startsWith('co_z')) return false
 	const profileId = account.get?.('profile')
-	if (!profileId?.startsWith('co_z')) return
-	try {
-		await fetch(`${baseUrl}/register`, {
+	if (!profileId?.startsWith('co_z')) return false
+	const doRegister = () =>
+		fetch(`${baseUrl}/register`, {
 			method: 'POST',
 			headers: { 'Content-Type': 'application/json' },
 			body: JSON.stringify({ type: 'human', accountId, profileId }),
 		})
-	} catch (_e) {}
+	for (let i = 0; i < 5; i++) {
+		try {
+			const res = await doRegister()
+			if (res.status === 503) {
+				await new Promise((r) => setTimeout(r, 1500))
+				continue
+			}
+			if (typeof updateSyncState === 'function') updateSyncState({ writeEnabled: res.ok })
+			return res.ok
+		} catch (_e) {
+			if (i < 4) await new Promise((r) => setTimeout(r, 1000))
+		}
+	}
+	if (typeof updateSyncState === 'function') updateSyncState({ writeEnabled: false })
+	return false
+}
+
+/** Auto-register human in registry (uses maia.id.maiaId). For Test Aven, use registerHuman(account) before boot. */
+async function autoRegisterHuman(maia) {
+	await registerHuman(maia?.id?.maiaId)
 }
 
 /**
@@ -414,18 +433,39 @@ async function signInWithTestAven() {
 	}
 	try {
 		const syncDomain = getSyncDomain()
+		const avenTestNameRaw = env?.VITE_AVEN_TEST_NAME || 'Test'
+		const avenTestName = avenTestNameRaw.startsWith('Aven ')
+			? avenTestNameRaw
+			: `Aven ${avenTestNameRaw}`
 		const agentResult = await loadOrCreateAgentAccount({
 			accountID,
 			agentSecret,
 			syncDomain: syncDomain || null,
-			inMemory: true,
-			createName: 'Aven Test',
+			inMemory: false, // NEVER allow in-memory storage
+			createName: avenTestName,
 		})
 		const { node, account } = agentResult
+
+		// Ensure profile name matches env var
+		try {
+			const profileId = account.get('profile')
+			if (profileId) {
+				const profileCore = node.getCoValue(profileId)
+				if (profileCore?.isAvailable()) {
+					const profile = profileCore.getCurrentContent()
+					if (profile?.get('name') !== avenTestName) {
+						profile.set('name', avenTestName)
+					}
+				}
+			}
+		} catch (_e) {}
 
 		authState = { signedIn: true, accountID: account.id }
 
 		// NO markAccountExists() - in-memory only, no localStorage
+
+		// Register BEFORE boot so server has us in registry before any sync writes
+		await registerHuman(account).catch(() => {})
 
 		maia = await MaiaOS.boot({
 			node,
@@ -437,7 +477,6 @@ async function signInWithTestAven() {
 		})
 		window.maia = maia
 		await linkAccountToRegistries(maia).catch(() => {})
-		autoRegisterHuman(maia).catch(() => {})
 
 		setupSyncSubscription()
 		currentScreen = 'dashboard'
@@ -496,9 +535,8 @@ async function signIn() {
 						modules: ['db', 'core', 'ai'], // Include all modules
 					})
 					window.maia = maia
-					// CRITICAL: Await link before first render - indexing requires account.registries
+					await autoRegisterHuman(maia).catch(() => {})
 					await linkAccountToRegistries(maia).catch(() => {})
-					autoRegisterHuman(maia).catch(() => {})
 
 					// Re-render app now that maia is ready
 					if (authState.signedIn) {
@@ -626,9 +664,8 @@ async function register() {
 				modules: ['db', 'core', 'ai'], // Include all modules
 			})
 			window.maia = maia
-			// CRITICAL: Await link before first render - indexing requires account.registries
+			await autoRegisterHuman(maia).catch(() => {})
 			await linkAccountToRegistries(maia).catch(() => {})
-			autoRegisterHuman(maia).catch(() => {})
 		} catch (bootError) {
 			throw new Error(`Failed to initialize MaiaOS: ${bootError.message}`)
 		}
@@ -696,6 +733,7 @@ function signOut() {
 	}
 	authState = { signedIn: false, accountID: null }
 	syncState = { connected: false, syncing: false, error: null, status: null }
+	updateSyncState({ writeEnabled: true }) // Reset for next session
 	maia = null
 
 	// DON'T clear the account flag - passkey still exists on device!
@@ -742,8 +780,16 @@ const LOADING_SCREEN_HTML = (syncMessage, indicatorStyle) => `
 function renderLoadingConnectingScreen() {
 	const syncMsg = getSyncStatusMessage(syncState, 'Connecting to sync...')
 	const isConnected = syncState.connected && syncState.status === 'connected'
+	const isReadOnly = syncState.connected && syncState.writeEnabled === false
 	const hasError = syncState.status === 'error' || syncState.error
-	const indicatorStyle = `background: ${isConnected ? 'var(--color-lush-green)' : hasError ? 'var(--brand-red)' : 'var(--color-sun-yellow)'}; animation: ${isConnected ? 'none' : 'pulse 2s ease-in-out infinite'};`
+	const indicatorColor = isConnected
+		? isReadOnly
+			? 'var(--color-sun-yellow)'
+			: 'var(--color-lush-green)'
+		: hasError
+			? 'var(--brand-red)'
+			: 'var(--color-sun-yellow)'
+	const indicatorStyle = `background: ${indicatorColor}; animation: ${isConnected && !isReadOnly ? 'none' : 'pulse 2s ease-in-out infinite'};`
 	document.getElementById('app').innerHTML = LOADING_SCREEN_HTML(syncMsg, indicatorStyle)
 	if (!loadingScreenSyncUnsubscribe) {
 		loadingScreenSyncUnsubscribe = subscribeSyncState((state) => {
@@ -765,13 +811,18 @@ function updateLoadingConnectingScreen() {
 	if (syncStatusElement && syncIndicator && syncMessageElement) {
 		syncMessageElement.textContent = syncMessage
 		const isConnected = syncState.connected && syncState.status === 'connected'
+		const isReadOnly = syncState.connected && syncState.writeEnabled === false
 		const hasError = syncState.status === 'error' || syncState.error
-		syncIndicator.style.background = isConnected
-			? 'var(--color-lush-green)'
+		const color = isConnected
+			? isReadOnly
+				? 'var(--color-sun-yellow)'
+				: 'var(--color-lush-green)'
 			: hasError
 				? 'var(--brand-red)'
 				: 'var(--color-sun-yellow)'
-		syncIndicator.style.animation = isConnected ? 'none' : 'pulse 2s ease-in-out infinite'
+		syncIndicator.style.background = color
+		syncIndicator.style.animation =
+			isConnected && !isReadOnly ? 'none' : 'pulse 2s ease-in-out infinite'
 	}
 }
 
@@ -967,8 +1018,9 @@ window.renderAppInternal = renderAppInternal
 /**
  * Revoke a capability grant by setting exp to past. Requires write access to the capability CoMap.
  * @param {string} capabilityId - Co-id of the capability grant to revoke
+ * @param {{ cmd?: string, sub?: string }} [grant] - Optional grant info; if cmd is /sync/write and sub is current account, updates sync writeEnabled
  */
-async function revokeCapability(capabilityId) {
+async function revokeCapability(capabilityId, grant = {}) {
 	const m = maia ?? window.maia
 	if (!m) {
 		showToast('Maia not ready', 'error')
@@ -980,6 +1032,9 @@ async function revokeCapability(capabilityId) {
 			id: capabilityId,
 			data: { exp: Math.floor(Date.now() / 1000) - 1 },
 		})
+		if (grant?.cmd === '/sync/write' && grant?.sub === authState.accountID) {
+			updateSyncState({ writeEnabled: false })
+		}
 		showToast('Capability revoked', 'success')
 		await renderAppInternal()
 	} catch (error) {
@@ -990,24 +1045,39 @@ window.revokeCapability = revokeCapability
 
 /**
  * Extend a capability grant by 1 day. For expired capabilities, re-enables from now.
+ * Uses server endpoint to avoid chicken-and-egg (client needs /sync/write to sync the update).
  * @param {string} capabilityId - Co-id of the capability grant
- * @param {number} [currentExp=0] - Current expiry timestamp (Unix sec); used to compute new exp
+ * @param {number} [currentExp=0] - Unused; server computes new exp from capability
  */
-async function extendCapability(capabilityId, currentExp = 0) {
+async function extendCapability(capabilityId, _currentExp = 0) {
 	const m = maia ?? window.maia
 	if (!m) {
 		showToast('Maia not ready', 'error')
 		return
 	}
-	const now = Math.floor(Date.now() / 1000)
-	const oneDay = 86400
-	const newExp = Math.max(now, currentExp || 0) + oneDay
+	const baseUrl = getMoaiBaseUrl()
+	if (!baseUrl) {
+		showToast('Sync server not configured', 'error')
+		return
+	}
 	try {
-		await m.do({
-			op: 'update',
-			id: capabilityId,
-			data: { exp: newExp },
+		const token = await m.getCapabilityToken({
+			cmd: '/extend-capability',
+			args: { capabilityId },
 		})
+		const res = await fetch(`${baseUrl}/extend-capability`, {
+			method: 'POST',
+			headers: {
+				'Content-Type': 'application/json',
+				Authorization: `Bearer ${token}`,
+			},
+			body: JSON.stringify({ capabilityId }),
+		})
+		const data = await res.json().catch(() => ({}))
+		if (!res.ok) {
+			showToast(data?.error ?? `Failed to extend: ${res.status}`, 'error')
+			return
+		}
 		showToast('Capability extended', 'success')
 		await renderAppInternal()
 	} catch (error) {
@@ -1092,13 +1162,27 @@ window.navigateToScreen = navigateToScreen
 window.getMoaiBaseUrl = getMoaiBaseUrl
 window.toggleExpand = toggleExpand
 
+// Global state for account menu
+let isMobileMenuOpen = false
+
 // Account menu toggle (username opens dropdown with account ID + sign out)
 window.toggleMobileMenu = () => {
+	isMobileMenuOpen = !isMobileMenuOpen
 	const menu = document.getElementById('mobile-menu')
 	if (!menu) return
-	menu.classList.toggle('active')
+	menu.classList.toggle('active', isMobileMenuOpen)
 	const trigger = document.querySelector('.account-menu-toggle')
-	if (trigger) trigger.classList.toggle('active', menu.classList.contains('active'))
+	if (trigger) trigger.classList.toggle('active', isMobileMenuOpen)
+}
+
+/** Restore menu state after re-render */
+window.restoreMenuState = () => {
+	if (isMobileMenuOpen) {
+		const menu = document.getElementById('mobile-menu')
+		if (menu) menu.classList.add('active')
+		const trigger = document.querySelector('.account-menu-toggle')
+		if (trigger) trigger.classList.add('active')
+	}
 }
 
 /** Toggle sidebar (DB viewer or aven viewer). Pass containerSelector for Shadow DOM. */

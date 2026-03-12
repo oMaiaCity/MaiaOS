@@ -1,0 +1,22 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/os/aven-identity",
+	"title": "°Maia/schema/os/aven-identity",
+	"description": "Aven identity: account + profile. Referenced by avens identity registry.",
+	"cotype": "comap",
+	"indexing": false,
+	"properties": {
+		"account": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]{20,}$",
+			"description": "Account co-id"
+		},
+		"profile": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]{20,}$",
+			"description": "Profile co-id"
+		}
+	},
+	"required": ["account", "profile"],
+	"additionalProperties": false
+}

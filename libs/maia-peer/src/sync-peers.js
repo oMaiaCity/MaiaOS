@@ -13,6 +13,7 @@ let syncState = {
 	syncing: false,
 	error: null,
 	status: null, // 'authenticating' | 'loading-account' | 'syncing' | 'connected' | 'error'
+	writeEnabled: true, // true = read+write, false = read-only. Set by app after register.
 }
 const syncStateListeners = new Set()
 
@@ -25,6 +26,16 @@ export function subscribeSyncState(listener) {
 	syncStateListeners.add(listener)
 	listener(syncState) // Call immediately with current state
 	return () => syncStateListeners.delete(listener)
+}
+
+/**
+ * Update sync state (e.g. writeEnabled after register). Merges partial into syncState and notifies listeners.
+ * @param {Object} partial - Partial state to merge (e.g. { writeEnabled: false })
+ */
+export function updateSyncState(partial) {
+	if (!partial || typeof partial !== 'object') return
+	syncState = { ...syncState, ...partial }
+	notifySyncStateChange()
 }
 
 function notifySyncStateChange() {
@@ -116,7 +127,13 @@ export function setupSyncPeers(syncDomain = null) {
 				connectionLostLoggedAt = now
 			}
 			websocketConnected = false
-			syncState = { connected: false, syncing: false, error: 'Disconnected', status: 'error' }
+			syncState = {
+				...syncState,
+				connected: false,
+				syncing: false,
+				error: 'Disconnected',
+				status: 'error',
+			}
 			notifySyncStateChange()
 		},
 	})
@@ -125,7 +142,7 @@ export function setupSyncPeers(syncDomain = null) {
 		if (connected && !websocketConnected) {
 			websocketConnected = true
 			connectionLostLoggedAt = 0
-			syncState = { connected: true, syncing: true, error: null, status: 'syncing' }
+			syncState = { ...syncState, connected: true, syncing: true, error: null, status: 'syncing' }
 			notifySyncStateChange()
 			if (websocketConnectedResolve) {
 				websocketConnectedResolve()
@@ -137,7 +154,7 @@ export function setupSyncPeers(syncDomain = null) {
 			if (now - connectionLostLoggedAt > CONNECTION_LOST_LOG_COOLDOWN_MS) {
 				connectionLostLoggedAt = now
 			}
-			syncState = { connected: false, syncing: false, error: 'Offline', status: 'error' }
+			syncState = { ...syncState, connected: false, syncing: false, error: 'Offline', status: 'error' }
 			notifySyncStateChange()
 		}
 	})
@@ -145,7 +162,13 @@ export function setupSyncPeers(syncDomain = null) {
 	if (typeof window !== 'undefined') {
 		connectionTimeout = setTimeout(() => {
 			if (!syncState.connected) {
-				syncState = { connected: false, syncing: false, error: 'Connection timeout', status: 'error' }
+				syncState = {
+					...syncState,
+					connected: false,
+					syncing: false,
+					error: 'Connection timeout',
+					status: 'error',
+				}
 				notifySyncStateChange()
 			}
 		}, 10000)

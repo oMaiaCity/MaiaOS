@@ -408,7 +408,8 @@ export async function loadOrCreateAgentAccount({
 			loadError?.isAccountNotFound ||
 			msg.includes('Account unavailable from all peers') ||
 			msg.includes('unavailable from all peers') ||
-			msg.includes('Account not found in storage')
+			msg.includes('Account not found in storage') ||
+			msg.includes('Account has no profile')
 		if (isNotFound) {
 			return await createAgentAccount({
 				agentSecret,

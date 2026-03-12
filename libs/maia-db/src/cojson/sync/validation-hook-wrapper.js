@@ -179,9 +179,10 @@ async function validateRemoteTransactions(peer, dbEngine, msg) {
  * @param {Object} syncManager - Original sync manager instance
  * @param {Object} peer - Backend instance (for validation)
  * @param {Object} dbEngine - Database engine (for schema resolution)
+ * @param {Object} [opts] - Optional { beforeAcceptWrite: async (peer, msg, from) => Promise<{ok: boolean, error?: string}> }
  * @returns {Object} Wrapped sync manager with validation
  */
-export function wrapSyncManagerWithValidation(syncManager, peer, dbEngine) {
+export function wrapSyncManagerWithValidation(syncManager, peer, dbEngine, opts = {}) {
 	if (!syncManager || !peer) {
 		return syncManager
 	}
@@ -194,17 +195,26 @@ export function wrapSyncManagerWithValidation(syncManager, peer, dbEngine) {
 		return syncManager
 	}
 
+	const { beforeAcceptWrite } = opts
+
 	// Create wrapper that validates before calling original
 	syncManager.handleNewContent = async (msg, from) => {
+		// Optional: capability check for incoming writes (before schema validation)
+		if (beforeAcceptWrite && msg?.new && Object.keys(msg.new).length > 0) {
+			const result = await beforeAcceptWrite(peer, msg, from)
+			if (!result?.ok) {
+				console.warn(`[ValidationHook] Write rejected: ${result?.error ?? 'No /sync/write capability'}`)
+				return
+			}
+		}
+
 		// Validate remote transactions BEFORE they enter CRDT
 		if (msg?.id && dbEngine) {
 			const validation = await validateRemoteTransactions(peer, dbEngine, msg)
 
 			if (!validation.valid) {
-				// Return error to sync manager (prevents transactions from being merged)
-				// Note: This might not prevent merge if sync manager doesn't check return value
-				// But it logs the error and prevents invalid data from being accepted
-				throw new Error(`[ValidationHook] Invalid remote transactions rejected: ${validation.error}`)
+				console.warn(`[ValidationHook] Invalid remote transactions rejected: ${validation.error}`)
+				return
 			}
 		}
 

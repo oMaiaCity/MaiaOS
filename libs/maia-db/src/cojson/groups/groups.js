@@ -147,6 +147,16 @@ export async function getHumansRegistryId(peer) {
 	return registriesContent.humans ?? null
 }
 
+/** Get avens registry CoMap co-id (account.registries.avens). Returns null if not found. */
+export async function getAvensRegistryId(peer) {
+	const registriesId = peer.account?.get?.('registries')
+	if (!registriesId?.startsWith('co_z')) return null
+	const registriesStore = await peer.read(null, registriesId)
+	await waitForStoreReady(registriesStore, registriesId, 10000)
+	const registriesContent = registriesStore?.value ?? {}
+	return registriesContent.avens ?? null
+}
+
 export async function getSparksRegistryContent(peer) {
 	const sparksId = await getSparksRegistryId(peer)
 	if (!sparksId?.startsWith('co_z')) return null
