@@ -14,6 +14,7 @@
  *   PEER_SYNC_SEED: Default false. Set true to run genesis seed (bootstrap + schemas + avens).
  *     - true: Fresh seed (first deploy or intentional reset). May overwrite existing scaffold.
  *     - false/unset: Skip seed, use persisted data. Never overwrite on restart.
+ *   PEER_APP_HOST: Allowed CORS origin (e.g. https://next.maia.city). When set, only that origin can call sync/LLM. Unset = * (dev fallback).
  */
 
 import {
@@ -66,6 +67,19 @@ const peerSyncSeed = process.env.PEER_SYNC_SEED === 'true'
 // Sync mode seeds all avens by default (internal, not configurable)
 const seedVibesConfig = 'all'
 
+/** CORS: PEER_APP_HOST = allowed origin (e.g. https://next.maia.city or localhost:4200). When set, only that origin can call sync/LLM. When unset, * (dev fallback). */
+function normalizeCorsOrigin(host) {
+	if (!host) return '*'
+	const trimmed = host.trim()
+	if (!trimmed) return '*'
+	// CORS requires full origin (scheme + host). If missing scheme, assume http for dev.
+	if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+		return `http://${trimmed}`
+	}
+	return trimmed
+}
+const CORS_ORIGIN = normalizeCorsOrigin(process.env.PEER_APP_HOST)
+
 let localNode = null
 let agentWorker = null
 let syncHandler = null
@@ -75,7 +89,11 @@ const sessionsAllowedUnresolved = new Set()
 function jsonResponse(data, status = 200, headers = {}) {
 	return new Response(JSON.stringify(data), {
 		status,
-		headers: { 'Content-Type': 'application/json', 'Access-Control-Allow-Origin': '*', ...headers },
+		headers: {
+			'Content-Type': 'application/json',
+			'Access-Control-Allow-Origin': CORS_ORIGIN,
+			...headers,
+		},
 	})
 }
 
@@ -627,6 +645,41 @@ async function handleAgentHttp(req, worker) {
 	return null
 }
 
+/** LLM messages schema: role + optional content. Enforces structure and limits. */
+const LLM_MAX_MESSAGES = 100
+const LLM_MAX_CONTENT_LENGTH = 200_000
+const LLM_ALLOWED_ROLES = new Set(['system', 'user', 'assistant'])
+
+function validateLLMMessages(messages) {
+	if (!messages || !Array.isArray(messages) || messages.length === 0) {
+		return { ok: false, error: 'messages array required' }
+	}
+	if (messages.length > LLM_MAX_MESSAGES) {
+		return { ok: false, error: `messages array exceeds max ${LLM_MAX_MESSAGES}` }
+	}
+	for (let i = 0; i < messages.length; i++) {
+		const m = messages[i]
+		if (!m || typeof m !== 'object' || Array.isArray(m)) {
+			return { ok: false, error: `messages[${i}] must be object` }
+		}
+		if (!m.role || typeof m.role !== 'string' || !LLM_ALLOWED_ROLES.has(m.role)) {
+			return { ok: false, error: `messages[${i}].role must be system, user, or assistant` }
+		}
+		if ('content' in m && m.content != null) {
+			if (typeof m.content !== 'string') {
+				return { ok: false, error: `messages[${i}].content must be string` }
+			}
+			if (m.content.length > LLM_MAX_CONTENT_LENGTH) {
+				return {
+					ok: false,
+					error: `messages[${i}].content exceeds max ${LLM_MAX_CONTENT_LENGTH} chars`,
+				}
+			}
+		}
+	}
+	return { ok: true }
+}
+
 /** LLM proxy: forwards request to RedPill, returns response. Tool execution is client-side (Runtime). Requires Bearer token + valid /llm/chat capability. */
 async function handleLLMChat(req, worker) {
 	if (!RED_PILL_API_KEY) return jsonResponse({ error: 'RED_PILL_API_KEY not configured' }, 500)
@@ -671,8 +724,8 @@ async function handleLLMChat(req, worker) {
 	try {
 		const body = await req.json()
 		const { messages, model = 'qwen/qwen3-30b-a3b-instruct-2507', temperature = 1, tools } = body
-		if (!messages || !Array.isArray(messages) || messages.length === 0)
-			return jsonResponse({ error: 'messages array required' }, 400)
+		const validation = validateLLMMessages(messages)
+		if (!validation.ok) return jsonResponse({ error: validation.error }, 400)
 
 		const reqBody = {
 			model,
@@ -707,7 +760,7 @@ async function handleLLMChat(req, worker) {
 }
 
 const CORS_HEADERS = {
-	'Access-Control-Allow-Origin': '*',
+	'Access-Control-Allow-Origin': CORS_ORIGIN,
 	'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 	'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 }

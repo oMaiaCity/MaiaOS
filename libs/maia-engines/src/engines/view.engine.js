@@ -2,36 +2,12 @@ import { ensureCoValueLoaded, normalizeCoValueData, ReactiveStore } from '@MaiaO
 import { validateViewDef } from '@MaiaOS/schemata'
 import { containsExpressions, resolveExpressions } from '@MaiaOS/schemata/expression-resolver'
 import { extractDOMValuesAsync } from '@MaiaOS/schemata/payload-resolver'
+import { sanitizeAttributeWhitelist } from '../utils/attribute-sanitizer.js'
 import { sanitizePayloadForValidation } from '../utils/payload-sanitizer.js'
 import { perfPipelineStart, perfPipelineStep } from '../utils/perf-pipeline.js'
 import { readStore } from '../utils/store-reader.js'
 import { traceView } from '../utils/trace.js'
 import { RENDER_STATES } from './actor.engine.js'
-
-function sanitizeAttribute(value) {
-	if (value === null || value === undefined) return ''
-	return String(value)
-		.replace(/</g, '&lt;')
-		.replace(/>/g, '&gt;')
-		.replace(/"/g, '&quot;')
-		.replace(/'/g, '&#x27;')
-		.replace(/\//g, '&#x2F;')
-}
-
-function containsDangerousHTML(str) {
-	if (typeof str !== 'string') return false
-	return [
-		/<script/i,
-		/javascript:/i,
-		/on\w+\s*=/i,
-		/<iframe/i,
-		/<object/i,
-		/<embed/i,
-		/<link/i,
-		/<meta/i,
-		/<style/i,
-	].some((pattern) => pattern.test(str))
-}
 
 const BOOLEAN_ATTRS = new Set([
 	'disabled',
@@ -146,8 +122,7 @@ function setAttr(element, name, value) {
 		if (bool) element.setAttribute(name, '')
 		else element.removeAttribute(name)
 	} else {
-		let s = typeof value === 'boolean' ? String(value) : String(value)
-		if (containsDangerousHTML(s)) s = sanitizeAttribute(s)
+		const s = typeof value === 'boolean' ? String(value) : sanitizeAttributeWhitelist(value)
 		element.setAttribute(name, s)
 	}
 }
