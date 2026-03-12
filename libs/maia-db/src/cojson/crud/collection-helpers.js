@@ -17,23 +17,34 @@ import { resolve } from '../schema/resolver.js'
  */
 export async function getSchemaIndexColistId(peer, schema) {
 	const schemaCoId = await resolve(peer, schema, { returnType: 'coId' })
+	if (typeof process !== 'undefined' && process.env?.DEBUG)
+		console.log('[DEBUG getSchemaIndexColistId] schema=', schema, 'schemaCoId=', schemaCoId)
 	if (!schemaCoId) return null
 
 	const { ensureIndexesCoMap, ensureSchemaIndexColist } = await import(
 		'../indexing/schema-index-manager.js'
 	)
 	const indexesCoMap = await ensureIndexesCoMap(peer)
+	if (typeof process !== 'undefined' && process.env?.DEBUG)
+		console.log('[DEBUG getSchemaIndexColistId] indexesCoMap=', !!indexesCoMap)
 	if (!indexesCoMap) return null
 
 	const indexColistId = indexesCoMap.get(schemaCoId)
 	if (indexColistId && typeof indexColistId === 'string' && indexColistId.startsWith('co_')) {
+		if (typeof process !== 'undefined' && process.env?.DEBUG)
+			console.log('[DEBUG getSchemaIndexColistId] found indexColistId=', indexColistId)
 		return indexColistId
 	}
 
 	try {
 		const indexColist = await ensureSchemaIndexColist(peer, schemaCoId)
-		return indexColist?.id ?? null
-	} catch {
+		const result = indexColist?.id ?? null
+		if (typeof process !== 'undefined' && process.env?.DEBUG)
+			console.log('[DEBUG getSchemaIndexColistId] ensureSchemaIndexColist result=', result)
+		return result
+	} catch (e) {
+		if (typeof process !== 'undefined' && process.env?.DEBUG)
+			console.error('[DEBUG getSchemaIndexColistId] error=', e)
 		return null
 	}
 }

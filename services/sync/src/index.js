@@ -913,7 +913,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 				if (profileCore?.isAvailable()) {
 					const profile = profileCore.getCurrentContent()
 					if (profile?.get('name') !== maiaName) {
-						profile.set('name', maiaName, 'private')
+						profile.set('name', maiaName)
 					}
 				}
 			}

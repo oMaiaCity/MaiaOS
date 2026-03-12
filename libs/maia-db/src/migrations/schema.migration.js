@@ -10,7 +10,6 @@
  * @returns {Promise<void>}
  */
 
-import { COJSON_PRIVACY } from '../cojson/constants.js'
 import { createSchemaMeta } from '../schemas/registry.js'
 
 function travelerFallbackId(account) {
@@ -33,6 +32,6 @@ export async function schemaMigration(account, node, creationProps) {
 		const profileGroup = node.createGroup()
 		profileGroup.addMember('everyone', 'reader')
 		const profileCoMap = profileGroup.createMap({ name: profileName }, profileMeta)
-		account.set('profile', profileCoMap.id, COJSON_PRIVACY)
+		account.set('profile', profileCoMap.id)
 	}
 }

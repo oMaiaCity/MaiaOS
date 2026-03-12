@@ -3,7 +3,6 @@
  */
 
 import mergedMetaSchema from '@MaiaOS/schemata/os/meta.schema.json'
-import { COJSON_PRIVACY } from '../../cojson/constants.js'
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import { waitForStoreReady } from '../../cojson/crud/read-operations.js'
 import * as groups from '../../cojson/groups/groups.js'
@@ -103,7 +102,7 @@ export async function ensureSparkOs(account, node, maiaGroup, peer, schemaCoIdMa
 					data: {},
 					dataEngine: peer?.dbEngine,
 				})
-				osContent.set('schematas', schematas.id, COJSON_PRIVACY)
+				osContent.set('schematas', schematas.id)
 				if (node.storage?.syncManager) {
 					try {
 						await node.syncManager.waitForStorageSync(schematas.id)
@@ -138,7 +137,7 @@ export async function ensureSparkOs(account, node, maiaGroup, peer, schemaCoIdMa
 							data: {},
 							dataEngine: peer?.dbEngine,
 						})
-						sparkContent.set('avens', avens.id, COJSON_PRIVACY)
+						sparkContent.set('avens', avens.id)
 					}
 				}
 			}
