@@ -1,6 +1,7 @@
 ---
 name: maia-ucan — Generic Capabilities Plan
 overview: Build maia-ucan as a fully generic, reusable capabilities/access-control layer on top of MaiaOS infrastructure. UCAN spec 1:1, did:key from cojson, cojson-native. Usable for LLM, CRUD, APIs, future endpoints. LLM is the first consumer.
+supersededBy: .cursor/plans/ucan_maia_master.plan.md
 todos:
   - id: m0
     content: Capture Current State & System Audit

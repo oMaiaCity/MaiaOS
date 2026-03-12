@@ -1,18 +1,26 @@
 /**
- * InboxEngine - Message validation and inbox delivery
+ * InboxEngine - Message validation, inbox delivery, and unified inbox processing
  *
- * Owns: validateMessage, validatePayload, resolveInboxForTarget, pushMessage, deliver.
+ * Owns: validateMessage, validatePayload, resolveInboxForTarget, pushMessage, deliver,
+ * watchInbox (unified $stores-based processing), processUnprocessedMessages.
  * ActorEngine delegates deliverEvent and processEvents validation here.
  */
 
+import { normalizeCoValueData } from '@MaiaOS/db'
 import { validateAgainstSchema } from '@MaiaOS/schemata/validation.helper'
 import { deriveInboxRef } from '../utils/inbox-convention.js'
+import { sanitizePayloadForValidation } from '../utils/payload-sanitizer.js'
+import { perfChatStart, perfChatStep } from '../utils/perf-chat.js'
+import { perfPipelineStep } from '../utils/perf-pipeline.js'
 import { readStore } from '../utils/store-reader.js'
+
+const DEBOUNCE_MS = 0
 
 export class InboxEngine {
 	constructor(dataEngine = null) {
 		this.dataEngine = dataEngine
 		this.actorEngine = null // Set by Loader after ActorEngine creation
+		this._processingByInbox = new Map()
 	}
 
 	async resolveInboxForTarget(targetId) {
@@ -117,12 +125,18 @@ export class InboxEngine {
 	 * @returns {Promise<boolean>} True if valid or if actor has no interface (skip validation)
 	 */
 	async validatePayloadForActor(actorId, eventType, payload) {
+		const r = await this.validatePayloadForActorWithDetails(actorId, eventType, payload)
+		return r.valid
+	}
+
+	/** Returns { valid, errors } for detailed logging when validation fails */
+	async validatePayloadForActorWithDetails(actorId, eventType, payload) {
 		const actor = this.actorEngine?.getActor?.(actorId)
-		if (!actor) return true
+		if (!actor) return { valid: true, errors: null }
 		const schema = this._getPayloadSchemaFromActor(actor, eventType)
-		if (!schema) return true
+		if (!schema) return { valid: true, errors: null }
 		const result = await this._validateEventPayload(schema, payload || {}, eventType)
-		return result.valid
+		return { valid: result.valid, errors: result.errors }
 	}
 
 	async validateMessage(actor, message) {
@@ -138,12 +152,16 @@ export class InboxEngine {
 		}
 		const payloadSchema = this._getPayloadSchemaFromActor(actor, message.type)
 		if (!payloadSchema) return { valid: false }
-		const payload = message.payload || {}
+		let payload = message.payload || {}
 		if (
 			message.type === 'DB_OP' &&
 			(Array.isArray(payload) || !payload || typeof payload !== 'object' || !('op' in payload))
 		) {
 			return { valid: false }
+		}
+		// Normalize CoMap/Proxy and sanitize for validation (same as ViewEngine before deliver)
+		if (payload && typeof payload === 'object') {
+			payload = sanitizePayloadForValidation(normalizeCoValueData(payload))
 		}
 		const validation = await this._validateEventPayload(payloadSchema, payload, message.type)
 		if (!validation.valid) return { valid: false }
@@ -156,7 +174,111 @@ export class InboxEngine {
 		return { valid: true, payloadPlain }
 	}
 
+	/**
+	 * Orchestrate processing of unprocessed inbox messages. Spawns actor if needed, delegates to ActorEngine.processEvents.
+	 * Back pressure: guarded by _processingByInbox; ActorEngine.processEvents has _isProcessing + shouldRetry for drain.
+	 * @param {string} inboxCoId - Inbox CoStream co-id
+	 * @param {string} actorId - Actor co-id
+	 * @param {Object} actorConfig - Actor config (for spawnActor)
+	 */
+	async processUnprocessedMessages(inboxCoId, actorId, actorConfig) {
+		if (this._processingByInbox.get(inboxCoId)) return
+		this._processingByInbox.set(inboxCoId, true)
+		try {
+			const result = await this.dataEngine?.execute?.({
+				op: 'processInbox',
+				actorId,
+				inboxCoId,
+			})
+			const count = result?.messages?.length ?? 0
+
+			if (this.actorEngine?.actors?.has(actorId)) {
+				if (count > 0) await this.actorEngine.processEvents(actorId)
+				return
+			}
+
+			if (count === 0) return
+
+			const actor = await this.actorEngine?.spawnActor?.(actorConfig, { skipInboxSubscription: true })
+			if (actor) {
+				this.actorEngine?.runtime?._emit?.('actorSpawned', {
+					actorId,
+					config: actorConfig,
+					source: 'inbox',
+				})
+				await this.actorEngine?.processEvents?.(actorId)
+			}
+		} finally {
+			this._processingByInbox.delete(inboxCoId)
+		}
+	}
+
+	/**
+	 * Watch an inbox for unprocessed messages. Pure $stores-based processing.
+	 * Subscribe to inbox store, debounce (0ms for UX), process on change.
+	 * Used by ActorEngine (spawned actors) and Runtime (headless, destroyed actors).
+	 * @param {string} inboxCoId - Inbox CoStream co-id
+	 * @param {string} actorId - Actor co-id
+	 * @param {Object} actorConfig - Actor config (for spawnActor)
+	 * @returns {Function} Unsubscribe function
+	 */
+	watchInbox(inboxCoId, actorId, actorConfig) {
+		if (!this.dataEngine || !actorConfig?.inbox) return () => {}
+		if (typeof actorId !== 'string' || !actorId.startsWith('co_z')) {
+			throw new Error(`[InboxEngine] watchInbox: actorId must be co-id, got: ${actorId}`)
+		}
+		if (typeof inboxCoId !== 'string' || !inboxCoId.startsWith('co_z')) {
+			throw new Error(`[InboxEngine] watchInbox: inboxCoId must be co-id, got: ${inboxCoId}`)
+		}
+
+		const process = () => {
+			this.processUnprocessedMessages(inboxCoId, actorId, actorConfig)
+		}
+
+		let debounceTimeout = null
+		const scheduleProcess = () => {
+			if (debounceTimeout) clearTimeout(debounceTimeout)
+			debounceTimeout = setTimeout(() => {
+				debounceTimeout = null
+				process()
+			}, DEBOUNCE_MS)
+		}
+
+		let unsub = () => {}
+		const resolveAndSubscribe = async () => {
+			const schemaCoId = await this.dataEngine?.peer?.resolve?.(
+				{ fromCoValue: inboxCoId },
+				{ returnType: 'coId' },
+			)
+			const inboxStore = schemaCoId
+				? await this.dataEngine
+						?.execute?.({ op: 'read', schema: schemaCoId, key: inboxCoId })
+						.catch(() => null)
+				: null
+			if (!inboxStore?.subscribe) {
+				scheduleProcess()
+				return
+			}
+			const inboxUnsub = inboxStore.subscribe(scheduleProcess)
+			scheduleProcess()
+			unsub = () => {
+				if (debounceTimeout) clearTimeout(debounceTimeout)
+				inboxUnsub?.()
+			}
+		}
+		resolveAndSubscribe()
+
+		return () => {
+			unsub()
+		}
+	}
+
 	async deliver(targetId, message) {
+		const isChatSend =
+			message?.type === 'SEND_MESSAGE' && message?.payload != null && 'inputText' in message.payload
+		if (isChatSend) perfChatStart(`deliver SEND_MESSAGE → ${String(targetId).slice(0, 24)}...`)
+
+		perfPipelineStep('inbox:deliver:start', { type: message?.type, targetId: targetId?.slice(0, 20) })
 		const DEBUG =
 			typeof window !== 'undefined' &&
 			(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
@@ -172,6 +294,7 @@ export class InboxEngine {
 		} catch (err) {
 			throw new Error(`[InboxEngine] cannot resolve target to inbox. ${err?.message || err}`)
 		}
+		perfPipelineStep('inbox:resolveInbox')
 
 		const { inboxCoId, targetActorConfig } = resolved
 		const messageWithTarget = { ...message, target: resolved.resolvedTargetId }
@@ -180,9 +303,13 @@ export class InboxEngine {
 				inboxCoId: `${inboxCoId?.slice(0, 20)}...`,
 				hasTargetActorConfig: !!targetActorConfig,
 			})
+		if (isChatSend) perfChatStep('_pushMessage (createAndPushMessage)')
 		await this._pushMessage(inboxCoId, messageWithTarget)
+		perfPipelineStep('inbox:pushMessage')
+		if (isChatSend) perfChatStep('_pushMessage done')
 
 		if (targetActorConfig) {
+			if (isChatSend) perfChatStep('ensureActorSpawned / processEvents (targetActorConfig)')
 			if (this.actorEngine?.runtime) {
 				await this.actorEngine.runtime.ensureActorSpawned(targetActorConfig, inboxCoId)
 			} else {
@@ -194,6 +321,7 @@ export class InboxEngine {
 					} catch (_e) {}
 				}
 			}
+			if (isChatSend) perfChatStep('ensureActorSpawned / processEvents done')
 		} else {
 			const actorId = resolved.resolvedTargetId
 			if (DEBUG)
@@ -201,10 +329,9 @@ export class InboxEngine {
 					actorId: `${actorId?.slice(0, 20)}...`,
 					hasActor: actorId && this.actorEngine?.actors?.has(actorId),
 				})
-			if (actorId && this.actorEngine?.actors?.has(actorId)) {
-				await this.actorEngine.processEvents(actorId)
-			}
-			this.actorEngine?.runtime?.notifyInboxPush?.(inboxCoId)
+			// Do NOT call processEvents here - inbox subscription handles it. Calling both caused
+			// duplicate processing (same message processed twice → 2x SUCCESS, 2x tell SELECT_ITEM)
+			// and 2x latency. Subscription fires when costream updates; DEBOUNCE_MS=0 so it runs next tick.
 		}
 		if (DEBUG) console.log('[InboxEngine] deliver: done')
 	}

@@ -4,6 +4,9 @@
 	"name": "Sparks",
 	"description": "Create and manage collaborative groups (sparks)",
 	"actor": "°Maia/sparks/actor/intent",
+	"runtime": [
+		"browser"
+	],
 	"dependencies": [
 		"°Maia/sparks/actor/intent",
 		"°Maia/actor/views/sparks",
