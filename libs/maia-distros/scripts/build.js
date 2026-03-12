@@ -65,10 +65,19 @@ async function main() {
 	}
 
 	// Vendor RunAnywhere WASM (llamacpp + sherpa) for app local LLM
-	const llamaWasmSrc = join(repoRoot, 'node_modules/@runanywhere/web-llamacpp/wasm')
-	const onnxSherpaSrc = join(repoRoot, 'node_modules/@runanywhere/web-onnx/wasm/sherpa')
+	// Check root node_modules first, then distros-local (Bun may hoist differently in CI)
+	const llamaCandidates = [
+		join(repoRoot, 'node_modules/@runanywhere/web-llamacpp/wasm'),
+		join(__dirname, '../node_modules/@runanywhere/web-llamacpp/wasm'),
+	]
+	const llamaWasmSrc = llamaCandidates.find((p) => existsSync(p))
+	const onnxCandidates = [
+		join(repoRoot, 'node_modules/@runanywhere/web-onnx/wasm/sherpa'),
+		join(__dirname, '../node_modules/@runanywhere/web-onnx/wasm/sherpa'),
+	]
+	const onnxSherpaSrc = onnxCandidates.find((p) => existsSync(p))
 	const wasmOutDir = join(outputDir, 'runanywhere-wasm')
-	if (existsSync(llamaWasmSrc)) {
+	if (llamaWasmSrc) {
 		mkdirSync(wasmOutDir, { recursive: true })
 		for (const file of [
 			'racommons-llamacpp.wasm',
@@ -80,16 +89,52 @@ async function main() {
 			if (existsSync(src)) cpSync(src, join(wasmOutDir, file))
 		}
 	}
-	if (existsSync(onnxSherpaSrc)) {
+	if (onnxSherpaSrc) {
 		const sherpaOut = join(wasmOutDir, 'sherpa')
 		mkdirSync(sherpaOut, { recursive: true })
 		for (const file of readdirSync(onnxSherpaSrc)) {
 			cpSync(join(onnxSherpaSrc, file), join(sherpaOut, file))
 		}
 	}
-	if (existsSync(join(wasmOutDir, 'racommons-llamacpp-webgpu.js'))) {
-		console.log('Vendored runanywhere-wasm (llamacpp + sherpa)')
+	const wasmJs = join(wasmOutDir, 'racommons-llamacpp-webgpu.js')
+	if (!existsSync(wasmJs)) {
+		// Retry: run bun install and try again (CI may have stale/cached node_modules)
+		console.log('runanywhere-wasm missing, running bun install...')
+		const proc = Bun.spawnSync(['bun', 'install', '--frozen-lockfile'], {
+			cwd: repoRoot,
+			stdout: 'inherit',
+			stderr: 'inherit',
+		})
+		if (proc.exitCode === 0 && existsSync(llamaCandidates[0])) {
+			// Re-run vendor logic after install
+			if (existsSync(llamaCandidates[0])) {
+				mkdirSync(wasmOutDir, { recursive: true })
+				for (const file of [
+					'racommons-llamacpp.wasm',
+					'racommons-llamacpp.js',
+					'racommons-llamacpp-webgpu.wasm',
+					'racommons-llamacpp-webgpu.js',
+				]) {
+					const src = join(llamaCandidates[0], file)
+					if (existsSync(src)) cpSync(src, join(wasmOutDir, file))
+				}
+			}
+			if (existsSync(onnxCandidates[0])) {
+				const sherpaOut = join(wasmOutDir, 'sherpa')
+				mkdirSync(sherpaOut, { recursive: true })
+				for (const file of readdirSync(onnxCandidates[0])) {
+					cpSync(join(onnxCandidates[0], file), join(sherpaOut, file))
+				}
+			}
+		}
+		if (!existsSync(wasmJs)) {
+			console.error(
+				'Distros build failed: runanywhere-wasm not vendored. Ensure @runanywhere/web-llamacpp is installed.',
+			)
+			process.exit(1)
+		}
 	}
+	console.log('Vendored runanywhere-wasm (llamacpp + sherpa)')
 
 	console.log('Distros build complete')
 }

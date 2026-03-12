@@ -12,7 +12,6 @@
 
 import { SCHEMA_REF_PATTERN } from '@MaiaOS/schemata'
 import { EXCEPTION_SCHEMAS } from '../../schemas/registry.js'
-import { COJSON_PRIVACY } from '../constants.js'
 import { create } from '../crud/create.js'
 import { read as universalRead } from '../crud/read.js'
 import * as groups from '../groups/groups.js'
@@ -34,6 +33,8 @@ async function ensureOsCoMap(peer, spark) {
 	}
 
 	const osId = await groups.getSparkOsId(peer, effectiveSpark)
+	if (typeof process !== 'undefined' && process.env?.DEBUG)
+		console.log('[DEBUG ensureOsCoMap] osId=', osId, 'spark=', effectiveSpark)
 
 	if (osId) {
 		// spark.os exists - use universal read() API to load and resolve it
@@ -80,6 +81,8 @@ async function ensureOsCoMap(peer, spark) {
 			}
 
 			// Successfully got CoMap content - return it
+			if (typeof process !== 'undefined' && process.env?.DEBUG)
+				console.log('[DEBUG ensureOsCoMap] returning osContent for osId=', osId)
 			return osContent
 		} catch (_e) {
 			if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_e)
@@ -189,7 +192,7 @@ export async function ensureIndexesCoMap(peer) {
 	}
 
 	// Store in spark.os.indexes
-	osCoMap.set('indexes', indexesCoMapId, COJSON_PRIVACY)
+	osCoMap.set('indexes', indexesCoMapId)
 
 	// Use universal read() API to load and resolve the newly created indexes CoMap
 	try {
@@ -305,7 +308,7 @@ async function ensureSchemaSpecificIndexColistSchema(peer, schemaCoId, metaSchem
 		// Register the schema in the registry
 		const schematasRegistry = await ensureSchemataRegistry(peer)
 		if (schematasRegistry) {
-			schematasRegistry.set(indexColistSchemaTitle, indexColistSchemaCoId, COJSON_PRIVACY)
+			schematasRegistry.set(indexColistSchemaTitle, indexColistSchemaCoId)
 		}
 
 		return indexColistSchemaCoId
@@ -409,7 +412,7 @@ export async function ensureSchemaIndexColist(peer, schemaCoId, metaSchemaCoId =
 	indexColistId = indexColistRaw.id
 
 	// Store in spark.os.indexes using schema co-id as key
-	indexesCoMap.set(schemaCoId, indexColistId, COJSON_PRIVACY)
+	indexesCoMap.set(schemaCoId, indexColistId)
 
 	// CRITICAL: Don't wait for storage sync - it blocks the UI!
 	// The set() operation is already queued in CoJSON's CRDT
@@ -459,7 +462,7 @@ export async function ensureUnknownColist(peer) {
 		cotype: 'colist',
 		data: [],
 	})
-	osCoMap.set('unknown', unknownColist.id, COJSON_PRIVACY)
+	osCoMap.set('unknown', unknownColist.id)
 
 	// CRITICAL: Don't wait for storage sync - it blocks the UI!
 	// The set() operation is already queued in CoJSON's CRDT
@@ -715,7 +718,7 @@ async function ensureSchemataRegistry(peer) {
 		data: {},
 		dataEngine: peer.dbEngine,
 	})
-	osCoMap.set('schematas', schematasCoMap.id, COJSON_PRIVACY)
+	osCoMap.set('schematas', schematasCoMap.id)
 
 	// CRITICAL: Don't wait for storage sync - it blocks the UI!
 	// The set() operation is already queued in CoJSON's CRDT
@@ -770,7 +773,7 @@ export async function registerSchemaCoValue(peer, schemaCoValueCore) {
 	}
 
 	// Register schema: title → schema co-id (only if not already registered)
-	schematasRegistry.set(title, schemaCoValueCore.id, COJSON_PRIVACY)
+	schematasRegistry.set(title, schemaCoValueCore.id)
 
 	// CRITICAL: Don't wait for storage sync - it blocks the UI
 	// The set() operation is already queued in CoJSON's CRDT, so it will persist eventually
@@ -971,7 +974,7 @@ export async function indexCoValue(peer, coValueCoreOrId) {
 			// Add co-value co-id to index colist
 			// Schema-specific index colist schema will validate the co-id format via $co keyword
 			try {
-				indexColist.append(coId, COJSON_PRIVACY)
+				indexColist.append(coId)
 			} catch (_e) {
 				return
 			}
@@ -1003,7 +1006,7 @@ export async function indexCoValue(peer, coValueCoreOrId) {
 			}
 
 			// Add to unknown colist
-			unknownColist.append(coId, COJSON_PRIVACY)
+			unknownColist.append(coId)
 
 			// CRITICAL: Don't wait for storage sync - it blocks the UI
 			// The append() operation is already queued in CoJSON's CRDT, so it will persist eventually

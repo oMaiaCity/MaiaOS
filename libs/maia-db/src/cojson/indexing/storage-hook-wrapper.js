@@ -242,13 +242,19 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 
 					// Check if this co-value should be indexed (skips internal co-values)
 					const { shouldIndex } = await shouldIndexCoValue(peer, updatedCoValueCore)
+					if (typeof process !== 'undefined' && process.env?.DEBUG)
+						console.log('[DEBUG storage-hook] coId=', coId, 'shouldIndex=', shouldIndex)
 					if (!shouldIndex) {
 						return
 					}
 
 					// Regular co-value - index it (await ensures storage not complete until indexed)
 					await indexCoValue(peer, updatedCoValueCore)
+					if (typeof process !== 'undefined' && process.env?.DEBUG)
+						console.log('[DEBUG storage-hook] indexed coId=', coId)
 				} catch (error) {
+					if (typeof process !== 'undefined' && process.env?.DEBUG)
+						console.error('[DEBUG storage-hook] indexing failed coId=', coId, error)
 					console.error('[StorageHook] Indexing failed', coId, error)
 				} finally {
 					pendingIndexing.delete(coId)

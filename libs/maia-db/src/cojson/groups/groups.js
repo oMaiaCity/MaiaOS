@@ -4,7 +4,6 @@
  * Provides all group-related operations: access, info extraction, and member management.
  */
 
-import { COJSON_PRIVACY } from '../constants.js'
 import { waitForStoreReady } from '../crud/read-operations.js'
 
 /**
@@ -228,7 +227,7 @@ export async function setSparkAvensId(peer, spark, avensId) {
 	const sparkContent = peer.getCurrentContent(sparkCore)
 	if (!sparkContent || typeof sparkContent.set !== 'function')
 		throw new Error(`[setSparkAvensId] Spark content not available`)
-	sparkContent.set('avens', avensId, COJSON_PRIVACY)
+	sparkContent.set('avens', avensId)
 }
 
 /**

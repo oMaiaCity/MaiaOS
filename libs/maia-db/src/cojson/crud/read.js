@@ -1160,6 +1160,8 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 	// Get schema index colist ID from spark.os.indexes (keyed by schema co-id)
 	// Supports both schema co-ids (co_z...) and human-readable names (°Maia/schema/data/todos)
 	const coListId = await getCoListId(peer, schema)
+	if (typeof process !== 'undefined' && process.env?.DEBUG)
+		console.log('[DEBUG readCollection] schema=', schema, 'coListId=', coListId)
 	if (!coListId) {
 		return store
 	}

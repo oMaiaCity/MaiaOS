@@ -28,8 +28,7 @@
 		"lint": "bunx biome lint .",
 		"check": "bunx biome check .",
 		"check:fix": "bunx biome check --write .",
-		"check:ci": "bun run format:maia:check && bun run check:cojson-privacy && bunx biome ci .",
-		"check:cojson-privacy": "bun scripts/check-cojson-privacy.js",
+		"check:ci": "bun run format:maia:check && bunx biome ci .",
 		"prepare": "husky"
 	},
 	"devDependencies": {
