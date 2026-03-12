@@ -625,7 +625,7 @@ export async function renderAvenViewer(
 		} catch (error) {
 			const container = document.getElementById(`aven-container-${currentAven}`)
 			if (container) {
-				container.innerHTML = `<div class="empty-state p-8 text-center text-rose-500 font-medium bg-rose-50/50 rounded-2xl border border-rose-100">Error loading aven: ${error.message}</div>`
+				container.innerHTML = `<div class="empty-state p-8 text-center text-rose-500 font-medium bg-rose-50/50 rounded-2xl border border-rose-100">Error loading aven: ${escapeHtml(error.message)}</div>`
 			}
 		}
 	})

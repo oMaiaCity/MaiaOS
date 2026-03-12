@@ -27,7 +27,7 @@ import {
 	renderSignInPrompt,
 	renderUnsupportedBrowser,
 } from './signin.js'
-import { getSyncStatusMessage } from './utils.js'
+import { escapeHtml, getSyncStatusMessage } from './utils.js'
 
 let maia
 let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'aven-viewer'
@@ -303,7 +303,7 @@ async function initAgentMode() {
 		document.getElementById('app').innerHTML = `
 			<div style="display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; gap: 1rem;">
 				<h1 style="color: #ef4444;">Agent Mode Error</h1>
-				<p style="color: #666;">${error.message}</p>
+				<p style="color: #666;">${escapeHtml(error.message)}</p>
 				<p style="color: #999; font-size: 0.875rem;">Check your environment variables and try again.</p>
 			</div>
 		`

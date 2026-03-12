@@ -6,7 +6,7 @@
  */
 
 import { existsSync, readFileSync, statSync } from 'node:fs'
-import { dirname, extname, join } from 'node:path'
+import { dirname, extname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { serve } from 'bun'
 
@@ -40,18 +40,25 @@ serve({
 	headers: [
 		['Cross-Origin-Opener-Policy', 'same-origin'],
 		['Cross-Origin-Embedder-Policy', 'credentialless'],
+		['X-Content-Type-Options', 'nosniff'],
+		['X-Frame-Options', 'DENY'],
+		[
+			'Content-Security-Policy',
+			"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https: wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+		],
 	],
 	async fetch(req) {
 		const url = new URL(req.url)
 		const pathname = url.pathname
 
-		// Security: prevent directory traversal
-		if (pathname.includes('..')) {
+		// Security: prevent directory traversal - resolve and ensure path stays under DIST_DIR
+		const safePath = pathname === '/' ? 'index.html' : pathname.replace(/^\//, '') || 'index.html'
+		const filePath = resolve(DIST_DIR, safePath)
+		const distResolved = resolve(DIST_DIR)
+		const rel = relative(distResolved, filePath)
+		if (rel.startsWith('..')) {
 			return new Response('Forbidden', { status: 403 })
 		}
-
-		// Try to serve static file
-		const filePath = join(DIST_DIR, pathname === '/' ? 'index.html' : pathname)
 
 		// Check if it's a file
 		if (existsSync(filePath)) {
