@@ -104,8 +104,7 @@ The view subscribes to context changes:
 ### Core Engine Files
 
 - **Actor Engine** (`libs/maia-engines/src/engines/actor.engine.js`):
-  - `sendMessage()` - Send message to actor inbox
-  - `sendInternalEvent()` - Send internal event to own inbox
+  - `deliverEvent()` - Deliver event to actor inbox (inbox-only, persisted via CoJSON)
   - `processMessages()` - Process messages from inbox
   - `_createChildActorIfNeeded()` - Create child actor lazily
 

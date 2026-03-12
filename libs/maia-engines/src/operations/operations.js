@@ -4,6 +4,7 @@
  */
 
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver'
+import { createSuccessResult } from '@MaiaOS/schemata/operation-result'
 import {
 	ensureCoValueAvailable,
 	requireDataEngine,
@@ -11,7 +12,6 @@ import {
 	validateCoId,
 	validateItems,
 } from '@MaiaOS/schemata/validation.helper'
-import { createSuccessResult } from './operation-result.js'
 
 async function resolveSchemaFromCoValue(peer, coId, _opName) {
 	try {

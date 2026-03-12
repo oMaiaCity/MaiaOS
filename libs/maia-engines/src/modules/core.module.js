@@ -2,7 +2,13 @@ export const config = {
 	version: '1.0.0',
 	description: 'Core UI tools (view modes, modals, utilities)',
 	namespace: '@core',
-	tools: ['preventDefault', 'publishMessage', 'computeMessageNames', 'updatePaperContent'],
+	tools: [
+		'preventDefault',
+		'publishMessage',
+		'computeMessageNames',
+		'updatePaperContent',
+		'copyLogsToClipboard',
+	],
 }
 
 export async function register(registry) {

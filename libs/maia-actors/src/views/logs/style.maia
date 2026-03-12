@@ -20,7 +20,7 @@
 			"color": "#001F33",
 			"flexShrink": 0
 		},
-		"agentCreatorTitle": {
+		"vibeCreatorTitle": {
 			"fontFamily": "{typography.fontFamily.heading}",
 			"fontSize": "0.9rem",
 			"fontWeight": "{typography.fontWeight.bold}",

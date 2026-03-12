@@ -1,7 +1,7 @@
 {
 	"$schema": "°Maia/schema/actor",
 	"$id": "°Maia/chat/actor/paper",
-	"role": "paper",
+	"role": "@chat/paper",
 	"context": "°Maia/chat/context/paper",
 	"view": "°Maia/chat/view/paper",
 	"state": "°Maia/chat/state/paper",

@@ -5,4 +5,4 @@ export {
 	createSuccessResult,
 	isPermissionError,
 	isSuccessResult,
-} from './operation-result.js'
+} from '@MaiaOS/schemata/operation-result'

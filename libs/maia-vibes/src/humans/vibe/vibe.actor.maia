@@ -9,5 +9,6 @@
 	"inbox": "°Maia/humans/inbox/vibe",
 	"messageTypes": [
 		"DISMISS"
-	]
+	],
+	"role": "@humans/vibe"
 }
