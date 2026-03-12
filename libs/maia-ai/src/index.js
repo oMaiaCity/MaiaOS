@@ -17,6 +17,7 @@ import {
 } from '@runanywhere/web'
 import {
 	fromToolValue,
+	getStringArg,
 	LlamaCPP,
 	LlamaCppBridge,
 	TextGeneration,
@@ -58,7 +59,8 @@ let initialized = false
 /**
  * Initialize the RunAnywhere SDK and register LlamaCPP + ONNX backends.
  * Configures WASM URLs to point to /runanywhere-wasm/ (served by dev-server and production).
- * @param {object} [opts] - Optional: { environment: 'development'|'production', debug: boolean }
+ * @param {object} [opts] - Optional: { environment, debug, addTodoExecutor }
+ * @param {function(string): Promise<{ success: boolean, error?: string }>} [opts.addTodoExecutor] - When provided, registers add_todo tool for LFM to create todos via the todos actor
  */
 export async function initialize(opts = {}) {
 	if (initialized) return
@@ -84,6 +86,42 @@ export async function initialize(opts = {}) {
 			timezone: toToolValue(Intl.DateTimeFormat().resolvedOptions().timeZone),
 		}),
 	)
+	if (typeof opts.addTodoExecutor === 'function') {
+		ToolCalling.registerTool(
+			{
+				name: 'add_todo',
+				description:
+					'Adds a todo item to the user\'s todo list. MUST be called when the user asks to add a task, create a todo, remember something to do, or add something to their list.',
+				parameters: [
+					{
+						name: 'text',
+						type: 'string',
+						description: 'The todo item text (e.g. "Buy groceries", "Call mom")',
+						required: true,
+					},
+				],
+				category: 'Productivity',
+			},
+			async (args) => {
+				const text = getStringArg(args, 'text')?.trim() ?? ''
+				if (!text) {
+					return { success: toToolValue(false), error: toToolValue('Todo text cannot be empty') }
+				}
+				try {
+					const result = await opts.addTodoExecutor(text)
+					return {
+						success: toToolValue(result?.success ?? true),
+						message: toToolValue(result?.message ?? `Added todo: ${text}`),
+					}
+				} catch (err) {
+					return {
+						success: toToolValue(false),
+						error: toToolValue(err?.message ?? String(err)),
+					}
+				}
+			},
+		)
+	}
 	SherpaONNXBridge.shared.wasmUrl = `${base}sherpa/sherpa-onnx-glue.js`
 	await ONNX.register()
 	initialized = true
@@ -198,7 +236,11 @@ function formatToolsForPromptLFM2(tools) {
 	const exampleWithArgs = tools.some((t) => t.parameters?.length > 0)
 		? `[${exampleTool}(arg="value")]`
 		: `[${exampleTool}()]`
-	return `You have access to the following tools:\n\n${descriptions}\n\nTo use a tool, respond with:\n<|tool_call_start|>${exampleWithArgs}<|tool_call_end|>\n\nExample for time queries: <|tool_call_start|>[get_current_time()]<|tool_call_end|>\n\nIf no tool is needed, respond normally.`
+	const timeExample = 'Example for time: <|tool_call_start|>[get_current_time()]<|tool_call_end|>'
+	const todoExample = toolNames.includes('add_todo')
+		? '\nExample for adding a todo: <|tool_call_start|>[add_todo(text="Buy groceries")]<|tool_call_end|>'
+		: ''
+	return `You have access to the following tools:\n\n${descriptions}\n\nTo use a tool, respond with ONLY the tool call — no other text before or after:\n<|tool_call_start|>${exampleWithArgs}<|tool_call_end|>\n\n${timeExample}${todoExample}\n\nWhen a tool is needed, output ONLY the tool call. Do not add conversational text. If no tool is needed, respond normally.`
 }
 
 /** Parse LFM2 format tool call from LLM output. */

@@ -47,7 +47,14 @@ function shouldFilterLine(line) {
 	}
 
 	// Filter EIO/pipe errors on Ctrl+C shutdown
-	if (trimmed.includes('EIO:') || trimmed.includes('i/o error') || trimmed.includes('errno: -5')) {
+	if (
+		trimmed.includes('EIO:') ||
+		trimmed.includes('i/o error') ||
+		trimmed.includes('errno: -5') ||
+		trimmed.includes('syscall:') ||
+		trimmed.includes('code: "EIO"') ||
+		/^\s*fd:\s*\d+/.test(trimmed)
+	) {
 		return true
 	}
 
@@ -411,6 +418,14 @@ async function killChildren() {
 	for (const p of procs) {
 		if (p && !p.killed) {
 			try {
+				// Destroy pipes first to avoid EIO when child exits
+				for (const stream of [p.stdout, p.stderr]) {
+					if (stream && !stream.destroyed) {
+						try {
+							stream.destroy()
+						} catch (_) {}
+					}
+				}
 				p.kill('SIGTERM')
 				toWait.push(
 					Promise.race([
@@ -433,6 +448,11 @@ function setupSignalHandlers() {
 		if (shuttingDown) return
 		shuttingDown = true
 		process.exitCode = 0
+		// Stop stdin reads to avoid EIO when terminal is interrupted
+		try {
+			process.stdin.pause()
+			process.stdin.removeAllListeners()
+		} catch (_) {}
 		try {
 			await killChildren()
 		} finally {
