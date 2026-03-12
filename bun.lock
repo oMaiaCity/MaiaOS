@@ -161,6 +161,7 @@
       "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/loader": "workspace:*",
+        "@MaiaOS/maia-ai": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
       },
     },
