@@ -208,7 +208,14 @@ export class ProcessEngine {
 	}
 
 	async _evaluateGuard(guard, context, eventPayload, actor) {
-		const resolved = await this._evaluatePayload(guard, context, eventPayload, null, actor)
+		// ProcessEngine-specific: $onlyWhenOriginated - only pass when event came from this actor's view (not from a tell)
+		if (guard?.$onlyWhenOriginated === true) {
+			if (eventPayload?.source !== actor?.id) return false
+		}
+		const guardForEval = guard && typeof guard === 'object' ? { ...guard } : guard
+		delete guardForEval?.$onlyWhenOriginated
+
+		const resolved = await this._evaluatePayload(guardForEval, context, eventPayload, null, actor)
 		if (typeof resolved === 'boolean') return resolved
 		if (resolved && typeof resolved === 'object') {
 			for (const [key, expected] of Object.entries(resolved)) {
@@ -328,7 +335,7 @@ export class ProcessEngine {
 			return
 		}
 		const eventPayload = process.eventPayload || payload || {}
-		const callerId = eventPayload.replyTo ?? actor._lastEventSource
+		let callerId = eventPayload.replyTo ?? actor._lastEventSource
 		try {
 			const rawResult = await actor.executableFunction.execute(actor, eventPayload)
 			if (DEBUG)
@@ -337,10 +344,22 @@ export class ProcessEngine {
 					hasData: !!rawResult?.data,
 				})
 			if (!isSuccessResult(rawResult)) {
+				// Deliver to caller (replyTo); fallback to _lastEventSource so os/messages can forward
 				if (callerId) {
 					await actor.actorOps.deliverEvent(actor.id, callerId, 'ERROR', {
 						errors: rawResult.errors,
 					})
+				} else {
+					if (DEBUG)
+						console.warn(
+							'[ProcessEngine] _executeFunction: no callerId (replyTo), delivering to _lastEventSource',
+						)
+					callerId = actor._lastEventSource
+					if (callerId) {
+						await actor.actorOps.deliverEvent(actor.id, callerId, 'ERROR', {
+							errors: rawResult.errors,
+						})
+					}
 				}
 				await actor.actorOps.deliverEvent(actor.id, actor.id, 'ERROR', {
 					errors: rawResult.errors,
@@ -361,8 +380,9 @@ export class ProcessEngine {
 			const errors = error?.errors ?? [
 				createErrorEntry(isPermissionError(error) ? 'permission' : 'structural', error?.message),
 			]
-			if (callerId) {
-				await actor.actorOps.deliverEvent(actor.id, callerId, 'ERROR', { errors })
+			const deliverTo = callerId ?? actor._lastEventSource
+			if (deliverTo) {
+				await actor.actorOps.deliverEvent(actor.id, deliverTo, 'ERROR', { errors })
 			}
 			await actor.actorOps.deliverEvent(actor.id, actor.id, 'ERROR', { errors })
 		}

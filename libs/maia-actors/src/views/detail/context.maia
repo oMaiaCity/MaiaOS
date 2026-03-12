@@ -10,8 +10,8 @@
 		"map": {
 			"id": "id",
 			"name": "name",
-			"members": "$os.capabilities.guardian.accountMembers",
-			"groupId": "$os.capabilities.guardian.id"
+			"members": "$os.groups.guardian.accountMembers",
+			"groupId": "$os.groups.guardian.id"
 		}
 	},
 	"hasSpark": false,

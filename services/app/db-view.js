@@ -5,7 +5,8 @@
 
 // Import from kernel bundle - everything bundled (no direct @MaiaOS/db in production)
 import {
-	resolveAccountCoIdsToProfileNames,
+	loadCapabilitiesGrants,
+	resolveAccountCoIdsToProfiles,
 	resolveGroupCoIdsToCapabilityNames,
 } from '@MaiaOS/loader'
 
@@ -388,6 +389,8 @@ export async function renderApp(
 
 	// Get data based on current view
 	let data, viewTitle, _viewSubtitle
+	let tableContent = ''
+	let headerInfo = null
 
 	// Get account and node for navigation
 	const account = maia.id.maiaId
@@ -422,11 +425,10 @@ export async function renderApp(
 			.map((g, i) => {
 				const profile = profiles.get(g.sub)
 				const displayName = profile?.name ?? truncate(g.sub, 16)
-				const avatarHtml = getProfileAvatarHtml(profile?.image ?? null, {
-					size: 24,
-					className: 'capabilities-avatar',
-				})
-				const subjectHtml = `<span class="capabilities-subject-wrap">${avatarHtml}<span>${escapeHtml(displayName)}</span></span>`
+				const image = profile?.image ?? null
+				const subjectHtml = image
+					? `<span class="capabilities-subject-wrap"><img class="capabilities-avatar" data-co-id="${escapeHtml(image)}" alt="" width="24" height="24" /><span>${escapeHtml(displayName)}</span></span>`
+					: escapeHtml(displayName)
 				const expired = typeof g.exp === 'number' && g.exp > 0 && g.exp < nowSec
 				const rowClass = `capabilities-row ${i % 2 === 0 ? 'capabilities-row-even' : 'capabilities-row-odd'}${expired ? ' capabilities-row-expired' : ' capabilities-row-active'}`
 				const currentExp = typeof g.exp === 'number' ? g.exp : 0
@@ -439,7 +441,7 @@ export async function renderApp(
 				<td class="capabilities-cell"><code class="capabilities-id" onclick="selectCoValue('${g.id}')" title="${escapeHtml(g.id)}">${truncate(g.id, 12)}</code></td>
 				<td class="capabilities-cell capabilities-actions">
 					<button type="button" class="capabilities-extend-btn" onclick="window.extendCapability && window.extendCapability('${g.id}', ${currentExp})" title="Extend expiry by 1 day">+1 day</button>
-					<button type="button" class="capabilities-revoke-btn" data-cmd="${escapeHtml(g.cmd || '')}" data-sub="${escapeHtml(g.sub || '')}" onclick="window.revokeCapability && window.revokeCapability('${escapeHtml(g.id)}', { cmd: this.dataset.cmd, sub: this.dataset.sub })" title="Revoke capability">Delete</button>
+					<button type="button" class="capabilities-revoke-btn" onclick="window.revokeCapability && window.revokeCapability('${g.id}')" title="Revoke capability">Delete</button>
 				</td>
 			</tr>
 		`
@@ -643,7 +645,7 @@ export async function renderApp(
 		_viewSubtitle = ''
 	}
 
-	// Build account structure navigation (Account only - agents in spark.agents)
+	// Build account structure navigation (Account + Capabilities)
 	const navigationItems = []
 
 	// Entry 1: Account itself
@@ -659,10 +661,7 @@ export async function renderApp(
 		type: 'capabilities',
 	})
 
-	// Build table content based on view
-	let tableContent = ''
-	let headerInfo = null // Store header info for colist/costream to display in inspector-header
-
+	// Build table content based on view (tableContent/headerInfo already set by capabilities branch if applicable)
 	// DB Viewer only shows DB content (no agent rendering here)
 	if (currentContextCoValueId && data) {
 		// Capabilities view: tableContent already set above
@@ -678,21 +677,21 @@ export async function renderApp(
 					<p class="mt-4 font-medium text-slate-500">Loading CoValue... (waiting for verified state)</p>
 				</div>
 			`
-		} else if ((data._coValueType || data.cotype || data.type) === 'cobinary') {
-			// CoBinary: Display binary stream metadata (co-id, mimeType, size, finished)
-			headerInfo = {
-				type: 'cobinary',
-				typeLabel: 'CoBinary',
-				description: 'Binary file stream',
-			}
-			const mimeType = data.mimeType || 'application/octet-stream'
-			const totalSizeBytes = data.totalSizeBytes ?? null
-			const finished = data.finished ?? false
-			const sizeStr = totalSizeBytes != null ? `${(totalSizeBytes / 1024).toFixed(1)} KB` : '?'
-			const isImage = mimeType.startsWith('image/')
-			let previewHtml = ''
-			if (isImage && data.id && maia?.do) {
-				previewHtml = `
+			} else if ((data._coValueType || data.cotype || data.type) === 'cobinary') {
+				// CoBinary: Display binary stream metadata (co-id, mimeType, size, finished)
+				headerInfo = {
+					type: 'cobinary',
+					typeLabel: 'CoBinary',
+					description: 'Binary file stream',
+				}
+				const mimeType = data.mimeType || 'application/octet-stream'
+				const totalSizeBytes = data.totalSizeBytes ?? null
+				const finished = data.finished ?? false
+				const sizeStr = totalSizeBytes != null ? `${(totalSizeBytes / 1024).toFixed(1)} KB` : '?'
+				const isImage = mimeType.startsWith('image/')
+				let previewHtml = ''
+				if (isImage && data.id && maia?.do) {
+					previewHtml = `
 					<div class="mt-4 p-4 bg-slate-50/50 rounded-xl border border-slate-200" style="width:100%;max-width:100%;min-width:0;overflow:hidden">
 						<p class="text-xs text-slate-500 mb-2">Image preview (loads on demand)</p>
 						<div style="width:100%;max-width:100%;min-width:0;overflow:hidden">
@@ -700,8 +699,8 @@ export async function renderApp(
 						</div>
 					</div>
 				`
-			}
-			tableContent = `
+				}
+				tableContent = `
 				<div class="space-y-4 cobinary-container">
 					<div class="grid grid-cols-2 gap-3 text-sm">
 						<div class="font-medium text-slate-500">Co-ID</div>
@@ -716,29 +715,29 @@ export async function renderApp(
 					${previewHtml}
 				</div>
 			`
-			// Image preview loaded reactively via hydrateCobinaryPreviews (after innerHTML)
-		} else if (
-			(data._coValueType || data.cotype || data.type) === 'colist' ||
-			(data._coValueType || data.cotype || data.type) === 'costream'
-		) {
-			// CoList/CoStream: Display items directly (they ARE the list/stream, no properties)
-			// STRICT: Ensure items is always array (read API may return object/undefined for index colists)
-			const raw = data?.items
-			const items = Array.isArray(raw)
-				? raw
-				: raw && typeof raw === 'object' && !Array.isArray(raw)
-					? Object.values(raw)
-					: []
-			const isStream = (data._coValueType || data.cotype || data.type) === 'costream'
-			const typeLabel = isStream ? 'CoStream' : 'CoList'
+				// Image preview loaded reactively via hydrateCobinaryPreviews (after innerHTML)
+			} else if (
+				(data._coValueType || data.cotype || data.type) === 'colist' ||
+				(data._coValueType || data.cotype || data.type) === 'costream'
+			) {
+				// CoList/CoStream: Display items directly (they ARE the list/stream, no properties)
+				// STRICT: Ensure items is always array (read API may return object/undefined for index colists)
+				const raw = data?.items
+				const items = Array.isArray(raw)
+					? raw
+					: raw && typeof raw === 'object' && !Array.isArray(raw)
+						? Object.values(raw)
+						: []
+				const isStream = (data._coValueType || data.cotype || data.type) === 'costream'
+				const typeLabel = isStream ? 'CoStream' : 'CoList'
 
-			// Store header info for display in inspector-header
-			headerInfo = {
-				type: data._coValueType || data.cotype || data.type,
-				typeLabel: typeLabel,
-				itemCount: items.length,
-				description: isStream ? 'Append-only stream' : 'Ordered list',
-			}
+				// Store header info for display in inspector-header
+				headerInfo = {
+					type: data._coValueType || data.cotype || data.type,
+					typeLabel: typeLabel,
+					itemCount: items.length,
+					description: isStream ? 'Append-only stream' : 'Ordered list',
+				}
 
 				const itemRows = items
 					.map((item, index) => {
@@ -769,53 +768,53 @@ export async function renderApp(
 					</div>
 				</div>
 			`
-		} else if (
-			data &&
-			typeof data === 'object' &&
-			!Array.isArray(data) &&
-			!data.error &&
-			!data.loading
-		) {
-			// CoMap: Display properties from flat object format (operations API)
-			// Convert flat object to normalized format for display
-			const schemaCoId = data.$schema // STRICT: Only $schema, no fallback
-			const schemaDef = schemaCoId ? await getSchemaFromDb(maia, schemaCoId) : null
+			} else if (
+				data &&
+				typeof data === 'object' &&
+				!Array.isArray(data) &&
+				!data.error &&
+				!data.loading
+			) {
+				// CoMap: Display properties from flat object format (operations API)
+				// Convert flat object to normalized format for display
+				const schemaCoId = data.$schema // STRICT: Only $schema, no fallback
+				const schemaDef = schemaCoId ? await getSchemaFromDb(maia, schemaCoId) : null
 
-			// Extract properties from flat object (exclude metadata keys)
-			// groupInfo is backend-derived metadata (not a co-value property) - only show in metadata sidebar
-			// CoJSON internal keys (sealer, signer, KEY_..._FOR_SEALER_...) go to metadata sidebar, not main view
-			const propertyKeys = Object.keys(data).filter(
-				(k) =>
-					k !== 'id' &&
-					k !== 'loading' &&
-					k !== 'error' &&
-					k !== '$schema' &&
-					k !== 'schema' &&
-					k !== 'type' &&
-					k !== 'cotype' && // Display only in metadata aside, not as main content property
-					k !== '_coValueType' && // Internal: actual CRDT type of this CoValue (display metadata)
-					k !== 'displayName' &&
-					k !== 'headerMeta' &&
-					k !== 'groupInfo' && // Backend metadata - displayed in metadata sidebar, not as a property
-					!isCoJsonInternalKey(k, data[k]),
-			)
+				// Extract properties from flat object (exclude metadata keys)
+				// groupInfo is backend-derived metadata (not a co-value property) - only show in metadata sidebar
+				// CoJSON internal keys (sealer, signer, KEY_..._FOR_SEALER_...) go to metadata sidebar, not main view
+				const propertyKeys = Object.keys(data).filter(
+					(k) =>
+						k !== 'id' &&
+						k !== 'loading' &&
+						k !== 'error' &&
+						k !== '$schema' &&
+						k !== 'schema' &&
+						k !== 'type' &&
+						k !== 'cotype' && // Display only in metadata aside, not as main content property
+						k !== '_coValueType' && // Internal: actual CRDT type of this CoValue (display metadata)
+						k !== 'displayName' &&
+						k !== 'headerMeta' &&
+						k !== 'groupInfo' && // Backend metadata - displayed in metadata sidebar, not as a property
+						!isCoJsonInternalKey(k, data[k]),
+				)
 
-			if (propertyKeys.length === 0) {
-				// No properties - show empty state (with hint for agents/schematas/indexes)
-				const schemaId = (data.$schema || schemaCoId || '').toString()
-				const isRegistryEmpty =
-					schemaId.includes('agents-registry') ||
-					schemaId.includes('schematas-registry') ||
-					schemaId.includes('indexes-registry')
-				const emptyHint = isRegistryEmpty
-					? '<p class="mt-3 text-sm text-amber-600 max-w-md mx-auto">Vibes/schemas come from the sync server. Run <code class="bg-amber-100 px-1 rounded">bun dev</code> (moai on :4201), sign in, and check console for <code class="bg-amber-100 px-1 rounded">linkAccountToSyncRegistry</code>.</p>'
-					: ''
-				tableContent = `<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">No properties available${emptyHint}</div>`
-			} else {
-				const propertyItems = propertyKeys
-					.map((key) => {
-						const value = data[key]
-						let propType = typeof value
+				if (propertyKeys.length === 0) {
+					// No properties - show empty state (with hint for agents/schematas/indexes)
+					const schemaId = (data.$schema || schemaCoId || '').toString()
+					const isRegistryEmpty =
+						schemaId.includes('agents-registry') ||
+						schemaId.includes('schematas-registry') ||
+						schemaId.includes('indexes-registry')
+					const emptyHint = isRegistryEmpty
+						? '<p class="mt-3 text-sm text-amber-600 max-w-md mx-auto">Vibes/schemas come from the sync server. Run <code class="bg-amber-100 px-1 rounded">bun dev</code> (moai on :4201), sign in, and check console for <code class="bg-amber-100 px-1 rounded">linkAccountToSyncRegistry</code>.</p>'
+						: ''
+					tableContent = `<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">No properties available${emptyHint}</div>`
+				} else {
+					const propertyItems = propertyKeys
+						.map((key) => {
+							const value = data[key]
+							let propType = typeof value
 
 							// Detect co-id references
 							if (typeof value === 'string' && value.startsWith('co_')) {
@@ -875,10 +874,9 @@ export async function renderApp(
 		} catch (_e) {}
 	}
 	const accountDisplayName = accountProfile?.name ?? truncate(accountId, 12)
-	const accountAvatarHtml = getProfileAvatarHtml(accountProfile?.image, {
-		size: 44,
-		className: 'navbar-avatar',
-	})
+	const accountAvatarHtml = accountProfile?.image
+		? `<img class="navbar-avatar" data-co-id="${escapeHtml(accountProfile.image)}" alt="" width="24" height="24" />`
+		: ''
 	// Metadata sidebar (explorer-style navigation; skip for capabilities view)
 	let metadataSidebar = ''
 	if (currentContextCoValueId && data && !data.error && !data.loading && !data._capabilitiesView) {
@@ -1209,7 +1207,7 @@ export async function renderApp(
 						${
 							authState.signedIn
 								? `
-							<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId}" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${escapeHtml(accountDisplayName)}</button>
+							<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId}" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${accountAvatarHtml}<span>${escapeHtml(accountDisplayName)}</span></button>
 						`
 								: ''
 						}
@@ -1220,9 +1218,15 @@ export async function renderApp(
 					${
 						authState.signedIn && accountId
 							? `
-						<div class="mobile-menu-account-id">
-							<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
-							<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
+						<div class="mobile-menu-account">
+							${accountAvatarHtml ? `<div class="mobile-menu-account-avatar">${accountAvatarHtml}</div>` : ''}
+							<div class="mobile-menu-account-info">
+								<span class="mobile-menu-account-name">${escapeHtml(accountDisplayName)}</span>
+								<div class="mobile-menu-account-id-row">
+									<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
+									<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(truncate(accountId, 24))}</code>
+								</div>
+							</div>
 						</div>
 					`
 							: ''

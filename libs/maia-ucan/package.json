@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/maia-ucan",
-	"version": "26.0312.1518",
+	"version": "26.0217.1438",
 	"type": "module",
 	"main": "./src/index.js",
 	"exports": {

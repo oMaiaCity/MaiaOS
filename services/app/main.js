@@ -13,7 +13,7 @@ import {
 	isPRFSupported,
 	loadOrCreateAgentAccount,
 	MaiaOS,
-	resolveAccountToProfileCoId,
+	resolveAccountCoIdsToProfiles,
 	signInWithPasskey,
 	signUpWithPasskey,
 	subscribeSyncState,
@@ -898,9 +898,10 @@ function selectCoValueInternal(coId, skipHistory = false) {
 /** Resolve account co-id to profile when possible (for clicks); then select. */
 async function selectCoValue(coId, skipHistory = false) {
 	let targetCoId = coId
-	if (coId?.startsWith('co_z') && maia?.db) {
+	if (coId?.startsWith('co_z') && maia?.do) {
 		try {
-			const profileId = await resolveAccountToProfileCoId(maia, coId)
+			const profiles = await resolveAccountCoIdsToProfiles(maia, [coId])
+			const profileId = profiles.get(coId)?.id
 			if (profileId) targetCoId = profileId
 		} catch (_e) {}
 	}
@@ -1002,6 +1003,58 @@ async function renderAppInternal() {
 
 // Expose renderAppInternal globally for reactive updates
 window.renderAppInternal = renderAppInternal
+
+/**
+ * Revoke a capability grant by setting exp to past. Requires write access to the capability CoMap.
+ * @param {string} capabilityId - Co-id of the capability grant to revoke
+ */
+async function revokeCapability(capabilityId) {
+	const m = maia ?? window.maia
+	if (!m) {
+		showToast('Maia not ready', 'error')
+		return
+	}
+	try {
+		await m.do({
+			op: 'update',
+			id: capabilityId,
+			data: { exp: Math.floor(Date.now() / 1000) - 1 },
+		})
+		showToast('Capability revoked', 'success')
+		await renderAppInternal()
+	} catch (error) {
+		showToast(`Failed to revoke: ${error?.message ?? error}`, 'error')
+	}
+}
+window.revokeCapability = revokeCapability
+
+/**
+ * Extend a capability grant by 1 day. For expired capabilities, re-enables from now.
+ * @param {string} capabilityId - Co-id of the capability grant
+ * @param {number} [currentExp=0] - Current expiry timestamp (Unix sec); used to compute new exp
+ */
+async function extendCapability(capabilityId, currentExp = 0) {
+	const m = maia ?? window.maia
+	if (!m) {
+		showToast('Maia not ready', 'error')
+		return
+	}
+	const now = Math.floor(Date.now() / 1000)
+	const oneDay = 86400
+	const newExp = Math.max(now, currentExp || 0) + oneDay
+	try {
+		await m.do({
+			op: 'update',
+			id: capabilityId,
+			data: { exp: newExp },
+		})
+		showToast('Capability extended', 'success')
+		await renderAppInternal()
+	} catch (error) {
+		showToast(`Failed to extend: ${error?.message ?? error}`, 'error')
+	}
+}
+window.extendCapability = extendCapability
 
 /**
  * Load an agent inline in the main context area

@@ -154,20 +154,20 @@ export class MaiaDB {
 		const { createChildGroup } = await import('../groups/create.js')
 		const childGroup = createChildGroup(this.node, maiaGuardian, { name: normalizedName })
 		const sparkSchemaCoId = await resolve(this, '°Maia/schema/data/spark', { returnType: 'coId' })
-		const capabilitiesSchemaCoId = await resolve(this, '°Maia/schema/os/capabilities', {
+		const groupsSchemaCoId = await resolve(this, '°Maia/schema/os/groups', {
 			returnType: 'coId',
 		})
 		const osSchemaCoId = await resolve(this, '°Maia/schema/os/os-registry', { returnType: 'coId' })
 		const agentsSchemaCoId = await resolve(this, '°Maia/schema/os/agents-registry', {
 			returnType: 'coId',
 		})
-		if (!sparkSchemaCoId || !capabilitiesSchemaCoId || !osSchemaCoId || !agentsSchemaCoId) {
+		if (!sparkSchemaCoId || !groupsSchemaCoId || !osSchemaCoId || !agentsSchemaCoId) {
 			throw new Error('[MaiaDB] Spark scaffold schemas not found')
 		}
 		const ctx = { node: this.node, account: this.account, guardian: childGroup }
 		const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
-		const { coValue: capabilities } = await createCoValueForSpark(ctx, null, {
-			schema: capabilitiesSchemaCoId,
+		const { coValue: groups } = await createCoValueForSpark(ctx, null, {
+			schema: groupsSchemaCoId,
 			cotype: 'comap',
 			data: { guardian: childGroup.id },
 			dataEngine: this.dbEngine,
@@ -175,7 +175,7 @@ export class MaiaDB {
 		const { coValue: os } = await createCoValueForSpark(ctx, null, {
 			schema: osSchemaCoId,
 			cotype: 'comap',
-			data: { capabilities: capabilities.id },
+			data: { groups: groups.id },
 			dataEngine: this.dbEngine,
 		})
 		const { coValue: agents } = await createCoValueForSpark(ctx, null, {
@@ -322,6 +322,31 @@ export class MaiaDB {
 				const osData2 = osStore2.value
 				if (osData2 && !osData2.error) schematasId = osData2.schematas || schematasId
 			} catch (_error) {}
+		}
+		let capabilitiesId = osData.capabilities
+		if (!capabilitiesId || typeof capabilitiesId !== 'string' || !capabilitiesId.startsWith('co_z')) {
+			const osCore = this.getCoValue(osId)
+			if (osCore && this.isAvailable(osCore)) {
+				const osContent = this.getCurrentContent(osCore)
+				if (osContent && typeof osContent.set === 'function') {
+					const capabilitiesStreamSchemaCoId = await resolve(
+						this,
+						'°Maia/schema/os/capabilities-stream',
+						{
+							returnType: 'coId',
+						},
+					)
+					const capSchema = capabilitiesStreamSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA
+					const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
+					const { coValue: capabilitiesStream } = await createCoValueForSpark(this, '°Maia', {
+						schema: capSchema,
+						cotype: 'costream',
+						dataEngine: this.dbEngine,
+					})
+					osContent.set('capabilities', capabilitiesStream.id)
+					capabilitiesId = capabilitiesStream.id
+				}
+			}
 		}
 		if (!schematasId || typeof schematasId !== 'string' || !schematasId.startsWith('co_z')) {
 			if (typeof process !== 'undefined' && process.env?.DEBUG) return false

@@ -473,7 +473,7 @@ async function getSparkGroup(peer, sparkId) {
 	validateCoId(sparkId, 'GetSparkGroup')
 	const groupId = await peer.getSparkCapabilityGroupIdFromSparkCoId(sparkId, 'guardian')
 	if (!groupId || typeof groupId !== 'string' || !groupId.startsWith('co_z')) {
-		throw new Error(`[GetSparkGroup] Spark has no guardian in os.capabilities: ${sparkId}`)
+		throw new Error(`[GetSparkGroup] Spark has no guardian in os.groups: ${sparkId}`)
 	}
 	const group = await peer.getGroup(groupId)
 	if (!group) throw new Error(`[GetSparkGroup] Group not found: ${groupId}`)

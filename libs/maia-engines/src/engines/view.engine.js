@@ -1,4 +1,4 @@
-import { normalizeCoValueData } from '@MaiaOS/db'
+import { ensureCoValueLoaded, normalizeCoValueData, ReactiveStore } from '@MaiaOS/db'
 import { validateViewDef } from '@MaiaOS/schemata'
 import { containsExpressions, resolveExpressions } from '@MaiaOS/schemata/expression-resolver'
 import { extractDOMValuesAsync } from '@MaiaOS/schemata/payload-resolver'
@@ -231,6 +231,9 @@ export class ViewEngine {
 		this._lastAvatarCoIdPerActor = new Map()
 		/** Debounce: eventDef.$debounce ms (schema-driven), key -> lastFireTime */
 		this._eventDebounce = new Map()
+		/** Cooling: ignore FORM_SUBMIT for this ms after OPEN_POPUP (prevents ghost clicks when overlay appears) */
+		this._lastPopupOpenTime = 0
+		this._popupOpenCoolingMs = 350
 	}
 
 	_makeStyleRerenderSubscribe(actorId) {
@@ -252,12 +255,36 @@ export class ViewEngine {
 	}
 
 	/**
+	 * Create fallback context when CoValue load fails. Universal: no hardcoded actor types.
+	 * Merges parent's @actors so child refs (e.g. $targetActor) resolve. Derives targetActor from
+	 * sibling slot when namekey indicates input-like child (tell target needs resolution).
+	 * @param {Object|null} parentActor - Parent actor (when child), for @actors propagation
+	 * @param {string|null} namekey - Child slot name when spawned from parent (e.g. 'input' => targetActor from @actors.messages)
+	 * @returns {ReactiveStore} Store with minimal structure
+	 */
+	_createFallbackContext(parentActor = null, namekey = null) {
+		const base = {}
+		const parentValue = parentActor?.context?.value
+		if (parentValue?.['@actors'] && typeof parentValue?.['@actors'] === 'object') {
+			base['@actors'] = { ...parentValue['@actors'] }
+			// When input child: targetActor = @actors.messages so tell resolves (convention from layout-chat)
+			if (namekey === 'input' && base['@actors'].messages) {
+				base.targetActor = base['@actors'].messages
+			}
+		}
+		return new ReactiveStore(base)
+	}
+
+	/**
 	 * Load view-related configs (view, context, style, brand). Returns viewDef, context, subscriptions.
+	 * Self-healing: when context CoValue fails to load, uses fallback store so actor spawns (no hard failure).
 	 * @param {Object} actorConfig - Actor config
 	 * @param {string} actorId - Actor ID
+	 * @param {Object|null} parentActor - Parent actor when spawning child (for fallback @actors)
+	 * @param {string|null} namekey - Child slot name when spawned (e.g. 'input' for targetActor)
 	 * @returns {Promise<{viewDef, context, contextCoId, contextSchemaCoId, configUnsubscribes}>}
 	 */
-	async loadViewConfigs(actorConfig, actorId) {
+	async loadViewConfigs(actorConfig, actorId, parentActor = null, namekey = null) {
 		if (!actorConfig.view) throw new Error(`[ViewEngine] Actor config must have 'view' property`)
 		const configUnsubscribes = []
 
@@ -303,14 +330,34 @@ export class ViewEngine {
 					`[ViewEngine] Actor config context must be co-id (or resolve to co-id). Got: ${actorConfig.context}. Run with PEER_FRESH_SEED=true to re-seed.`,
 				)
 			}
-			const contextStore = await readStore(this.dataEngine, contextCoIdVal)
-			if (!contextStore) throw new Error(`[ViewEngine] Failed to load context ${contextCoIdVal}`)
-			contextSchemaCoId = await this.dataEngine.peer.resolve(
-				{ fromCoValue: contextCoIdVal },
-				{ returnType: 'coId' },
-			)
-			context = contextStore
-			contextCoId = contextCoIdVal
+			// Ensure context CoValue is loaded (e.g. after capability extend, may be in IndexedDB but not node memory)
+			try {
+				await ensureCoValueLoaded(this.dataEngine.peer, contextCoIdVal, {
+					waitForAvailable: true,
+					timeoutMs: 5000,
+				})
+			} catch (_e) {
+				// Fall through - readStore may still work if CoValue became available
+			}
+			let contextStore = await readStore(this.dataEngine, contextCoIdVal)
+			// Retry: context may be loading from sync
+			for (let i = 0; !contextStore && i < 5; i++) {
+				await new Promise((r) => setTimeout(r, 150 + i * 100))
+				contextStore = await readStore(this.dataEngine, contextCoIdVal)
+			}
+			if (!contextStore) {
+				// Self-healing: use fallback so actor spawns. No persistence (contextCoId stays null).
+				context = this._createFallbackContext(parentActor, namekey)
+				contextCoId = null
+				contextSchemaCoId = null
+			} else {
+				contextSchemaCoId = await this.dataEngine.peer.resolve(
+					{ fromCoValue: contextCoIdVal },
+					{ returnType: 'coId' },
+				)
+				context = contextStore
+				contextCoId = contextCoIdVal
+			}
 		}
 
 		if (actorConfig.style) {
@@ -348,10 +395,18 @@ export class ViewEngine {
 	 * @param {string|null} agentKey - Optional agent key
 	 * @param {() => Promise<void>} [onBeforeRender] - Callback before render (e.g. state init)
 	 */
-	async attachViewToActor(actor, containerElement, actorConfig, agentKey, onBeforeRender) {
+	async attachViewToActor(
+		actor,
+		containerElement,
+		actorConfig,
+		agentKey,
+		onBeforeRender,
+		parentActor = null,
+		namekey = null,
+	) {
 		const actorId = actor.id
 		const { viewDef, context, contextCoId, contextSchemaCoId, configUnsubscribes } =
-			await this.loadViewConfigs(actorConfig, actorId)
+			await this.loadViewConfigs(actorConfig, actorId, parentActor, namekey)
 
 		actor.shadowRoot = containerElement.attachShadow({ mode: 'open' })
 		actor.context = context
@@ -377,6 +432,11 @@ export class ViewEngine {
 				},
 				{ skipInitial: true },
 			)
+		}
+
+		// Session-scoped: clear persisted error state on fresh mount (fixes UI break after restart)
+		if (context?.value && (context.value.hasError === true || context.value.error)) {
+			await this.actorOps?.updateContextCoValue?.(actor, { hasError: false, error: null })
 		}
 
 		if (onBeforeRender) await onBeforeRender()
@@ -793,16 +853,37 @@ export class ViewEngine {
 			typeof window !== 'undefined' &&
 			(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
 
-		// Schema-driven debounce: eventDef.$debounce (ms) prevents event storms from rapid clicks
-		// Use actorId:eventName key so any rapid click on this list is coalesced (itemId can be unstable)
-		const debounceMs = eventDef.$debounce
+		// CRITICAL: Ignore events from elements torn down during rerender (blur/focusout fire when removed)
+		// Prevents FORM_SUBMIT/UPDATE_INPUT feedback loop: rerender → clear DOM → blur → deliver → process → ctx → rerender
+		if (element?.isConnected === false) return
+
+		const FORM_INPUT_EVENTS = ['FORM_SUBMIT', 'UPDATE_INPUT', 'UPDATE_AGENT_INPUT']
+
+		// Schema-driven debounce: eventDef.$debounce (ms) prevents event storms
+		// Universal: FORM_SUBMIT/UPDATE_INPUT share a key so they throttle each other (breaks feedback loop)
+		// Rerender→blur→UPDATE_INPUT→ctx→rerender or submit→clear→blur→UPDATE_INPUT→...
+		const debounceMs = eventDef.$debounce ?? (FORM_INPUT_EVENTS.includes(eventName) ? 150 : 0)
+		const debounceKey = FORM_INPUT_EVENTS.includes(eventName)
+			? `${actorId}:form-input`
+			: `${actorId}:${eventName}`
 		if (typeof debounceMs === 'number' && debounceMs > 0) {
-			const key = `${actorId}:${eventName}`
 			const now = Date.now()
-			const last = this._eventDebounce.get(key)
+			const last = this._eventDebounce.get(debounceKey)
 			if (last != null && now - last < debounceMs) return
-			this._eventDebounce.set(key, now)
-			setTimeout(() => this._eventDebounce.delete(key), debounceMs)
+			this._eventDebounce.set(debounceKey, now)
+			setTimeout(() => this._eventDebounce.delete(debounceKey), debounceMs)
+		}
+
+		// Cooling: block spurious FORM_SUBMIT when overlay just opened (ghost clicks, touch delayed events)
+		if (eventName === 'OPEN_POPUP') {
+			this._lastPopupOpenTime = Date.now()
+		}
+		if (
+			eventName === 'FORM_SUBMIT' &&
+			this._lastPopupOpenTime > 0 &&
+			Date.now() - this._lastPopupOpenTime < this._popupOpenCoolingMs
+		) {
+			return
 		}
 
 		perfPipelineStart(`view:${eventName}`)
@@ -819,6 +900,11 @@ export class ViewEngine {
 		if (eventName === 'STOP_PROPAGATION') {
 			e.stopPropagation()
 			return
+		}
+
+		// Prevent default on DISMISS when from button (avoids synthetic touch-click edge cases)
+		if (eventName === 'DISMISS' && element?.tagName === 'BUTTON') {
+			e.preventDefault()
 		}
 
 		if (eventDef.key && e.key !== eventDef.key) {

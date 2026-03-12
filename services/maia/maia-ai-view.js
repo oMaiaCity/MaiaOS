@@ -3,7 +3,7 @@
  * Uses @MaiaOS/maia-ai (RunAnywhere) for private, offline-capable chat.
  */
 
-import { resolveAccountCoIdsToProfileNames } from '@MaiaOS/loader'
+import { resolveAccountCoIdsToProfiles } from '@MaiaOS/loader'
 import {
 	AudioCapture,
 	AudioPlayback,
@@ -24,10 +24,10 @@ import { escapeHtml, getSyncStatusMessage, truncate } from './utils.js'
 export async function renderMaiaAIView(maia, authState, syncState, navigateToScreen) {
 	const accountId = maia?.id?.maiaId?.id || ''
 	let accountDisplayName = truncate(accountId, 12)
-	if (accountId?.startsWith('co_z') && maia?.db) {
+	if (accountId?.startsWith('co_z') && maia?.do) {
 		try {
-			const profileNames = await resolveAccountCoIdsToProfileNames(maia, [accountId])
-			accountDisplayName = profileNames.get(accountId) ?? accountDisplayName
+			const profiles = await resolveAccountCoIdsToProfiles(maia, [accountId])
+			accountDisplayName = profiles.get(accountId)?.name ?? accountDisplayName
 		} catch (_e) {}
 	}
 

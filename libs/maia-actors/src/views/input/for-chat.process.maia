@@ -12,6 +12,11 @@
 		],
 		"FORM_SUBMIT": [
 			{
+				"guard": {
+					"hasError": false
+				}
+			},
+			{
 				"tell": {
 					"target": "$targetActor",
 					"type": "SEND_MESSAGE",
@@ -31,6 +36,18 @@
 				"ctx": {
 					"hasError": false,
 					"error": null
+				}
+			},
+			{
+				"guard": {
+					"$onlyWhenOriginated": true
+				}
+			},
+			{
+				"tell": {
+					"target": "°Maia/actor/views/messages",
+					"type": "DISMISS",
+					"payload": {}
 				}
 			}
 		],

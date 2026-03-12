@@ -1,15 +1,13 @@
 /**
  * Pipeline perf: selection/detail loading path (view click → inbox → process → tell).
- * Default: ON in browser. Disable: localStorage.setItem('maia:perf:pipeline', '0')
+ * Default: OFF. Enable: localStorage.setItem('maia:perf:pipeline', '1')
  */
 
 function isEnabled() {
 	if (typeof window === 'undefined') return false
 	try {
 		const explicit = localStorage?.getItem('maia:perf:pipeline')
-		if (explicit === '0') return false
-		// Default ON in browser so perf logs appear without setup
-		return true
+		return explicit === '1'
 	} catch {
 		return false
 	}
