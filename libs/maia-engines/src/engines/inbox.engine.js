@@ -24,8 +24,21 @@ export class InboxEngine {
 	}
 
 	async resolveInboxForTarget(targetId) {
-		if (typeof targetId !== 'string' || !targetId.startsWith('co_z')) {
-			throw new Error(`[InboxEngine] targetId must be co-id, got: ${targetId}`)
+		if (typeof targetId !== 'string') {
+			throw new Error(`[InboxEngine] targetId must be string, got: ${targetId}`)
+		}
+		// Resolve human-readable refs (e.g. °Maia/actor/services/todos) to co-id
+		if (!targetId.startsWith('co_z') && this.dataEngine?.peer) {
+			// Normalize: Maia/actor/... → °Maia/actor/... (degree symbol may be lost in some contexts)
+			const toResolve =
+				targetId.startsWith('Maia/') && !targetId.startsWith('°') ? `°${targetId}` : targetId
+			const resolved = await this.dataEngine.peer.resolve(toResolve, { returnType: 'coId' })
+			if (resolved && typeof resolved === 'string' && resolved.startsWith('co_z')) {
+				targetId = resolved
+			}
+		}
+		if (!targetId.startsWith('co_z')) {
+			throw new Error(`[InboxEngine] targetId must be co-id (or resolve to co-id), got: ${targetId}`)
 		}
 		const actors = this.actorEngine?.actors
 		if (actors) {
