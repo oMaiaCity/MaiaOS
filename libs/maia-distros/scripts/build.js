@@ -87,9 +87,14 @@ async function main() {
 			cpSync(join(onnxSherpaSrc, file), join(sherpaOut, file))
 		}
 	}
-	if (existsSync(join(wasmOutDir, 'racommons-llamacpp-webgpu.js'))) {
-		console.log('Vendored runanywhere-wasm (llamacpp + sherpa)')
+	const wasmJs = join(wasmOutDir, 'racommons-llamacpp-webgpu.js')
+	if (!existsSync(wasmJs)) {
+		console.error(
+			'Distros build failed: runanywhere-wasm not vendored. Ensure @runanywhere/web-llamacpp is installed.',
+		)
+		process.exit(1)
 	}
+	console.log('Vendored runanywhere-wasm (llamacpp + sherpa)')
 
 	console.log('Distros build complete')
 }
