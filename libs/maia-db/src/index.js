@@ -12,7 +12,7 @@
  */
 
 // Sync Peer Setup (client-side peer configuration for LocalNode) - re-exported from @MaiaOS/peer
-export { setupSyncPeers, subscribeSyncState, updateSyncState } from '@MaiaOS/peer'
+export { setupSyncPeers, subscribeSyncState } from '@MaiaOS/peer'
 // Unified cache (subscriptions, stores, resolutions, resolved data)
 export {
 	CoCache,
@@ -68,6 +68,7 @@ export {
 	resolve,
 	resolveReactive,
 } from './cojson/schema/resolver.js'
+export { simpleAccountSeed } from './cojson/seeding/seed.js'
 export { schemaMigration } from './migrations/schema.migration.js'
 export { simpleAccountSeed } from './migrations/seeding/seed.js'
 // ReactiveStore - reactive data store pattern (owned by maia-db; engines import from here)
