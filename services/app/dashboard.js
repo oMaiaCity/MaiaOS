@@ -3,7 +3,7 @@
  * Handles dashboard screen and agent viewer rendering
  */
 
-import { getAllAgentRegistries, resolveAccountCoIdsToProfileNames } from '@MaiaOS/loader'
+import { getAllAgentRegistries, resolveAccountCoIdsToProfiles } from '@MaiaOS/loader'
 import { escapeHtml, getSyncStatusMessage, truncate, truncateWords } from './utils.js'
 
 /**
@@ -203,17 +203,10 @@ export async function renderDashboard(
 
 	const accountId = maia?.id?.maiaId?.id || ''
 	let accountDisplayName = truncate(accountId, 12)
-	let accountAvatarHtml = ''
 	if (accountId?.startsWith('co_z') && maia?.do) {
 		try {
 			const profiles = await resolveAccountCoIdsToProfiles(maia, [accountId])
-			const accountProfile = profiles.get(accountId) ?? null
-			accountDisplayName = accountProfile?.name ?? accountDisplayName
-			accountAvatarHtml = getProfileAvatarHtml(accountProfile?.image, {
-				size: 44,
-				className: 'navbar-avatar',
-				syncState,
-			})
+			accountDisplayName = profiles.get(accountId)?.name ?? accountDisplayName
 		} catch (_e) {}
 	}
 	if (accountId && !accountAvatarHtml) {
@@ -400,17 +393,10 @@ export async function renderAgentViewer(
 ) {
 	const accountId = maia?.id?.maiaId?.id || ''
 	let accountDisplayName = truncate(accountId, 12)
-	let accountAvatarHtml = ''
 	if (accountId?.startsWith('co_z') && maia?.do) {
 		try {
 			const profiles = await resolveAccountCoIdsToProfiles(maia, [accountId])
-			const accountProfile = profiles.get(accountId) ?? null
-			accountDisplayName = accountProfile?.name ?? accountDisplayName
-			accountAvatarHtml = getProfileAvatarHtml(accountProfile?.image, {
-				size: 44,
-				className: 'navbar-avatar',
-				syncState,
-			})
+			accountDisplayName = profiles.get(accountId)?.name ?? accountDisplayName
 		} catch (_e) {}
 	}
 	// Map agent keys to display names

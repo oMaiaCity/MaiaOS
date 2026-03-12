@@ -27,17 +27,17 @@ export async function getGroup(node, groupId) {
 }
 
 /**
- * Get capability group co-id for a spark from spark.os.capabilities
- * Resolves: spark -> spark.os -> os.capabilities -> capabilities.get(capabilityName)
+ * Get capability group co-id for a spark from spark.os.groups
+ * Resolves: spark -> spark.os -> os.groups -> groups.get(capabilityName)
  * @param {Object} peer - Backend instance
  * @param {string} spark - Spark name (e.g. "°Maia") or spark co-id
  * @param {string} capabilityName - Group key (e.g. 'guardian', 'publicReaders')
  * @returns {Promise<string|null>} Group co-id or null
  */
 /**
- * Get capability group co-id from os CoMap id (os -> capabilities -> capabilityName)
- * Uses read() + waitForStoreReady to ensure os/capabilities are synced (e.g. when agent
- * loads human's spark via sync - os and capabilities must be fetched before access).
+ * Get capability group co-id from os CoMap id (os -> groups -> capabilityName)
+ * Uses read() + waitForStoreReady to ensure os/groups are synced (e.g. when agent
+ * loads human's spark via sync - os and groups must be fetched before access).
  * @param {Object} peer - Backend instance
  * @param {string} osId - OS CoMap co-id
  * @param {string} capabilityName - Group key (e.g. 'guardian', 'publicReaders')
@@ -51,16 +51,15 @@ export async function getCapabilityGroupIdFromOsId(peer, osId, capabilityName) {
 	if (!osCore || !peer.isAvailable(osCore)) return null
 	const osContent = peer.getCurrentContent(osCore)
 	if (!osContent || typeof osContent.get !== 'function') return null
-	const capabilitiesId = osContent.get('capabilities')
-	if (!capabilitiesId || typeof capabilitiesId !== 'string' || !capabilitiesId.startsWith('co_z'))
-		return null
-	const capabilitiesStore = await peer.read(null, capabilitiesId)
-	await waitForStoreReady(capabilitiesStore, capabilitiesId, 15000)
-	const capabilitiesCore = peer.getCoValue(capabilitiesId)
-	if (!capabilitiesCore || !peer.isAvailable(capabilitiesCore)) return null
-	const capabilitiesContent = peer.getCurrentContent(capabilitiesCore)
-	if (!capabilitiesContent || typeof capabilitiesContent.get !== 'function') return null
-	const groupId = capabilitiesContent.get(capabilityName)
+	const groupsId = osContent.get('groups')
+	if (!groupsId || typeof groupsId !== 'string' || !groupsId.startsWith('co_z')) return null
+	const groupsStore = await peer.read(null, groupsId)
+	await waitForStoreReady(groupsStore, groupsId, 15000)
+	const groupsCore = peer.getCoValue(groupsId)
+	if (!groupsCore || !peer.isAvailable(groupsCore)) return null
+	const groupsContent = peer.getCurrentContent(groupsCore)
+	if (!groupsContent || typeof groupsContent.get !== 'function') return null
+	const groupId = groupsContent.get(capabilityName)
 	if (!groupId || typeof groupId !== 'string' || !groupId.startsWith('co_z')) return null
 	return groupId
 }
@@ -89,7 +88,7 @@ export async function getSparkCapabilityGroupIdFromSparkCoId(peer, sparkCoId, ca
 
 /**
  * Get guardian (admin-role) group for a spark by name
- * Resolves from spark.os.capabilities.guardian only (no spark.group; fresh DB).
+ * Resolves from spark.os.groups.guardian only (no spark.group; fresh DB).
  * @param {Object} peer - Backend instance with read(), getCoValue(), getCurrentContent(), account
  * @param {string} spark - Spark name (e.g. "°Maia", "@handle")
  * @returns {Promise<RawGroup|null>} Group for the spark or null

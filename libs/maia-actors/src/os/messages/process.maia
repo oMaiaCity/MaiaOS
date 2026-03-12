@@ -5,15 +5,8 @@
 	"handlers": {
 		"SEND_MESSAGE": [
 			{
-				"op": {
-					"create": {
-						"schema": "°Maia/schema/data/chat",
-						"data": {
-							"role": "user",
-							"content": "$$inputText",
-							"displayName": "me"
-						}
-					}
+				"ctx": {
+					"_pendingReplyTo": "$$source"
 				}
 			},
 			{
@@ -50,6 +43,17 @@
 								]
 							]
 						}
+					}
+				}
+			}
+		],
+		"ERROR": [
+			{
+				"tell": {
+					"target": "$_pendingReplyTo",
+					"type": "ERROR",
+					"payload": {
+						"errors": "$$errors"
 					}
 				}
 			}

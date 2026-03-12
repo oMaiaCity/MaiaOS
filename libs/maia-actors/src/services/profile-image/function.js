@@ -4,7 +4,7 @@
  * Binary upload is done by BlobEngine before delivery; inbox carries only metadata.
  */
 
-import { resolveAccountToProfileCoId } from '@MaiaOS/db'
+import { resolveAccountCoIdsToProfiles } from '@MaiaOS/db'
 import {
 	createErrorEntry,
 	createErrorResult,
@@ -41,9 +41,11 @@ export default {
 			])
 		}
 
-		const profileCoId =
-			os?.id?.maiaId?.get?.('profile') ||
-			(os?.id?.maiaId?.id && (await resolveAccountToProfileCoId(os, os.id.maiaId.id)))
+		let profileCoId = os?.id?.maiaId?.get?.('profile')
+		if (!profileCoId?.startsWith('co_z') && os?.id?.maiaId?.id) {
+			const profiles = await resolveAccountCoIdsToProfiles(os, [os.id.maiaId.id])
+			profileCoId = profiles.get(os.id.maiaId.id)?.id ?? null
+		}
 
 		if (!profileCoId?.startsWith('co_z')) {
 			return createErrorResult([

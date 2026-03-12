@@ -40,6 +40,16 @@ export default {
 		}
 
 		const apiUrl = `${getApiBaseUrl()}/api/v0/llm/chat`
+		let token = null
+		try {
+			token = await runtime.getCapabilityToken?.({ cmd: '/llm/chat', args: {} })
+		} catch (_e) {}
+		if (!token) {
+			return createErrorResult([
+				createErrorEntry('structural', '[@ai/chat] Sign in required for AI chat'),
+			])
+		}
+
 		const tools = await runtime.collectTools()
 		const currentMessages = [...context]
 
@@ -54,7 +64,10 @@ export default {
 
 			const response = await fetch(apiUrl, {
 				method: 'POST',
-				headers: { 'Content-Type': 'application/json' },
+				headers: {
+					'Content-Type': 'application/json',
+					Authorization: `Bearer ${token}`,
+				},
 				body: JSON.stringify(reqBody),
 			})
 

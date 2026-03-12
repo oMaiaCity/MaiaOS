@@ -38,6 +38,7 @@ import {
 	schemaMigration,
 	waitForStoreReady,
 } from '@MaiaOS/loader'
+import { agentIDToDidKey, verifyInvocationToken } from '@MaiaOS/maia-ucan'
 import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -135,6 +136,98 @@ async function getCoIdByPath(peer, startId, path, opts = {}) {
 	}
 }
 
+/** Verify that the signer (iss/did:key) owns the claimed accountID. Prevents forged accountID in token. */
+async function verifyAccountBinding(peer, accountId, expectedDidKey) {
+	if (!accountId?.startsWith('co_z') || !expectedDidKey?.startsWith('did:key:')) return false
+	try {
+		const store = await peer.read(null, accountId)
+		await withTimeout(waitForStoreReady(store, accountId, 5000), 5000, 'verifyAccountBinding')
+		const core = peer.node.getCoValue(accountId)
+		if (!core || !peer.isAvailable(core)) return false
+		const agentId = core.verified?.header?.ruleset?.initialAdmin
+		if (!agentId || typeof agentId !== 'string') return false
+		const derivedDidKey = agentIDToDidKey(agentId)
+		return derivedDidKey === expectedDidKey
+	} catch {
+		return false
+	}
+}
+
+/** Get spark.os.capabilities stream co-id (registries → sparks → °Maia → os → capabilities). */
+async function getCapabilitiesStreamId(worker) {
+	try {
+		return await getCoIdByPath(worker.peer, getRegistriesId(worker.account), [
+			'sparks',
+			MAIA_SPARK,
+			'os',
+			'capabilities',
+		])
+	} catch {
+		return null
+	}
+}
+
+/** Push Capability CoMap to spark.os.capabilities stream. */
+async function pushCapabilityToStream(worker, { sub, cmd, pol, exp }) {
+	const capabilitiesStreamId = await getCapabilitiesStreamId(worker)
+	if (!capabilitiesStreamId?.startsWith('co_z')) return
+	const capabilitySchemaCoId = await resolve(worker.peer, '°Maia/schema/os/capability', {
+		returnType: 'coId',
+	})
+	if (!capabilitySchemaCoId) return
+	try {
+		const createResult = await worker.dataEngine.execute({
+			op: 'create',
+			schema: capabilitySchemaCoId,
+			data: { sub, cmd, pol, exp },
+			spark: MAIA_SPARK,
+		})
+		const capabilityCoId = createResult?.data?.id ?? createResult?.id
+		if (!capabilityCoId?.startsWith('co_z')) return
+		await worker.dataEngine.execute({
+			op: 'append',
+			coId: capabilitiesStreamId,
+			item: capabilityCoId,
+			cotype: 'costream',
+		})
+	} catch (e) {
+		console.warn('[register] Failed to push capability to stream', e?.message)
+	}
+}
+
+/** Check if account has valid /llm/chat capability from spark.os.capabilities stream. */
+async function hasValidLlmCapability(worker, accountId) {
+	if (!accountId?.startsWith('co_z')) return false
+	const capabilitiesStreamId = await getCapabilitiesStreamId(worker)
+	if (!capabilitiesStreamId?.startsWith('co_z')) return false
+	try {
+		const core = worker.peer.node.getCoValue(capabilitiesStreamId)
+		if (!core || !worker.peer.isAvailable(core)) return false
+		const content = worker.peer.getCurrentContent(core)
+		if (!content || content.type !== 'costream' || !content.items) return false
+		const now = Math.floor(Date.now() / 1000)
+		const allCoIds = []
+		for (const items of Object.values(content.items)) {
+			if (!Array.isArray(items)) continue
+			for (const item of items) {
+				const v = item?.value
+				if (typeof v === 'string' && v.startsWith('co_z')) allCoIds.push(v)
+			}
+		}
+		for (const capCoId of allCoIds) {
+			const capContent = await loadCoMap(worker.peer, capCoId, { retries: 1 })
+			if (!capContent?.get) continue
+			const sub = capContent.get('sub')
+			const cmd = capContent.get('cmd')
+			const exp = capContent.get('exp')
+			if (sub === accountId && cmd === '/llm/chat' && typeof exp === 'number' && exp > now) return true
+		}
+		return false
+	} catch {
+		return false
+	}
+}
+
 /** Returns account.registries + °Maia spark for human/agent to link. Set account.registries; sparks resolved via registries.sparks. */
 async function handleSyncRegistry(worker) {
 	try {
@@ -194,6 +287,25 @@ async function handleRegister(worker, body) {
 			// Idempotency: accountId already registered (by username or by accountId key)
 			const existingHumanId = raw?.[accountId]
 			if (existingHumanId?.startsWith('co_z')) {
+				const now = Math.floor(Date.now() / 1000)
+				const oneYear = 365 * 24 * 3600
+				try {
+					const humanContent = await loadCoMap(peer, existingHumanId, { retries: 1 })
+					let llmExp = humanContent?.get?.('llmExp')
+					if (llmExp == null || llmExp < now) {
+						const newExp = now + oneYear
+						await dataEngine.execute({ op: 'update', id: existingHumanId, data: { llmExp: newExp } })
+						llmExp = newExp
+					}
+					await pushCapabilityToStream(worker, {
+						sub: accountId,
+						cmd: '/llm/chat',
+						pol: [],
+						exp: llmExp,
+					})
+				} catch (_e) {
+					// Non-fatal: capability refresh failed, still return ok
+				}
 				const existingUsername = raw
 					? Object.keys(raw).find((k) => raw[k] === existingHumanId && k !== accountId)
 					: null
@@ -220,8 +332,9 @@ async function handleRegister(worker, body) {
 			const humanGroup = node.createGroup()
 			humanGroup.extend(guardian, 'extend')
 			humanGroup.addMember('everyone', 'reader')
+			const llmExp = Math.floor(Date.now() / 1000) + 365 * 24 * 3600
 			const humanCoMap = humanGroup.createMap(
-				{ account: accountId, profile: profileId },
+				{ account: accountId, profile: profileId, llmExp },
 				{ $schema: humanSchemaCoId },
 			)
 			const memberIdToRemove =
@@ -236,6 +349,12 @@ async function handleRegister(worker, body) {
 			const r = await dataEngine.execute({ op: 'update', id: registryId, data: registryData })
 			if (r?.ok === false)
 				return err(r.errors?.map((e) => e.message).join('; ') ?? 'update failed', 500)
+			await pushCapabilityToStream(worker, {
+				sub: accountId,
+				cmd: '/llm/chat',
+				pol: [],
+				exp: llmExp,
+			})
 			return jsonResponse({
 				ok: true,
 				type: 'human',
@@ -323,9 +442,47 @@ async function handleAgentHttp(req, worker) {
 	return null
 }
 
-/** LLM proxy: forwards request to RedPill, returns response. Tool execution is client-side (Runtime). */
-async function handleLLMChat(req) {
+/** LLM proxy: forwards request to RedPill, returns response. Tool execution is client-side (Runtime). Requires Bearer token + valid /llm/chat capability. */
+async function handleLLMChat(req, worker) {
 	if (!RED_PILL_API_KEY) return jsonResponse({ error: 'RED_PILL_API_KEY not configured' }, 500)
+	if (!worker) return jsonResponse({ error: 'Initializing', status: 503 }, 503)
+
+	// Auth gate: Bearer token + account binding + capability
+	const auth = req.headers.get('Authorization')
+	const token = auth?.startsWith('Bearer ') ? auth.slice(7).trim() : null
+	if (!token) {
+		return jsonResponse({ error: 'Unauthorized', message: 'Bearer token required' }, 401)
+	}
+	let payload
+	try {
+		payload = verifyInvocationToken(token, {
+			now: Math.floor(Date.now() / 1000),
+			allowedCmd: '/llm/chat',
+		})
+	} catch {
+		return jsonResponse({ error: 'Unauthorized', message: 'Invalid or expired token' }, 401)
+	}
+	const accountId = payload?.accountId
+	if (!accountId?.startsWith('co_z')) {
+		return jsonResponse({ error: 'Forbidden', message: 'Invalid token claims' }, 403)
+	}
+	const bindingOk = await verifyAccountBinding(worker.peer, accountId, payload.iss)
+	if (!bindingOk) {
+		console.warn('[llm] Account binding failed', { accountId: accountId?.slice(0, 12) })
+		return jsonResponse({ error: 'Forbidden', message: 'Account binding verification failed' }, 403)
+	}
+	const hasCap = await hasValidLlmCapability(worker, accountId)
+	if (!hasCap) {
+		console.warn('[llm] No valid capability', { accountId: accountId?.slice(0, 12) })
+		return jsonResponse(
+			{
+				error: 'Forbidden',
+				message: 'No valid /llm/chat capability. Ask a guardian to grant you access in Capabilities.',
+			},
+			403,
+		)
+	}
+
 	try {
 		const body = await req.json()
 		const { messages, model = 'qwen/qwen3-30b-a3b-instruct-2507', temperature = 1, tools } = body
@@ -349,6 +506,7 @@ async function handleLLMChat(req) {
 			try {
 				data = JSON.parse(txt)
 			} catch {}
+			console.error('[llm] RedPill upstream error', res.status, data.error || txt.slice(0, 200))
 			return jsonResponse(
 				{ error: data.error || `HTTP ${res.status}`, message: data.message || txt.slice(0, 200) },
 				500,
@@ -459,7 +617,10 @@ Bun.serve({
 		}
 
 		// API (LLM)
-		if (url.pathname === '/api/v0/llm/chat' && req.method === 'POST') return handleLLMChat(req)
+		if (url.pathname === '/api/v0/llm/chat' && req.method === 'POST') {
+			if (!agentWorker) return jsonResponse({ error: 'Initializing', status: 503 }, 503)
+			return handleLLMChat(req, agentWorker)
+		}
 
 		return new Response('Not Found', { status: 404, headers: CORS_HEADERS })
 	},
@@ -529,7 +690,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 		agentWorker = { node: localNode, account: result.account, peer, dataEngine }
 
 		// Ensure migration completes before seed (sparkGuardian -> guardian, registries.humans)
-		// loadAccount defers migration; seed needs guardian in os.capabilities
+		// loadAccount defers migration; seed needs guardian in os.groups
 		await schemaMigration(result.account, localNode)
 
 		// Genesis sync mode: seed only when PEER_FRESH_SEED=true (explicit, no co-value inference).

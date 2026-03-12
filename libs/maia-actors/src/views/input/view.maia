@@ -73,6 +73,9 @@
 					{
 						"tag": "button",
 						"class": "button-dismiss",
+						"attrs": {
+							"type": "button"
+						},
 						"text": "$dismissButtonText",
 						"$on": {
 							"click": {
