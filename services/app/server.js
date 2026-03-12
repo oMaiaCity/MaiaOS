@@ -16,6 +16,12 @@ const __dirname = dirname(__filename)
 const PORT = process.env.PORT || 8080
 const DIST_DIR = join(__dirname, 'dist')
 
+/** COOP/COEP required for RunAnywhere SharedArrayBuffer (multi-threaded WASM) */
+const COOP_COEP = {
+	'Cross-Origin-Opener-Policy': 'same-origin',
+	'Cross-Origin-Embedder-Policy': 'credentialless',
+}
+
 const MIME_TYPES = {
 	'.html': 'text/html',
 	'.js': 'application/javascript',
@@ -57,7 +63,7 @@ serve({
 		const distResolved = resolve(DIST_DIR)
 		const rel = relative(distResolved, filePath)
 		if (rel.startsWith('..')) {
-			return new Response('Forbidden', { status: 403 })
+			return new Response('Forbidden', { status: 403, headers: COOP_COEP })
 		}
 
 		// Check if it's a file
@@ -73,6 +79,7 @@ serve({
 						headers: {
 							'Content-Type': mimeType,
 							'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=31536000',
+							...COOP_COEP,
 						},
 					})
 				}
@@ -88,10 +95,11 @@ serve({
 				headers: {
 					'Content-Type': 'text/html',
 					'Cache-Control': 'no-cache',
+					...COOP_COEP,
 				},
 			})
 		} catch (_error) {
-			return new Response('Not Found', { status: 404 })
+			return new Response('Not Found', { status: 404, headers: COOP_COEP })
 		}
 	},
 })
