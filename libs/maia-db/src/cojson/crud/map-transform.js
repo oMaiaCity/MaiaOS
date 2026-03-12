@@ -45,23 +45,16 @@ async function getValueAtPathWithResolution(peer, item, path, visited, options =
  * @param {string} expression - Map expression (e.g. "$content", "$$source.role", "id")
  * @returns {{ path: string, isResolve: boolean }|null} Path and whether it needs resolution
  */
-function getValueAtPathNoResolve(item, path) {
-	if (!item || typeof path !== 'string') return undefined
-	return path.split('.').reduce((acc, key) => acc?.[key], item)
-}
-
 function parseMapExpression(expression) {
 	if (typeof expression !== 'string') return null
-	const pathExpr = expression.startsWith('$$')
-		? expression.substring(2)
-		: expression.startsWith('$')
-			? expression.substring(1)
-			: expression
-	const isResolve = expression.startsWith('$$') || expression.startsWith('$')
-	// :asDataUrl suffix stripped - path resolves to co-id; CoBinary loads via data-co-id + hydration (never blocks read)
-	const asDataUrlSuffix = pathExpr.endsWith(':asDataUrl')
-	const path = asDataUrlSuffix ? pathExpr.slice(0, -10) : pathExpr
-	return { path, isResolve, asDataUrl: false }
+	if (expression.startsWith('$$')) {
+		return { path: expression.substring(2), isResolve: true }
+	}
+	if (expression.startsWith('$')) {
+		return { path: expression.substring(1), isResolve: true }
+	}
+	// Pass-through: direct property access
+	return { path: expression, isResolve: false }
 }
 
 /**
@@ -124,19 +117,6 @@ export async function applyMapTransform(peer, item, mapConfig, options = {}) {
 						mappedItem[k] = v
 					}
 				}
-				continue
-			}
-
-			// $mapFields: generic reshape – [{label, valuePath}] → [{label, value: item[valuePath]}]
-			if (
-				typeof expression === 'object' &&
-				expression !== null &&
-				Array.isArray(expression.$mapFields)
-			) {
-				mappedItem[targetField] = expression.$mapFields.map((f) => ({
-					label: f?.label ?? '',
-					value: f?.valuePath ? getValueAtPathNoResolve(item, f.valuePath) : '',
-				}))
 				continue
 			}
 

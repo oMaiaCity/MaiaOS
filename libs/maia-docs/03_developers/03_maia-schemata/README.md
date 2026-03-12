@@ -172,7 +172,7 @@ const engine = new ValidationEngine({ validationPluginRegistry: registry })
 
 CoText = `cotype: colist` with `items.format: grapheme`. Extends colist, no new root keywords.
 
-**Schema:** `°Maia/schema/os/cotext`
+**Schema:** `°Maia/schema/data/cotext`
 ```json
 { "cotype": "colist", "items": { "type": "string", "format": "grapheme" } }
 ```

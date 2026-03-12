@@ -383,8 +383,7 @@ export class Evaluator {
 			'$length' in expression ||
 			'$concat' in expression ||
 			'$join' in expression ||
-			'$map' in expression ||
-			'$find' in expression
+			'$map' in expression
 		)
 	}
 }

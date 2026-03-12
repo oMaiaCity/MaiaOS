@@ -368,31 +368,6 @@
 			"flexDirection": "column",
 			"background": "transparent"
 		},
-		".messages-area": {
-			"flex": "1",
-			"minHeight": "0",
-			"overflowY": "auto",
-			"overflowX": "hidden",
-			"display": "flex",
-			"flexDirection": "column",
-			"padding": "{spacing.sm}",
-			"gap": "{spacing.md}"
-		},
-		".input-area": {
-			"flexShrink": "0",
-			"padding": "{spacing.sm}",
-			"borderTop": "1px solid {colors.border}",
-			"display": "flex",
-			"flexDirection": "row",
-			"alignItems": "stretch",
-			"gap": "0.25rem"
-		},
-		".input-area .input-wrapper": {
-			"flex": "1",
-			"minWidth": "0",
-			"display": "flex",
-			"gap": "0.25rem"
-		},
 		".paperArea": {
 			"position": "absolute",
 			"inset": "0",
@@ -405,7 +380,24 @@
 			"pointerEvents": "none",
 			"background": "#F5F0E8"
 		},
-		".paperScroll": {
+		".modalOverlay .paperBackground": {
+			"position": "fixed"
+		},
+		".paperRandomizeButton": {
+			"position": "absolute",
+			"top": "{spacing.sm}",
+			"right": "{spacing.lg}",
+			"zIndex": "1",
+			"pointerEvents": "auto",
+			"padding": "0.25rem 0.5rem",
+			"fontSize": "0.75rem",
+			"borderRadius": "{radii.sm}",
+			"border": "1px solid rgba(0, 31, 51, 0.2)",
+			"background": "rgba(255, 255, 255, 0.8)",
+			"cursor": "pointer",
+			"color": "{colors.marineBlue}"
+		},
+		".paperExampleText": {
 			"position": "absolute",
 			"top": "{spacing.xl}",
 			"left": "{spacing.lg}",
@@ -425,7 +417,7 @@
 			"fontFamily": "{typography.fontFamily.heading}",
 			"fontSize": "1rem",
 			"lineHeight": "1.75",
-			"color": "rgba(0, 31, 51, 0.62)",
+			"color": "rgba(0, 31, 51, 0.42)",
 			"margin": "0",
 			"whiteSpace": "pre-wrap"
 		},
@@ -483,12 +475,12 @@
 		},
 		".inputSection": {
 			"flexShrink": "0",
-			"padding": "0",
+			"padding": "0.25rem {spacing.sm} {spacing.md} {spacing.sm}",
 			"borderTop": "1px solid {colors.border}",
 			"display": "flex",
 			"flexDirection": "row",
 			"alignItems": "stretch",
-			"gap": "0"
+			"gap": "0.25rem"
 		},
 		".inputRow": {
 			"display": "flex",
@@ -506,6 +498,43 @@
 			"backdropFilter": "blur(8px) saturate(150%)",
 			"borderRadius": "{radii.full}",
 			"border": "1px solid {colors.border}",
+			"boxShadow": "{shadows.md}"
+		},
+		".modalCloseButton": {
+			"flexShrink": "0",
+			"position": "relative",
+			"zIndex": "1002",
+			"padding": "0",
+			"display": "flex",
+			"alignItems": "center",
+			"justifyContent": "center",
+			"background": "rgba(255, 255, 255, 0.9)",
+			"border": "1px solid {colors.border}",
+			"borderRadius": "50%",
+			"color": "{colors.marineBlueMuted}",
+			"fontSize": "1.1rem",
+			"lineHeight": "1",
+			"cursor": "pointer",
+			"transition": "{transitions.fast}",
+			"boxShadow": "{shadows.sm}",
+			":hover": {
+				"color": "{colors.marineBlue}",
+				"background": "rgba(255, 255, 255, 1)",
+				"boxShadow": "{shadows.md}"
+			}
+		},
+		".inputSection .inputRow .modalCloseButton": {
+			"flex": "0 0 auto",
+			"width": "2.25rem",
+			"height": "2.25rem",
+			"minWidth": "2.25rem",
+			"minHeight": "2.25rem",
+			"background": "rgba(255, 255, 255, 0.4)",
+			"backdropFilter": "blur(8px) saturate(150%)",
+			"boxShadow": "{shadows.md}"
+		},
+		".inputSection .inputRow .modalCloseButton:hover": {
+			"background": "rgba(255, 255, 255, 0.6)",
 			"boxShadow": "{shadows.md}"
 		},
 		".inputSection .thinkingBadge": {

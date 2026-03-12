@@ -1,15 +1,17 @@
 /**
  * CoJSON Seed Operation - Seed database with configs, schemas, and initial data
  *
- * Seeding Order: Bootstrap (if needed) → Schemas → Configs → Data → Registry
- * Extracted modules: bootstrap, cleanup, configs, data, store-registry, helpers
+ * Model: PEER_FRESH_SEED=true → bootstrap + seed (clean slate).
+ *        PEER_FRESH_SEED=false → use existing scaffold, no seed, no cleanup.
+ *
+ * Seeding Order: Bootstrap → Schemas → Configs → Data → Registry
+ * Extracted modules: bootstrap, configs, data, store-registry, helpers
  */
 
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import { ensureCoValueLoaded } from '../../cojson/crud/collection-helpers.js'
 import * as groups from '../../cojson/groups/groups.js'
 import { bootstrapAccountRegistries, bootstrapAndScaffold } from './bootstrap.js'
-import { deleteSeededCoValues } from './cleanup.js'
 import { seedConfigs } from './configs.js'
 import { seedData } from './data.js'
 import { buildMetaSchemaForSeeding, ensureSparkOs, removeIdFields } from './helpers.js'
@@ -44,73 +46,28 @@ export async function seed(
 ) {
 	const { forceFreshSeed = false } = options
 
+	if (!forceFreshSeed) {
+		return { skipped: true, reason: 'seed_requires_forceFreshSeed' }
+	}
+
 	const { MaiaDB } = await import('../../cojson/core/MaiaDB.js')
 	const peer = existingBackend || new MaiaDB({ node, account }, { systemSpark: '°Maia' })
 
-	let needsBootstrap = forceFreshSeed
+	let needsBootstrap = true
 	if (!needsBootstrap) {
 		needsBootstrap =
 			!account.get('registries') || !String(account.get('registries')).startsWith('co_z')
-	}
-	if (!needsBootstrap) {
-		const osId = await groups.getSparkOsId(peer, MAIA_SPARK)
-		if (!osId) needsBootstrap = true
 	}
 	if (needsBootstrap) {
 		const { getAllSchemas } = await import('@MaiaOS/schemata')
 		await bootstrapAndScaffold(account, node, schemas || getAllSchemas(), peer.dbEngine)
 	}
 
-	try {
-		const osId = await groups.getSparkOsId(peer, MAIA_SPARK)
-		if (osId) {
-			const osCore = await ensureCoValueLoaded(peer, osId, { waitForAvailable: true, timeoutMs: 2000 })
-			if (osCore && peer.isAvailable(osCore)) {
-				const osContent = peer.getCurrentContent(osCore)
-				const schematasId = osContent?.get?.('schematas')
-				if (schematasId) {
-					const schematasCore = await ensureCoValueLoaded(peer, schematasId, {
-						waitForAvailable: true,
-						timeoutMs: 2000,
-					})
-					if (schematasCore && peer.isAvailable(schematasCore)) {
-						const schematasContent = peer.getCurrentContent(schematasCore)
-						const keys = schematasContent?.keys?.() ?? Object.keys(schematasContent ?? {})
-						if (keys.length > 0 && !forceFreshSeed) {
-							if (!configs || (!configs.vibes?.length && Object.keys(configs.actors || {}).length === 0)) {
-								console.log('ℹ️  Account already seeded and no configs provided, skipping')
-								return { skipped: true, reason: 'already_seeded_no_configs' }
-							}
-						}
-					}
-				}
-			}
-		}
-	} catch (_e) {}
-
 	const { CoIdRegistry } = await import('@MaiaOS/schemata/co-id-generator')
 	const { transformForSeeding, validateSchemaStructure } = await import(
 		'@MaiaOS/schemata/schema-transformer'
 	)
 	const coIdRegistry = new CoIdRegistry()
-
-	const osIdForCleanup = needsBootstrap ? null : await groups.getSparkOsId(peer, MAIA_SPARK)
-	if (osIdForCleanup) {
-		try {
-			const osCoreForCleanup = await ensureCoValueLoaded(peer, osIdForCleanup, {
-				waitForAvailable: true,
-				timeoutMs: 2000,
-			})
-			if (osCoreForCleanup && peer.isAvailable(osCoreForCleanup)) {
-				const osContentForCleanup = peer.getCurrentContent(osCoreForCleanup)
-				const schematasIdForCleanup = osContentForCleanup?.get?.('schematas')
-				if (schematasIdForCleanup) {
-					console.log('🌱 Cleaning up existing seeded data before reseeding...')
-					await deleteSeededCoValues(account, node, peer)
-				}
-			}
-		} catch (_e) {}
-	}
 
 	const maiaGroup = await groups.getMaiaGroup(peer)
 	if (!maiaGroup || typeof maiaGroup.createMap !== 'function') {
@@ -234,6 +191,7 @@ export async function seed(
 	const { update: crudUpdate } = await import('../../cojson/crud/update.js')
 
 	const existingSchemaRegistry = new Map()
+	let schematasContent = null
 	if (osId) {
 		const osCore = await ensureCoValueLoaded(peer, osId, { waitForAvailable: true, timeoutMs: 2000 })
 		if (osCore && peer.isAvailable(osCore)) {
@@ -245,7 +203,7 @@ export async function seed(
 					timeoutMs: 2000,
 				})
 				if (schematasCore && peer.isAvailable(schematasCore)) {
-					const schematasContent = peer.getCurrentContent(schematasCore)
+					schematasContent = peer.getCurrentContent(schematasCore)
 					const keys = schematasContent?.keys?.() ?? Object.keys(schematasContent ?? {})
 					for (const key of keys) {
 						const schemaCoId = schematasContent.get(key)
@@ -280,6 +238,21 @@ export async function seed(
 
 	if (metaSchemaCoId && !schemaCoIdMap.has('°Maia/schema/meta')) {
 		schemaCoIdMap.set('°Maia/schema/meta', metaSchemaCoId)
+	}
+
+	// Schema definitions (meta-schema children) must always be CoMaps (have .get for resolution)
+	for (const [schemaKey, schemaCoId] of schemaCoIdMap) {
+		const core = peer.getCoValue(schemaCoId)
+		if (!core || !peer.isAvailable(core)) continue
+		const content = peer.getCurrentContent(core)
+		const isCoMap = content && typeof content.get === 'function'
+		if (!isCoMap) {
+			const rawType = content?.type ?? core?.type ?? 'unknown'
+			throw new Error(
+				`[Seed] Schema definition ${schemaKey} must be CoMap but is ${rawType}. ` +
+					'Corrupt data. Clear storage (delete DB file or IndexedDB) and run with PEER_FRESH_SEED=true.',
+			)
+		}
 	}
 
 	const seededSchemas = []

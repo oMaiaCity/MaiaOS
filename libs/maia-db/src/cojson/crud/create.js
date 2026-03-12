@@ -22,14 +22,16 @@ import * as collectionHelpers from './collection-helpers.js'
 // No CRUD-level hooks needed - storage hook catches ALL writes
 
 /**
- * Determine cotype from schema or data type
+ * Determine cotype from schema or data type.
+ * CRITICAL: Schema definitions (derived from meta-schema) must ALWAYS be CoMaps.
+ * The cotype in the schema describes instance types (colist/comap), not the schema document's type.
+ *
  * @param {Object} peer - Backend instance
  * @param {string} schema - Schema co-id
  * @param {*} data - Data to create
  * @returns {Promise<{ cotype: string, isSchemaDefinition: boolean }>} Cotype and schema-definition flag
  */
-async function determineCotype(peer, schema, data) {
-	// Try to load schema to get cotype using generic method
+async function determineCotypeAndFlag(peer, schema, data) {
 	try {
 		const schemaCore = await collectionHelpers.ensureCoValueLoaded(peer, schema, {
 			waitForAvailable: true,
@@ -89,7 +91,7 @@ export async function create(peer, schema, data, options = {}) {
 	const spark = options.spark ?? '°Maia'
 
 	// Determine cotype from schema or data type
-	const cotype = await determineCotype(peer, schema, data)
+	const { cotype, isSchemaDefinition } = await determineCotypeAndFlag(peer, schema, data)
 
 	if (!peer.account) {
 		throw new Error('[MaiaDB] Account required for create')
@@ -107,6 +109,7 @@ export async function create(peer, schema, data, options = {}) {
 		cotype,
 		data: cotype === 'comap' ? data : cotype === 'colist' ? data : undefined,
 		dataEngine: peer.dbEngine,
+		isSchemaDefinition,
 	})
 
 	if (isChatMessage) {
