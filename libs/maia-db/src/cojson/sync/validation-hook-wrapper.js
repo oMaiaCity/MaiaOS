@@ -182,7 +182,7 @@ async function validateRemoteTransactions(peer, dbEngine, msg) {
  * @param {Object} [opts] - Optional { beforeAcceptWrite: async (peer, msg, from) => Promise<{ok: boolean, error?: string}> }
  * @returns {Object} Wrapped sync manager with validation
  */
-export function wrapSyncManagerWithValidation(syncManager, peer, dbEngine) {
+export function wrapSyncManagerWithValidation(syncManager, peer, dbEngine, opts = {}) {
 	if (!syncManager || !peer) {
 		return syncManager
 	}

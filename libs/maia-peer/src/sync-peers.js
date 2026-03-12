@@ -142,7 +142,7 @@ export function setupSyncPeers(syncDomain = null) {
 		if (connected && !websocketConnected) {
 			websocketConnected = true
 			connectionLostLoggedAt = 0
-			syncState = { connected: true, syncing: true, error: null, status: 'syncing' }
+			syncState = { ...syncState, connected: true, syncing: true, error: null, status: 'syncing' }
 			notifySyncStateChange()
 			if (websocketConnectedResolve) {
 				websocketConnectedResolve()

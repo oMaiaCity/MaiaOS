@@ -24,22 +24,20 @@ import { WasmCrypto } from 'cojson/crypto/WasmCrypto'
  * @param {Function} [options.seed] - (account, node) => Promise<void> - post-creation seed (e.g. simpleAccountSeed)
  * @returns {Promise<{node, account, accountID, profile, group}>}
  */
-export async function createAccountWithSecret({
-	agentSecret,
-	name,
-	peers = [],
-	storage = undefined,
-	migration = undefined,
-	seed = undefined,
-}) {
+export async function createAccountWithSecret(options) {
+	const { agentSecret, name, peers = [], storage, migration = undefined, seed = undefined } = options
+
 	if (!agentSecret) {
 		throw new Error('agentSecret is required. Use signInWithPasskey() to get agentSecret.')
 	}
 
 	const crypto = await WasmCrypto.create()
 
-	// undefined = caller omitted → use default (human storage). null = explicitly no local storage.
-	const finalStorage = storage === undefined ? await getStorage({ mode: 'human' }) : storage
+	// Use human storage by default ONLY if storage property is missing.
+	// If storage is passed as undefined, it means explicitly in-memory.
+	const finalStorage = Object.hasOwn(options, 'storage')
+		? storage
+		: await getStorage({ mode: 'human' })
 
 	const result = await LocalNode.withNewlyCreatedAccount({
 		creationProps: { name },
@@ -88,13 +86,9 @@ export async function createAccountWithSecret({
  * @param {Function} [options.migration] - (account, node) => Promise<void> - idempotent migration on load
  * @returns {Promise<{node, account, accountID}>}
  */
-export async function loadAccount({
-	accountID,
-	agentSecret,
-	peers = [],
-	storage = undefined,
-	migration = undefined,
-}) {
+export async function loadAccount(options) {
+	const { accountID, agentSecret, peers = [], storage, migration = undefined } = options
+
 	if (!agentSecret) {
 		throw new Error('agentSecret is required. Use signInWithPasskey() to get agentSecret.')
 	}
@@ -104,8 +98,11 @@ export async function loadAccount({
 
 	const crypto = await WasmCrypto.create()
 
-	// undefined = caller omitted → use default (human storage). null = explicitly no local storage.
-	const finalStorage = storage === undefined ? await getStorage({ mode: 'human' }) : storage
+	// Use human storage by default ONLY if storage property is missing.
+	// If storage is passed as undefined, it means explicitly in-memory.
+	const finalStorage = Object.hasOwn(options, 'storage')
+		? storage
+		: await getStorage({ mode: 'human' })
 
 	console.log('   Sync peers:', peers.length > 0 ? `${peers.length} peer(s)` : 'none')
 	const storageLabel = finalStorage

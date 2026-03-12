@@ -49,8 +49,10 @@ export class MaiaDB {
 		if (node.storage) {
 			node.storage = wrapStorageWithIndexingHooks(node.storage, this)
 		}
-		if (node.syncManager && dbEngine) {
-			wrapSyncManagerWithValidation(node.syncManager, this, dbEngine)
+		if (node.syncManager && (dbEngine || options?.beforeAcceptWrite)) {
+			wrapSyncManagerWithValidation(node.syncManager, this, dbEngine, {
+				beforeAcceptWrite: options?.beforeAcceptWrite,
+			})
 		}
 	}
 

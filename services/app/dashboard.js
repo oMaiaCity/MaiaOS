@@ -4,7 +4,13 @@
  */
 
 import { getAllAvenRegistries, resolveAccountCoIdsToProfiles } from '@MaiaOS/loader'
-import { escapeHtml, getSyncStatusMessage, truncate, truncateWords } from './utils.js'
+import {
+	escapeHtml,
+	getProfileAvatarHtml,
+	getSyncStatusMessage,
+	truncate,
+	truncateWords,
+} from './utils.js'
 
 /**
  * Extract aven key from aven $id (e.g., "°Maia/aven/todos" -> "todos")
@@ -203,10 +209,17 @@ export async function renderDashboard(
 
 	const accountId = maia?.id?.maiaId?.id || ''
 	let accountDisplayName = truncate(accountId, 12)
+	let accountAvatarHtml = ''
 	if (accountId?.startsWith('co_z') && maia?.do) {
 		try {
 			const profiles = await resolveAccountCoIdsToProfiles(maia, [accountId])
-			accountDisplayName = profiles.get(accountId)?.name ?? accountDisplayName
+			const accountProfile = profiles.get(accountId) ?? null
+			accountDisplayName = accountProfile?.name ?? accountDisplayName
+			accountAvatarHtml = getProfileAvatarHtml(accountProfile?.image, {
+				size: 44,
+				className: 'navbar-avatar',
+				syncState,
+			})
 		} catch (_e) {}
 	}
 	if (accountId && !accountAvatarHtml) {
@@ -393,16 +406,26 @@ export async function renderAvenViewer(
 ) {
 	const accountId = maia?.id?.maiaId?.id || ''
 	let accountDisplayName = truncate(accountId, 12)
+	let accountAvatarHtml = ''
 	if (accountId?.startsWith('co_z') && maia?.do) {
 		try {
 			const profiles = await resolveAccountCoIdsToProfiles(maia, [accountId])
-			accountDisplayName = profiles.get(accountId)?.name ?? accountDisplayName
+			const accountProfile = profiles.get(accountId) ?? null
+			accountDisplayName = accountProfile?.name ?? accountDisplayName
+			accountAvatarHtml = getProfileAvatarHtml(accountProfile?.image, {
+				size: 44,
+				className: 'navbar-avatar',
+				syncState,
+			})
 		} catch (_e) {}
+	}
+	if (accountId && !accountAvatarHtml) {
+		accountAvatarHtml = getProfileAvatarHtml(null, { size: 44, className: 'navbar-avatar' })
 	}
 	// Map aven keys to display names
 	const avenNameMap = {
 		db: 'MaiaDB',
-		humans: 'Human Book',
+		humans: 'Addressbook',
 		todos: 'Todos',
 		logs: 'Creator',
 	}

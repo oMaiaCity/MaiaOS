@@ -10,7 +10,7 @@
 
 import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js'
 import { ReactiveStore } from '../../reactive-store.js'
-import { getHumansRegistryId, getSparksRegistryId } from '../groups/groups.js'
+import { getAvensRegistryId, getHumansRegistryId, getSparksRegistryId } from '../groups/groups.js'
 import { resolve as resolveSchema } from '../schema/resolver.js'
 import { ensureCoValueLoaded, getCoListId } from './collection-helpers.js'
 import { extractCoValueData } from './data-extraction.js'
@@ -89,6 +89,12 @@ export async function read(
 		}
 		if (humanSchemaCoId && resolvedSchema === humanSchemaCoId) {
 			return readHumansFromRegistries(peer, readOptions)
+		}
+		const avenIdentitySchemaCoId = await resolveSchema(peer, '°Maia/schema/os/aven-identity', {
+			returnType: 'coId',
+		})
+		if (avenIdentitySchemaCoId && resolvedSchema === avenIdentitySchemaCoId) {
+			return readAvensFromRegistries(peer, readOptions)
 		}
 		return readCollection(peer, schema, filter, readOptions)
 	}
@@ -953,6 +959,122 @@ async function readHumansFromRegistries(peer, options = {}) {
 	const unsub = humansStore?.subscribe?.(() => updateHumans())
 	if (unsub) {
 		peer.subscriptionCache.getOrCreate(`subscription:humans:${humansId}`, () => ({
+			unsubscribe: unsub,
+		}))
+	}
+	return store
+}
+
+/**
+ * Read avens from account.registries.avens CoMap.
+ * Same pattern as readHumansFromRegistries; avens registry is public (everyone reader).
+ * @param {Object} peer - Backend instance
+ * @param {Object} options - Read options
+ * @returns {Promise<ReactiveStore>} ReactiveStore with array of {id, accountId, registryName, profileName}
+ */
+async function readAvensFromRegistries(peer, options = {}) {
+	const { timeoutMs = 5000, map = null } = options
+	const cacheKey = map ? `avens:registries:${JSON.stringify(map)}` : 'avens:registries'
+	const store = peer.subscriptionCache.getOrCreateStore(cacheKey, () => new ReactiveStore([]))
+
+	const avensId = await getAvensRegistryId(peer)
+	if (!avensId || !avensId.startsWith('co_')) {
+		return store
+	}
+
+	const updateAvens = async () => {
+		const avensStore = await readSingleCoValue(peer, avensId, null, { deepResolve: false })
+		try {
+			await waitForStoreReady(avensStore, avensId, timeoutMs)
+		} catch {
+			return
+		}
+		const avensData = avensStore?.value ?? {}
+		if (avensData?.error) return
+
+		const avenIdentityCoIdToRegistryName = new Map()
+		for (const k of Object.keys(avensData)) {
+			if (k === 'id' || k === 'loading' || k === 'error' || k === '$schema' || k === 'type') continue
+			const avenIdentityCoId = avensData[k]
+			if (typeof avenIdentityCoId !== 'string' || !avenIdentityCoId.startsWith('co_')) continue
+			const isRegistryName = !k.startsWith('co_z')
+			if (isRegistryName) {
+				avenIdentityCoIdToRegistryName.set(avenIdentityCoId, k)
+			} else if (!avenIdentityCoIdToRegistryName.has(avenIdentityCoId)) {
+				avenIdentityCoIdToRegistryName.set(avenIdentityCoId, k)
+			}
+		}
+
+		const uniqueAvenIdentityCoIds = [...new Set(avenIdentityCoIdToRegistryName.keys())]
+		const items = []
+
+		for (const avenIdentityCoId of uniqueAvenIdentityCoIds) {
+			const registryName = avenIdentityCoIdToRegistryName.get(avenIdentityCoId) ?? avenIdentityCoId
+			try {
+				const avenIdentityStore = await readSingleCoValue(peer, avenIdentityCoId, null, {
+					deepResolve: false,
+					timeoutMs,
+				})
+				await waitForStoreReady(avenIdentityStore, avenIdentityCoId, Math.min(timeoutMs, 2000))
+				const avenIdentityData = avenIdentityStore?.value ?? {}
+				if (avenIdentityData?.error) {
+					items.push({
+						id: avenIdentityCoId,
+						accountId: avenIdentityCoId,
+						registryName,
+						profileName: travelerFallback(avenIdentityCoId),
+						profile: null,
+					})
+					continue
+				}
+				const accountId = avenIdentityData.account ?? avenIdentityCoId
+				const profileCoId = avenIdentityData.profile
+
+				let profileName = travelerFallback(accountId)
+				if (profileCoId && typeof profileCoId === 'string' && profileCoId.startsWith('co_')) {
+					try {
+						const profileStore = await readSingleCoValue(peer, profileCoId, null, {
+							deepResolve: false,
+							timeoutMs: Math.min(timeoutMs, 2000),
+						})
+						await waitForStoreReady(profileStore, profileCoId, 2000)
+						const profileData = profileStore?.value ?? {}
+						const name = profileData?.name
+						if (typeof name === 'string' && name.length > 0) {
+							profileName = name
+						}
+					} catch {
+						/* use fallback */
+					}
+				}
+
+				items.push({
+					id: avenIdentityCoId,
+					accountId,
+					registryName,
+					profileName,
+					profile: profileCoId,
+				})
+			} catch {
+				items.push({
+					id: avenIdentityCoId,
+					accountId: avenIdentityCoId,
+					registryName,
+					profileName: travelerFallback(avenIdentityCoId),
+					profile: null,
+				})
+			}
+		}
+
+		const finalItems = map ? await applyMapTransformToArray(peer, items, map, { timeoutMs }) : items
+		store._set(finalItems)
+	}
+
+	await updateAvens()
+	const avensStore = await readSingleCoValue(peer, avensId, null, { deepResolve: false })
+	const unsub = avensStore?.subscribe?.(() => updateAvens())
+	if (unsub) {
+		peer.subscriptionCache.getOrCreate(`subscription:avens:${avensId}`, () => ({
 			unsubscribe: unsub,
 		}))
 	}
