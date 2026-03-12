@@ -6,7 +6,7 @@
 	"indexing": true,
 	"properties": {
 		"content": {
-			"$co": "°Maia/schema/os/cotext",
+			"$co": "°Maia/schema/data/cotext",
 			"description": "CoText (colist of graphemes) - collaborative plaintext"
 		}
 	},

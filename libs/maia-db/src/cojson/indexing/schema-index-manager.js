@@ -979,8 +979,10 @@ export async function indexCoValue(peer, coValueCoreOrId) {
 			// The append() operation is already queued in CoJSON's CRDT, so it will persist eventually
 			// Storage sync happens asynchronously in the background - no need to block here
 			// This allows instant local-first UI updates without waiting for persistence
-		} else {
-			// No schema - add to unknown colist
+		} else if (!schemaCoId) {
+			// ROOT CAUSE FIX: Only add to UNKNOWN when CoValue has NO schema at all.
+			// CoValues with a schema that has indexing: false (e.g. CoTexts) must NOT go to UNKNOWN -
+			// they have a valid schema, they're just not in a schema index. Skip indexing entirely.
 			const unknownColist = await ensureUnknownColist(peer)
 
 			if (!unknownColist) {

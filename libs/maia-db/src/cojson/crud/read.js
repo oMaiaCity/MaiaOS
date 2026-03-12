@@ -597,14 +597,8 @@ function getMapDependencyCoIds(rawData, mapConfig) {
  * @param {Set<string>} [visited] - Visited set for circular reference detection
  * @returns {Promise<Object>} Processed CoValue data
  */
-async function processCoValueData(peer, coValueCore, schemaHint, options, visited = new Set()) {
-	const {
-		deepResolve = true,
-		maxDepth = 15,
-		timeoutMs = 5000,
-		resolveReferences = null,
-		map = null,
-	} = options
+async function processCoValueData(peer, coValueCore, schemaHint, options, _visited = new Set()) {
+	const { deepResolve = true, maxDepth = 15, timeoutMs = 5000, map = null } = options
 
 	// Extract CoValue data as flat object
 	let data = extractCoValueData(peer, coValueCore, schemaHint)
@@ -621,16 +615,6 @@ async function processCoValueData(peer, coValueCore, schemaHint, options, visite
 			})
 		} catch (_err) {
 			// Silently continue - deep resolution failure shouldn't block display
-		}
-	}
-
-	// Resolve CoValue references (if option enabled)
-	if (resolveReferences) {
-		try {
-			const resolutionOptions = { ...resolveReferences, timeoutMs }
-			data = await resolveCoValueReferences(peer, data, resolutionOptions, visited, maxDepth, 0)
-		} catch (_err) {
-			// Silently continue - resolution failure shouldn't block display
 		}
 	}
 
@@ -657,17 +641,11 @@ async function processCoValueData(peer, coValueCore, schemaHint, options, visite
  * @returns {Promise<ReactiveStore>} ReactiveStore with CoValue data (with query objects merged if present)
  */
 async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
-	const {
-		deepResolve = true,
-		maxDepth = 15,
-		timeoutMs = 5000,
-		resolveReferences = null,
-		map = null,
-	} = options
+	const { deepResolve = true, maxDepth = 15, timeoutMs = 5000, map = null } = options
 
 	// Check cache for resolved data before processing
 	const cache = peer.subscriptionCache
-	const cacheOptions = { deepResolve, resolveReferences, map, maxDepth, timeoutMs }
+	const cacheOptions = { deepResolve, map, maxDepth, timeoutMs }
 	const cachedData = cache.getResolvedData(coId, cacheOptions)
 
 	if (cachedData) {
@@ -1124,13 +1102,7 @@ export async function findFirst(peer, schema, filter, options = {}) {
  * @returns {Promise<ReactiveStore>} ReactiveStore with array of CoValue data
  */
 async function readCollection(peer, schema, filter = null, options = {}) {
-	const {
-		deepResolve = true,
-		maxDepth = 15,
-		timeoutMs = 5000,
-		resolveReferences = null,
-		map = null,
-	} = options
+	const { deepResolve = true, maxDepth = 15, timeoutMs = 5000, map = null } = options
 
 	// Cache stores by schema+filter+options so multiple actors share same store
 	const optionsKey = options?.map ? JSON.stringify({ map: options.map }) : ''
@@ -1213,6 +1185,24 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 				if (updateStore) updateStore().catch((_e) => {})
 			})
 			peer.subscriptionCache.getOrCreate(refKey, () => ({ unsubscribe: unsub }))
+		}
+		if (refCore && peer.isAvailable(refCore)) {
+			setupSub(refCore)
+		} else {
+			ensureCoValueLoaded(peer, refCoId, { waitForAvailable: true, timeoutMs: 2000 })
+				.then(() => {
+					const core = peer.getCoValue(refCoId)
+					if (core && peer.isAvailable(core)) setupSub(core)
+				})
+				.catch(() => {})
+		}
+	}
+
+	// Helper to subscribe to an item CoValue
+	const subscribeToItem = (itemId) => {
+		// Skip if already subscribed
+		if (subscribedItemIds.has(itemId)) {
+			return
 		}
 
 		subscribedItemIds.add(itemId)
@@ -1363,6 +1353,14 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 						// Process and cache the item data using fresh CoValueCore reference
 						let processedData = extractCoValueData(peer, currentItemCore)
 
+						// Subscribe to refs that map depends on (map-driven resolution reactivity)
+						if (map) {
+							const deps = getMapDependencyCoIds(processedData, map)
+							for (const coId of deps) {
+								subscribeToResolvedRef(coId, itemId)
+							}
+						}
+
 						// Filter out empty CoMaps (defense in depth - prevents skeletons from appearing even if index removal fails)
 						// Empty CoMap = object with only id, type, $schema properties (no data properties)
 						const dataKeys = Object.keys(processedData).filter(
@@ -1383,26 +1381,6 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 								})
 							} catch (_err) {
 								// Silently continue - deep resolution failure shouldn't block item display
-							}
-						}
-
-						// Resolve CoValue references (if option enabled)
-						// This allows views to access nested properties like $$source.role
-						if (resolveReferences) {
-							try {
-								const resolutionOptions = { ...resolveReferences, timeoutMs }
-								const resolvedData = await resolveCoValueReferences(
-									peer,
-									processedData,
-									resolutionOptions,
-									sharedVisited,
-									maxDepth,
-									0,
-								)
-								// Replace processedData with resolved version
-								Object.assign(processedData, resolvedData)
-							} catch (_err) {
-								// Silently continue - resolution failure shouldn't block item display
 							}
 						}
 
@@ -1495,6 +1473,9 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 		peer.subscriptionCache.scheduleCleanup(`subscription:${coListId}`)
 		for (const itemId of subscribedItemIds) {
 			peer.subscriptionCache.scheduleCleanup(`subscription:${itemId}`)
+		}
+		for (const refKey of subscribedResolvedRefKeys) {
+			peer.subscriptionCache.scheduleCleanup(refKey)
 		}
 	}
 

@@ -10,7 +10,6 @@
  */
 
 import { EXCEPTION_SCHEMAS } from '../../schemas/registry.js'
-import { createCoBinary } from '../cotypes/coBinary.js'
 import { createCoList } from '../cotypes/coList.js'
 import { createCoMap } from '../cotypes/coMap.js'
 import { createCoStream } from '../cotypes/coStream.js'
@@ -51,16 +50,26 @@ async function resolveContext(context, spark) {
  * @param {'comap'|'colist'|'costream'|'cobinary'} options.cotype
  * @param {Object} [options.data] - Init data for map (object) or list (array). Required for comap/colist.
  * @param {Object} [options.dataEngine] - For schema validation (optional during seed)
+ * @param {boolean} [options.isSchemaDefinition] - When true, enforces cotype='comap' (schema defs must be CoMaps)
  * @returns {Promise<{ coValue: RawCoValue }>}
  */
 export async function createCoValueForSpark(context, spark, options) {
-	const { schema, cotype, data, dataEngine } = options
+	const { schema, cotype, data, dataEngine, isSchemaDefinition } = options
 	if (!schema || typeof schema !== 'string') {
 		throw new Error('[createCoValueForSpark] options.schema is required')
 	}
 	if (!cotype || !['comap', 'colist', 'costream', 'cobinary'].includes(cotype)) {
 		throw new Error(
 			'[createCoValueForSpark] options.cotype must be comap, colist, costream, or cobinary',
+		)
+	}
+
+	// Schema definitions (meta-schema and its children) must ALWAYS be CoMaps.
+	// The cotype in schema JSON describes instance types (e.g. inbox has cotype:costream for its instances), not the document.
+	if ((schema === EXCEPTION_SCHEMAS.META_SCHEMA || isSchemaDefinition) && cotype !== 'comap') {
+		throw new Error(
+			`[createCoValueForSpark] Schema definitions must be CoMap, not ${cotype}. ` +
+				'The cotype in schema JSON describes instances (inbox instances are CoStreams), not the schema document.',
 		)
 	}
 

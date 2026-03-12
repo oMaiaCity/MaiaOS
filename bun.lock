@@ -44,11 +44,11 @@
     },
     "libs/maia-brand": {
       "name": "@MaiaOS/brand",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
     },
     "libs/maia-db": {
       "name": "@MaiaOS/db",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/peer": "workspace:*",
         "@MaiaOS/schemata": "workspace:*",
@@ -60,7 +60,7 @@
     },
     "libs/maia-distros": {
       "name": "@MaiaOS/maia-distros",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/actors": "workspace:*",
         "@MaiaOS/avens": "workspace:*",
@@ -72,7 +72,7 @@
     },
     "libs/maia-docs": {
       "name": "@MaiaOS/docs",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
     },
     "libs/maia-engines": {
       "name": "@MaiaOS/engines",
@@ -87,11 +87,11 @@
     },
     "libs/maia-language": {
       "name": "@maia/language",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
     },
     "libs/maia-loader": {
       "name": "@MaiaOS/loader",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/engines": "workspace:*",
@@ -113,15 +113,16 @@
     },
     "libs/maia-schemata": {
       "name": "@MaiaOS/schemata",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "ajv": "^8.12.0",
+        "unicode-segmenter": "^0.15.0",
       },
     },
     "libs/maia-self": {
       "name": "@MaiaOS/self",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
@@ -131,7 +132,7 @@
     },
     "libs/maia-storage": {
       "name": "@MaiaOS/storage",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@electric-sql/pglite": "latest",
         "cojson": "0.20.7",
@@ -158,7 +159,7 @@
     },
     "services/sync": {
       "name": "@MaiaOS/sync",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/loader": "workspace:*",
         "cojson": "0.20.7",
@@ -167,22 +168,23 @@
     },
     "libs/maia-tools": {
       "name": "@MaiaOS/tools",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/engines": "workspace:*",
         "@MaiaOS/schemata": "workspace:*",
+        "unicode-segmenter": "^0.15.0",
       },
     },
     "libs/maia-vibes": {
       "name": "@MaiaOS/vibes",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/loader": "workspace:*",
       },
     },
     "services/maia": {
       "name": "@MaiaOS/maia",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/loader": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
@@ -190,11 +192,10 @@
     },
     "services/moai": {
       "name": "@MaiaOS/moai",
-      "version": "26.217.1432",
+      "version": "26.217.1438",
       "dependencies": {
         "@MaiaOS/loader": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
-        "@MaiaOS/maia-ucan": "workspace:*",
         "unicode-segmenter": "^0.15.0",
       },
     },

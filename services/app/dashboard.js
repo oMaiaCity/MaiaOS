@@ -500,10 +500,10 @@ export async function renderAvenViewer(
 				<div class="aven-card">
 					<div id="aven-container-${escapeHtml(currentAven)}" class="aven-container"></div>
 				</div>
-				<!-- Bottom navbar area for mobile - home button bottom-left (aven-specific buttons handled by avens) -->
+				<!-- Bottom navbar area for mobile - home button bottom-left (vibe-specific buttons handled by vibes) -->
 				<div class="bottom-navbar">
 					<div class="bottom-navbar-left">
-						<button class="home-btn bottom-home-btn home-btn-icon-only" onclick="window.loadAven(null)" title="Home" aria-label="Home">
+						<button class="home-btn bottom-home-btn home-btn-icon-only" onclick="window.loadVibe(null)" title="Home" aria-label="Home">
 							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
 								<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
 								<polyline points="9 22 9 12 15 12 15 22"></polyline>
@@ -511,7 +511,7 @@ export async function renderAvenViewer(
 						</button>
 					</div>
 					<div class="bottom-navbar-center">
-						<!-- Center reserved for aven-specific -->
+						<!-- Center reserved for vibe-specific -->
 					</div>
 					<div class="bottom-navbar-right">
 						<!-- Right buttons are aven-specific, not global -->

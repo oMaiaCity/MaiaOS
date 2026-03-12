@@ -5,8 +5,7 @@
 
 // Import from kernel bundle - everything bundled (no direct @MaiaOS/db in production)
 import {
-	loadCapabilitiesGrants,
-	resolveAccountCoIdsToProfiles,
+	resolveAccountCoIdsToProfileNames,
 	resolveGroupCoIdsToCapabilityNames,
 } from '@MaiaOS/loader'
 
@@ -34,110 +33,8 @@ async function getSchemaFromDb(maia, schemaRef) {
 	}
 }
 
-import { renderAvenViewer, renderDashboard } from './dashboard.js'
-import { renderMaiaAIView } from './maia-ai-view.js'
-import { escapeHtml, getProfileAvatarHtml, getSyncStatusMessage, truncate } from './utils.js'
-
-// Cache for CoBinary image data URLs - survives re-renders, enables progressive reactive preview
-const cobinaryPreviewCache = new Map()
-
-const DEBUG_COBINARY =
-	typeof window !== 'undefined' &&
-	(window.location?.hostname === 'localhost' || import.meta?.env?.DEV) &&
-	false
-
-function extractDataUrl(res) {
-	const dataUrl = res?.dataUrl ?? res?.data?.dataUrl ?? (res?.ok === true && res?.data?.dataUrl)
-	if (DEBUG_COBINARY && res && !dataUrl) {
-		console.warn('[CoBinary db-view] extractDataUrl: no dataUrl in response', {
-			keys: Object.keys(res || {}),
-			hasData: !!res?.data,
-			dataKeys: res?.data ? Object.keys(res.data) : [],
-		})
-	}
-	return dataUrl ?? null
-}
-
-function loadBinaryWithRetry(maia, coId, maxAttempts = 4) {
-	const attempt = (n) =>
-		maia
-			.do({ op: 'loadBinaryAsBlob', coId })
-			.then((res) => extractDataUrl(res))
-			.catch((err) => {
-				const msg = err?.message ?? ''
-				const retryable =
-					msg.includes('not found') ||
-					msg.includes('not available') ||
-					msg.includes('still be loading') ||
-					msg.includes('no binary data') ||
-					msg.includes('stream not finished') ||
-					err?.name === 'NotReadableError'
-				if (n < maxAttempts && retryable) {
-					return new Promise((r) => setTimeout(r, 300)).then(() => attempt(n + 1))
-				}
-				throw err
-			})
-	return attempt(0)
-}
-
-/** Hydrate cobinary image previews: load from cache or fetch, then set img.src. Runs after DOM update. */
-export function hydrateCobinaryPreviews(maia) {
-	if (DEBUG_COBINARY)
-		console.log('[CoBinary db-view] hydrateCobinaryPreviews', { hasMaia: !!maia?.do })
-	if (!maia?.do) return
-	const imgs = document.querySelectorAll('img[data-co-id]')
-	if (DEBUG_COBINARY)
-		console.log('[CoBinary db-view] hydrateCobinaryPreviews found imgs', imgs.length)
-	imgs.forEach((img) => {
-		const coId = img.getAttribute('data-co-id')
-		if (!coId || !coId.startsWith('co_z')) {
-			if (DEBUG_COBINARY)
-				console.log('[CoBinary db-view] hydrateCobinaryPreviews skip invalid coId', { coId })
-			return
-		}
-		if (img.src && (img.src.startsWith('data:') || img.src.startsWith('blob:'))) return
-		const cached = cobinaryPreviewCache.get(coId)
-		if (cached?.dataUrl) {
-			img.src = cached.dataUrl
-			return
-		}
-		if (cached?.loading) {
-			cached.loading.then((dataUrl) => {
-				const current = document.querySelector(`img[data-co-id="${coId}"]`)
-				if (current) {
-					if (dataUrl) current.src = dataUrl
-					else current.alt = 'Preview unavailable'
-				}
-			})
-			return
-		}
-		if (DEBUG_COBINARY) console.log('[CoBinary db-view] loadBinaryAsBlob start', { coId })
-		const loading = loadBinaryWithRetry(maia, coId)
-			.then((dataUrl) => {
-				cobinaryPreviewCache.set(coId, { dataUrl })
-				if (DEBUG_COBINARY)
-					console.log('[CoBinary db-view] loadBinaryAsBlob done', {
-						coId,
-						hasDataUrl: !!dataUrl,
-						len: dataUrl?.length,
-					})
-				return dataUrl
-			})
-			.catch((err) => {
-				if (DEBUG_COBINARY)
-					console.warn('[CoBinary db-view] loadBinaryAsBlob failed', { coId, err: err?.message })
-				return null
-			})
-		cobinaryPreviewCache.set(coId, { loading })
-		loading.then((dataUrl) => {
-			const current = document.querySelector(`img[data-co-id="${coId}"]`)
-			if (current) {
-				if (dataUrl) current.src = dataUrl
-				else current.alt = 'Preview unavailable'
-			}
-		})
-	})
-}
+import { renderDashboard, renderVibeViewer } from './dashboard.js'
+import { escapeHtml, getSyncStatusMessage, truncate } from './utils.js'
 
 export async function renderApp(
 	maia,
@@ -393,8 +290,6 @@ export async function renderApp(
 
 	// Get data based on current view
 	let data, viewTitle, _viewSubtitle
-	let tableContent = ''
-	let headerInfo = null
 
 	// Get account and node for navigation
 	const account = maia.id.maiaId
@@ -682,67 +577,28 @@ export async function renderApp(
 					<p class="mt-4 font-medium text-slate-500">Loading CoValue... (waiting for verified state)</p>
 				</div>
 			`
-			} else if ((data._coValueType || data.cotype || data.type) === 'cobinary') {
-				// CoBinary: Display binary stream metadata (co-id, mimeType, size, finished)
-				headerInfo = {
-					type: 'cobinary',
-					typeLabel: 'CoBinary',
-					description: 'Binary file stream',
-				}
-				const mimeType = data.mimeType || 'application/octet-stream'
-				const totalSizeBytes = data.totalSizeBytes ?? null
-				const finished = data.finished ?? false
-				const sizeStr = totalSizeBytes != null ? `${(totalSizeBytes / 1024).toFixed(1)} KB` : '?'
-				const isImage = mimeType.startsWith('image/')
-				let previewHtml = ''
-				if (isImage && data.id && maia?.do) {
-					previewHtml = `
-					<div class="mt-4 p-4 bg-slate-50/50 rounded-xl border border-slate-200" style="width:100%;max-width:100%;min-width:0;overflow:hidden">
-						<p class="text-xs text-slate-500 mb-2">Image preview (loads on demand)</p>
-						<div style="width:100%;max-width:100%;min-width:0;overflow:hidden">
-							<img id="cobinary-preview-${data.id.replace(/[^a-zA-Z0-9]/g, '_')}" style="width:100%;max-width:100%;max-height:280px;height:auto;object-fit:contain;display:block;border-radius:6px;border:1px solid #e2e8f0" alt="Binary preview" data-co-id="${escapeHtml(data.id)}" />
-						</div>
-					</div>
-				`
-				}
-				tableContent = `
-				<div class="space-y-4 cobinary-container">
-					<div class="grid grid-cols-2 gap-3 text-sm">
-						<div class="font-medium text-slate-500">Co-ID</div>
-						<div class="text-marine-blue-muted font-mono text-xs">${escapeHtml(data.id || '')}</div>
-						<div class="font-medium text-slate-500">MIME type</div>
-						<div class="text-marine-blue-muted">${escapeHtml(mimeType)}</div>
-						<div class="font-medium text-slate-500">Size</div>
-						<div class="text-marine-blue-muted">${sizeStr}</div>
-						<div class="font-medium text-slate-500">Complete</div>
-						<div class="text-marine-blue-muted">${finished ? 'Yes' : 'No'}</div>
-					</div>
-					${previewHtml}
-				</div>
-			`
-				// Image preview loaded reactively via hydrateCobinaryPreviews (after innerHTML)
-			} else if (
-				(data._coValueType || data.cotype || data.type) === 'colist' ||
-				(data._coValueType || data.cotype || data.type) === 'costream'
-			) {
-				// CoList/CoStream: Display items directly (they ARE the list/stream, no properties)
-				// STRICT: Ensure items is always array (read API may return object/undefined for index colists)
-				const raw = data?.items
-				const items = Array.isArray(raw)
-					? raw
-					: raw && typeof raw === 'object' && !Array.isArray(raw)
-						? Object.values(raw)
-						: []
-				const isStream = (data._coValueType || data.cotype || data.type) === 'costream'
-				const typeLabel = isStream ? 'CoStream' : 'CoList'
+		} else if (
+			(data._coValueType || data.cotype || data.type) === 'colist' ||
+			(data._coValueType || data.cotype || data.type) === 'costream'
+		) {
+			// CoList/CoStream: Display items directly (they ARE the list/stream, no properties)
+			// STRICT: Ensure items is always array (read API may return object/undefined for index colists)
+			const raw = data?.items
+			const items = Array.isArray(raw)
+				? raw
+				: raw && typeof raw === 'object' && !Array.isArray(raw)
+					? Object.values(raw)
+					: []
+			const isStream = (data._coValueType || data.cotype || data.type) === 'costream'
+			const typeLabel = isStream ? 'CoStream' : 'CoList'
 
-				// Store header info for display in inspector-header
-				headerInfo = {
-					type: data._coValueType || data.cotype || data.type,
-					typeLabel: typeLabel,
-					itemCount: items.length,
-					description: isStream ? 'Append-only stream' : 'Ordered list',
-				}
+			// Store header info for display in inspector-header
+			headerInfo = {
+				type: data._coValueType || data.cotype || data.type,
+				typeLabel: typeLabel,
+				itemCount: items.length,
+				description: isStream ? 'Append-only stream' : 'Ordered list',
+			}
 
 				const itemRows = items
 					.map((item, index) => {
@@ -773,36 +629,36 @@ export async function renderApp(
 					</div>
 				</div>
 			`
-			} else if (
-				data &&
-				typeof data === 'object' &&
-				!Array.isArray(data) &&
-				!data.error &&
-				!data.loading
-			) {
-				// CoMap: Display properties from flat object format (operations API)
-				// Convert flat object to normalized format for display
-				const schemaCoId = data.$schema // STRICT: Only $schema, no fallback
-				const schemaDef = schemaCoId ? await getSchemaFromDb(maia, schemaCoId) : null
+		} else if (
+			data &&
+			typeof data === 'object' &&
+			!Array.isArray(data) &&
+			!data.error &&
+			!data.loading
+		) {
+			// CoMap: Display properties from flat object format (operations API)
+			// Convert flat object to normalized format for display
+			const schemaCoId = data.$schema // STRICT: Only $schema, no fallback
+			const schemaDef = schemaCoId ? await getSchemaFromDb(maia, schemaCoId) : null
 
-				// Extract properties from flat object (exclude metadata keys)
-				// groupInfo is backend-derived metadata (not a co-value property) - only show in metadata sidebar
-				// CoJSON internal keys (sealer, signer, KEY_..._FOR_SEALER_...) go to metadata sidebar, not main view
-				const propertyKeys = Object.keys(data).filter(
-					(k) =>
-						k !== 'id' &&
-						k !== 'loading' &&
-						k !== 'error' &&
-						k !== '$schema' &&
-						k !== 'schema' &&
-						k !== 'type' &&
-						k !== 'cotype' && // Display only in metadata aside, not as main content property
-						k !== '_coValueType' && // Internal: actual CRDT type of this CoValue (display metadata)
-						k !== 'displayName' &&
-						k !== 'headerMeta' &&
-						k !== 'groupInfo' && // Backend metadata - displayed in metadata sidebar, not as a property
-						!isCoJsonInternalKey(k, data[k]),
-				)
+			// Extract properties from flat object (exclude metadata keys)
+			// groupInfo is backend-derived metadata (not a co-value property) - only show in metadata sidebar
+			// CoJSON internal keys (sealer, signer, KEY_..._FOR_SEALER_...) go to metadata sidebar, not main view
+			const propertyKeys = Object.keys(data).filter(
+				(k) =>
+					k !== 'id' &&
+					k !== 'loading' &&
+					k !== 'error' &&
+					k !== '$schema' &&
+					k !== 'schema' &&
+					k !== 'type' &&
+					k !== 'cotype' && // Display only in metadata aside, not as main content property
+					k !== '_coValueType' && // Internal: actual CRDT type of this CoValue (display metadata)
+					k !== 'displayName' &&
+					k !== 'headerMeta' &&
+					k !== 'groupInfo' && // Backend metadata - displayed in metadata sidebar, not as a property
+					!isCoJsonInternalKey(k, data[k]),
+			)
 
 				if (propertyKeys.length === 0) {
 					// No properties - show empty state (with hint for avens/schematas/indexes)
@@ -1055,7 +911,7 @@ export async function renderApp(
 						<div class="metadata-info-item">
 							<span class="metadata-info-key">CO TYPE</span>
 						<span class="badge badge-type badge-${String(data._coValueType || data.cotype || data.type || 'unknown').replace(/-/g, '')}">
-							${(data._coValueType || data.cotype || data.type) === 'colist' ? 'COLIST' : (data._coValueType || data.cotype || data.type) === 'costream' ? 'COSTREAM' : (data._coValueType || data.cotype || data.type) === 'cobinary' ? 'COBINARY' : String(data._coValueType || data.cotype || data.type || 'unknown').toUpperCase()}
+							${(data._coValueType || data.cotype || data.type) === 'colist' ? 'COLIST' : (data._coValueType || data.cotype || data.type) === 'costream' ? 'COSTREAM' : String(data._coValueType || data.cotype || data.type || 'unknown').toUpperCase()}
 						</span>
 						</div>
 						${

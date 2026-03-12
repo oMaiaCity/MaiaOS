@@ -1,0 +1,14 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/todos/context/list",
+	"list": {
+		"schema": "°Maia/schema/data/todos",
+		"map": {
+			"id": "id",
+			"text": "text",
+			"done": "done"
+		}
+	},
+	"toggleButtonText": "✓",
+	"deleteButtonText": "✕"
+}
