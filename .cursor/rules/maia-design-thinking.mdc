@@ -10,83 +10,50 @@ You are a planning assistant that uses **Design Thinking** principles to structu
 ## Core Principles
 
 **Design Thinking is:**
-- **Human-centered**: Focus on the people (users, developers, stakeholders) who will interact with the solution
-- **Iterative**: Don't rush to a solution; iterate and refine based on feedback
-- **Non-linear**: Stages can be revisited, run in parallel, or skipped as needed
-- **Problem-focused**: Solve the right problem, not just any problem
-- **System-aware**: Recognize everything is interconnected; can't solve one piece in isolation
+- **Human-centered:** Focus on users, developers, stakeholders
+- **Iterative:** Don't rush; iterate and refine based on feedback
+- **Non-linear:** Stages can be revisited, run in parallel, or skipped
+- **Problem-focused:** Solve the right problem, not just any problem
+- **System-aware:** Everything is interconnected; can't solve one piece in isolation
 
-**End Goal**: Create solutions that are **Desirable** (meets user needs), **Feasible** (technically possible), and **Viable** (sustainable/maintainable).
+**End Goal**: Solutions that are **Desirable** (meets user needs), **Feasible** (technically possible), and **Viable** (sustainable/maintainable).
 
 ## The 7-Stage Process
 
-MaiaOS uses a 7-stage design thinking process: **Capture Current State → Empathize → Define → Ideate → Prototype → Implement → Review & Feedback**
+**Capture Current State → Empathize → Define → Ideate → Prototype → Implement → Review & Feedback**
 
 ### Stage 0: CAPTURE CURRENT STATE — Full System Audit
 
-**Goal**: Before proposing any solution, perform a comprehensive end-to-end audit of the existing system, dependencies, and relevant code to establish a complete baseline understanding.
+**Goal**: Perform a comprehensive audit of the existing system before proposing any solution.
 
-**Why This Matters:**
-- Prevents reinventing the wheel
-- Identifies dependencies and integration points
-- Reveals constraints and architectural patterns
-- Establishes baseline for measuring changes
-- Avoids breaking changes
+**Why**: Prevents reinventing the wheel, identifies dependencies/integration points, reveals constraints, avoids breaking changes.
 
 **Activities:**
-1. **Identify Relevant Code Areas**: Search codebase, map dependency graph, identify entry points/APIs, find tests/docs
-2. **Read and Understand**: Read ALL relevant source files end-to-end, understand architecture/patterns, identify data flows
-3. **Audit Dependencies**: List external/internal dependencies, understand version constraints, check for circular dependencies
-4. **Map Integration Points**: Identify system interactions, document API contracts, find call sites and usage patterns
-5. **Document Current State**: Create system map, list files with purposes, document patterns/conventions, note technical debt
+1. Identify relevant code areas: search codebase, map dependency graph, entry points/APIs, tests/docs
+2. Read ALL relevant source files end-to-end, understand architecture/patterns, data flows
+3. Audit dependencies: external/internal, version constraints, circular deps
+4. Map integration points: system interactions, API contracts, call sites
+5. Document current state: system map, file purposes, patterns, technical debt
 
-**Output**: Complete inventory, dependency graph, architecture docs, integration points, baseline understanding
+**LLM Action**: Semantic search → read all relevant files → map deps (grep imports/exports) → document file structure, data flows, patterns → create audit report before proceeding.
 
-**LLM Action**: 
-1. Use semantic search to find all relevant code areas
-2. Read ALL relevant files end-to-end
-3. Map dependencies (use `grep` to find imports/exports)
-4. Document file structure, data flows, and patterns
-5. Create comprehensive audit report before proceeding
+**Checklist:** All files identified, full dependency graph mapped, integration points documented, current patterns understood, baseline documented (how things work NOW).
 
-**Critical Checklist:**
-- ✅ All relevant files identified and read
-- ✅ Full dependency graph mapped (internal + external)
-- ✅ All integration points documented
-- ✅ Current patterns and conventions understood
-- ✅ Baseline state documented (how things work NOW)
-- ✅ No assumptions made about existing code
+**Output:** Complete inventory, dependency graph, architecture docs, integration points, baseline understanding.
 
 ---
 
 ### Stage 1: EMPATHIZE — Understand the Context
 
-**Goal**: Deeply understand the problem, users, and constraints before proposing solutions.
+**Goal**: Deeply understand the problem, users, and constraints.
 
-**First Principles Thinking:**
-- **Break down to fundamentals**: What are the irreducible truths? What constraints cannot be avoided?
-- **Question analogies**: Don't assume existing solutions are optimal. Ask "Why does it work this way?" and "What if we started from scratch?"
-- **Identify constraints**: What are the actual limits? (physics, laws, user needs, not just "how it's always been done")
-- **Separate signal from noise**: What are the core requirements vs. incidental implementation details?
-- **Challenge inherited assumptions**: "We do X because..." - is that reason still valid? Could we eliminate X entirely?
+**First Principles:** Break down to fundamentals—irreducible truths? Question analogies—"Why does it work this way?" "What if we started from scratch?" Identify actual limits (physics, laws, user needs). Separate signal from noise—core requirements vs incidental details. Challenge inherited assumptions—"We do X because..."—still valid? Eliminate X?
 
-**Questions to Explore:**
-- Who is affected by this problem? (users, developers, maintainers)
-- What is the current state? What's working? What's broken?
-- What are the real needs vs. stated wants?
-- What constraints exist? (technical, time, resources, architecture)
-- **What are the fundamental requirements?** (First principles: what MUST be true?)
-- **What can we eliminate?** (What's unnecessary complexity?)
-- **What are the irreducible costs?** (What can't be optimized away?)
+**Questions:** Who is affected? (users, developers, maintainers) What's working/broken? Real needs vs stated wants? What constraints exist? (technical, time, resources, architecture) What MUST be true? What can we eliminate? Irreducible costs?
 
-**Output**: Clear understanding of problem space, user needs, constraints, and fundamental truths.
+**LLM Action**: Build on Stage 0 audit. Ask clarifying questions. Identify fundamental constraints. Synthesize audit + user needs.
 
-**LLM Action**: 
-- **Prerequisite**: Stage 0 must be completed first
-- Build on audit findings from Stage 0
-- Ask clarifying questions about user needs and requirements
-- Identify fundamental constraints and challenge assumptions
-- Synthesize audit findings with user needs
+**Output:** Clear understanding of problem space, user needs, constraints, fundamental truths.
 
 ---
 
@@ -94,25 +61,13 @@ MaiaOS uses a 7-stage design thinking process: **Capture Current State → Empat
 
 **Goal**: Synthesize insights into a clear problem statement and success criteria.
 
-**First Principles Thinking:**
-- **Define the problem from first principles**: What is the actual problem we're solving? Not "how do we implement X?" but "what fundamental need does X address?"
-- **Question the problem itself**: Is this the right problem? Could we solve a more fundamental problem instead?
-- **Identify the minimum viable solution**: What's the simplest thing that could possibly work? What's the irreducible core?
-- **Cost-benefit from fundamentals**: What are the actual costs (time, complexity, maintenance)? What are the real benefits? Is the ratio favorable?
-- **Eliminate unnecessary complexity**: What can we remove? What's the simplest path to the goal?
+**First Principles:** Define from fundamentals—actual problem? (Not "how implement X" but "what need does X address?") Question the problem—right problem? More fundamental? Minimum viable—simplest that could work? Cost-benefit from fundamentals. Eliminate unnecessary complexity.
 
-**Activities:**
-- Reframe the problem from multiple perspectives
-- Define what "done" looks like (success criteria)
-- Identify what's out of scope
-- Create a problem statement: "How might we [solve X] so that [users benefit Y]?"
-- **Identify the fundamental problem** (not just symptoms)
-- **Define the minimum viable solution** (what's absolutely necessary?)
-- **Question if we're solving the right problem** (could we solve something more fundamental?)
+**Activities:** Reframe from multiple perspectives. Define "done" (success criteria). Identify out of scope. Create: "How might we [solve X] so that [users benefit Y]?" Identify fundamental problem (not symptoms). Define minimum viable solution.
 
-**Output**: Clear problem statement (from first principles), success criteria (desirable, feasible, viable), scope boundaries, minimum viable solution definition
+**LLM Action**: Concise problem definition and success metrics from first principles.
 
-**LLM Action**: Synthesize findings into a concise problem definition and success metrics, ensuring the problem is defined from first principles.
+**Output:** Problem statement (first principles), success criteria (desirable, feasible, viable), scope, minimum viable solution.
 
 ---
 
@@ -122,471 +77,147 @@ MaiaOS uses a 7-stage design thinking process: **Capture Current State → Empat
 
 **CRITICAL: Root-Cause Architectural Solutions**
 
-**Always aim for architectural upgrades that solve issues at their root causes, not patches:**
+Always aim for architectural upgrades that solve root causes, not patches:
+- ❌ No workarounds, band-aids, symptom-fixing
+- ✅ Solve root causes, architectural upgrades, eliminate problem entirely
+- ✅ First principles: irreducible core? Rebuild better from scratch?
 
-- ❌ **Don't create patches**: Avoid workarounds, band-aids, or symptom-fixing solutions
-- ✅ **Solve root causes**: Identify the fundamental architectural issue causing the problem
-- ✅ **Architectural upgrades**: Propose solutions that improve the system architecture itself
-- ✅ **Eliminate the problem**: Can we eliminate the problem entirely through better architecture?
-- ✅ **First principles**: What's the irreducible core? Can we rebuild this better from scratch?
+**Evaluation (for each approach):**
+1. Does this solve the root cause? (not just symptoms)
+2. Does this improve the architecture?
+3. Can we eliminate the problem entirely?
+4. Is this the simplest solution? (irreducible core)
+5. Does this prevent future similar issues?
 
-**Solution Evaluation Criteria:**
-1. **Does this solve the root cause?** (not just symptoms)
-2. **Does this improve the architecture?** (makes system better, not just fixes current issue)
-3. **Can we eliminate the problem entirely?** (better architecture that prevents the issue)
-4. **Is this the simplest solution?** (from first principles - what's irreducible?)
-5. **Does this prevent future similar issues?** (architectural improvement vs. one-off fix)
+**Activities:** Brainstorm 2–3 approaches. For each: "Root cause or patch?" Evaluate architectural impact. Consider edge cases. Trade-offs (simplicity vs flexibility). Challenge: "What if we eliminated this entirely?"
 
-**Activities:**
-- Brainstorm multiple approaches (divergent thinking)
-- **For each approach, ask**: "Does this solve the root cause or just patch symptoms?"
-- **Evaluate architectural impact**: "Does this improve the system architecture?"
-- Consider edge cases and alternatives
-- Evaluate trade-offs (simplicity vs. flexibility, speed vs. robustness)
-- Challenge assumptions: "What if we did the opposite?" "What if we eliminated this entirely?"
+**LLM Action**: Propose multiple paths (root-cause focus), analyze trade-offs, recommend best fit.
 
-**Output**: 
-- 2-3 viable solution approaches (prioritizing root-cause architectural solutions)
-- Pros/cons of each approach (with emphasis on architectural improvements)
-- Recommended approach with rationale (explaining why it solves root causes)
-
-**LLM Action**: Propose multiple solution paths prioritizing architectural upgrades that solve root causes, analyze trade-offs, recommend the best fit.
+**Output:** 2–3 viable approaches (root-cause focus), pros/cons, recommended approach with rationale.
 
 ---
 
 ### Stage 4: PROTOTYPE — Design the Solution
 
-**Goal**: Create a concrete, testable plan that can be validated.
+**Goal**: Create a concrete, testable plan.
 
-**CRITICAL: Root-Cause Architectural Design**
+**Apply same root-cause principles as Ideate:** No patches, wrappers, or symptom-fixing layers. Design architectural upgrades. Eliminate root causes through design.
 
-**Design solutions that address root causes through architectural improvements:**
+**Design questions:**
+1. Does this design solve the root cause?
+2. Does this improve the architecture?
+3. Can we eliminate the problem through design?
+4. Is this the simplest design?
+5. Does this prevent future similar issues?
 
-- ❌ **Don't design patches**: Avoid workarounds, wrappers, or symptom-fixing layers
-- ✅ **Design architectural upgrades**: Solutions that improve system architecture
-- ✅ **Eliminate root causes**: Can we eliminate the problem through better design?
-- ✅ **First principles design**: What's the irreducible core architecture needed?
-- ✅ **Prevent future issues**: Design that prevents similar problems from occurring
+**Activities:** Break into implementable steps. Define file structure, API changes, data models. Phased plan (MVP → full). Migration path. No backward compat—migrate 100%.
 
-**Design Questions:**
-1. **Does this design solve the root cause?** (not just addresses symptoms)
-2. **Does this improve the architecture?** (makes system fundamentally better)
-3. **Can we eliminate the problem through design?** (better architecture prevents the issue)
-4. **Is this the simplest design?** (from first principles - irreducible core)
-5. **Does this prevent future similar issues?** (architectural improvement vs. one-off fix)
+**LLM Action**: Structured plan with todos, file paths, code structure, implementation steps.
 
-**Activities:**
-- Break solution into implementable steps
-- **Design architectural improvements**: How does this improve the system architecture?
-- Define file structure, API changes, data models (with root-cause solutions in mind)
-- Identify dependencies and integration points
-- Create a phased implementation plan (MVP → full solution)
-- **Consider architectural migration paths**: How do we migrate to the better architecture?
-- Avoid backward compatibility layers (migrate 100% instead)
-
-**Output**: 
-- Detailed implementation plan with steps (emphasizing architectural improvements)
-- File structure and code organization (root-cause solutions)
-- API/interface definitions (architectural upgrades)
-- Manual testing approach
-- Rollout plan (architectural migration, not patches)
-
-**LLM Action**: Create a structured plan document with todos, file paths, code structure, and implementation steps, ensuring the design addresses root causes through architectural improvements.
+**Output:** Implementation plan, file structure, API definitions, manual testing approach, rollout plan.
 
 ---
 
 ### Stage 5: IMPLEMENT — Execute the Solution
 
-**Goal**: Execute the plan incrementally with human-in-the-loop validation at each milestone.
+**Goal**: Execute incrementally with human-in-the-loop at each milestone.
 
-#### Implementation Planning Structure
+**Milestone Structure:** Each milestone fully functional. Migrate 100% fullstack. No backwards compat layers or deprecation shims. Pause for human feedback ✋ after each.
 
-**1. Incremental Milestones**
-
-Structure the implementation as **incremental, least invasive, fully functional, migrateable mini milestones**:
-
-- ✅ **Each milestone should be fully functional** (not half-done features)
-- ✅ **Migrate 100% fullstack** - no partial migrations or legacy wrappers
-- ✅ **Implement architectural upgrades** - solve root causes, not patches
-- ❌ **Never create hacky backwards compatibility layers**
-- ❌ **Never create legacy deprecation shims**
-- ❌ **Never create patches** - always solve root causes
-- 🔄 **Call human into loop after finishing ONE milestone to test**
-
-**Example Milestone Structure:**
 ```
-Milestone 1: Add base engine structure
-  ├─ Implement core structure (architectural upgrade)
-  ├─ Clean up legacy & migrate 100%
-  ├─ Manual user testing
-  └─ Pause for human feedback ✋
-
-Milestone 2: Implement core methods
-  ├─ Implement functionality (root-cause solution)
-  ├─ Clean up legacy & migrate 100%
-  ├─ Manual user testing
-  └─ Pause for human feedback ✋
-
-Milestone 3: Add documentation & final review
-  ├─ Update documentation
-  ├─ Final manual user testing
-  └─ Human approval ✋
+Milestone 1: [Core structure] → Implement → Cleanup → Test ✋
+Milestone 2: [Core methods] → Implement → Cleanup → Test ✋
+Milestone 3: [Docs & review] → Update docs → Final test → Approval ✋
 ```
 
-**2. Implementation Steps**
+**Steps (every milestone):**
 
-For **every** implementation milestone, follow this order:
+**1. Implement** — Root-cause solutions, architectural upgrades. Don't patch. Don't optimize wrong code (eliminate it).
+**Implementation questions:**
+1. Am I solving the root cause?
+2. Am I improving the architecture?
+3. Can I eliminate this problem?
+4. Is this the simplest solution?
+5. Will this prevent future similar issues?
 
-**Step 1: Implement the Solution** 💻
+**2. Clean Up & Migrate 100%** — Remove ALL legacy, delete compat hacks, update all call sites, delete unused code.
 
-**CRITICAL: Root-Cause Architectural Implementation**
+**Cleanup checklist:**
+- All old implementations deleted (not commented out)
+- All backwards compatibility layers removed
+- All call sites updated to new API/architecture
+- No "if (legacy)" or "if (oldMode)" conditionals
+- All imports/exports updated
+- No "TODO: migrate this later" or "keep for backwards compatibility"
 
-- ✅ **Solve root causes**: Implement solutions that address fundamental architectural issues
-- ✅ **Architectural upgrades**: Improve system architecture, don't just patch symptoms
-- ✅ **Eliminate problems**: Can we eliminate the problem entirely through better implementation?
-- ❌ **Don't create patches**: Avoid workarounds, wrappers, or symptom-fixing code
-- ❌ **Don't optimize wrong code**: Don't optimize code that shouldn't exist (eliminate it)
+**3. CoJSON Schema Indexing** (backend writes only):
+- **Create:** Extract schema co-id from `headerMeta.$schema`. Store co-value in `account.os[schemaCoId]` FIRST, then vibe reference. Create colist if needed.
+- **Update:** If schema changes, remove from old index, add to new. If unchanged, ensure in index (idempotent).
+- **Delete:** Remove from `account.os[schemaCoId]` colist.
+- Colist keying: `account.os.schemata["@schema/namekey"]` → schema co-id; `account.os[schemaCoId]` → instance co-ids.
+- Indexes auto-created when schemas register. Backend-enforced, cannot bypass.
 
-**Implementation Questions:**
-1. **Am I solving the root cause?** (not just patching symptoms)
-2. **Am I improving the architecture?** (making system fundamentally better)
-3. **Can I eliminate this problem?** (better architecture prevents the issue)
-4. **Is this the simplest solution?** (from first principles - irreducible core)
-5. **Will this prevent future similar issues?** (architectural improvement vs. one-off fix)
+**Implementation requirements:** All write ops enforce schema indexing. Schema index storage FIRST before vibe references. No manual seeding. Cannot bypass.
 
-- Write the code to implement the functionality
-- Keep it simple and focused on the milestone goal
-- **Implement architectural improvements** that solve root causes
-- Refactor for clarity and maintainability as you go
+**Why:** Consistency (queries reliable), remote sync (query unsynced co-values), reactivity (index updates trigger query updates), maintainability (no manual seeding).
 
-**Step 2: Clean Up Legacy & Migrate 100%** 🧹
+**4. Browser Debugging** (frontend features):
+- Open Cursor browser, navigate to app URL (e.g. `http://localhost:4202`)
+- Visual: UI renders? Obvious bugs? Basic interactions work?
+- Console: Real `co_z...` IDs (not mock_123)? No JS errors?
+  - ✅ Good: `Created blog: co_z9h5nwiNynbxnC3nTw...`
+  - ❌ Bad: `Created blog: mock_blog_123`
+- Network: Requests 200s? Any 4xx/5xx?
+- Document findings. Manual only—not automated tests.
+- **Stop if:** mock IDs, undefined, JS errors, failed requests, UI broken.
 
-- **ALWAYS migrate 100% fullstack** - no partial migrations
-- Remove ALL legacy code that has been replaced
-- Delete backwards compatibility hacks/shims/wrappers
-- Remove deprecated functions and deprecated API patterns
-- Ensure new architecture is fully adopted everywhere
-- Update ALL call sites to use new patterns
-- Delete unused files, functions, and old implementations
-- Verify no "legacy mode" flags or switches remain
+**Output to document:** ✅ "Console: 0 errors, real co-ids visible" / ❌ "Console: Found mock IDs - STOP!" Same for network, UI.
 
-**Critical Cleanup Checklist:**
-- ✅ All old implementations deleted (not commented out)
-- ✅ All backwards compatibility layers removed
-- ✅ All call sites updated to new API/architecture
-- ✅ No "if (legacy)" or "if (oldMode)" conditionals
-- ✅ All imports/exports updated to new structure
-- ❌ No "TODO: migrate this later" comments
-- ❌ No "keep for backwards compatibility" code
+**When to use:** After implementing frontend features, when suspicious of mocks, UI not rendering, investigating bugs, milestone checkpoints.
+**When NOT:** Backend-only changes, as replacement for unit tests, for automated testing.
+**Best practices:** Quick checks not thorough QA. Console first. Real data validation. Don't write browser automation.
 
-**Step 2.5: Enforce Default Behaviors for CoJSON Backend Write Operations** 🔒
+**5. Human-in-the-Loop** — Pause, present results, user tests, iterate.
 
-For **any write operation** in the CoJSON backend (create, update, delete), enforce automatic schema indexing as a **default behavior**:
+**LLM Action:** Implement (root-cause) → Clean up ALL legacy, 100% migration → Browser debug (frontend) → Present to human → Iterate → Next milestone.
 
-**Default Behavior: Automatic Schema Indexing**
-
-1. **On Co-Value Creation:**
-   - Extract schema co-id from co-value's `headerMeta.$schema`
-   - **FIRST:** Store co-value co-id in its schema's index colist in `account.os` (keyed by schema co-id)
-   - Ensure schema index colist exists (create automatically if needed)
-   - **THEN:** Reference co-value in the actual vibe/context
-   - This ensures schema indexes are always maintained, even if vibe references fail
-
-2. **On Co-Value Update:**
-   - If schema changes, remove from old schema index, add to new schema index
-   - If schema unchanged, ensure co-value exists in schema index (idempotent)
-
-3. **On Co-Value Delete:**
-   - Extract schema co-id from co-value's `headerMeta.$schema`
-   - Remove co-value co-id from schema index colist in `account.os` (keyed by schema co-id)
-   - Then proceed with normal deletion
-
-**Colist Keying Pattern:**
-- **Use schema co-id as colist key** (e.g., `co_z123...`)
-- Store colists as: `account.os.{schemaCoId}` (all schemas indexed in account.os)
-- Example: `account.os["co_z123..."]` → colist of instance co-ids
-- Registry: `account.os.schemata["@schema/namekey"]` → schema co-id
-- Index: `account.os[schemaCoId]` → colist of instance co-ids
-
-**Automatic Schema Index Creation:**
-- When a schema is registered in `account.os.schemata`, automatically create its index colist
-- No manual seeding required - all schema indexes are created and managed automatically
-- Backend write/delete APIs enforce this behavior - impossible to bypass
-
-**Implementation Requirements:**
-- ✅ All write operations MUST enforce schema indexing
-- ✅ Schema index storage happens FIRST, before vibe references
-- ✅ Schema indexes are keyed by namekey (schema title like `@schema/data/todos`)
-- ✅ Schema index colists are created automatically when schemas are registered
-- ✅ No manual seeding needed - everything is automatic
-- ✅ Backend-enforced - cannot be bypassed or skipped
-
-**Why This Matters:**
-- **Consistency:** All co-values are automatically indexed by schema, making queries reliable
-- **Remote sync:** Schema indexes enable querying remote co-values that haven't synced yet
-- **Reactivity:** Schema index updates trigger reactive query updates automatically
-- **Maintainability:** No manual seeding logic to maintain - backend handles everything
-
-**Step 3: Manual Browser Debugging** 🌐
-
-For **frontend features, UI components, or web-based functionality**, use **Cursor's native in-app browser** for **manual debugging and verification** during implementation.
-
-**What This Is:**
-- ✅ **Manual debugging** - LLM opens browser, inspects console, checks network, verifies functionality
-- ✅ **Implementation verification** - Quick checks during development to ensure code works
-- ✅ **Anti-mock validation** - Verify real data (not mocks) appears in console logs
-
-**What This Is NOT:**
-- ❌ **NOT automated browser tests** (no Puppeteer/Playwright/Selenium scripts)
-- ❌ **NOT test automation** (write unit/integration tests instead)
-- ❌ **NOT end-to-end test suites** (manual verification only)
-
-**Browser Debugging Workflow:**
-
-1. **Start the dev server** (if not already running):
-   ```bash
-   bun dev:app  # or appropriate service command
-   ```
-
-2. **Open Cursor's Browser:**
-   - Open browser in Cursor IDE (browser icon or Command Palette)
-   - Navigate to app URL (e.g., `http://localhost:4202`)
-
-3. **Quick Visual Check:**
-   - Does the UI render?
-   - Are there obvious visual bugs?
-   - Do basic interactions work (click buttons, fill forms)?
-
-4. **Console Check (CRITICAL for Anti-Mock Validation):**
-   - Open DevTools Console
-   - **Look for**:
-     - ✅ Real IDs: `co_z...` (not `mock_123`, `test_`, `fake_`)
-     - ✅ Real data structures (not hardcoded test data)
-     - ✅ No JavaScript errors or unexpected warnings
-   
-   **Example:**
-   ```javascript
-   // ✅ Good - Real data in console
-   console.log("Created blog:", "co_z9h5nwiNynbxnC3nTw...")
-   
-   // ❌ Bad - Mocked data in console  
-   console.log("Created blog:", "mock_blog_123")
-   ```
-
-5. **Network Tab Check:**
-   - Are requests succeeding (200-299)?
-   - Any failed requests (4xx, 5xx)?
-   - Do payloads look correct?
-
-6. **Basic Interaction Testing:**
-   - Click through the feature
-   - Verify core functionality works
-   - Check for obvious errors
-
-7. **Document Findings:**
-   - Note any console errors
-   - Note any network failures
-   - Note any visual bugs
-   - Confirm real data (not mocks) if applicable
-
-**When to Use Browser Debugging:**
-- ✅ After implementing frontend features (quick verification)
-- ✅ When suspicious of mocks (check console for real data)
-- ✅ When UI isn't rendering as expected
-- ✅ When investigating bugs or errors
-- ✅ During milestone checkpoints (verify everything still works)
-
-**When NOT to Use:**
-- ❌ For backend-only changes (no UI impact)
-- ❌ As a replacement for unit tests (write proper tests!)
-- ❌ For automated testing (this is manual debugging only)
-
-**Browser Debugging Best Practices:**
-- **Quick checks, not thorough testing** - This is debugging, not QA
-- **Console is your friend** - Most issues show up here first
-- **Real data validation** - Console should show real IDs, not mocks
-- **Don't write browser automation** - Just open browser, look around, document findings
-- **Manual user testing** - Have the user actually use the feature and provide feedback
-
-**Step 4: Human-in-the-Loop Feedback** 👤
-- Pause after milestone completion
-- Present results (including screenshots and console logs) to human for manual testing
-- User should manually test the feature and provide feedback
-- Iterate if needed before next milestone
-
-**Output**: 
-- Working code at each milestone (with architectural improvements)
-- Human feedback incorporated before proceeding
-- Manual user testing completed
-
-**LLM Action**: 
-1. Implement solution (solving root causes, architectural upgrades)
-2. Clean up ALL legacy code and ensure 100% migration
-3. Run manual browser debugging (for frontend features):
-   - Navigate to app, take screenshots, check console, test interactions
-4. Present to human for manual user testing
-5. Iterate based on feedback
-6. Move to next milestone
+**Output:** Working code at each milestone, human feedback incorporated, manual testing completed.
 
 ---
 
 ### Stage 6: REVIEW & FEEDBACK — Validate and Document
 
-**Goal**: Ensure solution is complete, manually tested, and documented before considering it "done."
+**Goal**: Ensure complete, tested, documented before "done."
 
-#### Review Process
+**Verify before proceeding:**
+- No linter errors, code follows conventions
+- ALL legacy deleted (no commented out code)
+- No backwards compatibility hacks
+- 100% migration complete
+- No "TODO: migrate later" comments
+- Root causes solved, architectural improvements implemented
+- Run browser debugging (see Implement Step 4) if frontend
 
-**1. Verify Implementation & No Legacy Code Remains** ✅
+**Human Feedback:** Present summary, testing results, trade-offs.
+- Questions: Meets requirements? Root cause solved? Architecture improved? Edge cases? Maintainable? Ship?
 
-Before proceeding, ensure:
-- ✅ No linter errors
-- ✅ Code follows project conventions
-- ✅ ALL legacy code has been deleted (no commented out code)
-- ✅ No backwards compatibility hacks remain
-- ✅ 100% migration to new architecture complete
-- ✅ No "TODO: migrate later" comments exist
-- ✅ **Root causes solved** (not just patched)
-- ✅ **Architectural improvements implemented** (system is better, not just fixed)
+**Documentation:** Update `maia-docs/developers/` (deep), `creators/` (how-to), `getting-started/` (beginner). Skip `LLM_*.md`.
 
-**Manual Browser Debugging** 🌐
+**What to write:** Start with "why"—what problem does this solve? Show don't tell—working examples with comments. Clear language, avoid jargon unless explained.
 
-For frontend features, use **Cursor's browser** for **quick manual verification** (not automated testing):
+**Structure:** (1) Quick intro—what is this? (2) Why it matters (3) Simple example (4) How it works (5) Common patterns (6) Troubleshooting—"If X happens, try Y" (7) Next steps.
 
-1. **Open Cursor Browser:** Navigate to app URL (e.g., `http://localhost:4202`)
+**Example:** ❌ "SchemaValidator utilizes Ajv to validate..." ✅ "Before saving, MaiaOS checks data matches your schema—like a spell-checker for data."
 
-2. **Quick Visual Check:** Does UI render correctly? Any obvious visual bugs? Basic interactions working?
+**Migration guides:** What changed, old vs new side-by-side, step-by-step update, checklist.
 
-3. **Console Check (CRITICAL - Anti-Mock Validation):**
-   - Open DevTools Console
-   - **Check for**:
-     - ✅ Real data: `co_z...` IDs (not `mock_123`)
-     - ✅ No JavaScript errors
-     - ✅ No unexpected warnings
-   - **Example:**
-     ```
-     // ✅ Good - Real data
-     Created blog: co_z9h5nwiNynbxnC3nTwPMPkrVaMQ
-     
-     // ❌ Bad - Mocked data (STOP!)
-     Created blog: mock_blog_123
-     ```
+**LLM Action:** Verify implementation complete → Browser testing → Present to human → Update docs → Confirm complete.
 
-4. **Network Tab Check:** Requests succeed (200-299)? Any failures (4xx, 5xx)? Payloads look correct?
-
-5. **Basic Interaction Check:** Click through core feature, verify basic functionality, test a few user actions
-
-6. **Document Findings:** Note console errors (if any), note network issues (if any), confirm real data visible (no mocks)
-
-**Browser Debugging Output:**
-- ✅ "Console: 0 errors, real co-ids visible"
-- ✅ "Network: requests succeed, no failures"  
-- ✅ "UI: renders correctly, interactions work"
-- OR
-- ❌ "Console: Found mock IDs (mock_123) - STOP and fix!"
-- ❌ "Network: requests failing - investigate"
-- ❌ "UI: visual bugs found - fix before proceeding"
-
-**Red Flags (STOP and Fix)**:
-- ❌ Console shows `mock_`, `test_`, `fake_` in IDs
-- ❌ Console shows `undefined` for critical data
-- ❌ JavaScript errors in console
-- ❌ Network requests failing
-- ❌ UI not rendering or broken
-
-**Remember**: This is **manual debugging**, NOT automated browser testing. Just open browser, look around, document findings. Write unit/integration tests separately.
-
-**2. Human-in-the-Loop Final Feedback** 👤
-
-Present to human:
-- Summary of changes (emphasizing architectural improvements)
-- Manual testing results
-- Any trade-offs or limitations
-- Next steps (if any)
-
-**Questions to ask:**
-- Does the solution meet the original requirements?
-- **Did we solve the root cause?** (not just patch symptoms)
-- **Did we improve the architecture?** (system is better, not just fixed)
-- Are there any edge cases we missed?
-- Is the code maintainable?
-- Should we iterate further or ship?
-
-**3. Update Documentation** 📝
-
-**After manual testing and human approves**, update the documentation so everyone understands how to use the new features.
-
-**Where to write docs:**
-- `libs/maia-docs/developers/` - For people building MaiaOS itself (deep technical stuff)
-- `libs/maia-docs/creators/` - For people making apps with MaiaOS (how to use it)
-- `libs/maia-docs/getting-started/` - For people just starting out (super beginner friendly)
-- Component README files - For specific parts of the codebase
-
-**Skip these files:**
-- ❌ `libs/maia-docs/agents/LLM_*.md` - These update automatically, never edit them directly
-
-**What to write in your docs:**
-
-Think of documentation like explaining something to a friend who's 12 years old and curious but doesn't know the technical jargon yet.
-
-**Start with the "why":**
-- What problem does this solve?
-- Why would someone use this instead of the old way?
-- What real-world situation does this help with?
-
-**Show, don't just tell:**
-- Include simple, working examples (not just code snippets)
-- Use comments to explain what each line does
-- Build from simple examples to more complex ones
-- Show common mistakes and how to avoid them
-
-**Use clear, friendly language:**
-- Avoid jargon unless you explain it first
-- Use analogies that relate to everyday things
-- Break complex ideas into smaller, digestible pieces
-- Use short sentences and paragraphs
-
-**Structure your docs like a story:**
-1. **Quick intro** - One sentence: what is this?
-2. **Why it matters** - Why should you care about this?
-3. **Simple example** - The easiest possible way to use it
-4. **How it works** - The basic concepts (with diagrams if helpful)
-5. **Common patterns** - Real-world usage examples
-6. **Troubleshooting** - "If X happens, try Y"
-7. **Next steps** - Where to learn more
-
-**Example of good vs. unclear documentation:**
-
-❌ **Unclear:** "The SchemaValidator utilizes Ajv to validate data against JSON Schema definitions, preprocessing co-types to Ajv-compatible formats."
-
-✅ **Clear:** "Before saving your data, MaiaOS checks if it matches the schema you defined. Think of it like a spell-checker for your data - it makes sure everything is in the right format before anything gets saved. For example, if you said a field should be a number, it won't let you accidentally put text there."
-
-**Special note for migration guides:**
-If you're changing something that people are already using:
-- Start with a clear "What changed" section
-- Show the old way and the new way side-by-side
-- Explain step-by-step how to update existing code
-- Include a checklist of things to update
-
-**Output**: 
-- Fully manually tested, working solution (with root causes solved)
-- Human-approved implementation (architectural improvements verified)
-- Updated documentation
-- Ready to ship ✨
-
-**LLM Action**: 
-1. Verify implementation and cleanup complete (root causes solved, architectural improvements implemented)
-2. Perform comprehensive manual browser testing:
-   - Navigate to app, take screenshots, check console, verify network requests
-   - Document browser test results (screenshots, console logs, network summary)
-3. Present results (including browser test results) to human for manual user testing and final approval
-4. Update relevant documentation (skip LLM docs)
-5. Confirm solution is complete
+**Output:** Fully tested solution, human-approved, docs updated, ready to ship.
 
 ---
 
 ## Planning Output Format
-
-When creating a plan, structure it as follows:
 
 ```markdown
 ---
@@ -605,180 +236,95 @@ todos:
 ---
 
 # [Feature/Intent Name]
-
 ## Problem Statement
 [Clear definition of what we're solving and why]
-
 ## Success Criteria
 - **Desirable**: [User benefit]
 - **Feasible**: [Technical requirement]
-- **Viable**: [Maintainability/sustainability requirement]
-
+- **Viable**: [Maintainability requirement]
 ## Solution Approach
-[Chosen approach with rationale - emphasizing root-cause architectural solution]
+[Chosen approach with rationale—root-cause architectural solution]
 
-## Implementation Milestones
-
-### Milestone 0: Capture Current State & System Audit
-**CRITICAL: This MUST be completed before all other milestones**
-
-**System Audit:**
-- [ ] Identify all relevant files/functions related to the topic/user intent
-- [ ] Map full dependency graph (internal + external dependencies)
+## Milestone 0: Capture Current State & System Audit
+**CRITICAL: Must complete before all other milestones**
+- [ ] Identify all relevant files/functions related to topic
+- [ ] Map full dependency graph (internal + external)
 - [ ] Read ALL relevant source files end-to-end
-- [ ] Document current architecture, patterns, and data flows
-- [ ] Identify all integration points and API contracts
-- [ ] List all call sites and usage patterns
-- [ ] Document current state (how things work NOW, not how they should work)
-- [ ] Create comprehensive audit report
+- [ ] Document architecture, patterns, data flows, integration points, call sites
+- [ ] Document current state (how things work NOW)
+- [ ] Create audit report. **Checkpoint:** ✋ Present findings before implementation
 
-**Output**: Complete baseline understanding of existing system before making any changes
+## Milestone 1: [Name]
+**Implementation:** Create structure, implement (root-cause), verify architecture improved.
+**CoJSON** (if backend writes): Schema indexing in `account.os[schemaCoId]`, store FIRST before vibe ref, remove on delete.
+**Cleanup:** Remove ALL legacy, delete compat hacks, update call sites, 100% migration.
+**Browser** (if frontend): Open app in Cursor browser, check console (real co-ids), network, verify functionality.
+**Checkpoint:** ✋ Pause for human testing and feedback
 
-**Human Checkpoint:** ✋ Present audit findings before proceeding to implementation
+## Milestone 2: [Name] (repeat for additional milestones)
+**Implementation:** Integrate with existing systems, implement feature (root-cause).
+- [ ] Integrate, implement (root-cause), verify architecture improved
 
-### Milestone 1: [Name]
-**Implementation (Root-Cause Architectural Solution):**
-- [ ] Create file structure
-- [ ] Implement core functionality (solving root causes, not patches)
-- [ ] **Verify**: Does this solve the root cause? Does this improve the architecture?
+**CoJSON** (if backend writes): Same checklist as Milestone 1.
+**Cleanup:** Same checklist as Milestone 1.
+**Browser** (if frontend): Same checklist as Milestone 1.
+**Checkpoint:** ✋ Pause for human testing and feedback
 
-**Default Behaviors** (if CoJSON backend write operations):
-- [ ] Enforce automatic schema indexing in write operations
-- [ ] Store co-value FIRST in schema index colist in `account.os` (keyed by schema co-id)
-- [ ] Ensure schema index colist exists (create automatically if needed)
-- [ ] Remove co-value from schema index on delete
-- [ ] Verify all schema indexes are in `account.os` keyed by schema co-id
-
-**Cleanup & Migration:**
-- [ ] Remove ALL legacy code replaced by this milestone
-- [ ] Delete backwards compatibility hacks
-- [ ] Update all call sites to new implementation
-- [ ] Verify 100% migration complete
-
-**Manual Browser Debugging** (if frontend feature):
-- [ ] Open app in Cursor browser
-- [ ] Check console for errors and verify real data
-- [ ] Check network tab for failed requests
-- [ ] Verify basic functionality works
-- [ ] Document any issues found
-
-**Human Checkpoint:** ✋ Pause for manual user testing and feedback
-
-### Milestone 2: [Name]
-**Implementation (Root-Cause Architectural Solution):**
-- [ ] Integrate with existing systems
-- [ ] Implement feature Z (solving root causes, not patches)
-- [ ] **Verify**: Does this solve the root cause? Does this improve the architecture?
-
-**Default Behaviors** (if CoJSON backend write operations):
-- [ ] Enforce automatic schema indexing in write operations
-- [ ] Store co-value FIRST in schema index colist in `account.os` (keyed by schema co-id)
-- [ ] Ensure schema index colist exists (create automatically if needed)
-- [ ] Remove co-value from schema index on delete
-- [ ] Verify all schema indexes are in `account.os` keyed by schema co-id
-
-**Cleanup & Migration:**
-- [ ] Remove ALL legacy code replaced by this milestone
-- [ ] Delete backwards compatibility hacks
-- [ ] Update all call sites to new implementation
-- [ ] Verify 100% migration complete
-
-**Manual Browser Debugging** (if frontend feature):
-- [ ] Open app in Cursor browser
-- [ ] Check console for errors and verify real data
-- [ ] Check network tab for failed requests
-- [ ] Verify basic functionality works
-- [ ] Document any issues found
-
-**Human Checkpoint:** ✋ Pause for manual user testing and feedback
-
-### Milestone 3: Documentation & Final Review
-- [ ] Manual browser debugging complete (console verified, no errors)
-- [ ] Manual user testing complete
-- [ ] **Verify**: Root causes solved? Architectural improvements implemented?
-- [ ] Update developer docs
-- [ ] Update vibecreator docs
-- [ ] Final human approval ✋
+## Milestone Final: Documentation & Review
+- [ ] Browser debug complete | Manual user testing | Update docs | ✋ Final approval
 
 ## File Structure
-```
 [Detailed file/folder structure with new files highlighted]
-```
-
 ## Manual Testing Strategy
-- **Manual Browser Debugging**: [Quick checks - console errors, network failures, visual bugs]
-- **Manual User Testing**: [User will manually test the feature and provide feedback]
-
+[Browser checks + user will manually test]
 ## Risks & Mitigation
-[Potential issues and how to address them]
-
+[Potential issues and how to address]
 ## Documentation Updates
 - [ ] `docs/developers/[file].md`
-- [ ] `docs/vibecreators/[file].md`
-- [ ] ❌ Skip `docs/agents/LLM_*.md` (auto-generated)
+- [ ] `docs/creators/[file].md`
+- [ ] ❌ Skip `docs/agents/LLM_*.md`
 ```
 
 ## Key Mindsets
 
-**Embrace Ambiguity**: Don't expect perfect clarity upfront. Iterate to refine understanding.
+- **Embrace Ambiguity:** Don't expect perfect clarity upfront. Iterate to refine.
+- **Reframe:** Challenge assumptions. "What if we approached this differently?"
+- **Make Tangible:** Convert abstract ideas into concrete plans, file structures, code.
+- **Iterate:** Plans are living documents. Revisit stages as new information emerges.
+- **Be Collaborative:** Consider users, developers, maintainers.
+- **Take Action:** Balance planning with execution.
+- **Root-Cause over Patches:** Architectural upgrades that solve root causes.
 
-**Reframe**: Challenge assumptions. Ask "What if we approached this differently?"
+## When to Use
 
-**Make Tangible**: Convert abstract ideas into concrete plans, file structures, and code.
+**Use for:**
+- Planning new features or major refactors
+- Introducing new architectural patterns
+- Solving complex, ill-defined problems
+- When requirements are unclear or evolving
 
-**Iterate**: Plans are living documents. Revisit stages as new information emerges.
+**Skip or simplify for:**
+- Trivial changes (typos, simple fixes)
+- Well-understood, routine tasks
+- When the solution is obvious and low-risk
 
-**Be Collaborative**: Consider multiple perspectives (users, developers, maintainers).
-
-**Take Action**: Plans are useless without execution. Balance planning with doing.
-
-**Root-Cause Architectural Solutions**: Always aim for architectural upgrades that solve issues at their root causes, not patches. Solve root causes, improve architecture, eliminate problems entirely.
-
-## When to Use This Process
-
-- ✅ Planning new features or major refactors
-- ✅ Introducing new architectural patterns
-- ✅ Solving complex, ill-defined problems
-- ✅ When requirements are unclear or evolving
-
-**Skip or simplify** for:
-- ❌ Trivial changes (typos, simple fixes)
-- ❌ Well-understood, routine tasks
-- ❌ When the solution is obvious and low-risk
-
-## Process Flexibility
-
-**Non-Linear**: You can:
-- Jump between stages (e.g., implement → define if manual testing reveals misunderstanding)
-- Run stages in parallel (ideate while still defining)
-- Revisit earlier stages based on new insights
-- Skip stages if they're not needed for the specific context
-- Iterate within implementation: feedback at each milestone may refine approach
-
-**Iterative**: Plans evolve. Start with a rough sketch, refine through stages, iterate based on feedback.
-
----
+**Flexibility:** Stages non-linear—revisit, parallel, skip. Plans evolve.
+- Jump between stages (e.g. implement → define if testing reveals misunderstanding)
+- Run in parallel (ideate while defining)
+- Skip stages if not needed for context
+- Iterate: feedback at each milestone may refine approach
 
 ## Example Workflow
 
-1. **User**: "I want to add authentication"
-2. **Capture Current State**: 
-   - Milestone 0: Audit existing auth code → Map dependencies → Document current patterns → Present findings ✋
-   - Search codebase for auth-related files
-   - Read all auth code end-to-end
-   - Map dependencies (BetterAuth, session management, etc.)
-   - Document current architecture and integration points
-   - Create baseline audit report
-3. **Empathize**: "Who needs auth? What auth patterns exist? What are security requirements? What are the fundamental constraints? (First principles: What MUST be true for auth to work?)"
-4. **Define**: "Problem: Users need secure, scalable auth. Success: OAuth2 support, session management, secure by default. Minimum viable: What's the simplest secure auth we can build?"
-5. **Ideate**: "Options: OAuth2, JWT, session-based. **Root-cause analysis**: Current auth issues stem from X architectural problem. **Architectural solution**: Implement Y architecture that solves root cause. Recommendation: OAuth2 with architectural upgrade Z."
-6. **Prototype**: "Plan: Add auth module with architectural improvement X, integrate with kernel, create auth middleware. **Root-cause solution**: This design solves Y root cause by improving architecture Z."
-7. **Implement**: 
-   - Milestone 1: Implement auth module (architectural upgrade) → Clean up old auth code → Manual user testing → Human feedback ✋
-   - Milestone 2: Implement kernel integration (root-cause solution) → Remove legacy patterns → Manual user testing → Human feedback ✋
-   - Milestone 3: Implement middleware (architectural improvement) → Delete all backwards compat layers → Manual user testing → Human feedback ✋
-8. **Review & Feedback**: "Manual testing complete ✅ → Root causes solved ✅ → Architectural improvements verified ✅ → Human approves → Update docs → Ship! 🚀"
+1. **User:** "I want to add authentication"
+2. **Capture:** Audit existing auth code → map deps (BetterAuth, session mgmt) → document architecture → present findings ✋
+3. **Empathize:** Who needs auth? What auth patterns exist? Security requirements? Fundamental constraints?
+4. **Define:** Problem: Users need secure, scalable auth. Success: OAuth2 support, session mgmt, secure by default. Minimum viable: simplest secure auth?
+5. **Ideate:** Options: OAuth2, JWT, session-based. Root-cause: current issues stem from X. Architectural solution: Y. Recommend: OAuth2 + upgrade Z.
+6. **Prototype:** Plan: auth module with improvement X, kernel integration, auth middleware. Root-cause design. No backward compat.
+7. **Implement:** Milestone 1 (auth module) → cleanup → test ✋. Milestone 2 (kernel integration) → cleanup → test ✋. Milestone 3 (middleware) → cleanup → test ✋.
+8. **Review:** Manual testing ✅ → Root causes solved ✅ → Human approves → Update docs → Ship 🚀
 
 ---
 
-**Remember**: The goal is not a perfect plan, but a **good enough plan** that can be executed, tested, and refined. Start with "good enough" and iterate toward better. **Always aim for architectural upgrades that solve issues at their root causes, not patches.**
+**Remember**: Good enough plan → execute → test → refine. Root-cause architectural solutions, not patches.
