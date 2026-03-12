@@ -3,7 +3,7 @@
  *
  * Implements DBClientInterfaceAsync using node-postgres (pg).
  * Uses shared schema from ../schema/postgres.js (same as PGlite).
- * For Fly.io Managed Postgres: set PEER_STORAGE=postgres and PEER_DB_URL.
+ * For Fly.io Managed Postgres: set PEER_SYNC_STORAGE=postgres and PEER_SYNC_DB_URL.
  */
 
 import { emptyKnownState, logger } from 'cojson'
@@ -329,7 +329,7 @@ export async function createPostgresAdapter(connectionString) {
 /**
  * Get Postgres storage wrapped in StorageApiAsync
  *
- * @param {string} connectionString - PEER_DB_URL from Fly MPG
+ * @param {string} connectionString - PEER_SYNC_DB_URL from Fly MPG or Neon
  * @returns {Promise<StorageApiAsync>}
  */
 export async function getPostgresStorage(connectionString) {

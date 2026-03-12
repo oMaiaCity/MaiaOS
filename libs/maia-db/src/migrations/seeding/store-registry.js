@@ -7,6 +7,7 @@ import {
 	AVEN_ACTOR_REF_PATTERN,
 	INSTANCE_REF_PATTERN,
 } from '@MaiaOS/schemata'
+import { COJSON_PRIVACY } from '../../cojson/constants.js'
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import * as groups from '../../cojson/groups/groups.js'
 
@@ -84,7 +85,7 @@ export async function storeRegistry(
 	if (metaschemaCoId) {
 		const existingCoId = schematas.get('°Maia/schema/meta')
 		if (!existingCoId) {
-			schematas.set('°Maia/schema/meta', metaschemaCoId)
+			schematas.set('°Maia/schema/meta', metaschemaCoId, COJSON_PRIVACY)
 		}
 	}
 
@@ -101,7 +102,7 @@ export async function storeRegistry(
 				AVEN_ACTOR_REF_PATTERN.test(key))
 		) {
 			const existing = schematas.get(key)
-			if (!existing) schematas.set(key, coId)
+			if (!existing) schematas.set(key, coId, COJSON_PRIVACY)
 		}
 	}
 }

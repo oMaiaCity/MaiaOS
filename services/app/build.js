@@ -1,6 +1,6 @@
 #!/usr/bin/env bun
 import { spawnSync } from 'node:child_process'
-import { cpSync, existsSync, mkdirSync, readdirSync, readFileSync, rmSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 /**
  * Bun build for maia SPA - SPA mode intact.
  * Requires distros built first (maia-client.mjs, avens.mjs).
@@ -107,36 +107,17 @@ await Bun.write(join(distDir, 'style.css'), bundledCss)
 
 // brand/ already in dist via sync-assets above
 
-// Copy RunAnywhere WASM (llamacpp + sherpa) from node_modules to dist
+// Copy RunAnywhere WASM from distros output (vendored during distros:build)
 const repoRoot = join(serviceDir, '../..')
-const llamaWasmSrc = join(repoRoot, 'node_modules/@runanywhere/web-llamacpp/wasm')
-const onnxSherpaSrc = join(repoRoot, 'node_modules/@runanywhere/web-onnx/wasm/sherpa')
+const distrosWasmDir = join(repoRoot, 'libs/maia-distros/output/runanywhere-wasm')
 const wasmOutDir = join(distDir, 'runanywhere-wasm')
-if (existsSync(llamaWasmSrc)) {
-	mkdirSync(wasmOutDir, { recursive: true })
-	for (const file of [
-		'racommons-llamacpp.wasm',
-		'racommons-llamacpp.js',
-		'racommons-llamacpp-webgpu.wasm',
-		'racommons-llamacpp-webgpu.js',
-	]) {
-		const src = join(llamaWasmSrc, file)
-		if (existsSync(src)) {
-			cpSync(src, join(wasmOutDir, file))
-		}
-	}
-}
-if (existsSync(onnxSherpaSrc)) {
-	const sherpaOut = join(wasmOutDir, 'sherpa')
-	mkdirSync(sherpaOut, { recursive: true })
-	for (const file of readdirSync(onnxSherpaSrc)) {
-		cpSync(join(onnxSherpaSrc, file), join(sherpaOut, file))
-	}
+if (existsSync(distrosWasmDir)) {
+	cpSync(distrosWasmDir, wasmOutDir, { recursive: true })
 }
 
-// Verify critical assets
+// Verify critical assets (WASM required - no remote fallback)
 const distHas = (p) => existsSync(join(distDir, p))
-const checks = [
+const required = [
 	['style.css', distHas('style.css')],
 	['brand/images/banner.png', distHas('brand/images/banner.png')],
 	[
@@ -148,7 +129,7 @@ const checks = [
 		distHas('runanywhere-wasm/racommons-llamacpp-webgpu.js'),
 	],
 ]
-const missing = checks.filter(([, ok]) => !ok).map(([p]) => p)
+const missing = required.filter(([, ok]) => !ok).map(([p]) => p)
 if (missing.length > 0) {
 	console.error('Build verification failed - missing:', missing.join(', '))
 	process.exit(1)

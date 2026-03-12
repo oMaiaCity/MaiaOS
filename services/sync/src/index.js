@@ -9,7 +9,7 @@
  *   AVEN_MAIA_ACCOUNT, AVEN_MAIA_SECRET - From Fly secrets (sync from .env: bun run agent:generate)
  *   PEER_SYNC_STORAGE=pglite | postgres (required - server never runs without persistent storage)
  *     - pglite: PEER_DB_PATH (default ./local-sync.db)
- *     - postgres: PEER_DB_URL (required)
+ *     - postgres: PEER_SYNC_DB_URL (required)
  *   AVEN_MAIA_GUARDIAN: Human account co-id (co_z...). If set, add as admin of °Maia spark guardian. Retries until success (account may sync after client connects).
  *   PEER_SYNC_SEED: Default false. Set true to run genesis seed (bootstrap + schemas + avens).
  *     - true: Fresh seed (first deploy or intentional reset). May overwrite existing scaffold.
@@ -860,7 +860,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 				if (profileCore?.isAvailable()) {
 					const profile = profileCore.getCurrentContent()
 					if (profile?.get('name') !== maiaName) {
-						profile.set('name', maiaName)
+						profile.set('name', maiaName, 'private')
 					}
 				}
 			}

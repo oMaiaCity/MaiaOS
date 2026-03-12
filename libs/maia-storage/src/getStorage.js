@@ -86,7 +86,7 @@ export async function getStorage(options = {}) {
 
 	if (runtime === 'node') {
 		const finalDbPath = dbPath || (typeof process !== 'undefined' && process.env?.PEER_DB_PATH)
-		const databaseUrl = typeof process !== 'undefined' && process.env?.PEER_DB_URL
+		const databaseUrl = typeof process !== 'undefined' && process.env?.PEER_SYNC_DB_URL
 
 		// Agent/server mode: pglite or postgres only. No in-memory or jazz-cloud.
 		if (mode === 'agent' && !forceInMemory) {
@@ -105,7 +105,7 @@ export async function getStorage(options = {}) {
 		// Postgres (Fly MPG or any Postgres)
 		if (storageType === 'postgres' && !forceInMemory) {
 			if (!databaseUrl) {
-				throw new Error('[STORAGE] PEER_SYNC_STORAGE=postgres requires PEER_DB_URL env var')
+				throw new Error('[STORAGE] PEER_SYNC_STORAGE=postgres requires PEER_SYNC_DB_URL env var')
 			}
 			try {
 				const { getPostgresStorage } = await import('@MaiaOS/storage/adapters/postgres.js')
@@ -138,7 +138,7 @@ export async function getStorage(options = {}) {
 		// Agent mode with no valid storage → fail hard
 		if (mode === 'agent') {
 			throw new Error(
-				'[STORAGE] Agent mode requires PEER_SYNC_STORAGE=pglite (with PEER_DB_PATH) or PEER_SYNC_STORAGE=postgres (with PEER_DB_URL).',
+				'[STORAGE] Agent mode requires PEER_SYNC_STORAGE=pglite (with PEER_DB_PATH) or PEER_SYNC_STORAGE=postgres (with PEER_SYNC_DB_URL).',
 			)
 		}
 	}

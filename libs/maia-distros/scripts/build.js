@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-import { cpSync, existsSync, mkdirSync } from 'node:fs'
+import { cpSync, existsSync, mkdirSync, readdirSync } from 'node:fs'
 /**
  * Bun-native build for maia-client, sync-server, avens.
  * Uses root jsconfig.json paths for @MaiaOS/* resolution (self-contained bundle).
@@ -62,6 +62,33 @@ async function main() {
 	if (existsSync(wasmSource)) {
 		cpSync(wasmSource, join(outputDir, 'pglite.wasm'))
 		console.log('Vendored pglite.wasm')
+	}
+
+	// Vendor RunAnywhere WASM (llamacpp + sherpa) for app local LLM
+	const llamaWasmSrc = join(repoRoot, 'node_modules/@runanywhere/web-llamacpp/wasm')
+	const onnxSherpaSrc = join(repoRoot, 'node_modules/@runanywhere/web-onnx/wasm/sherpa')
+	const wasmOutDir = join(outputDir, 'runanywhere-wasm')
+	if (existsSync(llamaWasmSrc)) {
+		mkdirSync(wasmOutDir, { recursive: true })
+		for (const file of [
+			'racommons-llamacpp.wasm',
+			'racommons-llamacpp.js',
+			'racommons-llamacpp-webgpu.wasm',
+			'racommons-llamacpp-webgpu.js',
+		]) {
+			const src = join(llamaWasmSrc, file)
+			if (existsSync(src)) cpSync(src, join(wasmOutDir, file))
+		}
+	}
+	if (existsSync(onnxSherpaSrc)) {
+		const sherpaOut = join(wasmOutDir, 'sherpa')
+		mkdirSync(sherpaOut, { recursive: true })
+		for (const file of readdirSync(onnxSherpaSrc)) {
+			cpSync(join(onnxSherpaSrc, file), join(sherpaOut, file))
+		}
+	}
+	if (existsSync(join(wasmOutDir, 'racommons-llamacpp-webgpu.js'))) {
+		console.log('Vendored runanywhere-wasm (llamacpp + sherpa)')
 	}
 
 	console.log('Distros build complete')

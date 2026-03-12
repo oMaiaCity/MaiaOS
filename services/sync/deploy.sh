@@ -73,14 +73,14 @@ retry_flyctl_deploy() {
 }
 
 echo "🚀 Deploying sync service to Fly.io..."
-echo "   App: moai-next-maia-city"
+echo "   App: sync-next-maia-city"
 echo ""
 
 cd "$MONOREPO_ROOT"
 
-# Secrets (AVEN_MAIA_ACCOUNT, AVEN_MAIA_SECRET, PEER_DB_URL) must be set manually before deploy
+# Secrets (AVEN_MAIA_ACCOUNT, AVEN_MAIA_SECRET, PEER_SYNC_DB_URL) must be set manually before deploy
 if ! retry_flyctl_deploy \
-  "moai-next-maia-city" \
+  "sync-next-maia-city" \
   "services/sync/Dockerfile" \
   "services/sync/fly.toml"; then
   echo "❌ Failed to deploy sync service after retries"
@@ -89,9 +89,9 @@ fi
 
 # Enforce single machine for sync (sync service must not scale beyond 1)
 echo "Enforcing single machine..."
-flyctl scale count 1 --app moai-next-maia-city --yes
+flyctl scale count 1 --app sync-next-maia-city --yes
 
 echo ""
 echo "✅ Deployment complete!"
-echo "   Health check: https://moai-next-maia-city.fly.dev/health"
-echo "   WebSocket: wss://moai-next-maia-city.fly.dev/sync"
+echo "   Health check: https://sync.next.maia.city/health"
+echo "   WebSocket: wss://sync.next.maia.city/sync"

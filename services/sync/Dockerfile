@@ -25,5 +25,5 @@ COPY --from=builder /app/libs/maia-distros/output/pglite.wasm ./
 
 EXPOSE 4201
 
-# Env: PEER_SYNC_STORAGE (from fly.toml). Secrets: AVEN_MAIA_ACCOUNT, AVEN_MAIA_SECRET, PEER_DB_URL
+# Env: PEER_SYNC_STORAGE (from fly.toml). Secrets: AVEN_MAIA_ACCOUNT, AVEN_MAIA_SECRET, PEER_SYNC_DB_URL
 CMD ["bun", "run", "sync-server.mjs"]

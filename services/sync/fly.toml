@@ -1,12 +1,13 @@
 # Fly.io configuration for sync service
 # Single machine only: deploy uses --ha=false and post-deploy runs fly scale count 1
-app = "moai-next-maia-city"
+# Custom domain: sync.next.maia.city
+app = "sync-next-maia-city"
 org = "maia-city"
 primary_region = "fra"
 
 [vm]
-  memory = "512mb"
-  swap_size_mb = 128
+  memory = "2048mb"
+  swap_size_mb = 512
 
 [build]
   # Build from monorepo root with Dockerfile in services/sync/
@@ -19,7 +20,7 @@ primary_region = "fra"
 
 # Secrets: set manually via fly secrets set
 # AVEN_MAIA_ACCOUNT, AVEN_MAIA_SECRET - required
-# PEER_DB_URL - from Fly Postgres Connect tab (PEER_SYNC_STORAGE=postgres)
+# PEER_SYNC_DB_URL - Neon or Fly Postgres connection string (PEER_SYNC_STORAGE=postgres)
 # PEER_DB_PATH - PGlite data path (PEER_SYNC_STORAGE=pglite, e.g. /data/sync.db)
 # RED_PILL_API_KEY - Optional, for LLM chat
 
@@ -43,9 +44,9 @@ primary_region = "fra"
     port = 443
 
   [[services.http_checks]]
-    interval = "10s"
-    timeout = "2s"
-    grace_period = "5s"
+    interval = "15s"
+    timeout = "5s"
+    grace_period = "60s"
     method = "GET"
     path = "/health"
     protocol = "http"

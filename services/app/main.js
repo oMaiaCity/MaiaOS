@@ -369,7 +369,7 @@ async function linkAccountToRegistries(maia) {
 		const registriesId = data?.registries
 		const { maiaId: account } = maia.id
 		if (registriesId?.startsWith('co_z')) {
-			account.set('registries', registriesId)
+			account.set('registries', registriesId, 'private')
 		}
 	} catch (_e) {}
 }
@@ -454,7 +454,7 @@ async function signInWithTestAven() {
 				if (profileCore?.isAvailable()) {
 					const profile = profileCore.getCurrentContent()
 					if (profile?.get('name') !== avenTestName) {
-						profile.set('name', avenTestName)
+						profile.set('name', avenTestName, 'private')
 					}
 				}
 			}

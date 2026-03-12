@@ -7,6 +7,7 @@
 
 import { loadSchemaAndValidate } from '@MaiaOS/schemata/validation.helper'
 import { invalidateResolvedDataForMutatedCoValue } from '../cache/coCache.js'
+import { COJSON_PRIVACY } from '../constants.js'
 import { resolve } from '../schema/resolver.js'
 import * as collectionHelpers from './collection-helpers.js'
 import * as dataExtraction from './data-extraction.js'
@@ -99,7 +100,7 @@ export async function update(peer, _schema, id, data) {
 	if (rawType === 'comap' && content.set) {
 		// Update CoMap properties (validation passed, safe to apply)
 		for (const [key, value] of Object.entries(data)) {
-			content.set(key, value)
+			content.set(key, value, COJSON_PRIVACY)
 		}
 	} else {
 		throw new Error(`[MaiaDB] Update not supported for type: ${rawType}`)

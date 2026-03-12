@@ -9,6 +9,7 @@ import { seed } from '../../migrations/seeding/seed.js'
 import { ReactiveStore } from '../../reactive-store.js'
 import { EXCEPTION_SCHEMAS } from '../../schemas/registry.js'
 import { getGlobalCoCache } from '../cache/coCache.js'
+import { COJSON_PRIVACY } from '../constants.js'
 import * as crudCreate from '../crud/create.js'
 import { extractCoStreamWithSessions } from '../crud/data-extraction.js'
 import * as crudDelete from '../crud/delete.js'
@@ -313,7 +314,7 @@ export class MaiaDB {
 				data: {},
 				dataEngine: this.dbEngine,
 			})
-			osContent.set('schematas', schematasCoMap.id)
+			osContent.set('schematas', schematasCoMap.id, COJSON_PRIVACY)
 			schematasId = schematasCoMap.id
 			const osStore2 = await universalRead(this, osId, null, null, null, {
 				deepResolve: false,
@@ -345,7 +346,7 @@ export class MaiaDB {
 						cotype: 'costream',
 						dataEngine: this.dbEngine,
 					})
-					osContent.set('capabilities', capabilitiesStream.id)
+					osContent.set('capabilities', capabilitiesStream.id, COJSON_PRIVACY)
 					capabilitiesId = capabilitiesStream.id
 				}
 			}
