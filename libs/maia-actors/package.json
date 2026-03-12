@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/actors",
-	"version": "26.0312.1641",
+	"version": "26.0312.1650",
 	"type": "module",
 	"main": "src/index.js",
 	"exports": {
