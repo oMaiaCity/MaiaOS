@@ -764,7 +764,10 @@ export class MaiaOS {
 		const actorConfig = actorStore.value
 		const actor = await this.runtime.createActorForView(actorConfig, container, avenKey)
 
-		return { aven, actor }
+		// Create root actor with vibeKey for tracking
+		const actor = await this.actorEngine.createActor(actorConfig, container, vibeKey)
+
+		return { vibe, actor }
 	}
 
 	/**

@@ -5,8 +5,8 @@
  * STRICT: PRF required, no fallbacks
  */
 
-import { schemaMigration, simpleAccountSeed } from '@MaiaOS/db'
-import { createAccountWithSecret, loadAccount, setupSyncPeers } from '@MaiaOS/peer'
+import { createAccountWithSecret, loadAccount } from '@MaiaOS/db'
+import { setupSyncPeers } from '@MaiaOS/peer'
 // Import dependencies directly (workspace imports work in dev)
 // In Docker: These will be resolved via the kernel bundle or copied files
 import { getStorage } from '@MaiaOS/storage'
