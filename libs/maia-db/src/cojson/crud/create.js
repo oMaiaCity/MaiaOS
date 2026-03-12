@@ -104,6 +104,10 @@ export async function create(peer, schema, data, options = {}) {
 		throw new Error('[MaiaDB] Data must be array for colist')
 	}
 
+	// Chat message: { role, content, displayName }
+	const isChatMessage = data && 'role' in data && 'content' in data
+	const t0 = isChatMessage ? _perfChat.now() : 0
+
 	const { coValue } = await createCoValueForSpark(peer, spark, {
 		schema,
 		cotype,
@@ -116,13 +120,28 @@ export async function create(peer, schema, data, options = {}) {
 		_perfChat.log('create.createCoValueForSpark', Math.round((_perfChat.now() - t0) * 100) / 100)
 	}
 
-	// Return created CoValue data via read() API (single gate, normalized)
+	// Fast path: coValue is local and available—extract from node, no read/store wait
+	// coValue from createCoValueForSpark is RawCoMap/RawCoList (content); peer.isAvailable expects CoValueCore
+	const coValueCore = peer.getCoValue?.(coValue?.id) ?? coValue
+	if (coValueCore && peer.isAvailable(coValueCore)) {
+		const extracted = extractCoValueData(peer, coValueCore, schema)
+		if (extracted && !extracted.error) {
+			return { id: coValue.id, ...data, ...extracted }
+		}
+		return { id: coValue.id, ...data, type: cotype, schema }
+	}
+
+	// Fallback: coValue not yet available (rare remote/edge case)
 	const store = await peer.read(null, coValue.id, null, null, { deepResolve: false })
 	const { waitForStoreReady } = await import('./read-operations.js')
+	const t1 = isChatMessage ? _perfChat.now() : 0
 	try {
 		await waitForStoreReady(store, coValue.id, 5000)
 	} catch (_e) {
 		return { id: coValue.id, ...data, type: cotype, schema }
+	}
+	if (isChatMessage) {
+		_perfChat.log('create.waitForStoreReady', Math.round((_perfChat.now() - t1) * 100) / 100)
 	}
 	const extracted = store.value
 	if (extracted && !extracted.error) {

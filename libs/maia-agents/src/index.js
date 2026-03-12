@@ -84,4 +84,4 @@ export function filterAgentsForSeeding(agentRegistries, config = null) {
 	return []
 }
 
-export { getAgentActorConfigs, getDependenciesForAgents, getRuntimeConfig } from './seeding.js'
+export { getAgentActorConfigs, getDependenciesForAgents } from './seeding.js'

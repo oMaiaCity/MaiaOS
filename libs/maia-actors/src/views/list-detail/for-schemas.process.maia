@@ -29,7 +29,7 @@
 					"selectedItem": {
 						"id": "$selectedItem.id",
 						"label": "$selectedItem.label",
-						"definition": "$$definition"
+						"definition": "$event.definition"
 					}
 				}
 			},

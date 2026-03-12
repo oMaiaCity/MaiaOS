@@ -41,17 +41,17 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 		throw new Error('[createAndPushMessage] messageData must be an object')
 	}
 
+	const peer = dbEngine.peer
+	if (!peer) {
+		throw new Error('[createAndPushMessage] dbEngine.peer is required')
+	}
+
 	let t0 = _perf.now()
-	// 1. Get message schema co-id from inbox schema (preferred - avoids resolve warnings)
-	// Extract from inbox schema's items.$co property (same pattern as processInbox)
+	// 1. Get message schema co-id from inbox schema via resolve() (uses CoCache / universalRead)
 	let messageSchemaCoId = null
+	let inboxSchema = null
 	try {
-		// Get inbox schema to find message schema reference
-		const inboxSchemaStore = await dbEngine.execute({
-			op: 'schema',
-			fromCoValue: inboxCoId,
-		})
-		const inboxSchema = inboxSchemaStore.value
+		inboxSchema = await resolve(peer, { fromCoValue: inboxCoId }, { returnType: 'schema' })
 
 		if (inboxSchema?.items?.$co) {
 			const messageSchemaRef = inboxSchema.items.$co
@@ -64,10 +64,7 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 		}
 
 		if (!messageSchemaCoId) {
-			messageSchemaCoId = await dbEngine.execute({
-				op: 'resolve',
-				humanReadableKey: '°Maia/schema/event',
-			})
+			messageSchemaCoId = await resolve(peer, '°Maia/schema/event', { returnType: 'coId' })
 		}
 
 		if (!messageSchemaCoId || !messageSchemaCoId.startsWith('co_z')) {
@@ -82,7 +79,7 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 
 	// 2. CRITICAL: Load and validate message data against message schema before creating
 	//    This ensures type, payload, source, target, processed fields are valid
-	const messageSchema = await resolve(dbEngine.peer, messageSchemaCoId, { returnType: 'schema' })
+	const messageSchema = await resolve(peer, messageSchemaCoId, { returnType: 'schema' })
 	if (!messageSchema) {
 		throw new Error(`[createAndPushMessage] Message schema not found: ${messageSchemaCoId}`)
 	}

@@ -4,6 +4,9 @@
 	"name": "Todos",
 	"description": "Complete todo list with state machines and AI tools",
 	"actor": "°Maia/todos/actor/intent",
+	"runtime": [
+		"browser"
+	],
 	"dependencies": [
 		"°Maia/todos/actor/intent",
 		"°Maia/actor/views/layout-todos",

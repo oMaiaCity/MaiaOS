@@ -4,6 +4,9 @@
 	"name": "Chat",
 	"description": "CTO-level AI assistant for MaiaOS codebase",
 	"actor": "°Maia/chat/actor/intent",
+	"runtime": [
+		"browser"
+	],
 	"dependencies": [
 		"°Maia/chat/actor/intent",
 		"°Maia/actor/views/layout-chat",

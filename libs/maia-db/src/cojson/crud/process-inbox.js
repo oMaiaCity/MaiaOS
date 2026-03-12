@@ -35,13 +35,7 @@ export async function processInbox(peer, actorId, inboxCoId) {
 		throw new Error('[processInbox] Cannot get current session ID from peer')
 	}
 
-	// Get dbEngine from peer (needed for operations API)
-	const dbEngine = peer.dbEngine
-	if (!dbEngine) {
-		throw new Error('[processInbox] Backend must have dbEngine set')
-	}
-
-	// Get message schema co-id (needed for reading/updating message CoMaps)
+	// Get message schema co-id via resolve() (uses CoCache / universalRead)
 	let messageSchemaCoId = null
 	try {
 		const inboxSchema = await resolve(peer, { fromCoValue: inboxCoId }, { returnType: 'schema' })
@@ -68,9 +62,9 @@ export async function processInbox(peer, actorId, inboxCoId) {
 	}
 	// CRITICAL: Process ALL sessions - client must see server replies (e.g. SUCCESS from aiChat on moai)
 	// Session-only processing caused: maia never saw SUCCESS (moai's session) → result: null, no LLM response
-	const allMessages = []
+	const allItems = []
 	for (const items of Object.values(inboxData.sessions || {})) {
-		if (Array.isArray(items)) allMessages.push(...items)
+		if (Array.isArray(items)) allItems.push(...items)
 	}
 	// Deduplicate by _coId: same message can appear via multiple sessions (e.g. cross-peer sync)
 	// Without this, CHAT is processed twice → 2x LLM calls, 2x latency
@@ -102,8 +96,7 @@ export async function processInbox(peer, actorId, inboxCoId) {
 
 		// Message is a CoMap CoValue reference - read using universal read() API
 		try {
-			// Use universal read() API to handle progressive loading
-			const messageStore = await universalRead(peer, messageCoId, messageSchemaCoId)
+			let messageData = null
 
 			// Fast path: message already in node (just created locally)
 			const core = peer.getCoValue?.(messageCoId)

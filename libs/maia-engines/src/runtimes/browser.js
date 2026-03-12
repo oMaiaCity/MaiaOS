@@ -8,15 +8,12 @@
 
 import { deriveInboxRef } from '../utils/inbox-convention.js'
 
-const DEBOUNCE_MS = 50
-
 export class Runtime {
 	constructor(dataEngine, actorEngine, runtimeType) {
 		this.dataEngine = dataEngine
 		this.actorEngine = actorEngine
 		this.runtimeType = runtimeType
 		this._inboxWatcherUnsubscribes = []
-		this._inboxCheckers = new Map() // inboxCoId -> resolveAndSpawnIfNeeded
 		this._started = false
 		this._listeners = new Map() // event -> Set<callback>
 	}
@@ -99,7 +96,7 @@ export class Runtime {
 	 * @param {Object} targetActorConfig - Actor config from DB
 	 * @param {string} inboxCoId - Resolved inbox co-id
 	 */
-	async ensureActorSpawned(targetActorConfig, inboxCoId) {
+	async ensureActorSpawned(targetActorConfig, _inboxCoId) {
 		const actorId = targetActorConfig.$id || targetActorConfig.id
 		if (!actorId || this.actorEngine.actors.has(actorId)) return
 		try {
@@ -109,17 +106,8 @@ export class Runtime {
 				await this.actorEngine.processEvents(actorId)
 			}
 		} catch (_e) {
-			this.notifyInboxPush(inboxCoId)
+			// Store subscription will trigger processing when CoStream updates
 		}
-	}
-
-	/**
-	 * Called when a message is pushed to an inbox. Direct trigger ensures headless actors
-	 * process immediately without relying on store subscription (CoStream reads may not fire).
-	 */
-	notifyInboxPush(inboxCoId) {
-		const check = this._inboxCheckers.get(inboxCoId)
-		if (check) check()
 	}
 
 	/**
@@ -345,7 +333,10 @@ export class Runtime {
 						schema: null,
 						key: agentCoId,
 					})
-					const deps = agentStore?.value?.dependencies
+					const agent = agentStore?.value
+					if (!agent) continue
+					if (!Array.isArray(agent.runtime) || !agent.runtime.includes(this.runtimeType)) continue
+					const deps = agent.dependencies
 					if (Array.isArray(deps)) for (const ref of deps) actorRefs.add(ref)
 				} catch (_e) {}
 			}
@@ -357,79 +348,17 @@ export class Runtime {
 
 	/**
 	 * Watch an inbox for lifecycle: when unprocessed messages exist, spawn headless actor.
-	 * Actor watches and processes its own inbox (same as view-attached actors via _attachInboxSubscription).
+	 * Delegates to InboxEngine.watchInbox (unified $stores-based processing).
 	 * Used by start() and by ActorEngine.destroyActor (unmounted view actors).
 	 * @param {string} inboxCoId - Resolved inbox CoStream co-id
 	 * @param {string} actorId - Actor ID ($id for actors map, processEvents)
 	 * @param {Object} actorConfig - Full actor config (for spawnActor)
 	 */
 	watchInbox(inboxCoId, actorId, actorConfig) {
-		if (!this.dataEngine || !actorConfig?.inbox) return
-		if (typeof actorId !== 'string' || !actorId.startsWith('co_z')) {
-			throw new Error(`[Runtime] watchInbox: actorId must be co-id, got: ${actorId}`)
-		}
-		if (typeof inboxCoId !== 'string' || !inboxCoId.startsWith('co_z')) {
-			throw new Error(`[Runtime] watchInbox: inboxCoId must be co-id, got: ${inboxCoId}`)
-		}
-
-		const resolveAndSpawnIfNeeded = async () => {
-			const result = await this.dataEngine.execute({
-				op: 'processInbox',
-				actorId,
-				inboxCoId,
-			})
-			const count = result?.messages?.length ?? 0
-
-			if (this.actorEngine.actors.has(actorId)) {
-				// Actor exists: process new messages (e.g. SUCCESS from AI reply)
-				if (count > 0) await this.actorEngine.processEvents(actorId)
-				return
-			}
-
-			if (count === 0) return
-
-			const actor = await this.actorEngine.spawnActor(actorConfig)
-			if (actor) {
-				this._emit('actorSpawned', { actorId, config: actorConfig, source: 'inbox' })
-				await this.actorEngine.processEvents(actorId)
-			}
-		}
-
-		// Register immediately so notifyInboxPush works before resolveAndSubscribe completes
-		this._inboxCheckers.set(inboxCoId, () => resolveAndSpawnIfNeeded())
-
-		const resolveAndSubscribe = async () => {
-			const schemaCoId = await this.dataEngine?.peer?.resolve?.(
-				{ fromCoValue: inboxCoId },
-				{ returnType: 'coId' },
-			)
-			const inboxStore = schemaCoId
-				? await this.dataEngine
-						?.execute({ op: 'read', schema: schemaCoId, key: inboxCoId })
-						.catch(() => null)
-				: null
-			if (!inboxStore?.subscribe) {
-				// Keep checker – notifyInboxPush will still work
-				return
-			}
-
-			let debounceTimeout = null
-			const onInboxChange = () => {
-				if (debounceTimeout) clearTimeout(debounceTimeout)
-				debounceTimeout = setTimeout(() => {
-					debounceTimeout = null
-					resolveAndSpawnIfNeeded()
-				}, DEBOUNCE_MS)
-			}
-			const unsub = inboxStore.subscribe(onInboxChange)
-			setTimeout(() => resolveAndSpawnIfNeeded(), DEBOUNCE_MS)
-			this._inboxWatcherUnsubscribes.push(() => {
-				if (debounceTimeout) clearTimeout(debounceTimeout)
-				this._inboxCheckers.delete(inboxCoId)
-				unsub?.()
-			})
-		}
-		resolveAndSubscribe()
+		const inboxEngine = this.actorEngine?.inboxEngine
+		if (!inboxEngine) return
+		const unsub = inboxEngine.watchInbox(inboxCoId, actorId, actorConfig)
+		this._inboxWatcherUnsubscribes.push(unsub)
 	}
 
 	/**

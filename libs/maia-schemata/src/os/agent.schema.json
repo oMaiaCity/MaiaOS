@@ -17,6 +17,11 @@
 			"type": "array",
 			"items": { "type": "string" },
 			"description": "Explicit actor $ids whose inboxes must be watched (service actors this agent sends to)"
+		},
+		"runtime": {
+			"type": "array",
+			"items": { "type": "string" },
+			"description": "Runtime colocation - which runtimes this agent runs on (e.g. browser, server)"
 		}
 	}
 }
