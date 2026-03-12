@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/maia-ai",
-	"version": "26.0217.1438",
+	"version": "26.0312.1641",
 	"type": "module",
 	"main": "src/index.js",
 	"exports": {
