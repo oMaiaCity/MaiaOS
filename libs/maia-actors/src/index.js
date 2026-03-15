@@ -15,6 +15,8 @@ import paperFn from './services/paper/function.js'
 import profileImageDef from './services/profile-image/actor.maia'
 import profileImageFn from './services/profile-image/function.js'
 import todosDef from './services/todos/actor.maia'
+import updateWasmCodeDef from './services/update-wasm-code/actor.maia'
+import updateWasmCodeFn from './services/update-wasm-code/function.js'
 
 export const ACTORS = {
 	'maia/actor/os/ai': { definition: aiChatDef, function: aiChatFn },
@@ -25,6 +27,10 @@ export const ACTORS = {
 	'maia/actor/services/paper': {
 		definition: paperDef,
 		function: paperFn,
+	},
+	'maia/actor/services/updateWasmCode': {
+		definition: updateWasmCodeDef,
+		function: updateWasmCodeFn,
 	},
 	'maia/actor/services/profile-image': {
 		definition: profileImageDef,

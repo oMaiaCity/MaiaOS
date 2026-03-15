@@ -51,6 +51,21 @@ export function extractDOMValues(payload, element) {
 			}
 			result[key] = (inputEl?.value ?? '') || ''
 		}
+		// @inputByName:field — get input by name, data-field, or order (a=0, b=1) for multi-input forms
+		else if (typeof value === 'string' && value.startsWith('@inputByName:')) {
+			const field = value.slice(13)
+			const formOrContainer =
+				element.closest('form') || element.closest('[class*="form"]') || element.parentElement
+			let inputEl = formOrContainer?.querySelector(
+				`input[name="${field}"], input[data-field="${field}"]`,
+			)
+			if (!inputEl && formOrContainer) {
+				const inputs = formOrContainer.querySelectorAll('input, textarea')
+				const idx = field === 'b' ? 1 : 0
+				inputEl = inputs[idx]
+			}
+			result[key] = (inputEl?.value ?? '') || ''
+		}
 		// Handle special @dataColumn marker (DOM-specific, extracts data-column attribute)
 		else if (value === '@dataColumn') {
 			result[key] = element.dataset.column || element.getAttribute('data-column') || null

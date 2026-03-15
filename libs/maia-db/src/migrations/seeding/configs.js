@@ -2,6 +2,7 @@
  * Config seeding - actors, views, contexts, states, styles, etc.
  */
 
+import { splitGraphemes } from 'unicode-segmenter/grapheme'
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 
 /**
@@ -115,9 +116,56 @@ export async function seedConfigs(
 		return typeCount
 	}
 
+	const seedWasmConfigs = async () => {
+		const wasms = transformedConfigs.wasms
+		if (!wasms || typeof wasms !== 'object') return 0
+		const cotextSchemaCoId = schemaCoIdMap.get('°Maia/schema/os/cotext')
+		const wasmSchemaCoId = schemaCoIdMap.get('°Maia/schema/os/wasm')
+		if (!cotextSchemaCoId || !wasmSchemaCoId) return 0
+		let typeCount = 0
+		for (const [path, config] of Object.entries(wasms)) {
+			if (!config || typeof config !== 'object' || !config.$schema) continue
+			const codeStr = config.code
+			if (typeof codeStr !== 'string') continue
+			const graphemes = [...splitGraphemes(codeStr)]
+			const ctx = { node, account, guardian: maiaGroup }
+			const { coValue: cotextCoList } = await createCoValueForSpark(ctx, null, {
+				schema: cotextSchemaCoId,
+				cotype: 'colist',
+				data: graphemes,
+				dataEngine: peer?.dbEngine,
+			})
+			const { $id, $schema, lang, code: _code, ...rest } = config
+			const wasmData = { lang: config.lang ?? 'js', code: cotextCoList.id, ...rest }
+			const { coValue } = await createCoValueForSpark(ctx, null, {
+				schema: wasmSchemaCoId,
+				cotype: 'comap',
+				data: wasmData,
+				dataEngine: peer?.dbEngine,
+			})
+			const actualCoId = coValue.id
+			if ($id) {
+				instanceCoIdMap.set(path, actualCoId)
+				instanceCoIdMap.set($id, actualCoId)
+			}
+			seededConfigs.push({
+				type: 'wasm',
+				path,
+				coId: actualCoId,
+				expectedCoId: $id,
+				coMapId: actualCoId,
+				coMap: coValue,
+				cotype: 'comap',
+			})
+			typeCount++
+		}
+		return typeCount
+	}
+
 	totalCount += await seedConfigType('style', transformedConfigs.styles)
 	totalCount += await seedConfigType('tool', transformedConfigs.tools)
 	totalCount += await seedConfigType('process', transformedConfigs.processes)
+	totalCount += await seedWasmConfigs()
 	totalCount += await seedConfigType('actor', transformedConfigs.actors)
 	totalCount += await seedConfigType('view', transformedConfigs.views)
 	totalCount += await seedConfigType('context', transformedConfigs.contexts)

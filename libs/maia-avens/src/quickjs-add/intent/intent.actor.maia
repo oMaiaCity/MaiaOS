@@ -1,0 +1,11 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/quickjs-add/actor/intent",
+	"@label": "@quickjs-add/intent",
+	"context": "°Maia/quickjs-add/context/intent",
+	"view": "°Maia/quickjs-add/view/intent",
+	"process": "°Maia/quickjs-add/process/intent",
+	"brand": "°Maia/brand/maiacity",
+	"inbox": "°Maia/quickjs-add/inbox/intent",
+	"interface": []
+}

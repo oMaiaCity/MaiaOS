@@ -1,0 +1,12 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/quickjs-add/actor/deps-list-detail",
+	"@label": "@maia/quickjs-add/actor/deps-list-detail",
+	"context": "°Maia/quickjs-add/context/deps-list-detail",
+	"view": "°Maia/quickjs-add/view/deps-list-detail",
+	"process": "°Maia/quickjs-add/process/deps-list-detail",
+	"brand": "°Maia/brand/maiacity",
+	"style": "°Maia/actor/views/list-detail/style",
+	"inbox": "°Maia/quickjs-add/inbox/deps-list-detail",
+	"interface": "°Maia/quickjs-add/interface/deps-list-detail"
+}

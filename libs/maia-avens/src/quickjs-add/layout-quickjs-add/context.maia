@@ -1,0 +1,37 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/quickjs-add/context/layout-quickjs-add",
+	"title": "QuickJS Add",
+	"tabs": [
+		{
+			"id": "add",
+			"label": "Add",
+			"actor": "@addForm"
+		},
+		{
+			"id": "deps",
+			"label": "Deps",
+			"actor": "@depsList"
+		}
+	],
+	"viewMode": "add",
+	"currentView": "@addForm",
+	"tabsWithActive": [
+		{
+			"id": "add",
+			"label": "Add",
+			"actor": "@addForm",
+			"isActive": true
+		},
+		{
+			"id": "deps",
+			"label": "Deps",
+			"actor": "@depsList",
+			"isActive": false
+		}
+	],
+	"@actors": {
+		"addForm": "°Maia/quickjs-add/actor/add-form",
+		"depsList": "°Maia/quickjs-add/actor/deps-list"
+	}
+}

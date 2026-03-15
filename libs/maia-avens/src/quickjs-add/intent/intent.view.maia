@@ -1,0 +1,9 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/quickjs-add/view/intent",
+	"content": {
+		"tag": "div",
+		"class": "stack",
+		"$slot": "$layout"
+	}
+}

@@ -295,12 +295,11 @@ export class ProcessEngine {
 		if (!acceptedTypes?.length)
 			throw new Error(`[ProcessEngine] Cannot ask actor: no interface for ${target}`)
 		const eventType = type && acceptedTypes.includes(type) ? type : acceptedTypes[0]
-		await process.actor.actorOps.deliverEvent(
-			process.actor.id,
-			target,
-			eventType,
-			eventPayload && typeof eventPayload === 'object' ? eventPayload : {},
-		)
+		const payloadWithReplyTo = {
+			...(eventPayload && typeof eventPayload === 'object' ? eventPayload : {}),
+			replyTo: process.actor.id,
+		}
+		await process.actor.actorOps.deliverEvent(process.actor.id, target, eventType, payloadWithReplyTo)
 	}
 
 	/**

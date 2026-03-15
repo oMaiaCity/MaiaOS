@@ -1,0 +1,107 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/quickjs-add/add-form/view",
+	"content": {
+		"tag": "div",
+		"class": "add-form stack",
+		"children": [
+			{
+				"tag": "div",
+				"class": "form",
+				"children": [
+					{
+						"tag": "input",
+						"class": "input",
+						"attrs": {
+							"type": "number",
+							"placeholder": "a",
+							"data-field": "a"
+						},
+						"value": "$inputA",
+						"$on": {
+							"input": {
+								"send": "UPDATE_INPUT_A",
+								"payload": {
+									"value": "@inputValue"
+								}
+							},
+							"blur": {
+								"send": "UPDATE_INPUT_A",
+								"payload": {
+									"value": "@inputValue"
+								}
+							}
+						}
+					},
+					{
+						"tag": "span",
+						"class": "op",
+						"text": "+"
+					},
+					{
+						"tag": "input",
+						"class": "input",
+						"attrs": {
+							"type": "number",
+							"placeholder": "b",
+							"data-field": "b"
+						},
+						"value": "$inputB",
+						"$on": {
+							"input": {
+								"send": "UPDATE_INPUT_B",
+								"payload": {
+									"value": "@inputValue"
+								}
+							},
+							"blur": {
+								"send": "UPDATE_INPUT_B",
+								"payload": {
+									"value": "@inputValue"
+								}
+							}
+						}
+					},
+					{
+						"tag": "button",
+						"class": "button",
+						"attrs": {
+							"type": "button"
+						},
+						"text": "Add",
+						"$on": {
+							"click": {
+								"send": "ADD",
+								"payload": {
+									"a": "@inputByName:a",
+									"b": "@inputByName:b"
+								}
+							}
+						}
+					}
+				]
+			},
+			{
+				"tag": "div",
+				"class": "result",
+				"children": [
+					{
+						"tag": "span",
+						"class": "result-label",
+						"text": "Result: "
+					},
+					{
+						"tag": "span",
+						"class": "result-value",
+						"text": "$result"
+					}
+				]
+			},
+			{
+				"tag": "div",
+				"class": "error",
+				"text": "$error"
+			}
+		]
+	}
+}

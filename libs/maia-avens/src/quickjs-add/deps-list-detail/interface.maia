@@ -1,0 +1,28 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/quickjs-add/interface/deps-list-detail",
+	"title": "°Maia/quickjs-add/interface/deps-list-detail",
+	"description": "Detail view for selected dependency actor",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"SELECT_ITEM": {
+			"type": "object",
+			"properties": {
+				"item": {
+					"type": "object",
+					"properties": {
+						"id": {
+							"type": "string"
+						},
+						"configKeys": {
+							"type": "array"
+						}
+					}
+				}
+			},
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

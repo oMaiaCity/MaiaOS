@@ -1,0 +1,44 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/actor/services/updateWasmCode/interface",
+	"title": "°Maia/actor/services/updateWasmCode/interface",
+	"description": "Updates CoText content for wasm.code (inline edit). Resolves actorRef → wasm config → code CoText.",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"UPDATE_WASM_CODE": {
+			"type": "object",
+			"description": "Update wasm code CoText (full replace)",
+			"properties": {
+				"actorRef": {
+					"type": "string",
+					"description": "Actor ref (e.g. °Maia/actor/services/sandboxed-add)"
+				},
+				"value": {
+					"type": "string",
+					"description": "New code content (will be split into graphemes)"
+				}
+			},
+			"required": [
+				"actorRef",
+				"value"
+			],
+			"additionalProperties": false
+		},
+		"GET_WASM_CODE": {
+			"type": "object",
+			"description": "Get live wasm code from CoText",
+			"properties": {
+				"actorRef": {
+					"type": "string",
+					"description": "Actor ref (e.g. °Maia/actor/services/sandboxed-add)"
+				}
+			},
+			"required": [
+				"actorRef"
+			],
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

@@ -17,15 +17,19 @@ export { TodosAvenRegistry as TodosRegistry } from './todos/registry.js'
 import { ChatAvenRegistry } from './chat/registry.js'
 import { LogsAvenRegistry } from './creator/registry.js'
 import { HumansAvenRegistry } from './humans/registry.js'
+import { PaperAvenRegistry } from './paper/registry.js'
+import { QuickjsAddAvenRegistry } from './quickjs-add/registry.js'
 import { SparksAvenRegistry } from './sparks/registry.js'
 import { TodosAvenRegistry } from './todos/registry.js'
 
 const ALL_REGISTRIES = [
 	TodosAvenRegistry,
 	ChatAvenRegistry,
+	PaperAvenRegistry,
 	SparksAvenRegistry,
 	LogsAvenRegistry,
 	HumansAvenRegistry,
+	QuickjsAddAvenRegistry,
 ]
 
 /**
