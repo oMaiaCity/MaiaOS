@@ -1,0 +1,17 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/actor/services/updateWasmCode/process",
+	"@label": "@maia/actor/services/updateWasmCode/process",
+	"handlers": {
+		"UPDATE_WASM_CODE": [
+			{
+				"function": true
+			}
+		],
+		"GET_WASM_CODE": [
+			{
+				"function": true
+			}
+		]
+	}
+}

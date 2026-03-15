@@ -20,7 +20,7 @@ All commands are documented in root `package.json`. Key commands:
 ### First-time setup caveats
 
 1. **Generate credentials before first run**: `bun agent:generate` creates `/workspace/.env` with agent + test account credentials.
-2. **First run requires seeding**: Add `PEER_SYNC_SEED=true` and `PEER_SYNC_STORAGE=pglite` to `.env` for the first run. After successful seed, set `PEER_SYNC_SEED=false` so subsequent restarts use persisted data.
+2. **First run requires seeding**: Add `PEER_SYNC_SEED=true` and `PEER_SYNC_STORAGE=pglite` to `.env` for the first run. After successful seed, set `PEER_SYNC_SEED=false` so subsequent restarts use persisted data. `SEED_AVENS` defaults to `all` (includes quickjs-add); override with e.g. `SEED_AVENS=todos,chat,quickjs-add` to pick specific avens.
 3. **Test mode sign-in**: With `VITE_AVEN_TEST_MODE=true` in `.env`, the sign-in page shows a "SIGN IN / REGISTER WITH TEST AVEN" button that bypasses WebAuthn passkeys.
 4. **Guardian timeout on first run**: The sync server logs `Failed to add guardian: Timeout waiting for CoValue...` on first seed. This is expected — the test account isn't an existing peer yet. It does not block functionality.
 5. **RED_PILL_API_KEY**: Without this key, the LLM chat proxy (`/api/v0/llm/chat`) returns 500. The rest of the app works fine without it.

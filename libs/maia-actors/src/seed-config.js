@@ -29,6 +29,10 @@ import paperServiceProcess from './services/paper/process.maia'
 import profileImageServiceActor from './services/profile-image/actor.maia'
 import profileImageServiceInterface from './services/profile-image/interface.maia'
 import profileImageServiceProcess from './services/profile-image/process.maia'
+import sandboxedAddActor from './services/sandboxed-add/actor.maia'
+import sandboxedAddInterface from './services/sandboxed-add/interface.maia'
+import sandboxedAddProcess from './services/sandboxed-add/process.maia'
+import sandboxedAddWasm from './services/sandboxed-add/wasm.maia'
 import sparkActor from './services/spark/actor.maia'
 import sparkContext from './services/spark/context.maia'
 import sparkActorInterface from './services/spark/interface.maia'
@@ -37,6 +41,9 @@ import todosActor from './services/todos/actor.maia'
 import todosContext from './services/todos/context.maia'
 import todosActorInterface from './services/todos/interface.maia'
 import todosProcess from './services/todos/process.maia'
+import updateWasmCodeActor from './services/update-wasm-code/actor.maia'
+import updateWasmCodeInterface from './services/update-wasm-code/interface.maia'
+import updateWasmCodeProcess from './services/update-wasm-code/process.maia'
 import addressbookAvensGridActor from './views/addressbook-avens-grid/actor.maia'
 import addressbookAvensGridContext from './views/addressbook-avens-grid/context.maia'
 import addressbookAvensGridInterface from './views/addressbook-avens-grid/interface.maia'
@@ -195,6 +202,7 @@ export const ACTOR_ID_TO_EVENT_TYPE = {
 	'°Maia/actor/os/db': 'DB_OP',
 	'°Maia/actor/services/names': 'COMPUTE_NAMES',
 	'°Maia/actor/services/paper': 'UPDATE_PAPER',
+	'°Maia/actor/services/updateWasmCode': 'UPDATE_WASM_CODE',
 }
 
 /** Build actor config for seeding - uses actor schema */
@@ -272,6 +280,8 @@ export function getSeedConfig() {
 		paperActorInterface,
 		profileImageServiceInterface,
 		osSchemaInterface,
+		sandboxedAddInterface,
+		updateWasmCodeInterface,
 		sparkActorInterface,
 		todosActorInterface,
 		detailInterface,
@@ -518,6 +528,14 @@ export function getSeedConfig() {
 			context: osMessagesContext,
 			process: osMessagesProcess,
 		},
+		{
+			actor: sandboxedAddActor,
+			process: sandboxedAddProcess,
+		},
+		{
+			actor: updateWasmCodeActor,
+			process: updateWasmCodeProcess,
+		},
 	]
 	for (const { actor, context, view, process: proc, style: styleCfg } of serviceActors) {
 		if (actor?.$id) {
@@ -538,6 +556,10 @@ export function getSeedConfig() {
 	// Merge all processes
 	const allProcesses = { ...processes, ...uiProcesses }
 
+	const wasms = {
+		'°Maia/actor/services/sandboxed-add/wasm': sandboxedAddWasm,
+	}
+
 	return {
 		actors,
 		processes: allProcesses,
@@ -546,6 +568,7 @@ export function getSeedConfig() {
 		contexts: uiContexts,
 		views: uiViews,
 		styles: uiStyles,
+		wasms,
 	}
 }
 

@@ -310,6 +310,7 @@ function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 		'subscribers',
 		'tool',
 		'interface',
+		'wasm',
 	]
 	for (const prop of referenceProps) {
 		if (transformed[prop] && typeof transformed[prop] === 'string') {

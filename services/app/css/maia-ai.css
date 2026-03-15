@@ -56,12 +56,6 @@
 	color: #2e7d32;
 }
 
-.maia-ai-progress-row-storage {
-	border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-	padding-bottom: 0.5rem;
-	margin-bottom: 0.25rem;
-}
-
 .maia-ai-progress-indeterminate {
 	position: relative;
 	overflow: hidden;
@@ -225,10 +219,17 @@
 	margin: auto;
 }
 
-.maia-ai-center-btn .maia-ai-icon-sparkle,
 .maia-ai-center-btn .maia-ai-icon-mic,
-.maia-ai-center-btn .maia-ai-icon-close {
+.maia-ai-center-btn .maia-ai-icon-stop {
 	transition: opacity 0.2s;
+}
+
+.maia-ai-center-btn.maia-ai-center-btn-stop {
+	background: #c62828;
+}
+
+.maia-ai-center-btn.maia-ai-center-btn-stop:hover {
+	background: #8e0000;
 }
 
 .maia-ai-prompt {
@@ -384,6 +385,20 @@
 
 .maia-ai-voice-stop:hover:not(:disabled) {
 	background: #8e0000;
+}
+
+.maia-ai-voice-close {
+	background: none;
+	border: none;
+	padding: 0.5rem 0;
+	font-size: 0.875rem;
+	color: var(--color-marine-blue-light, #64748b);
+	cursor: pointer;
+	text-decoration: underline;
+}
+
+.maia-ai-voice-close:hover {
+	color: var(--color-marine-blue, #0f172a);
 }
 
 .maia-ai-retry-btn {

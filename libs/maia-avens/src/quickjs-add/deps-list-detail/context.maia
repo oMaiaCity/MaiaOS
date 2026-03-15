@@ -1,0 +1,8 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/quickjs-add/context/deps-list-detail",
+	"selectedItem": {
+		"id": "",
+		"configKeys": []
+	}
+}

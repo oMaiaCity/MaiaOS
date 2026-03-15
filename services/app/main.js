@@ -1152,6 +1152,19 @@ function toggleExpand(expandId) {
 	}
 }
 
+/** Load CoValue by ID from sidebar input (Maia DB). */
+window.loadCoValueById = () => {
+	const input = document.getElementById('coid-search-input')
+	if (!input) return
+	const coId = (input.value || '').trim()
+	if (!coId.startsWith('co_z')) {
+		showToast('Enter a valid co-id (starts with co_z)', 'info', 3000)
+		return
+	}
+	selectCoValue(coId)
+	input.value = ''
+}
+
 // Expose globally for onclick handlers
 window.switchView = switchView
 window.selectCoValue = selectCoValue

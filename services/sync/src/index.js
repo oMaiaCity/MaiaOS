@@ -14,6 +14,7 @@
  *   PEER_SYNC_SEED: Default false. Set true to run genesis seed (bootstrap + schemas + avens).
  *     - true: Fresh seed (first deploy or intentional reset). May overwrite existing scaffold.
  *     - false/unset: Skip seed, use persisted data. Never overwrite on restart.
+ *   SEED_AVENS: Default "all". Which avens to seed (todos, chat, quickjs-add, etc). "all" seeds every aven including quickjs-add.
  *   PEER_APP_HOST: Allowed CORS origin (e.g. https://next.maia.city). When set, only that origin can call sync/LLM. Unset = * (dev fallback).
  */
 
@@ -64,8 +65,8 @@ const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
 
 const avenMaiaGuardian = process.env.AVEN_MAIA_GUARDIAN?.trim() || null
 const peerSyncSeed = process.env.PEER_SYNC_SEED === 'true'
-// Sync mode seeds all avens by default (internal, not configurable)
-const seedVibesConfig = 'all'
+// SEED_AVENS: which avens to seed on genesis. Default "all" (includes quickjs-add). Override: "todos,chat" or "todos,chat,quickjs-add"
+const seedVibesConfig = process.env.SEED_AVENS || 'all'
 
 /** CORS: PEER_APP_HOST = allowed origin (e.g. https://next.maia.city or localhost:4200). When set, only that origin can call sync/LLM. When unset, * (dev fallback). */
 function normalizeCorsOrigin(host) {
@@ -971,6 +972,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 				views: actorViews,
 				processes: actorProcesses,
 				styles: actorStyles,
+				wasms: serviceWasms,
 			} = getSeedConfig()
 			const configsForSeed = {
 				...mergedConfigs,
@@ -982,6 +984,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 				views: { ...mergedConfigs.views, ...(actorViews || {}) },
 				processes: { ...mergedConfigs.processes, ...(actorProcesses || {}) },
 				styles: { ...mergedConfigs.styles, ...(actorStyles || {}) },
+				wasms: { ...(mergedConfigs.wasms || {}), ...(serviceWasms || {}) },
 			}
 			const schemas = getAllSchemas()
 			const seedResult = await dataEngine.execute({

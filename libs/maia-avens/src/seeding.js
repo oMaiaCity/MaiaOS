@@ -8,15 +8,19 @@
 import { ChatAvenRegistry } from './chat/registry.js'
 import { LogsAvenRegistry } from './creator/registry.js'
 import { HumansAvenRegistry } from './humans/registry.js'
+import { PaperAvenRegistry } from './paper/registry.js'
+import { QuickjsAddAvenRegistry } from './quickjs-add/registry.js'
 import { SparksAvenRegistry } from './sparks/registry.js'
 import { TodosAvenRegistry } from './todos/registry.js'
 
 const ALL_REGISTRIES = [
 	TodosAvenRegistry,
 	ChatAvenRegistry,
+	PaperAvenRegistry,
 	SparksAvenRegistry,
 	LogsAvenRegistry,
 	HumansAvenRegistry,
+	QuickjsAddAvenRegistry,
 ]
 
 function getAvenKey(aven) {
@@ -76,8 +80,10 @@ export function buildSeedConfig(avenRegistries) {
 		views: {},
 		contexts: {},
 		processes: {},
+		interfaces: {},
 		states: {},
 		inboxes: {},
+		wasms: {},
 		avens: validRegistries.map((r) => normalizeAvenForSeeding(r.aven)),
 		data: {},
 	}
@@ -87,6 +93,8 @@ export function buildSeedConfig(avenRegistries) {
 		Object.assign(merged.views, registry.views || {})
 		Object.assign(merged.contexts, registry.contexts || {})
 		Object.assign(merged.processes, registry.processes || {})
+		Object.assign(merged.interfaces, registry.interfaces || {})
+		Object.assign(merged.wasms, registry.wasms || {})
 		Object.assign(merged.data, registry.data || {})
 	}
 	// Inbox by convention: derive from actors (no registry.inboxes)

@@ -1,0 +1,11 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/quickjs-add/actor/add-form",
+	"@label": "@quickjs-add/add-form",
+	"brand": "°Maia/brand/maiacity",
+	"context": "°Maia/quickjs-add/add-form/context",
+	"view": "°Maia/quickjs-add/add-form/view",
+	"process": "°Maia/quickjs-add/add-form/process",
+	"inbox": "°Maia/quickjs-add/add-form/inbox",
+	"interface": "°Maia/quickjs-add/add-form/interface"
+}
