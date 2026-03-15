@@ -478,48 +478,48 @@ export async function seed(
 		}
 	}
 
-	const allAvens = configs?.avens || []
-	if (allAvens.length > 0) {
+	const allVibes = configs?.vibes || []
+	if (allVibes.length > 0) {
 		combinedRegistry = refreshCombinedRegistry()
-		let avens = null
-		const avensId = await groups.getSparkAvensId(peer, MAIA_SPARK)
-		if (avensId) {
-			const avensCore = await ensureCoValueLoaded(peer, avensId, {
+		let vibes = null
+		const vibesId = await groups.getSparkVibesId(peer, MAIA_SPARK)
+		if (vibesId) {
+			const vibesCore = await ensureCoValueLoaded(peer, vibesId, {
 				waitForAvailable: true,
 				timeoutMs: 5000,
 			})
-			if (avensCore?.type === 'comap' && peer.isAvailable(avensCore)) {
-				avens = avensCore.getCurrentContent?.()
+			if (vibesCore?.type === 'comap' && peer.isAvailable(vibesCore)) {
+				vibes = vibesCore.getCurrentContent?.()
 			}
 		}
-		if (!avens) {
+		if (!vibes) {
 			const { EXCEPTION_SCHEMAS } = await import('../../schemas/registry.js')
-			const avensRegistrySchemaCoId =
-				schemaCoIdMap?.get('°Maia/schema/os/avens-registry') ??
+			const vibesRegistrySchemaCoId =
+				schemaCoIdMap?.get('°Maia/schema/os/vibes-registry') ??
 				(await (
 					await import('../../cojson/schema/resolver.js')
-				).resolve(peer, '°Maia/schema/os/avens-registry', {
+				).resolve(peer, '°Maia/schema/os/vibes-registry', {
 					returnType: 'coId',
 				}))
-			const { coValue: avensCoMap } = await createCoValueForSpark(
+			const { coValue: vibesCoMap } = await createCoValueForSpark(
 				{ node, account, guardian: maiaGroup },
 				null,
 				{
-					schema: avensRegistrySchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
+					schema: vibesRegistrySchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
 					cotype: 'comap',
 					data: {},
 					dataEngine: peer?.dbEngine,
 				},
 			)
-			avens = avensCoMap
-			await groups.setSparkAvensId(peer, MAIA_SPARK, avens.id)
+			vibes = vibesCoMap
+			await groups.setSparkVibesId(peer, MAIA_SPARK, vibes.id)
 		}
-		for (const aven of allAvens) {
-			const originalAvenId = aven.$id || ''
-			const avenKey = originalAvenId.startsWith('°Maia/aven/')
-				? originalAvenId.replace('°Maia/aven/', '')
-				: (aven.name || 'default').toLowerCase().replace(/\s+/g, '-')
-			const schemaRef = aven.$schema
+		for (const vibe of allVibes) {
+			const originalVibeId = vibe.$id || ''
+			const vibeKey = originalVibeId.startsWith('°Maia/vibe/')
+				? originalVibeId.replace('°Maia/vibe/', '')
+				: (vibe.name || 'default').toLowerCase().replace(/\s+/g, '-')
+			const schemaRef = vibe.$schema
 			if (
 				schemaRef &&
 				(schemaRef.startsWith('@') || schemaRef.startsWith('°')) &&
@@ -532,31 +532,31 @@ export async function seed(
 					).resolve(peer, schemaRef, { returnType: 'coId' }))
 				if (schemaCoId) combinedRegistry.set(schemaRef, schemaCoId)
 			}
-			const retransformedAven = transformForSeeding(aven, combinedRegistry)
-			if (!retransformedAven.$schema?.startsWith('co_z')) {
+			const retransformedVibe = transformForSeeding(vibe, combinedRegistry)
+			if (!retransformedVibe.$schema?.startsWith('co_z')) {
 				throw new Error(
-					`[sync] Aven "${avenKey}": $schema missing or not resolved. Ensure °Maia/schema/aven is in schema registry.`,
+					`[sync] Vibe "${vibeKey}": $schema missing or not resolved. Ensure °Maia/schema/vibe is in schema registry.`,
 				)
 			}
-			const avenSeeded = await seedConfigs(
+			const vibeSeeded = await seedConfigs(
 				account,
 				node,
 				maiaGroup,
 				peer,
-				{ aven: retransformedAven },
+				{ vibe: retransformedVibe },
 				instanceCoIdMap,
 				schemaCoMaps,
 				schemaCoIdMap,
 			)
-			seededConfigs.configs.push(...(avenSeeded.configs || []))
-			seededConfigs.count += avenSeeded.count || 0
-			if (avenSeeded.configs?.length > 0) {
-				const avenCoId = avenSeeded.configs[0].coId
-				avens?.set?.(avenKey, avenCoId)
-				if (aven.$id) {
-					instanceCoIdMap.set(aven.$id, avenCoId)
-					combinedRegistry.set(aven.$id, avenCoId)
-					coIdRegistry.register(aven.$id, avenCoId)
+			seededConfigs.configs.push(...(vibeSeeded.configs || []))
+			seededConfigs.count += vibeSeeded.count || 0
+			if (vibeSeeded.configs?.length > 0) {
+				const vibeCoId = vibeSeeded.configs[0].coId
+				vibes?.set?.(vibeKey, vibeCoId)
+				if (vibe.$id) {
+					instanceCoIdMap.set(vibe.$id, vibeCoId)
+					combinedRegistry.set(vibe.$id, vibeCoId)
+					coIdRegistry.register(vibe.$id, vibeCoId)
 				}
 			}
 		}

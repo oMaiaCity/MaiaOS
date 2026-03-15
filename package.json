@@ -15,7 +15,7 @@
 		"deploy:app": "cd services/app && ./deploy.sh",
 		"deploy:app:verify": "bun scripts/fly-build-args-verify.js",
 		"deploy:sync": "cd services/sync && ./deploy.sh",
-		"avens:build": "cd libs/maia-avens && bun run build",
+		"vibes:build": "cd libs/maia-vibes && bun run build",
 		"distros:build": "bun run --filter @MaiaOS/maia-distros build",
 		"docs:generate": "bun scripts/generate-llm-docs.js",
 		"docs:watch": "bun scripts/generate-llm-docs.js --watch",

@@ -8,7 +8,7 @@
  * machine, and children. View-attached actors have viewDef + containerElement; headless have null.
  *
  * **Lifecycle:** spawnActor (headless, inbox+state) | createActor (view-attached via container).
- * destroyActor, destroyActorsForAven, destroyActorsForContainer for teardown.
+ * destroyActor, destroyActorsForVibe, destroyActorsForContainer for teardown.
  */
 
 import { waitForStoreReady } from '@MaiaOS/db'
@@ -34,7 +34,7 @@ export class ActorEngine {
 		this.dataEngine = null
 		this.os = null
 		this._containerActors = new Map()
-		this._avenActors = new Map()
+		this._vibeActors = new Map()
 		// ViewEngine/StateEngine receive ActorOps via Loader - no circular ref from here
 
 		// Svelte-style rerender batching (microtask queue)
@@ -158,11 +158,11 @@ export class ActorEngine {
 	 * Only creates the child actor when it's actually needed (referenced by context.currentView)
 	 * @param {Object} actor - Parent actor instance
 	 * @param {string} namekey - Child actor namekey (e.g., "list", "kanban")
-	 * @param {string} [avenKey] - Optional aven key for tracking child actors
+	 * @param {string} [vibeKey] - Optional vibe key for tracking child actors
 	 * @returns {Promise<Object|null>} The child actor instance, or null if not found/created
 	 * @private
 	 */
-	async _createChildActorIfNeeded(actor, namekey, avenKey = null) {
+	async _createChildActorIfNeeded(actor, namekey, _vibeKey = null) {
 		if (actor.children?.[namekey]) return actor.children[namekey]
 		if (!actor.children) actor.children = {}
 
@@ -188,7 +188,7 @@ export class ActorEngine {
 			const childActor = await this.createActor(
 				childActorConfig,
 				childContainer,
-				avenKey,
+				_vibeKey,
 				actor,
 				namekey,
 			)
@@ -208,14 +208,14 @@ export class ActorEngine {
 	async createActor(
 		actorConfig,
 		containerElement,
-		avenKey = null,
+		vibeKey = null,
 		parentActor = null,
 		namekey = null,
 	) {
 		const actorId = actorConfig.$id || actorConfig.id
 		if (this.actors.has(actorId)) {
-			return avenKey
-				? await this.reuseActor(actorId, containerElement, avenKey)
+			return vibeKey
+				? await this.reuseActor(actorId, containerElement, vibeKey)
 				: this.actors.get(actorId)
 		}
 		// Inbox by convention: derive when missing so config always has inbox set
@@ -237,7 +237,7 @@ export class ActorEngine {
 				this._containerActors.set(containerElement, new Set())
 			this._containerActors.get(containerElement).add(actorId)
 		}
-		if (avenKey) this.registerActorForAven(actorId, avenKey)
+		if (vibeKey) this.registerActorForVibe(actorId, vibeKey)
 
 		// View/DOM: delegate to ViewEngine
 		const onBeforeRender = () => this._initializeActorState(actor, actorConfig)
@@ -245,7 +245,7 @@ export class ActorEngine {
 			actor,
 			containerElement,
 			actorConfig,
-			avenKey,
+			vibeKey,
 			onBeforeRender,
 			parentActor,
 			namekey,
@@ -337,34 +337,34 @@ export class ActorEngine {
 	/**
 	 * Register an actor with an aven key for reuse tracking
 	 * @param {string} actorId - The actor ID
-	 * @param {string} avenKey - The aven key (e.g., 'todos')
+	 * @param {string} vibeKey - The vibe key (e.g., 'todos')
 	 */
-	registerActorForAven(actorId, avenKey) {
-		if (!avenKey) return
+	registerActorForVibe(actorId, vibeKey) {
+		if (!vibeKey) return
 
-		if (!this._avenActors.has(avenKey)) {
-			this._avenActors.set(avenKey, new Set())
+		if (!this._vibeActors.has(vibeKey)) {
+			this._vibeActors.set(vibeKey, new Set())
 		}
-		this._avenActors.get(avenKey).add(actorId)
+		this._vibeActors.get(vibeKey).add(actorId)
 	}
 
 	/**
-	 * Get all actors for an aven
-	 * @param {string} avenKey - The aven key (e.g., 'todos')
-	 * @returns {Set<string>|undefined} Set of actor IDs for the aven
+	 * Get all actors for a vibe
+	 * @param {string} vibeKey - The vibe key (e.g., 'todos')
+	 * @returns {Set<string>|undefined} Set of actor IDs for the vibe
 	 */
-	getActorsForAven(avenKey) {
-		return this._avenActors.get(avenKey)
+	getActorsForVibe(vibeKey) {
+		return this._vibeActors.get(vibeKey)
 	}
 
 	/**
 	 * Reuse an existing actor by reattaching it to a new container
 	 * @param {string} actorId - The actor ID
 	 * @param {HTMLElement} containerElement - The new container to attach to
-	 * @param {string} avenKey - The aven key (e.g., 'todos')
+	 * @param {string} vibeKey - The vibe key (e.g., 'todos')
 	 * @returns {Promise<Object>} The reused actor instance
 	 */
-	async reuseActor(actorId, containerElement, avenKey) {
+	async reuseActor(actorId, containerElement, vibeKey) {
 		const actor = this.actors.get(actorId)
 		if (!actor) throw new Error(`[ActorEngine] Cannot reuse actor ${actorId}`)
 		const oldContainer = actor.containerElement
@@ -379,7 +379,7 @@ export class ActorEngine {
 				this._containerActors.set(containerElement, new Set())
 			this._containerActors.get(containerElement).add(actorId)
 		}
-		this.registerActorForAven(actorId, avenKey)
+		this.registerActorForVibe(actorId, vibeKey)
 		if (actor.shadowRoot) {
 			const oldHost = actor.shadowRoot.host
 			if (oldHost && oldHost !== containerElement) {
@@ -435,10 +435,10 @@ export class ActorEngine {
 			containerActors.delete(actorId)
 			if (containerActors.size === 0) this._containerActors.delete(actor.containerElement)
 		}
-		for (const [avenKey, avenActorIds] of this._avenActors.entries()) {
-			if (avenActorIds.has(actorId)) {
-				avenActorIds.delete(actorId)
-				if (avenActorIds.size === 0) this._avenActors.delete(avenKey)
+		for (const [vibeKey, vibeActorIds] of this._vibeActors.entries()) {
+			if (vibeActorIds.has(actorId)) {
+				vibeActorIds.delete(actorId)
+				if (vibeActorIds.size === 0) this._vibeActors.delete(vibeKey)
 				break
 			}
 		}
@@ -613,7 +613,7 @@ export class ActorEngine {
 			containerElement: null,
 			actorOps: this, // ActorEngine implements ActorOps interface
 			viewDef: null,
-			avenKey: null,
+			vibeKey: null,
 			inbox: null,
 			inboxCoId,
 			interface: actorConfig.interface || null,
@@ -651,15 +651,15 @@ export class ActorEngine {
 	/**
 	 * Destroy all actors for an aven (complete cleanup)
 	 * Used for explicit cleanup when needed (e.g., app shutdown)
-	 * @param {string} avenKey - The aven key (e.g., 'todos')
+	 * @param {string} vibeKey - The vibe key (e.g., 'todos')
 	 */
-	destroyActorsForAven(avenKey) {
-		const actorIds = this._avenActors.get(avenKey)
-		if (!avenKey || !actorIds?.size) return
+	destroyActorsForVibe(vibeKey) {
+		const actorIds = this._vibeActors.get(vibeKey)
+		if (!vibeKey || !actorIds?.size) return
 		for (const actorId of Array.from(actorIds)) {
 			this.destroyActor(actorId)
 		}
-		this._avenActors.delete(avenKey)
+		this._vibeActors.delete(vibeKey)
 	}
 
 	/**

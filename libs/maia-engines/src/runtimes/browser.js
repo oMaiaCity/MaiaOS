@@ -54,11 +54,11 @@ export class Runtime {
 	 * Create actor with view attached. Delegates to actorEngine.createActor.
 	 * @param {Object} config - Actor config
 	 * @param {HTMLElement} container - Container element
-	 * @param {string|null} avenKey - Optional aven key for tracking
+	 * @param {string|null} vibeKey - Optional vibe key for tracking
 	 * @returns {Promise<Object>} Created actor
 	 */
-	async createActorForView(config, container, avenKey = null) {
-		const actor = await this.actorEngine.createActor(config, container, avenKey)
+	async createActorForView(config, container, vibeKey = null) {
+		const actor = await this.actorEngine.createActor(config, container, vibeKey)
 		if (actor) this._emit('actorSpawned', { actorId: actor.id, config, source: 'view' })
 		return actor
 	}
@@ -73,13 +73,13 @@ export class Runtime {
 	}
 
 	/**
-	 * Destroy all actors for an aven key (e.g. on aven switch).
-	 * @param {string} key - Agent key
+	 * Destroy all actors for a vibe key (e.g. on vibe switch).
+	 * @param {string} key - Vibe key
 	 */
-	destroyActorsForAven(key) {
-		this.actorEngine.destroyActorsForAven(key)
+	destroyActorsForVibe(key) {
+		this.actorEngine.destroyActorsForVibe(key)
 		// Emit per-actor would require iterating; bulk emit for now
-		this._emit('actorDestroyed', { avenKey: key, reason: 'avenSwitch' })
+		this._emit('actorDestroyed', { vibeKey: key, reason: 'vibeSwitch' })
 	}
 
 	/**
@@ -149,7 +149,7 @@ export class Runtime {
 	 */
 	async collectTools() {
 		if (!this.dataEngine?.peer) return []
-		const { actorRefs } = await this._getAvensAndDependenciesFromDb()
+		const { actorRefs } = await this._getVibesAndDependenciesFromDb()
 		const tools = []
 		const actorSchemaCoId = await this.dataEngine.peer.resolve('°Maia/schema/actor', {
 			returnType: 'coId',
@@ -311,10 +311,10 @@ export class Runtime {
 	}
 
 	/**
-	 * Load avens and union of their dependencies from DB (account.registries.sparks[°Maia].avens).
+	 * Load vibes and union of their dependencies from DB (account.registries.sparks[°Maia].vibes).
 	 * @returns {Promise<{actorRefs: string[]}>} Deduped actor refs to watch
 	 */
-	async _getAvensAndDependenciesFromDb() {
+	async _getVibesAndDependenciesFromDb() {
 		const peer = this.dataEngine?.peer
 		const account = peer?.account
 		if (!account?.id) return { actorRefs: [] }
@@ -350,36 +350,36 @@ export class Runtime {
 				schema: null,
 				key: sparkCoId,
 			})
-			const avensId = sparkStore?.value?.avens
-			if (!avensId?.startsWith?.('co_z')) return { actorRefs: [] }
-			const avensStore = await this.dataEngine.execute({
+			const vibesId = sparkStore?.value?.vibes
+			if (!vibesId?.startsWith?.('co_z')) return { actorRefs: [] }
+			const vibesStore = await this.dataEngine.execute({
 				op: 'read',
-				schema: avensId,
-				key: avensId,
+				schema: vibesId,
+				key: vibesId,
 			})
-			const avensData = avensStore?.value
-			if (!avensData || avensData.error) return { actorRefs: [] }
-			const avenKeys = Object.keys(avensData || {}).filter(
+			const vibesData = vibesStore?.value
+			if (!vibesData || vibesData.error) return { actorRefs: [] }
+			const vibeKeys = Object.keys(vibesData || {}).filter(
 				(k) =>
 					k !== 'id' &&
 					k !== '$schema' &&
 					k !== 'type' &&
-					typeof avensData[k] === 'string' &&
-					avensData[k].startsWith('co_'),
+					typeof vibesData[k] === 'string' &&
+					vibesData[k].startsWith('co_'),
 			)
 			const actorRefs = new Set()
-			for (const key of avenKeys) {
-				const avenCoId = avensData[key]
+			for (const key of vibeKeys) {
+				const vibeCoId = vibesData[key]
 				try {
-					const avenStore = await this.dataEngine.execute({
+					const vibeStore = await this.dataEngine.execute({
 						op: 'read',
 						schema: null,
-						key: avenCoId,
+						key: vibeCoId,
 					})
-					const aven = avenStore?.value
-					if (!aven) continue
-					if (!Array.isArray(aven.runtime) || !aven.runtime.includes(this.runtimeType)) continue
-					const deps = aven.dependencies
+					const vibe = vibeStore?.value
+					if (!vibe) continue
+					if (!Array.isArray(vibe.runtime) || !vibe.runtime.includes(this.runtimeType)) continue
+					const deps = vibe.dependencies
 					if (Array.isArray(deps)) for (const ref of deps) actorRefs.add(ref)
 				} catch (_e) {}
 			}
@@ -410,7 +410,7 @@ export class Runtime {
 		if (!this.dataEngine || this._started) return
 		this._started = true
 
-		const { actorRefs } = await this._getAvensAndDependenciesFromDb()
+		const { actorRefs } = await this._getVibesAndDependenciesFromDb()
 		if (!actorRefs?.length) return
 
 		for (const actorCoId of actorRefs) {

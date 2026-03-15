@@ -1,0 +1,20 @@
+{
+	"$schema": "°Maia/schema/vibe",
+	"$id": "°Maia/vibe/chat",
+	"name": "Chat",
+	"description": "CTO-level AI assistant for MaiaOS codebase",
+	"actor": "°Maia/chat/actor/intent",
+	"runtime": [
+		"browser"
+	],
+	"dependencies": [
+		"°Maia/chat/actor/intent",
+		"°Maia/actor/views/layout-chat",
+		"°Maia/actor/views/messages",
+		"°Maia/actor/views/paper",
+		"°Maia/actor/os/messages",
+		"°Maia/actor/services/paper",
+		"°Maia/actor/os/db",
+		"°Maia/actor/os/ai"
+	]
+}

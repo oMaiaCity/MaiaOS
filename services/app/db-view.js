@@ -34,7 +34,7 @@ async function getSchemaFromDb(maia, schemaRef) {
 	}
 }
 
-import { renderAvenViewer, renderDashboard } from './dashboard.js'
+import { renderDashboard, renderVibeViewer } from './dashboard.js'
 import { renderMaiaAIView } from './maia-ai-view.js'
 import { escapeHtml, getProfileAvatarHtml, getSyncStatusMessage, truncate } from './utils.js'
 
@@ -146,11 +146,11 @@ export async function renderApp(
 	currentScreen,
 	currentView,
 	currentContextCoValueId,
-	currentAven,
+	currentVibe,
 	currentSpark,
 	switchView,
 	selectCoValue,
-	loadAven,
+	loadVibe,
 	loadSpark,
 	navigateToScreen,
 ) {
@@ -162,7 +162,7 @@ export async function renderApp(
 			navigateToScreen,
 			currentSpark,
 			loadSpark,
-			loadAven,
+			loadVibe,
 		)
 		hydrateCobinaryPreviews(maia)
 		setTimeout(() => hydrateCobinaryPreviews(maia), 500)
@@ -176,8 +176,8 @@ export async function renderApp(
 		return
 	}
 
-	if (currentScreen === 'aven-viewer' && currentAven) {
-		await renderAvenViewer(maia, authState, syncState, currentAven, navigateToScreen, currentSpark)
+	if (currentScreen === 'vibe-viewer' && currentVibe) {
+		await renderVibeViewer(maia, authState, syncState, currentVibe, navigateToScreen, currentSpark)
 		hydrateCobinaryPreviews(maia)
 		setTimeout(() => hydrateCobinaryPreviews(maia), 500)
 		return
@@ -562,7 +562,7 @@ export async function renderApp(
 								currentSpark,
 								switchView,
 								selectCoValue,
-								loadAven,
+								loadVibe,
 								loadSpark,
 								navigateToScreen,
 							)
@@ -611,7 +611,7 @@ export async function renderApp(
 									currentSpark,
 									switchView,
 									selectCoValue,
-									loadAven,
+									loadVibe,
 									loadSpark,
 									navigateToScreen,
 								)
@@ -1174,7 +1174,7 @@ export async function renderApp(
 		`
 	}
 
-	// Build sidebar navigation items (Account only - avens via spark.avens)
+	// Build sidebar navigation items (Account only - vibes via spark.vibes)
 	const sidebarItems = navigationItems
 		.map((item) => {
 			// Account navigation - select account CoValue

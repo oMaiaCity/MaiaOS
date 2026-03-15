@@ -96,10 +96,10 @@ export async function seedConfigs(
 		}
 	}
 
-	const avenConfig = transformedConfigs.aven
-	if (avenConfig) {
-		const avenInfo = await createConfig(avenConfig, 'aven', 'aven')
-		seededConfigs.push(avenInfo)
+	const vibeConfig = transformedConfigs.vibe
+	if (vibeConfig) {
+		const vibeInfo = await createConfig(vibeConfig, 'vibe', 'vibe')
+		seededConfigs.push(vibeInfo)
 		totalCount++
 	}
 

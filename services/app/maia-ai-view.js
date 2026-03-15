@@ -70,7 +70,7 @@ export async function renderMaiaAIView(maia, authState, syncState, navigateToScr
 			</div>
 			</div>
 
-			<div class="aven-viewer-main">
+			<div class="vibe-viewer-main">
 				<div class="maia-ai-chat">
 					<div class="maia-ai-status" id="maia-ai-status">Initializing…</div>
 					<div class="maia-ai-progress" id="maia-ai-progress" style="display:none;">
