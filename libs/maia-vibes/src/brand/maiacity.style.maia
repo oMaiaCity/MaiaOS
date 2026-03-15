@@ -427,7 +427,17 @@
 			"lineHeight": "1.75",
 			"color": "rgba(0, 31, 51, 0.62)",
 			"margin": "0",
-			"whiteSpace": "pre-wrap"
+			"whiteSpace": "pre-wrap",
+			"outline": "none"
+		},
+		".paperExampleText:focus": {
+			"outline": "none"
+		},
+		"[contenteditable='true']:focus": {
+			"outline": "none"
+		},
+		"textarea:focus": {
+			"outline": "none"
 		},
 		".liquidGlass": {
 			"position": "relative",

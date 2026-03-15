@@ -122,27 +122,25 @@ The `tell` action config specifies target and payload. ProcessEngine evaluates e
 
 **Location**: `libs/maia-engines/src/engines/actor.engine.js`
 
-The `deliverEvent()` function pushes to inbox via `_pushToInbox()`:
+The `deliverEvent()` function delegates to InboxEngine. All messages go through the inbox—no bypass for self-delivery:
 ```javascript
 async deliverEvent(senderId, targetId, type, payload = {}) {
-  // Validate payload is resolved (no expressions)
   if (containsExpressions(payload)) throw new Error(...);
-  
-  await this._pushToInbox(targetId, {
-    type, payload: payload ?? {}, source: senderId, target: targetId, processed: false
-  });
-  // Same-actor: trigger processEvents immediately
-  if (senderId === targetId) await this.processEvents(targetId);
+  const message = {
+    type, payload: payloadPlain, source: senderId, target: targetId, processed: false
+  };
+  await this.inboxEngine.deliver(targetId, message);
 }
 ```
 
 **What happens**:
 1. Validates payload is resolved (no expressions)
-2. Resolves target to inbox co-id (actor in memory or via CoJSON)
-3. Persists to target's inbox CoStream (CRDT)
-4. Message syncs across devices automatically
+2. InboxEngine resolves target to inbox co-id (actor in memory or via CoJSON)
+3. InboxEngine persists to target's inbox CoStream (CRDT)
+4. When target is already spawned, InboxEngine triggers `processEvents` immediately
+5. Message syncs across devices automatically
 
-**Key Point**: Inbox is a CoStream (append-only list), providing CRDT-native deduplication and sync.
+**Key Point**: Inbox is a CoStream (append-only list), providing CRDT-native deduplication and sync. Every message—including self-delivery—goes through the inbox.
 
 ---
 

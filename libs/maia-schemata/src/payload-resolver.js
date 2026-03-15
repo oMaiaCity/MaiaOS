@@ -1,7 +1,7 @@
 /**
  * Universal Payload Resolution Interface
  *
- * DOM markers (view layer) - @inputValue, @dataColumn, @fileFromInput
+ * DOM markers (view layer) - @inputValue, @dataColumn, @contentEditableValue, @fileFromInput
  * MaiaScript expressions: Use resolveExpressions from expression-resolver directly
  */
 
@@ -69,6 +69,10 @@ export function extractDOMValues(payload, element) {
 		// Handle special @dataColumn marker (DOM-specific, extracts data-column attribute)
 		else if (value === '@dataColumn') {
 			result[key] = element.dataset.column || element.getAttribute('data-column') || null
+		}
+		// @contentEditableValue — get text from contenteditable element (event target)
+		else if (value === '@contentEditableValue') {
+			result[key] = (element?.innerText ?? element?.textContent ?? '') || ''
 		}
 		// @fileFromInput: async - caller must use extractDOMValuesAsync for file inputs
 		else if (value === '@fileFromInput') {
