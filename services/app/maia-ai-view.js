@@ -88,9 +88,9 @@ export async function renderMaiaAIView(maia, authState, syncState, navigateToScr
 								<span class="maia-ai-loading-text">Loading model…</span>
 							</div>
 						</div>
-						<button type="button" class="maia-ai-center-btn" id="maia-ai-center-btn" title="Tap for voice" aria-label="Voice">
+						<button type="button" class="maia-ai-center-btn" id="maia-ai-center-btn" title="Start" aria-label="Start">
 							<svg class="maia-ai-center-icon maia-ai-icon-mic" width="24" height="24" viewBox="0 0 24 24" fill="none"><path fill="currentColor" fill-opacity="0.16" d="m9.96 9.137l.886-3.099c.332-1.16 1.976-1.16 2.308 0l.885 3.099a1.2 1.2 0 0 0 .824.824l3.099.885c1.16.332 1.16 1.976 0 2.308l-3.099.885a1.2 1.2 0 0 0-.824.824l-.885 3.099c-.332 1.16-1.976 1.16-2.308 0l-.885-3.099a1.2 1.2 0 0 0-.824-.824l-3.099-.885c-1.16-.332-1.16-1.976 0-2.308l3.099-.885a1.2 1.2 0 0 0 .824-.824"/><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="1.5" d="m9.96 9.137l.886-3.099c.332-1.16 1.976-1.16 2.308 0l.885 3.099a1.2 1.2 0 0 0 .824.824l3.099.885c1.16.332 1.16 1.976 0 2.308l-3.099.885a1.2 1.2 0 0 0-.824.824l-.885 3.099c-.332 1.16-1.976 1.16-2.308 0l-.885-3.099a1.2 1.2 0 0 0-.824-.824l-3.099-.885c-1.16-.332-1.16-1.976 0-2.308l3.099-.885a1.2 1.2 0 0 0 .824-.824M4.43 4.283l.376-1.507c.05-.202.338-.202.388 0l.377 1.507a.2.2 0 0 0 .145.146l1.508.377c.202.05.202.337 0 .388l-1.508.377a.2.2 0 0 0-.145.145l-.377 1.508c-.05.202-.338.202-.388 0l-.377-1.508a.2.2 0 0 0-.145-.145l-1.508-.377c-.202-.05-.202-.338 0-.388l1.508-.377a.2.2 0 0 0 .145-.146M18.43 18.284l.376-1.508c.05-.202.337-.202.388 0l.377 1.508a.2.2 0 0 0 .145.145l1.508.377c.202.05.202.337 0 .388l-1.508.377a.2.2 0 0 0-.145.145l-.377 1.508c-.05.202-.337.202-.388 0l-.377-1.508a.2.2 0 0 0-.145-.145l-1.508-.377c-.202-.05-.202-.338 0-.388l1.508-.377a.2.2 0 0 0 .145-.145"/></svg>
-							<svg class="maia-ai-center-icon maia-ai-icon-close" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6L6 18"/><path d="M6 6l12 12"/></svg>
+							<svg class="maia-ai-center-icon maia-ai-icon-stop" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
 						</button>
 					</div>
 				</div>
@@ -154,6 +154,16 @@ export async function renderMaiaAIView(maia, authState, syncState, navigateToScr
 		updateTabContent()
 	}
 
+	function updateCenterButton() {
+		const isListening = voiceState === 'listening' || voiceState === 'processing'
+		centerBtn?.querySelector('.maia-ai-icon-mic')?.classList.toggle('active', !isListening)
+		centerBtn?.querySelector('.maia-ai-icon-stop')?.classList.toggle('active', isListening)
+		centerBtn?.classList.toggle('maia-ai-center-btn-stop', isListening)
+		const isExpanded = tabState !== 'collapsed'
+		centerBtn?.setAttribute('title', isExpanded ? (isListening ? 'Stop' : 'Start') : 'Voice')
+		centerBtn?.setAttribute('aria-label', isExpanded ? (isListening ? 'Stop' : 'Start') : 'Voice')
+	}
+
 	function updateTabContent() {
 		tabVoice.style.display = 'none'
 		tabLoad.style.display = 'none'
@@ -172,33 +182,11 @@ export async function renderMaiaAIView(maia, authState, syncState, navigateToScr
 				tabLoad.style.display = 'flex'
 			}
 		}
-		const isExpanded = tabState !== 'collapsed'
-		centerBtn?.querySelector('.maia-ai-icon-mic')?.classList.toggle('active', !isExpanded)
-		centerBtn?.querySelector('.maia-ai-icon-close')?.classList.toggle('active', isExpanded)
-		centerBtn?.setAttribute('title', isExpanded ? 'Close' : 'Tap for voice')
-		centerBtn?.setAttribute('aria-label', isExpanded ? 'Close' : 'Voice')
+		updateCenterButton()
 	}
 
-	function renderProgressBars(progressByModel, modelIds = VOICE_MODEL_IDS, storagePhase = null) {
+	function renderProgressBars(progressByModel, modelIds = VOICE_MODEL_IDS) {
 		if (!progressModelsEl) return
-		const storageHtml =
-			storagePhase === 'storage-setup'
-				? `
-				<div class="maia-ai-progress-row maia-ai-progress-row-storage" data-phase="storage">
-					<div class="maia-ai-progress-row-label">Storage</div>
-					<div class="maia-ai-progress-bar-wrap maia-ai-progress-indeterminate"><div class="maia-ai-progress-bar maia-ai-progress-bar-indeterminate"></div></div>
-					<div class="maia-ai-progress-text">Setting up OPFS…</div>
-				</div>
-			`
-				: storagePhase === 'storage-done'
-					? `
-					<div class="maia-ai-progress-row maia-ai-progress-row-storage maia-ai-progress-row-done" data-phase="storage">
-						<div class="maia-ai-progress-row-label">Storage</div>
-						<div class="maia-ai-progress-bar-wrap"><div class="maia-ai-progress-bar" style="width:100%"></div></div>
-						<div class="maia-ai-progress-text">Ready</div>
-					</div>
-				`
-					: ''
 		const rowsHtml = modelIds
 			.map((modelId) => {
 				const label = VOICE_MODEL_LABELS[modelId] ?? modelId
@@ -245,7 +233,7 @@ export async function renderMaiaAIView(maia, authState, syncState, navigateToScr
 			`
 			})
 			.join('')
-		progressModelsEl.innerHTML = storageHtml + rowsHtml
+		progressModelsEl.innerHTML = rowsHtml
 	}
 
 	async function ensureAllModels() {
@@ -259,27 +247,20 @@ export async function renderMaiaAIView(maia, authState, syncState, navigateToScr
 		const progressByModel = {}
 		for (const id of VOICE_MODEL_IDS)
 			progressByModel[id] = { phase: 'waiting', progress: 0, bytesDownloaded: 0, totalBytes: 0 }
-		let storagePhase = null
-		renderProgressBars(progressByModel, VOICE_MODEL_IDS, storagePhase)
+		renderProgressBars(progressByModel, VOICE_MODEL_IDS)
 		modelsLoadPromise = (async () => {
 			try {
-				await ensureAllModelsLoaded(
-					(modelId, data) => {
-						if (data) {
-							progressByModel[modelId] = { ...progressByModel[modelId], ...data }
-							renderProgressBars(progressByModel, VOICE_MODEL_IDS, storagePhase)
-						}
-					},
-					(phase) => {
-						storagePhase = phase
-						renderProgressBars(progressByModel, VOICE_MODEL_IDS, storagePhase)
-					},
-				)
+				await ensureAllModelsLoaded((modelId, data) => {
+					if (data) {
+						progressByModel[modelId] = { ...progressByModel[modelId], ...data }
+						renderProgressBars(progressByModel, VOICE_MODEL_IDS)
+					}
+				})
 				showProgress(false)
 				voiceState = 'idle'
 				statusEl.style.display = 'none'
 				showReady(true)
-				if (tabState === 'voice') renderVoiceUI()
+				if (tabState === 'voice') startListening()
 				return true
 			} catch (err) {
 				showProgress(false)
@@ -297,9 +278,9 @@ export async function renderMaiaAIView(maia, authState, syncState, navigateToScr
 
 	function renderVoiceUI() {
 		const statusText = {
-			idle: 'Tap Start to begin',
+			idle: 'Tap the button to start',
 			'loading-models': 'Loading models…',
-			listening: 'Listening… tap Stop when done',
+			listening: 'Listening… tap to stop',
 			processing: 'Transcribing…',
 		}
 		if (voiceStatus) {
@@ -313,22 +294,15 @@ export async function renderMaiaAIView(maia, authState, syncState, navigateToScr
 			if (voiceState === 'listening') voiceOrb.classList.add('listening')
 		}
 		voiceActions.innerHTML = ''
-		if (voiceState === 'idle' || voiceState === 'loading-models') {
-			const startBtn = document.createElement('button')
-			startBtn.type = 'button'
-			startBtn.className = 'maia-ai-voice-btn'
-			startBtn.textContent = 'Start'
-			startBtn.disabled = voiceState === 'loading-models'
-			startBtn.onclick = () => startListening()
-			voiceActions.appendChild(startBtn)
-		} else if (voiceState === 'listening' || voiceState === 'processing') {
-			const stopBtn = document.createElement('button')
-			stopBtn.type = 'button'
-			stopBtn.className = 'maia-ai-voice-btn maia-ai-voice-stop'
-			stopBtn.textContent = 'Stop'
-			stopBtn.onclick = () => stopListening()
-			voiceActions.appendChild(stopBtn)
+		if (voiceState === 'idle' && tabState === 'voice') {
+			const closeLink = document.createElement('button')
+			closeLink.type = 'button'
+			closeLink.className = 'maia-ai-voice-close'
+			closeLink.textContent = 'Close'
+			closeLink.onclick = () => collapseTab()
+			voiceActions.appendChild(closeLink)
 		}
+		updateCenterButton()
 	}
 
 	function stopListening() {
@@ -393,16 +367,23 @@ export async function renderMaiaAIView(maia, authState, syncState, navigateToScr
 		tabState = 'voice'
 		if (!isVoiceModelsLoaded()) ensureAllModels()
 		updateTabContent()
+		if (isVoiceModelsLoaded()) startListening()
 	}
 
 	window.__maiaAIRetryModel = () => ensureAllModels()
 
 	centerBtn?.addEventListener('click', () => {
-		if (tabState !== 'collapsed') {
-			collapseTab()
+		if (tabState === 'collapsed') {
+			openVoiceTab()
 			return
 		}
-		openVoiceTab()
+		if (voiceState === 'listening' || voiceState === 'processing') {
+			stopListening()
+			return
+		}
+		if (voiceState === 'idle') {
+			startListening()
+		}
 	})
 
 	window._maiaAIDispose = () => {

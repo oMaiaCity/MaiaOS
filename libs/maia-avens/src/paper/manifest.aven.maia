@@ -1,0 +1,15 @@
+{
+	"$schema": "°Maia/schema/aven",
+	"$id": "°Maia/aven/paper",
+	"name": "Paper",
+	"description": "Standalone collaborative paper / notes",
+	"actor": "°Maia/actor/views/layout-paper",
+	"runtime": [
+		"browser"
+	],
+	"dependencies": [
+		"°Maia/actor/views/layout-paper",
+		"°Maia/actor/views/paper",
+		"°Maia/actor/services/paper"
+	]
+}

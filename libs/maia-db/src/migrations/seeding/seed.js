@@ -31,6 +31,7 @@ const REFERENCE_PROPS = [
 	'subscribers',
 	'tool',
 	'interface',
+	'wasm',
 ]
 const NESTED_REF_PROPS = ['states']
 
@@ -386,13 +387,14 @@ export async function seed(
 		return seeded
 	}
 
-	// Interfaces before actors (actors reference interface). Process before actors (actors reference process).
+	// Interfaces before actors (actors reference interface). Process before actors (actors reference process). Wasms before actors (actors reference wasm).
 	const CONFIG_ORDER = [
 		['styles', 'styles'],
 		['inboxes', 'inboxes'],
 		['tools', 'tools'],
 		['processes', 'processes'],
 		['interfaces', 'interfaces'],
+		['wasms', 'wasms'],
 		['actors', 'actors'],
 		['views', 'views'],
 		['contexts', 'contexts'],
@@ -423,9 +425,9 @@ export async function seed(
 				: null
 			if (!originalConfig) continue
 			const fullyTransformed = transformForSeeding(originalConfig, latestRegistry)
-			// Post-transform validation: actor configs must have co-ids for process, context, view
+			// Post-transform validation: actor configs must have co-ids for process, context, view, wasm
 			if (configInfo.type === 'actor') {
-				const refProps = ['process', 'context', 'view', 'interface']
+				const refProps = ['process', 'context', 'view', 'interface', 'wasm']
 				for (const prop of refProps) {
 					const val = fullyTransformed[prop]
 					if (val && typeof val === 'string' && !val.startsWith('co_z')) {
@@ -446,6 +448,8 @@ export async function seed(
 				updatedCount++
 			} else if (coValue?.set) {
 				const { $id, $schema, ...propsToSet } = fullyTransformed
+				// wasm.code is CoText (co-id ref) - seeded by seedWasmConfigs, never overwrite with raw string
+				if (configInfo.type === 'wasm') delete propsToSet.code
 				for (const [key, value] of Object.entries(propsToSet)) coValue.set(key, value)
 				updatedCount++
 			}
@@ -459,6 +463,7 @@ export async function seed(
 			['inbox', 'inboxes'],
 			['children', 'children'],
 			['tool', 'tools'],
+			['wasm', 'wasms'],
 			['actor', 'actors'],
 			['view', 'views'],
 			['context', 'contexts'],

@@ -531,11 +531,47 @@ export class ActorEngine {
 			}
 		}
 
-		const { getActor } = await import('@MaiaOS/actors')
-		const label = actorConfig['@label']
-		const namespacePath = typeof label === 'string' ? label.replace(/^@/, '') : null
-		const actorModule = namespacePath ? getActor(namespacePath) : null
-		const executableFunction = actorModule?.function ?? null
+		let executableFunction = null
+		let wasmConfig = actorConfig.wasm
+		if (typeof wasmConfig === 'string' && wasmConfig.startsWith('co_z')) {
+			const wasmStore = await readStore(this.dataEngine, wasmConfig)
+			wasmConfig = wasmStore?.value ?? null
+		} else if (typeof wasmConfig === 'string' && this.dataEngine?.peer) {
+			const resolved = await this.dataEngine.peer.resolve(wasmConfig, { returnType: 'coId' })
+			if (resolved?.startsWith?.('co_z')) {
+				const wasmStore = await readStore(this.dataEngine, resolved)
+				wasmConfig = wasmStore?.value ?? null
+			}
+		}
+		if (wasmConfig?.lang === 'js' && wasmConfig?.code) {
+			let code = wasmConfig.code
+			if (typeof code === 'string' && code.startsWith('co_z')) {
+				const codeStore = await readStore(this.dataEngine, code)
+				const codeData = codeStore?.value
+				const items = codeData?.items ?? []
+				code = Array.isArray(items) ? items.join('') : typeof codeData === 'string' ? codeData : ''
+			}
+			if (typeof code === 'string' && code.length > 0) {
+				const { executeInSandbox } = await import('../utils/quickjs-executor.js')
+				executableFunction = {
+					execute: async (actor, payload) => {
+						const actorView = {
+							id: actor.id,
+							contextSchemaCoId: actor.contextSchemaCoId ?? null,
+							contextCoId: actor.contextCoId ?? null,
+						}
+						return executeInSandbox(code, actorView, payload)
+					},
+				}
+			}
+		}
+		if (!executableFunction) {
+			const { getActor } = await import('@MaiaOS/actors')
+			const label = actorConfig['@label']
+			const namespacePath = typeof label === 'string' ? label.replace(/^@/, '') : null
+			const actorModule = namespacePath ? getActor(namespacePath) : null
+			executableFunction = actorModule?.function ?? null
+		}
 
 		const minimalContext = { value: {}, subscribe: () => () => {} }
 		const configUnsubscribes = []

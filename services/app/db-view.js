@@ -821,7 +821,7 @@ export async function renderApp(
 							const value = data[key]
 							let propType = typeof value
 
-							// Detect co-id references
+							// Detect co-id references (including CoText refs - click to load in detail view)
 							if (typeof value === 'string' && value.startsWith('co_')) {
 								propType = 'co-id'
 							} else if (typeof value === 'string' && value.startsWith('key_')) {
@@ -1250,6 +1250,20 @@ export async function renderApp(
 			<div class="db-layout">
 				<aside class="db-sidebar">
 					<div class="sidebar-content-inner">
+						<div class="sidebar-coid-search">
+							<input
+								type="text"
+								id="coid-search-input"
+								class="coid-search-input"
+								placeholder="co_z..."
+								autocomplete="off"
+								aria-label="Load CoValue by ID"
+								onkeydown="if(event.key==='Enter'){event.preventDefault();window.loadCoValueById()}"
+							/>
+							<button type="button" class="coid-search-btn" onclick="window.loadCoValueById()" aria-label="Load CoValue">
+								Load
+							</button>
+						</div>
 						<div class="sidebar-header">
 							<h3>Navigation</h3>
 						</div>

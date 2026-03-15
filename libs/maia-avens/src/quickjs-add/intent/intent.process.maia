@@ -1,0 +1,5 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/quickjs-add/process/intent",
+	"handlers": {}
+}

@@ -21,6 +21,17 @@ import {
 	validateCoId,
 	validateItems,
 } from '@MaiaOS/schemata/validation.helper'
+import {
+	colistApplyDiffOp,
+	colistPopOp,
+	colistPushOp,
+	colistRemoveOp,
+	colistRetainOp,
+	colistSetOp,
+	colistShiftOp,
+	colistSpliceOp,
+	colistUnshiftOp,
+} from '../ops/colist-ops.js'
 
 // Enable: localStorage.setItem('maia:debug:loadBinary', '1')
 const DEBUG_LOAD_BINARY =
@@ -675,6 +686,33 @@ export class DataEngine {
 			this.registerOperation('spliceCoList', {
 				execute: (params) => spliceCoListOp(peer, this, params),
 			})
+			this.registerOperation('colistSet', {
+				execute: (params) => colistSetOp(peer, this, params),
+			})
+			this.registerOperation('colistPush', {
+				execute: (params) => colistPushOp(peer, this, params),
+			})
+			this.registerOperation('colistUnshift', {
+				execute: (params) => colistUnshiftOp(peer, this, params),
+			})
+			this.registerOperation('colistPop', {
+				execute: (params) => colistPopOp(peer, this, params),
+			})
+			this.registerOperation('colistShift', {
+				execute: (params) => colistShiftOp(peer, this, params),
+			})
+			this.registerOperation('colistSplice', {
+				execute: (params) => colistSpliceOp(peer, this, params),
+			})
+			this.registerOperation('colistRemove', {
+				execute: (params) => colistRemoveOp(peer, this, params),
+			})
+			this.registerOperation('colistRetain', {
+				execute: (params) => colistRetainOp(peer, this, params),
+			})
+			this.registerOperation('colistApplyDiff', {
+				execute: (params) => colistApplyDiffOp(peer, this, params),
+			})
 			this.registerOperation('push', {
 				execute: (params) => appendOp(peer, this, { ...params, cotype: 'costream' }),
 			})
@@ -755,10 +793,20 @@ export class DataEngine {
 			'delete',
 			'append',
 			'push',
+			'spliceCoList',
 			'uploadBinary',
 			'seed',
 			'addSparkMember',
 			'removeSparkMember',
+			'colistSet',
+			'colistPush',
+			'colistUnshift',
+			'colistPop',
+			'colistShift',
+			'colistSplice',
+			'colistRemove',
+			'colistRetain',
+			'colistApplyDiff',
 		])
 		try {
 			return await operation.execute(params)

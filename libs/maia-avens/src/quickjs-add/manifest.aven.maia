@@ -1,0 +1,20 @@
+{
+	"$schema": "°Maia/schema/aven",
+	"$id": "°Maia/aven/quickjs-add",
+	"name": "QuickJS Add",
+	"description": "Add two numbers via sandboxed QuickJS",
+	"actor": "°Maia/quickjs-add/actor/intent",
+	"runtime": [
+		"browser"
+	],
+	"dependencies": [
+		"°Maia/quickjs-add/actor/intent",
+		"°Maia/quickjs-add/actor/layout-quickjs-add",
+		"°Maia/quickjs-add/actor/add-form",
+		"°Maia/quickjs-add/actor/deps-list",
+		"°Maia/actor/views/tabs/view",
+		"°Maia/actor/views/tabs/process",
+		"°Maia/actor/views/tabs/style",
+		"°Maia/actor/services/sandboxed-add"
+	]
+}

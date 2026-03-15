@@ -1,0 +1,8 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/quickjs-add/context/intent",
+	"layout": "@layout",
+	"@actors": {
+		"layout": "°Maia/quickjs-add/actor/layout-quickjs-add"
+	}
+}

@@ -508,8 +508,7 @@ export class ViewEngine {
 				// Don't overwrite input value if user is typing (element has focus)
 				const isFocused = document.activeElement === element
 				if (!isFocused) {
-					if (element.tagName === 'INPUT') element.value = newValue
-					else element.textContent = newValue
+					element.value = newValue
 				}
 				if (!this.actorInputCounters.has(actorId)) this.actorInputCounters.set(actorId, 0)
 				const inputIndex = this.actorInputCounters.get(actorId)
@@ -714,16 +713,24 @@ export class ViewEngine {
 		// Prevents FORM_SUBMIT/UPDATE_INPUT feedback loop: rerender → clear DOM → blur → deliver → process → ctx → rerender
 		if (element?.isConnected === false) return
 
-		const FORM_INPUT_EVENTS = ['FORM_SUBMIT', 'UPDATE_INPUT', 'UPDATE_AGENT_INPUT']
+		const FORM_INPUT_EVENTS = [
+			'FORM_SUBMIT',
+			'UPDATE_INPUT',
+			'UPDATE_AGENT_INPUT',
+			'UPDATE_WASM_CODE',
+		]
 
 		// Schema-driven debounce: eventDef.$debounce (ms) prevents event storms
-		// CRITICAL: Use separate keys per event type. Shared key caused double-submit bug:
-		// click submit → blur fires UPDATE_INPUT → debounce set → FORM_SUBMIT blocked (same key).
-		// Each event type throttles only itself (double FORM_SUBMIT, duplicate UPDATE_INPUT).
-		// FORM_SUBMIT: 100ms (prevents accidental double-submit; 400ms felt like double-click needed)
-		// UPDATE_INPUT: 400ms (prevents storm from input/blur)
+		// UPDATE_INPUT_A/B: 0 debounce so each keystroke updates context (multi-input forms)
+		// FORM_SUBMIT: 100ms | UPDATE_INPUT: 400ms (blur-only, prevents storm)
 		const defaultDebounce =
-			eventName === 'FORM_SUBMIT' ? 100 : FORM_INPUT_EVENTS.includes(eventName) ? 400 : 0
+			eventName === 'FORM_SUBMIT'
+				? 100
+				: ['UPDATE_INPUT_A', 'UPDATE_INPUT_B'].includes(eventName)
+					? 0
+					: FORM_INPUT_EVENTS.includes(eventName)
+						? 400
+						: 0
 		const debounceMs = eventDef.$debounce ?? defaultDebounce
 		const debounceKey = `${actorId}:${eventName}`
 		if (typeof debounceMs === 'number' && debounceMs > 0) {
@@ -776,7 +783,13 @@ export class ViewEngine {
 			return
 		}
 
-		const UPDATE_INPUT_TYPES = ['UPDATE_INPUT', 'UPDATE_AGENT_INPUT']
+		const UPDATE_INPUT_TYPES = [
+			'UPDATE_INPUT',
+			'UPDATE_INPUT_A',
+			'UPDATE_INPUT_B',
+			'UPDATE_AGENT_INPUT',
+			'UPDATE_WASM_CODE',
+		]
 		const isUpdateInputType = UPDATE_INPUT_TYPES.includes(eventName)
 
 		// ROOT CAUSE FIX: Skip blur's UPDATE_INPUT when focus moves to a sibling element (e.g. submit button).
@@ -798,7 +811,10 @@ export class ViewEngine {
 			e.stopPropagation()
 		}
 
-		if (eventName === 'UPDATE_INPUT' && e.type === 'input') {
+		// Skip input events for UPDATE_INPUT (generic single-input) — only send on blur. Prevents re-render storm.
+		// UPDATE_INPUT_A/B (multi-input forms) fire on each keystroke so context stays in sync; view engine skips overwrite when focused.
+		const SKIP_INPUT_EVENT_NAMES = ['UPDATE_INPUT', 'UPDATE_AGENT_INPUT']
+		if (SKIP_INPUT_EVENT_NAMES.includes(eventName) && e.type === 'input') {
 			return
 		}
 
@@ -846,7 +862,7 @@ export class ViewEngine {
 					// Ensure FORM_SUBMIT/UPDATE_INPUT value is string (context/Proxy can yield undefined)
 					if (
 						payloadToValidate &&
-						(eventName === 'FORM_SUBMIT' || eventName === 'UPDATE_INPUT') &&
+						['FORM_SUBMIT', 'UPDATE_INPUT', 'UPDATE_WASM_CODE'].includes(eventName) &&
 						actor?.interfaceSchema?.properties?.[eventName]?.properties?.value?.type === 'string'
 					) {
 						const v = payloadToValidate.value

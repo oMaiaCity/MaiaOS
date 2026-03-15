@@ -43,6 +43,16 @@ function interfaceToArray(val) {
 }
 
 /**
+ * Strip infrastructure keys (replyTo, etc.) for schema validation.
+ * Keeps payload intact for process; use only the result for validation.
+ */
+export function stripInfrastructureKeysForValidation(payload) {
+	if (!payload || typeof payload !== 'object') return payload
+	const { replyTo, ...rest } = payload
+	return rest
+}
+
+/**
  * Sanitize payload for interface validation.
  * - Strip CoJSON metadata (_coValueType, cotype, etc.)
  * - Stringify definition when object (for-schemas)
@@ -67,8 +77,8 @@ export function sanitizePayloadForValidation(payload) {
 				result[k] = v
 			}
 		} else if (k === 'item' && v != null && typeof v === 'object') {
-			// SELECT_ITEM item: restrict to id, label, definition, interface (additionalProperties: false on actors)
-			const allowed = ['id', 'label', 'definition', 'interface']
+			// SELECT_ITEM item: restrict to id, label, definition, interface, wasmCode, hasWasmCode
+			const allowed = ['id', 'label', 'definition', 'interface', 'wasmCode', 'hasWasmCode']
 			const sub = {}
 			for (const key of allowed) {
 				if (key in v) {

@@ -1,0 +1,8 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/actor/services/updateWasmCode",
+	"@label": "@maia/actor/services/updateWasmCode",
+	"process": "°Maia/actor/services/updateWasmCode/process",
+	"inbox": "°Maia/actor/services/updateWasmCode/inbox",
+	"interface": "°Maia/actor/services/updateWasmCode/interface"
+}

@@ -42,27 +42,14 @@ export default {
 			])
 		}
 
-		const currentItems = content?.items ?? []
-		const currentLength = Array.isArray(currentItems) ? currentItems.length : 0
 		const graphemes = [...splitGraphemes(value)]
 
 		try {
-			if (currentLength > 0) {
-				await os.do({
-					op: 'spliceCoList',
-					coId,
-					start: 0,
-					deleteCount: currentLength,
-					items: [],
-				})
-			}
-			if (graphemes.length > 0) {
-				await os.do({
-					op: 'append',
-					coId,
-					items: graphemes,
-				})
-			}
+			await os.do({
+				op: 'colistApplyDiff',
+				coId,
+				result: graphemes,
+			})
 			return createSuccessResult({ coId, length: graphemes.length })
 		} catch (err) {
 			console.error('[updatePaperContent] Failed:', err?.message ?? err)

@@ -34,6 +34,21 @@
 		"interface": {
 			"$co": "°Maia/schema/meta",
 			"description": "Co-id reference to interface schema (standard Maia schema whose properties define accepted events with typed payloads). Every actor with an interface is LLM-callable by default."
+		},
+		"wasm": {
+			"description": "WASM-based execution. $co ref to wasm config, or inline { lang, code }.",
+			"oneOf": [
+				{ "type": "string", "pattern": "^co_z[a-zA-Z0-9]+$" },
+				{
+					"type": "object",
+					"properties": {
+						"lang": { "type": "string", "enum": ["js"] },
+						"code": { "$co": "°Maia/schema/os/cotext" }
+					},
+					"required": ["lang", "code"],
+					"additionalProperties": false
+				}
+			]
 		}
 	}
 }

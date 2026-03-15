@@ -9,7 +9,10 @@
 import { normalizeCoValueData } from '@MaiaOS/db'
 import { validateAgainstSchema } from '@MaiaOS/schemata/validation.helper'
 import { deriveInboxRef } from '../utils/inbox-convention.js'
-import { sanitizePayloadForValidation } from '../utils/payload-sanitizer.js'
+import {
+	sanitizePayloadForValidation,
+	stripInfrastructureKeysForValidation,
+} from '../utils/payload-sanitizer.js'
 import { perfChatStart, perfChatStep } from '../utils/perf-chat.js'
 import { perfPipelineStep } from '../utils/perf-pipeline.js'
 import { readStore } from '../utils/store-reader.js'
@@ -197,7 +200,13 @@ export class InboxEngine {
 		if (payload && typeof payload === 'object') {
 			payload = sanitizePayloadForValidation(normalizeCoValueData(payload))
 		}
-		const validation = await this._validateEventPayload(payloadSchema, payload, message.type)
+		// Strip infrastructure keys (replyTo from ask) before schema validation
+		const payloadForValidation = stripInfrastructureKeysForValidation(payload)
+		const validation = await this._validateEventPayload(
+			payloadSchema,
+			payloadForValidation,
+			message.type,
+		)
 		if (!validation.valid) return { valid: false }
 		const payloadPlain = {
 			...(payload && typeof payload === 'object'

@@ -89,6 +89,7 @@ import styleSchema from './os/style.schema.json'
 import subscribersSchema from './os/subscribers.schema.json'
 import transitionSchema from './os/transition.schema.json'
 import viewSchema from './os/view.schema.json'
+import wasmSchema from './os/wasm.schema.json'
 
 // Unified schema registry (os + data + message)
 const SCHEMAS = {
@@ -123,6 +124,7 @@ const SCHEMAS = {
 	'os/avens-registry': avensRegistrySchema,
 	'os/sparks-registry': sparksRegistrySchema,
 	'os/cotext': cotextSchema,
+	'os/wasm': wasmSchema,
 	'os/human': humanSchema,
 	'os/humans-registry': humansRegistrySchema,
 	'os/registries': registriesSchema,

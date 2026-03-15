@@ -1,0 +1,58 @@
+{
+	"$schema": "°Maia/schema/process",
+	"$id": "°Maia/quickjs-add/process/deps-list",
+	"@label": "@maia/quickjs-add/process/deps-list",
+	"handlers": {
+		"SELECT_ITEM": [
+			{
+				"ctx": {
+					"selectedItem": "$$item"
+				}
+			},
+			{
+				"ask": {
+					"target": "°Maia/actor/services/updateWasmCode",
+					"type": "GET_WASM_CODE",
+					"payload": {
+						"actorRef": "$$item.id"
+					}
+				}
+			}
+		],
+		"UPDATE_WASM_CODE": [
+			{
+				"tell": {
+					"target": "°Maia/actor/services/updateWasmCode",
+					"type": "UPDATE_WASM_CODE",
+					"payload": {
+						"actorRef": "$selectedItem.id",
+						"value": "$$value"
+					}
+				}
+			},
+			{
+				"ctx": {
+					"selectedItem": {
+						"id": "$selectedItem.id",
+						"label": "$selectedItem.label",
+						"wasmCode": "$$value",
+						"hasWasmCode": true
+					}
+				}
+			}
+		],
+		"SUCCESS": [
+			{
+				"guard": "$result.code !== undefined",
+				"ctx": {
+					"selectedItem": {
+						"id": "$selectedItem.id",
+						"label": "$selectedItem.label",
+						"wasmCode": "$result.code",
+						"hasWasmCode": true
+					}
+				}
+			}
+		]
+	}
+}

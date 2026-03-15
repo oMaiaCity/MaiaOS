@@ -5,9 +5,9 @@
 export const SCHEMA_REF_PATTERN = /^°[a-zA-Z0-9_-]+\/schema\//
 export const AVEN_REF_PATTERN = /^°[a-zA-Z0-9_-]+\/aven\//
 
-/** Instance config refs (actor, inbox, tool, view, context, state, style, process) - stored in spark.os.schematas. */
+/** Instance config refs (actor, inbox, tool, view, context, state, style, process, wasm) - stored in spark.os.schematas. */
 export const INSTANCE_REF_PATTERN =
-	/^°[a-zA-Z0-9_-]+(\/[a-zA-Z0-9_-]+)*\/(actor|inbox|tool|view|context|state|style|process)(\/|$)/
+	/^°[a-zA-Z0-9_-]+(\/[a-zA-Z0-9_-]+)*\/(actor|inbox|tool|view|context|state|style|process|wasm)(\/|$)/
 
 /** Actor config refs (°Maia/actor/db) - service actor definition in spark.os.schematas. */
 export const ACTOR_CONFIG_REF_PATTERN = /^°[a-zA-Z0-9_-]+\/actor\/[a-zA-Z0-9_-]+$/
