@@ -7,6 +7,11 @@
 			{
 				"function": true
 			}
+		],
+		"UPDATE_CO_TEXT": [
+			{
+				"function": true
+			}
 		]
 	}
 }

@@ -15,8 +15,11 @@
 						"class": "paper-content",
 						"children": [
 							{
-								"tag": "p",
+								"tag": "div",
 								"class": "paper-example-text",
+								"attrs": {
+									"contenteditable": true
+								},
 								"text": {
 									"$join": [
 										{
@@ -24,6 +27,21 @@
 										},
 										""
 									]
+								},
+								"$on": {
+									"input": {
+										"send": "UPDATE_PAPER",
+										"payload": {
+											"value": "@contentEditableValue"
+										},
+										"$debounce": 250
+									},
+									"blur": {
+										"send": "UPDATE_PAPER",
+										"payload": {
+											"value": "@contentEditableValue"
+										}
+									}
 								}
 							}
 						]

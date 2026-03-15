@@ -7,6 +7,7 @@ import { sanitizePayloadForValidation } from '../utils/payload-sanitizer.js'
 import { perfPipelineStart, perfPipelineStep } from '../utils/perf-pipeline.js'
 import { readStore } from '../utils/store-reader.js'
 import { traceView } from '../utils/trace.js'
+import { isContentEditableActive, isContentEditableUpdateEvent } from '../utils/utils.js'
 import { RENDER_STATES } from './actor.engine.js'
 
 const BOOLEAN_ATTRS = new Set([
@@ -139,6 +140,8 @@ export class ViewEngine {
 		this._scrollMutationObservers = new Map()
 		/** Debounce: eventDef.$debounce ms (schema-driven), key -> lastFireTime */
 		this._eventDebounce = new Map()
+		/** Debounce-send: key -> { timeoutId, element, actorId, eventDef, data } — delayed delivery with latest DOM value */
+		this._debounceSendTimers = new Map()
 		/** Cooling: ignore FORM_SUBMIT for this ms after OPEN_POPUP (prevents ghost clicks when overlay appears) */
 		this._lastPopupOpenTime = 0
 		this._popupOpenCoolingMs = 350
@@ -338,6 +341,8 @@ export class ViewEngine {
 					const contextChanged = currentContextValue !== lastContextValue
 					lastContextValue = currentContextValue
 					if (actor._renderState === RENDER_STATES.READY && contextChanged) {
+						// Skip rerender when any contenteditable has focus — prevents blur on each keystroke
+						if (isContentEditableActive()) return
 						actor._renderState = RENDER_STATES.UPDATING
 						this.actorOps?._scheduleRerender?.(actorId)
 					}
@@ -365,6 +370,9 @@ export class ViewEngine {
 	async render(viewDef, context, shadowRoot, styleSheets, actorId, options = {}) {
 		// $stores Architecture: Backend unified store handles reactivity automatically
 		// No manual subscriptions needed - backend handles everything via subscriptionCache
+
+		// CRITICAL: Skip full rerender when any contenteditable has focus — prevents blur on each keystroke
+		if (isContentEditableActive()) return
 
 		// Reset input counter for this actor at start of render
 		// This ensures inputs get consistent IDs across re-renders (same position = same ID)
@@ -518,27 +526,34 @@ export class ViewEngine {
 		}
 
 		if (node.text !== undefined) {
-			const textValue = await this.evaluator.evaluate(node.text, data)
-			// Format objects/arrays as JSON strings for display
-			if (textValue && typeof textValue === 'object') {
-				// Special handling for resolved actor objects (has @label and id)
-				if (textValue['@label'] && textValue.id && textValue.id.startsWith('co_z')) {
-					const truncatedId = `${textValue.id.substring(0, 15)}...`
-					element.textContent = `${textValue['@label']} (${truncatedId})`
-				} else {
-					try {
-						element.textContent = JSON.stringify(textValue, null, 2)
-					} catch (_e) {
-						element.textContent = String(textValue)
-					}
-				}
+			// Don't overwrite contenteditable when user is typing (avoids cursor jump)
+			const isContentEditable = element.isContentEditable || node.attrs?.contenteditable === true
+			const isFocused = document.activeElement === element
+			if (isContentEditable && isFocused) {
+				// Skip — user is typing; remote sync will apply on blur
 			} else {
-				let displayText = String(textValue || '')
-				// Format co-ids: truncate to first 15 characters
-				if (displayText.startsWith('co_z') && displayText.length > 15) {
-					displayText = `${displayText.substring(0, 15)}...`
+				const textValue = await this.evaluator.evaluate(node.text, data)
+				// Format objects/arrays as JSON strings for display
+				if (textValue && typeof textValue === 'object') {
+					// Special handling for resolved actor objects (has @label and id)
+					if (textValue['@label'] && textValue.id && textValue.id.startsWith('co_z')) {
+						const truncatedId = `${textValue.id.substring(0, 15)}...`
+						element.textContent = `${textValue['@label']} (${truncatedId})`
+					} else {
+						try {
+							element.textContent = JSON.stringify(textValue, null, 2)
+						} catch (_e) {
+							element.textContent = String(textValue)
+						}
+					}
+				} else {
+					let displayText = String(textValue || '')
+					// Format co-ids: truncate to first 15 characters
+					if (displayText.startsWith('co_z') && displayText.length > 15) {
+						displayText = `${displayText.substring(0, 15)}...`
+					}
+					element.textContent = displayText
 				}
-				element.textContent = displayText
 			}
 		}
 	}
@@ -704,6 +719,34 @@ export class ViewEngine {
 				}
 			})
 		}
+		// Contenteditable: paste as plain text only (no HTML/styles from source)
+		if (element.isContentEditable) {
+			element.addEventListener(
+				'paste',
+				(e) => {
+					e.preventDefault()
+					const plain = (e.clipboardData?.getData?.('text/plain') ?? '').trim()
+					if (!plain) return
+					const doc = element.ownerDocument
+					const ok = doc.execCommand?.('insertText', false, plain)
+					if (!ok) {
+						const sel = window.getSelection()
+						if (sel?.rangeCount) {
+							const range = sel.getRangeAt(0)
+							range.deleteContents()
+							range.insertNode(doc.createTextNode(plain))
+							range.collapse(false)
+							sel.removeAllRanges()
+							sel.addRange(range)
+						} else {
+							element.textContent = (element.textContent || '') + plain
+						}
+					}
+					element.dispatchEvent(new Event('input', { bubbles: true }))
+				},
+				true,
+			)
+		}
 	}
 
 	async _handleEvent(e, eventDef, data, element, actorId) {
@@ -721,19 +764,47 @@ export class ViewEngine {
 		]
 
 		// Schema-driven debounce: eventDef.$debounce (ms) prevents event storms
-		// UPDATE_INPUT_A/B: 0 debounce so each keystroke updates context (multi-input forms)
-		// FORM_SUBMIT: 100ms | UPDATE_INPUT: 400ms (blur-only, prevents storm)
+		// FORM_SUBMIT: 100ms | contenteditable (@contentEditableValue): 250ms (true debounce) | UPDATE_INPUT: 400ms (blur-only)
+		const isContentEditable = isContentEditableUpdateEvent(eventDef)
 		const defaultDebounce =
 			eventName === 'FORM_SUBMIT'
 				? 100
 				: ['UPDATE_INPUT_A', 'UPDATE_INPUT_B'].includes(eventName)
 					? 0
-					: FORM_INPUT_EVENTS.includes(eventName)
-						? 400
-						: 0
+					: isContentEditable
+						? 250
+						: FORM_INPUT_EVENTS.includes(eventName)
+							? 400
+							: 0
 		const debounceMs = eventDef.$debounce ?? defaultDebounce
 		const debounceKey = `${actorId}:${eventName}`
-		if (typeof debounceMs === 'number' && debounceMs > 0) {
+
+		// True debounce for contenteditable input: schedule delivery, cancel on new event, send latest when timer fires
+		if (isContentEditable && e.type === 'input' && typeof debounceMs === 'number' && debounceMs > 0) {
+			const existing = this._debounceSendTimers.get(debounceKey)
+			if (existing) {
+				clearTimeout(existing.timeoutId)
+			}
+			const timeoutId = setTimeout(async () => {
+				this._debounceSendTimers.delete(debounceKey)
+				if (element?.isConnected === false) return
+				await this._deliverEventFromDOM(actorId, element, eventDef, data, eventName, false)
+			}, debounceMs)
+			this._debounceSendTimers.set(debounceKey, { timeoutId, element, actorId, eventDef, data })
+			return
+		}
+
+		// On blur for contenteditable: clear pending debounce so we don't double-send
+		if (isContentEditable && e.type === 'blur') {
+			const existing = this._debounceSendTimers.get(debounceKey)
+			if (existing) {
+				clearTimeout(existing.timeoutId)
+				this._debounceSendTimers.delete(debounceKey)
+			}
+		}
+
+		// Throttle: block rapid re-fires (contenteditable uses true debounce above, skip throttle)
+		if (typeof debounceMs === 'number' && debounceMs > 0 && !isContentEditable) {
 			const now = Date.now()
 			const last = this._eventDebounce.get(debounceKey)
 			if (last != null && now - last < debounceMs) return
@@ -755,7 +826,6 @@ export class ViewEngine {
 
 		perfPipelineStart(`view:${eventName}`)
 		traceView(eventName, actorId)
-		let payload = eventDef.payload || {}
 
 		if (e.type === 'dragover' || e.type === 'drop' || e.type === 'dragenter') {
 			e.preventDefault()
@@ -790,7 +860,7 @@ export class ViewEngine {
 			'UPDATE_AGENT_INPUT',
 			'UPDATE_WASM_CODE',
 		]
-		const isUpdateInputType = UPDATE_INPUT_TYPES.includes(eventName)
+		const isUpdateInputType = UPDATE_INPUT_TYPES.includes(eventName) || isContentEditable
 
 		// ROOT CAUSE FIX: Skip blur's UPDATE_INPUT when focus moves to a sibling element (e.g. submit button).
 		// Blur → UPDATE_INPUT → ctx → rerender replaces DOM → click targets removed button → isConnected=false → FORM_SUBMIT dropped.
@@ -822,110 +892,7 @@ export class ViewEngine {
 		if (this.actorOps) {
 			const actor = this.actorOps.getActor?.(actorId)
 			if (actor?.machine || actor?.process) {
-				payload = await extractDOMValuesAsync(payload, element)
-
-				// $stores Architecture: Read CURRENT context from actor.context.value (backend unified store)
-				const currentContext = actor.context.value
-
-				const expressionData = {
-					context: currentContext,
-					item: data.item || {},
-					result: null, // $$result not available in view events (only in state machine actions after tool execution)
-				}
-				payload = await resolveExpressions(payload, this.evaluator, expressionData)
-
-				// CRITICAL: Validate payload is fully resolved before sending to inbox
-				// In distributed systems, only resolved clean JS objects/JSON can be persisted to CoJSON
-				if (containsExpressions(payload)) {
-					throw new Error(
-						`[ViewEngine] Payload contains unresolved expressions. Views must resolve all expressions before sending to inbox. Payload: ${JSON.stringify(payload).substring(0, 200)}`,
-					)
-				}
-
-				// BlobEngine: Convert file to CoBinary ref BEFORE validation/deliver (generic)
-				// Rule: Binary lives only in storage; inbox carries refs and metadata only.
-				const hasBinaryPayload = payload?.file instanceof File
-				let payloadToValidate = payload
-				if (hasBinaryPayload && this.blobEngine) {
-					const eventSchema = actor?.interfaceSchema?.properties?.[eventName]
-					const blobRefKey = eventSchema?.required?.[0] ?? eventSchema?.$blobRefKey ?? 'coId'
-					const result = await this.blobEngine.uploadToCoBinary(payload, {
-						onProgress: (loaded, total, phase) =>
-							this.actorOps?.reportUploadProgress?.(actorId, loaded, total, phase),
-					})
-					payloadToValidate = { [blobRefKey]: result.coId, mimeType: result.mimeType }
-				} else if (payloadToValidate && typeof payloadToValidate === 'object') {
-					// Plain-ify: CoMap/Proxy from context have extra props; additionalProperties fails
-					payloadToValidate = normalizeCoValueData(payloadToValidate)
-					// Strip CoJSON metadata (_coValueType etc.) and ensure definition is string for schema items
-					payloadToValidate = sanitizePayloadForValidation(payloadToValidate)
-					// Ensure FORM_SUBMIT/UPDATE_INPUT value is string (context/Proxy can yield undefined)
-					if (
-						payloadToValidate &&
-						['FORM_SUBMIT', 'UPDATE_INPUT', 'UPDATE_WASM_CODE'].includes(eventName) &&
-						actor?.interfaceSchema?.properties?.[eventName]?.properties?.value?.type === 'string'
-					) {
-						const v = payloadToValidate.value
-						if (v === undefined || v === null || typeof v !== 'string') {
-							payloadToValidate = { ...payloadToValidate, value: v == null ? '' : String(v) }
-						}
-					}
-				}
-
-				// Runtime schema validation (from actor's interface) - skip send if payload invalid
-				const validation = (await this.actorOps.validateEventPayloadForSendWithDetails?.(
-					actorId,
-					eventName,
-					payloadToValidate,
-				)) ?? { valid: true, errors: null }
-				if (!validation.valid) {
-					if (
-						typeof window !== 'undefined' &&
-						(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
-					) {
-						console.warn('[ViewEngine] Payload validation failed - event not delivered:', {
-							event: eventName,
-							actorId: actorId?.slice(0, 24),
-							payloadKeys: payloadToValidate ? Object.keys(payloadToValidate) : [],
-							payloadValueType:
-								payloadToValidate?.value != null ? typeof payloadToValidate.value : 'missing',
-							errors: validation.errors,
-							errorSummary: (validation.errors || [])
-								.map((e) => `${e.instancePath || '/'}: ${e.message || ''}`)
-								.join('; '),
-						})
-					}
-					return
-				}
-
-				// CLEAN ARCHITECTURE: For update-input types on blur, only send if DOM value differs from CURRENT context
-				// This prevents repopulation after state machine explicitly clears the field
-				// State machine is single source of truth - if context already matches DOM, no update needed
-				if (isUpdateInputType && e.type === 'blur' && payload && typeof payload === 'object') {
-					// Check if all payload fields match their corresponding CURRENT context values
-					let allMatch = true
-					for (const [key, value] of Object.entries(payload)) {
-						const contextValue = currentContext[key]
-						if (value !== contextValue) {
-							allMatch = false
-							break
-						}
-					}
-					// If all values match, don't send UPDATE_INPUT (prevents repopulation after explicit clears)
-					if (allMatch) {
-						return // No change, don't send event
-					}
-				}
-
-				perfPipelineStep('view:deliver', { event: eventName })
-				await this.actorOps?.deliverEvent?.(actorId, actorId, eventName, payloadToValidate)
-
-				// AUTO-CLEAR INPUTS: After form submission (any event except update-input types), clear all input fields
-				// This ensures forms reset after submission without manual clearing workarounds
-				// UPDATE_INPUT, UPDATE_AGENT_INPUT etc. update context from DOM - do NOT clear (would overwrite user typing)
-				if (!isUpdateInputType) {
-					this._clearInputFields(element, actorId)
-				}
+				await this._deliverEventFromDOM(actorId, element, eventDef, data, eventName, e.type === 'blur')
 			} else if (
 				typeof window !== 'undefined' &&
 				(window.location?.hostname === 'localhost' || import.meta?.env?.DEV) &&
@@ -942,6 +909,110 @@ export class ViewEngine {
 					hasProcess,
 				})
 			}
+		}
+	}
+
+	/**
+	 * Extract DOM values, resolve expressions, validate, and deliver event. Used by normal path and debounce callback.
+	 * @param {string} actorId - Actor ID
+	 * @param {HTMLElement} element - Event target (for DOM value extraction)
+	 * @param {Object} eventDef - Event definition (send, payload)
+	 * @param {Object} data - Render data (context, item)
+	 * @param {string} eventName - Event type to send
+	 * @param {boolean} isBlur - When true, skip send if payload matches current context (prevents repopulation)
+	 * @private
+	 */
+	async _deliverEventFromDOM(actorId, element, eventDef, data, eventName, isBlur) {
+		const actor = this.actorOps?.getActor?.(actorId)
+		if (!actor?.machine && !actor?.process) return
+
+		let payload = await extractDOMValuesAsync(eventDef.payload || {}, element)
+		const currentContext = actor.context?.value ?? {}
+		const expressionData = {
+			context: currentContext,
+			item: data?.item || {},
+			result: null,
+		}
+		payload = await resolveExpressions(payload, this.evaluator, expressionData)
+
+		if (containsExpressions(payload)) {
+			throw new Error(
+				`[ViewEngine] Payload contains unresolved expressions. Payload: ${JSON.stringify(payload).substring(0, 200)}`,
+			)
+		}
+
+		const hasBinaryPayload = payload?.file instanceof File
+		let payloadToValidate = payload
+		if (hasBinaryPayload && this.blobEngine) {
+			const eventSchema = actor?.interfaceSchema?.properties?.[eventName]
+			const blobRefKey = eventSchema?.required?.[0] ?? eventSchema?.$blobRefKey ?? 'coId'
+			const result = await this.blobEngine.uploadToCoBinary(payload, {
+				onProgress: (loaded, total, phase) =>
+					this.actorOps?.reportUploadProgress?.(actorId, loaded, total, phase),
+			})
+			payloadToValidate = { [blobRefKey]: result.coId, mimeType: result.mimeType }
+		} else if (payloadToValidate && typeof payloadToValidate === 'object') {
+			payloadToValidate = normalizeCoValueData(payloadToValidate)
+			payloadToValidate = sanitizePayloadForValidation(payloadToValidate)
+			if (
+				payloadToValidate &&
+				(['FORM_SUBMIT', 'UPDATE_INPUT', 'UPDATE_WASM_CODE'].includes(eventName) ||
+					isContentEditableUpdateEvent(eventDef)) &&
+				actor?.interfaceSchema?.properties?.[eventName]?.properties?.value?.type === 'string'
+			) {
+				const v = payloadToValidate.value
+				if (v === undefined || v === null || typeof v !== 'string') {
+					payloadToValidate = { ...payloadToValidate, value: v == null ? '' : String(v) }
+				}
+			}
+		}
+
+		const validation = (await this.actorOps.validateEventPayloadForSendWithDetails?.(
+			actorId,
+			eventName,
+			payloadToValidate,
+		)) ?? { valid: true, errors: null }
+		if (!validation.valid) {
+			if (
+				typeof window !== 'undefined' &&
+				(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
+			) {
+				console.warn('[ViewEngine] Payload validation failed - event not delivered:', {
+					event: eventName,
+					actorId: actorId?.slice(0, 24),
+					errors: validation.errors,
+				})
+			}
+			return
+		}
+
+		const UPDATE_INPUT_TYPES = [
+			'UPDATE_INPUT',
+			'UPDATE_INPUT_A',
+			'UPDATE_INPUT_B',
+			'UPDATE_AGENT_INPUT',
+			'UPDATE_WASM_CODE',
+		]
+		const isUpdateInputType =
+			UPDATE_INPUT_TYPES.includes(eventName) || isContentEditableUpdateEvent(eventDef)
+
+		if (isUpdateInputType && isBlur && payload && typeof payload === 'object') {
+			let allMatch = true
+			for (const [key, value] of Object.entries(payload)) {
+				const contextValue = currentContext[key]
+				if (value !== contextValue) {
+					allMatch = false
+					break
+				}
+			}
+			if (allMatch) return
+		}
+
+		perfPipelineStep('view:deliver', { event: eventName })
+		await this.actorOps?.deliverEvent?.(actorId, actorId, eventName, payloadToValidate)
+
+		if (!isUpdateInputType) {
+			this._clearInputFields(element, actorId)
 		}
 	}
 
@@ -1006,6 +1077,13 @@ export class ViewEngine {
 		}
 		for (const k of this._scrollToBottomPrev.keys()) {
 			if (k.startsWith(`${actorId}:`)) this._scrollToBottomPrev.delete(k)
+		}
+		for (const k of this._debounceSendTimers.keys()) {
+			if (k.startsWith(`${actorId}:`)) {
+				const entry = this._debounceSendTimers.get(k)
+				if (entry?.timeoutId) clearTimeout(entry.timeoutId)
+				this._debounceSendTimers.delete(k)
+			}
 		}
 	}
 }
