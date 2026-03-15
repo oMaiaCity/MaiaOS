@@ -1,12 +1,6 @@
 // CoJSON API factory - lives in loader (orchestrator) to keep db decoupled from engines
 
 export { getAllActorDefinitions, getSeedConfig } from '@MaiaOS/actors'
-// Avens seeding (static import from cycle-free @MaiaOS/avens/seeding - bundles correctly in sync-server.mjs)
-export {
-	buildSeedConfig,
-	filterAvensForSeeding,
-	getAllAvenRegistries,
-} from '@MaiaOS/avens/seeding'
 // Re-export db functions (bundled in core)
 // Peer setup, sync state, backend for operations
 // Re-export ReactiveStore from db
@@ -42,6 +36,12 @@ export {
 	// NO LOCALSTORAGE: Removed signOut, isSignedIn, getCurrentAccount, inspectStorage
 	// NO SYNC STATE: subscribeSyncState moved to @MaiaOS/db
 } from '@MaiaOS/self'
+// Vibes seeding (static import from cycle-free @MaiaOS/vibes/seeding - bundles correctly in sync-server.mjs)
+export {
+	buildSeedConfig,
+	filterVibesForSeeding,
+	getAllVibeRegistries,
+} from '@MaiaOS/vibes/seeding'
 export { createWebSocketPeer } from 'cojson-transport-ws'
 export { createCoJSONAPI } from './cojson-factory.js'
 export { MaiaOS } from './loader.js'

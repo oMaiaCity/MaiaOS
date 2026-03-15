@@ -56,7 +56,7 @@ async function build(entry, outfile, target, opts = {}) {
 async function main() {
 	await build('libs/maia-distros/client/index.js', 'maia-client.mjs', 'browser')
 	await build('services/sync/src/index.js', 'sync-server.mjs', 'node')
-	await build('libs/maia-distros/avens/index.js', 'avens.mjs', 'browser')
+	await build('libs/maia-distros/vibes/index.js', 'vibes.mjs', 'browser')
 
 	const wasmSource = join(repoRoot, 'node_modules/@electric-sql/pglite/dist/pglite.wasm')
 	if (existsSync(wasmSource)) {

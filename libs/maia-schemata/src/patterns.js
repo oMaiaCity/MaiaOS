@@ -1,9 +1,9 @@
 /**
  * Universal reference pattern helpers
- * Use spark name as prefix (e.g. °Maia/schema/, °Maia/aven/) - matches account.registries.sparks keys
+ * Use spark name as prefix (e.g. °Maia/schema/, °Maia/vibe/) - matches account.registries.sparks keys
  */
 export const SCHEMA_REF_PATTERN = /^°[a-zA-Z0-9_-]+\/schema\//
-export const AVEN_REF_PATTERN = /^°[a-zA-Z0-9_-]+\/aven\//
+export const VIBE_REF_PATTERN = /^°[a-zA-Z0-9_-]+\/vibe\//
 
 /** Instance config refs (actor, inbox, tool, view, context, state, style, process, wasm) - stored in spark.os.schematas. */
 export const INSTANCE_REF_PATTERN =
@@ -12,15 +12,15 @@ export const INSTANCE_REF_PATTERN =
 /** Actor config refs (°Maia/actor/db) - service actor definition in spark.os.schematas. */
 export const ACTOR_CONFIG_REF_PATTERN = /^°[a-zA-Z0-9_-]+\/actor\/[a-zA-Z0-9_-]+$/
 
-/** Aven actor refs (°Maia/todos/actor/intent, °Maia/chat/actor/messages) - aven-scoped actor configs. */
-export const AVEN_ACTOR_REF_PATTERN = /^°[a-zA-Z0-9_-]+(\/[a-zA-Z0-9_-]+)+\/actor\/[a-zA-Z0-9_-]+$/
+/** Vibe actor refs (°Maia/todos/actor/intent, °Maia/chat/actor/messages) - vibe-scoped actor configs. */
+export const VIBE_ACTOR_REF_PATTERN = /^°[a-zA-Z0-9_-]+(\/[a-zA-Z0-9_-]+)+\/actor\/[a-zA-Z0-9_-]+$/
 
 export function isSchemaRef(s) {
 	return typeof s === 'string' && SCHEMA_REF_PATTERN.test(s)
 }
 
-export function isAvenRef(s) {
-	return typeof s === 'string' && AVEN_REF_PATTERN.test(s)
+export function isVibeRef(s) {
+	return typeof s === 'string' && VIBE_REF_PATTERN.test(s)
 }
 
 export function isInstanceRef(s) {

@@ -18,10 +18,10 @@
 
 import {
 	ACTOR_CONFIG_REF_PATTERN,
-	AVEN_ACTOR_REF_PATTERN,
-	AVEN_REF_PATTERN,
 	INSTANCE_REF_PATTERN,
 	SCHEMA_REF_PATTERN,
+	VIBE_ACTOR_REF_PATTERN,
+	VIBE_REF_PATTERN,
 } from '@MaiaOS/schemata'
 import { normalizeCoValueData } from '../crud/data-extraction.js'
 import { resolveReactive as resolveReactiveBase } from '../crud/reactive-resolver.js'
@@ -204,16 +204,16 @@ export async function resolve(peer, identifier, options = {}) {
 
 	// Registry key lookup (°Maia/schema/..., °Maia/aven/..., °Maia/.../actor/..., °Maia/.../inbox/... - spark prefix)
 	const isSchemaKeyMatch = SCHEMA_REF_PATTERN.test(identifier)
-	const isAvenKeyMatch = AVEN_REF_PATTERN.test(identifier)
+	const isVibeKeyMatch = VIBE_REF_PATTERN.test(identifier)
 	const isInstanceKeyMatch =
 		INSTANCE_REF_PATTERN.test(identifier) ||
 		ACTOR_CONFIG_REF_PATTERN.test(identifier) ||
-		AVEN_ACTOR_REF_PATTERN.test(identifier)
+		VIBE_ACTOR_REF_PATTERN.test(identifier)
 	const isBareKey =
 		!identifier.startsWith('°') && !identifier.startsWith('@') && !identifier.startsWith('co_z')
-	if (isSchemaKeyMatch || isAvenKeyMatch || isInstanceKeyMatch || isBareKey) {
+	if (isSchemaKeyMatch || isVibeKeyMatch || isInstanceKeyMatch || isBareKey) {
 		const effectiveSpark = spark ?? peer?.systemSpark
-		if (!effectiveSpark && (isSchemaKeyMatch || isAvenKeyMatch || isInstanceKeyMatch || isBareKey)) {
+		if (!effectiveSpark && (isSchemaKeyMatch || isVibeKeyMatch || isInstanceKeyMatch || isBareKey)) {
 			throw new Error(
 				`[resolve] spark required for registry lookup of ${identifier}. Pass options.spark or set peer.systemSpark.`,
 			)
@@ -222,14 +222,14 @@ export async function resolve(peer, identifier, options = {}) {
 		let normalizedKey = identifier
 		if (
 			!SCHEMA_REF_PATTERN.test(normalizedKey) &&
-			!AVEN_REF_PATTERN.test(normalizedKey) &&
+			!VIBE_REF_PATTERN.test(normalizedKey) &&
 			!normalizedKey.startsWith('°') &&
 			!normalizedKey.startsWith('@')
 		) {
 			normalizedKey = `${effectiveSpark}/schema/${normalizedKey}`
 		}
 
-		// Use read() API to load spark.os (account.registries.sparks[spark].os) or spark.avens registry
+		// Use read() API to load spark.os (account.registries.sparks[spark].os) or spark.vibes registry
 		if (!peer.account || typeof peer.account.get !== 'function') {
 			return null
 		}
@@ -316,8 +316,8 @@ export async function resolve(peer, identifier, options = {}) {
 				}
 				return null
 			}
-		} else if (AVEN_REF_PATTERN.test(identifier)) {
-			// Aven instance keys → account.registries.sparks[spark].avens
+		} else if (VIBE_REF_PATTERN.test(identifier)) {
+			// Vibe instance keys → account.registries.sparks[spark].vibes
 			const sparkCoId = await resolveSparkCoId(peer, effectiveSpark)
 			if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_z')) {
 				return null
@@ -333,32 +333,32 @@ export async function resolve(peer, identifier, options = {}) {
 			}
 			const sparkData = sparkStore.value
 			if (!sparkData || sparkData.error) return null
-			const avensId = sparkData.avens
-			if (!avensId || typeof avensId !== 'string' || !avensId.startsWith('co_z')) {
+			const vibesId = sparkData.vibes
+			if (!vibesId || typeof vibesId !== 'string' || !vibesId.startsWith('co_z')) {
 				return null
 			}
 
-			const avensStore = await universalRead(peer, avensId, null, null, null, {
+			const vibesStore = await universalRead(peer, vibesId, null, null, null, {
 				deepResolve: false,
 				timeoutMs,
 			})
 
 			try {
-				await waitForStoreReady(avensStore, avensId, timeoutMs)
+				await waitForStoreReady(vibesStore, vibesId, timeoutMs)
 			} catch (_error) {
 				return null
 			}
 
-			const avensData = avensStore.value
-			if (!avensData || avensData.error) {
+			const vibesData = vibesStore.value
+			if (!vibesData || vibesData.error) {
 				return null
 			}
 
-			const avenName = AVEN_REF_PATTERN.test(identifier)
-				? identifier.replace(AVEN_REF_PATTERN, '')
+			const vibeName = VIBE_REF_PATTERN.test(identifier)
+				? identifier.replace(VIBE_REF_PATTERN, '')
 				: identifier
 
-			const registryCoId = avensData[avenName]
+			const registryCoId = vibesData[vibeName]
 			if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
 				// Found registry entry - resolve the co-id
 				if (returnType === 'coId') {

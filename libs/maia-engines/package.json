@@ -13,7 +13,7 @@
 	"dependencies": {
 		"@MaiaOS/actors": "workspace:*",
 		"fast-myers-diff": "^3.2.0",
-		"@MaiaOS/avens": "workspace:*",
+		"@MaiaOS/vibes": "workspace:*",
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/schemata": "workspace:*",
 		"@jitl/quickjs-singlefile-cjs-release-sync": "0.32.0",

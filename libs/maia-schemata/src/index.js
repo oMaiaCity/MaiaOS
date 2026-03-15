@@ -12,13 +12,13 @@ import { ValidationEngine } from './validation.engine.js'
 export { ValidationEngine }
 export {
 	ACTOR_CONFIG_REF_PATTERN,
-	AVEN_ACTOR_REF_PATTERN,
-	AVEN_REF_PATTERN,
 	INSTANCE_REF_PATTERN,
-	isAvenRef,
 	isInstanceRef,
 	isSchemaRef,
+	isVibeRef,
 	SCHEMA_REF_PATTERN,
+	VIBE_ACTOR_REF_PATTERN,
+	VIBE_REF_PATTERN,
 } from './patterns.js'
 // Export validation helper functions
 export {
@@ -56,10 +56,8 @@ import todosDataSchema from './data/todos.schema.json'
 import actionSchema from './os/action.schema.json'
 // Import all schema definitions directly as JSON
 import actorSchema from './os/actor.schema.json'
-import avenSchema from './os/aven.schema.json'
 import avenIdentitySchema from './os/aven-identity.schema.json'
 import avensIdentityRegistrySchema from './os/avens-identity-registry.schema.json'
-import avensRegistrySchema from './os/avens-registry.schema.json'
 import capabilitiesStreamSchema from './os/capabilities-stream.schema.json'
 import capabilitySchema from './os/capability.schema.json'
 import childrenSchema from './os/children.schema.json'
@@ -88,6 +86,8 @@ import styleSchema from './os/style.schema.json'
 // Import CoValue schemas
 import subscribersSchema from './os/subscribers.schema.json'
 import transitionSchema from './os/transition.schema.json'
+import vibeSchema from './os/vibe.schema.json'
+import vibesRegistrySchema from './os/vibes-registry.schema.json'
 import viewSchema from './os/view.schema.json'
 import wasmSchema from './os/wasm.schema.json'
 
@@ -102,7 +102,7 @@ const SCHEMAS = {
 	brand: styleSchema,
 	'brand.style': styleSchema,
 	'actor.style': styleSchema,
-	aven: avenSchema,
+	vibe: vibeSchema,
 	event: eventSchema,
 	guard: guardSchema,
 	action: actionSchema,
@@ -121,7 +121,7 @@ const SCHEMAS = {
 	'os/indexes-registry': indexesRegistrySchema,
 	'os/aven-identity': avenIdentitySchema,
 	'os/avens-identity-registry': avensIdentityRegistrySchema,
-	'os/avens-registry': avensRegistrySchema,
+	'os/vibes-registry': vibesRegistrySchema,
 	'os/sparks-registry': sparksRegistrySchema,
 	'os/cotext': cotextSchema,
 	'os/wasm': wasmSchema,

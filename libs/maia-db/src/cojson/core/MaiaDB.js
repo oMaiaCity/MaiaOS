@@ -160,10 +160,10 @@ export class MaiaDB {
 			returnType: 'coId',
 		})
 		const osSchemaCoId = await resolve(this, '°Maia/schema/os/os-registry', { returnType: 'coId' })
-		const avensRegistrySchemaCoId = await resolve(this, '°Maia/schema/os/avens-registry', {
+		const vibesRegistrySchemaCoId = await resolve(this, '°Maia/schema/os/vibes-registry', {
 			returnType: 'coId',
 		})
-		if (!sparkSchemaCoId || !groupsSchemaCoId || !osSchemaCoId || !avensRegistrySchemaCoId) {
+		if (!sparkSchemaCoId || !groupsSchemaCoId || !osSchemaCoId || !vibesRegistrySchemaCoId) {
 			throw new Error('[MaiaDB] Spark scaffold schemas not found')
 		}
 		const ctx = { node: this.node, account: this.account, guardian: childGroup }
@@ -180,8 +180,8 @@ export class MaiaDB {
 			data: { groups: groups.id },
 			dataEngine: this.dbEngine,
 		})
-		const { coValue: avens } = await createCoValueForSpark(ctx, null, {
-			schema: avensRegistrySchemaCoId,
+		const { coValue: vibes } = await createCoValueForSpark(ctx, null, {
+			schema: vibesRegistrySchemaCoId,
 			cotype: 'comap',
 			data: {},
 			dataEngine: this.dbEngine,
@@ -189,7 +189,7 @@ export class MaiaDB {
 		const { coValue: sparkCoMap } = await createCoValueForSpark(ctx, null, {
 			schema: sparkSchemaCoId,
 			cotype: 'comap',
-			data: { name: normalizedName, os: os.id, avens: avens.id },
+			data: { name: normalizedName, os: os.id, vibes: vibes.id },
 			dataEngine: this.dbEngine,
 		})
 		return { id: sparkCoMap.id, name: normalizedName, guardian: childGroup.id }

@@ -1,0 +1,27 @@
+{
+	"$schema": "°Maia/schema/meta",
+	"$id": "°Maia/schema/vibe",
+	"title": "°Maia/schema/vibe",
+	"description": "Vibe manifest/metadata",
+	"cotype": "comap",
+	"indexing": true,
+	"required": ["name", "description", "actor"],
+	"properties": {
+		"name": { "type": "string", "description": "Vibe name" },
+		"description": { "type": "string", "description": "Vibe description" },
+		"actor": {
+			"$co": "°Maia/schema/actor",
+			"description": "Co-id reference to actor definition (root actor for this vibe)"
+		},
+		"dependencies": {
+			"type": "array",
+			"items": { "type": "string" },
+			"description": "Explicit actor $ids whose inboxes must be watched (service actors this vibe sends to)"
+		},
+		"runtime": {
+			"type": "array",
+			"items": { "type": "string" },
+			"description": "Runtime colocation - which runtimes this vibe runs on (e.g. browser, server)"
+		}
+	}
+}

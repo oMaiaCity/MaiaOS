@@ -483,33 +483,33 @@ export class MaiaOS {
 	}
 
 	/**
-	 * Load an aven by key or co-id from account/database (no arbitrary URL loading)
-	 * @param {string} avenKeyOrCoId - Aven key (e.g., "todos") or co-id (co_z...) to lookup from account
+	 * Load a vibe by key or co-id from account/database (no arbitrary URL loading)
+	 * @param {string} vibeKeyOrCoId - Vibe key (e.g., "todos") or co-id (co_z...) to lookup from account
 	 * @param {HTMLElement} container - Container element
 	 * @param {string} [spark='°Maia'] - Spark name when using key lookup
-	 * @returns {Promise<{aven: Object, actor: Object}>} Aven metadata and actor instance
+	 * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
 	 */
-	async loadAven(avenKeyOrCoId, container, spark = '°Maia') {
-		return await this.loadAvenFromAccount(avenKeyOrCoId, container, spark)
+	async loadVibe(vibeKeyOrCoId, container, spark = '°Maia') {
+		return await this.loadVibeFromAccount(vibeKeyOrCoId, container, spark)
 	}
 
 	/**
-	 * Load an aven from registries.sparks[spark].avens or directly by co-id
-	 * Supports: (1) aven key (e.g., "todos") - lookup via spark.avens map, (2) co-id (co_z...) - direct load from database
-	 * SECURITY: No arbitrary URL loading - avens load only from CoJSON database (account-scoped)
-	 * @param {string} avenKeyOrCoId - Aven key in spark's avens (e.g., "todos") or aven co-id (co_z...)
+	 * Load a vibe from registries.sparks[spark].vibes or directly by co-id
+	 * Supports: (1) vibe key (e.g., "todos") - lookup via spark.vibes map, (2) co-id (co_z...) - direct load from database
+	 * SECURITY: No arbitrary URL loading - vibes load only from CoJSON database (account-scoped)
+	 * @param {string} vibeKeyOrCoId - Vibe key in spark's vibes (e.g., "todos") or vibe co-id (co_z...)
 	 * @param {HTMLElement} container - Container element
-	 * @param {string} [spark='°Maia'] - Spark name (used only when avenKeyOrCoId is a key, not a co-id)
-	 * @returns {Promise<{aven: Object, actor: Object}>} Aven metadata and actor instance
+	 * @param {string} [spark='°Maia'] - Spark name (used only when vibeKeyOrCoId is a key, not a co-id)
+	 * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
 	 */
-	async loadAvenFromAccount(avenKeyOrCoId, container, spark = '°Maia') {
+	async loadVibeFromAccount(vibeKeyOrCoId, container, spark = '°Maia') {
 		if (!this.dataEngine || !this._account) {
-			throw new Error('[Loader] Cannot load aven from account - dataEngine or account not available')
+			throw new Error('[Loader] Cannot load vibe from account - dataEngine or account not available')
 		}
 
-		// Co-id: load directly from database (skip spark.avens lookup)
-		if (typeof avenKeyOrCoId === 'string' && avenKeyOrCoId.startsWith('co_z')) {
-			return await this.loadAvenFromDatabase(avenKeyOrCoId, container, null)
+		// Co-id: load directly from database (skip spark.vibes lookup)
+		if (typeof vibeKeyOrCoId === 'string' && vibeKeyOrCoId.startsWith('co_z')) {
+			return await this.loadVibeFromDatabase(vibeKeyOrCoId, container, null)
 		}
 
 		const account = this._account
@@ -584,7 +584,7 @@ export class MaiaOS {
 			)
 		}
 
-		// Step 5: Read spark CoMap to get spark.avens (by co-id)
+		// Step 5: Read spark CoMap to get spark.vibes (by co-id)
 		const sparkStore = await this.dataEngine.execute({
 			op: 'read',
 			schema: null,
@@ -599,101 +599,101 @@ export class MaiaOS {
 		}
 		// sparkData is flat from extractCoValueData
 
-		const avensId = sparkData.avens
-		if (!avensId || typeof avensId !== 'string' || !avensId.startsWith('co_')) {
-			throw new Error(`[Kernel] Spark "${spark}" has no avens registry. Ensure seeding has run.`)
+		const vibesId = sparkData.vibes
+		if (!vibesId || typeof vibesId !== 'string' || !vibesId.startsWith('co_')) {
+			throw new Error(`[Kernel] Spark "${spark}" has no vibes registry. Ensure seeding has run.`)
 		}
 
-		// Step 6: Read spark.avens CoMap
-		const avensStore = await this.dataEngine.execute({
+		// Step 6: Read spark.vibes CoMap
+		const vibesStore = await this.dataEngine.execute({
 			op: 'read',
-			schema: avensId,
-			key: avensId,
+			schema: vibesId,
+			key: vibesId,
 		})
 
-		const avensData = avensStore.value
-		if (!avensData || avensData.error) {
+		const vibesData = vibesStore.value
+		if (!vibesData || vibesData.error) {
 			throw new Error(
-				`[Kernel] Spark "${spark}" avens not available: ${avensData?.error || 'Unknown error'}`,
+				`[Kernel] Spark "${spark}" vibes not available: ${vibesData?.error || 'Unknown error'}`,
 			)
 		}
-		// avensData is flat from extractCoValueData
+		// vibesData is flat from extractCoValueData
 
-		const avenCoId = avensData[avenKeyOrCoId]
-		if (!avenCoId || typeof avenCoId !== 'string' || !avenCoId.startsWith('co_')) {
-			const availableAvens = Object.keys(avensData).filter(
+		const vibeCoId = vibesData[vibeKeyOrCoId]
+		if (!vibeCoId || typeof vibeCoId !== 'string' || !vibeCoId.startsWith('co_')) {
+			const availableVibes = Object.keys(vibesData).filter(
 				(k) =>
 					k !== 'id' &&
 					k !== '$schema' &&
 					k !== 'type' &&
-					typeof avensData[k] === 'string' &&
-					avensData[k].startsWith('co_'),
+					typeof vibesData[k] === 'string' &&
+					vibesData[k].startsWith('co_'),
 			)
 			throw new Error(
-				`[Kernel] Aven '${avenKeyOrCoId}' not found in ${spark}.avens. Available: ${availableAvens.join(', ') || 'none'}`,
+				`[Kernel] Vibe '${vibeKeyOrCoId}' not found in ${spark}.vibes. Available: ${availableVibes.join(', ') || 'none'}`,
 			)
 		}
 
-		return await this.loadAvenFromDatabase(avenCoId, container, avenKeyOrCoId)
+		return await this.loadVibeFromDatabase(vibeCoId, container, vibeKeyOrCoId)
 	}
 
 	/**
-	 * Load an aven from database (maia.do)
-	 * @param {string} avenId - Aven ID (co-id)
+	 * Load a vibe from database (maia.do)
+	 * @param {string} vibeId - Vibe ID (co-id)
 	 * @param {HTMLElement} container - Container element
-	 * @param {string} [avenKey] - Optional aven key for actor reuse tracking (e.g., 'todos')
-	 * @returns {Promise<{aven: Object, actor: Object}>} Aven metadata and actor instance
+	 * @param {string} [vibeKey] - Optional vibe key for actor reuse tracking (e.g., 'todos')
+	 * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
 	 */
-	async loadAvenFromDatabase(avenId, container, avenKey = null) {
-		if (!avenId.startsWith('co_z')) {
+	async loadVibeFromDatabase(vibeId, container, vibeKey = null) {
+		if (!vibeId.startsWith('co_z')) {
 			throw new Error(
-				`[Kernel] Aven ID must be co-id at runtime: ${avenId}. This should have been resolved during seeding.`,
+				`[Kernel] Vibe ID must be co-id at runtime: ${vibeId}. This should have been resolved during seeding.`,
 			)
 		}
-		const avenCoId = avenId
+		const vibeCoId = vibeId
 
-		const avenStore = await this.dataEngine.execute({
+		const vibeStore = await this.dataEngine.execute({
 			op: 'read',
 			schema: null,
-			key: avenCoId,
+			key: vibeCoId,
 		})
 
 		const schemaStore = await this.dataEngine.execute({
 			op: 'schema',
-			fromCoValue: avenCoId,
+			fromCoValue: vibeCoId,
 		})
-		const avenSchemaCoId = schemaStore.value?.$id || avenStore.value?.$schema
+		const vibeSchemaCoId = schemaStore.value?.$id || vibeStore.value?.$schema
 
-		if (!avenSchemaCoId) {
+		if (!vibeSchemaCoId) {
 			throw new Error(
-				`[Kernel] Failed to extract schema co-id from aven ${avenCoId}. Aven must have $schema in headerMeta.`,
+				`[Kernel] Failed to extract schema co-id from vibe ${vibeCoId}. Vibe must have $schema in headerMeta.`,
 			)
 		}
 
-		const store = avenStore
-		const aven = store.value
+		const store = vibeStore
+		const vibe = store.value
 
-		if (!aven || aven.error) {
+		if (!vibe || vibe.error) {
 			try {
 				await this.dataEngine.execute({
 					op: 'read',
 					schema: null,
-					key: avenCoId,
+					key: vibeCoId,
 				})
 			} catch (_err) {}
-			throw new Error(`Aven not found in database: ${avenId} (co-id: ${avenCoId})`)
+			throw new Error(`Vibe not found in database: ${vibeId} (co-id: ${vibeCoId})`)
 		}
 
 		const schema = schemaStore.value
 		if (schema) {
-			await validateAgainstSchemaOrThrow(schema, aven, 'aven')
+			await validateAgainstSchemaOrThrow(schema, vibe, 'vibe')
 		}
 
-		const actorCoId = aven.actor
+		const actorCoId = vibe.actor
 
 		if (!actorCoId) {
 			throw new Error(
-				`[MaiaOS] Aven ${avenId} (${avenCoId}) does not have an 'actor' property. Aven structure: ${JSON.stringify(Object.keys(aven))}`,
+				`[MaiaOS] Vibe ${vibeId} (${vibeCoId}) does not have an 'actor' property. Vibe structure: ${JSON.stringify(Object.keys(vibe))}`,
 			)
 		}
 
@@ -756,15 +756,15 @@ export class MaiaOS {
 			)
 		}
 
-		// Destroy any existing actors for this aven (destroy-on-switch lifecycle)
-		if (avenKey) {
-			this.runtime.destroyActorsForAven(avenKey)
+		// Destroy any existing actors for this vibe (destroy-on-switch lifecycle)
+		if (vibeKey) {
+			this.runtime.destroyActorsForVibe(vibeKey)
 		}
 
 		const actorConfig = actorStore.value
-		const actor = await this.runtime.createActorForView(actorConfig, container, avenKey)
+		const actor = await this.runtime.createActorForView(actorConfig, container, vibeKey)
 
-		return { aven, actor }
+		return { vibe, actor }
 	}
 
 	/**
