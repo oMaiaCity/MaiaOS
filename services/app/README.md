@@ -2,7 +2,7 @@
 
 The main UI service for MaiaOS, featuring:
 - **Database Inspector** at `/` (root) - Explore Jazz CoValues with authentication
-- **Dynamic Aven Rendering** - Load and render avens dynamically (e.g., Todos Aven via navigation)
+- **Dynamic Vibe Rendering** - Load and render vibes dynamically (e.g., Todos Vibe via navigation)
 
 ## Structure
 
@@ -10,9 +10,9 @@ The main UI service for MaiaOS, featuring:
 services/app/
 ├── index.html          # Main app (database inspector)
 ├── main.js             # Main app logic
-├── db-view.js          # Database viewer and dynamic aven renderer
+├── db-view.js          # Database viewer and dynamic vibe renderer
 ├── voice.js            # Voice page (real-time speech-to-text)
-└── # Avens live in libs/maia-avens/ (todos, chat, sparks, etc.)
+└── # Vibes live in libs/maia-vibes/ (todos, chat, sparks, etc.)
 └── css/                # Global styles
 
 ```
@@ -42,26 +42,26 @@ Server runs on **http://localhost:4200**
 - **/** - Landing (or redirect to signin/me)
 - **/signin**, **/signup** - Authentication
 - **/me**, **/dashboard** - Database inspector (requires passkey auth)
-  - Includes dynamic aven rendering - navigate to "Todos" in the sidebar to load avens dynamically
+  - Includes dynamic vibe rendering - navigate to "Todos" in the sidebar to load vibes dynamically
 
 ## Architecture
 
-### Dynamic Aven Rendering
+### Dynamic Vibe Rendering
 
-Avens are loaded dynamically within the main maia app. When a user navigates to an aven (e.g., "Todos" in the sidebar), the app:
+Vibes are loaded dynamically within the main maia app. When a user navigates to a vibe (e.g., "Todos" in the sidebar), the app:
 
-1. Calls `loadAven('todos')` which sets `currentAven = 'todos'`
+1. Calls `loadVibe('todos')` which sets `currentVibe = 'todos'`
 2. Renders a container div in the main view area
-3. Calls `maia.loadAvenFromAccount('todos', container)` to load the aven from `account.registries.sparks[°Maia].avens`
-4. The aven renders inline within the database inspector interface
+3. Calls `maia.loadVibeFromAccount('todos', container)` to load the vibe from `account.registries.sparks[°Maia].vibes`
+4. The vibe renders inline within the database inspector interface
 
 **Example:**
 ```javascript
 // In services/maia/main.js
-async function loadAven(avenKey) {
-  currentAven = avenKey;
-  await renderAppInternal(); // Renders aven container
-  // db-view.js handles actual aven loading via maia.loadAvenFromAccount()
+async function loadVibe(vibeKey) {
+  currentVibe = vibeKey;
+  await renderAppInternal(); // Renders vibe container
+  // db-view.js handles actual vibe loading via maia.loadVibeFromAccount()
 }
 ```
 

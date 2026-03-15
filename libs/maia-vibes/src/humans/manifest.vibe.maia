@@ -1,0 +1,14 @@
+{
+	"$schema": "°Maia/schema/vibe",
+	"$id": "°Maia/vibe/humans",
+	"name": "Addressbook",
+	"description": "Browse humans and avens in the Maia registry — account ID, registry name, profile name",
+	"actor": "°Maia/humans/actor/intent",
+	"runtime": [
+		"browser"
+	],
+	"dependencies": [
+		"°Maia/humans/actor/intent",
+		"°Maia/actor/views/humans"
+	]
+}

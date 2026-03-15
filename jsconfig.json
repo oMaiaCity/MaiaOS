@@ -9,7 +9,7 @@
 			"@MaiaOS/schemata/*": ["./libs/maia-schemata/src/*"],
 			"@MaiaOS/self": ["./libs/maia-self/src/index.js"],
 			"@MaiaOS/actors": ["./libs/maia-actors/src"],
-			"@MaiaOS/avens": ["./libs/maia-avens/src"]
+			"@MaiaOS/vibes": ["./libs/maia-vibes/src"]
 		}
 	}
 }

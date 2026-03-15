@@ -33,9 +33,9 @@ let maia
 let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'aven-viewer'
 let currentView = 'account' // Current schema filter (default: 'account')
 let currentContextCoValueId = null // Currently loaded CoValue in main context (explorer-style navigation)
-let currentAven = null // Currently loaded aven (null = DB view mode, 'todos' = todos aven, etc.)
+let currentVibe = null // Currently loaded vibe (null = DB view mode, 'todos' = todos vibe, etc.)
 let currentSpark = null // Grid hierarchy: null = sparks level, '°Maia' = avens for that spark
-let _currentAvenContainer = null // Currently loaded aven container element (for cleanup on unload)
+let _currentVibeContainer = null // Currently loaded vibe container element (for cleanup on unload)
 let navigationHistory = [] // Navigation history stack for back button
 let isRendering = false // Guard to prevent render loops
 let authState = {
@@ -855,7 +855,7 @@ window.showToast = showToast // Expose for debugging
 function navigateToScreen(screen, options = {}) {
 	currentScreen = screen
 	if (screen === 'dashboard') {
-		currentAven = null
+		currentVibe = null
 		currentContextCoValueId = null
 		if (!options.preserveSpark) {
 			currentSpark = null
@@ -883,8 +883,8 @@ function selectCoValueInternal(coId, skipHistory = false) {
 	collapseAllSidebars()
 
 	// If we're in agent mode and selecting account, exit agent mode first
-	if (currentAven !== null && coId === maia?.id?.maiaId?.id) {
-		currentAven = null
+	if (currentVibe !== null && coId === maia?.id?.maiaId?.id) {
+		currentVibe = null
 		// If there's navigation history, restore the previous context instead of going to account
 		if (navigationHistory.length > 0) {
 			const previousCoId = navigationHistory.pop()
@@ -934,7 +934,7 @@ function collapseAllSidebars() {
 	}
 
 	// Collapse agent viewer sidebars (in Shadow DOM)
-	const agentContainer = document.querySelector('.aven-container')
+	const agentContainer = document.querySelector('.vibe-container')
 	if (agentContainer?.shadowRoot) {
 		const navAside = agentContainer.shadowRoot.querySelector('.nav-aside')
 		const detailAside = agentContainer.shadowRoot.querySelector('.detail-aside')
@@ -949,8 +949,8 @@ function collapseAllSidebars() {
 
 function goBack() {
 	// If we're in agent mode, exit agent mode first
-	if (currentAven !== null) {
-		loadAven(null)
+	if (currentVibe !== null) {
+		loadVibe(null)
 		return
 	}
 
@@ -999,11 +999,11 @@ async function renderAppInternal() {
 			currentScreen,
 			currentView,
 			currentContextCoValueId,
-			currentAven,
+			currentVibe,
 			currentSpark,
 			switchView,
 			selectCoValue,
-			loadAven,
+			loadVibe,
 			loadSpark,
 			navigateToScreen,
 		)
@@ -1088,48 +1088,48 @@ window.extendCapability = extendCapability
 
 /**
  * Load an aven inline in the main context area
- * @param {string|null} avenKey - Aven key (e.g., 'todos') or null to exit aven mode
+ * @param {string|null} vibeKey - Aven key (e.g., 'todos') or null to exit aven mode
  */
-async function loadAven(avenKey) {
-	if (!maia && avenKey !== null) {
+async function loadVibe(vibeKey) {
+	if (!maia && vibeKey !== null) {
 		return
 	}
 
-	if (avenKey !== null && typeof avenKey !== 'string') {
+	if (vibeKey !== null && typeof vibeKey !== 'string') {
 		return
 	}
 
 	try {
 		if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
 		}
-		if (avenKey === null) {
-			if (currentAven && maia?.runtime) {
-				maia.runtime.destroyActorsForAven(currentAven)
+		if (vibeKey === null) {
+			if (currentVibe && maia?.runtime) {
+				maia.runtime.destroyActorsForVibe(currentVibe)
 			}
 
-			_currentAvenContainer = null
-			window.currentAvenContainer = null
+			_currentVibeContainer = null
+			window.currentVibeContainer = null
 
-			currentAven = null
+			currentVibe = null
 			navigateToScreen('dashboard', { preserveSpark: true })
 		} else {
-			if (currentAven && currentAven !== avenKey && maia?.runtime) {
-				maia.runtime.destroyActorsForAven(currentAven)
+			if (currentVibe && currentVibe !== vibeKey && maia?.runtime) {
+				maia.runtime.destroyActorsForVibe(currentVibe)
 			}
 
 			if (currentContextCoValueId !== null) {
 				navigationHistory.push(currentContextCoValueId)
 			}
-			currentAven = avenKey
+			currentVibe = vibeKey
 			currentContextCoValueId = null
-			currentScreen = 'aven-viewer'
+			currentScreen = 'vibe-viewer'
 		}
 
 		await renderAppInternal()
 		if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
 		}
 	} catch (_error) {
-		currentAven = null
+		currentVibe = null
 		await renderAppInternal()
 	}
 }
@@ -1169,7 +1169,7 @@ window.loadCoValueById = () => {
 window.switchView = switchView
 window.selectCoValue = selectCoValue
 window.goBack = goBack
-window.loadAven = loadAven
+window.loadVibe = loadVibe
 window.loadSpark = loadSpark
 window.navigateToScreen = navigateToScreen
 window.getMoaiBaseUrl = getMoaiBaseUrl
@@ -1215,7 +1215,7 @@ function toggleSidebar(sidebarSelector, otherSidebarSelector, containerSelector)
 
 window.toggleDBLeftSidebar = () => toggleSidebar('.db-sidebar', '.db-metadata')
 window.toggleDBRightSidebar = () => toggleSidebar('.db-metadata', '.db-sidebar')
-window.toggleLeftSidebar = () => toggleSidebar('.nav-aside', '.detail-aside', '.aven-container')
-window.toggleRightSidebar = () => toggleSidebar('.detail-aside', '.nav-aside', '.aven-container')
+window.toggleLeftSidebar = () => toggleSidebar('.nav-aside', '.detail-aside', '.vibe-container')
+window.toggleRightSidebar = () => toggleSidebar('.detail-aside', '.nav-aside', '.vibe-container')
 
 init()

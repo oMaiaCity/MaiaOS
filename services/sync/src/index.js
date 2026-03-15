@@ -11,10 +11,10 @@
  *     - pglite: PEER_DB_PATH (default ./local-sync.db)
  *     - postgres: PEER_SYNC_DB_URL (required)
  *   AVEN_MAIA_GUARDIAN: Human account co-id (co_z...). If set, add as admin of °Maia spark guardian. Retries until success (account may sync after client connects).
- *   PEER_SYNC_SEED: Default false. Set true to run genesis seed (bootstrap + schemas + avens).
+ *   PEER_SYNC_SEED: Default false. Set true to run genesis seed (bootstrap + schemas + vibes).
  *     - true: Fresh seed (first deploy or intentional reset). May overwrite existing scaffold.
  *     - false/unset: Skip seed, use persisted data. Never overwrite on restart.
- *   SEED_AVENS: Default "all". Which avens to seed (todos, chat, quickjs-add, etc). "all" seeds every aven including quickjs-add.
+ *   SEED_VIBES: Default "all". Which vibes to seed (todos, chat, quickjs-add, etc). "all" seeds every vibe including quickjs-add.
  *   PEER_APP_HOST: Allowed CORS origin (e.g. https://next.maia.city). When set, only that origin can call sync/LLM. Unset = * (dev fallback).
  */
 
@@ -22,10 +22,10 @@ import {
 	buildSeedConfig,
 	createWebSocketPeer,
 	DataEngine,
-	filterAvensForSeeding,
+	filterVibesForSeeding,
 	generateRegistryName,
-	getAllAvenRegistries,
 	getAllSchemas,
+	getAllVibeRegistries,
 	getSeedConfig,
 	loadOrCreateAgentAccount,
 	MaiaDB,
@@ -65,8 +65,8 @@ const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
 
 const avenMaiaGuardian = process.env.AVEN_MAIA_GUARDIAN?.trim() || null
 const peerSyncSeed = process.env.PEER_SYNC_SEED === 'true'
-// SEED_AVENS: which avens to seed on genesis. Default "all" (includes quickjs-add). Override: "todos,chat" or "todos,chat,quickjs-add"
-const seedVibesConfig = process.env.SEED_AVENS || 'all'
+// SEED_VIBES: which vibes to seed on genesis. Default "all" (includes quickjs-add). Override: "todos,chat" or "todos,chat,quickjs-add"
+const seedVibesConfig = process.env.SEED_VIBES || 'all'
 
 /** CORS: PEER_APP_HOST = allowed origin (e.g. https://next.maia.city or localhost:4200). When set, only that origin can call sync/LLM. When unset, * (dev fallback). */
 function normalizeCorsOrigin(host) {
@@ -956,14 +956,14 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 
 		// Genesis: seed only when PEER_SYNC_SEED=true (explicit, no co-value inference).
 		if (peerSyncSeed) {
-			const allAvenRegistries = await getAllAvenRegistries()
-			const avenRegistries = await filterAvensForSeeding(allAvenRegistries, seedVibesConfig)
-			if (avenRegistries.length === 0) {
+			const allVibeRegistries = await getAllVibeRegistries()
+			const vibeRegistries = await filterVibesForSeeding(allVibeRegistries, seedVibesConfig)
+			if (vibeRegistries.length === 0) {
 				throw new Error(
-					'[sync] Genesis sync requires avens. getAllAvenRegistries returned none or SEED_AVENS filtered all.',
+					'[sync] Genesis sync requires vibes. getAllVibeRegistries returned none or SEED_VIBES filtered all.',
 				)
 			}
-			const { configs: mergedConfigs, data } = await buildSeedConfig(avenRegistries)
+			const { configs: mergedConfigs, data } = await buildSeedConfig(vibeRegistries)
 			const {
 				actors: serviceActors,
 				interfaces: serviceInterfaces,
@@ -999,7 +999,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 				throw new Error(`[sync] Genesis seed failed: ${msg}`)
 			}
 			console.log(
-				`[sync] Genesis seeded: ${avenRegistries.length} aven(s) (schemas + scaffold). Set PEER_SYNC_SEED=false for subsequent restarts.`,
+				`[sync] Genesis seeded: ${vibeRegistries.length} vibe(s) (schemas + scaffold). Set PEER_SYNC_SEED=false for subsequent restarts.`,
 			)
 		} else {
 			console.log('[sync] PEER_SYNC_SEED not set — using persisted scaffold (skip seed).')
