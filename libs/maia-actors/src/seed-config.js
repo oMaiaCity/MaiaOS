@@ -203,6 +203,7 @@ export const ACTOR_ID_TO_EVENT_TYPE = {
 	'°Maia/actor/services/names': 'COMPUTE_NAMES',
 	'°Maia/actor/services/paper': 'UPDATE_PAPER',
 	'°Maia/actor/services/updateWasmCode': 'UPDATE_WASM_CODE',
+	'°Maia/actor/views/paper': 'UPDATE_PAPER',
 }
 
 /** Build actor config for seeding - uses actor schema */

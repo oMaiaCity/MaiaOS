@@ -48,8 +48,9 @@ const depsListStyleMerged = {
 			border: '1px solid {colors.border}',
 			overflow: 'auto',
 			maxHeight: '50vh',
-			resize: 'vertical',
 			minHeight: '120px',
+			outline: 'none',
+			':focus': { outline: 'none' },
 		},
 		placeholderText: {
 			...(depsListStyle.components?.placeholderText ?? {}),

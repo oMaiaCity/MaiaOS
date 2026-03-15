@@ -1,11 +1,17 @@
 {
 	"$schema": "°Maia/schema/context",
 	"$id": "°Maia/actor/views/paper/context",
+	"contentService": "@contentService",
+	"paperService": "@paperService",
 	"notes": {
 		"schema": "°Maia/schema/data/notes",
 		"map": {
 			"id": "id",
 			"content": "$content"
 		}
+	},
+	"@actors": {
+		"contentService": "°Maia/actor/services/paper",
+		"paperService": "°Maia/actor/services/paper"
 	}
 }

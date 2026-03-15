@@ -1,2 +1,29 @@
 // getContextValue removed - Backend unified store provides merged value directly via context.value
 // getSchemaCoIdSafe removed - replaced with universal resolver resolve() from @MaiaOS/db/cojson/schema/resolver.js
+
+/** True when eventDef sends contenteditable value (payload.value === '@contentEditableValue'). Used for debounce, blur, validation. */
+export function isContentEditableUpdateEvent(eventDef) {
+	return eventDef?.payload?.value === '@contentEditableValue'
+}
+
+/** Check if any contenteditable element has focus (traverses shadow DOM boundaries) */
+export function isContentEditableActive() {
+	let el = document.activeElement
+	while (el?.shadowRoot?.activeElement) {
+		el = el.shadowRoot.activeElement
+	}
+	return !!el?.isContentEditable
+}
+
+/** Check if element is inside root (traverses shadow boundaries; contains() may not in all browsers) */
+export function isInsideRoot(element, root) {
+	if (!element || !root) return false
+	let node = element
+	while (node) {
+		const r = node.getRootNode?.()
+		if (r === root) return true
+		if (r === document) return false
+		node = r?.host
+	}
+	return false
+}

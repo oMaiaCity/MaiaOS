@@ -21,7 +21,8 @@
 		"paperExampleText": {
 			"fontSize": "0.85rem",
 			"lineHeight": "1.5",
-			"color": "{colors.marineBlue}"
+			"color": "{colors.marineBlue}",
+			"whiteSpace": "pre-wrap"
 		}
 	}
 }

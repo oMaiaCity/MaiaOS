@@ -15,6 +15,9 @@ import {
 } from '@MaiaOS/schemata/validation.helper'
 import { calcPatch } from 'fast-myers-diff'
 
+/** Cache schema/content per coId to avoid 4 async lookups on repeated calls (e.g. paper keystrokes). */
+const _coListContentCache = new Map()
+
 async function resolveSchemaFromCoValue(peer, coId) {
 	try {
 		const schemaCoId = await peer.resolve({ fromCoValue: coId }, { returnType: 'coId' })
@@ -27,26 +30,48 @@ async function resolveSchemaFromCoValue(peer, coId) {
 async function ensureCoListContent(peer, coId, opName) {
 	requireParam(coId, 'coId', opName)
 	validateCoId(coId, opName)
-	const coValueCore = await ensureCoValueAvailable(peer, coId, opName)
-	const schemaCoId = await resolveSchemaFromCoValue(peer, coId)
-	if (!schemaCoId || !(await peer.checkCotype(schemaCoId, 'colist'))) {
-		throw new Error(`[${opName}] CoValue ${coId} must be a CoList`)
+
+	const cached = _coListContentCache.get(coId)
+	if (cached?.coValueCore?.isAvailable?.()) {
+		const content = peer.getCurrentContent(cached.coValueCore)
+		if (
+			content &&
+			typeof content.delete === 'function' &&
+			typeof content.append === 'function' &&
+			typeof content.prepend === 'function' &&
+			typeof content.replace === 'function'
+		) {
+			return { content, schema: cached.schema, coValueCore: cached.coValueCore }
+		}
+		_coListContentCache.delete(coId)
 	}
-	const schema = await peer.resolve(schemaCoId, { returnType: 'schema' })
-	if (!schema) throw new Error(`[${opName}] Schema ${schemaCoId} not found`)
-	const content = peer.getCurrentContent(coValueCore)
-	if (
-		!content ||
-		typeof content.delete !== 'function' ||
-		typeof content.append !== 'function' ||
-		typeof content.prepend !== 'function' ||
-		typeof content.replace !== 'function'
-	) {
-		throw new Error(
-			`[${opName}] CoList ${coId} missing required methods (append, prepend, delete, replace)`,
-		)
+
+	try {
+		const coValueCore = await ensureCoValueAvailable(peer, coId, opName)
+		const schemaCoId = await resolveSchemaFromCoValue(peer, coId)
+		if (!schemaCoId || !(await peer.checkCotype(schemaCoId, 'colist'))) {
+			throw new Error(`[${opName}] CoValue ${coId} must be a CoList`)
+		}
+		const schema = await peer.resolve(schemaCoId, { returnType: 'schema' })
+		if (!schema) throw new Error(`[${opName}] Schema ${schemaCoId} not found`)
+		const content = peer.getCurrentContent(coValueCore)
+		if (
+			!content ||
+			typeof content.delete !== 'function' ||
+			typeof content.append !== 'function' ||
+			typeof content.prepend !== 'function' ||
+			typeof content.replace !== 'function'
+		) {
+			throw new Error(
+				`[${opName}] CoList ${coId} missing required methods (append, prepend, delete, replace)`,
+			)
+		}
+		_coListContentCache.set(coId, { schema, coValueCore })
+		return { content, schema, coValueCore }
+	} catch (err) {
+		_coListContentCache.delete(coId)
+		throw err
 	}
-	return { content, schema }
 }
 
 export async function colistSetOp(peer, dataEngine, params) {
@@ -217,10 +242,57 @@ export async function colistRetainOp(peer, dataEngine, params) {
 	return createSuccessResult({ coId, removed: toRemove }, { op: 'colistRetain' })
 }
 
+/**
+ * Apply a single splice to content (Jazz-style). No validation, no re-fetch.
+ * Used by colistApplyDiffOp to batch apply patches with notifications paused.
+ * Uses deleteRange when available (RawCoPlainText), appendItems for bulk insert.
+ */
+function applySpliceToContent(content, startIdx, toDelete, items) {
+	const current =
+		(typeof content.asArray === 'function' && content.asArray()) || content.toJSON?.() || []
+
+	// Batch delete: deleteRange when available (RawCoPlainText), else loop
+	if (toDelete > 0) {
+		if (typeof content.deleteRange === 'function') {
+			content.deleteRange({ from: startIdx, to: startIdx + toDelete })
+		} else {
+			for (let i = startIdx + toDelete - 1; i >= startIdx; i--) {
+				if (i < current.length && typeof content.delete === 'function') {
+					content.delete(i)
+				}
+			}
+		}
+	}
+
+	// Insert items
+	if (items.length > 0) {
+		if (items.length === 1) {
+			const item = items[0]
+			if (startIdx === 0) {
+				content.prepend(item)
+			} else {
+				content.append(item, Math.max(startIdx - 1, 0))
+			}
+		} else if (startIdx === 0) {
+			for (let i = items.length - 1; i >= 0; i--) {
+				content.prepend(items[i])
+			}
+		} else if (typeof content.appendItems === 'function') {
+			content.appendItems(items, Math.max(startIdx - 1, 0))
+		} else {
+			let appendAfter = Math.max(startIdx - 1, 0)
+			for (const it of items) {
+				content.append(it, appendAfter)
+				appendAfter++
+			}
+		}
+	}
+}
+
 export async function colistApplyDiffOp(peer, dataEngine, params) {
 	const { coId, result } = params
 	requireDataEngine(dataEngine, 'ColistApplyDiffOp', 'schema validation')
-	const { content, schema } = await ensureCoListContent(peer, coId, 'ColistApplyDiffOp')
+	const { content, schema, coValueCore } = await ensureCoListContent(peer, coId, 'ColistApplyDiffOp')
 	if (!Array.isArray(result)) {
 		throw new Error('[ColistApplyDiffOp] result must be an array')
 	}
@@ -248,20 +320,28 @@ export async function colistApplyDiffOp(peer, dataEngine, params) {
 			: undefined
 
 	const patches = [...calcPatch(current, result, comparator)]
-	// Apply in reverse order so high-index patches don't invalidate low-index patches
-	for (const patch of patches.reverse()) {
-		const [deleteStart, deleteCount, replacement] = patch
-		const items = Array.isArray(replacement)
-			? [...replacement]
-			: replacement != null
-				? [replacement]
-				: []
-		await colistSpliceOp(peer, dataEngine, {
-			coId,
-			start: deleteStart,
-			deleteCount,
-			items,
-		})
+	if (patches.length === 0) {
+		return createSuccessResult({ coId, patchesApplied: 0 }, { op: 'colistApplyDiff' })
+	}
+
+	// Jazz-style: pause notifications, apply all patches in one pass, resume notifications
+	if (typeof coValueCore?.pauseNotifyUpdate === 'function') {
+		coValueCore.pauseNotifyUpdate()
+	}
+	try {
+		for (const patch of patches.reverse()) {
+			const [deleteStart, deleteCount, replacement] = patch
+			const items = Array.isArray(replacement)
+				? [...replacement]
+				: replacement != null
+					? [replacement]
+					: []
+			applySpliceToContent(content, deleteStart, deleteCount, items)
+		}
+	} finally {
+		if (typeof coValueCore?.resumeNotifyUpdate === 'function') {
+			coValueCore.resumeNotifyUpdate()
+		}
 	}
 
 	return createSuccessResult({ coId, patchesApplied: patches.length }, { op: 'colistApplyDiff' })

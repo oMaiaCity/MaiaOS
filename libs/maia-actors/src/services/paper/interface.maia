@@ -2,21 +2,44 @@
 	"$schema": "°Maia/schema/meta",
 	"$id": "°Maia/actor/services/paper/interface",
 	"title": "°Maia/actor/services/paper/interface",
-	"description": "Updates CoText content for the paper area (full replace). Used by chat agent for auto-save on each keystroke. Use when the user asks you to write something into the paper or notes.",
+	"description": "Updates CoText content (full replace). Generic for any context path. Used by paper, notes, and other inline-edit views.",
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {
 		"UPDATE_PAPER": {
 			"type": "object",
-			"description": "Update paper CoText content (full replace)",
+			"description": "Update CoText (paper/notes). path defaults to notes.0.content",
 			"properties": {
 				"value": {
 					"type": "string",
-					"description": "New text content (will be split into graphemes)"
+					"description": "New text content (graphemes)"
+				},
+				"path": {
+					"type": "string",
+					"description": "Dot path into context (default notes.0.content)"
 				}
 			},
 			"required": [
 				"value"
+			],
+			"additionalProperties": false
+		},
+		"UPDATE_CO_TEXT": {
+			"type": "object",
+			"description": "Update any CoText at path. Generic inline-edit event.",
+			"properties": {
+				"value": {
+					"type": "string",
+					"description": "New text content (graphemes)"
+				},
+				"path": {
+					"type": "string",
+					"description": "Dot path into context (e.g. notes.0.content)"
+				}
+			},
+			"required": [
+				"value",
+				"path"
 			],
 			"additionalProperties": false
 		}

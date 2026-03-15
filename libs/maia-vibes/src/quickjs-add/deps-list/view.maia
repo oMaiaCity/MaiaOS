@@ -63,19 +63,26 @@
 								"text": "$selectedItem.id"
 							},
 							{
-								"tag": "textarea",
+								"tag": "div",
 								"class": "code-block",
 								"attrs": {
-									"placeholder": "No custom code attached — start typing to add"
+									"contenteditable": true,
+									"data-placeholder": "No custom code attached — start typing to add"
 								},
-								"value": "$selectedItem.wasmCode",
+								"text": "$selectedItem.wasmCode",
 								"$on": {
 									"input": {
 										"send": "UPDATE_WASM_CODE",
 										"payload": {
-											"value": "@inputValue"
+											"value": "@contentEditableValue"
 										},
-										"$debounce": 300
+										"$debounce": 250
+									},
+									"blur": {
+										"send": "UPDATE_WASM_CODE",
+										"payload": {
+											"value": "@contentEditableValue"
+										}
 									}
 								}
 							}

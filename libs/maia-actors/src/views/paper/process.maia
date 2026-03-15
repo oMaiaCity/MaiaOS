@@ -2,5 +2,18 @@
 	"$schema": "°Maia/schema/process",
 	"$id": "°Maia/actor/views/paper/process",
 	"@label": "@maia/actor/views/paper/process",
-	"handlers": {}
+	"handlers": {
+		"UPDATE_PAPER": [
+			{
+				"tell": {
+					"target": "$contentService",
+					"type": "UPDATE_PAPER",
+					"payload": {
+						"value": "$$value",
+						"path": "notes.0.content"
+					}
+				}
+			}
+		]
+	}
 }

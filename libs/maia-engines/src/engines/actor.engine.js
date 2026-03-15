@@ -15,6 +15,7 @@ import { waitForStoreReady } from '@MaiaOS/db'
 import { containsExpressions } from '@MaiaOS/schemata/expression-resolver'
 import { deriveInboxRef } from '../utils/inbox-convention.js'
 import { readStore } from '../utils/store-reader.js'
+import { isContentEditableActive } from '../utils/utils.js'
 
 // Render state machine - prevents race conditions by ensuring renders only happen when state allows
 export const RENDER_STATES = {
@@ -307,6 +308,12 @@ export class ActorEngine {
 			return
 		// Headless actors (no view) have nothing to render - skip style/view
 		if (!actor.viewDef) {
+			actor._renderState = RENDER_STATES.READY
+			return
+		}
+		// Skip rerender when any contenteditable has focus — prevents blur on each keystroke
+		// (Must check globally: parent rerender would destroy child's contenteditable)
+		if (isContentEditableActive()) {
 			actor._renderState = RENDER_STATES.READY
 			return
 		}

@@ -1,7 +1,7 @@
 /**
- * Update Paper Content - @maia/actor/services/paper
- * Full-replace CoText content for the chat paper area.
- * Used for auto-save on each keystroke (local-first CRDT).
+ * Update CoText Content - generic for any context path.
+ * Full-replace CoText content. Used for inline editing (paper, notes, etc.).
+ * Payload: { value: string, path?: string } — path is dot path into context (default "notes.0.content").
  */
 
 import {
@@ -9,52 +9,81 @@ import {
 	createErrorResult,
 	createSuccessResult,
 } from '@MaiaOS/schemata/operation-result'
-import { splitGraphemes } from 'unicode-segmenter/grapheme'
+
+/** Cache last value per coId to skip split+diff when unchanged. */
+const _lastValueByCoId = new Map()
+
+/** Fast grapheme split: ASCII fast path, Intl.Segmenter for Unicode. */
+function toGraphemes(value) {
+	if (typeof value !== 'string') return []
+	for (let i = 0; i < value.length; i++) {
+		if (value.charCodeAt(i) > 127) {
+			const seg = new Intl.Segmenter('und', { granularity: 'grapheme' })
+			return [...seg.segment(value)].map((s) => s.segment)
+		}
+	}
+	return value.split('')
+}
+
+/** Resolve value at dot path (e.g. "notes.0.content") from object. */
+function getByPath(obj, path) {
+	if (!obj || !path || typeof path !== 'string') return undefined
+	const parts = path.split('.')
+	let cur = obj
+	for (const p of parts) {
+		if (cur == null) return undefined
+		const num = Number(p)
+		cur = Number.isNaN(num) ? cur[p] : cur[num]
+	}
+	return cur
+}
 
 export default {
 	async execute(actor, payload) {
-		const { value } = payload
+		const { value, path = 'notes.0.content' } = payload
 		if (value == null || typeof value !== 'string') {
 			return createErrorResult([
-				createErrorEntry('structural', '[updatePaperContent] value (string) is required'),
+				createErrorEntry('structural', '[updateCoTextContent] value (string) is required'),
 			])
 		}
 
 		const os = actor.actorOps?.os
 		if (!os || !os.do) {
 			return createErrorResult([
-				createErrorEntry('structural', '[updatePaperContent] Database engine not available'),
+				createErrorEntry('structural', '[updateCoTextContent] Database engine not available'),
 			])
 		}
 
 		const contextValue = actor.context?.value ?? actor.context
-		const notes = contextValue?.notes
-		const firstNote = Array.isArray(notes) && notes.length > 0 ? notes[0] : null
-		const content = firstNote?.content
+		const content = getByPath(contextValue, path)
 		const coId = content?.id ?? content
 
 		if (!coId || typeof coId !== 'string' || !coId.startsWith('co_z')) {
 			return createErrorResult([
 				createErrorEntry(
 					'structural',
-					'[updatePaperContent] No paper CoText found. Ensure notes are seeded and context has notes[0].content.',
+					`[updateCoTextContent] No CoText at path "${path}". Ensure context has the target CoText.`,
 				),
 			])
 		}
 
-		const graphemes = [...splitGraphemes(value)]
+		if (_lastValueByCoId.get(coId) === value) {
+			return createSuccessResult({ coId, length: value.length })
+		}
 
 		try {
+			const graphemes = toGraphemes(value)
 			await os.do({
 				op: 'colistApplyDiff',
 				coId,
 				result: graphemes,
 			})
+			_lastValueByCoId.set(coId, value)
 			return createSuccessResult({ coId, length: graphemes.length })
 		} catch (err) {
-			console.error('[updatePaperContent] Failed:', err?.message ?? err)
+			console.error('[updateCoTextContent] Failed:', err?.message ?? err)
 			return createErrorResult([
-				createErrorEntry('structural', err?.message || 'Failed to update paper content'),
+				createErrorEntry('structural', err?.message || 'Failed to update CoText content'),
 			])
 		}
 	},
