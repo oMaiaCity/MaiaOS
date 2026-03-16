@@ -1,0 +1,8 @@
+{
+	"$schema": "°Maia/schema/context",
+	"$id": "°Maia/profile/context/intent",
+	"layout": "@layout",
+	"@actors": {
+		"layout": "°Maia/actor/services/profile-image"
+	}
+}

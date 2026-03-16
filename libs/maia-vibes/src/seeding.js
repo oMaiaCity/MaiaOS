@@ -9,6 +9,7 @@ import { ChatVibeRegistry } from './chat/registry.js'
 import { LogsVibeRegistry } from './creator/registry.js'
 import { HumansVibeRegistry } from './humans/registry.js'
 import { PaperVibeRegistry } from './paper/registry.js'
+import { ProfileVibeRegistry } from './profile/registry.js'
 import { QuickjsAddVibeRegistry } from './quickjs-add/registry.js'
 import { SparksVibeRegistry } from './sparks/registry.js'
 import { TodosVibeRegistry } from './todos/registry.js'
@@ -17,6 +18,7 @@ const ALL_REGISTRIES = [
 	TodosVibeRegistry,
 	ChatVibeRegistry,
 	PaperVibeRegistry,
+	ProfileVibeRegistry,
 	SparksVibeRegistry,
 	LogsVibeRegistry,
 	HumansVibeRegistry,

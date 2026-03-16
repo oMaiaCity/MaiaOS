@@ -1,0 +1,12 @@
+{
+	"$schema": "°Maia/schema/actor",
+	"$id": "°Maia/profile/actor/intent",
+	"type": "service",
+	"process": "°Maia/profile/process/intent",
+	"view": "°Maia/profile/view/intent",
+	"context": "°Maia/profile/context/intent",
+	"brand": "°Maia/brand/maiacity",
+	"inbox": "°Maia/profile/inbox/intent",
+	"interface": [],
+	"@label": "@profile/intent"
+}
