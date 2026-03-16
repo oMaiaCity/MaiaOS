@@ -15,9 +15,9 @@ All inference runs 100% on-device. Once models are downloaded, no network connec
 | Role | Model | Size |
 |------|-------|------|
 | VAD | Silero VAD v5 | ~5MB |
-| STT | Whisper Tiny English | ~105MB |
+| STT | Whisper Base English | ~129MB |
 
-**Total download**: ~110MB.
+**Total download**: ~134MB.
 
 Models are cached in OPFS. After the first download, refresh/reload does not re-download.
 
