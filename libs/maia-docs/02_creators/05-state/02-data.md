@@ -1,21 +1,19 @@
+# Process Handlers and Data
 
 ## Managing Item Lookup Objects
 
-For item-specific conditional styling, **state machines compute lookup objects** in context:
+For item-specific conditional styling, **process handlers compute lookup objects** in context:
 
-**State Machine:**
+**Process Handler:**
 ```json
 {
-  "SELECT_ITEM": {
-    "target": "idle",
-    "actions": [
-      {
-        "updateContext": {
-          "selectedItems": { "$$itemId": true }  // Lookup object: { "co_z123": true }
-        }
+  "SELECT_ITEM": [
+    {
+      "ctx": {
+        "selectedItems": { "$$itemId": true }
       }
-    ]
-  }
+    }
+  ]
 }
 ```
 
@@ -24,7 +22,7 @@ For item-specific conditional styling, **state machines compute lookup objects**
 {
   "attrs": {
     "data": {
-      "selected": "$selectedItems.$$id"  // Looks up selectedItems[item.id] → true/false
+      "selected": "$selectedItems.$$id"
     }
   }
 }
@@ -47,13 +45,13 @@ For item-specific conditional styling, **state machines compute lookup objects**
 ```
 
 **Why lookup objects instead of `$eq` in views?**
-- Views are dumb templates - no conditional logic allowed
+- Views are dumb templates — no conditional logic allowed
 - Lookup objects are resolved values (can be persisted to CoJSON)
-- State machines handle all logic, views just reference computed values
+- Process handlers handle all logic, views just reference computed values
 
 ## Working with Data (Reactive Queries)
 
-**CRITICAL:** Reactive data queries are defined **directly in context files**, not in state machines. State machines handle **mutations** (create, update, delete), while **queries** are declared in context.
+**CRITICAL:** Reactive data queries are defined **directly in context files**, not in process handlers. Process handlers handle **mutations** (create, update, delete via `op`), while **queries** are declared in context.
 
 ### The Correct Pattern: Query Objects in Context
 
@@ -81,9 +79,8 @@ For item-specific conditional styling, **state machines compute lookup objects**
 **What happens:**
 1. Query objects are declared in context (`.context.maia` file)
 2. MaiaOS automatically creates reactive query stores from these declarations
-3. Stores are stored in `actor._queryStores[contextKey]`
-4. Stores are marked in `context.@stores` for ViewEngine discovery
-5. ViewEngine subscribes to stores and re-renders when data changes
+3. ViewEngine subscribes to stores and re-renders when data changes
+4. When you create/update/delete via `op`, all query stores automatically update
 
 **Accessing data in views:**
 ```json
@@ -99,29 +96,25 @@ For item-specific conditional styling, **state machines compute lookup objects**
 ```
 
 **Important:**
-- Query objects are defined in **context files**, not state machines
-- State machines handle **mutations only** (create, update, delete via `@db` tool)
-- Factory can be a factory reference (`@factory/todos`) or co-id (`co_z...`) - references are resolved automatically
-- Query stores are ReactiveStore objects (can't be stored in CoValues)
-- Stores are stored in `actor._queryStores` and marked in `context.@stores`
-
-**See [Context - Reactive Data](./04-context.md#1-reactive-data-query-objects-) for complete documentation on query objects.**
+- Query objects are defined in **context files**, not process handlers
+- Process handlers handle **mutations only** (create, update, delete via `op`)
+- Factory can be a factory reference (`@factory/todos` or `°Maia/factory/data/todos`) or co-id (`co_z...`) — references are resolved at runtime
 
 ### Creating, Updating, Deleting Data
 
-Use the `@db` tool with different `op` values:
+Use the `op` action with create, update, or delete:
 
 #### Create
 
 ```json
 {
-  "tool": "@db",
-  "payload": {
-    "op": "create",
-    "factory": "@factory/todos",
-    "data": {
-      "text": "$newTodoText",
-      "done": false
+  "op": {
+    "create": {
+      "factory": "°Maia/factory/data/todos",
+      "data": {
+        "text": "$newTodoText",
+        "done": false
+      }
     }
   }
 }
@@ -131,13 +124,12 @@ Use the `@db` tool with different `op` values:
 
 ```json
 {
-  "tool": "@db",
-  "payload": {
-    "op": "update",
-    "factory": "@factory/todos",
-    "id": "$$id",
-    "data": {
-      "text": "Updated text"
+  "op": {
+    "update": {
+      "id": "$$id",
+      "data": {
+        "text": "Updated text"
+      }
     }
   }
 }
@@ -147,11 +139,10 @@ Use the `@db` tool with different `op` values:
 
 ```json
 {
-  "tool": "@db",
-  "payload": {
-    "op": "delete",
-    "factory": "@factory/todos",
-    "id": "$$id"
+  "op": {
+    "delete": {
+      "id": "$$id"
+    }
   }
 }
 ```
@@ -162,18 +153,18 @@ Toggle is not a separate operation. Use `update` with an expression:
 
 ```json
 {
-  "tool": "@db",
-  "payload": {
-    "op": "update",
-    "id": "$$id",
-    "data": {
-      "done": { "$not": "$existing.done" }
+  "op": {
+    "update": {
+      "id": "$$id",
+      "data": {
+        "done": { "$not": "$$done" }
+      }
     }
   }
 }
 ```
 
-**Note:** For `update` and `delete` operations, `schema` is not required - it's extracted from the CoValue's headerMeta automatically.
+**Note:** For `update` and `delete` operations, `factory` is not required — it's extracted from the CoValue's headerMeta automatically.
 
 ### Complete Example: Todo List
 
@@ -199,63 +190,63 @@ Toggle is not a separate operation. Use `update` with an expression:
 }
 ```
 
-**State Machine (`todo.state.maia`):**
+**Process Handler (`todo.process.maia`):**
 ```json
 {
-  "$factory": "@factory/state",
-  "$id": "@state/todo",
-  "initial": "idle",
-  "states": {
-    "idle": {
-      "on": {
-        "UPDATE_INPUT": {
-          "target": "idle",
-          "actions": [{
-            "updateContext": { "newTodoText": "$$value" }
-          }]
-        },
-        "CREATE_TODO": {
-          "target": "creating",
+  "$factory": "°Maia/factory/process",
+  "$id": "°Maia/actor/services/todos/process",
+  "handlers": {
+    "UPDATE_INPUT": [
+      {
+        "ctx": {
+          "newTodoText": "$$value"
         }
       }
-    },
-    "creating": {
-      "entry": [
-        {
-          "tool": "@db",
-          "payload": {
-            "op": "create",
-            "factory": "@factory/todos",
+    ],
+    "CREATE_TODO": [
+      {
+        "op": {
+          "create": {
+            "factory": "°Maia/factory/data/todos",
             "data": {
               "text": "$newTodoText",
               "done": false
             }
           }
-        },
-        {
-          "updateContext": { "newTodoText": "" }
         }
-      ],
-      "on": {
-        "SUCCESS": "idle",
-        "ERROR": "error"
+      },
+      {
+        "ctx": {
+          "newTodoText": ""
+        }
+      },
+      {
+        "tell": {
+          "target": "$$source",
+          "type": "SUCCESS",
+          "payload": {}
+        }
       }
-    },
-    "error": {
-      "on": {
-        "RETRY": "idle"
+    ],
+    "SUCCESS": [
+      { "ctx": {} }
+    ],
+    "ERROR": [
+      {
+        "ctx": {
+          "error": "$$errors.0.message"
+        }
       }
-    }
+    ]
   }
 }
 ```
 
 **What happens:**
 1. Query objects (`todos`, `todosTodo`, `todosDone`) are declared in context file
-2. MaiaOS automatically creates reactive query stores from these declarations
-3. Stores are stored in `actor._queryStores` and marked in `context.@stores`
-4. ViewEngine subscribes to stores and re-renders when data changes
-5. When creating a todo via `@db` tool, all query stores automatically update
+2. MaiaOS creates reactive query stores from these declarations
+3. ViewEngine subscribes to stores and re-renders when data changes
+4. When creating a todo via `op.create`, all query stores automatically update
 
 **View:**
 ```json
@@ -294,7 +285,16 @@ Toggle is not a separate operation. Use `update` with an expression:
 ### Best Practices
 
 **✅ DO:**
-- Define query objects **in context files** (`.context.maia`), not state machines
-- Use `@db` tool in state machines for all data mutations (create, update, delete)
+- Define query objects **in context files** (`.context.maia`), not process handlers
+- Use `op` in process handlers for all data mutations (create, update, delete)
 - Use descriptive names (`todosTodo`, not `data1`)
 - Filter in query objects (context), not in views
+- Use factory references (`@factory/todos` or `°Maia/factory/data/todos`) in context — they're resolved automatically
+
+**❌ DON'T:**
+- Don't define queries in process handlers (use context files instead)
+- Don't manually modify query stores directly
+- Don't use process handlers for queries (only for mutations)
+- Don't filter data in views (use query object filters in context instead)
+- Don't forget to handle SUCCESS/ERROR events (via `tell` or `ctx`)
+- Don't forget to `tell` SUCCESS to the source actor after successful `op` (so the UI can clear loading state)

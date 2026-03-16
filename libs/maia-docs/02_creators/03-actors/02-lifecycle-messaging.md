@@ -10,7 +10,7 @@
 
 ### Lifecycle Flow
 
-**Service Actor:** Created → Booting (state machine, view, styles) → Active (processes events) → Destroyed (vibe unload)
+**Service Actor:** Created → Booting (process, view, styles) → Active (processes events) → Destroyed (vibe unload)
 
 **UI Actor:** Created (lazily when referenced) → Booting → Active → Destroyed (when switching view)
 
@@ -29,7 +29,7 @@ Child actors created only when referenced by `context.currentView`. Service chil
 **Expression Resolution:**
 - Views resolve ALL expressions before sending to inbox (clean JSON only)
 - State machines receive resolved payloads
-- Action configs still support expressions (evaluated in state machine)
+- Action configs still support expressions (evaluated in process handler)
 
 ### Sending Messages
 
@@ -44,7 +44,7 @@ os.deliverEvent(senderId, 'actor_todo_001', 'notification', {
 
 ### Receiving Messages
 
-Messages sent to inbox costream. Actors automatically process and route to state machine. No explicit subscription needed.
+Messages sent to inbox costream. Actors automatically process and route to process handlers. No explicit subscription needed.
 
 ---
 

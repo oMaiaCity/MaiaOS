@@ -5,22 +5,18 @@
 
 **Everything is persisted to CoValues under the hood - no in-memory mutation hacks!** Every CoValue is accessible as a reactive store via `read()` API.
 
-### 2. UI State - Manual (via Tools)
+### 2. UI State - Manual (via ctx)
 
-When you update **UI state** (like form inputs, view modes, etc.), you explicitly update context via tools:
+When you update **UI state** (like form inputs, view modes, etc.), process handlers update context via `ctx`:
 
 ```
-State machine uses updateContext action (infrastructure)
+Process handler uses ctx action
   ↓
-Tool completes successfully
+Persists to Context CoValue (CRDT)
   ↓
-StateEngine sends SUCCESS event
+Context ReactiveStore automatically updates
   ↓
-State machine transitions
-  ↓
-ActorEngine.rerender(actor)
-  ↓
-ViewEngine re-renders with new context
+View subscribes to context ReactiveStore and re-renders
   ↓
 User sees updated UI
 ```
@@ -29,18 +25,21 @@ User sees updated UI
 
 ```json
 {
-        "updateContext": {
-  "payload": {
-    "newTodoText": "",
-    "viewMode": "kanban"
-  }
+  "SWITCH_VIEW": [
+    {
+      "ctx": {
+        "newTodoText": "",
+        "viewMode": "kanban"
+      }
+    }
+  ]
 }
 ```
 
 ### Summary
 
 - **Query objects** → Automatic reactivity via universal `read()` API (ReactiveStore watches for changes)
-- **UI state** → Manual updates (you explicitly update via `updateContext` infrastructure action)
+- **UI state** → Manual updates (you explicitly update via `ctx` in process handlers)
 - **Both trigger re-renders** → Your view stays in sync
 - **Universal Pattern** → Every CoValue is accessible as ReactiveStore via `read()` API
 
@@ -78,10 +77,10 @@ Use computed values for counts, percentages, etc.:
 
 ```json
 {
-  "states": {
-    "idle": {
-      "entry": {
-        "updateContext": {
+  "handlers": {
+    "COMPUTE_STATS": [
+      {
+        "ctx": {
           "todosCount": { "$length": "$todos" },
           "completedCount": { "$length": "$todosDone" },
           "progressPercent": {
@@ -92,28 +91,12 @@ Use computed values for counts, percentages, etc.:
           }
         }
       }
-    }
+    ]
   }
 }
 ```
 
-**Or compute in a custom tool:**
-
-```javascript
-// In custom @compute/stats tool
-export default {
-  async execute(actor, payload) {
-    const todos = actor.context.todos;
-    const completed = todos.filter(t => t.done);
-    
-    Object.assign(actor.context, {
-      todosCount: todos.length,
-      completedCount: completed.length,
-      progressPercent: (completed.length / todos.length) * 100
-    });
-  }
-};
-```
+**Prefer process handler `ctx`** — compute directly in handlers. No direct context mutation.
 
 ### Pattern 3: Client-Side Filtering (For Search/Sort)
 
@@ -178,9 +161,9 @@ localStorage.setItem(
 // Restore from localStorage
 const saved = localStorage.getItem(`actor_${actor.id}`);
 if (saved) {
-  // Update context via state machine, not direct mutation
-  actor.actorEngine.stateEngine.send(
-    actor.machine.id,
+  // Update context via process handler, not direct mutation
+  actor.actorOps.processEngine.send(
+    `${actor.id}_process`,
     'RESTORE_CONTEXT',
     JSON.parse(saved)
   );
@@ -192,9 +175,9 @@ function exportContext(actor) {
 }
 
 function importContext(actor, jsonString) {
-  // Update context via state machine, not direct mutation
-  actor.actorEngine.stateEngine.send(
-    actor.machine.id,
+  // Update context via process handler, not direct mutation
+  actor.actorOps.processEngine.send(
+    `${actor.id}_process`,
     'RESTORE_CONTEXT',
     JSON.parse(jsonString)
   );
@@ -233,7 +216,7 @@ validateContext(actor.context.value, {
 
 ## Next Steps
 
-- Learn about [State Machines](./05-state.md) - How context is orchestrated
+- Learn about [Process Handlers](./05-state.md) - How context is orchestrated
 - Explore [Tools](./06-tools.md) - How context is mutated
 - Understand [Views](./07-views.md) - How context is rendered
 - Read [Skills](./03-skills.md) - How AI queries context

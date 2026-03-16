@@ -2,6 +2,38 @@
 
 **Comprehensive guide to building scalable, maintainable MaiaOS applications**
 
+## Core Principles
+
+### Separation of Concerns (Nue.js-Style)
+
+**Views have zero conditional logic.** Only process handlers and CSS have logic.
+
+| Layer | Conditional Logic? | Responsibility |
+|-------|--------------------|----------------|
+| **Views** | **No** | Pure declarative structure. Reference context, send events. |
+| **Context** | **No** | Single source of truth. All UI state persisted to CoValues. |
+| **Process handlers** | **Yes** | All logic, computation, conditionals. |
+| **CSS** | **Yes** (styling) | Conditional styling via data-attributes. |
+
+### UI State: Single Source of Truth in Context
+
+**All UI state lives in context.** No in-memory hacks, no ephemeral state.
+
+- ✅ Context = CoValue — persisted, syncable, offline-first
+- ✅ Every update: `ctx` → CoValue (CRDT) → ReactiveStore → View
+- ✅ No shortcuts — no `useState`-style local variables, no bypassing persistence
+
+### Local-First, CoValue-Native Roundtrip
+
+**All data flows through CoValues.** No optimizing updates, no in-memory caches that bypass persistence.
+
+- ✅ Create/update/delete → CoValue (CRDT) → ReactiveStore → View
+- ✅ Query objects declared in context → resolved via `read()` → CoValue-backed
+- ✅ Full offline-first — CoValues sync when connected; local-first when not
+- ✅ Leverage CoJSON end-to-end. No shortcuts.
+
+---
+
 ## Vibe-First Development
 
 **Always create the vibe root service actor first when building a vibe.**
@@ -29,13 +61,13 @@
 
 **Rule of thumb:** State should be co-located with the component that renders it and uses it.
 
-### Context Updates: State Machine as Single Source of Truth
+### Context Updates: Process Handlers as Single Source of Truth
 
-**CRITICAL PRINCIPLE:** State machines are the **single source of truth** for all context changes.
+**CRITICAL PRINCIPLE:** Process handlers are the **single source of truth** for all context changes.
 
 **All context updates MUST:**
-- ✅ Flow through state machines
-- ✅ Use `updateContext` infrastructure action (never mutate directly)
+- ✅ Flow through process handlers
+- ✅ Use `ctx` action (never mutate directly)
 - ✅ Be triggered by events from inbox (never directly)
 
 **The ONLY exception:**
@@ -45,42 +77,35 @@
 **Correct Pattern:**
 ```json
 {
-  "idle": {
-    "on": {
-      "UPDATE_INPUT": {
-        "target": "idle",
-        "actions": [
-          {
-            "updateContext": { "newTodoText": "$$newTodoText" }
-          }
-        ]
-      }
+  "UPDATE_INPUT": [
+    {
+      "ctx": { "newTodoText": "$$value" }
     }
-  }
+  ]
 }
 ```
 
 **Anti-Patterns:**
 - ❌ Direct mutation: `actor.context.field = value`
 - ❌ Updating from views
-- ❌ Updating from tools (unless invoked by state machine)
-- ❌ Setting error context directly in ToolEngine
+- ❌ Updating from tools (unless invoked by process handler)
+- ❌ Setting error context directly in tools
 
 ### Event Flow: Inbox as Single Source of Truth
 
 **CRITICAL PRINCIPLE:** Actor inbox is the **single source of truth** for ALL events.
 
 **All events MUST flow through inbox:**
-- ✅ View events → inbox → state machine
-- ✅ External messages → inbox → state machine
-- ✅ Tool SUCCESS/ERROR → inbox → state machine
-- ✅ StateEngine.send() only called from processMessages()
+- ✅ View events → inbox → process handlers
+- ✅ External messages → inbox → process handlers
+- ✅ op SUCCESS/ERROR → delivered to source via tell or ProcessEngine
+- ✅ ProcessEngine.send() only called from processMessages()
 
 **Event Flow Pattern:**
 ```
-View Event → deliverEvent() → inbox → processMessages() → StateEngine.send()
-Tool SUCCESS → deliverEvent() → inbox → processMessages() → StateEngine.send()
-Tool ERROR → deliverEvent() → inbox → processMessages() → StateEngine.send()
+View Event → deliverEvent() → inbox → processMessages() → ProcessEngine.send()
+op success → tell(SUCCESS) to $$source
+op failure → ProcessEngine delivers ERROR to $$source
 ```
 
 **Why this matters:**
@@ -95,13 +120,12 @@ Tool ERROR → deliverEvent() → inbox → processMessages() → StateEngine.se
 - ✅ This ensures events are always routed to the correct actor's inbox
 
 **Anti-Patterns:**
-- ❌ Calling StateEngine.send() directly (bypasses inbox)
-- ❌ Sending SUCCESS/ERROR directly to state machine
+- ❌ Calling ProcessEngine.send() directly (bypasses inbox)
 - ❌ Bypassing inbox for any events
 
-### Separation of Concerns: Views, State Machines, and Message Passing
+### Separation of Concerns: Views, Process Handlers, and Message Passing
 
-**CRITICAL ARCHITECTURE:** MaiaOS enforces strict separation of concerns between views, state machines, and message passing to enable clean distributed systems.
+**CRITICAL ARCHITECTURE:** MaiaOS enforces strict separation of concerns between views, process handlers, and message passing to enable clean distributed systems.
 
 #### Views: "Dumb" Templates (Zero Logic)
 
@@ -119,15 +143,19 @@ Tool ERROR → deliverEvent() → inbox → processMessages() → StateEngine.se
 - ❌ Complex expressions: Only simple data resolution allowed
 - ❌ DSL operations: No `$if`, `$eq`, etc. in view definitions
 
-**Pattern: State Machine → Context → View → CSS**
+**Pattern: Process Handler → Context → View → CSS**
 
-1. **State Machine** computes boolean flags and lookup objects:
+1. **Process Handler** computes boolean flags and lookup objects:
 ```json
 {
-  "updateContext": {
-    "isSelected": {"$eq": ["$$id", "$selectedId"]},
-    "selectedItems": {"$$id": true}  // Lookup object
-  }
+  "SELECT_ITEM": [
+    {
+      "ctx": {
+        "isSelected": {"$eq": ["$$id", "$selectedId"]},
+        "selectedItems": {"$$id": true}  // Lookup object
+      }
+    }
+  ]
 }
 ```
 
@@ -153,22 +181,25 @@ Tool ERROR → deliverEvent() → inbox → processMessages() → StateEngine.se
 }
 ```
 
-#### State Machines: All Logic & Computation
+#### Process Handlers: All Logic & Computation
 
-**State machines are the single source of truth** for all logic, computation, and state transitions.
+**Process handlers are the single source of truth** for all logic, computation, and messaging.
 
-**State Machines Handle:**
+**Process Handlers Handle:**
 - ✅ All conditional logic (`$if`, `$eq`, `$and`, `$or`)
 - ✅ All value computation
 - ✅ All expressions that determine what values to set
 - ✅ Complex nested logic
 - ✅ Computing boolean flags for views
 - ✅ Computing lookup objects for views
+- ✅ Data operations via `op`
+- ✅ Inter-actor messaging via `tell`
 
-**State Machines Update Context:**
-- State machines compute values and store them in context
-- Views reference these pre-computed values
-- No conditional logic in views - all conditionals in state machines
+**Process Handlers Update Context:**
+- Process handlers compute values and store them in context via `ctx`
+- Views reference these pre-computed values (zero logic)
+- No conditional logic in views — all conditionals in process handlers
+- All context updates persist to CoValue — no in-memory hacks
 
 #### Message Passing: Only Resolved Values
 
@@ -182,12 +213,12 @@ Tool ERROR → deliverEvent() → inbox → processMessages() → StateEngine.se
 **How It Works:**
 1. **ViewEngine resolves ALL expressions** before sending to inbox
 2. **Only resolved values** (clean JS objects/JSON) persist to CoJSON
-3. **State machines receive pre-resolved payloads** (no re-evaluation needed for message payloads)
-4. **Action configs still support expressions** (e.g., `updateContext: { title: "$context.title" }` - evaluated in state machine context)
+3. **Process handlers receive pre-resolved payloads** (no re-evaluation needed for message payloads)
+4. **Action configs still support expressions** (e.g., `ctx: { title: "$context.title" }` — evaluated in process handler context)
 
 **Event Flow:**
 ```
-View Event → resolveExpressions() (FULLY resolve) → deliverEvent() → inbox (CoJSON - only clean JSON) → processMessages() → StateEngine.send() (payload already resolved)
+View Event → resolveExpressions() (FULLY resolve) → deliverEvent() → inbox (CoJSON - only clean JSON) → processMessages() → ProcessEngine.send() (payload already resolved)
 ```
 
 **Validation:**
@@ -222,12 +253,16 @@ View Event → resolveExpressions() (FULLY resolve) → deliverEvent() → inbox
   }
 }
 
-// ✅ Correct - State machine computes value
-// State machine:
+// ✅ Correct - Process handler computes value
+// Process handler:
 {
-  "updateContext": {
-    "todoPrefix": {"$if": {"condition": {"$eq": ["$mode", "urgent"]}, "then": "URGENT: ", "else": ""}}
-  }
+  "SET_MODE": [
+    {
+      "ctx": {
+        "todoPrefix": {"$if": {"condition": {"$eq": ["$mode", "urgent"]}, "then": "URGENT: ", "else": ""}}
+      }
+    }
+  ]
 }
 
 // View:

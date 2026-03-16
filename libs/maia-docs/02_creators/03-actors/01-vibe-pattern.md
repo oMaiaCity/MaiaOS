@@ -36,7 +36,7 @@ Every vibe's entry point is an **vibes service actor**:
 
 **Never:** Mutate context directly, update from views, use removed `@context/update` tool.
 
-**Always:** Update via state machine actions, use `updateContext`, handle errors via ERROR events.
+**Always:** Update via process handler actions, use `ctx`, handle errors via ERROR handler.
 
 ## Step 2: Vibe Root Service Actor Loads Composite
 
@@ -115,7 +115,7 @@ The `context` holds all runtime data. Defined in separate `.context.maia` file.
 
 ### Context Best Practices
 
-✅ **DO:** Keep flat, clear names, initialize all fields, update via state machines, use `updateContext`, go through CoValue persistence.
+✅ **DO:** Keep flat, clear names, initialize all fields, update via process handlers, use `ctx`, go through CoValue persistence.
 
 ❌ **DON'T:** Store DOM references, put logic in context, mutate directly, update from views, bypass CoValue persistence.
 

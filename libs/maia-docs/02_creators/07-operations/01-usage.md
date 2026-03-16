@@ -1,3 +1,8 @@
+# Operations Usage
+
+## Spark Operations (continued)
+
+### `createSpark` - Returns
 
 **Returns:**
 - Created spark object with:
@@ -92,112 +97,104 @@ console.log("Deleted:", deleted.success); // true
 2. Removes spark from `account.sparks` CoMap
 3. Automatically removes spark from indexed colist
 
-## Tool Invocation Pattern
+## Operation Invocation Pattern
 
-**CRITICAL:** Tools are invoked BY state machines, never directly from views or other engines.
+**CRITICAL:** Data operations are invoked BY process handlers via the `op` action, never directly from views.
 
 **Pattern:**
-1. View sends event to state machine
-2. State machine invokes tool (in entry actions or transition actions)
-3. Tool executes operation and returns result
-4. State machine receives SUCCESS event with tool result in payload
-5. State machine updates context via `updateContext` action using `$$result`
+1. View sends event to actor inbox
+2. Process handler runs `op` action (create, update, delete)
+3. DataEngine executes operation
+4. On success: handler runs `tell` SUCCESS to `$$source`
+5. On failure: ProcessEngine delivers ERROR to `$$source`
+6. Handler can update context via `ctx` action
 
 **Why this matters:**
-- **Single source of truth:** All operations flow through state machines
+- **Single source of truth:** All operations flow through process handlers
 - **Predictable:** Easy to trace where operations come from
-- **Error handling:** State machines handle SUCCESS/ERROR events
-- **Context updates:** State machines update context via `updateContext` infrastructure action
-- **Tool results accessible:** Tool results available via `$$result` in SUCCESS handlers
+- **Error handling:** ProcessEngine delivers ERROR automatically on op failure
+- **Context updates:** Process handlers update context via `ctx` action
 
 **Never:**
-- ❌ Invoke tools directly from views
-- ❌ Invoke tools from other engines
-- ❌ Update context directly in tools (tools should return results, not manipulate context)
-- ❌ Tools calling `updateContextCoValue()` directly
+- ❌ Invoke maia.do() directly from views
+- ❌ Update context directly from views
 
 **Always:**
-- ✅ Invoke tools from state machine actions
-- ✅ Handle SUCCESS/ERROR events in state machines
-- ✅ Update context via state machine actions using `updateContext` infrastructure action
-- ✅ Tools return results - state machines handle context updates
+- ✅ Use `op` in process handlers for create/update/delete
+- ✅ Use `tell` to send SUCCESS/ERROR to `$$source`
+- ✅ Use `ctx` for context updates in process handlers
 
-## Usage in State Machines
+## Usage in Process Handlers
 
-Use the `@db` tool in your state machine definitions:
+Use the `op` action in your process handler definitions:
 
 ```json
 {
-  "states": {
-    "creating": {
-      "entry": {
-        "tool": "@db",
-        "payload": {
-          "op": "create",
-          "factory": "@factory/todos",
-          "data": {
-            "text": "$newTodoText",
-            "done": false
-          }
-        }
-      },
-      "on": {
-        "SUCCESS": {
-          "target": "idle",
-          "actions": [
-            {
-              "tool": "@core/publishMessage",
-              "payload": {
-                "type": "TODO_CREATED",
-                "payload": {
-                  "id": "$$result.id",      // ← Access tool result
-                  "text": "$$result.text"  // ← Tool result available in SUCCESS handler
-                }
-              }
+  "handlers": {
+    "CREATE_TODO": [
+      {
+        "op": {
+          "create": {
+            "factory": "°Maia/factory/data/todos",
+            "data": {
+              "text": "$newTodoText",
+              "done": false
             }
-          ]
-        },
-        "ERROR": "error"
-      }
-    },
-    "toggling": {
-      "entry": {
-        "tool": "@db",
-        "payload": {
-          "op": "update",
-          "id": "$$id",
-          "data": {
-            "done": { "$not": "$existing.done" }
           }
         }
       },
-      "on": {
-        "SUCCESS": "idle"
+      {
+        "ctx": { "newTodoText": "" }
+      },
+      {
+        "tell": {
+          "target": "$$source",
+          "type": "SUCCESS",
+          "payload": {}
+        }
       }
-    }
+    ],
+    "TOGGLE_TODO": [
+      {
+        "op": {
+          "update": {
+            "id": "$$id",
+            "data": {
+              "done": { "$not": "$$done" }
+            }
+          }
+        }
+      },
+      {
+        "tell": {
+          "target": "$$source",
+          "type": "SUCCESS",
+          "payload": {}
+        }
+      }
+    ]
   }
 }
 ```
 
-**Accessing Tool Results:**
-- Tool results are included in SUCCESS event payload as `result`
-- Access via `$$result.propertyName` in SUCCESS handlers
-- Example: `$$result.id`, `$$result.text`, `$$result.draggedItemId`
+**Accessing Op Results:**
+- Op results are stored in `process.lastToolResult` for subsequent actions in the same handler
+- Pass to `tell` payload via `$$result` (e.g. `"id": "$$result.id"`)
 
 ## Architecture
 
 ```
-@db tool (in state machine)
+op action (in process handler)
   ↓
-maia.do({op: ...})
+ProcessEngine._executeOp()
   ↓
 DataEngine.execute()
   ↓
-Operation Handler (query/create/update/delete/toggle/seed)
+Operation Handler (read/create/update/delete/...)
   ↓
-Backend (IndexedDB, CoJSON, etc.)
+MaiaDB / CoJSON
   ↓
-Database
+Storage
 ```
 
 **Key Components:**
@@ -223,40 +220,35 @@ Database
 
 ## Best Practices
 
-### 1. Tools Are Invoked by State Machines
+### 1. Use op in Process Handlers
 
-**✅ DO:** Invoke tools from state machine actions
+**✅ DO:** Use `op` in process handlers for create/update/delete
 
 ```json
 {
-  "idle": {
-    "on": {
-      "CREATE_TODO": {
-        "target": "creating",
-        "actions": [
-          {
-            "tool": "@db",
-            "payload": {
-              "op": "create",
-              "factory": "@factory/todos",
-              "data": {...}
-            }
-          }
-        ]
+  "CREATE_TODO": [
+    {
+      "op": {
+        "create": {
+          "factory": "°Maia/factory/data/todos",
+          "data": {...}
+        }
+      }
+    },
+    {
+      "tell": {
+        "target": "$$source",
+        "type": "SUCCESS",
+        "payload": {}
       }
     }
-  }
+  ]
 }
 ```
 
-**❌ DON'T:** Invoke tools directly from views or other engines
+**❌ DON'T:** Invoke maia.do() directly from views
 
-```javascript
-// ❌ Don't do this - tools should be invoked by state machines
-actor.actorEngine.toolEngine.execute('@db', actor, payload);
-```
-
-### 2. Define Query Objects in Context (Not State Machines)
+### 2. Define Query Objects in Context (Not Process Handlers)
 
 **✅ DO:** Define query objects directly in your context file (`.context.maia`)
 
@@ -275,26 +267,13 @@ actor.actorEngine.toolEngine.execute('@db', actor, payload);
 }
 ```
 
-**❌ DON'T:** Define queries in state machines or call read operations in tools
+**❌ DON'T:** Call read operations in process handlers — use query objects in context instead
 
-```json
-{
-  "entry": {
-    "tool": "@db",
-    "payload": {
-      "op": "read",
-      "factory": "co_zTodos123"
-      // Don't do this - define query objects in context instead!
-    }
-  }
-}
-```
+**Why:** Query objects in context automatically create reactive query stores. Process handlers should only handle mutations (create, update, delete), not queries.
 
-**Why:** Query objects in context automatically create reactive query stores that are subscribed to by ViewEngine. State machines should only handle mutations (create, update, delete), not queries.
+**See [Context](./04-context/) for complete documentation on query objects.**
 
-**See [Context - Reactive Data](./04-context.md#1-reactive-data-query-objects-) for complete documentation on query objects.**
+### 3. Always Use op for Mutations
 
-### 3. Always Use Operations for Mutations
-
-**✅ DO:** Use `@db` tool for all data changes (invoked by state machines)
+**✅ DO:** Use `op` for all data changes in process handlers
 

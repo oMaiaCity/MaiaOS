@@ -27,13 +27,12 @@
 **Bad:**
 ```json
 {
-  "states": {
-    "creating": {
-      "entry": {
-        "tool": "@db",  // ❌ Business logic in UI actor
-        "payload": { "op": "create", ... }
+  "handlers": {
+    "CREATE_BUTTON": [
+      {
+        "op": { "create": {...} }  // ❌ Business logic in UI actor
       }
-    }
+    ]
   }
 }
 ```
@@ -41,22 +40,16 @@
 **Good:**
 ```json
 {
-  "states": {
-    "idle": {
-      "on": {
-        "CREATE_BUTTON": {
-          "actions": [
-            {
-              "tool": "@core/publishMessage",  // ✅ Forward to service
-              "payload": {
-                "type": "CREATE_BUTTON",
-                "target": "actor_service_001"
-              }
-            }
-          ]
+  "handlers": {
+    "CREATE_BUTTON": [
+      {
+        "tell": {  // ✅ Forward to service
+          "target": "°Maia/actor/services/todos",
+          "type": "CREATE_BUTTON",
+          "payload": { "text": "$$value" }
         }
       }
-    }
+    ]
   }
 }
 ```
@@ -101,7 +94,7 @@
   "$factory": "@factory/actor",
   "$id": "@actor/vibe",
   "@label": "agent",
-  "state": "@state/monolithic-service"  // ❌ Everything in one service
+  "process": "@process/monolithic-service"  // ❌ Everything in one service
 }
 ```
 
@@ -142,10 +135,9 @@ Composite Actor
 **Bad:**
 ```json
 {
-  "tool": "@core/publishMessage",
-  "payload": {
-    "type": "UPDATE_INPUT",
-    // ❌ No target - broadcasts to all subscribers
+  "tell": {
+    "type": "UPDATE_INPUT"
+    // ❌ No target - tell requires target
   }
 }
 ```
@@ -153,10 +145,10 @@ Composite Actor
 **Good:**
 ```json
 {
-  "tool": "@core/publishMessage",
-  "payload": {
+  "tell": {
+    "target": "°Maia/actor/views/composite",  // ✅ Targeted messaging
     "type": "UPDATE_INPUT",
-    "target": "actor_composite_001"  // ✅ Targeted messaging
+    "payload": { "value": "$$value" }
   }
 }
 ```
@@ -235,9 +227,9 @@ App Service Actor
 - [ ] UI actors manage component-specific state
 - [ ] State is co-located with components that use it
 - [ ] No state duplication across actors
-- [ ] **State machines are single source of truth** - All context updates flow through state machines
-- [ ] **Use `updateContext` infrastructure action** - Always update context via state machine actions
-- [ ] **Handle errors in state machines** - Use ERROR event handlers to update error context
+- [ ] **Process handlers are single source of truth** - All context updates flow through process handlers
+- [ ] **Use `ctx` action** - Always update context via process handler actions
+- [ ] **Handle errors in process handlers** - Use ERROR handler to update error context
 
 ### ✅ Architecture
 
@@ -249,9 +241,9 @@ App Service Actor
 
 ### ✅ Messaging
 
-- [ ] Use targeted messaging (not broadcasting)
-- [ ] Forward UI events to service actors
-- [ ] Publish data events from service actors
+- [ ] Use targeted messaging with `tell` (specify target)
+- [ ] Forward UI events to service actors via `tell`
+- [ ] Service actors use `tell` to send SUCCESS/ERROR to `$$source`
 - [ ] Handle state locally when possible
 - [ ] Use message batching for performance
 

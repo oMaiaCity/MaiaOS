@@ -1,346 +1,130 @@
-# Tools (The Hands)
+# Tools and Messaging
 
-Think of tools as your actor's **hands** - they do the actual work!
+MaiaOS uses two mechanisms for "doing work":
 
-**Your state machine says:** "Now is the time to create a todo!"
+1. **`op` action** — Direct DataEngine calls from process handlers (create, update, delete, read)
+2. **`tell` action** — Fire-and-forget messages between actors
+3. **Service actors** — Actors with `function: true` that execute custom logic (e.g. @db for Spark operations)
 
-**The tool responds:** "Got it! Let me add that to the database for you."
+## Primary Pattern: `op` in Process Handlers
 
-## What Tools Do
-
-Tools are where the actual work happens:
-- Create a todo? That's a tool! (`@db` with `op: "create"`)
-- Delete an item? That's a tool! (`@db` with `op: "delete"`)
-- Send a message? That's a tool! (`@core/publishMessage`)
-
-Your actor can't do anything without tools - they're the only way to actually make things happen.
-
-## How It Works Together
-
-```
-State Machine (The Brain)  →  "Create a todo!"
-     ↓
-Tool (The Hands)          →  Actually creates it in the database
-     ↓
-Context (The Memory)      →  Updates with the new todo
-     ↓
-View (The Face)           →  Shows the new todo to the user
-```
-
-## Tool Structure
-
-Each tool consists of two files:
-
-### 1. Tool Definition (`.tool.maia`)
-AI-compatible metadata describing the tool:
+**Process handlers** invoke data operations directly via the `op` action. No tool indirection.
 
 ```json
 {
-  "$type": "tool",
-  "$id": "tool_db_001",
-  "name": "@db",
-  "description": "Unified database operation tool",
-  "parameters": {
-    "type": "object",
-    "properties": {
-      "factory": {
-        "type": "string",
-        "description": "Collection name (e.g., 'todos', 'notes')"
-      },
-      "data": {
-        "type": "object",
-        "description": "Entity data (without ID, auto-generated)"
+  "CREATE_TODO": [
+    {
+      "op": {
+        "create": {
+          "factory": "°Maia/factory/data/todos",
+          "data": { "text": "$$value", "done": false }
+        }
       }
     },
-    "required": ["factory", "data"]
-  }
-}
-```
-
-### 2. Tool Function (`.tool.js`)
-Executable JavaScript function (must return OperationResult):
-
-```javascript
-import { createSuccessResult, createErrorResult, createErrorEntry } from '@MaiaOS/operations';
-
-export default {
-  async execute(actor, payload) {
-    try {
-      const result = await someOperation(payload);
-      return createSuccessResult(result);
-    } catch (err) {
-      return createErrorResult(err.errors ?? [createErrorEntry('structural', err.message)]);
-    }
-  }
-};
-```
-
-**CRITICAL:** Tools return OperationResult; they do not throw for domain errors. State machines handle context updates via `updateContext` actions in SUCCESS handlers.
-
-## Tool Roundtrip Contract
-
-All tools return **OperationResult** (never throw for domain errors). StateEngine routes to inbox events.
-
-- **Success:** Return `createSuccessResult(data)`. StateEngine sends `SUCCESS` with `{ ...eventPayload, result: data }` (domain data only; envelope is consistent).
-- **Error:** Return `createErrorResult(errors)`. StateEngine sends `ERROR` with `{ errors }`.
-
-Tools that call external APIs use shared helpers (`getApiBaseUrl`, `toStructuredErrors`) from `core/api-helpers.js`. All ERROR inbox events use `{ errors: [{ type, message, path? }] }` (same as OperationResult).
-
-**Example:**
-```javascript
-import { createSuccessResult, createErrorResult, createErrorEntry } from '@MaiaOS/operations';
-
-if (!target) {
-  return createErrorResult([createErrorEntry('structural', 'Target is required')]);
-}
-const data = await doWork();
-return createSuccessResult(data);
-```
-
-## Available Tools
-
-### Database Module (`@db`)
-
-The `@db` tool is a unified database operation tool that handles all CRUD operations through an `op` parameter.
-
-#### Create Operation
-```json
-{
-  "tool": "@db",
-  "payload": {
-    "op": "create",
-    "factory": "co_z...",
-    "data": {"text": "Buy milk", "done": false}
-  }
-}
-```
-
-**Note:** The `factory` field must be a co-id (`co_z...`). Factory references (`@factory/todos`) are transformed to co-ids during seeding. In your source state machine files, you can use factory references, but they get transformed to co-ids before execution.
-
-**Tool Results:**
-The `@db` tool returns the created/updated/deleted record. Access the result in SUCCESS handlers via `$$result`:
-
-```json
-{
-  "creating": {
-    "entry": {
-      "tool": "@db",
-      "payload": { "op": "create", "factory": "@factory/todos", "data": {...} }
-    },
-    "on": {
-      "SUCCESS": {
-        "target": "idle",
-        "actions": [
-          {
-            "tool": "@core/publishMessage",
-            "payload": {
-              "type": "TODO_CREATED",
-              "payload": {
-                "id": "$$result.id",      // ← Tool result available here
-                "text": "$$result.text"
-              }
-            }
-          }
-        ]
+    {
+      "tell": {
+        "target": "$$source",
+        "type": "SUCCESS",
+        "payload": {}
       }
     }
-  }
+  ]
 }
 ```
 
-#### Update Operation
-```json
-{
-  "tool": "@db",
-  "payload": {
-    "op": "update",
-    "id": "co_z...",
-    "data": {"text": "Buy milk and eggs"}
-  }
-}
-```
+**Why `op` instead of tools?**
+- Simpler — Direct DataEngine call, no tool registry lookup
+- Faster — No indirection
+- Same validation — DataEngine validates against factory schemas
 
-**Note:** For `update` and `delete` operations, `schema` is not required. The schema is automatically extracted from the CoValue's headerMeta internally by the operation.
+## Inter-Actor Messaging: `tell`
 
-#### Delete Operation
-```json
-{
-  "tool": "@db",
-  "payload": {
-    "op": "delete",
-    "id": "co_z..."
-  }
-}
-```
-
-**Note:** For `update` and `delete` operations, `schema` is not required. The schema is automatically extracted from the CoValue's headerMeta internally by the operation.
-
-#### Toggle (Using Update with Expression)
-
-Toggle is not a separate operation. Use `update` with an expression:
+**Send messages to other actors** with the `tell` action. No `@core/publishMessage` tool.
 
 ```json
 {
-  "tool": "@db",
-  "payload": {
-    "op": "update",
-    "id": "co_z...",
-    "data": {
-      "done": { "$not": "$existing.done" }
+  "tell": {
+    "target": "°Maia/actor/services/todos",
+    "type": "TOGGLE_TODO",
+    "payload": {
+      "id": "$$id",
+      "done": "$$done"
     }
   }
 }
 ```
 
-**Note:** For `update` and `delete` operations, `schema` is not required - it's extracted from the CoValue's headerMeta automatically.
+**Common pattern:** UI actor receives click → `tell` to service actor → service actor runs `op` → `tell` SUCCESS back to `$$source`.
 
-#### Seed Operation
+## Service Actors (Function Execution)
+
+Some actors have **executable functions** (e.g. `@maia/actor/os/db`). When a process handler uses `{ "function": true }`, the actor's `execute(actor, payload)` runs.
+
+**Example:** Spark operations target `°Maia/actor/os/db` with event type `SPARK_OP`. The db service actor's function handles the payload and calls `maia.do()`.
+
+## Available Service Actors
+
+### Database Service Actor (`@maia/actor/os/db`)
+
+**Creator-facing alias:** `@db` (resolved by getActor fallback)
+
+Used when you need the **service actor pattern** (e.g. Spark operations that require account/peer context). For most CRUD, use `op` directly in your process handlers.
+
+**Spark operations** — Target the db service actor with type `SPARK_OP`:
+
 ```json
 {
-  "tool": "@db",
-  "payload": {
-    "op": "seed",
-    "factory": "@factory/todos",
-    "data": [
-      {"text": "First todo", "done": false},
-      {"text": "Second todo", "done": true}
-    ]
-  }
-}
-```
-
-### Spark Operations (via `@db`)
-
-Spark operations (createSpark, readSpark, updateSpark, deleteSpark, addSparkMember, etc.) use the consolidated `@db` tool. Target `°Maia/actor/os/db` with type `SPARK_OP`.
-
-#### Create Spark Operation
-```json
-{
-  "tool": "@maia/actor/os/db",
-  "payload": {
-    "op": "createSpark",
-    "name": "My Project"
-  }
-}
-```
-
-**What it does:**
-- Creates a child group owned by your °Maia spark's group
-- Creates a Spark CoMap with the name and group reference
-- Registers the spark in `account.sparks` CoMap
-- Automatically indexes the spark in the database
-
-**Tool Result:** Returns created spark object with `id`, `name`, and `group` properties.
-
-#### Read Spark Operation
-```json
-{
-  "tool": "@maia/actor/os/db",
-  "payload": {
-    "op": "readSpark"
-  }
-}
-```
-
-Read all sparks (returns reactive store):
-```json
-{
-  "tool": "@maia/actor/os/db",
-  "payload": {
-    "op": "readSpark",
-    "id": "co_z..."
-  }
-}
-```
-
-Read a specific spark by co-id.
-
-**Tool Result:** Returns reactive store(s) with spark data. Access via `$$result` in SUCCESS handler.
-
-#### Update Spark Operation
-```json
-{
-  "tool": "@maia/actor/os/db",
-  "payload": {
-    "op": "updateSpark",
-    "id": "co_z...",
-    "data": {
-      "name": "Updated Spark Name"
+  "tell": {
+    "target": "°Maia/actor/os/db",
+    "type": "SPARK_OP",
+    "payload": {
+      "op": "createSpark",
+      "name": "My Project"
     }
   }
 }
 ```
 
-**Note:** The `data` object can contain `name` and/or `group` properties.
+The db service actor's function executes `maia.do(payload)` and delivers SUCCESS/ERROR to the caller.
 
-#### Delete Spark Operation
+### Core Module
+
+- `@core/preventDefault` — Prevent default browser behavior on events (e.g. form submit, link click)
+
+## Context Updates: `ctx` (Not a Tool)
+
+**Context updates** use the `ctx` action in process handlers. Not a tool.
+
 ```json
 {
-  "tool": "@maia/actor/os/db",
-  "payload": {
-    "op": "deleteSpark",
-    "id": "co_z..."
+  "ctx": {
+    "newTodoText": "",
+    "error": null
   }
 }
 ```
 
-**What it does:**
-- Removes the spark from `account.sparks` registry
-- Deletes the Spark CoMap
-- Note: The associated group is not deleted (groups persist independently)
+## Flow Summary
 
-**Future Operations (to be added):**
-- `addMember` - Add member to spark's group
-- `removeMember` - Remove member from spark's group
-- `updatePermissions` - Update member permissions/roles
-- `getMembers` - List spark members
-
-### Core Module (`@core/*`)
-
-#### `@core/setViewMode`
-```json
-{
-  "tool": "@core/setViewMode",
-  "payload": {"viewMode": "kanban"}
-}
+```
+Process handler receives event
+  ↓
+op action → DataEngine (create/update/delete)
+  ↓
+On success: tell(SUCCESS) to $$source
+On failure: ProcessEngine delivers ERROR to $$source
+  ↓
+ctx action → Update context CoValue
+  ↓
+View re-renders (reactive subscriptions)
 ```
 
+## When to Use What
 
-### Drag-Drop Module (`@dragdrop/*`)
-
-#### `@dragdrop/start`
-```json
-{
-  "tool": "@dragdrop/start",
-  "payload": {
-    "id": "co_z..."
-  }
-}
-```
-
-**Note:** Schema is not required. The schema is automatically extracted from the CoValue's headerMeta internally by update/delete operations when needed.
-
-**Tool Result:** Returns drag state object. Update context in SUCCESS handler:
-
-```json
-{
-  "dragging": {
-    "entry": {
-      "tool": "@dragdrop/start",
-      "payload": { "id": "$$id" }
-    },
-    "on": {
-      "SUCCESS": {
-        "target": "dragging",
-        "actions": [
-          {
-            "updateContext": {
-              "draggedItemId": "$$result.draggedItemId",
-              "draggedItemIds": "$$result.draggedItemIds"
-            }
-          }
-        ]
-      }
-    }
-  }
-}
+| Need | Use |
+|------|-----|
+| Create/update/delete data | `op` in process handler |
+| Send message to another actor | `tell` in process handler |
+| Spark operations (createSpark, etc.) | `tell` to °Maia/actor/os/db with SPARK_OP |
+| Update context | `ctx` in process handler |
+| Prevent default (e.g. form submit) | `@core/preventDefault` (tool) |

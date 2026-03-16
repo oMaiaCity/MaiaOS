@@ -33,7 +33,7 @@
   "on": {
     "SWITCH_VIEW": {
       "actions": [
-        { "updateContext": { "currentView": "@list" } }
+        { "ctx": { "currentView": "@list" } }
       ]
     }
   }
@@ -57,7 +57,7 @@ app (composite)
 
 ## Message Passing Between Actors
 
-Actors communicate via **inbox costreams**, not props. Use the `sendEvent` action in state machines: `{"sendEvent":{"target":"°Maia/...","type":"EVENT_TYPE","payload":{...}}}`. Messages auto-route to the target's state machine.
+Actors communicate via **inbox costreams**, not props. Use the `tell` action in process handlers: `{"tell":{"target":"°Maia/...","type":"EVENT_TYPE","payload":{...}}}`. Messages auto-route to the target's inbox.
 
 ## Common Patterns
 
@@ -65,7 +65,7 @@ Actors communicate via **inbox costreams**, not props. Use the `sendEvent` actio
 
 **List with items:** `$each` with `items` and `template`.
 
-**View switching:** State machine `updateContext` sets `currentView` to `@list` or `@kanban`.
+**View switching:** Process handler `ctx` sets `currentView` to `@list` or `@kanban`.
 
 ## Headless Intent Pattern
 

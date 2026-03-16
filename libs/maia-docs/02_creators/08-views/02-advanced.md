@@ -74,13 +74,13 @@ window.actor = actor;
 console.log(actor.viewDef);
 
 // Trigger manual re-render
-actor.actorEngine.rerender(actor);
+actor.actorOps.rerender(actor.id);
 
 // Log events
-const originalSend = actor.actorEngine.stateEngine.send;
-actor.actorEngine.stateEngine.send = function(machineId, event, payload) {
+const originalSend = actor.actorOps.processEngine.send;
+actor.actorOps.processEngine.send = function(processId, event, payload) {
   console.log('Event sent:', event, payload);
-  return originalSend.call(this, machineId, event, payload);
+  return originalSend.call(this, processId, event, payload);
 };
 ```
 
