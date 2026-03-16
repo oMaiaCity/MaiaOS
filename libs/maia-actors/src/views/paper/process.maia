@@ -9,26 +9,6 @@
 					"selectedNoteId": "$$id"
 				}
 			}
-		],
-		"UPDATE_PAPER": [
-			{
-				"guard": {
-					"$ne": [
-						"$selectedNote",
-						null
-					]
-				}
-			},
-			{
-				"tell": {
-					"target": "$contentService",
-					"type": "UPDATE_PAPER",
-					"payload": {
-						"value": "$$value",
-						"coId": "$selectedNote.content.id"
-					}
-				}
-			}
 		]
 	}
 }

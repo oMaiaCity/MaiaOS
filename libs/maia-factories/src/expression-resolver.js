@@ -62,9 +62,9 @@ export async function resolveExpressions(payload, evaluator, data) {
 	const keys = Object.keys(payload)
 
 	// Check if this entire object is a DSL operation (like { $if: {...} })
-	// DSL operations have a single key starting with $ and should be evaluated directly
+	// DSL operations have a single key starting with $ (but NOT $$, which are dynamic key refs)
 	// JSON Schema keywords ($ref, $schema, etc.) are DATA, not expressions - recurse into value
-	if (keys.length === 1 && keys[0].startsWith('$')) {
+	if (keys.length === 1 && keys[0].startsWith('$') && !keys[0].startsWith('$$')) {
 		if (JSON_SCHEMA_KEYS.has(keys[0])) {
 			return { [keys[0]]: await resolveExpressions(payload[keys[0]], evaluator, data) }
 		}
@@ -74,18 +74,17 @@ export async function resolveExpressions(payload, evaluator, data) {
 	// Handle regular objects - recursively resolve all properties
 	const resolved = {}
 	for (const [key, value] of Object.entries(payload)) {
-		// If value is an object or array, check if it's a DSL operation first
+		const resolvedKey = key.startsWith('$$')
+			? String((await evaluator.evaluate(key, data)) ?? key)
+			: key
 		if (value && typeof value === 'object') {
 			if (evaluator.isDSLOperation(value)) {
-				// Evaluate DSL operation directly
-				resolved[key] = await evaluator.evaluate(value, data)
+				resolved[resolvedKey] = await evaluator.evaluate(value, data)
 			} else {
-				// Otherwise, recursively resolve it
-				resolved[key] = await resolveExpressions(value, evaluator, data)
+				resolved[resolvedKey] = await resolveExpressions(value, evaluator, data)
 			}
 		} else {
-			// Evaluate as MaiaScript expression (handles $key, $$key shortcuts)
-			resolved[key] = await evaluator.evaluate(value, data)
+			resolved[resolvedKey] = await evaluator.evaluate(value, data)
 		}
 	}
 
@@ -149,11 +148,9 @@ export function containsExpressions(payload) {
 	}
 
 	// Check all properties recursively
-	for (const [_key, value] of Object.entries(payload)) {
-		// Check if value contains expressions
-		if (containsExpressions(value)) {
-			return true
-		}
+	for (const [key, value] of Object.entries(payload)) {
+		if (key.startsWith('$$')) return true
+		if (containsExpressions(value)) return true
 	}
 
 	return false

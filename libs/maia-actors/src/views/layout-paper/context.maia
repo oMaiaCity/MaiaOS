@@ -5,10 +5,12 @@
 		"factory": "°Maia/factory/data/notes",
 		"map": {
 			"id": "id",
+			"title": "title",
 			"content": "$content"
 		}
 	},
 	"selectedNoteId": null,
+	"selectedNoteIds": {},
 	"selectedNote": {
 		"factory": "°Maia/factory/data/notes",
 		"filter": {
@@ -16,6 +18,7 @@
 		},
 		"map": {
 			"id": "id",
+			"title": "title",
 			"content": "$content"
 		}
 	},

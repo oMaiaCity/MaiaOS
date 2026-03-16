@@ -53,17 +53,48 @@
 			"cursor": "pointer",
 			"wordBreak": "break-word",
 			"overflow": "hidden",
-			"textOverflow": "ellipsis",
-			"display": "-webkit-box",
-			"WebkitLineClamp": "2",
-			"WebkitBoxOrient": "vertical",
 			":hover": {
 				"background": "rgba(255, 255, 255, 0.5)"
+			},
+			"data": {
+				"active": {
+					"true": {
+						"background": "rgba(255, 255, 255, 0.7)",
+						"boxShadow": "0 1px 3px rgba(0, 31, 51, 0.08)"
+					}
+				}
 			}
 		},
 		"listItemLabel": {
 			"fontSize": "inherit",
 			"color": "inherit"
+		},
+		"listItemContent": {
+			"display": "flex",
+			"flexDirection": "column",
+			"gap": "0.125rem",
+			"overflow": "hidden"
+		},
+		"listItemTitle": {
+			"fontWeight": "{typography.fontWeight.semibold}",
+			"color": "{colors.marineBlue}",
+			"fontSize": "0.8rem",
+			"whiteSpace": "nowrap",
+			"overflow": "hidden",
+			"textOverflow": "ellipsis"
+		},
+		"listItemTitle:empty": {
+			"display": "none"
+		},
+		"listItemPreview": {
+			"fontSize": "0.7rem",
+			"color": "rgba(0, 31, 51, 0.62)",
+			"display": "-webkit-box",
+			"WebkitLineClamp": "2",
+			"WebkitBoxOrient": "vertical",
+			"overflow": "hidden",
+			"whiteSpace": "normal",
+			"lineHeight": "1.35"
 		},
 		"mainArea": {
 			"flex": "1",

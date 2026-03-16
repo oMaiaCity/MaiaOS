@@ -2,13 +2,13 @@
 	"$factory": "°Maia/factory/meta",
 	"$id": "°Maia/actor/views/paper/interface",
 	"title": "°Maia/actor/views/paper/interface",
-	"description": "Paper view - receives SELECT_NOTE from layout, UPDATE_PAPER from inline edit",
+	"description": "Paper view - receives SELECT_NOTE from layout",
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {
 		"SELECT_NOTE": {
 			"type": "object",
-			"description": "Load note into editor (from layout-paper)",
+			"description": "Load note into detail view",
 			"properties": {
 				"id": {
 					"type": "string",
@@ -17,20 +17,6 @@
 			},
 			"required": [
 				"id"
-			],
-			"additionalProperties": false
-		},
-		"UPDATE_PAPER": {
-			"type": "object",
-			"description": "Update paper CoText content (forward to paper service)",
-			"properties": {
-				"value": {
-					"type": "string",
-					"description": "New text content"
-				}
-			},
-			"required": [
-				"value"
 			],
 			"additionalProperties": false
 		}

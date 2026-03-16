@@ -193,8 +193,13 @@ export class Evaluator {
 			const [arrayExpr, separator = ''] = Array.isArray(expression.$join)
 				? expression.$join
 				: [expression.$join, '']
-			const arr = await this.evaluate(arrayExpr, data, depth + 1)
-			return Array.isArray(arr) ? arr.join(separator) : (arr ?? '')
+			let arr = await this.evaluate(arrayExpr, data, depth + 1)
+			// Colist resolution may return { id, items } - use items when present
+			if (arr != null && typeof arr === 'object' && !Array.isArray(arr)) {
+				const items = arr.items
+				arr = Array.isArray(items) ? items : arr
+			}
+			return Array.isArray(arr) ? arr.join(separator ?? '') : arr != null ? String(arr) : ''
 		}
 
 		// Handle $map operation (map over array)

@@ -1,8 +1,8 @@
 {
 	"$factory": "°Maia/factory/vibe",
 	"$id": "°Maia/vibe/paper",
-	"name": "Paper",
-	"description": "Standalone collaborative paper / notes",
+	"name": "Docs",
+	"description": "Docs / Notes - collaborative notes",
 	"actor": "°Maia/actor/views/layout-paper",
 	"runtime": [
 		"browser"

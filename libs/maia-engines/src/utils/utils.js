@@ -18,7 +18,9 @@ export function isContentEditableActive() {
 /** Convert camelCase to kebab-case. Shared by StyleEngine and ViewEngine. */
 export function toKebabCase(str) {
 	if (!str || typeof str !== 'string') return str
-	return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
+	const kebab = str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
+	if (/^(webkit|moz|ms|o)-/.test(kebab)) return `-${kebab}`
+	return kebab
 }
 
 /** Check if element is inside root (traverses shadow boundaries; contains() may not in all browsers) */
