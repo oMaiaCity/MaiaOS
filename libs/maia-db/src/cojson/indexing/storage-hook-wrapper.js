@@ -9,7 +9,7 @@
  * - Any other write path
  */
 
-import { EXCEPTION_SCHEMAS } from '../../schemas/registry.js'
+import { EXCEPTION_FACTORIES } from '../../factories/registry.js'
 import * as groups from '../groups/groups.js'
 import {
 	extractSchemaFromMessage,
@@ -18,10 +18,10 @@ import {
 } from '../helpers/co-value-detection.js'
 import {
 	indexCoValue,
-	isSchemaCoValue,
-	registerSchemaCoValue,
+	isFactoryCoValue,
+	registerFactoryCoValue,
 	shouldIndexCoValue,
-} from './schema-index-manager.js'
+} from './factory-index-manager.js'
 
 // Track pending indexing operations to prevent duplicates
 const pendingIndexing = new Set()
@@ -63,15 +63,15 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 	function wrappedStore(msg, correctionCallback, originalStore) {
 		const coId = msg.id
 
-		// CRITICAL: ENFORCE that every co-value MUST have a schema in headerMeta.$schema
+		// CRITICAL: ENFORCE that every co-value MUST have a schema in headerMeta.$factory
 		// Exception: Groups and accounts are created by CoJSON without schemas, but we detect them by ruleset/type
 
 		// Use universal detection helper (consolidates all detection logic)
 		const detection = isAccountGroupOrProfile(msg, peer, coId)
 
-		// Groups, accounts, and profiles during account creation are allowed without headerMeta.$schema
+		// Groups, accounts, and profiles during account creation are allowed without headerMeta.$factory
 		if (!detection.isAccount && !detection.isGroup && !detection.isProfile) {
-			// For all other co-values, ENFORCE headerMeta.$schema
+			// For all other co-values, ENFORCE headerMeta.$factory
 			if (!msg.header || !msg.header.meta) {
 				// No header.meta at all - REJECT
 				if (typeof process !== 'undefined' && process.env?.DEBUG) {
@@ -80,7 +80,7 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 					}
 				}
 				throw new Error(
-					`[StorageHook] Co-value ${coId} missing header.meta. Every co-value MUST have headerMeta.$schema (except groups, accounts, and profiles during account creation).`,
+					`[StorageHook] Co-value ${coId} missing header.meta. Every co-value MUST have headerMeta.$factory (except groups, accounts, and profiles during account creation).`,
 				)
 			}
 
@@ -90,7 +90,7 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 			if (!schema && !detection.isException) {
 				// Throw error to prevent storage (co-value will not be stored)
 				throw new Error(
-					`[StorageHook] Co-value ${coId} missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, @metaSchema, and groups/accounts).`,
+					`[StorageHook] Co-value ${coId} missing $factory in headerMeta. Every co-value MUST have a schema (except @account, @group, @metaSchema, and groups/accounts).`,
 				)
 			}
 		}
@@ -104,19 +104,19 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 		}
 
 		// 1. Use universal skip validation helper (consolidates all skip logic)
-		// NOTE: We DON'T skip @metaSchema here - °Maia/schema/meta uses @metaSchema but should be registered!
-		// Let isSchemaCoValue() and shouldIndexCoValue() handle °Maia detection properly
+		// NOTE: We DON'T skip @metaSchema here - °Maia/factory/meta uses @metaSchema but should be registered!
+		// Let isFactoryCoValue() and shouldIndexCoValue() handle °Maia detection properly
 		let shouldSkipIndexing = shouldSkipValidation(msg, peer, coId)
 
 		// Don't skip @metaSchema for indexing (it should be registered)
 		if (shouldSkipIndexing) {
 			const schema = extractSchemaFromMessage(msg)
-			if (schema === EXCEPTION_SCHEMAS.META_SCHEMA) {
+			if (schema === EXCEPTION_FACTORIES.META_SCHEMA) {
 				shouldSkipIndexing = false // Allow @metaSchema to be indexed
 			}
 		}
 
-		// 2. Skip indexing if this is spark.os, schematas, indexes, or any index colist (they're internal)
+		// 2. Skip indexing if this is spark.os, factories registry, indexes, or any index colist (they're internal)
 		// Use cached osId (set when getSparkOsId is first called - don't trigger async here!)
 		if (!shouldSkipIndexing && peer.account) {
 			const osId = peer._cachedMaiaOsId
@@ -129,9 +129,9 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 				if (osCore && peer.isAvailable(osCore) && osCore.type === 'comap') {
 					const osContent = osCore.getCurrentContent?.()
 					if (osContent && typeof osContent.get === 'function') {
-						// Check if it's schematas registry
-						const schematasId = osContent.get('schematas')
-						if (coId === schematasId) {
+						// Check if it's factories registry
+						const factoriesId = osContent.get('factories')
+						if (coId === factoriesId) {
 							shouldSkipIndexing = true
 						}
 
@@ -182,7 +182,7 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 				// broke indexing entirely: spark.os is often not loaded when the first todo/message
 				// is stored (getSparkOsId only loads registries->sparks->spark, not spark.os itself).
 				// indexCoValue's shouldIndexCoValue/isInternalCoValue will correctly skip internal
-				// co-values (spark.os, schematas, indexes). Data co-values (todos, messages) must be indexed.
+				// co-values (spark.os, factories registry, indexes). Data co-values (todos, messages) must be indexed.
 				// Skipping here caused spark.os.indexes to stay empty since the registry refactor.
 			}
 		}
@@ -233,10 +233,10 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 						return
 					}
 
-					// Schema co-value - auto-register in spark.os.schematas
-					const isSchema = await isSchemaCoValue(peer, updatedCoValueCore)
+					// Schema co-value - auto-register in spark.os.factories
+					const isSchema = await isFactoryCoValue(peer, updatedCoValueCore)
 					if (isSchema) {
-						await registerSchemaCoValue(peer, updatedCoValueCore)
+						await registerFactoryCoValue(peer, updatedCoValueCore)
 						return
 					}
 
@@ -253,9 +253,16 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 					if (typeof process !== 'undefined' && process.env?.DEBUG)
 						console.log('[DEBUG storage-hook] indexed coId=', coId)
 				} catch (error) {
-					if (typeof process !== 'undefined' && process.env?.DEBUG)
-						console.error('[DEBUG storage-hook] indexing failed coId=', coId, error)
-					console.error('[StorageHook] Indexing failed', coId, error)
+					const isFactoryCompilationError = error?.message?.includes('Failed to compile factory')
+					if (isFactoryCompilationError) {
+						// Legacy/invalid schemas in DB - skip logging (expected for stale data)
+						if (typeof process !== 'undefined' && process.env?.DEBUG)
+							console.error('[DEBUG storage-hook] indexing skipped (factory compile failed) coId=', coId)
+					} else {
+						if (typeof process !== 'undefined' && process.env?.DEBUG)
+							console.error('[DEBUG storage-hook] indexing failed coId=', coId, error)
+						console.error('[StorageHook] Indexing failed', coId, error)
+					}
 				} finally {
 					pendingIndexing.delete(coId)
 				}

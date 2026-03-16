@@ -124,7 +124,7 @@ The vibe manifest (`manifest.vibe.maia`) defines the app metadata and entry poin
 **Structure:**
 ```json
 {
-  "$schema": "@schema/vibe",
+  "$factory": "@factory/vibe",
   "$id": "@vibe/todos",
   "name": "Todo List",
   "description": "A complete todo list application",
@@ -133,7 +133,7 @@ The vibe manifest (`manifest.vibe.maia`) defines the app metadata and entry poin
 ```
 
 **Fields:**
-- `$schema` - Schema reference (`@schema/vibe`)
+- `$factory` - Factory reference (`@factory/vibe`)
 - `$id` - Unique vibe identifier (`@vibe/todos`)
 - `name` - Display name for marketplace
 - `description` - Brief description
@@ -348,7 +348,7 @@ my-vibe/
 **`manifest.vibe.maia`:**
 ```json
 {
-  "$schema": "@schema/vibe",
+  "$factory": "@factory/vibe",
   "$id": "@vibe/my-vibe",
   "name": "My Vibe",
   "description": "A description of my vibe",

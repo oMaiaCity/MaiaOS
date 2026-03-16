@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/actor",
+	"$factory": "°Maia/factory/actor",
 	"$id": "°Maia/actor/views/input/for-list",
 	"@label": "@maia/actor/views/input/for-list",
 	"context": "°Maia/actor/views/input/for-list/context",

@@ -1,10 +1,10 @@
-import { loadSchemaAndValidate } from '@MaiaOS/schemata/validation.helper'
+import { loadFactoryAndValidate } from '@MaiaOS/factories/validation.helper'
 import {
-	assertSchemaValidForCreate,
-	createSchemaMeta,
-	getAllSchemas,
-	isExceptionSchema,
-} from '../../schemas/registry.js'
+	assertFactoryValidForCreate,
+	createFactoryMeta,
+	getAllFactories,
+	isExceptionFactory,
+} from '../../factories/registry.js'
 
 /**
  * Create a generic CoList with MANDATORY schema validation
@@ -13,7 +13,7 @@ import {
  *
  * @param {RawAccount|RawGroup} accountOrGroup - Account (resolves °Maia spark group) or Group
  * @param {Array} init - Initial items (can be primitives or co-ids)
- * @param {string} schemaName - Schema name for headerMeta.$schema (REQUIRED)
+ * @param {string} factoryName - Schema name for headerMeta.$schema (REQUIRED)
  * @param {LocalNode} [node] - LocalNode instance (required if accountOrGroup is account)
  * @returns {Promise<RawCoList>} The created CoList
  * @throws {Error} If schema is missing or data validation fails
@@ -21,7 +21,7 @@ import {
 export async function createCoList(
 	accountOrGroup,
 	init = [],
-	schemaName,
+	factoryName,
 	_node = null,
 	dbEngine = null,
 ) {
@@ -48,19 +48,19 @@ export async function createCoList(
 		}
 		// If profileId is null/undefined, it's a regular group, use it as-is
 	}
-	assertSchemaValidForCreate(schemaName, 'createCoList')
+	assertFactoryValidForCreate(factoryName, 'createCoList')
 
 	// Validate data against schema BEFORE creating CoValue
 	// STRICT: Always validate using runtime schema from database (no fallbacks, no legacy hacks)
-	if (!isExceptionSchema(schemaName)) {
+	if (!isExceptionFactory(factoryName)) {
 		// Use consolidated universal validation function (single source of truth)
-		await loadSchemaAndValidate(dbEngine?.peer || null, schemaName, init, 'createCoList', {
+		await loadFactoryAndValidate(dbEngine?.peer || null, factoryName, init, 'createCoList', {
 			dataEngine: dbEngine,
-			getAllSchemas,
+			getAllFactories,
 		})
 	}
 
-	const meta = createSchemaMeta(schemaName)
+	const meta = createFactoryMeta(factoryName)
 	const colist = group.createList(init, meta)
 	return colist
 }

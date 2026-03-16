@@ -53,7 +53,7 @@ const dbEngine = new DataEngine(backend);
 // Use read() API (always returns reactive store)
 const store = await dbEngine.execute({
   op: 'read',
-  schema: 'co_zMySchema123'  // Schema co-id (co_z...)
+  factory: 'co_zMySchema123'  // Factory co-id (co_z...)
 });
 
 // Store has current value

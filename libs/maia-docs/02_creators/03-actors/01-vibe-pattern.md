@@ -16,7 +16,7 @@ Every vibe's entry point is an **vibes service actor**:
 **`manifest.vibe.maia`:**
 ```json
 {
-  "$schema": "@schema/vibe",
+  "$factory": "@factory/vibe",
   "$id": "@vibe/todos",
   "name": "Todo List",
   "actor": "@actor/vibe"

@@ -10,7 +10,7 @@ import {
 	createErrorEntry,
 	createErrorResult,
 	createSuccessResult,
-} from '@MaiaOS/schemata/operation-result'
+} from '@MaiaOS/factories/operation-result'
 import { splitGraphemes } from 'unicode-segmenter/grapheme'
 
 async function resolveCodeCoId(os, actorRef) {

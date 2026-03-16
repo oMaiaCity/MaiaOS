@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/context",
+	"$factory": "°Maia/factory/context",
 	"$id": "°Maia/actor/views/input/for-chat/context",
 	"targetActor": "@messages",
 	"inputPlaceholder": "Type your message...",

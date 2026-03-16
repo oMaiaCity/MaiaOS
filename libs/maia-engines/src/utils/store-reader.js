@@ -14,7 +14,7 @@ export async function readStore(dataEngine, coId) {
 				`Refs must be transformed to co-ids during seeding. Run with PEER_FRESH_SEED=true to re-seed.`,
 		)
 	}
-	const schemaCoId = await dataEngine.peer.resolve({ fromCoValue: coId }, { returnType: 'coId' })
-	if (!schemaCoId) return null
-	return dataEngine.execute({ op: 'read', schema: schemaCoId, key: coId })
+	const factoryCoId = await dataEngine.peer.resolve({ fromCoValue: coId }, { returnType: 'coId' })
+	if (!factoryCoId) return null
+	return dataEngine.execute({ op: 'read', factory: factoryCoId, key: coId })
 }

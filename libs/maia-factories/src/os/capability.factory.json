@@ -1,0 +1,46 @@
+{
+	"$factory": "°Maia/factory/meta",
+	"$id": "°Maia/factory/os/capability",
+	"title": "Capability",
+	"description": "Single capability grant. sub×cmd×pol. Stored in spark.os.capabilities CoStream.",
+	"cotype": "comap",
+	"indexing": false,
+	"properties": {
+		"sub": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "Subject (account co-id)"
+		},
+		"cmd": {
+			"type": "string",
+			"pattern": "^/[a-z0-9/]*$",
+			"description": "UCAN Command (e.g. /llm/chat)"
+		},
+		"pol": {
+			"type": "array",
+			"description": "UCAN Policy; [] for no constraints"
+		},
+		"exp": {
+			"type": "integer",
+			"description": "Expiry Unix seconds"
+		},
+		"iss": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "Issuer (optional)"
+		},
+		"nbf": {
+			"type": "integer",
+			"description": "Not before (optional)"
+		},
+		"nonce": {
+			"type": "string",
+			"description": "Uniqueness (optional)"
+		},
+		"meta": {
+			"type": "object",
+			"description": "Extensions (optional)"
+		}
+	},
+	"required": ["sub", "cmd", "pol", "exp"]
+}

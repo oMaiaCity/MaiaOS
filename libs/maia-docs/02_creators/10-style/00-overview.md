@@ -31,7 +31,7 @@ Create a file named `{name}.style.maia`:
 
 ```json
 {
-  "$schema": "@schema/style",
+  "$factory": "@factory/style",
   "$id": "@style/todo",
   
   "components": {
@@ -81,7 +81,7 @@ In your actor definition:
 
 ```json
 {
-  "$schema": "@schema/actor",
+  "$factory": "@factory/actor",
   "$id": "@actor/todo",
   "brand": "@style/brand",  // ← Required: shared design system
   "style": "@style/todo",   // ← Optional: actor-specific overrides

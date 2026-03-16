@@ -25,7 +25,7 @@ import {
 import * as aiModule from '@MaiaOS/engines/modules/ai.module.js'
 import * as coreModule from '@MaiaOS/engines/modules/core.module.js'
 import * as dbModule from '@MaiaOS/engines/modules/db.module.js'
-import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper'
+import { validateAgainstFactoryOrThrow } from '@MaiaOS/factories/validation.helper'
 
 // Store pre-loaded modules for registry
 const preloadedModules = {
@@ -122,7 +122,7 @@ export class MaiaOS {
 						allCoValues.push({
 							id: coId,
 							type: 'loading',
-							schema: null,
+							factory: null,
 							headerMeta: null,
 							keys: 'N/A',
 							content: null,
@@ -134,7 +134,7 @@ export class MaiaOS {
 					const content = coValueCore.getCurrentContent()
 					const header = coValueCore.verified?.header
 					const headerMeta = header?.meta || null
-					const schema = headerMeta?.$schema || null
+					const schema = headerMeta?.$factory || null
 					const createdAt = header?.createdAt || null
 
 					let keysCount = 'N/A'
@@ -189,7 +189,7 @@ export class MaiaOS {
 					allCoValues.push({
 						id: coId,
 						type: type,
-						schema: schema,
+						factory: schema,
 						headerMeta: headerMeta,
 						keys: keysCount,
 						content: specialContent || content,
@@ -199,7 +199,7 @@ export class MaiaOS {
 					allCoValues.push({
 						id: coId,
 						type: 'error',
-						schema: null,
+						factory: null,
 						headerMeta: null,
 						keys: 'N/A',
 						content: null,
@@ -291,8 +291,8 @@ export class MaiaOS {
 		await MaiaOS._initializeDatabase(os, config)
 
 		// Set schema resolver for runtime validation (engines need dataEngine for schema lookups)
-		const { setSchemaResolver } = await import('@MaiaOS/schemata/validation.helper')
-		setSchemaResolver({ dataEngine: os.dataEngine })
+		const { setFactoryResolver } = await import('@MaiaOS/factories/validation.helper')
+		setFactoryResolver({ dataEngine: os.dataEngine })
 
 		// Initialize engines
 		MaiaOS._initializeEngines(os, config)
@@ -460,7 +460,7 @@ export class MaiaOS {
 			)
 			const store = await this.actorEngine.dataEngine.execute({
 				op: 'read',
-				schema: actorSchemaCoId,
+				factory: actorSchemaCoId,
 				key: actorCoId,
 			})
 			actorConfig = store.value
@@ -527,7 +527,7 @@ export class MaiaOS {
 
 		const registriesStore = await this.dataEngine.execute({
 			op: 'read',
-			schema: null,
+			factory: null,
 			key: registriesId,
 		})
 		const registriesData = registriesStore.value
@@ -545,7 +545,7 @@ export class MaiaOS {
 		// Step 3: Read registries.sparks CoMap
 		const sparksStore = await this.dataEngine.execute({
 			op: 'read',
-			schema: sparksId,
+			factory: sparksId,
 			key: sparksId,
 		})
 
@@ -578,7 +578,7 @@ export class MaiaOS {
 		// Step 5: Read spark CoMap to get spark.vibes (by co-id)
 		const sparkStore = await this.dataEngine.execute({
 			op: 'read',
-			schema: null,
+			factory: null,
 			key: sparkCoId,
 		})
 
@@ -598,7 +598,7 @@ export class MaiaOS {
 		// Step 6: Read spark.vibes CoMap
 		const vibesStore = await this.dataEngine.execute({
 			op: 'read',
-			schema: vibesId,
+			factory: vibesId,
 			key: vibesId,
 		})
 
@@ -645,19 +645,19 @@ export class MaiaOS {
 
 		const vibeStore = await this.dataEngine.execute({
 			op: 'read',
-			schema: null,
+			factory: null,
 			key: vibeCoId,
 		})
 
-		const schemaStore = await this.dataEngine.execute({
-			op: 'schema',
+		const factoryStore = await this.dataEngine.execute({
+			op: 'factory',
 			fromCoValue: vibeCoId,
 		})
-		const vibeSchemaCoId = schemaStore.value?.$id || vibeStore.value?.$schema
+		const vibeSchemaCoId = factoryStore.value?.$id || vibeStore.value?.$factory
 
 		if (!vibeSchemaCoId) {
 			throw new Error(
-				`[Kernel] Failed to extract schema co-id from vibe ${vibeCoId}. Vibe must have $schema in headerMeta.`,
+				`[Kernel] Failed to extract schema co-id from vibe ${vibeCoId}. Vibe must have $factory in headerMeta.`,
 			)
 		}
 
@@ -668,16 +668,16 @@ export class MaiaOS {
 			try {
 				await this.dataEngine.execute({
 					op: 'read',
-					schema: null,
+					factory: null,
 					key: vibeCoId,
 				})
 			} catch (_err) {}
 			throw new Error(`Vibe not found in database: ${vibeId} (co-id: ${vibeCoId})`)
 		}
 
-		const schema = schemaStore.value
+		const schema = factoryStore.value
 		if (schema) {
-			await validateAgainstSchemaOrThrow(schema, vibe, 'vibe')
+			await validateAgainstFactoryOrThrow(schema, vibe, 'vibe')
 		}
 
 		const actorCoId = vibe.actor
@@ -722,14 +722,14 @@ export class MaiaOS {
 				clearTimeout(timeout)
 				if (unsubscribe) unsubscribe()
 
-				if (state.error || !state.schemaCoId) {
+				if (state.error || !state.factoryCoId) {
 					reject(
 						new Error(
-							`[Kernel] Failed to extract schema co-id from actor ${actorCoId}: ${state.error || 'Schema not found'}`,
+							`[Kernel] Failed to extract factory co-id from actor ${actorCoId}: ${state.error || 'Factory not found'}`,
 						),
 					)
 				} else {
-					resolve(state.schemaCoId)
+					resolve(state.factoryCoId)
 				}
 			})
 		})
@@ -737,7 +737,7 @@ export class MaiaOS {
 		// Verify actor exists in database (using read operation with reactive store)
 		const actorStore = await this.dataEngine.execute({
 			op: 'read',
-			schema: actorSchemaCoId,
+			factory: actorSchemaCoId,
 			key: actorCoId,
 		})
 		const actorExists = actorStore.value

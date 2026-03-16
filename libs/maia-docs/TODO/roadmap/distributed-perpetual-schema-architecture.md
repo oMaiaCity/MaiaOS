@@ -55,7 +55,7 @@ Instead of tracking schema history in a separate CoStream and manually managing 
 │ TodoSchema (co_zTodoSchema)                                 │
 │ ├── definition: {title, done, priority}  ← Mutable         │
 │ ├── versions: co_zTodoSchemaVersions                        │
-│ ├── $schemaName: "todo"                                     │
+│ ├── $factoryName: "todo"                                     │
 │ └── $createdAt: 1705766400000                               │
 └─────────────────────────────────────────────────────────────┘
                            ↓ References
@@ -175,7 +175,7 @@ const todoSchema = account.createMap({
     required: ["title"],
     additionalProperties: false
   },
-  $schemaName: "todo",
+  $factoryName: "todo",
   $createdAt: Date.now()
 }, {
   $schema: "SchemaDefinition"
@@ -198,7 +198,7 @@ const v1Branch = await node.checkoutBranch(
 
 // Copy definition to branch (immutable snapshot)
 v1Branch.set("definition", todoSchema.get("definition"));
-v1Branch.set("$schemaName", "todo");
+v1Branch.set("$factoryName", "todo");
 v1Branch.set("$createdAt", timestamp);
 
 // 4. Record version in CoStream
@@ -210,8 +210,8 @@ versionsStream.push({
   description: "Initial TODO schema"
 });
 
-// 5. Register in schemata
-account.os.schemata.set("todo", todoSchema.id);
+// 5. Register in factories
+account.os.factories.set("todo", todoSchema.id);
 
 console.log(`✅ TODO schema created: ${todoSchema.id}`);
 ```
@@ -221,7 +221,7 @@ console.log(`✅ TODO schema created: ${todoSchema.id}`);
 TodoSchema (co_zTodoSchema)
 ├── definition: {title, done}
 ├── versions: co_zTodoSchemaVersions
-├── $schemaName: "todo"
+├── $factoryName: "todo"
 └── $createdAt: 1705766400000
 
 Native Branch:
@@ -302,7 +302,7 @@ const v2Branch = await node.checkoutBranch(
 
 // Copy new definition to branch (immutable snapshot)
 v2Branch.set("definition", newDefinition);
-v2Branch.set("$schemaName", "todo");
+v2Branch.set("$factoryName", "todo");
 v2Branch.set("$createdAt", timestamp);
 
 // 5. Record version in CoStream
@@ -645,7 +645,7 @@ const BuiltInTransforms = {
 **Goal**: Add versions CoStream and initial branch to existing schemas
 
 **Changes**:
-1. Update `schema.migration.js`:
+1. Update `factory.migration.js`:
    - Create versions CoStream for each schema
    - Create initial version branch via `node.checkoutBranch()`
    - Record version entry in CoStream

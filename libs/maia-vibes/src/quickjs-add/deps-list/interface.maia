@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/meta",
+	"$factory": "°Maia/factory/meta",
 	"$id": "°Maia/quickjs-add/interface/deps-list",
 	"title": "°Maia/quickjs-add/interface/deps-list",
 	"description": "Read-only list of aven dependency actors",

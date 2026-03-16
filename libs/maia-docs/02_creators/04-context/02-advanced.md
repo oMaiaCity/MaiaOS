@@ -43,7 +43,7 @@ actor.actorEngine.stateEngine.send(
 // Read any CoValue as ReactiveStore
 const store = await dbEngine.execute({
   op: 'read',
-  schema: 'co_zTodos123',  // Schema co-id
+  factory: 'co_zTodos123',  // Factory co-id
   key: 'co_zItem456'       // Item co-id (optional)
 });
 
@@ -106,7 +106,7 @@ Generic context field update (infrastructure, not a tool):
 - **Don't store UI elements** - No DOM references
 - **Don't store functions** - Only JSON-serializable data
 - **Don't mix concerns** - Separate data from UI state
-- **Don't use reserved keys** - Avoid `$schema`, `$id`, `@actors`, `inbox`, etc.
+- **Don't use reserved keys** - Avoid `$factory`, `$id`, `@actors`, `inbox`, etc.
 - **Don't compute in views** - All computation happens in state machine
 - **Don't hardcode strings in views** - Extract all UI text to context variables
 - **Don't use specific names** - Avoid `todos`, `allMessages` - use generic `list`, `messages` instead
@@ -128,7 +128,7 @@ Generic context field update (infrastructure, not a tool):
 ```json
 {
   "list": {
-    "schema": "@schema/todos"
+    "factory": "@factory/todos"
   },
   "toggleButtonText": "✓",
   "deleteButtonText": "✕"
@@ -209,17 +209,17 @@ Generic context field update (infrastructure, not a tool):
   "context": {
     // Reactive data (query objects) - use generic names
     "list": {
-      "schema": "@schema/todos",
+      "factory": "@factory/todos",
       "filter": null
     },
     
     // Derived/filtered reactive data
     "listTodo": {
-      "schema": "@schema/todos",
+      "factory": "@factory/todos",
       "filter": { "done": false }
     },
     "listDone": {
-      "schema": "@schema/todos",
+      "factory": "@factory/todos",
       "filter": { "done": true }
     },
     

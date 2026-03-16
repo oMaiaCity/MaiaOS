@@ -4,7 +4,6 @@
  * Also includes standalone UI actors (e.g. placeholder).
  */
 
-import { getAllSchemas } from '@MaiaOS/schemata'
 import aiChatActor from './os/ai/actor.maia'
 import aiChatInterface from './os/ai/interface.maia'
 import aiChatProcess from './os/ai/process.maia'
@@ -15,10 +14,6 @@ import osMessagesActor from './os/messages/actor.maia'
 import osMessagesContext from './os/messages/context.maia'
 import osMessagesInterface from './os/messages/interface.maia'
 import osMessagesProcess from './os/messages/process.maia'
-import schemaActor from './os/schema/actor.maia'
-import schemaContext from './os/schema/context.maia'
-import osSchemaInterface from './os/schema/interface.maia'
-import schemaProcess from './os/schema/process.maia'
 import computeMessageNamesActor from './services/names/actor.maia'
 import computeMessageNamesInterface from './services/names/interface.maia'
 import computeMessageNamesProcess from './services/names/process.maia'
@@ -105,26 +100,7 @@ import listInterface from './views/list/interface.maia'
 import listProcess from './views/list/process.maia'
 import listStyle from './views/list/style.maia'
 import listView from './views/list/view.maia'
-import listDetailDetailActorsActor from './views/list-detail/detail-actors.actor.maia'
-import listDetailDetailActorsContext from './views/list-detail/detail-actors.context.maia'
-import listDetailDetailActorsInterface from './views/list-detail/detail-actors.interface.maia'
-import listDetailDetailActorsProcess from './views/list-detail/detail-actors.process.maia'
-import listDetailDetailActorsView from './views/list-detail/detail-actors-view.maia'
-import listDetailDetailSchemasActor from './views/list-detail/detail-schemas.actor.maia'
-import listDetailDetailSchemasContext from './views/list-detail/detail-schemas.context.maia'
-import listDetailDetailSchemasInterface from './views/list-detail/detail-schemas.interface.maia'
-import listDetailDetailSchemasProcess from './views/list-detail/detail-schemas.process.maia'
-import listDetailDetailSchemasView from './views/list-detail/detail-schemas-view.maia'
-import listDetailForActorsActor from './views/list-detail/for-actors.actor.maia'
-import listDetailForActorsContext from './views/list-detail/for-actors.context.maia'
-import listDetailForActorsInterface from './views/list-detail/for-actors.interface.maia'
-import listDetailForActorsProcess from './views/list-detail/for-actors.process.maia'
-import listDetailForSchemasActor from './views/list-detail/for-schemas.actor.maia'
-import listDetailForSchemasContextBase from './views/list-detail/for-schemas.context.maia'
-import listDetailForSchemasInterface from './views/list-detail/for-schemas.interface.maia'
-import listDetailForSchemasProcess from './views/list-detail/for-schemas.process.maia'
 import listDetailStyle from './views/list-detail/style.maia'
-import listDetailView from './views/list-detail/view.maia'
 import logsActor from './views/logs/actor.maia'
 import logsContext from './views/logs/context.maia'
 import logsInterface from './views/logs/interface.maia'
@@ -158,28 +134,12 @@ import layoutSparksInterface from './views/sparks/interface.maia'
 import layoutSparksProcess from './views/sparks/process.maia'
 import sparksStyle from './views/sparks/style.maia'
 import sparksView from './views/sparks/view.maia'
-import layoutCreatorActor from './views/tabs/creator.actor.maia'
-import layoutCreatorContext from './views/tabs/creator.context.maia'
-import layoutCreatorInterface from './views/tabs/creator.interface.maia'
 import tabsProcess from './views/tabs/process.maia'
 import tabsStyle from './views/tabs/style.maia'
 import layoutTodosActor from './views/tabs/todos.actor.maia'
 import layoutTodosContext from './views/tabs/todos.context.maia'
 import layoutTodosInterface from './views/tabs/todos.interface.maia'
 import tabsView from './views/tabs/view.maia'
-
-/** Build listItems from getAllSchemas() for list-detail/for-schemas */
-function buildListDetailSchemasContext() {
-	const allSchemas = getAllSchemas()
-	const listItems = Object.entries(allSchemas).map(([id, def]) => ({
-		id,
-		label: id.startsWith('°Maia/schema/') ? id.replace('°Maia/schema/', '') : id,
-		definition: JSON.stringify(def, null, 2),
-	}))
-	return { ...listDetailForSchemasContextBase, listItems }
-}
-
-const listDetailForSchemasContext = buildListDetailSchemasContext()
 
 /** Map role to folder name for consistent °Maia/actor/{folder} $ids */
 export const ROLE_TO_FOLDER = {
@@ -214,7 +174,7 @@ function toActorConfig(raw, inboxId) {
 	if (!label || !iface || !processRef) return null
 	const folder = ROLE_TO_FOLDER[label] ?? label.replace('@', '').replace(/\//g, '-')
 	return {
-		$schema: '°Maia/schema/actor',
+		$schema: '°Maia/factory/actor',
 		$id: `°Maia/actor/${folder}`,
 		'@label': label,
 		interface: iface,
@@ -238,7 +198,7 @@ function deriveInboxId(actorId) {
 /** Build minimal inbox config for seeding - cotype comes from schema. */
 function toInboxConfig(inboxId) {
 	return {
-		$schema: '°Maia/schema/inbox',
+		$factory: '°Maia/factory/inbox',
 		$id: inboxId,
 	}
 }
@@ -281,7 +241,6 @@ export function getSeedConfig() {
 		osMessagesInterface,
 		paperActorInterface,
 		profileImageServiceInterface,
-		osSchemaInterface,
 		sandboxedAddInterface,
 		updateWasmCodeInterface,
 		sparkActorInterface,
@@ -293,10 +252,6 @@ export function getSeedConfig() {
 		inputForListInterface,
 		inputForSparksInterface,
 		listInterface,
-		listDetailForActorsInterface,
-		listDetailForSchemasInterface,
-		listDetailDetailActorsInterface,
-		listDetailDetailSchemasInterface,
 		logsInterface,
 		messagesInterface,
 		infoCardInterface,
@@ -305,7 +260,6 @@ export function getSeedConfig() {
 		paperInterface,
 		placeholderInterface,
 		layoutSparksInterface,
-		layoutCreatorInterface,
 		layoutTodosInterface,
 		addressbookHumansGridInterface,
 		addressbookAvensGridInterface,
@@ -316,34 +270,6 @@ export function getSeedConfig() {
 
 	// View actors (UI components)
 	const viewActors = [
-		{
-			actor: listDetailDetailActorsActor,
-			context: listDetailDetailActorsContext,
-			view: listDetailDetailActorsView,
-			process: listDetailDetailActorsProcess,
-			style: listDetailStyle,
-		},
-		{
-			actor: listDetailDetailSchemasActor,
-			context: listDetailDetailSchemasContext,
-			view: listDetailDetailSchemasView,
-			process: listDetailDetailSchemasProcess,
-			style: listDetailStyle,
-		},
-		{
-			actor: listDetailForActorsActor,
-			context: listDetailForActorsContext,
-			view: listDetailView,
-			process: listDetailForActorsProcess,
-			style: listDetailStyle,
-		},
-		{
-			actor: listDetailForSchemasActor,
-			context: listDetailForSchemasContext,
-			view: listDetailView,
-			process: listDetailForSchemasProcess,
-			style: listDetailStyle,
-		},
 		{
 			actor: placeholderActor,
 			context: placeholderContext,
@@ -364,13 +290,6 @@ export function getSeedConfig() {
 			view: listView,
 			process: listProcess,
 			style: listStyle,
-		},
-		{
-			actor: layoutCreatorActor,
-			context: layoutCreatorContext,
-			view: tabsView,
-			process: tabsProcess,
-			style: tabsStyle,
 		},
 		{
 			actor: layoutSparksActor,
@@ -496,6 +415,7 @@ export function getSeedConfig() {
 		if (process?.$id) uiProcesses[process.$id] = process
 		if (style?.$id) uiStyles[style.$id] = style
 	}
+	if (listDetailStyle?.$id) uiStyles[listDetailStyle.$id] = listDetailStyle
 
 	// Service actors (messages, logs, list, detail, paper, todos)
 	const serviceActors = [
@@ -503,11 +423,6 @@ export function getSeedConfig() {
 			actor: todosActor,
 			context: todosContext,
 			process: todosProcess,
-		},
-		{
-			actor: schemaActor,
-			context: schemaContext,
-			process: schemaProcess,
 		},
 		{
 			actor: sparkActor,

@@ -1,11 +1,11 @@
 {
-	"$schema": "°Maia/schema/context",
+	"$factory": "°Maia/factory/context",
 	"$id": "°Maia/actor/views/paper/context",
 	"contentService": "@contentService",
 	"paperService": "@paperService",
 	"selectedNoteId": null,
 	"selectedNote": {
-		"schema": "°Maia/schema/data/notes",
+		"factory": "°Maia/factory/data/notes",
 		"filter": {
 			"id": "$selectedNoteId"
 		},

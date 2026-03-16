@@ -57,7 +57,7 @@ When you create a child group, the °Maia spark's group becomes its admin. The c
 
 Groups are powerful, but they're low-level. For users building applications, we needed something more intuitive. Enter **Sparks**.
 
-A Spark is a CoMap with schema `@schema/data/spark` that references a group:
+A Spark is a CoMap with factory `@factory/data/spark` that references a group:
 
 ```json
 {
@@ -107,10 +107,10 @@ In an actor's context, you can declare a query for all sparks:
 
 ```json
 {
-  "$schema": "@schema/context",
+  "$factory": "@factory/context",
   "$id": "@sparks/context/agent",
   "sparks": {
-    "schema": "@schema/data/spark"
+    "factory": "@factory/data/spark"
   }
 }
 ```
@@ -123,11 +123,11 @@ The real magic happens when you need to query a single spark based on user inter
 
 ```json
 {
-  "$schema": "@schema/context",
+  "$factory": "@factory/context",
   "$id": "@sparks/context/detail",
   "sparkId": null,
   "sparkDetails": {
-    "schema": "@schema/data/spark",
+    "factory": "@factory/data/spark",
     "filter": {
       "id": "$sparkId"
     },
@@ -234,7 +234,7 @@ Once `sparkId` is updated in the context, the reactive query automatically refet
 ```json
 {
   "sparkDetails": {
-    "schema": "@schema/data/spark",
+    "factory": "@factory/data/spark",
     "filter": {
       "id": "$sparkId"  // This now references the updated sparkId
     }
@@ -404,7 +404,7 @@ When querying a spark, you can use the `map` option to transform the resolved da
 ```json
 {
   "sparkDetails": {
-    "schema": "@schema/data/spark",
+    "factory": "@factory/data/spark",
     "filter": {
       "id": "$sparkId"
     },
@@ -488,11 +488,11 @@ In an actor's context:
 ```json
 {
   "sparks": {
-    "schema": "@schema/data/spark"
+    "factory": "@factory/data/spark"
   },
   "selectedSparkId": "co_zSpark123",
   "sparkDetails": {
-    "schema": "@schema/data/spark",
+    "factory": "@factory/data/spark",
     "filter": {
       "id": "$selectedSparkId"
     },

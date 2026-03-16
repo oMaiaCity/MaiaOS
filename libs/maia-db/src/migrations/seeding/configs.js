@@ -15,39 +15,42 @@ export async function seedConfigs(
 	peer,
 	transformedConfigs,
 	instanceCoIdMap,
-	schemaCoMaps,
-	schemaCoIdMap,
+	factoryCoMaps,
+	factoryCoIdMap,
 ) {
 	const seededConfigs = []
 	let totalCount = 0
 
 	const createConfig = async (config, configType, path) => {
-		const schemaCoId = config.$schema
-		if (!schemaCoId || !schemaCoId.startsWith('co_z')) {
-			throw new Error(`[CoJSONSeed] Config ${configType}:${path} has invalid $schema: ${schemaCoId}`)
+		const factoryRef = config.$factory
+		const factoryCoId = factoryRef?.startsWith('co_z')
+			? factoryRef
+			: (factoryCoIdMap?.get(factoryRef) ?? factoryRef)
+		if (!factoryCoId || !factoryCoId.startsWith('co_z')) {
+			throw new Error(`[CoJSONSeed] Config ${configType}:${path} has invalid $factory: ${factoryRef}`)
 		}
 
 		let cotype = 'comap'
-		let schemaCoMap = null
-		for (const [schemaKey, coId] of schemaCoIdMap.entries()) {
-			if (coId === schemaCoId) {
-				schemaCoMap = schemaCoMaps.get(schemaKey)
+		let factoryCoMap = null
+		for (const [factoryKey, coId] of factoryCoIdMap.entries()) {
+			if (coId === factoryCoId) {
+				factoryCoMap = factoryCoMaps.get(factoryKey)
 				break
 			}
 		}
 
-		if (!schemaCoMap) {
-			const schemaCore = node.getCoValue(schemaCoId)
-			if (schemaCore && schemaCore.type === 'comap') {
-				schemaCoMap = schemaCore.getCurrentContent?.()
+		if (!factoryCoMap) {
+			const factoryCore = node.getCoValue(factoryCoId)
+			if (factoryCore && factoryCore.type === 'comap') {
+				factoryCoMap = factoryCore.getCurrentContent?.()
 			}
 		}
 
-		if (schemaCoMap && typeof schemaCoMap.get === 'function') {
-			cotype = schemaCoMap.get('cotype') || 'comap'
+		if (factoryCoMap && typeof factoryCoMap.get === 'function') {
+			cotype = factoryCoMap.get('cotype') || 'comap'
 		}
 
-		const { $id, $schema, ...configWithoutId } = config
+		const { $id, $schema: _s, $factory, ...configWithoutId } = config
 		const ctx = { node, account, guardian: maiaGroup }
 		const data =
 			cotype === 'colist'
@@ -55,16 +58,16 @@ export async function seedConfigs(
 				: cotype === 'costream' || cotype === 'cobinary'
 					? undefined
 					: configWithoutId
-		let schemaKeyForError = null
-		for (const [k, cid] of schemaCoIdMap.entries()) {
-			if (cid === schemaCoId) {
-				schemaKeyForError = k
+		let factoryKeyForError = null
+		for (const [k, cid] of factoryCoIdMap.entries()) {
+			if (cid === factoryCoId) {
+				factoryKeyForError = k
 				break
 			}
 		}
 		try {
 			const { coValue } = await createCoValueForSpark(ctx, null, {
-				schema: schemaCoId,
+				factory: factoryCoId,
 				cotype,
 				data,
 				dataEngine: peer?.dbEngine,
@@ -86,11 +89,11 @@ export async function seedConfigs(
 				cotype,
 			}
 		} catch (err) {
-			const ctx = schemaKeyForError || schemaCoId
+			const ctx = factoryKeyForError || factoryCoId
 			const dataPreview =
 				typeof data === 'object' && data !== null ? JSON.stringify(data).slice(0, 200) : String(data)
 			throw new Error(
-				`[CoJSONSeed] Failed to create ${configType}:${path} (schema: ${ctx}): ${err?.message ?? err}\nData preview: ${dataPreview}...`,
+				`[CoJSONSeed] Failed to create ${configType}:${path} (factory: ${ctx}): ${err?.message ?? err}\nData preview: ${dataPreview}...`,
 				{ cause: err },
 			)
 		}
@@ -107,7 +110,7 @@ export async function seedConfigs(
 		if (!configsOfType || typeof configsOfType !== 'object') return 0
 		let typeCount = 0
 		for (const [path, config] of Object.entries(configsOfType)) {
-			if (config && typeof config === 'object' && config.$schema) {
+			if (config && typeof config === 'object' && config.$factory) {
 				const configInfo = await createConfig(config, configType, path)
 				seededConfigs.push(configInfo)
 				typeCount++
@@ -119,26 +122,26 @@ export async function seedConfigs(
 	const seedWasmConfigs = async () => {
 		const wasms = transformedConfigs.wasms
 		if (!wasms || typeof wasms !== 'object') return 0
-		const cotextSchemaCoId = schemaCoIdMap.get('°Maia/schema/os/cotext')
-		const wasmSchemaCoId = schemaCoIdMap.get('°Maia/schema/os/wasm')
+		const cotextSchemaCoId = factoryCoIdMap.get('°Maia/factory/os/cotext')
+		const wasmSchemaCoId = factoryCoIdMap.get('°Maia/factory/os/wasm')
 		if (!cotextSchemaCoId || !wasmSchemaCoId) return 0
 		let typeCount = 0
 		for (const [path, config] of Object.entries(wasms)) {
-			if (!config || typeof config !== 'object' || !config.$schema) continue
+			if (!config || typeof config !== 'object' || !config.$factory) continue
 			const codeStr = config.code
 			if (typeof codeStr !== 'string') continue
 			const graphemes = [...splitGraphemes(codeStr)]
 			const ctx = { node, account, guardian: maiaGroup }
 			const { coValue: cotextCoList } = await createCoValueForSpark(ctx, null, {
-				schema: cotextSchemaCoId,
+				factory: cotextSchemaCoId,
 				cotype: 'colist',
 				data: graphemes,
 				dataEngine: peer?.dbEngine,
 			})
-			const { $id, $schema, lang, code: _code, ...rest } = config
+			const { $id, $schema: _s, $factory, lang, code: _code, ...rest } = config
 			const wasmData = { lang: config.lang ?? 'js', code: cotextCoList.id, ...rest }
 			const { coValue } = await createCoValueForSpark(ctx, null, {
-				schema: wasmSchemaCoId,
+				factory: wasmSchemaCoId,
 				cotype: 'comap',
 				data: wasmData,
 				dataEngine: peer?.dbEngine,

@@ -265,7 +265,7 @@ View Event → resolveExpressions() (FULLY resolve) → deliverEvent() → inbox
 **Example Context:**
 ```json
 {
-  "$schema": "@schema/context",
+  "$factory": "@factory/context",
   "$id": "@context/vibe",
   "composite": "@actor/composite"
   // Only business logic references - no UI state
@@ -288,7 +288,7 @@ View Event → resolveExpressions() (FULLY resolve) → deliverEvent() → inbox
 **Example Context:**
 ```json
 {
-  "$schema": "@schema/context",
+  "$factory": "@factory/context",
   "$id": "@context/composite",
   "title": "Todo List",                    // UI presentation
   "inputPlaceholder": "Add a new todo...", // UI presentation
@@ -317,7 +317,7 @@ View Event → resolveExpressions() (FULLY resolve) → deliverEvent() → inbox
 **Kanban Actor:**
 ```json
 {
-  "$schema": "@schema/context",
+  "$factory": "@factory/context",
   "$id": "@context/kanban",
   "todosTodo": [],        // Filtered data (query result)
   "todosDone": [],       // Filtered data (query result)
@@ -329,7 +329,7 @@ View Event → resolveExpressions() (FULLY resolve) → deliverEvent() → inbox
 **List Actor:**
 ```json
 {
-  "$schema": "@schema/context",
+  "$factory": "@factory/context",
   "$id": "@context/list",
   "todos": []  // Filtered data (query result)
 }

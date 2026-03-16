@@ -70,7 +70,7 @@ User tools are JavaScript strings. Convention: must implement `execute(actor, pa
 // Example user tool code (string evaluated in QuickJS):
 export default {
   async execute(actor, payload) {
-    const items = await maia.do({ op: 'read', schema: payload.schema, filter: payload.filter });
+    const items = await maia.do({ op: 'read', factory: payload.factory, filter: payload.filter });
     if (items.ok && items.data?.value?.length > 0) {
       await maia.publishMessage(payload.target, 'NOTIFY', { count: items.data.value.length });
     }
@@ -153,7 +153,7 @@ flowchart TB
 
 User tools could be stored in the database:
 
-- **Schema**: e.g. `°Maia/schema/tool` with fields `name`, `definition` (JSON schema), `code` (JS string).
+- **Schema**: e.g. `°Maia/factory/tool` with fields `name`, `definition` (JSON schema), `code` (JS string).
 - **Registration**: On boot or on-demand, ToolEngine registers sandboxed tools: `registerTool(namespace, id, { definition, code })`.
 - **Lookup**: ToolEngine checks `tool.code` — if present, use sandbox path; else use native `tool.function`.
 
@@ -161,7 +161,7 @@ User tools could be stored in the database:
 
 ```json
 {
-  "$schema": "°Maia/schema/tool",
+  "$factory": "°Maia/factory/tool",
   "$id": "tool_user_count_notify_001",
   "name": "@user/countAndNotify",
   "description": "Reads items from a schema, counts them, and sends a NOTIFY message",
@@ -183,7 +183,7 @@ export default {
   async execute(actor, payload) {
     const result = await maia.do({
       op: 'read',
-      schema: payload.schema,
+      factory: payload.factory,
       filter: payload.filter || null
     });
     if (!result.ok) return result;

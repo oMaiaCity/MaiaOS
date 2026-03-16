@@ -1,9 +1,9 @@
 {
-	"$schema": "°Maia/schema/context",
+	"$factory": "°Maia/factory/context",
 	"$id": "°Maia/actor/views/sparks/context",
 	"title": "My Sparks",
 	"sparks": {
-		"schema": "°Maia/schema/data/spark",
+		"factory": "°Maia/factory/data/spark",
 		"map": {
 			"id": "id",
 			"name": "name"

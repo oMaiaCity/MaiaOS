@@ -5,9 +5,10 @@ export { getAllActorDefinitions, getSeedConfig } from '@MaiaOS/actors'
 // Peer setup, sync state, backend for operations
 // Re-export ReactiveStore from db
 export {
+	factoryMigration,
 	generateRegistryName,
+	getFactoryIndexColistId,
 	getSchema,
-	getSchemaIndexColistId,
 	loadCapabilitiesGrants,
 	MaiaDB,
 	ReactiveStore,
@@ -15,7 +16,6 @@ export {
 	resolve,
 	resolveAccountCoIdsToProfiles,
 	resolveGroupCoIdsToCapabilityNames,
-	schemaMigration,
 	setupSyncPeers,
 	subscribeSyncState,
 	updateSyncState,
@@ -23,7 +23,7 @@ export {
 } from '@MaiaOS/db'
 // Re-export DataEngine and MaiaScriptEvaluator for server/agent (moai)
 export { DataEngine, MaiaScriptEvaluator } from '@MaiaOS/engines'
-export { getAllSchemas } from '@MaiaOS/schemata'
+export { getAllFactories } from '@MaiaOS/factories'
 // Re-export auth functions for convenience
 export {
 	createAgentAccount,

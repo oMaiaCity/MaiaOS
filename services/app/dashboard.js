@@ -13,22 +13,11 @@ import {
 } from './utils.js'
 
 /**
- * Extract vibe key from vibe $id (e.g., "°Maia/vibe/todos" -> "todos")
- */
-function getVibeKeyFromId(vibeId) {
-	if (!vibeId) return null
-	if (vibeId.startsWith('°Maia/vibe/')) {
-		return vibeId.replace('°Maia/vibe/', '')
-	}
-	return null
-}
-
-/**
  * Get spark display name from spark co-id (reads spark CoMap)
  */
 async function getSparkDisplayName(maia, sparkCoId) {
 	try {
-		const sparkStore = await maia.do({ op: 'read', schema: null, key: sparkCoId })
+		const sparkStore = await maia.do({ op: 'read', factory: null, key: sparkCoId })
 		const sparkData = sparkStore?.value ?? sparkStore
 		const name = sparkData?.name
 		if (!name) return null
@@ -52,21 +41,21 @@ async function loadSparksFromAccount(maia) {
 
 	try {
 		const account = maia.id.maiaId
-		const accountStore = await maia.do({ op: 'read', schema: '@account', key: account.id })
+		const accountStore = await maia.do({ op: 'read', factory: '@account', key: account.id })
 		const accountData = accountStore.value || accountStore
 
 		const registriesId = accountData?.registries
 		if (!registriesId || typeof registriesId !== 'string' || !registriesId.startsWith('co_')) {
 			return sparks
 		}
-		const registriesStore = await maia.do({ op: 'read', schema: null, key: registriesId })
+		const registriesStore = await maia.do({ op: 'read', factory: null, key: registriesId })
 		const registriesData = registriesStore.value || registriesStore
 		const sparksId = registriesData.sparks
 		if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_')) {
 			return sparks
 		}
 
-		const sparksStore = await maia.do({ op: 'read', schema: sparksId, key: sparksId })
+		const sparksStore = await maia.do({ op: 'read', factory: sparksId, key: sparksId })
 		const sparksData = sparksStore.value || sparksStore
 
 		if (!sparksData || typeof sparksData !== 'object' || Array.isArray(sparksData)) return sparks
@@ -97,49 +86,37 @@ async function loadSparksFromAccount(maia) {
 }
 
 /**
- * Load vibes from spark.vibes registry
+ * Load vibes from spark.vibes registry.
+ * Dynamic vibes: name and description from CoJSON (vibe manifest CoValue).
  * @param {Object} maia - MaiaOS instance
  * @param {string} spark - Spark name (e.g. '°Maia')
- * @returns {Promise<Array>} Array of aven objects with {key, name, description, coId}
+ * @returns {Promise<Array>} Array of vibe objects with {key, name, description, coId}
  */
 async function loadVibesFromSpark(maia, spark) {
 	const vibes = []
 	if (!maia || !spark) return vibes
 	try {
-		const vibeRegistries = await getAllVibeRegistries()
-		const manifestMap = new Map()
-		for (const registry of vibeRegistries) {
-			if (registry.vibe) {
-				const vibeKey = getVibeKeyFromId(registry.vibe.$id)
-				if (vibeKey)
-					manifestMap.set(vibeKey, {
-						name: registry.vibe.name || vibeKey,
-						description: registry.vibe.description || '',
-					})
-			}
-		}
-
-		const accountStore = await maia.do({ op: 'read', schema: '@account', key: maia.id.maiaId.id })
+		const accountStore = await maia.do({ op: 'read', factory: '@account', key: maia.id.maiaId.id })
 		const accountData = accountStore?.value ?? accountStore
 		const registriesId = accountData?.registries
 		if (typeof registriesId !== 'string' || !registriesId.startsWith('co_')) return vibes
 
-		const registriesStore = await maia.do({ op: 'read', schema: null, key: registriesId })
+		const registriesStore = await maia.do({ op: 'read', factory: null, key: registriesId })
 		const registriesData = registriesStore?.value ?? registriesStore
 		const sparksId = registriesData.sparks
 		if (typeof sparksId !== 'string' || !sparksId.startsWith('co_')) return vibes
 
-		const sparksStore = await maia.do({ op: 'read', schema: sparksId, key: sparksId })
+		const sparksStore = await maia.do({ op: 'read', factory: sparksId, key: sparksId })
 		const sparksData = sparksStore?.value ?? sparksStore
 		const sparkCoId = sparksData?.[spark]
 		if (typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_')) return vibes
 
-		const sparkStore = await maia.do({ op: 'read', schema: null, key: sparkCoId })
+		const sparkStore = await maia.do({ op: 'read', factory: null, key: sparkCoId })
 		const sparkData = sparkStore?.value ?? sparkStore
 		const vibesId = sparkData?.vibes
 		if (typeof vibesId !== 'string' || !vibesId.startsWith('co_')) return vibes
 
-		const vibesStore = await maia.do({ op: 'read', schema: vibesId, key: vibesId })
+		const vibesStore = await maia.do({ op: 'read', factory: vibesId, key: vibesId })
 		const vibesData = vibesStore?.value ?? vibesStore
 		if (!vibesData || typeof vibesData !== 'object' || Array.isArray(vibesData)) return vibes
 
@@ -149,30 +126,29 @@ async function loadVibesFromSpark(maia, spark) {
 				k !== 'loading' &&
 				k !== 'error' &&
 				k !== '$schema' &&
+				k !== '$factory' &&
 				k !== 'type' &&
+				!k.startsWith('$') &&
 				typeof vibesData[k] === 'string' &&
 				vibesData[k].startsWith('co_'),
 		)
 
-		// Display name overrides: vibe key -> user-facing label (e.g. logs -> Creator)
-		const vibeDisplayNameOverrides = { logs: 'Creator' }
-		for (const vibeKey of vibeKeys) {
-			const vibeCoId = vibesData[vibeKey]
-			const manifest = manifestMap.get(vibeKey)
-			const name =
-				vibeDisplayNameOverrides[vibeKey] ??
-				manifest?.name ??
-				`${vibeKey.charAt(0).toUpperCase() + vibeKey.slice(1)}`
-			const description = manifest?.description
-				? truncateWords(manifest.description, 10)
-				: `Open ${name}`
-			vibes.push({
-				key: vibeKey,
-				name,
-				description,
-				coId: vibeCoId,
-			})
-		}
+		// Read each vibe manifest from CoJSON for name/description (dynamic, no hardcoded fallbacks)
+		const vibeEntries = await Promise.all(
+			vibeKeys.map(async (vibeKey) => {
+				const vibeCoId = vibesData[vibeKey]
+				let name = `${vibeKey.charAt(0).toUpperCase() + vibeKey.slice(1)}`
+				let description = `Open ${name}`
+				try {
+					const manifestStore = await maia.do({ op: 'read', factory: null, key: vibeCoId })
+					const manifest = manifestStore?.value ?? manifestStore
+					if (manifest?.name) name = manifest.name
+					if (manifest?.description) description = truncateWords(manifest.description, 10)
+				} catch (_e) {}
+				return { key: vibeKey, name, description, coId: vibeCoId }
+			}),
+		)
+		vibes.push(...vibeEntries)
 	} catch (_error) {}
 	return vibes
 }
@@ -422,16 +398,18 @@ export async function renderVibeViewer(
 	if (accountId && !accountAvatarHtml) {
 		accountAvatarHtml = getProfileAvatarHtml(null, { size: 44, className: 'navbar-avatar' })
 	}
-	// Map vibe keys to display names
-	const vibeNameMap = {
-		db: 'MaiaDB',
-		humans: 'Addressbook',
-		todos: 'Todos',
-		logs: 'Creator',
+	// Dvibes (special screens): hardcoded names. Dynamic vibes: resolved from registry manifest.
+	const dvibeNameMap = { db: 'MaiaDB' }
+	let vibeLabel = 'Vibe'
+	if (currentVibe) {
+		if (dvibeNameMap[currentVibe]) {
+			vibeLabel = dvibeNameMap[currentVibe]
+		} else {
+			const registries = await getAllVibeRegistries()
+			const reg = registries.find((r) => r?.vibe?.$id === `°Maia/vibe/${currentVibe}`)
+			vibeLabel = reg?.vibe?.name ?? `${currentVibe.charAt(0).toUpperCase() + currentVibe.slice(1)}`
+		}
 	}
-	const vibeLabel = currentVibe
-		? vibeNameMap[currentVibe] || `${currentVibe.charAt(0).toUpperCase() + currentVibe.slice(1)}`
-		: 'Vibe'
 
 	// Clear any existing vibe containers before rendering new one
 	// This ensures we don't have multiple aven containers stacked

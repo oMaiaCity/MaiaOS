@@ -5,7 +5,7 @@
  * Eliminates duplication across storage hooks, validation hooks, and CRUD operations.
  */
 
-import { isExceptionSchema } from '../../schemas/registry.js'
+import { isExceptionFactory } from '../../factories/registry.js'
 
 /**
  * Detect if a co-value is an account, group, or profile
@@ -46,8 +46,8 @@ export function isAccountGroupOrProfile(msg, peer, coId) {
 	const isGroup = isGroupOrAccount && !isAccountById && !isAccountByMeta && !isAccountCreation
 
 	// Check if schema is an exception schema (only if schema exists)
-	const schema = msg.header?.meta?.$schema
-	const isException = schema ? isExceptionSchema(schema) : false
+	const schema = msg.header?.meta?.$factory
+	const isException = schema ? isExceptionFactory(schema) : false
 
 	return {
 		isAccount,
@@ -68,12 +68,12 @@ export function extractSchemaFromMessage(msg) {
 	if (!msg || !msg.header || !msg.header.meta) {
 		return null
 	}
-	return msg.header.meta.$schema || null
+	return msg.header.meta.$factory || null
 }
 
 /**
  * Determine if validation/indexing should be skipped for a co-value
- * Uses isAccountGroupOrProfile() + isExceptionSchema() to determine skip logic
+ * Uses isAccountGroupOrProfile() + isExceptionFactory() to determine skip logic
  *
  * @param {Object} msg - Message object with header (from storage/sync)
  * @param {Object} peer - Backend instance (for account detection)

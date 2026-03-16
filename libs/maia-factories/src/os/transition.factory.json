@@ -1,0 +1,24 @@
+{
+	"$factory": "°Maia/factory/meta",
+	"$id": "°Maia/factory/transition",
+	"title": "°Maia/factory/transition",
+	"description": "State machine transition",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"target": {
+			"type": "string",
+			"description": "Target state name"
+		},
+		"guard": {
+			"$co": "°Maia/factory/guard"
+		},
+		"actions": {
+			"type": "array",
+			"items": {
+				"$co": "°Maia/factory/action"
+			}
+		}
+	},
+	"required": ["target"]
+}

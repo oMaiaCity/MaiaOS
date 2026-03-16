@@ -30,7 +30,7 @@ export { createCoValueForSpark } from './cojson/covalue/create-covalue-for-spark
 export {
 	ensureCoValueLoaded,
 	getCoListId,
-	getSchemaIndexColistId,
+	getFactoryIndexColistId,
 } from './cojson/crud/collection-helpers.js'
 // Data extraction (single canonical read format; normalizeCoValueData for CoMap/CoList shapes)
 export { extractCoValueData, normalizeCoValueData } from './cojson/crud/data-extraction.js'
@@ -42,13 +42,20 @@ export { processInbox } from './cojson/crud/process-inbox.js'
 // Note: resolveReactive is exported from resolver.js (wraps reactive-resolver.js)
 export {
 	resolveCoValueReactive,
+	resolveFactoryReactive,
 	resolveQueryReactive,
-	resolveSchemaReactive,
 	waitForReactiveResolution,
 } from './cojson/crud/reactive-resolver.js'
 // Read Operations (store-based loading with proper $store architecture)
 export { findFirst } from './cojson/crud/read.js'
 export { waitForStoreReady } from './cojson/crud/read-operations.js'
+// Universal Schema Resolver (single source of truth)
+export {
+	checkCotype,
+	loadFactoriesFromAccount,
+	resolve,
+	resolveReactive,
+} from './cojson/factory/resolver.js'
 // Re-export services for external use
 // Account primitives moved to @MaiaOS/peer (createAccountWithSecret, loadAccount). Migration/seed stay here.
 export { createGroup, createProfile } from './cojson/groups/create.js'
@@ -59,22 +66,15 @@ export {
 export { loadCapabilitiesGrants } from './cojson/helpers/load-capabilities-grants.js'
 export { resolveAccountCoIdsToProfiles } from './cojson/helpers/resolve-account-profile.js'
 export { resolveGroupCoIdsToCapabilityNames } from './cojson/helpers/resolve-capability-group.js'
-// Universal Schema Resolver (single source of truth)
 export {
-	checkCotype,
-	loadSchemasFromAccount,
-	resolve,
-	resolveReactive,
-} from './cojson/schema/resolver.js'
-export { schemaMigration } from './migrations/schema.migration.js'
+	createFactoryMeta,
+	EXCEPTION_FACTORIES,
+	getAllFactories,
+	getSchema,
+	hasSchema,
+} from './factories/registry.js'
+export { factoryMigration } from './migrations/factory.migration.js'
 export { simpleAccountSeed } from './migrations/seeding/seed.js'
 // ReactiveStore - reactive data store pattern (owned by maia-db; engines import from here)
 export { ReactiveStore } from './reactive-store.js'
-export {
-	createSchemaMeta,
-	EXCEPTION_SCHEMAS,
-	getAllSchemas,
-	getSchema,
-	hasSchema,
-} from './schemas/registry.js'
 export { generateRegistryName } from './utils/registry-name-generator.js'

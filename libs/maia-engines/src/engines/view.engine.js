@@ -1,7 +1,7 @@
 import { normalizeCoValueData, ReactiveStore } from '@MaiaOS/db'
-import { validateViewDef } from '@MaiaOS/schemata'
-import { containsExpressions, resolveExpressions } from '@MaiaOS/schemata/expression-resolver'
-import { extractDOMValuesAsync } from '@MaiaOS/schemata/payload-resolver'
+import { validateViewDef } from '@MaiaOS/factories'
+import { containsExpressions, resolveExpressions } from '@MaiaOS/factories/expression-resolver'
+import { extractDOMValuesAsync } from '@MaiaOS/factories/payload-resolver'
 import { sanitizeAttributeWhitelist } from '../utils/attribute-sanitizer.js'
 import { hydrateCobinaryPreviews } from '../utils/cobinary-preview.js'
 import {
@@ -144,7 +144,7 @@ export class ViewEngine {
 	 * @param {string} actorId - Actor ID
 	 * @param {Object|null} parentActor - Parent actor when spawning child (for fallback @actors)
 	 * @param {string|null} namekey - Child slot name when spawned (e.g. 'input' for targetActor)
-	 * @returns {Promise<{viewDef, context, contextCoId, contextSchemaCoId, configUnsubscribes}>}
+	 * @returns {Promise<{viewDef, context, contextCoId, contextFactoryCoId, configUnsubscribes}>}
 	 */
 	async loadViewConfigs(actorConfig, actorId, parentActor = null, namekey = null) {
 		if (!actorConfig.view) throw new Error(`[ViewEngine] Actor config must have 'view' property`)
@@ -173,7 +173,7 @@ export class ViewEngine {
 
 		let context = null,
 			contextCoId = null,
-			contextSchemaCoId = null
+			contextFactoryCoId = null
 		if (actorConfig.context) {
 			if (typeof actorConfig.context !== 'string') {
 				throw new Error(
@@ -189,7 +189,7 @@ export class ViewEngine {
 			} else {
 				context = loaded.store
 				contextCoId = loaded.coId
-				contextSchemaCoId = loaded.schemaCoId
+				contextFactoryCoId = loaded.factoryCoId
 			}
 		}
 
@@ -217,7 +217,7 @@ export class ViewEngine {
 				}
 			} catch {}
 		}
-		return { viewDef, context, contextCoId, contextSchemaCoId, configUnsubscribes }
+		return { viewDef, context, contextCoId, contextFactoryCoId, configUnsubscribes }
 	}
 
 	/**
@@ -238,13 +238,13 @@ export class ViewEngine {
 		namekey = null,
 	) {
 		const actorId = actor.id
-		const { viewDef, context, contextCoId, contextSchemaCoId, configUnsubscribes } =
+		const { viewDef, context, contextCoId, contextFactoryCoId, configUnsubscribes } =
 			await this.loadViewConfigs(actorConfig, actorId, parentActor, namekey)
 
 		actor.shadowRoot = containerElement.attachShadow({ mode: 'open' })
 		actor.context = context
 		actor.contextCoId = contextCoId
-		actor.contextSchemaCoId = contextSchemaCoId
+		actor.contextFactoryCoId = contextFactoryCoId
 		actor.viewDef = viewDef
 		actor.vibeKey = vibeKey
 		actor.containerElement = containerElement
@@ -815,8 +815,8 @@ export class ViewEngine {
 		const hasBinaryPayload = payload?.file instanceof File
 		let payloadToValidate = payload
 		if (hasBinaryPayload && this.dataEngine) {
-			const eventSchema = actor?.interfaceSchema?.properties?.[eventName]
-			const blobRefKey = eventSchema?.required?.[0] ?? eventSchema?.$blobRefKey ?? 'coId'
+			const eventFactory = actor?.interfaceFactory?.properties?.[eventName]
+			const blobRefKey = eventFactory?.required?.[0] ?? eventFactory?.$blobRefKey ?? 'coId'
 			const result = await this.dataEngine.execute({
 				op: 'uploadToCoBinary',
 				file: payload.file,
@@ -833,7 +833,7 @@ export class ViewEngine {
 				payloadToValidate &&
 				(['FORM_SUBMIT', 'UPDATE_INPUT', 'UPDATE_WASM_CODE'].includes(eventName) ||
 					isContentEditableUpdateEvent(eventDef)) &&
-				actor?.interfaceSchema?.properties?.[eventName]?.properties?.value?.type === 'string'
+				actor?.interfaceFactory?.properties?.[eventName]?.properties?.value?.type === 'string'
 			) {
 				const v = payloadToValidate.value
 				if (v === undefined || v === null || typeof v !== 'string') {

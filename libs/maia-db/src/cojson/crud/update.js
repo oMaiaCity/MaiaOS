@@ -5,9 +5,9 @@
  * Validates updates BEFORE applying them to CRDT (before content.set() calls).
  */
 
-import { loadSchemaAndValidate } from '@MaiaOS/schemata/validation.helper'
+import { loadFactoryAndValidate } from '@MaiaOS/factories/validation.helper'
 import { invalidateResolvedDataForMutatedCoValue } from '../cache/coCache.js'
-import { resolve } from '../schema/resolver.js'
+import { resolve } from '../factory/resolver.js'
 import * as collectionHelpers from './collection-helpers.js'
 import * as dataExtraction from './data-extraction.js'
 
@@ -38,9 +38,9 @@ export async function update(peer, _schema, id, data) {
 
 	// CRITICAL: Validate updates BEFORE applying to CRDT (before content.set())
 	// Extract schema co-id from co-value headerMeta
-	let schemaCoId = null
+	let factoryCoId = null
 	try {
-		schemaCoId = await resolve(peer, { fromCoValue: id }, { returnType: 'coId' })
+		factoryCoId = await resolve(peer, { fromCoValue: id }, { returnType: 'coId' })
 	} catch (error) {
 		// Schema extraction failed - skip validation (co-values without schemas, like context co-values)
 		console.log(`[Update] Skipping validation for ${id}: ${error.message}`)
@@ -50,21 +50,21 @@ export async function update(peer, _schema, id, data) {
 	// 1. No schema found (co-values without schemas, like context co-values)
 	// 2. Exception schemas (@account, @group, °Maia)
 	// 3. No dbEngine available
-	if (schemaCoId && peer.dbEngine && schemaCoId.startsWith('co_z')) {
+	if (factoryCoId && peer.dbEngine && factoryCoId.startsWith('co_z')) {
 		// Import exception schema checker
-		const { isExceptionSchema } = await import('../../schemas/registry.js')
+		const { isExceptionFactory } = await import('../../factories/registry.js')
 
 		// Skip validation for exception schemas
-		if (!isExceptionSchema(schemaCoId)) {
+		if (!isExceptionFactory(factoryCoId)) {
 			// Get existing data (current state) - use getRawRecord which returns actual properties
 			const existingDataRaw = await peer.getRawRecord(id)
 
 			if (existingDataRaw) {
 				// Load schema to get allowed properties (additionalProperties: false → must strip metadata)
-				const schemaDef = await resolve(peer, schemaCoId, { returnType: 'schema' })
+				const factoryDef = await resolve(peer, factoryCoId, { returnType: 'factory' })
 				const allowedKeys =
-					schemaDef?.properties && typeof schemaDef.properties === 'object'
-						? new Set(Object.keys(schemaDef.properties))
+					factoryDef?.properties && typeof factoryDef.properties === 'object'
+						? new Set(Object.keys(factoryDef.properties))
 						: null
 
 				// Strip metadata (id, _coValueType, $schema, type, groupInfo, etc.) — keep only schema-defined properties
@@ -74,7 +74,7 @@ export async function update(peer, _schema, id, data) {
 						: Object.fromEntries(
 								Object.entries(obj).filter(
 									([k]) =>
-										!['id', '$schema', '_coValueType', 'type', 'loading', 'error', 'groupInfo'].includes(k),
+										!['id', '$factory', '_coValueType', 'type', 'loading', 'error', 'groupInfo'].includes(k),
 								),
 							)
 				const existingDataOnly = stripToSchema(existingDataRaw)
@@ -84,7 +84,7 @@ export async function update(peer, _schema, id, data) {
 
 				// Validate merged data against schema BEFORE applying to CRDT
 				try {
-					await loadSchemaAndValidate(peer, schemaCoId, mergedData, `update for ${id}`, {
+					await loadFactoryAndValidate(peer, factoryCoId, mergedData, `update for ${id}`, {
 						dataEngine: peer.dbEngine,
 					})
 				} catch (error) {

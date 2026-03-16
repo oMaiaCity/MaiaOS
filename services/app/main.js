@@ -610,11 +610,11 @@ async function signIn() {
 async function loadLinkedCoValues() {
 	if (!maia?.id?.maiaId) return
 	try {
-		const accountStore = await maia.do({ op: 'read', schema: '@account', key: maia.id.maiaId.id })
+		const accountStore = await maia.do({ op: 'read', factory: '@account', key: maia.id.maiaId.id })
 		const accountData = accountStore?.value ?? accountStore
 		const registriesId = accountData?.registries
 		if (typeof registriesId === 'string' && registriesId.startsWith('co_')) {
-			await maia.do({ op: 'read', schema: registriesId, key: registriesId, deepResolve: true })
+			await maia.do({ op: 'read', factory: registriesId, key: registriesId, deepResolve: true })
 		}
 	} catch (_e) {}
 }

@@ -11,7 +11,7 @@ const DEFAULT_PAPER_TEXT = "Dear future us, what we're creating together..."
  * Seed data entities to CoJSON
  */
 export async function seedData(account, node, maiaGroup, peer, data, coIdRegistry) {
-	const { transformForSeeding } = await import('@MaiaOS/schemata/schema-transformer')
+	const { transformForSeeding } = await import('@MaiaOS/factories/factory-transformer')
 
 	if (!data || Object.keys(data).length === 0) {
 		return { collections: [], totalItems: 0, coIds: [] }
@@ -25,18 +25,18 @@ export async function seedData(account, node, maiaGroup, peer, data, coIdRegistr
 	for (const [collectionName, collectionItems] of Object.entries(data)) {
 		if (!Array.isArray(collectionItems)) continue
 
-		const schemaKey1 = `data/${collectionName}`
-		const schemaKey2 = `°Maia/schema/data/${collectionName}`
-		const schemaKey3 = `°Maia/schema/${collectionName}`
+		const factoryKey1 = `data/${collectionName}`
+		const factoryKey2 = `°Maia/factory/data/${collectionName}`
+		const factoryKey3 = `°Maia/factory/${collectionName}`
 
-		const schemaCoId =
-			registry.get(schemaKey1) || registry.get(schemaKey2) || registry.get(schemaKey3)
+		const factoryCoId =
+			registry.get(factoryKey1) || registry.get(factoryKey2) || registry.get(factoryKey3)
 
-		if (!schemaCoId) continue
+		if (!factoryCoId) continue
 
 		// Special handling for Notes: create CoText (colist) first, then Note (comap) with content ref
 		if (collectionName === 'notes') {
-			const cotextSchemaCoId = registry.get('°Maia/schema/os/cotext') || registry.get('os/cotext')
+			const cotextSchemaCoId = registry.get('°Maia/factory/os/cotext') || registry.get('os/cotext')
 			if (!cotextSchemaCoId) continue
 
 			let itemCount = 0
@@ -47,14 +47,14 @@ export async function seedData(account, node, maiaGroup, peer, data, coIdRegistr
 
 				const ctx = { node, account, guardian: maiaGroup }
 				const { coValue: cotextCoList } = await createCoValueForSpark(ctx, null, {
-					schema: cotextSchemaCoId,
+					factory: cotextSchemaCoId,
 					cotype: 'colist',
 					data: graphemes,
 					dataEngine: peer?.dbEngine,
 				})
 
 				const { coValue: noteCoMap } = await createCoValueForSpark(ctx, null, {
-					schema: schemaCoId,
+					factory: factoryCoId,
 					cotype: 'comap',
 					data: { content: cotextCoList.id },
 					dataEngine: peer?.dbEngine,
@@ -67,7 +67,7 @@ export async function seedData(account, node, maiaGroup, peer, data, coIdRegistr
 
 			seededCollections.push({
 				name: collectionName,
-				schemaCoId,
+				factoryCoId,
 				itemCount,
 				coIds,
 			})
@@ -83,7 +83,7 @@ export async function seedData(account, node, maiaGroup, peer, data, coIdRegistr
 
 			const ctx = { node, account, guardian: maiaGroup }
 			const { coValue: itemCoMap } = await createCoValueForSpark(ctx, null, {
-				schema: schemaCoId,
+				factory: factoryCoId,
 				cotype: 'comap',
 				data: itemWithoutId,
 				dataEngine: peer?.dbEngine,
@@ -94,7 +94,7 @@ export async function seedData(account, node, maiaGroup, peer, data, coIdRegistr
 
 		seededCollections.push({
 			name: collectionName,
-			schemaCoId,
+			factoryCoId,
 			itemCount,
 			coIds,
 		})

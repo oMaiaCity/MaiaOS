@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/meta",
+	"$factory": "°Maia/factory/meta",
 	"$id": "°Maia/actor/views/humans/interface",
 	"title": "°Maia/actor/views/humans/interface",
 	"description": "Addressbook tabs",

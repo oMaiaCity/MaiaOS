@@ -18,7 +18,7 @@ Last updated: 2026-01-20
 ├──────────────────────────────────────────────────────┤
 │ • type: "comap" | "colist" | "costream" | ...        │
 │ • ruleset: { type: "group" | "ownedByGroup", ... }   │
-│ • headerMeta: { $schema: "...", version: 1, ... }    │
+│ • headerMeta: { $factory: "...", version: 1, ... }    │
 │ • createdAt: timestamp                               │
 │ • uniqueness: string | null                          │
 │                                                      │
@@ -47,7 +47,7 @@ Last updated: 2026-01-20
 // Create CoValue with version 1
 const profile = group.createMap(
   { name: "Alice" },
-  { $schema: "ProfileSchema", version: 1 }  // ← Immutable!
+  { $factory: "ProfileFactory", version: 1 }  // ← Immutable!
 );
 
 // Later: Schema updates to version 2
@@ -68,14 +68,14 @@ profile.core.verified.header.meta.version = 2;  // Still read-only!
 
 // Before migration (v1 schema):
 profile.toJSON();  // { name: "Alice" }
-profile.headerMeta;  // { $schema: "ProfileSchema", version: 1 }
+profile.headerMeta;  // { $factory: "ProfileFactory", version: 1 }
 
 // Apply migration (modify DATA, not header):
 profile.set("age", null);  // Add new field required by v2
 
 // After migration:
 profile.toJSON();  // { name: "Alice", age: null }
-profile.headerMeta;  // { $schema: "ProfileSchema", version: 1 }
+profile.headerMeta;  // { $factory: "ProfileFactory", version: 1 }
 //                      ↑ Still says v1! (immutable)
 //                      But data is now v2-compatible! ✅
 ```
@@ -95,7 +95,7 @@ profile.headerMeta;  // { $schema: "ProfileSchema", version: 1 }
 │  │ type: "comap"                              │            │
 │  │ ruleset: { type: "ownedByGroup", ... }     │            │
 │  │ headerMeta: {                              │ ← Your     │
-│  │   $schema: "ProfileSchema",  🔒            │   metadata │
+│  │   $factory: "ProfileFactory",  🔒            │   metadata │
 │  │   version: 1,  🔒                          │   (frozen) │
 │  │   created: "2026-01-20"  🔒                │            │
 │  │ }                                          │            │
@@ -296,7 +296,7 @@ async function migrate(coValue) {
 
 const profile = group.createMap(
   { name: "Alice" },
-  { $schema: "ProfileSchema", version: 1 }  // ← Birth certificate
+  { $schema: "ProfileFactory", version: 1 }  // ← Birth certificate
 );
 
 // 10 years later...
@@ -335,7 +335,7 @@ function needsMigration(coValue) {
 // 2026-01-01: Create initial schema
 // ─────────────────────────────────────────────────────────────
 const schemaV1 = {
-  name: "ProfileSchema",
+  name: "ProfileFactory",
   version: 1,
   schema: {
     type: "object",
@@ -348,18 +348,18 @@ const schemaV1 = {
 // Create user profile
 const alice = group.createMap(
   { name: "Alice" },
-  { $schema: "ProfileSchema", version: 1 }
+  { $schema: "ProfileFactory", version: 1 }
 );
 
 // Alice's CoValue:
-// headerMeta: { $schema: "ProfileSchema", version: 1 } 🔒
+// headerMeta: { $factory: "ProfileFactory", version: 1 } 🔒
 // data: { name: "Alice" } 🔓
 
 // ─────────────────────────────────────────────────────────────
 // 2026-06-01: Schema evolves - add age field
 // ─────────────────────────────────────────────────────────────
 const schemaV2 = {
-  name: "ProfileSchema",
+  name: "ProfileFactory",
   version: 2,
   schema: {
     type: "object",
@@ -389,7 +389,7 @@ if (alice.headerMeta.version < schemaV2.version) {
 }
 
 // Alice's CoValue after migration:
-// headerMeta: { $schema: "ProfileSchema", version: 1 } 🔒 (UNCHANGED!)
+// headerMeta: { $factory: "ProfileFactory", version: 1 } 🔒 (UNCHANGED!)
 // data: { name: "Alice", age: null } 🔓 (CHANGED!)
 
 // ─────────────────────────────────────────────────────────────
@@ -398,7 +398,7 @@ if (alice.headerMeta.version < schemaV2.version) {
 alice.set("age", 30);  // ✅ Works!
 
 // Alice's CoValue now:
-// headerMeta: { $schema: "ProfileSchema", version: 1 } 🔒 (Still v1!)
+// headerMeta: { $factory: "ProfileFactory", version: 1 } 🔒 (Still v1!)
 // data: { name: "Alice", age: 30 } 🔓 (Now v2-compatible!)
 
 // ─────────────────────────────────────────────────────────────
@@ -406,11 +406,11 @@ alice.set("age", 30);  // ✅ Works!
 // ─────────────────────────────────────────────────────────────
 const bob = group.createMap(
   { name: "Bob", age: 25 },
-  { $schema: "ProfileSchema", version: 2 }  // ← Created with v2!
+  { $factory: "ProfileFactory", version: 2 }  // ← Created with v2!
 );
 
 // Bob's CoValue:
-// headerMeta: { $schema: "ProfileSchema", version: 2 } 🔒 (v2!)
+// headerMeta: { $factory: "ProfileFactory", version: 2 } 🔒 (v2!)
 // data: { name: "Bob", age: 25 } 🔓 (v2 from birth!)
 
 // ─────────────────────────────────────────────────────────────

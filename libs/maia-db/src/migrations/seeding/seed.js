@@ -14,7 +14,7 @@ import * as groups from '../../cojson/groups/groups.js'
 import { bootstrapAccountRegistries, bootstrapAndScaffold } from './bootstrap.js'
 import { seedConfigs } from './configs.js'
 import { seedData } from './data.js'
-import { buildMetaSchemaForSeeding, ensureSparkOs, removeIdFields } from './helpers.js'
+import { buildMetaFactoryForSeeding, ensureSparkOs, removeIdFields } from './helpers.js'
 import { storeRegistry } from './store-registry.js'
 
 const MAIA_SPARK = '°Maia'
@@ -63,13 +63,13 @@ export async function seed(
 			!account.get('registries') || !String(account.get('registries')).startsWith('co_z')
 	}
 	if (needsBootstrap) {
-		const { getAllSchemas } = await import('@MaiaOS/schemata')
-		await bootstrapAndScaffold(account, node, schemas || getAllSchemas(), peer.dbEngine)
+		const { getAllFactories } = await import('@MaiaOS/factories')
+		await bootstrapAndScaffold(account, node, schemas || getAllFactories(), peer.dbEngine)
 	}
 
-	const { CoIdRegistry } = await import('@MaiaOS/schemata/co-id-generator')
-	const { transformForSeeding, validateSchemaStructure } = await import(
-		'@MaiaOS/schemata/schema-transformer'
+	const { CoIdRegistry } = await import('@MaiaOS/factories/co-id-generator')
+	const { transformForSeeding, validateFactoryStructure } = await import(
+		'@MaiaOS/factories/factory-transformer'
 	)
 	const coIdRegistry = new CoIdRegistry()
 
@@ -83,7 +83,7 @@ export async function seed(
 
 	const uniqueSchemasBy$id = new Map()
 	for (const [name, schema] of Object.entries(schemas)) {
-		const key = schema.$id || `°Maia/schema/${name}`
+		const key = schema.$id || `°Maia/factory/${name}`
 		if (!uniqueSchemasBy$id.has(key)) uniqueSchemasBy$id.set(key, { name, schema })
 	}
 
@@ -91,7 +91,7 @@ export async function seed(
 		if (!obj || typeof obj !== 'object' || visited.has(obj)) return new Set()
 		visited.add(obj)
 		const refs = new Set()
-		if (obj.$co && typeof obj.$co === 'string' && obj.$co.startsWith('°Maia/schema/'))
+		if (obj.$co && typeof obj.$co === 'string' && obj.$co.startsWith('°Maia/factory/'))
 			refs.add(obj.$co)
 		for (const v of Object.values(obj)) {
 			if (v && typeof v === 'object') {
@@ -104,72 +104,82 @@ export async function seed(
 		}
 		return refs
 	}
-	const schemaDependencies = new Map()
-	for (const [schemaKey, { schema }] of uniqueSchemasBy$id) {
-		schemaDependencies.set(schemaKey, findCoReferences(schema))
+	const factoryDependencies = new Map()
+	for (const [factoryKey, { schema }] of uniqueSchemasBy$id) {
+		factoryDependencies.set(factoryKey, findCoReferences(schema))
 	}
 
-	const sortedSchemaKeys = []
+	const sortedFactoryKeys = []
 	const processed = new Set()
 	const processing = new Set()
-	const visitSchema = (schemaKey) => {
-		if (processed.has(schemaKey) || processing.has(schemaKey)) return
-		processing.add(schemaKey)
-		for (const dep of schemaDependencies.get(schemaKey) || []) {
-			if (dep.startsWith('°Maia/schema/') && uniqueSchemasBy$id.has(dep)) visitSchema(dep)
+	const visitFactory = (factoryKey) => {
+		if (processed.has(factoryKey) || processing.has(factoryKey)) return
+		processing.add(factoryKey)
+		for (const dep of factoryDependencies.get(factoryKey) || []) {
+			if (dep.startsWith('°Maia/factory/') && uniqueSchemasBy$id.has(dep)) visitFactory(dep)
 		}
-		processing.delete(schemaKey)
-		processed.add(schemaKey)
-		sortedSchemaKeys.push(schemaKey)
+		processing.delete(factoryKey)
+		processed.add(factoryKey)
+		sortedFactoryKeys.push(factoryKey)
 	}
-	for (const schemaKey of uniqueSchemasBy$id.keys()) {
-		if (schemaKey !== '°Maia/schema/meta') visitSchema(schemaKey)
+	for (const factoryKey of uniqueSchemasBy$id.keys()) {
+		if (factoryKey !== '°Maia/factory/meta') visitFactory(factoryKey)
 	}
 
 	await ensureSparkOs(account, node, maiaGroup, peer, undefined)
 
-	const { EXCEPTION_SCHEMAS } = await import('../../schemas/registry.js')
+	const { EXCEPTION_FACTORIES } = await import('../../factories/registry.js')
 	let metaSchemaCoId = null
 	const osId = await groups.getSparkOsId(peer, MAIA_SPARK)
 	if (osId) {
 		const osCore = await ensureCoValueLoaded(peer, osId, { waitForAvailable: true, timeoutMs: 2000 })
 		if (osCore && peer.isAvailable(osCore)) {
 			const osContent = peer.getCurrentContent(osCore)
-			const schematasId = osContent?.get?.('schematas')
-			if (schematasId) {
-				const schematasCore = await ensureCoValueLoaded(peer, schematasId, {
+			const factoriesId = osContent?.get?.('factories')
+			if (factoriesId) {
+				const factoriesCore = await ensureCoValueLoaded(peer, factoriesId, {
 					waitForAvailable: true,
 					timeoutMs: 2000,
 				})
-				if (schematasCore && peer.isAvailable(schematasCore)) {
-					const schematasContent = peer.getCurrentContent(schematasCore)
-					metaSchemaCoId = schematasContent?.get?.('°Maia/schema/meta')
+				if (factoriesCore && peer.isAvailable(factoriesCore)) {
+					const factoriesContent = peer.getCurrentContent(factoriesCore)
+					metaSchemaCoId = factoriesContent?.get?.('°Maia/factory/meta')
 				}
 			}
 		}
 	}
 
 	if (!metaSchemaCoId) {
-		const tempMetaSchemaDef = buildMetaSchemaForSeeding('co_zTEMP')
+		const tempMetaSchemaDef = buildMetaFactoryForSeeding('co_zTEMP')
 		const cleanedTempDef = {
 			definition: removeIdFields(tempMetaSchemaDef.definition || tempMetaSchemaDef),
 		}
 		const { coValue: metaSchemaCoMap } = await createCoValueForSpark(
 			{ node, account, guardian: maiaGroup },
 			null,
-			{ schema: EXCEPTION_SCHEMAS.META_SCHEMA, cotype: 'comap', data: cleanedTempDef },
+			{ factory: EXCEPTION_FACTORIES.META_SCHEMA, cotype: 'comap', data: cleanedTempDef },
 		)
 		const actualMetaSchemaCoId = metaSchemaCoMap.id
-		const updatedMetaSchemaDef = buildMetaSchemaForSeeding(actualMetaSchemaCoId)
-		const { $schema, $id, id, ...directProperties } =
-			updatedMetaSchemaDef.definition || updatedMetaSchemaDef
+		const updatedMetaSchemaDef = buildMetaFactoryForSeeding(actualMetaSchemaCoId)
+		const {
+			$schema: _s,
+			$factory: _f,
+			$id,
+			id,
+			...directProperties
+		} = updatedMetaSchemaDef.definition || updatedMetaSchemaDef
 		const cleanedProperties = removeIdFields(directProperties)
 		for (const [key, value] of Object.entries(cleanedProperties)) metaSchemaCoMap.set(key, value)
 		metaSchemaCoId = actualMetaSchemaCoId
 	} else {
-		const updatedMetaSchemaDef = buildMetaSchemaForSeeding(metaSchemaCoId)
-		const { $schema, $id, id, ...directProperties } =
-			updatedMetaSchemaDef.definition || updatedMetaSchemaDef
+		const updatedMetaSchemaDef = buildMetaFactoryForSeeding(metaSchemaCoId)
+		const {
+			$schema: _s,
+			$factory: _f,
+			$id,
+			id,
+			...directProperties
+		} = updatedMetaSchemaDef.definition || updatedMetaSchemaDef
 		const cleanedProperties = removeIdFields(directProperties)
 		const metaSchemaCore = await ensureCoValueLoaded(peer, metaSchemaCoId, {
 			waitForAvailable: true,
@@ -185,44 +195,44 @@ export async function seed(
 		}
 	}
 
-	if (!coIdRegistry.has('°Maia/schema/meta')) {
-		coIdRegistry.register('°Maia/schema/meta', metaSchemaCoId)
+	if (!coIdRegistry.has('°Maia/factory/meta')) {
+		coIdRegistry.register('°Maia/factory/meta', metaSchemaCoId)
 	}
 
-	const schemaCoIdMap = new Map()
-	const schemaCoMaps = new Map()
+	const factoryCoIdMap = new Map()
+	const factoryCoMaps = new Map()
 	const { create: crudCreate } = await import('../../cojson/crud/create.js')
 	const { update: crudUpdate } = await import('../../cojson/crud/update.js')
 
 	const existingSchemaRegistry = new Map()
-	let schematasContent = null
+	let factoriesContent = null
 	if (osId) {
 		const osCore = await ensureCoValueLoaded(peer, osId, { waitForAvailable: true, timeoutMs: 2000 })
 		if (osCore && peer.isAvailable(osCore)) {
 			const osContent = peer.getCurrentContent(osCore)
-			const schematasId = osContent?.get?.('schematas')
-			if (schematasId) {
-				const schematasCore = await ensureCoValueLoaded(peer, schematasId, {
+			const factoriesId = osContent?.get?.('factories')
+			if (factoriesId) {
+				const factoriesCore = await ensureCoValueLoaded(peer, factoriesId, {
 					waitForAvailable: true,
 					timeoutMs: 2000,
 				})
-				if (schematasCore && peer.isAvailable(schematasCore)) {
-					schematasContent = peer.getCurrentContent(schematasCore)
-					const keys = schematasContent?.keys?.() ?? Object.keys(schematasContent ?? {})
+				if (factoriesCore && peer.isAvailable(factoriesCore)) {
+					factoriesContent = peer.getCurrentContent(factoriesCore)
+					const keys = factoriesContent?.keys?.() ?? Object.keys(factoriesContent ?? {})
 					for (const key of keys) {
-						const schemaCoId = schematasContent.get(key)
-						if (schemaCoId?.startsWith?.('co_z')) existingSchemaRegistry.set(key, schemaCoId)
+						const factoryCoId = factoriesContent.get(key)
+						if (factoryCoId?.startsWith?.('co_z')) existingSchemaRegistry.set(key, factoryCoId)
 					}
 				}
 			}
 		}
 	}
 
-	for (const schemaKey of sortedSchemaKeys) {
-		const { schema } = uniqueSchemasBy$id.get(schemaKey)
-		const { $schema, $id, id, ...directProperties } = schema
+	for (const factoryKey of sortedFactoryKeys) {
+		const { schema } = uniqueSchemasBy$id.get(factoryKey)
+		const { $schema: _s, $factory: _f, $id, id, ...directProperties } = schema
 		const cleanedProperties = removeIdFields(directProperties)
-		const existingSchemaCoId = existingSchemaRegistry.get(schemaKey)
+		const existingSchemaCoId = existingSchemaRegistry.get(factoryKey)
 		let actualCoId
 		if (existingSchemaCoId) {
 			await crudUpdate(peer, metaSchemaCoId, existingSchemaCoId, cleanedProperties)
@@ -231,57 +241,57 @@ export async function seed(
 			const createdSchema = await crudCreate(peer, metaSchemaCoId, cleanedProperties)
 			actualCoId = createdSchema.id
 		}
-		schemaCoIdMap.set(schemaKey, actualCoId)
-		const schemaCoValueCore = peer.getCoValue(actualCoId)
-		if (schemaCoValueCore && peer.isAvailable(schemaCoValueCore)) {
-			const schemaCoMapContent = peer.getCurrentContent(schemaCoValueCore)
-			if (schemaCoMapContent?.set) schemaCoMaps.set(schemaKey, schemaCoMapContent)
+		factoryCoIdMap.set(factoryKey, actualCoId)
+		const factoryCoValueCore = peer.getCoValue(actualCoId)
+		if (factoryCoValueCore && peer.isAvailable(factoryCoValueCore)) {
+			const factoryCoMapContent = peer.getCurrentContent(factoryCoValueCore)
+			if (factoryCoMapContent?.set) factoryCoMaps.set(factoryKey, factoryCoMapContent)
 		}
-		coIdRegistry.register(schemaKey, actualCoId)
+		coIdRegistry.register(factoryKey, actualCoId)
 	}
 
-	if (metaSchemaCoId && !schemaCoIdMap.has('°Maia/schema/meta')) {
-		schemaCoIdMap.set('°Maia/schema/meta', metaSchemaCoId)
+	if (metaSchemaCoId && !factoryCoIdMap.has('°Maia/factory/meta')) {
+		factoryCoIdMap.set('°Maia/factory/meta', metaSchemaCoId)
 	}
 
 	// Schema definitions (meta-schema children) must always be CoMaps (have .get for resolution)
-	for (const [schemaKey, schemaCoId] of schemaCoIdMap) {
-		const core = peer.getCoValue(schemaCoId)
+	for (const [factoryKey, factoryCoId] of factoryCoIdMap) {
+		const core = peer.getCoValue(factoryCoId)
 		if (!core || !peer.isAvailable(core)) continue
 		const content = peer.getCurrentContent(core)
 		const isCoMap = content && typeof content.get === 'function'
 		if (!isCoMap) {
 			const rawType = content?.type ?? core?.type ?? 'unknown'
 			throw new Error(
-				`[Seed] Schema definition ${schemaKey} must be CoMap but is ${rawType}. ` +
+				`[Seed] Factory definition ${factoryKey} must be CoMap but is ${rawType}. ` +
 					'Corrupt data. Clear storage (delete DB file or IndexedDB) and run with PEER_FRESH_SEED=true.',
 			)
 		}
 	}
 
 	const seededSchemas = []
-	for (const schemaKey of sortedSchemaKeys) {
-		const { name, schema } = uniqueSchemasBy$id.get(schemaKey)
-		const schemaCoId = schemaCoIdMap.get(schemaKey)
-		const schemaCoMap = schemaCoMaps.get(schemaKey)
-		const transformedSchema = transformForSeeding(schema, schemaCoIdMap)
-		transformedSchema.$id = `https://maia.city/${schemaCoId}`
-		const verificationErrors = validateSchemaStructure(transformedSchema, schemaKey, {
+	for (const factoryKey of sortedFactoryKeys) {
+		const { name, schema } = uniqueSchemasBy$id.get(factoryKey)
+		const factoryCoId = factoryCoIdMap.get(factoryKey)
+		const factoryCoMap = factoryCoMaps.get(factoryKey)
+		const transformedSchema = transformForSeeding(schema, factoryCoIdMap)
+		transformedSchema.$id = `https://maia.city/${factoryCoId}`
+		const verificationErrors = validateFactoryStructure(transformedSchema, factoryKey, {
 			checkSchemaReferences: true,
 			checkNestedCoTypes: false,
 		})
 		if (verificationErrors.length > 0) {
 			throw new Error(
-				`[Seed] Schema ${schemaKey} still contains °Maia/schema/ references: ${verificationErrors.join('\n')}`,
+				`[Seed] Factory ${factoryKey} still contains °Maia/factory/ references: ${verificationErrors.join('\n')}`,
 			)
 		}
-		const { $schema: _s, $id: _i, id: _id, ...directProps } = transformedSchema
+		const { $schema: _s, $factory: _f, $id: _i, id: _id, ...directProps } = transformedSchema
 		const cleanedProperties = removeIdFields(directProps)
-		for (const [key, value] of Object.entries(cleanedProperties)) schemaCoMap?.set(key, value)
-		seededSchemas.push({ name, key: schemaKey, coId: schemaCoId, coMapId: schemaCoMap?.id })
+		for (const [key, value] of Object.entries(cleanedProperties)) factoryCoMap?.set(key, value)
+		seededSchemas.push({ name, key: factoryKey, coId: factoryCoId, coMapId: factoryCoMap?.id })
 	}
 
-	await ensureSparkOs(account, node, maiaGroup, peer, schemaCoIdMap)
+	await ensureSparkOs(account, node, maiaGroup, peer, factoryCoIdMap)
 
 	const instanceCoIdMap = new Map()
 
@@ -291,23 +301,23 @@ export async function seed(
 		if (osId2) {
 			const osCore = node.getCoValue(osId2)
 			const osContent = osCore?.getCurrentContent?.()
-			const schematasId = osContent?.get?.('schematas')
-			if (schematasId) {
-				const schematasCore = node.getCoValue(schematasId)
-				const schematasContent = schematasCore?.getCurrentContent?.()
+			const factoriesId = osContent?.get?.('factories')
+			if (factoriesId) {
+				const factoriesCore = node.getCoValue(factoriesId)
+				const factoriesContent = factoriesCore?.getCurrentContent?.()
 				const keys =
-					typeof schematasContent.keys === 'function'
-						? Array.from(schematasContent.keys())
-						: Object.keys(schematasContent ?? {})
+					typeof factoriesContent.keys === 'function'
+						? Array.from(factoriesContent.keys())
+						: Object.keys(factoriesContent ?? {})
 				for (const key of keys) {
-					const coId = schematasContent.get(key)
+					const coId = factoriesContent.get(key)
 					if (coId?.startsWith?.('co_z')) schemaRegistry.set(key, coId)
 				}
 			}
 		}
 		if (schemaRegistry.size === 0) {
-			for (const [k, v] of schemaCoIdMap) schemaRegistry.set(k, v)
-			if (metaSchemaCoId) schemaRegistry.set('°Maia/schema/meta', metaSchemaCoId)
+			for (const [k, v] of factoryCoIdMap) schemaRegistry.set(k, v)
+			if (metaSchemaCoId) schemaRegistry.set('°Maia/factory/meta', metaSchemaCoId)
 		}
 		return schemaRegistry
 	}
@@ -315,14 +325,14 @@ export async function seed(
 	let combinedRegistry = await getCombinedRegistry()
 	if (data) {
 		for (const [collectionName] of Object.entries(data)) {
-			const schemaKey = `°Maia/schema/${collectionName}`
-			const dataSchemaKey = `°Maia/schema/data/${collectionName}`
-			const dataSchemaCoId = combinedRegistry.get(dataSchemaKey) || combinedRegistry.get(schemaKey)
-			if (dataSchemaCoId) {
-				combinedRegistry.set(schemaKey, dataSchemaCoId)
-				combinedRegistry.set(dataSchemaKey, dataSchemaCoId)
-				coIdRegistry.register(schemaKey, dataSchemaCoId)
-				coIdRegistry.register(dataSchemaKey, dataSchemaCoId)
+			const factoryKey = `°Maia/factory/${collectionName}`
+			const dataFactoryKey = `°Maia/factory/data/${collectionName}`
+			const dataFactoryCoId = combinedRegistry.get(dataFactoryKey) || combinedRegistry.get(factoryKey)
+			if (dataFactoryCoId) {
+				combinedRegistry.set(factoryKey, dataFactoryCoId)
+				combinedRegistry.set(dataFactoryKey, dataFactoryCoId)
+				coIdRegistry.register(factoryKey, dataFactoryCoId)
+				coIdRegistry.register(dataFactoryKey, dataFactoryCoId)
 			}
 		}
 	}
@@ -331,9 +341,13 @@ export async function seed(
 	const transformSchemaRefsOnly = (instance, schemaRegistry) => {
 		if (!instance || typeof instance !== 'object') return instance
 		const transformed = JSON.parse(JSON.stringify(instance))
-		if (transformed.$schema?.startsWith('°Maia/schema/')) {
-			const coId = schemaRegistry.get(transformed.$schema)
-			if (coId) transformed.$schema = coId
+		const factoryRef = transformed.$factory ?? transformed.$schema
+		if (factoryRef?.startsWith('°Maia/factory/')) {
+			const coId = schemaRegistry.get(factoryRef)
+			if (coId) {
+				transformed.$factory = coId
+				delete transformed.$schema
+			}
 		}
 		for (const prop of REFERENCE_PROPS) delete transformed[prop]
 		for (const prop of NESTED_REF_PROPS) {
@@ -372,8 +386,8 @@ export async function seed(
 			peer,
 			{ [configTypeKey]: transformed },
 			instanceCoIdMap,
-			schemaCoMaps,
-			schemaCoIdMap,
+			factoryCoMaps,
+			factoryCoIdMap,
 		)
 		for (const configInfo of seeded.configs || []) {
 			instanceCoIdMap.set(configInfo.path, configInfo.coId)
@@ -447,7 +461,7 @@ export async function seed(
 				for (const item of fullyTransformed.items || []) coValue.push(item)
 				updatedCount++
 			} else if (coValue?.set) {
-				const { $id, $schema, ...propsToSet } = fullyTransformed
+				const { $id, $factory, ...propsToSet } = fullyTransformed
 				// wasm.code is CoText (co-id ref) - seeded by seedWasmConfigs, never overwrite with raw string
 				if (configInfo.type === 'wasm') delete propsToSet.code
 				for (const [key, value] of Object.entries(propsToSet)) coValue.set(key, value)
@@ -493,19 +507,19 @@ export async function seed(
 			}
 		}
 		if (!vibes) {
-			const { EXCEPTION_SCHEMAS } = await import('../../schemas/registry.js')
+			const { EXCEPTION_FACTORIES } = await import('../../factories/registry.js')
 			const vibesRegistrySchemaCoId =
-				schemaCoIdMap?.get('°Maia/schema/os/vibes-registry') ??
+				factoryCoIdMap?.get('°Maia/factory/os/vibes-registry') ??
 				(await (
-					await import('../../cojson/schema/resolver.js')
-				).resolve(peer, '°Maia/schema/os/vibes-registry', {
+					await import('../../cojson/factory/resolver.js')
+				).resolve(peer, '°Maia/factory/os/vibes-registry', {
 					returnType: 'coId',
 				}))
 			const { coValue: vibesCoMap } = await createCoValueForSpark(
 				{ node, account, guardian: maiaGroup },
 				null,
 				{
-					schema: vibesRegistrySchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
+					factory: vibesRegistrySchemaCoId || EXCEPTION_FACTORIES.META_SCHEMA,
 					cotype: 'comap',
 					data: {},
 					dataEngine: peer?.dbEngine,
@@ -519,23 +533,23 @@ export async function seed(
 			const vibeKey = originalVibeId.startsWith('°Maia/vibe/')
 				? originalVibeId.replace('°Maia/vibe/', '')
 				: (vibe.name || 'default').toLowerCase().replace(/\s+/g, '-')
-			const schemaRef = vibe.$schema
+			const factoryRef = vibe.$factory
 			if (
-				schemaRef &&
-				(schemaRef.startsWith('@') || schemaRef.startsWith('°')) &&
-				!combinedRegistry.has(schemaRef)
+				factoryRef &&
+				(factoryRef.startsWith('@') || factoryRef.startsWith('°')) &&
+				!combinedRegistry.has(factoryRef)
 			) {
-				const schemaCoId =
-					schemaCoIdMap?.get(schemaRef) ??
+				const factoryCoId =
+					factoryCoIdMap?.get(factoryRef) ??
 					(await (
-						await import('../../cojson/schema/resolver.js')
-					).resolve(peer, schemaRef, { returnType: 'coId' }))
-				if (schemaCoId) combinedRegistry.set(schemaRef, schemaCoId)
+						await import('../../cojson/factory/resolver.js')
+					).resolve(peer, factoryRef, { returnType: 'coId' }))
+				if (factoryCoId) combinedRegistry.set(factoryRef, factoryCoId)
 			}
 			const retransformedVibe = transformForSeeding(vibe, combinedRegistry)
-			if (!retransformedVibe.$schema?.startsWith('co_z')) {
+			if (!retransformedVibe.$factory?.startsWith('co_z')) {
 				throw new Error(
-					`[sync] Vibe "${vibeKey}": $schema missing or not resolved. Ensure °Maia/schema/vibe is in schema registry.`,
+					`[sync] Vibe "${vibeKey}": $factory missing or not resolved. Ensure °Maia/factory/vibe is in schema registry.`,
 				)
 			}
 			const vibeSeeded = await seedConfigs(
@@ -545,8 +559,8 @@ export async function seed(
 				peer,
 				{ vibe: retransformedVibe },
 				instanceCoIdMap,
-				schemaCoMaps,
-				schemaCoIdMap,
+				factoryCoMaps,
+				factoryCoIdMap,
 			)
 			seededConfigs.configs.push(...(vibeSeeded.configs || []))
 			seededConfigs.count += vibeSeeded.count || 0
@@ -570,13 +584,13 @@ export async function seed(
 		maiaGroup,
 		peer,
 		coIdRegistry,
-		schemaCoIdMap,
+		factoryCoIdMap,
 		instanceCoIdMap,
 		configs || {},
 		seededSchemas,
 	)
 
-	const { indexCoValue } = await import('../../cojson/indexing/schema-index-manager.js')
+	const { indexCoValue } = await import('../../cojson/indexing/factory-index-manager.js')
 	const allSeededCoIds = [
 		...(seededConfigs.configs || []).map((c) => c.coId).filter(Boolean),
 		...(seededData.coIds || []),

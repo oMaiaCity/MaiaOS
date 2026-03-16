@@ -1,8 +1,8 @@
 {
-	"$schema": "°Maia/schema/context",
+	"$factory": "°Maia/factory/context",
 	"$id": "°Maia/actor/os/messages/context",
 	"conversations": {
-		"schema": "°Maia/schema/data/chat",
+		"factory": "°Maia/factory/data/chat",
 		"map": {
 			"id": "id",
 			"role": "role",

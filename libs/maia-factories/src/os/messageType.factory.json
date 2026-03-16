@@ -1,0 +1,10 @@
+{
+	"$factory": "°Maia/factory/meta",
+	"$id": "°Maia/factory/messageType",
+	"title": "°Maia/factory/messageType",
+	"description": "Message type schema - this IS the payload schema (merged concept). Message type schemas are JSON Schemas that validate message payloads directly.",
+	"cotype": "comap",
+	"indexing": true,
+	"type": "object",
+	"additionalProperties": true
+}

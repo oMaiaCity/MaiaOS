@@ -14,7 +14,7 @@ The `@MaiaOS/engines` package provides the execution components that power MaiaO
 **What it isn't:**
 - ❌ **Not the loader** – Boot process is in `@MaiaOS/loader`
 - ❌ **Not tool definitions** – Tools are in `@MaiaOS/tools`
-- ❌ **Not schemas** – Schema validation is in `@MaiaOS/schemata`
+- ❌ **Not schemas** – Schema validation is in `@MaiaOS/factories`
 
 ---
 
@@ -83,8 +83,8 @@ service → maia-loader → maia.os → maia.do → maia.db (MaiaDB) → maia.pe
 
 ```javascript
 // Data operations via maia.do (from MaiaOS.boot())
-const store = await maia.do({ op: 'read', schema: 'co_z...', filter: { done: false } });
-const created = await maia.do({ op: 'create', schema: 'co_z...', data: { text: 'New item' } });
+const store = await maia.do({ op: 'read', factory: 'co_z...', filter: { done: false } });
+const created = await maia.do({ op: 'create', factory: 'co_z...', data: { text: 'New item' } });
 ```
 
 For full system usage, see the [maia-loader Package](../02_maia-loader/README.md).
@@ -95,7 +95,7 @@ For full system usage, see the [maia-loader Package](../02_maia-loader/README.md
 
 - [maia-loader Package](../02_maia-loader/README.md) - Boot process and orchestration
 - [maia-db Package](../05_maia-db/README.md) - MaiaDB (storage layer)
-- [maia-schemata Package](../03_maia-schemata/README.md) - Schema validation
+- [maia-factories Package](../03_maia-factories/README.md) - Schema validation
 - [maia-actors Package](../08_maia-actors/README.md) - Actor definitions
 
 ---
@@ -113,4 +113,4 @@ For full system usage, see the [maia-loader Package](../02_maia-loader/README.md
 **Dependencies:**
 - `@MaiaOS/db` - MaiaDB (storage)
 - `@MaiaOS/tools` - Tool definitions
-- `@MaiaOS/schemata` - Schema validation
+- `@MaiaOS/factories` - Schema validation

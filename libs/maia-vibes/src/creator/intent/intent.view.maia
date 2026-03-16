@@ -1,6 +1,6 @@
 {
-	"$schema": "°Maia/schema/view",
-	"$id": "°Maia/creator/view/intent",
+	"$factory": "°Maia/factory/view",
+	"$id": "°Maia/logs/view/intent",
 	"content": {
 		"tag": "div",
 		"class": "stack",

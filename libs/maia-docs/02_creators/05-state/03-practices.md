@@ -1,5 +1,5 @@
 - Test with empty data (handle empty arrays gracefully)
-- Use schema references (`@schema/todos`) in context - they're resolved automatically
+- Use factory references (`@factory/todos`) in context - they're resolved automatically
 
 **❌ DON'T:**
 - Don't define queries in state machines (use context files instead)
@@ -14,7 +14,7 @@
 **Data Not Appearing:**
 1. Are query objects defined in your context file (`.context.maia`)?
 2. Check browser console for errors
-3. Is the schema reference correct? (`@schema/todos` or `co_z...`)
+3. Is the factory reference correct? (`@factory/todos` or `co_z...`)
 
 **Data Not Updating:**
 1. Are you using `@db` tool in state machines to modify data?
@@ -72,7 +72,7 @@
         "tool": "@db",
         "payload": {
           "op": "create",
-          "schema": "@schema/todos",
+          "factory": "@factory/todos",
           "data": {"text": "$newTodoText", "done": false}
         }
       },
@@ -104,7 +104,7 @@
         "tool": "@db",
         "payload": {
           "op": "delete",
-          "schema": "@schema/todos",
+          "factory": "@factory/todos",
           "id": "$$id"
         }
       },

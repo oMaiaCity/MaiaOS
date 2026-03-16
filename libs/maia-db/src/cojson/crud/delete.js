@@ -7,7 +7,7 @@
  * Handles schema indexing automatically and ensures complete deletion.
  */
 
-import { removeFromIndex } from '../indexing/schema-index-manager.js'
+import { removeFromIndex } from '../indexing/factory-index-manager.js'
 import * as collectionHelpers from './collection-helpers.js'
 
 /**
@@ -43,7 +43,7 @@ export async function deleteRecord(peer, schema, id) {
 	// Atomic deletion guarantee: either fully delete (index removal + property clearing) or fully fail (nothing changes)
 	const itemHeader = peer.getHeader(coValueCore)
 	const itemHeaderMeta = itemHeader?.meta || null
-	const itemSchemaCoId = itemHeaderMeta?.$schema || schema
+	const itemSchemaCoId = itemHeaderMeta?.$factory || schema
 
 	await removeFromIndex(peer, id, itemSchemaCoId)
 	// If this fails, error propagates and deletion aborts (prevents orphaned skeletons)

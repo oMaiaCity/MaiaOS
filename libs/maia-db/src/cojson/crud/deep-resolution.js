@@ -60,7 +60,13 @@ function extractCoValueIds(data, visited = new Set(), depth = 0, maxDepth = 15) 
 	// Handle objects
 	for (const [key, value] of Object.entries(data)) {
 		// Skip internal properties
-		if (key === 'id' || key === '$schema' || key === 'type' || key === 'loading' || key === 'error') {
+		if (
+			key === 'id' ||
+			key === '$factory' ||
+			key === 'type' ||
+			key === 'loading' ||
+			key === 'error'
+		) {
 			continue
 		}
 

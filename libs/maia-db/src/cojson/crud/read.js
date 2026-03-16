@@ -8,10 +8,10 @@
  * ONE universal function that works for CoMap, CoList, and CoStream.
  */
 
-import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver.js'
+import { resolveExpressions } from '@MaiaOS/factories/expression-resolver.js'
 import { ReactiveStore } from '../../reactive-store.js'
+import { resolve as resolveSchema } from '../factory/resolver.js'
 import { getAvensRegistryId, getHumansRegistryId, getSparksRegistryId } from '../groups/groups.js'
-import { resolve as resolveSchema } from '../schema/resolver.js'
 import { ensureCoValueLoaded, getCoListId } from './collection-helpers.js'
 import { extractCoValueData } from './data-extraction.js'
 import {
@@ -76,11 +76,11 @@ export async function read(
 	// Collection read (by schema)
 	if (schema) {
 		// Sparks: read from account.registries.sparks (index only has user-created sparks)
-		const sparkSchemaCoId = await resolveSchema(peer, '°Maia/schema/data/spark', {
+		const sparkSchemaCoId = await resolveSchema(peer, '°Maia/factory/data/spark', {
 			returnType: 'coId',
 		})
 		// Humans: read from account.registries.humans (no schema index)
-		const humanSchemaCoId = await resolveSchema(peer, '°Maia/schema/os/human', {
+		const humanSchemaCoId = await resolveSchema(peer, '°Maia/factory/os/human', {
 			returnType: 'coId',
 		})
 		const resolvedSchema = await resolveSchema(peer, schema, { returnType: 'coId' })
@@ -90,7 +90,7 @@ export async function read(
 		if (humanSchemaCoId && resolvedSchema === humanSchemaCoId) {
 			return readHumansFromRegistries(peer, readOptions)
 		}
-		const avenIdentitySchemaCoId = await resolveSchema(peer, '°Maia/schema/os/aven-identity', {
+		const avenIdentitySchemaCoId = await resolveSchema(peer, '°Maia/factory/os/aven-identity', {
 			returnType: 'coId',
 		})
 		if (avenIdentitySchemaCoId && resolvedSchema === avenIdentitySchemaCoId) {
@@ -138,12 +138,12 @@ function isFindOneFilter(filter) {
 }
 
 /**
- * True if value looks like a context query object (has schema for reads), not a DB_OP payload.
- * DB_OP payloads have { op, schema, data } - schema is operation target, not a read query.
+ * True if value looks like a context query object (has factory for reads), not a DB_OP payload.
+ * DB_OP payloads have { op, factory, data } - factory is operation target, not a read query.
  */
 function isQueryObject(value) {
-	if (!value || typeof value !== 'object' || Array.isArray(value) || !value.schema) return false
-	if (value.op && !['query', 'read'].includes(value.op) && typeof value.schema === 'string')
+	if (!value || typeof value !== 'object' || Array.isArray(value) || !value.factory) return false
+	if (value.op && !['query', 'read'].includes(value.op) && typeof value.factory === 'string')
 		return false
 	return true
 }
@@ -173,7 +173,7 @@ async function wireQueryStoreForSchema(
 
 	queryIsFindOne.set(key, isFindOne)
 	queryDefinitions.set(key, {
-		schema: value.schema,
+		factory: value.factory,
 		filter: evaluatedFilter,
 		...(value.map ? { map: value.map } : {}),
 	})
@@ -282,7 +282,7 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 
 				// Replace skipped query objects with [] so views don't crash on $each (expect array, not {schema,map})
 				for (const [key, value] of Object.entries(contextValue || {})) {
-					if (key !== '$schema' && key !== '$id' && isQueryObject(value) && !queryStores.has(key)) {
+					if (key !== '$factory' && key !== '$id' && isQueryObject(value) && !queryStores.has(key)) {
 						delete mergedValue[key]
 						mergedValue[key] = []
 						const hasKey = `has${key.charAt(0).toUpperCase()}${key.slice(1)}`
@@ -322,7 +322,7 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 		// Pre-pass: resolve @scope to inject accountId/profileId for filter evaluation
 		const scopeInject = {}
 		for (const [key, value] of Object.entries(contextValue || {})) {
-			if (isQueryObject(value) && value.schema === '@scope' && peer.account) {
+			if (isQueryObject(value) && value.factory === '@scope' && peer.account) {
 				scopeInject[key] = {
 					accountId: peer.account.id,
 					profileId: peer.account.get?.('profile') ?? null,
@@ -330,7 +330,7 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 				currentQueryKeys.add(key)
 				const scopeStore = new ReactiveStore(scopeInject[key])
 				queryStores.set(key, scopeStore)
-				queryDefinitions.set(key, { schema: '@scope', filter: null })
+				queryDefinitions.set(key, { factory: '@scope', filter: null })
 				queryIsFindOne.set(key, true)
 			}
 		}
@@ -342,7 +342,7 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 			// Schema definition properties like 'properties', '$defs' are part of schema structure, not queries
 			// Note: 'items' is a valid context query key (e.g. grid items); only skip if not a query object
 			if (
-				key === '$schema' ||
+				key === '$factory' ||
 				key === '$id' ||
 				key === '@stores' ||
 				key === 'properties' ||
@@ -359,7 +359,7 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 				currentQueryKeys.add(key)
 
 				// @scope already handled in pre-pass
-				if (value.schema === '@scope') continue
+				if (value.factory === '@scope') continue
 
 				// Check if we already have this query store
 				const existingStore = queryStores.get(key)
@@ -375,40 +375,40 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 
 				try {
 					// UNIVERSAL PROGRESSIVE REACTIVE RESOLUTION: Use reactive schema resolution for queries
-					let schemaCoId = value.schema
+					let factoryCoId = value.factory
 
-					// Ensure schemaCoId is a string (might be an object if deep resolution happened)
-					if (schemaCoId && typeof schemaCoId === 'object' && schemaCoId.$id) {
+					// Ensure factoryCoId is a string (might be an object if deep resolution happened)
+					if (factoryCoId && typeof factoryCoId === 'object' && factoryCoId.$id) {
 						// Schema was resolved to an object - use its $id
-						schemaCoId = schemaCoId.$id
+						factoryCoId = factoryCoId.$id
 					}
 
-					// Validate schemaCoId is a string
-					if (typeof schemaCoId !== 'string') {
-						debugLog('Invalid schemaCoId:', schemaCoId)
+					// Validate factoryCoId is a string
+					if (typeof factoryCoId !== 'string') {
+						debugLog('Invalid factoryCoId:', factoryCoId)
 						continue
 					}
 
 					// Runtime: resolve human-readable schema refs to co-id (seed should transform; resolve handles edge cases)
-					if (!schemaCoId.startsWith('co_z')) {
+					if (!factoryCoId.startsWith('co_z')) {
 						try {
-							const resolved = await resolveSchema(peer, schemaCoId, {
+							const resolved = await resolveSchema(peer, factoryCoId, {
 								returnType: 'coId',
 								timeoutMs,
 							})
 							if (resolved && typeof resolved === 'string' && resolved.startsWith('co_z')) {
-								schemaCoId = resolved
+								factoryCoId = resolved
 							}
 						} catch (_) {
 							console.error(
 								'[createUnifiedStore] Query schema must be co-id or resolve to co-id. Got:',
-								schemaCoId,
+								factoryCoId,
 							)
 							continue
 						}
-						if (!schemaCoId.startsWith('co_z')) continue
+						if (!factoryCoId.startsWith('co_z')) continue
 					}
-					if (schemaCoId && typeof schemaCoId === 'string' && schemaCoId.startsWith('co_z')) {
+					if (factoryCoId && typeof factoryCoId === 'string' && factoryCoId.startsWith('co_z')) {
 						if (filterChanged || !existingStore) {
 							if (existingStore?._queryUnsubscribe) {
 								existingStore._queryUnsubscribe()
@@ -417,7 +417,7 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 								peer,
 								read,
 								key,
-								schemaCoId,
+								factoryCoId,
 								evaluatedFilter,
 								value,
 								queryStores,
@@ -809,7 +809,7 @@ async function readSparksFromAccount(peer, options = {}) {
 
 		const sparkCoIds = []
 		for (const k of Object.keys(sparksData)) {
-			if (k === 'id' || k === 'loading' || k === 'error' || k === '$schema' || k === 'type') continue
+			if (k === 'id' || k === 'loading' || k === 'error' || k === '$factory' || k === 'type') continue
 			const v = sparksData[k]
 			const coId = typeof v === 'string' && v.startsWith('co_') ? v : k.startsWith('co_') ? k : null
 			if (coId) sparkCoIds.push(coId)
@@ -885,7 +885,7 @@ async function readHumansFromRegistries(peer, options = {}) {
 		// Dedupe by human co-id; find registry name (key that does NOT start with co_z)
 		const humanCoIdToRegistryName = new Map()
 		for (const k of Object.keys(humansData)) {
-			if (k === 'id' || k === 'loading' || k === 'error' || k === '$schema' || k === 'type') continue
+			if (k === 'id' || k === 'loading' || k === 'error' || k === '$factory' || k === 'type') continue
 			const humanCoId = humansData[k]
 			if (typeof humanCoId !== 'string' || !humanCoId.startsWith('co_')) continue
 			const isRegistryName = !k.startsWith('co_z')
@@ -1002,7 +1002,7 @@ async function readAvensFromRegistries(peer, options = {}) {
 
 		const avenIdentityCoIdToRegistryName = new Map()
 		for (const k of Object.keys(avensData)) {
-			if (k === 'id' || k === 'loading' || k === 'error' || k === '$schema' || k === 'type') continue
+			if (k === 'id' || k === 'loading' || k === 'error' || k === '$factory' || k === 'type') continue
 			const avenIdentityCoId = avensData[k]
 			if (typeof avenIdentityCoId !== 'string' || !avenIdentityCoId.startsWith('co_')) continue
 			const isRegistryName = !k.startsWith('co_z')
@@ -1129,7 +1129,7 @@ export async function findFirst(peer, schema, filter, options = {}) {
 		if (!itemCore || !peer.isAvailable(itemCore)) continue
 
 		const itemData = extractCoValueData(peer, itemCore)
-		const dataKeys = Object.keys(itemData).filter((k) => !['id', 'type', '$schema'].includes(k))
+		const dataKeys = Object.keys(itemData).filter((k) => !['id', 'type', '$factory'].includes(k))
 		if (dataKeys.length === 0 && itemData.type === 'comap') continue
 
 		if (matchesFilter(itemData, filter)) {
@@ -1166,7 +1166,7 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 	})
 
 	// Get schema index colist ID from spark.os.indexes (keyed by schema co-id)
-	// Supports both schema co-ids (co_z...) and human-readable names (°Maia/schema/data/todos)
+	// Supports both schema co-ids (co_z...) and human-readable names (°Maia/factory/data/todos)
 	const coListId = await getCoListId(peer, schema)
 	if (typeof process !== 'undefined' && process.env?.DEBUG)
 		console.log('[DEBUG readCollection] schema=', schema, 'coListId=', coListId)
@@ -1340,7 +1340,7 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 						// Filter out empty CoMaps (defense in depth - prevents skeletons from appearing even if index removal fails)
 						// Empty CoMap = object with only id, type, $schema properties (no data properties)
 						const dataKeys = Object.keys(processedData).filter(
-							(key) => !['id', 'type', '$schema'].includes(key),
+							(key) => !['id', 'type', '$factory'].includes(key),
 						)
 						if (dataKeys.length === 0 && processedData.type === 'comap') {
 							// Return empty object for empty CoMap (will be filtered out later)
@@ -1375,7 +1375,7 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 
 					// Skip empty CoMaps
 					const dataKeys = Object.keys(itemData).filter(
-						(key) => !['id', 'type', '$schema'].includes(key),
+						(key) => !['id', 'type', '$factory'].includes(key),
 					)
 					if (dataKeys.length === 0 && itemData.type === 'comap') {
 						continue
@@ -1521,7 +1521,7 @@ async function readAllCoValues(peer, filter = null, options = {}) {
 
 			// Filter out empty CoMaps (defense in depth - prevents skeletons from appearing even if index removal fails)
 			// Empty CoMap = object with only id, type, $schema properties (no data properties)
-			const dataKeys = Object.keys(data).filter((key) => !['id', 'type', '$schema'].includes(key))
+			const dataKeys = Object.keys(data).filter((key) => !['id', 'type', '$factory'].includes(key))
 			if (dataKeys.length === 0 && data.type === 'comap') {
 				// Skip empty CoMap skeletons
 				continue

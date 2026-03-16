@@ -197,7 +197,7 @@ App Service Actor
 **Load actors on-demand:**
 ```json
 {
-  "$schema": "@schema/actor",
+  "$factory": "@factory/actor",
   "$id": "@actor/composite",
   "children": {
     "todos": "@actor/todos",

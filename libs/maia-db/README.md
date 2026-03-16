@@ -17,7 +17,7 @@ MaiaOS Operations (maia.do({ op: 'read', ... }))
         ↓
   DataEngine → MaiaDB
         ↓
-  Universal read() + resolve() + schema-index-manager
+  Universal read() + resolve() + factory-index-manager
         ↓
   CoCache + collection-helpers
         ↓
@@ -27,13 +27,13 @@ MaiaOS Operations (maia.do({ op: 'read', ... }))
 ## Key Exports
 
 - `MaiaDB` - Single database class (storage layer)
-- Account primitives (`createAccountWithSecret`, `loadAccount`) - in @MaiaOS/peer; db exports `schemaMigration`, `simpleAccountSeed` for wiring
-- `resolve`, `resolveReactive`, `checkCotype`, `loadSchemasFromAccount` - Schema/co-value resolution
+- Account primitives (`createAccountWithSecret`, `loadAccount`) - in @MaiaOS/peer; db exports `factoryMigration`, `simpleAccountSeed` for wiring
+- `resolve`, `resolveReactive`, `checkCotype`, `loadFactoriesFromAccount` - Schema/co-value resolution
 - `waitForStoreReady`, `waitForReactiveResolution` - Store access helpers
 - `setupSyncPeers`, `subscribeSyncState` - Sync peer configuration
 - `createGroup`, `createProfile`, `createCoMap`, `createCoList`, `createCoStream`
 - `createAndPushMessage`, `processInbox` - Inbox handling
-- `simpleAccountSeed`, `schemaMigration` - Bootstrap and migration
+- `simpleAccountSeed`, `factoryMigration` - Bootstrap and migration
 
 ## Project Structure
 
@@ -44,11 +44,11 @@ libs/maia-db/
 │   │   ├── cache/        # CoCache
 │   │   ├── core/         # MaiaDB
 │   │   ├── crud/         # read, create, update, delete, collection-helpers
-│   │   ├── indexing/     # schema-index-manager, storage-hook-wrapper
+│   │   ├── indexing/     # factory-index-manager, storage-hook-wrapper
 │   │   ├── schema/       # resolver, seed
 │   │   └── peers/        # sync-peers
 │   ├── schemas/          # registry
-│   └── migrations/       # schema.migration
+│   └── migrations/       # factory.migration
 └── package.json
 ```
 
@@ -115,7 +115,7 @@ unsubscribe();
 - **cojson** - RawCoMap, RawCoList, LocalNode
 - **cojson-transport-ws** - WebSocket transport for sync
 - **@MaiaOS/engines** - DataEngine (maia.do) calls MaiaDB
-- **@MaiaOS/schemata** - Schema registry, validation
+- **@MaiaOS/factories** - Schema registry, validation
 - **@MaiaOS/storage** - Storage adapters
 
 ## License

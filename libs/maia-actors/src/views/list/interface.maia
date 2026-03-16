@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/meta",
+	"$factory": "°Maia/factory/meta",
 	"$id": "°Maia/actor/views/list/interface",
 	"title": "°Maia/actor/views/list/interface",
 	"description": "List view - todo list with toggle and delete",

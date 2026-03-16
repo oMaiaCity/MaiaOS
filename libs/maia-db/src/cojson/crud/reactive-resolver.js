@@ -1,7 +1,7 @@
 /**
  * Universal Reactive Dependency Resolver
  *
- * Provides reactive resolution for all dependency types (schemas, queries, configs, nested CoValues).
+ * Provides reactive resolution for all dependency types (factories, queries, configs, nested CoValues).
  * Returns ReactiveStore instances that automatically update when dependencies become available.
  *
  * Key Principles:
@@ -9,42 +9,42 @@
  * - Progressive by default - dependencies resolve as they become available
  * - Subscription-based - uses CoValue subscriptions to detect when dependencies become available
  * - Automatic updates - reactive stores automatically update when dependencies resolve
- * - Universal - works for any dependency type (schemas, queries, configs, nested CoValues)
+ * - Universal - works for any dependency type (factories, queries, configs, nested CoValues)
  */
 
 import { ReactiveStore } from '../../reactive-store.js'
-import { resolve } from '../schema/resolver.js'
+import { resolve } from '../factory/resolver.js'
 import { ensureCoValueLoaded } from './collection-helpers.js'
 import { read as universalRead } from './read.js'
 
 export { waitForReactiveResolution } from './read-operations.js'
 
 /**
- * Resolve schema reactively - returns ReactiveStore that updates when schema becomes available
+ * Resolve factory reactively - returns ReactiveStore that updates when factory becomes available
  *
  * @param {Object} peer - Backend instance
- * @param {string} schemaKey - Schema key (°Maia/schema/data/todos) or co-id (co_z...)
+ * @param {string} factoryKey - Factory key (°Maia/factory/data/todos) or co-id (co_z...)
  * @param {Object} [options] - Options
  * @param {number} [options.timeoutMs=10000] - Timeout for waiting (unused in reactive mode, kept for compatibility)
- * @returns {ReactiveStore} ReactiveStore that updates when schema resolves:
+ * @returns {ReactiveStore} ReactiveStore that updates when factory resolves:
  *   - Initial: { loading: true }
- *   - When resolved: { loading: false, schemaCoId: 'co_z...' }
+ *   - When resolved: { loading: false, factoryCoId: 'co_z...' }
  */
-export function resolveSchemaReactive(peer, schemaKey, options = {}) {
+export function resolveFactoryReactive(peer, factoryKey, options = {}) {
 	const { timeoutMs = 10000 } = options
 	const store = new ReactiveStore({ loading: true })
 
 	// If it's already a co-id, return immediately
-	if (schemaKey.startsWith('co_z')) {
-		store._set({ loading: false, schemaCoId: schemaKey })
+	if (factoryKey.startsWith('co_z')) {
+		store._set({ loading: false, factoryCoId: factoryKey })
 		return store
 	}
 
 	// Track subscriptions for cleanup
 	let osUnsubscribe = null
-	let schematasUnsubscribe = null
+	let factoriesUnsubscribe = null
 
-	// Set up reactive subscription to spark.os.schematas for progressive resolution (account.registries.sparks[°Maia].os.schematas)
+	// Set up reactive subscription to spark.os.factories for progressive resolution (account.registries.sparks[°Maia].os.factories)
 	const setupReactiveSubscription = async () => {
 		const { getSparkOsId } = await import('../groups/groups.js')
 		const spark = peer?.systemSpark ?? '°Maia'
@@ -66,37 +66,37 @@ export function resolveSchemaReactive(peer, schemaKey, options = {}) {
 				return // Still loading or error
 			}
 
-			// Check if schematas is available
-			const schematasId = osData.schematas
-			if (!schematasId || typeof schematasId !== 'string' || !schematasId.startsWith('co_z')) {
-				return // schematas not available yet
+			// Check if factories registry is available
+			const factoriesId = osData.factories
+			if (!factoriesId || typeof factoriesId !== 'string' || !factoriesId.startsWith('co_z')) {
+				return // factories registry not available yet
 			}
 
-			// Load schematas store reactively (only if not already subscribed)
-			if (!schematasUnsubscribe) {
-				const schematasStore = await universalRead(peer, schematasId, null, null, null, {
+			// Load factories store reactively (only if not already subscribed)
+			if (!factoriesUnsubscribe) {
+				const factoriesStore = await universalRead(peer, factoriesId, null, null, null, {
 					deepResolve: false,
 					timeoutMs,
 				})
 
-				// Subscribe to schematasStore updates
-				schematasUnsubscribe = schematasStore.subscribe((schematasData) => {
-					if (!schematasData || schematasData.error) {
+				// Subscribe to factoriesStore updates
+				factoriesUnsubscribe = factoriesStore.subscribe((factoriesData) => {
+					if (!factoriesData || factoriesData.error) {
 						return // Still loading or error
 					}
 
-					// Check if schema is in registry
-					const normalizedKey = schemaKey.startsWith('°Maia/schema/')
-						? schemaKey
-						: `°Maia/schema/${schemaKey}`
-					const registryCoId = schematasData[normalizedKey] || schematasData[schemaKey]
+					// Check if factory is in registry
+					const normalizedKey = factoryKey.startsWith('°Maia/factory/')
+						? factoryKey
+						: `°Maia/factory/${factoryKey}`
+					const registryCoId = factoriesData[normalizedKey] || factoriesData[factoryKey]
 
 					if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
-						// Schema found - update store
-						store._set({ loading: false, schemaCoId: registryCoId })
-						if (schematasUnsubscribe) {
-							schematasUnsubscribe()
-							schematasUnsubscribe = null
+						// Factory found - update store
+						store._set({ loading: false, factoryCoId: registryCoId })
+						if (factoriesUnsubscribe) {
+							factoriesUnsubscribe()
+							factoriesUnsubscribe = null
 						}
 						if (osUnsubscribe) {
 							osUnsubscribe()
@@ -111,9 +111,9 @@ export function resolveSchemaReactive(peer, schemaKey, options = {}) {
 		const originalUnsubscribe = store._unsubscribe
 		store._unsubscribe = () => {
 			if (originalUnsubscribe) originalUnsubscribe()
-			if (schematasUnsubscribe) {
-				schematasUnsubscribe()
-				schematasUnsubscribe = null
+			if (factoriesUnsubscribe) {
+				factoriesUnsubscribe()
+				factoriesUnsubscribe = null
 			}
 			if (osUnsubscribe) {
 				osUnsubscribe()
@@ -122,12 +122,12 @@ export function resolveSchemaReactive(peer, schemaKey, options = {}) {
 		}
 	}
 
-	// Try to resolve schema immediately (non-blocking check)
-	resolve(peer, schemaKey, { returnType: 'coId', timeoutMs: 2000 })
-		.then((schemaCoId) => {
-			if (schemaCoId?.startsWith('co_z')) {
+	// Try to resolve factory immediately (non-blocking check)
+	resolve(peer, factoryKey, { returnType: 'coId', timeoutMs: 2000 })
+		.then((factoryCoId) => {
+			if (factoryCoId?.startsWith('co_z')) {
 				// Schema resolved immediately - update store
-				store._set({ loading: false, schemaCoId })
+				store._set({ loading: false, factoryCoId })
 			} else {
 				// Schema not available yet - set up reactive subscription
 				setupReactiveSubscription().catch((error) => {
@@ -203,7 +203,7 @@ export function resolveCoValueReactive(peer, coId, _options = {}) {
  * Resolve query reactively - returns ReactiveStore that updates when query results become available
  *
  * @param {Object} peer - Backend instance
- * @param {Object} queryDef - Query definition { schema: '°Maia/schema/data/todos', filter: {...}, options: {...} }
+ * @param {Object} queryDef - Query definition { factory: '°Maia/factory/data/todos', filter: {...}, options: {...} }
  * @param {Object} [options] - Options
  * @returns {ReactiveStore} ReactiveStore that updates when query resolves:
  *   - Initial: { loading: true, items: [] }
@@ -212,32 +212,32 @@ export function resolveCoValueReactive(peer, coId, _options = {}) {
 export function resolveQueryReactive(peer, queryDef, options = {}) {
 	const store = new ReactiveStore({ loading: true, items: [] })
 
-	if (!queryDef || !queryDef.schema) {
+	if (!queryDef || !queryDef.factory) {
 		store._set({ loading: false, items: [], error: 'Invalid query definition' })
 		return store
 	}
 
-	// Resolve schema reactively
-	const schemaStore = resolveSchemaReactive(peer, queryDef.schema, options)
+	// Resolve factory reactively
+	const factoryStore = resolveFactoryReactive(peer, queryDef.factory, options)
 
-	// Subscribe to schema resolution
-	const schemaUnsubscribe = schemaStore.subscribe(async (schemaState) => {
-		if (schemaState.loading) {
-			return // Still loading schema
+	// Subscribe to factory resolution
+	const factoryUnsubscribe = factoryStore.subscribe(async (factoryState) => {
+		if (factoryState.loading) {
+			return // Still loading factory
 		}
 
-		if (schemaState.error || !schemaState.schemaCoId) {
-			store._set({ loading: false, items: [], error: schemaState.error || 'Schema not found' })
-			schemaUnsubscribe()
+		if (factoryState.error || !factoryState.factoryCoId) {
+			store._set({ loading: false, items: [], error: factoryState.error || 'Factory not found' })
+			factoryUnsubscribe()
 			return
 		}
 
-		// Schema resolved - execute query
+		// Factory resolved - execute query
 		try {
 			const queryStore = await universalRead(
 				peer,
 				null,
-				schemaState.schemaCoId,
+				factoryState.factoryCoId,
 				queryDef.filter || null,
 				null,
 				{
@@ -257,11 +257,11 @@ export function resolveQueryReactive(peer, queryDef, options = {}) {
 			store._unsubscribe = () => {
 				if (originalUnsubscribe) originalUnsubscribe()
 				queryUnsubscribe()
-				schemaUnsubscribe()
+				factoryUnsubscribe()
 			}
 		} catch (error) {
 			store._set({ loading: false, items: [], error: error.message })
-			schemaUnsubscribe()
+			factoryUnsubscribe()
 		}
 	})
 
@@ -272,25 +272,25 @@ export function resolveQueryReactive(peer, queryDef, options = {}) {
  * Universal reactive resolver - handles any dependency type
  *
  * @param {Object} peer - Backend instance
- * @param {string|Object} identifier - Identifier (co-id, schema key, or query definition)
+ * @param {string|Object} identifier - Identifier (co-id, factory key, or query definition)
  * @param {Object} [options] - Options
  * @returns {ReactiveStore} ReactiveStore that updates when dependency resolves
  */
 export function resolveReactive(peer, identifier, options = {}) {
 	// Handle query definition objects
 	if (identifier && typeof identifier === 'object' && !Array.isArray(identifier)) {
-		if (identifier.schema) {
+		if (identifier.factory) {
 			// Query definition
 			return resolveQueryReactive(peer, identifier, options)
 		}
 		if (identifier.fromCoValue) {
-			// Extract schema from CoValue reactively
+			// Extract factory from CoValue reactively
 			const coValueStore = resolveCoValueReactive(peer, identifier.fromCoValue, options)
-			const schemaStore = new ReactiveStore({ loading: true })
+			const factoryStore = new ReactiveStore({ loading: true })
 
 			// Track subscriptions for cleanup
 			let coValueUnsubscribe
-			let schemaResolveUnsubscribe
+			let factoryResolveUnsubscribe
 			let headerUnsubscribe
 
 			coValueUnsubscribe = coValueStore.subscribe(async (coValueState) => {
@@ -299,44 +299,44 @@ export function resolveReactive(peer, identifier, options = {}) {
 				}
 
 				if (coValueState.error || !coValueState.coValueCore) {
-					schemaStore._set({ loading: false, error: coValueState.error || 'CoValue not found' })
+					factoryStore._set({ loading: false, error: coValueState.error || 'CoValue not found' })
 					if (coValueUnsubscribe) coValueUnsubscribe()
 					return
 				}
 
-				// Extract schema from headerMeta
+				// Extract factory from headerMeta
 				const header = peer.getHeader(coValueState.coValueCore)
 				const headerMeta = header?.meta || null
-				const schemaCoId = headerMeta?.$schema || null
+				const factoryCoId = headerMeta?.$factory || null
 
-				if (schemaCoId && typeof schemaCoId === 'string' && schemaCoId.startsWith('co_z')) {
-					// Resolve schema reactively
-					const resolvedSchemaStore = resolveSchemaReactive(peer, schemaCoId, options)
-					schemaResolveUnsubscribe = resolvedSchemaStore.subscribe((schemaState) => {
-						schemaStore._set(schemaState)
-						if (!schemaState.loading) {
-							if (schemaResolveUnsubscribe) schemaResolveUnsubscribe()
+				if (factoryCoId && typeof factoryCoId === 'string' && factoryCoId.startsWith('co_z')) {
+					// Resolve factory reactively
+					const resolvedFactoryStore = resolveFactoryReactive(peer, factoryCoId, options)
+					factoryResolveUnsubscribe = resolvedFactoryStore.subscribe((factoryState) => {
+						factoryStore._set(factoryState)
+						if (!factoryState.loading) {
+							if (factoryResolveUnsubscribe) factoryResolveUnsubscribe()
 							if (coValueUnsubscribe) coValueUnsubscribe()
 						}
 					})
 				} else {
-					// Subscribe to CoValueCore updates to wait for headerMeta.$schema
+					// Subscribe to CoValueCore updates to wait for headerMeta.$factory
 					headerUnsubscribe = coValueState.coValueCore.subscribe((core) => {
 						const updatedHeader = peer.getHeader(core)
 						const updatedHeaderMeta = updatedHeader?.meta || null
-						const updatedSchemaCoId = updatedHeaderMeta?.$schema || null
+						const updatedFactoryCoId = updatedHeaderMeta?.$factory || null
 
 						if (
-							updatedSchemaCoId &&
-							typeof updatedSchemaCoId === 'string' &&
-							updatedSchemaCoId.startsWith('co_z')
+							updatedFactoryCoId &&
+							typeof updatedFactoryCoId === 'string' &&
+							updatedFactoryCoId.startsWith('co_z')
 						) {
-							// Resolve schema reactively
-							const resolvedSchemaStore = resolveSchemaReactive(peer, updatedSchemaCoId, options)
-							schemaResolveUnsubscribe = resolvedSchemaStore.subscribe((schemaState) => {
-								schemaStore._set(schemaState)
-								if (!schemaState.loading) {
-									if (schemaResolveUnsubscribe) schemaResolveUnsubscribe()
+							// Resolve factory reactively
+							const resolvedFactoryStore = resolveFactoryReactive(peer, updatedFactoryCoId, options)
+							factoryResolveUnsubscribe = resolvedFactoryStore.subscribe((factoryState) => {
+								factoryStore._set(factoryState)
+								if (!factoryState.loading) {
+									if (factoryResolveUnsubscribe) factoryResolveUnsubscribe()
 									if (headerUnsubscribe) headerUnsubscribe()
 									if (coValueUnsubscribe) coValueUnsubscribe()
 								}
@@ -347,15 +347,15 @@ export function resolveReactive(peer, identifier, options = {}) {
 			})
 
 			// Cleanup - ensure all subscriptions are cleaned up
-			const originalUnsubscribe = schemaStore._unsubscribe
-			schemaStore._unsubscribe = () => {
+			const originalUnsubscribe = factoryStore._unsubscribe
+			factoryStore._unsubscribe = () => {
 				if (originalUnsubscribe) originalUnsubscribe()
 				if (coValueUnsubscribe) coValueUnsubscribe()
-				if (schemaResolveUnsubscribe) schemaResolveUnsubscribe()
+				if (factoryResolveUnsubscribe) factoryResolveUnsubscribe()
 				if (headerUnsubscribe) headerUnsubscribe()
 			}
 
-			return schemaStore
+			return factoryStore
 		}
 	}
 
@@ -365,8 +365,8 @@ export function resolveReactive(peer, identifier, options = {}) {
 			// Co-id - resolve CoValue reactively
 			return resolveCoValueReactive(peer, identifier, options)
 		} else {
-			// Schema key - resolve schema reactively
-			return resolveSchemaReactive(peer, identifier, options)
+			// Factory key - resolve factory reactively
+			return resolveFactoryReactive(peer, identifier, options)
 		}
 	}
 

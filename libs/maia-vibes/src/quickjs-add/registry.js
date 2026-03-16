@@ -46,7 +46,7 @@ const depsListStyleMerged = {
 }
 
 const depsListContext = {
-	$schema: '°Maia/schema/context',
+	$factory: '°Maia/factory/context',
 	$id: '°Maia/quickjs-add/context/deps-list',
 	title: 'Dependency actors',
 	listItems: (quickjsAddVibe.dependencies || []).map((id) => ({
@@ -57,7 +57,7 @@ const depsListContext = {
 	selectedActorRef: null,
 	selectedCodeCoId: null,
 	selectedWasmCode: {
-		schema: '°Maia/schema/os/cotext',
+		factory: '°Maia/factory/os/cotext',
 		filter: { id: '$selectedCodeCoId' },
 		map: { items: 'items' },
 	},

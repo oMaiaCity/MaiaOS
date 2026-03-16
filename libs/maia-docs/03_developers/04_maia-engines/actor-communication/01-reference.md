@@ -79,7 +79,7 @@ The view subscribes to context changes:
 - Backend handles all query resolution
 
 **How**:
-- Query objects declared in context: `{schema: "...", filter: {...}}`
+- Query objects declared in context: `{factory: "...", filter: {...}}`
 - Unified store detects queries, evaluates filters, executes queries
 - Query results merged into context automatically
 - Context subscriptions trigger view re-renders

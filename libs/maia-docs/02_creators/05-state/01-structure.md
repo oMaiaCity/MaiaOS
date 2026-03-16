@@ -2,7 +2,7 @@ Create a file named `{name}.state.maia`:
 
 ```json
 {
-  "$schema": "@schema/state",
+  "$factory": "@factory/state",
   "$id": "@state/todo",
   
   "initial": "idle",
@@ -20,7 +20,7 @@ Create a file named `{name}.state.maia`:
         "tool": "@db",
         "payload": {
           "op": "create",
-          "schema": "co_z...",
+          "factory": "co_z...",
           "data": {"text": "$newTodoText", "done": false}
         }
       },
@@ -39,8 +39,8 @@ Create a file named `{name}.state.maia`:
 ```
 
 **Note:** 
-- `$schema` and `$id` use schema references (`@schema/state`, `@state/todo`) that are transformed to co-ids during seeding
-- The `schema` field in tool payloads must be a co-id (`co_z...`) - schema references (`@schema/todos`) are transformed to co-ids during seeding
+- `$factory` and `$id` use factory references (`@factory/state`, `@state/todo`) that are transformed to co-ids during seeding
+- The `factory` field in tool payloads must be a co-id (`co_z...`) - factory references (`@factory/todos`) are transformed to co-ids during seeding
 - In your source files, you can use schema references, but at runtime they become co-ids
 
 ## State Definition
@@ -253,7 +253,7 @@ Use MaiaScript expressions in payloads:
 ```json
 {
   "payload": {
-    "schema": "todos",
+    "factory": "todos",
     "data": {
       "text": "$newTodoText",    // Evaluated recursively
       "done": false,             // Literal value

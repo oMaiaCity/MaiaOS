@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/tool",
+	"$factory": "°Maia/factory/tool",
 	"$id": "@tool/core/copyLogsToClipboard",
 	"type": "function",
 	"function": {

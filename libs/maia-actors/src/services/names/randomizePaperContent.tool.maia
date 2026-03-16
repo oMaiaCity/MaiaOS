@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/tool",
+	"$factory": "°Maia/factory/tool",
 	"$id": "tool_randomize_paper_content_001",
 	"name": "@core/randomizePaperContent",
 	"description": "Test tool: replaces paper CoText with a random number of random words.",

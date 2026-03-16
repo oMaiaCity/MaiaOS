@@ -8,7 +8,7 @@
 
 ```json
 {
-  "$schema": "@schema/view",
+  "$factory": "@factory/view",
   "$id": "@sparks/view/vibe",
   "content": {
     "tag": "div",
@@ -110,7 +110,7 @@ vibes/todos/
 **`manifest.vibe.maia`:**
 ```json
 {
-  "$schema": "@schema/vibe",
+  "$factory": "@factory/vibe",
   "$id": "@vibe/todos",
   "name": "Todo List",
   "description": "A complete todo list application with state machines, drag-drop kanban view, and AI-compatible tools. Showcases MaiaOS actor system, message passing, and declarative UI.",
@@ -166,7 +166,7 @@ vibes/todos/
 ### ✅ DO:
 
 - **Always create vibe root first** - Define `@actor/vibe` before any UI actors
-- **Use schema references** - `@schema/vibe`, `@actor/vibe` (transformed to co-ids during seeding)
+- **Use factory references** - `@factory/vibe`, `@actor/vibe` (transformed to co-ids during seeding)
 - **Keep descriptions concise** - 1-3 sentences max
 - **Use semantic naming** - `manifest.vibe.maia`, `vibe/vibe.actor.maia`
 - **Reference vibe root in manifest** - Always use `"actor": "@actor/vibe"` in vibe manifest
@@ -178,7 +178,7 @@ vibes/todos/
 - **Don't use file paths** - Use schema references (`@actor/vibe`, not `"./vibe.actor.maia"`)
 - **Don't include logic** - Vibes are metadata only
 - **Don't duplicate actor properties** - Vibe references actor, doesn't contain it
-- **Don't skip schema** - Always include `$schema: "@schema/vibe"`
+- **Don't skip factory** - Always include `$factory: "@factory/vibe"`
 - **Don't nest actors** - Reference one root actor only (`@actor/vibe`)
 
 ## Marketplace Integration (Future)
@@ -197,7 +197,7 @@ Vibes are designed to support future marketplace features:
 **Example Future Vibe:**
 ```json
 {
-  "$schema": "@schema/vibe",
+  "$factory": "@factory/vibe",
   "$id": "@vibe/todos",
   "name": "Todo List",
   "description": "A complete todo list application...",
@@ -239,8 +239,8 @@ console.log(actor.context);    // Runtime state
 - Verify the path is correct relative to your HTML file
 
 **Error: "Invalid vibe manifest"**
-- Ensure your JSON has `"$schema": "@schema/vibe"`
-- Check for typos in the $schema field
+- Ensure your JSON has `"$factory": "@factory/vibe"`
+- Check for typos in the $factory field
 
 **Error: "Vibe manifest missing 'actor' field"**
 - Add the `"actor"` field with path to your actor file

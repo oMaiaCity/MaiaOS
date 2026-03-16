@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/context",
+	"$factory": "°Maia/factory/context",
 	"$id": "°Maia/actor/views/layout-chat/context",
 	"messages": "@messages",
 	"infoCard": "@infoCard",

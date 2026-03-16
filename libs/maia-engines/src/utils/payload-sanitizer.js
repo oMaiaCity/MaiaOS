@@ -55,7 +55,7 @@ export function stripInfrastructureKeysForValidation(payload) {
 /**
  * Sanitize payload for interface validation.
  * - Strip CoJSON metadata (_coValueType, cotype, etc.)
- * - Stringify definition when object (for-schemas)
+ * - Stringify definition when object (for-factories)
  * - Convert interface from object to array (for-actors)
  */
 export function sanitizePayloadForValidation(payload) {

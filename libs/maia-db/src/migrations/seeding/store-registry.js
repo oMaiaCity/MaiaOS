@@ -1,20 +1,20 @@
 /**
- * Store registry - populate spark.os.schematas with schema + instance config co-ids
+ * Store registry - populate spark.os.factories with factory + instance config co-ids
  */
 
 import {
 	ACTOR_CONFIG_REF_PATTERN,
 	INSTANCE_REF_PATTERN,
 	VIBE_ACTOR_REF_PATTERN,
-} from '@MaiaOS/schemata'
+} from '@MaiaOS/factories'
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import * as groups from '../../cojson/groups/groups.js'
 
 const MAIA_SPARK = '°Maia'
 
 /**
- * Store registry in spark.os.schematas CoMap.
- * Schematas holds: schema defs (°Maia/schema/...) + instance config co-ids (°Maia/.../actor/..., inbox, etc.)
+ * Store registry in spark.os.factories CoMap.
+ * Factories registry holds: factory defs (°Maia/factory/...) + instance config co-ids (°Maia/.../actor/..., inbox, etc.)
  */
 export async function storeRegistry(
 	account,
@@ -22,12 +22,12 @@ export async function storeRegistry(
 	maiaGroup,
 	peer,
 	coIdRegistry,
-	schemaCoIdMap,
+	factoryCoIdMap,
 	instanceCoIdMap,
 	_configs,
 	_seededSchemas,
 ) {
-	const { EXCEPTION_SCHEMAS } = await import('../../schemas/registry.js')
+	const { EXCEPTION_FACTORIES } = await import('../../factories/registry.js')
 
 	const osId = await groups.getSparkOsId(peer, MAIA_SPARK)
 	if (!osId) return
@@ -43,48 +43,48 @@ export async function storeRegistry(
 	const osContent = osCore.getCurrentContent?.()
 	if (!osContent || typeof osContent.get !== 'function') return
 
-	const schematasId = osContent.get('schematas')
-	let schematas
+	const factoriesId = osContent.get('factories')
+	let factories
 
-	if (schematasId) {
-		const schematasCore = node.getCoValue(schematasId)
-		if (schematasCore?.isAvailable()) {
-			const schematasContent = schematasCore.getCurrentContent?.()
-			if (schematasContent && typeof schematasContent.set === 'function') {
-				schematas = schematasContent
+	if (factoriesId) {
+		const factoriesCore = node.getCoValue(factoriesId)
+		if (factoriesCore?.isAvailable()) {
+			const factoriesContent = factoriesCore.getCurrentContent?.()
+			if (factoriesContent && typeof factoriesContent.set === 'function') {
+				factories = factoriesContent
 			}
 		}
 	}
 
-	if (!schematas) {
-		let schematasSchemaCoId = null
-		if (schemaCoIdMap?.has('°Maia/schema/os/schematas-registry')) {
-			schematasSchemaCoId = schemaCoIdMap.get('°Maia/schema/os/schematas-registry')
+	if (!factories) {
+		let factoriesRegistrySchemaCoId = null
+		if (factoryCoIdMap?.has('°Maia/factory/os/factories-registry')) {
+			factoriesRegistrySchemaCoId = factoryCoIdMap.get('°Maia/factory/os/factories-registry')
 		}
-		const schemaForSchematas = schematasSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA
+		const schemaForFactories = factoriesRegistrySchemaCoId || EXCEPTION_FACTORIES.META_SCHEMA
 		const ctx = { node, account, guardian: maiaGroup }
-		const { coValue: schematasCreated } = await createCoValueForSpark(ctx, null, {
-			schema: schemaForSchematas,
+		const { coValue: factoriesCreated } = await createCoValueForSpark(ctx, null, {
+			factory: schemaForFactories,
 			cotype: 'comap',
 			data: {},
 			dataEngine: peer?.dbEngine,
 		})
-		schematas = schematasCreated
-		osContent.set('schematas', schematas.id)
+		factories = factoriesCreated
+		osContent.set('factories', factories.id)
 
 		if (node.storage && node.syncManager) {
 			try {
-				await node.syncManager.waitForStorageSync(schematas.id)
+				await node.syncManager.waitForStorageSync(factories.id)
 				await node.syncManager.waitForStorageSync(osId)
 			} catch (_e) {}
 		}
 	}
 
-	const metaschemaCoId = coIdRegistry.get('°Maia/schema/meta')
-	if (metaschemaCoId) {
-		const existingCoId = schematas.get('°Maia/schema/meta')
+	const metafactoryCoId = coIdRegistry.get('°Maia/factory/meta')
+	if (metafactoryCoId) {
+		const existingCoId = factories.get('°Maia/factory/meta')
 		if (!existingCoId) {
-			schematas.set('°Maia/schema/meta', metaschemaCoId)
+			factories.set('°Maia/factory/meta', metafactoryCoId)
 		}
 	}
 
@@ -100,8 +100,8 @@ export async function storeRegistry(
 				ACTOR_CONFIG_REF_PATTERN.test(key) ||
 				VIBE_ACTOR_REF_PATTERN.test(key))
 		) {
-			const existing = schematas.get(key)
-			if (!existing) schematas.set(key, coId)
+			const existing = factories.get(key)
+			if (!existing) factories.set(key, coId)
 		}
 	}
 }

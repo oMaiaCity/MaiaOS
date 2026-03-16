@@ -55,13 +55,13 @@ libs/maia-db/src/migrations/seeding/
 
 - **simpleAccountSeed** - Minimal seed (registries via link)
 - **seed** - Full seed (bootstrap + schemas + configs + data)
-- **schemaMigration** - Schema migration utilities
+- **factoryMigration** - Schema migration utilities
 
 ---
 
 ## Reference Props
 
-Config references (actor, context, view, process, brand, style, inbox, etc.) are transformed during seeding. Human-readable IDs (`@schema/...`) become co-ids (`co_z...`).
+Config references (actor, context, view, process, brand, style, inbox, etc.) are transformed during seeding. Human-readable IDs (`@factory/...`) become co-ids (`co_z...`).
 
 ---
 

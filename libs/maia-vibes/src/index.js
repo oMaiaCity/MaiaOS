@@ -16,7 +16,7 @@ export { TodosVibeRegistry as TodosRegistry } from './todos/registry.js'
 
 import { ChatVibeRegistry } from './chat/registry.js'
 import { LogsVibeRegistry } from './creator/registry.js'
-import { HumansVibeRegistry } from './humans/registry.js'
+import { RegistriesVibeRegistry } from './humans/registry.js'
 import { PaperVibeRegistry } from './paper/registry.js'
 import { ProfileVibeRegistry } from './profile/registry.js'
 import { QuickjsAddVibeRegistry } from './quickjs-add/registry.js'
@@ -30,7 +30,7 @@ const ALL_REGISTRIES = [
 	ProfileVibeRegistry,
 	SparksVibeRegistry,
 	LogsVibeRegistry,
-	HumansVibeRegistry,
+	RegistriesVibeRegistry,
 	QuickjsAddVibeRegistry,
 ]
 

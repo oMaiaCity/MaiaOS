@@ -165,7 +165,7 @@ Create a file named `{name}.actor.maia`:
 
 ```json
 {
-  "$schema": "@schema/actor",
+  "$factory": "@factory/actor",
   "$id": "@actor/todo",
   "@label": "todo-list",
   "context": "@context/todo",
@@ -182,7 +182,7 @@ Create a file named `{name}.actor.maia`:
 
 | Property | Type | Required | Description |
 |----------|------|----------|-------------|
-| `$schema` | string | Yes | Schema reference (`@schema/actor`) |
+| `$factory` | string | Yes | Factory reference (`@factory/actor`) |
 | `$id` | string | Yes | Unique actor identifier (`@actor/todo`) |
 | `@label` | string | No | Actor label (e.g., `"agent"`, `"composite"`, `"todo-list"`) |
 | `context` | string | No | Co-id reference to context |
@@ -234,7 +234,7 @@ Orchestrating actors: business logic, data management. Typically minimal or no v
 **Example: Agent Service Actor**
 ```json
 {
-  "$schema": "@schema/actor",
+  "$factory": "@factory/actor",
   "$id": "@actor/vibe",
   "@label": "agent",
   "context": "@context/agent",

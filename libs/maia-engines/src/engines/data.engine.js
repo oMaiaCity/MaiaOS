@@ -7,20 +7,20 @@
  */
 
 import { normalizeCoValueData } from '@MaiaOS/db'
-import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver'
+import { resolveExpressions } from '@MaiaOS/factories/expression-resolver'
 import {
 	createErrorEntry,
 	createErrorResult,
 	createSuccessResult,
 	isPermissionError,
-} from '@MaiaOS/schemata/operation-result'
+} from '@MaiaOS/factories/operation-result'
 import {
 	ensureCoValueAvailable,
 	requireDataEngine,
 	requireParam,
 	validateCoId,
 	validateItems,
-} from '@MaiaOS/schemata/validation.helper'
+} from '@MaiaOS/factories/validation.helper'
 import {
 	colistApplyDiffOp,
 	colistPopOp,
@@ -59,13 +59,13 @@ async function evaluateDataWithExisting(data, existingData, evaluator) {
 	return await resolveExpressions(data, evaluator, { context: { existing: existingData }, item: {} })
 }
 
-function extractSchemaDefinition(coValueData, schemaCoId) {
+function extractSchemaDefinition(coValueData, factoryCoId) {
 	if (!coValueData || coValueData.error) return null
 	const { id: _id, loading: _loading, error: _error, type, ...schemaOnly } = coValueData
 	let result
 	if (schemaOnly.definition) {
 		const { id: defId, type: defType, ...definitionOnly } = schemaOnly.definition
-		result = { ...definitionOnly, $id: schemaCoId }
+		result = { ...definitionOnly, $id: factoryCoId }
 	} else {
 		const hasSchemaProps =
 			schemaOnly.cotype ||
@@ -73,72 +73,74 @@ function extractSchemaDefinition(coValueData, schemaCoId) {
 			schemaOnly.items ||
 			schemaOnly.title ||
 			schemaOnly.description
-		result = hasSchemaProps ? { ...schemaOnly, $id: schemaCoId } : null
+		result = hasSchemaProps ? { ...schemaOnly, $id: factoryCoId } : null
 	}
 	return result ? normalizeCoValueData(result) : null
 }
 
-async function readSchemaOp(peer, params) {
-	const { schemaRef } = params
-	if (!schemaRef || typeof schemaRef !== 'string') {
-		throw new Error('[ReadSchemaOperation] schemaRef (schema namekey) is required')
+async function readFactoryOp(peer, params) {
+	const { factoryRef } = params
+	if (!factoryRef || typeof factoryRef !== 'string') {
+		throw new Error('[ReadSchemaOperation] factoryRef (schema namekey) is required')
 	}
 	const normalizedRef =
-		schemaRef.startsWith('°') || schemaRef.startsWith('@') ? schemaRef : `°Maia/schema/${schemaRef}`
-	const schemaDef = await peer.resolve(normalizedRef, { returnType: 'schema' })
-	if (!schemaDef) return null
+		factoryRef.startsWith('°') || factoryRef.startsWith('@')
+			? factoryRef
+			: `°Maia/factory/${factoryRef}`
+	const factoryDef = await peer.resolve(normalizedRef, { returnType: 'factory' })
+	if (!factoryDef) return null
 	const definition =
-		typeof schemaDef === 'object' && schemaDef !== null
-			? JSON.stringify(schemaDef, null, 2)
-			: String(schemaDef)
-	return createSuccessResult({ definition }, { op: 'readSchema' })
+		typeof factoryDef === 'object' && factoryDef !== null
+			? JSON.stringify(factoryDef, null, 2)
+			: String(factoryDef)
+	return createSuccessResult({ definition }, { op: 'readFactory' })
 }
 
 async function readOp(peer, params) {
-	const { schema, key, keys, filter, options } = params
+	const { factory, key, keys, filter, options } = params
 	if (
-		schema &&
-		!schema.startsWith('co_z') &&
-		!['@account', '@group', '@metaSchema'].includes(schema)
+		factory &&
+		!factory.startsWith('co_z') &&
+		!['@account', '@group', '@metaSchema'].includes(factory)
 	) {
 		throw new Error(
-			`[ReadOperation] Schema must be a co-id (co_z...) or special schema hint (@account, @group, @metaSchema), got: ${schema}. Runtime code must use co-ids only, not '°Maia/schema/...' patterns.`,
+			`[ReadOperation] Factory must be a co-id (co_z...) or special hint (@account, @group, @metaSchema), got: ${factory}. Runtime code must use co-ids only, not '°Maia/factory/...' patterns.`,
 		)
 	}
 	if (keys !== undefined && !Array.isArray(keys))
 		throw new Error('[ReadOperation] keys parameter must be an array of co-ids')
 	if (key && keys) throw new Error('[ReadOperation] Cannot provide both key and keys parameters')
-	return await peer.read(schema, key, keys, filter, options)
+	return await peer.read(factory, key, keys, filter, options)
 }
 
 async function createOp(peer, dataEngine, params) {
-	const { schema: schemaParam, data, spark, idempotencyKey } = params
-	requireParam(schemaParam, 'schema', 'CreateOperation')
+	const { factory: factoryParam, data, spark, idempotencyKey } = params
+	requireParam(factoryParam, 'factory', 'CreateOperation')
 	requireParam(data, 'data', 'CreateOperation')
 	requireDataEngine(dataEngine, 'CreateOperation', 'runtime schema validation')
-	const schemaCoId =
-		typeof schemaParam === 'string' && schemaParam.startsWith('co_z')
-			? schemaParam
-			: await peer.resolve(schemaParam, { returnType: 'coId' })
-	if (!schemaCoId) {
+	const factoryCoId =
+		typeof factoryParam === 'string' && factoryParam.startsWith('co_z')
+			? factoryParam
+			: await peer.resolve(factoryParam, { returnType: 'coId' })
+	if (!factoryCoId) {
 		const registriesHint = peer.account?.get?.('registries')
 			? 'has registries'
 			: 'account.registries not set (link via sync?)'
-		console.error('[CreateOperation] Schema resolve failed:', schemaParam, registriesHint)
-		throw new Error(`[CreateOperation] Could not resolve schema: ${schemaParam}. ${registriesHint}`)
+		console.error('[CreateOperation] Factory resolve failed:', factoryParam, registriesHint)
+		throw new Error(`[CreateOperation] Could not resolve factory: ${factoryParam}. ${registriesHint}`)
 	}
 	if (idempotencyKey && typeof idempotencyKey === 'string') {
 		const existing = await peer.findFirst(
-			schemaCoId,
+			factoryCoId,
 			{ sourceMessageId: idempotencyKey },
 			{ timeoutMs: 2000 },
 		)
 		if (existing?.id) return createSuccessResult(existing, { op: 'create' })
 	}
-	const schemaDef = await peer.resolve(schemaCoId, { returnType: 'schema' })
+	const factoryDef = await peer.resolve(factoryCoId, { returnType: 'factory' })
 	const allowedKeys =
-		schemaDef?.properties && typeof schemaDef.properties === 'object'
-			? new Set(Object.keys(schemaDef.properties))
+		factoryDef?.properties && typeof factoryDef.properties === 'object'
+			? new Set(Object.keys(factoryDef.properties))
 			: null
 	const rawData = idempotencyKey ? { ...data, sourceMessageId: idempotencyKey } : data
 	const dataToCreate =
@@ -146,7 +148,7 @@ async function createOp(peer, dataEngine, params) {
 			? Object.fromEntries(Object.entries(rawData).filter(([k]) => allowedKeys.has(k)))
 			: rawData
 	const options = spark != null ? { spark } : {}
-	const result = await peer.create(schemaCoId, dataToCreate, options)
+	const result = await peer.create(factoryCoId, dataToCreate, options)
 	return createSuccessResult(result, { op: 'create' })
 }
 
@@ -158,11 +160,11 @@ async function updateOp(peer, dataEngine, evaluator, params) {
 	requireDataEngine(dataEngine, 'UpdateOperation', 'schema validation')
 	const rawExistingData = await peer.getRawRecord(id)
 	if (!rawExistingData) throw new Error(`[UpdateOperation] Record not found: ${id}`)
-	const schemaCoId = await resolveSchemaFromCoValue(peer, id, 'UpdateOperation')
-	const updateSchema = schemaCoId || rawExistingData.$schema || null
-	const { $schema: _schema, ...existingDataWithoutMetadata } = rawExistingData
+	const factoryCoId = await resolveSchemaFromCoValue(peer, id, 'UpdateOperation')
+	const updateFactory = factoryCoId || rawExistingData.$factory || null
+	const { $factory: _factory, ...existingDataWithoutMetadata } = rawExistingData
 	const evaluatedData = await evaluateDataWithExisting(data, existingDataWithoutMetadata, evaluator)
-	const result = await peer.update(updateSchema, id, evaluatedData)
+	const result = await peer.update(updateFactory, id, evaluatedData)
 	return createSuccessResult(result, { op: 'update' })
 }
 
@@ -171,8 +173,8 @@ async function deleteOp(peer, dataEngine, params) {
 	requireParam(id, 'id', 'DeleteOperation')
 	validateCoId(id, 'DeleteOperation')
 	requireDataEngine(dataEngine, 'DeleteOperation', 'extract schema from CoValue headerMeta')
-	const schemaCoId = await resolveSchemaFromCoValue(dataEngine.peer, id, 'DeleteOperation')
-	const result = await peer.delete(schemaCoId, id)
+	const factoryCoId = await resolveSchemaFromCoValue(dataEngine.peer, id, 'DeleteOperation')
+	const result = await peer.delete(factoryCoId, id)
 	return createSuccessResult(result, { op: 'delete' })
 }
 
@@ -185,39 +187,39 @@ async function seedOp(peer, params) {
 	return createSuccessResult(result, { op: 'seed' })
 }
 
-async function schemaOp(peer, _dataEngine, params) {
+async function factoryOp(peer, _dataEngine, params) {
 	const { coId, fromCoValue } = params
 	const paramCount = [coId, fromCoValue].filter(Boolean).length
 	if (paramCount === 0)
 		throw new Error('[SchemaOperation] One of coId or fromCoValue must be provided')
 	if (paramCount > 1)
 		throw new Error('[SchemaOperation] Only one of coId or fromCoValue can be provided')
-	let schemaCoId
+	let factoryCoId
 	if (coId) {
 		validateCoId(coId, 'SchemaOperation')
-		schemaCoId = coId
+		factoryCoId = coId
 	} else {
-		schemaCoId = null
+		factoryCoId = null
 	}
 	if (fromCoValue) {
 		validateCoId(fromCoValue, 'SchemaOperation')
-		schemaCoId = await peer.resolve({ fromCoValue }, { returnType: 'coId' })
-		if (!schemaCoId) {
+		factoryCoId = await peer.resolve({ fromCoValue }, { returnType: 'coId' })
+		if (!factoryCoId) {
 			return peer.createReactiveStore(null)
 		}
 	}
-	const schemaCoMapStore = await peer.read(null, schemaCoId)
-	const schemaStore = peer.createReactiveStore(null)
-	const updateSchema = (coValueData) =>
-		schemaStore._set(extractSchemaDefinition(coValueData, schemaCoId))
-	const unsubscribe = schemaCoMapStore.subscribe(updateSchema)
-	updateSchema(schemaCoMapStore.value)
-	const originalUnsubscribe = schemaStore._unsubscribe
-	schemaStore._unsubscribe = () => {
+	const factoryCoMapStore = await peer.read(null, factoryCoId)
+	const factoryStore = peer.createReactiveStore(null)
+	const updateFactory = (coValueData) =>
+		factoryStore._set(extractSchemaDefinition(coValueData, factoryCoId))
+	const unsubscribe = factoryCoMapStore.subscribe(updateFactory)
+	updateFactory(factoryCoMapStore.value)
+	const originalUnsubscribe = factoryStore._unsubscribe
+	factoryStore._unsubscribe = () => {
 		if (originalUnsubscribe) originalUnsubscribe()
 		unsubscribe()
 	}
-	return schemaStore
+	return factoryStore
 }
 
 async function resolveOp(peer, params) {
@@ -244,24 +246,24 @@ async function appendOp(peer, dataEngine, params) {
 	validateCoId(coId, 'AppendOperation')
 	requireDataEngine(dataEngine, 'AppendOperation', 'check schema cotype')
 	const coValueCore = await ensureCoValueAvailable(peer, coId, 'AppendOperation')
-	const schemaCoId = await resolveSchemaFromCoValue(peer, coId, 'AppendOperation')
+	const factoryCoId = await resolveSchemaFromCoValue(peer, coId, 'AppendOperation')
 	let targetCotype = cotype
 	if (!targetCotype) {
-		const isColist = await peer.checkCotype(schemaCoId, 'colist')
-		const isCoStream = await peer.checkCotype(schemaCoId, 'costream')
+		const isColist = await peer.checkCotype(factoryCoId, 'colist')
+		const isCoStream = await peer.checkCotype(factoryCoId, 'costream')
 		if (isColist) targetCotype = 'colist'
 		else if (isCoStream) targetCotype = 'costream'
 		else
 			throw new Error(
-				`[AppendOperation] CoValue ${coId} must be a CoList (colist) or CoStream (costream), got schema cotype: ${schemaCoId}`,
+				`[AppendOperation] CoValue ${coId} must be a CoList (colist) or CoStream (costream), got schema cotype: ${factoryCoId}`,
 			)
 	}
-	if (!(await peer.checkCotype(schemaCoId, targetCotype)))
+	if (!(await peer.checkCotype(factoryCoId, targetCotype)))
 		throw new Error(
 			`[AppendOperation] CoValue ${coId} is not a ${targetCotype} (schema cotype check failed)`,
 		)
-	const schema = await peer.resolve(schemaCoId, { returnType: 'schema' })
-	if (!schema) throw new Error(`[AppendOperation] Schema ${schemaCoId} not found`)
+	const factoryDef = await peer.resolve(factoryCoId, { returnType: 'factory' })
+	if (!factoryDef) throw new Error(`[AppendOperation] Factory ${factoryCoId} not found`)
 	const content = peer.getCurrentContent(coValueCore)
 	const methodName = targetCotype === 'colist' ? 'append' : 'push'
 	if (!content || typeof content[methodName] !== 'function')
@@ -271,7 +273,7 @@ async function appendOp(peer, dataEngine, params) {
 	const itemsToAppend = items || (item ? [item] : [])
 	if (itemsToAppend.length === 0)
 		throw new Error('[AppendOperation] At least one item required (use item or items parameter)')
-	validateItems(schema, itemsToAppend)
+	validateItems(factoryDef, itemsToAppend)
 	let appendedCount = 0
 	if (targetCotype === 'colist') {
 		let existingItems = []
@@ -306,12 +308,12 @@ async function spliceCoListOp(peer, dataEngine, params) {
 	validateCoId(coId, 'SpliceCoListOperation')
 	requireDataEngine(dataEngine, 'SpliceCoListOperation', 'check schema')
 	const coValueCore = await ensureCoValueAvailable(peer, coId, 'SpliceCoListOperation')
-	const schemaCoId = await resolveSchemaFromCoValue(peer, coId, 'SpliceCoListOperation')
-	if (!(await peer.checkCotype(schemaCoId, 'colist'))) {
+	const factoryCoId = await resolveSchemaFromCoValue(peer, coId, 'SpliceCoListOperation')
+	if (!(await peer.checkCotype(factoryCoId, 'colist'))) {
 		throw new Error(`[SpliceCoListOperation] CoValue ${coId} must be a CoList`)
 	}
-	const schema = await peer.resolve(schemaCoId, { returnType: 'schema' })
-	if (!schema) throw new Error(`[SpliceCoListOperation] Schema ${schemaCoId} not found`)
+	const factoryDef = await peer.resolve(factoryCoId, { returnType: 'factory' })
+	if (!factoryDef) throw new Error(`[SpliceCoListOperation] Factory ${factoryCoId} not found`)
 	const content = peer.getCurrentContent(coValueCore)
 	if (!content || typeof content.delete !== 'function' || typeof content.append !== 'function') {
 		throw new Error(`[SpliceCoListOperation] CoList ${coId} missing delete/append methods`)
@@ -327,7 +329,7 @@ async function spliceCoListOp(peer, dataEngine, params) {
 		}
 	}
 	if (items.length > 0) {
-		validateItems(schema, items)
+		validateItems(factoryDef, items)
 		for (const it of items) {
 			content.append(it)
 		}
@@ -355,8 +357,8 @@ async function uploadBinaryOp(peer, dataEngine, params) {
 	requireDataEngine(dataEngine, 'UploadBinaryOperation', 'binary stream validation')
 
 	const coValueCore = await ensureCoValueAvailable(peer, coId, 'UploadBinaryOperation')
-	const schemaCoId = await resolveSchemaFromCoValue(peer, coId, 'UploadBinaryOperation')
-	if (!(await peer.checkCotype(schemaCoId, 'cobinary'))) {
+	const factoryCoId = await resolveSchemaFromCoValue(peer, coId, 'UploadBinaryOperation')
+	if (!(await peer.checkCotype(factoryCoId, 'cobinary'))) {
 		throw new Error(`[UploadBinaryOperation] CoValue ${coId} must be a CoBinary`)
 	}
 
@@ -491,7 +493,7 @@ async function uploadToCoBinaryOp(dataEngine, params) {
 	const chunks = await readFileAsChunks(file, CHUNK_SIZE, onProgress)
 	const createRes = await dataEngine.execute({
 		op: 'create',
-		schema: '°Maia/schema/data/cobinary',
+		factory: '°Maia/factory/data/cobinary',
 		data: {},
 	})
 	const cobinaryData = createRes?.ok === true ? createRes.data : createRes
@@ -550,12 +552,12 @@ async function createSparkOp(peer, dataEngine, params) {
 }
 
 async function readSparkOp(peer, params) {
-	const { id, schema } = params
+	const { id, factory } = params
 	if (id) {
 		validateCoId(id, 'ReadSparkOperation')
 		return await peer.readSpark(id)
 	}
-	return await peer.readSpark(null, schema || '°Maia/schema/data/spark')
+	return await peer.readSpark(null, factory || '°Maia/factory/data/spark')
 }
 
 async function updateSparkOp(peer, dataEngine, params) {
@@ -704,12 +706,12 @@ export class DataEngine {
 		this.ops = peer
 			? {
 					read: (p) => readOp(peer, p),
-					readSchema: (p) => readSchemaOp(peer, p),
+					readFactory: (p) => readFactoryOp(peer, p),
 					create: (p) => createOp(peer, this, p),
 					update: (p) => updateOp(peer, this, ev, p),
 					delete: (p) => deleteOp(peer, this, p),
 					seed: (p) => seedOp(peer, p),
-					schema: (p) => schemaOp(peer, this, p),
+					factory: (p) => factoryOp(peer, this, p),
 					resolve: (p) => resolveOp(peer, p),
 					append: (p) => appendOp(peer, this, p),
 					spliceCoList: (p) => spliceCoListOp(peer, this, p),
@@ -746,7 +748,7 @@ export class DataEngine {
 
 		if (!op) {
 			throw new Error(
-				'[DataEngine] Operation required: {op: "read|create|update|delete|seed|schema|resolve|append|push|..."}',
+				'[DataEngine] Operation required: {op: "read|create|update|delete|seed|factory|resolve|append|push|..."}',
 			)
 		}
 

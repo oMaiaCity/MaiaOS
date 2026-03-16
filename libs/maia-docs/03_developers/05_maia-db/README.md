@@ -66,7 +66,7 @@ maia.do({ op, schema, key, ... })  →  DataEngine  →  MaiaDB  →  MaiaPeer /
 ## Related Documentation
 
 - [maia-engines Package](../04_maia-engines/README.md) - DataEngine (maia.do)
-- [maia-schemata Package](../03_maia-schemata/README.md) - Schema validation and transformation
+- [maia-factories Package](../03_maia-factories/README.md) - Schema validation and transformation
 
 ---
 
@@ -81,4 +81,4 @@ maia.do({ op, schema, key, ... })  →  DataEngine  →  MaiaDB  →  MaiaPeer /
 
 **Dependencies:**
 - `cojson` - CRDT library
-- `@MaiaOS/schemata` - Schema validation
+- `@MaiaOS/factories` - Schema validation

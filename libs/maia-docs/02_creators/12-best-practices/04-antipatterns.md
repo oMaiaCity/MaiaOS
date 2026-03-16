@@ -5,7 +5,7 @@
 **Bad:**
 ```json
 {
-  "$schema": "@schema/context",
+  "$factory": "@factory/context",
   "$id": "@context/vibe",
   "viewMode": "list",        // ❌ UI state in service
   "listButtonActive": true,  // ❌ UI state in service
@@ -16,7 +16,7 @@
 **Good:**
 ```json
 {
-  "$schema": "@schema/context",
+  "$factory": "@factory/context",
   "$id": "@context/vibe",
   "composite": "@actor/composite"  // ✅ Only business logic references
 }
@@ -78,7 +78,7 @@
 {
   "currentView": "@composite",  // ✅ Context property (CRDT CoValue) - references active child
   "@actors": {
-    "composite": "@actor/composite"  // ✅ System property (like $schema/$id) - defines children
+    "composite": "@actor/composite"  // ✅ System property (like $factory/$id) - defines children
   }
 }
 
@@ -98,7 +98,7 @@
 **Bad:**
 ```json
 {
-  "$schema": "@schema/actor",
+  "$factory": "@factory/actor",
   "$id": "@actor/vibe",
   "@label": "agent",
   "state": "@state/monolithic-service"  // ❌ Everything in one service
@@ -108,7 +108,7 @@
 **Good:**
 ```json
 {
-  "$schema": "@schema/actor",
+  "$factory": "@factory/actor",
   "$id": "@actor/vibe",
   "@label": "agent",
   "children": {
@@ -276,7 +276,7 @@ App Service Actor
 - [ ] Every schema has a `cotype` (comap, colist, or costream)
 - [ ] Use `$co` for CoValue references (external schemas, actors, views)
 - [ ] Use `$ref` only for internal definitions (within `$defs`)
-- [ ] Include required fields: `$schema`, `$id`, `title`, `cotype`
+- [ ] Include required fields: `$factory`, `$id`, `title`, `cotype`
 - [ ] Validate co-id patterns: `^co_z[a-zA-Z0-9]+$`
 - [ ] Keep schemas focused and single-purpose
 

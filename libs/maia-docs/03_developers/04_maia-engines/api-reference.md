@@ -70,7 +70,7 @@ await viewEngine.render(viewDef, { context: {} }, shadowRoot, [], 'custom');
 
 const store = await maia.do({
   op: 'read',
-  schema: 'co_zTodos123'
+  factory: 'co_zTodos123'
 });
 
 console.log('Current data:', store.value);

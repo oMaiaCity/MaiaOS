@@ -15,7 +15,7 @@ Think of schema indexes like a library's card catalog. When you add a new book (
 ## Structure
 
 ```
-spark.os.schematas   →  "°Maia/schema/namekey" → schema co-id (registry)
+spark.os.factories   →  "°Maia/factory/namekey" → schema co-id (registry)
 spark.os.indexes     →  schema-co-id → colist of instance co-ids (index)
 spark.os.unknown     →  colist of co-values without schemas
 ```
@@ -45,13 +45,13 @@ Each schema index uses a colist with `$co` type safety for instance co-ids.
 
 ## Schema Registration
 
-When a schema is registered in `spark.os.schemata`, its index colist is created automatically. No manual setup.
+When a schema is registered in `spark.os.factories`, its index colist is created automatically. No manual setup.
 
 ---
 
 ## Source
 
-`libs/maia-db/src/cojson/indexing/schema-index-manager.js`
+`libs/maia-db/src/cojson/indexing/factory-index-manager.js`
 
 ---
 

@@ -7,7 +7,7 @@ import {
 	createErrorEntry,
 	createErrorResult,
 	createSuccessResult,
-} from '@MaiaOS/schemata/operation-result'
+} from '@MaiaOS/factories/operation-result'
 
 export default {
 	async execute(actor, payload) {

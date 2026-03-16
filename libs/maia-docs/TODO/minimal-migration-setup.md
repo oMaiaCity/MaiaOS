@@ -13,7 +13,7 @@ Stripped down the account migration to its **absolute minimum** to understand co
 ### Before (Complex)
 
 ```javascript
-export async function schemaMigration(account, node, creationProps) {
+export async function factoryMigration(account, node, creationProps) {
   const { name } = creationProps;
   
   // Create Group
@@ -35,7 +35,7 @@ export async function schemaMigration(account, node, creationProps) {
 ### After (MINIMAL)
 
 ```javascript
-export async function schemaMigration(account, node, creationProps) {
+export async function factoryMigration(account, node, creationProps) {
   const { name } = creationProps;
   
   // Just set profile to string "owner"
@@ -116,13 +116,13 @@ account.set("profile", "owner", "trusting");
 
 ## Files Changed
 
-### 1. `libs/maia-db/src/migrations/schema.migration.js`
+### 1. `libs/maia-db/src/migrations/factory.migration.js`
 
 **Before:** Created Group + Profile CoMap (complex)  
 **After:** Just sets profile to "owner" (minimal)
 
 ```javascript
-export async function schemaMigration(account, node, creationProps) {
+export async function factoryMigration(account, node, creationProps) {
   account.set("profile", "owner", "trusting");
 }
 ```
@@ -152,7 +152,7 @@ return {
 };
 ```
 
-### 3. `libs/maia-db/src/migrations/schema.migration.test.js`
+### 3. `libs/maia-db/src/migrations/factory.migration.test.js`
 
 **Before:** Tests for Group creation, Profile CoMap, headerMeta, etc.  
 **After:** Tests for minimal string value setup
@@ -162,7 +162,7 @@ it("should set profile to string 'owner'", async () => {
   const result = await LocalNode.withNewlyCreatedAccount({
     creationProps: { name: "Test" },
     crypto,
-    migration: schemaMigration,
+    migration: factoryMigration,
   });
   
   const account = result.node.expectCurrentAccount("test");
@@ -248,7 +248,7 @@ Now we can build up incrementally:
 ### Step 2: Add More Account Data
 
 ```javascript
-export async function schemaMigration(account, node, creationProps) {
+export async function factoryMigration(account, node, creationProps) {
   const { name } = creationProps;
   
   // Set profile to JSON object
@@ -266,7 +266,7 @@ export async function schemaMigration(account, node, creationProps) {
 ### Step 3: Create Single CoMap (No Group)
 
 ```javascript
-export async function schemaMigration(account, node, creationProps) {
+export async function factoryMigration(account, node, creationProps) {
   const { name } = creationProps;
   
   // Create a profile CoMap (no group needed!)
@@ -331,7 +331,7 @@ Run the tests to verify minimal setup works:
 
 ```bash
 cd libs/maia-db
-bun test src/migrations/schema.migration.test.js
+bun test src/migrations/factory.migration.test.js
 ```
 
 **Expected output:**
@@ -362,7 +362,7 @@ bun test src/migrations/schema.migration.test.js
 
 **The absolute minimum migration:**
 ```javascript
-export async function schemaMigration(account, node, creationProps) {
+export async function factoryMigration(account, node, creationProps) {
   account.set("profile", "owner", "trusting");
 }
 ```

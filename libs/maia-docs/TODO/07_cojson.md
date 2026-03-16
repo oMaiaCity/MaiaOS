@@ -387,7 +387,7 @@ await seedExampleCoValues(node, account, { name: "Maia User" });
 // Returns:
 // {
 //   userGroup,   // The owner group (co_z...)
-//   profile,     // Profile CoMap with ProfileSchema
+//   profile,     // Profile CoMap with ProfileFactory
 //   plainText,   // CoPlainText example
 //   stream,      // CoStream with ActivityStream schema
 //   notes        // Notes CoList with NotesSchema
@@ -396,7 +396,7 @@ await seedExampleCoValues(node, account, { name: "Maia User" });
 
 **What Gets Created:**
 1. **UserGroup**: Central group that owns all example CoValues
-2. **Profile CoMap**: User profile with `ProfileSchema` in headerMeta
+2. **Profile CoMap**: User profile with `ProfileFactory` in headerMeta
 3. **CoPlainText**: Example plain text storage
 4. **CoStream**: Activity stream example with `ActivityStream` schema
 5. **Notes CoList**: Example notes with `NotesSchema`
@@ -716,7 +716,7 @@ const { node, accountID } = await LocalNode.withNewlyCreatedAccount({
 const group = node.createGroup();
 const db = new MaiaDB({ node, accountID, group });
 
-// 1. REGISTER SCHEMAS
+// 1. REGISTER FACTORIES
 // Author schema (no dependencies)
 const authorSchemaId = await db.registerSchema("Author", {
   type: "co-map",
@@ -1346,7 +1346,7 @@ async function updateTodo(todoId, updates) {
 ### With Schema Registry
 
 ```javascript
-// schemas/todo.schema.json
+// schemas/todo.factory.json
 {
   "type": "co-map",
   "properties": {

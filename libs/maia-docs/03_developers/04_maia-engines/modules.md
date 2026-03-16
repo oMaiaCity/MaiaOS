@@ -55,10 +55,10 @@ if (dataEngine) {
 ```javascript
 // Tools are automatically available after module loads
 // Use in process handlers via op action:
-{ "op": { "read": { "schema": "co_zTodos123", "filter": { "completed": false } } } }
+{ "op": { "read": { "factory": "co_zTodos123", "filter": { "completed": false } } } }
 
 // maia.do (DataEngine) - always returns reactive store:
-const store = await maia.do({ op: 'read', schema: 'co_zTodos123' });
+const store = await maia.do({ op: 'read', factory: 'co_zTodos123' });
 console.log('Current todos:', store.value);
 store.subscribe((todos) => {
   console.log('Todos updated:', todos);

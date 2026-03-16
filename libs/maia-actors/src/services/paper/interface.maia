@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/meta",
+	"$factory": "°Maia/factory/meta",
 	"$id": "°Maia/actor/services/paper/interface",
 	"title": "°Maia/actor/services/paper/interface",
 	"description": "Updates CoText content (full replace). Generic for any context path. Used by paper, notes, and other inline-edit views.",

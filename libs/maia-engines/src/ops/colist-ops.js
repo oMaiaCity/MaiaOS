@@ -5,14 +5,14 @@
  * Uses raw CoJSON: append, appendItems, prepend, delete, replace.
  */
 
-import { createSuccessResult } from '@MaiaOS/schemata/operation-result'
+import { createSuccessResult } from '@MaiaOS/factories/operation-result'
 import {
 	ensureCoValueAvailable,
 	requireDataEngine,
 	requireParam,
 	validateCoId,
 	validateItems,
-} from '@MaiaOS/schemata/validation.helper'
+} from '@MaiaOS/factories/validation.helper'
 import { calcPatch } from 'fast-myers-diff'
 
 /** Cache schema/content per coId to avoid 4 async lookups on repeated calls (e.g. paper keystrokes). */
@@ -20,8 +20,8 @@ const _coListContentCache = new Map()
 
 async function resolveSchemaFromCoValue(peer, coId) {
 	try {
-		const schemaCoId = await peer.resolve({ fromCoValue: coId }, { returnType: 'coId' })
-		return schemaCoId
+		const factoryCoId = await peer.resolve({ fromCoValue: coId }, { returnType: 'coId' })
+		return factoryCoId
 	} catch (_error) {
 		return null
 	}
@@ -41,19 +41,19 @@ async function ensureCoListContent(peer, coId, opName) {
 			typeof content.prepend === 'function' &&
 			typeof content.replace === 'function'
 		) {
-			return { content, schema: cached.schema, coValueCore: cached.coValueCore }
+			return { content, factoryDef: cached.factoryDef, coValueCore: cached.coValueCore }
 		}
 		_coListContentCache.delete(coId)
 	}
 
 	try {
 		const coValueCore = await ensureCoValueAvailable(peer, coId, opName)
-		const schemaCoId = await resolveSchemaFromCoValue(peer, coId)
-		if (!schemaCoId || !(await peer.checkCotype(schemaCoId, 'colist'))) {
+		const factoryCoId = await resolveSchemaFromCoValue(peer, coId)
+		if (!factoryCoId || !(await peer.checkCotype(factoryCoId, 'colist'))) {
 			throw new Error(`[${opName}] CoValue ${coId} must be a CoList`)
 		}
-		const schema = await peer.resolve(schemaCoId, { returnType: 'schema' })
-		if (!schema) throw new Error(`[${opName}] Schema ${schemaCoId} not found`)
+		const factoryDef = await peer.resolve(factoryCoId, { returnType: 'factory' })
+		if (!factoryDef) throw new Error(`[${opName}] Factory ${factoryCoId} not found`)
 		const content = peer.getCurrentContent(coValueCore)
 		if (
 			!content ||
@@ -66,8 +66,8 @@ async function ensureCoListContent(peer, coId, opName) {
 				`[${opName}] CoList ${coId} missing required methods (append, prepend, delete, replace)`,
 			)
 		}
-		_coListContentCache.set(coId, { schema, coValueCore })
-		return { content, schema, coValueCore }
+		_coListContentCache.set(coId, { factoryDef, coValueCore })
+		return { content, factoryDef, coValueCore }
 	} catch (err) {
 		_coListContentCache.delete(coId)
 		throw err
@@ -77,13 +77,13 @@ async function ensureCoListContent(peer, coId, opName) {
 export async function colistSetOp(peer, dataEngine, params) {
 	const { coId, index, value } = params
 	requireDataEngine(dataEngine, 'ColistSetOp', 'schema validation')
-	const { content, schema } = await ensureCoListContent(peer, coId, 'ColistSetOp')
+	const { content, factoryDef } = await ensureCoListContent(peer, coId, 'ColistSetOp')
 	const idx = Math.max(0, Math.floor(Number(index)) || 0)
 	const current = (typeof content.toJSON === 'function' && content.toJSON()) || []
 	if (idx >= current.length) {
 		throw new Error(`[ColistSetOp] Index ${idx} out of bounds (length ${current.length})`)
 	}
-	validateItems(schema, [value])
+	validateItems(factoryDef, [value])
 	content.replace(idx, value)
 	return createSuccessResult({ coId, index: idx }, { op: 'colistSet' })
 }
@@ -91,12 +91,12 @@ export async function colistSetOp(peer, dataEngine, params) {
 export async function colistPushOp(peer, dataEngine, params) {
 	const { coId, item, items } = params
 	requireDataEngine(dataEngine, 'ColistPushOp', 'schema validation')
-	const { content, schema } = await ensureCoListContent(peer, coId, 'ColistPushOp')
+	const { content, factoryDef } = await ensureCoListContent(peer, coId, 'ColistPushOp')
 	const itemsToAppend = items ?? (item !== undefined ? [item] : [])
 	if (itemsToAppend.length === 0) {
 		throw new Error('[ColistPushOp] At least one item required (use item or items parameter)')
 	}
-	validateItems(schema, itemsToAppend)
+	validateItems(factoryDef, itemsToAppend)
 	if (itemsToAppend.length === 1) {
 		content.append(itemsToAppend[0])
 	} else if (typeof content.appendItems === 'function') {
@@ -112,12 +112,12 @@ export async function colistPushOp(peer, dataEngine, params) {
 export async function colistUnshiftOp(peer, dataEngine, params) {
 	const { coId, item, items } = params
 	requireDataEngine(dataEngine, 'ColistUnshiftOp', 'schema validation')
-	const { content, schema } = await ensureCoListContent(peer, coId, 'ColistUnshiftOp')
+	const { content, factoryDef } = await ensureCoListContent(peer, coId, 'ColistUnshiftOp')
 	const itemsToPrepend = items ?? (item !== undefined ? [item] : [])
 	if (itemsToPrepend.length === 0) {
 		throw new Error('[ColistUnshiftOp] At least one item required (use item or items parameter)')
 	}
-	validateItems(schema, itemsToPrepend)
+	validateItems(factoryDef, itemsToPrepend)
 	// Prepend in reverse order so [a,b,c] becomes correct [a,b,c,...] at start
 	for (let i = itemsToPrepend.length - 1; i >= 0; i--) {
 		content.prepend(itemsToPrepend[i])
@@ -160,7 +160,7 @@ export async function colistShiftOp(peer, dataEngine, params) {
 export async function colistSpliceOp(peer, dataEngine, params) {
 	const { coId, start, deleteCount = 0, items = [] } = params
 	requireDataEngine(dataEngine, 'ColistSpliceOp', 'schema validation')
-	const { content, schema } = await ensureCoListContent(peer, coId, 'ColistSpliceOp')
+	const { content, factoryDef } = await ensureCoListContent(peer, coId, 'ColistSpliceOp')
 	const current = (typeof content.toJSON === 'function' && content.toJSON()) || []
 	const startIdx = Math.max(0, Math.floor(Number(start)) || 0)
 	const toDelete = Math.max(0, Math.floor(Number(deleteCount)) || 0)
@@ -176,7 +176,7 @@ export async function colistSpliceOp(peer, dataEngine, params) {
 
 	// Insert items
 	if (items.length > 0) {
-		validateItems(schema, items)
+		validateItems(factoryDef, items)
 		if (items.length === 1) {
 			const item = items[0]
 			if (startIdx === 0) {
@@ -292,11 +292,15 @@ function applySpliceToContent(content, startIdx, toDelete, items) {
 export async function colistApplyDiffOp(peer, dataEngine, params) {
 	const { coId, result } = params
 	requireDataEngine(dataEngine, 'ColistApplyDiffOp', 'schema validation')
-	const { content, schema, coValueCore } = await ensureCoListContent(peer, coId, 'ColistApplyDiffOp')
+	const { content, factoryDef, coValueCore } = await ensureCoListContent(
+		peer,
+		coId,
+		'ColistApplyDiffOp',
+	)
 	if (!Array.isArray(result)) {
 		throw new Error('[ColistApplyDiffOp] result must be an array')
 	}
-	validateItems(schema, result)
+	validateItems(factoryDef, result)
 
 	const current =
 		(typeof content.asArray === 'function' && content.asArray()) || content.toJSON?.() || []

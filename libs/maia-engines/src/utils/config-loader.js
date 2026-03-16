@@ -1,10 +1,10 @@
-import { validateAgainstSchemaOrThrow, validateCoId } from '@MaiaOS/schemata/validation.helper'
+import { validateAgainstFactoryOrThrow, validateCoId } from '@MaiaOS/factories/validation.helper'
 
 function stripMetadataForValidation(config) {
 	if (!config || typeof config !== 'object') return config
 	const {
 		id,
-		$schema,
+		$factory,
 		type,
 		headerMeta,
 		properties,
@@ -23,10 +23,13 @@ function stripMetadataForValidation(config) {
 				value &&
 				typeof value === 'object' &&
 				!Array.isArray(value) &&
-				value.schema &&
-				typeof value.schema === 'string'
+				value.factory &&
+				typeof value.factory === 'string'
 			) {
-				cleaned[key] = { schema: value.schema, ...('filter' in value ? { filter: value.filter } : {}) }
+				cleaned[key] = {
+					factory: value.factory,
+					...('filter' in value ? { filter: value.filter } : {}),
+				}
 			} else if (value && typeof value === 'object' && !Array.isArray(value)) {
 				cleaned[key] = cleanQueryObjects(value)
 			} else {
@@ -38,15 +41,15 @@ function stripMetadataForValidation(config) {
 	return cleanQueryObjects(cleanConfig)
 }
 
-export async function subscribeConfig(dataEngine, schemaRef, coId, configType, _cache = null) {
-	if (!schemaRef || !schemaRef.startsWith('co_z')) {
-		throw new Error(`[${configType}] schemaRef must be a co-id (co_z...), got: ${schemaRef}`)
+export async function subscribeConfig(dataEngine, factoryRef, coId, configType, _cache = null) {
+	if (!factoryRef || !factoryRef.startsWith('co_z')) {
+		throw new Error(`[${configType}] factoryRef must be a co-id (co_z...), got: ${factoryRef}`)
 	}
 	validateCoId(coId, configType)
 	if (!dataEngine) throw new Error(`[${configType}] Database engine not available`)
 
 	// Return store directly - caller subscribes (pure stores pattern)
-	const store = await dataEngine.execute({ op: 'read', schema: schemaRef, key: coId })
+	const store = await dataEngine.execute({ op: 'read', factory: factoryRef, key: coId })
 	return store
 }
 
@@ -54,8 +57,10 @@ export async function subscribeConfigsBatch(dataEngine, requests) {
 	if (!requests || requests.length === 0) return []
 
 	for (const req of requests) {
-		if (!req.schemaRef || !req.schemaRef.startsWith('co_z')) {
-			throw new Error(`[${req.configType}] schemaRef must be a co-id (co_z...), got: ${req.schemaRef}`)
+		if (!req.factoryRef || !req.factoryRef.startsWith('co_z')) {
+			throw new Error(
+				`[${req.configType}] factoryRef must be a co-id (co_z...), got: ${req.factoryRef}`,
+			)
 		}
 		validateCoId(req.coId, req.configType)
 	}
@@ -66,7 +71,7 @@ export async function subscribeConfigsBatch(dataEngine, requests) {
 	const allCoIds = requests.map((req) => req.coId)
 	const stores =
 		allCoIds.length > 0
-			? await dataEngine.execute({ op: 'read', schema: requests[0].schemaRef, keys: allCoIds })
+			? await dataEngine.execute({ op: 'read', factory: requests[0].factoryRef, keys: allCoIds })
 			: []
 
 	return stores
@@ -77,10 +82,10 @@ function convertPropertiesArrayToPlainObject(config, requireSchema = true) {
 
 	if (config.type === 'colist' || config.type === 'costream') {
 		const result = { id: config.id, type: config.type, items: config.items || [] }
-		result.$schema = config.$schema || config.schema
-		if (!result.$schema)
+		result.$factory = config.$factory // STRICT: Only $schema, no fallback
+		if (!result.$factory)
 			throw new Error(
-				`[convertPropertiesArrayToPlainObject] CoList/CoStream config must have $schema. Config keys: ${JSON.stringify(Object.keys(config))}`,
+				`[convertPropertiesArrayToPlainObject] CoList/CoStream config must have $factory. Config keys: ${JSON.stringify(Object.keys(config))}`,
 			)
 		return result
 	}
@@ -107,15 +112,15 @@ function convertPropertiesArrayToPlainObject(config, requireSchema = true) {
 		}
 	}
 
-	const isCoValue = config.id || config.type || config.$schema || config.headerMeta
-	if (isCoValue && requireSchema && !result.$schema) {
-		result.$schema = config.$schema
-		if (!result.$schema)
+	const isCoValue = config.id || config.type || config.$factory || config.headerMeta
+	if (isCoValue && requireSchema && !result.$factory) {
+		result.$factory = config.$factory
+		if (!result.$factory)
 			throw new Error(
-				`[convertPropertiesArrayToPlainObject] Config must have $schema. Config keys: ${JSON.stringify(Object.keys(config))}`,
+				`[convertPropertiesArrayToPlainObject] Config must have $factory. Config keys: ${JSON.stringify(Object.keys(config))}`,
 			)
-	} else if (config.$schema && !result.$schema) {
-		result.$schema = config.$schema
+	} else if (config.$factory && !result.$factory) {
+		result.$factory = config.$factory
 	}
 
 	return result
@@ -123,13 +128,13 @@ function convertPropertiesArrayToPlainObject(config, requireSchema = true) {
 
 export async function loadConfigOrUseProvided(
 	dataEngine,
-	schemaRef,
+	factoryRef,
 	coIdOrConfig,
 	configType,
 	cache = null,
 ) {
-	if (!schemaRef || !schemaRef.startsWith('co_z')) {
-		throw new Error(`[${configType}] schemaRef must be a co-id (co_z...), got: ${schemaRef}`)
+	if (!factoryRef || !factoryRef.startsWith('co_z')) {
+		throw new Error(`[${configType}] factoryRef must be a co-id (co_z...), got: ${factoryRef}`)
 	}
 	if (typeof coIdOrConfig === 'object' && coIdOrConfig !== null) {
 		const plainConfig = convertPropertiesArrayToPlainObject(coIdOrConfig)
@@ -144,15 +149,15 @@ export async function loadConfigOrUseProvided(
 		}
 		const schema = await dataEngine.peer.resolve(
 			{ fromCoValue: configCoId },
-			{ returnType: 'schema' },
+			{ returnType: 'factory' },
 		)
 		if (schema) {
-			await validateAgainstSchemaOrThrow(schema, stripMetadataForValidation(plainConfig), configType)
+			await validateAgainstFactoryOrThrow(schema, stripMetadataForValidation(plainConfig), configType)
 		}
 		return plainConfig
 	}
 	// Get store and use current value (pure stores pattern)
-	const store = await subscribeConfig(dataEngine, schemaRef, coIdOrConfig, configType, cache)
+	const store = await subscribeConfig(dataEngine, factoryRef, coIdOrConfig, configType, cache)
 	const config = store.value
 	if (!config) {
 		throw new Error(`Failed to load ${configType} from database by co-id: ${coIdOrConfig}`)

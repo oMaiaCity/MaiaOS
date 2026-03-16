@@ -9,10 +9,10 @@
  * invalid data from ever entering the CRDT (which is immutable once merged).
  */
 
-import { loadSchemaAndValidate } from '@MaiaOS/schemata/validation.helper'
-import { isExceptionSchema } from '../../schemas/registry.js'
+import { loadFactoryAndValidate } from '@MaiaOS/factories/validation.helper'
+import { isExceptionFactory } from '../../factories/registry.js'
+import { resolve } from '../factory/resolver.js'
 import { extractSchemaFromMessage, isAccountGroupOrProfile } from '../helpers/co-value-detection.js'
-import { resolve } from '../schema/resolver.js'
 
 /**
  * Extract current co-value content for validation
@@ -53,16 +53,16 @@ async function extractCurrentContent(peer, coId) {
 /**
  * Wait for schema to sync if not available
  * @param {Object} peer - Backend instance
- * @param {string} schemaCoId - Schema co-id to wait for
+ * @param {string} factoryCoId - Schema co-id to wait for
  * @param {number} timeoutMs - Timeout in milliseconds (default: 5000)
  * @returns {Promise<Object|null>} Schema definition or null if timeout
  */
-async function waitForSchemaSync(peer, schemaCoId, timeoutMs = 5000) {
+async function waitForSchemaSync(peer, factoryCoId, timeoutMs = 5000) {
 	const startTime = Date.now()
 
 	while (Date.now() - startTime < timeoutMs) {
 		try {
-			const schema = await resolve(peer, schemaCoId, { returnType: 'schema' })
+			const schema = await resolve(peer, factoryCoId, { returnType: 'factory' })
 			if (schema) {
 				return schema
 			}
@@ -91,51 +91,51 @@ async function validateRemoteTransactions(peer, dbEngine, msg) {
 	// Use universal detection helper (consolidates all detection logic)
 	const detection = isAccountGroupOrProfile(msg, peer, coId)
 
-	// Groups, accounts, and profiles don't need headerMeta.$schema (they're created by CoJSON without it)
+	// Groups, accounts, and profiles don't need headerMeta.$factory (they're created by CoJSON without it)
 	if (detection.isGroup || detection.isAccount || detection.isProfile) {
 		return { valid: true, error: null }
 	}
 
 	// Extract schema co-id from message header
-	const schemaCoId = extractSchemaFromMessage(msg)
+	const factoryCoId = extractSchemaFromMessage(msg)
 
-	// CRITICAL: ENFORCE that every co-value MUST have a schema in headerMeta.$schema
+	// CRITICAL: ENFORCE that every co-value MUST have a schema in headerMeta.$factory
 	// Reject co-values without schemas - this is a fundamental requirement
-	if (!schemaCoId) {
+	if (!factoryCoId) {
 		return {
 			valid: false,
-			error: `Co-value ${coId} missing $schema in headerMeta. Every co-value MUST have a schema (except @account, @group, °Maia, and groups/accounts).`,
+			error: `Co-value ${coId} missing $factory in headerMeta. Every co-value MUST have a schema (except @account, @group, °Maia, and groups/accounts).`,
 		}
 	}
 
 	// Exception schemas (@account, @group, °Maia) are allowed without validation
 	// Use universal exception schema helper
-	if (isExceptionSchema(schemaCoId)) {
+	if (isExceptionFactory(factoryCoId)) {
 		return { valid: true, error: null }
 	}
 
 	// All other schemas must be co-ids (runtime schemas)
 	// Exception schemas are handled above, so if it's not a co-id, it's invalid
-	if (!schemaCoId.startsWith('co_z')) {
+	if (!factoryCoId.startsWith('co_z')) {
 		return {
 			valid: false,
-			error: `Co-value ${coId} has invalid schema format: ${schemaCoId}. Schema must be a co-id (co_z...) or exception schema (@account, @group, °Maia).`,
+			error: `Co-value ${coId} has invalid schema format: ${factoryCoId}. Schema must be a co-id (co_z...) or exception schema (@account, @group, °Maia).`,
 		}
 	}
 
 	// CRITICAL: Wait for schema to sync if not available
 	// This ensures schema is available before validating data
-	let schema = await resolve(peer, schemaCoId, { returnType: 'schema' })
+	let schema = await resolve(peer, factoryCoId, { returnType: 'factory' })
 	if (!schema) {
 		// Schema not available - wait for it to sync
-		console.log(`[ValidationHook] Schema ${schemaCoId} not available, waiting for sync...`)
-		schema = await waitForSchemaSync(peer, schemaCoId, 5000)
+		console.log(`[ValidationHook] Factory ${factoryCoId} not available, waiting for sync...`)
+		schema = await waitForSchemaSync(peer, factoryCoId, 5000)
 
 		if (!schema) {
 			// Schema still not available after timeout - REJECT transactions
 			return {
 				valid: false,
-				error: `Schema ${schemaCoId} not available after timeout. Cannot validate remote transactions for ${coId}.`,
+				error: `Factory ${factoryCoId} not available after timeout. Cannot validate remote transactions for ${coId}.`,
 			}
 		}
 	}
@@ -161,7 +161,7 @@ async function validateRemoteTransactions(peer, dbEngine, msg) {
 	// Note: Full validation would require merging transactions, which is complex
 	// This approach ensures schema is available and validates current state
 	try {
-		await loadSchemaAndValidate(peer, schemaCoId, content, `remote sync for ${coId}`, {
+		await loadFactoryAndValidate(peer, factoryCoId, content, `remote sync for ${coId}`, {
 			dataEngine: dbEngine,
 		})
 

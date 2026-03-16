@@ -1,17 +1,14 @@
 {
-	"$schema": "°Maia/schema/vibe",
+	"$factory": "°Maia/factory/vibe",
 	"$id": "°Maia/vibe/logs",
-	"name": "Creator",
+	"name": "Logs",
 	"description": "Developer logs and diagnostics",
-	"actor": "°Maia/creator/actor/intent",
+	"actor": "°Maia/logs/actor/intent",
 	"runtime": [
 		"browser"
 	],
 	"dependencies": [
-		"°Maia/creator/actor/intent",
-		"°Maia/actor/views/layout-creator",
-		"°Maia/actor/views/logs",
-		"°Maia/actor/views/list-detail/for-actors",
-		"°Maia/actor/views/list-detail/for-schemas"
+		"°Maia/logs/actor/intent",
+		"°Maia/actor/views/logs"
 	]
 }

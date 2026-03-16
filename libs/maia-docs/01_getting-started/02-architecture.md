@@ -46,7 +46,7 @@
 **Actors** - Component configuration:
 ```json
 {
-  "$schema": "@schema/actor",
+  "$factory": "@factory/actor",
   "$id": "@actor/todo",
   "@label": "todo-list",
   "context": "@context/todo",
@@ -66,12 +66,12 @@
 - `style` is **optional** - actor-specific style overrides that merge with brand
 - StyleEngine merges brand + style at runtime (brand first, then style overrides)
 - All references (`context`, `view`, `state`, `interface`, `brand`, `style`, `subscriptions`, `inbox`) use co-id references (like `@context/todo`) that are transformed to actual co-ids (`co_z...`) during seeding
-- The `$schema` and `$id` properties also use schema/instance references that get transformed
+- The `$factory` and `$id` properties also use factory/instance references that get transformed
 
 **Context** - Runtime data:
 ```json
 {
-  "$schema": "@schema/context",
+  "$factory": "@factory/context",
   "$id": "@context/todo",
   "todos": [],
   "newTodoText": "",
@@ -79,12 +79,12 @@
 }
 ```
 
-**Note:** Context files use `$schema` and `$id` with schema/instance references that get transformed to co-ids during seeding.
+**Note:** Context files use `$factory` and `$id` with factory/instance references that get transformed to co-ids during seeding.
 
 **State** - Behavior flow:
 ```json
 {
-  "$schema": "@schema/state",
+  "$factory": "@factory/state",
   "$id": "@state/todo",
   "initial": "idle",
   "states": {
@@ -97,12 +97,12 @@
 }
 ```
 
-**Note:** State machine files use `$schema` and `$id` with schema/instance references. Tool payloads in state machines reference co-ids (transformed during seeding).
+**Note:** State machine files use `$factory` and `$id` with factory/instance references. Tool payloads in state machines reference co-ids (transformed during seeding).
 
 **View** - UI structure:
 ```json
 {
-  "$schema": "@schema/view",
+  "$factory": "@factory/view",
   "$id": "@view/todo",
   "root": {
     "tag": "div",
@@ -111,12 +111,12 @@
 }
 ```
 
-**Note:** View files use `$schema` and `$id` with schema/instance references.
+**Note:** View files use `$factory` and `$id` with factory/instance references.
 
 **Style** - Appearance (Brand or Local):
 ```json
 {
-  "$schema": "@schema/style",
+  "$factory": "@factory/style",
   "$id": "@style/brand",
   "tokens": {
     "colors": {
@@ -136,12 +136,12 @@
 - **Brand styles** (`@style/brand`) - Shared design system with tokens and components, referenced via `brand` property
 - **Local styles** (`@style/todo`) - Actor-specific overrides, referenced via `style` property (optional)
 - StyleEngine merges brand + local styles at runtime (brand first, local overrides)
-- Style files use `$schema` and `$id` with schema/instance references
+- Style files use `$factory` and `$id` with factory/instance references
 
 **Interface** - Message contract (replaces skill):
 ```json
 {
-  "$schema": "@schema/interface",
+  "$factory": "@factory/interface",
   "$id": "@interface/todo",
   "messages": {
     "CREATE_TODO": {
@@ -154,7 +154,7 @@
 }
 ```
 
-**Note:** Interface files define message contracts between actors. They use `$schema` and `$id` with schema/instance references. Skills (AI agent interface) are planned.
+**Note:** Interface files define message contracts between actors. They use `$factory` and `$id` with factory/instance references. Skills (AI agent interface) are planned.
 
 ### 2. Execution Layer (Imperative)
 
@@ -232,7 +232,7 @@ During vibe loading, all human-readable references are transformed to co-ids:
 **Before Seeding (Human-Readable):**
 ```json
 {
-  "$schema": "@schema/actor",
+  "$factory": "@factory/actor",
   "$id": "@actor/todo",
   "context": "@context/todo",
   "view": "@view/todo",
@@ -243,7 +243,7 @@ During vibe loading, all human-readable references are transformed to co-ids:
 **After Seeding (Co-IDs):**
 ```json
 {
-  "$schema": "co_z9h5nwiNynbxnC3nTwPMPkrVaMQ",
+  "$factory": "co_z9h5nwiNynbxnC3nTwPMPkrVaMQ",
   "$id": "co_z8k4m2pLqRsTvWxYzAbCdEfGhIjKl",
   "context": "co_z7j3l1nKoQtPuVwXyZaBcDeFgHiJk",
   "view": "co_z6i2k0mJnPsOuTwVxYaBcDeFgHiJk",
@@ -252,7 +252,7 @@ During vibe loading, all human-readable references are transformed to co-ids:
 ```
 
 **Transformation Process:**
-1. Schema transformer maps `@schema/*` → co-ids
+1. Factory transformer maps `@factory/*` → co-ids
 2. Instance transformer maps `@actor/*`, `@context/*`, `@view/*`, etc. → co-ids
 3. All references in actors, state machines, and tool payloads are transformed
 4. Co-ids are stored in database, human-readable refs remain in source `.maia` files
@@ -359,7 +359,7 @@ MaiaOS/
 │   ├── maia-db/                # MaiaDB (CoJSON CRDT, seeding in migrations/)
 │   ├── maia-peer/              # P2P layer (node, account, sync)
 │   ├── maia-actors/            # Actor definitions
-│   ├── maia-schemata/          # Schema validation
+│   ├── maia-factories/          # Schema validation
 │   ├── maia-vibes/             # Example vibes/apps
 │   └── maia-self/              # Self-sovereign identity
 └── services/
@@ -406,10 +406,10 @@ See [Actors](../02_creators/03-actors/) for details.
 Data operations work with any schema via co-ids. Use **maia.do()** (the public data API):
 
 ```javascript
-maia.do({ op: "create", schema: "co_z...", data: {...} })
+maia.do({ op: "create", factory: "co_z...", data: {...} })
 maia.do({ op: "update", id: "co_z...", data: {...} })
 maia.do({ op: "delete", id: "co_z..." })
-maia.do({ op: "read", schema: "co_z...", filter: {...} })
+maia.do({ op: "read", factory: "co_z...", filter: {...} })
 ```
 
 Same API, different schema. Zero hardcoded domain knowledge. All schemas are co-ids (CoJSON IDs) - no human-readable fallbacks.

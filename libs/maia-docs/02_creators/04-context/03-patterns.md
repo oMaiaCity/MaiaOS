@@ -56,11 +56,11 @@ Use **query objects with filters** to get filtered data automatically:
 {
   "context": {
     "todosTodo": {
-      "schema": "@schema/todos",
+      "factory": "@factory/todos",
       "filter": { "done": false }
     },
     "todosDone": {
-      "schema": "@schema/todos",
+      "factory": "@factory/todos",
       "filter": { "done": true }
     }
   }

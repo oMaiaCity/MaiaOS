@@ -31,7 +31,7 @@ libs/maia-actors/src/
 │   ├── layout-chat/            # Chat (messages + input)
 │   └── layout-paper/            # Paper
 ├── aiChat/
-│   ├── aiChat.actor.maia       # Actor definition ($schema: °Maia/schema/actor)
+│   ├── aiChat.actor.maia       # Actor definition ($factory: °Maia/factory/actor)
 │   ├── aiChat.state.maia       # State machine (idle→processing on CHAT)
 │   └── aiChat.function.js      # LLM execution
 ├── db/, sparks/, updatePaperContent/, computeMessageNames/

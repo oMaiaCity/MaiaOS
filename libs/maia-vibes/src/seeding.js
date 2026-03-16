@@ -7,7 +7,7 @@
 
 import { ChatVibeRegistry } from './chat/registry.js'
 import { LogsVibeRegistry } from './creator/registry.js'
-import { HumansVibeRegistry } from './humans/registry.js'
+import { RegistriesVibeRegistry } from './humans/registry.js'
 import { PaperVibeRegistry } from './paper/registry.js'
 import { ProfileVibeRegistry } from './profile/registry.js'
 import { QuickjsAddVibeRegistry } from './quickjs-add/registry.js'
@@ -21,7 +21,7 @@ const ALL_REGISTRIES = [
 	ProfileVibeRegistry,
 	SparksVibeRegistry,
 	LogsVibeRegistry,
-	HumansVibeRegistry,
+	RegistriesVibeRegistry,
 	QuickjsAddVibeRegistry,
 ]
 
@@ -34,8 +34,8 @@ function getVibeKey(vibe) {
 	return (vibe.name || 'default').toLowerCase().replace(/\s+/g, '-')
 }
 
-const VIBE_SCHEMA = '°Maia/schema/vibe'
-const INBOX_SCHEMA = '°Maia/schema/inbox'
+const VIBE_SCHEMA = '°Maia/factory/vibe'
+const INBOX_SCHEMA = '°Maia/factory/inbox'
 
 /** Derive inbox namekey from actor $id (same convention as engine). */
 function deriveInboxId(actorId) {
@@ -53,8 +53,8 @@ function normalizeVibeForSeeding(vibe) {
 	}
 	const key = getVibeKey(vibe)
 	const normalized = { ...vibe }
-	if (!normalized.$schema || typeof normalized.$schema !== 'string') {
-		normalized.$schema = VIBE_SCHEMA
+	if (!normalized.$factory || typeof normalized.$factory !== 'string') {
+		normalized.$factory = VIBE_SCHEMA
 	}
 	if (!normalized.$id || !normalized.$id.startsWith('°Maia/vibe/')) {
 		normalized.$id = `°Maia/vibe/${key}`
@@ -104,7 +104,7 @@ export function buildSeedConfig(vibeRegistries) {
 		const inboxId = deriveInboxId(actorId)
 		if (inboxId) {
 			config.inbox = inboxId
-			merged.inboxes[inboxId] = { $schema: INBOX_SCHEMA, $id: inboxId }
+			merged.inboxes[inboxId] = { $factory: INBOX_SCHEMA, $id: inboxId }
 		}
 	}
 	return { configs: merged, data: merged.data || {} }

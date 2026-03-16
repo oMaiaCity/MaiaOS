@@ -16,7 +16,7 @@
 		"@MaiaOS/vibes": "workspace:*",
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/loader": "workspace:*",
-		"@MaiaOS/schemata": "workspace:*",
+		"@MaiaOS/factories": "workspace:*",
 		"@runanywhere/web-llamacpp": "0.1.0-beta.10",
 		"@runanywhere/web-onnx": "0.1.0-beta.10",
 		"cojson-transport-ws": "0.20.7"

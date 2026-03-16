@@ -15,7 +15,7 @@
 		"fast-myers-diff": "^3.2.0",
 		"@MaiaOS/vibes": "workspace:*",
 		"@MaiaOS/db": "workspace:*",
-		"@MaiaOS/schemata": "workspace:*",
+		"@MaiaOS/factories": "workspace:*",
 		"@jitl/quickjs-singlefile-cjs-release-sync": "0.32.0",
 		"quickjs-emscripten-core": "0.32.0"
 	},

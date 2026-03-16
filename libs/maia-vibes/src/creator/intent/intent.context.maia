@@ -1,8 +1,8 @@
 {
-	"$schema": "°Maia/schema/context",
-	"$id": "°Maia/creator/context/intent",
+	"$factory": "°Maia/factory/context",
+	"$id": "°Maia/logs/context/intent",
 	"layout": "@layout",
 	"@actors": {
-		"layout": "°Maia/actor/views/layout-creator"
+		"layout": "°Maia/actor/views/logs"
 	}
 }

@@ -89,7 +89,7 @@ my-app/
         "tool": "@db",
         "payload": {
           "op": "create",
-          "schema": "co_z...",
+          "factory": "co_z...",
           "data": { "text": "$newTodoText", "done": false }
         }
       },

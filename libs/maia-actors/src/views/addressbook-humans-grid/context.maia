@@ -1,8 +1,8 @@
 {
-	"$schema": "°Maia/schema/context",
+	"$factory": "°Maia/factory/context",
 	"$id": "°Maia/actor/views/addressbook-humans-grid/context",
 	"items": {
-		"schema": "°Maia/schema/os/human",
+		"factory": "°Maia/factory/os/human",
 		"map": {
 			"id": "id",
 			"accountId": "accountId",

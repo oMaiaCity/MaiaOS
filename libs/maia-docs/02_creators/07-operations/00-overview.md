@@ -32,7 +32,7 @@ Load data, configs, or schemas from the database. **Always returns a reactive st
 ```javascript
 const store = await maia.do({
   op: "read",
-  schema: "co_zActor123",  // Schema co-id (co_z...)
+  factory: "co_zActor123",  // Factory co-id (co_z...)
   key: "co_zAgent456"      // Config co-id (co_z...)
 });
 
@@ -49,7 +49,7 @@ const unsubscribe = store.subscribe((data) => {
 ```javascript
 const store = await maia.do({
   op: "read",
-  schema: "co_zTodos123"  // Schema co-id (co_z...)
+  factory: "co_zTodos123"  // Factory co-id (co_z...)
 });
 
 // Store has current value immediately
@@ -65,7 +65,7 @@ const unsubscribe = store.subscribe((todos) => {
 ```javascript
 const store = await maia.do({
   op: "read",
-  schema: "co_zTodos123",  // Schema co-id (co_z...)
+  factory: "co_zTodos123",  // Factory co-id (co_z...)
   filter: { done: false }
 });
 
@@ -79,12 +79,12 @@ const unsubscribe = store.subscribe((todos) => {
 ```
 
 **Important Notes:** 
-- **All schemas must be co-ids** (`co_z...`) at runtime - human-readable IDs (`@schema/...`) are transformed to co-ids during seeding
+- **All schemas must be co-ids** (`co_z...`) at runtime - human-readable IDs (`@factory/...`) are transformed to co-ids during seeding
 - **Always returns a reactive store** - use `store.value` for current value and `store.subscribe()` for updates
 - **No callbacks** - the store pattern replaces callback-based subscriptions
 
 **Parameters:**
-- `schema` (required) - Schema co-id (`co_z...`) - MUST be a co-id, not `@schema/...`
+- `schema` (required) - Schema co-id (`co_z...`) - MUST be a co-id, not `@factory/...`
 - `key` (optional) - Specific key (co-id) for single item lookups
 - `filter` (optional) - Filter criteria object (e.g., `{done: false}`)
 
@@ -100,7 +100,7 @@ Create a new record with schema validation.
 ```javascript
 const newTodo = await maia.do({
   op: "create",
-  schema: "co_z...",  // Co-id (transformed from @schema/todos during seeding)
+  factory: "co_z...",  // Co-id (transformed from @factory/todos during seeding)
   data: {
     text: "Buy groceries",
     done: false
@@ -111,7 +111,7 @@ console.log("Created:", newTodo.id); // Auto-generated ID (co-id)
 ```
 
 **Parameters:**
-- `schema` (required) - Co-id (`co_z...`) for data collections. Schema references (`@schema/todos`) are transformed to co-ids during seeding
+- `factory` (required) - Co-id (`co_z...`) for data collections. Factory references (`@factory/todos`) are transformed to co-ids during seeding
 - `data` (required) - Data object to create
 
 **Returns:**
@@ -190,9 +190,9 @@ console.log("Deleted:", deleted); // true
 Reseed the database with initial data. **Idempotent** - can be called multiple times safely.
 
 **Behavior:**
-- **First seed**: Creates all schemata, configs, and data from scratch
-- **Reseed**: Preserves schemata (updates if definitions changed), deletes and recreates all configs and data
-- **Idempotent**: Safe to call multiple times - schemata co-ids remain stable across reseeds
+- **First seed**: Creates all factories, configs, and data from scratch
+- **Reseed**: Preserves factories (updates if definitions changed), deletes and recreates all configs and data
+- **Idempotent**: Safe to call multiple times - factory co-ids remain stable across reseeds
 
 ```javascript
 await maia.do({
@@ -202,10 +202,10 @@ await maia.do({
     "vibe/vibe.actor": { /* actor config */ }
   },
   schemas: {
-    "@schema/todos": { /* schema definition */ }
+    "@factory/todos": { /* schema definition */ }
   },
   data: {
-    "@schema/todos": [
+    "@factory/todos": [
       { text: "First todo", done: false },
       { text: "Second todo", done: true }
     ]
@@ -222,26 +222,26 @@ await maia.do({
 - `true` when seeding completes
 
 **Idempotent Seeding:**
-- **Schemata**: Checked against `account.os.schematas` registry - if exists, updated in-place (preserves co-id); if not, created new
+- **Schemata**: Checked against `account.os.factories` registry - if exists, updated in-place (preserves co-id); if not, created new
 - **Configs & Data**: Always deleted and recreated (ensures clean state)
 - **Schema Index Colists**: Automatically managed - deleted co-values are removed from indexes, new co-values are added to indexes
 
-**Note:** Use only in development! Reseeding preserves schemata but recreates all configs and data.
+**Note:** Use only in development! Reseeding preserves factories but recreates all configs and data.
 
 ### `schema` - Load Schema Definitions
 
 Load schema definitions by co-id, schema name, or from CoValue headerMeta.
 
 ```javascript
-const schemaStore = await maia.do({
-  op: "schema",
+const factoryStore = await maia.do({
+  op: "factory",
   coId: "co_zActor123"  // Co-id of schema or CoValue
 });
 
 // Or resolve from human-readable ID (during seeding only)
-const schemaStore = await maia.do({
-  op: "schema",
-  humanReadableKey: "@schema/actor"
+const factoryStore = await maia.do({
+  op: "factory",
+  humanReadableKey: "@factory/actor"
 });
 ```
 
@@ -254,12 +254,12 @@ const schemaStore = await maia.do({
 
 ### `resolve` - Resolve Human-Readable Keys to Co-IDs
 
-Resolve human-readable keys (like `@schema/todos`) to co-ids. **Only for use during seeding.**
+Resolve human-readable keys (like `@factory/todos`) to co-ids. **Only for use during seeding.**
 
 ```javascript
 const coId = await maia.do({
   op: "resolve",
-  humanReadableKey: "@schema/todos"
+  humanReadableKey: "@factory/todos"
 });
 
 console.log("Resolved:", coId); // "co_zTodos123..."

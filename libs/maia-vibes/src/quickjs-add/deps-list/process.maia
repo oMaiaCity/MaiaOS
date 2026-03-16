@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/process",
+	"$factory": "°Maia/factory/process",
 	"$id": "°Maia/quickjs-add/process/deps-list",
 	"@label": "@maia/quickjs-add/process/deps-list",
 	"handlers": {

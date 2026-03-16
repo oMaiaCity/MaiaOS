@@ -157,7 +157,7 @@ Context can be defined inline in the actor file or in a separate `.context.maia`
 
 ```json
 {
-  "$schema": "@schema/actor",
+  "$factory": "@factory/actor",
   "$id": "@actor/todo",
   "state": "@state/todo",
   
@@ -176,7 +176,7 @@ Context can be defined inline in the actor file or in a separate `.context.maia`
 **`todo.context.maia`:**
 ```json
 {
-  "$schema": "@schema/context",
+  "$factory": "@factory/context",
   "$id": "@context/todo",
   
   // Collections
@@ -209,7 +209,7 @@ Context can be defined inline in the actor file or in a separate `.context.maia`
 **`todo.actor.maia`:**
 ```json
 {
-  "$schema": "@schema/actor",
+  "$factory": "@factory/actor",
   "$id": "@actor/todo",
   "context": "@context/todo",  // ← References todo.context.maia (co-id reference)
   "state": "@state/todo"
@@ -231,7 +231,7 @@ Context can be defined inline in the actor file or in a separate `.context.maia`
 // Read any CoValue as ReactiveStore
 const store = await dbEngine.execute({
   op: 'read',
-  schema: 'co_zTodos123',  // Schema co-id (co_z...)
+  factory: 'co_zTodos123',  // Factory co-id (co_z...)
   key: 'co_zItem456'       // Item co-id (optional - omit for collections)
 });
 
@@ -285,7 +285,7 @@ See [Operations](./07-operations.md) for complete documentation on the universal
 ```json
 {
   "todos": {
-    "schema": "@schema/todos",
+    "factory": "@factory/todos",
     "filter": null
   }
 }

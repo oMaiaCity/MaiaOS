@@ -150,10 +150,10 @@ export class Runtime {
 		if (!this.dataEngine?.peer) return []
 		const { actorRefs } = await this._getVibesAndDependenciesFromDb()
 		const tools = []
-		const actorSchemaCoId = await this.dataEngine.peer.resolve('°Maia/schema/actor', {
+		const actorSchemaCoId = await this.dataEngine.peer.resolve('°Maia/factory/actor', {
 			returnType: 'coId',
 		})
-		const metaSchemaCoId = await this.dataEngine.peer.resolve('°Maia/schema/meta', {
+		const metaSchemaCoId = await this.dataEngine.peer.resolve('°Maia/factory/meta', {
 			returnType: 'coId',
 		})
 		if (!actorSchemaCoId || !metaSchemaCoId) return []
@@ -169,14 +169,14 @@ export class Runtime {
 			if (!interfaceCoId?.startsWith?.('co_z')) continue
 			const ifaceStore = await this.dataEngine.execute({
 				op: 'read',
-				schema: metaSchemaCoId,
+				factory: metaSchemaCoId,
 				key: interfaceCoId,
 			})
 			const schema = ifaceStore?.value
 			if (!schema?.properties || typeof schema.properties !== 'object') continue
-			for (const [eventType, eventSchema] of Object.entries(schema.properties)) {
+			for (const [eventType, eventFactory] of Object.entries(schema.properties)) {
 				if (eventType.startsWith('@') || eventType.startsWith('$')) continue
-				const { properties = {}, required = [], ...rest } = eventSchema
+				const { properties = {}, required = [], ...rest } = eventFactory
 				const parameters = {
 					...rest,
 					properties: {
@@ -193,7 +193,7 @@ export class Runtime {
 					type: 'function',
 					function: {
 						name: `${actorCoId}/${eventType}`,
-						description: eventSchema.description ?? schema.description ?? '',
+						description: eventFactory.description ?? schema.description ?? '',
 						parameters,
 					},
 				})
@@ -291,14 +291,14 @@ export class Runtime {
 			throw new Error(`[Runtime] getActorConfig: actorCoId must be co-id, got: ${actorCoId}`)
 		}
 		try {
-			const schemaCoId = await this.dataEngine.peer.resolve(
+			const factoryCoId = await this.dataEngine.peer.resolve(
 				{ fromCoValue: actorCoId },
 				{ returnType: 'coId' },
 			)
-			if (!schemaCoId) return null
+			if (!factoryCoId) return null
 			const store = await this.dataEngine.execute({
 				op: 'read',
-				schema: schemaCoId,
+				factory: factoryCoId,
 				key: actorCoId,
 			})
 			const config = store?.value
@@ -320,7 +320,7 @@ export class Runtime {
 		try {
 			const accountStore = await this.dataEngine.execute({
 				op: 'read',
-				schema: '@account',
+				factory: '@account',
 				key: account.id,
 			})
 			const accountData = accountStore?.value
@@ -328,14 +328,14 @@ export class Runtime {
 			if (!registriesId?.startsWith?.('co_z')) return { actorRefs: [] }
 			const registriesStore = await this.dataEngine.execute({
 				op: 'read',
-				schema: null,
+				factory: null,
 				key: registriesId,
 			})
 			const sparksId = registriesStore?.value?.sparks
 			if (!sparksId?.startsWith?.('co_z')) return { actorRefs: [] }
 			const sparksStore = await this.dataEngine.execute({
 				op: 'read',
-				schema: sparksId,
+				factory: sparksId,
 				key: sparksId,
 			})
 			const sparksData = sparksStore?.value
@@ -346,14 +346,14 @@ export class Runtime {
 			if (!sparkCoId?.startsWith?.('co_z')) return { actorRefs: [] }
 			const sparkStore = await this.dataEngine.execute({
 				op: 'read',
-				schema: null,
+				factory: null,
 				key: sparkCoId,
 			})
 			const vibesId = sparkStore?.value?.vibes
 			if (!vibesId?.startsWith?.('co_z')) return { actorRefs: [] }
 			const vibesStore = await this.dataEngine.execute({
 				op: 'read',
-				schema: vibesId,
+				factory: vibesId,
 				key: vibesId,
 			})
 			const vibesData = vibesStore?.value
@@ -362,6 +362,7 @@ export class Runtime {
 				(k) =>
 					k !== 'id' &&
 					k !== '$schema' &&
+					k !== '$factory' &&
 					k !== 'type' &&
 					typeof vibesData[k] === 'string' &&
 					vibesData[k].startsWith('co_'),
@@ -372,7 +373,7 @@ export class Runtime {
 				try {
 					const vibeStore = await this.dataEngine.execute({
 						op: 'read',
-						schema: null,
+						factory: null,
 						key: vibeCoId,
 					})
 					const vibe = vibeStore?.value

@@ -41,7 +41,7 @@ When you call `MaiaOS.boot()`, here's what happens:
    └─> Creates DataEngine
 
 2. Seed Database (if registry provided)
-   └─> Collects schemas from @MaiaOS/schemata
+   └─> Collects schemas from @MaiaOS/factories
    └─> Validates schemas against meta schema
    └─> Seeds configs, schemas, and tool definitions
    └─> Sets up schema resolver
@@ -108,7 +108,7 @@ Modules are dynamically loaded during boot. Each module:
 ## Database Seeding
 
 When you provide a `registry` in boot config:
-1. Schemas are collected from `@MaiaOS/schemata`
+1. Schemas are collected from `@MaiaOS/factories`
 2. Schemas are validated against meta schema
 3. Configs, schemas, and tool definitions are seeded
 4. Schema resolver is set up for runtime schema loading

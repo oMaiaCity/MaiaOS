@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/actor",
+	"$factory": "°Maia/factory/actor",
 	"$id": "°Maia/quickjs-add/actor/deps-list",
 	"@label": "@maia/quickjs-add/actor/deps-list",
 	"context": "°Maia/quickjs-add/context/deps-list",

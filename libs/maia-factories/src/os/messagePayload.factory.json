@@ -1,0 +1,10 @@
+{
+	"$factory": "°Maia/factory/meta",
+	"$id": "°Maia/factory/messagePayload",
+	"title": "°Maia/factory/messagePayload",
+	"description": "Message payload definition",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {},
+	"additionalProperties": true
+}

@@ -35,7 +35,7 @@ Read the documentation in the following order for a complete understanding:
 - [API Reference](./02_maia-loader/api-reference.md) - Complete API reference
 - [Patterns](./02_maia-loader/patterns.md) - Common patterns and troubleshooting
 
-### 3. [maia-schemata Package](./03_maia-schemata/README.md)
+### 3. [maia-factories Package](./03_maia-factories/README.md)
 **Schema validation and transformation system**
 - ValidationEngine implementation details
 - Schema transformation for seeding
@@ -43,10 +43,10 @@ Read the documentation in the following order for a complete understanding:
 - Co-ID generation and registry
 
 **Sub-topics:**
-- [Validation](./03_maia-schemata/validation/) - Schema validation system
-- [Transformation](./03_maia-schemata/transformation.md) - Schema transformation for seeding
-- [CoJSON Integration](./03_maia-schemata/cojson-integration.md) - CoJSON types integration
-- [Co-ID Generation](./03_maia-schemata/co-id-generation.md) - Co-ID generation and registry
+- [Validation](./03_maia-factories/validation/) - Schema validation system
+- [Transformation](./03_maia-factories/transformation.md) - Schema transformation for seeding
+- [CoJSON Integration](./03_maia-factories/cojson-integration.md) - CoJSON types integration
+- [Co-ID Generation](./03_maia-factories/co-id-generation.md) - Co-ID generation and registry
 
 ### 4. [maia-engines Package](./04_maia-engines/README.md)
 **Execution engines and modules** (merged from maia-script + maia-operations)
