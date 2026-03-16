@@ -54,7 +54,7 @@
 						"tag": "div",
 						"class": "detail-content",
 						"attrs": {
-							"data-has-selection": "$selectedItem.id"
+							"data-has-selection": "$hasSelection"
 						},
 						"children": [
 							{
@@ -69,7 +69,14 @@
 									"contenteditable": true,
 									"data-placeholder": "No custom code attached — start typing to add"
 								},
-								"text": "$selectedItem.wasmCode",
+								"text": {
+									"$join": [
+										{
+											"$context": "selectedWasmCode.items"
+										},
+										""
+									]
+								},
 								"$on": {
 									"input": {
 										"send": "UPDATE_WASM_CODE",
@@ -92,7 +99,7 @@
 						"tag": "p",
 						"class": "placeholder-text",
 						"attrs": {
-							"data-has-selection": "$selectedItem.id"
+							"data-has-selection": "$hasSelection"
 						},
 						"text": "Select an item from the list"
 					}

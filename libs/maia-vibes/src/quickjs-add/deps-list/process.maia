@@ -6,7 +6,12 @@
 		"SELECT_ITEM": [
 			{
 				"ctx": {
-					"selectedItem": "$$item"
+					"hasSelection": true,
+					"selectedActorRef": "$$item.id",
+					"selectedItem": {
+						"id": "$$item.id",
+						"label": "$$item.label"
+					}
 				}
 			},
 			{
@@ -21,36 +26,28 @@
 		],
 		"UPDATE_WASM_CODE": [
 			{
+				"guard": {
+					"$ne": [
+						"$selectedCodeCoId",
+						null
+					]
+				}
+			},
+			{
 				"tell": {
 					"target": "°Maia/actor/services/updateWasmCode",
 					"type": "UPDATE_WASM_CODE",
 					"payload": {
-						"actorRef": "$selectedItem.id",
-						"value": "$$value"
-					}
-				}
-			},
-			{
-				"ctx": {
-					"selectedItem": {
-						"id": "$selectedItem.id",
-						"label": "$selectedItem.label",
-						"wasmCode": "$$value",
-						"hasWasmCode": true
+						"value": "$$value",
+						"codeCoId": "$selectedCodeCoId"
 					}
 				}
 			}
 		],
 		"SUCCESS": [
 			{
-				"guard": "$result.code !== undefined",
 				"ctx": {
-					"selectedItem": {
-						"id": "$selectedItem.id",
-						"label": "$selectedItem.label",
-						"wasmCode": "$result.code",
-						"hasWasmCode": true
-					}
+					"selectedCodeCoId": "$$result.codeCoId"
 				}
 			}
 		]
