@@ -72,7 +72,7 @@ The state machine is like a traffic controller - it decides what happens next!
 **Example - Good Context:**
 ```json
 {
-  "$schema": "@schema/context",
+  "$factory": "@factory/context",
   "$id": "@context/composite",
   "viewMode": "list",
   "currentView": "@list",

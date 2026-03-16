@@ -4,28 +4,28 @@
 
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import { waitForStoreReady } from '../../cojson/crud/read-operations.js'
-import { buildMetaSchemaForSeeding, removeIdFields } from './helpers.js'
+import { buildMetaFactoryForSeeding, removeIdFields } from './helpers.js'
 
 const MAIA_SPARK = '°Maia'
 
 /**
  * Bootstrap and scaffold when account.registries doesn't exist
- * Order: guardian → account.temp → metaschema → schemata → scaffold → cleanup temp.
+ * Order: guardian → account.temp → metaschema → factories → scaffold → cleanup temp.
  */
 export async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
-	const { EXCEPTION_SCHEMAS } = await import('../../schemas/registry.js')
-	const { getAllSchemas } = await import('@MaiaOS/schemata')
-	const allSchemas = schemas || getAllSchemas()
+	const { EXCEPTION_FACTORIES } = await import('../../factories/registry.js')
+	const { getAllFactories } = await import('@MaiaOS/factories')
+	const allSchemas = schemas || getAllFactories()
 
 	const guardian = node.createGroup()
 	const tempGroup = node.createGroup()
 	tempGroup.extend(guardian, 'extend')
-	const tempCoMap = tempGroup.createMap({}, { $schema: EXCEPTION_SCHEMAS.META_SCHEMA })
+	const tempCoMap = tempGroup.createMap({}, { $factory: EXCEPTION_FACTORIES.META_SCHEMA })
 	account.set('temp', tempCoMap.id)
 	tempCoMap.set('guardian', guardian.id)
 
-	const _metaSchemaMeta = { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }
-	const tempMetaSchemaDef = buildMetaSchemaForSeeding('co_zTEMP')
+	const _metaSchemaMeta = { $factory: EXCEPTION_FACTORIES.META_SCHEMA }
+	const tempMetaSchemaDef = buildMetaFactoryForSeeding('co_zTEMP')
 	const cleanedTempDef = {
 		definition: removeIdFields(tempMetaSchemaDef.definition || tempMetaSchemaDef),
 	}
@@ -33,16 +33,17 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		{ node, account, guardian },
 		null,
 		{
-			schema: EXCEPTION_SCHEMAS.META_SCHEMA,
+			factory: EXCEPTION_FACTORIES.META_SCHEMA,
 			cotype: 'comap',
 			data: cleanedTempDef,
 			dataEngine: dbEngine,
 		},
 	)
 	const metaSchemaCoId = metaSchemaCoMap.id
-	const updatedMetaSchemaDef = buildMetaSchemaForSeeding(metaSchemaCoId)
+	const updatedMetaSchemaDef = buildMetaFactoryForSeeding(metaSchemaCoId)
 	const {
 		$schema: _s,
+		$factory: _f,
 		$id: _i,
 		id: _id,
 		...directProps
@@ -52,14 +53,14 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 
 	const uniqueSchemasBy$id = new Map()
 	for (const [name, schema] of Object.entries(allSchemas)) {
-		const key = schema.$id || `°Maia/schema/${name}`
+		const key = schema.$id || `°Maia/factory/${name}`
 		if (!uniqueSchemasBy$id.has(key)) uniqueSchemasBy$id.set(key, { name, schema })
 	}
 	const findCoRefs = (obj, visited = new Set()) => {
 		if (!obj || typeof obj !== 'object' || visited.has(obj)) return new Set()
 		visited.add(obj)
 		const refs = new Set()
-		if (obj.$co && typeof obj.$co === 'string' && obj.$co.startsWith('°Maia/schema/'))
+		if (obj.$co && typeof obj.$co === 'string' && obj.$co.startsWith('°Maia/factory/'))
 			refs.add(obj.$co)
 		for (const v of Object.values(obj)) {
 			if (v && typeof v === 'object') {
@@ -82,47 +83,50 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		if (doing.has(key)) return
 		doing.add(key)
 		for (const d of deps.get(key) || []) {
-			if (d.startsWith('°Maia/schema/') && uniqueSchemasBy$id.has(d)) visit(d)
+			if (d.startsWith('°Maia/factory/') && uniqueSchemasBy$id.has(d)) visit(d)
 		}
 		doing.delete(key)
 		done.add(key)
 		sorted.push(key)
 	}
 	for (const key of uniqueSchemasBy$id.keys()) {
-		if (key !== '°Maia/schema/meta') visit(key)
+		if (key !== '°Maia/factory/meta') visit(key)
 	}
 
-	const schemaCoIdMap = new Map()
-	for (const schemaKey of sorted) {
-		const { schema } = uniqueSchemasBy$id.get(schemaKey)
+	const factoryCoIdMap = new Map()
+	for (const factoryKey of sorted) {
+		const { schema } = uniqueSchemasBy$id.get(factoryKey)
 		const { $schema, $id, id, ...props } = schema
 		const cleaned = removeIdFields(props)
-		const { coValue: schemaCoMap } = await createCoValueForSpark({ node, account, guardian }, null, {
-			schema: metaSchemaCoId,
+		const { coValue: factoryCoMap } = await createCoValueForSpark({ node, account, guardian }, null, {
+			factory: metaSchemaCoId,
 			cotype: 'comap',
 			data: cleaned,
 			dataEngine: dbEngine,
-			isSchemaDefinition: true,
+			isFactoryDefinition: true,
 		})
-		const coId = schemaCoMap.id
-		schemaCoIdMap.set(schemaKey, coId)
-		tempCoMap.set(schemaKey, coId)
+		const coId = factoryCoMap.id
+		factoryCoIdMap.set(factoryKey, coId)
+		tempCoMap.set(factoryKey, coId)
 	}
 
-	const sparkSchemaCoId = tempCoMap.get('°Maia/schema/data/spark') || EXCEPTION_SCHEMAS.META_SCHEMA
-	const schematasSchemaCoId =
-		tempCoMap.get('°Maia/schema/os/schematas-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
-	const osSchemaCoId = tempCoMap.get('°Maia/schema/os/os-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
-	const groupsSchemaCoId = tempCoMap.get('°Maia/schema/os/groups') || EXCEPTION_SCHEMAS.META_SCHEMA
+	const sparkSchemaCoId =
+		tempCoMap.get('°Maia/factory/data/spark') || EXCEPTION_FACTORIES.META_SCHEMA
+	const factoriesRegistrySchemaCoId =
+		tempCoMap.get('°Maia/factory/os/factories-registry') || EXCEPTION_FACTORIES.META_SCHEMA
+	const osSchemaCoId =
+		tempCoMap.get('°Maia/factory/os/os-registry') || EXCEPTION_FACTORIES.META_SCHEMA
+	const groupsSchemaCoId =
+		tempCoMap.get('°Maia/factory/os/groups') || EXCEPTION_FACTORIES.META_SCHEMA
 	const capabilitiesStreamSchemaCoId =
-		tempCoMap.get('°Maia/schema/os/capabilities-stream') || EXCEPTION_SCHEMAS.META_SCHEMA
+		tempCoMap.get('°Maia/factory/os/capabilities-stream') || EXCEPTION_FACTORIES.META_SCHEMA
 	const indexesSchemaCoId =
-		tempCoMap.get('°Maia/schema/os/indexes-registry') || EXCEPTION_SCHEMAS.META_SCHEMA
+		tempCoMap.get('°Maia/factory/os/indexes-registry') || EXCEPTION_FACTORIES.META_SCHEMA
 	const vibesRegistrySchemaCoId =
-		tempCoMap.get('°Maia/schema/os/vibes-registry') ?? EXCEPTION_SCHEMAS.META_SCHEMA
+		tempCoMap.get('°Maia/factory/os/vibes-registry') ?? EXCEPTION_FACTORIES.META_SCHEMA
 
 	const ctx = { node, account, guardian }
-	const scaffoldOpts = (schema, data) => ({ schema, cotype: 'comap', data, dataEngine: dbEngine })
+	const scaffoldOpts = (factory, data) => ({ factory, cotype: 'comap', data, dataEngine: dbEngine })
 	const { coValue: maiaSpark } = await createCoValueForSpark(
 		ctx,
 		null,
@@ -137,15 +141,15 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	groups.set('guardian', guardian.id)
 	os.set('groups', groups.id)
 	const { coValue: capabilitiesStream } = await createCoValueForSpark(ctx, null, {
-		schema: capabilitiesStreamSchemaCoId,
+		factory: capabilitiesStreamSchemaCoId,
 		cotype: 'costream',
 		dataEngine: dbEngine,
 	})
 	os.set('capabilities', capabilitiesStream.id)
-	const { coValue: schematas } = await createCoValueForSpark(
+	const { coValue: factoriesRegistry } = await createCoValueForSpark(
 		ctx,
 		null,
-		scaffoldOpts(schematasSchemaCoId, {}),
+		scaffoldOpts(factoriesRegistrySchemaCoId, {}),
 	)
 	const { coValue: indexes } = await createCoValueForSpark(
 		ctx,
@@ -157,16 +161,16 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		null,
 		scaffoldOpts(vibesRegistrySchemaCoId, {}),
 	)
-	os.set('schematas', schematas.id)
+	os.set('factories', factoriesRegistry.id)
 	os.set('indexes', indexes.id)
 	maiaSpark.set('os', os.id)
 	maiaSpark.set('vibes', vibes.id)
-	schematas.set('°Maia/schema/meta', metaSchemaCoId)
-	for (const [k, coId] of schemaCoIdMap) schematas.set(k, coId)
+	factoriesRegistry.set('°Maia/factory/meta', metaSchemaCoId)
+	for (const [k, coId] of factoryCoIdMap) factoriesRegistry.set(k, coId)
 
 	const { removeGroupMember } = await import('../../cojson/groups/groups.js')
 	const memberIdToRemove = account?.id ?? account?.$jazz?.id
-	const registriesMeta = { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }
+	const registriesMeta = { $factory: EXCEPTION_FACTORIES.META_SCHEMA }
 
 	const registriesGroup = node.createGroup()
 	registriesGroup.extend(guardian, 'extend')
@@ -240,7 +244,7 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	}
 
 	console.log(
-		'✅ Bootstrap scaffold complete: account.registries, °Maia spark, os, schematas, indexes, vibes',
+		'✅ Bootstrap scaffold complete: account.registries, °Maia spark, os, factories, indexes, vibes',
 	)
 }
 
@@ -280,7 +284,7 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 	const sparkContent = peer.getCurrentContent(sparkCore)
 	if (!sparkContent || typeof sparkContent.get !== 'function') return
 
-	const { EXCEPTION_SCHEMAS } = await import('../../schemas/registry.js')
+	const { EXCEPTION_FACTORIES } = await import('../../factories/registry.js')
 	const node = peer.node
 
 	const osId = sparkContent.get('os')
@@ -296,35 +300,35 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 	const groupsContent = peer.getCurrentContent(groupsCore)
 	if (!groupsContent || typeof groupsContent.set !== 'function') return
 
-	const { resolve } = await import('../../cojson/schema/resolver.js')
-	const registriesSchemaCoId = await resolve(peer, '°Maia/schema/os/registries', {
+	const { resolve } = await import('../../cojson/factory/resolver.js')
+	const registriesSchemaCoId = await resolve(peer, '°Maia/factory/os/registries', {
 		returnType: 'coId',
 	})
-	const sparksRegistrySchemaCoId = await resolve(peer, '°Maia/schema/os/sparks-registry', {
+	const sparksRegistrySchemaCoId = await resolve(peer, '°Maia/factory/os/sparks-registry', {
 		returnType: 'coId',
 	})
-	const humansRegistrySchemaCoId = await resolve(peer, '°Maia/schema/os/humans-registry', {
+	const humansRegistrySchemaCoId = await resolve(peer, '°Maia/factory/os/humans-registry', {
 		returnType: 'coId',
 	})
 	const avensIdentityRegistrySchemaCoId = await resolve(
 		peer,
-		'°Maia/schema/os/avens-identity-registry',
+		'°Maia/factory/os/avens-identity-registry',
 		{
 			returnType: 'coId',
 		},
 	)
 	const registriesMeta = registriesSchemaCoId
-		? { $schema: registriesSchemaCoId }
-		: { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }
+		? { $factory: registriesSchemaCoId }
+		: { $factory: EXCEPTION_FACTORIES.META_SCHEMA }
 	const sparksRegistryMeta = sparksRegistrySchemaCoId
-		? { $schema: sparksRegistrySchemaCoId }
-		: { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }
+		? { $factory: sparksRegistrySchemaCoId }
+		: { $factory: EXCEPTION_FACTORIES.META_SCHEMA }
 	const humansRegistryMeta = humansRegistrySchemaCoId
-		? { $schema: humansRegistrySchemaCoId }
-		: { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }
+		? { $factory: humansRegistrySchemaCoId }
+		: { $factory: EXCEPTION_FACTORIES.META_SCHEMA }
 	const avensIdentityRegistryMeta = avensIdentityRegistrySchemaCoId
-		? { $schema: avensIdentityRegistrySchemaCoId }
-		: { $schema: EXCEPTION_SCHEMAS.META_SCHEMA }
+		? { $factory: avensIdentityRegistrySchemaCoId }
+		: { $factory: EXCEPTION_FACTORIES.META_SCHEMA }
 
 	const { removeGroupMember } = await import('../../cojson/groups/groups.js')
 	const account = peer.account

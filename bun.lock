@@ -22,7 +22,7 @@
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/engines": "workspace:*",
-        "@MaiaOS/schemata": "workspace:*",
+        "@MaiaOS/factories": "workspace:*",
         "unicode-segmenter": "^0.15.0",
       },
     },
@@ -42,8 +42,8 @@
       "name": "@MaiaOS/db",
       "version": "26.312.1926",
       "dependencies": {
+        "@MaiaOS/factories": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
-        "@MaiaOS/schemata": "workspace:*",
         "@MaiaOS/storage": "workspace:*",
         "cojson": "^0.20.7",
         "cojson-transport-ws": "0.20.7",
@@ -56,8 +56,8 @@
       "dependencies": {
         "@MaiaOS/actors": "workspace:*",
         "@MaiaOS/db": "workspace:*",
+        "@MaiaOS/factories": "workspace:*",
         "@MaiaOS/loader": "workspace:*",
-        "@MaiaOS/schemata": "workspace:*",
         "@MaiaOS/vibes": "workspace:*",
         "@runanywhere/web-llamacpp": "0.1.0-beta.10",
         "@runanywhere/web-onnx": "0.1.0-beta.10",
@@ -74,7 +74,7 @@
       "dependencies": {
         "@MaiaOS/actors": "workspace:*",
         "@MaiaOS/db": "workspace:*",
-        "@MaiaOS/schemata": "workspace:*",
+        "@MaiaOS/factories": "workspace:*",
         "@MaiaOS/vibes": "workspace:*",
         "@jitl/quickjs-singlefile-cjs-release-sync": "0.32.0",
         "fast-myers-diff": "^3.2.0",
@@ -82,6 +82,15 @@
       },
       "devDependencies": {
         "cojson": "^0.20.7",
+      },
+    },
+    "libs/maia-factories": {
+      "name": "@MaiaOS/factories",
+      "version": "26.312.1926",
+      "dependencies": {
+        "@MaiaOS/db": "workspace:*",
+        "ajv": "^8.12.0",
+        "unicode-segmenter": "^0.15.0",
       },
     },
     "libs/maia-language": {
@@ -95,8 +104,8 @@
         "@MaiaOS/actors": "workspace:*",
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/engines": "workspace:*",
+        "@MaiaOS/factories": "workspace:*",
         "@MaiaOS/maia-ucan": "workspace:*",
-        "@MaiaOS/schemata": "workspace:*",
         "@MaiaOS/self": "workspace:*",
         "@MaiaOS/vibes": "workspace:*",
         "cojson-transport-ws": "0.20.7",
@@ -109,15 +118,6 @@
         "@MaiaOS/storage": "workspace:*",
         "cojson": "^0.20.7",
         "cojson-transport-ws": "0.20.7",
-      },
-    },
-    "libs/maia-schemata": {
-      "name": "@MaiaOS/schemata",
-      "version": "26.312.1926",
-      "dependencies": {
-        "@MaiaOS/db": "workspace:*",
-        "ajv": "^8.12.0",
-        "unicode-segmenter": "^0.15.0",
       },
     },
     "libs/maia-self": {
@@ -189,6 +189,8 @@
 
     "@MaiaOS/engines": ["@MaiaOS/engines@workspace:libs/maia-engines"],
 
+    "@MaiaOS/factories": ["@MaiaOS/factories@workspace:libs/maia-factories"],
+
     "@MaiaOS/loader": ["@MaiaOS/loader@workspace:libs/maia-loader"],
 
     "@MaiaOS/maia-ai": ["@MaiaOS/maia-ai@workspace:libs/maia-ai"],
@@ -198,8 +200,6 @@
     "@MaiaOS/maia-ucan": ["@MaiaOS/maia-ucan@workspace:libs/maia-ucan"],
 
     "@MaiaOS/peer": ["@MaiaOS/peer@workspace:libs/maia-peer"],
-
-    "@MaiaOS/schemata": ["@MaiaOS/schemata@workspace:libs/maia-schemata"],
 
     "@MaiaOS/self": ["@MaiaOS/self@workspace:libs/maia-self"],
 

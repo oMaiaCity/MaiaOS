@@ -12,7 +12,7 @@ import { ensureCoValueLoaded } from './collection-helpers.js'
  * @param {Object} peer - Backend instance
  * @param {CoValueCore} coValueCore - CoValueCore instance
  * @param {string} [schemaHint] - Schema hint for special types (@group, @account, @metaSchema)
- * @returns {Object} Flat CoValue data (id, $schema, type, and key-value for CoMaps)
+ * @returns {Object} Flat CoValue data (id, $factory, type, and key-value for CoMaps)
  */
 export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 	const header = peer.getHeader(coValueCore)
@@ -25,11 +25,11 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 		(peer.account && peer.account.id === coValueCore.id)
 
 	if (isAccount && peer.account && peer.account.id === coValueCore.id) {
-		const schema = headerMeta?.$schema || null
+		const schema = headerMeta?.$factory || null
 		const result = {
 			id: peer.account.id,
 			type: 'comap',
-			$schema: schema,
+			$factory: schema,
 		}
 		try {
 			const keys =
@@ -48,8 +48,8 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 	const content = peer.getCurrentContent(coValueCore)
 	if (!content) {
 		if (isAccount && peer.account && peer.account.id === coValueCore.id) {
-			const schema = headerMeta?.$schema || null
-			const result = { id: peer.account.id, type: 'comap', $schema: schema }
+			const schema = headerMeta?.$factory || null
+			const result = { id: peer.account.id, type: 'comap', $factory: schema }
 			try {
 				const keys =
 					peer.account.keys && typeof peer.account.keys === 'function'
@@ -61,12 +61,12 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 			} catch (_e) {}
 			return result
 		}
-		const schema = headerMeta?.$schema || null
-		return { id: coValueCore.id, type: 'unknown', $schema: schema }
+		const schema = headerMeta?.$factory || null
+		return { id: coValueCore.id, type: 'unknown', $factory: schema }
 	}
 
 	const rawType = content?.type || 'unknown'
-	let schema = headerMeta?.$schema || null
+	let schema = headerMeta?.$factory || null
 
 	if (schemaHint === '@group' || (_ruleset && _ruleset.type === 'group')) {
 		schema = '@group'
@@ -83,7 +83,7 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 				id: coValueCore.id,
 				cotype: 'colist',
 				type: 'colist',
-				$schema: schema,
+				$factory: schema,
 				items,
 			}
 			try {
@@ -98,7 +98,7 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 				id: coValueCore.id,
 				cotype: 'colist',
 				type: 'colist',
-				$schema: schema,
+				$factory: schema,
 				items: [],
 			}
 			try {
@@ -122,7 +122,7 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 					id: coValueCore.id,
 					cotype: 'cobinary',
 					type: 'cobinary',
-					$schema: schema,
+					$factory: schema,
 					mimeType: binaryInfo?.mimeType,
 					totalSizeBytes: binaryInfo?.totalSizeBytes,
 					finished: chunks?.finished ?? content.isBinaryStreamEnded?.() ?? false,
@@ -139,7 +139,7 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 					id: coValueCore.id,
 					cotype: 'cobinary',
 					type: 'cobinary',
-					$schema: schema,
+					$factory: schema,
 					items: [],
 				}
 				try {
@@ -165,7 +165,7 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 				id: coValueCore.id,
 				cotype: 'costream',
 				type: 'costream',
-				$schema: schema,
+				$factory: schema,
 				items,
 			}
 			try {
@@ -180,7 +180,7 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 				id: coValueCore.id,
 				cotype: 'costream',
 				type: 'costream',
-				$schema: schema,
+				$factory: schema,
 				items: [],
 			}
 			try {
@@ -202,7 +202,7 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 		const result = {
 			id: coValueCore.id,
 			_coValueType: rawType,
-			$schema: schema,
+			$factory: schema,
 		}
 		const keys =
 			content.keys && typeof content.keys === 'function' ? content.keys() : Object.keys(content)
@@ -234,7 +234,7 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 		return result
 	}
 
-	const fallbackResult = { id: coValueCore.id, type: rawType, $schema: schema }
+	const fallbackResult = { id: coValueCore.id, type: rawType, $factory: schema }
 	try {
 		if (typeof peer.getGroupInfo === 'function') {
 			const groupInfo = peer.getGroupInfo(coValueCore)
@@ -402,9 +402,15 @@ export async function resolveCoValueReferences(
 	const result = {}
 	for (const [key, value] of Object.entries(data)) {
 		// Always preserve internal properties (don't skip them - they're part of the data)
-		// CRITICAL: Preserve ALL properties, including id, $schema, type, etc.
+		// CRITICAL: Preserve ALL properties, including id, $factory, type, etc.
 		// Skip resolution for internal properties (they're not co-ids to resolve)
-		if (key === 'id' || key === '$schema' || key === 'type' || key === 'loading' || key === 'error') {
+		if (
+			key === 'id' ||
+			key === '$factory' ||
+			key === 'type' ||
+			key === 'loading' ||
+			key === 'error'
+		) {
 			result[key] = value
 			continue
 		}
@@ -490,7 +496,7 @@ async function resolveCoId(
 		// Return cached result immediately - no need to re-resolve
 		// But we still need to check schema filter if provided
 		if (schemas !== null && schemas.length > 0) {
-			const dataSchema = cachedResolved.$schema
+			const dataSchema = cachedResolved.$factory
 			if (!schemas.includes(dataSchema)) {
 				return { id: coId } // Schema not in filter
 			}
@@ -541,7 +547,7 @@ async function resolveCoId(
 
 		// Check if we should resolve based on schema filter
 		if (schemas !== null && schemas.length > 0) {
-			const dataSchema = coValueData.$schema
+			const dataSchema = coValueData.$factory
 			if (!schemas.includes(dataSchema)) {
 				return { id: coId } // Schema not in filter - return object with id
 			}
@@ -659,7 +665,7 @@ export function extractCoStreamWithSessions(peer, coValueCore) {
 		return {
 			id: coValueCore.id,
 			type: 'costream',
-			$schema: headerMeta?.$schema || null,
+			$factory: headerMeta?.$factory || null,
 			sessions: sessions, // Preserve session structure: { sessionID: [messages...] }
 		}
 	}
@@ -668,7 +674,7 @@ export function extractCoStreamWithSessions(peer, coValueCore) {
 	return {
 		id: coValueCore.id,
 		type: 'costream',
-		$schema: headerMeta?.$schema || null,
+		$factory: headerMeta?.$factory || null,
 		sessions: {},
 	}
 }

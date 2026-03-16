@@ -1,7 +1,6 @@
 /**
- * Creator Vibe Registry
+ * Logs Vibe Registry
  * Pre-loads all .maia configs as ES module imports
- * placeholder actor from @MaiaOS/actors (seeded separately)
  */
 
 import maiacityBrand from '../brand/maiacity.style.maia'
@@ -19,19 +18,19 @@ export const LogsVibeRegistry = {
 	},
 
 	actors: {
-		'°Maia/creator/actor/intent': intentActor,
+		'°Maia/logs/actor/intent': intentActor,
 	},
 
 	views: {
-		'°Maia/creator/view/intent': intentView,
+		'°Maia/logs/view/intent': intentView,
 	},
 
 	contexts: {
-		'°Maia/creator/context/intent': intentContext,
+		'°Maia/logs/context/intent': intentContext,
 	},
 
 	processes: {
-		'°Maia/creator/process/intent': intentProcess,
+		'°Maia/logs/process/intent': intentProcess,
 	},
 
 	data: {},

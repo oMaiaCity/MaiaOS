@@ -13,7 +13,7 @@ The `@MaiaOS/loader` package provides the foundational services that power MaiaO
 **What it doesn't do:**
 - ❌ Execute MaiaScript (that's `@MaiaOS/engines`)
 - ❌ Store data (that's `@MaiaOS/db`)
-- ❌ Validate schemas (that's `@MaiaOS/schemata`)
+- ❌ Validate schemas (that's `@MaiaOS/factories`)
 
 ---
 
@@ -158,4 +158,4 @@ async function startApp() {
 - `@MaiaOS/self` - Authentication
 - `@MaiaOS/engines` - Engines and DSL execution
 - `@MaiaOS/db` - Database operations
-- `@MaiaOS/schemata` - Schema validation
+- `@MaiaOS/factories` - Schema validation

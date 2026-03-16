@@ -19,7 +19,7 @@ Backend subscribes to config CRDTs: `view`, `style`, `brand`, `process`, `interf
 ```javascript
 const store = await dbEngine.execute({
   op: 'read',
-  schema: interfaceSchemaCoId,
+  factory: interfaceFactoryCoId,
   key: config.interface
 });
 store.subscribe((updatedInterface) => handleInterfaceUpdate(actorId, updatedInterface));
@@ -49,7 +49,7 @@ Objects in context with `schema` (co-id) and optional `filter`. Backend unified 
 
 ```javascript
 actor.context = {
-  todos: { schema: "co_zTodos123", filter: { completed: false } }
+  todos: { factory: "co_zTodos123", filter: { completed: false } }
 }
 ```
 
@@ -79,7 +79,7 @@ Svelte-style microtask batching prevents excessive re-renders. Multiple subscrip
 
 ## Runtime Requirements
 
-**Co-IDs only:** Runtime MUST use `co_z...`, never `@schema/...`. ReadOperation validates.
+**Co-IDs only:** Runtime MUST use `co_z...`, never `@factory/...`. ReadOperation validates.
 
 **Unified read():** All data access via `read()` → returns ReactiveStore. Single pattern, always reactive.
 

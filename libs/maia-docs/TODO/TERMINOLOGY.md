@@ -253,7 +253,7 @@ interface ViewNode {
 **Structure:**
 ```json
 {
-  "$schema": "composite-factory",
+  "$factory": "composite-factory",
   "parameters": {
     "text": { "type": "string", "required": true },
     "classes": { "type": "string", "default": "..." }

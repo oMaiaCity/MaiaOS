@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/vibe",
+	"$factory": "°Maia/factory/vibe",
 	"$id": "°Maia/vibe/quickjs-add",
 	"name": "QuickJS Add",
 	"description": "Add two numbers via sandboxed QuickJS",

@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/meta",
+	"$factory": "°Maia/factory/meta",
 	"$id": "°Maia/actor/views/logs/interface",
 	"title": "°Maia/actor/views/logs/interface",
 	"description": "Logs view",

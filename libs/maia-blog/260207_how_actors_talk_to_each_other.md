@@ -251,7 +251,7 @@ Once in the "creating" state, the entry action executes:
     "tool": "@db",
     "payload": {
       "op": "create",
-      "schema": "@schema/data/todos",
+      "factory": "@factory/data/todos",
       "data": { "text": "Buy milk", "done": false }
     }
   }

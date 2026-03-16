@@ -355,7 +355,7 @@ export class StyleEngine {
 		const brandSchemaCoId = await resolveSchemaFromCoValue(this.dataEngine?.peer, brandResolved)
 		const brandStore = await this.dataEngine.execute({
 			op: 'read',
-			schema: brandSchemaCoId,
+			factory: brandSchemaCoId,
 			key: brandResolved,
 		})
 		const brand = brandStore.value
@@ -366,7 +366,7 @@ export class StyleEngine {
 			const styleSchemaCoId = await resolveSchemaFromCoValue(this.dataEngine?.peer, styleResolved)
 			const styleStore = await this.dataEngine.execute({
 				op: 'read',
-				schema: styleSchemaCoId,
+				factory: styleSchemaCoId,
 				key: styleResolved,
 			})
 			actor = styleStore.value

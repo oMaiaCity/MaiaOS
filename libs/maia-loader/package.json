@@ -13,7 +13,7 @@
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/engines": "workspace:*",
 		"@MaiaOS/maia-ucan": "workspace:*",
-		"@MaiaOS/schemata": "workspace:*",
+		"@MaiaOS/factories": "workspace:*",
 		"@MaiaOS/self": "workspace:*",
 		"@MaiaOS/actors": "workspace:*",
 		"@MaiaOS/vibes": "workspace:*",

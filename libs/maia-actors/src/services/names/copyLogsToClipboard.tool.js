@@ -1,4 +1,4 @@
-import { createSuccessResult } from '@MaiaOS/schemata/operation-result'
+import { createSuccessResult } from '@MaiaOS/factories/operation-result'
 
 /**
  * Copy Logs To Clipboard Tool

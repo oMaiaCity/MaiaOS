@@ -221,7 +221,7 @@ const mockActor = {
 };
 
 const payload = {
-  schema: 'todos',
+  factory: 'todos',
   data: {text: 'Test', done: false}
 };
 

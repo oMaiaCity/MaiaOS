@@ -48,7 +48,7 @@ A **spark** is a CoMap with a name (e.g. "°Maia" or "My Project"). It's the use
 
 We could put a `group` property directly on the spark: `spark.group = "co_zSomeGroupId"`. But a spark needs more than just "who has access." It also needs:
 
-- **Schematas** – What schemas exist in this spark (for validation)
+- **Factories** – What schemas exist in this spark (for validation)
 - **Indexes** – How to query data in this spark
 - **Vibes** – What vibes (apps/UI) are available
 - **Groups** – The actual access primitives (who is admin, who can read publicly, etc.)
@@ -59,7 +59,7 @@ Putting all of that on the spark would make it messy. So we introduced the **OS*
 
 Each spark has an **OS CoMap** (`spark.os`). Think of it as the spark's "control panel"—everything the spark needs to operate lives there:
 
-- `os.schematas` – Schema registry for this spark
+- `os.factories` – Schema registry for this spark
 - `os.indexes` – Index registry for querying
 - `os.groups` – Access control groups (guardian, publicReaders)
 
@@ -161,7 +161,7 @@ The `$$` syntax means "follow this path on the loaded spark." The engine deep-re
 - **Groups** – Own CoValues, have members with roles, can extend parent groups.
 - **Accounts** – Your identity. Has `profile` and `sparks` (a registry of your collaborative spaces).
 - **Sparks** – Named entries in `account.sparks`. Each has `name`, `os`, `vibes`.
-- **spark.os** – The spark's "control panel": schematas, indexes, capabilities.
+- **spark.os** – The spark's "control panel": factories, indexes, capabilities.
 - **spark.os.groups** – Access groups: `guardian` (admin group), `publicReaders` (optional).
 - **Canonical path** – `spark.os.groups.guardian` is the single source of truth for who controls a spark.
 - **Per-CoValue ownership** – Each CoValue has its own group that extends the guardian. Creator leaves; access flows through the guardian.

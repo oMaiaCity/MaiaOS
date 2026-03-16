@@ -49,25 +49,25 @@ async function buildCapabilityGroupMap(maia, accountId) {
 	if (!maia?.db || !accountId?.startsWith('co_')) return result
 
 	try {
-		const accountStore = await maia.do({ op: 'read', schema: '@account', key: accountId })
+		const accountStore = await maia.do({ op: 'read', factory: '@account', key: accountId })
 		await waitForStore(accountStore, 5000)
 		const accountData = accountStore?.value ?? accountStore
 		const registriesId = accountData?.registries
 		if (!registriesId || typeof registriesId !== 'string' || !registriesId.startsWith('co_'))
 			return result
-		const registriesStore = await maia.do({ op: 'read', schema: null, key: registriesId })
+		const registriesStore = await maia.do({ op: 'read', factory: null, key: registriesId })
 		await waitForStore(registriesStore, 5000)
 		const registriesData = registriesStore?.value ?? registriesStore
 		const sparksId = registriesData?.sparks
 		if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_')) return result
 
-		const sparksStore = await maia.do({ op: 'read', schema: null, key: sparksId })
+		const sparksStore = await maia.do({ op: 'read', factory: null, key: sparksId })
 		await waitForStore(sparksStore, 5000)
 		const sparksRaw = sparksStore?.value ?? sparksStore
 		if (!sparksRaw || sparksRaw.error) return result
 		const sparksData = sparksRaw
 
-		const skipKeys = new Set(['id', 'loading', 'error', '$schema', 'type', 'cotype'])
+		const skipKeys = new Set(['id', 'loading', 'error', '$factory', 'type', 'cotype'])
 		for (const key of Object.keys(sparksData)) {
 			if (skipKeys.has(key)) continue
 			const sparkCoId =
@@ -79,7 +79,7 @@ async function buildCapabilityGroupMap(maia, accountId) {
 			if (!sparkCoId) continue
 
 			try {
-				const sparkStore = await maia.do({ op: 'read', schema: null, key: sparkCoId })
+				const sparkStore = await maia.do({ op: 'read', factory: null, key: sparkCoId })
 				await waitForStore(sparkStore, 3000)
 				const sparkRaw = sparkStore?.value ?? sparkStore
 				const sparkData = sparkRaw
@@ -90,14 +90,14 @@ async function buildCapabilityGroupMap(maia, accountId) {
 				const displaySparkName =
 					sparkName.startsWith('°') || sparkName.startsWith('@') ? sparkName : `°${sparkName}`
 
-				const osStore = await maia.do({ op: 'read', schema: null, key: osId })
+				const osStore = await maia.do({ op: 'read', factory: null, key: osId })
 				await waitForStore(osStore, 3000)
 				const osRaw = osStore?.value ?? osStore
 				const osData = osRaw
 				const groupsId = osData?.groups
 				if (!groupsId?.startsWith('co_')) continue
 
-				const groupsStore = await maia.do({ op: 'read', schema: null, key: groupsId })
+				const groupsStore = await maia.do({ op: 'read', factory: null, key: groupsId })
 				await waitForStore(groupsStore, 3000)
 				const groupsRaw = groupsStore?.value ?? groupsStore
 				if (!groupsRaw || groupsRaw.error) continue

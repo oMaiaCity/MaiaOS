@@ -1,0 +1,133 @@
+{
+	"$factory": "°Maia/factory/meta",
+	"$id": "°Maia/factory/view",
+	"title": "°Maia/factory/view",
+	"description": "UI structure definition with DOM tree, expressions, loops, and event handlers (recursive viewNode structure)",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"@label": {
+			"type": "string",
+			"description": "Human-readable label (namekey, e.g. '@maia/actor/views/grid/view')"
+		},
+		"content": {
+			"type": "object",
+			"description": "View content structure (recursive viewNode)",
+			"$ref": "#/$defs/viewNode"
+		}
+	},
+	"$defs": {
+		"viewNode": {
+			"type": "object",
+			"description": "Recursive DOM node structure",
+			"properties": {
+				"tag": { "type": "string" },
+				"class": { "type": "string" },
+				"text": {
+					"anyOf": [
+						{ "type": "string", "pattern": "^\\$\\$" },
+						{ "type": "string", "pattern": "^@" },
+						{ "type": "string", "pattern": "^\\$[^$]" },
+						{ "type": "string" },
+						{ "type": "number" },
+						{ "type": "boolean" },
+						{ "type": "null" },
+						{ "$ref": "#/$defs/expressionValue" }
+					]
+				},
+				"value": {
+					"anyOf": [
+						{ "type": "string", "pattern": "^\\$\\$" },
+						{ "type": "string", "pattern": "^@" },
+						{ "type": "string", "pattern": "^\\$[^$]" },
+						{ "type": "string" },
+						{ "type": "number" },
+						{ "type": "boolean" },
+						{ "type": "null" },
+						{ "$ref": "#/$defs/expressionValue" }
+					]
+				},
+				"attrs": {
+					"type": "object",
+					"additionalProperties": {
+						"anyOf": [
+							{ "type": "string", "pattern": "^\\$\\$" },
+							{ "type": "string", "pattern": "^@" },
+							{ "type": "string", "pattern": "^\\$[^$]" },
+							{ "type": "string" },
+							{ "type": "number" },
+							{ "type": "boolean" },
+							{ "type": "null" },
+							{
+								"type": "object",
+								"additionalProperties": {
+									"anyOf": [
+										{ "type": "string", "pattern": "^\\$\\$" },
+										{ "type": "string", "pattern": "^@" },
+										{ "type": "string", "pattern": "^\\$[^$]" },
+										{ "type": "string" },
+										{ "type": "number" },
+										{ "type": "boolean" },
+										{ "type": "null" }
+									]
+								}
+							}
+						]
+					}
+				},
+				"children": { "type": "array", "items": { "$ref": "#/$defs/viewNode" } },
+				"$on": {
+					"type": "object",
+					"additionalProperties": {
+						"type": "object",
+						"properties": {
+							"send": { "type": "string" },
+							"payload": { "type": "object", "additionalProperties": true },
+							"key": { "type": "string" }
+						},
+						"required": ["send"]
+					}
+				},
+				"$each": {
+					"type": "object",
+					"properties": {
+						"items": {
+							"anyOf": [
+								{ "type": "string", "pattern": "^\\$\\$" },
+								{ "type": "string", "pattern": "^@" },
+								{ "type": "string", "pattern": "^\\$[^$]" },
+								{ "type": "string" },
+								{ "type": "number" },
+								{ "type": "boolean" },
+								{ "type": "null" }
+							]
+						},
+						"template": { "$ref": "#/$defs/viewNode" }
+					},
+					"required": ["items", "template"]
+				},
+				"$slot": {
+					"anyOf": [
+						{ "type": "string", "pattern": "^\\$\\$" },
+						{ "type": "string", "pattern": "^@" },
+						{ "type": "string", "pattern": "^\\$[^$]" },
+						{ "type": "string" },
+						{ "type": "number" },
+						{ "type": "boolean" },
+						{ "type": "null" }
+					]
+				},
+				"scrollToBottomOn": {
+					"type": "string",
+					"description": "Context key (e.g. $conversations). When array length increases, scrolls this scroll container to bottom."
+				}
+			},
+			"additionalProperties": false
+		},
+		"expressionValue": {
+			"type": "object",
+			"description": "MaiaScript expression (e.g. $join, $context)"
+		}
+	},
+	"additionalProperties": false
+}

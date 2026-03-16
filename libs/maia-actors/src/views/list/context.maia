@@ -1,8 +1,8 @@
 {
-	"$schema": "°Maia/schema/context",
+	"$factory": "°Maia/factory/context",
 	"$id": "°Maia/actor/views/list/context",
 	"list": {
-		"schema": "°Maia/schema/data/todos",
+		"factory": "°Maia/factory/data/todos",
 		"map": {
 			"id": "id",
 			"text": "text",

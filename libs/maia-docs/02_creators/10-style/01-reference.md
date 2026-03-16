@@ -253,7 +253,7 @@ For conditional styling, use nested `data` syntax in component definitions:
 
 ```json
 {
-  "$schema": "@schema/style",
+  "$factory": "@factory/style",
   "$id": "@style/todo",
   
   "components": {

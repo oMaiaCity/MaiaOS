@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/os/wasm",
+	"$factory": "°Maia/factory/os/wasm",
 	"$id": "°Maia/actor/services/sandboxed-add/wasm",
 	"lang": "js",
 	"code": "({ execute: function(actor, payload) { var a = Number(payload.a) || 0; var b = Number(payload.b) || 0; return { ok: true, data: { result: a + b } }; } })"

@@ -48,16 +48,16 @@ async function resolveAccountToProfileCoIdViaHumans(maia, accountCoId) {
 	try {
 		const registriesId = maia?.id?.maiaId?.get?.('registries')
 		if (!registriesId?.startsWith('co_z')) return null
-		const registriesStore = await maia.do({ op: 'read', schema: null, key: registriesId })
+		const registriesStore = await maia.do({ op: 'read', factory: null, key: registriesId })
 		await waitForStore(registriesStore, 5000)
 		const registriesData = registriesStore?.value ?? registriesStore
 		if (!registriesData?.humans?.startsWith('co_z')) return null
-		const humansStore = await maia.do({ op: 'read', schema: null, key: registriesData.humans })
+		const humansStore = await maia.do({ op: 'read', factory: null, key: registriesData.humans })
 		await waitForStore(humansStore, 5000)
 		const humansData = humansStore?.value ?? humansStore
 		const humanCoId = humansData?.[accountCoId]
 		if (!humanCoId?.startsWith('co_z')) return null
-		const humanStore = await maia.do({ op: 'read', schema: null, key: humanCoId })
+		const humanStore = await maia.do({ op: 'read', factory: null, key: humanCoId })
 		await waitForStore(humanStore, 5000)
 		const humanData = humanStore?.value ?? humanStore
 		const profileCoId = humanData?.profile
@@ -77,16 +77,16 @@ async function resolveAccountToProfileCoIdViaAvens(maia, accountCoId) {
 	try {
 		const registriesId = maia?.id?.maiaId?.get?.('registries')
 		if (!registriesId?.startsWith('co_z')) return null
-		const registriesStore = await maia.do({ op: 'read', schema: null, key: registriesId })
+		const registriesStore = await maia.do({ op: 'read', factory: null, key: registriesId })
 		await waitForStore(registriesStore, 5000)
 		const registriesData = registriesStore?.value ?? registriesStore
 		if (!registriesData?.avens?.startsWith('co_z')) return null
-		const avensStore = await maia.do({ op: 'read', schema: null, key: registriesData.avens })
+		const avensStore = await maia.do({ op: 'read', factory: null, key: registriesData.avens })
 		await waitForStore(avensStore, 5000)
 		const avensData = avensStore?.value ?? avensStore
 		const avenIdentityCoId = avensData?.[accountCoId]
 		if (!avenIdentityCoId?.startsWith('co_z')) return null
-		const avenIdentityStore = await maia.do({ op: 'read', schema: null, key: avenIdentityCoId })
+		const avenIdentityStore = await maia.do({ op: 'read', factory: null, key: avenIdentityCoId })
 		await waitForStore(avenIdentityStore, 5000)
 		const avenIdentityData = avenIdentityStore?.value ?? avenIdentityStore
 		const profileCoId = avenIdentityData?.profile
@@ -110,7 +110,7 @@ async function resolveOneToProfile(maia, accountCoId) {
 			profileCoId = await resolveAccountToProfileCoIdViaAvens(maia, accountCoId)
 		}
 		if (!profileCoId) {
-			const accountStore = await maia.do({ op: 'read', schema: '@account', key: accountCoId })
+			const accountStore = await maia.do({ op: 'read', factory: '@account', key: accountCoId })
 			await waitForStore(accountStore, 5000)
 			const accountData = accountStore?.value ?? accountStore
 			profileCoId = accountData?.profile?.startsWith('co_') ? accountData.profile : null
@@ -118,7 +118,7 @@ async function resolveOneToProfile(maia, accountCoId) {
 		if (!profileCoId) {
 			return { id: null, name: travelerFallback(accountCoId), image: null }
 		}
-		const profileStore = await maia.do({ op: 'read', schema: null, key: profileCoId })
+		const profileStore = await maia.do({ op: 'read', factory: null, key: profileCoId })
 		await waitForStore(profileStore, 5000)
 		const profileData = profileStore?.value ?? profileStore
 		const name = profileData?.name

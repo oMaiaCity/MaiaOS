@@ -1,12 +1,12 @@
 const store = await dbEngine.execute({
   op: 'read',
-  schema: 'co_zTodos123'
+  factory: 'co_zTodos123'
 });
 
 // Batch read
 const stores = await dbEngine.execute({
   op: 'read',
-  schema: 'co_zTodos123',
+  factory: 'co_zTodos123',
   keys: ['co_zTodo1', 'co_zTodo2', 'co_zTodo3']
 });
 ```
@@ -25,7 +25,7 @@ const stores = await dbEngine.execute({
 ```javascript
 const newTodo = await dbEngine.execute({
   op: 'create',
-  schema: 'co_zTodos123',
+  factory: 'co_zTodos123',
   data: { text: 'Buy milk', completed: false }
 });
 ```
@@ -50,7 +50,7 @@ const newTodo = await dbEngine.execute({
 ```javascript
 const updated = await dbEngine.execute({
   op: 'update',
-  schema: 'co_zTodos123',
+  factory: 'co_zTodos123',
   id: 'co_zTodo456',
   data: { completed: true }
 });
@@ -70,7 +70,7 @@ const updated = await dbEngine.execute({
 ```javascript
 await dbEngine.execute({
   op: 'delete',
-  schema: 'co_zTodos123',
+  factory: 'co_zTodos123',
   id: 'co_zTodo456'
 });
 ```
@@ -111,30 +111,30 @@ await dbEngine.execute({
 **Example:**
 ```javascript
 // Load schema by co-id (returns ReactiveStore)
-const schemaStore = await dbEngine.execute({
-  op: 'schema',
+const factoryStore = await dbEngine.execute({
+  op: 'factory',
   coId: 'co_zSchema123'
 });
-const schema = schemaStore.value; // Get current value
-schemaStore.subscribe((updatedSchema) => {
+const schema = factoryStore.value; // Get current value
+factoryStore.subscribe((updatedSchema) => {
   // React to schema updates
 });
 
 // Load schema from CoValue's headerMeta (PREFERRED - single source of truth)
-const schemaStore = await dbEngine.execute({
-  op: 'schema',
+const factoryStore = await dbEngine.execute({
+  op: 'factory',
   fromCoValue: 'co_zValue456'
 });
-const schema = schemaStore.value;
+const schema = factoryStore.value;
 
-// To resolve registry strings (@schema/...), use resolve operation first:
-const schemaCoId = await dbEngine.execute({
+// To resolve registry strings (@factory/...), use resolve operation first:
+const factoryCoId = await dbEngine.execute({
   op: 'resolve',
-  humanReadableKey: '@schema/actor'
+  humanReadableKey: '@factory/actor'
 });
-const schemaStore = await dbEngine.execute({
-  op: 'schema',
-  coId: schemaCoId
+const factoryStore = await dbEngine.execute({
+  op: 'factory',
+  coId: factoryCoId
 });
 ```
 
@@ -142,7 +142,7 @@ const schemaStore = await dbEngine.execute({
 
 SchemaOperation uses the universal schema resolver internally, which:
 - Resolves schemas by co-id (`co_z...`)
-- Resolves schemas by registry string (`@schema/...`) - via resolve operation
+- Resolves schemas by registry string (`@factory/...`) - via resolve operation
 - Extracts schema co-id from CoValue headerMeta (`fromCoValue` pattern)
 - Provides single source of truth for all schema resolution across MaiaOS
 ```
@@ -152,7 +152,7 @@ SchemaOperation uses the universal schema resolver internally, which:
 **Purpose:** Resolve human-readable keys to co-ids
 
 **Parameters:**
-- `humanReadableKey` (string, required) - Human-readable ID (e.g., '@schema/actor', '@vibe/todos')
+- `humanReadableKey` (string, required) - Human-readable ID (e.g., '@factory/actor', '@vibe/todos')
 
 **Returns:** Co-id (co_z...) or null if not found
 
@@ -160,7 +160,7 @@ SchemaOperation uses the universal schema resolver internally, which:
 ```javascript
 const coId = await dbEngine.execute({
   op: 'resolve',
-  humanReadableKey: '@schema/actor'
+  humanReadableKey: '@factory/actor'
 });
 ```
 
@@ -195,17 +195,17 @@ Engines/Utils → dbEngine.execute({op: ...}) → Operations → Backend Methods
 // Direct operation call
 const store = await dbEngine.execute({
   op: 'read',
-  schema: 'co_zTodos123',
+  factory: 'co_zTodos123',
   key: 'co_zTodo456'
 });
 
 // Using helper methods (which use operations API internally)
-const schemaCoId = await dbEngine.getSchemaCoId('actor');
+const factoryCoId = await dbEngine.getSchemaCoId('actor');
 const coId = await dbEngine.resolveCoId('@vibe/todos');
 
 // Using utilities that use operations API
 // Config subscriptions handled by backend (maia-db CoCache)
-const { config } = await subscribeConfig(dbEngine, schemaCoId, coId, 'actor');
+const { config } = await subscribeConfig(dbEngine, factoryCoId, coId, 'actor');
 ```
 
 **❌ Incorrect Pattern:**
@@ -258,7 +258,7 @@ export class DBEngine extends SharedDBEngine {
 
 - [maia-script Package](../04_maia-script/README.md) - Uses operations layer
 - [maia-db Package](../05_maia-db/cojson.md) - Will implement DBAdapter for CoJSON
-- [maia-schemata Package](../03_maia-schemata/README.md) - Schema validation used by operations
+- [maia-factories Package](../03_maia-factories/README.md) - Schema validation used by operations
 
 ---
 
@@ -274,4 +274,4 @@ export class DBEngine extends SharedDBEngine {
 - `src/operations/` - All operation classes
 
 **Dependencies:**
-- `@MaiaOS/schemata` - Schema validation
+- `@MaiaOS/factories` - Schema validation

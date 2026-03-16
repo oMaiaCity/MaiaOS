@@ -8,7 +8,7 @@
 	},
 	"dependencies": {
 		"@MaiaOS/peer": "workspace:*",
-		"@MaiaOS/schemata": "workspace:*",
+		"@MaiaOS/factories": "workspace:*",
 		"@MaiaOS/storage": "workspace:*",
 		"cojson": "^0.20.7",
 		"cojson-transport-ws": "0.20.7",

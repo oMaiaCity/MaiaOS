@@ -71,8 +71,8 @@ const os = await MaiaOS.boot({
 Unified database operations through a single `@db` tool:
 - All operations use `op` parameter (`create`, `update`, `delete`, `toggle`, `read`, `seed`)
 - **Universal `read()` API** - Every CoValue is accessible as a reactive store
-- Example: `{ tool: "@db", payload: { op: "create", schema: "co_z...", data: {...} } }`
-- **Note:** Schema must be a co-id (`co_z...`) - schema references (`@schema/todos`) are transformed to co-ids during seeding
+- Example: `{ tool: "@db", payload: { op: "create", factory: "co_z...", data: {...} } }`
+- **Note:** Schema must be a co-id (`co_z...`) - factory references (`@factory/todos`) are transformed to co-ids during seeding
 - All `read()` operations return ReactiveStore with `.value` and `.subscribe()` methods
 - See [Operations](./07-operations.md) for the universal read() API pattern
 

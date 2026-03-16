@@ -5,8 +5,8 @@
 			"@MaiaOS/engines": ["./libs/maia-engines/src"],
 			"@MaiaOS/engines/*": ["./libs/maia-engines/src/*"],
 			"@MaiaOS/loader": ["./libs/maia-loader/src/index.js"],
-			"@MaiaOS/schemata": ["./libs/maia-schemata/src"],
-			"@MaiaOS/schemata/*": ["./libs/maia-schemata/src/*"],
+			"@MaiaOS/factories": ["./libs/maia-factories/src"],
+			"@MaiaOS/factories/*": ["./libs/maia-factories/src/*"],
 			"@MaiaOS/self": ["./libs/maia-self/src/index.js"],
 			"@MaiaOS/actors": ["./libs/maia-actors/src"],
 			"@MaiaOS/vibes": ["./libs/maia-vibes/src"]

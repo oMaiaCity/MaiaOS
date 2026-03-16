@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/meta",
+	"$factory": "°Maia/factory/meta",
 	"$id": "°Maia/actor/services/updateWasmCode/interface",
 	"title": "°Maia/actor/services/updateWasmCode/interface",
 	"description": "Updates CoText content for wasm.code (inline edit). Resolves actorRef → wasm config → code CoText.",

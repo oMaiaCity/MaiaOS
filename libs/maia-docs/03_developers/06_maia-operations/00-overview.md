@@ -190,7 +190,7 @@ const dbEngine = new DBEngine(backend);
 // Execute operations
 const store = await dbEngine.execute({
   op: 'read',
-  schema: 'co_zTodos123',
+  factory: 'co_zTodos123',
   filter: { completed: false }
 });
 
@@ -219,7 +219,7 @@ const dbEngine = new DBEngine(backend, { evaluator });
 // Now update operations can evaluate MaiaScript expressions
 await dbEngine.execute({
   op: 'update',
-  schema: 'co_zTodos123',
+  factory: 'co_zTodos123',
   id: 'co_zTodo456',
   data: {
     done: { $not: '$existing.done' }  // Toggle using MaiaScript
@@ -293,7 +293,7 @@ class MyCustomBackend extends DBAdapter {
 // Single item
 const store = await dbEngine.execute({
   op: 'read',
-  schema: 'co_zTodos123',
+  factory: 'co_zTodos123',
   key: 'co_zTodo456'
 });
 

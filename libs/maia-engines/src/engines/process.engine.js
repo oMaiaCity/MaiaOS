@@ -6,12 +6,12 @@
  * No states/transitions; phase lives in context when needed.
  */
 
-import { resolveExpressions } from '@MaiaOS/schemata/expression-resolver'
+import { resolveExpressions } from '@MaiaOS/factories/expression-resolver'
 import {
 	createErrorEntry,
 	isPermissionError,
 	isSuccessResult,
-} from '@MaiaOS/schemata/operation-result'
+} from '@MaiaOS/factories/operation-result'
 import { perfChatEnd, perfChatMeasure, perfChatStep } from '../utils/perf-chat.js'
 import { perfPipelineMeasure, perfPipelineStep } from '../utils/perf-pipeline.js'
 import { deliverResult } from '../utils/process-deliver.js'
@@ -115,8 +115,8 @@ export class ProcessEngine {
 					)
 					const isChatCreate =
 						opKey === 'create' &&
-						typeof evaluated?.schema === 'string' &&
-						evaluated.schema.includes('chat')
+						typeof evaluated?.factory === 'string' &&
+						evaluated.factory.includes('chat')
 					const runOp = () => this._executeOp(opKey, evaluated, process, payload)
 					const result = await (isChatCreate
 						? perfChatMeasure('op.create (chat)', runOp)
@@ -231,14 +231,14 @@ export class ProcessEngine {
 
 	async _executeOp(opKey, config, _process, eventPayload = {}) {
 		if (!this.dataEngine) return null
-		if (!config || (opKey === 'create' && (!config.schema || !config.data))) return null
+		if (!config || (opKey === 'create' && (!config.factory || !config.data))) return null
 
 		let result
 		if (opKey === 'create') {
 			const idempotencyKey = config.idempotencyKey ?? eventPayload.idempotencyKey
 			result = await this.dataEngine.execute({
 				op: 'create',
-				schema: config.schema,
+				factory: config.factory,
 				data: config.data,
 				...(idempotencyKey ? { idempotencyKey } : {}),
 			})
@@ -378,8 +378,8 @@ export class ProcessEngine {
 	 */
 	async _getAcceptedEventTypes(targetActorId) {
 		const actor = this.actorOps?.getActor?.(targetActorId)
-		if (actor?.interfaceSchema?.properties) {
-			return [...Object.keys(actor.interfaceSchema.properties), 'SUCCESS', 'ERROR']
+		if (actor?.interfaceFactory?.properties) {
+			return [...Object.keys(actor.interfaceFactory.properties), 'SUCCESS', 'ERROR']
 		}
 		const actorConfig = this.actorOps?.runtime
 			? await this.actorOps.runtime.getActorConfig(targetActorId)
@@ -398,11 +398,11 @@ export class ProcessEngine {
 		if (!this.dataEngine?.peer) return null
 		if (typeof actorCoId !== 'string' || !actorCoId.startsWith('co_z')) return null
 		try {
-			const schemaCoId = await resolveSchemaFromCoValue(this.dataEngine?.peer, actorCoId)
-			if (!schemaCoId) return null
+			const factoryCoId = await resolveSchemaFromCoValue(this.dataEngine?.peer, actorCoId)
+			if (!factoryCoId) return null
 			const store = await this.dataEngine.execute({
 				op: 'read',
-				schema: schemaCoId,
+				factory: factoryCoId,
 				key: actorCoId,
 			})
 			const config = store?.value

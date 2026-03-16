@@ -1,5 +1,5 @@
 // loadSchemaFromDB removed - use resolve() from @MaiaOS/db if needed
-import { validateAgainstSchemaOrThrow } from '@MaiaOS/schemata/validation.helper'
+import { validateAgainstFactoryOrThrow } from '@MaiaOS/factories/validation.helper'
 
 // getContextValue removed - Backend unified store provides merged value directly via context.value
 
@@ -68,12 +68,12 @@ export class Evaluator {
 		) {
 			try {
 				if (this.dataEngine?.peer) {
-					const schemaKey = `${this.dataEngine.peer.systemSpark}/schema/maia-script-expression`
-					const expressionSchema = await this.dataEngine.peer.resolve(schemaKey, {
-						returnType: 'schema',
+					const factoryKey = `${this.dataEngine.peer.systemSpark}/factory/maia-script-expression`
+					const expressionFactory = await this.dataEngine.peer.resolve(factoryKey, {
+						returnType: 'factory',
 					})
-					if (expressionSchema) {
-						await validateAgainstSchemaOrThrow(expressionSchema, expression, 'maia-script-expression')
+					if (expressionFactory) {
+						await validateAgainstFactoryOrThrow(expressionFactory, expression, 'maia-script-expression')
 					}
 				}
 			} catch (error) {

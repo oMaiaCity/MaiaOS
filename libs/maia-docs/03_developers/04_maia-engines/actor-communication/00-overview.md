@@ -198,7 +198,7 @@ The detail context contains a query with dynamic filter:
 ```json
 {
   "sparkDetails": {
-    "schema": "@schema/data/spark",
+    "factory": "@factory/data/spark",
     "filter": {
       "id": "$sparkId"
     }

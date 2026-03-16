@@ -5,8 +5,8 @@
  * Ensures proper validation and CRDT-native message handling.
  */
 
-import { containsExpressions } from '@MaiaOS/schemata/expression-resolver.js'
-import { resolve } from '../schema/resolver.js'
+import { containsExpressions } from '@MaiaOS/factories/expression-resolver.js'
+import { resolve } from '../factory/resolver.js'
 
 const _perf =
 	typeof window !== 'undefined' &&
@@ -48,28 +48,28 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 
 	let t0 = _perf.now()
 	// 1. Get message schema co-id from inbox schema via resolve() (uses CoCache / universalRead)
-	let messageSchemaCoId = null
-	let inboxSchema = null
+	let messageFactoryCoId = null
+	let inboxFactory = null
 	try {
-		inboxSchema = await resolve(peer, { fromCoValue: inboxCoId }, { returnType: 'schema' })
+		inboxFactory = await resolve(peer, { fromCoValue: inboxCoId }, { returnType: 'factory' })
 
-		if (inboxSchema?.items?.$co) {
-			const messageSchemaRef = inboxSchema.items.$co
+		if (inboxFactory?.items?.$co) {
+			const messageFactoryRef = inboxFactory.items.$co
 
-			if (messageSchemaRef.startsWith('co_z')) {
-				messageSchemaCoId = messageSchemaRef
-			} else if (messageSchemaRef.startsWith('°Maia/schema/')) {
-				messageSchemaCoId = await resolve(peer, messageSchemaRef, { returnType: 'coId' })
+			if (messageFactoryRef.startsWith('co_z')) {
+				messageFactoryCoId = messageFactoryRef
+			} else if (messageFactoryRef.startsWith('°Maia/factory/')) {
+				messageFactoryCoId = await resolve(peer, messageFactoryRef, { returnType: 'coId' })
 			}
 		}
 
-		if (!messageSchemaCoId) {
-			messageSchemaCoId = await resolve(peer, '°Maia/schema/event', { returnType: 'coId' })
+		if (!messageFactoryCoId) {
+			messageFactoryCoId = await resolve(peer, '°Maia/factory/event', { returnType: 'coId' })
 		}
 
-		if (!messageSchemaCoId || !messageSchemaCoId.startsWith('co_z')) {
+		if (!messageFactoryCoId || !messageFactoryCoId.startsWith('co_z')) {
 			throw new Error(
-				`[createAndPushMessage] Failed to get message schema co-id. Inbox schema items.$co: ${inboxSchema?.items?.$co || 'not found'}`,
+				`[createAndPushMessage] Failed to get message factory co-id. Inbox factory items.$co: ${inboxFactory?.items?.$co || 'not found'}`,
 			)
 		}
 	} catch (error) {
@@ -79,9 +79,9 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 
 	// 2. CRITICAL: Load and validate message data against message schema before creating
 	//    This ensures type, payload, source, target, processed fields are valid
-	const messageSchema = await resolve(peer, messageSchemaCoId, { returnType: 'schema' })
-	if (!messageSchema) {
-		throw new Error(`[createAndPushMessage] Message schema not found: ${messageSchemaCoId}`)
+	const messageFactory = await resolve(peer, messageFactoryCoId, { returnType: 'factory' })
+	if (!messageFactory) {
+		throw new Error(`[createAndPushMessage] Message factory not found: ${messageFactoryCoId}`)
 	}
 
 	// Ensure processed flag defaults to false if not provided
@@ -104,7 +104,7 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 	t0 = _perf.now()
 	const createResult = await dbEngine.execute({
 		op: 'create',
-		schema: messageSchemaCoId,
+		factory: messageFactoryCoId,
 		data: messageDataWithDefaults,
 	})
 	_perf.log('createAndPushMessage.create', Math.round((_perf.now() - t0) * 100) / 100)

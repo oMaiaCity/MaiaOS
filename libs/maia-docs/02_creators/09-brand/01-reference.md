@@ -55,7 +55,7 @@ In your actor definition:
 
 ```json
 {
-  "$schema": "@schema/actor",
+  "$factory": "@factory/actor",
   "$id": "@actor/todo",
   "brand": "@style/brand",  // ← Required: shared design system
   "style": "@style/todo",   // ← Optional: actor-specific overrides
@@ -206,7 +206,7 @@ For conditional styling, use nested `data` syntax in component definitions:
 
 ```json
 {
-  "$schema": "@schema/style",
+  "$factory": "@factory/style",
   "$id": "@style/brand",
   
   "tokens": {

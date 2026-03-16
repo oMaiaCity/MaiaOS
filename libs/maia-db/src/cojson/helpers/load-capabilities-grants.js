@@ -15,31 +15,31 @@ export async function loadCapabilitiesGrants(maia) {
 
 	try {
 		// Resolve path: registries → sparks → °Maia → os → capabilities
-		const registriesStore = await maia.do({ op: 'read', schema: null, key: registriesId })
+		const registriesStore = await maia.do({ op: 'read', factory: null, key: registriesId })
 		await waitForStore(registriesStore, 5000)
 		const registries = registriesStore?.value ?? registriesStore
 		const sparksId = registries?.sparks
 		if (!sparksId?.startsWith('co_z')) return []
 
-		const sparksStore = await maia.do({ op: 'read', schema: null, key: sparksId })
+		const sparksStore = await maia.do({ op: 'read', factory: null, key: sparksId })
 		await waitForStore(sparksStore, 5000)
 		const sparks = sparksStore?.value ?? sparksStore
 		const maiaSparkId = sparks?.['°Maia']
 		if (!maiaSparkId?.startsWith('co_z')) return []
 
-		const sparkStore = await maia.do({ op: 'read', schema: null, key: maiaSparkId })
+		const sparkStore = await maia.do({ op: 'read', factory: null, key: maiaSparkId })
 		await waitForStore(sparkStore, 5000)
 		const spark = sparkStore?.value ?? sparkStore
 		const osId = spark?.os
 		if (!osId?.startsWith('co_z')) return []
 
-		const osStore = await maia.do({ op: 'read', schema: null, key: osId })
+		const osStore = await maia.do({ op: 'read', factory: null, key: osId })
 		await waitForStore(osStore, 5000)
 		const os = osStore?.value ?? osStore
 		const capabilitiesStreamId = os?.capabilities
 		if (!capabilitiesStreamId?.startsWith('co_z')) return []
 
-		const streamStore = await maia.do({ op: 'read', schema: null, key: capabilitiesStreamId })
+		const streamStore = await maia.do({ op: 'read', factory: null, key: capabilitiesStreamId })
 		await waitForStore(streamStore, 5000)
 		const streamData = streamStore?.value ?? streamStore
 		const rawItems = streamData?.items ?? []
@@ -50,7 +50,7 @@ export async function loadCapabilitiesGrants(maia) {
 		const grants = []
 		for (const capCoId of capCoIds) {
 			try {
-				const capStore = await maia.do({ op: 'read', schema: null, key: capCoId })
+				const capStore = await maia.do({ op: 'read', factory: null, key: capCoId })
 				await waitForStore(capStore, 3000)
 				const cap = capStore?.value ?? capStore
 				if (!cap || cap?.error || cap?.loading) continue

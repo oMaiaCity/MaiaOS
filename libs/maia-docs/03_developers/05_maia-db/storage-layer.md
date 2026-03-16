@@ -55,8 +55,8 @@ Context can contain query objects:
 
 ```json
 {
-  "todos": { "schema": "co_zTodos123", "filter": { "completed": false } },
-  "sparkDetails": { "schema": "co_zSpark123", "filter": { "id": "$sparkId" } }
+  "todos": { "factory": "co_zTodos123", "filter": { "completed": false } },
+  "sparkDetails": { "factory": "co_zSpark123", "filter": { "id": "$sparkId" } }
 }
 ```
 
@@ -104,7 +104,7 @@ Unified cache for subscriptions, stores, resolutions, and resolved data.
 
 | Operation | Flow |
 |-----------|------|
-| Create | `peer.create(schemaCoId, data, options)` → Schema index updated |
+| Create | `peer.create(factoryCoId, data, options)` → Schema index updated |
 | Update | `peer.update(coId, data)` → Pre-CRDT validation |
 | Delete | `peer.delete(coId)` → Automatic index removal |
 | Read | `peer.read(schema, key, keys, filter, options)` → ReactiveStore |
@@ -116,14 +116,14 @@ Unified cache for subscriptions, stores, resolutions, and resolved data.
 Single `resolve()` API for all identifier types:
 
 - **Co-id** (`co_z...`) → Direct load
-- **Registry key** (`°Maia/schema/...`) → Resolves via `spark.os.schemata`
+- **Registry key** (`°Maia/factory/...`) → Resolves via `spark.os.factories`
 - **fromCoValue** (`{ fromCoValue: 'co_z...' }`) → Extracts schema from headerMeta
 
 **Return types:** `coId`, `schema`, `coValue` (ReactiveStore)
 
 **Reactive resolution:** `resolveReactive()`, `waitForReactiveResolution()` - For query objects in context with progressive loading.
 
-**Source:** `libs/maia-db/src/cojson/schema/resolver.js`
+**Source:** `libs/maia-db/src/cojson/factory/resolver.js`
 
 ---
 

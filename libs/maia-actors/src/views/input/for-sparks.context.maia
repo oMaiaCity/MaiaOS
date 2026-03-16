@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/context",
+	"$factory": "°Maia/factory/context",
 	"$id": "°Maia/actor/views/input/for-sparks/context",
 	"targetActor": "@target",
 	"inputPlaceholder": "Enter spark name...",

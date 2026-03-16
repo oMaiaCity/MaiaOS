@@ -134,7 +134,7 @@ Use the `@db` tool in your state machine definitions:
         "tool": "@db",
         "payload": {
           "op": "create",
-          "schema": "@schema/todos",
+          "factory": "@factory/todos",
           "data": {
             "text": "$newTodoText",
             "done": false
@@ -238,7 +238,7 @@ Database
             "tool": "@db",
             "payload": {
               "op": "create",
-              "schema": "@schema/todos",
+              "factory": "@factory/todos",
               "data": {...}
             }
           }
@@ -262,14 +262,14 @@ actor.actorEngine.toolEngine.execute('@db', actor, payload);
 
 ```json
 {
-  "$schema": "@schema/context",
+  "$factory": "@factory/context",
   "$id": "@context/todo",
   "todos": {
-    "schema": "@schema/todos",
+    "factory": "@factory/todos",
     "filter": null
   },
   "todosTodo": {
-    "schema": "@schema/todos",
+    "factory": "@factory/todos",
     "filter": { "done": false }
   }
 }
@@ -283,7 +283,7 @@ actor.actorEngine.toolEngine.execute('@db', actor, payload);
     "tool": "@db",
     "payload": {
       "op": "read",
-      "schema": "co_zTodos123"
+      "factory": "co_zTodos123"
       // Don't do this - define query objects in context instead!
     }
   }

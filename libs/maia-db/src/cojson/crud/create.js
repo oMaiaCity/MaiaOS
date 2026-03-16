@@ -41,7 +41,7 @@ async function determineCotypeAndFlag(peer, schema, data) {
 			if (schemaContent?.get) {
 				// Schema definitions (parent = meta-schema) must ALWAYS be CoMaps
 				const title = schemaContent.get('title')
-				if (title === '°Maia/schema/meta') {
+				if (title === '°Maia/factory/meta') {
 					return { cotype: 'comap', isSchemaDefinition: true }
 				}
 
@@ -109,11 +109,11 @@ export async function create(peer, schema, data, options = {}) {
 	const t0 = isChatMessage ? _perfChat.now() : 0
 
 	const { coValue } = await createCoValueForSpark(peer, spark, {
-		schema,
+		factory: schema,
 		cotype,
 		data: cotype === 'comap' ? data : cotype === 'colist' ? data : undefined,
 		dataEngine: peer.dbEngine,
-		isSchemaDefinition,
+		isFactoryDefinition: isSchemaDefinition,
 	})
 
 	if (isChatMessage) {

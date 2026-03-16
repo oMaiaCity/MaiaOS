@@ -18,7 +18,7 @@ Create a file named `brand.style.maia`:
 
 ```json
 {
-  "$schema": "@schema/style",
+  "$factory": "@factory/style",
   "$id": "@style/brand",
   
   "tokens": {

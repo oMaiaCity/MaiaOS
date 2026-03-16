@@ -40,7 +40,7 @@ const childGroup = createChildGroup(node, maiaGroup, { name: "My Project" });
 
 ### What are Sparks?
 
-Sparks are CoMaps with schema `@schema/data/spark` that reference groups:
+Sparks are CoMaps with factory `@factory/data/spark` that reference groups:
 - Structure: `{name: string, group: co-id}`
 - Registered in `account.registries.sparks` CoMap (sparkName -> sparkCoId)
 - Automatically indexed in `account.os.{sparkSchemaCoId}` colist
@@ -147,8 +147,8 @@ MaiaOS standardizes on **account co-ids** (co_z...) for group member storage and
 - **Group Operations:** `libs/maia-db/src/cojson/groups/groups.js`
 - **Spark Operations:** `libs/maia-engines/src/engines/data.engine.js` (merged)
 - **Spark Backend:** `libs/maia-db/src/cojson/core/cojson-backend.js` (spark CRUD methods)
-- **Schema Migration:** `libs/maia-db/src/migrations/schema.migration.js`
-- **Spark Schema:** `libs/maia-schemata/src/data/spark.schema.json`
+- **Schema Migration:** `libs/maia-db/src/migrations/factory.migration.js`
+- **Spark Schema:** `libs/maia-factories/src/data/spark.factory.json`
 
 ## Related Documentation
 

@@ -6,8 +6,8 @@
 
 ```json
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/guard",
+  "$factory": "@factory/meta",
+  "$id": "@factory/guard",
   "title": "Guard",
   "cotype": "comap",
   "properties": {
@@ -18,7 +18,7 @@
   },
   "allOf": [
     {
-      "$co": "@schema/maia-script-expression"  // ← Uses $co for schema reference
+      "$co": "@factory/maia-script-expression"  // ← Uses $co for schema reference
     }
   ]
 }
@@ -33,7 +33,7 @@
     "payload": {
       "type": "object",
       "additionalProperties": {
-        "$co": "@schema/maia-script-expression"  // ← Uses $co for schema reference
+        "$co": "@factory/maia-script-expression"  // ← Uses $co for schema reference
       }
     }
   }
@@ -63,8 +63,8 @@
 #### Example 1: Actor Schema (comap)
 ```json
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/actor",
+  "$factory": "@factory/meta",
+  "$id": "@factory/actor",
   "title": "Actor Definition",
   "cotype": "comap",
   "properties": {
@@ -73,17 +73,17 @@
       "pattern": "^co_z[a-zA-Z0-9]+$"
     },
     "context": {
-      "$co": "@schema/context",  // ← CoValue reference
+      "$co": "@factory/context",  // ← CoValue reference
       "description": "Co-id reference to context definition"
     },
     "view": {
-      "$co": "@schema/view",  // ← CoValue reference
+      "$co": "@factory/view",  // ← CoValue reference
       "description": "Co-id reference to view definition"
     },
     "children": {
       "type": "object",
       "additionalProperties": {
-        "$co": "@schema/actor"  // ← Each child is a co-id reference
+        "$co": "@factory/actor"  // ← Each child is a co-id reference
       }
     }
   }
@@ -93,8 +93,8 @@
 #### Example 2: Inbox Schema (costream)
 ```json
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/inbox",
+  "$factory": "@factory/meta",
+  "$id": "@factory/inbox",
   "title": "Inbox CoStream",
   "cotype": "costream",  // ← Append-only stream
   "properties": {
@@ -106,7 +106,7 @@
       "type": "array",
       "description": "Array of message co-id references",
       "items": {
-        "$co": "@schema/message",  // ← Each item is a co-id reference
+        "$co": "@factory/message",  // ← Each item is a co-id reference
         "description": "Each item is a co-id reference to a message"
       }
     }
@@ -118,14 +118,14 @@
 #### Example 3: View Schema (comap with internal $defs)
 ```json
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/view",
+  "$factory": "@factory/meta",
+  "$id": "@factory/view",
   "title": "View Definition",
   "cotype": "comap",
   "properties": {
     "tag": { "type": "string" },
     "text": {
-      "$co": "@schema/maia-script-expression"  // ← CoValue reference
+      "$co": "@factory/maia-script-expression"  // ← CoValue reference
     },
     "children": {
       "type": "array",

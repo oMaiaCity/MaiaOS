@@ -49,7 +49,7 @@ Create a file named `manifest.vibe.maia`:
 
 ```json
 {
-  "$schema": "@schema/vibe",
+  "$factory": "@factory/vibe",
   "$id": "@vibe/todos",
   "name": "Todo List",
   "description": "A complete todo list application",
@@ -61,7 +61,7 @@ Create a file named `manifest.vibe.maia`:
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `$schema` | string | Schema reference (`@schema/vibe`) - transformed to co-id during seeding |
+| `$factory` | string | Factory reference (`@factory/vibe`) - transformed to co-id during seeding |
 | `$id` | string | Unique vibe identifier (`@vibe/todos`) - transformed to co-id during seeding |
 | `name` | string | Display name for marketplace |
 | `description` | string | Brief description of the app |
@@ -69,7 +69,7 @@ Create a file named `manifest.vibe.maia`:
 
 ### Field Details
 
-**`$schema`:** Schema reference (`@schema/vibe`) - identifies this as a vibe manifest and is transformed to co-id during seeding.
+**`$factory`:** Factory reference (`@factory/vibe`) - identifies this as a vibe manifest and is transformed to co-id during seeding.
 
 **`$id`:** Unique vibe identifier (`@vibe/todos`) - transformed to co-id during seeding. Used for internal references.
 
@@ -127,7 +127,7 @@ todos/
 **`manifest.vibe.maia`:**
 ```json
 {
-  "$schema": "@schema/vibe",
+  "$factory": "@factory/vibe",
   "$id": "@vibe/todos",
   "name": "Todo List",
   "description": "A simple todo list with drag-and-drop organization",
@@ -144,7 +144,7 @@ todos/
 **`vibe/vibe.actor.maia` (Vibe Root Service Actor):**
 ```json
 {
-  "$schema": "@schema/actor",
+  "$factory": "@factory/actor",
   "$id": "@actor/vibe",
   "@label": "agent",
   "context": "@context/vibe",
@@ -167,7 +167,7 @@ todos/
 **Vibe Root View (Minimal):**
 ```json
 {
-  "$schema": "@schema/view",
+  "$factory": "@factory/view",
   "$id": "@view/vibe",
   "root": {
     "tag": "div",
@@ -241,7 +241,7 @@ os.loadVibe(path, container)
 
 The `loadVibe()` method:
 - Fetches the vibe manifest from the specified path
-- Validates that it's a proper vibe (`$schema: "@schema/vibe"`)
+- Validates that it's a proper vibe (`$factory: "@factory/vibe"`)
 - Resolves the actor path relative to the vibe location (when loading from file)
 - Calls `os.createActor()` with the resolved path
 - Returns both the vibe metadata and the created actor
@@ -301,10 +301,10 @@ vibes/sparks/
 
 ```json
 {
-  "$schema": "@schema/context",
+  "$factory": "@factory/context",
   "$id": "@sparks/context/vibe",
   "sparks": {
-    "schema": "@schema/data/spark"
+    "factory": "@factory/data/spark"
   },
   "newSparkName": "",
   "inputPlaceholder": "Enter spark name...",
@@ -319,7 +319,7 @@ vibes/sparks/
 
 ```json
 {
-  "$schema": "@schema/state",
+  "$factory": "@factory/state",
   "$id": "@sparks/state/vibe",
   "initial": "idle",
   "states": {

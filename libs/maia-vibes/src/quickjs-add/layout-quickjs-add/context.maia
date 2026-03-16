@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/context",
+	"$factory": "°Maia/factory/context",
 	"$id": "°Maia/quickjs-add/context/layout-quickjs-add",
 	"title": "QuickJS Add",
 	"tabs": [

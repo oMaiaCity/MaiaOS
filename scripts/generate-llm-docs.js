@@ -8,7 +8,7 @@
  * - libs/maia-docs/04_agents/LLM_Developers.md (ARCHITECTURE + developers docs)
  * - libs/maia-docs/04_agents/LLM_maia-self.md (package-specific: 01_maia-self)
  * - libs/maia-docs/04_agents/LLM_maia-loader.md (package-specific: 02_maia-loader)
- * - libs/maia-docs/04_agents/LLM_maia-schemata.md (package-specific: 03_maia-schemata)
+ * - libs/maia-docs/04_agents/LLM_maia-factories.md (package-specific: 03_maia-factories)
  * - libs/maia-docs/04_agents/LLM_maia-script.md (package-specific: 04_maia-script)
  * - libs/maia-docs/04_agents/LLM_maia-db.md (package-specific: 05_maia-db)
  *

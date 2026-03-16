@@ -1,8 +1,8 @@
 {
-	"$schema": "°Maia/schema/meta",
+	"$factory": "°Maia/factory/meta",
 	"$id": "°Maia/actor/os/db/interface",
 	"title": "°Maia/actor/os/db/interface",
-	"description": "Unified API for all database and spark operations (read, create, update, delete, seed, schema, resolve, append, push, processInbox, uploadBinary, loadBinaryAsBlob, createSpark, readSpark, updateSpark, deleteSpark, addSparkMember, removeSparkMember, addSparkParentGroup, removeSparkParentGroup, getSparkMembers, updateSparkMemberRole)",
+	"description": "Unified API for all database and spark operations (read, create, update, delete, seed, factory, resolve, append, push, processInbox, uploadBinary, loadBinaryAsBlob, createSpark, readSpark, updateSpark, deleteSpark, addSparkMember, removeSparkMember, addSparkParentGroup, removeSparkParentGroup, getSparkMembers, updateSparkMemberRole)",
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {
@@ -28,9 +28,9 @@
 					],
 					"description": "Operation to execute"
 				},
-				"schema": {
+				"factory": {
 					"type": "string",
-					"description": "Schema co-id - REQUIRED for create; optional for read/update/delete"
+					"description": "Factory co-id - REQUIRED for create; optional for read/update/delete"
 				},
 				"key": {
 					"type": "string",
@@ -109,9 +109,9 @@
 					],
 					"description": "Spark operation to execute"
 				},
-				"schema": {
+				"factory": {
 					"type": "string",
-					"description": "Schema co-id - optional for readSpark"
+					"description": "Factory co-id - optional for readSpark"
 				},
 				"id": {
 					"type": "string",

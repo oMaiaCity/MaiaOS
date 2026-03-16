@@ -599,7 +599,7 @@ console.log(`Need to apply ${migrations.length} migrations`);
 
 // Create a schema (stored as CoMap)
 const profileSchema = group.createMap({
-  name: "ProfileSchema",
+  name: "ProfileFactory",
   version: 1,
   definition: {
     type: "object",
@@ -898,7 +898,7 @@ function showMigrationTimeline(schemaCoMap) {
 }
 
 // Usage
-const profileSchema = schemaRegistry.get("ProfileSchema");
+const profileSchema = schemaRegistry.get("ProfileFactory");
 showMigrationTimeline(profileSchema);
 
 // Output:

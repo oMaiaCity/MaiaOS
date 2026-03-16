@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/view",
+	"$factory": "°Maia/factory/view",
 	"$id": "°Maia/actor/views/profile-image/view",
 	"@label": "@maia/actor/views/profile-image/view",
 	"content": {

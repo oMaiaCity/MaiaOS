@@ -2,11 +2,11 @@
  * Seeding helpers - pure utilities and ensureSparkOs
  */
 
-import mergedMetaSchema from '@MaiaOS/schemata/os/meta.schema.json'
+import mergedMetaSchema from '@MaiaOS/factories/os/meta.factory.json'
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import { waitForStoreReady } from '../../cojson/crud/read-operations.js'
 import * as groups from '../../cojson/groups/groups.js'
-import { ensureIndexesCoMap } from '../../cojson/indexing/schema-index-manager.js'
+import { ensureIndexesCoMap } from '../../cojson/indexing/factory-index-manager.js'
 
 const MAIA_SPARK = '°Maia'
 
@@ -35,37 +35,37 @@ export function removeIdFields(obj, inPropertiesOrItems = false) {
  * @param {string} metaSchemaCoId - The co-id of the meta schema CoMap (for self-reference)
  * @returns {Object} Schema CoMap structure with definition property
  */
-export function buildMetaSchemaForSeeding(metaSchemaCoId) {
+export function buildMetaFactoryForSeeding(metaSchemaCoId) {
 	const metaSchemaId = metaSchemaCoId
 		? `https://maia.city/${metaSchemaCoId}`
 		: 'https://json-schema.org/draft/2020-12/schema'
 	const fullMetaSchema = {
 		...mergedMetaSchema,
 		$id: metaSchemaId,
-		$schema: metaSchemaId,
+		$factory: metaSchemaId,
 	}
 	return { definition: fullMetaSchema }
 }
 
 /**
  * Ensure spark.os CoMap exists (creates if needed)
- * Also ensures spark.os.schematas, spark.os.indexes, spark.vibes
+ * Also ensures spark.os.factories, spark.os.indexes, spark.vibes
  */
-export async function ensureSparkOs(account, node, maiaGroup, peer, schemaCoIdMap) {
-	const { EXCEPTION_SCHEMAS } = await import('../../schemas/registry.js')
-	const { resolve } = await import('../../cojson/schema/resolver.js')
+export async function ensureSparkOs(account, node, maiaGroup, peer, factoryCoIdMap) {
+	const { EXCEPTION_FACTORIES } = await import('../../factories/registry.js')
+	const { resolve } = await import('../../cojson/factory/resolver.js')
 
 	const osId = await groups.getSparkOsId(peer, MAIA_SPARK)
 	if (!osId) {
 		throw new Error('[Seed] °Maia spark.os not found. Ensure bootstrap has run.')
 	}
 
-	const schematasSchemaCoId =
-		schemaCoIdMap?.get('°Maia/schema/os/schematas-registry') ??
-		(await resolve(peer, '°Maia/schema/os/schematas-registry', { returnType: 'coId' }))
+	const factoriesRegistrySchemaCoId =
+		factoryCoIdMap?.get('°Maia/factory/os/factories-registry') ??
+		(await resolve(peer, '°Maia/factory/os/factories-registry', { returnType: 'coId' }))
 	const vibesRegistrySchemaCoId =
-		schemaCoIdMap?.get('°Maia/schema/os/vibes-registry') ??
-		(await resolve(peer, '°Maia/schema/os/vibes-registry', { returnType: 'coId' }))
+		factoryCoIdMap?.get('°Maia/factory/os/vibes-registry') ??
+		(await resolve(peer, '°Maia/factory/os/vibes-registry', { returnType: 'coId' }))
 
 	let osCore = node.getCoValue(osId)
 	if (!osCore && node.loadCoValueCore) {
@@ -93,19 +93,19 @@ export async function ensureSparkOs(account, node, maiaGroup, peer, schemaCoIdMa
 	if (osCore?.isAvailable()) {
 		const osContent = osCore.getCurrentContent?.()
 		if (osContent && typeof osContent.get === 'function') {
-			const schematasId = osContent.get('schematas')
-			if (!schematasId) {
+			const factoriesId = osContent.get('factories')
+			if (!factoriesId) {
 				const ctx = { node, account, guardian: maiaGroup }
-				const { coValue: schematas } = await createCoValueForSpark(ctx, null, {
-					schema: schematasSchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
+				const { coValue: factories } = await createCoValueForSpark(ctx, null, {
+					factory: factoriesRegistrySchemaCoId || EXCEPTION_FACTORIES.META_SCHEMA,
 					cotype: 'comap',
 					data: {},
 					dataEngine: peer?.dbEngine,
 				})
-				osContent.set('schematas', schematas.id)
+				osContent.set('factories', factories.id)
 				if (node.storage?.syncManager) {
 					try {
-						await node.syncManager.waitForStorageSync(schematas.id)
+						await node.syncManager.waitForStorageSync(factories.id)
 						await node.syncManager.waitForStorageSync(osId)
 					} catch (_e) {}
 				}
@@ -118,7 +118,7 @@ export async function ensureSparkOs(account, node, maiaGroup, peer, schemaCoIdMa
 	}
 
 	const vibesId = await groups.getSparkVibesId(peer, MAIA_SPARK)
-	if (!vibesId && schemaCoIdMap) {
+	if (!vibesId && factoryCoIdMap) {
 		const sparksId = await groups.getSparksRegistryId(peer)
 		if (sparksId?.startsWith('co_z')) {
 			const sparksStore = await peer.read(null, sparksId)
@@ -132,7 +132,7 @@ export async function ensureSparkOs(account, node, maiaGroup, peer, schemaCoIdMa
 					if (sparkContent && typeof sparkContent.set === 'function') {
 						const ctx = { node, account, guardian: maiaGroup }
 						const { coValue: vibes } = await createCoValueForSpark(ctx, null, {
-							schema: vibesRegistrySchemaCoId || EXCEPTION_SCHEMAS.META_SCHEMA,
+							factory: vibesRegistrySchemaCoId || EXCEPTION_FACTORIES.META_SCHEMA,
 							cotype: 'comap',
 							data: {},
 							dataEngine: peer?.dbEngine,

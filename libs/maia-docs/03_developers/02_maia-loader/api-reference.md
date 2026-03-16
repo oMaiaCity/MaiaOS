@@ -10,7 +10,7 @@ Services (maia, moai) import only from `@MaiaOS/loader`. Loader re-exports every
 
 | Export | Source | Use |
 |--------|--------|-----|
-| `getAllSchemas` | `@MaiaOS/schemata` | Seed/bootstrap (canonical schema definitions) |
+| `getAllFactories` | `@MaiaOS/factories` | Seed/bootstrap (canonical schema definitions) |
 | `getAllToolDefinitions` | `@MaiaOS/tools` | Seed/bootstrap (tool definitions) |
 | `getAllVibeRegistries` | `@MaiaOS/vibes` (async) | Seed/bootstrap (vibe registries) |
 | `buildSeedConfig` | `@MaiaOS/vibes` (async) | Seed config from vibes |
@@ -185,7 +185,7 @@ Executes a database operation (internal use + `@db` tool).
 // Read (always returns reactive store)
 const store = await os.db({
   op: 'read',
-  schema: 'co_zTodos123',  // Schema co-id (co_z...)
+  factory: 'co_zTodos123',  // Factory co-id (co_z...)
   filter: { completed: false }
 });
 
@@ -200,7 +200,7 @@ const unsubscribe = store.subscribe((todos) => {
 // Create
 const newTodo = await os.db({
   op: 'create',
-  schema: '@schema/todos',
+  factory: '@factory/todos',
   data: { text: 'Buy milk', completed: false }
 });
 ```

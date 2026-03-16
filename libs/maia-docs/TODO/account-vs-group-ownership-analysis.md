@@ -5,7 +5,7 @@
 > - **°Maia spark** at `account.registries.sparks["°Maia"]` with `{ name, group, os, vibes }`
 > - Group resolved via `backend.getMaiaGroup()` → `getSparkGroup(backend, '°Maia')`
 > - Profile: `{ name }` only (no group)
-> - Schematas at `account.registries.sparks["°Maia"].os.schematas`, vibes at `account.registries.sparks["°Maia"].vibes`
+> - Factories at `account.registries.sparks["°Maia"].os.factories`, vibes at `account.registries.sparks["°Maia"].vibes`
 
 ## Analogy Overview
 
@@ -18,7 +18,7 @@
 **Group (Smart Contract Account / Safe-like):**
 - Data ownership primitive
 - Like Safe multisig - controls and owns all user data
-- Created during `schemaMigration()` as °Maia spark's group
+- Created during `factoryMigration()` as °Maia spark's group
 - Stored in `account.registries.sparks["°Maia"].group`
 - **ALL user data CoValues are owned by this group**
 

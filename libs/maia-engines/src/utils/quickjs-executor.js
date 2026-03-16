@@ -18,7 +18,7 @@ async function getVM() {
 /**
  * Execute sandboxed JS code. Code must eval to { execute: function(actor, payload) }.
  * @param {string} code - JS that evaluates to object with execute(actor, payload)
- * @param {Object} actorView - Minimal serializable actor { id, contextSchemaCoId?, contextCoId? }
+ * @param {Object} actorView - Minimal serializable actor { id, contextFactoryCoId?, contextCoId? }
  * @param {Object} payload - Event payload
  * @returns {Promise<{ ok: boolean, data?: any, errors?: Array }>} OperationResult
  */

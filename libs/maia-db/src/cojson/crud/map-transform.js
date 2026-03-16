@@ -78,7 +78,7 @@ function collectKeysToDepth(obj, maxDepth, currentDepth = 0) {
 	}
 	const result = {}
 	for (const [key, value] of Object.entries(obj)) {
-		if (key === '$schema') continue
+		if (key === '$factory') continue
 		if (
 			value != null &&
 			typeof value === 'object' &&

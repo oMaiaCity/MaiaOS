@@ -26,7 +26,7 @@ App Service Actor
 **Example:**
 ```json
 {
-  "$schema": "@schema/actor",
+  "$factory": "@factory/actor",
   "$id": "@actor/vibe",
   "@label": "agent",
   "context": "@context/vibe",
@@ -71,7 +71,7 @@ App Composite Actor
 **Example:**
 ```json
 {
-  "$schema": "@schema/actor",
+  "$factory": "@factory/actor",
   "$id": "@actor/composite",
   "@label": "composite",
   "context": "@context/composite",
@@ -102,8 +102,8 @@ App Composite Actor
 **Example:**
 ```json
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/actor",
+  "$factory": "@factory/meta",
+  "$id": "@factory/actor",
   "title": "Actor Definition",
   "cotype": "comap",  // ← REQUIRED: Must be comap, colist, or costream
   "properties": {
@@ -128,13 +128,13 @@ App Composite Actor
 {
   "properties": {
     "context": {
-      "$co": "@schema/context",  // ← References separate CoValue
+      "$co": "@factory/context",  // ← References separate CoValue
       "description": "Co-id reference to context definition"
     },
     "children": {
       "type": "array",
       "items": {
-        "$co": "@schema/actor"  // ← Each item is a co-id reference
+        "$co": "@factory/actor"  // ← Each item is a co-id reference
       }
     }
   },
@@ -159,7 +159,7 @@ App Composite Actor
 {
   "properties": {
     "context": {
-      "$ref": "@schema/context"  // ← WRONG: Use $co for CoValue references
+      "$ref": "@factory/context"  // ← WRONG: Use $co for CoValue references
     }
   }
 }
@@ -169,8 +169,8 @@ App Composite Actor
 
 Every schema must have:
 
-1. **`$schema`** - Reference to meta-schema (usually `"@schema/meta"`)
-2. **`$id`** - Unique schema identifier (human-readable like `"@schema/actor"` or co-id like `"co_z..."`)
+1. **`$factory`** - Reference to meta-factory (usually `"@factory/meta"`)
+2. **`$id`** - Unique schema identifier (human-readable like `"@factory/actor"` or co-id like `"co_z..."`)
 3. **`title`** - Human-readable schema title
 4. **`cotype`** - CoJSON type: `"comap"`, `"colist"`, or `"costream"`
 
@@ -183,7 +183,7 @@ Every schema must have:
 {
   "properties": {
     "view": {
-      "$co": "@schema/view"  // ← Always use $co for schema references
+      "$co": "@factory/view"  // ← Always use $co for schema references
     }
   }
 }
@@ -198,7 +198,7 @@ Every schema must have:
     "children": {
       "type": "array",
       "items": {
-        "$co": "@schema/actor"  // ← Each item is a co-id reference
+        "$co": "@factory/actor"  // ← Each item is a co-id reference
       }
     }
   }
@@ -233,10 +233,10 @@ Every schema must have:
 {
   "properties": {
     "text": {
-      "$co": "@schema/maia-script-expression"  // ← Expression schema reference
+      "$co": "@factory/maia-script-expression"  // ← Expression schema reference
     },
     "value": {
-      "$co": "@schema/maia-script-expression"  // ← Expression schema reference
+      "$co": "@factory/maia-script-expression"  // ← Expression schema reference
     }
   }
 }
@@ -247,7 +247,7 @@ Every schema must have:
 **Use `$co` in `allOf` to extend schemas:**
 ```json
 {
-  "$schema": "@schema/meta",
-  "$id": "@schema/guard",
+  "$factory": "@factory/meta",
+  "$id": "@factory/guard",
   "title": "Guard",
   "cotype": "comap",

@@ -1,0 +1,337 @@
+{
+	"$factory": "°Maia/factory/meta",
+	"$id": "°Maia/factory/state",
+	"title": "°Maia/factory/state",
+	"description": "XState-like state machine with states, transitions, guards, and actions",
+	"cotype": "comap",
+	"indexing": true,
+	"required": ["initial", "states"],
+	"properties": {
+		"initial": {
+			"type": "string",
+			"description": "Initial state name"
+		},
+		"states": {
+			"type": "object",
+			"description": "State definitions",
+			"additionalProperties": {
+				"type": "object",
+				"properties": {
+					"entry": {
+						"oneOf": [
+							{
+								"type": "object",
+								"description": "Inline actor action object",
+								"properties": {
+									"actor": {
+										"type": "string",
+										"description": "Actor identifier"
+									},
+									"payload": {
+										"type": "object",
+										"description": "Actor payload",
+										"additionalProperties": true
+									}
+								},
+								"required": ["actor"]
+							},
+							{
+								"type": "object",
+								"description": "Infrastructure context update action",
+								"properties": {
+									"updateContext": {
+										"type": "object",
+										"description": "Context updates (infrastructure, not a tool)",
+										"additionalProperties": true
+									}
+								},
+								"required": ["updateContext"]
+							},
+							{
+								"type": "object",
+								"description": "Map operations engine configs to context keys (universal API)",
+								"properties": {
+									"mapData": {
+										"type": "object",
+										"description": "Map operations engine configs to context keys (universal API)",
+										"additionalProperties": {
+											"type": "object",
+											"description": "Operations engine config (op, schema, filter, key, keys, etc.)",
+											"properties": {
+												"op": {
+													"type": "string",
+													"description": "Operation type (read, create, update, delete, schema, resolve, etc.)",
+													"default": "read"
+												}
+											},
+											"additionalProperties": true
+										}
+									}
+								},
+								"required": ["mapData"]
+							},
+							{
+								"type": "array",
+								"description": "Array of inline action objects",
+								"items": {
+									"oneOf": [
+										{
+											"type": "object",
+											"properties": {
+												"actor": {
+													"type": "string",
+													"description": "Actor identifier"
+												},
+												"payload": {
+													"type": "object",
+													"description": "Actor payload",
+													"additionalProperties": true
+												}
+											},
+											"required": ["actor"]
+										},
+										{
+											"type": "object",
+											"properties": {
+												"updateContext": {
+													"type": "object",
+													"description": "Context updates (infrastructure, not a tool)",
+													"additionalProperties": true
+												}
+											},
+											"required": ["updateContext"]
+										},
+										{
+											"type": "object",
+											"properties": {
+												"mapData": {
+													"type": "object",
+													"description": "Map operations engine configs to context keys (universal API)",
+													"additionalProperties": {
+														"type": "object",
+														"description": "Operations engine config (op, schema, filter, key, keys, etc.)",
+														"properties": {
+															"op": {
+																"type": "string",
+																"description": "Operation type (read, create, update, delete, schema, resolve, etc.)",
+																"default": "read"
+															}
+														},
+														"additionalProperties": true
+													}
+												}
+											},
+											"required": ["mapData"]
+										}
+									]
+								}
+							},
+							{
+								"$co": "°Maia/factory/action",
+								"description": "Co-id reference to action CoValue"
+							},
+							{
+								"type": "array",
+								"description": "Array of action co-id references",
+								"items": {
+									"$co": "°Maia/factory/action"
+								}
+							}
+						]
+					},
+					"exit": {
+						"oneOf": [
+							{
+								"type": "object",
+								"description": "Inline actor action object",
+								"properties": {
+									"actor": {
+										"type": "string",
+										"description": "Actor identifier"
+									},
+									"payload": {
+										"type": "object",
+										"description": "Actor payload",
+										"additionalProperties": true
+									}
+								},
+								"required": ["actor"]
+							},
+							{
+								"type": "object",
+								"description": "Infrastructure context update action",
+								"properties": {
+									"updateContext": {
+										"type": "object",
+										"description": "Context updates (infrastructure, not a tool)",
+										"additionalProperties": true
+									}
+								},
+								"required": ["updateContext"]
+							},
+							{
+								"type": "object",
+								"description": "Map operations engine configs to context keys (universal API)",
+								"properties": {
+									"mapData": {
+										"type": "object",
+										"description": "Map operations engine configs to context keys (universal API)",
+										"additionalProperties": {
+											"type": "object",
+											"description": "Operations engine config (op, schema, filter, key, keys, etc.)",
+											"properties": {
+												"op": {
+													"type": "string",
+													"description": "Operation type (read, create, update, delete, schema, resolve, etc.)",
+													"default": "read"
+												}
+											},
+											"additionalProperties": true
+										}
+									}
+								},
+								"required": ["mapData"]
+							},
+							{
+								"type": "array",
+								"description": "Array of inline action objects",
+								"items": {
+									"oneOf": [
+										{
+											"type": "object",
+											"properties": {
+												"actor": {
+													"type": "string",
+													"description": "Actor identifier"
+												},
+												"payload": {
+													"type": "object",
+													"description": "Actor payload",
+													"additionalProperties": true
+												}
+											},
+											"required": ["actor"]
+										},
+										{
+											"type": "object",
+											"properties": {
+												"updateContext": {
+													"type": "object",
+													"description": "Context updates (infrastructure, not a tool)",
+													"additionalProperties": true
+												}
+											},
+											"required": ["updateContext"]
+										},
+										{
+											"type": "object",
+											"properties": {
+												"mapData": {
+													"type": "object",
+													"description": "Map operations engine configs to context keys (universal API)",
+													"additionalProperties": {
+														"type": "object",
+														"description": "Operations engine config (op, schema, filter, key, keys, etc.)",
+														"properties": {
+															"op": {
+																"type": "string",
+																"description": "Operation type (read, create, update, delete, schema, resolve, etc.)",
+																"default": "read"
+															}
+														},
+														"additionalProperties": true
+													}
+												}
+											},
+											"required": ["mapData"]
+										}
+									]
+								}
+							},
+							{
+								"$co": "°Maia/factory/action",
+								"description": "Co-id reference to action CoValue"
+							},
+							{
+								"type": "array",
+								"description": "Array of action co-id references",
+								"items": {
+									"$co": "°Maia/factory/action"
+								}
+							}
+						]
+					},
+					"on": {
+						"type": "object",
+						"description": "Event handlers (transitions)",
+						"additionalProperties": {
+							"oneOf": [
+								{
+									"type": "string",
+									"description": "Simple target state name"
+								},
+								{
+									"type": "object",
+									"description": "Inline transition object",
+									"properties": {
+										"target": {
+											"type": "string",
+											"description": "Target state name"
+										},
+										"guard": {
+											"type": "object",
+											"description": "Guard condition",
+											"additionalProperties": true
+										},
+										"actions": {
+											"type": "array",
+											"description": "Transition actions",
+											"items": {
+												"oneOf": [
+													{
+														"type": "object",
+														"properties": {
+															"actor": {
+																"type": "string",
+																"description": "Actor identifier"
+															},
+															"payload": {
+																"type": "object",
+																"additionalProperties": true
+															}
+														},
+														"required": ["actor"]
+													},
+													{
+														"type": "object",
+														"properties": {
+															"updateContext": {
+																"type": "object",
+																"description": "Context updates (infrastructure, not a tool)",
+																"additionalProperties": true
+															}
+														},
+														"required": ["updateContext"]
+													},
+													{
+														"$co": "°Maia/factory/action"
+													}
+												]
+											}
+										}
+									},
+									"required": ["target"]
+								},
+								{
+									"$co": "°Maia/factory/transition",
+									"description": "Co-id reference to transition CoValue"
+								}
+							]
+						}
+					}
+				},
+				"additionalProperties": false
+			}
+		}
+	}
+}

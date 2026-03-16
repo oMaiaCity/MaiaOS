@@ -1,0 +1,323 @@
+{
+	"$factory": "°Maia/factory/meta",
+	"$id": "°Maia/factory/maia-script-expression",
+	"title": "°Maia/factory/maia-script-expression",
+	"cotype": "comap",
+	"indexing": false,
+	"description": "JSON-based DSL expression schema for MaiaScript runtime logic. Supports data access, comparisons, logical operations, control flow, and nested expressions.",
+	"anyOf": [
+		{
+			"description": "Primitive value",
+			"type": ["number", "boolean", "null"]
+		},
+		{
+			"description": "String value (including shortcut syntax $key or $$key)",
+			"type": "string"
+		},
+		{
+			"$ref": "#/$defs/expressionObject"
+		}
+	],
+	"$defs": {
+		"expressionObject": {
+			"description": "MaiaScript expression object (DSL operation)",
+			"type": "object",
+			"oneOf": [
+				{
+					"description": "$context operation - access context data",
+					"properties": {
+						"$context": {
+							"type": "string",
+							"description": "Dot-separated path in context (e.g. 'user.name', 'event.viewMode')",
+							"pattern": "^(?!.*(__proto__|constructor|prototype)).+$"
+						}
+					},
+					"required": ["$context"],
+					"additionalProperties": false
+				},
+				{
+					"description": "$item operation - access item data",
+					"properties": {
+						"$item": {
+							"type": "string",
+							"description": "Dot-separated path in item (e.g. 'id', 'status.value')",
+							"pattern": "^(?!.*(__proto__|constructor|prototype)).+$"
+						}
+					},
+					"required": ["$item"],
+					"additionalProperties": false
+				},
+				{
+					"description": "$eq operation - equality comparison",
+					"properties": {
+						"$eq": {
+							"type": "array",
+							"description": "Array of two expressions to compare",
+							"items": {
+								"$ref": "#"
+							},
+							"minItems": 2,
+							"maxItems": 2
+						}
+					},
+					"required": ["$eq"],
+					"additionalProperties": false
+				},
+				{
+					"description": "$ne operation - inequality comparison",
+					"properties": {
+						"$ne": {
+							"type": "array",
+							"description": "Array of two expressions to compare",
+							"items": {
+								"$ref": "#"
+							},
+							"minItems": 2,
+							"maxItems": 2
+						}
+					},
+					"required": ["$ne"],
+					"additionalProperties": false
+				},
+				{
+					"description": "$not operation - logical NOT (negate boolean)",
+					"properties": {
+						"$not": {
+							"$ref": "#",
+							"description": "Expression to negate (evaluated to boolean, then negated)"
+						}
+					},
+					"required": ["$not"],
+					"additionalProperties": false
+				},
+				{
+					"description": "$and operation - logical AND (all operands must be truthy)",
+					"properties": {
+						"$and": {
+							"oneOf": [
+								{
+									"type": "array",
+									"description": "Array of expressions (all must be truthy)",
+									"items": { "$ref": "#" },
+									"minItems": 1
+								},
+								{ "$ref": "#" }
+							]
+						}
+					},
+					"required": ["$and"],
+					"additionalProperties": false
+				},
+				{
+					"description": "$or operation - logical OR (at least one operand must be truthy)",
+					"properties": {
+						"$or": {
+							"oneOf": [
+								{
+									"type": "array",
+									"description": "Array of expressions (at least one must be truthy)",
+									"items": { "$ref": "#" },
+									"minItems": 1
+								},
+								{ "$ref": "#" }
+							]
+						}
+					},
+					"required": ["$or"],
+					"additionalProperties": false
+				},
+				{
+					"description": "$trim operation - trim whitespace from string",
+					"properties": {
+						"$trim": {
+							"$ref": "#",
+							"description": "Expression to trim (evaluated to string, then trimmed of leading/trailing whitespace)"
+						}
+					},
+					"required": ["$trim"],
+					"additionalProperties": false
+				},
+				{
+					"description": "$gt operation - greater than comparison",
+					"properties": {
+						"$gt": {
+							"type": "array",
+							"description": "Array of two expressions to compare (left > right)",
+							"items": {
+								"$ref": "#"
+							},
+							"minItems": 2,
+							"maxItems": 2
+						}
+					},
+					"required": ["$gt"],
+					"additionalProperties": false
+				},
+				{
+					"description": "$length operation - get array or string length",
+					"properties": {
+						"$length": {
+							"$ref": "#",
+							"description": "Expression to get length of (evaluated to array or string)"
+						}
+					},
+					"required": ["$length"],
+					"additionalProperties": false
+				},
+				{
+					"description": "$concat operation - concatenate arrays",
+					"properties": {
+						"$concat": {
+							"type": "array",
+							"description": "Array of expressions, arrays, or objects to concatenate (all evaluated to arrays, then flattened)",
+							"items": {
+								"anyOf": [
+									{
+										"$ref": "#"
+									},
+									{
+										"type": ["array", "object", "string", "number", "boolean", "null"]
+									}
+								]
+							},
+							"minItems": 1
+						}
+					},
+					"required": ["$concat"],
+					"additionalProperties": false
+				},
+				{
+					"description": "$join operation - join array elements with separator",
+					"properties": {
+						"$join": {
+							"oneOf": [
+								{
+									"type": "array",
+									"description": "[arrayExpr, separator] - array expression and separator string",
+									"items": {
+										"anyOf": [
+											{
+												"$ref": "#"
+											},
+											{
+												"type": "string"
+											}
+										]
+									},
+									"minItems": 1,
+									"maxItems": 2
+								},
+								{
+									"$ref": "#",
+									"description": "Array expression (separator defaults to empty string)"
+								}
+							]
+						}
+					},
+					"required": ["$join"],
+					"additionalProperties": false
+				},
+				{
+					"description": "$map operation - map over array",
+					"properties": {
+						"$map": {
+							"type": "object",
+							"description": "Map configuration object",
+							"properties": {
+								"array": {
+									"$ref": "#",
+									"description": "Expression evaluating to array to map over"
+								},
+								"items": {
+									"$ref": "#",
+									"description": "Alias for 'array' - expression evaluating to array to map over"
+								},
+								"as": {
+									"type": "string",
+									"description": "Variable name for each item in the array (default: 'item')"
+								},
+								"return": {
+									"description": "Expression, object, or array to evaluate for each item (result becomes item in returned array). 'do' is also supported as an alias.",
+									"anyOf": [
+										{
+											"$ref": "#"
+										},
+										{
+											"type": ["object", "array", "string", "number", "boolean", "null"]
+										}
+									]
+								},
+								"do": {
+									"description": "Alias for 'return' - expression, object, or array to evaluate for each item",
+									"anyOf": [
+										{
+											"$ref": "#"
+										},
+										{
+											"type": ["object", "array", "string", "number", "boolean", "null"]
+										}
+									]
+								}
+							},
+							"oneOf": [{ "required": ["array"] }, { "required": ["items"] }],
+							"additionalProperties": false
+						}
+					},
+					"required": ["$map"],
+					"additionalProperties": false
+				},
+				{
+					"description": "$find operation - find first matching item in array",
+					"properties": {
+						"$find": {
+							"type": "object",
+							"properties": {
+								"array": { "$ref": "#", "description": "Expression evaluating to array to search" },
+								"items": { "$ref": "#", "description": "Alias for 'array'" },
+								"where": { "$ref": "#" },
+								"return": {
+									"anyOf": [
+										{ "$ref": "#" },
+										{ "type": ["object", "array", "string", "number", "boolean", "null"] }
+									]
+								},
+								"as": { "type": "string" }
+							},
+							"oneOf": [{ "required": ["array"] }, { "required": ["items"] }],
+							"additionalProperties": false
+						}
+					},
+					"required": ["$find"],
+					"additionalProperties": false
+				},
+				{
+					"description": "$if operation - conditional expression",
+					"properties": {
+						"$if": {
+							"type": "object",
+							"description": "Conditional expression object",
+							"properties": {
+								"condition": {
+									"$ref": "#",
+									"description": "Condition expression (evaluated to boolean)"
+								},
+								"then": {
+									"$ref": "#",
+									"description": "Expression to evaluate if condition is true"
+								},
+								"else": {
+									"$ref": "#",
+									"description": "Expression to evaluate if condition is false"
+								}
+							},
+							"required": ["condition", "then", "else"],
+							"additionalProperties": false
+						}
+					},
+					"required": ["$if"],
+					"additionalProperties": false
+				}
+			]
+		}
+	}
+}

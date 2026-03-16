@@ -12,8 +12,8 @@
  */
 
 import { normalizeCoValueData } from '@MaiaOS/db'
-import { containsExpressions } from '@MaiaOS/schemata/expression-resolver'
-import { validateAgainstSchema } from '@MaiaOS/schemata/validation.helper'
+import { containsExpressions } from '@MaiaOS/factories/expression-resolver'
+import { validateAgainstFactory } from '@MaiaOS/factories/validation.helper'
 import { deriveInboxRef } from '../utils/inbox-convention.js'
 import {
 	sanitizePayloadForValidation,
@@ -83,12 +83,12 @@ export class ActorEngine {
 		}
 		// Persist to CoValue (skip if no CoValue backing)
 		if (actor.contextCoId && this.dataEngine) {
-			const contextSchemaCoId =
-				actor.contextSchemaCoId ||
+			const contextFactoryCoId =
+				actor.contextFactoryCoId ||
 				(await resolveSchemaFromCoValue(this.dataEngine?.peer, actor.contextCoId))
 			await this.dataEngine.execute({
 				op: 'update',
-				schema: contextSchemaCoId,
+				factory: contextFactoryCoId,
 				id: actor.contextCoId,
 				data: sanitizedUpdates,
 			})
@@ -515,14 +515,14 @@ export class ActorEngine {
 
 	_validateEventType(actor, messageType) {
 		if (SYSTEM_EVENTS.has(messageType)) return true
-		const schema = actor.interfaceSchema
-		if (!schema?.properties || typeof schema.properties !== 'object') return false
-		return messageType in schema.properties
+		const factory = actor.interfaceFactory
+		if (!factory?.properties || typeof factory.properties !== 'object') return false
+		return messageType in factory.properties
 	}
 
-	_getPayloadSchemaFromActor(actor, messageType) {
-		if (!actor.interfaceSchema?.properties) return null
-		return actor.interfaceSchema.properties[messageType] ?? null
+	_getPayloadFactoryFromActor(actor, messageType) {
+		if (!actor.interfaceFactory?.properties) return null
+		return actor.interfaceFactory.properties[messageType] ?? null
 	}
 
 	async _validateEventPayload(messageTypeSchema, payload, messageType) {
@@ -531,7 +531,7 @@ export class ActorEngine {
 		}
 		try {
 			const { groupInfo, cotype, indexing, ...schemaForValidation } = messageTypeSchema
-			const result = await validateAgainstSchema(
+			const result = await validateAgainstFactory(
 				schemaForValidation,
 				payload || {},
 				`message payload for ${messageType}`,
@@ -557,7 +557,7 @@ export class ActorEngine {
 			}
 			return { valid: true, payloadPlain }
 		}
-		const payloadSchema = this._getPayloadSchemaFromActor(actor, message.type)
+		const payloadSchema = this._getPayloadFactoryFromActor(actor, message.type)
 		if (!payloadSchema) return { valid: false }
 		let payload = message.payload || {}
 		if (
@@ -602,7 +602,7 @@ export class ActorEngine {
 	async validatePayloadForActorWithDetails(actorId, eventType, payload) {
 		const actor = this.getActor(actorId)
 		if (!actor) return { valid: true, errors: null }
-		const schema = this._getPayloadSchemaFromActor(actor, eventType)
+		const schema = this._getPayloadFactoryFromActor(actor, eventType)
 		if (!schema) return { valid: true, errors: null }
 		const result = await this._validateEventPayload(schema, payload || {}, eventType)
 		return { valid: result.valid, errors: result.errors }
@@ -632,10 +632,10 @@ export class ActorEngine {
 		}
 		let unsub = () => {}
 		const resolveAndSubscribe = async () => {
-			const schemaCoId = await resolveSchemaFromCoValue(this.dataEngine?.peer, inboxCoId)
-			const inboxStore = schemaCoId
+			const factoryCoId = await resolveSchemaFromCoValue(this.dataEngine?.peer, inboxCoId)
+			const inboxStore = factoryCoId
 				? await this.dataEngine
-						?.execute?.({ op: 'read', schema: schemaCoId, key: inboxCoId })
+						?.execute?.({ op: 'read', factory: factoryCoId, key: inboxCoId })
 						.catch(() => null)
 				: null
 			if (!inboxStore?.subscribe) {
@@ -724,14 +724,14 @@ export class ActorEngine {
 		const hasProcess = processRef && configDef?.handlers
 		if (!hasProcess) return null
 
-		// Resolve interface schema (co-id ref) for validation
-		let interfaceSchema = null
+		// Resolve interface factory (co-id ref) for validation
+		let interfaceFactory = null
 		const interfaceRef = actorConfig.interface
 		if (interfaceRef && typeof interfaceRef === 'string') {
 			const interfaceCoId = await resolveToCoId(this.dataEngine?.peer, interfaceRef)
 			if (interfaceCoId) {
 				const ifaceStore = await readStore(this.dataEngine, interfaceCoId)
-				if (ifaceStore?.value) interfaceSchema = ifaceStore.value
+				if (ifaceStore?.value) interfaceFactory = ifaceStore.value
 			}
 		}
 
@@ -762,7 +762,7 @@ export class ActorEngine {
 						execute: async (actor, payload) => {
 							const actorView = {
 								id: actor.id,
-								contextSchemaCoId: actor.contextSchemaCoId ?? null,
+								contextFactoryCoId: actor.contextFactoryCoId ?? null,
 								contextCoId: actor.contextCoId ?? null,
 							}
 							return executeInSandbox(code, actorView, payload)
@@ -780,7 +780,7 @@ export class ActorEngine {
 									execute: async (a, p) => {
 										const actorView = {
 											id: a.id,
-											contextSchemaCoId: a.contextSchemaCoId ?? null,
+											contextFactoryCoId: a.contextFactoryCoId ?? null,
 											contextCoId: a.contextCoId ?? null,
 										}
 										return executeInSandbox(newCode, actorView, p)
@@ -797,7 +797,7 @@ export class ActorEngine {
 					execute: async (actor, payload) => {
 						const actorView = {
 							id: actor.id,
-							contextSchemaCoId: actor.contextSchemaCoId ?? null,
+							contextFactoryCoId: actor.contextFactoryCoId ?? null,
 							contextCoId: actor.contextCoId ?? null,
 						}
 						return executeInSandbox(codeRef, actorView, payload)
@@ -818,7 +818,7 @@ export class ActorEngine {
 		// Load context for headless actors (paper, todos, etc.) so execute() has notes/todos
 		let contextStore = minimalContext
 		let contextCoId = null
-		let contextSchemaCoId = null
+		let contextFactoryCoId = null
 		const contextRef = actorConfig.context
 		if (contextRef && typeof contextRef === 'string') {
 			const loaded = await loadContextStore(this.dataEngine, contextRef, {
@@ -827,7 +827,7 @@ export class ActorEngine {
 			if (loaded.store) {
 				contextStore = loaded.store
 				contextCoId = loaded.coId
-				contextSchemaCoId = loaded.schemaCoId
+				contextFactoryCoId = loaded.factoryCoId
 				if (loaded.store._unsubscribe) {
 					configUnsubscribes.push(() => loaded.store._unsubscribe())
 				}
@@ -840,7 +840,7 @@ export class ActorEngine {
 			shadowRoot: null,
 			context: contextStore,
 			contextCoId,
-			contextSchemaCoId,
+			contextFactoryCoId,
 			containerElement: null,
 			actorOps: this, // ActorEngine implements ActorOps interface
 			viewDef: null,
@@ -848,7 +848,7 @@ export class ActorEngine {
 			inbox: null,
 			inboxCoId,
 			interface: actorConfig.interface || null,
-			interfaceSchema,
+			interfaceFactory,
 			executableFunction,
 			_renderState: 'ready',
 			children: {},

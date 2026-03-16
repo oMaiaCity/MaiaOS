@@ -1,8 +1,8 @@
 {
-	"$schema": "°Maia/schema/context",
+	"$factory": "°Maia/factory/context",
 	"$id": "°Maia/actor/views/addressbook-avens-grid/context",
 	"items": {
-		"schema": "°Maia/schema/os/aven-identity",
+		"factory": "°Maia/factory/os/aven-identity",
 		"map": {
 			"id": "id",
 			"accountId": "accountId",

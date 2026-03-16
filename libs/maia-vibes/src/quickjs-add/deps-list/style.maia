@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/style",
+	"$factory": "°Maia/factory/style",
 	"$id": "°Maia/quickjs-add/style/deps-list",
 	"@label": "@maia/quickjs-add/style/deps-list",
 	"components": {

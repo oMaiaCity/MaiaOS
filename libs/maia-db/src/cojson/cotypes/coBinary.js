@@ -1,4 +1,4 @@
-import { assertSchemaValidForCreate, createSchemaMeta } from '../../schemas/registry.js'
+import { assertFactoryValidForCreate, createFactoryMeta } from '../../factories/registry.js'
 
 /**
  * Create a CoBinary (RawBinaryCoStream) with MANDATORY schema validation
@@ -6,12 +6,12 @@ import { assertSchemaValidForCreate, createSchemaMeta } from '../../schemas/regi
  * Automatically uses °Maia spark group from account as owner/admin when account is passed.
  *
  * @param {RawAccount|RawGroup} accountOrGroup - Account (to get °Maia spark group) or Group
- * @param {string} schemaName - Schema name for headerMeta.$schema (REQUIRED)
+ * @param {string} factoryName - Schema name for headerMeta.$schema (REQUIRED)
  * @param {LocalNode} [node] - LocalNode instance (required if accountOrGroup is account)
  * @param {Object} [dbEngine] - dbEngine with peer (required when account is passed)
  * @returns {RawBinaryCoStream|Promise<RawBinaryCoStream>} The created CoBinary stream
  */
-export async function createCoBinary(accountOrGroup, schemaName, _node = null, dbEngine = null) {
+export async function createCoBinary(accountOrGroup, factoryName, _node = null, dbEngine = null) {
 	let group = accountOrGroup
 
 	// Check if first param is account (has get("profile") property) or group
@@ -29,9 +29,9 @@ export async function createCoBinary(accountOrGroup, schemaName, _node = null, d
 			}
 		}
 	}
-	assertSchemaValidForCreate(schemaName, 'createCoBinary')
+	assertFactoryValidForCreate(factoryName, 'createCoBinary')
 
-	const meta = createSchemaMeta(schemaName)
+	const meta = createFactoryMeta(factoryName)
 	// RawBinaryCoStream requires meta.type = "binary"
 	const binaryMeta = { ...meta, type: 'binary' }
 	return group.createBinaryStream(binaryMeta)

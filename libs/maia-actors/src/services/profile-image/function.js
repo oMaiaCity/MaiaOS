@@ -9,7 +9,7 @@ import {
 	createErrorEntry,
 	createErrorResult,
 	createSuccessResult,
-} from '@MaiaOS/schemata/operation-result'
+} from '@MaiaOS/factories/operation-result'
 
 const DEBUG =
 	typeof window !== 'undefined' &&

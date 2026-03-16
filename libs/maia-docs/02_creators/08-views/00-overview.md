@@ -31,7 +31,7 @@ Create a file named `{name}.view.maia`:
 
 ```json
 {
-  "$schema": "@schema/view",
+  "$factory": "@factory/view",
   "$id": "@view/todo",
   
   "content": {
@@ -67,7 +67,7 @@ Create a file named `{name}.view.maia`:
 }
 ```
 
-**Note:** `$schema` and `$id` use schema references (`@schema/view`, `@view/todo`) that are transformed to co-ids (`co_z...`) during seeding.
+**Note:** `$factory` and `$id` use factory references (`@factory/view`, `@view/todo`) that are transformed to co-ids (`co_z...`) during seeding.
 
 ## Element Structure
 

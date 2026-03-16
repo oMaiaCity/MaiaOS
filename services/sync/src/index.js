@@ -22,9 +22,10 @@ import {
 	buildSeedConfig,
 	createWebSocketPeer,
 	DataEngine,
+	factoryMigration,
 	filterVibesForSeeding,
 	generateRegistryName,
-	getAllSchemas,
+	getAllFactories,
 	getAllVibeRegistries,
 	getSeedConfig,
 	loadOrCreateAgentAccount,
@@ -32,7 +33,6 @@ import {
 	MaiaScriptEvaluator,
 	removeGroupMember,
 	resolve,
-	schemaMigration,
 	waitForStoreReady,
 } from '@MaiaOS/loader'
 import { agentIDToDidKey, verifyInvocationToken } from '@MaiaOS/maia-ucan'
@@ -184,14 +184,14 @@ async function getCapabilitiesStreamId(worker) {
 async function pushCapabilityToStream(worker, { sub, cmd, pol, exp }) {
 	const capabilitiesStreamId = await getCapabilitiesStreamId(worker)
 	if (!capabilitiesStreamId?.startsWith('co_z')) return
-	const capabilitySchemaCoId = await resolve(worker.peer, '°Maia/schema/os/capability', {
+	const capabilitySchemaCoId = await resolve(worker.peer, '°Maia/factory/os/capability', {
 		returnType: 'coId',
 	})
 	if (!capabilitySchemaCoId) return
 	try {
 		const createResult = await worker.dataEngine.execute({
 			op: 'create',
-			schema: capabilitySchemaCoId,
+			factory: capabilitySchemaCoId,
 			data: { sub, cmd, pol, exp },
 			spark: MAIA_SPARK,
 		})
@@ -446,7 +446,7 @@ async function handleRegister(worker, body) {
 				return err(`username "${u}" already registered to different identity`, 409)
 
 			// Create Human CoMap (public: everyone reader) and dual-key registry
-			const humanSchemaCoId = await resolve(peer, '°Maia/schema/os/human', { returnType: 'coId' })
+			const humanSchemaCoId = await resolve(peer, '°Maia/factory/os/human', { returnType: 'coId' })
 			if (!humanSchemaCoId) return err('Human schema not found. Ensure genesis seed has run.', 500)
 
 			const guardian = await peer.getMaiaGroup()
@@ -459,7 +459,7 @@ async function handleRegister(worker, body) {
 			const llmExp = Math.floor(Date.now() / 1000) + 365 * 24 * 3600
 			const humanCoMap = humanGroup.createMap(
 				{ account: accountId, profile: profileId, llmExp },
-				{ $schema: humanSchemaCoId },
+				{ $factory: humanSchemaCoId },
 			)
 			const memberIdToRemove =
 				typeof node.getCurrentAccountOrAgentID === 'function'
@@ -512,7 +512,7 @@ async function handleRegister(worker, body) {
 			if (raw?.[u] != null && raw[u] !== coId)
 				return err(`username "${u}" already registered to different identity`, 409)
 
-			const avenIdentitySchemaCoId = await resolve(peer, '°Maia/schema/os/aven-identity', {
+			const avenIdentitySchemaCoId = await resolve(peer, '°Maia/factory/os/aven-identity', {
 				returnType: 'coId',
 			})
 			if (!avenIdentitySchemaCoId)
@@ -527,7 +527,7 @@ async function handleRegister(worker, body) {
 			avenGroup.addMember('everyone', 'reader')
 			const avenIdentityCoMap = avenGroup.createMap(
 				{ account: accountId, profile: profileId },
-				{ $schema: avenIdentitySchemaCoId },
+				{ $factory: avenIdentitySchemaCoId },
 			)
 			const memberIdToRemove =
 				typeof node.getCurrentAccountOrAgentID === 'function'
@@ -952,7 +952,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 
 		// Ensure migration completes before seed (sparkGuardian -> guardian, registries.humans)
 		// loadAccount defers migration; seed needs guardian in os.groups
-		await schemaMigration(result.account, localNode)
+		await factoryMigration(result.account, localNode)
 
 		// Genesis: seed only when PEER_SYNC_SEED=true (explicit, no co-value inference).
 		if (peerSyncSeed) {
@@ -986,7 +986,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 				styles: { ...mergedConfigs.styles, ...(actorStyles || {}) },
 				wasms: { ...(mergedConfigs.wasms || {}), ...(serviceWasms || {}) },
 			}
-			const schemas = getAllSchemas()
+			const schemas = getAllFactories()
 			const seedResult = await dataEngine.execute({
 				op: 'seed',
 				configs: configsForSeed,

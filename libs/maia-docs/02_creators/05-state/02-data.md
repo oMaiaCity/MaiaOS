@@ -61,18 +61,18 @@ For item-specific conditional styling, **state machines compute lookup objects**
 
 ```json
 {
-  "$schema": "@schema/context",
+  "$factory": "@factory/context",
   "$id": "@context/todo",
   "todos": {
-    "schema": "@schema/todos",
+    "factory": "@factory/todos",
     "filter": null
   },
   "todosTodo": {
-    "schema": "@schema/todos",
+    "factory": "@factory/todos",
     "filter": { "done": false }
   },
   "todosDone": {
-    "schema": "@schema/todos",
+    "factory": "@factory/todos",
     "filter": { "done": true }
   }
 }
@@ -101,7 +101,7 @@ For item-specific conditional styling, **state machines compute lookup objects**
 **Important:**
 - Query objects are defined in **context files**, not state machines
 - State machines handle **mutations only** (create, update, delete via `@db` tool)
-- Schema can be a schema reference (`@schema/todos`) or co-id (`co_z...`) - references are resolved automatically
+- Factory can be a factory reference (`@factory/todos`) or co-id (`co_z...`) - references are resolved automatically
 - Query stores are ReactiveStore objects (can't be stored in CoValues)
 - Stores are stored in `actor._queryStores` and marked in `context.@stores`
 
@@ -118,7 +118,7 @@ Use the `@db` tool with different `op` values:
   "tool": "@db",
   "payload": {
     "op": "create",
-    "schema": "@schema/todos",
+    "factory": "@factory/todos",
     "data": {
       "text": "$newTodoText",
       "done": false
@@ -134,7 +134,7 @@ Use the `@db` tool with different `op` values:
   "tool": "@db",
   "payload": {
     "op": "update",
-    "schema": "@schema/todos",
+    "factory": "@factory/todos",
     "id": "$$id",
     "data": {
       "text": "Updated text"
@@ -150,7 +150,7 @@ Use the `@db` tool with different `op` values:
   "tool": "@db",
   "payload": {
     "op": "delete",
-    "schema": "@schema/todos",
+    "factory": "@factory/todos",
     "id": "$$id"
   }
 }
@@ -180,18 +180,18 @@ Toggle is not a separate operation. Use `update` with an expression:
 **Context (`todo.context.maia`):**
 ```json
 {
-  "$schema": "@schema/context",
+  "$factory": "@factory/context",
   "$id": "@context/todo",
   "todos": {
-    "schema": "@schema/todos",
+    "factory": "@factory/todos",
     "filter": null
   },
   "todosTodo": {
-    "schema": "@schema/todos",
+    "factory": "@factory/todos",
     "filter": { "done": false }
   },
   "todosDone": {
-    "schema": "@schema/todos",
+    "factory": "@factory/todos",
     "filter": { "done": true }
   },
   "newTodoText": "",
@@ -202,7 +202,7 @@ Toggle is not a separate operation. Use `update` with an expression:
 **State Machine (`todo.state.maia`):**
 ```json
 {
-  "$schema": "@schema/state",
+  "$factory": "@factory/state",
   "$id": "@state/todo",
   "initial": "idle",
   "states": {
@@ -225,7 +225,7 @@ Toggle is not a separate operation. Use `update` with an expression:
           "tool": "@db",
           "payload": {
             "op": "create",
-            "schema": "@schema/todos",
+            "factory": "@factory/todos",
             "data": {
               "text": "$newTodoText",
               "done": false

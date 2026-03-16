@@ -1,8 +1,8 @@
 {
-	"$schema": "°Maia/schema/context",
+	"$factory": "°Maia/factory/context",
 	"$id": "°Maia/actor/views/layout-paper/context",
 	"notes": {
-		"schema": "°Maia/schema/data/notes",
+		"factory": "°Maia/factory/data/notes",
 		"map": {
 			"id": "id",
 			"content": "$content"
@@ -10,7 +10,7 @@
 	},
 	"selectedNoteId": null,
 	"selectedNote": {
-		"schema": "°Maia/schema/data/notes",
+		"factory": "°Maia/factory/data/notes",
 		"filter": {
 			"id": "$selectedNoteId"
 		},

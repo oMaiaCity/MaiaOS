@@ -54,7 +54,7 @@ It means creating:
 ├─────────────────────────────────────────────────────┤
 │                                                     │
 │  1. Store schemas as CoMaps                         │
-│     account.os.schemata.ProfileSchema = CoMap       │
+│     account.os.factories.ProfileFactory = CoMap       │
 │                                                     │
 │  2. Store migrations as CoMaps                      │
 │     account.os.migrations["v1_to_v2"] = CoMap       │
@@ -93,11 +93,11 @@ It means creating:
 // When you create a CoValue:
 const profile = group.createMap(
   { name: "Alice" },
-  { $schema: "ProfileSchema", version: 1 }  // ← headerMeta
+  { $factory: "ProfileFactory", version: 1 }  // ← headerMeta
 );
 
 // headerMeta is stored in the CoValue header (immutable)
-profile.headerMeta;  // { $schema: "ProfileSchema", version: 1 }
+profile.headerMeta;  // { $factory: "ProfileFactory", version: 1 }
 
 // You CANNOT change headerMeta after creation
 profile.headerMeta.version = 2;  // ❌ Doesn't work (read-only)
@@ -120,16 +120,16 @@ profile.delete("oldField");    // ✅ Works!
 ```javascript
 // 1. Load CoValue (created with v1 schema)
 const profile = loadCoValue("co_z...");
-profile.headerMeta;  // { $schema: "ProfileSchema", version: 1 }
+profile.headerMeta;  // { $factory: "ProfileFactory", version: 1 }
 profile.toJSON();    // { name: "Alice" }
 
 // 2. Detect version mismatch
-const currentSchema = schemaRegistry.get("ProfileSchema");
+const currentSchema = schemaRegistry.get("ProfileFactory");
 currentSchema.version;  // 2 (current version)
 
 if (profile.headerMeta.version < currentSchema.version) {
   // 3. Load migration script
-  const migration = migrationRegistry.get("ProfileSchema_1_to_2");
+  const migration = migrationRegistry.get("ProfileFactory_1_to_2");
   
   // 4. Apply migration (MODIFY DATA, not headerMeta!)
   migration.addFields.forEach(([key, defaultValue]) => {
@@ -153,9 +153,9 @@ if (profile.headerMeta.version < currentSchema.version) {
 ### Step 1: Define Schema v1
 
 ```javascript
-// Stored in account.os.schemata.ProfileSchema (CoMap)
+// Stored in account.os.factories.ProfileFactory (CoMap)
 {
-  name: "ProfileSchema",
+  name: "ProfileFactory",
   version: 1,
   schema: {
     type: "object",
@@ -170,12 +170,12 @@ if (profile.headerMeta.version < currentSchema.version) {
 ### Step 2: Create CoValue with v1
 
 ```javascript
-const meta = { $schema: "ProfileSchema", version: 1 };
+const meta = { $factory: "ProfileFactory", version: 1 };
 const profile = group.createMap({ name: "Alice" }, meta);
 
 // Result:
 // profile.id = "co_z..."
-// profile.headerMeta = { $schema: "ProfileSchema", version: 1 }
+// profile.headerMeta = { $factory: "ProfileFactory", version: 1 }
 // profile.toJSON() = { name: "Alice" }
 ```
 
@@ -183,8 +183,8 @@ const profile = group.createMap({ name: "Alice" }, meta);
 
 ```javascript
 // Update schema in registry (CoMap is mutable!)
-account.os.schemata.ProfileSchema.set("version", 2);
-account.os.schemata.ProfileSchema.set("schema", {
+account.os.factories.ProfileFactory.set("version", 2);
+account.os.factories.ProfileFactory.set("schema", {
   type: "object",
   properties: {
     name: { type: "string" },
@@ -201,7 +201,7 @@ account.os.schemata.ProfileSchema.set("schema", {
 const migrationScript = {
   fromVersion: 1,
   toVersion: 2,
-  targetSchema: "ProfileSchema",
+  targetSchema: "ProfileFactory",
   script: {
     addFields: {
       age: null  // Default value
@@ -211,7 +211,7 @@ const migrationScript = {
   }
 };
 
-account.os.migrations.set("ProfileSchema_1_to_2", migrationScript);
+account.os.migrations.set("ProfileFactory_1_to_2", migrationScript);
 ```
 
 ### Step 5: Load Old CoValue
@@ -222,7 +222,7 @@ const profile = loadCoValue("co_z...");
 
 // Detect version mismatch
 const { $schema, version } = profile.headerMeta;  // version = 1
-const currentSchema = account.os.schemata.get($schema);
+const currentSchema = account.os.factories.get($schema);
 const currentVersion = currentSchema.get("version");  // 2
 
 if (version < currentVersion) {
@@ -270,7 +270,7 @@ coMap.set("anything", {...});      // ✅
 // headerMeta tells YOU what the data should look like
 // But cojson ignores it (except for built-in types)
 
-headerMeta: { $schema: "ProfileSchema", version: 1 }
+headerMeta: { $schema: "ProfileFactory", version: 1 }
 // ↑ This is YOUR metadata for YOUR system
 // cojson just stores it and gives it back to you
 ```
@@ -304,14 +304,14 @@ function migrate(coValue, migration) {
 ### 1. Schema Registry (CoMap)
 
 ```javascript
-// account.os.schemata = CoMap of schema CoMaps
+// account.os.factories = CoMap of schema CoMaps
 const schemaCoMap = group.createMap({
-  name: "ProfileSchema",
+  name: "ProfileFactory",
   version: 2,
   schema: { /* JSON Schema */ }
 }, { $schema: "MetaSchema" });
 
-account.os.schemata.set("ProfileSchema", schemaCoMap.id);
+account.os.factories.set("ProfileFactory", schemaCoMap.id);
 ```
 
 ### 2. Migration Registry (CoMap)
@@ -321,7 +321,7 @@ account.os.schemata.set("ProfileSchema", schemaCoMap.id);
 const migrationCoMap = group.createMap({
   fromVersion: 1,
   toVersion: 2,
-  targetSchema: "ProfileSchema",
+  targetSchema: "ProfileFactory",
   script: {
     addFields: { age: null },
     removeFields: [],
@@ -329,7 +329,7 @@ const migrationCoMap = group.createMap({
   }
 }, { $schema: "MigrationScriptSchema" });
 
-account.os.migrations.set("ProfileSchema_1_to_2", migrationCoMap.id);
+account.os.migrations.set("ProfileFactory_1_to_2", migrationCoMap.id);
 ```
 
 ### 3. Migration Engine (JavaScript)
@@ -384,8 +384,8 @@ class MigrationEngine {
 ### 4. Query Layer Integration
 
 ```javascript
-async function queryCoValue(schemaName, query) {
-  const coValues = findCoValues(schemaName, query);
+async function queryCoValue(factoryName, query) {
+  const coValues = findCoValues(factoryName, query);
   
   // Migrate each CoValue before returning
   for (const coValue of coValues) {
@@ -437,10 +437,10 @@ Perfect separation of concerns!
 
 ```javascript
 // Schemas are JSON (loaded at runtime)
-const schema = await loadSchema("ProfileSchema");
+const schema = await loadSchema("ProfileFactory");
 
 // Migrations are JSON (loaded at runtime)
-const migration = await loadMigration("ProfileSchema_1_to_2");
+const migration = await loadMigration("ProfileFactory_1_to_2");
 
 // Validation is runtime (JavaScript)
 const valid = validateData(schema, data);
@@ -538,7 +538,7 @@ if (isValid(testCoValue)) {
 2. **Explore existing code:**
    - `libs/maia-db/src/schemas/` - Schema definitions
    - `libs/maia-db/src/services/schema-service.js` - Schema CoMap creation
-   - `libs/maia-db/src/migrations/schema.migration.js` - Account setup migration
+   - `libs/maia-db/src/migrations/factory.migration.js` - Account setup migration
 
 3. **Start building:**
    - Define your schema format (JSON Schema recommended)

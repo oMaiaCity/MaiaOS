@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/vibe",
+	"$factory": "°Maia/factory/vibe",
 	"$id": "°Maia/vibe/todos",
 	"name": "Todos",
 	"description": "Complete todo list with state machines and AI tools",

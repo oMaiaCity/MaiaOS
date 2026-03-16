@@ -359,7 +359,7 @@ async function defaultMigration(account, node) {
 ### Our Custom Migration
 
 ```javascript
-// Profile creation is handled by schemaMigration in libs/maia-db/src/migrations/schema.migration.js
+// Profile creation is handled by factoryMigration in libs/maia-db/src/migrations/factory.migration.js
 // Passed to LocalNode.withNewlyCreatedAccount as migration hook
 ```
 

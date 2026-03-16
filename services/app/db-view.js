@@ -11,24 +11,24 @@ import {
 } from '@MaiaOS/loader'
 
 /** Resolve schema definition from DB (dynamic - no static registry fallback) */
-async function getSchemaFromDb(maia, schemaRef) {
-	if (!schemaRef || !maia?.do) return null
-	let schemaCoId = schemaRef
-	if (!schemaRef.startsWith('co_z')) {
+async function getFactoryFromDb(maia, factoryRef) {
+	if (!factoryRef || !maia?.do) return null
+	let factoryCoId = factoryRef
+	if (!factoryRef.startsWith('co_z')) {
 		try {
-			schemaCoId = await maia.do({
+			factoryCoId = await maia.do({
 				op: 'resolve',
-				humanReadableKey: schemaRef,
+				humanReadableKey: factoryRef,
 				returnType: 'coId',
 			})
 		} catch (_e) {
 			return null
 		}
-		if (!schemaCoId || !schemaCoId.startsWith('co_z')) return null
+		if (!factoryCoId || !factoryCoId.startsWith('co_z')) return null
 	}
 	try {
-		const schemaStore = await maia.do({ op: 'schema', coId: schemaCoId })
-		return schemaStore?.value ?? null
+		const factoryStore = await maia.do({ op: 'factory', coId: factoryCoId })
+		return factoryStore?.value ?? null
 	} catch (_e) {
 		return null
 	}
@@ -488,7 +488,7 @@ export async function renderApp(
 			// Using the coId as schema is a workaround - backend will use key parameter
 			const store = await maia.do({
 				op: 'read',
-				schema: currentContextCoValueId,
+				factory: currentContextCoValueId,
 				key: currentContextCoValueId,
 			})
 			// ReadOperation returns a ReactiveStore - get current value
@@ -500,11 +500,11 @@ export async function renderApp(
 				typeof contextData === 'object' &&
 				!Array.isArray(contextData) &&
 				Object.keys(contextData).filter(
-					(k) => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$schema' && k !== 'type',
+					(k) => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$factory' && k !== 'type',
 				).length > 0
 			const _propertiesCount = hasProperties
 				? Object.keys(contextData).filter(
-						(k) => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$schema' && k !== 'type',
+						(k) => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$factory' && k !== 'type',
 					).length
 				: 0
 
@@ -516,7 +516,7 @@ export async function renderApp(
 				const flatPropertyCount =
 					contextData && typeof contextData === 'object' && !Array.isArray(contextData)
 						? Object.keys(contextData).filter(
-								(k) => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$schema' && k !== 'type',
+								(k) => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$factory' && k !== 'type',
 							).length
 						: 0
 				let lastPropertiesCount = contextData?.loading ? -1 : flatPropertyCount
@@ -533,7 +533,7 @@ export async function renderApp(
 					const currentFlatPropertyCount =
 						updatedData && typeof updatedData === 'object' && !Array.isArray(updatedData)
 							? Object.keys(updatedData).filter(
-									(k) => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$schema' && k !== 'type',
+									(k) => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$factory' && k !== 'type',
 								).length
 							: 0
 					const currentPropertiesCount = updatedData?.loading ? -1 : currentFlatPropertyCount
@@ -626,22 +626,22 @@ export async function renderApp(
 				data = allCoValues
 					.filter((cv) => {
 						// Match schema name (can be in various formats)
-						const schema = cv.$schema // STRICT: Only $schema, no fallback
+						const schema = cv.$factory // STRICT: Only $factory, no fallback
 						return (
 							schema === currentView ||
-							schema === `°Maia/schema/${currentView}` ||
-							cv.headerMeta?.$schema === currentView
+							schema === `°Maia/factory/${currentView}` ||
+							cv.headerMeta?.$factory === currentView
 						)
 					})
 					.map((cv) => ({
-						displayName: cv.$schema || cv.id, // STRICT: Only $schema, no fallback
+						displayName: cv.$factory || cv.id, // STRICT: Only $factory, no fallback
 						...cv,
 					}))
 			}
 		} catch (_err) {
 			data = []
 		}
-		const schema = await getSchemaFromDb(maia, currentView)
+		const schema = await getFactoryFromDb(maia, currentView)
 		viewTitle = schema?.title || currentView
 		_viewSubtitle = `${Array.isArray(data) ? data.length : 0} CoValue(s)`
 	} else {
@@ -782,8 +782,8 @@ export async function renderApp(
 			) {
 				// CoMap: Display properties from flat object format (operations API)
 				// Convert flat object to normalized format for display
-				const schemaCoId = data.$schema // STRICT: Only $schema, no fallback
-				const schemaDef = schemaCoId ? await getSchemaFromDb(maia, schemaCoId) : null
+				const factoryCoId = data.$factory // STRICT: Only $factory, no fallback
+				const schemaDef = factoryCoId ? await getFactoryFromDb(maia, factoryCoId) : null
 
 				// Extract properties from flat object (exclude metadata keys)
 				// groupInfo is backend-derived metadata (not a co-value property) - only show in metadata sidebar
@@ -793,7 +793,7 @@ export async function renderApp(
 						k !== 'id' &&
 						k !== 'loading' &&
 						k !== 'error' &&
-						k !== '$schema' &&
+						k !== '$factory' &&
 						k !== 'schema' &&
 						k !== 'type' &&
 						k !== 'cotype' && // Display only in metadata aside, not as main content property
@@ -805,11 +805,11 @@ export async function renderApp(
 				)
 
 				if (propertyKeys.length === 0) {
-					// No properties - show empty state (with hint for avens/schematas/indexes)
-					const schemaId = (data.$schema || schemaCoId || '').toString()
+					// No properties - show empty state (with hint for avens/factories/indexes)
+					const schemaId = (data.$factory || factoryCoId || '').toString()
 					const isRegistryEmpty =
 						schemaId.includes('avens-registry') ||
-						schemaId.includes('schematas-registry') ||
+						schemaId.includes('factories-registry') ||
 						schemaId.includes('indexes-registry')
 					const emptyHint = isRegistryEmpty
 						? '<p class="mt-3 text-sm text-amber-600 max-w-md mx-auto">Vibes/schemas come from the sync server. Run <code class="bg-amber-100 px-1 rounded">bun dev</code> (moai on :4201), sign in, and check console for <code class="bg-amber-100 px-1 rounded">linkAccountToSyncRegistry</code>.</p>'
@@ -927,12 +927,12 @@ export async function renderApp(
 
 		// Fetch schema title if schema is a co-id using the abstracted read operation API
 		let schemaTitle = null
-		const schemaCoId = data.$schema || data.schema // Prefer $schema, fallback to schema
-		if (schemaCoId?.startsWith('co_z') && maia) {
+		const factoryCoId = data.$factory // STRICT: Only $factory, no fallback
+		if (factoryCoId?.startsWith('co_z') && maia) {
 			try {
 				// Use unified read API - same pattern as loading main context data
-				const schemaStore = await maia.do({ op: 'read', schema: schemaCoId, key: schemaCoId })
-				const schemaData = schemaStore.value || schemaStore
+				const factoryStore = await maia.do({ op: 'read', factory: factoryCoId, key: factoryCoId })
+				const schemaData = factoryStore.value || factoryStore
 
 				if (schemaData && !schemaData.error && !schemaData.loading) {
 					// Operations API returns flat objects: {id: '...', title: '...', definition: {...}, ...}
@@ -954,8 +954,8 @@ export async function renderApp(
 		let groupName = null
 		if (groupInfo?.groupId && maia) {
 			try {
-				// Use unified read API with @group schema hint (groups don't have $schema)
-				const groupStore = await maia.do({ op: 'read', schema: '@group', key: groupInfo.groupId })
+				// Use unified read API with @group schema hint (groups don't have $factory)
+				const groupStore = await maia.do({ op: 'read', factory: '@group', key: groupInfo.groupId })
 
 				// Wait for group data to be available (if it's loading)
 				if (groupStore.loading) {
@@ -1020,31 +1020,31 @@ export async function renderApp(
 							</div>
 						</div>
 						${
-							schemaCoId
+							factoryCoId
 								? `
 							<div class="metadata-info-item">
 								<span class="metadata-info-key">@SCHEMA</span>
 								${
-									schemaCoId.startsWith('co_')
+									factoryCoId.startsWith('co_')
 										? `
 									${
 										schemaTitle
 											? `
-										<code class="metadata-info-value co-id" onclick="selectCoValue('${schemaCoId}')" title="${schemaCoId}" style="cursor: pointer; text-decoration: underline;">
+										<code class="metadata-info-value co-id" onclick="selectCoValue('${factoryCoId}')" title="${factoryCoId}" style="cursor: pointer; text-decoration: underline;">
 											${escapeHtml(schemaTitle)}
 										</code>
-										<div class="metadata-info-schema-id" title="${schemaCoId}">${truncate(schemaCoId, 24)}</div>
+										<div class="metadata-info-schema-id" title="${factoryCoId}">${truncate(factoryCoId, 24)}</div>
 									`
 											: `
-										<code class="metadata-info-value co-id" onclick="selectCoValue('${schemaCoId}')" title="${schemaCoId}" style="cursor: pointer; text-decoration: underline;">
-											${truncate(schemaCoId, 24)}
+										<code class="metadata-info-value co-id" onclick="selectCoValue('${factoryCoId}')" title="${factoryCoId}" style="cursor: pointer; text-decoration: underline;">
+											${truncate(factoryCoId, 24)}
 										</code>
 									`
 									}
 								`
 										: `
-									<code class="metadata-info-value" title="${schemaCoId}">
-										${schemaCoId}
+									<code class="metadata-info-value" title="${factoryCoId}">
+										${factoryCoId}
 									</code>
 								`
 								}

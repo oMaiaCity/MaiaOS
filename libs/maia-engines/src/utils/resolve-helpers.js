@@ -41,12 +41,12 @@ export async function resolveSchemaFromCoValue(peer, coId) {
  * @param {Object} dataEngine - DataEngine with peer
  * @param {string} ref - Context ref (co-id or namekey)
  * @param {Object} [options] - { waitForStoreReadyMs, ensureLoaded, retries }
- * @returns {Promise<{store: Object|null, coId: string|null, schemaCoId: string|null}>}
+ * @returns {Promise<{store: Object|null, coId: string|null, factoryCoId: string|null}>}
  */
 export async function loadContextStore(dataEngine, ref, options = {}) {
 	const peer = dataEngine?.peer
 	const coId = ref?.startsWith('co_z') ? ref : await resolveToCoId(peer, ref)
-	if (!coId) return { store: null, coId: null, schemaCoId: null }
+	if (!coId) return { store: null, coId: null, factoryCoId: null }
 
 	if (options.ensureLoaded && peer) {
 		await ensureCoValueLoaded(peer, coId, options.ensureLoaded).catch(() => {})
@@ -57,11 +57,11 @@ export async function loadContextStore(dataEngine, ref, options = {}) {
 		await new Promise((r) => setTimeout(r, 150 + i * 100))
 		store = await readStore(dataEngine, coId)
 	}
-	if (!store) return { store: null, coId, schemaCoId: null }
+	if (!store) return { store: null, coId, factoryCoId: null }
 
 	if (options.waitForStoreReadyMs) {
 		await waitForStoreReady(store, coId, options.waitForStoreReadyMs).catch(() => {})
 	}
-	const schemaCoId = await resolveSchemaFromCoValue(peer, coId)
-	return { store, coId, schemaCoId }
+	const factoryCoId = await resolveSchemaFromCoValue(peer, coId)
+	return { store, coId, factoryCoId }
 }

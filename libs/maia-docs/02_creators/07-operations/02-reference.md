@@ -3,7 +3,7 @@
   "tool": "@db",
   "payload": {
     "op": "create",
-    "schema": "@schema/todos",
+    "factory": "@factory/todos",
     "data": {...}
   }
 }
@@ -94,10 +94,10 @@ actor.context.error = error.message;
 **Context (`todo.context.maia`):**
 ```json
 {
-  "$schema": "@schema/context",
+  "$factory": "@factory/context",
   "$id": "@context/todo",
   "todos": {
-    "schema": "@schema/todos",
+    "factory": "@factory/todos",
     "filter": null
   },
   "newTodoText": ""
@@ -107,7 +107,7 @@ actor.context.error = error.message;
 **State Machine (`todo.state.maia`):**
 ```json
 {
-  "$schema": "@schema/state",
+  "$factory": "@factory/state",
   "$id": "@state/todo",
   "initial": "idle",
   "states": {
@@ -130,7 +130,7 @@ actor.context.error = error.message;
           "tool": "@db",
           "payload": {
             "op": "create",
-            "schema": "@schema/todos",
+            "factory": "@factory/todos",
             "data": {
               "text": "$newTodoText",
               "done": false
@@ -167,7 +167,7 @@ actor.context.error = error.message;
         "tool": "@db",
         "payload": {
           "op": "delete",
-          "schema": "@schema/todos",
+          "factory": "@factory/todos",
           "id": "$$id"
         }
       },
@@ -196,9 +196,9 @@ The `@db` tool validates operations against this schema:
     "type": "string",
     "enum": ["read", "create", "update", "delete", "seed", "schema", "resolve", "append", "push", "processInbox", "createSpark", "readSpark", "updateSpark", "deleteSpark"]
   },
-  "schema": {
+  "factory": {
     "type": "string",
-    "description": "Schema co-id (co_z...) - Required for create, optional for update/delete (extracted from CoValue)"
+    "description": "Factory co-id (co_z...) - Required for create, optional for update/delete (extracted from CoValue)"
   },
   "key": {
     "type": "string",

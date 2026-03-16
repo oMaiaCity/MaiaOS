@@ -2,57 +2,57 @@
  * Collection Helper Functions
  *
  * Provides helpers for getting CoList IDs from spark.os.indexes and ensuring CoValues are loaded.
- * Uses schema-index-manager for indexing logic (single source of truth).
+ * Uses factory-index-manager for indexing logic (single source of truth).
  */
 
-import { isSchemaRef } from '@MaiaOS/schemata'
-import { resolve } from '../schema/resolver.js'
+import { isFactoryRef } from '@MaiaOS/factories'
+import { resolve } from '../factory/resolver.js'
 
 /**
  * Get schema index colist ID using schema co-id as key (all schemas indexed in spark.os.indexes)
  * Lazily creates the index colist if it doesn't exist and the schema has indexing: true
  * @param {Object} peer - Backend instance
- * @param {string} schema - Schema co-id (co_z...) or human-readable (°Maia/schema/data/todos)
+ * @param {string} schema - Schema co-id (co_z...) or human-readable (°Maia/factory/data/todos)
  * @returns {Promise<string|null>} Schema index colist ID or null if not found/not indexable
  */
-export async function getSchemaIndexColistId(peer, schema) {
-	const schemaCoId = await resolve(peer, schema, { returnType: 'coId' })
+export async function getFactoryIndexColistId(peer, schema) {
+	const factoryCoId = await resolve(peer, schema, { returnType: 'coId' })
 	if (typeof process !== 'undefined' && process.env?.DEBUG)
-		console.log('[DEBUG getSchemaIndexColistId] schema=', schema, 'schemaCoId=', schemaCoId)
-	if (!schemaCoId) return null
+		console.log('[DEBUG getFactoryIndexColistId] schema=', schema, 'factoryCoId=', factoryCoId)
+	if (!factoryCoId) return null
 
-	const { ensureIndexesCoMap, ensureSchemaIndexColist } = await import(
-		'../indexing/schema-index-manager.js'
+	const { ensureIndexesCoMap, ensureFactoryIndexColist } = await import(
+		'../indexing/factory-index-manager.js'
 	)
 	const indexesCoMap = await ensureIndexesCoMap(peer)
 	if (typeof process !== 'undefined' && process.env?.DEBUG)
-		console.log('[DEBUG getSchemaIndexColistId] indexesCoMap=', !!indexesCoMap)
+		console.log('[DEBUG getFactoryIndexColistId] indexesCoMap=', !!indexesCoMap)
 	if (!indexesCoMap) return null
 
-	const indexColistId = indexesCoMap.get(schemaCoId)
+	const indexColistId = indexesCoMap.get(factoryCoId)
 	if (indexColistId && typeof indexColistId === 'string' && indexColistId.startsWith('co_')) {
 		if (typeof process !== 'undefined' && process.env?.DEBUG)
-			console.log('[DEBUG getSchemaIndexColistId] found indexColistId=', indexColistId)
+			console.log('[DEBUG getFactoryIndexColistId] found indexColistId=', indexColistId)
 		return indexColistId
 	}
 
 	try {
-		const indexColist = await ensureSchemaIndexColist(peer, schemaCoId)
+		const indexColist = await ensureFactoryIndexColist(peer, factoryCoId)
 		const result = indexColist?.id ?? null
 		if (typeof process !== 'undefined' && process.env?.DEBUG)
-			console.log('[DEBUG getSchemaIndexColistId] ensureSchemaIndexColist result=', result)
+			console.log('[DEBUG getFactoryIndexColistId] ensureFactoryIndexColist result=', result)
 		return result
 	} catch (e) {
 		if (typeof process !== 'undefined' && process.env?.DEBUG)
-			console.error('[DEBUG getSchemaIndexColistId] error=', e)
+			console.error('[DEBUG getFactoryIndexColistId] error=', e)
 		return null
 	}
 }
 
 /**
- * Get CoList ID from spark.os.indexes.<schemaCoId> (all schema indexes in spark.os.indexes)
+ * Get CoList ID from spark.os.indexes.<factoryCoId> (all schema indexes in spark.os.indexes)
  * @param {Object} peer - Backend instance
- * @param {string} collectionNameOrSchema - Collection name (e.g., "todos"), schema co-id (co_z...), or namekey (°Maia/schema/data/todos)
+ * @param {string} collectionNameOrSchema - Collection name (e.g., "todos"), schema co-id (co_z...), or namekey (°Maia/factory/data/todos)
  * @returns {Promise<string|null>} CoList ID or null if not found
  */
 export async function getCoListId(peer, collectionNameOrSchema) {
@@ -62,15 +62,15 @@ export async function getCoListId(peer, collectionNameOrSchema) {
 		return null
 	}
 
-	// Must be a schema co-id or human-readable schema name (°Maia/schema/... or @domain/schema/...)
-	if (!collectionNameOrSchema.startsWith('co_z') && !isSchemaRef(collectionNameOrSchema)) {
+	// Must be a schema co-id or human-readable schema name (°Maia/factory/... or @domain/schema/...)
+	if (!collectionNameOrSchema.startsWith('co_z') && !isFactoryRef(collectionNameOrSchema)) {
 		if (typeof process !== 'undefined' && process.env?.DEBUG)
 			console.error('Invalid collection/schema ref:', collectionNameOrSchema)
 		return null
 	}
 
-	const colistId = await getSchemaIndexColistId(peer, collectionNameOrSchema)
-	// Don't warn if colistId is null - getSchemaIndexColistId already handles creation
+	const colistId = await getFactoryIndexColistId(peer, collectionNameOrSchema)
+	// Don't warn if colistId is null - getFactoryIndexColistId already handles creation
 	// and will return null silently if schema doesn't have indexing: true (which is expected)
 	return colistId
 }
@@ -150,17 +150,17 @@ export async function ensureCoValueLoaded(peer, coId, options = {}) {
  * @returns {Promise<string>} Schema co-id from headerMeta.$schema
  * @throws {Error} If headerMeta.$schema doesn't become available within timeout
  */
-export async function waitForHeaderMetaSchema(peer, coId, options = {}) {
+export async function waitForHeaderMetaFactory(peer, coId, options = {}) {
 	const { timeoutMs = 10000 } = options
 
 	if (!coId || !coId.startsWith('co_')) {
-		throw new Error(`[waitForHeaderMetaSchema] Invalid co-id: ${coId}`)
+		throw new Error(`[waitForHeaderMetaFactory] Invalid co-id: ${coId}`)
 	}
 
 	// Get CoValueCore (creates if doesn't exist)
 	const coValueCore = peer.getCoValue(coId)
 	if (!coValueCore) {
-		throw new Error(`[waitForHeaderMetaSchema] CoValueCore not found: ${coId}`)
+		throw new Error(`[waitForHeaderMetaFactory] CoValueCore not found: ${coId}`)
 	}
 
 	// Ensure CoValue is loaded first
@@ -169,10 +169,10 @@ export async function waitForHeaderMetaSchema(peer, coId, options = {}) {
 	// Check if headerMeta.$schema is already available
 	const header = peer.getHeader(coValueCore)
 	const headerMeta = header?.meta || null
-	const schemaCoId = headerMeta?.$schema || null
+	const factoryCoId = headerMeta?.$factory || null
 
-	if (schemaCoId && typeof schemaCoId === 'string' && schemaCoId.startsWith('co_z')) {
-		return schemaCoId // Already available
+	if (factoryCoId && typeof factoryCoId === 'string' && factoryCoId.startsWith('co_z')) {
+		return factoryCoId // Already available
 	}
 
 	// Not available yet - wait for it by subscribing to CoValueCore updates
@@ -186,7 +186,7 @@ export async function waitForHeaderMetaSchema(peer, coId, options = {}) {
 				if (unsubscribe) unsubscribe()
 				reject(
 					new Error(
-						`[waitForHeaderMetaSchema] Timeout waiting for headerMeta.$schema in CoValue ${coId} after ${timeoutMs}ms`,
+						`[waitForHeaderMetaFactory] Timeout waiting for headerMeta.$schema in CoValue ${coId} after ${timeoutMs}ms`,
 					),
 				)
 			}
@@ -198,7 +198,7 @@ export async function waitForHeaderMetaSchema(peer, coId, options = {}) {
 			// Check headerMeta.$schema on each update
 			const updatedHeader = peer.getHeader(core)
 			const updatedHeaderMeta = updatedHeader?.meta || null
-			const updatedSchemaCoId = updatedHeaderMeta?.$schema || null
+			const updatedSchemaCoId = updatedHeaderMeta?.$factory || null
 
 			if (
 				updatedSchemaCoId &&
@@ -215,7 +215,7 @@ export async function waitForHeaderMetaSchema(peer, coId, options = {}) {
 		// Check one more time after subscription setup (might have changed during setup)
 		const currentHeader = peer.getHeader(coValueCore)
 		const currentHeaderMeta = currentHeader?.meta || null
-		const currentSchemaCoId = currentHeaderMeta?.$schema || null
+		const currentSchemaCoId = currentHeaderMeta?.$factory || null
 
 		if (
 			currentSchemaCoId &&

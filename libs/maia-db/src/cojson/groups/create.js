@@ -4,7 +4,7 @@
  * Handles creation of Groups and Profiles.
  */
 
-import { createSchemaMeta } from '../../schemas/registry.js'
+import { createFactoryMeta } from '../../factories/registry.js'
 
 /**
  * Create a new Group with optional name property
@@ -65,7 +65,7 @@ export function createChildGroup(node, parentGroup, { name = null } = {}) {
 }
 
 /**
- * Create a new Profile CoMap with ProfileSchema in headerMeta
+ * Create a new Profile CoMap with ProfileFactory in headerMeta
  *
  * @param {RawGroup} group - Group that owns this Profile
  * @param {Object} init - Initial profile data
@@ -73,7 +73,7 @@ export function createChildGroup(node, parentGroup, { name = null } = {}) {
  * @returns {RawCoMap} Profile CoMap
  */
 export function createProfile(group, { name = 'User' } = {}) {
-	const meta = createSchemaMeta('ProfileSchema')
+	const meta = createFactoryMeta('ProfileFactory')
 	const profile = group.createMap({ name }, meta)
 
 	console.log('✅ Profile created:', profile.id)

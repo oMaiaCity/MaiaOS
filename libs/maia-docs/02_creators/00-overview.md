@@ -81,8 +81,8 @@ Read the documentation in the following order for a complete understanding:
 - **Optional** - Actors can override brand via `style` property
 - StyleEngine merges brand + style (brand first, style overrides)
 
-### 11. [Schemata](./11-schemata/)
-**Schema definitions and validation**
+### 11. [Factories](./11-factories/)
+**Factory definitions and validation**
 
 ### 12. [Best Practices](./12-best-practices/)
 **Best Practices and Patterns**

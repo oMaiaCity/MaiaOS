@@ -1,0 +1,15 @@
+{
+	"$id": "°Maia/factory/data/notes",
+	"$factory": "°Maia/factory/meta",
+	"title": "°Maia/factory/data/notes",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"content": {
+			"$co": "°Maia/factory/os/cotext",
+			"description": "CoText (colist of graphemes) - collaborative plaintext"
+		}
+	},
+	"required": ["content"],
+	"additionalProperties": false
+}

@@ -1,8 +1,8 @@
 {
-	"$schema": "°Maia/schema/context",
+	"$factory": "°Maia/factory/context",
 	"$id": "°Maia/actor/views/logs/context",
 	"messages": {
-		"schema": "°Maia/schema/event",
+		"factory": "°Maia/factory/event",
 		"map": {
 			"id": "id",
 			"type": "type",

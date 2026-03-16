@@ -1,4 +1,4 @@
-import { assertSchemaValidForCreate, createSchemaMeta } from '../../schemas/registry.js'
+import { assertFactoryValidForCreate, createFactoryMeta } from '../../factories/registry.js'
 
 /**
  * Create a CoStream with MANDATORY schema validation
@@ -6,12 +6,12 @@ import { assertSchemaValidForCreate, createSchemaMeta } from '../../schemas/regi
  * Automatically uses °Maia spark group from account as owner/admin when account is passed.
  *
  * @param {RawAccount|RawGroup} accountOrGroup - Account (to get °Maia spark group) or Group
- * @param {string} schemaName - Schema name for headerMeta.$schema (REQUIRED)
+ * @param {string} factoryName - Schema name for headerMeta.$schema (REQUIRED)
  * @param {LocalNode} [node] - LocalNode instance (required if accountOrGroup is account)
  * @param {Object} [dbEngine] - dbEngine with peer (required when account is passed)
  * @returns {RawCoStream|Promise<RawCoStream>} The created CoStream
  */
-export async function createCoStream(accountOrGroup, schemaName, _node = null, dbEngine = null) {
+export async function createCoStream(accountOrGroup, factoryName, _node = null, dbEngine = null) {
 	let group = accountOrGroup
 
 	// Check if first param is account (has get("profile") property) or group
@@ -33,8 +33,8 @@ export async function createCoStream(accountOrGroup, schemaName, _node = null, d
 		}
 		// If profileId is null/undefined, it's a regular group, use it as-is
 	}
-	assertSchemaValidForCreate(schemaName, 'createCoStream')
+	assertFactoryValidForCreate(factoryName, 'createCoStream')
 
-	const meta = createSchemaMeta(schemaName)
+	const meta = createFactoryMeta(factoryName)
 	return group.createStream(meta)
 }

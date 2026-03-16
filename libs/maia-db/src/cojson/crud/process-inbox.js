@@ -11,7 +11,7 @@
  * - Trust CRDT sync - CoJSON handles reactivity automatically
  */
 
-import { resolve } from '../schema/resolver.js'
+import { resolve } from '../factory/resolver.js'
 import { extractCoValueData } from './data-extraction.js'
 import { read as universalRead } from './read.js'
 import { waitForStoreReady } from './read-operations.js'
@@ -38,20 +38,20 @@ export async function processInbox(peer, actorId, inboxCoId) {
 	// Get message schema co-id via resolve() (uses CoCache / universalRead)
 	let messageSchemaCoId = null
 	try {
-		const inboxSchema = await resolve(peer, { fromCoValue: inboxCoId }, { returnType: 'schema' })
+		const inboxFactory = await resolve(peer, { fromCoValue: inboxCoId }, { returnType: 'factory' })
 
-		if (inboxSchema?.items?.$co) {
-			const messageSchemaRef = inboxSchema.items.$co
+		if (inboxFactory?.items?.$co) {
+			const messageFactoryRef = inboxFactory.items.$co
 
-			if (messageSchemaRef.startsWith('co_z')) {
-				messageSchemaCoId = messageSchemaRef
-			} else if (messageSchemaRef.startsWith('°Maia/schema/')) {
-				messageSchemaCoId = await resolve(peer, messageSchemaRef, { returnType: 'coId' })
+			if (messageFactoryRef.startsWith('co_z')) {
+				messageSchemaCoId = messageFactoryRef
+			} else if (messageFactoryRef.startsWith('°Maia/factory/')) {
+				messageSchemaCoId = await resolve(peer, messageFactoryRef, { returnType: 'coId' })
 			}
 		}
 
 		if (!messageSchemaCoId) {
-			messageSchemaCoId = await resolve(peer, '°Maia/schema/event', { returnType: 'coId' })
+			messageSchemaCoId = await resolve(peer, '°Maia/factory/event', { returnType: 'coId' })
 		}
 	} catch (_error) {}
 
@@ -141,7 +141,7 @@ export async function processInbox(peer, actorId, inboxCoId) {
 						key !== 'processed' &&
 						!key.startsWith('_') &&
 						key !== 'id' &&
-						key !== '$schema' &&
+						key !== '$factory' &&
 						key !== 'hasProperties' &&
 						key !== 'properties'
 					) {

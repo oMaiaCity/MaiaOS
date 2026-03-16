@@ -15,19 +15,19 @@
   "context": {
     // All todos (no filter)
     "todos": {
-      "schema": "@schema/todos",
+      "factory": "@factory/todos",
       "filter": null
     },
     
     // Only incomplete todos
     "todosTodo": {
-      "schema": "@schema/todos",
+      "factory": "@factory/todos",
       "filter": { "done": false }
     },
     
     // Only completed todos
     "todosDone": {
-      "schema": "@schema/todos",
+      "factory": "@factory/todos",
       "filter": { "done": true }
     }
   }
@@ -57,7 +57,7 @@ See [Reactive Data System](../developers/06_reactive-queries.md) for detailed ex
 ```json
 {
   "messages": {
-    "schema": "@schema/message",
+    "factory": "@factory/message",
     "options": {
       "map": {
         "fromRole": "$$source.@label",
@@ -83,7 +83,7 @@ See [Reactive Data System](../developers/06_reactive-queries.md) for detailed ex
 ```json
 {
   "messages": {
-    "schema": "@schema/message",
+    "factory": "@factory/message",
     "options": {
       "map": {
         "fromRole": "$$source.@label",
@@ -135,7 +135,7 @@ See [Reactive Data System](../developers/06_reactive-queries.md) for detailed ex
 ```json
 {
   "list": {
-    "schema": "@schema/todos",
+    "factory": "@factory/todos",
     "options": {
       "map": {
         "authorName": "$$author.name",
@@ -150,7 +150,7 @@ See [Reactive Data System](../developers/06_reactive-queries.md) for detailed ex
 ```json
 {
   "list": {
-    "schema": "@schema/todos",
+    "factory": "@factory/todos",
     "options": {
       "map": {
         "itemText": "$$text",
@@ -166,7 +166,7 @@ See [Reactive Data System](../developers/06_reactive-queries.md) for detailed ex
 ```json
 {
   "messages": {
-    "schema": "@schema/message",
+    "factory": "@factory/message",
     "options": {
       "filter": { "type": "notification" },
       "map": {

@@ -142,7 +142,7 @@ The wrapper element (with tag, class, attrs) wraps the child actor, allowing you
       "$on": {
         "dragstart": {
           "send": "DRAG_START",
-          "payload": {"schema": "todos", "id": "$$id"}
+          "payload": {"factory": "todos", "id": "$$id"}
         },
         "dragend": {
           "send": "DRAG_END",
@@ -170,7 +170,7 @@ The wrapper element (with tag, class, attrs) wraps the child actor, allowing you
     },
     "drop": {
       "send": "DROP",
-      "payload": {"schema": "todos", "field": "done", "value": false}
+      "payload": {"factory": "todos", "field": "done", "value": false}
     },
     "dragenter": {
       "send": "DRAG_ENTER",

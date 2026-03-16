@@ -136,7 +136,7 @@ This document maps the complete cojson architecture from cryptographic primitive
 │                                                             │
 │ Profile (just a RawCoMap with convention)                   │
 │   type: "comap"                                             │
-│   headerMeta: {$schema: "ProfileSchema"} (by YOU!)          │
+│   headerMeta: {$factory: "ProfileFactory"} (by YOU!)          │
 │   Typical properties:                                       │
 │   • name: string                                            │
 │   • ... (any JSON data)                                     │
@@ -221,7 +221,7 @@ Account (CoMap + special meta)
 MaiaOS extends cojson with a schema system using `headerMeta`:
 
 ```
-headerMeta: { $schema: "YourSchema" }  ← Layer 8: YOUR APPLICATION
+headerMeta: { $factory: "YourSchema" }  ← Layer 8: YOUR APPLICATION
          ↓
     RawCoValue (Layer 5)
          ↓
@@ -235,7 +235,7 @@ headerMeta: { $schema: "YourSchema" }  ← Layer 8: YOUR APPLICATION
 - **Proven CRDT primitives** (Layer 4) handle all conflict resolution
 - **Your schema system** (Layer 8) adds semantic meaning
 - **Zero breaking changes** to cojson - pure extension via `headerMeta`
-- **Type-safe** through `$schema` references
+- **Type-safe** through `$factory` references
 - **Inspectable** - all schemas visible in CoValue metadata
 
 ---
@@ -246,7 +246,7 @@ headerMeta: { $schema: "YourSchema" }  ← Layer 8: YOUR APPLICATION
 
 ```javascript
 // Layer 8: Your schema
-const profileMeta = { $schema: "ProfileSchema" };
+const profileMeta = { $factory: "ProfileFactory" };
 
 // Layer 7: Create via Group
 const profile = group.createMap({ name: "Alice" }, profileMeta);
@@ -267,7 +267,7 @@ const profile = group.createMap({ name: "Alice" }, profileMeta);
   id: "co_z...",              // Layer 1
   type: "comap",              // Layer 5
   headerMeta: {               // Layer 8 (YOUR LAYER!)
-    $schema: "ProfileSchema"
+    $factory: "ProfileFactory"
   },
   group: RawGroup,            // Layer 7
   core: CoValueCore           // Layer 4 (CRDT engine)

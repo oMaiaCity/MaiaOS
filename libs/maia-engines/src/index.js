@@ -12,7 +12,7 @@ export {
 	createSuccessResult,
 	isPermissionError,
 	isSuccessResult,
-} from '@MaiaOS/schemata/operation-result'
+} from '@MaiaOS/factories/operation-result'
 export { ActorEngine } from './engines/actor.engine.js'
 export { DataEngine } from './engines/data.engine.js'
 export { ProcessEngine } from './engines/process.engine.js'

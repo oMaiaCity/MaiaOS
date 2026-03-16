@@ -1,5 +1,5 @@
 {
-	"$schema": "°Maia/schema/meta",
+	"$factory": "°Maia/factory/meta",
 	"$id": "°Maia/quickjs-add/interface/deps-list-detail",
 	"title": "°Maia/quickjs-add/interface/deps-list-detail",
 	"description": "Detail view for selected dependency actor",

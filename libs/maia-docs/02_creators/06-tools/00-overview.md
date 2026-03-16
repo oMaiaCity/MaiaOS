@@ -43,7 +43,7 @@ AI-compatible metadata describing the tool:
   "parameters": {
     "type": "object",
     "properties": {
-      "schema": {
+      "factory": {
         "type": "string",
         "description": "Collection name (e.g., 'todos', 'notes')"
       },
@@ -52,7 +52,7 @@ AI-compatible metadata describing the tool:
         "description": "Entity data (without ID, auto-generated)"
       }
     },
-    "required": ["schema", "data"]
+    "required": ["factory", "data"]
   }
 }
 ```
@@ -109,13 +109,13 @@ The `@db` tool is a unified database operation tool that handles all CRUD operat
   "tool": "@db",
   "payload": {
     "op": "create",
-    "schema": "co_z...",
+    "factory": "co_z...",
     "data": {"text": "Buy milk", "done": false}
   }
 }
 ```
 
-**Note:** The `schema` field must be a co-id (`co_z...`). Schema references (`@schema/todos`) are transformed to co-ids during seeding. In your source state machine files, you can use schema references, but they get transformed to co-ids before execution.
+**Note:** The `factory` field must be a co-id (`co_z...`). Factory references (`@factory/todos`) are transformed to co-ids during seeding. In your source state machine files, you can use factory references, but they get transformed to co-ids before execution.
 
 **Tool Results:**
 The `@db` tool returns the created/updated/deleted record. Access the result in SUCCESS handlers via `$$result`:
@@ -125,7 +125,7 @@ The `@db` tool returns the created/updated/deleted record. Access the result in 
   "creating": {
     "entry": {
       "tool": "@db",
-      "payload": { "op": "create", "schema": "@schema/todos", "data": {...} }
+      "payload": { "op": "create", "factory": "@factory/todos", "data": {...} }
     },
     "on": {
       "SUCCESS": {
@@ -200,7 +200,7 @@ Toggle is not a separate operation. Use `update` with an expression:
   "tool": "@db",
   "payload": {
     "op": "seed",
-    "schema": "@schema/todos",
+    "factory": "@factory/todos",
     "data": [
       {"text": "First todo", "done": false},
       {"text": "Second todo", "done": true}

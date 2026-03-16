@@ -3,7 +3,7 @@
  * Thin wrapper: generates random words and delegates to updatePaperContent.
  */
 
-import { createErrorEntry, createErrorResult } from '@MaiaOS/schemata/operation-result'
+import { createErrorEntry, createErrorResult } from '@MaiaOS/factories/operation-result'
 
 const WORDS = [
 	'vision',
