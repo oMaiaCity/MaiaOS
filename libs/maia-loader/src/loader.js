@@ -14,9 +14,7 @@
 import { resolve, resolveReactive } from '@MaiaOS/db'
 import {
 	ActorEngine,
-	BlobEngine,
 	DataEngine,
-	InboxEngine,
 	MaiaScriptEvaluator,
 	ModuleRegistry,
 	ProcessEngine,
@@ -376,8 +374,6 @@ export class MaiaOS {
 
 		// Store engines in registry for module access
 		os.moduleRegistry._dataEngine = os.dataEngine
-		os.blobEngine = new BlobEngine(os.dataEngine)
-
 		os.processEngine = new ProcessEngine(os.evaluator)
 		os.styleEngine = new StyleEngine()
 		// Clear cache on boot in development only
@@ -386,14 +382,10 @@ export class MaiaOS {
 		}
 		os.viewEngine = new ViewEngine(os.evaluator, null, os.moduleRegistry)
 
-		// InboxEngine: validation + delivery (injected into ActorEngine)
-		os.inboxEngine = new InboxEngine(os.dataEngine)
-		os.actorEngine = new ActorEngine(os.styleEngine, os.viewEngine, os.processEngine, os.inboxEngine)
-		os.inboxEngine.actorEngine = os.actorEngine
+		os.actorEngine = new ActorEngine(os.styleEngine, os.viewEngine, os.processEngine)
 
 		// Pass DataEngine to engines (for internal config loading)
 		os.actorEngine.dataEngine = os.dataEngine
-		os.inboxEngine.dataEngine = os.dataEngine
 		os.viewEngine.dataEngine = os.dataEngine
 		os.viewEngine.styleEngine = os.styleEngine
 		os.styleEngine.dataEngine = os.dataEngine
@@ -403,9 +395,8 @@ export class MaiaOS {
 		// Store reference to MaiaOS in actorEngine (for @db tool access)
 		os.actorEngine.os = os
 
-		// Pass ActorOps and BlobEngine to ViewEngine (Loader wires; no circular ref)
+		// Pass ActorOps to ViewEngine (Loader wires; no circular ref)
 		os.viewEngine.actorOps = os.actorEngine
-		os.viewEngine.blobEngine = os.blobEngine
 	}
 
 	/**

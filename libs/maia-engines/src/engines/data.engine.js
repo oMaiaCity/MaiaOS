@@ -32,22 +32,27 @@ import {
 	colistSpliceOp,
 	colistUnshiftOp,
 } from '../ops/colist-ops.js'
+import { resolveSchemaFromCoValue } from '../utils/resolve-helpers.js'
+
+const CHUNK_SIZE = 100 * 1024
+
+async function readFileAsChunks(file, chunkSize, onProgress) {
+	const totalSize = file.size
+	onProgress?.(0, totalSize, 'reading')
+	const ab = await file.arrayBuffer()
+	const chunks = []
+	for (let offset = 0; offset < ab.byteLength; offset += chunkSize) {
+		chunks.push(new Uint8Array(ab, offset, Math.min(chunkSize, ab.byteLength - offset)))
+		onProgress?.(Math.min(offset + chunkSize, totalSize), totalSize)
+	}
+	return chunks
+}
 
 // Enable: localStorage.setItem('maia:debug:loadBinary', '1')
 const DEBUG_LOAD_BINARY =
 	typeof window !== 'undefined' &&
 	(window.location?.hostname === 'localhost' || import.meta?.env?.DEV) &&
 	!!(typeof localStorage !== 'undefined' && localStorage.getItem('maia:debug:loadBinary'))
-
-async function resolveSchemaFromCoValue(peer, coId, _opName) {
-	try {
-		const schemaCoId = await peer.resolve({ fromCoValue: coId }, { returnType: 'coId' })
-		if (!schemaCoId) return null
-		return schemaCoId
-	} catch (_error) {
-		return null
-	}
-}
 
 async function evaluateDataWithExisting(data, existingData, evaluator) {
 	if (!evaluator) return data
@@ -471,6 +476,40 @@ async function loadBinaryAsBlobOp(peer, params) {
 	)
 }
 
+async function uploadToCoBinaryOp(dataEngine, params) {
+	const { file, mimeType, onProgress } = params
+	if (!dataEngine?.peer) {
+		throw new Error('[DataEngine] peer required for uploadToCoBinary')
+	}
+	if (!file || !(file instanceof File)) {
+		throw new Error('[DataEngine] uploadToCoBinary: file (File) is required. No base64.')
+	}
+	const mime = mimeType || 'application/octet-stream'
+	const totalSizeBytes = file.size
+	onProgress?.(0, totalSizeBytes)
+
+	const chunks = await readFileAsChunks(file, CHUNK_SIZE, onProgress)
+	const createRes = await dataEngine.execute({
+		op: 'create',
+		schema: '°Maia/schema/data/cobinary',
+		data: {},
+	})
+	const cobinaryData = createRes?.ok === true ? createRes.data : createRes
+	const coId = cobinaryData?.id
+	if (!coId?.startsWith('co_z')) {
+		throw new Error('[DataEngine] Failed to create CoBinary')
+	}
+	await dataEngine.execute({
+		op: 'uploadBinary',
+		coId,
+		mimeType: mime,
+		totalSizeBytes,
+		chunks,
+		onProgress,
+	})
+	return createSuccessResult({ coId, mimeType: mime }, { op: 'uploadToCoBinary' })
+}
+
 async function processInboxOp(peer, _dataEngine, params) {
 	const { actorId, inboxCoId } = params
 	requireParam(actorId, 'actorId', 'ProcessInboxOperation')
@@ -661,116 +700,45 @@ export class DataEngine {
 			peer.dbEngine = this
 		}
 
-		this.operations = {}
-		if (peer) {
-			const ev = peer.evaluator ?? null
-			this.registerOperation('read', { execute: (params) => readOp(peer, params) })
-			this.registerOperation('readSchema', { execute: (params) => readSchemaOp(peer, params) })
-			this.registerOperation('create', {
-				execute: (params) => createOp(peer, this, params),
-			})
-			this.registerOperation('update', {
-				execute: (params) => updateOp(peer, this, ev, params),
-			})
-			this.registerOperation('delete', {
-				execute: (params) => deleteOp(peer, this, params),
-			})
-			this.registerOperation('seed', { execute: (params) => seedOp(peer, params) })
-			this.registerOperation('schema', {
-				execute: (params) => schemaOp(peer, this, params),
-			})
-			this.registerOperation('resolve', { execute: (params) => resolveOp(peer, params) })
-			this.registerOperation('append', {
-				execute: (params) => appendOp(peer, this, params),
-			})
-			this.registerOperation('spliceCoList', {
-				execute: (params) => spliceCoListOp(peer, this, params),
-			})
-			this.registerOperation('colistSet', {
-				execute: (params) => colistSetOp(peer, this, params),
-			})
-			this.registerOperation('colistPush', {
-				execute: (params) => colistPushOp(peer, this, params),
-			})
-			this.registerOperation('colistUnshift', {
-				execute: (params) => colistUnshiftOp(peer, this, params),
-			})
-			this.registerOperation('colistPop', {
-				execute: (params) => colistPopOp(peer, this, params),
-			})
-			this.registerOperation('colistShift', {
-				execute: (params) => colistShiftOp(peer, this, params),
-			})
-			this.registerOperation('colistSplice', {
-				execute: (params) => colistSpliceOp(peer, this, params),
-			})
-			this.registerOperation('colistRemove', {
-				execute: (params) => colistRemoveOp(peer, this, params),
-			})
-			this.registerOperation('colistRetain', {
-				execute: (params) => colistRetainOp(peer, this, params),
-			})
-			this.registerOperation('colistApplyDiff', {
-				execute: (params) => colistApplyDiffOp(peer, this, params),
-			})
-			this.registerOperation('push', {
-				execute: (params) => appendOp(peer, this, { ...params, cotype: 'costream' }),
-			})
-			this.registerOperation('processInbox', {
-				execute: (params) => processInboxOp(peer, this, params),
-			})
-			this.registerOperation('uploadBinary', {
-				execute: (params) => uploadBinaryOp(peer, this, params),
-			})
-			this.registerOperation('loadBinaryAsBlob', {
-				execute: (params) => loadBinaryAsBlobOp(peer, params),
-			})
-			this.registerOperation('createSpark', {
-				execute: (params) => createSparkOp(peer, this, params),
-			})
-			this.registerOperation('readSpark', {
-				execute: (params) => readSparkOp(peer, params),
-			})
-			this.registerOperation('updateSpark', {
-				execute: (params) => updateSparkOp(peer, this, params),
-			})
-			this.registerOperation('deleteSpark', {
-				execute: (params) => deleteSparkOp(peer, this, params),
-			})
-			this.registerOperation('addSparkMember', {
-				execute: (params) => addSparkMemberOp(peer, this, params),
-			})
-			this.registerOperation('removeSparkMember', {
-				execute: (params) => removeSparkMemberOp(peer, this, params),
-			})
-			this.registerOperation('addSparkParentGroup', {
-				execute: (params) => addSparkParentGroupOp(peer, this, params),
-			})
-			this.registerOperation('removeSparkParentGroup', {
-				execute: (params) => removeSparkParentGroupOp(peer, this, params),
-			})
-			this.registerOperation('getSparkMembers', {
-				execute: (params) => getSparkMembersOp(peer, params),
-			})
-			this.registerOperation('updateSparkMemberRole', {
-				execute: (params) => updateSparkMemberRoleOp(peer, this, params),
-			})
-		}
-	}
-
-	/**
-	 * Register an operation for maia.do({op: name, ...})
-	 * @param {string} opName - Operation name (e.g. 'read', 'create')
-	 * @param {Object} def - { execute: (params) => Promise }
-	 */
-	registerOperation(opName, def) {
-		if (!opName || typeof opName !== 'string') {
-			throw new Error('[DataEngine] registerOperation: opName must be a non-empty string')
-		}
-		if (!def?.execute || typeof def.execute !== 'function') {
-			throw new Error('[DataEngine] registerOperation: def.execute must be a function')
-		}
-		this.operations[opName] = def
+		const ev = peer?.evaluator ?? null
+		this.ops = peer
+			? {
+					read: (p) => readOp(peer, p),
+					readSchema: (p) => readSchemaOp(peer, p),
+					create: (p) => createOp(peer, this, p),
+					update: (p) => updateOp(peer, this, ev, p),
+					delete: (p) => deleteOp(peer, this, p),
+					seed: (p) => seedOp(peer, p),
+					schema: (p) => schemaOp(peer, this, p),
+					resolve: (p) => resolveOp(peer, p),
+					append: (p) => appendOp(peer, this, p),
+					spliceCoList: (p) => spliceCoListOp(peer, this, p),
+					colistSet: (p) => colistSetOp(peer, this, p),
+					colistPush: (p) => colistPushOp(peer, this, p),
+					colistUnshift: (p) => colistUnshiftOp(peer, this, p),
+					colistPop: (p) => colistPopOp(peer, this, p),
+					colistShift: (p) => colistShiftOp(peer, this, p),
+					colistSplice: (p) => colistSpliceOp(peer, this, p),
+					colistRemove: (p) => colistRemoveOp(peer, this, p),
+					colistRetain: (p) => colistRetainOp(peer, this, p),
+					colistApplyDiff: (p) => colistApplyDiffOp(peer, this, p),
+					push: (p) => appendOp(peer, this, { ...p, cotype: 'costream' }),
+					processInbox: (p) => processInboxOp(peer, this, p),
+					uploadBinary: (p) => uploadBinaryOp(peer, this, p),
+					loadBinaryAsBlob: (p) => loadBinaryAsBlobOp(peer, p),
+					uploadToCoBinary: (p) => uploadToCoBinaryOp(this, p),
+					createSpark: (p) => createSparkOp(peer, this, p),
+					readSpark: (p) => readSparkOp(peer, p),
+					updateSpark: (p) => updateSparkOp(peer, this, p),
+					deleteSpark: (p) => deleteSparkOp(peer, this, p),
+					addSparkMember: (p) => addSparkMemberOp(peer, this, p),
+					removeSparkMember: (p) => removeSparkMemberOp(peer, this, p),
+					addSparkParentGroup: (p) => addSparkParentGroupOp(peer, this, p),
+					removeSparkParentGroup: (p) => removeSparkParentGroupOp(peer, this, p),
+					getSparkMembers: (p) => getSparkMembersOp(peer, p),
+					updateSparkMemberRole: (p) => updateSparkMemberRoleOp(peer, this, p),
+				}
+			: {}
 	}
 
 	async execute(payload) {
@@ -778,12 +746,12 @@ export class DataEngine {
 
 		if (!op) {
 			throw new Error(
-				'[DataEngine] Operation required: {op: "read|create|update|delete|seed|schema|resolve|append|push|createSpark|readSpark|updateSpark|deleteSpark|addSparkMember|removeSparkMember|addSparkParentGroup|removeSparkParentGroup|getSparkMembers|updateSparkMemberRole"}',
+				'[DataEngine] Operation required: {op: "read|create|update|delete|seed|schema|resolve|append|push|..."}',
 			)
 		}
 
-		const operation = this.operations[op]
-		if (!operation) {
+		const fn = this.ops[op]
+		if (!fn) {
 			throw new Error(`[DataEngine] Unknown operation: ${op}`)
 		}
 
@@ -795,6 +763,7 @@ export class DataEngine {
 			'push',
 			'spliceCoList',
 			'uploadBinary',
+			'uploadToCoBinary',
 			'seed',
 			'addSparkMember',
 			'removeSparkMember',
@@ -809,7 +778,7 @@ export class DataEngine {
 			'colistApplyDiff',
 		])
 		try {
-			return await operation.execute(params)
+			return await fn(params)
 		} catch (error) {
 			if (WRITE_OPS.has(op)) {
 				const errors = [

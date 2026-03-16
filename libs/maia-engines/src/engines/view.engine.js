@@ -1,14 +1,36 @@
-import { ensureCoValueLoaded, normalizeCoValueData, ReactiveStore } from '@MaiaOS/db'
+import { normalizeCoValueData, ReactiveStore } from '@MaiaOS/db'
 import { validateViewDef } from '@MaiaOS/schemata'
 import { containsExpressions, resolveExpressions } from '@MaiaOS/schemata/expression-resolver'
 import { extractDOMValuesAsync } from '@MaiaOS/schemata/payload-resolver'
 import { sanitizeAttributeWhitelist } from '../utils/attribute-sanitizer.js'
+import { hydrateCobinaryPreviews } from '../utils/cobinary-preview.js'
+import {
+	cancelDebounceSend,
+	getDefaultDebounceMs,
+	POPUP_OPEN_COOLING_MS,
+	scheduleDebounceSend,
+	shouldCoolFormSubmit,
+	shouldThrottle,
+} from '../utils/event-debounce.js'
 import { sanitizePayloadForValidation } from '../utils/payload-sanitizer.js'
 import { perfPipelineStart, perfPipelineStep } from '../utils/perf-pipeline.js'
+import { loadContextStore } from '../utils/resolve-helpers.js'
 import { readStore } from '../utils/store-reader.js'
 import { traceView } from '../utils/trace.js'
-import { isContentEditableActive, isContentEditableUpdateEvent } from '../utils/utils.js'
+import {
+	isContentEditableActive,
+	isContentEditableUpdateEvent,
+	toKebabCase,
+} from '../utils/utils.js'
 import { RENDER_STATES } from './actor.engine.js'
+
+const UPDATE_INPUT_TYPES = [
+	'UPDATE_INPUT',
+	'UPDATE_INPUT_A',
+	'UPDATE_INPUT_B',
+	'UPDATE_AGENT_INPUT',
+	'UPDATE_WASM_CODE',
+]
 
 const BOOLEAN_ATTRS = new Set([
 	'disabled',
@@ -19,81 +41,6 @@ const BOOLEAN_ATTRS = new Set([
 	'required',
 	'multiple',
 ])
-
-/** Cache for CoBinary image data URLs - shared across actor views, enables progressive reactive preview */
-const cobinaryPreviewCache = new Map()
-
-/**
- * Hydrate cobinary image previews within a root (shadow DOM or element).
- * Finds img[data-co-id], loads binary via loadBinaryAsBlob, sets img.src.
- * Skips imgs that already have a valid data: URL in src.
- */
-/** 1x1 transparent GIF - placeholder when no co-id or load fails (avoids broken-image icon) */
-const COBINARY_PLACEHOLDER =
-	'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
-
-function extractDataUrl(res) {
-	const dataUrl = res?.dataUrl ?? res?.data?.dataUrl ?? (res?.ok === true && res?.data?.dataUrl)
-	return dataUrl ?? null
-}
-
-function loadBinaryWithRetry(dataEngine, coId, maxAttempts = 4) {
-	const attempt = (n) =>
-		dataEngine
-			.execute({ op: 'loadBinaryAsBlob', coId })
-			.then((res) => extractDataUrl(res))
-			.catch((err) => {
-				const msg = err?.message ?? ''
-				const retryable =
-					msg.includes('not found') ||
-					msg.includes('not available') ||
-					msg.includes('still be loading') ||
-					msg.includes('no binary data') ||
-					msg.includes('stream not finished') ||
-					err?.name === 'NotReadableError'
-				if (n < maxAttempts && retryable) {
-					return new Promise((r) => setTimeout(r, 400)).then(() => attempt(n + 1))
-				}
-				throw err
-			})
-	return attempt(0)
-}
-
-function hydrateCobinaryPreviews(root, dataEngine) {
-	if (!root || !dataEngine?.execute) return
-	const imgs = root.querySelectorAll('img[data-co-id]')
-	imgs.forEach((img) => {
-		const coId = img.getAttribute('data-co-id')
-		if (!coId || !coId.startsWith('co_z')) {
-			if (!img.src) img.src = COBINARY_PLACEHOLDER
-			return
-		}
-		if (img.src && (img.src.startsWith('data:') || img.src.startsWith('blob:'))) return
-		const cached = cobinaryPreviewCache.get(coId)
-		if (cached?.dataUrl) {
-			img.src = cached.dataUrl
-			return
-		}
-		if (cached?.loading) {
-			cached.loading.then((dataUrl) => {
-				const current = root.querySelector(`img[data-co-id="${coId}"]`)
-				if (current) current.src = dataUrl || COBINARY_PLACEHOLDER
-			})
-			return
-		}
-		const loading = loadBinaryWithRetry(dataEngine, coId)
-			.then((dataUrl) => {
-				cobinaryPreviewCache.set(coId, { dataUrl })
-				return dataUrl
-			})
-			.catch(() => null)
-		cobinaryPreviewCache.set(coId, { loading })
-		loading.then((dataUrl) => {
-			const current = root.querySelector(`img[data-co-id="${coId}"]`)
-			if (current) current.src = dataUrl || COBINARY_PLACEHOLDER
-		})
-	})
-}
 
 /**
  * Extract co-id string from a value (handles CoValue objects resolved by context map).
@@ -144,7 +91,7 @@ export class ViewEngine {
 		this._debounceSendTimers = new Map()
 		/** Cooling: ignore FORM_SUBMIT for this ms after OPEN_POPUP (prevents ghost clicks when overlay appears) */
 		this._lastPopupOpenTime = 0
-		this._popupOpenCoolingMs = 350
+		this._popupOpenCoolingMs = POPUP_OPEN_COOLING_MS
 	}
 
 	_makeStyleRerenderSubscribe(actorId) {
@@ -228,50 +175,21 @@ export class ViewEngine {
 			contextCoId = null,
 			contextSchemaCoId = null
 		if (actorConfig.context) {
-			let contextCoIdVal = actorConfig.context
-			if (typeof contextCoIdVal !== 'string') {
+			if (typeof actorConfig.context !== 'string') {
 				throw new Error(
-					`[ViewEngine] Actor config context must be string (co-id or ref), got: ${typeof contextCoIdVal}`,
+					`[ViewEngine] Actor config context must be string (co-id or ref), got: ${typeof actorConfig.context}`,
 				)
 			}
-			if (!contextCoIdVal.startsWith('co_z') && this.dataEngine?.peer) {
-				const resolved = await this.dataEngine.peer.resolve(contextCoIdVal, { returnType: 'coId' })
-				if (resolved && typeof resolved === 'string' && resolved.startsWith('co_z')) {
-					contextCoIdVal = resolved
-				}
-			}
-			if (!contextCoIdVal.startsWith('co_z')) {
-				throw new Error(
-					`[ViewEngine] Actor config context must be co-id (or resolve to co-id). Got: ${actorConfig.context}. Run with PEER_FRESH_SEED=true to re-seed.`,
-				)
-			}
-			// Ensure context CoValue is loaded (e.g. after capability extend, may be in IndexedDB but not node memory)
-			try {
-				await ensureCoValueLoaded(this.dataEngine.peer, contextCoIdVal, {
-					waitForAvailable: true,
-					timeoutMs: 5000,
-				})
-			} catch (_e) {
-				// Fall through - readStore may still work if CoValue became available
-			}
-			let contextStore = await readStore(this.dataEngine, contextCoIdVal)
-			// Retry: context may be loading from sync
-			for (let i = 0; !contextStore && i < 5; i++) {
-				await new Promise((r) => setTimeout(r, 150 + i * 100))
-				contextStore = await readStore(this.dataEngine, contextCoIdVal)
-			}
-			if (!contextStore) {
-				// Self-healing: use fallback so actor spawns. No persistence (contextCoId stays null).
+			const loaded = await loadContextStore(this.dataEngine, actorConfig.context, {
+				ensureLoaded: { waitForAvailable: true, timeoutMs: 5000 },
+				retries: 5,
+			})
+			if (!loaded.store) {
 				context = this._createFallbackContext(parentActor, namekey)
-				contextCoId = null
-				contextSchemaCoId = null
 			} else {
-				contextSchemaCoId = await this.dataEngine.peer.resolve(
-					{ fromCoValue: contextCoIdVal },
-					{ returnType: 'coId' },
-				)
-				context = contextStore
-				contextCoId = contextCoIdVal
+				context = loaded.store
+				contextCoId = loaded.coId
+				contextSchemaCoId = loaded.schemaCoId
 			}
 		}
 
@@ -513,9 +431,9 @@ export class ViewEngine {
 			const resolvedValue = await this.evaluator.evaluate(node.value, data)
 			if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
 				const newValue = resolvedValue || ''
-				// Don't overwrite input value if user is typing (element has focus)
+				// Context is single source of truth. Always apply when clear (empty) or when input loses focus.
 				const isFocused = document.activeElement === element
-				if (!isFocused) {
+				if (newValue === '' || !isFocused) {
 					element.value = newValue
 				}
 				if (!this.actorInputCounters.has(actorId)) this.actorInputCounters.set(actorId, 0)
@@ -600,13 +518,9 @@ export class ViewEngine {
 		for (const [key, spec] of entries) {
 			const value = await this._resolveDataAttrValue(spec, data)
 			if (value !== null && value !== undefined) {
-				element.setAttribute(`data-${this._toKebabCase(key)}`, String(value))
+				element.setAttribute(`data-${toKebabCase(key)}`, String(value))
 			}
 		}
-	}
-
-	_toKebabCase(str) {
-		return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
 	}
 
 	async _renderSlot(node, data, wrapperElement, actorId) {
@@ -756,61 +670,26 @@ export class ViewEngine {
 		// Prevents FORM_SUBMIT/UPDATE_INPUT feedback loop: rerender → clear DOM → blur → deliver → process → ctx → rerender
 		if (element?.isConnected === false) return
 
-		const FORM_INPUT_EVENTS = [
-			'FORM_SUBMIT',
-			'UPDATE_INPUT',
-			'UPDATE_AGENT_INPUT',
-			'UPDATE_WASM_CODE',
-		]
-
-		// Schema-driven debounce: eventDef.$debounce (ms) prevents event storms
-		// FORM_SUBMIT: 100ms | contenteditable (@contentEditableValue): 250ms (true debounce) | UPDATE_INPUT: 400ms (blur-only)
 		const isContentEditable = isContentEditableUpdateEvent(eventDef)
-		const defaultDebounce =
-			eventName === 'FORM_SUBMIT'
-				? 100
-				: ['UPDATE_INPUT_A', 'UPDATE_INPUT_B'].includes(eventName)
-					? 0
-					: isContentEditable
-						? 250
-						: FORM_INPUT_EVENTS.includes(eventName)
-							? 400
-							: 0
-		const debounceMs = eventDef.$debounce ?? defaultDebounce
+		const debounceMs = eventDef.$debounce ?? getDefaultDebounceMs(eventName, isContentEditable)
 		const debounceKey = `${actorId}:${eventName}`
 
 		// True debounce for contenteditable input: schedule delivery, cancel on new event, send latest when timer fires
 		if (isContentEditable && e.type === 'input' && typeof debounceMs === 'number' && debounceMs > 0) {
-			const existing = this._debounceSendTimers.get(debounceKey)
-			if (existing) {
-				clearTimeout(existing.timeoutId)
-			}
-			const timeoutId = setTimeout(async () => {
-				this._debounceSendTimers.delete(debounceKey)
+			scheduleDebounceSend(this._debounceSendTimers, debounceKey, debounceMs, async () => {
 				if (element?.isConnected === false) return
 				await this._deliverEventFromDOM(actorId, element, eventDef, data, eventName, false)
-			}, debounceMs)
-			this._debounceSendTimers.set(debounceKey, { timeoutId, element, actorId, eventDef, data })
+			})
 			return
 		}
 
 		// On blur for contenteditable: clear pending debounce so we don't double-send
 		if (isContentEditable && e.type === 'blur') {
-			const existing = this._debounceSendTimers.get(debounceKey)
-			if (existing) {
-				clearTimeout(existing.timeoutId)
-				this._debounceSendTimers.delete(debounceKey)
-			}
+			cancelDebounceSend(this._debounceSendTimers, debounceKey)
 		}
 
 		// Throttle: block rapid re-fires (contenteditable uses true debounce above, skip throttle)
-		if (typeof debounceMs === 'number' && debounceMs > 0 && !isContentEditable) {
-			const now = Date.now()
-			const last = this._eventDebounce.get(debounceKey)
-			if (last != null && now - last < debounceMs) return
-			this._eventDebounce.set(debounceKey, now)
-			setTimeout(() => this._eventDebounce.delete(debounceKey), debounceMs)
-		}
+		if (!isContentEditable && shouldThrottle(this._eventDebounce, debounceKey, debounceMs)) return
 
 		// Cooling: block spurious FORM_SUBMIT when overlay just opened (ghost clicks, touch delayed events)
 		if (eventName === 'OPEN_POPUP') {
@@ -818,8 +697,7 @@ export class ViewEngine {
 		}
 		if (
 			eventName === 'FORM_SUBMIT' &&
-			this._lastPopupOpenTime > 0 &&
-			Date.now() - this._lastPopupOpenTime < this._popupOpenCoolingMs
+			shouldCoolFormSubmit(this._lastPopupOpenTime, this._popupOpenCoolingMs)
 		) {
 			return
 		}
@@ -853,13 +731,6 @@ export class ViewEngine {
 			return
 		}
 
-		const UPDATE_INPUT_TYPES = [
-			'UPDATE_INPUT',
-			'UPDATE_INPUT_A',
-			'UPDATE_INPUT_B',
-			'UPDATE_AGENT_INPUT',
-			'UPDATE_WASM_CODE',
-		]
 		const isUpdateInputType = UPDATE_INPUT_TYPES.includes(eventName) || isContentEditable
 
 		// ROOT CAUSE FIX: Skip blur's UPDATE_INPUT when focus moves to a sibling element (e.g. submit button).
@@ -943,14 +814,18 @@ export class ViewEngine {
 
 		const hasBinaryPayload = payload?.file instanceof File
 		let payloadToValidate = payload
-		if (hasBinaryPayload && this.blobEngine) {
+		if (hasBinaryPayload && this.dataEngine) {
 			const eventSchema = actor?.interfaceSchema?.properties?.[eventName]
 			const blobRefKey = eventSchema?.required?.[0] ?? eventSchema?.$blobRefKey ?? 'coId'
-			const result = await this.blobEngine.uploadToCoBinary(payload, {
+			const result = await this.dataEngine.execute({
+				op: 'uploadToCoBinary',
+				file: payload.file,
+				mimeType: payload.mimeType,
 				onProgress: (loaded, total, phase) =>
 					this.actorOps?.reportUploadProgress?.(actorId, loaded, total, phase),
 			})
-			payloadToValidate = { [blobRefKey]: result.coId, mimeType: result.mimeType }
+			const data = result?.ok === true ? result.data : result
+			payloadToValidate = { [blobRefKey]: data?.coId, mimeType: data?.mimeType }
 		} else if (payloadToValidate && typeof payloadToValidate === 'object') {
 			payloadToValidate = normalizeCoValueData(payloadToValidate)
 			payloadToValidate = sanitizePayloadForValidation(payloadToValidate)
@@ -986,13 +861,6 @@ export class ViewEngine {
 			return
 		}
 
-		const UPDATE_INPUT_TYPES = [
-			'UPDATE_INPUT',
-			'UPDATE_INPUT_A',
-			'UPDATE_INPUT_B',
-			'UPDATE_AGENT_INPUT',
-			'UPDATE_WASM_CODE',
-		]
 		const isUpdateInputType =
 			UPDATE_INPUT_TYPES.includes(eventName) || isContentEditableUpdateEvent(eventDef)
 
@@ -1012,7 +880,7 @@ export class ViewEngine {
 		await this.actorOps?.deliverEvent?.(actorId, actorId, eventName, payloadToValidate)
 
 		if (!isUpdateInputType) {
-			this._clearInputFields(element, actorId)
+			await this._clearInputFields(element, actorId)
 		}
 	}
 
@@ -1051,7 +919,7 @@ export class ViewEngine {
 	 * @param {string} actorId - The actor ID
 	 * @private
 	 */
-	_clearInputFields(element, actorId) {
+	async _clearInputFields(element, actorId) {
 		let container = element.closest('form') || element.closest('.form')
 		const actor = this.actorOps?.getActor?.(actorId)
 		if (!container && actor?.shadowRoot) container = actor.shadowRoot
@@ -1064,7 +932,7 @@ export class ViewEngine {
 			const keys = this._getInputContextKeys(actor.viewDef)
 			if (keys.length) {
 				const updates = Object.fromEntries(keys.map((k) => [k, '']))
-				this.actorOps.updateContextCoValue(actor, updates).catch(() => {})
+				await this.actorOps.updateContextCoValue(actor, updates)
 			}
 		}
 	}

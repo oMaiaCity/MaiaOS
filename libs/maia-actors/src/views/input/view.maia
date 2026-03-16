@@ -50,7 +50,7 @@
 							"click": {
 								"send": "FORM_SUBMIT",
 								"payload": {
-									"value": "$inputValue"
+									"value": "@inputValue"
 								}
 							}
 						}

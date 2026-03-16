@@ -105,9 +105,8 @@ export class Runtime {
 		if (this._processingByInbox.get(inboxCoId)) return
 		this._processingByInbox.set(inboxCoId, true)
 		try {
-			const inboxEngine = this.actorEngine?.inboxEngine
-			const { messages } = inboxEngine
-				? await inboxEngine.getUnprocessedMessages(inboxCoId, actorId)
+			const { messages } = this.actorEngine
+				? await this.actorEngine.getUnprocessedMessages(inboxCoId, actorId)
 				: { messages: [] }
 			const count = messages.length
 
@@ -255,7 +254,7 @@ export class Runtime {
 			return { ok: true, delivered: true }
 		}
 
-		const { messages } = (await this.actorEngine?.inboxEngine?.getUnprocessedMessages?.(
+		const { messages } = (await this.actorEngine?.getUnprocessedMessages?.(
 			callerInboxCoId,
 			callerId,
 		)) ?? { messages: [] }
@@ -398,7 +397,7 @@ export class Runtime {
 	 * @param {Object} actorConfig - Full actor config (for spawnActor)
 	 */
 	watchInbox(inboxCoId, actorId, actorConfig) {
-		const unsub = this.actorEngine?.inboxEngine?.watchInbox(inboxCoId, actorId, actorConfig)
+		const unsub = this.actorEngine?.watchInbox(inboxCoId, actorId, actorConfig)
 		return unsub ?? (() => {})
 	}
 

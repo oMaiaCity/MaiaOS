@@ -14,6 +14,8 @@ import {
 } from '@MaiaOS/schemata/operation-result'
 import { perfChatEnd, perfChatMeasure, perfChatStep } from '../utils/perf-chat.js'
 import { perfPipelineMeasure, perfPipelineStep } from '../utils/perf-pipeline.js'
+import { deliverResult } from '../utils/process-deliver.js'
+import { resolveSchemaFromCoValue, resolveToCoId } from '../utils/resolve-helpers.js'
 import { readStore } from '../utils/store-reader.js'
 import { traceContextOnError, traceProcess } from '../utils/trace.js'
 
@@ -137,6 +139,11 @@ export class ProcessEngine {
 					return false
 				}
 				if (act.tell) {
+					// Flush pending ctx before inter-actor communication so rerenders see up-to-date context
+					if (Object.keys(contextUpdates).length > 0 && process.actor?.actorOps) {
+						await process.actor.actorOps.updateContextCoValue(process.actor, contextUpdates)
+						for (const k of Object.keys(contextUpdates)) delete contextUpdates[k]
+					}
 					await this._executeTell(process, act.tell, payload, contextUpdates)
 					return false
 				}
@@ -297,7 +304,7 @@ export class ProcessEngine {
 		const eventType = type && acceptedTypes.includes(type) ? type : acceptedTypes[0]
 		const payloadWithReplyTo = {
 			...(eventPayload && typeof eventPayload === 'object' ? eventPayload : {}),
-			replyTo: process.actor.id,
+			replyTo: eventPayload?.replyTo ?? process.actor.id,
 		}
 		await process.actor.actorOps.deliverEvent(process.actor.id, target, eventType, payloadWithReplyTo)
 	}
@@ -325,7 +332,7 @@ export class ProcessEngine {
 			return
 		}
 		const eventPayload = process.eventPayload || payload || {}
-		let callerId = eventPayload.replyTo ?? actor._lastEventSource
+		const callerId = eventPayload.replyTo ?? actor._lastEventSource
 		try {
 			const rawResult = await actor.executableFunction.execute(actor, eventPayload)
 			if (DEBUG)
@@ -334,47 +341,22 @@ export class ProcessEngine {
 					hasData: !!rawResult?.data,
 				})
 			if (!isSuccessResult(rawResult)) {
-				// Deliver to caller (replyTo); fallback to _lastEventSource so os/messages can forward
-				if (callerId) {
-					await actor.actorOps.deliverEvent(actor.id, callerId, 'ERROR', {
-						errors: rawResult.errors,
-					})
-				} else {
-					if (DEBUG)
-						console.warn(
-							'[ProcessEngine] _executeFunction: no callerId (replyTo), delivering to _lastEventSource',
-						)
-					callerId = actor._lastEventSource
-					if (callerId) {
-						await actor.actorOps.deliverEvent(actor.id, callerId, 'ERROR', {
-							errors: rawResult.errors,
-						})
-					}
-				}
-				await actor.actorOps.deliverEvent(actor.id, actor.id, 'ERROR', {
-					errors: rawResult.errors,
-				})
+				const errPayload = { errors: rawResult.errors }
+				await deliverResult(actor, callerId ?? actor._lastEventSource, 'ERROR', errPayload)
 				return
 			}
 			const data = rawResult.data
 			process.lastToolResult = data
 			const cleanedResult = data != null ? this._cleanToolResult(data) : null
 			const successPayload = { ...eventPayload, result: cleanedResult }
-			if (callerId) {
-				await actor.actorOps.deliverEvent(actor.id, callerId, 'SUCCESS', successPayload)
-			}
-			await actor.actorOps.deliverEvent(actor.id, actor.id, 'SUCCESS', successPayload)
+			await deliverResult(actor, callerId, 'SUCCESS', successPayload)
 			if (DEBUG) console.log('[ProcessEngine] _executeFunction: delivered SUCCESS')
 		} catch (error) {
 			if (DEBUG) console.error('[ProcessEngine] _executeFunction: error', error?.message ?? error)
 			const errors = error?.errors ?? [
 				createErrorEntry(isPermissionError(error) ? 'permission' : 'structural', error?.message),
 			]
-			const deliverTo = callerId ?? actor._lastEventSource
-			if (deliverTo) {
-				await actor.actorOps.deliverEvent(actor.id, deliverTo, 'ERROR', { errors })
-			}
-			await actor.actorOps.deliverEvent(actor.id, actor.id, 'ERROR', { errors })
+			await deliverResult(actor, callerId ?? actor._lastEventSource, 'ERROR', { errors })
 		}
 	}
 
@@ -404,12 +386,8 @@ export class ProcessEngine {
 			: await this._getActorConfigFromDb(targetActorId)
 		const interfaceRef = actorConfig?.interface
 		if (!interfaceRef || typeof interfaceRef !== 'string') return []
-		let interfaceCoId = interfaceRef
-		if (!interfaceCoId.startsWith('co_z') && this.dataEngine?.peer) {
-			const resolved = await this.dataEngine.peer.resolve(interfaceRef, { returnType: 'coId' })
-			if (resolved?.startsWith?.('co_z')) interfaceCoId = resolved
-		}
-		if (!interfaceCoId.startsWith('co_z')) return []
+		const interfaceCoId = await resolveToCoId(this.dataEngine?.peer, interfaceRef)
+		if (!interfaceCoId) return []
 		const ifaceStore = await readStore(this.dataEngine, interfaceCoId)
 		const schema = ifaceStore?.value
 		if (!schema?.properties) return []
@@ -420,10 +398,7 @@ export class ProcessEngine {
 		if (!this.dataEngine?.peer) return null
 		if (typeof actorCoId !== 'string' || !actorCoId.startsWith('co_z')) return null
 		try {
-			const schemaCoId = await this.dataEngine.peer.resolve(
-				{ fromCoValue: actorCoId },
-				{ returnType: 'coId' },
-			)
+			const schemaCoId = await resolveSchemaFromCoValue(this.dataEngine?.peer, actorCoId)
 			if (!schemaCoId) return null
 			const store = await this.dataEngine.execute({
 				op: 'read',

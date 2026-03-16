@@ -47,6 +47,17 @@
 				}
 			}
 		],
+		"SUCCESS": [
+			{
+				"tell": {
+					"target": "$_pendingReplyTo",
+					"type": "SUCCESS",
+					"payload": {
+						"result": "$$result"
+					}
+				}
+			}
+		],
 		"ERROR": [
 			{
 				"tell": {
