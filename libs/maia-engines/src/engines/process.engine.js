@@ -12,11 +12,8 @@ import {
 	isPermissionError,
 	isSuccessResult,
 } from '@MaiaOS/factories/operation-result'
-import { perfChatEnd, perfChatMeasure, perfChatStep } from '../utils/perf-chat.js'
-import { perfPipelineMeasure, perfPipelineStep } from '../utils/perf-pipeline.js'
-import { deliverResult } from '../utils/process-deliver.js'
-import { resolveSchemaFromCoValue, resolveToCoId } from '../utils/resolve-helpers.js'
-import { readStore } from '../utils/store-reader.js'
+import { perfChat, perfPipeline } from '../utils/perf.js'
+import { readStore, resolveSchemaFromCoValue, resolveToCoId } from '../utils/resolve-helpers.js'
 import { traceContextOnError, traceProcess } from '../utils/trace.js'
 
 export class ProcessEngine {
@@ -41,7 +38,7 @@ export class ProcessEngine {
 	}
 
 	async send(processId, event, payload = {}) {
-		perfPipelineStep('process:send:start', { event, processId: processId?.slice(0, 30) })
+		perfPipeline.step('process:send:start', { event, processId: processId?.slice(0, 30) })
 		const process = this.processes.get(processId)
 		if (!process) {
 			console.warn('[ProcessEngine] send: process not found', { processId, event })
@@ -64,7 +61,7 @@ export class ProcessEngine {
 		const actions = handlers[event]
 		if (!Array.isArray(actions) || actions.length === 0) return false
 
-		perfPipelineStep('process:send', { event })
+		perfPipeline.step('process:send', { event })
 		await this._executeActions(process, actions)
 		return true
 	}
@@ -119,9 +116,9 @@ export class ProcessEngine {
 						evaluated.factory.includes('chat')
 					const runOp = () => this._executeOp(opKey, evaluated, process, payload)
 					const result = await (isChatCreate
-						? perfChatMeasure('op.create (chat)', runOp)
+						? perfChat.measure('op.create (chat)', runOp)
 						: opKey === 'read'
-							? perfPipelineMeasure(`op.${opKey}`, runOp)
+							? perfPipeline.measure(`op.${opKey}`, runOp)
 							: runOp())
 					if (result?.ok && result?.data) process.lastToolResult = result.data
 					if (!isSuccessResult(result) && process.actor._lastEventSource) {
@@ -150,9 +147,9 @@ export class ProcessEngine {
 				if (act.ask) {
 					// Chat flow: user msg in costream; ask delivers CHAT (LLM runs async on AI actor)
 					const isChatAsk = act.ask?.type === 'CHAT'
-					if (isChatAsk) perfChatStep('ask CHAT delivered (user msg path complete)')
+					if (isChatAsk) perfChat.step('ask CHAT delivered (user msg path complete)')
 					await this._executeAsk(process, act.ask, payload, contextUpdates)
-					if (isChatAsk) perfChatEnd('user message → costream')
+					if (isChatAsk) perfChat.end('user message → costream')
 					return true // ask = stop processing (request-response)
 				}
 				if (act.function === true) {
@@ -274,7 +271,7 @@ export class ProcessEngine {
 		if (typeof target !== 'string' || !target.startsWith('co_z')) {
 			throw new Error(`[ProcessEngine] tell target must be co-id (transform at seed). Got: ${target}`)
 		}
-		perfPipelineStep('process:tell', { type, target: target?.slice(0, 20) })
+		perfPipeline.step('process:tell', { type, target: target?.slice(0, 20) })
 		await process.actor.actorOps.deliverEvent(
 			process.actor.id,
 			target,
@@ -307,6 +304,14 @@ export class ProcessEngine {
 			replyTo: eventPayload?.replyTo ?? process.actor.id,
 		}
 		await process.actor.actorOps.deliverEvent(process.actor.id, target, eventType, payloadWithReplyTo)
+	}
+
+	/** Deliver SUCCESS/ERROR from function action to caller and self. */
+	async _deliverResult(actor, targetId, type, payload) {
+		if (targetId) {
+			await actor.actorOps.deliverEvent(actor.id, targetId, type, payload)
+		}
+		await actor.actorOps.deliverEvent(actor.id, actor.id, type, payload)
 	}
 
 	/**
@@ -342,21 +347,21 @@ export class ProcessEngine {
 				})
 			if (!isSuccessResult(rawResult)) {
 				const errPayload = { errors: rawResult.errors }
-				await deliverResult(actor, callerId ?? actor._lastEventSource, 'ERROR', errPayload)
+				await this._deliverResult(actor, callerId ?? actor._lastEventSource, 'ERROR', errPayload)
 				return
 			}
 			const data = rawResult.data
 			process.lastToolResult = data
 			const cleanedResult = data != null ? this._cleanToolResult(data) : null
 			const successPayload = { ...eventPayload, result: cleanedResult }
-			await deliverResult(actor, callerId, 'SUCCESS', successPayload)
+			await this._deliverResult(actor, callerId, 'SUCCESS', successPayload)
 			if (DEBUG) console.log('[ProcessEngine] _executeFunction: delivered SUCCESS')
 		} catch (error) {
 			if (DEBUG) console.error('[ProcessEngine] _executeFunction: error', error?.message ?? error)
 			const errors = error?.errors ?? [
 				createErrorEntry(isPermissionError(error) ? 'permission' : 'structural', error?.message),
 			]
-			await deliverResult(actor, callerId ?? actor._lastEventSource, 'ERROR', { errors })
+			await this._deliverResult(actor, callerId ?? actor._lastEventSource, 'ERROR', { errors })
 		}
 	}
 

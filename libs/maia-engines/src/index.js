@@ -18,6 +18,9 @@ export { DataEngine } from './engines/data.engine.js'
 export { ProcessEngine } from './engines/process.engine.js'
 export { StyleEngine } from './engines/style.engine.js'
 export { ViewEngine } from './engines/view.engine.js'
-export { Registry as ModuleRegistry } from './modules/registry.js'
+export {
+	Registry as ModuleRegistry,
+	registerBuiltinModules,
+} from './modules/registry.js'
 export { Runtime } from './runtimes/browser.js'
 export { Evaluator as MaiaScriptEvaluator } from './utils/evaluator.js'

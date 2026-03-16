@@ -1,6 +1,5 @@
 import { resolveSchemaFromCoValue } from '../utils/resolve-helpers.js'
-import { compileCSSProperties } from '../utils/style-utils.js'
-import { toKebabCase } from '../utils/utils.js'
+import { compileCSSProperties, toKebabCase } from '../utils/utils.js'
 
 /** SECURITY: Block prototype chain / constructor access (matches Evaluator) */
 const FORBIDDEN_PATH_KEYS = ['__proto__', 'constructor', 'prototype']
