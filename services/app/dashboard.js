@@ -71,16 +71,18 @@ async function loadSparksFromAccount(maia) {
 				sparksData[k].startsWith('co_'),
 		)
 
-		for (const key of sparkKeys) {
-			// Resolve display name from spark CoMap (key → co-id, co-id → name)
-			const coId = sparksData[key]
-			const displayName = (await getSparkDisplayName(maia, coId)) || key
-			sparks.push({
-				key,
-				name: displayName,
-				description: `Context scope for ${displayName}`,
-			})
-		}
+		const sparkResults = await Promise.all(
+			sparkKeys.map(async (key) => {
+				const coId = sparksData[key]
+				const displayName = (await getSparkDisplayName(maia, coId)) || key
+				return {
+					key,
+					name: displayName,
+					description: `Context scope for ${displayName}`,
+				}
+			}),
+		)
+		sparks.push(...sparkResults)
 	} catch (_error) {}
 	return sparks
 }
@@ -186,10 +188,38 @@ export async function renderDashboard(
 	const accountId = maia?.id?.maiaId?.id || ''
 	let accountDisplayName = truncate(accountId, 12)
 	let accountAvatarHtml = ''
-	if (accountId?.startsWith('co_z') && maia?.do) {
+	let sparks = []
+	let vibes = []
+
+	if (!currentSpark) {
+		// Level 1: Load profile and sparks in parallel
 		try {
-			const profiles = await resolveAccountCoIdsToProfiles(maia, [accountId])
-			const accountProfile = profiles.get(accountId) ?? null
+			const [profilesResult, sparksResult] = await Promise.all([
+				accountId?.startsWith('co_z') && maia?.do
+					? resolveAccountCoIdsToProfiles(maia, [accountId])
+					: Promise.resolve(new Map()),
+				loadSparksFromAccount(maia),
+			])
+			sparks = sparksResult
+			const accountProfile = profilesResult.get(accountId) ?? null
+			accountDisplayName = accountProfile?.name ?? accountDisplayName
+			accountAvatarHtml = getProfileAvatarHtml(accountProfile?.image, {
+				size: 44,
+				className: 'navbar-avatar',
+				syncState,
+			})
+		} catch (_e) {}
+	} else {
+		// Level 2: Load profile and vibes in parallel
+		try {
+			const [profilesResult, vibesResult] = await Promise.all([
+				accountId?.startsWith('co_z') && maia?.do
+					? resolveAccountCoIdsToProfiles(maia, [accountId])
+					: Promise.resolve(new Map()),
+				loadVibesFromSpark(maia, currentSpark),
+			])
+			vibes = vibesResult
+			const accountProfile = profilesResult.get(accountId) ?? null
 			accountDisplayName = accountProfile?.name ?? accountDisplayName
 			accountAvatarHtml = getProfileAvatarHtml(accountProfile?.image, {
 				size: 44,
@@ -206,7 +236,6 @@ export async function renderDashboard(
 
 	if (!currentSpark) {
 		// Level 1: Show sparks (context scopes) + DB Viewer (hardcoded CoJSON inspector)
-		const sparks = await loadSparksFromAccount(maia)
 
 		const dbViewerCard = `
 			<div class="dashboard-card whitish-card" onclick="window.navigateToScreen('maia-db')">
@@ -242,8 +271,6 @@ export async function renderDashboard(
 		cards = dbViewerCard + sparkCards
 	} else {
 		// Level 2: Show vibes for the selected spark (no back card - Switch Spark in bottom navbar)
-		const vibes = await loadVibesFromSpark(maia, currentSpark)
-
 		const vibeCards = vibes
 			.map(
 				(vibe) => `
