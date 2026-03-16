@@ -1,3 +1,7 @@
+import { resolveSchemaFromCoValue } from '../utils/resolve-helpers.js'
+import { compileCSSProperties } from '../utils/style-utils.js'
+import { toKebabCase } from '../utils/utils.js'
+
 /** SECURITY: Block prototype chain / constructor access (matches Evaluator) */
 const FORBIDDEN_PATH_KEYS = ['__proto__', 'constructor', 'prototype']
 
@@ -80,10 +84,6 @@ export class StyleEngine {
 		})
 	}
 
-	_toKebabCase(str) {
-		return str.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
-	}
-
 	/**
 	 * Convert camelCase class selectors to kebab-case
 	 * Preserves special selectors (:host, @container, @media, pseudo-selectors)
@@ -107,21 +107,12 @@ export class StyleEngine {
 		// Split by spaces, combinators, and pseudo-selectors to handle complex selectors
 		// Example: ".todoCategory:hover" or ".buttonViewSwitch.active"
 		return selector.replace(/\.([a-zA-Z][a-zA-Z0-9]*)/g, (_match, className) => {
-			// Convert camelCase class name to kebab-case
-			const kebabClassName = className.replace(/([a-z0-9])([A-Z])/g, '$1-$2').toLowerCase()
-			return `.${kebabClassName}`
+			return `.${toKebabCase(className)}`
 		})
 	}
 
-	compileModifierStyles(styles, tokens) {
-		if (typeof styles !== 'object' || styles === null || Array.isArray(styles)) return ''
-		return Object.entries(styles)
-			.map(([prop, value]) => {
-				const cssProp = prop.replace(/([A-Z])/g, '-$1').toLowerCase()
-				const cssValue = this._interpolateTokens(value, tokens)
-				return `  ${cssProp}: ${cssValue};`
-			})
-			.join('\n')
+	compileModifierStyles(styles, tokens, indent = 2) {
+		return compileCSSProperties(styles, (v) => this._interpolateTokens(v, tokens), indent)
 	}
 
 	_flattenTokens(tokens, prefix = '') {
@@ -147,12 +138,7 @@ export class StyleEngine {
 		if (tokens.typography?.fontFaces && Array.isArray(tokens.typography.fontFaces)) {
 			fontFacesCSS = `${tokens.typography.fontFaces
 				.map((face) => {
-					const props = Object.entries(face)
-						.map(([prop, value]) => {
-							const cssProp = prop.replace(/([A-Z])/g, '-$1').toLowerCase()
-							return `  ${cssProp}: ${value};`
-						})
-						.join('\n')
+					const props = compileCSSProperties(face, (v) => v, 2)
 					return `@font-face {\n${props}\n}`
 				})
 				.join('\n\n')}\n\n`
@@ -180,11 +166,11 @@ export class StyleEngine {
 		for (const [dataKey, dataValue] of Object.entries(dataTree)) {
 			if (typeof dataValue !== 'object' || dataValue === null || Array.isArray(dataValue)) continue
 
-			const kebabDataKey = this._toKebabCase(dataKey)
+			const kebabDataKey = toKebabCase(dataKey)
 			for (const [valueKey, styles] of Object.entries(dataValue)) {
 				if (typeof styles !== 'object' || styles === null || Array.isArray(styles)) continue
 
-				const kebabValueKey = this._toKebabCase(valueKey)
+				const kebabValueKey = toKebabCase(valueKey)
 				const dataAttr = `[data-${kebabDataKey}="${kebabValueKey}"]`
 				const selector = `${baseSelector}${currentPath}${dataAttr}`
 
@@ -226,7 +212,7 @@ export class StyleEngine {
 
 		const cssRules = []
 		for (const [className, styles] of Object.entries(components)) {
-			const kebabClassName = className.replace(/([A-Z])/g, '-$1').toLowerCase()
+			const kebabClassName = toKebabCase(className)
 			const dataTree = styles.data
 			const stylesWithoutData = { ...styles }
 			delete stylesWithoutData.data
@@ -244,12 +230,11 @@ export class StyleEngine {
 			}
 
 			if (Object.keys(baseStyles).length > 0) {
-				const cssProperties = Object.entries(baseStyles)
-					.map(([prop, value]) => {
-						const cssProp = prop.replace(/([A-Z])/g, '-$1').toLowerCase()
-						return `  ${cssProp}: ${this._interpolateTokens(value, tokens)};`
-					})
-					.join('\n')
+				const cssProperties = compileCSSProperties(
+					baseStyles,
+					(v) => this._interpolateTokens(v, tokens),
+					2,
+				)
 				const compiledRule = `.${kebabClassName} {\n${cssProperties}\n}`
 				cssRules.push(compiledRule)
 			}
@@ -324,30 +309,16 @@ export class StyleEngine {
 									.join('\n'),
 							)
 						} else {
-							// Regular nested selector with CSS properties
-							// Convert camelCase class selectors to kebab-case to match DOM class names
 							const kebabNestedSelector = this._toKebabCaseSelector(nestedSelector)
-							const cssProperties = Object.entries(nestedStyles)
-								.map(([prop, value]) => {
-									const cssProp = prop.replace(/([A-Z])/g, '-$1').toLowerCase()
-									return `    ${cssProp}: ${this._interpolateTokens(value, tokens)};`
-								})
-								.join('\n')
+							const cssProperties = this.compileModifierStyles(nestedStyles, tokens, 4)
 							nestedRules.push(`  ${kebabNestedSelector} {\n${cssProperties}\n  }`)
 						}
 					}
 				}
 				cssRules.push(`${interpolatedSelector} {\n${nestedRules.join('\n')}\n}`)
 			} else {
-				// Regular selector with CSS properties
-				// Convert camelCase class selectors to kebab-case to match DOM class names
 				const kebabSelector = this._toKebabCaseSelector(interpolatedSelector)
-				const cssProperties = Object.entries(styles)
-					.map(([prop, value]) => {
-						const cssProp = prop.replace(/([A-Z])/g, '-$1').toLowerCase()
-						return `  ${cssProp}: ${this._interpolateTokens(value, tokens)};`
-					})
-					.join('\n')
+				const cssProperties = this.compileModifierStyles(styles, tokens, 2)
 				cssRules.push(`${kebabSelector} {\n${cssProperties}\n}`)
 			}
 		}
@@ -381,10 +352,7 @@ export class StyleEngine {
 		}
 
 		const brandResolved = this.resolveStyleRef(brandCoId)
-		const brandSchemaCoId = await this.dataEngine.peer.resolve(
-			{ fromCoValue: brandResolved },
-			{ returnType: 'coId' },
-		)
+		const brandSchemaCoId = await resolveSchemaFromCoValue(this.dataEngine?.peer, brandResolved)
 		const brandStore = await this.dataEngine.execute({
 			op: 'read',
 			schema: brandSchemaCoId,
@@ -395,10 +363,7 @@ export class StyleEngine {
 		let actor = { tokens: {}, components: {} }
 		if (styleCoId) {
 			const styleResolved = this.resolveStyleRef(styleCoId)
-			const styleSchemaCoId = await this.dataEngine.peer.resolve(
-				{ fromCoValue: styleResolved },
-				{ returnType: 'coId' },
-			)
+			const styleSchemaCoId = await resolveSchemaFromCoValue(this.dataEngine?.peer, styleResolved)
 			const styleStore = await this.dataEngine.execute({
 				op: 'read',
 				schema: styleSchemaCoId,

@@ -11,11 +11,30 @@
  * destroyActor, destroyActorsForVibe, destroyActorsForContainer for teardown.
  */
 
-import { waitForStoreReady } from '@MaiaOS/db'
+import { normalizeCoValueData } from '@MaiaOS/db'
 import { containsExpressions } from '@MaiaOS/schemata/expression-resolver'
+import { validateAgainstSchema } from '@MaiaOS/schemata/validation.helper'
 import { deriveInboxRef } from '../utils/inbox-convention.js'
+import {
+	sanitizePayloadForValidation,
+	stripInfrastructureKeysForValidation,
+} from '../utils/payload-sanitizer.js'
+import { perfChatStart, perfChatStep } from '../utils/perf-chat.js'
+import { perfPipelineStep } from '../utils/perf-pipeline.js'
+import {
+	loadContextStore,
+	resolveSchemaFromCoValue,
+	resolveToCoId,
+} from '../utils/resolve-helpers.js'
 import { readStore } from '../utils/store-reader.js'
+import { traceInbox } from '../utils/trace.js'
+import { getUploadProgressUpdates } from '../utils/upload-progress.js'
 import { isContentEditableActive } from '../utils/utils.js'
+
+const INBOX_DEBOUNCE_MS = 0
+
+/** System events accepted by all actors implicitly */
+const SYSTEM_EVENTS = new Set(['SUCCESS', 'ERROR'])
 
 // Render state machine - prevents race conditions by ensuring renders only happen when state allows
 export const RENDER_STATES = {
@@ -26,11 +45,10 @@ export const RENDER_STATES = {
 }
 
 export class ActorEngine {
-	constructor(styleEngine, viewEngine, processEngine, inboxEngine = null) {
+	constructor(styleEngine, viewEngine, processEngine) {
 		this.styleEngine = styleEngine
 		this.viewEngine = viewEngine
 		this.processEngine = processEngine
-		this.inboxEngine = inboxEngine
 		this.actors = new Map()
 		this.dataEngine = null
 		this.os = null
@@ -55,25 +73,25 @@ export class ActorEngine {
 		for (const [key, value] of Object.entries(updates)) {
 			sanitizedUpdates[key] = value === undefined ? null : value
 		}
-		if (!actor.contextCoId || !this.dataEngine) return
-		const contextSchemaCoId =
-			actor.contextSchemaCoId ||
-			(await this.dataEngine.peer.resolve({ fromCoValue: actor.contextCoId }, { returnType: 'coId' }))
-		await this.dataEngine.execute({
-			op: 'update',
-			schema: contextSchemaCoId,
-			id: actor.contextCoId,
-			data: sanitizedUpdates,
-		})
-		// Eager merge: store reflects change immediately so rerender uses fresh data
+		// Eager merge FIRST: local store always reflects the update for immediate rerender
 		if (actor.context && typeof actor.context._set === 'function') {
 			const merged = { ...(actor.context.value || {}), ...sanitizedUpdates }
 			actor.context._set(merged)
-			// Re-resolve context queries so filter changes (e.g. selectedCodeCoId) take effect immediately
-			// without waiting for async CoMap propagation to the raw contextStore
 			if (typeof actor.context._resolveQueries === 'function') {
-				actor.context._resolveQueries(sanitizedUpdates)
+				await actor.context._resolveQueries(sanitizedUpdates)
 			}
+		}
+		// Persist to CoValue (skip if no CoValue backing)
+		if (actor.contextCoId && this.dataEngine) {
+			const contextSchemaCoId =
+				actor.contextSchemaCoId ||
+				(await resolveSchemaFromCoValue(this.dataEngine?.peer, actor.contextCoId))
+			await this.dataEngine.execute({
+				op: 'update',
+				schema: contextSchemaCoId,
+				id: actor.contextCoId,
+				data: sanitizedUpdates,
+			})
 		}
 		this._scheduleRerender(actor.id)
 	}
@@ -100,42 +118,7 @@ export class ActorEngine {
 		} else if (loadedBytes >= totalBytes && phase !== 'storing') {
 			this._uploadProgressLastReport.delete(actorId)
 		}
-		const formatBytes = (bytes) => {
-			if (bytes == null || bytes < 0) return '0 B'
-			if (bytes < 1024) return `${bytes} B`
-			if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-			return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
-		}
-		const pct =
-			phase === 'reading'
-				? 0
-				: phase === 'storing'
-					? 95
-					: phase === 'done'
-						? 100
-						: totalBytes > 0
-							? Math.round((loadedBytes / totalBytes) * 95)
-							: 0
-		const isComplete = phase === 'done'
-		const status =
-			phase === 'reading'
-				? `Reading file... (${formatBytes(totalBytes)})`
-				: phase === 'storing'
-					? `Persisting to storage... (${formatBytes(totalBytes)})`
-					: phase === 'done'
-						? 'Done'
-						: `Saving... ${pct}% (${formatBytes(loadedBytes)} / ${formatBytes(totalBytes)})`
-		const style = `width: ${pct}%`
-		const updates = {
-			uploadStatus: status,
-			uploadError: null,
-			uploadProgressVisible: true,
-			uploadProgressSectionClass: 'upload-progress-section',
-			uploadProgressPercent: isComplete ? null : pct,
-			uploadProgressStyle: style,
-			uploadLoadedBytes: loadedBytes,
-			uploadTotalBytes: totalBytes,
-		}
+		const updates = getUploadProgressUpdates(loadedBytes, totalBytes, phase)
 		this.updateContextCoValue(actor, updates).catch(() => {})
 	}
 
@@ -226,9 +209,9 @@ export class ActorEngine {
 		}
 		// Inbox by convention: derive when missing so config always has inbox set
 		let inboxRef = actorConfig.inbox ?? deriveInboxRef(actorConfig.$id || actorConfig.id)
-		if (inboxRef && !inboxRef.startsWith('co_z') && this.dataEngine?.peer) {
-			const resolved = await this.dataEngine.peer.resolve(inboxRef, { returnType: 'coId' })
-			if (resolved && typeof resolved === 'string' && resolved.startsWith('co_z')) inboxRef = resolved
+		if (inboxRef) {
+			const resolved = await resolveToCoId(this.dataEngine?.peer, inboxRef)
+			if (resolved) inboxRef = resolved
 		}
 		if (!inboxRef)
 			throw new Error(`[ActorEngine] Actor config must have inbox (or derivable from $id): ${actorId}`)
@@ -462,7 +445,7 @@ export class ActorEngine {
 	}
 
 	/**
-	 * Attach inbox watcher via InboxEngine. Shared by spawnActor and view actors.
+	 * Attach inbox watcher. Shared by spawnActor and view actors.
 	 * @param {string} actorId - Actor ID
 	 * @param {string} inboxCoId - Inbox CoStream co-id
 	 * @param {Object} actorConfig - Actor config (for spawn if needed)
@@ -470,9 +453,238 @@ export class ActorEngine {
 	 * @private
 	 */
 	_attachInboxSubscription(actorId, inboxCoId, actorConfig, configUnsubscribes) {
-		if (!this.inboxEngine || !configUnsubscribes) return
-		const unsub = this.inboxEngine.watchInbox(inboxCoId, actorId, actorConfig)
+		if (!configUnsubscribes) return
+		const unsub = this.watchInbox(inboxCoId, actorId, actorConfig)
 		configUnsubscribes.push(unsub)
+	}
+
+	async _resolveInboxForTarget(targetId) {
+		if (typeof targetId !== 'string') {
+			throw new Error(`[ActorEngine] targetId must be string, got: ${targetId}`)
+		}
+		const resolvedTargetId = await resolveToCoId(this.dataEngine?.peer, targetId)
+		if (!resolvedTargetId) {
+			throw new Error(`[ActorEngine] targetId must be co-id (or resolve to co-id), got: ${targetId}`)
+		}
+		targetId = resolvedTargetId
+		const actor = this.actors.get(targetId)
+		if (actor?.inboxCoId) {
+			return { inboxCoId: actor.inboxCoId, targetActorConfig: null, resolvedTargetId: targetId }
+		}
+		const actorStore = await readStore(this.dataEngine, targetId)
+		if (!actorStore) throw new Error(`[ActorEngine] Failed to read actor config: ${targetId}`)
+		const targetActorConfig = actorStore?.value
+		let inboxCoId =
+			targetActorConfig?.inbox ??
+			deriveInboxRef(targetActorConfig?.$id || targetActorConfig?.id || targetId)
+		if (inboxCoId && typeof inboxCoId === 'string') {
+			inboxCoId = (await resolveToCoId(this.dataEngine?.peer, inboxCoId)) ?? inboxCoId
+		}
+		if (!inboxCoId || typeof inboxCoId !== 'string' || !inboxCoId.startsWith('co_z')) {
+			throw new Error(
+				`[ActorEngine] Actor config inbox must be co-id (or derivable from $id): ${targetId}`,
+			)
+		}
+		return { inboxCoId, targetActorConfig, resolvedTargetId: targetId }
+	}
+
+	async _pushMessage(inboxCoId, message) {
+		const sourceCoId = message.source
+		const targetCoId = message.target
+		if (sourceCoId && (typeof sourceCoId !== 'string' || !sourceCoId.startsWith('co_z'))) {
+			throw new Error(`[ActorEngine] source must be co-id, got: ${sourceCoId}`)
+		}
+		if (targetCoId && (typeof targetCoId !== 'string' || !targetCoId.startsWith('co_z'))) {
+			throw new Error(`[ActorEngine] target must be co-id, got: ${targetCoId}`)
+		}
+		const payload = message.payload || {}
+		if (payload?.file instanceof File || payload?.fileBase64) {
+			throw new Error(
+				'[ActorEngine] Binary not allowed in inbox. Use DataEngine uploadToCoBinary first. Payload must contain co-id (avatar), not file/fileBase64.',
+			)
+		}
+		const messageData = {
+			type: message.type,
+			payload,
+			source: sourceCoId,
+			target: targetCoId,
+			processed: false,
+		}
+		await this.dataEngine.peer.createAndPushMessage(inboxCoId, messageData)
+	}
+
+	_validateEventType(actor, messageType) {
+		if (SYSTEM_EVENTS.has(messageType)) return true
+		const schema = actor.interfaceSchema
+		if (!schema?.properties || typeof schema.properties !== 'object') return false
+		return messageType in schema.properties
+	}
+
+	_getPayloadSchemaFromActor(actor, messageType) {
+		if (!actor.interfaceSchema?.properties) return null
+		return actor.interfaceSchema.properties[messageType] ?? null
+	}
+
+	async _validateEventPayload(messageTypeSchema, payload, messageType) {
+		if (!messageTypeSchema) {
+			return { valid: false, errors: [`Message type schema is required for ${messageType}`] }
+		}
+		try {
+			const { groupInfo, cotype, indexing, ...schemaForValidation } = messageTypeSchema
+			const result = await validateAgainstSchema(
+				schemaForValidation,
+				payload || {},
+				`message payload for ${messageType}`,
+			)
+			return result
+		} catch (error) {
+			return { valid: false, errors: [error.message] }
+		}
+	}
+
+	async validateMessage(actor, message) {
+		if (!this._validateEventType(actor, message.type)) return { valid: false }
+		if (SYSTEM_EVENTS.has(message.type)) {
+			if (message.type === 'ERROR') {
+				const errors = message.payload?.errors
+				if (!Array.isArray(errors)) return { valid: false }
+			}
+			const payloadPlain = {
+				...(message.payload && typeof message.payload === 'object'
+					? JSON.parse(JSON.stringify(message.payload))
+					: message.payload || {}),
+				...(message._coId ? { idempotencyKey: message._coId } : {}),
+			}
+			return { valid: true, payloadPlain }
+		}
+		const payloadSchema = this._getPayloadSchemaFromActor(actor, message.type)
+		if (!payloadSchema) return { valid: false }
+		let payload = message.payload || {}
+		if (
+			message.type === 'DB_OP' &&
+			(Array.isArray(payload) || !payload || typeof payload !== 'object' || !('op' in payload))
+		) {
+			return { valid: false }
+		}
+		if (payload && typeof payload === 'object') {
+			payload = sanitizePayloadForValidation(normalizeCoValueData(payload))
+		}
+		const payloadForValidation = stripInfrastructureKeysForValidation(payload)
+		const validation = await this._validateEventPayload(
+			payloadSchema,
+			payloadForValidation,
+			message.type,
+		)
+		if (!validation.valid) return { valid: false }
+		const payloadPlain = {
+			...(payload && typeof payload === 'object'
+				? JSON.parse(JSON.stringify(payload))
+				: payload || {}),
+			...(message._coId ? { idempotencyKey: message._coId } : {}),
+		}
+		return { valid: true, payloadPlain }
+	}
+
+	async getUnprocessedMessages(inboxCoId, actorId) {
+		const result = await this.dataEngine?.execute?.({
+			op: 'processInbox',
+			actorId,
+			inboxCoId,
+		})
+		return { messages: result?.messages ?? [] }
+	}
+
+	async validatePayloadForActor(actorId, eventType, payload) {
+		const r = await this.validatePayloadForActorWithDetails(actorId, eventType, payload)
+		return r.valid
+	}
+
+	async validatePayloadForActorWithDetails(actorId, eventType, payload) {
+		const actor = this.getActor(actorId)
+		if (!actor) return { valid: true, errors: null }
+		const schema = this._getPayloadSchemaFromActor(actor, eventType)
+		if (!schema) return { valid: true, errors: null }
+		const result = await this._validateEventPayload(schema, payload || {}, eventType)
+		return { valid: result.valid, errors: result.errors }
+	}
+
+	async processUnprocessedMessages(inboxCoId, actorId, actorConfig) {
+		if (!this.runtime?.processInboxForActor) return
+		await this.runtime.processInboxForActor(inboxCoId, actorId, actorConfig)
+	}
+
+	watchInbox(inboxCoId, actorId, actorConfig) {
+		if (!this.dataEngine || !actorConfig?.inbox) return () => {}
+		if (typeof actorId !== 'string' || !actorId.startsWith('co_z')) {
+			throw new Error(`[ActorEngine] watchInbox: actorId must be co-id, got: ${actorId}`)
+		}
+		if (typeof inboxCoId !== 'string' || !inboxCoId.startsWith('co_z')) {
+			throw new Error(`[ActorEngine] watchInbox: inboxCoId must be co-id, got: ${inboxCoId}`)
+		}
+		const process = () => this.processUnprocessedMessages(inboxCoId, actorId, actorConfig)
+		let debounceTimeout = null
+		const scheduleProcess = () => {
+			if (debounceTimeout) clearTimeout(debounceTimeout)
+			debounceTimeout = setTimeout(() => {
+				debounceTimeout = null
+				process()
+			}, INBOX_DEBOUNCE_MS)
+		}
+		let unsub = () => {}
+		const resolveAndSubscribe = async () => {
+			const schemaCoId = await resolveSchemaFromCoValue(this.dataEngine?.peer, inboxCoId)
+			const inboxStore = schemaCoId
+				? await this.dataEngine
+						?.execute?.({ op: 'read', schema: schemaCoId, key: inboxCoId })
+						.catch(() => null)
+				: null
+			if (!inboxStore?.subscribe) {
+				scheduleProcess()
+				return
+			}
+			const inboxUnsub = inboxStore.subscribe(scheduleProcess)
+			scheduleProcess()
+			unsub = () => {
+				if (debounceTimeout) clearTimeout(debounceTimeout)
+				inboxUnsub?.()
+			}
+		}
+		resolveAndSubscribe()
+		return () => unsub()
+	}
+
+	async deliver(targetId, message) {
+		const isChatSend =
+			message?.type === 'SEND_MESSAGE' && message?.payload != null && 'inputText' in message.payload
+		if (isChatSend) perfChatStart(`deliver SEND_MESSAGE → ${String(targetId).slice(0, 24)}...`)
+		perfPipelineStep('inbox:deliver:start', { type: message?.type, targetId: targetId?.slice(0, 20) })
+		traceInbox(message?.source, targetId, message?.type)
+		if (!this.dataEngine?.peer) {
+			throw new Error(
+				'[ActorEngine] Cannot push to inbox: dataEngine or peer not set. Ensure MaiaOS is booted before deliverEvent.',
+			)
+		}
+		let resolved
+		try {
+			resolved = await this._resolveInboxForTarget(targetId)
+		} catch (err) {
+			throw new Error(`[ActorEngine] cannot resolve target to inbox. ${err?.message || err}`)
+		}
+		perfPipelineStep('inbox:resolveInbox')
+		const { inboxCoId, targetActorConfig } = resolved
+		const messageWithTarget = { ...message, target: resolved.resolvedTargetId }
+		if (isChatSend) perfChatStep('_pushMessage (createAndPushMessage)')
+		await this._pushMessage(inboxCoId, messageWithTarget)
+		perfPipelineStep('inbox:pushMessage')
+		if (isChatSend) perfChatStep('_pushMessage done')
+		if (targetActorConfig && this.runtime) {
+			if (isChatSend) perfChatStep('ensureActorSpawned (targetActorConfig)')
+			await this.runtime.ensureActorSpawned(targetActorConfig, inboxCoId)
+			if (isChatSend) perfChatStep('ensureActorSpawned done')
+		}
+		if (this.actors?.has(resolved.resolvedTargetId)) {
+			await this.processEvents(resolved.resolvedTargetId)
+		}
 	}
 
 	/**
@@ -491,28 +703,16 @@ export class ActorEngine {
 		}
 		if (this.actors.has(actorId)) return this.actors.get(actorId)
 
-		let inboxRef = actorConfig.inbox ?? deriveInboxRef(actorConfig.$id || actorConfig.id)
-		if (!inboxRef || !actorConfig.process) return null
-		if (typeof inboxRef !== 'string') return null
-		if (!inboxRef.startsWith('co_z') && this.dataEngine?.peer) {
-			const resolved = await this.dataEngine.peer.resolve(inboxRef, { returnType: 'coId' })
-			if (resolved && typeof resolved === 'string' && resolved.startsWith('co_z')) inboxRef = resolved
-		}
-		if (!inboxRef.startsWith('co_z')) return null
-		const inboxCoId = inboxRef
+		const inboxRef = actorConfig.inbox ?? deriveInboxRef(actorConfig.$id || actorConfig.id)
+		if (!inboxRef || !actorConfig.process || typeof inboxRef !== 'string') return null
+		const inboxCoId = await resolveToCoId(this.dataEngine?.peer, inboxRef)
+		if (!inboxCoId) return null
 		const processRef = actorConfig.process
-
-		let configCoId = processRef
-		if (typeof configCoId !== 'string') {
-			throw new Error(`[ActorEngine] spawnActor: process must be string, got: ${typeof configCoId}`)
+		if (typeof processRef !== 'string') {
+			throw new Error(`[ActorEngine] spawnActor: process must be string, got: ${typeof processRef}`)
 		}
-		if (!configCoId.startsWith('co_z') && this.dataEngine?.peer) {
-			const resolved = await this.dataEngine.peer.resolve(configCoId, { returnType: 'coId' })
-			if (resolved && typeof resolved === 'string' && resolved.startsWith('co_z')) {
-				configCoId = resolved
-			}
-		}
-		if (!configCoId.startsWith('co_z')) {
+		const configCoId = await resolveToCoId(this.dataEngine?.peer, processRef)
+		if (!configCoId) {
 			throw new Error(
 				`[ActorEngine] spawnActor: process must be co-id (or resolve to co-id). Got: ${processRef}. Run PEER_FRESH_SEED=true to seed configs with co-ids.`,
 			)
@@ -527,43 +727,71 @@ export class ActorEngine {
 		// Resolve interface schema (co-id ref) for validation
 		let interfaceSchema = null
 		const interfaceRef = actorConfig.interface
-		if (interfaceRef && typeof interfaceRef === 'string' && this.dataEngine?.peer) {
-			let interfaceCoId = interfaceRef
-			if (!interfaceCoId.startsWith('co_z')) {
-				const resolved = await this.dataEngine.peer.resolve(interfaceRef, { returnType: 'coId' })
-				if (resolved && typeof resolved === 'string' && resolved.startsWith('co_z')) {
-					interfaceCoId = resolved
-				}
-			}
-			if (interfaceCoId.startsWith('co_z')) {
+		if (interfaceRef && typeof interfaceRef === 'string') {
+			const interfaceCoId = await resolveToCoId(this.dataEngine?.peer, interfaceRef)
+			if (interfaceCoId) {
 				const ifaceStore = await readStore(this.dataEngine, interfaceCoId)
-				if (ifaceStore?.value) {
-					interfaceSchema = ifaceStore.value
-				}
+				if (ifaceStore?.value) interfaceSchema = ifaceStore.value
 			}
 		}
 
+		const configUnsubscribes = []
 		let executableFunction = null
 		let wasmConfig = actorConfig.wasm
-		if (typeof wasmConfig === 'string' && wasmConfig.startsWith('co_z')) {
-			const wasmStore = await readStore(this.dataEngine, wasmConfig)
-			wasmConfig = wasmStore?.value ?? null
-		} else if (typeof wasmConfig === 'string' && this.dataEngine?.peer) {
-			const resolved = await this.dataEngine.peer.resolve(wasmConfig, { returnType: 'coId' })
-			if (resolved?.startsWith?.('co_z')) {
-				const wasmStore = await readStore(this.dataEngine, resolved)
+		if (typeof wasmConfig === 'string') {
+			const wasmCoId = await resolveToCoId(this.dataEngine?.peer, wasmConfig)
+			if (wasmCoId) {
+				const wasmStore = await readStore(this.dataEngine, wasmCoId)
 				wasmConfig = wasmStore?.value ?? null
 			}
 		}
 		if (wasmConfig?.lang === 'js' && wasmConfig?.code) {
-			let code = wasmConfig.code
-			if (typeof code === 'string' && code.startsWith('co_z')) {
-				const codeStore = await readStore(this.dataEngine, code)
+			const codeRef = wasmConfig.code
+			if (typeof codeRef === 'string' && codeRef.startsWith('co_z')) {
+				const codeStore = await readStore(this.dataEngine, codeRef)
 				const codeData = codeStore?.value
 				const items = codeData?.items ?? []
-				code = Array.isArray(items) ? items.join('') : typeof codeData === 'string' ? codeData : ''
-			}
-			if (typeof code === 'string' && code.length > 0) {
+				const code = Array.isArray(items)
+					? items.join('')
+					: typeof codeData === 'string'
+						? codeData
+						: ''
+				if (typeof code === 'string' && code.length > 0) {
+					const { executeInSandbox } = await import('../utils/quickjs-executor.js')
+					executableFunction = {
+						execute: async (actor, payload) => {
+							const actorView = {
+								id: actor.id,
+								contextSchemaCoId: actor.contextSchemaCoId ?? null,
+								contextCoId: actor.contextCoId ?? null,
+							}
+							return executeInSandbox(code, actorView, payload)
+						},
+					}
+					if (codeStore?.subscribe) {
+						const rebuildExecutable = () => {
+							const actor = this.actors.get(actorId)
+							if (!actor) return
+							const data = codeStore?.value
+							const items = data?.items ?? []
+							const newCode = Array.isArray(items) ? items.join('') : typeof data === 'string' ? data : ''
+							if (newCode) {
+								actor.executableFunction = {
+									execute: async (a, p) => {
+										const actorView = {
+											id: a.id,
+											contextSchemaCoId: a.contextSchemaCoId ?? null,
+											contextCoId: a.contextCoId ?? null,
+										}
+										return executeInSandbox(newCode, actorView, p)
+									},
+								}
+							}
+						}
+						configUnsubscribes.push(codeStore.subscribe(rebuildExecutable, { skipInitial: true }))
+					}
+				}
+			} else if (typeof codeRef === 'string' && codeRef.length > 0) {
 				const { executeInSandbox } = await import('../utils/quickjs-executor.js')
 				executableFunction = {
 					execute: async (actor, payload) => {
@@ -572,7 +800,7 @@ export class ActorEngine {
 							contextSchemaCoId: actor.contextSchemaCoId ?? null,
 							contextCoId: actor.contextCoId ?? null,
 						}
-						return executeInSandbox(code, actorView, payload)
+						return executeInSandbox(codeRef, actorView, payload)
 					},
 				}
 			}
@@ -586,31 +814,22 @@ export class ActorEngine {
 		}
 
 		const minimalContext = { value: {}, subscribe: () => () => {} }
-		const configUnsubscribes = []
 
 		// Load context for headless actors (paper, todos, etc.) so execute() has notes/todos
 		let contextStore = minimalContext
 		let contextCoId = null
 		let contextSchemaCoId = null
 		const contextRef = actorConfig.context
-		if (contextRef && typeof contextRef === 'string' && this.dataEngine?.peer) {
-			const resolvedContextCoId = contextRef.startsWith('co_z')
-				? contextRef
-				: await this.dataEngine.peer.resolve(contextRef, { returnType: 'coId' })
-			if (resolvedContextCoId?.startsWith?.('co_z')) {
-				const store = await readStore(this.dataEngine, resolvedContextCoId)
-				if (store) {
-					await waitForStoreReady(store, resolvedContextCoId, 3000).catch(() => {})
-					contextStore = store
-					contextCoId = resolvedContextCoId
-					contextSchemaCoId =
-						(await this.dataEngine.peer.resolve(
-							{ fromCoValue: resolvedContextCoId },
-							{ returnType: 'coId' },
-						)) ?? null
-					if (store._unsubscribe) {
-						configUnsubscribes.push(() => store._unsubscribe())
-					}
+		if (contextRef && typeof contextRef === 'string') {
+			const loaded = await loadContextStore(this.dataEngine, contextRef, {
+				waitForStoreReadyMs: 3000,
+			})
+			if (loaded.store) {
+				contextStore = loaded.store
+				contextCoId = loaded.coId
+				contextSchemaCoId = loaded.schemaCoId
+				if (loaded.store._unsubscribe) {
+					configUnsubscribes.push(() => loaded.store._unsubscribe())
 				}
 			}
 		}
@@ -697,27 +916,21 @@ export class ActorEngine {
 			target: targetId,
 			processed: false,
 		}
-		if (!this.inboxEngine) {
-			throw new Error('[ActorEngine] InboxEngine not set. Ensure Loader booted with InboxEngine.')
-		}
-		await this.inboxEngine.deliver(targetId, message)
+		await this.deliver(targetId, message)
 	}
 
 	async validateEventPayloadForSend(actorId, eventType, payload) {
-		if (!this.inboxEngine) return true
-		return this.inboxEngine.validatePayloadForActor(actorId, eventType, payload)
+		return this.validatePayloadForActor(actorId, eventType, payload)
 	}
 
 	/** Returns { valid, errors } for detailed logging when validation fails */
 	async validateEventPayloadForSendWithDetails(actorId, eventType, payload) {
-		if (!this.inboxEngine) return { valid: true, errors: null }
-		return this.inboxEngine.validatePayloadForActorWithDetails(actorId, eventType, payload)
+		return this.validatePayloadForActorWithDetails(actorId, eventType, payload)
 	}
 
 	async processEvents(actorId, preloadedMessages = null) {
 		const actor = this.actors.get(actorId)
-		if (!actor || !actor.inboxCoId || !this.dataEngine || !this.inboxEngine || actor._isProcessing)
-			return
+		if (!actor || !actor.inboxCoId || !this.dataEngine || actor._isProcessing) return
 		actor._isProcessing = true
 		let hadUnhandledMessages = false
 		try {
@@ -745,7 +958,7 @@ export class ActorEngine {
 							} catch (_e) {}
 						}
 					}
-					const validated = await this.inboxEngine.validateMessage(actor, message)
+					const validated = await this.validateMessage(actor, message)
 					if (!validated.valid) {
 						if (
 							typeof window !== 'undefined' &&
@@ -804,8 +1017,7 @@ export class ActorEngine {
 			// Retry when: (1) unhandled messages (no transition), or (2) more messages arrived during our run.
 			const shouldRetry =
 				hadUnhandledMessages ||
-				(await this.inboxEngine
-					?.getUnprocessedMessages?.(actor.inboxCoId, actorId)
+				(await this.getUnprocessedMessages(actor.inboxCoId, actorId)
 					.then((r) => (r.messages?.length ?? 0) > 0)
 					.catch(() => false))
 			if (shouldRetry) {
