@@ -35,7 +35,6 @@ async function getFactoryFromDb(maia, factoryRef) {
 }
 
 import { renderDashboard, renderVibeViewer } from './dashboard.js'
-import { renderMaiaAIView } from './maia-ai-view.js'
 import { escapeHtml, getProfileAvatarHtml, getSyncStatusMessage, truncate } from './utils.js'
 
 // Cache for CoBinary image data URLs - survives re-renders, enables progressive reactive preview
@@ -164,13 +163,6 @@ export async function renderApp(
 			loadSpark,
 			loadVibe,
 		)
-		hydrateCobinaryPreviews(maia)
-		setTimeout(() => hydrateCobinaryPreviews(maia), 500)
-		return
-	}
-
-	if (currentScreen === 'maia-ai') {
-		await renderMaiaAIView(maia, authState, syncState, navigateToScreen)
 		hydrateCobinaryPreviews(maia)
 		setTimeout(() => hydrateCobinaryPreviews(maia), 500)
 		return

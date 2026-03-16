@@ -21,6 +21,7 @@ import {
 } from '@MaiaOS/loader'
 import { renderApp } from './db-view.js'
 import { renderLandingPage } from './landing.js'
+import { disposeGlobalAI, initGlobalAI, setFabVisible } from './maia-ai-global.js'
 import {
 	getFirstNameForRegister,
 	removeSigninKeyHandler,
@@ -30,7 +31,7 @@ import {
 import { escapeHtml, getSyncStatusMessage } from './utils.js'
 
 let maia
-let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'aven-viewer'
+let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'vibe-viewer'
 let currentView = 'account' // Current schema filter (default: 'account')
 let currentContextCoValueId = null // Currently loaded CoValue in main context (explorer-style navigation)
 let currentVibe = null // Currently loaded vibe (null = DB view mode, 'todos' = todos vibe, etc.)
@@ -136,6 +137,7 @@ async function handleRoute() {
 	const path = window.location.pathname
 
 	if (path === '/signin' || path === '/signup') {
+		setFabVisible(false)
 		if (redirectIfSignedIn()) return
 		try {
 			await isPRFSupported()
@@ -149,6 +151,7 @@ async function handleRoute() {
 	if (path === '/me' || path === '/dashboard') {
 		removeSigninKeyHandler()
 		const ready = detectMode() === 'agent' || (authState.signedIn && maia)
+		setFabVisible(ready)
 		if (ready) {
 			try {
 				await renderAppInternal()
@@ -182,6 +185,7 @@ async function handleRoute() {
 	}
 
 	removeSigninKeyHandler()
+	setFabVisible(false)
 	if (redirectIfSignedIn()) return
 	renderLandingPage()
 }
@@ -275,6 +279,7 @@ async function initAgentMode() {
 		window.maia = maia
 		// CRITICAL: Await link before first render - indexing requires account.registries
 		await linkAccountToRegistries(maia).catch(() => {})
+		initGlobalAI(maia).catch(() => {})
 
 		// Set auth state
 		authState = {
@@ -477,6 +482,7 @@ async function signInWithTestAven() {
 		})
 		window.maia = maia
 		await linkAccountToRegistries(maia).catch(() => {})
+		initGlobalAI(maia).catch(() => {})
 
 		setupSyncSubscription()
 		currentScreen = 'dashboard'
@@ -537,6 +543,7 @@ async function signIn() {
 					window.maia = maia
 					await autoRegisterHuman(maia).catch(() => {})
 					await linkAccountToRegistries(maia).catch(() => {})
+					initGlobalAI(maia).catch(() => {})
 
 					// Re-render app now that maia is ready
 					if (authState.signedIn) {
@@ -666,6 +673,7 @@ async function register() {
 			window.maia = maia
 			await autoRegisterHuman(maia).catch(() => {})
 			await linkAccountToRegistries(maia).catch(() => {})
+			initGlobalAI(maia).catch(() => {})
 		} catch (bootError) {
 			throw new Error(`Failed to initialize MaiaOS: ${bootError.message}`)
 		}
@@ -727,6 +735,7 @@ async function register() {
 
 function signOut() {
 	// Signing out
+	disposeGlobalAI()
 	if (unsubscribeSync) {
 		unsubscribeSync()
 		unsubscribeSync = null
@@ -951,12 +960,6 @@ function goBack() {
 	// If we're in agent mode, exit agent mode first
 	if (currentVibe !== null) {
 		loadVibe(null)
-		return
-	}
-
-	// If we're in Maia AI, go to dashboard
-	if (currentScreen === 'maia-ai') {
-		navigateToScreen('dashboard')
 		return
 	}
 
