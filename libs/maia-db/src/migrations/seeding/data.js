@@ -53,10 +53,13 @@ export async function seedData(account, node, maiaGroup, peer, data, coIdRegistr
 					dataEngine: peer?.dbEngine,
 				})
 
+				const noteData = { content: cotextCoList.id }
+				if (typeof item.title === 'string') noteData.title = item.title
+
 				const { coValue: noteCoMap } = await createCoValueForSpark(ctx, null, {
 					factory: factoryCoId,
 					cotype: 'comap',
-					data: { content: cotextCoList.id },
+					data: noteData,
 					dataEngine: peer?.dbEngine,
 				})
 

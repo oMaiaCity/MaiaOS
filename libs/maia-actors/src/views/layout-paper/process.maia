@@ -6,7 +6,10 @@
 		"SELECT_NOTE": [
 			{
 				"ctx": {
-					"selectedNoteId": "$$id"
+					"selectedNoteId": "$$id",
+					"selectedNoteIds": {
+						"$$id": true
+					}
 				}
 			},
 			{

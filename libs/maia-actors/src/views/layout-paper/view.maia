@@ -23,24 +23,39 @@
 							"template": {
 								"tag": "li",
 								"class": "list-item",
+								"attrs": {
+									"data": {
+										"active": "$selectedNoteIds.$$id"
+									}
+								},
 								"children": [
 									{
-										"tag": "span",
-										"class": "list-item-label",
-										"text": {
-											"$join": [
-												{
-													"$item": "content.items"
-												},
-												""
-											]
-										}
+										"tag": "div",
+										"class": "list-item-content",
+										"children": [
+											{
+												"tag": "span",
+												"class": "list-item-title",
+												"text": "$$title"
+											},
+											{
+												"tag": "span",
+												"class": "list-item-preview",
+												"text": {
+													"$join": [
+														{
+															"$item": "content.items"
+														},
+														""
+													]
+												}
+											}
+										]
 									}
 								],
 								"$on": {
 									"click": {
 										"send": "SELECT_NOTE",
-										"$debounce": 300,
 										"payload": {
 											"id": "$$id"
 										}

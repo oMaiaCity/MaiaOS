@@ -268,10 +268,9 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 							}
 						} else {
 							// Collection query: return array
-							// Set even empty arrays so reactivity works
-							mergedValue[key] = storeValue
+							// Set even empty arrays so reactivity works (guard against null/undefined)
+							mergedValue[key] = Array.isArray(storeValue) ? storeValue : []
 							// Derived: has{Key} = array has items (e.g. conversations -> hasConversations)
-							// Keeps view dumb: state/context handles logic, view uses simple $hasConversations ref
 							const hasKey = `has${key.charAt(0).toUpperCase()}${key.slice(1)}`
 							if (hasKey in contextValue) {
 								mergedValue[hasKey] = Array.isArray(storeValue) && storeValue.length > 0

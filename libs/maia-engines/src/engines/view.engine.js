@@ -12,16 +12,23 @@ import {
 	shouldCoolFormSubmit,
 	shouldThrottle,
 } from '../utils/event-debounce.js'
+import { renderMarkdown } from '../utils/markdown.js'
 import { sanitizePayloadForValidation } from '../utils/payload-sanitizer.js'
 import { perfPipeline } from '../utils/perf.js'
 import { loadContextStore, readStore } from '../utils/resolve-helpers.js'
 import { traceView } from '../utils/trace.js'
-import {
-	isContentEditableActive,
-	isContentEditableUpdateEvent,
-	toKebabCase,
-} from '../utils/utils.js'
+import { isContentEditableUpdateEvent, toKebabCase } from '../utils/utils.js'
 import { RENDER_STATES } from './actor.engine.js'
+
+function _hasContentEditableFocusIn(shadowRoot) {
+	if (!shadowRoot) return false
+	const active = shadowRoot.activeElement
+	if (!active) return false
+	if (active.shadowRoot?.activeElement) {
+		return _hasContentEditableFocusIn(active.shadowRoot)
+	}
+	return !!active.isContentEditable
+}
 
 const UPDATE_INPUT_TYPES = [
 	'UPDATE_INPUT',
@@ -258,8 +265,7 @@ export class ViewEngine {
 					const contextChanged = currentContextValue !== lastContextValue
 					lastContextValue = currentContextValue
 					if (actor._renderState === RENDER_STATES.READY && contextChanged) {
-						// Skip rerender when any contenteditable has focus — prevents blur on each keystroke
-						if (isContentEditableActive()) return
+						if (_hasContentEditableFocusIn(actor.shadowRoot)) return
 						actor._renderState = RENDER_STATES.UPDATING
 						this.actorOps?._scheduleRerender?.(actorId)
 					}
@@ -288,8 +294,7 @@ export class ViewEngine {
 		// $stores Architecture: Backend unified store handles reactivity automatically
 		// No manual subscriptions needed - backend handles everything via subscriptionCache
 
-		// CRITICAL: Skip full rerender when any contenteditable has focus — prevents blur on each keystroke
-		if (isContentEditableActive()) return
+		if (_hasContentEditableFocusIn(shadowRoot)) return
 
 		// Reset input counter for this actor at start of render
 		// This ensures inputs get consistent IDs across re-renders (same position = same ID)
@@ -380,6 +385,16 @@ export class ViewEngine {
 			this.attachEvents(element, node.$on, data, actorId)
 		}
 
+		// Markdown + contenteditable: on focus, restore raw text for editing
+		const formatMd = node.format === 'md' || node.format === 'markdown'
+		const isContentEditable = node.attrs?.contenteditable === true
+		if (node.text !== undefined && formatMd && isContentEditable) {
+			element.addEventListener('focus', () => {
+				const raw = element.dataset.rawMarkdown
+				if (raw !== undefined) element.textContent = raw
+			})
+		}
+
 		if (node.$slot) {
 			await this._renderSlot(node, data, element, actorId)
 			return element
@@ -449,10 +464,24 @@ export class ViewEngine {
 			if (isContentEditable && isFocused) {
 				// Skip — user is typing; remote sync will apply on blur
 			} else {
-				const textValue = await this.evaluator.evaluate(node.text, data)
-				// Format objects/arrays as JSON strings for display
-				if (textValue && typeof textValue === 'object') {
-					// Special handling for resolved actor objects (has @label and id)
+				let textValue = await this.evaluator.evaluate(node.text, data)
+				// Colist resolution may return { id, items } - join items for display
+				if (
+					textValue &&
+					typeof textValue === 'object' &&
+					!Array.isArray(textValue) &&
+					'items' in textValue
+				) {
+					const items = textValue.items
+					textValue = Array.isArray(items) ? items.join('') : ''
+				}
+				const formatMd = node.format === 'md' || node.format === 'markdown'
+				if (formatMd && (typeof textValue === 'string' || textValue == null)) {
+					const rawText = String(textValue || '')
+					element.dataset.rawMarkdown = rawText
+					element.innerHTML = await renderMarkdown(rawText)
+				} else if (textValue && typeof textValue === 'object') {
+					// Format objects/arrays as JSON strings for display
 					if (textValue['@label'] && textValue.id && textValue.id.startsWith('co_z')) {
 						const truncatedId = `${textValue.id.substring(0, 15)}...`
 						element.textContent = `${textValue['@label']} (${truncatedId})`

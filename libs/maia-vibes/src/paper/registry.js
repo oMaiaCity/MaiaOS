@@ -23,9 +23,44 @@ export const PaperVibeRegistry = {
 
 	data: {
 		notes: [
-			{ content: "Dear future us, what we're creating together..." },
-			{ content: 'Meeting notes: discussed architecture...' },
-			{ content: 'Ideas for the next sprint...' },
+			{ title: 'Dear future us', content: "**Dear future us**, what we're creating together..." },
+			{
+				title: 'Meeting notes',
+				content: '## Meeting notes\n- Discussed *architecture*\n- Reviewed **sprint** goals',
+			},
+			{
+				title: 'Ideas for the next sprint',
+				content:
+					'## Ideas for the next sprint\n1. Improve sync\n2. Add `format: "md"` support\n3. Ship it',
+			},
+			{
+				title: 'Markdown Formatting',
+				content: `# Markdown Formatting
+
+## Headers
+Use \`#\`, \`##\`, \`###\` for headings.
+
+## Text
+**Bold**, *italic*, ~~strikethrough~~, \`inline code\`.
+
+## Lists
+- Unordered item
+- Another item
+
+1. Ordered item
+2. Second item
+
+## Code
+\`\`\`javascript
+const x = 42;
+\`\`\`
+
+## Links
+[MaiaOS](https://maia.city)
+
+## Blockquote
+> A quote for emphasis.`,
+			},
 		],
 	},
 }

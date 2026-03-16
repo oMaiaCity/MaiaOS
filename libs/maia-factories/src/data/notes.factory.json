@@ -5,6 +5,10 @@
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {
+		"title": {
+			"type": "string",
+			"description": "Note title displayed in the aside list"
+		},
 		"content": {
 			"$co": "°Maia/factory/os/cotext",
 			"description": "CoText (colist of graphemes) - collaborative plaintext"

@@ -13,38 +13,15 @@
 					{
 						"tag": "div",
 						"class": "paper-content",
-						"children": [
-							{
-								"tag": "div",
-								"class": "paper-example-text",
-								"attrs": {
-									"contenteditable": true
+						"text": {
+							"$join": [
+								{
+									"$context": "selectedNote.content.items"
 								},
-								"text": {
-									"$join": [
-										{
-											"$context": "selectedNote.content.items"
-										},
-										""
-									]
-								},
-								"$on": {
-									"input": {
-										"send": "UPDATE_PAPER",
-										"payload": {
-											"value": "@contentEditableValue"
-										},
-										"$debounce": 250
-									},
-									"blur": {
-										"send": "UPDATE_PAPER",
-										"payload": {
-											"value": "@contentEditableValue"
-										}
-									}
-								}
-							}
-						]
+								""
+							]
+						},
+						"format": "md"
 					}
 				]
 			}

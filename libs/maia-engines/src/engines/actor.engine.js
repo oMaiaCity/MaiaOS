@@ -28,7 +28,6 @@ import {
 } from '../utils/resolve-helpers.js'
 import { traceInbox } from '../utils/trace.js'
 import { getUploadProgressUpdates } from '../utils/upload-progress.js'
-import { isContentEditableActive } from '../utils/utils.js'
 
 const INBOX_DEBOUNCE_MS = 0
 
@@ -298,9 +297,7 @@ export class ActorEngine {
 			actor._renderState = RENDER_STATES.READY
 			return
 		}
-		// Skip rerender when any contenteditable has focus — prevents blur on each keystroke
-		// (Must check globally: parent rerender would destroy child's contenteditable)
-		if (isContentEditableActive()) {
+		if (this._hasContentEditableFocusInTree(actor)) {
 			actor._renderState = RENDER_STATES.READY
 			return
 		}
@@ -317,6 +314,13 @@ export class ActorEngine {
 			},
 		)
 		actor._renderState = RENDER_STATES.READY
+	}
+
+	_hasContentEditableFocusInTree(actor) {
+		if (!actor?.shadowRoot) return false
+		let el = actor.shadowRoot.activeElement
+		while (el?.shadowRoot?.activeElement) el = el.shadowRoot.activeElement
+		return !!el?.isContentEditable
 	}
 
 	/**
