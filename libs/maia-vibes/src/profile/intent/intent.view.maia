@@ -1,0 +1,9 @@
+{
+	"$schema": "°Maia/schema/view",
+	"$id": "°Maia/profile/view/intent",
+	"content": {
+		"tag": "div",
+		"class": "stack",
+		"$slot": "$layout"
+	}
+}

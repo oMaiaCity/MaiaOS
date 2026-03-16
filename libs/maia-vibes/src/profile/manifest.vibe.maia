@@ -1,0 +1,14 @@
+{
+	"$schema": "°Maia/schema/vibe",
+	"$id": "°Maia/vibe/profile",
+	"name": "My Profile",
+	"description": "Update your profile picture",
+	"actor": "°Maia/profile/actor/intent",
+	"runtime": [
+		"browser"
+	],
+	"dependencies": [
+		"°Maia/profile/actor/intent",
+		"°Maia/actor/services/profile-image"
+	]
+}
