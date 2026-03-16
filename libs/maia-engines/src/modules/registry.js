@@ -2,6 +2,53 @@
  * Registry - Central plugin system for MaiaScript module extensions
  */
 
+function createModule(name, config, query = () => null) {
+	const module = { config, query }
+	return {
+		config,
+		async register(registry) {
+			registry.registerModule(name, module, config)
+		},
+	}
+}
+
+const BUILTIN_MODULES = {
+	db: createModule(
+		'db',
+		{
+			version: '1.0.0',
+			description: 'Unified database operation API',
+			namespace: '@maia/actor/os',
+			tools: ['@maia/actor/os/db'],
+		},
+		(q) => (q === 'tools' ? ['@maia/actor/os/db'] : null),
+	),
+	core: createModule('core', {
+		version: '1.0.0',
+		description: 'Core UI tools (view modes, modals, utilities)',
+		namespace: '@core',
+		tools: ['preventDefault'],
+	}),
+	ai: createModule(
+		'ai',
+		{
+			version: '1.0.0',
+			description: 'Unified AI tool for OpenAI-compatible API integration (RedPill)',
+			namespace: '@maia/actor/os',
+			tools: ['@maia/actor/os/ai'],
+		},
+		(q) => (q === 'tools' ? ['@maia/actor/os/ai'] : null),
+	),
+}
+
+/** Register built-in modules (db, core, ai) by name. */
+export async function registerBuiltinModules(registry, moduleNames) {
+	for (const name of moduleNames) {
+		const mod = BUILTIN_MODULES[name]
+		if (mod) await mod.register(registry)
+	}
+}
+
 export class Registry {
 	constructor() {
 		this.modules = new Map() // moduleName → module instance
@@ -15,9 +62,6 @@ export class Registry {
 	 * @param {Object} config - Optional module configuration/metadata
 	 */
 	registerModule(name, module, config = {}) {
-		if (this.modules.has(name)) {
-		}
-
 		this.modules.set(name, module)
 		this.moduleConfigs.set(name, {
 			name,
@@ -93,20 +137,15 @@ export class Registry {
 			console.log(`[Registry] Module "${moduleName}" already loaded`)
 			return
 		}
-
-		// Path relative to modules/ (where registry.js is located)
+		const mod = BUILTIN_MODULES[moduleName]
+		if (mod) {
+			await mod.register(this)
+			return
+		}
 		const path = modulePath || `./${moduleName}.module.js`
 		const module = await import(/* @vite-ignore */ path)
-
-		// Module should have a register method or export a class with static register
-		if (module.default && typeof module.default.register === 'function') {
-			// Class with static register method
-			await module.default.register(this)
-		} else if (typeof module.register === 'function') {
-			// Exported register function
-			await module.register(this)
-		} else {
-		}
+		if (module.default?.register) await module.default.register(this)
+		else if (typeof module.register === 'function') await module.register(this)
 	}
 
 	/**

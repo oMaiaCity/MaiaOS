@@ -19,14 +19,13 @@ import {
 	sanitizePayloadForValidation,
 	stripInfrastructureKeysForValidation,
 } from '../utils/payload-sanitizer.js'
-import { perfChatStart, perfChatStep } from '../utils/perf-chat.js'
-import { perfPipelineStep } from '../utils/perf-pipeline.js'
+import { perfChat, perfPipeline } from '../utils/perf.js'
 import {
 	loadContextStore,
+	readStore,
 	resolveSchemaFromCoValue,
 	resolveToCoId,
 } from '../utils/resolve-helpers.js'
-import { readStore } from '../utils/store-reader.js'
 import { traceInbox } from '../utils/trace.js'
 import { getUploadProgressUpdates } from '../utils/upload-progress.js'
 import { isContentEditableActive } from '../utils/utils.js'
@@ -656,8 +655,11 @@ export class ActorEngine {
 	async deliver(targetId, message) {
 		const isChatSend =
 			message?.type === 'SEND_MESSAGE' && message?.payload != null && 'inputText' in message.payload
-		if (isChatSend) perfChatStart(`deliver SEND_MESSAGE → ${String(targetId).slice(0, 24)}...`)
-		perfPipelineStep('inbox:deliver:start', { type: message?.type, targetId: targetId?.slice(0, 20) })
+		if (isChatSend) perfChat.start(`deliver SEND_MESSAGE → ${String(targetId).slice(0, 24)}...`)
+		perfPipeline.step('inbox:deliver:start', {
+			type: message?.type,
+			targetId: targetId?.slice(0, 20),
+		})
 		traceInbox(message?.source, targetId, message?.type)
 		if (!this.dataEngine?.peer) {
 			throw new Error(
@@ -670,17 +672,17 @@ export class ActorEngine {
 		} catch (err) {
 			throw new Error(`[ActorEngine] cannot resolve target to inbox. ${err?.message || err}`)
 		}
-		perfPipelineStep('inbox:resolveInbox')
+		perfPipeline.step('inbox:resolveInbox')
 		const { inboxCoId, targetActorConfig } = resolved
 		const messageWithTarget = { ...message, target: resolved.resolvedTargetId }
-		if (isChatSend) perfChatStep('_pushMessage (createAndPushMessage)')
+		if (isChatSend) perfChat.step('_pushMessage (createAndPushMessage)')
 		await this._pushMessage(inboxCoId, messageWithTarget)
-		perfPipelineStep('inbox:pushMessage')
-		if (isChatSend) perfChatStep('_pushMessage done')
+		perfPipeline.step('inbox:pushMessage')
+		if (isChatSend) perfChat.step('_pushMessage done')
 		if (targetActorConfig && this.runtime) {
-			if (isChatSend) perfChatStep('ensureActorSpawned (targetActorConfig)')
+			if (isChatSend) perfChat.step('ensureActorSpawned (targetActorConfig)')
 			await this.runtime.ensureActorSpawned(targetActorConfig, inboxCoId)
-			if (isChatSend) perfChatStep('ensureActorSpawned done')
+			if (isChatSend) perfChat.step('ensureActorSpawned done')
 		}
 		if (this.actors?.has(resolved.resolvedTargetId)) {
 			await this.processEvents(resolved.resolvedTargetId)

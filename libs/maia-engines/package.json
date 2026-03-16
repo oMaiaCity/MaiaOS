@@ -7,7 +7,6 @@
 		".": "./src/index.js",
 		"./engines/*": "./src/engines/*",
 		"./modules/*": "./src/modules/*",
-		"./perf": "./src/perf.js",
 		"./utils/*": "./src/utils/*"
 	},
 	"dependencies": {

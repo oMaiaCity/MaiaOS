@@ -19,20 +19,11 @@ import {
 	ModuleRegistry,
 	ProcessEngine,
 	Runtime,
+	registerBuiltinModules,
 	StyleEngine,
 	ViewEngine,
 } from '@MaiaOS/engines'
-import * as aiModule from '@MaiaOS/engines/modules/ai.module.js'
-import * as coreModule from '@MaiaOS/engines/modules/core.module.js'
-import * as dbModule from '@MaiaOS/engines/modules/db.module.js'
 import { validateAgainstFactoryOrThrow } from '@MaiaOS/factories/validation.helper'
-
-// Store pre-loaded modules for registry
-const preloadedModules = {
-	db: dbModule,
-	core: coreModule,
-	ai: aiModule,
-}
 
 /**
  * MaiaOS - Operating System for Actor-based Applications
@@ -405,26 +396,8 @@ export class MaiaOS {
 	 * @param {Object} config - Boot configuration
 	 */
 	static async _loadModules(os, config) {
-		// Load modules (default: db, core)
 		const modules = config.modules || ['db', 'core']
-
-		for (const moduleName of modules) {
-			try {
-				// Check if module is pre-loaded (for bundled standalone kernel)
-				if (preloadedModules[moduleName]) {
-					const module = preloadedModules[moduleName]
-					// Register the pre-loaded module directly
-					if (module.default && typeof module.default.register === 'function') {
-						await module.default.register(os.moduleRegistry)
-					} else if (typeof module.register === 'function') {
-						await module.register(os.moduleRegistry)
-					}
-				} else {
-					// Fallback to dynamic import (for development)
-					await os.moduleRegistry.loadModule(moduleName)
-				}
-			} catch (_error) {}
-		}
+		await registerBuiltinModules(os.moduleRegistry, modules)
 	}
 
 	/**

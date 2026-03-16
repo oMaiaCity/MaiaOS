@@ -92,12 +92,6 @@ export class Runtime {
 	}
 
 	/**
-	 * Ensure headless actor is spawned when target has config but is not running.
-	 * Called from ActorEngine._pushToInbox when message is pushed to non-running target.
-	 * @param {Object} targetActorConfig - Actor config from DB
-	 * @param {string} inboxCoId - Resolved inbox co-id
-	 */
-	/**
 	 * Process inbox for actor: read unprocessed messages, spawn if needed, process.
 	 * Sole executor path — InboxEngine delegates here; holds lock.
 	 */
@@ -127,6 +121,7 @@ export class Runtime {
 		}
 	}
 
+	/** Ensure headless actor is spawned when target has config but is not running. */
 	async ensureActorSpawned(targetActorConfig, _inboxCoId) {
 		const actorId = targetActorConfig.$id || targetActorConfig.id
 		if (!actorId || this.actorEngine.actors.has(actorId)) return

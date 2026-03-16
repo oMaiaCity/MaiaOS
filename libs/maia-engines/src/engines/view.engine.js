@@ -13,9 +13,8 @@ import {
 	shouldThrottle,
 } from '../utils/event-debounce.js'
 import { sanitizePayloadForValidation } from '../utils/payload-sanitizer.js'
-import { perfPipelineStart, perfPipelineStep } from '../utils/perf-pipeline.js'
-import { loadContextStore } from '../utils/resolve-helpers.js'
-import { readStore } from '../utils/store-reader.js'
+import { perfPipeline } from '../utils/perf.js'
+import { loadContextStore, readStore } from '../utils/resolve-helpers.js'
 import { traceView } from '../utils/trace.js'
 import {
 	isContentEditableActive,
@@ -702,7 +701,7 @@ export class ViewEngine {
 			return
 		}
 
-		perfPipelineStart(`view:${eventName}`)
+		perfPipeline.start(`view:${eventName}`)
 		traceView(eventName, actorId)
 
 		if (e.type === 'dragover' || e.type === 'drop' || e.type === 'dragenter') {
@@ -876,7 +875,7 @@ export class ViewEngine {
 			if (allMatch) return
 		}
 
-		perfPipelineStep('view:deliver', { event: eventName })
+		perfPipeline.step('view:deliver', { event: eventName })
 		await this.actorOps?.deliverEvent?.(actorId, actorId, eventName, payloadToValidate)
 
 		if (!isUpdateInputType) {
