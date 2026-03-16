@@ -8,7 +8,7 @@
 	"properties": {
 		"UPDATE_WASM_CODE": {
 			"type": "object",
-			"description": "Update wasm code CoText (full replace)",
+			"description": "Update wasm code CoText (full replace). codeCoId or actorRef required.",
 			"properties": {
 				"actorRef": {
 					"type": "string",
@@ -17,10 +17,13 @@
 				"value": {
 					"type": "string",
 					"description": "New code content (will be split into graphemes)"
+				},
+				"codeCoId": {
+					"type": "string",
+					"description": "CoText co-id (when provided, actorRef is ignored)"
 				}
 			},
 			"required": [
-				"actorRef",
 				"value"
 			],
 			"additionalProperties": false

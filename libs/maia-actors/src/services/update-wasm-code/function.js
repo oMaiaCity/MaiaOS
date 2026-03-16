@@ -56,7 +56,7 @@ export default {
 			try {
 				const codeCoId = await resolveCodeCoId(os, actorRef)
 				if (!codeCoId) {
-					return createSuccessResult({ code: null })
+					return createSuccessResult({ code: null, codeCoId: null })
 				}
 				const codeStore = await readStore(os.dataEngine, codeCoId)
 				const codeData = codeStore?.value
@@ -66,7 +66,7 @@ export default {
 					: typeof codeData === 'string'
 						? codeData
 						: ''
-				return createSuccessResult({ code })
+				return createSuccessResult({ code, codeCoId })
 			} catch (err) {
 				return createErrorResult([
 					createErrorEntry('structural', err?.message || 'Failed to get wasm code'),
@@ -74,15 +74,10 @@ export default {
 			}
 		}
 
-		const { actorRef, value } = payload
+		const { actorRef, value, codeCoId: codeCoIdParam } = payload
 		if (value == null || typeof value !== 'string') {
 			return createErrorResult([
 				createErrorEntry('structural', '[updateWasmCode] value (string) is required'),
-			])
-		}
-		if (!actorRef || typeof actorRef !== 'string') {
-			return createErrorResult([
-				createErrorEntry('structural', '[updateWasmCode] actorRef (string) is required'),
 			])
 		}
 
@@ -93,80 +88,88 @@ export default {
 			])
 		}
 
-		const peer = os.dataEngine?.peer
-		if (!peer) {
-			return createErrorResult([createErrorEntry('structural', '[updateWasmCode] Peer not available')])
+		let codeCoId = codeCoIdParam
+		if (!codeCoId || typeof codeCoId !== 'string' || !codeCoId.startsWith('co_z')) {
+			if (!actorRef || typeof actorRef !== 'string') {
+				return createErrorResult([
+					createErrorEntry('structural', '[updateWasmCode] actorRef or codeCoId is required'),
+				])
+			}
+			const peer = os.dataEngine?.peer
+			if (!peer) {
+				return createErrorResult([
+					createErrorEntry('structural', '[updateWasmCode] Peer not available'),
+				])
+			}
+			try {
+				const actorCoId = await os.do({
+					op: 'resolve',
+					humanReadableKey: actorRef,
+					spark: '°Maia',
+					returnType: 'coId',
+				})
+				if (!actorCoId || typeof actorCoId !== 'string' || !actorCoId.startsWith('co_z')) {
+					return createErrorResult([
+						createErrorEntry('structural', `[updateWasmCode] Could not resolve actor: ${actorRef}`),
+					])
+				}
+				const actorStore = await readStore(os.dataEngine, actorCoId)
+				const actorConfig = actorStore?.value
+				if (!actorConfig || actorConfig.error) {
+					return createErrorResult([
+						createErrorEntry('structural', `[updateWasmCode] Actor config not found: ${actorRef}`),
+					])
+				}
+				let wasmCoId = actorConfig.wasm
+				if (!wasmCoId || typeof wasmCoId !== 'string') {
+					return createErrorResult([
+						createErrorEntry('structural', `[updateWasmCode] Actor has no wasm config: ${actorRef}`),
+					])
+				}
+				if (!wasmCoId.startsWith('co_z')) {
+					wasmCoId = await peer.resolve(wasmCoId, {
+						returnType: 'coId',
+						spark: '°Maia',
+					})
+				}
+				if (!wasmCoId || !wasmCoId.startsWith('co_z')) {
+					return createErrorResult([
+						createErrorEntry(
+							'structural',
+							`[updateWasmCode] Could not resolve wasm config for: ${actorRef}`,
+						),
+					])
+				}
+				const wasmStore = await readStore(os.dataEngine, wasmCoId)
+				const wasmConfig = wasmStore?.value
+				if (!wasmConfig || wasmConfig.error) {
+					return createErrorResult([
+						createErrorEntry('structural', `[updateWasmCode] Wasm config not found: ${actorRef}`),
+					])
+				}
+				codeCoId = wasmConfig.code
+			} catch (err) {
+				return createErrorResult([
+					createErrorEntry('structural', err?.message || 'Failed to resolve code CoText'),
+				])
+			}
+		}
+
+		if (!codeCoId || typeof codeCoId !== 'string' || !codeCoId.startsWith('co_z')) {
+			return createErrorResult([
+				createErrorEntry('structural', '[updateWasmCode] Wasm config has no code CoText'),
+			])
 		}
 
 		try {
-			// 1. Resolve actorRef → actor config co-id
-			const actorCoId = await os.do({
-				op: 'resolve',
-				humanReadableKey: actorRef,
-				spark: '°Maia',
-				returnType: 'coId',
-			})
-			if (!actorCoId || typeof actorCoId !== 'string' || !actorCoId.startsWith('co_z')) {
-				return createErrorResult([
-					createErrorEntry('structural', `[updateWasmCode] Could not resolve actor: ${actorRef}`),
-				])
-			}
-
-			// 2. Read actor config
-			const actorStore = await readStore(os.dataEngine, actorCoId)
-			const actorConfig = actorStore?.value
-			if (!actorConfig || actorConfig.error) {
-				return createErrorResult([
-					createErrorEntry('structural', `[updateWasmCode] Actor config not found: ${actorRef}`),
-				])
-			}
-
-			// 3. Get wasm ref (co-id or registry ref)
-			let wasmCoId = actorConfig.wasm
-			if (!wasmCoId || typeof wasmCoId !== 'string') {
-				return createErrorResult([
-					createErrorEntry('structural', `[updateWasmCode] Actor has no wasm config: ${actorRef}`),
-				])
-			}
-			if (!wasmCoId.startsWith('co_z')) {
-				wasmCoId = await peer.resolve(wasmCoId, {
-					returnType: 'coId',
-					spark: '°Maia',
-				})
-			}
-			if (!wasmCoId || !wasmCoId.startsWith('co_z')) {
-				return createErrorResult([
-					createErrorEntry(
-						'structural',
-						`[updateWasmCode] Could not resolve wasm config for: ${actorRef}`,
-					),
-				])
-			}
-
-			// 4. Read wasm config → get code co-id
-			const wasmStore = await readStore(os.dataEngine, wasmCoId)
-			const wasmConfig = wasmStore?.value
-			if (!wasmConfig || wasmConfig.error) {
-				return createErrorResult([
-					createErrorEntry('structural', `[updateWasmCode] Wasm config not found: ${actorRef}`),
-				])
-			}
-
-			const codeCoId = wasmConfig.code
-			if (!codeCoId || typeof codeCoId !== 'string' || !codeCoId.startsWith('co_z')) {
-				return createErrorResult([
-					createErrorEntry('structural', `[updateWasmCode] Wasm config has no code CoText: ${actorRef}`),
-				])
-			}
-
-			// 5. Apply diff to CoText
+			// Apply diff to CoText
 			const graphemes = [...splitGraphemes(value)]
 			await os.do({
 				op: 'colistApplyDiff',
 				coId: codeCoId,
 				result: graphemes,
 			})
-			return createSuccessResult({ coId: codeCoId, length: graphemes.length })
+			return createSuccessResult({ codeCoId, length: graphemes.length })
 		} catch (err) {
 			console.error('[updateWasmCode] Failed:', err?.message ?? err)
 			return createErrorResult([

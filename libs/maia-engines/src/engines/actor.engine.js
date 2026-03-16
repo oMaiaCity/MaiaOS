@@ -69,6 +69,11 @@ export class ActorEngine {
 		if (actor.context && typeof actor.context._set === 'function') {
 			const merged = { ...(actor.context.value || {}), ...sanitizedUpdates }
 			actor.context._set(merged)
+			// Re-resolve context queries so filter changes (e.g. selectedCodeCoId) take effect immediately
+			// without waiting for async CoMap propagation to the raw contextStore
+			if (typeof actor.context._resolveQueries === 'function') {
+				actor.context._resolveQueries(sanitizedUpdates)
+			}
 		}
 		this._scheduleRerender(actor.id)
 	}

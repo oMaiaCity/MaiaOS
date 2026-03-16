@@ -22,16 +22,6 @@ import layoutQuickjsAddContext from './layout-quickjs-add/context.maia'
 import layoutQuickjsAddInterface from './layout-quickjs-add/interface.maia'
 import quickjsAddVibe from './manifest.vibe.maia'
 
-/** Fallback wasm.code for initial display (live code loads via GET_WASM_CODE on select) */
-const WASM_CODE_BY_ACTOR = {
-	'°Maia/actor/services/sandboxed-add': `({ execute: function(actor, payload) { var a = Number(payload.a) || 0; var b = Number(payload.b) || 0; return { ok: true, data: { result: a + b } }; } })`,
-}
-
-/** Hide placeholder when any dependency is selected (data-has-selection = dependency id) */
-const placeholderHideWhenSelected = Object.fromEntries(
-	(quickjsAddVibe.dependencies || []).map((id) => [id, { display: 'none' }]),
-)
-
 const depsListStyleMerged = {
 	...depsListStyle,
 	components: {
@@ -52,15 +42,6 @@ const depsListStyleMerged = {
 			outline: 'none',
 			':focus': { outline: 'none' },
 		},
-		placeholderText: {
-			...(depsListStyle.components?.placeholderText ?? {}),
-			data: {
-				hasSelection: {
-					'': {},
-					...placeholderHideWhenSelected,
-				},
-			},
-		},
 	},
 }
 
@@ -68,16 +49,19 @@ const depsListContext = {
 	$schema: '°Maia/schema/context',
 	$id: '°Maia/quickjs-add/context/deps-list',
 	title: 'Dependency actors',
-	listItems: (quickjsAddVibe.dependencies || []).map((id) => {
-		const wasmCode = WASM_CODE_BY_ACTOR[id] ?? null
-		return {
-			id,
-			label: id.replace(/^°Maia\//, ''),
-			wasmCode,
-			hasWasmCode: !!wasmCode,
-		}
-	}),
-	selectedItem: { id: '', wasmCode: null, hasWasmCode: false },
+	listItems: (quickjsAddVibe.dependencies || []).map((id) => ({
+		id,
+		label: id.replace(/^°Maia\//, ''),
+	})),
+	hasSelection: false,
+	selectedActorRef: null,
+	selectedCodeCoId: null,
+	selectedWasmCode: {
+		schema: '°Maia/schema/os/cotext',
+		filter: { id: '$selectedCodeCoId' },
+		map: { items: 'items' },
+	},
+	selectedItem: { id: '', label: '' },
 }
 
 export const QuickjsAddVibeRegistry = {

@@ -307,7 +307,11 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 	}
 
 	// Helper to resolve and subscribe to query objects
-	const resolveQueries = async (contextValue) => {
+	// overrides: eager context updates not yet propagated to the raw contextStore
+	const resolveQueries = async (contextValue, overrides = null) => {
+		if (overrides) {
+			contextValue = { ...contextValue, ...overrides }
+		}
 		if (!contextValue || typeof contextValue !== 'object' || Array.isArray(contextValue)) {
 			enqueueUpdate()
 			return
@@ -472,6 +476,10 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 		}
 		queryStores.clear()
 	}
+
+	// Allow external callers (e.g. eager context merge) to trigger query re-resolution
+	// Accepts overrides that get merged with the raw contextStore value for filter evaluation
+	unifiedStore._resolveQueries = (overrides) => resolveQueries(contextStore.value, overrides)
 
 	// Initial resolve
 	await resolveQueries(contextStore.value)
