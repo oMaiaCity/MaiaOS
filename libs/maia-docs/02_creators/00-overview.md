@@ -2,6 +2,40 @@
 
 Creator-facing documentation for building with MaiaOS.
 
+## Architecture Principles
+
+### Separation of Concerns (Nue.js-Style)
+
+MaiaOS enforces **strict separation of concerns**—each layer has one job. No mixing.
+
+| Layer | Has Conditional Logic? | Responsibility |
+|-------|------------------------|----------------|
+| **Views** | **No** — Zero logic, zero conditionals | Pure declarative structure. References context, sends events. |
+| **Context** | **No** — Pure data storage | Single source of truth. All UI state, all data. Persisted to CoValues. |
+| **Process handlers** | **Yes** | All logic, computation, conditionals. Updates context via `ctx`. |
+| **CSS** | **Yes** (styling only) | Conditional styling via data-attributes. Matches context-derived values. |
+
+**Views are "dumb" templates**—like Nue.js, they contain zero conditional logic. Process handlers think. Context stores. Views render. CSS styles.
+
+### UI State: Single Source of Truth in Context
+
+**All UI state lives in context.** No in-memory hacks, no ephemeral state, no `useState`-style local variables.
+
+- ✅ **Context = CoValue** — Persisted, syncable, offline-first
+- ✅ **Single source of truth** — One place for `viewMode`, `newTodoText`, `selectedItems`, etc.
+- ✅ **No shortcuts** — Every update goes through `ctx` → CoValue → ReactiveStore → View
+
+### Local-First, CoValue-Native Roundtrip
+
+**All data flows through CoValues.** No optimizing updates, no in-memory caches that bypass persistence.
+
+- ✅ **Data roundtrip** — Create/update/delete → CoValue (CRDT) → ReactiveStore → View
+- ✅ **Query objects** — Declared in context, resolved via `read()` → ReactiveStore (CoValue-backed)
+- ✅ **Offline-first** — CoValues sync when connected; local-first when not
+- ✅ **Full architecture** — Leverage CoJSON end-to-end. No shortcuts.
+
+---
+
 ## Documentation Order
 
 Read the documentation in the following order for a complete understanding:
@@ -22,7 +56,7 @@ Read the documentation in the following order for a complete understanding:
 ### 3. [Actors](./03-actors/)
 **Actor-Based Component System**
 - What are Actors?
-- **Architectural roles:** State machine defines transitions, context contains data, view renders from context
+- **Architectural roles:** Process handlers define behavior, context contains data, view renders from context
 - **Single source of truth:** Everything persisted to CoValues, accessed via ReactiveStore
 - **Vibe-first development** (create vibe root service actor first!)
 - Actor lifecycle
@@ -38,19 +72,18 @@ Read the documentation in the following order for a complete understanding:
 - Context composition
 - Data flow
 
-### 5. [State](./05-state/)
-**State Management**
-- State machines
-- State transitions
-- Event handling
-- Reactive state
+### 5. [Process Handlers](./05-state/)
+**Process Handlers**
+- Event handlers (op, ctx, tell)
+- Event flow
+- Error handling
+- Reactive updates
 
-### 6. [Tools](./06-tools/)
-**Tool System**
-- Tool definitions
-- Tool execution
-- Tool composition
-- Custom tools
+### 6. [Tools & Messaging](./06-tools/)
+**Tools and Messaging**
+- op action (data operations)
+- tell action (inter-actor messaging)
+- ctx action (context updates)
 
 ### 7. [Operations](./07-operations/)
 **Database Operations API**
@@ -105,11 +138,11 @@ This documentation is for **creators** who want to:
 ## What You'll Learn
 
 - How to use MaiaScript (`.maia` files)
-- How to compose actors, state machines, views, and styles
+- How to compose actors, process handlers, views, and styles
 - How to create AI-powered features with skills
 - How to manage state and context
 - How to build reactive, collaborative applications
-- **Architectural roles:** State machine defines transitions, context contains data, view renders from context
+- **Architectural roles:** Process handlers define behavior, context contains data, view renders from context
 - **Single source of truth:** Everything is persisted to CoValues, accessed reactively via universal `read()` API
 
 ---

@@ -128,12 +128,12 @@ User clicks "Add" button in Composite
 Composite: CREATE_BUTTON { text: "Buy milk" }
   └─ Forwards to Vibe: CREATE_BUTTON { text: "Buy milk" }
       ↓
-Vibe: Executes @db tool (op: "create")
-  ├─ Publishes: TODO_CREATED { id: "123", text: "Buy milk" }
-  └─ Publishes: INPUT_CLEARED → Composite
+Vibe: Executes op.create
+  ├─ tell(SUCCESS) to Composite
+  └─ Composite receives SUCCESS (clears newTodoText via ctx)
       ↓
-Composite: Receives INPUT_CLEARED
-  └─ Updates local state (newTodoText: "")
+Composite: Receives SUCCESS
+  └─ ctx: { newTodoText: "" }
 ```
 
 ### Message Routing
@@ -214,14 +214,13 @@ App Service Actor
 
 ### Targeted Messaging
 
-**Send to specific actors instead of broadcasting:**
+**Send to specific actors with `tell`:**
 ```json
 {
-  "tool": "@core/publishMessage",
-  "payload": {
+  "tell": {
+    "target": "°Maia/actor/views/composite",
     "type": "VIEW_MODE_UPDATED",
-    "payload": {...},
-    "target": "actor_composite_001"  // ← Targeted
+    "payload": {...}
   }
 }
 ```
@@ -233,19 +232,17 @@ App Service Actor
 
 ### Message Batching
 
-**Batch multiple updates:**
+**Batch multiple ctx updates in one handler:**
 ```json
 {
-  "tool": "@core/publishMessage",
-  "payload": {
-    "type": "BATCH_UPDATE",
-    "payload": {
-      "messages": [
-        { "type": "TODO_CREATED", "payload": {...} },
-        { "type": "NOTE_CREATED", "payload": {...} }
-      ]
+  "BATCH_UPDATE": [
+    {
+      "ctx": {
+        "todoCreated": "$$result.id",
+        "noteCreated": "$$result.id"
+      }
     }
-  }
+  ]
 }
 ```
 

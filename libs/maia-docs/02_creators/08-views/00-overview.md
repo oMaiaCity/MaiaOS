@@ -2,23 +2,32 @@
 
 **Views** define the UI representation of an actor. They are declarative JSON structures that the ViewEngine renders to Shadow DOM.
 
-## Philosophy
+## Philosophy: Separation of Concerns (Nue.js-Style)
 
 > Views are the EYES of an actor. They visualize context and capture user events.
 
-**CRITICAL ARCHITECTURE:**
-- **Templates are "dumb"** - Pure declarative structure, zero logic, zero conditionals
-- **State Machines define the state** - All logic, computation, and state transitions happen here
-- **Context is the realtime reactive snapshot** - The current reflection of state, automatically updated when state changes
-- **ViewEngine** handles HOW to render (imperative)
-- **CSS** handles conditional styling via data-attributes (no `$if` in views!)
-- **Events** trigger state machine transitions
+**MaiaOS enforces strict separation of concerns**—similar to Nue.js. Each layer has one job. Views contain **zero conditional logic**.
+
+| Layer | Conditional Logic? | Responsibility |
+|-------|--------------------|----------------|
+| **Views** | **No** | Pure declarative structure. Reference context, send events. |
+| **Context** | **No** | Single source of truth. All UI state persisted to CoValues. |
+| **Process handlers** | **Yes** | All logic, computation, conditionals. |
+| **CSS** | **Yes** (styling) | Conditional styling via data-attributes. |
+
+**CRITICAL:**
+- **Views = dumb templates** — Pure declarative structure, zero logic, zero conditionals
+- **Process handlers** — All logic, computation, state transitions
+- **Context** — Realtime reactive snapshot, single source of truth (CoValue-backed)
+- **ViewEngine** — Handles HOW to render (imperative)
+- **CSS** — Handles conditional styling via data-attributes (no `$if` in views!)
+- **Events** — Trigger process handler execution
 
 **The Flow:**
 ```
-State Machine (defines state) 
+Process Handler (defines behavior, computes values)
   ↓
-Updates Context (realtime reactive snapshot)
+ctx → Context CoValue (single source of truth, persisted)
   ↓
 View Template (dumb, just renders context)
   ↓
@@ -84,13 +93,14 @@ Create a file named `{name}.view.maia`:
 }
 ```
 
-**CRITICAL:** Views are **"dumb" templates** - they contain **zero conditional logic**. All conditionals are handled by:
-- **State Machine** → defines state, computes boolean flags → stores in context
-- **Context** → realtime reactive snapshot of current state reflection
-- **View** → dumb template, just references context values → maps to data-attributes
+**CRITICAL:** Views are **"dumb" templates** — they contain **zero conditional logic**. All conditionals live in process handlers and CSS:
+
+- **Process handler** → computes boolean flags, lookup objects → stores in context via `ctx`
+- **Context** → single source of truth (CoValue-backed), realtime reactive snapshot
+- **View** → dumb template, references context values → maps to data-attributes
 - **CSS** → matches data-attributes → applies conditional styles
 
-**Remember:** Templates don't think, they just render. State machines think. Context reflects.
+**Remember:** Templates don't think, they just render. Process handlers think. Context reflects. No `$if`, `$eq`, or any logic in views.
 
 ## HTML Tags
 
@@ -139,7 +149,7 @@ All standard HTML tags are supported:
 
 ### Data-Attribute Mapping
 
-Data-attributes are the primary mechanism for conditional styling. The state machine computes values, and views map them to data-attributes:
+Data-attributes are the primary mechanism for conditional styling. Process handlers compute values, and views map them to data-attributes:
 
 **String Shorthand:**
 ```json
@@ -179,7 +189,7 @@ Data-attributes are the primary mechanism for conditional styling. The state mac
 ```
 
 **How it works:**
-1. State machine computes `draggedItemIds: { "item-123": true }` in context
+1. Process handler computes `draggedItemIds: { "item-123": true }` in context
 2. View references `"$draggedItemIds.$$id"` for each item
 3. ViewEngine looks up `draggedItemIds[item.id]` → sets `data-is-dragged="true"`
 4. CSS matches `[data-is-dragged="true"]` → applies styles
@@ -306,10 +316,10 @@ Use this canonical pattern for input fields with a submit button. Both Enter key
 
 ## Conditional Styling (No Conditional Logic in Views!)
 
-**CRITICAL:** Views are **"dumb" templates** - they contain **zero conditional logic**. All conditionals are handled by the state machine and CSS:
+**CRITICAL:** Views are **"dumb" templates** - they contain **zero conditional logic**. All conditionals are handled by process handlers and CSS:
 
 **Architecture:**
-- **State Machine** → Defines state, computes boolean flags and lookup objects
+- **Process handler** → Defines behavior, computes boolean flags and lookup objects
 - **Context** → Realtime reactive snapshot of current state reflection  
 - **View Template** → Dumb, just references context → maps to data-attributes
 - **CSS** → Handles conditional styling via data-attributes
@@ -324,15 +334,19 @@ Use this canonical pattern for input fields with a submit button. Both Enter key
 - ❌ State changes: Views never update context directly
 - ❌ Complex expressions: Only simple data resolution allowed
 
-### Pattern: State Machine → Context → Data-Attributes → CSS
+### Pattern: Process Handler → Context → Data-Attributes → CSS
 
-**1. State Machine computes boolean flags:**
+**1. Process handler computes boolean flags:**
 ```json
 {
-  "updateContext": {
-    "listButtonActive": {"$eq": ["$$viewMode", "list"]},
-    "kanbanButtonActive": {"$eq": ["$$viewMode", "kanban"]}
-  }
+  "SWITCH_VIEW": [
+    {
+      "ctx": {
+        "listButtonActive": {"$eq": ["$$viewMode", "list"]},
+        "kanbanButtonActive": {"$eq": ["$$viewMode", "kanban"]}
+      }
+    }
+  ]
 ```
 
 **2. View references context values:**

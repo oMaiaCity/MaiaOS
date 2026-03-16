@@ -14,7 +14,7 @@ A vibe is a JSON manifest file (`.vibe.maia`) that serves as an "app store listi
 
 **What vibes are NOT:**
 - Not the app itself (that's the actor)
-- Not execution logic (that's in state machines and tools)
+- Not execution logic (that's in process handlers)
 - Not UI definitions (that's in views)
 
 > **Analogy:** If actors are the "executable," vibes are the "app store listing" that describes and loads them.
@@ -108,7 +108,7 @@ todos/
 ├── vibe/                 # Vibe root service actor (ALWAYS CREATE FIRST)
 │   ├── vibe.actor.maia
 │   ├── vibe.context.maia
-│   ├── vibe.state.maia
+│   ├── vibe.process.maia
 │   ├── vibe.view.maia
 │   ├── vibe.inbox.maia
 │   └── brand.style.maia
@@ -199,18 +199,26 @@ The vibe root actor orchestrates the application and loads UI actors as children
   <div id="app-container"></div>
   
   <script type="module">
-    import { MaiaOS } from '@MaiaOS/loader';
+    import { MaiaOS, signInWithPasskey } from '@MaiaOS/loader';
+    import { TodosVibeRegistry } from '@MaiaOS/vibes';
     
     async function boot() {
-      // Boot MaiaOS
-      const os = await MaiaOS.boot({
-        modules: ['db', 'core', 'dragdrop']
+      // 1. Authenticate (required for node + account)
+      const { node, account } = await signInWithPasskey({ salt: 'maia.city' });
+      
+      // 2. Boot MaiaOS with node, account, and vibe registry
+      const maia = await MaiaOS.boot({
+        node,
+        account,
+        modules: ['db', 'core', 'ai'],
+        registry: TodosVibeRegistry,
       });
       
-      // Load vibe
-      const { vibe, actor } = await os.loadVibe(
-        './vibes/myapp/myapp.vibe.maia',
-        document.getElementById('app-container')
+      // 3. Load vibe by key from account.registries.sparks[°Maia].vibes
+      const { vibe, actor } = await maia.loadVibeFromAccount(
+        'todos',
+        document.getElementById('app-container'),
+        '°Maia'
       );
       
       console.log('Loaded vibe:', vibe.name);
@@ -226,25 +234,26 @@ The vibe root actor orchestrates the application and loads UI actors as children
 ### What Happens When You Load a Vibe?
 
 ```
-os.loadVibe(path, container)
+maia.loadVibeFromAccount(vibeKey, container, spark)
   ↓
-1. Fetch vibe manifest
+1. Lookup vibe co-id from account.registries.sparks[spark].vibes[vibeKey]
   ↓
-2. Validate vibe structure
+2. Load vibe manifest (CoValue)
   ↓
-3. Resolve actor path (relative to vibe)
+3. Resolve actor co-id from vibe.actor
   ↓
-4. Load and create actor
+4. Create actor via createActorForView
   ↓
 5. Return { vibe, actor }
 ```
 
-The `loadVibe()` method:
-- Fetches the vibe manifest from the specified path
-- Validates that it's a proper vibe (`$factory: "@factory/vibe"`)
-- Resolves the actor path relative to the vibe location (when loading from file)
-- Calls `os.createActor()` with the resolved path
+The `loadVibeFromAccount()` method:
+- Requires registry at boot (for seeding)
+- Loads vibe by **key** (e.g. `'todos'`) from `account.registries.sparks[°Maia].vibes`
+- Vibe manifest must be seeded to account during initial setup
 - Returns both the vibe metadata and the created actor
+
+**`loadVibe(vibeKeyOrCoId, container, spark)`** is an alias that delegates to `loadVibeFromAccount`.
 
 ## Vibe vs Actor vs View
 
@@ -254,7 +263,7 @@ Understanding the hierarchy:
 Vibe (App Manifest)
   └── Actor (Component)
         ├── Context (Runtime Data)
-        ├── State (Behavior)
+        ├── Process (Behavior)
         ├── View (UI)
         └── Style (Appearance)
 ```

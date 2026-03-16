@@ -79,26 +79,26 @@ vibes/todos/
 ├── vibe/                   # Vibe root service actor (ALWAYS CREATE FIRST)
 │   ├── vibe.actor.maia     # Root actor definition
 │   ├── vibe.context.maia   # Root context (defines children via @actors)
-│   ├── vibe.state.maia     # Root state machine
+│   ├── vibe.process.maia   # Root process handlers
 │   ├── vibe.view.maia      # Minimal view (renders child)
 │   ├── vibe.inbox.maia     # Inbox costream
 │   └── brand.style.maia    # Shared design system
 ├── composite/              # Composite actor (first UI actor)
 │   ├── composite.actor.maia
 │   ├── composite.context.maia
-│   ├── composite.state.maia
+│   ├── composite.process.maia
 │   ├── composite.view.maia
 │   └── composite.inbox.maia
 ├── list/                   # UI actor
 │   ├── list.actor.maia
 │   ├── list.context.maia
-│   ├── list.state.maia
+│   ├── list.process.maia
 │   ├── list.view.maia
 │   └── list.inbox.maia
 └── kanban/                 # UI actor
     ├── kanban.actor.maia
     ├── kanban.context.maia
-    ├── kanban.state.maia
+    ├── kanban.process.maia
     ├── kanban.view.maia
     └── kanban.inbox.maia
 ```
@@ -134,15 +134,21 @@ vibes/todos/
   <div id="actor-todo"></div>
   
   <script type="module">
-    import { MaiaOS } from '@MaiaOS/loader';
+    import { MaiaOS, signInWithPasskey } from '@MaiaOS/loader';
+    import { TodosVibeRegistry } from '@MaiaOS/vibes';
     
     async function boot() {
-      const os = await MaiaOS.boot({
-        modules: ['db', 'core', 'dragdrop']
+      const { node, account } = await signInWithPasskey({ salt: 'maia.city' });
+      
+      const maia = await MaiaOS.boot({
+        node,
+        account,
+        modules: ['db', 'core', 'ai'],
+        registry: TodosVibeRegistry,
       });
       
-      // Load the vibe (by key from account.registries.sparks[°Maia].vibes or by co-id)
-      const { vibe, actor } = await os.loadVibe(
+      // Load vibe by key from account.registries.sparks[°Maia].vibes
+      const { vibe, actor } = await maia.loadVibeFromAccount(
         'todos',
         document.getElementById('actor-todo'),
         '°Maia'

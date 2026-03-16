@@ -1,239 +1,235 @@
-Create a file named `{name}.state.maia`:
+# Process Structure
+
+Create a file named `{name}.process.maia`:
 
 ```json
 {
-  "$factory": "@factory/state",
-  "$id": "@state/todo",
-  
-  "initial": "idle",
-  
-  "states": {
-    "idle": {
-      "on": {
-        "CREATE_TODO": {
-          "target": "creating"
-        }
-      }
-    },
-    "creating": {
-      "entry": {
-        "tool": "@db",
-        "payload": {
-          "op": "create",
-          "factory": "co_z...",
-          "data": {"text": "$newTodoText", "done": false}
+  "$factory": "°Maia/factory/process",
+  "$id": "°Maia/actor/services/todos/process",
+  "@label": "@maia/actor/services/todos/process",
+  "handlers": {
+    "CREATE_TODO": [
+      {
+        "op": {
+          "create": {
+            "factory": "°Maia/factory/data/todos",
+            "data": {
+              "text": "$$value",
+              "done": false
+            }
+          }
         }
       },
-      "on": {
-        "SUCCESS": "idle",
-        "ERROR": "error"
+      {
+        "tell": {
+          "target": "$$source",
+          "type": "SUCCESS",
+          "payload": {}
+        }
       }
-    },
-    "error": {
-      "on": {
-        "RETRY": "idle"
+    ],
+    "TOGGLE_TODO": [
+      {
+        "op": {
+          "update": {
+            "id": "$$id",
+            "data": {
+              "done": { "$not": "$$done" }
+            }
+          }
+        }
+      },
+      {
+        "tell": {
+          "target": "$$source",
+          "type": "SUCCESS",
+          "payload": {}
+        }
       }
-    }
-  }
-}
-```
-
-**Note:** 
-- `$factory` and `$id` use factory references (`@factory/state`, `@state/todo`) that are transformed to co-ids during seeding
-- The `factory` field in tool payloads must be a co-id (`co_z...`) - factory references (`@factory/todos`) are transformed to co-ids during seeding
-- In your source files, you can use schema references, but at runtime they become co-ids
-
-## State Definition
-
-```json
-{
-  "stateName": {
-    "entry": {...},      // Action(s) when entering state
-    "exit": {...},       // Action(s) when leaving state
-    "on": {              // Event handlers
-      "EVENT_NAME": {...}
-    }
-  }
-}
-```
-
-### Entry/Exit Actions
-
-Entry and exit actions can be:
-- **Single action object** - One tool or updateContext action
-- **Array of actions** - Multiple actions executed in order
-- **Co-id reference** - Reference to an action CoValue
-
-**Single action:**
-```json
-{
-  "creating": {
-    "entry": {
-      "tool": "@db",
-      "payload": { "op": "create", ... }
-    }
-  }
-}
-```
-
-**Multiple actions (array):**
-```json
-{
-  "creating": {
-    "entry": [
-      {"tool": "@core/showLoading", "payload": {}},
-      {"tool": "@db", "payload": { "op": "create", ... }},
-      {"updateContext": { "newTodoText": "" }}
+    ],
+    "DELETE_TODO": [
+      {
+        "op": {
+          "delete": {
+            "id": "$$id"
+          }
+        }
+      },
+      {
+        "tell": {
+          "target": "$$source",
+          "type": "SUCCESS",
+          "payload": {}
+        }
+      }
+    ],
+    "SUCCESS": [
+      { "ctx": {} }
+    ],
+    "ERROR": [
+      {
+        "ctx": {
+          "error": "$$errors.0.message"
+        }
+      }
     ]
   }
 }
 ```
 
-**Important:** All `updateContext` actions in a single transition are batched together and written to the context CoValue once at the end. This ensures efficient CRDT updates.
+**Note:**
+- `$factory` and `$id` use factory references (`°Maia/factory/process` or `@factory/process`) that are transformed to co-ids during seeding
+- The `factory` field in `op.create` can be a factory reference (`°Maia/factory/data/todos`) or co-id (`co_z...`) — references are resolved at runtime
 
-## Transitions
+## Handler Structure
 
-### Simple Transition
 ```json
 {
-  "on": {
-    "CANCEL": "idle"  // Just target state
+  "handlers": {
+    "EVENT_NAME": [
+      { "op": {...} },
+      { "ctx": {...} },
+      { "tell": {...} },
+      { "ask": {...} },
+      { "guard": {...} },
+      { "function": true }
+    ]
   }
 }
 ```
 
-### Guarded Transition
+### Action Types
+
+| Action | Purpose |
+|--------|---------|
+| `op` | Data operation (create, update, delete) — calls DataEngine directly |
+| `ctx` | Update context CoValue |
+| `tell` | Fire-and-forget message to another actor |
+| `ask` | Request-response to another actor (replyTo = sender) |
+| `guard` | Conditional — only run following actions if guard passes |
+| `function` | Run actor's executableFunction (for service actors like @db) |
+
+### `op` — Data Operations
+
+Direct DataEngine calls. No tool indirection.
+
+**Create:**
 ```json
 {
-  "on": {
-    "SUBMIT": {
-      "target": "submitting",
-      "guard": {
-        "schema": {
-          "type": "object",
-          "properties": {
-            "canSubmit": { "const": true },
-            "status": { "const": "ready" }
-          },
-          "required": ["canSubmit", "status"]
-        }
+  "op": {
+    "create": {
+      "factory": "°Maia/factory/data/todos",
+      "data": {
+        "text": "$$value",
+        "done": false
       }
     }
   }
 }
 ```
 
-**Note:** Guards validate against state/context conditions only. Payload validation (e.g., checking if email is not empty) happens in ActorEngine via message type schemas before the message reaches the state machine.
-
-### Self-Transition (No State Change)
+**Update:**
 ```json
 {
-  "on": {
-    "UPDATE_INPUT": {
-      "target": "idle",  // Stay in same state
-      "actions": [{"updateContext": {...}}]
+  "op": {
+    "update": {
+      "id": "$$id",
+      "data": {
+        "done": { "$not": "$$done" }
+      }
     }
   }
 }
 ```
 
-## Guards (Conditional Logic)
+**Delete:**
+```json
+{
+  "op": {
+    "delete": {
+      "id": "$$id"
+    }
+  }
+}
+```
 
-**CRITICAL ARCHITECTURAL SEPARATION:**
+**Important:** If `op` fails, ProcessEngine automatically delivers `ERROR` to the event source. On success, you typically `tell` SUCCESS to the source.
 
-Guards are for **conditional logic** based on state/context conditions. They answer: "Should this transition happen given the current state?"
+### `ctx` — Context Updates
 
-**Guards are NOT for payload validation** - payload validation happens in ActorEngine BEFORE the message reaches the state machine.
+Update the actor's context CoValue. All `ctx` updates in a handler run are batched and written once at the end.
 
-### Schema-Based Guards
+```json
+{
+  "ctx": {
+    "newTodoText": "",
+    "error": null
+  }
+}
+```
 
-Guards use JSON Schema to validate against the current state and context:
+Use MaiaScript expressions for computed values:
+
+```json
+{
+  "ctx": {
+    "listButtonActive": { "$eq": ["$$viewMode", "list"] },
+    "kanbanButtonActive": { "$eq": ["$$viewMode", "kanban"] }
+  }
+}
+```
+
+### `tell` — Send Message to Another Actor
+
+Fire-and-forget. Target can be a co-id or expression (`$$source`, `°Maia/actor/services/todos`).
+
+```json
+{
+  "tell": {
+    "target": "$$source",
+    "type": "SUCCESS",
+    "payload": {}
+  }
+}
+```
+
+```json
+{
+  "tell": {
+    "target": "°Maia/actor/services/todos",
+    "type": "TOGGLE_TODO",
+    "payload": {
+      "id": "$$id",
+      "done": "$$done"
+    }
+  }
+}
+```
+
+### `guard` — Conditional Actions
+
+Only run the following actions if the guard passes. Guards can use `$onlyWhenOriginated` (event came from this actor's view) or schema-based context validation.
 
 ```json
 {
   "guard": {
-    "schema": {
-      "type": "object",
-      "properties": {
-        "status": { "const": "ready" },
-        "canSubmit": { "const": true }
-      },
-      "required": ["status", "canSubmit"]
-    }
+    "$onlyWhenOriginated": true
   }
-}
-```
-
-This guard checks if `context.status` equals "ready" AND `context.canSubmit` is true.
-
-### Guard Examples
-
-**Check context state:**
-```json
+},
 {
-  "guard": {
-    "schema": {
-      "type": "object",
-      "properties": {
-        "status": { "const": "ready" }
-      },
-      "required": ["status"]
-    }
-  }
+  "ctx": { "phase": "submitted" }
 }
 ```
-
-**Check multiple context conditions:**
-```json
-{
-  "guard": {
-    "schema": {
-      "type": "object",
-      "properties": {
-        "canCreate": { "const": true },
-        "isNotCreating": { "const": true }
-      },
-      "required": ["canCreate", "isNotCreating"]
-    }
-  }
-}
-```
-
-**Check numeric context values:**
-```json
-{
-  "guard": {
-    "schema": {
-      "type": "object",
-      "properties": {
-        "count": { "type": "number", "minimum": 1 }
-      },
-      "required": ["count"]
-    }
-  }
-}
-```
-
-### When to Use Guards
-
-**✅ Use guards for:**
-- Checking if actor is in the right state to handle a message
-- Checking context conditions (e.g., `context.canSubmit === true`)
-- Conditional logic based on runtime state
-
-**❌ Do NOT use guards for:**
-- Payload validation (e.g., checking if `$$text` is not empty) - this belongs in message type schemas
-- Data structure validation - this happens in ActorEngine before the state machine
 
 ## Payload Resolution
 
-Use MaiaScript expressions in payloads:
+Use MaiaScript expressions in action configs:
 
 ### Context Variables (`$`)
 ```json
 {
-  "payload": {
-    "text": "$newTodoText",      // From actor.context.newTodoText
+  "data": {
+    "text": "$newTodoText",
     "mode": "$viewMode"
   }
 }
@@ -242,51 +238,40 @@ Use MaiaScript expressions in payloads:
 ### Event Payload (`$$`)
 ```json
 {
-  "payload": {
-    "id": "$$id",                // From event payload (e.g., {id: "123"})
-    "value": "$$value"
+  "data": {
+    "id": "$$id",
+    "value": "$$value",
+    "source": "$$source"
   }
 }
 ```
 
-### Nested Objects (Recursive Evaluation)
-```json
-{
-  "payload": {
-    "factory": "todos",
-    "data": {
-      "text": "$newTodoText",    // Evaluated recursively
-      "done": false,             // Literal value
-      "timestamp": "$now"
-    }
-  }
-}
-```
+**`$$source`** — Co-id of the actor that sent the event (for `tell` back to caller).
 
 ## Computing Boolean Flags for Conditional Styling
 
-**CRITICAL: Views contain zero conditional logic.** State machines compute boolean flags and lookup objects that views reference. This ensures clean separation of concerns and enables distributed message passing (only resolved values can be persisted to CoJSON).
+**CRITICAL: Views contain zero conditional logic.** Process handlers compute boolean flags and lookup objects that views reference.
 
-**Pattern: State Machine Computes → View References → CSS Styles**
+**Pattern: Process Handler Computes → View References → CSS Styles**
 
 ```json
 {
-  "SWITCH_VIEW": {
-    "target": "idle",
-    "actions": [{
-      "updateContext": {
+  "SWITCH_VIEW": [
+    {
+      "ctx": {
         "viewMode": "$$viewMode",
-        "listButtonActive": {"$eq": ["$$viewMode", "list"]},      // Compute flag
-        "kanbanButtonActive": {"$eq": ["$$viewMode", "kanban"]},   // Compute flag
+        "listButtonActive": { "$eq": ["$$viewMode", "list"] },
+        "kanbanButtonActive": { "$eq": ["$$viewMode", "kanban"] },
         "currentView": {
           "$if": {
-            "condition": {"$eq": ["$$viewMode", "list"]},
+            "condition": { "$eq": ["$$viewMode", "list"] },
             "then": "@list",
             "else": "@kanban"
           }
         }
-      }]
-  }
+      }
+    }
+  ]
 }
 ```
 
@@ -294,7 +279,7 @@ Use MaiaScript expressions in payloads:
 ```json
 {
   "attrs": {
-    "data": "$listButtonActive"  // Simple reference, no conditionals!
+    "data": "$listButtonActive"
   }
 }
 ```

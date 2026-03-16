@@ -1,10 +1,18 @@
 # Loader (Getting Started)
 
-The **Loader** is the single entry point for MaiaOS. It boots the operating system, loads modules, and creates your first actor.
+The **Loader** is the single entry point for MaiaOS. It boots the operating system, loads modules, and creates actors.
+
+## Boot Requirements
+
+**CRITICAL:** `MaiaOS.boot()` requires either:
+- `{ node, account }` — From auth (signInWithPasskey, loadOrCreateAgentAccount)
+- `{ peer }` — Pre-configured MaiaDB peer
+
+Boot **cannot** run with only `modules`. You must authenticate first to get `node` and `account`.
 
 ## Quick Start
 
-### 1. Basic HTML Setup
+### 1. Auth + Boot + Load Vibe
 
 ```html
 <!DOCTYPE html>
@@ -13,28 +21,34 @@ The **Loader** is the single entry point for MaiaOS. It boots the operating syst
   <title>My First MaiaOS App</title>
 </head>
 <body>
-  <!-- Actor container -->
-  <div id="actor-todo"></div>
+  <div id="app"></div>
 
-  <!-- Import MaiaOS Loader -->
   <script type="module">
-    import { MaiaOS } from '@MaiaOS/loader';
-    
+    import { MaiaOS, signInWithPasskey } from '@MaiaOS/loader';
+    import { TodosVibeRegistry } from '@MaiaOS/vibes';
+
     async function boot() {
-      // Boot the operating system
-      const os = await MaiaOS.boot({
-        modules: ['db', 'core']  // Default modules
+      // 1. Authenticate (required for node + account)
+      const { node, account } = await signInWithPasskey({ salt: 'maia.city' });
+
+      // 2. Boot MaiaOS with node, account, and vibe registry
+      const maia = await MaiaOS.boot({
+        node,
+        account,
+        modules: ['db', 'core', 'ai'],
+        registry: TodosVibeRegistry,
       });
-      
-      // Create an actor
-      const actor = await os.createActor(
-        './maia/todo.actor.maia',
-        document.getElementById('actor-todo')
+
+      // 3. Load vibe from account (by key, not file path)
+      const { vibe, actor } = await maia.loadVibeFromAccount(
+        'todos',
+        document.getElementById('app'),
+        '°Maia'
       );
-      
-      console.log('✅ App booted!', actor);
+
+      console.log('✅ App booted!', vibe.name, actor);
     }
-    
+
     boot();
   </script>
 </body>
@@ -44,117 +58,111 @@ The **Loader** is the single entry point for MaiaOS. It boots the operating syst
 ### 2. Boot Configuration
 
 ```javascript
-const os = await MaiaOS.boot({
-  // Modules to load (default: ['db', 'core'])
-  modules: ['db', 'core']  // Add 'dragdrop' if needed
+const maia = await MaiaOS.boot({
+  // Required: either peer OR (node + account)
+  node,           // From signInWithPasskey or loadOrCreateAgentAccount
+  account,        // From signInWithPasskey or loadOrCreateAgentAccount
+  // OR: peer,   // Pre-configured MaiaDB
+
+  // Optional
+  modules: ['db', 'core', 'ai'],  // Default: ['db', 'core']
+  registry: TodosVibeRegistry,    // Vibe registry for seeding/loading
+  getMoaiBaseUrl: () => 'https://sync.example.com',  // For createSpark POST
 });
 ```
 
 ## What Happens During Boot?
 
-1. **Initialize Database** - Sets up database backend (CoJSON or IndexedDB)
-2. **Initialize Module Registry** - Prepares dynamic module loading
-3. **Initialize Engines** - Boots all execution engines:
-   - `ActorEngine` - Manages actor lifecycle
-   - `StateEngine` - Interprets state machines
-   - `ViewEngine` - Renders views
-   - `ToolEngine` - Executes tools
-   - `StyleEngine` - Compiles styles
-   - `MaiaScriptEvaluator` - Evaluates DSL expressions
-   - `DataEngine` - Unified data operations via **maia.do({ op, schema, key, ... })**
-4. **Load Modules** - Dynamically loads specified modules (default: `['db', 'core']`)
-5. **Register Tools** - Each module registers its tools
+1. **Initialize DataEngine** — Requires `peer` (MaiaDB) or creates one from `node` + `account`
+2. **Initialize Module Registry** — Prepares dynamic module loading
+3. **Initialize Engines** — Boots all execution engines:
+   - `ActorEngine` — Manages actor lifecycle
+   - `ProcessEngine` — Interprets process handlers (event → actions)
+   - `ViewEngine` — Renders views
+   - `StyleEngine` — Compiles styles
+   - `MaiaScriptEvaluator` — Evaluates DSL expressions
+   - `DataEngine` — Unified data operations via **maia.do({ op, factory, key, filter, ... })**
+4. **Load Modules** — Dynamically loads specified modules (default: `['db', 'core']`)
+5. **Register Tools** — Each module registers its tools (e.g. @maia/actor/os/db)
 
 ## Available Modules
 
 ### Database Module (`db`)
-Unified database operations through a single `@db` tool:
-- All operations use `op` parameter (`create`, `update`, `delete`, `toggle`, `read`, `seed`)
-- **Universal `read()` API** - Every CoValue is accessible as a reactive store
-- Example: `{ tool: "@db", payload: { op: "create", factory: "co_z...", data: {...} } }`
-- **Note:** Schema must be a co-id (`co_z...`) - factory references (`@factory/todos`) are transformed to co-ids during seeding
-- All `read()` operations return ReactiveStore with `.value` and `.subscribe()` methods
-- See [Operations](./07-operations.md) for the universal read() API pattern
+Registers the database service actor:
+- `@maia/actor/os/db` — Unified database operations (creator-facing alias: `@db`)
+- Used by process handlers via `op` action (direct DataEngine), or by service actors via `function: true`
+- See [Operations](./07-operations/) for maia.do() API
 
 ### Core Module (`core`)
-UI utilities and message publishing:
-- `@core/publishMessage` - Publish messages to subscribed actors
-- `@core/noop` - No-operation (for testing)
-- `@core/preventDefault` - Prevent default events
+UI utilities:
+- `@core/preventDefault` — Prevent default browser behavior on events
 
-### Drag-Drop Module (`dragdrop`)
-Generic drag-and-drop for any schema/field:
-- `@dragdrop/start` - Start drag operation
-- `@dragdrop/end` - End drag operation
-- `@dragdrop/drop` - Handle drop with field update
-- `@dragdrop/dragEnter` - Visual feedback on enter
-- `@dragdrop/dragLeave` - Visual feedback on leave
+### AI Module (`ai`)
+AI/LLM integration (when included in modules).
 
 ## Creating Actors
 
 ### Direct Actor Creation
 
 ```javascript
-// Create a single actor
-const todoActor = await os.createActor(
-  './maia/todo.actor.maia',      // Actor definition path
-  document.getElementById('app')  // Container element
+// Create actor by co-id, path (human-readable key), or config object
+const actor = await maia.createActor(
+  'co_zActor123...',           // Co-id
+  document.getElementById('app')
 );
 
-// Create multiple actors
-const actors = await Promise.all([
-  os.createActor('./maia/todo.actor.maia', document.getElementById('todos')),
-  os.createActor('./maia/notes.actor.maia', document.getElementById('notes')),
-  os.createActor('./maia/calendar.actor.maia', document.getElementById('cal'))
-]);
+// Or by human-readable path (resolved at runtime)
+const actor = await maia.createActor(
+  '°Maia/actor/views/list',
+  document.getElementById('app')
+);
 ```
 
 ### Loading Vibes (Recommended)
 
-**Vibes** are app manifests that provide marketplace metadata and reference the agent service actor. This is the recommended way to load applications:
+**Vibes** are loaded by **key** from `account.registries.sparks[spark].vibes`. The registry is passed at boot.
 
 ```javascript
-// Load a vibe (app manifest)
-const { vibe, actor } = await os.loadVibe(
-  './vibes/todos/manifest.vibe.maia',
-  document.getElementById('app')
+// Load vibe by key (e.g. 'todos', 'chat')
+const { vibe, actor } = await maia.loadVibeFromAccount(
+  'todos',                        // Vibe key in spark.vibes
+  document.getElementById('app'),
+  '°Maia'                         // Spark (default: '°Maia')
 );
 
-console.log('Loaded vibe:', vibe.name);        // "Todo List"
-console.log('Description:', vibe.description); // App description
-console.log('Actor:', actor);                  // Created agent actor instance
+// loadVibe is an alias that delegates to loadVibeFromAccount
+const { vibe, actor } = await maia.loadVibe('todos', container);
 ```
 
 **What's the difference?**
-- `createActor()` - Direct actor creation (low-level)
-- `loadVibe()` - Load app via manifest (recommended, marketplace-ready)
-  - Always loads the vibe root service actor (`@actor/vibe`)
-  - Agent orchestrates the entire application
+- `createActor()` — Direct actor creation (low-level)
+- `loadVibeFromAccount()` — Load app via vibe key from account (recommended)
+  - Requires registry at boot for seeding
+  - Loads vibe manifest from account, then creates root actor
 
-**Best Practice:** Always create the agent service actor first, then reference it in the vibe manifest.
-
-**Learn more:** See [Vibes](./00-vibes.md) for complete documentation on app manifests.
+**Learn more:** See [Vibes](./01-vibes/) for complete documentation.
 
 ## Accessing the OS
 
-The booted OS instance provides:
+The booted MaiaOS instance provides:
 
 ```javascript
 // Get an actor by ID
-const actor = os.getActor('actor_todo_001');
+const actor = maia.getActor('co_zActor123...');
 
 // Deliver an event to an actor
-os.deliverEvent(senderId, 'actor_todo_001', 'notification', {
-  text: 'Task completed!'
-});
+maia.deliverEvent(senderId, targetActorId, 'EVENT_TYPE', { payload });
+
+// Execute data operations
+const store = await maia.do({ op: 'read', factory: 'co_z...', filter: {} });
 
 // Access engines for debugging
-const engines = os.getEngines();
-console.log(engines.stateEngine, engines.toolEngine);
+const engines = maia.getEngines();
+// Returns: actorEngine, viewEngine, styleEngine, processEngine, dataEngine, evaluator, moduleRegistry
 
 // Expose globally for debugging (optional)
-window.os = os;
-window.engines = engines;
+window.maia = maia;
+window.engines = maia.getEngines();
 ```
 
 ## File Structure
@@ -164,12 +172,13 @@ Your project should be organized like this:
 ```
 my-app/
 ├── index.html              # Your app entry point
-└── maia/                   # Actor definitions
+└── maia/                   # Actor definitions (or in vibe package)
     ├── todo.actor.maia     # Actor config
-    ├── todo.state.maia     # State machine
-    ├── todo.view.maia      # UI definition
-    ├── todo.style.maia     # Styling (optional)
-    └── brand.style.maia    # Design system (optional)
+    ├── todo.process.maia   # Process handlers
+    ├── todo.context.maia  # Context definition
+    ├── todo.view.maia     # UI definition
+    ├── todo.style.maia    # Styling (optional)
+    └── brand.style.maia   # Design system (optional)
 ```
 
 ## Development Server
@@ -180,51 +189,23 @@ For development with hot reload:
 bun dev
 ```
 
-Then navigate to `http://localhost:4200/examples/todos/`
+Then navigate to `http://localhost:4200/` (or your app route).
 
-## Console Output
+## Troubleshooting
 
-On successful boot, you'll see:
+### Boot fails: "requires either a peer or node+account"
+**Solution:** You must authenticate first. Use `signInWithPasskey()` or `loadOrCreateAgentAccount()` to get `{ node, account }`, then pass them to `MaiaOS.boot()`.
 
-```
-🚀 Booting MaiaOS...
-📦 Loader: Module-based architecture
-🤖 State Machines: AI-compatible actor coordination
-📨 Message Passing: Actor-to-actor communication
-🔧 Tools: Dynamic modular loading
-📦 Loading 4 modules...
-[DBModule] Registering 1 tool (@db)...
-[CoreModule] Registering 5 tools...
-[DragDropModule] Registering 5 tools...
-✅ Loaded 3 modules
-✅ Registered 11 tools
-✅ MaiaOS booted successfully
-```
+### Vibe not found when loading
+**Solution:** Ensure the vibe registry is passed at boot (`registry: TodosVibeRegistry`) and the vibe has been seeded to `account.registries.sparks[°Maia].vibes`.
+
+### Actor fails to load
+**Solution:** Check that the actor path resolves (human-readable key like `°Maia/actor/...` or co-id). Paths are resolved via `maia.do({ op: 'resolve', humanReadableKey, ... })`.
 
 ## Next Steps
 
 - [Actors](./03-actors/) – Building blocks
-- [State Machines](./05-state/) – Actor behavior
-- [Tools](./06-tools/) – Executable actions
+- [Process Handlers](./05-state/) – Actor behavior
+- [Tools](./06-tools/) – Service actors and messaging
 - [Views](./08-views/) – UI representation
 - [Creator Overview](./00-overview.md) – Full creator docs path
-
-## Troubleshooting
-
-### Module not loading
-```
-Error: Failed to load module "dragdrop"
-```
-**Solution:** Check that the module file exists at `libs/maia-engines/src/modules/dragdrop.module.js`
-
-### Tool not found
-```
-[ToolEngine] Tool not found: @db
-```
-**Solution:** Ensure the `db` module is loaded in boot config
-
-### Actor fails to load
-```
-Failed to load actor: ./maia/todo.actor.maia
-```
-**Solution:** Check file path is relative to your `index.html` location

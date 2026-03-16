@@ -1,63 +1,69 @@
 # Context (The Memory)
 
-Think of context as your actor's **memory** - like a notebook where it writes things down!
+Think of context as your actor's **memory** — like a notebook where it writes things down!
 
-**CRITICAL:** Context is the **realtime reactive snapshot** of the current reflection of state. It's automatically updated when the state machine changes state.
+**CRITICAL:** Context is the **single source of truth** for all UI state and data. Everything is persisted to CoValues. No in-memory hacks.
 
 **What's in the notebook?**
-- What todos you have (`todos: [...]`)
-- Whether a modal is open (`isModalOpen: false`)
-- What text is in the input field (`newTodoText: "Buy milk"`)
+- What todos you have (`todos: [...]`) — from query objects, CoValue-backed
+- Whether a modal is open (`isModalOpen: false`) — UI state in context
+- What text is in the input field (`newTodoText: "Buy milk"`) — form state in context
 
 **The Architecture:**
-- **State Machine** → Defines the state (all logic and transitions)
-- **Context** → Realtime reactive snapshot of current state reflection
+- **Process handlers** → All logic, computation, conditionals. Updates context via `ctx`.
+- **Context** → Single source of truth. All UI state. CoValue-backed. Realtime reactive.
 - **View Template** → Dumb template that just renders context (zero logic)
 
-Your actor looks at this notebook to know what to show and what to do!
+### UI State: Always in Context, Always CoValue
+
+**All UI state lives in context.** No ephemeral state, no in-memory shortcuts.
+
+- ✅ `viewMode`, `newTodoText`, `selectedItems`, `draggedItemId` — all in context
+- ✅ Context = CoValue — persisted, syncable, offline-first
+- ✅ Every update: `ctx` → CoValue (CRDT) → ReactiveStore → View
 
 ## How It Works
 
 ```
-1. You type "Buy milk" → Tool updates context: { newTodoText: "Buy milk" }
-2. You click "Add" → Tool creates todo → Context updates: { todos: [...new todo] }
+1. You type "Buy milk" → Process handler ctx: { newTodoText: "Buy milk" } → CoValue
+2. You click "Add" → op.create → CoValue → Query stores update → Context reflects
 3. View looks at context → Sees new todo → Shows it on screen!
 ```
 
-**The magic:** Your view automatically shows whatever is in context. Change the context, change what you see!
+**The magic:** Your view automatically shows whatever is in context. Change the context (via `ctx`), change what you see. All roundtrips are CoValue-native.
 
 ## Architectural Roles: Single Source of Truth
 
-**CRITICAL PRINCIPLE:** MaiaOS follows a strict single source of truth architecture. Everything is persisted to CoValues under the hood, accessed reactively via the universal `read()` API.
+**CRITICAL PRINCIPLE:** MaiaOS follows a strict single source of truth architecture. Everything is persisted to CoValues. No in-memory hacks. Full local-first, CoValue-native roundtrip.
 
 ### Clear Separation of Responsibilities
 
-**State Machine** → Defines ALL state transitions
+**Process handlers** → All logic and computation
 - ✅ **Single source of truth** for behavior
-- ✅ Defines when and how state changes
-- ✅ All transitions flow through state machine
+- ✅ Computes values, updates context via `ctx`
+- ✅ All context updates flow through process handlers
 
-**Context** → Contains ALL data and current state
+**Context** → Contains ALL data and UI state
 - ✅ **Single source of truth** for data
-- ✅ Always persisted to CoValue under the hood
+- ✅ **Always persisted to CoValue** — never in-memory only
 - ✅ Accessed reactively via ReactiveStore (universal `read()` API)
-- ✅ Never mutated directly - always through state machine
+- ✅ Never mutated directly — always through process handler `ctx`
 
-**View** → Dumb template that renders from context variables
-- ✅ **Read-only** - only reads from context
-- ✅ **Zero logic** - pure declarative structure, no conditionals
-- ✅ Sends events to state machine (never updates context directly)
-- ✅ Automatically re-renders when context changes (realtime reactive snapshot)
+**View** → Dumb template (zero logic)
+- ✅ **Read-only** — only reads from context
+- ✅ **Zero conditional logic** — pure declarative structure (Nue.js-style)
+- ✅ Sends events to process handlers (never updates context directly)
+- ✅ Automatically re-renders when context changes
 
-### Single Source of Truth: CoValue Under the Hood
+### Local-First, CoValue-Native Roundtrip
 
-**CRITICAL:** Everything is persisted to CoValues under the hood. No in-memory mutation hacks!
+**CRITICAL:** All data flows through CoValues. No optimizing updates, no in-memory caches that bypass persistence.
 
 **How it works:**
 ```
-State Machine Action
+Process handler ctx action
   ↓
-updateContextCoValue() → Persists to Context CoValue (CRDT)
+Persists to Context CoValue (CRDT)
   ↓
 Context ReactiveStore automatically updates
   ↓
@@ -65,43 +71,39 @@ View subscribes to ReactiveStore → Re-renders
 ```
 
 **Key Points:**
-- ✅ **Context is a CoValue** - Always persisted, never in-memory only
-- ✅ **Accessed via ReactiveStore** - Universal `read()` API pattern
-- ✅ **No mutation hacks** - Everything goes through persisted CoValues
-- ✅ **Automatic reactivity** - ReactiveStore notifies subscribers when CoValue changes
-- ✅ **Single source of truth** - CoValue is the authoritative data store
+- ✅ **Context is a CoValue** — Always persisted, never in-memory only
+- ✅ **Accessed via ReactiveStore** — Universal `read()` API pattern
+- ✅ **No mutation hacks** — Everything goes through persisted CoValues
+- ✅ **Full offline-first** — CoValues sync when connected; local-first when not
+- ✅ **CoValue-native roundtrip** — Create/update/delete → CoValue → reactive update. No shortcuts.
 
-## State Machine as Single Source of Truth
+### Process Handlers Update Context
 
-**CRITICAL PRINCIPLE:** State machines are the **single source of truth** for all context changes.
+**CRITICAL PRINCIPLE:** Process handlers are the **single source of truth** for all context changes.
 
 **What this means:**
-- ✅ All context updates MUST flow through state machines
-- ✅ State machines use `updateContext` action (infrastructure, not a tool) to update context
-- ✅ Views send events to state machines, never update context directly
-- ✅ Context updates are infrastructure - pure CRDT persistence via ReactiveStore pattern
+- ✅ All context updates MUST flow through process handlers via `ctx`
+- ✅ Views send events to process handlers, never update context directly
+- ✅ Every update persists to CoValue — full local-first architecture
 
 **Universal read() API Pattern (read-only reactive):**
 - ✅ **Every CoValue is accessible as ReactiveStore** via universal `read()` API
-- ✅ Query objects use `read()` internally - automatic reactivity
-- ✅ Context itself is a ReactiveStore - automatic updates when data changes
-- ✅ All updates are read-only derived data (reactive subscriptions via ReactiveStore)
+- ✅ Query objects use `read()` internally — automatic reactivity, CoValue-backed
+- ✅ Context itself is a ReactiveStore — automatic updates when CoValue changes
 
 **Why this matters:**
-- **Predictable:** All context changes happen in one place (state machines)
+- **Predictable:** All context changes happen in one place (process handlers)
 - **Debuggable:** Easy to trace where context changes come from
-- **Testable:** State machines define clear contracts for context updates
+- **Offline-first:** Full CoValue roundtrip — sync, conflict resolution, local-first
 - **AI-friendly:** LLMs can understand and generate correct patterns
 
 **Correct Pattern (Single Source of Truth):**
 ```
 User clicks button
   ↓
-View sends event to state machine (via inbox)
+View sends event to process handler (via inbox)
   ↓
-State machine uses updateContext action (infrastructure)
-  ↓
-updateContextCoValue() persists to Context CoValue (CRDT) ← SINGLE SOURCE OF TRUTH
+Process handler uses ctx action → persists to Context CoValue (CRDT) ← SINGLE SOURCE OF TRUTH
   ↓
 Context ReactiveStore automatically updates (read-only derived data)
   ↓
@@ -118,36 +120,25 @@ View subscribes to ReactiveStore → sees update → re-renders
 **Anti-Patterns (DON'T DO THIS):**
 - ❌ Direct context mutation: `actor.context.field = value` (bypasses CoValue persistence)
 - ❌ In-memory mutation hacks: `actor.context.value.todos.push(...)` (bypasses CoValue)
-- ❌ Using `@context/update` tool (removed - context updates are infrastructure)
+- ❌ Using `@context/update` tool (removed — context updates via `ctx` in process handlers)
 - ❌ Calling `ActorEngine.updateContextCoValue()` directly from views
 - ❌ Setting error context directly in ToolEngine (should use ERROR events)
-- ❌ Mutating context outside of state machines
+- ❌ Mutating context outside of process handlers
 - ❌ Bypassing CoValue persistence - everything must go through persisted CoValues
 
 **Error Handling:**
-When tools fail, state machines receive ERROR events (via inbox) with payload `{ errors: [{ type, message, path? }] }` — aligned with OperationResult. Use `$$errors.0.message` to extract the first error for display:
+When `op` fails, process handlers receive ERROR events (via inbox) with payload `{ errors: [{ type, message, path? }] }` — aligned with OperationResult. Use `$$errors.0.message` to extract the first error for display:
 ```json
 {
-  "creating": {
-    "entry": {
-      "tool": "@db",
-      "payload": { "op": "create", ... }
-    },
-    "on": {
-      "ERROR": {
-        "target": "error",
-        "actions": [
-          {
-            "updateContext": { "error": "$$errors.0.message" }
-          }
-        ]
-      }
+  "ERROR": [
+    {
+      "ctx": { "error": "$$errors.0.message" }
     }
-  }
+  ]
 }
 ```
 
-**Note:** `updateContext` is infrastructure (not a tool). It directly calls `updateContextCoValue()` to persist changes to the context CoValue (CRDT).
+**Note:** `ctx` persists to the context CoValue (CRDT). No in-memory hacks — full CoValue roundtrip.
 
 ## Context Definition
 

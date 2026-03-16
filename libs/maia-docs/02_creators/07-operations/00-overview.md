@@ -84,7 +84,7 @@ const unsubscribe = store.subscribe((todos) => {
 - **No callbacks** - the store pattern replaces callback-based subscriptions
 
 **Parameters:**
-- `schema` (required) - Schema co-id (`co_z...`) - MUST be a co-id, not `@factory/...`
+- `factory` (required) - Factory co-id (`co_z...`) - MUST be a co-id, not `@factory/...`
 - `key` (optional) - Specific key (co-id) for single item lookups
 - `filter` (optional) - Filter criteria object (e.g., `{done: false}`)
 
@@ -228,9 +228,9 @@ await maia.do({
 
 **Note:** Use only in development! Reseeding preserves factories but recreates all configs and data.
 
-### `schema` - Load Schema Definitions
+### `factory` - Load Schema Definitions
 
-Load schema definitions by co-id, schema name, or from CoValue headerMeta.
+Load schema definitions by co-id or from CoValue.
 
 ```javascript
 const factoryStore = await maia.do({
@@ -238,16 +238,16 @@ const factoryStore = await maia.do({
   coId: "co_zActor123"  // Co-id of schema or CoValue
 });
 
-// Or resolve from human-readable ID (during seeding only)
+// Or resolve schema from a CoValue (extracts $factory from headerMeta)
 const factoryStore = await maia.do({
   op: "factory",
-  humanReadableKey: "@factory/actor"
+  fromCoValue: "co_zInstance456"  // Co-id of instance; schema resolved from headerMeta
 });
 ```
 
 **Parameters:**
 - `coId` (optional) - Co-id of schema or CoValue
-- `humanReadableKey` (optional) - Human-readable schema ID (only during seeding)
+- `fromCoValue` (optional) - Co-id of instance; schema co-id extracted from headerMeta
 
 **Returns:**
 - `ReactiveStore` containing schema definition
@@ -280,17 +280,17 @@ Append items to a CoList (ordered array).
 ```javascript
 const result = await maia.do({
   op: "append",
-  id: "co_zList123",  // Co-id of CoList
+  coId: "co_zList123",  // Co-id of CoList
   items: ["item1", "item2"]
 });
 ```
 
 **Parameters:**
-- `id` (required) - Co-id of CoList
-- `items` (required) - Array of items to append
+- `coId` (required) - Co-id of CoList
+- `items` (required) - Array of items to append (or `item` for single item)
 
 **Returns:**
-- Updated CoList
+- Result object with `coId`, `itemsAppended` (or `itemsPushed` for costream)
 
 ### `push` - Append to CoStream
 
@@ -299,17 +299,17 @@ Append items to a CoStream (append-only stream). This is an alias for `append` w
 ```javascript
 const result = await maia.do({
   op: "push",
-  id: "co_zStream123",  // Co-id of CoStream
+  coId: "co_zStream123",  // Co-id of CoStream
   items: ["message1", "message2"]
 });
 ```
 
 **Parameters:**
-- `id` (required) - Co-id of CoStream
-- `items` (required) - Array of items to append
+- `coId` (required) - Co-id of CoStream
+- `items` (required) - Array of items to append (or `item` for single item)
 
 **Returns:**
-- Updated CoStream
+- Result object with `coId`, `itemsPushed`
 
 ### `processInbox` - Process Actor Inbox
 

@@ -1,125 +1,117 @@
-- Test with empty data (handle empty arrays gracefully)
-- Use factory references (`@factory/todos`) in context - they're resolved automatically
+# Process Handler Practices
 
-**❌ DON'T:**
-- Don't define queries in state machines (use context files instead)
-- Don't manually modify query stores directly
-- Don't use state machines for queries (only for mutations)
-- Don't filter data in views (use query object filters in context instead)
-- Don't forget to handle SUCCESS/ERROR events for mutations
-- Don't use `mapData` action in state machines (deprecated pattern)
-
-### Troubleshooting
-
-**Data Not Appearing:**
-1. Are query objects defined in your context file (`.context.maia`)?
-2. Check browser console for errors
-3. Is the factory reference correct? (`@factory/todos` or `co_z...`)
-
-**Data Not Updating:**
-1. Are you using `@db` tool in state machines to modify data?
-2. Are query stores properly subscribed? (check `context.@stores`)
-3. Check console logs for SUCCESS/ERROR events
-
-## Complete Example: Todo State Machine
+## Complete Example: Todo Process Handler
 
 ```json
 {
-  "$type": "state",
-  "$id": "state_todo_001",
-  "initial": "idle",
-  
-  "states": {
-    "idle": {
-      "on": {
-        "UPDATE_INPUT": {
-          "target": "idle",
-          "actions": [{
-            "updateContext": {"newTodoText": "$$newTodoText"}
-          }]
-        },
-        "CREATE_TODO": {
-          "target": "creating",
-        },
-        "TOGGLE_TODO": {
-          "target": "toggling",
-        },
-        "DELETE_TODO": {
-          "target": "deleting"
-        },
-        "SWITCH_VIEW": {
-          "target": "idle",
-          "actions": [{
-            "updateContext": {
-              "viewMode": "$$viewMode",
-              "listButtonActive": {"$eq": ["$$viewMode", "list"]},
-              "kanbanButtonActive": {"$eq": ["$$viewMode", "kanban"]},
-              "currentView": {
-                "$if": {
-                  "condition": {"$eq": ["$$viewMode", "list"]},
-                  "then": "@list",
-                  "else": "@kanban"
-                }
-              }
+  "$factory": "°Maia/factory/process",
+  "$id": "°Maia/actor/services/todos/process",
+  "@label": "@maia/actor/services/todos/process",
+  "handlers": {
+    "UPDATE_INPUT": [
+      {
+        "ctx": {
+          "newTodoText": "$$value"
+        }
+      }
+    ],
+    "CREATE_TODO": [
+      {
+        "op": {
+          "create": {
+            "factory": "°Maia/factory/data/todos",
+            "data": {
+              "text": "$$value",
+              "done": false
             }
-          }]
-        }
-      }
-    },
-    
-    "creating": {
-      "entry": {
-        "tool": "@db",
-        "payload": {
-          "op": "create",
-          "factory": "@factory/todos",
-          "data": {"text": "$newTodoText", "done": false}
-        }
-      },
-      "on": {
-        "SUCCESS": "idle",
-        "ERROR": "error"
-      }
-    },
-    
-    "toggling": {
-      "entry": {
-        "tool": "@db",
-        "payload": {
-          "op": "update",
-          "id": "$$id",
-          "data": {
-            "done": { "$not": "$existing.done" }
           }
         }
       },
-      "on": {
-        "SUCCESS": "idle",
-        "ERROR": "error"
+      {
+        "tell": {
+          "target": "$$source",
+          "type": "SUCCESS",
+          "payload": {}
+        }
       }
-    },
-    
-    "deleting": {
-      "entry": {
-        "tool": "@db",
-        "payload": {
-          "op": "delete",
-          "factory": "@factory/todos",
-          "id": "$$id"
+    ],
+    "TOGGLE_TODO": [
+      {
+        "op": {
+          "update": {
+            "id": "$$id",
+            "data": {
+              "done": { "$not": "$$done" }
+            }
+          }
         }
       },
-      "on": {
-        "SUCCESS": "idle",
-        "ERROR": "error"
+      {
+        "tell": {
+          "target": "$$source",
+          "type": "SUCCESS",
+          "payload": {}
+        }
       }
-    },
-    
-    "error": {
-      "on": {
-        "RETRY": "idle",
-        "DISMISS": "idle"
+    ],
+    "DELETE_TODO": [
+      {
+        "op": {
+          "delete": {
+            "id": "$$id"
+          }
+        }
+      },
+      {
+        "tell": {
+          "target": "$$source",
+          "type": "SUCCESS",
+          "payload": {}
+        }
       }
-    }
+    ],
+    "SWITCH_VIEW": [
+      {
+        "ctx": {
+          "viewMode": "$$viewMode",
+          "listButtonActive": { "$eq": ["$$viewMode", "list"] },
+          "kanbanButtonActive": { "$eq": ["$$viewMode", "kanban"] },
+          "currentView": {
+            "$if": {
+              "condition": { "$eq": ["$$viewMode", "list"] },
+              "then": "@list",
+              "else": "@kanban"
+            }
+          }
+        }
+      }
+    ],
+    "SUCCESS": [
+      {
+        "ctx": {}
+      }
+    ],
+    "ERROR": [
+      {
+        "ctx": {
+          "error": "$$errors.0.message"
+        }
+      }
+    ],
+    "RETRY": [
+      {
+        "ctx": {
+          "error": null
+        }
+      }
+    ],
+    "DISMISS": [
+      {
+        "ctx": {
+          "error": null
+        }
+      }
+    ]
   }
 }
 ```
@@ -131,113 +123,115 @@ User clicks button
   ↓
 ViewEngine captures event
   ↓
-StateEngine.send("CREATE_TODO", {text: "..."})
+deliverEvent() adds to actor inbox
   ↓
-StateEngine checks current state's "on" handlers
+processMessages() processes inbox
   ↓
-Evaluates guard (if present)
+ProcessEngine.send(eventType, payload)
   ↓
-Executes exit actions (if leaving state)
+Handler for event runs actions in order
   ↓
-Transitions to target state
+op executes → DataEngine
   ↓
-Executes entry actions (tool invocations)
+On failure: ProcessEngine delivers ERROR to source actor
   ↓
-Tool mutates actor.context
+On success: tell(SUCCESS) to source actor
   ↓
-StateEngine sends SUCCESS/ERROR event (auto)
+ctx updates written to context CoValue
   ↓
-Handles SUCCESS/ERROR transition
-  ↓
-ActorEngine.rerender() (if state changed)
+ViewEngine re-renders (reactive subscriptions)
 ```
 
-## Automatic Tool Events
+## Op Failure Handling
 
-When a tool executes in an `entry` action:
-- Tool succeeds → StateEngine auto-sends `SUCCESS` event with tool result in payload
-- Tool fails → StateEngine auto-sends `ERROR` event
-
-Handle these in your state definition:
+When an `op` action fails:
+- ProcessEngine automatically delivers `ERROR` to the actor that sent the event (`$$source`)
+- The ERROR payload includes `{ errors: [...] }`
+- Handle ERROR in your process to update context (e.g. show error message):
 
 ```json
 {
-  "creating": {
-    "entry": {"tool": "@db", "payload": { "op": "create", ... }},
-    "on": {
-      "SUCCESS": {
-        "target": "idle",
-        "actions": [
-          {
-            "tool": "@core/publishMessage",
-            "payload": {
-              "type": "TODO_CREATED",
-              "payload": {
-                "id": "$$result.id",      // ← Access tool result via $$result
-                "text": "$$result.text"   // ← Tool result is available in SUCCESS handler
-              }
-            }
-          }
-        ]
-      },
-      "ERROR": "error"
+  "ERROR": [
+    {
+      "ctx": {
+        "error": "$$errors.0.message"
+      }
     }
-  }
+  ]
 }
 ```
 
-**Accessing Tool Results:**
-- Tool results are available in SUCCESS event payload as `$$result`
-- Use `$$result.propertyName` to access specific result properties
-- Example: `$$result.id`, `$$result.text`, `$$result.draggedItemId`
+## Accessing Op Results
+
+When `op` succeeds, the result is stored in `process.lastToolResult` and available to subsequent actions in the same handler. For `tell`, you can pass result data:
+
+```json
+{
+  "CREATE_TODO": [
+    {
+      "op": {
+        "create": {
+          "factory": "°Maia/factory/data/todos",
+          "data": { "text": "$$value", "done": false }
+        }
+      }
+    },
+    {
+      "tell": {
+        "target": "$$source",
+        "type": "SUCCESS",
+        "payload": {
+          "id": "$$result.id",
+          "text": "$$result.text"
+        }
+      }
+    }
+  ]
+}
+```
+
+**Note:** `$$result` refers to the result of the previous `op` in the same handler run.
 
 ## Best Practices
 
 ### ✅ DO:
 
-- Keep states focused (single responsibility)
-- Use guards to validate transitions
-- Handle both SUCCESS and ERROR events
-- Name states as nouns (idle, creating, loading)
-- Name events as verbs (CREATE_TODO, TOGGLE_TODO)
+- Keep handlers focused (single responsibility per event)
+- Use guards for conditional logic when needed
+- Handle both SUCCESS and ERROR events (via `tell` or `ctx`)
+- Name events as verbs (CREATE_TODO, TOGGLE_TODO, DELETE_TODO)
 - Use `$$` for event payloads, `$` for context
-- **Compute boolean flags** - State machine computes, context stores, views reference
-- **Maintain item lookup objects** - For item-specific conditional styling
-- **Update context via infrastructure** - Always use `updateContext` action, never mutate directly
-- **Handle errors in state machines** - Use ERROR event handlers to update error context
+- **Compute boolean flags** — Process handler computes, context stores, views reference
+- **Maintain item lookup objects** — For item-specific conditional styling
+- **Update context via ctx** — Always use `ctx` action, never mutate directly
+- **Tell SUCCESS/ERROR to source** — So UI actors can clear loading state or show errors
 
 ### ❌ DON'T:
 
-- Put logic in state machines (use tools)
-- Create deeply nested states (keep flat)
-- Forget error handling
-- Use `$` for event payload fields
-- Create cycles without exit conditions
-- **Don't put conditionals in views** - Compute flags in state machine instead
-- **Don't mutate context directly** - Always use `updateContext` infrastructure action
-- **Don't update context from views** - Views send events, state machines update context
-- **Don't update context from tools** - Tools are invoked by state machines, not the other way around
+- Create deeply nested handler logic (keep flat)
+- Forget error handling (ERROR handler with ctx)
+- Use `$` for event payload fields (use `$$`)
+- **Don't put conditionals in views** — Compute flags in process handler instead
+- **Don't mutate context directly** — Always use `ctx` action
+- **Don't update context from views** — Views send events, process handlers update context
 
-## Debugging State Machines
+## Debugging Process Handlers
 
 ```javascript
-// Access state machine
-actor.machine.currentState  // "idle", "creating", etc.
+// Access process
+actor.process?.definition
 
-// Send events manually
-actor.actorEngine.stateEngine.send(
-  actor.machine.id,
+// Send events manually (for testing)
+actor.actorOps.deliverEvent(
+  'test-sender-id',
+  actor.id,
   'CREATE_TODO',
-  {text: 'Test todo'}
+  { value: 'Test todo' }
 );
-
-// View state definition
-actor.machine.definition
 ```
 
 ## Next Steps
 
-- Explore [Tools](./06-tools.md) - Actions state machines invoke
-- Learn about [Views](./07-views.md) - How UI sends events
-- Understand [Context](./04-context.md) - Data state machines manipulate
-- Build a [Kanban Board](../examples/kanban-board.md) - See queries in action
+- Explore [Tools](./06-tools/) — How service actors (e.g. @db) work
+- Learn about [Views](./08-views/) — How UI sends events
+- Understand [Context](./04-context/) — Data process handlers manipulate

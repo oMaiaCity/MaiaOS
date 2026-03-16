@@ -1,4 +1,4 @@
-# Tools Documentation
+# Tools and Messaging Documentation
 
-1. **[00-overview.md](./00-overview.md)** - Tool system overview
-2. **[01-reference.md](./01-reference.md)** - Reference details
+1. **[00-overview.md](./00-overview.md)** — op, tell, ctx, service actors
+2. **[01-reference.md](./01-reference.md)** — Reference details

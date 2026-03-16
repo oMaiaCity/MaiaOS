@@ -2,7 +2,7 @@
 
 Think of actors like **LEGO pieces**. Each piece is complete by itself:
 - It knows what it looks like (view)
-- It knows how to behave (state machine)
+- It knows how to behave (process handlers)
 - It remembers things (context)
 - It can talk to other pieces (messages)
 
@@ -11,7 +11,7 @@ You snap actors together to build your app!
 ## What's an Actor?
 
 An actor is just a small file (`.actor.maia`) that says:
-- "My brain is in `todo.state.maia`" (state machine)
+- "My brain is in `todo.process.maia`" (process handlers)
 - "My face is in `todo.view.maia`" (UI)
 - "My style is in `brand.style.maia`" (colors and fonts)
 - "My memory is in `todo.context.maia`" (data I remember)
@@ -27,19 +27,19 @@ An actor is just a small file (`.actor.maia`) that says:
 **State Machine** → Defines ALL state transitions
 - ✅ **Single source of truth** for behavior
 - ✅ Defines when and how state changes
-- ✅ All transitions flow through state machine
-- ✅ Never bypassed - all changes go through state machine
+- ✅ All behavior flows through process handlers
+- ✅ Never bypassed - all changes go through process handlers
 
 **Context** → Contains ALL data and current state
 - ✅ **Single source of truth** for data
 - ✅ Stores runtime data (todos, form values, UI state)
 - ✅ Always persisted to CoValue under the hood
 - ✅ Accessed reactively via ReactiveStore (universal `read()` API)
-- ✅ Never mutated directly - always through state machine
+- ✅ Never mutated directly - always through process handlers
 
 **View** → Renders from context variables
 - ✅ **Read-only** - only reads from context
-- ✅ Sends events to state machine (never updates context directly)
+- ✅ Sends events to process handlers (never updates context directly)
 - ✅ Automatically re-renders when context changes
 - ✅ Pure presentation - no business logic
 
@@ -51,7 +51,7 @@ An actor is just a small file (`.actor.maia`) that says:
 ```
 State Machine Action
   ↓
-updateContextCoValue() → Persists to Context CoValue (CRDT)
+ctx action → Persists to Context CoValue (CRDT)
   ↓
 Context ReactiveStore automatically updates
   ↓
@@ -75,7 +75,7 @@ View subscribes to ReactiveStore → Re-renders
         "target": "idle",
         "actions": [
           {
-            "updateContext": { "newTodoText": "$$newTodoText" }
+            "ctx": { "newTodoText": "$$newTodoText" }
           }
         ]
       }
@@ -85,9 +85,9 @@ View subscribes to ReactiveStore → Re-renders
 ```
 
 **What happens:**
-1. View sends `UPDATE_INPUT` event → inbox → state machine
-2. State machine executes `updateContext` action
-3. `updateContextCoValue()` persists to Context CoValue (CRDT)
+1. View sends `UPDATE_INPUT` event → inbox → process handler
+2. Process handler executes `ctx` action
+3. Context CoValue is updated (CRDT)
 4. Context ReactiveStore automatically updates (read-only derived data)
 5. View subscribes to ReactiveStore → sees update → re-renders
 
@@ -109,7 +109,7 @@ View subscribes to ReactiveStore → Re-renders
 ┌─────────────────────────────────────────────────────────┐
 │                      VIEW (Read-Only)                    │
 │  • Reads from context ReactiveStore                      │
-│  • Sends events to state machine                         │
+│  • Sends events to process handlers                     │
 │  • Never mutates context directly                        │
 └────────────────────┬────────────────────────────────────┘
                      │
@@ -117,14 +117,14 @@ View subscribes to ReactiveStore → Re-renders
 ┌─────────────────────────────────────────────────────────┐
 │                  INBOX COSTREAM                         │
 │  • Single source of truth for ALL events                │
-│  • Routes events to state machine                        │
+│  • Routes events to process handlers                    │
 └────────────────────┬────────────────────────────────────┘
                      │
                      ▼ (processes event)
 ┌─────────────────────────────────────────────────────────┐
 │                 STATE MACHINE                            │
 │  • Defines ALL state transitions                         │
-│  • Executes updateContext action                         │
+│  • Executes ctx action                                   │
 └────────────────────┬────────────────────────────────────┘
                      │
                      ▼ (persists to CoValue)
@@ -155,7 +155,7 @@ View subscribes to ReactiveStore → Re-renders
 
 **Reusable:** Want 3 todo lists? Create the actor 3 times. They all work independently!
 
-**Composable:** Mix and match. Use the same view with a different state machine. Use the same state machine with a different view.
+**Composable:** Mix and match. Use the same view with different process handlers. Use the same process handlers with a different view.
 
 **AI-Friendly:** Because it's just configuration files, AI agents can easily read and modify them!
 
@@ -186,7 +186,7 @@ Create a file named `{name}.actor.maia`:
 | `$id` | string | Yes | Unique actor identifier (`@actor/todo`) |
 | `@label` | string | No | Actor label (e.g., `"agent"`, `"composite"`, `"todo-list"`) |
 | `context` | string | No | Co-id reference to context |
-| `state` | string | Yes | Co-id reference to state machine |
+| `process` | string | Yes | Co-id reference to process definition |
 | `view` | string | No | Co-id reference to view (optional for service actors) |
 | `brand` | string | Yes | Co-id reference to brand style (required) |
 | `style` | string | No | Co-id reference to local style (optional) |

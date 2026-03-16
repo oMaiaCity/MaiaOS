@@ -12,14 +12,14 @@ const unsubscribe = actor.context.subscribe((context) => {
   console.log('Context updated:', context);
 });
 
-// Mutate context (via state machines only - goes through CoValue persistence!)
+// Mutate context (via process handlers only - goes through CoValue persistence!)
 // ❌ Don't do this (bypasses CoValue persistence):
 // actor.context.value.todos.push({...});
 // actor.context.value.newTodoText = "New text";
 
 // ✅ Do this instead (goes through persisted CoValue):
-actor.actorEngine.stateEngine.send(
-  actor.machine.id,
+actor.actorOps.processEngine.send(
+  `${actor.id}_process`,
   'CREATE_TODO',
   {text: 'New todo'}
 );
@@ -29,7 +29,7 @@ actor.actorEngine.stateEngine.send(
 - Context is a ReactiveStore backed by a persisted CoValue
 - Use `.value` to read current data (read-only!)
 - Use `.subscribe()` to watch for changes
-- **Never mutate `.value` directly** - always go through state machine → CoValue persistence
+- **Never mutate `.value` directly** - always go through process handler → CoValue persistence
 - This is the universal pattern - every CoValue is accessible as a ReactiveStore via `read()` API
 - **Single source of truth** - CoValue is the authoritative data store, ReactiveStore is the reactive access layer
 
@@ -58,26 +58,25 @@ const unsubscribe = store.subscribe((data) => {
 
 **This is the foundational pattern** - all data access uses this unified API. Context itself is a ReactiveStore, query objects use `read()` internally, and all CoValues are accessible this way.
 
-### Via updateContext (Infrastructure Action)
-Generic context field update (infrastructure, not a tool):
+### Via ctx (Process Handler Action)
+Generic context field update via process handler `ctx` action:
 
 ```json
 {
-  "updateContext": {
+  "ctx": {
     "newTodoText": "$$newTodoText",
     "viewMode": "kanban"
   }
 }
 ```
 
-**Note:** `updateContext` is infrastructure that directly calls `updateContextCoValue()` to persist changes to the context CoValue (CRDT). It's not a tool - it's pure infrastructure.
+**Note:** `ctx` persists to the context CoValue (CRDT). Full CoValue roundtrip — no in-memory hacks.
 
 **How it works:**
-1. State machine action evaluates payload (resolves `$` and `$$` references)
-2. Calls `actor.actorEngine.updateContextCoValue(actor, updates)` directly
-3. Persists changes to context CoValue (CRDT)
-4. Context ReactiveStore automatically updates (read-only derived data)
-5. Views subscribe to context ReactiveStore and re-render automatically
+1. Process handler action evaluates payload (resolves `$` and `$$` references)
+2. Persists changes to context CoValue (CRDT)
+3. Context ReactiveStore automatically updates (read-only derived data)
+4. Views subscribe to context ReactiveStore and re-render automatically
 
 ## Context Best Practices
 
@@ -89,7 +88,7 @@ Generic context field update (infrastructure, not a tool):
 - **Separate concerns** - Collections, UI state, form state
 - **Store serializable data** - No functions, DOM refs, or classes
 - **Use consistent naming** - `todosTodo`, `notesTodo` (pattern: `{schema}Todo`)
-- **Compute boolean flags** - State machine computes, context stores, views reference
+- **Compute boolean flags** - Process handler computes, context stores, views reference
 - **Use item lookup objects** - For item-specific conditional styling (e.g., `draggedItemIds`)
 - **Always go through CoValue persistence** - Everything must be persisted, no in-memory hacks
 - **Access via ReactiveStore** - Use universal `read()` API pattern
@@ -99,15 +98,15 @@ Generic context field update (infrastructure, not a tool):
 
 ### ❌ DON'T:
 
-- **Don't mutate directly** - Always use `updateContext` action in state machines
+- **Don't mutate directly** - Always use `ctx` action in process handlers
 - **Don't bypass CoValue persistence** - Never mutate `actor.context.value` directly
 - **Don't use in-memory mutation hacks** - Everything must go through persisted CoValues
-- **Don't use `@context/update` tool** - Removed, use `updateContext` infrastructure action instead
+- **Don't use `@context/update` tool** - Removed, use `ctx` in process handlers instead
 - **Don't store UI elements** - No DOM references
 - **Don't store functions** - Only JSON-serializable data
 - **Don't mix concerns** - Separate data from UI state
 - **Don't use reserved keys** - Avoid `$factory`, `$id`, `@actors`, `inbox`, etc.
-- **Don't compute in views** - All computation happens in state machine
+- **Don't compute in views** - All computation happens in process handlers
 - **Don't hardcode strings in views** - Extract all UI text to context variables
 - **Don't use specific names** - Avoid `todos`, `allMessages` - use generic `list`, `messages` instead
 - **Don't skip `$$` prefix** - Map expressions must use strict `$$` syntax (e.g., `$$source.@label`, not `source.@label`)
