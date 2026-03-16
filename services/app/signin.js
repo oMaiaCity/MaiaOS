@@ -22,6 +22,44 @@ export function removeSigninKeyHandler() {
 }
 
 /**
+ * Set loading state on sign-in buttons. Disables all buttons and shows spinner on primary.
+ * Call with true immediately on click; false restores (or re-render replaces DOM).
+ * @param {boolean} loading
+ */
+export function setSignInLoading(loading) {
+	const container = document.querySelector('.sign-in-container')
+	if (!container) return
+	const buttonsWrap = container.querySelector('.sign-in-buttons')
+	if (!buttonsWrap) return
+	const buttons = buttonsWrap.querySelectorAll('.btn')
+	const primaryBtn = buttonsWrap.querySelector('.btn-solid-water')
+	if (loading) {
+		buttons.forEach((btn) => {
+			btn.disabled = true
+			btn.classList.add('loading')
+		})
+		if (primaryBtn && !primaryBtn.dataset.originalText) {
+			primaryBtn.dataset.originalText = primaryBtn.innerHTML
+			primaryBtn.innerHTML = `
+				<span class="btn-spinner" aria-hidden="true"></span>
+				<span>Authenticating…</span>
+			`
+		}
+		container.classList.add('fading')
+	} else {
+		buttons.forEach((btn) => {
+			btn.disabled = false
+			btn.classList.remove('loading')
+		})
+		if (primaryBtn?.dataset.originalText) {
+			primaryBtn.innerHTML = primaryBtn.dataset.originalText
+			delete primaryBtn.dataset.originalText
+		}
+		container.classList.remove('fading')
+	}
+}
+
+/**
  * Get first name from signup input (for "Create new Self" flow).
  * Returns trimmed value or undefined if empty.
  * @returns {string|undefined}

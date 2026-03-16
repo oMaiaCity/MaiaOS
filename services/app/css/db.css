@@ -2128,6 +2128,11 @@ pre {
 	}
 }
 
+.loading-skeleton-overlay {
+	background: rgba(255, 255, 255, 0.6);
+	backdrop-filter: blur(8px);
+}
+
 .loading-connecting-overlay {
 	position: fixed;
 	inset: 0;
@@ -2196,6 +2201,34 @@ pre {
 	width: 8px;
 	height: 8px;
 	border-radius: 50%;
+}
+
+/* Skeleton placeholder cards for auth transition */
+.skeleton-card {
+	background: rgba(255, 255, 255, 0.25);
+	backdrop-filter: blur(12px) saturate(160%);
+	-webkit-backdrop-filter: blur(12px) saturate(160%);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: 24px;
+	overflow: hidden;
+	position: relative;
+}
+
+.skeleton-card::after {
+	content: "";
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(90deg, transparent 0%, rgba(255, 255, 255, 0.4) 50%, transparent 100%);
+	animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+	0% {
+		transform: translateX(-100%);
+	}
+	100% {
+		transform: translateX(100%);
+	}
 }
 
 .loading-hint {

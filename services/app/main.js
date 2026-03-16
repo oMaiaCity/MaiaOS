@@ -21,17 +21,17 @@ import {
 } from '@MaiaOS/loader'
 import { renderApp } from './db-view.js'
 import { renderLandingPage } from './landing.js'
-import { disposeGlobalAI, initGlobalAI, setFabVisible } from './maia-ai-global.js'
 import {
 	getFirstNameForRegister,
 	removeSigninKeyHandler,
 	renderSignInPrompt,
 	renderUnsupportedBrowser,
+	setSignInLoading,
 } from './signin.js'
 import { escapeHtml, getSyncStatusMessage } from './utils.js'
 
 let maia
-let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'vibe-viewer'
+let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'aven-viewer'
 let currentView = 'account' // Current schema filter (default: 'account')
 let currentContextCoValueId = null // Currently loaded CoValue in main context (explorer-style navigation)
 let currentVibe = null // Currently loaded vibe (null = DB view mode, 'todos' = todos vibe, etc.)
@@ -137,7 +137,6 @@ async function handleRoute() {
 	const path = window.location.pathname
 
 	if (path === '/signin' || path === '/signup') {
-		setFabVisible(false)
 		if (redirectIfSignedIn()) return
 		try {
 			await isPRFSupported()
@@ -151,7 +150,6 @@ async function handleRoute() {
 	if (path === '/me' || path === '/dashboard') {
 		removeSigninKeyHandler()
 		const ready = detectMode() === 'agent' || (authState.signedIn && maia)
-		setFabVisible(ready)
 		if (ready) {
 			try {
 				await renderAppInternal()
@@ -185,7 +183,6 @@ async function handleRoute() {
 	}
 
 	removeSigninKeyHandler()
-	setFabVisible(false)
 	if (redirectIfSignedIn()) return
 	renderLandingPage()
 }
@@ -279,7 +276,6 @@ async function initAgentMode() {
 		window.maia = maia
 		// CRITICAL: Await link before first render - indexing requires account.registries
 		await linkAccountToRegistries(maia).catch(() => {})
-		initGlobalAI(maia).catch(() => {})
 
 		// Set auth state
 		authState = {
@@ -437,6 +433,7 @@ async function signInWithTestAven() {
 		return
 	}
 	try {
+		setSignInLoading(true)
 		const syncDomain = getSyncDomain()
 		const avenTestNameRaw = env?.VITE_AVEN_TEST_NAME || 'Test'
 		const avenTestName = avenTestNameRaw.startsWith('Aven ')
@@ -465,35 +462,49 @@ async function signInWithTestAven() {
 			}
 		} catch (_e) {}
 
+		// Set auth and navigate IMMEDIATELY - don't wait for boot
 		authState = { signedIn: true, accountID: account.id }
-
-		// NO markAccountExists() - in-memory only, no localStorage
-
-		// Register BEFORE boot so server has us in registry before any sync writes
-		await registerHuman(account).catch(() => {})
-
-		maia = await MaiaOS.boot({
-			node,
-			account,
-			agentSecret,
-			syncDomain,
-			getMoaiBaseUrl,
-			modules: ['db', 'core', 'ai'],
-		})
-		window.maia = maia
-		await linkAccountToRegistries(maia).catch(() => {})
-		initGlobalAI(maia).catch(() => {})
-
 		setupSyncSubscription()
 		currentScreen = 'dashboard'
 		currentContextCoValueId = null
-
 		window.history.pushState({}, '', '/me')
 		await handleRoute()
+
+		// Boot in background; registerHuman and MaiaOS.boot run in parallel
+		Promise.all([
+			registerHuman(account).catch(() => {}),
+			MaiaOS.boot({
+				node,
+				account,
+				agentSecret,
+				syncDomain,
+				getMoaiBaseUrl,
+				modules: ['db', 'core', 'ai'],
+			}),
+		])
+			.then(async ([, bootedMaia]) => {
+				maia = bootedMaia
+				window.maia = maia
+				await linkAccountToRegistries(maia).catch(() => {})
+				cleanupLoadingScreenSync()
+				if (authState.signedIn) {
+					renderAppInternal().catch((e) => showToast(`Failed to render app: ${e.message}`, 'error'))
+				}
+			})
+			.catch((bootError) => {
+				showToast(`Failed to initialize: ${bootError?.message ?? bootError}`, 'error')
+				authState = { signedIn: false, accountID: null }
+				maia = null
+				setSignInLoading(false)
+				window.history.pushState({}, '', '/signin')
+				renderSignInPrompt(hasExistingAccount, undefined, true)
+			})
+
 		loadLinkedCoValues().catch(() => {})
 	} catch (error) {
 		authState = { signedIn: false, accountID: null }
 		maia = null
+		setSignInLoading(false)
 		showToast(`Test AVEN sign-in failed: ${error.message}`, 'error')
 		renderSignInPrompt(hasExistingAccount, undefined, true)
 	}
@@ -504,6 +515,7 @@ async function signInWithTestAven() {
  */
 async function signIn() {
 	try {
+		setSignInLoading(true)
 		// Determine sync domain (single source of truth - passed through kernel)
 		const syncDomain = getSyncDomain()
 		if (!syncDomain) {
@@ -543,7 +555,6 @@ async function signIn() {
 					window.maia = maia
 					await autoRegisterHuman(maia).catch(() => {})
 					await linkAccountToRegistries(maia).catch(() => {})
-					initGlobalAI(maia).catch(() => {})
 
 					// Re-render app now that maia is ready
 					if (authState.signedIn) {
@@ -589,6 +600,7 @@ async function signIn() {
 		// Reset state on error to prevent stuck state
 		authState = { signedIn: false, accountID: null }
 		maia = null
+		setSignInLoading(false)
 
 		if (error.message.includes('PRF not supported') || error.message.includes('WebAuthn')) {
 			renderUnsupportedBrowser(error.message)
@@ -644,6 +656,7 @@ async function register() {
 			firstNameInput.removeAttribute('aria-invalid')
 		}
 
+		setSignInLoading(true)
 		// Determine sync domain (single source of truth - passed through kernel)
 		const syncDomain = getSyncDomain()
 		const isDev = import.meta.env?.DEV || window.location.hostname === 'localhost'
@@ -659,57 +672,46 @@ async function register() {
 			salt: 'maia.city',
 		})
 
-		// Boot MaiaOS with node, account, and sync domain (using CoJSON backend)
-		// Sync domain stored in kernel as single source of truth
-		// This must succeed before we mark as signed in
-		try {
-			maia = await MaiaOS.boot({
-				node,
-				account,
-				syncDomain, // Pass sync domain to kernel (single source of truth)
-				getMoaiBaseUrl, // For POST /register after createSpark
-				modules: ['db', 'core', 'ai'], // Include all modules
-			})
-			window.maia = maia
-			await autoRegisterHuman(maia).catch(() => {})
-			await linkAccountToRegistries(maia).catch(() => {})
-			initGlobalAI(maia).catch(() => {})
-		} catch (bootError) {
-			throw new Error(`Failed to initialize MaiaOS: ${bootError.message}`)
-		}
-
-		// Set auth state AFTER maia is successfully booted
-		authState = {
-			signedIn: true,
-			accountID: accountID,
-		}
-
-		// Mark that user has successfully registered
+		// Set auth and navigate IMMEDIATELY - don't wait for boot
+		authState = { signedIn: true, accountID }
 		markAccountExists()
-
 		setupSyncSubscription()
-
-		// Start with dashboard screen (don't set default context)
 		currentScreen = 'dashboard'
 		currentContextCoValueId = null
-
-		// Navigate to /me IMMEDIATELY - don't wait for data loading
-		// This ensures UI shows right away, especially important on mobile
-
-		// Update URL first
 		window.history.pushState({}, '', '/me')
-
-		// Then handle route (which will render the app)
 		handleRoute().catch((error) => {
 			showToast(`Navigation error: ${error.message}`, 'error')
 		})
 
-		// Load linked CoValues in background (non-blocking)
-		// This allows the UI to show immediately while data loads progressively
-		loadLinkedCoValues().catch((_error) => {
-			// Non-fatal - UI is already shown, data will load progressively via sync
+		// Boot MaiaOS in background
+		MaiaOS.boot({
+			node,
+			account,
+			syncDomain, // Pass sync domain to kernel (single source of truth)
+			getMoaiBaseUrl, // For POST /register after createSpark
+			modules: ['db', 'core', 'ai'], // Include all modules
 		})
+			.then(async (bootedMaia) => {
+				maia = bootedMaia
+				window.maia = maia
+				await autoRegisterHuman(maia).catch(() => {})
+				await linkAccountToRegistries(maia).catch(() => {})
+				cleanupLoadingScreenSync()
+				if (authState.signedIn) {
+					renderAppInternal().catch((e) => showToast(`Failed to render app: ${e.message}`, 'error'))
+				}
+				loadLinkedCoValues().catch(() => {})
+			})
+			.catch((bootError) => {
+				authState = { signedIn: false, accountID: null }
+				maia = null
+				setSignInLoading(false)
+				showToast(`Failed to initialize MaiaOS: ${bootError?.message ?? bootError}`, 'error')
+				window.history.pushState({}, '', '/signup')
+				renderSignInPrompt(hasExistingAccount)
+			})
 	} catch (error) {
+		setSignInLoading(false)
 		if (error.message.includes('PRF not supported') || error.message.includes('WebAuthn')) {
 			renderUnsupportedBrowser(error.message)
 		} else if (
@@ -735,7 +737,6 @@ async function register() {
 
 function signOut() {
 	// Signing out
-	disposeGlobalAI()
 	if (unsubscribeSync) {
 		unsubscribeSync()
 		unsubscribeSync = null
@@ -754,30 +755,56 @@ function signOut() {
 let loadingScreenSyncUnsubscribe = null
 
 const LOADING_SCREEN_HTML = (syncMessage, indicatorStyle) => `
-	<div class="app-container" style="opacity: 0.5; pointer-events: none;">
-		<div class="dashboard-container">
-			<div class="dashboard-header"><h1>Maia City</h1></div>
+	<div class="db-container">
+		<div class="navbar-section">
+			<header class="db-header whitish-card">
+				<div class="header-content">
+					<div class="header-left"><h1>Me</h1></div>
+					<div class="header-center">
+						<img src="/brand/logo_dark.svg" alt="Maia City" class="header-logo-centered" />
+					</div>
+					<div class="header-right"></div>
+				</div>
+			</header>
+		</div>
+		<div class="dashboard-main">
 			<div class="dashboard-grid">
-				<div class="dashboard-card whitish-card">
+				<div class="dashboard-card whitish-card skeleton-card">
 					<div class="dashboard-card-content">
-						<div class="dashboard-card-icon">📊</div>
-						<h3 class="dashboard-card-title">Loading...</h3>
+						<div class="dashboard-card-icon"></div>
+						<h3 class="dashboard-card-title"></h3>
+						<p class="dashboard-card-description"></p>
 					</div>
 				</div>
-				<div class="dashboard-card whitish-card">
+				<div class="dashboard-card whitish-card skeleton-card">
 					<div class="dashboard-card-content">
-						<div class="dashboard-card-icon">📋</div>
-						<h3 class="dashboard-card-title">Loading...</h3>
+						<div class="dashboard-card-icon"></div>
+						<h3 class="dashboard-card-title"></h3>
+						<p class="dashboard-card-description"></p>
+					</div>
+				</div>
+				<div class="dashboard-card whitish-card skeleton-card">
+					<div class="dashboard-card-content">
+						<div class="dashboard-card-icon"></div>
+						<h3 class="dashboard-card-title"></h3>
+						<p class="dashboard-card-description"></p>
+					</div>
+				</div>
+				<div class="dashboard-card whitish-card skeleton-card">
+					<div class="dashboard-card-content">
+						<div class="dashboard-card-icon"></div>
+						<h3 class="dashboard-card-title"></h3>
+						<p class="dashboard-card-description"></p>
 					</div>
 				</div>
 			</div>
 		</div>
 	</div>
-	<div class="loading-connecting-overlay">
+	<div class="loading-connecting-overlay loading-skeleton-overlay">
 		<div class="loading-spinner"></div>
 		<div class="loading-connecting-content">
 			<h2>Initializing your account</h2>
-			<div class="loading-connecting-subtitle">Setting up your sovereign self...</div>
+			<div class="loading-connecting-subtitle">Setting up your sovereign self…</div>
 			<div class="sync-status loading-connecting-sync">
 				<div class="sync-indicator loading-connecting-indicator" style="${indicatorStyle}"></div>
 				<span class="sync-message">${syncMessage}</span>
@@ -960,6 +987,12 @@ function goBack() {
 	// If we're in agent mode, exit agent mode first
 	if (currentVibe !== null) {
 		loadVibe(null)
+		return
+	}
+
+	// If we're in Maia AI, go to dashboard
+	if (currentScreen === 'maia-ai') {
+		navigateToScreen('dashboard')
 		return
 	}
 
