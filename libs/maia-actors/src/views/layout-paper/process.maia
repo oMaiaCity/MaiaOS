@@ -2,5 +2,22 @@
 	"$schema": "°Maia/schema/process",
 	"$id": "°Maia/actor/views/layout-paper/process",
 	"@label": "@maia/actor/views/layout-paper/process",
-	"handlers": {}
+	"handlers": {
+		"SELECT_NOTE": [
+			{
+				"ctx": {
+					"selectedNoteId": "$$id"
+				}
+			},
+			{
+				"tell": {
+					"target": "°Maia/actor/views/paper",
+					"type": "SELECT_NOTE",
+					"payload": {
+						"id": "$$id"
+					}
+				}
+			}
+		]
+	}
 }

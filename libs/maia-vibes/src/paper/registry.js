@@ -23,9 +23,9 @@ export const PaperVibeRegistry = {
 
 	data: {
 		notes: [
-			{
-				content: "Dear future us, what we're creating together...",
-			},
+			{ content: "Dear future us, what we're creating together..." },
+			{ content: 'Meeting notes: discussed architecture...' },
+			{ content: 'Ideas for the next sprint...' },
 		],
 	},
 }

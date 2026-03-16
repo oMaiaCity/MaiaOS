@@ -3,8 +3,12 @@
 	"$id": "°Maia/actor/views/paper/context",
 	"contentService": "@contentService",
 	"paperService": "@paperService",
-	"notes": {
+	"selectedNoteId": null,
+	"selectedNote": {
 		"schema": "°Maia/schema/data/notes",
+		"filter": {
+			"id": "$selectedNoteId"
+		},
 		"map": {
 			"id": "id",
 			"content": "$content"

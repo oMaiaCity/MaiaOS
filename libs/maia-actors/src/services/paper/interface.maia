@@ -8,7 +8,7 @@
 	"properties": {
 		"UPDATE_PAPER": {
 			"type": "object",
-			"description": "Update CoText (paper/notes). path defaults to notes.0.content",
+			"description": "Update CoText (paper/notes). coId or path (default notes.0.content)",
 			"properties": {
 				"value": {
 					"type": "string",
@@ -17,6 +17,10 @@
 				"path": {
 					"type": "string",
 					"description": "Dot path into context (default notes.0.content)"
+				},
+				"coId": {
+					"type": "string",
+					"description": "CoText co-id (when provided, path is ignored)"
 				}
 			},
 			"required": [

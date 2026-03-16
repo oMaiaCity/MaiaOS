@@ -1,0 +1,78 @@
+{
+	"$schema": "°Maia/schema/style",
+	"$id": "°Maia/actor/views/layout-paper/style",
+	"@label": "@maia/actor/views/layout-paper/style",
+	"components": {
+		"layoutRow": {
+			"display": "flex",
+			"flexDirection": "row",
+			"gap": "0",
+			"width": "100%",
+			"height": "100%",
+			"minHeight": "0",
+			"overflow": "hidden",
+			"fontFamily": "{typography.fontFamily.body}",
+			"color": "{colors.marineBlue}",
+			"boxSizing": "border-box"
+		},
+		"asideList": {
+			"display": "flex",
+			"flexDirection": "column",
+			"width": "260px",
+			"minWidth": "260px",
+			"height": "100%",
+			"background": "rgba(245, 240, 232, 0.9)",
+			"backdropFilter": "blur(8px)",
+			"borderRight": "1px solid rgba(0, 31, 51, 0.12)",
+			"padding": "0.5rem",
+			"overflowY": "auto"
+		},
+		"listTitle": {
+			"fontFamily": "{typography.fontFamily.heading}",
+			"fontSize": "0.85rem",
+			"fontWeight": "{typography.fontWeight.bold}",
+			"color": "{colors.marineBlue}",
+			"margin": "0 0 0.5rem 0",
+			"padding": "0 0.25rem"
+		},
+		"list": {
+			"listStyle": "none",
+			"margin": "0",
+			"padding": "0",
+			"display": "flex",
+			"flexDirection": "column",
+			"gap": "0.125rem"
+		},
+		"listItem": {
+			"padding": "0.5rem 0.75rem",
+			"fontSize": "0.75rem",
+			"color": "rgba(0, 31, 51, 0.62)",
+			"fontFamily": "{typography.fontFamily.body}",
+			"borderRadius": "{radii.md}",
+			"transition": "{transitions.fast}",
+			"cursor": "pointer",
+			"wordBreak": "break-word",
+			"overflow": "hidden",
+			"textOverflow": "ellipsis",
+			"display": "-webkit-box",
+			"WebkitLineClamp": "2",
+			"WebkitBoxOrient": "vertical",
+			":hover": {
+				"background": "rgba(255, 255, 255, 0.5)"
+			}
+		},
+		"listItemLabel": {
+			"fontSize": "inherit",
+			"color": "inherit"
+		},
+		"mainArea": {
+			"flex": "1",
+			"display": "flex",
+			"flexDirection": "column",
+			"overflow": "hidden",
+			"minWidth": "0",
+			"position": "relative",
+			"background": "#F5F0E8"
+		}
+	}
+}
