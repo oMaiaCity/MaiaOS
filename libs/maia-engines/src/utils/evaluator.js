@@ -1,10 +1,8 @@
 // loadSchemaFromDB removed - use resolve() from @MaiaOS/db if needed
 import { validateAgainstFactoryOrThrow } from '@MaiaOS/factories/validation.helper'
+import { FORBIDDEN_PATH_KEYS } from './security-constants.js'
 
 // getContextValue removed - Backend unified store provides merged value directly via context.value
-
-/** SECURITY: Block prototype chain / constructor access to prevent exploitation */
-const FORBIDDEN_PATH_KEYS = ['__proto__', 'constructor', 'prototype']
 
 function assertSafePath(path, context = 'path resolution') {
 	if (!path || typeof path !== 'string') return

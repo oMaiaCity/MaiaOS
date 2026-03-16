@@ -1,8 +1,6 @@
 import { resolveSchemaFromCoValue } from '../utils/resolve-helpers.js'
+import { CSS_INJECTION_PATTERNS, FORBIDDEN_PATH_KEYS } from '../utils/security-constants.js'
 import { compileCSSProperties, toKebabCase } from '../utils/utils.js'
-
-/** SECURITY: Block prototype chain / constructor access (matches Evaluator) */
-const FORBIDDEN_PATH_KEYS = ['__proto__', 'constructor', 'prototype']
 
 function assertSafePath(path, context = 'style token path') {
 	if (!path || typeof path !== 'string') return
@@ -24,17 +22,6 @@ function resolvePath(obj, path) {
 		return acc?.[key]
 	}, obj)
 }
-
-/** SECURITY: Block CSS injection via url(), expression(), -moz-binding, etc. */
-const CSS_INJECTION_PATTERNS = [
-	/javascript\s*:/i,
-	/vbscript\s*:/i,
-	/data\s*:\s*[^,]*base64\s*,/i,
-	/expression\s*\(/i,
-	/-moz-binding\s*:/i,
-	/@import\b/i,
-	/behavior\s*:/i,
-]
 
 function sanitizeCSSInterpolatedValue(value) {
 	if (value == null || typeof value !== 'string') return value
