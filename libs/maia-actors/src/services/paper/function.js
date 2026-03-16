@@ -40,7 +40,7 @@ function getByPath(obj, path) {
 
 export default {
 	async execute(actor, payload) {
-		const { value, path = 'notes.0.content' } = payload
+		const { value, path = 'notes.0.content', coId: coIdParam } = payload
 		if (value == null || typeof value !== 'string') {
 			return createErrorResult([
 				createErrorEntry('structural', '[updateCoTextContent] value (string) is required'),
@@ -54,9 +54,12 @@ export default {
 			])
 		}
 
-		const contextValue = actor.context?.value ?? actor.context
-		const content = getByPath(contextValue, path)
-		const coId = content?.id ?? content
+		let coId = coIdParam
+		if (!coId || typeof coId !== 'string' || !coId.startsWith('co_z')) {
+			const contextValue = actor.context?.value ?? actor.context
+			const content = getByPath(contextValue, path)
+			coId = content?.id ?? content
+		}
 
 		if (!coId || typeof coId !== 'string' || !coId.startsWith('co_z')) {
 			return createErrorResult([

@@ -97,6 +97,7 @@ import layoutPaperActor from './views/layout-paper/actor.maia'
 import layoutPaperContext from './views/layout-paper/context.maia'
 import layoutPaperInterface from './views/layout-paper/interface.maia'
 import layoutPaperProcess from './views/layout-paper/process.maia'
+import layoutPaperStyle from './views/layout-paper/style.maia'
 import layoutPaperView from './views/layout-paper/view.maia'
 import listActor from './views/list/actor.maia'
 import listContext from './views/list/context.maia'
@@ -445,6 +446,7 @@ export function getSeedConfig() {
 			context: layoutPaperContext,
 			view: layoutPaperView,
 			process: layoutPaperProcess,
+			style: layoutPaperStyle,
 		},
 		{
 			actor: messagesActor,

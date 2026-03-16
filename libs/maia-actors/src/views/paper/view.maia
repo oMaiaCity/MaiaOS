@@ -23,7 +23,7 @@
 								"text": {
 									"$join": [
 										{
-											"$context": "notes.0.content.items"
+											"$context": "selectedNote.content.items"
 										},
 										""
 									]

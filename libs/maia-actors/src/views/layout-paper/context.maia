@@ -1,8 +1,6 @@
 {
 	"$schema": "°Maia/schema/context",
 	"$id": "°Maia/actor/views/layout-paper/context",
-	"paper": "@paper",
-	"paperService": "@paperService",
 	"notes": {
 		"schema": "°Maia/schema/data/notes",
 		"map": {
@@ -10,6 +8,19 @@
 			"content": "$content"
 		}
 	},
+	"selectedNoteId": null,
+	"selectedNote": {
+		"schema": "°Maia/schema/data/notes",
+		"filter": {
+			"id": "$selectedNoteId"
+		},
+		"map": {
+			"id": "id",
+			"content": "$content"
+		}
+	},
+	"paper": "@paper",
+	"paperService": "@paperService",
 	"@actors": {
 		"paper": "°Maia/actor/views/paper",
 		"paperService": "°Maia/actor/services/paper"

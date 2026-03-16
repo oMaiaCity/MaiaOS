@@ -3,14 +3,29 @@
 	"$id": "°Maia/actor/views/paper/process",
 	"@label": "@maia/actor/views/paper/process",
 	"handlers": {
+		"SELECT_NOTE": [
+			{
+				"ctx": {
+					"selectedNoteId": "$$id"
+				}
+			}
+		],
 		"UPDATE_PAPER": [
+			{
+				"guard": {
+					"$ne": [
+						"$selectedNote",
+						null
+					]
+				}
+			},
 			{
 				"tell": {
 					"target": "$contentService",
 					"type": "UPDATE_PAPER",
 					"payload": {
 						"value": "$$value",
-						"path": "notes.0.content"
+						"coId": "$selectedNote.content.id"
 					}
 				}
 			}
