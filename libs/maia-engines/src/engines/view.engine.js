@@ -16,6 +16,7 @@ import { renderMarkdown } from '../utils/markdown.js'
 import { sanitizePayloadForValidation } from '../utils/payload-sanitizer.js'
 import { perfPipeline } from '../utils/perf.js'
 import { loadContextStore, readStore } from '../utils/resolve-helpers.js'
+import { BOOLEAN_ATTRS, SAFE_TAGS, URL_ATTRS } from '../utils/security-constants.js'
 import { traceView } from '../utils/trace.js'
 import { isContentEditableUpdateEvent, toKebabCase } from '../utils/utils.js'
 import { RENDER_STATES } from './actor.engine.js'
@@ -38,16 +39,6 @@ const UPDATE_INPUT_TYPES = [
 	'UPDATE_WASM_CODE',
 ]
 
-const BOOLEAN_ATTRS = new Set([
-	'disabled',
-	'readonly',
-	'checked',
-	'selected',
-	'autofocus',
-	'required',
-	'multiple',
-])
-
 /**
  * Extract co-id string from a value (handles CoValue objects resolved by context map).
  * Returns the co-id string or null if not a valid co-id.
@@ -68,6 +59,13 @@ function setAttr(element, name, value) {
 		value = coId ?? ''
 		// fall through to set the attribute
 	} else if (value === undefined || value === null) {
+		return
+	}
+	if (URL_ATTRS.has(name.toLowerCase())) {
+		const urlStr = String(value)
+		if (/^(https?:|blob:|data:image\/|mailto:|tel:|\/|#)/.test(urlStr) || !urlStr.includes(':')) {
+			element.setAttribute(name, sanitizeAttributeWhitelist(urlStr))
+		}
 		return
 	}
 	if (BOOLEAN_ATTRS.has(name.toLowerCase())) {
@@ -371,7 +369,8 @@ export class ViewEngine {
 	async renderNode(node, data, actorId) {
 		if (!node) return null
 
-		const tag = node.tag || 'div'
+		const rawTag = (node.tag || 'div').toLowerCase()
+		const tag = SAFE_TAGS.has(rawTag) ? rawTag : 'div'
 		const element = document.createElement(tag)
 		await this._applyNodeAttributes(element, node, data, actorId)
 
@@ -426,7 +425,7 @@ export class ViewEngine {
 		if (node.class) {
 			const classValue = await this.evaluator.evaluate(node.class, data)
 			if (classValue) {
-				element.className = classValue
+				element.className = sanitizeAttributeWhitelist(classValue)
 			}
 		}
 
@@ -546,7 +545,7 @@ export class ViewEngine {
 		for (const [key, spec] of entries) {
 			const value = await this._resolveDataAttrValue(spec, data)
 			if (value !== null && value !== undefined) {
-				element.setAttribute(`data-${toKebabCase(key)}`, String(value))
+				element.setAttribute(`data-${toKebabCase(key)}`, sanitizeAttributeWhitelist(String(value)))
 			}
 		}
 	}

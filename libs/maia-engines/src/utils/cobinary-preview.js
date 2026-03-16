@@ -46,6 +46,7 @@ export function hydrateCobinaryPreviews(root, dataEngine) {
 			if (!img.src) img.src = COBINARY_PLACEHOLDER
 			return
 		}
+		if (!/^co_z[a-zA-Z0-9_-]+$/.test(coId)) return
 		if (img.src && (img.src.startsWith('data:') || img.src.startsWith('blob:'))) return
 		const cached = cobinaryPreviewCache.get(coId)
 		if (cached?.dataUrl) {
@@ -54,7 +55,7 @@ export function hydrateCobinaryPreviews(root, dataEngine) {
 		}
 		if (cached?.loading) {
 			cached.loading.then((dataUrl) => {
-				const current = root.querySelector(`img[data-co-id="${coId}"]`)
+				const current = root.querySelector(`img[data-co-id="${CSS.escape(coId)}"]`)
 				if (current) current.src = dataUrl || COBINARY_PLACEHOLDER
 			})
 			return
@@ -67,7 +68,7 @@ export function hydrateCobinaryPreviews(root, dataEngine) {
 			.catch(() => null)
 		cobinaryPreviewCache.set(coId, { loading })
 		loading.then((dataUrl) => {
-			const current = root.querySelector(`img[data-co-id="${coId}"]`)
+			const current = root.querySelector(`img[data-co-id="${CSS.escape(coId)}"]`)
 			if (current) current.src = dataUrl || COBINARY_PLACEHOLDER
 		})
 	})
