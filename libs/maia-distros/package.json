@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/maia-distros",
-	"version": "26.0317.2128",
+	"version": "26.0317.2202",
 	"type": "module",
 	"private": true,
 	"exports": {
