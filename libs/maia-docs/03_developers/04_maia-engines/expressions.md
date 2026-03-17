@@ -35,7 +35,7 @@ MaiaScript expressions are JSON-based and evaluated safely by `MaiaScriptEvaluat
 ### Comparison
 
 - `$eq` - Equal: `{ "$eq": ["$context.status", "active"] }`
-- `$neq` - Not equal: `{ "$neq": ["$context.status", "inactive"] }`
+- `$ne` - Not equal: `{ "$ne": ["$context.status", "inactive"] }`
 - `$gt` - Greater than: `{ "$gt": ["$context.count", 10] }`
 - `$gte` - Greater than or equal
 - `$lt` - Less than
@@ -50,33 +50,19 @@ MaiaScript expressions are JSON-based and evaluated safely by `MaiaScriptEvaluat
 ### Control Flow
 
 - `$if` - Conditional: `{ "$if": { "condition": { "$eq": ["$context.status", "active"] }, "then": "green", "else": "gray" } }`
-- `$switch` - Switch statement
+- Ternary shortcut: `"$condition ? $then : $else"` (string syntax, e.g. `"$context.done ? 'done' : 'pending'"`)
 
 ### String
 
 - `$concat` - Concatenate strings
 - `$trim` - Trim whitespace: `{ "$trim": "$$text" }` (removes leading/trailing whitespace from string)
-- `$toLowerCase` - Convert to lowercase
-- `$toUpperCase` - Convert to uppercase
-
-### Date
-
-- `$formatDate` - Format date
+- `$join` - Join array elements with separator: `{ "$join": { "array": "$context.items", "separator": ", " } }`
 
 ### Array
 
 - `$length` - Get array length
-- `$includes` - Check if array includes value
 - `$map` - Map over array
 - `$find` - Find first matching item in array (see below)
-- `$filter` - Filter array
-
-### Math
-
-- `$add` - Add numbers
-- `$subtract` - Subtract numbers
-- `$multiply` - Multiply numbers
-- `$divide` - Divide numbers
 
 ---
 

@@ -135,7 +135,6 @@ export async function ensureAllModelsLoaded(onProgress, onStoragePhase) {
 	}
 }
 
-/** @deprecated Use ensureAllModelsLoaded. Kept for backwards compatibility. */
 export async function ensureVoiceModelsLoaded(onProgress, onStoragePhase) {
 	return ensureAllModelsLoaded(onProgress, onStoragePhase)
 }

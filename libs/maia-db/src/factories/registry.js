@@ -134,7 +134,6 @@ export function getAllFactories() {
  * Check if schema exists in hardcoded registry (for migrations/seeding only)
  * @param {string} factoryName - Schema name
  * @returns {boolean} True if schema exists in hardcoded registry
- * @deprecated Only for use during migrations/seeding. Runtime should check spark.os.factories.
  */
 export function hasFactoryInRegistry(factoryName) {
 	// Only check hardcoded registry (for migrations/seeding before spark.os.factories exists)

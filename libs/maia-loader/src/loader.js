@@ -166,15 +166,6 @@ export class MaiaOS {
 						} catch (_e) {
 							// Ignore
 						}
-					} else if (type === 'coplaintext') {
-						try {
-							specialContent = {
-								type: 'plaintext',
-								content: content.text || content.toString(),
-							}
-						} catch (_e) {
-							// Ignore
-						}
 					}
 
 					allCoValues.push({

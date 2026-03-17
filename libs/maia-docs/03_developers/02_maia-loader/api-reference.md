@@ -11,7 +11,7 @@ Services (maia, moai) import only from `@MaiaOS/loader`. Loader re-exports every
 | Export | Source | Use |
 |--------|--------|-----|
 | `getAllFactories` | `@MaiaOS/factories` | Seed/bootstrap (canonical schema definitions) |
-| `getAllToolDefinitions` | `@MaiaOS/tools` | Seed/bootstrap (tool definitions) |
+| `getSeedConfig` | `@MaiaOS/actors` | Seed/bootstrap (actor definitions) |
 | `getAllVibeRegistries` | `@MaiaOS/vibes` (async) | Seed/bootstrap (vibe registries) |
 | `buildSeedConfig` | `@MaiaOS/vibes` (async) | Seed config from vibes |
 | `filterVibesForSeeding` | `@MaiaOS/vibes` (async) | Filter vibes by config |
@@ -21,57 +21,37 @@ Vibes helpers use dynamic import internally to avoid loader↔vibes circular dep
 
 ---
 
-## `createMaiaOS(options)`
-
-Creates an authenticated MaiaOS instance (identity layer).
-
-**Parameters:**
-- `options.node` (required) - LocalNode instance from `signInWithPasskey`
-- `options.account` (required) - RawAccount instance from `signInWithPasskey`
-- `options.accountID` (optional) - Account ID string
-- `options.name` (optional) - Display name
-
-**Returns:** `Promise<Object>` - MaiaOS instance with:
-- `id` - Identity object (`{ maiaId, node }`)
-- `auth` - Authentication API
-- `db` - Database API (future)
-- `script` - DSL API (future)
-- `inspector()` - Dev tool to inspect account
-- `getAllCoValues()` - List all CoValues
-- `getCoValueDetail(coId)` - Get CoValue details
-
-**Throws:** If `node` or `account` not provided
-
-**Example:**
-```javascript
-const { node, account } = await signInWithPasskey({ salt: "maia.city" });
-const o = await createMaiaOS({ node, account });
-
-// Inspect your account
-const accountData = o.inspector();
-console.log("Account data:", accountData);
-
-// List all CoValues
-const coValues = o.getAllCoValues();
-console.log("CoValues:", coValues);
-```
-
----
-
 ## `MaiaOS.boot(config)`
 
-Boots the MaiaOS operating system (execution layer).
+Boots the MaiaOS operating system. Authentication is integrated into boot—you must provide a peer or node+account, or use agent mode with env vars.
 
 **Parameters:**
-- `config.modules` (optional, default: `['db', 'core', 'dragdrop']`) - Modules to load
+- `config.node` (required for human mode) - LocalNode instance from `signInWithPasskey`
+- `config.account` (required for human mode) - RawAccount instance from `signInWithPasskey`
+- `config.peer` (alternative) - Pre-initialized MaiaDB peer
+- `config.agentSecret` (optional) - Agent secret for UCAN/capability tokens
+- `config.modules` (optional, default: `['db', 'core']`) - Modules to load (db, core, ai)
+- `config.syncDomain` (optional) - Sync server domain
+- `config.getMoaiBaseUrl` (optional) - Base URL for moai sync server
 - `config.isDevelopment` (optional) - Development mode flag
+- `config.runtimeType` (optional, default: `'browser'`) - Runtime type
+
+**Agent mode:** When `config.mode === 'agent'` and no peer/node+account, boot uses `AVEN_MAIA_ACCOUNT` and `AVEN_MAIA_SECRET` env vars with `loadOrCreateAgentAccount`.
 
 **Returns:** `Promise<MaiaOS>` - Booted OS instance
 
 **Example:**
 ```javascript
+import { MaiaOS, signInWithPasskey } from '@MaiaOS/loader';
+
+// Human mode: authenticate first
+const { accountID, agentSecret, loadingPromise } = await signInWithPasskey({ salt: "maia.city" });
+const { node, account } = await loadingPromise;
+
 const os = await MaiaOS.boot({
-  modules: ['db', 'core', 'dragdrop']
+  node,
+  account,
+  modules: ['db', 'core', 'ai']
 });
 ```
 
@@ -97,41 +77,57 @@ const actor = await os.createActor(
 
 ---
 
-## `os.loadVibe(vibePath, container)`
+## `os.loadVibe(vibeKeyOrCoId, container, spark?)`
 
-Loads a vibe (app manifest) from a file.
+Loads a vibe from account or spark vibes, or by co-id. Delegates to `loadVibeFromAccount`.
 
 **Parameters:**
-- `vibePath` (string) - Path to `.vibe.maia` file
+- `vibeKeyOrCoId` (string) - Vibe key (e.g., `'todos'`) from account.vibes, or co-id (`co_z...`)
 - `container` (HTMLElement) - DOM container for root actor
+- `spark` (optional, default: `'°Maia'`) - Spark for vibe lookup
 
 **Returns:** `Promise<{vibe: Object, actor: Object}>` - Vibe metadata and actor
 
 **Example:**
 ```javascript
 const { vibe, actor } = await os.loadVibe(
-  './vibes/todos/manifest.vibe.maia',
+  'todos',
   document.getElementById('app-container')
 );
 ```
 
 ---
 
-## `os.loadVibeFromDatabase(vibeId, container)`
+## `os.loadVibeFromAccount(vibeKeyOrCoId, container, spark?)`
 
-Loads a vibe from the database.
+Loads a vibe from account.vibes or by co-id. If vibe key, resolves from account; if co-id, loads from database.
 
 **Parameters:**
-- `vibeId` (string) - Vibe ID (e.g., `"@vibe/todos"`)
+- `vibeKeyOrCoId` (string) - Vibe key (e.g., `'todos'`) or co-id (`co_z...`)
 - `container` (HTMLElement) - DOM container for root actor
+- `spark` (optional, default: `'°Maia'`) - Spark for vibe lookup
+
+**Returns:** `Promise<{vibe: Object, actor: Object}>` - Vibe metadata and actor
+
+---
+
+## `os.loadVibeFromDatabase(vibeId, container, vibeKey?)`
+
+Loads a vibe from the database by co-id.
+
+**Parameters:**
+- `vibeId` (string) - Vibe co-id (`co_z...`); human-readable IDs like `@vibe/todos` are not supported
+- `container` (HTMLElement) - DOM container for root actor
+- `vibeKey` (optional) - Vibe key for actor reuse tracking (e.g., `'todos'`)
 
 **Returns:** `Promise<{vibe: Object, actor: Object}>` - Vibe metadata and actor
 
 **Example:**
 ```javascript
 const { vibe, actor } = await os.loadVibeFromDatabase(
-  '@vibe/todos',
-  document.getElementById('app-container')
+  'co_zVibe123...',
+  document.getElementById('app-container'),
+  'todos'
 );
 ```
 
@@ -169,23 +165,24 @@ await os.deliverEvent('co_z...', 'actor-123', 'click', {
 
 ---
 
-## `os.db(payload)`
+## `os.do(payload)`
 
-Executes a database operation (internal use + `@db` tool).
+Executes a database operation (internal use + `@db` tool). Delegates to DataEngine.
 
 **Parameters:**
 - `payload` (Object) - Operation payload:
-  - `op` (string) - Operation type: `'read'`, `'create'`, `'update'`, `'delete'`, `'seed'`
+  - `op` (string) - Operation type: `'read'`, `'create'`, `'update'`, `'delete'`, `'readFactory'`, `'factory'`, colist ops, etc.
+  - `factory` (string) - Factory co-id or registry key (e.g., `°Maia/factory/todos`)
   - Other fields depend on operation type
 
 **Returns:** `Promise<any>` - Operation result (for `read`, returns ReactiveStore)
 
 **Example:**
 ```javascript
-// Read (always returns reactive store)
-const store = await os.db({
+// Read (returns reactive store)
+const store = await os.do({
   op: 'read',
-  factory: 'co_zTodos123',  // Factory co-id (co_z...)
+  factory: '°Maia/factory/todos',
   filter: { completed: false }
 });
 
@@ -198,9 +195,9 @@ const unsubscribe = store.subscribe((todos) => {
 });
 
 // Create
-const newTodo = await os.db({
+const newTodo = await os.do({
   op: 'create',
-  factory: '@factory/todos',
+  factory: '°Maia/factory/todos',
   data: { text: 'Buy milk', completed: false }
 });
 ```
@@ -215,9 +212,8 @@ Gets all engines for debugging.
 - `actorEngine` - ActorEngine
 - `viewEngine` - ViewEngine
 - `styleEngine` - StyleEngine
-- `stateEngine` - StateEngine
-- `toolEngine` - ToolEngine
-- `maia.do` - DataEngine (data operations)
+- `processEngine` - ProcessEngine (state machines)
+- `dataEngine` - DataEngine (data operations)
 - `evaluator` - MaiaScriptEvaluator
 - `moduleRegistry` - ModuleRegistry
 

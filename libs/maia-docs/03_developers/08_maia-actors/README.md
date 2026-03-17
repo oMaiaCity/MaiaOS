@@ -10,8 +10,8 @@ The `@MaiaOS/actors` package provides a centralized registry for all MaiaScript 
 - ✅ **Actor implementations** - JavaScript functions that execute actors
 
 **What it isn't:**
-- ❌ **Not the execution engine** - Actor execution is in `maia-engines` (ToolEngine, StateEngine)
-- ❌ **Not actor registration** - Actors are registered by modules in `maia-engines`
+- ❌ **Not the execution engine** - Actor execution is in `maia-engines` (ProcessEngine, ActorEngine)
+- ❌ **Not actor registration** - Actors are referenced by modules in `maia-engines` registry
 - ❌ **Not business logic** - Actors are generic, reusable operations
 
 **Inbox-based invocation:** Actors receive events via their inbox CoStream. Use `sendEvent` action in state machines to deliver events to any actor. Actors with `function` defined run their code when the state machine triggers `{"function": true}`.
@@ -22,22 +22,20 @@ The `@MaiaOS/actors` package provides a centralized registry for all MaiaScript 
 
 ```
 libs/maia-actors/src/
-├── index.js                    # Main exports (ACTORS, getActor, getSeedConfig)
+├── index.js                    # Main exports (ACTORS, getActor, getAllActorDefinitions, getSeedConfig)
 ├── seed-config.js              # Service actor seeding (actors, states; inboxes derived from actors)
+├── os/                         # OS-level actors
+│   ├── ai/                     # AI chat (actor.maia, function.js)
+│   └── db/                     # DB operations (actor.maia, function.js)
+├── services/                   # Service actors
+│   ├── names/                  # computeMessageNames
+│   ├── paper/                  # updatePaperContent
+│   ├── profile-image/
+│   ├── todos/
+│   └── update-wasm-code/
 ├── views/                      # Layout actors (headless intent pattern)
-│   ├── tabs/  # Todos, Creator
-│   ├── sparks/                 # Sparks layout
-│   ├── grid/                   # Humans
-│   ├── layout-chat/            # Chat (messages + input)
-│   └── layout-paper/            # Paper
-├── aiChat/
-│   ├── aiChat.actor.maia       # Actor definition ($factory: °Maia/factory/actor)
-│   ├── aiChat.state.maia       # State machine (idle→processing on CHAT)
-│   └── aiChat.function.js      # LLM execution
-├── db/, sparks/, updatePaperContent/, computeMessageNames/
-│   ├── *.actor.maia
-│   ├── *.state.maia
-│   └── *.function.js
+│   ├── tabs/, sparks/, grid/, layout-chat/, layout-paper/, input/
+│   └── ...
 └── shared/
     └── api-helpers.js
 ```
@@ -52,8 +50,9 @@ Central registry that maps namespace paths to actor definitions and functions.
 
 ```javascript
 export const ACTORS = {
-  'core/publishMessage': { definition: publishMessageDef, function: publishMessageFn },
-  'ai/chat': { definition: aiDef, function: aiFn },
+  'maia/actor/os/ai': { definition: aiDef, function: aiFn },
+  'maia/actor/os/db': { definition: dbDef, function: dbFn },
+  'maia/actor/services/names': { definition: namesDef, function: namesFn },
   // ...
 };
 
@@ -96,8 +95,10 @@ export default {
 ```javascript
 import { getActor } from '@MaiaOS/actors';
 
-const actor = getActor('core/updatePaperContent');
+const actor = getActor('maia/actor/os/db');
 // Returns: { definition: {...}, function: execute(...) }
+
+// Single-part lookup: getActor('db') resolves to 'maia/actor/os/db'
 ```
 
 ### Getting All Actor Definitions
@@ -106,7 +107,7 @@ const actor = getActor('core/updatePaperContent');
 import { getAllActorDefinitions } from '@MaiaOS/actors';
 
 const definitions = getAllActorDefinitions();
-// Returns: { 'core/updatePaperContent': {...}, ... }
+// Returns: { 'maia/actor/os/db': {...}, 'maia/actor/services/names': {...}, ... }
 // Used for seeding actor definitions into database
 ```
 
@@ -114,26 +115,18 @@ const definitions = getAllActorDefinitions();
 
 ## Available Actors
 
-### Core
+### OS
 
-- **`@core/computeMessageNames`** - Computes message names from context
-- **`@core/updatePaperContent`** - Updates CoText content for paper area
-### AI
+- **`maia/actor/os/db`** - Unified API for query, create, update, delete, spark operations
+- **`maia/actor/os/ai`** - Unified AI chat using OpenAI-compatible API (RedPill)
 
-- **`@ai/chat`** - Unified AI chat using OpenAI-compatible API (RedPill)
-- **`@ai/sendMessage`** - Full pipeline: user message → LLM → assistant message
+### Services
 
-### Database
-
-- **`@db/db`** - Unified API for query, create, update, delete
-
-### Sparks
-
-- **`@db`** - Spark operations (createSpark, readSpark, addSparkMember, etc.) via `°Maia/actor/os/db` with type `SPARK_OP`
-
-### UI
-
-- **`@ui/switchView`** - Updates actor context with view mode
+- **`maia/actor/services/names`** - Computes message names from context
+- **`maia/actor/services/paper`** - Updates paper content
+- **`maia/actor/services/profile-image`** - Profile image handling
+- **`maia/actor/services/todos`** - Todos service (definition only)
+- **`maia/actor/services/updateWasmCode`** - WASM code updates
 
 ---
 
@@ -151,35 +144,22 @@ const definitions = getAllActorDefinitions();
 
 **`src/index.js`:**
 ```javascript
-import myActorDef from './my-namespace/myActor.actor.maia';
-import myActorFn from './my-namespace/myActor.function.js';
+import myActorDef from './services/my-actor/actor.maia';
+import myActorFn from './services/my-actor/function.js';
 
 export const ACTORS = {
   // ... existing
-  'my-namespace/myActor': { definition: myActorDef, function: myActorFn },
+  'maia/actor/services/myActor': { definition: myActorDef, function: myActorFn },
 };
 ```
 
-### Step 4: Register in Module
+### Step 4: Add to Module
 
-**`libs/maia-engines/src/modules/my-namespace.module.js`:**
-```javascript
-import { getActor } from '@MaiaOS/actors';
-
-export async function register(registry) {
-  const registered = await registry._registerActorsFromRegistry(
-    'my-namespace',
-    ['myActor'],
-    '@my-namespace',
-    { silent: true },
-  );
-  // ...
-}
-```
+Actors are referenced by modules in `libs/maia-engines/src/modules/registry.js`. The db and ai modules reference `@maia/actor/os/db` and `@maia/actor/os/ai`. To add a new tool, extend the registry's BUILTIN_MODULES or add a custom module that references your actor path.
 
 ---
 
 ## Related Documentation
 
-- [maia-engines: ComputeEngine](../04_maia-engines/engines/) - How actors are executed
-- [maia-engines: Modules](../04_maia-engines/modules.md) - How actors are registered
+- [maia-engines: ProcessEngine](../04_maia-engines/engines/) - How actors are executed
+- [maia-engines: Modules](../04_maia-engines/modules.md) - How modules reference actors

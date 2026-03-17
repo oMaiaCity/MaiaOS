@@ -22,19 +22,9 @@ Every account has the **°Maia spark** with a group at `registries.sparks["°Mai
 
 ### Creating Child Groups
 
-The °Maia spark's group can create child groups it owns:
+The °Maia spark's group can create child groups it owns. Use Spark operations (createSpark) or internal group APIs. `createChildGroup` is not part of the public API.
 
-```javascript
-import { createChildGroup } from '@MaiaOS/db';
-
-const maiaGroup = await backend.getMaiaGroup();
-const childGroup = createChildGroup(node, maiaGroup, { name: "My Project" });
-
-// °Maia group is now admin of childGroup
-// childGroup can own its own CoValues
-```
-
-**Implementation:** `libs/maia-db/src/cojson/groups/create.js`
+**Implementation:** `libs/maia-db/src/cojson/core/MaiaDB.js` - MaiaDB handles group creation
 
 ## Sparks
 

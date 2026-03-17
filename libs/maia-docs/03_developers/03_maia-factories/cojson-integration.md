@@ -24,15 +24,15 @@ Imagine JSON Schema is a language that only knows about regular objects and arra
 **Example:**
 ```json
 {
-  "$factory": "@factory/meta",
+  "$factory": "°Maia/factory/meta",
   "cotype": "comap",
   "properties": {
-    "viewRef": { "$co": "@factory/view" }
+    "viewRef": { "$co": "°Maia/factory/view" }
   }
 }
 ```
 
-This says: "This is a CoMap schema, and the `viewRef` property references the `@factory/view` schema."
+This says: "This is a CoMap schema, and the `viewRef` property references the `°Maia/factory/view` schema." Factory references use `°Maia/factory/` (spark-scoped) or `@domain/factory/` patterns.
 
 ---
 
@@ -46,6 +46,7 @@ This says: "This is a CoMap schema, and the `viewRef` property references the `@
 - `"comap"`: Collaborative map (object-like)
 - `"colist"`: Collaborative list (array-like)
 - `"costream"`: Collaborative stream (array-like, append-only)
+- `"cobinary"`: Collaborative binary (CoBinary)
 
 **Where it's used:** At the schema root only (not in properties).
 
@@ -75,9 +76,10 @@ This says: "This is a CoMap schema, and the `viewRef` property references the `@
 **What it expands to:**
 ```json
 {
-  "$co": "@factory/view"
+  "$co": "°Maia/factory/view"
 }
 ```
+Patterns: `°Maia/factory/` (spark-scoped), `@domain/factory/` (domain-scoped).
 
 Expands to:
 ```json

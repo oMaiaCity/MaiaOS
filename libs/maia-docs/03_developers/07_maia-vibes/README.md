@@ -37,24 +37,25 @@ Imagine you're building a house:
 ```
 libs/maia-vibes/src/
 ├── index.js                    # Main exports (loaders, registries)
+├── loader.js                   # createVibeLoader factory
+├── seeding.js                  # buildSeedConfig, getAllVibeRegistries, filterVibesForSeeding
 ├── todos/                      # Todos vibe
 │   ├── manifest.vibe.maia     # Vibe manifest
-│   ├── loader.js              # Vibe loader function
-│   ├── registry.js            # Vibe registry (pre-loaded configs)
-│   ├── index.html             # Example launcher HTML
-│   ├── agent/                 # Agent service actor
-│   │   ├── agent.actor.maia
-│   │   ├── agent.context.maia
-│   │   ├── agent.state.maia
-│   │   ├── agent.view.maia
-│   │   # inbox derived by convention from actor $id (no agent.inbox.maia)
-│   │   └── brand.style.maia
-│   ├── list/                  # List UI actor
-│   └── logs/                  # Logs UI actor
-├── my-data/                    # MyData vibe
-│   └── ... (similar structure)
-└── maia-agent/                # MaiaAgent vibe
-    └── ... (similar structure)
+│   ├── loader.js              # loadTodosVibe
+│   ├── registry.js            # TodosVibeRegistry
+│   ├── index.html             # Example launcher
+│   └── intent/                # Intent actor (entry point)
+│       ├── intent.actor.maia
+│       ├── intent.context.maia
+│       ├── intent.process.maia
+│       └── intent.view.maia
+├── sparks/                     # Sparks vibe
+├── chat/                       # Chat vibe
+├── paper/                      # Paper vibe
+├── profile/                    # Profile vibe
+├── creator/                    # Creator (Logs) vibe
+├── humans/                     # Humans (Registries) vibe
+└── quickjs-add/               # QuickJS Add vibe
 ```
 
 ---
@@ -124,20 +125,20 @@ The vibe manifest (`manifest.vibe.maia`) defines the app metadata and entry poin
 **Structure:**
 ```json
 {
-  "$factory": "@factory/vibe",
-  "$id": "@vibe/todos",
-  "name": "Todo List",
-  "description": "A complete todo list application",
-  "actor": "@todos/actor/agent"
+  "$factory": "°Maia/factory/vibe",
+  "$id": "°Maia/vibe/todos",
+  "name": "Todos",
+  "description": "Complete todo list with state machines and AI tools",
+  "actor": "°Maia/todos/actor/intent"
 }
 ```
 
 **Fields:**
-- `$factory` - Factory reference (`@factory/vibe`)
-- `$id` - Unique vibe identifier (`@vibe/todos`)
-- `name` - Display name for marketplace
+- `$factory` - Factory reference (`°Maia/factory/vibe`)
+- `$id` - Unique vibe identifier (`°Maia/vibe/todos`)
+- `name` - Display name
 - `description` - Brief description
-- `actor` - Reference to agent service actor (entry point)
+- `actor` - Reference to entry-point actor (e.g. `°Maia/todos/actor/intent`)
 
 ---
 
@@ -190,6 +191,11 @@ const container = document.getElementById('app');
 const { os, vibe, actor } = await loadTodosVibe(container);
 ```
 
+### Available Loaders
+
+- `loadTodosVibe` - Todos vibe (`@MaiaOS/vibes/todos/loader`)
+- `loadSparksVibe` - Sparks vibe
+
 ### Getting All Vibe Registries
 
 ```javascript
@@ -204,12 +210,15 @@ const registries = await getAllVibeRegistries();
 ```javascript
 import { TodosVibeRegistry } from '@MaiaOS/vibes/todos/registry';
 
-// Boot MaiaOS with registry
+// Boot MaiaOS with registry (seeds vibe configs)
 const os = await MaiaOS.boot({
-  registry: TodosVibeRegistry
+  node,
+  account,
+  modules: ['db', 'core'],
+  registry: TodosVibeRegistry  // Optional: seeds vibe configs during boot
 });
 
-// Load vibe
+// Load vibe by key
 const { vibe, actor } = await os.loadVibeFromAccount('todos', container);
 ```
 
@@ -249,29 +258,14 @@ vibe-name/
 ├── loader.js               # Vibe loader (optional, convenience)
 ├── registry.js             # Vibe registry (required for seeding)
 ├── index.html              # Example launcher (optional)
-└── [actors]/               # Actor directories
-    ├── [actor].actor.maia
-    ├── [actor].context.maia
-    ├── [actor].state.maia
-    ├── [actor].view.maia
-    # inbox derived by convention (no [actor].inbox.maia)
-    └── brand.style.maia    # Shared brand style
+└── intent/                 # Entry-point actor (convention: intent/)
+    ├── intent.actor.maia
+    ├── intent.context.maia
+    ├── intent.process.maia
+    └── intent.view.maia
 ```
 
-### Agent-First Pattern
-
-**Every vibe MUST have an "agent" service actor** as its entry point.
-
-**Structure:**
-```
-Vibe → Agent (Service Actor) → Composite Actor → UI Actors
-```
-
-**Why:**
-- Clear separation of concerns (service logic vs. UI)
-- Scalable architecture (add UI actors as needed)
-- Message-based communication (loose coupling)
-- Consistent structure across all vibes
+**Note:** Actor naming uses `intent` as the entry-point convention. Inbox is derived by convention from actor `$id`.
 
 **See:** [Creator Docs: Vibes](../../02_creators/01-vibes.md) for details
 
@@ -281,46 +275,37 @@ Vibe → Agent (Service Actor) → Composite Actor → UI Actors
 
 ### Todos Vibe
 
-A complete todo list application with drag-and-drop kanban view.
+A complete todo list application.
 
 **Features:**
 - Todo CRUD operations
-- Drag-and-drop organization
-- Multiple views (list, kanban)
 - State machine-based state management
+- AI tools integration
 
 **Load:**
 ```javascript
 import { loadTodosVibe } from '@MaiaOS/vibes/todos/loader';
 ```
 
-### MyData Vibe
+### Sparks Vibe
 
-A data management application for viewing and editing structured data.
-
-**Features:**
-- Table view for data
-- Detail view for editing
-- Schema-based validation
+Sparks management and layout.
 
 **Load:**
 ```javascript
-import { loadMyDataVibe } from '@MaiaOS/vibes/my-data/loader';
+import { loadSparksVibe } from '@MaiaOS/vibes';
 ```
 
-### MaiaAgent Vibe
+### Other Vibes
 
-An AI agent interface for LLM interactions.
+- **chat** - Chat interface
+- **paper** - Paper/document editing
+- **profile** - Profile management
+- **creator** - Creator (Logs) interface
+- **humans** - Humans (Registries) view
+- **quickjs-add** - QuickJS Add tool
 
-**Features:**
-- Chat interface
-- LLM integration (RedPill API)
-- Conversation history
-
-**Load:**
-```javascript
-import { loadMaiaAgentVibe } from '@MaiaOS/vibes/maia-agent/loader';
-```
+Registries for these are exported from `getAllVibeRegistries()`. Loaders can be created via `createVibeLoader(vibeKey, Registry, modules)`.
 
 ---
 
@@ -334,13 +319,11 @@ my-vibe/
 ├── loader.js
 ├── registry.js
 ├── index.html
-└── agent/
-    ├── agent.actor.maia
-    ├── agent.context.maia
-    ├── agent.state.maia
-    ├── agent.view.maia
-    # inbox derived by convention (no agent.inbox.maia)
-    └── brand.style.maia
+└── intent/
+    ├── intent.actor.maia
+    ├── intent.context.maia
+    ├── intent.process.maia
+    └── intent.view.maia
 ```
 
 ### Step 2: Create Vibe Manifest
@@ -348,11 +331,11 @@ my-vibe/
 **`manifest.vibe.maia`:**
 ```json
 {
-  "$factory": "@factory/vibe",
-  "$id": "@vibe/my-vibe",
+  "$factory": "°Maia/factory/vibe",
+  "$id": "°Maia/vibe/my-vibe",
   "name": "My Vibe",
   "description": "A description of my vibe",
-  "actor": "@my-vibe/actor/agent"
+  "actor": "°Maia/my-vibe/actor/intent"
 }
 ```
 
@@ -361,19 +344,19 @@ my-vibe/
 **`registry.js`:**
 ```javascript
 import vibe from './manifest.vibe.maia';
-import agentActor from './agent/agent.actor.maia';
-import agentView from './agent/agent.view.maia';
+import intentActor from './intent/intent.actor.maia';
+import intentView from './intent/intent.view.maia';
 // ... more imports
 
 export const MyVibeRegistry = {
   vibe: vibe,
   actors: {
-    '@my-vibe/actor/agent': agentActor,
+    '°Maia/my-vibe/actor/intent': intentActor,
   },
   views: {
-    '@my-vibe/view/agent': agentView,
+    '°Maia/my-vibe/view/intent': intentView,
   },
-  // ... contexts, states, inboxes, styles
+  // ... contexts, processes, styles
 };
 ```
 
@@ -381,30 +364,15 @@ export const MyVibeRegistry = {
 
 **`loader.js`:**
 ```javascript
-import { MaiaOS, signInWithPasskey } from '@MaiaOS/loader';
+import { createVibeLoader } from '../loader.js';
 import { MyVibeRegistry } from './registry.js';
 
-export async function loadMyVibe(container) {
-  // Check for existing session
-  let os;
-  if (window.maia && window.maia.id && window.maia.id.node) {
-    os = window.maia;
-  } else {
-    const { node, account } = await signInWithPasskey({ salt: "maia.city" });
-    os = await MaiaOS.boot({
-      node,
-      account,
-      modules: ['db', 'core'],
-      registry: MyVibeRegistry
-    });
-  }
-  
-  const { vibe, actor } = await os.loadVibeFromAccount('my-vibe', container);
-  return { os, vibe, actor };
-}
-
-export { MaiaOS, MyVibeRegistry };
+export const loadMyVibe = createVibeLoader('my-vibe', MyVibeRegistry, ['db', 'core']);
+export { MaiaOS } from '../loader.js';
+export { MyVibeRegistry } from './registry.js';
 ```
+
+**Note:** `createVibeLoader` handles auth (signInWithPasskey), boot, and loadVibeFromAccount. Pass `registry` to `MaiaOS.boot()` when creating a new session so vibe configs are seeded.
 
 ### Step 5: Export from Package
 
@@ -438,11 +406,7 @@ const os = await MaiaOS.boot({
 
 ### Problem: "Registry not found"
 
-**Solution:** Make sure registry is exported from package:
-```javascript
-// src/index.js
-export { MyVibeRegistry } from './my-vibe/registry.js';
-```
+**Solution:** Make sure registry is exported from package. Package exports `./todos/loader` and `./todos/registry`; add similar for custom vibes.
 
 ---
 
@@ -457,6 +421,7 @@ export { MyVibeRegistry } from './my-vibe/registry.js';
 ## Source Files
 
 - Main entry: `libs/maia-vibes/src/index.js`
+- Loader factory: `libs/maia-vibes/src/loader.js`
 - Todos vibe: `libs/maia-vibes/src/todos/`
-- MyData vibe: `libs/maia-vibes/src/my-data/`
-- MaiaAgent vibe: `libs/maia-vibes/src/maia-agent/`
+- Sparks vibe: `libs/maia-vibes/src/sparks/`
+- Package exports: `./todos/loader`, `./todos/registry`, `./seeding`

@@ -17,7 +17,7 @@ The schema transformation system converts human-readable references to co-ids du
 Imagine you have a recipe written in English, but you need to give it to someone who only speaks French. You translate the words, but keep the structure the same - "eggs" becomes "œufs", but you still need 2 of them.
 
 In MaiaOS:
-- **Before:** `{factory: "@factory/todos"}` (human-readable)
+- **Before:** `{factory: "°Maia/factory/todos"}` (human-readable)
 - **After:** `{factory: "co_z123..."}` (co-id)
 - **Structure:** Same! Only the reference string changed.
 
@@ -54,35 +54,39 @@ In MaiaOS:
 
 ## Key Functions
 
-### `transformSchemaForSeeding(schema, coIdMap)`
+### `transformForSeeding(schemaOrInstance, coIdMap, options?)`
 
-Transforms a schema object, replacing all human-readable references with co-ids.
+Transforms a schema or instance object, replacing all human-readable references with co-ids. Single entry point for both schema and instance transformation.
 
 **What it transforms:**
-- `$schema`: `"@factory/meta"` → `"co_z123..."`
-- `$id`: `"@factory/actor"` → `"co_z123..."`
-- `$co` in properties: `{ "$co": "@factory/view" }` → `{ "$co": "co_z456..." }`
-- `$ref` in `$defs`: `{ "$ref": "#/$defs/..." }` → (unchanged, internal reference)
+- `$schema`: `"°Maia/factory/meta"` → `"co_z123..."`
+- `$id`: `"°Maia/factory/actor"` → `"co_z123..."`
+- `$co` in properties: `{ "$co": "°Maia/factory/view" }` → `{ "$co": "co_z456..." }`
+- Query objects: `{factory: "°Maia/factory/todos", filter: {...}}` → `{factory: "co_z...", filter: {...}}`
+
+**Source:** `libs/maia-factories/src/factory-transformer.js`
 
 **Example:**
 ```javascript
+import { transformForSeeding } from '@MaiaOS/factories';
+
 const schema = {
-  $schema: '@factory/meta',
-  $id: '@factory/actor',
+  $schema: '°Maia/factory/meta',
+  $id: '°Maia/factory/actor',
   properties: {
-    viewRef: { $co: '@factory/view' }
+    viewRef: { $co: '°Maia/factory/view' }
   }
 };
 
 const coIdMap = new Map([
-  ['@factory/meta', 'co_z111...'],
-  ['@factory/actor', 'co_z222...'],
-  ['@factory/view', 'co_z333...']
+  ['°Maia/factory/meta', 'co_z111...'],
+  ['°Maia/factory/actor', 'co_z222...'],
+  ['°Maia/factory/view', 'co_z333...']
 ]);
 
-const transformed = transformSchemaForSeeding(schema, coIdMap);
+const transformed = transformForSeeding(schema, coIdMap);
 // {
-//   $factory: 'co_z111...',
+//   $schema: 'co_z111...',
 //   $id: 'co_z222...',
 //   properties: {
 //     viewRef: { $co: 'co_z333...' }
@@ -90,32 +94,19 @@ const transformed = transformSchemaForSeeding(schema, coIdMap);
 // }
 ```
 
-### `transformInstanceForSeeding(instance, coIdMap)`
+**Note:** `transformForSeeding` handles both schemas and instances. For query objects, use the `factory` field (not `schema`): `{factory: "°Maia/factory/todos", filter: {...}}`
 
-Transforms an instance (actor, context, etc.), replacing all human-readable references with co-ids.
-
-**What it transforms:**
-- Top-level `schema` field: `"@factory/todos"` → `"co_z123..."`
-- Query objects: `{factory: "@factory/todos", filter: {...}}` → `{factory: "co_z123...", filter: {...}}`
-- Tool payloads: `{tool: "@db", payload: {factory: "@factory/todos"}}` → `{tool: "@db", payload: {factory: "co_z123..."}}`
-- Action targets: `{tool: "@core/publishMessage", payload: {target: "@actor/vibe"}}` → `{tool: "@core/publishMessage", payload: {target: "co_z456..."}}`
-- Array items: `["@actor/vibe"]` → `["co_z456..."]`
-
-**Example:**
+**Instance example:**
 ```javascript
 const instance = {
-  factory: '@factory/todos',
+  factory: '°Maia/factory/todos',
   todos: {
-    factory: '@factory/todos',
+    factory: '°Maia/factory/todos',
     filter: { done: false }
   }
 };
 
-const coIdMap = new Map([
-  ['@factory/todos', 'co_z123...']
-]);
-
-const transformed = transformInstanceForSeeding(instance, coIdMap);
+const transformed = transformForSeeding(instance, coIdMap);
 // {
 //   factory: 'co_z123...',
 //   todos: {
@@ -125,37 +116,26 @@ const transformed = transformInstanceForSeeding(instance, coIdMap);
 // }
 ```
 
-### `transformQueryObjects(obj, coIdMap)`
+### Query Objects and Nested Structures
 
-Recursively transforms query objects in nested structures.
-
-**What it handles:**
-- Query objects: `{factory: "@factory/todos", filter: {...}}`
+`transformForSeeding` recursively transforms:
+- Query objects: `{factory: "°Maia/factory/todos", filter: {...}}`
 - Tool payloads: `{tool: "@db", payload: {...}}`
-- Action payloads: `{tool: "@core/publishMessage", payload: {target: "@actor/vibe"}}`
-- Nested objects and arrays
+- Action payloads and nested objects/arrays
 
 **Example:**
 ```javascript
 const obj = {
   context: {
     todos: {
-      factory: '@factory/todos',
+      factory: '°Maia/factory/todos',
       filter: { done: false }
     }
-  },
-  actions: [
-    {
-      tool: '@core/publishMessage',
-      payload: {
-        target: '@actor/vibe'
-      }
-    }
-  ]
+  }
 };
 
-transformQueryObjects(obj, coIdMap);
-// All @factory/... and @actor/... references are now co-ids
+transformForSeeding(obj, coIdMap);
+// All °Maia/factory/... references are now co-ids
 ```
 
 ---
@@ -169,14 +149,14 @@ Query objects are a special pattern used in context schemas to reference data co
 ```json
 {
   "todos": {
-    "factory": "@factory/todos",
+    "factory": "°Maia/factory/todos",
     "filter": { "done": false }
   }
 }
 ```
 
 **Structure:**
-- `schema`: Reference to data collection schema
+- `factory`: Reference to data collection factory (co-id or registry key like `°Maia/factory/todos`)
 - `filter`: Optional filter criteria
 
 **Transformation:**

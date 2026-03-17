@@ -1,277 +1,37 @@
-const store = await dbEngine.execute({
-  op: 'read',
-  factory: 'co_zTodos123'
-});
+# maia-operations Reference: See maia-engines
 
-// Batch read
-const stores = await dbEngine.execute({
-  op: 'read',
-  factory: 'co_zTodos123',
-  keys: ['co_zTodo1', 'co_zTodo2', 'co_zTodo3']
-});
-```
+The operations layer has been **merged into maia-engines**. There is no separate `@MaiaOS/operations` package.
 
-### CreateOperation
+## DataEngine API
 
-**Purpose:** Create new records
-
-**Parameters:**
-- `schema` (string, required) - Schema co-id (co_z...)
-- `data` (object, required) - Data to create
-
-**Returns:** Created record with generated co-id
-
-**Example:**
-```javascript
-const newTodo = await dbEngine.execute({
-  op: 'create',
-  factory: 'co_zTodos123',
-  data: { text: 'Buy milk', completed: false }
-});
-```
-
-### UpdateOperation
-
-**Purpose:** Update existing records (unified for data collections and configs)
-
-**Parameters:**
-- `schema` (string, required) - Schema co-id (co_z...)
-- `id` (string, required) - Record co-id to update
-- `data` (object, required) - Data to update
-
-**Returns:** Updated record
-
-**Features:**
-- Validates merged result (existing + update data) against schema
-- Supports MaiaScript expressions if evaluator is provided
-- Handles both data collections and configs uniformly
-
-**Example:**
-```javascript
-const updated = await dbEngine.execute({
-  op: 'update',
-  factory: 'co_zTodos123',
-  id: 'co_zTodo456',
-  data: { completed: true }
-});
-```
-
-### DeleteOperation
-
-**Purpose:** Delete records
-
-**Parameters:**
-- `schema` (string, required) - Schema co-id (co_z...)
-- `id` (string, required) - Record co-id to delete
-
-**Returns:** `true` if deleted successfully
-
-**Example:**
-```javascript
-await dbEngine.execute({
-  op: 'delete',
-  factory: 'co_zTodos123',
-  id: 'co_zTodo456'
-});
-```
-
-### SeedOperation
-
-**Purpose:** Seed database with initial data (backend-specific, IndexedDB only)
-
-**Parameters:**
-- `configs` (object, required) - Config registry
-- `schemas` (object, required) - Schema definitions
-- `data` (object, optional) - Initial application data
-
-**Returns:** `void`
-
-**Example:**
-```javascript
-await dbEngine.execute({
-  op: 'seed',
-  configs: { /* ... */ },
-  schemas: { /* ... */ },
-  data: { /* ... */ }
-});
-```
-
-### SchemaOperation
-
-**Purpose:** Load schema definitions by co-id or from CoValue headerMeta. Uses universal schema resolver (single source of truth).
-
-**Parameters:**
-- `coId` (string, optional) - Schema co-id (co_z...) - direct load via universal resolver
-- `fromCoValue` (string, optional) - CoValue co-id - extracts headerMeta.$schema internally via universal resolver
-
-**Note:** Exactly one of `coId` or `fromCoValue` must be provided.
-
-**Returns:** `ReactiveStore` with schema definition (or null if not found). The store updates reactively when the schema changes.
-
-**Example:**
-```javascript
-// Load schema by co-id (returns ReactiveStore)
-const factoryStore = await dbEngine.execute({
-  op: 'factory',
-  coId: 'co_zSchema123'
-});
-const schema = factoryStore.value; // Get current value
-factoryStore.subscribe((updatedSchema) => {
-  // React to schema updates
-});
-
-// Load schema from CoValue's headerMeta (PREFERRED - single source of truth)
-const factoryStore = await dbEngine.execute({
-  op: 'factory',
-  fromCoValue: 'co_zValue456'
-});
-const schema = factoryStore.value;
-
-// To resolve registry strings (@factory/...), use resolve operation first:
-const factoryCoId = await dbEngine.execute({
-  op: 'resolve',
-  humanReadableKey: '@factory/actor'
-});
-const factoryStore = await dbEngine.execute({
-  op: 'factory',
-  coId: factoryCoId
-});
-```
-
-**Universal Schema Resolver:**
-
-SchemaOperation uses the universal schema resolver internally, which:
-- Resolves schemas by co-id (`co_z...`)
-- Resolves schemas by registry string (`@factory/...`) - via resolve operation
-- Extracts schema co-id from CoValue headerMeta (`fromCoValue` pattern)
-- Provides single source of truth for all schema resolution across MaiaOS
-```
-
-### ResolveOperation
-
-**Purpose:** Resolve human-readable keys to co-ids
-
-**Parameters:**
-- `humanReadableKey` (string, required) - Human-readable ID (e.g., '@factory/actor', '@vibe/todos')
-
-**Returns:** Co-id (co_z...) or null if not found
-
-**Example:**
-```javascript
-const coId = await dbEngine.execute({
-  op: 'resolve',
-  humanReadableKey: '@factory/actor'
-});
-```
-
-**Note:** This operation is typically used internally by helper methods like `getSchemaCoId()` and `resolveCoId()`. Engines should use those helper methods rather than calling resolve directly.
-
----
-
-## Unified Operations API Pattern
-
-**Principle:** All database access should go through the unified operations API (`dbEngine.execute({op: ...})`). This ensures consistency, maintainability, and backend abstraction.
-
-### Architecture Flow
-
-```
-Engines/Utils → dbEngine.execute({op: ...}) → Operations → Backend Methods
-```
-
-**Allowed:**
-- ✅ Engines call `dbEngine.execute({op: 'read', ...})`
-- ✅ Engines use helper methods like `getSchemaCoId()` (which use operations API internally)
-- ✅ Operations call `this.backend.*` methods (operations ARE the abstraction layer)
-
-**Not Allowed:**
-- ❌ Engines calling `dbEngine.backend.*` directly
-- ❌ Engines calling `backend.*` methods directly
-- ❌ Utilities calling backend methods directly
-
-### How Engines Should Access Database
-
-**✅ Correct Pattern:**
-```javascript
-// Direct operation call
-const store = await dbEngine.execute({
-  op: 'read',
-  factory: 'co_zTodos123',
-  key: 'co_zTodo456'
-});
-
-// Using helper methods (which use operations API internally)
-const factoryCoId = await dbEngine.getSchemaCoId('actor');
-const coId = await dbEngine.resolveCoId('@vibe/todos');
-
-// Using utilities that use operations API
-// Config subscriptions handled by backend (maia-db CoCache)
-const { config } = await subscribeConfig(dbEngine, factoryCoId, coId, 'actor');
-```
-
-**❌ Incorrect Pattern:**
-```javascript
-// DON'T call backend directly from engines
-const data = await dbEngine.backend.read(...);  // ❌
-const coId = await dbEngine.backend.resolveHumanReadableKey(...);  // ❌
-```
-
-### Why This Matters
-
-1. **Consistency**: All database access follows the same pattern
-2. **Maintainability**: Single API to maintain, easier to debug
-3. **Backend Abstraction**: Engines don't need to know backend implementation details
-4. **Future-proof**: Easy to add new operations or swap backends
-
-## Integration with Other Packages
-
-### maia-script
-
-`maia-script` extends the shared `DBEngine` with MaiaScript evaluator support:
+All database operations are executed via **maia.do()** (which delegates to DataEngine):
 
 ```javascript
-// In maia-script
-import { DBEngine as SharedDBEngine } from '@MaiaOS/operations';
-import { MaiaScriptEvaluator } from './MaiaScriptEvaluator.js';
+// Read
+const result = await os.do({ op: 'read', factory: '°Maia/factory/todos', filter: { completed: false } });
 
-export class DBEngine extends SharedDBEngine {
-  constructor(backend) {
-    const evaluator = new MaiaScriptEvaluator();
-    super(backend, { evaluator });
-  }
-}
+// Create
+const created = await os.do({ op: 'create', factory: '°Maia/factory/todos', data: { text: 'Buy milk', completed: false } });
+
+// Update
+const updated = await os.do({ op: 'update', factory: '°Maia/factory/todos', key: 'co_zTodo456', data: { completed: true } });
+
+// Delete
+await os.do({ op: 'delete', factory: '°Maia/factory/todos', key: 'co_zTodo456' });
 ```
 
-**All engines in maia-script use the operations API:**
-- `ActorEngine` - Uses `dbEngine.execute({op: 'read'})` for configs
-- `StyleEngine` - Uses `subscribeConfig()` → `dbEngine.execute({op: 'read'})`
-- `ViewEngine` - Uses `subscribeConfig()` → `dbEngine.execute({op: 'read'})`
-- `StateEngine` - Uses `subscribeConfig()` → `dbEngine.execute({op: 'read'})`
-- `SubscriptionEngine` - Uses `dbEngine.execute({op: 'read'})` for data subscriptions
+**Note:** Use `factory` (not `schema`) for the factory/schema co-id or registry key.
 
-### maia-db
+## Full API Reference
 
-`maia-db` implements `DBAdapter` for the CoJSON backend, allowing it to use the same operations layer as IndexedDB. All database access goes through the unified operations API.
+See the [maia-engines API Reference](../04_maia-engines/api-reference.md) for complete DataEngine operations including:
 
----
+- read, create, update, delete
+- readFactory, factory
+- colistSet, colistPush, colistUnshift, colistPop, colistShift, colistSplice, colistRemove, colistRetain, colistApplyDiff
+- uploadBinary, loadBinaryAsBlob, uploadToCoBinary
+- Spark operations
 
-## Related Documentation
+## Source
 
-- [maia-script Package](../04_maia-script/README.md) - Uses operations layer
-- [maia-db Package](../05_maia-db/cojson.md) - Will implement DBAdapter for CoJSON
-- [maia-factories Package](../03_maia-factories/README.md) - Schema validation used by operations
-
----
-
-## Source Files
-
-**Package:** `libs/maia-operations/`
-
-**Key Files:**
-- `src/index.js` - Main exports
-- `src/engine.js` - Unified DBEngine
-- `src/db-adapter.js` - DBAdapter interface
-- `src/reactive-store.js` - ReactiveStore implementation
-- `src/operations/` - All operation classes
-
-**Dependencies:**
-- `@MaiaOS/factories` - Schema validation
+- `libs/maia-engines/src/engines/data.engine.js`

@@ -5,10 +5,9 @@
 The `@MaiaOS/loader` package provides the foundational services that power MaiaOS. Think of it as the OS loader - it doesn't do much on its own, but everything else depends on it.
 
 **What it does:**
-- ✅ **Identity & Authentication** - Creates authenticated MaiaOS instances (`createMaiaOS`)
 - ✅ **System Boot** - Initializes the entire OS with engines and modules (`MaiaOS.boot()`)
 - ✅ **Unified API** - Exposes a single entry point for all MaiaOS functionality
-- ✅ **Re-exports** - Schemas, tools, vibes seeding helpers, WebSocket peer (services import only from loader)
+- ✅ **Re-exports** - Auth, db, factories, vibes seeding helpers, WebSocket peer (services import only from loader)
 
 **What it doesn't do:**
 - ❌ Execute MaiaScript (that's `@MaiaOS/engines`)
@@ -20,74 +19,43 @@ The `@MaiaOS/loader` package provides the foundational services that power MaiaO
 ## The Simple Version
 
 Think of `maia-loader` like the foundation of a house. Before you can build anything, you need:
-1. **Identity** - Who are you? (`createMaiaOS` - proves you're authenticated)
-2. **System** - What can you do? (`MaiaOS.boot()` - starts all the engines)
+1. **Authenticate** - Who are you? (`signInWithPasskey` - proves you're authenticated)
+2. **Boot** - Start the system (`MaiaOS.boot()` - starts all the engines with your identity)
 
 **Analogy:**
-- `createMaiaOS` = Getting your ID card (proves who you are)
-- `MaiaOS.boot()` = Starting your computer (loads all the programs)
+- `signInWithPasskey` = Getting your ID card (proves who you are)
+- `MaiaOS.boot()` = Starting your computer (loads all the programs with your account)
 
 ---
 
-## Two Layers, One Package
+## Usage
 
-The loader provides **two distinct layers** that work together:
-
-### Layer 1: Identity & Authentication (`createMaiaOS`)
-
-**What it is:** Proves who you are and gives you access to your account.
-
-**When to use:** Before booting the OS, you need to authenticate.
+### Human Mode
 
 ```javascript
-import { createMaiaOS } from '@MaiaOS/loader';
-import { signInWithPasskey } from '@MaiaOS/self';
+import { MaiaOS, signInWithPasskey } from '@MaiaOS/loader';
 
-// Step 1: Authenticate (get your ID card)
-const { node, account, accountID } = await signInWithPasskey({
-  salt: "maia.city"
-});
+// Step 1: Authenticate
+const { loadingPromise } = await signInWithPasskey({ salt: "maia.city" });
+const { node, account } = await loadingPromise;
 
-// Step 2: Create MaiaOS instance (prove you're authenticated)
-const o = await createMaiaOS({ node, account, accountID });
-```
-
-**What you get:**
-- `o.id` - Your account identity (MaiaID)
-- `o.auth` - Authentication management API
-- `o.inspector()` - Dev tool to inspect your account data
-- `o.getAllCoValues()` - List all CoValues in your account
-- `o.getCoValueDetail(coId)` - Get details about a specific CoValue
-
-### Layer 2: Actor & DSL Execution (`MaiaOS.boot()`)
-
-**What it is:** Starts all the engines that run your actors and execute MaiaScript.
-
-**When to use:** After authentication, boot the OS to run your app.
-
-```javascript
-import { MaiaOS } from '@MaiaOS/loader';
-
-// Boot the operating system
+// Step 2: Boot OS (pass node and account)
 const os = await MaiaOS.boot({
-  modules: ['db', 'core', 'dragdrop'],
-  registry: { /* configs */ }
+  node,
+  account,
+  modules: ['db', 'core', 'ai']
 });
 
 // Now you can:
 // - os.createActor() - Create actors
-// - os.loadVibe() - Load app manifests
+// - os.loadVibe() - Load app manifests from account or by co-id
+// - os.do() - Execute data operations (maia.do({ op, factory, key, ... }))
 // - os.deliverEvent() - Deliver events to actors
 ```
 
-**What you get:**
-- `os.createActor()` - Create and render actors
-- `os.loadVibe()` - Load app manifests from files
-- `os.loadVibeFromDatabase()` - Load app manifests from database
-- `os.getActor()` - Get actor by ID
-- `os.deliverEvent()` - Deliver events to actors
-- `os.do()` - Execute data operations (**maia.do({ op, schema, key, ... })**)
-- `os.getEngines()` - Access all engines for debugging
+### Agent Mode
+
+When `mode === 'agent'` and no peer/node+account, boot uses `AVEN_MAIA_ACCOUNT` and `AVEN_MAIA_SECRET` env vars with `loadOrCreateAgentAccount`.
 
 ---
 
@@ -95,8 +63,8 @@ const os = await MaiaOS.boot({
 
 This package documentation is organized into focused topics:
 
-- **[auth-layer.md](./auth-layer.md)** - Identity & Authentication layer (`createMaiaOS`)
-- **[boot-process.md](./boot-process.md)** - Boot process and execution layer (`MaiaOS.boot()`)
+- **[auth-layer.md](./auth-layer.md)** - Identity & Authentication (integrated into boot)
+- **[boot-process.md](./boot-process.md)** - Boot process and execution layer
 - **[api-reference.md](./api-reference.md)** - Complete API reference
 - **[patterns.md](./patterns.md)** - Common patterns and troubleshooting
 
@@ -107,29 +75,26 @@ This package documentation is organized into focused topics:
 Here's the complete flow:
 
 ```javascript
-import { createMaiaOS, MaiaOS } from '@MaiaOS/loader';
-import { signInWithPasskey } from '@MaiaOS/self';
+import { MaiaOS, signInWithPasskey } from '@MaiaOS/loader';
 
 async function startApp() {
-  // STEP 1: Authenticate (Identity Layer)
-  const { node, account, accountID } = await signInWithPasskey({
-    salt: "maia.city"
-  });
-  
-  const o = await createMaiaOS({ node, account, accountID });
-  console.log("✅ Authenticated as:", accountID);
-  
-  // STEP 2: Boot OS (Execution Layer)
+  // STEP 1: Authenticate
+  const { loadingPromise } = await signInWithPasskey({ salt: "maia.city" });
+  const { node, account } = await loadingPromise;
+
+  // STEP 2: Boot OS
   const os = await MaiaOS.boot({
-    modules: ['db', 'core', 'dragdrop']
+    node,
+    account,
+    modules: ['db', 'core', 'ai']
   });
-  
+
   // STEP 3: Load your app
-  const { vibe, actor } = await os.loadVibeFromDatabase(
-    '@vibe/todos',
+  const { vibe, actor } = await os.loadVibe(
+    'todos',
     document.getElementById('app-container')
   );
-  
+
   console.log("✅ App loaded:", vibe.name);
 }
 ```
@@ -139,9 +104,8 @@ async function startApp() {
 ## Related Documentation
 
 - [maia-engines Package](../04_maia-engines/README.md) - Execution engines
-- [MaiaOS Architecture](../01_maiaos.md) - Overall system architecture
-- [Authentication](../09_authentication.md) - Authentication flow
-- [CoJSON Integration](../07_cojson.md) - Database layer
+- [maia-self Package](../01_maia-self/README.md) - Authentication
+- [maia-db Package](../05_maia-db/README.md) - Database layer
 
 ---
 
@@ -151,8 +115,8 @@ async function startApp() {
 
 **Key Files:**
 - `src/index.js` - Public API exports
-- `src/auth.js` - Identity/authentication layer (`createMaiaOS`)
-- `src/loader.js` - Execution layer (`MaiaOS.boot()`)
+- `src/loader.js` - MaiaOS class and boot logic
+- `src/cojson-factory.js` - CoJSON API factory
 
 **Dependencies:**
 - `@MaiaOS/self` - Authentication

@@ -41,14 +41,14 @@ libs/maia-db/src/
 │   ├── groups/                # Groups, sparks, coID
 │   └── ...
 ├── migrations/seeding/        # Bootstrap, configs, data, helpers
-├── schemas/                   # Schema registry, validation
+├── factories/                 # Factory registry (registry.js)
 └── utils/                     # registry-name-generator, etc.
 ```
 
 ### API Flow
 
 ```
-maia.do({ op, schema, key, ... })  →  DataEngine  →  MaiaDB  →  MaiaPeer / storage
+maia.do({ op, factory, key, ... })  →  DataEngine  →  MaiaDB  →  MaiaPeer / storage
 ```
 
 ---
@@ -77,7 +77,7 @@ maia.do({ op, schema, key, ... })  →  DataEngine  →  MaiaDB  →  MaiaPeer /
 **Key Files:**
 - `src/cojson/` - CoJSON backend implementation
 - `src/cojson/core/MaiaDB.js` - MaiaDB
-- `src/schemas/` - Schema system integration
+- `src/factories/` - Factory registry
 
 **Dependencies:**
 - `cojson` - CRDT library

@@ -23,7 +23,7 @@ Read the documentation in the following order for a complete understanding:
 
 ### 2. [maia-loader Package](./02_maia-loader/README.md)
 **Core system services and boot process**
-- Identity & authentication layer (`createMaiaOS`)
+- Identity & authentication (integrated into `MaiaOS.boot()`)
 - Actor & DSL execution layer (`MaiaOS.boot()`)
 - Boot process and engine initialization
 - Module loading and database seeding
@@ -50,7 +50,7 @@ Read the documentation in the following order for a complete understanding:
 
 ### 4. [maia-engines Package](./04_maia-engines/README.md)
 **Execution engines and modules** (merged from maia-script + maia-operations)
-- DataEngine – **maia.do({ op, schema, key, filter, ... })** (public data API)
+- DataEngine – **maia.do({ op, factory, key, filter, ... })** (public data API)
 - Engine architecture (ActorEngine, ViewEngine, StateEngine, etc.)
 - Module system and custom module creation
 - MaiaScript expression language reference

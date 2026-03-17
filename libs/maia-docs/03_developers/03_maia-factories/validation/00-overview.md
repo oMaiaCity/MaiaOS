@@ -105,7 +105,7 @@ Loads and compiles a schema for a given type.
 
 **Example:**
 ```javascript
-const actorSchema = getSchema('actor');
+const actorSchema = getFactory('actor');
 await engine.loadSchema('actor', actorSchema);
 // Schema is now compiled and cached
 ```
@@ -254,7 +254,7 @@ const resolver = async (id) => {
   return factoryStore.value;
 };
 
-engine.setFactoryResolver(resolver, dbEngine); // Pass dbEngine for automatic universal resolver setup
+setFactoryResolver({ dataEngine }); // Pass dataEngine; resolver is built internally
 ```
 
 **Or use backend's universal resolver directly:**

@@ -69,18 +69,15 @@ Complete documentation of registration and login flows in `@MaiaOS/self`.
 ┌─────────────────────────────────────────────────────────────┐
 │ STEP 3: Create Account (Verify AccountID Match)            │
 │                                                             │
-│ const result = await LocalNode.withNewlyCreatedAccount({   │
-│   crypto,                                                   │
-│   initialAgentSecret: agentSecret,                          │
-│   creationProps: { name: "maia" },                         │
-│   peers: [jazzSyncPeer],                                    │
-│   storage: indexedDBStorage                                 │
+│ const result = await createAccountWithSecret({              │
+│   agentSecret,                                              │
+│   name: "maia",                                             │
+│   peers: setupSyncPeers().peers,                            │
+│   storage: await getStorage({ mode: 'human' })             │
 │ });                                                         │
 │                                                             │
-│ // Verification                                             │
-│ if (result.accountID !== computedAccountID) {             │
-│   throw Error("AccountID mismatch!");                       │
-│ }                                                           │
+│ // createAccountWithSecret from @MaiaOS/peer                │
+│ // setupSyncPeers from @MaiaOS/peer (no apiKey)             │
 └─────────────────────────────────────────────────────────────┘
                          ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -105,15 +102,15 @@ import { signUpWithPasskey } from '@MaiaOS/self';
 async function register() {
   try {
     // Create new account (1 biometric prompt)
-    const { accountID, agentSecret, node, account } = await signUpWithPasskey({
+    const { accountID, agentSecret, loadingPromise } = await signUpWithPasskey({
       name: "maia",
       salt: "maia.city"
     });
+    const { node, account } = await loadingPromise;
     
     console.log("✅ Registered! Account ID:", accountID);
     console.log("⚠️  agentSecret is ephemeral - never store it!");
     
-    // Use node and account for app initialization
     return { node, account, accountID };
   } catch (error) {
     console.error("Registration failed:", error.message);
@@ -186,13 +183,14 @@ async function register() {
 ┌─────────────────────────────────────────────────────────────┐
 │ STEP 4: Load Account                                        │
 │                                                             │
-│ const node = await LocalNode.withLoadedAccount({           │
+│ const { node, account } = await loadAccount({               │
 │   accountID,         // Computed from PRF!                  │
-│   accountSecret: agentSecret,  // Derived from PRF!        │
-│   sessionID: crypto.newRandomSessionID(accountID),        │
-│   peers: [jazzSyncPeer],     // Jazz Cloud sync            │
-│   storage: indexedDBStorage  // Local cache                │
+│   agentSecret,       // Derived from PRF!                   │
+│   peers: setupSyncPeers().peers,                            │
+│   storage: await getStorage({ mode: 'human' })              │
 │ });                                                         │
+│                                                             │
+│ // loadAccount from @MaiaOS/peer                            │
 └─────────────────────────────────────────────────────────────┘
                          ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -217,14 +215,14 @@ import { signInWithPasskey } from '@MaiaOS/self';
 async function login() {
   try {
     // Load existing account (1 biometric prompt - fast!)
-    const { accountID, agentSecret, node, account } = await signInWithPasskey({
+    const { accountID, agentSecret, loadingPromise } = await signInWithPasskey({
       salt: "maia.city"
     });
+    const { node, account } = await loadingPromise;
     
     console.log("✅ Signed in! Account ID:", accountID);
     console.log("⚠️  agentSecret is ephemeral - never store it!");
     
-    // Use node and account for app initialization
     return { node, account, accountID };
   } catch (error) {
     console.error("Sign in failed:", error.message);
@@ -335,9 +333,9 @@ Cross-Device:
 ### Registration Implementation
 
 ```javascript
-// libs/maia-self/src/self.js
+// libs/maia-self/src/self.js (conceptual)
 
-export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = {}) {
+export async function signUpWithPasskey({ name, salt = "maia.city" } = {}) {
   await requirePRFSupport();
   
   const saltBytes = stringToUint8Array(salt);
@@ -345,7 +343,7 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
   
   // STEP 1: Create passkey and evaluate PRF
   const { credentialId, prfOutput } = await createPasskeyWithPRF({
-    name,
+    name: name || "Traveler " + randomUUID().slice(0, 8),
     userId: globalThis.crypto.getRandomValues(new Uint8Array(32)),
     salt: saltBytes,
   });
@@ -355,24 +353,19 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
   const accountHeader = accountHeaderForInitialAgentSecret(agentSecret, crypto);
   const computedAccountID = idforHeader(accountHeader, crypto);
   
-  // STEP 3: Create account
-  const storage = await getStorage();
-  const syncSetup = setupJazzSyncPeers(apiKey);
+  // STEP 3: Create account (createAccountWithSecret from @MaiaOS/peer)
+  const storage = await getStorage({ mode: 'human' });
+  const { peers } = setupSyncPeers();  // No apiKey
   
-  const result = await LocalNode.withNewlyCreatedAccount({
-    crypto,
-    initialAgentSecret: agentSecret,
-    creationProps: { name },
-    peers: syncSetup.peers,
+  const result = await createAccountWithSecret({
+    agentSecret,
+    name: name || "Traveler " + randomUUID().slice(0, 8),
+    peers,
     storage,
   });
   
-  // STEP 4: Verify accountID matches
-  if (result.accountID !== computedAccountID) {
-    throw Error("AccountID mismatch!");
-  }
-  
-  return { accountID: result.accountID, agentSecret, node: result.node, account };
+  // Returns { accountID, node, account }; loadingPromise for async node/account
+  return { accountID: result.accountID, agentSecret, loadingPromise: result.loadingPromise };
 }
 ```
 
@@ -381,7 +374,7 @@ export async function signUpWithPasskey({ name = "maia", salt = "maia.city" } = 
 ### Login Implementation
 
 ```javascript
-// libs/maia-self/src/self.js
+// libs/maia-self/src/self.js (conceptual)
 
 export async function signInWithPasskey({ salt = "maia.city" } = {}) {
   await requirePRFSupport();
@@ -399,21 +392,19 @@ export async function signInWithPasskey({ salt = "maia.city" } = {}) {
   const accountHeader = accountHeaderForInitialAgentSecret(agentSecret, crypto);
   const accountID = idforHeader(accountHeader, crypto);
   
-  // STEP 4: Load account
-  const storage = await getStorage();
-  const syncSetup = setupJazzSyncPeers(apiKey);
+  // STEP 4: Load account (loadAccount from @MaiaOS/peer)
+  const storage = await getStorage({ mode: 'human' });
+  const { peers } = setupSyncPeers();
   
-  const node = await LocalNode.withLoadedAccount({
+  const loadingPromise = loadAccount({
     accountID,
-    accountSecret: agentSecret,
-    crypto,
-    peers: syncSetup.peers,
+    agentSecret,
+    peers,
     storage,
   });
   
-  const account = node.expectCurrentAccount("signInWithPasskey");
-  
-  return { accountID: account.id, agentSecret, node, account };
+  // Returns immediately; node and account come from loadingPromise
+  return { accountID, agentSecret, loadingPromise };
 }
 ```
 

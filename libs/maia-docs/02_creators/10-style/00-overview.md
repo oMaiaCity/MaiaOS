@@ -73,7 +73,7 @@ Create a file named `{name}.style.maia`:
 **Note:** 
 - Use `components` section for component definitions with nested data-attribute syntax (e.g., `.todoItem`, `.card`)
 - Use `selectors` section for advanced CSS selectors (e.g., `:host`, `h1`, `@media` queries)
-- The old `styles` section is deprecated - use `components` or `selectors` instead
+- Use `components` or `selectors` instead of the old `styles` section
 
 ## Linking Style to Actors
 

@@ -54,7 +54,7 @@ async function determineCotypeAndFlag(peer, schema, data) {
 				if (cotype && typeof cotype === 'string') {
 					if (cotype === 'cotext' || cotype === 'coplaintext') {
 						throw new Error(
-							`[MaiaDB] CoText (cotext) support has been eliminated. Schema ${schema} specifies cotext, which is no longer supported.`,
+							`[MaiaDB] Schema ${schema} specifies cotext or coplaintext, which are not supported. Use colist with °Maia/factory/os/cotext for plaintext.`,
 						)
 					}
 					return { cotype, isSchemaDefinition: false }
@@ -67,9 +67,8 @@ async function determineCotypeAndFlag(peer, schema, data) {
 	if (Array.isArray(data)) {
 		return { cotype: 'colist', isSchemaDefinition: false }
 	} else if (typeof data === 'string') {
-		// CoText support eliminated - strings are not valid CoValue types
 		throw new Error(
-			`[MaiaDB] Cannot determine cotype from data type for schema ${schema}. String data type is not supported (CoText/cotext support has been eliminated). Use CoMap or CoList instead.`,
+			`[MaiaDB] Cannot determine cotype from data type for schema ${schema}. String is not a valid CoValue type. Use CoMap or colist with °Maia/factory/os/cotext for plaintext.`,
 		)
 	} else if (typeof data === 'object' && data !== null) {
 		return { cotype: 'comap', isSchemaDefinition: false }

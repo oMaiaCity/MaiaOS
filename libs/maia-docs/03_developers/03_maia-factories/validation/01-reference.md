@@ -41,7 +41,7 @@ const formatted = formatValidationErrors(errors);
 
 **ID:** `https://json-schema.org/draft/2020-12/schema`
 
-**Location:** `os/base-meta-schema.json`
+**Location:** Merged in `os/meta.factory.json`
 
 **Usage:**
 - Validates schemas that don't use CoJSON types
@@ -51,20 +51,20 @@ const formatted = formatValidationErrors(errors);
 
 **Purpose:** Validates MaiaOS schemas with CoJSON types
 
-**ID:** `@factory/meta`
+**ID:** `°Maia/factory/meta`
 
 **Location:** `os/meta.factory.json`
 
 **Features:**
 - Extends base meta-schema
-- Adds `cotype` keyword (comap, colist, costream)
+- Adds `cotype` keyword (comap, colist, costream, cobinary)
 - Adds `$co` keyword (co-id references)
 - Requires `title` field for all schemas
 
 **Usage:**
 ```json
 {
-  "$factory": "@factory/meta",
+  "$factory": "°Maia/factory/meta",
   "title": "Actor Schema",
   "cotype": "comap",
   "properties": {
@@ -132,12 +132,12 @@ This allows meta-schemas to be registered without validating themselves.
 ### Validating a Single File
 
 ```javascript
-import { ValidationEngine, getSchema } from '@MaiaOS/factories';
+import { ValidationEngine, getFactory } from '@MaiaOS/factories';
 
 const engine = new ValidationEngine();
 await engine.initialize();
 
-const schema = getSchema('actor');
+const schema = getFactory('actor');
 await engine.loadSchema('actor', schema);
 
 const result = await engine.validate('actor', actorData);
@@ -153,7 +153,7 @@ const types = ['actor', 'context', 'state', 'view'];
 
 // Load all schemas
 for (const type of types) {
-  const schema = getSchema(type);
+  const schema = getFactory(type);
   await engine.loadSchema(type, schema);
 }
 
@@ -204,9 +204,7 @@ const result = await engine.validate('actor', data);
 
 **Solution:** Set schema resolver to resolve co-id references:
 ```javascript
-engine.setFactoryResolver(async (id) => {
-  return await dbEngine.backend.getSchema(id);
-});
+setFactoryResolver({ dataEngine }); // From @MaiaOS/factories/validation.helper
 ```
 
 ### Problem: "Schema resolver returned null for $co reference"
