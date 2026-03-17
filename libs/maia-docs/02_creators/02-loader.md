@@ -120,12 +120,12 @@ const actor = await maia.createActor(
 
 ### Loading Vibes (Recommended)
 
-**Vibes** are loaded by **key** from `account.registries.sparks[spark].vibes`. The registry is passed at boot.
+**Vibes** are loaded by **key** from `account.registries.sparks[spark].os.vibes`. The registry is passed at boot.
 
 ```javascript
 // Load vibe by key (e.g. 'todos', 'chat')
 const { vibe, actor } = await maia.loadVibeFromAccount(
-  'todos',                        // Vibe key in spark.vibes
+  'todos',                        // Vibe key in spark.os.vibes
   document.getElementById('app'),
   '°Maia'                         // Spark (default: '°Maia')
 );
@@ -197,7 +197,7 @@ Then navigate to `http://localhost:4200/` (or your app route).
 **Solution:** You must authenticate first. Use `signInWithPasskey()` or `loadOrCreateAgentAccount()` to get `{ node, account }`, then pass them to `MaiaOS.boot()`.
 
 ### Vibe not found when loading
-**Solution:** Ensure the vibe registry is passed at boot (`registry: TodosVibeRegistry`) and the vibe has been seeded to `account.registries.sparks[°Maia].vibes`.
+**Solution:** Ensure the vibe registry is passed at boot (`registry: TodosVibeRegistry`) and the vibe has been seeded to `account.registries.sparks[°Maia].os.vibes`.
 
 ### Actor fails to load
 **Solution:** Check that the actor path resolves (human-readable key like `°Maia/actor/...` or co-id). Paths are resolved via `maia.do({ op: 'resolve', humanReadableKey, ... })`.

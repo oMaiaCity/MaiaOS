@@ -214,7 +214,7 @@ The vibe root actor orchestrates the application and loads UI actors as children
         registry: TodosVibeRegistry,
       });
       
-      // 3. Load vibe by key from account.registries.sparks[°Maia].vibes
+      // 3. Load vibe by key from account.registries.sparks[°Maia].os.vibes
       const { vibe, actor } = await maia.loadVibeFromAccount(
         'todos',
         document.getElementById('app-container'),
@@ -236,7 +236,7 @@ The vibe root actor orchestrates the application and loads UI actors as children
 ```
 maia.loadVibeFromAccount(vibeKey, container, spark)
   ↓
-1. Lookup vibe co-id from account.registries.sparks[spark].vibes[vibeKey]
+1. Lookup vibe co-id from account.registries.sparks[spark].os.vibes[vibeKey]
   ↓
 2. Load vibe manifest (CoValue)
   ↓
@@ -249,7 +249,7 @@ maia.loadVibeFromAccount(vibeKey, container, spark)
 
 The `loadVibeFromAccount()` method:
 - Requires registry at boot (for seeding)
-- Loads vibe by **key** (e.g. `'todos'`) from `account.registries.sparks[°Maia].vibes`
+- Loads vibe by **key** (e.g. `'todos'`) from `account.registries.sparks[°Maia].os.vibes`
 - Vibe manifest must be seeded to account during initial setup
 - Returns both the vibe metadata and the created actor
 

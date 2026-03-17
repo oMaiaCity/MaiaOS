@@ -11,12 +11,7 @@
 		"os": {
 			"type": "string",
 			"pattern": "^co_z[a-zA-Z0-9]+$",
-			"description": "OS CoMap - contains factories, indexes, groups (guardian, publicReaders)."
-		},
-		"vibes": {
-			"type": "string",
-			"pattern": "^co_z[a-zA-Z0-9]+$",
-			"description": "Vibes registry CoMap for this spark."
+			"description": "OS CoMap - contains factories, indexes, groups (guardian, publicReaders), vibes."
 		}
 	}
 }

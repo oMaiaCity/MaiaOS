@@ -458,8 +458,8 @@ export class MaiaOS {
 	}
 
 	/**
-	 * Load a vibe from registries.sparks[spark].vibes or directly by co-id
-	 * Supports: (1) vibe key (e.g., "todos") - lookup via spark.vibes map, (2) co-id (co_z...) - direct load from database
+	 * Load a vibe from registries.sparks[spark].os.vibes or directly by co-id
+	 * Supports: (1) vibe key (e.g., "todos") - lookup via spark.os.vibes map, (2) co-id (co_z...) - direct load from database
 	 * SECURITY: No arbitrary URL loading - vibes load only from CoJSON database (account-scoped)
 	 * @param {string} vibeKeyOrCoId - Vibe key in spark's vibes (e.g., "todos") or vibe co-id (co_z...)
 	 * @param {HTMLElement} container - Container element
@@ -471,7 +471,7 @@ export class MaiaOS {
 			throw new Error('[Loader] Cannot load vibe from account - dataEngine or account not available')
 		}
 
-		// Co-id: load directly from database (skip spark.vibes lookup)
+		// Co-id: load directly from database (skip spark.os.vibes lookup)
 		if (typeof vibeKeyOrCoId === 'string' && vibeKeyOrCoId.startsWith('co_z')) {
 			return await this.loadVibeFromDatabase(vibeKeyOrCoId, container, null)
 		}
@@ -548,7 +548,7 @@ export class MaiaOS {
 			)
 		}
 
-		// Step 5: Read spark CoMap to get spark.vibes (by co-id)
+		// Step 5: Read spark CoMap to get spark.os
 		const sparkStore = await this.dataEngine.execute({
 			op: 'read',
 			factory: null,
@@ -563,12 +563,29 @@ export class MaiaOS {
 		}
 		// sparkData is flat from extractCoValueData
 
-		const vibesId = sparkData.vibes
-		if (!vibesId || typeof vibesId !== 'string' || !vibesId.startsWith('co_')) {
-			throw new Error(`[Kernel] Spark "${spark}" has no vibes registry. Ensure seeding has run.`)
+		const osId = sparkData.os
+		if (!osId || typeof osId !== 'string' || !osId.startsWith('co_')) {
+			throw new Error(`[Kernel] Spark "${spark}" has no os. Ensure bootstrap has run.`)
 		}
 
-		// Step 6: Read spark.vibes CoMap
+		// Step 5b: Read spark.os CoMap to get os.vibes
+		const osStore = await this.dataEngine.execute({
+			op: 'read',
+			factory: null,
+			key: osId,
+		})
+		const osData = osStore.value
+		if (!osData || osData.error) {
+			throw new Error(
+				`[Kernel] Spark "${spark}" os not available: ${osData?.error || 'Unknown error'}`,
+			)
+		}
+		const vibesId = osData.vibes
+		if (!vibesId || typeof vibesId !== 'string' || !vibesId.startsWith('co_')) {
+			throw new Error(`[Kernel] Spark "${spark}" os has no vibes registry. Ensure seeding has run.`)
+		}
+
+		// Step 6: Read spark.os.vibes CoMap
 		const vibesStore = await this.dataEngine.execute({
 			op: 'read',
 			factory: vibesId,
@@ -594,7 +611,7 @@ export class MaiaOS {
 					vibesData[k].startsWith('co_'),
 			)
 			throw new Error(
-				`[Kernel] Vibe '${vibeKeyOrCoId}' not found in ${spark}.vibes. Available: ${availableVibes.join(', ') || 'none'}`,
+				`[Kernel] Vibe '${vibeKeyOrCoId}' not found in ${spark}.os.vibes. Available: ${availableVibes.join(', ') || 'none'}`,
 			)
 		}
 

@@ -163,8 +163,8 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	)
 	os.set('factories', factoriesRegistry.id)
 	os.set('indexes', indexes.id)
+	os.set('vibes', vibes.id)
 	maiaSpark.set('os', os.id)
-	maiaSpark.set('vibes', vibes.id)
 	factoriesRegistry.set('°Maia/factory/meta', metaSchemaCoId)
 	for (const [k, coId] of factoryCoIdMap) factoriesRegistry.set(k, coId)
 
