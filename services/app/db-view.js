@@ -153,6 +153,8 @@ export async function renderApp(
 	loadSpark,
 	navigateToScreen,
 ) {
+	document.body.classList.toggle('screen-maia-db', currentScreen === 'maia-db')
+
 	if (currentScreen === 'dashboard') {
 		await renderDashboard(
 			maia,
@@ -1306,48 +1308,26 @@ export async function renderApp(
 				
 				${metadataSidebar}
 			</div>
+
+			<!-- MaiaDB navigation latches and back notch -->
+			<button class="db-latch db-latch-left" id="db-latch-left" onclick="window.toggleDBLeftSidebar()" aria-label="Toggle navigation sidebar">
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+			</button>
 			
-			<!-- Bottom navbar area for mobile -->
-			<div class="bottom-navbar">
-				<div class="bottom-navbar-left">
-					<button class="sidebar-toggle-btn sidebar-toggle-left" onclick="window.toggleDBLeftSidebar()" aria-label="Toggle navigation sidebar">
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<line x1="3" y1="12" x2="21" y2="12"></line>
-							<line x1="3" y1="6" x2="21" y2="6"></line>
-							<line x1="3" y1="18" x2="21" y2="18"></line>
-						</svg>
-					</button>
-					${
-						currentContextCoValueId
-							? `
-						<button class="back-btn bottom-back-btn" onclick="goBack()" title="Back in navigation">
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="M19 12H5M12 19l-7-7 7-7"/>
-							</svg>
-							<span class="back-label">Back</span>
-						</button>
-					`
-							: ''
-					}
-				</div>
-				<div class="bottom-navbar-center">
-					<button class="home-btn bottom-home-btn" onclick="window.navigateToScreen('dashboard')" title="Home">
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-							<polyline points="9 22 9 12 15 12 15 22"></polyline>
-						</svg>
-						<span class="home-label">Home</span>
-					</button>
-				</div>
-				<div class="bottom-navbar-right">
-					<button class="sidebar-toggle-btn sidebar-toggle-right" onclick="window.toggleDBRightSidebar()" aria-label="Toggle detail sidebar">
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<circle cx="12" cy="12" r="10"></circle>
-							<path d="M12 16v-4M12 8h.01"/>
-						</svg>
-					</button>
-				</div>
-			</div>
+			${
+				currentContextCoValueId
+					? `
+				<button class="db-notch-back" onclick="goBack()" title="Back" aria-label="Back">
+					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+					<span>back</span>
+				</button>
+			`
+					: ''
+			}
+
+			<button class="db-latch db-latch-right" id="db-latch-right" onclick="window.toggleDBRightSidebar()" aria-label="Toggle detail sidebar">
+				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+			</button>
 		</div>
 	`
 

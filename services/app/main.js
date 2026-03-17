@@ -21,6 +21,7 @@ import {
 } from '@MaiaOS/loader'
 import { renderApp } from './db-view.js'
 import { renderLandingPage } from './landing.js'
+import { disposeGlobalAI, initGlobalAI, setFabVisible, updateNavLeft } from './maia-ai-global.js'
 import {
 	getFirstNameForRegister,
 	removeSigninKeyHandler,
@@ -137,6 +138,7 @@ async function handleRoute() {
 	const path = window.location.pathname
 
 	if (path === '/signin' || path === '/signup') {
+		setFabVisible(false)
 		if (redirectIfSignedIn()) return
 		try {
 			await isPRFSupported()
@@ -150,6 +152,7 @@ async function handleRoute() {
 	if (path === '/me' || path === '/dashboard') {
 		removeSigninKeyHandler()
 		const ready = detectMode() === 'agent' || (authState.signedIn && maia)
+		setFabVisible(ready)
 		if (ready) {
 			try {
 				await renderAppInternal()
@@ -183,6 +186,7 @@ async function handleRoute() {
 	}
 
 	removeSigninKeyHandler()
+	setFabVisible(false)
 	if (redirectIfSignedIn()) return
 	renderLandingPage()
 }
@@ -276,6 +280,7 @@ async function initAgentMode() {
 		window.maia = maia
 		// CRITICAL: Await link before first render - indexing requires account.registries
 		await linkAccountToRegistries(maia).catch(() => {})
+		initGlobalAI(maia)
 
 		// Set auth state
 		authState = {
@@ -486,6 +491,7 @@ async function signInWithTestAven() {
 				maia = bootedMaia
 				window.maia = maia
 				await linkAccountToRegistries(maia).catch(() => {})
+				initGlobalAI(maia)
 				cleanupLoadingScreenSync()
 				if (authState.signedIn) {
 					renderAppInternal().catch((e) => showToast(`Failed to render app: ${e.message}`, 'error'))
@@ -555,6 +561,7 @@ async function signIn() {
 					window.maia = maia
 					await autoRegisterHuman(maia).catch(() => {})
 					await linkAccountToRegistries(maia).catch(() => {})
+					initGlobalAI(maia)
 
 					// Re-render app now that maia is ready
 					if (authState.signedIn) {
@@ -696,6 +703,7 @@ async function register() {
 				window.maia = maia
 				await autoRegisterHuman(maia).catch(() => {})
 				await linkAccountToRegistries(maia).catch(() => {})
+				initGlobalAI(maia)
 				cleanupLoadingScreenSync()
 				if (authState.signedIn) {
 					renderAppInternal().catch((e) => showToast(`Failed to render app: ${e.message}`, 'error'))
@@ -736,7 +744,7 @@ async function register() {
 }
 
 function signOut() {
-	// Signing out
+	disposeGlobalAI()
 	if (unsubscribeSync) {
 		unsubscribeSync()
 		unsubscribeSync = null
@@ -1043,6 +1051,14 @@ async function renderAppInternal() {
 			loadSpark,
 			navigateToScreen,
 		)
+		// Update unified nav left button: always "home", action = go to dashboard when not on dashboard
+		if (currentScreen === 'dashboard') {
+			updateNavLeft('home', null)
+		} else if (currentScreen === 'vibe-viewer') {
+			updateNavLeft('home', () => loadVibe(null))
+		} else if (currentScreen === 'maia-db') {
+			updateNavLeft('home', () => navigateToScreen('dashboard'))
+		}
 	} finally {
 		isRendering = false
 	}
@@ -1123,6 +1139,17 @@ async function extendCapability(capabilityId, _currentExp = 0) {
 window.extendCapability = extendCapability
 
 /**
+ * Load a vibe with its spark context (for flattened dashboard grid)
+ * @param {string} vibeKey - Vibe key (e.g. 'todos')
+ * @param {string} spark - Spark name (e.g. '°Maia')
+ */
+function loadVibeWithSpark(vibeKey, spark) {
+	currentSpark = spark || '°Maia'
+	loadVibe(vibeKey)
+}
+window.loadVibeWithSpark = loadVibeWithSpark
+
+/**
  * Load an aven inline in the main context area
  * @param {string|null} vibeKey - Aven key (e.g., 'todos') or null to exit aven mode
  */
@@ -1147,7 +1174,7 @@ async function loadVibe(vibeKey) {
 			window.currentVibeContainer = null
 
 			currentVibe = null
-			navigateToScreen('dashboard', { preserveSpark: true })
+			navigateToScreen('dashboard')
 		} else {
 			if (currentVibe && currentVibe !== vibeKey && maia?.runtime) {
 				maia.runtime.destroyActorsForVibe(currentVibe)
@@ -1235,22 +1262,39 @@ window.restoreMenuState = () => {
 }
 
 /** Toggle sidebar (DB viewer or aven viewer). Pass containerSelector for Shadow DOM. */
-function toggleSidebar(sidebarSelector, otherSidebarSelector, containerSelector) {
+function toggleSidebar(sidebarSelector, otherSidebarSelector, containerSelector, latchId) {
 	const root = containerSelector ? document.querySelector(containerSelector)?.shadowRoot : document
 	if (!root) return
 	const sidebar = root.querySelector(sidebarSelector)
 	if (!sidebar) return
 	sidebar.classList.add('sidebar-ready')
 	sidebar.classList.toggle('collapsed')
+
+	const isCollapsed = sidebar.classList.contains('collapsed')
+	if (latchId) {
+		const latch = document.getElementById(latchId)
+		if (latch) latch.classList.toggle('active', !isCollapsed)
+	}
+
 	const other = root.querySelector(otherSidebarSelector)
-	if (other && !sidebar.classList.contains('collapsed')) {
+	if (other && !isCollapsed) {
 		other.classList.add('sidebar-ready')
 		other.classList.add('collapsed')
+		// If we opened one, we closed the other - update other latch if it exists
+		const otherLatchId = latchId?.includes('left')
+			? latchId.replace('left', 'right')
+			: latchId?.replace('right', 'left')
+		if (otherLatchId) {
+			const otherLatch = document.getElementById(otherLatchId)
+			if (otherLatch) otherLatch.classList.remove('active')
+		}
 	}
 }
 
-window.toggleDBLeftSidebar = () => toggleSidebar('.db-sidebar', '.db-metadata')
-window.toggleDBRightSidebar = () => toggleSidebar('.db-metadata', '.db-sidebar')
+window.toggleDBLeftSidebar = () =>
+	toggleSidebar('.db-sidebar', '.db-metadata', null, 'db-latch-left')
+window.toggleDBRightSidebar = () =>
+	toggleSidebar('.db-metadata', '.db-sidebar', null, 'db-latch-right')
 window.toggleLeftSidebar = () => toggleSidebar('.nav-aside', '.detail-aside', '.vibe-container')
 window.toggleRightSidebar = () => toggleSidebar('.detail-aside', '.nav-aside', '.vibe-container')
 

@@ -239,8 +239,8 @@
 	font-size: 1rem;
 	border-radius: 16px;
 	border: 1px solid rgba(0, 0, 0, 0.1);
-	background: rgba(255, 255, 255, 0.6);
-	backdrop-filter: blur(8px);
+	background: #ffffff;
+	backdrop-filter: none;
 	color: var(--color-marine-blue);
 	transition:
 		border-color 0.2s,
@@ -299,8 +299,8 @@
 	font-weight: 500;
 	border-radius: 16px;
 	border: 1px solid rgba(0, 0, 0, 0.1);
-	background: rgba(255, 255, 255, 0.6);
-	backdrop-filter: blur(8px);
+	background: #ffffff;
+	backdrop-filter: none;
 	color: var(--color-marine-blue);
 	cursor: pointer;
 	transition:
@@ -311,7 +311,7 @@
 }
 
 .maia-ai-load-btn:hover {
-	background: rgba(255, 255, 255, 0.85);
+	background: #f8fafc;
 	box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
@@ -430,7 +430,7 @@
 }
 
 #maia-ai-fab-root .maia-ai-modal,
-#maia-ai-fab-root .maia-ai-fab {
+#maia-ai-fab-root .maia-nav {
 	pointer-events: auto;
 }
 
@@ -462,7 +462,7 @@
 	min-height: 0;
 	display: flex;
 	flex-direction: column;
-	background: rgba(255, 255, 255, 0.95);
+	background: #ffffff;
 	border-radius: 20px 20px 0 0;
 	box-shadow: 0 -4px 24px rgba(0, 0, 0, 0.12);
 	padding: 1rem;
@@ -510,25 +510,140 @@
 	transform: translateY(0);
 }
 
-.maia-ai-fab {
+/* Unified bottom nav - pill + center circle */
+.maia-nav {
 	position: fixed;
-	bottom: 84px;
+	bottom: 0;
 	left: 50%;
-	margin-left: -28px;
+	transform: translateX(-50%);
+	width: 164px; /* 131 * 1.25 */
+	height: 65px; /* 52 * 1.25 */
 	z-index: 900;
-	width: 56px;
-	height: 56px;
-	border-radius: 50%;
-	box-shadow: 0 4px 12px rgba(0, 31, 51, 0.25);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	pointer-events: auto;
 }
 
-.maia-ai-fab:disabled {
+.maia-nav-pill {
+	position: absolute;
+	bottom: 0;
+	left: 0;
+	width: 164px;
+	height: 40px; /* 32 * 1.25 */
+	background: #1a2355;
+	border-radius: 32px 32px 0 0;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0 0.75rem;
+	box-sizing: border-box;
+}
+
+.maia-nav-left,
+.maia-nav-right {
+	background: none;
+	border: none;
+	padding: 0.25rem;
+	font-family: Inter, system-ui, sans-serif;
+	font-size: 15px; /* 12 * 1.25 */
+	line-height: 18px;
+	font-weight: 400;
+	color: rgba(255, 255, 255, 0.9);
+	cursor: pointer;
+	transition: color 0.15s;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.maia-nav-left:hover:not(:disabled),
+.maia-nav-right:hover:not(:disabled) {
+	color: rgba(255, 255, 255, 0.95);
+}
+
+.maia-nav-left:disabled,
+.maia-nav-right:disabled {
+	opacity: 0.5;
+	cursor: default;
+}
+
+.maia-nav-left .maia-nav-icon,
+.maia-nav-right .maia-nav-icon {
+	width: 25px; /* 20 * 1.25 */
+	height: 25px;
+	color: inherit;
+}
+
+.maia-nav-center {
+	position: absolute;
+	bottom: 6px; /* Small margin from bottom edge */
+	left: 50%;
+	transform: translateX(-50%);
+	width: 62px; /* 50 * 1.25 */
+	height: 62px;
+	border-radius: 50%;
+	background: #0c133d;
+	border: none;
+	padding: 0;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	box-shadow: 0 4px 12px rgba(0, 31, 51, 0.35);
+	z-index: 1;
+	transition:
+		background 0.2s,
+		transform 0.1s;
+}
+
+.maia-nav-center:hover:not(:disabled) {
+	background: #151d4a;
+}
+
+.maia-nav-center:active:not(:disabled) {
+	transform: translateX(-50%) scale(0.96);
+}
+
+.maia-nav-center:disabled {
 	opacity: 0.8;
 	cursor: not-allowed;
 }
 
-@media (min-width: 768px) {
-	.maia-ai-fab {
-		bottom: 24px;
-	}
+.maia-nav-center-inner {
+	width: 55px; /* 44 * 1.25 */
+	height: 55px;
+	border-radius: 50%;
+	background: #1a2355;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	position: relative;
+}
+
+.maia-nav-center .maia-ai-center-icon {
+	position: absolute;
+	inset: 0;
+	margin: auto;
+	opacity: 0;
+	transition: opacity 0.2s;
+	width: 30px; /* 24 * 1.25 */
+	height: 30px;
+}
+
+.maia-nav-center .maia-ai-center-icon.active {
+	opacity: 1;
+}
+
+.maia-nav-center.maia-ai-center-btn-stop .maia-nav-center-inner {
+	background: #c62828;
+}
+
+.maia-nav-center.maia-ai-center-btn-stop:hover:not(:disabled) .maia-nav-center-inner {
+	background: #8e0000;
+}
+
+/* When MaiaDB is shown, nav is also at the bottom */
+body.screen-maia-db .maia-nav {
+	bottom: 0;
 }
