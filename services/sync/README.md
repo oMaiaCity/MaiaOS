@@ -28,7 +28,8 @@ The sync service consolidates WebSocket sync, agent API, and LLM proxy in one pr
 
 - `AVEN_MAIA_ACCOUNT`, `AVEN_MAIA_SECRET` - Required (run `bun agent:generate`)
 - `PEER_SYNC_STORAGE=pglite | postgres` (required - server never runs without persistent storage)
-- `PEER_DB_PATH` - Default: `./local-sync.db` (pglite). Ignored when `postgres`.
+- `PEER_DB_PATH` - Default: `./pg-lite.db` (pglite). Ignored when `postgres`.
+- `PEER_BLOB_PATH` - Default: `./binary-bucket` (binary CoValue offload). Ignored when `BUCKET_NAME` set (Tigris).
 - `PEER_SYNC_DB_URL` - Required when `PEER_SYNC_STORAGE=postgres` (e.g. Neon, Fly Postgres)
 - `AVEN_MAIA_GUARDIAN` - Optional. If set (human account co-id), add as admin on startup (one-time genesis).
 - `PEER_SYNC_SEED` - Set `true` for genesis seed (bootstrap + schemas + avens). Default: `false`.
@@ -78,7 +79,7 @@ The client connects directly to sync (CORS enabled). Sync server URL:
 
 The sync server requires persistent storage (never in-memory or sync-only):
 
-- **PGlite** (`PEER_SYNC_STORAGE=pglite`): Local WASM Postgres. Dev: `./local-sync.db`, prod: `/data/sync.db`.
+- **PGlite** (`PEER_SYNC_STORAGE=pglite`): Local WASM Postgres. Dev: `./pg-lite.db`, prod: `/data/sync.db`.
 - **Postgres** (`PEER_SYNC_STORAGE=postgres`): Remote Postgres via `PEER_SYNC_DB_URL` (e.g. Neon, Fly Postgres).
 
 ## How It Works

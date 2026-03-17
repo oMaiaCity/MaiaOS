@@ -45,8 +45,13 @@ vite.config.ts.timestamp-*
 
 # PGlite local dev data (moai sync server - never commit)
 **/pgdata/
-local-sync.db
+pg-lite.db
+**/pg-lite.db
 /tmp/pglite/
+
+# Binary blob bucket (CoValue offloading - dev only, never commit)
+binary-bucket/
+**/binary-bucket/
 
 # Legacy (removed - use services/app)
 services/maia/

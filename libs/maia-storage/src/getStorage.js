@@ -31,6 +31,28 @@ function getEnvVar(key) {
 const _inMemory = () => undefined
 
 /**
+ * Create the appropriate BlobStore based on environment.
+ * BUCKET_NAME set → Tigris (production, Fly.io).
+ * Otherwise → local filesystem at PEER_BLOB_PATH or ./binary-bucket.
+ * Only created in Node.js server context.
+ */
+async function createBlobStore() {
+	const bucketName = typeof process !== 'undefined' && process.env?.BUCKET_NAME
+	if (bucketName) {
+		const { TigrisBlobStore } = await import('./blob/tigris.js')
+		console.log(`[Storage] BlobStore: Tigris (bucket=${bucketName})`)
+		return new TigrisBlobStore(bucketName)
+	}
+	const blobPath =
+		(typeof process !== 'undefined' && process.env?.PEER_BLOB_PATH) || './binary-bucket'
+	const { resolve } = await import('node:path')
+	const resolvedPath = resolve(blobPath)
+	const { LocalFsBlobStore } = await import('./blob/local-fs.js')
+	console.log(`[Storage] BlobStore: local filesystem (${resolvedPath})`)
+	return new LocalFsBlobStore(resolvedPath)
+}
+
+/**
  * Get storage instance based on runtime and configuration
  * Agent mode: PEER_SYNC_STORAGE, PEER_DB_PATH
  * Human mode (browser): OPFS first, IndexedDB fallback (MAIA_STORAGE=indexeddb to force)
@@ -102,6 +124,8 @@ export async function getStorage(options = {}) {
 			}
 		}
 
+		const blobStore = await createBlobStore()
+
 		// Postgres (Fly MPG or any Postgres)
 		if (storageType === 'postgres' && !forceInMemory) {
 			if (!databaseUrl) {
@@ -109,7 +133,7 @@ export async function getStorage(options = {}) {
 			}
 			try {
 				const { getPostgresStorage } = await import('@MaiaOS/storage/adapters/postgres.js')
-				return await getPostgresStorage(databaseUrl)
+				return await getPostgresStorage(databaseUrl, blobStore)
 			} catch (error) {
 				throw new Error(
 					`[STORAGE] Postgres storage initialization FAILED. ` +
@@ -126,7 +150,7 @@ export async function getStorage(options = {}) {
 		) {
 			try {
 				const { getPGliteStorage } = await import('@MaiaOS/storage/adapters/pglite.js')
-				return await getPGliteStorage(finalDbPath)
+				return await getPGliteStorage(finalDbPath, blobStore)
 			} catch (error) {
 				throw new Error(
 					`[STORAGE] PGlite storage initialization FAILED at ${finalDbPath}. ` +
