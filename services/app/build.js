@@ -83,10 +83,12 @@ if (!result.success) {
 	process.exit(1)
 }
 
-// Copy index.html and add cache-bust to main.js to avoid serving stale bundle after deploy
+// Copy index.html and add cache-bust to main.js and style.css to avoid serving stale bundles after deploy
 const buildId = Date.now().toString(36)
 const indexHtml = await Bun.file(join(serviceDir, 'index.html')).text()
-const indexWithCacheBust = indexHtml.replace('src="/main.js"', `src="/main.js?v=${buildId}"`)
+const indexWithCacheBust = indexHtml
+	.replace('src="/main.js"', `src="/main.js?v=${buildId}"`)
+	.replace('href="/style.css"', `href="/style.css?v=${buildId}"`)
 await Bun.write(join(distDir, 'index.html'), indexWithCacheBust)
 
 // Bundle CSS into single file: resolve @imports and output one style.css

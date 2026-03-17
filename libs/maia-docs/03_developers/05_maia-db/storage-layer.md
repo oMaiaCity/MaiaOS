@@ -19,6 +19,10 @@ OPFS and IndexedDB use **separate storage roots**. There is no automatic migrati
 
 **Source:** `@MaiaOS/storage` – `libs/maia-storage/src/getStorage.js`, `opfs.js`, `indexeddb.js`. maia-db uses storage via dependency; the actual OPFS/IndexedDB backends live in maia-storage.
 
+### Server Blob Storage
+
+On the sync server (Neon PostgreSQL path), binary CoValues (images, files) are offloaded to object storage instead of the database. When `BUCKET_NAME` is set, the sync service uses Tigris (S3-compatible); when unset (local dev), it uses `LocalFsBlobStore` at `./binary-bucket`. See [Tigris Blob Storage](../09_deployment/tigris-blob-storage.md) for setup.
+
 ---
 
 ## The Simple Version
