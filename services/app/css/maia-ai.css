@@ -429,11 +429,6 @@
 	z-index: 800;
 }
 
-#maia-ai-fab-root .maia-ai-modal,
-#maia-ai-fab-root .maia-nav {
-	pointer-events: auto;
-}
-
 .maia-ai-modal {
 	position: fixed;
 	inset: 0;
@@ -646,4 +641,10 @@
 /* When MaiaDB is shown, nav is also at the bottom */
 body.screen-maia-db .maia-nav {
 	bottom: 0;
+}
+
+/* Restore pointer-events for modal and nav inside fab root (higher specificity) */
+#maia-ai-fab-root .maia-ai-modal,
+#maia-ai-fab-root .maia-nav {
+	pointer-events: auto;
 }
