@@ -2268,12 +2268,12 @@ pre {
 .dashboard-main {
 	flex: 1;
 	overflow-y: auto;
-	padding: 0 0 1rem;
+	padding: 0;
 	z-index: 10;
 }
 @media (min-width: 600px) {
 	.dashboard-main {
-		padding: 0 0 1rem;
+		padding: 0;
 	}
 }
 
@@ -2407,7 +2407,7 @@ pre {
 	}
 }
 
-/* Agent Viewer Main - spans full height to bottom minus margin/padding on all viewports */
+/* Agent Viewer Main - spans full height to bottom edge */
 .vibe-viewer-main {
 	flex: 1;
 	height: 100%;
@@ -2419,168 +2419,83 @@ pre {
 	position: relative;
 }
 
-/* Bottom Navbar Area - Floating buttons, no background */
-.bottom-navbar {
-	display: flex;
+/* MaiaDB navigation latches (side-aligned) and back notch (bottom-aligned) */
+.db-latch {
 	position: fixed;
-	bottom: 1rem;
-	left: 0;
-	right: 0;
-	padding: 0;
-	margin: 0;
-	min-height: auto;
-	background: transparent;
+	background: #1a2355;
 	border: none;
-	box-shadow: none;
-	z-index: 1000;
-	align-items: center;
-	justify-content: space-between;
-	gap: 0;
-	border-radius: 0;
-	width: 100vw;
-	margin-left: 0;
-	margin-right: 0;
-	pointer-events: none; /* Allow clicks to pass through empty areas */
-}
-
-.bottom-navbar > * {
-	pointer-events: auto; /* Re-enable pointer events for buttons */
-}
-
-.bottom-navbar-left {
-	display: flex;
-	align-items: center;
-	gap: 0.5rem;
-	justify-content: flex-start;
-	flex-shrink: 0;
-	padding: 1rem 1rem 0 1rem; /* Same spacing from left (1rem), button at bottom edge for equal bottom spacing */
-}
-
-.bottom-navbar-center {
-	position: absolute;
-	left: 50%;
-	transform: translateX(-50%);
-	display: flex;
+	color: rgba(255, 255, 255, 0.8);
+	cursor: pointer;
+	display: none; /* Hidden by default, shown on mobile/tablet */
 	align-items: center;
 	justify-content: center;
-	z-index: 1;
+	z-index: 850;
+	transition:
+		background 0.15s,
+		color 0.15s;
 }
 
-.bottom-navbar-right {
-	display: flex;
-	align-items: center;
-	justify-content: flex-end;
-	flex-shrink: 0;
-	padding: 1rem 1rem 0 1rem; /* Mirror left: same spacing from right/bottom */
+.db-latch-left {
+	left: 0;
+	bottom: 0;
+	width: 40px; /* 32 * 1.25 */
+	height: 40px;
+	border-radius: 0 18px 0 0;
+	padding-right: 4px;
 }
 
-/* Bottom Corner Sidebar Toggle Buttons */
-.sidebar-toggle-btn {
+.db-latch-right {
+	right: 0;
+	bottom: 0;
 	width: 40px;
 	height: 40px;
-	border-radius: 50%;
-	background: rgba(255, 255, 255, 0.4);
-	backdrop-filter: blur(12px) saturate(160%);
-	border: 1px solid rgba(255, 255, 255, 0.2);
-	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-	cursor: pointer;
-	align-items: center;
-	justify-content: center;
-	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-	color: var(--color-marine-blue);
-	display: flex;
-	flex-shrink: 0;
+	border-radius: 18px 0 0 0;
+	padding-left: 4px;
 }
 
-.sidebar-toggle-btn:hover {
-	background: rgba(255, 255, 255, 0.6);
-	transform: scale(1.05);
-	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+.db-latch.active {
+	background: #0c133d;
+	color: #fff;
 }
 
-.sidebar-toggle-btn:active {
-	transform: scale(0.95);
-}
-
-/* Back button in bottom navbar */
-.bottom-back-btn {
-	width: auto;
+.db-notch-back {
+	position: fixed;
+	left: 48px; /* Increased gap from left latch (40px width + 8px gap) */
+	bottom: 0;
 	height: 40px;
-	border-radius: 20px;
-	padding: 0 0.75rem;
-	background: rgba(255, 255, 255, 0.4);
-	backdrop-filter: blur(12px) saturate(160%);
-	border: 1px solid rgba(255, 255, 255, 0.2);
-	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+	background: #1a2355;
+	border: none;
+	border-radius: 18px 18px 0 0;
+	padding: 0 1.25rem;
+	color: rgba(255, 255, 255, 0.8);
+	font-size: 15px; /* 12 * 1.25 */
+	font-family: Inter, system-ui, sans-serif;
 	cursor: pointer;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	gap: 0.4rem;
-	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-	color: var(--color-marine-blue);
-	font-size: 0.8rem;
-	font-weight: 500;
+	gap: 0.45rem;
+	z-index: 850;
+	transition:
+		background 0.15s,
+		color 0.15s;
+}
+
+.db-latch:hover,
+.db-notch-back:hover {
+	background: #0c133d;
+	color: rgba(255, 255, 255, 0.95);
+}
+
+.db-latch svg,
+.db-notch-back svg {
 	flex-shrink: 0;
 }
 
-.bottom-back-btn:hover {
-	background: rgba(255, 255, 255, 0.6);
-	transform: translateY(-1px);
-	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-}
-
-.bottom-back-btn:active {
-	transform: scale(0.95);
-}
-
-.bottom-back-btn .back-label {
-	display: inline;
-	font-size: 0.8rem;
-}
-
-/* Home button in bottom navbar (centered) */
-.bottom-home-btn {
-	width: auto;
-	height: 40px;
-	border-radius: 20px;
-	padding: 0 1rem;
-	background: rgba(255, 255, 255, 0.4);
-	backdrop-filter: blur(12px) saturate(160%);
-	border: 1px solid rgba(255, 255, 255, 0.2);
-	box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
-	cursor: pointer;
-	display: flex;
-	align-items: center;
-	justify-content: center;
-	gap: 0.4rem;
-	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-	color: var(--color-marine-blue);
-	font-size: 0.8rem;
-	font-weight: 500;
-	flex-shrink: 0;
-}
-
-.bottom-home-btn:hover {
-	background: rgba(255, 255, 255, 0.6);
-	transform: translateY(-1px);
-	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-}
-
-.bottom-home-btn:active {
-	transform: scale(0.95);
-}
-
-.bottom-home-btn .home-label {
-	display: inline;
-	font-size: 0.8rem;
-}
-
-/* Icon-only home button (bottom-left in vibe viewer) */
-.bottom-home-btn.home-btn-icon-only {
-	width: 40px;
-	padding: 0;
-	min-width: 40px;
+@media (max-width: 1024px) {
+	.db-latch {
+		display: flex;
+	}
 }
 
 /* Mobile Menu - card-style dropdown, floats above content (no layout push) */
@@ -2764,8 +2679,8 @@ pre {
 	.db-main {
 		width: 100%;
 		transition: margin 0.5s cubic-bezier(0.2, 0, 0.2, 1);
-		padding-bottom: 60px; /* Account for bottom navbar height */
-		box-sizing: border-box; /* Ensure padding is included in height */
+		padding-bottom: 0;
+		box-sizing: border-box;
 	}
 
 	/* Collapsed sidebars - slide out (explicit collapsed class) */
@@ -2797,14 +2712,6 @@ pre {
 		font-weight: 700;
 		text-transform: uppercase;
 		color: var(--color-marine-blue);
-	}
-
-	/* Show bottom navbar on mobile/tablet */
-	.bottom-navbar {
-		display: flex;
-		padding: 0;
-		margin: 0;
-		border-radius: 0;
 	}
 
 	/* Remove bottom padding from scrollable content to eliminate gap */

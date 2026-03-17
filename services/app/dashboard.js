@@ -156,16 +156,31 @@ async function loadVibesFromSpark(maia, spark) {
 }
 
 /**
- * Render dashboard screen with grid context hierarchy
- * Level 1: Sparks (context scopes) + DB Viewer
- * Level 2: Vibes for selected spark (when currentSpark is set)
+ * Load vibes from all sparks and merge into one flat list.
+ * @param {Object} maia - MaiaOS instance
+ * @param {Array} sparks - Array of {key} from loadSparksFromAccount
+ * @returns {Promise<Array>} Array of vibe objects with {key, name, description, coId, spark}
+ */
+async function loadVibesFromAllSparks(maia, sparks) {
+	const all = []
+	for (const spark of sparks) {
+		const vibes = await loadVibesFromSpark(maia, spark.key)
+		for (const v of vibes) {
+			all.push({ ...v, spark: spark.key })
+		}
+	}
+	return all
+}
+
+/**
+ * Render dashboard screen - flat grid: MaiaDB + dynamic vibes (no sparks/avens hierarchy)
  */
 export async function renderDashboard(
 	maia,
 	authState,
 	syncState,
 	_navigateToScreen,
-	currentSpark,
+	_currentSpark,
 	_loadSpark,
 	_loadVibe,
 ) {
@@ -191,114 +206,71 @@ export async function renderDashboard(
 	let sparks = []
 	let vibes = []
 
-	if (!currentSpark) {
-		// Level 1: Load profile and sparks in parallel
-		try {
-			const [profilesResult, sparksResult] = await Promise.all([
-				accountId?.startsWith('co_z') && maia?.do
-					? resolveAccountCoIdsToProfiles(maia, [accountId])
-					: Promise.resolve(new Map()),
-				loadSparksFromAccount(maia),
-			])
-			sparks = sparksResult
-			const accountProfile = profilesResult.get(accountId) ?? null
-			accountDisplayName = accountProfile?.name ?? accountDisplayName
-			accountAvatarHtml = getProfileAvatarHtml(accountProfile?.image, {
-				size: 44,
-				className: 'navbar-avatar',
-				syncState,
-			})
-		} catch (_e) {}
-	} else {
-		// Level 2: Load profile and vibes in parallel
-		try {
-			const [profilesResult, vibesResult] = await Promise.all([
-				accountId?.startsWith('co_z') && maia?.do
-					? resolveAccountCoIdsToProfiles(maia, [accountId])
-					: Promise.resolve(new Map()),
-				loadVibesFromSpark(maia, currentSpark),
-			])
-			vibes = vibesResult
-			const accountProfile = profilesResult.get(accountId) ?? null
-			accountDisplayName = accountProfile?.name ?? accountDisplayName
-			accountAvatarHtml = getProfileAvatarHtml(accountProfile?.image, {
-				size: 44,
-				className: 'navbar-avatar',
-				syncState,
-			})
-		} catch (_e) {}
-	}
+	try {
+		const [profilesResult, sparksResult] = await Promise.all([
+			accountId?.startsWith('co_z') && maia?.do
+				? resolveAccountCoIdsToProfiles(maia, [accountId])
+				: Promise.resolve(new Map()),
+			loadSparksFromAccount(maia),
+		])
+		sparks = sparksResult
+		vibes = await loadVibesFromAllSparks(maia, sparks)
+		const accountProfile = profilesResult.get(accountId) ?? null
+		accountDisplayName = accountProfile?.name ?? accountDisplayName
+		accountAvatarHtml = getProfileAvatarHtml(accountProfile?.image, {
+			size: 44,
+			className: 'navbar-avatar',
+			syncState,
+		})
+	} catch (_e) {}
 	if (accountId && !accountAvatarHtml) {
 		accountAvatarHtml = getProfileAvatarHtml(null, { size: 44, className: 'navbar-avatar' })
 	}
 
-	let cards = ''
-
-	if (!currentSpark) {
-		// Level 1: Show sparks (context scopes) + DB Viewer (hardcoded CoJSON inspector)
-
-		const dbViewerCard = `
-			<div class="dashboard-card whitish-card" onclick="window.navigateToScreen('maia-db')">
-				<div class="dashboard-card-content">
-					<div class="dashboard-card-icon">
-						<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-							<path d="M4 7h16M4 12h16M4 17h16"/>
-						</svg>
-					</div>
-					<h3 class="dashboard-card-title">MaiaDB</h3>
-					<p class="dashboard-card-description">Explore and inspect your data</p>
+	const dbViewerCard = `
+		<div class="dashboard-card whitish-card" onclick="window.navigateToScreen('maia-db')">
+			<div class="dashboard-card-content">
+				<div class="dashboard-card-icon">
+					<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+						<path d="M4 7h16M4 12h16M4 17h16"/>
+					</svg>
 				</div>
+				<h3 class="dashboard-card-title">MaiaDB</h3>
+				<p class="dashboard-card-description">Explore and inspect your data</p>
 			</div>
-		`
-		const sparkCards = sparks
-			.map(
-				(spark) => `
-			<div class="dashboard-card whitish-card" onclick="window.loadSpark('${escapeHtml(spark.key)}')">
-				<div class="dashboard-card-content">
-					<div class="dashboard-card-icon">
-						<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-							<path d="M13 10V3L4 14h7v7l9-11h-7z"/>
-						</svg>
-					</div>
-					<h3 class="dashboard-card-title">${escapeHtml(spark.name)}</h3>
-					<p class="dashboard-card-description">${escapeHtml(spark.description)}</p>
+		</div>
+	`
+	const vibeCards = vibes
+		.map(
+			(vibe) => `
+		<div class="dashboard-card whitish-card" onclick="window.loadVibeWithSpark('${escapeHtml(vibe.key)}', '${escapeHtml(vibe.spark || '°Maia')}')">
+			<div class="dashboard-card-content">
+				<div class="dashboard-card-icon">
+					<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+						<path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
+					</svg>
 				</div>
+				<h3 class="dashboard-card-title">${escapeHtml(vibe.name)}</h3>
+				<p class="dashboard-card-description">${escapeHtml(vibe.description)}</p>
 			</div>
-		`,
-			)
-			.join('')
+		</div>
+	`,
+		)
+		.join('')
 
-		cards = dbViewerCard + sparkCards
-	} else {
-		// Level 2: Show vibes for the selected spark (no back card - Switch Spark in bottom navbar)
-		const vibeCards = vibes
-			.map(
-				(vibe) => `
-			<div class="dashboard-card whitish-card" onclick="window.loadVibe('${escapeHtml(vibe.key)}')">
-				<div class="dashboard-card-content">
-					<div class="dashboard-card-icon">
-						<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-							<path d="M9 11l3 3L22 4M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/>
-						</svg>
-					</div>
-					<h3 class="dashboard-card-title">${escapeHtml(vibe.name)}</h3>
-					<p class="dashboard-card-description">${escapeHtml(vibe.description)}</p>
-				</div>
-			</div>
-		`,
-			)
-			.join('')
+	const cards = dbViewerCard + vibeCards
 
-		cards = vibeCards
-
-		// Reactivity: when vibes empty but spark selected, retry render so dashboard updates when registries/sparks/vibes arrive.
-		if (currentSpark && vibeCards === '' && typeof window.renderAppInternal === 'function') {
-			setTimeout(() => window.renderAppInternal(), 1500)
-			setTimeout(() => window.renderAppInternal(), 3500)
-		}
+	// Reactivity: when vibes empty, retry render so dashboard updates when registries/sparks/vibes arrive
+	if (
+		vibes.length === 0 &&
+		cards === dbViewerCard &&
+		typeof window.renderAppInternal === 'function'
+	) {
+		setTimeout(() => window.renderAppInternal(), 1500)
+		setTimeout(() => window.renderAppInternal(), 3500)
 	}
 
-	const headerTitle = currentSpark ? `${currentSpark} Vibes` : 'Me'
+	const headerTitle = 'Me'
 
 	document.getElementById('app').innerHTML = `
 		<div class="db-container">
@@ -352,30 +324,11 @@ export async function renderDashboard(
 			</div>
 			</div>
 
-			<div class="dashboard-main ${currentSpark ? 'has-bottom-navbar' : ''}">
+			<div class="dashboard-main">
 				<div class="dashboard-grid">
-					${cards || `<div class="empty-state p-12 text-center text-slate-400 italic">${currentSpark ? 'No avens in this context' : 'No context scopes available'}</div>`}
+					${cards || `<div class="empty-state p-12 text-center text-slate-400 italic">No context scopes available</div>`}
 				</div>
 			</div>
-			${
-				currentSpark
-					? `
-			<!-- Bottom navbar - Switch Spark (same position as Home in aven viewer) -->
-			<div class="bottom-navbar">
-				<div class="bottom-navbar-left"></div>
-				<div class="bottom-navbar-center">
-					<button class="home-btn bottom-home-btn" onclick="window.loadSpark(null)" title="Switch Spark">
-						<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-							<path d="M13 10V3L4 14h7v7l9-11h-7z"/>
-						</svg>
-						<span class="home-label">Switch Spark</span>
-					</button>
-				</div>
-				<div class="bottom-navbar-right"></div>
-			</div>
-			`
-					: ''
-			}
 		</div>
 	`
 }
@@ -489,23 +442,6 @@ export async function renderVibeViewer(
 			<div class="vibe-viewer-main">
 				<div class="vibe-card">
 					<div id="vibe-container-${escapeHtml(currentVibe)}" class="vibe-container"></div>
-				</div>
-				<!-- Bottom navbar area for mobile - home button bottom-left (vibe-specific buttons handled by vibes) -->
-				<div class="bottom-navbar">
-					<div class="bottom-navbar-left">
-						<button class="home-btn bottom-home-btn home-btn-icon-only" onclick="window.loadVibe(null)" title="Home" aria-label="Home">
-							<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-								<path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
-								<polyline points="9 22 9 12 15 12 15 22"></polyline>
-							</svg>
-						</button>
-					</div>
-					<div class="bottom-navbar-center">
-						<!-- Center reserved for vibe-specific -->
-					</div>
-					<div class="bottom-navbar-right">
-						<!-- Right buttons are vibe-specific, not global -->
-					</div>
 				</div>
 			</div>
 		</div>
