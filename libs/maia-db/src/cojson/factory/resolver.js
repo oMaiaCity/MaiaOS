@@ -229,7 +229,7 @@ export async function resolve(peer, identifier, options = {}) {
 			normalizedKey = `${effectiveSpark}/schema/${normalizedKey}`
 		}
 
-		// Use read() API to load spark.os (account.registries.sparks[spark].os) or spark.vibes registry
+		// Use read() API to load spark.os (account.registries.sparks[spark].os) or spark.os.vibes registry
 		if (!peer.account || typeof peer.account.get !== 'function') {
 			return null
 		}
@@ -317,7 +317,7 @@ export async function resolve(peer, identifier, options = {}) {
 				return null
 			}
 		} else if (VIBE_REF_PATTERN.test(identifier)) {
-			// Vibe instance keys → account.registries.sparks[spark].vibes
+			// Vibe instance keys → account.registries.sparks[spark].os.vibes
 			const sparkCoId = await resolveSparkCoId(peer, effectiveSpark)
 			if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_z')) {
 				return null
@@ -333,7 +333,20 @@ export async function resolve(peer, identifier, options = {}) {
 			}
 			const sparkData = sparkStore.value
 			if (!sparkData || sparkData.error) return null
-			const vibesId = sparkData.vibes
+			const osId = sparkData.os
+			if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) return null
+			const osStore = await universalRead(peer, osId, null, null, null, {
+				deepResolve: false,
+				timeoutMs,
+			})
+			try {
+				await waitForStoreReady(osStore, osId, timeoutMs)
+			} catch {
+				return null
+			}
+			const osData = osStore.value
+			if (!osData || osData.error) return null
+			const vibesId = osData.vibes
 			if (!vibesId || typeof vibesId !== 'string' || !vibesId.startsWith('co_z')) {
 				return null
 			}

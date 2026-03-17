@@ -1168,7 +1168,7 @@ export async function renderApp(
 		`
 	}
 
-	// Build sidebar navigation items (Account only - vibes via spark.vibes)
+	// Build sidebar navigation items (Account only - vibes via spark.os.vibes)
 	const sidebarItems = navigationItems
 		.map((item) => {
 			// Account navigation - select account CoValue

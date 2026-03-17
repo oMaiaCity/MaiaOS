@@ -88,7 +88,7 @@ async function loadSparksFromAccount(maia) {
 }
 
 /**
- * Load vibes from spark.vibes registry.
+ * Load vibes from spark.os.vibes registry.
  * Dynamic vibes: name and description from CoJSON (vibe manifest CoValue).
  * @param {Object} maia - MaiaOS instance
  * @param {string} spark - Spark name (e.g. '°Maia')
@@ -115,7 +115,12 @@ async function loadVibesFromSpark(maia, spark) {
 
 		const sparkStore = await maia.do({ op: 'read', factory: null, key: sparkCoId })
 		const sparkData = sparkStore?.value ?? sparkStore
-		const vibesId = sparkData?.vibes
+		const osId = sparkData?.os
+		if (typeof osId !== 'string' || !osId.startsWith('co_')) return vibes
+
+		const osStore = await maia.do({ op: 'read', factory: null, key: osId })
+		const osData = osStore?.value ?? osStore
+		const vibesId = osData?.vibes
 		if (typeof vibesId !== 'string' || !vibesId.startsWith('co_')) return vibes
 
 		const vibesStore = await maia.do({ op: 'read', factory: vibesId, key: vibesId })
@@ -515,7 +520,7 @@ export async function renderVibeViewer(
 			// Clear container before loading new vibe (remove any existing content)
 			container.innerHTML = ''
 
-			// Load vibe from spark context (registries.sparks[spark].vibes)
+			// Load vibe from spark context (registries.sparks[spark].os.vibes)
 			await maia.loadVibeFromAccount(currentVibe, container, currentSpark || '°Maia')
 
 			// Add sidebar toggle handlers for maiadb vibe (after vibe loads)

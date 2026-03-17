@@ -305,7 +305,7 @@ export class Runtime {
 	}
 
 	/**
-	 * Load vibes and union of their dependencies from DB (account.registries.sparks[°Maia].vibes).
+	 * Load vibes and union of their dependencies from DB (account.registries.sparks[°Maia].os.vibes).
 	 * @returns {Promise<{actorRefs: string[]}>} Deduped actor refs to watch
 	 */
 	async _getVibesAndDependenciesFromDb() {
@@ -344,7 +344,14 @@ export class Runtime {
 				factory: null,
 				key: sparkCoId,
 			})
-			const vibesId = sparkStore?.value?.vibes
+			const osId = sparkStore?.value?.os
+			if (!osId?.startsWith?.('co_z')) return { actorRefs: [] }
+			const osStore = await this.dataEngine.execute({
+				op: 'read',
+				factory: null,
+				key: osId,
+			})
+			const vibesId = osStore?.value?.vibes
 			if (!vibesId?.startsWith?.('co_z')) return { actorRefs: [] }
 			const vibesStore = await this.dataEngine.execute({
 				op: 'read',

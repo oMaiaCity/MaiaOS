@@ -147,7 +147,7 @@ vibes/todos/
         registry: TodosVibeRegistry,
       });
       
-      // Load vibe by key from account.registries.sparks[°Maia].vibes
+      // Load vibe by key from account.registries.sparks[°Maia].os.vibes
       const { vibe, actor } = await maia.loadVibeFromAccount(
         'todos',
         document.getElementById('actor-todo'),

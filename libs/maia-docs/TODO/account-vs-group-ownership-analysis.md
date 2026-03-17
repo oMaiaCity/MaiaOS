@@ -5,7 +5,7 @@
 > - **°Maia spark** at `account.registries.sparks["°Maia"]` with `{ name, group, os, vibes }`
 > - Group resolved via `backend.getMaiaGroup()` → `getSparkGroup(backend, '°Maia')`
 > - Profile: `{ name }` only (no group)
-> - Factories at `account.registries.sparks["°Maia"].os.factories`, vibes at `account.registries.sparks["°Maia"].vibes`
+> - Factories at `account.registries.sparks["°Maia"].os.factories`, vibes at `account.registries.sparks["°Maia"].os.vibes`
 
 ## Analogy Overview
 

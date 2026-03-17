@@ -1,6 +1,6 @@
 /**
  * Universal Vibe Loader
- * Boots MaiaOS with CoJSON backend, loads vibe from account.registries.sparks[spark].vibes[vibeKey]
+ * Boots MaiaOS with CoJSON backend, loads vibe from account.registries.sparks[spark].os.vibes[vibeKey]
  * Reuses existing MaiaOS session from main app if available
  */
 
@@ -18,7 +18,7 @@ function checkForExistingSession() {
 }
 
 /**
- * @param {string} vibeKey - Key in spark.vibes (e.g. 'todos', 'chat')
+ * @param {string} vibeKey - Key in spark.os.vibes (e.g. 'todos', 'chat')
  * @param {Object} Registry - Vibe registry (e.g. TodosVibeRegistry)
  * @param {string[]} [modules=['db','core']] - MaiaOS modules to load
  * @returns {(container: HTMLElement) => Promise<{os: MaiaOS, vibe: Object, actor: Object}>}

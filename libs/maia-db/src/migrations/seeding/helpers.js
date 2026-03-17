@@ -4,7 +4,6 @@
 
 import mergedMetaSchema from '@MaiaOS/factories/os/meta.factory.json'
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
-import { waitForStoreReady } from '../../cojson/crud/read-operations.js'
 import * as groups from '../../cojson/groups/groups.js'
 import { ensureIndexesCoMap } from '../../cojson/indexing/factory-index-manager.js'
 
@@ -49,7 +48,7 @@ export function buildMetaFactoryForSeeding(metaSchemaCoId) {
 
 /**
  * Ensure spark.os CoMap exists (creates if needed)
- * Also ensures spark.os.factories, spark.os.indexes, spark.vibes
+ * Also ensures spark.os.factories, spark.os.indexes, spark.os.vibes
  */
 export async function ensureSparkOs(account, node, maiaGroup, peer, factoryCoIdMap) {
 	const { EXCEPTION_FACTORIES } = await import('../../factories/registry.js')
@@ -118,28 +117,22 @@ export async function ensureSparkOs(account, node, maiaGroup, peer, factoryCoIdM
 	}
 
 	const vibesId = await groups.getSparkVibesId(peer, MAIA_SPARK)
-	if (!vibesId && factoryCoIdMap) {
-		const sparksId = await groups.getSparksRegistryId(peer)
-		if (sparksId?.startsWith('co_z')) {
-			const sparksStore = await peer.read(null, sparksId)
-			await waitForStoreReady(sparksStore, sparksId, 10000)
-			const sparksData = sparksStore?.value ?? {}
-			const maiaSparkCoId = sparksData?.[MAIA_SPARK] ?? sparksData?.['°Maia']
-			if (maiaSparkCoId?.startsWith('co_z')) {
-				const sparkCore = peer.getCoValue(maiaSparkCoId)
-				if (sparkCore && peer.isAvailable(sparkCore)) {
-					const sparkContent = peer.getCurrentContent(sparkCore)
-					if (sparkContent && typeof sparkContent.set === 'function') {
-						const ctx = { node, account, guardian: maiaGroup }
-						const { coValue: vibes } = await createCoValueForSpark(ctx, null, {
-							factory: vibesRegistrySchemaCoId || EXCEPTION_FACTORIES.META_SCHEMA,
-							cotype: 'comap',
-							data: {},
-							dataEngine: peer?.dbEngine,
-						})
-						sparkContent.set('vibes', vibes.id)
-					}
-				}
+	if (!vibesId && factoryCoIdMap && osCore?.isAvailable()) {
+		const osContent = osCore.getCurrentContent?.()
+		if (osContent && typeof osContent.set === 'function') {
+			const ctx = { node, account, guardian: maiaGroup }
+			const { coValue: vibes } = await createCoValueForSpark(ctx, null, {
+				factory: vibesRegistrySchemaCoId || EXCEPTION_FACTORIES.META_SCHEMA,
+				cotype: 'comap',
+				data: {},
+				dataEngine: peer?.dbEngine,
+			})
+			osContent.set('vibes', vibes.id)
+			if (node.storage?.syncManager) {
+				try {
+					await node.syncManager.waitForStorageSync(vibes.id)
+					await node.syncManager.waitForStorageSync(osId)
+				} catch (_e) {}
 			}
 		}
 	}

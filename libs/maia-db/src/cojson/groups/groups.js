@@ -198,36 +198,38 @@ export async function getSparkOsId(peer, spark) {
 }
 
 /**
- * Get spark's vibes CoMap id (account.registries.sparks[spark].vibes)
+ * Get spark's vibes CoMap id (account.registries.sparks[spark].os.vibes)
  * @param {Object} peer
  * @param {string} spark
  * @returns {Promise<string|null>}
  */
 export async function getSparkVibesId(peer, spark) {
-	const sparkCoId = await resolveSparkCoId(peer, spark)
-	if (!sparkCoId?.startsWith('co_z')) return null
-	const sparkStore = await peer.read(null, sparkCoId)
-	await waitForStoreReady(sparkStore, sparkCoId, 10000)
-	const sparkData = sparkStore?.value ?? {}
-	return sparkData.vibes ?? null
+	const osId = await getSparkOsId(peer, spark)
+	if (!osId?.startsWith('co_z')) return null
+	const osStore = await peer.read(null, osId)
+	await waitForStoreReady(osStore, osId, 10000)
+	const osData = osStore?.value ?? {}
+	return osData.vibes ?? null
 }
 
 /**
- * Set spark's vibes CoMap id
+ * Set spark's vibes CoMap id (spark.os.vibes)
  * @param {Object} peer
  * @param {string} spark
  * @param {string} vibesId
  */
 export async function setSparkVibesId(peer, spark, vibesId) {
-	const sparkCoId = await resolveSparkCoId(peer, spark)
-	if (!sparkCoId?.startsWith('co_z'))
-		throw new Error(`[setSparkVibesId] Spark ${spark} not found in registries`)
-	const sparkCore = peer.getCoValue(sparkCoId)
-	if (!sparkCore) throw new Error(`[setSparkVibesId] Spark core not found: ${sparkCoId}`)
-	const sparkContent = peer.getCurrentContent(sparkCore)
-	if (!sparkContent || typeof sparkContent.set !== 'function')
-		throw new Error(`[setSparkVibesId] Spark content not available`)
-	sparkContent.set('vibes', vibesId)
+	const osId = await getSparkOsId(peer, spark)
+	if (!osId?.startsWith('co_z')) throw new Error(`[setSparkVibesId] Spark ${spark} has no os`)
+	const osStore = await peer.read(null, osId)
+	await waitForStoreReady(osStore, osId, 10000)
+	const osCore = peer.getCoValue(osId)
+	if (!osCore || !peer.isAvailable(osCore))
+		throw new Error(`[setSparkVibesId] OS not available: ${osId}`)
+	const osContent = peer.getCurrentContent(osCore)
+	if (!osContent || typeof osContent.set !== 'function')
+		throw new Error(`[setSparkVibesId] OS content not available`)
+	osContent.set('vibes', vibesId)
 }
 
 /**
