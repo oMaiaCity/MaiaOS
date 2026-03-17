@@ -232,11 +232,13 @@ Same AccountID
 - Fast, secure hash function
 - Used for deriving secrets from PRF output
 
-**Usage:**
+**Note:** The actual derivation is **internal to cojson** (WasmCrypto), not maia-self. maia-self calls `crypto.agentSecretFromSecretSeed(prfOutput)`.
+
+**Usage (internal to cojson):**
 ```javascript
-// Internal to crypto.agentSecretFromSecretSeed()
-const sealerSecret = BLAKE3(prfOutput, context="seal");
-const signerSecret = BLAKE3(prfOutput, context="sign");
+// Internal to cojson/crypto (WasmCrypto.agentSecretFromSecretSeed)
+const sealerSecret = blake3(secretSeed, { context: "seal" });
+const signerSecret = blake3(secretSeed, { context: "sign" });
 ```
 
 **Properties:**

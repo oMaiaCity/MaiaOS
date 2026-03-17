@@ -54,8 +54,9 @@ libs/maia-db/src/migrations/seeding/
 ## Key Exports
 
 - **simpleAccountSeed** - Minimal seed (registries via link)
-- **seed** - Full seed (bootstrap + schemas + configs + data)
 - **factoryMigration** - Schema migration utilities
+
+**Note:** Full seeding is invoked via `MaiaDB.seed()` (not a top-level export). The seed logic lives in `migrations/seeding/seed.js`.
 
 ---
 

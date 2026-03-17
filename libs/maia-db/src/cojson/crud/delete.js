@@ -3,7 +3,7 @@
  *
  * Provides the delete() method for deleting CoValues.
  *
- * Unified delete operation for all co-types (CoMap, CoList, CoStream, CoPlainText).
+ * Unified delete operation for all co-types (CoMap, CoList, CoStream).
  * Handles schema indexing automatically and ensures complete deletion.
  */
 
@@ -89,24 +89,9 @@ export async function deleteRecord(peer, schema, id) {
 		// This effectively hides the stream from queries while preserving the immutable log
 		// No content clearing needed - CoStreams don't have clearable properties like CoMaps/CoLists
 		deletionSuccessful = true // Successfully "deleted" (removed from index in Step 1)
-	} else if (rawType === 'coplaintext' && content.delete) {
-		// CoPlainText: Clear all text content
-		// CoPlainText has delete method for characters, but we need to clear all
-		// Get length and delete all characters from end to beginning
-		if (typeof content.toString === 'function') {
-			const text = content.toString()
-			// Delete characters from end to beginning
-			for (let i = text.length - 1; i >= 0; i--) {
-				if (typeof content.delete === 'function') {
-					// CoPlainText delete takes position, not index
-					content.delete(i, 1)
-				}
-			}
-		}
-		deletionSuccessful = true
 	} else {
 		throw new Error(
-			`[MaiaDB] Delete not supported for type: ${rawType}. Supported types: comap, colist, costream, coplaintext`,
+			`[MaiaDB] Delete not supported for type: ${rawType}. Supported types: comap, colist, costream`,
 		)
 	}
 

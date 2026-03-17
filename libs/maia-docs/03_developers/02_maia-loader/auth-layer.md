@@ -1,6 +1,6 @@
 # Identity & Authentication Layer
 
-The `createMaiaOS` function provides the identity and authentication layer of MaiaOS.
+Authentication is integrated into `MaiaOS.boot()`. You provide `node` and `account` (from `signInWithPasskey`) or a pre-initialized `peer`, or use agent mode with env vars.
 
 ---
 
@@ -8,107 +8,49 @@ The `createMaiaOS` function provides the identity and authentication layer of Ma
 
 **What it is:** Proves who you are and gives you access to your account.
 
-**When to use:** Before booting the OS, you need to authenticate.
+**When to use:** Before booting the OS, you need to authenticate. Pass the result to `MaiaOS.boot()`.
 
 ---
 
 ## Usage
 
 ```javascript
-import { createMaiaOS } from '@MaiaOS/loader';
-import { signInWithPasskey } from '@MaiaOS/self';
+import { MaiaOS, signInWithPasskey } from '@MaiaOS/loader';
 
 // Step 1: Authenticate (get your ID card)
-const { node, account, accountID } = await signInWithPasskey({
+const { accountID, agentSecret, loadingPromise } = await signInWithPasskey({
   salt: "maia.city"
 });
 
-// Step 2: Create MaiaOS instance (prove you're authenticated)
-const o = await createMaiaOS({ node, account, accountID });
+// Step 2: Get node and account (async)
+const { node, account } = await loadingPromise;
+
+// Step 3: Boot MaiaOS with node and account
+const os = await MaiaOS.boot({ node, account });
 ```
 
 ---
 
 ## What You Get
 
-After calling `createMaiaOS`, you receive an authenticated MaiaOS instance with:
+After booting, the MaiaOS instance has:
 
-### `o.id`
+### `os.id`
 
 Your account identity object containing:
-- `maiaId` - Your MaiaID (unique identifier)
+- `maiaId` - Your account (RawAccount)
 - `node` - LocalNode instance for CoJSON operations
 
-### `o.auth`
+### `os.peer`
 
-Authentication management API for:
-- Managing authentication state
-- Signing in/out
-- Account management
+Returns `{ node, account }` for tools that need direct peer access.
 
-### `o.inspector()`
-
-Dev tool to inspect your account data:
-
-```javascript
-const accountData = o.inspector();
-console.log("Account data:", accountData);
-```
-
-### `o.getAllCoValues()`
+### `os.getAllCoValues()`
 
 List all CoValues in your account:
 
 ```javascript
-const coValues = o.getAllCoValues();
-console.log("CoValues:", coValues);
-```
-
-### `o.getCoValueDetail(coId)`
-
-Get details about a specific CoValue:
-
-```javascript
-const detail = o.getCoValueDetail('co_z...');
-console.log("CoValue detail:", detail);
-```
-
----
-
-## API Reference
-
-### `createMaiaOS(options)`
-
-Creates an authenticated MaiaOS instance (identity layer).
-
-**Parameters:**
-- `options.node` (required) - LocalNode instance from `signInWithPasskey`
-- `options.account` (required) - RawAccount instance from `signInWithPasskey`
-- `options.accountID` (optional) - Account ID string
-- `options.name` (optional) - Display name
-
-**Returns:** `Promise<Object>` - MaiaOS instance with:
-- `id` - Identity object (`{ maiaId, node }`)
-- `auth` - Authentication API
-- `db` - Database API (future)
-- `script` - DSL API (future)
-- `inspector()` - Dev tool to inspect account
-- `getAllCoValues()` - List all CoValues
-- `getCoValueDetail(coId)` - Get CoValue details
-
-**Throws:** If `node` or `account` not provided
-
-**Example:**
-```javascript
-const { node, account } = await signInWithPasskey({ salt: "maia.city" });
-const o = await createMaiaOS({ node, account });
-
-// Inspect your account
-const accountData = o.inspector();
-console.log("Account data:", accountData);
-
-// List all CoValues
-const coValues = o.getAllCoValues();
+const coValues = os.getAllCoValues();
 console.log("CoValues:", coValues);
 ```
 
@@ -118,16 +60,16 @@ console.log("CoValues:", coValues);
 
 ### Identity vs. Execution
 
-**Identity Layer (`createMaiaOS`):**
+**Authentication (signInWithPasskey):**
 - **Purpose:** Prove who you are
 - **When:** Before booting
-- **What it gives:** Access to your account, CoValues, identity
+- **What it gives:** `accountID`, `agentSecret`, `loadingPromise` → resolve for `node` and `account`
 - **Dependencies:** `@MaiaOS/self` (authentication)
 
-**Execution Layer (`MaiaOS.boot()`):**
-- **Purpose:** Run your app
-- **When:** After authentication
-- **What it gives:** Engines, actors, DSL execution
+**Boot (MaiaOS.boot):**
+- **Purpose:** Run your app with your identity
+- **When:** After authentication (or with pre-initialized peer)
+- **What it gives:** Engines, actors, `os.do()`, vibe loading
 - **Dependencies:** `@MaiaOS/engines`, `@MaiaOS/db`, `@MaiaOS/factories`
 
 ---

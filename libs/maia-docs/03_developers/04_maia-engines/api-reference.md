@@ -14,7 +14,6 @@ import {
   ViewEngine,
   ProcessEngine,
   StyleEngine,
-  InboxEngine,
   DataEngine,
   MaiaScriptEvaluator,
   ModuleRegistry,
@@ -22,17 +21,7 @@ import {
 } from '@MaiaOS/engines';
 ```
 
----
-
-## Subpath Exports
-
-```javascript
-// Modules
-import { register } from '@MaiaOS/engines/modules/db.module.js';
-
-// Engines (if needed)
-import { ActorEngine } from '@MaiaOS/engines/engines/actor.engine.js';
-```
+**Note:** Inbox logic is in ActorEngine; binary ops (uploadBinary, loadBinaryAsBlob, uploadToCoBinary) are in DataEngine.
 
 ---
 

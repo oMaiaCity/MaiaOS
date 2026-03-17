@@ -9,6 +9,10 @@
 
 This document maps the complete cojson architecture from cryptographic primitives (Layer 0) to application-level CoValues (Layer 7+), showing what composes what and how the CRDT system works under the hood.
 
+**Raw CoJSON types:** comap, colist, costream, cobinary. These are the only types at the CRDT layer.
+
+**CoText:** Plaintext CRDT content is supported via `°Maia/factory/os/cotext` – implemented as **colist** with grapheme items. Notes, wasm code, and paper content use this. CoText is an abstraction (colist + schema), not a raw type.
+
 ---
 
 ## Architecture Layers (Lowest → Highest)
@@ -46,7 +50,7 @@ This document maps the complete cojson architecture from cryptographic primitive
 │ LAYER 3: CORE VALUE HEADER & VERIFIED STATE               │
 ├─────────────────────────────────────────────────────────────┤
 │ • CoValueHeader:                                            │
-│   - type: "comap" | "colist" | "costream" | "coplaintext"   │
+│   - type: "comap" | "colist" | "costream" | "cobinary"               │
 │   - ruleset: ownership/permissions rules                    │
 │   - meta: headerMeta (JsonObject | null)                    │
 │   - createdAt: timestamp                                    │
@@ -98,16 +102,16 @@ This document maps the complete cojson architecture from cryptographic primitive
 │    ↓                │    │    • Ordered CRDT list  │
 │    Key-value CRDT   │    │    • insert/delete/move │
 │    with ops:        │    │                         │
-│    • set(k, v)      │    │ 2. RawCoPlainText       │
-│    • delete(k)      │    │    type: "coplaintext"  │
-│    • get(k)         │    │    • Character CRDT     │
-│                     │    │    • append/insert/del  │
-│ 2. RawCoStream      │    │                         │
-│    type: "costream" │    │ 3. RawBinaryCoStream    │
-│    ↓                │    │    type: "costream"     │
-│    Append-only log  │    │    meta: {type:"binary"}│
-│    • push(item)     │    │    • Binary chunks      │
-│    • Session-based  │    │    • push(Uint8Array)   │
+│    • set(k, v)      │    │ 2. RawBinaryCoStream    │
+│    • delete(k)      │    │    type: "costream"     │
+│    • get(k)         │    │    meta: {type:"binary"}│
+│                     │    │    • Binary chunks      │
+│ 2. RawCoStream      │    │    • push(Uint8Array)   │
+│    type: "costream" │    │                         │
+│    ↓                │    │                         │
+│    Append-only log  │    │                         │
+│    • push(item)     │    │                         │
+│    • Session-based  │    │                         │
 │                     │    │                         │
 └─────────────────────┘    └─────────────────────────┘
           ↓
@@ -124,7 +128,6 @@ This document maps the complete cojson architecture from cryptographic primitive
 │   • createList(init, meta) → RawCoList                      │
 │   • createStream(meta) → RawCoStream                        │
 │   • createBinaryStream(meta) → RawBinaryCoStream            │
-│   • createPlainText(text, meta) → RawCoPlainText            │
 │                                                             │
 │ RawAccount extends RawCoMap                                 │
 │   type: "comap"                                             │
@@ -163,7 +166,6 @@ else if (type === "costream") {
   if (meta.type === "binary") → RawBinaryCoStream
   else → RawCoStream
 }
-else if (type === "coplaintext") → RawCoPlainText
 ```
 
 ---
@@ -177,7 +179,6 @@ Account (CoMap + special meta)
       ↳ creates → ProfileList (CoList with your schema)
       ↳ creates → ActivityStream (CoStream with your schema)
       ↳ creates → AvatarStream (BinaryCoStream with your schema)
-      ↳ creates → BioText (CoPlainText with your schema)
 ```
 
 ---
@@ -189,7 +190,6 @@ Account (CoMap + special meta)
 | **CoMap** | `Map<string, JsonValue>` | set, delete, get | Objects, documents |
 | **CoList** | Ordered list with CRDT positions | insert, delete, move | Arrays, todo lists |
 | **CoStream** | Session-based append log | push (append-only) | Events, messages, logs |
-| **CoPlainText** | Character-based CRDT | append, insert, delete | Text editing, documents |
 
 ---
 
@@ -282,7 +282,7 @@ const profile = group.createMap({ name: "Alice" }, profileMeta);
 2. **BinaryCoStream IS a CoStream** - with special `meta.type = "binary"`
 3. **Groups can't have schemas** - `createGroup()` hardcodes `meta: null`
 4. **Accounts have built-in meta** - cojson sets `{type: "account"}` automatically
-5. **Everything else supports schemas** - CoMap, CoList, CoStream, CoPlainText via `meta` parameter
+5. **Everything else supports schemas** - CoMap, CoList, CoStream via `meta` parameter
 
 ---
 

@@ -430,4 +430,5 @@ const node = await LocalNode.withNewlyCreatedAccount({
 - [auth-flows.md](./auth-flows.md) - Registration and login flows
 - [cryptography.md](./cryptography.md) - Bottom-up cryptography concepts
 - [api-reference.md](./api-reference.md) - API reference
-- [Security Improvements](../architecture/security-improvements.md) - Detailed security analysis
+- [security-analysis.md](./security-analysis.md) - This document
+- [cryptography.md](./cryptography.md) - Bottom-up crypto concepts

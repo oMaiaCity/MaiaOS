@@ -8,25 +8,31 @@ The `MaiaOS.boot()` function initializes the entire MaiaOS operating system with
 
 **What it is:** Starts all the engines that run your actors and execute MaiaScript.
 
-**When to use:** After authentication, boot the OS to run your app.
+**When to use:** After authentication, boot the OS to run your app. Pass `node` and `account` from `signInWithPasskey`, or a pre-initialized `peer`, or use agent mode.
 
 ---
 
 ## Usage
 
 ```javascript
-import { MaiaOS } from '@MaiaOS/loader';
+import { MaiaOS, signInWithPasskey } from '@MaiaOS/loader';
+
+// Authenticate first
+const { loadingPromise } = await signInWithPasskey({ salt: "maia.city" });
+const { node, account } = await loadingPromise;
 
 // Boot the operating system
 const os = await MaiaOS.boot({
-  modules: ['db', 'core', 'dragdrop'],
-  registry: { /* configs */ }
+  node,
+  account,
+  modules: ['db', 'core', 'ai']
 });
 
 // Now you can:
 // - os.createActor() - Create actors
-// - os.loadVibe() - Load app manifests
+// - os.loadVibe() - Load vibes from account or by co-id
 // - os.deliverEvent() - Deliver events to actors
+// - os.do() - Execute data operations
 ```
 
 ---
@@ -36,25 +42,22 @@ const os = await MaiaOS.boot({
 When you call `MaiaOS.boot()`, here's what happens:
 
 ```
-1. Initialize Database
-   └─> Creates IndexedDBBackend
-   └─> Creates DataEngine
+1. Resolve Peer
+   └─> If config.peer: use provided MaiaDB
+   └─> If config.node + config.account: create MaiaDB with node+account
+   └─> If config.mode === 'agent': loadOrCreateAgentAccount (env vars)
 
-2. Seed Database (if registry provided)
-   └─> Collects schemas from @MaiaOS/factories
-   └─> Validates schemas against meta schema
-   └─> Seeds configs, schemas, and tool definitions
-   └─> Sets up schema resolver
+2. Initialize Database
+   └─> Creates DataEngine with MaiaDB
+   └─> Sets up schema resolver (setFactoryResolver)
 
 3. Initialize Engines
    └─> ModuleRegistry (module loader)
    └─> MaiaScriptEvaluator (DSL evaluator)
-   └─> ToolEngine (tool executor)
-   └─> StateEngine (state machine interpreter)
+   └─> ProcessEngine (state machine interpreter)
    └─> StyleEngine (style compiler)
    └─> ViewEngine (view renderer)
    └─> ActorEngine (actor lifecycle)
-   └─> SubscriptionEngine (reactive subscriptions)
    └─> DataEngine (maia.do – data operations)
 
 4. Wire Dependencies
@@ -63,12 +66,13 @@ When you call `MaiaOS.boot()`, here's what happens:
    └─> Store engines in registry
 
 5. Load Modules
-   └─> Loads specified modules (db, core, dragdrop)
+   └─> Loads specified modules (db, core, ai)
    └─> Each module registers its tools
    └─> Tools become available for use
 
-6. Return OS Instance
-   └─> Ready to create actors and run apps!
+6. Start Runtime
+   └─> Runtime (inbox watching for browser agents)
+   └─> Returns OS instance
 ```
 
 ---
@@ -80,12 +84,10 @@ Engines are initialized in a specific order due to dependencies:
 ```
 1. ModuleRegistry (no dependencies)
 2. MaiaScriptEvaluator (needs ModuleRegistry)
-3. ToolEngine (needs ModuleRegistry)
-4. StateEngine (needs ToolEngine, Evaluator)
-5. StyleEngine (no dependencies)
-6. ViewEngine (needs Evaluator, ModuleRegistry)
-7. ActorEngine (needs StyleEngine, ViewEngine, ModuleRegistry, ToolEngine, StateEngine)
-8. SubscriptionEngine (needs DataEngine, ActorEngine)
+3. ProcessEngine (needs Evaluator)
+4. StyleEngine (no dependencies)
+5. ViewEngine (needs Evaluator, ModuleRegistry)
+6. ActorEngine (needs StyleEngine, ViewEngine, ModuleRegistry, ProcessEngine)
 ```
 
 ---
@@ -93,25 +95,14 @@ Engines are initialized in a specific order due to dependencies:
 ## Module System
 
 Modules are dynamically loaded during boot. Each module:
-1. Registers tools with `ToolEngine`
+1. Registers tools with the module registry
 2. Provides module-specific functionality
-3. Can access engines via `ModuleRegistry`
+3. Can access engines via ModuleRegistry
 
 **Available Modules:**
 - `db` - Database operations (`@db` tool)
 - `core` - Core UI utilities (`@core/*` tools)
-- `dragdrop` - Drag and drop (`@dragdrop/*` tools)
-- `interface` - Interface tools (`@interface/*` tools)
-
----
-
-## Database Seeding
-
-When you provide a `registry` in boot config:
-1. Schemas are collected from `@MaiaOS/factories`
-2. Schemas are validated against meta schema
-3. Configs, schemas, and tool definitions are seeded
-4. Schema resolver is set up for runtime schema loading
+- `ai` - AI tools (`@maia/actor/os/ai`)
 
 ---
 
@@ -121,63 +112,31 @@ After booting, you receive a MaiaOS instance with:
 
 ### `os.createActor(actorPath, container)`
 
-Creates an actor from a `.maia` file.
+Creates an actor from a `.maia` file or co-id.
 
-**Parameters:**
-- `actorPath` (string) - Path to actor file or co-id
-- `container` (HTMLElement) - DOM container for actor
+### `os.loadVibe(vibeKeyOrCoId, container, spark?)`
 
-**Returns:** `Promise<Object>` - Created actor instance
+Loads a vibe from account or by co-id. Delegates to `loadVibeFromAccount`.
 
-### `os.loadVibe(vibePath, container)`
+### `os.loadVibeFromAccount(vibeKeyOrCoId, container, spark?)`
 
-Loads a vibe (app manifest) from a file.
+Loads a vibe from account.vibes or by co-id.
 
-**Parameters:**
-- `vibePath` (string) - Path to `.vibe.maia` file
-- `container` (HTMLElement) - DOM container for root actor
+### `os.loadVibeFromDatabase(vibeId, container, vibeKey?)`
 
-**Returns:** `Promise<{vibe: Object, actor: Object}>` - Vibe metadata and actor
-
-### `os.loadVibeFromDatabase(vibeId, container)`
-
-Loads a vibe from the database.
-
-**Parameters:**
-- `vibeId` (string) - Vibe ID (e.g., `"@vibe/todos"`)
-- `container` (HTMLElement) - DOM container for root actor
-
-**Returns:** `Promise<{vibe: Object, actor: Object}>` - Vibe metadata and actor
+Loads a vibe from the database by co-id. `vibeId` must be a co-id (`co_z...`).
 
 ### `os.getActor(actorId)`
 
 Gets an actor by ID.
 
-**Parameters:**
-- `actorId` (string) - Actor ID
-
-**Returns:** `Object|null` - Actor instance or null
-
 ### `os.deliverEvent(senderId, targetId, type, payload)`
 
 Delivers an event to a target actor (inbox-only, persisted via CoJSON).
 
-**Parameters:**
-- `senderId` (string) - Sender actor co-id
-- `targetId` (string) - Target actor co-id (co-id only; config-derived refs must be transformed at seed)
-- `type` (string) - Message type
-- `payload` (Object) - Resolved payload (no expressions)
+### `os.do(payload)`
 
-### `os.db(payload)`
-
-Executes a database operation (internal use + `@db` tool).
-
-**Parameters:**
-- `payload` (Object) - Operation payload:
-  - `op` (string) - Operation type: `'read'`, `'create'`, `'update'`, `'delete'`, `'seed'`
-  - Other fields depend on operation type
-
-**Returns:** `Promise<any>` - Operation result
+Executes a database operation (internal use + `@db` tool). Use `factory` (not `schema`) in payload.
 
 ### `os.getEngines()`
 
@@ -187,9 +146,8 @@ Gets all engines for debugging.
 - `actorEngine` - ActorEngine
 - `viewEngine` - ViewEngine
 - `styleEngine` - StyleEngine
-- `stateEngine` - StateEngine
-- `toolEngine` - ToolEngine
-- `dataEngine` / `maia.do` - DataEngine
+- `processEngine` - ProcessEngine
+- `dataEngine` - DataEngine
 - `evaluator` - MaiaScriptEvaluator
 - `moduleRegistry` - ModuleRegistry
 

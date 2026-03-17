@@ -11,10 +11,10 @@ Complete API reference for `@MaiaOS/self` package.
 Create a new passkey and derive deterministic account.
 
 **Parameters:**
-- `options.name` (string, default: `"maia"`) - Display name for the account
+- `options.name` (string, optional) - Display name; when falsy, fallback is `"Traveler " + randomUUID().slice(0,8)`
 - `options.salt` (string, default: `"maia.city"`) - Salt for PRF derivation
 
-**Returns:** `Promise<{accountID: string, agentSecret: Object, node: Object, account: Object, credentialId: string}>`
+**Returns:** `Promise<{accountID: string, agentSecret: Object, loadingPromise: Promise<{node, account}>}>`
 
 **Throws:** If PRF not supported
 
@@ -22,10 +22,13 @@ Create a new passkey and derive deterministic account.
 ```javascript
 import { signUpWithPasskey } from '@MaiaOS/self';
 
-const { accountID, agentSecret, node, account } = await signUpWithPasskey({
+const { accountID, agentSecret, loadingPromise } = await signUpWithPasskey({
   name: "maia",
   salt: "maia.city"
 });
+
+// Resolve node and account (async)
+const { node, account } = await loadingPromise;
 
 // accountID: "co_z..." (public identifier)
 // agentSecret: Ephemeral (never store!)
@@ -44,7 +47,7 @@ Sign in with existing passkey.
 **Parameters:**
 - `options.salt` (string, default: `"maia.city"`) - Salt for PRF derivation (must match signup)
 
-**Returns:** `Promise<{accountID: string, agentSecret: Object, node: Object, account: Object}>`
+**Returns:** `Promise<{accountID: string, agentSecret: Object, loadingPromise: Promise<{node, account}>}>`
 
 **Throws:** If PRF not supported or no passkey found
 
@@ -52,16 +55,18 @@ Sign in with existing passkey.
 ```javascript
 import { signInWithPasskey } from '@MaiaOS/self';
 
-const { accountID, agentSecret, node, account } = await signInWithPasskey({
+const { accountID, agentSecret, loadingPromise } = await signInWithPasskey({
   salt: "maia.city"
 });
 
-// Loads existing account from Jazz sync server
-// Returns same structure as signUpWithPasskey
+// Resolve node and account (async)
+const { node, account } = await loadingPromise;
+
+// Loads existing account from sync server
 // ⚡ Only 1 biometric prompt (fast login!)
 ```
 
-**Note:** Shows only 1 biometric prompt (fast login!)
+**Note:** Returns immediately; `node` and `account` come from `loadingPromise`. Caller must `await loadingPromise` before using them.
 
 ---
 
@@ -112,31 +117,54 @@ try {
 
 ---
 
+## Agent APIs
+
+### `createAgentAccount(options)`
+
+Create a new agent account (for server/headless use).
+
+**Parameters:** `{ agentSecret, accountID?, syncDomain?, dbPath?, inMemory? }`
+
+**Returns:** `Promise<{node, account, accountID}>`
+
+---
+
+### `loadAgentAccount(options)`
+
+Load an existing agent account.
+
+**Parameters:** `{ agentSecret, accountID, syncDomain?, dbPath?, inMemory? }`
+
+**Returns:** `Promise<{node, account}>`
+
+---
+
+### `loadOrCreateAgentAccount(options)`
+
+Load or create an agent account (idempotent).
+
+**Parameters:** `{ accountID, agentSecret, syncDomain?, createName?, ... }`
+
+**Returns:** `Promise<{node, account, accountID}>`
+
+---
+
+### `generateAgentCredentials()`
+
+Generate new agent credentials (for `bun agent:generate`).
+
+**Returns:** `Promise<{accountID, agentSecret}>`
+
+---
+
 ## Sync State Monitoring
 
-### `subscribeSyncState(listener)`
+**Note:** `subscribeSyncState` is **not** exported from `@MaiaOS/self`. Import it from `@MaiaOS/db` or `@MaiaOS/loader`:
 
-Subscribe to sync status changes.
-
-**Parameters:**
-- `listener` (Function) - Callback: `(state) => void`
-  - `state.connected` (boolean) - WebSocket connected?
-  - `state.syncing` (boolean) - Actively syncing?
-  - `state.error` (string | null) - Error message if any
-
-**Returns:** `Function` - Unsubscribe function
-
-**Example:**
 ```javascript
-import { subscribeSyncState } from '@MaiaOS/self';
-
-const unsubscribe = subscribeSyncState((state) => {
-  console.log("Sync status:", state);
-  // { connected: true, syncing: true, error: null }
-});
-
-// Later: unsubscribe when done
-unsubscribe();
+import { subscribeSyncState } from '@MaiaOS/loader';
+// or
+import { subscribeSyncState } from '@MaiaOS/db';
 ```
 
 ---
@@ -275,9 +303,14 @@ Validate accountID format (should start with "co_z").
 
 ## Storage Functions
 
-### `getStorage()`
+### `getStorage(options?)`
 
 Get browser storage for CoValue persistence. Uses **OPFS** when available (~4× faster for large data), falls back to **IndexedDB** otherwise (e.g. Firefox private mode, older Safari).
+
+**Parameters:**
+- `options.mode` (optional) - `'human'` (browser) or `'agent'` (Node)
+- `options.dbPath` (optional) - Path for persistent storage (agent mode)
+- `options.inMemory` (optional) - Use in-memory storage (agent mode)
 
 OPFS and IndexedDB use separate storage roots; there is no automatic migration between them. First run with OPFS creates a fresh store.
 
@@ -287,7 +320,7 @@ OPFS and IndexedDB use separate storage roots; there is no automatic migration b
 ```javascript
 import { getStorage } from '@MaiaOS/self';
 
-const storage = await getStorage();
+const storage = await getStorage({ mode: 'human' });
 
 if (storage) {
   console.log("Storage available (OPFS or IndexedDB)");
@@ -304,10 +337,9 @@ if (storage) {
 import { 
   signUpWithPasskey, 
   signInWithPasskey, 
-  subscribeSyncState,
   requirePRFSupport 
 } from '@MaiaOS/self';
-import { createMaiaOS } from '@MaiaOS/loader';
+import { MaiaOS, subscribeSyncState } from '@MaiaOS/loader';
 
 async function init() {
   // Check PRF support first
@@ -325,23 +357,24 @@ async function init() {
 async function register() {
   try {
     // Create new account (1 biometric prompt)
-    const { node, account, accountID } = await signUpWithPasskey({
+    const { accountID, loadingPromise } = await signUpWithPasskey({
       name: "maia",
       salt: "maia.city"
     });
+    const { node, account } = await loadingPromise;
     
     console.log("✅ Registered! Account ID:", accountID);
     
-    // Subscribe to sync state
+    // Subscribe to sync state (from loader, not self)
     subscribeSyncState((state) => {
       console.log("Sync:", state.connected ? "Online" : "Offline");
     });
     
-    // Create MaiaOS with node and account
-    const o = await createMaiaOS({ node, account, accountID });
+    // Boot MaiaOS with node and account
+    const os = await MaiaOS.boot({ node, account });
     
     // Show app UI
-    renderApp(o);
+    renderApp(os);
   } catch (error) {
     console.error("Registration failed:", error.message);
   }
@@ -350,26 +383,23 @@ async function register() {
 async function signIn() {
   try {
     // Load existing account (1 biometric prompt - fast!)
-    const { node, account, accountID } = await signInWithPasskey({
+    const { accountID, loadingPromise } = await signInWithPasskey({
       salt: "maia.city"
     });
+    const { node, account } = await loadingPromise;
     
     console.log("✅ Signed in! Account ID:", accountID);
     
-    // Subscribe to sync state
     subscribeSyncState((state) => {
       console.log("Sync:", state.connected ? "Online" : "Offline");
     });
     
-    // Create MaiaOS with node and account
-    const o = await createMaiaOS({ node, account, accountID });
+    const os = await MaiaOS.boot({ node, account });
     
-    // Show app UI
-    renderApp(o);
+    renderApp(os);
   } catch (error) {
     console.error("Sign in failed:", error.message);
     
-    // If no passkey found, suggest registration
     if (error.message.includes("No passkey found")) {
       console.log("No passkey found. Please register first.");
     }

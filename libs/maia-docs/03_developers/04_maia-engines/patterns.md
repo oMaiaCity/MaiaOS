@@ -9,22 +9,13 @@ Common usage patterns and solutions to frequent problems.
 ### Pattern 1: Custom Module with Tools
 
 ```javascript
-// 1. Create module
-export class MyModule {
-  static async register(registry) {
-    // Modules register via registry.registerModule()
-    await registerToolsFromRegistry(registry, toolEngine, 'mymodule', ['tool1'], '@mymodule');
-    registerModuleConfig(registry, 'mymodule', MyModule, {
-      version: '1.0.0',
-      description: 'My module',
-      namespace: '@mymodule',
-      tools: ['@mymodule/tool1']
-    });
-  }
-}
+// Built-in modules are defined in libs/maia-engines/src/modules/registry.js
+// To add a custom module, extend BUILTIN_MODULES or register at boot:
+// registry.registerModule('mymodule', module, config)
 
-// 2. Create tools in @MaiaOS/tools package
-// 3. Load module during boot
+// Actor definitions and functions live in @MaiaOS/actors
+// Tools are referenced by actor co-id (e.g. @maia/actor/os/db)
+// Load module during boot: modules: ['db', 'core', 'ai', 'mymodule']
 ```
 
 ---
@@ -46,20 +37,16 @@ const result = await evaluator.evaluate(expression, { context: myData });
 ### Pattern 3: Direct Database Access
 
 ```javascript
-const backend = new IndexedDBBackend();
-await backend.init();
-const dbEngine = new DataEngine(backend);
+// DataEngine receives MaiaDB (from MaiaOS.boot)
+// Use maia.do() or dataEngine.execute():
 
-// Use read() API (always returns reactive store)
-const store = await dbEngine.execute({
+const store = await maia.do({
   op: 'read',
-  factory: 'co_zMySchema123'  // Factory co-id (co_z...)
+  factory: '°Maia/factory/todos'  // Factory co-id or registry key
 });
 
-// Store has current value
 console.log('Current data:', store.value);
 
-// Subscribe to updates
 const unsubscribe = store.subscribe((data) => {
   console.log('Data updated:', data);
 });
@@ -106,11 +93,9 @@ const os = await MaiaOS.boot({
 **Solution:** Check tool registration:
 
 ```javascript
-// Ensure tool is registered in module
-await registerToolsFromRegistry(registry, toolEngine, 'mymodule', ['mytool'], '@mymodule');
-
-// Ensure tool exists in @MaiaOS/tools package
-// Check namespace path matches: 'mymodule/mytool' → '@mymodule/mytool'
+// Tools are actor-based; ensure actor is in @MaiaOS/actors and module references it
+// Module tools array: tools: ['@maia/actor/os/db'] etc.
+// Actor path in ACTORS: 'maia/actor/os/db'
 ```
 
 ---

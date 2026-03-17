@@ -294,7 +294,7 @@ function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 	// Transform reference properties (actor, context, view, state, brand, style, inbox, subscribers)
 	// Note: tokens and components are now embedded objects in styles, not separate CoValue references
 	// Note: children property removed - children are now stored in context.actors
-	// Note: topics removed - topics infrastructure deprecated, use direct messaging with target instead
+	// Note: topics removed - use direct messaging with target instead
 	// Note: subscribers is still used for other CoValue types (not just topics)
 	const referenceProps = [
 		'actor',

@@ -129,10 +129,11 @@ This package documentation is organized into focused topics:
 ```javascript
 import { signUpWithPasskey } from '@MaiaOS/self';
 
-const { accountID, agentSecret, node, account } = await signUpWithPasskey({
+const { accountID, agentSecret, loadingPromise } = await signUpWithPasskey({
   name: "maia",
   salt: "maia.city"
 });
+const { node, account } = await loadingPromise;
 
 // accountID: "co_z..." (public identifier)
 // agentSecret: Ephemeral (never store!)
@@ -144,9 +145,10 @@ const { accountID, agentSecret, node, account } = await signUpWithPasskey({
 ```javascript
 import { signInWithPasskey } from '@MaiaOS/self';
 
-const { accountID, agentSecret, node, account } = await signInWithPasskey({
+const { accountID, agentSecret, loadingPromise } = await signInWithPasskey({
   salt: "maia.city"
 });
+const { node, account } = await loadingPromise;
 
 // ⚡ Only 1 biometric prompt!
 // Everything computed deterministically from passkey
@@ -213,9 +215,9 @@ const { accountID, agentSecret, node, account } = await signInWithPasskey({
 ## Related Documentation
 
 - [maia-loader Package](../02_maia-loader/README.md) - Boot process and orchestration
-- [Security Improvements](../architecture/security-improvements.md) - Security analysis
-- [Auth Secrets](../architecture/auth-secrets.md) - Secret hierarchy details
-- [CoJSON Integration](../architecture/cojson.md) - Database layer
+- [security-analysis.md](./security-analysis.md) - Security analysis
+- [cryptography.md](./cryptography.md) - Secret hierarchy details
+- [maia-db Package](../05_maia-db/README.md) - Database layer
 
 ---
 
@@ -228,10 +230,11 @@ const { accountID, agentSecret, node, account } = await signInWithPasskey({
 - `src/self.js` - Sign up & sign in logic
 - `src/prf-evaluator.js` - WebAuthn PRF interface
 - `src/feature-detection.js` - PRF support detection
-- `src/storage.js` - IndexedDB helper (for CoValue data)
 - `src/utils.js` - Encoding/validation utilities
+
+**Note:** Storage comes from `@MaiaOS/storage` (OPFS/IndexedDB); sync from `@MaiaOS/peer`.
 
 **Dependencies:**
 - `cojson` - Core CRDT library
-- `cojson-storage-indexeddb` - IndexedDB storage
-- `cojson-transport-ws` - WebSocket transport for Jazz Cloud
+- `@MaiaOS/storage` - OPFS/IndexedDB storage
+- `@MaiaOS/peer` - Sync peers (setupSyncPeers, createAccountWithSecret, loadAccount)

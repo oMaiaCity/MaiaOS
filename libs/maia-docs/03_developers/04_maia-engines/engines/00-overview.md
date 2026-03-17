@@ -1,6 +1,6 @@
 # Engines
 
-The `@MaiaOS/engines` package provides the core engines that execute MaiaScript and manage actor lifecycles. Seven engines work together: ActorEngine, ViewEngine, ProcessEngine, StyleEngine, DataEngine, BlobEngine, InboxEngine. Plus the MaiaScriptEvaluator and Runtime.
+The `@MaiaOS/engines` package provides the core engines that execute MaiaScript and manage actor lifecycles. Five engines work together: ActorEngine, ViewEngine, ProcessEngine, StyleEngine, DataEngine. Plus the MaiaScriptEvaluator and Runtime.
 
 ---
 
@@ -9,11 +9,13 @@ The `@MaiaOS/engines` package provides the core engines that execute MaiaScript 
 **Purpose:** Evaluates MaiaScript expressions safely.
 
 **What it does:**
-- Evaluates JSON-based expressions (`$if`, `$eq`, `$context`, `$$item`, etc.)
+- Evaluates JSON-based expressions (`$if`, `$eq`, `$ne`, `$context`, `$$item`, etc.)
 - Resolves data paths (`$context.title`, `$$item.id`)
 - Validates expressions against schema before evaluation
 - Enforces depth limits to prevent DoS attacks
 - Supports shortcut syntax: `$key` (context) and `$$key` (item)
+- Ternary shortcut: `$condition ? $then : $else` (string syntax)
+- `$join` - Join array elements with separator
 
 **Key Methods:** `evaluate(expression, data, depth)`, `evaluateShortcut(expression, data)`, `isDSLOperation(value)`
 
@@ -27,7 +29,7 @@ The `@MaiaOS/engines` package provides the core engines that execute MaiaScript 
 
 **What it does:**
 - Creates and manages actors (`createActor`, `spawnActor`, `destroyActor`)
-- Handles message delivery via InboxEngine (`deliverEvent`)
+- Handles message delivery and inbox logic (validates messages, resolves inboxes, delivers to CoStreams)
 - Processes inbox messages sequentially (`processEvents`)
 - Coordinates ViewEngine, StyleEngine, ProcessEngine
 - Batches rerenders (Svelte-style microtask queue)
@@ -41,7 +43,7 @@ The `@MaiaOS/engines` package provides the core engines that execute MaiaScript 
 - `processEvents(actorId)` - Process pending inbox messages
 - `rerender(actorId)` - Trigger rerender (batched)
 
-**Dependencies:** StyleEngine, ViewEngine, ProcessEngine, InboxEngine, ModuleRegistry
+**Dependencies:** StyleEngine, ViewEngine, ProcessEngine, ModuleRegistry
 
 **Source:** `libs/maia-engines/src/engines/actor.engine.js`
 
@@ -67,12 +69,13 @@ The `@MaiaOS/engines` package provides the core engines that execute MaiaScript 
 
 ## ProcessEngine
 
-**Purpose:** GenServer-style flat event handlers. Routes events to handler actions. No state machines.
+**Purpose:** State machine and event handler execution. Routes events to handlers.
 
 **What it does:**
 - Creates process instances (`createProcess`)
 - Routes events to handlers keyed by message type: `handlers[event]` → array of actions
 - Executes actions: `ctx` (context updates), `op` (DB operations), `tell`/`ask` (messaging), `function` (executable)
+- Persists `_currentState` to actor context on transitions
 
 **Flow:** `inbox → processEvents() → ProcessEngine.send(processId, event, payload) → handlers[event] → _executeActions()`
 
@@ -95,61 +98,25 @@ The `@MaiaOS/engines` package provides the core engines that execute MaiaScript 
 - Caches compiled stylesheets
 - Blocks CSS injection (url(), expression(), etc.)
 
-**Key Methods:**
-- `getStyleSheets(actorConfig, actorId)` - Get compiled CSSStyleSheet array
-- `compileToCSS(tokens, components, selectors, containerName)` - Compile full CSS
+**Key Methods:** `getStyleSheets(actorConfig, actorId)` - Get compiled CSSStyleSheet array
 
 **Source:** `libs/maia-engines/src/engines/style.engine.js`
 
 ---
 
-## InboxEngine
-
-**Purpose:** Message validation and inbox delivery.
-
-**What it does:**
-- Validates messages (`validateMessage`, `validatePayload`)
-- Resolves inbox for target (`resolveInboxForTarget`)
-- Delivers messages (`deliver`, `_pushMessage`)
-- Interface validation (checks actor `interface` array)
-- Schema-based payload validation from backend registry
-
-**Source:** `libs/maia-engines/src/engines/inbox.engine.js`
-
----
-
 ## DataEngine
 
-**Purpose:** Public data API – **maia.do({ op, schema, key, filter, ... })**
+**Purpose:** Public data API – **maia.do({ op, factory, key, filter, ... })**
 
 **What it does:**
 - Single API for all data operations
 - Self-wires built-in operations at construction
-- Extensible via `registerOperation(opName, {execute})`
 
-**Operations:** read, create, update, delete, schema, resolve, append, push, spliceCoList, processInbox, seed, createSpark, readSpark, updateSpark, deleteSpark, addSparkMember, removeSparkMember, addSparkParentGroup, removeSparkParentGroup, getSparkMembers, updateSparkMemberRole
+**Operations:** read, create, update, delete, readFactory, factory, resolve, append, push, processInbox, seed, createSpark, readSpark, updateSpark, deleteSpark, addSparkMember, removeSparkMember, addSparkParentGroup, removeSparkParentGroup, getSparkMembers, updateSparkMemberRole, colistSet, colistPush, colistUnshift, colistPop, colistShift, colistSplice, colistRemove, colistRetain, colistApplyDiff, uploadBinary, loadBinaryAsBlob, uploadToCoBinary
 
 **Key Method:** `execute({ op, ...params })` - Execute any operation
 
 **Source:** `libs/maia-engines/src/engines/data.engine.js`
-
----
-
-## BlobEngine
-
-**Purpose:** Single owner of binary upload to CoBinary. Enforces the rule: *Binary lives only in storage; events carry refs and metadata.*
-
-**What it does:**
-- Uploads binary to CoBinary and returns metadata (`coId`, `mimeType`)
-- Callers (ViewEngine, programmatic code) use BlobEngine **before** emitting events
-- InboxEngine never sees or transforms binary; it rejects payloads containing `file` or `fileBase64`
-- Supports progress callbacks via `onProgress(loadedBytes, totalBytes)`
-
-**Rule:** Upload via BlobEngine before deliver. Inbox carries refs only.
-
-**Key Method:** `uploadToCoBinary(payload, { onProgress })` - Upload `{ file, mimeType }` (File → Uint8Array chunks) and return `{ coId, mimeType }`
-
-**Source:** `libs/maia-engines/src/engines/blob.engine.js`
 
 ---
 

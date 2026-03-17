@@ -250,10 +250,10 @@ Schemas for validating message payloads in actor communication.
 ### Validating a Schema File
 
 ```javascript
-import { validateOrThrow } from '@MaiaOS/factories/validation.helper';
+import { validateAgainstFactoryOrThrow } from '@MaiaOS/factories/validation.helper';
 
 try {
-  await validateOrThrow('actor', actorData, 'path/to/actor.maia');
+  await validateAgainstFactoryOrThrow(schema, actorData, { path: 'path/to/actor.maia' });
   console.log('✅ Valid!');
 } catch (error) {
   console.error('❌ Validation failed:', error.message);
@@ -263,9 +263,9 @@ try {
 ### Getting a Schema
 
 ```javascript
-import { getSchema } from '@MaiaOS/factories';
+import { getFactory } from '@MaiaOS/factories';
 
-const actorSchema = getSchema('actor');
+const actorSchema = getFactory('actor');
 console.log(actorSchema); // Full JSON Schema object
 ```
 
@@ -435,5 +435,5 @@ transformInstanceForSeeding(instance, coIdMap);
 - Expression resolver: `libs/maia-factories/src/expression-resolver.js`
 - Payload resolver: `libs/maia-factories/src/payload-resolver.js`
 - Validation plugins: `libs/maia-factories/src/plugins/` (cojson.plugin.js, cotext.plugin.js)
-- AJV plugin (deprecated): `libs/maia-factories/src/ajv-co-types-plugin.js`
+- AJV plugin: `libs/maia-factories/src/ajv-co-types-plugin.js`
 - Message schemas: `libs/maia-factories/src/message/`
