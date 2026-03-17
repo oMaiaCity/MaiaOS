@@ -8,7 +8,7 @@
 		"./validation.engine": "./src/validation.engine.js",
 		"./validation.helper": "./src/validation.helper.js",
 		"./co-id-generator": "./src/co-id-generator.js",
-		"./factory-transformer": "./src/schema-transformer.js",
+		"./factory-transformer": "./src/factory-transformer.js",
 		"./expression-resolver": "./src/expression-resolver.js",
 		"./payload-resolver": "./src/payload-resolver.js",
 		"./co-types.defs.json": "./src/co-types.defs.json",
