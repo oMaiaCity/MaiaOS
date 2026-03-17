@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/docs",
-	"version": "26.0312.2007",
+	"version": "26.0317.1816",
 	"type": "module",
 	"description": "Centralized documentation for MaiaOS - single source of truth for all docs",
 	"main": "README.md",
