@@ -4,6 +4,10 @@
  * Implements DBClientInterfaceAsync using node-postgres (pg).
  * Uses shared schema from ../schema/postgres.js (same as PGlite).
  * For Fly.io Managed Postgres: set PEER_SYNC_STORAGE=postgres and PEER_SYNC_DB_URL.
+ *
+ * Binary CoValue offloading: when a BlobStore is provided, transaction payloads for
+ * binary CoValues (header.meta.type === 'binary') are stored in the blob store instead
+ * of PG. A _blobRef JSON object replaces the raw payload in the transactions table.
  */
 
 import { emptyKnownState, logger } from 'cojson'
@@ -12,9 +16,6 @@ import { DeletedCoValueDeletionStatus } from 'cojson/dist/storage/types.js'
 import pg from 'pg'
 import { runMigrations } from '../schema/postgres.js'
 
-/**
- * Wrap pg.Client with query + exec for schema module compatibility
- */
 function wrapClient(client) {
 	return {
 		query: (sql, params) => client.query(sql, params),
@@ -26,8 +27,10 @@ function wrapClient(client) {
  * Postgres Transaction Interface
  */
 class PostgresTransaction {
-	constructor(db) {
+	/** @param {object} db @param {PostgresClient} client */
+	constructor(db, client) {
 		this.db = db
+		this._client = client
 	}
 
 	async getSingleCoValueSession(coValueRowId, sessionID) {
@@ -56,6 +59,7 @@ class PostgresTransaction {
 	}
 
 	async addSessionUpdate({ sessionUpdate, sessionRow }) {
+		let sessionRowID
 		if (sessionRow) {
 			const result = await this.db.query(
 				`UPDATE sessions 
@@ -69,27 +73,49 @@ class PostgresTransaction {
 					sessionRow.rowID,
 				],
 			)
-			return result.rows[0]?.rowID || sessionRow.rowID
-		}
-		const result = await this.db.query(
-			`INSERT INTO sessions ("coValue", "sessionID", "lastIdx", "lastSignature", "bytesSinceLastSignature") 
+			sessionRowID = result.rows[0]?.rowID || sessionRow.rowID
+		} else {
+			const result = await this.db.query(
+				`INSERT INTO sessions ("coValue", "sessionID", "lastIdx", "lastSignature", "bytesSinceLastSignature") 
        VALUES ($1, $2, $3, $4, $5)
        ON CONFLICT ("sessionID", "coValue") 
        DO UPDATE SET "lastIdx" = EXCLUDED."lastIdx", "lastSignature" = EXCLUDED."lastSignature", "bytesSinceLastSignature" = EXCLUDED."bytesSinceLastSignature"
        RETURNING "rowID"`,
-			[
-				sessionUpdate.coValue,
-				sessionUpdate.sessionID,
-				sessionUpdate.lastIdx,
-				sessionUpdate.lastSignature,
-				sessionUpdate.bytesSinceLastSignature,
-			],
-		)
-		if (!result.rows[0]) throw new Error('Failed to add session update')
-		return result.rows[0].rowID || result.rows[0].rowid
+				[
+					sessionUpdate.coValue,
+					sessionUpdate.sessionID,
+					sessionUpdate.lastIdx,
+					sessionUpdate.lastSignature,
+					sessionUpdate.bytesSinceLastSignature,
+				],
+			)
+			if (!result.rows[0]) throw new Error('Failed to add session update')
+			sessionRowID = result.rows[0].rowID || result.rows[0].rowid
+		}
+
+		if (this._client._binaryCoValueRowIDs.has(sessionUpdate.coValue)) {
+			this._client._binarySessionRowIDs.add(sessionRowID)
+		}
+
+		return sessionRowID
 	}
 
 	async addTransaction(sessionRowID, idx, newTransaction) {
+		const blobStore = this._client._blobStore
+		if (blobStore && this._client._binarySessionRowIDs.has(sessionRowID)) {
+			const payload = JSON.stringify(newTransaction)
+			const { blobKeyFromPayload, blobHashFromPayload } = await import('../blob/interface.js')
+			const blobKey = blobKeyFromPayload(payload)
+			const blobHash = blobHashFromPayload(payload)
+			await blobStore.put(blobKey, new TextEncoder().encode(payload))
+			const ref = { _blobRef: blobHash, _blobSize: payload.length, _blobKey: blobKey }
+			await this.db.query('INSERT INTO transactions (ses, idx, tx) VALUES ($1, $2, $3)', [
+				sessionRowID,
+				idx,
+				JSON.stringify(ref),
+			])
+			return
+		}
 		await this.db.query('INSERT INTO transactions (ses, idx, tx) VALUES ($1, $2, $3)', [
 			sessionRowID,
 			idx,
@@ -108,11 +134,18 @@ class PostgresTransaction {
 
 /**
  * Postgres Client implementing DBClientInterfaceAsync
+ *
+ * @param {object} client - pg.Client instance
+ * @param {import('../blob/interface.js').BlobStore} [blobStore] - optional blob store for binary offloading
  */
 class PostgresClient {
-	constructor(client) {
+	constructor(client, blobStore) {
 		this.client = client
 		this.db = client
+		/** @type {import('../blob/interface.js').BlobStore | null} */
+		this._blobStore = blobStore || null
+		this._binaryCoValueRowIDs = new Set()
+		this._binarySessionRowIDs = new Set()
 	}
 
 	async getCoValue(coValueId) {
@@ -122,11 +155,13 @@ class PostgresClient {
 		const row = result.rows[0]
 		try {
 			const header = typeof row.header === 'string' ? JSON.parse(row.header) : row.header
-			return {
-				rowID: row.rowID || row.rowid,
-				id: row.id,
-				header,
+			const rowID = row.rowID || row.rowid
+
+			if (this._blobStore && header?.meta?.type === 'binary') {
+				this._binaryCoValueRowIDs.add(rowID)
 			}
+
+			return { rowID, id: row.id, header }
 		} catch (e) {
 			logger.warn(`Invalid JSON in header: ${row.header}`, { id: coValueId, err: e })
 			return undefined
@@ -146,10 +181,19 @@ class PostgresClient {
 			[id, JSON.stringify(header)],
 		)
 
-		if (result.rows[0]) return result.rows[0].rowID || result.rows[0].rowid
+		let rowID
+		if (result.rows[0]) {
+			rowID = result.rows[0].rowID || result.rows[0].rowid
+		} else {
+			const existing = await this.db.query('SELECT "rowID" FROM coValues WHERE id = $1', [id])
+			rowID = existing.rows[0]?.rowID || existing.rows[0]?.rowid
+		}
 
-		const existing = await this.db.query('SELECT "rowID" FROM coValues WHERE id = $1', [id])
-		return existing.rows[0]?.rowID || existing.rows[0]?.rowid
+		if (this._blobStore && header?.meta?.type === 'binary') {
+			this._binaryCoValueRowIDs.add(rowID)
+		}
+
+		return rowID
 	}
 
 	async getAllCoValuesWaitingForDelete() {
@@ -161,14 +205,19 @@ class PostgresClient {
 
 	async getCoValueSessions(coValueRowId) {
 		const result = await this.db.query('SELECT * FROM sessions WHERE "coValue" = $1', [coValueRowId])
-		return result.rows.map((row) => ({
-			rowID: row.rowID || row.rowid,
-			coValue: row.coValue || row.covalue,
-			sessionID: row.sessionID || row.sessionid,
-			lastIdx: row.lastIdx || row.lastidx,
-			lastSignature: row.lastSignature || row.lastsignature,
-			bytesSinceLastSignature: row.bytesSinceLastSignature || row.bytessincelastsignature,
-		}))
+		const isBinary = this._binaryCoValueRowIDs.has(coValueRowId)
+		return result.rows.map((row) => {
+			const rowID = row.rowID || row.rowid
+			if (isBinary) this._binarySessionRowIDs.add(rowID)
+			return {
+				rowID,
+				coValue: row.coValue || row.covalue,
+				sessionID: row.sessionID || row.sessionid,
+				lastIdx: row.lastIdx || row.lastidx,
+				lastSignature: row.lastSignature || row.lastsignature,
+				bytesSinceLastSignature: row.bytesSinceLastSignature || row.bytessincelastsignature,
+			}
+		})
 	}
 
 	async getNewTransactionInSession(sessionRowId, fromIdx, toIdx) {
@@ -176,20 +225,26 @@ class PostgresClient {
 			'SELECT * FROM transactions WHERE ses = $1 AND idx >= $2 AND idx <= $3 ORDER BY idx',
 			[sessionRowId, fromIdx, toIdx],
 		)
-		return result.rows
-			.map((row) => {
-				try {
-					return {
-						ses: row.ses,
-						idx: row.idx,
-						tx: typeof row.tx === 'string' ? JSON.parse(row.tx) : row.tx,
+		const rows = []
+		for (const row of result.rows) {
+			try {
+				let tx = typeof row.tx === 'string' ? JSON.parse(row.tx) : row.tx
+
+				if (this._blobStore && tx?._blobKey) {
+					const data = await this._blobStore.get(tx._blobKey)
+					if (!data) {
+						logger.warn('Blob not found for ref', { ref: tx._blobKey, ses: row.ses, idx: row.idx })
+						continue
 					}
-				} catch (e) {
-					logger.warn('Invalid JSON in transaction', { err: e })
-					return null
+					tx = JSON.parse(new TextDecoder().decode(data))
 				}
-			})
-			.filter(Boolean)
+
+				rows.push({ ses: row.ses, idx: row.idx, tx })
+			} catch (e) {
+				logger.warn('Invalid JSON in transaction', { err: e })
+			}
+		}
+		return rows
 	}
 
 	async getSignatures(sessionRowId, firstNewTxIdx) {
@@ -207,7 +262,7 @@ class PostgresClient {
 	async transaction(callback) {
 		await this.db.query('BEGIN')
 		try {
-			const tx = new PostgresTransaction(this.db)
+			const tx = new PostgresTransaction(this.db, this)
 			await callback(tx)
 			await this.db.query('COMMIT')
 		} catch (e) {
@@ -306,9 +361,10 @@ class PostgresClient {
  * Create Postgres adapter with migrations
  *
  * @param {string} connectionString - postgres://user:pass@host:port/db
+ * @param {import('../blob/interface.js').BlobStore} [blobStore] - optional blob store for binary offloading
  * @returns {Promise<PostgresClient>}
  */
-export async function createPostgresAdapter(connectionString) {
+export async function createPostgresAdapter(connectionString, blobStore) {
 	if (typeof window !== 'undefined' || typeof process === 'undefined' || !process.versions?.node) {
 		throw new Error('[STORAGE] Postgres adapter is only available in Node.js/server environments')
 	}
@@ -323,17 +379,18 @@ export async function createPostgresAdapter(connectionString) {
 	const db = wrapClient(client)
 	await runMigrations(db)
 
-	return new PostgresClient(client)
+	return new PostgresClient(client, blobStore)
 }
 
 /**
  * Get Postgres storage wrapped in StorageApiAsync
  *
  * @param {string} connectionString - PEER_SYNC_DB_URL from Fly MPG or Neon
+ * @param {import('../blob/interface.js').BlobStore} [blobStore] - optional blob store for binary offloading
  * @returns {Promise<StorageApiAsync>}
  */
-export async function getPostgresStorage(connectionString) {
-	const dbClient = await createPostgresAdapter(connectionString)
+export async function getPostgresStorage(connectionString, blobStore) {
+	const dbClient = await createPostgresAdapter(connectionString, blobStore)
 	const storage = new StorageApiAsync(dbClient)
 	storage.enableDeletedCoValuesErasure()
 	return storage

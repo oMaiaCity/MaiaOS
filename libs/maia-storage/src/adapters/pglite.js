@@ -4,13 +4,15 @@
  * Implements DBClientInterfaceAsync using PGlite (WebAssembly PostgreSQL).
  * Uses the same PostgreSQL SQL interface, making it easy to migrate to Fly Postgres later.
  *
+ * Binary CoValue offloading: when a BlobStore is provided, transaction payloads for
+ * binary CoValues (header.meta.type === 'binary') are stored in the blob store instead
+ * of PG. A _blobRef JSON object replaces the raw payload in the transactions table.
+ *
  * NOTE: PGlite is server-only (Node.js). This module uses dynamic imports
  * to prevent browser bundlers from trying to resolve @electric-sql/pglite.
  */
 
 import { emptyKnownState, logger } from 'cojson'
-// Don't import pglite at top level - use dynamic import in functions
-// This prevents browser bundlers from trying to resolve it
 import { StorageApiAsync } from 'cojson/dist/storage/storageAsync.js'
 import { DeletedCoValueDeletionStatus } from 'cojson/dist/storage/types.js'
 import { runMigrations } from '../schema/postgres.js'
@@ -19,8 +21,10 @@ import { runMigrations } from '../schema/postgres.js'
  * PGlite Transaction Interface
  */
 class PGliteTransaction {
-	constructor(db) {
+	/** @param {object} db @param {PGliteClient} client */
+	constructor(db, client) {
 		this.db = db
+		this._client = client
 	}
 
 	async getSingleCoValueSession(coValueRowId, sessionID) {
@@ -49,8 +53,8 @@ class PGliteTransaction {
 	}
 
 	async addSessionUpdate({ sessionUpdate, sessionRow }) {
+		let sessionRowID
 		if (sessionRow) {
-			// Update existing session
 			const result = await this.db.query(
 				`UPDATE sessions 
          SET "lastIdx" = $1, "lastSignature" = $2, "bytesSinceLastSignature" = $3
@@ -63,9 +67,8 @@ class PGliteTransaction {
 					sessionRow.rowID,
 				],
 			)
-			return result.rows[0]?.rowID || sessionRow.rowID
+			sessionRowID = result.rows[0]?.rowID || sessionRow.rowID
 		} else {
-			// Insert new session
 			const result = await this.db.query(
 				`INSERT INTO sessions ("coValue", "sessionID", "lastIdx", "lastSignature", "bytesSinceLastSignature") 
          VALUES ($1, $2, $3, $4, $5)
@@ -83,11 +86,32 @@ class PGliteTransaction {
 			if (!result.rows[0]) {
 				throw new Error('Failed to add session update')
 			}
-			return result.rows[0].rowID
+			sessionRowID = result.rows[0].rowID
 		}
+
+		if (this._client._binaryCoValueRowIDs.has(sessionUpdate.coValue)) {
+			this._client._binarySessionRowIDs.add(sessionRowID)
+		}
+
+		return sessionRowID
 	}
 
 	async addTransaction(sessionRowID, idx, newTransaction) {
+		const blobStore = this._client._blobStore
+		if (blobStore && this._client._binarySessionRowIDs.has(sessionRowID)) {
+			const payload = JSON.stringify(newTransaction)
+			const { blobKeyFromPayload, blobHashFromPayload } = await import('../blob/interface.js')
+			const blobKey = blobKeyFromPayload(payload)
+			const blobHash = blobHashFromPayload(payload)
+			await blobStore.put(blobKey, new TextEncoder().encode(payload))
+			const ref = { _blobRef: blobHash, _blobSize: payload.length, _blobKey: blobKey }
+			await this.db.query('INSERT INTO transactions (ses, idx, tx) VALUES ($1, $2, $3)', [
+				sessionRowID,
+				idx,
+				JSON.stringify(ref),
+			])
+			return
+		}
 		await this.db.query('INSERT INTO transactions (ses, idx, tx) VALUES ($1, $2, $3)', [
 			sessionRowID,
 			idx,
@@ -106,10 +130,19 @@ class PGliteTransaction {
 
 /**
  * PGlite Client implementing DBClientInterfaceAsync
+ *
+ * @param {object} db - PGlite database instance
+ * @param {import('../blob/interface.js').BlobStore} [blobStore] - optional blob store for binary offloading
  */
 class PGliteClient {
-	constructor(db) {
+	constructor(db, blobStore) {
 		this.db = db
+		/** @type {import('../blob/interface.js').BlobStore | null} */
+		this._blobStore = blobStore || null
+		/** coValue rowIDs whose header.meta.type === 'binary' */
+		this._binaryCoValueRowIDs = new Set()
+		/** session rowIDs belonging to binary coValues */
+		this._binarySessionRowIDs = new Set()
 	}
 
 	async getCoValue(coValueId) {
@@ -121,11 +154,12 @@ class PGliteClient {
 		try {
 			const header = typeof row.header === 'string' ? JSON.parse(row.header) : row.header
 
-			return {
-				rowID: row.rowID || row.rowid,
-				id: row.id,
-				header: header,
+			const rowID = row.rowID || row.rowid
+			if (this._blobStore && header?.meta?.type === 'binary') {
+				this._binaryCoValueRowIDs.add(rowID)
 			}
+
+			return { rowID, id: row.id, header }
 		} catch (e) {
 			logger.warn(`Invalid JSON in header: ${row.header}`, {
 				id: coValueId,
@@ -148,13 +182,19 @@ class PGliteClient {
 			[id, JSON.stringify(header)],
 		)
 
+		let rowID
 		if (result.rows[0]) {
-			return result.rows[0].rowID || result.rows[0].rowid
+			rowID = result.rows[0].rowID || result.rows[0].rowid
+		} else {
+			const existing = await this.db.query('SELECT "rowID" FROM coValues WHERE id = $1', [id])
+			rowID = existing.rows[0]?.rowID || existing.rows[0]?.rowid
 		}
 
-		// If insert didn't happen (conflict), get existing rowID
-		const existing = await this.db.query('SELECT "rowID" FROM coValues WHERE id = $1', [id])
-		return existing.rows[0]?.rowID || existing.rows[0]?.rowid
+		if (this._blobStore && header?.meta?.type === 'binary') {
+			this._binaryCoValueRowIDs.add(rowID)
+		}
+
+		return rowID
 	}
 
 	async getAllCoValuesWaitingForDelete() {
@@ -166,14 +206,19 @@ class PGliteClient {
 
 	async getCoValueSessions(coValueRowId) {
 		const result = await this.db.query('SELECT * FROM sessions WHERE "coValue" = $1', [coValueRowId])
-		return result.rows.map((row) => ({
-			rowID: row.rowID || row.rowid,
-			coValue: row.coValue || row.covalue,
-			sessionID: row.sessionID || row.sessionid,
-			lastIdx: row.lastIdx || row.lastidx,
-			lastSignature: row.lastSignature || row.lastsignature,
-			bytesSinceLastSignature: row.bytesSinceLastSignature || row.bytessincelastsignature,
-		}))
+		const isBinary = this._binaryCoValueRowIDs.has(coValueRowId)
+		return result.rows.map((row) => {
+			const rowID = row.rowID || row.rowid
+			if (isBinary) this._binarySessionRowIDs.add(rowID)
+			return {
+				rowID,
+				coValue: row.coValue || row.covalue,
+				sessionID: row.sessionID || row.sessionid,
+				lastIdx: row.lastIdx || row.lastidx,
+				lastSignature: row.lastSignature || row.lastsignature,
+				bytesSinceLastSignature: row.bytesSinceLastSignature || row.bytessincelastsignature,
+			}
+		})
 	}
 
 	async getNewTransactionInSession(sessionRowId, fromIdx, toIdx) {
@@ -182,20 +227,26 @@ class PGliteClient {
 			[sessionRowId, fromIdx, toIdx],
 		)
 
-		return result.rows
-			.map((row) => {
-				try {
-					return {
-						ses: row.ses,
-						idx: row.idx,
-						tx: typeof row.tx === 'string' ? JSON.parse(row.tx) : row.tx,
+		const rows = []
+		for (const row of result.rows) {
+			try {
+				let tx = typeof row.tx === 'string' ? JSON.parse(row.tx) : row.tx
+
+				if (this._blobStore && tx?._blobKey) {
+					const data = await this._blobStore.get(tx._blobKey)
+					if (!data) {
+						logger.warn('Blob not found for ref', { ref: tx._blobKey, ses: row.ses, idx: row.idx })
+						continue
 					}
-				} catch (e) {
-					logger.warn('Invalid JSON in transaction', { err: e })
-					return null
+					tx = JSON.parse(new TextDecoder().decode(data))
 				}
-			})
-			.filter(Boolean)
+
+				rows.push({ ses: row.ses, idx: row.idx, tx })
+			} catch (e) {
+				logger.warn('Invalid JSON in transaction', { err: e })
+			}
+		}
+		return rows
 	}
 
 	async getSignatures(sessionRowId, firstNewTxIdx) {
@@ -213,7 +264,7 @@ class PGliteClient {
 	async transaction(callback) {
 		await this.db.exec('BEGIN')
 		try {
-			const tx = new PGliteTransaction(this.db)
+			const tx = new PGliteTransaction(this.db, this)
 			await callback(tx)
 			await this.db.exec('COMMIT')
 		} catch (e) {
@@ -319,13 +370,14 @@ class PGliteClient {
 /**
  * Create PGlite adapter with migrations
  * Matches legacy pattern (commit 39cf63): PGlite.create(dataDir) with string path.
- * PGlite expects a directory path; for ./local-sync.db it uses that as the data dir.
+ * PGlite expects a directory path; for ./pg-lite.db it uses that as the data dir.
  * Dynamic import avoids browser bundlers pulling in PGlite. Server bundle + vendored PGlite in dist/.
  *
- * @param {string} dbPath - Path to PGlite data directory (e.g. ./local-sync.db)
+ * @param {string} dbPath - Path to PGlite data directory (e.g. ./pg-lite.db)
+ * @param {import('../blob/interface.js').BlobStore} [blobStore] - optional blob store for binary offloading
  * @returns {Promise<PGliteClient>} PGlite client instance
  */
-export async function createPGliteAdapter(dbPath) {
+export async function createPGliteAdapter(dbPath, blobStore) {
 	// PGlite is server-only - check environment first
 	if (typeof window !== 'undefined' || typeof process === 'undefined' || !process.versions?.node) {
 		throw new Error('[STORAGE] PGlite is only available in Node.js/server environments')
@@ -404,16 +456,17 @@ export async function createPGliteAdapter(dbPath) {
 
 	const db = await PGlite.create(dbPath, wasmModule ? { wasmModule } : undefined)
 	await runMigrations(db)
-	return new PGliteClient(db)
+	return new PGliteClient(db, blobStore)
 }
 
 /**
  * Get PGlite storage adapter wrapped in StorageApiAsync
  * @param {string} dbPath - Path to PGlite database file
+ * @param {import('../blob/interface.js').BlobStore} [blobStore] - optional blob store for binary offloading
  * @returns {Promise<StorageApiAsync | undefined>} Storage instance or undefined if failed
  */
-export async function getPGliteStorage(dbPath) {
-	const dbClient = await createPGliteAdapter(dbPath)
+export async function getPGliteStorage(dbPath, blobStore) {
+	const dbClient = await createPGliteAdapter(dbPath, blobStore)
 	const storage = new StorageApiAsync(dbClient)
 	storage.enableDeletedCoValuesErasure()
 	return storage
