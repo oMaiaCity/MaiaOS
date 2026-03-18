@@ -93,17 +93,54 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		if (key !== '°Maia/factory/meta') visit(key)
 	}
 
+	// Ensure migration-stream factory is created before todos (todos needs a migration CoStream)
+	if (
+		sorted.includes('°Maia/factory/data/todos') &&
+		sorted.includes('°Maia/factory/os/migration-stream')
+	) {
+		const migIdx = sorted.indexOf('°Maia/factory/os/migration-stream')
+		const todosIdx = sorted.indexOf('°Maia/factory/data/todos')
+		if (migIdx > todosIdx) {
+			sorted.splice(migIdx, 1)
+			const newTodosIdx = sorted.indexOf('°Maia/factory/data/todos')
+			sorted.splice(newTodosIdx, 0, '°Maia/factory/os/migration-stream')
+		}
+	}
+
 	const factoryCoIdMap = new Map()
+	const ctx = { node, account, guardian }
 	for (const factoryKey of sorted) {
 		const { schema } = uniqueSchemasBy$id.get(factoryKey)
 		const { $schema, $id, id, ...props } = schema
 		const cleaned = removeIdFields(props)
-		const { coValue: factoryCoMap } = await createCoValueForSpark({ node, account, guardian }, null, {
+
+		let headerMetaOverrides
+		if (factoryKey === '°Maia/factory/data/todos') {
+			const migStreamFactoryCoId = factoryCoIdMap.get('°Maia/factory/os/migration-stream')
+			if (migStreamFactoryCoId) {
+				const migGroup = node.createGroup()
+				migGroup.extend(guardian, 'admin')
+				const migMeta = { $factory: migStreamFactoryCoId }
+				const migrationsStream = migGroup.createStream(undefined, 'private', migMeta)
+				migrationsStream.push(
+					{
+						description: 'Added priority field',
+						lang: 'js',
+						code: `({ migrate: function(d) { if (!d.priority) d.priority = 'medium'; return d; } })`,
+					},
+					'trusting',
+				)
+				headerMetaOverrides = { $migrations: migrationsStream.id }
+			}
+		}
+
+		const { coValue: factoryCoMap } = await createCoValueForSpark(ctx, null, {
 			factory: metaSchemaCoId,
 			cotype: 'comap',
 			data: cleaned,
 			dataEngine: dbEngine,
 			isFactoryDefinition: true,
+			headerMetaOverrides,
 		})
 		const coId = factoryCoMap.id
 		factoryCoIdMap.set(factoryKey, coId)
@@ -125,7 +162,6 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	const vibesRegistrySchemaCoId =
 		tempCoMap.get('°Maia/factory/os/vibes-registry') ?? EXCEPTION_FACTORIES.META_SCHEMA
 
-	const ctx = { node, account, guardian }
 	const scaffoldOpts = (factory, data) => ({ factory, cotype: 'comap', data, dataEngine: dbEngine })
 	const { coValue: maiaSpark } = await createCoValueForSpark(
 		ctx,

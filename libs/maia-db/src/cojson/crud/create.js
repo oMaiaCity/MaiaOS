@@ -39,7 +39,7 @@ async function determineCotypeAndFlag(peer, schema, data) {
 		if (schemaCore && peer.isAvailable(schemaCore)) {
 			const schemaContent = peer.getCurrentContent(schemaCore)
 			if (schemaContent?.get) {
-				// Schema definitions (parent = meta-schema) must ALWAYS be CoMaps
+				// Factory schema definitions (meta-schema) must ALWAYS be CoMaps
 				const title = schemaContent.get('title')
 				if (title === '°Maia/factory/meta') {
 					return { cotype: 'comap', isSchemaDefinition: true }
@@ -112,7 +112,7 @@ export async function create(peer, schema, data, options = {}) {
 		cotype,
 		data: cotype === 'comap' ? data : cotype === 'colist' ? data : undefined,
 		dataEngine: peer.dbEngine,
-		isFactoryDefinition: isSchemaDefinition,
+		isFactoryDefinition: isSchemaDefinition && cotype === 'comap',
 	})
 
 	if (isChatMessage) {
