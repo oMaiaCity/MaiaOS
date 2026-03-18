@@ -147,24 +147,11 @@ Two-stage payload resolution: DOM markers → MaiaScript expressions.
 
 ### 6. Validation Plugin Registry (Pluggable Validation)
 
-Validation is extensible via `ValidationPluginRegistry`. Plugins register keywords and formats with AJV.
+Validation uses built-in plugins (cojson, cobinary, cotext) for CoJSON types.
 
 **Built-in plugins:**
 - **@factories/cojson** – `cotype`, `$co`, `indexing` keywords
-- **@factories/cotext** – `grapheme` format, `cotext` keyword for plaintext colists
-
-**Adding custom plugins:**
-```javascript
-import { ValidationEngine, ValidationPluginRegistry } from '@MaiaOS/factories'
-
-const registry = new ValidationPluginRegistry()
-registry.registerPlugin('my-plugin', {
-  keywords: [{ keyword: 'myKeyword', validate: () => true, metaSchema: { type: 'boolean' } }],
-  formats: [{ name: 'myFormat', definition: { type: 'string', validate: (s) => s.length > 0 } }]
-})
-
-const engine = new ValidationEngine({ validationPluginRegistry: registry })
-```
+- **@factories/cotext** – `grapheme` format for plaintext colists
 
 **See:** [CoJSON Integration](./cojson-integration.md)
 

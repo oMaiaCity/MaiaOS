@@ -136,6 +136,40 @@ export async function ensureCoValueLoaded(peer, coId, options = {}) {
 }
 
 /**
+ * Ensure CoValue is loaded and available (throws if not). For operations that require the CoValue.
+ * @param {Object} backend - Backend instance
+ * @param {string} coId - Co-id to ensure is available
+ * @param {string} operationName - Operation name for error messages
+ * @returns {Promise<CoValueCore>} CoValueCore instance
+ */
+export async function ensureCoValueAvailable(backend, coId, operationName) {
+	let coValueCore = backend.getCoValue(coId)
+	if (!coValueCore && backend.node?.loadCoValueCore) {
+		await backend.node.loadCoValueCore(coId).catch(() => {})
+		for (let i = 0; i < 12 && !coValueCore; i++) {
+			coValueCore = backend.getCoValue(coId)
+			if (!coValueCore) await new Promise((r) => setTimeout(r, 100))
+		}
+	}
+	if (!coValueCore) {
+		throw new Error(`[${operationName}] CoValue not found: ${coId}`)
+	}
+
+	if (!coValueCore.isAvailable()) {
+		await backend.node.loadCoValueCore(coId)
+		let attempts = 0
+		while (!coValueCore.isAvailable() && attempts < 10) {
+			await new Promise((r) => setTimeout(r, 100))
+			attempts++
+		}
+		if (!coValueCore.isAvailable()) {
+			throw new Error(`[${operationName}] CoValue ${coId} is not available (may still be loading)`)
+		}
+	}
+	return coValueCore
+}
+
+/**
  * Wait for headerMeta.$schema to become available in a CoValue
  *
  * ROOT-CAUSE ARCHITECTURAL FIX: Direct headerMeta access

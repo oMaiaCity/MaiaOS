@@ -4,10 +4,13 @@
 
 import { normalizeCoValueData } from '@MaiaOS/db'
 import { normalizeFactoryReferencesWithResolver } from './factory-ref-resolver.js'
-import { ValidationEngine } from './validation.engine.js'
-import { formatValidationErrors, handleValidationResult } from './validation.utils.js'
+import {
+	formatValidationErrors,
+	handleValidationResult,
+	ValidationEngine,
+} from './validation.engine.js'
 
-export { formatValidationErrors, withSchemaValidationDisabled } from './validation.utils.js'
+export { formatValidationErrors, withSchemaValidationDisabled } from './validation.engine.js'
 
 // Singleton validation engine instance
 let validationEngine = null
@@ -189,74 +192,7 @@ export async function validateAgainstFactoryOrThrow(schema, data, context = '') 
 }
 
 /**
- * Validate items for CoList/CoStream (checks items.$co if specified)
- * @param {Object} schema - Schema definition
- * @param {Array} items - Items to validate
- * @throws {Error} If validation fails
- */
-export function validateItems(schema, items) {
-	if (!Array.isArray(items)) {
-		throw new Error('[validateItems] Items must be an array')
-	}
-
-	// Check if schema has items.$co reference (items must be co-ids)
-	if (schema.items?.$co) {
-		// Validate each item is a valid co-id
-		for (const item of items) {
-			if (typeof item !== 'string' || !item.startsWith('co_z')) {
-				throw new Error(
-					`[validateItems] Items must be co-ids when schema.items.$co is specified, got: ${item}`,
-				)
-			}
-		}
-	}
-	// Note: Full validation against schema.items happens in backend when appending
-}
-
-/**
- * Validate co-id format
- * @param {string} id - Co-id to validate
- * @param {string} operationName - Operation name for error messages
- * @throws {Error} If co-id format is invalid
- */
-export function validateCoId(id, operationName) {
-	if (!id) {
-		throw new Error(`[${operationName}] coId required`)
-	}
-	if (!id.startsWith('co_z')) {
-		throw new Error(`[${operationName}] coId must be a valid co-id (co_z...), got: ${id}`)
-	}
-}
-
-/**
- * Require a parameter to be present
- * @param {*} param - Parameter value to check
- * @param {string} paramName - Parameter name for error messages
- * @param {string} operationName - Operation name for error messages
- * @throws {Error} If parameter is missing
- */
-export function requireParam(param, paramName, operationName) {
-	if (param === undefined || param === null) {
-		throw new Error(`[${operationName}] ${paramName} required`)
-	}
-}
-
-/**
- * Require dataEngine to be present
- * @param {*} dataEngine - DataEngine instance to check
- * @param {string} operationName - Operation name for error messages
- * @param {string} [reason] - Reason dataEngine is required (optional)
- * @throws {Error} If dataEngine is missing
- */
-export function requireDataEngine(dataEngine, operationName, reason = '') {
-	if (!dataEngine) {
-		const reasonText = reason ? ` (${reason})` : ''
-		throw new Error(`[${operationName}] dataEngine required${reasonText}`)
-	}
-}
-
-/**
- * Universal schema loading and validation function (single source of truth)
+ * Universal schema loading and validation (single source of truth)
  * Consolidates schema loading + validation pattern used across codebase
  *
  * Handles both:
@@ -274,62 +210,6 @@ export function requireDataEngine(dataEngine, operationName, reason = '') {
  * @throws {Error} If schema not found or validation fails
  * @returns {Promise<Object>} Loaded schema definition
  */
-/**
- * Resolve properties/items that are co-id strings (references to other CoValues) into plain schema objects.
- * Recursively walks schema; uses visited set to prevent circular references.
- * @param {Object} peer - Backend instance for resolve()
- * @param {Object} schema - Schema object (may have properties/items as co-id strings)
- * @param {Set<string>} visited - Set of co-ids already visited (prevents circular refs)
- * @returns {Promise<Object>} Schema with co-id references resolved
- */
-async function normalizeFactoryReferences(peer, schema, visited = new Set()) {
-	if (!schema || typeof schema !== 'object') return schema
-
-	const resolveAsync = (await import('@MaiaOS/db')).resolve
-
-	const resolveIfCoId = async (val) => {
-		if (typeof val === 'string' && val.startsWith('co_z') && !visited.has(val)) {
-			visited.add(val)
-			try {
-				const resolved = await resolveAsync(peer, val, { returnType: 'factory' })
-				if (resolved) return await normalizeFactoryReferences(peer, resolved, visited)
-			} finally {
-				visited.delete(val)
-			}
-		}
-		return val
-	}
-
-	const result = { ...schema }
-
-	if (result.properties !== undefined) {
-		result.properties = await resolveIfCoId(result.properties)
-		if (
-			result.properties &&
-			typeof result.properties === 'object' &&
-			!Array.isArray(result.properties)
-		) {
-			const next = {}
-			for (const [k, v] of Object.entries(result.properties)) {
-				next[k] = await normalizeFactoryReferences(peer, v, visited)
-			}
-			result.properties = next
-		}
-	}
-	if (result.items !== undefined) {
-		result.items = await resolveIfCoId(result.items)
-		if (Array.isArray(result.items)) {
-			result.items = await Promise.all(
-				result.items.map((item) => normalizeFactoryReferences(peer, item, visited)),
-			)
-		} else if (result.items && typeof result.items === 'object') {
-			result.items = await normalizeFactoryReferences(peer, result.items, visited)
-		}
-	}
-
-	return result
-}
-
 export async function loadFactoryAndValidate(backend, factoryRef, data, context, options = {}) {
 	const { dataEngine, registrySchemas, getAllFactories } = options
 
@@ -350,23 +230,8 @@ export async function loadFactoryAndValidate(backend, factoryRef, data, context,
 			throw new Error(`[${context}] Factory not found in database: ${factoryRef}`)
 		}
 
-		// Resolve properties/items that are co-id references (AJV requires plain objects)
-		const resolvedFactoryDef = await normalizeFactoryReferences(backend, factoryDef)
-
-		// Fill required fields when undefined only if factory allows empty (avoids minLength/pattern failures)
-		// Skip fill for string fields with minLength > 0 - let validation fail with clear "required" message
-		const required = resolvedFactoryDef?.required
-		if (Array.isArray(required) && data && typeof data === 'object') {
-			for (const key of required) {
-				if (data[key] === undefined) {
-					const prop = resolvedFactoryDef?.properties?.[key]
-					const isString = prop?.type === 'string'
-					const minLength = prop?.minLength ?? 0
-					if (isString && minLength > 0) continue // Don't fill - would fail minLength/pattern
-					data[key] = isString ? '' : null
-				}
-			}
-		}
+		const resolver = async (coId) => resolve(backend, coId, { returnType: 'factory' })
+		const resolvedFactoryDef = await normalizeFactoryReferencesWithResolver(resolver, factoryDef)
 
 		// Validate data against runtime factory
 		await validateAgainstFactoryOrThrow(
@@ -403,44 +268,4 @@ export async function loadFactoryAndValidate(backend, factoryRef, data, context,
 		const registrySchemasMap = registrySchemas || allSchemas
 		return registrySchemasMap[factoryRef]
 	}
-}
-
-/**
- * Ensure CoValue is loaded and available
- * @param {Object} backend - Backend instance
- * @param {string} coId - Co-id to ensure is available
- * @param {string} operationName - Operation name for error messages
- * @returns {Promise<Object>} CoValueCore instance
- * @throws {Error} If CoValue cannot be loaded or is not available
- */
-export async function ensureCoValueAvailable(backend, coId, operationName) {
-	let coValueCore = backend.getCoValue(coId)
-	// Jazz lazy-loading: trigger load when not yet in cache (refs don't auto-load)
-	if (!coValueCore && backend.node?.loadCoValueCore) {
-		await backend.node.loadCoValueCore(coId).catch(() => {})
-		for (let i = 0; i < 12 && !coValueCore; i++) {
-			coValueCore = backend.getCoValue(coId)
-			if (!coValueCore) await new Promise((r) => setTimeout(r, 100))
-		}
-	}
-	if (!coValueCore) {
-		throw new Error(`[${operationName}] CoValue not found: ${coId}`)
-	}
-
-	// Ensure CoValue is available
-	if (!coValueCore.isAvailable()) {
-		// Try to load it
-		await backend.node.loadCoValueCore(coId)
-		// Wait a bit for it to become available
-		let attempts = 0
-		while (!coValueCore.isAvailable() && attempts < 10) {
-			await new Promise((resolve) => setTimeout(resolve, 100))
-			attempts++
-		}
-		if (!coValueCore.isAvailable()) {
-			throw new Error(`[${operationName}] CoValue ${coId} is not available (may still be loading)`)
-		}
-	}
-
-	return coValueCore
 }

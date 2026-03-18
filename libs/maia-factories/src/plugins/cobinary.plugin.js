@@ -1,11 +1,4 @@
-/**
- * CoBinary validation plugin for MaiaOS factories
- *
- * CoBinary = binary stream (RawBinaryCoStream) for files.
- * Registers format "binary-metadata" for validating BinaryStreamInfo objects
- * (mimeType required, totalSizeBytes).
- */
-
+/** CoBinary plugin: binary-metadata format for BinaryStreamInfo */
 export const pluginId = '@factories/cobinary'
 
 function isValidBinaryMetadata(obj) {

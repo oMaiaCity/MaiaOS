@@ -28,6 +28,7 @@ export { createCoStream } from './cojson/cotypes/coStream.js'
 export { createCoValueForSpark } from './cojson/covalue/create-covalue-for-spark.js'
 // Collection Helpers (schema index lookup, CoValue loading)
 export {
+	ensureCoValueAvailable,
 	ensureCoValueLoaded,
 	getCoListId,
 	getFactoryIndexColistId,

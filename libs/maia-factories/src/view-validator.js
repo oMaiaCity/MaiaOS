@@ -65,7 +65,7 @@ function rejectDataSpec(value, path) {
 }
 
 function validateViewNode(node, path = 'view') {
-	if (!node || typeof node !== 'object') return
+	if (node == null || typeof node !== 'object') return
 	if (Array.isArray(node)) {
 		for (let i = 0; i < node.length; i++) {
 			validateViewNode(node[i], `${path}[${i}]`)
@@ -73,7 +73,6 @@ function validateViewNode(node, path = 'view') {
 		return
 	}
 
-	// Reject conditional logic in scalar view properties
 	if (node.class !== undefined) rejectValue(node.class, path, 'class')
 	if (node.value !== undefined) rejectValue(node.value, path, 'value')
 	if (node.text !== undefined) rejectValue(node.text, path, 'text')
@@ -91,7 +90,7 @@ function validateViewNode(node, path = 'view') {
 	if (node.children) {
 		for (let i = 0; i < node.children.length; i++) {
 			const child = node.children[i]
-			if (child && typeof child === 'object' && isDSLOperation(child)) {
+			if (typeof child === 'object' && child !== null && isDSLOperation(child)) {
 				throw new Error(
 					`[ViewEngine] Conditional logic (${Object.keys(child)[0]}) not allowed in view templates. Use state machines.`,
 				)
