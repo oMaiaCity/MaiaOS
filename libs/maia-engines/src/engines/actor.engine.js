@@ -187,26 +187,18 @@ export class ActorEngine {
 	}
 
 	/**
-	 * Create a child actor lazily if it doesn't exist yet
-	 * Only creates the child actor when it's actually needed (referenced by context.currentView)
+	 * Create a child actor by co-id. Runtime uses co-ids exclusively.
 	 * @param {Object} actor - Parent actor instance
-	 * @param {string} namekey - Child actor namekey (e.g., "list", "kanban")
+	 * @param {string} childActorCoId - Child actor co-id
 	 * @param {string} [vibeKey] - Optional vibe key for tracking child actors
 	 * @returns {Promise<Object|null>} The child actor instance, or null if not found/created
 	 * @private
 	 */
-	async _createChildActorIfNeeded(actor, namekey, _vibeKey = null) {
-		if (actor.children?.[namekey]) return actor.children[namekey]
+	async _createChildActorByCoId(actor, childActorCoId, _vibeKey = null) {
+		if (!childActorCoId?.startsWith('co_z')) return null
+		if (actor.children?.[childActorCoId]) return actor.children[childActorCoId]
 		if (!actor.children) actor.children = {}
 
-		// $stores Architecture: actor.context IS ReactiveStore with merged query results from backend
-		const contextValue = actor.context.value
-
-		if (!contextValue['@actors']?.[namekey]) return null
-		const childActorCoId = contextValue['@actors'][namekey]
-		if (!childActorCoId.startsWith('co_z')) {
-			throw new Error(`[ActorEngine] Child actor ID must be co-id: ${childActorCoId}`)
-		}
 		try {
 			const store = await readStore(this.dataEngine, childActorCoId)
 			if (!store) {
@@ -216,21 +208,12 @@ export class ActorEngine {
 			if (childActorConfig.$id !== childActorCoId) childActorConfig.$id = childActorCoId
 			const childContainer = document.createElement('div')
 			childContainer.style.display = 'contents'
-			childContainer.dataset.namekey = namekey
 			childContainer.dataset.childActorId = childActorCoId
-			const childActor = await this.createActor(
-				childActorConfig,
-				childContainer,
-				_vibeKey,
-				actor,
-				namekey,
-			)
-			childActor.namekey = namekey
-			actor.children[namekey] = childActor
+			const childActor = await this.createActor(childActorConfig, childContainer, _vibeKey)
+			actor.children[childActorCoId] = childActor
 			return childActor
 		} catch (error) {
-			console.error('[ActorEngine] _createChildActorIfNeeded FAILED:', {
-				namekey,
+			console.error('[ActorEngine] _createChildActorByCoId FAILED:', {
 				childActorCoId,
 				error: error.message,
 			})
@@ -238,13 +221,7 @@ export class ActorEngine {
 		}
 	}
 
-	async createActor(
-		actorConfig,
-		containerElement,
-		vibeKey = null,
-		parentActor = null,
-		namekey = null,
-	) {
+	async createActor(actorConfig, containerElement, vibeKey = null) {
 		const actorId = actorConfig.$id || actorConfig.id
 		if (this.actors.has(actorId)) {
 			return vibeKey
@@ -280,8 +257,6 @@ export class ActorEngine {
 			actorConfig,
 			vibeKey,
 			onBeforeRender,
-			parentActor,
-			namekey,
 		)
 		return actor
 	}

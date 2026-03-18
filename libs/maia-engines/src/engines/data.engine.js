@@ -346,14 +346,12 @@ function extractSchemaDefinition(coValueData, factoryCoId) {
 
 async function readFactoryOp(peer, params) {
 	const { factoryRef } = params
-	if (!factoryRef || typeof factoryRef !== 'string') {
-		throw new Error('[ReadSchemaOperation] factoryRef (schema namekey) is required')
+	if (!factoryRef || typeof factoryRef !== 'string' || !factoryRef.startsWith('co_z')) {
+		throw new Error(
+			'[ReadSchemaOperation] factoryRef must be a co-id (co_z...). Runtime uses co-ids only.',
+		)
 	}
-	const normalizedRef =
-		factoryRef.startsWith('°') || factoryRef.startsWith('@')
-			? factoryRef
-			: `°Maia/factory/${factoryRef}`
-	const factoryDef = await peer.resolve(normalizedRef, { returnType: 'factory' })
+	const factoryDef = await peer.resolve(factoryRef, { returnType: 'factory' })
 	if (!factoryDef) return null
 	const definition =
 		typeof factoryDef === 'object' && factoryDef !== null
@@ -384,17 +382,12 @@ async function createOp(peer, dataEngine, params) {
 	requireParam(factoryParam, 'factory', 'CreateOperation')
 	requireParam(data, 'data', 'CreateOperation')
 	requireDataEngine(dataEngine, 'CreateOperation', 'runtime schema validation')
-	const factoryCoId =
-		typeof factoryParam === 'string' && factoryParam.startsWith('co_z')
-			? factoryParam
-			: await peer.resolve(factoryParam, { returnType: 'coId' })
-	if (!factoryCoId) {
-		const registriesHint = peer.account?.get?.('registries')
-			? 'has registries'
-			: 'account.registries not set (link via sync?)'
-		console.error('[CreateOperation] Factory resolve failed:', factoryParam, registriesHint)
-		throw new Error(`[CreateOperation] Could not resolve factory: ${factoryParam}. ${registriesHint}`)
+	if (typeof factoryParam !== 'string' || !factoryParam.startsWith('co_z')) {
+		throw new Error(
+			`[CreateOperation] factory must be a co-id (co_z...). Runtime uses co-ids only. Got: ${factoryParam}`,
+		)
 	}
+	const factoryCoId = factoryParam
 	if (idempotencyKey && typeof idempotencyKey === 'string') {
 		const existing = await peer.findFirst(
 			factoryCoId,

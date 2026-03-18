@@ -66,8 +66,8 @@ The view subscribes to context changes:
 - Enables lazy loading and reuse
 
 **How**:
-- Child actors created lazily via `_createChildActorIfNeeded()`
-- Parent references child via `actor.children[namekey]`
+- Child actors created lazily via `_createChildActorByCoId()` (co-id only)
+- Parent references child via `actor.children[coId]`
 - Communication via inboxes, not direct state access
 
 ### 3. Reactive Queries
@@ -171,11 +171,11 @@ The view subscribes to context changes:
 **Use Case**: Render child actor in parent view
 
 **Steps**:
-1. Define child in parent context: `@actors: {detail: "@sparks/actor/detail"}`
-2. Reference child in view: `currentDetail: "@detail"`
+1. Define child in parent context: `@actors: {detail: "°Maia/actor/..."}` (transformed to co-ids during seeding)
+2. Reference child in view: `currentDetail: "co_z..."` (co-id, set by process/context)
 3. Use slot in view: `$slot: "$currentDetail"`
-4. View engine extracts namekey from `currentDetail`
-5. View engine calls `_createChildActorIfNeeded()`
+4. View engine reads co-id from `currentDetail`
+5. View engine calls `_createChildActorByCoId()`
 6. Child actor created lazily, attached to slot element
 
 **Example**: Agent view renders detail actor in slot
