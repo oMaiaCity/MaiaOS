@@ -1,4 +1,8 @@
-import { assertFactoryValidForCreate, createFactoryMeta } from '../../factories/registry.js'
+import {
+	createFactoryMeta,
+	FACTORY_REGISTRY,
+	isExceptionFactory,
+} from '../../factories/registry.js'
 
 /**
  * Create a CoBinary (RawBinaryCoStream) with MANDATORY schema validation
@@ -29,8 +33,18 @@ export async function createCoBinary(accountOrGroup, factoryName, _node = null, 
 			}
 		}
 	}
-	assertFactoryValidForCreate(factoryName, 'createCoBinary')
-
+	if (!factoryName || typeof factoryName !== 'string') {
+		throw new Error('[createCoBinary] Schema name is REQUIRED.')
+	}
+	if (
+		!isExceptionFactory(factoryName) &&
+		!factoryName.startsWith('co_z') &&
+		!(factoryName in FACTORY_REGISTRY)
+	) {
+		throw new Error(
+			`[createCoBinary] Schema '${factoryName}' not found. Available: AccountFactory, ProfileFactory`,
+		)
+	}
 	const meta = createFactoryMeta(factoryName)
 	// RawBinaryCoStream requires meta.type = "binary"
 	const binaryMeta = { ...meta, type: 'binary' }

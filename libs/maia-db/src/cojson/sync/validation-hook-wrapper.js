@@ -1,12 +1,5 @@
 /**
- * Sync Manager Validation Hook Wrapper
- *
- * Wraps the SyncManager's handleNewContent() method to validate remote transactions
- * BEFORE they enter the CRDT. This is critical for P2P architecture where each peer
- * must validate incoming data before accepting it.
- *
- * CRITICAL: Validation happens BEFORE tryAddTransactions() is called, preventing
- * invalid data from ever entering the CRDT (which is immutable once merged).
+ * Sync Manager Validation Hook - validates remote transactions before CRDT merge.
  */
 
 import { loadFactoryAndValidate } from '@MaiaOS/factories/validation.helper'
@@ -14,213 +7,96 @@ import { isExceptionFactory } from '../../factories/registry.js'
 import { resolve } from '../factory/resolver.js'
 import { extractSchemaFromMessage, isAccountGroupOrProfile } from '../helpers/co-value-detection.js'
 
-/**
- * Extract current co-value content for validation
- * Note: This validates current state, not the merged state after transactions
- * Full validation of merged state would require merging transactions, which is complex
- * This ensures schema is available and validates current state as a proxy
- * @param {Object} peer - Backend instance
- * @param {string} coId - Co-value ID
- * @returns {Promise<Object|null>} Current content or null if can't extract
- */
 async function extractCurrentContent(peer, coId) {
 	try {
-		// Get existing co-value if available
 		const coValueCore = peer.getCoValue(coId)
-		if (!coValueCore || !peer.isAvailable(coValueCore)) {
-			// Co-value not available - this is OK for new co-values
-			// Validation will happen when they're created via CRUD API
-			return null
-		}
-
-		// Get current content
+		if (!coValueCore || !peer.isAvailable(coValueCore)) return null
 		const currentContent = peer.getCurrentContent(coValueCore)
-		if (!currentContent) {
-			return null
-		}
-
-		// Convert CoMap/CoList to plain object/array for validation
-		if (currentContent && typeof currentContent.toJSON === 'function') {
-			return currentContent.toJSON()
-		}
-
+		if (!currentContent) return null
+		if (typeof currentContent.toJSON === 'function') return currentContent.toJSON()
 		return currentContent
 	} catch (_error) {
 		return null
 	}
 }
 
-/**
- * Wait for schema to sync if not available
- * @param {Object} peer - Backend instance
- * @param {string} factoryCoId - Schema co-id to wait for
- * @param {number} timeoutMs - Timeout in milliseconds (default: 5000)
- * @returns {Promise<Object|null>} Schema definition or null if timeout
- */
 async function waitForSchemaSync(peer, factoryCoId, timeoutMs = 5000) {
-	const startTime = Date.now()
-
-	while (Date.now() - startTime < timeoutMs) {
+	const start = Date.now()
+	while (Date.now() - start < timeoutMs) {
 		try {
 			const schema = await resolve(peer, factoryCoId, { returnType: 'factory' })
-			if (schema) {
-				return schema
-			}
-		} catch (_error) {
-			// Schema not found yet, continue waiting
-		}
-
-		// Wait 100ms before checking again
-		await new Promise((resolve) => setTimeout(resolve, 100))
+			if (schema) return schema
+		} catch (_error) {}
+		await new Promise((r) => setTimeout(r, 100))
 	}
-
-	// Timeout - schema not available
 	return null
 }
 
-/**
- * Validate remote transactions before they enter CRDT
- * @param {Object} peer - Backend instance
- * @param {Object} dbEngine - Database engine (for schema resolution)
- * @param {Object} msg - NewContentMessage from sync
- * @returns {Promise<{valid: boolean, error: string|null}>} Validation result
- */
 async function validateRemoteTransactions(peer, dbEngine, msg) {
 	const coId = msg.id
-
-	// Use universal detection helper (consolidates all detection logic)
 	const detection = isAccountGroupOrProfile(msg, peer, coId)
-
-	// Groups, accounts, and profiles don't need headerMeta.$factory (they're created by CoJSON without it)
-	if (detection.isGroup || detection.isAccount || detection.isProfile) {
+	if (detection.isGroup || detection.isAccount || detection.isProfile)
 		return { valid: true, error: null }
-	}
 
-	// Extract schema co-id from message header
 	const factoryCoId = extractSchemaFromMessage(msg)
-
-	// CRITICAL: ENFORCE that every co-value MUST have a schema in headerMeta.$factory
-	// Reject co-values without schemas - this is a fundamental requirement
 	if (!factoryCoId) {
 		return {
 			valid: false,
-			error: `Co-value ${coId} missing $factory in headerMeta. Every co-value MUST have a schema (except @account, @group, °Maia, and groups/accounts).`,
+			error: `Co-value ${coId} missing $factory in headerMeta.`,
 		}
 	}
-
-	// Exception schemas (@account, @group, °Maia) are allowed without validation
-	// Use universal exception schema helper
-	if (isExceptionFactory(factoryCoId)) {
-		return { valid: true, error: null }
-	}
-
-	// All other schemas must be co-ids (runtime schemas)
-	// Exception schemas are handled above, so if it's not a co-id, it's invalid
+	if (isExceptionFactory(factoryCoId)) return { valid: true, error: null }
 	if (!factoryCoId.startsWith('co_z')) {
 		return {
 			valid: false,
-			error: `Co-value ${coId} has invalid schema format: ${factoryCoId}. Schema must be a co-id (co_z...) or exception schema (@account, @group, °Maia).`,
+			error: `Co-value ${coId} invalid schema format: ${factoryCoId}.`,
 		}
 	}
 
-	// CRITICAL: Wait for schema to sync if not available
-	// This ensures schema is available before validating data
 	let schema = await resolve(peer, factoryCoId, { returnType: 'factory' })
+	if (!schema) schema = await waitForSchemaSync(peer, factoryCoId, 5000)
 	if (!schema) {
-		// Schema not available - wait for it to sync
-		console.log(`[ValidationHook] Factory ${factoryCoId} not available, waiting for sync...`)
-		schema = await waitForSchemaSync(peer, factoryCoId, 5000)
-
-		if (!schema) {
-			// Schema still not available after timeout - REJECT transactions
-			return {
-				valid: false,
-				error: `Factory ${factoryCoId} not available after timeout. Cannot validate remote transactions for ${coId}.`,
-			}
+		return {
+			valid: false,
+			error: `Factory ${factoryCoId} not available after timeout.`,
 		}
 	}
 
-	// Extract current content for validation
-	// Note: We validate current state as a proxy for merged state
-	// Full validation of merged state would require merging transactions (complex)
-	// This ensures schema is available and validates current state
 	const content = await extractCurrentContent(peer, coId)
+	if (!content) return { valid: true, error: null }
 
-	// If content can't be extracted (new co-value), skip validation
-	// Validation will happen when co-value is created via CRUD API
-	// Schema availability check above ensures schema will be available when needed
-	if (!content) {
-		console.log(
-			`[ValidationHook] Cannot extract content for ${coId} (likely new co-value) - schema availability verified, allowing transactions`,
-		)
-		return { valid: true, error: null }
-	}
-
-	// Validate current content against schema
-	// This validates that current state is valid (proxy for merged state validation)
-	// Note: Full validation would require merging transactions, which is complex
-	// This approach ensures schema is available and validates current state
 	try {
 		await loadFactoryAndValidate(peer, factoryCoId, content, `remote sync for ${coId}`, {
 			dataEngine: dbEngine,
 		})
-
 		return { valid: true, error: null }
 	} catch (error) {
-		return {
-			valid: false,
-			error: `Validation failed for remote transactions: ${error.message}`,
-		}
+		return { valid: false, error: `Validation failed: ${error.message}` }
 	}
 }
 
-/**
- * Wrap sync manager's handleNewContent method with validation
- * @param {Object} syncManager - Original sync manager instance
- * @param {Object} peer - Backend instance (for validation)
- * @param {Object} dbEngine - Database engine (for schema resolution)
- * @param {Object} [opts] - Optional { beforeAcceptWrite: async (peer, msg, from) => Promise<{ok: boolean, error?: string}> }
- * @returns {Object} Wrapped sync manager with validation
- */
 export function wrapSyncManagerWithValidation(syncManager, peer, dbEngine, opts = {}) {
-	if (!syncManager || !peer) {
-		return syncManager
-	}
-
-	// Store original handleNewContent method
+	if (!syncManager || !peer) return syncManager
 	const originalHandleNewContent = syncManager.handleNewContent?.bind(syncManager)
-
-	if (!originalHandleNewContent) {
-		// No handleNewContent method - return original
-		return syncManager
-	}
+	if (!originalHandleNewContent) return syncManager
 
 	const { beforeAcceptWrite } = opts
-
-	// Create wrapper that validates before calling original
 	syncManager.handleNewContent = async (msg, from) => {
-		// Optional: capability check for incoming writes (before schema validation)
 		if (beforeAcceptWrite && msg?.new && Object.keys(msg.new).length > 0) {
 			const result = await beforeAcceptWrite(peer, msg, from)
 			if (!result?.ok) {
-				console.warn(`[ValidationHook] Write rejected: ${result?.error ?? 'No /sync/write capability'}`)
+				console.warn(`[ValidationHook] Write rejected: ${result?.error ?? 'No capability'}`)
 				return
 			}
 		}
-
-		// Validate remote transactions BEFORE they enter CRDT
 		if (msg?.id && dbEngine) {
 			const validation = await validateRemoteTransactions(peer, dbEngine, msg)
-
 			if (!validation.valid) {
-				console.warn(`[ValidationHook] Invalid remote transactions rejected: ${validation.error}`)
+				console.warn(`[ValidationHook] Rejected: ${validation.error}`)
 				return
 			}
 		}
-
-		// If validation passed (or skipped), proceed with original handleNewContent
 		return originalHandleNewContent(msg, from)
 	}
-
 	return syncManager
 }

@@ -69,7 +69,6 @@ export { resolveGroupCoIdsToCapabilityNames } from './cojson/helpers/resolve-cap
 export {
 	createFactoryMeta,
 	EXCEPTION_FACTORIES,
-	getAllFactories,
 	getSchema,
 	hasSchema,
 } from './factories/registry.js'

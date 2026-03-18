@@ -1,8 +1,8 @@
+import { getAllFactories } from '@MaiaOS/factories'
 import { loadFactoryAndValidate } from '@MaiaOS/factories/validation.helper'
 import {
-	assertFactoryValidForCreate,
 	createFactoryMeta,
-	getAllFactories,
+	FACTORY_REGISTRY,
 	isExceptionFactory,
 } from '../../factories/registry.js'
 
@@ -48,15 +48,22 @@ export async function createCoList(
 		}
 		// If profileId is null/undefined, it's a regular group, use it as-is
 	}
-	assertFactoryValidForCreate(factoryName, 'createCoList')
-
-	// Validate data against schema BEFORE creating CoValue
-	// STRICT: Always validate using runtime schema from database (no fallbacks, no legacy hacks)
+	if (!factoryName || typeof factoryName !== 'string') {
+		throw new Error('[createCoList] Schema name is REQUIRED.')
+	}
+	if (
+		!isExceptionFactory(factoryName) &&
+		!factoryName.startsWith('co_z') &&
+		!(factoryName in FACTORY_REGISTRY)
+	) {
+		throw new Error(
+			`[createCoList] Schema '${factoryName}' not found. Available: AccountFactory, ProfileFactory`,
+		)
+	}
 	if (!isExceptionFactory(factoryName)) {
-		// Use consolidated universal validation function (single source of truth)
 		await loadFactoryAndValidate(dbEngine?.peer || null, factoryName, init, 'createCoList', {
 			dataEngine: dbEngine,
-			getAllFactories,
+			getAllFactories: () => ({ ...getAllFactories(), ...FACTORY_REGISTRY }),
 		})
 	}
 
