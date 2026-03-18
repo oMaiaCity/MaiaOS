@@ -1,15 +1,17 @@
 /**
  * Factories - Centralized factory definitions and validation for MaiaOS
- *
- * This module provides:
- * - ValidationEngine: Unified validation API for all MaiaOS data types
- * - Factory definitions: Imported directly from JSON files
  */
 
-// Import ValidationEngine for getMetaFactory (must import before using)
 import { ValidationEngine } from './validation.engine.js'
 
 export { ValidationEngine }
+
+// Export co-id registry (seeding only)
+export { CoIdRegistry } from './co-id-generator.js'
+// Export co-type definitions
+export { default as coTypesDefs } from './co-types.defs.json'
+// Export schema transformer functions (seeding only)
+export { transformForSeeding, validateFactoryStructure } from './factory-transformer.js'
 export {
 	ACTOR_CONFIG_REF_PATTERN,
 	FACTORY_REF_PATTERN,
@@ -27,24 +29,7 @@ export {
 	validateAgainstFactory,
 	validateAgainstFactoryOrThrow,
 } from './validation.helper.js'
-export { ValidationPluginRegistry } from './validation-plugin-registry.js'
 export { validateViewDef } from './view-validator.js'
-
-// Meta schema is now loaded from os/meta.factory.json directly (seeding) or from backend (runtime)
-// No exports needed - use ValidationEngine.getMetaFactory() for validation engine, or getMetaFactoryFromPeer() for runtime access
-
-// loadFactoriesFromAccount, resolve: import from @MaiaOS/db directly (factories must not depend on db)
-// Export co-id registry (seeding only)
-export { CoIdRegistry } from './co-id-generator.js'
-// Export co-type definitions
-export { default as coTypesDefs } from './co-types.defs.json'
-// Export schema transformer functions (seeding only)
-export { transformForSeeding, validateFactoryStructure } from './factory-transformer.js'
-
-// Export meta schema for seeding
-export function getMetaFactory() {
-	return ValidationEngine.getMetaFactory()
-}
 
 import chatDataSchema from './data/chat.factory.json'
 // Import data schemas

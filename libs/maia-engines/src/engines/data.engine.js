@@ -6,7 +6,7 @@
  * Uses peer (MaiaDB) methods only - no direct @MaiaOS/db imports except normalizeCoValueData.
  */
 
-import { normalizeCoValueData } from '@MaiaOS/db'
+import { ensureCoValueAvailable, normalizeCoValueData } from '@MaiaOS/db'
 import { resolveExpressions } from '@MaiaOS/factories/expression-resolver'
 import {
 	createErrorEntry,
@@ -14,14 +14,13 @@ import {
 	createSuccessResult,
 	isPermissionError,
 } from '@MaiaOS/factories/operation-result'
+import { calcPatch } from 'fast-myers-diff'
 import {
-	ensureCoValueAvailable,
 	requireDataEngine,
 	requireParam,
 	validateCoId,
 	validateItems,
-} from '@MaiaOS/factories/validation.helper'
-import { calcPatch } from 'fast-myers-diff'
+} from '../utils/ops-assertions.js'
 import { resolveSchemaFromCoValue } from '../utils/resolve-helpers.js'
 
 /** Cache schema/content per coId to avoid 4 async lookups on repeated calls (e.g. paper keystrokes). */

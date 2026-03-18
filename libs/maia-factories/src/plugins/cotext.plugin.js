@@ -1,12 +1,4 @@
-/**
- * CoText validation plugin for MaiaOS factories
- *
- * CoText = colist with grapheme-only items (plaintext CRDT).
- * Registers:
- * - format "grapheme": string must be exactly one Unicode grapheme cluster
- * - keyword "cotext": schema metadata (always passes); marks colist as CoText
- */
-
+/** CoText plugin: grapheme format for colist items */
 import { countGraphemes } from 'unicode-segmenter/grapheme'
 
 export const pluginId = '@factories/cotext'

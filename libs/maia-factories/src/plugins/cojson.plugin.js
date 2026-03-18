@@ -1,12 +1,4 @@
-/**
- * CoJSON validation plugin for MaiaOS factories
- *
- * Registers AJV keywords:
- * - $co: Co-id reference macro
- * - cotype: CRDT type (comap, colist, costream, cobinary) at schema root
- * - indexing: Metadata for schema indexing (always passes)
- */
-
+/** CoJSON plugin: $co, cotype, indexing keywords */
 export const pluginId = '@factories/cojson'
 
 export const keywords = [
@@ -20,21 +12,10 @@ export const keywords = [
 		metaSchema: {
 			type: 'string',
 			anyOf: [
-				{
-					pattern: '^co_z[a-zA-Z0-9]+$',
-					description: 'Co-id reference (after transformation)',
-				},
-				{
-					pattern: '^°[a-zA-Z0-9_-]+/factory/',
-					description: 'Human-readable factory ID with ° prefix (e.g. °Maia/factory/...)',
-				},
-				{
-					pattern: '^@[a-zA-Z0-9_-]+/factory/',
-					description: 'Human-readable factory ID with @ prefix (e.g. @domain/factory/...)',
-				},
+				{ pattern: '^co_z[a-zA-Z0-9]+$' },
+				{ pattern: '^°[a-zA-Z0-9_-]+/factory/' },
+				{ pattern: '^@[a-zA-Z0-9_-]+/factory/' },
 			],
-			description:
-				'Reference to schema that this property value must conform to (human-readable ID or co-id)',
 		},
 	},
 	{
@@ -60,9 +41,7 @@ export const keywords = [
 			}
 			return false
 		},
-		metaSchema: {
-			enum: ['comap', 'colist', 'costream', 'cobinary'],
-		},
+		metaSchema: { enum: ['comap', 'colist', 'costream', 'cobinary'] },
 	},
 	{
 		keyword: 'indexing',

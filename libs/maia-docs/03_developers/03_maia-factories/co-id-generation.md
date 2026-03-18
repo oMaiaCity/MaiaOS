@@ -108,7 +108,6 @@ registry.register('@actor/vibe', instanceCoId);
 
 // Later, retrieve co-ids
 const coId = registry.get('@factory/actor');  // Returns 'co_z123...'
-const humanId = registry.getHumanId('co_z123...');  // Returns '@factory/actor'
 ```
 
 ### Methods
@@ -116,15 +115,9 @@ const humanId = registry.getHumanId('co_z123...');  // Returns '@factory/actor'
 **`register(humanId, coId)`**
 - Registers a mapping
 - Prevents duplicate registrations (throws if different co-id for same human ID)
-- Allows one co-id to map to multiple human IDs (aliases)
 
 **`get(humanId)`**
 - Returns co-id for human-readable ID
-- Returns `null` if not found
-
-**`getHumanId(coId)`**
-- Returns human-readable ID for co-id
-- Returns first registered human ID (if multiple aliases)
 - Returns `null` if not found
 
 **`has(humanId)`**
@@ -227,19 +220,6 @@ for (const [humanId, coId] of coIdRegistry.getAll()) {
   if (humanId.startsWith('@actor/') || humanId.startsWith('@context/')) {
     coIdMap.set(humanId, coId);
   }
-}
-```
-
-### Checking if Co-ID Exists
-
-```javascript
-const coId = generateCoId(content);
-
-// Check if this co-id is already registered
-const existingHumanId = coIdRegistry.getHumanId(coId);
-if (existingHumanId) {
-  console.log(`Co-id ${coId} already exists for ${existingHumanId}`);
-  // Reuse existing co-id or generate new one?
 }
 ```
 

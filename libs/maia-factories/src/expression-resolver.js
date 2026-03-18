@@ -1,26 +1,9 @@
 /**
- * Universal Expression Resolver
- *
- * ONE universal function for resolving MaiaScript expressions in payloads.
- * Used by View Engine, State Engine, and Operations to eliminate duplication.
- *
- * Handles:
- * - MaiaScript expressions: $key (context), $$key (item)
- * - DSL operations: $if, $eq, $not, $and, $or, etc.
- * - Recursive resolution: Arrays, objects, nested structures
- *
- * DOM markers (@inputValue, @dataColumn) are handled separately by View Engine.
- *
- * JSON Schema keywords ($schema, $id, $ref, $defs, etc.) are DATA, not expressions.
- * They appear in schema definitions, actor configs, and CoJSON documents.
- *
- * @param {any} payload - The payload to resolve (may contain expressions)
- * @param {Object} evaluator - Evaluator instance with evaluate() and isDSLOperation() methods
- * @param {Object} data - The data context { context, item }
- * @returns {Promise<any>} Fully resolved payload with all expressions evaluated
+ * Resolves MaiaScript expressions in payloads ($key, $$key, DSL ops).
+ * DOM markers (@inputValue) handled by View Engine. JSON Schema keywords ($ref, $schema) are data.
  */
 
-/** JSON Schema / structural keywords - these are data, not MaiaScript expressions */
+/** JSON Schema keywords - data, not expressions */
 const JSON_SCHEMA_KEYS = new Set([
 	'$schema',
 	'$id',
@@ -91,13 +74,7 @@ export async function resolveExpressions(payload, evaluator, data) {
 	return resolved
 }
 
-/**
- * Check if a payload contains any unresolved expressions
- * Used to validate that payloads are fully resolved before persisting to CoJSON or sending between actors
- *
- * @param {any} payload - The payload to check
- * @returns {boolean} True if payload contains expressions, false if fully resolved
- */
+/** Returns true if payload contains unresolved expressions */
 export function containsExpressions(payload) {
 	// Handle primitives - no expressions possible
 	if (payload === null || payload === undefined) {
