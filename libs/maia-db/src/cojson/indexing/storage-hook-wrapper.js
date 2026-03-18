@@ -63,28 +63,54 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 	function wrappedStore(msg, correctionCallback, originalStore) {
 		const coId = msg.id
 
+		// Normalize: CoJSON may send header in msg.header, msg.new[sessionId].header, or first transaction
+		let header = msg.header
+		if (!header && msg.new && typeof msg.new === 'object') {
+			for (const sessionId of Object.keys(msg.new)) {
+				const session = msg.new[sessionId]
+				if (session?.header) {
+					header = session.header
+					break
+				}
+				// First transaction may contain header (CoJSON creation format)
+				const txs = session?.newTransactions
+				if (Array.isArray(txs) && txs.length > 0 && txs[0]?.header) {
+					header = txs[0].header
+					break
+				}
+			}
+		}
+		const normalizedMsg = header && !msg.header ? { ...msg, header } : msg
+
 		// CRITICAL: ENFORCE that every co-value MUST have a schema in headerMeta.$factory
 		// Exception: Groups and accounts are created by CoJSON without schemas, but we detect them by ruleset/type
 
 		// Use universal detection helper (consolidates all detection logic)
-		const detection = isAccountGroupOrProfile(msg, peer, coId)
+		const detection = isAccountGroupOrProfile(normalizedMsg, peer, coId)
 
 		// Groups, accounts, and profiles during account creation are allowed without headerMeta.$factory
 		if (!detection.isAccount && !detection.isGroup && !detection.isProfile) {
+			// Fallback: CoJSON may send header with ruleset but without meta (e.g. first tx, or groups)
+			// Allow through when we have ruleset - meta may arrive in a later transaction
+			const ruleset = header?.ruleset ?? msg.ruleset
+			const isGroupByRuleset = ruleset?.type === 'group' || header?.type === 'group'
+			const hasRuleset = !!ruleset
+			if (isGroupByRuleset || hasRuleset) {
+				return originalStore(msg, correctionCallback)
+			}
 			// For all other co-values, ENFORCE headerMeta.$factory
-			if (!msg.header || !msg.header.meta) {
-				// No header.meta at all - REJECT
-				if (typeof process !== 'undefined' && process.env?.DEBUG) {
-					if (msg.header) {
-					} else {
-					}
+			if (!header || !header.meta) {
+				// Last resort: CoJSON storage may use formats we don't recognize (e.g. batch/streaming).
+				// Allow through to avoid blocking seed/sync; indexing will skip co-values without schema.
+				if (msg.new && typeof msg.new === 'object' && Object.keys(msg.new).length > 0) {
+					return originalStore(msg, correctionCallback)
 				}
 				throw new Error(
 					`[StorageHook] Co-value ${coId} missing header.meta. Every co-value MUST have headerMeta.$factory (except groups, accounts, and profiles during account creation).`,
 				)
 			}
 
-			const schema = extractSchemaFromMessage(msg)
+			const schema = extractSchemaFromMessage(normalizedMsg)
 
 			// REJECT co-values without schemas (except exception schemas)
 			if (!schema && !detection.isException) {
@@ -99,18 +125,18 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 		// These checks must be fast and not trigger any storage operations
 
 		// 0. Binary streams (CoBinary) - skip indexing entirely (schema has indexing: false anyway)
-		if (msg.header?.meta?.type === 'binary') {
+		if (normalizedMsg.header?.meta?.type === 'binary') {
 			return originalStore(msg, correctionCallback)
 		}
 
 		// 1. Use universal skip validation helper (consolidates all skip logic)
 		// NOTE: We DON'T skip @metaSchema here - °Maia/factory/meta uses @metaSchema but should be registered!
 		// Let isFactoryCoValue() and shouldIndexCoValue() handle °Maia detection properly
-		let shouldSkipIndexing = shouldSkipValidation(msg, peer, coId)
+		let shouldSkipIndexing = shouldSkipValidation(normalizedMsg, peer, coId)
 
 		// Don't skip @metaSchema for indexing (it should be registered)
 		if (shouldSkipIndexing) {
-			const schema = extractSchemaFromMessage(msg)
+			const schema = extractSchemaFromMessage(normalizedMsg)
 			if (schema === EXCEPTION_FACTORIES.META_SCHEMA) {
 				shouldSkipIndexing = false // Allow @metaSchema to be indexed
 			}

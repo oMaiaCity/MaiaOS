@@ -9,7 +9,6 @@
  * Exception: guardian itself is NOT created via this util - it keeps the account.
  */
 
-import { EXCEPTION_FACTORIES } from '../../factories/registry.js'
 import { createCoBinary } from '../cotypes/coBinary.js'
 import { createCoList } from '../cotypes/coList.js'
 import { createCoMap } from '../cotypes/coMap.js'
@@ -51,7 +50,7 @@ async function resolveContext(context, spark) {
  * @param {'comap'|'colist'|'costream'|'cobinary'} options.cotype
  * @param {Object} [options.data] - Init data for map (object) or list (array). Required for comap/colist.
  * @param {Object} [options.dataEngine] - For schema validation (optional during seed)
- * @param {boolean} [options.isFactoryDefinition] - When true, enforces cotype='comap' (factory defs must be CoMaps)
+ * @param {boolean} [options.isFactoryDefinition] - When true, enforces cotype='comap' (factory schema defs must be CoMaps)
  * @returns {Promise<{ coValue: RawCoValue }>}
  */
 export async function createCoValueForSpark(context, spark, options) {
@@ -65,9 +64,9 @@ export async function createCoValueForSpark(context, spark, options) {
 		)
 	}
 
-	// Factory definitions (meta-factory and its children) must ALWAYS be CoMaps.
-	// The cotype in factory JSON describes instance types (e.g. inbox has cotype:costream for its instances), not the document.
-	if ((factory === EXCEPTION_FACTORIES.META_SCHEMA || isFactoryDefinition) && cotype !== 'comap') {
+	// Factory schema definitions (the factory JSON document) must ALWAYS be CoMaps.
+	// Instances (e.g. unknown colist with factory: @metaSchema) are NOT factory definitions.
+	if (isFactoryDefinition && cotype !== 'comap') {
 		throw new Error(
 			`[createCoValueForSpark] Factory definitions must be CoMap, not ${cotype}. ` +
 				'The cotype in factory JSON describes instances (inbox instances are CoStreams), not the factory document.',
