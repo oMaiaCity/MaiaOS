@@ -36,5 +36,6 @@ export async function createCoStream(accountOrGroup, factoryName, _node = null, 
 	assertFactoryValidForCreate(factoryName, 'createCoStream')
 
 	const meta = createFactoryMeta(factoryName)
-	return group.createStream(meta)
+	// cojson 0.20.14: createStream(init, initPrivacy, meta, ...) - meta is 3rd param
+	return group.createStream(undefined, 'private', meta)
 }

@@ -13,7 +13,7 @@
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/peer": "workspace:*",
 		"@MaiaOS/storage": "workspace:*",
-		"cojson": "0.20.7"
+		"cojson": "0.20.14"
 	},
 	"description": "Self-Sovereign Identity (SSI) via WebAuthn PRF for MaiaOS"
 }
