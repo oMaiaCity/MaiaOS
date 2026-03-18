@@ -1,0 +1,13 @@
+{
+	"name": "@MaiaOS/game",
+	"version": "26.0317.2128",
+	"type": "module",
+	"main": "./src/index.js",
+	"exports": {
+		".": "./src/index.js"
+	},
+	"dependencies": {
+		"three": "^0.170.0"
+	},
+	"description": "Top-down 2D grid game plane with Three.js — hover highlight and click toggle"
+}
