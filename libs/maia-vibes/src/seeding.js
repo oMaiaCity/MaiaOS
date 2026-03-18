@@ -5,6 +5,7 @@
  * Used by loader for getAllVibeRegistries, buildSeedConfig, filterVibesForSeeding.
  */
 
+import { deriveInboxId } from '@MaiaOS/factories/seeding-utils'
 import { ChatVibeRegistry } from './chat/registry.js'
 import { LogsVibeRegistry } from './creator/registry.js'
 import { RegistriesVibeRegistry } from './humans/registry.js'
@@ -36,16 +37,6 @@ function getVibeKey(vibe) {
 
 const VIBE_SCHEMA = '°Maia/factory/vibe'
 const INBOX_SCHEMA = '°Maia/factory/inbox'
-
-/** Derive inbox namekey from actor $id (same convention as engine). */
-function deriveInboxId(actorId) {
-	if (!actorId || typeof actorId !== 'string') return null
-	if (actorId.includes('/actor/') && !actorId.startsWith('°Maia/actor/')) {
-		return actorId.replace('/actor/', '/inbox/')
-	}
-	if (actorId.includes('/')) return `${actorId}/inbox`
-	return null
-}
 
 function normalizeVibeForSeeding(vibe) {
 	if (!vibe || typeof vibe !== 'object') {
@@ -83,7 +74,6 @@ export function buildSeedConfig(vibeRegistries) {
 		contexts: {},
 		processes: {},
 		interfaces: {},
-		states: {},
 		inboxes: {},
 		wasms: {},
 		vibes: validRegistries.map((r) => normalizeVibeForSeeding(r.vibe)),

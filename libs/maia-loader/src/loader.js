@@ -319,6 +319,7 @@ export class MaiaOS {
 		// If peer is provided, use it
 		if (config.peer) {
 			os.dataEngine = new DataEngine(config.peer, dbOptions)
+			await os.dataEngine.resolveSystemFactories()
 			return config.peer
 		}
 
@@ -331,6 +332,7 @@ export class MaiaOS {
 			)
 			os.dataEngine = new DataEngine(maiaDB, dbOptions)
 			maiaDB.dbEngine = os.dataEngine
+			await os.dataEngine.resolveSystemFactories()
 			return maiaDB
 		}
 

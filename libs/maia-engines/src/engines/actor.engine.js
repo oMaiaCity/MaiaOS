@@ -554,7 +554,7 @@ export class ActorEngine {
 			return { valid: false, errors: [`Message type schema is required for ${messageType}`] }
 		}
 		try {
-			const { groupInfo, cotype, indexing, ...schemaForValidation } = messageTypeSchema
+			const { groupInfo, cotype, indexing, $blobRefKey, ...schemaForValidation } = messageTypeSchema
 			const result = await validateAgainstFactory(
 				schemaForValidation,
 				payload || {},

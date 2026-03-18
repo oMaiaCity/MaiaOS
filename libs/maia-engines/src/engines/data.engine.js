@@ -751,6 +751,14 @@ async function uploadToCoBinaryOp(dataEngine, params) {
 	if (!file || !(file instanceof File)) {
 		throw new Error('[DataEngine] uploadToCoBinary: file (File) is required. No base64.')
 	}
+	if (!dataEngine.cobinaryFactoryCoId?.startsWith('co_z')) {
+		await dataEngine.resolveSystemFactories()
+	}
+	if (!dataEngine.cobinaryFactoryCoId?.startsWith('co_z')) {
+		throw new Error(
+			'[DataEngine] cobinaryFactoryCoId could not be resolved. Ensure cobinary factory is seeded.',
+		)
+	}
 	const mime = mimeType || 'application/octet-stream'
 	const totalSizeBytes = file.size
 	onProgress?.(0, totalSizeBytes)
@@ -758,7 +766,7 @@ async function uploadToCoBinaryOp(dataEngine, params) {
 	const chunks = await readFileAsChunks(file, CHUNK_SIZE, onProgress)
 	const createRes = await dataEngine.execute({
 		op: 'create',
-		factory: '°Maia/factory/data/cobinary',
+		factory: dataEngine.cobinaryFactoryCoId,
 		data: {},
 	})
 	const cobinaryData = createRes?.ok === true ? createRes.data : createRes
@@ -953,6 +961,8 @@ export class DataEngine {
 	 * @param {Object} [options.evaluator] - MaiaScript evaluator (injected at boot; required for read reactive resolution)
 	 * @param {() => string|null} [options.getMoaiBaseUrl] - For POST /register after createSpark
 	 */
+	cobinaryFactoryCoId = null
+
 	constructor(peer, options = {}) {
 		this.peer = peer
 		const { evaluator, getMoaiBaseUrl } = options
@@ -1006,6 +1016,12 @@ export class DataEngine {
 					updateSparkMemberRole: (p) => updateSparkMemberRoleOp(peer, this, p),
 				}
 			: {}
+	}
+
+	async resolveSystemFactories() {
+		if (!this.peer?.resolve) return
+		const coId = await this.peer.resolve('°Maia/factory/data/cobinary', { returnType: 'coId' })
+		if (coId?.startsWith('co_z')) this.cobinaryFactoryCoId = coId
 	}
 
 	async execute(payload) {

@@ -166,7 +166,6 @@ export async function seedConfigs(
 	}
 
 	totalCount += await seedConfigType('style', transformedConfigs.styles)
-	totalCount += await seedConfigType('tool', transformedConfigs.tools)
 	totalCount += await seedConfigType('process', transformedConfigs.processes)
 	totalCount += await seedWasmConfigs()
 	totalCount += await seedConfigType('actor', transformedConfigs.actors)

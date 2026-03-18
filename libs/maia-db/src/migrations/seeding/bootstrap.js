@@ -4,7 +4,7 @@
 
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import { waitForStoreReady } from '../../cojson/crud/read-operations.js'
-import { buildMetaFactoryForSeeding, removeIdFields } from './helpers.js'
+import { buildMetaFactoryForSeeding, removeIdFields, sortSchemasByDependency } from './helpers.js'
 
 const MAIA_SPARK = '°Maia'
 
@@ -56,42 +56,7 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		const key = schema.$id || `°Maia/factory/${name}`
 		if (!uniqueSchemasBy$id.has(key)) uniqueSchemasBy$id.set(key, { name, schema })
 	}
-	const findCoRefs = (obj, visited = new Set()) => {
-		if (!obj || typeof obj !== 'object' || visited.has(obj)) return new Set()
-		visited.add(obj)
-		const refs = new Set()
-		if (obj.$co && typeof obj.$co === 'string' && obj.$co.startsWith('°Maia/factory/'))
-			refs.add(obj.$co)
-		for (const v of Object.values(obj)) {
-			if (v && typeof v === 'object') {
-				for (const item of Array.isArray(v) ? v : [v]) {
-					if (item && typeof item === 'object') {
-						for (const r of findCoRefs(item, visited)) refs.add(r)
-					}
-				}
-			}
-		}
-		return refs
-	}
-	const deps = new Map()
-	for (const [key, { schema }] of uniqueSchemasBy$id) deps.set(key, findCoRefs(schema))
-	const sorted = []
-	const done = new Set()
-	const doing = new Set()
-	const visit = (key) => {
-		if (done.has(key)) return
-		if (doing.has(key)) return
-		doing.add(key)
-		for (const d of deps.get(key) || []) {
-			if (d.startsWith('°Maia/factory/') && uniqueSchemasBy$id.has(d)) visit(d)
-		}
-		doing.delete(key)
-		done.add(key)
-		sorted.push(key)
-	}
-	for (const key of uniqueSchemasBy$id.keys()) {
-		if (key !== '°Maia/factory/meta') visit(key)
-	}
+	const sorted = sortSchemasByDependency(uniqueSchemasBy$id)
 
 	// Ensure migration-stream factory is created before todos (todos needs a migration CoStream)
 	if (

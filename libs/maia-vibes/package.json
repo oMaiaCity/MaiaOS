@@ -10,6 +10,7 @@
 		"./todos/registry": "./src/todos/registry.js"
 	},
 	"dependencies": {
+		"@MaiaOS/factories": "workspace:*",
 		"@MaiaOS/loader": "workspace:*"
 	},
 	"devDependencies": {},

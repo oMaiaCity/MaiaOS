@@ -1,9 +1,10 @@
 /**
- * Seed config for service actors - contributes actors and states to genesis seed.
+ * Seed config for service actors - contributes actors to genesis seed.
  * Merged by moai into buildSeedConfig output; replaces separate tool config.
  * Also includes standalone UI actors (e.g. placeholder).
  */
 
+import { deriveInboxId } from '@MaiaOS/factories/seeding-utils'
 import aiChatActor from './os/ai/actor.maia'
 import aiChatInterface from './os/ai/interface.maia'
 import aiChatProcess from './os/ai/process.maia'
@@ -185,16 +186,6 @@ function toActorConfig(raw, inboxId) {
 	}
 }
 
-/** Derive inbox namekey from actor $id (same convention as engine). */
-function deriveInboxId(actorId) {
-	if (!actorId || typeof actorId !== 'string') return null
-	if (actorId.includes('/actor/') && !actorId.startsWith('°Maia/actor/')) {
-		return actorId.replace('/actor/', '/inbox/')
-	}
-	if (actorId.includes('/')) return `${actorId}/inbox`
-	return null
-}
-
 /** Build minimal inbox config for seeding - cotype comes from schema. */
 function toInboxConfig(inboxId) {
 	return {
@@ -205,7 +196,7 @@ function toInboxConfig(inboxId) {
 
 /**
  * Seed config for all service actors.
- * Merge into mergedConfigs.actors, mergedConfigs.states, mergedConfigs.inboxes before seed.
+ * Merge into mergedConfigs.actors, mergedConfigs.inboxes before seed.
  * Inboxes must be seeded before actors (actor config references inbox).
  */
 export function getSeedConfig() {
