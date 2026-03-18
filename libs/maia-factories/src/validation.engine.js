@@ -105,6 +105,11 @@ export class ValidationEngine {
 					// Handle co-id references (for $schema and $ref only)
 					// Note: $co keyword handles its own schema resolution via compile-time validator
 					if (uri.startsWith('co_z')) {
+						// If already registered (e.g. by _resolveAndRegisterSchemaDependencies), return $ref
+						// to avoid AJV adding it again and throwing "already exists"
+						if (this.ajv?.getSchema?.(uri)) {
+							return { $ref: uri }
+						}
 						if (this.schemaResolver) {
 							try {
 								let schema = await this.schemaResolver(uri)
@@ -490,12 +495,16 @@ export class ValidationEngine {
 			resolvedSchemas.add(ref)
 
 			if (isMetaSchema) {
-				if (schema.$id && !this.ajv.getSchema(schema.$id)) {
-					this.ajv.addMetaSchema(schema, schema.$id)
+				try {
+					if (schema.$id && !this.ajv.getSchema(schema.$id)) {
+						this.ajv.addMetaSchema(schema, schema.$id)
+					}
+					if (!this.ajv.getSchema(ref)) this.ajv.addMetaSchema(schema, ref)
+				} catch (err) {
+					if (!err?.message?.includes?.('already exists')) throw err
 				}
-				if (!this.ajv.getSchema(ref)) this.ajv.addMetaSchema(schema, ref)
 			} else {
-				this._registerResolvedSchema(schema, ref, factoryCoId)
+				await this._registerResolvedSchema(schema, ref, factoryCoId)
 			}
 		} catch (error) {
 			if (!error.message?.includes('already exists')) throw error
@@ -511,43 +520,25 @@ export class ValidationEngine {
 	 * @param {string} ref - Reference ID (should be co-id after transformation)
 	 * @param {string} coId - Co-id of the schema
 	 */
-	_registerResolvedSchema(schema, ref, coId) {
+	async _registerResolvedSchema(schema, ref, coId) {
 		// CRITICAL: After seeding, all $co references should be co-ids, not °Maia/factory/... patterns
 		// If we see °Maia/factory/... here, it means transformation failed or schema is from source files
 		if (ref && isFactoryRef(ref)) {
 			// Still register it so validation can work, but log the warning
 		}
 
-		// Register with the reference used in $co FIRST (before co-id)
-		// This ensures AJV can resolve references during compilation
-		// Only register if different from co-id to avoid duplicate registration
-		if (ref !== coId && ref && !this.ajv.getSchema(ref)) {
+		const safeAddSchema = async (s, key) => {
 			try {
-				withSchemaValidationDisabled(this.ajv, () => {
-					this.ajv.addSchema(schema, ref)
-				})
-			} catch (error) {
-				if (error.message?.includes('already exists')) {
-					// Silent - duplicate registration is fine
-				} else {
-					throw error
-				}
+				await withSchemaValidationDisabled(this.ajv, () => this.ajv.addSchema(s, key))
+			} catch (err) {
+				if (!err?.message?.includes?.('already exists')) throw err
 			}
 		}
-
-		// Now register schema with its $id (co-id) - only if not already registered
+		if (ref !== coId && ref && !this.ajv.getSchema(ref)) {
+			await safeAddSchema(schema, ref)
+		}
 		if (coId && !this.ajv.getSchema(coId)) {
-			try {
-				withSchemaValidationDisabled(this.ajv, () => {
-					this.ajv.addSchema(schema, coId)
-				})
-			} catch (error) {
-				if (error.message?.includes('already exists')) {
-					// Silent - duplicate registration is fine
-				} else {
-					throw error
-				}
-			}
+			await safeAddSchema(schema, coId)
 		}
 	}
 
