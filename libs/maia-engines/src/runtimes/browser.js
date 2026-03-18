@@ -6,7 +6,14 @@
  * For each dependency: when inbox has unprocessed messages, spawns headless actor.
  */
 
-import { deriveInboxRef } from '../utils/inbox-convention.js'
+function deriveInboxRef(actorId) {
+	if (!actorId || typeof actorId !== 'string') return null
+	if (actorId.includes('/actor/') && !actorId.startsWith('°Maia/actor/')) {
+		return actorId.replace('/actor/', '/inbox/')
+	}
+	if (actorId.includes('/')) return `${actorId}/inbox`
+	return null
+}
 
 export class Runtime {
 	constructor(dataEngine, actorEngine, runtimeType, opts = {}) {

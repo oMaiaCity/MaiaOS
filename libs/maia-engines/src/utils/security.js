@@ -1,13 +1,126 @@
 /**
- * Payload sanitizer for interface validation.
- * Strips CoJSON metadata, normalizes interface/definition for list-detail SELECT_ITEM.
- * Used by ViewEngine (before deliver) and InboxEngine (before validateMessage).
+ * Security constants and payload sanitization for DOM/CSS/expression validation.
+ * Single source of truth for XSS prevention across ViewEngine, StyleEngine, Evaluator.
  */
 
-/** CoJSON metadata keys to strip (additionalProperties: false fails on these) */
+/** SECURITY: Block prototype chain / constructor access to prevent exploitation */
+export const FORBIDDEN_PATH_KEYS = ['__proto__', 'constructor', 'prototype']
+
+/** SECURITY: Block CSS injection via url(), expression(), -moz-binding, etc. */
+export const CSS_INJECTION_PATTERNS = [
+	/javascript\s*:/i,
+	/vbscript\s*:/i,
+	/data\s*:\s*[^,]*base64\s*,/i,
+	/expression\s*\(/i,
+	/-moz-binding\s*:/i,
+	/@import\b/i,
+	/behavior\s*:/i,
+]
+
+/** SECURITY: Tag allowlist for createElement - prevents script/iframe/object/embed injection */
+export const SAFE_TAGS = new Set([
+	'div',
+	'span',
+	'p',
+	'a',
+	'button',
+	'input',
+	'textarea',
+	'select',
+	'option',
+	'optgroup',
+	'form',
+	'label',
+	'fieldset',
+	'legend',
+	'img',
+	'picture',
+	'source',
+	'ul',
+	'ol',
+	'li',
+	'dl',
+	'dt',
+	'dd',
+	'table',
+	'thead',
+	'tbody',
+	'tfoot',
+	'tr',
+	'th',
+	'td',
+	'caption',
+	'colgroup',
+	'col',
+	'h1',
+	'h2',
+	'h3',
+	'h4',
+	'h5',
+	'h6',
+	'header',
+	'footer',
+	'main',
+	'nav',
+	'section',
+	'article',
+	'aside',
+	'details',
+	'summary',
+	'figure',
+	'figcaption',
+	'blockquote',
+	'pre',
+	'code',
+	'em',
+	'strong',
+	'small',
+	'sub',
+	'sup',
+	'mark',
+	'del',
+	'ins',
+	'abbr',
+	'time',
+	'progress',
+	'meter',
+	'output',
+	'dialog',
+	'hr',
+	'br',
+	'video',
+	'audio',
+	'canvas',
+	'svg',
+	'path',
+	'circle',
+	'rect',
+	'line',
+	'polyline',
+	'polygon',
+	'text',
+	'g',
+	'defs',
+	'use',
+	'symbol',
+])
+
+/** Boolean HTML attributes (set via element[name] = bool) */
+export const BOOLEAN_ATTRS = new Set([
+	'disabled',
+	'readonly',
+	'checked',
+	'selected',
+	'autofocus',
+	'required',
+	'multiple',
+])
+
+/** SECURITY: URL-bearing attributes - require safe protocol (blocks javascript:, data:, etc.) */
+export const URL_ATTRS = new Set(['href', 'src', 'action', 'formaction', 'poster'])
+
 const COJSON_METADATA_KEYS = new Set(['_coValueType', 'cotype', 'groupInfo', 'loading', 'error'])
 
-/** Interface array items must be exactly { name: string } (additionalProperties: false) */
 function normalizeInterfaceItem(x) {
 	if (x == null) return { name: '' }
 	if (typeof x === 'string') return { name: x }
@@ -16,11 +129,6 @@ function normalizeInterfaceItem(x) {
 	return { name: String(x) }
 }
 
-/**
- * Convert object to array for interface field.
- * - Object with numeric keys 0,1,2,... → array of { name } (CoList-like)
- * - Object with properties (schema-like) → array of { name: key }
- */
 function interfaceToArray(val) {
 	if (val == null) return []
 	if (Array.isArray(val)) return val.map(normalizeInterfaceItem)
@@ -31,33 +139,23 @@ function interfaceToArray(val) {
 	if (numericKeys) {
 		return keys.sort((a, b) => Number(a) - Number(b)).map((k) => normalizeInterfaceItem(val[k]))
 	}
-	// Schema-like: { properties: { X: {...}, Y: {...} } } → [{ name: "X" }, { name: "Y" }]
 	const props = val.properties || val
 	if (typeof props === 'object' && props !== null) {
 		return Object.keys(props)
 			.filter((k) => !k.startsWith('$'))
 			.map((k) => ({ name: k }))
 	}
-	// Fallback: [{ name: key }, ...]
 	return keys.filter((k) => !k.startsWith('$')).map((k) => ({ name: k }))
 }
 
-/**
- * Strip infrastructure keys (replyTo, etc.) for schema validation.
- * Keeps payload intact for process; use only the result for validation.
- */
+/** Strip infrastructure keys (replyTo, etc.) for schema validation. */
 export function stripInfrastructureKeysForValidation(payload) {
 	if (!payload || typeof payload !== 'object') return payload
 	const { replyTo, ...rest } = payload
 	return rest
 }
 
-/**
- * Sanitize payload for interface validation.
- * - Strip CoJSON metadata (_coValueType, cotype, etc.)
- * - Stringify definition when object (for-factories)
- * - Convert interface from object to array (for-actors)
- */
+/** Sanitize payload for interface validation. Strip CoJSON metadata, normalize interface/definition. */
 export function sanitizePayloadForValidation(payload) {
 	if (!payload || typeof payload !== 'object') return payload
 	if (Array.isArray(payload)) return payload.map(sanitizePayloadForValidation)
@@ -67,17 +165,11 @@ export function sanitizePayloadForValidation(payload) {
 		if (k === 'definition' && v != null && typeof v === 'object') {
 			result[k] = JSON.stringify(v, null, 2)
 		} else if (k === 'interface') {
-			if (Array.isArray(v)) {
-				result[k] = v.map(normalizeInterfaceItem)
-			} else if (v != null && typeof v === 'object') {
-				result[k] = interfaceToArray(v)
-			} else if (typeof v === 'string') {
-				result[k] = [] // Schema ref string -> empty array (satisfies type: array)
-			} else {
-				result[k] = v
-			}
+			if (Array.isArray(v)) result[k] = v.map(normalizeInterfaceItem)
+			else if (v != null && typeof v === 'object') result[k] = interfaceToArray(v)
+			else if (typeof v === 'string') result[k] = []
+			else result[k] = v
 		} else if (k === 'item' && v != null && typeof v === 'object') {
-			// SELECT_ITEM item: restrict to id, label, definition, interface, wasmCode, hasWasmCode
 			const allowed = ['id', 'label', 'definition', 'interface', 'wasmCode', 'hasWasmCode']
 			const sub = {}
 			for (const key of allowed) {
@@ -91,10 +183,8 @@ export function sanitizePayloadForValidation(payload) {
 					} else if (key === 'definition' && val != null && typeof val === 'object') {
 						sub[key] = JSON.stringify(val, null, 2)
 					} else if (key === 'id' && val != null && typeof val === 'object') {
-						// CoValue ref: extract id string
 						sub[key] = String(val.id ?? val.$id ?? val.coId ?? '')
 					} else if (key === 'label' && val != null && typeof val === 'object') {
-						// CoValue ref: extract label string
 						sub[key] = String(val['@label'] ?? val.label ?? val.name ?? '')
 					} else if (!COJSON_METADATA_KEYS.has(key)) {
 						sub[key] =

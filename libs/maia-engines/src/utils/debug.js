@@ -1,15 +1,12 @@
 /**
- * Diagnostic trace for actors, events, and context.
- * Enable via localStorage: maia:debug:trace = '1'
- * Or URL: ?maia_trace=1
- *
- * Logs: phase, actorId, event, source, target, context snapshot (on ERROR)
- * Detects: message loops (same type bouncing between same two actors)
+ * Diagnostic trace and performance tracers. Enable via localStorage:
+ * - maia:debug:trace = '1' or ?maia_trace=1
+ * - maia:perf:pipeline = '1', maia:perf:chat = '1'
  */
 
 const TRACE_KEY = 'maia:debug:trace'
 const LOOP_WINDOW_MS = 2000
-const LOOP_THRESHOLD = 4 // same type between same pair → warn
+const LOOP_THRESHOLD = 4
 
 function isTraceEnabled() {
 	if (typeof window === 'undefined') return false
@@ -22,7 +19,6 @@ function isTraceEnabled() {
 	}
 }
 
-/** Recent deliveries: { from, to, type, ts }[] */
 const _recent = []
 
 function _short(id) {
@@ -32,9 +28,7 @@ function _short(id) {
 function _detectLoop(from, to, type) {
 	const now = Date.now()
 	_recent.push({ from, to, type, ts: now })
-	// Keep only recent
 	while (_recent.length > 20) _recent.shift()
-	// Count same type between this pair in window
 	const count = _recent.filter(
 		(d) =>
 			d.type === type &&
@@ -54,11 +48,7 @@ export function traceView(eventName, actorId) {
 export function traceInbox(senderId, targetId, type) {
 	if (!isTraceEnabled()) return
 	_detectLoop(senderId, targetId, type)
-	console.log('[Trace:Inbox]', {
-		type,
-		from: _short(senderId),
-		to: _short(targetId),
-	})
+	console.log('[Trace:Inbox]', { type, from: _short(senderId), to: _short(targetId) })
 }
 
 export function traceProcess(processId, event, source, guardPassed) {
@@ -82,7 +72,41 @@ export function traceContextOnError(actorId, context) {
 			if (k in val) snapshot[k] = val[k]
 		}
 		console.log('[Trace:Context] ERROR state', { actor: _short(actorId), ...snapshot })
-	} catch {
-		// ignore
+	} catch {}
+}
+
+function createPerfTracer(key) {
+	const isEnabled = () =>
+		typeof localStorage !== 'undefined' && localStorage.getItem(`maia:perf:${key}`) === '1'
+	let _start = null
+	return {
+		start(label = key) {
+			if (!isEnabled()) return
+			_start = performance.now()
+			console.log(`[Perf:${key}] START ${label}`)
+		},
+		step(label, extra = {}) {
+			if (!isEnabled()) return
+			const elapsed = _start != null ? (performance.now() - _start).toFixed(1) : null
+			const msg = elapsed != null ? `[Perf:${key}] +${elapsed}ms ${label}` : `[Perf:${key}] ${label}`
+			console.log(msg, Object.keys(extra).length ? extra : '')
+		},
+		end(label) {
+			if (!isEnabled()) return
+			const elapsed = _start != null ? (performance.now() - _start).toFixed(1) : null
+			console.log(`[Perf:${key}] END ${label} total=${elapsed}ms`)
+			_start = null
+		},
+		async measure(label, fn) {
+			if (!isEnabled()) return fn()
+			const t0 = performance.now()
+			const result = await fn()
+			const ms = (performance.now() - t0).toFixed(1)
+			this.step(`${label}: ${ms}ms`)
+			return result
+		},
 	}
 }
+
+export const perfPipeline = createPerfTracer('pipeline')
+export const perfChat = createPerfTracer('chat')

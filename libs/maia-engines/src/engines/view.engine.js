@@ -2,24 +2,145 @@ import { normalizeCoValueData, ReactiveStore } from '@MaiaOS/db'
 import { validateViewDef } from '@MaiaOS/factories'
 import { containsExpressions, resolveExpressions } from '@MaiaOS/factories/expression-resolver'
 import { extractDOMValuesAsync } from '@MaiaOS/factories/payload-resolver'
-import { sanitizeAttributeWhitelist } from '../utils/attribute-sanitizer.js'
-import { hydrateCobinaryPreviews } from '../utils/cobinary-preview.js'
-import {
-	cancelDebounceSend,
-	getDefaultDebounceMs,
-	POPUP_OPEN_COOLING_MS,
-	scheduleDebounceSend,
-	shouldCoolFormSubmit,
-	shouldThrottle,
-} from '../utils/event-debounce.js'
-import { renderMarkdown } from '../utils/markdown.js'
-import { sanitizePayloadForValidation } from '../utils/payload-sanitizer.js'
-import { perfPipeline } from '../utils/perf.js'
+import DOMPurify from 'dompurify'
+import { marked } from 'marked'
+import { perfPipeline, traceView } from '../utils/debug.js'
 import { loadContextStore, readStore } from '../utils/resolve-helpers.js'
-import { BOOLEAN_ATTRS, SAFE_TAGS, URL_ATTRS } from '../utils/security-constants.js'
-import { traceView } from '../utils/trace.js'
+import {
+	BOOLEAN_ATTRS,
+	SAFE_TAGS,
+	sanitizePayloadForValidation,
+	URL_ATTRS,
+} from '../utils/security.js'
 import { isContentEditableUpdateEvent, toKebabCase } from '../utils/utils.js'
 import { RENDER_STATES } from './actor.engine.js'
+
+function sanitizeAttributeWhitelist(value) {
+	if (value === null || value === undefined) return ''
+	const s = String(value)
+	// biome-ignore lint/complexity/noUselessEscapeInRegex: ] must be escaped in char class to be literal
+	return s.replace(/[^\p{L}\p{N}\s.,!?_:;@#()+=\[\]~&%/-]/gu, '')
+}
+
+const COBINARY_PLACEHOLDER =
+	'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
+const cobinaryPreviewCache = new Map()
+
+function extractDataUrl(res) {
+	const dataUrl = res?.dataUrl ?? res?.data?.dataUrl ?? (res?.ok === true && res?.data?.dataUrl)
+	return dataUrl ?? null
+}
+
+function loadBinaryWithRetry(dataEngine, coId, maxAttempts = 4) {
+	const attempt = (n) =>
+		dataEngine
+			.execute({ op: 'loadBinaryAsBlob', coId })
+			.then((res) => extractDataUrl(res))
+			.catch((err) => {
+				const msg = err?.message ?? ''
+				const retryable =
+					msg.includes('not found') ||
+					msg.includes('not available') ||
+					msg.includes('still be loading') ||
+					msg.includes('no binary data') ||
+					msg.includes('stream not finished') ||
+					err?.name === 'NotReadableError'
+				if (n < maxAttempts && retryable) {
+					return new Promise((r) => setTimeout(r, 400)).then(() => attempt(n + 1))
+				}
+				throw err
+			})
+	return attempt(0)
+}
+
+function hydrateCobinaryPreviews(root, dataEngine) {
+	if (!root || !dataEngine?.execute) return
+	const imgs = root.querySelectorAll('img[data-co-id]')
+	imgs.forEach((img) => {
+		const coId = img.getAttribute('data-co-id')
+		if (!coId || !coId.startsWith('co_z')) {
+			if (!img.src) img.src = COBINARY_PLACEHOLDER
+			return
+		}
+		if (!/^co_z[a-zA-Z0-9_-]+$/.test(coId)) return
+		if (img.src && (img.src.startsWith('data:') || img.src.startsWith('blob:'))) return
+		const cached = cobinaryPreviewCache.get(coId)
+		if (cached?.dataUrl) {
+			img.src = cached.dataUrl
+			return
+		}
+		if (cached?.loading) {
+			cached.loading.then((dataUrl) => {
+				const current = root.querySelector(`img[data-co-id="${CSS.escape(coId)}"]`)
+				if (current) current.src = dataUrl || COBINARY_PLACEHOLDER
+			})
+			return
+		}
+		const loading = loadBinaryWithRetry(dataEngine, coId)
+			.then((dataUrl) => {
+				cobinaryPreviewCache.set(coId, { dataUrl })
+				return dataUrl
+			})
+			.catch(() => null)
+		cobinaryPreviewCache.set(coId, { loading })
+		loading.then((dataUrl) => {
+			const current = root.querySelector(`img[data-co-id="${CSS.escape(coId)}"]`)
+			if (current) current.src = dataUrl || COBINARY_PLACEHOLDER
+		})
+	})
+}
+
+const FORM_INPUT_EVENTS = ['FORM_SUBMIT', 'UPDATE_INPUT', 'UPDATE_AGENT_INPUT', 'UPDATE_WASM_CODE']
+const POPUP_OPEN_COOLING_MS = 350
+
+function getDefaultDebounceMs(eventName, isContentEditable) {
+	if (eventName === 'FORM_SUBMIT') return 100
+	if (['UPDATE_INPUT_A', 'UPDATE_INPUT_B'].includes(eventName)) return 0
+	if (isContentEditable) return 250
+	if (FORM_INPUT_EVENTS.includes(eventName)) return 400
+	return 0
+}
+
+function shouldThrottle(eventDebounce, key, debounceMs) {
+	if (typeof debounceMs !== 'number' || debounceMs <= 0) return false
+	const now = Date.now()
+	const last = eventDebounce.get(key)
+	if (last != null && now - last < debounceMs) return true
+	eventDebounce.set(key, now)
+	setTimeout(() => eventDebounce.delete(key), debounceMs)
+	return false
+}
+
+function scheduleDebounceSend(debounceSendTimers, key, debounceMs, fn) {
+	const existing = debounceSendTimers.get(key)
+	if (existing?.timeoutId) clearTimeout(existing.timeoutId)
+	const timeoutId = setTimeout(async () => {
+		debounceSendTimers.delete(key)
+		await fn()
+	}, debounceMs)
+	debounceSendTimers.set(key, { timeoutId })
+	return () => {
+		const entry = debounceSendTimers.get(key)
+		if (entry?.timeoutId) clearTimeout(entry.timeoutId)
+		debounceSendTimers.delete(key)
+	}
+}
+
+function cancelDebounceSend(debounceSendTimers, key) {
+	const existing = debounceSendTimers.get(key)
+	if (existing?.timeoutId) clearTimeout(existing.timeoutId)
+	debounceSendTimers.delete(key)
+}
+
+function shouldCoolFormSubmit(lastPopupOpenTime, coolingMs = POPUP_OPEN_COOLING_MS) {
+	return lastPopupOpenTime > 0 && Date.now() - lastPopupOpenTime < coolingMs
+}
+
+async function renderMarkdown(rawText) {
+	if (rawText == null || typeof rawText !== 'string') return ''
+	const html = await marked.parse(rawText)
+	return DOMPurify.sanitize(String(html))
+}
 
 function _hasContentEditableFocusIn(shadowRoot) {
 	if (!shadowRoot) return false

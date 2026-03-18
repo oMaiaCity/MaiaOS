@@ -1,6 +1,6 @@
 // loadSchemaFromDB removed - use resolve() from @MaiaOS/db if needed
 import { validateAgainstFactoryOrThrow } from '@MaiaOS/factories/validation.helper'
-import { FORBIDDEN_PATH_KEYS } from './security-constants.js'
+import { FORBIDDEN_PATH_KEYS } from './security.js'
 
 // getContextValue removed - Backend unified store provides merged value directly via context.value
 
