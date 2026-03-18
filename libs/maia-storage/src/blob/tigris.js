@@ -15,10 +15,21 @@ export class TigrisBlobStore {
 	}
 
 	async _initClient(options) {
-		const { S3Client, PutObjectCommand, GetObjectCommand, HeadObjectCommand } = await import(
-			'@aws-sdk/client-s3'
-		)
-		this._S3Commands = { PutObjectCommand, GetObjectCommand, HeadObjectCommand }
+		const {
+			S3Client,
+			PutObjectCommand,
+			GetObjectCommand,
+			HeadObjectCommand,
+			ListObjectsV2Command,
+			DeleteObjectsCommand,
+		} = await import('@aws-sdk/client-s3')
+		this._S3Commands = {
+			PutObjectCommand,
+			GetObjectCommand,
+			HeadObjectCommand,
+			ListObjectsV2Command,
+			DeleteObjectsCommand,
+		}
 		this._client = new S3Client({
 			region: options.region || 'auto',
 			endpoint: options.endpoint || process.env.AWS_ENDPOINT_URL_S3,
@@ -67,5 +78,29 @@ export class TigrisBlobStore {
 		} catch {
 			return false
 		}
+	}
+
+	async clear() {
+		await this._ensureClient()
+		const { ListObjectsV2Command, DeleteObjectsCommand } = this._S3Commands
+		let continuationToken
+		do {
+			const list = await this._client.send(
+				new ListObjectsV2Command({
+					Bucket: this.bucketName,
+					ContinuationToken: continuationToken,
+				}),
+			)
+			const keys = (list.Contents || []).map((o) => ({ Key: o.Key }))
+			if (keys.length > 0) {
+				await this._client.send(
+					new DeleteObjectsCommand({
+						Bucket: this.bucketName,
+						Delete: { Objects: keys },
+					}),
+				)
+			}
+			continuationToken = list.IsTruncated ? list.NextContinuationToken : undefined
+		} while (continuationToken)
 	}
 }
