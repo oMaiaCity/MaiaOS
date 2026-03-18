@@ -14,20 +14,66 @@
 import { normalizeCoValueData } from '@MaiaOS/db'
 import { containsExpressions } from '@MaiaOS/factories/expression-resolver'
 import { validateAgainstFactory } from '@MaiaOS/factories/validation.helper'
-import { deriveInboxRef } from '../utils/inbox-convention.js'
-import {
-	sanitizePayloadForValidation,
-	stripInfrastructureKeysForValidation,
-} from '../utils/payload-sanitizer.js'
-import { perfChat, perfPipeline } from '../utils/perf.js'
+import { perfChat, perfPipeline, traceInbox } from '../utils/debug.js'
 import {
 	loadContextStore,
 	readStore,
 	resolveSchemaFromCoValue,
 	resolveToCoId,
 } from '../utils/resolve-helpers.js'
-import { traceInbox } from '../utils/trace.js'
-import { getUploadProgressUpdates } from '../utils/upload-progress.js'
+import {
+	sanitizePayloadForValidation,
+	stripInfrastructureKeysForValidation,
+} from '../utils/security.js'
+
+function deriveInboxRef(actorId) {
+	if (!actorId || typeof actorId !== 'string') return null
+	if (actorId.includes('/actor/') && !actorId.startsWith('°Maia/actor/')) {
+		return actorId.replace('/actor/', '/inbox/')
+	}
+	if (actorId.includes('/')) return `${actorId}/inbox`
+	return null
+}
+
+function formatBytes(bytes) {
+	if (bytes == null || bytes < 0) return '0 B'
+	if (bytes < 1024) return `${bytes} B`
+	if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+	return `${(bytes / (1024 * 1024)).toFixed(2)} MB`
+}
+
+function getUploadProgressUpdates(loadedBytes, totalBytes, phase) {
+	const pct =
+		phase === 'reading'
+			? 0
+			: phase === 'storing'
+				? 95
+				: phase === 'done'
+					? 100
+					: totalBytes > 0
+						? Math.round((loadedBytes / totalBytes) * 95)
+						: 0
+	const isComplete = phase === 'done'
+	const status =
+		phase === 'reading'
+			? `Reading file... (${formatBytes(totalBytes)})`
+			: phase === 'storing'
+				? `Persisting to storage... (${formatBytes(totalBytes)})`
+				: phase === 'done'
+					? 'Done'
+					: `Saving... ${pct}% (${formatBytes(loadedBytes)} / ${formatBytes(totalBytes)})`
+	const style = `width: ${pct}%`
+	return {
+		uploadStatus: status,
+		uploadError: null,
+		uploadProgressVisible: true,
+		uploadProgressSectionClass: 'upload-progress-section',
+		uploadProgressPercent: isComplete ? null : pct,
+		uploadProgressStyle: style,
+		uploadLoadedBytes: loadedBytes,
+		uploadTotalBytes: totalBytes,
+	}
+}
 
 const INBOX_DEBOUNCE_MS = 0
 

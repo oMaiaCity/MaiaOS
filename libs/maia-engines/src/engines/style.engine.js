@@ -1,5 +1,5 @@
 import { resolveSchemaFromCoValue } from '../utils/resolve-helpers.js'
-import { CSS_INJECTION_PATTERNS, FORBIDDEN_PATH_KEYS } from '../utils/security-constants.js'
+import { CSS_INJECTION_PATTERNS, FORBIDDEN_PATH_KEYS } from '../utils/security.js'
 import { compileCSSProperties, toKebabCase } from '../utils/utils.js'
 
 function assertSafePath(path, context = 'style token path') {

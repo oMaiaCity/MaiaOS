@@ -12,9 +12,8 @@ import {
 	isPermissionError,
 	isSuccessResult,
 } from '@MaiaOS/factories/operation-result'
-import { perfChat, perfPipeline } from '../utils/perf.js'
+import { perfChat, perfPipeline, traceContextOnError, traceProcess } from '../utils/debug.js'
 import { readStore, resolveSchemaFromCoValue, resolveToCoId } from '../utils/resolve-helpers.js'
-import { traceContextOnError, traceProcess } from '../utils/trace.js'
 
 export class ProcessEngine {
 	constructor(evaluator, actorOps = null) {
