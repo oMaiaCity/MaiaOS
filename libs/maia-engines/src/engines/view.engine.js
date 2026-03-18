@@ -238,28 +238,11 @@ export class ViewEngine {
 	}
 
 	/**
-	 * Create fallback context when CoValue load fails. Universal: no hardcoded actor types.
-	 * Merges parent's @actors so child refs (e.g. $targetActor) resolve. Derives targetActor from
-	 * sibling slot when namekey indicates input-like child (tell target needs resolution).
-	 * @param {Object|null} parentActor - Parent actor (when child), for @actors propagation
-	 * @param {string|null} namekey - Child slot name when spawned from parent (e.g. 'input' => targetActor from @actors.messages)
+	 * Create fallback context when CoValue load fails. Empty store so actor spawns (no hard failure).
 	 * @returns {ReactiveStore} Store with minimal structure
 	 */
-	_createFallbackContext(parentActor = null, namekey = null) {
-		const base = {}
-		const parentValue = parentActor?.context?.value
-		if (parentValue?.['@actors'] && typeof parentValue?.['@actors'] === 'object') {
-			base['@actors'] = { ...parentValue['@actors'] }
-			// When input child: targetActor = @actors.messages (layout-chat convention)
-			if (namekey === 'input' && base['@actors'].messages) {
-				base.targetActor = base['@actors'].messages
-			}
-			// When messages child: targetInput = @actors.input (layout-chat convention)
-			if (namekey === 'messages' && base['@actors'].input) {
-				base.targetInput = base['@actors'].input
-			}
-		}
-		return new ReactiveStore(base)
+	_createFallbackContext() {
+		return new ReactiveStore({})
 	}
 
 	/**
@@ -267,11 +250,9 @@ export class ViewEngine {
 	 * Self-healing: when context CoValue fails to load, uses fallback store so actor spawns (no hard failure).
 	 * @param {Object} actorConfig - Actor config
 	 * @param {string} actorId - Actor ID
-	 * @param {Object|null} parentActor - Parent actor when spawning child (for fallback @actors)
-	 * @param {string|null} namekey - Child slot name when spawned (e.g. 'input' for targetActor)
 	 * @returns {Promise<{viewDef, context, contextCoId, contextFactoryCoId, configUnsubscribes}>}
 	 */
-	async loadViewConfigs(actorConfig, actorId, parentActor = null, namekey = null) {
+	async loadViewConfigs(actorConfig, actorId) {
 		if (!actorConfig.view) throw new Error(`[ViewEngine] Actor config must have 'view' property`)
 		const configUnsubscribes = []
 
@@ -310,7 +291,7 @@ export class ViewEngine {
 				retries: 5,
 			})
 			if (!loaded.store) {
-				context = this._createFallbackContext(parentActor, namekey)
+				context = this._createFallbackContext()
 			} else {
 				context = loaded.store
 				contextCoId = loaded.coId
@@ -353,18 +334,10 @@ export class ViewEngine {
 	 * @param {string|null} vibeKey - Optional vibe key
 	 * @param {() => Promise<void>} [onBeforeRender] - Callback before render (e.g. state init)
 	 */
-	async attachViewToActor(
-		actor,
-		containerElement,
-		actorConfig,
-		vibeKey,
-		onBeforeRender,
-		parentActor = null,
-		namekey = null,
-	) {
+	async attachViewToActor(actor, containerElement, actorConfig, vibeKey, onBeforeRender) {
 		const actorId = actor.id
 		const { viewDef, context, contextCoId, contextFactoryCoId, configUnsubscribes } =
-			await this.loadViewConfigs(actorConfig, actorId, parentActor, namekey)
+			await this.loadViewConfigs(actorConfig, actorId)
 
 		actor.shadowRoot = containerElement.attachShadow({ mode: 'open' })
 		actor.context = context
@@ -685,26 +658,20 @@ export class ViewEngine {
 			return
 		}
 
-		let namekey
-		if (typeof slotValue === 'string' && slotValue.startsWith('@')) {
-			namekey = slotValue.slice(1)
-		} else {
+		// Runtime uses co-ids exclusively. Non-co-id values render as plain text.
+		if (typeof slotValue !== 'string' || !slotValue.startsWith('co_z')) {
 			wrapperElement.textContent = String(slotValue)
 			return
 		}
 
 		const actor = this.actorOps?.getActor?.(actorId)
+		if (!actor) return
 
-		if (!actor) {
-			return
-		}
-
-		let childActor = actor.children?.[namekey]
-
+		let childActor = actor.children?.[slotValue]
 		if (!childActor) {
-			childActor = await this.actorOps?._createChildActorIfNeeded?.(
+			childActor = await this.actorOps?._createChildActorByCoId?.(
 				actor,
-				namekey,
+				slotValue,
 				actor.vibeKey ?? null,
 			)
 			if (!childActor) return
@@ -712,10 +679,9 @@ export class ViewEngine {
 
 		if (childActor.containerElement) {
 			// Only destroy children that were previously in THIS slot (same wrapper)
-			// Keeps sibling actors in other slots (e.g. paper + messages in chat)
 			if (actor?.children) {
 				for (const [key, child] of Object.entries(actor.children)) {
-					if (key === namekey) continue
+					if (child === childActor) continue
 					if (child.viewDef && child.containerElement?.parentNode === wrapperElement) {
 						this.runtime?.destroyActor?.(child.id) ?? this.actorOps?.destroyActor?.(child.id)
 						delete actor.children[key]

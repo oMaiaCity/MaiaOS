@@ -20,10 +20,32 @@ function inferRefType(ref) {
 	return null
 }
 
+/**
+ * @namekey pattern: value "@xyz" resolves via @actors.xyz (e.g. actor: "@addForm" -> @actors.addForm).
+ * Simple namekeys have no slashes; skip @inputValue, @todos/intent (labels/dom markers).
+ */
+function isActorNamekey(value) {
+	return (
+		typeof value === 'string' &&
+		value.startsWith('@') &&
+		!value.includes('/') &&
+		value !== '@inputValue' &&
+		value !== '@dataColumn' &&
+		value !== '@fileFromInput' &&
+		value !== '@contentEditableValue' &&
+		value !== '@scope' &&
+		!value.startsWith('@inputByName:')
+	)
+}
+
 /** Generic recursive walker: transform any @/° string ref to co-id. Mutates in place. */
-function walkAndTransformRefs(obj, coIdMap, options = {}) {
+function walkAndTransformRefs(obj, coIdMap, options = {}, ancestorActors = null) {
 	const { throwOnMissing = true } = options
 	if (!obj || typeof obj !== 'object') return
+
+	// Use current @actors or inherit from ancestor (for nested tabs, etc.)
+	const actors =
+		obj['@actors'] && typeof obj['@actors'] === 'object' ? obj['@actors'] : ancestorActors
 
 	if (Array.isArray(obj)) {
 		for (let i = 0; i < obj.length; i++) {
@@ -39,7 +61,7 @@ function walkAndTransformRefs(obj, coIdMap, options = {}) {
 				else if (throwOnMissing)
 					throw new Error(`[SchemaTransformer] No co-id found for array ref: ${item}`)
 			} else if (item && typeof item === 'object') {
-				walkAndTransformRefs(item, coIdMap, options)
+				walkAndTransformRefs(item, coIdMap, options, actors)
 			}
 		}
 		return
@@ -71,7 +93,10 @@ function walkAndTransformRefs(obj, coIdMap, options = {}) {
 	}
 
 	for (const [key, value] of Object.entries(obj)) {
-		if (key.startsWith('$') && key !== '$co' && key !== '$factory' && key !== '$id') continue
+		// Skip $ keys except $co, $factory (refs to transform). $id is instance identifier, not a ref.
+		if (key.startsWith('$') && key !== '$co' && key !== '$factory') continue
+		// @label holds human-readable display labels (e.g. @todos/intent), not co-id refs
+		if (key === '@label') continue
 
 		if (
 			typeof value === 'string' &&
@@ -79,19 +104,9 @@ function walkAndTransformRefs(obj, coIdMap, options = {}) {
 			!value.startsWith('co_z')
 		) {
 			let refToTransform = value
-			if (
-				value.startsWith('@') &&
-				(key === 'target' ||
-					key === 'targetActor' ||
-					key === 'targetInput' ||
-					key === 'targetMessages' ||
-					key === 'targetInfoCard' ||
-					key === 'paperService' ||
-					key === 'contentService') &&
-				obj['@actors'] &&
-				typeof obj['@actors'][value.slice(1)] === 'string'
-			) {
-				refToTransform = obj['@actors'][value.slice(1)]
+			// @namekey (e.g. @addForm) resolves via @actors - use current or ancestor
+			if (isActorNamekey(value) && actors && typeof actors[value.slice(1)] === 'string') {
+				refToTransform = actors[value.slice(1)]
 			}
 			const type = key === 'factory' ? 'schema' : (inferRefType(refToTransform) ?? 'target')
 			const coId = refToTransform.startsWith('co_z')
@@ -101,7 +116,7 @@ function walkAndTransformRefs(obj, coIdMap, options = {}) {
 			else if (throwOnMissing)
 				throw new Error(`[SchemaTransformer] No co-id found for ${key}: ${refToTransform}`)
 		} else if (value && typeof value === 'object') {
-			walkAndTransformRefs(value, coIdMap, options)
+			walkAndTransformRefs(value, coIdMap, options, actors)
 		}
 	}
 }

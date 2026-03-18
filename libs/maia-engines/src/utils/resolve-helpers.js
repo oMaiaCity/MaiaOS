@@ -79,16 +79,16 @@ export async function resolveSchemaFromCoValue(peer, coId) {
 }
 
 /**
- * Load context store by ref. Resolves ref to co-id, reads store, gets schema.
+ * Load context store by co-id. Runtime uses co-ids exclusively; refs must be transformed during seeding.
  * @param {Object} dataEngine - DataEngine with peer
- * @param {string} ref - Context ref (co-id or namekey)
+ * @param {string} ref - Context co-id (co_z...)
  * @param {Object} [options] - { waitForStoreReadyMs, ensureLoaded, retries }
  * @returns {Promise<{store: Object|null, coId: string|null, factoryCoId: string|null}>}
  */
 export async function loadContextStore(dataEngine, ref, options = {}) {
+	if (!ref?.startsWith('co_z')) return { store: null, coId: null, factoryCoId: null }
 	const peer = dataEngine?.peer
-	const coId = ref?.startsWith('co_z') ? ref : await resolveToCoId(peer, ref)
-	if (!coId) return { store: null, coId: null, factoryCoId: null }
+	const coId = ref
 
 	if (options.ensureLoaded && peer) {
 		await ensureCoValueLoaded(peer, coId, options.ensureLoaded).catch(() => {})

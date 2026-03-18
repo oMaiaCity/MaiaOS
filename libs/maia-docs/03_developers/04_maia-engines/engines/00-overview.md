@@ -33,10 +33,10 @@ The `@MaiaOS/engines` package provides the core engines that execute MaiaScript 
 - Processes inbox messages sequentially (`processEvents`)
 - Coordinates ViewEngine, StyleEngine, ProcessEngine
 - Batches rerenders (Svelte-style microtask queue)
-- Manages child actors (`_createChildActorIfNeeded`)
+- Manages child actors (`_createChildActorByCoId`)
 
 **Key Methods:**
-- `createActor(actorConfig, containerElement, agentKey)` - Create view-attached actor
+- `createActor(actorConfig, containerElement, vibeKey)` - Create view-attached actor
 - `spawnActor(actorConfig, options)` - Spawn headless actor
 - `destroyActor(actorId)` - Destroy single actor
 - `deliverEvent(senderId, targetId, type, payload)` - Deliver event to actor inbox
