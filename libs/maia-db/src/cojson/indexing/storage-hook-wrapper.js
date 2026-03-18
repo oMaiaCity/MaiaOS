@@ -90,21 +90,24 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 
 		// Groups, accounts, and profiles during account creation are allowed without headerMeta.$factory
 		if (!detection.isAccount && !detection.isGroup && !detection.isProfile) {
-			// Fallback: CoJSON may send header with ruleset but without meta (e.g. first tx, or groups)
-			// Allow through when we have ruleset - meta may arrive in a later transaction
+			// Allow through when ruleset indicates a group (CoJSON creates groups without our schema)
 			const ruleset = header?.ruleset ?? msg.ruleset
 			const isGroupByRuleset = ruleset?.type === 'group' || header?.type === 'group'
-			const hasRuleset = !!ruleset
-			if (isGroupByRuleset || hasRuleset) {
+			if (isGroupByRuleset) {
 				return originalStore(msg, correctionCallback)
 			}
-			// For all other co-values, ENFORCE headerMeta.$factory
+			// CoJSON sync sends content updates (msg.new) where header arrives separately.
+			// Allow through — header.meta will be present on the creation message; updates just add transactions.
+			if (!header && msg.new && typeof msg.new === 'object' && Object.keys(msg.new).length > 0) {
+				return originalStore(msg, correctionCallback)
+			}
+			// header exists but meta is null: CoJSON internal CoValue (profile during account creation,
+			// or groups/CoValues created without our schema). Allow — indexing will skip them.
+			if (header && header.meta === null) {
+				return originalStore(msg, correctionCallback)
+			}
+			// For all other co-values, ENFORCE headerMeta.$factory (required for resolve/CRUD)
 			if (!header || !header.meta) {
-				// Last resort: CoJSON storage may use formats we don't recognize (e.g. batch/streaming).
-				// Allow through to avoid blocking seed/sync; indexing will skip co-values without schema.
-				if (msg.new && typeof msg.new === 'object' && Object.keys(msg.new).length > 0) {
-					return originalStore(msg, correctionCallback)
-				}
 				throw new Error(
 					`[StorageHook] Co-value ${coId} missing header.meta. Every co-value MUST have headerMeta.$factory (except groups, accounts, and profiles during account creation).`,
 				)

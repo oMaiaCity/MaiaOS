@@ -44,8 +44,8 @@
         "@MaiaOS/factories": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
         "@MaiaOS/storage": "workspace:*",
-        "cojson": "^0.20.7",
-        "cojson-transport-ws": "0.20.7",
+        "cojson": "0.20.14",
+        "cojson-transport-ws": "0.20.14",
         "unicode-segmenter": "^0.15.0",
       },
     },
@@ -60,16 +60,12 @@
         "@MaiaOS/vibes": "workspace:*",
         "@runanywhere/web-llamacpp": "0.1.0-beta.10",
         "@runanywhere/web-onnx": "0.1.0-beta.10",
-        "cojson-transport-ws": "0.20.7",
+        "cojson-transport-ws": "0.20.14",
       },
-    },
-    "libs/maia-docs": {
-      "name": "@MaiaOS/docs",
-      "version": "26.317.2128",
     },
     "libs/maia-engines": {
       "name": "@MaiaOS/engines",
-      "version": "26.317.2128",
+      "version": "26.312.1926",
       "dependencies": {
         "@MaiaOS/actors": "workspace:*",
         "@MaiaOS/db": "workspace:*",
@@ -82,7 +78,7 @@
         "quickjs-emscripten-core": "0.32.0",
       },
       "devDependencies": {
-        "cojson": "^0.20.7",
+        "cojson": "0.20.14",
       },
     },
     "libs/maia-factories": {
@@ -116,7 +112,7 @@
         "@MaiaOS/maia-ucan": "workspace:*",
         "@MaiaOS/self": "workspace:*",
         "@MaiaOS/vibes": "workspace:*",
-        "cojson-transport-ws": "0.20.7",
+        "cojson-transport-ws": "0.20.14",
       },
     },
     "libs/maia-peer": {
@@ -124,8 +120,8 @@
       "version": "26.317.2128",
       "dependencies": {
         "@MaiaOS/storage": "workspace:*",
-        "cojson": "^0.20.7",
-        "cojson-transport-ws": "0.20.7",
+        "cojson": "0.20.14",
+        "cojson-transport-ws": "0.20.14",
       },
     },
     "libs/maia-self": {
@@ -135,7 +131,7 @@
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
         "@MaiaOS/storage": "workspace:*",
-        "cojson": "0.20.7",
+        "cojson": "0.20.14",
       },
     },
     "libs/maia-storage": {
@@ -198,8 +194,6 @@
     "@MaiaOS/brand": ["@MaiaOS/brand@workspace:libs/maia-brand"],
 
     "@MaiaOS/db": ["@MaiaOS/db@workspace:libs/maia-db"],
-
-    "@MaiaOS/docs": ["@MaiaOS/docs@workspace:libs/maia-docs"],
 
     "@MaiaOS/engines": ["@MaiaOS/engines@workspace:libs/maia-engines"],
 
@@ -759,7 +753,7 @@
 
     "cojson-storage-indexeddb": ["cojson-storage-indexeddb@0.20.14", "", { "dependencies": { "cojson": "0.20.14" } }, "sha512-AE7vEtYeU5BEr/2VAzOJd6VtHBXWkaJY++gGKXA5S2BYm4ibpUu+nsxX3vJ1MpRjmK3h6CQZP7lUFZiXQHkHjQ=="],
 
-    "cojson-transport-ws": ["cojson-transport-ws@0.20.7", "", { "dependencies": { "@opentelemetry/api": "^1.9.0", "cojson": "0.20.7" } }, "sha512-QrS3h336UaugDpQgHUHSM2TdpWZwDcJmI6o+TCiprpZWeGmC4T6dUP6msm4G4419mWXnvOfEfWmelavx1NyI9Q=="],
+    "cojson-transport-ws": ["cojson-transport-ws@0.20.14", "", { "dependencies": { "@opentelemetry/api": "^1.9.0", "cojson": "0.20.14" } }, "sha512-XlX7vs79UI1xI7hvlm8JgfqqIIsWqLcuqN++VEnu0VoJtJsAPMBvXk5y9EMg1vIJNLSLGzJrR0S+DACwS3KsNw=="],
 
     "color-convert": ["color-convert@2.0.1", "", { "dependencies": { "color-name": "~1.1.4" } }, "sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ=="],
 
@@ -1231,8 +1225,6 @@
 
     "yargs-parser": ["yargs-parser@21.1.1", "", {}, "sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw=="],
 
-    "@MaiaOS/self/cojson": ["cojson@0.20.7", "", { "dependencies": { "@noble/hashes": "^1.8.0", "@opentelemetry/api": "^1.9.0", "@scure/base": "1.2.1", "cojson-core-napi": "0.20.7", "cojson-core-rn": "0.20.7", "cojson-core-wasm": "0.20.7", "unicode-segmenter": "^0.12.0" } }, "sha512-i6IDmxaXDKHNciDeVIhKEqyzsbvBh4lkjMI4f45ARorXvErbZNzIFH3CaV1XhRT8lTEPrXrwArrX8xkwWlrwow=="],
-
     "@MaiaOS/storage/@electric-sql/pglite": ["@electric-sql/pglite@0.4.0", "", {}, "sha512-NBs9e2XwW0+pzUVNqsIRe+VOrP36zfJexI6EBuiPSn/6AcwQ/QE88QtbRfRNFJINqSagH7Rpn5e3Q7NypsVYWg=="],
 
     "@MaiaOS/storage/@noble/hashes": ["@noble/hashes@2.0.1", "", {}, "sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw=="],
@@ -1258,8 +1250,6 @@
     "cliui/wrap-ansi": ["wrap-ansi@7.0.0", "", { "dependencies": { "ansi-styles": "^4.0.0", "string-width": "^4.1.0", "strip-ansi": "^6.0.0" } }, "sha512-YVGIj2kamLSTxw6NsZjoBxfSwsn0ycdesmc4p+Q21c5zPuZ1pl+NfxVdxPtdHvmNVOQ6XSYG4AUtyt/Fi7D16Q=="],
 
     "cojson/unicode-segmenter": ["unicode-segmenter@0.12.0", "", {}, "sha512-PK6M1A1tt3ky6cFAJW/JOO9ml/sbEvim+SL75FM8slck08ACbF0TZj+tdUd3Mh8Tk5XieqUDPwmLjiyRQvb4pw=="],
-
-    "cojson-transport-ws/cojson": ["cojson@0.20.7", "", { "dependencies": { "@noble/hashes": "^1.8.0", "@opentelemetry/api": "^1.9.0", "@scure/base": "1.2.1", "cojson-core-napi": "0.20.7", "cojson-core-rn": "0.20.7", "cojson-core-wasm": "0.20.7", "unicode-segmenter": "^0.12.0" } }, "sha512-i6IDmxaXDKHNciDeVIhKEqyzsbvBh4lkjMI4f45ARorXvErbZNzIFH3CaV1XhRT8lTEPrXrwArrX8xkwWlrwow=="],
 
     "connect/debug": ["debug@2.6.9", "", { "dependencies": { "ms": "2.0.0" } }, "sha512-bC7ElrdJaJnPbAP+1EotYvqZsb3ecl5wi6Bfi6BJTUcNowp6cvspg0jXznRTKDjm/E7AdgFBVeAPVMNcKGsHMA=="],
 
@@ -1307,14 +1297,6 @@
 
     "yargs/string-width": ["string-width@4.2.3", "", { "dependencies": { "emoji-regex": "^8.0.0", "is-fullwidth-code-point": "^3.0.0", "strip-ansi": "^6.0.1" } }, "sha512-wKyQRQpjJ0sIp62ErSZdGsjMJWsap5oRNihHhu6G7JVO/9jIB6UyevL+tXuOqrng8j/cxKTWyWUwvSTriiZz/g=="],
 
-    "@MaiaOS/self/cojson/cojson-core-napi": ["cojson-core-napi@0.20.7", "", { "optionalDependencies": { "cojson-core-napi-darwin-arm64": "0.20.7", "cojson-core-napi-darwin-x64": "0.20.7", "cojson-core-napi-linux-arm-gnueabihf": "0.20.7", "cojson-core-napi-linux-arm64-gnu": "0.20.7", "cojson-core-napi-linux-arm64-musl": "0.20.7", "cojson-core-napi-linux-x64-gnu": "0.20.7", "cojson-core-napi-linux-x64-musl": "0.20.7" } }, "sha512-7/F21JYh1jRuwtxofN92F/xSsdr3pVjP2700c/1BM8LkXmD88n4+xyamxMJRX4cQ67miHBQqBYFvH10PP0DYWA=="],
-
-    "@MaiaOS/self/cojson/cojson-core-rn": ["cojson-core-rn@0.20.7", "", { "dependencies": { "uniffi-bindgen-react-native": "0.29.3-1" }, "peerDependencies": { "react": "*", "react-native": "*" } }, "sha512-1kjM+d1Rg6wIjX5DXlLAq7/p25krzkbZ/3aRuWYuAx7zPn/aSSKUTs3/J1NzvTSwSIz/eO63Pll3TGN82nnjgA=="],
-
-    "@MaiaOS/self/cojson/cojson-core-wasm": ["cojson-core-wasm@0.20.7", "", {}, "sha512-I8OPUbVqJ4MpBVoax2G+ZDRfnMUhSc/4oSJ8rfkGWxZd4/rzW6LIONoXliw/SvMMNkWGCSj3ipx9pU2lzmUOpA=="],
-
-    "@MaiaOS/self/cojson/unicode-segmenter": ["unicode-segmenter@0.12.0", "", {}, "sha512-PK6M1A1tt3ky6cFAJW/JOO9ml/sbEvim+SL75FM8slck08ACbF0TZj+tdUd3Mh8Tk5XieqUDPwmLjiyRQvb4pw=="],
-
     "@aws-crypto/sha1-browser/@smithy/util-utf8/@smithy/util-buffer-from": ["@smithy/util-buffer-from@2.2.0", "", { "dependencies": { "@smithy/is-array-buffer": "^2.2.0", "tslib": "^2.6.2" } }, "sha512-IJdWBbTcMQ6DA0gdNhh/BwrLkDR+ADW5Kr1aZmd4k3DIF6ezMV4R2NIAmT08wQJ3yUK82thHWmC/TnK/wpMMIA=="],
 
     "@aws-crypto/sha256-browser/@smithy/util-utf8/@smithy/util-buffer-from": ["@smithy/util-buffer-from@2.2.0", "", { "dependencies": { "@smithy/is-array-buffer": "^2.2.0", "tslib": "^2.6.2" } }, "sha512-IJdWBbTcMQ6DA0gdNhh/BwrLkDR+ADW5Kr1aZmd4k3DIF6ezMV4R2NIAmT08wQJ3yUK82thHWmC/TnK/wpMMIA=="],
@@ -1326,14 +1308,6 @@
     "cliui/string-width/is-fullwidth-code-point": ["is-fullwidth-code-point@3.0.0", "", {}, "sha512-zymm5+u+sCsSWyD9qNaejV3DFvhCKclKdizYaJUuHA83RLjb7nSuGnddCHGv0hk+KY7BMAlsWeK4Ueg6EV6XQg=="],
 
     "cliui/wrap-ansi/ansi-styles": ["ansi-styles@4.3.0", "", { "dependencies": { "color-convert": "^2.0.1" } }, "sha512-zbB9rCJAT1rbjiVDb2hqKFHNYLxgtk8NURxZ3IZwD3F6NtxbXZQCnnSi1Lkx+IDohdPlFp222wVALIheZJQSEg=="],
-
-    "cojson-transport-ws/cojson/cojson-core-napi": ["cojson-core-napi@0.20.7", "", { "optionalDependencies": { "cojson-core-napi-darwin-arm64": "0.20.7", "cojson-core-napi-darwin-x64": "0.20.7", "cojson-core-napi-linux-arm-gnueabihf": "0.20.7", "cojson-core-napi-linux-arm64-gnu": "0.20.7", "cojson-core-napi-linux-arm64-musl": "0.20.7", "cojson-core-napi-linux-x64-gnu": "0.20.7", "cojson-core-napi-linux-x64-musl": "0.20.7" } }, "sha512-7/F21JYh1jRuwtxofN92F/xSsdr3pVjP2700c/1BM8LkXmD88n4+xyamxMJRX4cQ67miHBQqBYFvH10PP0DYWA=="],
-
-    "cojson-transport-ws/cojson/cojson-core-rn": ["cojson-core-rn@0.20.7", "", { "dependencies": { "uniffi-bindgen-react-native": "0.29.3-1" }, "peerDependencies": { "react": "*", "react-native": "*" } }, "sha512-1kjM+d1Rg6wIjX5DXlLAq7/p25krzkbZ/3aRuWYuAx7zPn/aSSKUTs3/J1NzvTSwSIz/eO63Pll3TGN82nnjgA=="],
-
-    "cojson-transport-ws/cojson/cojson-core-wasm": ["cojson-core-wasm@0.20.7", "", {}, "sha512-I8OPUbVqJ4MpBVoax2G+ZDRfnMUhSc/4oSJ8rfkGWxZd4/rzW6LIONoXliw/SvMMNkWGCSj3ipx9pU2lzmUOpA=="],
-
-    "cojson-transport-ws/cojson/unicode-segmenter": ["unicode-segmenter@0.12.0", "", {}, "sha512-PK6M1A1tt3ky6cFAJW/JOO9ml/sbEvim+SL75FM8slck08ACbF0TZj+tdUd3Mh8Tk5XieqUDPwmLjiyRQvb4pw=="],
 
     "connect/debug/ms": ["ms@2.0.0", "", {}, "sha512-Tpp60P6IUJDTuOq/5Z8cdskzJujfwqfOTkrwIwj7IRISpnkJnT6SyJ4PCPnGMoFjC9ddhal5KVIYtAt97ix05A=="],
 
@@ -1349,38 +1323,10 @@
 
     "yargs/string-width/strip-ansi": ["strip-ansi@6.0.1", "", { "dependencies": { "ansi-regex": "^5.0.1" } }, "sha512-Y38VPSHcqkFrCpFnQ9vuSXmquuv5oXOKpGeT6aGrr3o3Gc9AlVa6JBfUSOCnbxGGZF+/0ooI7KrPuUSztUdU5A=="],
 
-    "@MaiaOS/self/cojson/cojson-core-napi/cojson-core-napi-darwin-arm64": ["cojson-core-napi-darwin-arm64@0.20.7", "", { "os": "darwin", "cpu": "arm64" }, "sha512-3Xnx88Lpf3GIf1l6mXp1YhXwPKnZ6pI0JYdF9mWFC16pNei26JsWlasxLAIZvyIjaFAweyiAFD967Tfuib+jdg=="],
-
-    "@MaiaOS/self/cojson/cojson-core-napi/cojson-core-napi-darwin-x64": ["cojson-core-napi-darwin-x64@0.20.7", "", { "os": "darwin", "cpu": "x64" }, "sha512-CAsLtCk9DkALaTbX7uHYZhR4Ua4OHWM7HPsWTkWp9Y5VXugMYqtyBV+avIm2vnjcJ/UduZt5ZXCgkHYJ/yoiZQ=="],
-
-    "@MaiaOS/self/cojson/cojson-core-napi/cojson-core-napi-linux-arm-gnueabihf": ["cojson-core-napi-linux-arm-gnueabihf@0.20.7", "", { "os": "linux", "cpu": "arm" }, "sha512-L+0sCqxLoJE5+SKs6D5UTDWFT1mtMMP9xLML5zvL1J80MeiquHsNbnNQNdXCB0406xNBZqHeG6QeQP9nT9m6Ig=="],
-
-    "@MaiaOS/self/cojson/cojson-core-napi/cojson-core-napi-linux-arm64-gnu": ["cojson-core-napi-linux-arm64-gnu@0.20.7", "", { "os": "linux", "cpu": "arm64" }, "sha512-AsL9mzXIDjabodBatm8j1ftp2J9PZ69UFtF3S0MPbMRRWijClNWox/pnu3AH0aSeX/L9CqkqOdaUPcsgKmuoow=="],
-
-    "@MaiaOS/self/cojson/cojson-core-napi/cojson-core-napi-linux-arm64-musl": ["cojson-core-napi-linux-arm64-musl@0.20.7", "", { "os": "linux", "cpu": "arm64" }, "sha512-2TAiQH6xBjZKpnQuGgj2snXiMDguq74lzU0KdNjucucw2bkBCwor/iNrPqZrywQu63JSxF1xUm1ut4GhwUtsKA=="],
-
-    "@MaiaOS/self/cojson/cojson-core-napi/cojson-core-napi-linux-x64-gnu": ["cojson-core-napi-linux-x64-gnu@0.20.7", "", { "os": "linux", "cpu": "x64" }, "sha512-noTNYwrhL+xI10VI0knvoP8YHt8vh1Pdu7hLFkzE8vQ8cHAGAhia0ELbbLKGy7dbpTMW8qLlKK9m8sUixfcXLQ=="],
-
-    "@MaiaOS/self/cojson/cojson-core-napi/cojson-core-napi-linux-x64-musl": ["cojson-core-napi-linux-x64-musl@0.20.7", "", { "os": "linux", "cpu": "x64" }, "sha512-cre5hMg3eN2ak/enwCUS0/0JrsfXO5KhbQgXfRISNNYX45ngQ1+Xg67gEfDB5k3R1HVTLvhgHX654ID2Fas5qg=="],
-
     "@aws-crypto/sha1-browser/@smithy/util-utf8/@smithy/util-buffer-from/@smithy/is-array-buffer": ["@smithy/is-array-buffer@2.2.0", "", { "dependencies": { "tslib": "^2.6.2" } }, "sha512-GGP3O9QFD24uGeAXYUjwSTXARoqpZykHadOmA8G5vfJPK0/DC67qa//0qvqrJzL1xc8WQWX7/yc7fwudjPHPhA=="],
 
     "@aws-crypto/sha256-browser/@smithy/util-utf8/@smithy/util-buffer-from/@smithy/is-array-buffer": ["@smithy/is-array-buffer@2.2.0", "", { "dependencies": { "tslib": "^2.6.2" } }, "sha512-GGP3O9QFD24uGeAXYUjwSTXARoqpZykHadOmA8G5vfJPK0/DC67qa//0qvqrJzL1xc8WQWX7/yc7fwudjPHPhA=="],
 
     "@aws-crypto/util/@smithy/util-utf8/@smithy/util-buffer-from/@smithy/is-array-buffer": ["@smithy/is-array-buffer@2.2.0", "", { "dependencies": { "tslib": "^2.6.2" } }, "sha512-GGP3O9QFD24uGeAXYUjwSTXARoqpZykHadOmA8G5vfJPK0/DC67qa//0qvqrJzL1xc8WQWX7/yc7fwudjPHPhA=="],
-
-    "cojson-transport-ws/cojson/cojson-core-napi/cojson-core-napi-darwin-arm64": ["cojson-core-napi-darwin-arm64@0.20.7", "", { "os": "darwin", "cpu": "arm64" }, "sha512-3Xnx88Lpf3GIf1l6mXp1YhXwPKnZ6pI0JYdF9mWFC16pNei26JsWlasxLAIZvyIjaFAweyiAFD967Tfuib+jdg=="],
-
-    "cojson-transport-ws/cojson/cojson-core-napi/cojson-core-napi-darwin-x64": ["cojson-core-napi-darwin-x64@0.20.7", "", { "os": "darwin", "cpu": "x64" }, "sha512-CAsLtCk9DkALaTbX7uHYZhR4Ua4OHWM7HPsWTkWp9Y5VXugMYqtyBV+avIm2vnjcJ/UduZt5ZXCgkHYJ/yoiZQ=="],
-
-    "cojson-transport-ws/cojson/cojson-core-napi/cojson-core-napi-linux-arm-gnueabihf": ["cojson-core-napi-linux-arm-gnueabihf@0.20.7", "", { "os": "linux", "cpu": "arm" }, "sha512-L+0sCqxLoJE5+SKs6D5UTDWFT1mtMMP9xLML5zvL1J80MeiquHsNbnNQNdXCB0406xNBZqHeG6QeQP9nT9m6Ig=="],
-
-    "cojson-transport-ws/cojson/cojson-core-napi/cojson-core-napi-linux-arm64-gnu": ["cojson-core-napi-linux-arm64-gnu@0.20.7", "", { "os": "linux", "cpu": "arm64" }, "sha512-AsL9mzXIDjabodBatm8j1ftp2J9PZ69UFtF3S0MPbMRRWijClNWox/pnu3AH0aSeX/L9CqkqOdaUPcsgKmuoow=="],
-
-    "cojson-transport-ws/cojson/cojson-core-napi/cojson-core-napi-linux-arm64-musl": ["cojson-core-napi-linux-arm64-musl@0.20.7", "", { "os": "linux", "cpu": "arm64" }, "sha512-2TAiQH6xBjZKpnQuGgj2snXiMDguq74lzU0KdNjucucw2bkBCwor/iNrPqZrywQu63JSxF1xUm1ut4GhwUtsKA=="],
-
-    "cojson-transport-ws/cojson/cojson-core-napi/cojson-core-napi-linux-x64-gnu": ["cojson-core-napi-linux-x64-gnu@0.20.7", "", { "os": "linux", "cpu": "x64" }, "sha512-noTNYwrhL+xI10VI0knvoP8YHt8vh1Pdu7hLFkzE8vQ8cHAGAhia0ELbbLKGy7dbpTMW8qLlKK9m8sUixfcXLQ=="],
-
-    "cojson-transport-ws/cojson/cojson-core-napi/cojson-core-napi-linux-x64-musl": ["cojson-core-napi-linux-x64-musl@0.20.7", "", { "os": "linux", "cpu": "x64" }, "sha512-cre5hMg3eN2ak/enwCUS0/0JrsfXO5KhbQgXfRISNNYX45ngQ1+Xg67gEfDB5k3R1HVTLvhgHX654ID2Fas5qg=="],
   }
 }

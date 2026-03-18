@@ -8,8 +8,8 @@
 	},
 	"dependencies": {
 		"@MaiaOS/storage": "workspace:*",
-		"cojson": "^0.20.7",
-		"cojson-transport-ws": "0.20.7"
+		"cojson": "0.20.14",
+		"cojson-transport-ws": "0.20.14"
 	},
 	"description": "MaiaPeer - Node + account + storage wiring + sync. P2P layer for MaiaOS."
 }

@@ -95,9 +95,18 @@ export async function resolve(peer, identifier, options = {}) {
 	if (!peer) {
 		throw new Error('[resolve] peer is required')
 	}
+	if (identifier === null || identifier === undefined) {
+		throw new Error('[resolve] identifier is required (co-id string or { fromCoValue: "co_z..." })')
+	}
 
-	// Handle options object (fromCoValue pattern)
+	// Handle options object (fromCoValue pattern) or resolved schema object ({ $id, id })
 	if (identifier && typeof identifier === 'object' && !Array.isArray(identifier)) {
+		// Resolved schema object: { $id: 'co_z...' } or { id: 'co_z...' }
+		const schemaCoId = identifier.$id ?? identifier.id
+		if (typeof schemaCoId === 'string' && schemaCoId.startsWith('co_z')) {
+			if (returnType === 'coId') return schemaCoId
+			return await resolve(peer, schemaCoId, { returnType, deepResolve, timeoutMs })
+		}
 		if (identifier.fromCoValue) {
 			if (!identifier.fromCoValue.startsWith('co_z')) {
 				throw new Error(
@@ -122,9 +131,14 @@ export async function resolve(peer, identifier, options = {}) {
 				return null
 			}
 
-			const factoryCoId = coValueData.$factory || null
+			let factoryCoId = coValueData.$factory || null
 
-			if (!factoryCoId) {
+			// Normalize: $factory may be object (resolved reference) - extract co-id
+			if (factoryCoId && typeof factoryCoId === 'object') {
+				factoryCoId = factoryCoId.$id ?? factoryCoId.id ?? null
+			}
+
+			if (!factoryCoId || typeof factoryCoId !== 'string') {
 				return null
 			}
 

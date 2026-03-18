@@ -43,6 +43,8 @@ export async function resolveToCoId(peer, ref) {
 
 /**
  * Resolve schema co-id from a CoValue.
+ * Reads header.meta.$factory directly from CoValueCore (fast path).
+ * Falls back to peer.resolve({ fromCoValue }) if direct read fails.
  * @param {Object} peer - MaiaDB peer
  * @param {string} coId - CoValue co-id
  * @returns {Promise<string|null>} Schema co-id or null
@@ -50,6 +52,26 @@ export async function resolveToCoId(peer, ref) {
 export async function resolveSchemaFromCoValue(peer, coId) {
 	if (!peer || !coId?.startsWith('co_z')) return null
 	try {
+		const coValueCore = peer.getCoValue(coId)
+		if (coValueCore?.isAvailable()) {
+			const readFactory = () => {
+				const meta = coValueCore.meta
+				if (meta?.$factory && typeof meta.$factory === 'string' && meta.$factory.startsWith('co_z'))
+					return meta.$factory
+				const header = peer.getHeader(coValueCore)
+				const factory = header?.meta?.$factory
+				if (factory && typeof factory === 'string' && factory.startsWith('co_z')) return factory
+				return null
+			}
+			let factory = readFactory()
+			if (factory) return factory
+			// Wait for header.meta to arrive via sync (handles timing race)
+			for (let i = 0; i < 10; i++) {
+				await new Promise((r) => setTimeout(r, 100 + i * 50))
+				factory = readFactory()
+				if (factory) return factory
+			}
+		}
 		return await peer.resolve({ fromCoValue: coId }, { returnType: 'coId' })
 	} catch {
 		return null
