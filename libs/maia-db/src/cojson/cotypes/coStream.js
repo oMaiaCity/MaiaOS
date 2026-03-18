@@ -1,4 +1,8 @@
-import { assertFactoryValidForCreate, createFactoryMeta } from '../../factories/registry.js'
+import {
+	createFactoryMeta,
+	FACTORY_REGISTRY,
+	isExceptionFactory,
+} from '../../factories/registry.js'
 
 /**
  * Create a CoStream with MANDATORY schema validation
@@ -33,8 +37,18 @@ export async function createCoStream(accountOrGroup, factoryName, _node = null, 
 		}
 		// If profileId is null/undefined, it's a regular group, use it as-is
 	}
-	assertFactoryValidForCreate(factoryName, 'createCoStream')
-
+	if (!factoryName || typeof factoryName !== 'string') {
+		throw new Error('[createCoStream] Schema name is REQUIRED.')
+	}
+	if (
+		!isExceptionFactory(factoryName) &&
+		!factoryName.startsWith('co_z') &&
+		!(factoryName in FACTORY_REGISTRY)
+	) {
+		throw new Error(
+			`[createCoStream] Schema '${factoryName}' not found. Available: AccountFactory, ProfileFactory`,
+		)
+	}
 	const meta = createFactoryMeta(factoryName)
 	// cojson 0.20.14: createStream(init, initPrivacy, meta, ...) - meta is 3rd param
 	return group.createStream(undefined, 'private', meta)

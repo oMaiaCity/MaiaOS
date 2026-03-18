@@ -1,11 +1,5 @@
 /**
- * CoJSON Seed Operation - Seed database with configs, schemas, and initial data
- *
- * Model: PEER_FRESH_SEED=true → bootstrap + seed (clean slate).
- *        PEER_FRESH_SEED=false → use existing scaffold, no seed, no cleanup.
- *
- * Seeding Order: Bootstrap → Schemas → Configs → Data → Registry
- * Extracted modules: bootstrap, configs, data, store-registry, helpers
+ * CoJSON Seed - Bootstrap → Schemas → Configs → Data → Registry
  */
 
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
@@ -57,11 +51,8 @@ export async function seed(
 	const { MaiaDB } = await import('../../cojson/core/MaiaDB.js')
 	const peer = existingBackend || new MaiaDB({ node, account }, { systemSpark: '°Maia' })
 
-	let needsBootstrap = true
-	if (!needsBootstrap) {
-		needsBootstrap =
-			!account.get('registries') || !String(account.get('registries')).startsWith('co_z')
-	}
+	const needsBootstrap =
+		!account.get('registries') || !String(account.get('registries')).startsWith('co_z')
 	if (needsBootstrap) {
 		const { getAllFactories } = await import('@MaiaOS/factories')
 		await bootstrapAndScaffold(account, node, schemas || getAllFactories(), peer.dbEngine)
@@ -600,9 +591,7 @@ export async function seed(
 			try {
 				if (peer.node?.loadCoValueCore) await peer.node.loadCoValueCore(coId).catch(() => {})
 				await indexCoValue(peer, coId)
-			} catch (e) {
-				console.error('[Seed] Re-index pass failed for', coId, e)
-			}
+			} catch (_e) {}
 		}
 	}
 

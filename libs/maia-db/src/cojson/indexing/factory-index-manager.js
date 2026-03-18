@@ -33,8 +33,6 @@ async function ensureOsCoMap(peer, spark) {
 	}
 
 	const osId = await groups.getSparkOsId(peer, effectiveSpark)
-	if (typeof process !== 'undefined' && process.env?.DEBUG)
-		console.log('[DEBUG ensureOsCoMap] osId=', osId, 'spark=', effectiveSpark)
 
 	if (osId) {
 		// spark.os exists - use universal read() API to load and resolve it
@@ -45,26 +43,15 @@ async function ensureOsCoMap(peer, spark) {
 				timeoutMs: 10000, // 10 second timeout for critical infrastructure
 			})
 
-			// Check if read succeeded (store has data, not error)
-			if (!osStore || osStore.value?.error) {
-				if (typeof process !== 'undefined' && process.env?.DEBUG)
-					console.error('osStore missing or error')
-				return null
-			}
+			if (!osStore || osStore.value?.error) return null
 
 			// Get the raw CoValueCore and content after read() has loaded it
 			const osCore = peer.getCoValue(osId)
-			if (!osCore || !osCore.isAvailable()) {
-				if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('osCore unavailable')
-				return null
-			}
+			if (!osCore || !osCore.isAvailable()) return null
 
 			// Get the content - should work now since read() ensured it's loaded
 			const osContent = osCore.getCurrentContent?.()
-			if (!osContent) {
-				if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('osContent missing')
-				return null
-			}
+			if (!osContent) return null
 
 			// Check if content is a CoMap using content.cotype and header $schema
 			const contentType = osContent.cotype || osContent.type
@@ -75,27 +62,17 @@ async function ensureOsCoMap(peer, spark) {
 			// Verify it's a CoMap: check cotype and that it has get() method
 			const isCoMap = contentType === 'comap' && typeof osContent.get === 'function'
 
-			if (!isCoMap) {
-				if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('osContent not CoMap')
-				return null
-			}
-
-			// Successfully got CoMap content - return it
-			if (typeof process !== 'undefined' && process.env?.DEBUG)
-				console.log('[DEBUG ensureOsCoMap] returning osContent for osId=', osId)
+			if (!isCoMap) return null
 			return osContent
 		} catch (_e) {
-			if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_e)
 			return null
 		}
 	}
 
-	// spark.os not ready - fail-fast with clear error when account.registries is missing
-	// Indexing requires account.registries (set via linkAccountToRegistries). Boot/link order must run before first create.
 	const registriesId = peer.account?.get?.('registries')
 	if (!registriesId?.startsWith('co_z')) {
 		console.error(
-			'[SchemaIndexManager] account.registries not set. Indexing requires linkAccountToRegistries to complete first. Call linkAccountToRegistries during boot before user can create content.',
+			'[SchemaIndexManager] account.registries not set. Indexing requires linkAccountToRegistries.',
 		)
 	}
 	return null
@@ -123,25 +100,13 @@ export async function ensureIndexesCoMap(peer) {
 				timeoutMs: 10000,
 			})
 
-			if (!indexesStore || indexesStore.value?.error) {
-				if (typeof process !== 'undefined' && process.env?.DEBUG)
-					console.error('indexesStore missing or error')
-				return null
-			}
+			if (!indexesStore || indexesStore.value?.error) return null
 
 			const indexesCore = peer.getCoValue(indexesId)
-			if (!indexesCore || !indexesCore.isAvailable()) {
-				if (typeof process !== 'undefined' && process.env?.DEBUG)
-					console.error('indexesCore unavailable')
-				return null
-			}
+			if (!indexesCore || !indexesCore.isAvailable()) return null
 
 			const indexesContent = indexesCore.getCurrentContent?.()
-			if (!indexesContent) {
-				if (typeof process !== 'undefined' && process.env?.DEBUG)
-					console.error('indexesContent missing')
-				return null
-			}
+			if (!indexesContent) return null
 
 			const contentType = indexesContent.cotype || indexesContent.type
 			const header = peer.getHeader(indexesCore)
@@ -149,15 +114,9 @@ export async function ensureIndexesCoMap(peer) {
 			const _schema = headerMeta?.$factory || null
 
 			const isCoMap = contentType === 'comap' && typeof indexesContent.get === 'function'
-			if (!isCoMap) {
-				if (typeof process !== 'undefined' && process.env?.DEBUG)
-					console.error('indexesContent not CoMap')
-				return null
-			}
-
+			if (!isCoMap) return null
 			return indexesContent
 		} catch (_e) {
-			if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_e)
 			return null
 		}
 	}
@@ -210,9 +169,7 @@ export async function ensureIndexesCoMap(peer) {
 				}
 			}
 		}
-	} catch (_e) {
-		if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_e)
-	}
+	} catch (_e) {}
 
 	// Fallback: return null if not available yet (caller should handle this gracefully)
 	return null
@@ -251,10 +208,7 @@ async function ensureSchemaSpecificIndexColistSchema(peer, factoryCoId, metaSche
 		}
 	}
 
-	if (!metaSchemaCoId || !metaSchemaCoId.startsWith('co_z')) {
-		if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('metaSchemaCoId invalid')
-		return null
-	}
+	if (!metaSchemaCoId || !metaSchemaCoId.startsWith('co_z')) return null
 
 	// Load schema definition to get its title
 	const factoryDef = await resolve(peer, factoryCoId, { returnType: 'factory' })
@@ -266,18 +220,13 @@ async function ensureSchemaSpecificIndexColistSchema(peer, factoryCoId, metaSche
 	// Extract schema title (e.g., "@domain/schema/data/todos")
 	const factoryTitle = factoryDef.title || factoryDef.$id
 	if (!factoryTitle || typeof factoryTitle !== 'string' || !FACTORY_REF_PATTERN.test(factoryTitle)) {
-		if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('factoryTitle invalid')
 		return null
 	}
 
 	// Generate schema-specific index colist schema name
 	// Preserves the full path structure: °Maia/factory/path → °Maia/factory/index/path (or @domain/...)
 	const match = factoryTitle.match(SCHEMA_REF_MATCH)
-	if (!match) {
-		if (typeof process !== 'undefined' && process.env?.DEBUG)
-			console.error('factoryTitle match failed')
-		return null
-	}
+	if (!match) return null
 	const [, prefix, path] = match
 	const indexColistFactoryTitle = `${prefix}/factory/index/${path}`
 
@@ -313,7 +262,6 @@ async function ensureSchemaSpecificIndexColistSchema(peer, factoryCoId, metaSche
 
 		return indexColistFactoryCoId
 	} catch (_error) {
-		if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_error)
 		return null
 	}
 }
@@ -338,10 +286,7 @@ export async function ensureFactoryIndexColist(peer, factoryCoId, metaSchemaCoId
 	// Check indexing property from schema definition
 	// Skip creating index colists if indexing is not true (defaults to false)
 	const factoryDef = await resolve(peer, factoryCoId, { returnType: 'factory' })
-	if (!factoryDef) {
-		if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('factoryDef missing')
-		return null
-	}
+	if (!factoryDef) return null
 
 	// Check indexing property (defaults to false if not present)
 	if (factoryDef.indexing !== true) {
@@ -381,9 +326,7 @@ export async function ensureFactoryIndexColist(peer, factoryCoId, metaSchemaCoId
 					}
 				}
 			}
-		} catch (_e) {
-			if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_e)
-		}
+		} catch (_e) {}
 
 		// If indexColistId exists but couldn't be loaded, DON'T create a new one
 		return null
@@ -397,10 +340,7 @@ export async function ensureFactoryIndexColist(peer, factoryCoId, metaSchemaCoId
 		factoryCoId,
 		metaSchemaCoId,
 	)
-	if (!indexSchemaCoId) {
-		if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('indexSchemaCoId missing')
-		return null
-	}
+	if (!indexSchemaCoId) return null
 
 	const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
 	const { coValue: indexColistRaw } = await createCoValueForSpark(peer, '°Maia', {
@@ -438,11 +378,7 @@ export async function ensureFactoryIndexColist(peer, factoryCoId, metaSchemaCoId
  */
 export async function ensureUnknownColist(peer) {
 	const osCoMap = await ensureOsCoMap(peer)
-
-	if (!osCoMap) {
-		if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('osCoMap missing')
-		return null
-	}
+	if (!osCoMap) return null
 
 	// Check if unknown colist already exists
 	const unknownColistId = osCoMap.get('unknown')
@@ -699,9 +635,7 @@ async function ensureFactoriesRegistry(peer) {
 					}
 				}
 			}
-		} catch (_e) {
-			if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(_e)
-		}
+		} catch (_e) {}
 
 		// If factoriesId exists but couldn't be loaded, DON'T create a new one
 		return null

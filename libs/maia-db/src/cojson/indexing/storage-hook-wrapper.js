@@ -271,8 +271,6 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 
 					// Check if this co-value should be indexed (skips internal co-values)
 					const { shouldIndex } = await shouldIndexCoValue(peer, updatedCoValueCore)
-					if (typeof process !== 'undefined' && process.env?.DEBUG)
-						console.log('[DEBUG storage-hook] coId=', coId, 'shouldIndex=', shouldIndex)
 					if (!shouldIndex) {
 						return
 					}
@@ -283,13 +281,7 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 						console.log('[DEBUG storage-hook] indexed coId=', coId)
 				} catch (error) {
 					const isFactoryCompilationError = error?.message?.includes('Failed to compile factory')
-					if (isFactoryCompilationError) {
-						// Legacy/invalid schemas in DB - skip logging (expected for stale data)
-						if (typeof process !== 'undefined' && process.env?.DEBUG)
-							console.error('[DEBUG storage-hook] indexing skipped (factory compile failed) coId=', coId)
-					} else {
-						if (typeof process !== 'undefined' && process.env?.DEBUG)
-							console.error('[DEBUG storage-hook] indexing failed coId=', coId, error)
+					if (!isFactoryCompilationError) {
 						console.error('[StorageHook] Indexing failed', coId, error)
 					}
 				} finally {

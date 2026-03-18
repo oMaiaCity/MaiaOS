@@ -5,12 +5,12 @@
  * Schema is REQUIRED - no fallbacks or defaults
  */
 
+import { getAllFactories } from '@MaiaOS/factories'
 import { loadFactoryAndValidate } from '@MaiaOS/factories/validation.helper'
 import {
-	assertFactoryValidForCreate,
 	createFactoryMeta,
 	EXCEPTION_FACTORIES,
-	getAllFactories,
+	FACTORY_REGISTRY,
 	isExceptionFactory,
 } from '../../factories/registry.js'
 
@@ -59,20 +59,25 @@ export async function createCoMap(
 		}
 		// If no profileId, accountOrGroup is a group - use as-is (group = accountOrGroup from line 27)
 	}
-	// Special case: @metaSchema (metaschema) uses hardcoded "@metaSchema" reference (no validation needed)
 	if (factoryName === EXCEPTION_FACTORIES.META_SCHEMA) {
-		const meta = { $factory: EXCEPTION_FACTORIES.META_SCHEMA }
-		return group.createMap(init, meta)
+		return group.createMap(init, { $factory: EXCEPTION_FACTORIES.META_SCHEMA })
 	}
-	assertFactoryValidForCreate(factoryName, 'createCoMap')
-
-	// Validate data against schema BEFORE creating CoValue
-	// STRICT: Always validate using runtime schema from database (no fallbacks, no legacy hacks)
+	if (!factoryName || typeof factoryName !== 'string') {
+		throw new Error('[createCoMap] Schema name is REQUIRED.')
+	}
+	if (
+		!isExceptionFactory(factoryName) &&
+		!factoryName.startsWith('co_z') &&
+		!(factoryName in FACTORY_REGISTRY)
+	) {
+		throw new Error(
+			`[createCoMap] Schema '${factoryName}' not found. Available: AccountFactory, ProfileFactory`,
+		)
+	}
 	if (!isExceptionFactory(factoryName)) {
-		// Use consolidated universal validation function (single source of truth)
 		await loadFactoryAndValidate(dbEngine?.peer || null, factoryName, init, 'createCoMap', {
 			dataEngine: dbEngine,
-			getAllFactories,
+			getAllFactories: () => ({ ...getAllFactories(), ...FACTORY_REGISTRY }),
 		})
 	}
 
