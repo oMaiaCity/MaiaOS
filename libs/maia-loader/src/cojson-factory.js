@@ -39,6 +39,7 @@ export async function createCoJSONAPI(node, account) {
 
 	// Set dbEngine on peer for runtime schema validation in create functions
 	peer.dbEngine = dataEngine
+	await dataEngine.resolveSystemFactories()
 
 	// Return API object
 	return {

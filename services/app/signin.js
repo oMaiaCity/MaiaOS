@@ -12,50 +12,40 @@
 let signinKeyHandler = null
 
 /**
+ * Show or hide loading overlay on sign-in screen.
+ * @param {boolean} loading - true to show spinner overlay, false to hide
+ */
+export function setSignInLoading(loading) {
+	const container = document.querySelector('.sign-in-container')
+	if (!container) return
+	let overlay = container.querySelector('.sign-in-loading-overlay')
+	if (loading) {
+		if (!overlay) {
+			overlay = document.createElement('div')
+			overlay.className = 'sign-in-loading-overlay'
+			overlay.innerHTML = `
+				<div class="loading-connecting-overlay">
+					<div class="loading-spinner"></div>
+					<div class="loading-connecting-content">
+						<div class="loading-connecting-subtitle">Authenticating…</div>
+					</div>
+				</div>
+			`
+			container.appendChild(overlay)
+		}
+		overlay.style.display = ''
+	} else if (overlay) {
+		overlay.style.display = 'none'
+	}
+}
+
+/**
  * Remove Enter key listener (call when navigating away from signin screen)
  */
 export function removeSigninKeyHandler() {
 	if (signinKeyHandler) {
 		document.removeEventListener('keydown', signinKeyHandler)
 		signinKeyHandler = null
-	}
-}
-
-/**
- * Set loading state on sign-in buttons. Disables all buttons and shows spinner on primary.
- * Call with true immediately on click; false restores (or re-render replaces DOM).
- * @param {boolean} loading
- */
-export function setSignInLoading(loading) {
-	const container = document.querySelector('.sign-in-container')
-	if (!container) return
-	const buttonsWrap = container.querySelector('.sign-in-buttons')
-	if (!buttonsWrap) return
-	const buttons = buttonsWrap.querySelectorAll('.btn')
-	const primaryBtn = buttonsWrap.querySelector('.btn-solid-water')
-	if (loading) {
-		buttons.forEach((btn) => {
-			btn.disabled = true
-			btn.classList.add('loading')
-		})
-		if (primaryBtn && !primaryBtn.dataset.originalText) {
-			primaryBtn.dataset.originalText = primaryBtn.innerHTML
-			primaryBtn.innerHTML = `
-				<span class="btn-spinner" aria-hidden="true"></span>
-				<span>Authenticating…</span>
-			`
-		}
-		container.classList.add('fading')
-	} else {
-		buttons.forEach((btn) => {
-			btn.disabled = false
-			btn.classList.remove('loading')
-		})
-		if (primaryBtn?.dataset.originalText) {
-			primaryBtn.innerHTML = primaryBtn.dataset.originalText
-			delete primaryBtn.dataset.originalText
-		}
-		container.classList.remove('fading')
 	}
 }
 
@@ -167,9 +157,12 @@ export function renderSignInPrompt(hasExistingAccount, viewMode, showTestAven = 
 	}
 	document.addEventListener('keydown', signinKeyHandler)
 
-	// Focus name input when in signup mode
+	// Focus name input when in signup mode (double rAF avoids forced reflow: first frame paints, second focuses)
 	if (isSignupMode) {
-		requestAnimationFrame(() => document.getElementById('signin-first-name')?.focus())
+		const input = document.getElementById('signin-first-name')
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => input?.focus())
+		})
 	}
 }
 

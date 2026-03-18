@@ -930,7 +930,10 @@ export class ViewEngine {
 		let payloadToValidate = payload
 		if (hasBinaryPayload && this.dataEngine) {
 			const eventFactory = actor?.interfaceFactory?.properties?.[eventName]
-			const blobRefKey = eventFactory?.required?.[0] ?? eventFactory?.$blobRefKey ?? 'coId'
+			const blobRefKey =
+				(Array.isArray(eventFactory?.required) && eventFactory.required[0]) ||
+				eventFactory?.$blobRefKey ||
+				'avatar'
 			const result = await this.dataEngine.execute({
 				op: 'uploadToCoBinary',
 				file: payload.file,
@@ -939,7 +942,12 @@ export class ViewEngine {
 					this.actorOps?.reportUploadProgress?.(actorId, loaded, total, phase),
 			})
 			const data = result?.ok === true ? result.data : result
-			payloadToValidate = { [blobRefKey]: data?.coId, mimeType: data?.mimeType }
+			const coId = data?.coId ?? data?.id
+			if (!coId || typeof coId !== 'string') {
+				console.warn('[ViewEngine] Upload completed but no co-id returned:', { result, data })
+				return
+			}
+			payloadToValidate = { [blobRefKey]: coId, mimeType: data?.mimeType ?? payload?.mimeType }
 		} else if (payloadToValidate && typeof payloadToValidate === 'object') {
 			payloadToValidate = normalizeCoValueData(payloadToValidate)
 			payloadToValidate = sanitizePayloadForValidation(payloadToValidate)

@@ -8,7 +8,12 @@ import * as groups from '../../cojson/groups/groups.js'
 import { bootstrapAccountRegistries, bootstrapAndScaffold } from './bootstrap.js'
 import { seedConfigs } from './configs.js'
 import { seedData } from './data.js'
-import { buildMetaFactoryForSeeding, ensureSparkOs, removeIdFields } from './helpers.js'
+import {
+	buildMetaFactoryForSeeding,
+	ensureSparkOs,
+	removeIdFields,
+	sortSchemasByDependency,
+} from './helpers.js'
 import { storeRegistry } from './store-registry.js'
 
 const MAIA_SPARK = '°Maia'
@@ -17,17 +22,14 @@ const REFERENCE_PROPS = [
 	'actor',
 	'context',
 	'view',
-	'state',
 	'process',
 	'brand',
 	'style',
 	'inbox',
-	'subscribers',
-	'tool',
 	'interface',
 	'wasm',
 ]
-const NESTED_REF_PROPS = ['states']
+const NESTED_REF_PROPS = []
 
 export async function simpleAccountSeed(_account, _node) {
 	console.log('✅ Simple account seed: (registries via link)')
@@ -78,44 +80,7 @@ export async function seed(
 		if (!uniqueSchemasBy$id.has(key)) uniqueSchemasBy$id.set(key, { name, schema })
 	}
 
-	const findCoReferences = (obj, visited = new Set()) => {
-		if (!obj || typeof obj !== 'object' || visited.has(obj)) return new Set()
-		visited.add(obj)
-		const refs = new Set()
-		if (obj.$co && typeof obj.$co === 'string' && obj.$co.startsWith('°Maia/factory/'))
-			refs.add(obj.$co)
-		for (const v of Object.values(obj)) {
-			if (v && typeof v === 'object') {
-				for (const item of Array.isArray(v) ? v : [v]) {
-					if (item && typeof item === 'object') {
-						for (const r of findCoReferences(item, visited)) refs.add(r)
-					}
-				}
-			}
-		}
-		return refs
-	}
-	const factoryDependencies = new Map()
-	for (const [factoryKey, { schema }] of uniqueSchemasBy$id) {
-		factoryDependencies.set(factoryKey, findCoReferences(schema))
-	}
-
-	const sortedFactoryKeys = []
-	const processed = new Set()
-	const processing = new Set()
-	const visitFactory = (factoryKey) => {
-		if (processed.has(factoryKey) || processing.has(factoryKey)) return
-		processing.add(factoryKey)
-		for (const dep of factoryDependencies.get(factoryKey) || []) {
-			if (dep.startsWith('°Maia/factory/') && uniqueSchemasBy$id.has(dep)) visitFactory(dep)
-		}
-		processing.delete(factoryKey)
-		processed.add(factoryKey)
-		sortedFactoryKeys.push(factoryKey)
-	}
-	for (const factoryKey of uniqueSchemasBy$id.keys()) {
-		if (factoryKey !== '°Maia/factory/meta') visitFactory(factoryKey)
-	}
+	const sortedFactoryKeys = sortSchemasByDependency(uniqueSchemasBy$id)
 
 	await ensureSparkOs(account, node, maiaGroup, peer, undefined)
 
@@ -329,6 +294,7 @@ export async function seed(
 	}
 
 	const seededConfigs = { configs: [], count: 0 }
+
 	const transformSchemaRefsOnly = (instance, schemaRegistry) => {
 		if (!instance || typeof instance !== 'object') return instance
 		const transformed = JSON.parse(JSON.stringify(instance))
@@ -341,15 +307,7 @@ export async function seed(
 			}
 		}
 		for (const prop of REFERENCE_PROPS) delete transformed[prop]
-		for (const prop of NESTED_REF_PROPS) {
-			if (prop === 'states' && transformed.initial) {
-				transformed.states = Object.fromEntries(
-					Object.keys(transformed.states || {}).map((k) => [k, {}]),
-				)
-			} else {
-				delete transformed[prop]
-			}
-		}
+		for (const prop of NESTED_REF_PROPS) delete transformed[prop]
 		return transformed
 	}
 
@@ -396,16 +354,12 @@ export async function seed(
 	const CONFIG_ORDER = [
 		['styles', 'styles'],
 		['inboxes', 'inboxes'],
-		['tools', 'tools'],
 		['processes', 'processes'],
 		['interfaces', 'interfaces'],
 		['wasms', 'wasms'],
 		['actors', 'actors'],
 		['views', 'views'],
 		['contexts', 'contexts'],
-		['states', 'states'],
-		['subscriptions', 'subscriptions'],
-		['children', 'children'],
 	]
 
 	if (configs) {
@@ -430,10 +384,8 @@ export async function seed(
 				: null
 			if (!originalConfig) continue
 			const fullyTransformed = transformForSeeding(originalConfig, latestRegistry)
-			// Post-transform validation: actor configs must have co-ids for process, context, view, wasm
 			if (configInfo.type === 'actor') {
-				const refProps = ['process', 'context', 'view', 'interface', 'wasm']
-				for (const prop of refProps) {
+				for (const prop of ['process', 'context', 'view', 'interface', 'wasm']) {
 					const val = fullyTransformed[prop]
 					if (val && typeof val === 'string' && !val.startsWith('co_z')) {
 						throw new Error(
@@ -453,7 +405,6 @@ export async function seed(
 				updatedCount++
 			} else if (coValue?.set) {
 				const { $id, $factory, ...propsToSet } = fullyTransformed
-				// wasm.code is CoText (co-id ref) - seeded by seedWasmConfigs, never overwrite with raw string
 				if (configInfo.type === 'wasm') delete propsToSet.code
 				for (const [key, value] of Object.entries(propsToSet)) coValue.set(key, value)
 				updatedCount++
@@ -464,16 +415,12 @@ export async function seed(
 
 	if (configs) {
 		const updateOrder = [
-			['subscription', 'subscriptions'],
 			['inbox', 'inboxes'],
-			['children', 'children'],
-			['tool', 'tools'],
 			['wasm', 'wasms'],
 			['actor', 'actors'],
 			['view', 'views'],
 			['context', 'contexts'],
 			['process', 'processes'],
-			['state', 'states'],
 			['interface', 'interfaces'],
 		]
 		for (const [type, prop] of updateOrder) {
@@ -580,20 +527,6 @@ export async function seed(
 		configs || {},
 		seededSchemas,
 	)
-
-	const { indexCoValue } = await import('../../cojson/indexing/factory-index-manager.js')
-	const allSeededCoIds = [
-		...(seededConfigs.configs || []).map((c) => c.coId).filter(Boolean),
-		...(seededData.coIds || []),
-	]
-	for (const coId of allSeededCoIds) {
-		if (coId?.startsWith?.('co_z')) {
-			try {
-				if (peer.node?.loadCoValueCore) await peer.node.loadCoValueCore(coId).catch(() => {})
-				await indexCoValue(peer, coId)
-			} catch (_e) {}
-		}
-	}
 
 	return {
 		metaSchema: metaSchemaCoId,

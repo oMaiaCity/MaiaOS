@@ -11,6 +11,7 @@
 		"./factory-transformer": "./src/factory-transformer.js",
 		"./expression-resolver": "./src/expression-resolver.js",
 		"./payload-resolver": "./src/payload-resolver.js",
+		"./seeding-utils": "./src/seeding-utils.js",
 		"./co-types.defs.json": "./src/co-types.defs.json",
 		"./os/meta.factory.json": "./src/os/meta.factory.json",
 		"./operation-result": "./src/operation-result.js"

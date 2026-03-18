@@ -3,6 +3,62 @@
  */
 
 import mergedMetaSchema from '@MaiaOS/factories/os/meta.factory.json'
+
+/**
+ * Find all °Maia/factory/ references in an object (recursive).
+ * @param {Object} obj - Schema or instance object
+ * @param {Set} [visited] - Visited objects (cycle detection)
+ * @returns {Set<string>} Set of factory ref strings
+ */
+function findCoReferences(obj, visited = new Set()) {
+	if (!obj || typeof obj !== 'object' || visited.has(obj)) return new Set()
+	visited.add(obj)
+	const refs = new Set()
+	if (obj.$co && typeof obj.$co === 'string' && obj.$co.startsWith('°Maia/factory/'))
+		refs.add(obj.$co)
+	for (const v of Object.values(obj)) {
+		if (v && typeof v === 'object') {
+			for (const item of Array.isArray(v) ? v : [v]) {
+				if (item && typeof item === 'object') {
+					for (const r of findCoReferences(item, visited)) refs.add(r)
+				}
+			}
+		}
+	}
+	return refs
+}
+
+/**
+ * Topologically sort schema keys by dependency ($co references).
+ * @param {Map<string, { name, schema }>} uniqueSchemasBy$id - Map of factory key -> { name, schema }
+ * @param {string[]} [excludeKeys] - Keys to exclude from sort (e.g. ['°Maia/factory/meta'])
+ * @returns {string[]} Sorted array of factory keys
+ */
+export function sortSchemasByDependency(uniqueSchemasBy$id, excludeKeys = ['°Maia/factory/meta']) {
+	const deps = new Map()
+	for (const [key, { schema }] of uniqueSchemasBy$id) {
+		deps.set(key, findCoReferences(schema))
+	}
+	const sorted = []
+	const done = new Set()
+	const doing = new Set()
+	const visit = (key) => {
+		if (done.has(key) || excludeKeys.includes(key)) return
+		if (doing.has(key)) return
+		doing.add(key)
+		for (const d of deps.get(key) || []) {
+			if (d.startsWith('°Maia/factory/') && uniqueSchemasBy$id.has(d)) visit(d)
+		}
+		doing.delete(key)
+		done.add(key)
+		sorted.push(key)
+	}
+	for (const key of uniqueSchemasBy$id.keys()) {
+		visit(key)
+	}
+	return sorted
+}
+
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import * as groups from '../../cojson/groups/groups.js'
 import { ensureIndexesCoMap } from '../../cojson/indexing/factory-index-manager.js'

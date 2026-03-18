@@ -23,7 +23,7 @@
 			"required": [
 				"avatar"
 			],
-			"additionalProperties": false
+			"additionalProperties": true
 		}
 	},
 	"additionalProperties": false

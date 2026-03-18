@@ -231,6 +231,23 @@ h1 em,
 	}
 }
 
+/* Sign-in loading overlay (spinner during auth) */
+.sign-in-loading-overlay {
+	position: absolute;
+	inset: 0;
+	z-index: 10;
+	border-radius: inherit;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.sign-in-loading-overlay .loading-connecting-overlay {
+	position: absolute;
+	inset: 0;
+	border-radius: inherit;
+}
+
 /* Sign-in fadeout during auth transition */
 .sign-in-container.fading {
 	opacity: 0.6;
