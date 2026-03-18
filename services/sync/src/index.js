@@ -893,6 +893,19 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 			)
 		}
 
+		if (peerSyncSeed) {
+			// Only auto-clear for PGlite (localhost). Postgres/Tigris: reset manually.
+			if (usePGlite) {
+				const { clearStorageForReseed } = await import('@MaiaOS/storage/clearStorageForReseed')
+				await clearStorageForReseed({ dbPath, usePostgres: false })
+				console.log('[sync] Storage cleared for reseed (DB + binary).')
+			} else {
+				console.log(
+					'[sync] PEER_SYNC_SEED=true with Postgres/Tigris: reset DB and blob manually. Skipping auto-clear.',
+				)
+			}
+		}
+
 		const maiaNameRaw = process.env.AVEN_MAIA_NAME || 'Maia'
 		const maiaName = maiaNameRaw.startsWith('Aven ') ? maiaNameRaw : `Aven ${maiaNameRaw}`
 		const result = await loadOrCreateAgentAccount({

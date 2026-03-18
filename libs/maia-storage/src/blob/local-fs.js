@@ -6,7 +6,7 @@
  * @implements {import('./interface.js').BlobStore}
  */
 
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, rm, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import { BLOB_PREFIX } from './interface.js'
 
@@ -46,5 +46,11 @@ export class LocalFsBlobStore {
 		} catch {
 			return false
 		}
+	}
+
+	async clear() {
+		await this._ready
+		await rm(this.chunksDir, { recursive: true, force: true })
+		await mkdir(this.chunksDir, { recursive: true })
 	}
 }
