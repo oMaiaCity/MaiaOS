@@ -4,12 +4,14 @@
 	"workspaces": [
 		"services/app",
 		"services/sync",
+		"services/game",
 		"libs/*"
 	],
 	"type": "module",
 	"scripts": {
 		"dev": "bun --silent scripts/dev.js",
 		"dev:app": "bun scripts/dev-app.js",
+		"dev:game": "bun scripts/dev-game.js",
 		"dev:sync": "bun scripts/dev-sync.js",
 		"deploy": "./scripts/deploy-all.sh",
 		"deploy:app": "cd services/app && ./deploy.sh",

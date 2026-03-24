@@ -1,0 +1,14 @@
+{
+	"name": "@MaiaOS/game-service",
+	"version": "26.0318.2107",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "bun dev-server.js",
+		"build": "bun build.js",
+		"start": "bun server.js"
+	},
+	"dependencies": {
+		"@MaiaOS/game": "workspace:*"
+	}
+}

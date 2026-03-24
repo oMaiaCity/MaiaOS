@@ -20,8 +20,6 @@ import {
 	updateSyncState,
 } from '@MaiaOS/loader'
 import { renderApp } from './db-view.js'
-// Three.js grid: see ./maia-game-mount.js — route disabled; restore import + block below to enable /the-game
-// import { disposeGame, renderGame } from './maia-game-mount.js'
 import { renderLandingPage } from './landing.js'
 import { disposeGlobalAI, initGlobalAI, setFabVisible, updateNavLeft } from './maia-ai-global.js'
 import {
@@ -139,10 +137,6 @@ function redirectIfSignedIn() {
 async function handleRoute() {
 	const path = window.location.pathname
 
-	// if (path !== '/the-game') {
-	// 	disposeGame()
-	// }
-
 	if (path === '/signin' || path === '/signup') {
 		setFabVisible(false)
 		if (redirectIfSignedIn()) return
@@ -188,18 +182,6 @@ async function handleRoute() {
 			return
 		}
 		navigateTo('/signin')
-		return
-	}
-
-	// if (path === '/the-game') {
-	// 	removeSigninKeyHandler()
-	// 	setFabVisible(false)
-	// 	renderGame()
-	// 	return
-	// }
-
-	if (path === '/the-game') {
-		navigateTo('/')
 		return
 	}
 

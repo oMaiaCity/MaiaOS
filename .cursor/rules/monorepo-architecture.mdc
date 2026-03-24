@@ -230,7 +230,8 @@ Each service in the monorepo has a **hardcoded development port** to avoid confl
 |---------|------|-------|
 | `services/app` | `4200` | Frontend SPA (default `bun dev`) |
 | `services/sync` | `4201` | Unified sync (WebSocket + agent API + LLM proxy) |
-| `4202-4210` | Reserved | |
+| `services/game` | `4202` | City builder game SPA (`bun run dev:game`; root `/`) |
+| `4203-4210` | Reserved | |
 
 **Configuration:**
 - Ports are configured in each service's dev script or server configuration

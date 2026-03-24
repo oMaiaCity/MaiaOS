@@ -73,3 +73,6 @@ libs/maia-distros/output/
 
 # maia-vibes dist (build output, not used in dev - we use source)
 libs/maia-vibes/dist/
+
+# Cursor / agent skills local lock (optional tooling output)
+skills-lock.json

@@ -17,7 +17,7 @@
     },
     "libs/maia-actors": {
       "name": "@MaiaOS/actors",
-      "version": "26.318.1647",
+      "version": "26.318.2107",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/engines": "workspace:*",
@@ -27,7 +27,7 @@
     },
     "libs/maia-ai": {
       "name": "@MaiaOS/maia-ai",
-      "version": "26.318.1647",
+      "version": "26.318.2107",
       "dependencies": {
         "@runanywhere/web": "0.1.0-beta.10",
         "@runanywhere/web-onnx": "0.1.0-beta.10",
@@ -35,11 +35,11 @@
     },
     "libs/maia-brand": {
       "name": "@MaiaOS/brand",
-      "version": "26.318.1647",
+      "version": "26.318.2107",
     },
     "libs/maia-db": {
       "name": "@MaiaOS/db",
-      "version": "26.318.1647",
+      "version": "26.318.2107",
       "dependencies": {
         "@MaiaOS/factories": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
@@ -51,7 +51,7 @@
     },
     "libs/maia-distros": {
       "name": "@MaiaOS/maia-distros",
-      "version": "26.318.1647",
+      "version": "26.318.2107",
       "dependencies": {
         "@MaiaOS/actors": "workspace:*",
         "@MaiaOS/db": "workspace:*",
@@ -65,7 +65,7 @@
     },
     "libs/maia-engines": {
       "name": "@MaiaOS/engines",
-      "version": "26.318.1647",
+      "version": "26.318.2107",
       "dependencies": {
         "@MaiaOS/actors": "workspace:*",
         "@MaiaOS/db": "workspace:*",
@@ -83,7 +83,7 @@
     },
     "libs/maia-factories": {
       "name": "@MaiaOS/factories",
-      "version": "26.318.1647",
+      "version": "26.318.2107",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "ajv": "^8.12.0",
@@ -92,18 +92,18 @@
     },
     "libs/maia-game": {
       "name": "@MaiaOS/game",
-      "version": "26.318.1647",
+      "version": "26.318.2107",
       "dependencies": {
         "three": "^0.170.0",
       },
     },
     "libs/maia-language": {
       "name": "@maia/language",
-      "version": "26.318.1647",
+      "version": "26.318.2107",
     },
     "libs/maia-loader": {
       "name": "@MaiaOS/loader",
-      "version": "26.318.1647",
+      "version": "26.318.2107",
       "dependencies": {
         "@MaiaOS/actors": "workspace:*",
         "@MaiaOS/db": "workspace:*",
@@ -117,7 +117,7 @@
     },
     "libs/maia-peer": {
       "name": "@MaiaOS/peer",
-      "version": "26.318.1647",
+      "version": "26.318.2107",
       "dependencies": {
         "@MaiaOS/storage": "workspace:*",
         "cojson": "0.20.14",
@@ -126,7 +126,7 @@
     },
     "libs/maia-self": {
       "name": "@MaiaOS/self",
-      "version": "26.318.1647",
+      "version": "26.318.2107",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
@@ -136,7 +136,7 @@
     },
     "libs/maia-storage": {
       "name": "@MaiaOS/storage",
-      "version": "26.318.1647",
+      "version": "26.318.2107",
       "dependencies": {
         "@aws-sdk/client-s3": "^3.1011.0",
         "@electric-sql/pglite": "latest",
@@ -148,7 +148,7 @@
     },
     "libs/maia-ucan": {
       "name": "@MaiaOS/maia-ucan",
-      "version": "26.318.1647",
+      "version": "26.318.2107",
       "dependencies": {
         "@noble/ed25519": "^2.1.0",
         "@noble/hashes": "^1.4.0",
@@ -157,7 +157,7 @@
     },
     "libs/maia-vibes": {
       "name": "@MaiaOS/vibes",
-      "version": "26.318.1647",
+      "version": "26.318.2107",
       "dependencies": {
         "@MaiaOS/factories": "workspace:*",
         "@MaiaOS/loader": "workspace:*",
@@ -165,17 +165,23 @@
     },
     "services/app": {
       "name": "@MaiaOS/app",
-      "version": "26.318.1647",
+      "version": "26.318.2107",
       "dependencies": {
-        "@MaiaOS/game": "workspace:*",
         "@MaiaOS/loader": "workspace:*",
         "@MaiaOS/maia-ai": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
       },
     },
+    "services/game": {
+      "name": "@MaiaOS/game-service",
+      "version": "26.318.2107",
+      "dependencies": {
+        "@MaiaOS/game": "workspace:*",
+      },
+    },
     "services/sync": {
       "name": "@MaiaOS/sync",
-      "version": "26.318.1647",
+      "version": "26.318.2107",
       "dependencies": {
         "@MaiaOS/loader": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
@@ -201,6 +207,8 @@
     "@MaiaOS/factories": ["@MaiaOS/factories@workspace:libs/maia-factories"],
 
     "@MaiaOS/game": ["@MaiaOS/game@workspace:libs/maia-game"],
+
+    "@MaiaOS/game-service": ["@MaiaOS/game-service@workspace:services/game"],
 
     "@MaiaOS/loader": ["@MaiaOS/loader@workspace:libs/maia-loader"],
 
@@ -1226,7 +1234,7 @@
 
     "yargs-parser": ["yargs-parser@21.1.1", "", {}, "sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw=="],
 
-    "@MaiaOS/storage/@electric-sql/pglite": ["@electric-sql/pglite@0.4.0", "", {}, "sha512-NBs9e2XwW0+pzUVNqsIRe+VOrP36zfJexI6EBuiPSn/6AcwQ/QE88QtbRfRNFJINqSagH7Rpn5e3Q7NypsVYWg=="],
+    "@MaiaOS/storage/@electric-sql/pglite": ["@electric-sql/pglite@0.4.1", "", {}, "sha512-mZ9NzzUSYPOCnxHH1oAHPRzoMFJHY472raDKwXl/+6oPbpdJ7g8LsCN4FSaIIfkiCKHhb3iF/Zqo3NYxaIhU7Q=="],
 
     "@MaiaOS/storage/@noble/hashes": ["@noble/hashes@2.0.1", "", {}, "sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw=="],
 
