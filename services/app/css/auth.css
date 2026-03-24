@@ -1,15 +1,8 @@
-/* Typography Glows */
-h1,
-.landing-hook {
-	text-shadow: 0 0 30px rgba(232, 225, 217, 0.2);
-}
-
+/* Typography */
 h1 em,
 .landing-hook em {
 	font-style: italic;
 	font-weight: 400;
-	color: var(--color-tinted-white);
-	text-shadow: 0 0 30px rgba(240, 237, 230, 0.3);
 }
 
 .sign-in-container {
@@ -19,36 +12,21 @@ h1 em,
 	justify-content: center;
 	padding: 2rem;
 	position: relative;
-	background-image: url("../brand/images/banner.png");
-	background-size: cover;
-	background-position: center;
-	background-attachment: fixed;
+	background: var(--color-foundation);
 	container-type: inline-size;
-}
-
-.sign-in-container::before {
-	content: "";
-	position: absolute;
-	inset: 0;
-	background: rgba(0, 0, 0, 0.4); /* Standard Atmospheric Depth */
-	z-index: 0;
 }
 
 .sign-in-content {
 	position: relative;
 	z-index: 1;
-	background: rgba(255, 255, 255, 0.0005); /* Liquid Glass Membrane v6 */
-	backdrop-filter: blur(8px) saturate(150%) contrast(101%);
-	-webkit-backdrop-filter: blur(8px) saturate(150%) contrast(101%);
-	border: 1px solid rgba(255, 255, 255, 0.05);
-	border-radius: 18px; /* Apple Standard Radius */
+	background: var(--color-tinted-white);
+	border: 1px solid var(--color-sage);
+	border-radius: var(--radius-soft);
 	padding: 4rem;
 	max-width: 540px;
 	width: 100%;
 	text-align: center;
-	box-shadow:
-		0 10px 40px rgba(0, 0, 0, 0.15),
-		inset 0 1px 1px 0 rgba(255, 255, 255, 0.05);
+	box-shadow: 0 4px 24px rgba(78, 91, 68, 0.12);
 	transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
@@ -73,18 +51,16 @@ h1 em,
 .sign-in-logo {
 	height: 80px;
 	width: auto;
-	filter: drop-shadow(0 0 15px rgba(0, 189, 214, 0.4)); /* Paradise Water Glow */
 }
 
 .sign-in-content h1 {
 	font-family: "Indie Flower", var(--font-heading), cursive;
 	font-size: 3.5rem;
-	color: var(--color-soft-clay);
+	color: var(--color-forest);
 	line-height: 0.9;
 	margin-bottom: 1.5rem;
 	font-weight: 400;
 	font-style: normal;
-	text-shadow: 0 0 30px rgba(232, 225, 217, 0.2);
 }
 
 .sign-in-content h1 span:first-child {
@@ -96,8 +72,8 @@ h1 em,
 	letter-spacing: 0.15em;
 	text-transform: none;
 	margin-bottom: 1rem;
-	color: var(--color-soft-clay);
-	text-shadow: 0 0 15px rgba(232, 225, 217, 0.5);
+	color: var(--color-forest);
+	opacity: 0.85;
 }
 
 .h1-main-text {
@@ -106,7 +82,7 @@ h1 em,
 	font-style: normal;
 	font-weight: 400;
 	font-size: 5rem;
-	color: var(--color-tinted-white);
+	color: var(--color-charcoal);
 	text-transform: none;
 }
 
@@ -121,7 +97,7 @@ h1 em,
 	font-weight: var(--font-weight-normal);
 	font-style: normal;
 	font-size: 1.1rem;
-	color: var(--color-soft-clay);
+	color: var(--color-forest);
 	margin-bottom: 3.5rem;
 	opacity: 0.9;
 	line-height: 1.4;
@@ -130,7 +106,7 @@ h1 em,
 .sign-in-description {
 	font-family: var(--font-body);
 	font-size: 1.1rem;
-	color: var(--color-soft-clay);
+	color: var(--color-forest);
 	margin-bottom: 3rem;
 	line-height: 1.6;
 	opacity: 0.8;
@@ -146,7 +122,7 @@ h1 em,
 	font-family: var(--font-body);
 	font-size: 0.9rem;
 	font-weight: 600;
-	color: var(--color-soft-clay);
+	color: var(--color-forest);
 	margin-bottom: 0.5rem;
 	letter-spacing: 0.02em;
 }
@@ -156,9 +132,9 @@ h1 em,
 	padding: 0.9rem 1.2rem;
 	font-family: var(--font-body);
 	font-size: 1rem;
-	color: var(--color-soft-clay);
-	background: rgba(255, 255, 255, 0.08);
-	border: 1px solid rgba(255, 255, 255, 0.12);
+	color: var(--color-charcoal);
+	background: var(--color-foundation);
+	border: 1px solid var(--color-sage);
 	border-radius: 10px;
 	outline: none;
 	transition:
@@ -168,13 +144,13 @@ h1 em,
 }
 
 .sign-in-first-name-input::placeholder {
-	color: var(--color-soft-clay);
-	opacity: 0.6;
+	color: var(--color-forest);
+	opacity: 0.5;
 }
 
 .sign-in-first-name-input:focus {
 	border-color: var(--color-paradise-water);
-	background: rgba(255, 255, 255, 0.1);
+	background: var(--color-tinted-white);
 }
 
 .sign-in-buttons {
@@ -193,7 +169,7 @@ h1 em,
 	margin-top: 1rem;
 	font-family: var(--font-body);
 	font-size: 0.9rem;
-	color: var(--color-soft-clay);
+	color: var(--color-forest);
 	opacity: 0.75;
 	text-decoration: none;
 	letter-spacing: 0.08em;
@@ -203,7 +179,7 @@ h1 em,
 }
 .sign-in-swap-link:hover {
 	opacity: 1;
-	color: var(--color-tinted-white);
+	color: var(--color-charcoal);
 }
 
 /* Button loading state - instant feedback on auth click */
@@ -254,7 +230,7 @@ h1 em,
 	transition: opacity 0.25s ease-out;
 }
 
-/* Landing Page Adaptations */
+/* Landing Page Adaptations – used by auth flow */
 .landing-container {
 	min-height: 100vh;
 	display: flex;
@@ -262,19 +238,8 @@ h1 em,
 	justify-content: center;
 	padding: 2rem;
 	position: relative;
-	background-image: url("../brand/images/banner.png");
-	background-size: cover;
-	background-position: center;
-	background-attachment: fixed;
+	background: var(--color-foundation);
 	container-type: inline-size;
-}
-
-.landing-container::before {
-	content: "";
-	position: absolute;
-	inset: 0;
-	background: rgba(0, 0, 0, 0.4);
-	z-index: 0;
 }
 
 .landing-content {
@@ -291,19 +256,17 @@ h1 em,
 .landing-hook {
 	font-family: "Indie Flower", var(--font-heading), cursive;
 	font-size: clamp(2.5rem, 8vw, 5rem);
-	color: var(--color-soft-clay);
+	color: var(--color-forest);
 	line-height: 0.9;
 	margin-bottom: 2.5rem;
 	font-weight: 400;
 	font-style: normal;
-	text-shadow: 0 0 30px rgba(232, 225, 217, 0.2);
 }
 
 .landing-subheadline-card {
-	background: rgba(255, 255, 255, 0.15); /* Underwriting Glass */
-	backdrop-filter: blur(12px) saturate(140%);
-	-webkit-backdrop-filter: blur(12px) saturate(140%);
-	border-radius: 4px;
+	background: var(--color-sand);
+	border: 1px solid var(--color-sage);
+	border-radius: var(--radius);
 	padding: 1.5rem 2.5rem;
 	margin-bottom: 3.5rem;
 }
@@ -311,15 +274,15 @@ h1 em,
 .landing-subheadline {
 	font-family: var(--font-body);
 	font-size: 1.2rem;
-	color: var(--color-tinted-white);
+	color: var(--color-forest);
 	font-weight: var(--font-weight-normal);
 	line-height: 1.6;
 	margin: 0;
 }
 
 .landing-cta {
-	background: var(--color-paradise-water);
-	color: var(--color-water-text);
+	background: var(--color-forest);
+	color: var(--color-green-text);
 	padding: 1.2rem 3.5rem;
 	border-radius: 9999px;
 	font-family: var(--font-body);
@@ -327,12 +290,13 @@ h1 em,
 	font-size: 0.9rem;
 	letter-spacing: 0.05em;
 	text-transform: uppercase;
+	text-decoration: none;
 	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-	box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+	box-shadow: 0 4px 16px rgba(78, 91, 68, 0.2);
 }
 
 .landing-cta:hover {
 	transform: translateY(-2px);
-	filter: brightness(1.1);
-	box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+	background: var(--color-charcoal);
+	box-shadow: 0 6px 24px rgba(78, 91, 68, 0.3);
 }

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-    <title>Maia City - where vision is reality</title>
+    <title>Maia City – The Game</title>
     
     <!-- Favicons -->
     <link rel="icon" type="image/svg+xml" href="/brand/favicon/favicon.svg" />
@@ -13,7 +13,7 @@
     
     <!-- Web App Manifest -->
     <link rel="manifest" href="/brand/favicon/site.webmanifest" />
-    <meta name="theme-color" content="#e3e9ec" />
+    <meta name="theme-color" content="#f8f7f2" />
     
     <link rel="stylesheet" href="/style.css" />
   </head>
@@ -21,17 +21,6 @@
     <div class="bg-foundation"></div>
     <div class="bg-overlay"></div>
     <div id="app"></div>
-    
-    <!-- Liquid Glass SVG Filter -->
-    <svg style="visibility: hidden; position: absolute;" width="0" height="0" xmlns="http://www.w3.org/2000/svg" version="1.1">
-      <defs>
-        <filter id="glass-blur">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="10" result="blur" />
-          <feColorMatrix in="blur" mode="matrix" values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 19 -9" result="glass" />
-          <feComposite in="SourceGraphic" in2="glass" operator="atop" />
-        </filter>
-      </defs>
-    </svg>
 
     <script type="module" src="/main.js"></script>
   </body>

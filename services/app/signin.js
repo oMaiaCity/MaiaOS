@@ -91,11 +91,8 @@ export function renderSignInPrompt(hasExistingAccount, viewMode, showTestAven = 
 
 	document.getElementById('app').innerHTML = `
 		<div class="sign-in-container">
-			<div class="sign-in-content liquid-glass">
-				<div class="liquid-glass--bend"></div>
-				<div class="liquid-glass--face"></div>
-				<div class="liquid-glass--edge"></div>
-				<div class="sign-in-inner liquid-glass-inner">
+			<div class="sign-in-content">
+				<div class="sign-in-inner">
 					<div class="logo-container">
 						<img src="/brand/logo.svg" alt="Maia City" class="sign-in-logo" />
 					</div>

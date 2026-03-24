@@ -1,60 +1,35 @@
 :root {
-	/* Brand Colors - Inspired by Paradise Water and Nature */
-	--brand-green: #4ca661;
-	--brand-water: #00d2ff;
-	--brand-earth: #8b5e3c;
-	--brand-yellow: #ffb703;
-	--brand-red: #ef4444;
-
-	/* Design System Brand Colors */
-	--color-lush-green: #4e9a58;
-	--color-marine-blue: #001f33;
-	--color-marine-blue-muted: #2d4a5c;
-	--color-marine-blue-light: #5e7a8c;
-	--color-paradise-water: #00bdd6;
-	--color-soft-clay: #e8e1d9;
+	/* Radical Solarpunk Manifesto – Ink & Paper Palette */
+	--color-foundation: #fdfcf0; /* Sun-drenched high-quality paper */
+	--color-ink: #1b2b1b; /* Deep, architectural forest-ink */
+	--color-blueprint: #a8b5a2; /* Sage blueprint lines */
+	--color-spark: #d9b061; /* Golden ochre spark */
+	--color-sand: #e2d1b3;
+	--color-charcoal: #1b2b1b;
 	--color-terracotta: #c27b66;
-	--color-sun-yellow: #e6b94d;
-	--color-sun-yellow-text: #5c4314;
-	--color-tinted-white: #f0ede6;
 
-	/* Typography */
-	--font-heading: "Indie Flower", cursive;
+	/* Semantic aliases */
+	--color-forest: var(--color-ink);
+	--color-marine-blue: var(--color-ink);
+	--color-marine-blue-muted: #3d4a52;
+	--color-marine-blue-light: #5e7a8c;
+	--color-paradise-water: #4fbfa5;
+	--color-soft-clay: var(--color-sand);
+	--color-sun-yellow: var(--color-spark);
+	--color-sun-yellow-text: #5c4314;
+	--color-tinted-white: #fdfcf0;
+
+	/* Typography – Architectural meets Raw Craft */
+	--font-heading: "Plus Jakarta Sans", sans-serif; /* Massive architectural sans */
+	--font-hand: "Indie Flower", cursive; /* Raw, hand-annotated notes */
 	--font-body: "Plus Jakarta Sans", sans-serif;
-	/* Optical alignment: Indie Flower renders high; nudge down when vertically centered (e.g. navbar) */
-	--font-heading-optical-shift: 4px;
+	--font-heading-optical-shift: 0px;
 	--font-weight-normal: 300;
+	--font-weight-bold: 700;
 	--font-weight-label: 600;
 
-	/* Button Text Colors (Tone-on-Tone) */
-	--color-marine-text: #d1e8f7;
-	--color-water-text: #004d59;
-	--color-green-text: #f0f9f1;
-	--color-terracotta-text: #fdf2ef;
-	--color-yellow-text: #4d3810;
-
-	/* Liquid Glass Config */
-	--glass-border: rgba(255, 255, 255, 0.25);
-	--glass-shadow: 0 12px 40px 0 rgba(0, 0, 0, 0.15);
-
-	/* Text Styles */
-	--text-pure-white: #ffffff;
-	--text-welcome: #fdfcf0; /* Super light cream */
-	--text-primary: #f8f9fa;
-	--text-accent: #ede6d9; /* Earthy cream */
-
-	--earth-dark: #2c2520;
-	--radius: 1rem; /* Even more compact for dashboard */
-
-	/* Slate Palette - Legacy Data Explorer Inspiration */
-	--slate-50: #f8fafc;
-	--slate-100: #f1f5f9;
-	--slate-200: #e2e8f0;
-	--slate-300: #cbd5e1;
-	--slate-400: #94a3b8;
-	--slate-500: #64748b;
-	--slate-600: #475569;
-	--slate-700: #334155;
-	--slate-800: #1e293b;
-	--slate-900: #0f172a;
+	/* Layout */
+	--radius: 0px; /* Brutalist sharp edges */
+	--radius-soft: 4px;
+	--blueprint-line: 1px solid var(--color-blueprint);
 }
