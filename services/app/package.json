@@ -11,7 +11,6 @@
 		"deploy": "./deploy.sh"
 	},
 	"dependencies": {
-		"@MaiaOS/game": "workspace:*",
 		"@MaiaOS/loader": "workspace:*",
 		"@MaiaOS/maia-ai": "workspace:*",
 		"@MaiaOS/maia-distros": "workspace:*"

@@ -9,5 +9,5 @@
 	"dependencies": {
 		"three": "^0.170.0"
 	},
-	"description": "Top-down 2D grid game plane with Three.js — hover highlight and click toggle"
+	"description": "Three.js scene host — mountGame(container) empty scene until features are added"
 }

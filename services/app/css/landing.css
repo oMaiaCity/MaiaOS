@@ -414,6 +414,13 @@
 	padding: 0 5vw;
 }
 
+.manifesto-body {
+	font-size: clamp(1rem, 1.5vw, 1.25rem);
+	line-height: 1.6;
+	margin-bottom: 1.5rem;
+	max-width: 600px;
+}
+
 .blueprint-intro .manifesto-body {
 	font-size: clamp(1.1rem, 1.8vw, 1.4rem);
 	line-height: 1.6;
@@ -588,6 +595,33 @@
 	margin: 0 auto;
 }
 
+/* Evolution Timeline Layout */
+.evolution-timeline {
+	display: flex;
+	flex-direction: column;
+	gap: 6rem;
+	max-width: 900px;
+	margin: 6rem auto 0;
+	text-align: left;
+	position: relative;
+}
+
+.evolution-timeline::before {
+	content: "";
+	position: absolute;
+	left: 3rem;
+	top: 0;
+	bottom: 0;
+	width: 1px;
+	background: linear-gradient(to bottom, transparent, var(--color-blueprint), transparent);
+	opacity: 0.3;
+}
+
+.roadmap-header {
+	margin: 8rem auto 6rem;
+	text-align: center;
+}
+
 .beat-milestones .roadmap-header {
 	margin: 0 auto 1rem;
 	text-align: center;
@@ -609,13 +643,6 @@
 	line-height: 1.2;
 	font-weight: 600;
 	margin-bottom: 2rem;
-}
-
-.manifesto-body {
-	font-size: clamp(1rem, 1.5vw, 1.25rem);
-	line-height: 1.6;
-	margin-bottom: 1.5rem;
-	max-width: 600px;
 }
 
 /* Typography Hierarchy */
@@ -796,33 +823,6 @@
 
 .beat-crowd .vertical-tag {
 	color: rgba(27, 43, 27, 0.3);
-}
-
-/* Evolution Timeline Layout */
-.evolution-timeline {
-	display: flex;
-	flex-direction: column;
-	gap: 6rem;
-	max-width: 900px;
-	margin: 6rem auto 0;
-	text-align: left;
-	position: relative;
-}
-
-.evolution-timeline::before {
-	content: "";
-	position: absolute;
-	left: 3rem;
-	top: 0;
-	bottom: 0;
-	width: 1px;
-	background: linear-gradient(to bottom, transparent, var(--color-blueprint), transparent);
-	opacity: 0.3;
-}
-
-.roadmap-header {
-	margin: 8rem auto 6rem;
-	text-align: center;
 }
 
 .roadmap-title {
