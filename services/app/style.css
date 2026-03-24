@@ -1,7 +1,6 @@
 /* Componentized Styles */
 @import "./css/vars.css";
 @import "./css/base.css";
-@import "./css/glass.css";
 @import "./css/components.css";
 @import "./css/hero.css";
 @import "./css/landing.css";

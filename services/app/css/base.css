@@ -25,12 +25,12 @@ body {
 	font-family: var(--font-body);
 	font-weight: var(--font-weight-normal);
 	line-height: 1.6;
-	color: var(--color-marine-blue);
+	color: var(--color-charcoal);
 	min-height: 100vh;
 	margin: 0;
 	padding: 0;
 	-webkit-font-smoothing: antialiased;
-	background: var(--color-soft-clay);
+	background: var(--color-foundation);
 	position: relative;
 	overflow-x: hidden;
 }
@@ -40,15 +40,14 @@ body {
 	position: fixed;
 	inset: 0;
 	z-index: -1;
-	background: url("../brand/images/banner.png") center / cover no-repeat;
-	background-attachment: fixed;
+	background: var(--color-foundation);
 }
 
 .bg-overlay {
 	position: fixed;
 	inset: 0;
 	z-index: 0;
-	background: rgba(0, 0, 0, 0.4); /* Atmospheric depth */
+	pointer-events: none;
 }
 
 /* Watermark logo background - Removed for hero banner */

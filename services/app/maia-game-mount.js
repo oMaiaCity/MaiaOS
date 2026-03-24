@@ -1,5 +1,6 @@
 /**
- * The Game — Top-down 2D grid with hover and click toggle
+ * Drop-in: full-viewport Three.js grid from @MaiaOS/game.
+ * Re-enable by importing `renderGame` / `disposeGame` in main.js and restoring the `/the-game` route.
  */
 import { mountGame } from '@MaiaOS/game'
 
