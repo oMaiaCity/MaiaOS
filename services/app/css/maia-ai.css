@@ -426,7 +426,8 @@
 	position: fixed;
 	inset: 0;
 	pointer-events: none;
-	z-index: 800;
+	/* Above dashboard chrome (z-index ~1000) and full-screen game shell */
+	z-index: 1100;
 }
 
 .maia-ai-modal {
@@ -513,7 +514,7 @@
 	transform: translateX(-50%);
 	width: 164px; /* 131 * 1.25 */
 	height: 65px; /* 52 * 1.25 */
-	z-index: 900;
+	z-index: 1101;
 	display: flex;
 	flex-direction: column;
 	align-items: center;
@@ -526,8 +527,14 @@
 	left: 0;
 	width: 164px;
 	height: 40px; /* 32 * 1.25 */
-	background: #1a2355;
+	background: var(--color-nav-pill-surface);
 	border-radius: 32px 32px 0 0;
+	border: 1px solid rgba(27, 43, 27, 0.1);
+	border-bottom: none;
+	box-shadow:
+		0 -2px 12px rgba(0, 0, 0, 0.06),
+		0 4px 20px rgba(0, 0, 0, 0.1),
+		inset 0 1px 0 rgba(255, 255, 255, 0.85);
 	display: flex;
 	align-items: center;
 	justify-content: space-between;
@@ -544,7 +551,7 @@
 	font-size: 15px; /* 12 * 1.25 */
 	line-height: 18px;
 	font-weight: 400;
-	color: rgba(255, 255, 255, 0.9);
+	color: var(--color-marine-blue);
 	cursor: pointer;
 	transition: color 0.15s;
 	display: flex;
@@ -554,7 +561,7 @@
 
 .maia-nav-left:hover:not(:disabled),
 .maia-nav-right:hover:not(:disabled) {
-	color: rgba(255, 255, 255, 0.95);
+	color: var(--color-paradise-water);
 }
 
 .maia-nav-left:disabled,
@@ -578,22 +585,31 @@
 	width: 62px; /* 50 * 1.25 */
 	height: 62px;
 	border-radius: 50%;
-	background: #0c133d;
+	background: var(--color-paradise-water);
+	color: #fff;
 	border: none;
 	padding: 0;
 	cursor: pointer;
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	box-shadow: 0 4px 12px rgba(0, 31, 51, 0.35);
+	box-shadow:
+		0 4px 16px rgba(0, 0, 0, 0.14),
+		0 2px 6px rgba(0, 60, 70, 0.2),
+		inset 0 1px 0 rgba(255, 255, 255, 0.35);
 	z-index: 1;
 	transition:
 		background 0.2s,
-		transform 0.1s;
+		transform 0.1s,
+		box-shadow 0.2s;
 }
 
 .maia-nav-center:hover:not(:disabled) {
-	background: #151d4a;
+	background: #3eb0bc;
+	box-shadow:
+		0 6px 20px rgba(0, 0, 0, 0.16),
+		0 2px 8px rgba(0, 60, 70, 0.25),
+		inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 
 .maia-nav-center:active:not(:disabled) {
@@ -609,7 +625,7 @@
 	width: 55px; /* 44 * 1.25 */
 	height: 55px;
 	border-radius: 50%;
-	background: #1a2355;
+	background: transparent;
 	display: flex;
 	align-items: center;
 	justify-content: center;
@@ -630,16 +646,18 @@
 	opacity: 1;
 }
 
-.maia-nav-center.maia-ai-center-btn-stop .maia-nav-center-inner {
+.maia-nav-center.maia-ai-center-btn-stop {
 	background: #c62828;
+	color: #fff;
 }
 
-.maia-nav-center.maia-ai-center-btn-stop:hover:not(:disabled) .maia-nav-center-inner {
+.maia-nav-center.maia-ai-center-btn-stop:hover:not(:disabled) {
 	background: #8e0000;
 }
 
-/* When MaiaDB is shown, nav is also at the bottom */
-body.screen-maia-db .maia-nav {
+/* When MaiaDB or the Three.js game is shown, nav stays at the bottom */
+body.screen-maia-db .maia-nav,
+body.screen-the-game .maia-nav {
 	bottom: 0;
 }
 

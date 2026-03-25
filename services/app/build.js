@@ -122,6 +122,8 @@ const distHas = (p) => existsSync(join(distDir, p))
 const required = [
 	['style.css', distHas('style.css')],
 	['brand/images/banner.png', distHas('brand/images/banner.png')],
+	['brand/images/loading-screen.png', distHas('brand/images/loading-screen.png')],
+	['brand/images/signin.png', distHas('brand/images/signin.png')],
 	[
 		'brand/fonts/IndieFlower/IndieFlower-Regular.ttf',
 		distHas('brand/fonts/IndieFlower/IndieFlower-Regular.ttf'),

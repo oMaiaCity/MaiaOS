@@ -13,8 +13,11 @@
 	--color-marine-blue: var(--color-ink);
 	--color-marine-blue-muted: #3d4a52;
 	--color-marine-blue-light: #5e7a8c;
-	--color-paradise-water: #4fbfa5;
+	--color-paradise-water: #48b8c4;
+	--color-water-text: #ffffff;
+	--color-nav-pill-surface: #f0f1ef;
 	--color-soft-clay: var(--color-sand);
+	--color-dashboard-canvas: #f5f3f0;
 	--color-sun-yellow: var(--color-spark);
 	--color-sun-yellow-text: #5c4314;
 	--color-tinted-white: #fdfcf0;

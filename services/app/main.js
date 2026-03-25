@@ -32,7 +32,7 @@ import {
 import { escapeHtml, getSyncStatusMessage } from './utils.js'
 
 let maia
-let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'aven-viewer'
+let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'the-game' | 'vibe-viewer' | …
 let currentView = 'account' // Current schema filter (default: 'account')
 let currentContextCoValueId = null // Currently loaded CoValue in main context (explorer-style navigation)
 let currentVibe = null // Currently loaded vibe (null = DB view mode, 'todos' = todos vibe, etc.)
@@ -1004,6 +1004,11 @@ function goBack() {
 		return
 	}
 
+	if (currentScreen === 'the-game') {
+		navigateToScreen('dashboard')
+		return
+	}
+
 	// If we're in maia-db, navigate back in history or go to dashboard
 	if (currentScreen === 'maia-db') {
 		if (navigationHistory.length > 0) {
@@ -1056,7 +1061,7 @@ async function renderAppInternal() {
 			updateNavLeft('home', null)
 		} else if (currentScreen === 'vibe-viewer') {
 			updateNavLeft('home', () => loadVibe(null))
-		} else if (currentScreen === 'maia-db') {
+		} else if (currentScreen === 'maia-db' || currentScreen === 'the-game') {
 			updateNavLeft('home', () => navigateToScreen('dashboard'))
 		}
 	} finally {

@@ -162,7 +162,7 @@ Milestone 3: [Docs & review] → Update docs → Final test → Approval ✋
 **Why:** Consistency (queries reliable), remote sync (query unsynced co-values), reactivity (index updates trigger query updates), maintainability (no manual seeding).
 
 **4. Browser Debugging** (frontend features):
-- Open Cursor browser, navigate to app URL (e.g. `http://localhost:4202`)
+- Open Cursor browser, navigate to app URL (e.g. `http://localhost:4200`)
 - Visual: UI renders? Obvious bugs? Basic interactions work?
 - Console: Real `co_z...` IDs (not mock_123)? No JS errors?
   - ✅ Good: `Created blog: co_z9h5nwiNynbxnC3nTw...`

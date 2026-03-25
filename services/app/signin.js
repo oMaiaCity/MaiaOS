@@ -83,7 +83,7 @@ export function renderSignInPrompt(hasExistingAccount, viewMode, showTestAven = 
 		: `Aven ${testAvenNameRaw}`
 	const testAvenButton = showTestAven
 		? `
-						<button class="btn btn-outline" onclick="window.handleSignInWithTestAven()" style="margin-top: 0.5rem;">
+						<button type="button" class="btn btn-outline-marine sign-in-test-aven" onclick="window.handleSignInWithTestAven()" style="margin-top: 0.5rem;">
 							Sign in with ${testAvenName}
 						</button>
 					`
@@ -91,51 +91,56 @@ export function renderSignInPrompt(hasExistingAccount, viewMode, showTestAven = 
 
 	document.getElementById('app').innerHTML = `
 		<div class="sign-in-container">
-			<div class="sign-in-content">
-				<div class="sign-in-inner">
-					<div class="logo-container">
-						<img src="/brand/logo.svg" alt="Maia City" class="sign-in-logo" />
+			<div class="sign-in-split">
+				<div class="sign-in-panel">
+					<div class="sign-in-panel-inner">
+						<div class="sign-in-brand-row">
+							<img src="/brand/logo_dark.svg" alt="Maia City" class="sign-in-logo" />
+						</div>
+						${
+							isSignupMode
+								? `
+							<h1 class="sign-in-panel-heading">Create your Self</h1>
+							<p class="sign-in-panel-lede">Passkeys only — pick a name, then register. No password to remember.</p>
+							<div class="sign-in-first-name-wrap">
+								<label for="signin-first-name" class="sign-in-first-name-label">First name</label>
+								<input
+									type="text"
+									id="signin-first-name"
+									class="sign-in-first-name-input"
+									placeholder="What shall we call you?"
+									autocomplete="given-name"
+									maxlength="50"
+									aria-label="First name"
+								/>
+							</div>
+							<div class="sign-in-buttons">
+								<button type="button" class="btn btn-solid-water" onclick="window.handleRegister()">
+									Create new Self
+								</button>
+								${testAvenButton}
+								<a href="#" class="sign-in-swap-link" onclick="window.switchToSigninView(); return false;">Already have a Self? Sign in</a>
+							</div>
+						`
+								: `
+							<h1 class="sign-in-panel-heading sign-in-panel-heading--poetic">
+								<span class="sign-in-line-eyebrow">is where we are</span>
+								<span class="sign-in-line-hero">humans</span>
+							</h1>
+							<p class="sign-in-panel-lede">who outgrow ourselves everyday creating the extraordinary</p>
+							<div class="sign-in-buttons">
+								<button type="button" class="btn btn-solid-water" onclick="window.handleSignIn()">
+									Unlock your Self
+								</button>
+								${testAvenButton}
+								<a href="#" class="sign-in-swap-link" onclick="window.switchToSignupView(); return false;">New here? Create your Self</a>
+							</div>
+						`
+						}
 					</div>
-					<h1>
-						<span>is where we are</span>
-						<span class="h1-main-text">
-							humans
-						</span>
-					</h1>
-					<p class="sign-in-subtitle">who outgrow ourselves everyday creating the extraordinary</p>
-					${
-						isSignupMode
-							? `
-						<div class="sign-in-first-name-wrap">
-							<label for="signin-first-name" class="sign-in-first-name-label">First name</label>
-							<input
-								type="text"
-								id="signin-first-name"
-								class="sign-in-first-name-input"
-								placeholder="What shall we call you?"
-								autocomplete="given-name"
-								maxlength="50"
-								aria-label="First name"
-							/>
-						</div>
-						<div class="sign-in-buttons">
-							<button class="btn btn-solid-water" onclick="window.handleRegister()">
-								Create new Self
-							</button>
-							${testAvenButton}
-							<a href="#" class="sign-in-swap-link" onclick="window.switchToSigninView(); return false;">&mdash; signin instead &mdash;</a>
-						</div>
-					`
-							: `
-						<div class="sign-in-buttons">
-							<button class="btn btn-solid-water" onclick="window.handleSignIn()">
-								Unlock your Self
-							</button>
-							${testAvenButton}
-							<a href="#" class="sign-in-swap-link" onclick="window.switchToSignupView(); return false;">&mdash; register new &mdash;</a>
-						</div>
-					`
-					}
+				</div>
+				<div class="sign-in-visual" aria-hidden="true">
+					<div class="sign-in-visual-scrim"></div>
 				</div>
 			</div>
 		</div>

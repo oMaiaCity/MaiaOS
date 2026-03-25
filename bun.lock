@@ -167,16 +167,10 @@
       "name": "@MaiaOS/app",
       "version": "26.318.2107",
       "dependencies": {
+        "@MaiaOS/game": "workspace:*",
         "@MaiaOS/loader": "workspace:*",
         "@MaiaOS/maia-ai": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
-      },
-    },
-    "services/game": {
-      "name": "@MaiaOS/game-service",
-      "version": "26.318.2107",
-      "dependencies": {
-        "@MaiaOS/game": "workspace:*",
       },
     },
     "services/sync": {
@@ -207,8 +201,6 @@
     "@MaiaOS/factories": ["@MaiaOS/factories@workspace:libs/maia-factories"],
 
     "@MaiaOS/game": ["@MaiaOS/game@workspace:libs/maia-game"],
-
-    "@MaiaOS/game-service": ["@MaiaOS/game-service@workspace:services/game"],
 
     "@MaiaOS/loader": ["@MaiaOS/loader@workspace:libs/maia-loader"],
 
@@ -1234,7 +1226,7 @@
 
     "yargs-parser": ["yargs-parser@21.1.1", "", {}, "sha512-tVpsJW7DdjecAiFpbIB1e3qxIQsE6NoPc5/eTdrbbIC4h0LVsWhnoa3g+m2HclBIujHzsxZ4VJVA+GUuc2/LBw=="],
 
-    "@MaiaOS/storage/@electric-sql/pglite": ["@electric-sql/pglite@0.4.1", "", {}, "sha512-mZ9NzzUSYPOCnxHH1oAHPRzoMFJHY472raDKwXl/+6oPbpdJ7g8LsCN4FSaIIfkiCKHhb3iF/Zqo3NYxaIhU7Q=="],
+    "@MaiaOS/storage/@electric-sql/pglite": ["@electric-sql/pglite@0.4.2", "", {}, "sha512-1GUUl/MZpy5QWgWisD3Epho3GkJrZ1MzVgQpo2pifQWUs96F9rXKZxeVLPhkwFYck34CH/kQ8lis6wX9ifn3kg=="],
 
     "@MaiaOS/storage/@noble/hashes": ["@noble/hashes@2.0.1", "", {}, "sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw=="],
 
