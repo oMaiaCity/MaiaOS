@@ -150,6 +150,23 @@ async function handleRoute() {
 		return
 	}
 
+	if (path === '/game') {
+		if (!isGameDevRouteEnabled()) {
+			window.history.replaceState({}, '', authState.signedIn && maia ? '/me' : '/')
+			await handleRoute()
+			return
+		}
+		removeSigninKeyHandler()
+		setFabVisible(false)
+		currentScreen = 'the-game'
+		try {
+			await renderAppInternal()
+		} catch (error) {
+			showToast(`Failed to load game: ${error.message}`, 'error')
+		}
+		return
+	}
+
 	if (path === '/me' || path === '/dashboard') {
 		removeSigninKeyHandler()
 		const ready = detectMode() === 'agent' || (authState.signedIn && maia)
@@ -200,6 +217,18 @@ async function handleRoute() {
 function detectMode() {
 	const mode = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PEER_MODE) || 'human'
 	return mode === 'agent' ? 'agent' : 'human'
+}
+
+/** `/game` route: dev-only (never enabled in production bundle; localhost + __maia_env DEV for Bun dev without import.meta.DEV). */
+function isGameDevRouteEnabled() {
+	if (typeof import.meta !== 'undefined' && import.meta.env?.DEV === true) {
+		return true
+	}
+	const h = typeof window !== 'undefined' ? window.location.hostname : ''
+	if (h !== 'localhost' && h !== '127.0.0.1') {
+		return false
+	}
+	return window.__MAIA_DEV_ENV__?.DEV === true
 }
 
 async function init() {
@@ -1062,8 +1091,17 @@ async function renderAppInternal() {
 			updateNavLeft('home', null)
 		} else if (currentScreen === 'vibe-viewer') {
 			updateNavLeft('home', () => loadVibe(null))
-		} else if (currentScreen === 'maia-db' || currentScreen === 'the-game') {
+		} else if (currentScreen === 'maia-db') {
 			updateNavLeft('home', () => navigateToScreen('dashboard'))
+		} else if (currentScreen === 'the-game') {
+			if (window.location.pathname === '/game' && isGameDevRouteEnabled()) {
+				updateNavLeft('home', () => {
+					currentScreen = 'dashboard'
+					navigateTo(authState.signedIn && maia ? '/me' : '/')
+				})
+			} else {
+				updateNavLeft('home', () => navigateToScreen('dashboard'))
+			}
 		}
 	} finally {
 		isRendering = false

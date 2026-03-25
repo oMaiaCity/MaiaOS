@@ -61,6 +61,25 @@ export function heightBiomeRgb(tn) {
 }
 
 /**
+ * Warmer lawn green under the dome garden annulus (plane lx, ly; world xz matches terrain sampling).
+ */
+export function domeGardenTurfRgb(lx, ly, baseRgb, centerX, centerZ, innerR, outerR) {
+	const wx = lx
+	const wz = -ly
+	const dx = wx - centerX
+	const dz = wz - centerZ
+	const r = Math.hypot(dx, dz)
+	const lawn = { r: 0.16, g: 0.5, b: 0.24 }
+	const tIn = smoothRange(r, innerR - 12, innerR + 6)
+	const tOut = 1 - smoothRange(r, outerR - 10, outerR + 22)
+	const strength = tIn * tOut * 0.96
+	if (strength <= 0) {
+		return baseRgb
+	}
+	return lerpRgb(baseRgb, lawn, strength)
+}
+
+/**
  * River corridor: sand only (bed + banks); earth/grass come from height biomes outside the channel.
  */
 export function riverCorridorRgb(wx, wy, baseRgb) {

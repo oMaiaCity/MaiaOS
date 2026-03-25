@@ -1,8 +1,7 @@
 /**
  * Full-viewport Three.js scene from @MaiaOS/game (dashboard screen `the-game`).
+ * Loads `@MaiaOS/game` only when entering The Game (dynamic import + parallel splash decode).
  */
-import { mountGame } from '@MaiaOS/game'
-
 const LOADING_SCREEN_IMAGE = '/brand/images/loading-screen.png'
 
 let _gameDispose = null
@@ -54,7 +53,7 @@ function gameLoadingMarkup() {
 }
 
 /**
- * Paint loading UI, wait for splash image decode, then mount after frames so the browser can paint the splash.
+ * Paint loading UI, decode splash + load game module in parallel, then mount after frames so the browser can paint the splash.
  */
 export async function renderGame() {
 	disposeGame()
@@ -63,7 +62,8 @@ export async function renderGame() {
 	app.innerHTML = gameLoadingMarkup()
 	const container = document.getElementById('game-container')
 
-	await waitForLoadingScreenImage()
+	const [, gameMod] = await Promise.all([waitForLoadingScreenImage(), import('@MaiaOS/game')])
+	const { mountGame } = gameMod
 	if (token !== _loadSession) return
 
 	const scheduleMount = () => {
@@ -72,11 +72,11 @@ export async function renderGame() {
 		if (typeof requestAnimationFrame === 'function') {
 			requestAnimationFrame(() => {
 				requestAnimationFrame(() => {
-					void runMountAsync(token, container)
+					void runMountAsync(token, container, mountGame)
 				})
 			})
 		} else {
-			setTimeout(() => void runMountAsync(token, container), 0)
+			setTimeout(() => void runMountAsync(token, container, mountGame), 0)
 		}
 	}
 
@@ -84,7 +84,7 @@ export async function renderGame() {
 }
 
 /** Terrain build yields to the event loop; await so home navigation can run mid-mount. */
-async function runMountAsync(token, container) {
+async function runMountAsync(token, container, mountGame) {
 	await new Promise((r) => setTimeout(r, 0))
 	if (token !== _loadSession) return
 	if (!container?.isConnected) return

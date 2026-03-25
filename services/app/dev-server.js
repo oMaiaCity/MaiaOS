@@ -42,6 +42,7 @@ const MIME = {
 	'.webmanifest': 'application/manifest+json',
 	'.js': 'application/javascript',
 	'.wasm': 'application/wasm',
+	'.glb': 'model/gltf-binary',
 }
 
 // RunAnywhere WASM: serve from maia dist, distros output, or node_modules (dev)
@@ -82,10 +83,24 @@ Bun.serve({
 		['Cross-Origin-Embedder-Policy', 'credentialless'],
 	],
 	routes: {
+		// Game GLB — must be in routes so Bun HTML dev does not serve index.html for this path
+		'/game-assets/geodesic-dome.glb': () => {
+			const filePath = join(repoRoot, 'libs/maia-game/src/assets/geodesic-dome.glb')
+			if (!existsSync(filePath) || !statSync(filePath).isFile()) {
+				return new Response(
+					'geodesic-dome.glb missing — run: cd libs/maia-game && bun run import:dome',
+					{ status: 404, headers: COOP_COEP },
+				)
+			}
+			return new Response(Bun.file(filePath), {
+				headers: { 'Content-Type': 'model/gltf-binary', ...COOP_COEP },
+			})
+		},
 		// Dev env endpoint (client fetches when import.meta.env not populated)
 		'/__maia_env': () =>
 			new Response(
 				JSON.stringify({
+					DEV: true,
 					VITE_AVEN_TEST_MODE: process.env.VITE_AVEN_TEST_MODE || '',
 					VITE_AVEN_TEST_ACCOUNT: process.env.VITE_AVEN_TEST_ACCOUNT || '',
 					VITE_AVEN_TEST_SECRET: process.env.VITE_AVEN_TEST_SECRET || '',
@@ -114,6 +129,21 @@ Bun.serve({
 					headers: { 'Content-Type': MIME[ext] || 'application/octet-stream', ...COOP_COEP },
 				})
 			}
+		}
+
+		// Game assets under /game-assets/ (other files; geodesic-dome.glb is handled in routes)
+		if (pathname.startsWith('/game-assets/')) {
+			const rel = pathname.slice('/game-assets/'.length)
+			if (rel && !rel.includes('..')) {
+				const filePath = join(repoRoot, 'libs/maia-game/src/assets', rel)
+				if (existsSync(filePath) && statSync(filePath).isFile()) {
+					const ext = pathname.slice(pathname.lastIndexOf('.'))
+					return new Response(Bun.file(filePath), {
+						headers: { 'Content-Type': MIME[ext] || 'application/octet-stream', ...COOP_COEP },
+					})
+				}
+			}
+			return new Response('Not found', { status: 404, headers: COOP_COEP })
 		}
 
 		// Serve static assets: /style.css, /css/*, /brand/*

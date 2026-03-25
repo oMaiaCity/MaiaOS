@@ -39,6 +39,7 @@ const MIME_TYPES = {
 	'.webmanifest': 'application/manifest+json',
 	'.map': 'application/json',
 	'.wasm': 'application/wasm',
+	'.glb': 'model/gltf-binary',
 }
 
 serve({
