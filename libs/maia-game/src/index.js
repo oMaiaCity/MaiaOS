@@ -30,6 +30,7 @@ import {
 	terrainHeightAtPlaneXY,
 	terrainPlaneWarp,
 } from './terrain.js'
+import { createForestInstancedMeshes, disposeForestResources } from './trees.js'
 import { createRiverWaterMesh, createRiverWaterVolumeMesh } from './water-meshes.js'
 
 const seg = 768
@@ -148,13 +149,13 @@ export function mountGame(container) {
 			vHMax = h
 		}
 	}
-	const hSpan = vHMax - vHMin
+	const vHSpan = vHMax - vHMin
 	const colors = new Float32Array(pos.count * 3)
 	for (let i = 0; i < pos.count; i++) {
 		const lx = pos.getX(i)
 		const ly = pos.getY(i)
 		const h = pos.getZ(i)
-		const tn = hSpan > 1e-5 ? (h - vHMin) / hSpan : 0.5
+		const tn = vHSpan > 1e-5 ? (h - vHMin) / vHSpan : 0.5
 		const { wx, wy } = terrainPlaneWarp(lx, ly)
 		let rgb = heightBiomeRgb(tn)
 		rgb = riverCorridorRgb(wx, wy, rgb)
@@ -180,6 +181,17 @@ export function mountGame(container) {
 	ground.receiveShadow = true
 	ground.castShadow = true
 	scene.add(ground)
+
+	const forest = createForestInstancedMeshes({
+		vHMin,
+		vHSpan,
+		floodLevel,
+		spawnX: playerX,
+		spawnZ: playerZ,
+	})
+	for (const m of forest.meshes) {
+		scene.add(m)
+	}
 
 	const floodGeo = new THREE.PlaneGeometry(PLANE_SIZE, PLANE_SIZE, 1, 1)
 	const floodPos = floodGeo.attributes.position
@@ -342,6 +354,10 @@ export function mountGame(container) {
 		window.removeEventListener('keyup', onKeyUp)
 		renderer.domElement.removeEventListener('wheel', onWheel)
 		pointer.dispose()
+		for (const m of forest.meshes) {
+			scene.remove(m)
+		}
+		disposeForestResources(forest)
 		planeGeo.dispose()
 		ground.material.dispose()
 		floodGeo.dispose()
