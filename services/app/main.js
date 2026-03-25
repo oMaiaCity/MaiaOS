@@ -40,6 +40,7 @@ let currentSpark = null // Grid hierarchy: null = sparks level, '°Maia' = avens
 let _currentVibeContainer = null // Currently loaded vibe container element (for cleanup on unload)
 let navigationHistory = [] // Navigation history stack for back button
 let isRendering = false // Guard to prevent render loops
+let pendingRender = false // Re-run render when navigateToScreen called while renderApp is still awaiting
 let authState = {
 	signedIn: false,
 	accountID: null,
@@ -1033,8 +1034,8 @@ function switchView(view) {
 }
 
 async function renderAppInternal() {
-	// Guard against render loops
 	if (isRendering) {
+		pendingRender = true
 		return
 	}
 
@@ -1066,6 +1067,10 @@ async function renderAppInternal() {
 		}
 	} finally {
 		isRendering = false
+		if (pendingRender) {
+			pendingRender = false
+			void renderAppInternal()
+		}
 	}
 }
 

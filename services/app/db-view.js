@@ -183,7 +183,11 @@ export async function renderApp(
 	}
 
 	if (currentScreen === 'the-game') {
-		await renderGame()
+		// Do not await: loading + Three.js mount can take seconds; awaiting would keep
+		// renderAppInternal's isRendering lock and drop navigateToScreen (e.g. home) until load finishes.
+		void renderGame().catch((err) => {
+			console.error('[Maia game] render failed', err)
+		})
 		return
 	}
 

@@ -66,23 +66,42 @@ export async function renderGame() {
 	await waitForLoadingScreenImage()
 	if (token !== _loadSession) return
 
-	const runMount = () => {
+	const scheduleMount = () => {
 		if (token !== _loadSession) return
 		if (!container?.isConnected) return
-		const { dispose } = mountGame(container)
-		if (token !== _loadSession) {
-			dispose()
-			return
+		if (typeof requestAnimationFrame === 'function') {
+			requestAnimationFrame(() => {
+				requestAnimationFrame(() => {
+					void runMountAsync(token, container)
+				})
+			})
+		} else {
+			setTimeout(() => void runMountAsync(token, container), 0)
 		}
-		_gameDispose = dispose
-		document.getElementById('game-loading')?.remove()
 	}
 
-	if (typeof requestAnimationFrame === 'function') {
-		requestAnimationFrame(() => {
-			requestAnimationFrame(runMount)
+	scheduleMount()
+}
+
+/** Terrain build yields to the event loop; await so home navigation can run mid-mount. */
+async function runMountAsync(token, container) {
+	await new Promise((r) => setTimeout(r, 0))
+	if (token !== _loadSession) return
+	if (!container?.isConnected) return
+	let result
+	try {
+		result = await mountGame(container, {
+			isCancelled: () => token !== _loadSession,
 		})
-	} else {
-		setTimeout(runMount, 0)
+	} catch (err) {
+		console.error('[Maia game] mount failed', err)
+		return
 	}
+	if (token !== _loadSession) {
+		result?.dispose()
+		return
+	}
+	if (!container?.isConnected) return
+	_gameDispose = result.dispose
+	document.getElementById('game-loading')?.remove()
 }

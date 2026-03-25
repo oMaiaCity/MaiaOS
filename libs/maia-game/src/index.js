@@ -36,11 +36,19 @@ import { createRiverWaterMesh, createRiverWaterVolumeMesh } from './water-meshes
 
 const seg = 1280
 
+/** Yield so the event loop can run (navigation, input) while terrain builds. */
+function yieldToMain() {
+	return new Promise((resolve) => setTimeout(resolve, 0))
+}
+
+const TERRAIN_BATCH = 65536
+
 /**
  * @param {HTMLElement} container
- * @returns {{ dispose: () => void }}
+ * @param {{ isCancelled?: () => boolean }} [options]
+ * @returns {Promise<{ dispose: () => void }>}
  */
-export function mountGame(container) {
+export async function mountGame(container, { isCancelled = () => false } = {}) {
 	const scene = new THREE.Scene()
 	scene.background = new THREE.Color(0x9ec8e8)
 	scene.fog = new THREE.Fog(0xa8d0e8, 2400, 10400)
@@ -127,44 +135,87 @@ export function mountGame(container) {
 	}
 	renderer.domElement.addEventListener('wheel', onWheel, { passive: false })
 
+	function cleanupEarlyPartial() {
+		window.removeEventListener('keydown', onKeyDown)
+		window.removeEventListener('keyup', onKeyUp)
+		renderer.domElement.removeEventListener('wheel', onWheel)
+		pointer.dispose()
+		renderer.dispose()
+		container.removeChild(renderer.domElement)
+		if (hint.parentNode === container) container.removeChild(hint)
+	}
+
+	await yieldToMain()
+	if (isCancelled()) {
+		cleanupEarlyPartial()
+		return { dispose: () => {} }
+	}
+
 	const floodLevel = floodWaterLevel()
 
 	const planeGeo = new THREE.PlaneGeometry(PLANE_SIZE, PLANE_SIZE, seg, seg)
 	const pos = planeGeo.attributes.position
-	for (let i = 0; i < pos.count; i++) {
-		const lx = pos.getX(i)
-		const ly = pos.getY(i)
-		const h = terrainHeightAtPlaneXY(lx, ly)
-		pos.setZ(i, h)
+	for (let start = 0; start < pos.count; start += TERRAIN_BATCH) {
+		await yieldToMain()
+		if (isCancelled()) {
+			cleanupEarlyPartial()
+			planeGeo.dispose()
+			return { dispose: () => {} }
+		}
+		const end = Math.min(start + TERRAIN_BATCH, pos.count)
+		for (let i = start; i < end; i++) {
+			const lx = pos.getX(i)
+			const ly = pos.getY(i)
+			const h = terrainHeightAtPlaneXY(lx, ly)
+			pos.setZ(i, h)
+		}
 	}
 	planeGeo.computeVertexNormals()
 
 	let vHMin = Infinity
 	let vHMax = -Infinity
-	for (let i = 0; i < pos.count; i++) {
-		const h = pos.getZ(i)
-		if (h < vHMin) {
-			vHMin = h
+	for (let start = 0; start < pos.count; start += TERRAIN_BATCH) {
+		await yieldToMain()
+		if (isCancelled()) {
+			cleanupEarlyPartial()
+			planeGeo.dispose()
+			return { dispose: () => {} }
 		}
-		if (h > vHMax) {
-			vHMax = h
+		const end = Math.min(start + TERRAIN_BATCH, pos.count)
+		for (let i = start; i < end; i++) {
+			const h = pos.getZ(i)
+			if (h < vHMin) {
+				vHMin = h
+			}
+			if (h > vHMax) {
+				vHMax = h
+			}
 		}
 	}
 	const vHSpan = vHMax - vHMin
 	const colors = new Float32Array(pos.count * 3)
-	for (let i = 0; i < pos.count; i++) {
-		const lx = pos.getX(i)
-		const ly = pos.getY(i)
-		const h = pos.getZ(i)
-		const tn = vHSpan > 1e-5 ? (h - vHMin) / vHSpan : 0.5
-		const { wx, wy } = terrainPlaneWarp(lx, ly)
-		let rgb = heightBiomeRgb(tn)
-		rgb = riverCorridorRgb(wx, wy, rgb)
-		rgb = applyUnderwaterRiverTint(wx, wy, h, rgb, floodLevel)
-		const micro = noise2(lx * 0.012, ly * 0.011) * 0.028
-		colors[i * 3] = THREE.MathUtils.clamp(rgb.r + micro, 0, 1)
-		colors[i * 3 + 1] = THREE.MathUtils.clamp(rgb.g + micro, 0, 1)
-		colors[i * 3 + 2] = THREE.MathUtils.clamp(rgb.b + micro * 0.75, 0, 1)
+	for (let start = 0; start < pos.count; start += TERRAIN_BATCH) {
+		await yieldToMain()
+		if (isCancelled()) {
+			cleanupEarlyPartial()
+			planeGeo.dispose()
+			return { dispose: () => {} }
+		}
+		const end = Math.min(start + TERRAIN_BATCH, pos.count)
+		for (let i = start; i < end; i++) {
+			const lx = pos.getX(i)
+			const ly = pos.getY(i)
+			const h = pos.getZ(i)
+			const tn = vHSpan > 1e-5 ? (h - vHMin) / vHSpan : 0.5
+			const { wx, wy } = terrainPlaneWarp(lx, ly)
+			let rgb = heightBiomeRgb(tn)
+			rgb = riverCorridorRgb(wx, wy, rgb)
+			rgb = applyUnderwaterRiverTint(wx, wy, h, rgb, floodLevel)
+			const micro = noise2(lx * 0.012, ly * 0.011) * 0.028
+			colors[i * 3] = THREE.MathUtils.clamp(rgb.r + micro, 0, 1)
+			colors[i * 3 + 1] = THREE.MathUtils.clamp(rgb.g + micro, 0, 1)
+			colors[i * 3 + 2] = THREE.MathUtils.clamp(rgb.b + micro * 0.75, 0, 1)
+		}
 	}
 	planeGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
 
