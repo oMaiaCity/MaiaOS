@@ -1,160 +1,38 @@
 /**
- * maia-game — grass terrain + pointer-lock WASD (clamped on plane, eye above ground).
+ * maia-game — procedural heightfield terrain, carved river, height-based vertex biomes, pointer-lock WASD, wheel zoom.
  */
 import * as THREE from 'three'
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js'
+import {
+	applyUnderwaterRiverTint,
+	floodWaterLevel,
+	heightBiomeRgb,
+	riverCorridorRgb,
+} from './biomes.js'
+import { createBlobCharacter } from './blob-character.js'
+import {
+	CHASE_MIN_ABOVE_TERRAIN,
+	chaseHeightAbovePlayer,
+	chaseHorizontalDistance,
+} from './camera-chase.js'
+import {
+	EDGE_MARGIN,
+	MOVE_SPEED,
+	PLANE_HALF,
+	PLANE_SIZE,
+	ZOOM_ABOVE_MAX,
+	ZOOM_ABOVE_MIN,
+	ZOOM_WHEEL_SCALE,
+} from './game-constants.js'
+import { noise2 } from './noise.js'
+import {
+	findMountainTopSpawnPosition,
+	terrainHeightAtPlaneXY,
+	terrainPlaneWarp,
+} from './terrain.js'
+import { createRiverWaterMesh, createRiverWaterVolumeMesh } from './water-meshes.js'
 
-const PLANE_SIZE = 4000
-const PLANE_HALF = PLANE_SIZE / 2
-const EDGE_MARGIN = 8
-const MOVE_SPEED = 140
-const EYE_HEIGHT = 2.2
-const RAY_UP = 4000
-
-/** Deterministic 0–1 hash for float coords (smooth-ish when interpolated). */
-function hash2(ix, iy) {
-	const n = Math.sin(ix * 127.1 + iy * 311.7) * 43758.5453123
-	return n - Math.floor(n)
-}
-
-/** Value noise with smooth interpolation (macro terrain / texture). */
-function noise2(x, y) {
-	const x0 = Math.floor(x)
-	const y0 = Math.floor(y)
-	const fx = x - x0
-	const fy = y - y0
-	const u = fx * fx * (3 - 2 * fx)
-	const v = fy * fy * (3 - 2 * fy)
-	const a = hash2(x0, y0)
-	const b = hash2(x0 + 1, y0)
-	const c = hash2(x0, y0 + 1)
-	const d = hash2(x0 + 1, y0 + 1)
-	const i1 = a + (b - a) * u
-	const i2 = c + (d - c) * u
-	return i1 + (i2 - i1) * v
-}
-
-/** ~FBM: several octaves of value noise. */
-function fbm2(x, y) {
-	let sum = 0
-	let amp = 0.55
-	let freq = 0.012
-	let norm = 0
-	for (let o = 0; o < 6; o++) {
-		sum += amp * (noise2(x * freq, y * freq) - 0.5) * 2
-		norm += amp
-		amp *= 0.48
-		freq *= 2.05
-	}
-	return sum / Math.max(norm, 1e-6)
-}
-
-/** World-space terrain height (matches mesh displacement; plane lies in local XY, then rotated). */
-function terrainHeightAtPlaneXY(lx, ly) {
-	const n = fbm2(lx * 0.004, ly * 0.004)
-	const ridges = Math.sin(lx * 0.0018 + n * 2.1) * Math.cos(ly * 0.0016 - n * 1.4) * 4.2
-	return n * 22 + ridges
-}
-
-/**
- * Albedo + roughness from shared height field (no external assets).
- * Normal maps are omitted: procedural tangents rarely match Three’s TBN and wrong colorSpace breaks lighting (black terrain).
- * @param {number} size
- */
-function makeTerrainTextures(size) {
-	const color = document.createElement('canvas')
-	color.width = size
-	color.height = size
-	const rough = document.createElement('canvas')
-	rough.width = size
-	rough.height = size
-
-	const cctx = color.getContext('2d')
-	const rctx = rough.getContext('2d')
-	if (!cctx || !rctx) {
-		return { color, rough }
-	}
-
-	const heights = new Float32Array(size * size)
-
-	for (let py = 0; py < size; py++) {
-		for (let px = 0; px < size; px++) {
-			const u = px / (size - 1)
-			const v = py / (size - 1)
-			const wx = (u - 0.5) * 2
-			const wy = (v - 0.5) * 2
-			const lx = wx * 120
-			const ly = wy * 120
-			const h = terrainHeightAtPlaneXY(lx, ly)
-			heights[py * size + px] = h
-		}
-	}
-
-	const imgC = cctx.createImageData(size, size)
-	const imgR = rctx.createImageData(size, size)
-
-	const du = 1
-	const dv = 1
-
-	for (let py = 0; py < size; py++) {
-		for (let px = 0; px < size; px++) {
-			const idx = py * size + px
-			const h = heights[idx]
-			const hx1 = heights[py * size + Math.min(px + du, size - 1)]
-			const hx0 = heights[py * size + Math.max(px - du, 0)]
-			const hy1 = heights[Math.min(py + dv, size - 1) * size + px]
-			const hy0 = heights[Math.max(py - dv, 0) * size + px]
-			const dhx = (hx1 - hx0) * 0.5
-			const dhy = (hy1 - hy0) * 0.5
-
-			const slope = Math.min(1, Math.sqrt(dhx * dhx + dhy * dhy) * 0.08)
-			const wet = Math.max(0, -h * 0.015 + slope * 0.4)
-
-			const grassDark = { r: 0.12, g: 0.28, b: 0.08 }
-			const grassMid = { r: 0.18, g: 0.42, b: 0.14 }
-			const grassLight = { r: 0.32, g: 0.55, b: 0.22 }
-			const soil = { r: 0.22, g: 0.16, b: 0.1 }
-
-			const t = h * 0.018 + 0.5
-			const g1 = Math.max(0, Math.min(1, t))
-			let rCol = grassDark.r + (grassMid.r - grassDark.r) * g1
-			let gCol = grassDark.g + (grassMid.g - grassDark.g) * g1
-			let bCol = grassDark.b + (grassMid.b - grassDark.b) * g1
-			const lift = Math.max(0, h * 0.008)
-			rCol += (grassLight.r - grassMid.r) * lift * 0.35
-			gCol += (grassLight.g - grassMid.g) * lift * 0.35
-			bCol += (grassLight.b - grassMid.b) * lift * 0.35
-
-			const soilMix = slope * 0.55 + wet * 0.35
-			rCol = rCol * (1 - soilMix) + soil.r * soilMix
-			gCol = gCol * (1 - soilMix) + soil.g * soilMix
-			bCol = bCol * (1 - soilMix) + soil.b * soilMix
-
-			const micro = noise2(px * 0.2, py * 0.2) * 0.06
-			rCol += micro
-			gCol += micro
-			bCol += micro * 0.5
-
-			const i = idx * 4
-			imgC.data[i] = Math.floor(THREE.MathUtils.clamp(rCol, 0, 1) * 255)
-			imgC.data[i + 1] = Math.floor(THREE.MathUtils.clamp(gCol, 0, 1) * 255)
-			imgC.data[i + 2] = Math.floor(THREE.MathUtils.clamp(bCol, 0, 1) * 255)
-			imgC.data[i + 3] = 255
-
-			const roughV = THREE.MathUtils.clamp(0.72 + slope * 0.22 - wet * 0.12, 0.35, 1)
-			const rv = Math.floor(roughV * 255)
-			imgR.data[i] = rv
-			imgR.data[i + 1] = rv
-			imgR.data[i + 2] = rv
-			imgR.data[i + 3] = 255
-		}
-	}
-
-	cctx.putImageData(imgC, 0, 0)
-	rctx.putImageData(imgR, 0, 0)
-
-	return { color, rough }
-}
+const seg = 768
 
 /**
  * @param {HTMLElement} container
@@ -163,15 +41,17 @@ function makeTerrainTextures(size) {
 export function mountGame(container) {
 	const scene = new THREE.Scene()
 	scene.background = new THREE.Color(0x9ec8e8)
-	scene.fog = new THREE.Fog(0xa8d0e8, 1200, 5200)
+	scene.fog = new THREE.Fog(0xa8d0e8, 2400, 10400)
 
 	const camera = new THREE.PerspectiveCamera(
 		50,
 		container.clientWidth / Math.max(container.clientHeight, 1),
-		0.1,
-		12000,
+		0.5,
+		16000,
 	)
-	camera.position.set(0, EYE_HEIGHT + 1.5, 12)
+	const spawn = findMountainTopSpawnPosition()
+	let playerX = spawn.playerX
+	let playerZ = spawn.playerZ
 
 	const renderer = new THREE.WebGLRenderer({ antialias: true })
 	renderer.setSize(container.clientWidth, container.clientHeight)
@@ -180,13 +60,13 @@ export function mountGame(container) {
 	renderer.toneMapping = THREE.ACESFilmicToneMapping
 	renderer.toneMappingExposure = 1.08
 	renderer.shadowMap.enabled = true
-	renderer.shadowMap.type = THREE.PCFSoftShadowMap
+	renderer.shadowMap.type = THREE.PCFShadowMap
 	container.appendChild(renderer.domElement)
 
 	const pointer = new PointerLockControls(camera, renderer.domElement)
 
 	const hint = document.createElement('div')
-	hint.textContent = 'Click — look · WASD move · Esc unlock'
+	hint.textContent = 'Scroll: zoom view · Click look · WASD · Esc unlock'
 	Object.assign(hint.style, {
 		position: 'absolute',
 		left: '12px',
@@ -233,64 +113,119 @@ export function mountGame(container) {
 	window.addEventListener('keydown', onKeyDown)
 	window.addEventListener('keyup', onKeyUp)
 
-	const seg = 192
+	let zoomAboveGround = 0
+
+	function onWheel(e) {
+		e.preventDefault()
+		zoomAboveGround = THREE.MathUtils.clamp(
+			zoomAboveGround + e.deltaY * ZOOM_WHEEL_SCALE,
+			ZOOM_ABOVE_MIN,
+			ZOOM_ABOVE_MAX,
+		)
+	}
+	renderer.domElement.addEventListener('wheel', onWheel, { passive: false })
+
+	const floodLevel = floodWaterLevel()
+
 	const planeGeo = new THREE.PlaneGeometry(PLANE_SIZE, PLANE_SIZE, seg, seg)
 	const pos = planeGeo.attributes.position
 	for (let i = 0; i < pos.count; i++) {
 		const lx = pos.getX(i)
 		const ly = pos.getY(i)
 		const h = terrainHeightAtPlaneXY(lx, ly)
-		pos.setZ(i, -h)
+		pos.setZ(i, h)
 	}
 	planeGeo.computeVertexNormals()
 
-	const TEX = 512
-	const { color: grassColorCanvas, rough: grassRoughCanvas } = makeTerrainTextures(TEX)
-
-	const grassTex = new THREE.CanvasTexture(grassColorCanvas)
-	grassTex.wrapS = grassTex.wrapT = THREE.RepeatWrapping
-	grassTex.repeat.set(28, 28)
-	grassTex.colorSpace = THREE.SRGBColorSpace
-	grassTex.anisotropy = renderer.capabilities.getMaxAnisotropy()
-	grassTex.needsUpdate = true
-
-	const roughTex = new THREE.CanvasTexture(grassRoughCanvas)
-	roughTex.wrapS = roughTex.wrapT = THREE.RepeatWrapping
-	roughTex.repeat.copy(grassTex.repeat)
-	roughTex.colorSpace = THREE.NoColorSpace
-	roughTex.needsUpdate = true
+	let vHMin = Infinity
+	let vHMax = -Infinity
+	for (let i = 0; i < pos.count; i++) {
+		const h = pos.getZ(i)
+		if (h < vHMin) {
+			vHMin = h
+		}
+		if (h > vHMax) {
+			vHMax = h
+		}
+	}
+	const hSpan = vHMax - vHMin
+	const colors = new Float32Array(pos.count * 3)
+	for (let i = 0; i < pos.count; i++) {
+		const lx = pos.getX(i)
+		const ly = pos.getY(i)
+		const h = pos.getZ(i)
+		const tn = hSpan > 1e-5 ? (h - vHMin) / hSpan : 0.5
+		const { wx, wy } = terrainPlaneWarp(lx, ly)
+		let rgb = heightBiomeRgb(tn)
+		rgb = riverCorridorRgb(wx, wy, rgb)
+		rgb = applyUnderwaterRiverTint(wx, wy, h, rgb, floodLevel)
+		const micro = noise2(lx * 0.012, ly * 0.011) * 0.028
+		colors[i * 3] = THREE.MathUtils.clamp(rgb.r + micro, 0, 1)
+		colors[i * 3 + 1] = THREE.MathUtils.clamp(rgb.g + micro, 0, 1)
+		colors[i * 3 + 2] = THREE.MathUtils.clamp(rgb.b + micro * 0.75, 0, 1)
+	}
+	planeGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
 
 	const ground = new THREE.Mesh(
 		planeGeo,
 		new THREE.MeshStandardMaterial({
-			map: grassTex,
-			roughnessMap: roughTex,
-			roughness: 1,
+			vertexColors: true,
+			roughness: 0.82,
 			metalness: 0,
 			envMapIntensity: 0.4,
-			side: THREE.DoubleSide,
+			side: THREE.FrontSide,
 		}),
 	)
 	ground.rotation.x = -Math.PI / 2
 	ground.receiveShadow = true
+	ground.castShadow = true
 	scene.add(ground)
 
-	const raycaster = new THREE.Raycaster()
-	const rayOrigin = new THREE.Vector3()
-	const down = new THREE.Vector3(0, -1, 0)
+	const floodGeo = new THREE.PlaneGeometry(PLANE_SIZE, PLANE_SIZE, 1, 1)
+	const floodPos = floodGeo.attributes.position
+	for (let i = 0; i < floodPos.count; i++) {
+		floodPos.setZ(i, floodLevel)
+	}
+	floodGeo.computeVertexNormals()
+	const floodMat = new THREE.MeshPhysicalMaterial({
+		color: 0x0a5a6e,
+		transparent: true,
+		opacity: 0.48,
+		roughness: 0.45,
+		metalness: 0,
+		side: THREE.DoubleSide,
+		depthWrite: false,
+		fog: true,
+		polygonOffset: true,
+		polygonOffsetFactor: 1,
+		polygonOffsetUnits: 2,
+	})
+	const floodMesh = new THREE.Mesh(floodGeo, floodMat)
+	floodMesh.rotation.x = -Math.PI / 2
+	floodMesh.renderOrder = 0
+	scene.add(floodMesh)
+
+	const { mesh: waterVolMesh, geo: waterVolGeo, mat: waterVolMat } = createRiverWaterVolumeMesh()
+	scene.add(waterVolMesh)
+
+	const { mesh: waterMesh, geo: waterGeo, mat: waterMat } = createRiverWaterMesh(scene.fog)
+	scene.add(waterMesh)
+
+	const blobParts = createBlobCharacter()
+	scene.add(blobParts.group)
 
 	const hemi = new THREE.HemisphereLight(0xcfe8ff, 0x4a5c3a, 0.55)
 	scene.add(hemi)
-	const amb = new THREE.AmbientLight(0xe8f2ff, 0.42)
+	const amb = new THREE.AmbientLight(0xe8f2ff, 0.38)
 	scene.add(amb)
-	const sun = new THREE.DirectionalLight(0xfff5e6, 1.35)
+	const sun = new THREE.DirectionalLight(0xfff5e6, 1.45)
 	sun.position.set(520, 1100, 380)
 	sun.castShadow = true
-	sun.shadow.mapSize.set(4096, 4096)
-	sun.shadow.bias = -0.00015
+	sun.shadow.mapSize.set(2048, 2048)
+	sun.shadow.bias = -0.0002
 	sun.shadow.camera.near = 10
-	sun.shadow.camera.far = 4500
-	const sc = 2200
+	sun.shadow.camera.far = 16000
+	const sc = 4200
 	sun.shadow.camera.left = -sc
 	sun.shadow.camera.right = sc
 	sun.shadow.camera.top = sc
@@ -304,18 +239,30 @@ export function mountGame(container) {
 
 	let requestId = 0
 
-	function clampXZ(v) {
+	function clampPlayerXZ() {
 		const lim = PLANE_HALF - EDGE_MARGIN
-		v.x = THREE.MathUtils.clamp(v.x, -lim, lim)
-		v.z = THREE.MathUtils.clamp(v.z, -lim, lim)
+		playerX = THREE.MathUtils.clamp(playerX, -lim, lim)
+		playerZ = THREE.MathUtils.clamp(playerZ, -lim, lim)
 	}
 
-	function snapEyeToGround() {
-		rayOrigin.set(camera.position.x, RAY_UP, camera.position.z)
-		raycaster.set(rayOrigin, down)
-		const hits = raycaster.intersectObject(ground, false)
-		const y = hits.length > 0 ? hits[0].point.y + EYE_HEIGHT : EYE_HEIGHT
-		camera.position.y = y
+	function updateChaseCamera() {
+		camera.getWorldDirection(forward)
+		const horizontal = Math.hypot(forward.x, forward.z)
+		const pitchUp = horizontal > 1e-8 ? Math.atan2(forward.y, horizontal) : 0
+		const r = chaseHorizontalDistance(pitchUp)
+		const hAbovePlayer = chaseHeightAbovePlayer(pitchUp)
+		forward.y = 0
+		if (forward.lengthSq() > 1e-6) {
+			forward.normalize()
+		} else {
+			forward.set(0, 0, -1)
+		}
+		camera.position.x = playerX + forward.x * -r
+		camera.position.z = playerZ + forward.z * -r
+		const playerGroundY = terrainHeightAtPlaneXY(playerX, -playerZ)
+		const yDesired = playerGroundY + hAbovePlayer + zoomAboveGround
+		const camGroundY = terrainHeightAtPlaneXY(camera.position.x, -camera.position.z)
+		camera.position.y = Math.max(yDesired, camGroundY + CHASE_MIN_ABOVE_TERRAIN)
 	}
 
 	function animate() {
@@ -339,15 +286,42 @@ export function mountGame(container) {
 			if (keys.KeyA) move.sub(right)
 			if (move.lengthSq() > 0) {
 				move.normalize().multiplyScalar(MOVE_SPEED * delta)
-				camera.position.add(move)
-				clampXZ(camera.position)
+				playerX += move.x
+				playerZ += move.z
+				clampPlayerXZ()
 			}
 		}
 
-		snapEyeToGround()
+		updateChaseCamera()
+
+		const el = clock.getElapsedTime()
+		waterMat.uniforms.uTime.value = el
+
+		{
+			const lx = playerX
+			const ly = -playerZ
+			const gy = terrainHeightAtPlaneXY(lx, ly)
+			blobParts.group.position.set(playerX, gy, playerZ)
+			camera.getWorldDirection(forward)
+			forward.y = 0
+			if (forward.lengthSq() > 1e-6) {
+				forward.normalize()
+			} else {
+				forward.set(0, 0, -1)
+			}
+			blobParts.group.rotation.y = Math.atan2(forward.x, forward.z)
+			const wobble = Math.sin(el * 3) * 0.02
+			blobParts.body.scale.set(
+				1.15 * (1 - wobble * 0.5),
+				1.15 * (1 + wobble),
+				1.15 * (1 - wobble * 0.5),
+			)
+			blobParts.group.rotation.x = wobble * 0.35
+		}
 
 		renderer.render(scene, camera)
 	}
+	updateChaseCamera()
 	animate()
 
 	function onResize() {
@@ -366,11 +340,21 @@ export function mountGame(container) {
 		resizeObserver.disconnect()
 		window.removeEventListener('keydown', onKeyDown)
 		window.removeEventListener('keyup', onKeyUp)
+		renderer.domElement.removeEventListener('wheel', onWheel)
 		pointer.dispose()
-		grassTex.dispose()
-		roughTex.dispose()
 		planeGeo.dispose()
 		ground.material.dispose()
+		floodGeo.dispose()
+		floodMat.dispose()
+		waterVolGeo.dispose()
+		waterVolMat.dispose()
+		waterGeo.dispose()
+		waterMat.dispose()
+		scene.remove(blobParts.group)
+		blobParts.bodyGeo.dispose()
+		blobParts.bodyMat.dispose()
+		blobParts.eyeGeo.dispose()
+		blobParts.eyeMat.dispose()
 		renderer.dispose()
 		container.removeChild(renderer.domElement)
 		if (hint.parentNode === container) {
