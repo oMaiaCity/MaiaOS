@@ -8,11 +8,17 @@ import { fbm2 } from './noise.js'
 const RIVER_WOBBLE_X = 0.00195
 const RIVER_WOBBLE_AMP = 560
 const RIVER_HALF_WIDTH_BASE = 1300
-const RIVER_WIDTH_NOISE = 600
+/** Smooth width variation along flow (fbm on flow parameter only). */
+const RIVER_WIDTH_NOISE = 520
+/** Primary / secondary along-flow pulses (thick → thin → thick). */
+const RIVER_WIDTH_PULSE_A = 440
+const RIVER_WIDTH_PULSE_B = 165
+const RIVER_WIDTH_PULSE_FREQ1 = 3.15
+const RIVER_WIDTH_PULSE_FREQ2 = 7.4
 /** Rim height above bed inside the corridor (U cross-section); keep modest to avoid canal walls). */
 const RIVER_BANK_HEIGHT = 105
-/** Jagged corridor edge: high-frequency width noise amplitude. */
-const RIVER_ROUGH_AMP = 120
+/** Beyond corridor half-width: blend carved rim height back to terrain (removes grid-stepped cliff faces). */
+const RIVER_FEATHER_OUTER = 74
 /** Bed elevation at upstream corner in flow projection (lowered vs terrain so channel cuts in, not perches). */
 const RIVER_ELEV_UPSTREAM = -120
 /** Bed elevation at downstream corner. Same total drop as before, shifted down. */
@@ -32,15 +38,41 @@ export const WATER_SEGMENTS = 112
 
 export { RIVER_BED_FLAT_FRAC }
 
+const FLOW_LEN = Math.hypot(FLOW_DN_X, FLOW_DN_Y)
+const FLOW_DNX = FLOW_DN_X / FLOW_LEN
+const FLOW_DNY = FLOW_DN_Y / FLOW_LEN
+const FLOW_SPAN = PLANE_HALF * (Math.abs(FLOW_DNX) + Math.abs(FLOW_DNY))
+
+/**
+ * Downstream progress [0, 1] in warped plane; same axis as bed elevation.
+ * @param {number} wx
+ * @param {number} wy
+ */
+export function riverFlowAlongT(wx, wy) {
+	const dot = wx * FLOW_DNX + wy * FLOW_DNY
+	return THREE.MathUtils.clamp((dot + FLOW_SPAN) / (2 * FLOW_SPAN), 0, 1)
+}
+
 export function riverCenterY(wx) {
 	return Math.sin(wx * RIVER_WOBBLE_X) * RIVER_WOBBLE_AMP + fbm2(wx * 0.00058 + 1.12, 2.9) * 220
 }
 
-export function riverHalfWidth(wx, wy) {
-	const w1 = fbm2(wx * 0.00145, wy * 0.00142)
-	const w2 = fbm2(wx * 0.0042, wy * 0.004)
-	const rough = fbm2(wx * 0.025, wy * 0.024) * RIVER_ROUGH_AMP
-	return RIVER_HALF_WIDTH_BASE + w1 * RIVER_WIDTH_NOISE + w2 * (RIVER_WIDTH_NOISE * 0.45) + rough
+/**
+ * Corridor half-width at this cross-section (constant across the channel at fixed wx).
+ * Width varies only along flow (thick/thin) — never with wy — so the carved bank is a smooth curve, not ribbed.
+ * @param {number} wx
+ * @param {number} _wy
+ */
+export function riverHalfWidth(wx, _wy) {
+	void _wy
+	const cy = riverCenterY(wx)
+	const t = riverFlowAlongT(wx, cy)
+	const w1 = fbm2(t * 5.85 + 0.22, 1.68) * RIVER_WIDTH_NOISE * 0.52
+	const w2 = fbm2(t * 14.6 + 3.4, 6.15) * RIVER_WIDTH_NOISE * 0.2
+	const pulse =
+		Math.sin(t * Math.PI * 2 * RIVER_WIDTH_PULSE_FREQ1) * RIVER_WIDTH_PULSE_A +
+		Math.sin(t * Math.PI * 2 * RIVER_WIDTH_PULSE_FREQ2) * RIVER_WIDTH_PULSE_B
+	return RIVER_HALF_WIDTH_BASE + w1 + w2 + pulse
 }
 
 /**
@@ -48,12 +80,7 @@ export function riverHalfWidth(wx, wy) {
  * so a winding channel still sits on one continuous elevation field; subtractive ripple only.
  */
 export function riverBedElevationFlow(wx, wy) {
-	const len = Math.hypot(FLOW_DN_X, FLOW_DN_Y)
-	const dnx = FLOW_DN_X / len
-	const dny = FLOW_DN_Y / len
-	const dot = wx * dnx + wy * dny
-	const span = PLANE_HALF * (Math.abs(dnx) + Math.abs(dny))
-	const t = THREE.MathUtils.clamp((dot + span) / (2 * span), 0, 1)
+	const t = riverFlowAlongT(wx, wy)
 	const linear = THREE.MathUtils.lerp(RIVER_ELEV_UPSTREAM, RIVER_ELEV_DOWNSTREAM, t)
 	const ripple =
 		16 * (0.5 + 0.5 * Math.sin(wx * 0.0004 + wy * 0.00012)) +
@@ -93,4 +120,28 @@ export function riverChannelHeight(wx, wy) {
 	}
 	const u = d / hw
 	return riverBedElevationFlow(wx, wy) + bankRiseFromCenter(u)
+}
+
+/**
+ * Apply river carve to raw terrain height: hard min inside the channel, smooth blend just outside
+ * so the rim is not a binary jump between adjacent heightfield samples.
+ * @param {number} wx
+ * @param {number} wy
+ * @param {number} terrainH
+ */
+export function riverTerrainBlend(wx, wy, terrainH) {
+	const cy = riverCenterY(wx)
+	const d = Math.abs(wy - cy)
+	const hw = riverHalfWidth(wx, wy)
+	if (d >= hw + RIVER_FEATHER_OUTER) {
+		return terrainH
+	}
+	if (d < hw) {
+		const riverH = riverChannelHeight(wx, wy)
+		return Math.min(terrainH, riverH)
+	}
+	const rimH = riverBedElevationFlow(wx, wy) + bankRiseFromCenter(1)
+	const carvedAtRim = Math.min(terrainH, rimH)
+	const t = smoothRange(d, hw, hw + RIVER_FEATHER_OUTER)
+	return carvedAtRim + (terrainH - carvedAtRim) * t
 }

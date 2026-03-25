@@ -3,7 +3,7 @@
  */
 import { EDGE_MARGIN, PLANE_HALF } from './game-constants.js'
 import { fbm2, ridgedFbm2 } from './noise.js'
-import { riverChannelHeight } from './river.js'
+import { riverTerrainBlend } from './river.js'
 
 /** Final vertical scale (after sharpen). */
 const TERRAIN_AMPLITUDE = 3.55
@@ -57,11 +57,7 @@ export function terrainHeightAtPlaneXY(lx, ly) {
 		(continent + hills + ridges + peaks + spikes + r3 * 22 + valleys + detail + grit) *
 		TERRAIN_AMPLITUDE
 	const terrainH = sharpenSignedHeight(raw)
-	const riverH = riverChannelHeight(wx, wy)
-	if (riverH === Infinity) {
-		return terrainH
-	}
-	return Math.min(terrainH, riverH)
+	return riverTerrainBlend(wx, wy, terrainH)
 }
 
 /** Minimum distance from origin so spawn is not at map center. */

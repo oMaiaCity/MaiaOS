@@ -33,7 +33,7 @@ import {
 import { createForestInstancedMeshes, disposeForestResources } from './trees.js'
 import { createRiverWaterMesh, createRiverWaterVolumeMesh } from './water-meshes.js'
 
-const seg = 768
+const seg = 1280
 
 /**
  * @param {HTMLElement} container
