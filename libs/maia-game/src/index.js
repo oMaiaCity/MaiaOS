@@ -14,6 +14,7 @@ import {
 	CHASE_MIN_ABOVE_TERRAIN,
 	chaseHeightAbovePlayer,
 	chaseHorizontalDistance,
+	moveSpeedScaleFromCameraBlobDist,
 } from './camera-chase.js'
 import {
 	EDGE_MARGIN,
@@ -247,6 +248,7 @@ export function mountGame(container) {
 	const forward = new THREE.Vector3()
 	const right = new THREE.Vector3()
 	const move = new THREE.Vector3()
+	const blobAt = new THREE.Vector3()
 	const clock = new THREE.Clock()
 
 	let requestId = 0
@@ -297,7 +299,11 @@ export function mountGame(container) {
 			if (keys.KeyD) move.add(right)
 			if (keys.KeyA) move.sub(right)
 			if (move.lengthSq() > 0) {
-				move.normalize().multiplyScalar(MOVE_SPEED * delta)
+				const gyMove = terrainHeightAtPlaneXY(playerX, -playerZ)
+				blobAt.set(playerX, gyMove, playerZ)
+				const distCamBlob = camera.position.distanceTo(blobAt)
+				const moveScale = moveSpeedScaleFromCameraBlobDist(distCamBlob)
+				move.normalize().multiplyScalar(MOVE_SPEED * delta * moveScale)
 				playerX += move.x
 				playerZ += move.z
 				clampPlayerXZ()
