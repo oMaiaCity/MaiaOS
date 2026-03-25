@@ -5,6 +5,7 @@ import * as THREE from 'three'
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js'
 import {
 	applyUnderwaterRiverTint,
+	domeGardenTurfRgb,
 	floodWaterLevel,
 	heightBiomeRgb,
 	riverCorridorRgb,
@@ -16,6 +17,9 @@ import {
 	chaseHorizontalDistance,
 	moveSpeedScaleFromCameraBlobDist,
 } from './camera-chase.js'
+import { updateDomeGardenPositions } from './dome-garden.js'
+import { angleWithinArc, minTerrainHeightUnderRim } from './dome-placement.js'
+import { setDomePlacementHighlight } from './dome-selection-tint.js'
 import {
 	EDGE_MARGIN,
 	MOVE_SPEED,
@@ -25,6 +29,7 @@ import {
 	ZOOM_ABOVE_MIN,
 	ZOOM_WHEEL_SCALE,
 } from './game-constants.js'
+import { DOME_BAKED_ENTRANCE_ATAN2, loadGeodesicDome } from './geodesic-dome.js'
 import { noise2 } from './noise.js'
 import {
 	findMountainTopSpawnPosition,
@@ -34,7 +39,7 @@ import {
 import { createForestInstancedMeshes, disposeForestResources } from './trees.js'
 import { createRiverWaterMesh, createRiverWaterVolumeMesh } from './water-meshes.js'
 
-const seg = 1280
+const seg = 640
 
 /** Yield so the event loop can run (navigation, input) while terrain builds. */
 function yieldToMain() {
@@ -50,6 +55,10 @@ const TERRAIN_BATCH = 65536
  */
 export async function mountGame(container, { isCancelled = () => false } = {}) {
 	const scene = new THREE.Scene()
+	let geodesicDome = null
+	let domeMovePending = false
+	/** @type {{ cx: number, cz: number, doorAngleCenter: number, gy: number, rotY: number } | null} */
+	let domePlacementSnapshot = null
 	scene.background = new THREE.Color(0x9ec8e8)
 	scene.fog = new THREE.Fog(0xa8d0e8, 2400, 10400)
 
@@ -75,8 +84,11 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 
 	const pointer = new PointerLockControls(camera, renderer.domElement)
 
+	const DEFAULT_HINT =
+		'Scroll: zoom · Click look · WASD (works unlocked) · Esc unlock · Unlocked: click dome, then ground to move'
+
 	const hint = document.createElement('div')
-	hint.textContent = 'Scroll: zoom view · Click look · WASD · Esc unlock'
+	hint.textContent = DEFAULT_HINT
 	Object.assign(hint.style, {
 		position: 'absolute',
 		left: '12px',
@@ -93,14 +105,29 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	container.style.position = 'relative'
 	container.appendChild(hint)
 
-	renderer.domElement.addEventListener('click', () => {
-		if (!pointer.isLocked) {
-			const ret = pointer.lock()
-			if (ret != null && typeof ret.then === 'function') {
-				ret.catch(() => {})
-			}
-		}
+	const domeCoordLabel = document.createElement('div')
+	domeCoordLabel.setAttribute('aria-hidden', 'true')
+	domeCoordLabel.style.display = 'none'
+	Object.assign(domeCoordLabel.style, {
+		position: 'fixed',
+		left: '50%',
+		top: '52px',
+		pointerEvents: 'none',
+		userSelect: 'none',
+		transform: 'translateX(-50%)',
+		padding: '8px 14px',
+		fontFamily: 'ui-monospace, SFMono-Regular, Menlo, monospace',
+		fontSize: '12px',
+		lineHeight: 1.45,
+		color: '#eaf8ff',
+		background: 'rgba(8, 22, 42, 0.88)',
+		borderRadius: '8px',
+		border: '1px solid rgba(120, 180, 220, 0.45)',
+		whiteSpace: 'pre',
+		boxShadow: '0 4px 18px rgba(0, 0, 0, 0.35)',
+		zIndex: '2147483646',
 	})
+	document.body.appendChild(domeCoordLabel)
 
 	pointer.addEventListener('lock', () => {
 		hint.style.opacity = '0.35'
@@ -113,6 +140,9 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	function onKeyDown(e) {
 		if (e.code in keys) {
 			keys[e.code] = true
+		}
+		if (e.code === 'Escape' && domeMovePending) {
+			cancelDomePlacement()
 		}
 	}
 	function onKeyUp(e) {
@@ -143,6 +173,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		renderer.dispose()
 		container.removeChild(renderer.domElement)
 		if (hint.parentNode === container) container.removeChild(hint)
+		if (domeCoordLabel.parentNode) domeCoordLabel.parentNode.removeChild(domeCoordLabel)
 	}
 
 	await yieldToMain()
@@ -153,23 +184,79 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 
 	const floodLevel = floodWaterLevel()
 
+	let terrainHeightWorker = null
+	try {
+		terrainHeightWorker = new Worker(new URL('./terrain-height-worker.mjs', import.meta.url), {
+			type: 'module',
+		})
+	} catch {
+		terrainHeightWorker = null
+	}
+	let terrainWorkerMsgId = 0
+
+	function terminateTerrainWorker() {
+		if (terrainHeightWorker) {
+			terrainHeightWorker.terminate()
+			terrainHeightWorker = null
+		}
+	}
+
 	const planeGeo = new THREE.PlaneGeometry(PLANE_SIZE, PLANE_SIZE, seg, seg)
 	const pos = planeGeo.attributes.position
+
+	async function fillHeightBatch(batchStart, batchEnd) {
+		if (terrainHeightWorker) {
+			const n = batchEnd - batchStart
+			const xs = new Float32Array(n)
+			const ys = new Float32Array(n)
+			for (let i = batchStart; i < batchEnd; i++) {
+				const o = i - batchStart
+				xs[o] = pos.getX(i)
+				ys[o] = pos.getY(i)
+			}
+			const id = ++terrainWorkerMsgId
+			const w = terrainHeightWorker
+			const out = await new Promise((resolve) => {
+				function onMsg(e) {
+					if (e.data.id !== id) {
+						return
+					}
+					w.removeEventListener('message', onMsg)
+					resolve(e.data.out)
+				}
+				w.addEventListener('message', onMsg)
+				w.postMessage({ id, start: batchStart, end: batchEnd, xs, ys })
+			})
+			for (let i = batchStart; i < batchEnd; i++) {
+				pos.setZ(i, out[i - batchStart])
+			}
+		} else {
+			for (let i = batchStart; i < batchEnd; i++) {
+				const lx = pos.getX(i)
+				const ly = pos.getY(i)
+				pos.setZ(i, terrainHeightAtPlaneXY(lx, ly))
+			}
+		}
+	}
+
 	for (let start = 0; start < pos.count; start += TERRAIN_BATCH) {
 		await yieldToMain()
 		if (isCancelled()) {
+			terminateTerrainWorker()
 			cleanupEarlyPartial()
 			planeGeo.dispose()
 			return { dispose: () => {} }
 		}
 		const end = Math.min(start + TERRAIN_BATCH, pos.count)
-		for (let i = start; i < end; i++) {
-			const lx = pos.getX(i)
-			const ly = pos.getY(i)
-			const h = terrainHeightAtPlaneXY(lx, ly)
-			pos.setZ(i, h)
+		try {
+			await fillHeightBatch(start, end)
+		} catch {
+			terminateTerrainWorker()
+			terrainHeightWorker = null
+			await fillHeightBatch(start, end)
 		}
 	}
+	terminateTerrainWorker()
 	planeGeo.computeVertexNormals()
 
 	let vHMin = Infinity
@@ -177,6 +264,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	for (let start = 0; start < pos.count; start += TERRAIN_BATCH) {
 		await yieldToMain()
 		if (isCancelled()) {
+			terminateTerrainWorker()
 			cleanupEarlyPartial()
 			planeGeo.dispose()
 			return { dispose: () => {} }
@@ -193,10 +281,23 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		}
 	}
 	const vHSpan = vHMax - vHMin
-	const colors = new Float32Array(pos.count * 3)
+
+	const DOME_RADIUS = 92
+	const DOME_DOOR_GAP = 0.92
+	const DOME_RIM_ABOVE_TERRAIN = 0.12
+	/** Default world placement (XZ + door facing); groundY follows terrain at rim. */
+	const DEFAULT_DOME_CENTER_X = -1877.615
+	const DEFAULT_DOME_CENTER_Z = -1952.463
+	const DEFAULT_DOME_DOOR_ANGLE_CENTER = -1.146173
+	let domeCx = DEFAULT_DOME_CENTER_X
+	let domeCz = DEFAULT_DOME_CENTER_Z
+	let doorAngleCenter = DEFAULT_DOME_DOOR_ANGLE_CENTER
+
+	const baseTerrainColors = new Float32Array(pos.count * 3)
 	for (let start = 0; start < pos.count; start += TERRAIN_BATCH) {
 		await yieldToMain()
 		if (isCancelled()) {
+			terminateTerrainWorker()
 			cleanupEarlyPartial()
 			planeGeo.dispose()
 			return { dispose: () => {} }
@@ -211,13 +312,49 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 			let rgb = heightBiomeRgb(tn)
 			rgb = riverCorridorRgb(wx, wy, rgb)
 			rgb = applyUnderwaterRiverTint(wx, wy, h, rgb, floodLevel)
-			const micro = noise2(lx * 0.012, ly * 0.011) * 0.028
-			colors[i * 3] = THREE.MathUtils.clamp(rgb.r + micro, 0, 1)
-			colors[i * 3 + 1] = THREE.MathUtils.clamp(rgb.g + micro, 0, 1)
-			colors[i * 3 + 2] = THREE.MathUtils.clamp(rgb.b + micro * 0.75, 0, 1)
+			baseTerrainColors[i * 3] = rgb.r
+			baseTerrainColors[i * 3 + 1] = rgb.g
+			baseTerrainColors[i * 3 + 2] = rgb.b
 		}
 	}
+	const colors = new Float32Array(pos.count * 3)
 	planeGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
+
+	function refreshDomeTerrainTint() {
+		const colorAttr = planeGeo.attributes.color
+		const out = colorAttr.array
+		const posAttr = planeGeo.attributes.position
+		const innerR = DOME_RADIUS + 12
+		const outerR = DOME_RADIUS + 168
+		for (let i = 0; i < posAttr.count; i++) {
+			const lx = posAttr.getX(i)
+			const ly = posAttr.getY(i)
+			const baseRgb = {
+				r: baseTerrainColors[i * 3],
+				g: baseTerrainColors[i * 3 + 1],
+				b: baseTerrainColors[i * 3 + 2],
+			}
+			const rgb = domeGardenTurfRgb(lx, ly, baseRgb, domeCx, domeCz, innerR, outerR)
+			const micro = noise2(lx * 0.012, ly * 0.011) * 0.028
+			out[i * 3] = THREE.MathUtils.clamp(rgb.r + micro, 0, 1)
+			out[i * 3 + 1] = THREE.MathUtils.clamp(rgb.g + micro, 0, 1)
+			out[i * 3 + 2] = THREE.MathUtils.clamp(rgb.b + micro * 0.75, 0, 1)
+		}
+		colorAttr.needsUpdate = true
+	}
+
+	let terrainTintRaf = 0
+	function scheduleTerrainTint() {
+		if (terrainTintRaf !== 0) {
+			return
+		}
+		terrainTintRaf = requestAnimationFrame(() => {
+			terrainTintRaf = 0
+			refreshDomeTerrainTint()
+		})
+	}
+
+	refreshDomeTerrainTint()
 
 	const ground = new THREE.Mesh(
 		planeGeo,
@@ -244,6 +381,166 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	for (const m of forest.meshes) {
 		scene.add(m)
 	}
+
+	/** Horizontal base: lowest terrain height around the full rim avoids air gaps on slopes (uphill may intersect terrain slightly). */
+	const domeGroundY =
+		minTerrainHeightUnderRim(domeCx, domeCz, DOME_RADIUS, terrainHeightAtPlaneXY, 64) +
+		DOME_RIM_ABOVE_TERRAIN
+	const doorYaw = doorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2
+	geodesicDome = await loadGeodesicDome({
+		centerX: domeCx,
+		centerZ: domeCz,
+		groundY: domeGroundY,
+		radius: DOME_RADIUS,
+		doorGapRadians: DOME_DOOR_GAP,
+		doorYaw,
+	})
+	scene.add(geodesicDome.group)
+
+	let domeLegitInterior = false
+
+	function syncDomeGarden() {
+		if (!geodesicDome?.gardenGroup) {
+			return
+		}
+		updateDomeGardenPositions(geodesicDome.gardenGroup, {
+			centerX: domeCx,
+			centerZ: domeCz,
+			groundY: geodesicDome.group.position.y,
+			doorYaw: doorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2,
+			terrainHeightAtPlaneXY,
+		})
+	}
+
+	function updateDomeCoordLabel() {
+		if (!domeMovePending || !geodesicDome) {
+			domeCoordLabel.style.display = 'none'
+			return
+		}
+		const gy = geodesicDome.group.position.y
+		const rotY = geodesicDome.group.rotation.y
+		domeCoordLabel.style.display = 'block'
+		domeCoordLabel.textContent = [
+			`centerX   ${domeCx.toFixed(3)}`,
+			`centerZ   ${domeCz.toFixed(3)}`,
+			`groundY   ${gy.toFixed(4)}`,
+			`rotationY ${rotY.toFixed(6)}`,
+		].join('\n')
+	}
+
+	function saveDomePlacementSnapshot() {
+		if (!geodesicDome) {
+			return
+		}
+		domePlacementSnapshot = {
+			cx: domeCx,
+			cz: domeCz,
+			doorAngleCenter,
+			gy: geodesicDome.group.position.y,
+			rotY: geodesicDome.group.rotation.y,
+		}
+	}
+
+	function cancelDomePlacement() {
+		if (!geodesicDome) {
+			domeMovePending = false
+			hint.textContent = DEFAULT_HINT
+			updateDomeCoordLabel()
+			return
+		}
+		if (domePlacementSnapshot) {
+			domeCx = domePlacementSnapshot.cx
+			domeCz = domePlacementSnapshot.cz
+			doorAngleCenter = domePlacementSnapshot.doorAngleCenter
+			geodesicDome.group.position.set(domeCx, domePlacementSnapshot.gy, domeCz)
+			geodesicDome.group.rotation.y = domePlacementSnapshot.rotY
+		}
+		domePlacementSnapshot = null
+		domeMovePending = false
+		setDomePlacementHighlight(geodesicDome.group, false)
+		hint.textContent = DEFAULT_HINT
+		syncDomeGarden()
+		scheduleTerrainTint()
+		updateDomeCoordLabel()
+	}
+
+	function applyDomePreview(newX, newZ) {
+		if (!geodesicDome) {
+			return
+		}
+		const lim = PLANE_HALF - EDGE_MARGIN
+		domeCx = THREE.MathUtils.clamp(newX, -lim, lim)
+		domeCz = THREE.MathUtils.clamp(newZ, -lim, lim)
+		doorAngleCenter = Math.atan2(spawn.playerX - domeCx, spawn.playerZ - domeCz)
+		const gy =
+			minTerrainHeightUnderRim(domeCx, domeCz, DOME_RADIUS, terrainHeightAtPlaneXY, 64) +
+			DOME_RIM_ABOVE_TERRAIN
+		geodesicDome.group.position.set(domeCx, gy, domeCz)
+		geodesicDome.group.rotation.y = doorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2
+		syncDomeGarden()
+		scheduleTerrainTint()
+		updateDomeCoordLabel()
+	}
+
+	function applyDomePlacement(newX, newZ) {
+		applyDomePreview(newX, newZ)
+		domeLegitInterior = false
+		domeMovePending = false
+		domePlacementSnapshot = null
+		setDomePlacementHighlight(geodesicDome.group, false)
+		hint.textContent = DEFAULT_HINT
+		updateDomeCoordLabel()
+	}
+
+	const raycaster = new THREE.Raycaster()
+	function onCanvasMoveDomePlace(e) {
+		if (!domeMovePending || !geodesicDome || pointer.isLocked) {
+			return
+		}
+		const rect = renderer.domElement.getBoundingClientRect()
+		const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1
+		const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1
+		raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera)
+		const gHits = raycaster.intersectObject(ground, false)
+		if (gHits.length > 0) {
+			applyDomePreview(gHits[0].point.x, gHits[0].point.z)
+		}
+	}
+	function onCanvasClickDomePlace(e) {
+		if (pointer.isLocked) {
+			return
+		}
+		const rect = renderer.domElement.getBoundingClientRect()
+		const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1
+		const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1
+		raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera)
+		if (domeMovePending && geodesicDome) {
+			const gHits = raycaster.intersectObject(ground, false)
+			if (gHits.length > 0) {
+				applyDomePlacement(gHits[0].point.x, gHits[0].point.z)
+				return
+			}
+			cancelDomePlacement()
+			return
+		}
+		if (geodesicDome) {
+			const dHits = raycaster.intersectObject(geodesicDome.group, true)
+			if (dHits.length > 0) {
+				saveDomePlacementSnapshot()
+				setDomePlacementHighlight(geodesicDome.group, true)
+				domeMovePending = true
+				hint.textContent = 'Move mouse to preview · click terrain to place · Esc to cancel'
+				updateDomeCoordLabel()
+				return
+			}
+		}
+		const ret = pointer.lock()
+		if (ret != null && typeof ret.then === 'function') {
+			ret.catch(() => {})
+		}
+	}
+	renderer.domElement.addEventListener('mousemove', onCanvasMoveDomePlace)
+	renderer.domElement.addEventListener('click', onCanvasClickDomePlace)
 
 	const floodGeo = new THREE.PlaneGeometry(PLANE_SIZE, PLANE_SIZE, 1, 1)
 	const floodPos = floodGeo.attributes.position
@@ -334,30 +631,63 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		requestId = requestAnimationFrame(animate)
 		const delta = Math.min(clock.getDelta(), 0.05)
 
-		if (pointer.isLocked) {
-			camera.getWorldDirection(forward)
-			forward.y = 0
-			if (forward.lengthSq() > 1e-6) {
-				forward.normalize()
-			} else {
-				forward.set(0, 0, -1)
-			}
-			right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize()
+		camera.getWorldDirection(forward)
+		forward.y = 0
+		if (forward.lengthSq() > 1e-6) {
+			forward.normalize()
+		} else {
+			forward.set(0, 0, -1)
+		}
+		right.crossVectors(forward, new THREE.Vector3(0, 1, 0)).normalize()
 
-			move.set(0, 0, 0)
-			if (keys.KeyW) move.add(forward)
-			if (keys.KeyS) move.sub(forward)
-			if (keys.KeyD) move.add(right)
-			if (keys.KeyA) move.sub(right)
-			if (move.lengthSq() > 0) {
-				const gyMove = terrainHeightAtPlaneXY(playerX, -playerZ)
-				blobAt.set(playerX, gyMove, playerZ)
-				const distCamBlob = camera.position.distanceTo(blobAt)
-				const moveScale = moveSpeedScaleFromCameraBlobDist(distCamBlob)
-				move.normalize().multiplyScalar(MOVE_SPEED * delta * moveScale)
-				playerX += move.x
-				playerZ += move.z
+		move.set(0, 0, 0)
+		if (keys.KeyW) move.add(forward)
+		if (keys.KeyS) move.sub(forward)
+		if (keys.KeyD) move.add(right)
+		if (keys.KeyA) move.sub(right)
+		if (move.lengthSq() > 0) {
+			const prevX = playerX
+			const prevZ = playerZ
+			const prevD = Math.hypot(prevX - domeCx, prevZ - domeCz)
+			const gyMove = terrainHeightAtPlaneXY(playerX, -playerZ)
+			blobAt.set(playerX, gyMove, playerZ)
+			const distCamBlob = camera.position.distanceTo(blobAt)
+			const moveScale = moveSpeedScaleFromCameraBlobDist(distCamBlob)
+			move.normalize().multiplyScalar(MOVE_SPEED * delta * moveScale)
+			playerX += move.x
+			playerZ += move.z
+			clampPlayerXZ()
+			const d = Math.hypot(playerX - domeCx, playerZ - domeCz)
+			const ang = Math.atan2(playerX - domeCx, playerZ - domeCz)
+			const doorHalfArc = DOME_DOOR_GAP / 2 + 0.08
+			const inDoorArc = angleWithinArc(ang, doorAngleCenter, doorHalfArc)
+			const rimIn = DOME_RADIUS - 1.5
+			const inwardCross = prevD >= rimIn && d < rimIn
+			const outwardCross = prevD < rimIn && d >= rimIn
+			if (inwardCross) {
+				if (inDoorArc) {
+					domeLegitInterior = true
+				} else {
+					playerX = prevX
+					playerZ = prevZ
+				}
+			} else if (outwardCross) {
+				if (inDoorArc) {
+					domeLegitInterior = false
+				} else {
+					playerX = prevX
+					playerZ = prevZ
+				}
+			} else if (d < rimIn && !domeLegitInterior) {
+				const dx = playerX - domeCx
+				const dz = playerZ - domeCz
+				const len = Math.hypot(dx, dz) || 1
+				const push = (rimIn + 0.5) / len
+				playerX = domeCx + dx * push
+				playerZ = domeCz + dz * push
 				clampPlayerXZ()
+			} else if (d >= rimIn && prevD >= rimIn) {
+				domeLegitInterior = false
 			}
 		}
 
@@ -405,16 +735,27 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	resizeObserver.observe(container)
 
 	function dispose() {
+		if (terrainTintRaf !== 0) {
+			cancelAnimationFrame(terrainTintRaf)
+			terrainTintRaf = 0
+		}
+		terminateTerrainWorker()
 		cancelAnimationFrame(requestId)
 		resizeObserver.disconnect()
 		window.removeEventListener('keydown', onKeyDown)
 		window.removeEventListener('keyup', onKeyUp)
 		renderer.domElement.removeEventListener('wheel', onWheel)
+		renderer.domElement.removeEventListener('mousemove', onCanvasMoveDomePlace)
+		renderer.domElement.removeEventListener('click', onCanvasClickDomePlace)
 		pointer.dispose()
 		for (const m of forest.meshes) {
 			scene.remove(m)
 		}
 		disposeForestResources(forest)
+		if (geodesicDome) {
+			scene.remove(geodesicDome.group)
+			geodesicDome.dispose()
+		}
 		planeGeo.dispose()
 		ground.material.dispose()
 		floodGeo.dispose()
@@ -432,6 +773,9 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		container.removeChild(renderer.domElement)
 		if (hint.parentNode === container) {
 			container.removeChild(hint)
+		}
+		if (domeCoordLabel.parentNode) {
+			domeCoordLabel.parentNode.removeChild(domeCoordLabel)
 		}
 	}
 

@@ -12,8 +12,8 @@ const BUSH_TYPES = 3
 const BUSH_VARIANTS_PER_TYPE = 16
 const TOTAL_BUSH_VARIANTS = BUSH_TYPES * BUSH_VARIANTS_PER_TYPE
 
-const DEFAULT_TREE_COUNT = 8800
-const DEFAULT_BUSH_COUNT = 8800
+const DEFAULT_TREE_COUNT = 5600
+const DEFAULT_BUSH_COUNT = 5600
 /** World-space scale multiplier for bush instances (geometry is authored small). */
 const BUSH_INSTANCE_SCALE = 3
 const MAX_PLACE_ATTEMPTS = 5_000_000

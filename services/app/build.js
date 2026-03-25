@@ -117,6 +117,13 @@ if (existsSync(distrosWasmDir)) {
 	cpSync(distrosWasmDir, wasmOutDir, { recursive: true })
 }
 
+const gameAssetsOut = join(distDir, 'game-assets')
+const gameAssetsSrc = join(repoRoot, 'libs/maia-game/src/assets')
+mkdirSync(gameAssetsOut, { recursive: true })
+if (existsSync(join(gameAssetsSrc, 'geodesic-dome.glb'))) {
+	cpSync(join(gameAssetsSrc, 'geodesic-dome.glb'), join(gameAssetsOut, 'geodesic-dome.glb'))
+}
+
 // Verify critical assets (WASM required - no remote fallback)
 const distHas = (p) => existsSync(join(distDir, p))
 const required = [
@@ -132,6 +139,7 @@ const required = [
 		'runanywhere-wasm/racommons-llamacpp-webgpu.js',
 		distHas('runanywhere-wasm/racommons-llamacpp-webgpu.js'),
 	],
+	['game-assets/geodesic-dome.glb', distHas('game-assets/geodesic-dome.glb')],
 ]
 const missing = required.filter(([, ok]) => !ok).map(([p]) => p)
 if (missing.length > 0) {

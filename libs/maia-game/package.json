@@ -3,6 +3,10 @@
 	"version": "26.0318.2254",
 	"type": "module",
 	"main": "./src/index.js",
+	"scripts": {
+		"generate:dome": "bun scripts/generate-dome.mjs",
+		"import:dome": "bun scripts/import-blender-dome.mjs"
+	},
 	"exports": {
 		".": "./src/index.js"
 	},
