@@ -94,7 +94,7 @@
 
 .nav-play-btn {
 	text-decoration: none;
-	color: var(--color-ink);
+	color: var(--color-water-text);
 	font-family: var(--font-heading);
 	font-weight: 800;
 	font-size: 0.8rem;
@@ -102,14 +102,14 @@
 	letter-spacing: 0.1em;
 	padding: 0.6rem 1.5rem;
 	background-color: var(--color-paradise-water);
-	border: 1px solid var(--color-ink);
+	border: 1px solid color-mix(in srgb, var(--color-paradise-water) 88%, var(--color-ink));
 	border-radius: 50px;
 	transition: all 0.2s ease;
 }
 
 .nav-play-btn:hover {
 	background-color: var(--color-ink);
-	color: var(--color-foundation);
+	color: var(--color-water-text);
 }
 
 /* Shared Beat Styles (General first) */
@@ -430,6 +430,157 @@
 	max-width: 100%; /* Allow it to fill the intro container */
 }
 
+/* €1 collective math — between blueprint intro and belief */
+.beat-euro-power {
+	position: relative;
+	z-index: 1;
+	max-width: 52rem;
+	margin: 0 auto;
+	padding: clamp(3rem, 8vw, 5rem) 5vw 0;
+	text-align: center;
+}
+
+.euro-power-eyebrow {
+	font-family: var(--font-heading);
+	font-weight: 800;
+	font-size: clamp(0.7rem, 1vw, 0.85rem);
+	letter-spacing: 0.2em;
+	text-transform: uppercase;
+	color: var(--color-terracotta);
+	margin: 0 0 1rem;
+}
+
+.euro-power-headline {
+	font-family: var(--font-heading);
+	font-size: clamp(1.35rem, 2.8vw, 2rem);
+	font-weight: 700;
+	line-height: 1.25;
+	color: var(--color-ink);
+	margin: 0 auto 2.5rem;
+	max-width: 44rem;
+}
+
+.euro-math-board {
+	border: 1px solid rgba(168, 181, 162, 0.55);
+	border-radius: 24px;
+	background: linear-gradient(165deg, rgba(253, 252, 250, 0.98) 0%, rgba(240, 248, 244, 0.85) 100%);
+	box-shadow:
+		0 1px 0 rgba(255, 255, 255, 0.75) inset,
+		0 16px 48px rgba(27, 43, 27, 0.07);
+	padding: clamp(1.5rem, 4vw, 2.25rem) clamp(1rem, 3vw, 2rem);
+	margin-bottom: 2rem;
+}
+
+.euro-math-row--inputs {
+	display: flex;
+	flex-wrap: wrap;
+	align-items: stretch;
+	justify-content: center;
+	gap: 0.35rem 0.5rem;
+	row-gap: 1rem;
+}
+
+.euro-math-cell {
+	flex: 1 1 5.5rem;
+	min-width: min(100%, 5.5rem);
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.35rem;
+	padding: 0.75rem 0.5rem;
+	border-radius: 14px;
+	background: rgba(253, 252, 240, 0.9);
+	border: 1px solid rgba(168, 181, 162, 0.35);
+}
+
+.euro-math-figure {
+	font-family: var(--font-heading);
+	font-weight: 800;
+	font-size: clamp(1.25rem, 2.5vw, 1.75rem);
+	color: var(--color-ink);
+	line-height: 1.1;
+	letter-spacing: -0.02em;
+}
+
+.euro-math-desc {
+	font-size: clamp(0.7rem, 1.2vw, 0.8rem);
+	font-weight: 600;
+	color: var(--color-ink);
+	opacity: 0.55;
+	line-height: 1.2;
+	text-align: center;
+	max-width: 8rem;
+}
+
+.euro-math-times {
+	align-self: center;
+	font-family: var(--font-heading);
+	font-weight: 700;
+	font-size: 1.1rem;
+	color: var(--color-blueprint);
+	opacity: 0.45;
+	padding: 0 0.15rem;
+}
+
+.euro-math-equals {
+	height: 1px;
+	background: linear-gradient(90deg, transparent, var(--color-blueprint), transparent);
+	opacity: 0.25;
+	margin: 1.25rem 0 1rem;
+}
+
+.euro-math-result {
+	margin: 0;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.35rem;
+}
+
+.euro-math-result-label {
+	font-size: clamp(0.7rem, 1.1vw, 0.8rem);
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--color-ink);
+	opacity: 0.45;
+}
+
+.euro-math-result-number {
+	font-family: var(--font-heading);
+	font-weight: 800;
+	font-size: clamp(1.75rem, 4vw, 2.75rem);
+	letter-spacing: -0.03em;
+	color: var(--color-paradise-water);
+	line-height: 1.1;
+}
+
+.euro-math-result-exact {
+	font-variant-numeric: tabular-nums;
+	font-size: clamp(0.85rem, 1.35vw, 0.95rem);
+	font-weight: 600;
+	letter-spacing: 0.04em;
+	color: var(--color-ink);
+	opacity: 0.5;
+	margin-top: 0.15rem;
+}
+
+.euro-power-body {
+	font-size: clamp(1rem, 1.5vw, 1.15rem);
+	line-height: 1.65;
+	color: var(--color-ink);
+	opacity: 0.88;
+	margin: 0 auto;
+	max-width: 40rem;
+	font-weight: 500;
+}
+
+.euro-power-body strong {
+	font-weight: 700;
+	color: var(--color-ink);
+	opacity: 1;
+}
+
 .manifesto-blueprint .manifesto-body {
 	font-size: clamp(1rem, 1.5vw, 1.25rem);
 	line-height: 1.6;
@@ -512,48 +663,66 @@
 	font-family: var(--font-heading);
 	color: var(--color-ink);
 	margin-top: 2.5rem;
-	padding: 1.75rem 2rem;
-	border: 1px solid rgba(168, 181, 162, 0.65);
+	padding: 2.5rem 3rem;
+	border: 1px solid rgba(168, 181, 162, 0.4);
 	background: linear-gradient(160deg, rgba(253, 252, 250, 0.98) 0%, rgba(245, 243, 232, 0.92) 100%);
-	border-radius: var(--radius-soft);
+	border-radius: 24px;
 	box-shadow:
 		0 1px 0 rgba(255, 255, 255, 0.7) inset,
-		0 12px 40px rgba(27, 43, 27, 0.07);
+		0 20px 60px rgba(27, 43, 27, 0.08);
 	display: flex;
 	flex-direction: column;
-	gap: 1.35rem;
-	align-items: flex-start;
-	max-width: 22rem;
+	gap: 1.75rem;
+	align-items: center;
+	max-width: 28rem;
 }
 
 .aven-plot-headlines {
 	display: flex;
 	flex-direction: column;
-	gap: 0.5rem;
+	gap: 0.75rem;
+	align-items: center;
+	text-align: center;
 }
 
 .aven-plot-panel .aven-plot-title {
-	font-size: clamp(0.78rem, 1.15vw, 0.9rem);
+	font-size: clamp(1rem, 1.5vw, 1.25rem);
 	font-weight: 800;
-	letter-spacing: 0.2em;
+	letter-spacing: 0.15em;
 	text-transform: uppercase;
-	line-height: 1.35;
+	line-height: 1.2;
+	color: var(--color-ink);
 }
 
-.aven-plot-panel .aven-plot-slots {
-	font-size: clamp(0.68rem, 1vw, 0.78rem);
-	font-weight: 600;
-	letter-spacing: 0.14em;
-	text-transform: uppercase;
+.aven-plot-panel .aven-plot-sub {
+	font-size: clamp(0.85rem, 1.1vw, 1rem);
+	font-weight: 500;
+	letter-spacing: 0.01em;
+	text-transform: none;
 	color: var(--color-ink);
-	opacity: 0.55;
-	line-height: 1.3;
+	opacity: 0.75;
+	line-height: 1.5;
+	max-width: 24rem;
 }
 
 .aven-plot-panel .aven-plot-cta {
-	margin-top: 0;
-	padding: 1rem 2.25rem;
-	font-size: 0.8rem;
+	margin-top: 0.5rem;
+	padding: 1.2rem 3.5rem;
+	font-size: 0.9rem;
+	font-weight: 700;
+	letter-spacing: 0.08em;
+	border-radius: 9999px;
+	background: var(--color-paradise-water);
+	color: var(--color-water-text);
+	border: 1px solid color-mix(in srgb, var(--color-paradise-water) 88%, var(--color-ink));
+	transition: all 0.3s ease;
+}
+
+.aven-plot-panel .aven-plot-cta:hover {
+	transform: translateY(-2px);
+	box-shadow: 0 8px 28px color-mix(in srgb, var(--color-paradise-water) 45%, transparent);
+	background: color-mix(in srgb, var(--color-paradise-water) 82%, var(--color-ink));
+	color: var(--color-water-text);
 }
 
 /* Centered plot CTA — own section below letter */
@@ -1126,6 +1295,25 @@
 		padding-right: 0;
 		padding-left: 2rem;
 		text-align: left;
+	}
+
+	.euro-math-row--inputs {
+		flex-direction: column;
+		align-items: stretch;
+	}
+
+	.euro-math-times {
+		display: none;
+	}
+
+	.euro-math-cell {
+		flex: 1 1 auto;
+		min-width: 0;
+	}
+
+	.beat-euro-power {
+		padding-left: 1.5rem;
+		padding-right: 1.5rem;
 	}
 
 	.aven-founder-letter {

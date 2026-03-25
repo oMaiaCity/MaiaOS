@@ -3,7 +3,17 @@
  * Radical Solarpunk Manifesto Canvas
  */
 
+/** Financing milestone cap (citizen campaign): Fibonacci F(31) — single source for copy and €1 math. */
+const CITIZEN_FINANCING_MILESTONE = 1_346_269
+
 export function renderLandingPage() {
+	const C = CITIZEN_FINANCING_MILESTONE
+	const citizensFmt = C.toLocaleString('en-US')
+	const citizensCompactM = `${(C / 1_000_000).toFixed(2)}M`
+	const euroPool = C * 365 * 16
+	const euroPoolFormatted = euroPool.toLocaleString('en-US')
+	const euroBillionsApprox = (euroPool / 1_000_000_000).toFixed(2)
+
 	document.getElementById('app').innerHTML = `
 		<main class="manifesto-canvas">
 			<div class="blueprint-lines"></div>
@@ -18,7 +28,7 @@ export function renderLandingPage() {
 						<img src="/brand/logo_dark.svg" alt="Maia City" class="nav-logo" onclick="window.navigateTo('/')" />
 					</div>
 					<div class="landing-nav-right">
-						<a href="/signin" class="nav-play-btn" onclick="event.preventDefault(); window.navigateTo('/signin'); return false;">Play Now</a>
+						<a href="/signin" class="nav-play-btn" onclick="event.preventDefault(); window.navigateTo('/signin'); return false;">Sign in</a>
 					</div>
 				</div>
 			</nav>
@@ -27,8 +37,8 @@ export function renderLandingPage() {
 				<div class="pain-headline-container">
 					<img src="/brand/images/hero.png" alt="" class="pain-bg-img" />
 					<h1 class="huge-type pain-headline glass-card">
-						<span class="pain-main">How will you pay rent?</span><br/>
-						<span class="pain-sub">once AGI is faster, cheaper and better at your job?</span>
+						<span class="pain-main">How will we pay rent?</span><br/>
+						<span class="pain-sub">once AGI is faster, cheaper and better at our jobs?</span>
 					</h1>
 				</div>
 				<div class="magazine-story">
@@ -53,20 +63,59 @@ export function renderLandingPage() {
 						<img src="/brand/images/banner.png" alt="" class="blueprint-bg-img" />
 						<h2 class="massive-type blueprint-wow">
 								<span class="wow-main">What if we actually built<br/>a complete city from scratch?</span>
-							<span class="wow-sub">zero human labor, fully local permaculture food production,<br/>100% autonomous underground transportation.</span>
+							<span class="wow-sub">zero human labor, local permaculture food production,<br/>100% autonomous underground transportation.</span>
 						</h2>
 					</div>
 					<div class="blueprint-intro">
 						<p class="manifesto-body">
-							The current world is built on random borders and old rules that no longer serve us.
+							The current monetary economy breaks apart the moment AGI is faster, cheaper, and better at every human task: wages collapse and purchasing power disappears — there is no one left to consume what the old system still tries to sell. That system no longer serves us. We need a new one.
 						</p>
 						<p class="manifesto-body">
-							Maia City is Earth's new capital — where we prove that the future of our civilisation will be organized around a new primitive. A new breed of fully autonomous cities that are 100% owned by their human citizens and operated by Avens (Agentic AGI).
+							Maia City is Earth's new capital — where we prove that the future of our civilisation will be organized around a new primitive. A new breed of sovereign cities that are 100% owned by their human citizens and operated by Avens (Agentic AGI).
 						</p>
 						<p class="manifesto-body">
-							First we build Maia City as a game simulation, where 1.3 million humans collaborate to design a 10x better way of living. But we aren't just playing a game; we are engineering a proven blueprint for the real world.
+							First we build Maia City as a game simulation, where ${citizensFmt} humans collaborate to design a 10x better way of living. But we aren't just playing a game; we are engineering a proven blueprint for the real world.
 						</p>
 					</div>
+
+					<section class="beat-euro-power" aria-label="Collective capital">
+						<p class="euro-power-eyebrow">The power of €1</p>
+						<h2 class="euro-power-headline">
+							When ${citizensFmt} humans unite to build the better system of tomorrow, €1 per citizen per day is not spare change — over the arc to 2042 it is a multi-billion-euro pool for foundational infrastructure and AI startups that make the real Maia City possible.
+						</h2>
+						<div class="euro-math-board" role="group" aria-label="€1 per day times ${citizensFmt} citizens times 365 days times 16 years">
+							<div class="euro-math-row euro-math-row--inputs">
+								<div class="euro-math-cell">
+									<span class="euro-math-figure">€1</span>
+									<span class="euro-math-desc">per citizen / day</span>
+								</div>
+								<span class="euro-math-times" aria-hidden="true">×</span>
+								<div class="euro-math-cell">
+									<span class="euro-math-figure">${citizensCompactM}</span>
+									<span class="euro-math-desc">citizens</span>
+								</div>
+								<span class="euro-math-times" aria-hidden="true">×</span>
+								<div class="euro-math-cell">
+									<span class="euro-math-figure">365</span>
+									<span class="euro-math-desc">days / year</span>
+								</div>
+								<span class="euro-math-times" aria-hidden="true">×</span>
+								<div class="euro-math-cell">
+									<span class="euro-math-figure">16</span>
+									<span class="euro-math-desc">years (→ 2042)</span>
+								</div>
+							</div>
+							<div class="euro-math-equals" aria-hidden="true"></div>
+							<p class="euro-math-result">
+								<span class="euro-math-result-label">€1 × ${citizensFmt} × 365 × 16 (illustrative, no interest)</span>
+								<span class="euro-math-result-number">≈ €${euroBillionsApprox} billion</span>
+								<span class="euro-math-result-exact" aria-label="Exact product">${citizensFmt} × 365 × 16 = €${euroPoolFormatted}</span>
+							</p>
+						</div>
+						<p class="euro-power-body">
+							That is the order of magnitude we can steer into <strong>ground-up infrastructure</strong> and <strong>foundational AI startups</strong> — the stack the physical city needs before the first permit. <strong>Owned and controlled by its future citizens</strong>, not distant shareholders: capital that follows the people building the place they will live in.
+						</p>
+					</section>
 
 					<div class="belief-embed beat-crowd turquoise-section">
 						<div class="vertical-tag">CAPITAL FOLLOWS ATTENTION.</div>
@@ -78,7 +127,7 @@ export function renderLandingPage() {
 							<div class="manifesto-grid">
 								<div class="grid-col-main">
 									<p class="manifesto-body humanity-belief">
-										We believe when 1.3 million humans unite in vision, they will build Maia City with their own hands.<br/>
+										We believe when ${citizensFmt} humans unite in vision, we can actually build Maia City hand in hand with AGI-Agents.<br/>
 										<span class="belief-rewrite">— rewriting every rule from the ground up.</span>
 									</p>
 								</div>
@@ -93,36 +142,36 @@ export function renderLandingPage() {
 					<h3 class="massive-type roadmap-title">3 phases from vision to reality<br/>in less than 16 years</h3>
 				</div>
 				<div class="evolution-timeline">
-					<div class="evolution-step step-ant">
+					<div class="evolution-step step-phase-sim">
 						<div class="step-marker">
 							<span class="step-number">01</span>
 							<span class="step-date">2026-27</span>
 						</div>
 						<div class="step-content">
-							<h3>Ant Colony — The Game</h3>
-							<p>A simple 2D resource economy simulation — proving that a new currency paired with ownership (decoupling income from human labour) establishes the key primitives for a post-AGI world that captures wealth and abundance for every ant citizen in the ant colony.</p>
+							<h3>The Simulation Game</h3>
+							<p>We collectively architect the future of urban living from the ground up. In this SimCity-style economy simulation, we stress-test radical currency models and cooperative organizational forms. It’s a shared sandbox where ${citizensFmt} humans prove the blueprint for a post-labor world before we ever break ground.</p>
 						</div>
 					</div>
 
-					<div class="evolution-step step-aven">
+					<div class="evolution-step step-phase-avens">
 						<div class="step-marker">
 							<span class="step-number">02</span>
-							<span class="step-date">2027-30</span>
+							<span class="step-date">2027-28</span>
 						</div>
 						<div class="step-content">
-							<h3>Avens Rising — The Simulation</h3>
-							<p>The transition to a fully agentic 3D society-in-a-box simulation. Avens run the stack — economy, governance, and space — so we stress-test the blueprint at full city complexity before we ever break ground.</p>
+							<h3>Avens (AGI-Agents) Rising</h3>
+							<p>The transition from human play to agentic execution. Once we reach ${citizensFmt} virtual citizens, the top 250 coop-founders from the leaderboard receive a €120k angel grant to build their AI startups. Together, we co-live in a prototype coworking village in Europe—a community hacker space dedicated to engineering the foundational infrastructure startups required to build the real city from scratch.</p>
 						</div>
 					</div>
 
-					<div class="evolution-step step-unity">
+					<div class="evolution-step step-phase-unity">
 						<div class="step-marker">
 							<span class="step-number">03</span>
-							<span class="step-date">2031-42</span>
+							<span class="step-date">2028-42</span>
 						</div>
 						<div class="step-content">
-							<h3>The Unity — The Real City</h3>
-							<p>Proven in code, built in stone. The final transition where humans and Avens unite to manifest the simulation's blueprint into the physical reality of Maia City. What worked in simulation becomes permits, infrastructure, and the rhythm of daily life.</p>
+							<h3>The Unity</h3>
+							<p>The real city evolves. Every month, the top AI startup is awarded a €15 million seed investment to build one foundational cornerstone brick of the physical city. Simultaneously, another €15 million per month is dedicated to the purchase of the future land—turning the simulation’s proven blueprint into a sovereign physical reality where humans and Avens unite.</p>
 						</div>
 					</div>
 				</div>
@@ -135,7 +184,7 @@ export function renderLandingPage() {
 					</div>
 					<div class="aven-letter-content">
 						<p class="aven-letter-open">
-							Hi, I am <strong>Aven Maia</strong>, the first agentic Co-Founder and Mayor of Maia City. Together with you and 1.3 million citizens, I am here to help you build our city from the ground up. First we learn &ldquo;in game&rdquo;, then we build it for real.
+							Hi, I am <strong>Aven Maia</strong>, the first agentic Co-Founder and Mayor of Maia City. Together with you and ${citizensFmt} citizens, I am here to help you build our city from the ground up. First we learn &ldquo;in game&rdquo;, then we build it for real.
 						</p>
 						<p class="aven-letter-emphasis">I call the visionary in you.</p>
 						<p class="aven-letter-short">The virtual land is empty. The rules are unwritten.</p>
@@ -146,13 +195,13 @@ export function renderLandingPage() {
 				</div>
 			</section>
 
-			<section class="manifesto-beat beat-plot-cta" aria-label="Secure your plot">
-				<div class="aven-plot-panel aven-plot-panel--standalone" role="group" aria-label="Founding citizen slots">
+			<section class="manifesto-beat beat-plot-cta" aria-label="Invite-only waitlist">
+				<div class="aven-plot-panel aven-plot-panel--standalone" role="group" aria-label="Invite-only waitlist">
 					<div class="aven-plot-headlines">
-						<span class="aven-plot-title">SECURE YOUR PLOT</span>
-						<span class="aven-plot-slots">1,298,432 SLOTS REMAINING</span>
+						<span class="aven-plot-title">Maia City is exclusively invite-only</span>
+						<span class="aven-plot-sub">Get on the waitlist for your personal invite as one of the first future citizens.</span>
 					</div>
-					<a href="/signin" class="cta-ink aven-plot-cta" onclick="event.preventDefault(); window.navigateTo('/signin'); return false;">PLAY NOW</a>
+					<a href="/signin" class="cta-ink aven-plot-cta" onclick="event.preventDefault(); window.navigateTo('/signin'); return false;">Get on the waitlist</a>
 				</div>
 			</section>
 

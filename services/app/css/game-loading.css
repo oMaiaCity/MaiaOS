@@ -1,0 +1,73 @@
+/* Full-screen Maia City game loading (shown until Three.js scene is ready) */
+/* #game-shell uses pointer-events: none so bottom nav (body) stays clickable; canvas re-enables on #game-container */
+
+#game-shell {
+	pointer-events: none;
+}
+
+#game-container {
+	pointer-events: auto;
+}
+
+.game-loading-screen {
+	position: absolute;
+	inset: 0;
+	z-index: 2;
+	/* Root-relative URL: same in dev and bundled CSS; solid fallback if load fails */
+	background: #0f1419 url("../brand/images/loading-screen.png") center / cover no-repeat;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: clamp(1.25rem, 4vw, 2.75rem);
+	box-sizing: border-box;
+	pointer-events: none;
+}
+
+.game-loading-panel {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
+	max-width: min(28rem, 92vw);
+	padding: 1.1rem 1.35rem 1.25rem;
+	border-radius: 16px;
+	background: rgba(12, 22, 32, 0.52);
+	backdrop-filter: blur(14px);
+	-webkit-backdrop-filter: blur(14px);
+	border: 1px solid rgba(255, 255, 255, 0.12);
+	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+	text-align: center;
+}
+
+.game-loading-title {
+	margin: 0;
+	font-family: var(--font-display, "Plus Jakarta Sans", system-ui, sans-serif);
+	font-size: clamp(1.05rem, 2.4vw, 1.25rem);
+	font-weight: 650;
+	letter-spacing: 0.02em;
+	color: #f8fafc;
+	text-shadow: 0 2px 10px rgba(0, 0, 0, 0.35);
+}
+
+.game-loading-sub {
+	margin: 0;
+	font-size: 0.88rem;
+	color: rgba(248, 250, 252, 0.82);
+	text-shadow: 0 1px 6px rgba(0, 0, 0, 0.35);
+}
+
+.game-loading-spinner {
+	width: 1.9rem;
+	height: 1.9rem;
+	margin-top: 0.35rem;
+	border: 2px solid rgba(255, 255, 255, 0.12);
+	border-top-color: rgba(255, 255, 255, 0.85);
+	border-radius: 50%;
+	animation: game-loading-spin 0.85s linear infinite;
+}
+
+@keyframes game-loading-spin {
+	to {
+		transform: rotate(360deg);
+	}
+}

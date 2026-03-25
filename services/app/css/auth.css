@@ -5,111 +5,95 @@ h1 em,
 	font-weight: 400;
 }
 
+/* Auth split layout: form panel + full-bleed hero (reference: glass form / lifestyle visual) */
 .sign-in-container {
-	min-height: 100vh;
+	min-height: 100dvh;
+	position: relative;
+	background: #e9eae9;
+	container-type: inline-size;
+	box-sizing: border-box;
+	width: 100%;
+}
+
+.sign-in-split {
+	display: grid;
+	grid-template-columns: minmax(0, 1fr) minmax(0, 1.05fr);
+	min-height: 0;
+	width: 100%;
+	max-width: 1400px;
+	margin: 0 auto;
+	box-shadow: 0 0 0 1px rgba(27, 43, 27, 0.06);
+}
+
+.sign-in-panel {
 	display: flex;
 	align-items: center;
 	justify-content: center;
-	padding: 2rem;
-	position: relative;
-	background: var(--color-foundation);
-	container-type: inline-size;
+	padding: clamp(1.5rem, 4vw, 3rem);
+	background: linear-gradient(165deg, #fafafa 0%, #f4f4f3 52%, #ececeb 100%);
+	border-right: 1px solid rgba(27, 43, 27, 0.1);
 }
 
-.sign-in-content {
-	position: relative;
-	z-index: 1;
-	background: var(--color-tinted-white);
-	border: 1px solid var(--color-sage);
-	border-radius: var(--radius-soft);
-	padding: 4rem;
-	max-width: 540px;
+.sign-in-panel-inner {
 	width: 100%;
+	max-width: 26rem;
 	text-align: center;
-	box-shadow: 0 4px 24px rgba(78, 91, 68, 0.12);
-	transition: transform 0.6s cubic-bezier(0.23, 1, 0.32, 1);
 }
 
-@container (max-width: 500px) {
-	.sign-in-content {
-		padding: 3rem 2rem;
-	}
-}
-
-.sign-in-inner {
-	position: relative;
-	z-index: 10;
-}
-
-.logo-container {
-	margin-bottom: 2.5rem;
+.sign-in-brand-row {
+	margin-bottom: 1.75rem;
 	display: flex;
 	justify-content: center;
 	align-items: center;
 }
 
 .sign-in-logo {
-	height: 80px;
+	height: clamp(52px, 10vw, 72px);
 	width: auto;
 }
 
-.sign-in-content h1 {
+.sign-in-panel-heading {
 	font-family: "Indie Flower", var(--font-heading), cursive;
-	font-size: 3.5rem;
-	color: var(--color-forest);
-	line-height: 0.9;
-	margin-bottom: 1.5rem;
+	font-size: clamp(2rem, 5vw, 2.75rem);
+	color: #0f172a;
+	line-height: 1.05;
+	margin: 0 0 1rem;
 	font-weight: 400;
-	font-style: normal;
 }
 
-.sign-in-content h1 span:first-child {
-	display: block;
+.sign-in-panel-heading--poetic {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.sign-in-line-eyebrow {
 	font-family: "Indie Flower", var(--font-heading), cursive;
-	font-size: 1.1rem;
+	font-size: clamp(0.95rem, 2.4vw, 1.15rem);
 	font-weight: 400;
-	font-style: normal;
-	letter-spacing: 0.15em;
-	text-transform: none;
-	margin-bottom: 1rem;
-	color: var(--color-forest);
-	opacity: 0.85;
+	letter-spacing: 0.12em;
+	color: #1e293b;
 }
 
-.h1-main-text {
-	display: block;
+.sign-in-line-hero {
 	font-family: "Indie Flower", var(--font-heading), cursive;
-	font-style: normal;
+	font-size: clamp(2.75rem, 9vw, 4.25rem);
 	font-weight: 400;
-	font-size: 5rem;
-	color: var(--color-charcoal);
-	text-transform: none;
+	color: #0f172a;
+	line-height: 1;
 }
 
-@media (max-width: 768px) {
-	.h1-main-text {
-		font-size: 2.9rem;
-	}
-}
-
-.sign-in-subtitle {
+.sign-in-panel-lede {
 	font-family: var(--font-body);
-	font-weight: var(--font-weight-normal);
-	font-style: normal;
-	font-size: 1.1rem;
-	color: var(--color-forest);
-	margin-bottom: 3.5rem;
-	opacity: 0.9;
-	line-height: 1.4;
-}
-
-.sign-in-description {
-	font-family: var(--font-body);
-	font-size: 1.1rem;
-	color: var(--color-forest);
-	margin-bottom: 3rem;
-	line-height: 1.6;
-	opacity: 0.8;
+	font-weight: 500;
+	font-size: clamp(0.95rem, 2.2vw, 1.05rem);
+	color: #334155;
+	margin: 0 0 1.75rem;
+	line-height: 1.55;
+	max-width: 22rem;
+	margin-left: auto;
+	margin-right: auto;
 }
 
 .sign-in-first-name-wrap {
@@ -120,37 +104,37 @@ h1 em,
 .sign-in-first-name-label {
 	display: block;
 	font-family: var(--font-body);
-	font-size: 0.9rem;
-	font-weight: 600;
-	color: var(--color-forest);
-	margin-bottom: 0.5rem;
-	letter-spacing: 0.02em;
+	font-size: 0.8125rem;
+	font-weight: 700;
+	color: #0f172a;
+	margin-bottom: 0.45rem;
+	letter-spacing: 0.03em;
+	text-align: left;
 }
 
 .sign-in-first-name-input {
 	width: 100%;
-	padding: 0.9rem 1.2rem;
+	padding: 0.85rem 1rem;
 	font-family: var(--font-body);
 	font-size: 1rem;
-	color: var(--color-charcoal);
-	background: var(--color-foundation);
-	border: 1px solid var(--color-sage);
-	border-radius: 10px;
+	color: #0f172a;
+	background: #ffffff;
+	border: 1.5px solid #64748b;
+	border-radius: 12px;
 	outline: none;
 	transition:
 		border-color 0.2s,
-		background 0.2s;
+		box-shadow 0.2s;
 	box-sizing: border-box;
 }
 
 .sign-in-first-name-input::placeholder {
-	color: var(--color-forest);
-	opacity: 0.5;
+	color: #475569;
 }
 
 .sign-in-first-name-input:focus {
 	border-color: var(--color-paradise-water);
-	background: var(--color-tinted-white);
+	box-shadow: 0 0 0 3px rgba(72, 184, 196, 0.28);
 }
 
 .sign-in-buttons {
@@ -163,23 +147,107 @@ h1 em,
 	width: 100%;
 }
 
+.sign-in-buttons .sign-in-test-aven.btn-outline-marine {
+	background: var(--color-nav-pill-surface);
+	border-color: rgba(27, 43, 27, 0.14);
+	color: var(--color-marine-blue);
+}
+
 .sign-in-swap-link {
 	display: block;
 	text-align: center;
 	margin-top: 1rem;
 	font-family: var(--font-body);
-	font-size: 0.9rem;
-	color: var(--color-forest);
-	opacity: 0.75;
-	text-decoration: none;
-	letter-spacing: 0.08em;
-	transition:
-		opacity 0.2s,
-		color 0.2s;
+	font-size: 0.875rem;
+	font-weight: 600;
+	color: #1e3a5f;
+	text-decoration: underline;
+	text-decoration-thickness: 1px;
+	text-underline-offset: 0.2em;
+	letter-spacing: 0.02em;
+	transition: color 0.2s;
 }
 .sign-in-swap-link:hover {
-	opacity: 1;
-	color: var(--color-charcoal);
+	color: #0f172a;
+}
+
+/* Hero column (solarpunk biosphere) */
+.sign-in-visual {
+	position: relative;
+	min-height: 280px;
+	background: #0f172a center / cover no-repeat;
+	background-image: url("../brand/images/signin.png");
+}
+
+.sign-in-visual-scrim {
+	position: absolute;
+	inset: 0;
+	background: linear-gradient(
+		115deg,
+		rgba(15, 23, 42, 0.08) 0%,
+		rgba(15, 23, 42, 0) 45%,
+		rgba(15, 23, 42, 0.12) 100%
+	);
+	pointer-events: none;
+}
+
+@media (min-width: 901px) {
+	/* Fit card inside viewport: padding is inside 100dvh (border-box), split flexes to remaining height */
+	.sign-in-container {
+		min-height: 100dvh;
+		max-height: 100dvh;
+		padding: clamp(0.5rem, 2vw, 1.25rem);
+		box-sizing: border-box;
+		display: flex;
+		flex-direction: column;
+		align-items: center;
+		justify-content: center;
+		overflow: hidden;
+	}
+
+	.sign-in-split {
+		flex: 1 1 auto;
+		min-height: 0;
+		max-height: min(920px, 100%);
+		width: 100%;
+		grid-template-rows: minmax(0, 1fr);
+		border-radius: 22px;
+		overflow: hidden;
+		box-shadow:
+			0 4px 6px -1px rgba(15, 23, 42, 0.08),
+			0 24px 48px -12px rgba(15, 23, 42, 0.12);
+	}
+
+	.sign-in-visual {
+		min-height: 0;
+	}
+}
+
+@media (max-width: 900px) {
+	.sign-in-container {
+		min-height: 100dvh;
+		max-height: none;
+		overflow-x: hidden;
+		overflow-y: auto;
+	}
+
+	.sign-in-split {
+		grid-template-columns: 1fr;
+		min-height: unset;
+	}
+
+	/* Hero image first, then form (DOM order unchanged; flex/grid order) */
+	.sign-in-visual {
+		order: 1;
+		min-height: min(32vh, 260px);
+		border-bottom: 1px solid rgba(27, 43, 27, 0.1);
+	}
+
+	.sign-in-panel {
+		border-right: none;
+		padding: clamp(1.25rem, 5vw, 2rem);
+		order: 2;
+	}
 }
 
 /* Button loading state - instant feedback on auth click */

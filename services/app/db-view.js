@@ -35,6 +35,7 @@ async function getFactoryFromDb(maia, factoryRef) {
 }
 
 import { renderDashboard, renderVibeViewer } from './dashboard.js'
+import { disposeGame, renderGame } from './maia-game-mount.js'
 import { escapeHtml, getProfileAvatarHtml, getSyncStatusMessage, truncate } from './utils.js'
 
 // Cache for CoBinary image data URLs - survives re-renders, enables progressive reactive preview
@@ -153,7 +154,11 @@ export async function renderApp(
 	loadSpark,
 	navigateToScreen,
 ) {
+	if (currentScreen !== 'the-game') {
+		disposeGame()
+	}
 	document.body.classList.toggle('screen-maia-db', currentScreen === 'maia-db')
+	document.body.classList.toggle('screen-the-game', currentScreen === 'the-game')
 
 	if (currentScreen === 'dashboard') {
 		await renderDashboard(
@@ -174,6 +179,11 @@ export async function renderApp(
 		await renderVibeViewer(maia, authState, syncState, currentVibe, navigateToScreen, currentSpark)
 		hydrateCobinaryPreviews(maia)
 		setTimeout(() => hydrateCobinaryPreviews(maia), 500)
+		return
+	}
+
+	if (currentScreen === 'the-game') {
+		await renderGame()
 		return
 	}
 

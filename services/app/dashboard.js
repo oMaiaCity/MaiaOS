@@ -245,6 +245,21 @@ export async function renderDashboard(
 			</div>
 		</div>
 	`
+	const gameCard = `
+		<div class="dashboard-card whitish-card" onclick="window.navigateToScreen('the-game')">
+			<div class="dashboard-card-content">
+				<div class="dashboard-card-icon">
+					<svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+						<path d="M12 3L4 9v12h16V9l-8-6z"/>
+						<path d="M9 21V12h6v9"/>
+						<path d="M8 12h8"/>
+					</svg>
+				</div>
+				<h3 class="dashboard-card-title">The Game</h3>
+				<p class="dashboard-card-description">Explore Maia City in 3D</p>
+			</div>
+		</div>
+	`
 	const vibeCards = vibes
 		.map(
 			(vibe) => `
@@ -263,14 +278,10 @@ export async function renderDashboard(
 		)
 		.join('')
 
-	const cards = dbViewerCard + vibeCards
+	const cards = dbViewerCard + gameCard + vibeCards
 
 	// Reactivity: when vibes empty, retry render so dashboard updates when registries/sparks/vibes arrive
-	if (
-		vibes.length === 0 &&
-		cards === dbViewerCard &&
-		typeof window.renderAppInternal === 'function'
-	) {
+	if (vibes.length === 0 && vibeCards === '' && typeof window.renderAppInternal === 'function') {
 		setTimeout(() => window.renderAppInternal(), 1500)
 		setTimeout(() => window.renderAppInternal(), 3500)
 	}

@@ -6,16 +6,14 @@
 
 | Service | Port | Description |
 |---|---|---|
-| `services/app` | 4200 | Frontend SPA (Bun HTML bundler with HMR) |
+| `services/app` | 4200 | Frontend SPA (Bun HTML bundler with HMR); includes the 3D city game (`@MaiaOS/game`) via dashboard **The Game** |
 | `services/sync` | 4201 | Unified sync (WebSocket + agent API + LLM proxy, PGlite storage) |
-| `services/game` | 4202 | City builder game SPA (Three.js via `@MaiaOS/game`; root `/`) |
 
 ### Running the dev environment
 
 All commands are documented in root `package.json`. Key commands:
 
 - **`bun dev`** — starts both app (4200) and sync (4201) with orchestrated startup (sync must be healthy before app starts)
-- **`bun run dev:game`** — game only (4202); does not start app or sync
 - **`bun run check:ci`** — lint + format check (Biome + `.maia` format)
 - **`bun run format`** — auto-fix formatting
 
