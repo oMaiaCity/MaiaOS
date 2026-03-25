@@ -28,4 +28,20 @@ export function chaseHeightAbovePlayer(pitchUpRad) {
 	return CHASE_H_BASE + t * CHASE_H_EXTRA_MAX
 }
 
+/** Below this camera–blob distance, WASD uses ~`MOVE_SCALE_AT_CLOSE` of base speed. */
+const MOVE_SCALE_DIST_NEAR = 140
+/** From here upward, WASD uses full `MOVE_SPEED`. */
+const MOVE_SCALE_DIST_FAR = 1680
+/** At/below near distance: 8× slower than baseline (within 5–8× range). */
+const MOVE_SCALE_AT_CLOSE = 1 / 8
+
+/**
+ * Multiplier for horizontal move speed from camera distance to blob (world units).
+ * Close = slow (fine control); far = full speed.
+ */
+export function moveSpeedScaleFromCameraBlobDist(dist) {
+	const t = THREE.MathUtils.smoothstep(dist, MOVE_SCALE_DIST_NEAR, MOVE_SCALE_DIST_FAR)
+	return MOVE_SCALE_AT_CLOSE + t * (1 - MOVE_SCALE_AT_CLOSE)
+}
+
 export { CHASE_MIN_ABOVE_TERRAIN }
