@@ -98,6 +98,48 @@ export function floodWaterLevel() {
  * Tint terrain below water: river corridor uses centerline surface; elsewhere uses global flood level.
  * @param {number} floodLevel
  */
+/** Same surface rule as underwater tint: river corridor vs global flood. */
+export function waterSurfaceHeightAt(wx, wy, floodLevel) {
+	const cy = riverCenterY(wx)
+	const d = Math.abs(wy - cy)
+	const hw = riverHalfWidth(wx, wy)
+	if (d >= hw) {
+		return floodLevel
+	}
+	return riverBedElevationFlow(wx, cy) + WATER_DEPTH
+}
+
+export function isRiverCorridor(wx, wy) {
+	const cy = riverCenterY(wx)
+	const d = Math.abs(wy - cy)
+	const hw = riverHalfWidth(wx, wy)
+	return d < hw
+}
+
+/** Normalized height band matching grass / high grass (excludes sand, snow, peaks). */
+const TREE_BIOME_TN_MIN = 0.48
+const TREE_BIOME_TN_MAX = 0.88
+
+export function isGrassBiomeForTrees(tn) {
+	return tn >= TREE_BIOME_TN_MIN && tn < TREE_BIOME_TN_MAX
+}
+
+/**
+ * @param {number} tn
+ * @param {number} h
+ * @param {number} floodLevel
+ */
+export function canPlaceTree(wx, wy, h, tn, floodLevel) {
+	if (!isGrassBiomeForTrees(tn)) {
+		return false
+	}
+	if (isRiverCorridor(wx, wy)) {
+		return false
+	}
+	const surf = waterSurfaceHeightAt(wx, wy, floodLevel)
+	return h >= surf
+}
+
 export function applyUnderwaterRiverTint(wx, wy, h, rgb, floodLevel) {
 	const cy = riverCenterY(wx)
 	const d = Math.abs(wy - cy)
