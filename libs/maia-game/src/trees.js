@@ -3,7 +3,7 @@
  */
 import * as THREE from 'three'
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js'
-import { canPlaceTree } from './biomes.js'
+import { canPlaceTree, isDenseForestPatch } from './biomes.js'
 import { EDGE_MARGIN, PLANE_HALF } from './game-constants.js'
 import { terrainHeightAtPlaneXY, terrainPlaneWarp } from './terrain.js'
 
@@ -219,6 +219,9 @@ export function createForestInstancedMeshes(opts) {
 		if (!canPlaceTree(wx, wy, h, tn, floodLevel)) {
 			continue
 		}
+		if (!isDenseForestPatch(wx, wy)) {
+			continue
+		}
 		if (Math.hypot(lx - spawnX, ly - spawnLy) < SPAWN_CLEAR_RADIUS) {
 			continue
 		}
@@ -240,6 +243,9 @@ export function createForestInstancedMeshes(opts) {
 		const tn = vHSpan > 1e-5 ? (h - vHMin) / vHSpan : 0.5
 		const { wx, wy } = terrainPlaneWarp(lx, ly)
 		if (!canPlaceTree(wx, wy, h, tn, floodLevel)) {
+			continue
+		}
+		if (!isDenseForestPatch(wx, wy)) {
 			continue
 		}
 		if (Math.hypot(lx - spawnX, ly - spawnLy) < SPAWN_CLEAR_RADIUS) {

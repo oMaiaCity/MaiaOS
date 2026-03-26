@@ -3,6 +3,7 @@
  */
 import * as THREE from 'three'
 import { PLANE_HALF } from './game-constants.js'
+import { fbm2 } from './noise.js'
 import {
 	FLOW_DN_X,
 	FLOW_DN_Y,
@@ -33,7 +34,8 @@ const UNDERWATER_RGB = { r: 0.1, g: 0.36, b: 0.48 }
 /** Sand (low) → earth → grass → snow only on the highest peaks; tn = normalized height [0,1]. */
 export function heightBiomeRgb(tn) {
 	const e0 = 0.34
-	const e1 = 0.76
+	/** Slightly earlier grass than before — narrower earth band, more overall green. */
+	const e1 = 0.64
 	const grassBrightEnd = 0.87
 	const snowBlendStart = 0.885
 	const snowBlendEnd = 0.945
@@ -141,6 +143,42 @@ const TREE_BIOME_TN_MAX = 0.88
 
 export function isGrassBiomeForTrees(tn) {
 	return tn >= TREE_BIOME_TN_MIN && tn < TREE_BIOME_TN_MAX
+}
+
+/**
+ * Fractal noise in warped world (wx, wy): ~symmetric around 0, so fbm>0 covers ~half the plane.
+ * Scale **down** coordinates before FBM to stretch the field → fewer, larger colocated forest
+ * masses instead of many small islands (do not use tiny scales here — that flattens the field).
+ */
+const DENSE_PATCH_FBM_WORLD_SCALE = 0.24
+
+/**
+ * Irregular forest patches — trees/bushes only where this is true (~50% of grass area).
+ */
+export function isDenseForestPatch(wx, wy) {
+	const sx = wx * DENSE_PATCH_FBM_WORLD_SCALE
+	const sy = wy * DENSE_PATCH_FBM_WORLD_SCALE
+	return fbm2(sx, sy) > 0
+}
+
+const OPEN_GRASS_SUB_RGB = { r: 0.34, g: 0.54, b: 0.26 }
+/** Dark forest-floor green (under canopy). */
+const DENSE_FOREST_SUB_RGB = { r: 0.08, g: 0.32, b: 0.11 }
+
+/**
+ * Open meadow vs denser canopy floor — only where trees can grow and not in the river strip.
+ * Call after heightBiomeRgb, before riverCorridorRgb.
+ */
+export function grassSubBiomeTerrainRgb(rgb, tn, wx, wy) {
+	if (!isGrassBiomeForTrees(tn) || isRiverCorridor(wx, wy)) {
+		return rgb
+	}
+	const wOpen = 0.2
+	const wDense = 0.32
+	if (isDenseForestPatch(wx, wy)) {
+		return lerpRgb(rgb, DENSE_FOREST_SUB_RGB, wDense)
+	}
+	return lerpRgb(rgb, OPEN_GRASS_SUB_RGB, wOpen)
 }
 
 /**
