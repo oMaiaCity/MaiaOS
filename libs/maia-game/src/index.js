@@ -5,7 +5,7 @@ import * as THREE from 'three'
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js'
 import {
 	applyUnderwaterRiverTint,
-	domeGardenTurfRgbMax,
+	domeGardenTurfRgb,
 	floodWaterLevel,
 	grassSubBiomeTerrainRgb,
 	heightBiomeRgb,
@@ -20,7 +20,8 @@ import {
 	moveSpeedScaleFromCameraBlobDist,
 } from './camera-chase.js'
 import { updateDomeGardenPositions } from './dome-garden.js'
-import { minTerrainHeightUnderRim, stepSingleDomePlayerBarrier } from './dome-placement.js'
+import { minTerrainHeightUnderRim } from './dome-placement.js'
+import { applyDomeRimCollision } from './dome-player-collision.js'
 import { setDomePlacementHighlight } from './dome-selection-tint.js'
 import {
 	EDGE_MARGIN,
@@ -31,8 +32,10 @@ import {
 	ZOOM_ABOVE_MIN,
 	ZOOM_WHEEL_SCALE,
 } from './game-constants.js'
+import { advanceTick, createTickState } from './game-tick.js'
 import { DOME_BAKED_ENTRANCE_ATAN2, loadGeodesicDome } from './geodesic-dome.js'
 import { noise2 } from './noise.js'
+import { oppositeBankPlaneXY, oreDomePlaneXYDry } from './river-bank.js'
 import {
 	clampPlayerToBridgeSides,
 	createRiverWoodBridgeGroup,
@@ -64,12 +67,13 @@ const TERRAIN_BATCH = 65536
  */
 export async function mountGame(container, { isCancelled = () => false } = {}) {
 	const scene = new THREE.Scene()
-	let geodesicDome = null
-	let geodesicDome2 = null
+	/** Movable wood dome (player placement). */
+	let woodDome = null
+	let oreDome = null
 	let domeMovePending = false
-	/** @type {1 | 2 | null} which dome is being moved */
-	let activePlacementDome = null
-	/** @type {{ cx: number, cz: number, doorAngleCenter: number, gy: number, rotY: number } | null} */
+	/** Which dome is being moved (`null` when not in placement mode). */
+	let placementDomeKind = /** @type {null | 'wood' | 'ore'} */ (null)
+	/** @type {{ kind: 'wood' | 'ore', cx: number, cz: number, doorAngleCenter: number, gy: number, rotY: number } | null} */
 	let domePlacementSnapshot = null
 	scene.background = new THREE.Color(0x9ec8e8)
 	scene.fog = new THREE.Fog(0xa8d0e8, 2400, 10400)
@@ -96,6 +100,53 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 
 	const pointer = new PointerLockControls(camera, renderer.domElement)
 
+	/** Browsers reject re-lock immediately after Esc; defer + swallow promise rejections. */
+	let pointerLockCooldownUntil = 0
+	function onPointerLockChange() {
+		if (!document.pointerLockElement) {
+			pointerLockCooldownUntil = performance.now() + 450
+		}
+	}
+	function onPointerLockError() {
+		// Avoid noisy unhandled rejections when lock is not allowed.
+	}
+	document.addEventListener('pointerlockchange', onPointerLockChange)
+	document.addEventListener('pointerlockerror', onPointerLockError)
+
+	function swallowPointerLockRejection(e) {
+		const r = e.reason
+		const msg = r && typeof r.message === 'string' ? r.message : String(r)
+		if (
+			r &&
+			(r.name === 'SecurityError' || msg.includes('Pointer lock') || msg.includes('pointer lock'))
+		) {
+			e.preventDefault()
+		}
+	}
+	window.addEventListener('unhandledrejection', swallowPointerLockRejection)
+
+	function tryPointerLock() {
+		if (pointer.isLocked) {
+			return
+		}
+		const run = () => {
+			try {
+				const p = pointer.lock()
+				if (p != null && typeof p.then === 'function') {
+					void p.catch(() => {})
+				}
+			} catch {
+				// Sync SecurityError
+			}
+		}
+		const now = performance.now()
+		if (now < pointerLockCooldownUntil) {
+			window.setTimeout(run, Math.max(0, pointerLockCooldownUntil - now + 80))
+			return
+		}
+		run()
+	}
+
 	const DEFAULT_HINT =
 		'Scroll: zoom · Click look · WASD (works unlocked) · Esc unlock · Unlocked: click dome, then ground to move'
 
@@ -116,6 +167,51 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	})
 	container.style.position = 'relative'
 	container.appendChild(hint)
+
+	/** HUD compass: +X is world north; rose rotates so N tracks it. */
+	const compassWrap = document.createElement('div')
+	compassWrap.setAttribute('role', 'img')
+	compassWrap.setAttribute('aria-label', 'Compass: N is world north (+X)')
+	Object.assign(compassWrap.style, {
+		position: 'absolute',
+		top: '12px',
+		right: '12px',
+		width: '76px',
+		height: '76px',
+		borderRadius: '50%',
+		border: '1px solid rgba(120, 180, 220, 0.45)',
+		background: 'rgba(8, 22, 42, 0.88)',
+		boxShadow: '0 4px 18px rgba(0, 0, 0, 0.25)',
+		pointerEvents: 'none',
+		userSelect: 'none',
+		zIndex: '2',
+	})
+	const compassRose = document.createElement('div')
+	Object.assign(compassRose.style, {
+		position: 'absolute',
+		inset: '0',
+		transformOrigin: '50% 50%',
+	})
+	function addCompassLetter(ch, style) {
+		const el = document.createElement('span')
+		el.textContent = ch
+		Object.assign(el.style, {
+			position: 'absolute',
+			fontFamily: 'system-ui, sans-serif',
+			fontSize: '11px',
+			fontWeight: '600',
+			color: ch === 'N' ? '#ffcc66' : '#cfe8ff',
+			textShadow: '0 0 6px rgba(0, 0, 0, 0.55)',
+			...style,
+		})
+		compassRose.appendChild(el)
+	}
+	addCompassLetter('N', { top: '6px', left: '50%', transform: 'translateX(-50%)' })
+	addCompassLetter('E', { right: '8px', top: '50%', transform: 'translateY(-50%)' })
+	addCompassLetter('S', { bottom: '6px', left: '50%', transform: 'translateX(-50%)' })
+	addCompassLetter('W', { left: '8px', top: '50%', transform: 'translateY(-50%)' })
+	compassWrap.appendChild(compassRose)
+	container.appendChild(compassWrap)
 
 	const domeCoordLabel = document.createElement('div')
 	domeCoordLabel.setAttribute('aria-hidden', 'true')
@@ -185,6 +281,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		renderer.dispose()
 		container.removeChild(renderer.domElement)
 		if (hint.parentNode === container) container.removeChild(hint)
+		if (compassWrap.parentNode === container) container.removeChild(compassWrap)
 		if (domeCoordLabel.parentNode) domeCoordLabel.parentNode.removeChild(domeCoordLabel)
 	}
 
@@ -301,17 +398,9 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	const DEFAULT_DOME_CENTER_X = -1877.615
 	const DEFAULT_DOME_CENTER_Z = -1952.463
 	const DEFAULT_DOME_DOOR_ANGLE_CENTER = -1.146173
-	/** East-side dome: fixed default (earth plateau across the river). Ground Y still follows rim under terrain. */
-	const DEFAULT_DOME2_CENTER_X = -215.89
-	const DEFAULT_DOME2_CENTER_Z = 1873.222
-	const DEFAULT_DOME2_DOOR_ANGLE_CENTER = -2.387471
 	let domeCx = DEFAULT_DOME_CENTER_X
 	let domeCz = DEFAULT_DOME_CENTER_Z
 	let doorAngleCenter = DEFAULT_DOME_DOOR_ANGLE_CENTER
-
-	let dome2Cx = DEFAULT_DOME2_CENTER_X
-	let dome2Cz = DEFAULT_DOME2_CENTER_Z
-	let dome2DoorAngleCenter = DEFAULT_DOME2_DOOR_ANGLE_CENTER
 
 	const baseTerrainColors = new Float32Array(pos.count * 3)
 	for (let start = 0; start < pos.count; start += TERRAIN_BATCH) {
@@ -355,17 +444,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 				g: baseTerrainColors[i * 3 + 1],
 				b: baseTerrainColors[i * 3 + 2],
 			}
-			const rgb = domeGardenTurfRgbMax(
-				lx,
-				ly,
-				baseRgb,
-				[
-					{ centerX: domeCx, centerZ: domeCz },
-					{ centerX: dome2Cx, centerZ: dome2Cz },
-				],
-				innerR,
-				outerR,
-			)
+			const rgb = domeGardenTurfRgb(lx, ly, baseRgb, domeCx, domeCz, innerR, outerR)
 			const micro = noise2(lx * 0.012, ly * 0.011) * 0.028
 			out[i * 3] = THREE.MathUtils.clamp(rgb.r + micro, 0, 1)
 			out[i * 3 + 1] = THREE.MathUtils.clamp(rgb.g + micro, 0, 1)
@@ -418,7 +497,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		minTerrainHeightUnderRim(domeCx, domeCz, DOME_RADIUS, terrainHeightAtPlaneXY, 64) +
 		DOME_RIM_ABOVE_TERRAIN
 	const doorYaw = doorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2
-	geodesicDome = await loadGeodesicDome({
+	woodDome = await loadGeodesicDome({
 		centerX: domeCx,
 		centerZ: domeCz,
 		groundY: domeGroundY,
@@ -426,136 +505,264 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		doorGapRadians: DOME_DOOR_GAP,
 		doorYaw,
 	})
-	scene.add(geodesicDome.group)
+	scene.add(woodDome.group)
 
-	const dome2GroundY =
-		minTerrainHeightUnderRim(dome2Cx, dome2Cz, DOME_RADIUS, terrainHeightAtPlaneXY, 64) +
+	const defaultPlaneLy = -DEFAULT_DOME_CENTER_Z
+	const pickOrePlane =
+		typeof oreDomePlaneXYDry === 'function' ? oreDomePlaneXYDry : oppositeBankPlaneXY
+	const { lx: orePlaneLx, ly: orePlaneLy } = pickOrePlane(
+		DEFAULT_DOME_CENTER_X,
+		defaultPlaneLy,
+		DOME_RADIUS + 10,
+	)
+	let oreCx = orePlaneLx
+	let oreCz = -orePlaneLy
+	let oreDoorAngleCenter = Math.atan2(spawn.playerX - oreCx, spawn.playerZ - oreCz)
+	const oreGroundY =
+		minTerrainHeightUnderRim(oreCx, oreCz, DOME_RADIUS, terrainHeightAtPlaneXY, 64) +
 		DOME_RIM_ABOVE_TERRAIN
-	const dome2DoorYaw = dome2DoorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2
-	geodesicDome2 = await loadGeodesicDome({
-		centerX: dome2Cx,
-		centerZ: dome2Cz,
-		groundY: dome2GroundY,
+	const oreDoorYaw = oreDoorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2
+	oreDome = await loadGeodesicDome({
+		centerX: oreCx,
+		centerZ: oreCz,
+		groundY: oreGroundY,
 		radius: DOME_RADIUS,
 		doorGapRadians: DOME_DOOR_GAP,
-		doorYaw: dome2DoorYaw,
+		doorYaw: oreDoorYaw,
 	})
-	scene.add(geodesicDome2.group)
+	scene.add(oreDome.group)
+	if (oreDome.gardenGroup) {
+		updateDomeGardenPositions(oreDome.gardenGroup, {
+			centerX: oreCx,
+			centerZ: oreCz,
+			groundY: oreDome.group.position.y,
+			doorYaw: oreDoorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2,
+			terrainHeightAtPlaneXY,
+		})
+	}
 
-	let domeLegitInterior = false
-	let dome2LegitInterior = false
+	const tickState = createTickState()
+	const tickHud = document.createElement('div')
+	Object.assign(tickHud.style, {
+		position: 'absolute',
+		top: '12px',
+		left: '12px',
+		zIndex: '2147483645',
+		padding: '10px 14px',
+		fontFamily: 'system-ui, sans-serif',
+		fontSize: '14px',
+		color: '#f0f8e8',
+		background: 'rgba(14, 28, 18, 0.75)',
+		borderRadius: '10px',
+		display: 'flex',
+		flexDirection: 'column',
+		gap: '8px',
+		alignItems: 'flex-start',
+		pointerEvents: 'auto',
+	})
+	const tickLabelEl = document.createElement('div')
+	const nextTickBtn = document.createElement('button')
+	nextTickBtn.type = 'button'
+	nextTickBtn.textContent = 'Next tick'
+	Object.assign(nextTickBtn.style, {
+		padding: '6px 12px',
+		fontSize: '13px',
+		cursor: 'pointer',
+		borderRadius: '6px',
+		border: '1px solid rgba(120, 180, 140, 0.6)',
+		background: 'rgba(30, 56, 38, 0.95)',
+		color: '#e8f4e0',
+	})
+	function refreshTickHud() {
+		tickLabelEl.textContent = `Tick ${tickState.tick}`
+	}
+	function refreshInventoryHud() {
+		inventoryHudText.textContent = `City — Wood: ${tickState.wood} · Ore: ${tickState.ore}`
+	}
+	function onNextTickClick() {
+		advanceTick(tickState)
+		refreshTickHud()
+		refreshInventoryHud()
+	}
+	refreshTickHud()
+	nextTickBtn.addEventListener('click', onNextTickClick)
+	tickHud.appendChild(tickLabelEl)
+	tickHud.appendChild(nextTickBtn)
+	container.appendChild(tickHud)
 
-	function syncDomeGarden() {
-		if (!geodesicDome?.gardenGroup) {
+	const inventoryHud = document.createElement('div')
+	Object.assign(inventoryHud.style, {
+		position: 'absolute',
+		left: '50%',
+		bottom: '12px',
+		transform: 'translateX(-50%)',
+		zIndex: '2147483645',
+		padding: '10px 20px',
+		fontFamily: 'system-ui, sans-serif',
+		fontSize: '14px',
+		color: '#eaf8ff',
+		background: 'rgba(8, 22, 42, 0.88)',
+		borderRadius: '10px',
+		border: '1px solid rgba(120, 180, 220, 0.45)',
+		pointerEvents: 'none',
+		userSelect: 'none',
+		whiteSpace: 'nowrap',
+	})
+	const inventoryHudText = document.createElement('span')
+	refreshInventoryHud()
+	inventoryHud.appendChild(inventoryHudText)
+	container.appendChild(inventoryHud)
+
+	const labelWood = document.createElement('div')
+	const labelOre = document.createElement('div')
+	for (const el of [labelWood, labelOre]) {
+		Object.assign(el.style, {
+			position: 'fixed',
+			pointerEvents: 'none',
+			userSelect: 'none',
+			padding: '6px 10px',
+			fontFamily: 'system-ui, sans-serif',
+			fontSize: '12px',
+			color: '#e8f4e0',
+			background: 'rgba(12, 28, 14, 0.72)',
+			borderRadius: '8px',
+			zIndex: '2147483644',
+			display: 'block',
+		})
+	}
+	labelWood.textContent = `+${tickState.woodPerTick} wood/tick`
+	labelOre.textContent = `+${tickState.orePerTick} ore/tick`
+	document.body.appendChild(labelWood)
+	document.body.appendChild(labelOre)
+
+	const domeLabelScratch = new THREE.Vector3()
+
+	function placeDomeLabelScreen(labelEl, worldX, topY, worldZ) {
+		domeLabelScratch.set(worldX, topY, worldZ)
+		domeLabelScratch.project(camera)
+		if (domeLabelScratch.z > 1) {
+			labelEl.style.display = 'none'
 			return
 		}
-		updateDomeGardenPositions(geodesicDome.gardenGroup, {
+		const rect = renderer.domElement.getBoundingClientRect()
+		const x = (domeLabelScratch.x * 0.5 + 0.5) * rect.width + rect.left
+		const y = (-domeLabelScratch.y * 0.5 + 0.5) * rect.height + rect.top
+		labelEl.style.display = 'block'
+		labelEl.style.left = `${x}px`
+		labelEl.style.top = `${y}px`
+		labelEl.style.transform = 'translate(-50%, -110%)'
+	}
+
+	let domeLegitInterior = false
+	let oreLegitInterior = false
+
+	function syncWoodDomeGarden() {
+		if (!woodDome?.gardenGroup) {
+			return
+		}
+		updateDomeGardenPositions(woodDome.gardenGroup, {
 			centerX: domeCx,
 			centerZ: domeCz,
-			groundY: geodesicDome.group.position.y,
+			groundY: woodDome.group.position.y,
 			doorYaw: doorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2,
 			terrainHeightAtPlaneXY,
 		})
 	}
 
-	function syncDomeGarden2() {
-		if (!geodesicDome2?.gardenGroup) {
+	function syncOreDomeGarden() {
+		if (!oreDome?.gardenGroup) {
 			return
 		}
-		updateDomeGardenPositions(geodesicDome2.gardenGroup, {
-			centerX: dome2Cx,
-			centerZ: dome2Cz,
-			groundY: geodesicDome2.group.position.y,
-			doorYaw: dome2DoorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2,
+		updateDomeGardenPositions(oreDome.gardenGroup, {
+			centerX: oreCx,
+			centerZ: oreCz,
+			groundY: oreDome.group.position.y,
+			doorYaw: oreDoorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2,
 			terrainHeightAtPlaneXY,
 		})
 	}
 
 	function updateDomeCoordLabel() {
-		if (!domeMovePending) {
+		if (!domeMovePending || !placementDomeKind) {
 			domeCoordLabel.style.display = 'none'
 			return
 		}
-		if (activePlacementDome === 1 && geodesicDome) {
-			const gy = geodesicDome.group.position.y
-			const rotY = geodesicDome.group.rotation.y
-			domeCoordLabel.style.display = 'block'
-			domeCoordLabel.textContent = [
-				`dome 1`,
-				`centerX   ${domeCx.toFixed(3)}`,
-				`centerZ   ${domeCz.toFixed(3)}`,
-				`groundY   ${gy.toFixed(4)}`,
-				`rotationY ${rotY.toFixed(6)}`,
-			].join('\n')
+		const g =
+			placementDomeKind === 'wood'
+				? { cx: domeCx, cz: domeCz, group: woodDome?.group }
+				: { cx: oreCx, cz: oreCz, group: oreDome?.group }
+		if (!g.group) {
+			domeCoordLabel.style.display = 'none'
 			return
 		}
-		if (activePlacementDome === 2 && geodesicDome2) {
-			const gy = geodesicDome2.group.position.y
-			const rotY = geodesicDome2.group.rotation.y
-			domeCoordLabel.style.display = 'block'
-			domeCoordLabel.textContent = [
-				`dome 2`,
-				`centerX   ${dome2Cx.toFixed(3)}`,
-				`centerZ   ${dome2Cz.toFixed(3)}`,
-				`groundY   ${gy.toFixed(4)}`,
-				`rotationY ${rotY.toFixed(6)}`,
-			].join('\n')
-			return
-		}
-		domeCoordLabel.style.display = 'none'
+		const gy = g.group.position.y
+		const rotY = g.group.rotation.y
+		domeCoordLabel.style.display = 'block'
+		domeCoordLabel.textContent = [
+			`${placementDomeKind} dome`,
+			`centerX   ${g.cx.toFixed(3)}`,
+			`centerZ   ${g.cz.toFixed(3)}`,
+			`groundY   ${gy.toFixed(4)}`,
+			`rotationY ${rotY.toFixed(6)}`,
+		].join('\n')
 	}
 
-	/**
-	 * @param {1 | 2} which
-	 */
-	function saveDomePlacementSnapshot(which) {
-		activePlacementDome = which
-		if (which === 1 && geodesicDome) {
+	function saveDomePlacementSnapshot(kind) {
+		placementDomeKind = kind
+		if (kind === 'wood' && woodDome) {
 			domePlacementSnapshot = {
+				kind: 'wood',
 				cx: domeCx,
 				cz: domeCz,
 				doorAngleCenter,
-				gy: geodesicDome.group.position.y,
-				rotY: geodesicDome.group.rotation.y,
+				gy: woodDome.group.position.y,
+				rotY: woodDome.group.rotation.y,
 			}
-		} else if (which === 2 && geodesicDome2) {
+			return
+		}
+		if (kind === 'ore' && oreDome) {
 			domePlacementSnapshot = {
-				cx: dome2Cx,
-				cz: dome2Cz,
-				doorAngleCenter: dome2DoorAngleCenter,
-				gy: geodesicDome2.group.position.y,
-				rotY: geodesicDome2.group.rotation.y,
+				kind: 'ore',
+				cx: oreCx,
+				cz: oreCz,
+				doorAngleCenter: oreDoorAngleCenter,
+				gy: oreDome.group.position.y,
+				rotY: oreDome.group.rotation.y,
 			}
 		}
 	}
 
 	function cancelDomePlacement() {
-		if (domePlacementSnapshot && activePlacementDome === 1 && geodesicDome) {
-			domeCx = domePlacementSnapshot.cx
-			domeCz = domePlacementSnapshot.cz
-			doorAngleCenter = domePlacementSnapshot.doorAngleCenter
-			geodesicDome.group.position.set(domeCx, domePlacementSnapshot.gy, domeCz)
-			geodesicDome.group.rotation.y = domePlacementSnapshot.rotY
-			syncDomeGarden()
-		} else if (domePlacementSnapshot && activePlacementDome === 2 && geodesicDome2) {
-			dome2Cx = domePlacementSnapshot.cx
-			dome2Cz = domePlacementSnapshot.cz
-			dome2DoorAngleCenter = domePlacementSnapshot.doorAngleCenter
-			geodesicDome2.group.position.set(dome2Cx, domePlacementSnapshot.gy, dome2Cz)
-			geodesicDome2.group.rotation.y = domePlacementSnapshot.rotY
-			syncDomeGarden2()
+		const snap = domePlacementSnapshot
+		if (snap?.kind === 'wood' && woodDome) {
+			domeCx = snap.cx
+			domeCz = snap.cz
+			doorAngleCenter = snap.doorAngleCenter
+			woodDome.group.position.set(snap.cx, snap.gy, snap.cz)
+			woodDome.group.rotation.y = snap.rotY
+			setDomePlacementHighlight(woodDome.group, false)
+			syncWoodDomeGarden()
+			scheduleTerrainTint()
+		} else if (snap?.kind === 'ore' && oreDome) {
+			oreCx = snap.cx
+			oreCz = snap.cz
+			oreDoorAngleCenter = snap.doorAngleCenter
+			oreDome.group.position.set(snap.cx, snap.gy, snap.cz)
+			oreDome.group.rotation.y = snap.rotY
+			setDomePlacementHighlight(oreDome.group, false)
+			syncOreDomeGarden()
+		} else {
+			if (woodDome) {
+				setDomePlacementHighlight(woodDome.group, false)
+			}
+			if (oreDome) {
+				setDomePlacementHighlight(oreDome.group, false)
+			}
 		}
 		domePlacementSnapshot = null
-		activePlacementDome = null
 		domeMovePending = false
-		if (geodesicDome) {
-			setDomePlacementHighlight(geodesicDome.group, false)
-		}
-		if (geodesicDome2) {
-			setDomePlacementHighlight(geodesicDome2.group, false)
-		}
+		placementDomeKind = null
 		hint.textContent = DEFAULT_HINT
-		scheduleTerrainTint()
 		updateDomeCoordLabel()
 	}
 
@@ -563,85 +770,57 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		const lim = PLANE_HALF - EDGE_MARGIN
 		const nx = THREE.MathUtils.clamp(newX, -lim, lim)
 		const nz = THREE.MathUtils.clamp(newZ, -lim, lim)
-		if (activePlacementDome === 1 && geodesicDome) {
+		if (placementDomeKind === 'wood' && woodDome) {
 			domeCx = nx
 			domeCz = nz
 			doorAngleCenter = Math.atan2(spawn.playerX - domeCx, spawn.playerZ - domeCz)
 			const gy =
 				minTerrainHeightUnderRim(domeCx, domeCz, DOME_RADIUS, terrainHeightAtPlaneXY, 64) +
 				DOME_RIM_ABOVE_TERRAIN
-			geodesicDome.group.position.set(domeCx, gy, domeCz)
-			geodesicDome.group.rotation.y = doorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2
-			syncDomeGarden()
-		} else if (activePlacementDome === 2 && geodesicDome2) {
-			dome2Cx = nx
-			dome2Cz = nz
-			dome2DoorAngleCenter = Math.atan2(spawn.playerX - dome2Cx, spawn.playerZ - dome2Cz)
-			const gy =
-				minTerrainHeightUnderRim(dome2Cx, dome2Cz, DOME_RADIUS, terrainHeightAtPlaneXY, 64) +
-				DOME_RIM_ABOVE_TERRAIN
-			geodesicDome2.group.position.set(dome2Cx, gy, dome2Cz)
-			geodesicDome2.group.rotation.y = dome2DoorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2
-			syncDomeGarden2()
-		} else {
+			woodDome.group.position.set(domeCx, gy, domeCz)
+			woodDome.group.rotation.y = doorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2
+			syncWoodDomeGarden()
+			scheduleTerrainTint()
+			updateDomeCoordLabel()
 			return
 		}
-		scheduleTerrainTint()
-		updateDomeCoordLabel()
+		if (placementDomeKind === 'ore' && oreDome) {
+			oreCx = nx
+			oreCz = nz
+			oreDoorAngleCenter = Math.atan2(spawn.playerX - oreCx, spawn.playerZ - oreCz)
+			const gy =
+				minTerrainHeightUnderRim(oreCx, oreCz, DOME_RADIUS, terrainHeightAtPlaneXY, 64) +
+				DOME_RIM_ABOVE_TERRAIN
+			oreDome.group.position.set(oreCx, gy, oreCz)
+			oreDome.group.rotation.y = oreDoorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2
+			syncOreDomeGarden()
+			updateDomeCoordLabel()
+		}
 	}
 
 	function applyDomePlacement(newX, newZ) {
 		applyDomePreview(newX, newZ)
-		if (activePlacementDome === 1) {
+		if (placementDomeKind === 'wood') {
 			domeLegitInterior = false
-		} else if (activePlacementDome === 2) {
-			dome2LegitInterior = false
+		} else if (placementDomeKind === 'ore') {
+			oreLegitInterior = false
 		}
+		const placedKind = placementDomeKind
 		domeMovePending = false
 		domePlacementSnapshot = null
-		activePlacementDome = null
-		if (geodesicDome) {
-			setDomePlacementHighlight(geodesicDome.group, false)
-		}
-		if (geodesicDome2) {
-			setDomePlacementHighlight(geodesicDome2.group, false)
+		placementDomeKind = null
+		if (placedKind === 'wood' && woodDome) {
+			setDomePlacementHighlight(woodDome.group, false)
+		} else if (placedKind === 'ore' && oreDome) {
+			setDomePlacementHighlight(oreDome.group, false)
 		}
 		hint.textContent = DEFAULT_HINT
 		updateDomeCoordLabel()
 	}
 
-	function raycastHitWhichDome(hitObject) {
-		let o = hitObject
-		while (o) {
-			if (geodesicDome && o === geodesicDome.group) {
-				return 1
-			}
-			if (geodesicDome2 && o === geodesicDome2.group) {
-				return 2
-			}
-			o = o.parent
-		}
-		return null
-	}
-
-	function requestPointerLockDeferred() {
-		requestAnimationFrame(() => {
-			const ret = pointer.lock()
-			if (ret != null && typeof ret.then === 'function') {
-				ret.catch(() => {})
-			}
-		})
-	}
-
 	const raycaster = new THREE.Raycaster()
 	function onCanvasMoveDomePlace(e) {
-		if (!domeMovePending || pointer.isLocked) {
-			return
-		}
-		if (activePlacementDome === 1 && !geodesicDome) {
-			return
-		}
-		if (activePlacementDome === 2 && !geodesicDome2) {
+		if (!domeMovePending || !placementDomeKind || pointer.isLocked) {
 			return
 		}
 		const rect = renderer.domElement.getBoundingClientRect()
@@ -661,7 +840,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1
 		const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1
 		raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera)
-		if (domeMovePending) {
+		if (domeMovePending && placementDomeKind) {
 			const gHits = raycaster.intersectObject(ground, false)
 			if (gHits.length > 0) {
 				applyDomePlacement(gHits[0].point.x, gHits[0].point.z)
@@ -670,33 +849,28 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 			cancelDomePlacement()
 			return
 		}
-		const domeRoots = []
-		if (geodesicDome) {
-			domeRoots.push(geodesicDome.group)
-		}
-		if (geodesicDome2) {
-			domeRoots.push(geodesicDome2.group)
-		}
-		if (domeRoots.length > 0) {
-			const dHits = raycaster.intersectObjects(domeRoots, true)
-			if (dHits.length > 0) {
-				const which = raycastHitWhichDome(dHits[0].object)
-				if (which === 1 || which === 2) {
-					saveDomePlacementSnapshot(which)
-					domeMovePending = true
-					if (geodesicDome) {
-						setDomePlacementHighlight(geodesicDome.group, which === 1)
-					}
-					if (geodesicDome2) {
-						setDomePlacementHighlight(geodesicDome2.group, which === 2)
-					}
-					hint.textContent = 'Move mouse to preview · click terrain to place · Esc to cancel'
-					updateDomeCoordLabel()
-					return
-				}
+		let best = /** @type {{ dist: number, kind: 'wood' | 'ore' } | null} */ (null)
+		if (woodDome) {
+			const h = raycaster.intersectObject(woodDome.group, true)
+			if (h.length > 0) {
+				best = { dist: h[0].distance, kind: 'wood' }
 			}
 		}
-		requestPointerLockDeferred()
+		if (oreDome) {
+			const h = raycaster.intersectObject(oreDome.group, true)
+			if (h.length > 0 && (!best || h[0].distance < best.dist)) {
+				best = { dist: h[0].distance, kind: 'ore' }
+			}
+		}
+		if (best) {
+			saveDomePlacementSnapshot(best.kind)
+			setDomePlacementHighlight(best.kind === 'wood' ? woodDome.group : oreDome.group, true)
+			domeMovePending = true
+			hint.textContent = 'Move mouse to preview · click terrain to place · Esc to cancel'
+			updateDomeCoordLabel()
+			return
+		}
+		tryPointerLock()
 	}
 	renderer.domElement.addEventListener('mousemove', onCanvasMoveDomePlace)
 	renderer.domElement.addEventListener('click', onCanvasClickDomePlace)
@@ -838,36 +1012,36 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 			playerX += move.x
 			playerZ += move.z
 			clampPlayerXZ()
-			const a1 = stepSingleDomePlayerBarrier(
-				prevX,
-				prevZ,
+			let r = applyDomeRimCollision({
 				playerX,
 				playerZ,
+				prevX,
+				prevZ,
 				domeCx,
 				domeCz,
 				doorAngleCenter,
 				domeLegitInterior,
-				DOME_RADIUS,
-				DOME_DOOR_GAP,
-			)
-			playerX = a1.x
-			playerZ = a1.z
-			domeLegitInterior = a1.legitInterior
-			const a2 = stepSingleDomePlayerBarrier(
-				prevX,
-				prevZ,
+				domeRadius: DOME_RADIUS,
+				domeDoorGap: DOME_DOOR_GAP,
+			})
+			playerX = r.playerX
+			playerZ = r.playerZ
+			domeLegitInterior = r.domeLegitInterior
+			r = applyDomeRimCollision({
 				playerX,
 				playerZ,
-				dome2Cx,
-				dome2Cz,
-				dome2DoorAngleCenter,
-				dome2LegitInterior,
-				DOME_RADIUS,
-				DOME_DOOR_GAP,
-			)
-			playerX = a2.x
-			playerZ = a2.z
-			dome2LegitInterior = a2.legitInterior
+				prevX,
+				prevZ,
+				domeCx: oreCx,
+				domeCz: oreCz,
+				doorAngleCenter: oreDoorAngleCenter,
+				domeLegitInterior: oreLegitInterior,
+				domeRadius: DOME_RADIUS,
+				domeDoorGap: DOME_DOOR_GAP,
+			})
+			playerX = r.playerX
+			playerZ = r.playerZ
+			oreLegitInterior = r.domeLegitInterior
 			clampPlayerXZ()
 			{
 				const b = clampPlayerToBridgeSides(playerX, playerZ, bridgeFp)
@@ -881,6 +1055,18 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		}
 
 		updateChaseCamera()
+
+		{
+			camera.getWorldDirection(forward)
+			forward.y = 0
+			if (forward.lengthSq() > 1e-6) {
+				forward.normalize()
+			} else {
+				forward.set(0, 0, -1)
+			}
+			const yawDeg = (Math.atan2(forward.x, forward.z) - Math.PI / 2) * (180 / Math.PI)
+			compassRose.style.transform = `rotate(${yawDeg}deg)`
+		}
 
 		const el = clock.getElapsedTime()
 		waterMat.uniforms.uTime.value = el
@@ -905,6 +1091,24 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 			blobParts.group.rotation.x = wobble * 0.35
 		}
 
+		const domeTopY = DOME_RADIUS * 0.92
+		if (woodDome?.group) {
+			placeDomeLabelScreen(
+				labelWood,
+				woodDome.group.position.x,
+				woodDome.group.position.y + domeTopY,
+				woodDome.group.position.z,
+			)
+		}
+		if (oreDome?.group) {
+			placeDomeLabelScreen(
+				labelOre,
+				oreDome.group.position.x,
+				oreDome.group.position.y + domeTopY,
+				oreDome.group.position.z,
+			)
+		}
+
 		renderer.render(scene, camera)
 	}
 	updateChaseCamera()
@@ -922,6 +1126,9 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	resizeObserver.observe(container)
 
 	function dispose() {
+		window.removeEventListener('unhandledrejection', swallowPointerLockRejection)
+		document.removeEventListener('pointerlockchange', onPointerLockChange)
+		document.removeEventListener('pointerlockerror', onPointerLockError)
 		if (terrainTintRaf !== 0) {
 			cancelAnimationFrame(terrainTintRaf)
 			terrainTintRaf = 0
@@ -939,14 +1146,29 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 			scene.remove(m)
 		}
 		disposeForestResources(forest)
-		if (geodesicDome) {
-			scene.remove(geodesicDome.group)
-			geodesicDome.dispose()
+		nextTickBtn.removeEventListener('click', onNextTickClick)
+		if (tickHud.parentNode) {
+			container.removeChild(tickHud)
 		}
-		if (geodesicDome2) {
-			scene.remove(geodesicDome2.group)
-			geodesicDome2.dispose()
+		if (inventoryHud.parentNode) {
+			container.removeChild(inventoryHud)
 		}
+		if (labelWood.parentNode) {
+			document.body.removeChild(labelWood)
+		}
+		if (labelOre.parentNode) {
+			document.body.removeChild(labelOre)
+		}
+		if (woodDome) {
+			scene.remove(woodDome.group)
+			woodDome.dispose()
+		}
+		if (oreDome) {
+			scene.remove(oreDome.group)
+			oreDome.dispose()
+		}
+		scene.remove(woodBridge.group)
+		woodBridge.dispose()
 		planeGeo.dispose()
 		ground.material.dispose()
 		floodGeo.dispose()
@@ -955,8 +1177,6 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		waterVolMat.dispose()
 		waterGeo.dispose()
 		waterMat.dispose()
-		scene.remove(woodBridge.group)
-		woodBridge.dispose()
 		scene.remove(blobParts.group)
 		blobParts.bodyGeo.dispose()
 		blobParts.bodyMat.dispose()
@@ -966,6 +1186,9 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		container.removeChild(renderer.domElement)
 		if (hint.parentNode === container) {
 			container.removeChild(hint)
+		}
+		if (compassWrap.parentNode === container) {
+			container.removeChild(compassWrap)
 		}
 		if (domeCoordLabel.parentNode) {
 			domeCoordLabel.parentNode.removeChild(domeCoordLabel)
