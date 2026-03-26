@@ -1,9 +1,16 @@
 /**
  * Procedural heightfield: warp, sharpen, continent + ridged peaks + river carve.
  */
+import { floodWaterLevel, isRiverCorridor, waterSurfaceHeightAt } from './biomes.js'
 import { EDGE_MARGIN, PLANE_HALF } from './game-constants.js'
 import { fbm2, ridgedFbm2 } from './noise.js'
 import { riverTerrainBlend } from './river.js'
+
+/** Cached once: matches underwater tint / flood plane. */
+const FLOOD_LEVEL = floodWaterLevel()
+
+/** World units: dry land (outside carved channel) stays above local water surface — stops low-tn sand “lakes”. */
+const LAND_MIN_ABOVE_WATER_SURFACE = 3
 
 /** Final vertical scale (after sharpen). */
 const TERRAIN_AMPLITUDE = 3.55
@@ -57,7 +64,12 @@ export function terrainHeightAtPlaneXY(lx, ly) {
 		(continent + hills + ridges + peaks + spikes + r3 * 22 + valleys + detail + grit) *
 		TERRAIN_AMPLITUDE
 	const terrainH = sharpenSignedHeight(raw)
-	return riverTerrainBlend(wx, wy, terrainH)
+	let h = riverTerrainBlend(wx, wy, terrainH)
+	if (!isRiverCorridor(wx, wy)) {
+		const surf = waterSurfaceHeightAt(wx, wy, FLOOD_LEVEL)
+		h = Math.max(h, surf + LAND_MIN_ABOVE_WATER_SURFACE)
+	}
+	return h
 }
 
 /** Minimum distance from origin so spawn is not at map center. */

@@ -10,6 +10,7 @@ import {
 	grassSubBiomeTerrainRgb,
 	heightBiomeRgb,
 	riverCorridorRgb,
+	waterSurfaceHeightAt,
 } from './biomes.js'
 import { createBlobCharacter } from './blob-character.js'
 import {
@@ -32,6 +33,12 @@ import {
 } from './game-constants.js'
 import { DOME_BAKED_ENTRANCE_ATAN2, loadGeodesicDome } from './geodesic-dome.js'
 import { noise2 } from './noise.js'
+import {
+	createRiverWoodBridgeGroup,
+	getBridgeWorldFootprint,
+	isInBridgeCrossingWaterExemptZone,
+	sampleBridgeGroundY,
+} from './river-bridge.js'
 import {
 	findMountainTopSpawnPosition,
 	terrainHeightAtPlaneXY,
@@ -574,6 +581,29 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	const { mesh: waterMesh, geo: waterGeo, mat: waterMat } = createRiverWaterMesh(scene.fog)
 	scene.add(waterMesh)
 
+	const woodBridge = createRiverWoodBridgeGroup()
+	scene.add(woodBridge.group)
+
+	const bridgeFp = getBridgeWorldFootprint()
+
+	function sampleGroundYAt(px, pz) {
+		return sampleBridgeGroundY(px, pz, bridgeFp)
+	}
+
+	function isMovementBlockedByWater(px, pz) {
+		if (isInBridgeCrossingWaterExemptZone(px, pz, bridgeFp)) {
+			return false
+		}
+		const lx = px
+		const ly = -pz
+		const { wx, wy } = terrainPlaneWarp(lx, ly)
+		const h = terrainHeightAtPlaneXY(lx, ly)
+		if (h >= waterSurfaceHeightAt(wx, wy, floodLevel)) {
+			return false
+		}
+		return true
+	}
+
 	const blobParts = createBlobCharacter()
 	scene.add(blobParts.group)
 
@@ -623,9 +653,9 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		}
 		camera.position.x = playerX + forward.x * -r
 		camera.position.z = playerZ + forward.z * -r
-		const playerGroundY = terrainHeightAtPlaneXY(playerX, -playerZ)
+		const playerGroundY = sampleGroundYAt(playerX, playerZ)
 		const yDesired = playerGroundY + hAbovePlayer + zoomAboveGround
-		const camGroundY = terrainHeightAtPlaneXY(camera.position.x, -camera.position.z)
+		const camGroundY = sampleGroundYAt(camera.position.x, camera.position.z)
 		camera.position.y = Math.max(yDesired, camGroundY + CHASE_MIN_ABOVE_TERRAIN)
 	}
 
@@ -651,7 +681,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 			const prevX = playerX
 			const prevZ = playerZ
 			const prevD = Math.hypot(prevX - domeCx, prevZ - domeCz)
-			const gyMove = terrainHeightAtPlaneXY(playerX, -playerZ)
+			const gyMove = sampleGroundYAt(playerX, playerZ)
 			blobAt.set(playerX, gyMove, playerZ)
 			const distCamBlob = camera.position.distanceTo(blobAt)
 			const moveScale = moveSpeedScaleFromCameraBlobDist(distCamBlob)
@@ -659,6 +689,10 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 			playerX += move.x
 			playerZ += move.z
 			clampPlayerXZ()
+			if (isMovementBlockedByWater(playerX, playerZ)) {
+				playerX = prevX
+				playerZ = prevZ
+			}
 			const d = Math.hypot(playerX - domeCx, playerZ - domeCz)
 			const ang = Math.atan2(playerX - domeCx, playerZ - domeCz)
 			const doorHalfArc = DOME_DOOR_GAP / 2 + 0.08
@@ -699,9 +733,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		waterMat.uniforms.uTime.value = el
 
 		{
-			const lx = playerX
-			const ly = -playerZ
-			const gy = terrainHeightAtPlaneXY(lx, ly)
+			const gy = sampleGroundYAt(playerX, playerZ)
 			blobParts.group.position.set(playerX, gy, playerZ)
 			camera.getWorldDirection(forward)
 			forward.y = 0
@@ -766,6 +798,8 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		waterVolMat.dispose()
 		waterGeo.dispose()
 		waterMat.dispose()
+		scene.remove(woodBridge.group)
+		woodBridge.dispose()
 		scene.remove(blobParts.group)
 		blobParts.bodyGeo.dispose()
 		blobParts.bodyMat.dispose()
