@@ -6,6 +6,8 @@
  * For each dependency: when inbox has unprocessed messages, spawns headless actor.
  */
 
+import { collectInboxMessageCoIds, findNewSuccessFromTarget } from '@MaiaOS/db'
+
 function deriveInboxRef(actorId) {
 	if (!actorId || typeof actorId !== 'string') return null
 	if (actorId.includes('/actor/') && !actorId.startsWith('°Maia/actor/')) {
@@ -45,6 +47,13 @@ export class Runtime {
 	on(event, callback) {
 		if (!this._listeners.has(event)) this._listeners.set(event, new Set())
 		this._listeners.get(event).add(callback)
+	}
+
+	off(event, callback) {
+		const set = this._listeners.get(event)
+		if (!set) return
+		set.delete(callback)
+		if (set.size === 0) this._listeners.delete(event)
 	}
 
 	_emit(event, payload) {
@@ -243,17 +252,38 @@ export class Runtime {
 			return { ok: false, error: 'Could not resolve target inbox' }
 		}
 
-		await this.actorEngine.deliverEvent(callerId, targetActorCoId, eventType, actorPayload || {})
-		await this.ensureActorSpawned(targetConfig, inboxCoId)
-		await this.actorEngine.processEvents(targetActorCoId)
-
 		const callerInboxRef = callerActor?.config?.inbox ?? deriveInboxRef(callerId)
 		let callerInboxCoId = callerInboxRef
 		if (callerInboxCoId && !callerInboxCoId.startsWith('co_z') && this.dataEngine?.peer) {
 			callerInboxCoId = await this.dataEngine.peer.resolve(callerInboxRef, { returnType: 'coId' })
 		}
-		if (!callerInboxCoId?.startsWith?.('co_z')) {
+
+		const peer = this.dataEngine?.peer
+		const beforeCallerIds =
+			callerInboxCoId?.startsWith('co_z') && peer
+				? collectInboxMessageCoIds(peer, callerInboxCoId)
+				: null
+
+		await this.actorEngine.deliverEvent(callerId, targetActorCoId, eventType, actorPayload || {})
+		await this.ensureActorSpawned(targetConfig, inboxCoId)
+		await this.actorEngine.processEvents(targetActorCoId)
+
+		if (!callerInboxCoId?.startsWith?.('co_z') || !peer || !beforeCallerIds) {
+			this._emit('toolExecuted', { toolName: eventType, fullName: toolName, ok: true })
 			return { ok: true, delivered: true }
+		}
+
+		const successReply = await findNewSuccessFromTarget(
+			peer,
+			callerInboxCoId,
+			targetActorCoId,
+			beforeCallerIds,
+		)
+		if (successReply) {
+			await this.actorEngine.processEvents(callerId)
+			const out = successReply.payload !== undefined ? successReply.payload : {}
+			this._emit('toolExecuted', { toolName: eventType, fullName: toolName, ok: true })
+			return out
 		}
 
 		const { messages } = (await this.actorEngine?.getUnprocessedMessages?.(
@@ -261,12 +291,19 @@ export class Runtime {
 			callerId,
 		)) ?? { messages: [] }
 		const successMsg = messages.find((m) => m.type === 'SUCCESS' && m.source === targetActorCoId)
-		if (successMsg?.payload) {
+		if (successMsg?.payload !== undefined) {
 			await this.actorEngine.processEvents(callerId)
+			this._emit('toolExecuted', { toolName: eventType, fullName: toolName, ok: true })
 			return successMsg.payload
 		}
 		await this.actorEngine.processEvents(callerId)
-		return { ok: true, delivered: true }
+		this._emit('toolExecuted', {
+			toolName: eventType,
+			fullName: toolName,
+			ok: false,
+			error: 'Target did not acknowledge (no SUCCESS)',
+		})
+		return { ok: false, error: 'Target did not acknowledge (no SUCCESS)' }
 	}
 
 	/**

@@ -4,6 +4,7 @@
  */
 
 import { getAllVibeRegistries, resolveAccountCoIdsToProfiles } from '@MaiaOS/loader'
+import { findSessionChatIntentActorId, PERSISTENT_CHAT_VIBE_KEY } from './maia-ai-global.js'
 import {
 	escapeHtml,
 	getProfileAvatarHtml,
@@ -219,7 +220,7 @@ export async function renderDashboard(
 			loadSparksFromAccount(maia),
 		])
 		sparks = sparksResult
-		vibes = await loadVibesFromAllSparks(maia, sparks)
+		vibes = (await loadVibesFromAllSparks(maia, sparks)).filter((v) => v.key !== 'chat')
 		const accountProfile = profilesResult.get(accountId) ?? null
 		accountDisplayName = accountProfile?.name ?? accountDisplayName
 		accountAvatarHtml = getProfileAvatarHtml(accountProfile?.image, {
@@ -392,6 +393,25 @@ export async function renderVibeViewer(
 		}
 	}
 
+	// Park persistent Chat intent off-screen so destroyActorsForContainer does not tear down the tree
+	if (maia?.runtime) {
+		const intentId = findSessionChatIntentActorId(maia)
+		if (intentId) {
+			let host = document.getElementById('maia-session-chat-host')
+			if (!host) {
+				host = document.createElement('div')
+				host.id = 'maia-session-chat-host'
+				host.setAttribute('aria-hidden', 'true')
+				host.style.cssText =
+					'position:fixed;width:0;height:0;overflow:hidden;pointer-events:none;visibility:hidden'
+				document.body.appendChild(host)
+			}
+			try {
+				await maia.getEngines().actorEngine.reuseActor(intentId, host, PERSISTENT_CHAT_VIBE_KEY)
+			} catch (_e) {}
+		}
+	}
+
 	// Clear any existing vibe containers before rendering new one
 	// This ensures we don't have multiple aven containers stacked
 	const app = document.getElementById('app')
@@ -531,8 +551,21 @@ export async function renderVibeViewer(
 			// Clear container before loading new vibe (remove any existing content)
 			container.innerHTML = ''
 
-			// Load vibe from spark context (registries.sparks[spark].os.vibes)
-			await maia.loadVibeFromAccount(currentVibe, container, currentSpark || '°Maia')
+			if (currentVibe === 'chat') {
+				const intentId = findSessionChatIntentActorId(maia)
+				if (intentId) {
+					await maia.getEngines().actorEngine.reuseActor(intentId, container, PERSISTENT_CHAT_VIBE_KEY)
+				} else {
+					await maia.loadVibeFromAccount(
+						'chat',
+						container,
+						currentSpark || '°Maia',
+						PERSISTENT_CHAT_VIBE_KEY,
+					)
+				}
+			} else {
+				await maia.loadVibeFromAccount(currentVibe, container, currentSpark || '°Maia')
+			}
 
 			// Add sidebar toggle handlers for maiadb vibe (after vibe loads)
 			setTimeout(() => {
