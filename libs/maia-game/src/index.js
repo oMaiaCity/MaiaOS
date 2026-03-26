@@ -576,8 +576,12 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	function refreshTickHud() {
 		tickLabelEl.textContent = `Tick ${tickState.tick}`
 	}
+	/** @type {{ el: HTMLDivElement, getCount: () => number }[]} */
+	const resourceSlotCountEls = []
 	function refreshInventoryHud() {
-		inventoryHudText.textContent = `City — Wood: ${tickState.wood} · Ore: ${tickState.ore}`
+		for (const { el, getCount } of resourceSlotCountEls) {
+			el.textContent = String(getCount())
+		}
 	}
 	function onNextTickClick() {
 		advanceTick(tickState)
@@ -591,26 +595,85 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	container.appendChild(tickHud)
 
 	const inventoryHud = document.createElement('div')
+	inventoryHud.setAttribute('role', 'status')
+	inventoryHud.setAttribute('aria-label', 'City resources')
 	Object.assign(inventoryHud.style, {
 		position: 'absolute',
 		left: '50%',
 		bottom: '12px',
 		transform: 'translateX(-50%)',
 		zIndex: '2147483645',
-		padding: '10px 20px',
-		fontFamily: 'system-ui, sans-serif',
-		fontSize: '14px',
-		color: '#eaf8ff',
+		display: 'flex',
+		alignItems: 'center',
+		gap: '8px',
+		padding: '8px 10px',
 		background: 'rgba(8, 22, 42, 0.88)',
 		borderRadius: '10px',
 		border: '1px solid rgba(120, 180, 220, 0.45)',
+		boxShadow: '0 4px 18px rgba(0, 0, 0, 0.25)',
 		pointerEvents: 'none',
 		userSelect: 'none',
-		whiteSpace: 'nowrap',
 	})
-	const inventoryHudText = document.createElement('span')
+	const SLOT_PX = 48
+	const resourceDefs = [
+		{
+			id: 'wood',
+			title: 'Wood',
+			getCount: () => tickState.wood,
+			iconSvg:
+				'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="#5c4030" d="M5 6h14v12H5z"/><path fill="#8b6914" d="M7 8h10v8H7z"/><path fill="#4a3528" d="M8 9h1v6H8zm3 0h1v6h-1zm3 0h1v6h-1zm3 0h1v6h-1z"/></svg>',
+		},
+		{
+			id: 'ore',
+			title: 'Ore',
+			getCount: () => tickState.ore,
+			iconSvg:
+				'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="28" height="28" aria-hidden="true"><path fill="#6b7380" d="M12 3l7 4v10l-7 4-7-4V7z"/><path fill="#9aa3b8" d="M12 6.2L7.5 8.8v6.4L12 18l4.5-2.8V8.8z"/><path fill="#c8d0e0" d="M10 9h2v2h-2zm2 3h2v2h-2z"/></svg>',
+		},
+	]
+	for (const def of resourceDefs) {
+		const slot = document.createElement('div')
+		slot.title = def.title
+		Object.assign(slot.style, {
+			position: 'relative',
+			width: `${SLOT_PX}px`,
+			height: `${SLOT_PX}px`,
+			flexShrink: '0',
+			borderRadius: '4px',
+			border: '1px solid rgba(80, 120, 160, 0.55)',
+			background: 'rgba(4, 14, 28, 0.65)',
+			display: 'flex',
+			alignItems: 'center',
+			justifyContent: 'center',
+			boxSizing: 'border-box',
+		})
+		const iconWrap = document.createElement('div')
+		iconWrap.innerHTML = def.iconSvg
+		const svg = iconWrap.firstElementChild
+		if (svg) {
+			svg.style.display = 'block'
+			svg.style.opacity = '0.95'
+		}
+		slot.appendChild(iconWrap)
+		const countEl = document.createElement('div')
+		Object.assign(countEl.style, {
+			position: 'absolute',
+			right: '3px',
+			bottom: '1px',
+			fontFamily: 'ui-monospace, monospace, system-ui, sans-serif',
+			fontSize: '12px',
+			fontWeight: '700',
+			color: '#ffffff',
+			textShadow: '1px 1px 0 #1a1a1a, -1px -1px 0 #1a1a1a, 1px -1px 0 #1a1a1a, -1px 1px 0 #1a1a1a',
+			lineHeight: '1',
+			pointerEvents: 'none',
+		})
+		countEl.textContent = '0'
+		slot.appendChild(countEl)
+		resourceSlotCountEls.push({ el: countEl, getCount: def.getCount })
+		inventoryHud.appendChild(slot)
+	}
 	refreshInventoryHud()
-	inventoryHud.appendChild(inventoryHudText)
 	container.appendChild(inventoryHud)
 
 	const labelWood = document.createElement('div')
