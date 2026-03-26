@@ -82,7 +82,7 @@ export function domeGardenTurfRgb(lx, ly, baseRgb, centerX, centerZ, innerR, out
 }
 
 /**
- * River corridor: sand only (bed + banks); earth/grass come from height biomes outside the channel.
+ * River corridor: warm sand on banks; flat bed reads as stone/gravel (banks unchanged at high u).
  */
 export function riverCorridorRgb(wx, wy, baseRgb) {
 	const cy = riverCenterY(wx)
@@ -94,9 +94,10 @@ export function riverCorridorRgb(wx, wy, baseRgb) {
 	const u = d / hw
 	const edgeBlend = 1 - smoothRange(u, 0.78, 1)
 	const bankSand = { r: 0.9, g: 0.8, b: 0.62 }
-	const bedSand = { r: 0.78, g: 0.68, b: 0.48 }
+	/** Channel floor — grey stone/gravel (underwater tint still applies). */
+	const bedGravel = { r: 0.44, g: 0.45, b: 0.47 }
 	const bedCore = 1 - smoothRange(u, 0, RIVER_BED_FLAT_FRAC * 0.95)
-	const sandTarget = lerpRgb(bankSand, bedSand, bedCore)
+	const sandTarget = lerpRgb(bankSand, bedGravel, bedCore)
 	const bedSandMask = 1 - smoothRange(u, 0.18, 0.48)
 	const sandStrength = 0.88 * edgeBlend * (0.32 + 0.68 * bedSandMask)
 	return lerpRgb(baseRgb, sandTarget, sandStrength)
