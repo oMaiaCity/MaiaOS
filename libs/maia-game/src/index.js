@@ -7,6 +7,7 @@ import {
 	applyUnderwaterRiverTint,
 	domeGardenTurfRgb,
 	floodWaterLevel,
+	grassSubBiomeTerrainRgb,
 	heightBiomeRgb,
 	riverCorridorRgb,
 } from './biomes.js'
@@ -310,6 +311,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 			const tn = vHSpan > 1e-5 ? (h - vHMin) / vHSpan : 0.5
 			const { wx, wy } = terrainPlaneWarp(lx, ly)
 			let rgb = heightBiomeRgb(tn)
+			rgb = grassSubBiomeTerrainRgb(rgb, tn, wx, wy)
 			rgb = riverCorridorRgb(wx, wy, rgb)
 			rgb = applyUnderwaterRiverTint(wx, wy, h, rgb, floodLevel)
 			baseTerrainColors[i * 3] = rgb.r
