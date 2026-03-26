@@ -62,23 +62,46 @@ export function heightBiomeRgb(tn) {
 	return snow
 }
 
-/**
- * Warmer lawn green under the dome garden annulus (plane lx, ly; world xz matches terrain sampling).
- */
-export function domeGardenTurfRgb(lx, ly, baseRgb, centerX, centerZ, innerR, outerR) {
+const DOME_GARDEN_LAWN_RGB = { r: 0.16, g: 0.5, b: 0.24 }
+
+function domeGardenTurfStrength(lx, ly, centerX, centerZ, innerR, outerR) {
 	const wx = lx
 	const wz = -ly
 	const dx = wx - centerX
 	const dz = wz - centerZ
 	const r = Math.hypot(dx, dz)
-	const lawn = { r: 0.16, g: 0.5, b: 0.24 }
 	const tIn = smoothRange(r, innerR - 12, innerR + 6)
 	const tOut = 1 - smoothRange(r, outerR - 10, outerR + 22)
-	const strength = tIn * tOut * 0.96
+	return tIn * tOut * 0.96
+}
+
+/**
+ * Warmer lawn green under the dome garden annulus (plane lx, ly; world xz matches terrain sampling).
+ */
+export function domeGardenTurfRgb(lx, ly, baseRgb, centerX, centerZ, innerR, outerR) {
+	const strength = domeGardenTurfStrength(lx, ly, centerX, centerZ, innerR, outerR)
 	if (strength <= 0) {
 		return baseRgb
 	}
-	return lerpRgb(baseRgb, lawn, strength)
+	return lerpRgb(baseRgb, DOME_GARDEN_LAWN_RGB, strength)
+}
+
+/**
+ * Strongest lawn blend among several dome centers (multiple garden rings).
+ * @param {Array<{ centerX: number, centerZ: number }>} centers
+ */
+export function domeGardenTurfRgbMax(lx, ly, baseRgb, centers, innerR, outerR) {
+	let best = 0
+	for (const c of centers) {
+		const s = domeGardenTurfStrength(lx, ly, c.centerX, c.centerZ, innerR, outerR)
+		if (s > best) {
+			best = s
+		}
+	}
+	if (best <= 0) {
+		return baseRgb
+	}
+	return lerpRgb(baseRgb, DOME_GARDEN_LAWN_RGB, best)
 }
 
 /**
