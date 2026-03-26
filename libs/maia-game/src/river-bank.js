@@ -1,11 +1,11 @@
 /**
  * River bank classification in warped plane space (matches terrain / river carve).
  */
-import { riverCenterY, riverHalfWidth } from './river.js'
+import { closestPointOnRiverPolyline, riverHalfWidth, riverTangentAtS } from './river.js'
 import { terrainPlaneWarp } from './terrain.js'
 
 /** Must match river carve feather in `river.js` — stay past this to be on dry bank. */
-const RIVER_FEATHER_OUTER = 74
+const RIVER_FEATHER_OUTER = 118
 /** Extra clearance so dome rim sits on sand, not in water mesh. */
 const DOME_BANK_CLEARANCE = 620
 
@@ -16,8 +16,12 @@ const DOME_BANK_CLEARANCE = 620
  */
 export function bankIdFromPlaneXY(lx, ly) {
 	const { wx, wy } = terrainPlaneWarp(lx, ly)
-	const cy = riverCenterY(wx)
-	return wy >= cy ? 0 : 1
+	const c = closestPointOnRiverPolyline(wx, wy)
+	const { tx, ty } = riverTangentAtS(c.sNorm)
+	const rx = wx - c.px
+	const ry = wy - c.py
+	const cross = rx * ty - ry * tx
+	return cross >= 0 ? 0 : 1
 }
 
 /**
@@ -30,17 +34,17 @@ export function bankIdFromPlaneXY(lx, ly) {
  */
 export function oppositeBankPlaneXY(lx, ly) {
 	const { wx, wy } = terrainPlaneWarp(lx, ly)
-	const cy = riverCenterY(wx)
-	const startSign = Math.sign(wy - cy) || 1
+	const c0 = closestPointOnRiverPolyline(wx, wy)
+	const startSign = Math.sign(wy - c0.py) || 1
 	for (let d = 400; d <= 12000; d += 200) {
 		for (const s of [-1, 1]) {
 			const ly2 = ly + s * d
 			const w = terrainPlaneWarp(lx, ly2)
-			const c2 = riverCenterY(w.wx)
+			const c2 = closestPointOnRiverPolyline(w.wx, w.wy)
 			const hw = riverHalfWidth(w.wx, w.wy)
-			const dist = Math.abs(w.wy - c2)
+			const dist = c2.dist
 			const minDry = hw + RIVER_FEATHER_OUTER + DOME_BANK_CLEARANCE
-			const newSign = Math.sign(w.wy - c2) || 1
+			const newSign = Math.sign(w.wy - c2.py) || 1
 			if (newSign !== startSign && dist >= minDry) {
 				return { lx, ly: ly2 }
 			}
@@ -59,10 +63,9 @@ const ORE_DOME_WORLD_FOOTPRINT_R = 102
  * @param {number} wy
  */
 function warpedPointDryEnough(wx, wy) {
-	const cy = riverCenterY(wx)
-	const d = Math.abs(wy - cy)
+	const c = closestPointOnRiverPolyline(wx, wy)
 	const hw = riverHalfWidth(wx, wy)
-	return d >= hw + RIVER_FEATHER_OUTER + DOME_BANK_CLEARANCE
+	return c.dist >= hw + RIVER_FEATHER_OUTER + DOME_BANK_CLEARANCE
 }
 
 /**
