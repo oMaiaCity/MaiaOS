@@ -113,6 +113,51 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	container.style.position = 'relative'
 	container.appendChild(hint)
 
+	/** HUD compass: +X is world north (south/north swapped vs −X-north); rose rotates so N tracks it. */
+	const compassWrap = document.createElement('div')
+	compassWrap.setAttribute('role', 'img')
+	compassWrap.setAttribute('aria-label', 'Compass: N is world north (+X)')
+	Object.assign(compassWrap.style, {
+		position: 'absolute',
+		top: '12px',
+		right: '12px',
+		width: '76px',
+		height: '76px',
+		borderRadius: '50%',
+		border: '1px solid rgba(120, 180, 220, 0.45)',
+		background: 'rgba(8, 22, 42, 0.88)',
+		boxShadow: '0 4px 18px rgba(0, 0, 0, 0.25)',
+		pointerEvents: 'none',
+		userSelect: 'none',
+		zIndex: '2',
+	})
+	const compassRose = document.createElement('div')
+	Object.assign(compassRose.style, {
+		position: 'absolute',
+		inset: '0',
+		transformOrigin: '50% 50%',
+	})
+	function addCompassLetter(ch, style) {
+		const el = document.createElement('span')
+		el.textContent = ch
+		Object.assign(el.style, {
+			position: 'absolute',
+			fontFamily: 'system-ui, sans-serif',
+			fontSize: '11px',
+			fontWeight: '600',
+			color: ch === 'N' ? '#ffcc66' : '#cfe8ff',
+			textShadow: '0 0 6px rgba(0, 0, 0, 0.55)',
+			...style,
+		})
+		compassRose.appendChild(el)
+	}
+	addCompassLetter('N', { top: '6px', left: '50%', transform: 'translateX(-50%)' })
+	addCompassLetter('E', { right: '8px', top: '50%', transform: 'translateY(-50%)' })
+	addCompassLetter('S', { bottom: '6px', left: '50%', transform: 'translateX(-50%)' })
+	addCompassLetter('W', { left: '8px', top: '50%', transform: 'translateY(-50%)' })
+	compassWrap.appendChild(compassRose)
+	container.appendChild(compassWrap)
+
 	const domeCoordLabel = document.createElement('div')
 	domeCoordLabel.setAttribute('aria-hidden', 'true')
 	domeCoordLabel.style.display = 'none'
@@ -181,6 +226,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		renderer.dispose()
 		container.removeChild(renderer.domElement)
 		if (hint.parentNode === container) container.removeChild(hint)
+		if (compassWrap.parentNode === container) container.removeChild(compassWrap)
 		if (domeCoordLabel.parentNode) domeCoordLabel.parentNode.removeChild(domeCoordLabel)
 	}
 
@@ -729,6 +775,18 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 
 		updateChaseCamera()
 
+		{
+			camera.getWorldDirection(forward)
+			forward.y = 0
+			if (forward.lengthSq() > 1e-6) {
+				forward.normalize()
+			} else {
+				forward.set(0, 0, -1)
+			}
+			const yawDeg = (Math.atan2(forward.x, forward.z) - Math.PI / 2) * (180 / Math.PI)
+			compassRose.style.transform = `rotate(${yawDeg}deg)`
+		}
+
 		const el = clock.getElapsedTime()
 		waterMat.uniforms.uTime.value = el
 
@@ -809,6 +867,9 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		container.removeChild(renderer.domElement)
 		if (hint.parentNode === container) {
 			container.removeChild(hint)
+		}
+		if (compassWrap.parentNode === container) {
+			container.removeChild(compassWrap)
 		}
 		if (domeCoordLabel.parentNode) {
 			domeCoordLabel.parentNode.removeChild(domeCoordLabel)
