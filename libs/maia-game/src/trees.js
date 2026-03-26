@@ -162,7 +162,6 @@ function buildInstancedMeshes(geoms, buckets, mat) {
  * @param {object} opts
  * @param {number} opts.vHMin
  * @param {number} opts.vHSpan
- * @param {number} opts.floodLevel
  * @param {number} [opts.treeCount]
  * @param {number} [opts.bushCount]
  * @param {number} [opts.seed]
@@ -173,7 +172,6 @@ export function createForestInstancedMeshes(opts) {
 	const {
 		vHMin,
 		vHSpan,
-		floodLevel,
 		treeCount = DEFAULT_TREE_COUNT,
 		bushCount = DEFAULT_BUSH_COUNT,
 		seed = 0x2f6e3a91,
@@ -216,7 +214,7 @@ export function createForestInstancedMeshes(opts) {
 		const h = terrainHeightAtPlaneXY(lx, ly)
 		const tn = vHSpan > 1e-5 ? (h - vHMin) / vHSpan : 0.5
 		const { wx, wy } = terrainPlaneWarp(lx, ly)
-		if (!canPlaceTree(wx, wy, h, tn, floodLevel)) {
+		if (!canPlaceTree(wx, wy, h, tn)) {
 			continue
 		}
 		if (!isDenseForestPatch(wx, wy)) {
@@ -242,7 +240,7 @@ export function createForestInstancedMeshes(opts) {
 		const h = terrainHeightAtPlaneXY(lx, ly)
 		const tn = vHSpan > 1e-5 ? (h - vHMin) / vHSpan : 0.5
 		const { wx, wy } = terrainPlaneWarp(lx, ly)
-		if (!canPlaceTree(wx, wy, h, tn, floodLevel)) {
+		if (!canPlaceTree(wx, wy, h, tn)) {
 			continue
 		}
 		if (!isDenseForestPatch(wx, wy)) {

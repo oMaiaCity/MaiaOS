@@ -1,18 +1,17 @@
 /**
- * Height-based vertex colors, river corridor sand, underwater tint, global flood level.
+ * Height-based vertex colors, river corridor sand, underwater tint.
  */
 import * as THREE from 'three'
-import { PLANE_HALF } from './game-constants.js'
 import { fbm2 } from './noise.js'
 import {
-	FLOW_DN_X,
-	FLOW_DN_Y,
+	closestPointOnRiverPolyline,
+	isRiverCorridor,
 	RIVER_BED_FLAT_FRAC,
-	riverBedElevationFlow,
-	riverCenterY,
 	riverHalfWidth,
-	WATER_DEPTH,
 } from './river.js'
+import { seaLevel, waterSurfaceHeightAt } from './water-surface.js'
+
+export { isRiverCorridor, seaLevel, waterSurfaceHeightAt }
 
 function smoothRange(t, a, b) {
 	const x = THREE.MathUtils.clamp((t - a) / Math.max(b - a, 1e-6), 0, 1)
@@ -108,8 +107,8 @@ export function domeGardenTurfRgbMax(lx, ly, baseRgb, centers, innerR, outerR) {
  * River corridor: warm sand on banks; flat bed reads as stone/gravel (banks unchanged at high u).
  */
 export function riverCorridorRgb(wx, wy, baseRgb) {
-	const cy = riverCenterY(wx)
-	const d = Math.abs(wy - cy)
+	const c = closestPointOnRiverPolyline(wx, wy)
+	const d = c.dist
 	const hw = riverHalfWidth(wx, wy)
 	if (d >= hw) {
 		return baseRgb
@@ -124,41 +123,6 @@ export function riverCorridorRgb(wx, wy, baseRgb) {
 	const bedSandMask = 1 - smoothRange(u, 0.18, 0.48)
 	const sandStrength = 0.88 * edgeBlend * (0.32 + 0.68 * bedSandMask)
 	return lerpRgb(baseRgb, sandTarget, sandStrength)
-}
-
-/** Representative global water surface for flood tint + flood plane (upstream/downstream bed average + column). */
-export function floodWaterLevel() {
-	const len = Math.hypot(FLOW_DN_X, FLOW_DN_Y)
-	const dnx = FLOW_DN_X / len
-	const dny = FLOW_DN_Y / len
-	const span = PLANE_HALF * (Math.abs(dnx) + Math.abs(dny))
-	const wx0 = -dnx * span * 0.9
-	const wy0 = -dny * span * 0.9
-	const wx1 = dnx * span * 0.9
-	const wy1 = dny * span * 0.9
-	return (riverBedElevationFlow(wx0, wy0) + riverBedElevationFlow(wx1, wy1)) / 2 + WATER_DEPTH
-}
-
-/**
- * Tint terrain below water: river corridor uses centerline surface; elsewhere uses global flood level.
- * @param {number} floodLevel
- */
-/** Same surface rule as underwater tint: river corridor vs global flood. */
-export function waterSurfaceHeightAt(wx, wy, floodLevel) {
-	const cy = riverCenterY(wx)
-	const d = Math.abs(wy - cy)
-	const hw = riverHalfWidth(wx, wy)
-	if (d >= hw) {
-		return floodLevel
-	}
-	return riverBedElevationFlow(wx, cy) + WATER_DEPTH
-}
-
-export function isRiverCorridor(wx, wy) {
-	const cy = riverCenterY(wx)
-	const d = Math.abs(wy - cy)
-	const hw = riverHalfWidth(wx, wy)
-	return d < hw
 }
 
 /** Normalized height band matching grass / high grass (excludes sand, snow, peaks). */
@@ -208,26 +172,20 @@ export function grassSubBiomeTerrainRgb(rgb, tn, wx, wy) {
 /**
  * @param {number} tn
  * @param {number} h
- * @param {number} floodLevel
  */
-export function canPlaceTree(wx, wy, h, tn, floodLevel) {
+export function canPlaceTree(wx, wy, h, tn) {
 	if (!isGrassBiomeForTrees(tn)) {
 		return false
 	}
 	if (isRiverCorridor(wx, wy)) {
 		return false
 	}
-	const surf = waterSurfaceHeightAt(wx, wy, floodLevel)
+	const surf = waterSurfaceHeightAt(wx, wy)
 	return h >= surf
 }
 
-export function applyUnderwaterRiverTint(wx, wy, h, rgb, floodLevel) {
-	const cy = riverCenterY(wx)
-	const d = Math.abs(wy - cy)
-	const hw = riverHalfWidth(wx, wy)
-	const riverSurf = riverBedElevationFlow(wx, cy) + WATER_DEPTH
-	const inCorridor = d < hw
-	const surfaceH = inCorridor ? riverSurf : floodLevel
+export function applyUnderwaterRiverTint(wx, wy, h, rgb) {
+	const surfaceH = waterSurfaceHeightAt(wx, wy)
 	if (h >= surfaceH) {
 		return rgb
 	}

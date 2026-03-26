@@ -1,25 +1,64 @@
 /**
  * River surface ribbon (shader) + semi-transparent volume under the corridor.
+ * Meshes march normalized arc s ∈ [0, 1] along the polyline centerline.
  */
 import * as THREE from 'three'
-import { PLANE_HALF } from './game-constants.js'
+import { inverseTerrainPlaneWarp } from './plane-warp.js'
 import {
+	closestPointOnRiverPolyline,
 	riverBedElevationFlow,
-	riverCenterY,
-	riverHalfWidth,
-	WATER_DEPTH,
+	riverCenterlinePointAtS,
+	riverHalfWidthAtS,
+	riverTangentAtS,
 	WATER_FLOW_SPEED,
+	WATER_MESH_HALF_WIDTH_SCALE,
 	WATER_SEGMENTS,
+	WATER_SURFACE_ABOVE_BED,
 } from './river.js'
+import { clampRiverSurfaceToTerrain } from './water-terrain-alignment.js'
+
+/** Terrain mesh uses plane (lx, ly); river math uses warped (wx, wy). Map corners to plane space. */
+function toPlaneXY(wx, wy) {
+	return inverseTerrainPlaneWarp(wx, wy)
+}
+
+/**
+ * Segment bank offsets use local tangents; global closest-point can differ, so points can leave the
+ * carved corridor after inverse warp — clamp in warped space to the same half-width rule as terrain.
+ */
+function clampWarpedCorridor(wx, wy, widthFrac) {
+	const c = closestPointOnRiverPolyline(wx, wy)
+	if (c.dist > 1e12) {
+		return { wx, wy }
+	}
+	const hw = riverHalfWidthAtS(c.sNorm)
+	const maxD = Math.max(hw * widthFrac - 0.35, 2)
+	if (c.dist <= maxD) {
+		return { wx, wy }
+	}
+	const dx = wx - c.px
+	const dy = wy - c.py
+	const len = Math.hypot(dx, dy) || 1
+	const t = maxD / len
+	return { wx: c.px + dx * t, wy: c.py + dy * t }
+}
+
+function flowTAtRibbonVertex(i, n) {
+	if (n <= 1) {
+		return 0
+	}
+	return i / (n - 1)
+}
+
+function flowUvAlongRiver(flowT) {
+	return THREE.MathUtils.clamp(flowT, 0, 1)
+}
 
 /**
  * Semi-transparent volume under the surface: riverbed + side walls (open top — surface mesh caps it).
  */
 export function createRiverWaterVolumeMesh() {
 	const n = WATER_SEGMENTS
-	const margin = 160
-	const x0 = -PLANE_HALF + margin
-	const x1 = PLANE_HALF - margin
 	const positions = []
 	const indices = []
 
@@ -32,43 +71,63 @@ export function createRiverWaterVolumeMesh() {
 		indices.push(a, b, c, a, c, d)
 	}
 
-	function sectionWx(t) {
-		return x0 + t * (x1 - x0)
-	}
-
 	for (let i = 0; i < n - 1; i++) {
-		const t0 = n > 1 ? i / (n - 1) : 0
-		const t1 = (i + 1) / (n - 1)
-		const wx0 = sectionWx(t0)
-		const wx1 = sectionWx(t1)
-		const cy0 = riverCenterY(wx0)
-		const cy1 = riverCenterY(wx1)
-		const hw0 = riverHalfWidth(wx0, cy0) * 0.82
-		const hw1 = riverHalfWidth(wx1, cy1) * 0.82
-		const wyL0 = cy0 - hw0
-		const wyR0 = cy0 + hw0
-		const wyL1 = cy1 - hw1
-		const wyR1 = cy1 + hw1
+		const flowT0 = flowTAtRibbonVertex(i, n)
+		const flowT1 = flowTAtRibbonVertex(i + 1, n)
+		const p0 = riverCenterlinePointAtS(flowT0)
+		const p1 = riverCenterlinePointAtS(flowT1)
+		const t0 = riverTangentAtS(flowT0)
+		const t1 = riverTangentAtS(flowT1)
+		const px0 = -t0.ty
+		const py0 = t0.tx
+		const px1 = -t1.ty
+		const py1 = t1.tx
+		const hw0 = riverHalfWidthAtS(flowT0) * WATER_MESH_HALF_WIDTH_SCALE
+		const hw1 = riverHalfWidthAtS(flowT1) * WATER_MESH_HALF_WIDTH_SCALE
+		let wx0L = p0.wx + px0 * hw0
+		let wy0L = p0.wy + py0 * hw0
+		let wx0R = p0.wx - px0 * hw0
+		let wy0R = p0.wy - py0 * hw0
+		let wx1L = p1.wx + px1 * hw1
+		let wy1L = p1.wy + py1 * hw1
+		let wx1R = p1.wx - px1 * hw1
+		let wy1R = p1.wy - py1 * hw1
+		;({ wx: wx0L, wy: wy0L } = clampWarpedCorridor(wx0L, wy0L, WATER_MESH_HALF_WIDTH_SCALE))
+		;({ wx: wx0R, wy: wy0R } = clampWarpedCorridor(wx0R, wy0R, WATER_MESH_HALF_WIDTH_SCALE))
+		;({ wx: wx1L, wy: wy1L } = clampWarpedCorridor(wx1L, wy1L, WATER_MESH_HALF_WIDTH_SCALE))
+		;({ wx: wx1R, wy: wy1R } = clampWarpedCorridor(wx1R, wy1R, WATER_MESH_HALF_WIDTH_SCALE))
 
-		const b0L = riverBedElevationFlow(wx0, wyL0)
-		const b0R = riverBedElevationFlow(wx0, wyR0)
-		const b1L = riverBedElevationFlow(wx1, wyL1)
-		const b1R = riverBedElevationFlow(wx1, wyR1)
-		const s0 = riverBedElevationFlow(wx0, cy0) + WATER_DEPTH
-		const s1 = riverBedElevationFlow(wx1, cy1) + WATER_DEPTH
+		const b0L = riverBedElevationFlow(wx0L, wy0L)
+		const b0R = riverBedElevationFlow(wx0R, wy0R)
+		const b1L = riverBedElevationFlow(wx1L, wy1L)
+		const b1R = riverBedElevationFlow(wx1R, wy1R)
 
-		const B00 = vert(wx0, wyL0, b0L)
-		const B01 = vert(wx0, wyR0, b0R)
-		const B11 = vert(wx1, wyR1, b1R)
-		const B10 = vert(wx1, wyL1, b1L)
+		const p00L = toPlaneXY(wx0L, wy0L)
+		const p00R = toPlaneXY(wx0R, wy0R)
+		const p10L = toPlaneXY(wx1L, wy1L)
+		const p10R = toPlaneXY(wx1R, wy1R)
+
+		const int0L = b0L + WATER_SURFACE_ABOVE_BED
+		const int0R = b0R + WATER_SURFACE_ABOVE_BED
+		const int1L = b1L + WATER_SURFACE_ABOVE_BED
+		const int1R = b1R + WATER_SURFACE_ABOVE_BED
+		const s0L = clampRiverSurfaceToTerrain(p00L.lx, p00L.ly, int0L, b0L)
+		const s0R = clampRiverSurfaceToTerrain(p00R.lx, p00R.ly, int0R, b0R)
+		const s1L = clampRiverSurfaceToTerrain(p10L.lx, p10L.ly, int1L, b1L)
+		const s1R = clampRiverSurfaceToTerrain(p10R.lx, p10R.ly, int1R, b1R)
+
+		const B00 = vert(p00L.lx, p00L.ly, b0L)
+		const B01 = vert(p00R.lx, p00R.ly, b0R)
+		const B11 = vert(p10R.lx, p10R.ly, b1R)
+		const B10 = vert(p10L.lx, p10L.ly, b1L)
 		quad(B00, B10, B11, B01)
 
-		const T00 = vert(wx0, wyL0, s0)
-		const T10 = vert(wx1, wyL1, s1)
+		const T00 = vert(p00L.lx, p00L.ly, s0L)
+		const T10 = vert(p10L.lx, p10L.ly, s1L)
 		quad(B00, T00, T10, B10)
 
-		const T01 = vert(wx0, wyR0, s0)
-		const T11 = vert(wx1, wyR1, s1)
+		const T01 = vert(p00R.lx, p00R.ly, s0R)
+		const T11 = vert(p10R.lx, p10R.ly, s1R)
 		quad(B01, B11, T11, T01)
 	}
 
@@ -97,37 +156,46 @@ export function createRiverWaterVolumeMesh() {
 }
 
 /**
- * Ribbon mesh along the river centerline at bed + WATER_DEPTH; ShaderMaterial ripples + downstream UV scroll.
+ * Ribbon mesh along the river centerline at bed + WATER_SURFACE_ABOVE_BED; ShaderMaterial ripples + downstream UV scroll.
  * @param {THREE.Fog} fog
  */
 export function createRiverWaterMesh(fog) {
 	const n = WATER_SEGMENTS
-	const margin = 160
-	const x0 = -PLANE_HALF + margin
-	const x1 = PLANE_HALF - margin
 	const verts = n * 2
 	const positions = new Float32Array(verts * 3)
 	const uvs = new Float32Array(verts * 2)
 	for (let i = 0; i < n; i++) {
-		const t = n > 1 ? i / (n - 1) : 0
-		const wx = x0 + t * (x1 - x0)
-		const cy = riverCenterY(wx)
-		const hw = riverHalfWidth(wx, cy) * 0.82
-		const wyL = cy - hw
-		const wyR = cy + hw
-		const h = riverBedElevationFlow(wx, cy) + WATER_DEPTH
-		const i0 = i * 2
-		const i1 = i * 2 + 1
-		positions[i0 * 3] = wx
-		positions[i0 * 3 + 1] = wyL
-		positions[i0 * 3 + 2] = h
-		positions[i1 * 3] = wx
-		positions[i1 * 3 + 1] = wyR
-		positions[i1 * 3 + 2] = h
-		uvs[i0 * 2] = t
-		uvs[i0 * 2 + 1] = 0
-		uvs[i1 * 2] = t
-		uvs[i1 * 2 + 1] = 1
+		const flowT = flowTAtRibbonVertex(i, n)
+		const p = riverCenterlinePointAtS(flowT)
+		const { tx, ty } = riverTangentAtS(flowT)
+		const px = -ty
+		const py = tx
+		const hw = riverHalfWidthAtS(flowT) * WATER_MESH_HALF_WIDTH_SCALE
+		let wxL = p.wx + px * hw
+		let wyL = p.wy + py * hw
+		let wxR = p.wx - px * hw
+		let wyR = p.wy - py * hw
+		;({ wx: wxL, wy: wyL } = clampWarpedCorridor(wxL, wyL, WATER_MESH_HALF_WIDTH_SCALE))
+		;({ wx: wxR, wy: wyR } = clampWarpedCorridor(wxR, wyR, WATER_MESH_HALF_WIDTH_SCALE))
+		const pl = toPlaneXY(wxL, wyL)
+		const pr = toPlaneXY(wxR, wyR)
+		const bedL = riverBedElevationFlow(wxL, wyL)
+		const bedR = riverBedElevationFlow(wxR, wyR)
+		const hL = clampRiverSurfaceToTerrain(pl.lx, pl.ly, bedL + WATER_SURFACE_ABOVE_BED, bedL)
+		const hR = clampRiverSurfaceToTerrain(pr.lx, pr.ly, bedR + WATER_SURFACE_ABOVE_BED, bedR)
+		const uAlong = flowUvAlongRiver(flowT)
+		const row = i * 2
+		const row1 = i * 2 + 1
+		positions[row * 3] = pl.lx
+		positions[row * 3 + 1] = pl.ly
+		positions[row * 3 + 2] = hL
+		positions[row1 * 3] = pr.lx
+		positions[row1 * 3 + 1] = pr.ly
+		positions[row1 * 3 + 2] = hR
+		uvs[row * 2] = uAlong
+		uvs[row * 2 + 1] = 0
+		uvs[row1 * 2] = uAlong
+		uvs[row1 * 2 + 1] = 1
 	}
 	const indices = []
 	for (let i = 0; i < n - 1; i++) {

@@ -6,7 +6,6 @@ import { PointerLockControls } from 'three/addons/controls/PointerLockControls.j
 import {
 	applyUnderwaterRiverTint,
 	domeGardenTurfRgb,
-	floodWaterLevel,
 	grassSubBiomeTerrainRgb,
 	heightBiomeRgb,
 	riverCorridorRgb,
@@ -39,13 +38,7 @@ import { advanceTick, createTickState } from './game-tick.js'
 import { DOME_BAKED_ENTRANCE_ATAN2, loadGeodesicDome } from './geodesic-dome.js'
 import { noise2 } from './noise.js'
 import { oppositeBankPlaneXY, oreDomePlaneXYDry } from './river-bank.js'
-import {
-	clampPlayerToBridgeSides,
-	createRiverWoodBridgeGroup,
-	getBridgeWorldFootprint,
-	isInBridgeCrossingWaterExemptZone,
-	sampleBridgeGroundY,
-} from './river-bridge.js'
+import { createSpringMouthGroup } from './river-spring.js'
 import {
 	findMountainTopSpawnPosition,
 	terrainHeightAtPlaneXY,
@@ -53,6 +46,7 @@ import {
 } from './terrain.js'
 import { createForestInstancedMeshes, disposeForestResources } from './trees.js'
 import { createRiverWaterMesh, createRiverWaterVolumeMesh } from './water-meshes.js'
+import { seaLevel } from './water-surface.js'
 
 const seg = 640
 
@@ -295,7 +289,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		return { dispose: () => {} }
 	}
 
-	const floodLevel = floodWaterLevel()
+	const seaLevelValue = seaLevel()
 
 	let terrainHeightWorker = null
 	try {
@@ -398,10 +392,11 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	const DOME_RADIUS = 92
 	const DOME_DOOR_GAP = 0.92
 	const DOME_RIM_ABOVE_TERRAIN = 0.12
-	/** Default world placement (XZ + door facing); groundY follows terrain at rim. */
-	const DEFAULT_DOME_CENTER_X = -1877.615
-	const DEFAULT_DOME_CENTER_Z = -1952.463
-	const DEFAULT_DOME_DOOR_ANGLE_CENTER = -1.146173
+	/** Default world placement (XZ + door facing + rim height). */
+	const DEFAULT_DOME_CENTER_X = -53.22
+	const DEFAULT_DOME_CENTER_Z = -1515.529
+	const DEFAULT_DOME_GROUND_Y = 43.9439
+	const DEFAULT_DOME_DOOR_ANGLE_CENTER = -1.51547
 	let domeCx = DEFAULT_DOME_CENTER_X
 	let domeCz = DEFAULT_DOME_CENTER_Z
 	let doorAngleCenter = DEFAULT_DOME_DOOR_ANGLE_CENTER
@@ -425,7 +420,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 			let rgb = heightBiomeRgb(tn)
 			rgb = grassSubBiomeTerrainRgb(rgb, tn, wx, wy)
 			rgb = riverCorridorRgb(wx, wy, rgb)
-			rgb = applyUnderwaterRiverTint(wx, wy, h, rgb, floodLevel)
+			rgb = applyUnderwaterRiverTint(wx, wy, h, rgb)
 			baseTerrainColors[i * 3] = rgb.r
 			baseTerrainColors[i * 3 + 1] = rgb.g
 			baseTerrainColors[i * 3 + 2] = rgb.b
@@ -488,7 +483,6 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	const forest = createForestInstancedMeshes({
 		vHMin,
 		vHSpan,
-		floodLevel,
 		spawnX: playerX,
 		spawnZ: playerZ,
 	})
@@ -496,10 +490,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		scene.add(m)
 	}
 
-	/** Horizontal base: lowest terrain height around the full rim avoids air gaps on slopes (uphill may intersect terrain slightly). */
-	const domeGroundY =
-		minTerrainHeightUnderRim(domeCx, domeCz, DOME_RADIUS, terrainHeightAtPlaneXY, 64) +
-		DOME_RIM_ABOVE_TERRAIN
+	const domeGroundY = DEFAULT_DOME_GROUND_Y
 	const doorYaw = doorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2
 	woodDome = await loadGeodesicDome({
 		centerX: domeCx,
@@ -945,7 +936,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	const floodGeo = new THREE.PlaneGeometry(PLANE_SIZE, PLANE_SIZE, 1, 1)
 	const floodPos = floodGeo.attributes.position
 	for (let i = 0; i < floodPos.count; i++) {
-		floodPos.setZ(i, floodLevel)
+		floodPos.setZ(i, seaLevelValue)
 	}
 	floodGeo.computeVertexNormals()
 	const floodMat = new THREE.MeshPhysicalMaterial({
@@ -972,27 +963,26 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	const { mesh: waterMesh, geo: waterGeo, mat: waterMat } = createRiverWaterMesh(scene.fog)
 	scene.add(waterMesh)
 
-	const woodBridge = createRiverWoodBridgeGroup()
-	scene.add(woodBridge.group)
+	const springMouth = createSpringMouthGroup(terrainHeightAtPlaneXY)
+	scene.add(springMouth.group)
 
-	const bridgeFp = getBridgeWorldFootprint()
+	/** Max depth below surface when wading (river bed can be deeper). */
+	const WADE_MAX_DEPTH = 5.2
+	/** Near-surface cap so the blob stays visibly in the water column when shallow. */
+	const WADE_NEAR_SURFACE = 0.05
 
 	function sampleGroundYAt(px, pz) {
-		return sampleBridgeGroundY(px, pz, bridgeFp)
-	}
-
-	function isMovementBlockedByWater(px, pz) {
-		if (isInBridgeCrossingWaterExemptZone(px, pz, bridgeFp)) {
-			return false
-		}
 		const lx = px
 		const ly = -pz
 		const { wx, wy } = terrainPlaneWarp(lx, ly)
-		const h = terrainHeightAtPlaneXY(lx, ly)
-		if (h >= waterSurfaceHeightAt(wx, wy, floodLevel)) {
-			return false
+		const terrain = terrainHeightAtPlaneXY(lx, ly)
+		const surf = waterSurfaceHeightAt(wx, wy)
+		if (terrain >= surf) {
+			return terrain
 		}
-		return true
+		const yBelow = surf - WADE_MAX_DEPTH
+		const yAbove = surf - WADE_NEAR_SURFACE
+		return Math.max(yBelow, Math.min(yAbove, terrain))
 	}
 
 	const blobParts = createBlobCharacter()
@@ -1137,17 +1127,6 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 			playerZ = r.playerZ
 			oreLegitInterior = r.domeLegitInterior
 			clampPlayerXZ()
-			{
-				const b = clampPlayerToBridgeSides(playerX, playerZ, bridgeFp)
-				playerX = b.x
-				playerZ = b.z
-			}
-			if (isMovementBlockedByWater(playerX, playerZ)) {
-				playerX = prevX
-				playerZ = prevZ
-				velX = 0
-				velZ = 0
-			}
 		}
 
 		updateChaseCamera()
@@ -1263,8 +1242,8 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 			scene.remove(oreDome.group)
 			oreDome.dispose()
 		}
-		scene.remove(woodBridge.group)
-		woodBridge.dispose()
+		scene.remove(springMouth.group)
+		springMouth.dispose()
 		planeGeo.dispose()
 		ground.material.dispose()
 		floodGeo.dispose()
