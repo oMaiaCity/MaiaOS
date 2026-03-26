@@ -5,7 +5,7 @@ import * as THREE from 'three'
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js'
 import {
 	applyUnderwaterRiverTint,
-	domeGardenTurfRgb,
+	domeGardenTurfRgbMax,
 	floodWaterLevel,
 	grassSubBiomeTerrainRgb,
 	heightBiomeRgb,
@@ -20,7 +20,7 @@ import {
 	moveSpeedScaleFromCameraBlobDist,
 } from './camera-chase.js'
 import { updateDomeGardenPositions } from './dome-garden.js'
-import { angleWithinArc, minTerrainHeightUnderRim } from './dome-placement.js'
+import { minTerrainHeightUnderRim, stepSingleDomePlayerBarrier } from './dome-placement.js'
 import { setDomePlacementHighlight } from './dome-selection-tint.js'
 import {
 	EDGE_MARGIN,
@@ -34,6 +34,7 @@ import {
 import { DOME_BAKED_ENTRANCE_ATAN2, loadGeodesicDome } from './geodesic-dome.js'
 import { noise2 } from './noise.js'
 import {
+	clampPlayerToBridgeSides,
 	createRiverWoodBridgeGroup,
 	getBridgeWorldFootprint,
 	isInBridgeCrossingWaterExemptZone,
@@ -64,7 +65,10 @@ const TERRAIN_BATCH = 65536
 export async function mountGame(container, { isCancelled = () => false } = {}) {
 	const scene = new THREE.Scene()
 	let geodesicDome = null
+	let geodesicDome2 = null
 	let domeMovePending = false
+	/** @type {1 | 2 | null} which dome is being moved */
+	let activePlacementDome = null
 	/** @type {{ cx: number, cz: number, doorAngleCenter: number, gy: number, rotY: number } | null} */
 	let domePlacementSnapshot = null
 	scene.background = new THREE.Color(0x9ec8e8)
@@ -112,51 +116,6 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	})
 	container.style.position = 'relative'
 	container.appendChild(hint)
-
-	/** HUD compass: +X is world north (south/north swapped vs −X-north); rose rotates so N tracks it. */
-	const compassWrap = document.createElement('div')
-	compassWrap.setAttribute('role', 'img')
-	compassWrap.setAttribute('aria-label', 'Compass: N is world north (+X)')
-	Object.assign(compassWrap.style, {
-		position: 'absolute',
-		top: '12px',
-		right: '12px',
-		width: '76px',
-		height: '76px',
-		borderRadius: '50%',
-		border: '1px solid rgba(120, 180, 220, 0.45)',
-		background: 'rgba(8, 22, 42, 0.88)',
-		boxShadow: '0 4px 18px rgba(0, 0, 0, 0.25)',
-		pointerEvents: 'none',
-		userSelect: 'none',
-		zIndex: '2',
-	})
-	const compassRose = document.createElement('div')
-	Object.assign(compassRose.style, {
-		position: 'absolute',
-		inset: '0',
-		transformOrigin: '50% 50%',
-	})
-	function addCompassLetter(ch, style) {
-		const el = document.createElement('span')
-		el.textContent = ch
-		Object.assign(el.style, {
-			position: 'absolute',
-			fontFamily: 'system-ui, sans-serif',
-			fontSize: '11px',
-			fontWeight: '600',
-			color: ch === 'N' ? '#ffcc66' : '#cfe8ff',
-			textShadow: '0 0 6px rgba(0, 0, 0, 0.55)',
-			...style,
-		})
-		compassRose.appendChild(el)
-	}
-	addCompassLetter('N', { top: '6px', left: '50%', transform: 'translateX(-50%)' })
-	addCompassLetter('E', { right: '8px', top: '50%', transform: 'translateY(-50%)' })
-	addCompassLetter('S', { bottom: '6px', left: '50%', transform: 'translateX(-50%)' })
-	addCompassLetter('W', { left: '8px', top: '50%', transform: 'translateY(-50%)' })
-	compassWrap.appendChild(compassRose)
-	container.appendChild(compassWrap)
 
 	const domeCoordLabel = document.createElement('div')
 	domeCoordLabel.setAttribute('aria-hidden', 'true')
@@ -226,7 +185,6 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		renderer.dispose()
 		container.removeChild(renderer.domElement)
 		if (hint.parentNode === container) container.removeChild(hint)
-		if (compassWrap.parentNode === container) container.removeChild(compassWrap)
 		if (domeCoordLabel.parentNode) domeCoordLabel.parentNode.removeChild(domeCoordLabel)
 	}
 
@@ -343,9 +301,17 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	const DEFAULT_DOME_CENTER_X = -1877.615
 	const DEFAULT_DOME_CENTER_Z = -1952.463
 	const DEFAULT_DOME_DOOR_ANGLE_CENTER = -1.146173
+	/** East-side dome: fixed default (earth plateau across the river). Ground Y still follows rim under terrain. */
+	const DEFAULT_DOME2_CENTER_X = -215.89
+	const DEFAULT_DOME2_CENTER_Z = 1873.222
+	const DEFAULT_DOME2_DOOR_ANGLE_CENTER = -2.387471
 	let domeCx = DEFAULT_DOME_CENTER_X
 	let domeCz = DEFAULT_DOME_CENTER_Z
 	let doorAngleCenter = DEFAULT_DOME_DOOR_ANGLE_CENTER
+
+	let dome2Cx = DEFAULT_DOME2_CENTER_X
+	let dome2Cz = DEFAULT_DOME2_CENTER_Z
+	let dome2DoorAngleCenter = DEFAULT_DOME2_DOOR_ANGLE_CENTER
 
 	const baseTerrainColors = new Float32Array(pos.count * 3)
 	for (let start = 0; start < pos.count; start += TERRAIN_BATCH) {
@@ -389,7 +355,17 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 				g: baseTerrainColors[i * 3 + 1],
 				b: baseTerrainColors[i * 3 + 2],
 			}
-			const rgb = domeGardenTurfRgb(lx, ly, baseRgb, domeCx, domeCz, innerR, outerR)
+			const rgb = domeGardenTurfRgbMax(
+				lx,
+				ly,
+				baseRgb,
+				[
+					{ centerX: domeCx, centerZ: domeCz },
+					{ centerX: dome2Cx, centerZ: dome2Cz },
+				],
+				innerR,
+				outerR,
+			)
 			const micro = noise2(lx * 0.012, ly * 0.011) * 0.028
 			out[i * 3] = THREE.MathUtils.clamp(rgb.r + micro, 0, 1)
 			out[i * 3 + 1] = THREE.MathUtils.clamp(rgb.g + micro, 0, 1)
@@ -452,7 +428,22 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	})
 	scene.add(geodesicDome.group)
 
+	const dome2GroundY =
+		minTerrainHeightUnderRim(dome2Cx, dome2Cz, DOME_RADIUS, terrainHeightAtPlaneXY, 64) +
+		DOME_RIM_ABOVE_TERRAIN
+	const dome2DoorYaw = dome2DoorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2
+	geodesicDome2 = await loadGeodesicDome({
+		centerX: dome2Cx,
+		centerZ: dome2Cz,
+		groundY: dome2GroundY,
+		radius: DOME_RADIUS,
+		doorGapRadians: DOME_DOOR_GAP,
+		doorYaw: dome2DoorYaw,
+	})
+	scene.add(geodesicDome2.group)
+
 	let domeLegitInterior = false
+	let dome2LegitInterior = false
 
 	function syncDomeGarden() {
 		if (!geodesicDome?.gardenGroup) {
@@ -467,89 +458,190 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		})
 	}
 
+	function syncDomeGarden2() {
+		if (!geodesicDome2?.gardenGroup) {
+			return
+		}
+		updateDomeGardenPositions(geodesicDome2.gardenGroup, {
+			centerX: dome2Cx,
+			centerZ: dome2Cz,
+			groundY: geodesicDome2.group.position.y,
+			doorYaw: dome2DoorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2,
+			terrainHeightAtPlaneXY,
+		})
+	}
+
 	function updateDomeCoordLabel() {
-		if (!domeMovePending || !geodesicDome) {
+		if (!domeMovePending) {
 			domeCoordLabel.style.display = 'none'
 			return
 		}
-		const gy = geodesicDome.group.position.y
-		const rotY = geodesicDome.group.rotation.y
-		domeCoordLabel.style.display = 'block'
-		domeCoordLabel.textContent = [
-			`centerX   ${domeCx.toFixed(3)}`,
-			`centerZ   ${domeCz.toFixed(3)}`,
-			`groundY   ${gy.toFixed(4)}`,
-			`rotationY ${rotY.toFixed(6)}`,
-		].join('\n')
-	}
-
-	function saveDomePlacementSnapshot() {
-		if (!geodesicDome) {
+		if (activePlacementDome === 1 && geodesicDome) {
+			const gy = geodesicDome.group.position.y
+			const rotY = geodesicDome.group.rotation.y
+			domeCoordLabel.style.display = 'block'
+			domeCoordLabel.textContent = [
+				`dome 1`,
+				`centerX   ${domeCx.toFixed(3)}`,
+				`centerZ   ${domeCz.toFixed(3)}`,
+				`groundY   ${gy.toFixed(4)}`,
+				`rotationY ${rotY.toFixed(6)}`,
+			].join('\n')
 			return
 		}
-		domePlacementSnapshot = {
-			cx: domeCx,
-			cz: domeCz,
-			doorAngleCenter,
-			gy: geodesicDome.group.position.y,
-			rotY: geodesicDome.group.rotation.y,
+		if (activePlacementDome === 2 && geodesicDome2) {
+			const gy = geodesicDome2.group.position.y
+			const rotY = geodesicDome2.group.rotation.y
+			domeCoordLabel.style.display = 'block'
+			domeCoordLabel.textContent = [
+				`dome 2`,
+				`centerX   ${dome2Cx.toFixed(3)}`,
+				`centerZ   ${dome2Cz.toFixed(3)}`,
+				`groundY   ${gy.toFixed(4)}`,
+				`rotationY ${rotY.toFixed(6)}`,
+			].join('\n')
+			return
+		}
+		domeCoordLabel.style.display = 'none'
+	}
+
+	/**
+	 * @param {1 | 2} which
+	 */
+	function saveDomePlacementSnapshot(which) {
+		activePlacementDome = which
+		if (which === 1 && geodesicDome) {
+			domePlacementSnapshot = {
+				cx: domeCx,
+				cz: domeCz,
+				doorAngleCenter,
+				gy: geodesicDome.group.position.y,
+				rotY: geodesicDome.group.rotation.y,
+			}
+		} else if (which === 2 && geodesicDome2) {
+			domePlacementSnapshot = {
+				cx: dome2Cx,
+				cz: dome2Cz,
+				doorAngleCenter: dome2DoorAngleCenter,
+				gy: geodesicDome2.group.position.y,
+				rotY: geodesicDome2.group.rotation.y,
+			}
 		}
 	}
 
 	function cancelDomePlacement() {
-		if (!geodesicDome) {
-			domeMovePending = false
-			hint.textContent = DEFAULT_HINT
-			updateDomeCoordLabel()
-			return
-		}
-		if (domePlacementSnapshot) {
+		if (domePlacementSnapshot && activePlacementDome === 1 && geodesicDome) {
 			domeCx = domePlacementSnapshot.cx
 			domeCz = domePlacementSnapshot.cz
 			doorAngleCenter = domePlacementSnapshot.doorAngleCenter
 			geodesicDome.group.position.set(domeCx, domePlacementSnapshot.gy, domeCz)
 			geodesicDome.group.rotation.y = domePlacementSnapshot.rotY
+			syncDomeGarden()
+		} else if (domePlacementSnapshot && activePlacementDome === 2 && geodesicDome2) {
+			dome2Cx = domePlacementSnapshot.cx
+			dome2Cz = domePlacementSnapshot.cz
+			dome2DoorAngleCenter = domePlacementSnapshot.doorAngleCenter
+			geodesicDome2.group.position.set(dome2Cx, domePlacementSnapshot.gy, dome2Cz)
+			geodesicDome2.group.rotation.y = domePlacementSnapshot.rotY
+			syncDomeGarden2()
 		}
 		domePlacementSnapshot = null
+		activePlacementDome = null
 		domeMovePending = false
-		setDomePlacementHighlight(geodesicDome.group, false)
+		if (geodesicDome) {
+			setDomePlacementHighlight(geodesicDome.group, false)
+		}
+		if (geodesicDome2) {
+			setDomePlacementHighlight(geodesicDome2.group, false)
+		}
 		hint.textContent = DEFAULT_HINT
-		syncDomeGarden()
 		scheduleTerrainTint()
 		updateDomeCoordLabel()
 	}
 
 	function applyDomePreview(newX, newZ) {
-		if (!geodesicDome) {
+		const lim = PLANE_HALF - EDGE_MARGIN
+		const nx = THREE.MathUtils.clamp(newX, -lim, lim)
+		const nz = THREE.MathUtils.clamp(newZ, -lim, lim)
+		if (activePlacementDome === 1 && geodesicDome) {
+			domeCx = nx
+			domeCz = nz
+			doorAngleCenter = Math.atan2(spawn.playerX - domeCx, spawn.playerZ - domeCz)
+			const gy =
+				minTerrainHeightUnderRim(domeCx, domeCz, DOME_RADIUS, terrainHeightAtPlaneXY, 64) +
+				DOME_RIM_ABOVE_TERRAIN
+			geodesicDome.group.position.set(domeCx, gy, domeCz)
+			geodesicDome.group.rotation.y = doorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2
+			syncDomeGarden()
+		} else if (activePlacementDome === 2 && geodesicDome2) {
+			dome2Cx = nx
+			dome2Cz = nz
+			dome2DoorAngleCenter = Math.atan2(spawn.playerX - dome2Cx, spawn.playerZ - dome2Cz)
+			const gy =
+				minTerrainHeightUnderRim(dome2Cx, dome2Cz, DOME_RADIUS, terrainHeightAtPlaneXY, 64) +
+				DOME_RIM_ABOVE_TERRAIN
+			geodesicDome2.group.position.set(dome2Cx, gy, dome2Cz)
+			geodesicDome2.group.rotation.y = dome2DoorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2
+			syncDomeGarden2()
+		} else {
 			return
 		}
-		const lim = PLANE_HALF - EDGE_MARGIN
-		domeCx = THREE.MathUtils.clamp(newX, -lim, lim)
-		domeCz = THREE.MathUtils.clamp(newZ, -lim, lim)
-		doorAngleCenter = Math.atan2(spawn.playerX - domeCx, spawn.playerZ - domeCz)
-		const gy =
-			minTerrainHeightUnderRim(domeCx, domeCz, DOME_RADIUS, terrainHeightAtPlaneXY, 64) +
-			DOME_RIM_ABOVE_TERRAIN
-		geodesicDome.group.position.set(domeCx, gy, domeCz)
-		geodesicDome.group.rotation.y = doorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2
-		syncDomeGarden()
 		scheduleTerrainTint()
 		updateDomeCoordLabel()
 	}
 
 	function applyDomePlacement(newX, newZ) {
 		applyDomePreview(newX, newZ)
-		domeLegitInterior = false
+		if (activePlacementDome === 1) {
+			domeLegitInterior = false
+		} else if (activePlacementDome === 2) {
+			dome2LegitInterior = false
+		}
 		domeMovePending = false
 		domePlacementSnapshot = null
-		setDomePlacementHighlight(geodesicDome.group, false)
+		activePlacementDome = null
+		if (geodesicDome) {
+			setDomePlacementHighlight(geodesicDome.group, false)
+		}
+		if (geodesicDome2) {
+			setDomePlacementHighlight(geodesicDome2.group, false)
+		}
 		hint.textContent = DEFAULT_HINT
 		updateDomeCoordLabel()
 	}
 
+	function raycastHitWhichDome(hitObject) {
+		let o = hitObject
+		while (o) {
+			if (geodesicDome && o === geodesicDome.group) {
+				return 1
+			}
+			if (geodesicDome2 && o === geodesicDome2.group) {
+				return 2
+			}
+			o = o.parent
+		}
+		return null
+	}
+
+	function requestPointerLockDeferred() {
+		requestAnimationFrame(() => {
+			const ret = pointer.lock()
+			if (ret != null && typeof ret.then === 'function') {
+				ret.catch(() => {})
+			}
+		})
+	}
+
 	const raycaster = new THREE.Raycaster()
 	function onCanvasMoveDomePlace(e) {
-		if (!domeMovePending || !geodesicDome || pointer.isLocked) {
+		if (!domeMovePending || pointer.isLocked) {
+			return
+		}
+		if (activePlacementDome === 1 && !geodesicDome) {
+			return
+		}
+		if (activePlacementDome === 2 && !geodesicDome2) {
 			return
 		}
 		const rect = renderer.domElement.getBoundingClientRect()
@@ -569,7 +661,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1
 		const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1
 		raycaster.setFromCamera(new THREE.Vector2(ndcX, ndcY), camera)
-		if (domeMovePending && geodesicDome) {
+		if (domeMovePending) {
 			const gHits = raycaster.intersectObject(ground, false)
 			if (gHits.length > 0) {
 				applyDomePlacement(gHits[0].point.x, gHits[0].point.z)
@@ -578,21 +670,33 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 			cancelDomePlacement()
 			return
 		}
+		const domeRoots = []
 		if (geodesicDome) {
-			const dHits = raycaster.intersectObject(geodesicDome.group, true)
+			domeRoots.push(geodesicDome.group)
+		}
+		if (geodesicDome2) {
+			domeRoots.push(geodesicDome2.group)
+		}
+		if (domeRoots.length > 0) {
+			const dHits = raycaster.intersectObjects(domeRoots, true)
 			if (dHits.length > 0) {
-				saveDomePlacementSnapshot()
-				setDomePlacementHighlight(geodesicDome.group, true)
-				domeMovePending = true
-				hint.textContent = 'Move mouse to preview · click terrain to place · Esc to cancel'
-				updateDomeCoordLabel()
-				return
+				const which = raycastHitWhichDome(dHits[0].object)
+				if (which === 1 || which === 2) {
+					saveDomePlacementSnapshot(which)
+					domeMovePending = true
+					if (geodesicDome) {
+						setDomePlacementHighlight(geodesicDome.group, which === 1)
+					}
+					if (geodesicDome2) {
+						setDomePlacementHighlight(geodesicDome2.group, which === 2)
+					}
+					hint.textContent = 'Move mouse to preview · click terrain to place · Esc to cancel'
+					updateDomeCoordLabel()
+					return
+				}
 			}
 		}
-		const ret = pointer.lock()
-		if (ret != null && typeof ret.then === 'function') {
-			ret.catch(() => {})
-		}
+		requestPointerLockDeferred()
 	}
 	renderer.domElement.addEventListener('mousemove', onCanvasMoveDomePlace)
 	renderer.domElement.addEventListener('click', onCanvasClickDomePlace)
@@ -726,7 +830,6 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		if (move.lengthSq() > 0) {
 			const prevX = playerX
 			const prevZ = playerZ
-			const prevD = Math.hypot(prevX - domeCx, prevZ - domeCz)
 			const gyMove = sampleGroundYAt(playerX, playerZ)
 			blobAt.set(playerX, gyMove, playerZ)
 			const distCamBlob = camera.position.distanceTo(blobAt)
@@ -735,57 +838,49 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 			playerX += move.x
 			playerZ += move.z
 			clampPlayerXZ()
+			const a1 = stepSingleDomePlayerBarrier(
+				prevX,
+				prevZ,
+				playerX,
+				playerZ,
+				domeCx,
+				domeCz,
+				doorAngleCenter,
+				domeLegitInterior,
+				DOME_RADIUS,
+				DOME_DOOR_GAP,
+			)
+			playerX = a1.x
+			playerZ = a1.z
+			domeLegitInterior = a1.legitInterior
+			const a2 = stepSingleDomePlayerBarrier(
+				prevX,
+				prevZ,
+				playerX,
+				playerZ,
+				dome2Cx,
+				dome2Cz,
+				dome2DoorAngleCenter,
+				dome2LegitInterior,
+				DOME_RADIUS,
+				DOME_DOOR_GAP,
+			)
+			playerX = a2.x
+			playerZ = a2.z
+			dome2LegitInterior = a2.legitInterior
+			clampPlayerXZ()
+			{
+				const b = clampPlayerToBridgeSides(playerX, playerZ, bridgeFp)
+				playerX = b.x
+				playerZ = b.z
+			}
 			if (isMovementBlockedByWater(playerX, playerZ)) {
 				playerX = prevX
 				playerZ = prevZ
 			}
-			const d = Math.hypot(playerX - domeCx, playerZ - domeCz)
-			const ang = Math.atan2(playerX - domeCx, playerZ - domeCz)
-			const doorHalfArc = DOME_DOOR_GAP / 2 + 0.08
-			const inDoorArc = angleWithinArc(ang, doorAngleCenter, doorHalfArc)
-			const rimIn = DOME_RADIUS - 1.5
-			const inwardCross = prevD >= rimIn && d < rimIn
-			const outwardCross = prevD < rimIn && d >= rimIn
-			if (inwardCross) {
-				if (inDoorArc) {
-					domeLegitInterior = true
-				} else {
-					playerX = prevX
-					playerZ = prevZ
-				}
-			} else if (outwardCross) {
-				if (inDoorArc) {
-					domeLegitInterior = false
-				} else {
-					playerX = prevX
-					playerZ = prevZ
-				}
-			} else if (d < rimIn && !domeLegitInterior) {
-				const dx = playerX - domeCx
-				const dz = playerZ - domeCz
-				const len = Math.hypot(dx, dz) || 1
-				const push = (rimIn + 0.5) / len
-				playerX = domeCx + dx * push
-				playerZ = domeCz + dz * push
-				clampPlayerXZ()
-			} else if (d >= rimIn && prevD >= rimIn) {
-				domeLegitInterior = false
-			}
 		}
 
 		updateChaseCamera()
-
-		{
-			camera.getWorldDirection(forward)
-			forward.y = 0
-			if (forward.lengthSq() > 1e-6) {
-				forward.normalize()
-			} else {
-				forward.set(0, 0, -1)
-			}
-			const yawDeg = (Math.atan2(forward.x, forward.z) - Math.PI / 2) * (180 / Math.PI)
-			compassRose.style.transform = `rotate(${yawDeg}deg)`
-		}
 
 		const el = clock.getElapsedTime()
 		waterMat.uniforms.uTime.value = el
@@ -848,6 +943,10 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 			scene.remove(geodesicDome.group)
 			geodesicDome.dispose()
 		}
+		if (geodesicDome2) {
+			scene.remove(geodesicDome2.group)
+			geodesicDome2.dispose()
+		}
 		planeGeo.dispose()
 		ground.material.dispose()
 		floodGeo.dispose()
@@ -867,9 +966,6 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		container.removeChild(renderer.domElement)
 		if (hint.parentNode === container) {
 			container.removeChild(hint)
-		}
-		if (compassWrap.parentNode === container) {
-			container.removeChild(compassWrap)
 		}
 		if (domeCoordLabel.parentNode) {
 			domeCoordLabel.parentNode.removeChild(domeCoordLabel)

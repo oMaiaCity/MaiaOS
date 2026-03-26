@@ -9,6 +9,13 @@ import { terrainHeightAtPlaneXY } from './terrain.js'
 const DECK_INSET = 0.9
 const DECK_WIDTH = 50
 const DECK_THICK = 2.1
+/** Lateral inset from deck edge for walkable clamp (matches rail inner clearance). */
+const DECK_SIDE_MARGIN = 0.42
+const RAIL_WIDTH = 0.38
+const RAIL_HEIGHT = 2.5
+/** East-bank ramp: length along bridge axis beyond deck (local +Z when east end is +Z). */
+const RAMP_LENGTH = 28
+const RAMP_INSET = 0.92
 const CLEARANCE_ABOVE_WATER = 15
 const STEM_COUNT = 4
 const STEM_TOP_R = 0.62 * 6
@@ -79,6 +86,37 @@ export function isPointOnBridgeDeck(px, pz, fp) {
 }
 
 /**
+ * World XZ from bridge-local (lx, lz); lz is along the span, lx across the deck.
+ */
+function worldXZFromBridgeLocal(lx, lz, fp) {
+	const c = Math.cos(fp.yawRad)
+	const s = Math.sin(fp.yawRad)
+	const dx = c * lx + s * lz
+	const dz = -s * lx + c * lz
+	return { px: fp.wxB + dx, pz: fp.worldZCenter + dz }
+}
+
+/**
+ * While within the bridge span, keep the player between the guard rails (no walking off the sides).
+ * @param {number} px
+ * @param {number} pz
+ * @param {ReturnType<typeof getBridgeWorldFootprint>} fp
+ */
+export function clampPlayerToBridgeSides(px, pz, fp) {
+	const { lx, lz } = localBridgeXZ(px, pz, fp)
+	if (Math.abs(lz) > fp.halfSpanZ) {
+		return { x: px, z: pz }
+	}
+	const maxLx = fp.halfWidthX - DECK_SIDE_MARGIN
+	const nlx = THREE.MathUtils.clamp(lx, -maxLx, maxLx)
+	if (nlx === lx) {
+		return { x: px, z: pz }
+	}
+	const w = worldXZFromBridgeLocal(nlx, lz, fp)
+	return { x: w.px, z: w.pz }
+}
+
+/**
  * Expanded OBB: allows walking onto the deck from banks without water collision blocking first.
  */
 export function isInBridgeCrossingWaterExemptZone(px, pz, fp) {
@@ -139,7 +177,72 @@ export function createRiverWoodBridgeGroup() {
 	deck.receiveShadow = true
 	group.add(deck)
 
-	const geoms = [deckGeom]
+	const railMat = new THREE.MeshStandardMaterial({
+		color: 0x3d2814,
+		roughness: 0.88,
+		metalness: 0.04,
+		envMapIntensity: 0.35,
+	})
+	const railSpan = Math.max(span - 1.2, span * 0.96)
+	const railGeom = new THREE.BoxGeometry(RAIL_WIDTH, RAIL_HEIGHT, railSpan)
+	const railY = DECK_THICK * 0.5 + RAIL_HEIGHT * 0.5
+	const railX = DECK_WIDTH * 0.5 - RAIL_WIDTH * 0.5
+	for (const sign of [-1, 1]) {
+		const rail = new THREE.Mesh(railGeom, railMat)
+		rail.castShadow = true
+		rail.receiveShadow = true
+		rail.position.set(sign * railX, railY, 0)
+		group.add(rail)
+	}
+
+	/** Bridge end toward world +X (east bank); ramp extends outward along local ±Z. */
+	const sinY = Math.sin(yawRad)
+	const eastSign = Math.abs(sinY) > 1e-6 ? Math.sign(sinY) : 1
+	const localZEnd = eastSign * span * 0.5
+	const innerZ = localZEnd - eastSign * 0.35
+	const outerZ = localZEnd + eastSign * RAMP_LENGTH
+	const xHalf = DECK_WIDTH * 0.5 * RAMP_INSET
+	const fpRamp = {
+		wxB,
+		worldZCenter: -cyB,
+		yawRad,
+		halfWidthX: DECK_WIDTH * 0.5,
+		halfSpanZ: span * 0.5,
+		deckTopY: L.deckTopY,
+	}
+	function terrainYLocal(lx, lz) {
+		const { px, pz } = worldXZFromBridgeLocal(lx, lz, fpRamp)
+		return terrainHeightAtPlaneXY(px, -pz) - deckCenterY
+	}
+	const yOutL = terrainYLocal(-xHalf, outerZ)
+	const yOutR = terrainYLocal(xHalf, outerZ)
+	const deckTopLocal = DECK_THICK * 0.5
+	const rampGeom = new THREE.BufferGeometry()
+	const rp = new Float32Array([
+		-xHalf,
+		deckTopLocal,
+		innerZ,
+		xHalf,
+		deckTopLocal,
+		innerZ,
+		xHalf,
+		yOutR,
+		outerZ,
+		-xHalf,
+		yOutL,
+		outerZ,
+	])
+	rampGeom.setAttribute('position', new THREE.BufferAttribute(rp, 3))
+	rampGeom.setIndex([0, 1, 2, 0, 2, 3])
+	rampGeom.computeVertexNormals()
+	const rampMat = woodMat.clone()
+	rampMat.side = THREE.DoubleSide
+	const ramp = new THREE.Mesh(rampGeom, rampMat)
+	ramp.castShadow = true
+	ramp.receiveShadow = true
+	group.add(ramp)
+
+	const geoms = [deckGeom, railGeom, rampGeom]
 
 	const wyStart = cyB - span * 0.5
 	for (let i = 0; i < STEM_COUNT; i++) {
@@ -165,6 +268,8 @@ export function createRiverWoodBridgeGroup() {
 			g.dispose()
 		}
 		woodMat.dispose()
+		rampMat.dispose()
+		railMat.dispose()
 	}
 
 	return { group, dispose }

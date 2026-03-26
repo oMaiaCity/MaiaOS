@@ -102,3 +102,59 @@ export function angleWithinArc(angle, center, halfWidth) {
 	const d = Math.atan2(Math.sin(angle - center), Math.cos(angle - center))
 	return Math.abs(d) <= halfWidth + 1e-4
 }
+
+/**
+ * One dome's door-arc rim barrier (matches mountGame player loop).
+ * @returns {{ x: number, z: number, legitInterior: boolean }}
+ */
+export function stepSingleDomePlayerBarrier(
+	prevX,
+	prevZ,
+	playerX,
+	playerZ,
+	domeCx,
+	domeCz,
+	doorAngleCenter,
+	legitInterior,
+	domeRadius,
+	doorGapRadians,
+) {
+	const rimIn = domeRadius - 1.5
+	const doorHalfArc = doorGapRadians / 2 + 0.08
+	const prevD = Math.hypot(prevX - domeCx, prevZ - domeCz)
+	const d = Math.hypot(playerX - domeCx, playerZ - domeCz)
+	const ang = Math.atan2(playerX - domeCx, playerZ - domeCz)
+	const inDoorArc = angleWithinArc(ang, doorAngleCenter, doorHalfArc)
+	const inwardCross = prevD >= rimIn && d < rimIn
+	const outwardCross = prevD < rimIn && d >= rimIn
+	let legit = legitInterior
+	let px = playerX
+	let pz = playerZ
+
+	if (inwardCross) {
+		if (inDoorArc) {
+			legit = true
+		} else {
+			px = prevX
+			pz = prevZ
+		}
+	} else if (outwardCross) {
+		if (inDoorArc) {
+			legit = false
+		} else {
+			px = prevX
+			pz = prevZ
+		}
+	} else if (d < rimIn && !legit) {
+		const dx = px - domeCx
+		const dz = pz - domeCz
+		const len = Math.hypot(dx, dz) || 1
+		const push = (rimIn + 0.5) / len
+		px = domeCx + dx * push
+		pz = domeCz + dz * push
+	} else if (d >= rimIn && prevD >= rimIn) {
+		legit = false
+	}
+
+	return { x: px, z: pz, legitInterior: legit }
+}
