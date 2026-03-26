@@ -25,11 +25,14 @@ import { applyDomeRimCollision } from './dome-player-collision.js'
 import { setDomePlacementHighlight } from './dome-selection-tint.js'
 import {
 	EDGE_MARGIN,
+	MOVE_ACCEL_TAU,
+	MOVE_DECEL_TAU,
 	MOVE_SPEED,
 	PLANE_HALF,
 	PLANE_SIZE,
 	ZOOM_ABOVE_MAX,
 	ZOOM_ABOVE_MIN,
+	ZOOM_SMOOTH_TAU,
 	ZOOM_WHEEL_SCALE,
 } from './game-constants.js'
 import { advanceTick, createTickState } from './game-tick.js'
@@ -262,11 +265,12 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	window.addEventListener('keyup', onKeyUp)
 
 	let zoomAboveGround = 0
+	let zoomTarget = 0
 
 	function onWheel(e) {
 		e.preventDefault()
-		zoomAboveGround = THREE.MathUtils.clamp(
-			zoomAboveGround + e.deltaY * ZOOM_WHEEL_SCALE,
+		zoomTarget = THREE.MathUtils.clamp(
+			zoomTarget + e.deltaY * ZOOM_WHEEL_SCALE,
 			ZOOM_ABOVE_MIN,
 			ZOOM_ABOVE_MAX,
 		)
@@ -1016,6 +1020,9 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	const right = new THREE.Vector3()
 	const move = new THREE.Vector3()
 	const blobAt = new THREE.Vector3()
+	/** World XZ velocity (units/s); smoothed for ease-in / ease-out on WASD. */
+	let velX = 0
+	let velZ = 0
 	const clock = new THREE.Clock()
 
 	let requestId = 0
@@ -1050,6 +1057,11 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		requestId = requestAnimationFrame(animate)
 		const delta = Math.min(clock.getDelta(), 0.05)
 
+		{
+			const aZ = 1 - Math.exp(-delta / ZOOM_SMOOTH_TAU)
+			zoomAboveGround += (zoomTarget - zoomAboveGround) * aZ
+		}
+
 		camera.getWorldDirection(forward)
 		forward.y = 0
 		if (forward.lengthSq() > 1e-6) {
@@ -1064,16 +1076,35 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		if (keys.KeyS) move.sub(forward)
 		if (keys.KeyD) move.add(right)
 		if (keys.KeyA) move.sub(right)
-		if (move.lengthSq() > 0) {
+		{
+			let targetVelX = 0
+			let targetVelZ = 0
+			if (move.lengthSq() > 0) {
+				const gyMove = sampleGroundYAt(playerX, playerZ)
+				blobAt.set(playerX, gyMove, playerZ)
+				const distCamBlob = camera.position.distanceTo(blobAt)
+				const moveScale = moveSpeedScaleFromCameraBlobDist(distCamBlob)
+				move.normalize()
+				const sp = MOVE_SPEED * moveScale
+				targetVelX = move.x * sp
+				targetVelZ = move.z * sp
+			}
+			const tau = targetVelX === 0 && targetVelZ === 0 ? MOVE_DECEL_TAU : MOVE_ACCEL_TAU
+			const a = 1 - Math.exp(-delta / tau)
+			velX += (targetVelX - velX) * a
+			velZ += (targetVelZ - velZ) * a
+			const v2 = velX * velX + velZ * velZ
+			if (v2 < 4) {
+				velX = 0
+				velZ = 0
+			}
+		}
+
+		if (velX !== 0 || velZ !== 0) {
 			const prevX = playerX
 			const prevZ = playerZ
-			const gyMove = sampleGroundYAt(playerX, playerZ)
-			blobAt.set(playerX, gyMove, playerZ)
-			const distCamBlob = camera.position.distanceTo(blobAt)
-			const moveScale = moveSpeedScaleFromCameraBlobDist(distCamBlob)
-			move.normalize().multiplyScalar(MOVE_SPEED * delta * moveScale)
-			playerX += move.x
-			playerZ += move.z
+			playerX += velX * delta
+			playerZ += velZ * delta
 			clampPlayerXZ()
 			let r = applyDomeRimCollision({
 				playerX,
@@ -1114,6 +1145,8 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 			if (isMovementBlockedByWater(playerX, playerZ)) {
 				playerX = prevX
 				playerZ = prevZ
+				velX = 0
+				velZ = 0
 			}
 		}
 
