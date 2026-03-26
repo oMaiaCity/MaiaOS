@@ -38,7 +38,11 @@ export { extractCoValueData, normalizeCoValueData } from './cojson/crud/data-ext
 // Message Helpers (create and push message CoMaps)
 export { createAndPushMessage } from './cojson/crud/message-helpers.js'
 // Process Inbox (peer-to-peer inbox processing)
-export { processInbox } from './cojson/crud/process-inbox.js'
+export {
+	collectInboxMessageCoIds,
+	findNewSuccessFromTarget,
+	processInbox,
+} from './cojson/crud/process-inbox.js'
 // Reactive Dependency Resolver (universal progressive reactive resolution)
 // Note: resolveReactive is exported from resolver.js (wraps reactive-resolver.js)
 export {

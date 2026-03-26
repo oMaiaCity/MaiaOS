@@ -196,3 +196,104 @@ export async function processInbox(peer, actorId, inboxCoId) {
 		messageSchemaCoId,
 	}
 }
+
+/**
+ * Co-id set of all message refs in an inbox (sessions merged, deduped by _coId).
+ * @param {Object} peer
+ * @param {string} inboxCoId
+ * @returns {Set<string>}
+ */
+export function collectInboxMessageCoIds(peer, inboxCoId) {
+	if (!peer || !inboxCoId) return new Set()
+	const inboxData = peer.readInboxWithSessions(inboxCoId)
+	if (!inboxData?.sessions) return new Set()
+	const allItems = []
+	for (const items of Object.values(inboxData.sessions || {})) {
+		if (Array.isArray(items)) allItems.push(...items)
+	}
+	const seen = new Set()
+	const ids = new Set()
+	for (const m of allItems) {
+		const cid = m._coId
+		if (!cid || seen.has(cid)) continue
+		seen.add(cid)
+		ids.add(cid)
+	}
+	return ids
+}
+
+/**
+ * After a tool deliver + target process, SUCCESS is often processed immediately on the caller (e.g. os/ai),
+ * so it no longer appears in processInbox unprocessed. Find the newest SUCCESS from targetActorCoId among
+ * messages whose co-id was not present before the tool run.
+ *
+ * @param {Object} peer
+ * @param {string} inboxCoId - Caller actor inbox
+ * @param {string} targetActorCoId - Service actor that replies with SUCCESS
+ * @param {Set<string>} beforeCoIds - Snapshot from collectInboxMessageCoIds before deliver
+ * @returns {Promise<{ payload: unknown } | null>}
+ */
+export async function findNewSuccessFromTarget(peer, inboxCoId, targetActorCoId, beforeCoIds) {
+	if (!peer || !inboxCoId || !targetActorCoId || !beforeCoIds) return null
+
+	let messageSchemaCoId = null
+	try {
+		const inboxFactory = await resolve(peer, { fromCoValue: inboxCoId }, { returnType: 'factory' })
+		if (inboxFactory?.items?.$co) {
+			const messageFactoryRef = inboxFactory.items.$co
+			if (messageFactoryRef.startsWith('co_z')) {
+				messageSchemaCoId = messageFactoryRef
+			} else if (messageFactoryRef.startsWith('°Maia/factory/')) {
+				messageSchemaCoId = await resolve(peer, messageFactoryRef, { returnType: 'coId' })
+			}
+		}
+		if (!messageSchemaCoId) {
+			messageSchemaCoId = await resolve(peer, '°Maia/factory/event', { returnType: 'coId' })
+		}
+	} catch (_error) {}
+
+	const inboxData = peer.readInboxWithSessions(inboxCoId)
+	if (!inboxData?.sessions) return null
+	const allItems = []
+	for (const items of Object.values(inboxData.sessions || {})) {
+		if (Array.isArray(items)) allItems.push(...items)
+	}
+	const seenCoIds = new Set()
+	const allMessages = allItems.filter((m) => {
+		const cid = m._coId
+		if (!cid || seenCoIds.has(cid)) return false
+		seenCoIds.add(cid)
+		return true
+	})
+
+	const candidates = allMessages.filter((m) => m._coId && !beforeCoIds.has(m._coId))
+	candidates.sort((a, b) => (a._madeAt || 0) - (b._madeAt || 0))
+
+	let lastSuccess = null
+	for (const message of candidates) {
+		const messageCoId = message._coId
+		try {
+			let messageData = null
+			const core = peer.getCoValue?.(messageCoId)
+			if (core && peer.isAvailable(core)) {
+				messageData = extractCoValueData(peer, core, messageSchemaCoId)
+			}
+			if (!messageData || messageData.error) {
+				const messageStore = await universalRead(peer, messageCoId, messageSchemaCoId, null, null, {
+					deepResolve: false,
+				})
+				try {
+					await waitForStoreReady(messageStore, messageCoId, 2000)
+				} catch (_waitError) {
+					continue
+				}
+				messageData = messageStore.value
+			}
+			if (!messageData || messageData.error) continue
+			if (messageData.type === 'SUCCESS' && messageData.source === targetActorCoId) {
+				lastSuccess = { payload: messageData.payload }
+			}
+		} catch (_error) {}
+	}
+	return lastSuccess
+}

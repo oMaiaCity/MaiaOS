@@ -339,7 +339,9 @@ export class ViewEngine {
 		const { viewDef, context, contextCoId, contextFactoryCoId, configUnsubscribes } =
 			await this.loadViewConfigs(actorConfig, actorId)
 
-		actor.shadowRoot = containerElement.attachShadow({ mode: 'open' })
+		actor.shadowRoot = containerElement.shadowRoot
+			? containerElement.shadowRoot
+			: containerElement.attachShadow({ mode: 'open' })
 		actor.context = context
 		actor.contextCoId = contextCoId
 		actor.contextFactoryCoId = contextFactoryCoId

@@ -22,6 +22,18 @@ const HOME_ICON = `<svg class="maia-nav-icon" xmlns="http://www.w3.org/2000/svg"
 
 const BELL_ICON = `<svg class="maia-nav-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M18.75 9v.704c0 .845.24 1.671.692 2.374l1.108 1.723c1.011 1.574.239 3.713-1.52 4.21a25.8 25.8 0 0 1-14.06 0c-1.759-.497-2.531-2.636-1.52-4.21l1.108-1.723a4.4 4.4 0 0 0 .693-2.374V9c0-3.866 3.022-7 6.749-7s6.75 3.134 6.75 7" opacity="0.5"/><path fill="currentColor" d="M7.243 18.545a5.002 5.002 0 0 0 9.513 0c-3.145.59-6.367.59-9.513 0"/></svg>`
 
+/** Vibe key for the persistent Chat actor tree (voice + Chat UI share one `views/messages` context). */
+export const PERSISTENT_CHAT_VIBE_KEY = 'session-chat'
+
+let maiaRef = null
+let messagesActorId = null
+let contextUnsub = null
+/** @type {Record<string, unknown>|null} */
+let lastChatCtx = null
+let sttError = ''
+let sessionChatHost = null
+let sessionChatLoadPromise = null
+
 let rootEl = null
 let navEl = null
 let fabBtn = null
@@ -35,10 +47,55 @@ let tabLoad = null
 let voiceOrb = null
 let voiceStatus = null
 
-const transcriptions = []
 let voiceState = 'idle' // idle | loading-models | listening | processing
 let fabVisibleByRoute = true
 let modalOpen = false
+
+/** Tools for the in-flight assistant reply (shown under loading row, then flushed to that message). */
+/** @type {{ name: string, ok: boolean }[]} */
+let pendingToolsForTurn = []
+/** Ordinal assistant message (1st, 2nd, …) → tool badges for that reply. */
+const toolsByAssistantOrdinal = new Map()
+let prevChatLoading = false
+
+function formatToolBadgesHtml(badges) {
+	if (!badges?.length) return ''
+	const inner = badges
+		.map(
+			(t) =>
+				`<span class="maia-ai-tool-badge ${t.ok ? 'maia-ai-tool-badge-ok' : 'maia-ai-tool-badge-err'}" title="${t.ok ? 'OK' : 'Failed'}">${escapeHtml(t.name)}</span>`,
+		)
+		.join('')
+	return `<div class="maia-ai-msg-tools" aria-label="Tools used">${inner}</div>`
+}
+
+function assistantOrdinalCount(conv) {
+	let ord = 0
+	for (const m of conv) {
+		if (m?.role === 'assistant' && typeof m.content === 'string' && m.content.trim()) ord += 1
+	}
+	return ord
+}
+
+function flushPendingToolsToLastAssistant(ctx) {
+	if (!pendingToolsForTurn.length) return
+	const conv = Array.isArray(ctx?.conversations) ? ctx.conversations : []
+	const ord = assistantOrdinalCount(conv)
+	if (ord < 1) return
+	const prev = toolsByAssistantOrdinal.get(ord) || []
+	toolsByAssistantOrdinal.set(ord, [...prev, ...pendingToolsForTurn])
+	pendingToolsForTurn = []
+}
+
+function toolExecutedHandler(payload) {
+	const name =
+		payload && typeof payload.toolName === 'string' && payload.toolName.trim()
+			? payload.toolName.trim()
+			: 'tool'
+	pendingToolsForTurn.push({ name, ok: payload?.ok !== false })
+	if (modalOpen) renderMessages()
+}
+
 let micRef = null
 let vadUnsub = null
 let modelsLoadPromise = null
@@ -54,16 +111,235 @@ function scrollMessagesToBottom() {
 
 function renderMessages() {
 	if (!messagesEl) return
-	messagesEl.innerHTML = transcriptions
-		.map(
-			(text) => `
-		<div class="maia-ai-msg user" style="padding:0.75rem 1rem;border-radius:12px;max-width:85%;background:var(--marine-blue, #1e3a5f);color:white;margin-left:auto;">
-			<div class="maia-ai-msg-text" style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(text)}</div>
-		</div>
-	`,
-		)
-		.join('')
+	const ctx = lastChatCtx
+	const conv = Array.isArray(ctx?.conversations) ? ctx.conversations : []
+	if (conv.length === 0 && !ctx?.isLoading) {
+		toolsByAssistantOrdinal.clear()
+		pendingToolsForTurn = []
+	}
+	let assistantOrdinal = 0
+	const rows = []
+	for (const msg of conv) {
+		const role = msg?.role
+		const content = typeof msg?.content === 'string' ? msg.content.trim() : ''
+		if (!content) continue
+		const isUser = role === 'user'
+		if (!isUser && role === 'assistant') assistantOrdinal += 1
+		const toolStrip =
+			!isUser && role === 'assistant'
+				? formatToolBadgesHtml(toolsByAssistantOrdinal.get(assistantOrdinal) || [])
+				: ''
+		const name = typeof msg?.displayName === 'string' ? msg.displayName : ''
+		const label = name ? `<div class="maia-ai-msg-name">${escapeHtml(name)}</div>` : ''
+		const bubbleStyle = isUser
+			? 'padding:0.75rem 1rem;border-radius:12px;max-width:85%;background:var(--marine-blue, #1e3a5f);color:white;margin-left:auto;'
+			: 'padding:0.75rem 1rem;border-radius:12px;max-width:85%;background:rgba(30,58,95,0.12);color:inherit;margin-right:auto;'
+		rows.push(`
+		<div class="maia-ai-msg ${isUser ? 'user' : 'assistant'}" style="${bubbleStyle}">
+			${label}
+			<div class="maia-ai-msg-text" style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(content)}</div>
+			${toolStrip}
+		</div>`)
+	}
+	if (ctx?.isLoading) {
+		const lt = typeof ctx.loadingText === 'string' ? ctx.loadingText : 'Maia is thinking…'
+		const liveTools = formatToolBadgesHtml(pendingToolsForTurn)
+		rows.push(`
+		<div class="maia-ai-msg assistant maia-ai-msg-loading" style="padding:0.5rem 1rem;max-width:85%;margin-right:auto;opacity:0.85;font-style:italic;">
+			${escapeHtml(lt)}
+			${liveTools}
+		</div>`)
+	}
+	if (sttError) {
+		rows.push(`
+		<div class="maia-ai-msg error" style="padding:0.75rem 1rem;border-radius:12px;max-width:85%;background:rgba(185,28,28,0.12);color:#991b1b;margin-left:auto;">
+			<div class="maia-ai-msg-text" style="white-space:pre-wrap;word-break:break-word;">${escapeHtml(sttError)}</div>
+		</div>`)
+	}
+	if (rows.length === 0) {
+		rows.push(`
+		<div class="maia-ai-msg empty" style="padding:1rem;text-align:center;opacity:0.65;font-size:0.9rem;">
+			Speak to message Maia (same thread as Chat).
+		</div>`)
+	}
+	messagesEl.innerHTML = rows.join('')
 	scrollMessagesToBottom()
+}
+
+/**
+ * Runtime actor configs use co-ids for process/view; match schema paths and labels.
+ * @param {object} [cfg]
+ */
+function actorConfigMatchesChatIntent(cfg) {
+	if (!cfg || typeof cfg !== 'object') return false
+	if (cfg['@label'] === '@chat/intent') return true
+	const pid = cfg.$id
+	if (typeof pid === 'string' && pid.includes('chat/actor/intent')) return true
+	for (const key of ['process', 'view', 'context']) {
+		const v = cfg[key]
+		if (typeof v === 'string' && v.includes('chat/process/intent')) return true
+	}
+	return false
+}
+
+/**
+ * @param {object} [cfg]
+ */
+function actorConfigMatchesMessages(cfg) {
+	if (!cfg || typeof cfg !== 'object') return false
+	if (cfg['@label'] === '@maia/actor/views/messages') return true
+	const label = cfg['@label']
+	if (typeof label === 'string' && label.includes('views/messages')) return true
+	const pid = cfg.$id
+	if (typeof pid === 'string' && pid.includes('actor/views/messages')) return true
+	for (const key of ['process', 'view', 'interface']) {
+		const v = cfg[key]
+		if (typeof v === 'string' && (v.includes('views/messages') || v.includes('messages/process')))
+			return true
+	}
+	return false
+}
+
+/**
+ * After spawn, process definition is loaded; config.process may be a bare co-id.
+ * @param {object} [actor]
+ */
+function actorIsMessagesViewByProcessDef(actor) {
+	const procId = actor?.process?.definition?.$id
+	if (typeof procId === 'string' && procId.includes('views/messages/process')) return true
+	return false
+}
+
+/**
+ * Depth-first search for messages leaf (layout-chat nests under intent).
+ * @param {object} [actor]
+ * @returns {string|null}
+ */
+function findMessagesActorIdInTree(actor) {
+	if (!actor) return null
+	if (actorConfigMatchesMessages(actor.config) || actorIsMessagesViewByProcessDef(actor))
+		return actor.id
+	const ch = actor.children
+	if (!ch || typeof ch !== 'object') return null
+	for (const k of Object.keys(ch)) {
+		const found = findMessagesActorIdInTree(ch[k])
+		if (found) return found
+	}
+	return null
+}
+
+/**
+ * @param {object} maia - MaiaOS instance
+ * @returns {string|null}
+ */
+export function findSessionChatIntentActorId(maia) {
+	const set = maia.getEngines().actorEngine.getActorsForVibe(PERSISTENT_CHAT_VIBE_KEY)
+	if (!set?.size) return null
+	for (const id of set) {
+		const a = maia.getActor(id)
+		if (actorConfigMatchesChatIntent(a?.config)) return id
+	}
+	return null
+}
+
+/**
+ * @param {object} maia - MaiaOS instance
+ * @returns {string|null}
+ */
+function findMessagesActorId(maia) {
+	const set = maia.getEngines().actorEngine.getActorsForVibe(PERSISTENT_CHAT_VIBE_KEY)
+	if (!set?.size) return null
+	for (const id of set) {
+		const a = maia.getActor(id)
+		if (actorConfigMatchesMessages(a?.config) || actorIsMessagesViewByProcessDef(a)) return id
+	}
+	return null
+}
+
+/**
+ * Child actors mount after layout slots render; poll the registry and intent subtree.
+ * @param {object} maia - MaiaOS instance
+ * @param {object} [rootIntentActor]
+ */
+async function waitForMessagesActor(maia, rootIntentActor) {
+	const deadline = Date.now() + 15000
+	while (Date.now() < deadline) {
+		const fromSet = findMessagesActorId(maia)
+		if (fromSet) return fromSet
+		const fromTree = rootIntentActor ? findMessagesActorIdInTree(rootIntentActor) : null
+		if (fromTree) return fromTree
+		await new Promise((r) => setTimeout(r, 48))
+	}
+	return null
+}
+
+function wireMessagesContext() {
+	if (!maiaRef || !messagesActorId) return
+	const actor = maiaRef.getActor(messagesActorId)
+	if (!actor?.context?.subscribe) return
+	if (contextUnsub) {
+		contextUnsub()
+		contextUnsub = null
+	}
+	contextUnsub = actor.context.subscribe((ctx) => {
+		lastChatCtx = ctx && typeof ctx === 'object' ? ctx : null
+		const loading = !!lastChatCtx?.isLoading
+		if (prevChatLoading && !loading) {
+			flushPendingToolsToLastAssistant(lastChatCtx)
+		}
+		if (!prevChatLoading && loading) {
+			pendingToolsForTurn = []
+		}
+		prevChatLoading = loading
+		if (modalOpen) renderMessages()
+	})
+	prevChatLoading = false
+}
+
+async function ensureSessionChat() {
+	if (!maiaRef?.id?.maiaId) {
+		throw new Error('Sign in required')
+	}
+	if (messagesActorId && maiaRef.getActor(messagesActorId)) {
+		wireMessagesContext()
+		return messagesActorId
+	}
+	const existing = findMessagesActorId(maiaRef)
+	if (existing) {
+		messagesActorId = existing
+		wireMessagesContext()
+		return messagesActorId
+	}
+	if (sessionChatLoadPromise) return sessionChatLoadPromise
+	sessionChatLoadPromise = (async () => {
+		if (!sessionChatHost) {
+			sessionChatHost = document.getElementById('maia-session-chat-host')
+		}
+		if (!sessionChatHost) {
+			sessionChatHost = document.createElement('div')
+			sessionChatHost.id = 'maia-session-chat-host'
+			sessionChatHost.setAttribute('aria-hidden', 'true')
+			sessionChatHost.style.cssText =
+				'position:fixed;width:0;height:0;overflow:hidden;pointer-events:none;visibility:hidden'
+			document.body.appendChild(sessionChatHost)
+		}
+		const { actor: rootIntent } = await maiaRef.loadVibeFromAccount(
+			'chat',
+			sessionChatHost,
+			'°Maia',
+			PERSISTENT_CHAT_VIBE_KEY,
+		)
+		const mid = await waitForMessagesActor(maiaRef, rootIntent)
+		if (!mid) throw new Error('Messages actor not found after loading Chat')
+		messagesActorId = mid
+		wireMessagesContext()
+		return messagesActorId
+	})()
+	try {
+		return await sessionChatLoadPromise
+	} finally {
+		sessionChatLoadPromise = null
+	}
 }
 
 function showProgress(show) {
@@ -244,15 +520,28 @@ function stopListening() {
 async function processSpeechSegment(samples) {
 	voiceState = 'processing'
 	renderVoiceUI()
+	sttError = ''
 
 	try {
 		const { text } = await transcribeVoice(samples, { sampleRate: 16000 })
-		if (text?.trim()) {
-			transcriptions.push(text.trim())
-			renderMessages()
+		const trimmed = text?.trim()
+		if (!trimmed) {
+			voiceState = 'listening'
+			renderVoiceUI()
+			return
 		}
+		if (!maiaRef?.id?.maiaId) {
+			sttError = 'Sign in required to message Maia.'
+			renderMessages()
+			voiceState = 'listening'
+			renderVoiceUI()
+			return
+		}
+		const mid = await ensureSessionChat()
+		await maiaRef.deliverEvent(mid, mid, 'SEND_MESSAGE', { inputText: trimmed })
+		renderMessages()
 	} catch (err) {
-		transcriptions.push(`Error: ${err?.message || String(err)}`)
+		sttError = err?.message || String(err)
 		renderMessages()
 	}
 	voiceState = 'listening'
@@ -289,6 +578,13 @@ function openModal() {
 	modalOpen = true
 	const modal = rootEl?.querySelector('.maia-ai-modal')
 	if (modal) modal.classList.add('open')
+	if (maiaRef?.id?.maiaId) {
+		void ensureSessionChat()
+			.then(() => {
+				if (modalOpen) renderMessages()
+			})
+			.catch(() => {})
+	}
 	if (!isVoiceModelsLoaded()) {
 		ensureAllModels()
 	} else {
@@ -421,9 +717,16 @@ export function updateNavLeft(label, onClick) {
 
 /**
  * Initialize global AI FAB and modal. Call after MaiaOS boots.
- * @param {Object} _maia - MaiaOS instance (unused for now; kept for future context)
+ * @param {Object|null} maia - MaiaOS instance (voice messages use Chat actor pipeline)
  */
-export async function initGlobalAI(_maia) {
+export async function initGlobalAI(maia) {
+	maiaRef = maia ?? null
+	if (maiaRef?.runtime?.off) {
+		maiaRef.runtime.off('toolExecuted', toolExecutedHandler)
+	}
+	if (maiaRef?.runtime?.on) {
+		maiaRef.runtime.on('toolExecuted', toolExecutedHandler)
+	}
 	if (initPromise) return initPromise
 	injectDOM()
 	setFabVisible(true)
@@ -444,10 +747,35 @@ export async function initGlobalAI(_maia) {
 }
 
 /**
- * Dispose global AI: stop listening, remove DOM.
+ * Dispose global AI: stop listening, remove DOM, tear down persistent Chat actors for this shell.
  */
 export function disposeGlobalAI() {
+	const rt = maiaRef?.runtime
+	if (rt?.off) {
+		rt.off('toolExecuted', toolExecutedHandler)
+	}
+	pendingToolsForTurn = []
+	toolsByAssistantOrdinal.clear()
+	prevChatLoading = false
 	stopListening()
+	if (contextUnsub) {
+		contextUnsub()
+		contextUnsub = null
+	}
+	if (maiaRef?.runtime) {
+		try {
+			maiaRef.runtime.destroyActorsForVibe(PERSISTENT_CHAT_VIBE_KEY)
+		} catch (_e) {}
+	}
+	maiaRef = null
+	messagesActorId = null
+	lastChatCtx = null
+	sttError = ''
+	if (sessionChatHost?.parentNode) {
+		sessionChatHost.parentNode.removeChild(sessionChatHost)
+	}
+	sessionChatHost = null
+	sessionChatLoadPromise = null
 	modelsLoadPromise = null
 	initPromise = null
 	window.__maiaAIRetryModel = null
@@ -466,5 +794,4 @@ export function disposeGlobalAI() {
 	tabLoad = null
 	voiceOrb = null
 	voiceStatus = null
-	transcriptions.length = 0
 }

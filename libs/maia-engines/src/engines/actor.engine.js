@@ -406,7 +406,9 @@ export class ActorEngine {
 				containerElement.appendChild(oldHost)
 			}
 		} else {
-			actor.shadowRoot = containerElement.attachShadow({ mode: 'open' })
+			actor.shadowRoot = containerElement.shadowRoot
+				? containerElement.shadowRoot
+				: containerElement.attachShadow({ mode: 'open' })
 		}
 		if (actor._initialRenderComplete) this._scheduleRerender(actorId)
 		return actor

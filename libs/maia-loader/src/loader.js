@@ -457,9 +457,15 @@ export class MaiaOS {
 	 * @param {string} vibeKeyOrCoId - Vibe key in spark's vibes (e.g., "todos") or vibe co-id (co_z...)
 	 * @param {HTMLElement} container - Container element
 	 * @param {string} [spark='°Maia'] - Spark name (used only when vibeKeyOrCoId is a key, not a co-id)
+	 * @param {string} [actorTrackingKey] - When set, registers spawned actors under this key instead of the registry vibe name (e.g. `session-chat` for a persistent Chat tree that survives `destroyActorsForVibe('chat')`).
 	 * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
 	 */
-	async loadVibeFromAccount(vibeKeyOrCoId, container, spark = '°Maia') {
+	async loadVibeFromAccount(
+		vibeKeyOrCoId,
+		container,
+		spark = '°Maia',
+		actorTrackingKey = undefined,
+	) {
 		if (!this.dataEngine || !this._account) {
 			throw new Error('[Loader] Cannot load vibe from account - dataEngine or account not available')
 		}
@@ -608,7 +614,8 @@ export class MaiaOS {
 			)
 		}
 
-		return await this.loadVibeFromDatabase(vibeCoId, container, vibeKeyOrCoId)
+		const trackingKey = actorTrackingKey ?? vibeKeyOrCoId
+		return await this.loadVibeFromDatabase(vibeCoId, container, trackingKey)
 	}
 
 	/**

@@ -23,6 +23,37 @@ import {
 } from '../utils/ops-assertions.js'
 import { resolveSchemaFromCoValue } from '../utils/resolve-helpers.js'
 
+/**
+ * Resolve factory param for read/create to a co-id. LLM shorthand may pass
+ * `°Maia/factory/...` or bare data slugs like `todos` (→ °Maia/factory/data/todos).
+ * @param {Object} peer
+ * @param {string} factory
+ * @param {string} opName
+ * @returns {Promise<string>}
+ */
+async function resolveDataFactoryToCoId(peer, factory, opName) {
+	if (factory == null || typeof factory !== 'string') {
+		throw new Error(`[${opName}] factory must be a non-empty string`)
+	}
+	if (factory.startsWith('co_z')) return factory
+	if (['@account', '@group', '@metaSchema'].includes(factory)) return factory
+
+	let resolved = null
+	if (factory.startsWith('°') || factory.startsWith('@')) {
+		resolved = await peer.resolve(factory, { returnType: 'coId' })
+	} else if (/^[a-z][a-z0-9_-]*$/i.test(factory)) {
+		resolved = await peer.resolve(`°Maia/factory/data/${factory}`, { returnType: 'coId' })
+	} else {
+		throw new Error(
+			`[${opName}] Invalid factory "${factory}". Use a co-id, °Maia/factory/... namekey, or a data slug (e.g. todos).`,
+		)
+	}
+	if (!resolved || typeof resolved !== 'string' || !resolved.startsWith('co_z')) {
+		throw new Error(`[${opName}] Could not resolve factory to co-id: ${factory}`)
+	}
+	return resolved
+}
+
 /** Cache schema/content per coId to avoid 4 async lookups on repeated calls (e.g. paper keystrokes). */
 const _coListContentCache = new Map()
 
@@ -361,14 +392,17 @@ async function readFactoryOp(peer, params) {
 }
 
 async function readOp(peer, params) {
-	const { factory, key, keys, filter, options } = params
+	let { factory, key, keys, filter, options } = params
+	if (factory) {
+		factory = await resolveDataFactoryToCoId(peer, factory, 'ReadOperation')
+	}
 	if (
 		factory &&
 		!factory.startsWith('co_z') &&
 		!['@account', '@group', '@metaSchema'].includes(factory)
 	) {
 		throw new Error(
-			`[ReadOperation] Factory must be a co-id (co_z...) or special hint (@account, @group, @metaSchema), got: ${factory}. Runtime code must use co-ids only, not '°Maia/factory/...' patterns.`,
+			`[ReadOperation] Factory must be a co-id (co_z...) or special hint (@account, @group, @metaSchema), got: ${factory}.`,
 		)
 	}
 	if (keys !== undefined && !Array.isArray(keys))
@@ -382,12 +416,7 @@ async function createOp(peer, dataEngine, params) {
 	requireParam(factoryParam, 'factory', 'CreateOperation')
 	requireParam(data, 'data', 'CreateOperation')
 	requireDataEngine(dataEngine, 'CreateOperation', 'runtime schema validation')
-	if (typeof factoryParam !== 'string' || !factoryParam.startsWith('co_z')) {
-		throw new Error(
-			`[CreateOperation] factory must be a co-id (co_z...). Runtime uses co-ids only. Got: ${factoryParam}`,
-		)
-	}
-	const factoryCoId = factoryParam
+	const factoryCoId = await resolveDataFactoryToCoId(peer, factoryParam, 'CreateOperation')
 	if (idempotencyKey && typeof idempotencyKey === 'string') {
 		const existing = await peer.findFirst(
 			factoryCoId,
