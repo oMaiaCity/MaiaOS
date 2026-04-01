@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/game",
-	"version": "26.4.12301",
+	"version": "26.4.12320",
 	"type": "module",
 	"main": "./src/index.js",
 	"scripts": {
