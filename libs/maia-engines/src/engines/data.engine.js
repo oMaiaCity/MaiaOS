@@ -839,9 +839,9 @@ async function createSparkOp(peer, dataEngine, params) {
 	requireParam(name, 'name', 'CreateSparkOperation')
 	requireDataEngine(dataEngine, 'CreateSparkOperation', 'spark creation')
 	const result = await peer.createSpark(name)
-	const getMoaiBaseUrl = dataEngine?.getMoaiBaseUrl
-	if (getMoaiBaseUrl && typeof getMoaiBaseUrl === 'function') {
-		const baseUrl = getMoaiBaseUrl()
+	const getSyncBaseUrl = dataEngine?.getSyncBaseUrl
+	if (getSyncBaseUrl && typeof getSyncBaseUrl === 'function') {
+		const baseUrl = getSyncBaseUrl()
 		if (baseUrl && result?.id) {
 			fetch(`${baseUrl.replace(/\/$/, '')}/register`, {
 				method: 'POST',
@@ -988,14 +988,14 @@ export class DataEngine {
 	 * @param {Object} peer - MaiaDB or peer with read/create/update/delete interface
 	 * @param {Object} [options]
 	 * @param {Object} [options.evaluator] - MaiaScript evaluator (injected at boot; required for read reactive resolution)
-	 * @param {() => string|null} [options.getMoaiBaseUrl] - For POST /register after createSpark
+	 * @param {() => string|null} [options.getSyncBaseUrl] - For POST /register after createSpark
 	 */
 	cobinaryFactoryCoId = null
 
 	constructor(peer, options = {}) {
 		this.peer = peer
-		const { evaluator, getMoaiBaseUrl } = options
-		this.getMoaiBaseUrl = getMoaiBaseUrl ?? null
+		const { evaluator, getSyncBaseUrl } = options
+		this.getSyncBaseUrl = getSyncBaseUrl ?? null
 
 		if (peer && evaluator) {
 			peer.evaluator = evaluator

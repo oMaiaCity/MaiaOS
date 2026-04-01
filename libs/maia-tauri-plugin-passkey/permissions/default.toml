@@ -1,7 +1,7 @@
 "$schema" = "schemas/schema.json"
 
 [default]
-description = "Default permissions for apple-passkey plugin"
+description = "Default permissions for maia-tauri-plugin-passkey"
 permissions = [
   "allow-register-passkey",
   "allow-login-passkey"

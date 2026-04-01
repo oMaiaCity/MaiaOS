@@ -27,10 +27,10 @@ exclude = [
 ]
 
 [target.'cfg(target_os = "macos")'.dependencies]
+libc = "0.2"
 tauri = { version = "2", features = [] }
 swift-rs = { version = "1.0.5" }
-tokio = { version = "1", features = ["full"] }
-futures = { version = "0.3" }
+tokio = { version = "1", features = ["sync"] }
 serde = { version = "1", features = ["derive"] }
 
 [build-dependencies]

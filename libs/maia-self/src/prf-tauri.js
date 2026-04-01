@@ -22,11 +22,11 @@ function pickRawId(result) {
  * @returns {Promise<{credentialId: ArrayBuffer, prfOutput: Uint8Array}>}
  */
 export async function createPasskeyWithPRF({ name, userId, salt, rpId = 'maia.city' }) {
-	const result = await invoke('plugin:apple-passkey|register_passkey', {
+	const result = await invoke('plugin:maia-tauri-plugin-passkey|register_passkey', {
 		domain: rpId,
 		challenge: Array.from(crypto.getRandomValues(new Uint8Array(32))),
 		username: name,
-		user_id: Array.from(userId),
+		userId: Array.from(userId),
 		salt: Array.from(salt),
 	})
 
@@ -53,7 +53,7 @@ export async function createPasskeyWithPRF({ name, userId, salt, rpId = 'maia.ci
  * @returns {Promise<{prfOutput: Uint8Array, credentialId: ArrayBuffer}>}
  */
 export async function evaluatePRF({ salt, rpId = 'maia.city' }) {
-	const result = await invoke('plugin:apple-passkey|login_passkey', {
+	const result = await invoke('plugin:maia-tauri-plugin-passkey|login_passkey', {
 		domain: rpId,
 		challenge: Array.from(crypto.getRandomValues(new Uint8Array(32))),
 		salt: Array.from(salt),

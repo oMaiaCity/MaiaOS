@@ -2,13 +2,10 @@
  * PRF implementation: browser WebAuthn vs Tauri native macOS passkey plugin
  */
 
-import { isTauri } from '@tauri-apps/api/core'
-
 let cachedModule = null
 
 function isTauriRuntime() {
-	// Tauri 2 sets globalThis.isTauri; legacy globals are not guaranteed
-	return isTauri()
+	return Boolean(globalThis.__TAURI_INTERNALS__)
 }
 
 async function loadPrfModule() {

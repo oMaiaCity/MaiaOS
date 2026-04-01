@@ -14,15 +14,17 @@
 All commands are documented in root `package.json`. Key commands:
 
 - **`bun dev`** — starts both app (4200) and sync (4201) with orchestrated startup (sync must be healthy before app starts)
-- **`bun run dev:desktop`** — full stack (`bun dev`) then Tauri macOS window (requires Rust 1.88+, Xcode toolchain for Swift passkey plugin)
-- **`bun run build:desktop`** — production SPA build + Tauri `.app` bundle
+- **`bun run dev:desktop`** — full stack (`bun dev`) then Tauri macOS window (requires Rust 1.88+, Xcode toolchain for Swift passkey plugin). **`tauri dev` is not fully code-signed like the bundle**; native passkeys (`ASAuthorizationController`) need a **built** `.app` (see below).
+- **`bun run build:desktop`** — production SPA build + Tauri `.app` bundle (signed per `src-tauri/tauri.conf.json`). **Use this build to test passkeys**, then open `services/app/src-tauri/target/release/bundle/macos/Maia City.app` (or run from Finder). Start `bun dev` (or sync only) in another terminal if the UI should talk to local sync.
+- **`bun run build:desktop:debug`** — same as `build:desktop` but `tauri build --debug` (faster Rust compile); signed bundle under `target/debug/bundle/macos/`.
 - **`bun run check:ci`** — lint + format check (Biome + `.maia` format)
 - **`bun run format`** — auto-fix formatting
 
 ### Tauri + passkeys (macOS)
 
 - WebAuthn in the embedded WebView is limited; native passkeys use `libs/maia-tauri-plugin-passkey` and `@MaiaOS/self` `prf-tauri.js` when `isTauri()` is true (`@tauri-apps/api/core`).
-- **AASA**: `services/app/well-known/apple-app-site-association` is copied into `dist/.well-known/` on build and served in production. It lists `2P6VCHVJWB.city.maia.app` (Team ID + bundle id); bundle id must match `src-tauri/tauri.conf.json` `identifier` (`city.maia.app`).
+- **AASA**: `services/app/well-known/apple-app-site-association` is copied into `dist/.well-known/` on build and served in production. It lists `TEAM_ID.city.maia.next` for each Apple team that signs the app. **Team ID** must match **Membership → Team ID** in Apple Developer (or `codesign -dv --verbose=4 "Maia City.app"` → `TeamIdentifier` — do not use the short id in parentheses from Keychain if it differs). Bundle id must match `src-tauri/tauri.conf.json` `identifier` (`city.maia.next` — do not use a suffix `.app`; it conflicts with the macOS `.app` bundle extension). In **Apple Developer → Identifiers**, that App ID must have **Associated Domains** enabled for each team you use to sign.
+- **Gatekeeper (why Finder says it cannot open):** `Apple Development`–signed `.app` bundles are **not** notarized; `spctl -a -vv` reports `rejected` for double-click from Finder. **First launch:** right-click **Maia City.app** → **Open** → confirm, or **System Settings → Privacy & Security → Open Anyway** after a blocked attempt. Copied/DMG installs: `xattr -cr "/path/to/Maia City.app"` to clear quarantine if needed. **Shipping to others:** sign with **Developer ID Application** and **notarize** (Tauri env: `APPLE_ID` / `APPLE_PASSWORD` / `APPLE_TEAM_ID` or API key trio).
 
 ### First-time setup caveats
 

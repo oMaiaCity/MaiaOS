@@ -7,7 +7,7 @@ pub fn init() -> tauri::plugin::TauriPlugin<tauri::Wry> {
     use tauri::{generate_handler, plugin::Builder};
     use crate::macos::commands::{register_passkey, login_passkey};
 
-    Builder::new("apple-passkey")
+    Builder::new("maia-tauri-plugin-passkey")
         .invoke_handler(generate_handler![
             register_passkey,
             login_passkey

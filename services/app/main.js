@@ -31,6 +31,25 @@ import {
 } from './signin.js'
 import { escapeHtml, getSyncStatusMessage } from './utils.js'
 
+/** Message string from catch — handles non-Error throws (string, Tauri, undefined). */
+function caughtErrMessage(error) {
+	if (error == null) return ''
+	if (typeof error === 'string') return error
+	if (typeof error === 'object' && typeof error.message === 'string') return error.message
+	try {
+		return String(error)
+	} catch {
+		return ''
+	}
+}
+
+function caughtErrName(error) {
+	if (error != null && typeof error === 'object' && typeof error.name === 'string') {
+		return error.name
+	}
+	return ''
+}
+
 let maia
 let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'the-game' | 'vibe-viewer' | …
 let currentView = 'account' // Current schema filter (default: 'account')
@@ -304,7 +323,7 @@ async function initAgentMode() {
 			account,
 			mode: 'agent', // Explicitly set mode
 			syncDomain, // Pass sync domain to kernel
-			getMoaiBaseUrl, // For POST /register after createSpark
+			getSyncBaseUrl, // For POST /register after createSpark
 			modules: ['db', 'core', 'ai'], // Include all modules
 		})
 		window.maia = maia
@@ -375,7 +394,7 @@ function isAvenTestModeEnabled() {
 }
 
 /** Base URL for sync HTTP API (syncRegistry, etc.) */
-function getMoaiBaseUrl() {
+function getSyncBaseUrl() {
 	const isDev =
 		import.meta.env?.DEV ||
 		(typeof window !== 'undefined' &&
@@ -384,19 +403,14 @@ function getMoaiBaseUrl() {
 	if (!apiDomain && isDev) return 'http://localhost:4201'
 	if (!apiDomain) return null
 	const host = apiDomain.replace(/^https?:\/\//, '').split('/')[0]
-	const protocol =
-		host.includes('localhost') || host.includes('127.0.0.1') || host.includes(':4201')
-			? 'http'
-			: typeof window !== 'undefined' && window.location.protocol === 'https:'
-				? 'https'
-				: 'http'
-	return `${protocol}://${host}`
+	const isLocal = host.includes('localhost') || host.includes('127.0.0.1') || host.includes(':4201')
+	return `${isLocal ? 'http' : 'https'}://${host}`
 }
 
 /** Link account to sync server's registries. Set account.registries only. Sparks resolved via registries.sparks. Human and agent. */
 async function linkAccountToRegistries(maia) {
 	if (!maia?.id?.node || !maia.id.maiaId) return
-	const baseUrl = getMoaiBaseUrl()
+	const baseUrl = getSyncBaseUrl()
 	if (!baseUrl) return
 	try {
 		const res = await fetch(`${baseUrl}/syncRegistry`)
@@ -413,7 +427,7 @@ async function linkAccountToRegistries(maia) {
 /** Register human with sync server. Call before boot so server has registry entry before any sync writes. */
 async function registerHuman(account) {
 	if (!account || detectMode() === 'agent') return false
-	const baseUrl = getMoaiBaseUrl()
+	const baseUrl = getSyncBaseUrl()
 	if (!baseUrl) return false
 	const accountId = account.id ?? account.$jazz?.id
 	if (!accountId?.startsWith('co_z')) return false
@@ -513,7 +527,7 @@ async function signInWithTestAven() {
 				account,
 				agentSecret,
 				syncDomain,
-				getMoaiBaseUrl,
+				getSyncBaseUrl,
 				modules: ['db', 'core', 'ai'],
 			}),
 		])
@@ -524,7 +538,9 @@ async function signInWithTestAven() {
 				initGlobalAI(maia)
 				cleanupLoadingScreenSync()
 				if (authState.signedIn) {
-					renderAppInternal().catch((e) => showToast(`Failed to render app: ${e.message}`, 'error'))
+					renderAppInternal().catch((e) =>
+						showToast(`Failed to render app: ${caughtErrMessage(e)}`, 'error'),
+					)
 				}
 			})
 			.catch((bootError) => {
@@ -541,7 +557,7 @@ async function signInWithTestAven() {
 		authState = { signedIn: false, accountID: null }
 		maia = null
 		setSignInLoading(false)
-		showToast(`Test AVEN sign-in failed: ${error.message}`, 'error')
+		showToast(`Test AVEN sign-in failed: ${caughtErrMessage(error)}`, 'error')
 		renderSignInPrompt(hasExistingAccount, undefined, true)
 	}
 }
@@ -585,7 +601,7 @@ async function signIn() {
 						account,
 						agentSecret, // For getCapabilityToken (UCAN-like auth)
 						syncDomain, // Pass sync domain to kernel (single source of truth)
-						getMoaiBaseUrl, // For POST /register after createSpark
+						getSyncBaseUrl, // For POST /register after createSpark
 						modules: ['db', 'core', 'ai'], // Include all modules
 					})
 					window.maia = maia
@@ -596,16 +612,16 @@ async function signIn() {
 					// Re-render app now that maia is ready
 					if (authState.signedIn) {
 						renderAppInternal().catch((error) => {
-							showToast(`Failed to render app: ${error.message}`, 'error')
+							showToast(`Failed to render app: ${caughtErrMessage(error)}`, 'error')
 						})
 					}
 				} catch (bootError) {
-					showToast(`Failed to initialize MaiaOS: ${bootError.message}`, 'error')
+					showToast(`Failed to initialize MaiaOS: ${caughtErrMessage(bootError)}`, 'error')
 					// Don't throw - UI is already shown, user can retry
 				}
 			})
 			.catch((loadError) => {
-				showToast(`Failed to load account: ${loadError.message}`, 'error')
+				showToast(`Failed to load account: ${caughtErrMessage(loadError)}`, 'error')
 				// Reset auth state on error
 				authState = { signedIn: false, accountID: null }
 				maia = null
@@ -625,7 +641,7 @@ async function signIn() {
 
 		// Then handle route (which will render the app)
 		handleRoute().catch((error) => {
-			showToast(`Navigation error: ${error.message}`, 'error')
+			showToast(`Navigation error: ${caughtErrMessage(error)}`, 'error')
 		})
 
 		// Load linked CoValues in background (non-blocking)
@@ -639,12 +655,14 @@ async function signIn() {
 		maia = null
 		setSignInLoading(false)
 
-		if (error.message.includes('PRF not supported') || error.message.includes('WebAuthn')) {
-			renderUnsupportedBrowser(error.message)
+		const msg = caughtErrMessage(error)
+		const errName = caughtErrName(error)
+		if (msg.includes('PRF not supported') || msg.includes('WebAuthn')) {
+			renderUnsupportedBrowser(msg)
 		} else if (
-			error.name === 'NotAllowedError' ||
-			error.message.includes('User denied permission') ||
-			error.message.includes('denied permission')
+			errName === 'NotAllowedError' ||
+			msg.includes('User denied permission') ||
+			msg.includes('denied permission')
 		) {
 			showToast(
 				"You cancelled the passkey prompt. Click the button again when you're ready.",
@@ -653,9 +671,9 @@ async function signIn() {
 			)
 			renderSignInPrompt(hasExistingAccount)
 		} else {
-			const friendlyMessage = error.message.includes('Failed to evaluate PRF')
+			const friendlyMessage = msg.includes('Failed to evaluate PRF')
 				? 'Unable to authenticate with your passkey. Please try again.'
-				: error.message
+				: msg
 			showToast(friendlyMessage, 'error', 7000)
 			renderSignInPrompt(hasExistingAccount)
 		}
@@ -717,7 +735,7 @@ async function register() {
 		currentContextCoValueId = null
 		window.history.pushState({}, '', '/me')
 		handleRoute().catch((error) => {
-			showToast(`Navigation error: ${error.message}`, 'error')
+			showToast(`Navigation error: ${caughtErrMessage(error)}`, 'error')
 		})
 
 		// Boot MaiaOS in background
@@ -725,7 +743,7 @@ async function register() {
 			node,
 			account,
 			syncDomain, // Pass sync domain to kernel (single source of truth)
-			getMoaiBaseUrl, // For POST /register after createSpark
+			getSyncBaseUrl, // For POST /register after createSpark
 			modules: ['db', 'core', 'ai'], // Include all modules
 		})
 			.then(async (bootedMaia) => {
@@ -736,7 +754,9 @@ async function register() {
 				initGlobalAI(maia)
 				cleanupLoadingScreenSync()
 				if (authState.signedIn) {
-					renderAppInternal().catch((e) => showToast(`Failed to render app: ${e.message}`, 'error'))
+					renderAppInternal().catch((e) =>
+						showToast(`Failed to render app: ${caughtErrMessage(e)}`, 'error'),
+					)
 				}
 				loadLinkedCoValues().catch(() => {})
 			})
@@ -744,18 +764,20 @@ async function register() {
 				authState = { signedIn: false, accountID: null }
 				maia = null
 				setSignInLoading(false)
-				showToast(`Failed to initialize MaiaOS: ${bootError?.message ?? bootError}`, 'error')
+				showToast(`Failed to initialize MaiaOS: ${caughtErrMessage(bootError)}`, 'error')
 				window.history.pushState({}, '', '/signup')
 				renderSignInPrompt(hasExistingAccount)
 			})
 	} catch (error) {
 		setSignInLoading(false)
-		if (error.message.includes('PRF not supported') || error.message.includes('WebAuthn')) {
-			renderUnsupportedBrowser(error.message)
+		const msg = caughtErrMessage(error)
+		const errName = caughtErrName(error)
+		if (msg.includes('PRF not supported') || msg.includes('WebAuthn')) {
+			renderUnsupportedBrowser(msg)
 		} else if (
-			error.name === 'NotAllowedError' ||
-			error.message.includes('User denied permission') ||
-			error.message.includes('denied permission')
+			errName === 'NotAllowedError' ||
+			msg.includes('User denied permission') ||
+			msg.includes('denied permission')
 		) {
 			showToast(
 				"You cancelled the passkey prompt. Click the button again when you're ready.",
@@ -764,9 +786,9 @@ async function register() {
 			)
 			renderSignInPrompt(hasExistingAccount)
 		} else {
-			const friendlyMessage = error.message.includes('Failed to create passkey')
+			const friendlyMessage = msg.includes('Failed to create passkey')
 				? 'Unable to create passkey. Please try again.'
-				: error.message
+				: msg
 			showToast(friendlyMessage, 'error', 7000)
 			renderSignInPrompt(hasExistingAccount)
 		}
@@ -1155,7 +1177,7 @@ async function extendCapability(capabilityId, _currentExp = 0) {
 		showToast('Maia not ready', 'error')
 		return
 	}
-	const baseUrl = getMoaiBaseUrl()
+	const baseUrl = getSyncBaseUrl()
 	if (!baseUrl) {
 		showToast('Sync server not configured', 'error')
 		return
@@ -1283,7 +1305,7 @@ window.goBack = goBack
 window.loadVibe = loadVibe
 window.loadSpark = loadSpark
 window.navigateToScreen = navigateToScreen
-window.getMoaiBaseUrl = getMoaiBaseUrl
+window.getSyncBaseUrl = getSyncBaseUrl
 window.toggleExpand = toggleExpand
 
 // Global state for account menu
