@@ -95,3 +95,13 @@ Production builds run `distros:build` then `bun build.js`.
 ## Port
 
 - **4200** (maia static server). Moai at **4201** (sync/API) — client connects directly via CORS.
+
+## Tauri desktop (macOS)
+
+Native shell in `src-tauri/` loads the same SPA from `http://localhost:4200` in dev or from `dist/` when built.
+
+- **Rust**: `rustup toolchain install 1.88.0` (see `src-tauri/rust-toolchain.toml`)
+- **Dev**: from repo root, `bun run dev:desktop` (starts `bun dev` then `tauri dev`), or run `bun dev` in one terminal and `cd services/app && bun run tauri:dev` in another after the app is up on 4200
+- **Build**: `bun run build:desktop` (runs `bun run build` in `services/app` then `tauri build`)
+
+Passkeys on desktop use `libs/maia-tauri-plugin-passkey` (native `ASAuthorizationController` + PRF). AASA uses Team ID `2P6VCHVJWB`; sign the app for production.

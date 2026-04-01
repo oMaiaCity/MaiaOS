@@ -8,13 +8,20 @@
 		"build": "cd ../.. && bun run distros:build && cd services/app && bun build.js",
 		"preview": "bun server.js",
 		"start": "bun server.js",
-		"deploy": "./deploy.sh"
+		"deploy": "./deploy.sh",
+		"tauri": "tauri",
+		"tauri:dev": "bun run tauri:icon && tauri dev",
+		"tauri:build": "bun run tauri:icon && tauri build",
+		"tauri:icon": "tauri icon brand/app_logo.png -o src-tauri/icons"
 	},
 	"dependencies": {
 		"@MaiaOS/game": "workspace:*",
 		"@MaiaOS/loader": "workspace:*",
 		"@MaiaOS/maia-ai": "workspace:*",
-		"@MaiaOS/maia-distros": "workspace:*"
+		"@MaiaOS/maia-distros": "workspace:*",
+		"@tauri-apps/api": "^2.8.0"
 	},
-	"devDependencies": {}
+	"devDependencies": {
+		"@tauri-apps/cli": "^2.8.0"
+	}
 }

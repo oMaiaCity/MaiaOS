@@ -11,11 +11,8 @@ export {
 	requirePRFSupport,
 } from './feature-detection.js'
 
-export {
-	createPasskeyWithPRF,
-	evaluatePRF,
-	getExistingPasskey,
-} from './prf-evaluator.js'
+export { createPasskeyWithPRF, evaluatePRF } from './prf-adapter.js'
+export { getExistingPasskey } from './prf-evaluator.js'
 export {
 	createAgentAccount,
 	generateAgentCredentials,
@@ -29,6 +26,7 @@ export {
 export {
 	arrayBufferToBase64,
 	base64ToArrayBuffer,
+	base64UrlToArrayBuffer,
 	isValidAccountID,
 	stringToUint8Array,
 	uint8ArrayToHex,

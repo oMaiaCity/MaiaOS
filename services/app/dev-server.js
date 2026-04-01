@@ -120,6 +120,18 @@ Bun.serve({
 		const url = new URL(req.url)
 		const pathname = url.pathname
 
+		if (pathname === '/.well-known/apple-app-site-association') {
+			const filePath = join(serviceDir, 'well-known/apple-app-site-association')
+			if (existsSync(filePath) && statSync(filePath).isFile()) {
+				return new Response(Bun.file(filePath), {
+					headers: {
+						'Content-Type': 'application/json',
+						...COOP_COEP,
+					},
+				})
+			}
+		}
+
 		// Serve RunAnywhere WASM (llamacpp + sherpa) with correct MIME types
 		if (pathname.startsWith('/runanywhere-wasm/')) {
 			const filePath = resolveRunAnywhereWasmPath(pathname)

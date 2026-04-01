@@ -1,0 +1,41 @@
+{
+	"$schema": "https://schema.tauri.app/config/2",
+	"productName": "Maia City",
+	"version": "0.1.0",
+	"identifier": "city.maia.app",
+	"build": {
+		"frontendDist": "../dist",
+		"devUrl": "http://localhost:4200"
+	},
+	"app": {
+		"windows": [
+			{
+				"label": "main",
+				"title": "Maia City",
+				"width": 1200,
+				"height": 800,
+				"resizable": true,
+				"fullscreen": false,
+				"devtools": true
+			}
+		],
+		"security": {
+			"csp": null
+		}
+	},
+	"bundle": {
+		"active": true,
+		"targets": "all",
+		"icon": [
+			"icons/32x32.png",
+			"icons/128x128.png",
+			"icons/128x128@2x.png",
+			"icons/icon.icns",
+			"icons/icon.ico"
+		],
+		"macOS": {
+			"entitlements": "./Entitlements.plist",
+			"minimumSystemVersion": "15.0"
+		}
+	}
+}

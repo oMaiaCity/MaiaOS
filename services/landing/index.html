@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+		<meta name="theme-color" content="#0d0c0a" />
+		<title>Maia — City</title>
+		<style>
+			:root {
+				--bg: #0d0c0a;
+				--fg: #f8f7f2;
+				--muted: #8a877d;
+				--accent: #c4a574;
+			}
+			* {
+				box-sizing: border-box;
+			}
+			html,
+			body {
+				margin: 0;
+				min-height: 100%;
+				background: var(--bg);
+				color: var(--fg);
+				font-family:
+					ui-sans-serif,
+					system-ui,
+					-apple-system,
+					'Segoe UI',
+					sans-serif;
+				-webkit-font-smoothing: antialiased;
+			}
+			.wrap {
+				min-height: 100vh;
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: center;
+				padding: 2rem 1.5rem;
+				text-align: center;
+			}
+			.mark {
+				font-size: clamp(2.5rem, 8vw, 4rem);
+				font-weight: 600;
+				letter-spacing: -0.04em;
+				line-height: 1.1;
+				margin-bottom: 0.75rem;
+			}
+			.mark span {
+				color: var(--accent);
+			}
+			p {
+				margin: 0;
+				max-width: 22rem;
+				font-size: 1rem;
+				line-height: 1.55;
+				color: var(--muted);
+			}
+			footer {
+				margin-top: 3rem;
+				font-size: 0.75rem;
+				color: var(--muted);
+				opacity: 0.85;
+			}
+		</style>
+	</head>
+	<body>
+		<div class="wrap">
+			<h1 class="mark">Maia <span>City</span></h1>
+			<p>Coming soon.</p>
+			<footer>maia.city</footer>
+		</div>
+	</body>
+</html>

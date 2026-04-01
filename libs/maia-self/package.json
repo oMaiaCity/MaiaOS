@@ -10,6 +10,7 @@
 		"generate-credentials": "bun scripts/generate-credentials.js"
 	},
 	"dependencies": {
+		"@tauri-apps/api": "^2.8.0",
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/peer": "workspace:*",
 		"@MaiaOS/storage": "workspace:*",
