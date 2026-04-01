@@ -26,7 +26,7 @@ jobs:
       - name: Generate version
         id: version
         run: |
-          VERSION=$(date -u +%y.%m%d.%H%M)
+          VERSION=$(date -u +%y.%m.%d%H%M)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Generated version: $VERSION"
 
@@ -37,7 +37,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add 'services/*/package.json' 'libs/*/package.json'
+          git add 'services/*/package.json' 'libs/*/package.json' \
+            'services/app/src-tauri/Cargo.toml' 'services/app/src-tauri/tauri.conf.json'
           git diff --staged --quiet || git commit -m "[release] ${{ steps.version.outputs.version }}"
           git tag -a "v${{ steps.version.outputs.version }}" -m "Release ${{ steps.version.outputs.version }}"
 

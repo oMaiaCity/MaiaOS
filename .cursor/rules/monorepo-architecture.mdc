@@ -186,7 +186,7 @@ cd libs/maia-distros && bun run build   # Build bundles (client, server, vibes)
 
 ## Version Management
 
-- **Continuous version tagging**: Version is set automatically when a PR is merged to `next` (format: `YY.MMDD.HHMM`)
+- **Continuous version tagging**: Version is set automatically when a PR is merged to `next` (format: `YY.MM.DDHHMM` UTC)
 - **Centralized**: All services and libraries share the same version
 - **Root-level command**: `bun run version:sync <version>` — for CI/scripting; version required, no fallbacks
 

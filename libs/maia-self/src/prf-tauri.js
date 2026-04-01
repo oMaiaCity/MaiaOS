@@ -1,5 +1,6 @@
 /**
- * Tauri macOS native passkey + PRF (maia-tauri-plugin-passkey → ASAuthorizationController)
+ * Tauri macOS native passkey + PRF (maia-tauri-plugin-passkey → ASAuthorizationController).
+ * Default RP ID: next.maia.city (must match Entitlements webcredentials and AASA on that host).
  */
 
 import { invoke } from '@tauri-apps/api/core'
@@ -21,7 +22,7 @@ function pickRawId(result) {
  * @param {string} [options.rpId]
  * @returns {Promise<{credentialId: ArrayBuffer, prfOutput: Uint8Array}>}
  */
-export async function createPasskeyWithPRF({ name, userId, salt, rpId = 'maia.city' }) {
+export async function createPasskeyWithPRF({ name, userId, salt, rpId = 'next.maia.city' }) {
 	const result = await invoke('plugin:maia-tauri-plugin-passkey|register_passkey', {
 		domain: rpId,
 		challenge: Array.from(crypto.getRandomValues(new Uint8Array(32))),
@@ -52,7 +53,7 @@ export async function createPasskeyWithPRF({ name, userId, salt, rpId = 'maia.ci
  * @param {string} [options.rpId]
  * @returns {Promise<{prfOutput: Uint8Array, credentialId: ArrayBuffer}>}
  */
-export async function evaluatePRF({ salt, rpId = 'maia.city' }) {
+export async function evaluatePRF({ salt, rpId = 'next.maia.city' }) {
 	const result = await invoke('plugin:maia-tauri-plugin-passkey|login_passkey', {
 		domain: rpId,
 		challenge: Array.from(crypto.getRandomValues(new Uint8Array(32))),

@@ -24,7 +24,7 @@ Wraps the MaiaOS SPA in a native macOS window with access to platform APIs (pass
 ## Entitlements
 
 - `com.apple.security.network.client` — outbound network (WebSocket to sync, HTTP to API)
-- `com.apple.developer.associated-domains` — `webcredentials:maia.city` for passkey domain association
+- `com.apple.developer.associated-domains` — `webcredentials:next.maia.city` for passkey domain association (must match native RP ID in `prf-tauri.js`)
 
 **No App Sandbox.** Sandbox requires a provisioning profile that grants sandbox entitlements; the current profile grants associated-domains only. Sandbox can be added later for App Store distribution.
 
@@ -52,7 +52,7 @@ The `embedded.provisionprofile` is **gitignored** because it contains device UUI
 
 ## AASA (Apple App Site Association)
 
-The server at `maia.city` (and `next.maia.city`) must serve `/.well-known/apple-app-site-association` with:
+The host **`next.maia.city`** (RP ID for the desktop app) must serve `/.well-known/apple-app-site-association` with:
 
 ```json
 {
@@ -99,4 +99,4 @@ Apple Development-signed apps are not notarized. Finder may block the first open
 
 ## Passkey Plugin
 
-Native passkeys are handled by `libs/maia-tauri-plugin-passkey` (Swift + Rust FFI). The plugin passes the domain (`maia.city`) at runtime to `ASAuthorizationController`. The associated-domains entitlement authorizes the app to use `webcredentials:maia.city`.
+Native passkeys are handled by `libs/maia-tauri-plugin-passkey` (Swift + Rust FFI). The plugin passes the relying party ID (`next.maia.city` from `@MaiaOS/self` `prf-tauri.js`) at runtime to `ASAuthorizationController`. The associated-domains entitlement authorizes `webcredentials:next.maia.city`.

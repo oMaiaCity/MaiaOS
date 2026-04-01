@@ -11,7 +11,7 @@
 	<true/>
 	<key>com.apple.developer.associated-domains</key>
 	<array>
-		<string>webcredentials:maia.city</string>
+		<string>webcredentials:next.maia.city</string>
 	</array>
 </dict>
 </plist>
