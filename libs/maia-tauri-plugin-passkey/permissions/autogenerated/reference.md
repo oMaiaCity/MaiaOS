@@ -1,6 +1,6 @@
 ## Default Permission
 
-Default permissions for apple-passkey plugin
+Default permissions for maia-tauri-plugin-passkey
 
 #### This default permission set includes the following:
 
@@ -19,7 +19,7 @@ Default permissions for apple-passkey plugin
 <tr>
 <td>
 
-`apple-passkey:allow-login-passkey`
+`maia-tauri-plugin-passkey:allow-login-passkey`
 
 </td>
 <td>
@@ -32,7 +32,7 @@ Enables the login_passkey command without any pre-configured scope.
 <tr>
 <td>
 
-`apple-passkey:deny-login-passkey`
+`maia-tauri-plugin-passkey:deny-login-passkey`
 
 </td>
 <td>
@@ -45,7 +45,7 @@ Denies the login_passkey command without any pre-configured scope.
 <tr>
 <td>
 
-`apple-passkey:allow-register-passkey`
+`maia-tauri-plugin-passkey:allow-register-passkey`
 
 </td>
 <td>
@@ -58,7 +58,7 @@ Enables the register_passkey command without any pre-configured scope.
 <tr>
 <td>
 
-`apple-passkey:deny-register-passkey`
+`maia-tauri-plugin-passkey:deny-register-passkey`
 
 </td>
 <td>

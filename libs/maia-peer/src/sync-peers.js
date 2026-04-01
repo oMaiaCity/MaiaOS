@@ -71,12 +71,12 @@ export function setupSyncPeers(syncDomain = null) {
 			syncDomain.includes('localhost') || syncDomain.includes('127.0.0.1') ? 'ws:' : 'wss:'
 		syncServerUrl = `${protocol}//${syncDomain}/sync`
 	} else if (isDev) {
-		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-		const devMoai = apiDomain || 'localhost:4201'
-		syncServerUrl = `${protocol}//${devMoai}/sync`
+		const devSync = apiDomain || 'localhost:4201'
+		const isLocal = devSync.includes('localhost') || devSync.includes('127.0.0.1')
+		syncServerUrl = `${isLocal ? 'ws:' : 'wss:'}//${devSync}/sync`
 	} else if (apiDomain) {
-		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-		syncServerUrl = `${protocol}//${apiDomain}/sync`
+		const isLocal = apiDomain.includes('localhost') || apiDomain.includes('127.0.0.1')
+		syncServerUrl = `${isLocal ? 'ws:' : 'wss:'}//${apiDomain}/sync`
 	} else {
 		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 		syncServerUrl = `${protocol}//${window.location.host}/sync`

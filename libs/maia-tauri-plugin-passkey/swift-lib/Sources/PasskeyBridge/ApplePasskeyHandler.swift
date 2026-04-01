@@ -3,13 +3,14 @@ import AuthenticationServices
 import AppKit
 import OSLog
 
+@MainActor
 public final class ApplePasskeyHandler: NSObject {
     private var registrationContinuation: CheckedContinuation<ASAuthorizationPlatformPublicKeyCredentialRegistration, Error>?
     private var loginContinuation: CheckedContinuation<ASAuthorizationPlatformPublicKeyCredentialAssertion, Error>?
 
     private let providedWindow: NSWindow?
     
-    private let logger = Logger(subsystem: "com.yminghua.tauri-plugin-macos-passkey", category: "ApplePasskeyHandler")
+    private let logger = Logger(subsystem: "city.maia.desktop.passkey", category: "ApplePasskeyHandler")
 
     public init(windowPtr: UnsafeMutableRawPointer?) {
         if let ptr = windowPtr {
@@ -32,7 +33,6 @@ public final class ApplePasskeyHandler: NSObject {
             userID: userID
         )
 
-        // Only add PRF extension if salt is provided
         if let salt = salt {
             let prfInputValues = ASAuthorizationPublicKeyCredentialPRFRegistrationInput.InputValues(saltInput1: salt)
             let prfInput = ASAuthorizationPublicKeyCredentialPRFRegistrationInput.inputValues(prfInputValues)
@@ -46,7 +46,7 @@ public final class ApplePasskeyHandler: NSObject {
         controller.delegate = self
         controller.presentationContextProvider = self
 
-        logger.log("Performing registration request...")
+        logger.log("Performing registration request on main thread...")
         return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ASAuthorizationPlatformPublicKeyCredentialRegistration, Error>) in
             self.registrationContinuation = continuation
             controller.performRequests()
@@ -60,7 +60,6 @@ public final class ApplePasskeyHandler: NSObject {
         let provider = ASAuthorizationPlatformPublicKeyCredentialProvider(relyingPartyIdentifier: domain)
         let request = provider.createCredentialAssertionRequest(challenge: challenge)
 
-        // Only add PRF extension if salt is provided
         if let salt = salt {
             let prfInputValues = ASAuthorizationPublicKeyCredentialPRFAssertionInput.InputValues(saltInput1: salt)
             let prfInput = ASAuthorizationPublicKeyCredentialPRFAssertionInput.inputValues(prfInputValues)
@@ -74,7 +73,7 @@ public final class ApplePasskeyHandler: NSObject {
         controller.delegate = self
         controller.presentationContextProvider = self
 
-        logger.log("Performing login request...")
+        logger.log("Performing login request on main thread...")
         return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<ASAuthorizationPlatformPublicKeyCredentialAssertion, Error>) in
             self.loginContinuation = continuation
             controller.performRequests()

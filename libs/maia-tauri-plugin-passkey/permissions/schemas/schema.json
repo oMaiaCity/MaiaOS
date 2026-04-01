@@ -280,10 +280,10 @@
 					"markdownDescription": "Denies the register_passkey command without any pre-configured scope."
 				},
 				{
-					"description": "Default permissions for apple-passkey plugin\n#### This default permission set includes:\n\n- `allow-register-passkey`\n- `allow-login-passkey`",
+					"description": "Default permissions for maia-tauri-plugin-passkey\n#### This default permission set includes:\n\n- `allow-register-passkey`\n- `allow-login-passkey`",
 					"type": "string",
 					"const": "default",
-					"markdownDescription": "Default permissions for apple-passkey plugin\n#### This default permission set includes:\n\n- `allow-register-passkey`\n- `allow-login-passkey`"
+					"markdownDescription": "Default permissions for maia-tauri-plugin-passkey\n#### This default permission set includes:\n\n- `allow-register-passkey`\n- `allow-login-passkey`"
 				}
 			]
 		}

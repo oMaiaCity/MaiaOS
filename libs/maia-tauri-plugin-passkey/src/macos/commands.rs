@@ -1,8 +1,7 @@
 #![cfg(target_os = "macos")]
 
-use std::ffi::c_void;
-use tauri::{Window, async_runtime::spawn_blocking};
-use crate::macos::{PasskeyRegistrationResult, PasskeyLoginResult, blocking::{run_registration, run_login}};
+use tauri::Window;
+use crate::macos::{PasskeyRegistrationResult, PasskeyLoginResult, begin_registration_from_rust, begin_login_from_rust};
 
 #[tauri::command]
 pub async fn register_passkey(
@@ -13,14 +12,8 @@ pub async fn register_passkey(
     salt: Vec<u8>,
     window: Window
 ) -> Result<PasskeyRegistrationResult, String> {
-    let raw_ptr = window.ns_window().map_err(|_| "Missing ns_window")? as usize;
-
-    spawn_blocking(move || {
-        let window_ptr = raw_ptr as *mut c_void;
-        run_registration(window_ptr, &domain, &challenge, &username, &user_id, &salt)
-    })
-    .await
-    .map_err(|e| format!("Join error: {}", e))?
+    let window_raw = window.ns_window().map_err(|_| "Missing ns_window")? as usize;
+    begin_registration_from_rust(window_raw, &domain, &challenge, &username, &user_id, &salt).await
 }
 
 #[tauri::command]
@@ -30,12 +23,6 @@ pub async fn login_passkey(
     salt: Vec<u8>,
     window: Window
 ) -> Result<PasskeyLoginResult, String> {
-    let raw_ptr = window.ns_window().map_err(|_| "Missing ns_window")? as usize;
-
-    spawn_blocking(move || {
-        let window_ptr = raw_ptr as *mut c_void;
-        run_login(window_ptr, &domain, &challenge, &salt)
-    })
-    .await
-    .map_err(|e| format!("Join error: {}", e))?
+    let window_raw = window.ns_window().map_err(|_| "Missing ns_window")? as usize;
+    begin_login_from_rust(window_raw, &domain, &challenge, &salt).await
 }

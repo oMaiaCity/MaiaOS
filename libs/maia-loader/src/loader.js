@@ -313,7 +313,7 @@ export class MaiaOS {
 		const evaluator = new MaiaScriptEvaluator()
 		const dbOptions = {
 			evaluator,
-			getMoaiBaseUrl: config.getMoaiBaseUrl ?? null,
+			getSyncBaseUrl: config.getSyncBaseUrl ?? null,
 		}
 
 		// If peer is provided, use it

@@ -9,10 +9,10 @@
  *
  * @param {Object} options
  * @param {Uint8Array} options.salt - Salt for PRF evaluation
- * @param {string} options.rpId - Relying Party ID (defaults to maia.city for cross-subdomain + Tauri reuse)
+ * @param {string} options.rpId - Relying Party ID (defaults to current hostname)
  * @returns {Promise<{prfOutput: Uint8Array, credentialId: ArrayBuffer}>}
  */
-export async function evaluatePRF({ salt, rpId = 'maia.city' }) {
+export async function evaluatePRF({ salt, rpId = window.location.hostname }) {
 	try {
 		// Request authentication with PRF evaluation
 		// IMPORTANT: authenticatorAttachment: 'platform' + hints: ['client-device']
@@ -63,11 +63,16 @@ export async function evaluatePRF({ salt, rpId = 'maia.city' }) {
  * @param {Object} options
  * @param {string} options.name - User-visible name
  * @param {Uint8Array} options.userId - User ID (will be used as salt later)
- * @param {string} options.rpId - Relying Party ID (defaults to maia.city for cross-subdomain + Tauri reuse)
+ * @param {string} options.rpId - Relying Party ID (defaults to current hostname)
  * @param {Uint8Array} [options.salt] - Optional: Evaluate PRF during creation
  * @returns {Promise<{credentialId: ArrayBuffer, response: Object, prfOutput?: Uint8Array}>}
  */
-export async function createPasskeyWithPRF({ name, userId, rpId = 'maia.city', salt }) {
+export async function createPasskeyWithPRF({
+	name,
+	userId,
+	rpId = window.location.hostname,
+	salt,
+}) {
 	try {
 		// Build PRF extension config
 		const prfConfig = salt
@@ -137,7 +142,7 @@ export async function createPasskeyWithPRF({ name, userId, rpId = 'maia.city', s
  * @param {string} rpId - Relying Party ID
  * @returns {Promise<{credentialId: ArrayBuffer, userId: Uint8Array}>}
  */
-export async function getExistingPasskey(rpId = 'maia.city') {
+export async function getExistingPasskey(rpId = window.location.hostname) {
 	try {
 		const challenge = crypto.getRandomValues(new Uint8Array(32))
 

@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 import AuthenticationServices
 import AppKit
@@ -55,6 +56,12 @@ public class LoginResultObject: NSObject {
     }
 }
 
+private func dupError(_ message: String) -> UnsafePointer<CChar> {
+    message.withCString { ptr in
+        UnsafePointer(strdup(ptr)!)
+    }
+}
+
 @_cdecl("begin_passkey_registration")
 public func begin_passkey_registration(
     windowPtr: UnsafeMutableRawPointer?,
@@ -64,10 +71,10 @@ public func begin_passkey_registration(
     userID: SRData,
     salt: SRData,
     context: UInt64,
-    callback: @Sendable @convention(c) (UnsafeMutableRawPointer?, UInt64) -> Void
+    callback: @Sendable @convention(c) (UnsafeMutableRawPointer?, UnsafePointer<CChar>?, UInt64) -> Void
 ) {
     guard #available(macOS 15.0, *) else {
-        callback(nil, context)
+        callback(nil, dupError("Passkeys require macOS 15 or later."), context)
         return
     }
 
@@ -82,7 +89,7 @@ public func begin_passkey_registration(
     }
     let windowWrapper = UnsafeWindowPtr(ptr: windowPtr)
 
-    Task {
+    Task { @MainActor in
         let handler = ApplePasskeyHandler(windowPtr: windowWrapper.ptr)
 
         do {
@@ -95,9 +102,9 @@ public func begin_passkey_registration(
             )
             let resultObject = RegistrationResultObject(from: credential)
             let resultPtr = Unmanaged.passRetained(resultObject).toOpaque()
-            callback(resultPtr, context)
+            callback(resultPtr, nil, context)
         } catch {
-            callback(nil, context)
+            callback(nil, dupError((error as NSError).localizedDescription), context)
         }
     }
 }
@@ -109,10 +116,10 @@ public func begin_passkey_login(
     challenge: SRData,
     salt: SRData,
     context: UInt64,
-    callback: @Sendable @convention(c) (UnsafeMutableRawPointer?, UInt64) -> Void
+    callback: @Sendable @convention(c) (UnsafeMutableRawPointer?, UnsafePointer<CChar>?, UInt64) -> Void
 ) {
     guard #available(macOS 15.0, *) else {
-        callback(nil, context)
+        callback(nil, dupError("Passkeys require macOS 15 or later."), context)
         return
     }
 
@@ -125,7 +132,7 @@ public func begin_passkey_login(
     }
     let windowWrapper = UnsafeWindowPtr(ptr: windowPtr)
 
-    Task {
+    Task { @MainActor in
         let handler = ApplePasskeyHandler(windowPtr: windowWrapper.ptr)
 
         do {
@@ -136,9 +143,9 @@ public func begin_passkey_login(
             )
             let resultObject = LoginResultObject(from: assertion)
             let resultPtr = Unmanaged.passRetained(resultObject).toOpaque()
-            callback(resultPtr, context)
+            callback(resultPtr, nil, context)
         } catch {
-            callback(nil, context)
+            callback(nil, dupError((error as NSError).localizedDescription), context)
         }
     }
 }
