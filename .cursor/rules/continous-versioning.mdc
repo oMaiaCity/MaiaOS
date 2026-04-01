@@ -6,21 +6,24 @@ alwaysApply: true
 
 **Continuous version tagging.** Version is set automatically when a PR is merged to `next`. All packages share the same version.
 
-### Format: `YY.MMDD.HHMM`
+### Format: `YY.MM.DDHHMM` (UTC)
 
 | Part | Example | Meaning |
 |------|---------|---------|
 | YY | 26 | Year |
-| MMDD | 0212 | Feb 12 |
-| HHMM | 2230 | 22:30 UTC |
+| MM | 04 | Month |
+| DDHHMM | 021430 | Day 02, time 14:30 |
 
-Example: `26.0212.2230` = Feb 12, 2026 at 22:30 UTC.
+Example: `26.04.021430` = 2 Apr 2026, 14:30 UTC.
+
+**Stored version:** `sync-version.js` writes one **semver-normalized** string everywhere (leading zeros removed per segment), e.g. `26.04.021430` → `26.4.21430`. Same rule for npm, Tauri, and Cargo.
 
 ### Scope
 
 Every package gets the same version:
 - All `services/*/package.json`
 - All `libs/*/package.json`
+- Desktop shell: `services/app/src-tauri/Cargo.toml` (`[package]` version) and `services/app/src-tauri/tauri.conf.json` (`version`)
 
 No exclusions. Single source: the workflow generates the version and passes it to `sync-version.js`.
 
@@ -57,8 +60,8 @@ flowchart LR
 
 **CI flow (after merge):**
 1. Push to `next` triggers `version-tag` and `deploy-next`.
-2. `version-tag`: Generate `YY.MMDD.HHMM`, sync all packages, commit, tag, create GitHub release.
-3. `deploy-next`: Deploy maia and moai.
+2. `version-tag`: Generate `YY.MM.DDHHMM`, sync all packages, commit, tag, create GitHub release.
+3. `deploy-next`: Deploy app and sync to Fly.io.
 
 Version changes only on merge to `next`. No manual bumping.
 
@@ -122,15 +125,15 @@ gh pr merge <number> --rebase
 
 - **Trigger:** Push to `next`, or manual.
 - **Runs only on:** `[release]` commits (version-tag push) or workflow_dispatch. Skips merge commits — deploy once per merge.
-- Deploys maia and moai to Fly.io (parallel).
+- Deploys the app and sync services to Fly.io (parallel).
 
 ### CI (`.github/workflows/biome.yml`)
 
 - **Trigger:** Pull requests and pushes to `next`.
 - **Jobs:**
   1. **Lint & Format** – `bun run check:ci` (Biome + .maia format check).
-  2. **Build (maia + moai)** – Docker build for both services. Validates deployment will succeed before merge.
-- **Branch protection:** Require **both** jobs before PRs can merge into `next`. Settings → Branches → Rules for `next` → Require status checks → Add `Lint & Format` and `Build (maia + moai)`. If "No results" appears, push a PR, let the workflow run once, then the check names become searchable.
+  2. **Build (app + sync)** – Docker build for app, sync, and landing. Validates deployment will succeed before merge.
+- **Branch protection:** Require **Lint & Format** and **`Build (app + sync)`**. If an old ruleset still lists **`Build (maia + moai)`**, remove it in GitHub (that name is obsolete; there is no separate moai-only check). Settings → Rules → ruleset for `next` → Required status checks. If "No results" appears, push a PR, let the workflow run once, then the check names become searchable.
 - **Deployment gate:** PRs cannot merge until the Build job passes. This prevents merging code that would break the deploy pipeline.
 - **When changing:** Dockerfiles, `package.json` workspaces, or deploy scripts — ensure the Build job passes before merging.
 
@@ -149,5 +152,5 @@ On each commit (local), Husky runs:
 Version is always supplied as an argument. No fallbacks.
 
 ```bash
-bun run version:sync 26.0212.2230
+bun run version:sync 26.04.021430
 ```

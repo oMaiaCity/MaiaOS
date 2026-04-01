@@ -252,9 +252,10 @@ function isGameDevRouteEnabled() {
 
 async function init() {
 	try {
-		// Dev: fetch env from server (Bun dev doesn't inject VITE_* like Vite)
+		// Dev: fetch env from server (Bun dev doesn't inject VITE_* like Vite). Skip in Tauri (tauri:// — env is build-time).
 		if (
 			typeof window !== 'undefined' &&
+			window.location.protocol !== 'tauri:' &&
 			(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')
 		) {
 			try {
