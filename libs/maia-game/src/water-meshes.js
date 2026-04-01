@@ -15,7 +15,33 @@ import {
 	WATER_SEGMENTS,
 	WATER_SURFACE_ABOVE_BED,
 } from './river.js'
+import { signedDistanceToOcean, terrainPlaneWarp } from './terrain.js'
 import { clampRiverSurfaceToTerrain } from './water-terrain-alignment.js'
+
+/** Same base hue as flood plane (`index.js` MeshPhysicalMaterial 0x0a5a6e). */
+const SEA_DEEP_RGB = new THREE.Vector3(10 / 255, 90 / 255, 110 / 255)
+const SEA_SHALLOW_RGB = new THREE.Vector3(32 / 255, 118 / 255, 138 / 255)
+
+/**
+ * Last polyline s where the centerline is still on the island (sd ≤ 0). Trims ribbon/volume
+ * so the river surface does not extend as a slab over open ocean past the shore.
+ */
+function computeRiverSurfaceEndS() {
+	const steps = 200
+	let lastLand = 0
+	for (let k = 0; k <= steps; k++) {
+		const s = k / steps
+		const p = riverCenterlinePointAtS(s)
+		const { lx, ly } = inverseTerrainPlaneWarp(p.wx, p.wy)
+		const { wx, wy } = terrainPlaneWarp(lx, ly)
+		if (signedDistanceToOcean(lx, ly, wx, wy) <= 0) {
+			lastLand = s
+		}
+	}
+	return Math.max(0.04, Math.min(1, lastLand))
+}
+
+const RIVER_SURFACE_END_S = computeRiverSurfaceEndS()
 
 /** Terrain mesh uses plane (lx, ly); river math uses warped (wx, wy). Map corners to plane space. */
 function toPlaneXY(wx, wy) {
@@ -43,22 +69,14 @@ function clampWarpedCorridor(wx, wy, widthFrac) {
 	return { wx: c.px + dx * t, wy: c.py + dy * t }
 }
 
-function flowTAtRibbonVertex(i, n) {
-	if (n <= 1) {
-		return 0
-	}
-	return i / (n - 1)
-}
-
-function flowUvAlongRiver(flowT) {
-	return THREE.MathUtils.clamp(flowT, 0, 1)
-}
-
 /**
  * Semi-transparent volume under the surface: riverbed + side walls (open top — surface mesh caps it).
  */
 export function createRiverWaterVolumeMesh() {
-	const n = WATER_SEGMENTS
+	const nMax = WATER_SEGMENTS
+	const lastIdx = Math.max(1, Math.floor(RIVER_SURFACE_END_S * (nMax - 1)))
+	const n = lastIdx + 1
+
 	const positions = []
 	const indices = []
 
@@ -71,9 +89,12 @@ export function createRiverWaterVolumeMesh() {
 		indices.push(a, b, c, a, c, d)
 	}
 
+	const span = Math.max(1, n - 1)
+	const sAt = (i) => (i / span) * RIVER_SURFACE_END_S
+
 	for (let i = 0; i < n - 1; i++) {
-		const flowT0 = flowTAtRibbonVertex(i, n)
-		const flowT1 = flowTAtRibbonVertex(i + 1, n)
+		const flowT0 = sAt(i)
+		const flowT1 = sAt(i + 1)
 		const p0 = riverCenterlinePointAtS(flowT0)
 		const p1 = riverCenterlinePointAtS(flowT1)
 		const t0 = riverTangentAtS(flowT0)
@@ -137,9 +158,9 @@ export function createRiverWaterVolumeMesh() {
 	geo.computeVertexNormals()
 
 	const mat = new THREE.MeshPhysicalMaterial({
-		color: 0x0a4d5e,
+		color: 0x0a5a6e,
 		transparent: true,
-		opacity: 0.42,
+		opacity: 0.44,
 		roughness: 0.42,
 		metalness: 0,
 		side: THREE.DoubleSide,
@@ -160,12 +181,17 @@ export function createRiverWaterVolumeMesh() {
  * @param {THREE.Fog} fog
  */
 export function createRiverWaterMesh(fog) {
-	const n = WATER_SEGMENTS
+	const nMax = WATER_SEGMENTS
+	const lastIdx = Math.max(1, Math.floor(RIVER_SURFACE_END_S * (nMax - 1)))
+	const n = lastIdx + 1
+	const span = Math.max(1, n - 1)
+	const sAt = (i) => (i / span) * RIVER_SURFACE_END_S
+
 	const verts = n * 2
 	const positions = new Float32Array(verts * 3)
 	const uvs = new Float32Array(verts * 2)
 	for (let i = 0; i < n; i++) {
-		const flowT = flowTAtRibbonVertex(i, n)
+		const flowT = sAt(i)
 		const p = riverCenterlinePointAtS(flowT)
 		const { tx, ty } = riverTangentAtS(flowT)
 		const px = -ty
@@ -183,7 +209,7 @@ export function createRiverWaterMesh(fog) {
 		const bedR = riverBedElevationFlow(wxR, wyR)
 		const hL = clampRiverSurfaceToTerrain(pl.lx, pl.ly, bedL + WATER_SURFACE_ABOVE_BED, bedL)
 		const hR = clampRiverSurfaceToTerrain(pr.lx, pr.ly, bedR + WATER_SURFACE_ABOVE_BED, bedR)
-		const uAlong = flowUvAlongRiver(flowT)
+		const uAlong = span > 0 ? i / span : 0
 		const row = i * 2
 		const row1 = i * 2 + 1
 		positions[row * 3] = pl.lx
@@ -198,7 +224,7 @@ export function createRiverWaterMesh(fog) {
 		uvs[row1 * 2 + 1] = 1
 	}
 	const indices = []
-	for (let i = 0; i < n - 1; i++) {
+	for (let i = 0; i < lastIdx; i++) {
 		const a = i * 2
 		const b = i * 2 + 1
 		const c = (i + 1) * 2 + 1
@@ -218,6 +244,8 @@ export function createRiverWaterMesh(fog) {
 			uFogColor: { value: fog.color.clone() },
 			uFogNear: { value: fog.near },
 			uFogFar: { value: fog.far },
+			uSeaDeep: { value: SEA_DEEP_RGB.clone() },
+			uSeaShallow: { value: SEA_SHALLOW_RGB.clone() },
 		},
 		vertexShader: `
 			uniform float uTime;
@@ -241,17 +269,21 @@ export function createRiverWaterMesh(fog) {
 			uniform vec3 uFogColor;
 			uniform float uFogNear;
 			uniform float uFogFar;
+			uniform vec3 uSeaDeep;
+			uniform vec3 uSeaShallow;
 			varying vec2 vUv;
 			varying float vFogDepth;
 			void main() {
 				vec2 uv = vUv;
 				uv.x += uTime * uFlowSpeed;
-				vec3 shallow = vec3(0.18, 0.48, 0.58);
-				vec3 deep = vec3(0.08, 0.22, 0.38);
-				vec3 water = mix(deep, shallow, uv.y * 0.5 + 0.25 + 0.08 * sin(uv.x * 18.0 + uTime * 1.2));
+				float rip = uv.y * 0.48 + 0.28 + 0.07 * sin(uv.x * 18.0 + uTime * 1.2);
+				vec3 water = mix(uSeaDeep, uSeaShallow, rip);
+				float est = smoothstep(0.62, 0.99, vUv.x);
+				water = mix(water, uSeaDeep, est * 0.48);
 				float fogF = smoothstep(uFogNear, uFogFar, vFogDepth);
 				vec3 col = mix(water, uFogColor, fogF);
-				gl_FragColor = vec4(col, 0.74);
+				float alpha = mix(0.5, 0.47, est);
+				gl_FragColor = vec4(col, alpha);
 			}
 		`,
 		transparent: true,

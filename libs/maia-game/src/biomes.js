@@ -9,6 +9,7 @@ import {
 	RIVER_BED_FLAT_FRAC,
 	riverHalfWidth,
 } from './river.js'
+import { distanceIntoCoastalRingPlane } from './terrain.js'
 import { seaLevel, waterSurfaceHeightAt } from './water-surface.js'
 
 export { isRiverCorridor, seaLevel, waterSurfaceHeightAt }
@@ -30,14 +31,14 @@ function lerpRgb(a, b, t) {
 const EARTH_RGB = { r: 0.48, g: 0.34, b: 0.24 }
 const UNDERWATER_RGB = { r: 0.1, g: 0.36, b: 0.48 }
 
-/** Sand (low) → earth → grass → snow only on the highest peaks; tn = normalized height [0,1]. */
+/** Sand (low) → earth → grass → snow on high ground; tn = normalized height [0,1]. */
 export function heightBiomeRgb(tn) {
 	const e0 = 0.34
 	/** Slightly earlier grass than before — narrower earth band, more overall green. */
 	const e1 = 0.64
-	const grassBrightEnd = 0.87
-	const snowBlendStart = 0.885
-	const snowBlendEnd = 0.945
+	const grassBrightEnd = 0.77
+	const snowBlendStart = 0.795
+	const snowBlendEnd = 0.865
 	const sand = { r: 0.86, g: 0.76, b: 0.58 }
 	const grass = { r: 0.26, g: 0.44, b: 0.2 }
 	const grassHigh = { r: 0.28, g: 0.48, b: 0.22 }
@@ -103,6 +104,26 @@ export function domeGardenTurfRgbMax(lx, ly, baseRgb, centers, innerR, outerR) {
 	return lerpRgb(baseRgb, DOME_GARDEN_LAWN_RGB, best)
 }
 
+const BEACH_SAND_RGB = { r: 0.82, g: 0.74, b: 0.55 }
+
+/**
+ * Warm beach / littoral tint along the organic shore (low elevation near the land–sea transition).
+ * Wide smooth ramps avoid hard cutoffs and noisy dither at grass ↔ sand.
+ */
+export function littoralTerrainRgb(lx, ly, wx, wy, baseRgb, tn) {
+	const dRing = distanceIntoCoastalRingPlane(lx, ly, wx, wy)
+	if (dRing > 680) {
+		return baseRgb
+	}
+	const inBand = smoothRange(dRing, -980, 560)
+	const outDeep = 1 - smoothRange(dRing, 420, 760)
+	const ringEntry = inBand * outDeep
+	const lowElev = 1 - smoothRange(tn, 0.14, 0.55)
+	const sandNoise = fbm2(wx * 0.00038 + 0.2, wy * 0.00036 - 0.11) * 0.08
+	const strength = THREE.MathUtils.clamp(ringEntry * lowElev * 0.31 + sandNoise, 0, 1)
+	return lerpRgb(baseRgb, BEACH_SAND_RGB, strength)
+}
+
 /**
  * River corridor: warm sand on banks; flat bed reads as stone/gravel (banks unchanged at high u).
  */
@@ -127,7 +148,7 @@ export function riverCorridorRgb(wx, wy, baseRgb) {
 
 /** Normalized height band matching grass / high grass (excludes sand, snow, peaks). */
 const TREE_BIOME_TN_MIN = 0.48
-const TREE_BIOME_TN_MAX = 0.88
+const TREE_BIOME_TN_MAX = 0.79
 
 export function isGrassBiomeForTrees(tn) {
 	return tn >= TREE_BIOME_TN_MIN && tn < TREE_BIOME_TN_MAX
@@ -172,8 +193,10 @@ export function grassSubBiomeTerrainRgb(rgb, tn, wx, wy) {
 /**
  * @param {number} tn
  * @param {number} h
+ * @param {number} [lx] — plane X (optional; excludes sparse trees on low coastal fringes)
+ * @param {number} [ly] — plane Y
  */
-export function canPlaceTree(wx, wy, h, tn) {
+export function canPlaceTree(wx, wy, h, tn, lx, ly) {
 	if (!isGrassBiomeForTrees(tn)) {
 		return false
 	}
@@ -181,7 +204,16 @@ export function canPlaceTree(wx, wy, h, tn) {
 		return false
 	}
 	const surf = waterSurfaceHeightAt(wx, wy)
-	return h >= surf
+	if (h < surf) {
+		return false
+	}
+	if (lx !== undefined && ly !== undefined) {
+		const dRing = distanceIntoCoastalRingPlane(lx, ly, wx, wy)
+		if (dRing > -420 && dRing < 880 && tn < 0.52) {
+			return false
+		}
+	}
+	return true
 }
 
 export function applyUnderwaterRiverTint(wx, wy, h, rgb) {

@@ -24,20 +24,21 @@ export function createSpringMouthGroup(terrainHeightAtPlaneXY) {
 
 	const outerR = hw * 0.46
 	const innerR = hw * 0.24
-	const wellH = Math.min(68, SPRING_WELL_DEPTH * 1.05)
+	/** Deeper stone collar than the terrain carve so the well reads as a real shaft. */
+	const wellH = Math.min(108, SPRING_WELL_DEPTH * 1.05 + 62)
 
 	const group = new THREE.Group()
 	group.name = 'RiverSpringMouth'
 	group.position.set(lx, rimY, -ly)
 
 	const stoneMat = new THREE.MeshStandardMaterial({
-		color: 0x5c4a38,
-		roughness: 0.94,
-		metalness: 0.02,
-		envMapIntensity: 0.28,
+		color: 0x6a6f7a,
+		roughness: 0.88,
+		metalness: 0.04,
+		envMapIntensity: 0.22,
 	})
 	const innerMat = new THREE.MeshStandardMaterial({
-		color: 0x1e242c,
+		color: 0x151a22,
 		roughness: 1,
 		metalness: 0,
 		side: THREE.DoubleSide,

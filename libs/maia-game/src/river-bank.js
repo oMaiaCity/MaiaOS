@@ -1,11 +1,15 @@
 /**
  * River bank classification in warped plane space (matches terrain / river carve).
  */
-import { closestPointOnRiverPolyline, riverHalfWidth, riverTangentAtS } from './river.js'
+import { CORE_PRESERVE_HALF } from './game-constants.js'
+import {
+	closestPointOnRiverPolyline,
+	RIVER_FEATHER_OUTER_MAX,
+	riverHalfWidth,
+	riverTangentAtS,
+} from './river.js'
 import { terrainPlaneWarp } from './terrain.js'
 
-/** Must match river carve feather in `river.js` — stay past this to be on dry bank. */
-const RIVER_FEATHER_OUTER = 118
 /** Extra clearance so dome rim sits on sand, not in water mesh. */
 const DOME_BANK_CLEARANCE = 620
 
@@ -43,14 +47,14 @@ export function oppositeBankPlaneXY(lx, ly) {
 			const c2 = closestPointOnRiverPolyline(w.wx, w.wy)
 			const hw = riverHalfWidth(w.wx, w.wy)
 			const dist = c2.dist
-			const minDry = hw + RIVER_FEATHER_OUTER + DOME_BANK_CLEARANCE
+			const minDry = hw + RIVER_FEATHER_OUTER_MAX + DOME_BANK_CLEARANCE
 			const newSign = Math.sign(w.wy - c2.py) || 1
 			if (newSign !== startSign && dist >= minDry) {
 				return { lx, ly: ly2 }
 			}
 		}
 	}
-	return { lx, ly: ly + 4000 }
+	return { lx, ly: ly + CORE_PRESERVE_HALF }
 }
 
 /** World XZ radius (meters) — dome ~92; sample full rim in world space (warp makes plane circles wrong). */
@@ -65,7 +69,7 @@ const ORE_DOME_WORLD_FOOTPRINT_R = 102
 function warpedPointDryEnough(wx, wy) {
 	const c = closestPointOnRiverPolyline(wx, wy)
 	const hw = riverHalfWidth(wx, wy)
-	return c.dist >= hw + RIVER_FEATHER_OUTER + DOME_BANK_CLEARANCE
+	return c.dist >= hw + RIVER_FEATHER_OUTER_MAX + DOME_BANK_CLEARANCE
 }
 
 /**
