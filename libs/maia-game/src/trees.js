@@ -16,7 +16,8 @@ const DEFAULT_TREE_COUNT = 5600
 const DEFAULT_BUSH_COUNT = 5600
 /** World-space scale multiplier for bush instances (geometry is authored small). */
 const BUSH_INSTANCE_SCALE = 3
-const MAX_PLACE_ATTEMPTS = 5_000_000
+/** Cap attempts so startup stays responsive (worst case ~2× this terrain samples). */
+const MAX_PLACE_ATTEMPTS = 280_000
 const SPAWN_CLEAR_RADIUS = 520
 
 function mulberry32(seed) {
@@ -158,6 +159,10 @@ function buildInstancedMeshes(geoms, buckets, mat) {
 	return meshes
 }
 
+function yieldToMain() {
+	return new Promise((resolve) => setTimeout(resolve, 0))
+}
+
 /**
  * @param {object} opts
  * @param {number} opts.vHMin
@@ -168,7 +173,7 @@ function buildInstancedMeshes(geoms, buckets, mat) {
  * @param {number} [opts.spawnX]
  * @param {number} [opts.spawnZ]
  */
-export function createForestInstancedMeshes(opts) {
+export async function createForestInstancedMeshes(opts) {
 	const {
 		vHMin,
 		vHSpan,
@@ -209,12 +214,18 @@ export function createForestInstancedMeshes(opts) {
 	let attemptT = 0
 	while (placedTrees < treeCount && attemptT < MAX_PLACE_ATTEMPTS) {
 		attemptT++
+		if (attemptT > 48_000 && placedTrees === 0) {
+			break
+		}
+		if ((attemptT & 8191) === 0) {
+			await yieldToMain()
+		}
 		const lx = (rngTrees() * 2 - 1) * lim
 		const ly = (rngTrees() * 2 - 1) * lim
 		const h = terrainHeightAtPlaneXY(lx, ly)
 		const tn = vHSpan > 1e-5 ? (h - vHMin) / vHSpan : 0.5
 		const { wx, wy } = terrainPlaneWarp(lx, ly)
-		if (!canPlaceTree(wx, wy, h, tn)) {
+		if (!canPlaceTree(wx, wy, h, tn, lx, ly)) {
 			continue
 		}
 		if (!isDenseForestPatch(wx, wy)) {
@@ -235,12 +246,18 @@ export function createForestInstancedMeshes(opts) {
 	let attemptB = 0
 	while (placedBushes < bushCount && attemptB < MAX_PLACE_ATTEMPTS) {
 		attemptB++
+		if (attemptB > 48_000 && placedBushes === 0) {
+			break
+		}
+		if ((attemptB & 8191) === 0) {
+			await yieldToMain()
+		}
 		const lx = (rngBushes() * 2 - 1) * lim
 		const ly = (rngBushes() * 2 - 1) * lim
 		const h = terrainHeightAtPlaneXY(lx, ly)
 		const tn = vHSpan > 1e-5 ? (h - vHMin) / vHSpan : 0.5
 		const { wx, wy } = terrainPlaneWarp(lx, ly)
-		if (!canPlaceTree(wx, wy, h, tn)) {
+		if (!canPlaceTree(wx, wy, h, tn, lx, ly)) {
 			continue
 		}
 		if (!isDenseForestPatch(wx, wy)) {

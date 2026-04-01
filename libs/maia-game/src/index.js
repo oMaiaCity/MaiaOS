@@ -8,6 +8,7 @@ import {
 	domeGardenTurfRgb,
 	grassSubBiomeTerrainRgb,
 	heightBiomeRgb,
+	littoralTerrainRgb,
 	riverCorridorRgb,
 	waterSurfaceHeightAt,
 } from './biomes.js'
@@ -23,6 +24,7 @@ import { minTerrainHeightUnderRim } from './dome-placement.js'
 import { applyDomeRimCollision } from './dome-player-collision.js'
 import { setDomePlacementHighlight } from './dome-selection-tint.js'
 import {
+	CORE_PRESERVE_HALF,
 	EDGE_MARGIN,
 	MOVE_ACCEL_TAU,
 	MOVE_DECEL_TAU,
@@ -36,7 +38,7 @@ import {
 } from './game-constants.js'
 import { advanceTick, createTickState } from './game-tick.js'
 import { DOME_BAKED_ENTRANCE_ATAN2, loadGeodesicDome } from './geodesic-dome.js'
-import { noise2 } from './noise.js'
+import { fbm2, noise2 } from './noise.js'
 import { oppositeBankPlaneXY, oreDomePlaneXYDry } from './river-bank.js'
 import { createSpringMouthGroup } from './river-spring.js'
 import {
@@ -48,7 +50,7 @@ import { createForestInstancedMeshes, disposeForestResources } from './trees.js'
 import { createRiverWaterMesh, createRiverWaterVolumeMesh } from './water-meshes.js'
 import { seaLevel } from './water-surface.js'
 
-const seg = 640
+const seg = 768
 
 /** Yield so the event loop can run (navigation, input) while terrain builds. */
 function yieldToMain() {
@@ -419,8 +421,13 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 			const { wx, wy } = terrainPlaneWarp(lx, ly)
 			let rgb = heightBiomeRgb(tn)
 			rgb = grassSubBiomeTerrainRgb(rgb, tn, wx, wy)
+			rgb = littoralTerrainRgb(lx, ly, wx, wy, rgb, tn)
 			rgb = riverCorridorRgb(wx, wy, rgb)
 			rgb = applyUnderwaterRiverTint(wx, wy, h, rgb)
+			const br = fbm2(lx * 0.00195 + 1.7, ly * 0.00188 - 0.9) * 0.024
+			rgb.r = THREE.MathUtils.clamp(rgb.r + br, 0, 1)
+			rgb.g = THREE.MathUtils.clamp(rgb.g + br * 0.92, 0, 1)
+			rgb.b = THREE.MathUtils.clamp(rgb.b + br * 0.78, 0, 1)
 			baseTerrainColors[i * 3] = rgb.r
 			baseTerrainColors[i * 3 + 1] = rgb.g
 			baseTerrainColors[i * 3 + 2] = rgb.b
@@ -480,7 +487,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	ground.castShadow = true
 	scene.add(ground)
 
-	const forest = createForestInstancedMeshes({
+	const forest = await createForestInstancedMeshes({
 		vHMin,
 		vHSpan,
 		spawnX: playerX,
@@ -825,7 +832,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	}
 
 	function applyDomePreview(newX, newZ) {
-		const lim = PLANE_HALF - EDGE_MARGIN
+		const lim = CORE_PRESERVE_HALF - EDGE_MARGIN
 		const nx = THREE.MathUtils.clamp(newX, -lim, lim)
 		const nz = THREE.MathUtils.clamp(newZ, -lim, lim)
 		if (placementDomeKind === 'wood' && woodDome) {
@@ -999,7 +1006,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	sun.shadow.bias = -0.0002
 	sun.shadow.camera.near = 10
 	sun.shadow.camera.far = 16000
-	const sc = 4200
+	const sc = 7800
 	sun.shadow.camera.left = -sc
 	sun.shadow.camera.right = sc
 	sun.shadow.camera.top = sc

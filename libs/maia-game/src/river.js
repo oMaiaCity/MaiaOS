@@ -5,7 +5,6 @@
 import * as THREE from 'three'
 import {
 	EDGE_MARGIN,
-	PLANE_HALF,
 	RIVER_END_PLANE_LX,
 	RIVER_END_PLANE_LY,
 	RIVER_HALF_WIDTH_END,
@@ -13,6 +12,8 @@ import {
 	RIVER_MEANDER_AMP,
 	RIVER_MIN_CHORD_TO_END_PLANE,
 	RIVER_POLY_SEGMENTS,
+	RIVER_REFERENCE_HALF,
+	WORLD_PLANE_HALF,
 } from './game-constants.js'
 import { fbm2 } from './noise.js'
 import { terrainPlaneWarp } from './plane-warp.js'
@@ -22,6 +23,8 @@ import { rawLandHeightFromWarp } from './terrain-raw.js'
 const RIVER_BANK_HEIGHT = 105
 /** Wider blend past corridor edge reduces stair-step canyon walls on the heightfield. */
 const RIVER_FEATHER_OUTER = 118
+/** Worst-case feather (spring head + estuary mouth); use for dome/bank dry clearance. */
+export const RIVER_FEATHER_OUTER_MAX = RIVER_FEATHER_OUTER + 240 + 480
 /** Ease for gravity envelope along normalized path (steep early drop). */
 const RIVER_BED_GRAVITY_EASE = 2.35
 /** Clearance below raw terrain when following valley floor. */
@@ -42,10 +45,10 @@ export const WATER_MESH_HALF_WIDTH_SCALE = 0.68
 export const WATER_FLOW_SPEED = 0.06
 export const WATER_SEGMENTS = 112
 
-/** Spring pocket carve depth (world units); fades with arc s and lateral distance. */
-export const SPRING_WELL_DEPTH = 52
+/** Spring pocket carve depth (world units); keep small so the head blends into mountain slopes. */
+export const SPRING_WELL_DEPTH = 14
 /** Normalized arc length: only s below this gets a pocket (head of the river). */
-const SPRING_POCKET_S_NORM = 0.072
+const SPRING_POCKET_S_NORM = 0.042
 
 export { RIVER_BED_FLAT_FRAC }
 
@@ -55,7 +58,7 @@ export const FLOW_DN_Y = -0.8
 const FLOW_LEN = Math.hypot(FLOW_DN_X, FLOW_DN_Y)
 export const FLOW_DNX = FLOW_DN_X / FLOW_LEN
 export const FLOW_DNY = FLOW_DN_Y / FLOW_LEN
-export const FLOW_SPAN = PLANE_HALF * (Math.abs(FLOW_DNX) + Math.abs(FLOW_DNY))
+export const FLOW_SPAN = RIVER_REFERENCE_HALF * (Math.abs(FLOW_DNX) + Math.abs(FLOW_DNY))
 
 const N = RIVER_POLY_SEGMENTS
 const margin = EDGE_MARGIN + 120
@@ -87,11 +90,17 @@ function smoothRange(t, a, b) {
 }
 
 /**
- * Pick warped start near maximum raw height with enough chord to mouth (plane space).
- * Tie-break: prefer points farther from end if heights are close (stable ridge picks).
+ * Plane-space shift from ridge candidate toward mouth: spring sits on the slope below the peak
+ * so the channel reads as emerging from the mountain instead of a vertical plug on the summit.
+ */
+const SPRING_START_DOWNSLOPE_M = 580
+
+/**
+ * Pick warped start near maximum raw height with enough chord to mouth (plane space), then
+ * nudge downstream so the head is lower on the slope (not the absolute ridgeline).
  */
 function computeRiverStartWarped() {
-	const lim = PLANE_HALF - EDGE_MARGIN
+	const lim = RIVER_REFERENCE_HALF - EDGE_MARGIN
 	const endLx = RIVER_END_PLANE_LX
 	const endLy = RIVER_END_PLANE_LY
 	let bestH = -Infinity
@@ -135,7 +144,30 @@ function computeRiverStartWarped() {
 		}
 	}
 
-	return terrainPlaneWarp(bestLx, bestLy)
+	const toMx = endLx - bestLx
+	const toMy = endLy - bestLy
+	const toMLen = Math.hypot(toMx, toMy) || 1
+	const ux = toMx / toMLen
+	const uy = toMy / toMLen
+
+	const baseChord = Math.hypot(bestLx - endLx, bestLy - endLy)
+	/** Nudging toward the mouth shortens chord — stay above the minimum reach to the end point. */
+	const maxNudge = Math.max(0, baseChord - RIVER_MIN_CHORD_TO_END_PLANE - 120)
+	const d = Math.min(SPRING_START_DOWNSLOPE_M, maxNudge)
+
+	let lx = bestLx
+	let ly = bestLy
+	if (d > 24) {
+		const nx = THREE.MathUtils.clamp(bestLx + ux * d, -lim, lim)
+		const ny = THREE.MathUtils.clamp(bestLy + uy * d, -lim, lim)
+		const chord = Math.hypot(nx - endLx, ny - endLy)
+		if (chord >= RIVER_MIN_CHORD_TO_END_PLANE) {
+			lx = nx
+			ly = ny
+		}
+	}
+
+	return terrainPlaneWarp(lx, ly)
 }
 
 function meanderOffset01(u) {
@@ -197,7 +229,7 @@ function mouthWarpedOnMapEdge(S) {
 	const L = Math.hypot(ddx, ddy) || 1
 	const ux = ddx / L
 	const uy = ddy / L
-	const lim = PLANE_HALF - margin
+	const lim = WORLD_PLANE_HALF - margin
 	const tExit = rayExitFromInsideSquare(S.wx, S.wy, ux, uy, lim)
 	if (!Number.isFinite(tExit) || tExit <= 0) {
 		return E0
@@ -222,8 +254,8 @@ function buildPolyline() {
 		const u = i / (N - 1)
 		const mx = S.wx + dx * u + px * meanderOffset01(u) * RIVER_MEANDER_AMP
 		const my = S.wy + dy * u + py * meanderOffset01(u + 0.31) * RIVER_MEANDER_AMP
-		polyWx[i] = THREE.MathUtils.clamp(mx, -PLANE_HALF + margin, PLANE_HALF - margin)
-		polyWy[i] = THREE.MathUtils.clamp(my, -PLANE_HALF + margin, PLANE_HALF - margin)
+		polyWx[i] = THREE.MathUtils.clamp(mx, -WORLD_PLANE_HALF + margin, WORLD_PLANE_HALF - margin)
+		polyWy[i] = THREE.MathUtils.clamp(my, -WORLD_PLANE_HALF + margin, WORLD_PLANE_HALF - margin)
 	}
 
 	polyArcLen[0] = 0
@@ -233,7 +265,7 @@ function buildPolyline() {
 		polyArcLen[i] = polyArcLen[i - 1] + Math.hypot(ddx, ddy)
 	}
 	totalArcLen = polyArcLen[N - 1] || 1
-	const pad = RIVER_HALF_WIDTH_END + RIVER_FEATHER_OUTER + RIVER_MEANDER_AMP + 220
+	const pad = RIVER_HALF_WIDTH_END + RIVER_FEATHER_OUTER_MAX + RIVER_MEANDER_AMP + 220
 	let minX = polyWx[0]
 	let maxX = polyWx[0]
 	let minY = polyWy[0]
@@ -472,8 +504,29 @@ function springPocketDepthAt(sNorm, lateral, hw) {
 		return 0
 	}
 	const alongFall = 1 - THREE.MathUtils.smoothstep(sNorm, 0, SPRING_POCKET_S_NORM)
-	const lateralFall = 1 - THREE.MathUtils.smoothstep(lateral, hw * 0.1, hw * 0.94)
+	const lateralFall = 1 - THREE.MathUtils.smoothstep(lateral, hw * 0.04, hw * 0.9)
 	return alongFall * lateralFall * SPRING_WELL_DEPTH
+}
+
+/** Shallow banks at the spring (mountain slopes into the channel); full U-profile downstream. */
+function headBankHeightScale(sNorm) {
+	return 0.24 + THREE.MathUtils.smoothstep(sNorm, 0, 0.19) * 0.76
+}
+
+/** Wider blend into raw terrain at the head so the carve is not a vertical slot. */
+function headFeatherOuter(sNorm) {
+	return RIVER_FEATHER_OUTER + (1 - THREE.MathUtils.smoothstep(sNorm, 0, 0.13)) * 240
+}
+
+/** Shallow U at the estuary: tall rims + ocean clamp read as left/right canyon walls at the mouth. */
+function mouthBankHeightScale(sNorm) {
+	const t = THREE.MathUtils.smoothstep(sNorm, 0.58, 1)
+	return 1 - t * 0.86
+}
+
+/** Extra lateral blend at the mouth so banks ease into beach / seabed. */
+function mouthFeatherExtra(sNorm) {
+	return THREE.MathUtils.smoothstep(sNorm, 0.52, 0.995) * 480
 }
 
 /**
@@ -484,20 +537,22 @@ export function applyRiverTerrainCarve(wx, wy, terrainH) {
 	const c = closestPointOnRiverPolyline(wx, wy)
 	const hw = riverHalfWidthAtS(c.sNorm)
 	const lateral = c.dist
-	if (lateral >= hw + RIVER_FEATHER_OUTER) {
+	const feather = headFeatherOuter(c.sNorm) + mouthFeatherExtra(c.sNorm)
+	if (lateral >= hw + feather) {
 		return { h: terrainH, inRiverCorridor: false }
 	}
 	const pocket = springPocketDepthAt(c.sNorm, lateral, hw)
 	const bedBase = riverBedElevationFromClosest(wx, wy, c) - pocket
+	const bankK = headBankHeightScale(c.sNorm) * mouthBankHeightScale(c.sNorm)
 	let h
 	if (lateral < hw) {
 		const u = lateral / hw
-		const riverH = bedBase + bankRiseFromCenter(u)
+		const riverH = bedBase + bankRiseFromCenter(u) * bankK
 		h = Math.min(terrainH, riverH)
 	} else {
-		const rimH = bedBase + bankRiseFromCenter(1)
+		const rimH = bedBase + bankRiseFromCenter(1) * bankK
 		const carvedAtRim = Math.min(terrainH, rimH)
-		const tt = smoothRange(lateral, hw, hw + RIVER_FEATHER_OUTER)
+		const tt = smoothRange(lateral, hw, hw + feather)
 		/** Smooth twice to soften stair-step canyon walls between heightfield samples. */
 		const tt2 = tt * tt * (3 - 2 * tt)
 		h = carvedAtRim + (terrainH - carvedAtRim) * tt2
@@ -528,7 +583,8 @@ export function riverChannelHeight(wx, wy) {
 	}
 	const u = hw > 1e-6 ? c.dist / hw : 1
 	const pocket = springPocketDepthAt(c.sNorm, c.dist, hw)
-	return riverBedElevationFromClosest(wx, wy, c) - pocket + bankRiseFromCenter(u)
+	const bankK = headBankHeightScale(c.sNorm) * mouthBankHeightScale(c.sNorm)
+	return riverBedElevationFromClosest(wx, wy, c) - pocket + bankRiseFromCenter(u) * bankK
 }
 
 export function riverTerrainBlend(wx, wy, terrainH) {

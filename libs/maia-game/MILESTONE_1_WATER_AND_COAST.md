@@ -8,12 +8,9 @@
 - **Water ribbon/volume** — Meshes sample **uniform flow progress** `t` and resolve `wx` with `centerlineWxForFlowT` (see [`src/river.js`](src/river.js)). They must **not** sweep uniform world `wx` alone: flow is diagonal, so an X-sweep pinned the visible start to a map edge and hid the narrow spring.
 - **`isRiverCorridor`** — Lives in [`src/river.js`](src/river.js) with corridor geometry; re-exported from [`src/biomes.js`](src/biomes.js) for callers that already imported it there.
 
-## Phase 2 (planned): Island shoreline extension
+## Phase 2 (done): Island shoreline extension
 
-- Enlarge `PLANE_SIZE` (e.g. 2×), preserve legacy terrain in `CORE_PRESERVE_HALF`, coastal mask + blend in [`src/terrain.js`](src/terrain.js).
-- Decouple river flow span and sea reference from mesh size via `RIVER_REFERENCE_HALF` so the playable core matches today when the plane grows.
-
-See the island coastline plan in the repo `.cursor/plans/` for full detail.
+- Implemented in [`MILESTONE_2_ISLAND_COAST.md`](MILESTONE_2_ISLAND_COAST.md): enlarged world mesh, `CORE_PRESERVE_HALF`, `RIVER_REFERENCE_HALF`, coastal ring + bay/peninsula blend, littoral tint, coastal tree thinning.
 
 ## Rendering
 
