@@ -27,6 +27,16 @@ export function base64ToArrayBuffer(base64) {
 }
 
 /**
+ * Base64url (no padding) to ArrayBuffer — WebAuthn / passkey credential ids
+ */
+export function base64UrlToArrayBuffer(base64url) {
+	const padded = base64url.replace(/-/g, '+').replace(/_/g, '/')
+	const pad = padded.length % 4
+	const padStr = pad === 0 ? '' : '='.repeat(4 - pad)
+	return base64ToArrayBuffer(padded + padStr)
+}
+
+/**
  * Convert string to Uint8Array
  */
 export function stringToUint8Array(str) {

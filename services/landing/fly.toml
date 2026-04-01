@@ -1,0 +1,42 @@
+# Fly.io — apex / marketing landing (coming soon) + AASA for webcredentials:maia.city
+# First deploy: fly apps create maia-city --org maia-city
+# Then: fly deploy --dockerfile services/landing/Dockerfile --config services/landing/fly.toml
+
+app = "maia-city"
+org = "maia-city"
+primary_region = "fra"
+
+# Build context = monorepo root. Use:
+# flyctl deploy --dockerfile services/landing/Dockerfile --config services/landing/fly.toml
+
+[env]
+  PORT = "8080"
+  NODE_ENV = "production"
+
+[[services]]
+  internal_port = 8080
+  protocol = "tcp"
+  processes = ["app"]
+
+  [[services.ports]]
+    handlers = ["http"]
+    port = 80
+    force_https = true
+
+  [[services.ports]]
+    handlers = ["tls", "http"]
+    port = 443
+
+  [services.concurrency]
+    type = "connections"
+    hard_limit = 500
+    soft_limit = 250
+
+  [[services.http_checks]]
+    interval = "15s"
+    timeout = "2s"
+    grace_period = "5s"
+    method = "GET"
+    path = "/"
+    protocol = "http"
+    tls_skip_verify = false

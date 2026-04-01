@@ -74,7 +74,9 @@ serve({
 				if (stats.isFile()) {
 					const content = readFileSync(filePath)
 					const ext = extname(filePath) // Use filePath, not pathname, to get correct extension
-					const mimeType = MIME_TYPES[ext] || 'application/octet-stream'
+					const mimeType = pathname.includes('apple-app-site-association')
+						? 'application/json'
+						: MIME_TYPES[ext] || 'application/octet-stream'
 
 					return new Response(content, {
 						headers: {

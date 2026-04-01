@@ -13,7 +13,7 @@ import { getStorage } from '@MaiaOS/storage'
 import { cojsonInternals } from 'cojson'
 import { WasmCrypto } from 'cojson/crypto/WasmCrypto'
 import { requirePRFSupport } from './feature-detection.js'
-import { createPasskeyWithPRF, evaluatePRF } from './prf-evaluator.js'
+import { createPasskeyWithPRF, evaluatePRF } from './prf-adapter.js'
 import { arrayBufferToBase64, stringToUint8Array } from './utils.js'
 
 // Extract functions from cojsonInternals for cleaner code

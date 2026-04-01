@@ -14,8 +14,15 @@
 All commands are documented in root `package.json`. Key commands:
 
 - **`bun dev`** — starts both app (4200) and sync (4201) with orchestrated startup (sync must be healthy before app starts)
+- **`bun run dev:desktop`** — full stack (`bun dev`) then Tauri macOS window (requires Rust 1.88+, Xcode toolchain for Swift passkey plugin)
+- **`bun run build:desktop`** — production SPA build + Tauri `.app` bundle
 - **`bun run check:ci`** — lint + format check (Biome + `.maia` format)
 - **`bun run format`** — auto-fix formatting
+
+### Tauri + passkeys (macOS)
+
+- WebAuthn in the embedded WebView is limited; native passkeys use `libs/maia-tauri-plugin-passkey` and `@MaiaOS/self` `prf-tauri.js` when `isTauri()` is true (`@tauri-apps/api/core`).
+- **AASA**: `services/app/well-known/apple-app-site-association` is copied into `dist/.well-known/` on build and served in production. It lists `2P6VCHVJWB.city.maia.app` (Team ID + bundle id); bundle id must match `src-tauri/tauri.conf.json` `identifier` (`city.maia.app`).
 
 ### First-time setup caveats
 

@@ -2,9 +2,9 @@ name: CI
 
 on:
   pull_request:
-    branches: [next]
+    branches: [next, main]
   push:
-    branches: [next]
+    branches: [next, main]
 
 jobs:
   biome:
@@ -50,3 +50,6 @@ jobs:
 
       - name: Build sync (Docker)
         run: docker build -f services/sync/Dockerfile -t sync-build . 2>&1 | tail -30
+
+      - name: Build landing (Docker)
+        run: docker build -f services/landing/Dockerfile -t landing-build . 2>&1 | tail -30

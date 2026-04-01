@@ -117,6 +117,12 @@ if (existsSync(distrosWasmDir)) {
 	cpSync(distrosWasmDir, wasmOutDir, { recursive: true })
 }
 
+const wellKnownSrc = join(serviceDir, 'well-known')
+const wellKnownDist = join(distDir, '.well-known')
+if (existsSync(wellKnownSrc)) {
+	cpSync(wellKnownSrc, wellKnownDist, { recursive: true })
+}
+
 const gameAssetsOut = join(distDir, 'game-assets')
 const gameAssetsSrc = join(repoRoot, 'libs/maia-game/src/assets')
 mkdirSync(gameAssetsOut, { recursive: true })

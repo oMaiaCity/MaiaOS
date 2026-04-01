@@ -17,6 +17,8 @@
 			"!build",
 			"!dist",
 			"!gen",
+			"!**/src-tauri/gen",
+			"!**/src-tauri/target",
 			"!**/*.generated.*",
 			"!.cursor",
 			"!.vscode"

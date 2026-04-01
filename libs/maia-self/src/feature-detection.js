@@ -3,6 +3,8 @@
  * STRICT: PRF is REQUIRED - no fallbacks
  */
 
+import { isTauri } from '@tauri-apps/api/core'
+
 /**
  * Check if WebAuthn PRF extension is supported
  * STRICT: Throws error if not supported
@@ -11,8 +13,13 @@
  * @throws {Error} If PRF not supported with instructions for user
  */
 export async function isPRFSupported() {
+	// Tauri macOS: native passkey + PRF via plugin (WKWebView WebAuthn is insufficient)
+	if (isTauri()) {
+		return true
+	}
+
 	// Check if WebAuthn is available
-	if (!window.PublicKeyCredential) {
+	if (!globalThis.window?.PublicKeyCredential) {
 		throw new Error(
 			'WebAuthn not supported. Please use:\n' +
 				'- Chrome on macOS/Linux/Windows 11\n' +
