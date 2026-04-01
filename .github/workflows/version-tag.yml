@@ -26,7 +26,8 @@ jobs:
       - name: Generate version
         id: version
         run: |
-          VERSION=$(date -u +%y.%m.%d%H%M)
+          # GNU date (ubuntu-latest): %-m / %-d avoid zero-padding month/day; tag/commit match sync-version output.
+          VERSION=$(date -u +%y.%-m.%-d%H%M)
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Generated version: $VERSION"
 

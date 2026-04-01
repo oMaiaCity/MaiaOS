@@ -9,8 +9,8 @@
  * - services/app/src-tauri/tauri.conf.json (version)
  *
  * CI tag format: YY.MM.DDHHMM (UTC) — year, month, then day + hour + minute concatenated
- * (e.g. 26.04.021430 = 2026-04-02 14:30 UTC). Leading zeros may appear in segments; npm,
- * Tauri, and Cargo require valid semver, so each segment is normalized (e.g. 26.04.021430 → 26.4.21430).
+ * (e.g. 26.4.21430 = 2026-04-02 14:30 UTC). version-tag uses GNU date %-m / %-d so month/day are not
+ * zero-padded. npm/Tauri/Cargo still need valid semver; each segment is normalized if needed.
  *
  * Triggered automatically on merge to `next` (version-tag workflow).
  * For local use: bun run version:sync <version>
