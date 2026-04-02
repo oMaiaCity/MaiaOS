@@ -10,7 +10,7 @@
  *   PEER_SYNC_STORAGE=pglite | postgres (required - server never runs without persistent storage)
  *     - pglite: PEER_DB_PATH (default ./pg-lite.db)
  *     - postgres: PEER_SYNC_DB_URL (required)
- *   AVEN_MAIA_GUARDIAN: Human account co-id (co_z...). If set, add as admin of °Maia spark guardian. Retries until success (account may sync after client connects).
+ *   AVEN_MAIA_GUARDIAN: Human account co-id (co_z...). If set, add as admin of °Maia spark guardian; also seeds /sync/write so that account can sync without POST /register.
  *   PEER_SYNC_SEED: Default false. Set true to run genesis seed (bootstrap + schemas + vibes).
  *     - true: Fresh seed (first deploy or intentional reset). May overwrite existing scaffold.
  *     - false/unset: Skip seed, use persisted data. Never overwrite on restart.
@@ -265,6 +265,21 @@ async function seedAdminCapabilityForServerAccount(worker) {
 	await pushCapabilityToStream(worker, { sub: accountID, cmd: '/admin', pol: [], exp })
 }
 
+/**
+ * Ensure AVEN_MAIA_GUARDIAN has /sync/write and /llm/chat (same grants as POST /register for humans).
+ * Without this, the guardian’s browser session syncs but every write hits ValidationHook — they never called /register.
+ */
+async function seedCapabilitiesForGuardian(worker) {
+	if (!avenMaiaGuardian?.startsWith('co_z')) return
+	if (avenMaiaGuardian === accountID) return
+	const exp = Math.floor(Date.now() / 1000) + 10 * 365 * 24 * 3600
+	for (const cmd of ['/sync/write', '/llm/chat']) {
+		const has = await hasValidCapability(worker, avenMaiaGuardian, cmd)
+		if (has) continue
+		await pushCapabilityToStream(worker, { sub: avenMaiaGuardian, cmd, pol: [], exp })
+	}
+}
+
 /** Check if account has valid capability for cmd from spark.os.capabilities stream. /admin grants all. */
 async function hasValidCapability(worker, accountId, cmd) {
 	if (!accountId?.startsWith('co_z') || !cmd) return false
@@ -342,7 +357,7 @@ async function resolveAgentIdToAccountId(worker, agentId) {
 		}
 		const registriesId = getRegistriesId(worker.account)
 		const registriesContent = await loadCoMap(worker.peer, registriesId, { retries: 1 })
-		// Check registries.sparks (agent may be registered as spark, e.g. Moai)
+		// Check registries.sparks (agent may be registered as a spark)
 		const sparksId = registriesContent?.get?.('sparks')
 		if (sparksId?.startsWith('co_z')) {
 			const sparksRaw = await worker.peer.getRawRecord(sparksId)
@@ -1142,6 +1157,10 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 		// Seed /admin for AVEN_MAIA_ACCOUNT (grants all endpoints). Must run after scaffold exists (genesis or prior run).
 		await seedAdminCapabilityForServerAccount(agentWorker).catch((e) =>
 			opsSync.warn('seedAdminCapabilityForServerAccount:', e?.message),
+		)
+
+		await seedCapabilitiesForGuardian(agentWorker).catch((e) =>
+			opsSync.warn('seedCapabilitiesForGuardian:', e?.message),
 		)
 
 		// Self-register Maia aven in registries.avens for profile resolution (idempotent)

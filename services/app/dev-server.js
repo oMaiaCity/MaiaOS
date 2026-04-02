@@ -211,5 +211,5 @@ Bun.serve({
 })
 
 console.log(
-	'Local: http://localhost:4200 (brand at /brand; runanywhere-wasm at /runanywhere-wasm; moai at :4201)',
+	'Local: http://localhost:4200 (brand at /brand; runanywhere-wasm at /runanywhere-wasm; sync at :4201)',
 )

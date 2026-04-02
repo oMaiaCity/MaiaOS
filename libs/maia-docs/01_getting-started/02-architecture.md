@@ -364,7 +364,7 @@ MaiaOS/
 │   └── maia-self/              # Self-sovereign identity
 └── services/
     ├── maia/                   # Frontend SPA
-    └── moai/                   # Sync + API
+    └── sync/                   # Sync + API
 ```
 
 ## Key Architectural Patterns

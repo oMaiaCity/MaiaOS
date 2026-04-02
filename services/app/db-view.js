@@ -811,7 +811,7 @@ export async function renderApp(
 						schemaId.includes('factories-registry') ||
 						schemaId.includes('indexes-registry')
 					const emptyHint = isRegistryEmpty
-						? '<p class="mt-3 text-sm text-amber-600 max-w-md mx-auto">Vibes/schemas come from the sync server. Run <code class="bg-amber-100 px-1 rounded">bun dev</code> (moai on :4201), sign in, and check console for <code class="bg-amber-100 px-1 rounded">linkAccountToSyncRegistry</code>.</p>'
+						? '<p class="mt-3 text-sm text-amber-600 max-w-md mx-auto">Vibes/schemas come from the sync server. Run <code class="bg-amber-100 px-1 rounded">bun dev</code> (sync on :4201), sign in, and check console for <code class="bg-amber-100 px-1 rounded">linkAccountToSyncRegistry</code>.</p>'
 						: ''
 					tableContent = `<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">No properties available${emptyHint}</div>`
 				} else {

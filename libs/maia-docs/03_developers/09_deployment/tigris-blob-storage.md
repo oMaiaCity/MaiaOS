@@ -147,7 +147,7 @@ When `BUCKET_NAME` is set, the sync service uses `TigrisBlobStore` (S3). When un
 
 ## Related Documentation
 
-- [Deployment Guide](./deployment-guide.md) - Fly.io setup, moai deploy, DNS, volumes
+- [Deployment Guide](./deployment-guide.md) - Fly.io setup, sync deploy, DNS, volumes
 - [fly-next-setup.md](../../../../scripts/fly-next-setup.md) - Neon + sync-next-maia-city setup (prerequisite)
 - [storage-layer.md](../05_maia-db/storage-layer.md) - Browser storage (OPFS/IndexedDB), server blob offloading
 - [Fly.io Tigris docs](https://fly.io/docs/tigris/)

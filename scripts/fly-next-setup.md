@@ -5,14 +5,14 @@ Setup guide for **sync.next.maia.city** (sync) and **next.maia.city** (app) with
 ## 1. Create Fly Apps
 
 ```bash
-# Create sync app (replaces moai-next-maia-city)
+# Create sync app (Fly app name may still be moai-next-maia-city; service lives in services/sync)
 flyctl apps create sync-next-maia-city --org maia-city
 
 # App already exists
 flyctl apps create next-maia-city --org maia-city  # skip if exists
 ```
 
-**Note:** No volume needed for sync when using Neon Postgres. If you were using PGlite before, you can destroy the old moai app after migration.
+**Note:** No volume needed for sync when using Neon Postgres. If you were using PGlite before, you can destroy the old Fly app after migration.
 
 ## 2. Neon PostgreSQL Setup
 
