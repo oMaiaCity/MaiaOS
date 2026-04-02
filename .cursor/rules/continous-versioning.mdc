@@ -16,7 +16,7 @@ alwaysApply: true
 
 Example: `26.04.021430` = 2 Apr 2026, 14:30 UTC.
 
-**Stored version:** `sync-version.js` writes one **semver-normalized** string everywhere (leading zeros removed per segment), e.g. `26.04.021430` → `26.4.21430`. Same rule for npm, Tauri, and Cargo.
+**Stored version:** `sync-version.js` writes one **semver-normalized** string everywhere (leading zeros removed per core segment). Releases from `next` use a **prerelease** suffix: `26.04.021430-next` → `26.4.21430-next`. Stable promotion (e.g. `main`) can sync without `-next` when you cut production. Same rule for npm, Tauri, and Cargo.
 
 ### Scope
 
