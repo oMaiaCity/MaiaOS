@@ -17,10 +17,15 @@ jobs:
     permissions:
       contents: write
     steps:
+      # Load deploy key into ssh-agent for the whole job. checkout's ssh-key does not reliably
+      # apply to later steps' git push — without an agent, SSH push gets "Permission denied (publickey)".
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+
       - uses: actions/checkout@v4
         with:
-          ssh-key: ${{ secrets.DEPLOY_KEY }}
-          # Otherwise GITHUB_TOKEN is stored for HTTPS; git push uses it and GH006 rejects protected `next`.
+          # Do not persist GITHUB_TOKEN for HTTPS push (GH006 on protected next). Clone uses token in-step only.
           persist-credentials: false
 
       - uses: oven-sh/setup-bun@v2
