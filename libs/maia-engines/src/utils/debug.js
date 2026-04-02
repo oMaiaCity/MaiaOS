@@ -9,8 +9,13 @@ export {
 	perfEnginesChat,
 	perfEnginesPipeline,
 	TRACE_STORAGE_KEY,
+	traceActorProcessEvents,
 	traceContextOnError,
+	traceDataCreate,
 	traceInbox,
 	traceProcess,
+	traceProcessOp,
+	traceRuntimeProcess,
 	traceView,
+	traceViewDeliver,
 } from '@MaiaOS/logs'

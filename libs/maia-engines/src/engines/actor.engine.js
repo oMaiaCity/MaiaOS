@@ -15,7 +15,12 @@ import { normalizeCoValueData } from '@MaiaOS/db'
 import { containsExpressions } from '@MaiaOS/factories/expression-resolver'
 import { validateAgainstFactory } from '@MaiaOS/factories/validation.helper'
 import { createOpsLogger } from '@MaiaOS/logs'
-import { perfEnginesChat, perfEnginesPipeline, traceInbox } from '../utils/debug.js'
+import {
+	perfEnginesChat,
+	perfEnginesPipeline,
+	traceActorProcessEvents,
+	traceInbox,
+} from '../utils/debug.js'
 import {
 	loadContextStore,
 	readStore,
@@ -993,6 +998,13 @@ export class ActorEngine {
 					}
 					const validated = await this.validateMessage(actor, message)
 					if (!validated.valid) {
+						traceActorProcessEvents({
+							actorId,
+							messageType: message.type,
+							source: message.source,
+							messageCoId: message._coId,
+							outcome: 'validation_skipped',
+						})
 						if (
 							typeof window !== 'undefined' &&
 							(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
@@ -1017,6 +1029,13 @@ export class ActorEngine {
 							message.type,
 							payloadWithSource,
 						)
+						traceActorProcessEvents({
+							actorId,
+							messageType: message.type,
+							source: message.source,
+							messageCoId: message._coId,
+							outcome: handled ? 'handled' : 'unhandled',
+						})
 						await markProcessed()
 						if (!handled) hadUnhandledMessages = true
 					} else {

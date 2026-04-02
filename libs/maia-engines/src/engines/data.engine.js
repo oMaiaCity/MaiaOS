@@ -14,7 +14,7 @@ import {
 	createSuccessResult,
 	isPermissionError,
 } from '@MaiaOS/factories/operation-result'
-import { debugLog, debugWarn } from '@MaiaOS/logs'
+import { debugLog, debugWarn, traceDataCreate } from '@MaiaOS/logs'
 import { calcPatch } from 'fast-myers-diff'
 import {
 	requireDataEngine,
@@ -418,7 +418,10 @@ async function createOp(peer, dataEngine, params) {
 			{ sourceMessageId: idempotencyKey },
 			{ timeoutMs: 2000 },
 		)
-		if (existing?.id) return createSuccessResult(existing, { op: 'create' })
+		if (existing?.id) {
+			traceDataCreate({ factory: factoryParam, idempotencyKey, deduplicated: true })
+			return createSuccessResult(existing, { op: 'create' })
+		}
 	}
 	const factoryDef = await peer.resolve(factoryCoId, { returnType: 'factory' })
 	const allowedKeys =
@@ -432,6 +435,11 @@ async function createOp(peer, dataEngine, params) {
 			: rawData
 	const options = spark != null ? { spark } : {}
 	const result = await peer.create(factoryCoId, dataToCreate, options)
+	traceDataCreate({
+		factory: factoryParam,
+		idempotencyKey: idempotencyKey && typeof idempotencyKey === 'string' ? idempotencyKey : null,
+		deduplicated: false,
+	})
 	return createSuccessResult(result, { op: 'create' })
 }
 
