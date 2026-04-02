@@ -12,9 +12,13 @@
  * (e.g. 26.4.21430 = 2026-04-02 14:30 UTC). version-tag uses GNU date %-m / %-d so month/day are not
  * zero-padded. npm/Tauri/Cargo still need valid semver; each segment is normalized if needed.
  *
+ * Optional semver prerelease after the core (e.g. `-next` for `next` branch releases):
+ * `26.04.021430-next` → `26.4.21430-next`.
+ *
  * Triggered automatically on merge to `next` (version-tag workflow).
  * For local use: bun run version:sync <version>
  * Example: bun run version:sync 26.04.021430
+ * Example (prerelease): bun run version:sync 26.04.021430-next
  */
 
 import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
@@ -31,13 +35,28 @@ if (!rawVersion) {
 	exit(1)
 }
 
-/** Valid semver for npm, Tauri, Cargo: strip leading zeros per segment. */
+/** Valid semver for npm, Tauri, Cargo: strip leading zeros per core segment; keep optional prerelease (e.g. `-next`). */
 function toSemverVersion(continuous) {
-	const parts = continuous.split('.')
-	if (parts.length !== 3) {
-		throw new Error(`Expected YY.MM.DDHHMM (three dot parts), got: ${continuous}`)
+	const trimmed = continuous.trim()
+	const dashIdx = trimmed.indexOf('-')
+	if (dashIdx === -1) {
+		const parts = trimmed.split('.')
+		if (parts.length !== 3) {
+			throw new Error(`Expected YY.MM.DDHHMM (three dot parts), got: ${continuous}`)
+		}
+		return parts.map((p) => String(Number.parseInt(p, 10))).join('.')
 	}
-	return parts.map((p) => String(Number.parseInt(p, 10))).join('.')
+	const core = trimmed.slice(0, dashIdx)
+	const prerelease = trimmed.slice(dashIdx + 1)
+	if (!prerelease) {
+		throw new Error(`Invalid prerelease in: ${continuous}`)
+	}
+	const parts = core.split('.')
+	if (parts.length !== 3) {
+		throw new Error(`Expected YY.MM.DDHHMM before '-', got: ${continuous}`)
+	}
+	const normalizedCore = parts.map((p) => String(Number.parseInt(p, 10))).join('.')
+	return `${normalizedCore}-${prerelease}`
 }
 
 const newVersion = toSemverVersion(rawVersion)

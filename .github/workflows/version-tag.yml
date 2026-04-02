@@ -27,7 +27,8 @@ jobs:
         id: version
         run: |
           # GNU date (ubuntu-latest): %-m / %-d avoid zero-padding month/day; tag/commit match sync-version output.
-          VERSION=$(date -u +%y.%-m.%-d%H%M)
+          CORE=$(date -u +%y.%-m.%-d%H%M)
+          VERSION="${CORE}-next"
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Generated version: $VERSION"
 
@@ -50,5 +51,6 @@ jobs:
           git push origin next
           git push origin "v${{ steps.version.outputs.version }}"
           gh release create "v${{ steps.version.outputs.version }}" \
+            --prerelease \
             --title "v${{ steps.version.outputs.version }}" \
-            --notes "Auto-generated release from merge to next"
+            --notes "Prerelease (\`-next\`) from merge to \`next\`. Production \`main\` is promoted separately when ready."
