@@ -6,7 +6,7 @@
  * Updates:
  * - All services/* and libs/* package.json files
  * - services/app/src-tauri/Cargo.toml ([package] version)
- * - services/app/src-tauri/tauri.conf.json (version)
+ * - services/app/src-tauri/tauri.conf.json (version line only — preserves Biome formatting; never full JSON.stringify)
  *
  * CI tag format: YY.MM.DDHHMM (UTC) — year, month, then day + hour + minute concatenated
  * (e.g. 26.4.21430 = 2026-04-02 14:30 UTC). version-tag uses GNU date %-m / %-d so month/day are not
@@ -93,12 +93,19 @@ try {
 
 const tauriConfPath = join(rootDir, 'services/app/src-tauri/tauri.conf.json')
 try {
-	const tauriConf = JSON.parse(readFileSync(tauriConfPath, 'utf-8'))
-	tauriConf.version = newVersion
-	writeFileSync(tauriConfPath, `${JSON.stringify(tauriConf, null, '\t')}\n`)
+	const raw = readFileSync(tauriConfPath, 'utf-8')
+	if (!/^(\s*"version"\s*:\s*)"[^"]*"/m.test(raw)) {
+		throw new Error('Could not update version in tauri.conf.json (missing root "version" key)')
+	}
+	const next = raw.replace(/^(\s*"version"\s*:\s*)"[^"]*"/m, `$1"${newVersion}"`)
+	writeFileSync(tauriConfPath, next)
 	console.log(`  ${tauriConfPath.replace(`${rootDir}/`, '')}`)
-} catch {
-	// Optional
+} catch (err) {
+	if (err?.code === 'ENOENT') {
+		// Optional workspace layout
+	} else {
+		throw err
+	}
 }
 
 console.log(`Version ${newVersion} synced.`)
