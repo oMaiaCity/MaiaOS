@@ -138,6 +138,25 @@ export async function loadAccount(options) {
 
 	const INITIAL_LOAD_TIMEOUT = 3000
 
+	/** Avoid cojson "Error withLoadedAccount" log when storage has no account row (fresh DB / reseed). */
+	async function accountExistsInStorage(storage, id) {
+		const getCoValue = storage?.dbClient?.getCoValue
+		if (typeof getCoValue !== 'function' || !id?.startsWith('co_')) return null
+		try {
+			const row = await getCoValue.call(storage.dbClient, id)
+			return row != null
+		} catch {
+			return null
+		}
+	}
+
+	const existsInStorage = await accountExistsInStorage(finalStorage, accountID)
+	if (existsInStorage === false) {
+		const e = new Error('Account not found in storage (first-time setup - will be created)')
+		e.isAccountNotFound = true
+		throw e
+	}
+
 	// Peers at load time may be empty if WS connects later; setupSyncPeers registerPeersIfMissing + addPeer when node exists avoids duplicate PeerState (see sync-peers.js).
 	const loadPromise = LocalNode.withLoadedAccount({
 		crypto,

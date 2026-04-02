@@ -1168,7 +1168,16 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 					if (ok) opsSync.log('Added guardian as admin of °Maia spark.')
 				})
 				.catch((e) => {
-					opsSync.warn('Guardian add deferred (will retry):', e?.message ?? e)
+					const msg = e?.message ?? String(e)
+					const waitingForSync =
+						msg.includes('Timeout waiting for CoValue') || msg.includes('not available')
+					if (waitingForSync) {
+						opsSync.log(
+							'Guardian admin pending: guardian account not in server storage yet (connect app once); retrying every 15s.',
+						)
+					} else {
+						opsSync.warn('Guardian add deferred (will retry):', msg)
+					}
 					const retryMs = 15000
 					const id = setInterval(async () => {
 						try {

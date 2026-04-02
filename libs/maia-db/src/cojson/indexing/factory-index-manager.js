@@ -20,6 +20,8 @@ import * as groups from '../groups/groups.js'
 // Matches both °Spark/schema/... and @domain/schema/... (captures prefix + path)
 const SCHEMA_REF_MATCH = /^([°@][a-zA-Z0-9_-]+)\/factory\/(.+)$/
 
+let warnedRegistriesMissingDuringBootstrap = false
+
 /**
  * Ensure spark.os CoMap exists (account.registries.sparks[spark].os)
  * @param {Object} peer - Backend instance
@@ -71,9 +73,12 @@ async function ensureOsCoMap(peer, spark) {
 
 	const registriesId = peer.account?.get?.('registries')
 	if (!registriesId?.startsWith('co_z')) {
-		console.error(
-			'[SchemaIndexManager] account.registries not set. Indexing requires linkAccountToRegistries.',
-		)
+		if (!warnedRegistriesMissingDuringBootstrap) {
+			warnedRegistriesMissingDuringBootstrap = true
+			console.warn(
+				'[SchemaIndexManager] account.registries not set yet (bootstrap). Indexing deferred until linkAccountToRegistries.',
+			)
+		}
 	}
 	return null
 }
