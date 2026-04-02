@@ -11,8 +11,8 @@
 		"@MaiaOS/peer": "workspace:*",
 		"@MaiaOS/factories": "workspace:*",
 		"@MaiaOS/storage": "workspace:*",
-		"cojson": "0.20.14",
-		"cojson-transport-ws": "0.20.14",
-		"unicode-segmenter": "^0.15.0"
+		"cojson": "0.20.16",
+		"cojson-transport-ws": "0.20.16",
+		"unicode-segmenter": "0.15.0"
 	}
 }

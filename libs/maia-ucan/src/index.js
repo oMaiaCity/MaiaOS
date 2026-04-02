@@ -3,7 +3,7 @@
  * Creates and verifies signed tokens from agentSecret (passkey-derived)
  */
 import * as ed from '@noble/ed25519'
-import { sha512 } from '@noble/hashes/sha2'
+import { sha512 } from '@noble/hashes/sha2.js'
 import { didKeyToPublicKey, publicKeyToDidKey } from './did-key.js'
 
 export { agentIDToDidKey } from './did-key.js'

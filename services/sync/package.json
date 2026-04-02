@@ -13,9 +13,6 @@
 		"@MaiaOS/loader": "workspace:*",
 		"@MaiaOS/storage": "workspace:*",
 		"@MaiaOS/maia-distros": "workspace:*",
-		"@MaiaOS/maia-ucan": "workspace:*",
-		"@jitl/quickjs-singlefile-cjs-release-sync": "0.32.0",
-		"quickjs-emscripten-core": "0.32.0",
-		"unicode-segmenter": "^0.15.0"
+		"@MaiaOS/maia-ucan": "workspace:*"
 	}
 }

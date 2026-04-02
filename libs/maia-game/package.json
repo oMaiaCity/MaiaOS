@@ -13,7 +13,7 @@
 	},
 	"dependencies": {
 		"@MaiaOS/logs": "workspace:*",
-		"three": "^0.170.0"
+		"three": "0.170.0"
 	},
 	"description": "Three.js scene host — mountGame(container) empty scene until features are added"
 }
