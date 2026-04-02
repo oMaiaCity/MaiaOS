@@ -1,7 +1,6 @@
 /**
  * Module worker: batch height samples for terrain (same math as main thread).
- * Instantiate with `new Worker(new URL('./terrain-height-worker.mjs', import.meta.url), { type: 'module' })`.
- * Falls back to main-thread loops when workers are unavailable or bundling omits this file.
+ * Production/dev load the bundled script at `/game-workers/terrain-height-worker.js` (see terrain-height-workers.js).
  */
 import { terrainHeightAtPlaneXY } from './terrain.js'
 
