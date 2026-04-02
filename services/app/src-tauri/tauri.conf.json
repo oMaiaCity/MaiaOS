@@ -21,9 +21,7 @@
 		],
 		"security": {
 			"csp": "default-src 'self' blob: data:; script-src 'self' 'unsafe-inline' 'unsafe-eval' 'wasm-unsafe-eval'; connect-src 'self' data: ipc: http://ipc.localhost https: wss: http: ws: tauri://localhost http://tauri.localhost https://tauri.localhost; worker-src 'self' blob:; img-src 'self' data: blob: https:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; media-src 'self' blob: mediastream:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
-			"dangerousDisableAssetCspModification": [
-				"script-src"
-			],
+			"dangerousDisableAssetCspModification": ["script-src"],
 			"headers": {
 				"Cross-Origin-Opener-Policy": "same-origin",
 				"Cross-Origin-Embedder-Policy": "credentialless"
@@ -32,9 +30,7 @@
 	},
 	"bundle": {
 		"active": true,
-		"targets": [
-			"app"
-		],
+		"targets": ["app"],
 		"icon": [
 			"icons/32x32.png",
 			"icons/128x128.png",
