@@ -84,11 +84,11 @@ export async function getCoListId(peer, collectionNameOrSchema) {
  * @param {string} coId - CoValue ID (co-id)
  * @param {Object} [options] - Options
  * @param {boolean} [options.waitForAvailable=false] - Wait for CoValue to become available
- * @param {number} [options.timeoutMs=2000] - Timeout in milliseconds
+ * @param {number} [options.timeoutMs=10000] - Timeout in milliseconds
  * @returns {Promise<CoValueCore|null>} CoValueCore or null if not found
  */
 export async function ensureCoValueLoaded(peer, coId, options = {}) {
-	const { waitForAvailable = false, timeoutMs = 2000 } = options
+	const { waitForAvailable = false, timeoutMs = 25000 } = options
 
 	if (!coId || !coId.startsWith('co_')) {
 		return null // Invalid co-id
