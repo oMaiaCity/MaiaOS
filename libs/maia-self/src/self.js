@@ -157,9 +157,7 @@ export async function signInWithPasskey({ salt = 'maia.city' } = {}) {
 	// Start account loading in background (non-blocking)
 	// Use loadAccount() abstraction from @MaiaOS/db instead of direct withLoadedAccount()
 	const accountLoadingPromise = (async () => {
-		try {
-			// peers[] is filled in addPeer when the WebSocket connects — it is empty on the first tick.
-			// Wait until at least one peer is registered (or timeout) so loadAccount can hydrate from sync.
+		const waitForSyncPeers = async () => {
 			if (syncSetup?.wsPeer) {
 				if (typeof syncSetup.waitForPeer === 'function') {
 					await syncSetup.waitForPeer()
@@ -169,7 +167,10 @@ export async function signInWithPasskey({ salt = 'maia.city' } = {}) {
 					await new Promise((r) => setTimeout(r, 50))
 				}
 			}
-			const loadResult = await loadAccount({
+		}
+
+		const doLoad = () =>
+			loadAccount({
 				accountID,
 				agentSecret,
 				peers: syncSetup ? syncSetup.peers : [],
@@ -177,15 +178,43 @@ export async function signInWithPasskey({ salt = 'maia.city' } = {}) {
 				migration: factoryMigration,
 			})
 
+		try {
+			await waitForSyncPeers()
+			const peerCount = syncSetup?.peers?.length ?? 0
+			const hasWs = !!syncSetup?.wsPeer
+			console.log(
+				`[signInWithPasskey] before loadAccount: hasWsPeer=${hasWs} syncPeers=${peerCount} account=${typeof accountID === 'string' ? `${accountID.slice(0, 12)}…` : '?'}`,
+			)
+			if (!hasWs) {
+				console.warn(
+					'[signInWithPasskey] No sync WebSocket (setupSyncPeers returned empty URL). Load relies on local OPFS/IndexedDB only.',
+				)
+			}
+
+			let loadResult
+			try {
+				loadResult = await doLoad()
+			} catch (first) {
+				if (first?.isAccountNotFound && syncSetup?.wsPeer) {
+					console.warn(
+						'[signInWithPasskey] loadAccount failed (no local row + 0 peers at error time). Retrying after 2s for WebSocket race…',
+						{ peersAtFail: syncSetup.peers.length, message: first?.message },
+					)
+					await new Promise((r) => setTimeout(r, 2000))
+					await waitForSyncPeers()
+					console.log(`[signInWithPasskey] retry loadAccount: syncPeers=${syncSetup.peers.length}`)
+					loadResult = await doLoad()
+				} else {
+					throw first
+				}
+			}
+
 			const { node, account } = loadResult
 
-			// Assign node to peer callbacks
 			if (syncSetup) {
 				syncSetup.setNode(node)
 			}
 
-			// Initial sync handshake complete
-			// Sync state is managed by setupSyncPeers in @MaiaOS/db
 			console.log('   💾 0 secrets retrieved from storage')
 			console.log('   ⚡ Everything computed deterministically!')
 
@@ -196,11 +225,13 @@ export async function signInWithPasskey({ salt = 'maia.city' } = {}) {
 				account,
 			}
 		} catch (loadError) {
-			if (syncSetup && syncSetup.peers.length > 0) {
-			}
-
-			// Sync state errors are managed by setupSyncPeers in @MaiaOS/db
-
+			console.error('[signInWithPasskey] loadAccount failed', {
+				message: loadError?.message,
+				isAccountNotFound: loadError?.isAccountNotFound,
+				peers: syncSetup?.peers?.length,
+				hasWsPeer: !!syncSetup?.wsPeer,
+				original: loadError?.originalError?.message,
+			})
 			throw loadError
 		}
 	})()

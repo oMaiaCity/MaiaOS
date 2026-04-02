@@ -84,6 +84,8 @@ export const perfEnginesChat = createPerfTracer('engines', 'chat')
 export const perfDbUpload = createPerfTracer('db', 'upload')
 export const perfGameInit = createPerfTracer('game', 'init')
 export const perfAppVibes = createPerfTracer('app', 'vibes')
+/** Maia DB viewer `renderApp` (data + DOM); enable with `perf.app.maia-db` or `perf.all` */
+export const perfAppMaiaDb = createPerfTracer('app', 'maia-db')
 
 /**
  * @returns {boolean}

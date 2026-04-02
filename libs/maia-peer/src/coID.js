@@ -157,6 +157,13 @@ export async function loadAccount(options) {
 			peers.length === 0 &&
 			finalStorage
 		) {
+			const accountShort = typeof accountID === 'string' ? `${accountID.slice(0, 12)}…` : '(no id)'
+			opsPeer.log(
+				'loadAccount: no sync peers yet + nothing in local storage → wrapping as first-time / race. account=%s peers=%s original=%s',
+				accountShort,
+				peers.length,
+				error?.message ?? error,
+			)
 			const accountNotFoundError = new Error(
 				'Account not found in storage (first-time setup - will be created)',
 			)

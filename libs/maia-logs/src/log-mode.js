@@ -29,9 +29,16 @@ const PERF_ALL_KEYS = [
 	'storage:opfs',
 	'game:init',
 	'app:vibes',
+	'app:maia-db',
 ]
 
-const DEBUG_ALL_KEYS = ['engines:loadbinary', 'app:cobinary', 'engines:runtime', 'db:storagehook']
+const DEBUG_ALL_KEYS = [
+	'engines:loadbinary',
+	'app:cobinary',
+	'app:maia-db',
+	'engines:runtime',
+	'db:storagehook',
+]
 
 /**
  * @param {string | undefined | null} value

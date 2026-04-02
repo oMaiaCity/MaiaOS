@@ -289,9 +289,19 @@ async function init() {
 				const res = await fetch('/__maia_env')
 				if (res.ok) {
 					window.__MAIA_DEV_ENV__ = await res.json()
-					applyLogModeFromEnv(window.__MAIA_DEV_ENV__?.LOG_MODE ?? '')
+				} else {
+					window.__MAIA_DEV_ENV__ = { DEV: true, LOG_MODE: '' }
 				}
-			} catch (_e) {}
+			} catch (_e) {
+				window.__MAIA_DEV_ENV__ = { DEV: true, LOG_MODE: '' }
+			}
+			// URL override: /me?log_mode=perf.all (useful when shell env did not reach dev-server)
+			const params = new URLSearchParams(window.location.search)
+			const urlLogMode = params.get('log_mode') ?? params.get('LOG_MODE')
+			if (urlLogMode) {
+				window.__MAIA_DEV_ENV__.LOG_MODE = urlLogMode
+			}
+			applyLogModeFromEnv(window.__MAIA_DEV_ENV__?.LOG_MODE ?? '')
 		}
 
 		// Check if we're in agent mode
@@ -684,7 +694,17 @@ async function signIn() {
 				}
 			})
 			.catch((loadError) => {
-				showToast(`Failed to load account: ${caughtErrMessage(loadError)}`, 'error')
+				const msg = caughtErrMessage(loadError)
+				const isNotFound = loadError?.isAccountNotFound || msg.includes('Account not found in storage')
+				console.error('[app] signIn loadingPromise failed', {
+					message: msg,
+					isAccountNotFound: isNotFound,
+					original: loadError?.originalError?.message,
+				})
+				const hint = isNotFound
+					? ' If this persists: ensure `bun dev:sync` is running (port 4201), or use Sign up once on this device. Check console for [signInWithPasskey] and peer logs.'
+					: ''
+				showToast(`Failed to load account: ${msg}${hint}`, 'error')
 				// Reset auth state on error
 				authState = { signedIn: false, accountID: null }
 				maia = null

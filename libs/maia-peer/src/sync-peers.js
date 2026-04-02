@@ -95,6 +95,9 @@ export function setupSyncPeers(syncDomain = null) {
 		(typeof process !== 'undefined' ? process.env?.PEER_SYNC_HOST : undefined)
 
 	if (!syncServerUrl) {
+		opsPeer.log(
+			'setupSyncPeers: no WebSocket URL (getSyncWebSocketUrl returned null). Sync disabled — account load needs local storage or configure VITE_PEER_SYNC_HOST / sync domain.',
+		)
 		return { peers: [], setNode: () => {}, wsPeer: null }
 	}
 
