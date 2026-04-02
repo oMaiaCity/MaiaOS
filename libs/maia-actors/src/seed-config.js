@@ -43,15 +43,12 @@ import updateWasmCodeProcess from './services/update-wasm-code/process.maia'
 import addressbookAvensGridActor from './views/addressbook-avens-grid/actor.maia'
 import addressbookAvensGridContext from './views/addressbook-avens-grid/context.maia'
 import addressbookAvensGridInterface from './views/addressbook-avens-grid/interface.maia'
-import addressbookAvensGridProcess from './views/addressbook-avens-grid/process.maia'
-import addressbookAvensGridStyle from './views/addressbook-avens-grid/style.maia'
-import addressbookAvensGridView from './views/addressbook-avens-grid/view.maia'
+import addressbookGridProcess from './views/addressbook-grid/process.maia'
+import addressbookGridStyle from './views/addressbook-grid/style.maia'
+import addressbookGridView from './views/addressbook-grid/view.maia'
 import addressbookHumansGridActor from './views/addressbook-humans-grid/actor.maia'
 import addressbookHumansGridContext from './views/addressbook-humans-grid/context.maia'
 import addressbookHumansGridInterface from './views/addressbook-humans-grid/interface.maia'
-import addressbookHumansGridProcess from './views/addressbook-humans-grid/process.maia'
-import addressbookHumansGridStyle from './views/addressbook-humans-grid/style.maia'
-import addressbookHumansGridView from './views/addressbook-humans-grid/view.maia'
 import detailActor from './views/detail/actor.maia'
 import detailContext from './views/detail/context.maia'
 import detailInterface from './views/detail/interface.maia'
@@ -327,16 +324,16 @@ export function getSeedConfig() {
 		{
 			actor: addressbookHumansGridActor,
 			context: addressbookHumansGridContext,
-			view: addressbookHumansGridView,
-			process: addressbookHumansGridProcess,
-			style: addressbookHumansGridStyle,
+			view: addressbookGridView,
+			process: addressbookGridProcess,
+			style: addressbookGridStyle,
 		},
 		{
 			actor: addressbookAvensGridActor,
 			context: addressbookAvensGridContext,
-			view: addressbookAvensGridView,
-			process: addressbookAvensGridProcess,
-			style: addressbookAvensGridStyle,
+			view: addressbookGridView,
+			process: addressbookGridProcess,
+			style: addressbookGridStyle,
 		},
 		{
 			actor: layoutChatActor,

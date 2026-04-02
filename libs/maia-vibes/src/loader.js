@@ -39,4 +39,6 @@ export function createVibeLoader(vibeKey, Registry, modules = ['db', 'core']) {
 	}
 }
 
+export const createAvenLoader = createVibeLoader
+
 export { MaiaOS }

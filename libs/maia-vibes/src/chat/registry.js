@@ -1,43 +1,23 @@
 /**
  * Chat Vibe Registry
- * Pre-loads all .maia configs as ES module imports
- * Exports everything as JS objects - no runtime file loading needed
  */
 
-import maiacityBrand from '../brand/maiacity.style.maia'
+import { buildIntentVibeRegistry } from '../build-intent-vibe-registry.js'
 import intentActor from './intent/intent.actor.maia'
 import intentContext from './intent/intent.context.maia'
 import intentProcess from './intent/intent.process.maia'
 import intentView from './intent/intent.view.maia'
 import chatVibe from './manifest.vibe.maia'
 
-/**
- * Chat Vibe Registry
- * All configs pre-loaded and ready to use
- */
-export const ChatVibeRegistry = {
+export const ChatVibeRegistry = buildIntentVibeRegistry({
 	vibe: chatVibe,
-
-	styles: {
-		'°Maia/brand/maiacity': maiacityBrand,
+	idPrefix: 'chat',
+	intent: {
+		actor: intentActor,
+		context: intentContext,
+		process: intentProcess,
+		view: intentView,
 	},
-
-	actors: {
-		'°Maia/chat/actor/intent': intentActor,
-	},
-
-	views: {
-		'°Maia/chat/view/intent': intentView,
-	},
-
-	contexts: {
-		'°Maia/chat/context/intent': intentContext,
-	},
-
-	processes: {
-		'°Maia/chat/process/intent': intentProcess,
-	},
-
 	data: {
 		chat: [],
 		notes: [
@@ -46,7 +26,9 @@ export const ChatVibeRegistry = {
 			},
 		],
 	},
-}
+})
+
+export { ChatVibeRegistry as ChatAvenRegistry }
 
 if (import.meta.hot) {
 	import.meta.hot.accept()
