@@ -72,3 +72,87 @@ export function traceContextOnError(actorId, context) {
 		console.log('[Trace:Context] ERROR state', { actor: _short(actorId), ...snapshot })
 	} catch {}
 }
+
+/**
+ * Inbox session filter: multi-client sync — log process vs skip (other session).
+ * @param {object} detail
+ */
+export function traceInboxFilter(detail) {
+	if (!isTraceEnabled()) return
+	const { decision, messageType, messageCoId, messageSessionId, currentSessionId, actorId, reason } =
+		detail
+	console.log('[Trace:Inbox:Filter]', {
+		decision,
+		messageType,
+		messageCoId: _short(messageCoId),
+		messageSessionId: messageSessionId != null ? _short(String(messageSessionId)) : null,
+		currentSessionId: currentSessionId != null ? _short(String(currentSessionId)) : null,
+		actorId: actorId != null ? _short(actorId) : null,
+		reason: reason ?? '-',
+	})
+}
+
+/**
+ * ProcessEngine op (create/update/delete).
+ */
+export function traceProcessOp(detail) {
+	if (!isTraceEnabled()) return
+	const { opKey, factory, hasIdempotencyKey, processId } = detail
+	console.log('[Trace:Process:Op]', {
+		opKey,
+		factory: typeof factory === 'string' ? factory.slice(0, 40) : factory,
+		hasIdempotencyKey: hasIdempotencyKey ?? false,
+		processId: processId != null ? String(processId).slice(0, 36) : '-',
+	})
+}
+
+/**
+ * DataEngine create: idempotency hit/miss.
+ */
+export function traceDataCreate(detail) {
+	if (!isTraceEnabled()) return
+	const { factory, idempotencyKey, deduplicated } = detail
+	console.log('[Trace:Data:Create]', {
+		factory: typeof factory === 'string' ? factory.slice(0, 40) : factory,
+		idempotencyKey: idempotencyKey != null ? _short(String(idempotencyKey)) : null,
+		deduplicated: deduplicated ?? false,
+	})
+}
+
+/**
+ * Runtime processInboxForActor.
+ */
+export function traceRuntimeProcess(detail) {
+	if (!isTraceEnabled()) return
+	const { inboxCoId, actorId, messageCount, runtimeType } = detail
+	console.log('[Trace:Runtime:Process]', {
+		inboxCoId: _short(inboxCoId),
+		actorId: _short(actorId),
+		messageCount,
+		runtimeType: runtimeType ?? '-',
+	})
+}
+
+/**
+ * ViewEngine deliverEventFromDOM (after validation).
+ */
+export function traceViewDeliver(detail) {
+	if (!isTraceEnabled()) return
+	const { actorId, eventName } = detail
+	console.log('[Trace:View:Deliver]', { event: eventName, actor: _short(actorId) })
+}
+
+/**
+ * ActorEngine processEvents per message.
+ */
+export function traceActorProcessEvents(detail) {
+	if (!isTraceEnabled()) return
+	const { actorId, messageType, source, messageCoId, outcome } = detail
+	console.log('[Trace:Actor:ProcessEvents]', {
+		actor: _short(actorId),
+		messageType,
+		source: source != null ? _short(source) : null,
+		messageCoId: _short(messageCoId),
+		outcome,
+	})
+}

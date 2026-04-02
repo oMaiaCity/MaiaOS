@@ -5,7 +5,7 @@ import { extractDOMValuesAsync } from '@MaiaOS/factories/payload-resolver'
 import { createOpsLogger } from '@MaiaOS/logs'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
-import { perfEnginesPipeline, traceView } from '../utils/debug.js'
+import { perfEnginesPipeline, traceView, traceViewDeliver } from '../utils/debug.js'
 import { loadContextStore, readStore } from '../utils/resolve-helpers.js'
 import {
 	BOOLEAN_ATTRS,
@@ -1004,6 +1004,7 @@ export class ViewEngine {
 		}
 
 		perfEnginesPipeline.step('view:deliver', { event: eventName })
+		traceViewDeliver({ actorId, eventName })
 		await this.actorOps?.deliverEvent?.(actorId, actorId, eventName, payloadToValidate)
 
 		if (!isUpdateInputType) {

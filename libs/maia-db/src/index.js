@@ -42,6 +42,7 @@ export {
 	collectInboxMessageCoIds,
 	findNewSuccessFromTarget,
 	processInbox,
+	shouldProcessInboxMessageForSession,
 } from './cojson/crud/process-inbox.js'
 // Reactive Dependency Resolver (universal progressive reactive resolution)
 // Note: resolveReactive is exported from resolver.js (wraps reactive-resolver.js)

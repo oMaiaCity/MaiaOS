@@ -11,10 +11,30 @@
  * - Trust CRDT sync - CoJSON handles reactivity automatically
  */
 
+import { traceInboxFilter } from '@MaiaOS/logs'
 import { resolve } from '../factory/resolver.js'
 import { extractCoValueData } from './data-extraction.js'
 import { read as universalRead } from './read.js'
 import { waitForStoreReady } from './read-operations.js'
+
+/**
+ * Multi-client: only the runtime whose session appended the stream item should execute
+ * command messages. Other peers see replicated state (CoMaps) without re-running handlers.
+ * SUCCESS/ERROR always process (recipient must handle replies from any session).
+ * @param {string} messageType
+ * @param {string|undefined|null} streamSessionId - from CoStream item (may be absent on legacy)
+ * @param {string} currentSessionID
+ * @returns {boolean}
+ */
+export function shouldProcessInboxMessageForSession(
+	messageType,
+	streamSessionId,
+	currentSessionID,
+) {
+	if (messageType === 'SUCCESS' || messageType === 'ERROR') return true
+	if (streamSessionId == null || streamSessionId === '') return true
+	return streamSessionId === currentSessionID
+}
 
 /**
  * Process inbox and return unprocessed messages
@@ -164,10 +184,39 @@ export async function processInbox(peer, actorId, inboxCoId) {
 					continue
 				}
 
+				const streamSessionId = message._sessionID
+				const msgType = extractedMessageData.type
+				if (!shouldProcessInboxMessageForSession(msgType, streamSessionId, currentSessionID)) {
+					traceInboxFilter({
+						decision: 'skip',
+						messageType: msgType,
+						messageCoId,
+						messageSessionId: streamSessionId,
+						currentSessionId: currentSessionID,
+						actorId,
+						reason: 'other_session',
+					})
+					continue
+				}
+				traceInboxFilter({
+					decision: 'process',
+					messageType: msgType,
+					messageCoId,
+					messageSessionId: streamSessionId,
+					currentSessionId: currentSessionID,
+					actorId,
+					reason:
+						msgType === 'SUCCESS' || msgType === 'ERROR'
+							? 'response_message'
+							: streamSessionId == null || streamSessionId === ''
+								? 'legacy_or_missing_session'
+								: 'same_session',
+				})
+
 				unprocessedMessages.push({
 					...extractedMessageData,
 					_coId: messageCoId,
-					_sessionID: message._sessionID ?? currentSessionID,
+					_sessionID: streamSessionId ?? currentSessionID,
 					_madeAt: madeAt,
 				})
 			}

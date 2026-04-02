@@ -17,6 +17,7 @@ import {
 	perfEnginesPipeline,
 	traceContextOnError,
 	traceProcess,
+	traceProcessOp,
 } from '../utils/debug.js'
 import { readStore, resolveSchemaFromCoValue, resolveToCoId } from '../utils/resolve-helpers.js'
 
@@ -237,6 +238,12 @@ export class ProcessEngine {
 		let result
 		if (opKey === 'create') {
 			const idempotencyKey = config.idempotencyKey ?? eventPayload.idempotencyKey
+			traceProcessOp({
+				opKey: 'create',
+				factory: config.factory,
+				hasIdempotencyKey: Boolean(idempotencyKey),
+				processId: _process?.id,
+			})
 			result = await this.dataEngine.execute({
 				op: 'create',
 				factory: config.factory,
@@ -244,12 +251,24 @@ export class ProcessEngine {
 				...(idempotencyKey ? { idempotencyKey } : {}),
 			})
 		} else if (opKey === 'update') {
+			traceProcessOp({
+				opKey: 'update',
+				factory: config.id,
+				hasIdempotencyKey: false,
+				processId: _process?.id,
+			})
 			result = await this.dataEngine.execute({
 				op: 'update',
 				id: config.id,
 				data: config.data,
 			})
 		} else if (opKey === 'delete') {
+			traceProcessOp({
+				opKey: 'delete',
+				factory: config.id,
+				hasIdempotencyKey: false,
+				processId: _process?.id,
+			})
 			result = await this.dataEngine.execute({
 				op: 'delete',
 				id: config.id,

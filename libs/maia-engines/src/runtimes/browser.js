@@ -7,7 +7,7 @@
  */
 
 import { collectInboxMessageCoIds, findNewSuccessFromTarget } from '@MaiaOS/db'
-import { debugLog, isDebugChannelEnabled } from '@MaiaOS/logs'
+import { debugLog, isDebugChannelEnabled, traceRuntimeProcess } from '@MaiaOS/logs'
 
 function deriveInboxRef(actorId) {
 	if (!actorId || typeof actorId !== 'string') return null
@@ -109,6 +109,12 @@ export class Runtime {
 				? await this.actorEngine.getUnprocessedMessages(inboxCoId, actorId)
 				: { messages: [] }
 			const count = messages.length
+			traceRuntimeProcess({
+				inboxCoId,
+				actorId,
+				messageCount: count,
+				runtimeType: this.runtimeType,
+			})
 
 			if (this.actorEngine?.actors?.has(actorId)) {
 				if (count > 0) await this.actorEngine.processEvents(actorId, messages)

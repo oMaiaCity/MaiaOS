@@ -22,8 +22,14 @@ export {
 export {
 	isTraceEnabled,
 	TRACE_STORAGE_KEY,
+	traceActorProcessEvents,
 	traceContextOnError,
+	traceDataCreate,
 	traceInbox,
+	traceInboxFilter,
 	traceProcess,
+	traceProcessOp,
+	traceRuntimeProcess,
 	traceView,
+	traceViewDeliver,
 } from './trace.js'
