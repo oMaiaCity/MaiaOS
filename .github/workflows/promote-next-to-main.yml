@@ -1,0 +1,29 @@
+# After version-tag pushes [release] to `next`, fast-forward `main` to match `next`.
+# Push to `main` triggers deploy-main.yml (landing only).
+
+name: Promote next to main
+
+on:
+  push:
+    branches: [next]
+
+jobs:
+  promote:
+    if: github.event.head_commit != null && startsWith(github.event.head_commit.message, '[release] ')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Fast-forward main to next
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main next
+          git checkout main
+          git merge --ff-only origin/next
+          git push origin main

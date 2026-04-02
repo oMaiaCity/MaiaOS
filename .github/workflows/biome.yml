@@ -26,7 +26,7 @@ jobs:
         run: bun run check:ci
 
   build:
-    if: github.event_name != 'push' || github.event.head_commit == null || !startsWith(github.event.head_commit.message, '[release] ')
+    if: (github.event_name != 'push' || github.event.head_commit == null || !startsWith(github.event.head_commit.message, '[release] ')) && (github.event_name != 'push' || github.ref != 'refs/heads/main')
     name: Build (app + sync)
     runs-on: ubuntu-latest
     steps:
@@ -50,6 +50,16 @@ jobs:
 
       - name: Build sync (Docker)
         run: docker build -f services/sync/Dockerfile -t sync-build . 2>&1 | tail -30
+
+      - name: Build landing (Docker)
+        run: docker build -f services/landing/Dockerfile -t landing-build . 2>&1 | tail -30
+
+  build-landing-main:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && (github.event.head_commit == null || !startsWith(github.event.head_commit.message, '[release] '))
+    name: Build (landing)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
 
       - name: Build landing (Docker)
         run: docker build -f services/landing/Dockerfile -t landing-build . 2>&1 | tail -30
