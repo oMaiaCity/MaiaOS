@@ -22,6 +22,16 @@ const COOP_COEP = {
 	'Cross-Origin-Embedder-Policy': 'credentialless',
 }
 
+const SECURITY_HEADERS = {
+	...COOP_COEP,
+	'X-Content-Type-Options': 'nosniff',
+	'X-Frame-Options': 'DENY',
+	'Referrer-Policy': 'strict-origin-when-cross-origin',
+	'Permissions-Policy': 'camera=(), microphone=(self), geolocation=()',
+	'Content-Security-Policy':
+		"default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss:; media-src 'self' blob: mediastream:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+}
+
 const MIME_TYPES = {
 	'.html': 'text/html',
 	'.js': 'application/javascript',
@@ -44,16 +54,6 @@ const MIME_TYPES = {
 
 serve({
 	port: PORT,
-	headers: [
-		['Cross-Origin-Opener-Policy', 'same-origin'],
-		['Cross-Origin-Embedder-Policy', 'credentialless'],
-		['X-Content-Type-Options', 'nosniff'],
-		['X-Frame-Options', 'DENY'],
-		[
-			'Content-Security-Policy',
-			"default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self' https: wss:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
-		],
-	],
 	async fetch(req) {
 		const url = new URL(req.url)
 		const pathname = url.pathname
@@ -64,7 +64,7 @@ serve({
 		const distResolved = resolve(DIST_DIR)
 		const rel = relative(distResolved, filePath)
 		if (rel.startsWith('..')) {
-			return new Response('Forbidden', { status: 403, headers: COOP_COEP })
+			return new Response('Forbidden', { status: 403, headers: SECURITY_HEADERS })
 		}
 
 		// Check if it's a file
@@ -82,7 +82,7 @@ serve({
 						headers: {
 							'Content-Type': mimeType,
 							'Cache-Control': ext === '.html' ? 'no-cache' : 'public, max-age=31536000',
-							...COOP_COEP,
+							...SECURITY_HEADERS,
 						},
 					})
 				}
@@ -98,11 +98,11 @@ serve({
 				headers: {
 					'Content-Type': 'text/html',
 					'Cache-Control': 'no-cache',
-					...COOP_COEP,
+					...SECURITY_HEADERS,
 				},
 			})
 		} catch (_error) {
-			return new Response('Not Found', { status: 404, headers: COOP_COEP })
+			return new Response('Not Found', { status: 404, headers: SECURITY_HEADERS })
 		}
 	},
 })

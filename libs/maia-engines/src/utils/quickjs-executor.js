@@ -9,6 +9,13 @@ import { newQuickJSWASMModuleFromVariant } from 'quickjs-emscripten-core'
 
 let quickJSPromise = null
 
+/** Wall-clock budget for one guest execution (interrupt callback). */
+const EXECUTION_BUDGET_MS = 15_000
+/** Hard cap on runtime heap for one guest execution (bytes). */
+const MEMORY_LIMIT_BYTES = 32 * 1024 * 1024
+/** Max stack for one guest execution (bytes). 0 = unlimited after reset. */
+const MAX_STACK_BYTES = 512 * 1024
+
 async function getVM() {
 	if (!quickJSPromise) quickJSPromise = newQuickJSWASMModuleFromVariant(variant)
 	const QuickJS = await quickJSPromise
@@ -24,10 +31,24 @@ async function getVM() {
  */
 export async function executeInSandbox(code, actorView, payload) {
 	const vm = await getVM()
+	const deadline = Date.now() + EXECUTION_BUDGET_MS
+	let actorJson
+	let payloadJson
 	try {
-		vm.evalCode(
-			`var __actor = ${JSON.stringify(actorView ?? {})}; var __payload = ${JSON.stringify(payload ?? {})}`,
-		)
+		actorJson = JSON.stringify(actorView ?? {})
+		payloadJson = JSON.stringify(payload ?? {})
+	} catch {
+		return {
+			ok: false,
+			errors: [{ type: 'structural', message: 'Actor or payload is not JSON-serializable' }],
+		}
+	}
+	try {
+		vm.runtime.setInterruptHandler(() => Date.now() > deadline)
+		vm.runtime.setMemoryLimit(MEMORY_LIMIT_BYTES)
+		vm.runtime.setMaxStackSize(MAX_STACK_BYTES)
+
+		vm.evalCode(`var __actor = ${actorJson}; var __payload = ${payloadJson}`)
 		const modResult = vm.evalCode(`var __mod = (${code}); __mod.execute(__actor, __payload)`)
 		if (modResult.error) {
 			const errMsg = vm.dump(modResult.error)
@@ -47,6 +68,9 @@ export async function executeInSandbox(code, actorView, payload) {
 			errors: [{ type: 'structural', message: 'Sandbox did not return OperationResult' }],
 		}
 	} finally {
+		vm.runtime.removeInterruptHandler()
+		vm.runtime.setMemoryLimit(-1)
+		vm.runtime.setMaxStackSize(0)
 		vm.dispose()
 	}
 }

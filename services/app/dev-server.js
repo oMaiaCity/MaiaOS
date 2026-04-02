@@ -100,6 +100,7 @@ console.log(
 )
 
 Bun.serve({
+	hostname: '127.0.0.1',
 	port: 4200,
 	strictPort: true,
 	development: { hmr: true, console: true },
@@ -122,18 +123,22 @@ Bun.serve({
 			})
 		},
 		// Dev env endpoint (client fetches when import.meta.env not populated)
-		'/__maia_env': () =>
-			new Response(
-				JSON.stringify({
-					DEV: true,
-					LOG_MODE: process.env.LOG_MODE ?? '',
-					VITE_AVEN_TEST_MODE: process.env.VITE_AVEN_TEST_MODE || '',
-					VITE_AVEN_TEST_ACCOUNT: process.env.VITE_AVEN_TEST_ACCOUNT || '',
-					VITE_AVEN_TEST_SECRET: process.env.VITE_AVEN_TEST_SECRET || '',
-					VITE_AVEN_TEST_NAME: process.env.VITE_AVEN_TEST_NAME || '',
-				}),
-				{ headers: { 'Content-Type': 'application/json' } },
-			),
+		'/__maia_env': () => {
+			const testMode = process.env.VITE_AVEN_TEST_MODE === 'true'
+			const body = {
+				DEV: true,
+				LOG_MODE: process.env.LOG_MODE ?? '',
+				VITE_AVEN_TEST_MODE: process.env.VITE_AVEN_TEST_MODE || '',
+				...(testMode
+					? {
+							VITE_AVEN_TEST_ACCOUNT: process.env.VITE_AVEN_TEST_ACCOUNT || '',
+							VITE_AVEN_TEST_SECRET: process.env.VITE_AVEN_TEST_SECRET || '',
+							VITE_AVEN_TEST_NAME: process.env.VITE_AVEN_TEST_NAME || '',
+						}
+					: {}),
+			}
+			return new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } })
+		},
 		// Internal: raw index - only our wrappers should serve this with COOP/COEP
 		'/__index_raw': index,
 		// Main doc and SPA roots get index with COOP/COEP for SharedArrayBuffer

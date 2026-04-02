@@ -468,7 +468,7 @@ async function ensureAllModels() {
 			updateFabButton()
 			const msg = err?.message || String(err)
 			if (statusEl) {
-				statusEl.innerHTML = `Failed to load models: ${escapeHtml(msg)} <button type="button" class="maia-ai-retry-btn" onclick="window.__maiaAIRetryModel?.()">Retry</button>`
+				statusEl.innerHTML = `Failed to load models: ${escapeHtml(msg)} <button type="button" class="maia-ai-retry-btn" data-maia-ai-retry="1">Retry</button>`
 				statusEl.style.display = 'block'
 			}
 			updateFabButton()
@@ -683,6 +683,13 @@ function injectDOM() {
 
 	fabBtn?.addEventListener('click', handleFabClick)
 
+	rootEl.addEventListener('click', (e) => {
+		if (e.target.closest('[data-maia-ai-retry]')) {
+			e.preventDefault()
+			void ensureAllModels()
+		}
+	})
+
 	const closeBtn = rootEl.querySelector('#maia-ai-modal-close')
 	closeBtn?.addEventListener('click', closeModal)
 
@@ -742,7 +749,6 @@ export async function initGlobalAI(maia) {
 			showReady(false)
 		}
 	})()
-	window.__maiaAIRetryModel = () => ensureAllModels()
 	return initPromise
 }
 
@@ -778,7 +784,6 @@ export function disposeGlobalAI() {
 	sessionChatLoadPromise = null
 	modelsLoadPromise = null
 	initPromise = null
-	window.__maiaAIRetryModel = null
 	if (rootEl?.parentNode) {
 		rootEl.parentNode.removeChild(rootEl)
 	}

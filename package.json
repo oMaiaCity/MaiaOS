@@ -32,7 +32,7 @@
 		"lint": "bunx biome lint .",
 		"check": "bunx biome check .",
 		"check:fix": "bunx biome check --write .",
-		"check:ci": "bun run format:maia:check && bunx biome ci .",
+		"check:ci": "bun run format:maia:check && bun scripts/check-maia-app-no-inline-handlers.mjs && bunx biome ci .",
 		"prepare": "husky"
 	},
 	"devDependencies": {

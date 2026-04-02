@@ -22,6 +22,12 @@ export function escapeHtml(text) {
 	return div.innerHTML
 }
 
+/** Escape for double-quoted HTML attributes (data-* values). */
+export function escapeAttr(text) {
+	if (text === null || text === undefined) return ''
+	return String(text).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;')
+}
+
 /**
  * Get sync status message based on status field
  * @param {Object} syncState - Sync state object with status field
