@@ -65,8 +65,14 @@ export function getFirstNameForRegister() {
  * @param {() => boolean} hasExistingAccount
  * @param {'signup' | 'signin'} [viewMode] - Override; default: hasAccount ? 'signin' : 'signup'
  * @param {boolean} [showTestAven] - Show "Sign in with Test AVEN" (local dev only, no passkeys)
+ * @param {{ register: () => void, signIn: () => void, signInWithTestAven: () => void, switchToSignin: () => void, switchToSignup: () => void }} [handlers] - Required for CSP-safe UI (no inline handlers)
  */
-export function renderSignInPrompt(hasExistingAccount, viewMode, showTestAven = false) {
+export function renderSignInPrompt(
+	hasExistingAccount,
+	viewMode,
+	showTestAven = false,
+	handlers = null,
+) {
 	const hasAccount = hasExistingAccount()
 	const mode = viewMode ?? (hasAccount ? 'signin' : 'signup')
 
@@ -83,7 +89,7 @@ export function renderSignInPrompt(hasExistingAccount, viewMode, showTestAven = 
 		: `Aven ${testAvenNameRaw}`
 	const testAvenButton = showTestAven
 		? `
-						<button type="button" class="btn btn-outline-marine sign-in-test-aven" onclick="window.handleSignInWithTestAven()" style="margin-top: 0.5rem;">
+						<button type="button" class="btn btn-outline-marine sign-in-test-aven" data-maia-action="signInWithTestAven" style="margin-top: 0.5rem;">
 							Sign in with ${testAvenName}
 						</button>
 					`
@@ -114,11 +120,11 @@ export function renderSignInPrompt(hasExistingAccount, viewMode, showTestAven = 
 								/>
 							</div>
 							<div class="sign-in-buttons">
-								<button type="button" class="btn btn-solid-water" onclick="window.handleRegister()">
+								<button type="button" class="btn btn-solid-water" data-maia-action="register">
 									Create new Self
 								</button>
 								${testAvenButton}
-								<a href="#" class="sign-in-swap-link" onclick="window.switchToSigninView(); return false;">Already have a Self? Sign in</a>
+								<a href="#" class="sign-in-swap-link" data-maia-action="switchToSignin">Already have a Self? Sign in</a>
 							</div>
 						`
 								: `
@@ -128,11 +134,11 @@ export function renderSignInPrompt(hasExistingAccount, viewMode, showTestAven = 
 							</h1>
 							<p class="sign-in-panel-lede">who outgrow ourselves everyday creating the extraordinary</p>
 							<div class="sign-in-buttons">
-								<button type="button" class="btn btn-solid-water" onclick="window.handleSignIn()">
+								<button type="button" class="btn btn-solid-water" data-maia-action="signIn">
 									Unlock your Self
 								</button>
 								${testAvenButton}
-								<a href="#" class="sign-in-swap-link" onclick="window.switchToSignupView(); return false;">New here? Create your Self</a>
+								<a href="#" class="sign-in-swap-link" data-maia-action="switchToSignup">New here? Create your Self</a>
 							</div>
 						`
 						}
@@ -150,10 +156,12 @@ export function renderSignInPrompt(hasExistingAccount, viewMode, showTestAven = 
 	signinKeyHandler = (e) => {
 		if (e.key !== 'Enter' || e.repeat) return
 		if (!document.querySelector('.sign-in-container')) return // Not on signin screen
+		const h = handlers
+		if (!h) return
 		if (isSignupMode) {
-			window.handleRegister()
+			h.register()
 		} else {
-			window.handleSignIn()
+			h.signIn()
 		}
 	}
 	document.addEventListener('keydown', signinKeyHandler)

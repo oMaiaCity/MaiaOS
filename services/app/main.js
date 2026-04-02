@@ -21,7 +21,7 @@ import {
 } from '@MaiaOS/loader'
 import { applyLogModeFromEnv, createPerfTracer } from '@MaiaOS/logs'
 import { getSyncHttpBaseUrl } from '@MaiaOS/peer'
-import { renderApp } from './db-view.js'
+import { renderApp, toggleMetadataInternalKey } from './db-view.js'
 import { renderLandingPage } from './landing.js'
 import { disposeGlobalAI, initGlobalAI, setFabVisible, updateNavLeft } from './maia-ai-global.js'
 import {
@@ -67,7 +67,6 @@ let currentView = 'account' // Current schema filter (default: 'account')
 let currentContextCoValueId = null // Currently loaded CoValue in main context (explorer-style navigation)
 let currentVibe = null // Currently loaded vibe (null = DB view mode, 'todos' = todos vibe, etc.)
 let currentSpark = null // Grid hierarchy: null = sparks level, '°Maia' = avens for that spark
-let _currentVibeContainer = null // Currently loaded vibe container element (for cleanup on unload)
 let navigationHistory = [] // Navigation history stack for back button
 let isRendering = false // Guard to prevent render loops
 let pendingRender = false // Re-run render when navigateToScreen called while renderApp is still awaiting
@@ -187,7 +186,7 @@ async function handleRoute() {
 		if (redirectIfSignedIn()) return
 		try {
 			await isPRFSupported()
-			renderSignInPrompt(hasExistingAccount, undefined, isAvenTestModeEnabled())
+			renderSignInPrompt(hasExistingAccount, undefined, isAvenTestModeEnabled(), getSignInUiHandlers())
 		} catch (error) {
 			renderUnsupportedBrowser(error.message)
 		}
@@ -278,6 +277,10 @@ function isGameDevRouteEnabled() {
 }
 
 async function init() {
+	setupMaiaAppDelegation()
+	document.addEventListener('maia-schedule-render', () => {
+		void renderAppInternal()
+	})
 	try {
 		// Dev: fetch env from server (Bun dev doesn't inject VITE_* like Vite). Skip in Tauri (tauri:// — env is build-time).
 		if (
@@ -617,7 +620,7 @@ async function signInWithTestAven() {
 				maia = null
 				setSignInLoading(false)
 				window.history.pushState({}, '', '/signin')
-				renderSignInPrompt(hasExistingAccount, undefined, true)
+				renderSignInPrompt(hasExistingAccount, undefined, true, getSignInUiHandlers())
 			})
 
 		loadLinkedCoValues().catch(() => {})
@@ -626,7 +629,7 @@ async function signInWithTestAven() {
 		maia = null
 		setSignInLoading(false)
 		showToast(`Test AVEN sign-in failed: ${caughtErrMessage(error)}`, 'error')
-		renderSignInPrompt(hasExistingAccount, undefined, true)
+		renderSignInPrompt(hasExistingAccount, undefined, true, getSignInUiHandlers())
 	}
 }
 
@@ -752,13 +755,13 @@ async function signIn() {
 				'info',
 				5000,
 			)
-			renderSignInPrompt(hasExistingAccount)
+			renderSignInPrompt(hasExistingAccount, undefined, false, getSignInUiHandlers())
 		} else {
 			const friendlyMessage = msg.includes('Failed to evaluate PRF')
 				? 'Unable to authenticate with your passkey. Please try again.'
 				: msg
 			showToast(friendlyMessage, 'error', 7000)
-			renderSignInPrompt(hasExistingAccount)
+			renderSignInPrompt(hasExistingAccount, undefined, false, getSignInUiHandlers())
 		}
 	}
 }
@@ -848,7 +851,7 @@ async function register() {
 				setSignInLoading(false)
 				showToast(`Failed to initialize MaiaOS: ${caughtErrMessage(bootError)}`, 'error')
 				window.history.pushState({}, '', '/signup')
-				renderSignInPrompt(hasExistingAccount)
+				renderSignInPrompt(hasExistingAccount, undefined, false, getSignInUiHandlers())
 			})
 	} catch (error) {
 		setSignInLoading(false)
@@ -866,13 +869,13 @@ async function register() {
 				'info',
 				5000,
 			)
-			renderSignInPrompt(hasExistingAccount)
+			renderSignInPrompt(hasExistingAccount, undefined, false, getSignInUiHandlers())
 		} else {
 			const friendlyMessage = msg.includes('Failed to create passkey')
 				? 'Unable to create passkey. Please try again.'
 				: msg
 			showToast(friendlyMessage, 'error', 7000)
-			renderSignInPrompt(hasExistingAccount)
+			renderSignInPrompt(hasExistingAccount, undefined, false, getSignInUiHandlers())
 		}
 	}
 }
@@ -1013,18 +1016,6 @@ function cleanupLoadingScreenSync() {
 		loadingScreenSyncUnsubscribe = null
 	}
 }
-
-// Expose globally for onclick handlers
-window.handleSignIn = signIn
-window.handleSignInWithTestAven = signInWithTestAven
-window.handleRegister = register
-
-// Swap signin/signup view mode (link-style toggle)
-window.switchToSigninView = () => renderSignInPrompt(hasExistingAccount, 'signin')
-window.switchToSignupView = () => renderSignInPrompt(hasExistingAccount, 'signup')
-window.navigateTo = navigateTo
-window.handleSignOut = signOut
-window.showToast = showToast // Expose for debugging
 
 // Navigation function for screen transitions
 // @param {string} screen - Screen to navigate to
@@ -1216,9 +1207,6 @@ async function renderAppInternal() {
 	}
 }
 
-// Expose renderAppInternal globally for reactive updates
-window.renderAppInternal = renderAppInternal
-
 /**
  * Revoke a capability grant by setting exp to past. Requires write access to the capability CoMap.
  * @param {string} capabilityId - Co-id of the capability grant to revoke
@@ -1245,7 +1233,6 @@ async function revokeCapability(capabilityId, grant = {}) {
 		showToast(`Failed to revoke: ${error?.message ?? error}`, 'error')
 	}
 }
-window.revokeCapability = revokeCapability
 
 /**
  * Extend a capability grant by 1 day. For expired capabilities, re-enables from now.
@@ -1288,7 +1275,6 @@ async function extendCapability(capabilityId, _currentExp = 0) {
 		showToast(`Failed to extend: ${error?.message ?? error}`, 'error')
 	}
 }
-window.extendCapability = extendCapability
 
 /**
  * Load a vibe with its spark context (for flattened dashboard grid)
@@ -1299,7 +1285,6 @@ function loadVibeWithSpark(vibeKey, spark) {
 	currentSpark = spark || '°Maia'
 	loadVibe(vibeKey)
 }
-window.loadVibeWithSpark = loadVibeWithSpark
 
 /**
  * Load an aven inline in the main context area
@@ -1324,9 +1309,6 @@ async function loadVibe(vibeKey) {
 				maia.runtime.destroyActorsForVibe(currentVibe)
 				perf.step('destroyActorsForVibe(close)')
 			}
-
-			_currentVibeContainer = null
-			window.currentVibeContainer = null
 
 			currentVibe = null
 			// Match navigateToScreen('dashboard') state but do not call render here — that would race
@@ -1385,7 +1367,7 @@ function toggleExpand(expandId) {
 }
 
 /** Load CoValue by ID from sidebar input (Maia DB). */
-window.loadCoValueById = () => {
+function loadCoValueById() {
 	const input = document.getElementById('coid-search-input')
 	if (!input) return
 	const coId = (input.value || '').trim()
@@ -1397,37 +1379,15 @@ window.loadCoValueById = () => {
 	input.value = ''
 }
 
-// Expose globally for onclick handlers
-window.switchView = switchView
-window.selectCoValue = selectCoValue
-window.goBack = goBack
-window.loadVibe = loadVibe
-window.loadSpark = loadSpark
-window.navigateToScreen = navigateToScreen
-window.getSyncBaseUrl = getSyncBaseUrl
-window.toggleExpand = toggleExpand
-
-// Global state for account menu
 let isMobileMenuOpen = false
 
-// Account menu toggle (username opens dropdown with account ID + sign out)
-window.toggleMobileMenu = () => {
+function toggleMobileMenu() {
 	isMobileMenuOpen = !isMobileMenuOpen
 	const menu = document.getElementById('mobile-menu')
 	if (!menu) return
 	menu.classList.toggle('active', isMobileMenuOpen)
 	const trigger = document.querySelector('.account-menu-toggle')
 	if (trigger) trigger.classList.toggle('active', isMobileMenuOpen)
-}
-
-/** Restore menu state after re-render */
-window.restoreMenuState = () => {
-	if (isMobileMenuOpen) {
-		const menu = document.getElementById('mobile-menu')
-		if (menu) menu.classList.add('active')
-		const trigger = document.querySelector('.account-menu-toggle')
-		if (trigger) trigger.classList.add('active')
-	}
 }
 
 /** Toggle sidebar (DB viewer or aven viewer). Pass containerSelector for Shadow DOM. */
@@ -1460,11 +1420,144 @@ function toggleSidebar(sidebarSelector, otherSidebarSelector, containerSelector,
 	}
 }
 
-window.toggleDBLeftSidebar = () =>
+function toggleDBLeftSidebar() {
 	toggleSidebar('.db-sidebar', '.db-metadata', null, 'db-latch-left')
-window.toggleDBRightSidebar = () =>
+}
+function toggleDBRightSidebar() {
 	toggleSidebar('.db-metadata', '.db-sidebar', null, 'db-latch-right')
-window.toggleLeftSidebar = () => toggleSidebar('.nav-aside', '.detail-aside', '.vibe-container')
-window.toggleRightSidebar = () => toggleSidebar('.detail-aside', '.nav-aside', '.vibe-container')
+}
+
+function getSignInUiHandlers() {
+	return {
+		register,
+		signIn,
+		signInWithTestAven,
+		switchToSignin: () =>
+			renderSignInPrompt(hasExistingAccount, 'signin', isAvenTestModeEnabled(), getSignInUiHandlers()),
+		switchToSignup: () =>
+			renderSignInPrompt(hasExistingAccount, 'signup', isAvenTestModeEnabled(), getSignInUiHandlers()),
+	}
+}
+
+function setupMaiaAppDelegation() {
+	const app = document.getElementById('app')
+	if (!app || app.dataset.maiaDelegationBound) return
+	app.dataset.maiaDelegationBound = '1'
+
+	app.addEventListener('click', (e) => {
+		const el = e.target.closest('[data-maia-action]')
+		if (!el) return
+		const action = el.dataset.maiaAction
+		if (action === 'navigateTo') {
+			e.preventDefault()
+			navigateTo(el.dataset.path || '/')
+			return
+		}
+		if (action === 'selectCoValue') {
+			const id = el.dataset.coid
+			if (id) void selectCoValue(id)
+			return
+		}
+		if (action === 'toggleExpand') {
+			e.stopPropagation()
+			const id = el.dataset.expandId
+			if (id) toggleExpand(id)
+			return
+		}
+		if (action === 'extendCapability') {
+			const capId = el.dataset.capId
+			if (capId) void extendCapability(capId, Number(el.dataset.capExp) || 0)
+			return
+		}
+		if (action === 'revokeCapability') {
+			const id = el.dataset.revokeId
+			if (id) void revokeCapability(id, { cmd: el.dataset.cmd, sub: el.dataset.sub })
+			return
+		}
+		if (action === 'copyId') {
+			const id = el.dataset.copyId
+			if (id) {
+				navigator.clipboard.writeText(id).then(() => {
+					el.textContent = '✓'
+					setTimeout(() => {
+						el.textContent = '⎘'
+					}, 800)
+				})
+			}
+			return
+		}
+		if (action === 'toggleMobileMenu') {
+			toggleMobileMenu()
+			return
+		}
+		if (action === 'signOut') {
+			signOut()
+			toggleMobileMenu()
+			return
+		}
+		if (action === 'loadCoValueById') {
+			loadCoValueById()
+			return
+		}
+		if (action === 'toggleDBLeftSidebar') {
+			toggleDBLeftSidebar()
+			return
+		}
+		if (action === 'toggleDBRightSidebar') {
+			toggleDBRightSidebar()
+			return
+		}
+		if (action === 'goBack') {
+			goBack()
+			return
+		}
+		if (action === 'navigateToScreen') {
+			const screen = el.dataset.screen
+			if (screen) navigateToScreen(screen)
+			return
+		}
+		if (action === 'loadVibeWithSpark') {
+			const vk = el.dataset.vibeKey
+			const spark = el.dataset.spark
+			if (vk) loadVibeWithSpark(vk, spark || '°Maia')
+			return
+		}
+		if (action === 'toggleMetadataInternalKey') {
+			toggleMetadataInternalKey(el)
+			return
+		}
+		if (action === 'register') {
+			void register()
+			return
+		}
+		if (action === 'signIn') {
+			void signIn()
+			return
+		}
+		if (action === 'signInWithTestAven') {
+			void signInWithTestAven()
+			return
+		}
+		if (action === 'switchToSignin') {
+			e.preventDefault()
+			getSignInUiHandlers().switchToSignin()
+			return
+		}
+		if (action === 'switchToSignup') {
+			e.preventDefault()
+			getSignInUiHandlers().switchToSignup()
+			return
+		}
+	})
+
+	app.addEventListener('keydown', (e) => {
+		if (e.key !== 'Enter') return
+		const t = e.target
+		if (t && t.id === 'coid-search-input') {
+			e.preventDefault()
+			loadCoValueById()
+		}
+	})
+}
 
 init()

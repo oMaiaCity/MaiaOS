@@ -41,7 +41,34 @@ async function getFactoryFromDb(maia, factoryRef) {
 
 import { renderDashboard, renderVibeViewer } from './dashboard.js'
 import { disposeGame, renderGame } from './maia-game-mount.js'
-import { escapeHtml, getProfileAvatarHtml, getSyncStatusMessage, truncate } from './utils.js'
+import {
+	escapeAttr,
+	escapeHtml,
+	getProfileAvatarHtml,
+	getSyncStatusMessage,
+	truncate,
+} from './utils.js'
+
+/** Expand/collapse CoJSON internal key rows (metadata sidebar). */
+export function toggleMetadataInternalKey(btn) {
+	const row = btn.closest('.metadata-internal-row')
+	if (!row) return
+	const truncated = row.querySelector('.metadata-internal-truncated')
+	const full = row.querySelector('.metadata-internal-full')
+	if (!truncated || !full) return
+	const isExpanded = full.style.display !== 'none'
+	if (isExpanded) {
+		full.style.display = 'none'
+		truncated.style.display = ''
+		btn.textContent = '⊕'
+		btn.setAttribute('aria-label', 'Expand')
+	} else {
+		truncated.style.display = 'none'
+		full.style.display = ''
+		btn.textContent = '⊖'
+		btn.setAttribute('aria-label', 'Collapse')
+	}
+}
 
 function formatCapabilitiesExp(exp) {
 	if (typeof exp !== 'number' || exp <= 0) return '—'
@@ -74,10 +101,10 @@ function buildCapabilitiesGrantRowsHtml(grants, profiles) {
 				<td class="capabilities-cell"><span class="capabilities-cmd">${escapeHtml(g.cmd || '—')}</span></td>
 				<td class="capabilities-cell capabilities-expiry">${escapeHtml(formatCapabilitiesExp(g.exp))}</td>
 				<td class="capabilities-cell capabilities-policy">${formatCapabilitiesPolicyDisplay(g.pol)}</td>
-				<td class="capabilities-cell"><code class="capabilities-id" onclick="selectCoValue('${g.id}')" title="${escapeHtml(g.id)}">${truncate(g.id, 12)}</code></td>
+				<td class="capabilities-cell"><code class="capabilities-id" data-maia-action="selectCoValue" data-coid="${escapeAttr(g.id)}" title="${escapeHtml(g.id)}">${truncate(g.id, 12)}</code></td>
 				<td class="capabilities-cell capabilities-actions">
-					<button type="button" class="capabilities-extend-btn" onclick="window.extendCapability && window.extendCapability('${g.id}', ${currentExp})" title="Extend expiry by 1 day">+1 day</button>
-					<button type="button" class="capabilities-revoke-btn" data-cmd="${escapeHtml(g.cmd || '')}" data-sub="${escapeHtml(g.sub || '')}" onclick="window.revokeCapability && window.revokeCapability('${escapeHtml(g.id)}', { cmd: this.dataset.cmd, sub: this.dataset.sub })" title="Revoke capability">Delete</button>
+					<button type="button" class="capabilities-extend-btn" data-maia-action="extendCapability" data-cap-id="${escapeAttr(g.id)}" data-cap-exp="${currentExp}" title="Extend expiry by 1 day">+1 day</button>
+					<button type="button" class="capabilities-revoke-btn" data-maia-action="revokeCapability" data-revoke-id="${escapeAttr(g.id)}" data-cmd="${escapeHtml(g.cmd || '')}" data-sub="${escapeHtml(g.sub || '')}" title="Revoke capability">Delete</button>
 				</td>
 			</tr>
 		`
@@ -298,26 +325,6 @@ export async function renderApp(
 		`renderApp view=${currentView} ctx=${String(currentContextCoValueId ?? '').slice(0, 32)}`,
 	)
 	try {
-		window.toggleMetadataInternalKey = (btn) => {
-			const row = btn.closest('.metadata-internal-row')
-			if (!row) return
-			const truncated = row.querySelector('.metadata-internal-truncated')
-			const full = row.querySelector('.metadata-internal-full')
-			if (!truncated || !full) return
-			const isExpanded = full.style.display !== 'none'
-			if (isExpanded) {
-				full.style.display = 'none'
-				truncated.style.display = ''
-				btn.textContent = '⊕'
-				btn.setAttribute('aria-label', 'Expand')
-			} else {
-				truncated.style.display = 'none'
-				full.style.display = ''
-				btn.textContent = '⊖'
-				btn.setAttribute('aria-label', 'Collapse')
-			}
-		}
-
 		// CoJSON internal keys: sealer/signer, KEY_..._FOR_SEALER_..., and agent IDs as map keys - shown in metadata sidebar
 		const isCoJsonInternalKey = (key, value) => {
 			const k = String(key).toLowerCase()
@@ -343,7 +350,7 @@ export async function renderApp(
 
 			if (typeof value === 'string') {
 				if (value.startsWith('co_')) {
-					return `<code class="text-xs co-id text-marine-blue-muted hover:underline clickable" onclick="selectCoValue('${value}')" title="${value}">${truncate(value, 12)}</code>`
+					return `<code class="text-xs co-id text-marine-blue-muted hover:underline clickable" data-maia-action="selectCoValue" data-coid="${escapeAttr(value)}" title="${escapeAttr(value)}">${truncate(value, 12)}</code>`
 				}
 				if (value.startsWith('key_')) {
 					return `<code class="text-xs key-value text-marine-blue-muted" title="${value}">${truncate(value, 30)}</code>`
@@ -435,11 +442,11 @@ export async function renderApp(
 			const isCoIdClickable = type === 'co-id'
 			const isClickable = isCoIdClickable || isExpandable
 
-			let onclickHandler = ''
+			let dataActionAttrs = ''
 			if (isCoIdClickable) {
-				onclickHandler = `onclick="selectCoValue('${value}')"`
+				dataActionAttrs = `data-maia-action="selectCoValue" data-coid="${escapeAttr(String(value))}"`
 			} else if (isExpandable) {
-				onclickHandler = `onclick="event.stopPropagation(); toggleExpand('${expandId}')"`
+				dataActionAttrs = `data-maia-action="toggleExpand" data-expand-id="${escapeAttr(expandId)}"`
 			}
 
 			return `
@@ -447,7 +454,7 @@ export async function renderApp(
 				<button 
 					type="button"
 					class="list-item-card property-item-button w-full ${isClickable ? 'hoverable' : ''} group"
-					${onclickHandler}
+					${dataActionAttrs}
 				>
 					<div class="flex gap-3 justify-between items-center">
 						<!-- Left side: Property Key -->
@@ -1080,7 +1087,7 @@ export async function renderApp(
 							<span class="metadata-info-key">ID</span>
 							<div class="metadata-info-value-wrap">
 								<code class="metadata-info-value" title="${escapeHtml(data.id || '')}">${truncate(data.id, 24)}</code>
-								<button type="button" class="metadata-copy-id" title="Copy full ID" data-copy-id="${escapeHtml(data.id || '')}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
+								<button type="button" class="metadata-copy-id" title="Copy full ID" data-maia-action="copyId" data-copy-id="${escapeHtml(data.id || '')}">⎘</button>
 							</div>
 						</div>
 						${
@@ -1094,13 +1101,13 @@ export async function renderApp(
 									${
 										schemaTitle
 											? `
-										<code class="metadata-info-value co-id" onclick="selectCoValue('${factoryCoId}')" title="${factoryCoId}" style="cursor: pointer; text-decoration: underline;">
+										<code class="metadata-info-value co-id" data-maia-action="selectCoValue" data-coid="${escapeAttr(factoryCoId)}" title="${escapeAttr(factoryCoId)}" style="cursor: pointer; text-decoration: underline;">
 											${escapeHtml(schemaTitle)}
 										</code>
 										<div class="metadata-info-schema-id" title="${factoryCoId}">${truncate(factoryCoId, 24)}</div>
 									`
 											: `
-										<code class="metadata-info-value co-id" onclick="selectCoValue('${factoryCoId}')" title="${factoryCoId}" style="cursor: pointer; text-decoration: underline;">
+										<code class="metadata-info-value co-id" data-maia-action="selectCoValue" data-coid="${escapeAttr(factoryCoId)}" title="${escapeAttr(factoryCoId)}" style="cursor: pointer; text-decoration: underline;">
 											${truncate(factoryCoId, 24)}
 										</code>
 									`
@@ -1134,13 +1141,13 @@ export async function renderApp(
 										<span class="metadata-info-value" style="font-weight: 600; color: #1e293b;">
 											${escapeHtml(groupName || capabilityNames.get(groupInfo.groupId))}
 										</span>
-										<code class="co-id" onclick="selectCoValue('${groupInfo.groupId}')" title="${groupInfo.groupId}" style="cursor: pointer; text-decoration: underline; font-size: 11px; color: #64748b;">
+										<code class="co-id" data-maia-action="selectCoValue" data-coid="${escapeAttr(groupInfo.groupId)}" title="${escapeAttr(groupInfo.groupId)}" style="cursor: pointer; text-decoration: underline; font-size: 11px; color: #64748b;">
 											${truncate(groupInfo.groupId, 24)}
 										</code>
 									</div>
 								`
 										: `
-									<code class="metadata-info-value co-id" onclick="selectCoValue('${groupInfo.groupId}')" title="${groupInfo.groupId}" style="cursor: pointer; text-decoration: underline;">
+									<code class="metadata-info-value co-id" data-maia-action="selectCoValue" data-coid="${escapeAttr(groupInfo.groupId)}" title="${escapeAttr(groupInfo.groupId)}" style="cursor: pointer; text-decoration: underline;">
 										${truncate(groupInfo.groupId, 24)}
 									</code>
 								`
@@ -1173,7 +1180,7 @@ export async function renderApp(
 									<code class="metadata-info-key-internal">${escapeHtml(k)}</code>
 									<code class="metadata-info-value-internal">${escapeHtml(val)}</code>
 								</div>
-								<button type="button" class="metadata-expand-btn" onclick="window.toggleMetadataInternalKey(this)" aria-label="Expand">⊕</button>
+								<button type="button" class="metadata-expand-btn" data-maia-action="toggleMetadataInternalKey" aria-label="Expand">⊕</button>
 							</div>`
 								})
 								.join('')}
@@ -1206,7 +1213,7 @@ export async function renderApp(
 															: truncate(row.who, 16)))
 												// Row 1: account name. Row 2: group name (link) or "direct", both left-aligned
 												const groupLinkHtml = row.viaGroupId
-													? `<code class="co-id" onclick="selectCoValue('${row.viaGroupId}')" title="${row.viaGroupId}" style="cursor: pointer; text-decoration: underline; font-size: 9px;">${escapeHtml(capabilityNames.get(row.viaGroupId) ?? truncate(row.viaGroupId, 12))}</code>`
+													? `<code class="co-id" data-maia-action="selectCoValue" data-coid="${escapeAttr(row.viaGroupId)}" title="${escapeAttr(row.viaGroupId)}" style="cursor: pointer; text-decoration: underline; font-size: 9px;">${escapeHtml(capabilityNames.get(row.viaGroupId) ?? truncate(row.viaGroupId, 12))}</code>`
 													: null
 												const sourceLine = row.viaGroupId
 													? groupLinkHtml
@@ -1245,10 +1252,8 @@ export async function renderApp(
 				const isActive =
 					currentContextCoValueId === item.id || (currentView === 'account' && !currentContextCoValueId)
 
-				const clickHandler = `onclick="selectCoValue('${item.id}')"`
-
 				return `
-			<div class="sidebar-item ${isActive ? 'active' : ''}" ${clickHandler}>
+			<div class="sidebar-item ${isActive ? 'active' : ''}" data-maia-action="selectCoValue" data-coid="${escapeAttr(item.id)}" role="button" tabindex="0">
 				<div class="sidebar-label">
 					<span class="sidebar-name">${item.label}</span>
 					${item.count !== undefined ? `<span class="sidebar-count">${item.count}</span>` : ''}
@@ -1280,7 +1285,7 @@ export async function renderApp(
 						${
 							authState.signedIn
 								? `
-							${accountAvatarHtml ? `<div class="account-nav-group"><span class="account-display-name">${escapeHtml(accountDisplayName)}</span><button type="button" class="db-status account-menu-toggle" title="Account: ${accountId} (${getSyncStatusMessage(syncState)})" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${accountAvatarHtml}</button></div>` : `<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId} (${getSyncStatusMessage(syncState)})" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${escapeHtml(accountDisplayName)}</button>`}
+							${accountAvatarHtml ? `<div class="account-nav-group"><span class="account-display-name">${escapeHtml(accountDisplayName)}</span><button type="button" class="db-status account-menu-toggle" title="Account: ${accountId} (${getSyncStatusMessage(syncState)})" data-maia-action="toggleMobileMenu" aria-label="Toggle account menu">${accountAvatarHtml}</button></div>` : `<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId} (${getSyncStatusMessage(syncState)})" data-maia-action="toggleMobileMenu" aria-label="Toggle account menu">${escapeHtml(accountDisplayName)}</button>`}
 						`
 								: ''
 						}
@@ -1297,7 +1302,7 @@ export async function renderApp(
 						<div class="mobile-menu-account-info">
 							<span class="mobile-menu-account-name">${escapeHtml(accountDisplayName)}</span>
 							<div class="mobile-menu-account-id-row">
-								<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
+								<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-maia-action="copyId" data-copy-id="${escapeHtml(accountId)}">⎘</button>
 								<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(truncate(accountId, 24))}</code>
 							</div>
 						</div>
@@ -1308,7 +1313,7 @@ export async function renderApp(
 				${
 					authState.signedIn
 						? `
-					<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">
+					<button type="button" class="mobile-menu-item sign-out-btn" data-maia-action="signOut">
 						Sign Out
 					</button>
 				`
@@ -1328,9 +1333,9 @@ export async function renderApp(
 								placeholder="co_z..."
 								autocomplete="off"
 								aria-label="Load CoValue by ID"
-								onkeydown="if(event.key==='Enter'){event.preventDefault();window.loadCoValueById()}"
+								data-maia-enter-load-covalue="1"
 							/>
-							<button type="button" class="coid-search-btn" onclick="window.loadCoValueById()" aria-label="Load CoValue">
+							<button type="button" class="coid-search-btn" data-maia-action="loadCoValueById" aria-label="Load CoValue">
 								Load
 							</button>
 						</div>
@@ -1392,14 +1397,14 @@ export async function renderApp(
 			</div>
 
 			<!-- MaiaDB navigation latches and back notch -->
-			<button class="db-latch db-latch-left" id="db-latch-left" onclick="window.toggleDBLeftSidebar()" aria-label="Toggle navigation sidebar">
+			<button type="button" class="db-latch db-latch-left" id="db-latch-left" data-maia-action="toggleDBLeftSidebar" aria-label="Toggle navigation sidebar">
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 			</button>
 			
 			${
 				currentContextCoValueId
 					? `
-				<button class="db-notch-back" onclick="goBack()" title="Back" aria-label="Back">
+				<button type="button" class="db-notch-back" data-maia-action="goBack" title="Back" aria-label="Back">
 					<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
 					<span>back</span>
 				</button>
@@ -1407,7 +1412,7 @@ export async function renderApp(
 					: ''
 			}
 
-			<button class="db-latch db-latch-right" id="db-latch-right" onclick="window.toggleDBRightSidebar()" aria-label="Toggle detail sidebar">
+			<button type="button" class="db-latch db-latch-right" id="db-latch-right" data-maia-action="toggleDBRightSidebar" aria-label="Toggle detail sidebar">
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
 			</button>
 		</div>

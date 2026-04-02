@@ -8,6 +8,7 @@ import { createPerfTracer } from '@MaiaOS/logs'
 import { findSessionChatIntentActorId, PERSISTENT_CHAT_VIBE_KEY } from './maia-ai-global.js'
 import { MAIADB_LAYER_STACK_ICON_SVG } from './maia-icons.js'
 import {
+	escapeAttr,
 	escapeHtml,
 	getProfileAvatarHtml,
 	getSyncStatusMessage,
@@ -276,7 +277,7 @@ export async function renderDashboard(
 	}
 
 	const dbViewerCard = `
-		<div class="dashboard-card whitish-card" onclick="window.navigateToScreen('maia-db')">
+		<div class="dashboard-card whitish-card" data-maia-action="navigateToScreen" data-screen="maia-db">
 			<div class="dashboard-card-content">
 				<div class="dashboard-card-icon">
 					${MAIADB_LAYER_STACK_ICON_SVG}
@@ -287,7 +288,7 @@ export async function renderDashboard(
 		</div>
 	`
 	const gameCard = `
-		<div class="dashboard-card whitish-card" onclick="window.navigateToScreen('the-game')">
+		<div class="dashboard-card whitish-card" data-maia-action="navigateToScreen" data-screen="the-game">
 			<div class="dashboard-card-content">
 				<div class="dashboard-card-icon">
 					${DASHBOARD_GAME_ICON_SVG}
@@ -300,7 +301,7 @@ export async function renderDashboard(
 	const vibeCards = vibes
 		.map(
 			(vibe) => `
-		<div class="dashboard-card whitish-card" onclick="window.loadVibeWithSpark('${escapeHtml(vibe.key)}', '${escapeHtml(vibe.spark || '°Maia')}')">
+		<div class="dashboard-card whitish-card" data-maia-action="loadVibeWithSpark" data-vibe-key="${escapeAttr(vibe.key)}" data-spark="${escapeAttr(vibe.spark || '°Maia')}">
 			<div class="dashboard-card-content">
 				<div class="dashboard-card-icon">
 					${dashboardVibeCardIconSvg(vibe.key)}
@@ -316,9 +317,9 @@ export async function renderDashboard(
 	const cards = dbViewerCard + gameCard + vibeCards
 
 	// Reactivity: when vibes empty, retry render so dashboard updates when registries/sparks/vibes arrive
-	if (vibes.length === 0 && vibeCards === '' && typeof window.renderAppInternal === 'function') {
-		setTimeout(() => window.renderAppInternal(), 1500)
-		setTimeout(() => window.renderAppInternal(), 3500)
+	if (vibes.length === 0 && vibeCards === '') {
+		setTimeout(() => document.dispatchEvent(new CustomEvent('maia-schedule-render')), 1500)
+		setTimeout(() => document.dispatchEvent(new CustomEvent('maia-schedule-render')), 3500)
 	}
 
 	const headerTitle = 'Me'
@@ -339,7 +340,7 @@ export async function renderDashboard(
 						${
 							authState.signedIn
 								? `
-							${accountAvatarHtml ? `<div class="account-nav-group"><span class="account-display-name">${escapeHtml(accountDisplayName)}</span><button type="button" class="db-status account-menu-toggle" title="Account: ${accountId} (${getSyncStatusMessage(syncState)})" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${accountAvatarHtml}</button></div>` : `<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId} (${getSyncStatusMessage(syncState)})" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${escapeHtml(accountDisplayName)}</button>`}
+							${accountAvatarHtml ? `<div class="account-nav-group"><span class="account-display-name">${escapeHtml(accountDisplayName)}</span><button type="button" class="db-status account-menu-toggle" title="Account: ${accountId} (${getSyncStatusMessage(syncState)})" data-maia-action="toggleMobileMenu" aria-label="Toggle account menu">${accountAvatarHtml}</button></div>` : `<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId} (${getSyncStatusMessage(syncState)})" data-maia-action="toggleMobileMenu" aria-label="Toggle account menu">${escapeHtml(accountDisplayName)}</button>`}
 						`
 								: ''
 						}
@@ -355,7 +356,7 @@ export async function renderDashboard(
 						<div class="mobile-menu-account-info">
 							<span class="mobile-menu-account-name">${escapeHtml(accountDisplayName)}</span>
 							<div class="mobile-menu-account-id-row">
-								<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
+								<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-maia-action="copyId" data-copy-id="${escapeHtml(accountId)}">⎘</button>
 								<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
 							</div>
 						</div>
@@ -366,7 +367,7 @@ export async function renderDashboard(
 				${
 					authState.signedIn
 						? `
-					<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">
+					<button type="button" class="mobile-menu-item sign-out-btn" data-maia-action="signOut">
 						Sign Out
 					</button>
 				`
@@ -487,7 +488,7 @@ export async function renderVibeViewer(
 						${
 							authState.signedIn
 								? `
-							${accountAvatarHtml ? `<div class="account-nav-group"><span class="account-display-name">${escapeHtml(accountDisplayName)}</span><button type="button" class="db-status account-menu-toggle" title="Account: ${accountId} (${getSyncStatusMessage(syncState)})" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${accountAvatarHtml}</button></div>` : `<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId} (${getSyncStatusMessage(syncState)})" onclick="window.toggleMobileMenu()" aria-label="Toggle account menu">${escapeHtml(accountDisplayName)}</button>`}
+							${accountAvatarHtml ? `<div class="account-nav-group"><span class="account-display-name">${escapeHtml(accountDisplayName)}</span><button type="button" class="db-status account-menu-toggle" title="Account: ${accountId} (${getSyncStatusMessage(syncState)})" data-maia-action="toggleMobileMenu" aria-label="Toggle account menu">${accountAvatarHtml}</button></div>` : `<button type="button" class="db-status db-status-name account-menu-toggle" title="Account: ${accountId} (${getSyncStatusMessage(syncState)})" data-maia-action="toggleMobileMenu" aria-label="Toggle account menu">${escapeHtml(accountDisplayName)}</button>`}
 						`
 								: ''
 						}
@@ -503,7 +504,7 @@ export async function renderVibeViewer(
 						<div class="mobile-menu-account-info">
 							<span class="mobile-menu-account-name">${escapeHtml(accountDisplayName)}</span>
 							<div class="mobile-menu-account-id-row">
-								<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-copy-id="${escapeHtml(accountId)}" onclick="(function(btn){const id=btn.dataset.copyId;if(id)navigator.clipboard.writeText(id).then(()=>{btn.textContent='✓';setTimeout(()=>btn.textContent='⎘',800)});})(this)">⎘</button>
+								<button type="button" class="mobile-menu-copy-id" title="Copy ID" data-maia-action="copyId" data-copy-id="${escapeHtml(accountId)}">⎘</button>
 								<code class="mobile-menu-account-id-value" title="${escapeHtml(accountId)}">${escapeHtml(accountId)}</code>
 							</div>
 						</div>
@@ -514,7 +515,7 @@ export async function renderVibeViewer(
 				${
 					authState.signedIn
 						? `
-					<button class="mobile-menu-item sign-out-btn" onclick="window.handleSignOut(); window.toggleMobileMenu();">
+					<button type="button" class="mobile-menu-item sign-out-btn" data-maia-action="signOut">
 						Sign Out
 					</button>
 				`
@@ -650,7 +651,6 @@ export async function renderVibeViewer(
 							}
 						}, 500)
 
-						window.currentVibeContainer = container
 						resolve()
 					} catch (error) {
 						const container = document.getElementById(`vibe-container-${currentVibe}`)

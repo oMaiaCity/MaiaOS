@@ -21,14 +21,14 @@ export function renderLandingPage() {
 			<nav class="landing-nav">
 				<div class="landing-nav-inner">
 					<div class="landing-nav-left">
-						<a href="/docs" class="nav-link" onclick="event.preventDefault(); window.navigateTo('/docs'); return false;">Docs</a>
-						<a href="/blog" class="nav-link" onclick="event.preventDefault(); window.navigateTo('/blog'); return false;">Blog</a>
+						<a href="/docs" class="nav-link" data-maia-action="navigateTo" data-path="/docs">Docs</a>
+						<a href="/blog" class="nav-link" data-maia-action="navigateTo" data-path="/blog">Blog</a>
 					</div>
 					<div class="landing-nav-center">
-						<img src="/brand/logo_dark.svg" alt="Maia City" class="nav-logo" onclick="window.navigateTo('/')" />
+						<img src="/brand/logo_dark.svg" alt="Maia City" class="nav-logo" data-maia-action="navigateTo" data-path="/" />
 					</div>
 					<div class="landing-nav-right">
-						<a href="/signin" class="nav-play-btn" onclick="event.preventDefault(); window.navigateTo('/signin'); return false;">Sign in</a>
+						<a href="/signin" class="nav-play-btn" data-maia-action="navigateTo" data-path="/signin">Sign in</a>
 					</div>
 				</div>
 			</nav>
@@ -201,7 +201,7 @@ export function renderLandingPage() {
 						<span class="aven-plot-title">Maia City is exclusively invite-only</span>
 						<span class="aven-plot-sub">Get on the waitlist for your personal invite as one of the first future citizens.</span>
 					</div>
-					<a href="/signin" class="cta-ink aven-plot-cta" onclick="event.preventDefault(); window.navigateTo('/signin'); return false;">Get on the waitlist</a>
+					<a href="/signin" class="cta-ink aven-plot-cta" data-maia-action="navigateTo" data-path="/signin">Get on the waitlist</a>
 				</div>
 			</section>
 
