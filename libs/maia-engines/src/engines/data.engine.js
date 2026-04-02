@@ -14,6 +14,7 @@ import {
 	createSuccessResult,
 	isPermissionError,
 } from '@MaiaOS/factories/operation-result'
+import { debugLog, debugWarn } from '@MaiaOS/logs'
 import { calcPatch } from 'fast-myers-diff'
 import {
 	requireDataEngine,
@@ -344,12 +345,6 @@ async function readFileAsChunks(file, chunkSize, onProgress) {
 	}
 	return chunks
 }
-
-// Enable: localStorage.setItem('maia:debug:loadBinary', '1')
-const DEBUG_LOAD_BINARY =
-	typeof window !== 'undefined' &&
-	(window.location?.hostname === 'localhost' || import.meta?.env?.DEV) &&
-	!!(typeof localStorage !== 'undefined' && localStorage.getItem('maia:debug:loadBinary'))
 
 async function evaluateDataWithExisting(data, existingData, evaluator) {
 	if (!evaluator) return data
@@ -713,19 +708,17 @@ async function loadBinaryAsBlobOp(peer, params) {
 	}
 	// allowUnfinished=true to get chunks; but we require finished=true for display (partial = corrupt image)
 	let result = content.getBinaryChunks(true)
-	if (DEBUG_LOAD_BINARY) {
-		console.log('[LoadBinaryAsBlob] getBinaryChunks(1) initial', {
-			coId,
-			hasResult: !!result,
-			finished: result?.finished,
-		})
-	}
+	debugLog('engines', 'loadBinary', 'getBinaryChunks(1) initial', {
+		coId,
+		hasResult: !!result,
+		finished: result?.finished,
+	})
 	for (let i = 0; i < 40; i++) {
 		if (result?.chunks?.length && result.finished) break
 		await new Promise((r) => setTimeout(r, 120))
 		result = content.getBinaryChunks(true)
-		if (DEBUG_LOAD_BINARY && (i === 0 || result))
-			console.log('[LoadBinaryAsBlob] getBinaryChunks retry', {
+		if (i === 0 || result)
+			debugLog('engines', 'loadBinary', 'getBinaryChunks retry', {
 				coId,
 				attempt: i + 1,
 				hasResult: !!result,
@@ -734,7 +727,7 @@ async function loadBinaryAsBlobOp(peer, params) {
 			})
 	}
 	if (!result) {
-		if (DEBUG_LOAD_BINARY) console.warn('[LoadBinaryAsBlob] no result after retries', { coId })
+		debugWarn('engines', 'loadBinary', 'no result after retries', { coId })
 		throw new Error(
 			`[LoadBinaryAsBlobOperation] CoBinary ${coId} has no binary data (stream may still be loading)`,
 		)
@@ -745,27 +738,23 @@ async function loadBinaryAsBlobOp(peer, params) {
 		)
 	}
 	const { chunks, mimeType } = result
-	if (DEBUG_LOAD_BINARY) {
-		console.log('[LoadBinaryAsBlob] chunks info', {
-			coId,
-			chunkCount: chunks?.length ?? 0,
-			firstChunkIsUint8Array: chunks?.[0] instanceof Uint8Array,
-			mimeType,
-			finished: result.finished,
-		})
-	}
+	debugLog('engines', 'loadBinary', 'chunks info', {
+		coId,
+		chunkCount: chunks?.length ?? 0,
+		firstChunkIsUint8Array: chunks?.[0] instanceof Uint8Array,
+		mimeType,
+		finished: result.finished,
+	})
 	if (!chunks?.length) {
 		throw new Error(`[LoadBinaryAsBlobOperation] CoBinary ${coId} has no chunks`)
 	}
 	// Use Blob URL instead of data URL - no base64 conversion, works for any size, displays correctly
 	const dataUrl = chunksToBlobUrl(chunks, mimeType || 'application/octet-stream')
-	if (DEBUG_LOAD_BINARY) {
-		console.log('[LoadBinaryAsBlob] blob URL created', {
-			coId,
-			hasDataUrl: !!dataUrl,
-			prefix: dataUrl?.slice(0, 20),
-		})
-	}
+	debugLog('engines', 'loadBinary', 'blob URL created', {
+		coId,
+		hasDataUrl: !!dataUrl,
+		prefix: dataUrl?.slice(0, 20),
+	})
 	return createSuccessResult(
 		{ dataUrl, mimeType: mimeType || 'application/octet-stream' },
 		{ op: 'loadBinaryAsBlob' },

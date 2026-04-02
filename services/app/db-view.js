@@ -9,6 +9,7 @@ import {
 	resolveAccountCoIdsToProfiles,
 	resolveGroupCoIdsToCapabilityNames,
 } from '@MaiaOS/loader'
+import { debugLog, debugWarn } from '@MaiaOS/logs'
 
 /** Resolve schema definition from DB (dynamic - no static registry fallback) */
 async function getFactoryFromDb(maia, factoryRef) {
@@ -41,15 +42,10 @@ import { escapeHtml, getProfileAvatarHtml, getSyncStatusMessage, truncate } from
 // Cache for CoBinary image data URLs - survives re-renders, enables progressive reactive preview
 const cobinaryPreviewCache = new Map()
 
-const DEBUG_COBINARY =
-	typeof window !== 'undefined' &&
-	(window.location?.hostname === 'localhost' || import.meta?.env?.DEV) &&
-	false
-
 function extractDataUrl(res) {
 	const dataUrl = res?.dataUrl ?? res?.data?.dataUrl ?? (res?.ok === true && res?.data?.dataUrl)
-	if (DEBUG_COBINARY && res && !dataUrl) {
-		console.warn('[CoBinary db-view] extractDataUrl: no dataUrl in response', {
+	if (res && !dataUrl) {
+		debugWarn('app', 'cobinary', 'extractDataUrl: no dataUrl in response', {
 			keys: Object.keys(res || {}),
 			hasData: !!res?.data,
 			dataKeys: res?.data ? Object.keys(res.data) : [],
@@ -82,17 +78,14 @@ function loadBinaryWithRetry(maia, coId, maxAttempts = 4) {
 
 /** Hydrate cobinary image previews: load from cache or fetch, then set img.src. Runs after DOM update. */
 export function hydrateCobinaryPreviews(maia) {
-	if (DEBUG_COBINARY)
-		console.log('[CoBinary db-view] hydrateCobinaryPreviews', { hasMaia: !!maia?.do })
+	debugLog('app', 'cobinary', 'hydrateCobinaryPreviews', { hasMaia: !!maia?.do })
 	if (!maia?.do) return
 	const imgs = document.querySelectorAll('img[data-co-id]')
-	if (DEBUG_COBINARY)
-		console.log('[CoBinary db-view] hydrateCobinaryPreviews found imgs', imgs.length)
+	debugLog('app', 'cobinary', 'hydrateCobinaryPreviews found imgs', imgs.length)
 	imgs.forEach((img) => {
 		const coId = img.getAttribute('data-co-id')
 		if (!coId || !coId.startsWith('co_z')) {
-			if (DEBUG_COBINARY)
-				console.log('[CoBinary db-view] hydrateCobinaryPreviews skip invalid coId', { coId })
+			debugLog('app', 'cobinary', 'hydrateCobinaryPreviews skip invalid coId', { coId })
 			return
 		}
 		if (img.src && (img.src.startsWith('data:') || img.src.startsWith('blob:'))) return
@@ -111,21 +104,19 @@ export function hydrateCobinaryPreviews(maia) {
 			})
 			return
 		}
-		if (DEBUG_COBINARY) console.log('[CoBinary db-view] loadBinaryAsBlob start', { coId })
+		debugLog('app', 'cobinary', 'loadBinaryAsBlob start', { coId })
 		const loading = loadBinaryWithRetry(maia, coId)
 			.then((dataUrl) => {
 				cobinaryPreviewCache.set(coId, { dataUrl })
-				if (DEBUG_COBINARY)
-					console.log('[CoBinary db-view] loadBinaryAsBlob done', {
-						coId,
-						hasDataUrl: !!dataUrl,
-						len: dataUrl?.length,
-					})
+				debugLog('app', 'cobinary', 'loadBinaryAsBlob done', {
+					coId,
+					hasDataUrl: !!dataUrl,
+					len: dataUrl?.length,
+				})
 				return dataUrl
 			})
 			.catch((err) => {
-				if (DEBUG_COBINARY)
-					console.warn('[CoBinary db-view] loadBinaryAsBlob failed', { coId, err: err?.message })
+				debugWarn('app', 'cobinary', 'loadBinaryAsBlob failed', { coId, err: err?.message })
 				return null
 			})
 		cobinaryPreviewCache.set(coId, { loading })

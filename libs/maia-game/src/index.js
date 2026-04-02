@@ -1,6 +1,7 @@
 /**
  * maia-game — procedural heightfield terrain, carved river, height-based vertex biomes, pointer-lock WASD, wheel zoom.
  */
+import { perfGameInit } from '@MaiaOS/logs'
 import * as THREE from 'three'
 import { PointerLockControls } from 'three/addons/controls/PointerLockControls.js'
 import {
@@ -46,6 +47,11 @@ import {
 	terrainHeightAtPlaneXY,
 	terrainPlaneWarp,
 } from './terrain.js'
+import {
+	createTerrainHeightWorkerPool,
+	terrainHeightWorkerPoolSize,
+} from './terrain-height-workers.js'
+import { computeHeightfieldNormalsForPlaneGrid } from './terrain-normals.js'
 import { createForestInstancedMeshes, disposeForestResources } from './trees.js'
 import { createRiverWaterMesh, createRiverWaterVolumeMesh } from './water-meshes.js'
 import { seaLevel } from './water-surface.js'
@@ -57,7 +63,10 @@ function yieldToMain() {
 	return new Promise((resolve) => setTimeout(resolve, 0))
 }
 
-const TERRAIN_BATCH = 65536
+/** Larger batches = fewer rounds; main-thread path still yields periodically. */
+const TERRAIN_BATCH = 131072
+/** Main-thread height fill only: yield every N batches (worker pipelines yield inside). */
+const TERRAIN_YIELD_EVERY_MAIN_THREAD_BATCHES = 2
 
 /**
  * @param {HTMLElement} container
@@ -65,6 +74,7 @@ const TERRAIN_BATCH = 65536
  * @returns {Promise<{ dispose: () => void }>}
  */
 export async function mountGame(container, { isCancelled = () => false } = {}) {
+	perfGameInit.start('mountGame')
 	const scene = new THREE.Scene()
 	/** Movable wood dome (player placement). */
 	let woodDome = null
@@ -287,108 +297,171 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 
 	await yieldToMain()
 	if (isCancelled()) {
+		perfGameInit.end('cancelled')
 		cleanupEarlyPartial()
 		return { dispose: () => {} }
 	}
+	perfGameInit.step('boot')
 
 	const seaLevelValue = seaLevel()
 
-	let terrainHeightWorker = null
-	try {
-		terrainHeightWorker = new Worker(new URL('./terrain-height-worker.mjs', import.meta.url), {
-			type: 'module',
-		})
-	} catch {
-		terrainHeightWorker = null
-	}
+	let terrainHeightWorkerPoolDispose = /** @type {(() => void) | null} */ (null)
 	let terrainWorkerMsgId = 0
+	/** @type {Worker[] | null} */
+	let terrainWorkerPool = null
 
-	function terminateTerrainWorker() {
-		if (terrainHeightWorker) {
-			terrainHeightWorker.terminate()
-			terrainHeightWorker = null
+	try {
+		const pool = createTerrainHeightWorkerPool(terrainHeightWorkerPoolSize())
+		if (pool) {
+			terrainWorkerPool = pool.workers
+			terrainHeightWorkerPoolDispose = pool.dispose
+		}
+	} catch {
+		terrainWorkerPool = null
+	}
+
+	function terminateTerrainWorkers() {
+		if (terrainHeightWorkerPoolDispose) {
+			terrainHeightWorkerPoolDispose()
+			terrainHeightWorkerPoolDispose = null
+			terrainWorkerPool = null
 		}
 	}
 
 	const planeGeo = new THREE.PlaneGeometry(PLANE_SIZE, PLANE_SIZE, seg, seg)
 	const pos = planeGeo.attributes.position
 
-	async function fillHeightBatch(batchStart, batchEnd) {
-		if (terrainHeightWorker) {
-			const n = batchEnd - batchStart
-			const xs = new Float32Array(n)
-			const ys = new Float32Array(n)
-			for (let i = batchStart; i < batchEnd; i++) {
-				const o = i - batchStart
-				xs[o] = pos.getX(i)
-				ys[o] = pos.getY(i)
-			}
-			const id = ++terrainWorkerMsgId
-			const w = terrainHeightWorker
-			const out = await new Promise((resolve) => {
-				function onMsg(e) {
-					if (e.data.id !== id) {
-						return
-					}
-					w.removeEventListener('message', onMsg)
-					resolve(e.data.out)
-				}
-				w.addEventListener('message', onMsg)
-				w.postMessage({ id, start: batchStart, end: batchEnd, xs, ys })
-			})
-			for (let i = batchStart; i < batchEnd; i++) {
-				pos.setZ(i, out[i - batchStart])
-			}
-		} else {
-			for (let i = batchStart; i < batchEnd; i++) {
-				const lx = pos.getX(i)
-				const ly = pos.getY(i)
-				pos.setZ(i, terrainHeightAtPlaneXY(lx, ly))
-			}
-		}
-	}
-
-	for (let start = 0; start < pos.count; start += TERRAIN_BATCH) {
-		await yieldToMain()
-		if (isCancelled()) {
-			terminateTerrainWorker()
-			cleanupEarlyPartial()
-			planeGeo.dispose()
-			return { dispose: () => {} }
-		}
-		const end = Math.min(start + TERRAIN_BATCH, pos.count)
-		try {
-			await fillHeightBatch(start, end)
-		} catch {
-			terminateTerrainWorker()
-			terrainHeightWorker = null
-			await fillHeightBatch(start, end)
-		}
-	}
-	terminateTerrainWorker()
-	planeGeo.computeVertexNormals()
-
 	let vHMin = Infinity
 	let vHMax = -Infinity
-	for (let start = 0; start < pos.count; start += TERRAIN_BATCH) {
-		await yieldToMain()
-		if (isCancelled()) {
-			terminateTerrainWorker()
-			cleanupEarlyPartial()
-			planeGeo.dispose()
-			return { dispose: () => {} }
+	function updateHeightRange(h) {
+		if (h < vHMin) {
+			vHMin = h
 		}
-		const end = Math.min(start + TERRAIN_BATCH, pos.count)
-		for (let i = start; i < end; i++) {
-			const h = pos.getZ(i)
-			if (h < vHMin) {
-				vHMin = h
-			}
-			if (h > vHMax) {
-				vHMax = h
-			}
+		if (h > vHMax) {
+			vHMax = h
 		}
 	}
+
+	async function fillHeightBatchOnWorker(worker, batchStart, batchEnd) {
+		const n = batchEnd - batchStart
+		const xs = new Float32Array(n)
+		const ys = new Float32Array(n)
+		for (let i = batchStart; i < batchEnd; i++) {
+			const o = i - batchStart
+			xs[o] = pos.getX(i)
+			ys[o] = pos.getY(i)
+		}
+		const id = ++terrainWorkerMsgId
+		const out = await new Promise((resolve) => {
+			function onMsg(e) {
+				if (e.data.id !== id) {
+					return
+				}
+				worker.removeEventListener('message', onMsg)
+				resolve(e.data.out)
+			}
+			worker.addEventListener('message', onMsg)
+			worker.postMessage({ id, start: batchStart, end: batchEnd, xs, ys })
+		})
+		for (let i = batchStart; i < batchEnd; i++) {
+			const z = out[i - batchStart]
+			pos.setZ(i, z)
+			updateHeightRange(z)
+		}
+	}
+
+	async function fillHeightBatchMainThread(batchStart, batchEnd) {
+		for (let i = batchStart; i < batchEnd; i++) {
+			const lx = pos.getX(i)
+			const ly = pos.getY(i)
+			const z = terrainHeightAtPlaneXY(lx, ly)
+			pos.setZ(i, z)
+			updateHeightRange(z)
+		}
+	}
+
+	const terrainRanges = []
+	for (let start = 0; start < pos.count; start += TERRAIN_BATCH) {
+		terrainRanges.push({ start, end: Math.min(start + TERRAIN_BATCH, pos.count) })
+	}
+
+	try {
+		if (terrainWorkerPool && terrainWorkerPool.length > 0) {
+			await yieldToMain()
+			if (isCancelled()) {
+				perfGameInit.end('cancelled')
+				terminateTerrainWorkers()
+				cleanupEarlyPartial()
+				planeGeo.dispose()
+				return { dispose: () => {} }
+			}
+			await Promise.all(
+				terrainWorkerPool.map((worker, k) =>
+					(async () => {
+						for (let r = k; r < terrainRanges.length; r += terrainWorkerPool.length) {
+							if (isCancelled()) {
+								return
+							}
+							await fillHeightBatchOnWorker(worker, terrainRanges[r].start, terrainRanges[r].end)
+						}
+					})(),
+				),
+			)
+		} else {
+			let mainThreadBatchIndex = 0
+			for (const { start: bs, end: be } of terrainRanges) {
+				if (
+					mainThreadBatchIndex > 0 &&
+					mainThreadBatchIndex % TERRAIN_YIELD_EVERY_MAIN_THREAD_BATCHES === 0
+				) {
+					await yieldToMain()
+				}
+				mainThreadBatchIndex++
+				if (isCancelled()) {
+					perfGameInit.end('cancelled')
+					terminateTerrainWorkers()
+					cleanupEarlyPartial()
+					planeGeo.dispose()
+					return { dispose: () => {} }
+				}
+				await fillHeightBatchMainThread(bs, be)
+			}
+		}
+	} catch {
+		terminateTerrainWorkers()
+		terrainWorkerPool = null
+		vHMin = Infinity
+		vHMax = -Infinity
+		let idx = 0
+		for (const { start: bs, end: be } of terrainRanges) {
+			if (isCancelled()) {
+				perfGameInit.end('cancelled')
+				cleanupEarlyPartial()
+				planeGeo.dispose()
+				return { dispose: () => {} }
+			}
+			if (idx > 0 && idx % TERRAIN_YIELD_EVERY_MAIN_THREAD_BATCHES === 0) {
+				await yieldToMain()
+			}
+			idx++
+			await fillHeightBatchMainThread(bs, be)
+		}
+	}
+
+	terminateTerrainWorkers()
+
+	if (isCancelled()) {
+		perfGameInit.end('cancelled')
+		cleanupEarlyPartial()
+		planeGeo.dispose()
+		return { dispose: () => {} }
+	}
+
+	perfGameInit.step('terrain_heights')
+
+	computeHeightfieldNormalsForPlaneGrid(planeGeo, seg)
+	perfGameInit.step('terrain_normals')
+
 	const vHSpan = vHMax - vHMin
 
 	const DOME_RADIUS = 92
@@ -404,10 +477,15 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	let doorAngleCenter = DEFAULT_DOME_DOOR_ANGLE_CENTER
 
 	const baseTerrainColors = new Float32Array(pos.count * 3)
+	const colors = new Float32Array(pos.count * 3)
+	const innerR = DOME_RADIUS + 12
+	const outerR = DOME_RADIUS + 168
+
 	for (let start = 0; start < pos.count; start += TERRAIN_BATCH) {
 		await yieldToMain()
 		if (isCancelled()) {
-			terminateTerrainWorker()
+			perfGameInit.end('cancelled')
+			terminateTerrainWorkers()
 			cleanupEarlyPartial()
 			planeGeo.dispose()
 			return { dispose: () => {} }
@@ -431,17 +509,27 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 			baseTerrainColors[i * 3] = rgb.r
 			baseTerrainColors[i * 3 + 1] = rgb.g
 			baseTerrainColors[i * 3 + 2] = rgb.b
+			const baseRgb = { r: rgb.r, g: rgb.g, b: rgb.b }
+			const rgbDome = domeGardenTurfRgb(lx, ly, baseRgb, domeCx, domeCz, innerR, outerR)
+			const micro = noise2(lx * 0.012, ly * 0.011) * 0.028
+			colors[i * 3] = THREE.MathUtils.clamp(rgbDome.r + micro, 0, 1)
+			colors[i * 3 + 1] = THREE.MathUtils.clamp(rgbDome.g + micro, 0, 1)
+			colors[i * 3 + 2] = THREE.MathUtils.clamp(rgbDome.b + micro * 0.75, 0, 1)
 		}
 	}
-	const colors = new Float32Array(pos.count * 3)
+	perfGameInit.step('terrain_colors')
 	planeGeo.setAttribute('color', new THREE.BufferAttribute(colors, 3))
 
 	function refreshDomeTerrainTint() {
 		const colorAttr = planeGeo.attributes.color
 		const out = colorAttr.array
 		const posAttr = planeGeo.attributes.position
-		const innerR = DOME_RADIUS + 12
-		const outerR = DOME_RADIUS + 168
+		const margin = 80
+		const nearWood = (lx, ly) => {
+			const wx = lx
+			const wz = -ly
+			return Math.hypot(wx - domeCx, wz - domeCz) <= outerR + margin
+		}
 		for (let i = 0; i < posAttr.count; i++) {
 			const lx = posAttr.getX(i)
 			const ly = posAttr.getY(i)
@@ -450,8 +538,14 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 				g: baseTerrainColors[i * 3 + 1],
 				b: baseTerrainColors[i * 3 + 2],
 			}
-			const rgb = domeGardenTurfRgb(lx, ly, baseRgb, domeCx, domeCz, innerR, outerR)
 			const micro = noise2(lx * 0.012, ly * 0.011) * 0.028
+			if (!nearWood(lx, ly)) {
+				out[i * 3] = THREE.MathUtils.clamp(baseRgb.r + micro, 0, 1)
+				out[i * 3 + 1] = THREE.MathUtils.clamp(baseRgb.g + micro, 0, 1)
+				out[i * 3 + 2] = THREE.MathUtils.clamp(baseRgb.b + micro * 0.75, 0, 1)
+				continue
+			}
+			const rgb = domeGardenTurfRgb(lx, ly, baseRgb, domeCx, domeCz, innerR, outerR)
 			out[i * 3] = THREE.MathUtils.clamp(rgb.r + micro, 0, 1)
 			out[i * 3 + 1] = THREE.MathUtils.clamp(rgb.g + micro, 0, 1)
 			out[i * 3 + 2] = THREE.MathUtils.clamp(rgb.b + micro * 0.75, 0, 1)
@@ -470,8 +564,6 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		})
 	}
 
-	refreshDomeTerrainTint()
-
 	const ground = new THREE.Mesh(
 		planeGeo,
 		new THREE.MeshStandardMaterial({
@@ -486,6 +578,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	ground.receiveShadow = true
 	ground.castShadow = true
 	scene.add(ground)
+	perfGameInit.step('ground')
 
 	const forest = await createForestInstancedMeshes({
 		vHMin,
@@ -496,6 +589,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	for (const m of forest.meshes) {
 		scene.add(m)
 	}
+	perfGameInit.step('forest')
 
 	const domeGroundY = DEFAULT_DOME_GROUND_Y
 	const doorYaw = doorAngleCenter - DOME_BAKED_ENTRANCE_ATAN2
@@ -508,6 +602,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 		doorYaw,
 	})
 	scene.add(woodDome.group)
+	perfGameInit.step('dome_wood')
 
 	const defaultPlaneLy = -DEFAULT_DOME_CENTER_Z
 	const pickOrePlane =
@@ -542,6 +637,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 			terrainHeightAtPlaneXY,
 		})
 	}
+	perfGameInit.step('dome_ore')
 
 	const tickState = createTickState()
 	const tickHud = document.createElement('div')
@@ -1012,6 +1108,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	sun.shadow.camera.top = sc
 	sun.shadow.camera.bottom = -sc
 	scene.add(sun)
+	perfGameInit.step('scene_content')
 
 	const forward = new THREE.Vector3()
 	const right = new THREE.Vector3()
@@ -1195,6 +1292,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 	}
 	updateChaseCamera()
 	animate()
+	perfGameInit.end('ready')
 
 	function onResize() {
 		const w = container.clientWidth
@@ -1215,7 +1313,7 @@ export async function mountGame(container, { isCancelled = () => false } = {}) {
 			cancelAnimationFrame(terrainTintRaf)
 			terrainTintRaf = 0
 		}
-		terminateTerrainWorker()
+		terminateTerrainWorkers()
 		cancelAnimationFrame(requestId)
 		resizeObserver.disconnect()
 		window.removeEventListener('keydown', onKeyDown)

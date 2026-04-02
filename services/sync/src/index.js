@@ -36,12 +36,17 @@ import {
 	resolve,
 	waitForStoreReady,
 } from '@MaiaOS/loader'
+import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
 import { agentIDToDidKey, verifyInvocationToken } from '@MaiaOS/maia-ucan'
 import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 // Resolve db path relative to sync package root (not process.cwd) so persistence is stable across restarts
 const _syncDir = pathResolve(dirname(fileURLToPath(import.meta.url)), '..')
+
+const opsSync = createOpsLogger('sync')
+const opsRegister = createOpsLogger('register')
+const opsLlm = createOpsLogger('llm')
 
 const PORT = process.env.PORT || 4201
 const PEER_DB_PATH = process.env.PEER_DB_PATH || './pg-lite.db'
@@ -51,13 +56,15 @@ const agentSecret = process.env.AVEN_MAIA_SECRET
 const storageType = process.env.PEER_SYNC_STORAGE || 'pglite'
 if (storageType === 'in-memory' || storageType === 'jazz-cloud') {
 	throw new Error(
-		'[sync] Server requires persistent storage. Use PEER_SYNC_STORAGE=pglite or PEER_SYNC_STORAGE=postgres. No in-memory or jazz-cloud.',
+		`${OPS_PREFIX.sync} Server requires persistent storage. Use PEER_SYNC_STORAGE=pglite or PEER_SYNC_STORAGE=postgres. No in-memory or jazz-cloud.`,
 	)
 }
 const usePGlite = storageType === 'pglite'
 const usePostgres = storageType === 'postgres'
 if (!usePGlite && !usePostgres) {
-	throw new Error(`[sync] PEER_SYNC_STORAGE must be pglite or postgres. Got: ${storageType}`)
+	throw new Error(
+		`${OPS_PREFIX.sync} PEER_SYNC_STORAGE must be pglite or postgres. Got: ${storageType}`,
+	)
 }
 // Resolve relative to sync package dir (stable across runs regardless of cwd)
 const dbPath = usePGlite ? pathResolve(_syncDir, PEER_DB_PATH) : undefined
@@ -109,7 +116,7 @@ function corsHeadersForRequest(req) {
 		if (!origin) {
 			return { ...base, 'Access-Control-Allow-Origin': CONFIGURED_CORS_ORIGIN, Vary: 'Origin' }
 		}
-		console.warn('[sync] CORS: origin not allowed (dev)', origin)
+		opsSync.warn('CORS: origin not allowed (dev)', origin)
 		return { ...base, Vary: 'Origin' }
 	}
 	if (!origin) {
@@ -118,7 +125,7 @@ function corsHeadersForRequest(req) {
 	if (origin === CONFIGURED_CORS_ORIGIN) {
 		return { ...base, 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
 	}
-	console.warn('[sync] CORS: origin not allowed', origin)
+	opsSync.warn('CORS: origin not allowed', origin)
 	return { ...base, Vary: 'Origin' }
 }
 
@@ -245,7 +252,7 @@ async function pushCapabilityToStream(worker, { sub, cmd, pol, exp }) {
 			cotype: 'costream',
 		})
 	} catch (e) {
-		console.warn('[register] Failed to push capability to stream', e?.message)
+		opsRegister.warn('Failed to push capability to stream', e?.message)
 	}
 }
 
@@ -802,7 +809,7 @@ async function handleLLMChat(req, worker) {
 	}
 	const bindingOk = await verifyAccountBinding(worker.peer, accountId, payload.iss)
 	if (!bindingOk) {
-		console.warn('[llm] Account binding failed', { accountId: accountId?.slice(0, 12) })
+		opsLlm.warn('Account binding failed', { accountId: accountId?.slice(0, 12) })
 		return jsonResponse(
 			{ error: 'Forbidden', message: 'Account binding verification failed' },
 			403,
@@ -812,7 +819,7 @@ async function handleLLMChat(req, worker) {
 	}
 	const hasCap = await hasValidCapability(worker, accountId, '/llm/chat')
 	if (!hasCap) {
-		console.warn('[llm] No valid capability', { accountId: accountId?.slice(0, 12) })
+		opsLlm.warn('No valid capability', { accountId: accountId?.slice(0, 12) })
 		return jsonResponse(
 			{
 				error: 'Forbidden',
@@ -847,7 +854,7 @@ async function handleLLMChat(req, worker) {
 			try {
 				data = JSON.parse(txt)
 			} catch {}
-			console.error('[llm] RedPill upstream error', res.status, data.error || txt.slice(0, 200))
+			opsLlm.error('RedPill upstream error', res.status, data.error || txt.slice(0, 200))
 			return jsonResponse(
 				{ error: data.error || `HTTP ${res.status}`, message: data.message || txt.slice(0, 200) },
 				500,
@@ -859,7 +866,7 @@ async function handleLLMChat(req, worker) {
 		return jsonResponse(data, 200, {}, req)
 	} catch (e) {
 		const msg = e?.message ?? String(e)
-		console.error('[llm]', msg, e)
+		console.error(OPS_PREFIX.llm, msg, e)
 		return jsonResponse({ error: 'Failed to process LLM request', message: msg }, 500, {}, req)
 	}
 }
@@ -970,7 +977,7 @@ Bun.serve({
 				if (syncHandler) await syncHandler.open(ws)
 				else ws.close(1008, 'Sync initializing')
 			} catch (e) {
-				console.error('[sync] websocket open:', e?.message ?? e)
+				opsSync.error('websocket open:', e?.message ?? e)
 				try {
 					ws.close(1011, 'Internal error')
 				} catch (_closeErr) {}
@@ -981,21 +988,21 @@ Bun.serve({
 				if (!syncHandler) return
 				await syncHandler.message(ws, wsMessageToUtf8String(msg))
 			} catch (e) {
-				console.error('[sync] websocket message:', e?.message ?? e)
+				opsSync.error('websocket message:', e?.message ?? e)
 			}
 		},
 		async close(ws, code, reason) {
 			try {
 				syncHandler?.close(ws, code, reason)
 			} catch (e) {
-				console.error('[sync] websocket close:', e?.message ?? e)
+				opsSync.error('websocket close:', e?.message ?? e)
 			}
 		},
 		error(_ws, _err) {},
 	},
 })
 
-console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
+opsSync.log('Listening on 0.0.0.0:%s', PORT)
 
 ;(async () => {
 	try {
@@ -1006,11 +1013,11 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 		if (dbPath && !process.env.PEER_DB_PATH) process.env.PEER_DB_PATH = dbPath
 
 		const storageLabel = usePostgres ? 'Postgres' : `PGlite at ${dbPath || './pg-lite.db'}`
-		console.log('[sync] Loading account (%s)...', storageLabel)
-		console.log('[sync] accountID=%s', `${accountID?.slice(0, 12)}...`)
+		opsSync.log('Loading account (%s)...', storageLabel)
+		opsSync.log('accountID=%s', `${accountID?.slice(0, 12)}...`)
 		if (!RED_PILL_API_KEY) {
-			console.warn(
-				'[sync] RED_PILL_API_KEY not set — LLM chat will return 500. Add to root .env and restart.',
+			opsSync.warn(
+				'RED_PILL_API_KEY not set — LLM chat will return 500. Add to root .env and restart.',
 			)
 		}
 
@@ -1019,10 +1026,10 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 			if (usePGlite) {
 				const { clearStorageForReseed } = await import('@MaiaOS/storage/clearStorageForReseed')
 				await clearStorageForReseed({ dbPath, usePostgres: false })
-				console.log('[sync] Storage cleared for reseed (DB + binary).')
+				opsSync.log('Storage cleared for reseed (DB + binary).')
 			} else {
-				console.log(
-					'[sync] PEER_SYNC_SEED=true with Postgres/Tigris: reset DB and blob manually. Skipping auto-clear.',
+				opsSync.log(
+					'PEER_SYNC_SEED=true with Postgres/Tigris: reset DB and blob manually. Skipping auto-clear.',
 				)
 			}
 		}
@@ -1061,7 +1068,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 					await localNode.syncManager.gracefulShutdown()
 				}
 			} catch (e) {
-				console.error('[sync] Graceful shutdown error:', e?.message ?? e)
+				opsSync.error('Graceful shutdown error:', e?.message ?? e)
 			}
 			process.exit(0)
 		}
@@ -1094,7 +1101,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 			const vibeRegistries = await filterVibesForSeeding(allVibeRegistries, seedVibesConfig)
 			if (vibeRegistries.length === 0) {
 				throw new Error(
-					'[sync] Genesis sync requires vibes. getAllVibeRegistries returned none or SEED_VIBES filtered all.',
+					`${OPS_PREFIX.sync} Genesis sync requires vibes. getAllVibeRegistries returned none or SEED_VIBES filtered all.`,
 				)
 			}
 			const { configs: mergedConfigs, data } = await buildSeedConfig(vibeRegistries)
@@ -1130,18 +1137,18 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 			})
 			if (seedResult?.ok === false && seedResult?.errors?.length) {
 				const msg = seedResult.errors.map((e) => e?.message ?? e).join('; ')
-				throw new Error(`[sync] Genesis seed failed: ${msg}`)
+				throw new Error(`${OPS_PREFIX.sync} Genesis seed failed: ${msg}`)
 			}
-			console.log(
-				`[sync] Genesis seeded: ${vibeRegistries.length} vibe(s) (schemas + scaffold). Set PEER_SYNC_SEED=false for subsequent restarts.`,
+			opsSync.log(
+				`Genesis seeded: ${vibeRegistries.length} vibe(s) (schemas + scaffold). Set PEER_SYNC_SEED=false for subsequent restarts.`,
 			)
 		} else {
-			console.log('[sync] PEER_SYNC_SEED not set — using persisted scaffold (skip seed).')
+			opsSync.log('PEER_SYNC_SEED not set — using persisted scaffold (skip seed).')
 		}
 
 		// Seed /admin for AVEN_MAIA_ACCOUNT (grants all endpoints). Must run after scaffold exists (genesis or prior run).
 		await seedAdminCapabilityForServerAccount(agentWorker).catch((e) =>
-			console.warn('[sync] seedAdminCapabilityForServerAccount:', e?.message),
+			opsSync.warn('seedAdminCapabilityForServerAccount:', e?.message),
 		)
 
 		// Self-register Maia aven in registries.avens for profile resolution (idempotent)
@@ -1152,7 +1159,7 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 				username: maiaName,
 				accountId: accountID,
 				profileId,
-			}).catch((e) => console.warn('[sync] Self-register aven:', e?.message))
+			}).catch((e) => opsSync.warn('Self-register aven:', e?.message))
 		}
 
 		// Add AVEN_MAIA_GUARDIAN as admin of °Maia spark guardian group. Retry on each start until success (account may sync after client connects).
@@ -1165,17 +1172,17 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 			}
 			tryAddGuardian()
 				.then((ok) => {
-					if (ok) console.log('[sync] Added guardian as admin of °Maia spark.')
+					if (ok) opsSync.log('Added guardian as admin of °Maia spark.')
 				})
 				.catch((e) => {
-					console.warn('[sync] Guardian add deferred (will retry):', e?.message ?? e)
+					opsSync.warn('Guardian add deferred (will retry):', e?.message ?? e)
 					const retryMs = 15000
 					const id = setInterval(async () => {
 						try {
 							const ok = await tryAddGuardian()
 							if (ok) {
 								clearInterval(id)
-								console.log('[sync] Added guardian as admin of °Maia spark.')
+								opsSync.log('Added guardian as admin of °Maia spark.')
 							}
 						} catch (err) {
 							const msg = err?.message ?? ''
@@ -1230,9 +1237,9 @@ console.log(`[sync] Listening on 0.0.0.0:${PORT}`)
 					} catch (_e) {}
 			},
 		}
-		console.log('[sync] Ready')
+		opsSync.log('Ready')
 	} catch (e) {
-		console.error('[sync] Init failed:', e?.message ?? e)
+		opsSync.error('Init failed:', e?.message ?? e)
 		if (e?.stack) console.error(e.stack)
 		process.exit(1)
 	}

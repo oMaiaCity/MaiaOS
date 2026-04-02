@@ -9,6 +9,7 @@
  * - Any other write path
  */
 
+import { debugLog } from '@MaiaOS/logs'
 import { EXCEPTION_FACTORIES } from '../../factories/registry.js'
 import * as groups from '../groups/groups.js'
 import {
@@ -282,8 +283,7 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 
 					// Regular co-value - index it (await ensures storage not complete until indexed)
 					await indexCoValue(peer, updatedCoValueCore)
-					if (typeof process !== 'undefined' && process.env?.DEBUG)
-						console.log('[DEBUG storage-hook] indexed coId=', coId)
+					debugLog('db', 'storageHook', 'indexed coId=', coId)
 				} catch (error) {
 					const isFactoryCompilationError = error?.message?.includes('Failed to compile factory')
 					if (!isFactoryCompilationError) {

@@ -7,6 +7,7 @@
  */
 
 import { collectInboxMessageCoIds, findNewSuccessFromTarget } from '@MaiaOS/db'
+import { debugLog, isDebugChannelEnabled } from '@MaiaOS/logs'
 
 function deriveInboxRef(actorId) {
 	if (!actorId || typeof actorId !== 'string') return null
@@ -26,17 +27,6 @@ export class Runtime {
 		this._processingByInbox = new Map()
 		this._started = false
 		this._listeners = new Map() // event -> Set<callback>
-	}
-
-	_isDebug() {
-		return (
-			typeof window !== 'undefined' &&
-			(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
-		)
-	}
-
-	_log(...args) {
-		if (this._isDebug()) console.log(...args)
 	}
 
 	/**
@@ -460,12 +450,12 @@ export class Runtime {
 		if (!actorRefs?.length) return
 
 		const watchedIds = []
-		const verboseRuntime =
-			typeof localStorage !== 'undefined' && localStorage.getItem('MAIA_DEBUG_RUNTIME') === '1'
 
 		for (const actorCoId of actorRefs) {
 			if (typeof actorCoId !== 'string' || !actorCoId.startsWith('co_z')) {
-				this._log('[Runtime] start: skipping non-co-id actorRef', { actorCoId })
+				debugLog('engines', 'runtime', '[Runtime] start: skipping non-co-id actorRef', {
+					actorCoId,
+				})
 				continue
 			}
 			const actorConfig = await this.getActorConfig(actorCoId)
@@ -482,18 +472,20 @@ export class Runtime {
 			if (typeof actorId !== 'string' || !actorId.startsWith('co_z')) {
 				throw new Error(`[Runtime] start: actor config $id must be co-id: ${actorCoId}`)
 			}
-			if (verboseRuntime) {
-				this._log('[Runtime] start: watching inbox', { actorCoId, inboxCoId })
+			if (isDebugChannelEnabled('engines', 'runtime')) {
+				debugLog('engines', 'runtime', '[Runtime] start: watching inbox', { actorCoId, inboxCoId })
 			}
 			this.watchInbox(inboxCoId, actorId, actorConfig)
 			watchedIds.push(actorCoId)
 		}
 
-		if (watchedIds.length && this._isDebug()) {
+		if (watchedIds.length && isDebugChannelEnabled('engines', 'runtime')) {
 			const max = 8
 			const head = watchedIds.slice(0, max).map((id) => id.slice(0, 14))
 			const more = watchedIds.length > max ? ` (+${watchedIds.length - max} more)` : ''
-			console.log(
+			debugLog(
+				'engines',
+				'runtime',
 				`[Runtime] start: watching ${watchedIds.length} inbox(es): ${head.join(', ')}${more}`,
 			)
 		}

@@ -16,6 +16,7 @@
 		}
 	},
 	"dependencies": {
+		"@MaiaOS/logs": "workspace:*",
 		"@aws-sdk/client-s3": "^3.1011.0",
 		"@electric-sql/pglite": "latest",
 		"@noble/hashes": "^2.0.1",

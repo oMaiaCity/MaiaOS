@@ -16,6 +16,7 @@
 		"tauri:icon": "tauri icon brand/logo_app.svg -o src-tauri/icons"
 	},
 	"dependencies": {
+		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/game": "workspace:*",
 		"@MaiaOS/loader": "workspace:*",
 		"@MaiaOS/peer": "workspace:*",

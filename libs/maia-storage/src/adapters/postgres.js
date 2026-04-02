@@ -10,11 +10,14 @@
  * of PG. A _blobRef JSON object replaces the raw payload in the transactions table.
  */
 
+import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
 import { emptyKnownState, logger } from 'cojson'
 import { StorageApiAsync } from 'cojson/dist/storage/storageAsync.js'
 import { DeletedCoValueDeletionStatus } from 'cojson/dist/storage/types.js'
 import pg from 'pg'
 import { runMigrations } from '../schema/postgres.js'
+
+const opsStor = createOpsLogger('STORAGE')
 
 function wrapClient(client) {
 	return {
@@ -366,14 +369,16 @@ class PostgresClient {
  */
 export async function createPostgresAdapter(connectionString, blobStore) {
 	if (typeof window !== 'undefined' || typeof process === 'undefined' || !process.versions?.node) {
-		throw new Error('[STORAGE] Postgres adapter is only available in Node.js/server environments')
+		throw new Error(
+			`${OPS_PREFIX.STORAGE} Postgres adapter is only available in Node.js/server environments`,
+		)
 	}
 
 	const client = new pg.Client({ connectionString })
 	await client.connect()
 
 	if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
-		console.log('[STORAGE] Postgres connected, running migrations...')
+		opsStor.log('Postgres connected, running migrations...')
 	}
 
 	const db = wrapClient(client)

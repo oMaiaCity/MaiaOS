@@ -101,6 +101,7 @@ Bun.serve({
 			new Response(
 				JSON.stringify({
 					DEV: true,
+					LOG_MODE: process.env.LOG_MODE ?? '',
 					VITE_AVEN_TEST_MODE: process.env.VITE_AVEN_TEST_MODE || '',
 					VITE_AVEN_TEST_ACCOUNT: process.env.VITE_AVEN_TEST_ACCOUNT || '',
 					VITE_AVEN_TEST_SECRET: process.env.VITE_AVEN_TEST_SECRET || '',

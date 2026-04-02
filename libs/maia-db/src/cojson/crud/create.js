@@ -4,19 +4,10 @@
  * Provides the create() method for creating new CoValues.
  */
 
+import { perfEnginesChat } from '@MaiaOS/logs'
 import { createCoValueForSpark } from '../covalue/create-covalue-for-spark.js'
-import { extractCoValueData } from './data-extraction.js'
-
-// Enable: localStorage.setItem('maia:perf:chat', '1')
-const _perfChat =
-	typeof window !== 'undefined' && localStorage?.getItem('maia:perf:chat') === '1'
-		? {
-				now: () => performance.now(),
-				log: (label, ms) => console.log(`[Perf:chat] ${label}: ${ms}ms`),
-			}
-		: { now: () => 0, log: () => {} }
-
 import * as collectionHelpers from './collection-helpers.js'
+import { extractCoValueData } from './data-extraction.js'
 
 // Schema indexing is handled by storage-level hooks (more resilient than API hooks)
 // No CRUD-level hooks needed - storage hook catches ALL writes
@@ -105,7 +96,7 @@ export async function create(peer, schema, data, options = {}) {
 
 	// Chat message: { role, content, displayName }
 	const isChatMessage = data && 'role' in data && 'content' in data
-	const t0 = isChatMessage ? _perfChat.now() : 0
+	const t0 = isChatMessage ? perfEnginesChat.now() : 0
 
 	const { coValue } = await createCoValueForSpark(peer, spark, {
 		factory: schema,
@@ -116,7 +107,10 @@ export async function create(peer, schema, data, options = {}) {
 	})
 
 	if (isChatMessage) {
-		_perfChat.log('create.createCoValueForSpark', Math.round((_perfChat.now() - t0) * 100) / 100)
+		perfEnginesChat.timing(
+			'create.createCoValueForSpark',
+			Math.round((perfEnginesChat.now() - t0) * 100) / 100,
+		)
 	}
 
 	// Fast path: coValue is local and available—extract from node, no read/store wait
@@ -133,14 +127,17 @@ export async function create(peer, schema, data, options = {}) {
 	// Fallback: coValue not yet available (rare remote/edge case)
 	const store = await peer.read(null, coValue.id, null, null, { deepResolve: false })
 	const { waitForStoreReady } = await import('./read-operations.js')
-	const t1 = isChatMessage ? _perfChat.now() : 0
+	const t1 = isChatMessage ? perfEnginesChat.now() : 0
 	try {
 		await waitForStoreReady(store, coValue.id, 5000)
 	} catch (_e) {
 		return { id: coValue.id, ...data, type: cotype, schema }
 	}
 	if (isChatMessage) {
-		_perfChat.log('create.waitForStoreReady', Math.round((_perfChat.now() - t1) * 100) / 100)
+		perfEnginesChat.timing(
+			'create.waitForStoreReady',
+			Math.round((perfEnginesChat.now() - t1) * 100) / 100,
+		)
 	}
 	const extracted = store.value
 	if (extracted && !extracted.error) {

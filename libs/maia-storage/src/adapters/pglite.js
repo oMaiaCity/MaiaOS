@@ -12,10 +12,13 @@
  * to prevent browser bundlers from trying to resolve @electric-sql/pglite.
  */
 
+import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
 import { emptyKnownState, logger } from 'cojson'
 import { StorageApiAsync } from 'cojson/dist/storage/storageAsync.js'
 import { DeletedCoValueDeletionStatus } from 'cojson/dist/storage/types.js'
 import { runMigrations } from '../schema/postgres.js'
+
+const opsStor = createOpsLogger('STORAGE')
 
 /**
  * PGlite Transaction Interface
@@ -380,7 +383,7 @@ class PGliteClient {
 export async function createPGliteAdapter(dbPath, blobStore) {
 	// PGlite is server-only - check environment first
 	if (typeof window !== 'undefined' || typeof process === 'undefined' || !process.versions?.node) {
-		throw new Error('[STORAGE] PGlite is only available in Node.js/server environments')
+		throw new Error(`${OPS_PREFIX.STORAGE} PGlite is only available in Node.js/server environments`)
 	}
 
 	const path = await import('node:path')
@@ -406,14 +409,16 @@ export async function createPGliteAdapter(dbPath, blobStore) {
 	} catch (importError) {
 		if (typeof window !== 'undefined') {
 			throw new Error(
-				'[STORAGE] PGlite cannot be imported in browser environment. This is a server-only module.',
+				`${OPS_PREFIX.STORAGE} PGlite cannot be imported in browser environment. This is a server-only module.`,
 			)
 		}
 		throw importError
 	}
 
 	if (!PGlite) {
-		throw new Error('[STORAGE] Failed to import PGlite - module structure may have changed')
+		throw new Error(
+			`${OPS_PREFIX.STORAGE} Failed to import PGlite - module structure may have changed`,
+		)
 	}
 
 	const fs = await import('node:fs/promises')
@@ -446,7 +451,7 @@ export async function createPGliteAdapter(dbPath, blobStore) {
 			if (isStale) {
 				await fs.unlink(postmasterPidPath)
 				if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
-					console.log('[STORAGE] Removed stale postmaster.pid from previous run')
+					opsStor.log('Removed stale postmaster.pid from previous run')
 				}
 			}
 		}

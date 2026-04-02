@@ -2,9 +2,10 @@ import { normalizeCoValueData, ReactiveStore } from '@MaiaOS/db'
 import { validateViewDef } from '@MaiaOS/factories'
 import { containsExpressions, resolveExpressions } from '@MaiaOS/factories/expression-resolver'
 import { extractDOMValuesAsync } from '@MaiaOS/factories/payload-resolver'
+import { createOpsLogger } from '@MaiaOS/logs'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
-import { perfPipeline, traceView } from '../utils/debug.js'
+import { perfEnginesPipeline, traceView } from '../utils/debug.js'
 import { loadContextStore, readStore } from '../utils/resolve-helpers.js'
 import {
 	BOOLEAN_ATTRS,
@@ -14,6 +15,8 @@ import {
 } from '../utils/security.js'
 import { isContentEditableUpdateEvent, toKebabCase } from '../utils/utils.js'
 import { RENDER_STATES } from './actor.engine.js'
+
+const viewOps = createOpsLogger('ViewEngine')
 
 function sanitizeAttributeWhitelist(value) {
 	if (value === null || value === undefined) return ''
@@ -744,7 +747,7 @@ export class ViewEngine {
 						typeof window !== 'undefined' &&
 						(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
 					) {
-						console.error('[ViewEngine] Event handler error:', eventDef?.send || eventName, error)
+						viewOps.error('Event handler error:', eventDef?.send || eventName, error)
 					}
 				}
 			})
@@ -818,7 +821,7 @@ export class ViewEngine {
 			return
 		}
 
-		perfPipeline.start(`view:${eventName}`)
+		perfEnginesPipeline.start(`view:${eventName}`)
 		traceView(eventName, actorId)
 
 		if (e.type === 'dragover' || e.type === 'drop' || e.type === 'dragenter') {
@@ -888,7 +891,7 @@ export class ViewEngine {
 				const hasActor = !!actor
 				const hasMachine = !!actor?.machine
 				const hasProcess = !!actor?.process
-				console.warn('[ViewEngine] Event not delivered - actor missing machine/process:', {
+				viewOps.warn('Event not delivered - actor missing machine/process:', {
 					event: eventDef.send,
 					actorId,
 					hasActor,
@@ -946,7 +949,7 @@ export class ViewEngine {
 			const data = result?.ok === true ? result.data : result
 			const coId = data?.coId ?? data?.id
 			if (!coId || typeof coId !== 'string') {
-				console.warn('[ViewEngine] Upload completed but no co-id returned:', { result, data })
+				viewOps.warn('Upload completed but no co-id returned:', { result, data })
 				return
 			}
 			payloadToValidate = { [blobRefKey]: coId, mimeType: data?.mimeType ?? payload?.mimeType }
@@ -976,7 +979,7 @@ export class ViewEngine {
 				typeof window !== 'undefined' &&
 				(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
 			) {
-				console.warn('[ViewEngine] Payload validation failed - event not delivered:', {
+				viewOps.warn('Payload validation failed - event not delivered:', {
 					event: eventName,
 					actorId: actorId?.slice(0, 24),
 					errors: validation.errors,
@@ -1000,7 +1003,7 @@ export class ViewEngine {
 			if (allMatch) return
 		}
 
-		perfPipeline.step('view:deliver', { event: eventName })
+		perfEnginesPipeline.step('view:deliver', { event: eventName })
 		await this.actorOps?.deliverEvent?.(actorId, actorId, eventName, payloadToValidate)
 
 		if (!isUpdateInputType) {
