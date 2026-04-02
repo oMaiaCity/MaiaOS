@@ -61,7 +61,7 @@ function hydrateCobinaryPreviews(root, dataEngine) {
 	const imgs = root.querySelectorAll('img[data-co-id]')
 	imgs.forEach((img) => {
 		const coId = img.getAttribute('data-co-id')
-		if (!coId || !coId.startsWith('co_z')) {
+		if (!coId?.startsWith('co_z')) {
 			if (!img.src) img.src = COBINARY_PLACEHOLDER
 			return
 		}
@@ -580,7 +580,7 @@ export class ViewEngine {
 					element.innerHTML = await renderMarkdown(rawText)
 				} else if (textValue && typeof textValue === 'object') {
 					// Format objects/arrays as JSON strings for display
-					if (textValue['@label'] && textValue.id && textValue.id.startsWith('co_z')) {
+					if (textValue['@label'] && textValue.id?.startsWith('co_z')) {
 						const truncatedId = `${textValue.id.substring(0, 15)}...`
 						element.textContent = `${textValue['@label']} (${truncatedId})`
 					} else {
@@ -651,7 +651,7 @@ export class ViewEngine {
 
 	async _renderSlot(node, data, wrapperElement, actorId) {
 		const slotKey = node.$slot
-		if (!slotKey || !slotKey.startsWith('$')) {
+		if (!slotKey?.startsWith('$')) {
 			return
 		}
 		const contextKey = slotKey.slice(1)

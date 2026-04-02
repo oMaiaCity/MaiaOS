@@ -527,7 +527,7 @@ export async function addGroupMember(node, group, accountCoId, role, peer = null
 		throw new Error('[MaiaDB] Group does not support addMember')
 	}
 
-	if (!accountCoId || !accountCoId.startsWith('co_z')) {
+	if (!accountCoId?.startsWith('co_z')) {
 		throw new Error(
 			'[MaiaDB] accountCoId required (co_z...). Human must sign in from maia first so account syncs.',
 		)
@@ -593,7 +593,7 @@ export function wouldLeaveNoAdmins(groupContent, memberIdToRemove) {
  */
 export async function removeGroupMember(group, member) {
 	const memberId = typeof member === 'string' ? member : (member?.id ?? member?.$jazz?.id)
-	if (!memberId || !memberId.startsWith('co_z')) {
+	if (!memberId?.startsWith('co_z')) {
 		throw new Error('[removeGroupMember] member must be co-id (co_z...) or account content with .id')
 	}
 	if (typeof group.removeMember !== 'function') {

@@ -792,7 +792,7 @@ async function readSparksFromAccount(peer, options = {}) {
 	)
 
 	const sparksId = await getSparksRegistryId(peer)
-	if (!sparksId || !sparksId.startsWith('co_')) {
+	if (!sparksId?.startsWith('co_')) {
 		return store
 	}
 
@@ -866,7 +866,7 @@ async function readHumansFromRegistries(peer, options = {}) {
 	const store = peer.subscriptionCache.getOrCreateStore(cacheKey, () => new ReactiveStore([]))
 
 	const humansId = await getHumansRegistryId(peer)
-	if (!humansId || !humansId.startsWith('co_')) {
+	if (!humansId?.startsWith('co_')) {
 		return store
 	}
 
@@ -985,7 +985,7 @@ async function readAvensFromRegistries(peer, options = {}) {
 	const store = peer.subscriptionCache.getOrCreateStore(cacheKey, () => new ReactiveStore([]))
 
 	const avensId = await getAvensRegistryId(peer)
-	if (!avensId || !avensId.startsWith('co_')) {
+	if (!avensId?.startsWith('co_')) {
 		return store
 	}
 
@@ -1283,7 +1283,7 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 		}
 
 		const content = peer.getCurrentContent(coListCore)
-		if (!content || !content.toJSON) {
+		if (!content?.toJSON) {
 			return
 		}
 

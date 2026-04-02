@@ -35,7 +35,7 @@ export default {
 		}
 
 		const os = actor.actorOps?.os
-		if (!os || !os.do) {
+		if (!os?.do) {
 			return createErrorResult([
 				createErrorEntry('structural', '[uploadProfileImage] Database engine not available'),
 			])

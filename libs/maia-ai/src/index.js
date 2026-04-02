@@ -16,7 +16,7 @@ import {
 import { ONNX, SherpaONNXBridge, STT, VAD } from '@runanywhere/web-onnx'
 
 /** Re-export for consumers */
-export { AudioCapture, VAD, SpeechActivity }
+export { AudioCapture, SpeechActivity, VAD }
 
 /**
  * Transcribe audio to text (STT). Use after VAD detects speech end.

@@ -968,7 +968,7 @@ export class ActorEngine {
 
 	async processEvents(actorId, preloadedMessages = null) {
 		const actor = this.actors.get(actorId)
-		if (!actor || !actor.inboxCoId || !this.dataEngine || actor._isProcessing) return
+		if (!actor?.inboxCoId || !this.dataEngine || actor._isProcessing) return
 		actor._isProcessing = true
 		let hadUnhandledMessages = false
 		try {

@@ -335,7 +335,7 @@ function agentIdsMatch(a, b) {
 
 /** Resolve agentId (sealer_z...) to accountId by finding account whose initialAdmin matches. */
 async function resolveAgentIdToAccountId(worker, agentId) {
-	if (!agentId || !agentId.startsWith('sealer_')) return null
+	if (!agentId?.startsWith('sealer_')) return null
 	try {
 		// Resolve server's agent to its account (AVEN_MAIA_ACCOUNT has /admin capability)
 		const serverAccountId = worker.account?.id ?? worker.account?.$jazz?.id ?? accountID

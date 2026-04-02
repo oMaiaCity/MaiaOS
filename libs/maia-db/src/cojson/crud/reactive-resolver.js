@@ -158,7 +158,7 @@ export function resolveFactoryReactive(peer, factoryKey, options = {}) {
 export function resolveCoValueReactive(peer, coId, _options = {}) {
 	const store = new ReactiveStore({ loading: true })
 
-	if (!coId || !coId.startsWith('co_z')) {
+	if (!coId?.startsWith('co_z')) {
 		store._set({ loading: false, error: 'Invalid co-id' })
 		return store
 	}
@@ -212,7 +212,7 @@ export function resolveCoValueReactive(peer, coId, _options = {}) {
 export function resolveQueryReactive(peer, queryDef, options = {}) {
 	const store = new ReactiveStore({ loading: true, items: [] })
 
-	if (!queryDef || !queryDef.factory) {
+	if (!queryDef?.factory) {
 		store._set({ loading: false, items: [], error: 'Invalid query definition' })
 		return store
 	}

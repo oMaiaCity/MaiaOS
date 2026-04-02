@@ -538,7 +538,7 @@ async function appendOp(peer, dataEngine, params) {
 	requireDataEngine(dataEngine, 'AppendOperation', 'check schema cotype')
 	const coValueCore = await ensureCoValueAvailable(peer, coId, 'AppendOperation')
 	const factoryCoId = await resolveSchemaFromCoValue(peer, coId, 'AppendOperation')
-	if (!factoryCoId || !factoryCoId.startsWith('co_z')) {
+	if (!factoryCoId?.startsWith('co_z')) {
 		throw new Error(
 			`[AppendOperation] CoValue ${coId} has no schema (missing header.meta.$factory). ` +
 				'Re-seed with PEER_SYNC_SEED=true or ensure the CoValue was created with a valid factory.',

@@ -248,7 +248,7 @@ export class ValidationEngine {
 			})
 		} catch (error) {
 			// If meta-schema already exists, that's fine (might be registered elsewhere)
-			if (!error.message || !error.message.includes('already exists')) {
+			if (!error.message?.includes('already exists')) {
 				return
 			}
 		}
@@ -270,7 +270,7 @@ export class ValidationEngine {
 				}
 			})
 		} catch (error) {
-			if (!error.message || !error.message.includes('already exists')) {
+			if (!error.message?.includes('already exists')) {
 			}
 		}
 	}
@@ -679,7 +679,7 @@ export class ValidationEngine {
 					this.ajv.addSchema(coTypesSchema, coTypesSchema.$id)
 				})
 			} catch (error) {
-				if (!error.message || !error.message.includes('already exists')) {
+				if (!error.message?.includes('already exists')) {
 				}
 			}
 		}

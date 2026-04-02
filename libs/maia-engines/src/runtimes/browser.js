@@ -231,7 +231,7 @@ export class Runtime {
 		// actionSummary is system-injected, stripped before delivery to actor
 
 		const callerId = callerActor?.id || callerActor?.config?.$id
-		if (!callerId || !callerId.startsWith('co_z')) {
+		if (!callerId?.startsWith('co_z')) {
 			return { ok: false, error: 'Caller actor must have co-id' }
 		}
 

@@ -49,7 +49,7 @@ async function ensureOsCoMap(peer, spark) {
 
 			// Get the raw CoValueCore and content after read() has loaded it
 			const osCore = peer.getCoValue(osId)
-			if (!osCore || !osCore.isAvailable()) return null
+			if (!osCore?.isAvailable()) return null
 
 			// Get the content - should work now since read() ensured it's loaded
 			const osContent = osCore.getCurrentContent?.()
@@ -108,7 +108,7 @@ export async function ensureIndexesCoMap(peer) {
 			if (!indexesStore || indexesStore.value?.error) return null
 
 			const indexesCore = peer.getCoValue(indexesId)
-			if (!indexesCore || !indexesCore.isAvailable()) return null
+			if (!indexesCore?.isAvailable()) return null
 
 			const indexesContent = indexesCore.getCurrentContent?.()
 			if (!indexesContent) return null
@@ -189,7 +189,7 @@ export async function ensureIndexesCoMap(peer) {
  * @returns {Promise<string|null>} Schema-specific index colist schema co-id or null if failed
  */
 async function ensureSchemaSpecificIndexColistSchema(peer, factoryCoId, metaSchemaCoId = null) {
-	if (!factoryCoId || !factoryCoId.startsWith('co_z')) {
+	if (!factoryCoId?.startsWith('co_z')) {
 		throw new Error(`[SchemaIndexManager] Invalid schema co-id: ${factoryCoId}`)
 	}
 
@@ -208,12 +208,12 @@ async function ensureSchemaSpecificIndexColistSchema(peer, factoryCoId, metaSche
 		}
 
 		// Fallback: try registry lookup
-		if (!metaSchemaCoId || !metaSchemaCoId.startsWith('co_z')) {
+		if (!metaSchemaCoId?.startsWith('co_z')) {
 			metaSchemaCoId = await getMetafactoryCoId(peer)
 		}
 	}
 
-	if (!metaSchemaCoId || !metaSchemaCoId.startsWith('co_z')) return null
+	if (!metaSchemaCoId?.startsWith('co_z')) return null
 
 	// Load schema definition to get its title
 	const factoryDef = await resolve(peer, factoryCoId, { returnType: 'factory' })
@@ -499,7 +499,7 @@ export async function shouldIndexCoValue(peer, coValueCore) {
 
 	// Get header metadata
 	const header = peer.getHeader(coValueCore)
-	if (!header || !header.meta) {
+	if (!header?.meta) {
 		return { shouldIndex: false, factoryCoId: null }
 	}
 
@@ -673,7 +673,7 @@ async function ensureFactoriesRegistry(peer) {
  * @returns {Promise<void>}
  */
 export async function registerFactoryCoValue(peer, schemaCoValueCore) {
-	if (!schemaCoValueCore || !schemaCoValueCore.id) {
+	if (!schemaCoValueCore?.id) {
 		return
 	}
 
@@ -754,7 +754,7 @@ export async function isFactoryCoValue(peer, coValueCore) {
 
 	// PRIMARY: Check headerMeta.$factory FIRST (always available immediately, most reliable)
 	const header = peer.getHeader(coValueCore)
-	if (!header || !header.meta) {
+	if (!header?.meta) {
 		return false
 	}
 
@@ -1035,7 +1035,7 @@ export async function reconcileIndexes(peer, options = {}) {
  * @returns {Promise<RawCoList|null>} Schema index colist or null if not found
  */
 async function getSchemaIndexColistForRemoval(peer, factoryCoId) {
-	if (!factoryCoId || !factoryCoId.startsWith('co_z')) {
+	if (!factoryCoId?.startsWith('co_z')) {
 		return null
 	}
 
@@ -1095,7 +1095,7 @@ async function getSchemaIndexColistForRemoval(peer, factoryCoId) {
  * @returns {Promise<void>}
  */
 export async function removeFromIndex(peer, coId, factoryCoId = null) {
-	if (!coId || !coId.startsWith('co_z')) return
+	if (!coId?.startsWith('co_z')) return
 
 	function removeAllFromColist(colist, id) {
 		if (!colist?.toJSON || !colist?.delete) return

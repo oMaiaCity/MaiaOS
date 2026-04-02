@@ -4,8 +4,6 @@
 
 import { ValidationEngine } from './validation.engine.js'
 
-export { ValidationEngine }
-
 // Export co-id registry (seeding only)
 export { CoIdRegistry } from './co-id-generator.js'
 // Export co-type definitions
@@ -30,6 +28,7 @@ export {
 	validateAgainstFactoryOrThrow,
 } from './validation.helper.js'
 export { validateViewDef } from './view-validator.js'
+export { ValidationEngine }
 
 import chatDataSchema from './data/chat.factory.json'
 // Import data schemas

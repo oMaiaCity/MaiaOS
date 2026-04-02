@@ -29,7 +29,7 @@ async function getFactoryFromDb(maia, factoryRef) {
 		} catch (_e) {
 			return null
 		}
-		if (!factoryCoId || !factoryCoId.startsWith('co_z')) return null
+		if (!factoryCoId?.startsWith('co_z')) return null
 	}
 	try {
 		const factoryStore = await maia.do({ op: 'factory', coId: factoryCoId })
@@ -166,7 +166,7 @@ export function hydrateCobinaryPreviews(maia) {
 	debugLog('app', 'cobinary', 'hydrateCobinaryPreviews found imgs', imgs.length)
 	imgs.forEach((img) => {
 		const coId = img.getAttribute('data-co-id')
-		if (!coId || !coId.startsWith('co_z')) {
+		if (!coId?.startsWith('co_z')) {
 			debugLog('app', 'cobinary', 'hydrateCobinaryPreviews skip invalid coId', { coId })
 			return
 		}

@@ -128,7 +128,7 @@ export async function ensureSparkOs(account, node, maiaGroup, peer, factoryCoIdM
 		osCore = node.getCoValue(osId)
 	}
 
-	if (!osCore || !osCore.isAvailable()) {
+	if (!osCore?.isAvailable()) {
 		await new Promise((r) => {
 			let unsub
 			const t = setTimeout(r, 5000)

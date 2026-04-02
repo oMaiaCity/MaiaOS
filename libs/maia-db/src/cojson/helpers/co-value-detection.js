@@ -65,7 +65,7 @@ export function isAccountGroupOrProfile(msg, peer, coId) {
  * @returns {string|null} Schema co-id or null if not found
  */
 export function extractSchemaFromMessage(msg) {
-	if (!msg || !msg.header || !msg.header.meta) {
+	if (!msg?.header?.meta) {
 		return null
 	}
 	return msg.header.meta.$factory || null
