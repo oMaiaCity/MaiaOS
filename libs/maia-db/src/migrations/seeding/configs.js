@@ -26,7 +26,7 @@ export async function seedConfigs(
 		const factoryCoId = factoryRef?.startsWith('co_z')
 			? factoryRef
 			: (factoryCoIdMap?.get(factoryRef) ?? factoryRef)
-		if (!factoryCoId || !factoryCoId.startsWith('co_z')) {
+		if (!factoryCoId?.startsWith('co_z')) {
 			throw new Error(`[CoJSONSeed] Config ${configType}:${path} has invalid $factory: ${factoryRef}`)
 		}
 

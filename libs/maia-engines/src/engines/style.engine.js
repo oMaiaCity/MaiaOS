@@ -40,7 +40,7 @@ export class StyleEngine {
 	}
 
 	resolveStyleRef(ref) {
-		if (!ref || !ref.startsWith('co_z')) {
+		if (!ref?.startsWith('co_z')) {
 			throw new Error(
 				`[StyleEngine] Style reference must be a co-id (starts with 'co_z'), got: ${ref}`,
 			)

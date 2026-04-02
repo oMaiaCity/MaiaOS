@@ -90,7 +90,7 @@ export async function getCoListId(peer, collectionNameOrSchema) {
 export async function ensureCoValueLoaded(peer, coId, options = {}) {
 	const { waitForAvailable = false, timeoutMs = 25000 } = options
 
-	if (!coId || !coId.startsWith('co_')) {
+	if (!coId?.startsWith('co_')) {
 		return null // Invalid co-id
 	}
 
@@ -187,7 +187,7 @@ export async function ensureCoValueAvailable(backend, coId, operationName) {
 export async function waitForHeaderMetaFactory(peer, coId, options = {}) {
 	const { timeoutMs = 10000 } = options
 
-	if (!coId || !coId.startsWith('co_')) {
+	if (!coId?.startsWith('co_')) {
 		throw new Error(`[waitForHeaderMetaFactory] Invalid co-id: ${coId}`)
 	}
 

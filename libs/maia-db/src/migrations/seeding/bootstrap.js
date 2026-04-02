@@ -266,7 +266,7 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 	const sparksData = sparksStore?.value
 	if (!sparksData || sparksData.error) return
 	const maiaSparkCoId = sparksData[MAIA_SPARK]
-	if (!maiaSparkCoId || !maiaSparkCoId.startsWith('co_z')) return
+	if (!maiaSparkCoId?.startsWith('co_z')) return
 
 	const sparkCore = peer.getCoValue(maiaSparkCoId)
 	if (!sparkCore) return
@@ -289,13 +289,13 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 	const node = peer.node
 
 	const osId = sparkContent.get('os')
-	if (!osId || !osId.startsWith('co_z')) return
+	if (!osId?.startsWith('co_z')) return
 	const osCore = peer.getCoValue(osId)
 	if (!osCore || !peer.isAvailable(osCore)) return
 	const osContent = peer.getCurrentContent(osCore)
 	if (!osContent || typeof osContent.get !== 'function') return
 	const groupsId = osContent.get('groups')
-	if (!groupsId || !groupsId.startsWith('co_z')) return
+	if (!groupsId?.startsWith('co_z')) return
 	const groupsCore = peer.getCoValue(groupsId)
 	if (!groupsCore || !peer.isAvailable(groupsCore)) return
 	const groupsContent = peer.getCurrentContent(groupsCore)

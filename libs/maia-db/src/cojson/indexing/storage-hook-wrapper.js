@@ -112,7 +112,7 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 				return originalStore(msg, correctionCallback)
 			}
 			// For all other co-values, ENFORCE headerMeta.$factory (required for resolve/CRUD)
-			if (!header || !header.meta) {
+			if (!header?.meta) {
 				throw new Error(
 					`[StorageHook] Co-value ${coId} missing header.meta. Every co-value MUST have headerMeta.$factory (except groups, accounts, and profiles during account creation).`,
 				)

@@ -38,7 +38,7 @@ export async function storeRegistry(
 		osCore = node.getCoValue(osId)
 	}
 
-	if (!osCore || !osCore.isAvailable()) return
+	if (!osCore?.isAvailable()) return
 
 	const osContent = osCore.getCurrentContent?.()
 	if (!osContent || typeof osContent.get !== 'function') return

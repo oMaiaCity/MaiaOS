@@ -25,7 +25,7 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 		throw new Error('[createAndPushMessage] dbEngine is required')
 	}
 
-	if (!inboxCoId || !inboxCoId.startsWith('co_z')) {
+	if (!inboxCoId?.startsWith('co_z')) {
 		throw new Error(
 			`[createAndPushMessage] inboxCoId must be a valid co-id (co_z...), got: ${inboxCoId}`,
 		)
@@ -61,7 +61,7 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 			messageFactoryCoId = await resolve(peer, '°Maia/factory/event', { returnType: 'coId' })
 		}
 
-		if (!messageFactoryCoId || !messageFactoryCoId.startsWith('co_z')) {
+		if (!messageFactoryCoId?.startsWith('co_z')) {
 			throw new Error(
 				`[createAndPushMessage] Failed to get message factory co-id. Inbox factory items.$co: ${inboxFactory?.items?.$co || 'not found'}`,
 			)
@@ -113,7 +113,7 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 		throw new Error(`[createAndPushMessage] Failed to create message: ${msgs}`)
 	}
 	const created = createResult.data
-	if (!created || !created.id) {
+	if (!created?.id) {
 		throw new Error(
 			'[createAndPushMessage] Failed to create message CoMap - create operation returned no id',
 		)

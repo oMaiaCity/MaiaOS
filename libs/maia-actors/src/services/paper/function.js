@@ -48,7 +48,7 @@ export default {
 		}
 
 		const os = actor.actorOps?.os
-		if (!os || !os.do) {
+		if (!os?.do) {
 			return createErrorResult([
 				createErrorEntry('structural', '[updateCoTextContent] Database engine not available'),
 			])

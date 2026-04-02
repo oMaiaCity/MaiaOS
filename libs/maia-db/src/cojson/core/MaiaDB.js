@@ -68,7 +68,7 @@ export class MaiaDB {
 		return coValueCore?.isAvailable() || false
 	}
 	getCurrentContent(coValueCore) {
-		if (!coValueCore || !coValueCore.isAvailable()) return null
+		if (!coValueCore?.isAvailable()) return null
 		return coValueCore.getCurrentContent()
 	}
 	getHeader(coValueCore) {
@@ -78,7 +78,7 @@ export class MaiaDB {
 		return this.account
 	}
 	getCurrentSessionID() {
-		if (!this.node || !this.node.currentSessionID) return null
+		if (!this.node?.currentSessionID) return null
 		return this.node.currentSessionID
 	}
 
@@ -295,7 +295,7 @@ export class MaiaDB {
 		let factoriesId = osData.factories
 		if (!factoriesId || typeof factoriesId !== 'string' || !factoriesId.startsWith('co_z')) {
 			const osCore = this.getCoValue(osId)
-			if (!osCore || !osCore.isAvailable()) {
+			if (!osCore?.isAvailable()) {
 				if (typeof process !== 'undefined' && process.env?.DEBUG) return false
 			}
 			const osContent = this.getCurrentContent(osCore)

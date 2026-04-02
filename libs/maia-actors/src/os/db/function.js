@@ -16,7 +16,7 @@ export default {
 		}
 
 		const os = actor.actorOps?.os
-		if (!os || !os.do) {
+		if (!os?.do) {
 			if (typeof window !== 'undefined')
 				console.warn('[@db] os not available, actorOps:', !!actor.actorOps)
 			return createErrorResult([createErrorEntry('structural', '[@db] Database engine not available')])

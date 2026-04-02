@@ -82,7 +82,7 @@ export default {
 		}
 
 		const os = actor.actorOps?.os
-		if (!os || !os.do) {
+		if (!os?.do) {
 			return createErrorResult([
 				createErrorEntry('structural', '[updateWasmCode] Database engine not available'),
 			])
@@ -132,7 +132,7 @@ export default {
 						spark: '°Maia',
 					})
 				}
-				if (!wasmCoId || !wasmCoId.startsWith('co_z')) {
+				if (!wasmCoId?.startsWith('co_z')) {
 					return createErrorResult([
 						createErrorEntry(
 							'structural',

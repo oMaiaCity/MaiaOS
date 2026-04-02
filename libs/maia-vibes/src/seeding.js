@@ -47,7 +47,7 @@ function normalizeVibeForSeeding(vibe) {
 	if (!normalized.$factory || typeof normalized.$factory !== 'string') {
 		normalized.$factory = VIBE_SCHEMA
 	}
-	if (!normalized.$id || !normalized.$id.startsWith('°Maia/vibe/')) {
+	if (!normalized.$id?.startsWith('°Maia/vibe/')) {
 		normalized.$id = `°Maia/vibe/${key}`
 	}
 	if (!Array.isArray(normalized.runtime)) {
