@@ -13,3 +13,4 @@ export {
 	subscribeSyncState,
 	updateSyncState,
 } from './sync-peers.js'
+export { getSyncHttpBaseUrl, getSyncWebSocketUrl } from './sync-urls.js'

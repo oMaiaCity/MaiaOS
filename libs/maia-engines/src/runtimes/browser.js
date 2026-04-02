@@ -459,6 +459,10 @@ export class Runtime {
 		const { actorRefs } = await this._getVibesAndDependenciesFromDb()
 		if (!actorRefs?.length) return
 
+		const watchedIds = []
+		const verboseRuntime =
+			typeof localStorage !== 'undefined' && localStorage.getItem('MAIA_DEBUG_RUNTIME') === '1'
+
 		for (const actorCoId of actorRefs) {
 			if (typeof actorCoId !== 'string' || !actorCoId.startsWith('co_z')) {
 				this._log('[Runtime] start: skipping non-co-id actorRef', { actorCoId })
@@ -478,8 +482,20 @@ export class Runtime {
 			if (typeof actorId !== 'string' || !actorId.startsWith('co_z')) {
 				throw new Error(`[Runtime] start: actor config $id must be co-id: ${actorCoId}`)
 			}
-			this._log('[Runtime] start: watching inbox', { actorCoId, inboxCoId })
+			if (verboseRuntime) {
+				this._log('[Runtime] start: watching inbox', { actorCoId, inboxCoId })
+			}
 			this.watchInbox(inboxCoId, actorId, actorConfig)
+			watchedIds.push(actorCoId)
+		}
+
+		if (watchedIds.length && this._isDebug()) {
+			const max = 8
+			const head = watchedIds.slice(0, max).map((id) => id.slice(0, 14))
+			const more = watchedIds.length > max ? ` (+${watchedIds.length - max} more)` : ''
+			console.log(
+				`[Runtime] start: watching ${watchedIds.length} inbox(es): ${head.join(', ')}${more}`,
+			)
 		}
 	}
 }

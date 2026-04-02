@@ -39,6 +39,7 @@ export async function createAccountWithSecret(options) {
 		? storage
 		: await getStorage({ mode: 'human' })
 
+	// Peers at creation may be empty until WS connects; setupSyncPeers registerPeersIfMissing avoids duplicate addPeer (see sync-peers.js).
 	const result = await LocalNode.withNewlyCreatedAccount({
 		creationProps: { name },
 		crypto,
@@ -134,6 +135,7 @@ export async function loadAccount(options) {
 
 	const INITIAL_LOAD_TIMEOUT = 3000
 
+	// Peers at load time may be empty if WS connects later; setupSyncPeers registerPeersIfMissing + addPeer when node exists avoids duplicate PeerState (see sync-peers.js).
 	const loadPromise = LocalNode.withLoadedAccount({
 		crypto,
 		accountID,

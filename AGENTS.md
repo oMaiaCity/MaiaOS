@@ -9,6 +9,15 @@
 | `services/app` | 4200 | Frontend SPA (Bun HTML bundler with HMR); includes the 3D city game (`@MaiaOS/game`) via dashboard **The Game** |
 | `services/sync` | 4201 | Unified sync (WebSocket + agent API + LLM proxy, PGlite storage) |
 
+### Sync: `PEER_APP_HOST` and multi-origin local dev
+
+- **`PEER_APP_HOST`** is the allowed browser origin for sync (HTTP + WebSocket upgrade). In production (Postgres on Fly), set it to the app origin (for example `https://next.maia.city`).
+- **PGlite local dev:** With `PEER_APP_HOST` set (for example `localhost:4200`), sync still allows `http://localhost:4200`, `http://127.0.0.1:4200`, and `http://[::1]:4200` on port **4200** so different loopback URLs are not blocked by CORS.
+- **Postgres local dev:** Set **`MAIA_DEV_CORS=1`** for the same multi-origin CORS, or leave **`PEER_APP_HOST` unset** so sync uses `*` (development only).
+- **Unset `PEER_APP_HOST`:** CORS is `*` — acceptable for local dev, not for production.
+- The app builds sync HTTP and WebSocket URLs from the same module (`@MaiaOS/peer` `getSyncHttpBaseUrl` / `getSyncWebSocketUrl`) so the page host matches fetch and WS.
+- **AdGuard** (and similar tools) can block `localhost` traffic; if sync still fails, try disabling filtering for localhost.
+
 ### Running the dev environment
 
 All commands are documented in root `package.json`. Key commands:

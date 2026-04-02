@@ -96,10 +96,14 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 			if (isGroupByRuleset) {
 				return originalStore(msg, correctionCallback)
 			}
-			// CoJSON sync sends content updates (msg.new) where header arrives separately.
-			// Allow through — header.meta will be present on the creation message; updates just add transactions.
-			if (!header && msg.new && typeof msg.new === 'object' && Object.keys(msg.new).length > 0) {
-				return originalStore(msg, correctionCallback)
+			// CoJSON sync: incremental batches use msg.new; a chunk may not repeat meta.$factory in
+			// the extracted header (second peer / patches). That does NOT mean we accept schema-less
+			// co-values: creation must still carry $factory in an earlier or sibling message; the
+			// merged CoJSON state retains header meta. Without msg.new, missing $factory still throws below.
+			if (msg.new && typeof msg.new === 'object' && Object.keys(msg.new).length > 0) {
+				if (!extractSchemaFromMessage(normalizedMsg)) {
+					return originalStore(msg, correctionCallback)
+				}
 			}
 			// header exists but meta is null: CoJSON internal CoValue (profile during account creation,
 			// or groups/CoValues created without our schema). Allow — indexing will skip them.
@@ -111,6 +115,12 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 				throw new Error(
 					`[StorageHook] Co-value ${coId} missing header.meta. Every co-value MUST have headerMeta.$factory (except groups, accounts, and profiles during account creation).`,
 				)
+			}
+
+			// CoBinary: meta.type === 'binary' without Maia $factory (RawBinaryCoStream). MUST run before
+			// $factory enforcement — otherwise we throw and can crash the sync server on store().
+			if (header.meta.type === 'binary') {
+				return originalStore(msg, correctionCallback)
 			}
 
 			const schema = extractSchemaFromMessage(normalizedMsg)
@@ -126,11 +136,6 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 
 		// CRITICAL: Synchronous checks to prevent infinite loops BEFORE any async work
 		// These checks must be fast and not trigger any storage operations
-
-		// 0. Binary streams (CoBinary) - skip indexing entirely (schema has indexing: false anyway)
-		if (normalizedMsg.header?.meta?.type === 'binary') {
-			return originalStore(msg, correctionCallback)
-		}
 
 		// 1. Use universal skip validation helper (consolidates all skip logic)
 		// NOTE: We DON'T skip @metaSchema here - °Maia/factory/meta uses @metaSchema but should be registered!
