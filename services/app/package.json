@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/app",
-	"version": "26.4.20921",
+	"version": "26.4.20933",
 	"type": "module",
 	"private": true,
 	"scripts": {

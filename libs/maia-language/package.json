@@ -1,6 +1,6 @@
 {
 	"name": "@maia/language",
-	"version": "26.4.20921",
+	"version": "26.4.20933",
 	"type": "module",
 	"main": "src/index.ts",
 	"exports": {
