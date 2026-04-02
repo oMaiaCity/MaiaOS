@@ -1,3 +1,5 @@
+import { normalizePostgresConnectionString } from './normalizePostgresUrl.js'
+
 /**
  * Clear DB and binary blob storage for reseed (PEER_SYNC_SEED=true).
  * Ensures a complete reset before loadOrCreateAgentAccount + seed.
@@ -24,7 +26,9 @@ export async function clearStorageForReseed(options = {}) {
 			throw new Error('[clearStorageForReseed] PEER_SYNC_STORAGE=postgres requires PEER_SYNC_DB_URL')
 		}
 		const pg = await import('pg')
-		const client = new pg.default.Client({ connectionString: databaseUrl })
+		const client = new pg.default.Client({
+			connectionString: normalizePostgresConnectionString(databaseUrl),
+		})
 		await client.connect()
 		try {
 			await client.query(

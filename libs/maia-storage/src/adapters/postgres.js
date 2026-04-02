@@ -15,14 +15,24 @@ import { emptyKnownState, logger } from 'cojson'
 import { StorageApiAsync } from 'cojson/dist/storage/storageAsync.js'
 import { DeletedCoValueDeletionStatus } from 'cojson/dist/storage/types.js'
 import pg from 'pg'
+import { normalizePostgresConnectionString } from '../normalizePostgresUrl.js'
 import { runMigrations } from '../schema/postgres.js'
 
 const opsStor = createOpsLogger('STORAGE')
 
-function wrapClient(client) {
+/**
+ * Serialize queries on a single pg.Client. pg@9 deprecates overlapping client.query() calls.
+ */
+function wrapSerializingClient(client) {
+	let tail = Promise.resolve()
+	const enqueue = (fn) => {
+		const p = tail.then(fn)
+		tail = p.catch(() => {})
+		return p
+	}
 	return {
-		query: (sql, params) => client.query(sql, params),
-		exec: (sql) => client.query(sql),
+		query: (sql, params) => enqueue(() => client.query(sql, params)),
+		exec: (sql) => enqueue(() => client.query(sql)),
 	}
 }
 
@@ -374,14 +384,15 @@ export async function createPostgresAdapter(connectionString, blobStore) {
 		)
 	}
 
-	const client = new pg.Client({ connectionString })
+	const normalized = normalizePostgresConnectionString(connectionString)
+	const client = new pg.Client({ connectionString: normalized })
 	await client.connect()
 
 	if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
 		opsStor.log('Postgres connected, running migrations...')
 	}
 
-	const db = wrapClient(client)
+	const db = wrapSerializingClient(client)
 	await runMigrations(db)
 
 	return new PostgresClient(client, blobStore)
