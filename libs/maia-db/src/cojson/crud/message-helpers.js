@@ -6,14 +6,8 @@
  */
 
 import { containsExpressions } from '@MaiaOS/factories/expression-resolver.js'
+import { perfDbUpload } from '@MaiaOS/logs'
 import { resolve } from '../factory/resolver.js'
-
-const _perf =
-	typeof window !== 'undefined' &&
-	typeof localStorage !== 'undefined' &&
-	localStorage?.getItem('maia:perf:upload') === '1'
-		? { now: () => performance.now(), log: (s, ms, e = '') => console.log(`[Perf] ${s}: ${ms}ms`, e) }
-		: { now: () => 0, log: () => {} }
 
 /**
  * Create a message CoMap and push its co-id to an inbox CoStream
@@ -46,7 +40,7 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 		throw new Error('[createAndPushMessage] dbEngine.peer is required')
 	}
 
-	let t0 = _perf.now()
+	let t0 = perfDbUpload.now()
 	// 1. Get message schema co-id from inbox schema via resolve() (uses CoCache / universalRead)
 	let messageFactoryCoId = null
 	let inboxFactory = null
@@ -75,7 +69,10 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 	} catch (error) {
 		throw new Error(`[createAndPushMessage] Failed to get message schema co-id: ${error.message}`)
 	}
-	_perf.log('createAndPushMessage.getSchema', Math.round((_perf.now() - t0) * 100) / 100)
+	perfDbUpload.timing(
+		'createAndPushMessage.getSchema',
+		Math.round((perfDbUpload.now() - t0) * 100) / 100,
+	)
 
 	// 2. CRITICAL: Load and validate message data against message schema before creating
 	//    This ensures type, payload, source, target, processed fields are valid
@@ -101,13 +98,16 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 
 	// Schema validation happens at gate: createCoMap (peer)
 	// 3. Create message CoMap using create operation
-	t0 = _perf.now()
+	t0 = perfDbUpload.now()
 	const createResult = await dbEngine.execute({
 		op: 'create',
 		factory: messageFactoryCoId,
 		data: messageDataWithDefaults,
 	})
-	_perf.log('createAndPushMessage.create', Math.round((_perf.now() - t0) * 100) / 100)
+	perfDbUpload.timing(
+		'createAndPushMessage.create',
+		Math.round((perfDbUpload.now() - t0) * 100) / 100,
+	)
 	if (!createResult.ok) {
 		const msgs = createResult.errors?.map((e) => e.message).join('; ') || 'Create failed'
 		throw new Error(`[createAndPushMessage] Failed to create message: ${msgs}`)
@@ -123,13 +123,13 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 		throw new Error(`[createAndPushMessage] Invalid message co-id returned: ${messageCoId}`)
 	}
 	// 4. Push message co-id to inbox CoStream (not plain object)
-	t0 = _perf.now()
+	t0 = perfDbUpload.now()
 	const pushResult = await dbEngine.execute({
 		op: 'push',
 		coId: inboxCoId,
 		item: messageCoId,
 	})
-	_perf.log('createAndPushMessage.push', Math.round((_perf.now() - t0) * 100) / 100)
+	perfDbUpload.timing('createAndPushMessage.push', Math.round((perfDbUpload.now() - t0) * 100) / 100)
 	if (!pushResult.ok) {
 		const msgs = pushResult.errors?.map((e) => e.message).join('; ') || 'Push failed'
 		throw new Error(`[createAndPushMessage] Failed to push message to inbox: ${msgs}`)

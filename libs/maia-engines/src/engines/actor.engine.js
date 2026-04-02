@@ -14,7 +14,8 @@
 import { normalizeCoValueData } from '@MaiaOS/db'
 import { containsExpressions } from '@MaiaOS/factories/expression-resolver'
 import { validateAgainstFactory } from '@MaiaOS/factories/validation.helper'
-import { perfChat, perfPipeline, traceInbox } from '../utils/debug.js'
+import { createOpsLogger } from '@MaiaOS/logs'
+import { perfEnginesChat, perfEnginesPipeline, traceInbox } from '../utils/debug.js'
 import {
 	loadContextStore,
 	readStore,
@@ -25,6 +26,8 @@ import {
 	sanitizePayloadForValidation,
 	stripInfrastructureKeysForValidation,
 } from '../utils/security.js'
+
+const actorOps = createOpsLogger('ActorEngine')
 
 function deriveInboxRef(actorId) {
 	if (!actorId || typeof actorId !== 'string') return null
@@ -213,7 +216,7 @@ export class ActorEngine {
 			actor.children[childActorCoId] = childActor
 			return childActor
 		} catch (error) {
-			console.error('[ActorEngine] _createChildActorByCoId FAILED:', {
+			actorOps.error('_createChildActorByCoId FAILED:', {
 				childActorCoId,
 				error: error.message,
 			})
@@ -682,8 +685,9 @@ export class ActorEngine {
 	async deliver(targetId, message) {
 		const isChatSend =
 			message?.type === 'SEND_MESSAGE' && message?.payload != null && 'inputText' in message.payload
-		if (isChatSend) perfChat.start(`deliver SEND_MESSAGE → ${String(targetId).slice(0, 24)}...`)
-		perfPipeline.step('inbox:deliver:start', {
+		if (isChatSend)
+			perfEnginesChat.start(`deliver SEND_MESSAGE → ${String(targetId).slice(0, 24)}...`)
+		perfEnginesPipeline.step('inbox:deliver:start', {
 			type: message?.type,
 			targetId: targetId?.slice(0, 20),
 		})
@@ -699,17 +703,17 @@ export class ActorEngine {
 		} catch (err) {
 			throw new Error(`[ActorEngine] cannot resolve target to inbox. ${err?.message || err}`)
 		}
-		perfPipeline.step('inbox:resolveInbox')
+		perfEnginesPipeline.step('inbox:resolveInbox')
 		const { inboxCoId, targetActorConfig } = resolved
 		const messageWithTarget = { ...message, target: resolved.resolvedTargetId }
-		if (isChatSend) perfChat.step('_pushMessage (createAndPushMessage)')
+		if (isChatSend) perfEnginesChat.step('_pushMessage (createAndPushMessage)')
 		await this._pushMessage(inboxCoId, messageWithTarget)
-		perfPipeline.step('inbox:pushMessage')
-		if (isChatSend) perfChat.step('_pushMessage done')
+		perfEnginesPipeline.step('inbox:pushMessage')
+		if (isChatSend) perfEnginesChat.step('_pushMessage done')
 		if (targetActorConfig && this.runtime) {
-			if (isChatSend) perfChat.step('ensureActorSpawned (targetActorConfig)')
+			if (isChatSend) perfEnginesChat.step('ensureActorSpawned (targetActorConfig)')
 			await this.runtime.ensureActorSpawned(targetActorConfig, inboxCoId)
-			if (isChatSend) perfChat.step('ensureActorSpawned done')
+			if (isChatSend) perfEnginesChat.step('ensureActorSpawned done')
 		}
 		if (this.actors?.has(resolved.resolvedTargetId)) {
 			await this.processEvents(resolved.resolvedTargetId)
@@ -993,7 +997,7 @@ export class ActorEngine {
 							typeof window !== 'undefined' &&
 							(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
 						) {
-							console.warn('[ActorEngine] Message validation failed (skipped):', {
+							actorOps.warn('Message validation failed (skipped):', {
 								actorId: actorId?.slice(0, 24),
 								messageType: message.type,
 								payloadKeys: message.payload ? Object.keys(message.payload) : [],
@@ -1016,13 +1020,13 @@ export class ActorEngine {
 						await markProcessed()
 						if (!handled) hadUnhandledMessages = true
 					} else {
-						console.warn('[ActorEngine] Message skipped - no process:', {
+						actorOps.warn('Message skipped - no process:', {
 							actorId,
 							messageType: message.type,
 						})
 					}
 				} catch (error) {
-					console.error('[ActorEngine] processEvents error for message:', {
+					actorOps.error('processEvents error for message:', {
 						actorId,
 						type: message.type,
 						error: error.message,
@@ -1040,7 +1044,7 @@ export class ActorEngine {
 				}
 			}
 		} catch (error) {
-			console.error('[ActorEngine] processEvents outer error:', { actorId, error: error.message })
+			actorOps.error('processEvents outer error:', { actorId, error: error.message })
 		} finally {
 			actor._isProcessing = false
 			// Retry when: (1) unhandled messages (no transition), or (2) more messages arrived during our run.

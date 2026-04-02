@@ -7,6 +7,7 @@
 		".": "./src/index.js"
 	},
 	"dependencies": {
+		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/peer": "workspace:*",
 		"@MaiaOS/factories": "workspace:*",
 		"@MaiaOS/storage": "workspace:*",

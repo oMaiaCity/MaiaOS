@@ -3,9 +3,12 @@
  */
 
 import { loadFactoryAndValidate } from '@MaiaOS/factories/validation.helper'
+import { createOpsLogger } from '@MaiaOS/logs'
 import { isExceptionFactory } from '../../factories/registry.js'
 import { resolve } from '../factory/resolver.js'
 import { extractSchemaFromMessage, isAccountGroupOrProfile } from '../helpers/co-value-detection.js'
+
+const opsValidation = createOpsLogger('ValidationHook')
 
 async function extractCurrentContent(peer, coId) {
 	try {
@@ -85,14 +88,14 @@ export function wrapSyncManagerWithValidation(syncManager, peer, dbEngine, opts 
 		if (beforeAcceptWrite && msg?.new && Object.keys(msg.new).length > 0) {
 			const result = await beforeAcceptWrite(peer, msg, from)
 			if (!result?.ok) {
-				console.warn(`[ValidationHook] Write rejected: ${result?.error ?? 'No capability'}`)
+				opsValidation.warn('Write rejected: %s', result?.error ?? 'No capability')
 				return
 			}
 		}
 		if (msg?.id && dbEngine) {
 			const validation = await validateRemoteTransactions(peer, dbEngine, msg)
 			if (!validation.valid) {
-				console.warn(`[ValidationHook] Rejected: ${validation.error}`)
+				opsValidation.warn('Rejected: %s', validation.error)
 				return
 			}
 		}

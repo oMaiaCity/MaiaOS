@@ -4,6 +4,8 @@
  * Avoids pulling @electric-sql/pglite into client bundles.
  */
 
+import { OPS_PREFIX } from '@MaiaOS/logs'
+
 export async function getPGliteStorage() {
-	throw new Error('[STORAGE] PGlite is server-only - use IndexedDB in browser')
+	throw new Error(`${OPS_PREFIX.STORAGE} PGlite is server-only - use IndexedDB in browser`)
 }

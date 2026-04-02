@@ -2,6 +2,7 @@
  * CoJSON Seed - Bootstrap → Schemas → Configs → Data → Registry
  */
 
+import { OPS_PREFIX } from '@MaiaOS/logs'
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import { ensureCoValueLoaded } from '../../cojson/crud/collection-helpers.js'
 import * as groups from '../../cojson/groups/groups.js'
@@ -487,7 +488,7 @@ export async function seed(
 			const retransformedVibe = transformForSeeding(vibe, combinedRegistry)
 			if (!retransformedVibe.$factory?.startsWith('co_z')) {
 				throw new Error(
-					`[sync] Vibe "${vibeKey}": $factory missing or not resolved. Ensure °Maia/factory/vibe is in schema registry.`,
+					`${OPS_PREFIX.sync} Vibe "${vibeKey}": $factory missing or not resolved. Ensure °Maia/factory/vibe is in schema registry.`,
 				)
 			}
 			const vibeSeeded = await seedConfigs(

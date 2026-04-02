@@ -5,9 +5,12 @@
  * Only supports our own sync service - no Jazz sync fallback.
  */
 
+import { createOpsLogger } from '@MaiaOS/logs'
 import { WebSocketPeerWithReconnection } from 'cojson-transport-ws'
 
 import { getSyncWebSocketUrl } from './sync-urls.js'
+
+const opsPeer = createOpsLogger('peer')
 
 /**
  * LocalNode.withLoadedAccount / withNewlyCreatedAccount registers whatever is in `peers` at that moment.
@@ -96,9 +99,10 @@ export function setupSyncPeers(syncDomain = null) {
 	}
 
 	if (!isDev) {
-		console.log(`   Sync Domain: ${resolvedDomainForLog || '(not set - using same origin fallback)'}`)
-		console.log(
-			`   Source: ${syncDomain ? 'loader' : import.meta.env?.VITE_PEER_SYNC_HOST ? 'build-time' : 'fallback'}`,
+		opsPeer.log('Sync Domain: %s', resolvedDomainForLog || '(not set - using same origin fallback)')
+		opsPeer.log(
+			'Source: %s',
+			syncDomain ? 'loader' : import.meta.env?.VITE_PEER_SYNC_HOST ? 'build-time' : 'fallback',
 		)
 	}
 

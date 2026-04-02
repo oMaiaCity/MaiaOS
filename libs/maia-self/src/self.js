@@ -158,12 +158,7 @@ export async function signInWithPasskey({ salt = 'maia.city' } = {}) {
 	// Use loadAccount() abstraction from @MaiaOS/db instead of direct withLoadedAccount()
 	const accountLoadingPromise = (async () => {
 		try {
-			// OPTIMIZATION: Wait for WebSocket connection before loading account (or timeout gracefully)
-			// This ensures sync server is ready before we try to load, reducing unnecessary waits
-			if (syncSetup?.waitForPeer) {
-				await syncSetup.waitForPeer()
-			}
-
+			// Local-first: load account from storage immediately; WebSocket connects in parallel (setupSyncPeers).
 			// Use loadAccount() abstraction - goes through proper abstraction layer
 			const loadResult = await loadAccount({
 				accountID,

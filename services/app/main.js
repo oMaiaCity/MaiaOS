@@ -19,6 +19,7 @@ import {
 	subscribeSyncState,
 	updateSyncState,
 } from '@MaiaOS/loader'
+import { applyLogModeFromEnv } from '@MaiaOS/logs'
 import { getSyncHttpBaseUrl } from '@MaiaOS/peer'
 import { renderApp } from './db-view.js'
 import { renderLandingPage } from './landing.js'
@@ -77,6 +78,20 @@ let syncState = {
 // Subscription management for sync state
 let unsubscribeSync = null
 let syncStateRenderTimeout = null // Debounce sync state renders
+
+let _maiaReadyResolve
+if (typeof window !== 'undefined') {
+	window.__maiaReady = new Promise((resolve) => {
+		_maiaReadyResolve = resolve
+	})
+}
+function notifyMaiaReady(bootedMaia) {
+	if (typeof _maiaReadyResolve === 'function') {
+		const fn = _maiaReadyResolve
+		_maiaReadyResolve = null
+		fn(bootedMaia)
+	}
+}
 
 /** Subscribe to sync state changes with debounced renderAppInternal */
 function setupSyncSubscription() {
@@ -263,6 +278,7 @@ async function init() {
 				const res = await fetch('/__maia_env')
 				if (res.ok) {
 					window.__MAIA_DEV_ENV__ = await res.json()
+					applyLogModeFromEnv(window.__MAIA_DEV_ENV__?.LOG_MODE ?? '')
 				}
 			} catch (_e) {}
 		}
@@ -332,6 +348,7 @@ async function initAgentMode() {
 		// CRITICAL: Await link before first render - indexing requires account.registries
 		await linkAccountToRegistries(maia).catch(() => {})
 		initGlobalAI(maia)
+		notifyMaiaReady(maia)
 
 		// Set auth state
 		authState = {
@@ -411,6 +428,15 @@ function getSyncBaseUrl() {
 /** Set account.registries from GET /syncRegistry (must run before MaiaOS.boot if peer was reseeded). */
 async function applySyncRegistriesToAccount(account, node) {
 	if (!account?.set) return
+	const existing = account.get?.('registries')
+	if (existing?.startsWith('co_z')) {
+		const wfs = node?.syncManager?.waitForStorageSync
+		if (typeof wfs === 'function') {
+			await wfs.call(node.syncManager, account.id)
+			await wfs.call(node.syncManager, existing)
+		}
+		return
+	}
 	const baseUrl = getSyncBaseUrl()
 	if (!baseUrl) return
 	const res = await fetch(`${baseUrl}/syncRegistry`)
@@ -556,6 +582,7 @@ async function signInWithTestAven() {
 				window.maia = maia
 				await linkAccountToRegistries(maia).catch(() => {})
 				initGlobalAI(maia)
+				notifyMaiaReady(maia)
 				cleanupLoadingScreenSync()
 				if (authState.signedIn) {
 					renderAppInternal().catch((e) =>
@@ -625,9 +652,12 @@ async function signIn() {
 						modules: ['db', 'core', 'ai'], // Include all modules
 					})
 					window.maia = maia
-					await autoRegisterHuman(maia).catch(() => {})
-					await linkAccountToRegistries(maia).catch(() => {})
+					await Promise.all([
+						autoRegisterHuman(maia).catch(() => {}),
+						linkAccountToRegistries(maia).catch(() => {}),
+					])
 					initGlobalAI(maia)
+					notifyMaiaReady(maia)
 
 					// Re-render app now that maia is ready
 					if (authState.signedIn) {
@@ -765,9 +795,12 @@ async function register() {
 			.then(async (bootedMaia) => {
 				maia = bootedMaia
 				window.maia = maia
-				await autoRegisterHuman(maia).catch(() => {})
-				await linkAccountToRegistries(maia).catch(() => {})
+				await Promise.all([
+					autoRegisterHuman(maia).catch(() => {}),
+					linkAccountToRegistries(maia).catch(() => {}),
+				])
 				initGlobalAI(maia)
+				notifyMaiaReady(maia)
 				cleanupLoadingScreenSync()
 				if (authState.signedIn) {
 					renderAppInternal().catch((e) =>

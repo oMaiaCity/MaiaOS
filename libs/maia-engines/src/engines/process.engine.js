@@ -12,7 +12,12 @@ import {
 	isPermissionError,
 	isSuccessResult,
 } from '@MaiaOS/factories/operation-result'
-import { perfChat, perfPipeline, traceContextOnError, traceProcess } from '../utils/debug.js'
+import {
+	perfEnginesChat,
+	perfEnginesPipeline,
+	traceContextOnError,
+	traceProcess,
+} from '../utils/debug.js'
 import { readStore, resolveSchemaFromCoValue, resolveToCoId } from '../utils/resolve-helpers.js'
 
 export class ProcessEngine {
@@ -37,7 +42,7 @@ export class ProcessEngine {
 	}
 
 	async send(processId, event, payload = {}) {
-		perfPipeline.step('process:send:start', { event, processId: processId?.slice(0, 30) })
+		perfEnginesPipeline.step('process:send:start', { event, processId: processId?.slice(0, 30) })
 		const process = this.processes.get(processId)
 		if (!process) {
 			console.warn('[ProcessEngine] send: process not found', { processId, event })
@@ -60,7 +65,7 @@ export class ProcessEngine {
 		const actions = handlers[event]
 		if (!Array.isArray(actions) || actions.length === 0) return false
 
-		perfPipeline.step('process:send', { event })
+		perfEnginesPipeline.step('process:send', { event })
 		await this._executeActions(process, actions)
 		return true
 	}
@@ -115,9 +120,9 @@ export class ProcessEngine {
 						evaluated.factory.includes('chat')
 					const runOp = () => this._executeOp(opKey, evaluated, process, payload)
 					const result = await (isChatCreate
-						? perfChat.measure('op.create (chat)', runOp)
+						? perfEnginesChat.measure('op.create (chat)', runOp)
 						: opKey === 'read'
-							? perfPipeline.measure(`op.${opKey}`, runOp)
+							? perfEnginesPipeline.measure(`op.${opKey}`, runOp)
 							: runOp())
 					if (result?.ok && result?.data) process.lastToolResult = result.data
 					if (!isSuccessResult(result) && process.actor._lastEventSource) {
@@ -146,9 +151,9 @@ export class ProcessEngine {
 				if (act.ask) {
 					// Chat flow: user msg in costream; ask delivers CHAT (LLM runs async on AI actor)
 					const isChatAsk = act.ask?.type === 'CHAT'
-					if (isChatAsk) perfChat.step('ask CHAT delivered (user msg path complete)')
+					if (isChatAsk) perfEnginesChat.step('ask CHAT delivered (user msg path complete)')
 					await this._executeAsk(process, act.ask, payload, contextUpdates)
-					if (isChatAsk) perfChat.end('user message → costream')
+					if (isChatAsk) perfEnginesChat.end('user message → costream')
 					return true // ask = stop processing (request-response)
 				}
 				if (act.function === true) {
@@ -270,7 +275,7 @@ export class ProcessEngine {
 		if (typeof target !== 'string' || !target.startsWith('co_z')) {
 			throw new Error(`[ProcessEngine] tell target must be co-id (transform at seed). Got: ${target}`)
 		}
-		perfPipeline.step('process:tell', { type, target: target?.slice(0, 20) })
+		perfEnginesPipeline.step('process:tell', { type, target: target?.slice(0, 20) })
 		await process.actor.actorOps.deliverEvent(
 			process.actor.id,
 			target,

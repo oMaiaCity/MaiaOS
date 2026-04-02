@@ -42,6 +42,7 @@
       "version": "26.4.12327",
       "dependencies": {
         "@MaiaOS/factories": "workspace:*",
+        "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
         "@MaiaOS/storage": "workspace:*",
         "cojson": "0.20.14",
@@ -70,6 +71,7 @@
         "@MaiaOS/actors": "workspace:*",
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/factories": "workspace:*",
+        "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/vibes": "workspace:*",
         "@jitl/quickjs-singlefile-cjs-release-sync": "0.32.0",
         "dompurify": "^3.2.2",
@@ -94,6 +96,7 @@
       "name": "@MaiaOS/game",
       "version": "26.4.12327",
       "dependencies": {
+        "@MaiaOS/logs": "workspace:*",
         "three": "^0.170.0",
       },
     },
@@ -115,10 +118,15 @@
         "cojson-transport-ws": "0.20.14",
       },
     },
+    "libs/maia-logs": {
+      "name": "@MaiaOS/logs",
+      "version": "26.4.12327",
+    },
     "libs/maia-peer": {
       "name": "@MaiaOS/peer",
       "version": "26.4.12327",
       "dependencies": {
+        "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/storage": "workspace:*",
         "cojson": "0.20.14",
         "cojson-transport-ws": "0.20.14",
@@ -139,6 +147,7 @@
       "name": "@MaiaOS/storage",
       "version": "26.4.12327",
       "dependencies": {
+        "@MaiaOS/logs": "workspace:*",
         "@aws-sdk/client-s3": "^3.1011.0",
         "@electric-sql/pglite": "latest",
         "@noble/hashes": "^2.0.1",
@@ -170,6 +179,7 @@
       "dependencies": {
         "@MaiaOS/game": "workspace:*",
         "@MaiaOS/loader": "workspace:*",
+        "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/maia-ai": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
@@ -184,6 +194,7 @@
       "version": "26.4.12327",
       "dependencies": {
         "@MaiaOS/loader": "workspace:*",
+        "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
         "@MaiaOS/maia-ucan": "workspace:*",
         "@MaiaOS/storage": "workspace:*",
@@ -209,6 +220,8 @@
     "@MaiaOS/game": ["@MaiaOS/game@workspace:libs/maia-game"],
 
     "@MaiaOS/loader": ["@MaiaOS/loader@workspace:libs/maia-loader"],
+
+    "@MaiaOS/logs": ["@MaiaOS/logs@workspace:libs/maia-logs"],
 
     "@MaiaOS/maia-ai": ["@MaiaOS/maia-ai@workspace:libs/maia-ai"],
 

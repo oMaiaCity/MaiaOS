@@ -6,6 +6,7 @@
  * Node: PGlite or Postgres for agent mode.
  */
 
+import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
 import { getIndexedDBStorageAdapter } from './adapters/indexeddb.js'
 import {
 	getOPFSStorageAdapter,
@@ -30,6 +31,9 @@ function getEnvVar(key) {
 
 const _inMemory = () => undefined
 
+const opsStorage = createOpsLogger('Storage')
+const opsStorErr = createOpsLogger('STORAGE')
+
 /**
  * Create the appropriate BlobStore based on environment.
  * BUCKET_NAME set → Tigris (production, Fly.io).
@@ -40,7 +44,7 @@ async function createBlobStore() {
 	const bucketName = typeof process !== 'undefined' && process.env?.BUCKET_NAME
 	if (bucketName) {
 		const { TigrisBlobStore } = await import('./blob/tigris.js')
-		console.log(`[Storage] BlobStore: Tigris (bucket=${bucketName})`)
+		opsStorage.log('BlobStore: Tigris (bucket=%s)', bucketName)
 		return new TigrisBlobStore(bucketName)
 	}
 	const blobPath =
@@ -48,7 +52,7 @@ async function createBlobStore() {
 	const { resolve } = await import('node:path')
 	const resolvedPath = resolve(blobPath)
 	const { LocalFsBlobStore } = await import('./blob/local-fs.js')
-	console.log(`[Storage] BlobStore: local filesystem (${resolvedPath})`)
+	opsStorage.log('BlobStore: local filesystem (%s)', resolvedPath)
 	return new LocalFsBlobStore(resolvedPath)
 }
 
@@ -72,17 +76,19 @@ export async function getStorage(options = {}) {
 			: getEnvVar('MAIA_STORAGE')
 
 	if (runtime === 'edge') {
-		throw new Error('[STORAGE] Edge runtime has no persistent storage. No in-memory fallback.')
+		throw new Error(
+			`${OPS_PREFIX.STORAGE} Edge runtime has no persistent storage. No in-memory fallback.`,
+		)
 	}
 	if (storageType === 'in-memory') {
-		throw new Error('[STORAGE] in-memory storage disabled. Use OPFS, IndexedDB, PGlite, or Postgres.')
+		throw new Error(
+			`${OPS_PREFIX.STORAGE} in-memory storage disabled. Use OPFS, IndexedDB, PGlite, or Postgres.`,
+		)
 	}
 	if (forceInMemory === true) {
 		// STRICT: in-memory storage is forbidden in MaiaOS.
 		// Fallback to human storage (OPFS/IndexedDB) even if inMemory was requested.
-		console.warn(
-			'[STORAGE] in-memory storage requested but forbidden. Falling back to persistent storage.',
-		)
+		opsStorErr.warn('in-memory storage requested but forbidden. Falling back to persistent storage.')
 	}
 
 	if (runtime === 'browser') {
@@ -91,18 +97,18 @@ export async function getStorage(options = {}) {
 			const storage = await getOPFSStorageAdapter()
 			if (storage) {
 				storage.__maiaBackend = 'opfs'
-				console.log('[Storage] Using OPFS (File System Access API)')
+				opsStorage.log('Using OPFS (File System Access API)')
 				return storage
 			}
 		}
 		const storage = await getIndexedDBStorageAdapter()
 		if (storage) {
 			storage.__maiaBackend = 'indexeddb'
-			console.log('[Storage] Using IndexedDB (OPFS unavailable or MAIA_STORAGE=indexeddb)')
+			opsStorage.log('Using IndexedDB (OPFS unavailable or MAIA_STORAGE=indexeddb)')
 			return storage
 		}
 		throw new Error(
-			'[STORAGE] Browser storage failed. OPFS and IndexedDB both unavailable. Use a supported browser (Chrome, Safari, Edge).',
+			`${OPS_PREFIX.STORAGE} Browser storage failed. OPFS and IndexedDB both unavailable. Use a supported browser (Chrome, Safari, Edge).`,
 		)
 	}
 
@@ -114,12 +120,12 @@ export async function getStorage(options = {}) {
 		if (mode === 'agent' && !forceInMemory) {
 			if (storageType === 'in-memory' || storageType === 'jazz-cloud') {
 				throw new Error(
-					'[STORAGE] Agent/server requires persistent storage. Use PEER_SYNC_STORAGE=pglite or PEER_SYNC_STORAGE=postgres. No in-memory or jazz-cloud.',
+					`${OPS_PREFIX.STORAGE} Agent/server requires persistent storage. Use PEER_SYNC_STORAGE=pglite or PEER_SYNC_STORAGE=postgres. No in-memory or jazz-cloud.`,
 				)
 			}
 			if (storageType && storageType !== 'pglite' && storageType !== 'postgres') {
 				throw new Error(
-					`[STORAGE] Agent/server mode requires PEER_SYNC_STORAGE=pglite or PEER_SYNC_STORAGE=postgres. Got: ${storageType}`,
+					`${OPS_PREFIX.STORAGE} Agent/server mode requires PEER_SYNC_STORAGE=pglite or PEER_SYNC_STORAGE=postgres. Got: ${storageType}`,
 				)
 			}
 		}
@@ -129,14 +135,16 @@ export async function getStorage(options = {}) {
 		// Postgres (Fly MPG or any Postgres)
 		if (storageType === 'postgres' && !forceInMemory) {
 			if (!databaseUrl) {
-				throw new Error('[STORAGE] PEER_SYNC_STORAGE=postgres requires PEER_SYNC_DB_URL env var')
+				throw new Error(
+					`${OPS_PREFIX.STORAGE} PEER_SYNC_STORAGE=postgres requires PEER_SYNC_DB_URL env var`,
+				)
 			}
 			try {
 				const { getPostgresStorage } = await import('@MaiaOS/storage/adapters/postgres.js')
 				return await getPostgresStorage(databaseUrl, blobStore)
 			} catch (error) {
 				throw new Error(
-					`[STORAGE] Postgres storage initialization FAILED. ` +
+					`${OPS_PREFIX.STORAGE} Postgres storage initialization FAILED. ` +
 						`Original error: ${error?.message || error}`,
 				)
 			}
@@ -153,7 +161,7 @@ export async function getStorage(options = {}) {
 				return await getPGliteStorage(finalDbPath, blobStore)
 			} catch (error) {
 				throw new Error(
-					`[STORAGE] PGlite storage initialization FAILED at ${finalDbPath}. ` +
+					`${OPS_PREFIX.STORAGE} PGlite storage initialization FAILED at ${finalDbPath}. ` +
 						`Original error: ${error?.message || error}`,
 				)
 			}
@@ -162,12 +170,12 @@ export async function getStorage(options = {}) {
 		// Agent mode with no valid storage → fail hard
 		if (mode === 'agent') {
 			throw new Error(
-				'[STORAGE] Agent mode requires PEER_SYNC_STORAGE=pglite (with PEER_DB_PATH) or PEER_SYNC_STORAGE=postgres (with PEER_SYNC_DB_URL).',
+				`${OPS_PREFIX.STORAGE} Agent mode requires PEER_SYNC_STORAGE=pglite (with PEER_DB_PATH) or PEER_SYNC_STORAGE=postgres (with PEER_SYNC_DB_URL).`,
 			)
 		}
 	}
 
 	throw new Error(
-		`[STORAGE] No persistent storage configured for runtime=${runtime} mode=${mode}. No in-memory fallback.`,
+		`${OPS_PREFIX.STORAGE} No persistent storage configured for runtime=${runtime} mode=${mode}. No in-memory fallback.`,
 	)
 }

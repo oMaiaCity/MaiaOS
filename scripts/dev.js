@@ -9,6 +9,7 @@ import { execSync, spawn } from 'node:child_process'
 import { existsSync, rmSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { OPS_PREFIX } from '../libs/maia-logs/src/index.js'
 import { freePort } from './free-port.js'
 import { bootFooter, bootHeader, createLogger } from './logger.js'
 
@@ -119,7 +120,7 @@ function processOutput(service, data, isError = false) {
 			trimmed.includes('Running on port') ||
 			trimmed.includes('HTTP server on port') ||
 			(trimmed.includes('[api]') && trimmed.includes('HTTP server')) ||
-			(trimmed.includes('[sync]') && trimmed.includes('Listening'))
+			(trimmed.includes(OPS_PREFIX.sync) && trimmed.includes('Listening'))
 		if (serverReadyPattern) {
 			const portMatch = trimmed.match(/port\s+(\d+)/i) || trimmed.match(/:(\d+)/)
 			if (portMatch && !serviceStatus[service]) {
@@ -162,7 +163,7 @@ function processOutput(service, data, isError = false) {
 		}
 
 		// Passthrough: sync init progress
-		if (service === 'sync' && trimmed.startsWith('[sync]')) {
+		if (service === 'sync' && trimmed.startsWith(OPS_PREFIX.sync)) {
 			logger.log(trimmed)
 			continue
 		}

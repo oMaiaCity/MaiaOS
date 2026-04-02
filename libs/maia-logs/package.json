@@ -1,0 +1,10 @@
+{
+	"name": "@MaiaOS/logs",
+	"version": "26.4.12327",
+	"type": "module",
+	"main": "./src/index.js",
+	"exports": {
+		".": "./src/index.js"
+	},
+	"description": "PERF, TRACE, DEBUG, OPS logging channels for MaiaOS"
+}

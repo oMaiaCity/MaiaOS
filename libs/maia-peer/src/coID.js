@@ -5,9 +5,12 @@
  * Migration and seed are injectable (provided by caller, typically from @MaiaOS/db)
  */
 
+import { createOpsLogger } from '@MaiaOS/logs'
 import { getStorage } from '@MaiaOS/storage'
 import { LocalNode } from 'cojson'
 import { WasmCrypto } from 'cojson/crypto/WasmCrypto'
+
+const opsPeer = createOpsLogger('peer')
 
 /**
  * Create a new MaiaID (Account) with provided agentSecret
@@ -105,7 +108,7 @@ export async function loadAccount(options) {
 		? storage
 		: await getStorage({ mode: 'human' })
 
-	console.log('   Sync peers:', peers.length > 0 ? `${peers.length} peer(s)` : 'none')
+	opsPeer.log('Sync peers: %s', peers.length > 0 ? `${peers.length} peer(s)` : 'none')
 	const storageLabel = finalStorage
 		? typeof process !== 'undefined' && process.versions?.node
 			? `${
@@ -119,10 +122,10 @@ export async function loadAccount(options) {
 				? 'OPFS available (local-first)'
 				: 'IndexedDB available (local-first)'
 		: 'no storage (sync-only)'
-	console.log('   Storage:', storageLabel)
+	opsPeer.log('Storage: %s', storageLabel)
 
 	if (storage) {
-		console.log('   💾 Storage available')
+		opsPeer.log('💾 Storage available')
 	}
 
 	// CRITICAL: Must AWAIT migration so profile is created before cojson validates.

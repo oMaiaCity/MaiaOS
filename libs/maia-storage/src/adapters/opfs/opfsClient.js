@@ -7,22 +7,13 @@
  * preventing race conditions that corrupt session rowIDs and cause signature mismatches.
  */
 
+import { isStorageOpfsPerfEnabled, logStorageOpfsStep } from '@MaiaOS/logs'
 import { getOrCreateDir, listDir, readJSON, sanitizeForFilename, writeJSON } from './opfsHelpers.js'
 import { OPFSTransaction } from './opfsTransaction.js'
 
 const META_PATH = '_meta.json'
 const STORAGE_LOCK = 'maia-opfs-storage'
 /** Bump on breaking storage changes. Old-format: migration or abandon on open. */
-
-const perfEnabled = () =>
-	typeof window !== 'undefined' &&
-	((window.location?.hostname === 'localhost' && import.meta?.env?.DEV) ||
-		localStorage?.getItem('maia:perf:upload') === '1')
-const perfLog = (step, ms, extra = {}) => {
-	if (!perfEnabled()) return
-	const ex = Object.keys(extra).length ? ` ${JSON.stringify(extra)}` : ''
-	console.log(`[Perf] OPFS.${step}: ${ms}ms${ex}`)
-}
 const FORMAT_VERSION = 1
 const DEFAULT_META = {
 	formatVersion: FORMAT_VERSION,
@@ -87,7 +78,7 @@ export class OPFSClient {
 	}
 
 	async upsertCoValue(id, header) {
-		const t0 = perfEnabled() ? performance.now() : 0
+		const t0 = isStorageOpfsPerfEnabled() ? performance.now() : 0
 		if (!header) {
 			const row = await this.getCoValue(id)
 			return row?.rowID
@@ -108,10 +99,9 @@ export class OPFSClient {
 			id,
 			header,
 		})
-		if (perfEnabled())
-			perfLog('upsertCoValue', Math.round((performance.now() - t0) * 100) / 100, {
-				id: id?.slice(0, 16),
-			})
+		logStorageOpfsStep('upsertCoValue', Math.round((performance.now() - t0) * 100) / 100, {
+			id: id?.slice(0, 16),
+		})
 		return rowID
 	}
 
@@ -170,7 +160,7 @@ export class OPFSClient {
 	}
 
 	async transaction(callback, _storeNames) {
-		const t0 = perfEnabled() ? performance.now() : 0
+		const t0 = isStorageOpfsPerfEnabled() ? performance.now() : 0
 		await this._withLock(async () => {
 			const meta = await this._loadMeta()
 			const tx = new OPFSTransaction(this.root, meta)
@@ -178,7 +168,7 @@ export class OPFSClient {
 			await tx.flushDeferredWrites()
 			if (tx.metaModified) await this._saveMeta(meta)
 		})
-		if (perfEnabled()) perfLog('transaction', Math.round((performance.now() - t0) * 100) / 100)
+		logStorageOpfsStep('transaction', Math.round((performance.now() - t0) * 100) / 100)
 	}
 
 	async trackCoValuesSyncState(updates) {

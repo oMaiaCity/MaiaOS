@@ -10,6 +10,7 @@
 		"./utils/*": "./src/utils/*"
 	},
 	"dependencies": {
+		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/actors": "workspace:*",
 		"dompurify": "^3.2.2",
 		"marked": "^15.0.7",
