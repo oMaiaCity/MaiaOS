@@ -2419,20 +2419,27 @@ pre {
 	position: relative;
 }
 
-/* MaiaDB navigation latches (side-aligned) and back notch (bottom-aligned) */
+/* MaiaDB navigation latches (side-aligned) and back notch (bottom-aligned)
+   — match unified bottom nav pill (maia-nav-pill / --color-nav-pill-surface) */
 .db-latch {
 	position: fixed;
-	background: #1a2355;
-	border: none;
-	color: rgba(255, 255, 255, 0.8);
+	background: var(--color-nav-pill-surface);
+	border: 1px solid rgba(27, 43, 27, 0.1);
+	color: var(--color-marine-blue);
 	cursor: pointer;
 	display: none; /* Hidden by default, shown on mobile/tablet */
 	align-items: center;
 	justify-content: center;
 	z-index: 850;
+	box-shadow:
+		0 -2px 12px rgba(0, 0, 0, 0.06),
+		0 4px 20px rgba(0, 0, 0, 0.08),
+		inset 0 1px 0 rgba(255, 255, 255, 0.85);
 	transition:
 		background 0.15s,
-		color 0.15s;
+		color 0.15s,
+		border-color 0.15s,
+		box-shadow 0.15s;
 }
 
 .db-latch-left {
@@ -2441,6 +2448,7 @@ pre {
 	width: 40px; /* 32 * 1.25 */
 	height: 40px;
 	border-radius: 0 18px 0 0;
+	border-bottom: none;
 	padding-right: 4px;
 }
 
@@ -2450,12 +2458,14 @@ pre {
 	width: 40px;
 	height: 40px;
 	border-radius: 18px 0 0 0;
+	border-bottom: none;
 	padding-left: 4px;
 }
 
 .db-latch.active {
-	background: #0c133d;
-	color: #fff;
+	background: rgba(72, 184, 196, 0.14);
+	color: var(--color-marine-blue);
+	border-color: rgba(27, 43, 27, 0.14);
 }
 
 .db-notch-back {
@@ -2463,11 +2473,12 @@ pre {
 	left: 48px; /* Increased gap from left latch (40px width + 8px gap) */
 	bottom: 0;
 	height: 40px;
-	background: #1a2355;
-	border: none;
+	background: var(--color-nav-pill-surface);
+	border: 1px solid rgba(27, 43, 27, 0.1);
+	border-bottom: none;
 	border-radius: 18px 18px 0 0;
 	padding: 0 1.25rem;
-	color: rgba(255, 255, 255, 0.8);
+	color: var(--color-marine-blue);
 	font-size: 15px; /* 12 * 1.25 */
 	font-family: Inter, system-ui, sans-serif;
 	cursor: pointer;
@@ -2476,15 +2487,22 @@ pre {
 	justify-content: center;
 	gap: 0.45rem;
 	z-index: 850;
+	box-shadow:
+		0 -2px 12px rgba(0, 0, 0, 0.06),
+		0 4px 20px rgba(0, 0, 0, 0.08),
+		inset 0 1px 0 rgba(255, 255, 255, 0.85);
 	transition:
 		background 0.15s,
-		color 0.15s;
+		color 0.15s,
+		border-color 0.15s,
+		box-shadow 0.15s;
 }
 
 .db-latch:hover,
 .db-notch-back:hover {
-	background: #0c133d;
-	color: rgba(255, 255, 255, 0.95);
+	background: rgba(0, 31, 51, 0.06);
+	color: var(--color-paradise-water);
+	border-color: rgba(27, 43, 27, 0.12);
 }
 
 .db-latch svg,
