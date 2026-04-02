@@ -19,7 +19,7 @@
 		"@MaiaOS/factories": "workspace:*",
 		"@runanywhere/web-llamacpp": "0.1.0-beta.10",
 		"@runanywhere/web-onnx": "0.1.0-beta.10",
-		"cojson-transport-ws": "0.20.14"
+		"cojson-transport-ws": "0.20.16"
 	},
 	"scripts": {
 		"build": "bun scripts/build.js",

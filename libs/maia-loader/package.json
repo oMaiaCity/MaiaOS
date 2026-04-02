@@ -17,6 +17,6 @@
 		"@MaiaOS/self": "workspace:*",
 		"@MaiaOS/actors": "workspace:*",
 		"@MaiaOS/vibes": "workspace:*",
-		"cojson-transport-ws": "0.20.14"
+		"cojson-transport-ws": "0.20.16"
 	}
 }

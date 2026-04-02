@@ -36,17 +36,17 @@
 		"prepare": "husky"
 	},
 	"devDependencies": {
-		"@biomejs/biome": "2.3.8",
-		"@realfavicongenerator/generate-favicon": "^0.6.0",
-		"@realfavicongenerator/image-adapter-node": "^0.6.1",
-		"husky": "^9.1.7",
-		"lint-staged": "^16.2.7"
+		"@biomejs/biome": "2.4.10",
+		"@realfavicongenerator/generate-favicon": "0.8.0",
+		"@realfavicongenerator/image-adapter-node": "0.8.0",
+		"husky": "9.1.7",
+		"lint-staged": "16.4.0"
 	},
 	"lint-staged": {
 		"*.{js,css,html,md,json}": "biome check --write --no-errors-on-unmatched",
 		"*.maia": "bun scripts/format-maia.js"
 	},
 	"dependencies": {
-		"@electric-sql/pglite": "^0.3.15"
+		"@electric-sql/pglite": "0.4.2"
 	}
 }
