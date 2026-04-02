@@ -3,7 +3,7 @@
  *
  * Tokens (comma / semicolon / whitespace separated):
  * - **`perf.all`** — all PERF channels
- * - **`perf.scope.subscope`** — e.g. `perf.engines.pipeline`, `perf.storage.opfs`
+ * - **`perf.scope.subscope`** — e.g. `perf.engines.pipeline`, `perf.app.vibes`, `perf.storage.opfs`
  * - **`scope:subscope`** — granular PERF (e.g. `engines:pipeline`)
  * - **`debug.all`** — all DEBUG channels (`engines:loadBinary`, `app:cobinary`, …)
  * - **`debug.scope.name`** — e.g. `debug.engines.loadBinary`, `debug.app.cobinary`
@@ -22,7 +22,14 @@ const PERF_DOT = /^perf\.([^.]+)\.(.+)$/i
 /** `debug.scope.name` → `scope:name` */
 const DEBUG_DOT = /^debug\.([^.]+)\.(.+)$/i
 
-const PERF_ALL_KEYS = ['engines:pipeline', 'engines:chat', 'db:upload', 'storage:opfs', 'game:init']
+const PERF_ALL_KEYS = [
+	'engines:pipeline',
+	'engines:chat',
+	'db:upload',
+	'storage:opfs',
+	'game:init',
+	'app:vibes',
+]
 
 const DEBUG_ALL_KEYS = ['engines:loadbinary', 'app:cobinary', 'engines:runtime', 'db:storagehook']
 

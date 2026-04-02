@@ -19,7 +19,7 @@ import {
 	subscribeSyncState,
 	updateSyncState,
 } from '@MaiaOS/loader'
-import { applyLogModeFromEnv } from '@MaiaOS/logs'
+import { applyLogModeFromEnv, createPerfTracer } from '@MaiaOS/logs'
 import { getSyncHttpBaseUrl } from '@MaiaOS/peer'
 import { renderApp } from './db-view.js'
 import { renderLandingPage } from './landing.js'
@@ -1281,12 +1281,15 @@ async function loadVibe(vibeKey) {
 		return
 	}
 
+	const perf = createPerfTracer('app', 'vibes')
 	try {
+		perf.start(`loadVibe(${vibeKey === null ? 'close' : vibeKey})`)
 		if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
 		}
 		if (vibeKey === null) {
 			if (currentVibe && maia?.runtime) {
 				maia.runtime.destroyActorsForVibe(currentVibe)
+				perf.step('destroyActorsForVibe(close)')
 			}
 
 			_currentVibeContainer = null
@@ -1294,9 +1297,11 @@ async function loadVibe(vibeKey) {
 
 			currentVibe = null
 			navigateToScreen('dashboard')
+			perf.step('navigateToScreen(dashboard)')
 		} else {
 			if (currentVibe && currentVibe !== vibeKey && maia?.runtime) {
 				maia.runtime.destroyActorsForVibe(currentVibe)
+				perf.step('destroyActorsForVibe(switch)')
 			}
 
 			if (currentContextCoValueId !== null) {
@@ -1305,12 +1310,15 @@ async function loadVibe(vibeKey) {
 			currentVibe = vibeKey
 			currentContextCoValueId = null
 			currentScreen = 'vibe-viewer'
+			perf.step('state→vibe-viewer')
 		}
 
-		await renderAppInternal()
+		await perf.measure('renderAppInternal', async () => renderAppInternal())
+		perf.end('loadVibe')
 		if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
 		}
 	} catch (_error) {
+		perf.end('loadVibe(error)')
 		currentVibe = null
 		await renderAppInternal()
 	}

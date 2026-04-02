@@ -83,6 +83,7 @@ export const perfEnginesPipeline = createPerfTracer('engines', 'pipeline')
 export const perfEnginesChat = createPerfTracer('engines', 'chat')
 export const perfDbUpload = createPerfTracer('db', 'upload')
 export const perfGameInit = createPerfTracer('game', 'init')
+export const perfAppVibes = createPerfTracer('app', 'vibes')
 
 /**
  * @returns {boolean}

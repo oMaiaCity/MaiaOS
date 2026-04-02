@@ -4,6 +4,7 @@
  */
 
 import { getAllVibeRegistries, resolveAccountCoIdsToProfiles } from '@MaiaOS/loader'
+import { createPerfTracer } from '@MaiaOS/logs'
 import { findSessionChatIntentActorId, PERSISTENT_CHAT_VIBE_KEY } from './maia-ai-global.js'
 import {
 	escapeHtml,
@@ -362,68 +363,81 @@ export async function renderVibeViewer(
 	_navigateToScreen,
 	currentSpark = '°Maia',
 ) {
-	const accountId = maia?.id?.maiaId?.id || ''
-	let accountDisplayName = truncate(accountId, 12)
-	let accountAvatarHtml = ''
-	if (accountId?.startsWith('co_z') && maia?.do) {
-		try {
-			const profiles = await resolveAccountCoIdsToProfiles(maia, [accountId])
-			const accountProfile = profiles.get(accountId) ?? null
-			accountDisplayName = accountProfile?.name ?? accountDisplayName
-			accountAvatarHtml = getProfileAvatarHtml(accountProfile?.image, {
-				size: 44,
-				className: 'navbar-avatar',
-				syncState,
-			})
-		} catch (_e) {}
-	}
-	if (accountId && !accountAvatarHtml) {
-		accountAvatarHtml = getProfileAvatarHtml(null, { size: 44, className: 'navbar-avatar' })
-	}
-	// Dvibes (special screens): hardcoded names. Dynamic vibes: resolved from registry manifest.
-	const dvibeNameMap = { db: 'MaiaDB' }
-	let vibeLabel = 'Vibe'
-	if (currentVibe) {
-		if (dvibeNameMap[currentVibe]) {
-			vibeLabel = dvibeNameMap[currentVibe]
-		} else {
-			const registries = await getAllVibeRegistries()
-			const reg = registries.find((r) => r?.vibe?.$id === `°Maia/vibe/${currentVibe}`)
-			vibeLabel = reg?.vibe?.name ?? `${currentVibe.charAt(0).toUpperCase() + currentVibe.slice(1)}`
-		}
-	}
-
-	// Park persistent Chat intent off-screen so destroyActorsForContainer does not tear down the tree
-	if (maia?.runtime) {
-		const intentId = findSessionChatIntentActorId(maia)
-		if (intentId) {
-			let host = document.getElementById('maia-session-chat-host')
-			if (!host) {
-				host = document.createElement('div')
-				host.id = 'maia-session-chat-host'
-				host.setAttribute('aria-hidden', 'true')
-				host.style.cssText =
-					'position:fixed;width:0;height:0;overflow:hidden;pointer-events:none;visibility:hidden'
-				document.body.appendChild(host)
-			}
+	const perf = createPerfTracer('app', 'vibes')
+	perf.start(`renderVibeViewer:${currentVibe}`)
+	try {
+		const accountId = maia?.id?.maiaId?.id || ''
+		let accountDisplayName = truncate(accountId, 12)
+		let accountAvatarHtml = ''
+		if (accountId?.startsWith('co_z') && maia?.do) {
 			try {
-				await maia.getEngines().actorEngine.reuseActor(intentId, host, PERSISTENT_CHAT_VIBE_KEY)
+				await perf.measure('resolveAccountProfile', async () => {
+					const profiles = await resolveAccountCoIdsToProfiles(maia, [accountId])
+					const accountProfile = profiles.get(accountId) ?? null
+					accountDisplayName = accountProfile?.name ?? accountDisplayName
+					accountAvatarHtml = getProfileAvatarHtml(accountProfile?.image, {
+						size: 44,
+						className: 'navbar-avatar',
+						syncState,
+					})
+				})
 			} catch (_e) {}
 		}
-	}
-
-	// Clear any existing vibe containers before rendering new one
-	// This ensures we don't have multiple aven containers stacked
-	const app = document.getElementById('app')
-	if (app) {
-		const existingContainers = app.querySelectorAll('.vibe-container')
-		for (const container of existingContainers) {
-			if (maia?.runtime) maia.runtime.destroyActorsForContainer(container)
-			container.remove()
+		if (accountId && !accountAvatarHtml) {
+			accountAvatarHtml = getProfileAvatarHtml(null, { size: 44, className: 'navbar-avatar' })
 		}
-	}
+		perf.step('profile+avatar')
+		// Dvibes (special screens): hardcoded names. Dynamic vibes: resolved from registry manifest.
+		const dvibeNameMap = { db: 'MaiaDB' }
+		let vibeLabel = 'Vibe'
+		if (currentVibe) {
+			if (dvibeNameMap[currentVibe]) {
+				vibeLabel = dvibeNameMap[currentVibe]
+			} else {
+				await perf.measure('getAllVibeRegistries+vibeLabel', async () => {
+					const registries = await getAllVibeRegistries()
+					const reg = registries.find((r) => r?.vibe?.$id === `°Maia/vibe/${currentVibe}`)
+					vibeLabel = reg?.vibe?.name ?? `${currentVibe.charAt(0).toUpperCase() + currentVibe.slice(1)}`
+				})
+			}
+		}
+		perf.step('vibeTitle')
 
-	app.innerHTML = `
+		// Park persistent Chat intent off-screen so destroyActorsForContainer does not tear down the tree
+		if (maia?.runtime) {
+			await perf.measure('chatIntentReuse', async () => {
+				const intentId = findSessionChatIntentActorId(maia)
+				if (intentId) {
+					let host = document.getElementById('maia-session-chat-host')
+					if (!host) {
+						host = document.createElement('div')
+						host.id = 'maia-session-chat-host'
+						host.setAttribute('aria-hidden', 'true')
+						host.style.cssText =
+							'position:fixed;width:0;height:0;overflow:hidden;pointer-events:none;visibility:hidden'
+						document.body.appendChild(host)
+					}
+					try {
+						await maia.getEngines().actorEngine.reuseActor(intentId, host, PERSISTENT_CHAT_VIBE_KEY)
+					} catch (_e) {}
+				}
+			})
+		}
+		perf.step('afterChatHost')
+
+		// Clear any existing vibe containers before rendering new one
+		// This ensures we don't have multiple aven containers stacked
+		const app = document.getElementById('app')
+		if (app) {
+			const existingContainers = app.querySelectorAll('.vibe-container')
+			for (const container of existingContainers) {
+				if (maia?.runtime) maia.runtime.destroyActorsForContainer(container)
+				container.remove()
+			}
+		}
+		perf.step('destroyOldContainers')
+
+		app.innerHTML = `
 		<div class="db-container">
 			<div class="navbar-section">
 			<header class="db-header whitish-card">
@@ -482,126 +496,142 @@ export async function renderVibeViewer(
 			</div>
 		</div>
 	`
+		perf.step('shellDOM')
 
-	// Add sidebar toggle handlers for maiadb vibe
-	setTimeout(() => {
-		const vibeContainer = document.querySelector('.vibe-container')
-		if (vibeContainer?.shadowRoot) {
-			const navAside = vibeContainer.shadowRoot.querySelector('.nav-aside')
-			const detailAside = vibeContainer.shadowRoot.querySelector('.detail-aside')
+		// Add sidebar toggle handlers for maiadb vibe
+		setTimeout(() => {
+			const vibeContainer = document.querySelector('.vibe-container')
+			if (vibeContainer?.shadowRoot) {
+				const navAside = vibeContainer.shadowRoot.querySelector('.nav-aside')
+				const detailAside = vibeContainer.shadowRoot.querySelector('.detail-aside')
 
-			// Start collapsed by default, no transitions
-			if (navAside) {
-				navAside.classList.add('collapsed')
-			}
-			if (detailAside) {
-				detailAside.classList.add('collapsed')
-			}
+				// Start collapsed by default, no transitions
+				if (navAside) {
+					navAside.classList.add('collapsed')
+				}
+				if (detailAside) {
+					detailAside.classList.add('collapsed')
+				}
 
-			// Add toggle handlers
-			const navToggle = vibeContainer.shadowRoot.querySelector('.nav-toggle')
-			const detailToggle = vibeContainer.shadowRoot.querySelector('.detail-toggle')
+				// Add toggle handlers
+				const navToggle = vibeContainer.shadowRoot.querySelector('.nav-toggle')
+				const detailToggle = vibeContainer.shadowRoot.querySelector('.detail-toggle')
 
-			if (navToggle) {
-				navToggle.addEventListener('click', () => {
-					if (navAside) {
-						// Enable transitions when user explicitly toggles
-						navAside.classList.add('sidebar-ready')
-						navAside.classList.toggle('collapsed')
-					}
-				})
-			}
+				if (navToggle) {
+					navToggle.addEventListener('click', () => {
+						if (navAside) {
+							// Enable transitions when user explicitly toggles
+							navAside.classList.add('sidebar-ready')
+							navAside.classList.toggle('collapsed')
+						}
+					})
+				}
 
-			if (detailToggle) {
-				detailToggle.addEventListener('click', () => {
-					if (detailAside) {
-						// Enable transitions when user explicitly toggles
-						detailAside.classList.add('sidebar-ready')
-						detailAside.classList.toggle('collapsed')
-					}
-				})
-			}
-		}
-	}, 100)
-
-	// Load aven asynchronously after DOM is updated
-	requestAnimationFrame(async () => {
-		try {
-			await new Promise((resolve) => setTimeout(resolve, 10))
-
-			// Ensure only one aven container exists (cleanup any duplicates)
-			const allContainers = document.querySelectorAll('.vibe-container')
-			if (allContainers.length > 1) {
-				const targetContainer = document.getElementById(`vibe-container-${currentVibe}`)
-				for (const container of allContainers) {
-					if (container !== targetContainer) {
-						container.remove()
-					}
+				if (detailToggle) {
+					detailToggle.addEventListener('click', () => {
+						if (detailAside) {
+							// Enable transitions when user explicitly toggles
+							detailAside.classList.add('sidebar-ready')
+							detailAside.classList.toggle('collapsed')
+						}
+					})
 				}
 			}
+		}, 100)
 
-			const container = document.getElementById(`vibe-container-${currentVibe}`)
-			if (!container) {
-				return
-			}
-			if (!maia) {
-				return
-			}
+		// Await rAF + loadVibeFromAccount so loadVibe/renderApp timing includes real mount (was fire-and-forget).
+		await new Promise((resolve, reject) => {
+			requestAnimationFrame(() => {
+				void (async () => {
+					try {
+						await new Promise((r) => setTimeout(r, 10))
+						perf.step('rAF+10ms')
 
-			// Clear container before loading new vibe (remove any existing content)
-			container.innerHTML = ''
-
-			if (currentVibe === 'chat') {
-				const intentId = findSessionChatIntentActorId(maia)
-				if (intentId) {
-					await maia.getEngines().actorEngine.reuseActor(intentId, container, PERSISTENT_CHAT_VIBE_KEY)
-				} else {
-					await maia.loadVibeFromAccount(
-						'chat',
-						container,
-						currentSpark || '°Maia',
-						PERSISTENT_CHAT_VIBE_KEY,
-					)
-				}
-			} else {
-				await maia.loadVibeFromAccount(currentVibe, container, currentSpark || '°Maia')
-			}
-
-			// Add sidebar toggle handlers for maiadb vibe (after vibe loads)
-			setTimeout(() => {
-				const vibeContainerEl = document.getElementById(`vibe-container-${currentVibe}`)
-				if (vibeContainerEl) {
-					const shadowRoot = vibeContainerEl.shadowRoot || vibeContainerEl
-					const navToggle = shadowRoot.querySelector('.nav-toggle')
-					const detailToggle = shadowRoot.querySelector('.detail-toggle')
-
-					if (navToggle) {
-						navToggle.addEventListener('click', () => {
-							const navAside = navToggle.closest('.nav-aside')
-							if (navAside) {
-								navAside.classList.toggle('collapsed')
+						const allContainers = document.querySelectorAll('.vibe-container')
+						if (allContainers.length > 1) {
+							const targetContainer = document.getElementById(`vibe-container-${currentVibe}`)
+							for (const container of allContainers) {
+								if (container !== targetContainer) {
+									container.remove()
+								}
 							}
-						})
-					}
+						}
 
-					if (detailToggle) {
-						detailToggle.addEventListener('click', () => {
-							const detailAside = detailToggle.closest('.detail-aside')
-							if (detailAside) {
-								detailAside.classList.toggle('collapsed')
+						const container = document.getElementById(`vibe-container-${currentVibe}`)
+						if (!container || !maia) {
+							resolve()
+							return
+						}
+
+						container.innerHTML = ''
+						perf.step('beforeLoadVibeFromAccount')
+
+						if (currentVibe === 'chat') {
+							const intentId = findSessionChatIntentActorId(maia)
+							if (intentId) {
+								await perf.measure('loadVibeFromAccount(chat reuse)', async () =>
+									maia.getEngines().actorEngine.reuseActor(intentId, container, PERSISTENT_CHAT_VIBE_KEY),
+								)
+							} else {
+								await perf.measure('loadVibeFromAccount(chat)', async () =>
+									maia.loadVibeFromAccount(
+										'chat',
+										container,
+										currentSpark || '°Maia',
+										PERSISTENT_CHAT_VIBE_KEY,
+									),
+								)
 							}
-						})
-					}
-				}
-			}, 500)
+						} else {
+							await perf.measure('loadVibeFromAccount', async () =>
+								maia.loadVibeFromAccount(currentVibe, container, currentSpark || '°Maia'),
+							)
+						}
+						perf.step('afterLoadVibeFromAccount')
 
-			// Store container reference for cleanup on unload
-			window.currentVibeContainer = container
-		} catch (error) {
-			const container = document.getElementById(`vibe-container-${currentVibe}`)
-			if (container) {
-				container.innerHTML = `<div class="empty-state p-8 text-center text-rose-500 font-medium bg-rose-50/50 rounded-2xl border border-rose-100">Error loading aven: ${escapeHtml(error.message)}</div>`
-			}
-		}
-	})
+						setTimeout(() => {
+							const vibeContainerEl = document.getElementById(`vibe-container-${currentVibe}`)
+							if (vibeContainerEl) {
+								const shadowRoot = vibeContainerEl.shadowRoot || vibeContainerEl
+								const navToggle = shadowRoot.querySelector('.nav-toggle')
+								const detailToggle = shadowRoot.querySelector('.detail-toggle')
+
+								if (navToggle) {
+									navToggle.addEventListener('click', () => {
+										const navAside = navToggle.closest('.nav-aside')
+										if (navAside) {
+											navAside.classList.toggle('collapsed')
+										}
+									})
+								}
+
+								if (detailToggle) {
+									detailToggle.addEventListener('click', () => {
+										const detailAside = detailToggle.closest('.detail-aside')
+										if (detailAside) {
+											detailAside.classList.toggle('collapsed')
+										}
+									})
+								}
+							}
+						}, 500)
+
+						window.currentVibeContainer = container
+						resolve()
+					} catch (error) {
+						const container = document.getElementById(`vibe-container-${currentVibe}`)
+						if (container) {
+							container.innerHTML = `<div class="empty-state p-8 text-center text-rose-500 font-medium bg-rose-50/50 rounded-2xl border border-rose-100">Error loading aven: ${escapeHtml(error.message)}</div>`
+						}
+						reject(error)
+					}
+				})()
+			})
+		})
+
+		perf.end('renderVibeViewer')
+	} catch (e) {
+		perf.end('renderVibeViewer(error)')
+		throw e
+	}
 }
