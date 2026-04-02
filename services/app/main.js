@@ -226,13 +226,15 @@ async function handleRoute() {
 		if (authState.signedIn && !maia) {
 			renderLoadingConnectingScreen()
 			let waitCount = 0
+			// First load on a new browser can pull a large account from sync; allow up to ~60s before giving up.
+			const maxTicks = 120
 			const checkMaia = setInterval(() => {
 				waitCount++
 				if (maia) {
 					clearInterval(checkMaia)
 					cleanupLoadingScreenSync()
 					renderAppInternal().catch((e) => showToast(`Failed to render app: ${e.message}`, 'error'))
-				} else if (waitCount > 20) {
+				} else if (waitCount > maxTicks) {
 					clearInterval(checkMaia)
 					cleanupLoadingScreenSync()
 					authState = { signedIn: false, accountID: null }
@@ -643,6 +645,8 @@ async function signIn() {
 
 		// Mark that user has successfully authenticated
 		markAccountExists()
+
+		setSignInLoading(false)
 
 		// Await account loading in background and boot MaiaOS when ready
 		loadingPromise
