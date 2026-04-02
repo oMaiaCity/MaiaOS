@@ -52,6 +52,15 @@ function caughtErrName(error) {
 	return ''
 }
 
+/** Wait until after the next composited frame (double rAF) so PERF includes visible paint. */
+function waitUntilNextPaint() {
+	return new Promise((resolve) => {
+		requestAnimationFrame(() => {
+			requestAnimationFrame(() => resolve())
+		})
+	})
+}
+
 let maia
 let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'the-game' | 'vibe-viewer' | …
 let currentView = 'account' // Current schema filter (default: 'account')
@@ -1296,8 +1305,13 @@ async function loadVibe(vibeKey) {
 			window.currentVibeContainer = null
 
 			currentVibe = null
-			navigateToScreen('dashboard')
-			perf.step('navigateToScreen(dashboard)')
+			// Match navigateToScreen('dashboard') state but do not call render here — that would race
+			// the awaited renderAppInternal below (second call returns early while isRendering).
+			currentScreen = 'dashboard'
+			currentContextCoValueId = null
+			currentSpark = null
+			navigationHistory = []
+			perf.step('state→dashboard')
 		} else {
 			if (currentVibe && currentVibe !== vibeKey && maia?.runtime) {
 				maia.runtime.destroyActorsForVibe(currentVibe)
@@ -1314,6 +1328,10 @@ async function loadVibe(vibeKey) {
 		}
 
 		await perf.measure('renderAppInternal', async () => renderAppInternal())
+		if (vibeKey === null) {
+			await waitUntilNextPaint()
+			perf.step('afterPaint(dashboard)')
+		}
 		perf.end('loadVibe')
 		if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
 		}

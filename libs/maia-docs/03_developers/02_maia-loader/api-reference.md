@@ -6,7 +6,7 @@ Complete API reference for `@MaiaOS/loader` package.
 
 ## Re-exports (single-entry pattern)
 
-Services (maia, moai) import only from `@MaiaOS/loader`. Loader re-exports everything needed:
+Services (app, sync) import only from `@MaiaOS/loader`. Loader re-exports everything needed:
 
 | Export | Source | Use |
 |--------|--------|-----|
@@ -32,7 +32,7 @@ Boots the MaiaOS operating system. Authentication is integrated into boot—you 
 - `config.agentSecret` (optional) - Agent secret for UCAN/capability tokens
 - `config.modules` (optional, default: `['db', 'core']`) - Modules to load (db, core, ai)
 - `config.syncDomain` (optional) - Sync server domain
-- `config.getMoaiBaseUrl` (optional) - Base URL for moai sync server
+- `config.getMoaiBaseUrl` (optional) - Base URL for the sync server
 - `config.isDevelopment` (optional) - Development mode flag
 - `config.runtimeType` (optional, default: `'browser'`) - Runtime type
 

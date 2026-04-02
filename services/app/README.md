@@ -94,7 +94,7 @@ Production builds run `distros:build` then `bun build.js`.
 
 ## Port
 
-- **4200** (maia static server). Moai at **4201** (sync/API) — client connects directly via CORS.
+- **4200** (app static server). **Sync** at **4201** (WebSocket + API) — client connects directly via CORS.
 
 ## Tauri desktop (macOS)
 

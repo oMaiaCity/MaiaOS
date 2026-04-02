@@ -72,21 +72,21 @@ The sync service requires persistent storage (never in-memory). Two backends are
 
 **simpleAccountSeed** – No account.sparks. Used for all signups (human + agent). Registries set via linkAccountToRegistries.
 
-**genesisAccountSeed** – Full scaffold + vibes. Only when **PEER_MODE=sync** (moai sync server).
+**genesisAccountSeed** – Full scaffold + vibes. Only when **PEER_MODE=sync** (sync server).
 
 | Trigger | Mode | Behavior |
 |---------|------|----------|
 | **createAccountWithSecret** (human or agent) | simpleAccountSeed | No account.sparks. Vibes come from sync; registries via link. |
-| **Moai PEER_MODE=sync** | genesisAccountSeed | Full scaffold + vibes into sync server account. |
+| **Sync PEER_MODE=sync** | genesisAccountSeed | Full scaffold + vibes into sync server account. |
 | **handleSeed** (agent mode, manual) | genesisAccountSeed | Manual reseed for dev. |
 
-**SEED_VIBES** (moai env) controls which vibes moai seeds when PEER_MODE=sync: `"all"` or comma-separated `"todos,chat,db,sparks,creator"`.
+**SEED_VIBES** (sync server env) controls which vibes are seeded when PEER_MODE=sync: `"all"` or comma-separated `"todos,chat,db,sparks,creator"`.
 
 ---
 
 ## Registries (Humans and Sparks)
 
-Top-level `account.registries` stores human and spark identity mappings. Only the sync agent (moai) seeds it during genesis. Humans and agents link by setting `account.registries` to the sync server's registries co-id.
+Top-level `account.registries` stores human and spark identity mappings. Only the sync agent seeds it during genesis. Humans and agents link by setting `account.registries` to the sync server's registries co-id.
 
 ### Structure
 

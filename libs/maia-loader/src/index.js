@@ -21,7 +21,7 @@ export {
 	updateSyncState,
 	waitForStoreReady,
 } from '@MaiaOS/db'
-// Re-export DataEngine and MaiaScriptEvaluator for server/agent (moai)
+// Re-export DataEngine and MaiaScriptEvaluator for server/agent (sync)
 export { DataEngine, MaiaScriptEvaluator } from '@MaiaOS/engines'
 export { getAllFactories } from '@MaiaOS/factories'
 // Re-export auth functions for convenience

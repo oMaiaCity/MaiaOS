@@ -1,9 +1,9 @@
 /**
  * AI Chat Actor - @ai/chat
  *
- * Unified AI chat using OpenAI-compatible API (RedPill via moai proxy).
+ * Unified AI chat using OpenAI-compatible API (RedPill via sync proxy).
  * LLM loop runs client-side: Runtime.collectTools + Runtime.executeToolCall.
- * Moai is LLM proxy only (no tool execution).
+ * Sync is LLM proxy only (no tool execution).
  *
  * Usage in process:
  *   {"actor": "@ai/chat", "payload": {"context": [...], "model": "qwen/..."}}

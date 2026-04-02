@@ -33,16 +33,16 @@ MaiaOS/ (root)
 
 ## Workspace Organization
 
-### `services/maia/` - Frontend SPA
+### `services/app/` - Frontend SPA
 - **Port 4200** (dev)
 - Bun-built SPA, pure static server (no proxy)
-- Client connects directly to moai (4201) for sync/API — CORS enabled on moai
-- Sync domain: `VITE_PEER_MOAI` at build time (fly.toml [build.args])
+- Client connects directly to sync (4201) for sync/API — CORS enabled on the sync server
+- Sync host: `VITE_PEER_SYNC_HOST` at build time (fly.toml [build.args])
 
-### `services/moai/` - Sync + API
+### `services/sync/` - Sync + API
 - **Port 4201** (dev)
 - Unified: WebSocket sync (cojson LocalNode), agent API, LLM proxy
-- Secrets: `PEER_ID`, `PEER_SECRET`, `RED_PILL_API_KEY`, etc. (no PEER_MOAI for maia deploy)
+- Secrets: `PEER_ID`, `PEER_SECRET`, `RED_PILL_API_KEY`, etc.
 
 ### `libs/` - Shared Libraries
 Reusable packages that can be shared across multiple workspaces:
@@ -179,8 +179,8 @@ bun run build                  # Build sync
 
 Each workspace builds independently:
 ```bash
-cd services/maia && bun run build       # Build maia (Bun, uses distros bundles)
-cd services/moai && bun run build      # Build moai
+cd services/app && bun run build        # Build app (Bun, uses distros bundles)
+cd services/sync && bun run build       # Build sync
 cd libs/maia-distros && bun run build   # Build bundles (client, server, vibes)
 ```
 
@@ -250,7 +250,7 @@ Each service in the monorepo has a **hardcoded development port** to avoid confl
 MaiaOS/
 ├── .env                    # Root-level env vars (all services/libs)
 ├── services/
-│   └── maia/
+│   └── app/
 │       └── .env.local      # Optional: service-specific overrides (gitignored)
 └── libs/
     └── [lib]/
@@ -284,12 +284,12 @@ bun install
 # Run development server (from root)
 bun dev
 
-# Build maia (from services/maia)
-cd services/maia && bun run build
+# Build app (from services/app)
+cd services/app && bun run build
 
 
-# Add dependency to maia
-cd services/maia && bun add <package>
+# Add dependency to app
+cd services/app && bun add <package>
 
 # Add dependency to shared library
 cd libs/maia-db && bun add <package>

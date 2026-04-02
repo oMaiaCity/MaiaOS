@@ -97,14 +97,43 @@ async function resolveAccountToProfileCoIdViaAvens(maia, accountCoId) {
 }
 
 /**
+ * Signed-in user: profile co-id is on the live account — do not walk registries (those stores
+ * often stay `loading` until sync settles and each waitForStore can burn the full 5s timeout).
+ */
+async function resolveSelfAccountProfileFromLiveAccount(maia, accountCoId) {
+	const acc = maia?.id?.maiaId
+	const selfId = acc?.id ?? acc?.$jazz?.id
+	if (selfId !== accountCoId || typeof acc?.get !== 'function') return null
+	const profileCoId = acc.get('profile')
+	if (!profileCoId?.startsWith('co_z')) return null
+	const profileStore = await maia.do({ op: 'read', factory: null, key: profileCoId })
+	await waitForStore(profileStore, 5000)
+	const profileData = profileStore?.value ?? profileStore
+	const name = profileData?.name
+	const image =
+		typeof profileData?.avatar === 'string' && profileData.avatar.startsWith('co_z')
+			? profileData.avatar
+			: null
+	return {
+		id: profileCoId,
+		name: typeof name === 'string' && name.length > 0 ? name : travelerFallback(accountCoId),
+		image,
+	}
+}
+
+/**
  * Resolve a single account co-id to profile id, name, and image
- * Uses humans registry (public) first; falls back to account read for self.
+ * Self account: read profile from live account first (avoids registries wait chain).
+ * Others: humans registry, then avens, then @account read.
  * @param {Object} maia - MaiaOS instance with maia.do()
  * @param {string} accountCoId - Account co-id (co_z...)
  * @returns {Promise<{ id: string|null, name: string, image: string|null }>}
  */
 async function resolveOneToProfile(maia, accountCoId) {
 	try {
+		const selfProfile = await resolveSelfAccountProfileFromLiveAccount(maia, accountCoId)
+		if (selfProfile) return selfProfile
+
 		let profileCoId = await resolveAccountToProfileCoIdViaHumans(maia, accountCoId)
 		if (!profileCoId) {
 			profileCoId = await resolveAccountToProfileCoIdViaAvens(maia, accountCoId)

@@ -1,6 +1,6 @@
 # MaiaOS Production Deployment Guide
 
-Complete guide for deploying MaiaOS services to Fly.io, including DNS setup. Consolidates maia and moai deployment documentation.
+Complete guide for deploying MaiaOS services to Fly.io, including DNS setup. Consolidates app and sync deployment documentation.
 
 ## Prerequisites
 
@@ -129,7 +129,7 @@ flyctl apps destroy sync-next-maia-city
 ### Fly.io Domains (Default)
 
 - **Frontend**: `https://next-maia-city.fly.dev`
-- **Moai**: `https://moai-next-maia-city.fly.dev`
+- **Sync** (Fly app `moai-next-maia-city`): `https://moai-next-maia-city.fly.dev`
 
 ### Custom Domains
 
@@ -297,7 +297,7 @@ curl https://next-maia-city.fly.dev/
 
 ## WebSocket Endpoint
 
-Clients connect to moai sync via:
+Clients connect to the sync service via:
 - **Fly.io:** `wss://moai-next-maia-city.fly.dev/sync`
 - **Custom domain:** `wss://sync.next.maia.city/sync`
 
@@ -343,7 +343,7 @@ The API (LLM chat) and sync use the same domain. Sync domain comes from `VITE_PE
 
 ### Frontend can't connect to server
 
-1. Verify fly.toml [build.args] VITE_PEER_SYNC_HOST matches your moai domain
+1. Verify fly.toml [build.args] VITE_PEER_SYNC_HOST matches your sync host
 2. Check sync service is running: `curl https://moai-next-maia-city.fly.dev/health`
 3. Verify DNS/domain configuration if using custom domains
 
@@ -352,7 +352,7 @@ The API (LLM chat) and sync use the same domain. Sync domain comes from `VITE_PE
 1. Check logs: `flyctl logs --app moai-next-maia-city`
 2. Test health: `curl https://moai-next-maia-city.fly.dev/health`
 
-### "The app appears to be crashing" (Moai)
+### "The app appears to be crashing" (sync)
 
 Usually missing secrets. Run:
 ```bash
@@ -361,7 +361,7 @@ bun agent:generate
 bun run deploy:secrets
 ```
 
-### Volume not mounted (Moai)
+### Volume not mounted (sync)
 
 1. Verify volume exists: `flyctl volumes list --app moai-next-maia-city`
 2. Volume name must match fly.toml [mounts] `source`: `moai_data`
@@ -373,11 +373,11 @@ bun run deploy:secrets
 Both services have deployment scripts:
 
 ```bash
-# Moai (sync+API)
-cd services/moai && bun run deploy
+# Sync (WebSocket + API)
+cd services/sync && bun run deploy
 
-# Maia City
-cd services/maia && bun run deploy
+# App (frontend)
+cd services/app && bun run deploy
 ```
 
 These scripts handle deployment from the monorepo root with proper Dockerfile and config paths.

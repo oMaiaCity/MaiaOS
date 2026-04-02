@@ -46,7 +46,7 @@ vite.config.ts.timestamp-*
 **/zero-replica.db*
 **/*.db-journal
 
-# PGlite local dev data (moai sync server - never commit)
+# PGlite local dev data (sync server — never commit)
 **/pgdata/
 pg-lite.db
 **/pg-lite.db

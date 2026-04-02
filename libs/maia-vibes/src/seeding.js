@@ -1,5 +1,5 @@
 /**
- * Vibes Seeding API - Cycle-free entry for moai genesis
+ * Vibes Seeding API - Cycle-free entry for sync genesis
  *
  * No dependency on @MaiaOS/loader - safe for static import in bundled sync-server.mjs.
  * Used by loader for getAllVibeRegistries, buildSeedConfig, filterVibesForSeeding.

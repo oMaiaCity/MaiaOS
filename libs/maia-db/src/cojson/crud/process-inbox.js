@@ -60,8 +60,8 @@ export async function processInbox(peer, actorId, inboxCoId) {
 	if (!inboxData?.sessions) {
 		return { messages: [] }
 	}
-	// CRITICAL: Process ALL sessions - client must see server replies (e.g. SUCCESS from aiChat on moai)
-	// Session-only processing caused: maia never saw SUCCESS (moai's session) → result: null, no LLM response
+	// CRITICAL: Process ALL sessions - client must see server replies (e.g. SUCCESS from aiChat on sync)
+	// Session-only processing caused: app never saw SUCCESS (sync session) → result: null, no LLM response
 	const allItems = []
 	for (const items of Object.values(inboxData.sessions || {})) {
 		if (Array.isArray(items)) allItems.push(...items)

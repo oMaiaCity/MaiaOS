@@ -4,9 +4,9 @@ How we ensure the WebSocket client connects successfully on first sign-in, witho
 
 ## Problem
 
-- **moai** (sync server) has async init: PGlite, agent worker, syncHandler. Until ready, `/sync` returns 503.
-- **maia** (client) connects to `ws://localhost:4201/sync` as soon as the app loads.
-- If the client connects before moai is ready → "bad response from server" → noisy error, 3–5s until retry succeeds.
+- **Sync** (port 4201) has async init: PGlite, agent worker, syncHandler. Until ready, `/sync` returns 503.
+- **App** (client) connects to `ws://localhost:4201/sync` as soon as the page loads.
+- If the client connects before sync is ready → "bad response from server" → noisy error, 3–5s until retry succeeds.
 
 ## Design Principle
 
@@ -20,9 +20,9 @@ The client assumes the server is ready when it connects. Orchestration (dev scri
 ┌─────────────────────────────────────────────────────────────────┐
 │  Dev (bun dev)                                                   │
 │                                                                  │
-│  1. Start moai (spawn, async init begins)                        │
+│  1. Start sync (spawn, async init begins)                        │
 │  2. Poll GET /health until ready: true                           │
-│  3. Start maia (user can load page; moai is ready)                │
+│  3. Start app (user can load page; sync is ready)                │
 │                                                                  │
 │  → No client polling. No "bad response" on first load.            │
 └─────────────────────────────────────────────────────────────────┘
@@ -40,7 +40,7 @@ The client assumes the server is ready when it connects. Orchestration (dev scri
 
 ## Components
 
-### 1. Health Endpoint (moai)
+### 1. Health Endpoint (sync)
 
 `GET /health` returns:
 
@@ -54,13 +54,13 @@ The client assumes the server is ready when it connects. Orchestration (dev scri
 ### 2. Dev Orchestration (scripts/dev.js)
 
 ```javascript
-await startMoai()
+await startSync()
 await waitForServiceReady('http://localhost:4201/health')
-await startMaia()
+await startApp()
 ```
 
 - `waitForServiceReady` polls `/health` until `ready: true` or timeout.
-- On timeout: maia still starts; WebSocket retries (existing behavior).
+- On timeout: app still starts; WebSocket retries (existing behavior).
 - Orchestration lives at the dev boundary; no client code changes.
 
 ### 3. Client (sync-peers.js)
@@ -81,7 +81,7 @@ Orchestration (who starts what, when) belongs at process boundaries. The client�
 
 ## Contracts
 
-1. **moai** exposes `/health` with `ready` reflecting sync handler availability.
-2. **dev** ensures maia starts only after moai is ready (or timeout).
+1. **Sync** exposes `/health` with `ready` reflecting sync handler availability.
+2. **dev** ensures the app starts only after sync is ready (or timeout).
 3. **production** uses platform health checks so traffic reaches ready instances only.
 4. **client** connects; retries on failure; no readiness probing.

@@ -1,6 +1,6 @@
 /**
  * Seed config for service actors - contributes actors to genesis seed.
- * Merged by moai into buildSeedConfig output; replaces separate tool config.
+ * Merged by the sync server into buildSeedConfig output; replaces separate tool config.
  * Also includes standalone UI actors (e.g. placeholder).
  */
 
