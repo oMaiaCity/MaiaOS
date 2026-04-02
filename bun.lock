@@ -17,7 +17,7 @@
     },
     "libs/maia-actors": {
       "name": "@MaiaOS/actors",
-      "version": "26.318.2107",
+      "version": "26.4.12327",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/engines": "workspace:*",
@@ -27,7 +27,7 @@
     },
     "libs/maia-ai": {
       "name": "@MaiaOS/maia-ai",
-      "version": "26.318.2107",
+      "version": "26.4.12327",
       "dependencies": {
         "@runanywhere/web": "0.1.0-beta.10",
         "@runanywhere/web-onnx": "0.1.0-beta.10",
@@ -35,11 +35,11 @@
     },
     "libs/maia-brand": {
       "name": "@MaiaOS/brand",
-      "version": "26.318.2107",
+      "version": "26.4.12327",
     },
     "libs/maia-db": {
       "name": "@MaiaOS/db",
-      "version": "26.318.2107",
+      "version": "26.4.12327",
       "dependencies": {
         "@MaiaOS/factories": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
@@ -51,7 +51,7 @@
     },
     "libs/maia-distros": {
       "name": "@MaiaOS/maia-distros",
-      "version": "26.318.2107",
+      "version": "26.4.12327",
       "dependencies": {
         "@MaiaOS/actors": "workspace:*",
         "@MaiaOS/db": "workspace:*",
@@ -65,7 +65,7 @@
     },
     "libs/maia-engines": {
       "name": "@MaiaOS/engines",
-      "version": "26.318.2107",
+      "version": "26.4.12327",
       "dependencies": {
         "@MaiaOS/actors": "workspace:*",
         "@MaiaOS/db": "workspace:*",
@@ -83,7 +83,7 @@
     },
     "libs/maia-factories": {
       "name": "@MaiaOS/factories",
-      "version": "26.318.2107",
+      "version": "26.4.12327",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "ajv": "^8.12.0",
@@ -92,18 +92,18 @@
     },
     "libs/maia-game": {
       "name": "@MaiaOS/game",
-      "version": "26.318.2107",
+      "version": "26.4.12327",
       "dependencies": {
         "three": "^0.170.0",
       },
     },
     "libs/maia-language": {
       "name": "@maia/language",
-      "version": "26.318.2107",
+      "version": "26.4.12327",
     },
     "libs/maia-loader": {
       "name": "@MaiaOS/loader",
-      "version": "26.318.2107",
+      "version": "26.4.12327",
       "dependencies": {
         "@MaiaOS/actors": "workspace:*",
         "@MaiaOS/db": "workspace:*",
@@ -117,7 +117,7 @@
     },
     "libs/maia-peer": {
       "name": "@MaiaOS/peer",
-      "version": "26.318.2107",
+      "version": "26.4.12327",
       "dependencies": {
         "@MaiaOS/storage": "workspace:*",
         "cojson": "0.20.14",
@@ -126,7 +126,7 @@
     },
     "libs/maia-self": {
       "name": "@MaiaOS/self",
-      "version": "26.318.2107",
+      "version": "26.4.12327",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
@@ -137,7 +137,7 @@
     },
     "libs/maia-storage": {
       "name": "@MaiaOS/storage",
-      "version": "26.318.2107",
+      "version": "26.4.12327",
       "dependencies": {
         "@aws-sdk/client-s3": "^3.1011.0",
         "@electric-sql/pglite": "latest",
@@ -149,7 +149,7 @@
     },
     "libs/maia-ucan": {
       "name": "@MaiaOS/maia-ucan",
-      "version": "26.318.2107",
+      "version": "26.4.12327",
       "dependencies": {
         "@noble/ed25519": "^2.1.0",
         "@noble/hashes": "^1.4.0",
@@ -158,7 +158,7 @@
     },
     "libs/maia-vibes": {
       "name": "@MaiaOS/vibes",
-      "version": "26.318.2107",
+      "version": "26.4.12327",
       "dependencies": {
         "@MaiaOS/factories": "workspace:*",
         "@MaiaOS/loader": "workspace:*",
@@ -166,12 +166,13 @@
     },
     "services/app": {
       "name": "@MaiaOS/app",
-      "version": "26.318.2107",
+      "version": "26.4.12327",
       "dependencies": {
         "@MaiaOS/game": "workspace:*",
         "@MaiaOS/loader": "workspace:*",
         "@MaiaOS/maia-ai": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
+        "@MaiaOS/peer": "workspace:*",
         "@tauri-apps/api": "^2.8.0",
       },
       "devDependencies": {
@@ -180,7 +181,7 @@
     },
     "services/sync": {
       "name": "@MaiaOS/sync",
-      "version": "26.318.2107",
+      "version": "26.4.12327",
       "dependencies": {
         "@MaiaOS/loader": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",

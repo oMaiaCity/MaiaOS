@@ -15,7 +15,8 @@
  *     - true: Fresh seed (first deploy or intentional reset). May overwrite existing scaffold.
  *     - false/unset: Skip seed, use persisted data. Never overwrite on restart.
  *   SEED_VIBES: Default "all". Which vibes to seed (todos, chat, quickjs-add, etc). "all" seeds every vibe including quickjs-add.
- *   PEER_APP_HOST: Allowed CORS origin (e.g. https://next.maia.city). When set, only that origin can call sync/LLM. Unset = * (dev fallback).
+ *   PEER_APP_HOST: Allowed CORS origin (e.g. https://next.maia.city). When set, only that origin can call sync/LLM in production. Unset = * (dev).
+ *   MAIA_DEV_CORS=1: With Postgres local dev, enable same multi-origin dev CORS as PGlite (localhost / 127.0.0.1 / ::1 on port 4200).
  */
 
 import {
@@ -68,18 +69,58 @@ const peerSyncSeed = process.env.PEER_SYNC_SEED === 'true'
 // SEED_VIBES: which vibes to seed on genesis. Default "all" (includes quickjs-add). Override: "todos,chat" or "todos,chat,quickjs-add"
 const seedVibesConfig = process.env.SEED_VIBES || 'all'
 
-/** CORS: PEER_APP_HOST = allowed origin (e.g. https://next.maia.city or localhost:4200). When set, only that origin can call sync/LLM. When unset, * (dev fallback). */
+/** CORS: PEER_APP_HOST = allowed origin (e.g. https://next.maia.city or localhost:4200). When unset, * (dev). */
 function normalizeCorsOrigin(host) {
 	if (!host) return '*'
 	const trimmed = host.trim()
 	if (!trimmed) return '*'
-	// CORS requires full origin (scheme + host). If missing scheme, assume http for dev.
 	if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
 		return `http://${trimmed}`
 	}
 	return trimmed
 }
-const CORS_ORIGIN = normalizeCorsOrigin(process.env.PEER_APP_HOST)
+
+const DEV_APP_ORIGINS = new Set([
+	'http://localhost:4200',
+	'http://127.0.0.1:4200',
+	'http://[::1]:4200',
+])
+
+const IS_LOCAL_DEV_CORS =
+	usePGlite || process.env.MAIA_DEV_CORS === 'true' || process.env.MAIA_DEV_CORS === '1'
+
+const rawPeerAppHost = process.env.PEER_APP_HOST?.trim() || ''
+const CONFIGURED_CORS_ORIGIN = rawPeerAppHost ? normalizeCorsOrigin(rawPeerAppHost) : null
+
+/** Per-request CORS: dev reflects Origin from allowlist; prod matches CONFIGURED_CORS_ORIGIN only; unset PEER_APP_HOST → *. */
+function corsHeadersForRequest(req) {
+	const base = {
+		'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+		'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+	}
+	if (!CONFIGURED_CORS_ORIGIN) {
+		return { ...base, 'Access-Control-Allow-Origin': '*' }
+	}
+	const origin = req?.headers?.get?.('Origin') ?? null
+	if (IS_LOCAL_DEV_CORS) {
+		if (origin && (DEV_APP_ORIGINS.has(origin) || origin === CONFIGURED_CORS_ORIGIN)) {
+			return { ...base, 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
+		}
+		if (!origin) {
+			return { ...base, 'Access-Control-Allow-Origin': CONFIGURED_CORS_ORIGIN, Vary: 'Origin' }
+		}
+		console.warn('[sync] CORS: origin not allowed (dev)', origin)
+		return { ...base, Vary: 'Origin' }
+	}
+	if (!origin) {
+		return { ...base, 'Access-Control-Allow-Origin': CONFIGURED_CORS_ORIGIN, Vary: 'Origin' }
+	}
+	if (origin === CONFIGURED_CORS_ORIGIN) {
+		return { ...base, 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
+	}
+	console.warn('[sync] CORS: origin not allowed', origin)
+	return { ...base, Vary: 'Origin' }
+}
 
 let localNode = null
 let agentWorker = null
@@ -87,19 +128,19 @@ let syncHandler = null
 /** Sessions we allowed through when unresolved (first message). Next message we'll check. */
 const sessionsAllowedUnresolved = new Set()
 
-function jsonResponse(data, status = 200, headers = {}) {
+function jsonResponse(data, status = 200, headers = {}, req) {
 	return new Response(JSON.stringify(data), {
 		status,
 		headers: {
 			'Content-Type': 'application/json',
-			'Access-Control-Allow-Origin': CORS_ORIGIN,
 			...headers,
+			...corsHeadersForRequest(req),
 		},
 	})
 }
 
-function err(msg, status = 400, extra = {}) {
-	return jsonResponse({ ok: false, error: msg, ...extra }, status)
+function err(msg, status = 400, extra = {}, req) {
+	return jsonResponse({ ok: false, error: msg, ...extra }, status, {}, req)
 }
 
 const LOAD_TIMEOUT_MS = 25000
@@ -372,7 +413,7 @@ async function checkSyncWriteCapability(worker, msg) {
 }
 
 /** Returns account.registries + °Maia spark for human/agent to link. Set account.registries; sparks resolved via registries.sparks. */
-async function handleSyncRegistry(worker) {
+async function handleSyncRegistry(worker, req) {
 	try {
 		const registriesId = getRegistriesId(worker.account)
 		const registriesContent = await loadCoMap(worker.peer, registriesId, { retries: 2 })
@@ -382,37 +423,62 @@ async function handleSyncRegistry(worker) {
 			const sparksContent = await loadCoMap(worker.peer, sparksId, { retries: 2 })
 			maiaSparkId = sparksContent?.get?.(MAIA_SPARK)
 		}
-		return jsonResponse({
-			registries: registriesId,
-			...(maiaSparkId?.startsWith('co_z') && { '°Maia': maiaSparkId }),
-		})
+		return jsonResponse(
+			{
+				registries: registriesId,
+				...(maiaSparkId?.startsWith('co_z') && { '°Maia': maiaSparkId }),
+			},
+			200,
+			{},
+			req,
+		)
 	} catch (e) {
-		return err(e?.message ?? 'failed to get sync registry', 500)
+		return err(e?.message ?? 'failed to get sync registry', 500, {}, req)
 	}
 }
 
 // --- Agent handlers ---
-async function handleRegister(worker, body) {
+async function handleRegister(worker, body, req) {
 	const { type, username, accountId, profileId, sparkCoId } = body || {}
 	if (type !== 'human' && type !== 'spark' && type !== 'aven')
-		return err('type required: human, spark, or aven', 400, {
-			validationErrors: [{ field: 'type', message: 'must be human, spark, or aven' }],
-		})
+		return err(
+			'type required: human, spark, or aven',
+			400,
+			{
+				validationErrors: [{ field: 'type', message: 'must be human, spark, or aven' }],
+			},
+			req,
+		)
 	if ((type === 'human' || type === 'aven') && (!accountId || typeof accountId !== 'string'))
-		return err('accountId required for type=human/aven', 400, {
-			validationErrors: [{ field: 'accountId', message: 'required' }],
-		})
+		return err(
+			'accountId required for type=human/aven',
+			400,
+			{
+				validationErrors: [{ field: 'accountId', message: 'required' }],
+			},
+			req,
+		)
 	if (
 		(type === 'human' || type === 'aven') &&
 		(!profileId || typeof profileId !== 'string' || !profileId.startsWith('co_z'))
 	)
-		return err('profileId required for type=human/aven', 400, {
-			validationErrors: [{ field: 'profileId', message: 'required (co_z...)' }],
-		})
+		return err(
+			'profileId required for type=human/aven',
+			400,
+			{
+				validationErrors: [{ field: 'profileId', message: 'required (co_z...)' }],
+			},
+			req,
+		)
 	if (type === 'spark' && (!sparkCoId || typeof sparkCoId !== 'string'))
-		return err('sparkCoId required for type=spark', 400, {
-			validationErrors: [{ field: 'sparkCoId', message: 'required' }],
-		})
+		return err(
+			'sparkCoId required for type=spark',
+			400,
+			{
+				validationErrors: [{ field: 'sparkCoId', message: 'required' }],
+			},
+			req,
+		)
 
 	const coId = type === 'spark' ? sparkCoId : accountId
 	let u =
@@ -433,24 +499,30 @@ async function handleRegister(worker, body) {
 				const existingUsername = raw
 					? Object.keys(raw).find((k) => raw[k] === existingHumanId && k !== accountId)
 					: null
-				return jsonResponse({
-					ok: true,
-					type: 'human',
-					username: existingUsername ?? generateRegistryName(type),
-					accountId: coId,
-				})
+				return jsonResponse(
+					{
+						ok: true,
+						type: 'human',
+						username: existingUsername ?? generateRegistryName(type),
+						accountId: coId,
+					},
+					200,
+					{},
+					req,
+				)
 			}
 			const existingUsername = raw ? Object.keys(raw).find((k) => raw[k] === coId) : null
 			if (!u) u = existingUsername ?? generateRegistryName(type)
 			if (raw?.[u] != null && raw[u] !== coId)
-				return err(`username "${u}" already registered to different identity`, 409)
+				return err(`username "${u}" already registered to different identity`, 409, {}, req)
 
 			// Create Human CoMap (public: everyone reader) and dual-key registry
 			const humanSchemaCoId = await resolve(peer, '°Maia/factory/os/human', { returnType: 'coId' })
-			if (!humanSchemaCoId) return err('Human schema not found. Ensure genesis seed has run.', 500)
+			if (!humanSchemaCoId)
+				return err('Human schema not found. Ensure genesis seed has run.', 500, {}, req)
 
 			const guardian = await peer.getMaiaGroup()
-			if (!guardian) return err('Guardian not found', 500)
+			if (!guardian) return err('Guardian not found', 500, {}, req)
 
 			const node = peer.node
 			const humanGroup = node.createGroup()
@@ -472,7 +544,7 @@ async function handleRegister(worker, body) {
 			const registryData = { [u]: humanCoMap.id, [accountId]: humanCoMap.id }
 			const r = await dataEngine.execute({ op: 'update', id: registryId, data: registryData })
 			if (r?.ok === false)
-				return err(r.errors?.map((e) => e.message).join('; ') ?? 'update failed', 500)
+				return err(r.errors?.map((e) => e.message).join('; ') ?? 'update failed', 500, {}, req)
 			await pushCapabilityToStream(worker, {
 				sub: accountId,
 				cmd: '/llm/chat',
@@ -485,12 +557,17 @@ async function handleRegister(worker, body) {
 				pol: [],
 				exp: llmExp,
 			})
-			return jsonResponse({
-				ok: true,
-				type: 'human',
-				username: u,
-				accountId: coId,
-			})
+			return jsonResponse(
+				{
+					ok: true,
+					type: 'human',
+					username: u,
+					accountId: coId,
+				},
+				200,
+				{},
+				req,
+			)
 		}
 
 		if (type === 'aven') {
@@ -500,26 +577,31 @@ async function handleRegister(worker, body) {
 				const existingUsername = raw
 					? Object.keys(raw).find((k) => raw[k] === existingAvenId && k !== accountId)
 					: null
-				return jsonResponse({
-					ok: true,
-					type: 'aven',
-					username: existingUsername ?? generateRegistryName(type),
-					accountId: coId,
-				})
+				return jsonResponse(
+					{
+						ok: true,
+						type: 'aven',
+						username: existingUsername ?? generateRegistryName(type),
+						accountId: coId,
+					},
+					200,
+					{},
+					req,
+				)
 			}
 			const existingUsername = raw ? Object.keys(raw).find((k) => raw[k] === coId) : null
 			if (!u) u = existingUsername ?? generateRegistryName(type)
 			if (raw?.[u] != null && raw[u] !== coId)
-				return err(`username "${u}" already registered to different identity`, 409)
+				return err(`username "${u}" already registered to different identity`, 409, {}, req)
 
 			const avenIdentitySchemaCoId = await resolve(peer, '°Maia/factory/os/aven-identity', {
 				returnType: 'coId',
 			})
 			if (!avenIdentitySchemaCoId)
-				return err('Aven identity schema not found. Ensure genesis seed has run.', 500)
+				return err('Aven identity schema not found. Ensure genesis seed has run.', 500, {}, req)
 
 			const guardian = await peer.getMaiaGroup()
-			if (!guardian) return err('Guardian not found', 500)
+			if (!guardian) return err('Guardian not found', 500, {}, req)
 
 			const node = peer.node
 			const avenGroup = node.createGroup()
@@ -540,43 +622,53 @@ async function handleRegister(worker, body) {
 			const registryData = { [u]: avenIdentityCoMap.id, [accountId]: avenIdentityCoMap.id }
 			const r = await dataEngine.execute({ op: 'update', id: registryId, data: registryData })
 			if (r?.ok === false)
-				return err(r.errors?.map((e) => e.message).join('; ') ?? 'update failed', 500)
-			return jsonResponse({
-				ok: true,
-				type: 'aven',
-				username: u,
-				accountId: coId,
-			})
+				return err(r.errors?.map((e) => e.message).join('; ') ?? 'update failed', 500, {}, req)
+			return jsonResponse(
+				{
+					ok: true,
+					type: 'aven',
+					username: u,
+					accountId: coId,
+				},
+				200,
+				{},
+				req,
+			)
 		}
 
 		// Spark registration (unchanged)
 		if (!u) u = generateRegistryName(type)
 		if (raw?.[u] != null && raw[u] !== coId)
-			return err(`username "${u}" already registered to different identity`, 409)
+			return err(`username "${u}" already registered to different identity`, 409, {}, req)
 		const r = await dataEngine.execute({ op: 'update', id: registryId, data: { [u]: coId } })
 		if (r?.ok === false)
-			return err(r.errors?.map((e) => e.message).join('; ') ?? 'update failed', 500)
-		return jsonResponse({
-			ok: true,
-			type,
-			username: u,
-			accountId: type === 'human' || type === 'aven' ? coId : undefined,
-			sparkCoId: type === 'spark' ? coId : undefined,
-		})
+			return err(r.errors?.map((e) => e.message).join('; ') ?? 'update failed', 500, {}, req)
+		return jsonResponse(
+			{
+				ok: true,
+				type,
+				username: u,
+				accountId: type === 'human' || type === 'aven' ? coId : undefined,
+				sparkCoId: type === 'spark' ? coId : undefined,
+			},
+			200,
+			{},
+			req,
+		)
 	} catch (e) {
-		return err(e?.message ?? 'failed to register', 500)
+		return err(e?.message ?? 'failed to register', 500, {}, req)
 	}
 }
 
 /** Extend a capability by 1 day. Server-side write (avoids chicken-and-egg: client needs /sync/write to sync). */
-async function handleExtendCapability(worker, body) {
+async function handleExtendCapability(worker, body, req) {
 	const { capabilityId } = body || {}
 	if (!capabilityId || typeof capabilityId !== 'string' || !capabilityId.startsWith('co_z'))
-		return err('capabilityId required (co_z...)', 400)
+		return err('capabilityId required (co_z...)', 400, {}, req)
 
 	const auth = body._authHeader
 	const token = auth?.startsWith('Bearer ') ? auth.slice(7).trim() : null
-	if (!token) return err('Authorization: Bearer token required', 401)
+	if (!token) return err('Authorization: Bearer token required', 401, {}, req)
 
 	let payload
 	try {
@@ -585,24 +677,24 @@ async function handleExtendCapability(worker, body) {
 			allowedCmd: null, // Any valid token
 		})
 	} catch {
-		return err('Invalid or expired token', 401)
+		return err('Invalid or expired token', 401, {}, req)
 	}
 	const callerAccountId = payload?.accountId
-	if (!callerAccountId?.startsWith('co_z')) return err('Invalid token claims', 403)
+	if (!callerAccountId?.startsWith('co_z')) return err('Invalid token claims', 403, {}, req)
 
 	const bindingOk = await verifyAccountBinding(worker.peer, callerAccountId, payload.iss)
-	if (!bindingOk) return err('Account binding verification failed', 403)
+	if (!bindingOk) return err('Account binding verification failed', 403, {}, req)
 
 	try {
 		const capContent = await loadCoMap(worker.peer, capabilityId, { retries: 2 })
 		const sub = capContent?.get?.('sub')
 		const currentExp = capContent?.get?.('exp')
-		if (!sub?.startsWith('co_z')) return err('Invalid capability (no sub)', 400)
+		if (!sub?.startsWith('co_z')) return err('Invalid capability (no sub)', 400, {}, req)
 
 		const isOwner = callerAccountId === sub
 		const isGuardian = avenMaiaGuardian?.startsWith('co_z') && callerAccountId === avenMaiaGuardian
 		if (!isOwner && !isGuardian)
-			return err('Forbidden: only capability owner or guardian can extend', 403)
+			return err('Forbidden: only capability owner or guardian can extend', 403, {}, req)
 
 		const now = Math.floor(Date.now() / 1000)
 		const oneDay = 86400
@@ -614,10 +706,10 @@ async function handleExtendCapability(worker, body) {
 			data: { exp: newExp },
 		})
 		if (r?.ok === false)
-			return err(r.errors?.map((e) => e.message).join('; ') ?? 'update failed', 500)
-		return jsonResponse({ ok: true, newExp })
+			return err(r.errors?.map((e) => e.message).join('; ') ?? 'update failed', 500, {}, req)
+		return jsonResponse({ ok: true, newExp }, 200, {}, req)
 	} catch (e) {
-		return err(e?.message ?? 'failed to extend capability', 500)
+		return err(e?.message ?? 'failed to extend capability', 500, {}, req)
 	}
 }
 
@@ -626,18 +718,20 @@ async function handleAgentHttp(req, worker) {
 	const post = async (strict, handler) => {
 		try {
 			const body = strict ? await req.json() : await req.json().catch(() => ({}))
-			return await handler(worker, body)
+			return await handler(worker, body, req)
 		} catch (e) {
-			return err(e.message, e?.message?.includes('timed out') ? 504 : 400)
+			return err(e.message, e?.message?.includes('timed out') ? 504 : 400, {}, req)
 		}
 	}
 	if (url.pathname === '/register' && req.method === 'POST')
-		return post(false, (w, b) => withTimeout(handleRegister(w, b), REQUEST_TIMEOUT_MS, '/register'))
+		return post(false, (w, b, r) =>
+			withTimeout(handleRegister(w, b, r), REQUEST_TIMEOUT_MS, '/register'),
+		)
 	if (url.pathname === '/extend-capability' && req.method === 'POST') {
 		const auth = req.headers.get('Authorization')
-		return post(false, (w, b) =>
+		return post(false, (w, b, r) =>
 			withTimeout(
-				handleExtendCapability(w, { ...b, _authHeader: auth }),
+				handleExtendCapability(w, { ...b, _authHeader: auth }, r),
 				REQUEST_TIMEOUT_MS,
 				'/extend-capability',
 			),
@@ -683,14 +777,15 @@ function validateLLMMessages(messages) {
 
 /** LLM proxy: forwards request to RedPill, returns response. Tool execution is client-side (Runtime). Requires Bearer token + valid /llm/chat capability. */
 async function handleLLMChat(req, worker) {
-	if (!RED_PILL_API_KEY) return jsonResponse({ error: 'RED_PILL_API_KEY not configured' }, 500)
-	if (!worker) return jsonResponse({ error: 'Initializing', status: 503 }, 503)
+	if (!RED_PILL_API_KEY)
+		return jsonResponse({ error: 'RED_PILL_API_KEY not configured' }, 500, {}, req)
+	if (!worker) return jsonResponse({ error: 'Initializing', status: 503 }, 503, {}, req)
 
 	// Auth gate: Bearer token + account binding + capability
 	const auth = req.headers.get('Authorization')
 	const token = auth?.startsWith('Bearer ') ? auth.slice(7).trim() : null
 	if (!token) {
-		return jsonResponse({ error: 'Unauthorized', message: 'Bearer token required' }, 401)
+		return jsonResponse({ error: 'Unauthorized', message: 'Bearer token required' }, 401, {}, req)
 	}
 	let payload
 	try {
@@ -699,16 +794,21 @@ async function handleLLMChat(req, worker) {
 			allowedCmd: '/llm/chat',
 		})
 	} catch {
-		return jsonResponse({ error: 'Unauthorized', message: 'Invalid or expired token' }, 401)
+		return jsonResponse({ error: 'Unauthorized', message: 'Invalid or expired token' }, 401, {}, req)
 	}
 	const accountId = payload?.accountId
 	if (!accountId?.startsWith('co_z')) {
-		return jsonResponse({ error: 'Forbidden', message: 'Invalid token claims' }, 403)
+		return jsonResponse({ error: 'Forbidden', message: 'Invalid token claims' }, 403, {}, req)
 	}
 	const bindingOk = await verifyAccountBinding(worker.peer, accountId, payload.iss)
 	if (!bindingOk) {
 		console.warn('[llm] Account binding failed', { accountId: accountId?.slice(0, 12) })
-		return jsonResponse({ error: 'Forbidden', message: 'Account binding verification failed' }, 403)
+		return jsonResponse(
+			{ error: 'Forbidden', message: 'Account binding verification failed' },
+			403,
+			{},
+			req,
+		)
 	}
 	const hasCap = await hasValidCapability(worker, accountId, '/llm/chat')
 	if (!hasCap) {
@@ -719,6 +819,8 @@ async function handleLLMChat(req, worker) {
 				message: 'No valid /llm/chat capability. Ask a guardian to grant you access in Capabilities.',
 			},
 			403,
+			{},
+			req,
 		)
 	}
 
@@ -726,7 +828,7 @@ async function handleLLMChat(req, worker) {
 		const body = await req.json()
 		const { messages, model = 'qwen/qwen3-30b-a3b-instruct-2507', temperature = 1, tools } = body
 		const validation = validateLLMMessages(messages)
-		if (!validation.ok) return jsonResponse({ error: validation.error }, 400)
+		if (!validation.ok) return jsonResponse({ error: validation.error }, 400, {}, req)
 
 		const reqBody = {
 			model,
@@ -749,27 +851,23 @@ async function handleLLMChat(req, worker) {
 			return jsonResponse(
 				{ error: data.error || `HTTP ${res.status}`, message: data.message || txt.slice(0, 200) },
 				500,
+				{},
+				req,
 			)
 		}
 		const data = JSON.parse(txt)
-		return jsonResponse(data)
+		return jsonResponse(data, 200, {}, req)
 	} catch (e) {
 		const msg = e?.message ?? String(e)
 		console.error('[llm]', msg, e)
-		return jsonResponse({ error: 'Failed to process LLM request', message: msg }, 500)
+		return jsonResponse({ error: 'Failed to process LLM request', message: msg }, 500, {}, req)
 	}
 }
 
-const CORS_HEADERS = {
-	'Access-Control-Allow-Origin': CORS_ORIGIN,
-	'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-	'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-}
-
-function handleCORS() {
+function handleCORS(req) {
 	return new Response(null, {
 		status: 204,
-		headers: CORS_HEADERS,
+		headers: corsHeadersForRequest(req),
 	})
 }
 
@@ -795,6 +893,12 @@ function adaptBunWebSocket(ws, _clientId) {
 	return { adaptedWs, messageListeners, openListeners }
 }
 
+/** Bun passes `string | Buffer` (and sometimes views); cojson-transport-ws requires a string for deserializeMessages. */
+function wsMessageToUtf8String(msg) {
+	if (typeof msg === 'string') return msg
+	return Buffer.from(msg).toString('utf8')
+}
+
 function startPing(ws) {
 	const send = () => {
 		if (ws.readyState === WebSocket.OPEN) {
@@ -816,30 +920,31 @@ Bun.serve({
 	async fetch(req, srv) {
 		const url = new URL(req.url)
 
-		if (req.method === 'OPTIONS') return handleCORS()
+		if (req.method === 'OPTIONS') return handleCORS(req)
 
 		if (url.pathname === '/health') {
-			return jsonResponse({ status: 'ok', service: 'sync', ready: !!syncHandler })
+			return jsonResponse({ status: 'ok', service: 'sync', ready: !!syncHandler }, 200, {}, req)
 		}
 
 		if (url.pathname === '/syncRegistry' && req.method === 'GET') {
-			if (!agentWorker) return jsonResponse({ error: 'Initializing', status: 503 }, 503)
-			return withTimeout(handleSyncRegistry(agentWorker), REQUEST_TIMEOUT_MS, '/syncRegistry')
+			if (!agentWorker) return jsonResponse({ error: 'Initializing', status: 503 }, 503, {}, req)
+			return withTimeout(handleSyncRegistry(agentWorker, req), REQUEST_TIMEOUT_MS, '/syncRegistry')
 		}
 
 		if (url.pathname === '/sync') {
-			if (!syncHandler) return jsonResponse({ error: 'Initializing', status: 503 }, 503)
+			if (!syncHandler) return jsonResponse({ error: 'Initializing', status: 503 }, 503, {}, req)
+			const wsCors = corsHeadersForRequest(req)
 			if (req.headers.get('upgrade') !== 'websocket')
 				return new Response('Expected WebSocket upgrade', {
 					status: 426,
-					headers: CORS_HEADERS,
+					headers: wsCors,
 				})
-			const ok = srv.upgrade(req, { data: {}, headers: CORS_HEADERS })
+			const ok = srv.upgrade(req, { data: {}, headers: wsCors })
 			return ok
 				? undefined
 				: new Response('Failed to upgrade', {
 						status: 500,
-						headers: CORS_HEADERS,
+						headers: wsCors,
 					})
 		}
 
@@ -848,27 +953,43 @@ Bun.serve({
 			const agentRes = await handleAgentHttp(req, agentWorker)
 			if (agentRes) return agentRes
 		} else if (url.pathname.startsWith('/register') || url.pathname.startsWith('/syncRegistry')) {
-			return jsonResponse({ error: 'Initializing', status: 503 }, 503)
+			return jsonResponse({ error: 'Initializing', status: 503 }, 503, {}, req)
 		}
 
 		// API (LLM)
 		if (url.pathname === '/api/v0/llm/chat' && req.method === 'POST') {
-			if (!agentWorker) return jsonResponse({ error: 'Initializing', status: 503 }, 503)
+			if (!agentWorker) return jsonResponse({ error: 'Initializing', status: 503 }, 503, {}, req)
 			return handleLLMChat(req, agentWorker)
 		}
 
-		return new Response('Not Found', { status: 404, headers: CORS_HEADERS })
+		return new Response('Not Found', { status: 404, headers: corsHeadersForRequest(req) })
 	},
 	websocket: {
 		async open(ws) {
-			if (syncHandler) await syncHandler.open(ws)
-			else ws.close(1008, 'Sync initializing')
+			try {
+				if (syncHandler) await syncHandler.open(ws)
+				else ws.close(1008, 'Sync initializing')
+			} catch (e) {
+				console.error('[sync] websocket open:', e?.message ?? e)
+				try {
+					ws.close(1011, 'Internal error')
+				} catch (_closeErr) {}
+			}
 		},
 		async message(ws, msg) {
-			await syncHandler?.message(ws, msg)
+			try {
+				if (!syncHandler) return
+				await syncHandler.message(ws, wsMessageToUtf8String(msg))
+			} catch (e) {
+				console.error('[sync] websocket message:', e?.message ?? e)
+			}
 		},
 		async close(ws, code, reason) {
-			syncHandler?.close(ws, code, reason)
+			try {
+				syncHandler?.close(ws, code, reason)
+			} catch (e) {
+				console.error('[sync] websocket close:', e?.message ?? e)
+			}
 		},
 		error(_ws, _err) {},
 	},

@@ -7,6 +7,23 @@
 
 import { WebSocketPeerWithReconnection } from 'cojson-transport-ws'
 
+import { getSyncWebSocketUrl } from './sync-urls.js'
+
+/**
+ * LocalNode.withLoadedAccount / withNewlyCreatedAccount registers whatever is in `peers` at that moment.
+ * If the WebSocket connects later, the peer object is only in our array afterward — it must be added
+ * in setNode or in addPeer when node exists. Calling addPeer when syncManager.peers[id] already exists
+ * duplicates PeerState (same id) and breaks sync; skipping when present fixes both cases.
+ */
+function registerPeersIfMissing(syncManager, peerList) {
+	if (!syncManager?.peers || !Array.isArray(peerList)) return
+	for (const peer of peerList) {
+		const id = peer?.id
+		if (typeof id !== 'string' || syncManager.peers[id]) continue
+		syncManager.addPeer(peer)
+	}
+}
+
 // Global state for connection monitoring
 let syncState = {
 	connected: false,
@@ -52,38 +69,34 @@ function notifySyncStateChange() {
  * @returns {{peers: Array, setNode: Function, wsPeer: Object}} Peers array and node setter
  */
 export function setupSyncPeers(syncDomain = null) {
-	// Priority: 1) syncDomain from loader, 2) runtime-injected env var, 3) build-time env var, 4) fallback
+	const hasWindow = typeof window !== 'undefined'
 	const isDev =
 		import.meta.env?.DEV ||
-		(typeof window !== 'undefined' && window.location.hostname === 'localhost')
+		(hasWindow &&
+			(window.location.hostname === 'localhost' ||
+				window.location.hostname === '127.0.0.1' ||
+				window.location.hostname === '[::1]'))
 
-	const apiDomain =
+	const syncServerUrl = getSyncWebSocketUrl({
+		syncDomain,
+		vitePeerSyncHost: import.meta.env?.VITE_PEER_SYNC_HOST,
+		processPeerSyncHost: typeof process !== 'undefined' ? process.env?.PEER_SYNC_HOST : undefined,
+		windowLocation: hasWindow ? window.location : null,
+		isDev,
+		hasWindow,
+	})
+
+	const resolvedDomainForLog =
 		syncDomain ||
 		import.meta.env?.VITE_PEER_SYNC_HOST ||
-		(typeof process !== 'undefined' && process.env?.PEER_SYNC_HOST)
+		(typeof process !== 'undefined' ? process.env?.PEER_SYNC_HOST : undefined)
 
-	let syncServerUrl
-	if (typeof window === 'undefined') {
-		if (!syncDomain) {
-			return { peers: [], setNode: () => {}, wsPeer: null }
-		}
-		const protocol =
-			syncDomain.includes('localhost') || syncDomain.includes('127.0.0.1') ? 'ws:' : 'wss:'
-		syncServerUrl = `${protocol}//${syncDomain}/sync`
-	} else if (isDev) {
-		const devSync = apiDomain || 'localhost:4201'
-		const isLocal = devSync.includes('localhost') || devSync.includes('127.0.0.1')
-		syncServerUrl = `${isLocal ? 'ws:' : 'wss:'}//${devSync}/sync`
-	} else if (apiDomain) {
-		const isLocal = apiDomain.includes('localhost') || apiDomain.includes('127.0.0.1')
-		syncServerUrl = `${isLocal ? 'ws:' : 'wss:'}//${apiDomain}/sync`
-	} else {
-		const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-		syncServerUrl = `${protocol}//${window.location.host}/sync`
+	if (!syncServerUrl) {
+		return { peers: [], setNode: () => {}, wsPeer: null }
 	}
 
 	if (!isDev) {
-		console.log(`   Sync Domain: ${apiDomain || '(not set - using same origin fallback)'}`)
+		console.log(`   Sync Domain: ${resolvedDomainForLog || '(not set - using same origin fallback)'}`)
 		console.log(
 			`   Source: ${syncDomain ? 'loader' : import.meta.env?.VITE_PEER_SYNC_HOST ? 'build-time' : 'fallback'}`,
 		)
@@ -100,10 +113,6 @@ export function setupSyncPeers(syncDomain = null) {
 		websocketConnectedResolve = resolve
 	})
 
-	if (!syncServerUrl) {
-		return { peers: [], setNode: () => {}, wsPeer: null }
-	}
-
 	const wsPeer = new WebSocketPeerWithReconnection({
 		peer: syncServerUrl,
 		reconnectionTimeout: 1500,
@@ -114,7 +123,7 @@ export function setupSyncPeers(syncDomain = null) {
 			}
 			peers.push(peer)
 			if (node) {
-				node.syncManager.addPeer(peer)
+				registerPeersIfMissing(node.syncManager, [peer])
 			}
 		},
 		removePeer: (peer) => {
@@ -211,11 +220,7 @@ export function setupSyncPeers(syncDomain = null) {
 		},
 		setNode: (n) => {
 			node = n
-			if (peers.length > 0) {
-				for (const peer of peers) {
-					node.syncManager.addPeer(peer)
-				}
-			}
+			registerPeersIfMissing(n.syncManager, peers)
 		},
 	}
 }
@@ -252,7 +257,7 @@ export function setupJazzCloudPeer(apiKey) {
 		addPeer: (peer) => {
 			peers.push(peer)
 			if (node) {
-				node.syncManager.addPeer(peer)
+				registerPeersIfMissing(node.syncManager, [peer])
 			}
 		},
 		removePeer: (peer) => {
@@ -303,11 +308,7 @@ export function setupJazzCloudPeer(apiKey) {
 		},
 		setNode: (n) => {
 			node = n
-			if (peers.length > 0) {
-				for (const peer of peers) {
-					node.syncManager.addPeer(peer)
-				}
-			}
+			registerPeersIfMissing(n.syncManager, peers)
 		},
 	}
 }

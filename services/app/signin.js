@@ -103,12 +103,11 @@ export function renderSignInPrompt(hasExistingAccount, viewMode, showTestAven = 
 							<h1 class="sign-in-panel-heading">Create your Self</h1>
 							<p class="sign-in-panel-lede">Passkeys only — pick a name, then register. No password to remember.</p>
 							<div class="sign-in-first-name-wrap">
-								<label for="signin-first-name" class="sign-in-first-name-label">First name</label>
 								<input
 									type="text"
 									id="signin-first-name"
 									class="sign-in-first-name-input"
-									placeholder="What shall we call you?"
+									placeholder="First name"
 									autocomplete="given-name"
 									maxlength="50"
 									aria-label="First name"

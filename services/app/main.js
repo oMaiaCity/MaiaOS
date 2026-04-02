@@ -19,6 +19,7 @@ import {
 	subscribeSyncState,
 	updateSyncState,
 } from '@MaiaOS/loader'
+import { getSyncHttpBaseUrl } from '@MaiaOS/peer'
 import { renderApp } from './db-view.js'
 import { renderLandingPage } from './landing.js'
 import { disposeGlobalAI, initGlobalAI, setFabVisible, updateNavLeft } from './maia-ai-global.js'
@@ -366,15 +367,19 @@ async function initAgentMode() {
 	}
 }
 
+const isLocalAppHost =
+	typeof window !== 'undefined' &&
+	(window.location.hostname === 'localhost' ||
+		window.location.hostname === '127.0.0.1' ||
+		window.location.hostname === '[::1]')
+const isDevEnvironment = import.meta.env?.DEV || isLocalAppHost
+
 /**
- * Determine sync domain from environment (runtime injection or build-time env var)
- * Single source of truth for sync domain configuration
- * In dev: null (sync-peers uses localhost:4201). In prod: VITE_PEER_SYNC_HOST
- * @returns {string|null} Sync domain or null if not set
+ * Sync domain for loader (null in local dev — URLs come from sync-urls + Vite).
+ * @returns {string|null}
  */
 function getSyncDomain() {
-	const isDev = import.meta.env?.DEV || window.location.hostname === 'localhost'
-	if (isDev) return null // sync-peers defaults to localhost:4201
+	if (isDevEnvironment) return null
 	return import.meta.env?.VITE_PEER_SYNC_HOST || null
 }
 
@@ -384,7 +389,6 @@ function getSyncDomain() {
  * In-memory only - no localStorage.
  */
 function isAvenTestModeEnabled() {
-	// Dev: env injected by dev-server; fallback to window.__MAIA_DEV_ENV__ if script ran
 	const env = import.meta.env ?? window.__MAIA_DEV_ENV__
 	if (env?.VITE_AVEN_TEST_MODE !== 'true') return false
 	const isLocal =
@@ -394,35 +398,48 @@ function isAvenTestModeEnabled() {
 	return isLocal
 }
 
-/** Base URL for sync HTTP API (syncRegistry, etc.) */
+/** Base URL for sync HTTP API (syncRegistry, register, extend-capability). */
 function getSyncBaseUrl() {
-	const isDev =
-		import.meta.env?.DEV ||
-		(typeof window !== 'undefined' &&
-			(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
-	const apiDomain = getSyncDomain() || import.meta.env?.VITE_PEER_SYNC_HOST
-	if (!apiDomain && isDev) return 'http://localhost:4201'
-	if (!apiDomain) return null
-	const host = apiDomain.replace(/^https?:\/\//, '').split('/')[0]
-	const isLocal = host.includes('localhost') || host.includes('127.0.0.1') || host.includes(':4201')
-	return `${isLocal ? 'http' : 'https'}://${host}`
+	return getSyncHttpBaseUrl({
+		dev: isDevEnvironment,
+		syncDomain: getSyncDomain(),
+		vitePeerSyncHost: import.meta.env?.VITE_PEER_SYNC_HOST,
+		windowLocation: typeof window !== 'undefined' ? window.location : null,
+	})
+}
+
+/** Set account.registries from GET /syncRegistry (must run before MaiaOS.boot if peer was reseeded). */
+async function applySyncRegistriesToAccount(account, node) {
+	if (!account?.set) return
+	const baseUrl = getSyncBaseUrl()
+	if (!baseUrl) return
+	const res = await fetch(`${baseUrl}/syncRegistry`)
+	if (!res.ok) {
+		throw new Error(`[Maia] syncRegistry failed: HTTP ${res.status}`)
+	}
+	const data = await res.json()
+	const registriesId = data?.registries
+	if (!registriesId?.startsWith('co_z')) {
+		throw new Error('[Maia] syncRegistry response missing registries co-id')
+	}
+	account.set('registries', registriesId)
+	const linked = account.get?.('registries')
+	if (linked !== registriesId) {
+		throw new Error(
+			`[Maia] account.set('registries') did not apply (have ${linked}, expected ${registriesId})`,
+		)
+	}
+	const wfs = node?.syncManager?.waitForStorageSync
+	if (typeof wfs === 'function') {
+		await wfs.call(node.syncManager, account.id)
+		await wfs.call(node.syncManager, registriesId)
+	}
 }
 
 /** Link account to sync server's registries. Set account.registries only. Sparks resolved via registries.sparks. Human and agent. */
 async function linkAccountToRegistries(maia) {
 	if (!maia?.id?.node || !maia.id.maiaId) return
-	const baseUrl = getSyncBaseUrl()
-	if (!baseUrl) return
-	try {
-		const res = await fetch(`${baseUrl}/syncRegistry`)
-		if (!res.ok) return
-		const data = await res.json()
-		const registriesId = data?.registries
-		const { maiaId: account } = maia.id
-		if (registriesId?.startsWith('co_z')) {
-			account.set('registries', registriesId)
-		}
-	} catch (_e) {}
+	await applySyncRegistriesToAccount(maia.id.maiaId, maia.id.node)
 }
 
 /** Register human with sync server. Call before boot so server has registry entry before any sync writes. */
@@ -511,6 +528,8 @@ async function signInWithTestAven() {
 				}
 			}
 		} catch (_e) {}
+
+		await applySyncRegistriesToAccount(account, node)
 
 		// Set auth and navigate IMMEDIATELY - don't wait for boot
 		authState = { signedIn: true, accountID: account.id }
@@ -713,11 +732,7 @@ async function register() {
 		}
 
 		setSignInLoading(true)
-		// Determine sync domain (single source of truth - passed through kernel)
 		const syncDomain = getSyncDomain()
-		const isDev = import.meta.env?.DEV || window.location.hostname === 'localhost'
-		if (!syncDomain && !isDev) {
-		}
 
 		// First name from input (trimmed, max 50 chars); empty → fallback to "Traveler " + short id
 		const firstName = getFirstNameForRegister()
