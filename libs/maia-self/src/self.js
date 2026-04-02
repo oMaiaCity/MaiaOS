@@ -158,8 +158,17 @@ export async function signInWithPasskey({ salt = 'maia.city' } = {}) {
 	// Use loadAccount() abstraction from @MaiaOS/db instead of direct withLoadedAccount()
 	const accountLoadingPromise = (async () => {
 		try {
-			// Local-first: load account from storage immediately; WebSocket connects in parallel (setupSyncPeers).
-			// Use loadAccount() abstraction - goes through proper abstraction layer
+			// peers[] is filled in addPeer when the WebSocket connects — it is empty on the first tick.
+			// Wait until at least one peer is registered (or timeout) so loadAccount can hydrate from sync.
+			if (syncSetup?.wsPeer) {
+				if (typeof syncSetup.waitForPeer === 'function') {
+					await syncSetup.waitForPeer()
+				}
+				const deadline = Date.now() + 30000
+				while (syncSetup.peers.length === 0 && Date.now() < deadline) {
+					await new Promise((r) => setTimeout(r, 50))
+				}
+			}
 			const loadResult = await loadAccount({
 				accountID,
 				agentSecret,
