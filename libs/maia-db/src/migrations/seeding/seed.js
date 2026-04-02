@@ -89,14 +89,13 @@ export async function seed(
 	let metaSchemaCoId = null
 	const osId = await groups.getSparkOsId(peer, MAIA_SPARK)
 	if (osId) {
-		const osCore = await ensureCoValueLoaded(peer, osId, { waitForAvailable: true, timeoutMs: 2000 })
+		const osCore = await ensureCoValueLoaded(peer, osId, { waitForAvailable: true })
 		if (osCore && peer.isAvailable(osCore)) {
 			const osContent = peer.getCurrentContent(osCore)
 			const factoriesId = osContent?.get?.('factories')
 			if (factoriesId) {
 				const factoriesCore = await ensureCoValueLoaded(peer, factoriesId, {
 					waitForAvailable: true,
-					timeoutMs: 2000,
 				})
 				if (factoriesCore && peer.isAvailable(factoriesCore)) {
 					const factoriesContent = peer.getCurrentContent(factoriesCore)
@@ -140,7 +139,6 @@ export async function seed(
 		const cleanedProperties = removeIdFields(directProperties)
 		const metaSchemaCore = await ensureCoValueLoaded(peer, metaSchemaCoId, {
 			waitForAvailable: true,
-			timeoutMs: 2000,
 		})
 		if (metaSchemaCore && peer.isAvailable(metaSchemaCore)) {
 			const metaSchemaCoMap = peer.getCurrentContent(metaSchemaCore)
@@ -164,14 +162,13 @@ export async function seed(
 	const existingSchemaRegistry = new Map()
 	let factoriesContent = null
 	if (osId) {
-		const osCore = await ensureCoValueLoaded(peer, osId, { waitForAvailable: true, timeoutMs: 2000 })
+		const osCore = await ensureCoValueLoaded(peer, osId, { waitForAvailable: true })
 		if (osCore && peer.isAvailable(osCore)) {
 			const osContent = peer.getCurrentContent(osCore)
 			const factoriesId = osContent?.get?.('factories')
 			if (factoriesId) {
 				const factoriesCore = await ensureCoValueLoaded(peer, factoriesId, {
 					waitForAvailable: true,
-					timeoutMs: 2000,
 				})
 				if (factoriesCore && peer.isAvailable(factoriesCore)) {
 					factoriesContent = peer.getCurrentContent(factoriesCore)
