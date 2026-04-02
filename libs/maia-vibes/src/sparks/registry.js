@@ -1,43 +1,24 @@
 /**
  * Sparks Vibe Registry
- * Pre-loads all .maia configs as ES module imports
- * Exports everything as JS objects - no runtime file loading needed
  */
 
-import maiacityBrand from '../brand/maiacity.style.maia'
+import { buildIntentVibeRegistry } from '../build-intent-vibe-registry.js'
 import intentActor from './intent/intent.actor.maia'
 import intentContext from './intent/intent.context.maia'
 import intentProcess from './intent/intent.process.maia'
 import intentView from './intent/intent.view.maia'
 import sparksVibe from './manifest.vibe.maia'
 
-/**
- * Sparks Vibe Registry
- * All configs pre-loaded and ready to use
- */
-export const SparksVibeRegistry = {
+export const SparksVibeRegistry = buildIntentVibeRegistry({
 	vibe: sparksVibe,
-
-	styles: {
-		'°Maia/brand/maiacity': maiacityBrand,
+	idPrefix: 'sparks',
+	intent: {
+		actor: intentActor,
+		context: intentContext,
+		process: intentProcess,
+		view: intentView,
 	},
-
-	actors: {
-		'°Maia/sparks/actor/intent': intentActor,
-	},
-
-	views: {
-		'°Maia/sparks/view/intent': intentView,
-	},
-
-	contexts: {
-		'°Maia/sparks/context/intent': intentContext,
-	},
-
-	processes: {
-		'°Maia/sparks/process/intent': intentProcess,
-	},
-}
+})
 
 if (import.meta.hot) {
 	import.meta.hot.accept()

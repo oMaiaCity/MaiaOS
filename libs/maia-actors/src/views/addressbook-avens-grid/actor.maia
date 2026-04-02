@@ -3,10 +3,10 @@
 	"$id": "°Maia/actor/views/addressbook-avens-grid",
 	"@label": "@maia/actor/views/addressbook-avens-grid",
 	"context": "°Maia/actor/views/addressbook-avens-grid/context",
-	"view": "°Maia/actor/views/addressbook-avens-grid/view",
-	"process": "°Maia/actor/views/addressbook-avens-grid/process",
+	"view": "°Maia/actor/views/addressbook-grid/view",
+	"process": "°Maia/actor/views/addressbook-grid/process",
 	"brand": "°Maia/brand/maiacity",
-	"style": "°Maia/actor/views/addressbook-avens-grid/style",
+	"style": "°Maia/actor/views/addressbook-grid/style",
 	"inbox": "°Maia/actor/views/addressbook-avens-grid/inbox",
 	"interface": "°Maia/actor/views/addressbook-avens-grid/interface"
 }

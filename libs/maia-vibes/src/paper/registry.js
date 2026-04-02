@@ -64,3 +64,5 @@ const x = 42;
 		],
 	},
 }
+
+export { PaperVibeRegistry as PaperAvenRegistry }

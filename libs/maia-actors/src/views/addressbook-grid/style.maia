@@ -1,7 +1,7 @@
 {
 	"$factory": "°Maia/factory/style",
-	"$id": "°Maia/actor/views/addressbook-humans-grid/style",
-	"@label": "@maia/actor/views/addressbook-humans-grid/style",
+	"$id": "°Maia/actor/views/addressbook-grid/style",
+	"@label": "@maia/actor/views/addressbook-grid/style",
 	"components": {
 		"grid": {
 			"display": "grid",
