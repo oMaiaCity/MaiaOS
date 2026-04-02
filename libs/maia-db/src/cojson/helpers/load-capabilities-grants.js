@@ -14,59 +14,79 @@ export async function loadCapabilitiesGrants(maia) {
 	if (!registriesId?.startsWith('co_z')) return []
 
 	try {
-		// Resolve path: registries → sparks → °Maia → os → capabilities
+		const devCap =
+			typeof globalThis !== 'undefined' && globalThis.window?.__MAIA_DEV_ENV__?.DEV === true
+		const tCap0 = devCap ? performance.now() : 0
+		const capLog = (label) => {
+			if (devCap) {
+				// biome-ignore lint/suspicious/noConsole: localhost dev timing for slow capabilities path
+				console.info(`[MaiaDB capabilities path] ${label} +${(performance.now() - tCap0).toFixed(0)}ms`)
+			}
+		}
+
+		// Resolve path: registries → sparks → °Maia → os → capabilities (each waitForStore can block up to timeoutMs while loading=true)
 		const registriesStore = await maia.do({ op: 'read', factory: null, key: registriesId })
 		await waitForStore(registriesStore, 5000)
+		capLog('registries hydrated')
 		const registries = registriesStore?.value ?? registriesStore
 		const sparksId = registries?.sparks
 		if (!sparksId?.startsWith('co_z')) return []
 
 		const sparksStore = await maia.do({ op: 'read', factory: null, key: sparksId })
 		await waitForStore(sparksStore, 5000)
+		capLog('sparks hydrated')
 		const sparks = sparksStore?.value ?? sparksStore
 		const maiaSparkId = sparks?.['°Maia']
 		if (!maiaSparkId?.startsWith('co_z')) return []
 
 		const sparkStore = await maia.do({ op: 'read', factory: null, key: maiaSparkId })
 		await waitForStore(sparkStore, 5000)
+		capLog('spark °Maia hydrated')
 		const spark = sparkStore?.value ?? sparkStore
 		const osId = spark?.os
 		if (!osId?.startsWith('co_z')) return []
 
 		const osStore = await maia.do({ op: 'read', factory: null, key: osId })
 		await waitForStore(osStore, 5000)
+		capLog('os hydrated')
 		const os = osStore?.value ?? osStore
 		const capabilitiesStreamId = os?.capabilities
 		if (!capabilitiesStreamId?.startsWith('co_z')) return []
 
 		const streamStore = await maia.do({ op: 'read', factory: null, key: capabilitiesStreamId })
 		await waitForStore(streamStore, 5000)
+		capLog('capabilities stream hydrated')
 		const streamData = streamStore?.value ?? streamStore
 		const rawItems = streamData?.items ?? []
 		const capCoIds = rawItems
 			.map((item) => (typeof item === 'string' && item.startsWith('co_z') ? item : item?.value))
 			.filter((id) => id?.startsWith('co_z'))
 
-		const grants = []
-		for (const capCoId of capCoIds) {
-			try {
-				const capStore = await maia.do({ op: 'read', factory: null, key: capCoId })
-				await waitForStore(capStore, 3000)
-				const cap = capStore?.value ?? capStore
-				if (!cap || cap?.error || cap?.loading) continue
-				grants.push({
-					id: cap.id ?? capCoId,
-					sub: cap.sub,
-					cmd: cap.cmd,
-					pol: Array.isArray(cap.pol) ? cap.pol : [],
-					exp: typeof cap.exp === 'number' ? cap.exp : 0,
-					...(cap.iss && { iss: cap.iss }),
-					...(cap.nbf != null && { nbf: cap.nbf }),
-				})
-			} catch (_e) {
-				// Skip failed capability loads (permission, sync, etc.)
-			}
-		}
+		capLog(`stream items=${rawItems.length} grant refs=${capCoIds.length}`)
+		// Load grant CoValues in parallel — sequential reads multiplied latency (~3s × N per waitForStore).
+		const grantRows = await Promise.all(
+			capCoIds.map(async (capCoId) => {
+				try {
+					const capStore = await maia.do({ op: 'read', factory: null, key: capCoId })
+					await waitForStore(capStore, 3000)
+					const cap = capStore?.value ?? capStore
+					if (!cap || cap?.error || cap?.loading) return null
+					return {
+						id: cap.id ?? capCoId,
+						sub: cap.sub,
+						cmd: cap.cmd,
+						pol: Array.isArray(cap.pol) ? cap.pol : [],
+						exp: typeof cap.exp === 'number' ? cap.exp : 0,
+						...(cap.iss && { iss: cap.iss }),
+						...(cap.nbf != null && { nbf: cap.nbf }),
+					}
+				} catch (_e) {
+					return null
+				}
+			}),
+		)
+		const grants = grantRows.filter(Boolean)
+		capLog(`grants loaded count=${grants.length}`)
 		return grants
 	} catch (_e) {
 		return []

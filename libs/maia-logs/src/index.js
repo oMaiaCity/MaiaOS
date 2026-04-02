@@ -11,6 +11,7 @@ export {
 	createPerfTracer,
 	isStorageOpfsPerfEnabled,
 	logStorageOpfsStep,
+	perfAppMaiaDb,
 	perfAppVibes,
 	perfDbUpload,
 	perfEnginesChat,

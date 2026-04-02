@@ -93,6 +93,12 @@ function resolveRunAnywhereWasmPath(pathname) {
 	return null
 }
 
+console.log(
+	'[dev-server] process.env.LOG_MODE =',
+	process.env.LOG_MODE ||
+		'(empty — perf logs need this; try: LOG_MODE=perf.all bun dev:app or add to .env)',
+)
+
 Bun.serve({
 	port: 4200,
 	strictPort: true,

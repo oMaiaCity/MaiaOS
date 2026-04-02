@@ -9,7 +9,11 @@ import {
 	resolveAccountCoIdsToProfiles,
 	resolveGroupCoIdsToCapabilityNames,
 } from '@MaiaOS/loader'
-import { debugLog, debugWarn } from '@MaiaOS/logs'
+import { applyLogModeFromEnv, createPerfTracer, debugLog, debugWarn } from '@MaiaOS/logs'
+import { MAIADB_LAYER_STACK_ICON_SVG } from './maia-icons.js'
+
+/** Same channel as `perfAppMaiaDb` in @MaiaOS/logs — created here so bundled app always resolves (named export can be omitted by some bundles). */
+const perfAppMaiaDb = createPerfTracer('app', 'maia-db')
 
 /** Resolve schema definition from DB (dynamic - no static registry fallback) */
 async function getFactoryFromDb(maia, factoryRef) {
@@ -38,6 +42,84 @@ async function getFactoryFromDb(maia, factoryRef) {
 import { renderDashboard, renderVibeViewer } from './dashboard.js'
 import { disposeGame, renderGame } from './maia-game-mount.js'
 import { escapeHtml, getProfileAvatarHtml, getSyncStatusMessage, truncate } from './utils.js'
+
+function formatCapabilitiesExp(exp) {
+	if (typeof exp !== 'number' || exp <= 0) return '—'
+	const d = new Date(exp * 1000)
+	return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+}
+
+function formatCapabilitiesPolicyDisplay(pol) {
+	if (!Array.isArray(pol) || pol.length === 0) return '—'
+	return escapeHtml(JSON.stringify(pol))
+}
+
+function buildCapabilitiesGrantRowsHtml(grants, profiles) {
+	const nowSec = Math.floor(Date.now() / 1000)
+	return grants
+		.map((g, i) => {
+			const profile = profiles.get(g.sub)
+			const displayName = profile?.name ?? truncate(g.sub, 16)
+			const avatarHtml = getProfileAvatarHtml(profile?.image ?? null, {
+				size: 24,
+				className: 'capabilities-avatar',
+			})
+			const subjectHtml = `<span class="capabilities-subject-wrap">${avatarHtml}<span>${escapeHtml(displayName)}</span></span>`
+			const expired = typeof g.exp === 'number' && g.exp > 0 && g.exp < nowSec
+			const rowClass = `capabilities-row ${i % 2 === 0 ? 'capabilities-row-even' : 'capabilities-row-odd'}${expired ? ' capabilities-row-expired' : ' capabilities-row-active'}`
+			const currentExp = typeof g.exp === 'number' ? g.exp : 0
+			return `
+			<tr class="${rowClass}">
+				<td class="capabilities-cell capabilities-subject">${subjectHtml}</td>
+				<td class="capabilities-cell"><span class="capabilities-cmd">${escapeHtml(g.cmd || '—')}</span></td>
+				<td class="capabilities-cell capabilities-expiry">${escapeHtml(formatCapabilitiesExp(g.exp))}</td>
+				<td class="capabilities-cell capabilities-policy">${formatCapabilitiesPolicyDisplay(g.pol)}</td>
+				<td class="capabilities-cell"><code class="capabilities-id" onclick="selectCoValue('${g.id}')" title="${escapeHtml(g.id)}">${truncate(g.id, 12)}</code></td>
+				<td class="capabilities-cell capabilities-actions">
+					<button type="button" class="capabilities-extend-btn" onclick="window.extendCapability && window.extendCapability('${g.id}', ${currentExp})" title="Extend expiry by 1 day">+1 day</button>
+					<button type="button" class="capabilities-revoke-btn" data-cmd="${escapeHtml(g.cmd || '')}" data-sub="${escapeHtml(g.sub || '')}" onclick="window.revokeCapability && window.revokeCapability('${escapeHtml(g.id)}', { cmd: this.dataset.cmd, sub: this.dataset.sub })" title="Revoke capability">Delete</button>
+				</td>
+			</tr>
+		`
+		})
+		.join('')
+}
+
+/** Load grants + profiles after first paint (sync continues in background). */
+async function hydrateCapabilitiesView(maia) {
+	try {
+		const grants = await perfAppMaiaDb.measure('loadCapabilitiesGrants', () =>
+			loadCapabilitiesGrants(maia),
+		)
+		let profiles = new Map()
+		if (grants.length > 0) {
+			const subIds = [...new Set(grants.map((g) => g.sub).filter(Boolean))]
+			profiles = await perfAppMaiaDb.measure('resolveAccountCoIdsToProfiles (subjects)', () =>
+				resolveAccountCoIdsToProfiles(maia, subIds),
+			)
+		}
+		debugLog('app', 'maia-db', 'capabilities grants loaded', { count: grants.length })
+		const tbody = document.getElementById('capabilities-tbody')
+		if (!tbody) return
+		tbody.innerHTML =
+			grants.length > 0
+				? buildCapabilitiesGrantRowsHtml(grants, profiles)
+				: '<tr class="capabilities-empty"><td colspan="6">No capability grants in spark.os.capabilities</td></tr>'
+		const banner = document.getElementById('capabilities-sync-banner')
+		if (banner) banner.remove()
+		const countEl = document.getElementById('capabilities-grant-count')
+		if (countEl) countEl.textContent = `${grants.length} grant(s)`
+	} catch (capErr) {
+		debugWarn('app', 'maia-db', 'loadCapabilitiesGrants failed', capErr?.message ?? capErr)
+		const tbody = document.getElementById('capabilities-tbody')
+		if (tbody) {
+			const msg = escapeHtml(String(capErr?.message ?? capErr ?? 'Unknown error'))
+			tbody.innerHTML = `<tr class="capabilities-empty"><td colspan="6">Failed to load grants: ${msg}</td></tr>`
+		}
+		const banner = document.getElementById('capabilities-sync-banner')
+		if (banner) banner.remove()
+	}
+}
 
 // Cache for CoBinary image data URLs - survives re-renders, enables progressive reactive preview
 const cobinaryPreviewCache = new Map()
@@ -145,6 +227,11 @@ export async function renderApp(
 	loadSpark,
 	navigateToScreen,
 ) {
+	// Re-apply LOG_MODE every render: in-memory perf/debug gates reset on HMR; ensures perf.all works after clicks.
+	if (typeof window !== 'undefined' && window.__MAIA_DEV_ENV__?.LOG_MODE !== undefined) {
+		applyLogModeFromEnv(String(window.__MAIA_DEV_ENV__.LOG_MODE))
+	}
+
 	if (currentScreen !== 'the-game') {
 		disposeGame()
 	}
@@ -184,6 +271,14 @@ export async function renderApp(
 
 	// DB viewer requires signed-in account (maia.id = { maiaId, node })
 	if (!maia?.id?.maiaId || !maia.id.node) {
+		debugLog('app', 'maia-db', 'gate blocked (no maia kernel)', {
+			hasMaia: !!maia,
+			hasMaiaId: !!maia?.id?.maiaId,
+			hasNode: !!maia?.id?.node,
+			signedIn: authState?.signedIn,
+			currentScreen,
+			currentContextCoValueId,
+		})
 		const isLoading = authState?.signedIn
 		const message = isLoading ? 'Loading account…' : 'Please sign in to view the DB.'
 		document.getElementById('app').innerHTML = `
@@ -199,151 +294,155 @@ export async function renderApp(
 	}
 
 	// Default: render MaiaDB (currentScreen === 'maia-db')
-	window.toggleMetadataInternalKey = (btn) => {
-		const row = btn.closest('.metadata-internal-row')
-		if (!row) return
-		const truncated = row.querySelector('.metadata-internal-truncated')
-		const full = row.querySelector('.metadata-internal-full')
-		if (!truncated || !full) return
-		const isExpanded = full.style.display !== 'none'
-		if (isExpanded) {
-			full.style.display = 'none'
-			truncated.style.display = ''
-			btn.textContent = '⊕'
-			btn.setAttribute('aria-label', 'Expand')
-		} else {
-			truncated.style.display = 'none'
-			full.style.display = ''
-			btn.textContent = '⊖'
-			btn.setAttribute('aria-label', 'Collapse')
-		}
-	}
-
-	// CoJSON internal keys: sealer/signer, KEY_..._FOR_SEALER_..., and agent IDs as map keys - shown in metadata sidebar
-	const isCoJsonInternalKey = (key, value) => {
-		const k = String(key).toLowerCase()
-		if (k === 'sealer' || k === 'signer') return true
-		// Keys can BE agent IDs or revelation keys (e.g. "sealer_z.../signer_z..." or "key_z..._for_sealer_z.../signer_z...")
-		if (k.startsWith('sealer_') && k.includes('/signer_')) return true
-		if (k.startsWith('key_') && k.includes('_for_sealer_')) return true
-		if (typeof value !== 'string') return false
-		const v = value.toLowerCase()
-		return (
-			v.startsWith('sealer_') ||
-			v.includes('/signer_') ||
-			(v.startsWith('key_') && v.includes('_for_sealer_'))
-		)
-	}
-
-	// Helper to render any value consistently
-	const renderValue = (value, depth = 0) => {
-		if (depth > 2) return '<span class="nested-depth">...</span>'
-		if (value === null) return '<span class="text-xs italic null-value text-slate-400">null</span>'
-		if (value === undefined)
-			return '<span class="text-xs italic undefined-value text-slate-400">undefined</span>'
-
-		if (typeof value === 'string') {
-			if (value.startsWith('co_')) {
-				return `<code class="text-xs co-id text-marine-blue-muted hover:underline clickable" onclick="selectCoValue('${value}')" title="${value}">${truncate(value, 12)}</code>`
+	perfAppMaiaDb.start(
+		`renderApp view=${currentView} ctx=${String(currentContextCoValueId ?? '').slice(0, 32)}`,
+	)
+	try {
+		window.toggleMetadataInternalKey = (btn) => {
+			const row = btn.closest('.metadata-internal-row')
+			if (!row) return
+			const truncated = row.querySelector('.metadata-internal-truncated')
+			const full = row.querySelector('.metadata-internal-full')
+			if (!truncated || !full) return
+			const isExpanded = full.style.display !== 'none'
+			if (isExpanded) {
+				full.style.display = 'none'
+				truncated.style.display = ''
+				btn.textContent = '⊕'
+				btn.setAttribute('aria-label', 'Expand')
+			} else {
+				truncated.style.display = 'none'
+				full.style.display = ''
+				btn.textContent = '⊖'
+				btn.setAttribute('aria-label', 'Collapse')
 			}
-			if (value.startsWith('key_')) {
-				return `<code class="text-xs key-value text-marine-blue-muted" title="${value}">${truncate(value, 30)}</code>`
-			}
-			if (value.startsWith('sealed_')) {
-				return '<code class="text-xs italic sealed-value text-marine-blue-muted">sealed_***</code>'
-			}
-
-			const maxLength = 100
-			const truncated = value.length > maxLength ? `${value.substring(0, maxLength)}...` : value
-			return `<span class="min-w-0 text-xs text-right break-all string-value text-marine-blue-muted" title="${value}">"${escapeHtml(truncated)}"</span>`
 		}
 
-		if (typeof value === 'boolean') {
-			return `<span class="boolean-value ${value ? 'true' : 'false'} text-xs font-semibold ${value ? 'text-lush-green bg-lush-green/10' : 'text-marine-blue-muted bg-white/10'} px-1.5 py-0.5 rounded">${value}</span>`
+		// CoJSON internal keys: sealer/signer, KEY_..._FOR_SEALER_..., and agent IDs as map keys - shown in metadata sidebar
+		const isCoJsonInternalKey = (key, value) => {
+			const k = String(key).toLowerCase()
+			if (k === 'sealer' || k === 'signer') return true
+			// Keys can BE agent IDs or revelation keys (e.g. "sealer_z.../signer_z..." or "key_z..._for_sealer_z.../signer_z...")
+			if (k.startsWith('sealer_') && k.includes('/signer_')) return true
+			if (k.startsWith('key_') && k.includes('_for_sealer_')) return true
+			if (typeof value !== 'string') return false
+			const v = value.toLowerCase()
+			return (
+				v.startsWith('sealer_') ||
+				v.includes('/signer_') ||
+				(v.startsWith('key_') && v.includes('_for_sealer_'))
+			)
 		}
 
-		if (typeof value === 'number') {
-			return `<span class="text-xs font-medium number-value text-marine-blue-muted">${value}</span>`
-		}
+		// Helper to render any value consistently
+		const renderValue = (value, depth = 0) => {
+			if (depth > 2) return '<span class="nested-depth">...</span>'
+			if (value === null) return '<span class="text-xs italic null-value text-slate-400">null</span>'
+			if (value === undefined)
+				return '<span class="text-xs italic undefined-value text-slate-400">undefined</span>'
 
-		if (Array.isArray(value)) {
-			// Truncate array preview to max 24 characters
-			const preview = `[${value.length} ${value.length === 1 ? 'item' : 'items'}]`
-			const truncated = preview.length > 24 ? `${preview.substring(0, 21)}...` : preview
-			return `<span class="text-xs italic array-value text-marine-blue-light" title="${escapeHtml(JSON.stringify(value))}">${escapeHtml(truncated)}</span>`
-		}
-
-		if (typeof value === 'object' && value !== null) {
-			// Create a compact JSON preview string, truncated to max 24 characters total (including "OBJECT >")
-			const objectIndicator = ' OBJECT >'
-			const maxJsonLength = 24 - objectIndicator.length // Reserve space for " OBJECT >"
-
-			try {
-				const jsonString = JSON.stringify(value)
-				let truncated = jsonString
-				if (jsonString.length > maxJsonLength) {
-					truncated = `${jsonString.substring(0, maxJsonLength - 3)}...`
+			if (typeof value === 'string') {
+				if (value.startsWith('co_')) {
+					return `<code class="text-xs co-id text-marine-blue-muted hover:underline clickable" onclick="selectCoValue('${value}')" title="${value}">${truncate(value, 12)}</code>`
 				}
-				return `<span class="text-xs italic object-value text-marine-blue-light" title="${escapeHtml(jsonString)}">${escapeHtml(truncated)}<span class="text-marine-blue-light/50">${objectIndicator}</span></span>`
-			} catch (_e) {
-				// Fallback if JSON.stringify fails
-				const keys = Object.keys(value)
-				const preview = `{${keys.length} ${keys.length === 1 ? 'key' : 'keys'}}`
-				let truncated = preview
-				if (preview.length > maxJsonLength) {
-					truncated = `${preview.substring(0, maxJsonLength - 3)}...`
+				if (value.startsWith('key_')) {
+					return `<code class="text-xs key-value text-marine-blue-muted" title="${value}">${truncate(value, 30)}</code>`
 				}
-				return `<span class="text-xs italic object-value text-marine-blue-light">${escapeHtml(truncated)}<span class="text-marine-blue-light/50">${objectIndicator}</span></span>`
+				if (value.startsWith('sealed_')) {
+					return '<code class="text-xs italic sealed-value text-marine-blue-muted">sealed_***</code>'
+				}
+
+				const maxLength = 100
+				const truncated = value.length > maxLength ? `${value.substring(0, maxLength)}...` : value
+				return `<span class="min-w-0 text-xs text-right break-all string-value text-marine-blue-muted" title="${value}">"${escapeHtml(truncated)}"</span>`
+			}
+
+			if (typeof value === 'boolean') {
+				return `<span class="boolean-value ${value ? 'true' : 'false'} text-xs font-semibold ${value ? 'text-lush-green bg-lush-green/10' : 'text-marine-blue-muted bg-white/10'} px-1.5 py-0.5 rounded">${value}</span>`
+			}
+
+			if (typeof value === 'number') {
+				return `<span class="text-xs font-medium number-value text-marine-blue-muted">${value}</span>`
+			}
+
+			if (Array.isArray(value)) {
+				// Truncate array preview to max 24 characters
+				const preview = `[${value.length} ${value.length === 1 ? 'item' : 'items'}]`
+				const truncated = preview.length > 24 ? `${preview.substring(0, 21)}...` : preview
+				return `<span class="text-xs italic array-value text-marine-blue-light" title="${escapeHtml(JSON.stringify(value))}">${escapeHtml(truncated)}</span>`
+			}
+
+			if (typeof value === 'object' && value !== null) {
+				// Create a compact JSON preview string, truncated to max 24 characters total (including "OBJECT >")
+				const objectIndicator = ' OBJECT >'
+				const maxJsonLength = 24 - objectIndicator.length // Reserve space for " OBJECT >"
+
+				try {
+					const jsonString = JSON.stringify(value)
+					let truncated = jsonString
+					if (jsonString.length > maxJsonLength) {
+						truncated = `${jsonString.substring(0, maxJsonLength - 3)}...`
+					}
+					return `<span class="text-xs italic object-value text-marine-blue-light" title="${escapeHtml(jsonString)}">${escapeHtml(truncated)}<span class="text-marine-blue-light/50">${objectIndicator}</span></span>`
+				} catch (_e) {
+					// Fallback if JSON.stringify fails
+					const keys = Object.keys(value)
+					const preview = `{${keys.length} ${keys.length === 1 ? 'key' : 'keys'}}`
+					let truncated = preview
+					if (preview.length > maxJsonLength) {
+						truncated = `${preview.substring(0, maxJsonLength - 3)}...`
+					}
+					return `<span class="text-xs italic object-value text-marine-blue-light">${escapeHtml(truncated)}<span class="text-marine-blue-light/50">${objectIndicator}</span></span>`
+				}
+			}
+
+			return `<span class="text-xs text-marine-blue-muted">${escapeHtml(String(value))}</span>`
+		}
+
+		// Helper to format JSON properly (parse if string, then stringify with indentation)
+		const formatJSON = (value) => {
+			if (typeof value === 'string') {
+				// Try to parse as JSON first
+				try {
+					const parsed = JSON.parse(value)
+					return JSON.stringify(parsed, null, 2)
+				} catch (_e) {
+					// Not valid JSON, return as-is
+					return value
+				}
+			} else if (Array.isArray(value)) {
+				// Explicitly handle arrays
+				return JSON.stringify(value, null, 2)
+			} else if (typeof value === 'object' && value !== null) {
+				// Handle objects
+				return JSON.stringify(value, null, 2)
+			} else {
+				return String(value)
 			}
 		}
 
-		return `<span class="text-xs text-marine-blue-muted">${escapeHtml(String(value))}</span>`
-	}
+		// Helper to render a property row consistently
+		const renderPropertyRow = (
+			label,
+			value,
+			type,
+			key,
+			isExpandable = false,
+			expandId = '',
+			_schemaTitle = '',
+		) => {
+			const typeClass = type ? type.replace(/-/g, '') : 'unknown'
+			const isCoIdClickable = type === 'co-id'
+			const isClickable = isCoIdClickable || isExpandable
 
-	// Helper to format JSON properly (parse if string, then stringify with indentation)
-	const formatJSON = (value) => {
-		if (typeof value === 'string') {
-			// Try to parse as JSON first
-			try {
-				const parsed = JSON.parse(value)
-				return JSON.stringify(parsed, null, 2)
-			} catch (_e) {
-				// Not valid JSON, return as-is
-				return value
+			let onclickHandler = ''
+			if (isCoIdClickable) {
+				onclickHandler = `onclick="selectCoValue('${value}')"`
+			} else if (isExpandable) {
+				onclickHandler = `onclick="event.stopPropagation(); toggleExpand('${expandId}')"`
 			}
-		} else if (Array.isArray(value)) {
-			// Explicitly handle arrays
-			return JSON.stringify(value, null, 2)
-		} else if (typeof value === 'object' && value !== null) {
-			// Handle objects
-			return JSON.stringify(value, null, 2)
-		} else {
-			return String(value)
-		}
-	}
 
-	// Helper to render a property row consistently
-	const renderPropertyRow = (
-		label,
-		value,
-		type,
-		key,
-		isExpandable = false,
-		expandId = '',
-		_schemaTitle = '',
-	) => {
-		const typeClass = type ? type.replace(/-/g, '') : 'unknown'
-		const isCoIdClickable = type === 'co-id'
-		const isClickable = isCoIdClickable || isExpandable
-
-		let onclickHandler = ''
-		if (isCoIdClickable) {
-			onclickHandler = `onclick="selectCoValue('${value}')"`
-		} else if (isExpandable) {
-			onclickHandler = `onclick="event.stopPropagation(); toggleExpand('${expandId}')"`
-		}
-
-		return `
+			return `
 			<div class="w-full property-item-wrapper">
 				<button 
 					type="button"
@@ -388,80 +487,42 @@ export async function renderApp(
 				}
 			</div>
 		`
-	}
-
-	// Get data based on current view
-	let data, viewTitle, _viewSubtitle
-	let tableContent = ''
-	let headerInfo = null
-
-	// Get account and node for navigation
-	const account = maia.id.maiaId
-	const _node = maia.id.node
-
-	// Default to showing account if no context is set
-	if (!currentContextCoValueId && account?.id) {
-		currentContextCoValueId = account.id
-	}
-
-	// Capabilities view (guardian visibility - spark.os.capabilities grants)
-	if (currentContextCoValueId === '__capabilities__' && maia) {
-		const grants = await loadCapabilitiesGrants(maia)
-		let profiles = new Map()
-		if (grants.length > 0) {
-			try {
-				const subIds = [...new Set(grants.map((g) => g.sub).filter(Boolean))]
-				profiles = await resolveAccountCoIdsToProfiles(maia, subIds)
-			} catch (_e) {}
 		}
-		const formatExp = (exp) => {
-			if (typeof exp !== 'number' || exp <= 0) return '—'
-			const d = new Date(exp * 1000)
-			return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
+
+		// Get data based on current view
+		let data, viewTitle, _viewSubtitle
+		let tableContent = ''
+		let headerInfo = null
+
+		// Get account and node for navigation
+		const account = maia.id.maiaId
+		const _node = maia.id.node
+
+		// Default to showing account if no context is set
+		if (!currentContextCoValueId && account?.id) {
+			currentContextCoValueId = account.id
 		}
-		const policyDisplay = (pol) => {
-			if (!Array.isArray(pol) || pol.length === 0) return '—'
-			return escapeHtml(JSON.stringify(pol))
-		}
-		const nowSec = Math.floor(Date.now() / 1000)
-		const grantRows = grants
-			.map((g, i) => {
-				const profile = profiles.get(g.sub)
-				const displayName = profile?.name ?? truncate(g.sub, 16)
-				const avatarHtml = getProfileAvatarHtml(profile?.image ?? null, {
-					size: 24,
-					className: 'capabilities-avatar',
-				})
-				const subjectHtml = `<span class="capabilities-subject-wrap">${avatarHtml}<span>${escapeHtml(displayName)}</span></span>`
-				const expired = typeof g.exp === 'number' && g.exp > 0 && g.exp < nowSec
-				const rowClass = `capabilities-row ${i % 2 === 0 ? 'capabilities-row-even' : 'capabilities-row-odd'}${expired ? ' capabilities-row-expired' : ' capabilities-row-active'}`
-				const currentExp = typeof g.exp === 'number' ? g.exp : 0
-				return `
-			<tr class="${rowClass}">
-				<td class="capabilities-cell capabilities-subject">${subjectHtml}</td>
-				<td class="capabilities-cell"><span class="capabilities-cmd">${escapeHtml(g.cmd || '—')}</span></td>
-				<td class="capabilities-cell capabilities-expiry">${escapeHtml(formatExp(g.exp))}</td>
-				<td class="capabilities-cell capabilities-policy">${policyDisplay(g.pol)}</td>
-				<td class="capabilities-cell"><code class="capabilities-id" onclick="selectCoValue('${g.id}')" title="${escapeHtml(g.id)}">${truncate(g.id, 12)}</code></td>
-				<td class="capabilities-cell capabilities-actions">
-					<button type="button" class="capabilities-extend-btn" onclick="window.extendCapability && window.extendCapability('${g.id}', ${currentExp})" title="Extend expiry by 1 day">+1 day</button>
-					<button type="button" class="capabilities-revoke-btn" data-cmd="${escapeHtml(g.cmd || '')}" data-sub="${escapeHtml(g.sub || '')}" onclick="window.revokeCapability && window.revokeCapability('${escapeHtml(g.id)}', { cmd: this.dataset.cmd, sub: this.dataset.sub })" title="Revoke capability">Delete</button>
-				</td>
-			</tr>
-		`
+
+		// Capabilities view — shell first; grants + profiles load after paint (hydrateCapabilitiesView)
+		if (currentContextCoValueId === '__capabilities__' && maia) {
+			debugLog('app', 'maia-db', 'render capabilities view (shell; grants load in background)', {
+				hasDo: !!maia?.do,
 			})
-			.join('')
-		data = { _capabilitiesView: true, grants }
-		viewTitle = 'Capabilities'
-		_viewSubtitle = `${grants.length} grant(s)`
-		headerInfo = {
-			type: 'capabilities',
-			typeLabel: 'Grants',
-			itemCount: grants.length,
-			description: 'spark.os.capabilities',
-		}
-		tableContent = `
+			data = { _capabilitiesView: true, grants: [], _loading: true }
+			viewTitle = 'Capabilities'
+			_viewSubtitle = ''
+			headerInfo = {
+				type: 'capabilities',
+				typeLabel: 'Grants',
+				itemCount: null,
+				description: 'spark.os.capabilities',
+			}
+			tableContent = `
 			<div class="capabilities-table-wrap">
+				<p class="capabilities-sync-banner" id="capabilities-sync-banner" role="status">
+					<span class="capabilities-loading-spinner" aria-hidden="true"></span>
+					<span>Syncing capability grants…</span>
+				</p>
 				<table class="capabilities-table">
 					<thead>
 						<tr>
@@ -473,131 +534,86 @@ export async function renderApp(
 							<th class="capabilities-th capabilities-th-actions"></th>
 						</tr>
 					</thead>
-					<tbody>
-						${grants.length > 0 ? grantRows : '<tr class="capabilities-empty"><td colspan="6">No capability grants in spark.os.capabilities</td></tr>'}
+					<tbody id="capabilities-tbody">
+						<tr class="capabilities-row capabilities-row-loading">
+							<td colspan="6" class="capabilities-loading-cell">
+								<span class="text-marine-blue-light text-sm">Loading rows…</span>
+							</td>
+						</tr>
 					</tbody>
 				</table>
 			</div>
 		`
-	} else if (currentContextCoValueId && maia) {
-		// Explorer-style navigation: if a CoValue is loaded into context, show it in main container
-		try {
-			// Use unified read API - query by ID (key parameter)
-			// Note: schema is required by ReadOperation, but backend handles key-only reads
-			// Using the coId as schema is a workaround - backend will use key parameter
-			const store = await maia.do({
-				op: 'read',
-				factory: currentContextCoValueId,
-				key: currentContextCoValueId,
-			})
-			// ReadOperation returns a ReactiveStore - get current value
-			const contextData = store.value || store
-			// Operations API returns flat objects: {id: '...', profile: '...', registries: '...'}
-			// Convert to normalized format for DB Viewer display
-			const hasProperties =
-				contextData &&
-				typeof contextData === 'object' &&
-				!Array.isArray(contextData) &&
-				Object.keys(contextData).filter(
-					(k) => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$factory' && k !== 'type',
-				).length > 0
-			const _propertiesCount = hasProperties
-				? Object.keys(contextData).filter(
-						(k) => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$factory' && k !== 'type',
-					).length
-				: 0
-
-			data = contextData
-
-			// Subscribe to ReactiveStore updates for reactivity
-			if (typeof store.subscribe === 'function') {
-				// Count properties from flat object (exclude metadata keys)
-				const flatPropertyCount =
-					contextData && typeof contextData === 'object' && !Array.isArray(contextData)
-						? Object.keys(contextData).filter(
-								(k) => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$factory' && k !== 'type',
-							).length
-						: 0
-				let lastPropertiesCount = contextData?.loading ? -1 : flatPropertyCount
-				let lastLoadingState = contextData?.loading || false
-				let lastDataHash = JSON.stringify({
-					propsCount: lastPropertiesCount,
-					loading: lastLoadingState,
-					hasError: !!contextData?.error,
+		} else if (currentContextCoValueId && maia) {
+			// Explorer-style navigation: if a CoValue is loaded into context, show it in main container
+			try {
+				// Use unified read API - query by ID (key parameter)
+				// Note: schema is required by ReadOperation, but backend handles key-only reads
+				// Using the coId as schema is a workaround - backend will use key parameter
+				const store = await maia.do({
+					op: 'read',
+					factory: currentContextCoValueId,
+					key: currentContextCoValueId,
 				})
-
-				store.subscribe((updatedData) => {
-					// Check if data actually changed (properties appeared, loading state changed, etc.)
-					// Count properties from flat object (exclude metadata keys)
-					const currentFlatPropertyCount =
-						updatedData && typeof updatedData === 'object' && !Array.isArray(updatedData)
-							? Object.keys(updatedData).filter(
-									(k) => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$factory' && k !== 'type',
-								).length
-							: 0
-					const currentPropertiesCount = updatedData?.loading ? -1 : currentFlatPropertyCount
-					const currentLoadingState = updatedData?.loading || false
-					const currentDataHash = JSON.stringify({
-						propsCount: currentPropertiesCount,
-						loading: currentLoadingState,
-						hasError: !!updatedData?.error,
-					})
-
-					const dataChanged = currentDataHash !== lastDataHash
-
-					if (updatedData && dataChanged) {
-						lastPropertiesCount = currentPropertiesCount
-						lastLoadingState = currentLoadingState
-						lastDataHash = currentDataHash
-						setTimeout(() => {
-							renderApp(
-								maia,
-								authState,
-								syncState,
-								currentScreen,
-								currentView,
-								currentContextCoValueId,
-								currentAven,
-								currentSpark,
-								switchView,
-								selectCoValue,
-								loadVibe,
-								loadSpark,
-								navigateToScreen,
-							)
-						}, 0)
-					}
-				})
-				// ReactiveStore handles cleanup automatically
-			}
-			// Use ID as title (no displayName logic)
-			viewTitle = contextData.id ? truncate(contextData.id, 24) : 'CoValue'
-			_viewSubtitle = ''
-		} catch (err) {
-			data = { error: err.message, id: currentContextCoValueId, loading: false }
-			viewTitle = 'Error'
-			_viewSubtitle = ''
-		}
-	} else if (currentView && maia) {
-		// Filter by schema
-		// ReadOperation requires schema to be a co-id (co_z...)
-		// If currentView is not a co-id, get all CoValues and filter manually
-		try {
-			if (currentView.startsWith('co_z')) {
-				// Schema is already a co-id - use unified read API
-				const store = await maia.do({ op: 'read', schema: currentView })
 				// ReadOperation returns a ReactiveStore - get current value
-				const result = store.value || store
-				data = Array.isArray(result) ? result : []
+				const contextData = store.value || store
+				// Operations API returns flat objects: {id: '...', profile: '...', registries: '...'}
+				// Convert to normalized format for DB Viewer display
+				const hasProperties =
+					contextData &&
+					typeof contextData === 'object' &&
+					!Array.isArray(contextData) &&
+					Object.keys(contextData).filter(
+						(k) => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$factory' && k !== 'type',
+					).length > 0
+				const _propertiesCount = hasProperties
+					? Object.keys(contextData).filter(
+							(k) => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$factory' && k !== 'type',
+						).length
+					: 0
+
+				data = contextData
 
 				// Subscribe to ReactiveStore updates for reactivity
 				if (typeof store.subscribe === 'function') {
-					let lastLength = result.length
-					store.subscribe((updatedResult) => {
-						// Re-render when store updates (check if data actually changed)
-						if (updatedResult && Array.isArray(updatedResult) && updatedResult.length !== lastLength) {
-							lastLength = updatedResult.length
-							// Use setTimeout to prevent infinite loops and batch updates
+					// Count properties from flat object (exclude metadata keys)
+					const flatPropertyCount =
+						contextData && typeof contextData === 'object' && !Array.isArray(contextData)
+							? Object.keys(contextData).filter(
+									(k) => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$factory' && k !== 'type',
+								).length
+							: 0
+					let lastPropertiesCount = contextData?.loading ? -1 : flatPropertyCount
+					let lastLoadingState = contextData?.loading || false
+					let lastDataHash = JSON.stringify({
+						propsCount: lastPropertiesCount,
+						loading: lastLoadingState,
+						hasError: !!contextData?.error,
+					})
+
+					store.subscribe((updatedData) => {
+						// Check if data actually changed (properties appeared, loading state changed, etc.)
+						// Count properties from flat object (exclude metadata keys)
+						const currentFlatPropertyCount =
+							updatedData && typeof updatedData === 'object' && !Array.isArray(updatedData)
+								? Object.keys(updatedData).filter(
+										(k) => k !== 'id' && k !== 'loading' && k !== 'error' && k !== '$factory' && k !== 'type',
+									).length
+								: 0
+						const currentPropertiesCount = updatedData?.loading ? -1 : currentFlatPropertyCount
+						const currentLoadingState = updatedData?.loading || false
+						const currentDataHash = JSON.stringify({
+							propsCount: currentPropertiesCount,
+							loading: currentLoadingState,
+							hasError: !!updatedData?.error,
+						})
+
+						const dataChanged = currentDataHash !== lastDataHash
+
+						if (updatedData && dataChanged) {
+							lastPropertiesCount = currentPropertiesCount
+							lastLoadingState = currentLoadingState
+							lastDataHash = currentDataHash
 							setTimeout(() => {
 								renderApp(
 									maia,
@@ -619,83 +635,132 @@ export async function renderApp(
 					})
 					// ReactiveStore handles cleanup automatically
 				}
-			} else {
-				// Human-readable schema name - get all CoValues and filter by schema
-				const allCoValues = maia.getAllCoValues()
-				data = allCoValues
-					.filter((cv) => {
-						// Match schema name (can be in various formats)
-						const schema = cv.$factory // STRICT: Only $factory, no fallback
-						return (
-							schema === currentView ||
-							schema === `°Maia/factory/${currentView}` ||
-							cv.headerMeta?.$factory === currentView
-						)
-					})
-					.map((cv) => ({
-						displayName: cv.$factory || cv.id, // STRICT: Only $factory, no fallback
-						...cv,
-					}))
+				// Use ID as title (no displayName logic)
+				viewTitle = contextData.id ? truncate(contextData.id, 24) : 'CoValue'
+				_viewSubtitle = ''
+			} catch (err) {
+				data = { error: err.message, id: currentContextCoValueId, loading: false }
+				viewTitle = 'Error'
+				_viewSubtitle = ''
 			}
-		} catch (_err) {
-			data = []
+		} else if (currentView && maia) {
+			// Filter by schema
+			// ReadOperation requires schema to be a co-id (co_z...)
+			// If currentView is not a co-id, get all CoValues and filter manually
+			try {
+				if (currentView.startsWith('co_z')) {
+					// Schema is already a co-id - use unified read API
+					const store = await maia.do({ op: 'read', schema: currentView })
+					// ReadOperation returns a ReactiveStore - get current value
+					const result = store.value || store
+					data = Array.isArray(result) ? result : []
+
+					// Subscribe to ReactiveStore updates for reactivity
+					if (typeof store.subscribe === 'function') {
+						let lastLength = result.length
+						store.subscribe((updatedResult) => {
+							// Re-render when store updates (check if data actually changed)
+							if (updatedResult && Array.isArray(updatedResult) && updatedResult.length !== lastLength) {
+								lastLength = updatedResult.length
+								// Use setTimeout to prevent infinite loops and batch updates
+								setTimeout(() => {
+									renderApp(
+										maia,
+										authState,
+										syncState,
+										currentScreen,
+										currentView,
+										currentContextCoValueId,
+										currentAven,
+										currentSpark,
+										switchView,
+										selectCoValue,
+										loadVibe,
+										loadSpark,
+										navigateToScreen,
+									)
+								}, 0)
+							}
+						})
+						// ReactiveStore handles cleanup automatically
+					}
+				} else {
+					// Human-readable schema name - get all CoValues and filter by schema
+					const allCoValues = maia.getAllCoValues()
+					data = allCoValues
+						.filter((cv) => {
+							// Match schema name (can be in various formats)
+							const schema = cv.$factory // STRICT: Only $factory, no fallback
+							return (
+								schema === currentView ||
+								schema === `°Maia/factory/${currentView}` ||
+								cv.headerMeta?.$factory === currentView
+							)
+						})
+						.map((cv) => ({
+							displayName: cv.$factory || cv.id, // STRICT: Only $factory, no fallback
+							...cv,
+						}))
+				}
+			} catch (_err) {
+				data = []
+			}
+			const schema = await getFactoryFromDb(maia, currentView)
+			viewTitle = schema?.title || currentView
+			_viewSubtitle = `${Array.isArray(data) ? data.length : 0} CoValue(s)`
+		} else {
+			// Default: show account ID if available
+			viewTitle = account?.id ? truncate(account.id, 24) : 'CoValue'
+			_viewSubtitle = ''
 		}
-		const schema = await getFactoryFromDb(maia, currentView)
-		viewTitle = schema?.title || currentView
-		_viewSubtitle = `${Array.isArray(data) ? data.length : 0} CoValue(s)`
-	} else {
-		// Default: show account ID if available
-		viewTitle = account?.id ? truncate(account.id, 24) : 'CoValue'
-		_viewSubtitle = ''
-	}
 
-	// Build account structure navigation (Account + Capabilities)
-	const navigationItems = []
+		// Build account structure navigation (Account + Capabilities)
+		const navigationItems = []
 
-	// Entry 1: Account itself
-	navigationItems.push({
-		id: account.id,
-		label: 'Account',
-		type: 'account',
-	})
-	// Entry 2: Capabilities (guardian visibility - spark.os.capabilities grants)
-	navigationItems.push({
-		id: '__capabilities__',
-		label: 'Capabilities',
-		type: 'capabilities',
-	})
+		// Entry 1: Account itself
+		navigationItems.push({
+			id: account.id,
+			label: 'Account',
+			type: 'account',
+		})
+		// Entry 2: Capabilities (guardian visibility - spark.os.capabilities grants)
+		navigationItems.push({
+			id: '__capabilities__',
+			label: 'Capabilities',
+			type: 'capabilities',
+		})
 
-	// Build table content based on view (tableContent/headerInfo already set by capabilities branch if applicable)
-	// DB Viewer only shows DB content (no agent rendering here)
-	if (currentContextCoValueId && data) {
-		// Capabilities view: tableContent already set above
-		if (!data._capabilitiesView) {
-			// Explorer-style: if context CoValue is loaded, show its properties in main container
-			// Show CoValue properties in main container (reuse property rendering from detail view)
-			if (data.error && !data.loading) {
-				tableContent = `<div class="p-8 font-medium text-center text-rose-500 rounded-2xl border border-rose-100 empty-state bg-rose-50/50">Error: ${data.error}</div>`
-			} else if (data.loading) {
-				tableContent = `
+		// Build table content based on view (tableContent/headerInfo already set by capabilities branch if applicable)
+		// DB Viewer only shows DB content (no agent rendering here)
+		if (currentContextCoValueId && data) {
+			// Capabilities view: tableContent already set above
+			if (!data._capabilitiesView) {
+				// Explorer-style: if context CoValue is loaded, show its properties in main container
+				// Show CoValue properties in main container (reuse property rendering from detail view)
+				if (data.error && !data.loading) {
+					tableContent = `<div class="p-8 font-medium text-center text-rose-500 rounded-2xl border border-rose-100 empty-state bg-rose-50/50">Error: ${data.error}</div>`
+				} else if (data.loading) {
+					tableContent = `
 				<div class="flex flex-col justify-center items-center p-12 rounded-2xl border empty-state bg-slate-50/50 border-slate-100">
 					<div class="w-8 h-8 rounded-full border-4 animate-spin loading-spinner border-slate-200 border-t-slate-400"></div>
 					<p class="mt-4 font-medium text-slate-500">Loading CoValue... (waiting for verified state)</p>
 				</div>
 			`
-			} else if ((data._coValueType || data.cotype || data.type) === 'cobinary') {
-				// CoBinary: Display binary stream metadata (co-id, mimeType, size, finished)
-				headerInfo = {
-					type: 'cobinary',
-					typeLabel: 'CoBinary',
-					description: 'Binary file stream',
-				}
-				const mimeType = data.mimeType || 'application/octet-stream'
-				const totalSizeBytes = data.totalSizeBytes ?? null
-				const finished = data.finished ?? false
-				const sizeStr = totalSizeBytes != null ? `${(totalSizeBytes / 1024).toFixed(1)} KB` : '?'
-				const isImage = mimeType.startsWith('image/')
-				let previewHtml = ''
-				if (isImage && data.id && maia?.do) {
-					previewHtml = `
+				} else if ((data._coValueType || data.cotype || data.type) === 'cobinary') {
+					// CoBinary: Display binary stream metadata (co-id, mimeType, size, finished)
+					headerInfo = {
+						type: 'cobinary',
+						typeLabel: 'CoBinary',
+						description: 'Binary file stream',
+					}
+					const mimeType = data.mimeType || 'application/octet-stream'
+					const totalSizeBytes = data.totalSizeBytes ?? null
+					const finished = data.finished ?? false
+					const sizeStr = totalSizeBytes != null ? `${(totalSizeBytes / 1024).toFixed(1)} KB` : '?'
+					const isImage = mimeType.startsWith('image/')
+					let previewHtml = ''
+					if (isImage && data.id && maia?.do) {
+						previewHtml = `
 					<div class="mt-4 p-4 bg-slate-50/50 rounded-xl border border-slate-200" style="width:100%;max-width:100%;min-width:0;overflow:hidden">
 						<p class="text-xs text-slate-500 mb-2">Image preview (loads on demand)</p>
 						<div style="width:100%;max-width:100%;min-width:0;overflow:hidden">
@@ -703,8 +768,8 @@ export async function renderApp(
 						</div>
 					</div>
 				`
-				}
-				tableContent = `
+					}
+					tableContent = `
 				<div class="space-y-4 cobinary-container">
 					<div class="grid grid-cols-2 gap-3 text-sm">
 						<div class="font-medium text-slate-500">Co-ID</div>
@@ -719,293 +784,293 @@ export async function renderApp(
 					${previewHtml}
 				</div>
 			`
-				// Image preview loaded reactively via hydrateCobinaryPreviews (after innerHTML)
-			} else if (
-				(data._coValueType || data.cotype || data.type) === 'colist' ||
-				(data._coValueType || data.cotype || data.type) === 'costream'
-			) {
-				// CoList/CoStream: Display items directly (they ARE the list/stream, no properties)
-				// STRICT: Ensure items is always array (read API may return object/undefined for index colists)
-				const raw = data?.items
-				const items = Array.isArray(raw)
-					? raw
-					: raw && typeof raw === 'object' && !Array.isArray(raw)
-						? Object.values(raw)
-						: []
-				const isStream = (data._coValueType || data.cotype || data.type) === 'costream'
-				const typeLabel = isStream ? 'CoStream' : 'CoList'
+					// Image preview loaded reactively via hydrateCobinaryPreviews (after innerHTML)
+				} else if (
+					(data._coValueType || data.cotype || data.type) === 'colist' ||
+					(data._coValueType || data.cotype || data.type) === 'costream'
+				) {
+					// CoList/CoStream: Display items directly (they ARE the list/stream, no properties)
+					// STRICT: Ensure items is always array (read API may return object/undefined for index colists)
+					const raw = data?.items
+					const items = Array.isArray(raw)
+						? raw
+						: raw && typeof raw === 'object' && !Array.isArray(raw)
+							? Object.values(raw)
+							: []
+					const isStream = (data._coValueType || data.cotype || data.type) === 'costream'
+					const typeLabel = isStream ? 'CoStream' : 'CoList'
 
-				// Store header info for display in inspector-header
-				headerInfo = {
-					type: data._coValueType || data.cotype || data.type,
-					typeLabel: typeLabel,
-					itemCount: items.length,
-					description: isStream ? 'Append-only stream' : 'Ordered list',
-				}
+					// Store header info for display in inspector-header
+					headerInfo = {
+						type: data._coValueType || data.cotype || data.type,
+						typeLabel: typeLabel,
+						itemCount: items.length,
+						description: isStream ? 'Append-only stream' : 'Ordered list',
+					}
 
-				const itemRows = items
-					.map((item, index) => {
-						const label = `#${index + 1}`
-						let type = typeof item
-						if (typeof item === 'string' && item.startsWith('co_')) {
-							type = 'co-id'
-						} else if (Array.isArray(item)) {
-							type = 'array'
-						} else if (typeof item === 'object' && item !== null) {
-							type = 'object'
-						}
+					const itemRows = items
+						.map((item, index) => {
+							const label = `#${index + 1}`
+							let type = typeof item
+							if (typeof item === 'string' && item.startsWith('co_')) {
+								type = 'co-id'
+							} else if (Array.isArray(item)) {
+								type = 'array'
+							} else if (typeof item === 'object' && item !== null) {
+								type = 'object'
+							}
 
-						// Make objects and arrays expandable
-						const isExpandable = (typeof item === 'object' && item !== null) || Array.isArray(item)
-						const expandId = isExpandable
-							? `expand-item-${index}-${Math.random().toString(36).substr(2, 9)}`
-							: ''
+							// Make objects and arrays expandable
+							const isExpandable = (typeof item === 'object' && item !== null) || Array.isArray(item)
+							const expandId = isExpandable
+								? `expand-item-${index}-${Math.random().toString(36).substr(2, 9)}`
+								: ''
 
-						return renderPropertyRow(label, item, type, label, isExpandable, expandId)
-					})
-					.join('')
+							return renderPropertyRow(label, item, type, label, isExpandable, expandId)
+						})
+						.join('')
 
-				tableContent = `
+					tableContent = `
 				<div class="space-y-4 list-stream-container">
 					<div class="space-y-1 list-view-container">
 						${items.length > 0 ? itemRows : `<div class="p-8 italic text-center rounded-xl border border-dashed text-slate-400 bg-slate-50/30 border-slate-200">No items in this ${typeLabel.toLowerCase()}</div>`}
 					</div>
 				</div>
 			`
-			} else if (
-				data &&
-				typeof data === 'object' &&
-				!Array.isArray(data) &&
-				!data.error &&
-				!data.loading
-			) {
-				// CoMap: Display properties from flat object format (operations API)
-				// Convert flat object to normalized format for display
-				const factoryCoId = data.$factory // STRICT: Only $factory, no fallback
-				const schemaDef = factoryCoId ? await getFactoryFromDb(maia, factoryCoId) : null
+				} else if (
+					data &&
+					typeof data === 'object' &&
+					!Array.isArray(data) &&
+					!data.error &&
+					!data.loading
+				) {
+					// CoMap: Display properties from flat object format (operations API)
+					// Convert flat object to normalized format for display
+					const factoryCoId = data.$factory // STRICT: Only $factory, no fallback
+					const schemaDef = factoryCoId ? await getFactoryFromDb(maia, factoryCoId) : null
 
-				// Extract properties from flat object (exclude metadata keys)
-				// groupInfo is backend-derived metadata (not a co-value property) - only show in metadata sidebar
-				// CoJSON internal keys (sealer, signer, KEY_..._FOR_SEALER_...) go to metadata sidebar, not main view
-				const propertyKeys = Object.keys(data).filter(
-					(k) =>
-						k !== 'id' &&
-						k !== 'loading' &&
-						k !== 'error' &&
-						k !== '$factory' &&
-						k !== 'schema' &&
-						k !== 'type' &&
-						k !== 'cotype' && // Display only in metadata aside, not as main content property
-						k !== '_coValueType' && // Internal: actual CRDT type of this CoValue (display metadata)
-						k !== 'displayName' &&
-						k !== 'headerMeta' &&
-						k !== 'groupInfo' && // Backend metadata - displayed in metadata sidebar, not as a property
-						!isCoJsonInternalKey(k, data[k]),
-				)
+					// Extract properties from flat object (exclude metadata keys)
+					// groupInfo is backend-derived metadata (not a co-value property) - only show in metadata sidebar
+					// CoJSON internal keys (sealer, signer, KEY_..._FOR_SEALER_...) go to metadata sidebar, not main view
+					const propertyKeys = Object.keys(data).filter(
+						(k) =>
+							k !== 'id' &&
+							k !== 'loading' &&
+							k !== 'error' &&
+							k !== '$factory' &&
+							k !== 'schema' &&
+							k !== 'type' &&
+							k !== 'cotype' && // Display only in metadata aside, not as main content property
+							k !== '_coValueType' && // Internal: actual CRDT type of this CoValue (display metadata)
+							k !== 'displayName' &&
+							k !== 'headerMeta' &&
+							k !== 'groupInfo' && // Backend metadata - displayed in metadata sidebar, not as a property
+							!isCoJsonInternalKey(k, data[k]),
+					)
 
-				if (propertyKeys.length === 0) {
-					// No properties - show empty state (with hint for avens/factories/indexes)
-					const schemaId = (data.$factory || factoryCoId || '').toString()
-					const isRegistryEmpty =
-						schemaId.includes('avens-registry') ||
-						schemaId.includes('factories-registry') ||
-						schemaId.includes('indexes-registry')
-					const emptyHint = isRegistryEmpty
-						? '<p class="mt-3 text-sm text-amber-600 max-w-md mx-auto">Vibes/schemas come from the sync server. Run <code class="bg-amber-100 px-1 rounded">bun dev</code> (sync on :4201), sign in, and check console for <code class="bg-amber-100 px-1 rounded">linkAccountToSyncRegistry</code>.</p>'
-						: ''
-					tableContent = `<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">No properties available${emptyHint}</div>`
-				} else {
-					const propertyItems = propertyKeys
-						.map((key) => {
-							const value = data[key]
-							let propType = typeof value
+					if (propertyKeys.length === 0) {
+						// No properties - show empty state (with hint for avens/factories/indexes)
+						const schemaId = (data.$factory || factoryCoId || '').toString()
+						const isRegistryEmpty =
+							schemaId.includes('avens-registry') ||
+							schemaId.includes('factories-registry') ||
+							schemaId.includes('indexes-registry')
+						const emptyHint = isRegistryEmpty
+							? '<p class="mt-3 text-sm text-amber-600 max-w-md mx-auto">Vibes/schemas come from the sync server. Run <code class="bg-amber-100 px-1 rounded">bun dev</code> (sync on :4201), sign in, and check console for <code class="bg-amber-100 px-1 rounded">linkAccountToSyncRegistry</code>.</p>'
+							: ''
+						tableContent = `<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">No properties available${emptyHint}</div>`
+					} else {
+						const propertyItems = propertyKeys
+							.map((key) => {
+								const value = data[key]
+								let propType = typeof value
 
-							// Detect co-id references (including CoText refs - click to load in detail view)
-							if (typeof value === 'string' && value.startsWith('co_')) {
-								propType = 'co-id'
-							} else if (typeof value === 'string' && value.startsWith('key_')) {
-								propType = 'key'
-							} else if (typeof value === 'string' && value.startsWith('sealed_')) {
-								propType = 'sealed'
-							} else if (Array.isArray(value)) {
-								propType = 'array'
-							} else if (typeof value === 'object' && value !== null) {
-								propType = 'object'
-							}
+								// Detect co-id references (including CoText refs - click to load in detail view)
+								if (typeof value === 'string' && value.startsWith('co_')) {
+									propType = 'co-id'
+								} else if (typeof value === 'string' && value.startsWith('key_')) {
+									propType = 'key'
+								} else if (typeof value === 'string' && value.startsWith('sealed_')) {
+									propType = 'sealed'
+								} else if (Array.isArray(value)) {
+									propType = 'array'
+								} else if (typeof value === 'object' && value !== null) {
+									propType = 'object'
+								}
 
-							const propSchema = schemaDef?.properties?.[key]
-							const propLabel = propSchema?.title || key
+								const propSchema = schemaDef?.properties?.[key]
+								const propLabel = propSchema?.title || key
 
-							// Make objects and arrays expandable
-							const isExpandable =
-								propType === 'object' ||
-								propType === 'array' ||
-								(typeof value === 'object' && value !== null && !Array.isArray(value)) ||
-								Array.isArray(value)
-							const expandId = isExpandable
-								? `expand-${key}-${Math.random().toString(36).substr(2, 9)}`
-								: ''
+								// Make objects and arrays expandable
+								const isExpandable =
+									propType === 'object' ||
+									propType === 'array' ||
+									(typeof value === 'object' && value !== null && !Array.isArray(value)) ||
+									Array.isArray(value)
+								const expandId = isExpandable
+									? `expand-${key}-${Math.random().toString(36).substr(2, 9)}`
+									: ''
 
-							return renderPropertyRow(propLabel, value, propType, key, isExpandable, expandId)
-						})
-						.join('')
+								return renderPropertyRow(propLabel, value, propType, key, isExpandable, expandId)
+							})
+							.join('')
 
-					tableContent = `
+						tableContent = `
 					<div class="space-y-1 list-view-container">
 						${propertyItems}
 					</div>
 				`
+					}
+				} else {
+					// Fallback: empty or no properties
+					tableContent =
+						'<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">No properties available</div>'
 				}
-			} else {
-				// Fallback: empty or no properties
-				tableContent =
-					'<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">No properties available</div>'
 			}
+		} else {
+			// Default view - show list of CoValues or error
+			tableContent =
+				'<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">Select a CoValue to explore its content</div>'
 		}
-	} else {
-		// Default view - show list of CoValues or error
-		tableContent =
-			'<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">Select a CoValue to explore its content</div>'
-	}
 
-	// Get account ID and resolve profile (name + image) for navbar display
-	const accountId = maia?.id?.maiaId?.id || ''
-	let accountProfile = null
-	if (accountId?.startsWith('co_z') && maia?.do) {
-		try {
-			const profiles = await resolveAccountCoIdsToProfiles(maia, [accountId])
-			accountProfile = profiles.get(accountId) ?? null
-		} catch (_e) {}
-	}
-	const accountDisplayName = accountProfile?.name ?? truncate(accountId, 12)
-	const accountAvatarHtml = getProfileAvatarHtml(accountProfile?.image, {
-		size: 44,
-		className: 'navbar-avatar',
-	})
-	// Metadata sidebar (explorer-style navigation; skip for capabilities view)
-	let metadataSidebar = ''
-	if (currentContextCoValueId && data && !data.error && !data.loading && !data._capabilitiesView) {
-		const groupInfo = data.groupInfo || null
+		// Get account ID and resolve profile (name + image) for navbar display
+		const accountId = maia?.id?.maiaId?.id || ''
+		let accountProfile = null
+		if (accountId?.startsWith('co_z') && maia?.do) {
+			try {
+				const profiles = await resolveAccountCoIdsToProfiles(maia, [accountId])
+				accountProfile = profiles.get(accountId) ?? null
+			} catch (_e) {}
+		}
+		const accountDisplayName = accountProfile?.name ?? truncate(accountId, 12)
+		const accountAvatarHtml = getProfileAvatarHtml(accountProfile?.image, {
+			size: 44,
+			className: 'navbar-avatar',
+		})
+		// Metadata sidebar (explorer-style navigation; skip for capabilities view)
+		let metadataSidebar = ''
+		if (currentContextCoValueId && data && !data.error && !data.loading && !data._capabilitiesView) {
+			const groupInfo = data.groupInfo || null
 
-		// Flattened "Members with access": each row is (who, role, source)
-		// Inherited roles (= via parent group) are only shown under "via" to avoid duplicates
-		const flattenedMembers = []
-		const viaMemberIds = new Set()
-		if (groupInfo?.groupMembers) {
-			for (const g of groupInfo.groupMembers) {
-				for (const m of g.members || []) {
-					viaMemberIds.add(m.id)
+			// Flattened "Members with access": each row is (who, role, source)
+			// Inherited roles (= via parent group) are only shown under "via" to avoid duplicates
+			const flattenedMembers = []
+			const viaMemberIds = new Set()
+			if (groupInfo?.groupMembers) {
+				for (const g of groupInfo.groupMembers) {
+					for (const m of g.members || []) {
+						viaMemberIds.add(m.id)
+						flattenedMembers.push({
+							who: m.id,
+							role: m.role || 'reader',
+							source: `via ${truncate(g.id, 12)}`,
+							viaGroupId: g.id, // Parent group/capability – link to this CoValue, not the account
+						})
+					}
+				}
+			}
+			if (groupInfo?.accountMembers) {
+				for (const m of groupInfo.accountMembers) {
+					// Skip inherited: already shown under "via" above
+					if (m.isInherited && viaMemberIds.has(m.id)) continue
 					flattenedMembers.push({
 						who: m.id,
 						role: m.role || 'reader',
-						source: `via ${truncate(g.id, 12)}`,
-						viaGroupId: g.id, // Parent group/capability – link to this CoValue, not the account
+						source: m.isInherited ? 'inherited' : 'direct',
 					})
 				}
 			}
-		}
-		if (groupInfo?.accountMembers) {
-			for (const m of groupInfo.accountMembers) {
-				// Skip inherited: already shown under "via" above
-				if (m.isInherited && viaMemberIds.has(m.id)) continue
-				flattenedMembers.push({
-					who: m.id,
-					role: m.role || 'reader',
-					source: m.isInherited ? 'inherited' : 'direct',
-				})
-			}
-		}
-		// Sort: everyone first, then by source (direct, then via…, then inherited)
-		const sourceOrder = (s) => (s === 'direct' ? 0 : s === 'inherited' ? 2 : 1)
-		flattenedMembers.sort((a, b) => {
-			if (a.who === 'everyone') return -1
-			if (b.who === 'everyone') return 1
-			return sourceOrder(a.source) - sourceOrder(b.source) || String(a.who).localeCompare(b.who)
-		})
-		const hasMembers = flattenedMembers.length > 0
+			// Sort: everyone first, then by source (direct, then via…, then inherited)
+			const sourceOrder = (s) => (s === 'direct' ? 0 : s === 'inherited' ? 2 : 1)
+			flattenedMembers.sort((a, b) => {
+				if (a.who === 'everyone') return -1
+				if (b.who === 'everyone') return 1
+				return sourceOrder(a.source) - sourceOrder(b.source) || String(a.who).localeCompare(b.who)
+			})
+			const hasMembers = flattenedMembers.length > 0
 
-		// Fetch schema title if schema is a co-id using the abstracted read operation API
-		let schemaTitle = null
-		const factoryCoId = data.$factory // STRICT: Only $factory, no fallback
-		if (factoryCoId?.startsWith('co_z') && maia) {
-			try {
-				// Use unified read API - same pattern as loading main context data
-				const factoryStore = await maia.do({ op: 'read', factory: factoryCoId, key: factoryCoId })
-				const schemaData = factoryStore.value || factoryStore
+			// Fetch schema title if schema is a co-id using the abstracted read operation API
+			let schemaTitle = null
+			const factoryCoId = data.$factory // STRICT: Only $factory, no fallback
+			if (factoryCoId?.startsWith('co_z') && maia) {
+				try {
+					// Use unified read API - same pattern as loading main context data
+					const factoryStore = await maia.do({ op: 'read', factory: factoryCoId, key: factoryCoId })
+					const schemaData = factoryStore.value || factoryStore
 
-				if (schemaData && !schemaData.error && !schemaData.loading) {
-					// Operations API returns flat objects: {id: '...', title: '...', definition: {...}, ...}
-					if (schemaData && typeof schemaData === 'object' && !Array.isArray(schemaData)) {
-						// Check title directly
-						if (schemaData.title && typeof schemaData.title === 'string') {
-							schemaTitle = schemaData.title
-						}
-						// Also check definition.title for schema definitions
-						if (!schemaTitle && schemaData.definition && typeof schemaData.definition === 'object') {
-							schemaTitle = schemaData.definition.title || null
-						}
-					}
-				}
-			} catch (_e) {}
-		}
-
-		// Fetch group name if group ID is available (groups are CoMaps, so they can have a "name" property)
-		let groupName = null
-		if (groupInfo?.groupId && maia) {
-			try {
-				// Use unified read API with @group schema hint (groups don't have $factory)
-				const groupStore = await maia.do({ op: 'read', factory: '@group', key: groupInfo.groupId })
-
-				// Wait for group data to be available (if it's loading)
-				if (groupStore.loading) {
-					await new Promise((resolve, reject) => {
-						const timeout = setTimeout(() => {
-							reject(new Error('Timeout waiting for group data'))
-						}, 5000)
-						const unsubscribe = groupStore.subscribe(() => {
-							if (!groupStore.loading) {
-								clearTimeout(timeout)
-								unsubscribe()
-								resolve()
+					if (schemaData && !schemaData.error && !schemaData.loading) {
+						// Operations API returns flat objects: {id: '...', title: '...', definition: {...}, ...}
+						if (schemaData && typeof schemaData === 'object' && !Array.isArray(schemaData)) {
+							// Check title directly
+							if (schemaData.title && typeof schemaData.title === 'string') {
+								schemaTitle = schemaData.title
 							}
-						})
-					})
-				}
-
-				const groupData = groupStore.value || groupStore
-
-				if (groupData && !groupData.error && !groupData.loading) {
-					if (groupData.name && typeof groupData.name === 'string') {
-						groupName = groupData.name
+							// Also check definition.title for schema definitions
+							if (!schemaTitle && schemaData.definition && typeof schemaData.definition === 'object') {
+								schemaTitle = schemaData.definition.title || null
+							}
+						}
 					}
-				}
-			} catch (_e) {}
-		}
+				} catch (_e) {}
+			}
 
-		// Resolve account co-ids to profiles (name + avatar) for members display
-		let profiles = new Map()
-		if (hasMembers && maia) {
-			try {
-				const accountCoIds = flattenedMembers.map((row) => row.who).filter((id) => id)
-				profiles = await resolveAccountCoIdsToProfiles(maia, accountCoIds)
-			} catch (_e) {}
-		}
+			// Fetch group name if group ID is available (groups are CoMaps, so they can have a "name" property)
+			let groupName = null
+			if (groupInfo?.groupId && maia) {
+				try {
+					// Use unified read API with @group schema hint (groups don't have $factory)
+					const groupStore = await maia.do({ op: 'read', factory: '@group', key: groupInfo.groupId })
 
-		// Resolve capability group co-ids to display names (e.g. °Maia/Guardian)
-		let capabilityNames = new Map()
-		if (maia && account?.id) {
-			try {
-				const groupCoIds = [
-					...new Set([
-						...(groupInfo?.groupId ? [groupInfo.groupId] : []),
-						...(flattenedMembers?.map((row) => row.viaGroupId).filter(Boolean) ?? []),
-					]),
-				]
-				capabilityNames = await resolveGroupCoIdsToCapabilityNames(maia, groupCoIds, account.id)
-			} catch (_e) {}
-		}
+					// Wait for group data to be available (if it's loading)
+					if (groupStore.loading) {
+						await new Promise((resolve, reject) => {
+							const timeout = setTimeout(() => {
+								reject(new Error('Timeout waiting for group data'))
+							}, 5000)
+							const unsubscribe = groupStore.subscribe(() => {
+								if (!groupStore.loading) {
+									clearTimeout(timeout)
+									unsubscribe()
+									resolve()
+								}
+							})
+						})
+					}
 
-		metadataSidebar = `
+					const groupData = groupStore.value || groupStore
+
+					if (groupData && !groupData.error && !groupData.loading) {
+						if (groupData.name && typeof groupData.name === 'string') {
+							groupName = groupData.name
+						}
+					}
+				} catch (_e) {}
+			}
+
+			// Resolve account co-ids to profiles (name + avatar) for members display
+			let profiles = new Map()
+			if (hasMembers && maia) {
+				try {
+					const accountCoIds = flattenedMembers.map((row) => row.who).filter((id) => id)
+					profiles = await resolveAccountCoIdsToProfiles(maia, accountCoIds)
+				} catch (_e) {}
+			}
+
+			// Resolve capability group co-ids to display names (e.g. °Maia/Guardian)
+			let capabilityNames = new Map()
+			if (maia && account?.id) {
+				try {
+					const groupCoIds = [
+						...new Set([
+							...(groupInfo?.groupId ? [groupInfo.groupId] : []),
+							...(flattenedMembers?.map((row) => row.viaGroupId).filter(Boolean) ?? []),
+						]),
+					]
+					capabilityNames = await resolveGroupCoIdsToCapabilityNames(maia, groupCoIds, account.id)
+				} catch (_e) {}
+			}
+
+			metadataSidebar = `
 			<aside class="db-metadata">
 				<div class="metadata-content">
 					<!-- Consolidated Metadata View (no tabs) -->
@@ -1171,18 +1236,18 @@ export async function renderApp(
 				</div>
 			</aside>
 		`
-	}
+		}
 
-	// Build sidebar navigation items (Account only - vibes via spark.os.vibes)
-	const sidebarItems = navigationItems
-		.map((item) => {
-			// Account navigation - select account CoValue
-			const isActive =
-				currentContextCoValueId === item.id || (currentView === 'account' && !currentContextCoValueId)
+		// Build sidebar navigation items (Account only - vibes via spark.os.vibes)
+		const sidebarItems = navigationItems
+			.map((item) => {
+				// Account navigation - select account CoValue
+				const isActive =
+					currentContextCoValueId === item.id || (currentView === 'account' && !currentContextCoValueId)
 
-			const clickHandler = `onclick="selectCoValue('${item.id}')"`
+				const clickHandler = `onclick="selectCoValue('${item.id}')"`
 
-			return `
+				return `
 			<div class="sidebar-item ${isActive ? 'active' : ''}" ${clickHandler}>
 				<div class="sidebar-label">
 					<span class="sidebar-name">${item.label}</span>
@@ -1190,15 +1255,21 @@ export async function renderApp(
 				</div>
 			</div>
 		`
-		})
-		.join('')
+			})
+			.join('')
 
-	document.getElementById('app').innerHTML = `
+		perfAppMaiaDb.step('data + sidebars ready → paint', {
+			context: currentContextCoValueId,
+			view: currentView,
+		})
+
+		document.getElementById('app').innerHTML = `
 		<div class="db-container">
 			<div class="navbar-section">
 			<header class="db-header whitish-card">
 				<div class="header-content">
 					<div class="header-left">
+						<span class="db-header-maia-icon" aria-hidden="true">${MAIADB_LAYER_STACK_ICON_SVG}</span>
 						<h1>Maia DB</h1>
 					</div>
 					<div class="header-center">
@@ -1290,7 +1361,13 @@ export async function renderApp(
 										headerInfo
 											? `
 										<span class="badge badge-type badge-${headerInfo.type} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${headerInfo.typeLabel}</span>
-										${headerInfo.itemCount != null ? `<span class="text-sm font-semibold text-marine-blue">${headerInfo.itemCount} ${headerInfo.itemCount === 1 ? 'Item' : 'Items'}</span>` : ''}
+										${
+											data?._capabilitiesView
+												? `<span id="capabilities-grant-count" class="text-sm font-semibold text-marine-blue">${data?._loading ? '…' : `${(data.grants || []).length} grant(s)`}</span>`
+												: headerInfo.itemCount != null
+													? `<span class="text-sm font-semibold text-marine-blue">${headerInfo.itemCount} ${headerInfo.itemCount === 1 ? 'Item' : 'Items'}</span>`
+													: ''
+										}
 										<span class="text-xs italic font-medium text-marine-blue-light">${headerInfo.description}</span>
 									`
 											: ''
@@ -1336,25 +1413,32 @@ export async function renderApp(
 		</div>
 	`
 
-	// Hydrate CoBinary image previews (loadBinaryAsBlob uses chunked async conversion for large files)
-	hydrateCobinaryPreviews(maia)
-	// Deferred re-hydration: CoBinary may not be ready immediately (sync/lazy-load)
-	setTimeout(() => hydrateCobinaryPreviews(maia), 500)
-
-	// Add sidebar toggle handlers for DB viewer
-	setTimeout(() => {
-		// Ensure sidebars are initialized with collapsed class by default
-		// Don't add sidebar-ready class initially to prevent ghost animations
-		const leftSidebar = document.querySelector('.db-sidebar')
-		const rightSidebar = document.querySelector('.db-metadata')
-
-		if (leftSidebar) {
-			// Start collapsed by default, no transitions
-			leftSidebar.classList.add('collapsed')
+		if (currentContextCoValueId === '__capabilities__' && maia) {
+			void hydrateCapabilitiesView(maia)
 		}
-		if (rightSidebar) {
-			// Start collapsed by default, no transitions
-			rightSidebar.classList.add('collapsed')
-		}
-	}, 100)
+
+		// Hydrate CoBinary image previews (loadBinaryAsBlob uses chunked async conversion for large files)
+		hydrateCobinaryPreviews(maia)
+		// Deferred re-hydration: CoBinary may not be ready immediately (sync/lazy-load)
+		setTimeout(() => hydrateCobinaryPreviews(maia), 500)
+
+		// Add sidebar toggle handlers for DB viewer
+		setTimeout(() => {
+			// Ensure sidebars are initialized with collapsed class by default
+			// Don't add sidebar-ready class initially to prevent ghost animations
+			const leftSidebar = document.querySelector('.db-sidebar')
+			const rightSidebar = document.querySelector('.db-metadata')
+
+			if (leftSidebar) {
+				// Start collapsed by default, no transitions
+				leftSidebar.classList.add('collapsed')
+			}
+			if (rightSidebar) {
+				// Start collapsed by default, no transitions
+				rightSidebar.classList.add('collapsed')
+			}
+		}, 100)
+	} finally {
+		perfAppMaiaDb.end('renderApp')
+	}
 }
