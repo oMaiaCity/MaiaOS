@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/engines",
-	"version": "26.4.21315-next",
+	"version": "26.4.21815-next",
 	"type": "module",
 	"main": "src/index.js",
 	"exports": {
