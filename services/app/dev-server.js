@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { spawnSync } from 'node:child_process'
 import { existsSync, statSync } from 'node:fs'
 /**
  * Maia dev server: static /brand/* + /runanywhere-wasm/* + Bun HTML bundling with HMR.
@@ -30,6 +31,23 @@ function withCrossOriginIsolation(response) {
 	})
 }
 
+const terrainWorkerBundled = join(
+	repoRoot,
+	'libs/maia-game/dist/game-workers/terrain-height-worker.js',
+)
+if (!existsSync(terrainWorkerBundled)) {
+	console.log('[dev-server] Building terrain-height-worker bundle…')
+	const r = spawnSync('bun', ['run', 'build:terrain-worker'], {
+		cwd: join(repoRoot, 'libs/maia-game'),
+		stdio: 'inherit',
+	})
+	if (r.status !== 0) {
+		console.error(
+			'[dev-server] terrain-height-worker build failed — terrain may fall back to main thread',
+		)
+	}
+}
+
 const MIME = {
 	'.css': 'text/css',
 	'.svg': 'image/svg+xml',
@@ -41,6 +59,7 @@ const MIME = {
 	'.json': 'application/json',
 	'.webmanifest': 'application/manifest+json',
 	'.js': 'application/javascript',
+	'.mjs': 'application/javascript',
 	'.wasm': 'application/wasm',
 	'.glb': 'model/gltf-binary',
 }
@@ -134,6 +153,18 @@ Bun.serve({
 		}
 
 		// Serve RunAnywhere WASM (llamacpp + sherpa) with correct MIME types
+		if (pathname === '/game-workers/terrain-height-worker.js') {
+			if (existsSync(terrainWorkerBundled) && statSync(terrainWorkerBundled).isFile()) {
+				return new Response(Bun.file(terrainWorkerBundled), {
+					headers: { 'Content-Type': 'application/javascript', ...COOP_COEP },
+				})
+			}
+			return new Response(
+				'terrain-height-worker not built — run: cd libs/maia-game && bun run build:terrain-worker',
+				{ status: 503, headers: COOP_COEP },
+			)
+		}
+
 		if (pathname.startsWith('/runanywhere-wasm/')) {
 			const filePath = resolveRunAnywhereWasmPath(pathname)
 			if (filePath && existsSync(filePath) && statSync(filePath).isFile()) {

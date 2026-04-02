@@ -42,6 +42,25 @@ if (!existsSync(clientPath) || !existsSync(vibesPath)) {
 	process.exit(1)
 }
 
+const repoRoot = join(serviceDir, '../..')
+const terrainWorkerBuild = spawnSync('bun', ['run', 'build:terrain-worker'], {
+	cwd: join(repoRoot, 'libs/maia-game'),
+	stdio: 'inherit',
+	env: { ...process.env, NODE_ENV: 'production' },
+})
+if (terrainWorkerBuild.status !== 0) {
+	console.error('libs/maia-game build:terrain-worker failed')
+	process.exit(1)
+}
+const terrainWorkerSrc = join(repoRoot, 'libs/maia-game/dist/game-workers/terrain-height-worker.js')
+if (!existsSync(terrainWorkerSrc)) {
+	console.error('terrain-height-worker.js missing after maia-game build')
+	process.exit(1)
+}
+const gameWorkersOut = join(distDir, 'game-workers')
+mkdirSync(gameWorkersOut, { recursive: true })
+cpSync(terrainWorkerSrc, join(gameWorkersOut, 'terrain-height-worker.js'))
+
 // Bun doesn't inject import.meta.env like Vite - must define at build time for production
 // VITE_AVEN_TEST_MODE: NEVER add to production - test mode is localhost-only, in-memory
 const envDefine = {
@@ -110,7 +129,6 @@ await Bun.write(join(distDir, 'style.css'), bundledCss)
 // brand/ already in dist via sync-assets above
 
 // Copy RunAnywhere WASM from distros output (vendored during distros:build)
-const repoRoot = join(serviceDir, '../..')
 const distrosWasmDir = join(repoRoot, 'libs/maia-distros/output/runanywhere-wasm')
 const wasmOutDir = join(distDir, 'runanywhere-wasm')
 if (existsSync(distrosWasmDir)) {
@@ -146,6 +164,7 @@ const required = [
 		distHas('runanywhere-wasm/racommons-llamacpp-webgpu.js'),
 	],
 	['game-assets/geodesic-dome.glb', distHas('game-assets/geodesic-dome.glb')],
+	['game-workers/terrain-height-worker.js', distHas('game-workers/terrain-height-worker.js')],
 ]
 const missing = required.filter(([, ok]) => !ok).map(([p]) => p)
 if (missing.length > 0) {

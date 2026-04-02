@@ -77,5 +77,8 @@ libs/maia-distros/output/
 # maia-vibes dist (build output, not used in dev - we use source)
 libs/maia-vibes/dist/
 
+# maia-game bundled terrain worker (built by build:terrain-worker or app build.js)
+libs/maia-game/dist/
+
 # Cursor / agent skills local lock (optional tooling output)
 skills-lock.json

@@ -4,6 +4,7 @@
 	"type": "module",
 	"main": "./src/index.js",
 	"scripts": {
+		"build:terrain-worker": "bun scripts/build-terrain-height-worker.mjs",
 		"generate:dome": "bun scripts/generate-dome.mjs",
 		"import:dome": "bun scripts/import-blender-dome.mjs"
 	},
