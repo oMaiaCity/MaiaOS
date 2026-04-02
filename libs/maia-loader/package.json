@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/loader",
-	"version": "26.4.21206-next",
+	"version": "26.4.21247-next",
 	"type": "module",
 	"main": "./src/index.js",
 	"exports": {
