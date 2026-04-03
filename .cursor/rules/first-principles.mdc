@@ -1,0 +1,4 @@
+---
+alwaysApply: false
+---
+Please audit and map the related files and current architecture regarding the users request and attached files. What's the single smartest and most radically innovative and accretive and useful and compelling FIRST PRINCILPES refactoring you could make at this point, to reduce the codes complexity and increase its resillience. Strip out as much indirections as you can, while abstracting to first principles relentlessly. Always lean into massive simplficiation refactorings, while keeping functionality intact. Enforce DRY / KISS, deduplication,  unified, generic, abstractions where ever you can. 

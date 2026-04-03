@@ -7,6 +7,31 @@
 import { ensureCoValueLoaded } from './collection-helpers.js'
 
 /**
+ * Flat snapshot of the live account CoMap from peer.account (single path for all account branches).
+ * @param {Object} peer
+ * @param {Object|null} headerMeta
+ * @returns {Object}
+ */
+function materializeAccountFlat(peer, headerMeta) {
+	const schema = headerMeta?.$factory || null
+	const result = {
+		id: peer.account.id,
+		type: 'comap',
+		$factory: schema,
+	}
+	const keys =
+		peer.account.keys && typeof peer.account.keys === 'function'
+			? peer.account.keys()
+			: Object.keys(peer.account)
+	for (const key of keys) {
+		try {
+			result[key] = peer.account.get(key)
+		} catch (_e) {}
+	}
+	return result
+}
+
+/**
  * Extract CoValue data from CoValueCore as flat object.
  * One format everywhere: flat {key: value} for CoMaps, no properties array.
  * @param {Object} peer - Backend instance
@@ -25,42 +50,11 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 		(peer.account && peer.account.id === coValueCore.id)
 
 	if (isAccount && peer.account && peer.account.id === coValueCore.id) {
-		const schema = headerMeta?.$factory || null
-		const result = {
-			id: peer.account.id,
-			type: 'comap',
-			$factory: schema,
-		}
-		try {
-			const keys =
-				peer.account.keys && typeof peer.account.keys === 'function'
-					? peer.account.keys()
-					: Object.keys(peer.account)
-			for (const key of keys) {
-				try {
-					result[key] = peer.account.get(key)
-				} catch (_e) {}
-			}
-		} catch (_e) {}
-		return result
+		return materializeAccountFlat(peer, headerMeta)
 	}
 
 	const content = peer.getCurrentContent(coValueCore)
 	if (!content) {
-		if (isAccount && peer.account && peer.account.id === coValueCore.id) {
-			const schema = headerMeta?.$factory || null
-			const result = { id: peer.account.id, type: 'comap', $factory: schema }
-			try {
-				const keys =
-					peer.account.keys && typeof peer.account.keys === 'function'
-						? peer.account.keys()
-						: Object.keys(peer.account)
-				for (const key of keys) {
-					result[key] = peer.account.get(key)
-				}
-			} catch (_e) {}
-			return result
-		}
 		const schema = headerMeta?.$factory || null
 		return { id: coValueCore.id, type: 'unknown', $factory: schema }
 	}

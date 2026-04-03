@@ -72,6 +72,25 @@ export function extractSchemaFromMessage(msg) {
 }
 
 /**
+ * Plain snapshot of current CRDT content for validation (CoMap JSON or raw content).
+ * @param {Object} peer
+ * @param {string} coId
+ * @returns {any|null}
+ */
+export function getCoValueContentSnapshot(peer, coId) {
+	try {
+		const coValueCore = peer.getCoValue(coId)
+		if (!coValueCore || !peer.isAvailable(coValueCore)) return null
+		const currentContent = peer.getCurrentContent(coValueCore)
+		if (!currentContent) return null
+		if (typeof currentContent.toJSON === 'function') return currentContent.toJSON()
+		return currentContent
+	} catch (_error) {
+		return null
+	}
+}
+
+/**
  * Determine if validation/indexing should be skipped for a co-value
  * Uses isAccountGroupOrProfile() + isExceptionFactory() to determine skip logic
  *

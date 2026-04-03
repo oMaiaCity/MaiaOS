@@ -10,15 +10,15 @@
 		"./utils/*": "./src/utils/*"
 	},
 	"dependencies": {
-		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/actors": "workspace:*",
-		"dompurify": "3.3.3",
-		"marked": "15.0.12",
-		"fast-myers-diff": "3.2.0",
-		"@MaiaOS/vibes": "workspace:*",
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/factories": "workspace:*",
+		"@MaiaOS/logs": "workspace:*",
+		"@MaiaOS/vibes": "workspace:*",
 		"@jitl/quickjs-singlefile-cjs-release-sync": "0.32.0",
+		"dompurify": "3.3.3",
+		"fast-myers-diff": "3.2.0",
+		"marked": "15.0.12",
 		"quickjs-emscripten-core": "0.32.0"
 	},
 	"devDependencies": {

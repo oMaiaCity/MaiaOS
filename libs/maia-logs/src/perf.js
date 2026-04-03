@@ -81,6 +81,7 @@ export function createPerfTracer(scope, name) {
 
 export const perfEnginesPipeline = createPerfTracer('engines', 'pipeline')
 export const perfEnginesChat = createPerfTracer('engines', 'chat')
+export const perfDbRead = createPerfTracer('db', 'read')
 export const perfDbUpload = createPerfTracer('db', 'upload')
 export const perfGameInit = createPerfTracer('game', 'init')
 export const perfAppVibes = createPerfTracer('app', 'vibes')

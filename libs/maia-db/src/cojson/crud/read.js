@@ -9,7 +9,9 @@
  */
 
 import { resolveExpressions } from '@MaiaOS/factories/expression-resolver.js'
+import { perfDbRead } from '@MaiaOS/logs'
 import { ReactiveStore } from '../../reactive-store.js'
+import { observeCoValue } from '../cache/coCache.js'
 import { resolve as resolveSchema } from '../factory/resolver.js'
 import { getAvensRegistryId, getHumansRegistryId, getSparksRegistryId } from '../groups/groups.js'
 import { ensureCoValueLoaded, getCoListId } from './collection-helpers.js'
@@ -113,15 +115,29 @@ export async function read(
  * @returns {Promise<ReactiveStore>} Unified ReactiveStore with merged data
  * @private
  */
-/** Shared cleanup for single CoValue subscriptions: origUnsub, coUnsub, depUnsubs, scheduleCleanup. */
-function makeSingleCoCleanup(peer, coId, coUnsub, depUnsubs, origUnsub, extra = null) {
+/**
+ * Shared cleanup for single CoValue subscriptions: origUnsub, coUnsub, depUnsubs, observer hub.
+ * Evicts readStore cache entry so a dead unified store is never returned again.
+ */
+function makeSingleCoCleanup(
+	peer,
+	coId,
+	coUnsub,
+	depUnsubs,
+	origUnsub,
+	extra = null,
+	readStoreCacheKey = null,
+	storeToMarkDead = null,
+) {
 	return () => {
 		if (origUnsub) origUnsub()
 		if (extra) extra()
 		coUnsub()
 		for (const u of depUnsubs.values()) u()
 		depUnsubs.clear()
-		peer.subscriptionCache.scheduleCleanup(`subscription:${coId}`)
+		peer.subscriptionCache.scheduleCleanup(`observer:${coId}`)
+		if (readStoreCacheKey) peer.subscriptionCache.evict(readStoreCacheKey)
+		if (storeToMarkDead) storeToMarkDead._maiaReadReactiveDead = true
 	}
 }
 
@@ -146,6 +162,31 @@ function isQueryObject(value) {
 	if (value.op && !['query', 'read'].includes(value.op) && typeof value.factory === 'string')
 		return false
 	return true
+}
+
+/**
+ * One lifecycle bag per cached derived ReactiveStore (collection, allCoValues, registry readers).
+ * Replaces scattered _maiaRead* flags.
+ */
+function ensureDerivedLifecycle(store) {
+	if (!store._lifecycle) {
+		store._lifecycle = {
+			live: false,
+			unsubscribeHooked: false,
+			baseUnsubscribe: undefined,
+			runState: { running: false, queued: false },
+			collectionSubscribedItemIds: new Set(),
+			collectionSubscribedResolvedRefKeys: new Set(),
+			collectionSharedVisited: new Set(),
+			allCoValuesSubscribedIds: new Set(),
+			registryReaderWired: false,
+		}
+	}
+	return store._lifecycle
+}
+
+function setMaiaReadDerivedStoreLive(store, live) {
+	ensureDerivedLifecycle(store).live = live
 }
 
 /** Execute read for schema+filter and wire query store. Shared by reactive and co-id branches. */
@@ -203,9 +244,12 @@ async function evaluateFilter(filter, contextValue, evaluator) {
 
 async function createUnifiedStore(peer, contextStore, options = {}) {
 	const unifiedStore = new ReactiveStore({})
+	let unifiedInnerTeardownDone = false
 	const queryStores = new Map() // key -> ReactiveStore
 	const queryDefinitions = new Map() // key -> query definition object (for $op) - stores evaluated filters
 	const queryIsFindOne = new Map() // key -> boolean (true if query should return single object instead of array)
+	/** Last merged query result per key (survives transient gaps while a query rebinds). */
+	const lastCommittedQueryMerge = new Map()
 	const { timeoutMs = 5000 } = options
 
 	// Evaluator injected at boot (avoids maia-db → maia-engines dependency)
@@ -218,8 +262,91 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 
 	// Update Queue: batches all updates within a single event loop tick
 	// Prevents duplicate renders when multiple query stores update simultaneously
-	let lastUnifiedValue = null
 	let queueTimer = null
+
+	const flushUpdate = () => {
+		const contextValue = contextStore.value || {}
+		const mergedValue = { ...contextValue }
+
+		// Remove special fields
+		delete mergedValue['@stores']
+
+		// Build $op object with query definitions (keyed by query name)
+		const $op = {}
+		for (const [key, queryDef] of queryDefinitions.entries()) {
+			$op[key] = queryDef
+		}
+
+		// Add $op to merged value if there are any query definitions
+		if (Object.keys($op).length > 0) {
+			mergedValue.$op = $op
+		}
+
+		// Merge query store values (resolved arrays or single objects at root level, same key as query name)
+		// Always merge query values (even empty) so progressive loading works
+		for (const [key, queryStore] of queryStores.entries()) {
+			if (queryStore && typeof queryStore.subscribe === 'function' && 'value' in queryStore) {
+				// Remove the query object from mergedValue (if present) and replace with resolved value
+				delete mergedValue[key]
+
+				const isFindOne = queryIsFindOne.get(key) || false
+				const storeValue = queryStore.value
+
+				if (isFindOne) {
+					// findOne query: return single object (or null if not found/empty)
+					// If store value is an array, extract first element; if it's already an object, use it directly
+					if (Array.isArray(storeValue)) {
+						mergedValue[key] = storeValue.length > 0 ? storeValue[0] : null
+					} else if (storeValue && typeof storeValue === 'object') {
+						mergedValue[key] = storeValue
+					} else {
+						mergedValue[key] = null
+					}
+				} else {
+					// Collection query: return array
+					// Set even empty arrays so reactivity works (guard against null/undefined)
+					mergedValue[key] = Array.isArray(storeValue) ? storeValue : []
+					// Derived: has{Key} = array has items (e.g. conversations -> hasConversations)
+					const hasKey = `has${key.charAt(0).toUpperCase()}${key.slice(1)}`
+					if (hasKey in contextValue) {
+						mergedValue[hasKey] = Array.isArray(storeValue) && storeValue.length > 0
+					}
+				}
+				lastCommittedQueryMerge.set(key, mergedValue[key])
+			}
+		}
+
+		// ${key}Loading: paired with ViewEngine shouldShowQueryLoadingSkeleton (libs/maia-engines/src/utils/query-loading.js)
+		for (const key of queryStores.keys()) {
+			mergedValue[`${key}Loading`] = false
+		}
+
+		// Query still in context but not yet wired (e.g. mid single-flight resolve): keep last committed value, not transient []
+		for (const [key, value] of Object.entries(contextValue || {})) {
+			if (key !== '$factory' && key !== '$id' && isQueryObject(value) && !queryStores.has(key)) {
+				delete mergedValue[key]
+				const prev = lastCommittedQueryMerge.get(key)
+				if (prev !== undefined) {
+					mergedValue[key] = prev
+					mergedValue[`${key}Loading`] = true
+					const hasKey = `has${key.charAt(0).toUpperCase()}${key.slice(1)}`
+					if (hasKey in contextValue) {
+						mergedValue[hasKey] = Array.isArray(prev) ? prev.length > 0 : prev != null
+					}
+				} else {
+					mergedValue[key] = []
+					mergedValue[`${key}Loading`] = true
+					const hasKey = `has${key.charAt(0).toUpperCase()}${key.slice(1)}`
+					if (hasKey in contextValue) {
+						mergedValue[hasKey] = false
+					}
+				}
+			}
+		}
+
+		// Always _set: JSON.stringify dedup caused false negatives (list updates skipped until a later event).
+		unifiedStore._set(mergedValue)
+	}
 
 	const enqueueUpdate = () => {
 		// Schedule batch processing if not already scheduled
@@ -227,90 +354,29 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 		if (!queueTimer) {
 			queueTimer = queueMicrotask(() => {
 				queueTimer = null
-
-				// Process single batched update (all pending updates are processed together)
-				const contextValue = contextStore.value || {}
-				const mergedValue = { ...contextValue }
-
-				// Remove special fields
-				delete mergedValue['@stores']
-
-				// Build $op object with query definitions (keyed by query name)
-				const $op = {}
-				for (const [key, queryDef] of queryDefinitions.entries()) {
-					$op[key] = queryDef
-				}
-
-				// Add $op to merged value if there are any query definitions
-				if (Object.keys($op).length > 0) {
-					mergedValue.$op = $op
-				}
-
-				// Merge query store values (resolved arrays or single objects at root level, same key as query name)
-				// Always merge query values (even empty) so progressive loading works
-				for (const [key, queryStore] of queryStores.entries()) {
-					if (queryStore && typeof queryStore.subscribe === 'function' && 'value' in queryStore) {
-						// Remove the query object from mergedValue (if present) and replace with resolved value
-						delete mergedValue[key]
-
-						const isFindOne = queryIsFindOne.get(key) || false
-						const storeValue = queryStore.value
-
-						if (isFindOne) {
-							// findOne query: return single object (or null if not found/empty)
-							// If store value is an array, extract first element; if it's already an object, use it directly
-							if (Array.isArray(storeValue)) {
-								mergedValue[key] = storeValue.length > 0 ? storeValue[0] : null
-							} else if (storeValue && typeof storeValue === 'object') {
-								mergedValue[key] = storeValue
-							} else {
-								mergedValue[key] = null
-							}
-						} else {
-							// Collection query: return array
-							// Set even empty arrays so reactivity works (guard against null/undefined)
-							mergedValue[key] = Array.isArray(storeValue) ? storeValue : []
-							// Derived: has{Key} = array has items (e.g. conversations -> hasConversations)
-							const hasKey = `has${key.charAt(0).toUpperCase()}${key.slice(1)}`
-							if (hasKey in contextValue) {
-								mergedValue[hasKey] = Array.isArray(storeValue) && storeValue.length > 0
-							}
-						}
-					}
-				}
-
-				// Replace skipped query objects with [] so views don't crash on $each (expect array, not {schema,map})
-				for (const [key, value] of Object.entries(contextValue || {})) {
-					if (key !== '$factory' && key !== '$id' && isQueryObject(value) && !queryStores.has(key)) {
-						delete mergedValue[key]
-						mergedValue[key] = []
-						const hasKey = `has${key.charAt(0).toUpperCase()}${key.slice(1)}`
-						if (hasKey in contextValue) {
-							mergedValue[hasKey] = false
-						}
-					}
-				}
-
-				// Only update if value actually changed (deep comparison)
-				// Deep change detection via JSON.stringify
-				const currentValueStr = JSON.stringify(mergedValue)
-				const lastValueStr = lastUnifiedValue ? JSON.stringify(lastUnifiedValue) : null
-
-				if (currentValueStr !== lastValueStr) {
-					lastUnifiedValue = mergedValue
-					// _set() automatically notifies all subscribers (including the one set up in ActorEngine)
-					unifiedStore._set(mergedValue)
-				}
+				flushUpdate()
 			})
 		}
 	}
 
-	// Helper to resolve and subscribe to query objects
-	// overrides: eager context updates not yet propagated to the raw contextStore
-	const resolveQueries = async (contextValue, overrides = null) => {
-		if (overrides) {
-			contextValue = { ...contextValue, ...overrides }
+	// Single-flight: exactly one runResolveQueriesImpl at a time via a promise chain.
+	// Never call runResolveQueriesImpl outside this chain — a direct await + subscribe's
+	// immediate callback would run two legs in parallel and corrupt queryStores.
+	let resolveChain = Promise.resolve()
+
+	const scheduleResolve = (snapshotOverride) => {
+		const run = async () => {
+			const snapshot = snapshotOverride !== undefined ? snapshotOverride : contextStore.value || {}
+			await runResolveQueriesImpl(snapshot)
 		}
+		resolveChain = resolveChain.then(run).catch((e) => {
+			debugLog(e)
+		})
+		return resolveChain
+	}
+
+	// Helper to resolve and subscribe to query objects (full context snapshot only)
+	const runResolveQueriesImpl = async (contextValue) => {
 		if (!contextValue || typeof contextValue !== 'object' || Array.isArray(contextValue)) {
 			enqueueUpdate()
 			return
@@ -360,10 +426,10 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 				// @scope already handled in pre-pass
 				if (value.factory === '@scope') continue
 
-				// Check if we already have this query store
-				const existingStore = queryStores.get(key)
-
 				const evaluatedFilter = await evaluateFilter(value.filter || null, contextWithScope, evaluator)
+
+				// Re-read after await: another resolve leg must not skip wiring with a stale "existing" ref
+				const existingStore = queryStores.get(key)
 
 				// Get stored query definition to compare filters
 				const storedQueryDef = queryDefinitions.get(key)
@@ -444,6 +510,7 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 				queryStores.delete(key)
 				queryDefinitions.delete(key)
 				queryIsFindOne.delete(key)
+				lastCommittedQueryMerge.delete(key)
 			}
 		}
 
@@ -452,16 +519,22 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 		enqueueUpdate()
 	}
 
-	// Subscribe to context store changes
-	const contextUnsubscribe = contextStore.subscribe(async (newContextValue) => {
-		await resolveQueries(newContextValue)
-	})
+	// skipInitial: initial load uses await scheduleResolve() below (one leg, not subscribe + await).
+	const contextUnsubscribe = contextStore.subscribe(
+		() => {
+			void scheduleResolve()
+		},
+		{ skipInitial: true },
+	)
 
 	// Set up cleanup
 	const originalUnsubscribe = unifiedStore._unsubscribe
 	unifiedStore._unsubscribe = () => {
+		if (unifiedInnerTeardownDone) return
+		unifiedInnerTeardownDone = true
 		if (originalUnsubscribe) originalUnsubscribe()
 		contextUnsubscribe()
+		resolveChain = Promise.resolve()
 		// Clean up query stores: our subscription + schedule cache cleanup (store may be shared, so don't call _unsubscribe directly)
 		for (const store of queryStores.values()) {
 			if (store._queryUnsubscribe) {
@@ -474,14 +547,22 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 			}
 		}
 		queryStores.clear()
+		lastCommittedQueryMerge.clear()
 	}
 
-	// Allow external callers (e.g. eager context merge) to trigger query re-resolution
-	// Accepts overrides that get merged with the raw contextStore value for filter evaluation
-	unifiedStore._resolveQueries = (overrides) => resolveQueries(contextStore.value, overrides)
+	// Optional: merge overrides with current context for one scheduled leg (same chain as subscribe).
+	unifiedStore._resolveQueries = (overrides) => {
+		const merged =
+			overrides !== undefined && overrides !== null
+				? { ...(contextStore.value || {}), ...overrides }
+				: undefined
+		return scheduleResolve(merged)
+	}
 
-	// Initial resolve
-	await resolveQueries(contextStore.value)
+	// Initial resolve: sole first leg (subscribe skipped initial — no parallel duplicate).
+	await scheduleResolve()
+	// Sync flush so unified.value is correct before return (actors render before microtask runs)
+	flushUpdate()
 
 	return unifiedStore
 }
@@ -577,9 +658,20 @@ async function processCoValueData(peer, coValueCore, schemaHint, options) {
 async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
 	const { deepResolve = true, maxDepth = 15, timeoutMs = 5000, map = null } = options
 
-	// Check cache for resolved data before processing
 	const cache = peer.subscriptionCache
 	const cacheOptions = { deepResolve, map, maxDepth, timeoutMs }
+
+	// Return cached store if one already exists for this co-id + options
+	const storeCacheKey = `readStore:${coId}:${JSON.stringify(cacheOptions)}`
+	const cachedStoreEntry = cache.get(storeCacheKey)
+	if (cachedStoreEntry) {
+		if (cachedStoreEntry._maiaReadReactiveDead === true) {
+			cache.evict(storeCacheKey)
+		} else {
+			return cachedStoreEntry
+		}
+	}
+
 	const cachedData = cache.getResolvedData(coId, cacheOptions)
 
 	if (cachedData) {
@@ -602,7 +694,7 @@ async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
 					if (cacheDepUnsubs.has(depCoId)) continue
 					const depCore = peer.getCoValue(depCoId)
 					if (!depCore) continue
-					const unsub = depCore.subscribe(async () => {
+					const unsub = observeCoValue(peer, depCoId).subscribe(async () => {
 						if (!mainCore.isAvailable()) return
 						cache.invalidateResolvedData(depCoId)
 						const data = await processAndCacheCached(mainCore)
@@ -617,17 +709,14 @@ async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
 					}
 				}
 			}
-			const cacheCoUnsub = coValueCore.subscribe(async (core) => {
+			setupMapDepSubs(coValueCore)
+			const cacheCoUnsub = observeCoValue(peer, coId).subscribe(async (core) => {
 				if (core.isAvailable()) {
 					const newData = await processAndCacheCached(core)
 					setupMapDepSubs(core)
 					ctxStore._set(newData)
 				}
 			})
-			setupMapDepSubs(coValueCore)
-			peer.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({
-				unsubscribe: cacheCoUnsub,
-			}))
 
 			if (hasQueryObjects) {
 				const unified = await createUnifiedStore(peer, ctxStore, options)
@@ -637,7 +726,11 @@ async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
 					cacheCoUnsub,
 					cacheDepUnsubs,
 					unified._unsubscribe,
+					null,
+					storeCacheKey,
+					unified,
 				)
+				cache.set(storeCacheKey, unified)
 				return unified
 			}
 			ctxStore._unsubscribe = makeSingleCoCleanup(
@@ -646,8 +739,12 @@ async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
 				cacheCoUnsub,
 				cacheDepUnsubs,
 				ctxStore._unsubscribe,
+				null,
+				storeCacheKey,
+				ctxStore,
 			)
 		}
+		cache.set(storeCacheKey, ctxStore)
 		return ctxStore
 	}
 
@@ -682,7 +779,7 @@ async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
 			if (depUnsubscribes.has(depCoId)) continue
 			const depCore = peer.getCoValue(depCoId)
 			if (!depCore) continue
-			const unsub = depCore.subscribe(async () => {
+			const unsub = observeCoValue(peer, depCoId).subscribe(async () => {
 				if (!mainCore.isAvailable()) return
 				cache.invalidateResolvedData(depCoId)
 				const data = await processAndCache(mainCore)
@@ -699,7 +796,7 @@ async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
 		}
 	}
 
-	const coUnsubscribe = coValueCore.subscribe(async (core) => {
+	const coUnsubscribe = observeCoValue(peer, coId).subscribe(async (core) => {
 		if (!core.isAvailable()) {
 			store._set({ id: coId, loading: true })
 			return
@@ -712,8 +809,8 @@ async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
 			if (!queryCtxStore) {
 				queryCtxStore = new ReactiveStore(data)
 				const unified = await createUnifiedStore(peer, queryCtxStore, options)
+				// Caller still holds `store` (CoValue was not available on first read); mirror unified into it.
 				unifiedPipeUnsub = unified.subscribe((v) => store._set(v))
-				store._set(unified.value)
 			} else {
 				queryCtxStore._set(data)
 			}
@@ -722,25 +819,25 @@ async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
 		}
 	})
 
-	peer.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({
-		unsubscribe: coUnsubscribe,
-	}))
-
 	if (coValueCore.isAvailable()) {
 		const data = await processAndCache(coValueCore)
 		setupMapDependencySubscriptions(coValueCore)
 		const hasQueryObjects =
 			data && typeof data === 'object' && Object.values(data).some(isQueryObject)
 		if (hasQueryObjects) {
-			store._set(data)
-			const unified = await createUnifiedStore(peer, store, options)
+			queryCtxStore = new ReactiveStore(data)
+			const unified = await createUnifiedStore(peer, queryCtxStore, options)
 			unified._unsubscribe = makeSingleCoCleanup(
 				peer,
 				coId,
 				coUnsubscribe,
 				depUnsubscribes,
 				unified._unsubscribe,
+				null,
+				storeCacheKey,
+				unified,
 			)
+			cache.set(storeCacheKey, unified)
 			return unified
 		}
 		store._set(data)
@@ -750,7 +847,11 @@ async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
 			coUnsubscribe,
 			depUnsubscribes,
 			store._unsubscribe,
+			null,
+			storeCacheKey,
+			store,
 		)
+		cache.set(storeCacheKey, store)
 		return store
 	}
 
@@ -773,7 +874,10 @@ async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
 				unifiedPipeUnsub = null
 			}
 		},
+		storeCacheKey,
+		store,
 	)
+	cache.set(storeCacheKey, store)
 	return store
 }
 
@@ -786,10 +890,16 @@ async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
  */
 async function readSparksFromAccount(peer, options = {}) {
 	const { deepResolve = true, maxDepth = 15, timeoutMs = 5000 } = options
-	const store = peer.subscriptionCache.getOrCreateStore(
-		'sparks:account',
-		() => new ReactiveStore([]),
-	)
+	const store = peer.subscriptionCache.getOrCreateStore('sparks:account', () => {
+		const s = new ReactiveStore([])
+		s._cacheKey = 'store:sparks:account'
+		return s
+	})
+
+	const sparksLc = ensureDerivedLifecycle(store)
+	if (sparksLc.registryReaderWired) {
+		return store
+	}
 
 	const sparksId = await getSparksRegistryId(peer)
 	if (!sparksId?.startsWith('co_')) {
@@ -842,6 +952,7 @@ async function readSparksFromAccount(peer, options = {}) {
 			unsubscribe: unsub,
 		}))
 	}
+	sparksLc.registryReaderWired = true
 	return store
 }
 
@@ -854,72 +965,80 @@ function travelerFallback(accountCoId) {
 }
 
 /**
- * Read humans from account.registries.humans CoMap.
- * Used when schema is human schema - data from humans registry, not schema index.
- * @param {Object} peer - Backend instance
- * @param {Object} options - Read options
- * @returns {Promise<ReactiveStore>} ReactiveStore with array of {id, accountId, registryName, profileName}
+ * Humans + avens: same registry shape (identity co-id → account/profile rows).
+ * @param {Object} peer
+ * @param {Object} options
+ * @param {{ getRegistryId: (p: Object) => Promise<string|null>, baseCacheKey: string, subscriptionPrefix: string }} spec
  */
-async function readHumansFromRegistries(peer, options = {}) {
+async function readProfileBackedRegistryList(peer, options, spec) {
+	const { getRegistryId, baseCacheKey, subscriptionPrefix } = spec
 	const { timeoutMs = 5000, map = null } = options
-	const cacheKey = map ? `humans:registries:${JSON.stringify(map)}` : 'humans:registries'
-	const store = peer.subscriptionCache.getOrCreateStore(cacheKey, () => new ReactiveStore([]))
+	const cacheKey = map ? `${baseCacheKey}:${JSON.stringify(map)}` : baseCacheKey
+	const store = peer.subscriptionCache.getOrCreateStore(cacheKey, () => {
+		const s = new ReactiveStore([])
+		s._cacheKey = `store:${cacheKey}`
+		return s
+	})
 
-	const humansId = await getHumansRegistryId(peer)
-	if (!humansId?.startsWith('co_')) {
+	const regLc = ensureDerivedLifecycle(store)
+	if (regLc.registryReaderWired) {
 		return store
 	}
 
-	const updateHumans = async () => {
-		const humansStore = await readSingleCoValue(peer, humansId, null, { deepResolve: false })
+	const registryId = await getRegistryId(peer)
+	if (!registryId?.startsWith('co_')) {
+		return store
+	}
+
+	const updateItems = async () => {
+		const registryStore = await readSingleCoValue(peer, registryId, null, { deepResolve: false })
 		try {
-			await waitForStoreReady(humansStore, humansId, timeoutMs)
+			await waitForStoreReady(registryStore, registryId, timeoutMs)
 		} catch {
 			return
 		}
-		const humansData = humansStore?.value ?? {}
-		if (humansData?.error) return
+		const registryData = registryStore?.value ?? {}
+		if (registryData?.error) return
 
-		// humans CoMap: keys = registry name or account co-id, values = human CoMap co-id (dual-key)
-		// Dedupe by human co-id; find registry name (key that does NOT start with co_z)
-		const humanCoIdToRegistryName = new Map()
-		for (const k of Object.keys(humansData)) {
+		// CoMap: keys = registry name or account co-id, values = identity CoMap co-id (dual-key).
+		// Dedupe by identity co-id; prefer registry name (key that does NOT start with co_z).
+		const identityCoIdToRegistryName = new Map()
+		for (const k of Object.keys(registryData)) {
 			if (k === 'id' || k === 'loading' || k === 'error' || k === '$factory' || k === 'type') continue
-			const humanCoId = humansData[k]
-			if (typeof humanCoId !== 'string' || !humanCoId.startsWith('co_')) continue
+			const identityCoId = registryData[k]
+			if (typeof identityCoId !== 'string' || !identityCoId.startsWith('co_')) continue
 			const isRegistryName = !k.startsWith('co_z')
-			// Prefer registry name (animal key); only set account id if no registry name exists
 			if (isRegistryName) {
-				humanCoIdToRegistryName.set(humanCoId, k)
-			} else if (!humanCoIdToRegistryName.has(humanCoId)) {
-				humanCoIdToRegistryName.set(humanCoId, k)
+				identityCoIdToRegistryName.set(identityCoId, k)
+			} else if (!identityCoIdToRegistryName.has(identityCoId)) {
+				identityCoIdToRegistryName.set(identityCoId, k)
 			}
 		}
 
-		const uniqueHumanCoIds = [...new Set(humanCoIdToRegistryName.keys())]
+		const uniqueIds = [...new Set(identityCoIdToRegistryName.keys())]
 		const items = []
 
-		for (const humanCoId of uniqueHumanCoIds) {
-			const registryName = humanCoIdToRegistryName.get(humanCoId) ?? humanCoId
+		for (const identityCoId of uniqueIds) {
+			const registryName = identityCoIdToRegistryName.get(identityCoId) ?? identityCoId
 			try {
-				const humanStore = await readSingleCoValue(peer, humanCoId, null, {
+				const identityStore = await readSingleCoValue(peer, identityCoId, null, {
 					deepResolve: false,
 					timeoutMs,
 				})
-				await waitForStoreReady(humanStore, humanCoId, Math.min(timeoutMs, 2000))
-				const humanData = humanStore?.value ?? {}
-				if (humanData?.error) {
+				await waitForStoreReady(identityStore, identityCoId, Math.min(timeoutMs, 2000))
+				const identityData = identityStore?.value ?? {}
+				if (identityData?.error) {
 					items.push({
-						id: humanCoId,
-						accountId: humanCoId,
+						id: identityCoId,
+						accountId: identityCoId,
 						registryName,
-						profileName: travelerFallback(humanCoId),
+						profileName: travelerFallback(identityCoId),
 						profile: null,
 					})
 					continue
 				}
-				const accountId = humanData.account ?? humanCoId
-				const profileCoId = humanData.profile
+				const accountId = identityData.account ?? identityCoId
+				const profileCoId = identityData.profile
 
 				let profileName = travelerFallback(accountId)
 				if (profileCoId && typeof profileCoId === 'string' && profileCoId.startsWith('co_')) {
@@ -940,7 +1059,7 @@ async function readHumansFromRegistries(peer, options = {}) {
 				}
 
 				items.push({
-					id: humanCoId,
+					id: identityCoId,
 					accountId,
 					registryName,
 					profileName,
@@ -948,10 +1067,10 @@ async function readHumansFromRegistries(peer, options = {}) {
 				})
 			} catch {
 				items.push({
-					id: humanCoId,
-					accountId: humanCoId,
+					id: identityCoId,
+					accountId: identityCoId,
 					registryName,
-					profileName: travelerFallback(humanCoId),
+					profileName: travelerFallback(identityCoId),
 					profile: null,
 				})
 			}
@@ -961,131 +1080,38 @@ async function readHumansFromRegistries(peer, options = {}) {
 		store._set(finalItems)
 	}
 
-	await updateHumans()
-	const humansStore = await readSingleCoValue(peer, humansId, null, { deepResolve: false })
-	const unsub = humansStore?.subscribe?.(() => updateHumans())
+	await updateItems()
+	const outerRegistryStore = await readSingleCoValue(peer, registryId, null, { deepResolve: false })
+	const unsub = outerRegistryStore?.subscribe?.(() => updateItems())
 	if (unsub) {
-		peer.subscriptionCache.getOrCreate(`subscription:humans:${humansId}`, () => ({
+		peer.subscriptionCache.getOrCreate(`subscription:${subscriptionPrefix}:${registryId}`, () => ({
 			unsubscribe: unsub,
 		}))
 	}
+	regLc.registryReaderWired = true
 	return store
 }
 
 /**
- * Read avens from account.registries.avens CoMap.
- * Same pattern as readHumansFromRegistries; avens registry is public (everyone reader).
- * @param {Object} peer - Backend instance
- * @param {Object} options - Read options
- * @returns {Promise<ReactiveStore>} ReactiveStore with array of {id, accountId, registryName, profileName}
+ * Read humans from account.registries.humans CoMap (schema index is not the source of truth).
+ */
+async function readHumansFromRegistries(peer, options = {}) {
+	return readProfileBackedRegistryList(peer, options, {
+		getRegistryId: getHumansRegistryId,
+		baseCacheKey: 'humans:registries',
+		subscriptionPrefix: 'humans',
+	})
+}
+
+/**
+ * Read avens from account.registries.avens CoMap (public readers; same resolution shape as humans).
  */
 async function readAvensFromRegistries(peer, options = {}) {
-	const { timeoutMs = 5000, map = null } = options
-	const cacheKey = map ? `avens:registries:${JSON.stringify(map)}` : 'avens:registries'
-	const store = peer.subscriptionCache.getOrCreateStore(cacheKey, () => new ReactiveStore([]))
-
-	const avensId = await getAvensRegistryId(peer)
-	if (!avensId?.startsWith('co_')) {
-		return store
-	}
-
-	const updateAvens = async () => {
-		const avensStore = await readSingleCoValue(peer, avensId, null, { deepResolve: false })
-		try {
-			await waitForStoreReady(avensStore, avensId, timeoutMs)
-		} catch {
-			return
-		}
-		const avensData = avensStore?.value ?? {}
-		if (avensData?.error) return
-
-		const avenIdentityCoIdToRegistryName = new Map()
-		for (const k of Object.keys(avensData)) {
-			if (k === 'id' || k === 'loading' || k === 'error' || k === '$factory' || k === 'type') continue
-			const avenIdentityCoId = avensData[k]
-			if (typeof avenIdentityCoId !== 'string' || !avenIdentityCoId.startsWith('co_')) continue
-			const isRegistryName = !k.startsWith('co_z')
-			if (isRegistryName) {
-				avenIdentityCoIdToRegistryName.set(avenIdentityCoId, k)
-			} else if (!avenIdentityCoIdToRegistryName.has(avenIdentityCoId)) {
-				avenIdentityCoIdToRegistryName.set(avenIdentityCoId, k)
-			}
-		}
-
-		const uniqueAvenIdentityCoIds = [...new Set(avenIdentityCoIdToRegistryName.keys())]
-		const items = []
-
-		for (const avenIdentityCoId of uniqueAvenIdentityCoIds) {
-			const registryName = avenIdentityCoIdToRegistryName.get(avenIdentityCoId) ?? avenIdentityCoId
-			try {
-				const avenIdentityStore = await readSingleCoValue(peer, avenIdentityCoId, null, {
-					deepResolve: false,
-					timeoutMs,
-				})
-				await waitForStoreReady(avenIdentityStore, avenIdentityCoId, Math.min(timeoutMs, 2000))
-				const avenIdentityData = avenIdentityStore?.value ?? {}
-				if (avenIdentityData?.error) {
-					items.push({
-						id: avenIdentityCoId,
-						accountId: avenIdentityCoId,
-						registryName,
-						profileName: travelerFallback(avenIdentityCoId),
-						profile: null,
-					})
-					continue
-				}
-				const accountId = avenIdentityData.account ?? avenIdentityCoId
-				const profileCoId = avenIdentityData.profile
-
-				let profileName = travelerFallback(accountId)
-				if (profileCoId && typeof profileCoId === 'string' && profileCoId.startsWith('co_')) {
-					try {
-						const profileStore = await readSingleCoValue(peer, profileCoId, null, {
-							deepResolve: false,
-							timeoutMs: Math.min(timeoutMs, 2000),
-						})
-						await waitForStoreReady(profileStore, profileCoId, 2000)
-						const profileData = profileStore?.value ?? {}
-						const name = profileData?.name
-						if (typeof name === 'string' && name.length > 0) {
-							profileName = name
-						}
-					} catch {
-						/* use fallback */
-					}
-				}
-
-				items.push({
-					id: avenIdentityCoId,
-					accountId,
-					registryName,
-					profileName,
-					profile: profileCoId,
-				})
-			} catch {
-				items.push({
-					id: avenIdentityCoId,
-					accountId: avenIdentityCoId,
-					registryName,
-					profileName: travelerFallback(avenIdentityCoId),
-					profile: null,
-				})
-			}
-		}
-
-		const finalItems = map ? await applyMapTransformToArray(peer, items, map, { timeoutMs }) : items
-		store._set(finalItems)
-	}
-
-	await updateAvens()
-	const avensStore = await readSingleCoValue(peer, avensId, null, { deepResolve: false })
-	const unsub = avensStore?.subscribe?.(() => updateAvens())
-	if (unsub) {
-		peer.subscriptionCache.getOrCreate(`subscription:avens:${avensId}`, () => ({
-			unsubscribe: unsub,
-		}))
-	}
-	return store
+	return readProfileBackedRegistryList(peer, options, {
+		getRegistryId: getAvensRegistryId,
+		baseCacheKey: 'avens:registries',
+		subscriptionPrefix: 'avens',
+	})
 }
 
 /**
@@ -1157,15 +1183,18 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 	const optionsKey = options?.map ? JSON.stringify({ map: options.map }) : ''
 	const cacheKey = `${schema}:${JSON.stringify(filter || {})}:${optionsKey}`
 
-	// Use unified cache for store caching
 	const store = peer.subscriptionCache.getOrCreateStore(cacheKey, () => {
 		const s = new ReactiveStore([])
 		s._cacheKey = `store:${cacheKey}`
 		return s
 	})
 
+	const lc = ensureDerivedLifecycle(store)
+	if (lc.live) {
+		return store
+	}
+
 	// Get schema index colist ID from spark.os.indexes (keyed by schema co-id)
-	// Supports both schema co-ids (co_z...) and human-readable names (°Maia/factory/data/todos)
 	const coListId = await getCoListId(peer, schema)
 	if (typeof process !== 'undefined' && process.env?.DEBUG)
 		console.log('[DEBUG readCollection] schema=', schema, 'coListId=', coListId)
@@ -1173,50 +1202,20 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 		return store
 	}
 
-	// Get CoList CoValueCore
 	const coListCore = peer.getCoValue(coListId)
 	if (!coListCore) {
 		return store
 	}
 
-	// Track item IDs we've subscribed to (for cleanup)
-	const subscribedItemIds = new Set()
-	// Track resolved-ref subscription cache keys (ref CoValues like note.content)
-	const subscribedResolvedRefKeys = new Set()
+	const subscribedItemIds = lc.collectionSubscribedItemIds
+	const subscribedResolvedRefKeys = lc.collectionSubscribedResolvedRefKeys
+	const sharedVisited = lc.collectionSharedVisited
 
-	// Shared visited set prevents duplicate work across updateStore calls
-	const sharedVisited = new Set()
-
-	// Cache for resolved+mapped item data (keyed by itemId)
 	const cache = peer.subscriptionCache
 
-	// Fix: Declare updateStore BEFORE any subscriptions to avoid temporal dead zone
-	// updateStore is referenced in subscription callbacks (both colist and item subscriptions)
-	// Initialize to no-op function to prevent temporal dead zone errors when subscriptions fire synchronously
-	let updateStore = async () => {} // Will be reassigned below
+	let updateStore = async () => {}
 
-	// Progressive loading: trigger load, return store, subscription updates when ready
-	if (!peer.isAvailable(coListCore)) {
-		// Trigger loading (non-blocking)
-		ensureCoValueLoaded(peer, coListId, { waitForAvailable: false }).catch(debugLog)
-
-		// Set up subscription to update store when colist becomes available
-		if (coListCore) {
-			const unsubscribeColist = coListCore.subscribe((core) => {
-				if (core && peer.isAvailable(core)) {
-					// Colist is now available - trigger store update
-					updateStore().catch(debugLog)
-				}
-			})
-			peer.subscriptionCache.getOrCreate(`subscription:${coListId}`, () => ({
-				unsubscribe: unsubscribeColist,
-			}))
-		}
-
-		// Return store immediately (empty array) - will update reactively when colist loads
-		// This allows instant UI updates without waiting for index
-		return store
-	}
+	const runState = lc.runState
 
 	// Subscribe to a resolved-reference CoValue (e.g. note.content = CoText).
 	// When the ref changes, invalidate the parent item's cache so it re-resolves with fresh data.
@@ -1226,22 +1225,20 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 		if (subscribedResolvedRefKeys.has(refKey)) return
 		subscribedResolvedRefKeys.add(refKey)
 
-		const refCore = peer.getCoValue(refCoId)
-		const setupSub = (core) => {
-			if (!core) return
-			const unsub = core.subscribe(() => {
+		const setupSub = () => {
+			const unsub = observeCoValue(peer, refCoId).subscribe(() => {
 				cache.invalidateResolvedData(parentItemId)
 				if (updateStore) updateStore().catch((_e) => {})
 			})
 			peer.subscriptionCache.getOrCreate(refKey, () => ({ unsubscribe: unsub }))
 		}
+		const refCore = peer.getCoValue(refCoId)
 		if (refCore && peer.isAvailable(refCore)) {
-			setupSub(refCore)
+			setupSub()
 		} else {
 			ensureCoValueLoaded(peer, refCoId, { waitForAvailable: true, timeoutMs: 2000 })
 				.then(() => {
-					const core = peer.getCoValue(refCoId)
-					if (core && peer.isAvailable(core)) setupSub(core)
+					if (peer.getCoValue(refCoId)) setupSub()
 				})
 				.catch(() => {})
 		}
@@ -1253,8 +1250,7 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 	}
 	const wireItemSubscription = (core, id) => {
 		if (!core || !peer.isAvailable(core)) return
-		const unsub = core.subscribe(() => onItemChange(id))
-		peer.subscriptionCache.getOrCreate(`subscription:${id}`, () => ({ unsubscribe: unsub }))
+		observeCoValue(peer, id).subscribe(() => onItemChange(id))
 		if (updateStore) updateStore().catch(debugLog)
 	}
 	const subscribeToItem = (itemId) => {
@@ -1270,147 +1266,144 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 		wireItemSubscription(itemCore, itemId)
 	}
 
-	// Helper to update store with current items
-	// Fix: Assign to pre-declared variable (declared above to avoid temporal dead zone)
-	updateStore = async () => {
-		const results = []
-
-		// Get current CoList content (should be available now, but check anyway)
-		if (!peer.isAvailable(coListCore)) {
-			// CoList became unavailable - trigger reload
-			ensureCoValueLoaded(peer, coListId).catch(debugLog)
-			return
-		}
-
-		const content = peer.getCurrentContent(coListCore)
-		if (!content?.toJSON) {
-			return
-		}
-
+	const runUpdateStore = async () => {
+		perfDbRead.start(`updateStore schema=${schema}`)
+		let resultCount = 0
 		try {
-			const itemIdsArray = content.toJSON() // Array of item co-ids
+			const results = []
 
-			// Deduplicate by co-id: schema index colist can contain same co-id twice (sync race)
-			const seenIds = new Set()
+			if (!peer.isAvailable(coListCore)) {
+				ensureCoValueLoaded(peer, coListId).catch(debugLog)
+				store._set(Array.isArray(store.value) ? store.value : [])
+				return
+			}
 
-			// Process each item ID
-			for (const itemId of itemIdsArray) {
-				if (typeof itemId !== 'string' || !itemId.startsWith('co_')) {
-					continue
-				}
+			const content = peer.getCurrentContent(coListCore)
+			if (!content?.toJSON) {
+				store._set(Array.isArray(store.value) ? store.value : [])
+				return
+			}
 
-				if (seenIds.has(itemId)) continue
-				seenIds.add(itemId)
+			try {
+				const itemIdsArray = content.toJSON()
+				const seenIds = new Set()
 
-				// Subscribe to item (if not already subscribed) - this ensures reactive updates
-				subscribeToItem(itemId)
-
-				// Get item CoValueCore
-				const itemCore = peer.getCoValue(itemId)
-				if (!itemCore) {
-					// Item not in memory - subscribeToItem already triggered loading
-					continue
-				}
-
-				// Extract item if available (progressive loading - show available items immediately)
-				if (peer.isAvailable(itemCore)) {
-					// getOrCreateResolvedData prevents concurrent processing
-					const itemCacheOptions = { deepResolve, map, maxDepth, timeoutMs }
-
-					// Get fresh itemCore for latest data
-					const currentItemCore = peer.getCoValue(itemId)
-					if (!currentItemCore || !peer.isAvailable(currentItemCore)) {
-						// Item no longer available - skip it (will be handled by subscription)
+				for (const itemId of itemIdsArray) {
+					if (typeof itemId !== 'string' || !itemId.startsWith('co_')) {
 						continue
 					}
 
-					const itemData = await cache.getOrCreateResolvedData(itemId, itemCacheOptions, async () => {
-						// Process and cache the item data using fresh CoValueCore reference
-						let processedData = extractCoValueData(peer, currentItemCore)
+					if (seenIds.has(itemId)) continue
+					seenIds.add(itemId)
 
-						// Subscribe to refs that map depends on (map-driven resolution reactivity)
-						if (map) {
-							const deps = getMapDependencyCoIds(processedData, map)
-							for (const coId of deps) {
-								subscribeToResolvedRef(coId, itemId)
-							}
+					subscribeToItem(itemId)
+
+					const itemCore = peer.getCoValue(itemId)
+					if (!itemCore) {
+						continue
+					}
+
+					if (peer.isAvailable(itemCore)) {
+						const itemCacheOptions = { deepResolve, map, maxDepth, timeoutMs }
+
+						const currentItemCore = peer.getCoValue(itemId)
+						if (!currentItemCore || !peer.isAvailable(currentItemCore)) {
+							continue
 						}
 
-						// Filter out empty CoMaps (defense in depth - prevents skeletons from appearing even if index removal fails)
-						// Empty CoMap = object with only id, type, $schema properties (no data properties)
-						const dataKeys = Object.keys(processedData).filter(
+						const itemData = await cache.getOrCreateResolvedData(itemId, itemCacheOptions, async () => {
+							let processedData = extractCoValueData(peer, currentItemCore)
+
+							if (map) {
+								const deps = getMapDependencyCoIds(processedData, map)
+								for (const coId of deps) {
+									subscribeToResolvedRef(coId, itemId)
+								}
+							}
+
+							const dataKeys = Object.keys(processedData).filter(
+								(key) => !['id', 'type', '$factory'].includes(key),
+							)
+							if (dataKeys.length === 0 && processedData.type === 'comap') {
+								return processedData
+							}
+
+							if (deepResolve && !map && !cache.isResolved(itemId)) {
+								try {
+									await resolveNestedReferences(peer, processedData, sharedVisited, {
+										maxDepth,
+										timeoutMs,
+										currentDepth: 0,
+									})
+								} catch (_err) {
+									/* continue with partial data */
+								}
+							}
+
+							if (map) {
+								try {
+									processedData = await applyMapTransform(peer, processedData, map, {
+										timeoutMs,
+									})
+								} catch (_err) {
+									debugLog(_err)
+								}
+							}
+
+							return processedData
+						})
+
+						const dataKeys = Object.keys(itemData).filter(
 							(key) => !['id', 'type', '$factory'].includes(key),
 						)
-						if (dataKeys.length === 0 && processedData.type === 'comap') {
-							// Return empty object for empty CoMap (will be filtered out later)
-							return processedData
+						if (dataKeys.length === 0 && itemData.type === 'comap') {
+							continue
 						}
 
-						// Deep resolve nested references if enabled (skip when map present - map does on-demand resolution)
-						if (deepResolve && !map && !cache.isResolved(itemId)) {
-							try {
-								await resolveNestedReferences(peer, processedData, sharedVisited, {
-									maxDepth,
-									timeoutMs,
-									currentDepth: 0,
-								})
-							} catch (_err) {
-								// Silently continue - deep resolution failure shouldn't block item display
-							}
+						if (!filter || matchesFilter(itemData, filter)) {
+							results.push(itemData)
 						}
-
-						// Apply map transformation (if option enabled)
-						// This transforms data using MaiaScript expressions (e.g., { sender: "$$source.role" })
-						if (map) {
-							try {
-								processedData = await applyMapTransform(peer, processedData, map, { timeoutMs })
-							} catch (_err) {
-								debugLog(_err)
-							}
-						}
-
-						return processedData
-					})
-
-					// Skip empty CoMaps
-					const dataKeys = Object.keys(itemData).filter(
-						(key) => !['id', 'type', '$factory'].includes(key),
-					)
-					if (dataKeys.length === 0 && itemData.type === 'comap') {
-						continue
 					}
-
-					// Apply filter if provided
-					if (!filter || matchesFilter(itemData, filter)) {
-						results.push(itemData)
-					}
-				} else {
-					// Item not available yet, subscription will fire when ready
 				}
-				// If item not available yet, subscription will fire when it becomes available
+			} catch (_e) {
+				debugLog(_e)
 			}
-		} catch (_e) {
-			debugLog(_e)
-		}
 
-		// Update store with current results (progressive loading - may be partial, updates reactively)
-		// Always update store (even empty) for reactivity
-		store._set(results)
+			store._set(results)
+			resultCount = results.length
+		} finally {
+			perfDbRead.end(`updateStore results=${resultCount}`)
+		}
 	}
 
-	// Subscribe to CoList changes (fires when items are added/removed or CoList updates)
-	const unsubscribeCoList = coListCore.subscribe(() => {
-		// Fire and forget - don't await async updateStore in subscription callback
+	updateStore = async () => {
+		if (runState.running) {
+			runState.queued = true
+			return
+		}
+		runState.running = true
+		try {
+			await runUpdateStore()
+		} finally {
+			runState.running = false
+			if (runState.queued) {
+				runState.queued = false
+				queueMicrotask(() => updateStore().catch(debugLog))
+			}
+		}
+	}
+
+	// Single colist subscription: shared observer hub fans out to updateStore.
+	observeCoValue(peer, coListId).subscribe(() => {
 		updateStore().catch(debugLog)
 	})
 
-	// Use subscriptionCache for CoList
-	peer.subscriptionCache.getOrCreate(`subscription:${coListId}`, () => ({
-		unsubscribe: unsubscribeCoList,
-	}))
+	// Progressive loading: trigger load; runUpdateStore guards unavailable / no content
+	if (!peer.isAvailable(coListCore)) {
+		ensureCoValueLoaded(peer, coListId, { waitForAvailable: false }).catch(debugLog)
+		return store
+	}
 
-	// Trigger immediate load before initial updateStore
-	// Read CoList content to get all item IDs
 	if (peer.isAvailable(coListCore)) {
 		const content = peer.getCurrentContent(coListCore)
 		if (content?.toJSON) {
@@ -1434,24 +1427,28 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 	}
 
 	// Initial load (progressive - shows available items immediately, sets up subscriptions for all items)
-	// Items that aren't ready yet will populate reactively via subscriptions
 	await updateStore()
 
-	// Set up store unsubscribe to clean up subscriptions and remove from cache
-	const originalUnsubscribe = store._unsubscribe
-	store._unsubscribe = () => {
-		// Remove from cache when store is cleaned up
-		peer.subscriptionCache.scheduleCleanup(`store:${cacheKey}`)
-		if (originalUnsubscribe) originalUnsubscribe()
-		peer.subscriptionCache.scheduleCleanup(`subscription:${coListId}`)
-		for (const itemId of subscribedItemIds) {
-			peer.subscriptionCache.scheduleCleanup(`subscription:${itemId}`)
-		}
-		for (const refKey of subscribedResolvedRefKeys) {
-			peer.subscriptionCache.scheduleCleanup(refKey)
+	if (!lc.unsubscribeHooked) {
+		lc.unsubscribeHooked = true
+		const previousUnsubscribe = store._unsubscribe
+		store._unsubscribe = () => {
+			lc.live = false
+			lc.unsubscribeHooked = false
+			setMaiaReadDerivedStoreLive(store, false)
+			peer.subscriptionCache.scheduleCleanup(`store:${cacheKey}`)
+			if (previousUnsubscribe) previousUnsubscribe()
+			peer.subscriptionCache.scheduleCleanup(`observer:${coListId}`)
+			for (const itemId of subscribedItemIds) {
+				peer.subscriptionCache.scheduleCleanup(`observer:${itemId}`)
+			}
+			for (const refKey of subscribedResolvedRefKeys) {
+				peer.subscriptionCache.scheduleCleanup(refKey)
+			}
 		}
 	}
 
+	setMaiaReadDerivedStoreLive(store, true)
 	return store
 }
 
@@ -1467,75 +1464,68 @@ async function readCollection(peer, schema, filter = null, options = {}) {
  */
 async function readAllCoValues(peer, filter = null, options = {}) {
 	const { deepResolve = true, maxDepth = 15, timeoutMs = 5000 } = options
-	const store = new ReactiveStore([])
+	const cacheKey = `allCoValues:${JSON.stringify(filter || {})}:${deepResolve}:${maxDepth}:${timeoutMs}`
 
-	// Track CoValue IDs we've subscribed to (for cleanup)
-	const subscribedCoIds = new Set()
+	const store = peer.subscriptionCache.getOrCreateStore(cacheKey, () => {
+		const s = new ReactiveStore([])
+		s._cacheKey = `store:${cacheKey}`
+		return s
+	})
 
-	// Fix: Declare updateStore before subscribeToCoValue to avoid temporal dead zone
-	// updateStore is referenced in subscribeToCoValue callbacks, so it must be declared first
-	// Initialize to no-op function to prevent temporal dead zone errors when subscriptions fire synchronously
-	let updateStore = async () => {} // Will be reassigned below
+	const allLc = ensureDerivedLifecycle(store)
+	if (allLc.live) {
+		return store
+	}
 
-	// Helper to subscribe to a CoValue
-	const subscribeToCoValue = (coId, coValueCore) => {
-		// Skip if already subscribed
+	const subscribedCoIds = allLc.allCoValuesSubscribedIds
+
+	const runState = allLc.runState
+
+	let updateStore = async () => {}
+
+	const subscribeToCoValue = (coId) => {
 		if (subscribedCoIds.has(coId)) {
 			return
 		}
 
 		subscribedCoIds.add(coId)
 
-		const unsubscribe = coValueCore.subscribe(() => {
+		observeCoValue(peer, coId).subscribe(() => {
 			updateStore()
 		})
-
-		// Use subscriptionCache (same pattern for all types)
-		peer.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({ unsubscribe }))
 	}
 
-	// Helper to update store with all CoValues
-	// Fix: Assign to pre-declared variable (declared above to avoid temporal dead zone)
-	updateStore = async () => {
+	const runUpdateStore = async () => {
 		const allCoValues = peer.getAllCoValues()
 		const results = []
 
 		for (const [coId, coValueCore] of allCoValues.entries()) {
-			// Skip invalid IDs
 			if (!coId || typeof coId !== 'string' || !coId.startsWith('co_')) {
 				continue
 			}
 
-			// Subscribe to CoValue (if not already subscribed)
-			subscribeToCoValue(coId, coValueCore)
+			subscribeToCoValue(coId)
 
-			// Trigger loading for unavailable CoValues
 			if (!peer.isAvailable(coValueCore)) {
 				ensureCoValueLoaded(peer, coId).catch(debugLog)
 				continue
 			}
 
-			// Extract CoValue data as flat object
 			const data = extractCoValueData(peer, coValueCore)
 
-			// Filter out empty CoMaps (defense in depth - prevents skeletons from appearing even if index removal fails)
-			// Empty CoMap = object with only id, type, $schema properties (no data properties)
 			const dataKeys = Object.keys(data).filter((key) => !['id', 'type', '$factory'].includes(key))
 			if (dataKeys.length === 0 && data.type === 'comap') {
-				// Skip empty CoMap skeletons
 				continue
 			}
 
-			// Deep resolve nested references if enabled
 			if (deepResolve) {
 				try {
 					await resolveNestedReferencesPublic(peer, data, { maxDepth, timeoutMs })
 				} catch (_err) {
-					// Silently continue - deep resolution failure shouldn't block the app
+					/* continue with partial data */
 				}
 			}
 
-			// Apply filter if provided
 			if (!filter || matchesFilter(data, filter)) {
 				results.push(data)
 			}
@@ -1544,18 +1534,39 @@ async function readAllCoValues(peer, filter = null, options = {}) {
 		store._set(results)
 	}
 
-	// Initial load (triggers loading for unavailable CoValues, sets up subscriptions)
-	await updateStore()
-
-	// Set up store unsubscribe to clean up subscriptions
-	const originalUnsubscribe = store._unsubscribe
-	store._unsubscribe = () => {
-		if (originalUnsubscribe) originalUnsubscribe()
-		// Schedule cleanup for all subscribed CoValues
-		for (const coId of subscribedCoIds) {
-			peer.subscriptionCache.scheduleCleanup(`subscription:${coId}`)
+	updateStore = async () => {
+		if (runState.running) {
+			runState.queued = true
+			return
+		}
+		runState.running = true
+		try {
+			await runUpdateStore()
+		} finally {
+			runState.running = false
+			if (runState.queued) {
+				runState.queued = false
+				queueMicrotask(() => updateStore().catch(debugLog))
+			}
 		}
 	}
 
+	await updateStore()
+
+	if (!allLc.unsubscribeHooked) {
+		allLc.unsubscribeHooked = true
+		const previousUnsubscribe = store._unsubscribe
+		store._unsubscribe = () => {
+			allLc.live = false
+			allLc.unsubscribeHooked = false
+			setMaiaReadDerivedStoreLive(store, false)
+			if (previousUnsubscribe) previousUnsubscribe()
+			for (const coId of subscribedCoIds) {
+				peer.subscriptionCache.scheduleCleanup(`observer:${coId}`)
+			}
+		}
+	}
+
+	setMaiaReadDerivedStoreLive(store, true)
 	return store
 }

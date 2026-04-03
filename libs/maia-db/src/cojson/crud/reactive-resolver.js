@@ -13,6 +13,7 @@
  */
 
 import { ReactiveStore } from '../../reactive-store.js'
+import { observeCoValue } from '../cache/coCache.js'
 import { resolve } from '../factory/resolver.js'
 import { ensureCoValueLoaded } from './collection-helpers.js'
 import { read as universalRead } from './read.js'
@@ -181,11 +182,11 @@ export function resolveCoValueReactive(peer, coId, _options = {}) {
 		// Silently handle errors - subscription will handle updates
 	})
 
-	// Subscribe to CoValueCore updates
-	const unsubscribe = coValueCore.subscribe((core) => {
+	// Subscribe via shared observer hub (same policy as read.js)
+	const hubUnsub = observeCoValue(peer, coId).subscribe((core) => {
 		if (peer.isAvailable(core)) {
 			store._set({ loading: false, coValueCore: core })
-			unsubscribe()
+			hubUnsub()
 		}
 	})
 
@@ -193,7 +194,7 @@ export function resolveCoValueReactive(peer, coId, _options = {}) {
 	const originalUnsubscribe = store._unsubscribe
 	store._unsubscribe = () => {
 		if (originalUnsubscribe) originalUnsubscribe()
-		unsubscribe()
+		hubUnsub()
 	}
 
 	return store

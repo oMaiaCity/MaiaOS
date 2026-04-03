@@ -24,3 +24,8 @@ export {
 } from './modules/registry.js'
 export { Runtime } from './runtimes/browser.js'
 export { Evaluator as MaiaScriptEvaluator } from './utils/evaluator.js'
+export {
+	isQueryLoadingFieldKey,
+	QUERY_LOADING_SUFFIX,
+	shouldShowQueryLoadingSkeleton,
+} from './utils/query-loading.js'

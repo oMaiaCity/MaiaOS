@@ -82,6 +82,30 @@ export async function update(peer, _schema, id, data) {
 				// Merge existing (schema props only) with update data
 				const mergedData = { ...existingDataOnly, ...data }
 
+				// getRawRecord can omit or reshape keys that still exist on the live CoMap; fill gaps for validation
+				if (rawType === 'comap' && content?.get && allowedKeys) {
+					const skipJsonParsingFields = ['error', 'message', 'content', 'addAgentError', 'addAvenError']
+					for (const key of allowedKeys) {
+						if (mergedData[key] !== undefined) continue
+						try {
+							let v = content.get(key)
+							if (
+								typeof v === 'string' &&
+								(v.startsWith('{') || v.startsWith('[')) &&
+								!skipJsonParsingFields.includes(key)
+							) {
+								try {
+									v = JSON.parse(v)
+									v = dataExtraction.normalizeCoValueData(v)
+								} catch (_e) {}
+							} else if (typeof v === 'object' && v !== null) {
+								v = dataExtraction.normalizeCoValueData(v)
+							}
+							if (v !== undefined) mergedData[key] = v
+						} catch (_e) {}
+					}
+				}
+
 				// Validate merged data against schema BEFORE applying to CRDT
 				try {
 					await loadFactoryAndValidate(peer, factoryCoId, mergedData, `update for ${id}`, {

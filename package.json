@@ -33,6 +33,7 @@
 		"check": "bunx biome check .",
 		"check:fix": "bunx biome check --write .",
 		"check:ci": "bun run format:maia:check && bun scripts/check-maia-app-no-inline-handlers.mjs && bunx biome ci .",
+		"test:db-contract": "bun --filter @MaiaOS/db test",
 		"prepare": "husky"
 	},
 	"devDependencies": {

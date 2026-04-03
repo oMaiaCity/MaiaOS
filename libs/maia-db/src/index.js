@@ -18,6 +18,7 @@ export {
 	CoCache,
 	getGlobalCoCache,
 	invalidateResolvedDataForMutatedCoValue,
+	observeCoValue,
 	resetGlobalCoCache,
 } from './cojson/cache/coCache.js'
 // MaiaDB - single data layer implementation (was CoJSONBackend)
