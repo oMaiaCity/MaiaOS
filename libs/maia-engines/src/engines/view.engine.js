@@ -251,11 +251,13 @@ export class ViewEngine {
 	/**
 	 * Load view-related configs (view, context, style, brand). Returns viewDef, context, subscriptions.
 	 * Self-healing: when context CoValue fails to load, uses fallback store so actor spawns (no hard failure).
+	 * When actor already has context from spawnActor for the same co-id, reuses that store (one reactive graph).
+	 * @param {Object} actor - Actor instance (from spawnActor)
 	 * @param {Object} actorConfig - Actor config
 	 * @param {string} actorId - Actor ID
 	 * @returns {Promise<{viewDef, context, contextCoId, contextFactoryCoId, configUnsubscribes}>}
 	 */
-	async loadViewConfigs(actorConfig, actorId) {
+	async loadViewConfigs(actor, actorConfig, actorId) {
 		if (!actorConfig.view) throw new Error(`[ViewEngine] Actor config must have 'view' property`)
 		const configUnsubscribes = []
 
@@ -289,16 +291,27 @@ export class ViewEngine {
 					`[ViewEngine] Actor config context must be string (co-id or ref), got: ${typeof actorConfig.context}`,
 				)
 			}
-			const loaded = await loadContextStore(this.dataEngine, actorConfig.context, {
-				ensureLoaded: { waitForAvailable: true, timeoutMs: 5000 },
-				retries: 5,
-			})
-			if (!loaded.store) {
-				context = this._createFallbackContext()
+			const reuseSpawnContext =
+				actor?.contextCoId === actorConfig.context &&
+				typeof actor.contextCoId === 'string' &&
+				actor.contextCoId.startsWith('co_z') &&
+				actor.context
+			if (reuseSpawnContext) {
+				context = actor.context
+				contextCoId = actor.contextCoId
+				contextFactoryCoId = actor.contextFactoryCoId
 			} else {
-				context = loaded.store
-				contextCoId = loaded.coId
-				contextFactoryCoId = loaded.factoryCoId
+				const loaded = await loadContextStore(this.dataEngine, actorConfig.context, {
+					ensureLoaded: { waitForAvailable: true, timeoutMs: 5000 },
+					retries: 5,
+				})
+				if (!loaded.store) {
+					context = this._createFallbackContext()
+				} else {
+					context = loaded.store
+					contextCoId = loaded.coId
+					contextFactoryCoId = loaded.factoryCoId
+				}
 			}
 		}
 
@@ -340,7 +353,7 @@ export class ViewEngine {
 	async attachViewToActor(actor, containerElement, actorConfig, vibeKey, onBeforeRender) {
 		const actorId = actor.id
 		const { viewDef, context, contextCoId, contextFactoryCoId, configUnsubscribes } =
-			await this.loadViewConfigs(actorConfig, actorId)
+			await this.loadViewConfigs(actor, actorConfig, actorId)
 
 		actor.shadowRoot = containerElement.shadowRoot
 			? containerElement.shadowRoot
@@ -355,16 +368,14 @@ export class ViewEngine {
 		for (const unsub of configUnsubscribes) actor._configUnsubscribes.push(unsub)
 
 		if (actor.context?.subscribe) {
-			let lastContextValue = JSON.stringify(actor.context.value || {})
 			actor._contextUnsubscribe = actor.context.subscribe(
-				(newValue) => {
-					const currentContextValue = JSON.stringify(newValue || {})
-					const contextChanged = currentContextValue !== lastContextValue
-					lastContextValue = currentContextValue
-					if (actor._renderState === RENDER_STATES.READY && contextChanged) {
+				(_newValue) => {
+					if (actor._renderState === RENDER_STATES.READY) {
 						if (_hasContentEditableFocusIn(actor.shadowRoot)) return
 						actor._renderState = RENDER_STATES.UPDATING
 						this.actorOps?._scheduleRerender?.(actorId)
+					} else {
+						actor._needsPostInitRerender = true
 					}
 				},
 				{ skipInitial: true },
@@ -388,52 +399,34 @@ export class ViewEngine {
 	}
 
 	async render(viewDef, context, shadowRoot, styleSheets, actorId, options = {}) {
-		// $stores Architecture: Backend unified store handles reactivity automatically
-		// No manual subscriptions needed - backend handles everything via subscriptionCache
-
 		if (_hasContentEditableFocusIn(shadowRoot)) return
 
-		// Reset input counter for this actor at start of render
-		// This ensures inputs get consistent IDs across re-renders (same position = same ID)
 		this.actorInputCounters.set(actorId, 0)
 		this._pendingScrollToBottom = []
-		// Disconnect MutationObservers from previous render (element is about to be replaced)
 		const prevObservers = this._scrollMutationObservers.get(actorId)
 		if (prevObservers) {
 			for (const { observer } of prevObservers) observer.disconnect()
 			this._scrollMutationObservers.delete(actorId)
 		}
 
-		// CRITICAL: Clear shadow root on re-render (prevents duplicates)
-		// This ensures that when rerender is triggered by context subscription, old DOM is cleared first
-		// Combined with batching system, this prevents doubled rendering
-		shadowRoot.innerHTML = ''
-
-		// Attach stylesheets to shadow root FIRST (before rendering)
-		// This ensures styles are available when elements are created
 		shadowRoot.adoptedStyleSheets = styleSheets
-
-		// Store actor ID for event handling
 		this.currentActorId = actorId
 
 		const viewNode = viewDef.content || viewDef
-		// $stores Architecture: Context is ReactiveStore with merged query results from backend
-		if (!context) {
-			return
-		}
+		if (!context) return
 		const contextForRender = context.value || {}
-		const element = await this.renderNode(viewNode, { context: contextForRender }, actorId)
+		const dataEngine =
+			options.dataEngine ??
+			this.dataEngine ??
+			this.actorOps?.dataEngine ??
+			this.actorOps?.os?.dataEngine
 
+		shadowRoot.innerHTML = ''
+		const element = await this.renderNode(viewNode, { context: contextForRender }, actorId)
 		if (element) {
 			element.dataset.actorId = actorId
 			shadowRoot.appendChild(element)
 			this._processScrollToBottom(actorId)
-			// Use explicitly passed dataEngine (from ActorEngine) - same peer as maia.do() in db-view
-			const dataEngine =
-				options.dataEngine ??
-				this.dataEngine ??
-				this.actorOps?.dataEngine ??
-				this.actorOps?.os?.dataEngine
 			hydrateCobinaryPreviews(shadowRoot, dataEngine)
 		}
 	}
@@ -663,7 +656,6 @@ export class ViewEngine {
 			return
 		}
 
-		// Runtime uses co-ids exclusively. Non-co-id values render as plain text.
 		if (typeof slotValue !== 'string' || !slotValue.startsWith('co_z')) {
 			wrapperElement.textContent = String(slotValue)
 			return
@@ -673,6 +665,10 @@ export class ViewEngine {
 		if (!actor) return
 
 		let childActor = actor.children?.[slotValue]
+		if (childActor && !this.actorOps?.getActor?.(childActor.id)) {
+			delete actor.children[slotValue]
+			childActor = null
+		}
 		if (!childActor) {
 			childActor = await this.actorOps?._createChildActorByCoId?.(
 				actor,
@@ -683,7 +679,6 @@ export class ViewEngine {
 		}
 
 		if (childActor.containerElement) {
-			// Only destroy children that were previously in THIS slot (same wrapper)
 			if (actor?.children) {
 				for (const [key, child] of Object.entries(actor.children)) {
 					if (child === childActor) continue
@@ -694,7 +689,6 @@ export class ViewEngine {
 				}
 			}
 
-			// Only rerender child if its state is READY (initial render complete)
 			if (childActor._renderState === RENDER_STATES.READY && this.actorOps) {
 				childActor._renderState = RENDER_STATES.UPDATING
 				this.actorOps._scheduleRerender?.(childActor.id)

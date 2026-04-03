@@ -129,9 +129,7 @@ export class ActorEngine {
 		if (actor.context && typeof actor.context._set === 'function') {
 			const merged = { ...(actor.context.value || {}), ...sanitizedUpdates }
 			actor.context._set(merged)
-			if (typeof actor.context._resolveQueries === 'function') {
-				await actor.context._resolveQueries(sanitizedUpdates)
-			}
+			// Query resolution is owned solely by contextStore.subscribe → requestResolve in createUnifiedStore.
 		}
 		// Persist to CoValue (skip if no CoValue backing)
 		if (actor.contextCoId && this.dataEngine) {
@@ -204,8 +202,15 @@ export class ActorEngine {
 	 */
 	async _createChildActorByCoId(actor, childActorCoId, _vibeKey = null) {
 		if (!childActorCoId?.startsWith('co_z')) return null
-		if (actor.children?.[childActorCoId]) return actor.children[childActorCoId]
 		if (!actor.children) actor.children = {}
+
+		if (actor.children[childActorCoId]) {
+			const cached = actor.children[childActorCoId]
+			if (cached?.id && this.actors.has(cached.id)) {
+				return cached
+			}
+			delete actor.children[childActorCoId]
+		}
 
 		try {
 			const store = await readStore(this.dataEngine, childActorCoId)
@@ -343,6 +348,10 @@ export class ActorEngine {
 			},
 		)
 		actor._renderState = RENDER_STATES.READY
+		if (actor._needsPostInitRerender) {
+			delete actor._needsPostInitRerender
+			this._scheduleRerender(actorId)
+		}
 	}
 
 	_hasContentEditableFocusInTree(actor) {
@@ -429,6 +438,21 @@ export class ActorEngine {
 	destroyActor(actorId) {
 		const actor = this.actors.get(actorId)
 		if (!actor) return
+
+		// Slot / child actors must be destroyed before this actor. Otherwise they stay in
+		// this.actors; the next createActor hits reuseActor (no attachViewToActor) and the
+		// tree breaks (e.g. todo list empty, input/tabs shells remain).
+		if (actor.children && typeof actor.children === 'object') {
+			const childCoIds = Object.keys(actor.children)
+			for (const childCoId of childCoIds) {
+				const child = actor.children[childCoId]
+				delete actor.children[childCoId]
+				if (child?.id && typeof child.id === 'string') {
+					this.destroyActor(child.id)
+				}
+			}
+		}
+
 		if (actor.shadowRoot) actor.shadowRoot.innerHTML = ''
 		if (this.viewEngine) this.viewEngine.cleanupActor(actorId)
 

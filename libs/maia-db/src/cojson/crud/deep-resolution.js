@@ -5,6 +5,7 @@
  * are available before returning stores. Inspired by jazz-tools' deepLoading pattern.
  */
 
+import { observeCoValue } from '../cache/coCache.js'
 import { ensureCoValueLoaded } from './collection-helpers.js'
 import { extractCoValueData } from './data-extraction.js'
 
@@ -196,13 +197,8 @@ export async function resolveNestedReferences(peer, data, visited = new Set(), o
 								currentDepth: currentDepth + 1,
 							})
 
-							// Subscribe to nested CoValue to ensure it stays loaded
-							const nestedUnsubscribe = core.subscribe(() => {
-								// Keep subscription active for updates
-							})
-							peer.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({
-								unsubscribe: nestedUnsubscribe,
-							}))
+							// Keep observer hub listener so nested CoValue updates stay wired
+							observeCoValue(peer, coId).subscribe(() => {})
 
 							loadingUnsubscribe() // Clean up loading subscription
 						} catch (_err) {
@@ -226,14 +222,11 @@ export async function resolveNestedReferences(peer, data, visited = new Set(), o
 				currentDepth: currentDepth + 1,
 			})
 
-			// REACTIVE PROGRESSIVE RESOLUTION: Subscribe to nested CoValue for reactive updates
-			// When CoValue becomes available, automatically resolve its nested references
-			const unsubscribe = coValueCore.subscribe(async (core) => {
+			// REACTIVE PROGRESSIVE RESOLUTION: shared observer hub for nested CoValue updates
+			observeCoValue(peer, coId).subscribe(async (core) => {
 				if (peer.isAvailable(core)) {
-					// CoValue became available - reactively resolve its nested references
 					try {
 						const nestedData = extractCoValueData(peer, core)
-						// Recursively resolve nested references reactively (non-blocking)
 						resolveNestedReferences(peer, nestedData, visited, {
 							maxDepth,
 							timeoutMs,
@@ -246,9 +239,6 @@ export async function resolveNestedReferences(peer, data, visited = new Set(), o
 					}
 				}
 			})
-
-			// Store subscription in cache
-			peer.subscriptionCache.getOrCreate(`subscription:${coId}`, () => ({ unsubscribe }))
 		} catch (_error) {
 			// Silently continue - errors are logged at top level if needed
 			// Continue with other CoValues even if one fails

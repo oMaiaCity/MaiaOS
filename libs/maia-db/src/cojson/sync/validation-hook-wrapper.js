@@ -6,22 +6,13 @@ import { loadFactoryAndValidate } from '@MaiaOS/factories/validation.helper'
 import { createOpsLogger } from '@MaiaOS/logs'
 import { isExceptionFactory } from '../../factories/registry.js'
 import { resolve } from '../factory/resolver.js'
-import { extractSchemaFromMessage, isAccountGroupOrProfile } from '../helpers/co-value-detection.js'
+import {
+	extractSchemaFromMessage,
+	getCoValueContentSnapshot,
+	isAccountGroupOrProfile,
+} from '../helpers/co-value-detection.js'
 
 const opsValidation = createOpsLogger('ValidationHook')
-
-async function extractCurrentContent(peer, coId) {
-	try {
-		const coValueCore = peer.getCoValue(coId)
-		if (!coValueCore || !peer.isAvailable(coValueCore)) return null
-		const currentContent = peer.getCurrentContent(coValueCore)
-		if (!currentContent) return null
-		if (typeof currentContent.toJSON === 'function') return currentContent.toJSON()
-		return currentContent
-	} catch (_error) {
-		return null
-	}
-}
 
 async function waitForSchemaSync(peer, factoryCoId, timeoutMs = 5000) {
 	const start = Date.now()
@@ -65,7 +56,7 @@ async function validateRemoteTransactions(peer, dbEngine, msg) {
 		}
 	}
 
-	const content = await extractCurrentContent(peer, coId)
+	const content = getCoValueContentSnapshot(peer, coId)
 	if (!content) return { valid: true, error: null }
 
 	try {

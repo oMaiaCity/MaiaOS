@@ -3,16 +3,20 @@
 	"version": "26.4.21815-next",
 	"type": "module",
 	"main": "./src/index.js",
+	"scripts": {
+		"test": "bun test tests"
+	},
 	"exports": {
 		".": "./src/index.js"
 	},
 	"dependencies": {
+		"@MaiaOS/factories": "workspace:*",
 		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/peer": "workspace:*",
-		"@MaiaOS/factories": "workspace:*",
 		"@MaiaOS/storage": "workspace:*",
 		"cojson": "0.20.16",
 		"cojson-transport-ws": "0.20.16",
+		"nanoid": "^5.1.7",
 		"unicode-segmenter": "0.15.0"
 	}
 }

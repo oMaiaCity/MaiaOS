@@ -5,7 +5,8 @@
  * Consolidates subscription caching, store caching, resolution tracking, and resolved data caching.
  *
  * Key Features:
- * - Subscription caching (subscription:${id})
+ * - Subscription caching (subscription:${id}) — composite keys (e.g. registry, ref)
+ * - CoValue observer hubs (observer:${coId}) — one core.subscribe, many listeners
  * - Store caching (store:${key})
  * - Resolution tracking (resolution:${id})
  * - Resolved data caching (resolved:${coId}:${options})
@@ -13,6 +14,11 @@
  * - Node-aware (clears on node change)
  * - Memory leak prevention through cleanup timers
  */
+
+/** @param {string} coId @param {Object} [options] */
+function resolvedDataCacheKey(coId, options) {
+	return `resolved:${coId}:${JSON.stringify(options || {})}`
+}
 
 export class CoCache {
 	/**
@@ -135,7 +141,7 @@ export class CoCache {
 	 * @returns {any|null} Cached resolved data or null
 	 */
 	getResolvedData(coId, options) {
-		const key = `resolved:${coId}:${JSON.stringify(options || {})}`
+		const key = resolvedDataCacheKey(coId, options)
 		const cached = this.cache.get(key)
 		// If it's a promise, it's still being processed - return null to indicate not ready
 		if (cached && typeof cached.then === 'function') {
@@ -153,7 +159,7 @@ export class CoCache {
 	 * @returns {Promise<any>} Resolved data (from cache or factory)
 	 */
 	async getOrCreateResolvedData(coId, options, factory) {
-		const key = `resolved:${coId}:${JSON.stringify(options || {})}`
+		const key = resolvedDataCacheKey(coId, options)
 		const existing = this.cache.get(key)
 
 		// If already cached (and not a promise), return it immediately
@@ -199,7 +205,7 @@ export class CoCache {
 	 * @param {any} data - Resolved+mapped data to cache
 	 */
 	setResolvedData(coId, options, data) {
-		const key = `resolved:${coId}:${JSON.stringify(options || {})}`
+		const key = resolvedDataCacheKey(coId, options)
 		this.cache.set(key, data)
 	}
 
@@ -237,22 +243,9 @@ export class CoCache {
 
 		const timerId = setTimeout(() => {
 			this.destroy(key)
-			this._maybeLogStats()
 		}, this.cleanupTimeout)
 
 		this.cleanupTimers.set(key, timerId)
-	}
-
-	/**
-	 * Debug: Log cache stats when window._maiaDebugSubscriptions is true
-	 * Helps diagnose subscription buildup / agent freeze issues
-	 * @private
-	 */
-	_maybeLogStats() {
-		if (typeof window !== 'undefined' && window._maiaDebugSubscriptions) {
-			const _subs = Array.from(this.cache.keys()).filter((k) => k.startsWith('subscription:'))
-			const _stores = Array.from(this.cache.keys()).filter((k) => k.startsWith('store:'))
-		}
 	}
 
 	/**
@@ -263,7 +256,9 @@ export class CoCache {
 	 */
 	_maybeWarnSubscriptionBuildup() {
 		if (typeof window === 'undefined' || !window._maiaDebugSubscriptions) return
-		const subs = Array.from(this.cache.keys()).filter((k) => k.startsWith('subscription:'))
+		const subs = Array.from(this.cache.keys()).filter(
+			(k) => k.startsWith('subscription:') || k.startsWith('observer:'),
+		)
 		const threshold = window._maiaDebugSubscriptionThreshold ?? 80
 		if (subs.length < threshold) return
 		const now = Date.now()
@@ -299,6 +294,17 @@ export class CoCache {
 
 		// Handle different entry types
 		if (entry && typeof entry === 'object') {
+			// CoValue observer hub (see observeCoValue)
+			if (entry.destroy && typeof entry.destroy === 'function' && entry.subscribe) {
+				try {
+					entry.destroy()
+				} catch (_error) {
+					// Silently handle destroy errors
+				}
+				this.cache.delete(key)
+				this.cancelCleanup(key)
+				return
+			}
 			// Call unsubscribe if available (for subscriptions)
 			if (entry.unsubscribe && typeof entry.unsubscribe === 'function') {
 				try {
@@ -326,6 +332,16 @@ export class CoCache {
 	}
 
 	/**
+	 * Remove a key without running entry lifecycle (used when observer hub evicts itself on last listener).
+	 *
+	 * @param {string} key - Cache key
+	 */
+	evict(key) {
+		this.cancelCleanup(key)
+		this.cache.delete(key)
+	}
+
+	/**
 	 * Check if entry exists in cache
 	 *
 	 * @param {string} key - Cache key (MUST be namespaced)
@@ -343,6 +359,18 @@ export class CoCache {
 	 */
 	get(key) {
 		return this.cache.get(key) || null
+	}
+
+	/**
+	 * Set entry (e.g. deduped readSingleCoValue result under readStore:${coId}:...)
+	 * Cancels pending cleanup for this key while the entry is live.
+	 *
+	 * @param {string} key - Cache key (MUST be namespaced)
+	 * @param {any} value - Value to store
+	 */
+	set(key, value) {
+		this.cancelCleanup(key)
+		this.cache.set(key, value)
 	}
 
 	/**
@@ -364,6 +392,7 @@ export class CoCache {
 		return {
 			cacheSize: this.cache.size,
 			subscriptions: keys.filter((k) => k.startsWith('subscription:')).length,
+			observers: keys.filter((k) => k.startsWith('observer:')).length,
 			stores: keys.filter((k) => k.startsWith('store:')).length,
 			pendingCleanups: this.cleanupTimers.size,
 		}
@@ -448,6 +477,101 @@ export function resetGlobalCoCache() {
 		globalCache = null
 	}
 	currentNode = null
+}
+
+/**
+ * Shared CoValue observer: one core.subscribe per coId, fan-out to many listeners.
+ * Last listener removal tears down the core subscription and evicts `observer:${coId}`.
+ * The hub is created only when subscribe() runs and a core exists (no empty cache entries).
+ *
+ * @param {Object} peer - Backend with getCoValue(coId) and subscriptionCache (CoCache)
+ * @param {string} coId - CoValue ID
+ * @returns {{ subscribe: (onCore: (core: object) => void) => () => void, destroy: () => void }}
+ */
+export function observeCoValue(peer, coId) {
+	const cache = peer.subscriptionCache
+	const key = `observer:${coId}`
+	return {
+		subscribe(onCore) {
+			const core = peer.getCoValue(coId)
+			if (!core) {
+				return () => {}
+			}
+			const hub = cache.getOrCreate(key, () => createCoValueObserverHub(peer, coId, key))
+			return hub.subscribe(onCore)
+		},
+		destroy() {
+			const hub = cache.get(key)
+			if (hub?.destroy) {
+				hub.destroy()
+			}
+		},
+	}
+}
+
+/**
+ * @param {Object} peer
+ * @param {string} coId
+ * @param {string} key - `observer:${coId}`
+ */
+function createCoValueObserverHub(peer, coId, key) {
+	const cache = peer.subscriptionCache
+	const listeners = new Set()
+	let coreUnsub = null
+
+	function notify(core) {
+		for (const fn of listeners) {
+			try {
+				fn(core)
+			} catch (_error) {
+				// Per-listener errors must not break fan-out
+			}
+		}
+	}
+
+	const hub = {
+		/**
+		 * @param {(core: object) => void} onCore
+		 * @returns {() => void}
+		 */
+		subscribe(onCore) {
+			const core = peer.getCoValue(coId)
+			if (!core) {
+				return () => {}
+			}
+			cache.cancelCleanup(key)
+			listeners.add(onCore)
+			if (!coreUnsub) {
+				coreUnsub = core.subscribe((c) => notify(c))
+			}
+			return () => {
+				listeners.delete(onCore)
+				if (listeners.size === 0) {
+					if (coreUnsub) {
+						try {
+							coreUnsub()
+						} catch (_error) {
+							// ignore
+						}
+						coreUnsub = null
+					}
+					cache.evict(key)
+				}
+			}
+		},
+		destroy() {
+			if (coreUnsub) {
+				try {
+					coreUnsub()
+				} catch (_error) {
+					// ignore
+				}
+				coreUnsub = null
+			}
+			listeners.clear()
+		},
+	}
+	return hub
 }
 
 /**

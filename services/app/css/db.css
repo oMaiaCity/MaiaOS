@@ -2430,6 +2430,9 @@ pre {
 	display: flex;
 	flex-direction: column;
 	position: relative;
+	max-width: 1200px;
+	width: 100%;
+	margin: 0 auto;
 }
 
 /* MaiaDB navigation latches (side-aligned) and back notch (bottom-aligned)
