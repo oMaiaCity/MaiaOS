@@ -1,3 +1,5 @@
+import { collectCapabilityGrantCoIdsFromStreamContent } from './capability-stream-co-ids.js'
+
 /**
  * Load capability grants from spark.os.capabilities CoStream
  * Resolves: account.registries → sparks → °Maia → os → capabilities
@@ -57,12 +59,9 @@ export async function loadCapabilitiesGrants(maia) {
 		await waitForStore(streamStore, 5000)
 		capLog('capabilities stream hydrated')
 		const streamData = streamStore?.value ?? streamStore
-		const rawItems = streamData?.items ?? []
-		const capCoIds = rawItems
-			.map((item) => (typeof item === 'string' && item.startsWith('co_z') ? item : item?.value))
-			.filter((id) => id?.startsWith('co_z'))
+		const capCoIds = collectCapabilityGrantCoIdsFromStreamContent(streamData)
 
-		capLog(`stream items=${rawItems.length} grant refs=${capCoIds.length}`)
+		capLog(`stream grant refs=${capCoIds.length}`)
 		// Load grant CoValues in parallel — sequential reads multiplied latency (~3s × N per waitForStore).
 		const grantRows = await Promise.all(
 			capCoIds.map(async (capCoId) => {

@@ -194,6 +194,7 @@
       "name": "@MaiaOS/sync",
       "version": "26.4.21315-next",
       "dependencies": {
+        "@MaiaOS/db": "workspace:*",
         "@MaiaOS/loader": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",

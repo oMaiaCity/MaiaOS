@@ -19,6 +19,7 @@
  *   MAIA_DEV_CORS=1: With Postgres local dev, enable same multi-origin dev CORS as PGlite (localhost / 127.0.0.1 / ::1 on port 4200).
  */
 
+import { collectCapabilityGrantCoIdsFromStreamContent } from '@MaiaOS/db'
 import {
 	buildSeedConfig,
 	createWebSocketPeer,
@@ -228,8 +229,33 @@ async function getCapabilitiesStreamId(worker) {
 	}
 }
 
-/** Push Capability CoMap to spark.os.capabilities stream. */
+/** Wait until the capabilities CoStream view is readable (items or toJSON) so hasValidCapability is not a false negative on startup. */
+async function waitForCapabilitiesStreamReady(worker, { maxAttempts = 40, delayMs = 100 } = {}) {
+	const capabilitiesStreamId = await getCapabilitiesStreamId(worker)
+	if (!capabilitiesStreamId?.startsWith('co_z')) return
+	for (let i = 0; i < maxAttempts; i++) {
+		const core = worker.peer.node.getCoValue(capabilitiesStreamId)
+		if (core && worker.peer.isAvailable(core)) {
+			const content = worker.peer.getCurrentContent(core)
+			if (content?.type === 'costream') {
+				if (content.items !== undefined && content.items !== null) return
+				if (typeof content.toJSON === 'function') {
+					try {
+						const j = content.toJSON()
+						if (j && typeof j === 'object' && !(j instanceof Uint8Array)) return
+					} catch {
+						// keep waiting
+					}
+				}
+			}
+		}
+		await new Promise((r) => setTimeout(r, delayMs))
+	}
+}
+
+/** Push Capability CoMap to spark.os.capabilities stream. Skips if a non-expired grant for the same sub+cmd already exists. */
 async function pushCapabilityToStream(worker, { sub, cmd, pol, exp }) {
+	if (await hasValidCapability(worker, sub, cmd)) return
 	const capabilitiesStreamId = await getCapabilitiesStreamId(worker)
 	if (!capabilitiesStreamId?.startsWith('co_z')) return
 	const capabilitySchemaCoId = await resolve(worker.peer, '°Maia/factory/os/capability', {
@@ -259,8 +285,6 @@ async function pushCapabilityToStream(worker, { sub, cmd, pol, exp }) {
 /** Ensure AVEN_MAIA_ACCOUNT has /admin capability (grants all endpoints). Seeded at sync startup. */
 async function seedAdminCapabilityForServerAccount(worker) {
 	if (!accountID?.startsWith('co_z')) return
-	const hasAdmin = await hasValidCapability(worker, accountID, '/admin')
-	if (hasAdmin) return
 	const exp = Math.floor(Date.now() / 1000) + 10 * 365 * 24 * 3600 // 10 years
 	await pushCapabilityToStream(worker, { sub: accountID, cmd: '/admin', pol: [], exp })
 }
@@ -274,8 +298,6 @@ async function seedCapabilitiesForGuardian(worker) {
 	if (avenMaiaGuardian === accountID) return
 	const exp = Math.floor(Date.now() / 1000) + 10 * 365 * 24 * 3600
 	for (const cmd of ['/sync/write', '/llm/chat']) {
-		const has = await hasValidCapability(worker, avenMaiaGuardian, cmd)
-		if (has) continue
 		await pushCapabilityToStream(worker, { sub: avenMaiaGuardian, cmd, pol: [], exp })
 	}
 }
@@ -289,18 +311,12 @@ async function hasValidCapability(worker, accountId, cmd) {
 		const core = worker.peer.node.getCoValue(capabilitiesStreamId)
 		if (!core || !worker.peer.isAvailable(core)) return false
 		const content = worker.peer.getCurrentContent(core)
-		if (!content || content.type !== 'costream' || !content.items) return false
+		if (!content) return false
+		if (content.type !== undefined && content.type !== 'costream') return false
 		const now = Math.floor(Date.now() / 1000)
-		const allCoIds = []
-		for (const items of Object.values(content.items)) {
-			if (!Array.isArray(items)) continue
-			for (const item of items) {
-				const v = item?.value
-				if (typeof v === 'string' && v.startsWith('co_z')) allCoIds.push(v)
-			}
-		}
+		const allCoIds = collectCapabilityGrantCoIdsFromStreamContent(content)
 		for (const capCoId of allCoIds) {
-			const capContent = await loadCoMap(worker.peer, capCoId, { retries: 1 })
+			const capContent = await loadCoMap(worker.peer, capCoId, { retries: 3 })
 			if (!capContent?.get) continue
 			const sub = capContent.get('sub')
 			const capCmd = capContent.get('cmd')
@@ -1155,6 +1171,9 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 		}
 
 		// Seed /admin for AVEN_MAIA_ACCOUNT (grants all endpoints). Must run after scaffold exists (genesis or prior run).
+		await waitForCapabilitiesStreamReady(agentWorker).catch((e) =>
+			opsSync.warn('waitForCapabilitiesStreamReady:', e?.message),
+		)
 		await seedAdminCapabilityForServerAccount(agentWorker).catch((e) =>
 			opsSync.warn('seedAdminCapabilityForServerAccount:', e?.message),
 		)
