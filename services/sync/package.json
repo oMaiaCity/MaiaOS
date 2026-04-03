@@ -9,6 +9,7 @@
 		"deploy": "./deploy.sh"
 	},
 	"dependencies": {
+		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/loader": "workspace:*",
 		"@MaiaOS/storage": "workspace:*",

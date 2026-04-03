@@ -27,6 +27,7 @@ All commands are documented in root `package.json`. Key commands:
 - **`bun run build:desktop`** — production SPA build + Tauri `.app` bundle (signed per `src-tauri/tauri.conf.json`). **Use this build to test passkeys**, then open `services/app/src-tauri/target/release/bundle/macos/Maia City.app` (or run from Finder). Start `bun dev` (or sync only) in another terminal if the UI should talk to local sync.
 - **`bun run build:desktop:debug`** — same as `build:desktop` but `tauri build --debug` (faster Rust compile); signed bundle under `target/debug/bundle/macos/`.
 - **`bun run check:ci`** — lint + format check (Biome + `.maia` format)
+- **`bun test`** — runs `test` in every workspace that defines it (`bun run --workspaces --if-present test`; currently `@MaiaOS/db`)
 - **`bun run format`** — auto-fix formatting
 - **Logging mode (dev, `@MaiaOS/logs`):** Set **`LOG_MODE`** in root `.env` (or `LOG_MODE=… bun dev`). On localhost, `/__maia_env` sets **in-memory** PERF/TRACE/DEBUG flags before boot — **not** localStorage. Use dot tokens: **`perf.all`**, **`perf.game.init`**, **`trace.all`**, **`debug.all`**, **`debug.engines.loadBinary`**, **`debug.app.cobinary`**, comma-separated. Colon form **`engines:pipeline`** for granular PERF. Empty **`LOG_MODE`** → no PERF/TRACE/DEBUG. No browser overrides (old `maia:perf:*` / `maia:debug:trace` keys are ignored for gating).
 

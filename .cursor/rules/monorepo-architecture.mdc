@@ -284,6 +284,9 @@ bun install
 # Run development server (from root)
 bun dev
 
+# Run all workspace tests — only packages that define a `test` script (from root)
+bun test
+
 # Build app (from services/app)
 cd services/app && bun run build
 
