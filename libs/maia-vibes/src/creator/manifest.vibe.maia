@@ -2,6 +2,7 @@
 	"$factory": "°Maia/factory/vibe",
 	"$id": "°Maia/vibe/logs",
 	"name": "Logs",
+	"icon": "°Maia/vibe/logs/icon",
 	"description": "Developer logs and diagnostics",
 	"actor": "°Maia/logs/actor/intent",
 	"runtime": [

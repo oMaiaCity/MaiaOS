@@ -138,7 +138,7 @@ body:has(.sign-in-container) #app {
 
 .sign-in-first-name-input:focus {
 	border-color: var(--color-paradise-water);
-	box-shadow: 0 0 0 3px rgba(72, 184, 196, 0.28);
+	box-shadow: 0 0 0 3px rgba(90, 180, 216, 0.28);
 }
 
 .sign-in-buttons {

@@ -25,12 +25,12 @@
 	}
 }
 
-/* Liquid Glass Card Design - Brand Guidelines */
+/* Liquid Glass Card Design - Brand Guidelines (same glass as .db-header.whitish-card) */
 .whitish-card {
-	background: rgba(255, 255, 255, 0.4);
+	background: var(--glass-surface);
 	backdrop-filter: blur(12px) saturate(160%);
 	-webkit-backdrop-filter: blur(12px) saturate(160%);
-	border: 1px solid rgba(255, 255, 255, 0.2);
+	border: 1px solid var(--glass-border);
 	border-radius: 24px; /* Slightly more organic */
 	box-shadow:
 		0 4px 24px -1px rgba(0, 0, 0, 0.05),
@@ -42,7 +42,7 @@
 }
 
 .whitish-card:hover {
-	background: rgba(255, 255, 255, 0.5);
+	background: var(--glass-surface-hover);
 	box-shadow: 0 12px 40px rgba(0, 0, 0, 0.08);
 }
 
@@ -65,8 +65,8 @@
 	width: 100%;
 	max-width: none;
 	border-radius: 9999px;
-	background: rgba(255, 255, 255, 0.3);
-	border: 1px solid rgba(255, 255, 255, 0.2);
+	background: var(--glass-surface);
+	border: 1px solid var(--glass-border);
 	backdrop-filter: blur(12px) saturate(160%);
 	-webkit-backdrop-filter: blur(12px) saturate(160%);
 	box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03);
@@ -94,7 +94,7 @@
 .db-header-maia-icon {
 	display: flex;
 	align-items: center;
-	color: var(--color-marine-blue);
+	color: var(--color-vibe-duotone-primary);
 	flex-shrink: 0;
 }
 
@@ -102,6 +102,22 @@
 	width: 1.75rem;
 	height: 1.75rem;
 	display: block;
+}
+
+/* Same 3-tier duotone as dashboard vibe icons (MaiaDB stack / vibe glyph) */
+.db-header.whitish-card .db-header-maia-icon svg path[opacity="0.7"],
+.db-header.whitish-card .db-header-maia-icon svg path[opacity="0.5"] {
+	opacity: 1;
+	fill: var(--color-vibe-duotone-secondary);
+}
+.db-header.whitish-card .db-header-maia-icon svg path[opacity="0.4"],
+.db-header.whitish-card .db-header-maia-icon svg path[opacity="0.2"] {
+	opacity: 1;
+	fill: var(--color-vibe-duotone-tertiary);
+}
+.db-header.whitish-card .db-header-maia-icon svg path[fill-opacity] {
+	fill-opacity: 1;
+	fill: var(--color-vibe-duotone-tertiary);
 }
 
 .header-center {
@@ -141,16 +157,17 @@
 	filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
-.db-header h1 {
-	font-family: var(--font-heading);
+/* Me / vibe / MaiaDB — same hand type as dashboard cards; padding-top nudges baseline down in pill */
+.db-header .header-left h1 {
+	font-family: "Indie Flower", var(--font-heading), cursive;
 	font-size: 1.5rem;
 	font-weight: 400;
-	color: var(--color-marine-blue);
+	color: var(--color-vibe-duotone-primary);
 	margin: 0;
 	letter-spacing: -0.02em;
 	font-style: normal;
-	line-height: 1;
-	padding-top: var(--font-heading-optical-shift);
+	line-height: 1.15;
+	padding-top: 0.3rem;
 }
 
 .db-status {
@@ -253,8 +270,9 @@
 	transition: border-color 0.3s ease;
 }
 
+/* Healthy sync: no ring (green ring read as heavy/dark); yellow + red stay for read-only / error */
 .navbar-avatar.connected {
-	border-color: var(--color-lush-green);
+	border-color: transparent;
 }
 
 .navbar-avatar.read-only {
@@ -2257,9 +2275,9 @@ pre {
 	flex-direction: column;
 	overflow: hidden;
 	min-height: 0;
-	background: rgba(255, 255, 255, 0.2);
+	background: var(--glass-surface);
 	border-radius: 24px;
-	border: 1px solid rgba(255, 255, 255, 0.2);
+	border: 1px solid var(--glass-border);
 	backdrop-filter: blur(12px) saturate(160%);
 	-webkit-backdrop-filter: blur(12px) saturate(160%);
 	box-shadow: 0 8px 32px rgba(0, 0, 0, 0.05);
@@ -2323,7 +2341,7 @@ pre {
 @media (hover: hover) {
 	.dashboard-card:hover {
 		box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-		background: rgba(255, 255, 255, 0.5);
+		background: var(--glass-surface-hover);
 	}
 }
 
@@ -2349,9 +2367,24 @@ pre {
 }
 
 .dashboard-card-icon {
-	color: var(--color-marine-blue);
+	color: var(--color-vibe-duotone-primary);
 	margin-bottom: 0.25rem;
 	transition: all 0.3s ease;
+}
+/* Soft layers: secondary (mid) vs tertiary (light) — matches old 0.7/0.5 vs 0.4/0.2 grey steps */
+.dashboard-card.whitish-card .dashboard-card-icon svg path[opacity="0.7"],
+.dashboard-card.whitish-card .dashboard-card-icon svg path[opacity="0.5"] {
+	opacity: 1;
+	fill: var(--color-vibe-duotone-secondary);
+}
+.dashboard-card.whitish-card .dashboard-card-icon svg path[opacity="0.4"],
+.dashboard-card.whitish-card .dashboard-card-icon svg path[opacity="0.2"] {
+	opacity: 1;
+	fill: var(--color-vibe-duotone-tertiary);
+}
+.dashboard-card.whitish-card .dashboard-card-icon svg path[fill-opacity] {
+	fill-opacity: 1;
+	fill: var(--color-vibe-duotone-tertiary);
 }
 .dashboard-card-icon svg {
 	width: 40px;
@@ -2373,9 +2406,9 @@ pre {
 	}
 }
 
+/* Hover: only primary strokes (currentColor) → brand turquoise; soft tiers unchanged */
 .dashboard-card:hover .dashboard-card-icon {
 	color: var(--color-paradise-water);
-	filter: drop-shadow(0 0 15px rgba(0, 189, 214, 0.4));
 }
 
 .dashboard-card-title {
@@ -2383,7 +2416,7 @@ pre {
 	font-size: 1rem;
 	font-weight: 400;
 	font-style: normal;
-	color: var(--color-marine-blue);
+	color: var(--color-vibe-duotone-primary);
 	margin: 0;
 	letter-spacing: -0.02em;
 }
@@ -2479,7 +2512,7 @@ pre {
 }
 
 .db-latch.active {
-	background: rgba(72, 184, 196, 0.14);
+	background: rgba(90, 180, 216, 0.14);
 	color: var(--color-marine-blue);
 	border-color: rgba(27, 43, 27, 0.14);
 }
@@ -2609,7 +2642,7 @@ pre {
 		min-width: 0;
 	}
 
-	.header-left h1 {
+	.db-header .header-left h1 {
 		font-size: 1.25rem;
 		overflow: hidden;
 		text-overflow: ellipsis;

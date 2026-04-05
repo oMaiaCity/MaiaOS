@@ -10,8 +10,8 @@
 			"padding": "{spacing.md}",
 			"borderRadius": "{radii.md}",
 			"boxShadow": "{shadows.sm}",
-			"border": "1px solid {colors.border}",
-			"background": "{colors.softClay}",
+			"border": "1px solid {colors.surfaceBorder}",
+			"background": "{colors.surface}",
 			"color": "{colors.terracotta}",
 			"data": {
 				"visible": {

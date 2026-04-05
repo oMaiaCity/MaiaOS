@@ -14,7 +14,8 @@
 		"./seeding-utils": "./src/seeding-utils.js",
 		"./co-types.defs.json": "./src/co-types.defs.json",
 		"./os/meta.factory.json": "./src/os/meta.factory.json",
-		"./operation-result": "./src/operation-result.js"
+		"./operation-result": "./src/operation-result.js",
+		"./vibe-icon-svgs": "./src/vibe-icon-svgs.js"
 	},
 	"dependencies": {
 		"@MaiaOS/db": "workspace:*",

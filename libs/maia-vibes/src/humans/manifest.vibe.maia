@@ -2,6 +2,7 @@
 	"$factory": "°Maia/factory/vibe",
 	"$id": "°Maia/vibe/registries",
 	"name": "Registries",
+	"icon": "°Maia/vibe/registries/icon",
 	"description": "Browse humans and avens in the Maia registry — account ID, registry name, profile name",
 	"actor": "°Maia/registries/actor/intent",
 	"runtime": [

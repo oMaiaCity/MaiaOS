@@ -10,7 +10,7 @@
 			"width": "100%",
 			"maxWidth": "100%",
 			"height": "100vh",
-			"background": "{colors.softClay}",
+			"background": "transparent",
 			"padding": "0.375rem",
 			"overflowY": "auto",
 			"overflowX": "hidden",
@@ -43,10 +43,10 @@
 			"alignItems": "center",
 			"gap": "0.25rem",
 			"padding": "0.25rem 0.375rem",
-			"background": "rgba(255, 255, 255, 0.4)",
+			"background": "{colors.surface}",
 			"backdropFilter": "blur(8px) saturate(150%)",
 			"borderRadius": "{radii.full}",
-			"border": "1px solid {colors.border}",
+			"border": "1px solid {colors.surfaceBorder}",
 			"boxShadow": "{shadows.md}",
 			"width": "100%",
 			"boxSizing": "border-box",
@@ -153,10 +153,10 @@
 		},
 		"item": {
 			"padding": "0.5rem 0.75rem",
-			"background": "rgba(255, 255, 255, 0.3)",
+			"background": "{colors.surface}",
 			"backdropFilter": "blur(4px)",
 			"borderRadius": "{radii.md}",
-			"border": "1px solid {colors.border}",
+			"border": "1px solid {colors.surfaceBorder}",
 			"boxShadow": "{shadows.sm}",
 			"display": "flex",
 			"flexDirection": "column",
@@ -164,7 +164,7 @@
 			"cursor": "pointer",
 			"transition": "{transitions.fast}",
 			":hover": {
-				"background": "rgba(255, 255, 255, 0.5)",
+				"background": "{colors.surfaceHover}",
 				"transform": "translateY(-1px)",
 				"boxShadow": "{shadows.md}"
 			}

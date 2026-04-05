@@ -19,14 +19,14 @@
 			"gap": "0.5rem",
 			"padding": "0.5rem",
 			"minHeight": "44px",
-			"background": "rgba(255, 255, 255, 0.3)",
+			"background": "{colors.surface}",
 			"backdropFilter": "blur(8px) saturate(150%)",
 			"borderRadius": "{radii.apple}",
-			"border": "1px solid {colors.border}",
+			"border": "1px solid {colors.surfaceBorder}",
 			"transition": "{transitions.fast}",
 			"marginBottom": "0.25rem",
 			":hover": {
-				"background": "rgba(255, 255, 255, 0.5)",
+				"background": "{colors.surfaceHover}",
 				"transform": "translateY(-2px)",
 				"boxShadow": "{shadows.sm}"
 			}
@@ -52,7 +52,7 @@
 			"justifyContent": "center",
 			"background": "rgba(255, 255, 255, 0.2)",
 			"color": "{colors.marineBlueMuted}",
-			"border": "1px solid {colors.border}",
+			"border": "1px solid {colors.surfaceBorder}",
 			"borderRadius": "{radii.full}",
 			"cursor": "pointer",
 			"transition": "{transitions.fast}",
@@ -60,7 +60,7 @@
 			"flexShrink": "0",
 			":hover": {
 				"background": "{colors.marineBlue}",
-				"color": "{colors.softClay}",
+				"color": "{colors.tintedWhite}",
 				"borderColor": "{colors.marineBlue}"
 			}
 		},

@@ -22,28 +22,7 @@ import layoutQuickjsAddContext from './layout-quickjs-add/context.maia'
 import layoutQuickjsAddInterface from './layout-quickjs-add/interface.maia'
 import quickjsAddVibe from './manifest.vibe.maia'
 
-const depsListStyleMerged = {
-	...depsListStyle,
-	components: {
-		...(depsListStyle.components ?? {}),
-		codeBlock: {
-			display: 'block',
-			fontFamily: 'monospace',
-			fontSize: '0.75rem',
-			whiteSpace: 'pre-wrap',
-			wordBreak: 'break-all',
-			padding: '{spacing.md}',
-			background: 'rgba(255, 255, 255, 0.3)',
-			borderRadius: '{radii.md}',
-			border: '1px solid {colors.border}',
-			overflow: 'auto',
-			maxHeight: '50vh',
-			minHeight: '120px',
-			outline: 'none',
-			':focus': { outline: 'none' },
-		},
-	},
-}
+const depsListStyleMerged = depsListStyle
 
 const depsListContext = {
 	$factory: '°Maia/factory/context',

@@ -4,12 +4,12 @@
 	"@label": "@maia/actor/views/detail/style",
 	"components": {
 		"detailContainer": {
-			"background": "rgba(255, 255, 255, 0.4)",
+			"background": "{colors.surface}",
 			"backdropFilter": "blur(12px) saturate(160%)",
 			"borderRadius": "{radii.apple}",
 			"boxShadow": "{shadows.md}",
 			"overflow": "auto",
-			"border": "1px solid rgba(255, 255, 255, 0.2)",
+			"border": "1px solid {colors.surfaceBorder}",
 			"transition": "{transitions.standard}",
 			"height": "100%",
 			"display": "flex",
@@ -104,9 +104,9 @@
 			"justifyContent": "space-between",
 			"alignItems": "center",
 			"padding": "{spacing.sm}",
-			"background": "rgba(255, 255, 255, 0.3)",
+			"background": "{colors.surface}",
 			"borderRadius": "{radii.md}",
-			"border": "1px solid {colors.border}",
+			"border": "1px solid {colors.surfaceBorder}",
 			"gap": "{spacing.md}"
 		},
 		"memberId": {

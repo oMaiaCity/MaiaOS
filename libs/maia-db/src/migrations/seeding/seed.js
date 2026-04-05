@@ -2,7 +2,9 @@
  * CoJSON Seed - Bootstrap → Schemas → Configs → Data → Registry
  */
 
+import { VIBE_ICON_SVG_BY_KEY } from '@MaiaOS/factories/vibe-icon-svgs'
 import { OPS_PREFIX } from '@MaiaOS/logs'
+import { splitGraphemes } from 'unicode-segmenter/grapheme'
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import { ensureCoValueLoaded } from '../../cojson/crud/collection-helpers.js'
 import * as groups from '../../cojson/groups/groups.js'
@@ -431,6 +433,37 @@ export async function seed(
 
 	const allVibes = configs?.vibes || []
 	if (allVibes.length > 0) {
+		combinedRegistry = refreshCombinedRegistry()
+		const cotextSchemaCoId = factoryCoIdMap.get('°Maia/factory/os/cotext')
+		if (!cotextSchemaCoId?.startsWith?.('co_z')) {
+			throw new Error(
+				'[CoJSONSeed] °Maia/factory/os/cotext not registered; cannot seed vibe icon CoTexts',
+			)
+		}
+		for (const vibe of allVibes) {
+			const originalVibeId = vibe.$id || ''
+			const vibeKey = originalVibeId.startsWith('°Maia/vibe/')
+				? originalVibeId.replace('°Maia/vibe/', '')
+				: (vibe.name || 'default').toLowerCase().replace(/\s+/g, '-')
+			const iconRef = `°Maia/vibe/${vibeKey}/icon`
+			const svg = VIBE_ICON_SVG_BY_KEY[vibeKey]
+			if (typeof svg !== 'string' || !svg.trim()) {
+				throw new Error(
+					`[CoJSONSeed] VIBE_ICON_SVG_BY_KEY missing or empty for vibe "${vibeKey}" (${iconRef})`,
+				)
+			}
+			const graphemes = [...splitGraphemes(svg)]
+			const ctx = { node, account, guardian: maiaGroup }
+			const { coValue: iconCotext } = await createCoValueForSpark(ctx, null, {
+				factory: cotextSchemaCoId,
+				cotype: 'colist',
+				data: graphemes,
+				dataEngine: peer?.dbEngine,
+			})
+			instanceCoIdMap.set(iconRef, iconCotext.id)
+			combinedRegistry.set(iconRef, iconCotext.id)
+			coIdRegistry.register(iconRef, iconCotext.id)
+		}
 		combinedRegistry = refreshCombinedRegistry()
 		let vibes = null
 		const vibesId = await groups.getSparkVibesId(peer, MAIA_SPARK)

@@ -177,6 +177,7 @@
       "name": "@MaiaOS/app",
       "version": "26.4.21315-next",
       "dependencies": {
+        "@MaiaOS/factories": "workspace:*",
         "@MaiaOS/game": "workspace:*",
         "@MaiaOS/loader": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
