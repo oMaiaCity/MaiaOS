@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/actor",
 	"$id": "°Maia/quickjs-add/actor/deps-list-detail",
-	"@label": "@maia/quickjs-add/actor/deps-list-detail",
 	"context": "°Maia/quickjs-add/context/deps-list-detail",
 	"view": "°Maia/quickjs-add/view/deps-list-detail",
 	"process": "°Maia/quickjs-add/process/deps-list-detail",

@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/process",
 	"$id": "°Maia/actor/views/list/process",
-	"@label": "@maia/actor/views/list/process",
 	"handlers": {
 		"TOGGLE_BUTTON": [
 			{

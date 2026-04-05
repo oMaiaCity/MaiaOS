@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/style",
 	"$id": "°Maia/actor/views/info-card/style",
-	"@label": "@maia/actor/views/info-card/style",
 	"components": {
 		"infoCard": {
 			"display": "none",

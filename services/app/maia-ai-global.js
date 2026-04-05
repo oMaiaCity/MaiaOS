@@ -3,6 +3,7 @@
  * Global FAB + modal overlay. Uses @MaiaOS/maia-ai (RunAnywhere) for private, offline-capable transcription.
  */
 
+import { executableKeyFromMaiaPath } from '@MaiaOS/factories'
 import {
 	AudioCapture,
 	ensureAllModelsLoaded,
@@ -169,7 +170,7 @@ function renderMessages() {
  */
 function actorConfigMatchesChatIntent(cfg) {
 	if (!cfg || typeof cfg !== 'object') return false
-	return cfg.executableKey === 'chat/intent'
+	return typeof cfg.$label === 'string' && executableKeyFromMaiaPath(cfg.$label) === 'chat/intent'
 }
 
 /**
@@ -177,7 +178,7 @@ function actorConfigMatchesChatIntent(cfg) {
  */
 function actorConfigMatchesMessages(cfg) {
 	if (!cfg || typeof cfg !== 'object') return false
-	const k = cfg.executableKey
+	const k = typeof cfg.$label === 'string' ? executableKeyFromMaiaPath(cfg.$label) : ''
 	return (
 		typeof k === 'string' &&
 		(k.includes('views/messages') || k.includes('actor/os/messages') || k.endsWith('/messages'))

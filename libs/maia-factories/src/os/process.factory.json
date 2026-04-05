@@ -7,10 +7,7 @@
 	"indexing": true,
 	"required": ["handlers"],
 	"properties": {
-		"@label": {
-			"type": "string",
-			"description": "Human-readable label (namekey, e.g. '@maia/actor/views/layout-humans/process')"
-		},
+		"$label": { "$ref": "#/$defs/registryLabel" },
 		"handlers": {
 			"type": "object",
 			"description": "Event type → array of actions",
@@ -30,6 +27,10 @@
 		}
 	},
 	"$defs": {
+		"registryLabel": {
+			"type": "string",
+			"description": "Opaque human-readable registry path (typically equals pre-seed $id). Never ref-walked; never resolved as co-id. Native module path for getActor is derived at runtime from $label, not stored."
+		},
 		"ctx": {
 			"type": "object",
 			"description": "Update context CoValue",

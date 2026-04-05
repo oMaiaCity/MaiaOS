@@ -9,6 +9,7 @@ export { CoIdRegistry } from './co-id-generator.js'
 // Export co-type definitions
 export { default as coTypesDefs } from './co-types.defs.json'
 // Export schema transformer functions (seeding only)
+export { executableKeyFromMaiaPath } from './executable-key-from-maia-path.js'
 export { transformForSeeding, validateFactoryStructure } from './factory-transformer.js'
 export {
 	ACTOR_CONFIG_REF_PATTERN,

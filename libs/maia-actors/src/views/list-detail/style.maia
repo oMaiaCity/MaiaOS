@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/style",
 	"$id": "°Maia/actor/views/list-detail/style",
-	"@label": "@maia/actor/views/list-detail/style",
 	"components": {
 		"layoutRow": {
 			"display": "flex",

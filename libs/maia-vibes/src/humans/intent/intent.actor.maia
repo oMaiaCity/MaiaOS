@@ -9,6 +9,5 @@
 	"inbox": "°Maia/registries/inbox/intent",
 	"interface": [
 		"DISMISS"
-	],
-	"@label": "@registries/intent"
+	]
 }

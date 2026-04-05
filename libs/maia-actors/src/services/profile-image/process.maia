@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/process",
 	"$id": "°Maia/actor/services/profile-image/process",
-	"@label": "@maia/actor/services/profile-image/process",
 	"handlers": {
 		"UPLOAD_PROFILE_IMAGE": [
 			{

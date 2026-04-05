@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/view",
 	"$id": "°Maia/quickjs-add/view/deps-list",
-	"@label": "@maia/quickjs-add/view/deps-list",
 	"content": {
 		"tag": "div",
 		"class": "layout-row",

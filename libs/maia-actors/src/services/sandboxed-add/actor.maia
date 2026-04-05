@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/actor",
 	"$id": "°Maia/actor/services/sandboxed-add",
-	"@label": "@maia/actor/services/sandboxed-add",
 	"interface": "°Maia/actor/services/sandboxed-add/interface",
 	"process": "°Maia/actor/services/sandboxed-add/process",
 	"inbox": "°Maia/actor/services/sandboxed-add/inbox",

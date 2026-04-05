@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/actor",
 	"$id": "°Maia/quickjs-add/actor/layout-quickjs-add",
-	"@label": "@maia/quickjs-add/actor/layout-quickjs-add",
 	"context": "°Maia/quickjs-add/context/layout-quickjs-add",
 	"view": "°Maia/actor/views/tabs/view",
 	"process": "°Maia/actor/views/tabs/process",

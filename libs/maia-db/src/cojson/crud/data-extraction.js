@@ -443,7 +443,7 @@ export async function resolveCoValueReferences(
 	}
 
 	// CRITICAL: Ensure we preserve ALL properties from the original data object
-	// This is especially important for actor objects where properties like '@label' must be preserved
+	// This is especially important for actor objects where properties like '$label' must be preserved
 	return result
 }
 

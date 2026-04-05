@@ -6,10 +6,7 @@
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {
-		"@label": {
-			"type": "string",
-			"description": "Human-readable label (namekey, e.g. '@maia/actor/views/grid/view')"
-		},
+		"$label": { "$ref": "#/$defs/registryLabel" },
 		"content": {
 			"type": "object",
 			"description": "View content structure (recursive viewNode)",
@@ -17,6 +14,10 @@
 		}
 	},
 	"$defs": {
+		"registryLabel": {
+			"type": "string",
+			"description": "Opaque human-readable registry path (typically equals pre-seed $id). Never ref-walked; never resolved as co-id. Native module path for getActor is derived at runtime from $label, not stored."
+		},
 		"viewNode": {
 			"type": "object",
 			"description": "Recursive DOM node structure",

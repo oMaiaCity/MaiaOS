@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/style",
 	"$id": "°Maia/actor/views/paper/style",
-	"@label": "@maia/actor/views/paper/style",
 	"components": {
 		"paperBackground": {
 			"display": "flex",

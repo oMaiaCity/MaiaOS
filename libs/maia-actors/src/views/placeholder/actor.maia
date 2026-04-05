@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/actor",
 	"$id": "°Maia/actor/views/placeholder",
-	"@label": "@maia/actor/views/placeholder",
 	"context": "°Maia/actor/views/placeholder/context",
 	"view": "°Maia/actor/views/placeholder/view",
 	"process": "°Maia/actor/views/placeholder/process",

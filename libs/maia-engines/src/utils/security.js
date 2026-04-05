@@ -185,7 +185,7 @@ export function sanitizePayloadForValidation(payload) {
 					} else if (key === 'id' && val != null && typeof val === 'object') {
 						sub[key] = String(val.id ?? val.$id ?? val.coId ?? '')
 					} else if (key === 'label' && val != null && typeof val === 'object') {
-						sub[key] = String(val['@label'] ?? val.label ?? val.name ?? '')
+						sub[key] = String(val.$label ?? val.label ?? val.name ?? '')
 					} else if (!COJSON_METADATA_KEYS.has(key)) {
 						sub[key] =
 							val != null && typeof val === 'object' && !Array.isArray(val) && !(val instanceof File)

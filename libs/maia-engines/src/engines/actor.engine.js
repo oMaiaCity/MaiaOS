@@ -12,6 +12,7 @@
  */
 
 import { normalizeCoValueData } from '@MaiaOS/db'
+import { executableKeyFromMaiaPath } from '@MaiaOS/factories'
 import { containsExpressions } from '@MaiaOS/factories/expression-resolver'
 import { validateAgainstFactory } from '@MaiaOS/factories/validation.helper'
 import { createOpsLogger } from '@MaiaOS/logs'
@@ -849,10 +850,10 @@ export class ActorEngine {
 		if (!executableFunction) {
 			const { getActor } = await import('@MaiaOS/actors')
 			const namespacePath =
-				typeof actorConfig.executableKey === 'string' ? actorConfig.executableKey : null
+				typeof actorConfig.$label === 'string' ? executableKeyFromMaiaPath(actorConfig.$label) : null
 			if (!namespacePath) {
 				throw new Error(
-					`[ActorEngine] spawnActor: actorConfig.executableKey required for native JS actor (co-id ${actorId})`,
+					`[ActorEngine] spawnActor: actorConfig.$label required for native JS actor (co-id ${actorId})`,
 				)
 			}
 			const actorModule = getActor(namespacePath)

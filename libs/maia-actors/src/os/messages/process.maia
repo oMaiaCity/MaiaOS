@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/process",
 	"$id": "°Maia/actor/os/messages/process",
-	"@label": "@maia/actor/os/messages/process",
 	"handlers": {
 		"SEND_MESSAGE": [
 			{

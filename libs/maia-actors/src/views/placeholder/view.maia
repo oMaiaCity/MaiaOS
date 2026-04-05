@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/view",
 	"$id": "°Maia/actor/views/placeholder/view",
-	"@label": "@maia/actor/views/placeholder/view",
 	"content": {
 		"tag": "div",
 		"class": "placeholder",
