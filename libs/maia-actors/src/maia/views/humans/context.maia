@@ -1,0 +1,36 @@
+{
+	"$factory": "°maia/factory/context",
+	"title": "Addressbook",
+	"tabs": [
+		{
+			"id": "humans",
+			"label": "Humans",
+			"actor": "@humansGrid"
+		},
+		{
+			"id": "avens",
+			"label": "Avens",
+			"actor": "@avensGrid"
+		}
+	],
+	"viewMode": "humans",
+	"currentView": "@humansGrid",
+	"tabsWithActive": [
+		{
+			"id": "humans",
+			"label": "Humans",
+			"actor": "@humansGrid",
+			"isActive": true
+		},
+		{
+			"id": "avens",
+			"label": "Avens",
+			"actor": "@avensGrid",
+			"isActive": false
+		}
+	],
+	"@actors": {
+		"humansGrid": "°maia/views/addressbook-humans-grid/actor.maia",
+		"avensGrid": "°maia/views/addressbook-avens-grid/actor.maia"
+	}
+}

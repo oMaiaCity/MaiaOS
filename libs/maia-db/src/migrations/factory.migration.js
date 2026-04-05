@@ -2,7 +2,7 @@
  * Schema Migration - Identity layer for fresh accounts only.
  *
  * No legacy data migration. New accounts only.
- * Scaffold (registries, °Maia spark, os) is created by bootstrap/seed.
+ * Scaffold (registries, °maia spark, os) is created by bootstrap/seed.
  *
  * @param {RawAccount} account - The account (new or existing)
  * @param {LocalNode} node - The LocalNode instance

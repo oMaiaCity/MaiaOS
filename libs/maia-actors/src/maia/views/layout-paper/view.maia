@@ -1,0 +1,74 @@
+{
+	"$factory": "°maia/factory/view",
+	"content": {
+		"tag": "div",
+		"class": "layout-row",
+		"children": [
+			{
+				"tag": "aside",
+				"class": "aside-list",
+				"children": [
+					{
+						"tag": "div",
+						"class": "list-title",
+						"text": "Notes"
+					},
+					{
+						"tag": "ul",
+						"class": "list",
+						"$each": {
+							"items": "$notes",
+							"template": {
+								"tag": "li",
+								"class": "list-item",
+								"attrs": {
+									"data": {
+										"active": "$selectedNoteIds.$$id"
+									}
+								},
+								"children": [
+									{
+										"tag": "div",
+										"class": "list-item-content",
+										"children": [
+											{
+												"tag": "span",
+												"class": "list-item-title",
+												"text": "$$title"
+											},
+											{
+												"tag": "span",
+												"class": "list-item-preview",
+												"text": {
+													"$join": [
+														{
+															"$item": "content.items"
+														},
+														""
+													]
+												}
+											}
+										]
+									}
+								],
+								"$on": {
+									"click": {
+										"send": "SELECT_NOTE",
+										"payload": {
+											"id": "$$id"
+										}
+									}
+								}
+							}
+						}
+					}
+				]
+			},
+			{
+				"tag": "main",
+				"class": "main-area",
+				"$slot": "$paper"
+			}
+		]
+	}
+}

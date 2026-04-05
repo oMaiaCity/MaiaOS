@@ -21,7 +21,7 @@ export async function getCapabilitiesStreamCoId(maia) {
 		await waitForStore(sparksStore, 5000)
 		const sparks = sparksStore?.value ?? sparksStore
 		const peer = maia.dataEngine?.peer
-		const maiaSparkId = peer?.systemSparkCoId ?? sparks?.['°Maia']
+		const maiaSparkId = peer?.systemSparkCoId ?? sparks?.['°maia']
 		if (!maiaSparkId?.startsWith('co_z')) return null
 		const sparkStore = await maia.do({ op: 'read', factory: null, key: maiaSparkId })
 		await waitForStore(sparkStore, 5000)
@@ -40,7 +40,7 @@ export async function getCapabilitiesStreamCoId(maia) {
 
 /**
  * Load capability grants from spark.os.capabilities CoStream
- * Resolves: account.registries → sparks → °Maia → os → capabilities
+ * Resolves: account.registries → sparks → °maia → os → capabilities
  * Used by MaiaDB Capabilities view (guardian visibility)
  *
  * @param {Object} maia - MaiaOS instance with maia.do()

@@ -1,12 +1,12 @@
 {
-	"$factory": "°Maia/factory/meta",
-	"$id": "°Maia/factory/os/capabilities-stream",
-	"title": "°Maia/factory/os/capabilities-stream",
+	"$factory": "°maia/factory/meta",
+	"$id": "°maia/factory/os/capabilities-stream",
+	"title": "°maia/factory/os/capabilities-stream",
 	"description": "CoStream of Capability CoMap co-ids (UCAN-aligned grants). Stored in spark.os.capabilities.",
 	"cotype": "costream",
 	"indexing": false,
 	"items": {
-		"$co": "°Maia/factory/os/capability",
+		"$co": "°maia/factory/os/capability",
 		"description": "Each item is a co-id reference to a Capability CoMap"
 	}
 }

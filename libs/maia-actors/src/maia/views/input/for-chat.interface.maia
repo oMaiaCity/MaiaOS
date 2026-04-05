@@ -1,0 +1,38 @@
+{
+	"$factory": "°maia/factory/meta",
+	"title": "°maia/views/input/for-chat.interface.maia",
+	"description": "Chat input view",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"UPDATE_INPUT": {
+			"type": "object",
+			"description": "Update input",
+			"properties": {
+				"value": {
+					"type": "string",
+					"description": "Input value"
+				}
+			},
+			"required": [
+				"value"
+			],
+			"additionalProperties": false
+		},
+		"FORM_SUBMIT": {
+			"type": "object",
+			"description": "Form submit",
+			"properties": {
+				"value": {
+					"type": "string",
+					"description": "Form value (message text)"
+				}
+			},
+			"required": [
+				"value"
+			],
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

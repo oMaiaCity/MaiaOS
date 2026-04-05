@@ -69,7 +69,7 @@ let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'th
 let currentView = 'account' // Current schema filter (default: 'account')
 let currentContextCoValueId = null // Currently loaded CoValue in main context (explorer-style navigation)
 let currentVibe = null // Currently loaded vibe (null = DB view mode, 'todos' = todos vibe, etc.)
-let currentSpark = null // Grid hierarchy: null = sparks level, '°Maia' = avens for that spark
+let currentSpark = null // Grid hierarchy: null = sparks level, '°maia' = avens for that spark
 let navigationHistory = [] // Navigation history stack for back button
 let isRendering = false // Guard to prevent render loops
 let pendingRender = false // Re-run render when navigateToScreen called while renderApp is still awaiting
@@ -1054,7 +1054,7 @@ function navigateToScreen(screen, options = {}) {
 
 /**
  * Load a spark context (grid hierarchy level 1 → level 2)
- * @param {string|null} spark - Spark name (e.g. '°Maia') or null to go back to sparks level
+ * @param {string|null} spark - Spark name (e.g. '°maia') or null to go back to sparks level
  */
 function loadSpark(spark) {
 	currentSpark = spark

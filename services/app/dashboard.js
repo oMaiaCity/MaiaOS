@@ -3,9 +3,9 @@
  * Handles dashboard screen and vibe viewer rendering
  */
 
-import { DEFAULT_VIBE_CARD_ICON_SVG } from '@MaiaOS/factories/vibe-icon-svgs'
 import { resolveAccountCoIdsToProfiles } from '@MaiaOS/loader'
 import { createPerfTracer } from '@MaiaOS/logs'
+import { DEFAULT_CARD_ICON_SVG } from '@MaiaOS/vibes/dashboard-icon-svgs'
 import { findSessionChatIntentActorId, resolveChatVibeCoId } from './maia-ai-global.js'
 import { MAIADB_LAYER_STACK_ICON_SVG } from './maia-icons.js'
 import {
@@ -55,7 +55,7 @@ async function resolveVibeIconSvgFromManifest(maia, manifest) {
 		const joined = raw.items.join('')
 		if (/^<svg[\s>/]/i.test(joined) && !/<script/i.test(joined)) return joined
 	}
-	return DEFAULT_VIBE_CARD_ICON_SVG
+	return DEFAULT_CARD_ICON_SVG
 }
 
 /**
@@ -177,7 +177,7 @@ async function loadVibesFromSpark(maia, sparkCoId) {
 				const vibeCoId = vibesData[vibeKey]
 				let name = `${vibeKey.charAt(0).toUpperCase() + vibeKey.slice(1)}`
 				let description = `Open ${name}`
-				let iconSvg = DEFAULT_VIBE_CARD_ICON_SVG
+				let iconSvg = DEFAULT_CARD_ICON_SVG
 				try {
 					const manifestStore = await maia.do({ op: 'read', factory: null, key: vibeCoId })
 					const manifest = manifestStore?.value ?? manifestStore
@@ -413,7 +413,7 @@ export async function renderVibeViewer(
 		}
 		perf.step('profile+avatar')
 		let vibeLabel = 'Vibe'
-		let vibeNavbarIconSvg = DEFAULT_VIBE_CARD_ICON_SVG
+		let vibeNavbarIconSvg = DEFAULT_CARD_ICON_SVG
 		if (currentVibe?.startsWith?.('co_z')) {
 			try {
 				await perf.measure('vibeManifestTitle', async () => {

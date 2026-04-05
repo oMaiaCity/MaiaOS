@@ -1,0 +1,14 @@
+{
+	"$factory": "°maia/factory/vibe",
+	"name": "Paper",
+	"description": "Docs / Notes - collaborative notes",
+	"actor": "°maia/views/layout-paper/actor.maia",
+	"runtime": [
+		"browser"
+	],
+	"dependencies": [
+		"°maia/views/layout-paper/actor.maia",
+		"°maia/views/paper/actor.maia",
+		"°maia/services/paper/actor.maia"
+	]
+}

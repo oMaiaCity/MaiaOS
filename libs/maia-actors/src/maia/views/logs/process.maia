@@ -1,0 +1,26 @@
+{
+	"$factory": "°maia/factory/process",
+	"handlers": {
+		"ERROR": [
+			{
+				"ctx": {
+					"error": "$$errors.0.message"
+				}
+			}
+		],
+		"RETRY": [
+			{
+				"ctx": {
+					"error": null
+				}
+			}
+		],
+		"DISMISS": [
+			{
+				"ctx": {
+					"error": null
+				}
+			}
+		]
+	}
+}

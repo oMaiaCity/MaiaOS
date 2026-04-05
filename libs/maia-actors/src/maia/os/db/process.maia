@@ -1,0 +1,15 @@
+{
+	"$factory": "°maia/factory/process",
+	"handlers": {
+		"DB_OP": [
+			{
+				"function": true
+			}
+		],
+		"SPARK_OP": [
+			{
+				"function": true
+			}
+		]
+	}
+}

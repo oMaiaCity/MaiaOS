@@ -1,7 +1,7 @@
 {
-	"$factory": "°Maia/factory/meta",
-	"$id": "°Maia/factory/os/avens-identity-registry",
-	"title": "°Maia/factory/os/avens-identity-registry",
+	"$factory": "°maia/factory/meta",
+	"$id": "°maia/factory/os/avens-identity-registry",
+	"title": "°maia/factory/os/avens-identity-registry",
 	"description": "Avens identity registry. Keys: username or account co-id. Values: aven identity comap co-id.",
 	"cotype": "comap",
 	"indexing": false,

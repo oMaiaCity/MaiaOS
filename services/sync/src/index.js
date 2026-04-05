@@ -10,15 +10,18 @@
  *   PEER_SYNC_STORAGE=pglite | postgres (required - server never runs without persistent storage)
  *     - pglite: PEER_DB_PATH (default ./pg-lite.db)
  *     - postgres: PEER_SYNC_DB_URL (required)
- *   AVEN_MAIA_GUARDIAN: Human account co-id (co_z...). If set, add as admin of °Maia spark guardian; also seeds /sync/write so that account can sync without POST /register.
+ *   AVEN_MAIA_GUARDIAN: Human account co-id (co_z...). If set, add as admin of °maia spark guardian; also seeds /sync/write so that account can sync without POST /register.
  *   PEER_SYNC_SEED: Default false. Set true to run genesis seed (bootstrap + schemas + vibes).
  *     - true: Fresh seed (first deploy or intentional reset). May overwrite existing scaffold.
  *     - false/unset: Skip seed, use persisted data. Never overwrite on restart.
+ *   PEER_SYNC_MIGRATE: Default false. Set true to non-destructively update configs from code (nano-ID keyed).
+ *     - Mutually exclusive with PEER_SYNC_SEED. Requires an existing scaffold (run PEER_SYNC_SEED once first).
  *   SEED_VIBES: Default "all". Which vibes to seed (todos, chat, quickjs-add, etc). "all" seeds every vibe including quickjs-add.
  *   PEER_APP_HOST: Allowed CORS origin (e.g. https://next.maia.city). When set, only that origin can call sync/LLM in production. Unset = * (dev).
  *   MAIA_DEV_CORS=1: With Postgres local dev, enable same multi-origin dev CORS as PGlite (localhost / 127.0.0.1 / ::1 on port 4200).
  */
 
+import { getSeedConfig } from '@MaiaOS/actors/seed-config'
 import { collectCapabilityGrantCoIdsFromStreamContent } from '@MaiaOS/db'
 import {
 	createWebSocketPeer,
@@ -26,7 +29,6 @@ import {
 	factoryMigration,
 	generateRegistryName,
 	getAllFactories,
-	getSeedConfig,
 	loadOrCreateAgentAccount,
 	MaiaDB,
 	MaiaScriptEvaluator,
@@ -71,6 +73,12 @@ const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
 
 const avenMaiaGuardian = process.env.AVEN_MAIA_GUARDIAN?.trim() || null
 const peerSyncSeed = process.env.PEER_SYNC_SEED === 'true'
+const peerSyncMigrate = process.env.PEER_SYNC_MIGRATE === 'true'
+if (peerSyncSeed && peerSyncMigrate) {
+	throw new Error(
+		`${OPS_PREFIX.sync} PEER_SYNC_SEED and PEER_SYNC_MIGRATE are mutually exclusive. Use one or neither.`,
+	)
+}
 // SEED_VIBES: which vibes to seed on genesis. Default "all" (includes quickjs-add). Override: "todos,chat" or "todos,chat,quickjs-add"
 const seedVibesConfig = process.env.SEED_VIBES || 'all'
 
@@ -212,7 +220,7 @@ async function verifyAccountBinding(peer, accountId, expectedDidKey) {
 	}
 }
 
-/** Get spark.os.capabilities stream co-id (registries → sparks → °Maia → os → capabilities). */
+/** Get spark.os.capabilities stream co-id (registries → sparks → °maia → os → capabilities). */
 async function getCapabilitiesStreamId(worker) {
 	try {
 		return await getCoIdByPath(worker.peer, getRegistriesId(worker.account), [
@@ -255,7 +263,7 @@ async function pushCapabilityToStream(worker, { sub, cmd, pol, exp }) {
 	if (await hasValidCapability(worker, sub, cmd)) return
 	const capabilitiesStreamId = await getCapabilitiesStreamId(worker)
 	if (!capabilitiesStreamId?.startsWith('co_z')) return
-	const capabilitySchemaCoId = worker.peer.systemFactoryCoIds?.get?.('°Maia/factory/os/capability')
+	const capabilitySchemaCoId = worker.peer.systemFactoryCoIds?.get?.('°maia/factory/os/capability')
 	if (!capabilitySchemaCoId) return
 	try {
 		const createResult = await worker.dataEngine.execute({
@@ -445,7 +453,7 @@ async function checkSyncWriteCapability(worker, msg) {
 	return { ok: true }
 }
 
-/** Returns account.registries + °Maia spark for human/agent to link. Set account.registries; sparks resolved via registries.sparks. */
+/** Returns account.registries + °maia spark for human/agent to link. Set account.registries; sparks resolved via registries.sparks. */
 async function handleSyncRegistry(worker, req) {
 	try {
 		const registriesId = getRegistriesId(worker.account)
@@ -459,7 +467,7 @@ async function handleSyncRegistry(worker, req) {
 		return jsonResponse(
 			{
 				registries: registriesId,
-				...(maiaSparkId?.startsWith('co_z') && { '°Maia': maiaSparkId }),
+				...(maiaSparkId?.startsWith('co_z') && { '°maia': maiaSparkId }),
 			},
 			200,
 			{},
@@ -550,7 +558,7 @@ async function handleRegister(worker, body, req) {
 				return err(`username "${u}" already registered to different identity`, 409, {}, req)
 
 			// Create Human CoMap (public: everyone reader) and dual-key registry
-			const humanSchemaCoId = peer.systemFactoryCoIds?.get?.('°Maia/factory/os/human')
+			const humanSchemaCoId = peer.systemFactoryCoIds?.get?.('°maia/factory/os/human')
 			if (!humanSchemaCoId)
 				return err('Human schema not found. Ensure genesis seed has run.', 500, {}, req)
 
@@ -627,7 +635,7 @@ async function handleRegister(worker, body, req) {
 			if (raw?.[u] != null && raw[u] !== coId)
 				return err(`username "${u}" already registered to different identity`, 409, {}, req)
 
-			const avenIdentitySchemaCoId = peer.systemFactoryCoIds?.get?.('°Maia/factory/os/aven-identity')
+			const avenIdentitySchemaCoId = peer.systemFactoryCoIds?.get?.('°maia/factory/os/aven-identity')
 			if (!avenIdentitySchemaCoId)
 				return err('Aven identity schema not found. Ensure genesis seed has run.', 500, {}, req)
 
@@ -1111,8 +1119,8 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 		// loadAccount defers migration; seed needs guardian in os.groups
 		await factoryMigration(result.account, localNode)
 
-		// Genesis: seed only when PEER_SYNC_SEED=true (explicit, no co-value inference).
-		if (peerSyncSeed) {
+		// Genesis: PEER_SYNC_SEED=true, or non-destructive config sync: PEER_SYNC_MIGRATE=true
+		if (peerSyncSeed || peerSyncMigrate) {
 			const allVibeRegistries = await getAllVibeRegistries()
 			const vibeRegistries = await filterVibesForSeeding(allVibeRegistries, seedVibesConfig)
 			if (vibeRegistries.length === 0) {
@@ -1149,17 +1157,26 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 				configs: configsForSeed,
 				schemas,
 				data,
-				forceFreshSeed: true, // PEER_SYNC_SEED=true: always bootstrap, bypass idempotency
+				forceFreshSeed: peerSyncSeed,
+				forceMigrate: peerSyncMigrate,
 			})
 			if (seedResult?.ok === false && seedResult?.errors?.length) {
 				const msg = seedResult.errors.map((e) => e?.message ?? e).join('; ')
-				throw new Error(`${OPS_PREFIX.sync} Genesis seed failed: ${msg}`)
+				throw new Error(
+					`${OPS_PREFIX.sync} ${peerSyncMigrate ? 'Migrate' : 'Genesis seed'} failed: ${msg}`,
+				)
 			}
-			opsSync.log(
-				`Genesis seeded: ${vibeRegistries.length} vibe(s) (schemas + scaffold). Set PEER_SYNC_SEED=false for subsequent restarts.`,
-			)
+			if (peerSyncSeed) {
+				opsSync.log(
+					`Genesis seeded: ${vibeRegistries.length} vibe(s) (schemas + scaffold). Set PEER_SYNC_SEED=false for subsequent restarts.`,
+				)
+			} else {
+				opsSync.log(
+					`Config migrate applied: ${vibeRegistries.length} vibe(s). Set PEER_SYNC_MIGRATE=false when done.`,
+				)
+			}
 		} else {
-			opsSync.log('PEER_SYNC_SEED not set — using persisted scaffold (skip seed).')
+			opsSync.log('PEER_SYNC_SEED / PEER_SYNC_MIGRATE not set — using persisted scaffold (skip seed).')
 		}
 
 		await peer.resolveSystemSparkCoId()
@@ -1189,7 +1206,7 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 			}).catch((e) => opsSync.warn('Self-register aven:', e?.message))
 		}
 
-		// Add AVEN_MAIA_GUARDIAN as admin of °Maia spark guardian group. Retry on each start until success (account may sync after client connects).
+		// Add AVEN_MAIA_GUARDIAN as admin of °maia spark guardian group. Retry on each start until success (account may sync after client connects).
 		if (avenMaiaGuardian?.startsWith('co_z')) {
 			const tryAddGuardian = async () => {
 				const guardian = await agentWorker.peer.getMaiaGroup()
@@ -1199,7 +1216,7 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 			}
 			tryAddGuardian()
 				.then((ok) => {
-					if (ok) opsSync.log('Added guardian as admin of °Maia spark.')
+					if (ok) opsSync.log('Added guardian as admin of °maia spark.')
 				})
 				.catch((e) => {
 					const msg = e?.message ?? String(e)
@@ -1218,7 +1235,7 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 							const ok = await tryAddGuardian()
 							if (ok) {
 								clearInterval(id)
-								opsSync.log('Added guardian as admin of °Maia spark.')
+								opsSync.log('Added guardian as admin of °maia spark.')
 							}
 						} catch (err) {
 							const msg = err?.message ?? ''

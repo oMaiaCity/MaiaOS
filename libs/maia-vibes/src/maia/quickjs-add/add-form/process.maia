@@ -1,0 +1,47 @@
+{
+	"$factory": "°maia/factory/process",
+	"handlers": {
+		"UPDATE_INPUT_A": [
+			{
+				"ctx": {
+					"inputA": "$$value"
+				}
+			}
+		],
+		"UPDATE_INPUT_B": [
+			{
+				"ctx": {
+					"inputB": "$$value"
+				}
+			}
+		],
+		"ADD": [
+			{
+				"ask": {
+					"target": "°maia/services/sandboxed-add/actor.maia",
+					"type": "ADD",
+					"payload": {
+						"a": "$$a",
+						"b": "$$b"
+					}
+				}
+			}
+		],
+		"SUCCESS": [
+			{
+				"ctx": {
+					"result": "$$result.result",
+					"error": null
+				}
+			}
+		],
+		"ERROR": [
+			{
+				"ctx": {
+					"error": "$$errors.0.message",
+					"result": ""
+				}
+			}
+		]
+	}
+}

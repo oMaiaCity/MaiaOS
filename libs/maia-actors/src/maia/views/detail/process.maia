@@ -1,0 +1,75 @@
+{
+	"$factory": "°maia/factory/process",
+	"handlers": {
+		"LOAD_ACTOR": [
+			{
+				"ctx": {
+					"sparkId": "$$id",
+					"hasSpark": {
+						"$ne": [
+							"$$id",
+							null
+						]
+					},
+					"showEmptyState": {
+						"$eq": [
+							"$$id",
+							null
+						]
+					},
+					"showContent": {
+						"$ne": [
+							"$$id",
+							null
+						]
+					}
+				}
+			}
+		],
+		"REMOVE_MEMBER": [
+			{
+				"tell": {
+					"target": "°maia/services/spark/actor.maia",
+					"type": "REMOVE_MEMBER",
+					"payload": {
+						"id": "$sparkId",
+						"memberId": "$$memberId"
+					}
+				}
+			}
+		],
+		"SUCCESS": [
+			{
+				"tell": {
+					"target": "$inputActor",
+					"type": "SUCCESS",
+					"payload": {}
+				}
+			}
+		],
+		"ERROR": [
+			{
+				"tell": {
+					"target": "$inputActor",
+					"type": "ERROR",
+					"payload": {
+						"errors": "$$errors"
+					}
+				}
+			}
+		],
+		"FORM_SUBMIT": [
+			{
+				"tell": {
+					"target": "°maia/services/spark/actor.maia",
+					"type": "ADD_MEMBER",
+					"payload": {
+						"id": "$sparkId",
+						"memberId": "$$value",
+						"role": "writer"
+					}
+				}
+			}
+		]
+	}
+}

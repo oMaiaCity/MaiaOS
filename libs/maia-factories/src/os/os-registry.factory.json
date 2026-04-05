@@ -1,7 +1,7 @@
 {
-	"$factory": "°Maia/factory/meta",
-	"$id": "°Maia/factory/os/os-registry",
-	"title": "°Maia/factory/os/os-registry",
+	"$factory": "°maia/factory/meta",
+	"$id": "°maia/factory/os/os-registry",
+	"title": "°maia/factory/os/os-registry",
 	"description": "OS CoMap - contains groups, factories, indexes. Stored in spark.os",
 	"cotype": "comap",
 	"indexing": false,

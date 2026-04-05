@@ -17,9 +17,9 @@ import {
 /**
  * Create a generic CoMap with MANDATORY schema validation
  *
- * Uses °Maia spark's group when account is passed; uses group directly when resolved group passed.
+ * Uses °maia spark's group when account is passed; uses group directly when resolved group passed.
  *
- * @param {RawAccount|RawGroup} accountOrGroup - Account (resolves °Maia spark group) or Group
+ * @param {RawAccount|RawGroup} accountOrGroup - Account (resolves °maia spark group) or Group
  * @param {Object} init - Initial properties
  * @param {string} factoryName - Schema name or co-id for headerMeta (REQUIRED - use "@metaSchema" for meta schema creation)
  * @param {LocalNode} [node] - LocalNode instance (required if accountOrGroup is account)
@@ -33,6 +33,7 @@ export async function createCoMap(
 	factoryName,
 	_node = null,
 	dbEngine = null,
+	nanoid = null,
 ) {
 	let group = accountOrGroup
 
@@ -44,17 +45,17 @@ export async function createCoMap(
 		// Accounts have profile property, regular groups don't
 		const profileId = accountOrGroup.get('profile')
 		if (profileId) {
-			// It's an account - resolve °Maia spark's group via getSparkGroup
+			// It's an account - resolve °maia spark's group via getSparkGroup
 			const peer = dbEngine?.peer
 			if (!peer) {
 				throw new Error(
-					'[createCoMap] dbEngine.peer required when passing account (to resolve °Maia spark group)',
+					'[createCoMap] dbEngine.peer required when passing account (to resolve °maia spark group)',
 				)
 			}
 			const { getSparkGroup } = await import('../groups/groups.js')
-			group = await getSparkGroup(peer, '°Maia')
+			group = await getSparkGroup(peer, '°maia')
 			if (!group) {
-				throw new Error('[createCoMap] °Maia spark group not found. Ensure bootstrap has run.')
+				throw new Error('[createCoMap] °maia spark group not found. Ensure bootstrap has run.')
 			}
 		}
 		// If no profileId, accountOrGroup is a group - use as-is (group = accountOrGroup from line 27)
@@ -81,7 +82,7 @@ export async function createCoMap(
 		})
 	}
 
-	const meta = createFactoryMeta(factoryName)
+	const meta = createFactoryMeta(factoryName, nanoid)
 
 	// Create CoMap with metadata passed to cojson
 	const comap = group.createMap(init, meta)

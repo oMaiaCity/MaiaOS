@@ -1,0 +1,20 @@
+{
+	"$factory": "°maia/factory/vibe",
+	"name": "Chat",
+	"description": "CTO-level AI assistant for MaiaOS codebase",
+	"actor": "°maia/chat/intent/intent.actor.maia",
+	"runtime": [
+		"browser"
+	],
+	"dependencies": [
+		"°maia/chat/intent/intent.actor.maia",
+		"°maia/views/layout-chat/actor.maia",
+		"°maia/views/messages/actor.maia",
+		"°maia/views/paper/actor.maia",
+		"°maia/os/messages/actor.maia",
+		"°maia/services/paper/actor.maia",
+		"°maia/services/todos/actor.maia",
+		"°maia/os/db/actor.maia",
+		"°maia/os/ai/actor.maia"
+	]
+}

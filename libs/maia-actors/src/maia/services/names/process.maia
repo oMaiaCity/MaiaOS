@@ -1,0 +1,10 @@
+{
+	"$factory": "°maia/factory/process",
+	"handlers": {
+		"COMPUTE_NAMES": [
+			{
+				"function": true
+			}
+		]
+	}
+}

@@ -1,0 +1,42 @@
+{
+	"$factory": "°maia/factory/view",
+	"content": {
+		"tag": "div",
+		"class": "grid",
+		"$each": {
+			"items": "$items",
+			"template": {
+				"tag": "div",
+				"class": "card",
+				"children": [
+					{
+						"tag": "div",
+						"class": "card-name",
+						"text": "$$profileName"
+					},
+					{
+						"$each": {
+							"items": "$$cardRows",
+							"template": {
+								"tag": "div",
+								"class": "card-row",
+								"children": [
+									{
+										"tag": "div",
+										"class": "card-label",
+										"text": "$$label"
+									},
+									{
+										"tag": "div",
+										"class": "card-value",
+										"text": "$$value"
+									}
+								]
+							}
+						}
+					}
+				]
+			}
+		}
+	}
+}

@@ -113,7 +113,7 @@ export async function waitForRegistriesSparksCoId(store, registriesCoId, timeout
 }
 
 /**
- * Wait until sparks CoMap has the system registry key (e.g. °Maia) set to a co_z id.
+ * Wait until sparks CoMap has the system registry key (e.g. °maia) set to a co_z id.
  * @param {import('../../reactive-store.js').ReactiveStore} sparksStore
  * @param {string} sparksCoId
  * @param {string} registryKey

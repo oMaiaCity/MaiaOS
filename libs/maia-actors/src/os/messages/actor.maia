@@ -1,8 +1,0 @@
-{
-	"$factory": "°Maia/factory/actor",
-	"$id": "°Maia/actor/os/messages",
-	"context": "°Maia/actor/os/messages/context",
-	"process": "°Maia/actor/os/messages/process",
-	"inbox": "°Maia/actor/os/messages/inbox",
-	"interface": "°Maia/actor/os/messages/interface"
-}

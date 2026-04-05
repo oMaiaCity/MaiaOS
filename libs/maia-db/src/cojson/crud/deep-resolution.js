@@ -139,7 +139,7 @@ async function _waitForCoValueAvailable(peer, coId, timeoutMs = 5000) {
  */
 export async function resolveNestedReferences(peer, data, visited = new Set(), options = {}) {
 	const {
-		maxDepth = 15, // TODO: temporarily scaled up from 10 for °Maia spark detail
+		maxDepth = 15, // TODO: temporarily scaled up from 10 for °maia spark detail
 		timeoutMs = 5000, // Kept for API compatibility but not used in progressive mode
 		currentDepth = 0,
 	} = options
@@ -271,7 +271,7 @@ export async function resolveNestedReferences(peer, data, visited = new Set(), o
 export async function deepResolveCoValue(peer, coId, options = {}) {
 	const {
 		deepResolve = true,
-		maxDepth = 15, // TODO: temporarily scaled up from 10 for °Maia spark detail
+		maxDepth = 15, // TODO: temporarily scaled up from 10 for °maia spark detail
 		timeoutMs = 5000,
 	} = options
 

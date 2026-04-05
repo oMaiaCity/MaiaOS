@@ -184,6 +184,7 @@
         "@MaiaOS/maia-ai": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
+        "@MaiaOS/vibes": "workspace:*",
         "@tauri-apps/api": "2.10.1",
       },
       "devDependencies": {
@@ -194,6 +195,7 @@
       "name": "@MaiaOS/sync",
       "version": "26.4.21315-next",
       "dependencies": {
+        "@MaiaOS/actors": "workspace:*",
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/loader": "workspace:*",
         "@MaiaOS/logs": "workspace:*",

@@ -1,13 +1,19 @@
 import { isFactoryRef } from './patterns.js'
 
-const ACTOR_REF = /^[@°][^/]+.*\/actor\//
+/** Actor instance targets in @actors: file path ending with actor.maia (e.g. …/intent.actor.maia or …/actor.maia) */
+const ACTOR_REF_FILE = /^[@°].*actor\.maia$/
+
+function isActorTargetRef(ref) {
+	return typeof ref === 'string' && ACTOR_REF_FILE.test(ref)
+}
+
 const INSTANCE_REF = /^[@°]/
 
 /** Resolve ref to co-id. Returns co-id or null/ref. type: 'schema' | 'target' | 'instance' */
 function resolveRef(ref, coIdMap, type = 'instance') {
 	if (!ref || typeof ref !== 'string' || ref.startsWith('co_z')) return ref
 	if (type === 'schema' && isFactoryRef(ref)) return coIdMap.get(ref) ?? null
-	if (type === 'target' && ACTOR_REF.test(ref)) return coIdMap.get(ref) ?? null
+	if (type === 'target' && isActorTargetRef(ref)) return coIdMap.get(ref) ?? null
 	if (type === 'instance' && INSTANCE_REF.test(ref)) return coIdMap.get(ref) ?? null
 	return type === 'schema' ? ref : null
 }
@@ -15,7 +21,7 @@ function resolveRef(ref, coIdMap, type = 'instance') {
 /** Infer ref type from format. Order: schema (most specific) > target > instance */
 function inferRefType(ref) {
 	if (isFactoryRef(ref)) return 'schema'
-	if (ACTOR_REF.test(ref)) return 'target'
+	if (isActorTargetRef(ref)) return 'target'
 	if (INSTANCE_REF.test(ref)) return 'instance'
 	return null
 }
@@ -78,9 +84,9 @@ function walkAndTransformRefs(obj, coIdMap, options = {}, ancestorActors = null)
 	if (obj['@actors'] && typeof obj['@actors'] === 'object' && !Array.isArray(obj['@actors'])) {
 		for (const [namekey, actorRef] of Object.entries(obj['@actors'])) {
 			if (typeof actorRef === 'string' && !actorRef.startsWith('co_z')) {
-				if (!ACTOR_REF.test(actorRef))
+				if (!isActorTargetRef(actorRef))
 					throw new Error(
-						`[SchemaTransformer] context.@actors[${namekey}] must use @namespace/actor/instance format, got: ${actorRef}`,
+						`[SchemaTransformer] context.@actors[${namekey}] must be a file path ending in .actor.maia, got: ${actorRef}`,
 					)
 				const coId = resolveRef(actorRef, coIdMap, 'target')
 				if (coId) obj['@actors'][namekey] = coId
@@ -136,25 +142,16 @@ export function transformForSeeding(schemaOrInstance, coIdMap, options = {}) {
 	}
 
 	// Detect if this is a schema or instance
-	// KEY DIFFERENCE:
-	// - Schemas have $schema: "°Maia/factory/meta" (or "https://json-schema.org/...")
-	// - Instances have $schema or $factory: "°Maia/factory/aven", "°Maia/factory/actor", etc.
-	const factoryRef = schemaOrInstance.$schema ?? schemaOrInstance.$factory
+	const factoryRef = schemaOrInstance.$factory
 
-	// Check if $schema points to meta-schema (indicates this IS a schema definition)
-	// Meta schema: @domain/schema/meta or standard JSON Schema URLs
-	const isMetaSchema =
-		(typeof factoryRef === 'string' && /\/factory\/meta$/.test(factoryRef)) ||
-		(typeof factoryRef === 'string' && factoryRef.startsWith('https://json-schema.org/')) ||
-		(typeof factoryRef === 'string' && factoryRef.startsWith('https://'))
+	const isMetaSchema = typeof factoryRef === 'string' && /\/factory\/meta$/.test(factoryRef)
 
-	// If $schema points to meta-schema, it's a schema definition
+	// Meta-schema object → schema definition
 	if (isMetaSchema) {
 		return transformSchemaForSeeding(schemaOrInstance, coIdMap)
 	}
 
-	// If $schema points to a data schema (e.g., "°Maia/factory/aven", "°Maia/factory/actor"), it's an instance
-	// Also check for instance-specific properties as additional confirmation
+	// Data factory (non-meta) or instance-shaped properties
 	const hasInstanceProperties =
 		schemaOrInstance.actor !== undefined ||
 		schemaOrInstance.context !== undefined ||
@@ -166,7 +163,6 @@ export function transformForSeeding(schemaOrInstance, coIdMap, options = {}) {
 		schemaOrInstance.subscribers !== undefined ||
 		(schemaOrInstance.name !== undefined && schemaOrInstance.description !== undefined)
 
-	// If $schema points to a data schema (not meta-schema), it's an instance
 	const isDataSchema = factoryRef && isFactoryRef(factoryRef) && !/\/factory\/meta$/.test(factoryRef)
 
 	if (isDataSchema || hasInstanceProperties) {
@@ -208,8 +204,7 @@ function transformSchemaForSeeding(schema, coIdMap) {
 	const preservedLabel =
 		typeof transformed.$id === 'string' && transformed.$id.startsWith('°') ? transformed.$id : null
 
-	// Transform $factory reference (meta-schema: keep $schema for JSON Schema spec)
-	const factoryRef = transformed.$factory ?? transformed.$schema
+	const factoryRef = transformed.$factory
 	if (factoryRef && isFactoryRef(factoryRef)) {
 		const coId = coIdMap.get(factoryRef)
 		if (coId) {
@@ -308,7 +303,7 @@ function transformCoReferences(obj, coIdMap, path = '') {
 			return 0
 		}
 
-		// If it's a human-readable ID (starts with °Maia/factory/), look it up in coIdMap
+		// If it's a human-readable ID (starts with °maia/factory/), look it up in coIdMap
 		if (isFactoryRef(refValue)) {
 			const coId = coIdMap.get(refValue)
 			if (coId) {
@@ -362,8 +357,7 @@ function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 	// Deep clone to avoid mutating original
 	const transformed = JSON.parse(JSON.stringify(instance))
 
-	// Transform $factory and delete $schema when replaced
-	const factoryRef = transformed.$factory ?? transformed.$schema
+	const factoryRef = transformed.$factory
 	if (factoryRef && isFactoryRef(factoryRef)) {
 		const coId = coIdMap.get(factoryRef)
 		if (coId) {
@@ -389,11 +383,11 @@ function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 
 /**
  * Validate schema structure (single source of truth for all schema validation)
- * Checks both for °Maia/factory/ references and nested co-types
+ * Checks both for °maia/factory/ references and nested co-types
  * @param {Object} schema - Schema to validate
  * @param {string} path - Current path (for error messages)
  * @param {Object} [options] - Validation options
- * @param {boolean} [options.checkSchemaReferences=true] - Check for °Maia/factory/ references
+ * @param {boolean} [options.checkSchemaReferences=true] - Check for °maia/factory/ references
  * @param {boolean} [options.checkNestedCoTypes=true] - Check for nested co-types
  * @returns {Array<string>} Array of error messages (empty if valid)
  */
@@ -405,13 +399,13 @@ export function validateFactoryStructure(schema, path = '', options = {}) {
 		return errors
 	}
 
-	// Check for °Maia/factory/ references
+	// Check for °maia/factory/ references
 	if (checkSchemaReferences) {
-		// Check if this object has a $co keyword with °Maia/factory/ reference
+		// Check if this object has a $co keyword with °maia/factory/ reference
 		if (schema.$co && typeof schema.$co === 'string') {
 			if (isFactoryRef(schema.$co)) {
 				errors.push(
-					`Found °Maia/factory/ reference in $co at ${path || 'root'}: ${schema.$co}. All $co references must be transformed to co-ids.`,
+					`Found °maia/factory/ reference in $co at ${path || 'root'}: ${schema.$co}. All $co references must be transformed to co-ids.`,
 				)
 			}
 		}
@@ -419,14 +413,14 @@ export function validateFactoryStructure(schema, path = '', options = {}) {
 		// Check $factory reference
 		if (schema.$factory && typeof schema.$factory === 'string' && isFactoryRef(schema.$factory)) {
 			errors.push(
-				`Found °Maia/factory/ reference in $factory at ${path || 'root'}: ${schema.$factory}. $factory must be transformed to co-id.`,
+				`Found °maia/factory/ reference in $factory at ${path || 'root'}: ${schema.$factory}. $factory must be transformed to co-id.`,
 			)
 		}
 
 		// Check $id reference
 		if (schema.$id && typeof schema.$id === 'string' && isFactoryRef(schema.$id)) {
 			errors.push(
-				`Found °Maia/factory/ reference in $id at ${path || 'root'}: ${schema.$id}. $id must be transformed to co-id.`,
+				`Found °maia/factory/ reference in $id at ${path || 'root'}: ${schema.$id}. $id must be transformed to co-id.`,
 			)
 		}
 	}

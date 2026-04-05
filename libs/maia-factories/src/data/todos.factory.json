@@ -1,7 +1,7 @@
 {
-	"$id": "°Maia/factory/data/todos",
-	"$factory": "°Maia/factory/meta",
-	"title": "°Maia/factory/data/todos",
+	"$id": "°maia/factory/data/todos",
+	"$factory": "°maia/factory/meta",
+	"title": "°maia/factory/data/todos",
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {

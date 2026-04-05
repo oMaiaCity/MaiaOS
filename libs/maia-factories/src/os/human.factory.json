@@ -1,7 +1,7 @@
 {
-	"$factory": "°Maia/factory/meta",
-	"$id": "°Maia/factory/os/human",
-	"title": "°Maia/factory/os/human",
+	"$factory": "°maia/factory/meta",
+	"$id": "°maia/factory/os/human",
+	"title": "°maia/factory/os/human",
 	"description": "Canonical public identity: account + profile. Referenced by humans registry. View shape includes derived fields (id, accountId, registryName, profileName).",
 	"cotype": "comap",
 	"indexing": false,

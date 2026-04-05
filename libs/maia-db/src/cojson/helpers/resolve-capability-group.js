@@ -1,7 +1,7 @@
 /**
  * Resolve capability group co-ids to human-readable names
  * Format: @SparkName/CapabilityName
- * Used by maia-db to display "via °Maia/Guardian" instead of "via co_zVvK79kWN..."
+ * Used by maia-db to display "via °maia/Guardian" instead of "via co_zVvK79kWN..."
  */
 
 function truncate(str, maxLen = 16) {
@@ -127,7 +127,7 @@ async function buildCapabilityGroupMap(maia, accountId) {
 
 /**
  * Resolve group co-ids to capability display names
- * Format: @SparkName/CapabilityName, e.g. "°Maia/Guardian"
+ * Format: @SparkName/CapabilityName, e.g. "°maia/Guardian"
  * Only resolves capability groups from the current account's sparks; others fall back to truncated co-id
  *
  * @param {Object} maia - MaiaOS instance with maia.do()

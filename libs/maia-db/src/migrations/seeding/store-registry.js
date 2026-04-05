@@ -2,19 +2,16 @@
  * Store registry - populate spark.os.factories with factory + instance config co-ids
  */
 
-import {
-	ACTOR_CONFIG_REF_PATTERN,
-	INSTANCE_REF_PATTERN,
-	VIBE_ACTOR_REF_PATTERN,
-} from '@MaiaOS/factories'
+import { INSTANCE_REF_PATTERN } from '@MaiaOS/factories'
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import * as groups from '../../cojson/groups/groups.js'
+import { NANOID_KEY_PATTERN } from './nanoid-registry.js'
 
-const MAIA_SPARK = '°Maia'
+const MAIA_SPARK = '°maia'
 
 /**
  * Store registry in spark.os.factories CoMap.
- * Factories registry holds: factory defs (°Maia/factory/...) + instance config co-ids (°Maia/.../actor/..., inbox, etc.)
+ * Factories registry holds: factory defs (°maia/factory/...) + instance config co-ids (°maia/.../*.maia, vibe ids, etc.)
  */
 export async function storeRegistry(
 	account,
@@ -58,8 +55,8 @@ export async function storeRegistry(
 
 	if (!factories) {
 		let factoriesRegistrySchemaCoId = null
-		if (factoryCoIdMap?.has('°Maia/factory/os/factories-registry')) {
-			factoriesRegistrySchemaCoId = factoryCoIdMap.get('°Maia/factory/os/factories-registry')
+		if (factoryCoIdMap?.has('°maia/factory/os/factories-registry')) {
+			factoriesRegistrySchemaCoId = factoryCoIdMap.get('°maia/factory/os/factories-registry')
 		}
 		const schemaForFactories = factoriesRegistrySchemaCoId || EXCEPTION_FACTORIES.META_SCHEMA
 		const ctx = { node, account, guardian: maiaGroup }
@@ -80,11 +77,11 @@ export async function storeRegistry(
 		}
 	}
 
-	const metafactoryCoId = coIdRegistry.get('°Maia/factory/meta')
+	const metafactoryCoId = coIdRegistry.get('°maia/factory/meta')
 	if (metafactoryCoId) {
-		const existingCoId = factories.get('°Maia/factory/meta')
+		const existingCoId = factories.get('°maia/factory/meta')
 		if (!existingCoId) {
-			factories.set('°Maia/factory/meta', metafactoryCoId)
+			factories.set('°maia/factory/meta', metafactoryCoId)
 		}
 	}
 
@@ -92,14 +89,12 @@ export async function storeRegistry(
 	const entries =
 		instanceCoIdMap instanceof Map ? instanceCoIdMap.entries() : Object.entries(instanceCoIdMap ?? {})
 	for (const [key, coId] of entries) {
-		if (
-			typeof key === 'string' &&
-			typeof coId === 'string' &&
-			coId.startsWith('co_z') &&
-			(INSTANCE_REF_PATTERN.test(key) ||
-				ACTOR_CONFIG_REF_PATTERN.test(key) ||
-				VIBE_ACTOR_REF_PATTERN.test(key))
-		) {
+		if (typeof key !== 'string' || typeof coId !== 'string' || !coId.startsWith('co_z')) continue
+		if (NANOID_KEY_PATTERN.test(key)) {
+			factories.set(key, coId)
+			continue
+		}
+		if (INSTANCE_REF_PATTERN.test(key)) {
 			const existing = factories.get(key)
 			if (!existing) factories.set(key, coId)
 		}

@@ -1,7 +1,7 @@
 {
-	"$factory": "°Maia/factory/meta",
-	"$id": "°Maia/factory/view",
-	"title": "°Maia/factory/view",
+	"$factory": "°maia/factory/meta",
+	"$id": "°maia/factory/view",
+	"title": "°maia/factory/view",
 	"description": "UI structure definition with DOM tree, expressions, loops, and event handlers (recursive viewNode structure)",
 	"cotype": "comap",
 	"indexing": true,

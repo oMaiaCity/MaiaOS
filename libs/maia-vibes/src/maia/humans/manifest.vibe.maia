@@ -1,0 +1,13 @@
+{
+	"$factory": "°maia/factory/vibe",
+	"name": "Registries",
+	"description": "Browse humans and avens in the Maia registry — account ID, registry name, profile name",
+	"actor": "°maia/humans/intent/intent.actor.maia",
+	"runtime": [
+		"browser"
+	],
+	"dependencies": [
+		"°maia/humans/intent/intent.actor.maia",
+		"°maia/views/humans/actor.maia"
+	]
+}

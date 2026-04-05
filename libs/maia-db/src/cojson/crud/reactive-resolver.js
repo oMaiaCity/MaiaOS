@@ -24,7 +24,7 @@ export { waitForReactiveResolution } from './read-operations.js'
  * Resolve factory reactively - returns ReactiveStore that updates when factory becomes available
  *
  * @param {Object} peer - Backend instance
- * @param {string} factoryKey - Factory key (°Maia/factory/data/todos) or co-id (co_z...)
+ * @param {string} factoryKey - Factory key (°maia/factory/data/todos) or co-id (co_z...)
  * @param {Object} [options] - Options
  * @param {number} [options.timeoutMs=10000] - Timeout for waiting (unused in reactive mode, kept for compatibility)
  * @returns {ReactiveStore} ReactiveStore that updates when factory resolves:
@@ -50,7 +50,7 @@ export function resolveFactoryReactive(peer, factoryKey, options = {}) {
 	let osUnsubscribe = null
 	let factoriesUnsubscribe = null
 
-	// Set up reactive subscription to spark.os.factories for progressive resolution (account.registries.sparks[°Maia].os.factories)
+	// Set up reactive subscription to spark.os.factories for progressive resolution (account.registries.sparks[°maia].os.factories)
 	const setupReactiveSubscription = async () => {
 		const { getSparkOsId } = await import('../groups/groups.js')
 		const spark = peer?.systemSparkCoId
@@ -211,7 +211,7 @@ export function resolveCoValueReactive(peer, coId, _options = {}) {
  * Resolve query reactively - returns ReactiveStore that updates when query results become available
  *
  * @param {Object} peer - Backend instance
- * @param {Object} queryDef - Query definition { factory: '°Maia/factory/data/todos', filter: {...}, options: {...} }
+ * @param {Object} queryDef - Query definition { factory: '°maia/factory/data/todos', filter: {...}, options: {...} }
  * @param {Object} [options] - Options
  * @returns {ReactiveStore} ReactiveStore that updates when query resolves:
  *   - Initial: { loading: true, items: [] }

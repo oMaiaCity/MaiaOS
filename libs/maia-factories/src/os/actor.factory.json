@@ -1,35 +1,35 @@
 {
-	"$factory": "°Maia/factory/meta",
-	"$id": "°Maia/factory/actor",
-	"title": "°Maia/factory/actor",
+	"$factory": "°maia/factory/meta",
+	"$id": "°maia/factory/actor",
+	"title": "°maia/factory/actor",
 	"description": "Pure declarative actor specification",
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {
 		"$label": { "$ref": "#/$defs/registryLabel" },
 		"context": {
-			"$co": "°Maia/factory/context",
+			"$co": "°maia/factory/context",
 			"description": "Co-id reference to context definition"
 		},
-		"view": { "$co": "°Maia/factory/view", "description": "Co-id reference to view definition" },
+		"view": { "$co": "°maia/factory/view", "description": "Co-id reference to view definition" },
 		"process": {
-			"$co": "°Maia/factory/process",
+			"$co": "°maia/factory/process",
 			"description": "Co-id reference to process config (GenServer-style handlers)"
 		},
 		"brand": {
-			"$co": "°Maia/factory/style",
+			"$co": "°maia/factory/style",
 			"description": "Co-id reference to brand style definition (uses style schema)"
 		},
 		"style": {
-			"$co": "°Maia/factory/style",
+			"$co": "°maia/factory/style",
 			"description": "Co-id reference to local style definition"
 		},
 		"inbox": {
-			"$co": "°Maia/factory/inbox",
+			"$co": "°maia/factory/inbox",
 			"description": "Co-id reference to message inbox costream (append-only message feed)"
 		},
 		"interface": {
-			"$co": "°Maia/factory/meta",
+			"$co": "°maia/factory/meta",
 			"description": "Co-id reference to interface schema (standard Maia schema whose properties define accepted events with typed payloads). Every actor with an interface is LLM-callable by default."
 		},
 		"wasm": {
@@ -40,7 +40,7 @@
 					"type": "object",
 					"properties": {
 						"lang": { "type": "string", "enum": ["js"] },
-						"code": { "$co": "°Maia/factory/os/cotext" }
+						"code": { "$co": "°maia/factory/os/cotext" }
 					},
 					"required": ["lang", "code"],
 					"additionalProperties": false

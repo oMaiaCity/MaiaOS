@@ -1,0 +1,24 @@
+{
+	"$factory": "°maia/factory/meta",
+	"title": "°maia/views/tabs/todos.interface.maia",
+	"description": "Todos layout tabs",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"SWITCH_VIEW": {
+			"type": "object",
+			"description": "Switch view",
+			"properties": {
+				"viewMode": {
+					"type": "string",
+					"description": "View/tab id to switch to"
+				}
+			},
+			"required": [
+				"viewMode"
+			],
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

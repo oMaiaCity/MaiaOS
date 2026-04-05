@@ -1,0 +1,29 @@
+{
+	"$factory": "°maia/factory/context",
+	"sparkId": null,
+	"sparkDetails": {
+		"factory": "°maia/factory/data/spark",
+		"filter": {
+			"id": "$sparkId"
+		},
+		"map": {
+			"id": "id",
+			"name": "name",
+			"members": "$os.groups.guardian.accountMembers",
+			"groupId": "$os.groups.guardian.id"
+		}
+	},
+	"hasSpark": false,
+	"showEmptyState": true,
+	"showContent": false,
+	"inputActor": "@input",
+	"emptyStateMessage": "Select a spark to view details and members",
+	"categoryLabel": "Spark Details",
+	"groupIdLabel": "Group ID",
+	"membersLabel": "Members",
+	"addAvenLabel": "Add Aven",
+	"memberRemoveButtonText": "×",
+	"@actors": {
+		"input": "°maia/views/input/for-detail.actor.maia"
+	}
+}

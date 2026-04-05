@@ -1,0 +1,7 @@
+{
+	"$factory": "°maia/factory/actor",
+	"context": "°maia/services/spark/context.maia",
+	"process": "°maia/services/spark/process.maia",
+	"inbox": "°maia/services/spark/actor.maia/inbox",
+	"interface": "°maia/services/spark/interface.maia"
+}

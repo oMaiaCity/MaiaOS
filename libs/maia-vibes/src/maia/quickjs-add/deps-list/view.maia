@@ -1,0 +1,108 @@
+{
+	"$factory": "°maia/factory/view",
+	"content": {
+		"tag": "div",
+		"class": "layout-row",
+		"children": [
+			{
+				"tag": "aside",
+				"class": "aside-list",
+				"children": [
+					{
+						"tag": "div",
+						"class": "list-title",
+						"text": "$title"
+					},
+					{
+						"tag": "ul",
+						"class": "list",
+						"$each": {
+							"items": "$listItems",
+							"template": {
+								"tag": "li",
+								"class": "list-item",
+								"attrs": {
+									"data-selected": "$$.id === $selectedItem.id"
+								},
+								"children": [
+									{
+										"tag": "span",
+										"class": "list-item-label",
+										"text": "$$label"
+									}
+								],
+								"$on": {
+									"click": {
+										"send": "SELECT_ITEM",
+										"payload": {
+											"item": "$$"
+										}
+									}
+								}
+							}
+						}
+					}
+				]
+			},
+			{
+				"tag": "main",
+				"class": "main-area",
+				"children": [
+					{
+						"tag": "div",
+						"class": "detail-content",
+						"attrs": {
+							"data-has-selection": "$hasSelection"
+						},
+						"children": [
+							{
+								"tag": "h2",
+								"class": "main-title",
+								"text": "$selectedItem.id"
+							},
+							{
+								"tag": "div",
+								"class": "code-block",
+								"attrs": {
+									"contenteditable": true,
+									"data-placeholder": "No custom code attached — start typing to add"
+								},
+								"text": {
+									"$join": [
+										{
+											"$context": "selectedWasmCode.items"
+										},
+										""
+									]
+								},
+								"$on": {
+									"input": {
+										"send": "UPDATE_WASM_CODE",
+										"payload": {
+											"value": "@contentEditableValue"
+										},
+										"$debounce": 250
+									},
+									"blur": {
+										"send": "UPDATE_WASM_CODE",
+										"payload": {
+											"value": "@contentEditableValue"
+										}
+									}
+								}
+							}
+						]
+					},
+					{
+						"tag": "p",
+						"class": "placeholder-text",
+						"attrs": {
+							"data-has-selection": "$hasSelection"
+						},
+						"text": "Select an item from the list"
+					}
+				]
+			}
+		]
+	}
+}

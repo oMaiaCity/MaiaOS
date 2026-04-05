@@ -29,7 +29,7 @@ import { wrapStorageWithIndexingHooks } from '../indexing/storage-hook-wrapper.j
 import { wrapSyncManagerWithValidation } from '../sync/validation-hook-wrapper.js'
 
 /** Key used in `registries.sparks` CoMap for the primary OS spark (written at seed). */
-export const SYSTEM_SPARK_REGISTRY_KEY = '°Maia'
+export const SYSTEM_SPARK_REGISTRY_KEY = '°maia'
 
 export class MaiaDB {
 	/**
@@ -192,13 +192,13 @@ export class MaiaDB {
 		const trimmed = typeof name === 'string' ? name.trim() : ''
 		const normalizedName = trimmed && !trimmed.startsWith('°') ? `°${trimmed}` : trimmed
 		const maiaGuardian = await this.getMaiaGroup()
-		if (!maiaGuardian) throw new Error('[MaiaDB] °Maia spark group not found')
+		if (!maiaGuardian) throw new Error('[MaiaDB] °maia spark group not found')
 		const { createChildGroup } = await import('../groups/create.js')
 		const childGroup = createChildGroup(this.node, maiaGuardian, { name: normalizedName })
-		const sparkSchemaCoId = this.systemFactoryCoIds.get('°Maia/factory/data/spark')
-		const groupsSchemaCoId = this.systemFactoryCoIds.get('°Maia/factory/os/groups')
-		const osSchemaCoId = this.systemFactoryCoIds.get('°Maia/factory/os/os-registry')
-		const vibesRegistrySchemaCoId = this.systemFactoryCoIds.get('°Maia/factory/os/vibes-registry')
+		const sparkSchemaCoId = this.systemFactoryCoIds.get('°maia/factory/data/spark')
+		const groupsSchemaCoId = this.systemFactoryCoIds.get('°maia/factory/os/groups')
+		const osSchemaCoId = this.systemFactoryCoIds.get('°maia/factory/os/os-registry')
+		const vibesRegistrySchemaCoId = this.systemFactoryCoIds.get('°maia/factory/os/vibes-registry')
 		if (!sparkSchemaCoId || !groupsSchemaCoId || !osSchemaCoId || !vibesRegistrySchemaCoId) {
 			throw new Error('[MaiaDB] Spark scaffold factories not found')
 		}
@@ -341,7 +341,7 @@ export class MaiaDB {
 				if (typeof process !== 'undefined' && process.env?.DEBUG) return false
 			}
 			const factoriesRegistrySchemaCoId = this.systemFactoryCoIds.get(
-				'°Maia/factory/os/factories-registry',
+				'°maia/factory/os/factories-registry',
 			)
 			const schema = factoriesRegistrySchemaCoId || EXCEPTION_FACTORIES.META_SCHEMA
 			const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
@@ -370,7 +370,7 @@ export class MaiaDB {
 				const osContent = this.getCurrentContent(osCore)
 				if (osContent && typeof osContent.set === 'function') {
 					const capabilitiesStreamSchemaCoId = this.systemFactoryCoIds.get(
-						'°Maia/factory/os/capabilities-stream',
+						'°maia/factory/os/capabilities-stream',
 					)
 					const capSchema = capabilitiesStreamSchemaCoId || EXCEPTION_FACTORIES.META_SCHEMA
 					const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
