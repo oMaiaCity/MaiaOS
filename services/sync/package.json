@@ -12,6 +12,7 @@
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/loader": "workspace:*",
+		"@MaiaOS/vibes": "workspace:*",
 		"@MaiaOS/storage": "workspace:*",
 		"@MaiaOS/maia-distros": "workspace:*",
 		"@MaiaOS/maia-ucan": "workspace:*"

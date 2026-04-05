@@ -3,9 +3,9 @@
  * Handles dashboard screen and vibe viewer rendering
  */
 
-import { getAllVibeRegistries, resolveAccountCoIdsToProfiles } from '@MaiaOS/loader'
+import { resolveAccountCoIdsToProfiles } from '@MaiaOS/loader'
 import { createPerfTracer } from '@MaiaOS/logs'
-import { findSessionChatIntentActorId, PERSISTENT_CHAT_VIBE_KEY } from './maia-ai-global.js'
+import { findSessionChatIntentActorId, resolveChatVibeCoId } from './maia-ai-global.js'
 import { MAIADB_LAYER_STACK_ICON_SVG } from './maia-icons.js'
 import {
 	escapeAttr,
@@ -39,6 +39,11 @@ const DASHBOARD_LOGS_VIBE_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" wi
 
 const DEFAULT_VIBE_CARD_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 256 256" aria-hidden="true"><g fill="currentColor"><path d="M224 128a96 96 0 1 1-96-96a96 96 0 0 1 96 96" opacity="0.2"/><path d="M128 24a104 104 0 1 0 104 104A104.11 104.11 0 0 0 128 24m0 192a88 88 0 1 1 88-88a88.1 88.1 0 0 1-88 88"/></g></svg>`
 
+/** Safe HTML id fragment for a vibe CoMap co-id */
+function vibeDomId(vibeCoId) {
+	return `vc_${encodeURIComponent(vibeCoId).replace(/[^a-zA-Z0-9_-]/g, '_')}`
+}
+
 function dashboardVibeCardIconSvg(vibeKey) {
 	if (vibeKey === 'profile') return DASHBOARD_PROFILE_VIBE_ICON_SVG
 	if (vibeKey === 'sparks') return DASHBOARD_SPARKS_VIBE_ICON_SVG
@@ -47,13 +52,6 @@ function dashboardVibeCardIconSvg(vibeKey) {
 	if (vibeKey === 'registries') return DASHBOARD_REGISTRIES_VIBE_ICON_SVG
 	if (vibeKey === 'logs') return DASHBOARD_LOGS_VIBE_ICON_SVG
 	return DEFAULT_VIBE_CARD_ICON_SVG
-}
-
-/** Navbar icon for vibe viewer — same artwork as dashboard cards (plus Maia DB stack for `db`). */
-function vibeViewerHeaderIconSvg(vibeKey) {
-	if (!vibeKey) return DEFAULT_VIBE_CARD_ICON_SVG
-	if (vibeKey === 'db') return MAIADB_LAYER_STACK_ICON_SVG
-	return dashboardVibeCardIconSvg(vibeKey)
 }
 
 /**
@@ -121,6 +119,7 @@ async function loadSparksFromAccount(maia) {
 				const displayName = (await getSparkDisplayName(maia, coId)) || key
 				return {
 					key,
+					coId,
 					name: displayName,
 					description: `Context scope for ${displayName}`,
 				}
@@ -135,28 +134,13 @@ async function loadSparksFromAccount(maia) {
  * Load vibes from spark.os.vibes registry.
  * Dynamic vibes: name and description from CoJSON (vibe manifest CoValue).
  * @param {Object} maia - MaiaOS instance
- * @param {string} spark - Spark name (e.g. '°Maia')
+ * @param {string} sparkCoId - Spark CoMap co-id (co_z...)
  * @returns {Promise<Array>} Array of vibe objects with {key, name, description, coId}
  */
-async function loadVibesFromSpark(maia, spark) {
+async function loadVibesFromSpark(maia, sparkCoId) {
 	const vibes = []
-	if (!maia || !spark) return vibes
+	if (!maia || !sparkCoId?.startsWith?.('co_')) return vibes
 	try {
-		const accountStore = await maia.do({ op: 'read', factory: '@account', key: maia.id.maiaId.id })
-		const accountData = accountStore?.value ?? accountStore
-		const registriesId = accountData?.registries
-		if (typeof registriesId !== 'string' || !registriesId.startsWith('co_')) return vibes
-
-		const registriesStore = await maia.do({ op: 'read', factory: null, key: registriesId })
-		const registriesData = registriesStore?.value ?? registriesStore
-		const sparksId = registriesData.sparks
-		if (typeof sparksId !== 'string' || !sparksId.startsWith('co_')) return vibes
-
-		const sparksStore = await maia.do({ op: 'read', factory: sparksId, key: sparksId })
-		const sparksData = sparksStore?.value ?? sparksStore
-		const sparkCoId = sparksData?.[spark]
-		if (typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_')) return vibes
-
 		const sparkStore = await maia.do({ op: 'read', factory: null, key: sparkCoId })
 		const sparkData = sparkStore?.value ?? sparkStore
 		const osId = sparkData?.os
@@ -213,9 +197,11 @@ async function loadVibesFromSpark(maia, spark) {
 async function loadVibesFromAllSparks(maia, sparks) {
 	const all = []
 	for (const spark of sparks) {
-		const vibes = await loadVibesFromSpark(maia, spark.key)
+		const sid = spark.coId
+		if (typeof sid !== 'string' || !sid.startsWith('co_')) continue
+		const vibes = await loadVibesFromSpark(maia, sid)
 		for (const v of vibes) {
-			all.push({ ...v, spark: spark.key })
+			all.push({ ...v, sparkCoId: sid })
 		}
 	}
 	return all
@@ -301,7 +287,7 @@ export async function renderDashboard(
 	const vibeCards = vibes
 		.map(
 			(vibe) => `
-		<div class="dashboard-card whitish-card" data-maia-action="loadVibeWithSpark" data-vibe-key="${escapeAttr(vibe.key)}" data-spark="${escapeAttr(vibe.spark || '°Maia')}">
+		<div class="dashboard-card whitish-card" data-maia-action="loadVibeWithSpark" data-vibe-coid="${escapeAttr(vibe.coId)}" data-spark-coid="${escapeAttr(vibe.sparkCoId)}">
 			<div class="dashboard-card-content">
 				<div class="dashboard-card-icon">
 					${dashboardVibeCardIconSvg(vibe.key)}
@@ -387,7 +373,6 @@ export async function renderDashboard(
 
 /**
  * Render aven viewer screen (full-screen aven display)
- * @param {string} [currentSpark='°Maia'] - Spark context scope for avens
  */
 export async function renderVibeViewer(
 	maia,
@@ -395,7 +380,7 @@ export async function renderVibeViewer(
 	syncState,
 	currentVibe,
 	_navigateToScreen,
-	currentSpark = '°Maia',
+	_currentSpark = null,
 ) {
 	const perf = createPerfTracer('app', 'vibes')
 	perf.start(`renderVibeViewer:${currentVibe}`)
@@ -421,18 +406,19 @@ export async function renderVibeViewer(
 			accountAvatarHtml = getProfileAvatarHtml(null, { size: 44, className: 'navbar-avatar' })
 		}
 		perf.step('profile+avatar')
-		// Dvibes (special screens): hardcoded names. Dynamic vibes: resolved from registry manifest.
-		const dvibeNameMap = { db: 'MaiaDB' }
 		let vibeLabel = 'Vibe'
-		if (currentVibe) {
-			if (dvibeNameMap[currentVibe]) {
-				vibeLabel = dvibeNameMap[currentVibe]
-			} else {
-				await perf.measure('getAllVibeRegistries+vibeLabel', async () => {
-					const registries = await getAllVibeRegistries()
-					const reg = registries.find((r) => r?.vibe?.$id === `°Maia/vibe/${currentVibe}`)
-					vibeLabel = reg?.vibe?.name ?? `${currentVibe.charAt(0).toUpperCase() + currentVibe.slice(1)}`
+		if (currentVibe?.startsWith?.('co_z')) {
+			try {
+				await perf.measure('vibeManifestTitle', async () => {
+					const manifestStore = await maia.do({ op: 'read', factory: null, key: currentVibe })
+					const manifest = manifestStore?.value ?? manifestStore
+					vibeLabel =
+						typeof manifest?.name === 'string' && manifest.name.trim()
+							? manifest.name
+							: truncate(currentVibe, 24)
 				})
+			} catch (_e) {
+				vibeLabel = truncate(currentVibe, 24)
 			}
 		}
 		perf.step('vibeTitle')
@@ -440,8 +426,9 @@ export async function renderVibeViewer(
 		// Park persistent Chat intent off-screen so destroyActorsForContainer does not tear down the tree
 		if (maia?.runtime) {
 			await perf.measure('chatIntentReuse', async () => {
-				const intentId = findSessionChatIntentActorId(maia)
-				if (intentId) {
+				const intentId = await findSessionChatIntentActorId(maia)
+				const chatVibe = await resolveChatVibeCoId(maia)
+				if (intentId && chatVibe) {
 					let host = document.getElementById('maia-session-chat-host')
 					if (!host) {
 						host = document.createElement('div')
@@ -452,7 +439,7 @@ export async function renderVibeViewer(
 						document.body.appendChild(host)
 					}
 					try {
-						await maia.getEngines().actorEngine.reuseActor(intentId, host, PERSISTENT_CHAT_VIBE_KEY)
+						await maia.getEngines().actorEngine.reuseActor(intentId, host, chatVibe)
 					} catch (_e) {}
 				}
 			})
@@ -477,7 +464,7 @@ export async function renderVibeViewer(
 			<header class="db-header whitish-card">
 				<div class="header-content">
 					<div class="header-left">
-						<span class="db-header-maia-icon" aria-hidden="true">${vibeViewerHeaderIconSvg(currentVibe)}</span>
+						<span class="db-header-maia-icon" aria-hidden="true">${DEFAULT_VIBE_CARD_ICON_SVG}</span>
 						<h1>${escapeHtml(vibeLabel)}</h1>
 					</div>
 					<div class="header-center">
@@ -526,7 +513,7 @@ export async function renderVibeViewer(
 
 			<div class="vibe-viewer-main">
 				<div class="vibe-card">
-					<div id="vibe-container-${escapeHtml(currentVibe)}" class="vibe-container"></div>
+					<div id="${escapeAttr(vibeDomId(currentVibe))}" class="vibe-container"></div>
 				</div>
 			</div>
 		</div>
@@ -584,7 +571,7 @@ export async function renderVibeViewer(
 
 						const allContainers = document.querySelectorAll('.vibe-container')
 						if (allContainers.length > 1) {
-							const targetContainer = document.getElementById(`vibe-container-${currentVibe}`)
+							const targetContainer = document.getElementById(vibeDomId(currentVibe))
 							for (const container of allContainers) {
 								if (container !== targetContainer) {
 									container.remove()
@@ -592,7 +579,7 @@ export async function renderVibeViewer(
 							}
 						}
 
-						const container = document.getElementById(`vibe-container-${currentVibe}`)
+						const container = document.getElementById(vibeDomId(currentVibe))
 						if (!container || !maia) {
 							resolve()
 							return
@@ -601,31 +588,27 @@ export async function renderVibeViewer(
 						container.innerHTML = ''
 						perf.step('beforeLoadVibeFromAccount')
 
-						if (currentVibe === 'chat') {
-							const intentId = findSessionChatIntentActorId(maia)
+						const chatVibe = await resolveChatVibeCoId(maia)
+						if (chatVibe && currentVibe === chatVibe) {
+							const intentId = await findSessionChatIntentActorId(maia)
 							if (intentId) {
-								await perf.measure('loadVibeFromAccount(chat reuse)', async () =>
-									maia.getEngines().actorEngine.reuseActor(intentId, container, PERSISTENT_CHAT_VIBE_KEY),
+								await perf.measure('loadVibe(chat reuse)', async () =>
+									maia.getEngines().actorEngine.reuseActor(intentId, container, chatVibe),
 								)
 							} else {
-								await perf.measure('loadVibeFromAccount(chat)', async () =>
-									maia.loadVibeFromAccount(
-										'chat',
-										container,
-										currentSpark || '°Maia',
-										PERSISTENT_CHAT_VIBE_KEY,
-									),
+								await perf.measure('loadVibe(chat)', async () =>
+									maia.loadVibe(chatVibe, container, chatVibe),
 								)
 							}
 						} else {
-							await perf.measure('loadVibeFromAccount', async () =>
-								maia.loadVibeFromAccount(currentVibe, container, currentSpark || '°Maia'),
+							await perf.measure('loadVibe', async () =>
+								maia.loadVibe(currentVibe, container, currentVibe),
 							)
 						}
-						perf.step('afterLoadVibeFromAccount')
+						perf.step('afterLoadVibe')
 
 						setTimeout(() => {
-							const vibeContainerEl = document.getElementById(`vibe-container-${currentVibe}`)
+							const vibeContainerEl = document.getElementById(vibeDomId(currentVibe))
 							if (vibeContainerEl) {
 								const shadowRoot = vibeContainerEl.shadowRoot || vibeContainerEl
 								const navToggle = shadowRoot.querySelector('.nav-toggle')
@@ -653,7 +636,7 @@ export async function renderVibeViewer(
 
 						resolve()
 					} catch (error) {
-						const container = document.getElementById(`vibe-container-${currentVibe}`)
+						const container = document.getElementById(vibeDomId(currentVibe))
 						if (container) {
 							container.innerHTML = `<div class="empty-state p-8 text-center text-rose-500 font-medium bg-rose-50/50 rounded-2xl border border-rose-100">Error loading aven: ${escapeHtml(error.message)}</div>`
 						}

@@ -22,9 +22,6 @@ const HOME_ICON = `<svg class="maia-nav-icon" xmlns="http://www.w3.org/2000/svg"
 
 const BELL_ICON = `<svg class="maia-nav-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M18.75 9v.704c0 .845.24 1.671.692 2.374l1.108 1.723c1.011 1.574.239 3.713-1.52 4.21a25.8 25.8 0 0 1-14.06 0c-1.759-.497-2.531-2.636-1.52-4.21l1.108-1.723a4.4 4.4 0 0 0 .693-2.374V9c0-3.866 3.022-7 6.749-7s6.75 3.134 6.75 7" opacity="0.5"/><path fill="currentColor" d="M7.243 18.545a5.002 5.002 0 0 0 9.513 0c-3.145.59-6.367.59-9.513 0"/></svg>`
 
-/** Vibe key for the persistent Chat actor tree (voice + Chat UI share one `views/messages` context). */
-export const PERSISTENT_CHAT_VIBE_KEY = 'session-chat'
-
 let maiaRef = null
 let messagesActorId = null
 let contextUnsub = null
@@ -172,14 +169,7 @@ function renderMessages() {
  */
 function actorConfigMatchesChatIntent(cfg) {
 	if (!cfg || typeof cfg !== 'object') return false
-	if (cfg['@label'] === '@chat/intent') return true
-	const pid = cfg.$id
-	if (typeof pid === 'string' && pid.includes('chat/actor/intent')) return true
-	for (const key of ['process', 'view', 'context']) {
-		const v = cfg[key]
-		if (typeof v === 'string' && v.includes('chat/process/intent')) return true
-	}
-	return false
+	return cfg.executableKey === 'chat/intent'
 }
 
 /**
@@ -187,17 +177,11 @@ function actorConfigMatchesChatIntent(cfg) {
  */
 function actorConfigMatchesMessages(cfg) {
 	if (!cfg || typeof cfg !== 'object') return false
-	if (cfg['@label'] === '@maia/actor/views/messages') return true
-	const label = cfg['@label']
-	if (typeof label === 'string' && label.includes('views/messages')) return true
-	const pid = cfg.$id
-	if (typeof pid === 'string' && pid.includes('actor/views/messages')) return true
-	for (const key of ['process', 'view', 'interface']) {
-		const v = cfg[key]
-		if (typeof v === 'string' && (v.includes('views/messages') || v.includes('messages/process')))
-			return true
-	}
-	return false
+	const k = cfg.executableKey
+	return (
+		typeof k === 'string' &&
+		(k.includes('views/messages') || k.includes('actor/os/messages') || k.endsWith('/messages'))
+	)
 }
 
 /**
@@ -232,8 +216,30 @@ function findMessagesActorIdInTree(actor) {
  * @param {object} maia - MaiaOS instance
  * @returns {string|null}
  */
-export function findSessionChatIntentActorId(maia) {
-	const set = maia.getEngines().actorEngine.getActorsForVibe(PERSISTENT_CHAT_VIBE_KEY)
+export async function resolveChatVibeCoId(maia) {
+	const peer = maia?.dataEngine?.peer
+	if (!peer) return null
+	if (typeof peer.resolveSystemSparkCoId === 'function' && !peer.systemSparkCoId) {
+		await peer.resolveSystemSparkCoId()
+	}
+	const sparkCoId = peer.systemSparkCoId
+	if (!sparkCoId?.startsWith?.('co_z')) return null
+	const sparkStore = await maia.do({ op: 'read', factory: null, key: sparkCoId })
+	const osId = sparkStore?.value?.os
+	if (!osId?.startsWith?.('co_z')) return null
+	const osStore = await maia.do({ op: 'read', factory: null, key: osId })
+	const vibesId = osStore?.value?.vibes
+	if (!vibesId?.startsWith?.('co_z')) return null
+	const vibesStore = await maia.do({ op: 'read', factory: vibesId, key: vibesId })
+	const vibesData = vibesStore?.value ?? vibesStore
+	const cid = vibesData?.chat
+	return typeof cid === 'string' && cid.startsWith('co_z') ? cid : null
+}
+
+export async function findSessionChatIntentActorId(maia) {
+	const chatVibe = await resolveChatVibeCoId(maia)
+	if (!chatVibe) return null
+	const set = maia.getEngines().actorEngine.getActorsForVibe(chatVibe)
 	if (!set?.size) return null
 	for (const id of set) {
 		const a = maia.getActor(id)
@@ -246,8 +252,10 @@ export function findSessionChatIntentActorId(maia) {
  * @param {object} maia - MaiaOS instance
  * @returns {string|null}
  */
-function findMessagesActorId(maia) {
-	const set = maia.getEngines().actorEngine.getActorsForVibe(PERSISTENT_CHAT_VIBE_KEY)
+async function findMessagesActorId(maia) {
+	const chatVibe = await resolveChatVibeCoId(maia)
+	if (!chatVibe) return null
+	const set = maia.getEngines().actorEngine.getActorsForVibe(chatVibe)
 	if (!set?.size) return null
 	for (const id of set) {
 		const a = maia.getActor(id)
@@ -264,7 +272,7 @@ function findMessagesActorId(maia) {
 async function waitForMessagesActor(maia, rootIntentActor) {
 	const deadline = Date.now() + 15000
 	while (Date.now() < deadline) {
-		const fromSet = findMessagesActorId(maia)
+		const fromSet = await findMessagesActorId(maia)
 		if (fromSet) return fromSet
 		const fromTree = rootIntentActor ? findMessagesActorIdInTree(rootIntentActor) : null
 		if (fromTree) return fromTree
@@ -304,7 +312,7 @@ async function ensureSessionChat() {
 		wireMessagesContext()
 		return messagesActorId
 	}
-	const existing = findMessagesActorId(maiaRef)
+	const existing = await findMessagesActorId(maiaRef)
 	if (existing) {
 		messagesActorId = existing
 		wireMessagesContext()
@@ -323,12 +331,9 @@ async function ensureSessionChat() {
 				'position:fixed;width:0;height:0;overflow:hidden;pointer-events:none;visibility:hidden'
 			document.body.appendChild(sessionChatHost)
 		}
-		const { actor: rootIntent } = await maiaRef.loadVibeFromAccount(
-			'chat',
-			sessionChatHost,
-			'°Maia',
-			PERSISTENT_CHAT_VIBE_KEY,
-		)
+		const chatVibeCoId = await resolveChatVibeCoId(maiaRef)
+		if (!chatVibeCoId) throw new Error('Chat vibe co-id not found in spark.os.vibes')
+		const { actor: rootIntent } = await maiaRef.loadVibe(chatVibeCoId, sessionChatHost, chatVibeCoId)
 		const mid = await waitForMessagesActor(maiaRef, rootIntent)
 		if (!mid) throw new Error('Messages actor not found after loading Chat')
 		messagesActorId = mid

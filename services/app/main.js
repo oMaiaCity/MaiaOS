@@ -10,6 +10,7 @@
  */
 
 import {
+	getCapabilitiesStreamCoId,
 	isPRFSupported,
 	loadOrCreateAgentAccount,
 	MaiaOS,
@@ -62,6 +63,8 @@ function waitUntilNextPaint() {
 }
 
 let maia
+/** spark.os.capabilities CoStream co-id — navigation + DB viewer capabilities shell */
+let capabilitiesStreamCoId = null
 let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'the-game' | 'vibe-viewer' | …
 let currentView = 'account' // Current schema filter (default: 'account')
 let currentContextCoValueId = null // Currently loaded CoValue in main context (explorer-style navigation)
@@ -359,6 +362,8 @@ async function initAgentMode() {
 
 		const { node, account } = agentResult
 
+		await applySyncRegistriesToAccount(account, node)
+
 		// Boot MaiaOS with agent account
 		maia = await MaiaOS.boot({
 			node,
@@ -371,6 +376,7 @@ async function initAgentMode() {
 		window.maia = maia
 		// CRITICAL: Await link before first render - indexing requires account.registries
 		await linkAccountToRegistries(maia).catch(() => {})
+		capabilitiesStreamCoId = (await getCapabilitiesStreamCoId(maia)) ?? null
 		initGlobalAI(maia)
 		notifyMaiaReady(maia)
 
@@ -605,6 +611,7 @@ async function signInWithTestAven() {
 				maia = bootedMaia
 				window.maia = maia
 				await linkAccountToRegistries(maia).catch(() => {})
+				capabilitiesStreamCoId = (await getCapabilitiesStreamCoId(maia)) ?? null
 				initGlobalAI(maia)
 				notifyMaiaReady(maia)
 				cleanupLoadingScreenSync()
@@ -669,6 +676,7 @@ async function signIn() {
 				console.log(`   account: ${account ? 'ready' : 'not ready'}`)
 
 				try {
+					await applySyncRegistriesToAccount(account, node)
 					maia = await MaiaOS.boot({
 						node,
 						account,
@@ -682,6 +690,7 @@ async function signIn() {
 						autoRegisterHuman(maia).catch(() => {}),
 						linkAccountToRegistries(maia).catch(() => {}),
 					])
+					capabilitiesStreamCoId = (await getCapabilitiesStreamCoId(maia)) ?? null
 					initGlobalAI(maia)
 					notifyMaiaReady(maia)
 
@@ -820,14 +829,17 @@ async function register() {
 			showToast(`Navigation error: ${caughtErrMessage(error)}`, 'error')
 		})
 
-		// Boot MaiaOS in background
-		MaiaOS.boot({
-			node,
-			account,
-			syncDomain, // Pass sync domain to kernel (single source of truth)
-			getSyncBaseUrl, // For POST /register after createSpark
-			modules: ['db', 'core', 'ai'], // Include all modules
-		})
+		// Boot MaiaOS in background (registries must be linked before DB init)
+		;(async () => {
+			await applySyncRegistriesToAccount(account, node)
+			return MaiaOS.boot({
+				node,
+				account,
+				syncDomain, // Pass sync domain to kernel (single source of truth)
+				getSyncBaseUrl, // For POST /register after createSpark
+				modules: ['db', 'core', 'ai'], // Include all modules
+			})
+		})()
 			.then(async (bootedMaia) => {
 				maia = bootedMaia
 				window.maia = maia
@@ -835,6 +847,7 @@ async function register() {
 					autoRegisterHuman(maia).catch(() => {}),
 					linkAccountToRegistries(maia).catch(() => {}),
 				])
+				capabilitiesStreamCoId = (await getCapabilitiesStreamCoId(maia)) ?? null
 				initGlobalAI(maia)
 				notifyMaiaReady(maia)
 				cleanupLoadingScreenSync()
@@ -848,6 +861,7 @@ async function register() {
 			.catch((bootError) => {
 				authState = { signedIn: false, accountID: null }
 				maia = null
+				capabilitiesStreamCoId = null
 				setSignInLoading(false)
 				showToast(`Failed to initialize MaiaOS: ${caughtErrMessage(bootError)}`, 'error')
 				window.history.pushState({}, '', '/signup')
@@ -890,6 +904,7 @@ function signOut() {
 	syncState = { connected: false, syncing: false, error: null, status: null }
 	updateSyncState({ writeEnabled: true }) // Reset for next session
 	maia = null
+	capabilitiesStreamCoId = null
 
 	// DON'T clear the account flag - passkey still exists on device!
 	// User can still sign back in, so UI should show "Sign In" as primary
@@ -1180,6 +1195,7 @@ async function renderAppInternal() {
 			loadVibe,
 			loadSpark,
 			navigateToScreen,
+			capabilitiesStreamCoId,
 		)
 		// Update unified nav left button: always "home", action = go to dashboard when not on dashboard
 		if (currentScreen === 'dashboard') {
@@ -1277,34 +1293,36 @@ async function extendCapability(capabilityId, _currentExp = 0) {
 }
 
 /**
- * Load a vibe with its spark context (for flattened dashboard grid)
- * @param {string} vibeKey - Vibe key (e.g. 'todos')
- * @param {string} spark - Spark name (e.g. '°Maia')
+ * @param {string} vibeCoId - Vibe CoMap co-id (co_z...)
+ * @param {string} [_sparkCoId] - Reserved (spark is implicit on peer.systemSparkCoId)
  */
-function loadVibeWithSpark(vibeKey, spark) {
-	currentSpark = spark || '°Maia'
-	loadVibe(vibeKey)
+function loadVibeWithSpark(vibeCoId, _sparkCoId) {
+	void _sparkCoId
+	loadVibe(vibeCoId)
 }
 
 /**
  * Load an aven inline in the main context area
- * @param {string|null} vibeKey - Aven key (e.g., 'todos') or null to exit aven mode
+ * @param {string|null} vibeCoId - Vibe CoMap co-id (co_z...) or null to exit aven mode
  */
-async function loadVibe(vibeKey) {
-	if (!maia && vibeKey !== null) {
+async function loadVibe(vibeCoId) {
+	if (!maia && vibeCoId !== null) {
 		return
 	}
 
-	if (vibeKey !== null && typeof vibeKey !== 'string') {
+	if (vibeCoId !== null && typeof vibeCoId !== 'string') {
+		return
+	}
+	if (vibeCoId !== null && !vibeCoId.startsWith('co_z')) {
 		return
 	}
 
 	const perf = createPerfTracer('app', 'vibes')
 	try {
-		perf.start(`loadVibe(${vibeKey === null ? 'close' : vibeKey})`)
+		perf.start(`loadVibe(${vibeCoId === null ? 'close' : vibeCoId})`)
 		if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
 		}
-		if (vibeKey === null) {
+		if (vibeCoId === null) {
 			if (currentVibe && maia?.runtime) {
 				maia.runtime.destroyActorsForVibe(currentVibe)
 				perf.step('destroyActorsForVibe(close)')
@@ -1319,7 +1337,7 @@ async function loadVibe(vibeKey) {
 			navigationHistory = []
 			perf.step('state→dashboard')
 		} else {
-			if (currentVibe && currentVibe !== vibeKey && maia?.runtime) {
+			if (currentVibe && currentVibe !== vibeCoId && maia?.runtime) {
 				maia.runtime.destroyActorsForVibe(currentVibe)
 				perf.step('destroyActorsForVibe(switch)')
 			}
@@ -1327,14 +1345,14 @@ async function loadVibe(vibeKey) {
 			if (currentContextCoValueId !== null) {
 				navigationHistory.push(currentContextCoValueId)
 			}
-			currentVibe = vibeKey
+			currentVibe = vibeCoId
 			currentContextCoValueId = null
 			currentScreen = 'vibe-viewer'
 			perf.step('state→vibe-viewer')
 		}
 
 		await perf.measure('renderAppInternal', async () => renderAppInternal())
-		if (vibeKey === null) {
+		if (vibeCoId === null) {
 			await waitUntilNextPaint()
 			perf.step('afterPaint(dashboard)')
 		}
@@ -1517,9 +1535,8 @@ function setupMaiaAppDelegation() {
 			return
 		}
 		if (action === 'loadVibeWithSpark') {
-			const vk = el.dataset.vibeKey
-			const spark = el.dataset.spark
-			if (vk) loadVibeWithSpark(vk, spark || '°Maia')
+			const vc = el.dataset.vibeCoid
+			if (vc) loadVibeWithSpark(vc, el.dataset.sparkCoid)
 			return
 		}
 		if (action === 'toggleMetadataInternalKey') {

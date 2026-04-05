@@ -347,10 +347,10 @@ export class ViewEngine {
 	 * @param {Object} actor - Actor instance
 	 * @param {HTMLElement} containerElement - Container element
 	 * @param {Object} actorConfig - Actor config
-	 * @param {string|null} vibeKey - Optional vibe key
+	 * @param {string|null} vibeCoId - Optional vibe CoMap co-id (co_z...)
 	 * @param {() => Promise<void>} [onBeforeRender] - Callback before render (e.g. state init)
 	 */
-	async attachViewToActor(actor, containerElement, actorConfig, vibeKey, onBeforeRender) {
+	async attachViewToActor(actor, containerElement, actorConfig, vibeCoId, onBeforeRender) {
 		const actorId = actor.id
 		const { viewDef, context, contextCoId, contextFactoryCoId, configUnsubscribes } =
 			await this.loadViewConfigs(actor, actorConfig, actorId)
@@ -362,7 +362,7 @@ export class ViewEngine {
 		actor.contextCoId = contextCoId
 		actor.contextFactoryCoId = contextFactoryCoId
 		actor.viewDef = viewDef
-		actor.vibeKey = vibeKey
+		actor.vibeCoId = vibeCoId
 		actor.containerElement = containerElement
 		actor._renderState = RENDER_STATES.INITIALIZING
 		for (const unsub of configUnsubscribes) actor._configUnsubscribes.push(unsub)
@@ -673,7 +673,7 @@ export class ViewEngine {
 			childActor = await this.actorOps?._createChildActorByCoId?.(
 				actor,
 				slotValue,
-				actor.vibeKey ?? null,
+				actor.vibeCoId ?? null,
 			)
 			if (!childActor) return
 		}

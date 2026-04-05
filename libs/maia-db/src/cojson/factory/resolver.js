@@ -72,6 +72,288 @@ function removeIdFields(obj, inPropertiesOrItems = false) {
 }
 
 /**
+ * Resolve registry namekeys (`°Maia/factory/...`, vibes, instance keys) via spark.os — used by seed, indexing, and infrastructure.
+ * Does not enforce {@link resolve} strictMode; public API remains co_z-only when strict.
+ */
+export async function lookupRegistryKey(peer, identifier, options = {}) {
+	const { returnType = 'factory', deepResolve = false, timeoutMs = 5000, spark } = options
+
+	// Registry key lookup (°Maia/factory/..., °Maia/aven/..., °Maia/.../actor/..., °Maia/.../inbox/... - spark prefix)
+	const isSchemaKeyMatch = FACTORY_REF_PATTERN.test(identifier)
+	const isVibeKeyMatch = VIBE_REF_PATTERN.test(identifier)
+	const isInstanceKeyMatch =
+		INSTANCE_REF_PATTERN.test(identifier) ||
+		ACTOR_CONFIG_REF_PATTERN.test(identifier) ||
+		VIBE_ACTOR_REF_PATTERN.test(identifier)
+	const isBareKey =
+		!identifier.startsWith('°') && !identifier.startsWith('@') && !identifier.startsWith('co_z')
+	if (isSchemaKeyMatch || isVibeKeyMatch || isInstanceKeyMatch || isBareKey) {
+		const effectiveSpark = spark ?? peer?.systemSparkCoId
+		if (!effectiveSpark && (isSchemaKeyMatch || isVibeKeyMatch || isInstanceKeyMatch || isBareKey)) {
+			throw new Error(
+				`[resolve] spark required for registry lookup of ${identifier}. Pass options.spark or set peer.systemSparkCoId (call MaiaDB.resolveSystemSparkCoId() after boot).`,
+			)
+		}
+		// Normalize key format: bare key → sparkName/schema/key (use spark name directly as prefix)
+		let normalizedKey = identifier
+		if (
+			!FACTORY_REF_PATTERN.test(normalizedKey) &&
+			!VIBE_REF_PATTERN.test(normalizedKey) &&
+			!normalizedKey.startsWith('°') &&
+			!normalizedKey.startsWith('@')
+		) {
+			normalizedKey = `${effectiveSpark}/schema/${normalizedKey}`
+		}
+
+		// Use read() API to load spark.os (account.registries.sparks[spark].os) or spark.os.vibes registry
+		if (!peer.account || typeof peer.account.get !== 'function') {
+			return null
+		}
+
+		const isSchemaKey = FACTORY_REF_PATTERN.test(normalizedKey)
+
+		if (isSchemaKey) {
+			// Schema keys → account.registries.sparks[spark].os.factories
+			const sparkCoId = await resolveSparkCoId(peer, effectiveSpark)
+			if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_z')) {
+				return null
+			}
+			const sparkStore = await universalRead(peer, sparkCoId, null, null, null, {
+				deepResolve: false,
+				timeoutMs,
+			})
+			try {
+				await waitForStoreReady(sparkStore, sparkCoId, timeoutMs)
+			} catch {
+				return null
+			}
+			const sparkData = sparkStore.value
+			if (!sparkData || sparkData.error) return null
+			const osId = sparkData.os
+			if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
+				return null
+			}
+
+			// Load spark.os using read() API
+			const osStore = await universalRead(peer, osId, null, null, null, {
+				deepResolve: false,
+				timeoutMs,
+			})
+
+			try {
+				await waitForStoreReady(osStore, osId, timeoutMs)
+			} catch (_error) {
+				return null
+			}
+
+			const osData = osStore.value
+			if (!osData || osData.error) {
+				return null
+			}
+			// osData is flat from extractCoValueData
+
+			// Get factories registry co-id from os data (flat object from read() API)
+			const factoriesId = osData.factories
+			if (!factoriesId || typeof factoriesId !== 'string' || !factoriesId.startsWith('co_z')) {
+				return null
+			}
+
+			// Load factories registry using read() API
+			const factoriesStore = await universalRead(peer, factoriesId, null, null, null, {
+				deepResolve: false,
+				timeoutMs,
+			})
+
+			try {
+				await waitForStoreReady(factoriesStore, factoriesId, timeoutMs)
+			} catch (_error) {
+				return null
+			}
+
+			const factoriesData = factoriesStore.value
+			if (!factoriesData || factoriesData.error) {
+				return null
+			}
+
+			// Lookup key in registry (flat object from read() API - properties directly accessible)
+			const registryCoId = factoriesData[normalizedKey] || factoriesData[identifier]
+			if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
+				// Found registry entry - resolve the co-id
+				if (returnType === 'coId') {
+					return registryCoId
+				}
+				// Resolve the actual schema/co-value
+				return await resolve(peer, registryCoId, { returnType, deepResolve, timeoutMs })
+			} else {
+				// Schema not found in registry - this is a permanent failure
+				// Don't warn for index schemas - they're created on-demand
+				const isIndexSchema = /^°[a-zA-Z0-9_-]+\/factory\/index\//.test(normalizedKey)
+				if (!isIndexSchema) {
+				}
+				return null
+			}
+		} else if (VIBE_REF_PATTERN.test(identifier)) {
+			// Vibe instance keys → account.registries.sparks[spark].os.vibes
+			const sparkCoId = await resolveSparkCoId(peer, effectiveSpark)
+			if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_z')) {
+				return null
+			}
+			const sparkStore = await universalRead(peer, sparkCoId, null, null, null, {
+				deepResolve: false,
+				timeoutMs,
+			})
+			try {
+				await waitForStoreReady(sparkStore, sparkCoId, timeoutMs)
+			} catch {
+				return null
+			}
+			const sparkData = sparkStore.value
+			if (!sparkData || sparkData.error) return null
+			const osId = sparkData.os
+			if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) return null
+			const osStore = await universalRead(peer, osId, null, null, null, {
+				deepResolve: false,
+				timeoutMs,
+			})
+			try {
+				await waitForStoreReady(osStore, osId, timeoutMs)
+			} catch {
+				return null
+			}
+			const osData = osStore.value
+			if (!osData || osData.error) return null
+			const vibesId = osData.vibes
+			if (!vibesId || typeof vibesId !== 'string' || !vibesId.startsWith('co_z')) {
+				return null
+			}
+
+			const vibesStore = await universalRead(peer, vibesId, null, null, null, {
+				deepResolve: false,
+				timeoutMs,
+			})
+
+			try {
+				await waitForStoreReady(vibesStore, vibesId, timeoutMs)
+			} catch (_error) {
+				return null
+			}
+
+			const vibesData = vibesStore.value
+			if (!vibesData || vibesData.error) {
+				return null
+			}
+
+			const vibeName = VIBE_REF_PATTERN.test(identifier)
+				? identifier.replace(VIBE_REF_PATTERN, '')
+				: identifier
+
+			const registryCoId = vibesData[vibeName]
+			if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
+				// Found registry entry - resolve the co-id
+				if (returnType === 'coId') {
+					return registryCoId
+				}
+				// Resolve the actual co-value
+				return await resolve(peer, registryCoId, { returnType, deepResolve, timeoutMs })
+			}
+
+			return null
+		} else if (isInstanceKeyMatch) {
+			// Instance config keys (actor, inbox, view, context, state, style) → spark.os.factories
+			const sparkCoId = await resolveSparkCoId(peer, effectiveSpark)
+			if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_z')) {
+				if (typeof window !== 'undefined') {
+					console.warn('[resolve] instance key: spark not resolved', identifier)
+				}
+				return null
+			}
+			const sparkStore = await universalRead(peer, sparkCoId, null, null, null, {
+				deepResolve: false,
+				timeoutMs,
+			})
+			try {
+				await waitForStoreReady(sparkStore, sparkCoId, timeoutMs)
+			} catch {
+				if (typeof window !== 'undefined') {
+					console.warn('[resolve] instance key: spark store timeout', identifier)
+				}
+				return null
+			}
+			const sparkData = sparkStore.value
+			if (!sparkData || sparkData.error) return null
+			const osId = sparkData.os
+			if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
+				if (typeof window !== 'undefined') {
+					console.warn('[resolve] instance key: os missing from spark', identifier)
+				}
+				return null
+			}
+
+			const osStore = await universalRead(peer, osId, null, null, null, {
+				deepResolve: false,
+				timeoutMs,
+			})
+			try {
+				await waitForStoreReady(osStore, osId, timeoutMs)
+			} catch (_error) {
+				if (typeof window !== 'undefined') {
+					console.warn('[resolve] instance key: os store timeout', identifier)
+				}
+				return null
+			}
+			const osData = osStore.value
+			if (!osData || osData.error) return null
+
+			const factoriesId = osData.factories
+			if (!factoriesId || typeof factoriesId !== 'string' || !factoriesId.startsWith('co_z')) {
+				if (typeof window !== 'undefined') {
+					console.warn('[resolve] instance key: factories missing from os', identifier)
+				}
+				return null
+			}
+
+			const factoriesStore = await universalRead(peer, factoriesId, null, null, null, {
+				deepResolve: false,
+				timeoutMs,
+			})
+			try {
+				await waitForStoreReady(factoriesStore, factoriesId, timeoutMs)
+			} catch (_error) {
+				if (typeof window !== 'undefined') {
+					console.warn('[resolve] instance key: factories store timeout', identifier)
+				}
+				return null
+			}
+			const factoriesData = factoriesStore.value
+			if (!factoriesData || factoriesData.error) return null
+
+			const registryCoId = factoriesData[identifier]
+			if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
+				if (returnType === 'coId') {
+					return registryCoId
+				}
+				return await resolve(peer, registryCoId, { returnType, deepResolve, timeoutMs })
+			}
+			if (typeof window !== 'undefined') {
+				const keys = Object.keys(factoriesData).filter(
+					(k) => !['id', 'loading', 'error', '$factory', 'type', '_coValueType'].includes(k),
+				)
+				console.warn(
+					'[resolve] instance key not in factories:',
+					identifier,
+					'| factories keys:',
+					keys.slice(0, 20).join(', '),
+				)
+			}
+			return null
+		}
+	}
+
+	// Unknown key format
+	return null
+}
+
+/**
  * Universal resolver - handles ALL identifier types and return types
  * Single source of truth for all schema/co-value lookups
  *
@@ -216,6 +498,10 @@ export async function resolve(peer, identifier, options = {}) {
 		return null
 	}
 
+	if (peer.strictMode === true) {
+		throw new Error(`[resolve] Runtime resolve requires co_z CoID, got: ${identifier}`)
+	}
+
 	// Registry key lookup (°Maia/factory/..., °Maia/aven/..., °Maia/.../actor/..., °Maia/.../inbox/... - spark prefix)
 	const isSchemaKeyMatch = FACTORY_REF_PATTERN.test(identifier)
 	const isVibeKeyMatch = VIBE_REF_PATTERN.test(identifier)
@@ -226,10 +512,10 @@ export async function resolve(peer, identifier, options = {}) {
 	const isBareKey =
 		!identifier.startsWith('°') && !identifier.startsWith('@') && !identifier.startsWith('co_z')
 	if (isSchemaKeyMatch || isVibeKeyMatch || isInstanceKeyMatch || isBareKey) {
-		const effectiveSpark = spark ?? peer?.systemSpark
+		const effectiveSpark = spark ?? peer?.systemSparkCoId
 		if (!effectiveSpark && (isSchemaKeyMatch || isVibeKeyMatch || isInstanceKeyMatch || isBareKey)) {
 			throw new Error(
-				`[resolve] spark required for registry lookup of ${identifier}. Pass options.spark or set peer.systemSpark.`,
+				`[resolve] spark required for registry lookup of ${identifier}. Pass options.spark or set peer.systemSparkCoId (call MaiaDB.resolveSystemSparkCoId() after boot).`,
 			)
 		}
 		// Normalize key format: bare key → sparkName/schema/key (use spark name directly as prefix)
@@ -700,4 +986,51 @@ export async function loadFactoriesFromAccount(node, account) {
 	} catch (_error) {
 		return {}
 	}
+}
+
+/**
+ * Strict runtime: factory definition by co-id or registry namekey. Namekeys resolve only via
+ * `peer.systemFactoryCoIds` (filled by DataEngine.resolveSystemFactories), then `resolve` with co_z only.
+ * No registry walk — pairs with peer.strictMode.
+ *
+ * @param {{ systemFactoryCoIds?: Map<string, string> }} peer - MaiaDB peer
+ * @param {string} factoryKey - co_z… or registry key present in systemFactoryCoIds
+ * @param {Object} [options]
+ * @param {string} [options.returnType='factory']
+ * @param {boolean} [options.deepResolve=false]
+ * @param {number} [options.timeoutMs=5000]
+ */
+export async function resolveFactoryDefFromPeer(peer, factoryKey, options = {}) {
+	const { returnType = 'factory', deepResolve = false, timeoutMs = 5000 } = options
+	if (!peer) {
+		throw new Error('[resolveFactoryDefFromPeer] peer is required')
+	}
+	if (typeof factoryKey !== 'string') {
+		throw new Error(
+			`[resolveFactoryDefFromPeer] factoryKey must be a string, got: ${typeof factoryKey}`,
+		)
+	}
+
+	if (factoryKey.startsWith('co_z')) {
+		const def = await resolve(peer, factoryKey, { returnType, deepResolve, timeoutMs })
+		if (def == null && returnType === 'factory') {
+			throw new Error(`[resolveFactoryDefFromPeer] Factory not found for co-id: ${factoryKey}`)
+		}
+		return def
+	}
+
+	const coId = peer.systemFactoryCoIds?.get?.(factoryKey)
+	if (!coId?.startsWith('co_z')) {
+		throw new Error(
+			`[resolveFactoryDefFromPeer] Registry key not in peer.systemFactoryCoIds: ${factoryKey}`,
+		)
+	}
+
+	const def = await resolve(peer, coId, { returnType, deepResolve, timeoutMs })
+	if (def == null && returnType === 'factory') {
+		throw new Error(
+			`[resolveFactoryDefFromPeer] Factory not found for co-id ${coId} (key: ${factoryKey})`,
+		)
+	}
+	return def
 }

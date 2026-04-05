@@ -319,20 +319,23 @@ export class MaiaOS {
 		// If peer is provided, use it
 		if (config.peer) {
 			os.dataEngine = new DataEngine(config.peer, dbOptions)
+			if (typeof config.peer.resolveSystemSparkCoId === 'function') {
+				await config.peer.resolveSystemSparkCoId()
+			}
 			await os.dataEngine.resolveSystemFactories()
+			config.peer.strictMode = true
 			return config.peer
 		}
 
 		// If node and account are provided, create MaiaDB peer
 		if (config.node && config.account) {
 			const { MaiaDB } = await import('@MaiaOS/db')
-			const maiaDB = new MaiaDB(
-				{ node: config.node, account: config.account },
-				{ systemSpark: '°Maia' },
-			)
+			const maiaDB = new MaiaDB({ node: config.node, account: config.account }, {})
 			os.dataEngine = new DataEngine(maiaDB, dbOptions)
 			maiaDB.dbEngine = os.dataEngine
+			await maiaDB.resolveSystemSparkCoId()
 			await os.dataEngine.resolveSystemFactories()
+			maiaDB.strictMode = true
 			return maiaDB
 		}
 
@@ -400,25 +403,14 @@ export class MaiaOS {
 	 * @returns {Promise<Object>} Created actor
 	 */
 	async createActor(actorPath, container) {
-		// Use universal API directly - no wrapper needed
 		let actorConfig
 		if (typeof actorPath === 'object' && actorPath !== null) {
-			// Already have config object - just use it
 			actorConfig = actorPath
 		} else if (typeof actorPath === 'string') {
-			// Resolve path to co-id at edge (runtime uses co-ids only)
-			let actorCoId = actorPath
 			if (!actorPath.startsWith('co_z')) {
-				actorCoId = await this.actorEngine.dataEngine.execute({
-					op: 'resolve',
-					humanReadableKey: actorPath,
-					spark: '°Maia',
-					returnType: 'coId',
-				})
-				if (!actorCoId?.startsWith?.('co_z')) {
-					throw new Error(`[MaiaOS] createActor: failed to resolve actor path: ${actorPath}`)
-				}
+				throw new Error(`[MaiaOS] createActor: actor co-id (co_z...) required, got: ${actorPath}`)
 			}
+			const actorCoId = actorPath
 			const actorSchemaCoId = await resolve(
 				this.actorEngine.dataEngine.peer,
 				{ fromCoValue: actorCoId },
@@ -432,7 +424,7 @@ export class MaiaOS {
 			actorConfig = store.value
 		} else {
 			throw new Error(
-				`[MaiaOS] createActor expects co-id (co_z...), path string, or config object, got: ${typeof actorPath}`,
+				`[MaiaOS] createActor expects co-id (co_z...) or config object, got: ${typeof actorPath}`,
 			)
 		}
 		const actor = await this.runtime.createActorForView(actorConfig, container)
@@ -440,192 +432,28 @@ export class MaiaOS {
 	}
 
 	/**
-	 * Load a vibe by key or co-id from account/database (no arbitrary URL loading)
-	 * @param {string} vibeKeyOrCoId - Vibe key (e.g., "todos") or co-id (co_z...) to lookup from account
+	 * Load a vibe by vibe CoMap co-id (runtime: co_z only).
+	 * @param {string} vibeCoId - Vibe CoMap co-id (co_z...)
 	 * @param {HTMLElement} container - Container element
-	 * @param {string} [spark='°Maia'] - Spark name when using key lookup
-	 * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
+	 * @param {string} [actorTrackingCoId] - Registers spawned actors under this co-id (defaults to vibeCoId; use same value for dashboard + session chat when they share one tree)
+	 * @returns {Promise<{vibe: Object, actor: Object}>}
 	 */
-	async loadVibe(vibeKeyOrCoId, container, spark = '°Maia') {
-		return await this.loadVibeFromAccount(vibeKeyOrCoId, container, spark)
-	}
-
-	/**
-	 * Load a vibe from registries.sparks[spark].os.vibes or directly by co-id
-	 * Supports: (1) vibe key (e.g., "todos") - lookup via spark.os.vibes map, (2) co-id (co_z...) - direct load from database
-	 * SECURITY: No arbitrary URL loading - vibes load only from CoJSON database (account-scoped)
-	 * @param {string} vibeKeyOrCoId - Vibe key in spark's vibes (e.g., "todos") or vibe co-id (co_z...)
-	 * @param {HTMLElement} container - Container element
-	 * @param {string} [spark='°Maia'] - Spark name (used only when vibeKeyOrCoId is a key, not a co-id)
-	 * @param {string} [actorTrackingKey] - When set, registers spawned actors under this key instead of the registry vibe name (e.g. `session-chat` for a persistent Chat tree that survives `destroyActorsForVibe('chat')`).
-	 * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
-	 */
-	async loadVibeFromAccount(
-		vibeKeyOrCoId,
-		container,
-		spark = '°Maia',
-		actorTrackingKey = undefined,
-	) {
-		if (!this.dataEngine || !this._account) {
-			throw new Error('[Loader] Cannot load vibe from account - dataEngine or account not available')
+	async loadVibe(vibeCoId, container, actorTrackingCoId) {
+		if (typeof vibeCoId !== 'string' || !vibeCoId.startsWith('co_z')) {
+			throw new Error(`[MaiaOS] loadVibe requires vibe CoMap co-id (co_z...), got: ${vibeCoId}`)
 		}
-
-		// Co-id: load directly from database (skip spark.os.vibes lookup)
-		if (typeof vibeKeyOrCoId === 'string' && vibeKeyOrCoId.startsWith('co_z')) {
-			return await this.loadVibeFromDatabase(vibeKeyOrCoId, container, null)
-		}
-
-		const account = this._account
-
-		// Step 1: Read account CoMap
-		const accountStore = await this.dataEngine.execute({
-			op: 'read',
-			schema: '@account',
-			key: account.id,
-		})
-
-		const accountData = accountStore.value
-		if (!accountData) {
-			throw new Error('[Kernel] Failed to read account CoMap')
-		}
-
-		// Step 2: Get account.registries.sparks CoMap co-id
-		const registriesId = accountData.registries
-		if (!registriesId || typeof registriesId !== 'string' || !registriesId.startsWith('co_')) {
-			throw new Error(
-				`[Kernel] account.registries not found. Link account via sync or ensure bootstrap has run. Account data: ${JSON.stringify({ id: accountData.id, hasRegistries: !!accountData.registries })}`,
-			)
-		}
-
-		const registriesStore = await this.dataEngine.execute({
-			op: 'read',
-			factory: null,
-			key: registriesId,
-		})
-		const registriesData = registriesStore.value
-		if (!registriesData || registriesData.error) {
-			throw new Error(
-				`[Kernel] account.registries not available: ${registriesData?.error || 'Unknown error'}`,
-			)
-		}
-		// registriesData is flat from extractCoValueData
-		const sparksId = registriesData.sparks
-		if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_')) {
-			throw new Error(`[Kernel] registries.sparks not found`)
-		}
-
-		// Step 3: Read registries.sparks CoMap
-		const sparksStore = await this.dataEngine.execute({
-			op: 'read',
-			factory: sparksId,
-			key: sparksId,
-		})
-
-		const sparksData = sparksStore.value
-		if (!sparksData || sparksData.error) {
-			throw new Error(
-				`[Kernel] registries.sparks not available: ${sparksData?.error || 'Unknown error'}`,
-			)
-		}
-		// sparksData is flat from extractCoValueData
-
-		// Step 4: Get spark CoMap co-id from sparks[spark]
-		const sparkCoIdRaw = sparksData[spark]
-		const sparkCoId =
-			typeof sparkCoIdRaw === 'string' && sparkCoIdRaw.startsWith('co_') ? sparkCoIdRaw : null
-		if (!sparkCoId) {
-			const availableSparks = Object.keys(sparksData).filter(
-				(k) =>
-					k !== 'id' &&
-					k !== '$schema' &&
-					k !== 'type' &&
-					typeof sparksData[k] === 'string' &&
-					sparksData[k].startsWith('co_'),
-			)
-			throw new Error(
-				`[Kernel] Spark "${spark}" not found in registries.sparks. Available: ${availableSparks.join(', ') || 'none'}`,
-			)
-		}
-
-		// Step 5: Read spark CoMap to get spark.os
-		const sparkStore = await this.dataEngine.execute({
-			op: 'read',
-			factory: null,
-			key: sparkCoId,
-		})
-
-		const sparkData = sparkStore.value
-		if (!sparkData || sparkData.error) {
-			throw new Error(
-				`[Kernel] Spark "${spark}" not available: ${sparkData?.error || 'Unknown error'}`,
-			)
-		}
-		// sparkData is flat from extractCoValueData
-
-		const osId = sparkData.os
-		if (!osId || typeof osId !== 'string' || !osId.startsWith('co_')) {
-			throw new Error(`[Kernel] Spark "${spark}" has no os. Ensure bootstrap has run.`)
-		}
-
-		// Step 5b: Read spark.os CoMap to get os.vibes
-		const osStore = await this.dataEngine.execute({
-			op: 'read',
-			factory: null,
-			key: osId,
-		})
-		const osData = osStore.value
-		if (!osData || osData.error) {
-			throw new Error(
-				`[Kernel] Spark "${spark}" os not available: ${osData?.error || 'Unknown error'}`,
-			)
-		}
-		const vibesId = osData.vibes
-		if (!vibesId || typeof vibesId !== 'string' || !vibesId.startsWith('co_')) {
-			throw new Error(`[Kernel] Spark "${spark}" os has no vibes registry. Ensure seeding has run.`)
-		}
-
-		// Step 6: Read spark.os.vibes CoMap
-		const vibesStore = await this.dataEngine.execute({
-			op: 'read',
-			factory: vibesId,
-			key: vibesId,
-		})
-
-		const vibesData = vibesStore.value
-		if (!vibesData || vibesData.error) {
-			throw new Error(
-				`[Kernel] Spark "${spark}" vibes not available: ${vibesData?.error || 'Unknown error'}`,
-			)
-		}
-		// vibesData is flat from extractCoValueData
-
-		const vibeCoId = vibesData[vibeKeyOrCoId]
-		if (!vibeCoId || typeof vibeCoId !== 'string' || !vibeCoId.startsWith('co_')) {
-			const availableVibes = Object.keys(vibesData).filter(
-				(k) =>
-					k !== 'id' &&
-					k !== '$schema' &&
-					k !== 'type' &&
-					typeof vibesData[k] === 'string' &&
-					vibesData[k].startsWith('co_'),
-			)
-			throw new Error(
-				`[Kernel] Vibe '${vibeKeyOrCoId}' not found in ${spark}.os.vibes. Available: ${availableVibes.join(', ') || 'none'}`,
-			)
-		}
-
-		const trackingKey = actorTrackingKey ?? vibeKeyOrCoId
-		return await this.loadVibeFromDatabase(vibeCoId, container, trackingKey)
+		const track = actorTrackingCoId ?? vibeCoId
+		return await this.loadVibeFromDatabase(vibeCoId, container, track)
 	}
 
 	/**
 	 * Load a vibe from database (maia.do)
 	 * @param {string} vibeId - Vibe ID (co-id)
 	 * @param {HTMLElement} container - Container element
-	 * @param {string} [vibeKey] - Optional vibe key for actor reuse tracking (e.g., 'todos')
+	 * @param {string|null} [vibeCoIdForActors] - Vibe co-id for actor reuse / destroyActorsForVibe (co_z...)
 	 * @returns {Promise<{vibe: Object, actor: Object}>} Vibe metadata and actor instance
 	 */
-	async loadVibeFromDatabase(vibeId, container, vibeKey = null) {
+	async loadVibeFromDatabase(vibeId, container, vibeCoIdForActors = null) {
 		if (!vibeId.startsWith('co_z')) {
 			throw new Error(
 				`[Kernel] Vibe ID must be co-id at runtime: ${vibeId}. This should have been resolved during seeding.`,
@@ -738,12 +566,12 @@ export class MaiaOS {
 		}
 
 		// Destroy any existing actors for this vibe (destroy-on-switch lifecycle)
-		if (vibeKey) {
-			this.runtime.destroyActorsForVibe(vibeKey)
+		if (vibeCoIdForActors?.startsWith('co_z')) {
+			this.runtime.destroyActorsForVibe(vibeCoIdForActors)
 		}
 
 		const actorConfig = actorStore.value
-		const actor = await this.runtime.createActorForView(actorConfig, container, vibeKey)
+		const actor = await this.runtime.createActorForView(actorConfig, container, vibeCoIdForActors)
 
 		return { vibe, actor }
 	}

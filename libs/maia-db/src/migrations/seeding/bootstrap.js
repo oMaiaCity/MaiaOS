@@ -267,6 +267,8 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 	if (!sparksData || sparksData.error) return
 	const maiaSparkCoId = sparksData[MAIA_SPARK]
 	if (!maiaSparkCoId?.startsWith('co_z')) return
+	// Seed runs bootstrapAccountRegistries before MaiaDB.resolveSystemSparkCoId(); resolver needs this for namekey lookups.
+	peer.systemSparkCoId = maiaSparkCoId
 
 	const sparkCore = peer.getCoValue(maiaSparkCoId)
 	if (!sparkCore) return

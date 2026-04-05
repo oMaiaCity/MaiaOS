@@ -2,8 +2,7 @@
 	"compilerOptions": {
 		"baseUrl": ".",
 		"paths": {
-			"@MaiaOS/loader": ["../../libs/maia-loader/src/index.js"],
-			"@MaiaOS/vibes": ["../../libs/maia-vibes/src/index.js"]
+			"@MaiaOS/loader": ["../../libs/maia-loader/src/index.js"]
 		}
 	}
 }

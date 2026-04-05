@@ -7,6 +7,7 @@ export { getAllActorDefinitions, getSeedConfig } from '@MaiaOS/actors'
 export {
 	factoryMigration,
 	generateRegistryName,
+	getCapabilitiesStreamCoId,
 	getFactoryIndexColistId,
 	getSchema,
 	loadCapabilitiesGrants,
@@ -16,6 +17,7 @@ export {
 	resolve,
 	resolveAccountCoIdsToProfiles,
 	resolveGroupCoIdsToCapabilityNames,
+	SYSTEM_SPARK_REGISTRY_KEY,
 	setupSyncPeers,
 	subscribeSyncState,
 	updateSyncState,
@@ -36,12 +38,6 @@ export {
 	// NO LOCALSTORAGE: Removed signOut, isSignedIn, getCurrentAccount, inspectStorage
 	// NO SYNC STATE: subscribeSyncState moved to @MaiaOS/db
 } from '@MaiaOS/self'
-// Vibes seeding (static import from cycle-free @MaiaOS/vibes/seeding - bundles correctly in sync-server.mjs)
-export {
-	buildSeedConfig,
-	filterVibesForSeeding,
-	getAllVibeRegistries,
-} from '@MaiaOS/vibes/seeding'
 export { createWebSocketPeer } from 'cojson-transport-ws'
 export { createCoJSONAPI } from './cojson-factory.js'
 export { MaiaOS } from './loader.js'

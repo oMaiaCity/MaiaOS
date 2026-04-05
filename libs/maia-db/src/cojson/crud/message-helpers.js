@@ -53,12 +53,12 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 			if (messageFactoryRef.startsWith('co_z')) {
 				messageFactoryCoId = messageFactoryRef
 			} else if (messageFactoryRef.startsWith('°Maia/factory/')) {
-				messageFactoryCoId = await resolve(peer, messageFactoryRef, { returnType: 'coId' })
+				messageFactoryCoId = peer.systemFactoryCoIds?.get?.(messageFactoryRef) ?? null
 			}
 		}
 
 		if (!messageFactoryCoId) {
-			messageFactoryCoId = await resolve(peer, '°Maia/factory/event', { returnType: 'coId' })
+			messageFactoryCoId = peer.systemFactoryCoIds?.get?.('°Maia/factory/event') ?? null
 		}
 
 		if (!messageFactoryCoId?.startsWith('co_z')) {

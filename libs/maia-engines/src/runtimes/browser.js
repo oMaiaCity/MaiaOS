@@ -9,15 +9,6 @@
 import { collectInboxMessageCoIds, findNewSuccessFromTarget } from '@MaiaOS/db'
 import { debugLog, isDebugChannelEnabled, traceRuntimeProcess } from '@MaiaOS/logs'
 
-function deriveInboxRef(actorId) {
-	if (!actorId || typeof actorId !== 'string') return null
-	if (actorId.includes('/actor/') && !actorId.startsWith('°Maia/actor/')) {
-		return actorId.replace('/actor/', '/inbox/')
-	}
-	if (actorId.includes('/')) return `${actorId}/inbox`
-	return null
-}
-
 export class Runtime {
 	constructor(dataEngine, actorEngine, runtimeType, opts = {}) {
 		this.dataEngine = dataEngine
@@ -60,11 +51,11 @@ export class Runtime {
 	 * Create actor with view attached. Delegates to actorEngine.createActor.
 	 * @param {Object} config - Actor config
 	 * @param {HTMLElement} container - Container element
-	 * @param {string|null} vibeKey - Optional vibe key for tracking
+	 * @param {string|null} vibeCoId - Optional vibe CoMap co-id (co_z...) for tracking
 	 * @returns {Promise<Object>} Created actor
 	 */
-	async createActorForView(config, container, vibeKey = null) {
-		const actor = await this.actorEngine.createActor(config, container, vibeKey)
+	async createActorForView(config, container, vibeCoId = null) {
+		const actor = await this.actorEngine.createActor(config, container, vibeCoId)
 		if (actor) this._emit('actorSpawned', { actorId: actor.id, config, source: 'view' })
 		return actor
 	}
@@ -85,7 +76,7 @@ export class Runtime {
 	destroyActorsForVibe(key) {
 		this.actorEngine.destroyActorsForVibe(key)
 		// Emit per-actor would require iterating; bulk emit for now
-		this._emit('actorDestroyed', { vibeKey: key, reason: 'vibeSwitch' })
+		this._emit('actorDestroyed', { vibeCoId: key, reason: 'vibeSwitch' })
 	}
 
 	/**
@@ -157,12 +148,9 @@ export class Runtime {
 		if (!this.dataEngine?.peer) return []
 		const { actorRefs } = await this._getVibesAndDependenciesFromDb()
 		const tools = []
-		const actorSchemaCoId = await this.dataEngine.peer.resolve('°Maia/factory/actor', {
-			returnType: 'coId',
-		})
-		const metaSchemaCoId = await this.dataEngine.peer.resolve('°Maia/factory/meta', {
-			returnType: 'coId',
-		})
+		const peer = this.dataEngine.peer
+		const actorSchemaCoId = peer.systemFactoryCoIds?.get?.('°Maia/factory/actor')
+		const metaSchemaCoId = peer.systemFactoryCoIds?.get?.('°Maia/factory/meta')
 		if (!actorSchemaCoId || !metaSchemaCoId) return []
 
 		for (const actorCoId of actorRefs) {
@@ -172,7 +160,7 @@ export class Runtime {
 			if (!interfaceRef || typeof interfaceRef !== 'string') continue
 			const interfaceCoId = interfaceRef.startsWith('co_z')
 				? interfaceRef
-				: await this.dataEngine.peer.resolve(interfaceRef, { returnType: 'coId' })
+				: (peer.systemFactoryCoIds?.get?.(interfaceRef) ?? null)
 			if (!interfaceCoId?.startsWith?.('co_z')) continue
 			const ifaceStore = await this.dataEngine.execute({
 				op: 'read',
@@ -240,19 +228,12 @@ export class Runtime {
 			return { ok: false, error: `Target actor not found: ${targetActorCoId}` }
 		}
 
-		let inboxCoId = targetConfig.inbox
-		if (!inboxCoId.startsWith('co_z') && this.dataEngine?.peer) {
-			inboxCoId = await this.dataEngine.peer.resolve(inboxCoId, { returnType: 'coId' })
-		}
-		if (!inboxCoId?.startsWith?.('co_z')) {
-			return { ok: false, error: 'Could not resolve target inbox' }
+		const inboxCoId = targetConfig.inbox
+		if (typeof inboxCoId !== 'string' || !inboxCoId.startsWith('co_z')) {
+			return { ok: false, error: 'Target actor inbox must be co-id (co_z...)' }
 		}
 
-		const callerInboxRef = callerActor?.config?.inbox ?? deriveInboxRef(callerId)
-		let callerInboxCoId = callerInboxRef
-		if (callerInboxCoId && !callerInboxCoId.startsWith('co_z') && this.dataEngine?.peer) {
-			callerInboxCoId = await this.dataEngine.peer.resolve(callerInboxRef, { returnType: 'coId' })
-		}
+		const callerInboxCoId = callerActor?.config?.inbox
 
 		const peer = this.dataEngine?.peer
 		const beforeCallerIds =
@@ -368,16 +349,7 @@ export class Runtime {
 			})
 			const sparksId = registriesStore?.value?.sparks
 			if (!sparksId?.startsWith?.('co_z')) return { actorRefs: [] }
-			const sparksStore = await this.dataEngine.execute({
-				op: 'read',
-				factory: sparksId,
-				key: sparksId,
-			})
-			const sparksData = sparksStore?.value
-			const sparkCoId =
-				sparksData?.['°Maia'] ||
-				sparksData?.Maia ||
-				Object.values(sparksData || {}).find((v) => typeof v === 'string' && v.startsWith('co_z'))
+			const sparkCoId = peer.systemSparkCoId
 			if (!sparkCoId?.startsWith?.('co_z')) return { actorRefs: [] }
 			const sparkStore = await this.dataEngine.execute({
 				op: 'read',
@@ -465,14 +437,7 @@ export class Runtime {
 				continue
 			}
 			const actorConfig = await this.getActorConfig(actorCoId)
-			let inboxCoId =
-				actorConfig?.inbox ?? deriveInboxRef(actorConfig?.$id || actorConfig?.id || actorCoId)
-			if (!inboxCoId) continue
-			if (typeof inboxCoId === 'string' && !inboxCoId.startsWith('co_z') && this.dataEngine?.peer) {
-				const resolved = await this.dataEngine.peer.resolve(inboxCoId, { returnType: 'coId' })
-				if (resolved && typeof resolved === 'string' && resolved.startsWith('co_z'))
-					inboxCoId = resolved
-			}
+			const inboxCoId = actorConfig?.inbox
 			if (typeof inboxCoId !== 'string' || !inboxCoId.startsWith('co_z')) continue
 			const actorId = actorConfig.$id || actorConfig.id || actorCoId
 			if (typeof actorId !== 'string' || !actorId.startsWith('co_z')) {

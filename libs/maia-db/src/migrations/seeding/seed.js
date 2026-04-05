@@ -52,7 +52,7 @@ export async function seed(
 	}
 
 	const { MaiaDB } = await import('../../cojson/core/MaiaDB.js')
-	const peer = existingBackend || new MaiaDB({ node, account }, { systemSpark: '°Maia' })
+	const peer = existingBackend || new MaiaDB({ node, account }, {})
 
 	const needsBootstrap =
 		!account.get('registries') || !String(account.get('registries')).startsWith('co_z')
@@ -74,6 +74,7 @@ export async function seed(
 		)
 	}
 	await bootstrapAccountRegistries(peer, maiaGroup)
+	await peer.resolveSystemSparkCoId()
 
 	const uniqueSchemasBy$id = new Map()
 	for (const [name, schema] of Object.entries(schemas)) {
@@ -525,6 +526,8 @@ export async function seed(
 		configs || {},
 		seededSchemas,
 	)
+
+	peer.strictMode = true
 
 	return {
 		metaSchema: metaSchemaCoId,

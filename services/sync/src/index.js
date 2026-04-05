@@ -21,24 +21,22 @@
 
 import { collectCapabilityGrantCoIdsFromStreamContent } from '@MaiaOS/db'
 import {
-	buildSeedConfig,
 	createWebSocketPeer,
 	DataEngine,
 	factoryMigration,
-	filterVibesForSeeding,
 	generateRegistryName,
 	getAllFactories,
-	getAllVibeRegistries,
 	getSeedConfig,
 	loadOrCreateAgentAccount,
 	MaiaDB,
 	MaiaScriptEvaluator,
 	removeGroupMember,
-	resolve,
+	SYSTEM_SPARK_REGISTRY_KEY,
 	waitForStoreReady,
 } from '@MaiaOS/loader'
 import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
 import { agentIDToDidKey, verifyInvocationToken } from '@MaiaOS/maia-ucan'
+import { buildSeedConfig, filterVibesForSeeding, getAllVibeRegistries } from '@MaiaOS/vibes/seeding'
 import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -69,7 +67,6 @@ if (!usePGlite && !usePostgres) {
 }
 // Resolve relative to sync package dir (stable across runs regardless of cwd)
 const dbPath = usePGlite ? pathResolve(_syncDir, PEER_DB_PATH) : undefined
-const MAIA_SPARK = '°Maia'
 const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
 
 const avenMaiaGuardian = process.env.AVEN_MAIA_GUARDIAN?.trim() || null
@@ -220,7 +217,7 @@ async function getCapabilitiesStreamId(worker) {
 	try {
 		return await getCoIdByPath(worker.peer, getRegistriesId(worker.account), [
 			'sparks',
-			MAIA_SPARK,
+			SYSTEM_SPARK_REGISTRY_KEY,
 			'os',
 			'capabilities',
 		])
@@ -258,16 +255,14 @@ async function pushCapabilityToStream(worker, { sub, cmd, pol, exp }) {
 	if (await hasValidCapability(worker, sub, cmd)) return
 	const capabilitiesStreamId = await getCapabilitiesStreamId(worker)
 	if (!capabilitiesStreamId?.startsWith('co_z')) return
-	const capabilitySchemaCoId = await resolve(worker.peer, '°Maia/factory/os/capability', {
-		returnType: 'coId',
-	})
+	const capabilitySchemaCoId = worker.peer.systemFactoryCoIds?.get?.('°Maia/factory/os/capability')
 	if (!capabilitySchemaCoId) return
 	try {
 		const createResult = await worker.dataEngine.execute({
 			op: 'create',
 			factory: capabilitySchemaCoId,
 			data: { sub, cmd, pol, exp },
-			spark: MAIA_SPARK,
+			spark: worker.peer.systemSparkCoId,
 		})
 		const capabilityCoId = createResult?.data?.id ?? createResult?.id
 		if (!capabilityCoId?.startsWith('co_z')) return
@@ -459,7 +454,7 @@ async function handleSyncRegistry(worker, req) {
 		let maiaSparkId = null
 		if (sparksId?.startsWith('co_z')) {
 			const sparksContent = await loadCoMap(worker.peer, sparksId, { retries: 2 })
-			maiaSparkId = sparksContent?.get?.(MAIA_SPARK)
+			maiaSparkId = sparksContent?.get?.(SYSTEM_SPARK_REGISTRY_KEY)
 		}
 		return jsonResponse(
 			{
@@ -555,7 +550,7 @@ async function handleRegister(worker, body, req) {
 				return err(`username "${u}" already registered to different identity`, 409, {}, req)
 
 			// Create Human CoMap (public: everyone reader) and dual-key registry
-			const humanSchemaCoId = await resolve(peer, '°Maia/factory/os/human', { returnType: 'coId' })
+			const humanSchemaCoId = peer.systemFactoryCoIds?.get?.('°Maia/factory/os/human')
 			if (!humanSchemaCoId)
 				return err('Human schema not found. Ensure genesis seed has run.', 500, {}, req)
 
@@ -632,9 +627,7 @@ async function handleRegister(worker, body, req) {
 			if (raw?.[u] != null && raw[u] !== coId)
 				return err(`username "${u}" already registered to different identity`, 409, {}, req)
 
-			const avenIdentitySchemaCoId = await resolve(peer, '°Maia/factory/os/aven-identity', {
-				returnType: 'coId',
-			})
+			const avenIdentitySchemaCoId = peer.systemFactoryCoIds?.get?.('°Maia/factory/os/aven-identity')
 			if (!avenIdentitySchemaCoId)
 				return err('Aven identity schema not found. Ensure genesis seed has run.', 500, {}, req)
 
@@ -1102,7 +1095,6 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 		const peer = new MaiaDB(
 			{ node: localNode, account: result.account },
 			{
-				systemSpark: '°Maia',
 				beforeAcceptWrite: async (_p, msg, from) => {
 					if (!agentWorker) return { ok: true }
 					if (from === 'storage' || from === 'import' || typeof from === 'string') return { ok: true }
@@ -1169,6 +1161,10 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 		} else {
 			opsSync.log('PEER_SYNC_SEED not set — using persisted scaffold (skip seed).')
 		}
+
+		await peer.resolveSystemSparkCoId()
+		await dataEngine.resolveSystemFactories()
+		if (!peer.strictMode) peer.strictMode = true
 
 		// Seed /admin for AVEN_MAIA_ACCOUNT (grants all endpoints). Must run after scaffold exists (genesis or prior run).
 		await waitForCapabilitiesStreamReady(agentWorker).catch((e) =>

@@ -34,15 +34,6 @@ import {
 
 const actorOps = createOpsLogger('ActorEngine')
 
-function deriveInboxRef(actorId) {
-	if (!actorId || typeof actorId !== 'string') return null
-	if (actorId.includes('/actor/') && !actorId.startsWith('°Maia/actor/')) {
-		return actorId.replace('/actor/', '/inbox/')
-	}
-	if (actorId.includes('/')) return `${actorId}/inbox`
-	return null
-}
-
 function formatBytes(bytes) {
 	if (bytes == null || bytes < 0) return '0 B'
 	if (bytes < 1024) return `${bytes} B`
@@ -196,11 +187,11 @@ export class ActorEngine {
 	 * Create a child actor by co-id. Runtime uses co-ids exclusively.
 	 * @param {Object} actor - Parent actor instance
 	 * @param {string} childActorCoId - Child actor co-id
-	 * @param {string} [vibeKey] - Optional vibe key for tracking child actors
+	 * @param {string} [vibeCoId] - Optional vibe co-id for tracking child actors
 	 * @returns {Promise<Object|null>} The child actor instance, or null if not found/created
 	 * @private
 	 */
-	async _createChildActorByCoId(actor, childActorCoId, _vibeKey = null) {
+	async _createChildActorByCoId(actor, childActorCoId, _vibeCoId = null) {
 		if (!childActorCoId?.startsWith('co_z')) return null
 		if (!actor.children) actor.children = {}
 
@@ -222,7 +213,7 @@ export class ActorEngine {
 			const childContainer = document.createElement('div')
 			childContainer.style.display = 'contents'
 			childContainer.dataset.childActorId = childActorCoId
-			const childActor = await this.createActor(childActorConfig, childContainer, _vibeKey)
+			const childActor = await this.createActor(childActorConfig, childContainer, _vibeCoId)
 			actor.children[childActorCoId] = childActor
 			return childActor
 		} catch (error) {
@@ -234,22 +225,16 @@ export class ActorEngine {
 		}
 	}
 
-	async createActor(actorConfig, containerElement, vibeKey = null) {
+	async createActor(actorConfig, containerElement, vibeCoId = null) {
 		const actorId = actorConfig.$id || actorConfig.id
 		if (this.actors.has(actorId)) {
-			return vibeKey
-				? await this.reuseActor(actorId, containerElement, vibeKey)
+			return vibeCoId
+				? await this.reuseActor(actorId, containerElement, vibeCoId)
 				: this.actors.get(actorId)
 		}
-		// Inbox by convention: derive when missing so config always has inbox set
-		let inboxRef = actorConfig.inbox ?? deriveInboxRef(actorConfig.$id || actorConfig.id)
-		if (inboxRef) {
-			const resolved = await resolveToCoId(this.dataEngine?.peer, inboxRef)
-			if (resolved) inboxRef = resolved
+		if (!actorConfig.inbox?.startsWith('co_z')) {
+			throw new Error(`[ActorEngine] Actor config must have inbox co-id (co_z...): ${actorId}`)
 		}
-		if (!inboxRef)
-			throw new Error(`[ActorEngine] Actor config must have inbox (or derivable from $id): ${actorId}`)
-		actorConfig.inbox = inboxRef
 		if (!actorConfig.process)
 			throw new Error(`[ActorEngine] Actor config must have process: ${actorId}`)
 		const actor = await this.spawnActor(actorConfig)
@@ -260,7 +245,7 @@ export class ActorEngine {
 				this._containerActors.set(containerElement, new Set())
 			this._containerActors.get(containerElement).add(actorId)
 		}
-		if (vibeKey) this.registerActorForVibe(actorId, vibeKey)
+		if (vibeCoId) this.registerActorForVibe(actorId, vibeCoId)
 
 		// View/DOM: delegate to ViewEngine
 		const onBeforeRender = () => this._initializeActorState(actor, actorConfig)
@@ -268,7 +253,7 @@ export class ActorEngine {
 			actor,
 			containerElement,
 			actorConfig,
-			vibeKey,
+			vibeCoId,
 			onBeforeRender,
 		)
 		return actor
@@ -371,36 +356,36 @@ export class ActorEngine {
 	}
 
 	/**
-	 * Register an actor with an aven key for reuse tracking
+	 * Register an actor with a vibe co-id for reuse tracking
 	 * @param {string} actorId - The actor ID
-	 * @param {string} vibeKey - The vibe key (e.g., 'todos')
+	 * @param {string} vibeCoId - Vibe CoMap co-id (co_z...)
 	 */
-	registerActorForVibe(actorId, vibeKey) {
-		if (!vibeKey) return
+	registerActorForVibe(actorId, vibeCoId) {
+		if (!vibeCoId) return
 
-		if (!this._vibeActors.has(vibeKey)) {
-			this._vibeActors.set(vibeKey, new Set())
+		if (!this._vibeActors.has(vibeCoId)) {
+			this._vibeActors.set(vibeCoId, new Set())
 		}
-		this._vibeActors.get(vibeKey).add(actorId)
+		this._vibeActors.get(vibeCoId).add(actorId)
 	}
 
 	/**
 	 * Get all actors for a vibe
-	 * @param {string} vibeKey - The vibe key (e.g., 'todos')
+	 * @param {string} vibeCoId - Vibe CoMap co-id (co_z...)
 	 * @returns {Set<string>|undefined} Set of actor IDs for the vibe
 	 */
-	getActorsForVibe(vibeKey) {
-		return this._vibeActors.get(vibeKey)
+	getActorsForVibe(vibeCoId) {
+		return this._vibeActors.get(vibeCoId)
 	}
 
 	/**
 	 * Reuse an existing actor by reattaching it to a new container
 	 * @param {string} actorId - The actor ID
 	 * @param {HTMLElement} containerElement - The new container to attach to
-	 * @param {string} vibeKey - The vibe key (e.g., 'todos')
+	 * @param {string} vibeCoId - Vibe CoMap co-id (co_z...)
 	 * @returns {Promise<Object>} The reused actor instance
 	 */
-	async reuseActor(actorId, containerElement, vibeKey) {
+	async reuseActor(actorId, containerElement, vibeCoId) {
 		const actor = this.actors.get(actorId)
 		if (!actor) throw new Error(`[ActorEngine] Cannot reuse actor ${actorId}`)
 		const oldContainer = actor.containerElement
@@ -415,7 +400,7 @@ export class ActorEngine {
 				this._containerActors.set(containerElement, new Set())
 			this._containerActors.get(containerElement).add(actorId)
 		}
-		this.registerActorForVibe(actorId, vibeKey)
+		this.registerActorForVibe(actorId, vibeCoId)
 		if (actor.shadowRoot) {
 			const oldHost = actor.shadowRoot.host
 			if (oldHost && oldHost !== containerElement) {
@@ -488,10 +473,10 @@ export class ActorEngine {
 			containerActors.delete(actorId)
 			if (containerActors.size === 0) this._containerActors.delete(actor.containerElement)
 		}
-		for (const [vibeKey, vibeActorIds] of this._vibeActors.entries()) {
+		for (const [vibeCoId, vibeActorIds] of this._vibeActors.entries()) {
 			if (vibeActorIds.has(actorId)) {
 				vibeActorIds.delete(actorId)
-				if (vibeActorIds.size === 0) this._vibeActors.delete(vibeKey)
+				if (vibeActorIds.size === 0) this._vibeActors.delete(vibeCoId)
 				break
 			}
 		}
@@ -532,16 +517,9 @@ export class ActorEngine {
 		const actorStore = await readStore(this.dataEngine, targetId)
 		if (!actorStore) throw new Error(`[ActorEngine] Failed to read actor config: ${targetId}`)
 		const targetActorConfig = actorStore?.value
-		let inboxCoId =
-			targetActorConfig?.inbox ??
-			deriveInboxRef(targetActorConfig?.$id || targetActorConfig?.id || targetId)
-		if (inboxCoId && typeof inboxCoId === 'string') {
-			inboxCoId = (await resolveToCoId(this.dataEngine?.peer, inboxCoId)) ?? inboxCoId
-		}
+		const inboxCoId = targetActorConfig?.inbox
 		if (!inboxCoId || typeof inboxCoId !== 'string' || !inboxCoId.startsWith('co_z')) {
-			throw new Error(
-				`[ActorEngine] Actor config inbox must be co-id (or derivable from $id): ${targetId}`,
-			)
+			throw new Error(`[ActorEngine] Actor config inbox must be co-id (co_z...): ${targetId}`)
 		}
 		return { inboxCoId, targetActorConfig, resolvedTargetId: targetId }
 	}
@@ -765,10 +743,11 @@ export class ActorEngine {
 		}
 		if (this.actors.has(actorId)) return this.actors.get(actorId)
 
-		const inboxRef = actorConfig.inbox ?? deriveInboxRef(actorConfig.$id || actorConfig.id)
-		if (!inboxRef || !actorConfig.process || typeof inboxRef !== 'string') return null
-		const inboxCoId = await resolveToCoId(this.dataEngine?.peer, inboxRef)
-		if (!inboxCoId) return null
+		if (!actorConfig.inbox?.startsWith('co_z')) {
+			throw new Error(`[ActorEngine] spawnActor: actorConfig.inbox must be co-id (co_z...)`)
+		}
+		const inboxCoId = actorConfig.inbox
+		if (!actorConfig.process) return null
 		const processRef = actorConfig.process
 		if (typeof processRef !== 'string') {
 			throw new Error(`[ActorEngine] spawnActor: process must be string, got: ${typeof processRef}`)
@@ -776,7 +755,7 @@ export class ActorEngine {
 		const configCoId = await resolveToCoId(this.dataEngine?.peer, processRef)
 		if (!configCoId) {
 			throw new Error(
-				`[ActorEngine] spawnActor: process must be co-id (or resolve to co-id). Got: ${processRef}. Run PEER_FRESH_SEED=true to seed configs with co-ids.`,
+				`[ActorEngine] spawnActor: process must be co-id. Got: ${processRef}. Re-seed with PEER_SYNC_SEED=true.`,
 			)
 		}
 		const configStore = await readStore(this.dataEngine, configCoId)
@@ -869,9 +848,14 @@ export class ActorEngine {
 		}
 		if (!executableFunction) {
 			const { getActor } = await import('@MaiaOS/actors')
-			const label = actorConfig['@label']
-			const namespacePath = typeof label === 'string' ? label.replace(/^@/, '') : null
-			const actorModule = namespacePath ? getActor(namespacePath) : null
+			const namespacePath =
+				typeof actorConfig.executableKey === 'string' ? actorConfig.executableKey : null
+			if (!namespacePath) {
+				throw new Error(
+					`[ActorEngine] spawnActor: actorConfig.executableKey required for native JS actor (co-id ${actorId})`,
+				)
+			}
+			const actorModule = getActor(namespacePath)
 			executableFunction = actorModule?.function ?? null
 		}
 
@@ -906,7 +890,7 @@ export class ActorEngine {
 			containerElement: null,
 			actorOps: this, // ActorEngine implements ActorOps interface
 			viewDef: null,
-			vibeKey: null,
+			vibeCoId: null,
 			inbox: null,
 			inboxCoId,
 			interface: actorConfig.interface || null,
@@ -944,15 +928,15 @@ export class ActorEngine {
 	/**
 	 * Destroy all actors for an aven (complete cleanup)
 	 * Used for explicit cleanup when needed (e.g., app shutdown)
-	 * @param {string} vibeKey - The vibe key (e.g., 'todos')
+	 * @param {string} vibeCoId - Vibe CoMap co-id (co_z...)
 	 */
-	destroyActorsForVibe(vibeKey) {
-		const actorIds = this._vibeActors.get(vibeKey)
-		if (!vibeKey || !actorIds?.size) return
+	destroyActorsForVibe(vibeCoId) {
+		const actorIds = this._vibeActors.get(vibeCoId)
+		if (!vibeCoId || !actorIds?.size) return
 		for (const actorId of Array.from(actorIds)) {
 			this.destroyActor(actorId)
 		}
-		this._vibeActors.delete(vibeKey)
+		this._vibeActors.delete(vibeCoId)
 	}
 
 	/**

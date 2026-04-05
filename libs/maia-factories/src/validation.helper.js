@@ -32,27 +32,15 @@ export function setFactoryResolver(options) {
 		throw new Error('[setFactoryResolver] dataEngine is REQUIRED. No fallbacks allowed.')
 	}
 
-	// Create resolver that uses universal resolve() API (single source of truth)
+	// Strict runtime: co_z via resolve(); namekeys only via peer.systemFactoryCoIds → resolve(co_z) (see resolveFactoryDefFromPeer)
 	const operationsResolver = async (factoryKey) => {
-		// Use universal resolve() API directly (single source of truth)
 		try {
 			if (!dataEngine.peer) {
 				throw new Error('[SchemaResolver] dataEngine.peer is required')
 			}
-
-			// Import resolve() dynamically to avoid circular dependencies
-			const { resolve } = await import('@MaiaOS/db')
-
-			// Use universal resolve() API - handles co-id, registry string (°Maia/factory/...), etc.
-			const factoryDef = await resolve(dataEngine.peer, factoryKey, { returnType: 'factory' })
-
-			if (!factoryDef) {
-				throw new Error(`[SchemaResolver] Factory ${factoryKey} not found`)
-			}
-
-			return factoryDef
+			const { resolveFactoryDefFromPeer } = await import('@MaiaOS/db')
+			return await resolveFactoryDefFromPeer(dataEngine.peer, factoryKey, { returnType: 'factory' })
 		} catch (error) {
-			// Fail fast - no fallbacks
 			throw new Error(`[SchemaResolver] Failed to load factory ${factoryKey}: ${error.message}`)
 		}
 	}

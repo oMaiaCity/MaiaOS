@@ -9,6 +9,9 @@
 	"files": [
 		"src"
 	],
+	"scripts": {
+		"test": "bun test ./tests"
+	},
 	"dependencies": {
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/engines": "workspace:*",
@@ -16,7 +19,6 @@
 		"@MaiaOS/factories": "workspace:*",
 		"@MaiaOS/self": "workspace:*",
 		"@MaiaOS/actors": "workspace:*",
-		"@MaiaOS/vibes": "workspace:*",
 		"cojson-transport-ws": "0.20.16"
 	}
 }

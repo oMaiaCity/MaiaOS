@@ -22,7 +22,7 @@ export {
 	resetGlobalCoCache,
 } from './cojson/cache/coCache.js'
 // MaiaDB - single data layer implementation (was CoJSONBackend)
-export { MaiaDB } from './cojson/core/MaiaDB.js'
+export { MaiaDB, SYSTEM_SPARK_REGISTRY_KEY } from './cojson/core/MaiaDB.js'
 export { createCoList } from './cojson/cotypes/coList.js'
 export { createCoMap } from './cojson/cotypes/coMap.js'
 export { createCoStream } from './cojson/cotypes/coStream.js'
@@ -60,7 +60,9 @@ export { waitForStoreReady } from './cojson/crud/read-operations.js'
 export {
 	checkCotype,
 	loadFactoriesFromAccount,
+	lookupRegistryKey,
 	resolve,
+	resolveFactoryDefFromPeer,
 	resolveReactive,
 } from './cojson/factory/resolver.js'
 // Re-export services for external use
@@ -68,10 +70,14 @@ export {
 export { createGroup, createProfile } from './cojson/groups/create.js'
 export {
 	getSparkCapabilityGroupIdFromSparkCoId,
+	getSparkOsId,
 	removeGroupMember,
 } from './cojson/groups/groups.js'
 export { collectCapabilityGrantCoIdsFromStreamContent } from './cojson/helpers/capability-stream-co-ids.js'
-export { loadCapabilitiesGrants } from './cojson/helpers/load-capabilities-grants.js'
+export {
+	getCapabilitiesStreamCoId,
+	loadCapabilitiesGrants,
+} from './cojson/helpers/load-capabilities-grants.js'
 export { resolveAccountCoIdsToProfiles } from './cojson/helpers/resolve-account-profile.js'
 export { resolveGroupCoIdsToCapabilityNames } from './cojson/helpers/resolve-capability-group.js'
 export {

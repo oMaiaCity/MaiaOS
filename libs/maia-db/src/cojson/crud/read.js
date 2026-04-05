@@ -78,13 +78,9 @@ export async function read(
 	// Collection read (by schema)
 	if (schema) {
 		// Sparks: read from account.registries.sparks (index only has user-created sparks)
-		const sparkSchemaCoId = await resolveSchema(peer, '°Maia/factory/data/spark', {
-			returnType: 'coId',
-		})
+		const sparkSchemaCoId = peer.systemFactoryCoIds?.get?.('°Maia/factory/data/spark') ?? null
 		// Humans: read from account.registries.humans (no schema index)
-		const humanSchemaCoId = await resolveSchema(peer, '°Maia/factory/os/human', {
-			returnType: 'coId',
-		})
+		const humanSchemaCoId = peer.systemFactoryCoIds?.get?.('°Maia/factory/os/human') ?? null
 		const resolvedSchema = await resolveSchema(peer, schema, { returnType: 'coId' })
 		if (sparkSchemaCoId && resolvedSchema === sparkSchemaCoId) {
 			return readSparksFromAccount(peer, readOptions)
@@ -92,9 +88,8 @@ export async function read(
 		if (humanSchemaCoId && resolvedSchema === humanSchemaCoId) {
 			return readHumansFromRegistries(peer, readOptions)
 		}
-		const avenIdentitySchemaCoId = await resolveSchema(peer, '°Maia/factory/os/aven-identity', {
-			returnType: 'coId',
-		})
+		const avenIdentitySchemaCoId =
+			peer.systemFactoryCoIds?.get?.('°Maia/factory/os/aven-identity') ?? null
 		if (avenIdentitySchemaCoId && resolvedSchema === avenIdentitySchemaCoId) {
 			return readAvensFromRegistries(peer, readOptions)
 		}

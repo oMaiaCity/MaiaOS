@@ -243,7 +243,7 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 				try {
 					// Pre-warm getSparkOsId: ensure registries/spark/os are loaded before indexCoValue
 					if (!peer._cachedMaiaOsId && peer.account) {
-						await groups.getSparkOsId(peer, peer.systemSpark ?? '°Maia')
+						await groups.getSparkOsId(peer, peer.systemSparkCoId)
 					}
 
 					// Get co-value core (may need retries for local rapid writes during seeding)

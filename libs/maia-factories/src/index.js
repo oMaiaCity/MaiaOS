@@ -53,6 +53,7 @@ import humanSchema from './os/human.factory.json'
 import humansRegistrySchema from './os/humans-registry.factory.json'
 import inboxFactory from './os/inbox.factory.json'
 import indexesRegistrySchema from './os/indexes-registry.factory.json'
+import maiaScriptExpressionSchema from './os/maia-script-expression.factory.json'
 import osRegistrySchema from './os/os-registry.factory.json'
 import processSchema from './os/process.factory.json'
 import registriesSchema from './os/registries.factory.json'
@@ -91,6 +92,7 @@ const FACTORIES = {
 	'os/human': humanSchema,
 	'os/humans-registry': humansRegistrySchema,
 	'os/registries': registriesSchema,
+	'maia-script-expression': maiaScriptExpressionSchema,
 	'data/cobinary': cobinaryDataSchema,
 	'data/notes': notesDataSchema,
 	'data/profile': profileDataSchema,
