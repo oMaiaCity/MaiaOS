@@ -369,6 +369,12 @@ function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 	// dependencies, items, source/target, states, handlers, query objects)
 	walkAndTransformRefs(transformed, coIdMap)
 
+	// Native JS actor dispatch: stable module key (ACTORS map). Not a CoID.
+	if (transformed['@label'] && typeof transformed['@label'] === 'string') {
+		transformed.executableKey = transformed['@label'].replace(/^@/, '')
+		delete transformed['@label']
+	}
+
 	return transformed
 }
 

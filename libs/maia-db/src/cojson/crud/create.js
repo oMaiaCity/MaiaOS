@@ -74,11 +74,14 @@ async function determineCotypeAndFlag(peer, schema, data) {
  * @param {string} schema - Schema co-id (co_z...) for data collections
  * @param {Object} data - Data to create
  * @param {Object} [options] - Optional settings
- * @param {string} [options.spark='°Maia'] - Spark name for context (e.g. '°Maia', '@Maia')
+ * @param {string} [options.spark] - Spark co-id (co_z...); defaults to peer.systemSparkCoId
  * @returns {Promise<Object>} Created record with generated co-id
  */
 export async function create(peer, schema, data, options = {}) {
-	const spark = options.spark ?? '°Maia'
+	const spark = options.spark ?? peer.systemSparkCoId
+	if (!spark?.startsWith?.('co_z')) {
+		throw new Error('[MaiaDB] create: options.spark or peer.systemSparkCoId (co_z) required')
+	}
 
 	// Determine cotype from schema or data type
 	const { cotype, isSchemaDefinition } = await determineCotypeAndFlag(peer, schema, data)

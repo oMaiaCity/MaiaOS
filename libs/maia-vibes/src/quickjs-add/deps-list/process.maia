@@ -19,7 +19,7 @@
 					"target": "°Maia/actor/services/updateWasmCode",
 					"type": "GET_WASM_CODE",
 					"payload": {
-						"actorRef": "$$item.id"
+						"actorCoId": "$$item.id"
 					}
 				}
 			}

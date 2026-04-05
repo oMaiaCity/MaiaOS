@@ -15,24 +15,12 @@ import { MAIADB_LAYER_STACK_ICON_SVG } from './maia-icons.js'
 /** Same channel as `perfAppMaiaDb` in @MaiaOS/logs — created here so bundled app always resolves (named export can be omitted by some bundles). */
 const perfAppMaiaDb = createPerfTracer('app', 'maia-db')
 
-/** Resolve schema definition from DB (dynamic - no static registry fallback) */
+/** Resolve schema definition from DB (dynamic - factory ref must be co_z) */
 async function getFactoryFromDb(maia, factoryRef) {
 	if (!factoryRef || !maia?.do) return null
-	let factoryCoId = factoryRef
-	if (!factoryRef.startsWith('co_z')) {
-		try {
-			factoryCoId = await maia.do({
-				op: 'resolve',
-				humanReadableKey: factoryRef,
-				returnType: 'coId',
-			})
-		} catch (_e) {
-			return null
-		}
-		if (!factoryCoId?.startsWith('co_z')) return null
-	}
+	if (!factoryRef.startsWith('co_z')) return null
 	try {
-		const factoryStore = await maia.do({ op: 'factory', coId: factoryCoId })
+		const factoryStore = await maia.do({ op: 'factory', coId: factoryRef })
 		return factoryStore?.value ?? null
 	} catch (_e) {
 		return null
@@ -253,6 +241,7 @@ export async function renderApp(
 	loadVibe,
 	loadSpark,
 	navigateToScreen,
+	capabilitiesStreamCoId,
 ) {
 	// Re-apply LOG_MODE every render: in-memory perf/debug gates reset on HMR; ensures perf.all works after clicks.
 	if (typeof window !== 'undefined' && window.__MAIA_DEV_ENV__?.LOG_MODE !== undefined) {
@@ -511,7 +500,7 @@ export async function renderApp(
 		}
 
 		// Capabilities view — shell first; grants + profiles load after paint (hydrateCapabilitiesView)
-		if (currentContextCoValueId === '__capabilities__' && maia) {
+		if (capabilitiesStreamCoId && currentContextCoValueId === capabilitiesStreamCoId && maia) {
 			debugLog('app', 'maia-db', 'render capabilities view (shell; grants load in background)', {
 				hasDo: !!maia?.do,
 			})
@@ -629,13 +618,14 @@ export async function renderApp(
 									currentScreen,
 									currentView,
 									currentContextCoValueId,
-									currentAven,
+									currentVibe,
 									currentSpark,
 									switchView,
 									selectCoValue,
 									loadVibe,
 									loadSpark,
 									navigateToScreen,
+									capabilitiesStreamCoId,
 								)
 							}, 0)
 						}
@@ -678,13 +668,14 @@ export async function renderApp(
 										currentScreen,
 										currentView,
 										currentContextCoValueId,
-										currentAven,
+										currentVibe,
 										currentSpark,
 										switchView,
 										selectCoValue,
 										loadVibe,
 										loadSpark,
 										navigateToScreen,
+										capabilitiesStreamCoId,
 									)
 								}, 0)
 							}
@@ -692,22 +683,7 @@ export async function renderApp(
 						// ReactiveStore handles cleanup automatically
 					}
 				} else {
-					// Human-readable schema name - get all CoValues and filter by schema
-					const allCoValues = maia.getAllCoValues()
-					data = allCoValues
-						.filter((cv) => {
-							// Match schema name (can be in various formats)
-							const schema = cv.$factory // STRICT: Only $factory, no fallback
-							return (
-								schema === currentView ||
-								schema === `°Maia/factory/${currentView}` ||
-								cv.headerMeta?.$factory === currentView
-							)
-						})
-						.map((cv) => ({
-							displayName: cv.$factory || cv.id, // STRICT: Only $factory, no fallback
-							...cv,
-						}))
+					data = []
 				}
 			} catch (_err) {
 				data = []
@@ -730,12 +706,13 @@ export async function renderApp(
 			label: 'Account',
 			type: 'account',
 		})
-		// Entry 2: Capabilities (guardian visibility - spark.os.capabilities grants)
-		navigationItems.push({
-			id: '__capabilities__',
-			label: 'Capabilities',
-			type: 'capabilities',
-		})
+		if (capabilitiesStreamCoId) {
+			navigationItems.push({
+				id: capabilitiesStreamCoId,
+				label: 'Capabilities',
+				type: 'capabilities',
+			})
+		}
 
 		// Build table content based on view (tableContent/headerInfo already set by capabilities branch if applicable)
 		// DB Viewer only shows DB content (no agent rendering here)
@@ -1418,7 +1395,7 @@ export async function renderApp(
 		</div>
 	`
 
-		if (currentContextCoValueId === '__capabilities__' && maia) {
+		if (capabilitiesStreamCoId && currentContextCoValueId === capabilitiesStreamCoId && maia) {
 			void hydrateCapabilitiesView(maia)
 		}
 

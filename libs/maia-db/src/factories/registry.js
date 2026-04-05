@@ -93,8 +93,7 @@ export function validateHeaderMetaFactory(coValue) {
 
 export async function getMetaFactoryFromPeer(peer) {
 	if (!peer) throw new Error('[getMetaFactoryFromPeer] Peer required')
-	const { resolve } = await import('../cojson/factory/resolver.js')
-	const metaSchemaCoId = await resolve(peer, '°Maia/factory/meta', { returnType: 'coId' })
+	const metaSchemaCoId = peer.systemFactoryCoIds?.get?.('°Maia/factory/meta')
 	if (!metaSchemaCoId) throw new Error('[getMetaFactoryFromPeer] Metaschema not found in registry')
 	const metaSchemaStore = await peer.read(null, metaSchemaCoId)
 	if (!metaSchemaStore || metaSchemaStore.value?.error) {

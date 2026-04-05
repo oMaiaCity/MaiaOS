@@ -1,4 +1,5 @@
 // loadSchemaFromDB removed - use resolve() from @MaiaOS/db if needed
+import { resolveFactoryDefFromPeer, SYSTEM_SPARK_REGISTRY_KEY } from '@MaiaOS/db'
 import { validateAgainstFactoryOrThrow } from '@MaiaOS/factories/validation.helper'
 import { FORBIDDEN_PATH_KEYS } from './security.js'
 
@@ -66,8 +67,9 @@ export class Evaluator {
 		) {
 			try {
 				if (this.dataEngine?.peer) {
-					const factoryKey = `${this.dataEngine.peer.systemSpark}/factory/maia-script-expression`
-					const expressionFactory = await this.dataEngine.peer.resolve(factoryKey, {
+					const peer = this.dataEngine.peer
+					const factoryKey = `${SYSTEM_SPARK_REGISTRY_KEY}/factory/maia-script-expression`
+					const expressionFactory = await resolveFactoryDefFromPeer(peer, factoryKey, {
 						returnType: 'factory',
 					})
 					if (expressionFactory) {

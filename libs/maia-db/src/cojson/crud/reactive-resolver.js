@@ -14,7 +14,7 @@
 
 import { ReactiveStore } from '../../reactive-store.js'
 import { observeCoValue } from '../cache/coCache.js'
-import { resolve } from '../factory/resolver.js'
+import { lookupRegistryKey } from '../factory/resolver.js'
 import { ensureCoValueLoaded } from './collection-helpers.js'
 import { read as universalRead } from './read.js'
 
@@ -35,6 +35,11 @@ export function resolveFactoryReactive(peer, factoryKey, options = {}) {
 	const { timeoutMs = 10000 } = options
 	const store = new ReactiveStore({ loading: true })
 
+	if (peer?.strictMode && typeof factoryKey === 'string' && !factoryKey.startsWith('co_z')) {
+		store._set({ loading: false, error: '[resolveReactive] Runtime resolve requires co_z CoID' })
+		return store
+	}
+
 	// If it's already a co-id, return immediately
 	if (factoryKey.startsWith('co_z')) {
 		store._set({ loading: false, factoryCoId: factoryKey })
@@ -48,7 +53,11 @@ export function resolveFactoryReactive(peer, factoryKey, options = {}) {
 	// Set up reactive subscription to spark.os.factories for progressive resolution (account.registries.sparks[°Maia].os.factories)
 	const setupReactiveSubscription = async () => {
 		const { getSparkOsId } = await import('../groups/groups.js')
-		const spark = peer?.systemSpark ?? '°Maia'
+		const spark = peer?.systemSparkCoId
+		if (!spark?.startsWith?.('co_z')) {
+			store._set({ loading: false, error: 'peer.systemSparkCoId not set' })
+			return
+		}
 		const osId = await getSparkOsId(peer, spark)
 		if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
 			store._set({ loading: false, error: 'spark.os not found' })
@@ -86,24 +95,22 @@ export function resolveFactoryReactive(peer, factoryKey, options = {}) {
 						return // Still loading or error
 					}
 
-					// Check if factory is in registry
-					const normalizedKey = factoryKey.startsWith('°Maia/factory/')
-						? factoryKey
-						: `°Maia/factory/${factoryKey}`
-					const registryCoId = factoriesData[normalizedKey] || factoriesData[factoryKey]
-
-					if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
-						// Factory found - update store
-						store._set({ loading: false, factoryCoId: registryCoId })
-						if (factoriesUnsubscribe) {
-							factoriesUnsubscribe()
-							factoriesUnsubscribe = null
-						}
-						if (osUnsubscribe) {
-							osUnsubscribe()
-							osUnsubscribe = null
-						}
-					}
+					void lookupRegistryKey(peer, factoryKey, { returnType: 'coId', timeoutMs }).then(
+						(registryCoId) => {
+							if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
+								// Factory found - update store
+								store._set({ loading: false, factoryCoId: registryCoId })
+								if (factoriesUnsubscribe) {
+									factoriesUnsubscribe()
+									factoriesUnsubscribe = null
+								}
+								if (osUnsubscribe) {
+									osUnsubscribe()
+									osUnsubscribe = null
+								}
+							}
+						},
+					)
 				})
 			}
 		})
@@ -123,8 +130,8 @@ export function resolveFactoryReactive(peer, factoryKey, options = {}) {
 		}
 	}
 
-	// Try to resolve factory immediately (non-blocking check)
-	resolve(peer, factoryKey, { returnType: 'coId', timeoutMs: 2000 })
+	// Try to resolve factory immediately (non-blocking check; registry keys — not public resolve in strict mode)
+	lookupRegistryKey(peer, factoryKey, { returnType: 'coId', timeoutMs: 2000 })
 		.then((factoryCoId) => {
 			if (factoryCoId?.startsWith('co_z')) {
 				// Schema resolved immediately - update store
@@ -215,6 +222,19 @@ export function resolveQueryReactive(peer, queryDef, options = {}) {
 
 	if (!queryDef?.factory) {
 		store._set({ loading: false, items: [], error: 'Invalid query definition' })
+		return store
+	}
+
+	if (
+		peer?.strictMode &&
+		typeof queryDef.factory === 'string' &&
+		!queryDef.factory.startsWith('co_z')
+	) {
+		store._set({
+			loading: false,
+			items: [],
+			error: '[resolveReactive] Runtime resolve requires co_z CoID',
+		})
 		return store
 	}
 
@@ -365,10 +385,16 @@ export function resolveReactive(peer, identifier, options = {}) {
 		if (identifier.startsWith('co_z')) {
 			// Co-id - resolve CoValue reactively
 			return resolveCoValueReactive(peer, identifier, options)
-		} else {
-			// Factory key - resolve factory reactively
-			return resolveFactoryReactive(peer, identifier, options)
 		}
+		if (peer?.strictMode) {
+			const errStore = new ReactiveStore({
+				loading: false,
+				error: '[resolveReactive] Runtime resolve requires co_z CoID',
+			})
+			return errStore
+		}
+		// Factory key - resolve factory reactively (non-strict / seeding)
+		return resolveFactoryReactive(peer, identifier, options)
 	}
 
 	// Invalid identifier

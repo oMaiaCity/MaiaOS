@@ -66,12 +66,12 @@ export async function processInbox(peer, actorId, inboxCoId) {
 			if (messageFactoryRef.startsWith('co_z')) {
 				messageSchemaCoId = messageFactoryRef
 			} else if (messageFactoryRef.startsWith('°Maia/factory/')) {
-				messageSchemaCoId = await resolve(peer, messageFactoryRef, { returnType: 'coId' })
+				messageSchemaCoId = peer.systemFactoryCoIds?.get?.(messageFactoryRef) ?? null
 			}
 		}
 
 		if (!messageSchemaCoId) {
-			messageSchemaCoId = await resolve(peer, '°Maia/factory/event', { returnType: 'coId' })
+			messageSchemaCoId = peer.systemFactoryCoIds?.get?.('°Maia/factory/event') ?? null
 		}
 	} catch (_error) {}
 
@@ -293,11 +293,11 @@ export async function findNewSuccessFromTarget(peer, inboxCoId, targetActorCoId,
 			if (messageFactoryRef.startsWith('co_z')) {
 				messageSchemaCoId = messageFactoryRef
 			} else if (messageFactoryRef.startsWith('°Maia/factory/')) {
-				messageSchemaCoId = await resolve(peer, messageFactoryRef, { returnType: 'coId' })
+				messageSchemaCoId = peer.systemFactoryCoIds?.get?.(messageFactoryRef) ?? null
 			}
 		}
 		if (!messageSchemaCoId) {
-			messageSchemaCoId = await resolve(peer, '°Maia/factory/event', { returnType: 'coId' })
+			messageSchemaCoId = peer.systemFactoryCoIds?.get?.('°Maia/factory/event') ?? null
 		}
 	} catch (_error) {}
 

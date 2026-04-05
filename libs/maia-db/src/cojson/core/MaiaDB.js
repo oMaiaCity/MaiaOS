@@ -18,6 +18,8 @@ import { resolveReactive as resolveReactiveFn } from '../crud/reactive-resolver.
 import { findFirst as findFirstByFilter, read as universalRead } from '../crud/read.js'
 import {
 	waitForReactiveResolution as waitForReactiveResolutionFn,
+	waitForRegistriesSparksCoId,
+	waitForSparksCoMapRegistryKey,
 	waitForStoreReady,
 } from '../crud/read-operations.js'
 import * as crudUpdate from '../crud/update.js'
@@ -26,10 +28,13 @@ import * as groups from '../groups/groups.js'
 import { wrapStorageWithIndexingHooks } from '../indexing/storage-hook-wrapper.js'
 import { wrapSyncManagerWithValidation } from '../sync/validation-hook-wrapper.js'
 
+/** Key used in `registries.sparks` CoMap for the primary OS spark (written at seed). */
+export const SYSTEM_SPARK_REGISTRY_KEY = '°Maia'
+
 export class MaiaDB {
 	/**
 	 * @param {{ node: import('cojson').LocalNode, account: import('cojson').RawAccount }} peer - Node and account
-	 * @param {Object} [dbEngineOrOptions] - DBEngine for schema validation, or options { systemSpark }
+	 * @param {Object} [dbEngineOrOptions] - DBEngine for schema validation, or options bag (no systemSpark; use {@link #resolveSystemSparkCoId})
 	 */
 	constructor(peer, dbEngineOrOptions = null) {
 		const { node, account } = peer
@@ -43,7 +48,12 @@ export class MaiaDB {
 		this.node = node
 		this.account = account
 		this.dbEngine = dbEngine
-		this.systemSpark = options.systemSpark ?? '°Maia'
+		/** @type {string|null} Spark CoMap co-id for {@link SYSTEM_SPARK_REGISTRY_KEY}; set by {@link #resolveSystemSparkCoId} */
+		this.systemSparkCoId = options.systemSparkCoId ?? null
+		/** When true, {@link resolve} rejects non-`co_z` string identifiers (set after boot / seed). */
+		this.strictMode = false
+		/** Registry namekey → schema factory co-id; filled by DataEngine.resolveSystemFactories */
+		this.systemFactoryCoIds = new Map()
 
 		this.subscriptionCache = getGlobalCoCache(node)
 		if (node.storage) {
@@ -54,6 +64,35 @@ export class MaiaDB {
 				beforeAcceptWrite: options?.beforeAcceptWrite,
 			})
 		}
+	}
+
+	/**
+	 * Resolve and cache `account.registries.sparks[SYSTEM_SPARK_REGISTRY_KEY]` as {@link #systemSparkCoId}.
+	 * Call after {@link #dbEngine} is set (loader boot).
+	 */
+	async resolveSystemSparkCoId() {
+		if (this.systemSparkCoId?.startsWith('co_z')) return this.systemSparkCoId
+		if (!this.account?.id) {
+			throw new Error('[MaiaDB] resolveSystemSparkCoId: account required')
+		}
+		const accountStore = await this.read('@account', this.account.id)
+		const registriesId = accountStore?.value?.registries
+		if (!registriesId?.startsWith?.('co_z')) {
+			throw new Error('[MaiaDB] resolveSystemSparkCoId: account.registries missing')
+		}
+		const registriesStore = await this.read(null, registriesId)
+		await waitForStoreReady(registriesStore, registriesId, 20000)
+		const sparksId = await waitForRegistriesSparksCoId(registriesStore, registriesId, 20000)
+		const sparksStore = await this.read(sparksId, sparksId)
+		await waitForStoreReady(sparksStore, sparksId, 20000)
+		const id = await waitForSparksCoMapRegistryKey(
+			sparksStore,
+			sparksId,
+			SYSTEM_SPARK_REGISTRY_KEY,
+			20000,
+		)
+		this.systemSparkCoId = id
+		return id
 	}
 
 	_resetCaches() {}
@@ -149,20 +188,17 @@ export class MaiaDB {
 
 	async createSpark(name) {
 		if (!this.account) throw new Error('[MaiaDB] Account required for createSpark')
+		if (this.dbEngine?.resolveSystemFactories) await this.dbEngine.resolveSystemFactories()
 		const trimmed = typeof name === 'string' ? name.trim() : ''
 		const normalizedName = trimmed && !trimmed.startsWith('°') ? `°${trimmed}` : trimmed
 		const maiaGuardian = await this.getMaiaGroup()
 		if (!maiaGuardian) throw new Error('[MaiaDB] °Maia spark group not found')
 		const { createChildGroup } = await import('../groups/create.js')
 		const childGroup = createChildGroup(this.node, maiaGuardian, { name: normalizedName })
-		const sparkSchemaCoId = await resolve(this, '°Maia/factory/data/spark', { returnType: 'coId' })
-		const groupsSchemaCoId = await resolve(this, '°Maia/factory/os/groups', {
-			returnType: 'coId',
-		})
-		const osSchemaCoId = await resolve(this, '°Maia/factory/os/os-registry', { returnType: 'coId' })
-		const vibesRegistrySchemaCoId = await resolve(this, '°Maia/factory/os/vibes-registry', {
-			returnType: 'coId',
-		})
+		const sparkSchemaCoId = this.systemFactoryCoIds.get('°Maia/factory/data/spark')
+		const groupsSchemaCoId = this.systemFactoryCoIds.get('°Maia/factory/os/groups')
+		const osSchemaCoId = this.systemFactoryCoIds.get('°Maia/factory/os/os-registry')
+		const vibesRegistrySchemaCoId = this.systemFactoryCoIds.get('°Maia/factory/os/vibes-registry')
 		if (!sparkSchemaCoId || !groupsSchemaCoId || !osSchemaCoId || !vibesRegistrySchemaCoId) {
 			throw new Error('[MaiaDB] Spark scaffold factories not found')
 		}
@@ -197,10 +233,10 @@ export class MaiaDB {
 
 	async readSpark(id, schema = null) {
 		if (id) return await this.read(null, id)
-		const sparkSchema = schema || '°Maia/factory/data/spark'
-		const sparkSchemaCoId = await resolve(this, sparkSchema, { returnType: 'coId' })
-		if (!sparkSchemaCoId) throw new Error(`[MaiaDB] Spark factory not found: ${sparkSchema}`)
-		return await this.read(sparkSchemaCoId)
+		if (!schema?.startsWith?.('co_z')) {
+			throw new Error('[MaiaDB] readSpark: id or spark schema co-id (co_z...) required')
+		}
+		return await this.read(schema)
 	}
 
 	async updateSpark(id, data) {
@@ -275,7 +311,9 @@ export class MaiaDB {
 	async ensureAccountOsReady(options = {}) {
 		const { timeoutMs = 10000 } = options
 		if (!this.account && typeof process !== 'undefined' && process.env?.DEBUG) return false
-		const osId = await groups.getSparkOsId(this, '°Maia')
+		if (!this.systemSparkCoId?.startsWith?.('co_z')) await this.resolveSystemSparkCoId()
+		if (this.dbEngine?.resolveSystemFactories) await this.dbEngine.resolveSystemFactories()
+		const osId = await groups.getSparkOsId(this, this.systemSparkCoId)
 		if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
 			if (typeof process !== 'undefined' && process.env?.DEBUG) return false
 		}
@@ -302,12 +340,12 @@ export class MaiaDB {
 			if (!osContent || typeof osContent.set !== 'function') {
 				if (typeof process !== 'undefined' && process.env?.DEBUG) return false
 			}
-			const factoriesRegistrySchemaCoId = await resolve(this, '°Maia/factory/os/factories-registry', {
-				returnType: 'coId',
-			})
+			const factoriesRegistrySchemaCoId = this.systemFactoryCoIds.get(
+				'°Maia/factory/os/factories-registry',
+			)
 			const schema = factoriesRegistrySchemaCoId || EXCEPTION_FACTORIES.META_SCHEMA
 			const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
-			const { coValue: factoriesCoMap } = await createCoValueForSpark(this, '°Maia', {
+			const { coValue: factoriesCoMap } = await createCoValueForSpark(this, this.systemSparkCoId, {
 				factory: schema,
 				cotype: 'comap',
 				data: {},
@@ -331,20 +369,20 @@ export class MaiaDB {
 			if (osCore && this.isAvailable(osCore)) {
 				const osContent = this.getCurrentContent(osCore)
 				if (osContent && typeof osContent.set === 'function') {
-					const capabilitiesStreamSchemaCoId = await resolve(
-						this,
+					const capabilitiesStreamSchemaCoId = this.systemFactoryCoIds.get(
 						'°Maia/factory/os/capabilities-stream',
-						{
-							returnType: 'coId',
-						},
 					)
 					const capSchema = capabilitiesStreamSchemaCoId || EXCEPTION_FACTORIES.META_SCHEMA
 					const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
-					const { coValue: capabilitiesStream } = await createCoValueForSpark(this, '°Maia', {
-						factory: capSchema,
-						cotype: 'costream',
-						dataEngine: this.dbEngine,
-					})
+					const { coValue: capabilitiesStream } = await createCoValueForSpark(
+						this,
+						this.systemSparkCoId,
+						{
+							factory: capSchema,
+							cotype: 'costream',
+							dataEngine: this.dbEngine,
+						},
+					)
 					osContent.set('capabilities', capabilitiesStream.id)
 					capabilitiesId = capabilitiesStream.id
 				}

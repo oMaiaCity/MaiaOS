@@ -6,7 +6,12 @@
  * Uses peer (MaiaDB) methods only - no direct @MaiaOS/db imports except normalizeCoValueData.
  */
 
-import { ensureCoValueAvailable, normalizeCoValueData } from '@MaiaOS/db'
+import {
+	ensureCoValueAvailable,
+	getSparkOsId,
+	normalizeCoValueData,
+	waitForStoreReady,
+} from '@MaiaOS/db'
 import { resolveExpressions } from '@MaiaOS/factories/expression-resolver'
 import {
 	createErrorEntry,
@@ -24,35 +29,25 @@ import {
 } from '../utils/ops-assertions.js'
 import { resolveSchemaFromCoValue } from '../utils/resolve-helpers.js'
 
+/** Registry key for cobinary data factory in spark.os.factories (seed-time key; lookup uses CoMap, not resolve()). */
+const COBINARY_DATA_FACTORY_KEY = '°Maia/factory/data/cobinary'
+
 /**
- * Resolve factory param for read/create to a co-id. LLM shorthand may pass
- * `°Maia/factory/...` or bare data slugs like `todos` (→ °Maia/factory/data/todos).
+ * Resolve factory param for read/create to a co-id. Runtime uses co_z only (plus account/group sentinels).
  * @param {Object} peer
  * @param {string} factory
  * @param {string} opName
  * @returns {Promise<string>}
  */
-async function resolveDataFactoryToCoId(peer, factory, opName) {
+async function resolveDataFactoryToCoId(_peer, factory, opName) {
 	if (factory == null || typeof factory !== 'string') {
 		throw new Error(`[${opName}] factory must be a non-empty string`)
 	}
 	if (factory.startsWith('co_z')) return factory
 	if (['@account', '@group', '@metaSchema'].includes(factory)) return factory
-
-	let resolved = null
-	if (factory.startsWith('°') || factory.startsWith('@')) {
-		resolved = await peer.resolve(factory, { returnType: 'coId' })
-	} else if (/^[a-z][a-z0-9_-]*$/i.test(factory)) {
-		resolved = await peer.resolve(`°Maia/factory/data/${factory}`, { returnType: 'coId' })
-	} else {
-		throw new Error(
-			`[${opName}] Invalid factory "${factory}". Use a co-id, °Maia/factory/... namekey, or a data slug (e.g. todos).`,
-		)
-	}
-	if (!resolved || typeof resolved !== 'string' || !resolved.startsWith('co_z')) {
-		throw new Error(`[${opName}] Could not resolve factory to co-id: ${factory}`)
-	}
-	return resolved
+	throw new Error(
+		`[${opName}] factory must be co-id (co_z...) or @account/@group/@metaSchema, got: ${factory}`,
+	)
 }
 
 /** Cache schema/content per coId to avoid 4 async lookups on repeated calls (e.g. paper keystrokes). */
@@ -513,24 +508,6 @@ async function factoryOp(peer, _dataEngine, params) {
 	return factoryStore
 }
 
-async function resolveOp(peer, params) {
-	const { humanReadableKey, fromCoValue, returnType = 'coId' } = params
-	const hasKey = humanReadableKey != null
-	const hasFromCoValue = fromCoValue != null
-	if (!hasKey && !hasFromCoValue) {
-		throw new Error('[ResolveOperation] humanReadableKey or fromCoValue required')
-	}
-	if (hasKey && hasFromCoValue) {
-		throw new Error('[ResolveOperation] Provide humanReadableKey OR fromCoValue, not both')
-	}
-	const identifier = hasFromCoValue ? { fromCoValue } : humanReadableKey
-	if (typeof identifier === 'string' && typeof humanReadableKey !== 'string') {
-		throw new Error('[ResolveOperation] humanReadableKey must be a string')
-	}
-	const spark = params.spark ?? peer?.systemSpark
-	return await peer.resolve(identifier, { returnType, spark })
-}
-
 async function appendOp(peer, dataEngine, params) {
 	const { coId, item, items, cotype } = params
 	requireParam(coId, 'coId', 'AppendOperation')
@@ -856,7 +833,12 @@ async function readSparkOp(peer, params) {
 		validateCoId(id, 'ReadSparkOperation')
 		return await peer.readSpark(id)
 	}
-	return await peer.readSpark(null, factory || '°Maia/factory/data/spark')
+	if (!factory || typeof factory !== 'string' || !factory.startsWith('co_z')) {
+		throw new Error(
+			'[ReadSparkOperation] id or factory (spark schema co-id, co_z...) required — no namekey default',
+		)
+	}
+	return await peer.readSpark(null, factory)
 }
 
 async function updateSparkOp(peer, dataEngine, params) {
@@ -1013,7 +995,6 @@ export class DataEngine {
 					delete: (p) => deleteOp(peer, this, p),
 					seed: (p) => seedOp(peer, p),
 					factory: (p) => factoryOp(peer, this, p),
-					resolve: (p) => resolveOp(peer, p),
 					append: (p) => appendOp(peer, this, p),
 					spliceCoList: (p) => spliceCoListOp(peer, this, p),
 					colistSet: (p) => colistSetOp(peer, this, p),
@@ -1045,17 +1026,42 @@ export class DataEngine {
 	}
 
 	async resolveSystemFactories() {
-		if (!this.peer?.resolve) return
-		const coId = await this.peer.resolve('°Maia/factory/data/cobinary', { returnType: 'coId' })
+		const peer = this.peer
+		if (!peer?.systemSparkCoId?.startsWith('co_z')) return
+		const osId = await getSparkOsId(peer, peer.systemSparkCoId)
+		if (!osId?.startsWith('co_z')) return
+		const osStore = await peer.read(null, osId)
+		await waitForStoreReady(osStore, osId, 10000)
+		const osData = osStore?.value ?? {}
+		const factoriesId = osData.factories
+		if (!factoriesId?.startsWith('co_z')) return
+		const factoriesStore = await peer.read(null, factoriesId)
+		await waitForStoreReady(factoriesStore, factoriesId, 10000)
+		const factoriesData = factoriesStore?.value ?? {}
+		peer.systemFactoryCoIds.clear()
+		for (const [key, value] of Object.entries(factoriesData)) {
+			if (
+				typeof key === 'string' &&
+				typeof value === 'string' &&
+				value.startsWith('co_z') &&
+				!['id', 'loading', 'error', '$factory', 'type', '_coValueType'].includes(key)
+			) {
+				peer.systemFactoryCoIds.set(key, value)
+			}
+		}
+		const coId = factoriesData[COBINARY_DATA_FACTORY_KEY]
 		if (coId?.startsWith('co_z')) this.cobinaryFactoryCoId = coId
 	}
 
 	async execute(payload) {
 		const { op, ...params } = payload
+		if (params.factory == null && params.schema != null) {
+			params.factory = params.schema
+		}
 
 		if (!op) {
 			throw new Error(
-				'[DataEngine] Operation required: {op: "read|create|update|delete|seed|factory|resolve|append|push|..."}',
+				'[DataEngine] Operation required: {op: "read|create|update|delete|seed|factory|append|push|..."}',
 			)
 		}
 

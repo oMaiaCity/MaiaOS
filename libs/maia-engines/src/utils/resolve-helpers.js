@@ -27,18 +27,15 @@ export async function readStore(dataEngine, coId) {
 }
 
 /**
- * Resolve human-readable ref to co-id.
- * @param {Object} peer - MaiaDB peer
- * @param {string} ref - Ref (co_z... or namekey like °Maia/actor/...)
- * @returns {Promise<string|null>} Co-id or null
+ * Runtime: refs must already be co-ids (seed transforms namekeys).
+ * @param {Object} _peer - Unused (kept for call-site shape)
+ * @param {string} ref - Co-id (co_z...)
+ * @returns {Promise<string|null>}
  */
-export async function resolveToCoId(peer, ref) {
+export async function resolveToCoId(_peer, ref) {
 	if (!ref || typeof ref !== 'string') return null
 	if (ref.startsWith('co_z')) return ref
-	if (!peer) return null
-	const toResolve = ref.startsWith('Maia/') && !ref.startsWith('°') ? `°${ref}` : ref
-	const resolved = await peer.resolve(toResolve, { returnType: 'coId' })
-	return resolved && typeof resolved === 'string' && resolved.startsWith('co_z') ? resolved : null
+	throw new Error(`[resolveToCoId] Expected co-id (co_z...), got: ${ref}`)
 }
 
 /**

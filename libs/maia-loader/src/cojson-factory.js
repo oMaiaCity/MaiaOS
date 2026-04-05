@@ -31,7 +31,7 @@ export async function createCoJSONAPI(node, account) {
 		throw new Error('[createCoJSONAPI] Account required')
 	}
 
-	const peer = new MaiaDB({ node, account }, { systemSpark: '°Maia' })
+	const peer = new MaiaDB({ node, account }, {})
 
 	const dataEngine = new DataEngine(peer, {
 		evaluator: new MaiaScriptEvaluator(),
@@ -39,6 +39,7 @@ export async function createCoJSONAPI(node, account) {
 
 	// Set dbEngine on peer for runtime schema validation in create functions
 	peer.dbEngine = dataEngine
+	await peer.resolveSystemSparkCoId()
 	await dataEngine.resolveSystemFactories()
 
 	// Return API object

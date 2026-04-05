@@ -5,8 +5,7 @@
 	"private": true,
 	"exports": {
 		"./client": "./output/maia-client.mjs",
-		"./server": "./output/sync-server.mjs",
-		"./vibes": "./output/vibes.mjs"
+		"./server": "./output/sync-server.mjs"
 	},
 	"files": [
 		"output"

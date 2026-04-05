@@ -6,7 +6,7 @@
  */
 
 import { isFactoryRef } from '@MaiaOS/factories'
-import { resolve } from '../factory/resolver.js'
+import { lookupRegistryKey } from '../factory/resolver.js'
 
 /**
  * Get schema index colist ID using schema co-id as key (all schemas indexed in spark.os.indexes)
@@ -16,7 +16,10 @@ import { resolve } from '../factory/resolver.js'
  * @returns {Promise<string|null>} Schema index colist ID or null if not found/not indexable
  */
 export async function getFactoryIndexColistId(peer, schema) {
-	const factoryCoId = await resolve(peer, schema, { returnType: 'coId' })
+	const factoryCoId = schema.startsWith('co_z')
+		? schema
+		: (peer.systemFactoryCoIds?.get?.(schema) ??
+			(await lookupRegistryKey(peer, schema, { returnType: 'coId' })))
 	if (typeof process !== 'undefined' && process.env?.DEBUG)
 		console.log('[DEBUG getFactoryIndexColistId] schema=', schema, 'factoryCoId=', factoryCoId)
 	if (!factoryCoId) return null

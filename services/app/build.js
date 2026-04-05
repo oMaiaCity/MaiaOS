@@ -3,7 +3,7 @@ import { spawnSync } from 'node:child_process'
 import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
 /**
  * Bun build for maia SPA - SPA mode intact.
- * Requires distros built first (maia-client.mjs, vibes.mjs).
+ * Requires distros built first (maia-client.mjs).
  * Sync-assets runs directly into dist/brand (single source: libs/maia-brand).
  */
 import { join } from 'node:path'
@@ -36,8 +36,7 @@ if (syncResult.status !== 0) {
 // maia-storage uses package.json "browser" exports for postgres/pglite → stubs in client builds
 
 const clientPath = join(serviceDir, '../../libs/maia-distros/output/maia-client.mjs')
-const vibesPath = join(serviceDir, '../../libs/maia-distros/output/vibes.mjs')
-if (!existsSync(clientPath) || !existsSync(vibesPath)) {
+if (!existsSync(clientPath)) {
 	console.error('Run bun run distros:build first')
 	process.exit(1)
 }

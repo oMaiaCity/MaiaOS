@@ -1,6 +1,44 @@
 import { collectCapabilityGrantCoIdsFromStreamContent } from './capability-stream-co-ids.js'
 
 /**
+ * Co-id of spark.os.capabilities (CoStream), or null.
+ * @param {Object} maia - MaiaOS instance with maia.do()
+ * @returns {Promise<string|null>}
+ */
+export async function getCapabilitiesStreamCoId(maia) {
+	if (!maia?.do) return null
+	const account = maia?.id?.maiaId
+	if (!account) return null
+	const registriesId = account.get?.('registries')
+	if (!registriesId?.startsWith('co_z')) return null
+	try {
+		const registriesStore = await maia.do({ op: 'read', factory: null, key: registriesId })
+		await waitForStore(registriesStore, 5000)
+		const registries = registriesStore?.value ?? registriesStore
+		const sparksId = registries?.sparks
+		if (!sparksId?.startsWith('co_z')) return null
+		const sparksStore = await maia.do({ op: 'read', factory: null, key: sparksId })
+		await waitForStore(sparksStore, 5000)
+		const sparks = sparksStore?.value ?? sparksStore
+		const peer = maia.dataEngine?.peer
+		const maiaSparkId = peer?.systemSparkCoId ?? sparks?.['°Maia']
+		if (!maiaSparkId?.startsWith('co_z')) return null
+		const sparkStore = await maia.do({ op: 'read', factory: null, key: maiaSparkId })
+		await waitForStore(sparkStore, 5000)
+		const spark = sparkStore?.value ?? sparkStore
+		const osId = spark?.os
+		if (!osId?.startsWith('co_z')) return null
+		const osStore = await maia.do({ op: 'read', factory: null, key: osId })
+		await waitForStore(osStore, 5000)
+		const os = osStore?.value ?? osStore
+		const capabilitiesStreamId = os?.capabilities
+		return capabilitiesStreamId?.startsWith('co_z') ? capabilitiesStreamId : null
+	} catch {
+		return null
+	}
+}
+
+/**
  * Load capability grants from spark.os.capabilities CoStream
  * Resolves: account.registries → sparks → °Maia → os → capabilities
  * Used by MaiaDB Capabilities view (guardian visibility)
@@ -12,8 +50,6 @@ export async function loadCapabilitiesGrants(maia) {
 	if (!maia?.do) return []
 	const account = maia?.id?.maiaId
 	if (!account) return []
-	const registriesId = account.get?.('registries')
-	if (!registriesId?.startsWith('co_z')) return []
 
 	try {
 		const devCap =
@@ -26,34 +62,9 @@ export async function loadCapabilitiesGrants(maia) {
 			}
 		}
 
-		// Resolve path: registries → sparks → °Maia → os → capabilities (each waitForStore can block up to timeoutMs while loading=true)
-		const registriesStore = await maia.do({ op: 'read', factory: null, key: registriesId })
-		await waitForStore(registriesStore, 5000)
-		capLog('registries hydrated')
-		const registries = registriesStore?.value ?? registriesStore
-		const sparksId = registries?.sparks
-		if (!sparksId?.startsWith('co_z')) return []
-
-		const sparksStore = await maia.do({ op: 'read', factory: null, key: sparksId })
-		await waitForStore(sparksStore, 5000)
-		capLog('sparks hydrated')
-		const sparks = sparksStore?.value ?? sparksStore
-		const maiaSparkId = sparks?.['°Maia']
-		if (!maiaSparkId?.startsWith('co_z')) return []
-
-		const sparkStore = await maia.do({ op: 'read', factory: null, key: maiaSparkId })
-		await waitForStore(sparkStore, 5000)
-		capLog('spark °Maia hydrated')
-		const spark = sparkStore?.value ?? sparkStore
-		const osId = spark?.os
-		if (!osId?.startsWith('co_z')) return []
-
-		const osStore = await maia.do({ op: 'read', factory: null, key: osId })
-		await waitForStore(osStore, 5000)
-		capLog('os hydrated')
-		const os = osStore?.value ?? osStore
-		const capabilitiesStreamId = os?.capabilities
+		const capabilitiesStreamId = await getCapabilitiesStreamCoId(maia)
 		if (!capabilitiesStreamId?.startsWith('co_z')) return []
+		capLog('capabilities stream id resolved')
 
 		const streamStore = await maia.do({ op: 'read', factory: null, key: capabilitiesStreamId })
 		await waitForStore(streamStore, 5000)
