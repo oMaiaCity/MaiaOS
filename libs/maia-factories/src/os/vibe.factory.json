@@ -22,6 +22,10 @@
 			"type": "array",
 			"items": { "type": "string" },
 			"description": "Runtime colocation - which runtimes this vibe runs on (e.g. browser, server)"
+		},
+		"icon": {
+			"$co": "°Maia/factory/os/cotext",
+			"description": "Co-id of seeded CoText (colist of graphemes) holding SVG markup for dashboard / vibe chrome"
 		}
 	}
 }

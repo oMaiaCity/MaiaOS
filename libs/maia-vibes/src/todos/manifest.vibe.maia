@@ -2,6 +2,7 @@
 	"$factory": "°Maia/factory/vibe",
 	"$id": "°Maia/vibe/todos",
 	"name": "Todos",
+	"icon": "°Maia/vibe/todos/icon",
 	"description": "Complete todo list with state machines and AI tools",
 	"actor": "°Maia/todos/actor/intent",
 	"runtime": [

@@ -2,6 +2,7 @@
 	"$factory": "°Maia/factory/vibe",
 	"$id": "°Maia/vibe/sparks",
 	"name": "Sparks",
+	"icon": "°Maia/vibe/sparks/icon",
 	"description": "Create and manage collaborative groups (sparks)",
 	"actor": "°Maia/sparks/actor/intent",
 	"runtime": [

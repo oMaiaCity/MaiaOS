@@ -2,6 +2,7 @@
 	"$factory": "°Maia/factory/vibe",
 	"$id": "°Maia/vibe/profile",
 	"name": "My Profile",
+	"icon": "°Maia/vibe/profile/icon",
 	"description": "Update your profile picture",
 	"actor": "°Maia/profile/actor/intent",
 	"runtime": [

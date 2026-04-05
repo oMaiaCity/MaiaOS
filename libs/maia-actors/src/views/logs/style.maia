@@ -59,7 +59,7 @@
 		"logEntry": {
 			"padding": "0.1rem 0.75rem",
 			"margin": "0",
-			"background": "rgba(255, 255, 255, 0.4)",
+			"background": "{colors.surface}",
 			"backdropFilter": "blur(8px) saturate(150%)",
 			"-webkit-backdrop-filter": "blur(8px) saturate(150%)",
 			"border": "1px solid rgba(0, 31, 51, 0.05)",
