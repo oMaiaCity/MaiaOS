@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/process",
 	"$id": "°Maia/actor/views/paper/process",
-	"@label": "@maia/actor/views/paper/process",
 	"handlers": {
 		"SELECT_NOTE": [
 			{

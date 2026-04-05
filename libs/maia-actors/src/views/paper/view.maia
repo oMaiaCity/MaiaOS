@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/view",
 	"$id": "°Maia/actor/views/paper/view",
-	"@label": "@maia/actor/views/paper/view",
 	"content": {
 		"tag": "div",
 		"class": "paper-background",

@@ -1,6 +1,5 @@
 {
 	"$factory": "°Maia/factory/process",
 	"$id": "°Maia/actor/views/addressbook-grid/process",
-	"@label": "@maia/actor/views/addressbook-grid/process",
 	"handlers": {}
 }

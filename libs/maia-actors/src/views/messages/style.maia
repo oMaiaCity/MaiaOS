@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/style",
 	"$id": "°Maia/actor/views/messages/style",
-	"@label": "@maia/actor/views/messages/style",
 	"components": {
 		"messagesContent": {
 			"display": "flex",

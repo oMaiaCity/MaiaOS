@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/style",
 	"$id": "°Maia/actor/views/sparks/style",
-	"@label": "@maia/actor/views/sparks/style",
 	"components": {
 		"stack": {
 			"display": "flex",

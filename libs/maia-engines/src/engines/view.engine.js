@@ -573,9 +573,9 @@ export class ViewEngine {
 					element.innerHTML = await renderMarkdown(rawText)
 				} else if (textValue && typeof textValue === 'object') {
 					// Format objects/arrays as JSON strings for display
-					if (textValue['@label'] && textValue.id?.startsWith('co_z')) {
+					if (textValue.$label && textValue.id?.startsWith('co_z')) {
 						const truncatedId = `${textValue.id.substring(0, 15)}...`
-						element.textContent = `${textValue['@label']} (${truncatedId})`
+						element.textContent = `${textValue.$label} (${truncatedId})`
 					} else {
 						try {
 							element.textContent = JSON.stringify(textValue, null, 2)

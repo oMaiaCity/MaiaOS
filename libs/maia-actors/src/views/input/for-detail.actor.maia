@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/actor",
 	"$id": "°Maia/actor/views/input/for-detail",
-	"@label": "@maia/actor/views/input/for-detail",
 	"context": "°Maia/actor/views/input/for-detail/context",
 	"view": "°Maia/actor/views/input/view",
 	"process": "°Maia/actor/views/input/process",

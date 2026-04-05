@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/process",
 	"$id": "°Maia/actor/views/input/process",
-	"@label": "@maia/actor/views/input/process",
 	"handlers": {
 		"UPDATE_INPUT": [
 			{

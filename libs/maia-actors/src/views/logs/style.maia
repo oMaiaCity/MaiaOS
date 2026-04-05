@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/style",
 	"$id": "°Maia/actor/views/logs/style",
-	"@label": "@maia/actor/views/logs/style",
 	"components": {
 		"logsHeader": {
 			"display": "flex",

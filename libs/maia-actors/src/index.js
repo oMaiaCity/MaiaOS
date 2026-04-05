@@ -71,7 +71,6 @@ export function getAllActorDefinitions() {
 export {
 	ACTOR_ID_TO_EVENT_TYPE,
 	getSeedConfig,
-	ROLE_TO_FOLDER,
 	resolveServiceActorCoId,
 } from './seed-config.js'
 

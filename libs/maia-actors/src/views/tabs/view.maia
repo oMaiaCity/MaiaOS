@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/view",
 	"$id": "°Maia/actor/views/tabs/view",
-	"@label": "@maia/actor/views/tabs/view",
 	"content": {
 		"tag": "div",
 		"class": "stack",

@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/process",
 	"$id": "°Maia/actor/views/logs/process",
-	"@label": "@maia/actor/views/logs/process",
 	"handlers": {
 		"ERROR": [
 			{

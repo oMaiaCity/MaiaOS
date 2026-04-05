@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/style",
 	"$id": "°Maia/actor/views/input/style",
-	"@label": "@maia/actor/views/input/style",
 	"components": {
 		"input-wrapper": {
 			"width": "100%",

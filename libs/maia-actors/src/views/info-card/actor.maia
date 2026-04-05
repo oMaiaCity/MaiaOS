@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/actor",
 	"$id": "°Maia/actor/views/info-card",
-	"@label": "@maia/actor/views/info-card",
 	"context": "°Maia/actor/views/info-card/context",
 	"view": "°Maia/actor/views/info-card/view",
 	"process": "°Maia/actor/views/info-card/process",

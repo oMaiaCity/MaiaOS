@@ -130,7 +130,6 @@ export class ValidationEngine {
 						return undefined
 					}
 
-					// For non-co-id URIs, return undefined (let AJV handle standard resolution)
 					return undefined
 				},
 			})

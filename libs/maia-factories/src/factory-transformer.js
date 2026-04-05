@@ -93,9 +93,9 @@ function walkAndTransformRefs(obj, coIdMap, options = {}, ancestorActors = null)
 	}
 
 	for (const [key, value] of Object.entries(obj)) {
-		// Skip $ keys except $co, $factory (refs to transform). $id is instance identifier, not a ref.
+		// Skip $ keys except $co, $factory (refs to transform). $id / $label are opaque, never ref-walked.
 		if (key.startsWith('$') && key !== '$co' && key !== '$factory') continue
-		// @label holds human-readable display labels (e.g. @todos/intent), not co-id refs
+		// Legacy authoring key; removed from configs — never treat as ref
 		if (key === '@label') continue
 
 		if (
@@ -205,6 +205,8 @@ function transformSchemaForSeeding(schema, coIdMap) {
 
 	// Deep clone to avoid mutating original
 	const transformed = JSON.parse(JSON.stringify(schema))
+	const preservedLabel =
+		typeof transformed.$id === 'string' && transformed.$id.startsWith('°') ? transformed.$id : null
 
 	// Transform $factory reference (meta-schema: keep $schema for JSON Schema spec)
 	const factoryRef = transformed.$factory ?? transformed.$schema
@@ -262,6 +264,10 @@ function transformSchemaForSeeding(schema, coIdMap) {
 			)
 		}
 	})
+
+	if (preservedLabel) {
+		transformed.$label = preservedLabel
+	}
 
 	return transformed
 }
@@ -369,11 +375,14 @@ function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 	// dependencies, items, source/target, states, handlers, query objects)
 	walkAndTransformRefs(transformed, coIdMap)
 
-	// Native JS actor dispatch: stable module key (ACTORS map). Not a CoID.
-	if (transformed['@label'] && typeof transformed['@label'] === 'string') {
-		transformed.executableKey = transformed['@label'].replace(/^@/, '')
+	const idPath = typeof transformed.$id === 'string' ? transformed.$id : null
+	if (idPath?.startsWith('°')) {
+		transformed.$label = idPath
+		delete transformed['@label']
+	} else if (transformed['@label'] && typeof transformed['@label'] === 'string') {
 		delete transformed['@label']
 	}
+	delete transformed.executableKey
 
 	return transformed
 }

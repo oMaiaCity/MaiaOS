@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/style",
 	"$id": "°Maia/actor/views/placeholder/style",
-	"@label": "@maia/actor/views/placeholder/style",
 	"components": {
 		"placeholder": {
 			"display": "flex",

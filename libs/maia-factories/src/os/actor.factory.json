@@ -6,10 +6,7 @@
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {
-		"@label": {
-			"type": "string",
-			"description": "Actor label (e.g., '@ai/chat', 'kanban-view', 'agent')"
-		},
+		"$label": { "$ref": "#/$defs/registryLabel" },
 		"context": {
 			"$co": "°Maia/factory/context",
 			"description": "Co-id reference to context definition"
@@ -49,6 +46,12 @@
 					"additionalProperties": false
 				}
 			]
+		}
+	},
+	"$defs": {
+		"registryLabel": {
+			"type": "string",
+			"description": "Opaque human-readable registry path (typically equals pre-seed $id). Never ref-walked; never resolved as co-id. Native module path for getActor is derived at runtime from $label, not stored."
 		}
 	}
 }

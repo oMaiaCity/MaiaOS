@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/actor",
 	"$id": "°Maia/logs/actor/intent",
-	"@label": "@logs/intent",
 	"context": "°Maia/logs/context/intent",
 	"view": "°Maia/logs/view/intent",
 	"process": "°Maia/logs/process/intent",

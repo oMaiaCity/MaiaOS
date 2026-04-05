@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/context",
 	"$id": "°Maia/actor/views/humans/context",
-	"@label": "@maia/actor/views/humans/context",
 	"title": "Addressbook",
 	"tabs": [
 		{

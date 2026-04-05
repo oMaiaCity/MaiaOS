@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/process",
 	"$id": "°Maia/actor/os/ai/process",
-	"@label": "@maia/actor/os/ai/process",
 	"handlers": {
 		"CHAT": [
 			{

@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/style",
 	"$id": "°Maia/actor/views/detail/style",
-	"@label": "@maia/actor/views/detail/style",
 	"components": {
 		"detailContainer": {
 			"background": "{colors.surface}",

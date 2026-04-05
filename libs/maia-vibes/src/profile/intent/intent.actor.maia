@@ -7,6 +7,5 @@
 	"context": "°Maia/profile/context/intent",
 	"brand": "°Maia/brand/maiacity",
 	"inbox": "°Maia/profile/inbox/intent",
-	"interface": [],
-	"@label": "@profile/intent"
+	"interface": []
 }

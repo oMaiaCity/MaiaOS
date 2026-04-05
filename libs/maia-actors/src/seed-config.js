@@ -139,14 +139,6 @@ import layoutTodosContext from './views/tabs/todos.context.maia'
 import layoutTodosInterface from './views/tabs/todos.interface.maia'
 import tabsView from './views/tabs/view.maia'
 
-/** Map role to folder name for consistent °Maia/actor/{folder} $ids */
-export const ROLE_TO_FOLDER = {
-	'@maia/actor/os/ai': 'os/ai',
-	'@maia/actor/os/db': 'os/db',
-	'@maia/actor/services/names': 'services/names',
-	'@maia/actor/views/placeholder': 'views/placeholder',
-}
-
 /** Resolve actor ref to registry key. Only accepts °Maia/actor/... $ids (id-based lookup). */
 export function resolveServiceActorCoId(actorRef) {
 	if (typeof actorRef === 'string' && actorRef.startsWith('°') && actorRef.includes('/actor/')) {
@@ -165,16 +157,14 @@ export const ACTOR_ID_TO_EVENT_TYPE = {
 	'°Maia/actor/views/paper': 'UPDATE_PAPER',
 }
 
-/** Build actor config for seeding - uses actor schema */
+/** Build actor config for seeding - uses actor schema; identity from $id only (no @label). */
 function toActorConfig(raw, inboxId) {
-	const label = raw['@label']
-	const { interface: iface, process: processRef } = raw
-	if (!label || !iface || !processRef) return null
-	const folder = ROLE_TO_FOLDER[label] ?? label.replace('@', '').replace(/\//g, '-')
+	const { interface: iface, process: processRef, $id } = raw
+	if (!$id || !iface || !processRef) return null
+	if (typeof $id !== 'string' || !$id.startsWith('°Maia/actor/')) return null
 	return {
 		$schema: '°Maia/factory/actor',
-		$id: `°Maia/actor/${folder}`,
-		'@label': label,
+		$id,
 		interface: iface,
 		process: processRef,
 		view: null,

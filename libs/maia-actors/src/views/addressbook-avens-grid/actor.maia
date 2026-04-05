@@ -1,7 +1,6 @@
 {
 	"$factory": "°Maia/factory/actor",
 	"$id": "°Maia/actor/views/addressbook-avens-grid",
-	"@label": "@maia/actor/views/addressbook-avens-grid",
 	"context": "°Maia/actor/views/addressbook-avens-grid/context",
 	"view": "°Maia/actor/views/addressbook-grid/view",
 	"process": "°Maia/actor/views/addressbook-grid/process",
