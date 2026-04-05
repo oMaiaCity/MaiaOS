@@ -8,41 +8,30 @@
 		"children": [
 			{
 				"tag": "div",
-				"class": "header-section",
-				"children": [
-					{
-						"tag": "h2",
-						"class": "layout-title",
-						"text": "$title"
-					},
-					{
-						"tag": "div",
-						"class": "view-switcher",
-						"$each": {
-							"items": "$tabsWithActive",
-							"template": {
-								"tag": "button",
-								"class": "button-view-switch",
-								"attrs": {
-									"type": "button",
-									"data-view": "$$id",
-									"data": {
-										"active": "$$isActive"
-									}
-								},
-								"text": "$$label",
-								"$on": {
-									"click": {
-										"send": "SWITCH_VIEW",
-										"payload": {
-											"viewMode": "$$id"
-										}
-									}
+				"class": "view-switcher",
+				"$each": {
+					"items": "$tabsWithActive",
+					"template": {
+						"tag": "button",
+						"class": "button-view-switch",
+						"attrs": {
+							"type": "button",
+							"data-view": "$$id",
+							"data": {
+								"active": "$$isActive"
+							}
+						},
+						"text": "$$label",
+						"$on": {
+							"click": {
+								"send": "SWITCH_VIEW",
+								"payload": {
+									"viewMode": "$$id"
 								}
 							}
 						}
 					}
-				]
+				}
 			},
 			{
 				"tag": "main",
