@@ -7,17 +7,6 @@
 		"class": "stack",
 		"children": [
 			{
-				"tag": "div",
-				"class": "header-section",
-				"children": [
-					{
-						"tag": "h2",
-						"class": "layout-title",
-						"text": "$title"
-					}
-				]
-			},
-			{
 				"$slot": "$inputActor"
 			},
 			{

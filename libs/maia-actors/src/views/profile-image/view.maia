@@ -7,11 +7,6 @@
 		"class": "profile-image-wrapper",
 		"children": [
 			{
-				"tag": "h2",
-				"class": "profile-image-title",
-				"text": "$title"
-			},
-			{
 				"tag": "div",
 				"class": "profile-image-display",
 				"children": [
@@ -27,67 +22,67 @@
 			},
 			{
 				"tag": "div",
-				"class": "$uploadProgressSectionClass",
-				"children": [
-					{
-						"tag": "div",
-						"class": "upload-progress-track",
-						"children": [
-							{
-								"tag": "div",
-								"class": "upload-progress-fill",
-								"attrs": {
-									"style": "$uploadProgressStyle"
-								}
-							}
-						]
-					},
-					{
-						"tag": "div",
-						"class": "upload-status",
-						"text": "$uploadStatus"
-					}
-				]
-			},
-			{
-				"tag": "div",
 				"class": "upload-error",
 				"text": "$uploadError"
 			},
 			{
 				"tag": "div",
 				"class": "profile-image-upload",
+				"attrs": {
+					"data": {
+						"uploading": "$uploadProgressVisible"
+					}
+				},
 				"children": [
+					{
+						"tag": "div",
+						"class": "$uploadProgressSectionClass",
+						"children": [
+							{
+								"tag": "div",
+								"class": "upload-progress-track",
+								"children": [
+									{
+										"tag": "div",
+										"class": "upload-progress-fill",
+										"attrs": {
+											"style": "$uploadProgressStyle"
+										}
+									}
+								]
+							},
+							{
+								"tag": "div",
+								"class": "upload-status",
+								"text": "$uploadStatus"
+							}
+						]
+					},
 					{
 						"tag": "label",
 						"class": "upload-label",
-						"text": "Upload avatar",
 						"children": [
+							{
+								"tag": "span",
+								"text": "Update Image"
+							},
 							{
 								"tag": "input",
 								"attrs": {
 									"type": "file",
 									"accept": "image/*",
 									"class": "upload-input"
+								},
+								"$on": {
+									"change": {
+										"send": "UPLOAD_PROFILE_IMAGE",
+										"payload": {
+											"file": "@fileFromInput"
+										}
+									}
 								}
 							}
 						]
-					},
-					{
-						"tag": "button",
-						"class": "button",
-						"text": "Upload",
-						"attrs": {
-							"type": "button"
-						},
-						"$on": {
-							"click": {
-								"send": "UPLOAD_PROFILE_IMAGE",
-								"payload": {
-									"file": "@fileFromInput"
-								}
-							}
-						}
 					}
 				]
 			}

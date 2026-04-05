@@ -17,6 +17,8 @@ import profileImageFn from './services/profile-image/function.js'
 import todosDef from './services/todos/actor.maia'
 import updateWasmCodeDef from './services/update-wasm-code/actor.maia'
 import updateWasmCodeFn from './services/update-wasm-code/function.js'
+import profileImageViewDef from './views/profile-image/actor.maia'
+import profileImageViewFn from './views/profile-image/function.js'
 
 export const ACTORS = {
 	'maia/actor/os/ai': { definition: aiChatDef, function: aiChatFn },
@@ -35,6 +37,10 @@ export const ACTORS = {
 	'maia/actor/services/profile-image': {
 		definition: profileImageDef,
 		function: profileImageFn,
+	},
+	'maia/actor/views/profile-image': {
+		definition: profileImageViewDef,
+		function: profileImageViewFn,
 	},
 	'maia/actor/services/todos': {
 		definition: todosDef,

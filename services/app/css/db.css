@@ -157,7 +157,7 @@
 	filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
-/* Me / vibe / MaiaDB — same hand type as dashboard cards; padding-top nudges baseline down in pill */
+/* MaiaOS / vibe / MaiaDB — same hand type as dashboard cards; padding-top nudges baseline down in pill */
 .db-header .header-left h1 {
 	font-family: "Indie Flower", var(--font-heading), cursive;
 	font-size: 1.5rem;
