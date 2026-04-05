@@ -1,0 +1,10 @@
+{
+	"$factory": "°maia/factory/context",
+	"targetActor": "@messages",
+	"inputPlaceholder": "Type your message...",
+	"inputValue": "",
+	"submitButtonText": "➤",
+	"@actors": {
+		"messages": "°maia/views/messages/actor.maia"
+	}
+}

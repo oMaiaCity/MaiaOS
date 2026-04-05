@@ -1040,7 +1040,7 @@ export async function renderApp(
 				} catch (_e) {}
 			}
 
-			// Resolve capability group co-ids to display names (e.g. °Maia/Guardian)
+			// Resolve capability group co-ids to display names (e.g. °maia/Guardian)
 			let capabilityNames = new Map()
 			if (maia && account?.id) {
 				try {

@@ -1,0 +1,53 @@
+{
+	"$factory": "°maia/factory/process",
+	"handlers": {
+		"SELECT_ITEM": [
+			{
+				"ctx": {
+					"hasSelection": true,
+					"selectedActorRef": "$$item.id",
+					"selectedItem": {
+						"id": "$$item.id",
+						"label": "$$item.label"
+					}
+				}
+			},
+			{
+				"ask": {
+					"target": "°maia/services/update-wasm-code/actor.maia",
+					"type": "GET_WASM_CODE",
+					"payload": {
+						"actorCoId": "$$item.id"
+					}
+				}
+			}
+		],
+		"UPDATE_WASM_CODE": [
+			{
+				"guard": {
+					"$ne": [
+						"$selectedCodeCoId",
+						null
+					]
+				}
+			},
+			{
+				"tell": {
+					"target": "°maia/services/update-wasm-code/actor.maia",
+					"type": "UPDATE_WASM_CODE",
+					"payload": {
+						"value": "$$value",
+						"codeCoId": "$selectedCodeCoId"
+					}
+				}
+			}
+		],
+		"SUCCESS": [
+			{
+				"ctx": {
+					"selectedCodeCoId": "$$result.codeCoId"
+				}
+			}
+		]
+	}
+}

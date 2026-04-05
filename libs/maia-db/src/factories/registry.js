@@ -2,7 +2,7 @@
  * Schema Registry - Bootstrap schemas and metadata utilities for MaiaDB
  *
  * Hardcoded schemas ONLY for migrations/seeding (before spark.os.factories exists).
- * Runtime schema access loads from account.registries.sparks[°Maia].os.factories.
+ * Runtime schema access loads from account.registries.sparks[°maia].os.factories.
  */
 
 import coTypesDefs from '@MaiaOS/factories/co-types.defs.json'
@@ -59,8 +59,12 @@ export function isExceptionFactory(schema) {
 	)
 }
 
-export function createFactoryMeta(factoryName) {
-	return { $factory: factoryName }
+export function createFactoryMeta(factoryName, nanoid = null) {
+	const meta = { $factory: factoryName }
+	if (typeof nanoid === 'string' && nanoid.length > 0) {
+		meta.$nanoid = nanoid
+	}
+	return meta
 }
 
 export function hasSchema(coValue, expectedSchema) {
@@ -93,7 +97,7 @@ export function validateHeaderMetaFactory(coValue) {
 
 export async function getMetaFactoryFromPeer(peer) {
 	if (!peer) throw new Error('[getMetaFactoryFromPeer] Peer required')
-	const metaSchemaCoId = peer.systemFactoryCoIds?.get?.('°Maia/factory/meta')
+	const metaSchemaCoId = peer.systemFactoryCoIds?.get?.('°maia/factory/meta')
 	if (!metaSchemaCoId) throw new Error('[getMetaFactoryFromPeer] Metaschema not found in registry')
 	const metaSchemaStore = await peer.read(null, metaSchemaCoId)
 	if (!metaSchemaStore || metaSchemaStore.value?.error) {

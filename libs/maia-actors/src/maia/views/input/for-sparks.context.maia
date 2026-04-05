@@ -1,0 +1,15 @@
+{
+	"$factory": "°maia/factory/context",
+	"targetActor": "@target",
+	"inputPlaceholder": "Enter spark name...",
+	"inputValue": "",
+	"submitButtonText": "Create Spark",
+	"hasError": false,
+	"error": null,
+	"errorLabel": "Error: ",
+	"dismissButtonText": "Dismiss",
+	"@actors": {
+		"target": "°maia/views/sparks/actor.maia"
+	},
+	"isLoading": false
+}

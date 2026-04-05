@@ -16,13 +16,7 @@
  * All consumers use resolve() directly - no wrappers, no scattered functions.
  */
 
-import {
-	ACTOR_CONFIG_REF_PATTERN,
-	FACTORY_REF_PATTERN,
-	INSTANCE_REF_PATTERN,
-	VIBE_ACTOR_REF_PATTERN,
-	VIBE_REF_PATTERN,
-} from '@MaiaOS/factories'
+import { FACTORY_REF_PATTERN, INSTANCE_REF_PATTERN, VIBE_REF_PATTERN } from '@MaiaOS/factories'
 import { normalizeCoValueData } from '../crud/data-extraction.js'
 import { resolveReactive as resolveReactiveBase } from '../crud/reactive-resolver.js'
 import { read as universalRead } from '../crud/read.js'
@@ -72,19 +66,16 @@ function removeIdFields(obj, inPropertiesOrItems = false) {
 }
 
 /**
- * Resolve registry namekeys (`°Maia/factory/...`, vibes, instance keys) via spark.os — used by seed, indexing, and infrastructure.
+ * Resolve registry namekeys (`°maia/factory/...`, vibes, instance keys) via spark.os — used by seed, indexing, and infrastructure.
  * Does not enforce {@link resolve} strictMode; public API remains co_z-only when strict.
  */
 export async function lookupRegistryKey(peer, identifier, options = {}) {
 	const { returnType = 'factory', deepResolve = false, timeoutMs = 5000, spark } = options
 
-	// Registry key lookup (°Maia/factory/..., °Maia/aven/..., °Maia/.../actor/..., °Maia/.../inbox/... - spark prefix)
+	// Registry key lookup (°maia/factory/..., vibes, instance file paths — spark prefix)
 	const isSchemaKeyMatch = FACTORY_REF_PATTERN.test(identifier)
 	const isVibeKeyMatch = VIBE_REF_PATTERN.test(identifier)
-	const isInstanceKeyMatch =
-		INSTANCE_REF_PATTERN.test(identifier) ||
-		ACTOR_CONFIG_REF_PATTERN.test(identifier) ||
-		VIBE_ACTOR_REF_PATTERN.test(identifier)
+	const isInstanceKeyMatch = INSTANCE_REF_PATTERN.test(identifier)
 	const isBareKey =
 		!identifier.startsWith('°') && !identifier.startsWith('@') && !identifier.startsWith('co_z')
 	if (isSchemaKeyMatch || isVibeKeyMatch || isInstanceKeyMatch || isBareKey) {
@@ -360,7 +351,7 @@ export async function lookupRegistryKey(peer, identifier, options = {}) {
  * @param {Object} peer - Backend instance
  * @param {string|Object} identifier - Identifier:
  *   - Co-id: 'co_z...' → returns co-value/schema
- *   - Registry key: '°Maia/factory/...' or '°Maia/aven/...' → resolves to co-id, then returns co-value/schema
+ *   - Registry key: '°maia/factory/...' or '°maia/aven/...' → resolves to co-id, then returns co-value/schema
  *   - Options: {fromCoValue: 'co_z...'} → extracts schema from headerMeta, then returns schema
  * @param {Object} [options] - Options
  * @param {string} [options.returnType='factory'] - Return type: 'coId' | 'factory' | 'coValue'
@@ -502,13 +493,10 @@ export async function resolve(peer, identifier, options = {}) {
 		throw new Error(`[resolve] Runtime resolve requires co_z CoID, got: ${identifier}`)
 	}
 
-	// Registry key lookup (°Maia/factory/..., °Maia/aven/..., °Maia/.../actor/..., °Maia/.../inbox/... - spark prefix)
+	// Registry key lookup (°maia/factory/..., vibes, instance file paths — spark prefix)
 	const isSchemaKeyMatch = FACTORY_REF_PATTERN.test(identifier)
 	const isVibeKeyMatch = VIBE_REF_PATTERN.test(identifier)
-	const isInstanceKeyMatch =
-		INSTANCE_REF_PATTERN.test(identifier) ||
-		ACTOR_CONFIG_REF_PATTERN.test(identifier) ||
-		VIBE_ACTOR_REF_PATTERN.test(identifier)
+	const isInstanceKeyMatch = INSTANCE_REF_PATTERN.test(identifier)
 	const isBareKey =
 		!identifier.startsWith('°') && !identifier.startsWith('@') && !identifier.startsWith('co_z')
 	if (isSchemaKeyMatch || isVibeKeyMatch || isInstanceKeyMatch || isBareKey) {
@@ -896,7 +884,7 @@ async function waitForCoValueAvailable(core, timeoutMs = 5000) {
  * Resolve spark.os id from account via account.registries.sparks[spark].os (node-only, no peer.read)
  * @param {LocalNode} node
  * @param {RawAccount} account
- * @param {string} spark - Spark name (e.g. '°Maia')
+ * @param {string} spark - Spark name (e.g. '°maia')
  * @returns {Promise<string|null>} os co-id or null
  */
 async function resolveSparkOsIdFromNode(node, account, spark) {
@@ -947,10 +935,10 @@ export async function loadFactoriesFromAccount(node, account) {
 			getHeader: (c) => c?.verified?.header ?? null,
 			getCurrentContent: (c) => c?.getCurrentContent?.() ?? null,
 			subscriptionCache: getGlobalCoCache(node),
-			systemSpark: '°Maia',
+			systemSpark: '°maia',
 		}
 
-		const osId = await resolveSparkOsIdFromNode(node, account, '°Maia')
+		const osId = await resolveSparkOsIdFromNode(node, account, '°maia')
 		if (!osId?.startsWith('co_z')) return {}
 
 		const osStore = await universalRead(peer, osId, null, null, null, { deepResolve: false })

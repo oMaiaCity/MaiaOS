@@ -1,0 +1,9 @@
+{
+	"$factory": "°maia/factory/meta",
+	"title": "°maia/views/placeholder/interface.maia",
+	"description": "Placeholder view - no domain events",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {},
+	"additionalProperties": false
+}

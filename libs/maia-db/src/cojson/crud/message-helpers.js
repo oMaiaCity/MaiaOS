@@ -52,13 +52,13 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 
 			if (messageFactoryRef.startsWith('co_z')) {
 				messageFactoryCoId = messageFactoryRef
-			} else if (messageFactoryRef.startsWith('°Maia/factory/')) {
+			} else if (messageFactoryRef.startsWith('°maia/factory/')) {
 				messageFactoryCoId = peer.systemFactoryCoIds?.get?.(messageFactoryRef) ?? null
 			}
 		}
 
 		if (!messageFactoryCoId) {
-			messageFactoryCoId = peer.systemFactoryCoIds?.get?.('°Maia/factory/event') ?? null
+			messageFactoryCoId = peer.systemFactoryCoIds?.get?.('°maia/factory/event') ?? null
 		}
 
 		if (!messageFactoryCoId?.startsWith('co_z')) {

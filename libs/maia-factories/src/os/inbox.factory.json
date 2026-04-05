@@ -1,12 +1,12 @@
 {
-	"$factory": "°Maia/factory/meta",
-	"$id": "°Maia/factory/inbox",
-	"title": "°Maia/factory/inbox",
+	"$factory": "°maia/factory/meta",
+	"$id": "°maia/factory/inbox",
+	"title": "°maia/factory/inbox",
 	"description": "A costream (append-only stream) of messages received by this actor",
 	"cotype": "costream",
 	"indexing": true,
 	"items": {
-		"$co": "°Maia/factory/event",
+		"$co": "°maia/factory/event",
 		"description": "Each item is a co-id reference to a message"
 	}
 }

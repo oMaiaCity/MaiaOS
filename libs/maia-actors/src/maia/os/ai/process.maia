@@ -1,0 +1,15 @@
+{
+	"$factory": "°maia/factory/process",
+	"handlers": {
+		"CHAT": [
+			{
+				"function": true
+			}
+		],
+		"ERROR": [
+			{
+				"ctx": {}
+			}
+		]
+	}
+}

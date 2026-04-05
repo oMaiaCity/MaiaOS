@@ -1,7 +1,7 @@
 {
-	"$factory": "°Maia/factory/meta",
-	"$id": "°Maia/factory/vibe",
-	"title": "°Maia/factory/vibe",
+	"$factory": "°maia/factory/meta",
+	"$id": "°maia/factory/vibe",
+	"title": "°maia/factory/vibe",
 	"description": "Vibe manifest/metadata",
 	"cotype": "comap",
 	"indexing": true,
@@ -10,7 +10,7 @@
 		"name": { "type": "string", "description": "Vibe name" },
 		"description": { "type": "string", "description": "Vibe description" },
 		"actor": {
-			"$co": "°Maia/factory/actor",
+			"$co": "°maia/factory/actor",
 			"description": "Co-id reference to actor definition (root actor for this vibe)"
 		},
 		"dependencies": {
@@ -24,7 +24,7 @@
 			"description": "Runtime colocation - which runtimes this vibe runs on (e.g. browser, server)"
 		},
 		"icon": {
-			"$co": "°Maia/factory/os/cotext",
+			"$co": "°maia/factory/os/cotext",
 			"description": "Co-id of seeded CoText (colist of graphemes) holding SVG markup for dashboard / vibe chrome"
 		}
 	}

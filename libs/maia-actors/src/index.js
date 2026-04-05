@@ -4,57 +4,56 @@
  * Interface schemas define accepted events; execution in .function.js
  */
 
-import aiChatDef from './os/ai/actor.maia'
-import aiChatFn from './os/ai/function.js'
-import dbDef from './os/db/actor.maia'
-import dbFn from './os/db/function.js'
-import computeMessageNamesDef from './services/names/actor.maia'
-import computeMessageNamesFn from './services/names/function.js'
-import paperDef from './services/paper/actor.maia'
-import paperFn from './services/paper/function.js'
-import profileImageDef from './services/profile-image/actor.maia'
-import profileImageFn from './services/profile-image/function.js'
-import todosDef from './services/todos/actor.maia'
-import updateWasmCodeDef from './services/update-wasm-code/actor.maia'
-import updateWasmCodeFn from './services/update-wasm-code/function.js'
-import profileImageViewDef from './views/profile-image/actor.maia'
-import profileImageViewFn from './views/profile-image/function.js'
+import aiChatDef from './maia/os/ai/actor.maia'
+import aiChatFn from './maia/os/ai/function.js'
+import dbDef from './maia/os/db/actor.maia'
+import dbFn from './maia/os/db/function.js'
+import computeMessageNamesDef from './maia/services/names/actor.maia'
+import computeMessageNamesFn from './maia/services/names/function.js'
+import paperDef from './maia/services/paper/actor.maia'
+import paperFn from './maia/services/paper/function.js'
+import profileImageDef from './maia/services/profile-image/actor.maia'
+import profileImageFn from './maia/services/profile-image/function.js'
+import todosDef from './maia/services/todos/actor.maia'
+import updateWasmCodeDef from './maia/services/update-wasm-code/actor.maia'
+import updateWasmCodeFn from './maia/services/update-wasm-code/function.js'
+import profileImageViewDef from './maia/views/profile-image/actor.maia'
+import profileImageViewFn from './maia/views/profile-image/function.js'
 
 export const ACTORS = {
-	'maia/actor/os/ai': { definition: aiChatDef, function: aiChatFn },
-	'maia/actor/services/names': {
+	'maia/os/ai': { definition: aiChatDef, function: aiChatFn },
+	'maia/services/names': {
 		definition: computeMessageNamesDef,
 		function: computeMessageNamesFn,
 	},
-	'maia/actor/services/paper': {
+	'maia/services/paper': {
 		definition: paperDef,
 		function: paperFn,
 	},
-	'maia/actor/services/updateWasmCode': {
+	'maia/services/update-wasm-code': {
 		definition: updateWasmCodeDef,
 		function: updateWasmCodeFn,
 	},
-	'maia/actor/services/profile-image': {
+	'maia/services/profile-image': {
 		definition: profileImageDef,
 		function: profileImageFn,
 	},
-	'maia/actor/views/profile-image': {
+	'maia/views/profile-image': {
 		definition: profileImageViewDef,
 		function: profileImageViewFn,
 	},
-	'maia/actor/services/todos': {
+	'maia/services/todos': {
 		definition: todosDef,
 		function: null,
 	},
-	'maia/actor/os/db': { definition: dbDef, function: dbFn },
+	'maia/os/db': { definition: dbDef, function: dbFn },
 }
 
 export function getActor(namespacePath) {
 	let mod = ACTORS[namespacePath]
 	if (mod) return mod
-	// Fallback: role @db → "maia/actor/os/db" for single-part lookups
 	if (namespacePath && !namespacePath.includes('/')) {
-		mod = ACTORS[`maia/actor/os/${namespacePath}`]
+		mod = ACTORS[`maia/os/${namespacePath}`]
 		if (mod) return mod
 	}
 	return null
@@ -68,11 +67,7 @@ export function getAllActorDefinitions() {
 	return definitions
 }
 
-export {
-	ACTOR_ID_TO_EVENT_TYPE,
-	getSeedConfig,
-	resolveServiceActorCoId,
-} from './seed-config.js'
+export { ACTOR_ID_TO_EVENT_TYPE, resolveServiceActorCoId } from './maia/actor-service-refs.js'
 
 if (import.meta.hot) {
 	import.meta.hot.accept()

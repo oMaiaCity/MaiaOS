@@ -1,0 +1,10 @@
+{
+	"$factory": "°maia/factory/context",
+	"notes": {
+		"factory": "°maia/factory/data/notes",
+		"map": {
+			"id": "id",
+			"content": "$content"
+		}
+	}
+}

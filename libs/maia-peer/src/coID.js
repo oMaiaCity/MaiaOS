@@ -216,7 +216,7 @@ export async function loadAccount(options) {
 			if (!sparksCore?.isAvailable?.()) return
 			const sparks = sparksCore.getCurrentContent?.()
 			if (!sparks?.get) return
-			const maiaSparkId = sparks.get('°Maia')
+			const maiaSparkId = sparks.get('°maia')
 			if (!maiaSparkId?.startsWith('co_z')) return
 			await node.loadCoValueCore?.(maiaSparkId)
 			const sparkCore = node.getCoValue(maiaSparkId)

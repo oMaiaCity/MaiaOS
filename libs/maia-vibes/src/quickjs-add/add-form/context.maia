@@ -1,8 +1,0 @@
-{
-	"$factory": "°Maia/factory/context",
-	"$id": "°Maia/quickjs-add/add-form/context",
-	"inputA": "",
-	"inputB": "",
-	"result": "",
-	"error": null
-}

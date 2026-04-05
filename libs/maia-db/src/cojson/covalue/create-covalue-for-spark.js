@@ -19,7 +19,7 @@ import { getSparkGroup, removeGroupMember } from '../groups/groups.js'
 /**
  * Resolve guardian from context.
  * @param {Object} context - Backend or { node, account, guardian }
- * @param {string|null} spark - Spark name (e.g. '°Maia') or null when context has guardian
+ * @param {string|null} spark - Spark name (e.g. '°maia') or null when context has guardian
  * @returns {Promise<{ node, account, guardian }>}
  */
 async function resolveContext(context, spark) {
@@ -44,7 +44,7 @@ async function resolveContext(context, spark) {
  * All create CoValue flows MUST use this util.
  *
  * @param {Object} context - Backend (has node, account, getMaiaGroup) OR { node, account, guardian }
- * @param {string|null} spark - Spark name (e.g. '°Maia'). Null when context has guardian.
+ * @param {string|null} spark - Spark name (e.g. '°maia'). Null when context has guardian.
  * @param {Object} options
  * @param {string} options.factory - Factory co-id or name for headerMeta.$factory
  * @param {'comap'|'colist'|'costream'|'cobinary'} options.cotype
@@ -54,7 +54,7 @@ async function resolveContext(context, spark) {
  * @returns {Promise<{ coValue: RawCoValue }>}
  */
 export async function createCoValueForSpark(context, spark, options) {
-	const { factory, cotype, data, dataEngine, isFactoryDefinition } = options
+	const { factory, cotype, data, dataEngine, isFactoryDefinition, nanoid } = options
 	if (!factory || typeof factory !== 'string') {
 		throw new Error('[createCoValueForSpark] options.factory is required')
 	}
@@ -86,10 +86,16 @@ export async function createCoValueForSpark(context, spark, options) {
 
 	// Create CoValue - normalize before storage (single gate, same function as read path)
 	let coValue
-	const _meta = { $factory: factory }
 	switch (cotype) {
 		case 'comap':
-			coValue = await createCoMap(group, normalizeCoValueData(data ?? {}), factory, node, dataEngine)
+			coValue = await createCoMap(
+				group,
+				normalizeCoValueData(data ?? {}),
+				factory,
+				node,
+				dataEngine,
+				nanoid,
+			)
 			break
 		case 'colist':
 			coValue = await createCoList(
@@ -98,6 +104,7 @@ export async function createCoValueForSpark(context, spark, options) {
 				factory,
 				node,
 				dataEngine,
+				nanoid,
 			)
 			break
 		case 'costream':

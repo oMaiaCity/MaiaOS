@@ -1,0 +1,10 @@
+{
+	"$factory": "°maia/factory/actor",
+	"type": "service",
+	"process": "°maia/profile/intent/intent.process.maia",
+	"view": "°maia/profile/intent/intent.view.maia",
+	"context": "°maia/profile/intent/intent.context.maia",
+	"brand": "°maia/brand/maiacity.style.maia",
+	"inbox": "°maia/profile/intent/inbox.maia",
+	"interface": []
+}

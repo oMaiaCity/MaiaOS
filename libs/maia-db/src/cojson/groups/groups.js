@@ -30,7 +30,7 @@ export async function getGroup(node, groupId) {
  * Get capability group co-id for a spark from spark.os.groups
  * Resolves: spark -> spark.os -> os.groups -> groups.get(capabilityName)
  * @param {Object} peer - Backend instance
- * @param {string} spark - Spark name (e.g. "°Maia") or spark co-id
+ * @param {string} spark - Spark name (e.g. "°maia") or spark co-id
  * @param {string} capabilityName - Group key (e.g. 'guardian', 'publicReaders')
  * @returns {Promise<string|null>} Group co-id or null
  */
@@ -90,7 +90,7 @@ export async function getSparkCapabilityGroupIdFromSparkCoId(peer, sparkCoId, ca
  * Get guardian (admin-role) group for a spark by name
  * Resolves from spark.os.groups.guardian only (no spark.group; fresh DB).
  * @param {Object} peer - Backend instance with read(), getCoValue(), getCurrentContent(), account
- * @param {string} spark - Spark name (e.g. "°Maia", "@handle")
+ * @param {string} spark - Spark name (e.g. "°maia", "@handle")
  * @returns {Promise<RawGroup|null>} Group for the spark or null
  */
 export async function getSparkGroup(peer, spark) {
@@ -183,7 +183,7 @@ export async function resolveSparkCoId(peer, spark) {
 /**
  * Get spark's os CoMap id (account.registries.sparks[spark].os)
  * @param {Object} peer
- * @param {string} spark - Spark name (e.g. "°Maia") or spark co-id
+ * @param {string} spark - Spark name (e.g. "°maia") or spark co-id
  * @returns {Promise<string|null>}
  */
 export async function getSparkOsId(peer, spark) {
@@ -233,12 +233,12 @@ export async function setSparkVibesId(peer, spark, vibesId) {
 }
 
 /**
- * Get °Maia spark's group (for create operations, seeding, etc.)
+ * Get °maia spark's group (for create operations, seeding, etc.)
  * @param {Object} peer - Backend instance
- * @returns {Promise<RawGroup|null>} °Maia spark's group
+ * @returns {Promise<RawGroup|null>} °maia spark's group
  */
 export async function getMaiaGroup(peer) {
-	return getSparkGroup(peer, '°Maia')
+	return getSparkGroup(peer, '°maia')
 }
 
 /**

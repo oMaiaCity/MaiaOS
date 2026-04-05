@@ -1,7 +1,7 @@
 {
-	"$factory": "°Maia/factory/meta",
-	"$id": "°Maia/factory/context",
-	"title": "°Maia/factory/context",
+	"$factory": "°maia/factory/meta",
+	"$id": "°maia/factory/context",
+	"title": "°maia/factory/context",
 	"description": "Runtime data for an actor (flexible JSON structure). The context itself is a comap CoValue (for CRDT sync/versioning), but all inner properties are plain JS objects/arrays/strings - NOT CoJSON types.",
 	"cotype": "comap",
 	"indexing": true,
@@ -14,7 +14,7 @@
 				"properties": {
 					"factory": {
 						"type": "string",
-						"description": "Factory reference (e.g., '°Maia/factory/event' or co-id)"
+						"description": "Factory reference (e.g., '°maia/factory/event' or co-id)"
 					},
 					"options": {
 						"type": "object",

@@ -6,7 +6,7 @@ import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-s
 import { waitForStoreReady } from '../../cojson/crud/read-operations.js'
 import { buildMetaFactoryForSeeding, removeIdFields, sortSchemasByDependency } from './helpers.js'
 
-const MAIA_SPARK = '°Maia'
+const MAIA_SPARK = '°maia'
 
 /**
  * Bootstrap and scaffold when account.registries doesn't exist
@@ -53,22 +53,22 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 
 	const uniqueSchemasBy$id = new Map()
 	for (const [name, schema] of Object.entries(allSchemas)) {
-		const key = schema.$id || `°Maia/factory/${name}`
+		const key = schema.$id || `°maia/factory/${name}`
 		if (!uniqueSchemasBy$id.has(key)) uniqueSchemasBy$id.set(key, { name, schema })
 	}
 	const sorted = sortSchemasByDependency(uniqueSchemasBy$id)
 
 	// Ensure migration-stream factory is created before todos (todos needs a migration CoStream)
 	if (
-		sorted.includes('°Maia/factory/data/todos') &&
-		sorted.includes('°Maia/factory/os/migration-stream')
+		sorted.includes('°maia/factory/data/todos') &&
+		sorted.includes('°maia/factory/os/migration-stream')
 	) {
-		const migIdx = sorted.indexOf('°Maia/factory/os/migration-stream')
-		const todosIdx = sorted.indexOf('°Maia/factory/data/todos')
+		const migIdx = sorted.indexOf('°maia/factory/os/migration-stream')
+		const todosIdx = sorted.indexOf('°maia/factory/data/todos')
 		if (migIdx > todosIdx) {
 			sorted.splice(migIdx, 1)
-			const newTodosIdx = sorted.indexOf('°Maia/factory/data/todos')
-			sorted.splice(newTodosIdx, 0, '°Maia/factory/os/migration-stream')
+			const newTodosIdx = sorted.indexOf('°maia/factory/data/todos')
+			sorted.splice(newTodosIdx, 0, '°maia/factory/os/migration-stream')
 		}
 	}
 
@@ -80,8 +80,8 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		const cleaned = removeIdFields(props)
 
 		let headerMetaOverrides
-		if (factoryKey === '°Maia/factory/data/todos') {
-			const migStreamFactoryCoId = factoryCoIdMap.get('°Maia/factory/os/migration-stream')
+		if (factoryKey === '°maia/factory/data/todos') {
+			const migStreamFactoryCoId = factoryCoIdMap.get('°maia/factory/os/migration-stream')
 			if (migStreamFactoryCoId) {
 				const migGroup = node.createGroup()
 				migGroup.extend(guardian, 'admin')
@@ -113,25 +113,25 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	}
 
 	const sparkSchemaCoId =
-		tempCoMap.get('°Maia/factory/data/spark') || EXCEPTION_FACTORIES.META_SCHEMA
+		tempCoMap.get('°maia/factory/data/spark') || EXCEPTION_FACTORIES.META_SCHEMA
 	const factoriesRegistrySchemaCoId =
-		tempCoMap.get('°Maia/factory/os/factories-registry') || EXCEPTION_FACTORIES.META_SCHEMA
+		tempCoMap.get('°maia/factory/os/factories-registry') || EXCEPTION_FACTORIES.META_SCHEMA
 	const osSchemaCoId =
-		tempCoMap.get('°Maia/factory/os/os-registry') || EXCEPTION_FACTORIES.META_SCHEMA
+		tempCoMap.get('°maia/factory/os/os-registry') || EXCEPTION_FACTORIES.META_SCHEMA
 	const groupsSchemaCoId =
-		tempCoMap.get('°Maia/factory/os/groups') || EXCEPTION_FACTORIES.META_SCHEMA
+		tempCoMap.get('°maia/factory/os/groups') || EXCEPTION_FACTORIES.META_SCHEMA
 	const capabilitiesStreamSchemaCoId =
-		tempCoMap.get('°Maia/factory/os/capabilities-stream') || EXCEPTION_FACTORIES.META_SCHEMA
+		tempCoMap.get('°maia/factory/os/capabilities-stream') || EXCEPTION_FACTORIES.META_SCHEMA
 	const indexesSchemaCoId =
-		tempCoMap.get('°Maia/factory/os/indexes-registry') || EXCEPTION_FACTORIES.META_SCHEMA
+		tempCoMap.get('°maia/factory/os/indexes-registry') || EXCEPTION_FACTORIES.META_SCHEMA
 	const vibesRegistrySchemaCoId =
-		tempCoMap.get('°Maia/factory/os/vibes-registry') ?? EXCEPTION_FACTORIES.META_SCHEMA
+		tempCoMap.get('°maia/factory/os/vibes-registry') ?? EXCEPTION_FACTORIES.META_SCHEMA
 
 	const scaffoldOpts = (factory, data) => ({ factory, cotype: 'comap', data, dataEngine: dbEngine })
 	const { coValue: maiaSpark } = await createCoValueForSpark(
 		ctx,
 		null,
-		scaffoldOpts(sparkSchemaCoId, { name: '°Maia' }),
+		scaffoldOpts(sparkSchemaCoId, { name: '°maia' }),
 	)
 	const { coValue: os } = await createCoValueForSpark(ctx, null, scaffoldOpts(osSchemaCoId, {}))
 	const { coValue: groups } = await createCoValueForSpark(
@@ -166,7 +166,7 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	os.set('indexes', indexes.id)
 	os.set('vibes', vibes.id)
 	maiaSpark.set('os', os.id)
-	factoriesRegistry.set('°Maia/factory/meta', metaSchemaCoId)
+	factoriesRegistry.set('°maia/factory/meta', metaSchemaCoId)
 	for (const [k, coId] of factoryCoIdMap) factoriesRegistry.set(k, coId)
 
 	const { removeGroupMember } = await import('../../cojson/groups/groups.js')
@@ -245,7 +245,7 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	}
 
 	console.log(
-		'✅ Bootstrap scaffold complete: account.registries, °Maia spark, os, factories, indexes, vibes',
+		'✅ Bootstrap scaffold complete: account.registries, °maia spark, os, factories, indexes, vibes',
 	)
 }
 
@@ -304,18 +304,18 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 	if (!groupsContent || typeof groupsContent.set !== 'function') return
 
 	const { resolve } = await import('../../cojson/factory/resolver.js')
-	const registriesSchemaCoId = await resolve(peer, '°Maia/factory/os/registries', {
+	const registriesSchemaCoId = await resolve(peer, '°maia/factory/os/registries', {
 		returnType: 'coId',
 	})
-	const sparksRegistrySchemaCoId = await resolve(peer, '°Maia/factory/os/sparks-registry', {
+	const sparksRegistrySchemaCoId = await resolve(peer, '°maia/factory/os/sparks-registry', {
 		returnType: 'coId',
 	})
-	const humansRegistrySchemaCoId = await resolve(peer, '°Maia/factory/os/humans-registry', {
+	const humansRegistrySchemaCoId = await resolve(peer, '°maia/factory/os/humans-registry', {
 		returnType: 'coId',
 	})
 	const avensIdentityRegistrySchemaCoId = await resolve(
 		peer,
-		'°Maia/factory/os/avens-identity-registry',
+		'°maia/factory/os/avens-identity-registry',
 		{
 			returnType: 'coId',
 		},
@@ -420,5 +420,5 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 		registriesContent.set('avens', avens.id)
 	}
 
-	console.log('✅ account.registries bootstrapped (sparks[°Maia], humans, avens)')
+	console.log('✅ account.registries bootstrapped (sparks[°maia], humans, avens)')
 }

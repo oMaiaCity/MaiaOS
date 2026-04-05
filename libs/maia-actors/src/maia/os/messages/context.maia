@@ -1,0 +1,12 @@
+{
+	"$factory": "°maia/factory/context",
+	"conversations": {
+		"factory": "°maia/factory/data/chat",
+		"map": {
+			"id": "id",
+			"role": "role",
+			"displayName": "displayName",
+			"content": "content"
+		}
+	}
+}

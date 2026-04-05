@@ -1,7 +1,7 @@
 {
-	"$factory": "°Maia/factory/meta",
-	"$id": "°Maia/factory/process",
-	"title": "°Maia/factory/process",
+	"$factory": "°maia/factory/meta",
+	"$id": "°maia/factory/process",
+	"title": "°maia/factory/process",
 	"description": "Flat event handlers (GenServer-style). No FSM—handlers keyed by message type.",
 	"cotype": "comap",
 	"indexing": true,

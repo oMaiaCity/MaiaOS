@@ -4,21 +4,21 @@
 
 import { ValidationEngine } from './validation.engine.js'
 
+// Export schema transformer functions (seeding only)
+export { annotateMaiaConfig } from './annotate-maia.js'
 // Export co-id registry (seeding only)
 export { CoIdRegistry } from './co-id-generator.js'
 // Export co-type definitions
 export { default as coTypesDefs } from './co-types.defs.json'
-// Export schema transformer functions (seeding only)
 export { executableKeyFromMaiaPath } from './executable-key-from-maia-path.js'
 export { transformForSeeding, validateFactoryStructure } from './factory-transformer.js'
+export { maiaRefFromPathKey, nanoidFromPath, normalizeMaiaPathKey } from './nanoid.js'
 export {
-	ACTOR_CONFIG_REF_PATTERN,
 	FACTORY_REF_PATTERN,
 	INSTANCE_REF_PATTERN,
 	isFactoryRef,
 	isInstanceRef,
 	isVibeRef,
-	VIBE_ACTOR_REF_PATTERN,
 	VIBE_REF_PATTERN,
 } from './patterns.js'
 // Export validation helper functions
@@ -103,7 +103,7 @@ const FACTORIES = {
 }
 
 export function getFactory(type) {
-	const key = type.startsWith('°Maia/factory/') ? type.replace('°Maia/factory/', '') : type
+	const key = type.startsWith('°maia/factory/') ? type.replace('°maia/factory/', '') : type
 	return FACTORIES[key] || null
 }
 

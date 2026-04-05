@@ -1,6 +1,6 @@
 // CoJSON API factory - lives in loader (orchestrator) to keep db decoupled from engines
 
-export { getAllActorDefinitions, getSeedConfig } from '@MaiaOS/actors'
+export { getAllActorDefinitions } from '@MaiaOS/actors'
 // Re-export db functions (bundled in core)
 // Peer setup, sync state, backend for operations
 // Re-export ReactiveStore from db

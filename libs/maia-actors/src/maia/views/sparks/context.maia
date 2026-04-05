@@ -1,0 +1,20 @@
+{
+	"$factory": "°maia/factory/context",
+	"title": "My Sparks",
+	"sparks": {
+		"factory": "°maia/factory/data/spark",
+		"map": {
+			"id": "id",
+			"name": "name"
+		}
+	},
+	"inputActor": "@input",
+	"loading": false,
+	"selectedSparkId": null,
+	"selectedSparkItems": {},
+	"currentDetail": "@detail",
+	"@actors": {
+		"input": "°maia/views/input/for-sparks.actor.maia",
+		"detail": "°maia/views/detail/actor.maia"
+	}
+}

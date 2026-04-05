@@ -1,7 +1,7 @@
 {
-	"$id": "°Maia/factory/data/cobinary",
-	"$factory": "°Maia/factory/meta",
-	"title": "°Maia/factory/data/cobinary",
+	"$id": "°maia/factory/data/cobinary",
+	"$factory": "°maia/factory/meta",
+	"title": "°maia/factory/data/cobinary",
 	"cotype": "cobinary",
 	"indexing": false,
 	"properties": {

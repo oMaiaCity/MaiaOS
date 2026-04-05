@@ -1,0 +1,54 @@
+{
+	"$factory": "°maia/factory/style",
+	"components": {
+		"grid": {
+			"display": "grid",
+			"gridTemplateColumns": "repeat(auto-fill, minmax(200px, 1fr))",
+			"gap": "{spacing.md}",
+			"width": "100%",
+			"padding": "0 {spacing.sm}"
+		},
+		"card": {
+			"padding": "0.75rem 1rem",
+			"background": "{colors.surface}",
+			"backdropFilter": "blur(8px)",
+			"borderRadius": "{radii.md}",
+			"border": "1px solid {colors.surfaceBorder}",
+			"boxShadow": "{shadows.sm}",
+			"display": "flex",
+			"flexDirection": "column",
+			"gap": "0.25rem",
+			"transition": "{transitions.fast}",
+			":hover": {
+				"background": "{colors.surfaceHover}",
+				"transform": "translateY(-2px)",
+				"boxShadow": "{shadows.md}"
+			}
+		},
+		"cardRow": {
+			"display": "flex",
+			"flexDirection": "column",
+			"gap": "0.125rem"
+		},
+		"cardName": {
+			"fontFamily": "{typography.fontFamily.heading}",
+			"fontSize": "1rem",
+			"fontWeight": "{typography.fontWeight.bold}",
+			"color": "{colors.marineBlue}",
+			"margin": "0"
+		},
+		"cardLabel": {
+			"fontSize": "0.65rem",
+			"fontWeight": "{typography.fontWeight.semibold}",
+			"color": "{colors.marineBlueLight}",
+			"textTransform": "uppercase",
+			"letterSpacing": "0.05em"
+		},
+		"cardValue": {
+			"fontSize": "0.75rem",
+			"color": "{colors.marineBlue}",
+			"fontFamily": "{typography.fontFamily.body}",
+			"wordBreak": "break-all"
+		}
+	}
+}

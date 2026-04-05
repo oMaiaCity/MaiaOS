@@ -5,7 +5,7 @@
 import mergedMetaSchema from '@MaiaOS/factories/os/meta.factory.json'
 
 /**
- * Find all °Maia/factory/ references in an object (recursive).
+ * Find all °maia/factory/ references in an object (recursive).
  * @param {Object} obj - Schema or instance object
  * @param {Set} [visited] - Visited objects (cycle detection)
  * @returns {Set<string>} Set of factory ref strings
@@ -14,7 +14,7 @@ function findCoReferences(obj, visited = new Set()) {
 	if (!obj || typeof obj !== 'object' || visited.has(obj)) return new Set()
 	visited.add(obj)
 	const refs = new Set()
-	if (obj.$co && typeof obj.$co === 'string' && obj.$co.startsWith('°Maia/factory/'))
+	if (obj.$co && typeof obj.$co === 'string' && obj.$co.startsWith('°maia/factory/'))
 		refs.add(obj.$co)
 	for (const v of Object.values(obj)) {
 		if (v && typeof v === 'object') {
@@ -31,10 +31,10 @@ function findCoReferences(obj, visited = new Set()) {
 /**
  * Topologically sort schema keys by dependency ($co references).
  * @param {Map<string, { name, schema }>} uniqueSchemasBy$id - Map of factory key -> { name, schema }
- * @param {string[]} [excludeKeys] - Keys to exclude from sort (e.g. ['°Maia/factory/meta'])
+ * @param {string[]} [excludeKeys] - Keys to exclude from sort (e.g. ['°maia/factory/meta'])
  * @returns {string[]} Sorted array of factory keys
  */
-export function sortSchemasByDependency(uniqueSchemasBy$id, excludeKeys = ['°Maia/factory/meta']) {
+export function sortSchemasByDependency(uniqueSchemasBy$id, excludeKeys = ['°maia/factory/meta']) {
 	const deps = new Map()
 	for (const [key, { schema }] of uniqueSchemasBy$id) {
 		deps.set(key, findCoReferences(schema))
@@ -47,7 +47,7 @@ export function sortSchemasByDependency(uniqueSchemasBy$id, excludeKeys = ['°Ma
 		if (doing.has(key)) return
 		doing.add(key)
 		for (const d of deps.get(key) || []) {
-			if (d.startsWith('°Maia/factory/') && uniqueSchemasBy$id.has(d)) visit(d)
+			if (d.startsWith('°maia/factory/') && uniqueSchemasBy$id.has(d)) visit(d)
 		}
 		doing.delete(key)
 		done.add(key)
@@ -63,7 +63,7 @@ import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-s
 import * as groups from '../../cojson/groups/groups.js'
 import { ensureIndexesCoMap } from '../../cojson/indexing/factory-index-manager.js'
 
-const MAIA_SPARK = '°Maia'
+const MAIA_SPARK = '°maia'
 
 /**
  * Recursively remove 'id' fields from schema objects (AJV only accepts $id, not id)
@@ -112,15 +112,15 @@ export async function ensureSparkOs(account, node, maiaGroup, peer, factoryCoIdM
 
 	const osId = await groups.getSparkOsId(peer, MAIA_SPARK)
 	if (!osId) {
-		throw new Error('[Seed] °Maia spark.os not found. Ensure bootstrap has run.')
+		throw new Error('[Seed] °maia spark.os not found. Ensure bootstrap has run.')
 	}
 
 	const factoriesRegistrySchemaCoId =
-		factoryCoIdMap?.get('°Maia/factory/os/factories-registry') ??
-		(await resolve(peer, '°Maia/factory/os/factories-registry', { returnType: 'coId' }))
+		factoryCoIdMap?.get('°maia/factory/os/factories-registry') ??
+		(await resolve(peer, '°maia/factory/os/factories-registry', { returnType: 'coId' }))
 	const vibesRegistrySchemaCoId =
-		factoryCoIdMap?.get('°Maia/factory/os/vibes-registry') ??
-		(await resolve(peer, '°Maia/factory/os/vibes-registry', { returnType: 'coId' }))
+		factoryCoIdMap?.get('°maia/factory/os/vibes-registry') ??
+		(await resolve(peer, '°maia/factory/os/vibes-registry', { returnType: 'coId' }))
 
 	let osCore = node.getCoValue(osId)
 	if (!osCore && node.loadCoValueCore) {

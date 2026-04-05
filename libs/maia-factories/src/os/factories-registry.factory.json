@@ -1,18 +1,18 @@
 {
-	"$factory": "°Maia/factory/meta",
-	"$id": "°Maia/factory/os/factories-registry",
-	"title": "°Maia/factory/os/factories-registry",
-	"description": "Schema registry CoMap - maps schema namekeys (e.g., °Maia/factory/data/todos) to schema co-ids (co_z...). Stored in account.os.factories",
+	"$factory": "°maia/factory/meta",
+	"$id": "°maia/factory/os/factories-registry",
+	"title": "°maia/factory/os/factories-registry",
+	"description": "Schema registry CoMap - maps schema namekeys (e.g., °maia/factory/data/todos) to schema co-ids (co_z...). Stored in account.os.factories",
 	"cotype": "comap",
 	"indexing": false,
 	"properties": {
-		"°Maia/factory/meta": {
+		"°maia/factory/meta": {
 			"type": "string",
 			"description": "Metaschema co-id (co_z...)"
 		}
 	},
 	"additionalProperties": {
 		"type": "string",
-		"description": "Schema namekey → schema co-id mapping (e.g., °Maia/factory/data/todos → co_z123...)"
+		"description": "Schema namekey → schema co-id mapping (e.g., °maia/factory/data/todos → co_z123...)"
 	}
 }

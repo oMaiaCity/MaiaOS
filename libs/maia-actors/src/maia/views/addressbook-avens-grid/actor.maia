@@ -1,0 +1,10 @@
+{
+	"$factory": "°maia/factory/actor",
+	"context": "°maia/views/addressbook-avens-grid/context.maia",
+	"view": "°maia/views/addressbook-grid/view.maia",
+	"process": "°maia/views/addressbook-grid/process.maia",
+	"brand": "°maia/brand/maiacity.style.maia",
+	"style": "°maia/views/addressbook-grid/style.maia",
+	"inbox": "°maia/views/addressbook-avens-grid/inbox.maia",
+	"interface": "°maia/views/addressbook-avens-grid/interface.maia"
+}

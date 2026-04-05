@@ -211,7 +211,7 @@ export class ValidationEngine {
 		// JSON Schema Draft 2020-12 meta-schema
 		// This is the foundation schema that validates all other schemas
 		// The metaschema itself validates against the hardcoded standard (breaks circular dependency)
-		// All OTHER schemas validate against °Maia/factory/meta-schema (dynamically loaded)
+		// All OTHER schemas validate against °maia/factory/meta-schema (dynamically loaded)
 		// Use merged meta.factory.json - it contains all base JSON Schema 2020-12 properties
 		// The MaiaOS extensions (cotype, $co, indexing) don't interfere with base schema validation
 		return customMetaSchema
@@ -223,7 +223,7 @@ export class ValidationEngine {
 	 */
 	_loadMetaSchema() {
 		const metaSchemaId = 'https://json-schema.org/draft/2020-12/schema'
-		const metaSchemaDynamicId = '°Maia/factory/meta-schema'
+		const metaSchemaDynamicId = '°maia/factory/meta-schema'
 
 		// Temporarily disable schema validation to add meta-schema
 		// (meta-schema can't validate itself due to circular references)
@@ -237,7 +237,7 @@ export class ValidationEngine {
 				}
 
 				// CRITICAL: Always register with dynamic ID, even if standard ID exists
-				// This allows schemas to use "$factory": "°Maia/factory/meta-schema"
+				// This allows schemas to use "$factory": "°maia/factory/meta-schema"
 				if (!this.ajv.getSchema(metaSchemaDynamicId)) {
 					// Create copy with dynamic $id to ensure proper registration
 					const metaSchemaCopy = JSON.parse(JSON.stringify(metaSchema))
@@ -258,12 +258,12 @@ export class ValidationEngine {
 	 * @private
 	 */
 	_loadCoJsonMetaSchema() {
-		const customMetaSchemaId = '°Maia/factory/meta'
+		const customMetaSchemaId = '°maia/factory/meta'
 
 		// Temporarily disable schema validation to add custom meta-schema
 		try {
 			withSchemaValidationDisabled(this.ajv, () => {
-				// Register with °Maia/factory/ format
+				// Register with °maia/factory/ format
 				if (!this.ajv.getSchema(customMetaSchemaId)) {
 					this.ajv.addMetaSchema(customMetaSchema, customMetaSchemaId)
 				}
@@ -299,8 +299,8 @@ export class ValidationEngine {
 			}
 		}
 
-		if (resolvedId === '°Maia/factory/meta' || resolvedId === '°Maia/factory/meta-schema') {
-			return this.ajv.getSchema('°Maia/factory/meta')
+		if (resolvedId === '°maia/factory/meta' || resolvedId === '°maia/factory/meta-schema') {
+			return this.ajv.getSchema('°maia/factory/meta')
 		}
 		if (resolvedId === 'https://json-schema.org/draft/2020-12/schema') {
 			return this.ajv.getSchema('https://json-schema.org/draft/2020-12/schema')
@@ -312,10 +312,10 @@ export class ValidationEngine {
 				metaSchemaObject.properties?.cotype?.enum?.includes('comap') ||
 				metaSchemaObject.$vocabulary?.['https://maiaos.dev/vocab/cojson'] === true
 			const targetId = hasCotype
-				? '°Maia/factory/meta'
+				? '°maia/factory/meta'
 				: metaSchemaObject.$vocabulary
 					? 'https://json-schema.org/draft/2020-12/schema'
-					: '°Maia/factory/meta'
+					: '°maia/factory/meta'
 
 			metaValidator = this.ajv.getSchema(targetId)
 			if (!metaValidator) {
@@ -360,7 +360,7 @@ export class ValidationEngine {
 		const standardMetaSchemaId = 'https://json-schema.org/draft/2020-12/schema'
 		const isSelfValidation =
 			schema.$id === standardMetaSchemaId ||
-			schema.$id === '°Maia/factory/meta' ||
+			schema.$id === '°maia/factory/meta' ||
 			(schema.$schema === standardMetaSchemaId && schema.$id && schema.$id.includes('schema'))
 
 		if (isSelfValidation) {
@@ -520,8 +520,8 @@ export class ValidationEngine {
 	 * @param {string} coId - Co-id of the schema
 	 */
 	async _registerResolvedSchema(schema, ref, coId) {
-		// CRITICAL: After seeding, all $co references should be co-ids, not °Maia/factory/... patterns
-		// If we see °Maia/factory/... here, it means transformation failed or schema is from source files
+		// CRITICAL: After seeding, all $co references should be co-ids, not °maia/factory/... patterns
+		// If we see °maia/factory/... here, it means transformation failed or schema is from source files
 		if (ref && isFactoryRef(ref)) {
 			// Still register it so validation can work, but log the warning
 		}

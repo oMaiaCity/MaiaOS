@@ -48,7 +48,7 @@ export async function update(peer, _schema, id, data) {
 
 	// Skip validation if:
 	// 1. No schema found (co-values without schemas, like context co-values)
-	// 2. Exception schemas (@account, @group, °Maia)
+	// 2. Exception schemas (@account, @group, °maia)
 	// 3. No dbEngine available
 	if (factoryCoId && peer.dbEngine && factoryCoId.startsWith('co_z')) {
 		// Import exception schema checker

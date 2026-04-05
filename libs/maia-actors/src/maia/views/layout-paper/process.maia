@@ -1,0 +1,24 @@
+{
+	"$factory": "°maia/factory/process",
+	"handlers": {
+		"SELECT_NOTE": [
+			{
+				"ctx": {
+					"selectedNoteId": "$$id",
+					"selectedNoteIds": {
+						"$$id": true
+					}
+				}
+			},
+			{
+				"tell": {
+					"target": "°maia/views/paper/actor.maia",
+					"type": "SELECT_NOTE",
+					"payload": {
+						"id": "$$id"
+					}
+				}
+			}
+		]
+	}
+}

@@ -1,7 +1,7 @@
 {
-	"$id": "°Maia/factory/data/profile",
-	"$factory": "°Maia/factory/meta",
-	"title": "°Maia/factory/data/profile",
+	"$id": "°maia/factory/data/profile",
+	"$factory": "°maia/factory/meta",
+	"title": "°maia/factory/data/profile",
 	"description": "Profile CoMap (account-owned, identity). Used for profile-image context.",
 	"cotype": "comap",
 	"indexing": false,

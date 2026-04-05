@@ -1,7 +1,7 @@
 {
-	"$id": "°Maia/factory/data/chat",
-	"$factory": "°Maia/factory/meta",
-	"title": "°Maia/factory/data/chat",
+	"$id": "°maia/factory/data/chat",
+	"$factory": "°maia/factory/meta",
+	"title": "°maia/factory/data/chat",
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {

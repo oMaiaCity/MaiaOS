@@ -1,0 +1,13 @@
+{
+	"$factory": "°maia/factory/vibe",
+	"name": "My Profile",
+	"description": "Update your profile picture",
+	"actor": "°maia/profile/intent/intent.actor.maia",
+	"runtime": [
+		"browser"
+	],
+	"dependencies": [
+		"°maia/profile/intent/intent.actor.maia",
+		"°maia/services/profile-image/actor.maia"
+	]
+}

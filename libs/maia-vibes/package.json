@@ -5,9 +5,10 @@
 	"main": "src/index.js",
 	"exports": {
 		".": "./src/index.js",
-		"./seeding": "./src/seeding.js",
-		"./todos/loader": "./src/todos/loader.js",
-		"./todos/registry": "./src/todos/registry.js"
+		"./dashboard-icon-svgs": "./src/maia/dashboard-icon-svgs.js",
+		"./seeding": "./src/maia/seeding.js",
+		"./todos/loader": "./src/maia/todos/loader.js",
+		"./todos/registry": "./src/maia/todos/registry.js"
 	},
 	"dependencies": {
 		"@MaiaOS/factories": "workspace:*",

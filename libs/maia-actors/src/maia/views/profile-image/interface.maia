@@ -1,0 +1,8 @@
+{
+	"$factory": "°maia/factory/meta",
+	"title": "°maia/views/profile-image/interface.maia",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {},
+	"additionalProperties": false
+}

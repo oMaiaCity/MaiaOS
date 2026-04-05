@@ -2,7 +2,8 @@
  * CoJSON Seed - Bootstrap → Schemas → Configs → Data → Registry
  */
 
-import { VIBE_ICON_SVG_BY_KEY } from '@MaiaOS/factories/vibe-icon-svgs'
+import { iconInstanceRefFromKey } from '@MaiaOS/factories/icon-instance-ref'
+import { getVibeKey } from '@MaiaOS/factories/vibe-keys'
 import { OPS_PREFIX } from '@MaiaOS/logs'
 import { splitGraphemes } from 'unicode-segmenter/grapheme'
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
@@ -17,9 +18,10 @@ import {
 	removeIdFields,
 	sortSchemasByDependency,
 } from './helpers.js'
+import { loadNanoidRegistryFromSpark } from './nanoid-registry.js'
 import { storeRegistry } from './store-registry.js'
 
-const MAIA_SPARK = '°Maia'
+const MAIA_SPARK = '°maia'
 
 const REFERENCE_PROPS = [
 	'actor',
@@ -47,10 +49,14 @@ export async function seed(
 	existingBackend = null,
 	options = {},
 ) {
-	const { forceFreshSeed = false } = options
+	const { forceFreshSeed = false, forceMigrate = false } = options
 
-	if (!forceFreshSeed) {
-		return { skipped: true, reason: 'seed_requires_forceFreshSeed' }
+	if (forceFreshSeed && forceMigrate) {
+		throw new Error('[CoJSONSeed] forceFreshSeed and forceMigrate are mutually exclusive')
+	}
+
+	if (!forceFreshSeed && !forceMigrate) {
+		return { skipped: true, reason: 'seed_requires_forceFreshSeed_or_forceMigrate' }
 	}
 
 	const { MaiaDB } = await import('../../cojson/core/MaiaDB.js')
@@ -58,10 +64,20 @@ export async function seed(
 
 	const needsBootstrap =
 		!account.get('registries') || !String(account.get('registries')).startsWith('co_z')
-	if (needsBootstrap) {
+	if (forceMigrate) {
+		if (needsBootstrap) {
+			throw new Error(
+				'[CoJSONSeed] PEER_SYNC_MIGRATE requires an existing scaffold. Run with PEER_SYNC_SEED=true first.',
+			)
+		}
+	} else if (needsBootstrap) {
 		const { getAllFactories } = await import('@MaiaOS/factories')
 		await bootstrapAndScaffold(account, node, schemas || getAllFactories(), peer.dbEngine)
 	}
+
+	const migrateSeedOpts = forceMigrate
+		? { migrateMode: true, migrateRegistry: await loadNanoidRegistryFromSpark(peer) }
+		: undefined
 
 	const { CoIdRegistry } = await import('@MaiaOS/factories/co-id-generator')
 	const { transformForSeeding, validateFactoryStructure } = await import(
@@ -72,7 +88,7 @@ export async function seed(
 	const maiaGroup = await groups.getMaiaGroup(peer)
 	if (!maiaGroup || typeof maiaGroup.createMap !== 'function') {
 		throw new Error(
-			'[CoJSONSeed] °Maia spark group not found. Ensure bootstrap has created °Maia spark.',
+			'[CoJSONSeed] °maia spark group not found. Ensure bootstrap has created °maia spark.',
 		)
 	}
 	await bootstrapAccountRegistries(peer, maiaGroup)
@@ -80,7 +96,7 @@ export async function seed(
 
 	const uniqueSchemasBy$id = new Map()
 	for (const [name, schema] of Object.entries(schemas)) {
-		const key = schema.$id || `°Maia/factory/${name}`
+		const key = schema.$id || `°maia/factory/${name}`
 		if (!uniqueSchemasBy$id.has(key)) uniqueSchemasBy$id.set(key, { name, schema })
 	}
 
@@ -102,7 +118,7 @@ export async function seed(
 				})
 				if (factoriesCore && peer.isAvailable(factoriesCore)) {
 					const factoriesContent = peer.getCurrentContent(factoriesCore)
-					metaSchemaCoId = factoriesContent?.get?.('°Maia/factory/meta')
+					metaSchemaCoId = factoriesContent?.get?.('°maia/factory/meta')
 				}
 			}
 		}
@@ -153,8 +169,8 @@ export async function seed(
 		}
 	}
 
-	if (!coIdRegistry.has('°Maia/factory/meta')) {
-		coIdRegistry.register('°Maia/factory/meta', metaSchemaCoId)
+	if (!coIdRegistry.has('°maia/factory/meta')) {
+		coIdRegistry.register('°maia/factory/meta', metaSchemaCoId)
 	}
 
 	const factoryCoIdMap = new Map()
@@ -207,8 +223,8 @@ export async function seed(
 		coIdRegistry.register(factoryKey, actualCoId)
 	}
 
-	if (metaSchemaCoId && !factoryCoIdMap.has('°Maia/factory/meta')) {
-		factoryCoIdMap.set('°Maia/factory/meta', metaSchemaCoId)
+	if (metaSchemaCoId && !factoryCoIdMap.has('°maia/factory/meta')) {
+		factoryCoIdMap.set('°maia/factory/meta', metaSchemaCoId)
 	}
 
 	// Schema definitions (meta-schema children) must always be CoMaps (have .get for resolution)
@@ -239,7 +255,7 @@ export async function seed(
 		})
 		if (verificationErrors.length > 0) {
 			throw new Error(
-				`[Seed] Factory ${factoryKey} still contains °Maia/factory/ references: ${verificationErrors.join('\n')}`,
+				`[Seed] Factory ${factoryKey} still contains °maia/factory/ references: ${verificationErrors.join('\n')}`,
 			)
 		}
 		const { $schema: _s, $factory: _f, $id: _i, id: _id, ...directProps } = transformedSchema
@@ -274,7 +290,7 @@ export async function seed(
 		}
 		if (schemaRegistry.size === 0) {
 			for (const [k, v] of factoryCoIdMap) schemaRegistry.set(k, v)
-			if (metaSchemaCoId) schemaRegistry.set('°Maia/factory/meta', metaSchemaCoId)
+			if (metaSchemaCoId) schemaRegistry.set('°maia/factory/meta', metaSchemaCoId)
 		}
 		return schemaRegistry
 	}
@@ -282,8 +298,9 @@ export async function seed(
 	let combinedRegistry = await getCombinedRegistry()
 	if (data) {
 		for (const [collectionName] of Object.entries(data)) {
-			const factoryKey = `°Maia/factory/${collectionName}`
-			const dataFactoryKey = `°Maia/factory/data/${collectionName}`
+			if (collectionName === 'dashboardIconCotexts') continue
+			const factoryKey = `°maia/factory/${collectionName}`
+			const dataFactoryKey = `°maia/factory/data/${collectionName}`
 			const dataFactoryCoId = combinedRegistry.get(dataFactoryKey) || combinedRegistry.get(factoryKey)
 			if (dataFactoryCoId) {
 				combinedRegistry.set(factoryKey, dataFactoryCoId)
@@ -299,8 +316,8 @@ export async function seed(
 	const transformSchemaRefsOnly = (instance, schemaRegistry) => {
 		if (!instance || typeof instance !== 'object') return instance
 		const transformed = JSON.parse(JSON.stringify(instance))
-		const factoryRef = transformed.$factory ?? transformed.$schema
-		if (factoryRef?.startsWith('°Maia/factory/')) {
+		const factoryRef = transformed.$factory
+		if (factoryRef?.startsWith('°maia/factory/')) {
 			const coId = schemaRegistry.get(factoryRef)
 			if (coId) {
 				transformed.$factory = coId
@@ -338,6 +355,7 @@ export async function seed(
 			instanceCoIdMap,
 			factoryCoMaps,
 			factoryCoIdMap,
+			migrateSeedOpts,
 		)
 		for (const configInfo of seeded.configs || []) {
 			instanceCoIdMap.set(configInfo.path, configInfo.coId)
@@ -432,24 +450,28 @@ export async function seed(
 	}
 
 	const allVibes = configs?.vibes || []
+	const iconCotextRows = data?.dashboardIconCotexts
 	if (allVibes.length > 0) {
+		if (!Array.isArray(iconCotextRows) || iconCotextRows.length === 0) {
+			throw new Error(
+				'[CoJSONSeed] data.dashboardIconCotexts required when configs include vibes (from buildSeedConfig)',
+			)
+		}
+		const svgByVibeKey = new Map(iconCotextRows.map((r) => [r.vibeKey, r.svg]))
 		combinedRegistry = refreshCombinedRegistry()
-		const cotextSchemaCoId = factoryCoIdMap.get('°Maia/factory/os/cotext')
+		const cotextSchemaCoId = factoryCoIdMap.get('°maia/factory/os/cotext')
 		if (!cotextSchemaCoId?.startsWith?.('co_z')) {
 			throw new Error(
-				'[CoJSONSeed] °Maia/factory/os/cotext not registered; cannot seed vibe icon CoTexts',
+				'[CoJSONSeed] °maia/factory/os/cotext not registered; cannot seed vibe icon CoTexts',
 			)
 		}
 		for (const vibe of allVibes) {
-			const originalVibeId = vibe.$id || ''
-			const vibeKey = originalVibeId.startsWith('°Maia/vibe/')
-				? originalVibeId.replace('°Maia/vibe/', '')
-				: (vibe.name || 'default').toLowerCase().replace(/\s+/g, '-')
-			const iconRef = `°Maia/vibe/${vibeKey}/icon`
-			const svg = VIBE_ICON_SVG_BY_KEY[vibeKey]
+			const vibeKey = getVibeKey(vibe)
+			const iconRef = vibe.icon ?? iconInstanceRefFromKey(vibeKey)
+			const svg = svgByVibeKey.get(vibeKey)
 			if (typeof svg !== 'string' || !svg.trim()) {
 				throw new Error(
-					`[CoJSONSeed] VIBE_ICON_SVG_BY_KEY missing or empty for vibe "${vibeKey}" (${iconRef})`,
+					`[CoJSONSeed] data.dashboardIconCotexts missing or empty for vibe "${vibeKey}" (${iconRef})`,
 				)
 			}
 			const graphemes = [...splitGraphemes(svg)]
@@ -479,10 +501,10 @@ export async function seed(
 		if (!vibes) {
 			const { EXCEPTION_FACTORIES } = await import('../../factories/registry.js')
 			const vibesRegistrySchemaCoId =
-				factoryCoIdMap?.get('°Maia/factory/os/vibes-registry') ??
+				factoryCoIdMap?.get('°maia/factory/os/vibes-registry') ??
 				(await (
 					await import('../../cojson/factory/resolver.js')
-				).resolve(peer, '°Maia/factory/os/vibes-registry', {
+				).resolve(peer, '°maia/factory/os/vibes-registry', {
 					returnType: 'coId',
 				}))
 			const { coValue: vibesCoMap } = await createCoValueForSpark(
@@ -499,10 +521,7 @@ export async function seed(
 			await groups.setSparkVibesId(peer, MAIA_SPARK, vibes.id)
 		}
 		for (const vibe of allVibes) {
-			const originalVibeId = vibe.$id || ''
-			const vibeKey = originalVibeId.startsWith('°Maia/vibe/')
-				? originalVibeId.replace('°Maia/vibe/', '')
-				: (vibe.name || 'default').toLowerCase().replace(/\s+/g, '-')
+			const vibeKey = getVibeKey(vibe)
 			const factoryRef = vibe.$factory
 			if (
 				factoryRef &&
@@ -519,7 +538,7 @@ export async function seed(
 			const retransformedVibe = transformForSeeding(vibe, combinedRegistry)
 			if (!retransformedVibe.$factory?.startsWith('co_z')) {
 				throw new Error(
-					`${OPS_PREFIX.sync} Vibe "${vibeKey}": $factory missing or not resolved. Ensure °Maia/factory/vibe is in schema registry.`,
+					`${OPS_PREFIX.sync} Vibe "${vibeKey}": $factory missing or not resolved. Ensure °maia/factory/vibe is in schema registry.`,
 				)
 			}
 			const vibeSeeded = await seedConfigs(
@@ -531,6 +550,7 @@ export async function seed(
 				instanceCoIdMap,
 				factoryCoMaps,
 				factoryCoIdMap,
+				migrateSeedOpts,
 			)
 			seededConfigs.configs.push(...(vibeSeeded.configs || []))
 			seededConfigs.count += vibeSeeded.count || 0

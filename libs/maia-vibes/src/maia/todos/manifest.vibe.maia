@@ -1,0 +1,17 @@
+{
+	"$factory": "°maia/factory/vibe",
+	"name": "Todos",
+	"description": "Complete todo list with state machines and AI tools",
+	"actor": "°maia/todos/intent/intent.actor.maia",
+	"runtime": [
+		"browser"
+	],
+	"dependencies": [
+		"°maia/todos/intent/intent.actor.maia",
+		"°maia/views/tabs/todos.actor.maia",
+		"°maia/views/list/actor.maia",
+		"°maia/services/todos/actor.maia",
+		"°maia/views/placeholder/actor.maia",
+		"°maia/os/db/actor.maia"
+	]
+}

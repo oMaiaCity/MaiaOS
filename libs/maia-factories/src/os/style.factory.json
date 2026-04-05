@@ -1,7 +1,7 @@
 {
-	"$factory": "°Maia/factory/meta",
-	"$id": "°Maia/factory/style",
-	"title": "°Maia/factory/style",
+	"$factory": "°maia/factory/meta",
+	"$id": "°maia/factory/style",
+	"title": "°maia/factory/style",
 	"description": "Style definition (brand or actor-specific). Brand styles typically include selectors, actor styles are overrides.",
 	"cotype": "comap",
 	"indexing": true,

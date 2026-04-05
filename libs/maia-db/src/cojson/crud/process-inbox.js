@@ -65,13 +65,13 @@ export async function processInbox(peer, actorId, inboxCoId) {
 
 			if (messageFactoryRef.startsWith('co_z')) {
 				messageSchemaCoId = messageFactoryRef
-			} else if (messageFactoryRef.startsWith('°Maia/factory/')) {
+			} else if (messageFactoryRef.startsWith('°maia/factory/')) {
 				messageSchemaCoId = peer.systemFactoryCoIds?.get?.(messageFactoryRef) ?? null
 			}
 		}
 
 		if (!messageSchemaCoId) {
-			messageSchemaCoId = peer.systemFactoryCoIds?.get?.('°Maia/factory/event') ?? null
+			messageSchemaCoId = peer.systemFactoryCoIds?.get?.('°maia/factory/event') ?? null
 		}
 	} catch (_error) {}
 
@@ -292,12 +292,12 @@ export async function findNewSuccessFromTarget(peer, inboxCoId, targetActorCoId,
 			const messageFactoryRef = inboxFactory.items.$co
 			if (messageFactoryRef.startsWith('co_z')) {
 				messageSchemaCoId = messageFactoryRef
-			} else if (messageFactoryRef.startsWith('°Maia/factory/')) {
+			} else if (messageFactoryRef.startsWith('°maia/factory/')) {
 				messageSchemaCoId = peer.systemFactoryCoIds?.get?.(messageFactoryRef) ?? null
 			}
 		}
 		if (!messageSchemaCoId) {
-			messageSchemaCoId = peer.systemFactoryCoIds?.get?.('°Maia/factory/event') ?? null
+			messageSchemaCoId = peer.systemFactoryCoIds?.get?.('°maia/factory/event') ?? null
 		}
 	} catch (_error) {}
 

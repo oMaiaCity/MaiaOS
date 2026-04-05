@@ -2,10 +2,10 @@
  * Schema Index Manager
  *
  * Provides helper functions for automatic schema-based indexing of co-values.
- * Manages schema index colists keyed by schema co-id in spark.os.indexes (account.registries.sparks[°Maia].os.indexes).
+ * Manages schema index colists keyed by schema co-id in spark.os.indexes (account.registries.sparks[°maia].os.indexes).
  *
  * Structure:
- * - spark.os.factories: "°Maia/factory/namekey" → schema co-id (registry)
+ * - spark.os.factories: "°maia/factory/namekey" → schema co-id (registry)
  * - spark.os.indexes: schema-co-id → colist of instance co-ids (index)
  * - spark.os.unknown: colist of co-values without schemas
  */
@@ -25,7 +25,7 @@ let warnedRegistriesMissingDuringBootstrap = false
 /**
  * Ensure spark.os CoMap exists (account.registries.sparks[spark].os)
  * @param {Object} peer - Backend instance
- * @param {string} [spark='°Maia'] - Spark name
+ * @param {string} [spark='°maia'] - Spark name
  * @returns {Promise<RawCoMap|null>} spark.os CoMap
  */
 async function ensureOsCoMap(peer, spark) {
@@ -130,7 +130,7 @@ export async function ensureIndexesCoMap(peer) {
 	// Use proper runtime validation with dbEngine when schema is available
 	if (peer.dbEngine?.resolveSystemFactories) await peer.dbEngine.resolveSystemFactories()
 	const indexesSchemaCoId =
-		peer.systemFactoryCoIds?.get?.('°Maia/factory/os/indexes-registry') ?? null
+		peer.systemFactoryCoIds?.get?.('°maia/factory/os/indexes-registry') ?? null
 
 	// Validate indexesSchemaCoId is a string
 	let indexesCoMapId
@@ -228,7 +228,7 @@ async function ensureSchemaSpecificIndexColistSchema(peer, factoryCoId, metaSche
 	}
 
 	// Generate schema-specific index colist schema name
-	// Preserves the full path structure: °Maia/factory/path → °Maia/factory/index/path (or @domain/...)
+	// Preserves the full path structure: °maia/factory/path → °maia/factory/index/path (or @domain/...)
 	const match = factoryTitle.match(SCHEMA_REF_MATCH)
 	if (!match) return null
 	const [, prefix, path] = match
@@ -425,7 +425,7 @@ async function isInternalCoValue(peer, coId) {
 		return false
 	}
 
-	// Check if it's spark.os (account.registries.sparks[°Maia].os)
+	// Check if it's spark.os (account.registries.sparks[°maia].os)
 	const osId = await groups.getSparkOsId(peer, peer?.systemSparkCoId)
 	if (coId === osId) {
 		return true
@@ -557,7 +557,7 @@ export async function shouldIndexCoValue(peer, coValueCore) {
 }
 
 /**
- * Get metaschema co-id from spark.os.factories registry (account.registries.sparks[°Maia].os.factories)
+ * Get metaschema co-id from spark.os.factories registry (account.registries.sparks[°maia].os.factories)
  * @param {Object} peer - Backend instance
  * @returns {Promise<string|null>} Metaschema co-id or null if not found
  */
@@ -595,7 +595,7 @@ async function getMetafactoryCoId(peer) {
 	}
 
 	// Look up metaschema from registry
-	const metaSchemaCoId = factoriesContent.get('°Maia/factory/meta')
+	const metaSchemaCoId = factoriesContent.get('°maia/factory/meta')
 	if (metaSchemaCoId && typeof metaSchemaCoId === 'string' && metaSchemaCoId.startsWith('co_z')) {
 		return metaSchemaCoId
 	}
@@ -604,7 +604,7 @@ async function getMetafactoryCoId(peer) {
 }
 
 /**
- * Ensure spark.os.factories registry CoMap exists (account.registries.sparks[°Maia].os.factories)
+ * Ensure spark.os.factories registry CoMap exists (account.registries.sparks[°maia].os.factories)
  * @param {Object} peer - Backend instance
  * @returns {Promise<RawCoMap>} spark.os.factories registry CoMap
  */
@@ -649,7 +649,7 @@ async function ensureFactoriesRegistry(peer) {
 
 	if (peer.dbEngine?.resolveSystemFactories) await peer.dbEngine.resolveSystemFactories()
 	const factoriesRegistrySchemaCoId = peer.systemFactoryCoIds?.get?.(
-		'°Maia/factory/os/factories-registry',
+		'°maia/factory/os/factories-registry',
 	)
 	const schemaForFactories = factoriesRegistrySchemaCoId || EXCEPTION_FACTORIES.META_SCHEMA
 	const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
@@ -770,12 +770,12 @@ export async function isFactoryCoValue(peer, coValueCore) {
 
 	// Metaschema itself uses @metaSchema exception (can't self-reference)
 	// Special case: Check content.title to confirm it's metaschema
-	// Uses "°Maia/factory/meta" (schema namekey from JSON definition - single source of truth)
+	// Uses "°maia/factory/meta" (schema namekey from JSON definition - single source of truth)
 	if (schema === EXCEPTION_FACTORIES.META_SCHEMA) {
 		const content = peer.getCurrentContent(coValueCore)
 		if (content && typeof content.get === 'function') {
 			const title = content.get('title')
-			if (title === '°Maia/factory/meta') {
+			if (title === '°maia/factory/meta') {
 				return true // This is the metaschema itself
 			}
 		}
@@ -807,8 +807,8 @@ export async function isFactoryCoValue(peer, coValueCore) {
 						const referencedTitle = referencedContent.get('title')
 
 						// Check if it's the metaschema by title
-						// - "°Maia/factory/meta" (schema namekey from JSON definition - single source of truth)
-						if (referencedTitle === '°Maia/factory/meta') {
+						// - "°maia/factory/meta" (schema namekey from JSON definition - single source of truth)
+						if (referencedTitle === '°maia/factory/meta') {
 							// headerMeta.$factory points to metaschema - this is a schema!
 							return true
 						}

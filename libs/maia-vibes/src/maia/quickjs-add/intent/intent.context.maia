@@ -1,0 +1,7 @@
+{
+	"$factory": "°maia/factory/context",
+	"layout": "@layout",
+	"@actors": {
+		"layout": "°maia/quickjs-add/layout-quickjs-add/actor.maia"
+	}
+}

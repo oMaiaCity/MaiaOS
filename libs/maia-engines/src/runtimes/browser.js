@@ -149,8 +149,8 @@ export class Runtime {
 		const { actorRefs } = await this._getVibesAndDependenciesFromDb()
 		const tools = []
 		const peer = this.dataEngine.peer
-		const actorSchemaCoId = peer.systemFactoryCoIds?.get?.('°Maia/factory/actor')
-		const metaSchemaCoId = peer.systemFactoryCoIds?.get?.('°Maia/factory/meta')
+		const actorSchemaCoId = peer.systemFactoryCoIds?.get?.('°maia/factory/actor')
+		const metaSchemaCoId = peer.systemFactoryCoIds?.get?.('°maia/factory/meta')
 		if (!actorSchemaCoId || !metaSchemaCoId) return []
 
 		for (const actorCoId of actorRefs) {
@@ -326,7 +326,7 @@ export class Runtime {
 	}
 
 	/**
-	 * Load vibes and union of their dependencies from DB (account.registries.sparks[°Maia].os.vibes).
+	 * Load vibes and union of their dependencies from DB (account.registries.sparks[°maia].os.vibes).
 	 * @returns {Promise<{actorRefs: string[]}>} Deduped actor refs to watch
 	 */
 	async _getVibesAndDependenciesFromDb() {

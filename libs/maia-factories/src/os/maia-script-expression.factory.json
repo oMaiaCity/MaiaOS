@@ -1,7 +1,7 @@
 {
-	"$factory": "°Maia/factory/meta",
-	"$id": "°Maia/factory/maia-script-expression",
-	"title": "°Maia/factory/maia-script-expression",
+	"$factory": "°maia/factory/meta",
+	"$id": "°maia/factory/maia-script-expression",
+	"title": "°maia/factory/maia-script-expression",
 	"description": "MaiaScript JSON DSL (evaluator enforces depth and operation whitelist)",
 	"cotype": "comap",
 	"oneOf": [

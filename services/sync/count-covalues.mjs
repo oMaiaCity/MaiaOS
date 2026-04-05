@@ -107,7 +107,7 @@ for (const r of byFactory.rows) {
   else if (name === '@metaSchema') cat = 'metaSchema bootstrap'
   else if (name === 'ProfileFactory') cat = 'cojson internal'
   else if (name.includes('index/')) cat = 'index schemas + colists'
-  else if (name.includes('°Maia/factory/')) cat = 'factory schema instances'
+  else if (name.includes('°maia/factory/')) cat = 'factory schema instances'
   else if (name === 'unresolved') cat = 'unresolved'
   else cat = name
   categoryMap.set(cat, (categoryMap.get(cat) || 0) + r.count)

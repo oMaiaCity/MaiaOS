@@ -1,6 +1,7 @@
 {
+	"$factory": "°maia/factory/meta",
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
-	"$id": "°Maia/factory/meta",
+	"$id": "°maia/factory/meta",
 	"$vocabulary": {
 		"https://json-schema.org/draft/2020-12/vocab/core": true,
 		"https://json-schema.org/draft/2020-12/vocab/applicator": true,
@@ -12,7 +13,7 @@
 		"https://maiaos.dev/vocab/cojson": true
 	},
 	"allOf": [{ "$ref": "https://json-schema.org/draft/2020-12/schema" }],
-	"title": "°Maia/factory/meta",
+	"title": "°maia/factory/meta",
 	"type": ["object", "boolean"],
 	"indexing": false,
 	"properties": {

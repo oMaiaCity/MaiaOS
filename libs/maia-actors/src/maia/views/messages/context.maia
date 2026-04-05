@@ -1,0 +1,20 @@
+{
+	"$factory": "°maia/factory/context",
+	"targetInfoCard": "@infoCard",
+	"@actors": {
+		"infoCard": "°maia/views/info-card/actor.maia"
+	},
+	"conversations": {
+		"factory": "°maia/factory/data/chat",
+		"map": {
+			"id": "id",
+			"role": "role",
+			"displayName": "displayName",
+			"content": "content"
+		}
+	},
+	"isLoading": false,
+	"hasConversations": false,
+	"welcomeText": "Hello! How can I assist you today?",
+	"loadingText": "Maia is thinking..."
+}

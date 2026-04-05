@@ -7,9 +7,9 @@ import {
 /**
  * Create a CoBinary (RawBinaryCoStream) with MANDATORY schema validation
  *
- * Automatically uses °Maia spark group from account as owner/admin when account is passed.
+ * Automatically uses °maia spark group from account as owner/admin when account is passed.
  *
- * @param {RawAccount|RawGroup} accountOrGroup - Account (to get °Maia spark group) or Group
+ * @param {RawAccount|RawGroup} accountOrGroup - Account (to get °maia spark group) or Group
  * @param {string} factoryName - Schema name for headerMeta.$schema (REQUIRED)
  * @param {LocalNode} [node] - LocalNode instance (required if accountOrGroup is account)
  * @param {Object} [dbEngine] - dbEngine with peer (required when account is passed)
@@ -27,9 +27,9 @@ export async function createCoBinary(accountOrGroup, factoryName, _node = null, 
 				throw new Error('[createCoBinary] dbEngine.peer required when passing account')
 			}
 			const { getSparkGroup } = await import('../groups/groups.js')
-			group = await getSparkGroup(peer, '°Maia')
+			group = await getSparkGroup(peer, '°maia')
 			if (!group) {
-				throw new Error('[createCoBinary] °Maia spark group not found. Ensure bootstrap has run.')
+				throw new Error('[createCoBinary] °maia spark group not found. Ensure bootstrap has run.')
 			}
 		}
 	}

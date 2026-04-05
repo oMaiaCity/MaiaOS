@@ -17,7 +17,7 @@ const JSON_SCHEMA_KEYS = new Set([
 	'$vocabulary',
 	'$comment',
 	'$async',
-	'$co', // MaiaOS CoJSON schema reference (e.g. { $co: "°Maia/factory/action" })
+	'$co', // MaiaOS CoJSON schema reference (e.g. { $co: "°maia/factory/action" })
 ])
 export async function resolveExpressions(payload, evaluator, data) {
 	// Handle string expressions (e.g., "$$result", "$context.key")

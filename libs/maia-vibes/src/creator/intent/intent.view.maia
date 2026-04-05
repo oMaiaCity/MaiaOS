@@ -1,9 +1,0 @@
-{
-	"$factory": "°Maia/factory/view",
-	"$id": "°Maia/logs/view/intent",
-	"content": {
-		"tag": "div",
-		"class": "stack",
-		"$slot": "$layout"
-	}
-}

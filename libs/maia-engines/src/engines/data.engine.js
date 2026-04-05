@@ -30,7 +30,7 @@ import {
 import { resolveSchemaFromCoValue } from '../utils/resolve-helpers.js'
 
 /** Registry key for cobinary data factory in spark.os.factories (seed-time key; lookup uses CoMap, not resolve()). */
-const COBINARY_DATA_FACTORY_KEY = '°Maia/factory/data/cobinary'
+const COBINARY_DATA_FACTORY_KEY = '°maia/factory/data/cobinary'
 
 /**
  * Resolve factory param for read/create to a co-id. Runtime uses co_z only (plus account/group sentinels).
@@ -465,10 +465,18 @@ async function deleteOp(peer, dataEngine, params) {
 }
 
 async function seedOp(peer, params) {
-	const { configs, schemas, data, forceFreshSeed } = params
+	const { configs, schemas, data, forceFreshSeed, forceMigrate } = params
 	if (!configs) throw new Error('[SeedOperation] Configs required')
 	if (!schemas) throw new Error('[SeedOperation] Schemas required')
-	const options = forceFreshSeed ? { forceFreshSeed: true } : {}
+	const options = {}
+	if (forceFreshSeed) options.forceFreshSeed = true
+	if (forceMigrate) options.forceMigrate = true
+	if (options.forceFreshSeed && options.forceMigrate) {
+		throw new Error('[SeedOperation] forceFreshSeed and forceMigrate are mutually exclusive')
+	}
+	if (!options.forceFreshSeed && !options.forceMigrate) {
+		throw new Error('[SeedOperation] forceFreshSeed or forceMigrate is required')
+	}
 	const result = await peer.seed(configs, schemas, data || {}, options)
 	return createSuccessResult(result, { op: 'seed' })
 }
