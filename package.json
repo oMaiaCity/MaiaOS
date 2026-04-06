@@ -19,7 +19,7 @@
 		"deploy:app:verify": "bun scripts/fly-build-args-verify.js",
 		"deploy:sync": "cd services/sync && ./deploy.sh",
 		"deploy:landing": "flyctl deploy --dockerfile services/landing/Dockerfile --config services/landing/fly.toml --app maia-city --wait-timeout 300 && flyctl scale count 1 --app maia-city --yes",
-		"vibes:build": "cd libs/maia-vibes && bun run build",
+		"universe:build": "cd libs/maia-universe && bun run build",
 		"distros:build": "bun run --filter @MaiaOS/maia-distros build",
 		"docs:generate": "bun scripts/generate-llm-docs.js",
 		"docs:watch": "bun scripts/generate-llm-docs.js --watch",
@@ -33,6 +33,7 @@
 		"check": "bunx biome check .",
 		"check:fix": "bunx biome check --write .",
 		"check:ci": "bun run format:maia:check && bun scripts/check-maia-app-no-inline-handlers.mjs && bunx biome ci .",
+		"check:m2-bundle": "bun scripts/check-m2-app-bundle.mjs",
 		"test": "bun run --workspaces --if-present test",
 		"test:db-contract": "bun --filter @MaiaOS/db test",
 		"prepare": "husky"

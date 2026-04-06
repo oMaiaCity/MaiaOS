@@ -1,17 +1,21 @@
 {
 	"$factory": "°maia/factory/meta",
-	"$id": "°maia/factory/actor",
 	"title": "°maia/factory/actor",
 	"description": "Pure declarative actor specification",
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {
-		"$label": { "$ref": "#/$defs/registryLabel" },
+		"$label": {
+			"$ref": "#/$defs/registryLabel"
+		},
 		"context": {
 			"$co": "°maia/factory/context",
 			"description": "Co-id reference to context definition"
 		},
-		"view": { "$co": "°maia/factory/view", "description": "Co-id reference to view definition" },
+		"view": {
+			"$co": "°maia/factory/view",
+			"description": "Co-id reference to view definition"
+		},
 		"process": {
 			"$co": "°maia/factory/process",
 			"description": "Co-id reference to process config (GenServer-style handlers)"
@@ -35,12 +39,20 @@
 		"wasm": {
 			"description": "WASM-based execution. $co ref to wasm config, or inline { lang, code }.",
 			"oneOf": [
-				{ "type": "string", "pattern": "^co_z[a-zA-Z0-9]+$" },
+				{
+					"type": "string",
+					"pattern": "^co_z[a-zA-Z0-9]+$"
+				},
 				{
 					"type": "object",
 					"properties": {
-						"lang": { "type": "string", "enum": ["js"] },
-						"code": { "$co": "°maia/factory/os/cotext" }
+						"lang": {
+							"type": "string",
+							"enum": ["js"]
+						},
+						"code": {
+							"$co": "°maia/factory/os/cotext"
+						}
 					},
 					"required": ["lang", "code"],
 					"additionalProperties": false

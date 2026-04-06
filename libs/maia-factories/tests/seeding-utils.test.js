@@ -15,8 +15,8 @@ describe('deriveInboxId', () => {
 	})
 
 	test('literal actor.maia filename -> sibling inbox.maia', () => {
-		expect(deriveInboxId('°maia/quickjs-add/add-form/actor.maia')).toBe(
-			'°maia/quickjs-add/add-form/inbox.maia',
+		expect(deriveInboxId('°maia/quickjs/add-form/actor.maia')).toBe(
+			'°maia/quickjs/add-form/inbox.maia',
 		)
 	})
 

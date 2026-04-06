@@ -1,0 +1,13 @@
+{
+	"$factory": "°maia/factory/vibe",
+	"name": "Logs",
+	"description": "Developer logs and diagnostics",
+	"actor": "°maia/logs/intent/intent.actor.maia",
+	"runtime": [
+		"browser"
+	],
+	"dependencies": [
+		"°maia/logs/intent/intent.actor.maia",
+		"°maia/views/logs/actor.maia"
+	]
+}

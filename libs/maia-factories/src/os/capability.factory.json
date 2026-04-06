@@ -1,6 +1,5 @@
 {
 	"$factory": "°maia/factory/meta",
-	"$id": "°maia/factory/os/capability",
 	"title": "Capability",
 	"description": "Single capability grant. sub×cmd×pol. Stored in spark.os.capabilities CoStream.",
 	"cotype": "comap",

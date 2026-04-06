@@ -1,13 +1,14 @@
 {
 	"$factory": "°maia/factory/meta",
-	"$id": "°maia/factory/process",
 	"title": "°maia/factory/process",
 	"description": "Flat event handlers (GenServer-style). No FSM—handlers keyed by message type.",
 	"cotype": "comap",
 	"indexing": true,
 	"required": ["handlers"],
 	"properties": {
-		"$label": { "$ref": "#/$defs/registryLabel" },
+		"$label": {
+			"$ref": "#/$defs/registryLabel"
+		},
 		"handlers": {
 			"type": "object",
 			"description": "Event type → array of actions",
@@ -15,12 +16,24 @@
 				"type": "array",
 				"items": {
 					"oneOf": [
-						{ "$ref": "#/$defs/ctx" },
-						{ "$ref": "#/$defs/op" },
-						{ "$ref": "#/$defs/tell" },
-						{ "$ref": "#/$defs/ask" },
-						{ "$ref": "#/$defs/guard" },
-						{ "$ref": "#/$defs/function" }
+						{
+							"$ref": "#/$defs/ctx"
+						},
+						{
+							"$ref": "#/$defs/op"
+						},
+						{
+							"$ref": "#/$defs/tell"
+						},
+						{
+							"$ref": "#/$defs/ask"
+						},
+						{
+							"$ref": "#/$defs/guard"
+						},
+						{
+							"$ref": "#/$defs/function"
+						}
 					]
 				}
 			}
@@ -34,7 +47,12 @@
 		"ctx": {
 			"type": "object",
 			"description": "Update context CoValue",
-			"properties": { "ctx": { "type": "object", "additionalProperties": true } },
+			"properties": {
+				"ctx": {
+					"type": "object",
+					"additionalProperties": true
+				}
+			},
 			"required": ["ctx"]
 		},
 		"op": {
@@ -44,9 +62,15 @@
 				"op": {
 					"type": "object",
 					"properties": {
-						"create": { "type": "object" },
-						"update": { "type": "object" },
-						"delete": { "type": "object" }
+						"create": {
+							"type": "object"
+						},
+						"update": {
+							"type": "object"
+						},
+						"delete": {
+							"type": "object"
+						}
 					}
 				}
 			},
@@ -60,11 +84,22 @@
 					"type": "object",
 					"properties": {
 						"target": {
-							"oneOf": [{ "type": "string" }, { "type": "object" }],
+							"oneOf": [
+								{
+									"type": "string"
+								},
+								{
+									"type": "object"
+								}
+							],
 							"description": "Actor co-id or expression ($if, $$source, etc.)"
 						},
-						"type": { "type": "string" },
-						"payload": { "type": "object" }
+						"type": {
+							"type": "string"
+						},
+						"payload": {
+							"type": "object"
+						}
 					},
 					"required": ["target", "type"]
 				}
@@ -79,11 +114,22 @@
 					"type": "object",
 					"properties": {
 						"target": {
-							"oneOf": [{ "type": "string" }, { "type": "object" }],
+							"oneOf": [
+								{
+									"type": "string"
+								},
+								{
+									"type": "object"
+								}
+							],
 							"description": "Actor co-id or expression ($if, $$source, etc.)"
 						},
-						"type": { "type": "string" },
-						"payload": { "type": "object" }
+						"type": {
+							"type": "string"
+						},
+						"payload": {
+							"type": "object"
+						}
 					},
 					"required": ["target", "type"]
 				}
@@ -93,13 +139,23 @@
 		"guard": {
 			"type": "object",
 			"description": "Guard condition (phase, etc.)",
-			"properties": { "guard": { "type": "object", "additionalProperties": true } },
+			"properties": {
+				"guard": {
+					"type": "object",
+					"additionalProperties": true
+				}
+			},
 			"required": ["guard"]
 		},
 		"function": {
 			"type": "object",
 			"description": "Run actor executableFunction, deliver SUCCESS/ERROR to caller",
-			"properties": { "function": { "type": "boolean", "const": true } },
+			"properties": {
+				"function": {
+					"type": "boolean",
+					"const": true
+				}
+			},
 			"required": ["function"]
 		}
 	}

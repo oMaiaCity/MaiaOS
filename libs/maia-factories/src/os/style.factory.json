@@ -1,12 +1,13 @@
 {
 	"$factory": "°maia/factory/meta",
-	"$id": "°maia/factory/style",
 	"title": "°maia/factory/style",
 	"description": "Style definition (brand or actor-specific). Brand styles typically include selectors, actor styles are overrides.",
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {
-		"$label": { "$ref": "#/$defs/registryLabel" },
+		"$label": {
+			"$ref": "#/$defs/registryLabel"
+		},
 		"tokens": {
 			"type": "object",
 			"description": "Design tokens (colors, spacing, typography, etc.)",

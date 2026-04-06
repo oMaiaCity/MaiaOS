@@ -21,7 +21,7 @@
 		"@MaiaOS/game": "workspace:*",
 		"@MaiaOS/loader": "workspace:*",
 		"@MaiaOS/peer": "workspace:*",
-		"@MaiaOS/vibes": "workspace:*",
+		"@MaiaOS/universe": "workspace:*",
 		"@MaiaOS/maia-ai": "workspace:*",
 		"@MaiaOS/maia-distros": "workspace:*",
 		"@tauri-apps/api": "2.10.1"

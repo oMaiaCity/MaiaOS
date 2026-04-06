@@ -1,5 +1,4 @@
 {
-	"$id": "°maia/factory/os/wasm",
 	"$factory": "°maia/factory/meta",
 	"title": "°maia/factory/os/wasm",
 	"cotype": "comap",

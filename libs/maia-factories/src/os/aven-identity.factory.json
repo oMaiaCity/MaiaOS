@@ -1,6 +1,5 @@
 {
 	"$factory": "°maia/factory/meta",
-	"$id": "°maia/factory/os/aven-identity",
 	"title": "°maia/factory/os/aven-identity",
 	"description": "Aven identity: account + profile. Referenced by avens identity registry.",
 	"cotype": "comap",

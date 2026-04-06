@@ -1,6 +1,6 @@
 /**
  * Stable vibe key from annotated manifest or explicit °maia/vibe/<k> id.
- * Shared by @MaiaOS/vibes (seeding) and @MaiaOS/db (genesis icon CoText).
+ * Shared by @MaiaOS/universe (seeding) and @MaiaOS/db (genesis icon CoText).
  */
 
 /** @param {{ $id?: string, name?: string } | null | undefined} vibe */

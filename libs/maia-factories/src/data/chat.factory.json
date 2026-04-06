@@ -1,5 +1,4 @@
 {
-	"$id": "°maia/factory/data/chat",
 	"$factory": "°maia/factory/meta",
 	"title": "°maia/factory/data/chat",
 	"cotype": "comap",
@@ -10,7 +9,11 @@
 			"enum": ["user", "assistant", "system"],
 			"description": "The role of the message sender"
 		},
-		"content": { "type": "string", "minLength": 1, "description": "The message content" },
+		"content": {
+			"type": "string",
+			"minLength": 1,
+			"description": "The message content"
+		},
 		"displayName": {
 			"type": "string",
 			"description": "Display name for view (e.g. me for user, Maia for assistant) - set by state machine, view stays dumb"

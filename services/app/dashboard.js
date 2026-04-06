@@ -5,7 +5,7 @@
 
 import { resolveAccountCoIdsToProfiles } from '@MaiaOS/loader'
 import { createPerfTracer } from '@MaiaOS/logs'
-import { DEFAULT_CARD_ICON_SVG } from '@MaiaOS/vibes/dashboard-icon-svgs'
+import { DEFAULT_CARD_ICON_SVG } from '@MaiaOS/universe/dashboard-icon-svgs'
 import { findSessionChatIntentActorId, resolveChatVibeCoId } from './maia-ai-global.js'
 import { MAIADB_LAYER_STACK_ICON_SVG } from './maia-icons.js'
 import {

@@ -1,9 +1,0 @@
-{
-	"$factory": "°maia/factory/actor",
-	"context": "°maia/quickjs-add/intent/intent.context.maia",
-	"view": "°maia/quickjs-add/intent/intent.view.maia",
-	"process": "°maia/quickjs-add/intent/intent.process.maia",
-	"brand": "°maia/brand/maiacity.style.maia",
-	"inbox": "°maia/quickjs-add/intent/inbox.maia",
-	"interface": []
-}

@@ -1,12 +1,13 @@
 {
 	"$factory": "°maia/factory/meta",
-	"$id": "°maia/factory/view",
 	"title": "°maia/factory/view",
 	"description": "UI structure definition with DOM tree, expressions, loops, and event handlers (recursive viewNode structure)",
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {
-		"$label": { "$ref": "#/$defs/registryLabel" },
+		"$label": {
+			"$ref": "#/$defs/registryLabel"
+		},
 		"content": {
 			"type": "object",
 			"description": "View content structure (recursive viewNode)",
@@ -113,68 +114,154 @@
 					],
 					"description": "HTML element tag (allowlist for XSS prevention)"
 				},
-				"class": { "type": "string" },
+				"class": {
+					"type": "string"
+				},
 				"text": {
 					"anyOf": [
-						{ "type": "string", "pattern": "^\\$\\$" },
-						{ "type": "string", "pattern": "^@" },
-						{ "type": "string", "pattern": "^\\$[^$]" },
-						{ "type": "string" },
-						{ "type": "number" },
-						{ "type": "boolean" },
-						{ "type": "null" },
-						{ "$ref": "#/$defs/expressionValue" }
+						{
+							"type": "string",
+							"pattern": "^\\$\\$"
+						},
+						{
+							"type": "string",
+							"pattern": "^@"
+						},
+						{
+							"type": "string",
+							"pattern": "^\\$[^$]"
+						},
+						{
+							"type": "string"
+						},
+						{
+							"type": "number"
+						},
+						{
+							"type": "boolean"
+						},
+						{
+							"type": "null"
+						},
+						{
+							"$ref": "#/$defs/expressionValue"
+						}
 					]
 				},
 				"value": {
 					"anyOf": [
-						{ "type": "string", "pattern": "^\\$\\$" },
-						{ "type": "string", "pattern": "^@" },
-						{ "type": "string", "pattern": "^\\$[^$]" },
-						{ "type": "string" },
-						{ "type": "number" },
-						{ "type": "boolean" },
-						{ "type": "null" },
-						{ "$ref": "#/$defs/expressionValue" }
+						{
+							"type": "string",
+							"pattern": "^\\$\\$"
+						},
+						{
+							"type": "string",
+							"pattern": "^@"
+						},
+						{
+							"type": "string",
+							"pattern": "^\\$[^$]"
+						},
+						{
+							"type": "string"
+						},
+						{
+							"type": "number"
+						},
+						{
+							"type": "boolean"
+						},
+						{
+							"type": "null"
+						},
+						{
+							"$ref": "#/$defs/expressionValue"
+						}
 					]
 				},
 				"attrs": {
 					"type": "object",
 					"additionalProperties": {
 						"anyOf": [
-							{ "type": "string", "pattern": "^\\$\\$" },
-							{ "type": "string", "pattern": "^@" },
-							{ "type": "string", "pattern": "^\\$[^$]" },
-							{ "type": "string" },
-							{ "type": "number" },
-							{ "type": "boolean" },
-							{ "type": "null" },
+							{
+								"type": "string",
+								"pattern": "^\\$\\$"
+							},
+							{
+								"type": "string",
+								"pattern": "^@"
+							},
+							{
+								"type": "string",
+								"pattern": "^\\$[^$]"
+							},
+							{
+								"type": "string"
+							},
+							{
+								"type": "number"
+							},
+							{
+								"type": "boolean"
+							},
+							{
+								"type": "null"
+							},
 							{
 								"type": "object",
 								"additionalProperties": {
 									"anyOf": [
-										{ "type": "string", "pattern": "^\\$\\$" },
-										{ "type": "string", "pattern": "^@" },
-										{ "type": "string", "pattern": "^\\$[^$]" },
-										{ "type": "string" },
-										{ "type": "number" },
-										{ "type": "boolean" },
-										{ "type": "null" }
+										{
+											"type": "string",
+											"pattern": "^\\$\\$"
+										},
+										{
+											"type": "string",
+											"pattern": "^@"
+										},
+										{
+											"type": "string",
+											"pattern": "^\\$[^$]"
+										},
+										{
+											"type": "string"
+										},
+										{
+											"type": "number"
+										},
+										{
+											"type": "boolean"
+										},
+										{
+											"type": "null"
+										}
 									]
 								}
 							}
 						]
 					}
 				},
-				"children": { "type": "array", "items": { "$ref": "#/$defs/viewNode" } },
+				"children": {
+					"type": "array",
+					"items": {
+						"$ref": "#/$defs/viewNode"
+					}
+				},
 				"$on": {
 					"type": "object",
 					"additionalProperties": {
 						"type": "object",
 						"properties": {
-							"send": { "type": "string" },
-							"payload": { "type": "object", "additionalProperties": true },
-							"key": { "type": "string" }
+							"send": {
+								"type": "string"
+							},
+							"payload": {
+								"type": "object",
+								"additionalProperties": true
+							},
+							"key": {
+								"type": "string"
+							}
 						},
 						"required": ["send"]
 					}
@@ -184,28 +271,64 @@
 					"properties": {
 						"items": {
 							"anyOf": [
-								{ "type": "string", "pattern": "^\\$\\$" },
-								{ "type": "string", "pattern": "^@" },
-								{ "type": "string", "pattern": "^\\$[^$]" },
-								{ "type": "string" },
-								{ "type": "number" },
-								{ "type": "boolean" },
-								{ "type": "null" }
+								{
+									"type": "string",
+									"pattern": "^\\$\\$"
+								},
+								{
+									"type": "string",
+									"pattern": "^@"
+								},
+								{
+									"type": "string",
+									"pattern": "^\\$[^$]"
+								},
+								{
+									"type": "string"
+								},
+								{
+									"type": "number"
+								},
+								{
+									"type": "boolean"
+								},
+								{
+									"type": "null"
+								}
 							]
 						},
-						"template": { "$ref": "#/$defs/viewNode" }
+						"template": {
+							"$ref": "#/$defs/viewNode"
+						}
 					},
 					"required": ["items", "template"]
 				},
 				"$slot": {
 					"anyOf": [
-						{ "type": "string", "pattern": "^\\$\\$" },
-						{ "type": "string", "pattern": "^@" },
-						{ "type": "string", "pattern": "^\\$[^$]" },
-						{ "type": "string" },
-						{ "type": "number" },
-						{ "type": "boolean" },
-						{ "type": "null" }
+						{
+							"type": "string",
+							"pattern": "^\\$\\$"
+						},
+						{
+							"type": "string",
+							"pattern": "^@"
+						},
+						{
+							"type": "string",
+							"pattern": "^\\$[^$]"
+						},
+						{
+							"type": "string"
+						},
+						{
+							"type": "number"
+						},
+						{
+							"type": "boolean"
+						},
+						{
+							"type": "null"
+						}
 					]
 				},
 				"scrollToBottomOn": {

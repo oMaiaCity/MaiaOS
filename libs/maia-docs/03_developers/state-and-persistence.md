@@ -80,7 +80,7 @@ The sync service requires persistent storage (never in-memory). Two backends are
 | **Sync PEER_MODE=sync** | genesisAccountSeed | Full scaffold + vibes into sync server account. |
 | **handleSeed** (agent mode, manual) | genesisAccountSeed | Manual reseed for dev. |
 
-**SEED_VIBES** (sync server env) controls which vibes are seeded when PEER_MODE=sync: `"all"` or comma-separated `"todos,chat,db,sparks,creator"`.
+**SEED_VIBES** (sync server env) controls which vibes are seeded when PEER_MODE=sync: `"all"` or comma-separated `"todos,chat,db,sparks,logs"`.
 
 ---
 
