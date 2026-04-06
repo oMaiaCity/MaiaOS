@@ -1,6 +1,5 @@
 {
 	"$factory": "°maia/factory/meta",
-	"$id": "°maia/factory/os/factories-registry",
 	"title": "°maia/factory/os/factories-registry",
 	"description": "Schema registry CoMap - maps schema namekeys (e.g., °maia/factory/data/todos) to schema co-ids (co_z...). Stored in account.os.factories",
 	"cotype": "comap",

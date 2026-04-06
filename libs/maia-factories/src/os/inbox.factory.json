@@ -1,6 +1,5 @@
 {
 	"$factory": "°maia/factory/meta",
-	"$id": "°maia/factory/inbox",
 	"title": "°maia/factory/inbox",
 	"description": "A costream (append-only stream) of messages received by this actor",
 	"cotype": "costream",

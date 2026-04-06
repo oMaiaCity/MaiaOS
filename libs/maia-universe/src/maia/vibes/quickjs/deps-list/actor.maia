@@ -1,0 +1,10 @@
+{
+	"$factory": "°maia/factory/actor",
+	"context": "°maia/quickjs/deps-list/context.dynamic.maia",
+	"view": "°maia/quickjs/deps-list/view.maia",
+	"process": "°maia/quickjs/deps-list/process.maia",
+	"brand": "°maia/brand/maiacity.style.maia",
+	"style": "°maia/quickjs/deps-list/style.maia",
+	"inbox": "°maia/quickjs/deps-list/inbox.maia",
+	"interface": "°maia/quickjs/deps-list/interface.maia"
+}

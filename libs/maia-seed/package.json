@@ -1,0 +1,17 @@
+{
+	"name": "@MaiaOS/seed",
+	"version": "26.4.21315-next",
+	"type": "module",
+	"main": "src/index.js",
+	"exports": {
+		".": "./src/index.js",
+		"./seed-config": "./src/seed-config.js"
+	},
+	"dependencies": {
+		"@MaiaOS/factories": "workspace:*",
+		"@MaiaOS/universe": "workspace:*"
+	},
+	"files": [
+		"src"
+	]
+}

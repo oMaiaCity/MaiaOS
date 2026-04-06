@@ -12,7 +12,7 @@
 	],
 	"dependencies": {
 		"@MaiaOS/actors": "workspace:*",
-		"@MaiaOS/vibes": "workspace:*",
+		"@MaiaOS/universe": "workspace:*",
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/loader": "workspace:*",
 		"@MaiaOS/factories": "workspace:*",

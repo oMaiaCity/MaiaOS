@@ -1,0 +1,12 @@
+{
+	"todos": [
+		{
+			"text": "Welcome to MaiaOS! 🎉",
+			"done": false
+		},
+		{
+			"text": "Toggle me to mark as complete",
+			"done": false
+		}
+	]
+}

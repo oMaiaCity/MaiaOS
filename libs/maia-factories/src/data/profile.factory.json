@@ -1,12 +1,15 @@
 {
-	"$id": "°maia/factory/data/profile",
 	"$factory": "°maia/factory/meta",
 	"title": "°maia/factory/data/profile",
 	"description": "Profile CoMap (account-owned, identity). Used for profile-image context.",
 	"cotype": "comap",
 	"indexing": false,
 	"properties": {
-		"name": { "type": "string", "minLength": 1, "description": "User's display name" },
+		"name": {
+			"type": "string",
+			"minLength": 1,
+			"description": "User's display name"
+		},
 		"avatar": {
 			"type": "string",
 			"pattern": "^co_z[a-zA-Z0-9]+$",

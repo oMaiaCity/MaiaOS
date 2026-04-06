@@ -1,0 +1,59 @@
+{
+	"$factory": "°maia/factory/meta",
+	"title": "°maia/quickjs/deps-list/interface.maia",
+	"description": "Read-only list of aven dependency actors",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"SELECT_ITEM": {
+			"type": "object",
+			"description": "Select dependency actor",
+			"properties": {
+				"item": {
+					"type": "object",
+					"description": "Dependency item (id, label, wasmCode, hasWasmCode)",
+					"properties": {
+						"id": {
+							"type": "string"
+						},
+						"label": {
+							"type": "string"
+						},
+						"wasmCode": {
+							"type": [
+								"string",
+								"null"
+							]
+						},
+						"hasWasmCode": {
+							"type": "boolean"
+						}
+					},
+					"required": [
+						"id",
+						"label"
+					],
+					"additionalProperties": true
+				}
+			},
+			"required": [
+				"item"
+			],
+			"additionalProperties": false
+		},
+		"UPDATE_WASM_CODE": {
+			"type": "object",
+			"description": "Update wasm code for selected actor (inline edit)",
+			"properties": {
+				"value": {
+					"type": "string"
+				}
+			},
+			"required": [
+				"value"
+			],
+			"additionalProperties": false
+		}
+	},
+	"additionalProperties": false
+}

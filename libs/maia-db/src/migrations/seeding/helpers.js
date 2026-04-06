@@ -2,7 +2,10 @@
  * Seeding helpers - pure utilities and ensureSparkOs
  */
 
-import mergedMetaSchema from '@MaiaOS/factories/os/meta.factory.json'
+import { withCanonicalFactorySchema } from '@MaiaOS/factories'
+import mergedMetaSchemaRaw from '@MaiaOS/factories/os/meta.factory.json'
+
+const mergedMetaSchema = withCanonicalFactorySchema(mergedMetaSchemaRaw, 'os/meta.factory.json')
 
 /**
  * Find all °maia/factory/ references in an object (recursive).

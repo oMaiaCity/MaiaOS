@@ -34,6 +34,9 @@ RUN cd services/app && \
   VITE_PEER_APP_HOST=${VITE_PEER_APP_HOST:-next.maia.city} \
   bun build.js
 
+# M2: ensure .maia was compiled to JSON (no Bun asset URL leaks in prod bundles)
+RUN bun scripts/check-m2-app-bundle.mjs
+
 # Runtime stage - only built SPA + static server, no source
 FROM oven/bun:1-slim
 WORKDIR /app

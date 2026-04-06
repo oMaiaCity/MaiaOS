@@ -4,14 +4,13 @@
 	"type": "module",
 	"main": "src/index.js",
 	"exports": {
-		".": "./src/index.js",
-		"./seed-config": "./src/maia/seed-config.js",
-		"./shared/*": "./src/maia/shared/*"
+		".": "./src/index.js"
 	},
 	"dependencies": {
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/engines": "workspace:*",
 		"@MaiaOS/factories": "workspace:*",
+		"@MaiaOS/universe": "workspace:*",
 		"unicode-segmenter": "0.15.0"
 	},
 	"files": [

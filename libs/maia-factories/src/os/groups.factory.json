@@ -1,6 +1,5 @@
 {
 	"$factory": "°maia/factory/meta",
-	"$id": "°maia/factory/os/groups",
 	"title": "°maia/factory/os/groups",
 	"description": "Groups CoMap - guardian, publicReaders. Stored in spark.os.groups",
 	"cotype": "comap",

@@ -3,8 +3,12 @@
  */
 
 import { normalizeCoValueData } from '@MaiaOS/db'
+import { withCanonicalFactorySchema } from './factory-identity.js'
 import { normalizeFactoryReferencesWithResolver } from './factory-ref-resolver.js'
-import customMetaSchema from './os/meta.factory.json'
+import customMetaSchemaRaw from './os/meta.factory.json'
+
+const customMetaSchema = withCanonicalFactorySchema(customMetaSchemaRaw, 'os/meta.factory.json')
+
 import { isFactoryRef } from './patterns.js'
 import { plugin as cobinaryPlugin } from './plugins/cobinary.plugin.js'
 import { plugin as cojsonPlugin } from './plugins/cojson.plugin.js'

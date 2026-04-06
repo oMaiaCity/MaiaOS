@@ -53,7 +53,7 @@ const globs = [
 		'maia-self',
 		'maia-storage',
 		'maia-ucan',
-		'maia-vibes',
+		'maia-universe',
 	].map((n) => join(repoRoot, 'libs', n, 'package.json')),
 ]
 

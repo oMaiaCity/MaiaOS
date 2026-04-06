@@ -81,8 +81,8 @@ libs/maia-docs/04_agents/LLM_*.md
 # maia-distros output (built during Docker/production build only, not used in dev)
 libs/maia-distros/output/
 
-# maia-vibes dist (build output, not used in dev - we use source)
-libs/maia-vibes/dist/
+# maia-universe dist (build output, not used in dev - we use source)
+libs/maia-universe/dist/
 
 # maia-game bundled terrain worker (built by build:terrain-worker or app build.js)
 libs/maia-game/dist/

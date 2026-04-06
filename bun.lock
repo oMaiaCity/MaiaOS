@@ -22,6 +22,7 @@
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/engines": "workspace:*",
         "@MaiaOS/factories": "workspace:*",
+        "@MaiaOS/universe": "workspace:*",
         "unicode-segmenter": "0.15.0",
       },
     },
@@ -59,7 +60,7 @@
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/factories": "workspace:*",
         "@MaiaOS/loader": "workspace:*",
-        "@MaiaOS/vibes": "workspace:*",
+        "@MaiaOS/universe": "workspace:*",
         "@runanywhere/web-llamacpp": "0.1.0-beta.10",
         "@runanywhere/web-onnx": "0.1.0-beta.10",
         "cojson-transport-ws": "0.20.16",
@@ -73,7 +74,7 @@
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/factories": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
-        "@MaiaOS/vibes": "workspace:*",
+        "@MaiaOS/universe": "workspace:*",
         "@jitl/quickjs-singlefile-cjs-release-sync": "0.32.0",
         "dompurify": "3.3.3",
         "fast-myers-diff": "3.2.0",
@@ -132,6 +133,14 @@
         "cojson-transport-ws": "0.20.16",
       },
     },
+    "libs/maia-seed": {
+      "name": "@MaiaOS/seed",
+      "version": "26.4.21315-next",
+      "dependencies": {
+        "@MaiaOS/factories": "workspace:*",
+        "@MaiaOS/universe": "workspace:*",
+      },
+    },
     "libs/maia-self": {
       "name": "@MaiaOS/self",
       "version": "26.4.21315-next",
@@ -165,12 +174,15 @@
         "@scure/base": "2.0.0",
       },
     },
-    "libs/maia-vibes": {
-      "name": "@MaiaOS/vibes",
+    "libs/maia-universe": {
+      "name": "@MaiaOS/universe",
       "version": "26.4.21315-next",
       "dependencies": {
+        "@MaiaOS/db": "workspace:*",
+        "@MaiaOS/engines": "workspace:*",
         "@MaiaOS/factories": "workspace:*",
         "@MaiaOS/loader": "workspace:*",
+        "unicode-segmenter": "0.15.0",
       },
     },
     "services/app": {
@@ -184,7 +196,7 @@
         "@MaiaOS/maia-ai": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
-        "@MaiaOS/vibes": "workspace:*",
+        "@MaiaOS/universe": "workspace:*",
         "@tauri-apps/api": "2.10.1",
       },
       "devDependencies": {
@@ -195,14 +207,14 @@
       "name": "@MaiaOS/sync",
       "version": "26.4.21315-next",
       "dependencies": {
-        "@MaiaOS/actors": "workspace:*",
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/loader": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
         "@MaiaOS/maia-ucan": "workspace:*",
+        "@MaiaOS/seed": "workspace:*",
         "@MaiaOS/storage": "workspace:*",
-        "@MaiaOS/vibes": "workspace:*",
+        "@MaiaOS/universe": "workspace:*",
       },
     },
   },
@@ -233,13 +245,15 @@
 
     "@MaiaOS/peer": ["@MaiaOS/peer@workspace:libs/maia-peer"],
 
+    "@MaiaOS/seed": ["@MaiaOS/seed@workspace:libs/maia-seed"],
+
     "@MaiaOS/self": ["@MaiaOS/self@workspace:libs/maia-self"],
 
     "@MaiaOS/storage": ["@MaiaOS/storage@workspace:libs/maia-storage"],
 
     "@MaiaOS/sync": ["@MaiaOS/sync@workspace:services/sync"],
 
-    "@MaiaOS/vibes": ["@MaiaOS/vibes@workspace:libs/maia-vibes"],
+    "@MaiaOS/universe": ["@MaiaOS/universe@workspace:libs/maia-universe"],
 
     "@aws-crypto/crc32": ["@aws-crypto/crc32@5.2.0", "", { "dependencies": { "@aws-crypto/util": "^5.2.0", "@aws-sdk/types": "^3.222.0", "tslib": "^2.6.2" } }, "sha512-nLbCWqQNgUiwwtFsen1AdzAtvuLRsQS8rYgMuxCrdKf9kOssamGLuPwyTY9wyYblNr9+1XM8v6zoDTPPSIeANg=="],
 

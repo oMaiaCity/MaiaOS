@@ -14,7 +14,7 @@
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/factories": "workspace:*",
 		"@MaiaOS/logs": "workspace:*",
-		"@MaiaOS/vibes": "workspace:*",
+		"@MaiaOS/universe": "workspace:*",
 		"@jitl/quickjs-singlefile-cjs-release-sync": "0.32.0",
 		"dompurify": "3.3.3",
 		"fast-myers-diff": "3.2.0",

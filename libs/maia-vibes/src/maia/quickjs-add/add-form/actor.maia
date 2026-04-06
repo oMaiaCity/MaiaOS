@@ -1,9 +1,0 @@
-{
-	"$factory": "°maia/factory/actor",
-	"brand": "°maia/brand/maiacity.style.maia",
-	"context": "°maia/quickjs-add/add-form/context.maia",
-	"view": "°maia/quickjs-add/add-form/view.maia",
-	"process": "°maia/quickjs-add/add-form/process.maia",
-	"inbox": "°maia/quickjs-add/add-form/inbox.maia",
-	"interface": "°maia/quickjs-add/add-form/interface.maia"
-}

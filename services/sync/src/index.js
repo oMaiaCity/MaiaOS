@@ -16,12 +16,11 @@
  *     - false/unset: Skip seed, use persisted data. Never overwrite on restart.
  *   PEER_SYNC_MIGRATE: Default false. Set true to non-destructively update configs from code (nano-ID keyed).
  *     - Mutually exclusive with PEER_SYNC_SEED. Requires an existing scaffold (run PEER_SYNC_SEED once first).
- *   SEED_VIBES: Default "all". Which vibes to seed (todos, chat, quickjs-add, etc). "all" seeds every vibe including quickjs-add.
+ *   SEED_VIBES: Default "all". Which vibes to seed (todos, chat, quickjs, etc). "all" seeds every vibe including quickjs.
  *   PEER_APP_HOST: Allowed CORS origin (e.g. https://next.maia.city). When set, only that origin can call sync/LLM in production. Unset = * (dev).
  *   MAIA_DEV_CORS=1: With Postgres local dev, enable same multi-origin dev CORS as PGlite (localhost / 127.0.0.1 / ::1 on port 4200).
  */
 
-import { getSeedConfig } from '@MaiaOS/actors/seed-config'
 import { collectCapabilityGrantCoIdsFromStreamContent } from '@MaiaOS/db'
 import {
 	createWebSocketPeer,
@@ -38,7 +37,12 @@ import {
 } from '@MaiaOS/loader'
 import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
 import { agentIDToDidKey, verifyInvocationToken } from '@MaiaOS/maia-ucan'
-import { buildSeedConfig, filterVibesForSeeding, getAllVibeRegistries } from '@MaiaOS/vibes/seeding'
+import { getSeedConfig } from '@MaiaOS/seed'
+import {
+	buildSeedConfig,
+	filterVibesForSeeding,
+	getAllVibeRegistries,
+} from '@MaiaOS/universe/seeding'
 import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -79,7 +83,7 @@ if (peerSyncSeed && peerSyncMigrate) {
 		`${OPS_PREFIX.sync} PEER_SYNC_SEED and PEER_SYNC_MIGRATE are mutually exclusive. Use one or neither.`,
 	)
 }
-// SEED_VIBES: which vibes to seed on genesis. Default "all" (includes quickjs-add). Override: "todos,chat" or "todos,chat,quickjs-add"
+// SEED_VIBES: which vibes to seed on genesis. Default "all" (includes quickjs). Override: "todos,chat" or "todos,chat,quickjs"
 const seedVibesConfig = process.env.SEED_VIBES || 'all'
 
 /** CORS: PEER_APP_HOST = allowed origin (e.g. https://next.maia.city or localhost:4200). When unset, * (dev). */

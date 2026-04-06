@@ -1,0 +1,3 @@
+# Seed imports universe `.maia`; same loader as root / sync
+[loader]
+".maia" = "json"
