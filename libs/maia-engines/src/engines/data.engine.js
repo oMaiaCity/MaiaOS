@@ -1060,6 +1060,8 @@ export class DataEngine {
 		fillRuntimeRefsFromSystemFactories(peer)
 		const cob = getRuntimeRef(peer, RUNTIME_REF.DATA_COBINARY)
 		if (cob) this.cobinaryFactoryCoId = cob
+		const { hydrateValidationMetaFromPeer } = await import('@MaiaOS/factories/validation.helper')
+		await hydrateValidationMetaFromPeer(peer)
 	}
 
 	async execute(payload) {
