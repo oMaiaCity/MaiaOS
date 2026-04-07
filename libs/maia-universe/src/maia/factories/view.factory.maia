@@ -263,7 +263,9 @@
 								"type": "string"
 							}
 						},
-						"required": ["send"]
+						"required": [
+							"send"
+						]
 					}
 				},
 				"$each": {
@@ -301,7 +303,10 @@
 							"$ref": "#/$defs/viewNode"
 						}
 					},
-					"required": ["items", "template"]
+					"required": [
+						"items",
+						"template"
+					]
 				},
 				"$slot": {
 					"anyOf": [
@@ -337,7 +342,10 @@
 				},
 				"format": {
 					"type": "string",
-					"enum": ["md", "markdown"],
+					"enum": [
+						"md",
+						"markdown"
+					],
 					"description": "When set with text, render as markdown (innerHTML) instead of plain text (textContent)."
 				}
 			},

@@ -11,7 +11,6 @@
 		"output"
 	],
 	"dependencies": {
-		"@MaiaOS/actors": "workspace:*",
 		"@MaiaOS/universe": "workspace:*",
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/loader": "workspace:*",

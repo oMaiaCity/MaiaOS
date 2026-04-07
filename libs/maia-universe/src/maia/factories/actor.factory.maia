@@ -48,13 +48,18 @@
 					"properties": {
 						"lang": {
 							"type": "string",
-							"enum": ["js"]
+							"enum": [
+								"js"
+							]
 						},
 						"code": {
 							"$co": "°maia/factory/os/cotext"
 						}
 					},
-					"required": ["lang", "code"],
+					"required": [
+						"lang",
+						"code"
+					],
 					"additionalProperties": false
 				}
 			]

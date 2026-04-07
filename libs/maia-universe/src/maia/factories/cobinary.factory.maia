@@ -14,5 +14,7 @@
 			"description": "Total file size in bytes"
 		}
 	},
-	"required": ["mimeType"]
+	"required": [
+		"mimeType"
+	]
 }

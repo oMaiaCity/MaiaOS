@@ -4,7 +4,9 @@
 	"description": "Actor event for state machine transitions",
 	"cotype": "comap",
 	"indexing": true,
-	"required": ["type"],
+	"required": [
+		"type"
+	],
 	"properties": {
 		"type": {
 			"type": "string",

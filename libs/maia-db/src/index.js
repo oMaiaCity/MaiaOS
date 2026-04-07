@@ -92,7 +92,6 @@ export {
 	hasSchema,
 } from './factories/registry.js'
 export { factoryMigration } from './migrations/factory.migration.js'
-export { simpleAccountSeed } from './migrations/seeding/seed.js'
 // ReactiveStore - reactive data store pattern (owned by maia-db; engines import from here)
 export { ReactiveStore } from './reactive-store.js'
 export { generateRegistryName } from './utils/registry-name-generator.js'

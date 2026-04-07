@@ -848,7 +848,7 @@ export class ActorEngine {
 			}
 		}
 		if (!executableFunction) {
-			const { getActor } = await import('@MaiaOS/actors')
+			const { getActor } = await import('@MaiaOS/universe/actors')
 			const namespacePath =
 				typeof actorConfig.$label === 'string' ? executableKeyFromMaiaPath(actorConfig.$label) : null
 			if (!namespacePath) {

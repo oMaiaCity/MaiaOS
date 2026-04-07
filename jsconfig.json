@@ -8,7 +8,6 @@
 			"@MaiaOS/factories": ["./libs/maia-factories/src"],
 			"@MaiaOS/factories/*": ["./libs/maia-factories/src/*"],
 			"@MaiaOS/self": ["./libs/maia-self/src/index.js"],
-			"@MaiaOS/actors": ["./libs/maia-actors/src"],
 			"@MaiaOS/universe": ["./libs/maia-universe/src"],
 			"@MaiaOS/universe/*": ["./libs/maia-universe/src/*"],
 			"@MaiaOS/seed": ["./libs/maia-seed/src"]

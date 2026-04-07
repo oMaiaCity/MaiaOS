@@ -194,7 +194,7 @@ export async function validateAgainstFactoryOrThrow(schema, data, context = '') 
  * @param {Object} [options] - Options object
  * @param {Object} [options.dataEngine] - DataEngine (REQUIRED for co-id schemas)
  * @param {Object} [options.registrySchemas] - Registry schemas map (ONLY for migrations/seeding)
- * @param {Function} [options.getAllFactories] - Function to get all schemas (for migrations)
+ * @param {Function} [options.getAllFactories] - Sync or async function returning schema map (migrations/seeding)
  * @throws {Error} If schema not found or validation fails
  * @returns {Promise<Object>} Loaded schema definition
  */
@@ -237,7 +237,7 @@ export async function loadFactoryAndValidate(backend, factoryRef, data, context,
 			)
 		}
 
-		const allSchemas = getAllFactories()
+		const allSchemas = await getAllFactories()
 		const engine = await getValidationEngine({
 			registrySchemas: registrySchemas || allSchemas,
 		})

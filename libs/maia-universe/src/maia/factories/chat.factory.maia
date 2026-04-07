@@ -6,7 +6,11 @@
 	"properties": {
 		"role": {
 			"type": "string",
-			"enum": ["user", "assistant", "system"],
+			"enum": [
+				"user",
+				"assistant",
+				"system"
+			],
 			"description": "The role of the message sender"
 		},
 		"content": {
@@ -19,6 +23,9 @@
 			"description": "Display name for view (e.g. me for user, Maia for assistant) - set by state machine, view stays dumb"
 		}
 	},
-	"required": ["role", "content"],
+	"required": [
+		"role",
+		"content"
+	],
 	"additionalProperties": false
 }

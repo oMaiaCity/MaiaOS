@@ -52,7 +52,9 @@
 						]
 					}
 				},
-				"required": ["factory"],
+				"required": [
+					"factory"
+				],
 				"additionalProperties": true
 			},
 			{

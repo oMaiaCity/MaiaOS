@@ -5,7 +5,6 @@
  * Schema is REQUIRED - no fallbacks or defaults
  */
 
-import { getAllFactories } from '@MaiaOS/factories'
 import { loadFactoryAndValidate } from '@MaiaOS/factories/validation.helper'
 import {
 	createFactoryMeta,
@@ -76,10 +75,21 @@ export async function createCoMap(
 		)
 	}
 	if (!isExceptionFactory(factoryName)) {
-		await loadFactoryAndValidate(dbEngine?.peer || null, factoryName, init, 'createCoMap', {
-			dataEngine: dbEngine,
-			getAllFactories: () => ({ ...getAllFactories(), ...FACTORY_REGISTRY }),
-		})
+		const validateOpts = { dataEngine: dbEngine }
+		if (!factoryName.startsWith('co_z')) {
+			validateOpts.getAllFactories = async () => {
+				const { ensureFactoriesLoaded, getAllFactories: getAll } = await import('@MaiaOS/factories')
+				await ensureFactoriesLoaded()
+				return { ...getAll(), ...FACTORY_REGISTRY }
+			}
+		}
+		await loadFactoryAndValidate(
+			dbEngine?.peer || null,
+			factoryName,
+			init,
+			'createCoMap',
+			validateOpts,
+		)
 	}
 
 	const meta = createFactoryMeta(factoryName, nanoid)

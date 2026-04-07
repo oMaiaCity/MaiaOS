@@ -2,10 +2,17 @@
  * Seeding helpers - pure utilities and ensureSparkOs
  */
 
-import { withCanonicalFactorySchema } from '@MaiaOS/factories'
-import mergedMetaSchemaRaw from '@MaiaOS/factories/os/meta.factory.json'
+import { withCanonicalFactorySchema } from '@MaiaOS/factories/factory-identity'
+import { metaFactorySchemaRaw } from '@MaiaOS/factories/meta-factory-schema'
 
-const mergedMetaSchema = withCanonicalFactorySchema(mergedMetaSchemaRaw, 'os/meta.factory.json')
+/** @type {object | null} */
+let mergedMetaSchemaCache = null
+function mergedMetaSchemaForSeeding() {
+	if (!mergedMetaSchemaCache) {
+		mergedMetaSchemaCache = withCanonicalFactorySchema(metaFactorySchemaRaw, 'meta.factory.maia')
+	}
+	return mergedMetaSchemaCache
+}
 
 /**
  * Find all °maia/factory/ references in an object (recursive).
@@ -98,7 +105,7 @@ export function buildMetaFactoryForSeeding(metaSchemaCoId) {
 		? `https://maia.city/${metaSchemaCoId}`
 		: 'https://json-schema.org/draft/2020-12/schema'
 	const fullMetaSchema = {
-		...mergedMetaSchema,
+		...mergedMetaSchemaForSeeding(),
 		$id: metaSchemaId,
 		$factory: metaSchemaId,
 	}

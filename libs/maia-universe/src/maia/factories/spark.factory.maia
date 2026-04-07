@@ -4,7 +4,9 @@
 	"description": "Spark CoMap. Guardian (admin) group is spark.os.groups.guardian.",
 	"cotype": "comap",
 	"indexing": true,
-	"required": ["name"],
+	"required": [
+		"name"
+	],
 	"properties": {
 		"name": {
 			"type": "string",
