@@ -1,6 +1,7 @@
 #!/usr/bin/env bun
+import './register-dev-bun-loaders.js'
 import { spawnSync } from 'node:child_process'
-import { existsSync, statSync } from 'node:fs'
+import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 /**
  * Maia dev server: static /brand/* + /runanywhere-wasm/* + Bun HTML bundling with HMR.
  * bun index.html serves index.html for ALL paths (SPA fallback) - so /brand/logo.svg
@@ -120,6 +121,32 @@ Bun.serve({
 			}
 			return new Response(Bun.file(filePath), {
 				headers: { 'Content-Type': 'model/gltf-binary', ...COOP_COEP },
+			})
+		},
+		// Same file as @MaiaOS/universe/factories/meta.factory.maia — for ValidationEngine when Bun HMR leaves dynamic import empty
+		'/__maia_dev/factory/meta.factory.maia': () => {
+			const filePath = join(repoRoot, 'libs/maia-universe/src/maia/factories/meta.factory.maia')
+			if (!existsSync(filePath) || !statSync(filePath).isFile()) {
+				return new Response('Not found', { status: 404, headers: COOP_COEP })
+			}
+			return new Response(Bun.file(filePath), {
+				headers: { 'Content-Type': 'application/json', ...COOP_COEP },
+			})
+		},
+		// All *.factory.maia in universe — for ensureFactoriesLoaded when Bun HMR breaks dynamic imports
+		'/__maia_dev/factories.json': () => {
+			const dir = join(repoRoot, 'libs/maia-universe/src/maia/factories')
+			if (!existsSync(dir) || !statSync(dir).isDirectory()) {
+				return new Response('Not found', { status: 404, headers: COOP_COEP })
+			}
+			const out = {}
+			for (const name of readdirSync(dir)) {
+				if (!name.endsWith('.factory.maia')) continue
+				const text = readFileSync(join(dir, name), 'utf8')
+				out[name] = JSON.parse(text)
+			}
+			return new Response(JSON.stringify(out), {
+				headers: { 'Content-Type': 'application/json', ...COOP_COEP },
 			})
 		},
 		// Dev env endpoint (client fetches when import.meta.env not populated)

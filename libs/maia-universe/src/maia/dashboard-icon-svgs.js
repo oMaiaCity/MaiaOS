@@ -1,6 +1,6 @@
 /**
  * Dashboard card icon SVG strings — single source: instance files under data/icons/.
- * Schema: °maia/factory/os/cotext (see @MaiaOS/factories/os/vibe.factory.json icon.$co).
+ * Schema: °maia/factory/os/cotext (see src/maia/factories/vibe.factory.maia icon.$co).
  */
 import chat from './vibes/data/icons/chat.maia'
 import humans from './vibes/data/icons/humans.maia'

@@ -26,6 +26,7 @@ import {
 	getRuntimeRef,
 	RUNTIME_REF,
 } from '@MaiaOS/db'
+import { ensureFactoriesLoaded } from '@MaiaOS/factories'
 import {
 	createWebSocketPeer,
 	DataEngine,
@@ -1046,6 +1047,8 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 
 ;(async () => {
 	try {
+		await ensureFactoriesLoaded()
+
 		if (!accountID || !agentSecret) {
 			throw new Error('AVEN_MAIA_ACCOUNT and AVEN_MAIA_SECRET required. Run: bun agent:generate')
 		}

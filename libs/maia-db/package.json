@@ -7,7 +7,9 @@
 		"test": "bun test tests"
 	},
 	"exports": {
-		".": "./src/index.js"
+		".": "./src/index.js",
+		"./seeding": "./src/seeding-index.js",
+		"./co-types-defs": "./src/factories/co-types-defs.data.js"
 	},
 	"dependencies": {
 		"@MaiaOS/factories": "workspace:*",

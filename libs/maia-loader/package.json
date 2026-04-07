@@ -18,7 +18,7 @@
 		"@MaiaOS/maia-ucan": "workspace:*",
 		"@MaiaOS/factories": "workspace:*",
 		"@MaiaOS/self": "workspace:*",
-		"@MaiaOS/actors": "workspace:*",
+		"@MaiaOS/universe": "workspace:*",
 		"cojson-transport-ws": "0.20.16"
 	}
 }

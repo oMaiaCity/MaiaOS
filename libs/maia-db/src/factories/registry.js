@@ -5,8 +5,8 @@
  * Runtime schema access loads from account.registries.sparks[°maia].os.factories.
  */
 
-import coTypesDefs from '@MaiaOS/factories/co-types.defs.json'
 import { getRuntimeRef, RUNTIME_REF } from '../cojson/factory/runtime-factory-refs.js'
+import { CO_TYPES_DEFS } from './co-types-defs.data.js'
 
 const AccountFactory = {
 	$schema: 'https://json-schema.org/draft/2020-12/schema',
@@ -27,7 +27,7 @@ const AccountFactory = {
 		examples: { type: 'string', pattern: '^co_z[a-zA-Z0-9]+$' },
 	},
 	required: ['profile'],
-	$defs: coTypesDefs.$defs,
+	$defs: CO_TYPES_DEFS,
 }
 
 const ProfileFactory = {
@@ -41,7 +41,7 @@ const ProfileFactory = {
 		avatar: { type: 'string', pattern: '^co_z[a-zA-Z0-9]+$', description: 'CoBinary co-id' },
 	},
 	required: ['name'],
-	$defs: coTypesDefs.$defs,
+	$defs: CO_TYPES_DEFS,
 }
 
 export const FACTORY_REGISTRY = { AccountFactory, ProfileFactory }

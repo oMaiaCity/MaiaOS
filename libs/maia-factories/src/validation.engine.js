@@ -3,16 +3,24 @@
  */
 
 import { normalizeCoValueData } from '@MaiaOS/db'
+import { CO_TYPES_DEFS } from '@MaiaOS/db/co-types-defs'
+import { metaFactorySchemaRaw } from './data/meta-factory-schema.data.js'
 import { withCanonicalFactorySchema } from './factory-identity.js'
 import { normalizeFactoryReferencesWithResolver } from './factory-ref-resolver.js'
-import customMetaSchemaRaw from './os/meta.factory.json'
-
-const customMetaSchema = withCanonicalFactorySchema(customMetaSchemaRaw, 'os/meta.factory.json')
-
 import { isFactoryRef } from './patterns.js'
 import { plugin as cobinaryPlugin } from './plugins/cobinary.plugin.js'
 import { plugin as cojsonPlugin } from './plugins/cojson.plugin.js'
 import { plugin as cotextPlugin } from './plugins/cotext.plugin.js'
+
+/**
+ * Meta schema — same JSON as universe meta.factory.maia, shipped as JS (no .maia in bundle).
+ */
+let customMetaSchema = null
+
+async function loadMetaFactorySchema() {
+	if (customMetaSchema) return
+	customMetaSchema = withCanonicalFactorySchema(metaFactorySchemaRaw, 'meta.factory.maia')
+}
 
 export function formatValidationErrors(errors) {
 	return (errors || []).map((e) => ({
@@ -177,6 +185,8 @@ export class ValidationEngine {
 				},
 			})
 
+			await loadMetaFactorySchema()
+
 			// Load JSON Schema Draft 2020-12 meta-schema (hardcoded)
 			// Note: If using Ajv2020, meta-schema might already be included
 			this._loadMetaSchema()
@@ -204,6 +214,9 @@ export class ValidationEngine {
 	 * @returns {Object} Meta schema object
 	 */
 	static getMetaFactory() {
+		if (!customMetaSchema) {
+			throw new Error('[ValidationEngine] Meta factory not loaded; call initialize() first.')
+		}
 		return customMetaSchema
 	}
 
@@ -216,8 +229,11 @@ export class ValidationEngine {
 		// This is the foundation schema that validates all other schemas
 		// The metaschema itself validates against the hardcoded standard (breaks circular dependency)
 		// All OTHER schemas validate against °maia/factory/meta-schema (dynamically loaded)
-		// Use merged meta.factory.json - it contains all base JSON Schema 2020-12 properties
+		// Use merged meta.factory.maia - it contains all base JSON Schema 2020-12 properties
 		// The MaiaOS extensions (cotype, $co, indexing) don't interfere with base schema validation
+		if (!customMetaSchema) {
+			throw new Error('[ValidationEngine] Meta factory not loaded; call initialize() first.')
+		}
 		return customMetaSchema
 	}
 
@@ -670,10 +686,9 @@ export class ValidationEngine {
 	 * @private
 	 */
 	async _loadCoTypeDefinitions() {
-		const coTypesDefs = await import('./co-types.defs.json')
 		const coTypesSchema = {
 			$id: 'https://maia.city/schemas/co-types',
-			$defs: coTypesDefs.$defs,
+			$defs: CO_TYPES_DEFS,
 		}
 
 		if (!this.ajv.getSchema(coTypesSchema.$id)) {

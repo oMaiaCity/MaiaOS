@@ -1,4 +1,3 @@
-import { getAllFactories } from '@MaiaOS/factories'
 import { loadFactoryAndValidate } from '@MaiaOS/factories/validation.helper'
 import {
 	createFactoryMeta,
@@ -62,10 +61,21 @@ export async function createCoList(
 		)
 	}
 	if (!isExceptionFactory(factoryName)) {
-		await loadFactoryAndValidate(dbEngine?.peer || null, factoryName, init, 'createCoList', {
-			dataEngine: dbEngine,
-			getAllFactories: () => ({ ...getAllFactories(), ...FACTORY_REGISTRY }),
-		})
+		const validateOpts = { dataEngine: dbEngine }
+		if (!factoryName.startsWith('co_z')) {
+			validateOpts.getAllFactories = async () => {
+				const { ensureFactoriesLoaded, getAllFactories: getAll } = await import('@MaiaOS/factories')
+				await ensureFactoriesLoaded()
+				return { ...getAll(), ...FACTORY_REGISTRY }
+			}
+		}
+		await loadFactoryAndValidate(
+			dbEngine?.peer || null,
+			factoryName,
+			init,
+			'createCoList',
+			validateOpts,
+		)
 	}
 
 	const meta = createFactoryMeta(factoryName, nanoid)

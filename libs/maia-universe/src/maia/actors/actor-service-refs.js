@@ -1,5 +1,5 @@
 /**
- * Lightweight actor ref helpers — no .maia graph (safe for browser via @MaiaOS/actors).
+ * Lightweight actor ref helpers — no .maia graph (safe for browser via @MaiaOS/universe/actors).
  * Genesis tables live in seed-config.js.
  */
 

@@ -1,6 +1,10 @@
-import { describe, expect, test } from 'bun:test'
+import { beforeAll, describe, expect, test } from 'bun:test'
 import { FACTORY_PATH_TO_REF, withCanonicalFactorySchema } from '../src/factory-identity.js'
-import { getAllFactories } from '../src/index.js'
+import { ensureFactoriesLoaded, getAllFactories } from '../src/index.js'
+
+beforeAll(async () => {
+	await ensureFactoriesLoaded()
+})
 
 describe('factory-identity (M4)', () => {
 	test('every FACTORY_PATH_TO_REF value is °maia/factory/...', () => {
@@ -20,7 +24,7 @@ describe('factory-identity (M4)', () => {
 	test('withCanonicalFactorySchema sets $id', () => {
 		const out = withCanonicalFactorySchema(
 			{ $factory: '°maia/factory/meta', x: 1 },
-			'os/actor.factory.json',
+			'actor.factory.maia',
 		)
 		expect(out.$id).toBe('°maia/factory/actor')
 		expect(out.x).toBe(1)

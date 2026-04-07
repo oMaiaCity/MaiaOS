@@ -1,6 +1,5 @@
 // CoJSON API factory - lives in loader (orchestrator) to keep db decoupled from engines
 
-export { getAllActorDefinitions } from '@MaiaOS/actors'
 // Re-export db functions (bundled in core)
 // Peer setup, sync state, backend for operations
 // Re-export ReactiveStore from db
@@ -38,6 +37,7 @@ export {
 	// NO LOCALSTORAGE: Removed signOut, isSignedIn, getCurrentAccount, inspectStorage
 	// NO SYNC STATE: subscribeSyncState moved to @MaiaOS/db
 } from '@MaiaOS/self'
+export { getAllActorDefinitions } from '@MaiaOS/universe/actors'
 export { createWebSocketPeer } from 'cojson-transport-ws'
 export { createCoJSONAPI } from './cojson-factory.js'
 export { MaiaOS } from './loader.js'

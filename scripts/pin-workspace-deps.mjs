@@ -38,7 +38,6 @@ const globs = [
 	join(repoRoot, 'services/app/package.json'),
 	join(repoRoot, 'services/sync/package.json'),
 	...[
-		'maia-actors',
 		'maia-ai',
 		'maia-brand',
 		'maia-db',

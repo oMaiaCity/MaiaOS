@@ -41,5 +41,10 @@
 			"description": "Extensions (optional)"
 		}
 	},
-	"required": ["sub", "cmd", "pol", "exp"]
+	"required": [
+		"sub",
+		"cmd",
+		"pol",
+		"exp"
+	]
 }

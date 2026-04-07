@@ -72,7 +72,8 @@ export async function seed(
 			)
 		}
 	} else if (needsBootstrap) {
-		const { getAllFactories } = await import('@MaiaOS/factories')
+		const { ensureFactoriesLoaded, getAllFactories } = await import('@MaiaOS/factories')
+		await ensureFactoriesLoaded()
 		await bootstrapAndScaffold(account, node, schemas || getAllFactories(), peer.dbEngine)
 	}
 

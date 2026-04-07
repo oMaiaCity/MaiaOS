@@ -4,7 +4,11 @@
 	"description": "Vibe manifest/metadata",
 	"cotype": "comap",
 	"indexing": true,
-	"required": ["name", "description", "actor"],
+	"required": [
+		"name",
+		"description",
+		"actor"
+	],
 	"properties": {
 		"name": {
 			"type": "string",

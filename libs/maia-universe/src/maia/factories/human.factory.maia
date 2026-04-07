@@ -38,6 +38,9 @@
 			"description": "Capability expiry for /llm/chat (Unix seconds). Set at register."
 		}
 	},
-	"required": ["account", "profile"],
+	"required": [
+		"account",
+		"profile"
+	],
 	"additionalProperties": false
 }

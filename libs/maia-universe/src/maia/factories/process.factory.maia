@@ -4,7 +4,9 @@
 	"description": "Flat event handlers (GenServer-style). No FSM—handlers keyed by message type.",
 	"cotype": "comap",
 	"indexing": true,
-	"required": ["handlers"],
+	"required": [
+		"handlers"
+	],
 	"properties": {
 		"$label": {
 			"$ref": "#/$defs/registryLabel"
@@ -53,7 +55,9 @@
 					"additionalProperties": true
 				}
 			},
-			"required": ["ctx"]
+			"required": [
+				"ctx"
+			]
 		},
 		"op": {
 			"type": "object",
@@ -74,7 +78,9 @@
 					}
 				}
 			},
-			"required": ["op"]
+			"required": [
+				"op"
+			]
 		},
 		"tell": {
 			"type": "object",
@@ -101,10 +107,15 @@
 							"type": "object"
 						}
 					},
-					"required": ["target", "type"]
+					"required": [
+						"target",
+						"type"
+					]
 				}
 			},
-			"required": ["tell"]
+			"required": [
+				"tell"
+			]
 		},
 		"ask": {
 			"type": "object",
@@ -131,10 +142,15 @@
 							"type": "object"
 						}
 					},
-					"required": ["target", "type"]
+					"required": [
+						"target",
+						"type"
+					]
 				}
 			},
-			"required": ["ask"]
+			"required": [
+				"ask"
+			]
 		},
 		"guard": {
 			"type": "object",
@@ -145,7 +161,9 @@
 					"additionalProperties": true
 				}
 			},
-			"required": ["guard"]
+			"required": [
+				"guard"
+			]
 		},
 		"function": {
 			"type": "object",
@@ -156,7 +174,9 @@
 					"const": true
 				}
 			},
-			"required": ["function"]
+			"required": [
+				"function"
+			]
 		}
 	}
 }

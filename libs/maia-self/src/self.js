@@ -5,7 +5,7 @@
  * STRICT: PRF required, no fallbacks
  */
 
-import { factoryMigration, simpleAccountSeed } from '@MaiaOS/db'
+import { factoryMigration } from '@MaiaOS/db'
 import { createAccountWithSecret, loadAccount, setupSyncPeers } from '@MaiaOS/peer'
 // Import dependencies directly (workspace imports work in dev)
 // In Docker: These will be resolved via the kernel bundle or copied files
@@ -80,7 +80,6 @@ export async function signUpWithPasskey({ name, salt = 'maia.city' } = {}) {
 		peers: syncSetup ? syncSetup.peers : [],
 		storage: storage,
 		migration: factoryMigration,
-		seed: simpleAccountSeed,
 	})
 
 	const { node, account, accountID: createdAccountID } = createResult
@@ -316,14 +315,13 @@ export async function createAgentAccount({
 	const syncSetup = setupSyncPeers(syncDomain)
 
 	// Use createAccountWithSecret() abstraction from @MaiaOS/db
-	// All signups get simpleAccountSeed; genesis (full scaffold) is PEER_MODE=sync only
+	// Genesis scaffold runs on sync (PEER_SYNC_SEED); client does not bundle seed helpers
 	const createResult = await createAccountWithSecret({
 		agentSecret,
 		name,
 		peers: syncSetup?.peers ?? [],
 		storage,
 		migration: factoryMigration,
-		seed: simpleAccountSeed,
 	})
 
 	const { node, account, accountID: createdAccountID } = createResult

@@ -17,7 +17,10 @@
 		}
 	],
 	"title": "°maia/factory/meta",
-	"type": ["object", "boolean"],
+	"type": [
+		"object",
+		"boolean"
+	],
 	"indexing": false,
 	"properties": {
 		"title": {
@@ -25,7 +28,12 @@
 			"description": "Human-readable schema title (required)"
 		},
 		"cotype": {
-			"enum": ["comap", "colist", "costream", "cobinary"],
+			"enum": [
+				"comap",
+				"colist",
+				"costream",
+				"cobinary"
+			],
 			"description": "CRDT type at schema root. Schemas can be comap (with properties), colist (with items), or costream (with items). CoText is modeled as colist with string items. CoBinary is a binary stream for files."
 		},
 		"$co": {
@@ -48,7 +56,10 @@
 			"description": "Whether instances of this schema should be indexed in spark.os.indexes. Default: false. Set explicitly to true to index."
 		}
 	},
-	"required": ["title", "cotype"],
+	"required": [
+		"title",
+		"cotype"
+	],
 	"$defs": {
 		"comap": {
 			"description": "CoMap - CRDT-based collaborative map/object",
@@ -180,7 +191,9 @@
 					"description": "Total file size in bytes"
 				}
 			},
-			"required": ["mimeType"]
+			"required": [
+				"mimeType"
+			]
 		},
 		"registryLabel": {
 			"type": "string",

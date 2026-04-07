@@ -5,7 +5,9 @@
 	"properties": {
 		"lang": {
 			"type": "string",
-			"enum": ["js"],
+			"enum": [
+				"js"
+			],
 			"default": "js",
 			"description": "Execution language: 'js' = run in QuickJS WASM sandbox"
 		},
@@ -14,6 +16,9 @@
 			"description": "CoText (colist of graphemes) - JS code to execute in sandbox"
 		}
 	},
-	"required": ["lang", "code"],
+	"required": [
+		"lang",
+		"code"
+	],
 	"additionalProperties": false
 }

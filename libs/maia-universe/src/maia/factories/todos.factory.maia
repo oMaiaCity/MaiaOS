@@ -19,6 +19,9 @@
 			"description": "Idempotency key - message CoMap co-id that triggered this create"
 		}
 	},
-	"required": ["text", "done"],
+	"required": [
+		"text",
+		"done"
+	],
 	"additionalProperties": false
 }

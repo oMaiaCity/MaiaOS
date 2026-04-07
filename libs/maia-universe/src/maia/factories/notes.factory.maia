@@ -13,6 +13,8 @@
 			"description": "CoText (colist of graphemes) - collaborative plaintext"
 		}
 	},
-	"required": ["content"],
+	"required": [
+		"content"
+	],
 	"additionalProperties": false
 }

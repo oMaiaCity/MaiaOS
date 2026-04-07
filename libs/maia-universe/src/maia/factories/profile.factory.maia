@@ -16,6 +16,8 @@
 			"description": "CoBinary co-id for profile image"
 		}
 	},
-	"required": ["name"],
+	"required": [
+		"name"
+	],
 	"additionalProperties": false
 }
