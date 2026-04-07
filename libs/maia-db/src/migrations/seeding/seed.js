@@ -175,6 +175,11 @@ export async function seed(
 		coIdRegistry.register('°maia/factory/meta', metaSchemaCoId)
 	}
 
+	peer.systemFactoryCoIds.set('°maia/factory/meta', metaSchemaCoId)
+	fillRuntimeRefsFromSystemFactories(peer)
+	const { hydrateValidationMetaFromPeer } = await import('@MaiaOS/factories/validation.helper')
+	await hydrateValidationMetaFromPeer(peer)
+
 	const factoryCoIdMap = new Map()
 	const factoryCoMaps = new Map()
 	const { create: crudCreate } = await import('../../cojson/crud/create.js')

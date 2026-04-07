@@ -4,7 +4,6 @@
 
 import { normalizeCoValueData } from '@MaiaOS/db'
 import { CO_TYPES_DEFS } from '@MaiaOS/db/co-types-defs'
-import { metaFactorySchemaRaw } from './data/meta-factory-schema.data.js'
 import { withCanonicalFactorySchema } from './factory-identity.js'
 import { normalizeFactoryReferencesWithResolver } from './factory-ref-resolver.js'
 import { isFactoryRef } from './patterns.js'
@@ -13,14 +12,10 @@ import { plugin as cojsonPlugin } from './plugins/cojson.plugin.js'
 import { plugin as cotextPlugin } from './plugins/cotext.plugin.js'
 
 /**
- * Meta schema — same JSON as universe meta.factory.maia, shipped as JS (no .maia in bundle).
+ * Metaschema object — runtime: loaded from peer metaschema CoValue via {@link ValidationEngine#hydrateMetaFromPeer}.
+ * Seeding uses `@MaiaOS/factories/meta-factory-schema` in maia-db helpers only.
  */
 let customMetaSchema = null
-
-async function loadMetaFactorySchema() {
-	if (customMetaSchema) return
-	customMetaSchema = withCanonicalFactorySchema(metaFactorySchemaRaw, 'meta.factory.maia')
-}
 
 export function formatValidationErrors(errors) {
 	return (errors || []).map((e) => ({
@@ -185,14 +180,7 @@ export class ValidationEngine {
 				},
 			})
 
-			await loadMetaFactorySchema()
-
-			// Load JSON Schema Draft 2020-12 meta-schema (hardcoded)
-			// Note: If using Ajv2020, meta-schema might already be included
-			this._loadMetaSchema()
-
-			// Register CoJSON custom meta-schema and plugins
-			this._loadCoJsonMetaSchema()
+			// Metaschema (°maia/factory/meta) is registered in AJV only after hydrateMetaFromPeer(peer)
 			applyPlugins(this.ajv)
 
 			// ALWAYS register co-type definitions (REQUIRED, not optional)
@@ -210,12 +198,57 @@ export class ValidationEngine {
 	}
 
 	/**
+	 * Register metaschema in AJV from the metaschema CoValue on peer (runtime source of truth).
+	 * Requires peer.systemFactoryCoIds['°maia/factory/meta'] or runtimeRefs.meta.
+	 */
+	async hydrateMetaFromPeer(peer) {
+		await this.initialize()
+		const { resolveFactoryDefFromPeer } = await import('@MaiaOS/db')
+		const { getRuntimeRef, RUNTIME_REF } = await import('@MaiaOS/db')
+		let metaCoId = peer.systemFactoryCoIds?.get?.('°maia/factory/meta')
+		if (!metaCoId?.startsWith?.('co_z')) {
+			metaCoId = getRuntimeRef(peer, RUNTIME_REF.META)
+		}
+		if (!metaCoId?.startsWith?.('co_z')) {
+			throw new Error(
+				'[ValidationEngine] hydrateMetaFromPeer: metaschema co-id missing — peer.systemFactoryCoIds or runtimeRefs (meta)',
+			)
+		}
+		const def = await resolveFactoryDefFromPeer(peer, metaCoId)
+		if (!def || typeof def !== 'object') {
+			throw new Error(
+				'[ValidationEngine] hydrateMetaFromPeer: metaschema definition not found on peer',
+			)
+		}
+		const normalized = normalizeCoValueData(def)
+		const { $id: _i, $factory: _f, ...rest } = normalized
+		customMetaSchema = withCanonicalFactorySchema(rest, 'meta.factory.maia')
+		this._removeMetaSchemasFromAjv()
+		this.schemas.clear()
+		this._loadMetaSchema()
+		this._loadCoJsonMetaSchema()
+	}
+
+	_removeMetaSchemasFromAjv() {
+		if (!this.ajv) return
+		// Do not remove https://json-schema.org/draft/2020-12/schema — Ajv2020 registers it;
+		// factory schemas use $schema: that URI. Re-adding only Maia copies below would not restore it.
+		for (const id of ['°maia/factory/meta-schema', '°maia/factory/meta']) {
+			try {
+				this.ajv.removeSchema(id)
+			} catch (_e) {}
+		}
+	}
+
+	/**
 	 * Get the CoJSON custom meta-schema (extends JSON Schema Draft 2020-12)
 	 * @returns {Object} Meta schema object
 	 */
 	static getMetaFactory() {
 		if (!customMetaSchema) {
-			throw new Error('[ValidationEngine] Meta factory not loaded; call initialize() first.')
+			throw new Error(
+				'[ValidationEngine] Metaschema not loaded; call hydrateMetaFromPeer(peer) after peer has °maia/factory/meta.',
+			)
 		}
 		return customMetaSchema
 	}
@@ -225,14 +258,10 @@ export class ValidationEngine {
 	 * @returns {Object} Meta schema object
 	 */
 	static getBaseMetaSchema() {
-		// JSON Schema Draft 2020-12 meta-schema
-		// This is the foundation schema that validates all other schemas
-		// The metaschema itself validates against the hardcoded standard (breaks circular dependency)
-		// All OTHER schemas validate against °maia/factory/meta-schema (dynamically loaded)
-		// Use merged meta.factory.maia - it contains all base JSON Schema 2020-12 properties
-		// The MaiaOS extensions (cotype, $co, indexing) don't interfere with base schema validation
 		if (!customMetaSchema) {
-			throw new Error('[ValidationEngine] Meta factory not loaded; call initialize() first.')
+			throw new Error(
+				'[ValidationEngine] Metaschema not loaded; call hydrateMetaFromPeer(peer) after peer has °maia/factory/meta.',
+			)
 		}
 		return customMetaSchema
 	}

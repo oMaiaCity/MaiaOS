@@ -21,6 +21,15 @@ let pendingSchemaResolver = null // Store resolver if set before engine initiali
  * @param {Object} options - Options object
  * @param {Object} options.dataEngine - DataEngine instance (REQUIRED - uses operations API)
  */
+/**
+ * Load metaschema into AJV from the peer metaschema CoValue (runtime source of truth).
+ * @param {import('@MaiaOS/db').MaiaDB} peer
+ */
+export async function hydrateValidationMetaFromPeer(peer) {
+	const engine = await getValidationEngine()
+	await engine.hydrateMetaFromPeer(peer)
+}
+
 export function setFactoryResolver(options) {
 	if (!options || typeof options !== 'object') {
 		throw new Error('[setFactoryResolver] Options object required: { dataEngine }')

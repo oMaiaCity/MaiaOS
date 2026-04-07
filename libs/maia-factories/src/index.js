@@ -26,6 +26,7 @@ export {
 export { ValidationEngine } from './validation.engine.js'
 export {
 	getValidationEngine,
+	hydrateValidationMetaFromPeer,
 	setFactoryResolver,
 	validateAgainstFactory,
 	validateAgainstFactoryOrThrow,
