@@ -21,7 +21,11 @@
  *   MAIA_DEV_CORS=1: With Postgres local dev, enable same multi-origin dev CORS as PGlite (localhost / 127.0.0.1 / ::1 on port 4200).
  */
 
-import { collectCapabilityGrantCoIdsFromStreamContent } from '@MaiaOS/db'
+import {
+	collectCapabilityGrantCoIdsFromStreamContent,
+	getRuntimeRef,
+	RUNTIME_REF,
+} from '@MaiaOS/db'
 import {
 	createWebSocketPeer,
 	DataEngine,
@@ -267,7 +271,7 @@ async function pushCapabilityToStream(worker, { sub, cmd, pol, exp }) {
 	if (await hasValidCapability(worker, sub, cmd)) return
 	const capabilitiesStreamId = await getCapabilitiesStreamId(worker)
 	if (!capabilitiesStreamId?.startsWith('co_z')) return
-	const capabilitySchemaCoId = worker.peer.systemFactoryCoIds?.get?.('°maia/factory/os/capability')
+	const capabilitySchemaCoId = getRuntimeRef(worker.peer, RUNTIME_REF.OS_CAPABILITY)
 	if (!capabilitySchemaCoId) return
 	try {
 		const createResult = await worker.dataEngine.execute({
@@ -562,7 +566,7 @@ async function handleRegister(worker, body, req) {
 				return err(`username "${u}" already registered to different identity`, 409, {}, req)
 
 			// Create Human CoMap (public: everyone reader) and dual-key registry
-			const humanSchemaCoId = peer.systemFactoryCoIds?.get?.('°maia/factory/os/human')
+			const humanSchemaCoId = getRuntimeRef(peer, RUNTIME_REF.OS_HUMAN)
 			if (!humanSchemaCoId)
 				return err('Human schema not found. Ensure genesis seed has run.', 500, {}, req)
 
@@ -639,7 +643,7 @@ async function handleRegister(worker, body, req) {
 			if (raw?.[u] != null && raw[u] !== coId)
 				return err(`username "${u}" already registered to different identity`, 409, {}, req)
 
-			const avenIdentitySchemaCoId = peer.systemFactoryCoIds?.get?.('°maia/factory/os/aven-identity')
+			const avenIdentitySchemaCoId = getRuntimeRef(peer, RUNTIME_REF.OS_AVEN_IDENTITY)
 			if (!avenIdentitySchemaCoId)
 				return err('Aven identity schema not found. Ensure genesis seed has run.', 500, {}, req)
 
@@ -1185,7 +1189,6 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 
 		await peer.resolveSystemSparkCoId()
 		await dataEngine.resolveSystemFactories()
-		if (!peer.strictMode) peer.strictMode = true
 
 		// Seed /admin for AVEN_MAIA_ACCOUNT (grants all endpoints). Must run after scaffold exists (genesis or prior run).
 		await waitForCapabilitiesStreamReady(agentWorker).catch((e) =>

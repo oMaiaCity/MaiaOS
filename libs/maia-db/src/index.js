@@ -56,7 +56,6 @@ export {
 // Read Operations (store-based loading with proper $store architecture)
 export { findFirst } from './cojson/crud/read.js'
 export { waitForStoreReady } from './cojson/crud/read-operations.js'
-// Universal Schema Resolver (single source of truth)
 export {
 	checkCotype,
 	loadFactoriesFromAccount,
@@ -65,6 +64,12 @@ export {
 	resolveFactoryDefFromPeer,
 	resolveReactive,
 } from './cojson/factory/resolver.js'
+// Universal Schema Resolver (single source of truth)
+export {
+	fillRuntimeRefsFromSystemFactories,
+	getRuntimeRef,
+	RUNTIME_REF,
+} from './cojson/factory/runtime-factory-refs.js'
 // Re-export services for external use
 // Account primitives moved to @MaiaOS/peer (createAccountWithSecret, loadAccount). Migration/seed stay here.
 export { createGroup, createProfile } from './cojson/groups/create.js'

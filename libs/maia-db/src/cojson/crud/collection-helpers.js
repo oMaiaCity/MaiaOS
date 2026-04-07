@@ -5,21 +5,18 @@
  * Uses factory-index-manager for indexing logic (single source of truth).
  */
 
-import { isFactoryRef } from '@MaiaOS/factories'
-import { lookupRegistryKey } from '../factory/resolver.js'
-
 /**
  * Get schema index colist ID using schema co-id as key (all schemas indexed in spark.os.indexes)
  * Lazily creates the index colist if it doesn't exist and the schema has indexing: true
  * @param {Object} peer - Backend instance
- * @param {string} schema - Schema co-id (co_z...) or human-readable (°maia/factory/data/todos)
+ * @param {string} schema - Schema co-id (co_z...)
  * @returns {Promise<string|null>} Schema index colist ID or null if not found/not indexable
  */
 export async function getFactoryIndexColistId(peer, schema) {
-	const factoryCoId = schema.startsWith('co_z')
-		? schema
-		: (peer.systemFactoryCoIds?.get?.(schema) ??
-			(await lookupRegistryKey(peer, schema, { returnType: 'coId' })))
+	if (!schema?.startsWith?.('co_z')) {
+		throw new Error(`[getFactoryIndexColistId] schema must be co_z co-id, got: ${schema}`)
+	}
+	const factoryCoId = schema
 	if (typeof process !== 'undefined' && process.env?.DEBUG)
 		console.log('[DEBUG getFactoryIndexColistId] schema=', schema, 'factoryCoId=', factoryCoId)
 	if (!factoryCoId) return null
@@ -55,21 +52,15 @@ export async function getFactoryIndexColistId(peer, schema) {
 /**
  * Get CoList ID from spark.os.indexes.<factoryCoId> (all schema indexes in spark.os.indexes)
  * @param {Object} peer - Backend instance
- * @param {string} collectionNameOrSchema - Collection name (e.g., "todos"), schema co-id (co_z...), or namekey (°maia/factory/data/todos)
+ * @param {string} collectionNameOrSchema - Schema co-id (co_z...)
  * @returns {Promise<string|null>} CoList ID or null if not found
  */
 export async function getCoListId(peer, collectionNameOrSchema) {
-	// STRICT: Only schema-based lookup - no backward compatibility layers
-	// All collections must be resolved via schema registry
 	if (!collectionNameOrSchema || typeof collectionNameOrSchema !== 'string') {
 		return null
 	}
-
-	// Must be a schema co-id or human-readable schema name (°maia/factory/... or @domain/schema/...)
-	if (!collectionNameOrSchema.startsWith('co_z') && !isFactoryRef(collectionNameOrSchema)) {
-		if (typeof process !== 'undefined' && process.env?.DEBUG)
-			console.error('Invalid collection/schema ref:', collectionNameOrSchema)
-		return null
+	if (!collectionNameOrSchema.startsWith('co_z')) {
+		throw new Error(`[getCoListId] schema must be co_z co-id, got: ${collectionNameOrSchema}`)
 	}
 
 	const colistId = await getFactoryIndexColistId(peer, collectionNameOrSchema)

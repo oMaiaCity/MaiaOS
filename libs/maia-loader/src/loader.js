@@ -323,7 +323,6 @@ export class MaiaOS {
 				await config.peer.resolveSystemSparkCoId()
 			}
 			await os.dataEngine.resolveSystemFactories()
-			config.peer.strictMode = true
 			return config.peer
 		}
 
@@ -335,7 +334,6 @@ export class MaiaOS {
 			maiaDB.dbEngine = os.dataEngine
 			await maiaDB.resolveSystemSparkCoId()
 			await os.dataEngine.resolveSystemFactories()
-			maiaDB.strictMode = true
 			return maiaDB
 		}
 

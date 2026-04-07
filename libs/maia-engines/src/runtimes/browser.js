@@ -6,7 +6,12 @@
  * For each dependency: when inbox has unprocessed messages, spawns headless actor.
  */
 
-import { collectInboxMessageCoIds, findNewSuccessFromTarget } from '@MaiaOS/db'
+import {
+	collectInboxMessageCoIds,
+	findNewSuccessFromTarget,
+	getRuntimeRef,
+	RUNTIME_REF,
+} from '@MaiaOS/db'
 import { debugLog, isDebugChannelEnabled, traceRuntimeProcess } from '@MaiaOS/logs'
 
 export class Runtime {
@@ -149,8 +154,8 @@ export class Runtime {
 		const { actorRefs } = await this._getVibesAndDependenciesFromDb()
 		const tools = []
 		const peer = this.dataEngine.peer
-		const actorSchemaCoId = peer.systemFactoryCoIds?.get?.('°maia/factory/actor')
-		const metaSchemaCoId = peer.systemFactoryCoIds?.get?.('°maia/factory/meta')
+		const actorSchemaCoId = getRuntimeRef(peer, RUNTIME_REF.ACTOR)
+		const metaSchemaCoId = getRuntimeRef(peer, RUNTIME_REF.META)
 		if (!actorSchemaCoId || !metaSchemaCoId) return []
 
 		for (const actorCoId of actorRefs) {

@@ -13,6 +13,7 @@
 
 import { traceInboxFilter } from '@MaiaOS/logs'
 import { resolve } from '../factory/resolver.js'
+import { getRuntimeRef, RUNTIME_REF } from '../factory/runtime-factory-refs.js'
 import { extractCoValueData } from './data-extraction.js'
 import { read as universalRead } from './read.js'
 import { waitForStoreReady } from './read-operations.js'
@@ -71,7 +72,7 @@ export async function processInbox(peer, actorId, inboxCoId) {
 		}
 
 		if (!messageSchemaCoId) {
-			messageSchemaCoId = peer.systemFactoryCoIds?.get?.('°maia/factory/event') ?? null
+			messageSchemaCoId = getRuntimeRef(peer, RUNTIME_REF.EVENT)
 		}
 	} catch (_error) {}
 
@@ -297,7 +298,7 @@ export async function findNewSuccessFromTarget(peer, inboxCoId, targetActorCoId,
 			}
 		}
 		if (!messageSchemaCoId) {
-			messageSchemaCoId = peer.systemFactoryCoIds?.get?.('°maia/factory/event') ?? null
+			messageSchemaCoId = getRuntimeRef(peer, RUNTIME_REF.EVENT)
 		}
 	} catch (_error) {}
 

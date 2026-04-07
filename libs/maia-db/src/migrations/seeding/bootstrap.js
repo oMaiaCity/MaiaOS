@@ -303,17 +303,25 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 	const groupsContent = peer.getCurrentContent(groupsCore)
 	if (!groupsContent || typeof groupsContent.set !== 'function') return
 
-	const { resolve } = await import('../../cojson/factory/resolver.js')
-	const registriesSchemaCoId = await resolve(peer, '°maia/factory/os/registries', {
+	const { lookupRegistryKey } = await import('../../cojson/factory/resolver.js')
+	const registriesSchemaCoId = await lookupRegistryKey(peer, '°maia/factory/os/registries', {
 		returnType: 'coId',
 	})
-	const sparksRegistrySchemaCoId = await resolve(peer, '°maia/factory/os/sparks-registry', {
-		returnType: 'coId',
-	})
-	const humansRegistrySchemaCoId = await resolve(peer, '°maia/factory/os/humans-registry', {
-		returnType: 'coId',
-	})
-	const avensIdentityRegistrySchemaCoId = await resolve(
+	const sparksRegistrySchemaCoId = await lookupRegistryKey(
+		peer,
+		'°maia/factory/os/sparks-registry',
+		{
+			returnType: 'coId',
+		},
+	)
+	const humansRegistrySchemaCoId = await lookupRegistryKey(
+		peer,
+		'°maia/factory/os/humans-registry',
+		{
+			returnType: 'coId',
+		},
+	)
+	const avensIdentityRegistrySchemaCoId = await lookupRegistryKey(
 		peer,
 		'°maia/factory/os/avens-identity-registry',
 		{
