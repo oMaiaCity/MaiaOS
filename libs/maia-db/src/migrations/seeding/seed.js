@@ -8,6 +8,7 @@ import { OPS_PREFIX } from '@MaiaOS/logs'
 import { splitGraphemes } from 'unicode-segmenter/grapheme'
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import { ensureCoValueLoaded } from '../../cojson/crud/collection-helpers.js'
+import { fillRuntimeRefsFromSystemFactories } from '../../cojson/factory/runtime-factory-refs.js'
 import * as groups from '../../cojson/groups/groups.js'
 import { bootstrapAccountRegistries, bootstrapAndScaffold } from './bootstrap.js'
 import { seedConfigs } from './configs.js'
@@ -504,7 +505,7 @@ export async function seed(
 				factoryCoIdMap?.get('°maia/factory/os/vibes-registry') ??
 				(await (
 					await import('../../cojson/factory/resolver.js')
-				).resolve(peer, '°maia/factory/os/vibes-registry', {
+				).lookupRegistryKey(peer, '°maia/factory/os/vibes-registry', {
 					returnType: 'coId',
 				}))
 			const { coValue: vibesCoMap } = await createCoValueForSpark(
@@ -532,7 +533,7 @@ export async function seed(
 					factoryCoIdMap?.get(factoryRef) ??
 					(await (
 						await import('../../cojson/factory/resolver.js')
-					).resolve(peer, factoryRef, { returnType: 'coId' }))
+					).lookupRegistryKey(peer, factoryRef, { returnType: 'coId' }))
 				if (factoryCoId) combinedRegistry.set(factoryRef, factoryCoId)
 			}
 			const retransformedVibe = transformForSeeding(vibe, combinedRegistry)
@@ -580,7 +581,12 @@ export async function seed(
 		seededSchemas,
 	)
 
-	peer.strictMode = true
+	for (const [k, v] of factoryCoIdMap) {
+		if (typeof k === 'string' && typeof v === 'string' && v.startsWith('co_z')) {
+			peer.systemFactoryCoIds.set(k, v)
+		}
+	}
+	fillRuntimeRefsFromSystemFactories(peer)
 
 	return {
 		metaSchema: metaSchemaCoId,

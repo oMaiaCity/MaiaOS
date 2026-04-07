@@ -8,8 +8,11 @@
 
 import {
 	ensureCoValueAvailable,
+	fillRuntimeRefsFromSystemFactories,
+	getRuntimeRef,
 	getSparkOsId,
 	normalizeCoValueData,
+	RUNTIME_REF,
 	waitForStoreReady,
 } from '@MaiaOS/db'
 import { resolveExpressions } from '@MaiaOS/factories/expression-resolver'
@@ -28,9 +31,6 @@ import {
 	validateItems,
 } from '../utils/ops-assertions.js'
 import { resolveSchemaFromCoValue } from '../utils/resolve-helpers.js'
-
-/** Registry key for cobinary data factory in spark.os.factories (seed-time key; lookup uses CoMap, not resolve()). */
-const COBINARY_DATA_FACTORY_KEY = '°maia/factory/data/cobinary'
 
 /**
  * Resolve factory param for read/create to a co-id. Runtime uses co_z only (plus account/group sentinels).
@@ -1057,8 +1057,9 @@ export class DataEngine {
 				peer.systemFactoryCoIds.set(key, value)
 			}
 		}
-		const coId = factoriesData[COBINARY_DATA_FACTORY_KEY]
-		if (coId?.startsWith('co_z')) this.cobinaryFactoryCoId = coId
+		fillRuntimeRefsFromSystemFactories(peer)
+		const cob = getRuntimeRef(peer, RUNTIME_REF.DATA_COBINARY)
+		if (cob) this.cobinaryFactoryCoId = cob
 	}
 
 	async execute(payload) {

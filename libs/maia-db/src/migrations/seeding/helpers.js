@@ -111,7 +111,7 @@ export function buildMetaFactoryForSeeding(metaSchemaCoId) {
  */
 export async function ensureSparkOs(account, node, maiaGroup, peer, factoryCoIdMap) {
 	const { EXCEPTION_FACTORIES } = await import('../../factories/registry.js')
-	const { resolve } = await import('../../cojson/factory/resolver.js')
+	const { lookupRegistryKey } = await import('../../cojson/factory/resolver.js')
 
 	const osId = await groups.getSparkOsId(peer, MAIA_SPARK)
 	if (!osId) {
@@ -120,10 +120,10 @@ export async function ensureSparkOs(account, node, maiaGroup, peer, factoryCoIdM
 
 	const factoriesRegistrySchemaCoId =
 		factoryCoIdMap?.get('°maia/factory/os/factories-registry') ??
-		(await resolve(peer, '°maia/factory/os/factories-registry', { returnType: 'coId' }))
+		(await lookupRegistryKey(peer, '°maia/factory/os/factories-registry', { returnType: 'coId' }))
 	const vibesRegistrySchemaCoId =
 		factoryCoIdMap?.get('°maia/factory/os/vibes-registry') ??
-		(await resolve(peer, '°maia/factory/os/vibes-registry', { returnType: 'coId' }))
+		(await lookupRegistryKey(peer, '°maia/factory/os/vibes-registry', { returnType: 'coId' }))
 
 	let osCore = node.getCoValue(osId)
 	if (!osCore && node.loadCoValueCore) {

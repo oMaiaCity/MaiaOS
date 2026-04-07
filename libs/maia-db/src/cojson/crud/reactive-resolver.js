@@ -10,146 +10,37 @@
  * - Subscription-based - uses CoValue subscriptions to detect when dependencies become available
  * - Automatic updates - reactive stores automatically update when dependencies resolve
  * - Universal - works for any dependency type (factories, queries, configs, nested CoValues)
+ *
+ * Runtime factory resolution is **co_z only** — no registry namekey strings.
  */
 
 import { ReactiveStore } from '../../reactive-store.js'
 import { observeCoValue } from '../cache/coCache.js'
-import { lookupRegistryKey } from '../factory/resolver.js'
 import { ensureCoValueLoaded } from './collection-helpers.js'
 import { read as universalRead } from './read.js'
 
 export { waitForReactiveResolution } from './read-operations.js'
 
+const STRICT_ERR = '[resolveReactive] Runtime resolve requires co_z CoID'
+
 /**
  * Resolve factory reactively - returns ReactiveStore that updates when factory becomes available
  *
  * @param {Object} peer - Backend instance
- * @param {string} factoryKey - Factory key (°maia/factory/data/todos) or co-id (co_z...)
+ * @param {string} factoryKey - Schema co-id (co_z…)
  * @param {Object} [options] - Options
- * @param {number} [options.timeoutMs=10000] - Timeout for waiting (unused in reactive mode, kept for compatibility)
+ * @param {number} [options.timeoutMs=10000] - Timeout (unused; kept for API compatibility)
  * @returns {ReactiveStore} ReactiveStore that updates when factory resolves:
  *   - Initial: { loading: true }
  *   - When resolved: { loading: false, factoryCoId: 'co_z...' }
  */
-export function resolveFactoryReactive(peer, factoryKey, options = {}) {
-	const { timeoutMs = 10000 } = options
+export function resolveFactoryReactive(_peer, factoryKey, _options = {}) {
 	const store = new ReactiveStore({ loading: true })
-
-	if (peer?.strictMode && typeof factoryKey === 'string' && !factoryKey.startsWith('co_z')) {
-		store._set({ loading: false, error: '[resolveReactive] Runtime resolve requires co_z CoID' })
+	if (typeof factoryKey !== 'string' || !factoryKey.startsWith('co_z')) {
+		store._set({ loading: false, error: STRICT_ERR })
 		return store
 	}
-
-	// If it's already a co-id, return immediately
-	if (factoryKey.startsWith('co_z')) {
-		store._set({ loading: false, factoryCoId: factoryKey })
-		return store
-	}
-
-	// Track subscriptions for cleanup
-	let osUnsubscribe = null
-	let factoriesUnsubscribe = null
-
-	// Set up reactive subscription to spark.os.factories for progressive resolution (account.registries.sparks[°maia].os.factories)
-	const setupReactiveSubscription = async () => {
-		const { getSparkOsId } = await import('../groups/groups.js')
-		const spark = peer?.systemSparkCoId
-		if (!spark?.startsWith?.('co_z')) {
-			store._set({ loading: false, error: 'peer.systemSparkCoId not set' })
-			return
-		}
-		const osId = await getSparkOsId(peer, spark)
-		if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
-			store._set({ loading: false, error: 'spark.os not found' })
-			return
-		}
-
-		// Load spark.os store reactively
-		const osStore = await universalRead(peer, osId, null, null, null, {
-			deepResolve: false,
-			timeoutMs,
-		})
-
-		// Subscribe to osStore updates
-		osUnsubscribe = osStore.subscribe(async (osData) => {
-			if (!osData || osData.error) {
-				return // Still loading or error
-			}
-
-			// Check if factories registry is available
-			const factoriesId = osData.factories
-			if (!factoriesId || typeof factoriesId !== 'string' || !factoriesId.startsWith('co_z')) {
-				return // factories registry not available yet
-			}
-
-			// Load factories store reactively (only if not already subscribed)
-			if (!factoriesUnsubscribe) {
-				const factoriesStore = await universalRead(peer, factoriesId, null, null, null, {
-					deepResolve: false,
-					timeoutMs,
-				})
-
-				// Subscribe to factoriesStore updates
-				factoriesUnsubscribe = factoriesStore.subscribe((factoriesData) => {
-					if (!factoriesData || factoriesData.error) {
-						return // Still loading or error
-					}
-
-					void lookupRegistryKey(peer, factoryKey, { returnType: 'coId', timeoutMs }).then(
-						(registryCoId) => {
-							if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
-								// Factory found - update store
-								store._set({ loading: false, factoryCoId: registryCoId })
-								if (factoriesUnsubscribe) {
-									factoriesUnsubscribe()
-									factoriesUnsubscribe = null
-								}
-								if (osUnsubscribe) {
-									osUnsubscribe()
-									osUnsubscribe = null
-								}
-							}
-						},
-					)
-				})
-			}
-		})
-
-		// Cleanup on store unsubscribe
-		const originalUnsubscribe = store._unsubscribe
-		store._unsubscribe = () => {
-			if (originalUnsubscribe) originalUnsubscribe()
-			if (factoriesUnsubscribe) {
-				factoriesUnsubscribe()
-				factoriesUnsubscribe = null
-			}
-			if (osUnsubscribe) {
-				osUnsubscribe()
-				osUnsubscribe = null
-			}
-		}
-	}
-
-	// Try to resolve factory immediately (non-blocking check; registry keys — not public resolve in strict mode)
-	lookupRegistryKey(peer, factoryKey, { returnType: 'coId', timeoutMs: 2000 })
-		.then((factoryCoId) => {
-			if (factoryCoId?.startsWith('co_z')) {
-				// Schema resolved immediately - update store
-				store._set({ loading: false, factoryCoId })
-			} else {
-				// Schema not available yet - set up reactive subscription
-				setupReactiveSubscription().catch((error) => {
-					store._set({ loading: false, error: error.message })
-				})
-			}
-		})
-		.catch(() => {
-			// Immediate resolution failed - set up reactive subscription
-			setupReactiveSubscription().catch((error) => {
-				store._set({ loading: false, error: error.message })
-			})
-		})
-
+	store._set({ loading: false, factoryCoId: factoryKey })
 	return store
 }
 
@@ -211,7 +102,7 @@ export function resolveCoValueReactive(peer, coId, _options = {}) {
  * Resolve query reactively - returns ReactiveStore that updates when query results become available
  *
  * @param {Object} peer - Backend instance
- * @param {Object} queryDef - Query definition { factory: '°maia/factory/data/todos', filter: {...}, options: {...} }
+ * @param {Object} queryDef - Query definition { factory: 'co_z…', filter: {...}, options: {...} }
  * @param {Object} [options] - Options
  * @returns {ReactiveStore} ReactiveStore that updates when query resolves:
  *   - Initial: { loading: true, items: [] }
@@ -225,16 +116,8 @@ export function resolveQueryReactive(peer, queryDef, options = {}) {
 		return store
 	}
 
-	if (
-		peer?.strictMode &&
-		typeof queryDef.factory === 'string' &&
-		!queryDef.factory.startsWith('co_z')
-	) {
-		store._set({
-			loading: false,
-			items: [],
-			error: '[resolveReactive] Runtime resolve requires co_z CoID',
-		})
+	if (typeof queryDef.factory !== 'string' || !queryDef.factory.startsWith('co_z')) {
+		store._set({ loading: false, items: [], error: STRICT_ERR })
 		return store
 	}
 
@@ -293,7 +176,7 @@ export function resolveQueryReactive(peer, queryDef, options = {}) {
  * Universal reactive resolver - handles any dependency type
  *
  * @param {Object} peer - Backend instance
- * @param {string|Object} identifier - Identifier (co-id, factory key, or query definition)
+ * @param {string|Object} identifier - Identifier (co-id, or query definition)
  * @param {Object} [options] - Options
  * @returns {ReactiveStore} ReactiveStore that updates when dependency resolves
  */
@@ -386,15 +269,11 @@ export function resolveReactive(peer, identifier, options = {}) {
 			// Co-id - resolve CoValue reactively
 			return resolveCoValueReactive(peer, identifier, options)
 		}
-		if (peer?.strictMode) {
-			const errStore = new ReactiveStore({
-				loading: false,
-				error: '[resolveReactive] Runtime resolve requires co_z CoID',
-			})
-			return errStore
-		}
-		// Factory key - resolve factory reactively (non-strict / seeding)
-		return resolveFactoryReactive(peer, identifier, options)
+		const errStore = new ReactiveStore({
+			loading: false,
+			error: STRICT_ERR,
+		})
+		return errStore
 	}
 
 	// Invalid identifier

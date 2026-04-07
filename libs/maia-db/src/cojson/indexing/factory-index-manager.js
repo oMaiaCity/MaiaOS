@@ -14,7 +14,12 @@ import { FACTORY_REF_PATTERN } from '@MaiaOS/factories'
 import { EXCEPTION_FACTORIES } from '../../factories/registry.js'
 import { create } from '../crud/create.js'
 import { read as universalRead } from '../crud/read.js'
-import { lookupRegistryKey, resolve } from '../factory/resolver.js'
+import { resolve } from '../factory/resolver.js'
+import {
+	getRuntimeRef,
+	INFRA_FACTORY_NAMEKEY_BY_ROLE,
+	RUNTIME_REF,
+} from '../factory/runtime-factory-refs.js'
 import * as groups from '../groups/groups.js'
 
 // Matches both °Spark/schema/... and @domain/schema/... (captures prefix + path)
@@ -129,8 +134,7 @@ export async function ensureIndexesCoMap(peer) {
 	// Create new spark.os.indexes CoMap (per-CoValue group)
 	// Use proper runtime validation with dbEngine when schema is available
 	if (peer.dbEngine?.resolveSystemFactories) await peer.dbEngine.resolveSystemFactories()
-	const indexesSchemaCoId =
-		peer.systemFactoryCoIds?.get?.('°maia/factory/os/indexes-registry') ?? null
+	const indexesSchemaCoId = getRuntimeRef(peer, RUNTIME_REF.OS_INDEXES_REGISTRY)
 
 	// Validate indexesSchemaCoId is a string
 	let indexesCoMapId
@@ -200,9 +204,9 @@ async function ensureSchemaSpecificIndexColistSchema(peer, factoryCoId, metaSche
 			const headerMeta = header?.meta
 			metaSchemaCoId = headerMeta?.$factory
 
-			// If it's a human-readable key, try to resolve it
+			// If it's a human-readable key, resolve via system factory map
 			if (metaSchemaCoId && !metaSchemaCoId.startsWith('co_z')) {
-				metaSchemaCoId = await resolve(peer, metaSchemaCoId, { returnType: 'coId' })
+				metaSchemaCoId = peer.systemFactoryCoIds?.get?.(metaSchemaCoId) ?? null
 			}
 		}
 
@@ -235,9 +239,7 @@ async function ensureSchemaSpecificIndexColistSchema(peer, factoryCoId, metaSche
 	const indexColistFactoryTitle = `${prefix}/factory/index/${path}`
 
 	// Check if schema-specific index colist schema already exists
-	const existingSchemaCoId = await lookupRegistryKey(peer, indexColistFactoryTitle, {
-		returnType: 'coId',
-	})
+	const existingSchemaCoId = peer.systemFactoryCoIds?.get?.(indexColistFactoryTitle) ?? null
 	if (existingSchemaCoId?.startsWith('co_z')) {
 		return existingSchemaCoId
 	}
@@ -595,7 +597,7 @@ async function getMetafactoryCoId(peer) {
 	}
 
 	// Look up metaschema from registry
-	const metaSchemaCoId = factoriesContent.get('°maia/factory/meta')
+	const metaSchemaCoId = factoriesContent.get(INFRA_FACTORY_NAMEKEY_BY_ROLE[RUNTIME_REF.META])
 	if (metaSchemaCoId && typeof metaSchemaCoId === 'string' && metaSchemaCoId.startsWith('co_z')) {
 		return metaSchemaCoId
 	}
@@ -648,9 +650,7 @@ async function ensureFactoriesRegistry(peer) {
 	}
 
 	if (peer.dbEngine?.resolveSystemFactories) await peer.dbEngine.resolveSystemFactories()
-	const factoriesRegistrySchemaCoId = peer.systemFactoryCoIds?.get?.(
-		'°maia/factory/os/factories-registry',
-	)
+	const factoriesRegistrySchemaCoId = getRuntimeRef(peer, RUNTIME_REF.OS_FACTORIES_REGISTRY)
 	const schemaForFactories = factoriesRegistrySchemaCoId || EXCEPTION_FACTORIES.META_SCHEMA
 	const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
 	const { coValue: factoriesCoMap } = await createCoValueForSpark(peer, peer.systemSparkCoId, {
@@ -732,9 +732,9 @@ export async function registerFactoryCoValue(peer, schemaCoValueCore) {
 	const headerMeta = header?.meta
 	let metaSchemaCoId = headerMeta?.$factory
 
-	// If it's a human-readable key, resolve via registry (not public resolve — strictMode)
+	// If it's a human-readable key, resolve via system factory map (not public resolve)
 	if (metaSchemaCoId && !metaSchemaCoId.startsWith('co_z')) {
-		metaSchemaCoId = await lookupRegistryKey(peer, metaSchemaCoId, { returnType: 'coId' })
+		metaSchemaCoId = peer.systemFactoryCoIds?.get?.(metaSchemaCoId) ?? null
 	}
 
 	// Create schema index colist for this schema (in spark.os, keyed by schema co-id)

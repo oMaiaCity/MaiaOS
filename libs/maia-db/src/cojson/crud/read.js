@@ -13,6 +13,7 @@ import { perfDbRead } from '@MaiaOS/logs'
 import { ReactiveStore } from '../../reactive-store.js'
 import { observeCoValue } from '../cache/coCache.js'
 import { resolve as resolveSchema } from '../factory/resolver.js'
+import { getRuntimeRef, RUNTIME_REF } from '../factory/runtime-factory-refs.js'
 import { getAvensRegistryId, getHumansRegistryId, getSparksRegistryId } from '../groups/groups.js'
 import { ensureCoValueLoaded, getCoListId } from './collection-helpers.js'
 import { extractCoValueData } from './data-extraction.js'
@@ -78,9 +79,8 @@ export async function read(
 	// Collection read (by schema)
 	if (schema) {
 		// Sparks: read from account.registries.sparks (index only has user-created sparks)
-		const sparkSchemaCoId = peer.systemFactoryCoIds?.get?.('°maia/factory/data/spark') ?? null
-		// Humans: read from account.registries.humans (no schema index)
-		const humanSchemaCoId = peer.systemFactoryCoIds?.get?.('°maia/factory/os/human') ?? null
+		const sparkSchemaCoId = getRuntimeRef(peer, RUNTIME_REF.DATA_SPARK)
+		const humanSchemaCoId = getRuntimeRef(peer, RUNTIME_REF.OS_HUMAN)
 		const resolvedSchema = await resolveSchema(peer, schema, { returnType: 'coId' })
 		if (sparkSchemaCoId && resolvedSchema === sparkSchemaCoId) {
 			return readSparksFromAccount(peer, readOptions)
@@ -88,8 +88,7 @@ export async function read(
 		if (humanSchemaCoId && resolvedSchema === humanSchemaCoId) {
 			return readHumansFromRegistries(peer, readOptions)
 		}
-		const avenIdentitySchemaCoId =
-			peer.systemFactoryCoIds?.get?.('°maia/factory/os/aven-identity') ?? null
+		const avenIdentitySchemaCoId = getRuntimeRef(peer, RUNTIME_REF.OS_AVEN_IDENTITY)
 		if (avenIdentitySchemaCoId && resolvedSchema === avenIdentitySchemaCoId) {
 			return readAvensFromRegistries(peer, readOptions)
 		}

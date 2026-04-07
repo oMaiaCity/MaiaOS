@@ -6,6 +6,7 @@
  */
 
 import coTypesDefs from '@MaiaOS/factories/co-types.defs.json'
+import { getRuntimeRef, RUNTIME_REF } from '../cojson/factory/runtime-factory-refs.js'
 
 const AccountFactory = {
 	$schema: 'https://json-schema.org/draft/2020-12/schema',
@@ -97,7 +98,7 @@ export function validateHeaderMetaFactory(coValue) {
 
 export async function getMetaFactoryFromPeer(peer) {
 	if (!peer) throw new Error('[getMetaFactoryFromPeer] Peer required')
-	const metaSchemaCoId = peer.systemFactoryCoIds?.get?.('°maia/factory/meta')
+	const metaSchemaCoId = getRuntimeRef(peer, RUNTIME_REF.META)
 	if (!metaSchemaCoId) throw new Error('[getMetaFactoryFromPeer] Metaschema not found in registry')
 	const metaSchemaStore = await peer.read(null, metaSchemaCoId)
 	if (!metaSchemaStore || metaSchemaStore.value?.error) {
