@@ -128,73 +128,10 @@ function walkAndTransformRefs(obj, coIdMap, options = {}, ancestorActors = null)
 }
 
 /**
- * Transform a schema or instance for seeding (replace human-readable refs with co-ids)
- * Single source of truth for all transformation logic
- * @param {Object} schemaOrInstance - Schema object or instance object
- * @param {Map<string, string>} coIdMap - Map of human-readable ID → co-id
- * @param {Object} [options] - Optional transformation options
- * @param {Function} [options.schemaResolver] - Optional function to resolve schema definitions by co-id (for instances only)
- * @returns {Object} Transformed schema or instance
+ * Transform a factory JSON schema for seeding (replace human-readable refs with co-ids).
+ * Use for schema definitions from getAllFactories / bootstrap — not actor configs.
  */
-export function transformForSeeding(schemaOrInstance, coIdMap, options = {}) {
-	if (!schemaOrInstance || typeof schemaOrInstance !== 'object') {
-		return schemaOrInstance
-	}
-
-	// Detect if this is a schema or instance
-	const factoryRef = schemaOrInstance.$factory
-
-	const isMetaSchema = typeof factoryRef === 'string' && /\/factory\/meta$/.test(factoryRef)
-
-	// Meta-schema object → schema definition
-	if (isMetaSchema) {
-		return transformSchemaForSeeding(schemaOrInstance, coIdMap)
-	}
-
-	// Data factory (non-meta) or instance-shaped properties
-	const hasInstanceProperties =
-		schemaOrInstance.actor !== undefined ||
-		schemaOrInstance.context !== undefined ||
-		schemaOrInstance.view !== undefined ||
-		schemaOrInstance.state !== undefined ||
-		schemaOrInstance.brand !== undefined ||
-		schemaOrInstance.style !== undefined ||
-		schemaOrInstance.inbox !== undefined ||
-		schemaOrInstance.subscribers !== undefined ||
-		(schemaOrInstance.name !== undefined && schemaOrInstance.description !== undefined)
-
-	const isDataSchema = factoryRef && isFactoryRef(factoryRef) && !/\/factory\/meta$/.test(factoryRef)
-
-	if (isDataSchema || hasInstanceProperties) {
-		return transformInstanceForSeeding(schemaOrInstance, coIdMap, options)
-	}
-
-	// Fallback: Check for schema structure properties (properties, $defs, cotype)
-	// These indicate it's a schema definition even if $schema isn't set yet
-	const hasSchemaStructure =
-		schemaOrInstance.properties !== undefined ||
-		schemaOrInstance.$defs !== undefined ||
-		(schemaOrInstance.items !== undefined &&
-			typeof schemaOrInstance.items === 'object' &&
-			!Array.isArray(schemaOrInstance.items)) ||
-		schemaOrInstance.cotype !== undefined
-
-	if (hasSchemaStructure) {
-		return transformSchemaForSeeding(schemaOrInstance, coIdMap)
-	}
-
-	// Default: treat as instance if unclear (safer - instances are more common)
-	return transformInstanceForSeeding(schemaOrInstance, coIdMap, options)
-}
-
-/**
- * Transform a schema for seeding (replace human-readable refs with co-ids)
- * @private
- * @param {Object} schema - Schema object
- * @param {Map<string, string>} coIdMap - Map of human-readable ID → co-id
- * @returns {Object} Transformed schema
- */
-function transformSchemaForSeeding(schema, coIdMap) {
+export function transformSchemaForSeeding(schema, coIdMap) {
 	if (!schema || typeof schema !== 'object') {
 		return schema
 	}
@@ -341,15 +278,9 @@ function transformCoReferences(obj, coIdMap, path = '') {
 }
 
 /**
- * Transform an instance for seeding (replace human-readable refs with co-ids)
- * @private
- * @param {Object} instance - Instance object (config, actor, view, etc.)
- * @param {Map<string, string>} coIdMap - Map of human-readable ID → co-id
- * @param {Object} options - Optional transformation options
- * @param {Function} options.schemaResolver - Optional function to resolve schema definitions by co-id: (factoryCoId) => Promise<Object|null>
- * @returns {Object} Transformed instance
+ * Transform a config instance for seeding (actor, vibe manifest, data row, etc.).
  */
-function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
+export function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 	if (!instance || typeof instance !== 'object') {
 		return instance
 	}

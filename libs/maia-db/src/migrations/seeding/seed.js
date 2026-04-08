@@ -77,9 +77,8 @@ export async function seed(
 	}
 
 	const { CoIdRegistry } = await import('@MaiaOS/factories/co-id-generator')
-	const { transformForSeeding, validateFactoryStructure } = await import(
-		'@MaiaOS/seed/ref-transform'
-	)
+	const { transformInstanceForSeeding, transformSchemaForSeeding, validateFactoryStructure } =
+		await import('@MaiaOS/seed/ref-transform')
 	const coIdRegistry = new CoIdRegistry()
 
 	const maiaGroup = await groups.getMaiaGroup(peer)
@@ -228,7 +227,7 @@ export async function seed(
 		const { name, schema } = uniqueSchemasBy$id.get(factoryKey)
 		const factoryCoId = factoryCoIdMap.get(factoryKey)
 		const factoryCoMap = factoryCoMaps.get(factoryKey)
-		const transformedSchema = transformForSeeding(schema, factoryCoIdMap)
+		const transformedSchema = transformSchemaForSeeding(schema, factoryCoIdMap)
 		transformedSchema.$id = `https://maia.city/${factoryCoId}`
 		const verificationErrors = validateFactoryStructure(transformedSchema, factoryKey, {
 			checkSchemaReferences: true,
@@ -366,14 +365,14 @@ export async function seed(
 				? Object.values(originalConfigs).find((cfg) => cfg.$id === configInfo.expectedCoId)
 				: null
 			if (!originalConfig) continue
-			const fullyTransformed = transformForSeeding(originalConfig, latestRegistry)
+			const fullyTransformed = transformInstanceForSeeding(originalConfig, latestRegistry)
 			if (configInfo.type === 'actor') {
 				for (const prop of ['process', 'context', 'view', 'interface', 'wasm']) {
 					const val = fullyTransformed[prop]
 					if (val && typeof val === 'string' && !val.startsWith('co_z')) {
 						throw new Error(
 							`[Seed] Actor config ${configInfo.expectedCoId} has unresolved ref in ${prop}: ${val}. ` +
-								`All refs must be transformed to co-ids during seed. Check transformForSeeding and coIdMap coverage.`,
+								`All refs must be transformed to co-ids during seed. Check transformInstanceForSeeding and coIdMap coverage.`,
 						)
 					}
 				}
@@ -499,7 +498,7 @@ export async function seed(
 					).lookupRegistryKey(peer, factoryRef, { returnType: 'coId' }))
 				if (factoryCoId) combinedRegistry.set(factoryRef, factoryCoId)
 			}
-			const retransformedVibe = transformForSeeding(vibe, combinedRegistry)
+			const retransformedVibe = transformInstanceForSeeding(vibe, combinedRegistry)
 			if (!retransformedVibe.$factory?.startsWith('co_z')) {
 				throw new Error(
 					`${OPS_PREFIX.sync} Vibe "${vibeKey}": $factory missing or not resolved. Ensure °maia/factory/vibe is in schema registry.`,
