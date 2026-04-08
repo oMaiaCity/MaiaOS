@@ -1,5 +1,4 @@
-// loadSchemaFromDB removed - use resolve() from @MaiaOS/db if needed
-import { resolveFactoryDefFromPeer, SYSTEM_SPARK_REGISTRY_KEY } from '@MaiaOS/db'
+import { ensureFactoriesLoaded, getFactory } from '@MaiaOS/factories'
 import { validateAgainstFactoryOrThrow } from '@MaiaOS/factories/validation.helper'
 import { FORBIDDEN_PATH_KEYS } from './security.js'
 
@@ -66,16 +65,12 @@ export class Evaluator {
 			!Array.isArray(expression)
 		) {
 			try {
-				if (this.dataEngine?.peer) {
-					const peer = this.dataEngine.peer
-					const factoryKey = `${SYSTEM_SPARK_REGISTRY_KEY}/factory/maia-script-expression`
-					const expressionFactory = await resolveFactoryDefFromPeer(peer, factoryKey, {
-						returnType: 'factory',
-					})
-					if (expressionFactory) {
-						await validateAgainstFactoryOrThrow(expressionFactory, expression, 'maia-script-expression')
-					}
+				await ensureFactoriesLoaded()
+				const expressionFactory = getFactory('°maia/factory/maia-script-expression')
+				if (!expressionFactory) {
+					throw new Error('[Evaluator] maia-script-expression factory missing from registry')
 				}
+				await validateAgainstFactoryOrThrow(expressionFactory, expression, 'maia-script-expression')
 			} catch (error) {
 				throw new Error(`[Evaluator] Invalid MaiaScript expression: ${error.message}`)
 			}

@@ -1,4 +1,4 @@
-import { isFactoryRef } from './patterns.js'
+import { isFactoryRef } from '@MaiaOS/factories/patterns'
 
 /** Actor instance targets in @actors: file path ending with actor.maia (e.g. …/intent.actor.maia or …/actor.maia) */
 const ACTOR_REF_FILE = /^[@°].*actor\.maia$/

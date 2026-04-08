@@ -13,6 +13,7 @@
 	},
 	"dependencies": {
 		"@MaiaOS/factories": "workspace:*",
+		"@MaiaOS/seed": "workspace:*",
 		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/peer": "workspace:*",
 		"@MaiaOS/storage": "workspace:*",

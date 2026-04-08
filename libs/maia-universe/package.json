@@ -10,7 +10,7 @@
 		"./data": "./src/maia/data/index.js",
 		"./dashboard-icon-svgs": "./src/maia/dashboard-icon-svgs.js",
 		"./factories/*": "./src/maia/factories/*",
-		"./seeding": "./src/maia/seeding.js",
+		"./vibe-registries": "./src/maia/vibe-registries.index.js",
 		"./todos/loader": "./src/maia/vibes/todos/loader.js",
 		"./todos/registry": "./src/maia/vibes/todos/registry.js",
 		"./vibes/*": "./src/maia/vibes/*"

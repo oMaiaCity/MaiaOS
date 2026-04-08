@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { deriveInboxId } from '../src/seeding-utils.js'
+import { deriveInboxId } from '../src/derive-inbox.js'
 
 describe('deriveInboxId', () => {
 	test('intent.actor.maia -> inbox.maia sibling', () => {

@@ -42,12 +42,8 @@ import {
 } from '@MaiaOS/loader'
 import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
 import { agentIDToDidKey, verifyInvocationToken } from '@MaiaOS/maia-ucan'
-import { getSeedConfig } from '@MaiaOS/seed'
-import {
-	buildSeedConfig,
-	filterVibesForSeeding,
-	getAllVibeRegistries,
-} from '@MaiaOS/universe/seeding'
+import { buildSeedConfig, filterVibesForSeeding, getSeedConfig } from '@MaiaOS/seed'
+import { getAllVibeRegistries } from '@MaiaOS/universe'
 import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
