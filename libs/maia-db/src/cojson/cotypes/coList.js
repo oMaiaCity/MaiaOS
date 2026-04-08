@@ -1,6 +1,7 @@
 import { loadFactoryAndValidate } from '@MaiaOS/factories/validation.helper'
 import {
 	createFactoryMeta,
+	EXCEPTION_FACTORIES,
 	FACTORY_REGISTRY,
 	isExceptionFactory,
 } from '../../factories/registry.js'
@@ -48,6 +49,17 @@ export async function createCoList(
 		}
 		// If profileId is null/undefined, it's a regular group, use it as-is
 	}
+	if (factoryName === EXCEPTION_FACTORIES.META_SCHEMA) {
+		const peer = dbEngine?.peer
+		let metaFactoryRef = EXCEPTION_FACTORIES.META_SCHEMA
+		if (peer) {
+			const { getSparkOsMetaFactoryCoId } = await import('../groups/groups.js')
+			const metaCoId = await getSparkOsMetaFactoryCoId(peer)
+			if (metaCoId) metaFactoryRef = metaCoId
+		}
+		const meta = createFactoryMeta(metaFactoryRef, nanoid)
+		return group.createList(init, meta)
+	}
 	if (!factoryName || typeof factoryName !== 'string') {
 		throw new Error('[createCoList] Schema name is REQUIRED.')
 	}
@@ -57,25 +69,13 @@ export async function createCoList(
 		!(factoryName in FACTORY_REGISTRY)
 	) {
 		throw new Error(
-			`[createCoList] Schema '${factoryName}' not found. Available: AccountFactory, ProfileFactory`,
+			`[createCoList] Schema '${factoryName}' not found. Use a co_z factory co-id or AccountFactory|ProfileFactory.`,
 		)
 	}
 	if (!isExceptionFactory(factoryName)) {
-		const validateOpts = { dataEngine: dbEngine }
-		if (!factoryName.startsWith('co_z')) {
-			validateOpts.getAllFactories = async () => {
-				const { ensureFactoriesLoaded, getAllFactories: getAll } = await import('@MaiaOS/factories')
-				await ensureFactoriesLoaded()
-				return { ...getAll(), ...FACTORY_REGISTRY }
-			}
-		}
-		await loadFactoryAndValidate(
-			dbEngine?.peer || null,
-			factoryName,
-			init,
-			'createCoList',
-			validateOpts,
-		)
+		await loadFactoryAndValidate(dbEngine?.peer || null, factoryName, init, 'createCoList', {
+			dataEngine: dbEngine,
+		})
 	}
 
 	const meta = createFactoryMeta(factoryName, nanoid)

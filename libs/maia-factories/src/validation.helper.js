@@ -3,6 +3,7 @@
  */
 
 import { normalizeCoValueData } from '@MaiaOS/db'
+import { FACTORY_REGISTRY } from '@MaiaOS/db/registry'
 import { normalizeFactoryReferencesWithResolver } from './factory-ref-resolver.js'
 import {
 	formatValidationErrors,
@@ -190,38 +191,31 @@ export async function validateAgainstFactoryOrThrow(schema, data, context = '') 
 
 /**
  * Universal schema loading and validation (single source of truth)
- * Consolidates schema loading + validation pattern used across codebase
  *
- * Handles both:
- * - Runtime schemas (co-id): Loads from database via resolve() API
- * - Migration schemas (name): Uses registry schemas (seeding only)
+ * - Runtime: `co_z` → resolve(peer) + validateAgainstFactory
+ * - Inline only: `AccountFactory` | `ProfileFactory` from @MaiaOS/db/registry (no universe bundle)
  *
  * @param {Object} backend - Backend instance (for resolve() API)
- * @param {string} factoryRef - Schema co-id (co_z...) or name (for migrations)
+ * @param {string} factoryRef - Schema co-id (co_z...) or AccountFactory | ProfileFactory
  * @param {any} data - Data to validate
  * @param {string} context - Context for error messages (e.g., 'createCoMap')
  * @param {Object} [options] - Options object
  * @param {Object} [options.dataEngine] - DataEngine (REQUIRED for co-id schemas)
- * @param {Object} [options.registrySchemas] - Registry schemas map (ONLY for migrations/seeding)
- * @param {Function} [options.getAllFactories] - Sync or async function returning schema map (migrations/seeding)
  * @throws {Error} If schema not found or validation fails
- * @returns {Promise<Object>} Loaded schema definition
+ * @returns {Promise<Object>} Loaded factory definition (runtime or inline schema object)
  */
 export async function loadFactoryAndValidate(backend, factoryRef, data, context, options = {}) {
-	const { dataEngine, registrySchemas, getAllFactories } = options
+	const { dataEngine } = options
 
-	// Dynamic import to avoid circular dependencies
 	const { resolve } = await import('@MaiaOS/db')
 
 	if (factoryRef.startsWith('co_z')) {
-		// Schema co-id - MUST validate using runtime schema from database
 		if (!dataEngine) {
 			throw new Error(
 				`[${context}] dataEngine is REQUIRED for co-id schema validation. Schema: ${factoryRef}. Pass dataEngine in options.`,
 			)
 		}
 
-		// Load factory from database (runtime - single source of truth)
 		const factoryDef = await resolve(backend, factoryRef, { returnType: 'factory' })
 		if (!factoryDef) {
 			throw new Error(`[${context}] Factory not found in database: ${factoryRef}`)
@@ -230,7 +224,6 @@ export async function loadFactoryAndValidate(backend, factoryRef, data, context,
 		const resolver = async (coId) => resolve(backend, coId, { returnType: 'factory' })
 		const resolvedFactoryDef = await normalizeFactoryReferencesWithResolver(resolver, factoryDef)
 
-		// Validate data against runtime factory
 		await validateAgainstFactoryOrThrow(
 			resolvedFactoryDef,
 			data,
@@ -238,31 +231,18 @@ export async function loadFactoryAndValidate(backend, factoryRef, data, context,
 		)
 
 		return resolvedFactoryDef
-	} else {
-		// Schema name - use hardcoded registry (only for migrations/seeding)
-		if (!getAllFactories || typeof getAllFactories !== 'function') {
-			throw new Error(
-				`[${context}] getAllFactories function is REQUIRED for name-based schema validation. Schema: ${factoryRef}. This is only for migrations/seeding.`,
-			)
-		}
-
-		const allSchemas = await getAllFactories()
-		const engine = await getValidationEngine({
-			registrySchemas: registrySchemas || allSchemas,
-		})
-		const validation = await engine.validateData(factoryRef, data)
-
-		if (!validation.valid) {
-			const errorDetails = validation.errors
-				.map((err) => `  - ${err.instancePath}: ${err.message}`)
-				.join('\n')
-			throw new Error(
-				`[${context}] Data validation failed for schema '${factoryRef}':\n${errorDetails}`,
-			)
-		}
-
-		// Return schema from registry for consistency
-		const registrySchemasMap = registrySchemas || allSchemas
-		return registrySchemasMap[factoryRef]
 	}
+
+	if (factoryRef === 'AccountFactory' || factoryRef === 'ProfileFactory') {
+		const schema = FACTORY_REGISTRY[factoryRef]
+		if (!schema) {
+			throw new Error(`[${context}] Inline factory missing: ${factoryRef}`)
+		}
+		await validateAgainstFactoryOrThrow(schema, data, `${context} ${factoryRef}`)
+		return schema
+	}
+
+	throw new Error(
+		`[${context}] Schema must be a co_z co-id or AccountFactory|ProfileFactory. Got: ${factoryRef}`,
+	)
 }

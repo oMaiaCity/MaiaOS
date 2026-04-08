@@ -3,18 +3,9 @@
  * Reactive read() snapshots are not used here — they can omit indexes/catalog keys before deep resolve.
  */
 
-import { FACTORY_REF_PATTERN } from '@MaiaOS/factories'
+import { FACTORY_REF_PATTERN, INSTANCE_REF_PATTERN } from '@MaiaOS/factories'
 import { ensureCoValueLoaded } from '../crud/collection-helpers.js'
-import { SPARK_OS_INSTANCES_KEY, SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
-
-const RESERVED_INSTANCE_KEYS = new Set([
-	'id',
-	'loading',
-	'error',
-	'$factory',
-	'type',
-	'_coValueType',
-])
+import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
 
 /**
  * @param {object} peer — MaiaDB (node + account + getCoValue / getCurrentContent / isAvailable)
@@ -53,9 +44,11 @@ export async function buildSystemFactoryCoIdsFromSparkOs(peer, osId) {
 							const title = defContent?.get?.('title')
 							const idKey = defContent?.get?.('$id')
 							const namekey =
-								typeof title === 'string' && FACTORY_REF_PATTERN.test(title)
+								typeof title === 'string' &&
+								(FACTORY_REF_PATTERN.test(title) || INSTANCE_REF_PATTERN.test(title))
 									? title
-									: typeof idKey === 'string' && FACTORY_REF_PATTERN.test(idKey)
+									: typeof idKey === 'string' &&
+											(FACTORY_REF_PATTERN.test(idKey) || INSTANCE_REF_PATTERN.test(idKey))
 										? idKey
 										: null
 							if (namekey) out.set(namekey, defCoId)
@@ -68,25 +61,6 @@ export async function buildSystemFactoryCoIdsFromSparkOs(peer, osId) {
 
 	if (metaCoId?.startsWith?.('co_z')) {
 		out.set('°maia/factory/meta', metaCoId)
-	}
-
-	const instancesId = osContent.get(SPARK_OS_INSTANCES_KEY)
-	if (instancesId?.startsWith?.('co_z')) {
-		const instCore = await ensureCoValueLoaded(peer, instancesId, { waitForAvailable: true })
-		if (instCore && peer.isAvailable(instCore)) {
-			const instContent = peer.getCurrentContent(instCore)
-			const keys =
-				instContent?.keys && typeof instContent.keys === 'function'
-					? Array.from(instContent.keys())
-					: Object.keys(instContent ?? {})
-			for (const key of keys) {
-				if (RESERVED_INSTANCE_KEYS.has(key)) continue
-				const coId = instContent.get(key)
-				if (typeof key === 'string' && typeof coId === 'string' && coId.startsWith('co_z')) {
-					out.set(key, coId)
-				}
-			}
-		}
 	}
 
 	return out

@@ -70,6 +70,33 @@ export async function getCoListId(peer, collectionNameOrSchema) {
 }
 
 /**
+ * Resolve CoValueCore in the node (handles seed races where getCoValue is briefly null).
+ * @param {Object} peer
+ * @param {string} coId
+ * @param {number} deadlineAt - epoch ms; stop polling after this
+ * @returns {Promise<object|null>}
+ */
+async function acquireCoValueCore(peer, coId, deadlineAt) {
+	const getCore = () => peer.getCoValue(coId) ?? peer.node?.getCoValue?.(coId)
+	let coValueCore = getCore()
+	if (coValueCore) return coValueCore
+
+	if (peer.node?.loadCoValueCore) {
+		await peer.node.loadCoValueCore(coId).catch((_err) => {
+			if (typeof process !== 'undefined' && process.env?.DEBUG)
+				console.log('[CoValue load error]', _err)
+		})
+	}
+
+	while (Date.now() < deadlineAt) {
+		coValueCore = getCore()
+		if (coValueCore) return coValueCore
+		await new Promise((r) => setTimeout(r, 100))
+	}
+	return getCore()
+}
+
+/**
  * Ensure CoValue is loaded from IndexedDB (jazz-tools pattern)
  * Generic method that works for ANY CoValue type (CoMap, CoList, CoStream, etc.)
  * After re-login, CoValues exist in IndexedDB but aren't loaded into node memory
@@ -88,43 +115,49 @@ export async function ensureCoValueLoaded(peer, coId, options = {}) {
 		return null // Invalid co-id
 	}
 
-	// Get CoValueCore (creates if doesn't exist)
-	const coValueCore = peer.getCoValue(coId)
+	const deadline = Date.now() + timeoutMs
+	const coValueCore = await acquireCoValueCore(peer, coId, deadline)
 	if (!coValueCore) {
-		return null // CoValueCore doesn't exist (shouldn't happen)
+		return null
 	}
 
-	// If already available, return immediately
 	if (coValueCore.isAvailable()) {
 		return coValueCore
 	}
 
-	// Not available - trigger loading from IndexedDB (jazz-tools pattern)
-	peer.node.loadCoValueCore(coId).catch((_err) => {
-		if (typeof process !== 'undefined' && process.env?.DEBUG)
-			console.log('[CoValue load error]', _err)
-	})
-
-	// If waitForAvailable is true, wait for it to become available
-	if (waitForAvailable) {
-		await new Promise((resolve, reject) => {
-			// Fix: Declare unsubscribe before subscribe call to avoid temporal dead zone
-			let unsubscribe
-			const timeout = setTimeout(() => {
-				if (typeof process !== 'undefined' && process.env?.DEBUG) console.log('[CoValue timeout]', coId)
-				unsubscribe()
-				reject(new Error(`Timeout waiting for CoValue ${coId} to load after ${timeoutMs}ms`))
-			}, timeoutMs)
-
-			unsubscribe = coValueCore.subscribe((core) => {
-				if (core.isAvailable()) {
-					clearTimeout(timeout)
-					unsubscribe()
-					resolve()
-				}
-			})
+	if (peer.node?.loadCoValueCore) {
+		peer.node.loadCoValueCore(coId).catch((_err) => {
+			if (typeof process !== 'undefined' && process.env?.DEBUG)
+				console.log('[CoValue load error]', _err)
 		})
 	}
+
+	if (!waitForAvailable) {
+		return coValueCore
+	}
+
+	const remaining = deadline - Date.now()
+	if (remaining <= 0) {
+		if (typeof process !== 'undefined' && process.env?.DEBUG) console.log('[CoValue timeout]', coId)
+		return coValueCore.isAvailable() ? coValueCore : null
+	}
+
+	await new Promise((resolve, reject) => {
+		let unsubscribe
+		const timer = setTimeout(() => {
+			unsubscribe?.()
+			if (typeof process !== 'undefined' && process.env?.DEBUG) console.log('[CoValue timeout]', coId)
+			reject(new Error(`Timeout waiting for CoValue ${coId} to load after ${timeoutMs}ms`))
+		}, remaining)
+
+		unsubscribe = coValueCore.subscribe((core) => {
+			if (core.isAvailable()) {
+				clearTimeout(timer)
+				unsubscribe?.()
+				resolve()
+			}
+		})
+	})
 
 	return coValueCore
 }
@@ -137,30 +170,24 @@ export async function ensureCoValueLoaded(peer, coId, options = {}) {
  * @returns {Promise<CoValueCore>} CoValueCore instance
  */
 export async function ensureCoValueAvailable(backend, coId, operationName) {
-	let coValueCore = backend.getCoValue(coId)
-	if (!coValueCore && backend.node?.loadCoValueCore) {
-		await backend.node.loadCoValueCore(coId).catch(() => {})
-		for (let i = 0; i < 12 && !coValueCore; i++) {
-			coValueCore = backend.getCoValue(coId)
-			if (!coValueCore) await new Promise((r) => setTimeout(r, 100))
-		}
-	}
-	if (!coValueCore) {
-		throw new Error(`[${operationName}] CoValue not found: ${coId}`)
-	}
-
-	if (!coValueCore.isAvailable()) {
-		await backend.node.loadCoValueCore(coId)
-		let attempts = 0
-		while (!coValueCore.isAvailable() && attempts < 10) {
-			await new Promise((r) => setTimeout(r, 100))
-			attempts++
+	try {
+		const coValueCore = await ensureCoValueLoaded(backend, coId, {
+			waitForAvailable: true,
+			timeoutMs: 25000,
+		})
+		if (!coValueCore) {
+			throw new Error(`[${operationName}] CoValue not found: ${coId}`)
 		}
 		if (!coValueCore.isAvailable()) {
 			throw new Error(`[${operationName}] CoValue ${coId} is not available (may still be loading)`)
 		}
+		return coValueCore
+	} catch (e) {
+		if (e instanceof Error && e.message.includes('Timeout waiting for CoValue')) {
+			throw new Error(`[${operationName}] CoValue ${coId} is not available (may still be loading)`)
+		}
+		throw e
 	}
-	return coValueCore
 }
 
 /**
@@ -185,14 +212,12 @@ export async function waitForHeaderMetaFactory(peer, coId, options = {}) {
 		throw new Error(`[waitForHeaderMetaFactory] Invalid co-id: ${coId}`)
 	}
 
-	// Get CoValueCore (creates if doesn't exist)
-	const coValueCore = peer.getCoValue(coId)
+	await ensureCoValueLoaded(peer, coId, { waitForAvailable: true, timeoutMs })
+
+	const coValueCore = peer.getCoValue(coId) ?? peer.node?.getCoValue?.(coId)
 	if (!coValueCore) {
 		throw new Error(`[waitForHeaderMetaFactory] CoValueCore not found: ${coId}`)
 	}
-
-	// Ensure CoValue is loaded first
-	await ensureCoValueLoaded(peer, coId, { waitForAvailable: true, timeoutMs })
 
 	// Check if headerMeta.$schema is already available
 	const header = peer.getHeader(coValueCore)

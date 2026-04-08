@@ -22,7 +22,7 @@ import { resolveReactive as resolveReactiveBase } from '../crud/reactive-resolve
 import { read as universalRead } from '../crud/read.js'
 import { waitForStoreReady } from '../crud/read-operations.js'
 import { resolveSparkCoId } from '../groups/groups.js'
-import { SPARK_OS_INSTANCES_KEY, SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
+import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
 
 /**
  * Recursively remove 'id' fields from schema objects (AJV only accepts $id, not id)
@@ -187,91 +187,17 @@ export async function lookupRegistryKey(peer, identifier, options = {}) {
 
 			return null
 		} else if (isInstanceKeyMatch) {
-			// Instance config keys → spark.os.instances
-			const sparkCoId = await resolveSparkCoId(peer, effectiveSpark)
-			if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_z')) {
-				if (typeof window !== 'undefined') {
-					console.warn('[resolve] instance key: spark not resolved', identifier)
-				}
-				return null
+			// Instance-style namekeys (°maia/... not under /factory/) → definition catalog (peer.systemFactoryCoIds)
+			if (peer.dbEngine?.resolveSystemFactories) {
+				await peer.dbEngine.resolveSystemFactories()
 			}
-			const sparkStore = await universalRead(peer, sparkCoId, null, null, null, {
-				deepResolve: false,
-				timeoutMs,
-			})
-			try {
-				await waitForStoreReady(sparkStore, sparkCoId, timeoutMs)
-			} catch {
-				if (typeof window !== 'undefined') {
-					console.warn('[resolve] instance key: spark store timeout', identifier)
-				}
-				return null
-			}
-			const sparkData = sparkStore.value
-			if (!sparkData || sparkData.error) return null
-			const osId = sparkData.os
-			if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
-				if (typeof window !== 'undefined') {
-					console.warn('[resolve] instance key: os missing from spark', identifier)
-				}
-				return null
-			}
-
-			const osStore = await universalRead(peer, osId, null, null, null, {
-				deepResolve: false,
-				timeoutMs,
-			})
-			try {
-				await waitForStoreReady(osStore, osId, timeoutMs)
-			} catch (_error) {
-				if (typeof window !== 'undefined') {
-					console.warn('[resolve] instance key: os store timeout', identifier)
-				}
-				return null
-			}
-			const osData = osStore.value
-			if (!osData || osData.error) return null
-
-			const instancesId = osData[SPARK_OS_INSTANCES_KEY]
-			if (!instancesId || typeof instancesId !== 'string' || !instancesId.startsWith('co_z')) {
-				if (typeof window !== 'undefined') {
-					console.warn('[resolve] instance key: instances missing from os', identifier)
-				}
-				return null
-			}
-
-			const instancesStore = await universalRead(peer, instancesId, null, null, null, {
-				deepResolve: false,
-				timeoutMs,
-			})
-			try {
-				await waitForStoreReady(instancesStore, instancesId, timeoutMs)
-			} catch (_error) {
-				if (typeof window !== 'undefined') {
-					console.warn('[resolve] instance key: instances store timeout', identifier)
-				}
-				return null
-			}
-			const instancesData = instancesStore.value
-			if (!instancesData || instancesData.error) return null
-
-			const registryCoId = instancesData[identifier]
+			const registryCoId =
+				peer.systemFactoryCoIds?.get?.(identifier) ?? peer.systemFactoryCoIds?.get?.(normalizedKey)
 			if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
 				if (returnType === 'coId') {
 					return registryCoId
 				}
 				return await resolve(peer, registryCoId, { returnType, deepResolve, timeoutMs })
-			}
-			if (typeof window !== 'undefined') {
-				const keys = Object.keys(instancesData).filter(
-					(k) => !['id', 'loading', 'error', '$factory', 'type', '_coValueType'].includes(k),
-				)
-				console.warn(
-					'[resolve] instance key not in instances:',
-					identifier,
-					'| keys:',
-					keys.slice(0, 20).join(', '),
-				)
 			}
 			return null
 		}
@@ -567,7 +493,7 @@ async function resolveSparkOsIdFromNode(node, account, spark) {
 }
 
 /**
- * Load all factory definitions (definition catalog + instances map co-ids that are schemas)
+ * Load all factory definitions (definition catalog colist)
  * MIGRATIONS ONLY - uses resolve(peer, factoryCoId, { returnType: 'schema' }) for each schema
  *
  * @param {LocalNode} node - LocalNode instance

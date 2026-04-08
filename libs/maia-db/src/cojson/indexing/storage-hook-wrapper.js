@@ -17,7 +17,6 @@ import {
 	isAccountGroupOrProfile,
 	shouldSkipValidation,
 } from '../helpers/co-value-detection.js'
-import { SPARK_OS_INSTANCES_KEY } from '../spark-os-keys.js'
 import { applyPersistentCoValueIndexing } from './factory-index-manager.js'
 
 // Track pending indexing operations to prevent duplicates
@@ -147,7 +146,7 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 			}
 		}
 
-		// 2. Skip indexing if this is spark.os, instances map, indexes, or any index colist (they're internal)
+		// 2. Skip indexing if this is spark.os, indexes, or any index colist (they're internal)
 		// Use cached osId (set when getSparkOsId is first called - don't trigger async here!)
 		if (!shouldSkipIndexing && peer.account) {
 			const osId = peer._cachedMaiaOsId
@@ -160,11 +159,6 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 				if (osCore && peer.isAvailable(osCore) && osCore.type === 'comap') {
 					const osContent = osCore.getCurrentContent?.()
 					if (osContent && typeof osContent.get === 'function') {
-						const instancesId = osContent.get(SPARK_OS_INSTANCES_KEY)
-						if (coId === instancesId) {
-							shouldSkipIndexing = true
-						}
-
 						// Check if it's unknown colist
 						const unknownId = osContent.get('unknown')
 						if (coId === unknownId) {
@@ -212,7 +206,7 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 				// broke indexing entirely: spark.os is often not loaded when the first todo/message
 				// is stored (getSparkOsId only loads registries->sparks->spark, not spark.os itself).
 				// indexCoValue's shouldIndexCoValue/isInternalCoValue will correctly skip internal
-				// co-values (spark.os, instances, indexes). Data co-values (todos, messages) must be indexed.
+				// co-values (spark.os, indexes). Data co-values (todos, messages) must be indexed.
 				// Skipping here caused spark.os.indexes to stay empty since the registry refactor.
 			}
 		}

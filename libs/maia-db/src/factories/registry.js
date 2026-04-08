@@ -2,7 +2,7 @@
  * Schema Registry - Bootstrap schemas and metadata utilities for MaiaDB
  *
  * Hardcoded schemas ONLY for migrations/seeding (before peer.systemFactoryCoIds is filled).
- * Runtime schema access resolves via catalog + instances (see resolveSystemFactories).
+ * Runtime schema access resolves via the definition catalog (see resolveSystemFactories).
  */
 
 import { getRuntimeRef, RUNTIME_REF } from '../cojson/factory/runtime-factory-refs.js'

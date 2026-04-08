@@ -6,7 +6,6 @@
  *
  * Structure:
  * - spark.os.metaFactoryCoId: co_z of metafactory (anchor)
- * - spark.os.instances: instance path → instance co_z
  * - spark.os.indexes: schema-co-id → colist (definition catalog at key === metaFactoryCoId; per-schema instance indexes otherwise)
  * - spark.os.unknown: colist of co-values without schemas
  */
@@ -14,15 +13,36 @@
 import { FACTORY_REF_PATTERN } from '@MaiaOS/factories'
 import { EXCEPTION_FACTORIES } from '../../factories/registry.js'
 import { removeIdFields } from '../../migrations/seeding/helpers.js'
+import { ensureCoValueLoaded } from '../crud/collection-helpers.js'
 import { create } from '../crud/create.js'
 import { read as universalRead } from '../crud/read.js'
 import { resolve } from '../factory/resolver.js'
 import { getRuntimeRef, RUNTIME_REF } from '../factory/runtime-factory-refs.js'
 import * as groups from '../groups/groups.js'
-import { SPARK_OS_INSTANCES_KEY, SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
+import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
 
 // Matches both °Spark/schema/... and @domain/schema/... (captures prefix + path)
 const SCHEMA_REF_MATCH = /^([°@][a-zA-Z0-9_-]+)\/factory\/(.+)$/
+
+/** Single load path for index colists (no universalRead fallback). */
+async function loadIndexColistContent(peer, indexColistId, timeoutMs = 8000) {
+	const start = Date.now()
+	let core
+	try {
+		core = await ensureCoValueLoaded(peer, indexColistId, { waitForAvailable: true, timeoutMs })
+	} catch {
+		return null
+	}
+	if (!core?.isAvailable?.()) return null
+	const content = peer.getCurrentContent?.(core) ?? core.getCurrentContent?.()
+	if (!content) return null
+	const contentType = content.cotype || content.type
+	if (contentType !== 'colist') return null
+	if (typeof process !== 'undefined' && process.env?.DEBUG && Date.now() - start > 2000) {
+		console.log('[DEBUG loadIndexColistContent] slow', indexColistId, Date.now() - start, 'ms')
+	}
+	return content
+}
 
 let warnedRegistriesMissingDuringBootstrap = false
 
@@ -252,7 +272,8 @@ async function ensureSchemaSpecificIndexColistSchema(peer, factoryCoId, metaSche
 		cotype: 'colist',
 		indexing: false, // Index colist factories themselves should not be indexed
 		items: {
-			$co: factoryTitle, // Enforces type safety - only co-ids referencing the target factory are allowed
+			// Factory-first: reference the seeded definition by co-id (not °…/factory/… namekeys)
+			$co: factoryCoId,
 		},
 	}
 
@@ -305,30 +326,10 @@ export async function ensureFactoryIndexColist(peer, factoryCoId, metaSchemaCoId
 	// Check if index colist already exists (using schema co-id as key)
 	let indexColistId = indexesCoMap.get(factoryCoId)
 	if (indexColistId) {
-		// Use universal read() API to load and resolve index colist
-		try {
-			const indexColistStore = await universalRead(peer, indexColistId, null, null, null, {
-				deepResolve: false, // Don't need deep resolution for index colists
-				timeoutMs: 5000,
-			})
-
-			// Check if read succeeded
-			if (indexColistStore && !indexColistStore.value?.error) {
-				// Get the raw CoValueCore and content after read() has loaded it
-				const indexColistCore = peer.getCoValue(indexColistId)
-				if (indexColistCore?.isAvailable()) {
-					const indexColistContent = indexColistCore.getCurrentContent?.()
-					if (indexColistContent && typeof indexColistContent.append === 'function') {
-						// Verify it's a CoList using content.cotype
-						const contentType = indexColistContent.cotype || indexColistContent.type
-						if (contentType === 'colist') {
-							return indexColistContent
-						}
-					}
-				}
-			}
-		} catch (_e) {}
-
+		const indexColistContent = await loadIndexColistContent(peer, indexColistId, 8000)
+		if (indexColistContent && typeof indexColistContent.append === 'function') {
+			return indexColistContent
+		}
 		// If indexColistId exists but couldn't be loaded, DON'T create a new one
 		return null
 	}
@@ -410,7 +411,7 @@ export async function ensureUnknownColist(peer) {
 
 /**
  * Check if a co-value is an internal co-value that should NOT be indexed
- * Internal co-values include: account.data, spark.os, schema index colists, instances map, unknown colist
+ * Internal co-values include: account.data, spark.os, schema index colists, unknown colist
  * @param {Object} peer - Backend instance
  * @param {string} coId - Co-value co-id
  * @returns {Promise<boolean>} True if internal co-value (should not be indexed)
@@ -426,17 +427,12 @@ async function isInternalCoValue(peer, coId) {
 		return true
 	}
 
-	// Check if it's inside spark.os (instances map, unknown colist, or indexes container)
+	// Check if it's inside spark.os (unknown colist, or indexes container)
 	if (osId) {
 		const osCore = peer.node.getCoValue(osId)
 		if (osCore && osCore.type === 'comap') {
 			const osContent = osCore.getCurrentContent?.()
 			if (osContent && typeof osContent.get === 'function') {
-				const instancesId = osContent.get(SPARK_OS_INSTANCES_KEY)
-				if (coId === instancesId) {
-					return true
-				}
-
 				// Check if it's unknown colist
 				const unknownId = osContent.get('unknown')
 				if (coId === unknownId) {
@@ -523,22 +519,18 @@ export async function shouldIndexCoValue(peer, coValueCore) {
 
 	// If schema is a co-id, check if indexing is enabled for this schema
 	if (schema && typeof schema === 'string' && schema.startsWith('co_z')) {
-		// Load schema definition to check indexing property
 		try {
 			const factoryDef = await resolve(peer, schema, { returnType: 'factory' })
-			if (factoryDef) {
-				// Default indexing: false. Only index when explicitly set to true.
-				const indexing = factoryDef.indexing
-				if (indexing !== true) {
-					return { shouldIndex: false, factoryCoId: schema }
-				}
+			if (!factoryDef) {
+				return { shouldIndex: false, factoryCoId: schema }
 			}
+			if (factoryDef.indexing !== true) {
+				return { shouldIndex: false, factoryCoId: schema }
+			}
+			return { shouldIndex: true, factoryCoId: schema }
 		} catch (_error) {
-			// If we can't load the schema definition, assume indexing is enabled
-			// (better to index than to miss something)
-			// This can happen during seeding when schemas aren't fully registered yet
+			return { shouldIndex: false, factoryCoId: schema }
 		}
-		return { shouldIndex: true, factoryCoId: schema }
 	}
 
 	// If no schema, should not be indexed (will go to unknown colist)
@@ -829,16 +821,6 @@ export async function indexCoValue(peer, coValueCoreOrId) {
 				return
 			}
 
-			// CRITICAL: Validate that co-value actually matches the schema before indexing
-			const header = peer.getHeader(coValueCore)
-			const headerMeta = header?.meta
-			const coValueSchemaCoId = headerMeta?.$factory
-
-			// Verify the co-value's schema matches the expected schema
-			if (!coValueSchemaCoId || coValueSchemaCoId !== factoryCoId) {
-				return
-			}
-
 			// CRITICAL: Check if co-value co-id already in index (idempotent)
 			// This is the final check - prevents duplicate entries even if function is called multiple times
 			try {
@@ -929,26 +911,9 @@ export async function reconcileIndexes(peer, options = {}) {
 		if (key.startsWith('co_z')) {
 			const indexColistId = indexesCoMap.get(key)
 			if (indexColistId) {
-				// Use universal read() API to load and resolve index colist
-				try {
-					const indexColistStore = await universalRead(peer, indexColistId, null, null, null, {
-						deepResolve: false, // Don't need deep resolution for reconciliation
-						timeoutMs: 2000,
-					})
-
-					// Check if read succeeded
-					if (indexColistStore && !indexColistStore.value?.error) {
-						// Get the raw CoValueCore and content after read() has loaded it
-						const indexColistCore = peer.getCoValue(indexColistId)
-						if (indexColistCore?.isAvailable()) {
-							const indexColistContent = indexColistCore.getCurrentContent?.()
-							if (indexColistContent && typeof indexColistContent.toJSON === 'function') {
-								schemaIndexColists.set(key, indexColistContent)
-							}
-						}
-					}
-				} catch (_e) {
-					// Skip this index colist if read fails
+				const indexColistContent = await loadIndexColistContent(peer, indexColistId, 2000)
+				if (indexColistContent && typeof indexColistContent.toJSON === 'function') {
+					schemaIndexColists.set(key, indexColistContent)
 				}
 			}
 		}
@@ -996,33 +961,13 @@ async function getSchemaIndexColistForRemoval(peer, factoryCoId) {
 		return null
 	}
 
-	// Use universal read() API to load and resolve index colist
-	try {
-		const indexColistStore = await universalRead(peer, indexColistId, null, null, null, {
-			deepResolve: false, // Don't need deep resolution for removal
-			timeoutMs: 2000,
-		})
-
-		// Check if read succeeded
-		if (indexColistStore && !indexColistStore.value?.error) {
-			// Get the raw CoValueCore and content after read() has loaded it
-			const indexColistCore = peer.getCoValue(indexColistId)
-			if (indexColistCore && peer.isAvailable(indexColistCore)) {
-				const indexColistContent = peer.getCurrentContent(indexColistCore)
-				if (
-					indexColistContent &&
-					typeof indexColistContent.toJSON === 'function' &&
-					typeof indexColistContent.delete === 'function'
-				) {
-					const contentType = indexColistContent.cotype || indexColistContent.type
-					if (contentType === 'colist') {
-						return indexColistContent
-					}
-				}
-			}
-		}
-	} catch (_e) {
-		// Read failed - return null
+	const indexColistContent = await loadIndexColistContent(peer, indexColistId, 2000)
+	if (
+		indexColistContent &&
+		typeof indexColistContent.toJSON === 'function' &&
+		typeof indexColistContent.delete === 'function'
+	) {
+		return indexColistContent
 	}
 
 	return null
