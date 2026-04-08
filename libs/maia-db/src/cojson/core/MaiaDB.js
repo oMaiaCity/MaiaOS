@@ -189,6 +189,7 @@ export class MaiaDB {
 
 	async createSpark(name) {
 		if (!this.account) throw new Error('[MaiaDB] Account required for createSpark')
+		if (!this.systemSparkCoId?.startsWith('co_z')) await this.resolveSystemSparkCoId()
 		if (this.dbEngine?.resolveSystemFactories) await this.dbEngine.resolveSystemFactories()
 		const trimmed = typeof name === 'string' ? name.trim() : ''
 		const normalizedName = trimmed && !trimmed.startsWith('°') ? `°${trimmed}` : trimmed
@@ -331,37 +332,6 @@ export class MaiaDB {
 		if (!osData || osData.error) {
 			if (typeof process !== 'undefined' && process.env?.DEBUG) return false
 		}
-		let factoriesId = osData.factories
-		if (!factoriesId || typeof factoriesId !== 'string' || !factoriesId.startsWith('co_z')) {
-			const osCore = this.getCoValue(osId)
-			if (!osCore?.isAvailable()) {
-				if (typeof process !== 'undefined' && process.env?.DEBUG) return false
-			}
-			const osContent = this.getCurrentContent(osCore)
-			if (!osContent || typeof osContent.set !== 'function') {
-				if (typeof process !== 'undefined' && process.env?.DEBUG) return false
-			}
-			const factoriesRegistrySchemaCoId = getRuntimeRef(this, RUNTIME_REF.OS_FACTORIES_REGISTRY)
-			const schema = factoriesRegistrySchemaCoId || EXCEPTION_FACTORIES.META_SCHEMA
-			const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
-			const { coValue: factoriesCoMap } = await createCoValueForSpark(this, this.systemSparkCoId, {
-				factory: schema,
-				cotype: 'comap',
-				data: {},
-				dataEngine: this.dbEngine,
-			})
-			osContent.set('factories', factoriesCoMap.id)
-			factoriesId = factoriesCoMap.id
-			const osStore2 = await universalRead(this, osId, null, null, null, {
-				deepResolve: false,
-				timeoutMs: 2000,
-			})
-			try {
-				await waitForStoreReady(osStore2, osId, 2000)
-				const osData2 = osStore2.value
-				if (osData2 && !osData2.error) factoriesId = osData2.factories || factoriesId
-			} catch (_error) {}
-		}
 		let capabilitiesId = osData.capabilities
 		if (!capabilitiesId || typeof capabilitiesId !== 'string' || !capabilitiesId.startsWith('co_z')) {
 			const osCore = this.getCoValue(osId)
@@ -384,22 +354,6 @@ export class MaiaDB {
 					capabilitiesId = capabilitiesStream.id
 				}
 			}
-		}
-		if (!factoriesId || typeof factoriesId !== 'string' || !factoriesId.startsWith('co_z')) {
-			if (typeof process !== 'undefined' && process.env?.DEBUG) return false
-		}
-		const factoriesStore = await universalRead(this, factoriesId, null, null, null, {
-			deepResolve: false,
-			timeoutMs,
-		})
-		try {
-			await waitForStoreReady(factoriesStore, factoriesId, timeoutMs)
-		} catch (_error) {
-			if (typeof process !== 'undefined' && process.env?.DEBUG) return false
-		}
-		const factoriesData = factoriesStore.value
-		if (!factoriesData || factoriesData.error) {
-			if (typeof process !== 'undefined' && process.env?.DEBUG) return false
 		}
 		return true
 	}

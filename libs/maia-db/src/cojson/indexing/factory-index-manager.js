@@ -5,22 +5,21 @@
  * Manages schema index colists keyed by schema co-id in spark.os.indexes (account.registries.sparks[°maia].os.indexes).
  *
  * Structure:
- * - spark.os.factories: "°maia/factory/namekey" → schema co-id (registry)
- * - spark.os.indexes: schema-co-id → colist of instance co-ids (index)
+ * - spark.os.metaFactoryCoId: co_z of metafactory (anchor)
+ * - spark.os.instances: instance path → instance co_z
+ * - spark.os.indexes: schema-co-id → colist (definition catalog at key === metaFactoryCoId; per-schema instance indexes otherwise)
  * - spark.os.unknown: colist of co-values without schemas
  */
 
 import { FACTORY_REF_PATTERN } from '@MaiaOS/factories'
 import { EXCEPTION_FACTORIES } from '../../factories/registry.js'
+import { removeIdFields } from '../../migrations/seeding/helpers.js'
 import { create } from '../crud/create.js'
 import { read as universalRead } from '../crud/read.js'
 import { resolve } from '../factory/resolver.js'
-import {
-	getRuntimeRef,
-	INFRA_FACTORY_NAMEKEY_BY_ROLE,
-	RUNTIME_REF,
-} from '../factory/runtime-factory-refs.js'
+import { getRuntimeRef, RUNTIME_REF } from '../factory/runtime-factory-refs.js'
 import * as groups from '../groups/groups.js'
+import { SPARK_OS_INSTANCES_KEY, SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
 
 // Matches both °Spark/schema/... and @domain/schema/... (captures prefix + path)
 const SCHEMA_REF_MATCH = /^([°@][a-zA-Z0-9_-]+)\/factory\/(.+)$/
@@ -262,12 +261,6 @@ async function ensureSchemaSpecificIndexColistSchema(peer, factoryCoId, metaSche
 		const createdFactory = await create(peer, metaSchemaCoId, indexColistFactoryDef)
 		const indexColistFactoryCoId = createdFactory.id
 
-		// Register the factory in the registry
-		const factoriesRegistry = await ensureFactoriesRegistry(peer)
-		if (factoriesRegistry) {
-			factoriesRegistry.set(indexColistFactoryTitle, indexColistFactoryCoId)
-		}
-
 		return indexColistFactoryCoId
 	} catch (_error) {
 		return null
@@ -417,7 +410,7 @@ export async function ensureUnknownColist(peer) {
 
 /**
  * Check if a co-value is an internal co-value that should NOT be indexed
- * Internal co-values include: account.data, spark.os, schema index colists, factories registry, unknown colist
+ * Internal co-values include: account.data, spark.os, schema index colists, instances map, unknown colist
  * @param {Object} peer - Backend instance
  * @param {string} coId - Co-value co-id
  * @returns {Promise<boolean>} True if internal co-value (should not be indexed)
@@ -433,15 +426,14 @@ async function isInternalCoValue(peer, coId) {
 		return true
 	}
 
-	// Check if it's inside spark.os (factories registry, unknown colist, or indexes container)
+	// Check if it's inside spark.os (instances map, unknown colist, or indexes container)
 	if (osId) {
 		const osCore = peer.node.getCoValue(osId)
 		if (osCore && osCore.type === 'comap') {
 			const osContent = osCore.getCurrentContent?.()
 			if (osContent && typeof osContent.get === 'function') {
-				// Check if it's factories registry
-				const factoriesId = osContent.get('factories')
-				if (coId === factoriesId) {
+				const instancesId = osContent.get(SPARK_OS_INSTANCES_KEY)
+				if (coId === instancesId) {
 					return true
 				}
 
@@ -559,117 +551,83 @@ export async function shouldIndexCoValue(peer, coValueCore) {
 }
 
 /**
- * Get metaschema co-id from spark.os.factories registry (account.registries.sparks[°maia].os.factories)
+ * Metafactory co-id from spark.os.metaFactoryCoId (bootstrap anchor).
  * @param {Object} peer - Backend instance
- * @returns {Promise<string|null>} Metaschema co-id or null if not found
+ * @returns {Promise<string|null>}
  */
 async function getMetafactoryCoId(peer) {
 	const spark = peer?.systemSparkCoId
 	const osId = await groups.getSparkOsId(peer, spark)
-	if (!osId) {
-		return null
-	}
+	if (!osId) return null
 
 	const osCore = peer.node.getCoValue(osId)
-	if (!osCore || osCore.type !== 'comap') {
-		return null
-	}
+	if (!osCore || osCore.type !== 'comap') return null
 
 	const osContent = osCore.getCurrentContent?.()
-	if (!osContent || typeof osContent.get !== 'function') {
-		return null
-	}
+	if (!osContent || typeof osContent.get !== 'function') return null
 
-	// Get factories registry
-	const factoriesId = osContent.get('factories')
-	if (!factoriesId) {
-		return null
-	}
-
-	const factoriesCore = peer.node.getCoValue(factoriesId)
-	if (!factoriesCore || factoriesCore.type !== 'comap') {
-		return null
-	}
-
-	const factoriesContent = factoriesCore.getCurrentContent?.()
-	if (!factoriesContent || typeof factoriesContent.get !== 'function') {
-		return null
-	}
-
-	// Look up metaschema from registry
-	const metaSchemaCoId = factoriesContent.get(INFRA_FACTORY_NAMEKEY_BY_ROLE[RUNTIME_REF.META])
+	const metaSchemaCoId = osContent.get(SPARK_OS_META_FACTORY_CO_ID_KEY)
 	if (metaSchemaCoId && typeof metaSchemaCoId === 'string' && metaSchemaCoId.startsWith('co_z')) {
 		return metaSchemaCoId
 	}
-
 	return null
 }
 
 /**
- * Ensure spark.os.factories registry CoMap exists (account.registries.sparks[°maia].os.factories)
- * @param {Object} peer - Backend instance
- * @returns {Promise<RawCoMap>} spark.os.factories registry CoMap
+ * Ensure indexes[metaCoId] holds the definition catalog colist; create at runtime if missing.
+ * @returns {Promise<string|null>} catalog colist co-id
  */
-async function ensureFactoriesRegistry(peer) {
-	const osCoMap = await ensureOsCoMap(peer)
-
-	if (!osCoMap) {
-		// spark.os not ready (expected during bootstrap) - skip creating factories registry
+async function ensureDefinitionCatalogColistId(peer, metaCoId) {
+	const indexesCoMap = await ensureIndexesCoMap(peer)
+	if (!indexesCoMap) return null
+	const catalogColistId = indexesCoMap.get(metaCoId)
+	if (catalogColistId && typeof catalogColistId === 'string' && catalogColistId.startsWith('co_z')) {
+		return catalogColistId
+	}
+	const catalogSchemaDef = {
+		title: '°maia/factory/index/definitions-catalog',
+		description: 'Colist of factory definition co_zs',
+		cotype: 'colist',
+		indexing: false,
+		items: { $co: '°maia/factory/meta' },
+	}
+	try {
+		const created = await create(peer, metaCoId, removeIdFields(catalogSchemaDef))
+		const catalogSchemaCoId = created?.id
+		if (!catalogSchemaCoId?.startsWith('co_z')) return null
+		const colist = await create(peer, catalogSchemaCoId, [])
+		const colistId = colist?.id
+		if (!colistId?.startsWith('co_z')) return null
+		indexesCoMap.set(metaCoId, colistId)
+		return colistId
+	} catch (_e) {
 		return null
 	}
-
-	// Check if factories registry already exists
-	const factoriesId = osCoMap.get('factories')
-	if (factoriesId) {
-		// Use universal read() API to load and resolve factories registry
-		try {
-			const factoriesStore = await universalRead(peer, factoriesId, null, null, null, {
-				deepResolve: false, // Don't need deep resolution for registry
-				timeoutMs: 5000,
-			})
-
-			// Check if read succeeded
-			if (factoriesStore && !factoriesStore.value?.error) {
-				// Get the raw CoValueCore and content after read() has loaded it
-				const factoriesCore = peer.getCoValue(factoriesId)
-				if (factoriesCore?.isAvailable()) {
-					const factoriesContent = factoriesCore.getCurrentContent?.()
-					if (factoriesContent && typeof factoriesContent.set === 'function') {
-						// Verify it's a CoMap using content.cotype
-						const contentType = factoriesContent.cotype || factoriesContent.type
-						if (contentType === 'comap') {
-							return factoriesContent
-						}
-					}
-				}
-			}
-		} catch (_e) {}
-
-		// If factoriesId exists but couldn't be loaded, DON'T create a new one
-		return null
-	}
-
-	if (peer.dbEngine?.resolveSystemFactories) await peer.dbEngine.resolveSystemFactories()
-	const factoriesRegistrySchemaCoId = getRuntimeRef(peer, RUNTIME_REF.OS_FACTORIES_REGISTRY)
-	const schemaForFactories = factoriesRegistrySchemaCoId || EXCEPTION_FACTORIES.META_SCHEMA
-	const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
-	const { coValue: factoriesCoMap } = await createCoValueForSpark(peer, peer.systemSparkCoId, {
-		factory: schemaForFactories,
-		cotype: 'comap',
-		data: {},
-		dataEngine: peer.dbEngine,
-	})
-	osCoMap.set('factories', factoriesCoMap.id)
-
-	// CRITICAL: Don't wait for storage sync - it blocks the UI!
-	// The set() operation is already queued in CoJSON's CRDT
-	// Storage sync happens asynchronously in the background
-
-	return factoriesCoMap
 }
 
 /**
- * Register a schema co-value in spark.os.factories registry
+ * Append a factory-definition co-id to spark.os.indexes[metaCoId] catalog (idempotent).
+ * @param {Object} peer
+ * @param {string} defCoId
+ */
+export async function appendFactoryDefinitionToCatalog(peer, defCoId) {
+	if (!defCoId?.startsWith('co_z')) return
+	const metaCoId = await getMetafactoryCoId(peer)
+	if (!metaCoId) return
+	const catalogColistId = await ensureDefinitionCatalogColistId(peer, metaCoId)
+	if (!catalogColistId) return
+	const core = peer.getCoValue(catalogColistId)
+	const colistContent = core?.getCurrentContent?.()
+	if (!colistContent || typeof colistContent.append !== 'function') return
+	try {
+		const items = colistContent.toJSON?.() ?? []
+		if (Array.isArray(items) && items.includes(defCoId)) return
+		colistContent.append(defCoId)
+	} catch (_e) {}
+}
+
+/**
+ * Register a factory-definition CoValue: append to definition catalog; optional per-schema instance index colist.
  * @param {Object} peer - Backend instance
  * @param {CoValueCore} schemaCoValueCore - Schema co-value core
  * @returns {Promise<void>}
@@ -679,7 +637,6 @@ export async function registerFactoryCoValue(peer, schemaCoValueCore) {
 		return
 	}
 
-	// Get schema content to extract title
 	const content = peer.getCurrentContent(schemaCoValueCore)
 	if (!content || typeof content.get !== 'function') {
 		return
@@ -687,59 +644,42 @@ export async function registerFactoryCoValue(peer, schemaCoValueCore) {
 
 	const title = content.get('title')
 	if (!title || typeof title !== 'string' || !FACTORY_REF_PATTERN.test(title)) {
-		// Not a valid schema title - skip
 		return
 	}
 
-	// Ensure factories registry exists
-	const factoriesRegistry = await ensureFactoriesRegistry(peer)
+	await appendFactoryDefinitionToCatalog(peer, schemaCoValueCore.id)
 
-	if (!factoriesRegistry) {
-		// spark.os not available - skip registration for now
-		// Will be registered when spark.os becomes available
-		return
-	}
-
-	// Check if already registered (idempotent)
-	const existingCoId = factoriesRegistry.get(title)
-	if (existingCoId === schemaCoValueCore.id) {
-		// Already registered with same ID - skip
-		return
-	}
-
-	if (existingCoId && existingCoId !== schemaCoValueCore.id) {
-		// Different schema already registered - skip to prevent overwrite
-		// This prevents overwriting existing registrations (e.g., from previous runs)
-		return
-	}
-
-	// Register schema: title → schema co-id (only if not already registered)
-	factoriesRegistry.set(title, schemaCoValueCore.id)
-
-	// CRITICAL: Don't wait for storage sync - it blocks the UI
-	// The set() operation is already queued in CoJSON's CRDT, so it will persist eventually
-	// Storage sync happens asynchronously in the background - no need to block here
-
-	// Check indexing property from schema content
-	// Skip creating index colists if indexing is not true (defaults to false)
 	const indexing = content.get('indexing')
 	if (indexing !== true) {
 		return
 	}
 
-	// Get metaSchema co-id from schema's headerMeta for creating schema-specific index colist schema
 	const header = peer.getHeader(schemaCoValueCore)
 	const headerMeta = header?.meta
 	let metaSchemaCoId = headerMeta?.$factory
 
-	// If it's a human-readable key, resolve via system factory map (not public resolve)
 	if (metaSchemaCoId && !metaSchemaCoId.startsWith('co_z')) {
 		metaSchemaCoId = peer.systemFactoryCoIds?.get?.(metaSchemaCoId) ?? null
 	}
 
-	// Create schema index colist for this schema (in spark.os, keyed by schema co-id)
-	// Pass metaSchema co-id to avoid registry lookup issues
 	await ensureFactoryIndexColist(peer, schemaCoValueCore.id, metaSchemaCoId)
+}
+
+/**
+ * Single post-persist path: register factory-definition CoValues in the definition catalog (and index colists when applicable), otherwise run instance indexing when {@link shouldIndexCoValue} allows it (same gate as the storage hook had for non-schemas).
+ * @param {Object} peer
+ * @param {CoValueCore} coValueCore
+ * @returns {Promise<void>}
+ */
+export async function applyPersistentCoValueIndexing(peer, coValueCore) {
+	if (!coValueCore?.id || !peer.isAvailable(coValueCore)) return
+	if (await isFactoryCoValue(peer, coValueCore)) {
+		await registerFactoryCoValue(peer, coValueCore)
+		return
+	}
+	const { shouldIndex } = await shouldIndexCoValue(peer, coValueCore)
+	if (!shouldIndex) return
+	await indexCoValue(peer, coValueCore)
 }
 
 /**
@@ -890,7 +830,6 @@ export async function indexCoValue(peer, coValueCoreOrId) {
 			}
 
 			// CRITICAL: Validate that co-value actually matches the schema before indexing
-			// This prevents legacy/invalid entries from being indexed
 			const header = peer.getHeader(coValueCore)
 			const headerMeta = header?.meta
 			const coValueSchemaCoId = headerMeta?.$factory

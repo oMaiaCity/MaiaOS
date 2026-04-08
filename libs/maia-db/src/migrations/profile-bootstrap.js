@@ -1,11 +1,9 @@
 /**
- * Schema Migration - Identity layer for fresh accounts only.
+ * Profile bootstrap for new accounts (identity layer).
+ * Not config migration — creates Profile CoMap when missing.
  *
- * No legacy data migration. New accounts only.
- * Scaffold (registries, °maia spark, os) is created by bootstrap/seed.
- *
- * @param {RawAccount} account - The account (new or existing)
- * @param {LocalNode} node - The LocalNode instance
+ * @param {import('cojson').RawAccount} account - The account (new or existing)
+ * @param {import('cojson').LocalNode} node - The LocalNode instance
  * @param {Object} [creationProps] - Creation properties (optional)
  * @returns {Promise<void>}
  */
@@ -22,7 +20,7 @@ function travelerFallbackId(account) {
 	)
 }
 
-export async function factoryMigration(account, node, creationProps) {
+export async function ensureProfileForNewAccount(account, node, creationProps) {
 	const baseName = creationProps?.name?.trim()
 	const profileName =
 		baseName && baseName.length > 0 ? baseName : `Traveler ${travelerFallbackId(account)}`

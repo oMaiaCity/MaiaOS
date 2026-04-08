@@ -4,6 +4,11 @@
 
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import { waitForStoreReady } from '../../cojson/crud/read-operations.js'
+import {
+	SPARK_OS_INSTANCES_KEY,
+	SPARK_OS_META_FACTORY_CO_ID_KEY,
+} from '../../cojson/spark-os-keys.js'
+import { seedDefinitionCatalogBootstrap } from './definition-catalog-bootstrap.js'
 import { buildMetaFactoryForSeeding, removeIdFields, sortSchemasByDependency } from './helpers.js'
 
 const MAIA_SPARK = '°maia'
@@ -114,8 +119,6 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 
 	const sparkSchemaCoId =
 		tempCoMap.get('°maia/factory/data/spark') || EXCEPTION_FACTORIES.META_SCHEMA
-	const factoriesRegistrySchemaCoId =
-		tempCoMap.get('°maia/factory/os/factories-registry') || EXCEPTION_FACTORIES.META_SCHEMA
 	const osSchemaCoId =
 		tempCoMap.get('°maia/factory/os/os-registry') || EXCEPTION_FACTORIES.META_SCHEMA
 	const groupsSchemaCoId =
@@ -147,11 +150,13 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		dataEngine: dbEngine,
 	})
 	os.set('capabilities', capabilitiesStream.id)
-	const { coValue: factoriesRegistry } = await createCoValueForSpark(
+	const { coValue: instances } = await createCoValueForSpark(
 		ctx,
 		null,
-		scaffoldOpts(factoriesRegistrySchemaCoId, {}),
+		scaffoldOpts(EXCEPTION_FACTORIES.META_SCHEMA, {}),
 	)
+	os.set(SPARK_OS_INSTANCES_KEY, instances.id)
+	os.set(SPARK_OS_META_FACTORY_CO_ID_KEY, metaSchemaCoId)
 	const { coValue: indexes } = await createCoValueForSpark(
 		ctx,
 		null,
@@ -162,12 +167,10 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		null,
 		scaffoldOpts(vibesRegistrySchemaCoId, {}),
 	)
-	os.set('factories', factoriesRegistry.id)
 	os.set('indexes', indexes.id)
 	os.set('vibes', vibes.id)
 	maiaSpark.set('os', os.id)
-	factoriesRegistry.set('°maia/factory/meta', metaSchemaCoId)
-	for (const [k, coId] of factoryCoIdMap) factoriesRegistry.set(k, coId)
+	await seedDefinitionCatalogBootstrap(ctx, indexes, metaSchemaCoId, factoryCoIdMap, dbEngine)
 
 	const { removeGroupMember } = await import('../../cojson/groups/groups.js')
 	const memberIdToRemove = account?.id ?? account?.$jazz?.id
@@ -245,7 +248,7 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	}
 
 	console.log(
-		'✅ Bootstrap scaffold complete: account.registries, °maia spark, os, factories, indexes, vibes',
+		'✅ Bootstrap scaffold complete: account.registries, °maia spark, os, metaFactoryCoId, instances, indexes (definition catalog), vibes',
 	)
 }
 

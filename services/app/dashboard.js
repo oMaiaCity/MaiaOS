@@ -39,21 +39,16 @@ async function readCotextSvgString(maia, cotextCoId) {
 }
 
 /**
- * manifest.icon: co-id of seeded CoText (SVG graphemes) or legacy inline SVG.
+ * manifest.icon: co-id of seeded CoText (SVG graphemes).
  */
 async function resolveVibeIconSvgFromManifest(maia, manifest) {
 	const raw = manifest?.icon
 	if (typeof raw === 'string' && raw.trim()) {
 		const t = raw.trim()
-		if (/^<svg[\s>/]/i.test(t) && !/<script/i.test(t)) return t
 		if (t.startsWith('co_z')) {
 			const svg = await readCotextSvgString(maia, t)
 			if (svg) return svg
 		}
-	}
-	if (raw && typeof raw === 'object' && raw.cotype === 'colist' && Array.isArray(raw.items)) {
-		const joined = raw.items.join('')
-		if (/^<svg[\s>/]/i.test(joined) && !/<script/i.test(joined)) return joined
 	}
 	return DEFAULT_CARD_ICON_SVG
 }

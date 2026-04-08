@@ -23,7 +23,7 @@ import { waitForStoreReady } from './read-operations.js'
  * command messages. Other peers see replicated state (CoMaps) without re-running handlers.
  * SUCCESS/ERROR always process (recipient must handle replies from any session).
  * @param {string} messageType
- * @param {string|undefined|null} streamSessionId - from CoStream item (may be absent on legacy)
+ * @param {string|undefined|null} streamSessionId - from CoStream item (may be absent for broadcast-style items)
  * @param {string} currentSessionID
  * @returns {boolean}
  */
@@ -107,12 +107,12 @@ export async function processInbox(peer, actorId, inboxCoId) {
 
 		const madeAt = message._madeAt || 0
 
-		// Message must be a CoMap CoValue reference (co-id)
-		// REJECT legacy plain object messages - they should not exist anymore
 		const messageCoId = message._coId
 
 		if (!messageCoId) {
-			continue // Skip legacy messages - they're invalid
+			throw new Error(
+				'[processInbox] Inbox stream item missing _coId (message must be a CoMap reference). Reseed with PEER_SYNC_SEED=true.',
+			)
 		}
 
 		// Message is a CoMap CoValue reference - read using universal read() API
@@ -210,7 +210,7 @@ export async function processInbox(peer, actorId, inboxCoId) {
 						msgType === 'SUCCESS' || msgType === 'ERROR'
 							? 'response_message'
 							: streamSessionId == null || streamSessionId === ''
-								? 'legacy_or_missing_session'
+								? 'missing_session'
 								: 'same_session',
 				})
 

@@ -27,13 +27,13 @@ MaiaOS Operations (maia.do({ op: 'read', ... }))
 ## Key Exports
 
 - `MaiaDB` - Single database class (storage layer)
-- Account primitives (`createAccountWithSecret`, `loadAccount`) - in @MaiaOS/peer; db exports `factoryMigration`, `simpleAccountSeed` for wiring
+- Account primitives (`createAccountWithSecret`, `loadAccount`) - in @MaiaOS/peer; db exports `ensureProfileForNewAccount`, `simpleAccountSeed` for wiring
 - `resolve`, `resolveReactive`, `checkCotype`, `loadFactoriesFromAccount` - Schema/co-value resolution
 - `waitForStoreReady`, `waitForReactiveResolution` - Store access helpers
 - `setupSyncPeers`, `subscribeSyncState` - Sync peer configuration
 - `createGroup`, `createProfile`, `createCoMap`, `createCoList`, `createCoStream`
 - `createAndPushMessage`, `processInbox` - Inbox handling
-- `simpleAccountSeed`, `factoryMigration` - Bootstrap and migration
+- `simpleAccountSeed`, `ensureProfileForNewAccount` - Bootstrap and profile wiring
 
 ## Project Structure
 
@@ -48,7 +48,7 @@ libs/maia-db/
 │   │   ├── schema/       # resolver, seed
 │   │   └── peers/        # sync-peers
 │   ├── schemas/          # registry
-│   └── migrations/       # factory.migration
+│   └── migrations/       # profile-bootstrap (ensureProfileForNewAccount), seeding
 └── package.json
 ```
 

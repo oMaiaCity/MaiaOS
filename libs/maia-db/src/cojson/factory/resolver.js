@@ -22,6 +22,7 @@ import { resolveReactive as resolveReactiveBase } from '../crud/reactive-resolve
 import { read as universalRead } from '../crud/read.js'
 import { waitForStoreReady } from '../crud/read-operations.js'
 import { resolveSparkCoId } from '../groups/groups.js'
+import { SPARK_OS_INSTANCES_KEY, SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
 
 /**
  * Recursively remove 'id' fields from schema objects (AJV only accepts $id, not id)
@@ -67,7 +68,7 @@ function removeIdFields(obj, inPropertiesOrItems = false) {
 
 /**
  * Resolve registry namekeys (`°maia/factory/...`, vibes, instance keys) via spark.os — used by seed, indexing, and infrastructure.
- * For seed/migrate and registry walks — not used by {@link resolve} (co_z only).
+ * For seed/bootstrap and registry walks — not used by {@link resolve} (co_z only).
  */
 export async function lookupRegistryKey(peer, identifier, options = {}) {
 	const { returnType = 'factory', deepResolve = false, timeoutMs = 5000, spark } = options
@@ -104,85 +105,21 @@ export async function lookupRegistryKey(peer, identifier, options = {}) {
 		const isSchemaKey = FACTORY_REF_PATTERN.test(normalizedKey)
 
 		if (isSchemaKey) {
-			// Schema keys → account.registries.sparks[spark].os.factories
-			const sparkCoId = await resolveSparkCoId(peer, effectiveSpark)
-			if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_z')) {
-				return null
+			if (peer.dbEngine?.resolveSystemFactories) {
+				await peer.dbEngine.resolveSystemFactories()
 			}
-			const sparkStore = await universalRead(peer, sparkCoId, null, null, null, {
-				deepResolve: false,
-				timeoutMs,
-			})
-			try {
-				await waitForStoreReady(sparkStore, sparkCoId, timeoutMs)
-			} catch {
-				return null
-			}
-			const sparkData = sparkStore.value
-			if (!sparkData || sparkData.error) return null
-			const osId = sparkData.os
-			if (!osId || typeof osId !== 'string' || !osId.startsWith('co_z')) {
-				return null
-			}
-
-			// Load spark.os using read() API
-			const osStore = await universalRead(peer, osId, null, null, null, {
-				deepResolve: false,
-				timeoutMs,
-			})
-
-			try {
-				await waitForStoreReady(osStore, osId, timeoutMs)
-			} catch (_error) {
-				return null
-			}
-
-			const osData = osStore.value
-			if (!osData || osData.error) {
-				return null
-			}
-			// osData is flat from extractCoValueData
-
-			// Get factories registry co-id from os data (flat object from read() API)
-			const factoriesId = osData.factories
-			if (!factoriesId || typeof factoriesId !== 'string' || !factoriesId.startsWith('co_z')) {
-				return null
-			}
-
-			// Load factories registry using read() API
-			const factoriesStore = await universalRead(peer, factoriesId, null, null, null, {
-				deepResolve: false,
-				timeoutMs,
-			})
-
-			try {
-				await waitForStoreReady(factoriesStore, factoriesId, timeoutMs)
-			} catch (_error) {
-				return null
-			}
-
-			const factoriesData = factoriesStore.value
-			if (!factoriesData || factoriesData.error) {
-				return null
-			}
-
-			// Lookup key in registry (flat object from read() API - properties directly accessible)
-			const registryCoId = factoriesData[normalizedKey] || factoriesData[identifier]
+			const registryCoId =
+				peer.systemFactoryCoIds?.get?.(normalizedKey) ?? peer.systemFactoryCoIds?.get?.(identifier)
 			if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
-				// Found registry entry - resolve the co-id
 				if (returnType === 'coId') {
 					return registryCoId
 				}
-				// Resolve the actual schema/co-value
 				return await resolve(peer, registryCoId, { returnType, deepResolve, timeoutMs })
-			} else {
-				// Schema not found in registry - this is a permanent failure
-				// Don't warn for index schemas - they're created on-demand
-				const isIndexSchema = /^°[a-zA-Z0-9_-]+\/factory\/index\//.test(normalizedKey)
-				if (!isIndexSchema) {
-				}
-				return null
 			}
+			const isIndexSchema = /^°[a-zA-Z0-9_-]+\/factory\/index\//.test(normalizedKey)
+			if (!isIndexSchema) {
+			}
+			return null
 		} else if (VIBE_REF_PATTERN.test(identifier)) {
 			// Vibe instance keys → account.registries.sparks[spark].os.vibes
 			const sparkCoId = await resolveSparkCoId(peer, effectiveSpark)
@@ -250,7 +187,7 @@ export async function lookupRegistryKey(peer, identifier, options = {}) {
 
 			return null
 		} else if (isInstanceKeyMatch) {
-			// Instance config keys (actor, inbox, view, context, state, style) → spark.os.factories
+			// Instance config keys → spark.os.instances
 			const sparkCoId = await resolveSparkCoId(peer, effectiveSpark)
 			if (!sparkCoId || typeof sparkCoId !== 'string' || !sparkCoId.startsWith('co_z')) {
 				if (typeof window !== 'undefined') {
@@ -295,30 +232,30 @@ export async function lookupRegistryKey(peer, identifier, options = {}) {
 			const osData = osStore.value
 			if (!osData || osData.error) return null
 
-			const factoriesId = osData.factories
-			if (!factoriesId || typeof factoriesId !== 'string' || !factoriesId.startsWith('co_z')) {
+			const instancesId = osData[SPARK_OS_INSTANCES_KEY]
+			if (!instancesId || typeof instancesId !== 'string' || !instancesId.startsWith('co_z')) {
 				if (typeof window !== 'undefined') {
-					console.warn('[resolve] instance key: factories missing from os', identifier)
+					console.warn('[resolve] instance key: instances missing from os', identifier)
 				}
 				return null
 			}
 
-			const factoriesStore = await universalRead(peer, factoriesId, null, null, null, {
+			const instancesStore = await universalRead(peer, instancesId, null, null, null, {
 				deepResolve: false,
 				timeoutMs,
 			})
 			try {
-				await waitForStoreReady(factoriesStore, factoriesId, timeoutMs)
+				await waitForStoreReady(instancesStore, instancesId, timeoutMs)
 			} catch (_error) {
 				if (typeof window !== 'undefined') {
-					console.warn('[resolve] instance key: factories store timeout', identifier)
+					console.warn('[resolve] instance key: instances store timeout', identifier)
 				}
 				return null
 			}
-			const factoriesData = factoriesStore.value
-			if (!factoriesData || factoriesData.error) return null
+			const instancesData = instancesStore.value
+			if (!instancesData || instancesData.error) return null
 
-			const registryCoId = factoriesData[identifier]
+			const registryCoId = instancesData[identifier]
 			if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
 				if (returnType === 'coId') {
 					return registryCoId
@@ -326,13 +263,13 @@ export async function lookupRegistryKey(peer, identifier, options = {}) {
 				return await resolve(peer, registryCoId, { returnType, deepResolve, timeoutMs })
 			}
 			if (typeof window !== 'undefined') {
-				const keys = Object.keys(factoriesData).filter(
+				const keys = Object.keys(instancesData).filter(
 					(k) => !['id', 'loading', 'error', '$factory', 'type', '_coValueType'].includes(k),
 				)
 				console.warn(
-					'[resolve] instance key not in factories:',
+					'[resolve] instance key not in instances:',
 					identifier,
-					'| factories keys:',
+					'| keys:',
 					keys.slice(0, 20).join(', '),
 				)
 			}
@@ -478,7 +415,7 @@ export async function resolve(peer, identifier, options = {}) {
 		return null
 	}
 
-	// Strict-only: non-co_z string identifiers are not supported (use lookupRegistryKey for seed/migrate, or pass co_z)
+	// Strict-only: non-co_z string identifiers are not supported (use lookupRegistryKey during seed, or pass co_z)
 	throw new Error(`[resolve] Runtime resolve requires co_z co-id, got: ${identifier}`)
 }
 
@@ -630,7 +567,7 @@ async function resolveSparkOsIdFromNode(node, account, spark) {
 }
 
 /**
- * Load all schemas from spark.os.factories via read() API
+ * Load all factory definitions (definition catalog + instances map co-ids that are schemas)
  * MIGRATIONS ONLY - uses resolve(peer, factoryCoId, { returnType: 'schema' }) for each schema
  *
  * @param {LocalNode} node - LocalNode instance
@@ -661,20 +598,28 @@ export async function loadFactoriesFromAccount(node, account) {
 		const osStore = await universalRead(peer, osId, null, null, null, { deepResolve: false })
 		await waitForStoreReady(osStore, osId, 5000)
 		const osData = osStore.value
-		const factoriesId = osData?.factories
-		if (!factoriesId?.startsWith?.('co_z')) return {}
-
-		const factoriesStore = await universalRead(peer, factoriesId, null, null, null, {
-			deepResolve: false,
-		})
-		await waitForStoreReady(factoriesStore, factoriesId, 5000)
-		const factoriesData = factoriesStore.value
-		if (!factoriesData || factoriesData.error) return {}
-
+		const metaCoId = osData?.[SPARK_OS_META_FACTORY_CO_ID_KEY]
+		const indexesId = osData?.indexes
 		const factoryCoIds = []
-		for (const [key, val] of Object.entries(factoriesData)) {
-			if (key === 'id' || key === '$factory' || key === 'type') continue
-			if (typeof val === 'string' && val.startsWith('co_')) factoryCoIds.push(val)
+		if (metaCoId?.startsWith?.('co_z') && indexesId?.startsWith?.('co_z')) {
+			const indexesStore = await universalRead(peer, indexesId, null, null, null, {
+				deepResolve: false,
+			})
+			await waitForStoreReady(indexesStore, indexesId, 5000)
+			const indexesData = indexesStore.value
+			const catalogColistId = indexesData?.[metaCoId]
+			if (catalogColistId?.startsWith?.('co_z')) {
+				const colistCore = peer.getCoValue(catalogColistId)
+				if (colistCore && peer.isAvailable(colistCore)) {
+					const colistContent = peer.getCurrentContent(colistCore)
+					const items = colistContent?.toJSON?.() ?? []
+					if (Array.isArray(items)) {
+						for (const id of items) {
+							if (typeof id === 'string' && id.startsWith('co_z')) factoryCoIds.push(id)
+						}
+					}
+				}
+			}
 		}
 
 		if (factoryCoIds.length === 0) return {}
@@ -697,7 +642,7 @@ export async function loadFactoriesFromAccount(node, account) {
  * Factory definition by co-id or registry namekey (namekey must exist in `peer.systemFactoryCoIds`).
  *
  * @param {{ systemFactoryCoIds?: Map<string, string> }} peer - MaiaDB peer
- * @param {string} factoryKey - co_z… or factories-map key
+ * @param {string} factoryKey - co_z… or systemFactoryCoIds namekey
  * @param {Object} [options]
  * @param {string} [options.returnType='factory']
  * @param {boolean} [options.deepResolve=false]

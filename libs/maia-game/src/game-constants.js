@@ -1,6 +1,6 @@
 /** Shared layout / movement / zoom (used by mount, camera, input). */
 
-/** Legacy core island half-extent (original playable square). Terrain matches legacy inside this box. */
+/** Core island half-extent (playable square). Terrain is authoritative inside this box. */
 export const CORE_PRESERVE_HALF = 4000
 /** World mesh / player bounds half-extent (ocean ring around core). */
 export const WORLD_PLANE_HALF = CORE_PRESERVE_HALF * 2
@@ -8,7 +8,7 @@ export const WORLD_PLANE_HALF = CORE_PRESERVE_HALF * 2
 export const PLANE_SIZE = WORLD_PLANE_HALF * 2
 /** Same as `WORLD_PLANE_HALF` — mesh half-extent and movement clamp. */
 export const PLANE_HALF = WORLD_PLANE_HALF
-/** River flow length scale — decoupled from world size (matches legacy half-extent). */
+/** River flow length scale — decoupled from world size (aligned to core half-extent). */
 export const RIVER_REFERENCE_HALF = CORE_PRESERVE_HALF
 /** Downstream mouth / shore in plane space (world X = lx, Z = -ly). */
 export const RIVER_END_PLANE_LX = 3024

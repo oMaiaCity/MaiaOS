@@ -643,15 +643,10 @@ export function extractCoStreamWithSessions(peer, coValueCore) {
 							_madeAt: item.madeAt, // Internal metadata: CRDT madeAt timestamp
 							_tx: item.tx, // Internal metadata: transaction ID
 						}
-					} else {
-						// Item is plain object (legacy format) - spread message data
-						return {
-							...item.value, // Message data (type, payload, from, id)
-							_sessionID: sessionID, // Internal metadata: session ID
-							_madeAt: item.madeAt, // Internal metadata: CRDT madeAt timestamp
-							_tx: item.tx, // Internal metadata: transaction ID
-						}
 					}
+					throw new Error(
+						'[extractCoValueData] CoStream inbox item must use co-id reference (co_z) for message CoMap, not inline payload. Reseed if needed.',
+					)
 				})
 			}
 		}

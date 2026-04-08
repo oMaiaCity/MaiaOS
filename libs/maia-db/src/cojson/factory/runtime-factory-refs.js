@@ -1,6 +1,6 @@
 /**
  * Infra factory namekeys → peer.runtimeRefs (short role → co_z).
- * Single module holding °maia/... strings for mirroring spark.os.factories into runtimeRefs.
+ * Single module holding °maia/... strings for mirroring peer.systemFactoryCoIds into runtimeRefs.
  * Call {@link fillRuntimeRefsFromSystemFactories} after {@link peer.systemFactoryCoIds} is populated.
  */
 
@@ -17,12 +17,11 @@ export const RUNTIME_REF = {
 	OS_GROUPS: 'osGroups',
 	OS_OS_REGISTRY: 'osOsRegistry',
 	OS_VIBES_REGISTRY: 'osVibesRegistry',
-	OS_FACTORIES_REGISTRY: 'osFactoriesRegistry',
 	OS_CAPABILITIES_STREAM: 'osCapabilitiesStream',
 	DATA_COBINARY: 'dataCobinary',
 }
 
-/** role → spark.os.factories map key (authoring namekey). */
+/** role → system factory registry map key (authoring namekey). */
 export const INFRA_FACTORY_NAMEKEY_BY_ROLE = {
 	[RUNTIME_REF.META]: '°maia/factory/meta',
 	[RUNTIME_REF.ACTOR]: '°maia/factory/actor',
@@ -35,7 +34,6 @@ export const INFRA_FACTORY_NAMEKEY_BY_ROLE = {
 	[RUNTIME_REF.OS_GROUPS]: '°maia/factory/os/groups',
 	[RUNTIME_REF.OS_OS_REGISTRY]: '°maia/factory/os/os-registry',
 	[RUNTIME_REF.OS_VIBES_REGISTRY]: '°maia/factory/os/vibes-registry',
-	[RUNTIME_REF.OS_FACTORIES_REGISTRY]: '°maia/factory/os/factories-registry',
 	[RUNTIME_REF.OS_CAPABILITIES_STREAM]: '°maia/factory/os/capabilities-stream',
 	[RUNTIME_REF.DATA_COBINARY]: '°maia/factory/data/cobinary',
 }

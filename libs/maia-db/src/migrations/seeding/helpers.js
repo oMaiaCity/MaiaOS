@@ -72,6 +72,7 @@ export function sortSchemasByDependency(uniqueSchemasBy$id, excludeKeys = ['°ma
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import * as groups from '../../cojson/groups/groups.js'
 import { ensureIndexesCoMap } from '../../cojson/indexing/factory-index-manager.js'
+import { SPARK_OS_INSTANCES_KEY } from '../../cojson/spark-os-keys.js'
 
 const MAIA_SPARK = '°maia'
 
@@ -114,7 +115,7 @@ export function buildMetaFactoryForSeeding(metaSchemaCoId) {
 
 /**
  * Ensure spark.os CoMap exists (creates if needed)
- * Also ensures spark.os.factories, spark.os.indexes, spark.os.vibes
+ * Also ensures spark.os.instances, spark.os.indexes, spark.os.vibes
  */
 export async function ensureSparkOs(account, node, maiaGroup, peer, factoryCoIdMap) {
 	const { EXCEPTION_FACTORIES } = await import('../../factories/registry.js')
@@ -125,9 +126,6 @@ export async function ensureSparkOs(account, node, maiaGroup, peer, factoryCoIdM
 		throw new Error('[Seed] °maia spark.os not found. Ensure bootstrap has run.')
 	}
 
-	const factoriesRegistrySchemaCoId =
-		factoryCoIdMap?.get('°maia/factory/os/factories-registry') ??
-		(await lookupRegistryKey(peer, '°maia/factory/os/factories-registry', { returnType: 'coId' }))
 	const vibesRegistrySchemaCoId =
 		factoryCoIdMap?.get('°maia/factory/os/vibes-registry') ??
 		(await lookupRegistryKey(peer, '°maia/factory/os/vibes-registry', { returnType: 'coId' }))
@@ -158,19 +156,19 @@ export async function ensureSparkOs(account, node, maiaGroup, peer, factoryCoIdM
 	if (osCore?.isAvailable()) {
 		const osContent = osCore.getCurrentContent?.()
 		if (osContent && typeof osContent.get === 'function') {
-			const factoriesId = osContent.get('factories')
-			if (!factoriesId) {
+			const instancesId = osContent.get(SPARK_OS_INSTANCES_KEY)
+			if (!instancesId) {
 				const ctx = { node, account, guardian: maiaGroup }
-				const { coValue: factories } = await createCoValueForSpark(ctx, null, {
-					factory: factoriesRegistrySchemaCoId || EXCEPTION_FACTORIES.META_SCHEMA,
+				const { coValue: instances } = await createCoValueForSpark(ctx, null, {
+					factory: EXCEPTION_FACTORIES.META_SCHEMA,
 					cotype: 'comap',
 					data: {},
 					dataEngine: peer?.dbEngine,
 				})
-				osContent.set('factories', factories.id)
+				osContent.set(SPARK_OS_INSTANCES_KEY, instances.id)
 				if (node.storage?.syncManager) {
 					try {
-						await node.syncManager.waitForStorageSync(factories.id)
+						await node.syncManager.waitForStorageSync(instances.id)
 						await node.syncManager.waitForStorageSync(osId)
 					} catch (_e) {}
 				}

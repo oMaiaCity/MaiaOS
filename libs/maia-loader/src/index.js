@@ -4,7 +4,7 @@
 // Peer setup, sync state, backend for operations
 // Re-export ReactiveStore from db
 export {
-	factoryMigration,
+	ensureProfileForNewAccount,
 	generateRegistryName,
 	getCapabilitiesStreamCoId,
 	getFactoryIndexColistId,

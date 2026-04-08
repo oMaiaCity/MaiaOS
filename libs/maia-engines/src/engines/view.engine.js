@@ -25,8 +25,6 @@ function sanitizeAttributeWhitelist(value) {
 	return s.replace(/[^\p{L}\p{N}\s.,!?_:;@#()+=\[\]~&%/-]/gu, '')
 }
 
-const COBINARY_PLACEHOLDER =
-	'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7'
 const cobinaryPreviewCache = new Map()
 
 function extractDataUrl(res) {
@@ -57,16 +55,21 @@ function loadBinaryWithRetry(dataEngine, coId, maxAttempts = 4) {
 }
 
 function hydrateCobinaryPreviews(root, dataEngine) {
-	if (!root || !dataEngine?.execute) return
+	if (!root) return
+	const canLoadBinary = typeof dataEngine?.execute === 'function'
 	const imgs = root.querySelectorAll('img[data-co-id]')
 	imgs.forEach((img) => {
 		const coId = img.getAttribute('data-co-id')
 		if (!coId?.startsWith('co_z')) {
-			if (!img.src) img.src = COBINARY_PLACEHOLDER
 			return
 		}
 		if (!/^co_z[a-zA-Z0-9_-]+$/.test(coId)) return
-		if (img.src && (img.src.startsWith('data:') || img.src.startsWith('blob:'))) return
+		if (!canLoadBinary) return
+
+		const attrSrc = img.getAttribute('src')
+		const hasRealPreview = attrSrc && (attrSrc.startsWith('blob:') || attrSrc.startsWith('data:'))
+		if (hasRealPreview) return
+
 		const cached = cobinaryPreviewCache.get(coId)
 		if (cached?.dataUrl) {
 			img.src = cached.dataUrl
@@ -75,7 +78,7 @@ function hydrateCobinaryPreviews(root, dataEngine) {
 		if (cached?.loading) {
 			cached.loading.then((dataUrl) => {
 				const current = root.querySelector(`img[data-co-id="${CSS.escape(coId)}"]`)
-				if (current) current.src = dataUrl || COBINARY_PLACEHOLDER
+				if (current && dataUrl) current.src = dataUrl
 			})
 			return
 		}
@@ -88,7 +91,7 @@ function hydrateCobinaryPreviews(root, dataEngine) {
 		cobinaryPreviewCache.set(coId, { loading })
 		loading.then((dataUrl) => {
 			const current = root.querySelector(`img[data-co-id="${CSS.escape(coId)}"]`)
-			if (current) current.src = dataUrl || COBINARY_PLACEHOLDER
+			if (current && dataUrl) current.src = dataUrl
 		})
 	})
 }
@@ -941,7 +944,12 @@ export class ViewEngine {
 					this.actorOps?.reportUploadProgress?.(actorId, loaded, total, phase),
 			})
 			const data = result?.ok === true ? result.data : result
-			const coId = data?.coId ?? data?.id
+			const coId =
+				data?.coId ??
+				data?.id ??
+				(result?.ok === true && typeof result.data === 'object' && result.data !== null
+					? (result.data.coId ?? result.data.id)
+					: undefined)
 			if (!coId || typeof coId !== 'string') {
 				viewOps.warn('Upload completed but no co-id returned:', { result, data })
 				return

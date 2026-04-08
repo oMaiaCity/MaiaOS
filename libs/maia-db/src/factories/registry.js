@@ -1,8 +1,8 @@
 /**
  * Schema Registry - Bootstrap schemas and metadata utilities for MaiaDB
  *
- * Hardcoded schemas ONLY for migrations/seeding (before spark.os.factories exists).
- * Runtime schema access loads from account.registries.sparks[°maia].os.factories.
+ * Hardcoded schemas ONLY for migrations/seeding (before peer.systemFactoryCoIds is filled).
+ * Runtime schema access resolves via catalog + instances (see resolveSystemFactories).
  */
 
 import { getRuntimeRef, RUNTIME_REF } from '../cojson/factory/runtime-factory-refs.js'

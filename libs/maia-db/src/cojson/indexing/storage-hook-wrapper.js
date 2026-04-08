@@ -17,12 +17,8 @@ import {
 	isAccountGroupOrProfile,
 	shouldSkipValidation,
 } from '../helpers/co-value-detection.js'
-import {
-	indexCoValue,
-	isFactoryCoValue,
-	registerFactoryCoValue,
-	shouldIndexCoValue,
-} from './factory-index-manager.js'
+import { SPARK_OS_INSTANCES_KEY } from '../spark-os-keys.js'
+import { applyPersistentCoValueIndexing } from './factory-index-manager.js'
 
 // Track pending indexing operations to prevent duplicates
 const pendingIndexing = new Set()
@@ -151,7 +147,7 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 			}
 		}
 
-		// 2. Skip indexing if this is spark.os, factories registry, indexes, or any index colist (they're internal)
+		// 2. Skip indexing if this is spark.os, instances map, indexes, or any index colist (they're internal)
 		// Use cached osId (set when getSparkOsId is first called - don't trigger async here!)
 		if (!shouldSkipIndexing && peer.account) {
 			const osId = peer._cachedMaiaOsId
@@ -164,9 +160,8 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 				if (osCore && peer.isAvailable(osCore) && osCore.type === 'comap') {
 					const osContent = osCore.getCurrentContent?.()
 					if (osContent && typeof osContent.get === 'function') {
-						// Check if it's factories registry
-						const factoriesId = osContent.get('factories')
-						if (coId === factoriesId) {
+						const instancesId = osContent.get(SPARK_OS_INSTANCES_KEY)
+						if (coId === instancesId) {
 							shouldSkipIndexing = true
 						}
 
@@ -217,7 +212,7 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 				// broke indexing entirely: spark.os is often not loaded when the first todo/message
 				// is stored (getSparkOsId only loads registries->sparks->spark, not spark.os itself).
 				// indexCoValue's shouldIndexCoValue/isInternalCoValue will correctly skip internal
-				// co-values (spark.os, factories registry, indexes). Data co-values (todos, messages) must be indexed.
+				// co-values (spark.os, instances, indexes). Data co-values (todos, messages) must be indexed.
 				// Skipping here caused spark.os.indexes to stay empty since the registry refactor.
 			}
 		}
@@ -268,21 +263,7 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 						return
 					}
 
-					// Schema co-value - auto-register in spark.os.factories
-					const isSchema = await isFactoryCoValue(peer, updatedCoValueCore)
-					if (isSchema) {
-						await registerFactoryCoValue(peer, updatedCoValueCore)
-						return
-					}
-
-					// Check if this co-value should be indexed (skips internal co-values)
-					const { shouldIndex } = await shouldIndexCoValue(peer, updatedCoValueCore)
-					if (!shouldIndex) {
-						return
-					}
-
-					// Regular co-value - index it (await ensures storage not complete until indexed)
-					await indexCoValue(peer, updatedCoValueCore)
+					await applyPersistentCoValueIndexing(peer, updatedCoValueCore)
 					debugLog('db', 'storageHook', 'indexed coId=', coId)
 				} catch (error) {
 					const isFactoryCompilationError = error?.message?.includes('Failed to compile factory')
