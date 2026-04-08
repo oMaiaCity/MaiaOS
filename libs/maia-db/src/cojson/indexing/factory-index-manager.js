@@ -472,6 +472,14 @@ async function isInternalCoValue(peer, coId) {
 }
 
 /**
+ * @param {object|null|undefined} factoryDef - result of resolve(..., { returnType: 'factory' })
+ * @returns {boolean} true only when schema explicitly has indexing: true
+ */
+export function factoryDefAllowsInstanceIndexing(factoryDef) {
+	return factoryDef != null && factoryDef.indexing === true
+}
+
+/**
  * Check if a co-value should be indexed (excludes exception schemas and internal co-values)
  * @param {Object} peer - Backend instance
  * @param {CoValueCore} coValueCore - CoValueCore instance
@@ -521,10 +529,7 @@ export async function shouldIndexCoValue(peer, coValueCore) {
 	if (schema && typeof schema === 'string' && schema.startsWith('co_z')) {
 		try {
 			const factoryDef = await resolve(peer, schema, { returnType: 'factory' })
-			if (!factoryDef) {
-				return { shouldIndex: false, factoryCoId: schema }
-			}
-			if (factoryDef.indexing !== true) {
+			if (!factoryDefAllowsInstanceIndexing(factoryDef)) {
 				return { shouldIndex: false, factoryCoId: schema }
 			}
 			return { shouldIndex: true, factoryCoId: schema }

@@ -37,6 +37,13 @@ import {
 	truncate,
 } from './utils.js'
 
+/** Header-resolved factory co_z (`$factoryCoId`) first; legacy fallback: flat `data.$factory` only. */
+function factoryRefForDbView(data) {
+	if (data.$factoryCoId?.startsWith('co_z')) return data.$factoryCoId
+	if (typeof data.$factory === 'string' && data.$factory.length > 0) return data.$factory
+	return null
+}
+
 /** Expand/collapse CoJSON internal key rows (metadata sidebar). */
 export function toggleMetadataInternalKey(btn) {
 	const row = btn.closest('.metadata-internal-row')
@@ -830,7 +837,7 @@ export async function renderApp(
 				) {
 					// CoMap: Display properties from flat object format (operations API)
 					// Convert flat object to normalized format for display
-					const factoryCoId = data.$factoryCoId ?? data.$factory
+					const factoryCoId = factoryRefForDbView(data)
 					const schemaDef = factoryCoId?.startsWith('co_z')
 						? await getFactoryFromDb(maia, factoryCoId)
 						: null
@@ -857,7 +864,7 @@ export async function renderApp(
 
 					if (propertyKeys.length === 0) {
 						// No properties - show empty state (with hint for avens/factories/indexes)
-						const schemaId = (data.$factory || factoryCoId || '').toString()
+						const schemaId = (factoryCoId || '').toString()
 						const isRegistryEmpty =
 							schemaId.includes('avens-registry') ||
 							schemaId.includes('factories-registry') ||
@@ -981,7 +988,7 @@ export async function renderApp(
 
 			// Fetch schema title if schema is a co-id using the abstracted read operation API
 			let schemaTitle = null
-			const factoryCoId = data.$factoryCoId ?? data.$factory
+			const factoryCoId = factoryRefForDbView(data)
 			if (factoryCoId?.startsWith('co_z') && maia) {
 				try {
 					// Use unified read API - same pattern as loading main context data
