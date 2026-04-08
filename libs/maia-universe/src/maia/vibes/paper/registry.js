@@ -4,7 +4,7 @@
  */
 
 import { annotateMaiaConfig } from '@MaiaOS/factories/annotate-maia'
-import { SEED_DATA } from '../../data/index.js'
+import { SEED_DATA } from '@MaiaOS/universe/data'
 import maiacityBrand from '../brand/maiacity.style.maia'
 import paperVibe from './manifest.vibe.maia'
 

@@ -7,10 +7,12 @@
 		".": "./src/index.js",
 		"./actors": "./src/maia/actors/index.js",
 		"./actors/*": "./src/maia/actors/*",
-		"./data": "./src/maia/data/index.js",
-		"./dashboard-icon-svgs": "./src/maia/dashboard-icon-svgs.js",
+		"./data": "./src/maia/registry-core.js",
+		"./data/icons/*": "./src/maia/data/icons/*",
+		"./registry": "./src/registry.js",
+		"./dashboard-icon-svgs": "./src/maia/registry-icons.js",
 		"./factories/*": "./src/maia/factories/*",
-		"./vibe-registries": "./src/maia/vibe-registries.index.js",
+		"./vibe-registries": "./src/maia/registry.js",
 		"./todos/loader": "./src/maia/vibes/todos/loader.js",
 		"./todos/registry": "./src/maia/vibes/todos/registry.js",
 		"./vibes/*": "./src/maia/vibes/*"
@@ -24,7 +26,8 @@
 	},
 	"devDependencies": {},
 	"scripts": {
-		"build": "echo 'No build — use source via @MaiaOS/universe'"
+		"build": "echo 'No build — use source via @MaiaOS/universe'",
+		"test": "bun test tests/"
 	},
 	"files": [
 		"src"

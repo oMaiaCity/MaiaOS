@@ -2,8 +2,8 @@
  * Todos Vibe Registry
  */
 
+import { SEED_DATA } from '@MaiaOS/universe/data'
 import { buildIntentVibeRegistry } from '../../build-intent-vibe-registry.js'
-import { SEED_DATA } from '../../data/index.js'
 import intentActor from './intent/intent.actor.maia'
 import intentContext from './intent/intent.context.maia'
 import intentProcess from './intent/intent.process.maia'

@@ -1,6 +1,6 @@
 /**
  * File-path ref for seeded dashboard icon CoText (SVG graphemes).
- * Instance JSON lives in @MaiaOS/universe src/maia/vibes/data/icons/<key>.maia (not in factories).
+ * Instance JSON lives in @MaiaOS/universe src/maia/data/icons/<key>.maia (not in factories).
  */
 export function iconInstanceRefFromKey(key) {
 	if (typeof key !== 'string' || !key.trim()) {

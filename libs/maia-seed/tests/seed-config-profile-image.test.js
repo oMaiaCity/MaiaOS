@@ -1,0 +1,12 @@
+import { annotateMaiaByActorsPath } from '@MaiaOS/universe/registry'
+import { describe, expect, test } from 'bun:test'
+import { getSeedConfig } from '../src/seed-config.js'
+
+describe('getSeedConfig profile-image', () => {
+	test('seeds the views context referenced by services/profile-image actor (not services/context stub)', () => {
+		const { contexts } = getSeedConfig()
+		const viewCtx = annotateMaiaByActorsPath['views/profile-image/context.maia']
+		expect(viewCtx?.$id).toBeTruthy()
+		expect(contexts[viewCtx.$id]).toEqual(viewCtx)
+	})
+})

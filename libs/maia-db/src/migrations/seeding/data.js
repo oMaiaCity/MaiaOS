@@ -11,7 +11,7 @@ const DEFAULT_PAPER_TEXT = "Dear future us, what we're creating together..."
  * Seed data entities to CoJSON
  */
 export async function seedData(account, node, maiaGroup, peer, data, coIdRegistry) {
-	const { transformForSeeding } = await import('@MaiaOS/seed/ref-transform')
+	const { transformInstanceForSeeding } = await import('@MaiaOS/seed/ref-transform')
 
 	if (!data || Object.keys(data).length === 0) {
 		return { collections: [], totalItems: 0, coIds: [] }
@@ -82,7 +82,7 @@ export async function seedData(account, node, maiaGroup, peer, data, coIdRegistr
 		let itemCount = 0
 		const coIds = []
 		for (const item of collectionItems) {
-			const transformedItem = transformForSeeding(item, getAll)
+			const transformedItem = transformInstanceForSeeding(item, getAll)
 			const { $id, ...itemWithoutId } = transformedItem
 
 			const ctx = { node, account, guardian: maiaGroup }
