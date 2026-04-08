@@ -83,7 +83,7 @@ export async function seed(
 
 	const { CoIdRegistry } = await import('@MaiaOS/factories/co-id-generator')
 	const { transformForSeeding, validateFactoryStructure } = await import(
-		'@MaiaOS/factories/factory-transformer'
+		'@MaiaOS/seed/ref-transform'
 	)
 	const coIdRegistry = new CoIdRegistry()
 

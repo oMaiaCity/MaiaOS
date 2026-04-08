@@ -5,9 +5,7 @@
  */
 
 import { annotateMaiaConfig } from '@MaiaOS/factories/annotate-maia'
-import { deriveInboxId } from '@MaiaOS/factories/seeding-utils'
 import { isActorFilePathId } from '@MaiaOS/universe/actors/actor-service-refs.js'
-
 import aiChatActorRaw from '@MaiaOS/universe/actors/os/ai/actor.maia'
 import aiChatInterfaceRaw from '@MaiaOS/universe/actors/os/ai/interface.maia'
 import aiChatProcessRaw from '@MaiaOS/universe/actors/os/ai/process.maia'
@@ -141,6 +139,7 @@ import layoutTodosActorRaw from '@MaiaOS/universe/actors/views/tabs/todos.actor.
 import layoutTodosContextRaw from '@MaiaOS/universe/actors/views/tabs/todos.context.maia'
 import layoutTodosInterfaceRaw from '@MaiaOS/universe/actors/views/tabs/todos.interface.maia'
 import tabsViewRaw from '@MaiaOS/universe/actors/views/tabs/view.maia'
+import { deriveInboxId } from './derive-inbox.js'
 
 const aiChatActor = annotateMaiaConfig(aiChatActorRaw, 'os/ai/actor.maia')
 const aiChatInterface = annotateMaiaConfig(aiChatInterfaceRaw, 'os/ai/interface.maia')

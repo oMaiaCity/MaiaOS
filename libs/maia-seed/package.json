@@ -5,7 +5,8 @@
 	"main": "src/index.js",
 	"exports": {
 		".": "./src/index.js",
-		"./seed-config": "./src/seed-config.js"
+		"./seed-config": "./src/seed-config.js",
+		"./ref-transform": "./src/ref-transform.js"
 	},
 	"dependencies": {
 		"@MaiaOS/factories": "workspace:*",
@@ -13,5 +14,8 @@
 	},
 	"files": [
 		"src"
-	]
+	],
+	"scripts": {
+		"test": "bun test tests/"
+	}
 }

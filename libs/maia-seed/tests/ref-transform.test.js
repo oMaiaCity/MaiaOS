@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { transformForSeeding } from '../src/factory-transformer.js'
+import { transformForSeeding } from '../src/ref-transform.js'
 
 describe('transformForSeeding', () => {
 	test('resolves @actors file-path actor refs to co-ids', () => {

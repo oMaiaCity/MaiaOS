@@ -22,7 +22,7 @@ const header = `/**
  * Also includes standalone UI actors (e.g. placeholder).
  */
 
-import { deriveInboxId } from '@MaiaOS/factories/seeding-utils'
+import { deriveInboxId } from '@MaiaOS/seed'
 import { annotateMaiaConfig } from '@MaiaOS/factories/annotate-maia'
 
 ${rawImports.join('\n')}
