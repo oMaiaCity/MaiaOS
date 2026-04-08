@@ -5,6 +5,7 @@
  */
 
 import { waitForStoreReady } from '../crud/read-operations.js'
+import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
 
 /**
  * Get a Group CoValue by ID
@@ -186,6 +187,27 @@ export async function resolveSparkCoId(peer, spark) {
  * @param {string} spark - Spark name (e.g. "°maia") or spark co-id
  * @returns {Promise<string|null>}
  */
+/**
+ * Seeded metafactory co-id from spark.os.metaFactoryCoId (single anchor for factory-definition headers).
+ * @param {Object} peer
+ * @param {string} [spark]
+ * @returns {Promise<string|null>}
+ */
+export async function getSparkOsMetaFactoryCoId(peer, spark) {
+	const effectiveSpark = spark ?? peer?.systemSparkCoId ?? '°maia'
+	const osId = await getSparkOsId(peer, effectiveSpark)
+	if (!osId?.startsWith('co_z')) return null
+	if (peer.node?.loadCoValueCore) {
+		await peer.node.loadCoValueCore(osId).catch(() => {})
+	}
+	const osCore = peer.getCoValue?.(osId) ?? peer.node?.getCoValue?.(osId)
+	if (!osCore?.isAvailable?.()) return null
+	const osContent = peer.getCurrentContent?.(osCore) ?? osCore.getCurrentContent?.()
+	if (!osContent || typeof osContent.get !== 'function') return null
+	const coId = osContent.get(SPARK_OS_META_FACTORY_CO_ID_KEY)
+	return typeof coId === 'string' && coId.startsWith('co_z') ? coId : null
+}
+
 export async function getSparkOsId(peer, spark) {
 	const sparkCoId = await resolveSparkCoId(peer, spark)
 	if (!sparkCoId?.startsWith('co_z')) return null

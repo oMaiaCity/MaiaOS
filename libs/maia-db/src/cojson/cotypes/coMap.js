@@ -60,7 +60,14 @@ export async function createCoMap(
 		// If no profileId, accountOrGroup is a group - use as-is (group = accountOrGroup from line 27)
 	}
 	if (factoryName === EXCEPTION_FACTORIES.META_SCHEMA) {
-		return group.createMap(init, { $factory: EXCEPTION_FACTORIES.META_SCHEMA })
+		const peer = dbEngine?.peer
+		let metaFactoryRef = EXCEPTION_FACTORIES.META_SCHEMA
+		if (peer) {
+			const { getSparkOsMetaFactoryCoId } = await import('../groups/groups.js')
+			const metaCoId = await getSparkOsMetaFactoryCoId(peer)
+			if (metaCoId) metaFactoryRef = metaCoId
+		}
+		return group.createMap(init, createFactoryMeta(metaFactoryRef, nanoid))
 	}
 	if (!factoryName || typeof factoryName !== 'string') {
 		throw new Error('[createCoMap] Schema name is REQUIRED.')
@@ -71,25 +78,13 @@ export async function createCoMap(
 		!(factoryName in FACTORY_REGISTRY)
 	) {
 		throw new Error(
-			`[createCoMap] Schema '${factoryName}' not found. Available: AccountFactory, ProfileFactory`,
+			`[createCoMap] Schema '${factoryName}' not found. Use a co_z factory co-id or AccountFactory|ProfileFactory.`,
 		)
 	}
 	if (!isExceptionFactory(factoryName)) {
-		const validateOpts = { dataEngine: dbEngine }
-		if (!factoryName.startsWith('co_z')) {
-			validateOpts.getAllFactories = async () => {
-				const { ensureFactoriesLoaded, getAllFactories: getAll } = await import('@MaiaOS/factories')
-				await ensureFactoriesLoaded()
-				return { ...getAll(), ...FACTORY_REGISTRY }
-			}
-		}
-		await loadFactoryAndValidate(
-			dbEngine?.peer || null,
-			factoryName,
-			init,
-			'createCoMap',
-			validateOpts,
-		)
+		await loadFactoryAndValidate(dbEngine?.peer || null, factoryName, init, 'createCoMap', {
+			dataEngine: dbEngine,
+		})
 	}
 
 	const meta = createFactoryMeta(factoryName, nanoid)

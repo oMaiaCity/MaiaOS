@@ -21,7 +21,6 @@ import {
 	removeIdFields,
 	sortSchemasByDependency,
 } from './helpers.js'
-import { storeRegistry } from './store-registry.js'
 
 const MAIA_SPARK = '°maia'
 
@@ -39,7 +38,7 @@ const REFERENCE_PROPS = [
 const NESTED_REF_PROPS = []
 
 /**
- * Title/instance-path → co_z from spark.os (definition catalog colist + instances CoMap).
+ * Title/instance-path → co_z from spark.os (definition catalog colist).
  * @param {object} peer — MaiaDB peer
  */
 async function collectSparkOsRegistry(peer, osId, metaCoId) {
@@ -531,18 +530,6 @@ export async function seed(
 	}
 
 	const seededData = await seedData(account, node, maiaGroup, peer, data, coIdRegistry)
-
-	await storeRegistry(
-		account,
-		node,
-		maiaGroup,
-		peer,
-		coIdRegistry,
-		factoryCoIdMap,
-		instanceCoIdMap,
-		configs || {},
-		seededSchemas,
-	)
 
 	for (const [k, v] of factoryCoIdMap) {
 		if (typeof k === 'string' && typeof v === 'string' && v.startsWith('co_z')) {

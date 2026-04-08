@@ -4,6 +4,7 @@
  * Provides extractCoValueData - single canonical extraction, always outputs flat format for CoMaps.
  */
 
+import { resolveFactoryRefToCoId } from '../factory/runtime-factory-refs.js'
 import { ensureCoValueLoaded } from './collection-helpers.js'
 
 /**
@@ -42,6 +43,16 @@ function materializeAccountFlat(peer, headerMeta) {
 export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 	const header = peer.getHeader(coValueCore)
 	const headerMeta = header?.meta || null
+	// Read-side only: `$factoryCoId` helps UI when persisted `meta.$factory` is still a namekey; creation paths should store co_z in headers.
+	const factoryCoIdResolved = resolveFactoryRefToCoId(peer, headerMeta?.$factory)
+	const withResolvedFactory = (obj) => {
+		if (factoryCoIdResolved) obj.$factoryCoId = factoryCoIdResolved
+		return obj
+	}
+	const rawHeaderFactory =
+		typeof headerMeta?.$factory === 'string' && headerMeta.$factory.startsWith('co_z')
+			? headerMeta.$factory
+			: null
 	const _ruleset = coValueCore.ruleset || header?.ruleset
 
 	const isAccount =
@@ -50,21 +61,24 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 		(peer.account && peer.account.id === coValueCore.id)
 
 	if (isAccount && peer.account && peer.account.id === coValueCore.id) {
-		return materializeAccountFlat(peer, headerMeta)
+		return withResolvedFactory(materializeAccountFlat(peer, headerMeta))
 	}
 
 	const content = peer.getCurrentContent(coValueCore)
 	if (!content) {
-		const schema = headerMeta?.$factory || null
-		return { id: coValueCore.id, type: 'unknown', $factory: schema }
+		const schema = rawHeaderFactory ?? headerMeta?.$factory ?? null
+		return withResolvedFactory({ id: coValueCore.id, type: 'unknown', $factory: schema })
 	}
 
 	const rawType = content?.type || 'unknown'
-	let schema = headerMeta?.$factory || null
+	let schema = rawHeaderFactory ?? headerMeta?.$factory ?? null
 
 	if (schemaHint === '@group' || (_ruleset && _ruleset.type === 'group')) {
 		schema = '@group'
-	} else if (schemaHint === '@account' || (headerMeta && headerMeta.type === 'account')) {
+	} else if (
+		!rawHeaderFactory &&
+		(schemaHint === '@account' || (headerMeta && headerMeta.type === 'account'))
+	) {
 		schema = '@account'
 	} else if (schemaHint === '@metaSchema' || schema === '@metaSchema') {
 		schema = '@metaSchema'
@@ -86,7 +100,7 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 					if (groupInfo) result.groupInfo = groupInfo
 				}
 			} catch (_e) {}
-			return result
+			return withResolvedFactory(result)
 		} catch (_e) {
 			const result = {
 				id: coValueCore.id,
@@ -101,7 +115,7 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 					if (groupInfo) result.groupInfo = groupInfo
 				}
 			} catch (_e) {}
-			return result
+			return withResolvedFactory(result)
 		}
 	}
 
@@ -127,7 +141,7 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 						if (groupInfo) result.groupInfo = groupInfo
 					}
 				} catch (_e) {}
-				return result
+				return withResolvedFactory(result)
 			} catch (_e) {
 				const result = {
 					id: coValueCore.id,
@@ -142,7 +156,7 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 						if (groupInfo) result.groupInfo = groupInfo
 					}
 				} catch (_e) {}
-				return result
+				return withResolvedFactory(result)
 			}
 		}
 		try {
@@ -168,7 +182,7 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 					if (groupInfo) result.groupInfo = groupInfo
 				}
 			} catch (_e) {}
-			return result
+			return withResolvedFactory(result)
 		} catch (_e) {
 			const result = {
 				id: coValueCore.id,
@@ -183,7 +197,7 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 					if (groupInfo) result.groupInfo = groupInfo
 				}
 			} catch (_e) {}
-			return result
+			return withResolvedFactory(result)
 		}
 	}
 
@@ -203,6 +217,7 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 
 		const skipJsonParsingFields = ['error', 'message', 'content', 'addAgentError', 'addAvenError']
 		for (const key of keys) {
+			if (key === 'maiaPathKey') continue
 			let value = content.get(key)
 			if (
 				typeof value === 'string' &&
@@ -225,7 +240,7 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 				if (groupInfo) result.groupInfo = groupInfo
 			}
 		} catch (_e) {}
-		return result
+		return withResolvedFactory(result)
 	}
 
 	const fallbackResult = { id: coValueCore.id, type: rawType, $factory: schema }
@@ -235,7 +250,7 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 			if (groupInfo) fallbackResult.groupInfo = groupInfo
 		}
 	} catch (_e) {}
-	return fallbackResult
+	return withResolvedFactory(fallbackResult)
 }
 
 /**
@@ -249,6 +264,8 @@ function isCoMapKeyValueArray(arr) {
 		arr.every((x) => x && typeof x === 'object' && 'key' in x && 'value' in x)
 	)
 }
+
+const OMIT_FROM_PERSISTED_PAYLOAD = new Set(['maiaPathKey'])
 
 /**
  * Normalize CoValue data to plain JS (single implementation for read and write).
@@ -269,6 +286,7 @@ export function normalizeCoValueData(data) {
 		if (isCoMapKeyValueArray(data)) {
 			const obj = {}
 			for (const { key, value: v } of data) {
+				if (OMIT_FROM_PERSISTED_PAYLOAD.has(key)) continue
 				obj[key] = normalizeCoValueData(v)
 			}
 			return obj
@@ -283,12 +301,14 @@ export function normalizeCoValueData(data) {
 		// CoMap-like (nested CoMap): Object.entries() does not extract content; use .keys() and .get()
 		const result = {}
 		for (const k of data.keys()) {
+			if (OMIT_FROM_PERSISTED_PAYLOAD.has(k)) continue
 			result[k] = normalizeCoValueData(data.get(k))
 		}
 		return result
 	} else if (typeof data === 'object' && data !== null) {
 		const result = {}
 		for (const [key, val] of Object.entries(data)) {
+			if (OMIT_FROM_PERSISTED_PAYLOAD.has(key)) continue
 			result[key] = normalizeCoValueData(val)
 		}
 		return result
@@ -401,6 +421,7 @@ export async function resolveCoValueReferences(
 		if (
 			key === 'id' ||
 			key === '$factory' ||
+			key === '$factoryCoId' ||
 			key === 'type' ||
 			key === 'loading' ||
 			key === 'error'

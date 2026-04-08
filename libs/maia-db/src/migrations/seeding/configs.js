@@ -2,7 +2,7 @@
  * Config seeding - actors, views, contexts, states, styles, etc.
  */
 
-import { nanoidFromPath } from '@MaiaOS/factories/nanoid'
+import { nanoidFromPath, normalizeMaiaPathKey } from '@MaiaOS/factories/nanoid'
 import { splitGraphemes } from 'unicode-segmenter/grapheme'
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 
@@ -51,15 +51,7 @@ export async function seedConfigs(
 			cotype = factoryCoMap.get('cotype') || 'comap'
 		}
 
-		const {
-			$id,
-			$label: _lbl,
-			$nanoid,
-			$schema: _s,
-			$factory,
-			maiaPathKey: _mk,
-			...configWithoutId
-		} = config
+		const { $id, $label: _lbl, $nanoid, $schema: _s, $factory, ...configWithoutId } = config
 		const ctx = { node, account, guardian: maiaGroup }
 		const data =
 			cotype === 'colist'
@@ -146,10 +138,8 @@ export async function seedConfigs(
 			if (typeof codeStr !== 'string') continue
 			const graphemes = [...splitGraphemes(codeStr)]
 			const ctx = { node, account, guardian: maiaGroup }
-			const cotextNanoid =
-				typeof config.maiaPathKey === 'string'
-					? nanoidFromPath(`${config.maiaPathKey}/cotext`)
-					: undefined
+			const fullKey = path.includes('maia/') ? path : `maia/${path.replace(/^\/+/, '')}`
+			const cotextNanoid = nanoidFromPath(`${normalizeMaiaPathKey(fullKey)}/cotext`)
 
 			const { coValue: cotextCreated } = await createCoValueForSpark(ctx, null, {
 				factory: cotextSchemaCoId,
@@ -165,7 +155,6 @@ export async function seedConfigs(
 				$nanoid,
 				$schema: _s2,
 				$factory: _f,
-				maiaPathKey: _mk2,
 				lang,
 				code: _code,
 				...rest

@@ -4,10 +4,7 @@
 
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import { waitForStoreReady } from '../../cojson/crud/read-operations.js'
-import {
-	SPARK_OS_INSTANCES_KEY,
-	SPARK_OS_META_FACTORY_CO_ID_KEY,
-} from '../../cojson/spark-os-keys.js'
+import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../../cojson/spark-os-keys.js'
 import { seedDefinitionCatalogBootstrap } from './definition-catalog-bootstrap.js'
 import { buildMetaFactoryForSeeding, removeIdFields, sortSchemasByDependency } from './helpers.js'
 
@@ -150,12 +147,6 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		dataEngine: dbEngine,
 	})
 	os.set('capabilities', capabilitiesStream.id)
-	const { coValue: instances } = await createCoValueForSpark(
-		ctx,
-		null,
-		scaffoldOpts(EXCEPTION_FACTORIES.META_SCHEMA, {}),
-	)
-	os.set(SPARK_OS_INSTANCES_KEY, instances.id)
 	os.set(SPARK_OS_META_FACTORY_CO_ID_KEY, metaSchemaCoId)
 	const { coValue: indexes } = await createCoValueForSpark(
 		ctx,
@@ -248,7 +239,7 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	}
 
 	console.log(
-		'✅ Bootstrap scaffold complete: account.registries, °maia spark, os, metaFactoryCoId, instances, indexes (definition catalog), vibes',
+		'✅ Bootstrap scaffold complete: account.registries, °maia spark, os, metaFactoryCoId, indexes (definition catalog), vibes',
 	)
 }
 

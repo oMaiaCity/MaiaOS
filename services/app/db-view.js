@@ -830,8 +830,10 @@ export async function renderApp(
 				) {
 					// CoMap: Display properties from flat object format (operations API)
 					// Convert flat object to normalized format for display
-					const factoryCoId = data.$factory // STRICT: Only $factory, no fallback
-					const schemaDef = factoryCoId ? await getFactoryFromDb(maia, factoryCoId) : null
+					const factoryCoId = data.$factoryCoId ?? data.$factory
+					const schemaDef = factoryCoId?.startsWith('co_z')
+						? await getFactoryFromDb(maia, factoryCoId)
+						: null
 
 					// Extract properties from flat object (exclude metadata keys)
 					// groupInfo is backend-derived metadata (not a co-value property) - only show in metadata sidebar
@@ -842,6 +844,7 @@ export async function renderApp(
 							k !== 'loading' &&
 							k !== 'error' &&
 							k !== '$factory' &&
+							k !== '$factoryCoId' &&
 							k !== 'schema' &&
 							k !== 'type' &&
 							k !== 'cotype' && // Display only in metadata aside, not as main content property
@@ -978,7 +981,7 @@ export async function renderApp(
 
 			// Fetch schema title if schema is a co-id using the abstracted read operation API
 			let schemaTitle = null
-			const factoryCoId = data.$factory // STRICT: Only $factory, no fallback
+			const factoryCoId = data.$factoryCoId ?? data.$factory
 			if (factoryCoId?.startsWith('co_z') && maia) {
 				try {
 					// Use unified read API - same pattern as loading main context data
@@ -1074,7 +1077,7 @@ export async function renderApp(
 							factoryCoId
 								? `
 							<div class="metadata-info-item">
-								<span class="metadata-info-key">@SCHEMA</span>
+								<span class="metadata-info-key">@Factory</span>
 								${
 									factoryCoId.startsWith('co_')
 										? `

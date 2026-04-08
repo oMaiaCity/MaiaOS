@@ -8,6 +8,7 @@
 	},
 	"exports": {
 		".": "./src/index.js",
+		"./registry": "./src/factories/registry.js",
 		"./seeding": "./src/seeding-index.js",
 		"./co-types-defs": "./src/factories/co-types-defs.data.js",
 		"./factory/system-factories-from-os": "./src/cojson/factory/system-factories-from-os.js"

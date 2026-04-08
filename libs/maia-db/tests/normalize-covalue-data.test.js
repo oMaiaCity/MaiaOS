@@ -1,0 +1,17 @@
+import { describe, expect, test } from 'bun:test'
+import { normalizeCoValueData } from '../src/cojson/crud/data-extraction.js'
+
+describe('normalizeCoValueData', () => {
+	test('drops maiaPathKey from persisted-shaped objects (not exposed to clients)', () => {
+		expect(
+			normalizeCoValueData({
+				foo: 1,
+				maiaPathKey: 'maia/services/paper/process.maia',
+				nested: { maiaPathKey: 'x' },
+			}),
+		).toEqual({
+			foo: 1,
+			nested: {},
+		})
+	})
+})

@@ -59,3 +59,21 @@ export function getRuntimeRef(peer, role) {
 	const id = peer.runtimeRefs?.get?.(role)
 	return id?.startsWith?.('co_z') ? id : null
 }
+
+/**
+ * Resolve header `meta.$factory` (namekey, @metaSchema, or co_z) to catalog co_id for display / deep links.
+ * Does not write headers and does not run at seed time — only for read paths (e.g. extractCoValueData → `$factoryCoId`).
+ * @param {{ systemFactoryCoIds?: Map<string, string>, runtimeRefs?: Map<string, string> }} peer
+ * @param {string|null|undefined} ref
+ * @returns {string|null}
+ */
+export function resolveFactoryRefToCoId(peer, ref) {
+	if (!ref || typeof ref !== 'string') return null
+	if (ref.startsWith('co_z')) return ref
+	if (ref === '@metaSchema') {
+		const meta = getRuntimeRef(peer, RUNTIME_REF.META)
+		if (meta) return meta
+	}
+	const fromMap = peer.systemFactoryCoIds?.get?.(ref)
+	return fromMap?.startsWith?.('co_z') ? fromMap : null
+}
