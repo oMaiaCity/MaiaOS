@@ -2,8 +2,7 @@
  * Map Transform - Apply mapping transformations to read data
  *
  * Unified map syntax:
- * - $path = resolve path from current item (e.g. $content, $source.replyTo.author.name)
- * - $$path = same as $path (legacy support; both mean "resolve from current item")
+ * - $path = resolve path from current item (e.g. $content, $source.replyTo.author.name). A leading $$ is normalized to $.
  * - path without $ = pass-through (direct property, e.g. "id" → item.id)
  * - "*": "N" = all keys up to depth N (1-8)
  *
@@ -52,12 +51,9 @@ function getValueAtPathNoResolve(item, path) {
 
 function parseMapExpression(expression) {
 	if (typeof expression !== 'string') return null
-	const pathExpr = expression.startsWith('$$')
-		? expression.substring(2)
-		: expression.startsWith('$')
-			? expression.substring(1)
-			: expression
-	const isResolve = expression.startsWith('$$') || expression.startsWith('$')
+	const normalized = expression.startsWith('$$') ? `$${expression.slice(2)}` : expression
+	const pathExpr = normalized.startsWith('$') ? normalized.substring(1) : normalized
+	const isResolve = normalized.startsWith('$')
 	// :asDataUrl suffix stripped - path resolves to co-id; CoBinary loads via data-co-id + hydration (never blocks read)
 	const asDataUrlSuffix = pathExpr.endsWith(':asDataUrl')
 	const path = asDataUrlSuffix ? pathExpr.slice(0, -10) : pathExpr

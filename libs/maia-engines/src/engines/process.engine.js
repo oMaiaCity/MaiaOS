@@ -339,7 +339,7 @@ export class ProcessEngine {
 
 	/**
 	 * Execute function action: run actor's executableFunction, deliver SUCCESS/ERROR to caller.
-	 * Same semantics as legacy StateEngine function action.
+	 * Runs the actor executable and delivers SUCCESS/ERROR to the process graph.
 	 */
 	async _executeFunction(process, payload) {
 		const actor = process?.actor

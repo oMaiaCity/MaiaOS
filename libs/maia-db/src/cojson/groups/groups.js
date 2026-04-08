@@ -297,43 +297,6 @@ export function extractAccountMembers(groupContent) {
 				}
 			}
 		}
-
-		// Method 2: Fallback - try members iterator (legacy support)
-		if (
-			accountMembers.length === 0 &&
-			groupContent.members &&
-			typeof groupContent.members[Symbol.iterator] === 'function'
-		) {
-			for (const member of groupContent.members) {
-				if (member?.account) {
-					const accountRef = member.account
-					const memberId =
-						typeof accountRef === 'string'
-							? accountRef
-							: accountRef.id || accountRef.$jazz?.id || 'unknown'
-
-					if (seenMembers.has(memberId)) continue
-					seenMembers.add(memberId)
-
-					let role = null
-					if (typeof groupContent.roleOf === 'function') {
-						try {
-							role = groupContent.roleOf(memberId)
-						} catch (_e) {
-							// Ignore
-						}
-					}
-
-					if (role && role !== 'revoked') {
-						accountMembers.push({
-							id: memberId,
-							role: role,
-							isInherited: false,
-						})
-					}
-				}
-			}
-		}
 	} catch (_e) {}
 	return accountMembers
 }

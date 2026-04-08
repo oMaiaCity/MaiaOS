@@ -13,8 +13,8 @@ import {
 	getSparkOsId,
 	normalizeCoValueData,
 	RUNTIME_REF,
-	waitForStoreReady,
 } from '@MaiaOS/db'
+import { buildSystemFactoryCoIdsFromSparkOs } from '@MaiaOS/db/factory/system-factories-from-os'
 import { resolveExpressions } from '@MaiaOS/factories/expression-resolver'
 import {
 	createErrorEntry,
@@ -465,19 +465,13 @@ async function deleteOp(peer, dataEngine, params) {
 }
 
 async function seedOp(peer, params) {
-	const { configs, schemas, data, forceFreshSeed, forceMigrate } = params
+	const { configs, schemas, data, forceFreshSeed } = params
 	if (!configs) throw new Error('[SeedOperation] Configs required')
 	if (!schemas) throw new Error('[SeedOperation] Schemas required')
-	const options = {}
-	if (forceFreshSeed) options.forceFreshSeed = true
-	if (forceMigrate) options.forceMigrate = true
-	if (options.forceFreshSeed && options.forceMigrate) {
-		throw new Error('[SeedOperation] forceFreshSeed and forceMigrate are mutually exclusive')
+	if (!forceFreshSeed) {
+		throw new Error('[SeedOperation] forceFreshSeed is required')
 	}
-	if (!options.forceFreshSeed && !options.forceMigrate) {
-		throw new Error('[SeedOperation] forceFreshSeed or forceMigrate is required')
-	}
-	const result = await peer.seed(configs, schemas, data || {}, options)
+	const result = await peer.seed(configs, schemas, data || {}, { forceFreshSeed: true })
 	return createSuccessResult(result, { op: 'seed' })
 }
 
@@ -780,10 +774,19 @@ async function uploadToCoBinaryOp(dataEngine, params) {
 		factory: dataEngine.cobinaryFactoryCoId,
 		data: {},
 	})
+	if (createRes?.ok === false) {
+		const msg =
+			Array.isArray(createRes.errors) && createRes.errors.length > 0
+				? createRes.errors.map((e) => e?.message ?? String(e)).join('; ')
+				: 'create failed'
+		throw new Error(`[DataEngine] uploadToCoBinary: create cobinary failed — ${msg}`)
+	}
 	const cobinaryData = createRes?.ok === true ? createRes.data : createRes
-	const coId = cobinaryData?.id
+	const coId = cobinaryData?.id ?? cobinaryData?.coId
 	if (!coId?.startsWith('co_z')) {
-		throw new Error('[DataEngine] Failed to create CoBinary')
+		throw new Error(
+			`[DataEngine] Failed to create CoBinary: missing id on create result. got=${JSON.stringify(cobinaryData)?.slice(0, 200)}`,
+		)
 	}
 	await dataEngine.execute({
 		op: 'uploadBinary',
@@ -793,7 +796,7 @@ async function uploadToCoBinaryOp(dataEngine, params) {
 		chunks,
 		onProgress,
 	})
-	return createSuccessResult({ coId, mimeType: mime }, { op: 'uploadToCoBinary' })
+	return createSuccessResult({ coId, id: coId, mimeType: mime }, { op: 'uploadToCoBinary' })
 }
 
 async function processInboxOp(peer, _dataEngine, params) {
@@ -1033,31 +1036,35 @@ export class DataEngine {
 			: {}
 	}
 
+	/** Fills peer.systemFactoryCoIds from spark.os.instances + definition catalog at spark.os.indexes[metaFactoryCoId]. */
 	async resolveSystemFactories() {
 		const peer = this.peer
+		if (
+			typeof peer.resolveSystemSparkCoId === 'function' &&
+			!peer.systemSparkCoId?.startsWith('co_z')
+		) {
+			await peer.resolveSystemSparkCoId()
+		}
 		if (!peer?.systemSparkCoId?.startsWith('co_z')) return
 		const osId = await getSparkOsId(peer, peer.systemSparkCoId)
 		if (!osId?.startsWith('co_z')) return
-		const osStore = await peer.read(null, osId)
-		await waitForStoreReady(osStore, osId, 10000)
-		const osData = osStore?.value ?? {}
-		const factoriesId = osData.factories
-		if (!factoriesId?.startsWith('co_z')) return
-		const factoriesStore = await peer.read(null, factoriesId)
-		await waitForStoreReady(factoriesStore, factoriesId, 10000)
-		const factoriesData = factoriesStore?.value ?? {}
-		peer.systemFactoryCoIds.clear()
-		for (const [key, value] of Object.entries(factoriesData)) {
-			if (
-				typeof key === 'string' &&
-				typeof value === 'string' &&
-				value.startsWith('co_z') &&
-				!['id', 'loading', 'error', '$factory', 'type', '_coValueType'].includes(key)
-			) {
-				peer.systemFactoryCoIds.set(key, value)
-			}
+		const hasSparkScaffoldRefs = () =>
+			!!(
+				getRuntimeRef(peer, RUNTIME_REF.DATA_SPARK) &&
+				getRuntimeRef(peer, RUNTIME_REF.OS_GROUPS) &&
+				getRuntimeRef(peer, RUNTIME_REF.OS_OS_REGISTRY) &&
+				getRuntimeRef(peer, RUNTIME_REF.OS_VIBES_REGISTRY)
+			)
+		const maxAttempts = 8
+		for (let attempt = 0; attempt < maxAttempts; attempt++) {
+			if (attempt > 0) await new Promise((r) => setTimeout(r, 50 * attempt))
+			peer.systemFactoryCoIds.clear()
+			const built = await buildSystemFactoryCoIdsFromSparkOs(peer, osId)
+			for (const [k, v] of built) peer.systemFactoryCoIds.set(k, v)
+			fillRuntimeRefsFromSystemFactories(peer)
+			if (hasSparkScaffoldRefs() && getRuntimeRef(peer, RUNTIME_REF.DATA_COBINARY)) break
 		}
-		fillRuntimeRefsFromSystemFactories(peer)
+
 		const cob = getRuntimeRef(peer, RUNTIME_REF.DATA_COBINARY)
 		if (cob) this.cobinaryFactoryCoId = cob
 		const { hydrateValidationMetaFromPeer } = await import('@MaiaOS/factories/validation.helper')

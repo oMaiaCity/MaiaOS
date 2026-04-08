@@ -34,7 +34,7 @@
 			"justifyContent": "center",
 			"overflow": "hidden"
 		},
-		".profile-avatar-fallback": {
+		".profile-image-empty-label": {
 			"position": "absolute",
 			"left": "4px",
 			"right": "4px",
@@ -43,22 +43,21 @@
 			"display": "flex",
 			"alignItems": "center",
 			"justifyContent": "center",
-			"zIndex": "2",
+			"padding": "{spacing.sm}",
+			"textAlign": "center",
+			"zIndex": "1",
 			"pointerEvents": "none",
+			"fontSize": "0.75rem",
+			"fontWeight": "{typography.fontWeight.medium}",
+			"color": "{colors.marineBlueLight}",
+			"fontFamily": "{typography.fontFamily.body}",
+			"lineHeight": "1.35",
 			"borderRadius": "50%"
 		},
-		".profile-avatar-fallback .avatar-fallback-svg": {
-			"width": "72%",
-			"height": "72%",
-			"maxWidth": "100%",
-			"maxHeight": "100%",
-			"objectFit": "contain",
-			"display": "block"
-		},
-		".profile-image-display:has(.profile-avatar[src^=\"blob:\"]) .profile-avatar-fallback": {
+		".profile-image-display:has(.profile-avatar:not([data-co-id=\"\"])[src^=\"blob:\"]) .profile-image-empty-label": {
 			"display": "none"
 		},
-		".profile-image-display:has(.profile-avatar[src^=\"data:image/\"]:not([src^=\"data:image/gif;base64,R0lGODlhAQABAI\"])) .profile-avatar-fallback": {
+		".profile-image-display:has(.profile-avatar:not([data-co-id=\"\"])[src^=\"data:\"]) .profile-image-empty-label": {
 			"display": "none"
 		},
 		".profile-avatar": {
@@ -67,20 +66,29 @@
 			"right": "4px",
 			"top": "4px",
 			"bottom": "4px",
-			"zIndex": "1",
-			"width": "auto",
-			"height": "auto",
+			"zIndex": "2",
+			"width": "100%",
+			"height": "100%",
+			"boxSizing": "border-box",
 			"borderRadius": "50%",
-			"objectFit": "cover"
+			"objectFit": "cover",
+			"objectPosition": "center",
+			"opacity": "0",
+			"pointerEvents": "none"
 		},
-		".profile-avatar:not([src])": {
-			"opacity": "0"
+		".profile-avatar[data-co-id=\"\"]": {
+			"visibility": "hidden",
+			"pointerEvents": "none"
 		},
-		".profile-avatar[src=\"\"]": {
-			"opacity": "0"
+		".profile-image-display > .profile-avatar[src^=\"blob:\"]": {
+			"opacity": "1",
+			"visibility": "visible",
+			"pointerEvents": "none"
 		},
-		".profile-avatar[src^=\"data:image/gif;base64,R0lGODlhAQABAI\"]": {
-			"opacity": "0"
+		".profile-image-display > .profile-avatar[src^=\"data:\"]": {
+			"opacity": "1",
+			"visibility": "visible",
+			"pointerEvents": "none"
 		},
 		".profile-image-upload": {
 			"display": "flex",

@@ -883,7 +883,10 @@ export async function renderApp(
 								}
 
 								const propSchema = schemaDef?.properties?.[key]
-								const propLabel = propSchema?.title || key
+								const sparkOsKeyLabels = {
+									metaFactoryCoId: 'MetaFactory',
+								}
+								const propLabel = propSchema?.title || sparkOsKeyLabels[key] || key
 
 								// Make objects and arrays expandable
 								const isExpandable =

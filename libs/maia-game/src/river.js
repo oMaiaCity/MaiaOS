@@ -52,7 +52,7 @@ const SPRING_POCKET_S_NORM = 0.042
 
 export { RIVER_BED_FLAT_FRAC }
 
-/** Legacy flow axis (opposite-bank stepping); unit downstream in warped plane. */
+/** Flow axis (opposite-bank stepping); unit downstream in warped plane. */
 export const FLOW_DN_X = 0.6
 export const FLOW_DN_Y = -0.8
 const FLOW_LEN = Math.hypot(FLOW_DN_X, FLOW_DN_Y)
@@ -437,7 +437,7 @@ export function riverTangentAtS(sNorm) {
 	return { tx: dx / len, ty: dy / len }
 }
 
-/** Legacy name: centerline Y for a given wx by finding polyline point with nearest wx (approximate). */
+/** Centerline Y for a given wx by finding polyline point with nearest wx (approximate). */
 export function riverCenterY(wx) {
 	let best = 0
 	let bestDx = Infinity
@@ -452,7 +452,7 @@ export function riverCenterY(wx) {
 }
 
 /**
- * Downstream progress [0, 1] — planar projection (legacy helpers / tint).
+ * Downstream progress [0, 1] — planar projection (helpers / tint).
  * @param {number} wx
  * @param {number} wy
  */

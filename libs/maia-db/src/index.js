@@ -70,6 +70,7 @@ export {
 	getRuntimeRef,
 	RUNTIME_REF,
 } from './cojson/factory/runtime-factory-refs.js'
+export { buildSystemFactoryCoIdsFromSparkOs } from './cojson/factory/system-factories-from-os.js'
 // Re-export services for external use
 // Account primitives moved to @MaiaOS/peer (createAccountWithSecret, loadAccount). Migration/seed stay here.
 export { createGroup, createProfile } from './cojson/groups/create.js'
@@ -86,12 +87,16 @@ export {
 export { resolveAccountCoIdsToProfiles } from './cojson/helpers/resolve-account-profile.js'
 export { resolveGroupCoIdsToCapabilityNames } from './cojson/helpers/resolve-capability-group.js'
 export {
+	SPARK_OS_INSTANCES_KEY,
+	SPARK_OS_META_FACTORY_CO_ID_KEY,
+} from './cojson/spark-os-keys.js'
+export {
 	createFactoryMeta,
 	EXCEPTION_FACTORIES,
 	getSchema,
 	hasSchema,
 } from './factories/registry.js'
-export { factoryMigration } from './migrations/factory.migration.js'
+export { ensureProfileForNewAccount } from './migrations/profile-bootstrap.js'
 // ReactiveStore - reactive data store pattern (owned by maia-db; engines import from here)
 export { ReactiveStore } from './reactive-store.js'
 export { generateRegistryName } from './utils/registry-name-generator.js'

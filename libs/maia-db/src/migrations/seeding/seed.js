@@ -9,7 +9,9 @@ import { splitGraphemes } from 'unicode-segmenter/grapheme'
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import { ensureCoValueLoaded } from '../../cojson/crud/collection-helpers.js'
 import { fillRuntimeRefsFromSystemFactories } from '../../cojson/factory/runtime-factory-refs.js'
+import { buildSystemFactoryCoIdsFromSparkOs } from '../../cojson/factory/system-factories-from-os.js'
 import * as groups from '../../cojson/groups/groups.js'
+import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../../cojson/spark-os-keys.js'
 import { bootstrapAccountRegistries, bootstrapAndScaffold } from './bootstrap.js'
 import { seedConfigs } from './configs.js'
 import { seedData } from './data.js'
@@ -19,7 +21,6 @@ import {
 	removeIdFields,
 	sortSchemasByDependency,
 } from './helpers.js'
-import { loadNanoidRegistryFromSpark } from './nanoid-registry.js'
 import { storeRegistry } from './store-registry.js'
 
 const MAIA_SPARK = '°maia'
@@ -37,6 +38,15 @@ const REFERENCE_PROPS = [
 ]
 const NESTED_REF_PROPS = []
 
+/**
+ * Title/instance-path → co_z from spark.os (definition catalog colist + instances CoMap).
+ * @param {object} peer — MaiaDB peer
+ */
+async function collectSparkOsRegistry(peer, osId, metaCoId) {
+	if (!osId || !metaCoId?.startsWith?.('co_z')) return new Map()
+	return buildSystemFactoryCoIdsFromSparkOs(peer, osId)
+}
+
 export async function simpleAccountSeed(_account, _node) {
 	console.log('✅ Simple account seed: (registries via link)')
 }
@@ -50,14 +60,10 @@ export async function seed(
 	existingBackend = null,
 	options = {},
 ) {
-	const { forceFreshSeed = false, forceMigrate = false } = options
+	const { forceFreshSeed = false } = options
 
-	if (forceFreshSeed && forceMigrate) {
-		throw new Error('[CoJSONSeed] forceFreshSeed and forceMigrate are mutually exclusive')
-	}
-
-	if (!forceFreshSeed && !forceMigrate) {
-		return { skipped: true, reason: 'seed_requires_forceFreshSeed_or_forceMigrate' }
+	if (!forceFreshSeed) {
+		return { skipped: true, reason: 'seed_requires_forceFreshSeed' }
 	}
 
 	const { MaiaDB } = await import('../../cojson/core/MaiaDB.js')
@@ -65,21 +71,11 @@ export async function seed(
 
 	const needsBootstrap =
 		!account.get('registries') || !String(account.get('registries')).startsWith('co_z')
-	if (forceMigrate) {
-		if (needsBootstrap) {
-			throw new Error(
-				'[CoJSONSeed] PEER_SYNC_MIGRATE requires an existing scaffold. Run with PEER_SYNC_SEED=true first.',
-			)
-		}
-	} else if (needsBootstrap) {
+	if (needsBootstrap) {
 		const { ensureFactoriesLoaded, getAllFactories } = await import('@MaiaOS/factories')
 		await ensureFactoriesLoaded()
 		await bootstrapAndScaffold(account, node, schemas || getAllFactories(), peer.dbEngine)
 	}
-
-	const migrateSeedOpts = forceMigrate
-		? { migrateMode: true, migrateRegistry: await loadNanoidRegistryFromSpark(peer) }
-		: undefined
 
 	const { CoIdRegistry } = await import('@MaiaOS/factories/co-id-generator')
 	const { transformForSeeding, validateFactoryStructure } = await import(
@@ -113,16 +109,8 @@ export async function seed(
 		const osCore = await ensureCoValueLoaded(peer, osId, { waitForAvailable: true })
 		if (osCore && peer.isAvailable(osCore)) {
 			const osContent = peer.getCurrentContent(osCore)
-			const factoriesId = osContent?.get?.('factories')
-			if (factoriesId) {
-				const factoriesCore = await ensureCoValueLoaded(peer, factoriesId, {
-					waitForAvailable: true,
-				})
-				if (factoriesCore && peer.isAvailable(factoriesCore)) {
-					const factoriesContent = peer.getCurrentContent(factoriesCore)
-					metaSchemaCoId = factoriesContent?.get?.('°maia/factory/meta')
-				}
-			}
+			const anchored = osContent?.get?.(SPARK_OS_META_FACTORY_CO_ID_KEY)
+			if (anchored?.startsWith?.('co_z')) metaSchemaCoId = anchored
 		}
 	}
 
@@ -148,6 +136,13 @@ export async function seed(
 		const cleanedProperties = removeIdFields(directProperties)
 		for (const [key, value] of Object.entries(cleanedProperties)) metaSchemaCoMap.set(key, value)
 		metaSchemaCoId = actualMetaSchemaCoId
+		if (osId) {
+			const osCoreForAnchor = await ensureCoValueLoaded(peer, osId, { waitForAvailable: true })
+			if (osCoreForAnchor && peer.isAvailable(osCoreForAnchor)) {
+				const osMap = peer.getCurrentContent(osCoreForAnchor)
+				osMap?.set?.(SPARK_OS_META_FACTORY_CO_ID_KEY, metaSchemaCoId)
+			}
+		}
 	} else {
 		const updatedMetaSchemaDef = buildMetaFactoryForSeeding(metaSchemaCoId)
 		const {
@@ -185,28 +180,8 @@ export async function seed(
 	const { create: crudCreate } = await import('../../cojson/crud/create.js')
 	const { update: crudUpdate } = await import('../../cojson/crud/update.js')
 
-	const existingSchemaRegistry = new Map()
-	let factoriesContent = null
-	if (osId) {
-		const osCore = await ensureCoValueLoaded(peer, osId, { waitForAvailable: true })
-		if (osCore && peer.isAvailable(osCore)) {
-			const osContent = peer.getCurrentContent(osCore)
-			const factoriesId = osContent?.get?.('factories')
-			if (factoriesId) {
-				const factoriesCore = await ensureCoValueLoaded(peer, factoriesId, {
-					waitForAvailable: true,
-				})
-				if (factoriesCore && peer.isAvailable(factoriesCore)) {
-					factoriesContent = peer.getCurrentContent(factoriesCore)
-					const keys = factoriesContent?.keys?.() ?? Object.keys(factoriesContent ?? {})
-					for (const key of keys) {
-						const factoryCoId = factoriesContent.get(key)
-						if (factoryCoId?.startsWith?.('co_z')) existingSchemaRegistry.set(key, factoryCoId)
-					}
-				}
-			}
-		}
-	}
+	const existingSchemaRegistry =
+		osId && metaSchemaCoId ? await collectSparkOsRegistry(peer, osId, metaSchemaCoId) : new Map()
 
 	for (const factoryKey of sortedFactoryKeys) {
 		const { schema } = uniqueSchemasBy$id.get(factoryKey)
@@ -276,29 +251,13 @@ export async function seed(
 	const instanceCoIdMap = new Map()
 
 	const getCombinedRegistry = async () => {
-		const schemaRegistry = new Map()
 		const osId2 = await groups.getSparkOsId(peer, MAIA_SPARK)
-		if (osId2) {
-			const osCore = node.getCoValue(osId2)
-			const osContent = osCore?.getCurrentContent?.()
-			const factoriesId = osContent?.get?.('factories')
-			if (factoriesId) {
-				const factoriesCore = node.getCoValue(factoriesId)
-				const factoriesContent = factoriesCore?.getCurrentContent?.()
-				const keys =
-					typeof factoriesContent.keys === 'function'
-						? Array.from(factoriesContent.keys())
-						: Object.keys(factoriesContent ?? {})
-				for (const key of keys) {
-					const coId = factoriesContent.get(key)
-					if (coId?.startsWith?.('co_z')) schemaRegistry.set(key, coId)
-				}
-			}
-		}
-		if (schemaRegistry.size === 0) {
-			for (const [k, v] of factoryCoIdMap) schemaRegistry.set(k, v)
-			if (metaSchemaCoId) schemaRegistry.set('°maia/factory/meta', metaSchemaCoId)
-		}
+		if (!osId2) return new Map()
+		const fromOs = await collectSparkOsRegistry(peer, osId2, metaSchemaCoId)
+		if (fromOs.size > 0) return fromOs
+		const schemaRegistry = new Map()
+		for (const [k, v] of factoryCoIdMap) schemaRegistry.set(k, v)
+		if (metaSchemaCoId) schemaRegistry.set('°maia/factory/meta', metaSchemaCoId)
 		return schemaRegistry
 	}
 
@@ -362,7 +321,6 @@ export async function seed(
 			instanceCoIdMap,
 			factoryCoMaps,
 			factoryCoIdMap,
-			migrateSeedOpts,
 		)
 		for (const configInfo of seeded.configs || []) {
 			instanceCoIdMap.set(configInfo.path, configInfo.coId)
@@ -557,7 +515,6 @@ export async function seed(
 				instanceCoIdMap,
 				factoryCoMaps,
 				factoryCoIdMap,
-				migrateSeedOpts,
 			)
 			seededConfigs.configs.push(...(vibeSeeded.configs || []))
 			seededConfigs.count += vibeSeeded.count || 0

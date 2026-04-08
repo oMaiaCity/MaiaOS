@@ -14,8 +14,6 @@
  *   PEER_SYNC_SEED: Default false. Set true to run genesis seed (bootstrap + schemas + vibes).
  *     - true: Fresh seed (first deploy or intentional reset). May overwrite existing scaffold.
  *     - false/unset: Skip seed, use persisted data. Never overwrite on restart.
- *   PEER_SYNC_MIGRATE: Default false. Set true to non-destructively update configs from code (nano-ID keyed).
- *     - Mutually exclusive with PEER_SYNC_SEED. Requires an existing scaffold (run PEER_SYNC_SEED once first).
  *   SEED_VIBES: Default "all". Which vibes to seed (todos, chat, quickjs, etc). "all" seeds every vibe including quickjs.
  *   PEER_APP_HOST: Allowed CORS origin (e.g. https://next.maia.city). When set, only that origin can call sync/LLM in production. Unset = * (dev).
  *   MAIA_DEV_CORS=1: With Postgres local dev, enable same multi-origin dev CORS as PGlite (localhost / 127.0.0.1 / ::1 on port 4200).
@@ -30,7 +28,7 @@ import { ensureFactoriesLoaded } from '@MaiaOS/factories'
 import {
 	createWebSocketPeer,
 	DataEngine,
-	factoryMigration,
+	ensureProfileForNewAccount,
 	generateRegistryName,
 	getAllFactories,
 	loadOrCreateAgentAccount,
@@ -78,12 +76,6 @@ const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
 
 const avenMaiaGuardian = process.env.AVEN_MAIA_GUARDIAN?.trim() || null
 const peerSyncSeed = process.env.PEER_SYNC_SEED === 'true'
-const peerSyncMigrate = process.env.PEER_SYNC_MIGRATE === 'true'
-if (peerSyncSeed && peerSyncMigrate) {
-	throw new Error(
-		`${OPS_PREFIX.sync} PEER_SYNC_SEED and PEER_SYNC_MIGRATE are mutually exclusive. Use one or neither.`,
-	)
-}
 // SEED_VIBES: which vibes to seed on genesis. Default "all" (includes quickjs). Override: "todos,chat" or "todos,chat,quickjs"
 const seedVibesConfig = process.env.SEED_VIBES || 'all'
 
@@ -1124,10 +1116,9 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 
 		// Ensure migration completes before seed (sparkGuardian -> guardian, registries.humans)
 		// loadAccount defers migration; seed needs guardian in os.groups
-		await factoryMigration(result.account, localNode)
+		await ensureProfileForNewAccount(result.account, localNode)
 
-		// Genesis: PEER_SYNC_SEED=true, or non-destructive config sync: PEER_SYNC_MIGRATE=true
-		if (peerSyncSeed || peerSyncMigrate) {
+		if (peerSyncSeed) {
 			const allVibeRegistries = await getAllVibeRegistries()
 			const vibeRegistries = await filterVibesForSeeding(allVibeRegistries, seedVibesConfig)
 			if (vibeRegistries.length === 0) {
@@ -1164,26 +1155,17 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 				configs: configsForSeed,
 				schemas,
 				data,
-				forceFreshSeed: peerSyncSeed,
-				forceMigrate: peerSyncMigrate,
+				forceFreshSeed: true,
 			})
 			if (seedResult?.ok === false && seedResult?.errors?.length) {
 				const msg = seedResult.errors.map((e) => e?.message ?? e).join('; ')
-				throw new Error(
-					`${OPS_PREFIX.sync} ${peerSyncMigrate ? 'Migrate' : 'Genesis seed'} failed: ${msg}`,
-				)
+				throw new Error(`${OPS_PREFIX.sync} Genesis seed failed: ${msg}`)
 			}
-			if (peerSyncSeed) {
-				opsSync.log(
-					`Genesis seeded: ${vibeRegistries.length} vibe(s) (schemas + scaffold). Set PEER_SYNC_SEED=false for subsequent restarts.`,
-				)
-			} else {
-				opsSync.log(
-					`Config migrate applied: ${vibeRegistries.length} vibe(s). Set PEER_SYNC_MIGRATE=false when done.`,
-				)
-			}
+			opsSync.log(
+				`Genesis seeded: ${vibeRegistries.length} vibe(s) (schemas + scaffold). Set PEER_SYNC_SEED=false for subsequent restarts.`,
+			)
 		} else {
-			opsSync.log('PEER_SYNC_SEED / PEER_SYNC_MIGRATE not set — using persisted scaffold (skip seed).')
+			opsSync.log('PEER_SYNC_SEED not set — using persisted scaffold (skip seed).')
 		}
 
 		await peer.resolveSystemSparkCoId()

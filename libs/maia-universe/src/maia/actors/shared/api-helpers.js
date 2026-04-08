@@ -36,15 +36,12 @@ function extractErrorMessage(apiError) {
 	if (nested && typeof nested === 'object' && typeof nested.message === 'string') {
 		return nested.message
 	}
-	// Top-level message
 	if (typeof apiError.message === 'string') return apiError.message
-	// Legacy: err + msg
 	const err = apiError.error
-	const msg = apiError.message || ''
-	if (typeof err === 'string' && typeof msg === 'string') {
-		return err && msg && msg !== 'Unknown' ? `${err}: ${msg}` : err || msg
+	if (typeof err === 'string') {
+		const msg = typeof apiError.message === 'string' ? apiError.message : ''
+		return msg && msg !== 'Unknown' ? `${err}: ${msg}` : err
 	}
-	if (typeof err === 'string') return err
 	return 'Unknown error'
 }
 
