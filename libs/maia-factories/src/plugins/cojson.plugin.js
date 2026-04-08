@@ -48,7 +48,8 @@ export const keywords = [
 		validate: () => true,
 		metaSchema: {
 			type: 'boolean',
-			description: 'Whether instances of this schema should be indexed in account.os.{factoryCoId}',
+			description:
+				'Whether instances of this schema should be indexed in spark.os.indexes (keyed by this schema co_z). Default false.',
 		},
 	},
 ]

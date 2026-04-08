@@ -3,7 +3,7 @@
  * Reactive read() snapshots are not used here — they can omit indexes/catalog keys before deep resolve.
  */
 
-import { FACTORY_REF_PATTERN, INSTANCE_REF_PATTERN } from '@MaiaOS/factories'
+import { namekeyFromFactoryDefinitionContent } from '@MaiaOS/factories'
 import { ensureCoValueLoaded } from '../crud/collection-helpers.js'
 import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
 
@@ -41,16 +41,7 @@ export async function buildSystemFactoryCoIdsFromSparkOs(peer, osId) {
 							const defCore = peer.getCoValue(defCoId)
 							if (!defCore || !peer.isAvailable(defCore)) continue
 							const defContent = peer.getCurrentContent(defCore)
-							const title = defContent?.get?.('title')
-							const idKey = defContent?.get?.('$id')
-							const namekey =
-								typeof title === 'string' &&
-								(FACTORY_REF_PATTERN.test(title) || INSTANCE_REF_PATTERN.test(title))
-									? title
-									: typeof idKey === 'string' &&
-											(FACTORY_REF_PATTERN.test(idKey) || INSTANCE_REF_PATTERN.test(idKey))
-										? idKey
-										: null
+							const namekey = namekeyFromFactoryDefinitionContent(defContent)
 							if (namekey) out.set(namekey, defCoId)
 						}
 					}

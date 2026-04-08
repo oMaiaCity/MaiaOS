@@ -13,6 +13,7 @@ export { CoIdRegistry } from './co-id-generator.js'
 export { executableKeyFromMaiaPath } from './executable-key-from-maia-path.js'
 export { FACTORY_PATH_TO_REF, withCanonicalFactorySchema } from './factory-identity.js'
 export { ensureFactoriesLoaded, getAllFactories, getFactory } from './factory-registry.js'
+export { namekeyFromFactoryDefinitionContent } from './namekey-from-definition-content.js'
 export { maiaRefFromPathKey, nanoidFromPath, normalizeMaiaPathKey } from './nanoid.js'
 export {
 	FACTORY_REF_PATTERN,
