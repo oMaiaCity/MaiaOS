@@ -2,7 +2,7 @@
 /**
  * Emits committed files under libs/maia-universe/src/maia/:
  * - registry-core.js — .maia imports (SEED_DATA, annotate maps). @MaiaOS/universe/data points here (no cycle with vibe registry.js).
- * - registry-icons.js — data/icons/*.maia only (ICON_SVG_BY_KEY, DEFAULT_CARD_ICON_SVG). @MaiaOS/universe/dashboard-icon-svgs points here so the app bundle does not load the full core (HMR-safe).
+ * - registry-icons.js — data/icons/*.maia only (ICON_SVG_BY_KEY, DEFAULT_CARD_ICON_SVG). @MaiaOS/universe/dashboard-icon-svgs — seed/build-seed-config; SPA uses runtime CoText + placeholder in dashboard.js.
  * - registry.js — re-exports icons + core + aggregates vibe registry modules.
  * Discovers all .maia files and registry.js modules under the maia spark root (recursive).
  */

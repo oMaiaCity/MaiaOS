@@ -5,7 +5,6 @@
 
 import { resolveAccountCoIdsToProfiles } from '@MaiaOS/loader'
 import { createPerfTracer } from '@MaiaOS/logs'
-import { DEFAULT_CARD_ICON_SVG } from '@MaiaOS/universe/dashboard-icon-svgs'
 import { findSessionChatIntentActorId, resolveChatVibeCoId } from './maia-ai-global.js'
 import { MAIADB_LAYER_STACK_ICON_SVG } from './maia-icons.js'
 import {
@@ -16,6 +15,9 @@ import {
 	truncate,
 	truncateWords,
 } from './utils.js'
+
+/** Neutral placeholder when manifest icon CoText is not yet available (icons come from runtime CoValues, not bundled registry). */
+const VIBE_ICON_PLACEHOLDER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.35"/></svg>`
 
 /** Dashboard card icon for The Game (gamepad) */
 const DASHBOARD_GAME_ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m10.667 6.134l-.502-.355A4.24 4.24 0 0 0 7.715 5h-.612c-.405 0-.813.025-1.194.16c-2.383.846-4.022 3.935-3.903 10.943c.024 1.412.354 2.972 1.628 3.581A3.2 3.2 0 0 0 5.027 20a2.74 2.74 0 0 0 1.53-.437c.41-.268.77-.616 1.13-.964c.444-.43.888-.86 1.424-1.138a4.1 4.1 0 0 1 1.89-.461H13c.658 0 1.306.158 1.89.46c.536.279.98.709 1.425 1.139c.36.348.72.696 1.128.964c.39.256.895.437 1.531.437a3.2 3.2 0 0 0 1.393-.316c1.274-.609 1.604-2.17 1.628-3.581c.119-7.008-1.52-10.097-3.903-10.942C17.71 5.025 17.3 5 16.897 5h-.612a4.24 4.24 0 0 0-2.45.78l-.502.354a2.31 2.31 0 0 1-2.666 0" opacity="0.5"/><path fill="currentColor" d="M16.75 9a.75.75 0 1 1 0 1.5a.75.75 0 0 1 0-1.5m-9.25.25a.75.75 0 0 1 .75.75v.75H9a.75.75 0 0 1 0 1.5h-.75V13a.75.75 0 0 1-1.5 0v-.75H6a.75.75 0 0 1 0-1.5h.75V10a.75.75 0 0 1 .75-.75m11.5 2a.75.75 0 1 1-1.5 0a.75.75 0 0 1 1.5 0m-3.75.75a.75.75 0 1 0 0-1.5a.75.75 0 0 0 0 1.5m2.25.75a.75.75 0 1 0-1.5 0a.75.75 0 0 0 1.5 0"/></svg>`
@@ -50,7 +52,7 @@ async function resolveVibeIconSvgFromManifest(maia, manifest) {
 			if (svg) return svg
 		}
 	}
-	return DEFAULT_CARD_ICON_SVG
+	return VIBE_ICON_PLACEHOLDER_SVG
 }
 
 /**
@@ -172,7 +174,7 @@ async function loadVibesFromSpark(maia, sparkCoId) {
 				const vibeCoId = vibesData[vibeKey]
 				let name = `${vibeKey.charAt(0).toUpperCase() + vibeKey.slice(1)}`
 				let description = `Open ${name}`
-				let iconSvg = DEFAULT_CARD_ICON_SVG
+				let iconSvg = VIBE_ICON_PLACEHOLDER_SVG
 				try {
 					const manifestStore = await maia.do({ op: 'read', factory: null, key: vibeCoId })
 					const manifest = manifestStore?.value ?? manifestStore
@@ -408,7 +410,7 @@ export async function renderVibeViewer(
 		}
 		perf.step('profile+avatar')
 		let vibeLabel = 'Vibe'
-		let vibeNavbarIconSvg = DEFAULT_CARD_ICON_SVG
+		let vibeNavbarIconSvg = VIBE_ICON_PLACEHOLDER_SVG
 		if (currentVibe?.startsWith?.('co_z')) {
 			try {
 				await perf.measure('vibeManifestTitle', async () => {
