@@ -9,7 +9,6 @@ export const FACTORY_PATH_TO_REF = {
 	'actor.factory.maia': '°maia/factory/actor',
 	'aven-identity.factory.maia': '°maia/factory/os/aven-identity',
 	'avens-identity-registry.factory.maia': '°maia/factory/os/avens-identity-registry',
-	'capabilities-stream.factory.maia': '°maia/factory/os/capabilities-stream',
 	'capability.factory.maia': '°maia/factory/os/capability',
 	'context.factory.maia': '°maia/factory/context',
 	'cotext.factory.maia': '°maia/factory/os/cotext',

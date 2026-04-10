@@ -70,6 +70,7 @@ export {
 	getRuntimeRef,
 	RUNTIME_REF,
 	resolveFactoryRefToCoId,
+	resolveInfraFactoryCoId,
 } from './cojson/factory/runtime-factory-refs.js'
 export { buildSystemFactoryCoIdsFromSparkOs } from './cojson/factory/system-factories-from-os.js'
 // Re-export services for external use
@@ -80,9 +81,13 @@ export {
 	getSparkOsId,
 	removeGroupMember,
 } from './cojson/groups/groups.js'
-export { collectCapabilityGrantCoIdsFromStreamContent } from './cojson/helpers/capability-stream-co-ids.js'
+export { collectCapabilityGrantCoIdsFromColistContent } from './cojson/helpers/capability-grant-co-ids.js'
 export {
-	getCapabilitiesStreamCoId,
+	accountHasCapabilityOnPeer,
+	getCapabilityGrantIndexColistCoIdFromPeer,
+} from './cojson/helpers/capability-grants-resolve.js'
+export {
+	getCapabilityGrantIndexColistCoId,
 	loadCapabilitiesGrants,
 } from './cojson/helpers/load-capabilities-grants.js'
 export { resolveAccountCoIdsToProfiles } from './cojson/helpers/resolve-account-profile.js'

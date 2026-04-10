@@ -12,7 +12,6 @@ const UNIQUE_PATH_KEYS = [
 	'actor.factory.maia',
 	'aven-identity.factory.maia',
 	'avens-identity-registry.factory.maia',
-	'capabilities-stream.factory.maia',
 	'capability.factory.maia',
 	'chat.factory.maia',
 	'cobinary.factory.maia',
@@ -47,8 +46,6 @@ const UNIVERSE_FACTORY_IMPORTS = {
 		import('@MaiaOS/universe/factories/aven-identity.factory.maia'),
 	'avens-identity-registry.factory.maia': () =>
 		import('@MaiaOS/universe/factories/avens-identity-registry.factory.maia'),
-	'capabilities-stream.factory.maia': () =>
-		import('@MaiaOS/universe/factories/capabilities-stream.factory.maia'),
 	'capability.factory.maia': () => import('@MaiaOS/universe/factories/capability.factory.maia'),
 	'chat.factory.maia': () => import('@MaiaOS/universe/factories/chat.factory.maia'),
 	'cobinary.factory.maia': () => import('@MaiaOS/universe/factories/cobinary.factory.maia'),
@@ -132,7 +129,6 @@ function buildFactories(rawByPathKey) {
 	const actorSchema = p('actor.factory.maia')
 	const avenIdentitySchema = p('aven-identity.factory.maia')
 	const avensIdentityRegistrySchema = p('avens-identity-registry.factory.maia')
-	const capabilitiesStreamSchema = p('capabilities-stream.factory.maia')
 	const capabilitySchema = p('capability.factory.maia')
 	const chatDataSchema = p('chat.factory.maia')
 	const cobinaryDataSchema = p('cobinary.factory.maia')
@@ -175,7 +171,6 @@ function buildFactories(rawByPathKey) {
 		'os/factories-registry': factoriesRegistryFactory,
 		'os/os-registry': osRegistrySchema,
 		'os/capability': capabilitySchema,
-		'os/capabilities-stream': capabilitiesStreamSchema,
 		'os/groups': groupsSchema,
 		'os/indexes-registry': indexesRegistrySchema,
 		'os/aven-identity': avenIdentitySchema,

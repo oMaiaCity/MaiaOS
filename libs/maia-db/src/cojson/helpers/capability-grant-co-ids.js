@@ -1,21 +1,21 @@
 /**
- * Collect capability CoMap co-ids from a CoStream view (peer getCurrentContent, or MaiaDB store value).
- * Handles session buckets `{ [sessionId]: [{ value: co_z }] }`, flat `items: [co_z | { value }]`,
- * and RawCoStreamView `toJSON()` when `items` is missing on the live view.
- *
- * @param {object|null|undefined} content - CoStream content from peer, or `{ type, items }` from store
+ * Collect capability CoMap co-ids from a schema index CoList view (peer getCurrentContent, or MaiaDB store value).
+ * @param {object|null|undefined} content - CoList content from peer, or store value
  * @returns {string[]}
  */
-export function collectCapabilityGrantCoIdsFromStreamContent(content) {
+export function collectCapabilityGrantCoIdsFromColistContent(content) {
 	if (!content) return []
-	if (content.type !== undefined && content.type !== 'costream') return []
+	if (content.type !== undefined && content.type !== 'colist') return []
 
 	let items = content.items
 	if (items == null && typeof content.toJSON === 'function') {
 		try {
 			const j = content.toJSON()
-			if (j && typeof j === 'object' && !(j instanceof Uint8Array)) {
-				items = j
+			if (Array.isArray(j)) {
+				return j.filter((id) => typeof id === 'string' && id.startsWith('co_z'))
+			}
+			if (j && typeof j === 'object' && !(j instanceof Uint8Array) && Array.isArray(j.items)) {
+				items = j.items
 			}
 		} catch {
 			return []
@@ -26,7 +26,7 @@ export function collectCapabilityGrantCoIdsFromStreamContent(content) {
 }
 
 /**
- * @param {unknown} items - Session map or flat list (MaiaDB store shape)
+ * @param {unknown} items - Flat list (MaiaDB store shape)
  * @returns {string[]}
  */
 function collectCoIdsFromItemsShape(items) {

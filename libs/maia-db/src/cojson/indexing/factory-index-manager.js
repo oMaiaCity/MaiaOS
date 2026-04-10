@@ -53,7 +53,7 @@ let warnedRegistriesMissingDuringBootstrap = false
  * @returns {Promise<RawCoMap|null>} spark.os CoMap
  */
 async function ensureOsCoMap(peer, spark) {
-	const effectiveSpark = spark ?? peer?.systemSparkCoId
+	const effectiveSpark = spark ?? peer?.systemSparkCoId ?? '°maia'
 	if (!peer.account) {
 		throw new Error('[SchemaIndexManager] Account required')
 	}

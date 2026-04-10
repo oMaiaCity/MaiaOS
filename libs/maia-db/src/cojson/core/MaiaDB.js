@@ -5,7 +5,6 @@
  * No DBAdapter interface. Direct CoJSON operations.
  */
 
-import { EXCEPTION_FACTORIES } from '../../factories/registry.js'
 import { seed } from '../../migrations/seeding/seed.js'
 import { ReactiveStore } from '../../reactive-store.js'
 import { getGlobalCoCache } from '../cache/coCache.js'
@@ -331,29 +330,6 @@ export class MaiaDB {
 		const osData = osStore.value
 		if (!osData || osData.error) {
 			if (typeof process !== 'undefined' && process.env?.DEBUG) return false
-		}
-		let capabilitiesId = osData.capabilities
-		if (!capabilitiesId || typeof capabilitiesId !== 'string' || !capabilitiesId.startsWith('co_z')) {
-			const osCore = this.getCoValue(osId)
-			if (osCore && this.isAvailable(osCore)) {
-				const osContent = this.getCurrentContent(osCore)
-				if (osContent && typeof osContent.set === 'function') {
-					const capabilitiesStreamSchemaCoId = getRuntimeRef(this, RUNTIME_REF.OS_CAPABILITIES_STREAM)
-					const capSchema = capabilitiesStreamSchemaCoId || EXCEPTION_FACTORIES.META_SCHEMA
-					const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
-					const { coValue: capabilitiesStream } = await createCoValueForSpark(
-						this,
-						this.systemSparkCoId,
-						{
-							factory: capSchema,
-							cotype: 'costream',
-							dataEngine: this.dbEngine,
-						},
-					)
-					osContent.set('capabilities', capabilitiesStream.id)
-					capabilitiesId = capabilitiesStream.id
-				}
-			}
 		}
 		return true
 	}

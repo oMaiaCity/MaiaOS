@@ -1,9 +1,9 @@
 {
 	"$factory": "°maia/factory/meta",
-	"title": "Capability",
-	"description": "Single capability grant. sub×cmd×pol. Stored in spark.os.capabilities CoStream.",
+	"title": "°maia/factory/os/capability",
+	"description": "Single capability grant. sub×cmd×pol. Instances are listed in spark.os.indexes[Capability schema co-id] (schema index CoList).",
 	"cotype": "comap",
-	"indexing": false,
+	"indexing": true,
 	"properties": {
 		"sub": {
 			"type": "string",

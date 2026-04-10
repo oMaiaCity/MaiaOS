@@ -37,11 +37,14 @@ export async function getFactoryIndexColistId(peer, schema) {
 	}
 
 	try {
-		const indexColist = await ensureFactoryIndexColist(peer, factoryCoId)
-		const result = indexColist?.id ?? null
-		if (typeof process !== 'undefined' && process.env?.DEBUG)
-			console.log('[DEBUG getFactoryIndexColistId] ensureFactoryIndexColist result=', result)
-		return result
+		await ensureFactoryIndexColist(peer, factoryCoId)
+		const idAfter = indexesCoMap.get(factoryCoId)
+		if (idAfter && typeof idAfter === 'string' && idAfter.startsWith('co_z')) {
+			if (typeof process !== 'undefined' && process.env?.DEBUG)
+				console.log('[DEBUG getFactoryIndexColistId] ensured indexColistId=', idAfter)
+			return idAfter
+		}
+		return null
 	} catch (e) {
 		if (typeof process !== 'undefined' && process.env?.DEBUG)
 			console.error('[DEBUG getFactoryIndexColistId] error=', e)

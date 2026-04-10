@@ -17,7 +17,6 @@ export const RUNTIME_REF = {
 	OS_GROUPS: 'osGroups',
 	OS_OS_REGISTRY: 'osOsRegistry',
 	OS_VIBES_REGISTRY: 'osVibesRegistry',
-	OS_CAPABILITIES_STREAM: 'osCapabilitiesStream',
 	DATA_COBINARY: 'dataCobinary',
 }
 
@@ -34,7 +33,6 @@ export const INFRA_FACTORY_NAMEKEY_BY_ROLE = {
 	[RUNTIME_REF.OS_GROUPS]: '°maia/factory/os/groups',
 	[RUNTIME_REF.OS_OS_REGISTRY]: '°maia/factory/os/os-registry',
 	[RUNTIME_REF.OS_VIBES_REGISTRY]: '°maia/factory/os/vibes-registry',
-	[RUNTIME_REF.OS_CAPABILITIES_STREAM]: '°maia/factory/os/capabilities-stream',
 	[RUNTIME_REF.DATA_COBINARY]: '°maia/factory/data/cobinary',
 }
 
@@ -58,6 +56,22 @@ export function fillRuntimeRefsFromSystemFactories(peer) {
 export function getRuntimeRef(peer, role) {
 	const id = peer.runtimeRefs?.get?.(role)
 	return id?.startsWith?.('co_z') ? id : null
+}
+
+/**
+ * Resolve infra factory co-id: runtimeRefs first, then {@link peer.systemFactoryCoIds} by authoring namekey.
+ * Use when {@link fillRuntimeRefsFromSystemFactories} has not run yet or {@link DataEngine.resolveSystemFactories} returned early.
+ * @param {{ runtimeRefs?: Map<string, string>, systemFactoryCoIds?: Map<string, string> }} peer
+ * @param {string} role — {@link RUNTIME_REF} value (e.g. {@link RUNTIME_REF.OS_CAPABILITY})
+ * @returns {string|null}
+ */
+export function resolveInfraFactoryCoId(peer, role) {
+	const id = getRuntimeRef(peer, role)
+	if (id?.startsWith?.('co_z')) return id
+	const nk = INFRA_FACTORY_NAMEKEY_BY_ROLE[role]
+	if (!nk) return null
+	const fromMap = peer.systemFactoryCoIds?.get?.(nk)
+	return fromMap?.startsWith?.('co_z') ? fromMap : null
 }
 
 /**

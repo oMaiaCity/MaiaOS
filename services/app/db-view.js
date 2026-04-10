@@ -126,7 +126,7 @@ async function hydrateCapabilitiesView(maia) {
 		tbody.innerHTML =
 			grants.length > 0
 				? buildCapabilitiesGrantRowsHtml(grants, profiles)
-				: '<tr class="capabilities-empty"><td colspan="6">No capability grants in spark.os.capabilities</td></tr>'
+				: '<tr class="capabilities-empty"><td colspan="6">No capability grants in the Capability index</td></tr>'
 		const banner = document.getElementById('capabilities-sync-banner')
 		if (banner) banner.remove()
 		const countEl = document.getElementById('capabilities-grant-count')
@@ -248,7 +248,7 @@ export async function renderApp(
 	loadVibe,
 	loadSpark,
 	navigateToScreen,
-	capabilitiesStreamCoId,
+	capabilityGrantsIndexColistCoId,
 ) {
 	// Re-apply LOG_MODE every render: in-memory perf/debug gates reset on HMR; ensures perf.all works after clicks.
 	if (typeof window !== 'undefined' && window.__MAIA_DEV_ENV__?.LOG_MODE !== undefined) {
@@ -507,7 +507,11 @@ export async function renderApp(
 		}
 
 		// Capabilities view — shell first; grants + profiles load after paint (hydrateCapabilitiesView)
-		if (capabilitiesStreamCoId && currentContextCoValueId === capabilitiesStreamCoId && maia) {
+		if (
+			capabilityGrantsIndexColistCoId &&
+			currentContextCoValueId === capabilityGrantsIndexColistCoId &&
+			maia
+		) {
 			debugLog('app', 'maia-db', 'render capabilities view (shell; grants load in background)', {
 				hasDo: !!maia?.do,
 			})
@@ -518,7 +522,7 @@ export async function renderApp(
 				type: 'capabilities',
 				typeLabel: 'Grants',
 				itemCount: null,
-				description: 'spark.os.capabilities',
+				description: 'spark.os.indexes (Capability schema index CoList)',
 			}
 			tableContent = `
 			<div class="capabilities-table-wrap">
@@ -632,7 +636,7 @@ export async function renderApp(
 									loadVibe,
 									loadSpark,
 									navigateToScreen,
-									capabilitiesStreamCoId,
+									capabilityGrantsIndexColistCoId,
 								)
 							}, 0)
 						}
@@ -682,7 +686,7 @@ export async function renderApp(
 										loadVibe,
 										loadSpark,
 										navigateToScreen,
-										capabilitiesStreamCoId,
+										capabilityGrantsIndexColistCoId,
 									)
 								}, 0)
 							}
@@ -713,9 +717,9 @@ export async function renderApp(
 			label: 'Account',
 			type: 'account',
 		})
-		if (capabilitiesStreamCoId) {
+		if (capabilityGrantsIndexColistCoId) {
 			navigationItems.push({
-				id: capabilitiesStreamCoId,
+				id: capabilityGrantsIndexColistCoId,
 				label: 'Capabilities',
 				type: 'capabilities',
 			})
@@ -1408,7 +1412,11 @@ export async function renderApp(
 		</div>
 	`
 
-		if (capabilitiesStreamCoId && currentContextCoValueId === capabilitiesStreamCoId && maia) {
+		if (
+			capabilityGrantsIndexColistCoId &&
+			currentContextCoValueId === capabilityGrantsIndexColistCoId &&
+			maia
+		) {
 			void hydrateCapabilitiesView(maia)
 		}
 
