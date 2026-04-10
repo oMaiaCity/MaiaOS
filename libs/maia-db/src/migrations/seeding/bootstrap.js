@@ -120,8 +120,6 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		tempCoMap.get('°maia/factory/os/os-registry') || EXCEPTION_FACTORIES.META_SCHEMA
 	const groupsSchemaCoId =
 		tempCoMap.get('°maia/factory/os/groups') || EXCEPTION_FACTORIES.META_SCHEMA
-	const capabilitiesStreamSchemaCoId =
-		tempCoMap.get('°maia/factory/os/capabilities-stream') || EXCEPTION_FACTORIES.META_SCHEMA
 	const indexesSchemaCoId =
 		tempCoMap.get('°maia/factory/os/indexes-registry') || EXCEPTION_FACTORIES.META_SCHEMA
 	const vibesRegistrySchemaCoId =
@@ -141,12 +139,6 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	)
 	groups.set('guardian', guardian.id)
 	os.set('groups', groups.id)
-	const { coValue: capabilitiesStream } = await createCoValueForSpark(ctx, null, {
-		factory: capabilitiesStreamSchemaCoId,
-		cotype: 'costream',
-		dataEngine: dbEngine,
-	})
-	os.set('capabilities', capabilitiesStream.id)
 	os.set(SPARK_OS_META_FACTORY_CO_ID_KEY, metaSchemaCoId)
 	const { coValue: indexes } = await createCoValueForSpark(
 		ctx,

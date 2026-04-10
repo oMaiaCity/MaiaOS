@@ -20,9 +20,10 @@
  */
 
 import {
-	collectCapabilityGrantCoIdsFromStreamContent,
+	accountHasCapabilityOnPeer,
 	getRuntimeRef,
 	RUNTIME_REF,
+	resolveInfraFactoryCoId,
 } from '@MaiaOS/db'
 import { ensureFactoriesLoaded } from '@MaiaOS/factories'
 import {
@@ -217,68 +218,61 @@ async function verifyAccountBinding(peer, accountId, expectedDidKey) {
 	}
 }
 
-/** Get spark.os.capabilities stream co-id (registries → sparks → °maia → os → capabilities). */
-async function getCapabilitiesStreamId(worker) {
-	try {
-		return await getCoIdByPath(worker.peer, getRegistriesId(worker.account), [
-			'sparks',
-			SYSTEM_SPARK_REGISTRY_KEY,
-			'os',
-			'capabilities',
-		])
-	} catch {
-		return null
+/** Create Capability CoMap; index hook appends to spark.os.indexes[capability schema]. Skips if a non-expired grant for the same sub+cmd already exists. */
+async function ensureCapabilityGrant(worker, { sub, cmd, pol, exp }) {
+	const peer = worker.peer
+	if (!resolveInfraFactoryCoId(peer, RUNTIME_REF.OS_CAPABILITY)) {
+		await worker.dataEngine.resolveSystemFactories()
 	}
-}
-
-/** Wait until the capabilities CoStream view is readable (items or toJSON) so hasValidCapability is not a false negative on startup. */
-async function waitForCapabilitiesStreamReady(worker, { maxAttempts = 40, delayMs = 100 } = {}) {
-	const capabilitiesStreamId = await getCapabilitiesStreamId(worker)
-	if (!capabilitiesStreamId?.startsWith('co_z')) return
-	for (let i = 0; i < maxAttempts; i++) {
-		const core = worker.peer.node.getCoValue(capabilitiesStreamId)
-		if (core && worker.peer.isAvailable(core)) {
-			const content = worker.peer.getCurrentContent(core)
-			if (content?.type === 'costream') {
-				if (content.items !== undefined && content.items !== null) return
-				if (typeof content.toJSON === 'function') {
-					try {
-						const j = content.toJSON()
-						if (j && typeof j === 'object' && !(j instanceof Uint8Array)) return
-					} catch {
-						// keep waiting
-					}
-				}
-			}
-		}
-		await new Promise((r) => setTimeout(r, delayMs))
+	if (await accountHasCapabilityOnPeer(peer, worker.account, sub, cmd)) return
+	const capabilitySchemaCoId = resolveInfraFactoryCoId(peer, RUNTIME_REF.OS_CAPABILITY)
+	if (!capabilitySchemaCoId) {
+		opsRegister.warn(
+			'ensureCapabilityGrant: OS_CAPABILITY factory missing after resolveSystemFactories',
+			{
+				sub: sub?.slice(0, 14),
+				cmd,
+			},
+		)
+		return
 	}
-}
-
-/** Push Capability CoMap to spark.os.capabilities stream. Skips if a non-expired grant for the same sub+cmd already exists. */
-async function pushCapabilityToStream(worker, { sub, cmd, pol, exp }) {
-	if (await hasValidCapability(worker, sub, cmd)) return
-	const capabilitiesStreamId = await getCapabilitiesStreamId(worker)
-	if (!capabilitiesStreamId?.startsWith('co_z')) return
-	const capabilitySchemaCoId = getRuntimeRef(worker.peer, RUNTIME_REF.OS_CAPABILITY)
-	if (!capabilitySchemaCoId) return
 	try {
-		const createResult = await worker.dataEngine.execute({
+		await worker.dataEngine.execute({
 			op: 'create',
 			factory: capabilitySchemaCoId,
 			data: { sub, cmd, pol, exp },
-			spark: worker.peer.systemSparkCoId,
-		})
-		const capabilityCoId = createResult?.data?.id ?? createResult?.id
-		if (!capabilityCoId?.startsWith('co_z')) return
-		await worker.dataEngine.execute({
-			op: 'append',
-			coId: capabilitiesStreamId,
-			item: capabilityCoId,
-			cotype: 'costream',
+			spark: peer.systemSparkCoId,
 		})
 	} catch (e) {
-		opsRegister.warn('Failed to push capability to stream', e?.message)
+		opsRegister.warn('Failed to create capability grant', e?.message)
+	}
+}
+
+/**
+ * For every humans registry key that is an account co-id (co_z...), ensure /llm/chat and /sync/write.
+ * Repairs pre-grant registries and cases where POST /register did not create grants.
+ */
+async function ensureCapabilityGrantsForRegisteredHumanAccountKeys(worker) {
+	const { peer, account } = worker
+	let registryId
+	try {
+		registryId = await getCoIdByPath(peer, getRegistriesId(account), ['humans'], { retries: 2 })
+	} catch (e) {
+		opsRegister.warn(
+			'ensureCapabilityGrantsForRegisteredHumanAccountKeys: no humans registry',
+			e?.message,
+		)
+		return
+	}
+	const raw = await peer.getRawRecord(registryId)
+	if (!raw || typeof raw !== 'object') return
+	const exp = Math.floor(Date.now() / 1000) + 365 * 24 * 3600
+	for (const k of Object.keys(raw)) {
+		if (!k.startsWith('co_z')) continue
+		const v = raw[k]
+		if (typeof v !== 'string' || !v.startsWith('co_z')) continue
+		await ensureCapabilityGrant(worker, { sub: k, cmd: '/llm/chat', pol: [], exp })
+		await ensureCapabilityGrant(worker, { sub: k, cmd: '/sync/write', pol: [], exp })
 	}
 }
 
@@ -286,7 +280,7 @@ async function pushCapabilityToStream(worker, { sub, cmd, pol, exp }) {
 async function seedAdminCapabilityForServerAccount(worker) {
 	if (!accountID?.startsWith('co_z')) return
 	const exp = Math.floor(Date.now() / 1000) + 10 * 365 * 24 * 3600 // 10 years
-	await pushCapabilityToStream(worker, { sub: accountID, cmd: '/admin', pol: [], exp })
+	await ensureCapabilityGrant(worker, { sub: accountID, cmd: '/admin', pol: [], exp })
 }
 
 /**
@@ -298,36 +292,17 @@ async function seedCapabilitiesForGuardian(worker) {
 	if (avenMaiaGuardian === accountID) return
 	const exp = Math.floor(Date.now() / 1000) + 10 * 365 * 24 * 3600
 	for (const cmd of ['/sync/write', '/llm/chat']) {
-		await pushCapabilityToStream(worker, { sub: avenMaiaGuardian, cmd, pol: [], exp })
+		await ensureCapabilityGrant(worker, { sub: avenMaiaGuardian, cmd, pol: [], exp })
 	}
 }
 
-/** Check if account has valid capability for cmd from spark.os.capabilities stream. /admin grants all. */
+/** Check if account has valid capability from Capability index CoList. /admin grants all. */
 async function hasValidCapability(worker, accountId, cmd) {
-	if (!accountId?.startsWith('co_z') || !cmd) return false
-	const capabilitiesStreamId = await getCapabilitiesStreamId(worker)
-	if (!capabilitiesStreamId?.startsWith('co_z')) return false
-	try {
-		const core = worker.peer.node.getCoValue(capabilitiesStreamId)
-		if (!core || !worker.peer.isAvailable(core)) return false
-		const content = worker.peer.getCurrentContent(core)
-		if (!content) return false
-		if (content.type !== undefined && content.type !== 'costream') return false
-		const now = Math.floor(Date.now() / 1000)
-		const allCoIds = collectCapabilityGrantCoIdsFromStreamContent(content)
-		for (const capCoId of allCoIds) {
-			const capContent = await loadCoMap(worker.peer, capCoId, { retries: 3 })
-			if (!capContent?.get) continue
-			const sub = capContent.get('sub')
-			const capCmd = capContent.get('cmd')
-			const exp = capContent.get('exp')
-			if (sub !== accountId || typeof exp !== 'number' || exp <= now) continue
-			if (capCmd === cmd || capCmd === '/admin') return true
-		}
-		return false
-	} catch {
-		return false
+	const peer = worker.peer
+	if (!resolveInfraFactoryCoId(peer, RUNTIME_REF.OS_CAPABILITY)) {
+		await worker.dataEngine.resolveSystemFactories()
 	}
+	return accountHasCapabilityOnPeer(peer, worker.account, accountId, cmd)
 }
 
 /** Extract account/agent ID from CoJSON sessionID (format: id_session_z... or id_session_d...). */
@@ -531,12 +506,25 @@ async function handleRegister(worker, body, req) {
 		const raw = await peer.getRawRecord(registryId)
 
 		if (type === 'human') {
-			// Re-auth: accountId already registered — return OK, no new capabilities
+			// Re-auth: accountId already registered — still ensure grants (migrations / pre-grant accounts)
 			const existingHumanId = raw?.[accountId]
 			if (existingHumanId?.startsWith('co_z')) {
 				const existingUsername = raw
 					? Object.keys(raw).find((k) => raw[k] === existingHumanId && k !== accountId)
 					: null
+				const llmExp = Math.floor(Date.now() / 1000) + 365 * 24 * 3600
+				await ensureCapabilityGrant(worker, {
+					sub: accountId,
+					cmd: '/llm/chat',
+					pol: [],
+					exp: llmExp,
+				})
+				await ensureCapabilityGrant(worker, {
+					sub: accountId,
+					cmd: '/sync/write',
+					pol: [],
+					exp: llmExp,
+				})
 				return jsonResponse(
 					{
 						ok: true,
@@ -583,13 +571,13 @@ async function handleRegister(worker, body, req) {
 			const r = await dataEngine.execute({ op: 'update', id: registryId, data: registryData })
 			if (r?.ok === false)
 				return err(r.errors?.map((e) => e.message).join('; ') ?? 'update failed', 500, {}, req)
-			await pushCapabilityToStream(worker, {
+			await ensureCapabilityGrant(worker, {
 				sub: accountId,
 				cmd: '/llm/chat',
 				pol: [],
 				exp: llmExp,
 			})
-			await pushCapabilityToStream(worker, {
+			await ensureCapabilityGrant(worker, {
 				sub: accountId,
 				cmd: '/sync/write',
 				pol: [],
@@ -1172,15 +1160,16 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 		await dataEngine.resolveSystemFactories()
 
 		// Seed /admin for AVEN_MAIA_ACCOUNT (grants all endpoints). Must run after scaffold exists (genesis or prior run).
-		await waitForCapabilitiesStreamReady(agentWorker).catch((e) =>
-			opsSync.warn('waitForCapabilitiesStreamReady:', e?.message),
-		)
 		await seedAdminCapabilityForServerAccount(agentWorker).catch((e) =>
 			opsSync.warn('seedAdminCapabilityForServerAccount:', e?.message),
 		)
 
 		await seedCapabilitiesForGuardian(agentWorker).catch((e) =>
 			opsSync.warn('seedCapabilitiesForGuardian:', e?.message),
+		)
+
+		await ensureCapabilityGrantsForRegisteredHumanAccountKeys(agentWorker).catch((e) =>
+			opsRegister.warn('ensureCapabilityGrantsForRegisteredHumanAccountKeys:', e?.message),
 		)
 
 		// Self-register Maia aven in registries.avens for profile resolution (idempotent)

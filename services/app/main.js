@@ -10,7 +10,7 @@
  */
 
 import {
-	getCapabilitiesStreamCoId,
+	getCapabilityGrantIndexColistCoId,
 	isPRFSupported,
 	loadOrCreateAgentAccount,
 	MaiaOS,
@@ -63,8 +63,8 @@ function waitUntilNextPaint() {
 }
 
 let maia
-/** spark.os.capabilities CoStream co-id — navigation + DB viewer capabilities shell */
-let capabilitiesStreamCoId = null
+/** spark.os.indexes[OS_CAPABILITY] schema index CoList co-id — navigation + DB viewer capabilities shell */
+let capabilityGrantsIndexColistCoId = null
 let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'the-game' | 'vibe-viewer' | …
 let currentView = 'account' // Current schema filter (default: 'account')
 let currentContextCoValueId = null // Currently loaded CoValue in main context (explorer-style navigation)
@@ -376,7 +376,7 @@ async function initAgentMode() {
 		window.maia = maia
 		// CRITICAL: Await link before first render - indexing requires account.registries
 		await linkAccountToRegistries(maia).catch(() => {})
-		capabilitiesStreamCoId = (await getCapabilitiesStreamCoId(maia)) ?? null
+		capabilityGrantsIndexColistCoId = (await getCapabilityGrantIndexColistCoId(maia)) ?? null
 		initGlobalAI(maia)
 		notifyMaiaReady(maia)
 
@@ -611,7 +611,7 @@ async function signInWithTestAven() {
 				maia = bootedMaia
 				window.maia = maia
 				await linkAccountToRegistries(maia).catch(() => {})
-				capabilitiesStreamCoId = (await getCapabilitiesStreamCoId(maia)) ?? null
+				capabilityGrantsIndexColistCoId = (await getCapabilityGrantIndexColistCoId(maia)) ?? null
 				initGlobalAI(maia)
 				notifyMaiaReady(maia)
 				cleanupLoadingScreenSync()
@@ -690,7 +690,7 @@ async function signIn() {
 						autoRegisterHuman(maia).catch(() => {}),
 						linkAccountToRegistries(maia).catch(() => {}),
 					])
-					capabilitiesStreamCoId = (await getCapabilitiesStreamCoId(maia)) ?? null
+					capabilityGrantsIndexColistCoId = (await getCapabilityGrantIndexColistCoId(maia)) ?? null
 					initGlobalAI(maia)
 					notifyMaiaReady(maia)
 
@@ -847,7 +847,7 @@ async function register() {
 					autoRegisterHuman(maia).catch(() => {}),
 					linkAccountToRegistries(maia).catch(() => {}),
 				])
-				capabilitiesStreamCoId = (await getCapabilitiesStreamCoId(maia)) ?? null
+				capabilityGrantsIndexColistCoId = (await getCapabilityGrantIndexColistCoId(maia)) ?? null
 				initGlobalAI(maia)
 				notifyMaiaReady(maia)
 				cleanupLoadingScreenSync()
@@ -861,7 +861,7 @@ async function register() {
 			.catch((bootError) => {
 				authState = { signedIn: false, accountID: null }
 				maia = null
-				capabilitiesStreamCoId = null
+				capabilityGrantsIndexColistCoId = null
 				setSignInLoading(false)
 				showToast(`Failed to initialize MaiaOS: ${caughtErrMessage(bootError)}`, 'error')
 				window.history.pushState({}, '', '/signup')
@@ -904,7 +904,7 @@ function signOut() {
 	syncState = { connected: false, syncing: false, error: null, status: null }
 	updateSyncState({ writeEnabled: true }) // Reset for next session
 	maia = null
-	capabilitiesStreamCoId = null
+	capabilityGrantsIndexColistCoId = null
 
 	// DON'T clear the account flag - passkey still exists on device!
 	// User can still sign back in, so UI should show "Sign In" as primary
@@ -1198,7 +1198,7 @@ async function renderAppInternal() {
 			loadVibe,
 			loadSpark,
 			navigateToScreen,
-			capabilitiesStreamCoId,
+			capabilityGrantsIndexColistCoId,
 		)
 		// Update unified nav left button: always "home", action = go to dashboard when not on dashboard
 		if (currentScreen === 'dashboard') {

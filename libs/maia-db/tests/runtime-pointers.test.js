@@ -4,6 +4,7 @@ import {
 	getRuntimeRef,
 	RUNTIME_REF,
 	resolveFactoryRefToCoId,
+	resolveInfraFactoryCoId,
 } from '../src/cojson/factory/runtime-factory-refs.js'
 
 describe('runtimeRefs', () => {
@@ -14,6 +15,14 @@ describe('runtimeRefs', () => {
 		}
 		fillRuntimeRefsFromSystemFactories(peer)
 		expect(getRuntimeRef(peer, RUNTIME_REF.META)).toBe('co_zMETA')
+	})
+
+	test('resolveInfraFactoryCoId falls back to systemFactoryCoIds when runtimeRefs empty', () => {
+		const peer = {
+			systemFactoryCoIds: new Map([['°maia/factory/os/capability', 'co_zCAP']]),
+			runtimeRefs: new Map(),
+		}
+		expect(resolveInfraFactoryCoId(peer, RUNTIME_REF.OS_CAPABILITY)).toBe('co_zCAP')
 	})
 
 	test('resolveFactoryRefToCoId maps namekey and @metaSchema to catalog co_z', () => {

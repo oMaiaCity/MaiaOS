@@ -6,7 +6,7 @@
 export {
 	ensureProfileForNewAccount,
 	generateRegistryName,
-	getCapabilitiesStreamCoId,
+	getCapabilityGrantIndexColistCoId,
 	getFactoryIndexColistId,
 	getSchema,
 	loadCapabilitiesGrants,

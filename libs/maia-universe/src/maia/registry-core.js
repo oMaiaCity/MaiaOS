@@ -150,93 +150,92 @@ import raw140 from '@MaiaOS/universe/actors/views/tabs/view.maia'
 import raw141 from '@MaiaOS/universe/factories/actor.factory.maia'
 import raw142 from '@MaiaOS/universe/factories/aven-identity.factory.maia'
 import raw143 from '@MaiaOS/universe/factories/avens-identity-registry.factory.maia'
-import raw144 from '@MaiaOS/universe/factories/capabilities-stream.factory.maia'
-import raw145 from '@MaiaOS/universe/factories/capability.factory.maia'
-import raw146 from '@MaiaOS/universe/factories/chat.factory.maia'
-import raw147 from '@MaiaOS/universe/factories/co-types.defs.maia'
-import raw148 from '@MaiaOS/universe/factories/cobinary.factory.maia'
-import raw149 from '@MaiaOS/universe/factories/context.factory.maia'
-import raw150 from '@MaiaOS/universe/factories/cotext.factory.maia'
-import raw151 from '@MaiaOS/universe/factories/event.factory.maia'
-import raw152 from '@MaiaOS/universe/factories/factories-registry.factory.maia'
-import raw153 from '@MaiaOS/universe/factories/groups.factory.maia'
-import raw154 from '@MaiaOS/universe/factories/human.factory.maia'
-import raw155 from '@MaiaOS/universe/factories/humans-registry.factory.maia'
-import raw156 from '@MaiaOS/universe/factories/inbox.factory.maia'
-import raw157 from '@MaiaOS/universe/factories/indexes-registry.factory.maia'
-import raw158 from '@MaiaOS/universe/factories/maia-script-expression.factory.maia'
-import raw159 from '@MaiaOS/universe/factories/meta.factory.maia'
-import raw160 from '@MaiaOS/universe/factories/notes.factory.maia'
-import raw161 from '@MaiaOS/universe/factories/os-registry.factory.maia'
-import raw162 from '@MaiaOS/universe/factories/process.factory.maia'
-import raw163 from '@MaiaOS/universe/factories/profile.factory.maia'
-import raw164 from '@MaiaOS/universe/factories/registries.factory.maia'
-import raw165 from '@MaiaOS/universe/factories/spark.factory.maia'
-import raw166 from '@MaiaOS/universe/factories/sparks-registry.factory.maia'
-import raw167 from '@MaiaOS/universe/factories/style.factory.maia'
-import raw168 from '@MaiaOS/universe/factories/todos.factory.maia'
-import raw169 from '@MaiaOS/universe/factories/vibe.factory.maia'
-import raw170 from '@MaiaOS/universe/factories/vibes-registry.factory.maia'
-import raw171 from '@MaiaOS/universe/factories/view.factory.maia'
-import raw172 from '@MaiaOS/universe/factories/wasm.factory.maia'
-import raw173 from '@MaiaOS/universe/vibes/brand/maiacity.style.maia'
-import raw174 from '@MaiaOS/universe/vibes/chat/intent/intent.actor.maia'
-import raw175 from '@MaiaOS/universe/vibes/chat/intent/intent.context.maia'
-import raw176 from '@MaiaOS/universe/vibes/chat/intent/intent.process.maia'
-import raw177 from '@MaiaOS/universe/vibes/chat/intent/intent.view.maia'
-import raw178 from '@MaiaOS/universe/vibes/chat/manifest.vibe.maia'
-import raw179 from '@MaiaOS/universe/vibes/humans/intent/intent.actor.maia'
-import raw180 from '@MaiaOS/universe/vibes/humans/intent/intent.context.maia'
-import raw181 from '@MaiaOS/universe/vibes/humans/intent/intent.process.maia'
-import raw182 from '@MaiaOS/universe/vibes/humans/intent/intent.view.maia'
-import raw183 from '@MaiaOS/universe/vibes/humans/manifest.vibe.maia'
-import raw184 from '@MaiaOS/universe/vibes/logs/intent/intent.actor.maia'
-import raw185 from '@MaiaOS/universe/vibes/logs/intent/intent.context.maia'
-import raw186 from '@MaiaOS/universe/vibes/logs/intent/intent.process.maia'
-import raw187 from '@MaiaOS/universe/vibes/logs/intent/intent.view.maia'
-import raw188 from '@MaiaOS/universe/vibes/logs/manifest.vibe.maia'
-import raw189 from '@MaiaOS/universe/vibes/paper/manifest.vibe.maia'
-import raw190 from '@MaiaOS/universe/vibes/profile/intent/intent.actor.maia'
-import raw191 from '@MaiaOS/universe/vibes/profile/intent/intent.context.maia'
-import raw192 from '@MaiaOS/universe/vibes/profile/intent/intent.process.maia'
-import raw193 from '@MaiaOS/universe/vibes/profile/intent/intent.view.maia'
-import raw194 from '@MaiaOS/universe/vibes/profile/manifest.vibe.maia'
-import raw195 from '@MaiaOS/universe/vibes/quickjs/add-form/actor.maia'
-import raw196 from '@MaiaOS/universe/vibes/quickjs/add-form/context.maia'
-import raw197 from '@MaiaOS/universe/vibes/quickjs/add-form/interface.maia'
-import raw198 from '@MaiaOS/universe/vibes/quickjs/add-form/process.maia'
-import raw199 from '@MaiaOS/universe/vibes/quickjs/add-form/view.maia'
-import raw205 from '@MaiaOS/universe/vibes/quickjs/deps-list/actor.maia'
-import raw206 from '@MaiaOS/universe/vibes/quickjs/deps-list/interface.maia'
-import raw207 from '@MaiaOS/universe/vibes/quickjs/deps-list/process.maia'
-import raw208 from '@MaiaOS/universe/vibes/quickjs/deps-list/style.maia'
-import raw209 from '@MaiaOS/universe/vibes/quickjs/deps-list/view.maia'
-import raw200 from '@MaiaOS/universe/vibes/quickjs/deps-list-detail/actor.maia'
-import raw201 from '@MaiaOS/universe/vibes/quickjs/deps-list-detail/context.maia'
-import raw202 from '@MaiaOS/universe/vibes/quickjs/deps-list-detail/interface.maia'
-import raw203 from '@MaiaOS/universe/vibes/quickjs/deps-list-detail/process.maia'
-import raw204 from '@MaiaOS/universe/vibes/quickjs/deps-list-detail/view.maia'
-import raw210 from '@MaiaOS/universe/vibes/quickjs/intent/intent.actor.maia'
-import raw211 from '@MaiaOS/universe/vibes/quickjs/intent/intent.context.maia'
-import raw212 from '@MaiaOS/universe/vibes/quickjs/intent/intent.process.maia'
-import raw213 from '@MaiaOS/universe/vibes/quickjs/intent/intent.view.maia'
-import raw214 from '@MaiaOS/universe/vibes/quickjs/layout-quickjs/actor.maia'
-import raw215 from '@MaiaOS/universe/vibes/quickjs/layout-quickjs/context.maia'
-import raw216 from '@MaiaOS/universe/vibes/quickjs/layout-quickjs/interface.maia'
-import raw217 from '@MaiaOS/universe/vibes/quickjs/manifest.vibe.maia'
-import raw218 from '@MaiaOS/universe/vibes/sparks/intent/intent.actor.maia'
-import raw219 from '@MaiaOS/universe/vibes/sparks/intent/intent.context.maia'
-import raw220 from '@MaiaOS/universe/vibes/sparks/intent/intent.process.maia'
-import raw221 from '@MaiaOS/universe/vibes/sparks/intent/intent.view.maia'
-import raw222 from '@MaiaOS/universe/vibes/sparks/manifest.vibe.maia'
-import raw223 from '@MaiaOS/universe/vibes/todos/intent/intent.actor.maia'
-import raw224 from '@MaiaOS/universe/vibes/todos/intent/intent.context.maia'
-import raw225 from '@MaiaOS/universe/vibes/todos/intent/intent.process.maia'
-import raw226 from '@MaiaOS/universe/vibes/todos/intent/intent.view.maia'
-import raw227 from '@MaiaOS/universe/vibes/todos/manifest.vibe.maia'
-import raw228 from './data/icons.data.maia'
-import raw229 from './data/notes.data.maia'
-import raw230 from './data/todos.data.maia'
+import raw144 from '@MaiaOS/universe/factories/capability.factory.maia'
+import raw145 from '@MaiaOS/universe/factories/chat.factory.maia'
+import raw146 from '@MaiaOS/universe/factories/co-types.defs.maia'
+import raw147 from '@MaiaOS/universe/factories/cobinary.factory.maia'
+import raw148 from '@MaiaOS/universe/factories/context.factory.maia'
+import raw149 from '@MaiaOS/universe/factories/cotext.factory.maia'
+import raw150 from '@MaiaOS/universe/factories/event.factory.maia'
+import raw151 from '@MaiaOS/universe/factories/factories-registry.factory.maia'
+import raw152 from '@MaiaOS/universe/factories/groups.factory.maia'
+import raw153 from '@MaiaOS/universe/factories/human.factory.maia'
+import raw154 from '@MaiaOS/universe/factories/humans-registry.factory.maia'
+import raw155 from '@MaiaOS/universe/factories/inbox.factory.maia'
+import raw156 from '@MaiaOS/universe/factories/indexes-registry.factory.maia'
+import raw157 from '@MaiaOS/universe/factories/maia-script-expression.factory.maia'
+import raw158 from '@MaiaOS/universe/factories/meta.factory.maia'
+import raw159 from '@MaiaOS/universe/factories/notes.factory.maia'
+import raw160 from '@MaiaOS/universe/factories/os-registry.factory.maia'
+import raw161 from '@MaiaOS/universe/factories/process.factory.maia'
+import raw162 from '@MaiaOS/universe/factories/profile.factory.maia'
+import raw163 from '@MaiaOS/universe/factories/registries.factory.maia'
+import raw164 from '@MaiaOS/universe/factories/spark.factory.maia'
+import raw165 from '@MaiaOS/universe/factories/sparks-registry.factory.maia'
+import raw166 from '@MaiaOS/universe/factories/style.factory.maia'
+import raw167 from '@MaiaOS/universe/factories/todos.factory.maia'
+import raw168 from '@MaiaOS/universe/factories/vibe.factory.maia'
+import raw169 from '@MaiaOS/universe/factories/vibes-registry.factory.maia'
+import raw170 from '@MaiaOS/universe/factories/view.factory.maia'
+import raw171 from '@MaiaOS/universe/factories/wasm.factory.maia'
+import raw172 from '@MaiaOS/universe/vibes/brand/maiacity.style.maia'
+import raw173 from '@MaiaOS/universe/vibes/chat/intent/intent.actor.maia'
+import raw174 from '@MaiaOS/universe/vibes/chat/intent/intent.context.maia'
+import raw175 from '@MaiaOS/universe/vibes/chat/intent/intent.process.maia'
+import raw176 from '@MaiaOS/universe/vibes/chat/intent/intent.view.maia'
+import raw177 from '@MaiaOS/universe/vibes/chat/manifest.vibe.maia'
+import raw178 from '@MaiaOS/universe/vibes/humans/intent/intent.actor.maia'
+import raw179 from '@MaiaOS/universe/vibes/humans/intent/intent.context.maia'
+import raw180 from '@MaiaOS/universe/vibes/humans/intent/intent.process.maia'
+import raw181 from '@MaiaOS/universe/vibes/humans/intent/intent.view.maia'
+import raw182 from '@MaiaOS/universe/vibes/humans/manifest.vibe.maia'
+import raw183 from '@MaiaOS/universe/vibes/logs/intent/intent.actor.maia'
+import raw184 from '@MaiaOS/universe/vibes/logs/intent/intent.context.maia'
+import raw185 from '@MaiaOS/universe/vibes/logs/intent/intent.process.maia'
+import raw186 from '@MaiaOS/universe/vibes/logs/intent/intent.view.maia'
+import raw187 from '@MaiaOS/universe/vibes/logs/manifest.vibe.maia'
+import raw188 from '@MaiaOS/universe/vibes/paper/manifest.vibe.maia'
+import raw189 from '@MaiaOS/universe/vibes/profile/intent/intent.actor.maia'
+import raw190 from '@MaiaOS/universe/vibes/profile/intent/intent.context.maia'
+import raw191 from '@MaiaOS/universe/vibes/profile/intent/intent.process.maia'
+import raw192 from '@MaiaOS/universe/vibes/profile/intent/intent.view.maia'
+import raw193 from '@MaiaOS/universe/vibes/profile/manifest.vibe.maia'
+import raw194 from '@MaiaOS/universe/vibes/quickjs/add-form/actor.maia'
+import raw195 from '@MaiaOS/universe/vibes/quickjs/add-form/context.maia'
+import raw196 from '@MaiaOS/universe/vibes/quickjs/add-form/interface.maia'
+import raw197 from '@MaiaOS/universe/vibes/quickjs/add-form/process.maia'
+import raw198 from '@MaiaOS/universe/vibes/quickjs/add-form/view.maia'
+import raw204 from '@MaiaOS/universe/vibes/quickjs/deps-list/actor.maia'
+import raw205 from '@MaiaOS/universe/vibes/quickjs/deps-list/interface.maia'
+import raw206 from '@MaiaOS/universe/vibes/quickjs/deps-list/process.maia'
+import raw207 from '@MaiaOS/universe/vibes/quickjs/deps-list/style.maia'
+import raw208 from '@MaiaOS/universe/vibes/quickjs/deps-list/view.maia'
+import raw199 from '@MaiaOS/universe/vibes/quickjs/deps-list-detail/actor.maia'
+import raw200 from '@MaiaOS/universe/vibes/quickjs/deps-list-detail/context.maia'
+import raw201 from '@MaiaOS/universe/vibes/quickjs/deps-list-detail/interface.maia'
+import raw202 from '@MaiaOS/universe/vibes/quickjs/deps-list-detail/process.maia'
+import raw203 from '@MaiaOS/universe/vibes/quickjs/deps-list-detail/view.maia'
+import raw209 from '@MaiaOS/universe/vibes/quickjs/intent/intent.actor.maia'
+import raw210 from '@MaiaOS/universe/vibes/quickjs/intent/intent.context.maia'
+import raw211 from '@MaiaOS/universe/vibes/quickjs/intent/intent.process.maia'
+import raw212 from '@MaiaOS/universe/vibes/quickjs/intent/intent.view.maia'
+import raw213 from '@MaiaOS/universe/vibes/quickjs/layout-quickjs/actor.maia'
+import raw214 from '@MaiaOS/universe/vibes/quickjs/layout-quickjs/context.maia'
+import raw215 from '@MaiaOS/universe/vibes/quickjs/layout-quickjs/interface.maia'
+import raw216 from '@MaiaOS/universe/vibes/quickjs/manifest.vibe.maia'
+import raw217 from '@MaiaOS/universe/vibes/sparks/intent/intent.actor.maia'
+import raw218 from '@MaiaOS/universe/vibes/sparks/intent/intent.context.maia'
+import raw219 from '@MaiaOS/universe/vibes/sparks/intent/intent.process.maia'
+import raw220 from '@MaiaOS/universe/vibes/sparks/intent/intent.view.maia'
+import raw221 from '@MaiaOS/universe/vibes/sparks/manifest.vibe.maia'
+import raw222 from '@MaiaOS/universe/vibes/todos/intent/intent.actor.maia'
+import raw223 from '@MaiaOS/universe/vibes/todos/intent/intent.context.maia'
+import raw224 from '@MaiaOS/universe/vibes/todos/intent/intent.process.maia'
+import raw225 from '@MaiaOS/universe/vibes/todos/intent/intent.view.maia'
+import raw226 from '@MaiaOS/universe/vibes/todos/manifest.vibe.maia'
+import raw227 from './data/icons.data.maia'
+import raw228 from './data/notes.data.maia'
+import raw229 from './data/todos.data.maia'
 
 const _actorPairs = [
 	['os/ai/actor.maia', raw0],
@@ -389,104 +388,103 @@ const _factoryPairs = [
 	['actor.factory.maia', raw141],
 	['aven-identity.factory.maia', raw142],
 	['avens-identity-registry.factory.maia', raw143],
-	['capabilities-stream.factory.maia', raw144],
-	['capability.factory.maia', raw145],
-	['chat.factory.maia', raw146],
-	['co-types.defs.maia', raw147],
-	['cobinary.factory.maia', raw148],
-	['context.factory.maia', raw149],
-	['cotext.factory.maia', raw150],
-	['event.factory.maia', raw151],
-	['factories-registry.factory.maia', raw152],
-	['groups.factory.maia', raw153],
-	['human.factory.maia', raw154],
-	['humans-registry.factory.maia', raw155],
-	['inbox.factory.maia', raw156],
-	['indexes-registry.factory.maia', raw157],
-	['maia-script-expression.factory.maia', raw158],
-	['meta.factory.maia', raw159],
-	['notes.factory.maia', raw160],
-	['os-registry.factory.maia', raw161],
-	['process.factory.maia', raw162],
-	['profile.factory.maia', raw163],
-	['registries.factory.maia', raw164],
-	['spark.factory.maia', raw165],
-	['sparks-registry.factory.maia', raw166],
-	['style.factory.maia', raw167],
-	['todos.factory.maia', raw168],
-	['vibe.factory.maia', raw169],
-	['vibes-registry.factory.maia', raw170],
-	['view.factory.maia', raw171],
-	['wasm.factory.maia', raw172],
+	['capability.factory.maia', raw144],
+	['chat.factory.maia', raw145],
+	['co-types.defs.maia', raw146],
+	['cobinary.factory.maia', raw147],
+	['context.factory.maia', raw148],
+	['cotext.factory.maia', raw149],
+	['event.factory.maia', raw150],
+	['factories-registry.factory.maia', raw151],
+	['groups.factory.maia', raw152],
+	['human.factory.maia', raw153],
+	['humans-registry.factory.maia', raw154],
+	['inbox.factory.maia', raw155],
+	['indexes-registry.factory.maia', raw156],
+	['maia-script-expression.factory.maia', raw157],
+	['meta.factory.maia', raw158],
+	['notes.factory.maia', raw159],
+	['os-registry.factory.maia', raw160],
+	['process.factory.maia', raw161],
+	['profile.factory.maia', raw162],
+	['registries.factory.maia', raw163],
+	['spark.factory.maia', raw164],
+	['sparks-registry.factory.maia', raw165],
+	['style.factory.maia', raw166],
+	['todos.factory.maia', raw167],
+	['vibe.factory.maia', raw168],
+	['vibes-registry.factory.maia', raw169],
+	['view.factory.maia', raw170],
+	['wasm.factory.maia', raw171],
 ]
 export const annotateMaiaByFactoriesPath = Object.fromEntries(
 	_factoryPairs.map(([rel, raw]) => [rel, annotateMaiaConfig(raw, rel)]),
 )
 
 const _vibeMaiaPairs = [
-	['brand/maiacity.style.maia', raw173],
-	['chat/intent/intent.actor.maia', raw174],
-	['chat/intent/intent.context.maia', raw175],
-	['chat/intent/intent.process.maia', raw176],
-	['chat/intent/intent.view.maia', raw177],
-	['chat/manifest.vibe.maia', raw178],
-	['humans/intent/intent.actor.maia', raw179],
-	['humans/intent/intent.context.maia', raw180],
-	['humans/intent/intent.process.maia', raw181],
-	['humans/intent/intent.view.maia', raw182],
-	['humans/manifest.vibe.maia', raw183],
-	['logs/intent/intent.actor.maia', raw184],
-	['logs/intent/intent.context.maia', raw185],
-	['logs/intent/intent.process.maia', raw186],
-	['logs/intent/intent.view.maia', raw187],
-	['logs/manifest.vibe.maia', raw188],
-	['paper/manifest.vibe.maia', raw189],
-	['profile/intent/intent.actor.maia', raw190],
-	['profile/intent/intent.context.maia', raw191],
-	['profile/intent/intent.process.maia', raw192],
-	['profile/intent/intent.view.maia', raw193],
-	['profile/manifest.vibe.maia', raw194],
-	['quickjs/add-form/actor.maia', raw195],
-	['quickjs/add-form/context.maia', raw196],
-	['quickjs/add-form/interface.maia', raw197],
-	['quickjs/add-form/process.maia', raw198],
-	['quickjs/add-form/view.maia', raw199],
-	['quickjs/deps-list-detail/actor.maia', raw200],
-	['quickjs/deps-list-detail/context.maia', raw201],
-	['quickjs/deps-list-detail/interface.maia', raw202],
-	['quickjs/deps-list-detail/process.maia', raw203],
-	['quickjs/deps-list-detail/view.maia', raw204],
-	['quickjs/deps-list/actor.maia', raw205],
-	['quickjs/deps-list/interface.maia', raw206],
-	['quickjs/deps-list/process.maia', raw207],
-	['quickjs/deps-list/style.maia', raw208],
-	['quickjs/deps-list/view.maia', raw209],
-	['quickjs/intent/intent.actor.maia', raw210],
-	['quickjs/intent/intent.context.maia', raw211],
-	['quickjs/intent/intent.process.maia', raw212],
-	['quickjs/intent/intent.view.maia', raw213],
-	['quickjs/layout-quickjs/actor.maia', raw214],
-	['quickjs/layout-quickjs/context.maia', raw215],
-	['quickjs/layout-quickjs/interface.maia', raw216],
-	['quickjs/manifest.vibe.maia', raw217],
-	['sparks/intent/intent.actor.maia', raw218],
-	['sparks/intent/intent.context.maia', raw219],
-	['sparks/intent/intent.process.maia', raw220],
-	['sparks/intent/intent.view.maia', raw221],
-	['sparks/manifest.vibe.maia', raw222],
-	['todos/intent/intent.actor.maia', raw223],
-	['todos/intent/intent.context.maia', raw224],
-	['todos/intent/intent.process.maia', raw225],
-	['todos/intent/intent.view.maia', raw226],
-	['todos/manifest.vibe.maia', raw227],
+	['brand/maiacity.style.maia', raw172],
+	['chat/intent/intent.actor.maia', raw173],
+	['chat/intent/intent.context.maia', raw174],
+	['chat/intent/intent.process.maia', raw175],
+	['chat/intent/intent.view.maia', raw176],
+	['chat/manifest.vibe.maia', raw177],
+	['humans/intent/intent.actor.maia', raw178],
+	['humans/intent/intent.context.maia', raw179],
+	['humans/intent/intent.process.maia', raw180],
+	['humans/intent/intent.view.maia', raw181],
+	['humans/manifest.vibe.maia', raw182],
+	['logs/intent/intent.actor.maia', raw183],
+	['logs/intent/intent.context.maia', raw184],
+	['logs/intent/intent.process.maia', raw185],
+	['logs/intent/intent.view.maia', raw186],
+	['logs/manifest.vibe.maia', raw187],
+	['paper/manifest.vibe.maia', raw188],
+	['profile/intent/intent.actor.maia', raw189],
+	['profile/intent/intent.context.maia', raw190],
+	['profile/intent/intent.process.maia', raw191],
+	['profile/intent/intent.view.maia', raw192],
+	['profile/manifest.vibe.maia', raw193],
+	['quickjs/add-form/actor.maia', raw194],
+	['quickjs/add-form/context.maia', raw195],
+	['quickjs/add-form/interface.maia', raw196],
+	['quickjs/add-form/process.maia', raw197],
+	['quickjs/add-form/view.maia', raw198],
+	['quickjs/deps-list-detail/actor.maia', raw199],
+	['quickjs/deps-list-detail/context.maia', raw200],
+	['quickjs/deps-list-detail/interface.maia', raw201],
+	['quickjs/deps-list-detail/process.maia', raw202],
+	['quickjs/deps-list-detail/view.maia', raw203],
+	['quickjs/deps-list/actor.maia', raw204],
+	['quickjs/deps-list/interface.maia', raw205],
+	['quickjs/deps-list/process.maia', raw206],
+	['quickjs/deps-list/style.maia', raw207],
+	['quickjs/deps-list/view.maia', raw208],
+	['quickjs/intent/intent.actor.maia', raw209],
+	['quickjs/intent/intent.context.maia', raw210],
+	['quickjs/intent/intent.process.maia', raw211],
+	['quickjs/intent/intent.view.maia', raw212],
+	['quickjs/layout-quickjs/actor.maia', raw213],
+	['quickjs/layout-quickjs/context.maia', raw214],
+	['quickjs/layout-quickjs/interface.maia', raw215],
+	['quickjs/manifest.vibe.maia', raw216],
+	['sparks/intent/intent.actor.maia', raw217],
+	['sparks/intent/intent.context.maia', raw218],
+	['sparks/intent/intent.process.maia', raw219],
+	['sparks/intent/intent.view.maia', raw220],
+	['sparks/manifest.vibe.maia', raw221],
+	['todos/intent/intent.actor.maia', raw222],
+	['todos/intent/intent.context.maia', raw223],
+	['todos/intent/intent.process.maia', raw224],
+	['todos/intent/intent.view.maia', raw225],
+	['todos/manifest.vibe.maia', raw226],
 ]
 export const annotateMaiaByVibesPath = Object.fromEntries(
 	_vibeMaiaPairs.map(([rel, raw]) => [rel, annotateMaiaConfig(raw, rel)]),
 )
 
 const _seedPairs = [
-	['icons', raw228],
-	['notes', raw229],
-	['todos', raw230],
+	['icons', raw227],
+	['notes', raw228],
+	['todos', raw229],
 ]
 export const SEED_DATA = Object.fromEntries(_seedPairs)
