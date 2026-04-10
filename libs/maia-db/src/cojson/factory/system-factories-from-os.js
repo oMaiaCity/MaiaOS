@@ -5,7 +5,28 @@
 
 import { namekeyFromFactoryDefinitionContent } from '@MaiaOS/factories'
 import { ensureCoValueLoaded } from '../crud/collection-helpers.js'
+import { INFRA_FACTORY_NAMEKEY_BY_ROLE, RUNTIME_REF } from '../factory/runtime-factory-refs.js'
 import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
+
+const OS_CAPABILITY_NAMEKEY = INFRA_FACTORY_NAMEKEY_BY_ROLE[RUNTIME_REF.OS_CAPABILITY]
+
+/**
+ * Seeded catalogs before the canonical factory title used a plain "Capability" label,
+ * so {@link namekeyFromFactoryDefinitionContent} returned null and OS_CAPABILITY never
+ * entered {@link peer.systemFactoryCoIds}. Match that legacy shape only.
+ * @param {object} defContent - CoMap content from a definition CoValue
+ * @returns {boolean}
+ */
+function isLegacyCapabilityFactoryDefinition(defContent) {
+	if (!defContent || typeof defContent.get !== 'function') return false
+	const get = (k) => defContent.get(k)
+	if (get('cotype') !== 'comap' || get('indexing') !== true) return false
+	const req = get('required')
+	if (!Array.isArray(req)) return false
+	const need = new Set(['sub', 'cmd', 'pol', 'exp'])
+	for (const k of req) need.delete(k)
+	return need.size === 0
+}
 
 /**
  * @param {object} peer — MaiaDB (node + account + getCoValue / getCurrentContent / isAvailable)
@@ -41,7 +62,10 @@ export async function buildSystemFactoryCoIdsFromSparkOs(peer, osId) {
 							const defCore = peer.getCoValue(defCoId)
 							if (!defCore || !peer.isAvailable(defCore)) continue
 							const defContent = peer.getCurrentContent(defCore)
-							const namekey = namekeyFromFactoryDefinitionContent(defContent)
+							let namekey = namekeyFromFactoryDefinitionContent(defContent)
+							if (!namekey && OS_CAPABILITY_NAMEKEY && isLegacyCapabilityFactoryDefinition(defContent)) {
+								namekey = OS_CAPABILITY_NAMEKEY
+							}
 							if (namekey) out.set(namekey, defCoId)
 						}
 					}

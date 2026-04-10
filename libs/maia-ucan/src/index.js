@@ -10,7 +10,9 @@ export { agentIDToDidKey } from './did-key.js'
 
 import { getPublicKey, sign } from './sign.js'
 
-ed.etc.sha512Sync = (...m) => sha512(ed.etc.concatBytes(...m))
+/** @noble/ed25519 v3+: sync sign/verify need hashes.sha512 (v2 used ed.etc.sha512Sync). */
+ed.hashes.sha512 = sha512
+ed.hashes.sha512Async = (m) => Promise.resolve(sha512(m))
 
 function base64urlEncode(bytes) {
 	const b64 = btoa(String.fromCharCode(...bytes))

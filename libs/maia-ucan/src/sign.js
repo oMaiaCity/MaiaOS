@@ -6,7 +6,8 @@ import * as ed from '@noble/ed25519'
 import { sha512 } from '@noble/hashes/sha2.js'
 import { base58 } from '@scure/base'
 
-ed.etc.sha512Sync = (...m) => sha512(ed.etc.concatBytes(...m))
+ed.hashes.sha512 = sha512
+ed.hashes.sha512Async = (m) => Promise.resolve(sha512(m))
 
 const SIGNER_PREFIX = 'signerSecret_z'
 const PREFIX_LEN = SIGNER_PREFIX.length
