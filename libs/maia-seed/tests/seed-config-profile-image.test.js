@@ -1,4 +1,4 @@
-import { annotateMaiaByActorsPath } from '@MaiaOS/universe/registry'
+import { annotateMaiaByActorsPath } from '@MaiaOS/universe'
 import { describe, expect, test } from 'bun:test'
 import { getSeedConfig } from '../src/build-seed-config.js'
 

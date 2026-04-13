@@ -3,7 +3,7 @@
  * Used by validation and migrations before spark.os catalog is populated.
  */
 
-import { CO_TYPES_DEFS } from './co-types-defs.data.js'
+import { CO_TYPES_DEFS } from '@MaiaOS/universe'
 
 const AccountFactory = {
 	$schema: 'https://json-schema.org/draft/2020-12/schema',

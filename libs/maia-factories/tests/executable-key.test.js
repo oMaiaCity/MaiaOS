@@ -1,6 +1,6 @@
+import { ACTOR_NANOID_TO_EXECUTABLE_KEY } from '@MaiaOS/universe'
 import { describe, expect, test } from 'bun:test'
 import { executableKeyFromMaiaPath } from '../src/executable-key-from-maia-path.js'
-import { ACTOR_NANOID_TO_EXECUTABLE_KEY } from '../src/generated/actor-nanoid-to-executable-key.js'
 import { identityFromMaiaPath } from '../src/identity-from-maia-path.js'
 
 describe('executableKeyFromMaiaPath', () => {

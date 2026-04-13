@@ -22,7 +22,9 @@ execFileSync(
 		'libs/maia-universe/src/maia/registry.js',
 		'libs/maia-universe/src/maia/registry-core.js',
 		'libs/maia-universe/src/maia/registry-icons.js',
-		'libs/maia-factories/src/generated/actor-nanoid-to-executable-key.js',
+		'libs/maia-universe/src/generated/actor-nanoid-to-executable-key.js',
+		'libs/maia-universe/src/generated/co-types-defs.data.js',
+		'libs/maia-universe/src/generated/meta-factory-schema.data.js',
 	],
 	{
 		cwd: ROOT,

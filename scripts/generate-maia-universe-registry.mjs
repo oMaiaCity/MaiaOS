@@ -4,7 +4,9 @@
  * - registry-core.js — .maia imports (SEED_DATA, annotate maps). @MaiaOS/universe/data points here (no cycle with vibe registry.js).
  * - registry-icons.js — data/icons/*.maia only (ICON_SVG_BY_KEY, DEFAULT_CARD_ICON_SVG). @MaiaOS/universe/dashboard-icon-svgs — seed/build-seed-config; SPA uses runtime CoText + placeholder in dashboard.js.
  * - registry.js — re-exports icons + core + aggregates vibe registry modules.
- * - libs/maia-factories/src/generated/actor-nanoid-to-executable-key.js — $nanoid → getActor key (native JS fallback).
+ * - libs/maia-universe/src/generated/actor-nanoid-to-executable-key.js — $nanoid → getActor key (native JS fallback).
+ * - libs/maia-universe/src/generated/co-types-defs.data.js — from factories/co-types.defs.maia
+ * - libs/maia-universe/src/generated/meta-factory-schema.data.js — from factories/meta.factory.maia
  * Discovers all .maia files and registry.js modules under the maia spark root (recursive).
  */
 
@@ -18,11 +20,15 @@ import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = join(__dirname, '..')
-const MAIA_ROOT = join(REPO_ROOT, 'libs/maia-universe/src/maia')
+const UNIVERSE_SRC = join(REPO_ROOT, 'libs/maia-universe/src')
+const MAIA_ROOT = join(UNIVERSE_SRC, 'maia')
 const OUT_CORE = join(MAIA_ROOT, 'registry-core.js')
 const OUT_ICONS = join(MAIA_ROOT, 'registry-icons.js')
 const OUT_FILE = join(MAIA_ROOT, 'registry.js')
-const OUT_ACTOR_NANOID = join(REPO_ROOT, 'libs/maia-factories/src/generated/actor-nanoid-to-executable-key.js')
+const OUT_GEN = join(UNIVERSE_SRC, 'generated')
+const OUT_ACTOR_NANOID = join(OUT_GEN, 'actor-nanoid-to-executable-key.js')
+const OUT_CO_TYPES = join(OUT_GEN, 'co-types-defs.data.js')
+const OUT_META_FACTORY = join(OUT_GEN, 'meta-factory-schema.data.js')
 
 const BANNER = `/* eslint-disable */
 /**
@@ -189,8 +195,8 @@ async function emitIntentVibeRegistrySource(idPrefix, exportName) {
 	const aliases = VIBE_REGISTRY_ALIASES[idPrefix] || []
 	const aliasLines = aliases.map((a) => `export { ${exportName} as ${a} }`).join('\n')
 	return `${BANNER}
-import { annotateMaiaConfig } from '@MaiaOS/factories/identity-from-maia-path.js'
-${needsSeedData ? "import { SEED_DATA } from '@MaiaOS/universe/data'\n" : ''}import maiacityBrand from '../brand/maiacity.style.maia'
+import { annotateMaiaConfig } from '../../../helpers/annotate-maia.js'
+${needsSeedData ? "import { SEED_DATA } from '../../registry-core.js'\n" : ''}import maiacityBrand from '../brand/maiacity.style.maia'
 import intentActor from './intent/intent.actor.maia'
 import intentContext from './intent/intent.context.maia'
 import intentProcess from './intent/intent.process.maia'
@@ -232,8 +238,8 @@ ${aliasLines ? `${aliasLines}\n` : ''}`
 
 async function emitPaperVibeRegistrySource() {
 	return `${BANNER}
-import { annotateMaiaConfig } from '@MaiaOS/factories/identity-from-maia-path.js'
-import { SEED_DATA } from '@MaiaOS/universe/data'
+import { annotateMaiaConfig } from '../../../helpers/annotate-maia.js'
+import { SEED_DATA } from '../../registry-core.js'
 import maiacityBrand from '../brand/maiacity.style.maia'
 import paperVibe from './manifest.vibe.maia'
 
@@ -276,7 +282,7 @@ async function emitQuickjsVibeRegistrySource() {
 	rels.sort((a, b) => a.localeCompare(b))
 
 	const imports = [
-		`import { annotateMaiaConfig } from '@MaiaOS/factories/identity-from-maia-path.js'`,
+		`import { annotateMaiaConfig } from '../../../helpers/annotate-maia.js'`,
 		`import maiacityBrand from '../brand/maiacity.style.maia'`,
 		`import quickjsVibe from './manifest.vibe.maia'`,
 	]
@@ -526,7 +532,7 @@ async function buildCoreAndShell() {
 
 	const coreLines = [
 		BANNER,
-		`import { annotateMaiaConfig } from '@MaiaOS/factories/identity-from-maia-path.js'`,
+		`import { annotateMaiaConfig } from '../helpers/annotate-maia.js'`,
 		'',
 		...coreImports.map((l) => l),
 		'',
@@ -560,7 +566,7 @@ async function buildCoreAndShell() {
 
 	const shellLines = [
 		BANNER,
-		`import { getVibeKey } from '@MaiaOS/factories/vibe-keys'`,
+		`import { getVibeKey } from '../helpers/vibe-keys.js'`,
 		'',
 		...vibeRegistryImports,
 		'',
@@ -591,6 +597,23 @@ async function buildCoreAndShell() {
 	}
 }
 
+async function emitCoTypesAndMetaFactory() {
+	const coTypesMaia = join(MAIA_ROOT, 'factories/co-types.defs.maia')
+	const metaMaia = join(MAIA_ROOT, 'factories/meta.factory.maia')
+	const coRaw = await readFile(coTypesMaia, 'utf8')
+	const metaRaw = await readFile(metaMaia, 'utf8')
+	const coParsed = JSON.parse(coRaw)
+	const metaParsed = JSON.parse(metaRaw)
+	if (!coParsed.$defs || typeof coParsed.$defs !== 'object') {
+		throw new Error('[generate-registry] co-types.defs.maia missing $defs')
+	}
+	const coBody = `${BANNER}export const CO_TYPES_DEFS = ${JSON.stringify(coParsed.$defs, null, '\t')}\n`
+	const metaBody = `${BANNER}export const metaFactorySchemaRaw = ${JSON.stringify(metaParsed, null, '\t')}\n`
+	await mkdir(dirname(OUT_CO_TYPES), { recursive: true })
+	await writeFile(OUT_CO_TYPES, coBody, 'utf8')
+	await writeFile(OUT_META_FACTORY, metaBody, 'utf8')
+}
+
 async function removeLegacyGenerated() {
 	const legacy = [
 		join(MAIA_ROOT, 'generated', 'annotate-maia-by-actors-path.generated.js'),
@@ -613,6 +636,7 @@ async function main() {
 		const { core, icons, shell, actorNanoid } = await buildCoreAndShell()
 		await removeLegacyGenerated()
 		await mkdir(dirname(OUT_ACTOR_NANOID), { recursive: true })
+		await emitCoTypesAndMetaFactory()
 		await writeFile(OUT_CORE, core, 'utf8')
 		await writeFile(OUT_ICONS, icons, 'utf8')
 		await writeFile(OUT_FILE, shell, 'utf8')
@@ -632,6 +656,8 @@ async function main() {
 				OUT_ICONS,
 				OUT_FILE,
 				OUT_ACTOR_NANOID,
+				OUT_CO_TYPES,
+				OUT_META_FACTORY,
 				...vibeRegistries,
 			],
 			{
@@ -644,8 +670,9 @@ async function main() {
 			posix(relative(REPO_ROOT, OUT_CORE)),
 			posix(relative(REPO_ROOT, OUT_ICONS)),
 			posix(relative(REPO_ROOT, OUT_FILE)),
-			'and',
 			posix(relative(REPO_ROOT, OUT_ACTOR_NANOID)),
+			posix(relative(REPO_ROOT, OUT_CO_TYPES)),
+			posix(relative(REPO_ROOT, OUT_META_FACTORY)),
 		)
 	}
 	await run()

@@ -1,5 +1,5 @@
 import { getVibeKey } from '@MaiaOS/factories/vibe-keys'
-import { ALL_VIBE_REGISTRIES } from '@MaiaOS/universe/vibe-registries'
+import { ALL_VIBE_REGISTRIES } from '@MaiaOS/universe'
 
 export function getDependenciesForVibes(vibeKeys) {
 	const registryByKey = new Map()

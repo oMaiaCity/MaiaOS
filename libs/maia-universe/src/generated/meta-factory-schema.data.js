@@ -1,4 +1,8 @@
-/** Canonical meta factory — mirrors meta.factory.maia (authoring in universe). */
+/* eslint-disable */
+/**
+ * GENERATED — do not edit.
+ * Source: bun scripts/generate-maia-universe-registry.mjs
+ */
 export const metaFactorySchemaRaw = {
 	$factory: '°maia/factory/meta.factory.maia',
 	$schema: 'https://json-schema.org/draft/2020-12/schema',

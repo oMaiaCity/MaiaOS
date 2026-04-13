@@ -3,7 +3,7 @@
  */
 
 import { normalizeCoValueData } from '@MaiaOS/db'
-import { CO_TYPES_DEFS } from './data/co-types-defs.data.js'
+import { CO_TYPES_DEFS } from '@MaiaOS/universe'
 import { normalizeFactoryReferencesWithResolver } from './factory-ref-resolver.js'
 import { withCanonicalFactorySchema } from './identity-from-maia-path.js'
 import { isFactoryRef } from './patterns.js'
@@ -13,7 +13,7 @@ import { plugin as cotextPlugin } from './plugins/cotext.plugin.js'
 
 /**
  * Metaschema object — runtime: loaded from peer metaschema CoValue via {@link ValidationEngine#hydrateMetaFromPeer}.
- * Seeding uses `@MaiaOS/factories/meta-factory-schema` in maia-db helpers only.
+ * Seeding uses `metaFactorySchemaRaw` from `@MaiaOS/universe` in helpers.
  */
 let customMetaSchema = null
 

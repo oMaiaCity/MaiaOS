@@ -37,7 +37,7 @@ export {
 	// NO LOCALSTORAGE: Removed signOut, isSignedIn, getCurrentAccount, inspectStorage
 	// NO SYNC STATE: subscribeSyncState moved to @MaiaOS/db
 } from '@MaiaOS/self'
-export { getAllActorDefinitions } from '@MaiaOS/universe/actors'
+export { getAllActorDefinitions } from '@MaiaOS/universe'
 export { createWebSocketPeer } from 'cojson-transport-ws'
 export { createCoJSONAPI } from './cojson-factory.js'
 export { MaiaOS } from './loader.js'
