@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/process",
+	"$factory": "°maia/factory/process.factory.maia",
 	"handlers": {
 		"SEND_MESSAGE": [
 			{
@@ -16,7 +16,7 @@
 			{
 				"op": {
 					"create": {
-						"factory": "°maia/factory/data/chat",
+						"factory": "°maia/factory/chat.factory.maia",
 						"data": {
 							"role": "user",
 							"content": "$$inputText",
@@ -39,7 +39,7 @@
 			{
 				"op": {
 					"create": {
-						"factory": "°maia/factory/data/chat",
+						"factory": "°maia/factory/chat.factory.maia",
 						"data": {
 							"role": "assistant",
 							"content": "$$result.content",

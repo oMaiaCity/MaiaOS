@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/actor",
+	"$factory": "°maia/factory/actor.factory.maia",
 	"brand": "°maia/brand/maiacity.style.maia",
 	"context": "°maia/quickjs/add-form/context.maia",
 	"view": "°maia/quickjs/add-form/view.maia",

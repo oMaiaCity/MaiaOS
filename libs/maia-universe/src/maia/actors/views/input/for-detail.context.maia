@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/context",
+	"$factory": "°maia/factory/context.factory.maia",
 	"targetActor": "@target",
 	"inputPlaceholder": "Agent account co-id (e.g. co_z...)",
 	"inputValue": "",

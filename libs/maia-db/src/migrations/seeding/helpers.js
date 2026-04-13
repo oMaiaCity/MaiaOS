@@ -2,7 +2,10 @@
  * Seeding helpers - pure utilities and ensureSparkOs
  */
 
-import { withCanonicalFactorySchema } from '@MaiaOS/factories/factory-identity'
+import {
+	identityFromMaiaPath,
+	withCanonicalFactorySchema,
+} from '@MaiaOS/factories/identity-from-maia-path.js'
 import { metaFactorySchemaRaw } from '@MaiaOS/factories/meta-factory-schema'
 
 /** @type {object | null} */
@@ -41,12 +44,15 @@ function findCoReferences(obj, visited = new Set()) {
 /**
  * Topologically sort schema keys by dependency ($co references).
  * @param {Map<string, { name, schema }>} uniqueSchemasBy$id - Map of factory key -> { name, schema }
- * @param {string[]} [excludeKeys] - Keys to exclude from sort (e.g. ['°maia/factory/meta'])
+ * @param {string[]} [excludeKeys] - Keys to exclude from sort (e.g. ['°maia/factory/meta.factory.maia'])
  * @returns {string[]} Sorted array of factory keys
  */
-export function sortSchemasByDependency(uniqueSchemasBy$id, excludeKeys = ['°maia/factory/meta']) {
+export function sortSchemasByDependency(
+	uniqueSchemasByLabel,
+	excludeKeys = ['°maia/factory/meta.factory.maia'],
+) {
 	const deps = new Map()
-	for (const [key, { schema }] of uniqueSchemasBy$id) {
+	for (const [key, { schema }] of uniqueSchemasByLabel) {
 		deps.set(key, findCoReferences(schema))
 	}
 	const sorted = []
@@ -57,13 +63,13 @@ export function sortSchemasByDependency(uniqueSchemasBy$id, excludeKeys = ['°ma
 		if (doing.has(key)) return
 		doing.add(key)
 		for (const d of deps.get(key) || []) {
-			if (d.startsWith('°maia/factory/') && uniqueSchemasBy$id.has(d)) visit(d)
+			if (d.startsWith('°maia/factory/') && uniqueSchemasByLabel.has(d)) visit(d)
 		}
 		doing.delete(key)
 		done.add(key)
 		sorted.push(key)
 	}
-	for (const key of uniqueSchemasBy$id.keys()) {
+	for (const key of uniqueSchemasByLabel.keys()) {
 		visit(key)
 	}
 	return sorted
@@ -126,8 +132,10 @@ export async function ensureSparkOs(account, node, maiaGroup, peer, factoryCoIdM
 	}
 
 	const vibesRegistrySchemaCoId =
-		factoryCoIdMap?.get('°maia/factory/os/vibes-registry') ??
-		(await lookupRegistryKey(peer, '°maia/factory/os/vibes-registry', { returnType: 'coId' }))
+		factoryCoIdMap?.get(identityFromMaiaPath('vibes-registry.factory.maia').$nanoid) ??
+		(await lookupRegistryKey(peer, '°maia/factory/vibes-registry.factory.maia', {
+			returnType: 'coId',
+		}))
 
 	let osCore = node.getCoValue(osId)
 	if (!osCore && node.loadCoValueCore) {

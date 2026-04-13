@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/meta",
+	"$factory": "°maia/factory/meta.factory.maia",
 	"title": "°maia/views/humans/interface.maia",
 	"description": "Addressbook tabs",
 	"cotype": "comap",

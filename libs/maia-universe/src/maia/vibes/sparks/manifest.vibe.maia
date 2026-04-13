@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/vibe",
+	"$factory": "°maia/factory/vibe.factory.maia",
 	"name": "Sparks",
 	"description": "Create and manage collaborative groups (sparks)",
 	"actor": "°maia/sparks/intent/intent.actor.maia",

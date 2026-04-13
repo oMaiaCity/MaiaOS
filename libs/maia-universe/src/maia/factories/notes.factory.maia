@@ -1,6 +1,6 @@
 {
-	"$factory": "°maia/factory/meta",
-	"title": "°maia/factory/data/notes",
+	"$factory": "°maia/factory/meta.factory.maia",
+	"title": "°maia/factory/notes.factory.maia",
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {
@@ -9,7 +9,7 @@
 			"description": "Note title displayed in the aside list"
 		},
 		"content": {
-			"$co": "°maia/factory/os/cotext",
+			"$co": "°maia/factory/cotext.factory.maia",
 			"description": "CoText (colist of graphemes) - collaborative plaintext"
 		}
 	},

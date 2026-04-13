@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/os/wasm",
+	"$factory": "°maia/factory/wasm.factory.maia",
 	"lang": "js",
 	"code": "({ execute: function(actor, payload) { var a = Number(payload.a) || 0; var b = Number(payload.b) || 0; return { ok: true, data: { result: a + b } }; } })"
 }

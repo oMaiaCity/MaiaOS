@@ -7,21 +7,19 @@
 		".": "./src/index.js",
 		"./validation.engine": "./src/validation.engine.js",
 		"./validation.helper": "./src/validation.helper.js",
-		"./co-id-generator": "./src/co-id-generator.js",
 		"./patterns": "./src/patterns.js",
 		"./expression-resolver": "./src/expression-resolver.js",
 		"./payload-resolver": "./src/payload-resolver.js",
 		"./nanoid": "./src/nanoid.js",
-		"./annotate-maia": "./src/annotate-maia.js",
-		"./factory-identity": "./src/factory-identity.js",
+		"./identity-from-maia-path": "./src/identity-from-maia-path.js",
 		"./meta-factory-schema": "./src/data/meta-factory-schema.data.js",
 		"./operation-result": "./src/operation-result.js",
-		"./icon-instance-ref": "./src/icon-instance-ref.js",
 		"./vibe-keys": "./src/vibe-keys.js"
 	},
 	"dependencies": {
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/universe": "workspace:*",
+		"@noble/hashes": "2.0.1",
 		"ajv": "8.17.1",
 		"unicode-segmenter": "0.15.0"
 	},

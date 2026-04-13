@@ -1,6 +1,6 @@
 {
-	"$factory": "°maia/factory/meta",
-	"title": "°maia/quickjs/deps-list/interface.maia-detail",
+	"$factory": "°maia/factory/meta.factory.maia",
+	"title": "°maia/quickjs/deps-list-detail/interface.maia",
 	"description": "Detail view for selected dependency actor",
 	"cotype": "comap",
 	"indexing": true,

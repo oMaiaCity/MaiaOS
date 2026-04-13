@@ -1,7 +1,7 @@
 {
-	"$factory": "°maia/factory/context",
+	"$factory": "°maia/factory/context.factory.maia",
 	"conversations": {
-		"factory": "°maia/factory/data/chat",
+		"factory": "°maia/factory/chat.factory.maia",
 		"map": {
 			"id": "id",
 			"role": "role",

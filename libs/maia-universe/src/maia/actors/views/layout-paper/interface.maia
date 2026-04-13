@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/meta",
+	"$factory": "°maia/factory/meta.factory.maia",
 	"title": "°maia/views/layout-paper/interface.maia",
 	"description": "Paper layout view - aside note list + main paper editor",
 	"cotype": "comap",

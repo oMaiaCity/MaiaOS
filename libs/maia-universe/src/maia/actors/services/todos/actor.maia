@@ -1,7 +1,7 @@
 {
-	"$factory": "°maia/factory/actor",
+	"$factory": "°maia/factory/actor.factory.maia",
 	"context": "°maia/services/todos/context.maia",
 	"process": "°maia/services/todos/process.maia",
-	"inbox": "°maia/services/todos/actor.maia/inbox",
+	"inbox": "°maia/services/todos/inbox.maia",
 	"interface": "°maia/services/todos/interface.maia"
 }

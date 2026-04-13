@@ -1,11 +1,11 @@
 {
-	"$factory": "°maia/factory/context",
+	"$factory": "°maia/factory/context.factory.maia",
 	"title": "Profile Image",
 	"scope": {
 		"factory": "@scope"
 	},
 	"profile": {
-		"factory": "°maia/factory/data/profile",
+		"factory": "°maia/factory/profile.factory.maia",
 		"filter": {
 			"id": "$scope.profileId"
 		},

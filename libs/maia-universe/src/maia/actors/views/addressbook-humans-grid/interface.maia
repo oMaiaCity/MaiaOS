@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/meta",
+	"$factory": "°maia/factory/meta.factory.maia",
 	"title": "°maia/views/addressbook-humans-grid/interface.maia",
 	"description": "Humans grid - display only",
 	"cotype": "comap",

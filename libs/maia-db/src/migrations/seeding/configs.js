@@ -2,7 +2,11 @@
  * Config seeding - actors, views, contexts, states, styles, etc.
  */
 
-import { nanoidFromPath, normalizeMaiaPathKey } from '@MaiaOS/factories/nanoid'
+import { cotextNanoidFromInstancePath } from '@MaiaOS/factories'
+import {
+	identityFromMaiaPath,
+	maiaFactoryRefToNanoid,
+} from '@MaiaOS/factories/identity-from-maia-path.js'
 import { splitGraphemes } from 'unicode-segmenter/grapheme'
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 
@@ -26,12 +30,16 @@ export async function seedConfigs(
 		const factoryRef = config.$factory
 		const factoryCoId = factoryRef?.startsWith('co_z')
 			? factoryRef
-			: (factoryCoIdMap?.get(factoryRef) ?? factoryRef)
+			: factoryRef?.startsWith('°maia/factory/')
+				? (() => {
+						const n = maiaFactoryRefToNanoid(factoryRef)
+						return n ? factoryCoIdMap?.get(n) : null
+					})()
+				: (factoryCoIdMap?.get(factoryRef) ?? factoryRef)
 		if (!factoryCoId?.startsWith('co_z')) {
 			throw new Error(`[CoJSONSeed] Config ${configType}:${path} has invalid $factory: ${factoryRef}`)
 		}
 
-		let cotype = 'comap'
 		let factoryCoMap = null
 		for (const [factoryKey, coId] of factoryCoIdMap.entries()) {
 			if (coId === factoryCoId) {
@@ -47,11 +55,16 @@ export async function seedConfigs(
 			}
 		}
 
-		if (factoryCoMap && typeof factoryCoMap.get === 'function') {
-			cotype = factoryCoMap.get('cotype') || 'comap'
-		}
+		const cotypeFromFactory =
+			factoryCoMap && typeof factoryCoMap.get === 'function'
+				? factoryCoMap.get('cotype') || 'comap'
+				: 'comap'
+		const cotype =
+			typeof config.cotype === 'string' && config.cotype.length > 0 ? config.cotype : cotypeFromFactory
 
-		const { $id, $label: _lbl, $nanoid, $schema: _s, $factory, ...configWithoutId } = config
+		// Keep `cotype` in persisted comap data when the .maia defines it (e.g. interface). Do not strip —
+		// views use strict additionalProperties and must not get an injected cotype.
+		const { $id, $label, $nanoid, $schema: _s, $factory, ...configWithoutId } = config
 		const ctx = { node, account, guardian: maiaGroup }
 		const data =
 			cotype === 'colist'
@@ -59,6 +72,16 @@ export async function seedConfigs(
 				: cotype === 'costream' || cotype === 'cobinary'
 					? undefined
 					: configWithoutId
+		if (data && typeof data === 'object' && !Array.isArray(data)) {
+			if (typeof $label === 'string') data.$label = $label
+			if (typeof $nanoid === 'string') data.$nanoid = $nanoid
+		}
+		// Actors: identity is path-derived only (same input as registry annotate + ACTOR_NANOID_TO_EXECUTABLE_KEY).
+		if (configType === 'actor' && data && typeof data === 'object' && !Array.isArray(data)) {
+			const canonical = identityFromMaiaPath(path)
+			data.$nanoid = canonical.$nanoid
+			data.$label = canonical.$label
+		}
 		let factoryKeyForError = null
 		for (const [k, cid] of factoryCoIdMap.entries()) {
 			if (cid === factoryCoId) {
@@ -68,19 +91,22 @@ export async function seedConfigs(
 		}
 
 		try {
+			const nanoidForCreate =
+				configType === 'actor' && data && typeof data === 'object' && typeof data.$nanoid === 'string'
+					? data.$nanoid
+					: typeof $nanoid === 'string'
+						? $nanoid
+						: undefined
 			const { coValue } = await createCoValueForSpark(ctx, null, {
 				factory: factoryCoId,
 				cotype,
 				data,
 				dataEngine: peer?.dbEngine,
-				nanoid: typeof $nanoid === 'string' ? $nanoid : undefined,
+				nanoid: nanoidForCreate,
 			})
 			const actualCoId = coValue.id
 
-			if ($id) {
-				instanceCoIdMap.set(path, actualCoId)
-				instanceCoIdMap.set($id, actualCoId)
-			}
+			instanceCoIdMap.set(path, actualCoId)
 			if (typeof $nanoid === 'string') {
 				instanceCoIdMap.set($nanoid, actualCoId)
 			}
@@ -89,7 +115,7 @@ export async function seedConfigs(
 				type: configType,
 				path,
 				coId: actualCoId,
-				expectedCoId: $id || undefined,
+				expectedNanoid: typeof $nanoid === 'string' ? $nanoid : undefined,
 				coMapId: actualCoId,
 				coMap: coValue,
 				cotype,
@@ -128,8 +154,8 @@ export async function seedConfigs(
 	const seedWasmConfigs = async () => {
 		const wasms = transformedConfigs.wasms
 		if (!wasms || typeof wasms !== 'object') return 0
-		const cotextSchemaCoId = factoryCoIdMap.get('°maia/factory/os/cotext')
-		const wasmSchemaCoId = factoryCoIdMap.get('°maia/factory/os/wasm')
+		const cotextSchemaCoId = factoryCoIdMap.get(identityFromMaiaPath('cotext.factory.maia').$nanoid)
+		const wasmSchemaCoId = factoryCoIdMap.get(identityFromMaiaPath('wasm.factory.maia').$nanoid)
 		if (!cotextSchemaCoId || !wasmSchemaCoId) return 0
 		let typeCount = 0
 		for (const [path, config] of Object.entries(wasms)) {
@@ -138,8 +164,7 @@ export async function seedConfigs(
 			if (typeof codeStr !== 'string') continue
 			const graphemes = [...splitGraphemes(codeStr)]
 			const ctx = { node, account, guardian: maiaGroup }
-			const fullKey = path.includes('maia/') ? path : `maia/${path.replace(/^\/+/, '')}`
-			const cotextNanoid = nanoidFromPath(`${normalizeMaiaPathKey(fullKey)}/cotext`)
+			const cotextNanoid = cotextNanoidFromInstancePath(path)
 
 			const { coValue: cotextCreated } = await createCoValueForSpark(ctx, null, {
 				factory: cotextSchemaCoId,
@@ -149,17 +174,10 @@ export async function seedConfigs(
 				nanoid: cotextNanoid,
 			})
 			const cotextCoList = cotextCreated
-			const {
-				$id,
-				$label: _lbl2,
-				$nanoid,
-				$schema: _s2,
-				$factory: _f,
-				lang,
-				code: _code,
-				...rest
-			} = config
+			const { $label, $nanoid, $schema: _s2, $factory: _f, lang, code: _code, ...rest } = config
 			const wasmData = { lang: config.lang ?? 'js', code: cotextCoList.id, ...rest }
+			if (typeof $label === 'string') wasmData.$label = $label
+			if (typeof $nanoid === 'string') wasmData.$nanoid = $nanoid
 			const { coValue } = await createCoValueForSpark(ctx, null, {
 				factory: wasmSchemaCoId,
 				cotype: 'comap',
@@ -168,10 +186,7 @@ export async function seedConfigs(
 				nanoid: typeof $nanoid === 'string' ? $nanoid : undefined,
 			})
 			const actualCoId = coValue.id
-			if ($id) {
-				instanceCoIdMap.set(path, actualCoId)
-				instanceCoIdMap.set($id, actualCoId)
-			}
+			instanceCoIdMap.set(path, actualCoId)
 			if (typeof $nanoid === 'string') {
 				instanceCoIdMap.set($nanoid, actualCoId)
 			}
@@ -182,7 +197,7 @@ export async function seedConfigs(
 				type: 'wasm',
 				path,
 				coId: actualCoId,
-				expectedCoId: $id,
+				expectedNanoid: typeof $nanoid === 'string' ? $nanoid : undefined,
 				coMapId: actualCoId,
 				coMap: coValue,
 				cotype: 'comap',

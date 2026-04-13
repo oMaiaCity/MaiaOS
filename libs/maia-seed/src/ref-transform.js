@@ -1,3 +1,4 @@
+import { identityFromMaiaPath } from '@MaiaOS/factories/identity-from-maia-path.js'
 import { isFactoryRef } from '@MaiaOS/factories/patterns'
 
 /** Actor instance targets in @actors: file path ending with actor.maia (e.g. …/intent.actor.maia or …/actor.maia) */
@@ -9,12 +10,44 @@ function isActorTargetRef(ref) {
 
 const INSTANCE_REF = /^[@°]/
 
-/** Resolve ref to co-id. Returns co-id or null/ref. type: 'schema' | 'target' | 'instance' */
+/** Pre-seed registries are keyed by $nanoid only (never ° logical strings). */
+function getCoId(map, key) {
+	if (map instanceof Map) return map.get(key) ?? null
+	if (map && typeof map === 'object') return map[key] ?? null
+	return null
+}
+
+/** °maia/factory/*.factory.maia → same nanoid as withCanonicalFactorySchema(basename). */
+function factoryRefToNanoid(factoryRef) {
+	if (!isFactoryRef(factoryRef)) return null
+	const without = factoryRef.startsWith('°') ? factoryRef.slice(1) : factoryRef
+	const parts = without.split('/')
+	const basename = parts[parts.length - 1]
+	if (!basename.endsWith('.factory.maia')) return null
+	return identityFromMaiaPath(basename).$nanoid
+}
+
+/** °maia/... instance path → nanoid (same as annotate path under maia/). */
+function instanceLogicalRefToNanoid(ref) {
+	if (typeof ref !== 'string' || !ref.startsWith('°') || ref.startsWith('co_z')) return null
+	const without = ref.slice(1)
+	if (!without.startsWith('maia/')) return null
+	const pathKey = without.slice('maia/'.length)
+	return identityFromMaiaPath(pathKey).$nanoid
+}
+
+/** Resolve ref to co-id via nanoid keys in coIdMap. type: 'schema' | 'target' | 'instance' */
 function resolveRef(ref, coIdMap, type = 'instance') {
 	if (!ref || typeof ref !== 'string' || ref.startsWith('co_z')) return ref
-	if (type === 'schema' && isFactoryRef(ref)) return coIdMap.get(ref) ?? null
-	if (type === 'target' && isActorTargetRef(ref)) return coIdMap.get(ref) ?? null
-	if (type === 'instance' && INSTANCE_REF.test(ref)) return coIdMap.get(ref) ?? null
+	let n = null
+	if (type === 'schema' && isFactoryRef(ref)) {
+		n = factoryRefToNanoid(ref)
+	} else if (type === 'target' && isActorTargetRef(ref) && ref.startsWith('°')) {
+		n = instanceLogicalRefToNanoid(ref)
+	} else if (type === 'instance' && INSTANCE_REF.test(ref) && ref.startsWith('°')) {
+		n = isFactoryRef(ref) ? factoryRefToNanoid(ref) : instanceLogicalRefToNanoid(ref)
+	}
+	if (n) return getCoId(coIdMap, n)
 	return type === 'schema' ? ref : null
 }
 
@@ -99,7 +132,7 @@ function walkAndTransformRefs(obj, coIdMap, options = {}, ancestorActors = null)
 	}
 
 	for (const [key, value] of Object.entries(obj)) {
-		// Skip $ keys except $co, $factory (refs to transform). $id / $label are opaque, never ref-walked.
+		// Skip $ keys except $co, $factory (refs to transform). $label / $nanoid / $id / $schema are opaque.
 		if (key.startsWith('$') && key !== '$co' && key !== '$factory') continue
 		// Legacy authoring key; removed from configs — never treat as ref
 		if (key === '@label') continue
@@ -139,25 +172,29 @@ export function transformSchemaForSeeding(schema, coIdMap) {
 	// Deep clone to avoid mutating original
 	const transformed = JSON.parse(JSON.stringify(schema))
 	const preservedLabel =
-		typeof transformed.$id === 'string' && transformed.$id.startsWith('°') ? transformed.$id : null
+		typeof transformed.$label === 'string' && transformed.$label.startsWith('°')
+			? transformed.$label
+			: null
 
 	const factoryRef = transformed.$factory
 	if (factoryRef && isFactoryRef(factoryRef)) {
-		const coId = coIdMap.get(factoryRef)
+		const refN = factoryRefToNanoid(factoryRef)
+		const coId = refN ? getCoId(coIdMap, refN) : null
 		if (coId) {
 			transformed.$factory = coId
 			delete transformed.$schema
 		}
 	}
 
-	// Transform $id reference (if it's a human-readable ID)
-	if (transformed.$id && typeof transformed.$id === 'string') {
-		if (isFactoryRef(transformed.$id) || transformed.$id.startsWith('https://')) {
-			const coId = coIdMap.get(transformed.$id)
-			if (coId) {
-				transformed.$id = coId
-			}
-		}
+	// Factory catalog $label when it holds a factory ref: resolve via schema $nanoid only
+	if (
+		transformed.$label &&
+		typeof transformed.$label === 'string' &&
+		isFactoryRef(transformed.$label) &&
+		typeof transformed.$nanoid === 'string'
+	) {
+		const coId = getCoId(coIdMap, transformed.$nanoid)
+		if (coId) transformed.$label = coId
 	}
 
 	// Transform $ref references in properties
@@ -174,7 +211,7 @@ export function transformSchemaForSeeding(schema, coIdMap) {
 
 	// Transform $co keyword values (replace human-readable IDs with co-ids)
 	// CRITICAL: This must happen AFTER all schemas have been added to coIdMap
-	transformCoReferences(transformed, coIdMap, transformed.$id || 'root')
+	transformCoReferences(transformed, coIdMap, preservedLabel || transformed.$label || 'root')
 
 	// Transform items in arrays (for colist/costream)
 	if (transformed.items) {
@@ -220,7 +257,7 @@ function transformProperties(properties, coIdMap) {
  * Transform $co keyword references (replace human-readable IDs with co-ids)
  * @private
  * @param {Object} obj - Object to transform
- * @param {Map<string, string>} coIdMap - Map of human-readable ID → co-id
+ * @param {Map<string, string> | Record<string, string>} coIdMap - $nanoid → co-id (pre-seed only)
  * @param {string} path - Current path for logging (optional)
  * @returns {number} Number of references transformed
  */
@@ -240,9 +277,9 @@ function transformCoReferences(obj, coIdMap, path = '') {
 			return 0
 		}
 
-		// If it's a human-readable ID (starts with °maia/factory/), look it up in coIdMap
 		if (isFactoryRef(refValue)) {
-			const coId = coIdMap.get(refValue)
+			const refN = factoryRefToNanoid(refValue)
+			const coId = refN ? getCoId(coIdMap, refN) : null
 			if (coId) {
 				obj.$co = coId
 				transformedCount++
@@ -290,7 +327,8 @@ export function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 
 	const factoryRef = transformed.$factory
 	if (factoryRef && isFactoryRef(factoryRef)) {
-		const coId = coIdMap.get(factoryRef)
+		const refN = factoryRefToNanoid(factoryRef)
+		const coId = refN ? getCoId(coIdMap, refN) : null
 		if (coId) {
 			transformed.$factory = coId
 			delete transformed.$schema
@@ -300,9 +338,9 @@ export function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 	// dependencies, items, source/target, states, handlers, query objects)
 	walkAndTransformRefs(transformed, coIdMap)
 
-	const idPath = typeof transformed.$id === 'string' ? transformed.$id : null
-	if (idPath?.startsWith('°')) {
-		transformed.$label = idPath
+	const labelPath = typeof transformed.$label === 'string' ? transformed.$label : null
+	if (labelPath?.startsWith('°')) {
+		transformed.$label = labelPath
 		delete transformed['@label']
 	} else if (transformed['@label'] && typeof transformed['@label'] === 'string') {
 		delete transformed['@label']

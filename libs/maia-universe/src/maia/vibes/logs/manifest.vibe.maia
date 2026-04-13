@@ -1,11 +1,12 @@
 {
-	"$factory": "°maia/factory/vibe",
+	"$factory": "°maia/factory/vibe.factory.maia",
 	"name": "Logs",
 	"description": "Developer logs and diagnostics",
 	"actor": "°maia/logs/intent/intent.actor.maia",
 	"runtime": [
 		"browser"
 	],
+	"seedData": {},
 	"dependencies": [
 		"°maia/logs/intent/intent.actor.maia",
 		"°maia/views/logs/actor.maia"

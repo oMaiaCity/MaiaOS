@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/meta",
+	"$factory": "°maia/factory/meta.factory.maia",
 	"title": "°maia/views/layout-chat/interface.maia",
 	"description": "Chat layout view",
 	"cotype": "comap",

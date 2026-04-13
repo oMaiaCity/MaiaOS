@@ -12,7 +12,7 @@
  */
 
 import { normalizeCoValueData } from '@MaiaOS/db'
-import { executableKeyFromMaiaPath } from '@MaiaOS/factories'
+import { ACTOR_NANOID_TO_EXECUTABLE_KEY } from '@MaiaOS/factories'
 import { containsExpressions } from '@MaiaOS/factories/expression-resolver'
 import { validateAgainstFactory } from '@MaiaOS/factories/validation.helper'
 import { createOpsLogger } from '@MaiaOS/logs'
@@ -850,10 +850,12 @@ export class ActorEngine {
 		if (!executableFunction) {
 			const { getActor } = await import('@MaiaOS/universe/actors')
 			const namespacePath =
-				typeof actorConfig.$label === 'string' ? executableKeyFromMaiaPath(actorConfig.$label) : null
+				typeof actorConfig.$nanoid === 'string'
+					? (ACTOR_NANOID_TO_EXECUTABLE_KEY[actorConfig.$nanoid] ?? null)
+					: null
 			if (!namespacePath) {
 				throw new Error(
-					`[ActorEngine] spawnActor: actorConfig.$label required for native JS actor (co-id ${actorId})`,
+					`[ActorEngine] spawnActor: actorConfig.$nanoid must map to a native JS actor (co-id ${actorId})`,
 				)
 			}
 			const actorModule = getActor(namespacePath)

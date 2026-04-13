@@ -1,6 +1,6 @@
 {
-	"$factory": "°maia/factory/meta",
-	"title": "°maia/factory/os/indexes-registry",
+	"$factory": "°maia/factory/meta.factory.maia",
+	"title": "°maia/factory/indexes-registry.factory.maia",
 	"description": "Indexes registry CoMap - schema co-id -> index colist. Stored in spark.os.indexes",
 	"cotype": "comap",
 	"indexing": false,

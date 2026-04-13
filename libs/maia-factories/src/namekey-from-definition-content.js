@@ -1,12 +1,11 @@
 /**
- * Single source for catalog namekey extraction (definition CoMap content: title / $id).
- * Used by spark.os registry build and tests — keep in sync with factory ref patterns.
+ * Single source for catalog namekey extraction (definition CoMap content: title / $label).
  */
 
 import { FACTORY_REF_PATTERN, INSTANCE_REF_PATTERN } from './patterns.js'
 
 /**
- * @param {object|null|undefined} content - CoMap-like with .get('title'|'$id') or plain { title, $id }
+ * @param {object|null|undefined} content - CoMap-like with .get('title'|'$label') or plain object
  * @returns {string|null}
  */
 export function namekeyFromFactoryDefinitionContent(content) {
@@ -16,7 +15,7 @@ export function namekeyFromFactoryDefinitionContent(content) {
 			? (k) => content.get(k)
 			: (k) => (k in content ? content[k] : undefined)
 	const title = get('title')
-	const idKey = get('$id')
+	const label = get('$label')
 	if (
 		typeof title === 'string' &&
 		(FACTORY_REF_PATTERN.test(title) || INSTANCE_REF_PATTERN.test(title))
@@ -24,10 +23,10 @@ export function namekeyFromFactoryDefinitionContent(content) {
 		return title
 	}
 	if (
-		typeof idKey === 'string' &&
-		(FACTORY_REF_PATTERN.test(idKey) || INSTANCE_REF_PATTERN.test(idKey))
+		typeof label === 'string' &&
+		(FACTORY_REF_PATTERN.test(label) || INSTANCE_REF_PATTERN.test(label))
 	) {
-		return idKey
+		return label
 	}
 	return null
 }

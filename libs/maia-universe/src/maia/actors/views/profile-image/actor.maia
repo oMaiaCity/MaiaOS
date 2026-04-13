@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/actor",
+	"$factory": "°maia/factory/actor.factory.maia",
 	"context": "°maia/views/profile-image/context.maia",
 	"view": "°maia/views/profile-image/view.maia",
 	"process": "°maia/views/profile-image/process.maia",

@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/meta",
+	"$factory": "°maia/factory/meta.factory.maia",
 	"title": "°maia/views/input/for-detail.interface.maia",
 	"description": "Detail input view",
 	"cotype": "comap",

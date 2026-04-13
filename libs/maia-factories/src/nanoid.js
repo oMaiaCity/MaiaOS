@@ -1,9 +1,11 @@
 /**
  * Deterministic 12-char nano-ID from a maia file path (case-insensitive).
  * Hash input: normalized path (lowercase, forward slashes) relative to package src/maia root.
+ *
+ * Uses @noble/hashes/sha256 (browser + Node) — same digest as former node:crypto createHash('sha256').
  */
 
-import { createHash } from 'node:crypto'
+import { sha256 } from '@noble/hashes/sha2.js'
 
 const ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 export const NANOID_LENGTH = 12
@@ -30,7 +32,7 @@ export function normalizeMaiaPathKey(pathKey) {
  */
 export function nanoidFromPath(pathKey) {
 	const normalized = normalizeMaiaPathKey(pathKey)
-	const hash = createHash('sha256').update(normalized, 'utf8').digest()
+	const hash = sha256(new TextEncoder().encode(normalized))
 	let id = ''
 	for (let i = 0; i < NANOID_LENGTH; i++) {
 		id += ALPHABET[hash[i] % ALPHABET.length]

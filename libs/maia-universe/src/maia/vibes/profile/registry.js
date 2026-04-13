@@ -1,25 +1,44 @@
+/* eslint-disable */
 /**
- * My Profile Vibe Registry
+ * GENERATED — do not edit.
+ * Source: bun scripts/generate-maia-universe-registry.mjs
  */
 
-import { buildIntentVibeRegistry } from '../../build-intent-vibe-registry.js'
+import { annotateMaiaConfig } from '@MaiaOS/factories/identity-from-maia-path.js'
+import maiacityBrand from '../brand/maiacity.style.maia'
 import intentActor from './intent/intent.actor.maia'
 import intentContext from './intent/intent.context.maia'
 import intentProcess from './intent/intent.process.maia'
 import intentView from './intent/intent.view.maia'
-import profileVibe from './manifest.vibe.maia'
+import manifestVibe from './manifest.vibe.maia'
 
-export const ProfileVibeRegistry = buildIntentVibeRegistry({
-	vibe: profileVibe,
-	idPrefix: 'profile',
-	intent: {
-		actor: intentActor,
-		context: intentContext,
-		process: intentProcess,
-		view: intentView,
+const brand = annotateMaiaConfig(maiacityBrand, 'brand/maiacity.style.maia')
+const vibe = annotateMaiaConfig(manifestVibe, 'profile/manifest.vibe.maia')
+const actor = annotateMaiaConfig(intentActor, 'profile/intent/intent.actor.maia')
+const context = annotateMaiaConfig(intentContext, 'profile/intent/intent.context.maia')
+const view = annotateMaiaConfig(intentView, 'profile/intent/intent.view.maia')
+const process = annotateMaiaConfig(intentProcess, 'profile/intent/intent.process.maia')
+
+export const ProfileVibeRegistry = {
+	vibe,
+
+	styles: {
+		'brand/maiacity.style.maia': brand,
 	},
-})
 
-if (import.meta.hot) {
-	import.meta.hot.accept()
+	actors: {
+		'profile/intent/intent.actor.maia': actor,
+	},
+
+	views: {
+		'profile/intent/intent.view.maia': view,
+	},
+
+	contexts: {
+		'profile/intent/intent.context.maia': context,
+	},
+
+	processes: {
+		'profile/intent/intent.process.maia': process,
+	},
 }

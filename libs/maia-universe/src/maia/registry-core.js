@@ -4,7 +4,7 @@
  * Source: bun scripts/generate-maia-universe-registry.mjs
  */
 
-import { annotateMaiaConfig } from '@MaiaOS/factories/annotate-maia'
+import { annotateMaiaConfig } from '@MaiaOS/factories/identity-from-maia-path.js'
 
 import raw0 from '@MaiaOS/universe/actors/os/ai/actor.maia'
 import raw1 from '@MaiaOS/universe/actors/os/ai/interface.maia'

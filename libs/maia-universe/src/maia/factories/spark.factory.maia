@@ -1,6 +1,6 @@
 {
-	"$factory": "°maia/factory/meta",
-	"title": "°maia/factory/data/spark",
+	"$factory": "°maia/factory/meta.factory.maia",
+	"title": "°maia/factory/spark.factory.maia",
 	"description": "Spark CoMap. Guardian (admin) group is spark.os.groups.guardian.",
 	"cotype": "comap",
 	"indexing": true,

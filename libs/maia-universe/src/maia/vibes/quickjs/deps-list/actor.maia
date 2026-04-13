@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/actor",
+	"$factory": "°maia/factory/actor.factory.maia",
 	"context": "°maia/quickjs/deps-list/context.dynamic.maia",
 	"view": "°maia/quickjs/deps-list/view.maia",
 	"process": "°maia/quickjs/deps-list/process.maia",

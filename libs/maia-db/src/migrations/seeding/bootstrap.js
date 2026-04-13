@@ -2,6 +2,7 @@
  * Bootstrap - guardian, scaffold, account.registries
  */
 
+import { maiaFactoryRefToNanoid } from '@MaiaOS/factories/identity-from-maia-path.js'
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 import { waitForStoreReady } from '../../cojson/crud/read-operations.js'
 import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../../cojson/spark-os-keys.js'
@@ -53,53 +54,19 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	for (const [k, v] of Object.entries(removeIdFields(directProps))) metaSchemaCoMap.set(k, v)
 	tempCoMap.set('metaschema', metaSchemaCoId)
 
-	const uniqueSchemasBy$id = new Map()
+	const uniqueSchemasByLabel = new Map()
 	for (const [name, schema] of Object.entries(allSchemas)) {
-		const key = schema.$id || `°maia/factory/${name}`
-		if (!uniqueSchemasBy$id.has(key)) uniqueSchemasBy$id.set(key, { name, schema })
+		const key = schema.$label || `°maia/factory/${name}`
+		if (!uniqueSchemasByLabel.has(key)) uniqueSchemasByLabel.set(key, { name, schema })
 	}
-	const sorted = sortSchemasByDependency(uniqueSchemasBy$id)
-
-	// Ensure migration-stream factory is created before todos (todos needs a migration CoStream)
-	if (
-		sorted.includes('°maia/factory/data/todos') &&
-		sorted.includes('°maia/factory/os/migration-stream')
-	) {
-		const migIdx = sorted.indexOf('°maia/factory/os/migration-stream')
-		const todosIdx = sorted.indexOf('°maia/factory/data/todos')
-		if (migIdx > todosIdx) {
-			sorted.splice(migIdx, 1)
-			const newTodosIdx = sorted.indexOf('°maia/factory/data/todos')
-			sorted.splice(newTodosIdx, 0, '°maia/factory/os/migration-stream')
-		}
-	}
+	const sorted = sortSchemasByDependency(uniqueSchemasByLabel)
 
 	const factoryCoIdMap = new Map()
 	const ctx = { node, account, guardian }
 	for (const factoryKey of sorted) {
-		const { schema } = uniqueSchemasBy$id.get(factoryKey)
-		const { $schema, $id, id, ...props } = schema
+		const { schema } = uniqueSchemasByLabel.get(factoryKey)
+		const { $schema, $label: _lb, $nanoid: _nn, $id: _legacy, id, ...props } = schema
 		const cleaned = removeIdFields(props)
-
-		let headerMetaOverrides
-		if (factoryKey === '°maia/factory/data/todos') {
-			const migStreamFactoryCoId = factoryCoIdMap.get('°maia/factory/os/migration-stream')
-			if (migStreamFactoryCoId) {
-				const migGroup = node.createGroup()
-				migGroup.extend(guardian, 'admin')
-				const migMeta = { $factory: migStreamFactoryCoId }
-				const migrationsStream = migGroup.createStream(undefined, 'private', migMeta)
-				migrationsStream.push(
-					{
-						description: 'Added priority field',
-						lang: 'js',
-						code: `({ migrate: function(d) { if (!d.priority) d.priority = 'medium'; return d; } })`,
-					},
-					'trusting',
-				)
-				headerMetaOverrides = { $migrations: migrationsStream.id }
-			}
-		}
 
 		const { coValue: factoryCoMap } = await createCoValueForSpark(ctx, null, {
 			factory: metaSchemaCoId,
@@ -107,23 +74,27 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 			data: cleaned,
 			dataEngine: dbEngine,
 			isFactoryDefinition: true,
-			headerMetaOverrides,
 		})
 		const coId = factoryCoMap.id
-		factoryCoIdMap.set(factoryKey, coId)
+		const factoryNanoid =
+			typeof _nn === 'string' && _nn.length > 0 ? _nn : maiaFactoryRefToNanoid(factoryKey)
+		if (!factoryNanoid) {
+			throw new Error(`[bootstrap] Missing $nanoid for factory ${factoryKey}`)
+		}
+		factoryCoIdMap.set(factoryNanoid, coId)
 		tempCoMap.set(factoryKey, coId)
 	}
 
 	const sparkSchemaCoId =
-		tempCoMap.get('°maia/factory/data/spark') || EXCEPTION_FACTORIES.META_SCHEMA
+		tempCoMap.get('°maia/factory/spark.factory.maia') || EXCEPTION_FACTORIES.META_SCHEMA
 	const osSchemaCoId =
-		tempCoMap.get('°maia/factory/os/os-registry') || EXCEPTION_FACTORIES.META_SCHEMA
+		tempCoMap.get('°maia/factory/os-registry.factory.maia') || EXCEPTION_FACTORIES.META_SCHEMA
 	const groupsSchemaCoId =
-		tempCoMap.get('°maia/factory/os/groups') || EXCEPTION_FACTORIES.META_SCHEMA
+		tempCoMap.get('°maia/factory/groups.factory.maia') || EXCEPTION_FACTORIES.META_SCHEMA
 	const indexesSchemaCoId =
-		tempCoMap.get('°maia/factory/os/indexes-registry') || EXCEPTION_FACTORIES.META_SCHEMA
+		tempCoMap.get('°maia/factory/indexes-registry.factory.maia') || EXCEPTION_FACTORIES.META_SCHEMA
 	const vibesRegistrySchemaCoId =
-		tempCoMap.get('°maia/factory/os/vibes-registry') ?? EXCEPTION_FACTORIES.META_SCHEMA
+		tempCoMap.get('°maia/factory/vibes-registry.factory.maia') ?? EXCEPTION_FACTORIES.META_SCHEMA
 
 	const scaffoldOpts = (factory, data) => ({ factory, cotype: 'comap', data, dataEngine: dbEngine })
 	const { coValue: maiaSpark } = await createCoValueForSpark(
@@ -290,26 +261,30 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 	if (!groupsContent || typeof groupsContent.set !== 'function') return
 
 	const { lookupRegistryKey } = await import('../../cojson/factory/resolver.js')
-	const registriesSchemaCoId = await lookupRegistryKey(peer, '°maia/factory/os/registries', {
-		returnType: 'coId',
-	})
+	const registriesSchemaCoId = await lookupRegistryKey(
+		peer,
+		'°maia/factory/registries.factory.maia',
+		{
+			returnType: 'coId',
+		},
+	)
 	const sparksRegistrySchemaCoId = await lookupRegistryKey(
 		peer,
-		'°maia/factory/os/sparks-registry',
+		'°maia/factory/sparks-registry.factory.maia',
 		{
 			returnType: 'coId',
 		},
 	)
 	const humansRegistrySchemaCoId = await lookupRegistryKey(
 		peer,
-		'°maia/factory/os/humans-registry',
+		'°maia/factory/humans-registry.factory.maia',
 		{
 			returnType: 'coId',
 		},
 	)
 	const avensIdentityRegistrySchemaCoId = await lookupRegistryKey(
 		peer,
-		'°maia/factory/os/avens-identity-registry',
+		'°maia/factory/avens-identity-registry.factory.maia',
 		{
 			returnType: 'coId',
 		},

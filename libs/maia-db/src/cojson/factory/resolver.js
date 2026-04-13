@@ -17,12 +17,14 @@
  */
 
 import { FACTORY_REF_PATTERN, INSTANCE_REF_PATTERN, VIBE_REF_PATTERN } from '@MaiaOS/factories'
+import { ensureCoValueLoaded } from '../crud/collection-helpers.js'
 import { normalizeCoValueData } from '../crud/data-extraction.js'
 import { resolveReactive as resolveReactiveBase } from '../crud/reactive-resolver.js'
 import { read as universalRead } from '../crud/read.js'
 import { waitForStoreReady } from '../crud/read-operations.js'
 import { resolveSparkCoId } from '../groups/groups.js'
 import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
+import { getSystemFactoryCoId } from './runtime-factory-refs.js'
 
 /**
  * Recursively remove 'id' fields from schema objects (AJV only accepts $id, not id)
@@ -109,7 +111,7 @@ export async function lookupRegistryKey(peer, identifier, options = {}) {
 				await peer.dbEngine.resolveSystemFactories()
 			}
 			const registryCoId =
-				peer.systemFactoryCoIds?.get?.(normalizedKey) ?? peer.systemFactoryCoIds?.get?.(identifier)
+				getSystemFactoryCoId(peer, normalizedKey) ?? getSystemFactoryCoId(peer, identifier)
 			if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
 				if (returnType === 'coId') {
 					return registryCoId
@@ -192,7 +194,7 @@ export async function lookupRegistryKey(peer, identifier, options = {}) {
 				await peer.dbEngine.resolveSystemFactories()
 			}
 			const registryCoId =
-				peer.systemFactoryCoIds?.get?.(identifier) ?? peer.systemFactoryCoIds?.get?.(normalizedKey)
+				getSystemFactoryCoId(peer, identifier) ?? getSystemFactoryCoId(peer, normalizedKey)
 			if (registryCoId && typeof registryCoId === 'string' && registryCoId.startsWith('co_z')) {
 				if (returnType === 'coId') {
 					return registryCoId
@@ -287,6 +289,12 @@ export async function resolve(peer, identifier, options = {}) {
 
 	// If it's already a co-id, load directly
 	if (identifier.startsWith('co_z')) {
+		// IndexedDB may hold the CoValue before the node has loaded it into memory (see ensureCoValueLoaded).
+		try {
+			await ensureCoValueLoaded(peer, identifier, { waitForAvailable: true, timeoutMs })
+		} catch (_e) {
+			// Timeout: still try read() — subscription may populate the store.
+		}
 		// Load co-value using read() API
 		const store = await universalRead(peer, identifier, null, null, null, {
 			deepResolve,
@@ -593,7 +601,7 @@ export async function resolveFactoryDefFromPeer(peer, factoryKey, options = {}) 
 		return def
 	}
 
-	const coId = peer.systemFactoryCoIds?.get?.(factoryKey)
+	const coId = getSystemFactoryCoId(peer, factoryKey)
 	if (!coId?.startsWith('co_z')) {
 		throw new Error(
 			`[resolveFactoryDefFromPeer] Registry key not in peer.systemFactoryCoIds: ${factoryKey}`,

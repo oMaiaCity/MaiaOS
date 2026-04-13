@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/style",
+	"$factory": "°maia/factory/style.factory.maia",
 	"components": {
 		"list": {
 			"display": "flex",

@@ -7,8 +7,8 @@ describe('resolve() strict-only', () => {
 			systemSparkCoId: 'co_z_test_spark',
 			account: { get: () => null },
 		}
-		await expect(resolve(peer, '°maia/factory/data/todos', { returnType: 'coId' })).rejects.toThrow(
-			/Runtime resolve requires co_z co-id/,
-		)
+		await expect(
+			resolve(peer, '°maia/factory/todos.factory.maia', { returnType: 'coId' }),
+		).rejects.toThrow(/Runtime resolve requires co_z co-id/)
 	})
 })

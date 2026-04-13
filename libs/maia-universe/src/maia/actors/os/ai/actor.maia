@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/actor",
+	"$factory": "°maia/factory/actor.factory.maia",
 	"interface": "°maia/os/ai/interface.maia",
 	"process": "°maia/os/ai/process.maia"
 }

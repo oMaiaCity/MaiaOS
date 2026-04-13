@@ -1,9 +1,10 @@
+/* eslint-disable */
 /**
- * Paper Vibe Registry
- * Standalone paper app (collaborative notes)
+ * GENERATED — do not edit.
+ * Source: bun scripts/generate-maia-universe-registry.mjs
  */
 
-import { annotateMaiaConfig } from '@MaiaOS/factories/annotate-maia'
+import { annotateMaiaConfig } from '@MaiaOS/factories/identity-from-maia-path.js'
 import { SEED_DATA } from '@MaiaOS/universe/data'
 import maiacityBrand from '../brand/maiacity.style.maia'
 import paperVibe from './manifest.vibe.maia'
@@ -15,7 +16,7 @@ export const PaperVibeRegistry = {
 	vibe,
 
 	styles: {
-		[brand.$id]: brand,
+		'brand/maiacity.style.maia': brand,
 	},
 
 	actors: {},

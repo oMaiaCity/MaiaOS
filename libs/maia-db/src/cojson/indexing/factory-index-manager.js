@@ -17,7 +17,11 @@ import { ensureCoValueLoaded } from '../crud/collection-helpers.js'
 import { create } from '../crud/create.js'
 import { read as universalRead } from '../crud/read.js'
 import { resolve } from '../factory/resolver.js'
-import { getRuntimeRef, RUNTIME_REF } from '../factory/runtime-factory-refs.js'
+import {
+	getRuntimeRef,
+	getSystemFactoryCoId,
+	RUNTIME_REF,
+} from '../factory/runtime-factory-refs.js'
 import * as groups from '../groups/groups.js'
 import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
 
@@ -225,7 +229,7 @@ async function ensureSchemaSpecificIndexColistSchema(peer, factoryCoId, metaSche
 
 			// If it's a human-readable key, resolve via system factory map
 			if (metaSchemaCoId && !metaSchemaCoId.startsWith('co_z')) {
-				metaSchemaCoId = peer.systemFactoryCoIds?.get?.(metaSchemaCoId) ?? null
+				metaSchemaCoId = getSystemFactoryCoId(peer, metaSchemaCoId) ?? null
 			}
 		}
 
@@ -258,7 +262,7 @@ async function ensureSchemaSpecificIndexColistSchema(peer, factoryCoId, metaSche
 	const indexColistFactoryTitle = `${prefix}/factory/index/${path}`
 
 	// Check if schema-specific index colist schema already exists
-	const existingSchemaCoId = peer.systemFactoryCoIds?.get?.(indexColistFactoryTitle) ?? null
+	const existingSchemaCoId = getSystemFactoryCoId(peer, indexColistFactoryTitle) ?? null
 	if (existingSchemaCoId?.startsWith('co_z')) {
 		return existingSchemaCoId
 	}
@@ -586,7 +590,7 @@ async function ensureDefinitionCatalogColistId(peer, metaCoId) {
 		description: 'Colist of factory definition co_zs',
 		cotype: 'colist',
 		indexing: false,
-		items: { $co: '°maia/factory/meta' },
+		items: { $co: '°maia/factory/meta.factory.maia' },
 	}
 	try {
 		const created = await create(peer, metaCoId, removeIdFields(catalogSchemaDef))
@@ -656,7 +660,7 @@ export async function registerFactoryCoValue(peer, schemaCoValueCore) {
 	let metaSchemaCoId = headerMeta?.$factory
 
 	if (metaSchemaCoId && !metaSchemaCoId.startsWith('co_z')) {
-		metaSchemaCoId = peer.systemFactoryCoIds?.get?.(metaSchemaCoId) ?? null
+		metaSchemaCoId = getSystemFactoryCoId(peer, metaSchemaCoId) ?? null
 	}
 
 	await ensureFactoryIndexColist(peer, schemaCoValueCore.id, metaSchemaCoId)
@@ -707,12 +711,12 @@ export async function isFactoryCoValue(peer, coValueCore) {
 
 	// Metaschema itself uses @metaSchema exception (can't self-reference)
 	// Special case: Check content.title to confirm it's metaschema
-	// Uses "°maia/factory/meta" (schema namekey from JSON definition - single source of truth)
+	// Uses "°maia/factory/meta.factory.maia" (schema namekey from JSON definition - single source of truth)
 	if (schema === EXCEPTION_FACTORIES.META_SCHEMA) {
 		const content = peer.getCurrentContent(coValueCore)
 		if (content && typeof content.get === 'function') {
 			const title = content.get('title')
-			if (title === '°maia/factory/meta') {
+			if (title === '°maia/factory/meta.factory.maia') {
 				return true // This is the metaschema itself
 			}
 		}
@@ -744,8 +748,8 @@ export async function isFactoryCoValue(peer, coValueCore) {
 						const referencedTitle = referencedContent.get('title')
 
 						// Check if it's the metaschema by title
-						// - "°maia/factory/meta" (schema namekey from JSON definition - single source of truth)
-						if (referencedTitle === '°maia/factory/meta') {
+						// - "°maia/factory/meta.factory.maia" (schema namekey from JSON definition - single source of truth)
+						if (referencedTitle === '°maia/factory/meta.factory.maia') {
 							// headerMeta.$factory points to metaschema - this is a schema!
 							return true
 						}

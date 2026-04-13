@@ -1,6 +1,6 @@
 /** Canonical meta factory — mirrors meta.factory.maia (authoring in universe). */
 export const metaFactorySchemaRaw = {
-	$factory: '°maia/factory/meta',
+	$factory: '°maia/factory/meta.factory.maia',
 	$schema: 'https://json-schema.org/draft/2020-12/schema',
 	$vocabulary: {
 		'https://json-schema.org/draft/2020-12/vocab/core': true,
@@ -17,7 +17,7 @@ export const metaFactorySchemaRaw = {
 			$ref: 'https://json-schema.org/draft/2020-12/schema',
 		},
 	],
-	title: '°maia/factory/meta',
+	title: '°maia/factory/meta.factory.maia',
 	type: ['object', 'boolean'],
 	indexing: false,
 	properties: {

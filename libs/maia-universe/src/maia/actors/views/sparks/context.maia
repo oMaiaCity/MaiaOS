@@ -1,8 +1,8 @@
 {
-	"$factory": "°maia/factory/context",
+	"$factory": "°maia/factory/context.factory.maia",
 	"title": "My Sparks",
 	"sparks": {
-		"factory": "°maia/factory/data/spark",
+		"factory": "°maia/factory/spark.factory.maia",
 		"map": {
 			"id": "id",
 			"name": "name"

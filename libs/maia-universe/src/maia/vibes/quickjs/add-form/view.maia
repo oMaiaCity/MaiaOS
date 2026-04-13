@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/view",
+	"$factory": "°maia/factory/view.factory.maia",
 	"content": {
 		"tag": "div",
 		"class": "add-form stack",

@@ -1,6 +1,6 @@
 {
-	"$factory": "°maia/factory/meta",
-	"title": "°maia/factory/os/humans-registry",
+	"$factory": "°maia/factory/meta.factory.maia",
+	"title": "°maia/factory/humans-registry.factory.maia",
 	"description": "Humans registry. Keys: username or account co-id. Values: human comap co-id.",
 	"cotype": "comap",
 	"indexing": false,

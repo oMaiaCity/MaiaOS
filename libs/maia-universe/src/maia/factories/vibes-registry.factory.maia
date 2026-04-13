@@ -1,6 +1,6 @@
 {
-	"$factory": "°maia/factory/meta",
-	"title": "°maia/factory/os/vibes-registry",
+	"$factory": "°maia/factory/meta.factory.maia",
+	"title": "°maia/factory/vibes-registry.factory.maia",
 	"description": "Vibes registry CoMap - vibe key -> vibe co-id. Stored in spark.os.vibes",
 	"cotype": "comap",
 	"indexing": false,

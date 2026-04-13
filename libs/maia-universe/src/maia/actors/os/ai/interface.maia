@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/meta",
+	"$factory": "°maia/factory/meta.factory.maia",
 	"title": "°maia/os/ai/interface.maia",
 	"description": "Unified AI chat using OpenAI-compatible API (RedPill) for LLM interactions. Model can be configured dynamically via payload. LLMs are stateless - each request sends the full context (complete conversation history).",
 	"cotype": "comap",

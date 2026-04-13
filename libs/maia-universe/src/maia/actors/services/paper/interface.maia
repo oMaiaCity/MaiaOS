@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/meta",
+	"$factory": "°maia/factory/meta.factory.maia",
 	"title": "°maia/services/paper/interface.maia",
 	"description": "Updates CoText content (full replace). Generic for any context path. Used by paper, notes, and other inline-edit views.",
 	"cotype": "comap",

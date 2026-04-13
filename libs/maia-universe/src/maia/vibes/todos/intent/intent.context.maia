@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/context",
+	"$factory": "°maia/factory/context.factory.maia",
 	"layout": "@layout",
 	"@actors": {
 		"layout": "°maia/views/tabs/todos.actor.maia"

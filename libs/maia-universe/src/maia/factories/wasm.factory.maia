@@ -1,6 +1,6 @@
 {
-	"$factory": "°maia/factory/meta",
-	"title": "°maia/factory/os/wasm",
+	"$factory": "°maia/factory/meta.factory.maia",
+	"title": "°maia/factory/wasm.factory.maia",
 	"cotype": "comap",
 	"properties": {
 		"lang": {
@@ -12,7 +12,7 @@
 			"description": "Execution language: 'js' = run in QuickJS WASM sandbox"
 		},
 		"code": {
-			"$co": "°maia/factory/os/cotext",
+			"$co": "°maia/factory/cotext.factory.maia",
 			"description": "CoText (colist of graphemes) - JS code to execute in sandbox"
 		}
 	},

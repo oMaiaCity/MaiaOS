@@ -1,11 +1,11 @@
 {
-	"$factory": "°maia/factory/process",
+	"$factory": "°maia/factory/process.factory.maia",
 	"handlers": {
 		"CREATE_TODO": [
 			{
 				"op": {
 					"create": {
-						"factory": "°maia/factory/data/todos",
+						"factory": "°maia/factory/todos.factory.maia",
 						"idempotencyKey": "$$idempotencyKey",
 						"data": {
 							"text": "$$value",

@@ -1,5 +1,6 @@
 {
-	"$factory": "°maia/factory/vibe",
+	"$factory": "°maia/factory/vibe.factory.maia",
+	"key": "profile",
 	"name": "My Profile",
 	"description": "Update your profile picture",
 	"actor": "°maia/profile/intent/intent.actor.maia",

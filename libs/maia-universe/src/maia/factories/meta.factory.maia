@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/meta",
+	"$factory": "°maia/factory/meta.factory.maia",
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$vocabulary": {
 		"https://json-schema.org/draft/2020-12/vocab/core": true,
@@ -16,7 +16,7 @@
 			"$ref": "https://json-schema.org/draft/2020-12/schema"
 		}
 	],
-	"title": "°maia/factory/meta",
+	"title": "°maia/factory/meta.factory.maia",
 	"type": [
 		"object",
 		"boolean"

@@ -3,7 +3,8 @@
  * Global FAB + modal overlay. Uses @MaiaOS/maia-ai (RunAnywhere) for private, offline-capable transcription.
  */
 
-import { executableKeyFromMaiaPath } from '@MaiaOS/factories'
+import { ACTOR_NANOID_TO_EXECUTABLE_KEY } from '@MaiaOS/factories'
+import { identityFromMaiaPath } from '@MaiaOS/factories/identity-from-maia-path.js'
 import {
 	AudioCapture,
 	ensureAllModelsLoaded,
@@ -22,6 +23,13 @@ const STOP_ICON = `<svg class="maia-ai-center-icon maia-ai-icon-stop" width="24"
 const HOME_ICON = `<svg class="maia-nav-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" fill-opacity="0.25" d="M5 14.059c0-1.01 0-1.514.222-1.945c.221-.43.632-.724 1.453-1.31l4.163-2.974c.56-.4.842-.601 1.162-.601s.601.2 1.162.601l4.163 2.973c.821.587 1.232.88 1.453 1.311s.222.935.222 1.944V19c0 .943 0 1.414-.293 1.707S17.943 21 17 21H7c-.943 0-1.414 0-1.707-.293S5 19.943 5 19z"/><path fill="currentColor" d="M3 12.387c0 .266 0 .4.084.441s.19-.04.4-.205l7.288-5.668c.59-.459.885-.688 1.228-.688s.638.23 1.228.688l7.288 5.668c.21.164.316.246.4.205s.084-.175.084-.441v-.409c0-.48 0-.72-.102-.928s-.291-.356-.67-.65l-7-5.445c-.59-.459-.885-.688-1.228-.688s-.638.23-1.228.688l-7 5.445c-.379.294-.569.442-.67.65S3 11.498 3 11.978zM12.5 15h-1a2 2 0 0 0-2 2v3.85c0 .083.067.15.15.15h4.7a.15.15 0 0 0 .15-.15V17a2 2 0 0 0-2-2"/><rect width="2" height="4" x="16" y="5" fill="currentColor" rx=".5"/></svg>`
 
 const BELL_ICON = `<svg class="maia-nav-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M18.75 9v.704c0 .845.24 1.671.692 2.374l1.108 1.723c1.011 1.574.239 3.713-1.52 4.21a25.8 25.8 0 0 1-14.06 0c-1.759-.497-2.531-2.636-1.52-4.21l1.108-1.723a4.4 4.4 0 0 0 .693-2.374V9c0-3.866 3.022-7 6.749-7s6.75 3.134 6.75 7" opacity="0.5"/><path fill="currentColor" d="M7.243 18.545a5.002 5.002 0 0 0 9.513 0c-3.145.59-6.367.59-9.513 0"/></svg>`
+
+const CHAT_INTENT_ACTOR_NANOID = identityFromMaiaPath('chat/intent/intent.actor.maia').$nanoid
+
+function execKeyFromActorCfg(cfg) {
+	if (!cfg || typeof cfg !== 'object' || typeof cfg.$nanoid !== 'string') return ''
+	return ACTOR_NANOID_TO_EXECUTABLE_KEY[cfg.$nanoid] ?? ''
+}
 
 let maiaRef = null
 let messagesActorId = null
@@ -170,7 +178,7 @@ function renderMessages() {
  */
 function actorConfigMatchesChatIntent(cfg) {
 	if (!cfg || typeof cfg !== 'object') return false
-	return typeof cfg.$label === 'string' && executableKeyFromMaiaPath(cfg.$label) === 'chat/intent'
+	return cfg.$nanoid === CHAT_INTENT_ACTOR_NANOID
 }
 
 /**
@@ -178,7 +186,7 @@ function actorConfigMatchesChatIntent(cfg) {
  */
 function actorConfigMatchesMessages(cfg) {
 	if (!cfg || typeof cfg !== 'object') return false
-	const k = typeof cfg.$label === 'string' ? executableKeyFromMaiaPath(cfg.$label) : ''
+	const k = execKeyFromActorCfg(cfg)
 	return (
 		typeof k === 'string' &&
 		(k.includes('views/messages') || k.includes('actor/os/messages') || k.endsWith('/messages'))
