@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/meta",
+	"$factory": "°maia/factory/meta.factory.maia",
 	"title": "°maia/os/db/interface.maia",
 	"description": "Unified API for all database and spark operations (read, create, update, delete, seed, factory, resolve, append, push, processInbox, uploadBinary, loadBinaryAsBlob, createSpark, readSpark, updateSpark, deleteSpark, addSparkMember, removeSparkMember, addSparkParentGroup, removeSparkParentGroup, getSparkMembers, updateSparkMemberRole)",
 	"cotype": "comap",

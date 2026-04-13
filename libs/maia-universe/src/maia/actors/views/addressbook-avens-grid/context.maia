@@ -1,7 +1,7 @@
 {
-	"$factory": "°maia/factory/context",
+	"$factory": "°maia/factory/context.factory.maia",
 	"items": {
-		"factory": "°maia/factory/os/aven-identity",
+		"factory": "°maia/factory/aven-identity.factory.maia",
 		"map": {
 			"id": "id",
 			"accountId": "accountId",

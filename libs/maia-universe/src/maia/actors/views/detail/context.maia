@@ -1,8 +1,8 @@
 {
-	"$factory": "°maia/factory/context",
+	"$factory": "°maia/factory/context.factory.maia",
 	"sparkId": null,
 	"sparkDetails": {
-		"factory": "°maia/factory/data/spark",
+		"factory": "°maia/factory/spark.factory.maia",
 		"filter": {
 			"id": "$sparkId"
 		},

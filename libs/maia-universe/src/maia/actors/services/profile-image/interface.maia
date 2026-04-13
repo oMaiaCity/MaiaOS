@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/meta",
+	"$factory": "°maia/factory/meta.factory.maia",
 	"title": "°maia/services/profile-image/interface.maia",
 	"description": "Upload profile image (avatar) to CoBinary and set profile.avatar. Used when user uploads an image for their profile.",
 	"cotype": "comap",

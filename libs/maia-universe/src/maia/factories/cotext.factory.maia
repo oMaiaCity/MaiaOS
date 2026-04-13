@@ -1,6 +1,6 @@
 {
-	"$factory": "°maia/factory/meta",
-	"title": "°maia/factory/os/cotext",
+	"$factory": "°maia/factory/meta.factory.maia",
+	"title": "°maia/factory/cotext.factory.maia",
 	"description": "CoText - exclusively colist (ordered graphemes). Never comap or cobinary.",
 	"cotype": "colist",
 	"indexing": true,

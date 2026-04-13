@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/meta",
+	"$factory": "°maia/factory/meta.factory.maia",
 	"title": "°maia/views/info-card/interface.maia",
 	"description": "Info card view (info, success, error)",
 	"cotype": "comap",

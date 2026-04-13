@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/context",
+	"$factory": "°maia/factory/context.factory.maia",
 	"inputPlaceholder": "Add a new todo...",
 	"inputValue": "",
 	"submitButtonText": "Add",

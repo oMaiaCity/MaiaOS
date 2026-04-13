@@ -1,6 +1,6 @@
 {
-	"$factory": "°maia/factory/meta",
-	"title": "°maia/factory/os/registries",
+	"$factory": "°maia/factory/meta.factory.maia",
+	"title": "°maia/factory/registries.factory.maia",
 	"description": "Registries CoMap - contains sparks, humans. Stored in account.registries (sync agent only).",
 	"cotype": "comap",
 	"indexing": false,

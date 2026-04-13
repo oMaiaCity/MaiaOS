@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/meta",
+	"$factory": "°maia/factory/meta.factory.maia",
 	"title": "°maia/views/messages/interface.maia",
 	"description": "Messages view",
 	"cotype": "comap",

@@ -2,6 +2,7 @@
  * Data seeding - todos, entities, etc.
  */
 
+import { identityFromMaiaPath } from '@MaiaOS/factories/identity-from-maia-path.js'
 import { splitGraphemes } from 'unicode-segmenter/grapheme'
 import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 
@@ -10,7 +11,7 @@ const DEFAULT_PAPER_TEXT = "Dear future us, what we're creating together..."
 /**
  * Seed data entities to CoJSON
  */
-export async function seedData(account, node, maiaGroup, peer, data, coIdRegistry) {
+export async function seedData(account, node, maiaGroup, peer, data, seedRegistry) {
 	const { transformInstanceForSeeding } = await import('@MaiaOS/seed/ref-transform')
 
 	if (!data || Object.keys(data).length === 0) {
@@ -19,25 +20,26 @@ export async function seedData(account, node, maiaGroup, peer, data, coIdRegistr
 
 	const seededCollections = []
 	let totalItems = 0
-	const registry = coIdRegistry.registry ?? coIdRegistry
-	const getAll = typeof coIdRegistry.getAll === 'function' ? coIdRegistry.getAll() : registry
+	const registry =
+		seedRegistry instanceof Map
+			? seedRegistry
+			: typeof seedRegistry.getAll === 'function'
+				? seedRegistry.getAll()
+				: (seedRegistry.registry ?? seedRegistry)
+	const getAll = registry
 
 	for (const [collectionName, collectionItems] of Object.entries(data)) {
 		if (collectionName === 'dashboardIconCotexts') continue
 		if (!Array.isArray(collectionItems)) continue
 
-		const factoryKey1 = `data/${collectionName}`
-		const factoryKey2 = `°maia/factory/data/${collectionName}`
-		const factoryKey3 = `°maia/factory/${collectionName}`
-
-		const factoryCoId =
-			registry.get(factoryKey1) || registry.get(factoryKey2) || registry.get(factoryKey3)
+		const factoryCoId = registry.get(identityFromMaiaPath(`${collectionName}.factory.maia`).$nanoid)
 
 		if (!factoryCoId) continue
 
 		// Special handling for Notes: create CoText (colist) first, then Note (comap) with content ref
 		if (collectionName === 'notes') {
-			const cotextSchemaCoId = registry.get('°maia/factory/os/cotext') || registry.get('os/cotext')
+			const cotextSchemaCoId =
+				registry.get(identityFromMaiaPath('cotext.factory.maia').$nanoid) || registry.get('os/cotext')
 			if (!cotextSchemaCoId) continue
 
 			let itemCount = 0

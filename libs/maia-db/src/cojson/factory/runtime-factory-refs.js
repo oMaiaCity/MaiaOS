@@ -1,8 +1,13 @@
 /**
- * Infra factory namekeys → peer.runtimeRefs (short role → co_z).
- * Single module holding °maia/... strings for mirroring peer.systemFactoryCoIds into runtimeRefs.
+ * Infra factory nanoids → peer.runtimeRefs (short role → co_z).
+ * {@link peer.systemFactoryCoIds} keys are factory $nanoid strings (same as pre-seed registry).
  * Call {@link fillRuntimeRefsFromSystemFactories} after {@link peer.systemFactoryCoIds} is populated.
  */
+
+import {
+	identityFromMaiaPath,
+	logicalRefToSeedNanoid,
+} from '@MaiaOS/factories/identity-from-maia-path.js'
 
 /** Short role keys for {@link getRuntimeRef} — no ° in call sites. */
 export const RUNTIME_REF = {
@@ -20,20 +25,38 @@ export const RUNTIME_REF = {
 	DATA_COBINARY: 'dataCobinary',
 }
 
-/** role → system factory registry map key (authoring namekey). */
-export const INFRA_FACTORY_NAMEKEY_BY_ROLE = {
-	[RUNTIME_REF.META]: '°maia/factory/meta',
-	[RUNTIME_REF.ACTOR]: '°maia/factory/actor',
-	[RUNTIME_REF.DATA_SPARK]: '°maia/factory/data/spark',
-	[RUNTIME_REF.OS_HUMAN]: '°maia/factory/os/human',
-	[RUNTIME_REF.OS_AVEN_IDENTITY]: '°maia/factory/os/aven-identity',
-	[RUNTIME_REF.EVENT]: '°maia/factory/event',
-	[RUNTIME_REF.OS_INDEXES_REGISTRY]: '°maia/factory/os/indexes-registry',
-	[RUNTIME_REF.OS_CAPABILITY]: '°maia/factory/os/capability',
-	[RUNTIME_REF.OS_GROUPS]: '°maia/factory/os/groups',
-	[RUNTIME_REF.OS_OS_REGISTRY]: '°maia/factory/os/os-registry',
-	[RUNTIME_REF.OS_VIBES_REGISTRY]: '°maia/factory/os/vibes-registry',
-	[RUNTIME_REF.DATA_COBINARY]: '°maia/factory/data/cobinary',
+function infraNanoid(basename) {
+	return identityFromMaiaPath(basename).$nanoid
+}
+
+/** role → factory schema $nanoid (registry map key). */
+export const INFRA_FACTORY_NANOID_BY_ROLE = {
+	[RUNTIME_REF.META]: infraNanoid('meta.factory.maia'),
+	[RUNTIME_REF.ACTOR]: infraNanoid('actor.factory.maia'),
+	[RUNTIME_REF.DATA_SPARK]: infraNanoid('spark.factory.maia'),
+	[RUNTIME_REF.OS_HUMAN]: infraNanoid('human.factory.maia'),
+	[RUNTIME_REF.OS_AVEN_IDENTITY]: infraNanoid('aven-identity.factory.maia'),
+	[RUNTIME_REF.EVENT]: infraNanoid('event.factory.maia'),
+	[RUNTIME_REF.OS_INDEXES_REGISTRY]: infraNanoid('indexes-registry.factory.maia'),
+	[RUNTIME_REF.OS_CAPABILITY]: infraNanoid('capability.factory.maia'),
+	[RUNTIME_REF.OS_GROUPS]: infraNanoid('groups.factory.maia'),
+	[RUNTIME_REF.OS_OS_REGISTRY]: infraNanoid('os-registry.factory.maia'),
+	[RUNTIME_REF.OS_VIBES_REGISTRY]: infraNanoid('vibes-registry.factory.maia'),
+	[RUNTIME_REF.DATA_COBINARY]: infraNanoid('cobinary.factory.maia'),
+}
+
+/**
+ * @param {{ systemFactoryCoIds?: Map<string, string> }} peer
+ * @param {string} ref — °maia/… logical ref or pre-seed $nanoid
+ * @returns {string|null}
+ */
+export function getSystemFactoryCoId(peer, ref) {
+	if (!peer?.systemFactoryCoIds || typeof ref !== 'string') return null
+	if (ref.startsWith('co_z')) return null
+	const n = ref.startsWith('°') ? logicalRefToSeedNanoid(ref) : ref
+	if (!n) return null
+	const v = peer.systemFactoryCoIds.get(n)
+	return v?.startsWith?.('co_z') ? v : null
 }
 
 /**
@@ -42,8 +65,8 @@ export const INFRA_FACTORY_NAMEKEY_BY_ROLE = {
 export function fillRuntimeRefsFromSystemFactories(peer) {
 	if (!peer.runtimeRefs) peer.runtimeRefs = new Map()
 	peer.runtimeRefs.clear()
-	for (const [role, namekey] of Object.entries(INFRA_FACTORY_NAMEKEY_BY_ROLE)) {
-		const coId = peer.systemFactoryCoIds?.get?.(namekey)
+	for (const [role, nanoid] of Object.entries(INFRA_FACTORY_NANOID_BY_ROLE)) {
+		const coId = peer.systemFactoryCoIds?.get?.(nanoid)
 		if (coId?.startsWith?.('co_z')) peer.runtimeRefs.set(role, coId)
 	}
 }
@@ -59,8 +82,7 @@ export function getRuntimeRef(peer, role) {
 }
 
 /**
- * Resolve infra factory co-id: runtimeRefs first, then {@link peer.systemFactoryCoIds} by authoring namekey.
- * Use when {@link fillRuntimeRefsFromSystemFactories} has not run yet or {@link DataEngine.resolveSystemFactories} returned early.
+ * Resolve infra factory co-id: runtimeRefs first, then {@link peer.systemFactoryCoIds} by nanoid.
  * @param {{ runtimeRefs?: Map<string, string>, systemFactoryCoIds?: Map<string, string> }} peer
  * @param {string} role — {@link RUNTIME_REF} value (e.g. {@link RUNTIME_REF.OS_CAPABILITY})
  * @returns {string|null}
@@ -68,15 +90,14 @@ export function getRuntimeRef(peer, role) {
 export function resolveInfraFactoryCoId(peer, role) {
 	const id = getRuntimeRef(peer, role)
 	if (id?.startsWith?.('co_z')) return id
-	const nk = INFRA_FACTORY_NAMEKEY_BY_ROLE[role]
-	if (!nk) return null
-	const fromMap = peer.systemFactoryCoIds?.get?.(nk)
+	const n = INFRA_FACTORY_NANOID_BY_ROLE[role]
+	if (!n) return null
+	const fromMap = peer.systemFactoryCoIds?.get?.(n)
 	return fromMap?.startsWith?.('co_z') ? fromMap : null
 }
 
 /**
  * Resolve header `meta.$factory` (namekey, @metaSchema, or co_z) to catalog co_id for display / deep links.
- * Does not write headers and does not run at seed time — only for read paths (e.g. extractCoValueData → `$factoryCoId`).
  * @param {{ systemFactoryCoIds?: Map<string, string>, runtimeRefs?: Map<string, string> }} peer
  * @param {string|null|undefined} ref
  * @returns {string|null}
@@ -88,6 +109,5 @@ export function resolveFactoryRefToCoId(peer, ref) {
 		const meta = getRuntimeRef(peer, RUNTIME_REF.META)
 		if (meta) return meta
 	}
-	const fromMap = peer.systemFactoryCoIds?.get?.(ref)
-	return fromMap?.startsWith?.('co_z') ? fromMap : null
+	return getSystemFactoryCoId(peer, ref)
 }

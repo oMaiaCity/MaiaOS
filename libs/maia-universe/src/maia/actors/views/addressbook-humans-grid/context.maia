@@ -1,7 +1,7 @@
 {
-	"$factory": "°maia/factory/context",
+	"$factory": "°maia/factory/context.factory.maia",
 	"items": {
-		"factory": "°maia/factory/os/human",
+		"factory": "°maia/factory/human.factory.maia",
 		"map": {
 			"id": "id",
 			"accountId": "accountId",

@@ -1,6 +1,6 @@
 {
-	"$factory": "°maia/factory/meta",
-	"title": "°maia/factory/view",
+	"$factory": "°maia/factory/meta.factory.maia",
+	"title": "°maia/factory/view.factory.maia",
 	"description": "UI structure definition with DOM tree, expressions, loops, and event handlers (recursive viewNode structure)",
 	"cotype": "comap",
 	"indexing": true,

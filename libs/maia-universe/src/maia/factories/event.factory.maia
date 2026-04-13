@@ -1,6 +1,6 @@
 {
-	"$factory": "°maia/factory/meta",
-	"title": "°maia/factory/event",
+	"$factory": "°maia/factory/meta.factory.maia",
+	"title": "°maia/factory/event.factory.maia",
 	"description": "Actor event for state machine transitions",
 	"cotype": "comap",
 	"indexing": true,
@@ -17,11 +17,11 @@
 			"description": "Event payload data"
 		},
 		"source": {
-			"$co": "°maia/factory/actor",
+			"$co": "°maia/factory/actor.factory.maia",
 			"description": "Co-id reference to source actor"
 		},
 		"target": {
-			"$co": "°maia/factory/actor",
+			"$co": "°maia/factory/actor.factory.maia",
 			"description": "Co-id reference to target actor (required for direct messaging)"
 		},
 		"processed": {

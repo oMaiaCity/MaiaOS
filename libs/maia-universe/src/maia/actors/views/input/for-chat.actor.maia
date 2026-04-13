@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/actor",
+	"$factory": "°maia/factory/actor.factory.maia",
 	"context": "°maia/views/input/for-chat.context.maia",
 	"view": "°maia/views/input/view.maia",
 	"process": "°maia/views/input/for-chat.process.maia",

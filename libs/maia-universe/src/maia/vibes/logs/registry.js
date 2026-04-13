@@ -1,28 +1,46 @@
+/* eslint-disable */
 /**
- * Logs Vibe Registry
+ * GENERATED — do not edit.
+ * Source: bun scripts/generate-maia-universe-registry.mjs
  */
 
-import { buildIntentVibeRegistry } from '../../build-intent-vibe-registry.js'
+import { annotateMaiaConfig } from '@MaiaOS/factories/identity-from-maia-path.js'
+import maiacityBrand from '../brand/maiacity.style.maia'
 import intentActor from './intent/intent.actor.maia'
 import intentContext from './intent/intent.context.maia'
 import intentProcess from './intent/intent.process.maia'
 import intentView from './intent/intent.view.maia'
-import logsVibe from './manifest.vibe.maia'
+import manifestVibe from './manifest.vibe.maia'
 
-export const LogsVibeRegistry = buildIntentVibeRegistry({
-	vibe: logsVibe,
-	idPrefix: 'logs',
-	intent: {
-		actor: intentActor,
-		context: intentContext,
-		process: intentProcess,
-		view: intentView,
+const brand = annotateMaiaConfig(maiacityBrand, 'brand/maiacity.style.maia')
+const vibe = annotateMaiaConfig(manifestVibe, 'logs/manifest.vibe.maia')
+const actor = annotateMaiaConfig(intentActor, 'logs/intent/intent.actor.maia')
+const context = annotateMaiaConfig(intentContext, 'logs/intent/intent.context.maia')
+const view = annotateMaiaConfig(intentView, 'logs/intent/intent.view.maia')
+const process = annotateMaiaConfig(intentProcess, 'logs/intent/intent.process.maia')
+
+export const LogsVibeRegistry = {
+	vibe,
+
+	styles: {
+		'brand/maiacity.style.maia': brand,
+	},
+
+	actors: {
+		'logs/intent/intent.actor.maia': actor,
+	},
+
+	views: {
+		'logs/intent/intent.view.maia': view,
+	},
+
+	contexts: {
+		'logs/intent/intent.context.maia': context,
+	},
+
+	processes: {
+		'logs/intent/intent.process.maia': process,
 	},
 	data: {},
-})
-
-export { LogsVibeRegistry as LogsAvenRegistry }
-
-if (import.meta.hot) {
-	import.meta.hot.accept()
 }
+export { LogsVibeRegistry as LogsAvenRegistry }

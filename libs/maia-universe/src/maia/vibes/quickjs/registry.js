@@ -1,61 +1,42 @@
+/* eslint-disable */
 /**
- * QuickJS vibe registry
+ * GENERATED — do not edit.
+ * Source: bun scripts/generate-maia-universe-registry.mjs
  */
 
-import { annotateMaiaConfig } from '@MaiaOS/factories/annotate-maia'
+import { annotateMaiaConfig } from '@MaiaOS/factories/identity-from-maia-path.js'
 import maiacityBrand from '../brand/maiacity.style.maia'
-import addFormActor from './add-form/actor.maia'
-import addFormContext from './add-form/context.maia'
-import addFormInterface from './add-form/interface.maia'
-import addFormProcess from './add-form/process.maia'
-import addFormView from './add-form/view.maia'
-import depsListActor from './deps-list/actor.maia'
-import depsListInterface from './deps-list/interface.maia'
-import depsListProcess from './deps-list/process.maia'
-import depsListStyle from './deps-list/style.maia'
-import depsListView from './deps-list/view.maia'
-import intentActor from './intent/intent.actor.maia'
-import intentContext from './intent/intent.context.maia'
-import intentProcess from './intent/intent.process.maia'
-import intentView from './intent/intent.view.maia'
-import layoutQuickjsActor from './layout-quickjs/actor.maia'
-import layoutQuickjsContext from './layout-quickjs/context.maia'
-import layoutQuickjsInterface from './layout-quickjs/interface.maia'
+import raw0 from './add-form/actor.maia'
+import raw1 from './add-form/context.maia'
+import raw2 from './add-form/interface.maia'
+import raw3 from './add-form/process.maia'
+import raw4 from './add-form/view.maia'
+import raw10 from './deps-list/actor.maia'
+import raw11 from './deps-list/interface.maia'
+import raw12 from './deps-list/process.maia'
+import raw13 from './deps-list/style.maia'
+import raw14 from './deps-list/view.maia'
+import raw5 from './deps-list-detail/actor.maia'
+import raw6 from './deps-list-detail/context.maia'
+import raw7 from './deps-list-detail/interface.maia'
+import raw8 from './deps-list-detail/process.maia'
+import raw9 from './deps-list-detail/view.maia'
+import raw15 from './intent/intent.actor.maia'
+import raw16 from './intent/intent.context.maia'
+import raw17 from './intent/intent.process.maia'
+import raw18 from './intent/intent.view.maia'
+import raw19 from './layout-quickjs/actor.maia'
+import raw20 from './layout-quickjs/context.maia'
+import raw21 from './layout-quickjs/interface.maia'
 import quickjsVibe from './manifest.vibe.maia'
 
 const base = 'quickjs'
 const brand = annotateMaiaConfig(maiacityBrand, 'brand/maiacity.style.maia')
 const vibe = annotateMaiaConfig(quickjsVibe, `${base}/manifest.vibe.maia`)
-const addFormActorA = annotateMaiaConfig(addFormActor, `${base}/add-form/actor.maia`)
-const addFormContextA = annotateMaiaConfig(addFormContext, `${base}/add-form/context.maia`)
-const addFormInterfaceA = annotateMaiaConfig(addFormInterface, `${base}/add-form/interface.maia`)
-const addFormProcessA = annotateMaiaConfig(addFormProcess, `${base}/add-form/process.maia`)
-const addFormViewA = annotateMaiaConfig(addFormView, `${base}/add-form/view.maia`)
-const depsListActorA = annotateMaiaConfig(depsListActor, `${base}/deps-list/actor.maia`)
-const depsListInterfaceA = annotateMaiaConfig(depsListInterface, `${base}/deps-list/interface.maia`)
-const depsListProcessA = annotateMaiaConfig(depsListProcess, `${base}/deps-list/process.maia`)
-const depsListStyleMerged = annotateMaiaConfig(depsListStyle, `${base}/deps-list/style.maia`)
-const depsListViewA = annotateMaiaConfig(depsListView, `${base}/deps-list/view.maia`)
-const intentActorA = annotateMaiaConfig(intentActor, `${base}/intent/intent.actor.maia`)
-const intentContextA = annotateMaiaConfig(intentContext, `${base}/intent/intent.context.maia`)
-const intentProcessA = annotateMaiaConfig(intentProcess, `${base}/intent/intent.process.maia`)
-const intentViewA = annotateMaiaConfig(intentView, `${base}/intent/intent.view.maia`)
-const layoutQuickjsActorA = annotateMaiaConfig(
-	layoutQuickjsActor,
-	`${base}/layout-quickjs/actor.maia`,
-)
-const layoutQuickjsContextA = annotateMaiaConfig(
-	layoutQuickjsContext,
-	`${base}/layout-quickjs/context.maia`,
-)
-const layoutQuickjsInterfaceA = annotateMaiaConfig(
-	layoutQuickjsInterface,
-	`${base}/layout-quickjs/interface.maia`,
-)
 
 const depsListContext = annotateMaiaConfig(
 	{
-		$factory: '°maia/factory/context',
+		$factory: '°maia/factory/context.factory.maia',
 		title: 'Dependency actors',
 		listItems: (quickjsVibe.dependencies || []).map((id) => ({
 			id,
@@ -65,7 +46,7 @@ const depsListContext = annotateMaiaConfig(
 		selectedActorRef: null,
 		selectedCodeCoId: null,
 		selectedWasmCode: {
-			factory: '°maia/factory/os/cotext',
+			factory: '°maia/factory/cotext.factory.maia',
 			filter: { id: '$selectedCodeCoId' },
 			map: { items: 'items' },
 		},
@@ -78,39 +59,74 @@ export const QuickjsVibeRegistry = {
 	vibe,
 
 	styles: {
-		[brand.$id]: brand,
-		[depsListStyleMerged.$id]: depsListStyleMerged,
+		'brand/maiacity.style.maia': brand,
+		'quickjs/deps-list/style.maia': annotateMaiaConfig(raw13, 'quickjs/deps-list/style.maia'),
 	},
 
 	actors: {
-		[intentActorA.$id]: intentActorA,
-		[addFormActorA.$id]: addFormActorA,
-		[layoutQuickjsActorA.$id]: layoutQuickjsActorA,
-		[depsListActorA.$id]: depsListActorA,
+		'quickjs/add-form/actor.maia': annotateMaiaConfig(raw0, 'quickjs/add-form/actor.maia'),
+		'quickjs/deps-list-detail/actor.maia': annotateMaiaConfig(
+			raw5,
+			'quickjs/deps-list-detail/actor.maia',
+		),
+		'quickjs/deps-list/actor.maia': annotateMaiaConfig(raw10, 'quickjs/deps-list/actor.maia'),
+		'quickjs/intent/intent.actor.maia': annotateMaiaConfig(raw15, 'quickjs/intent/intent.actor.maia'),
+		'quickjs/layout-quickjs/actor.maia': annotateMaiaConfig(
+			raw19,
+			'quickjs/layout-quickjs/actor.maia',
+		),
 	},
 
 	views: {
-		[intentViewA.$id]: intentViewA,
-		[addFormViewA.$id]: addFormViewA,
-		[depsListViewA.$id]: depsListViewA,
+		'quickjs/add-form/view.maia': annotateMaiaConfig(raw4, 'quickjs/add-form/view.maia'),
+		'quickjs/deps-list-detail/view.maia': annotateMaiaConfig(
+			raw9,
+			'quickjs/deps-list-detail/view.maia',
+		),
+		'quickjs/deps-list/view.maia': annotateMaiaConfig(raw14, 'quickjs/deps-list/view.maia'),
+		'quickjs/intent/intent.view.maia': annotateMaiaConfig(raw18, 'quickjs/intent/intent.view.maia'),
 	},
 
 	contexts: {
-		[intentContextA.$id]: intentContextA,
-		[addFormContextA.$id]: addFormContextA,
-		[layoutQuickjsContextA.$id]: layoutQuickjsContextA,
-		[depsListContext.$id]: depsListContext,
+		'quickjs/add-form/context.maia': annotateMaiaConfig(raw1, 'quickjs/add-form/context.maia'),
+		'quickjs/deps-list-detail/context.maia': annotateMaiaConfig(
+			raw6,
+			'quickjs/deps-list-detail/context.maia',
+		),
+		'quickjs/intent/intent.context.maia': annotateMaiaConfig(
+			raw16,
+			'quickjs/intent/intent.context.maia',
+		),
+		'quickjs/layout-quickjs/context.maia': annotateMaiaConfig(
+			raw20,
+			'quickjs/layout-quickjs/context.maia',
+		),
+		[`${base}/deps-list/context.dynamic.maia`]: depsListContext,
 	},
 
 	processes: {
-		[intentProcessA.$id]: intentProcessA,
-		[addFormProcessA.$id]: addFormProcessA,
-		[depsListProcessA.$id]: depsListProcessA,
+		'quickjs/add-form/process.maia': annotateMaiaConfig(raw3, 'quickjs/add-form/process.maia'),
+		'quickjs/deps-list-detail/process.maia': annotateMaiaConfig(
+			raw8,
+			'quickjs/deps-list-detail/process.maia',
+		),
+		'quickjs/deps-list/process.maia': annotateMaiaConfig(raw12, 'quickjs/deps-list/process.maia'),
+		'quickjs/intent/intent.process.maia': annotateMaiaConfig(
+			raw17,
+			'quickjs/intent/intent.process.maia',
+		),
 	},
 
 	interfaces: {
-		[addFormInterfaceA.$id]: addFormInterfaceA,
-		[layoutQuickjsInterfaceA.$id]: layoutQuickjsInterfaceA,
-		[depsListInterfaceA.$id]: depsListInterfaceA,
+		'quickjs/add-form/interface.maia': annotateMaiaConfig(raw2, 'quickjs/add-form/interface.maia'),
+		'quickjs/deps-list-detail/interface.maia': annotateMaiaConfig(
+			raw7,
+			'quickjs/deps-list-detail/interface.maia',
+		),
+		'quickjs/deps-list/interface.maia': annotateMaiaConfig(raw11, 'quickjs/deps-list/interface.maia'),
+		'quickjs/layout-quickjs/interface.maia': annotateMaiaConfig(
+			raw21,
+			'quickjs/layout-quickjs/interface.maia',
+		),
 	},
 }

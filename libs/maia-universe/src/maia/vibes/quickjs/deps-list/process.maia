@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/process",
+	"$factory": "°maia/factory/process.factory.maia",
 	"handlers": {
 		"SELECT_ITEM": [
 			{

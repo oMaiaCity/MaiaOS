@@ -1,16 +1,21 @@
 /**
- * Stable vibe key from annotated manifest or explicit °maia/vibe/<k> id.
+ * Stable dashboard / icon key. Prefer explicit `key` when `name` would not match ICON_SVG_BY_KEY
+ * (e.g. "My Profile" → my-profile vs profile).
  * Shared by @MaiaOS/universe (seeding) and @MaiaOS/db (genesis icon CoText).
  */
 
-/** @param {{ $id?: string, name?: string } | null | undefined} vibe */
+/** @param {{ key?: string, name?: string, $label?: string } | null | undefined} vibe */
 export function getVibeKey(vibe) {
 	if (!vibe) return null
-	const originalVibeId = vibe.$id || ''
-	if (originalVibeId.startsWith('°maia/vibe/')) {
-		return originalVibeId.replace('°maia/vibe/', '')
+	if (typeof vibe.key === 'string' && vibe.key.trim()) {
+		return vibe.key.trim().toLowerCase()
 	}
-	const manifestMatch = /^°maia\/([^/]+)\/manifest\.vibe\.maia$/i.exec(originalVibeId)
-	if (manifestMatch) return manifestMatch[1].toLowerCase()
-	return (vibe.name || 'default').toLowerCase().replace(/\s+/g, '-')
+	if (typeof vibe.name === 'string' && vibe.name.trim()) {
+		return vibe.name.trim().toLowerCase().replace(/\s+/g, '-')
+	}
+	const label = typeof vibe.$label === 'string' ? vibe.$label : ''
+	if (label.startsWith('°maia/vibe/')) {
+		return label.replace('°maia/vibe/', '')
+	}
+	return 'default'
 }

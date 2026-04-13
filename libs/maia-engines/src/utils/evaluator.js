@@ -66,7 +66,7 @@ export class Evaluator {
 		) {
 			try {
 				await ensureFactoriesLoaded()
-				const expressionFactory = getFactory('°maia/factory/maia-script-expression')
+				const expressionFactory = getFactory('°maia/factory/maia-script-expression.factory.maia')
 				if (!expressionFactory) {
 					throw new Error('[Evaluator] maia-script-expression factory missing from registry')
 				}

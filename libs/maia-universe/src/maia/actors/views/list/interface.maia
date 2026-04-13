@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/meta",
+	"$factory": "°maia/factory/meta.factory.maia",
 	"title": "°maia/views/list/interface.maia",
 	"description": "List view - todo list with toggle and delete",
 	"cotype": "comap",

@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/meta",
+	"$factory": "°maia/factory/meta.factory.maia",
 	"title": "°maia/services/todos/interface.maia",
 	"description": "Manages todo items - create, toggle, and delete todos",
 	"cotype": "comap",

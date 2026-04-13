@@ -1,6 +1,6 @@
 /**
  * Lightweight actor ref helpers — no .maia graph (safe for browser via @MaiaOS/universe/actors).
- * Genesis tables live in seed-config.js.
+ * Genesis tables live in build-seed-config.js (maia-seed).
  */
 
 /** File-path actor $id: intent.actor.maia, *\/actor.maia, or *\/*.actor.maia */

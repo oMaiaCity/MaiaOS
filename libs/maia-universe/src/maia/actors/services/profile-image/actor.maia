@@ -1,9 +1,9 @@
 {
-	"$factory": "°maia/factory/actor",
+	"$factory": "°maia/factory/actor.factory.maia",
 	"context": "°maia/views/profile-image/context.maia",
 	"view": "°maia/views/profile-image/view.maia",
 	"process": "°maia/services/profile-image/process.maia",
-	"inbox": "°maia/services/profile-image/actor.maia/inbox",
+	"inbox": "°maia/services/profile-image/inbox.maia",
 	"interface": "°maia/services/profile-image/interface.maia",
 	"style": "°maia/views/profile-image/style.maia",
 	"brand": "°maia/brand/maiacity.style.maia"

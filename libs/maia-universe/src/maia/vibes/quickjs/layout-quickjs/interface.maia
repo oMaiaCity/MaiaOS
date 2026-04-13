@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/meta",
+	"$factory": "°maia/factory/meta.factory.maia",
 	"title": "°maia/quickjs/layout-quickjs/interface.maia",
 	"description": "QuickJS Add layout tabs",
 	"cotype": "comap",

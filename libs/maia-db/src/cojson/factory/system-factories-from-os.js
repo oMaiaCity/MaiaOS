@@ -1,14 +1,18 @@
 /**
- * Build namekey → factory co_z from spark.os using live CoMap APIs (same source as seed collectSparkOsRegistry).
+ * Build factory $nanoid → factory co_z from spark.os using live CoMap APIs (same source as seed collectSparkOsRegistry).
  * Reactive read() snapshots are not used here — they can omit indexes/catalog keys before deep resolve.
  */
 
 import { namekeyFromFactoryDefinitionContent } from '@MaiaOS/factories'
+import {
+	identityFromMaiaPath,
+	maiaFactoryRefToNanoid,
+} from '@MaiaOS/factories/identity-from-maia-path.js'
 import { ensureCoValueLoaded } from '../crud/collection-helpers.js'
-import { INFRA_FACTORY_NAMEKEY_BY_ROLE, RUNTIME_REF } from '../factory/runtime-factory-refs.js'
+import { INFRA_FACTORY_NANOID_BY_ROLE, RUNTIME_REF } from '../factory/runtime-factory-refs.js'
 import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
 
-const OS_CAPABILITY_NAMEKEY = INFRA_FACTORY_NAMEKEY_BY_ROLE[RUNTIME_REF.OS_CAPABILITY]
+const OS_CAPABILITY_NANOID = INFRA_FACTORY_NANOID_BY_ROLE[RUNTIME_REF.OS_CAPABILITY]
 
 /**
  * Seeded catalogs before the canonical factory title used a plain "Capability" label,
@@ -63,10 +67,11 @@ export async function buildSystemFactoryCoIdsFromSparkOs(peer, osId) {
 							if (!defCore || !peer.isAvailable(defCore)) continue
 							const defContent = peer.getCurrentContent(defCore)
 							let namekey = namekeyFromFactoryDefinitionContent(defContent)
-							if (!namekey && OS_CAPABILITY_NAMEKEY && isLegacyCapabilityFactoryDefinition(defContent)) {
-								namekey = OS_CAPABILITY_NAMEKEY
+							if (!namekey && OS_CAPABILITY_NANOID && isLegacyCapabilityFactoryDefinition(defContent)) {
+								namekey = '°maia/factory/capability.factory.maia'
 							}
-							if (namekey) out.set(namekey, defCoId)
+							const n = namekey ? maiaFactoryRefToNanoid(namekey) : null
+							if (n) out.set(n, defCoId)
 						}
 					}
 				}
@@ -75,7 +80,7 @@ export async function buildSystemFactoryCoIdsFromSparkOs(peer, osId) {
 	}
 
 	if (metaCoId?.startsWith?.('co_z')) {
-		out.set('°maia/factory/meta', metaCoId)
+		out.set(identityFromMaiaPath('meta.factory.maia').$nanoid, metaCoId)
 	}
 
 	return out

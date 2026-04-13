@@ -1,6 +1,6 @@
 {
-	"$factory": "°maia/factory/meta",
-	"title": "°maia/factory/vibe",
+	"$factory": "°maia/factory/meta.factory.maia",
+	"title": "°maia/factory/vibe.factory.maia",
 	"description": "Vibe manifest/metadata",
 	"cotype": "comap",
 	"indexing": true,
@@ -10,6 +10,10 @@
 		"actor"
 	],
 	"properties": {
+		"key": {
+			"type": "string",
+			"description": "Stable dashboard and icon slug (e.g. profile). Use when display name differs from the icon key."
+		},
 		"name": {
 			"type": "string",
 			"description": "Vibe name"
@@ -19,7 +23,7 @@
 			"description": "Vibe description"
 		},
 		"actor": {
-			"$co": "°maia/factory/actor",
+			"$co": "°maia/factory/actor.factory.maia",
 			"description": "Co-id reference to actor definition (root actor for this vibe)"
 		},
 		"dependencies": {
@@ -37,7 +41,7 @@
 			"description": "Runtime colocation - which runtimes this vibe runs on (e.g. browser, server)"
 		},
 		"icon": {
-			"$co": "°maia/factory/os/cotext",
+			"$co": "°maia/factory/cotext.factory.maia",
 			"description": "Co-id of seeded CoText (colist of graphemes) holding SVG markup for dashboard / vibe chrome"
 		}
 	}

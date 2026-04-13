@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/actor",
+	"$factory": "°maia/factory/actor.factory.maia",
 	"type": "service",
 	"process": "°maia/profile/intent/intent.process.maia",
 	"view": "°maia/profile/intent/intent.view.maia",

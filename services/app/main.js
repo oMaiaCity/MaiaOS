@@ -1362,9 +1362,13 @@ async function loadVibe(vibeCoId) {
 		perf.end('loadVibe')
 		if (typeof window !== 'undefined' && window._maiaDebugFreeze) {
 		}
-	} catch (_error) {
+	} catch (error) {
 		perf.end('loadVibe(error)')
 		currentVibe = null
+		// Must reset screen: vibe-viewer + null currentVibe falls through to default MaiaDB in renderApp.
+		currentScreen = 'dashboard'
+		currentContextCoValueId = null
+		showToast(`Failed to open vibe: ${error?.message ?? error}`, 'error')
 		await renderAppInternal()
 	}
 }

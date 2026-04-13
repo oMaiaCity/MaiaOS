@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/meta",
+	"$factory": "°maia/factory/meta.factory.maia",
 	"title": "°maia/quickjs/add-form/interface.maia",
 	"cotype": "comap",
 	"indexing": true,

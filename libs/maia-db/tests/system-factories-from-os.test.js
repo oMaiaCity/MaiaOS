@@ -1,3 +1,7 @@
+import {
+	identityFromMaiaPath,
+	maiaFactoryRefToNanoid,
+} from '@MaiaOS/factories/identity-from-maia-path.js'
 import { describe, expect, test } from 'bun:test'
 import { buildSystemFactoryCoIdsFromSparkOs } from '../src/cojson/factory/system-factories-from-os.js'
 import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../src/cojson/spark-os-keys.js'
@@ -19,7 +23,7 @@ describe('buildSystemFactoryCoIdsFromSparkOs', () => {
 		expect((await buildSystemFactoryCoIdsFromSparkOs(peer, 'bad')).size).toBe(0)
 	})
 
-	test('builds namekey map from definition catalog colist + meta anchor', async () => {
+	test('builds nanoid map from definition catalog colist + meta anchor', async () => {
 		const metaCoId = 'co_zMETA'
 		const indexesMapId = 'co_zINDEXES'
 		const catalogColistId = 'co_zCATALOG'
@@ -42,7 +46,7 @@ describe('buildSystemFactoryCoIdsFromSparkOs', () => {
 		}
 		const defContent = {
 			get(k) {
-				if (k === 'title') return '°maia/factory/registry-contract'
+				if (k === 'title') return '°maia/factory/event.factory.maia'
 				return undefined
 			},
 		}
@@ -74,7 +78,7 @@ describe('buildSystemFactoryCoIdsFromSparkOs', () => {
 		const peer = mockPeer({ getCoValue, getCurrentContent })
 		const out = await buildSystemFactoryCoIdsFromSparkOs(peer, 'co_zOS')
 
-		expect(out.get('°maia/factory/registry-contract')).toBe(defId)
-		expect(out.get('°maia/factory/meta')).toBe(metaCoId)
+		expect(out.get(maiaFactoryRefToNanoid('°maia/factory/event.factory.maia'))).toBe(defId)
+		expect(out.get(identityFromMaiaPath('meta.factory.maia').$nanoid)).toBe(metaCoId)
 	})
 })

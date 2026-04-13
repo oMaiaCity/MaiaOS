@@ -1,7 +1,7 @@
 {
-	"$factory": "°maia/factory/context",
+	"$factory": "°maia/factory/context.factory.maia",
 	"messages": {
-		"factory": "°maia/factory/event",
+		"factory": "°maia/factory/event.factory.maia",
 		"map": {
 			"id": "id",
 			"type": "type",

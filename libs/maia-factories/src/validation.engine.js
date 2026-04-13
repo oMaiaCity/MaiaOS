@@ -4,8 +4,8 @@
 
 import { normalizeCoValueData } from '@MaiaOS/db'
 import { CO_TYPES_DEFS } from '@MaiaOS/db/co-types-defs'
-import { withCanonicalFactorySchema } from './factory-identity.js'
 import { normalizeFactoryReferencesWithResolver } from './factory-ref-resolver.js'
+import { withCanonicalFactorySchema } from './identity-from-maia-path.js'
 import { isFactoryRef } from './patterns.js'
 import { plugin as cobinaryPlugin } from './plugins/cobinary.plugin.js'
 import { plugin as cojsonPlugin } from './plugins/cojson.plugin.js'
@@ -180,7 +180,7 @@ export class ValidationEngine {
 				},
 			})
 
-			// Metaschema (°maia/factory/meta) is registered in AJV only after hydrateMetaFromPeer(peer)
+			// Metaschema (°maia/factory/meta.factory.maia) is registered in AJV only after hydrateMetaFromPeer(peer)
 			applyPlugins(this.ajv)
 
 			// ALWAYS register co-type definitions (REQUIRED, not optional)
@@ -199,19 +199,19 @@ export class ValidationEngine {
 
 	/**
 	 * Register metaschema in AJV from the metaschema CoValue on peer (runtime source of truth).
-	 * Requires peer.systemFactoryCoIds['°maia/factory/meta'] or runtimeRefs.meta.
+	 * Requires peer.systemFactoryCoIds (meta $nanoid) or runtimeRefs.meta.
 	 */
 	async hydrateMetaFromPeer(peer) {
 		await this.initialize()
-		const { resolveFactoryDefFromPeer } = await import('@MaiaOS/db')
-		const { getRuntimeRef, RUNTIME_REF } = await import('@MaiaOS/db')
-		let metaCoId = peer.systemFactoryCoIds?.get?.('°maia/factory/meta')
+		const { getRuntimeRef, getSystemFactoryCoId, resolveFactoryDefFromPeer, RUNTIME_REF } =
+			await import('@MaiaOS/db')
+		let metaCoId = getSystemFactoryCoId(peer, '°maia/factory/meta.factory.maia')
 		if (!metaCoId?.startsWith?.('co_z')) {
 			metaCoId = getRuntimeRef(peer, RUNTIME_REF.META)
 		}
 		if (!metaCoId?.startsWith?.('co_z')) {
 			throw new Error(
-				'[ValidationEngine] hydrateMetaFromPeer: metaschema co-id missing — peer.systemFactoryCoIds or runtimeRefs (meta)',
+				'[ValidationEngine] hydrateMetaFromPeer: metaschema co-id missing — systemFactoryCoIds (meta nanoid) or runtimeRefs (meta)',
 			)
 		}
 		const def = await resolveFactoryDefFromPeer(peer, metaCoId)
@@ -233,7 +233,7 @@ export class ValidationEngine {
 		if (!this.ajv) return
 		// Do not remove https://json-schema.org/draft/2020-12/schema — Ajv2020 registers it;
 		// factory schemas use $schema: that URI. Re-adding only Maia copies below would not restore it.
-		for (const id of ['°maia/factory/meta-schema', '°maia/factory/meta']) {
+		for (const id of ['°maia/factory/meta.factory.maia-schema', '°maia/factory/meta.factory.maia']) {
 			try {
 				this.ajv.removeSchema(id)
 			} catch (_e) {}
@@ -247,7 +247,7 @@ export class ValidationEngine {
 	static getMetaFactory() {
 		if (!customMetaSchema) {
 			throw new Error(
-				'[ValidationEngine] Metaschema not loaded; call hydrateMetaFromPeer(peer) after peer has °maia/factory/meta.',
+				'[ValidationEngine] Metaschema not loaded; call hydrateMetaFromPeer(peer) after peer has °maia/factory/meta.factory.maia.',
 			)
 		}
 		return customMetaSchema
@@ -260,7 +260,7 @@ export class ValidationEngine {
 	static getBaseMetaSchema() {
 		if (!customMetaSchema) {
 			throw new Error(
-				'[ValidationEngine] Metaschema not loaded; call hydrateMetaFromPeer(peer) after peer has °maia/factory/meta.',
+				'[ValidationEngine] Metaschema not loaded; call hydrateMetaFromPeer(peer) after peer has °maia/factory/meta.factory.maia.',
 			)
 		}
 		return customMetaSchema
@@ -272,7 +272,7 @@ export class ValidationEngine {
 	 */
 	_loadMetaSchema() {
 		const metaSchemaId = 'https://json-schema.org/draft/2020-12/schema'
-		const metaSchemaDynamicId = '°maia/factory/meta-schema'
+		const metaSchemaDynamicId = '°maia/factory/meta.factory.maia-schema'
 
 		// Temporarily disable schema validation to add meta-schema
 		// (meta-schema can't validate itself due to circular references)
@@ -286,7 +286,7 @@ export class ValidationEngine {
 				}
 
 				// CRITICAL: Always register with dynamic ID, even if standard ID exists
-				// This allows schemas to use "$factory": "°maia/factory/meta-schema"
+				// This allows schemas to use "$factory": "°maia/factory/meta.factory.maia-schema"
 				if (!this.ajv.getSchema(metaSchemaDynamicId)) {
 					// Create copy with dynamic $id to ensure proper registration
 					const metaSchemaCopy = JSON.parse(JSON.stringify(metaSchema))
@@ -307,7 +307,7 @@ export class ValidationEngine {
 	 * @private
 	 */
 	_loadCoJsonMetaSchema() {
-		const customMetaSchemaId = '°maia/factory/meta'
+		const customMetaSchemaId = '°maia/factory/meta.factory.maia'
 
 		// Temporarily disable schema validation to add custom meta-schema
 		try {
@@ -348,8 +348,11 @@ export class ValidationEngine {
 			}
 		}
 
-		if (resolvedId === '°maia/factory/meta' || resolvedId === '°maia/factory/meta-schema') {
-			return this.ajv.getSchema('°maia/factory/meta')
+		if (
+			resolvedId === '°maia/factory/meta.factory.maia' ||
+			resolvedId === '°maia/factory/meta.factory.maia-schema'
+		) {
+			return this.ajv.getSchema('°maia/factory/meta.factory.maia')
 		}
 		if (resolvedId === 'https://json-schema.org/draft/2020-12/schema') {
 			return this.ajv.getSchema('https://json-schema.org/draft/2020-12/schema')
@@ -361,10 +364,10 @@ export class ValidationEngine {
 				metaSchemaObject.properties?.cotype?.enum?.includes('comap') ||
 				metaSchemaObject.$vocabulary?.['https://maiaos.dev/vocab/cojson'] === true
 			const targetId = hasCotype
-				? '°maia/factory/meta'
+				? '°maia/factory/meta.factory.maia'
 				: metaSchemaObject.$vocabulary
 					? 'https://json-schema.org/draft/2020-12/schema'
-					: '°maia/factory/meta'
+					: '°maia/factory/meta.factory.maia'
 
 			metaValidator = this.ajv.getSchema(targetId)
 			if (!metaValidator) {
@@ -409,7 +412,7 @@ export class ValidationEngine {
 		const standardMetaSchemaId = 'https://json-schema.org/draft/2020-12/schema'
 		const isSelfValidation =
 			schema.$id === standardMetaSchemaId ||
-			schema.$id === '°maia/factory/meta' ||
+			schema.$label === '°maia/factory/meta.factory.maia' ||
 			(schema.$schema === standardMetaSchemaId && schema.$id && schema.$id.includes('schema'))
 
 		if (isSelfValidation) {
@@ -527,7 +530,7 @@ export class ValidationEngine {
 			}
 
 			schema = normalizeCoValueData(schema)
-			const factoryCoId = schema.$id
+			const factoryCoId = schema.$label ?? schema.$id
 			if (!isMetaSchema && factoryCoId && resolvedSchemas.has(factoryCoId)) {
 				resolvedSchemas.add(ref)
 				return

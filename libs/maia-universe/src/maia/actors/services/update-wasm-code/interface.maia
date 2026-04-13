@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/meta",
+	"$factory": "°maia/factory/meta.factory.maia",
 	"title": "°maia/services/update-wasm-code/interface.maia",
 	"description": "Updates CoText content for wasm.code (inline edit). Resolves actor co-id → wasm config → code CoText.",
 	"cotype": "comap",

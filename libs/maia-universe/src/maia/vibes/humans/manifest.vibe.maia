@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/vibe",
+	"$factory": "°maia/factory/vibe.factory.maia",
 	"name": "Registries",
 	"description": "Browse humans and avens in the Maia registry — account ID, registry name, profile name",
 	"actor": "°maia/humans/intent/intent.actor.maia",

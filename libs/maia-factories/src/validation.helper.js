@@ -13,6 +13,13 @@ import {
 
 export { formatValidationErrors, withSchemaValidationDisabled } from './validation.engine.js'
 
+/** $label and $nanoid are identity metadata injected by the seed pipeline — not schema-validated content. */
+function stripIdentityMeta(data) {
+	if (!data || typeof data !== 'object' || Array.isArray(data)) return data
+	const { $label: _l, $nanoid: _n, ...rest } = data
+	return rest
+}
+
 // Singleton validation engine instance
 let validationEngine = null
 let pendingSchemaResolver = null // Store resolver if set before engine initialization
@@ -209,6 +216,8 @@ export async function loadFactoryAndValidate(backend, factoryRef, data, context,
 
 	const { resolve } = await import('@MaiaOS/db')
 
+	const dataForValidation = stripIdentityMeta(data)
+
 	if (factoryRef.startsWith('co_z')) {
 		if (!dataEngine) {
 			throw new Error(
@@ -226,7 +235,7 @@ export async function loadFactoryAndValidate(backend, factoryRef, data, context,
 
 		await validateAgainstFactoryOrThrow(
 			resolvedFactoryDef,
-			data,
+			dataForValidation,
 			`${context} for factory ${factoryRef}`,
 		)
 
@@ -238,7 +247,7 @@ export async function loadFactoryAndValidate(backend, factoryRef, data, context,
 		if (!schema) {
 			throw new Error(`[${context}] Inline factory missing: ${factoryRef}`)
 		}
-		await validateAgainstFactoryOrThrow(schema, data, `${context} ${factoryRef}`)
+		await validateAgainstFactoryOrThrow(schema, dataForValidation, `${context} ${factoryRef}`)
 		return schema
 	}
 

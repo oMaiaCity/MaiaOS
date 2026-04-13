@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/meta",
+	"$factory": "°maia/factory/meta.factory.maia",
 	"title": "°maia/services/spark/interface.maia",
 	"description": "Creates sparks and manages spark membership",
 	"cotype": "comap",

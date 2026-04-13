@@ -24,7 +24,7 @@ export async function seedDefinitionCatalogBootstrap(
 		description: 'Colist of factory definition co_zs',
 		cotype: 'colist',
 		indexing: false,
-		items: { $co: '°maia/factory/meta' },
+		items: { $co: '°maia/factory/meta.factory.maia' },
 	}
 	const { coValue: catalogSchemaFactory } = await createCoValueForSpark(ctx, null, {
 		factory: metaSchemaCoId,

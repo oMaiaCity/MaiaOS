@@ -13,19 +13,19 @@ describe('INSTANCE_REF_PATTERN', () => {
 	})
 
 	test('does not match factory refs', () => {
-		expect(INSTANCE_REF_PATTERN.test('°maia/factory/actor')).toBe(false)
-		expect(INSTANCE_REF_PATTERN.test('°maia/factory/meta')).toBe(false)
+		expect(INSTANCE_REF_PATTERN.test('°maia/factory/actor.factory.maia')).toBe(false)
+		expect(INSTANCE_REF_PATTERN.test('°maia/factory/meta.factory.maia')).toBe(false)
 	})
 
 	test('isInstanceRef aligns with pattern', () => {
 		expect(isInstanceRef('°maia/os/db/actor.maia')).toBe(true)
-		expect(isInstanceRef('°maia/factory/actor')).toBe(false)
+		expect(isInstanceRef('°maia/factory/actor.factory.maia')).toBe(false)
 	})
 })
 
 describe('FACTORY_REF_PATTERN', () => {
 	test('isFactoryRef', () => {
-		expect(isFactoryRef('°maia/factory/actor')).toBe(true)
+		expect(isFactoryRef('°maia/factory/actor.factory.maia')).toBe(true)
 		expect(isFactoryRef('°maia/views/x.maia')).toBe(false)
 	})
 })

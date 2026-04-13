@@ -1036,7 +1036,7 @@ export class DataEngine {
 			: {}
 	}
 
-	/** Fills peer.systemFactoryCoIds from the definition catalog: spark.os.indexes[metaFactoryCoId] colist (title / $id namekeys → co_z), plus meta anchor °maia/factory/meta. */
+	/** Fills peer.systemFactoryCoIds from the definition catalog: spark.os.indexes[metaFactoryCoId] colist (title / $id namekeys → co_z), plus meta anchor °maia/factory/meta.factory.maia. */
 	async resolveSystemFactories() {
 		const peer = this.peer
 		if (

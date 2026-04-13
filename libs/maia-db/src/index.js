@@ -68,6 +68,7 @@ export {
 export {
 	fillRuntimeRefsFromSystemFactories,
 	getRuntimeRef,
+	getSystemFactoryCoId,
 	RUNTIME_REF,
 	resolveFactoryRefToCoId,
 	resolveInfraFactoryCoId,

@@ -1,11 +1,11 @@
 {
-	"$factory": "°maia/factory/context",
+	"$factory": "°maia/factory/context.factory.maia",
 	"targetInfoCard": "@infoCard",
 	"@actors": {
 		"infoCard": "°maia/views/info-card/actor.maia"
 	},
 	"conversations": {
-		"factory": "°maia/factory/data/chat",
+		"factory": "°maia/factory/chat.factory.maia",
 		"map": {
 			"id": "id",
 			"role": "role",

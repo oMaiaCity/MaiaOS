@@ -2,12 +2,46 @@
  * Factory schema registry — loaded asynchronously so Bun HTML + HMR never evaluates
  * static `.maia` imports at module init (empty exports). Dev: GET /__maia_dev/factories.json.
  */
-import { withCanonicalFactorySchema } from './factory-identity.js'
+
+import { withCanonicalFactorySchema } from './identity-from-maia-path.js'
+
+/** Basename → key in getAllFactories() return object. */
+const FACTORY_BASENAME_TO_REGISTRY_KEY = {
+	'actor.factory.maia': 'actor',
+	'aven-identity.factory.maia': 'os/aven-identity',
+	'avens-identity-registry.factory.maia': 'os/avens-identity-registry',
+	'capability.factory.maia': 'os/capability',
+	'context.factory.maia': 'context',
+	'cotext.factory.maia': 'os/cotext',
+	'event.factory.maia': 'event',
+	'factories-registry.factory.maia': 'os/factories-registry',
+	'groups.factory.maia': 'os/groups',
+	'human.factory.maia': 'os/human',
+	'humans-registry.factory.maia': 'os/humans-registry',
+	'inbox.factory.maia': 'inbox',
+	'indexes-registry.factory.maia': 'os/indexes-registry',
+	'maia-script-expression.factory.maia': 'maia-script-expression',
+	'os-registry.factory.maia': 'os/os-registry',
+	'process.factory.maia': 'process',
+	'registries.factory.maia': 'os/registries',
+	'sparks-registry.factory.maia': 'os/sparks-registry',
+	'style.factory.maia': 'style',
+	'vibe.factory.maia': 'vibe',
+	'vibes-registry.factory.maia': 'os/vibes-registry',
+	'view.factory.maia': 'view',
+	'wasm.factory.maia': 'os/wasm',
+	'chat.factory.maia': 'data/chat',
+	'cobinary.factory.maia': 'data/cobinary',
+	'notes.factory.maia': 'data/notes',
+	'profile.factory.maia': 'data/profile',
+	'spark.factory.maia': 'data/spark',
+	'todos.factory.maia': 'data/todos',
+}
 
 /** @type {Record<string, object> | null} */
 let FACTORIES = null
 
-/** Path keys must match FACTORY_PATH_TO_REF in factory-identity.js */
+/** Factory disk basenames → °maia/factory/<basename> via maiaFactoryLabel (identity-from-maia-path). */
 const UNIQUE_PATH_KEYS = [
 	'actor.factory.maia',
 	'aven-identity.factory.maia',
@@ -202,8 +236,13 @@ export function getFactory(type) {
 	if (!FACTORIES) {
 		throw new Error('[factories] Call ensureFactoriesLoaded() before getFactory()')
 	}
-	const key = type.startsWith('°maia/factory/') ? type.replace('°maia/factory/', '') : type
-	return FACTORIES[key] || null
+	if (type.startsWith('°maia/factory/')) {
+		const rest = type.slice('°maia/factory/'.length)
+		if (!rest.endsWith('.factory.maia')) return null
+		const regKey = FACTORY_BASENAME_TO_REGISTRY_KEY[rest]
+		return regKey ? (FACTORIES[regKey] ?? null) : null
+	}
+	return FACTORIES[type] ?? null
 }
 
 export function getAllFactories() {

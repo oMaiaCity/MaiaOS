@@ -10,6 +10,7 @@ import {
 	collectInboxMessageCoIds,
 	findNewSuccessFromTarget,
 	getRuntimeRef,
+	getSystemFactoryCoId,
 	RUNTIME_REF,
 } from '@MaiaOS/db'
 import { debugLog, isDebugChannelEnabled, traceRuntimeProcess } from '@MaiaOS/logs'
@@ -165,7 +166,7 @@ export class Runtime {
 			if (!interfaceRef || typeof interfaceRef !== 'string') continue
 			const interfaceCoId = interfaceRef.startsWith('co_z')
 				? interfaceRef
-				: (peer.systemFactoryCoIds?.get?.(interfaceRef) ?? null)
+				: (getSystemFactoryCoId(peer, interfaceRef) ?? null)
 			if (!interfaceCoId?.startsWith?.('co_z')) continue
 			const ifaceStore = await this.dataEngine.execute({
 				op: 'read',

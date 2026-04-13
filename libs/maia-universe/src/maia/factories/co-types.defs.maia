@@ -1,5 +1,5 @@
 {
-	"$factory": "°maia/factory/meta",
+	"$factory": "°maia/factory/meta.factory.maia",
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"$id": "https://maia.city/schemas/co-types",
 	"title": "Co-Type Definitions",
