@@ -2,13 +2,13 @@
  * Config seeding - actors, views, contexts, states, styles, etc.
  */
 
+import { createCoValueForSpark } from '@MaiaOS/db'
 import { cotextNanoidFromInstancePath } from '@MaiaOS/factories'
 import {
 	identityFromMaiaPath,
 	maiaFactoryRefToNanoid,
 } from '@MaiaOS/factories/identity-from-maia-path.js'
 import { splitGraphemes } from 'unicode-segmenter/grapheme'
-import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 
 /**
  * Seed configs/instances to CoJSON

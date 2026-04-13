@@ -78,9 +78,12 @@ export { buildSystemFactoryCoIdsFromSparkOs } from './cojson/factory/system-fact
 // Account primitives moved to @MaiaOS/peer (createAccountWithSecret, loadAccount). Migration/seed stay here.
 export { createGroup, createProfile } from './cojson/groups/create.js'
 export {
+	getMaiaGroup,
 	getSparkCapabilityGroupIdFromSparkCoId,
 	getSparkOsId,
+	getSparkVibesId,
 	removeGroupMember,
+	setSparkVibesId,
 } from './cojson/groups/groups.js'
 export { collectCapabilityGrantCoIdsFromColistContent } from './cojson/helpers/capability-grant-co-ids.js'
 export {
@@ -100,7 +103,7 @@ export {
 	getSchema,
 	hasSchema,
 } from './factories/registry.js'
-export { ensureProfileForNewAccount } from './migrations/profile-bootstrap.js'
+export { ensureProfileForNewAccount } from './profile-bootstrap.js'
 // ReactiveStore - reactive data store pattern (owned by maia-db; engines import from here)
 export { ReactiveStore } from './reactive-store.js'
 export { generateRegistryName } from './utils/registry-name-generator.js'

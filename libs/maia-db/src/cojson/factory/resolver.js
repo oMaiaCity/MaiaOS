@@ -16,7 +16,13 @@
  * All consumers use resolve() directly - no wrappers, no scattered functions.
  */
 
-import { FACTORY_REF_PATTERN, INSTANCE_REF_PATTERN, VIBE_REF_PATTERN } from '@MaiaOS/factories'
+import {
+	FACTORY_REF_PATTERN,
+	INSTANCE_REF_PATTERN,
+	removeIdFields,
+	VIBE_REF_PATTERN,
+} from '@MaiaOS/factories'
+import { ReactiveStore } from '../../reactive-store.js'
 import { ensureCoValueLoaded } from '../crud/collection-helpers.js'
 import { normalizeCoValueData } from '../crud/data-extraction.js'
 import { resolveReactive as resolveReactiveBase } from '../crud/reactive-resolver.js'
@@ -25,48 +31,6 @@ import { waitForStoreReady } from '../crud/read-operations.js'
 import { resolveSparkCoId } from '../groups/groups.js'
 import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
 import { getSystemFactoryCoId } from './runtime-factory-refs.js'
-
-/**
- * Recursively remove 'id' fields from schema objects (AJV only accepts $id, not id)
- * BUT: Preserve 'id' fields in properties/items (those are valid property names in JSON Schema)
- * Only remove top-level 'id' and nested 'id' in schema structure (not in property definitions)
- * @param {any} obj - Object to clean
- * @param {boolean} inPropertiesOrItems - Whether we're inside properties/items (preserve 'id' here)
- * @returns {any} Cleaned object without 'id' fields (except in properties/items)
- */
-function removeIdFields(obj, inPropertiesOrItems = false) {
-	if (obj === null || obj === undefined) {
-		return obj
-	}
-
-	if (typeof obj !== 'object') {
-		return obj
-	}
-
-	if (Array.isArray(obj)) {
-		return obj.map((item) => removeIdFields(item, inPropertiesOrItems))
-	}
-
-	const cleaned = {}
-	for (const [key, value] of Object.entries(obj)) {
-		// Skip 'id' field ONLY if we're NOT in properties/items
-		// Properties named 'id' are valid in JSON Schema (e.g., properties.id)
-		if (key === 'id' && !inPropertiesOrItems) {
-			continue
-		}
-
-		// Recursively clean nested objects/arrays
-		// If we're entering properties or items, preserve 'id' fields there
-		if (value !== null && value !== undefined && typeof value === 'object') {
-			const isPropertiesOrItems = key === 'properties' || key === 'items'
-			cleaned[key] = removeIdFields(value, isPropertiesOrItems || inPropertiesOrItems)
-		} else {
-			cleaned[key] = value
-		}
-	}
-
-	return cleaned
-}
 
 /**
  * Resolve registry namekeys (`°maia/factory/...`, vibes, instance keys) via spark.os — used by seed, indexing, and infrastructure.
@@ -372,7 +336,8 @@ export function resolveReactive(peer, identifier, options = {}) {
 	if (returnType === 'factory' || returnType === 'coValue') {
 		const transformedStore = new ReactiveStore({ loading: true })
 
-		const unsubscribe = store.subscribe(async (state) => {
+		let unsubscribe = () => {}
+		unsubscribe = store.subscribe(async (state) => {
 			if (state.loading) {
 				transformedStore._set({ loading: true })
 				return

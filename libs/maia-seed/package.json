@@ -5,11 +5,13 @@
 	"main": "src/index.js",
 	"exports": {
 		".": "./src/index.js",
-		"./seed-config": "./src/seed-config.js",
-		"./ref-transform": "./src/ref-transform.js"
+		"./ref-transform": "./src/ref-transform.js",
+		"./orchestration": "./src/orchestration/seed.js"
 	},
 	"dependencies": {
+		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/factories": "workspace:*",
+		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/universe": "workspace:*"
 	},
 	"files": [

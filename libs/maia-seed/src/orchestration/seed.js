@@ -2,28 +2,26 @@
  * CoJSON Seed - Bootstrap → Schemas → Configs → Data → Registry
  */
 
+import * as groups from '@MaiaOS/db'
+import {
+	buildSystemFactoryCoIdsFromSparkOs,
+	createCoValueForSpark,
+	ensureCoValueLoaded,
+	fillRuntimeRefsFromSystemFactories,
+	SPARK_OS_META_FACTORY_CO_ID_KEY,
+} from '@MaiaOS/db'
 import {
 	identityFromMaiaPath,
 	maiaFactoryRefToNanoid,
 } from '@MaiaOS/factories/identity-from-maia-path.js'
+import { removeIdFields } from '@MaiaOS/factories/remove-id-fields'
 import { getVibeKey } from '@MaiaOS/factories/vibe-keys'
 import { OPS_PREFIX } from '@MaiaOS/logs'
 import { splitGraphemes } from 'unicode-segmenter/grapheme'
-import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
-import { ensureCoValueLoaded } from '../../cojson/crud/collection-helpers.js'
-import { fillRuntimeRefsFromSystemFactories } from '../../cojson/factory/runtime-factory-refs.js'
-import { buildSystemFactoryCoIdsFromSparkOs } from '../../cojson/factory/system-factories-from-os.js'
-import * as groups from '../../cojson/groups/groups.js'
-import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../../cojson/spark-os-keys.js'
 import { bootstrapAccountRegistries, bootstrapAndScaffold } from './bootstrap.js'
 import { seedConfigs } from './configs.js'
 import { seedData } from './data.js'
-import {
-	buildMetaFactoryForSeeding,
-	ensureSparkOs,
-	removeIdFields,
-	sortSchemasByDependency,
-} from './helpers.js'
+import { buildMetaFactoryForSeeding, ensureSparkOs, sortSchemasByDependency } from './helpers.js'
 
 const MAIA_SPARK = '°maia'
 
@@ -81,7 +79,7 @@ export async function seed(
 		return { skipped: true, reason: 'seed_requires_forceFreshSeed' }
 	}
 
-	const { MaiaDB } = await import('../../cojson/core/MaiaDB.js')
+	const { MaiaDB } = await import('@MaiaOS/db')
 	const peer = existingBackend || new MaiaDB({ node, account }, {})
 
 	const needsBootstrap =
@@ -93,7 +91,7 @@ export async function seed(
 	}
 
 	const { transformInstanceForSeeding, transformSchemaForSeeding, validateFactoryStructure } =
-		await import('@MaiaOS/seed/ref-transform')
+		await import('../ref-transform.js')
 	/** Pre-seed: $nanoid → co_z (factories + instances). */
 	const seedRegistry = new Map()
 	const metaFactoryNanoid = identityFromMaiaPath('meta.factory.maia').$nanoid
@@ -117,7 +115,7 @@ export async function seed(
 
 	await ensureSparkOs(account, node, maiaGroup, peer, undefined)
 
-	const { EXCEPTION_FACTORIES } = await import('../../factories/registry.js')
+	const { EXCEPTION_FACTORIES } = await import('@MaiaOS/db/registry')
 	let metaSchemaCoId = null
 	const osId = await groups.getSparkOsId(peer, MAIA_SPARK)
 	if (osId) {
@@ -192,8 +190,8 @@ export async function seed(
 
 	const factoryCoIdMap = new Map()
 	const factoryCoMaps = new Map()
-	const { create: crudCreate } = await import('../../cojson/crud/create.js')
-	const { update: crudUpdate } = await import('../../cojson/crud/update.js')
+	const { create: crudCreate } = await import('@MaiaOS/db/cojson/crud/create')
+	const { update: crudUpdate } = await import('@MaiaOS/db/cojson/crud/update')
 
 	const existingSchemaRegistry =
 		osId && metaSchemaCoId ? await collectSparkOsRegistry(peer, osId, metaSchemaCoId) : new Map()
@@ -518,11 +516,11 @@ export async function seed(
 			}
 		}
 		if (!vibes) {
-			const { EXCEPTION_FACTORIES } = await import('../../factories/registry.js')
+			const { EXCEPTION_FACTORIES } = await import('@MaiaOS/db/registry')
 			const vibesRegistrySchemaCoId =
 				factoryCoIdMap?.get(identityFromMaiaPath('vibes-registry.factory.maia').$nanoid) ??
 				(await (
-					await import('../../cojson/factory/resolver.js')
+					await import('@MaiaOS/db')
 				).lookupRegistryKey(peer, '°maia/factory/vibes-registry.factory.maia', {
 					returnType: 'coId',
 				}))
@@ -554,7 +552,7 @@ export async function seed(
 					(factoryRefN ? factoryCoIdMap?.get(factoryRefN) : null) ??
 					factoryCoIdMap?.get(factoryRef) ??
 					(await (
-						await import('../../cojson/factory/resolver.js')
+						await import('@MaiaOS/db')
 					).lookupRegistryKey(peer, factoryRef, { returnType: 'coId' }))
 				if (factoryCoId) combinedRegistry.set(factoryRefN ?? factoryRef, factoryCoId)
 			}

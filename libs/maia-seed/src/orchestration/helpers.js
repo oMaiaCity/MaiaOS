@@ -75,31 +75,11 @@ export function sortSchemasByDependency(
 	return sorted
 }
 
-import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
-import * as groups from '../../cojson/groups/groups.js'
-import { ensureIndexesCoMap } from '../../cojson/indexing/factory-index-manager.js'
+import * as groups from '@MaiaOS/db'
+import { createCoValueForSpark } from '@MaiaOS/db'
+import { ensureIndexesCoMap } from '@MaiaOS/db/cojson/indexing/factory-index-manager'
 
 const MAIA_SPARK = '°maia'
-
-/**
- * Recursively remove 'id' fields from schema objects (AJV only accepts $id, not id)
- * Preserve 'id' in properties/items (valid property names).
- */
-export function removeIdFields(obj, inPropertiesOrItems = false) {
-	if (obj === null || obj === undefined) return obj
-	if (typeof obj !== 'object') return obj
-	if (Array.isArray(obj)) return obj.map((item) => removeIdFields(item, inPropertiesOrItems))
-	const cleaned = {}
-	for (const [key, value] of Object.entries(obj)) {
-		if (key === 'id' && !inPropertiesOrItems) continue
-		const isPropertiesOrItems = key === 'properties' || key === 'items'
-		cleaned[key] =
-			value !== null && value !== undefined && typeof value === 'object'
-				? removeIdFields(value, isPropertiesOrItems || inPropertiesOrItems)
-				: value
-	}
-	return cleaned
-}
 
 /**
  * Build metaschema definition for seeding
@@ -123,8 +103,8 @@ export function buildMetaFactoryForSeeding(metaSchemaCoId) {
  * Also ensures spark.os.indexes, spark.os.vibes
  */
 export async function ensureSparkOs(account, node, maiaGroup, peer, factoryCoIdMap) {
-	const { EXCEPTION_FACTORIES } = await import('../../factories/registry.js')
-	const { lookupRegistryKey } = await import('../../cojson/factory/resolver.js')
+	const { EXCEPTION_FACTORIES } = await import('@MaiaOS/db/registry')
+	const { lookupRegistryKey } = await import('@MaiaOS/db')
 
 	const osId = await groups.getSparkOsId(peer, MAIA_SPARK)
 	if (!osId) {

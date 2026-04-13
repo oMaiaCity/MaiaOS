@@ -3,7 +3,7 @@
  */
 
 import { normalizeCoValueData } from '@MaiaOS/db'
-import { FACTORY_REGISTRY } from '@MaiaOS/db/registry'
+import { FACTORY_REGISTRY } from './data/builtin-schemas.data.js'
 import { normalizeFactoryReferencesWithResolver } from './factory-ref-resolver.js'
 import {
 	formatValidationErrors,
@@ -200,7 +200,7 @@ export async function validateAgainstFactoryOrThrow(schema, data, context = '') 
  * Universal schema loading and validation (single source of truth)
  *
  * - Runtime: `co_z` → resolve(peer) + validateAgainstFactory
- * - Inline only: `AccountFactory` | `ProfileFactory` from @MaiaOS/db/registry (no universe bundle)
+ * - Inline only: `AccountFactory` | `ProfileFactory` from builtin-schemas (no universe bundle)
  *
  * @param {Object} backend - Backend instance (for resolve() API)
  * @param {string} factoryRef - Schema co-id (co_z...) or AccountFactory | ProfileFactory

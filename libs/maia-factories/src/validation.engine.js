@@ -3,7 +3,7 @@
  */
 
 import { normalizeCoValueData } from '@MaiaOS/db'
-import { CO_TYPES_DEFS } from '@MaiaOS/db/co-types-defs'
+import { CO_TYPES_DEFS } from './data/co-types-defs.data.js'
 import { normalizeFactoryReferencesWithResolver } from './factory-ref-resolver.js'
 import { withCanonicalFactorySchema } from './identity-from-maia-path.js'
 import { isFactoryRef } from './patterns.js'
