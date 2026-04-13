@@ -12,12 +12,14 @@
 		"./payload-resolver": "./src/payload-resolver.js",
 		"./nanoid": "./src/nanoid.js",
 		"./identity-from-maia-path": "./src/identity-from-maia-path.js",
+		"./builtin-schemas": "./src/data/builtin-schemas.data.js",
+		"./co-types-defs": "./src/data/co-types-defs.data.js",
 		"./meta-factory-schema": "./src/data/meta-factory-schema.data.js",
 		"./operation-result": "./src/operation-result.js",
-		"./vibe-keys": "./src/vibe-keys.js"
+		"./vibe-keys": "./src/vibe-keys.js",
+		"./remove-id-fields": "./src/remove-id-fields.js"
 	},
 	"dependencies": {
-		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/universe": "workspace:*",
 		"@noble/hashes": "2.0.1",
 		"ajv": "8.17.1",

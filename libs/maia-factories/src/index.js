@@ -30,6 +30,7 @@ export {
 	isVibeRef,
 	VIBE_REF_PATTERN,
 } from './patterns.js'
+export { removeIdFields } from './remove-id-fields.js'
 export { ValidationEngine } from './validation.engine.js'
 export {
 	getValidationEngine,

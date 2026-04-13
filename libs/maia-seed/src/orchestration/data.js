@@ -2,9 +2,9 @@
  * Data seeding - todos, entities, etc.
  */
 
+import { createCoValueForSpark } from '@MaiaOS/db'
 import { identityFromMaiaPath } from '@MaiaOS/factories/identity-from-maia-path.js'
 import { splitGraphemes } from 'unicode-segmenter/grapheme'
-import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
 
 const DEFAULT_PAPER_TEXT = "Dear future us, what we're creating together..."
 
@@ -12,7 +12,7 @@ const DEFAULT_PAPER_TEXT = "Dear future us, what we're creating together..."
  * Seed data entities to CoJSON
  */
 export async function seedData(account, node, maiaGroup, peer, data, seedRegistry) {
-	const { transformInstanceForSeeding } = await import('@MaiaOS/seed/ref-transform')
+	const { transformInstanceForSeeding } = await import('../ref-transform.js')
 
 	if (!data || Object.keys(data).length === 0) {
 		return { collections: [], totalItems: 0, coIds: [] }

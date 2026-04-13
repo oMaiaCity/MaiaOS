@@ -5,7 +5,6 @@
  * No DBAdapter interface. Direct CoJSON operations.
  */
 
-import { seed } from '../../migrations/seeding/seed.js'
 import { ReactiveStore } from '../../reactive-store.js'
 import { getGlobalCoCache } from '../cache/coCache.js'
 import * as crudCreate from '../crud/create.js'
@@ -13,7 +12,6 @@ import { extractCoStreamWithSessions } from '../crud/data-extraction.js'
 import * as crudDelete from '../crud/delete.js'
 import { createAndPushMessage as createAndPushMessageFn } from '../crud/message-helpers.js'
 import { processInbox as processInboxFn } from '../crud/process-inbox.js'
-import { resolveReactive as resolveReactiveFn } from '../crud/reactive-resolver.js'
 import { findFirst as findFirstByFilter, read as universalRead } from '../crud/read.js'
 import {
 	waitForReactiveResolution as waitForReactiveResolutionFn,
@@ -22,7 +20,11 @@ import {
 	waitForStoreReady,
 } from '../crud/read-operations.js'
 import * as crudUpdate from '../crud/update.js'
-import { checkCotype as checkCotypeFn, resolve } from '../factory/resolver.js'
+import {
+	checkCotype as checkCotypeFn,
+	resolve,
+	resolveReactive as resolveReactiveFromResolver,
+} from '../factory/resolver.js'
 import { getRuntimeRef, RUNTIME_REF } from '../factory/runtime-factory-refs.js'
 import * as groups from '../groups/groups.js'
 import { wrapStorageWithIndexingHooks } from '../indexing/storage-hook-wrapper.js'
@@ -306,7 +308,8 @@ export class MaiaDB {
 
 	async seed(configs, schemas, data, options = {}) {
 		if (!this.account) throw new Error('[MaiaDB] Account required for seed')
-		return await seed(this.account, this.node, configs, schemas, data || {}, this, options)
+		const { seed: runSeed } = await import('@MaiaOS/seed/orchestration')
+		return await runSeed(this.account, this.node, configs, schemas, data || {}, this, options)
 	}
 
 	async ensureAccountOsReady(options = {}) {
@@ -348,7 +351,7 @@ export class MaiaDB {
 		return groups.getSparkCapabilityGroupIdFromSparkCoId(this, sparkCoId, capabilityName)
 	}
 	resolveReactive(identifier, opts = {}) {
-		return resolveReactiveFn(this, identifier, opts)
+		return resolveReactiveFromResolver(this, identifier, opts)
 	}
 	async waitForReactiveResolution(store, opts = {}) {
 		return waitForReactiveResolutionFn(store, opts)

@@ -2,12 +2,15 @@
  * Bootstrap - guardian, scaffold, account.registries
  */
 
+import {
+	createCoValueForSpark,
+	SPARK_OS_META_FACTORY_CO_ID_KEY,
+	waitForStoreReady,
+} from '@MaiaOS/db'
 import { maiaFactoryRefToNanoid } from '@MaiaOS/factories/identity-from-maia-path.js'
-import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
-import { waitForStoreReady } from '../../cojson/crud/read-operations.js'
-import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../../cojson/spark-os-keys.js'
+import { removeIdFields } from '@MaiaOS/factories/remove-id-fields'
 import { seedDefinitionCatalogBootstrap } from './definition-catalog-bootstrap.js'
-import { buildMetaFactoryForSeeding, removeIdFields, sortSchemasByDependency } from './helpers.js'
+import { buildMetaFactoryForSeeding, sortSchemasByDependency } from './helpers.js'
 
 const MAIA_SPARK = '°maia'
 
@@ -16,7 +19,7 @@ const MAIA_SPARK = '°maia'
  * Order: guardian → account.temp → metaschema → factories → scaffold → cleanup temp.
  */
 export async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
-	const { EXCEPTION_FACTORIES } = await import('../../factories/registry.js')
+	const { EXCEPTION_FACTORIES } = await import('@MaiaOS/db/registry')
 	const { getAllFactories } = await import('@MaiaOS/factories')
 	const allSchemas = schemas || getAllFactories()
 
@@ -126,7 +129,7 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	maiaSpark.set('os', os.id)
 	await seedDefinitionCatalogBootstrap(ctx, indexes, metaSchemaCoId, factoryCoIdMap, dbEngine)
 
-	const { removeGroupMember } = await import('../../cojson/groups/groups.js')
+	const { removeGroupMember } = await import('@MaiaOS/db')
 	const memberIdToRemove = account?.id ?? account?.$jazz?.id
 	const registriesMeta = { $factory: EXCEPTION_FACTORIES.META_SCHEMA }
 
@@ -244,7 +247,7 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 	const sparkContent = peer.getCurrentContent(sparkCore)
 	if (!sparkContent || typeof sparkContent.get !== 'function') return
 
-	const { EXCEPTION_FACTORIES } = await import('../../factories/registry.js')
+	const { EXCEPTION_FACTORIES } = await import('@MaiaOS/db/registry')
 	const node = peer.node
 
 	const osId = sparkContent.get('os')
@@ -260,7 +263,7 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 	const groupsContent = peer.getCurrentContent(groupsCore)
 	if (!groupsContent || typeof groupsContent.set !== 'function') return
 
-	const { lookupRegistryKey } = await import('../../cojson/factory/resolver.js')
+	const { lookupRegistryKey } = await import('@MaiaOS/db')
 	const registriesSchemaCoId = await lookupRegistryKey(
 		peer,
 		'°maia/factory/registries.factory.maia',
@@ -302,7 +305,7 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 		? { $factory: avensIdentityRegistrySchemaCoId }
 		: { $factory: EXCEPTION_FACTORIES.META_SCHEMA }
 
-	const { removeGroupMember } = await import('../../cojson/groups/groups.js')
+	const { removeGroupMember } = await import('@MaiaOS/db')
 	const account = peer.account
 	const memberIdToRemove =
 		typeof node.getCurrentAccountOrAgentID === 'function'

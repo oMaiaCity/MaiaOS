@@ -11,8 +11,8 @@
  */
 
 import { FACTORY_REF_PATTERN } from '@MaiaOS/factories'
+import { removeIdFields } from '@MaiaOS/factories/remove-id-fields'
 import { EXCEPTION_FACTORIES } from '../../factories/registry.js'
-import { removeIdFields } from '../../migrations/seeding/helpers.js'
 import { ensureCoValueLoaded } from '../crud/collection-helpers.js'
 import { create } from '../crud/create.js'
 import { read as universalRead } from '../crud/read.js'

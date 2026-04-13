@@ -2,8 +2,8 @@
  * Bootstrap-only: create spark.os.indexes[metaSchemaCoId] definition catalog colist and seed with factory defs.
  */
 
-import { createCoValueForSpark } from '../../cojson/covalue/create-covalue-for-spark.js'
-import { removeIdFields } from './helpers.js'
+import { createCoValueForSpark } from '@MaiaOS/db'
+import { removeIdFields } from '@MaiaOS/factories/remove-id-fields'
 
 /**
  * @param {{ node: import('@cojson/cojson').LocalNode, account: unknown, guardian: unknown }} ctx

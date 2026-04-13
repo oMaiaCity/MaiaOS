@@ -9,16 +9,16 @@
 	"exports": {
 		".": "./src/index.js",
 		"./registry": "./src/factories/registry.js",
-		"./seeding": "./src/seeding-index.js",
-		"./co-types-defs": "./src/factories/co-types-defs.data.js",
-		"./factory/system-factories-from-os": "./src/cojson/factory/system-factories-from-os.js"
+		"./factory/system-factories-from-os": "./src/cojson/factory/system-factories-from-os.js",
+		"./cojson/crud/create": "./src/cojson/crud/create.js",
+		"./cojson/crud/update": "./src/cojson/crud/update.js",
+		"./cojson/indexing/factory-index-manager": "./src/cojson/indexing/factory-index-manager.js"
 	},
 	"dependencies": {
 		"@MaiaOS/factories": "workspace:*",
 		"@MaiaOS/seed": "workspace:*",
 		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/peer": "workspace:*",
-		"@MaiaOS/storage": "workspace:*",
 		"cojson": "0.20.16",
 		"cojson-transport-ws": "0.20.16",
 		"nanoid": "^5.1.7",
