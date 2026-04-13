@@ -7,22 +7,14 @@
 		".": "./src/index.js",
 		"./actors": "./src/maia/actors/index.js",
 		"./actors/*": "./src/maia/actors/*",
-		"./data": "./src/maia/registry-core.js",
 		"./data/icons/*": "./src/maia/data/icons/*",
-		"./registry": "./src/registry.js",
-		"./dashboard-icon-svgs": "./src/maia/registry-icons.js",
 		"./factories/*": "./src/maia/factories/*",
-		"./vibe-registries": "./src/maia/registry.js",
 		"./todos/loader": "./src/maia/vibes/todos/loader.js",
 		"./todos/registry": "./src/maia/vibes/todos/registry.js",
 		"./vibes/*": "./src/maia/vibes/*"
 	},
 	"dependencies": {
-		"@MaiaOS/db": "workspace:*",
-		"@MaiaOS/engines": "workspace:*",
-		"@MaiaOS/factories": "workspace:*",
-		"@MaiaOS/loader": "workspace:*",
-		"unicode-segmenter": "0.15.0"
+		"@noble/hashes": "2.0.1"
 	},
 	"devDependencies": {},
 	"scripts": {

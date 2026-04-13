@@ -168,11 +168,7 @@
       "name": "@MaiaOS/universe",
       "version": "26.4.21315-next",
       "dependencies": {
-        "@MaiaOS/db": "workspace:*",
-        "@MaiaOS/engines": "workspace:*",
-        "@MaiaOS/factories": "workspace:*",
-        "@MaiaOS/loader": "workspace:*",
-        "unicode-segmenter": "0.15.0",
+        "@noble/hashes": "2.0.1",
       },
     },
     "services/app": {

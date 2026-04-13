@@ -3,3 +3,8 @@
 # .maia files treated as JSON (inlined, not emitted)
 [loader]
 ".maia" = "json"
+
+# Bun.serve HTML/HMR route bundling must load this plugin; global `plugin()` in JS is not
+# applied to the HTML import graph, so .maia can otherwise resolve as non-object defaults.
+[serve.static]
+plugins = ["./register-dev-bun-loaders.js"]

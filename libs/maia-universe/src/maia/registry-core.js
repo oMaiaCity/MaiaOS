@@ -4,8 +4,6 @@
  * Source: bun scripts/generate-maia-universe-registry.mjs
  */
 
-import { annotateMaiaConfig } from '@MaiaOS/factories/identity-from-maia-path.js'
-
 import raw0 from '@MaiaOS/universe/actors/os/ai/actor.maia'
 import raw1 from '@MaiaOS/universe/actors/os/ai/interface.maia'
 import raw2 from '@MaiaOS/universe/actors/os/ai/process.maia'
@@ -233,6 +231,7 @@ import raw223 from '@MaiaOS/universe/vibes/todos/intent/intent.context.maia'
 import raw224 from '@MaiaOS/universe/vibes/todos/intent/intent.process.maia'
 import raw225 from '@MaiaOS/universe/vibes/todos/intent/intent.view.maia'
 import raw226 from '@MaiaOS/universe/vibes/todos/manifest.vibe.maia'
+import { annotateMaiaConfig } from '../helpers/annotate-maia.js'
 import raw227 from './data/icons.data.maia'
 import raw228 from './data/notes.data.maia'
 import raw229 from './data/todos.data.maia'

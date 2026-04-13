@@ -8,9 +8,9 @@
  * identity-from-maia-path is still in TDZ (circular init).
  */
 
+export { ACTOR_NANOID_TO_EXECUTABLE_KEY } from '@MaiaOS/universe'
 export { executableKeyFromMaiaPath } from './executable-key-from-maia-path.js'
 export { ensureFactoriesLoaded, getAllFactories, getFactory } from './factory-registry.js'
-export { ACTOR_NANOID_TO_EXECUTABLE_KEY } from './generated/actor-nanoid-to-executable-key.js'
 export {
 	annotateMaiaConfig,
 	cotextNanoidFromInstancePath,

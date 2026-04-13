@@ -67,7 +67,11 @@ export function getAllActorDefinitions() {
 	return definitions
 }
 
-export { ACTOR_ID_TO_EVENT_TYPE, resolveServiceActorCoId } from './actor-service-refs.js'
+export {
+	ACTOR_ID_TO_EVENT_TYPE,
+	isActorFilePathId,
+	resolveServiceActorCoId,
+} from './actor-service-refs.js'
 
 if (import.meta.hot) {
 	import.meta.hot.accept()

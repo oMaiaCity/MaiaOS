@@ -4,7 +4,7 @@
  * Source: bun scripts/generate-maia-universe-registry.mjs
  */
 
-import { getVibeKey } from '@MaiaOS/factories/vibe-keys'
+import { getVibeKey } from '../helpers/vibe-keys.js'
 
 import { ChatVibeRegistry } from './vibes/chat/registry.js'
 import { RegistriesVibeRegistry } from './vibes/humans/registry.js'

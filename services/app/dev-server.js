@@ -1,5 +1,4 @@
 #!/usr/bin/env bun
-import './register-dev-bun-loaders.js'
 import { spawnSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 /**

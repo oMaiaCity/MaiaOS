@@ -1,0 +1,3 @@
+# Match repo root — universe registry imports `.maia` as JSON (required when cwd is this package)
+[loader]
+".maia" = "json"

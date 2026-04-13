@@ -4,7 +4,7 @@
  * Source: bun scripts/generate-maia-universe-registry.mjs
  */
 
-import { annotateMaiaConfig } from '@MaiaOS/factories/identity-from-maia-path.js'
+import { annotateMaiaConfig } from '../../../helpers/annotate-maia.js'
 import maiacityBrand from '../brand/maiacity.style.maia'
 import intentActor from './intent/intent.actor.maia'
 import intentContext from './intent/intent.context.maia'

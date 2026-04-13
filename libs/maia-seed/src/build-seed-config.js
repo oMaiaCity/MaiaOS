@@ -3,11 +3,14 @@
  */
 
 import { identityFromMaiaPath } from '@MaiaOS/factories/identity-from-maia-path.js'
-import { getVibeKey } from '@MaiaOS/factories/vibe-keys'
-import { isActorFilePathId } from '@MaiaOS/universe/actors/actor-service-refs.js'
-import { dashboardIconCotextSeedRows, ICON_SVG_BY_KEY } from '@MaiaOS/universe/dashboard-icon-svgs'
-import { SEED_DATA } from '@MaiaOS/universe/data'
-import { annotateMaiaByActorsPath } from '@MaiaOS/universe/registry'
+import {
+	annotateMaiaByActorsPath,
+	dashboardIconCotextSeedRows,
+	getVibeKey,
+	ICON_SVG_BY_KEY,
+	isActorFilePathId,
+	SEED_DATA,
+} from '@MaiaOS/universe'
 import { deriveInboxId } from './derive-inbox.js'
 
 const VIBE_SCHEMA = '°maia/factory/vibe.factory.maia'
@@ -434,7 +437,7 @@ export function getSeedConfig() {
 	}
 }
 
-export { SEED_DATA } from '@MaiaOS/universe/data'
+export { SEED_DATA } from '@MaiaOS/universe'
 
 if (import.meta.hot) {
 	import.meta.hot.accept()

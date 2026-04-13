@@ -6,7 +6,7 @@ import {
 	identityFromMaiaPath,
 	withCanonicalFactorySchema,
 } from '@MaiaOS/factories/identity-from-maia-path.js'
-import { metaFactorySchemaRaw } from '@MaiaOS/factories/meta-factory-schema'
+import { metaFactorySchemaRaw } from '@MaiaOS/universe'
 
 /** @type {object | null} */
 let mergedMetaSchemaCache = null
