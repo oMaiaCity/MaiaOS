@@ -1,0 +1,21 @@
+{
+	"$factory": "°maia/factory/meta.factory.maia",
+	"title": "°maia/factory/icon.factory.maia",
+	"cotype": "comap",
+	"indexing": true,
+	"properties": {
+		"title": {
+			"type": "string",
+			"description": "Human-readable label for dashboard / vibe chrome (e.g. Todos, Paper)"
+		},
+		"svg": {
+			"$co": "°maia/factory/cotext.factory.maia",
+			"description": "CoText (colist of graphemes) holding SVG markup for the icon"
+		}
+	},
+	"required": [
+		"title",
+		"svg"
+	],
+	"additionalProperties": false
+}
