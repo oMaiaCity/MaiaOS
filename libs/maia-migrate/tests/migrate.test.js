@@ -28,7 +28,7 @@ describe('stripKeysWithUnresolvedRefs', () => {
 })
 
 describe('buildRegistryMapFromNanoidIndex', () => {
-	test('merges spark.os.nanoids entries and peer.systemFactoryCoIds', () => {
+	test('merges nanoid index entries and peer.systemFactoryCoIds', () => {
 		const nanoidContent = {
 			keys() {
 				return ['n1']

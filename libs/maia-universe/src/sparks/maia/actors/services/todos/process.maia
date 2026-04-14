@@ -5,7 +5,7 @@
 			{
 				"op": {
 					"create": {
-						"factory": "°maia/factory/todos.factory.maia",
+						"factory": "°maia/factory/todo.factory.maia",
 						"idempotencyKey": "$$idempotencyKey",
 						"data": {
 							"text": "$$value",

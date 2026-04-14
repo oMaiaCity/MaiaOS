@@ -1,3 +1,4 @@
+import { parseDataMaiaBracketRef } from '@MaiaOS/universe/helpers/bracket-ref.js'
 import { maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { isFactoryRef } from '@MaiaOS/validation/patterns'
 
@@ -27,9 +28,11 @@ function factoryRefToNanoid(factoryRef) {
 	return maiaIdentity(basename).$nanoid
 }
 
-/** °maia/... instance path → nanoid (same as annotate path under maia/). */
+/** °maia/... instance path → nanoid (same as annotate path under maia/). Bracket refs resolve to the row itemNanoid only. */
 function instanceLogicalRefToNanoid(ref) {
 	if (typeof ref !== 'string' || !ref.startsWith('°') || ref.startsWith('co_z')) return null
+	const bracket = parseDataMaiaBracketRef(ref)
+	if (bracket) return bracket.itemNanoid
 	const without = ref.slice(1)
 	if (!without.startsWith('maia/')) return null
 	const pathKey = without.slice('maia/'.length)

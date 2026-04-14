@@ -3,18 +3,17 @@ import { buildSeedConfig } from '../src/config/build-seed-config.js'
 import { ALL_VIBE_REGISTRIES, SEED_DATA } from '../src/registry.js'
 
 describe('buildSeedConfig data merge', () => {
-	test('concatenates notes across vibes (chat + paper)', () => {
+	test('merged notes bucket matches combined seed instances from vibes', () => {
 		const { data } = buildSeedConfig(ALL_VIBE_REGISTRIES)
-		const chatLen = SEED_DATA.notes.chat?.length ?? 0
-		const paperLen = SEED_DATA.notes.paper?.length ?? 0
-		expect(Array.isArray(data.notes)).toBe(true)
-		expect(data.notes.length).toBe(chatLen + paperLen)
+		expect(data.notes && typeof data.notes === 'object').toBe(true)
+		expect(Array.isArray(data.notes.instances)).toBe(true)
+		expect(data.notes.instances.length).toBe(SEED_DATA.notes.instances.length)
 	})
 
-	test('todos array length matches SEED_DATA.todos.todos', () => {
+	test('merged todos bucket matches SEED_DATA.todos instances', () => {
 		const { data } = buildSeedConfig(ALL_VIBE_REGISTRIES)
-		const expected = SEED_DATA.todos.todos?.length ?? 0
-		expect(Array.isArray(data.todos)).toBe(true)
-		expect(data.todos.length).toBe(expected)
+		expect(data.todos && typeof data.todos === 'object').toBe(true)
+		expect(Array.isArray(data.todos.instances)).toBe(true)
+		expect(data.todos.instances.length).toBe(SEED_DATA.todos.instances.length)
 	})
 })

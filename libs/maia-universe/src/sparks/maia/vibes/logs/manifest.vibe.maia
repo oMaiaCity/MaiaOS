@@ -2,6 +2,7 @@
 	"$factory": "°maia/factory/vibe.factory.maia",
 	"name": "Logs",
 	"description": "Developer logs and diagnostics",
+	"icon": "°maia/data/icons.data.maia[gKQfa4ddebAf]",
 	"actor": "°maia/logs/intent/intent.actor.maia",
 	"runtime": [
 		"browser"

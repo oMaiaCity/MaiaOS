@@ -2,6 +2,7 @@
 	"$factory": "°maia/factory/vibe.factory.maia",
 	"name": "QuickJS",
 	"description": "Add two numbers via sandboxed QuickJS",
+	"icon": "°maia/data/icons.data.maia[UKqnOjPwqebR]",
 	"actor": "°maia/quickjs/intent/intent.actor.maia",
 	"runtime": [
 		"browser"

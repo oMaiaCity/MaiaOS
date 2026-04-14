@@ -14,7 +14,6 @@ import { OPS_PREFIX } from '@MaiaOS/logs'
 import { maiaFactoryRefToNanoid, maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { removeIdFields } from '@MaiaOS/validation/remove-id-fields'
 import { getVibeKey } from '@MaiaOS/validation/vibe-keys'
-import { splitGraphemes } from 'unicode-segmenter/grapheme'
 import { bootstrapAccountRegistries, bootstrapAndScaffold } from './bootstrap.js'
 import { seedConfigs } from './configs.js'
 import { seedData } from './data.js'
@@ -104,13 +103,16 @@ export async function seed(
 	await bootstrapAccountRegistries(peer, maiaGroup)
 	await peer.resolveSystemSparkCoId()
 
-	const uniqueSchemasByLabel = new Map()
+	const uniqueSchemasByNanoid = new Map()
 	for (const [name, schema] of Object.entries(schemas)) {
-		const key = schema.$label || `°maia/factory/${name}`
-		if (!uniqueSchemasByLabel.has(key)) uniqueSchemasByLabel.set(key, { name, schema })
+		const nn = schema.$nanoid
+		if (typeof nn !== 'string' || nn.length === 0) {
+			throw new Error(`[CoJSONSeed] factory schema missing canonical $nanoid (registry key ${name})`)
+		}
+		if (!uniqueSchemasByNanoid.has(nn)) uniqueSchemasByNanoid.set(nn, { name, schema })
 	}
 
-	const sortedFactoryKeys = sortSchemasByDependency(uniqueSchemasByLabel)
+	const sortedFactoryKeys = sortSchemasByDependency(uniqueSchemasByNanoid)
 
 	await ensureSparkOs(account, node, maiaGroup, peer, undefined)
 
@@ -195,8 +197,8 @@ export async function seed(
 	const existingSchemaRegistry =
 		osId && metaSchemaCoId ? await collectSparkOsRegistry(peer, osId, metaSchemaCoId) : new Map()
 
-	for (const factoryKey of sortedFactoryKeys) {
-		const { schema } = uniqueSchemasByLabel.get(factoryKey)
+	for (const factoryNanoidKey of sortedFactoryKeys) {
+		const { schema } = uniqueSchemasByNanoid.get(factoryNanoidKey)
 		const {
 			$schema: _s,
 			$factory: _f,
@@ -207,10 +209,9 @@ export async function seed(
 			...directProperties
 		} = schema
 		const cleanedProperties = removeIdFields(directProperties)
-		const factoryNanoid =
-			typeof _n === 'string' && _n.length > 0 ? _n : maiaFactoryRefToNanoid(factoryKey)
+		const factoryNanoid = typeof _n === 'string' && _n.length > 0 ? _n : factoryNanoidKey
 		if (!factoryNanoid) {
-			throw new Error(`[Seed] Missing factory $nanoid for ${factoryKey}`)
+			throw new Error(`[Seed] Missing factory $nanoid for ${factoryNanoidKey}`)
 		}
 		const existingSchemaCoId = existingSchemaRegistry.get(factoryNanoid)
 		let actualCoId
@@ -235,12 +236,12 @@ export async function seed(
 	}
 
 	// Schema definitions (meta-schema children) must always be CoMaps (have .get for resolution)
-	for (const factoryKey of sortedFactoryKeys) {
-		const { schema } = uniqueSchemasByLabel.get(factoryKey)
+	for (const factoryNanoidKey of sortedFactoryKeys) {
+		const { schema } = uniqueSchemasByNanoid.get(factoryNanoidKey)
 		const fn =
 			typeof schema.$nanoid === 'string' && schema.$nanoid.length > 0
 				? schema.$nanoid
-				: maiaFactoryRefToNanoid(factoryKey)
+				: factoryNanoidKey
 		const factoryCoId = fn ? factoryCoIdMap.get(fn) : null
 		if (!factoryCoId) continue
 		const core = peer.getCoValue(factoryCoId)
@@ -250,30 +251,30 @@ export async function seed(
 		if (!isCoMap) {
 			const rawType = content?.type ?? core?.type ?? 'unknown'
 			throw new Error(
-				`[Seed] Factory definition ${factoryKey} must be CoMap but is ${rawType}. ` +
+				`[Seed] Factory definition ${factoryNanoidKey} must be CoMap but is ${rawType}. ` +
 					'Corrupt data. Clear storage (delete DB file or IndexedDB) and run with PEER_FRESH_SEED=true.',
 			)
 		}
 	}
 
 	const seededSchemas = []
-	for (const factoryKey of sortedFactoryKeys) {
-		const { name, schema } = uniqueSchemasByLabel.get(factoryKey)
+	for (const factoryNanoidKey of sortedFactoryKeys) {
+		const { name, schema } = uniqueSchemasByNanoid.get(factoryNanoidKey)
 		const fn =
 			typeof schema.$nanoid === 'string' && schema.$nanoid.length > 0
 				? schema.$nanoid
-				: maiaFactoryRefToNanoid(factoryKey)
+				: factoryNanoidKey
 		const factoryCoId = fn ? factoryCoIdMap.get(fn) : null
 		const factoryCoMap = fn ? factoryCoMaps.get(fn) : null
 		const transformedSchema = transformSchemaForSeeding(schema, factoryCoIdMap)
 		transformedSchema.$id = `https://maia.city/${factoryCoId}`
-		const verificationErrors = validateFactoryStructure(transformedSchema, factoryKey, {
+		const verificationErrors = validateFactoryStructure(transformedSchema, factoryNanoidKey, {
 			checkSchemaReferences: true,
 			checkNestedCoTypes: false,
 		})
 		if (verificationErrors.length > 0) {
 			throw new Error(
-				`[Seed] Factory ${factoryKey} still contains °maia/factory/ references: ${verificationErrors.join('\n')}`,
+				`[Seed] Factory ${factoryNanoidKey} still contains °maia/factory/ references: ${verificationErrors.join('\n')}`,
 			)
 		}
 		const {
@@ -287,7 +288,7 @@ export async function seed(
 		} = transformedSchema
 		const cleanedProperties = removeIdFields(directProps)
 		for (const [key, value] of Object.entries(cleanedProperties)) factoryCoMap?.set(key, value)
-		seededSchemas.push({ name, key: factoryKey, coId: factoryCoId, coMapId: factoryCoMap?.id })
+		seededSchemas.push({ name, key: factoryNanoidKey, coId: factoryCoId, coMapId: factoryCoMap?.id })
 	}
 
 	await ensureSparkOs(account, node, maiaGroup, peer, factoryCoIdMap)
@@ -306,9 +307,14 @@ export async function seed(
 
 	let combinedRegistry = await getCombinedRegistry()
 	if (data) {
-		for (const [collectionName] of Object.entries(data)) {
+		for (const [collectionName, bucket] of Object.entries(data)) {
+			if (!bucket || typeof bucket !== 'object') continue
 			if (collectionName === 'icons') continue
-			const n = maiaIdentity(`${collectionName}.factory.maia`).$nanoid
+			const factoryBasename =
+				typeof bucket.$factory === 'string' && bucket.$factory.startsWith('°maia/factory/')
+					? bucket.$factory.slice('°maia/factory/'.length)
+					: `${collectionName}.factory.maia`
+			const n = maiaIdentity(factoryBasename).$nanoid
 			const dataFactoryCoId = combinedRegistry.get(n)
 			if (dataFactoryCoId) {
 				combinedRegistry.set(n, dataFactoryCoId)
@@ -461,52 +467,21 @@ export async function seed(
 		}
 	}
 
-	const allVibes = configs?.vibes || []
-	const iconsSeed = data?.icons
-	if (allVibes.length > 0) {
-		if (!iconsSeed || typeof iconsSeed !== 'object') {
-			throw new Error(
-				'[CoJSONSeed] data.icons required when configs include vibes (from buildSeedConfig / SEED_DATA.icons)',
-			)
-		}
-		const svgByVibeKey = new Map(
-			allVibes.map((v) => {
-				const vibeKey = getVibeKey(v)
-				const svg = vibeKey ? iconsSeed[vibeKey]?.svg : null
-				return [vibeKey, svg]
-			}),
-		)
+	let seededData = { collections: [], totalItems: 0, coIds: [] }
+	if (data) {
+		seededData = await seedData(account, node, maiaGroup, peer, data, seedRegistry, {
+			instanceCoIdMap,
+			registerSeedCoId,
+		})
 		combinedRegistry = refreshCombinedRegistry()
-		const cotextSchemaCoId = factoryCoIdMap.get(maiaIdentity('cotext.factory.maia').$nanoid)
-		if (!cotextSchemaCoId?.startsWith?.('co_z')) {
+	}
+
+	const allVibes = configs?.vibes || []
+	if (allVibes.length > 0) {
+		if (!data?.icons?.instances?.length) {
 			throw new Error(
-				'[CoJSONSeed] °maia/factory/cotext.factory.maia not registered; cannot seed vibe icon CoTexts',
+				'[CoJSONSeed] data.icons.instances required when configs include vibes (from buildSeedConfig / SEED_DATA.icons)',
 			)
-		}
-		for (const vibe of allVibes) {
-			const vibeKey = getVibeKey(vibe)
-			const iconRef = vibe.icon ?? maiaIdentity(`data/icons/${vibeKey}.maia`).$label
-			const svg = svgByVibeKey.get(vibeKey)
-			if (typeof svg !== 'string' || !svg.trim()) {
-				throw new Error(
-					`[CoJSONSeed] data.icons[${JSON.stringify(vibeKey)}].svg missing or empty (${iconRef})`,
-				)
-			}
-			const graphemes = [...splitGraphemes(svg)]
-			const ctx = { node, account, guardian: maiaGroup }
-			const { coValue: iconCotext } = await createCoValueForSpark(ctx, null, {
-				factory: cotextSchemaCoId,
-				cotype: 'colist',
-				data: graphemes,
-				dataEngine: peer?.dbEngine,
-			})
-			const iconNanoid = maiaIdentity(`data/icons/${vibeKey}.maia`).$nanoid
-			instanceCoIdMap.set(iconRef, iconCotext.id)
-			instanceCoIdMap.set(iconNanoid, iconCotext.id)
-			combinedRegistry.set(iconRef, iconCotext.id)
-			combinedRegistry.set(iconNanoid, iconCotext.id)
-			registerSeedCoId(seedRegistry, iconRef, iconCotext.id)
-			registerSeedCoId(seedRegistry, iconNanoid, iconCotext.id)
 		}
 		combinedRegistry = refreshCombinedRegistry()
 		let vibes = null
@@ -590,8 +565,6 @@ export async function seed(
 			}
 		}
 	}
-
-	const seededData = await seedData(account, node, maiaGroup, peer, data, seedRegistry)
 
 	for (const [k, v] of factoryCoIdMap) {
 		if (typeof k === 'string' && typeof v === 'string' && v.startsWith('co_z')) {

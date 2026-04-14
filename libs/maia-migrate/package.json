@@ -1,5 +1,5 @@
 {
-	"name": "@MaiaOS/seed",
+	"name": "@MaiaOS/migrate",
 	"version": "26.4.141611-next",
 	"type": "module",
 	"main": "src/index.js",

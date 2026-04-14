@@ -314,7 +314,7 @@ export class MaiaDB {
 
 	async seed(configs, schemas, data, options = {}) {
 		if (!this.account) throw new Error('[MaiaDB] Account required for seed')
-		const { seed: runSeed } = await import('@MaiaOS/seed/orchestration')
+		const { seed: runSeed } = await import('@MaiaOS/migrate/orchestration')
 		return await runSeed(this.account, this.node, configs, schemas, data || {}, this, options)
 	}
 

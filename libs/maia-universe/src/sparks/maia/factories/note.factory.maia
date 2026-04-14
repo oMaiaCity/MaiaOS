@@ -1,6 +1,6 @@
 {
 	"$factory": "°maia/factory/meta.factory.maia",
-	"title": "°maia/factory/notes.factory.maia",
+	"title": "°maia/factory/note.factory.maia",
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {

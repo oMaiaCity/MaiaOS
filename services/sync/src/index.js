@@ -29,6 +29,7 @@ import {
 } from '@MaiaOS/db'
 import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
 import { agentIDToDidKey, verifyInvocationToken } from '@MaiaOS/maia-ucan'
+import { buildSeedConfig, filterVibesForSeeding, getSeedConfig } from '@MaiaOS/migrate'
 import {
 	createWebSocketPeer,
 	DataEngine,
@@ -41,7 +42,6 @@ import {
 	SYSTEM_SPARK_REGISTRY_KEY,
 	waitForStoreReady,
 } from '@MaiaOS/runtime'
-import { buildSeedConfig, filterVibesForSeeding, getSeedConfig } from '@MaiaOS/seed'
 import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -1175,7 +1175,7 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 		await dataEngine.resolveSystemFactories()
 
 		if (peerSyncMigrate) {
-			const { migrate } = await import('@MaiaOS/seed/orchestration/migrate')
+			const { migrate } = await import('@MaiaOS/migrate/orchestration/migrate')
 			const result = await migrate(peer, dataEngine)
 			for (const err of result.errors ?? []) {
 				opsSync.warn(err)
@@ -1187,7 +1187,7 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 
 		if (maiaDevMigrateWatch) {
 			const repoRoot = pathResolve(_syncDir, '..', '..')
-			const { startMaiaMigrateWatch } = await import('@MaiaOS/seed/dev/watch-migrate')
+			const { startMaiaMigrateWatch } = await import('@MaiaOS/migrate/dev/watch-migrate')
 			startMaiaMigrateWatch(peer, dataEngine, { rootDir: repoRoot })
 			opsSync.log(
 				'Dev migrate watch: .maia changes regenerate registry and apply migrate (NODE_ENV not production).',

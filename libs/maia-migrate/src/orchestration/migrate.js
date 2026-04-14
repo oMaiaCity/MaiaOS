@@ -1,5 +1,5 @@
 /**
- * Diff .maia registry configs against live CoValues and apply CRDT updates (nanoid → co_z via spark.os.nanoids).
+ * Diff .maia registry configs against live CoValues and apply CRDT updates (nanoid → co_z via spark.os.indexes["@nanoids"]).
  */
 
 import { ensureCoValueLoaded, normalizeCoValueData } from '@MaiaOS/db'
@@ -173,7 +173,7 @@ export async function migrate(peer, _dataEngine, options = {}) {
 		return {
 			updated: 0,
 			skipped: 0,
-			errors: ['[migrate] spark.os.nanoids not available (bootstrap spark.os first)'],
+			errors: ['[migrate] spark.os.indexes["@nanoids"] not available (bootstrap spark.os first)'],
 		}
 	}
 
