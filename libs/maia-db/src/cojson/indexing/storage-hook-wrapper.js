@@ -165,6 +165,11 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 							shouldSkipIndexing = true
 						}
 
+						const nanoidsId = osContent.get('nanoids')
+						if (coId === nanoidsId) {
+							shouldSkipIndexing = true
+						}
+
 						// Check if it's spark.os.indexes itself
 						const indexesId = osContent.get('indexes')
 						if (coId === indexesId) {

@@ -13,10 +13,10 @@ import {
 
 export { formatValidationErrors, withSchemaValidationDisabled } from './validation.engine.js'
 
-/** $label and $nanoid are identity metadata injected by the seed pipeline — not schema-validated content. */
+/** Identity / authoring metadata — not schema-validated instance content. */
 function stripIdentityMeta(data) {
 	if (!data || typeof data !== 'object' || Array.isArray(data)) return data
-	const { $label: _l, $nanoid: _n, ...rest } = data
+	const { $label: _l, $nanoid: _n, $schema: _s, $co: _c, $id: _i, ...rest } = data
 	return rest
 }
 

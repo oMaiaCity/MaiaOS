@@ -19,11 +19,16 @@ const logger = createLogger('sync')
 	const ok = await freePort(4201, (msg) => logger.warn(msg))
 	if (!ok) process.exit(1)
 
+	const syncEnv = { ...process.env }
+	if (syncEnv.MAIA_DEV_MIGRATE_WATCH === undefined) {
+		syncEnv.MAIA_DEV_MIGRATE_WATCH = 'true'
+	}
+
 	const proc = spawn('bun', ['--env-file=.env', '--filter', '@MaiaOS/sync', 'dev'], {
 		cwd: rootDir,
 		stdio: 'inherit',
 		shell: false,
-		env: { ...process.env },
+		env: syncEnv,
 	})
 	proc.on('error', () => process.exit(1))
 	proc.on('exit', (code) => process.exit(code ?? 0))

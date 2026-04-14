@@ -35,6 +35,7 @@
 		"check:ci": "bun run format:maia:check && bun scripts/check-maia-app-no-inline-handlers.mjs && bun scripts/check-universe-registry.mjs && bunx biome ci .",
 		"universe:registry": "bun scripts/generate-maia-universe-registry.mjs",
 		"universe:registry:watch": "bun scripts/generate-maia-universe-registry.mjs --watch",
+		"dev:migrate": "bun --env-file=.env libs/maia-seed/src/dev/watch-migrate.js",
 		"check:m2-bundle": "bun scripts/check-m2-app-bundle.mjs",
 		"test": "bun run --workspaces --if-present test",
 		"test:db-contract": "bun --filter @MaiaOS/db test",

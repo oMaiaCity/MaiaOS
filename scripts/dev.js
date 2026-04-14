@@ -252,11 +252,15 @@ async function startSync() {
 	const ok = await freePort(4201, (msg) => logger.warn(msg))
 	if (!ok) process.exit(1)
 
+	const syncEnv = { ...process.env }
+	if (syncEnv.MAIA_DEV_MIGRATE_WATCH === undefined) {
+		syncEnv.MAIA_DEV_MIGRATE_WATCH = 'true'
+	}
 	syncProcess = spawn('bun', ['--env-file=.env', '--filter', '@MaiaOS/sync', 'dev'], {
 		cwd: rootDir,
 		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,
-		env: { ...process.env },
+		env: syncEnv,
 	})
 
 	syncProcess.stdout.on('data', (data) => processOutput('sync', data))

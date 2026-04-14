@@ -42,4 +42,11 @@ describe('transformInstanceForSeeding', () => {
 		expect(out.$factory).toBe('co_zVIBEF')
 		expect(out.$label).toBe('°maia/vibe/chat')
 	})
+
+	test('throwOnMissing false leaves unresolved ° refs in place (migrate path)', () => {
+		const coIdMap = new Map()
+		const inst = { inbox: '°maia/x/intent/inbox.maia' }
+		const out = transformInstanceForSeeding(inst, coIdMap, { throwOnMissing: false })
+		expect(out.inbox).toBe('°maia/x/intent/inbox.maia')
+	})
 })

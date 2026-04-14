@@ -15,6 +15,8 @@
  *     - true: Fresh seed (first deploy or intentional reset). May overwrite existing scaffold.
  *     - false/unset: Skip seed, use persisted data. Never overwrite on restart.
  *   SEED_VIBES: Default "all". Which vibes to seed (todos, chat, quickjs, etc). "all" seeds every vibe including quickjs.
+ *   PEER_SYNC_MIGRATE: Default false. Set true to diff MAIA_SPARK_REGISTRY vs live CoValues and apply CRDT updates (after resolveSystemFactories).
+ *   MAIA_DEV_MIGRATE_WATCH: Watch .maia files and run migrate after registry regen. `bun dev` and `bun dev:sync` set this true unless you export MAIA_DEV_MIGRATE_WATCH=false.
  *   PEER_APP_HOST: Allowed CORS origin (e.g. https://next.maia.city). When set, only that origin can call sync/LLM in production. Unset = * (dev).
  *   MAIA_DEV_CORS=1: With Postgres local dev, enable same multi-origin dev CORS as PGlite (localhost / 127.0.0.1 / ::1 on port 4200).
  */
@@ -74,6 +76,8 @@ const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
 
 const avenMaiaGuardian = process.env.AVEN_MAIA_GUARDIAN?.trim() || null
 const peerSyncSeed = process.env.PEER_SYNC_SEED === 'true'
+const peerSyncMigrate = process.env.PEER_SYNC_MIGRATE === 'true'
+const maiaDevMigrateWatch = process.env.MAIA_DEV_MIGRATE_WATCH === 'true'
 // SEED_VIBES: which vibes to seed on genesis. Default "all" (includes quickjs). Override: "todos,chat" or "todos,chat,quickjs"
 const seedVibesConfig = process.env.SEED_VIBES || 'all'
 
@@ -1158,6 +1162,24 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 
 		await peer.resolveSystemSparkCoId()
 		await dataEngine.resolveSystemFactories()
+
+		if (peerSyncMigrate) {
+			const { migrate } = await import('@MaiaOS/seed/orchestration/migrate')
+			const result = await migrate(peer, dataEngine)
+			for (const err of result.errors ?? []) {
+				opsSync.warn(err)
+			}
+			opsSync.log(
+				`PEER_SYNC_MIGRATE: ${result.updated} CoValues updated, ${result.skipped} unchanged.`,
+			)
+		}
+
+		if (maiaDevMigrateWatch) {
+			const repoRoot = pathResolve(_syncDir, '..', '..')
+			const { startMaiaMigrateWatch } = await import('@MaiaOS/seed/dev/watch-migrate')
+			startMaiaMigrateWatch(peer, dataEngine, { rootDir: repoRoot })
+			opsSync.log('MAIA_DEV_MIGRATE_WATCH: watching .maia files for registry + migrate.')
+		}
 
 		// Seed /admin for AVEN_MAIA_ACCOUNT (grants all endpoints). Must run after scaffold exists (genesis or prior run).
 		await seedAdminCapabilityForServerAccount(agentWorker).catch((e) =>

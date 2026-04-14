@@ -317,10 +317,12 @@ function transformCoReferences(obj, coIdMap, path = '') {
 /**
  * Transform a config instance for seeding (actor, vibe manifest, data row, etc.).
  */
-export function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
+export function transformInstanceForSeeding(instance, coIdMap, options = {}) {
 	if (!instance || typeof instance !== 'object') {
 		return instance
 	}
+
+	const { throwOnMissing = true } = options
 
 	// Deep clone to avoid mutating original
 	const transformed = JSON.parse(JSON.stringify(instance))
@@ -336,7 +338,7 @@ export function transformInstanceForSeeding(instance, coIdMap, _options = {}) {
 	}
 
 	// dependencies, items, source/target, states, handlers, query objects)
-	walkAndTransformRefs(transformed, coIdMap)
+	walkAndTransformRefs(transformed, coIdMap, { throwOnMissing })
 
 	const labelPath = typeof transformed.$label === 'string' ? transformed.$label : null
 	if (labelPath?.startsWith('°')) {

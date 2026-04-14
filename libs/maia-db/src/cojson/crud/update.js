@@ -74,7 +74,20 @@ export async function update(peer, _schema, id, data) {
 						: Object.fromEntries(
 								Object.entries(obj).filter(
 									([k]) =>
-										!['id', '$factory', '_coValueType', 'type', 'loading', 'error', 'groupInfo'].includes(k),
+										![
+											'id',
+											'$factory',
+											'_coValueType',
+											'type',
+											'loading',
+											'error',
+											'groupInfo',
+											'$schema',
+											'$co',
+											'$id',
+											'$label',
+											'$nanoid',
+										].includes(k),
 								),
 							)
 				const existingDataOnly = stripToSchema(existingDataRaw)
