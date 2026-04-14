@@ -7,7 +7,7 @@
 import {
 	identityFromMaiaPath,
 	logicalRefToSeedNanoid,
-} from '@MaiaOS/factories/identity-from-maia-path.js'
+} from '@MaiaOS/validation/identity-from-maia-path.js'
 
 /** Short role keys for {@link getRuntimeRef} — no ° in call sites. */
 export const RUNTIME_REF = {

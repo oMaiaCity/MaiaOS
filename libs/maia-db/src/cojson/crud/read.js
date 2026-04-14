@@ -8,8 +8,8 @@
  * ONE universal function that works for CoMap, CoList, and CoStream.
  */
 
-import { resolveExpressions } from '@MaiaOS/factories/expression-resolver.js'
 import { perfDbRead } from '@MaiaOS/logs'
+import { resolveExpressions } from '@MaiaOS/validation/expression-resolver.js'
 import { ReactiveStore } from '../../reactive-store.js'
 import { observeCoValue } from '../cache/coCache.js'
 import { resolve as resolveSchema } from '../factory/resolver.js'

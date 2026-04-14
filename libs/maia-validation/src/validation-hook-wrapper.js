@@ -2,19 +2,18 @@
  * Sync Manager Validation Hook - validates remote transactions before CRDT merge.
  */
 
-import { loadFactoryAndValidate } from '@MaiaOS/factories/validation.helper'
 import { createOpsLogger } from '@MaiaOS/logs'
-import { isExceptionFactory } from '../../factories/registry.js'
-import { resolve } from '../factory/resolver.js'
 import {
 	extractSchemaFromMessage,
 	getCoValueContentSnapshot,
 	isAccountGroupOrProfile,
-} from '../helpers/co-value-detection.js'
+} from './co-value-detection.js'
+import { isExceptionFactory } from './data/builtin-schemas.data.js'
+import { loadFactoryAndValidate } from './validation.helper.js'
 
 const opsValidation = createOpsLogger('ValidationHook')
 
-async function waitForSchemaSync(peer, factoryCoId, timeoutMs = 5000) {
+async function waitForSchemaSync(peer, factoryCoId, resolve, timeoutMs = 5000) {
 	const start = Date.now()
 	while (Date.now() - start < timeoutMs) {
 		try {
@@ -27,6 +26,7 @@ async function waitForSchemaSync(peer, factoryCoId, timeoutMs = 5000) {
 }
 
 async function validateRemoteTransactions(peer, dbEngine, msg) {
+	const { resolve } = await import('@MaiaOS/db')
 	const coId = msg.id
 	const detection = isAccountGroupOrProfile(msg, peer, coId)
 	if (detection.isGroup || detection.isAccount || detection.isProfile)
@@ -48,7 +48,7 @@ async function validateRemoteTransactions(peer, dbEngine, msg) {
 	}
 
 	let schema = await resolve(peer, factoryCoId, { returnType: 'factory' })
-	if (!schema) schema = await waitForSchemaSync(peer, factoryCoId, 5000)
+	if (!schema) schema = await waitForSchemaSync(peer, factoryCoId, resolve, 5000)
 	if (!schema) {
 		return {
 			valid: false,

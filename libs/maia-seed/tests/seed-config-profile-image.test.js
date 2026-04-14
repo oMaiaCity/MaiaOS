@@ -1,7 +1,7 @@
-import { identityFromMaiaPath } from '@MaiaOS/factories/identity-from-maia-path.js'
 import { MAIA_SPARK_REGISTRY } from '@MaiaOS/universe'
+import { getSeedConfig } from '@MaiaOS/universe/config/build-seed-config.js'
+import { identityFromMaiaPath } from '@MaiaOS/universe/helpers/identity-from-maia-path.js'
 import { describe, expect, test } from 'bun:test'
-import { getSeedConfig } from '../src/build-seed-config.js'
 
 describe('getSeedConfig profile-image', () => {
 	test('seeds the views context referenced by services/profile-image actor (not services/context stub)', () => {

@@ -1,7 +1,7 @@
 /**
  * Factories - Centralized factory definitions and validation for MaiaOS
  * M4: $label + $nanoid from identity-from-maia-path (canonical °maia/factory/*.factory.maia).
- * Full factory set loads asynchronously — import `@MaiaOS/factories/factory-registry` for seed/bootstrap only.
+ * Full factory set loads asynchronously — import `@MaiaOS/validation/factory-registry` for seed/bootstrap only.
  *
  * Export order: identity-from-maia-path and factory-registry before validation.engine. A top-level import of
  * ValidationEngine runs validation.engine → @MaiaOS/db → helpers → withCanonicalFactorySchema while

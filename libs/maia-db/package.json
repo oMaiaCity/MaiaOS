@@ -15,7 +15,7 @@
 		"./cojson/indexing/factory-index-manager": "./src/cojson/indexing/factory-index-manager.js"
 	},
 	"dependencies": {
-		"@MaiaOS/factories": "workspace:*",
+		"@MaiaOS/validation": "workspace:*",
 		"@MaiaOS/seed": "workspace:*",
 		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/peer": "workspace:*",

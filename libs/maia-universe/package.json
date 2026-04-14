@@ -5,13 +5,21 @@
 	"main": "src/index.js",
 	"exports": {
 		".": "./src/index.js",
+		"./helpers/identity-from-maia-path.js": "./src/helpers/identity-from-maia-path.js",
+		"./helpers/nanoid.js": "./src/helpers/nanoid.js",
+		"./helpers/operation-result.js": "./src/helpers/operation-result.js",
+		"./helpers/patterns.js": "./src/helpers/patterns.js",
+		"./helpers/remove-id-fields.js": "./src/helpers/remove-id-fields.js",
+		"./helpers/vibe-keys.js": "./src/helpers/vibe-keys.js",
 		"./actors": "./src/sparks/maia/actors/index.js",
 		"./actors/*": "./src/sparks/maia/actors/*",
 		"./data/icons/*": "./src/sparks/maia/data/icons/*",
 		"./factories/*": "./src/sparks/maia/factories/*",
 		"./todos/loader": "./src/sparks/maia/vibes/todos/loader.js",
-		"./todos/registry": "./src/sparks/maia/vibes/todos/registry.js",
-		"./vibes/*": "./src/sparks/maia/vibes/*"
+		"./vibes/*": "./src/sparks/maia/vibes/*",
+		"./config/build-seed-config.js": "./src/config/build-seed-config.js",
+		"./config/vibe-seed-helpers.js": "./src/config/vibe-seed-helpers.js",
+		"./config/derive-inbox.js": "./src/config/derive-inbox.js"
 	},
 	"dependencies": {
 		"@MaiaOS/runtime": "workspace:*",

@@ -2,15 +2,10 @@
  * Unified seed config: vibe merge (buildSeedConfig) + service/UI tables (getSeedConfig).
  */
 
-import { identityFromMaiaPath } from '@MaiaOS/factories/identity-from-maia-path.js'
-import {
-	dashboardIconCotextSeedRows,
-	getVibeKey,
-	ICON_SVG_BY_KEY,
-	isActorFilePathId,
-	MAIA_SPARK_REGISTRY,
-	SEED_DATA,
-} from '@MaiaOS/universe'
+import { MAIA_SPARK_REGISTRY, SEED_DATA } from '../generated/registry.js'
+import { identityFromMaiaPath } from '../helpers/identity-from-maia-path.js'
+import { getVibeKey } from '../helpers/vibe-keys.js'
+import { isActorFilePathId } from '../sparks/maia/actors/index.js'
 import { deriveInboxId } from './derive-inbox.js'
 
 const VIBE_SCHEMA = '°maia/factory/vibe.factory.maia'
@@ -64,9 +59,10 @@ function normalizeVibeForSeeding(vibe) {
 
 export function buildSeedConfig(vibeRegistries) {
 	for (const k of SEED_DATA.icons.dashboardVibeKeys) {
-		if (!(k in ICON_SVG_BY_KEY)) {
+		const entry = SEED_DATA.icons[k]
+		if (!entry || typeof entry.svg !== 'string' || !entry.svg.trim()) {
 			throw new Error(
-				`[vibes] data/icons.data.maia lists unknown vibe key "${k}" (no SVG in dashboard-icon-svgs)`,
+				`[vibes] data/icons.data.maia lists unknown vibe key "${k}" (no SVG merged in SEED_DATA.icons)`,
 			)
 		}
 	}
@@ -98,8 +94,9 @@ export function buildSeedConfig(vibeRegistries) {
 		assignLabeledBucket(merged.wasms, registry.wasms)
 		Object.assign(merged.data, registry.data || {})
 	}
-	const vibeKeysForIcons = validRegistries.map((r) => getVibeKey(r.vibe)).filter(Boolean)
-	merged.data.dashboardIconCotexts = dashboardIconCotextSeedRows(vibeKeysForIcons)
+	if (validRegistries.length > 0) {
+		merged.data.icons = SEED_DATA.icons
+	}
 	for (const [, config] of Object.entries(merged.actors)) {
 		const inboxId = deriveInboxId(config.$label)
 		if (inboxId) {
@@ -454,7 +451,7 @@ export function getSeedConfig() {
 	}
 }
 
-export { SEED_DATA } from '@MaiaOS/universe'
+export { SEED_DATA } from '../generated/registry.js'
 
 if (import.meta.hot) {
 	import.meta.hot.accept()

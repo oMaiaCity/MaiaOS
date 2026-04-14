@@ -10,13 +10,13 @@ import {
 	fillRuntimeRefsFromSystemFactories,
 	SPARK_OS_META_FACTORY_CO_ID_KEY,
 } from '@MaiaOS/db'
+import { OPS_PREFIX } from '@MaiaOS/logs'
 import {
 	identityFromMaiaPath,
 	maiaFactoryRefToNanoid,
-} from '@MaiaOS/factories/identity-from-maia-path.js'
-import { removeIdFields } from '@MaiaOS/factories/remove-id-fields'
-import { getVibeKey } from '@MaiaOS/factories/vibe-keys'
-import { OPS_PREFIX } from '@MaiaOS/logs'
+} from '@MaiaOS/validation/identity-from-maia-path.js'
+import { removeIdFields } from '@MaiaOS/validation/remove-id-fields'
+import { getVibeKey } from '@MaiaOS/validation/vibe-keys'
 import { splitGraphemes } from 'unicode-segmenter/grapheme'
 import { bootstrapAccountRegistries, bootstrapAndScaffold } from './bootstrap.js'
 import { seedConfigs } from './configs.js'
@@ -86,7 +86,7 @@ export async function seed(
 		!account.get('registries') || !String(account.get('registries')).startsWith('co_z')
 	if (needsBootstrap) {
 		const { ensureFactoriesLoaded, getAllFactories } = await import(
-			'@MaiaOS/factories/factory-registry'
+			'@MaiaOS/validation/factory-registry'
 		)
 		await ensureFactoriesLoaded()
 		await bootstrapAndScaffold(account, node, schemas || getAllFactories(), peer.dbEngine)
@@ -187,7 +187,7 @@ export async function seed(
 
 	peer.systemFactoryCoIds.set(metaFactoryNanoid, metaSchemaCoId)
 	fillRuntimeRefsFromSystemFactories(peer)
-	const { hydrateValidationMetaFromPeer } = await import('@MaiaOS/factories/validation.helper')
+	const { hydrateValidationMetaFromPeer } = await import('@MaiaOS/validation/validation.helper')
 	await hydrateValidationMetaFromPeer(peer)
 
 	const factoryCoIdMap = new Map()
@@ -310,7 +310,7 @@ export async function seed(
 	let combinedRegistry = await getCombinedRegistry()
 	if (data) {
 		for (const [collectionName] of Object.entries(data)) {
-			if (collectionName === 'dashboardIconCotexts') continue
+			if (collectionName === 'icons') continue
 			const n = identityFromMaiaPath(`${collectionName}.factory.maia`).$nanoid
 			const dataFactoryCoId = combinedRegistry.get(n)
 			if (dataFactoryCoId) {
@@ -465,14 +465,20 @@ export async function seed(
 	}
 
 	const allVibes = configs?.vibes || []
-	const iconCotextRows = data?.dashboardIconCotexts
+	const iconsSeed = data?.icons
 	if (allVibes.length > 0) {
-		if (!Array.isArray(iconCotextRows) || iconCotextRows.length === 0) {
+		if (!iconsSeed || typeof iconsSeed !== 'object') {
 			throw new Error(
-				'[CoJSONSeed] data.dashboardIconCotexts required when configs include vibes (from buildSeedConfig)',
+				'[CoJSONSeed] data.icons required when configs include vibes (from buildSeedConfig / SEED_DATA.icons)',
 			)
 		}
-		const svgByVibeKey = new Map(iconCotextRows.map((r) => [r.vibeKey, r.svg]))
+		const svgByVibeKey = new Map(
+			allVibes.map((v) => {
+				const vibeKey = getVibeKey(v)
+				const svg = vibeKey ? iconsSeed[vibeKey]?.svg : null
+				return [vibeKey, svg]
+			}),
+		)
 		combinedRegistry = refreshCombinedRegistry()
 		const cotextSchemaCoId = factoryCoIdMap.get(identityFromMaiaPath('cotext.factory.maia').$nanoid)
 		if (!cotextSchemaCoId?.startsWith?.('co_z')) {
@@ -486,7 +492,7 @@ export async function seed(
 			const svg = svgByVibeKey.get(vibeKey)
 			if (typeof svg !== 'string' || !svg.trim()) {
 				throw new Error(
-					`[CoJSONSeed] data.dashboardIconCotexts missing or empty for vibe "${vibeKey}" (${iconRef})`,
+					`[CoJSONSeed] data.icons[${JSON.stringify(vibeKey)}].svg missing or empty (${iconRef})`,
 				)
 			}
 			const graphemes = [...splitGraphemes(svg)]

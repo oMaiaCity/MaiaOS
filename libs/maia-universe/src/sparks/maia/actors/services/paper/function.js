@@ -8,7 +8,7 @@ import {
 	createErrorEntry,
 	createErrorResult,
 	createSuccessResult,
-} from '@MaiaOS/factories/operation-result'
+} from '@MaiaOS/universe/helpers/operation-result.js'
 
 /** Cache last value per coId to skip split+diff when unchanged. */
 const _lastValueByCoId = new Map()

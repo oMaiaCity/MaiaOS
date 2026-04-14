@@ -2,9 +2,9 @@
  * Sparks Vibe Loader
  */
 
+import { SparksVibeRegistry } from '../../../../generated/registry.js'
 import { createVibeLoader } from '../../loader.js'
-import { SparksVibeRegistry } from './registry.js'
 
 export const loadSparksVibe = createVibeLoader('sparks', SparksVibeRegistry, ['db', 'sparks'])
 export { MaiaOS } from '../../loader.js'
-export { SparksVibeRegistry } from './registry.js'
+export { SparksVibeRegistry }

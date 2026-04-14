@@ -42,7 +42,7 @@ const globs = [
 		'maia-brand',
 		'maia-db',
 		'maia-distros',
-		'maia-factories',
+		'maia-validation',
 		'maia-game',
 		'maia-language',
 		'maia-logs',

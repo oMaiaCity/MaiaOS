@@ -10,13 +10,13 @@
  */
 
 import { debugLog } from '@MaiaOS/logs'
-import { EXCEPTION_FACTORIES } from '../../factories/registry.js'
-import * as groups from '../groups/groups.js'
 import {
 	extractSchemaFromMessage,
 	isAccountGroupOrProfile,
 	shouldSkipValidation,
-} from '../helpers/co-value-detection.js'
+} from '@MaiaOS/validation/co-value-detection'
+import { EXCEPTION_FACTORIES } from '../../factories/registry.js'
+import * as groups from '../groups/groups.js'
 import { applyPersistentCoValueIndexing } from './factory-index-manager.js'
 
 // Track pending indexing operations to prevent duplicates

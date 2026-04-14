@@ -6,12 +6,12 @@
  * No states/transitions; phase lives in context when needed.
  */
 
-import { resolveExpressions } from '@MaiaOS/factories/expression-resolver'
+import { resolveExpressions } from '@MaiaOS/validation/expression-resolver'
 import {
 	createErrorEntry,
 	isPermissionError,
 	isSuccessResult,
-} from '@MaiaOS/factories/operation-result'
+} from '@MaiaOS/validation/operation-result'
 import {
 	perfEnginesChat,
 	perfEnginesPipeline,

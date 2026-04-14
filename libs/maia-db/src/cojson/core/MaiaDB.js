@@ -5,6 +5,7 @@
  * No DBAdapter interface. Direct CoJSON operations.
  */
 
+import { wrapSyncManagerWithValidation } from '@MaiaOS/validation/validation-hook-wrapper'
 import { ReactiveStore } from '../../reactive-store.js'
 import { getGlobalCoCache } from '../cache/coCache.js'
 import * as crudCreate from '../crud/create.js'
@@ -28,7 +29,6 @@ import {
 import { getRuntimeRef, RUNTIME_REF } from '../factory/runtime-factory-refs.js'
 import * as groups from '../groups/groups.js'
 import { wrapStorageWithIndexingHooks } from '../indexing/storage-hook-wrapper.js'
-import { wrapSyncManagerWithValidation } from '../sync/validation-hook-wrapper.js'
 
 /** Key used in `registries.sparks` CoMap for the primary OS spark (written at seed). */
 export const SYSTEM_SPARK_REGISTRY_KEY = '°maia'

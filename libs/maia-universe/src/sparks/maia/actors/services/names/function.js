@@ -2,7 +2,7 @@
  * Compute Message Names Actor - @maia/actor/services/names
  * Computes a lookup object mapping message IDs to display names based on role.
  */
-import { createSuccessResult } from '@MaiaOS/factories/operation-result'
+import { createSuccessResult } from '@MaiaOS/universe/helpers/operation-result.js'
 
 export default {
 	async execute(_actor, payload) {

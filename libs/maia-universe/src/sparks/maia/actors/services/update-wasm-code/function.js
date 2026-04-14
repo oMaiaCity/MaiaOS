@@ -5,12 +5,12 @@
  * Supports UPDATE_WASM_CODE (persist) and GET_WASM_CODE (read live code).
  */
 
+import { readStore } from '@MaiaOS/runtime/utils/resolve-helpers.js'
 import {
 	createErrorEntry,
 	createErrorResult,
 	createSuccessResult,
-} from '@MaiaOS/factories/operation-result'
-import { readStore } from '@MaiaOS/runtime/utils/resolve-helpers.js'
+} from '@MaiaOS/universe/helpers/operation-result.js'
 import { splitGraphemes } from 'unicode-segmenter/grapheme'
 
 async function resolveCodeCoId(os, actorCoId) {

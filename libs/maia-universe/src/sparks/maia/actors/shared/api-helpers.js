@@ -3,7 +3,7 @@
  * DRY: Single getApiBaseUrl and toStructuredErrors for @ai/chat, etc.
  */
 
-import { createErrorEntry } from '@MaiaOS/factories/operation-result'
+import { createErrorEntry } from '@MaiaOS/universe/helpers/operation-result.js'
 
 /**
  * Get API base URL for sync service (LLM, sync, agent API).

@@ -5,7 +5,7 @@
  * Validates updates BEFORE applying them to CRDT (before content.set() calls).
  */
 
-import { loadFactoryAndValidate } from '@MaiaOS/factories/validation.helper'
+import { loadFactoryAndValidate } from '@MaiaOS/validation/validation.helper'
 import { invalidateResolvedDataForMutatedCoValue } from '../cache/coCache.js'
 import { resolve } from '../factory/resolver.js'
 import * as collectionHelpers from './collection-helpers.js'

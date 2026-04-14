@@ -3,7 +3,7 @@
  */
 
 import { createCoValueForSpark } from '@MaiaOS/db'
-import { removeIdFields } from '@MaiaOS/factories/remove-id-fields'
+import { removeIdFields } from '@MaiaOS/validation/remove-id-fields'
 
 /**
  * @param {{ node: import('@cojson/cojson').LocalNode, account: unknown, guardian: unknown }} ctx

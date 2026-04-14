@@ -1103,7 +1103,7 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 
 		if (peerSyncSeed) {
 			const { ensureFactoriesLoaded, getAllFactories } = await import(
-				'@MaiaOS/factories/factory-registry'
+				'@MaiaOS/validation/factory-registry'
 			)
 			await ensureFactoriesLoaded()
 			const { getAllVibeRegistries } = await import('@MaiaOS/universe')

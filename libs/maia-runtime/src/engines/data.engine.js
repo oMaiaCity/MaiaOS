@@ -15,14 +15,14 @@ import {
 	RUNTIME_REF,
 } from '@MaiaOS/db'
 import { buildSystemFactoryCoIdsFromSparkOs } from '@MaiaOS/db/factory/system-factories-from-os'
-import { resolveExpressions } from '@MaiaOS/factories/expression-resolver'
+import { debugLog, debugWarn, traceDataCreate } from '@MaiaOS/logs'
+import { resolveExpressions } from '@MaiaOS/validation/expression-resolver'
 import {
 	createErrorEntry,
 	createErrorResult,
 	createSuccessResult,
 	isPermissionError,
-} from '@MaiaOS/factories/operation-result'
-import { debugLog, debugWarn, traceDataCreate } from '@MaiaOS/logs'
+} from '@MaiaOS/validation/operation-result'
 import { calcPatch } from 'fast-myers-diff'
 import {
 	requireDataEngine,
@@ -1067,7 +1067,7 @@ export class DataEngine {
 
 		const cob = getRuntimeRef(peer, RUNTIME_REF.DATA_COBINARY)
 		if (cob) this.cobinaryFactoryCoId = cob
-		const { hydrateValidationMetaFromPeer } = await import('@MaiaOS/factories/validation.helper')
+		const { hydrateValidationMetaFromPeer } = await import('@MaiaOS/validation/validation.helper')
 		await hydrateValidationMetaFromPeer(peer)
 	}
 

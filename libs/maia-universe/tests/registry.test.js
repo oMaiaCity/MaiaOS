@@ -1,9 +1,8 @@
 import { describe, expect, test } from 'bun:test'
-import { identityFromMaiaPath } from '../src/helpers/annotate-maia.js'
+import { identityFromMaiaPath } from '../src/helpers/identity-from-maia-path.js'
 import {
 	ALL_VIBE_REGISTRIES,
 	getAllVibeRegistries,
-	ICON_SVG_BY_KEY,
 	MAIA_SPARK_REGISTRY,
 	SEED_DATA,
 } from '../src/registry.js'
@@ -23,10 +22,10 @@ describe('maia registry (generated)', () => {
 		expect(SEED_DATA.todos).toBeDefined()
 	})
 
-	test('dashboard icon SVG map covers vibe keys', () => {
+	test('SEED_DATA.icons has svg for each dashboard vibe key', () => {
 		for (const k of SEED_DATA.icons.dashboardVibeKeys) {
-			expect(typeof ICON_SVG_BY_KEY[k]).toBe('string')
-			expect(ICON_SVG_BY_KEY[k].length).toBeGreaterThan(0)
+			expect(typeof SEED_DATA.icons[k]?.svg).toBe('string')
+			expect(SEED_DATA.icons[k].svg.length).toBeGreaterThan(0)
 		}
 	})
 

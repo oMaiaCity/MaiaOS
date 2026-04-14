@@ -2,11 +2,11 @@
  * Seeding helpers - pure utilities and ensureSparkOs
  */
 
+import { metaFactorySchemaRaw } from '@MaiaOS/universe'
 import {
 	identityFromMaiaPath,
 	withCanonicalFactorySchema,
-} from '@MaiaOS/factories/identity-from-maia-path.js'
-import { metaFactorySchemaRaw } from '@MaiaOS/universe'
+} from '@MaiaOS/validation/identity-from-maia-path.js'
 
 /** @type {object | null} */
 let mergedMetaSchemaCache = null

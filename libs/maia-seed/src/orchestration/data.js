@@ -3,7 +3,7 @@
  */
 
 import { createCoValueForSpark } from '@MaiaOS/db'
-import { identityFromMaiaPath } from '@MaiaOS/factories/identity-from-maia-path.js'
+import { identityFromMaiaPath } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { splitGraphemes } from 'unicode-segmenter/grapheme'
 
 const DEFAULT_PAPER_TEXT = "Dear future us, what we're creating together..."
@@ -29,7 +29,7 @@ export async function seedData(account, node, maiaGroup, peer, data, seedRegistr
 	const getAll = registry
 
 	for (const [collectionName, collectionItems] of Object.entries(data)) {
-		if (collectionName === 'dashboardIconCotexts') continue
+		if (collectionName === 'icons') continue
 		if (!Array.isArray(collectionItems)) continue
 
 		const factoryCoId = registry.get(identityFromMaiaPath(`${collectionName}.factory.maia`).$nanoid)
