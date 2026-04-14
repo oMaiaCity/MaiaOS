@@ -1,5 +1,5 @@
 # Production (main): Fly app `maia-city` only — coming soon + AASA at maia.city.
-# Sync + full SPA deploy from `next` (deploy-next.yml).
+# Production landing only. App + sync deploy from `next` via `.github/workflows/next.yml`.
 
 name: Deploy Main (landing)
 
