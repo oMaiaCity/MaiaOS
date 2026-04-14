@@ -1,7 +1,7 @@
 /**
  * Postgres Adapter for CoJSON Storage
  *
- * Implements DBClientInterfaceAsync using node-postgres (pg).
+ * Implements DBClientInterfaceAsync using Bun's native SQL driver (`bun` package).
  * Uses shared schema from ../schema/postgres.js (same as PGlite).
  * For Fly.io Managed Postgres: set PEER_SYNC_STORAGE=postgres and PEER_SYNC_DB_URL.
  *
@@ -11,28 +11,29 @@
  */
 
 import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
+import { SQL } from 'bun'
 import { emptyKnownState, logger } from 'cojson'
 import { StorageApiAsync } from 'cojson/dist/storage/storageAsync.js'
 import { DeletedCoValueDeletionStatus } from 'cojson/dist/storage/types.js'
-import pg from 'pg'
 import { normalizePostgresConnectionString } from '../normalizePostgresUrl.js'
 import { runMigrations } from '../schema/postgres.js'
 
 const opsStor = createOpsLogger('STORAGE')
 
 /**
- * Serialize queries on a single pg.Client. pg@9 deprecates overlapping client.query() calls.
+ * @param {import('bun').SQL} sql
+ * @returns {{ query: (text: string, params?: unknown[]) => Promise<{ rows: unknown[] }>, exec: (text: string) => Promise<void> }}
  */
-function wrapSerializingClient(client) {
-	let tail = Promise.resolve()
-	const enqueue = (fn) => {
-		const p = tail.then(fn)
-		tail = p.catch(() => {})
-		return p
-	}
+function createSqlDbInterface(sql) {
 	return {
-		query: (sql, params) => enqueue(() => client.query(sql, params)),
-		exec: (sql) => enqueue(() => client.query(sql)),
+		query: async (text, params) => {
+			const raw = await sql.unsafe(text, params ?? [])
+			const rows = Array.isArray(raw) ? raw : [...raw]
+			return { rows }
+		},
+		exec: async (text) => {
+			await sql.unsafe(text)
+		},
 	}
 }
 
@@ -152,9 +153,14 @@ class PostgresTransaction {
  * @param {import('../blob/interface.js').BlobStore} [blobStore] - optional blob store for binary offloading
  */
 class PostgresClient {
-	constructor(client, blobStore) {
-		this.client = client
-		this.db = client
+	/**
+	 * @param {object} sql - Bun SQL connection (close())
+	 * @param {{ query: Function, exec: Function }} db
+	 * @param {import('../blob/interface.js').BlobStore} [blobStore]
+	 */
+	constructor(sql, db, blobStore) {
+		this._sql = sql
+		this.db = db
 		/** @type {import('../blob/interface.js').BlobStore | null} */
 		this._blobStore = blobStore || null
 		this._binaryCoValueRowIDs = new Set()
@@ -385,17 +391,16 @@ export async function createPostgresAdapter(connectionString, blobStore) {
 	}
 
 	const normalized = normalizePostgresConnectionString(connectionString)
-	const client = new pg.Client({ connectionString: normalized })
-	await client.connect()
+	const sql = new SQL(normalized)
+	const db = createSqlDbInterface(sql)
 
 	if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
 		opsStor.log('Postgres connected, running migrations...')
 	}
 
-	const db = wrapSerializingClient(client)
 	await runMigrations(db)
 
-	return new PostgresClient(client, blobStore)
+	return new PostgresClient(sql, db, blobStore)
 }
 
 /**

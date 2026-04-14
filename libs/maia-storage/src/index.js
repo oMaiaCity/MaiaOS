@@ -5,4 +5,4 @@
  * clearStorageForReseed is Node-only (uses pg, fs). Import from '@MaiaOS/storage/clearStorageForReseed'.
  */
 
-export { getStorage } from './getStorage.js'
+export { getStorage } from './getStorage.node.js'

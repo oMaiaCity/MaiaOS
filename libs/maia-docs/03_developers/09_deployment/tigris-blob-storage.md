@@ -153,4 +153,4 @@ When `BUCKET_NAME` is set, the sync service uses `TigrisBlobStore` (S3). When un
 - [Fly.io Tigris docs](https://fly.io/docs/tigris/)
 - [Tigris S3 API compatibility](https://www.tigrisdata.com/docs/api/s3)
 
-**Source:** `libs/maia-storage/src/blob/`, `libs/maia-storage/src/getStorage.js`
+**Source:** `libs/maia-storage/src/blob/`, `libs/maia-storage/src/getStorage.node.js`

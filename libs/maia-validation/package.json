@@ -25,7 +25,6 @@
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/universe": "workspace:*",
-		"@noble/hashes": "2.0.1",
 		"ajv": "8.17.1",
 		"unicode-segmenter": "0.15.0"
 	},

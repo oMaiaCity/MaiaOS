@@ -2,10 +2,10 @@
 import { spawnSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
 /**
- * Maia dev server: static /brand/* + /runanywhere-wasm/* + Bun HTML bundling with HMR.
+ * Maia dev server: static /brand/* + Bun HTML bundling with HMR.
  * bun index.html serves index.html for ALL paths (SPA fallback) - so /brand/logo.svg
- * would return HTML. We serve brand and WASM first, then delegate to Bun's HTML dev for the app.
- * COOP/COEP headers required for RunAnywhere SharedArrayBuffer (multi-threaded WASM).
+ * would return HTML. We serve brand first, then delegate to Bun's HTML dev for the app.
+ * COOP/COEP headers for SharedArrayBuffer (e.g. PGlite WASM in sync/client).
  */
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -62,35 +62,6 @@ const MIME = {
 	'.mjs': 'application/javascript',
 	'.wasm': 'application/wasm',
 	'.glb': 'model/gltf-binary',
-}
-
-// RunAnywhere WASM: serve from maia dist, distros output, or node_modules (dev)
-const llamaWasmDir = join(repoRoot, 'node_modules/@runanywhere/web-llamacpp/wasm')
-const onnxSherpaDir = join(repoRoot, 'node_modules/@runanywhere/web-onnx/wasm/sherpa')
-const maiaDistWasmDir = join(serviceDir, 'dist/runanywhere-wasm')
-const distrosWasmDir = join(repoRoot, 'libs/maia-distros/output/runanywhere-wasm')
-
-function resolveRunAnywhereWasmPath(pathname) {
-	const prefix = '/runanywhere-wasm/'
-	if (!pathname.startsWith(prefix)) return null
-	const rel = pathname.slice(prefix.length)
-	if (rel.startsWith('sherpa/')) {
-		const file = rel.slice(7)
-		for (const base of [maiaDistWasmDir, distrosWasmDir]) {
-			const p = join(base, 'sherpa', file)
-			if (existsSync(p) && statSync(p).isFile()) return p
-		}
-		const onnxPath = join(onnxSherpaDir, file)
-		if (existsSync(onnxPath) && statSync(onnxPath).isFile()) return onnxPath
-		return null
-	}
-	for (const base of [maiaDistWasmDir, distrosWasmDir]) {
-		const p = join(base, rel)
-		if (existsSync(p) && statSync(p).isFile()) return p
-	}
-	const llamaPath = join(llamaWasmDir, rel)
-	if (existsSync(llamaPath) && statSync(llamaPath).isFile()) return llamaPath
-	return null
 }
 
 console.log(
@@ -189,7 +160,6 @@ Bun.serve({
 			}
 		}
 
-		// Serve RunAnywhere WASM (llamacpp + sherpa) with correct MIME types
 		if (pathname === '/game-workers/terrain-height-worker.js') {
 			if (existsSync(terrainWorkerBundled) && statSync(terrainWorkerBundled).isFile()) {
 				return new Response(Bun.file(terrainWorkerBundled), {
@@ -200,16 +170,6 @@ Bun.serve({
 				'terrain-height-worker not built — run: cd libs/maia-game && bun run build:terrain-worker',
 				{ status: 503, headers: COOP_COEP },
 			)
-		}
-
-		if (pathname.startsWith('/runanywhere-wasm/')) {
-			const filePath = resolveRunAnywhereWasmPath(pathname)
-			if (filePath && existsSync(filePath) && statSync(filePath).isFile()) {
-				const ext = pathname.slice(pathname.lastIndexOf('.'))
-				return new Response(Bun.file(filePath), {
-					headers: { 'Content-Type': MIME[ext] || 'application/octet-stream', ...COOP_COEP },
-				})
-			}
 		}
 
 		// Game assets under /game-assets/ (other files; geodesic-dome.glb is handled in routes)
@@ -247,6 +207,4 @@ Bun.serve({
 	},
 })
 
-console.log(
-	'Local: http://localhost:4200 (brand at /brand; runanywhere-wasm at /runanywhere-wasm; sync at :4201)',
-)
+console.log('Local: http://localhost:4200 (brand at /brand; sync at :4201)')

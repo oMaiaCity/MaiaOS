@@ -178,6 +178,39 @@
 	gap: 0.75rem;
 }
 
+.maia-ai-input-wrap {
+	width: 100%;
+	max-width: 480px;
+	display: flex;
+	gap: 0.5rem;
+	align-items: stretch;
+}
+
+.maia-ai-input {
+	flex: 1;
+	min-width: 0;
+	padding: 0.875rem 1rem;
+	font-size: 1rem;
+	border-radius: 16px;
+	border: 1px solid rgba(0, 0, 0, 0.1);
+	background: #ffffff;
+	color: var(--color-marine-blue);
+}
+
+.maia-ai-input::placeholder {
+	color: var(--color-marine-blue-light);
+}
+
+.maia-ai-input:focus {
+	outline: none;
+	border-color: var(--color-marine-blue);
+	box-shadow: 0 0 0 2px rgba(0, 31, 51, 0.15);
+}
+
+.maia-ai-send .maia-ai-send-icon {
+	display: block;
+}
+
 /* Expandable tab above center button */
 .maia-ai-tab {
 	width: 100%;

@@ -1,3 +1,4 @@
+import { SQL } from 'bun'
 import { normalizePostgresConnectionString } from './normalizePostgresUrl.js'
 
 /**
@@ -25,13 +26,9 @@ export async function clearStorageForReseed(options = {}) {
 		if (!databaseUrl) {
 			throw new Error('[clearStorageForReseed] PEER_SYNC_STORAGE=postgres requires PEER_SYNC_DB_URL')
 		}
-		const pg = await import('pg')
-		const client = new pg.default.Client({
-			connectionString: normalizePostgresConnectionString(databaseUrl),
-		})
-		await client.connect()
+		const sql = new SQL(normalizePostgresConnectionString(databaseUrl))
 		try {
-			await client.query(
+			await sql.unsafe(
 				'TRUNCATE transactions, signatureafter, sessions, covalues, unsynced_covalues, deletedcovalues, schema_version RESTART IDENTITY CASCADE',
 			)
 		} catch (e) {
@@ -41,7 +38,7 @@ export async function clearStorageForReseed(options = {}) {
 				throw e
 			}
 		} finally {
-			await client.end()
+			await sql.close()
 		}
 	} else if (dbPath) {
 		const fs = await import('node:fs/promises')

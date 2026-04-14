@@ -16,7 +16,7 @@ const __dirname = dirname(__filename)
 const PORT = process.env.PORT || 8080
 const DIST_DIR = join(__dirname, 'dist')
 
-/** COOP/COEP required for RunAnywhere SharedArrayBuffer (multi-threaded WASM) */
+/** COOP/COEP for SharedArrayBuffer (e.g. client PGlite WASM) */
 const COOP_COEP = {
 	'Cross-Origin-Opener-Policy': 'same-origin',
 	'Cross-Origin-Embedder-Policy': 'credentialless',
