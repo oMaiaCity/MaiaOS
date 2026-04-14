@@ -47,29 +47,11 @@
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/factories": "workspace:*",
-        "@MaiaOS/loader": "workspace:*",
+        "@MaiaOS/runtime": "workspace:*",
         "@MaiaOS/universe": "workspace:*",
         "@runanywhere/web-llamacpp": "0.1.0-beta.10",
         "@runanywhere/web-onnx": "0.1.0-beta.10",
         "cojson-transport-ws": "0.20.16",
-      },
-    },
-    "libs/maia-engines": {
-      "name": "@MaiaOS/engines",
-      "version": "26.4.21315-next",
-      "dependencies": {
-        "@MaiaOS/db": "workspace:*",
-        "@MaiaOS/factories": "workspace:*",
-        "@MaiaOS/logs": "workspace:*",
-        "@MaiaOS/universe": "workspace:*",
-        "@jitl/quickjs-singlefile-cjs-release-sync": "0.32.0",
-        "dompurify": "3.3.3",
-        "fast-myers-diff": "3.2.0",
-        "marked": "15.0.12",
-        "quickjs-emscripten-core": "0.32.0",
-      },
-      "devDependencies": {
-        "cojson": "0.20.16",
       },
     },
     "libs/maia-factories": {
@@ -94,19 +76,6 @@
       "name": "@maia/language",
       "version": "26.4.21315-next",
     },
-    "libs/maia-loader": {
-      "name": "@MaiaOS/loader",
-      "version": "26.4.21315-next",
-      "dependencies": {
-        "@MaiaOS/db": "workspace:*",
-        "@MaiaOS/engines": "workspace:*",
-        "@MaiaOS/factories": "workspace:*",
-        "@MaiaOS/maia-ucan": "workspace:*",
-        "@MaiaOS/self": "workspace:*",
-        "@MaiaOS/universe": "workspace:*",
-        "cojson-transport-ws": "0.20.16",
-      },
-    },
     "libs/maia-logs": {
       "name": "@MaiaOS/logs",
       "version": "26.4.21315-next",
@@ -119,6 +88,27 @@
         "@MaiaOS/storage": "workspace:*",
         "cojson": "0.20.16",
         "cojson-transport-ws": "0.20.16",
+      },
+    },
+    "libs/maia-runtime": {
+      "name": "@MaiaOS/runtime",
+      "version": "26.4.21315-next",
+      "dependencies": {
+        "@MaiaOS/db": "workspace:*",
+        "@MaiaOS/factories": "workspace:*",
+        "@MaiaOS/logs": "workspace:*",
+        "@MaiaOS/maia-ucan": "workspace:*",
+        "@MaiaOS/self": "workspace:*",
+        "@MaiaOS/universe": "workspace:*",
+        "@jitl/quickjs-singlefile-cjs-release-sync": "0.32.0",
+        "cojson-transport-ws": "0.20.16",
+        "dompurify": "3.3.3",
+        "fast-myers-diff": "3.2.0",
+        "marked": "15.0.12",
+        "quickjs-emscripten-core": "0.32.0",
+      },
+      "devDependencies": {
+        "cojson": "0.20.16",
       },
     },
     "libs/maia-seed": {
@@ -168,6 +158,7 @@
       "name": "@MaiaOS/universe",
       "version": "26.4.21315-next",
       "dependencies": {
+        "@MaiaOS/runtime": "workspace:*",
         "@noble/hashes": "2.0.1",
       },
     },
@@ -177,11 +168,11 @@
       "dependencies": {
         "@MaiaOS/factories": "workspace:*",
         "@MaiaOS/game": "workspace:*",
-        "@MaiaOS/loader": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/maia-ai": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
+        "@MaiaOS/runtime": "workspace:*",
         "@MaiaOS/universe": "workspace:*",
         "@tauri-apps/api": "2.10.1",
       },
@@ -194,10 +185,10 @@
       "version": "26.4.21315-next",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
-        "@MaiaOS/loader": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
         "@MaiaOS/maia-ucan": "workspace:*",
+        "@MaiaOS/runtime": "workspace:*",
         "@MaiaOS/seed": "workspace:*",
         "@MaiaOS/storage": "workspace:*",
         "@MaiaOS/universe": "workspace:*",
@@ -211,13 +202,9 @@
 
     "@MaiaOS/db": ["@MaiaOS/db@workspace:libs/maia-db"],
 
-    "@MaiaOS/engines": ["@MaiaOS/engines@workspace:libs/maia-engines"],
-
     "@MaiaOS/factories": ["@MaiaOS/factories@workspace:libs/maia-factories"],
 
     "@MaiaOS/game": ["@MaiaOS/game@workspace:libs/maia-game"],
-
-    "@MaiaOS/loader": ["@MaiaOS/loader@workspace:libs/maia-loader"],
 
     "@MaiaOS/logs": ["@MaiaOS/logs@workspace:libs/maia-logs"],
 
@@ -228,6 +215,8 @@
     "@MaiaOS/maia-ucan": ["@MaiaOS/maia-ucan@workspace:libs/maia-ucan"],
 
     "@MaiaOS/peer": ["@MaiaOS/peer@workspace:libs/maia-peer"],
+
+    "@MaiaOS/runtime": ["@MaiaOS/runtime@workspace:libs/maia-runtime"],
 
     "@MaiaOS/seed": ["@MaiaOS/seed@workspace:libs/maia-seed"],
 

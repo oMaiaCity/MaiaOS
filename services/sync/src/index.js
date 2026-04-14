@@ -25,6 +25,8 @@ import {
 	RUNTIME_REF,
 	resolveInfraFactoryCoId,
 } from '@MaiaOS/db'
+import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
+import { agentIDToDidKey, verifyInvocationToken } from '@MaiaOS/maia-ucan'
 import {
 	createWebSocketPeer,
 	DataEngine,
@@ -36,9 +38,7 @@ import {
 	removeGroupMember,
 	SYSTEM_SPARK_REGISTRY_KEY,
 	waitForStoreReady,
-} from '@MaiaOS/loader'
-import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
-import { agentIDToDidKey, verifyInvocationToken } from '@MaiaOS/maia-ucan'
+} from '@MaiaOS/runtime'
 import { buildSeedConfig, filterVibesForSeeding, getSeedConfig } from '@MaiaOS/seed'
 import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'

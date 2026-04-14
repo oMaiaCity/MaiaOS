@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"baseUrl": ".",
 		"paths": {
-			"@MaiaOS/loader": ["../../libs/maia-loader/src/index.js"]
+			"@MaiaOS/runtime": ["../../libs/maia-runtime/src/index.js"]
 		}
 	}
 }

@@ -10,7 +10,7 @@ The `@MaiaOS/vibes` package contains pre-built vibe configurations (`.maia` file
 - ✅ **Example apps** - Reference implementations (Todos, MyData, MaiaAgent)
 
 **What it isn't:**
-- ❌ **Not the loader** - Boot process is in `@MaiaOS/loader`
+- ❌ **Not the loader** - Boot process is in `@MaiaOS/runtime`
 - ❌ **Not the vibe system** - Vibe concept is documented in creator docs
 - ❌ **Not a build tool** - Vibes are just JSON configs, no compilation needed
 
@@ -233,7 +233,7 @@ The `maia-loader` package uses vibes for:
 - Seeding vibe configs during boot (if needed)
 - Creating root actors from vibe manifests
 
-**See:** `libs/maia-loader/src/loader.js`
+**See:** `libs/maia-runtime/src/loader.js`
 
 ### With maia-engines
 
@@ -242,7 +242,7 @@ The `maia-engines` package uses vibes for:
 - Creating actors from vibe registries
 - Executing vibe state machines
 
-**See:** `libs/maia-engines/src/engines/actor.engine.js`
+**See:** `libs/maia-runtime/src/engines/actor.engine.js`
 
 ---
 

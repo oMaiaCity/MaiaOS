@@ -217,7 +217,7 @@ Sign in with existing passkey.
 
 ### `subscribeSyncState(listener)` ⚠️ Moved to `@MaiaOS/db`
 
-**Note:** This function has been moved to `@MaiaOS/db` for better separation of concerns. It's still available via `@MaiaOS/loader` bundle for convenience.
+**Note:** This function has been moved to `@MaiaOS/db` for better separation of concerns. It's still available via `@MaiaOS/runtime` bundle for convenience.
 
 Subscribe to sync status changes.
 
@@ -231,7 +231,7 @@ Subscribe to sync status changes.
 
 **Example:**
 ```javascript
-import { subscribeSyncState } from '@MaiaOS/loader'; // or '@MaiaOS/db'
+import { subscribeSyncState } from '@MaiaOS/runtime'; // or '@MaiaOS/db'
 
 const unsub = subscribeSyncState((state) => {
   console.log("Sync:", state.connected ? "Online" : "Offline");
@@ -259,8 +259,8 @@ Strictly require PRF support (throws on unsupported browsers).
 
 ```javascript
 // In your app initialization
-import { signInWithPasskey, signUpWithPasskey, subscribeSyncState } from '@MaiaOS/loader';
-import { MaiaOS } from '@MaiaOS/loader';
+import { signInWithPasskey, signUpWithPasskey, subscribeSyncState } from '@MaiaOS/runtime';
+import { MaiaOS } from '@MaiaOS/runtime';
 
 async function init() {
   // Check PRF support first

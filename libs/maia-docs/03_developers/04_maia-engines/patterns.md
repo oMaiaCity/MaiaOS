@@ -9,7 +9,7 @@ Common usage patterns and solutions to frequent problems.
 ### Pattern 1: Custom Module with Tools
 
 ```javascript
-// Built-in modules are defined in libs/maia-engines/src/modules/registry.js
+// Built-in modules are defined in libs/maia-runtime/src/modules/registry.js
 // To add a custom module, extend BUILTIN_MODULES or register at boot:
 // registry.registerModule('mymodule', module, config)
 

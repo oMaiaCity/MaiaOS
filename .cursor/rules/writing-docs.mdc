@@ -198,11 +198,11 @@ Structure developer docs by package:
 
 **Example:**
 ```markdown
-# maia-loader: Core System Services
+# maia-runtime: Core System Services
 
 ## Overview
 
-The `maia-loader` package provides the foundational services that power MaiaOS. Think of it as the operating system kernel - it doesn't do much on its own, but everything else depends on it.
+The `@MaiaOS/runtime` package provides engines, `MaiaOS` boot, and re-exports for db/self/sync transport. Think of it as the OS runtime — services import it (often via maia-distros bundles).
 
 ## Architecture
 
@@ -212,7 +212,7 @@ The core system is organized into:
 - **Engines**: Processing systems (validation, transformation)
 - **Utils**: Shared utilities
 
-See `libs/maia-loader/src/` for implementation.
+See `libs/maia-runtime/src/` for implementation (`@MaiaOS/runtime`).
 ```
 
 ### Target Group 3: LLM Agents (`libs/maia-docs/04_agents/`)
@@ -471,7 +471,7 @@ maia-script/
 - [Main README](./README.md) - Package overview
 - [engines.md](./engines.md) - Engine details
 - [expressions.md](./expressions.md) - Expression language
-- [maia-loader Package](../02_maia-loader/README.md) - Boot process
+- [Boot / loader docs](../02_maia-loader/README.md) - `@MaiaOS/runtime` (same doc folder; source in `libs/maia-runtime`)
 ```
 
 ### File Naming Conventions

@@ -1,6 +1,6 @@
 /**
  * Sync server bundle entry.
- * Single entry point: @MaiaOS/loader (like client).
+ * Single entry point: @MaiaOS/runtime (like client).
  * Core re-exports db, operations, self internally.
  */
 export {
@@ -8,4 +8,4 @@ export {
 	loadOrCreateAgentAccount,
 	MaiaDB,
 	waitForStoreReady,
-} from '@MaiaOS/loader'
+} from '@MaiaOS/runtime'

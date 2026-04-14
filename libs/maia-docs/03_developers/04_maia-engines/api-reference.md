@@ -1,12 +1,12 @@
 # API Reference
 
-Complete API reference for `@MaiaOS/engines` package.
+Complete API reference for `@MaiaOS/runtime` package.
 
 ---
 
 ## Exported Engines and Runtime
 
-All engines are exported from `@MaiaOS/engines`:
+All engines are exported from `@MaiaOS/runtime`:
 
 ```javascript
 import {
@@ -18,7 +18,7 @@ import {
   MaiaScriptEvaluator,
   ModuleRegistry,
   Runtime,
-} from '@MaiaOS/engines';
+} from '@MaiaOS/runtime';
 ```
 
 **Note:** Inbox logic is in ActorEngine; binary ops (uploadBinary, loadBinaryAsBlob, uploadToCoBinary) are in DataEngine.
@@ -30,7 +30,7 @@ import {
 ### Custom Evaluator
 
 ```javascript
-import { Evaluator as MaiaScriptEvaluator } from '@MaiaOS/engines';
+import { Evaluator as MaiaScriptEvaluator } from '@MaiaOS/runtime';
 
 const evaluator = new MaiaScriptEvaluator();
 
@@ -43,7 +43,7 @@ const result = await evaluator.evaluate(
 ### Custom View Renderer
 
 ```javascript
-import { ViewEngine, MaiaScriptEvaluator, ModuleRegistry } from '@MaiaOS/engines';
+import { ViewEngine, MaiaScriptEvaluator, ModuleRegistry } from '@MaiaOS/runtime';
 
 const evaluator = new MaiaScriptEvaluator();
 const registry = new ModuleRegistry();
@@ -73,7 +73,7 @@ const unsubscribe = store.subscribe((data) => {
 
 ## Package Exports
 
-Defined in `libs/maia-engines/package.json`:
+Defined in `libs/maia-runtime/package.json`:
 
 ```json
 {

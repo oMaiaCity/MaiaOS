@@ -26,7 +26,7 @@ services/app (@MaiaOS/app)
         └── three  (^0.170.x) — only runtime dependency of the game library
 ```
 
-The app also depends on `@MaiaOS/loader`, `@MaiaOS/maia-ai`, `@MaiaOS/maia-distros` for the rest of the SPA (sync, AI shell, bundles). Those are **orthogonal** to the game except they share the same HTML shell and navigation.
+The app also depends on `@MaiaOS/runtime`, `@MaiaOS/maia-ai`, `@MaiaOS/maia-distros` for the rest of the SPA (sync, AI shell, bundles). Those are **orthogonal** to the game except they share the same HTML shell and navigation.
 
 ---
 

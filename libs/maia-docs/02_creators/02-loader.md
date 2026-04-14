@@ -24,7 +24,7 @@ Boot **cannot** run with only `modules`. You must authenticate first to get `nod
   <div id="app"></div>
 
   <script type="module">
-    import { MaiaOS, signInWithPasskey } from '@MaiaOS/loader';
+    import { MaiaOS, signInWithPasskey } from '@MaiaOS/runtime';
     import { TodosVibeRegistry } from '@MaiaOS/vibes';
 
     async function boot() {

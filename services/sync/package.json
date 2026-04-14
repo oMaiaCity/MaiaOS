@@ -12,7 +12,7 @@
 		"@MaiaOS/seed": "workspace:*",
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/logs": "workspace:*",
-		"@MaiaOS/loader": "workspace:*",
+		"@MaiaOS/runtime": "workspace:*",
 		"@MaiaOS/universe": "workspace:*",
 		"@MaiaOS/storage": "workspace:*",
 		"@MaiaOS/maia-distros": "workspace:*",

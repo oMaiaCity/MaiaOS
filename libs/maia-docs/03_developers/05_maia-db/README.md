@@ -11,7 +11,7 @@ The `@MaiaOS/db` package provides **MaiaDB** – the storage layer for MaiaOS. C
 - ✅ **Schema integration** - Schema metadata utilities for CoValues
 
 **What it isn't:**
-- ❌ **Not the data API** - **maia.do()** (DataEngine) is in `@MaiaOS/engines`
+- ❌ **Not the data API** - **maia.do()** (DataEngine) is in `@MaiaOS/runtime`
 - ❌ **Not the P2P layer** - Node, account, sync are in `@MaiaOS/peer`
 
 ---

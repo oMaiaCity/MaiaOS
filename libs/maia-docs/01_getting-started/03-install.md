@@ -216,10 +216,10 @@ my-app/
 ## Resources
 
 - **Examples:** `libs/maia-vibes/src/todos/`
-- **Loader:** `libs/maia-loader/src/loader.js`
-- **Engines:** `libs/maia-engines/src/engines/`
+- **Loader:** `libs/maia-runtime/src/loader.js`
+- **Engines:** `libs/maia-runtime/src/engines/`
 - **Actors:** `libs/maia-actors/`
-- **Modules:** `libs/maia-engines/src/modules/`
+- **Modules:** `libs/maia-runtime/src/modules/`
 - **Docs:** `libs/maia-docs/`
 
 ## Support

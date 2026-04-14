@@ -199,7 +199,7 @@ The vibe root actor orchestrates the application and loads UI actors as children
   <div id="app-container"></div>
   
   <script type="module">
-    import { MaiaOS, signInWithPasskey } from '@MaiaOS/loader';
+    import { MaiaOS, signInWithPasskey } from '@MaiaOS/runtime';
     import { TodosVibeRegistry } from '@MaiaOS/vibes';
     
     async function boot() {

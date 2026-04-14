@@ -1,12 +1,12 @@
 # API Reference
 
-Complete API reference for `@MaiaOS/loader` package.
+Complete API reference for `@MaiaOS/runtime` package.
 
 ---
 
 ## Re-exports (single-entry pattern)
 
-Services (app, sync) import only from `@MaiaOS/loader`. Loader re-exports everything needed:
+Services (app, sync) import only from `@MaiaOS/runtime`. Loader re-exports everything needed:
 
 | Export | Source | Use |
 |--------|--------|-----|
@@ -42,7 +42,7 @@ Boots the MaiaOS operating system. Authentication is integrated into boot—you 
 
 **Example:**
 ```javascript
-import { MaiaOS, signInWithPasskey } from '@MaiaOS/loader';
+import { MaiaOS, signInWithPasskey } from '@MaiaOS/runtime';
 
 // Human mode: authenticate first
 const { accountID, agentSecret, loadingPromise } = await signInWithPasskey({ salt: "maia.city" });

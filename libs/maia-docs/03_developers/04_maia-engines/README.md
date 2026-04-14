@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `@MaiaOS/engines` package provides the execution components that power MaiaOS. Merged from maia-script + maia-operations. Think of it as the factory floor where all the work happens - engines process your definitions, modules provide tools, and **DataEngine** executes **maia.do({ op, factory, key, ... })**.
+The `@MaiaOS/runtime` package provides the execution components that power MaiaOS. Merged from maia-script + maia-operations. Think of it as the factory floor where all the work happens - engines process your definitions, modules provide tools, and **DataEngine** executes **maia.do({ op, factory, key, ... })**.
 
 **What it is:**
 - ✅ **DataEngine** – Public data API: **maia.do({ op, factory, key, filter, ... })**
@@ -12,7 +12,7 @@ The `@MaiaOS/engines` package provides the execution components that power MaiaO
 - ✅ **Runtime** – Browser runtime for actor lifecycle and inbox watching
 
 **What it isn't:**
-- ❌ **Not the loader** – Boot process is in `@MaiaOS/loader`
+- ❌ **Not the loader** – Boot process is in `@MaiaOS/runtime`
 - ❌ **Not tool definitions** – Tools are in `@MaiaOS/tools`
 - ❌ **Not schemas** – Schema validation is in `@MaiaOS/factories`
 
@@ -41,7 +41,7 @@ Think of `maia-engines` like a factory with specialized workers:
 ### Package Structure
 
 ```
-libs/maia-engines/src/
+libs/maia-runtime/src/
 ├── engines/                  # Core execution engines (flat structure)
 │   ├── data.engine.js        # DataEngine – maia.do({ op, factory, key, ... }) + binary ops
 │   ├── actor.engine.js       # Inbox logic integrated here
@@ -100,7 +100,7 @@ For full system usage, see the [maia-loader Package](../02_maia-loader/README.md
 
 ## Source Files
 
-**Package:** `libs/maia-engines/`
+**Package:** `libs/maia-runtime/`
 
 **Key Files:**
 - `src/engines/data.engine.js` - DataEngine (maia.do) + built-in operations

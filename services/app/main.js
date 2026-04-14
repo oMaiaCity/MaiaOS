@@ -9,6 +9,8 @@
  * - No manual re-seeding needed - Jazz handles persistence and loading
  */
 
+import { applyLogModeFromEnv, createPerfTracer } from '@MaiaOS/logs'
+import { getSyncHttpBaseUrl } from '@MaiaOS/peer'
 import {
 	getCapabilityGrantIndexColistCoId,
 	isPRFSupported,
@@ -19,9 +21,7 @@ import {
 	signUpWithPasskey,
 	subscribeSyncState,
 	updateSyncState,
-} from '@MaiaOS/loader'
-import { applyLogModeFromEnv, createPerfTracer } from '@MaiaOS/logs'
-import { getSyncHttpBaseUrl } from '@MaiaOS/peer'
+} from '@MaiaOS/runtime'
 import { renderApp, toggleMetadataInternalKey } from './db-view.js'
 import { renderLandingPage } from './landing.js'
 import { disposeGlobalAI, initGlobalAI, setFabVisible, updateNavLeft } from './maia-ai-global.js'

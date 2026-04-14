@@ -13,7 +13,7 @@
 	"dependencies": {
 		"@MaiaOS/universe": "workspace:*",
 		"@MaiaOS/db": "workspace:*",
-		"@MaiaOS/loader": "workspace:*",
+		"@MaiaOS/runtime": "workspace:*",
 		"@MaiaOS/factories": "workspace:*",
 		"@runanywhere/web-llamacpp": "0.1.0-beta.10",
 		"@runanywhere/web-onnx": "0.1.0-beta.10",

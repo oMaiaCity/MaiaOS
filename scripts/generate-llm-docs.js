@@ -7,7 +7,7 @@
  * - libs/maia-docs/04_agents/LLM_Creators.md (ARCHITECTURE + creators docs)
  * - libs/maia-docs/04_agents/LLM_Developers.md (ARCHITECTURE + developers docs)
  * - libs/maia-docs/04_agents/LLM_maia-self.md (package-specific: 01_maia-self)
- * - libs/maia-docs/04_agents/LLM_maia-loader.md (package-specific: 02_maia-loader)
+ * - libs/maia-docs/04_agents/LLM_maia-runtime.md (package-specific: 02_maia-loader folder)
  * - libs/maia-docs/04_agents/LLM_maia-factories.md (package-specific: 03_maia-factories)
  * - libs/maia-docs/04_agents/LLM_maia-script.md (package-specific: 04_maia-script)
  * - libs/maia-docs/04_agents/LLM_maia-db.md (package-specific: 05_maia-db)
@@ -72,7 +72,7 @@ async function readMarkdownFiles(dir, baseDir = dir) {
 			}
 		}
 
-		// Sort by path to maintain order (01_maia-self, 02_maia-loader, etc.)
+		// Sort by path to maintain order (01_maia-self, 02_maia-loader docs folder, etc.)
 		return contents.sort((a, b) => a.path.localeCompare(b.path))
 	} catch (_error) {
 		return []

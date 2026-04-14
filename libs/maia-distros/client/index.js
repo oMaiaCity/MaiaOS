@@ -1,5 +1,5 @@
 /**
  * Maia client bundle entry.
- * Re-exports from @MaiaOS/loader (browser build with IndexedDB, human auth).
+ * Re-exports from @MaiaOS/runtime (browser build with IndexedDB, human auth).
  */
-export * from '@MaiaOS/loader'
+export * from '@MaiaOS/runtime'

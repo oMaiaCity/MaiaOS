@@ -14,6 +14,7 @@
 		"./vibes/*": "./src/sparks/maia/vibes/*"
 	},
 	"dependencies": {
+		"@MaiaOS/runtime": "workspace:*",
 		"@noble/hashes": "2.0.1"
 	},
 	"devDependencies": {},

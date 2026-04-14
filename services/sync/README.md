@@ -36,7 +36,7 @@ The sync service consolidates WebSocket sync, agent API, and LLM proxy in one pr
 
 ## Dependencies
 
-- `@MaiaOS/maia-distros` + `@MaiaOS/loader`. Sync imports only from loader; loader re-exports schemata, tools, avens, cojson-transport-ws. maia-distros has no app logic—only bundling. Sync owns the logic (src/index.js); distros bundles it to sync-server.mjs. Prod runs the bundle; dev runs source.
+- `@MaiaOS/maia-distros` + `@MaiaOS/runtime`. Sync imports from runtime (engines + `MaiaOS` boot + db/self); cojson-transport-ws. maia-distros has no app logic—only bundling. Sync owns the logic (src/index.js); distros bundles it to sync-server.mjs. Prod runs the bundle; dev runs source.
 
 ## Development
 
@@ -63,7 +63,7 @@ bun run dev:sync
 Clients connect via kernel bundle, which automatically connects to the sync server:
 
 ```javascript
-import { signUpWithPasskey, setupSyncPeers, subscribeSyncState } from '@MaiaOS/loader'
+import { signUpWithPasskey, setupSyncPeers, subscribeSyncState } from '@MaiaOS/runtime'
 
 // Sync server is used automatically - no API key needed
 const { node, account } = await signUpWithPasskey()
