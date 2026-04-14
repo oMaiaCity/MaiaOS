@@ -64,7 +64,6 @@ The sync service requires persistent storage (never in-memory). Two backends are
 - `PEER_DB_PATH` – Default: `./local-sync.db` (pglite). Ignored when postgres.
 - `PEER_SYNC_DB_URL` – Required when `PEER_SYNC_STORAGE=postgres` (e.g. Neon, Fly Postgres)
 - `AVEN_MAIA_ACCOUNT`, `AVEN_MAIA_SECRET` – Required (run `bun agent:generate`)
-- `PEER_SYNC_MODE` – Optional `seed` only (emergency force clear + reseed). Unset: auto-seed on empty DB; migrate runs every boot. Other values are rejected.
 
 ---
 

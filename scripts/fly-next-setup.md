@@ -47,7 +47,7 @@ flyctl secrets set \
   --app sync-next-maia-city
 ```
 
-**First deploy:** Empty Neon DB is detected automatically; sync runs genesis seed then registry migrate. Optional: `PEER_SYNC_MODE=seed` only if you need to force clear + reseed (emergency); unset afterward.
+**First deploy:** Empty Neon DB is detected automatically; sync runs genesis seed then registry migrate. Remove any legacy `PEER_SYNC_MODE` Fly secret — sync will refuse to start if it is set.
 
 **App secrets:** The app (next-maia-city) has no runtime secrets — `VITE_PEER_SYNC_HOST` and `VITE_PEER_APP_HOST` are build args in fly.toml.
 
@@ -104,7 +104,6 @@ bun run deploy
 | `PEER_SYNC_STORAGE` | — | ✓ | `postgres` (Neon) or `pglite` |
 | `PEER_SYNC_DB_URL` | — | ✓ | Neon connection string |
 | `PEER_DB_PATH` | — | — | Only for PGlite |
-| `PEER_SYNC_MODE` | — | — | Optional `seed` (force reseed); omit for auto-seed on empty DB |
 | `AVEN_MAIA_ACCOUNT` | — | ✓ | Guardian account co-id |
 | `AVEN_MAIA_SECRET` | — | ✓ | Guardian sealer secret |
 | `AVEN_MAIA_GUARDIAN` | — | ✓ | Guardian co-id |

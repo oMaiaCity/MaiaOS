@@ -49,7 +49,7 @@ Empty Postgres + deploy runs genesis seed automatically; registry migrate runs e
 
 ## 4. After First Deploy
 
-No `PEER_SYNC_MODE` secret required. Optional: `PEER_SYNC_MODE=seed` only for emergency force reseed (then unset).
+Remove any legacy `PEER_SYNC_MODE` Fly secret.
 
 ## 5. Verify
 

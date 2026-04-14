@@ -115,7 +115,7 @@ export async function processInbox(peer, actorId, inboxCoId) {
 
 		if (!messageCoId) {
 			throw new Error(
-				'[processInbox] Inbox stream item missing _coId (message must be a CoMap reference). Reseed with PEER_SYNC_MODE=seed.',
+				'[processInbox] Inbox stream item missing _coId (message must be a CoMap reference). Wipe storage and re-run genesis seed if needed.',
 			)
 		}
 
