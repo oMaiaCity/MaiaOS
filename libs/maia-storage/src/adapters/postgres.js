@@ -20,20 +20,43 @@ import { runMigrations } from '../schema/postgres.js'
 
 const opsStor = createOpsLogger('STORAGE')
 
+const TRANSIENT_PG_CODES = new Set([
+	'ERR_POSTGRES_INVALID_MESSAGE',
+	'ERR_POSTGRES_CONNECTION_CLOSED',
+	'ConnectionClosed',
+	'ECONNRESET',
+	'EPIPE',
+])
+
+function isTransientPgError(err) {
+	return (
+		TRANSIENT_PG_CODES.has(err?.code) || /failed to read data|connection closed/i.test(err?.message)
+	)
+}
+
 /**
  * @param {import('bun').SQL} sql
  * @returns {{ query: (text: string, params?: unknown[]) => Promise<{ rows: unknown[] }>, exec: (text: string) => Promise<void> }}
  */
 function createSqlDbInterface(sql) {
+	async function runWithRetry(fn) {
+		try {
+			return await fn()
+		} catch (err) {
+			if (!isTransientPgError(err)) throw err
+			opsStor.warn('Transient Postgres error, retrying once:', err?.code || err?.message)
+			await new Promise((r) => setTimeout(r, 250))
+			return await fn()
+		}
+	}
 	return {
-		query: async (text, params) => {
-			const raw = await sql.unsafe(text, params ?? [])
-			const rows = Array.isArray(raw) ? raw : [...raw]
-			return { rows }
-		},
-		exec: async (text) => {
-			await sql.unsafe(text)
-		},
+		query: (text, params) =>
+			runWithRetry(async () => {
+				const raw = await sql.unsafe(text, params ?? [])
+				const rows = Array.isArray(raw) ? raw : [...raw]
+				return { rows }
+			}),
+		exec: (text) => runWithRetry(() => sql.unsafe(text)),
 	}
 }
 
@@ -391,8 +414,11 @@ export async function createPostgresAdapter(connectionString, blobStore) {
 	}
 
 	const normalized = normalizePostgresConnectionString(connectionString)
-	// Bun pooled SQL (max > 1) forbids sql.unsafe() outside sql.begin/reserve — this adapter uses unsafe everywhere.
-	const sql = new SQL(normalized, { max: 1 })
+	const sql = new SQL(normalized, {
+		max: 1,
+		idleTimeout: 30,
+		connectionTimeout: 30,
+	})
 	const db = createSqlDbInterface(sql)
 
 	if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
