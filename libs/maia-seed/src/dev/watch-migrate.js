@@ -3,7 +3,7 @@
  */
 
 import { execSync, spawnSync } from 'node:child_process'
-import { watch } from 'node:fs'
+import { existsSync, watch } from 'node:fs'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -21,6 +21,7 @@ function repoRootFromThisFile() {
 export function startMaiaMigrateWatch(peer, dataEngine, options = {}) {
 	const rootDir = options.rootDir ?? repoRootFromThisFile()
 	const maiaDir = resolve(rootDir, 'libs/maia-universe/src/sparks/maia')
+	if (!existsSync(maiaDir)) return
 	const genScript = resolve(rootDir, 'scripts/generate-maia-universe-registry.mjs')
 	const regPath = resolve(rootDir, 'libs/maia-universe/src/generated/registry.js')
 
