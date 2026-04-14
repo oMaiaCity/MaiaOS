@@ -21,6 +21,7 @@
 		"./config/derive-inbox.js": "./src/config/derive-inbox.js"
 	},
 	"dependencies": {
+		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/peer": "workspace:*",
 		"@MaiaOS/runtime": "workspace:*",
 		"@noble/hashes": "2.2.0",
