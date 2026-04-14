@@ -11,7 +11,7 @@
  *     - pglite: PEER_DB_PATH (default ./pg-lite.db)
  *     - postgres: PEER_SYNC_DB_URL (required)
  *   AVEN_MAIA_GUARDIAN: Human account co-id (co_z...). If set, add as admin of °maia spark guardian; also seeds /sync/write so that account can sync without POST /register.
- *   Seeding: auto-detect empty DB via SQL (no rows in CoJSON data tables → genesis seed); registry migrate every boot. No PEER_SYNC_MODE (obsolete — remove from env).
+ *   Seeding: auto-detect empty DB via SQL (no rows in CoJSON data tables → genesis seed); registry migrate every boot. PEER_SYNC_MODE is ignored if set (obsolete — remove from Fly when convenient).
  *   SEED_VIBES: Default "all". Which vibes to seed (todos, chat, quickjs, etc). "all" seeds every vibe including quickjs.
  *   Dev: when NODE_ENV is not production, sync watches `.maia` under maia-universe and live-migrates after registry regen. Production (Fly) sets NODE_ENV=production, so watch is off.
  *   PEER_APP_HOST: Allowed CORS origin (e.g. https://next.maia.city). When set, only that origin can call sync/LLM in production. Unset = * (dev).
@@ -73,8 +73,8 @@ const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
 
 const avenMaiaGuardian = process.env.AVEN_MAIA_GUARDIAN?.trim() || null
 if ((process.env.PEER_SYNC_MODE ?? '').trim() !== '') {
-	throw new Error(
-		`${OPS_PREFIX.sync} PEER_SYNC_MODE is obsolete — remove it from .env and Fly secrets. To reseed: wipe Postgres/PGlite/Tigris data manually, then restart sync.`,
+	opsSync.warn(
+		'PEER_SYNC_MODE is set but ignored (obsolete). Remove from Fly secrets / .env when convenient — reseed by wiping Postgres/PGlite/Tigris data manually.',
 	)
 }
 const maiaDevMigrateWatch = process.env.NODE_ENV !== 'production'

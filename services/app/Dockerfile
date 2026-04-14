@@ -22,8 +22,9 @@ ENV VITE_PEER_APP_HOST=$VITE_PEER_APP_HOST
 
 ENV HUSKY=0
 RUN bun install
-RUN bun run universe:registry
-RUN bun run distros:build
+# GIT_SHA must change per commit so remote BuildKit cannot reuse a stale distros bundle layer
+ARG GIT_SHA=unknown
+RUN echo "GIT_SHA=${GIT_SHA}" && bun run universe:registry && bun run distros:build
 
 # Generate favicons (sync-assets runs inside build.js, outputs to dist/brand)
 RUN bun scripts/generate-favicons.js

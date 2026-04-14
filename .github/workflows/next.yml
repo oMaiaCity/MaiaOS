@@ -63,6 +63,7 @@ jobs:
       url: https://sync.next.maia.city/health
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      GITHUB_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
 
@@ -89,6 +90,7 @@ jobs:
       url: https://next.maia.city
     env:
       FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+      GITHUB_SHA: ${{ github.sha }}
     steps:
       - uses: actions/checkout@v4
 
