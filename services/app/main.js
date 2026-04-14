@@ -29,7 +29,6 @@ import {
 	getFirstNameForRegister,
 	removeSigninKeyHandler,
 	renderSignInPrompt,
-	renderUnsupportedBrowser,
 	setSignInLoading,
 } from './signin.js'
 import { escapeHtml, getSyncStatusMessage } from './utils.js'
@@ -187,12 +186,20 @@ async function handleRoute() {
 	if (path === '/signin' || path === '/signup') {
 		setFabVisible(false)
 		if (redirectIfSignedIn()) return
+		let prfOk = false
 		try {
 			await isPRFSupported()
-			renderSignInPrompt(hasExistingAccount, undefined, isAvenTestModeEnabled(), getSignInUiHandlers())
-		} catch (error) {
-			renderUnsupportedBrowser(error.message)
+			prfOk = true
+		} catch (_) {
+			/* passkeys unavailable — test aven can still sign in */
 		}
+		renderSignInPrompt(
+			hasExistingAccount,
+			undefined,
+			isAvenTestModeEnabled(),
+			getSignInUiHandlers(),
+			!prfOk,
+		)
 		return
 	}
 
@@ -753,7 +760,14 @@ async function signIn() {
 		const msg = caughtErrMessage(error)
 		const errName = caughtErrName(error)
 		if (msg.includes('PRF not supported') || msg.includes('WebAuthn')) {
-			renderUnsupportedBrowser(msg)
+			showToast('Passkeys are not available in this browser.', 'info', 5000)
+			renderSignInPrompt(
+				hasExistingAccount,
+				undefined,
+				isAvenTestModeEnabled(),
+				getSignInUiHandlers(),
+				true,
+			)
 		} else if (
 			errName === 'NotAllowedError' ||
 			msg.includes('User denied permission') ||
@@ -764,7 +778,7 @@ async function signIn() {
 				'info',
 				5000,
 			)
-			renderSignInPrompt(hasExistingAccount, undefined, false, getSignInUiHandlers())
+			renderSignInPrompt(hasExistingAccount, undefined, isAvenTestModeEnabled(), getSignInUiHandlers())
 		} else {
 			const friendlyMessage = msg.includes('Failed to evaluate PRF')
 				? 'Unable to authenticate with your passkey. Please try again.'
@@ -872,7 +886,14 @@ async function register() {
 		const msg = caughtErrMessage(error)
 		const errName = caughtErrName(error)
 		if (msg.includes('PRF not supported') || msg.includes('WebAuthn')) {
-			renderUnsupportedBrowser(msg)
+			showToast('Passkeys are not available in this browser.', 'info', 5000)
+			renderSignInPrompt(
+				hasExistingAccount,
+				'signup',
+				isAvenTestModeEnabled(),
+				getSignInUiHandlers(),
+				true,
+			)
 		} else if (
 			errName === 'NotAllowedError' ||
 			msg.includes('User denied permission') ||
@@ -883,13 +904,13 @@ async function register() {
 				'info',
 				5000,
 			)
-			renderSignInPrompt(hasExistingAccount, undefined, false, getSignInUiHandlers())
+			renderSignInPrompt(hasExistingAccount, 'signup', isAvenTestModeEnabled(), getSignInUiHandlers())
 		} else {
 			const friendlyMessage = msg.includes('Failed to create passkey')
 				? 'Unable to create passkey. Please try again.'
 				: msg
 			showToast(friendlyMessage, 'error', 7000)
-			renderSignInPrompt(hasExistingAccount, undefined, false, getSignInUiHandlers())
+			renderSignInPrompt(hasExistingAccount, 'signup', isAvenTestModeEnabled(), getSignInUiHandlers())
 		}
 	}
 }

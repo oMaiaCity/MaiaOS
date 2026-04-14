@@ -111,6 +111,18 @@ body:has(.sign-in-container) #app {
 	margin-right: auto;
 }
 
+.sign-in-prf-notice {
+	font-family: var(--font-body);
+	font-size: 0.85rem;
+	color: #92400e;
+	background: #fef3c7;
+	border-radius: 0.5rem;
+	padding: 0.5rem 0.75rem;
+	margin: 0 auto 1rem;
+	max-width: 22rem;
+	line-height: 1.45;
+}
+
 .sign-in-first-name-wrap {
 	margin-bottom: 1.5rem;
 	text-align: left;
