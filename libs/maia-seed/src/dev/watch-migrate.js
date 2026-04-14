@@ -81,7 +81,7 @@ function runStandaloneWatch() {
 		})
 		if (r.status === 0) {
 			console.log(
-				'[dev:migrate] registry regenerated. Restart sync with PEER_SYNC_MODE=migrate to apply, or use full sync dev (live migrate when NODE_ENV is not production).',
+				'[dev:migrate] registry regenerated. Restart sync to apply migrate (or use full sync dev: live migrate when NODE_ENV is not production).',
 			)
 		}
 	}
