@@ -11,9 +11,11 @@ COPY package.json bun.lock* ./
 COPY libs ./libs
 COPY services/app ./services/app
 COPY services/sync ./services/sync
+COPY scripts ./scripts
 
 ENV HUSKY=0
 RUN bun install
+RUN bun run universe:registry
 RUN bun run distros:build
 
 # Runtime stage - single sync-server.mjs bundle + vendored pglite.wasm (no node_modules)

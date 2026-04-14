@@ -5,7 +5,6 @@
 
 import { Glob } from 'bun'
 import { maiaIdentity } from '../libs/maia-universe/src/helpers/identity-from-maia-path.js'
-import { execFileSync } from 'node:child_process'
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -333,6 +332,10 @@ ${iconSvgObjectLines.join('\n')}
 			byBucket[b].push({ nk })
 		}
 
+		for (const k of Object.keys(byBucket)) {
+			byBucket[k].sort((a, b) => String(a.nk).localeCompare(String(b.nk)))
+		}
+
 		let synth = null
 		if (vibeDir === 'quickjs') {
 			const depsCtxPath = 'quickjs/deps-list/context.dynamic.maia'
@@ -416,15 +419,6 @@ ${emitBucketObject('interfaces', byBucket.interfaces)}${dataFrag}
 
 	await removeLegacyGenerated()
 	await deleteOldSplitOutputs()
-
-	execFileSync(
-		'bunx',
-		['biome', 'check', '--write', '--unsafe', OUT_GENERATED, OUT_TOP_REGISTRY],
-		{
-			cwd: REPO_ROOT,
-			stdio: 'inherit',
-		},
-	)
 
 	console.log('[generate-maia-universe-registry] ok', posix(relative(REPO_ROOT, OUT_GENERATED)))
 }

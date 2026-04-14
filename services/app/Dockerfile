@@ -21,6 +21,7 @@ ENV VITE_PEER_APP_HOST=$VITE_PEER_APP_HOST
 
 ENV HUSKY=0
 RUN bun install
+RUN bun run universe:registry
 RUN bun run distros:build
 
 # Generate favicons (sync-assets runs inside build.js, outputs to dist/brand)
