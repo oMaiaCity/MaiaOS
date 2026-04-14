@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { identityFromMaiaPath } from '../src/helpers/identity-from-maia-path.js'
+import { maiaIdentity } from '../src/helpers/identity-from-maia-path.js'
 import {
 	ALL_VIBE_REGISTRIES,
 	getAllVibeRegistries,
@@ -9,10 +9,10 @@ import {
 
 describe('maia registry (generated)', () => {
 	test('MAIA_SPARK_REGISTRY maps nanoid → annotated config for actors', () => {
-		const id = identityFromMaiaPath('os/ai/actor.maia')
+		const id = maiaIdentity('services/ai/actor.maia')
 		expect(MAIA_SPARK_REGISTRY[id.$nanoid]).toBeDefined()
 		expect(MAIA_SPARK_REGISTRY[id.$nanoid].$nanoid).toBe(id.$nanoid)
-		const idSparks = identityFromMaiaPath('views/sparks/actor.maia')
+		const idSparks = maiaIdentity('views/sparks/actor.maia')
 		expect(MAIA_SPARK_REGISTRY[idSparks.$nanoid]).toBeDefined()
 	})
 

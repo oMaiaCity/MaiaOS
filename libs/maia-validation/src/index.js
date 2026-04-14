@@ -9,18 +9,18 @@
  */
 
 export { ACTOR_NANOID_TO_EXECUTABLE_KEY } from '@MaiaOS/universe'
-export { executableKeyFromMaiaPath } from './executable-key-from-maia-path.js'
 export {
 	annotateMaiaConfig,
 	cotextNanoidFromInstancePath,
-	identityFromMaiaPath,
+	executableKeyFromMaiaPath,
 	logicalRefToSeedNanoid,
 	maiaFactoryLabel,
 	maiaFactoryRefToNanoid,
+	maiaIdentity,
 	withCanonicalFactorySchema,
 } from './identity-from-maia-path.js'
 export { namekeyFromFactoryDefinitionContent } from './namekey-from-definition-content.js'
-export { maiaRefFromPathKey, nanoidFromPath, normalizeMaiaPathKey } from './nanoid.js'
+export { nanoidFromPath, normalizeMaiaPathKey } from './nanoid.js'
 export {
 	FACTORY_REF_PATTERN,
 	INSTANCE_REF_PATTERN,

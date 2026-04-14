@@ -11,6 +11,6 @@
 		"°maia/views/sparks/actor.maia",
 		"°maia/views/detail/actor.maia",
 		"°maia/services/spark/actor.maia",
-		"°maia/os/db/actor.maia"
+		"°maia/services/db/actor.maia"
 	]
 }

@@ -4,10 +4,7 @@
 
 import { createCoValueForSpark } from '@MaiaOS/db'
 import { cotextNanoidFromInstancePath } from '@MaiaOS/validation'
-import {
-	identityFromMaiaPath,
-	maiaFactoryRefToNanoid,
-} from '@MaiaOS/validation/identity-from-maia-path.js'
+import { maiaFactoryRefToNanoid, maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { splitGraphemes } from 'unicode-segmenter/grapheme'
 
 /**
@@ -78,7 +75,7 @@ export async function seedConfigs(
 		}
 		// Actors: identity is path-derived only (same input as registry annotate + ACTOR_NANOID_TO_EXECUTABLE_KEY).
 		if (configType === 'actor' && data && typeof data === 'object' && !Array.isArray(data)) {
-			const canonical = identityFromMaiaPath(path)
+			const canonical = maiaIdentity(path)
 			data.$nanoid = canonical.$nanoid
 			data.$label = canonical.$label
 		}
@@ -154,8 +151,8 @@ export async function seedConfigs(
 	const seedWasmConfigs = async () => {
 		const wasms = transformedConfigs.wasms
 		if (!wasms || typeof wasms !== 'object') return 0
-		const cotextSchemaCoId = factoryCoIdMap.get(identityFromMaiaPath('cotext.factory.maia').$nanoid)
-		const wasmSchemaCoId = factoryCoIdMap.get(identityFromMaiaPath('wasm.factory.maia').$nanoid)
+		const cotextSchemaCoId = factoryCoIdMap.get(maiaIdentity('cotext.factory.maia').$nanoid)
+		const wasmSchemaCoId = factoryCoIdMap.get(maiaIdentity('wasm.factory.maia').$nanoid)
 		if (!cotextSchemaCoId || !wasmSchemaCoId) return 0
 		let typeCount = 0
 		for (const [path, config] of Object.entries(wasms)) {

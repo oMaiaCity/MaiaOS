@@ -14,7 +14,7 @@ Common usage patterns and solutions to frequent problems.
 // registry.registerModule('mymodule', module, config)
 
 // Actor definitions and functions live in @MaiaOS/actors
-// Tools are referenced by actor co-id (e.g. @maia/actor/os/db)
+// Tools are referenced by actor co-id (e.g. @maia/actor/services/db)
 // Load module during boot: modules: ['db', 'core', 'ai', 'mymodule']
 ```
 
@@ -94,8 +94,8 @@ const os = await MaiaOS.boot({
 
 ```javascript
 // Tools are actor-based; ensure actor is in @MaiaOS/actors and module references it
-// Module tools array: tools: ['@maia/actor/os/db'] etc.
-// Actor path in ACTORS: 'maia/actor/os/db'
+// Module tools array: tools: ['@maia/actor/services/db'] etc.
+// Actor path in ACTORS: 'maia/services/db'
 ```
 
 ---

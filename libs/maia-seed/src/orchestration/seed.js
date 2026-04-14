@@ -11,10 +11,7 @@ import {
 	SPARK_OS_META_FACTORY_CO_ID_KEY,
 } from '@MaiaOS/db'
 import { OPS_PREFIX } from '@MaiaOS/logs'
-import {
-	identityFromMaiaPath,
-	maiaFactoryRefToNanoid,
-} from '@MaiaOS/validation/identity-from-maia-path.js'
+import { maiaFactoryRefToNanoid, maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { removeIdFields } from '@MaiaOS/validation/remove-id-fields'
 import { getVibeKey } from '@MaiaOS/validation/vibe-keys'
 import { splitGraphemes } from 'unicode-segmenter/grapheme'
@@ -96,7 +93,7 @@ export async function seed(
 		await import('../ref-transform.js')
 	/** Pre-seed: $nanoid → co_z (factories + instances). */
 	const seedRegistry = new Map()
-	const metaFactoryNanoid = identityFromMaiaPath('meta.factory.maia').$nanoid
+	const metaFactoryNanoid = maiaIdentity('meta.factory.maia').$nanoid
 
 	const maiaGroup = await groups.getMaiaGroup(peer)
 	if (!maiaGroup || typeof maiaGroup.createMap !== 'function') {
@@ -311,7 +308,7 @@ export async function seed(
 	if (data) {
 		for (const [collectionName] of Object.entries(data)) {
 			if (collectionName === 'icons') continue
-			const n = identityFromMaiaPath(`${collectionName}.factory.maia`).$nanoid
+			const n = maiaIdentity(`${collectionName}.factory.maia`).$nanoid
 			const dataFactoryCoId = combinedRegistry.get(n)
 			if (dataFactoryCoId) {
 				combinedRegistry.set(n, dataFactoryCoId)
@@ -414,7 +411,7 @@ export async function seed(
 			if (!originalConfig) continue
 			const fullyTransformed = transformInstanceForSeeding(originalConfig, latestRegistry)
 			if (configInfo.type === 'actor' && typeof configInfo.path === 'string') {
-				const canonical = identityFromMaiaPath(configInfo.path)
+				const canonical = maiaIdentity(configInfo.path)
 				fullyTransformed.$nanoid = canonical.$nanoid
 				fullyTransformed.$label = canonical.$label
 			}
@@ -480,7 +477,7 @@ export async function seed(
 			}),
 		)
 		combinedRegistry = refreshCombinedRegistry()
-		const cotextSchemaCoId = factoryCoIdMap.get(identityFromMaiaPath('cotext.factory.maia').$nanoid)
+		const cotextSchemaCoId = factoryCoIdMap.get(maiaIdentity('cotext.factory.maia').$nanoid)
 		if (!cotextSchemaCoId?.startsWith?.('co_z')) {
 			throw new Error(
 				'[CoJSONSeed] °maia/factory/cotext.factory.maia not registered; cannot seed vibe icon CoTexts',
@@ -488,7 +485,7 @@ export async function seed(
 		}
 		for (const vibe of allVibes) {
 			const vibeKey = getVibeKey(vibe)
-			const iconRef = vibe.icon ?? identityFromMaiaPath(`data/icons/${vibeKey}.maia`).$label
+			const iconRef = vibe.icon ?? maiaIdentity(`data/icons/${vibeKey}.maia`).$label
 			const svg = svgByVibeKey.get(vibeKey)
 			if (typeof svg !== 'string' || !svg.trim()) {
 				throw new Error(
@@ -503,7 +500,7 @@ export async function seed(
 				data: graphemes,
 				dataEngine: peer?.dbEngine,
 			})
-			const iconNanoid = identityFromMaiaPath(`data/icons/${vibeKey}.maia`).$nanoid
+			const iconNanoid = maiaIdentity(`data/icons/${vibeKey}.maia`).$nanoid
 			instanceCoIdMap.set(iconRef, iconCotext.id)
 			instanceCoIdMap.set(iconNanoid, iconCotext.id)
 			combinedRegistry.set(iconRef, iconCotext.id)
@@ -526,7 +523,7 @@ export async function seed(
 		if (!vibes) {
 			const { EXCEPTION_FACTORIES } = await import('@MaiaOS/db/registry')
 			const vibesRegistrySchemaCoId =
-				factoryCoIdMap?.get(identityFromMaiaPath('vibes-registry.factory.maia').$nanoid) ??
+				factoryCoIdMap?.get(maiaIdentity('vibes-registry.factory.maia').$nanoid) ??
 				(await (
 					await import('@MaiaOS/db')
 				).lookupRegistryKey(peer, '°maia/factory/vibes-registry.factory.maia', {

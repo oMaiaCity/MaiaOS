@@ -4,8 +4,7 @@
  */
 
 import { Glob } from 'bun'
-import { executableKeyFromMaiaPath } from '../libs/maia-validation/src/executable-key-from-maia-path.js'
-import { identityFromMaiaPath } from '../libs/maia-universe/src/helpers/identity-from-maia-path.js'
+import { maiaIdentity } from '../libs/maia-universe/src/helpers/identity-from-maia-path.js'
 import { execFileSync } from 'node:child_process'
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
@@ -140,8 +139,7 @@ function buildActorNanoidLines(buckets) {
 				: null
 		if (!pathKey) continue
 		if (!isActorExecutableMaiaPath(pathKey)) continue
-		const { $label, $nanoid } = identityFromMaiaPath(pathKey)
-		const ex = executableKeyFromMaiaPath($label)
+		const { $nanoid, executableKey: ex } = maiaIdentity(pathKey)
 		if (ex) {
 			if (nanoidMap[$nanoid] && nanoidMap[$nanoid] !== ex) {
 				throw new Error(
@@ -231,7 +229,7 @@ async function main() {
 
 	function addSparkEntry(rel, partition) {
 		const pathKey = pathKeyForRel(rel, partition)
-		const { $nanoid } = identityFromMaiaPath(pathKey)
+		const { $nanoid } = maiaIdentity(pathKey)
 		if (seenNanoids.has($nanoid)) {
 			throw new Error(
 				`[generate-registry] nanoid collision: ${$nanoid} (${seenNanoids.get($nanoid)} vs ${rel})`,
@@ -294,7 +292,7 @@ async function main() {
 ${iconSvgObjectLines.join('\n')}
 })`
 
-	const brandNk = identityFromMaiaPath('brand/maiacity.style.maia').$nanoid
+	const brandNk = maiaIdentity('brand/maiacity.style.maia').$nanoid
 	const vibeDirs = Object.keys(VIBE_REGISTRY_EXPORT).sort((a, b) => a.localeCompare(b))
 	const vibeExportNames = []
 	const vibeBlocks = []
@@ -307,7 +305,7 @@ ${iconSvgObjectLines.join('\n')}
 		}
 		const manifest = JSON.parse(await readFile(join(MAIA_ROOT, manifestRel), 'utf8'))
 		const exportName = VIBE_REGISTRY_EXPORT[vibeDir]
-		const manifestNk = identityFromMaiaPath(`${vibeDir}/manifest.vibe.maia`).$nanoid
+		const manifestNk = maiaIdentity(`${vibeDir}/manifest.vibe.maia`).$nanoid
 
 		const byBucket = {
 			styles: [{ nk: brandNk }],
@@ -331,15 +329,15 @@ ${iconSvgObjectLines.join('\n')}
 			const raw = JSON.parse(await readFile(join(MAIA_ROOT, fullRel), 'utf8'))
 			const b = factoryToBucket(raw.$factory)
 			if (!b) throw new Error(`[generate-registry] ${fullRel}: unknown $factory ${raw.$factory}`)
-			const nk = identityFromMaiaPath(pk).$nanoid
+			const nk = maiaIdentity(pk).$nanoid
 			byBucket[b].push({ nk })
 		}
 
 		let synth = null
 		if (vibeDir === 'quickjs') {
 			const depsCtxPath = 'quickjs/deps-list/context.dynamic.maia'
-			synth = { nk: identityFromMaiaPath(depsCtxPath).$nanoid, pathKey: depsCtxPath }
-			const qmNk = identityFromMaiaPath('quickjs/manifest.vibe.maia').$nanoid
+			synth = { nk: maiaIdentity(depsCtxPath).$nanoid, pathKey: depsCtxPath }
+			const qmNk = maiaIdentity('quickjs/manifest.vibe.maia').$nanoid
 			quickjsPrelude = `const quickjsManifest = ${sparkRegistryRef(qmNk)}\n\n`
 		}
 

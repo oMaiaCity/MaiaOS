@@ -4,16 +4,16 @@
  * Source: bun scripts/generate-maia-universe-registry.mjs
  */
 
-import m_MLQ8EcLJRmN4 from '@MaiaOS/universe/actors/os/ai/actor.maia'
-import m_ZXukwP1kkMUV from '@MaiaOS/universe/actors/os/ai/interface.maia'
-import m_oymGE1k5djvo from '@MaiaOS/universe/actors/os/ai/process.maia'
-import m_qRpEskVYQ5oo from '@MaiaOS/universe/actors/os/db/actor.maia'
-import m_Ufyczm8tNTwN from '@MaiaOS/universe/actors/os/db/interface.maia'
-import m_MsrqhChxw9lJ from '@MaiaOS/universe/actors/os/db/process.maia'
-import m_GdUkhno8D7Wq from '@MaiaOS/universe/actors/os/messages/actor.maia'
-import m_yA3nD309udXj from '@MaiaOS/universe/actors/os/messages/context.maia'
-import m_EcVGVE66nL9a from '@MaiaOS/universe/actors/os/messages/interface.maia'
-import m_hxZ4xuy3pYsW from '@MaiaOS/universe/actors/os/messages/process.maia'
+import m_hptsAz24xIKA from '@MaiaOS/universe/actors/services/ai/actor.maia'
+import m_goLQV9xtn9yZ from '@MaiaOS/universe/actors/services/ai/interface.maia'
+import m_2gUt28SVDOWb from '@MaiaOS/universe/actors/services/ai/process.maia'
+import m_uRKBR4xuVvnd from '@MaiaOS/universe/actors/services/db/actor.maia'
+import m_N7QlUFdmu7pj from '@MaiaOS/universe/actors/services/db/interface.maia'
+import m_igTf1K8OGMCb from '@MaiaOS/universe/actors/services/db/process.maia'
+import m_pGREJB1vyquy from '@MaiaOS/universe/actors/services/messages/actor.maia'
+import m_9aPNcEipb6Z7 from '@MaiaOS/universe/actors/services/messages/context.maia'
+import m_g1nzi7wBG8r5 from '@MaiaOS/universe/actors/services/messages/interface.maia'
+import m_tI9VpFwH2MoT from '@MaiaOS/universe/actors/services/messages/process.maia'
 import m_eetq9nlpKKkw from '@MaiaOS/universe/actors/services/names/actor.maia'
 import m_1zZEablMEGco from '@MaiaOS/universe/actors/services/names/interface.maia'
 import m_ZXLGra2wnq1n from '@MaiaOS/universe/actors/services/names/process.maia'
@@ -258,6 +258,7 @@ export const MAIA_SPARK_REGISTRY = Object.freeze({
 	'1OtBaJUTzi5f': annotateMaiaConfig(m_1OtBaJUTzi5f, 'views/profile-image/process.maia'),
 	'1zZEablMEGco': annotateMaiaConfig(m_1zZEablMEGco, 'services/names/interface.maia'),
 	'2E6n4HGE8d84': annotateMaiaConfig(m_2E6n4HGE8d84, 'views/sparks/style.maia'),
+	'2gUt28SVDOWb': annotateMaiaConfig(m_2gUt28SVDOWb, 'services/ai/process.maia'),
 	'2gVESpVjSjnn': annotateMaiaConfig(m_2gVESpVjSjnn, 'quickjs/layout-quickjs/actor.maia'),
 	'2l9jBH1RcGBO': annotateMaiaConfig(m_2l9jBH1RcGBO, 'views/profile-image/actor.maia'),
 	'2RlKJG9wijpe': annotateMaiaConfig(m_2RlKJG9wijpe, 'views/input/for-list.interface.maia'),
@@ -285,6 +286,7 @@ export const MAIA_SPARK_REGISTRY = Object.freeze({
 	'8iWEKtKvTOMu': annotateMaiaConfig(m_8iWEKtKvTOMu, 'profile/intent/intent.context.maia'),
 	'8O3eF7wudvlR': annotateMaiaConfig(m_8O3eF7wudvlR, 'services/profile-image/actor.maia'),
 	'8RZda05XUOGd': annotateMaiaConfig(m_8RZda05XUOGd, 'logs/intent/intent.actor.maia'),
+	'9aPNcEipb6Z7': annotateMaiaConfig(m_9aPNcEipb6Z7, 'services/messages/context.maia'),
 	'9OkoAkJ7IgN7': annotateMaiaConfig(m_9OkoAkJ7IgN7, 'views/messages/view.maia'),
 	A3qiBC3C6lt2: annotateMaiaConfig(m_A3qiBC3C6lt2, 'sparks/manifest.vibe.maia'),
 	atSfknKJlheR: annotateMaiaConfig(m_atSfknKJlheR, 'views/detail/interface.maia'),
@@ -312,7 +314,6 @@ export const MAIA_SPARK_REGISTRY = Object.freeze({
 	Dz3qruJSHyH7: annotateMaiaConfig(m_Dz3qruJSHyH7, 'maia-script-expression.factory.maia'),
 	e6jOKN2ZAsX9: annotateMaiaConfig(m_e6jOKN2ZAsX9, 'views/layout-chat/process.maia'),
 	eb5PcRxreEbn: annotateMaiaConfig(m_eb5PcRxreEbn, 'humans/intent/intent.process.maia'),
-	EcVGVE66nL9a: annotateMaiaConfig(m_EcVGVE66nL9a, 'os/messages/interface.maia'),
 	eDai54e5xrEv: annotateMaiaConfig(m_eDai54e5xrEv, 'data/icons/humans.maia'),
 	eDS2FiBd43oY: annotateMaiaConfig(m_eDS2FiBd43oY, 'views/input/for-list.context.maia'),
 	eetq9nlpKKkw: annotateMaiaConfig(m_eetq9nlpKKkw, 'services/names/actor.maia'),
@@ -334,10 +335,11 @@ export const MAIA_SPARK_REGISTRY = Object.freeze({
 	FQNtILqlRmaz: annotateMaiaConfig(m_FQNtILqlRmaz, 'services/spark/context.maia'),
 	fufn3vCCRqRX: annotateMaiaConfig(m_fufn3vCCRqRX, 'views/layout-paper/context.maia'),
 	Fvi4Q6z3X7aS: annotateMaiaConfig(m_Fvi4Q6z3X7aS, 'services/paper/actor.maia'),
+	g1nzi7wBG8r5: annotateMaiaConfig(m_g1nzi7wBG8r5, 'services/messages/interface.maia'),
 	g1qA3atQiIzz: annotateMaiaConfig(m_g1qA3atQiIzz, 'views/layout-paper/interface.maia'),
-	GdUkhno8D7Wq: annotateMaiaConfig(m_GdUkhno8D7Wq, 'os/messages/actor.maia'),
 	GjwqKsa5H2Q0: annotateMaiaConfig(m_GjwqKsa5H2Q0, 'views/profile-image/context.maia'),
 	gKQfa4ddebAf: annotateMaiaConfig(m_gKQfa4ddebAf, 'data/icons/logs.maia'),
+	goLQV9xtn9yZ: annotateMaiaConfig(m_goLQV9xtn9yZ, 'services/ai/interface.maia'),
 	Gom3dnloIaN8: annotateMaiaConfig(m_Gom3dnloIaN8, 'human.factory.maia'),
 	GqBpurTHeBSA: annotateMaiaConfig(m_GqBpurTHeBSA, 'quickjs/add-form/actor.maia'),
 	Grpymj3Oj5R1: annotateMaiaConfig(m_Grpymj3Oj5R1, 'quickjs/deps-list/actor.maia'),
@@ -348,13 +350,14 @@ export const MAIA_SPARK_REGISTRY = Object.freeze({
 	hEvDQt80UcA7: annotateMaiaConfig(m_hEvDQt80UcA7, 'aven-identity.factory.maia'),
 	HgVyMuPMjjXf: annotateMaiaConfig(m_HgVyMuPMjjXf, 'quickjs/layout-quickjs/context.maia'),
 	HlKr3NTjx4fX: annotateMaiaConfig(m_HlKr3NTjx4fX, 'views/messages/process.maia'),
+	hptsAz24xIKA: annotateMaiaConfig(m_hptsAz24xIKA, 'services/ai/actor.maia'),
 	hry8gagTkuhs: annotateMaiaConfig(m_hry8gagTkuhs, 'views/layout-chat/interface.maia'),
 	Hv2UdNUBQE7j: annotateMaiaConfig(m_Hv2UdNUBQE7j, 'views/info-card/actor.maia'),
 	hVe88ZqsZhmJ: annotateMaiaConfig(m_hVe88ZqsZhmJ, 'sparks/intent/intent.process.maia'),
-	hxZ4xuy3pYsW: annotateMaiaConfig(m_hxZ4xuy3pYsW, 'os/messages/process.maia'),
 	i3m8UWtf88qI: annotateMaiaConfig(m_i3m8UWtf88qI, 'indexes-registry.factory.maia'),
 	i7ZIOCbuLlCZ: annotateMaiaConfig(m_i7ZIOCbuLlCZ, 'quickjs/add-form/process.maia'),
 	i83Hy1P8q2hu: annotateMaiaConfig(m_i83Hy1P8q2hu, 'quickjs/deps-list/process.maia'),
+	igTf1K8OGMCb: annotateMaiaConfig(m_igTf1K8OGMCb, 'services/db/process.maia'),
 	IhvLzZmyXyU3: annotateMaiaConfig(m_IhvLzZmyXyU3, 'quickjs/deps-list-detail/context.maia'),
 	IOl2Lh54uw40: annotateMaiaConfig(m_IOl2Lh54uw40, 'views/addressbook-avens-grid/actor.maia'),
 	IQjSYTonLsby: annotateMaiaConfig(m_IQjSYTonLsby, 'views/layout-paper/process.maia'),
@@ -378,11 +381,10 @@ export const MAIA_SPARK_REGISTRY = Object.freeze({
 	MBlU5oFva4Mh: annotateMaiaConfig(m_MBlU5oFva4Mh, 'views/profile-image/interface.maia'),
 	mC7aKSEAx9g0: annotateMaiaConfig(m_mC7aKSEAx9g0, 'services/sandboxed-add/wasm.maia'),
 	MExHgveVR1wp: annotateMaiaConfig(m_MExHgveVR1wp, 'views/detail/process.maia'),
-	MLQ8EcLJRmN4: annotateMaiaConfig(m_MLQ8EcLJRmN4, 'os/ai/actor.maia'),
-	MsrqhChxw9lJ: annotateMaiaConfig(m_MsrqhChxw9lJ, 'os/db/process.maia'),
 	MXluU6t0jgmu: annotateMaiaConfig(m_MXluU6t0jgmu, 'sparks/intent/intent.view.maia'),
 	mz4egiERlCIO: annotateMaiaConfig(m_mz4egiERlCIO, 'services/spark/process.maia'),
 	N2EzsMn8Y3mt: annotateMaiaConfig(m_N2EzsMn8Y3mt, 'views/paper/view.maia'),
+	N7QlUFdmu7pj: annotateMaiaConfig(m_N7QlUFdmu7pj, 'services/db/interface.maia'),
 	n9ws9MPStaKO: annotateMaiaConfig(m_n9ws9MPStaKO, 'views/paper/actor.maia'),
 	nD7KNPHZ6mp9: annotateMaiaConfig(m_nD7KNPHZ6mp9, 'data/icons/profile.maia'),
 	NGPpafBygzQO: annotateMaiaConfig(m_NGPpafBygzQO, 'views/addressbook-humans-grid/inbox.maia'),
@@ -400,9 +402,9 @@ export const MAIA_SPARK_REGISTRY = Object.freeze({
 	ooM6RLvt6OBk: annotateMaiaConfig(m_ooM6RLvt6OBk, 'factories-registry.factory.maia'),
 	OS3RgD0XllLU: annotateMaiaConfig(m_OS3RgD0XllLU, 'views/tabs/todos.actor.maia'),
 	oVzAlRvTmcJk: annotateMaiaConfig(m_oVzAlRvTmcJk, 'views/profile-image/view.maia'),
-	oymGE1k5djvo: annotateMaiaConfig(m_oymGE1k5djvo, 'os/ai/process.maia'),
 	P9C7A8Ue31VU: annotateMaiaConfig(m_P9C7A8Ue31VU, 'views/addressbook-grid/process.maia'),
 	pfj0b8wowYfH: annotateMaiaConfig(m_pfj0b8wowYfH, 'cobinary.factory.maia'),
+	pGREJB1vyquy: annotateMaiaConfig(m_pGREJB1vyquy, 'services/messages/actor.maia'),
 	Pl6MAFGIS4hW: annotateMaiaConfig(m_Pl6MAFGIS4hW, 'profile/intent/intent.view.maia'),
 	PNtp1Sh3X9uz: annotateMaiaConfig(m_PNtp1Sh3X9uz, 'quickjs/add-form/context.maia'),
 	pr9FVA6H3emt: annotateMaiaConfig(m_pr9FVA6H3emt, 'context.factory.maia'),
@@ -416,7 +418,6 @@ export const MAIA_SPARK_REGISTRY = Object.freeze({
 	QK0Mho2ETiZ7: annotateMaiaConfig(m_QK0Mho2ETiZ7, 'quickjs/deps-list-detail/process.maia'),
 	Qk4fq4jADZ43: annotateMaiaConfig(m_Qk4fq4jADZ43, 'profile/manifest.vibe.maia'),
 	qLauGowfDn5E: annotateMaiaConfig(m_qLauGowfDn5E, 'views/layout-chat/view.maia'),
-	qRpEskVYQ5oo: annotateMaiaConfig(m_qRpEskVYQ5oo, 'os/db/actor.maia'),
 	QswXc4jZJu04: annotateMaiaConfig(m_QswXc4jZJu04, 'views/addressbook-grid/style.maia'),
 	QTi5we20xoDN: annotateMaiaConfig(m_QTi5we20xoDN, 'views/sparks/actor.maia'),
 	QVddxxPIeXNO: annotateMaiaConfig(m_QVddxxPIeXNO, 'views/input/for-sparks.context.maia'),
@@ -436,13 +437,14 @@ export const MAIA_SPARK_REGISTRY = Object.freeze({
 	TaDroFDU2rJ3: annotateMaiaConfig(m_TaDroFDU2rJ3, 'views/logs/actor.maia'),
 	TGK3TdCTHR5X: annotateMaiaConfig(m_TGK3TdCTHR5X, 'views/placeholder/style.maia'),
 	THBdFkCwVIXZ: annotateMaiaConfig(m_THBdFkCwVIXZ, 'views/input/for-chat.context.maia'),
+	tI9VpFwH2MoT: annotateMaiaConfig(m_tI9VpFwH2MoT, 'services/messages/process.maia'),
 	TjtVnjOxXyqa: annotateMaiaConfig(m_TjtVnjOxXyqa, 'views/logs/interface.maia'),
 	TM4RGSMXKrAa: annotateMaiaConfig(m_TM4RGSMXKrAa, 'services/paper/process.maia'),
 	TZ0SiwQPePtq: annotateMaiaConfig(m_TZ0SiwQPePtq, 'spark.factory.maia'),
 	UdphG1Y2pGpu: annotateMaiaConfig(m_UdphG1Y2pGpu, 'views/list/style.maia'),
-	Ufyczm8tNTwN: annotateMaiaConfig(m_Ufyczm8tNTwN, 'os/db/interface.maia'),
 	UH6c0Gz163Jc: annotateMaiaConfig(m_UH6c0Gz163Jc, 'data/icons/sparks.maia'),
 	UKqnOjPwqebR: annotateMaiaConfig(m_UKqnOjPwqebR, 'data/icons/quickjs.maia'),
+	uRKBR4xuVvnd: annotateMaiaConfig(m_uRKBR4xuVvnd, 'services/db/actor.maia'),
 	uXfrsUnrGHwY: annotateMaiaConfig(m_uXfrsUnrGHwY, 'process.factory.maia'),
 	UYzv9s5OCkqP: annotateMaiaConfig(m_UYzv9s5OCkqP, 'vibe.factory.maia'),
 	VI16n5B95KA8: annotateMaiaConfig(m_VI16n5B95KA8, 'views/sparks/interface.maia'),
@@ -473,7 +475,6 @@ export const MAIA_SPARK_REGISTRY = Object.freeze({
 	xy0Fg6mnZLnR: annotateMaiaConfig(m_xy0Fg6mnZLnR, 'notes.factory.maia'),
 	y4ELr96pwpfc: annotateMaiaConfig(m_y4ELr96pwpfc, 'profile/intent/intent.actor.maia'),
 	y7G0Db5JrfSI: annotateMaiaConfig(m_y7G0Db5JrfSI, 'views/input/for-detail.actor.maia'),
-	yA3nD309udXj: annotateMaiaConfig(m_yA3nD309udXj, 'os/messages/context.maia'),
 	YD2WISHnA91P: annotateMaiaConfig(m_YD2WISHnA91P, 'views/paper/style.maia'),
 	yFBKHozblSsA: annotateMaiaConfig(m_yFBKHozblSsA, 'views/addressbook-humans-grid/actor.maia'),
 	YuS1Ux69GBXC: annotateMaiaConfig(m_YuS1Ux69GBXC, 'logs/intent/intent.view.maia'),
@@ -485,7 +486,6 @@ export const MAIA_SPARK_REGISTRY = Object.freeze({
 	ZnfErOeG8Qa1: annotateMaiaConfig(m_ZnfErOeG8Qa1, 'avens-identity-registry.factory.maia'),
 	zqwFLWSvHKNn: annotateMaiaConfig(m_zqwFLWSvHKNn, 'views/input/for-sparks.interface.maia'),
 	ZXLGra2wnq1n: annotateMaiaConfig(m_ZXLGra2wnq1n, 'services/names/process.maia'),
-	ZXukwP1kkMUV: annotateMaiaConfig(m_ZXukwP1kkMUV, 'os/ai/interface.maia'),
 })
 
 export const SEED_DATA = Object.freeze({
@@ -521,26 +521,26 @@ export const ACTOR_NANOID_TO_EXECUTABLE_KEY = Object.freeze({
 	czHOBTneaUIn: 'maia/views/placeholder',
 	eetq9nlpKKkw: 'maia/services/names',
 	Fvi4Q6z3X7aS: 'maia/services/paper',
-	GdUkhno8D7Wq: 'maia/os/messages',
 	GqBpurTHeBSA: 'maia/quickjs/add-form',
 	Grpymj3Oj5R1: 'maia/quickjs/deps-list',
+	hptsAz24xIKA: 'maia/services/ai',
 	Hv2UdNUBQE7j: 'maia/views/info-card',
 	IOl2Lh54uw40: 'maia/views/addressbook-avens-grid',
 	J5Wb4IdhASDa: 'maia/views/input/for-list',
 	kDFzLDGsOcok: 'maia/views/layout-chat',
 	MAIl6lM8g7Zr: 'maia/views/input/for-sparks',
-	MLQ8EcLJRmN4: 'maia/os/ai',
 	n9ws9MPStaKO: 'maia/views/paper',
 	nPMDld2ZbXCh: 'maia/services/spark',
 	NYVUUdK9v783: 'maia/quickjs/deps-list-detail',
 	OOB2CfxhmalY: 'maia/views/messages',
 	OS3RgD0XllLU: 'maia/views/tabs/todos',
-	qRpEskVYQ5oo: 'maia/os/db',
+	pGREJB1vyquy: 'maia/services/messages',
 	QTi5we20xoDN: 'maia/views/sparks',
 	rYabQOLtByEe: 'maia/views/detail',
 	sT9nXs6LEQ4x: 'maia/views/list',
 	SwQem1kx98up: 'maia/views/input/for-chat',
 	TaDroFDU2rJ3: 'maia/views/logs',
+	uRKBR4xuVvnd: 'maia/services/db',
 	vv35ZGYqifye: 'maia/services/sandboxed-add',
 	XV1ARTtfudRM: 'quickjs/intent',
 	y4ELr96pwpfc: 'profile/intent',

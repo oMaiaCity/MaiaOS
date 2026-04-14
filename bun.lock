@@ -125,6 +125,7 @@
       "name": "@MaiaOS/universe",
       "version": "26.4.21315-next",
       "dependencies": {
+        "@MaiaOS/peer": "workspace:*",
         "@MaiaOS/runtime": "workspace:*",
         "@noble/hashes": "2.0.1",
       },

@@ -3,7 +3,7 @@
  */
 
 import { MAIA_SPARK_REGISTRY, SEED_DATA } from '../generated/registry.js'
-import { identityFromMaiaPath } from '../helpers/identity-from-maia-path.js'
+import { maiaIdentity } from '../helpers/identity-from-maia-path.js'
 import { getVibeKey } from '../helpers/vibe-keys.js'
 import { isActorFilePathId } from '../sparks/maia/actors/index.js'
 import { deriveInboxId } from './derive-inbox.js'
@@ -13,6 +13,7 @@ const INBOX_SCHEMA = '°maia/factory/inbox.factory.maia'
 /** Instance shape for inbox.factory.maia (schema says cotype: costream). */
 const INBOX_INSTANCE_COTYPE = 'costream'
 
+/** Canonical `$label` → spark-relative path key for seed bucket maps (same segment list {@link maiaIdentity} hashes). */
 function pathKeyFromMaiaLabel($label) {
 	if (typeof $label !== 'string' || !$label.startsWith('°maia/')) {
 		throw new Error(`[vibes] expected °maia/ $label, got ${String($label)}`)
@@ -62,7 +63,7 @@ function normalizeVibeForSeeding(vibe) {
 	if (!normalized.$label?.startsWith('°maia/vibe/')) {
 		normalized.$label = `°maia/vibe/${key}`
 	}
-	normalized.icon = identityFromMaiaPath(`data/icons/${key}.maia`).$label
+	normalized.icon = maiaIdentity(`data/icons/${key}.maia`).$label
 	if (!Array.isArray(normalized.runtime)) {
 		normalized.runtime = ['browser']
 	}
@@ -110,10 +111,10 @@ export function buildSeedConfig(vibeRegistries) {
 		merged.data.icons = SEED_DATA.icons
 	}
 	for (const [, config] of Object.entries(merged.actors)) {
-		const inboxId = deriveInboxId(config.$label)
+		const inboxId = deriveInboxId(pathKeyFromMaiaLabel(config.$label))
 		if (inboxId) {
 			config.inbox = inboxLogicalRef(inboxId)
-			const id = identityFromMaiaPath(inboxId)
+			const id = maiaIdentity(inboxId)
 			merged.inboxes[inboxId] = {
 				$factory: INBOX_SCHEMA,
 				$label: id.$label,
@@ -143,7 +144,7 @@ function toActorConfig(raw, inboxId) {
 }
 
 function toInboxConfig(inboxPath) {
-	const id = identityFromMaiaPath(inboxPath)
+	const id = maiaIdentity(inboxPath)
 	return {
 		$factory: '°maia/factory/inbox.factory.maia',
 		$label: id.$label,
@@ -153,7 +154,7 @@ function toInboxConfig(inboxPath) {
 }
 
 function a(p) {
-	const id = identityFromMaiaPath(p)
+	const id = maiaIdentity(p)
 	const v = MAIA_SPARK_REGISTRY[id.$nanoid]
 	if (!v) {
 		throw new Error(
@@ -165,9 +166,9 @@ function a(p) {
 
 export function getSeedConfig() {
 	const actorDefs = [
-		['os/ai/actor.maia', 'os/ai/process.maia'],
+		['services/ai/actor.maia', 'services/ai/process.maia'],
 		['services/names/actor.maia', 'services/names/process.maia'],
-		['os/db/actor.maia', 'os/db/process.maia'],
+		['services/db/actor.maia', 'services/db/process.maia'],
 	]
 
 	const actors = {}
@@ -189,10 +190,10 @@ export function getSeedConfig() {
 	}
 
 	const interfacePaths = [
-		'os/ai/interface.maia',
-		'os/db/interface.maia',
+		'services/ai/interface.maia',
+		'services/db/interface.maia',
 		'services/names/interface.maia',
-		'os/messages/interface.maia',
+		'services/messages/interface.maia',
 		'services/paper/interface.maia',
 		'services/profile-image/interface.maia',
 		'services/sandboxed-add/interface.maia',
@@ -411,7 +412,13 @@ export function getSeedConfig() {
 			'views/profile-image/view.maia',
 			'views/profile-image/style.maia',
 		],
-		['os/messages/actor.maia', 'os/messages/context.maia', 'os/messages/process.maia', null, null],
+		[
+			'services/messages/actor.maia',
+			'services/messages/context.maia',
+			'services/messages/process.maia',
+			null,
+			null,
+		],
 		['services/sandboxed-add/actor.maia', null, 'services/sandboxed-add/process.maia', null, null],
 		[
 			'services/update-wasm-code/actor.maia',

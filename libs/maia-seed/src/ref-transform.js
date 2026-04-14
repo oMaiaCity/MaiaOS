@@ -1,4 +1,4 @@
-import { identityFromMaiaPath } from '@MaiaOS/validation/identity-from-maia-path.js'
+import { maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { isFactoryRef } from '@MaiaOS/validation/patterns'
 
 /** Actor instance targets in @actors: file path ending with actor.maia (e.g. …/intent.actor.maia or …/actor.maia) */
@@ -24,7 +24,7 @@ function factoryRefToNanoid(factoryRef) {
 	const parts = without.split('/')
 	const basename = parts[parts.length - 1]
 	if (!basename.endsWith('.factory.maia')) return null
-	return identityFromMaiaPath(basename).$nanoid
+	return maiaIdentity(basename).$nanoid
 }
 
 /** °maia/... instance path → nanoid (same as annotate path under maia/). */
@@ -33,7 +33,7 @@ function instanceLogicalRefToNanoid(ref) {
 	const without = ref.slice(1)
 	if (!without.startsWith('maia/')) return null
 	const pathKey = without.slice('maia/'.length)
-	return identityFromMaiaPath(pathKey).$nanoid
+	return maiaIdentity(pathKey).$nanoid
 }
 
 /** Resolve ref to co-id via nanoid keys in coIdMap. type: 'schema' | 'target' | 'instance' */

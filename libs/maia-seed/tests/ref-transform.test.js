@@ -1,4 +1,4 @@
-import { identityFromMaiaPath } from '@MaiaOS/validation/identity-from-maia-path.js'
+import { maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { describe, expect, test } from 'bun:test'
 import { transformInstanceForSeeding } from '../src/ref-transform.js'
 
@@ -6,8 +6,8 @@ describe('transformInstanceForSeeding', () => {
 	test('resolves @actors file-path actor refs to co-ids', () => {
 		const actorPath = '°maia/views/sparks/actor.maia'
 		const coIdMap = new Map([
-			[identityFromMaiaPath('context.factory.maia').$nanoid, 'co_zFAC'],
-			[identityFromMaiaPath('views/sparks/actor.maia').$nanoid, 'co_zACTOR'],
+			[maiaIdentity('context.factory.maia').$nanoid, 'co_zFAC'],
+			[maiaIdentity('views/sparks/actor.maia').$nanoid, 'co_zACTOR'],
 		])
 		const ctx = {
 			$factory: '°maia/factory/context.factory.maia',
@@ -20,8 +20,8 @@ describe('transformInstanceForSeeding', () => {
 
 	test('transforms instance refs', () => {
 		const coIdMap = new Map([
-			[identityFromMaiaPath('actor.factory.maia').$nanoid, 'co_zFAC'],
-			[identityFromMaiaPath('x/actor.maia').$nanoid, 'co_zINST'],
+			[maiaIdentity('actor.factory.maia').$nanoid, 'co_zFAC'],
+			[maiaIdentity('x/actor.maia').$nanoid, 'co_zINST'],
 		])
 		const inst = {
 			$factory: '°maia/factory/actor.factory.maia',
@@ -33,7 +33,7 @@ describe('transformInstanceForSeeding', () => {
 	})
 
 	test('does not resolve $label as a walkable ref (logical id stays °…)', () => {
-		const coIdMap = new Map([[identityFromMaiaPath('vibe.factory.maia').$nanoid, 'co_zVIBEF']])
+		const coIdMap = new Map([[maiaIdentity('vibe.factory.maia').$nanoid, 'co_zVIBEF']])
 		const vibe = {
 			$factory: '°maia/factory/vibe.factory.maia',
 			$label: '°maia/vibe/chat',

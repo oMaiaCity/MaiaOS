@@ -9,7 +9,7 @@
 			},
 			{
 				"ask": {
-					"target": "°maia/os/db/actor.maia",
+					"target": "°maia/services/db/actor.maia",
 					"type": "SPARK_OP",
 					"payload": {
 						"op": "createSpark",
@@ -26,7 +26,7 @@
 			},
 			{
 				"ask": {
-					"target": "°maia/os/db/actor.maia",
+					"target": "°maia/services/db/actor.maia",
 					"type": "SPARK_OP",
 					"payload": {
 						"op": "addSparkMember",
@@ -45,7 +45,7 @@
 			},
 			{
 				"ask": {
-					"target": "°maia/os/db/actor.maia",
+					"target": "°maia/services/db/actor.maia",
 					"type": "SPARK_OP",
 					"payload": {
 						"op": "removeSparkMember",

@@ -4,10 +4,10 @@
  * Interface schemas define accepted events; execution in .function.js
  */
 
-import aiChatDef from './os/ai/actor.maia'
-import aiChatFn from './os/ai/function.js'
-import dbDef from './os/db/actor.maia'
-import dbFn from './os/db/function.js'
+import aiChatDef from './services/ai/actor.maia'
+import aiChatFn from './services/ai/function.js'
+import dbDef from './services/db/actor.maia'
+import dbFn from './services/db/function.js'
 import computeMessageNamesDef from './services/names/actor.maia'
 import computeMessageNamesFn from './services/names/function.js'
 import paperDef from './services/paper/actor.maia'
@@ -21,7 +21,7 @@ import profileImageViewDef from './views/profile-image/actor.maia'
 import profileImageViewFn from './views/profile-image/function.js'
 
 export const ACTORS = {
-	'maia/os/ai': { definition: aiChatDef, function: aiChatFn },
+	'maia/services/ai': { definition: aiChatDef, function: aiChatFn },
 	'maia/services/names': {
 		definition: computeMessageNamesDef,
 		function: computeMessageNamesFn,
@@ -46,17 +46,11 @@ export const ACTORS = {
 		definition: todosDef,
 		function: null,
 	},
-	'maia/os/db': { definition: dbDef, function: dbFn },
+	'maia/services/db': { definition: dbDef, function: dbFn },
 }
 
 export function getActor(namespacePath) {
-	let mod = ACTORS[namespacePath]
-	if (mod) return mod
-	if (namespacePath && !namespacePath.includes('/')) {
-		mod = ACTORS[`maia/os/${namespacePath}`]
-		if (mod) return mod
-	}
-	return null
+	return ACTORS[namespacePath] ?? null
 }
 
 export function getAllActorDefinitions() {

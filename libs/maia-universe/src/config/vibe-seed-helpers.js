@@ -25,6 +25,7 @@ export function getVibeActorConfigs() {
 		if (!registry?.actors) continue
 		for (const config of Object.values(registry.actors)) {
 			if (config?.$label?.startsWith('°maia/')) {
+				// Bucket key = spark-relative path (not a second identity format)
 				map[config.$label.slice('°maia/'.length)] = config
 			}
 		}

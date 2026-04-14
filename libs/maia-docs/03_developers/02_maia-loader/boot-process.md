@@ -102,7 +102,7 @@ Modules are dynamically loaded during boot. Each module:
 **Available Modules:**
 - `db` - Database operations (`@db` tool)
 - `core` - Core UI utilities (`@core/*` tools)
-- `ai` - AI tools (`@maia/actor/os/ai`)
+- `ai` - AI tools (`@maia/actor/services/ai`)
 
 ---
 

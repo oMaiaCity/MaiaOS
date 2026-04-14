@@ -1,7 +1,4 @@
-import {
-	identityFromMaiaPath,
-	maiaFactoryRefToNanoid,
-} from '@MaiaOS/validation/identity-from-maia-path.js'
+import { maiaFactoryRefToNanoid, maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { describe, expect, test } from 'bun:test'
 import { buildSystemFactoryCoIdsFromSparkOs } from '../src/cojson/factory/system-factories-from-os.js'
 import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../src/cojson/spark-os-keys.js'
@@ -79,6 +76,6 @@ describe('buildSystemFactoryCoIdsFromSparkOs', () => {
 		const out = await buildSystemFactoryCoIdsFromSparkOs(peer, 'co_zOS')
 
 		expect(out.get(maiaFactoryRefToNanoid('°maia/factory/event.factory.maia'))).toBe(defId)
-		expect(out.get(identityFromMaiaPath('meta.factory.maia').$nanoid)).toBe(metaCoId)
+		expect(out.get(maiaIdentity('meta.factory.maia').$nanoid)).toBe(metaCoId)
 	})
 })

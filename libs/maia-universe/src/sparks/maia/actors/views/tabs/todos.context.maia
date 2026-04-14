@@ -9,7 +9,7 @@
 		},
 		{
 			"id": "placeholder",
-			"label": "Soon3",
+			"label": "Soon",
 			"actor": "@placeholder"
 		}
 	],
@@ -24,7 +24,7 @@
 		},
 		{
 			"id": "placeholder",
-			"label": "Soon3",
+			"label": "Soon",
 			"actor": "@placeholder",
 			"isActive": false
 		}

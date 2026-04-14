@@ -18,7 +18,7 @@ describe('INSTANCE_REF_PATTERN', () => {
 	})
 
 	test('isInstanceRef aligns with pattern', () => {
-		expect(isInstanceRef('°maia/os/db/actor.maia')).toBe(true)
+		expect(isInstanceRef('°maia/services/db/actor.maia')).toBe(true)
 		expect(isInstanceRef('°maia/factory/actor.factory.maia')).toBe(false)
 	})
 })

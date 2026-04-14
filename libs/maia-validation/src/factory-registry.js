@@ -41,7 +41,7 @@ const FACTORY_BASENAME_TO_REGISTRY_KEY = {
 /** @type {Record<string, object> | null} */
 let FACTORIES = null
 
-/** Factory disk basenames → °maia/factory/<basename> via maiaFactoryLabel (identity-from-maia-path). */
+/** Factory disk basenames → °maia/factory/<basename> via maiaFactoryLabel (maiaIdentity). */
 const UNIQUE_PATH_KEYS = [
 	'actor.factory.maia',
 	'aven-identity.factory.maia',

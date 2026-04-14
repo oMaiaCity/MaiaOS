@@ -36,8 +36,6 @@ libs/maia-actors/src/
 ├── views/                      # Layout actors (headless intent pattern)
 │   ├── tabs/, sparks/, grid/, layout-chat/, layout-paper/, input/
 │   └── ...
-└── shared/
-    └── api-helpers.js
 ```
 
 ---
@@ -50,9 +48,9 @@ Central registry that maps namespace paths to actor definitions and functions.
 
 ```javascript
 export const ACTORS = {
-  'maia/actor/os/ai': { definition: aiDef, function: aiFn },
-  'maia/actor/os/db': { definition: dbDef, function: dbFn },
-  'maia/actor/services/names': { definition: namesDef, function: namesFn },
+  'maia/services/ai': { definition: aiDef, function: aiFn },
+  'maia/services/db': { definition: dbDef, function: dbFn },
+  'maia/services/names': { definition: namesDef, function: namesFn },
   // ...
 };
 
@@ -95,10 +93,10 @@ export default {
 ```javascript
 import { getActor } from '@MaiaOS/actors';
 
-const actor = getActor('maia/actor/os/db');
+const actor = getActor('maia/services/db');
 // Returns: { definition: {...}, function: execute(...) }
 
-// Single-part lookup: getActor('db') resolves to 'maia/actor/os/db'
+// Single-part lookup: getActor('db') resolves to 'maia/services/db'
 ```
 
 ### Getting All Actor Definitions
@@ -107,7 +105,7 @@ const actor = getActor('maia/actor/os/db');
 import { getAllActorDefinitions } from '@MaiaOS/actors';
 
 const definitions = getAllActorDefinitions();
-// Returns: { 'maia/actor/os/db': {...}, 'maia/actor/services/names': {...}, ... }
+// Returns: { 'maia/services/db': {...}, 'maia/services/names': {...}, ... }
 // Used for seeding actor definitions into database
 ```
 
@@ -115,18 +113,15 @@ const definitions = getAllActorDefinitions();
 
 ## Available Actors
 
-### OS
+### Services (including core AI / DB)
 
-- **`maia/actor/os/db`** - Unified API for query, create, update, delete, spark operations
-- **`maia/actor/os/ai`** - Unified AI chat using OpenAI-compatible API (RedPill)
-
-### Services
-
-- **`maia/actor/services/names`** - Computes message names from context
-- **`maia/actor/services/paper`** - Updates paper content
-- **`maia/actor/services/profile-image`** - Profile image handling
-- **`maia/actor/services/todos`** - Todos service (definition only)
-- **`maia/actor/services/updateWasmCode`** - WASM code updates
+- **`maia/services/db`** - Unified API for query, create, update, delete, spark operations
+- **`maia/services/ai`** - Unified AI chat using OpenAI-compatible API (RedPill)
+- **`maia/services/names`** - Computes message names from context
+- **`maia/services/paper`** - Updates paper content
+- **`maia/services/profile-image`** - Profile image handling
+- **`maia/services/todos`** - Todos service (definition only)
+- **`maia/services/update-wasm-code`** - WASM code updates
 
 ---
 
@@ -155,7 +150,7 @@ export const ACTORS = {
 
 ### Step 4: Add to Module
 
-Actors are referenced by modules in `libs/maia-runtime/src/modules/registry.js`. The db and ai modules reference `@maia/actor/os/db` and `@maia/actor/os/ai`. To add a new tool, extend the registry's BUILTIN_MODULES or add a custom module that references your actor path.
+Actors are referenced by modules in `libs/maia-runtime/src/modules/registry.js`. The db and ai modules reference `@maia/actor/services/db` and `@maia/actor/services/ai`. To add a new tool, extend the registry's BUILTIN_MODULES or add a custom module that references your actor path.
 
 ---
 

@@ -1,62 +1,52 @@
-import { beforeAll, describe, expect, test } from 'bun:test'
-import { ensureFactoriesLoaded, getAllFactories } from '../src/factory-registry.js'
+import { describe, expect, test } from 'bun:test'
 import {
-	identityFromMaiaPath,
 	logicalRefToSeedNanoid,
 	maiaFactoryLabel,
-	withCanonicalFactorySchema,
+	maiaIdentity,
 } from '../src/identity-from-maia-path.js'
 
-beforeAll(async () => {
-	await ensureFactoriesLoaded()
-})
-
-describe('identityFromMaiaPath', () => {
-	test('instance path → $label + $nanoid', () => {
-		const o = identityFromMaiaPath('actors/os/ai/actor.maia')
-		expect(o.$label).toBe('°maia/actors/os/ai/actor.maia')
+describe('maiaIdentity', () => {
+	test('instance path → $label + $nanoid + executableKey', () => {
+		const o = maiaIdentity('services/ai/actor.maia')
+		expect(o.$label).toBe('°maia/services/ai/actor.maia')
+		expect(o.executableKey).toBe('maia/services/ai')
 		expect(o.$nanoid.length).toBe(12)
 	})
 
-	test('factory basename → derived °maia/factory/<basename>', () => {
-		const o = identityFromMaiaPath('actor.factory.maia')
+	test('factory basename → $label + nanoid; executableKey null', () => {
+		const o = maiaIdentity('actor.factory.maia')
 		expect(o.$label).toBe('°maia/factory/actor.factory.maia')
+		expect(o.executableKey).toBeNull()
+		expect(o.$nanoid.length).toBe(12)
 	})
 
-	test('logical °maia/factory/<basename> matches basename identity (seed / registry)', () => {
-		const fromLabel = identityFromMaiaPath('meta.factory.maia').$nanoid
+	test('rejects ° prefix', () => {
+		expect(() => maiaIdentity('°maia/services/ai/actor.maia')).toThrow(
+			/sparkRelPath must not start with °/,
+		)
+	})
+
+	test('rejects maia/ prefix', () => {
+		expect(() => maiaIdentity('maia/services/ai/actor.maia')).toThrow(
+			/must not include a maia\/ prefix/,
+		)
+	})
+})
+
+describe('logicalRefToSeedNanoid', () => {
+	test('factory logical ref matches maiaIdentity basename', () => {
+		const fromSpark = maiaIdentity('meta.factory.maia').$nanoid
 		const fromLogical = logicalRefToSeedNanoid('°maia/factory/meta.factory.maia')
-		expect(fromLogical).toBe(fromLabel)
+		expect(fromLogical).toBe(fromSpark)
 		expect(logicalRefToSeedNanoid('°maia/factory/event.factory.maia')).toBe(
-			identityFromMaiaPath('event.factory.maia').$nanoid,
+			maiaIdentity('event.factory.maia').$nanoid,
 		)
 	})
 })
 
 describe('maiaFactoryLabel', () => {
-	test('prefixes basename', () => {
+	test('basename → °maia/factory/...', () => {
 		expect(maiaFactoryLabel('actor.factory.maia')).toBe('°maia/factory/actor.factory.maia')
 		expect(maiaFactoryLabel('todos.factory.maia')).toBe('°maia/factory/todos.factory.maia')
-	})
-})
-
-describe('identity-from-maia-path (M4)', () => {
-	test('getAllFactories injects matching $label for each schema', () => {
-		const all = getAllFactories()
-		for (const schema of Object.values(all)) {
-			expect(typeof schema.$label).toBe('string')
-			expect(schema.$label.startsWith('°maia/factory/')).toBe(true)
-		}
-	})
-
-	test('withCanonicalFactorySchema sets $label + $nanoid', () => {
-		const out = withCanonicalFactorySchema(
-			{ $factory: '°maia/factory/meta.factory.maia', x: 1 },
-			'actor.factory.maia',
-		)
-		expect(out.$label).toBe('°maia/factory/actor.factory.maia')
-		expect(typeof out.$nanoid).toBe('string')
-		expect(out.$nanoid.length).toBe(12)
-		expect(out.x).toBe(1)
 	})
 })

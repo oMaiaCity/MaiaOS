@@ -83,13 +83,13 @@ const maia = await MaiaOS.boot({
    - `MaiaScriptEvaluator` — Evaluates DSL expressions
    - `DataEngine` — Unified data operations via **maia.do({ op, factory, key, filter, ... })**
 4. **Load Modules** — Dynamically loads specified modules (default: `['db', 'core']`)
-5. **Register Tools** — Each module registers its tools (e.g. @maia/actor/os/db)
+5. **Register Tools** — Each module registers its tools (e.g. @maia/actor/services/db)
 
 ## Available Modules
 
 ### Database Module (`db`)
 Registers the database service actor:
-- `@maia/actor/os/db` — Unified database operations (creator-facing alias: `@db`)
+- `@maia/actor/services/db` — Unified database operations (creator-facing alias: `@db`)
 - Used by process handlers via `op` action (direct DataEngine), or by service actors via `function: true`
 - See [Operations](./07-operations/) for maia.do() API
 

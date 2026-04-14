@@ -9,12 +9,31 @@
  *   {"actor": "@ai/chat", "payload": {"context": [...], "model": "qwen/..."}}
  */
 
+import { getSyncHttpBaseUrl } from '@MaiaOS/peer'
 import {
 	createErrorEntry,
 	createErrorResult,
 	createSuccessResult,
+	toStructuredErrors,
 } from '@MaiaOS/universe/helpers/operation-result.js'
-import { getApiBaseUrl, toStructuredErrors } from '../../shared/api-helpers.js'
+
+function getLlmApiBaseUrl() {
+	const dev =
+		import.meta.env?.DEV === true ||
+		(typeof window !== 'undefined' &&
+			(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
+	const fromPeer = getSyncHttpBaseUrl({
+		dev,
+		syncDomain: null,
+		vitePeerSyncHost: import.meta.env?.VITE_PEER_SYNC_HOST,
+		windowLocation: typeof window !== 'undefined' ? window.location : undefined,
+	})
+	if (fromPeer) return fromPeer
+	const domain = (typeof process !== 'undefined' && process.env?.PEER_SYNC_HOST) || 'localhost:4201'
+	if (domain.startsWith('http://') || domain.startsWith('https://')) return domain
+	const secure = domain.includes('localhost') || domain.includes('127.0.0.1') ? 'http' : 'https'
+	return `${secure}://${domain}`
+}
 
 const MAX_TURNS = 4
 
@@ -39,7 +58,7 @@ export default {
 			])
 		}
 
-		const apiUrl = `${getApiBaseUrl()}/api/v0/llm/chat`
+		const apiUrl = `${getLlmApiBaseUrl()}/api/v0/llm/chat`
 		let token = null
 		try {
 			token = await runtime.getCapabilityToken?.({ cmd: '/llm/chat', args: {} })

@@ -9,7 +9,7 @@
 			},
 			{
 				"ask": {
-					"target": "°maia/os/ai/actor.maia",
+					"target": "°maia/services/ai/actor.maia",
 					"type": "CHAT",
 					"payload": {
 						"replyTo": "$$source",
