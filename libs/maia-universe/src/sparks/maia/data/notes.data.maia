@@ -17,9 +17,5 @@
 			"content": "# Markdown Formatting\n\n## Headers\nUse `#`, `##`, `###` for headings.\n\n## Text\n**Bold**, *italic*, ~~strikethrough~~, `inline code`.\n\n## Lists\n- Unordered item\n- Another item\n\n1. Ordered item\n2. Second item\n\n## Code\n```javascript\nconst x = 42;\n```\n\n## Links\n[MaiaOS](https://maia.city)\n\n## Blockquote\n> A quote for emphasis."
 		}
 	],
-	"chat": [
-		{
-			"content": "Dear future us, what we're creating together... — [this is coming from CoText]"
-		}
-	]
+	"chat": []
 }

@@ -35,6 +35,18 @@ function inboxLogicalRef(inboxPathFromDerive) {
 	return inboxPathFromDerive ? `°maia/${inboxPathFromDerive}` : null
 }
 
+/** Merge `registry.data` into `merged.data`: concatenate arrays for the same key (e.g. notes from chat + paper). */
+function mergeSeedDataBucket(mergedData, registryData) {
+	if (!registryData || typeof registryData !== 'object') return
+	for (const [key, value] of Object.entries(registryData)) {
+		if (Array.isArray(value) && Array.isArray(mergedData[key])) {
+			mergedData[key] = mergedData[key].concat(value)
+		} else {
+			mergedData[key] = value
+		}
+	}
+}
+
 function normalizeVibeForSeeding(vibe) {
 	if (!vibe || typeof vibe !== 'object') {
 		throw new Error('[vibes] Vibe must be a non-null object')
@@ -92,7 +104,7 @@ export function buildSeedConfig(vibeRegistries) {
 		assignLabeledBucket(merged.processes, registry.processes)
 		assignLabeledBucket(merged.interfaces, registry.interfaces)
 		assignLabeledBucket(merged.wasms, registry.wasms)
-		Object.assign(merged.data, registry.data || {})
+		mergeSeedDataBucket(merged.data, registry.data)
 	}
 	if (validRegistries.length > 0) {
 		merged.data.icons = SEED_DATA.icons

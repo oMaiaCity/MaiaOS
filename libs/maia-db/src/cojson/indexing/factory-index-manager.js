@@ -8,6 +8,7 @@
  * - spark.os.metaFactoryCoId: co_z of metafactory (anchor)
  * - spark.os.indexes: schema-co-id → colist (definition catalog at key === metaFactoryCoId; per-schema instance indexes otherwise)
  * - spark.os.unknown: colist of co-values without schemas
+ * - spark.os.nanoids: nanoid string → co_z (header.meta.$nanoid index for migration)
  */
 
 import { FACTORY_REF_PATTERN } from '@MaiaOS/validation'
@@ -204,6 +205,129 @@ export async function ensureIndexesCoMap(peer) {
 
 	// Fallback: return null if not available yet (caller should handle this gracefully)
 	return null
+}
+
+/**
+ * Ensure spark.os.nanoids CoMap exists (nanoid string → instance/factory co_z).
+ * @param {Object} peer
+ * @returns {Promise<import('@cojson/cojson').RawCoMap|null>}
+ */
+export async function ensureNanoidIndexCoMap(peer) {
+	const osCoMap = await ensureOsCoMap(peer)
+	if (!osCoMap) return null
+
+	const existingId = osCoMap.get('nanoids')
+	if (existingId) {
+		try {
+			const store = await universalRead(peer, existingId, null, null, null, {
+				deepResolve: false,
+				timeoutMs: 10000,
+			})
+			if (!store || store.value?.error) return null
+			const core = peer.getCoValue(existingId)
+			if (!core?.isAvailable()) return null
+			const nanoidsContent = core.getCurrentContent?.()
+			if (!nanoidsContent) return null
+			const contentType = nanoidsContent.cotype || nanoidsContent.type
+			const isCoMap = contentType === 'comap' && typeof nanoidsContent.get === 'function'
+			if (!isCoMap) return null
+			return nanoidsContent
+		} catch (_e) {
+			return null
+		}
+	}
+
+	if (peer.dbEngine?.resolveSystemFactories) await peer.dbEngine.resolveSystemFactories()
+	const indexesSchemaCoId = getRuntimeRef(peer, RUNTIME_REF.OS_INDEXES_REGISTRY)
+
+	let nanoidsCoMapId
+	if (
+		indexesSchemaCoId &&
+		typeof indexesSchemaCoId === 'string' &&
+		indexesSchemaCoId.startsWith('co_z') &&
+		peer.dbEngine
+	) {
+		const { create } = await import('../crud/create.js')
+		const created = await create(peer, indexesSchemaCoId, {})
+		nanoidsCoMapId = created.id
+	} else {
+		const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
+		const { coValue: nanoidsCoMap } = await createCoValueForSpark(peer, peer.systemSparkCoId, {
+			factory: EXCEPTION_FACTORIES.META_SCHEMA,
+			cotype: 'comap',
+			data: {},
+		})
+		nanoidsCoMapId = nanoidsCoMap.id
+	}
+
+	osCoMap.set('nanoids', nanoidsCoMapId)
+
+	try {
+		const nanoidsStore = await universalRead(peer, nanoidsCoMapId, null, null, null, {
+			deepResolve: false,
+			timeoutMs: 5000,
+		})
+		if (nanoidsStore && !nanoidsStore.value?.error) {
+			const nanoidsCore = peer.getCoValue(nanoidsCoMapId)
+			if (nanoidsCore && peer.isAvailable(nanoidsCore)) {
+				const nanoidsContent = nanoidsCore.getCurrentContent?.()
+				if (nanoidsContent && typeof nanoidsContent.get === 'function') {
+					return nanoidsContent
+				}
+			}
+		}
+	} catch (_e) {}
+
+	return null
+}
+
+/**
+ * @param {Object} peer
+ * @param {import('@cojson/cojson').CoValueCore} coValueCore
+ * @returns {Promise<void>}
+ */
+export async function indexByNanoid(peer, coValueCore) {
+	if (!coValueCore?.id || !peer.isAvailable(coValueCore)) return
+	if (await isInternalCoValue(peer, coValueCore.id)) return
+
+	const header = peer.getHeader(coValueCore)
+	const nanoid = header?.meta?.$nanoid
+	if (typeof nanoid !== 'string' || nanoid.length === 0) return
+
+	const nanoidsContent = await ensureNanoidIndexCoMap(peer)
+	if (!nanoidsContent || typeof nanoidsContent.set !== 'function') return
+
+	try {
+		nanoidsContent.set(nanoid, coValueCore.id)
+	} catch (_e) {}
+}
+
+/**
+ * Load spark.os.nanoids CoMap content (nanoid → co_z).
+ * @param {Object} peer
+ * @returns {Promise<import('@cojson/cojson').RawCoMap|null>}
+ */
+export async function loadNanoidIndex(peer) {
+	const osCoMap = await ensureOsCoMap(peer)
+	if (!osCoMap) return null
+	const nanoidsId = osCoMap.get('nanoids')
+	if (!nanoidsId || typeof nanoidsId !== 'string' || !nanoidsId.startsWith('co_z')) return null
+	try {
+		const store = await universalRead(peer, nanoidsId, null, null, null, {
+			deepResolve: false,
+			timeoutMs: 10000,
+		})
+		if (!store || store.value?.error) return null
+		const core = peer.getCoValue(nanoidsId)
+		if (!core?.isAvailable()) return null
+		const content = peer.getCurrentContent(core)
+		if (!content || typeof content.get !== 'function') return null
+		const contentType = content.cotype || content.type
+		if (contentType !== 'comap') return null
+		return content
+	} catch (_e) {
+		return null
+	}
 }
 
 /**
@@ -443,6 +567,11 @@ async function isInternalCoValue(peer, coId) {
 					return true
 				}
 
+				const nanoidsId = osContent.get('nanoids')
+				if (coId === nanoidsId) {
+					return true
+				}
+
 				// Check if it's spark.os.indexes itself
 				const indexesId = osContent.get('indexes')
 				if (coId === indexesId) {
@@ -674,6 +803,7 @@ export async function registerFactoryCoValue(peer, schemaCoValueCore) {
  */
 export async function applyPersistentCoValueIndexing(peer, coValueCore) {
 	if (!coValueCore?.id || !peer.isAvailable(coValueCore)) return
+	await indexByNanoid(peer, coValueCore)
 	if (await isFactoryCoValue(peer, coValueCore)) {
 		await registerFactoryCoValue(peer, coValueCore)
 		return

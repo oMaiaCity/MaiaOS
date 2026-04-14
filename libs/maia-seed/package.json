@@ -6,7 +6,9 @@
 	"exports": {
 		".": "./src/index.js",
 		"./ref-transform": "./src/ref-transform.js",
-		"./orchestration": "./src/orchestration/seed.js"
+		"./orchestration": "./src/orchestration/seed.js",
+		"./orchestration/migrate": "./src/orchestration/migrate.js",
+		"./dev/watch-migrate": "./src/dev/watch-migrate.js"
 	},
 	"dependencies": {
 		"@MaiaOS/db": "workspace:*",

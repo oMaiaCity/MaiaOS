@@ -4,6 +4,5 @@
 	"view": "°maia/chat/intent/intent.view.maia",
 	"process": "°maia/chat/intent/intent.process.maia",
 	"brand": "°maia/brand/maiacity.style.maia",
-	"inbox": "°maia/chat/intent/inbox.maia",
-	"interface": []
+	"inbox": "°maia/chat/intent/inbox.maia"
 }

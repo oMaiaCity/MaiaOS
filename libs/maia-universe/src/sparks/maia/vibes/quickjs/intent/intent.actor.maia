@@ -4,6 +4,5 @@
 	"view": "°maia/quickjs/intent/intent.view.maia",
 	"process": "°maia/quickjs/intent/intent.process.maia",
 	"brand": "°maia/brand/maiacity.style.maia",
-	"inbox": "°maia/quickjs/intent/inbox.maia",
-	"interface": []
+	"inbox": "°maia/quickjs/intent/inbox.maia"
 }

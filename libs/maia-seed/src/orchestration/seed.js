@@ -603,6 +603,20 @@ export async function seed(
 	}
 	fillRuntimeRefsFromSystemFactories(peer)
 
+	const dataCoIds = seededData?.coIds
+	if (Array.isArray(dataCoIds) && dataCoIds.length > 0) {
+		const { applyPersistentCoValueIndexing } = await import(
+			'@MaiaOS/db/cojson/indexing/factory-index-manager.js'
+		)
+		for (const coId of dataCoIds) {
+			if (typeof coId !== 'string' || !coId.startsWith('co_z')) continue
+			const core = await ensureCoValueLoaded(peer, coId, { waitForAvailable: true })
+			if (core && peer.isAvailable(core)) {
+				await applyPersistentCoValueIndexing(peer, core)
+			}
+		}
+	}
+
 	return {
 		metaSchema: metaSchemaCoId,
 		schemas: seededSchemas,
