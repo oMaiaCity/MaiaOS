@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/validation",
-	"version": "26.4.141515-next",
+	"version": "26.4.141523-next",
 	"type": "module",
 	"main": "src/index.js",
 	"exports": {
