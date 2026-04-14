@@ -391,7 +391,8 @@ export async function createPostgresAdapter(connectionString, blobStore) {
 	}
 
 	const normalized = normalizePostgresConnectionString(connectionString)
-	const sql = new SQL(normalized)
+	// Bun pooled SQL (max > 1) forbids sql.unsafe() outside sql.begin/reserve — this adapter uses unsafe everywhere.
+	const sql = new SQL(normalized, { max: 1 })
 	const db = createSqlDbInterface(sql)
 
 	if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {

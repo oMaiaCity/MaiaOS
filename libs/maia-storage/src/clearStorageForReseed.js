@@ -26,7 +26,7 @@ export async function clearStorageForReseed(options = {}) {
 		if (!databaseUrl) {
 			throw new Error('[clearStorageForReseed] PEER_SYNC_STORAGE=postgres requires PEER_SYNC_DB_URL')
 		}
-		const sql = new SQL(normalizePostgresConnectionString(databaseUrl))
+		const sql = new SQL(normalizePostgresConnectionString(databaseUrl), { max: 1 })
 		try {
 			await sql.unsafe(
 				'TRUNCATE transactions, signatureafter, sessions, covalues, unsynced_covalues, deletedcovalues, schema_version RESTART IDENTITY CASCADE',
