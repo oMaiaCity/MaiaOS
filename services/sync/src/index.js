@@ -12,7 +12,7 @@
  *     - postgres: PEER_SYNC_DB_URL (required)
  *   AVEN_MAIA_GUARDIAN: Human account co-id (co_z...). If set, add as admin of °maia spark guardian; also seeds /sync/write so that account can sync without POST /register.
  *   PEER_SYNC_MODE: seed | migrate | unset/empty/none — controls one-shot sync startup behavior.
- *     - seed: Clear storage (PGlite) then genesis seed (bootstrap + schemas + vibes). May overwrite scaffold.
+ *     - seed: Genesis seed (bootstrap + schemas + vibes). Does not clear storage — wipe Postgres/PGlite/Tigris manually if you need a full reset.
  *     - migrate: Diff MAIA_SPARK_REGISTRY vs live CoValues and apply CRDT updates (after resolveSystemFactories). No seed.
  *     - unset, empty, or none: Normal run — use persisted scaffold; no genesis seed; no one-shot migrate.
  *   SEED_VIBES: Default "all". Which vibes to seed (todos, chat, quickjs, etc). "all" seeds every vibe including quickjs.
@@ -1050,12 +1050,6 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 			)
 		}
 
-		if (peerSyncSeed) {
-			const { clearStorageForReseed } = await import('@MaiaOS/storage/clearStorageForReseed')
-			await clearStorageForReseed({ dbPath, usePostgres })
-			opsSync.log('Storage cleared for reseed (DB + binary).')
-		}
-
 		const maiaNameRaw = process.env.AVEN_MAIA_NAME || 'Maia'
 		const maiaName = maiaNameRaw.startsWith('Aven ') ? maiaNameRaw : `Aven ${maiaNameRaw}`
 		const result = await loadOrCreateAgentAccount({
@@ -1165,7 +1159,7 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 				throw new Error(`${OPS_PREFIX.sync} Genesis seed failed: ${msg}`)
 			}
 			opsSync.log(
-				`Genesis seeded: ${vibeRegistries.length} vibe(s) (schemas + scaffold). Clear PEER_SYNC_MODE or set none for subsequent restarts.`,
+				`Genesis seeded: ${vibeRegistries.length} vibe(s) (schemas + scaffold). Unset PEER_SYNC_MODE (or set none) after first seed so later restarts use the persisted scaffold.`,
 			)
 		} else {
 			opsSync.log('PEER_SYNC_MODE not seed — using persisted scaffold (skip genesis seed).')
