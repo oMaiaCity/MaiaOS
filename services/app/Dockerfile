@@ -8,6 +8,7 @@ WORKDIR /app
 
 # Copy monorepo
 COPY package.json bun.lock* ./
+COPY jsconfig.json ./
 COPY libs ./libs
 COPY services/app ./services/app
 COPY services/sync ./services/sync
