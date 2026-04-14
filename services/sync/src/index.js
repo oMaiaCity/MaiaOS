@@ -11,10 +11,8 @@
  *     - pglite: PEER_DB_PATH (default ./pg-lite.db)
  *     - postgres: PEER_SYNC_DB_URL (required)
  *   AVEN_MAIA_GUARDIAN: Human account co-id (co_z...). If set, add as admin of °maia spark guardian; also seeds /sync/write so that account can sync without POST /register.
- *   PEER_SYNC_MODE: seed | migrate | unset/empty/none — controls one-shot sync startup behavior.
- *     - seed: Clear storage (PGlite) then genesis seed (bootstrap + schemas + vibes). May overwrite scaffold.
- *     - migrate: Diff MAIA_SPARK_REGISTRY vs live CoValues and apply CRDT updates (after resolveSystemFactories). No seed.
- *     - unset, empty, or none: Normal run — use persisted scaffold; no genesis seed; no one-shot migrate.
+ *   PEER_SYNC_MODE: optional "seed" only — emergency force reseed (clear DB + blob, then genesis seed).
+ *     Unset: auto-detect empty DB via SQL (any row in CoJSON tables → skip seed); always run registry migrate after boot.
  *   SEED_VIBES: Default "all". Which vibes to seed (todos, chat, quickjs, etc). "all" seeds every vibe including quickjs.
  *   Dev: when NODE_ENV is not production, sync watches `.maia` under maia-universe and live-migrates after registry regen. Production (Fly) sets NODE_ENV=production, so watch is off.
  *   PEER_APP_HOST: Allowed CORS origin (e.g. https://next.maia.city). When set, only that origin can call sync/LLM in production. Unset = * (dev).
@@ -75,19 +73,13 @@ const dbPath = usePGlite ? pathResolve(_syncDir, PEER_DB_PATH) : undefined
 const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
 
 const avenMaiaGuardian = process.env.AVEN_MAIA_GUARDIAN?.trim() || null
-function parsePeerSyncMode() {
-	const raw = (process.env.PEER_SYNC_MODE ?? '').trim().toLowerCase()
-	if (raw === '' || raw === 'none') return 'none'
-	if (raw === 'seed') return 'seed'
-	if (raw === 'migrate') return 'migrate'
+const peerSyncModeRaw = (process.env.PEER_SYNC_MODE ?? '').trim().toLowerCase()
+if (peerSyncModeRaw && peerSyncModeRaw !== 'seed' && peerSyncModeRaw !== 'none') {
 	throw new Error(
-		`${OPS_PREFIX.sync} PEER_SYNC_MODE must be seed, migrate, none, or unset. Got: ${process.env.PEER_SYNC_MODE ?? ''}`,
+		`${OPS_PREFIX.sync} PEER_SYNC_MODE only supports "seed" (force reseed) or unset / "none". Got: ${process.env.PEER_SYNC_MODE ?? ''}`,
 	)
 }
-
-const peerSyncMode = parsePeerSyncMode()
-const peerSyncSeed = peerSyncMode === 'seed'
-const peerSyncMigrate = peerSyncMode === 'migrate'
+const peerForceReseed = peerSyncModeRaw === 'seed'
 const maiaDevMigrateWatch = process.env.NODE_ENV !== 'production'
 // SEED_VIBES: which vibes to seed on genesis. Default "all" (includes quickjs). Override: "todos,chat" or "todos,chat,quickjs"
 const seedVibesConfig = process.env.SEED_VIBES || 'all'
@@ -1050,10 +1042,35 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 			)
 		}
 
-		if (peerSyncSeed) {
+		if (peerForceReseed) {
 			const { clearStorageForReseed } = await import('@MaiaOS/storage/clearStorageForReseed')
 			await clearStorageForReseed({ dbPath, usePostgres })
-			opsSync.log('Storage cleared for reseed (DB + binary).')
+			opsSync.log('Storage cleared for reseed (PEER_SYNC_MODE=seed).')
+		}
+
+		let needsSeed
+		if (peerForceReseed) {
+			needsSeed = true
+		} else if (usePostgres) {
+			const dbUrl = process.env.PEER_SYNC_DB_URL
+			if (!dbUrl) {
+				throw new Error(`${OPS_PREFIX.sync} PEER_SYNC_STORAGE=postgres requires PEER_SYNC_DB_URL`)
+			}
+			const { probePostgresDatabaseEmpty } = await import('@MaiaOS/storage/probeCojsonDatabaseEmpty')
+			needsSeed = await probePostgresDatabaseEmpty(dbUrl)
+			opsSync.log(
+				needsSeed
+					? 'CoJSON tables empty — will run genesis seed after account load.'
+					: 'CoJSON data present — skipping genesis seed.',
+			)
+		} else {
+			const { probePGliteDatabaseEmpty } = await import('@MaiaOS/storage/probeCojsonDatabaseEmpty')
+			needsSeed = await probePGliteDatabaseEmpty(dbPath)
+			opsSync.log(
+				needsSeed
+					? 'CoJSON tables empty — will run genesis seed after account load.'
+					: 'CoJSON data present — skipping genesis seed.',
+			)
 		}
 
 		const maiaNameRaw = process.env.AVEN_MAIA_NAME || 'Maia'
@@ -1116,7 +1133,7 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 		// loadAccount defers migration; seed needs guardian in os.groups
 		await ensureProfileForNewAccount(result.account, localNode)
 
-		if (peerSyncSeed) {
+		if (needsSeed) {
 			const { ensureFactoriesLoaded, getAllFactories } = await import(
 				'@MaiaOS/validation/factory-registry'
 			)
@@ -1164,26 +1181,22 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 				const msg = seedResult.errors.map((e) => e?.message ?? e).join('; ')
 				throw new Error(`${OPS_PREFIX.sync} Genesis seed failed: ${msg}`)
 			}
-			opsSync.log(
-				`Genesis seeded: ${vibeRegistries.length} vibe(s) (schemas + scaffold). Clear PEER_SYNC_MODE or set none for subsequent restarts.`,
-			)
+			opsSync.log(`Genesis seeded: ${vibeRegistries.length} vibe(s) (schemas + scaffold).`)
 		} else {
-			opsSync.log('PEER_SYNC_MODE not seed — using persisted scaffold (skip genesis seed).')
+			opsSync.log('Genesis seed skipped — persisted scaffold in use.')
 		}
 
 		await peer.resolveSystemSparkCoId()
 		await dataEngine.resolveSystemFactories()
 
-		if (peerSyncMigrate) {
-			const { migrate } = await import('@MaiaOS/seed/orchestration/migrate')
-			const result = await migrate(peer, dataEngine)
-			for (const err of result.errors ?? []) {
-				opsSync.warn(err)
-			}
-			opsSync.log(
-				`PEER_SYNC_MODE=migrate: ${result.updated} CoValues updated, ${result.skipped} unchanged.`,
-			)
+		const { migrate } = await import('@MaiaOS/seed/orchestration/migrate')
+		const migrateResult = await migrate(peer, dataEngine)
+		for (const err of migrateResult.errors ?? []) {
+			opsSync.warn(err)
 		}
+		opsSync.log(
+			`Registry migrate: ${migrateResult.updated} CoValues updated, ${migrateResult.skipped} unchanged.`,
+		)
 
 		if (maiaDevMigrateWatch) {
 			const repoRoot = pathResolve(_syncDir, '..', '..')

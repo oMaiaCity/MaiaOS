@@ -45,14 +45,11 @@ Alternatively, create a fresh Neon DB and update `PEER_SYNC_DB_URL` in Fly secre
 bun run deploy:sync
 ```
 
-Ensure `PEER_SYNC_MODE=seed` for the first deploy to run genesis seed. All new binary uploads will go to Tigris automatically.
+Empty Postgres + deploy runs genesis seed automatically; registry migrate runs every boot. All new binary uploads go to Tigris automatically.
 
 ## 4. After First Deploy
 
-Set `PEER_SYNC_MODE=none` (or unset the secret):
-```bash
-flyctl secrets set PEER_SYNC_MODE=none --app sync-next-maia-city
-```
+No `PEER_SYNC_MODE` secret required. Optional: `PEER_SYNC_MODE=seed` only for emergency force reseed (then unset).
 
 ## 5. Verify
 

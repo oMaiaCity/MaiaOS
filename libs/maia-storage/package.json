@@ -19,7 +19,8 @@
 		"./adapters/pglite.js": {
 			"browser": "./src/adapters/pglite-stub.js",
 			"default": "./src/adapters/pglite.js"
-		}
+		},
+		"./probeCojsonDatabaseEmpty": "./src/probeCojsonDatabaseEmpty.js"
 	},
 	"scripts": {
 		"test": "bun test tests"
