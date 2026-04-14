@@ -4,8 +4,8 @@
  * Source: bun scripts/generate-maia-universe-registry.mjs
  */
 
-import { annotateMaiaConfig } from '../../../helpers/annotate-maia.js'
-import { SEED_DATA } from '../../registry-core.js'
+import { annotateMaiaConfig } from '../../../../helpers/annotate-maia.js'
+import { SEED_DATA } from '../../registry.js'
 import maiacityBrand from '../brand/maiacity.style.maia'
 import paperVibe from './manifest.vibe.maia'
 
@@ -16,7 +16,7 @@ export const PaperVibeRegistry = {
 	vibe,
 
 	styles: {
-		'brand/maiacity.style.maia': brand,
+		kIIgf0iCfbAU: brand,
 	},
 
 	actors: {},

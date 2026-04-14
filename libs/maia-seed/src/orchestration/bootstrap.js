@@ -20,7 +20,7 @@ const MAIA_SPARK = '°maia'
  */
 export async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
 	const { EXCEPTION_FACTORIES } = await import('@MaiaOS/db/registry')
-	const { getAllFactories } = await import('@MaiaOS/factories')
+	const { getAllFactories } = await import('@MaiaOS/factories/factory-registry')
 	const allSchemas = schemas || getAllFactories()
 
 	const guardian = node.createGroup()

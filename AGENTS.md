@@ -23,7 +23,7 @@
 - **Logical refs** use the **`°`** prefix (e.g. `°maia/...`). Instance configs carry **`$label`** (full logical ref string) and **`$nanoid`** (deterministic from the canonical `maia/...` path). There is **no Maia `$id`** on instances—**`$label`** is the single logical id.
 - **Factory refs** in authoring use **`°maia/factory/<name>.factory.maia`** — derived as `maiaFactoryLabel` / `identityFromMaiaPath` in [`libs/maia-factories/src/identity-from-maia-path.js`](libs/maia-factories/src/identity-from-maia-path.js) (no manual map). **`$factory`** in `.maia` files uses that shape.
 - **JSON Schema** `"$id": "https://..."` in defs is unrelated to Maia identity.
-- **Registry codegen:** after changing universe `.maia` inventory, run **`bun scripts/generate-maia-universe-registry.mjs`** (updates `registry-core.js` `SEED_DATA`).
+- **Registry codegen:** after changing universe `.maia` inventory, run **`bun scripts/generate-maia-universe-registry.mjs`** (updates `sparks/maia/registry.js`, `SEED_DATA`, `MAIA_SPARK_REGISTRY`).
 - **Future sparks:** additional top-level prefixes may follow the same pattern (e.g. `°<spark>/factory/...`); the current universe uses **`°maia/...`** only.
 
 ### Running the dev environment

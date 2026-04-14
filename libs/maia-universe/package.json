@@ -5,13 +5,13 @@
 	"main": "src/index.js",
 	"exports": {
 		".": "./src/index.js",
-		"./actors": "./src/maia/actors/index.js",
-		"./actors/*": "./src/maia/actors/*",
-		"./data/icons/*": "./src/maia/data/icons/*",
-		"./factories/*": "./src/maia/factories/*",
-		"./todos/loader": "./src/maia/vibes/todos/loader.js",
-		"./todos/registry": "./src/maia/vibes/todos/registry.js",
-		"./vibes/*": "./src/maia/vibes/*"
+		"./actors": "./src/sparks/maia/actors/index.js",
+		"./actors/*": "./src/sparks/maia/actors/*",
+		"./data/icons/*": "./src/sparks/maia/data/icons/*",
+		"./factories/*": "./src/sparks/maia/factories/*",
+		"./todos/loader": "./src/sparks/maia/vibes/todos/loader.js",
+		"./todos/registry": "./src/sparks/maia/vibes/todos/registry.js",
+		"./vibes/*": "./src/sparks/maia/vibes/*"
 	},
 	"dependencies": {
 		"@noble/hashes": "2.0.1"

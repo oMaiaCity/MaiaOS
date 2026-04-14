@@ -10,7 +10,7 @@ Services (app, sync) import only from `@MaiaOS/loader`. Loader re-exports everyt
 
 | Export | Source | Use |
 |--------|--------|-----|
-| `getAllFactories` | `@MaiaOS/factories` | Seed/bootstrap (canonical schema definitions) |
+| `getAllFactories` | `@MaiaOS/factories/factory-registry` | Seed/bootstrap (canonical schema definitions) |
 | `getSeedConfig` | `@MaiaOS/actors` | Seed/bootstrap (actor definitions) |
 | `getAllVibeRegistries` | `@MaiaOS/vibes` (async) | Seed/bootstrap (vibe registries) |
 | `buildSeedConfig` | `@MaiaOS/vibes` (async) | Seed config from vibes |

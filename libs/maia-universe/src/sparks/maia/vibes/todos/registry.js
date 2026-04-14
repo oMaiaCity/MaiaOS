@@ -4,8 +4,8 @@
  * Source: bun scripts/generate-maia-universe-registry.mjs
  */
 
-import { annotateMaiaConfig } from '../../../helpers/annotate-maia.js'
-import { SEED_DATA } from '../../registry-core.js'
+import { annotateMaiaConfig } from '../../../../helpers/annotate-maia.js'
+import { SEED_DATA } from '../../registry.js'
 import maiacityBrand from '../brand/maiacity.style.maia'
 import intentActor from './intent/intent.actor.maia'
 import intentContext from './intent/intent.context.maia'
@@ -24,23 +24,23 @@ export const TodosVibeRegistry = {
 	vibe,
 
 	styles: {
-		'brand/maiacity.style.maia': brand,
+		kIIgf0iCfbAU: brand,
 	},
 
 	actors: {
-		'todos/intent/intent.actor.maia': actor,
+		bpCP5HDpQTfq: actor,
 	},
 
 	views: {
-		'todos/intent/intent.view.maia': view,
+		KtUzIAwlaape: view,
 	},
 
 	contexts: {
-		'todos/intent/intent.context.maia': context,
+		WJp1VRg1Doq0: context,
 	},
 
 	processes: {
-		'todos/intent/intent.process.maia': process,
+		qWrT4xarG80I: process,
 	},
 	data: {
 		todos: SEED_DATA.todos.todos,

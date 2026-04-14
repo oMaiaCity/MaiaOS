@@ -124,7 +124,7 @@ Bun.serve({
 		},
 		// Same file as @MaiaOS/universe/factories/meta.factory.maia — for ValidationEngine when Bun HMR leaves dynamic import empty
 		'/__maia_dev/factory/meta.factory.maia': () => {
-			const filePath = join(repoRoot, 'libs/maia-universe/src/maia/factories/meta.factory.maia')
+			const filePath = join(repoRoot, 'libs/maia-universe/src/sparks/maia/factories/meta.factory.maia')
 			if (!existsSync(filePath) || !statSync(filePath).isFile()) {
 				return new Response('Not found', { status: 404, headers: COOP_COEP })
 			}
@@ -134,7 +134,7 @@ Bun.serve({
 		},
 		// All *.factory.maia in universe — for ensureFactoriesLoaded when Bun HMR breaks dynamic imports
 		'/__maia_dev/factories.json': () => {
-			const dir = join(repoRoot, 'libs/maia-universe/src/maia/factories')
+			const dir = join(repoRoot, 'libs/maia-universe/src/sparks/maia/factories')
 			if (!existsSync(dir) || !statSync(dir).isDirectory()) {
 				return new Response('Not found', { status: 404, headers: COOP_COEP })
 			}

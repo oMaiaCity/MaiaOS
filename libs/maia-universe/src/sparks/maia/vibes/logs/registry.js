@@ -4,7 +4,7 @@
  * Source: bun scripts/generate-maia-universe-registry.mjs
  */
 
-import { annotateMaiaConfig } from '../../../helpers/annotate-maia.js'
+import { annotateMaiaConfig } from '../../../../helpers/annotate-maia.js'
 import maiacityBrand from '../brand/maiacity.style.maia'
 import intentActor from './intent/intent.actor.maia'
 import intentContext from './intent/intent.context.maia'
@@ -23,23 +23,23 @@ export const LogsVibeRegistry = {
 	vibe,
 
 	styles: {
-		'brand/maiacity.style.maia': brand,
+		kIIgf0iCfbAU: brand,
 	},
 
 	actors: {
-		'logs/intent/intent.actor.maia': actor,
+		'8RZda05XUOGd': actor,
 	},
 
 	views: {
-		'logs/intent/intent.view.maia': view,
+		YuS1Ux69GBXC: view,
 	},
 
 	contexts: {
-		'logs/intent/intent.context.maia': context,
+		'5QcEnyvON5Xe': context,
 	},
 
 	processes: {
-		'logs/intent/intent.process.maia': process,
+		B6kNjDps5u4X: process,
 	},
 	data: {},
 }

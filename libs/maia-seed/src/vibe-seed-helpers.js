@@ -23,8 +23,10 @@ export function getVibeActorConfigs() {
 	const map = {}
 	for (const registry of ALL_VIBE_REGISTRIES) {
 		if (!registry?.actors) continue
-		for (const [id, config] of Object.entries(registry.actors)) {
-			map[id] = config
+		for (const config of Object.values(registry.actors)) {
+			if (config?.$label?.startsWith('°maia/')) {
+				map[config.$label.slice('°maia/'.length)] = config
+			}
 		}
 	}
 	return map

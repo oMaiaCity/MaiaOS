@@ -5,16 +5,18 @@
 
 export function deriveInboxId(actorPathKey) {
 	if (!actorPathKey || typeof actorPathKey !== 'string') return null
-	const lower = actorPathKey.toLowerCase()
+	let path = actorPathKey
+	if (path.startsWith('°maia/')) path = path.slice('°maia/'.length)
+	const lower = path.toLowerCase()
 	if (lower.endsWith('intent.actor.maia')) {
-		return `${actorPathKey.slice(0, -'intent.actor.maia'.length)}inbox.maia`
+		return `${path.slice(0, -'intent.actor.maia'.length)}inbox.maia`
 	}
 	if (lower.endsWith('/actor.maia')) {
-		const dir = actorPathKey.slice(0, actorPathKey.lastIndexOf('/'))
+		const dir = path.slice(0, path.lastIndexOf('/'))
 		return `${dir}/inbox.maia`
 	}
 	if (lower.endsWith('.actor.maia')) {
-		const dir = actorPathKey.slice(0, actorPathKey.lastIndexOf('/'))
+		const dir = path.slice(0, path.lastIndexOf('/'))
 		return `${dir}/inbox.maia`
 	}
 	return null

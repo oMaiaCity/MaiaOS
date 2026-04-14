@@ -25,13 +25,11 @@ import {
 	RUNTIME_REF,
 	resolveInfraFactoryCoId,
 } from '@MaiaOS/db'
-import { ensureFactoriesLoaded } from '@MaiaOS/factories'
 import {
 	createWebSocketPeer,
 	DataEngine,
 	ensureProfileForNewAccount,
 	generateRegistryName,
-	getAllFactories,
 	loadOrCreateAgentAccount,
 	MaiaDB,
 	MaiaScriptEvaluator,
@@ -42,7 +40,6 @@ import {
 import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
 import { agentIDToDidKey, verifyInvocationToken } from '@MaiaOS/maia-ucan'
 import { buildSeedConfig, filterVibesForSeeding, getSeedConfig } from '@MaiaOS/seed'
-import { getAllVibeRegistries } from '@MaiaOS/universe'
 import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -1023,8 +1020,6 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 
 ;(async () => {
 	try {
-		await ensureFactoriesLoaded()
-
 		if (!accountID || !agentSecret) {
 			throw new Error('AVEN_MAIA_ACCOUNT and AVEN_MAIA_SECRET required. Run: bun agent:generate')
 		}
@@ -1107,6 +1102,11 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 		await ensureProfileForNewAccount(result.account, localNode)
 
 		if (peerSyncSeed) {
+			const { ensureFactoriesLoaded, getAllFactories } = await import(
+				'@MaiaOS/factories/factory-registry'
+			)
+			await ensureFactoriesLoaded()
+			const { getAllVibeRegistries } = await import('@MaiaOS/universe')
 			const allVibeRegistries = await getAllVibeRegistries()
 			const vibeRegistries = await filterVibesForSeeding(allVibeRegistries, seedVibesConfig)
 			if (vibeRegistries.length === 0) {
