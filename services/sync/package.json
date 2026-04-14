@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/sync",
-	"version": "26.4.21815-next",
+	"version": "26.4.141450-next",
 	"type": "module",
 	"private": true,
 	"scripts": {

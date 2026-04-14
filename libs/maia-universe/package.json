@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/universe",
-	"version": "26.4.21315-next",
+	"version": "26.4.141450-next",
 	"type": "module",
 	"main": "src/index.js",
 	"exports": {

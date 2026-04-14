@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/peer",
-	"version": "26.4.21815-next",
+	"version": "26.4.141450-next",
 	"type": "module",
 	"main": "./src/index.js",
 	"exports": {
