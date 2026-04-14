@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/runtime",
-	"version": "26.4.141523-next",
+	"version": "26.4.141611-next",
 	"type": "module",
 	"main": "src/index.js",
 	"exports": {
