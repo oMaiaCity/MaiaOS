@@ -1,15 +1,27 @@
 #!/usr/bin/env bun
 import { cpSync, existsSync, mkdirSync } from 'node:fs'
+import { createRequire } from 'node:module'
 /**
  * Bun-native build for maia-client, sync-server, avens.
  * Uses root jsconfig.json paths for @MaiaOS/* resolution (self-contained bundle).
  */
-import { join, normalize } from 'node:path'
+import { dirname, join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const repoRoot = join(__dirname, '../../..')
 const outputDir = join(__dirname, '../output')
+
+function resolvePgliteWasmPath(root) {
+	const fallback = join(root, 'node_modules/@electric-sql/pglite/dist/pglite.wasm')
+	try {
+		const require = createRequire(join(root, 'package.json'))
+		const pkgDir = dirname(require.resolve('@electric-sql/pglite/package.json'))
+		return join(pkgDir, 'dist', 'pglite.wasm')
+	} catch {
+		return fallback
+	}
+}
 
 const storageIndexBrowser = join(repoRoot, 'libs/maia-storage/src/index.browser.js')
 const storagePostgresStub = join(repoRoot, 'libs/maia-storage/src/adapters/postgres-stub.js')
@@ -103,11 +115,14 @@ async function main() {
 	// Server runtime is Bun only — sync bundle must use target `bun` (Bun builtins, SQL, etc.).
 	await build('services/sync/src/index.js', 'sync-server.mjs', 'bun')
 
-	const wasmSource = join(repoRoot, 'node_modules/@electric-sql/pglite/dist/pglite.wasm')
-	if (existsSync(wasmSource)) {
-		cpSync(wasmSource, join(outputDir, 'pglite.wasm'))
-		console.log('Vendored pglite.wasm')
+	const wasmSource = resolvePgliteWasmPath(repoRoot)
+	const wasmDest = join(outputDir, 'pglite.wasm')
+	if (!existsSync(wasmSource)) {
+		console.error('[maia-distros] Missing pglite.wasm at', wasmSource)
+		process.exit(1)
 	}
+	cpSync(wasmSource, wasmDest)
+	console.log('Vendored pglite.wasm')
 
 	console.log('Distros build complete')
 }
