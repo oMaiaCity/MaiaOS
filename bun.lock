@@ -108,7 +108,7 @@
       "dependencies": {
         "@MaiaOS/logs": "workspace:*",
         "@electric-sql/pglite": "0.4.2",
-        "@noble/hashes": "2.0.1",
+        "@noble/hashes": "2.2.0",
         "cojson": "0.20.16",
         "cojson-storage-indexeddb": "0.20.16",
       },
@@ -118,7 +118,7 @@
       "version": "26.4.21815-next",
       "dependencies": {
         "@noble/ed25519": "3.0.1",
-        "@noble/hashes": "2.0.1",
+        "@noble/hashes": "2.2.0",
         "@scure/base": "2.0.0",
       },
     },
@@ -128,7 +128,7 @@
       "dependencies": {
         "@MaiaOS/peer": "workspace:*",
         "@MaiaOS/runtime": "workspace:*",
-        "@noble/hashes": "2.0.1",
+        "@noble/hashes": "2.2.0",
         "unicode-segmenter": "0.15.0",
       },
     },
@@ -382,7 +382,7 @@
 
     "@noble/ed25519": ["@noble/ed25519@3.0.1", "", {}, "sha512-t/T8LuK0ym8ALQudCCQCtrRdMSxBnRgHXw+wg+YsSlE6d+on7sX3flqlSJ2mOs9xEuchM36kj9SuX5MG7pXQMA=="],
 
-    "@noble/hashes": ["@noble/hashes@2.0.1", "", {}, "sha512-XlOlEbQcE9fmuXxrVTXCTlG2nlRXa9Rj3rr5Ue/+tX+nmkgbX720YHh0VR3hBF9xDvwnb8D2shVGOwNx+ulArw=="],
+    "@noble/hashes": ["@noble/hashes@2.2.0", "", {}, "sha512-IYqDGiTXab6FniAgnSdZwgWbomxpy9FtYvLKs7wCUs2a8RkITG+DFGO1DM9cr+E3/RgADRpFjrKVaJ1z6sjtEg=="],
 
     "@opentelemetry/api": ["@opentelemetry/api@1.9.0", "", {}, "sha512-3giAOQvZiH5F9bMlMiv8+GSPMeqg0dbaeo58/0SlA9sxSqZhnUtxzX9/2FzyhS9sWQf5S0GJE0AKBrFqjpeYcg=="],
 
