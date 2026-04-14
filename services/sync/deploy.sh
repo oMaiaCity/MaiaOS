@@ -25,7 +25,9 @@ retry_flyctl_deploy() {
       --app "$app_name" \
       --wait-timeout 600 \
       --auto-confirm \
-      --ha=false 2>&1 | tee /tmp/flyctl-deploy.log
+      --ha=false \
+      --build-arg "GIT_SHA=${GITHUB_SHA:-$(git -C "$MONOREPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)}" \
+      2>&1 | tee /tmp/flyctl-deploy.log
 
     local deploy_exit_code=${PIPESTATUS[0]}
 

@@ -16,8 +16,9 @@ COPY scripts ./scripts
 
 ENV HUSKY=0
 RUN bun install
-RUN bun run universe:registry
-RUN bun run distros:build
+# GIT_SHA must change per commit so remote BuildKit cannot reuse a stale distros bundle layer
+ARG GIT_SHA=unknown
+RUN echo "GIT_SHA=${GIT_SHA}" && bun run universe:registry && bun run distros:build
 
 # Runtime stage - single sync-server.mjs bundle + vendored pglite.wasm (no node_modules)
 FROM oven/bun:1-slim
