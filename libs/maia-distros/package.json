@@ -11,6 +11,7 @@
 		"output"
 	],
 	"dependencies": {
+		"@electric-sql/pglite": "0.4.2",
 		"@MaiaOS/universe": "workspace:*",
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/runtime": "workspace:*",

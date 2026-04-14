@@ -4,12 +4,26 @@
  * Adapter passes wasmModule to PGlite.create() so no path resolution needed.
  */
 import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs'
+import { createRequire } from 'node:module'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
+const repoRoot = join(__dirname, '../../..')
 const outputRoot = join(__dirname, '../output')
-const wasmSource = join(__dirname, '../../../node_modules/@electric-sql/pglite/dist/pglite.wasm')
+
+function resolvePgliteWasmPath(root) {
+	const fallback = join(root, 'node_modules/@electric-sql/pglite/dist/pglite.wasm')
+	try {
+		const require = createRequire(join(root, 'package.json'))
+		const pkgDir = dirname(require.resolve('@electric-sql/pglite/package.json'))
+		return join(pkgDir, 'dist', 'pglite.wasm')
+	} catch {
+		return fallback
+	}
+}
+
+const wasmSource = resolvePgliteWasmPath(repoRoot)
 const wasmTarget = join(outputRoot, 'pglite.wasm')
 
 if (!existsSync(wasmSource)) {
