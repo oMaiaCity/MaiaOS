@@ -5,7 +5,7 @@
  * Kills any process on 4201 before starting, like bun dev.
  */
 
-import { spawn } from 'node:child_process'
+import { execSync, spawn } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { freePort } from './free-port.js'
@@ -16,6 +16,18 @@ const rootDir = resolve(__dirname, '..')
 const logger = createLogger('sync')
 
 ;(async () => {
+	try {
+		execSync('bun scripts/generate-maia-universe-registry.mjs', {
+			cwd: rootDir,
+			stdio: 'pipe',
+			env: process.env,
+		})
+		logger.log('[registry] Universe registry generated')
+	} catch (e) {
+		logger.error(`[registry] Generation failed: ${e.stderr?.toString().trim() || e.message}`)
+		process.exit(1)
+	}
+
 	const ok = await freePort(4201, (msg) => logger.warn(msg))
 	if (!ok) process.exit(1)
 
