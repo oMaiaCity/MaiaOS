@@ -14,7 +14,8 @@
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/validation": "workspace:*",
 		"@MaiaOS/logs": "workspace:*",
-		"@MaiaOS/universe": "workspace:*"
+		"@MaiaOS/universe": "workspace:*",
+		"unicode-segmenter": "0.15.0"
 	},
 	"files": [
 		"src"
