@@ -19,7 +19,7 @@
 		"@MaiaOS/factories": "workspace:*",
 		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/game": "workspace:*",
-		"@MaiaOS/loader": "workspace:*",
+		"@MaiaOS/runtime": "workspace:*",
 		"@MaiaOS/peer": "workspace:*",
 		"@MaiaOS/universe": "workspace:*",
 		"@MaiaOS/maia-ai": "workspace:*",

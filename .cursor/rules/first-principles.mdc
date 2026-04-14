@@ -12,11 +12,7 @@ Apply the following planing process:
 
 4. apply TDD (bun tests - colocated in each packages /tests folder) write full coverage tests for the solution, that you figured out is the best possible of all potential variants
 
-5. ask once again, what the single smartest and most radically innovative and accretive and useful and compelling additoain you can add to the plan 
-
-6. refine plan with human feedback
-
-7. execute until all tests pass
+5. refine plan with human feedback
 
 IMPORANT KEEP IN MIND:
 Where ever you can, compact and simplify ans abstract anything that you can aiming and 20% code line compaction and redcutions.

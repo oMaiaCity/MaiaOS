@@ -21,8 +21,8 @@ Read the documentation in the following order for a complete understanding:
 - [Cryptography](./01_maia-self/cryptography.md) - Bottom-up crypto concepts
 - [API Reference](./01_maia-self/api-reference.md) - Complete API reference
 
-### 2. [maia-loader Package](./02_maia-loader/README.md)
-**Core system services and boot process**
+### 2. [Boot / runtime docs](./02_maia-loader/README.md) (`@MaiaOS/runtime`)
+**Core system services and boot process** (source: `libs/maia-runtime/`)
 - Identity & authentication (integrated into `MaiaOS.boot()`)
 - Actor & DSL execution layer (`MaiaOS.boot()`)
 - Boot process and engine initialization
@@ -74,9 +74,9 @@ Read the documentation in the following order for a complete understanding:
 - [CoJSON Architecture](./05_maia-db/cojson.md) - Complete layer hierarchy from primitives to CoValues
 
 ### 6. [maia-operations (merged)](./06_maia-operations/README.md)
-**Operations are now part of maia-engines**
+**Operations live in @MaiaOS/runtime** (DataEngine)
 - DataEngine (data.engine.js) executes **maia.do({ op, schema, key, ... })**
-- Operations live in `libs/maia-engines/src/engines/data.engine.js`
+- Operations live in `libs/maia-runtime/src/engines/data.engine.js`
 - MaiaDB (maia-db) is the storage layer; no DBAdapter interface
 
 ### 7. [State and Persistence](./state-and-persistence.md)

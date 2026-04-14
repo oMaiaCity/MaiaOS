@@ -155,7 +155,7 @@ export const ACTORS = {
 
 ### Step 4: Add to Module
 
-Actors are referenced by modules in `libs/maia-engines/src/modules/registry.js`. The db and ai modules reference `@maia/actor/os/db` and `@maia/actor/os/ai`. To add a new tool, extend the registry's BUILTIN_MODULES or add a custom module that references your actor path.
+Actors are referenced by modules in `libs/maia-runtime/src/modules/registry.js`. The db and ai modules reference `@maia/actor/os/db` and `@maia/actor/os/ai`. To add a new tool, extend the registry's BUILTIN_MODULES or add a custom module that references your actor path.
 
 ---
 

@@ -246,7 +246,7 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 	const lastCommittedQueryMerge = new Map()
 	const { timeoutMs = 5000 } = options
 
-	// Evaluator injected at boot (avoids maia-db → maia-engines dependency)
+	// Evaluator injected at boot (avoids maia-db → maia-runtime dependency)
 	const evaluator = peer.evaluator
 	if (!evaluator) {
 		throw new Error(
@@ -310,7 +310,7 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 			}
 		}
 
-		// ${key}Loading: paired with ViewEngine shouldShowQueryLoadingSkeleton (libs/maia-engines/src/utils/query-loading.js)
+		// ${key}Loading: paired with ViewEngine shouldShowQueryLoadingSkeleton (libs/maia-runtime/src/utils/query-loading.js)
 		for (const key of queryStores.keys()) {
 			mergedValue[`${key}Loading`] = false
 		}

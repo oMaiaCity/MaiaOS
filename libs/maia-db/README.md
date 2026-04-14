@@ -108,13 +108,13 @@ const unsubscribe = subscribeSyncState((state) => {
 unsubscribe();
 ```
 
-**Note:** These functions are also available via `@MaiaOS/loader` bundle for convenience.
+**Note:** These functions are also available via `@MaiaOS/runtime` bundle for convenience.
 
 ## Dependencies
 
 - **cojson** - RawCoMap, RawCoList, LocalNode
 - **cojson-transport-ws** - WebSocket transport for sync
-- **@MaiaOS/engines** - DataEngine (maia.do) calls MaiaDB
+- **@MaiaOS/runtime** - DataEngine (maia.do) calls MaiaDB
 - **@MaiaOS/factories** - Schema registry, validation
 - **@MaiaOS/storage** - Storage adapters
 

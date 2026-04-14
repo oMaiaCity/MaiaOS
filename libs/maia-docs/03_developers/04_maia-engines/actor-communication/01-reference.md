@@ -103,16 +103,16 @@ The view subscribes to context changes:
 
 ### Core Engine Files
 
-- **Actor Engine** (`libs/maia-engines/src/engines/actor.engine.js`):
+- **Actor Engine** (`libs/maia-runtime/src/engines/actor.engine.js`):
   - `deliverEvent()` - Deliver event to actor inbox
   - `processEvents()` - Process messages from inbox
   - `_createChildActorIfNeeded()` - Create child actor lazily
 
-- **Process Engine** (`libs/maia-engines/src/engines/process.engine.js`):
+- **Process Engine** (`libs/maia-runtime/src/engines/process.engine.js`):
   - `send(processId, event, payload)` - Route event to handlers[event]
   - `_executeActions()` - Execute ctx, op, tell, ask, function actions
 
-- **View Engine** (`libs/maia-engines/src/engines/view.engine.js`):
+- **View Engine** (`libs/maia-runtime/src/engines/view.engine.js`):
   - `_renderSlot()` - Render child actors in slots
   - `_handleEvent()` - Handle DOM events, resolve expressions, send to inbox
 
@@ -241,8 +241,8 @@ The view subscribes to context changes:
 5. ✅ **CRDT-native** - All messages persist to CRDTs, sync across devices
 
 **Key Files**:
-- `libs/maia-engines/src/engines/actor.engine.js` - Message passing
-- `libs/maia-engines/src/engines/process.engine.js` - Event handler execution
+- `libs/maia-runtime/src/engines/actor.engine.js` - Message passing
+- `libs/maia-runtime/src/engines/process.engine.js` - Event handler execution
 - `libs/maia-db/src/cojson/crud/read.js` - Query reactivity
 
 **Example**: Sparks vibe agent → detail actor communication flow (documented above)

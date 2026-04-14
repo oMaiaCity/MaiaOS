@@ -159,10 +159,10 @@ Generate new agent credentials (for `bun agent:generate`).
 
 ## Sync State Monitoring
 
-**Note:** `subscribeSyncState` is **not** exported from `@MaiaOS/self`. Import it from `@MaiaOS/db` or `@MaiaOS/loader`:
+**Note:** `subscribeSyncState` is **not** exported from `@MaiaOS/self`. Import it from `@MaiaOS/db` or `@MaiaOS/runtime`:
 
 ```javascript
-import { subscribeSyncState } from '@MaiaOS/loader';
+import { subscribeSyncState } from '@MaiaOS/runtime';
 // or
 import { subscribeSyncState } from '@MaiaOS/db';
 ```
@@ -339,7 +339,7 @@ import {
   signInWithPasskey, 
   requirePRFSupport 
 } from '@MaiaOS/self';
-import { MaiaOS, subscribeSyncState } from '@MaiaOS/loader';
+import { MaiaOS, subscribeSyncState } from '@MaiaOS/runtime';
 
 async function init() {
   // Check PRF support first

@@ -15,7 +15,7 @@ Authentication is integrated into `MaiaOS.boot()`. You provide `node` and `accou
 ## Usage
 
 ```javascript
-import { MaiaOS, signInWithPasskey } from '@MaiaOS/loader';
+import { MaiaOS, signInWithPasskey } from '@MaiaOS/runtime';
 
 // Step 1: Authenticate (get your ID card)
 const { accountID, agentSecret, loadingPromise } = await signInWithPasskey({
@@ -70,7 +70,7 @@ console.log("CoValues:", coValues);
 - **Purpose:** Run your app with your identity
 - **When:** After authentication (or with pre-initialized peer)
 - **What it gives:** Engines, actors, `os.do()`, vibe loading
-- **Dependencies:** `@MaiaOS/engines`, `@MaiaOS/db`, `@MaiaOS/factories`
+- **Dependencies:** `@MaiaOS/runtime`, `@MaiaOS/db`, `@MaiaOS/factories`
 
 ---
 

@@ -26,7 +26,7 @@ MaiaOS/ (root)
 │       ├── package.json
 │       └── deploy.sh     # Runs sync-server.mjs from maia-distros output
 └── libs/                 # Shared libraries (@MaiaOS/*)
-    └── maia-*/           # maia-db, maia-loader, maia-actors, etc.
+    └── maia-*/           # maia-db, maia-runtime, maia-factories, etc.
         ├── package.json
         └── src/
 ```
@@ -71,20 +71,20 @@ Each workspace can depend on other workspaces (services or libs) using the `work
 
 **Supported Dependency Patterns:**
 
-1. **Single-entry pattern: services import only from loader**
+1. **Single-entry pattern: services import only from runtime**
 ```json
-// services/app/package.json - only maia-distros (loader/vibes via jsconfig)
-// services/sync/package.json - maia-distros + @MaiaOS/loader
+// services/app/package.json - maia-distros + @MaiaOS/runtime (+ game, peer, …)
+// services/sync/package.json - maia-distros + @MaiaOS/runtime
 ```
-Services depend only on `@MaiaOS/loader`. Loader re-exports everything needed: db, schemata, actors, vibes (via dynamic import), cojson-transport-ws. maia-distros has no app logic—only bundling. Services own logic; distros produces bundles (maia-client, avens, sync-server). Prod runs bundles.
+Services depend on `@MaiaOS/runtime` (engines + `MaiaOS` boot) via `maia-distros` bundles or direct workspace dep. Runtime re-exports what app/sync need: db, engines, self, cojson-transport-ws. maia-distros has no app logic—only bundling. Services own logic; distros produces bundles (maia-client, sync-server). Prod runs bundles.
 
 2. **Library depends on another Library:**
 ```json
-// libs/maia-loader/package.json
+// libs/maia-example/package.json
 {
   "dependencies": {
     "@MaiaOS/db": "workspace:*",
-    "@MaiaOS/actors": "workspace:*"
+    "@MaiaOS/runtime": "workspace:*"
   }
 }
 ```

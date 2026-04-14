@@ -1,29 +1,24 @@
 /**
- * MaiaOS Loader
+ * MaiaOS runtime kernel
  *
- * Single entry point for the MaiaOS Operating System
- * Central source of truth for booting and managing the OS
- * Imports engines from @MaiaOS/engines and orchestrates them
+ * Single entry point for booting and managing the OS.
  *
  * Usage:
- *   import { MaiaOS } from '@MaiaOS/loader';
+ *   import { MaiaOS } from '@MaiaOS/runtime';
  *   const maia = await MaiaOS.boot(config);
  *   maia.do({ op: 'read', schema, key, filter, ... });
  */
 
 import { resolve, resolveReactive } from '@MaiaOS/db'
-import {
-	ActorEngine,
-	DataEngine,
-	MaiaScriptEvaluator,
-	ModuleRegistry,
-	ProcessEngine,
-	Runtime,
-	registerBuiltinModules,
-	StyleEngine,
-	ViewEngine,
-} from '@MaiaOS/engines'
 import { validateAgainstFactoryOrThrow } from '@MaiaOS/factories/validation.helper'
+import { ActorEngine } from './engines/actor.engine.js'
+import { DataEngine } from './engines/data.engine.js'
+import { ProcessEngine } from './engines/process.engine.js'
+import { StyleEngine } from './engines/style.engine.js'
+import { ViewEngine } from './engines/view.engine.js'
+import { Registry as ModuleRegistry, registerBuiltinModules } from './modules/registry.js'
+import { Runtime } from './runtimes/browser.js'
+import { Evaluator as MaiaScriptEvaluator } from './utils/evaluator.js'
 
 /**
  * MaiaOS - Operating System for Actor-based Applications

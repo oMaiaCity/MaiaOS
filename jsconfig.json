@@ -2,9 +2,8 @@
 	"compilerOptions": {
 		"paths": {
 			"@MaiaOS/db": ["./libs/maia-db/src/index.js"],
-			"@MaiaOS/engines": ["./libs/maia-engines/src"],
-			"@MaiaOS/engines/*": ["./libs/maia-engines/src/*"],
-			"@MaiaOS/loader": ["./libs/maia-loader/src/index.js"],
+			"@MaiaOS/runtime": ["./libs/maia-runtime/src/index.js"],
+			"@MaiaOS/runtime/*": ["./libs/maia-runtime/src/*"],
 			"@MaiaOS/factories": ["./libs/maia-factories/src"],
 			"@MaiaOS/factories/*": ["./libs/maia-factories/src/*"],
 			"@MaiaOS/self": ["./libs/maia-self/src/index.js"],

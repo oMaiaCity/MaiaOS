@@ -18,7 +18,7 @@
 
 ## References
 
-- **DataEngine:** `libs/maia-engines/src/engines/data.engine.js`
+- **DataEngine:** `libs/maia-runtime/src/engines/data.engine.js`
 - **Storage:** MaiaDB (`libs/maia-db/`) – CoJSON CRDT
 - **Example Vibe:** `libs/maia-vibes/src/todos/`
 

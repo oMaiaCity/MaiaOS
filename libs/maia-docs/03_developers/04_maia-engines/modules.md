@@ -1,6 +1,6 @@
 # Module System
 
-Modules are plugins that extend MaiaOS functionality. They register tools and provide configuration. Built-in modules are defined in `libs/maia-engines/src/modules/registry.js`.
+Modules are plugins that extend MaiaOS functionality. They register tools and provide configuration. Built-in modules are defined in `libs/maia-runtime/src/modules/registry.js`.
 
 ---
 

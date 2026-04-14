@@ -140,5 +140,5 @@ Check: batching (pendingRerenders), deduplication, cache hit rate. Fix: Verify b
 - Config/data subscriptions: Backend unified store in maia-db
 - CoCache: `libs/maia-db/src/cojson/cache/coCache.js`
 - Read: `libs/maia-db/src/cojson/crud/read.js`
-- DataEngine: `libs/maia-engines/src/engines/data.engine.js`
+- DataEngine: `libs/maia-runtime/src/engines/data.engine.js`
 - ReactiveStore: `libs/maia-db` (exported from maia-db)

@@ -101,7 +101,7 @@ The agent process receives `SELECT_SPARK` via `handlers.SELECT_SPARK`:
 
 ### 3. Tell Action: Sending Message to Detail Actor
 
-**Location**: `libs/maia-engines/src/engines/process.engine.js`
+**Location**: `libs/maia-runtime/src/engines/process.engine.js`
 
 The `tell` action config specifies target and payload. ProcessEngine evaluates expressions and calls `deliverEvent()`:
 
@@ -120,7 +120,7 @@ The `tell` action config specifies target and payload. ProcessEngine evaluates e
 
 ### 4. Message Persistence to Inbox
 
-**Location**: `libs/maia-engines/src/engines/actor.engine.js`
+**Location**: `libs/maia-runtime/src/engines/actor.engine.js`
 
 The `deliverEvent()` function delegates to InboxEngine. All messages go through the inbox—no bypass for self-delivery:
 ```javascript
@@ -146,7 +146,7 @@ async deliverEvent(senderId, targetId, type, payload = {}) {
 
 ### 5. Message Processing
 
-**Location**: `libs/maia-engines/src/engines/actor.engine.js`
+**Location**: `libs/maia-runtime/src/engines/actor.engine.js`
 
 The `processEvents()` function processes inbox messages. Inbox subscription fires when new messages arrive:
 ```javascript

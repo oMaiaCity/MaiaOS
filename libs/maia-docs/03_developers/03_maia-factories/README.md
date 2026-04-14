@@ -294,7 +294,7 @@ The `maia-engines` package uses `maia-factories` for:
 - Transforming schemas/instances before seeding to IndexedDB
 - Runtime validation of data operations
 
-**See:** `libs/maia-engines/src/engines/data.engine.js`
+**See:** `libs/maia-runtime/src/engines/data.engine.js`
 
 ### With maia-db
 

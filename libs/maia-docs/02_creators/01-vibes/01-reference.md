@@ -134,7 +134,7 @@ vibes/todos/
   <div id="actor-todo"></div>
   
   <script type="module">
-    import { MaiaOS, signInWithPasskey } from '@MaiaOS/loader';
+    import { MaiaOS, signInWithPasskey } from '@MaiaOS/runtime';
     import { TodosVibeRegistry } from '@MaiaOS/vibes';
     
     async function boot() {

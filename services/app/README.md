@@ -19,7 +19,7 @@ services/app/
 
 ## Dependencies
 
-- `@MaiaOS/loader` (via maia-distros) - MaiaOS kernel, auth
+- `@MaiaOS/runtime` (via maia-distros) - engines + MaiaOS kernel, auth
 - `@MaiaOS/maia-distros` - Pre-built bundles (maia-client.mjs, avens.mjs)
 
 ## Development
@@ -67,22 +67,12 @@ async function loadVibe(vibeKey) {
 
 ### Clean Import Pattern
 
-**maia-loader exports:**
-```javascript
-// libs/maia-loader/src/index.js
-export { MaiaOS } from "./kernel.js";
-```
-
-**maia-script exports:**
-```javascript
-// libs/maia-script/src/index.js
-export { ActorEngine, ViewEngine, StyleEngine, ... } from "./engines/...";
-```
+**@MaiaOS/runtime** exports `MaiaOS`, engines, db helpers, and auth — see [`libs/maia-runtime/src/index.js`](../../libs/maia-runtime/src/index.js).
 
 **maia imports:**
 ```javascript
 // services/app/main.js
-import { MaiaOS } from '@MaiaOS/loader';
+import { MaiaOS } from '@MaiaOS/runtime';
 const os = await MaiaOS.boot({ node, account });
 ```
 

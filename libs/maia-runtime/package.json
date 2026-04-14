@@ -1,5 +1,5 @@
 {
-	"name": "@MaiaOS/engines",
+	"name": "@MaiaOS/runtime",
 	"version": "26.4.21815-next",
 	"type": "module",
 	"main": "src/index.js",
@@ -9,12 +9,21 @@
 		"./modules/*": "./src/modules/*",
 		"./utils/*": "./src/utils/*"
 	},
+	"files": [
+		"src"
+	],
+	"scripts": {
+		"test": "bun test ./tests"
+	},
 	"dependencies": {
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/factories": "workspace:*",
 		"@MaiaOS/logs": "workspace:*",
+		"@MaiaOS/maia-ucan": "workspace:*",
+		"@MaiaOS/self": "workspace:*",
 		"@MaiaOS/universe": "workspace:*",
 		"@jitl/quickjs-singlefile-cjs-release-sync": "0.32.0",
+		"cojson-transport-ws": "0.20.16",
 		"dompurify": "3.3.3",
 		"fast-myers-diff": "3.2.0",
 		"marked": "15.0.12",

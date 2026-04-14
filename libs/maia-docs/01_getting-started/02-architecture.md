@@ -326,17 +326,16 @@ Agent sends event to actor via StateEngine
 
 ## File Organization
 
-**API Hierarchy:** service → maia-loader → **maia.os** → **maia.do** → maia.db (MaiaDB) → maia.peer, maia.storage
+**API Hierarchy:** service → **@MaiaOS/runtime** → **maia.os** → **maia.do** → maia.db (MaiaDB) → maia.peer, maia.storage
 
 **Packages:**
-- **maia-loader** – Boot process, loader.js (single entry point)
-- **maia-engines** – DataEngine (maia.do), Actor/View/Style/State/Tool engines, modules
+- **@MaiaOS/runtime** – Engines, `MaiaOS` boot (`loader.js`), `createCoJSONAPI`, re-exports for app/sync
 - **maia-db** – MaiaDB (CRUD, resolve, indexing, seeding)
 - **maia-peer** – Node, account, sync (P2P layer)
 - **maia-actors** – Actor definitions (@db, @core/*, @ai/chat, etc.)
 
 ```
-libs/maia-engines/src/
+libs/maia-runtime/src/
 ├── engines/                    # Execution engines
 │   ├── data.engine.js          # DataEngine – maia.do({ op, schema, key, ... })
 │   ├── actor.engine.js
@@ -354,8 +353,7 @@ libs/maia-engines/src/
 ```
 MaiaOS/
 ├── libs/
-│   ├── maia-loader/            # Boot, loader.js
-│   ├── maia-engines/           # Engines (DataEngine, Actor, View, etc.)
+│   ├── maia-runtime/           # Engines + MaiaOS boot (npm: @MaiaOS/runtime)
 │   ├── maia-db/                # MaiaDB (CoJSON CRDT, seeding in migrations/)
 │   ├── maia-peer/              # P2P layer (node, account, sync)
 │   ├── maia-actors/            # Actor definitions

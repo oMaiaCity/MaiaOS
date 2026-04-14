@@ -1,6 +1,6 @@
 # Engines
 
-The `@MaiaOS/engines` package provides the core engines that execute MaiaScript and manage actor lifecycles. Five engines work together: ActorEngine, ViewEngine, ProcessEngine, StyleEngine, DataEngine. Plus the MaiaScriptEvaluator and Runtime.
+The `@MaiaOS/runtime` package provides the core engines that execute MaiaScript and manage actor lifecycles. Five engines work together: ActorEngine, ViewEngine, ProcessEngine, StyleEngine, DataEngine. Plus the MaiaScriptEvaluator and Runtime.
 
 ---
 
@@ -19,7 +19,7 @@ The `@MaiaOS/engines` package provides the core engines that execute MaiaScript 
 
 **Key Methods:** `evaluate(expression, data, depth)`, `evaluateShortcut(expression, data)`, `isDSLOperation(value)`
 
-**Source:** `libs/maia-engines/src/utils/evaluator.js`
+**Source:** `libs/maia-runtime/src/utils/evaluator.js`
 
 ---
 
@@ -45,7 +45,7 @@ The `@MaiaOS/engines` package provides the core engines that execute MaiaScript 
 
 **Dependencies:** StyleEngine, ViewEngine, ProcessEngine, ModuleRegistry
 
-**Source:** `libs/maia-engines/src/engines/actor.engine.js`
+**Source:** `libs/maia-runtime/src/engines/actor.engine.js`
 
 ---
 
@@ -63,7 +63,7 @@ The `@MaiaOS/engines` package provides the core engines that execute MaiaScript 
 
 **Key Methods:** `attachViewToActor()`, `render()`, `renderNode()`, `renderEach()`, `_handleEvent()`
 
-**Source:** `libs/maia-engines/src/engines/view.engine.js`
+**Source:** `libs/maia-runtime/src/engines/view.engine.js`
 
 ---
 
@@ -83,7 +83,7 @@ The `@MaiaOS/engines` package provides the core engines that execute MaiaScript 
 - `createProcess(processDef, actor)` - Create process instance
 - `send(processId, event, payload)` - Send event to process (routes to handlers)
 
-**Source:** `libs/maia-engines/src/engines/process.engine.js`
+**Source:** `libs/maia-runtime/src/engines/process.engine.js`
 
 ---
 
@@ -100,7 +100,7 @@ The `@MaiaOS/engines` package provides the core engines that execute MaiaScript 
 
 **Key Methods:** `getStyleSheets(actorConfig, actorId)` - Get compiled CSSStyleSheet array
 
-**Source:** `libs/maia-engines/src/engines/style.engine.js`
+**Source:** `libs/maia-runtime/src/engines/style.engine.js`
 
 ---
 
@@ -116,7 +116,7 @@ The `@MaiaOS/engines` package provides the core engines that execute MaiaScript 
 
 **Key Method:** `execute({ op, ...params })` - Execute any operation
 
-**Source:** `libs/maia-engines/src/engines/data.engine.js`
+**Source:** `libs/maia-runtime/src/engines/data.engine.js`
 
 ---
 
@@ -133,7 +133,7 @@ The `@MaiaOS/engines` package provides the core engines that execute MaiaScript 
 
 **Key Methods:** `createActorForView()`, `destroyActor()`, `getActorConfig()`, `start()`, `watchInbox()`
 
-**Source:** `libs/maia-engines/src/runtimes/browser.js`
+**Source:** `libs/maia-runtime/src/runtimes/browser.js`
 
 ---
 

@@ -1,10 +1,10 @@
 # maia-operations: Merged into maia-engines
 
-The `@MaiaOS/operations` package **no longer exists**. The operations layer has been merged into `@MaiaOS/engines`.
+The `@MaiaOS/operations` package **no longer exists**. The operations layer has been merged into `@MaiaOS/runtime`.
 
 ## Current Architecture
 
-- **DataEngine** (`libs/maia-engines/src/engines/data.engine.js`) – Executes **maia.do({ op, factory, key, filter, ... })**
+- **DataEngine** (`libs/maia-runtime/src/engines/data.engine.js`) – Executes **maia.do({ op, factory, key, filter, ... })**
 - **Operations** – read, create, update, delete, spark operations, colist operations, binary upload, etc.
 - **MaiaDB** (`libs/maia-db/`) – Storage layer; DataEngine calls MaiaDB
 
@@ -15,7 +15,7 @@ The `@MaiaOS/operations` package **no longer exists**. The operations layer has 
 | DBAdapter + CoJSONBackend | MaiaDB (single class) |
 | DBEngine | DataEngine |
 | maia.db() | **maia.do()** |
-| @MaiaOS/operations | Merged into @MaiaOS/engines |
+| @MaiaOS/operations | Merged into @MaiaOS/runtime |
 
 ## See Also
 

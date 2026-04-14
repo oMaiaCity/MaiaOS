@@ -3,13 +3,13 @@
  * Liquid glass design with widget-based layout
  */
 
+import { applyLogModeFromEnv, createPerfTracer, debugLog, debugWarn } from '@MaiaOS/logs'
 // Import from kernel bundle - everything bundled (no direct @MaiaOS/db in production)
 import {
 	loadCapabilitiesGrants,
 	resolveAccountCoIdsToProfiles,
 	resolveGroupCoIdsToCapabilityNames,
-} from '@MaiaOS/loader'
-import { applyLogModeFromEnv, createPerfTracer, debugLog, debugWarn } from '@MaiaOS/logs'
+} from '@MaiaOS/runtime'
 import { MAIADB_LAYER_STACK_ICON_SVG } from './maia-icons.js'
 
 /** Same channel as `perfAppMaiaDb` in @MaiaOS/logs — created here so bundled app always resolves (named export can be omitted by some bundles). */

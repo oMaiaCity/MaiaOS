@@ -15,7 +15,7 @@ The `MaiaOS.boot()` function initializes the entire MaiaOS operating system with
 ## Usage
 
 ```javascript
-import { MaiaOS, signInWithPasskey } from '@MaiaOS/loader';
+import { MaiaOS, signInWithPasskey } from '@MaiaOS/runtime';
 
 // Authenticate first
 const { loadingPromise } = await signInWithPasskey({ salt: "maia.city" });

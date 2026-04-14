@@ -2,7 +2,7 @@
 
 ## Overview
 
-The `@MaiaOS/loader` package provides the foundational services that power MaiaOS. Think of it as the OS loader - it doesn't do much on its own, but everything else depends on it.
+The `@MaiaOS/runtime` package provides the foundational services that power MaiaOS. Think of it as the OS loader - it doesn't do much on its own, but everything else depends on it.
 
 **What it does:**
 - ✅ **System Boot** - Initializes the entire OS with engines and modules (`MaiaOS.boot()`)
@@ -10,7 +10,7 @@ The `@MaiaOS/loader` package provides the foundational services that power MaiaO
 - ✅ **Re-exports** - Auth, db, factories, vibes seeding helpers, WebSocket peer (services import only from loader)
 
 **What it doesn't do:**
-- ❌ Execute MaiaScript (that's `@MaiaOS/engines`)
+- ❌ Execute MaiaScript (that's `@MaiaOS/runtime`)
 - ❌ Store data (that's `@MaiaOS/db`)
 - ❌ Validate schemas (that's `@MaiaOS/factories`)
 
@@ -33,7 +33,7 @@ Think of `maia-loader` like the foundation of a house. Before you can build anyt
 ### Human Mode
 
 ```javascript
-import { MaiaOS, signInWithPasskey } from '@MaiaOS/loader';
+import { MaiaOS, signInWithPasskey } from '@MaiaOS/runtime';
 
 // Step 1: Authenticate
 const { loadingPromise } = await signInWithPasskey({ salt: "maia.city" });
@@ -75,7 +75,7 @@ This package documentation is organized into focused topics:
 Here's the complete flow:
 
 ```javascript
-import { MaiaOS, signInWithPasskey } from '@MaiaOS/loader';
+import { MaiaOS, signInWithPasskey } from '@MaiaOS/runtime';
 
 async function startApp() {
   // STEP 1: Authenticate
@@ -111,7 +111,7 @@ async function startApp() {
 
 ## Source Files
 
-**Package:** `libs/maia-loader/`
+**Package:** `libs/maia-runtime/`
 
 **Key Files:**
 - `src/index.js` - Public API exports
@@ -120,6 +120,6 @@ async function startApp() {
 
 **Dependencies:**
 - `@MaiaOS/self` - Authentication
-- `@MaiaOS/engines` - Engines and DSL execution
+- `@MaiaOS/runtime` - Engines and DSL execution
 - `@MaiaOS/db` - Database operations
 - `@MaiaOS/factories` - Schema validation
