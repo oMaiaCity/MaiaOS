@@ -495,6 +495,20 @@ async function main() {
 		freePort(4201, (msg) => logger.warn(msg)),
 	])
 
+	// Regenerate universe registry before anything imports it
+	const registryLogger = createLogger('registry')
+	try {
+		execSync('bun scripts/generate-maia-universe-registry.mjs', {
+			cwd: rootDir,
+			stdio: 'pipe',
+			env: process.env,
+		})
+		registryLogger.success('Universe registry generated')
+	} catch (e) {
+		registryLogger.error(`Registry generation failed: ${e.stderr?.toString().trim() || e.message}`)
+		process.exit(1)
+	}
+
 	// Generate favicons first (runs once, then exits)
 	generateFavicons()
 

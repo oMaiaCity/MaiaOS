@@ -594,7 +594,9 @@ async function signInWithTestAven() {
 
 		await applySyncRegistriesToAccount(account, node)
 
-		// Set auth and navigate IMMEDIATELY - don't wait for boot
+		// Register BEFORE any sync writes so the server grants /sync/write capability
+		await registerHuman(account)
+
 		authState = { signedIn: true, accountID: account.id }
 		setupSyncSubscription()
 		currentScreen = 'dashboard'
@@ -602,19 +604,15 @@ async function signInWithTestAven() {
 		window.history.pushState({}, '', '/me')
 		await handleRoute()
 
-		// Boot in background; registerHuman and MaiaOS.boot run in parallel
-		Promise.all([
-			registerHuman(account).catch(() => {}),
-			MaiaOS.boot({
-				node,
-				account,
-				agentSecret,
-				syncDomain,
-				getSyncBaseUrl,
-				modules: ['db', 'core', 'ai'],
-			}),
-		])
-			.then(async ([, bootedMaia]) => {
+		MaiaOS.boot({
+			node,
+			account,
+			agentSecret,
+			syncDomain,
+			getSyncBaseUrl,
+			modules: ['db', 'core', 'ai'],
+		})
+			.then(async (bootedMaia) => {
 				maia = bootedMaia
 				window.maia = maia
 				await linkAccountToRegistries(maia).catch(() => {})
