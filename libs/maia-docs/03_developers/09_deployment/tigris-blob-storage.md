@@ -91,7 +91,7 @@ Empty Postgres + deploy runs genesis seed automatically. All new binary uploads 
 
 ### 4. After First Deploy
 
-No `PEER_SYNC_MODE` secret required for normal operation. Optional: `PEER_SYNC_MODE=seed` only for emergency force reseed (then unset).
+Remove any legacy `PEER_SYNC_MODE` secret — sync refuses to start if it is set.
 
 ### 5. Verify
 

@@ -315,7 +315,7 @@ export async function createAgentAccount({
 	const syncSetup = setupSyncPeers(syncDomain)
 
 	// Use createAccountWithSecret() abstraction from @MaiaOS/db
-	// Genesis scaffold runs on sync (auto-seed on empty DB or PEER_SYNC_MODE=seed); client does not bundle seed helpers
+	// Genesis scaffold runs on sync (auto-seed on empty DB); client does not bundle seed helpers
 	const createResult = await createAccountWithSecret({
 		agentSecret,
 		name,

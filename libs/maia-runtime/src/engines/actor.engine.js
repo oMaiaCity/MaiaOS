@@ -756,7 +756,7 @@ export class ActorEngine {
 		const configCoId = await resolveToCoId(this.dataEngine?.peer, processRef)
 		if (!configCoId) {
 			throw new Error(
-				`[ActorEngine] spawnActor: process must be co-id. Got: ${processRef}. Re-seed with PEER_SYNC_MODE=seed.`,
+				`[ActorEngine] spawnActor: process must be co-id. Got: ${processRef}. Wipe storage and re-run genesis seed if scaffold is wrong.`,
 			)
 		}
 		const configStore = await readStore(this.dataEngine, configCoId)

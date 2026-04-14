@@ -32,8 +32,6 @@ The sync service consolidates WebSocket sync, agent API, and LLM proxy in one pr
 - `PEER_BLOB_PATH` - Default: `./binary-bucket` (binary CoValue offload). Ignored when `BUCKET_NAME` set (Tigris).
 - `PEER_SYNC_DB_URL` - Required when `PEER_SYNC_STORAGE=postgres` (e.g. Neon, Fly Postgres)
 - `AVEN_MAIA_GUARDIAN` - Optional. If set (human account co-id), add as admin on startup (one-time genesis).
-- `PEER_SYNC_MODE` - Optional `seed` only: emergency force reseed (clear storage, then genesis seed). Unset: empty DB is auto-detected and seeded; registry migrate runs every boot. Any other value throws at startup.
-
 ## Dependencies
 
 - `@MaiaOS/maia-distros` + `@MaiaOS/runtime`. Sync imports from runtime (engines + `MaiaOS` boot + db/self); cojson-transport-ws. maia-distros has no app logic—only bundling. Sync owns the logic (src/index.js); distros bundles it to sync-server.mjs. Prod runs the bundle; dev runs source.
