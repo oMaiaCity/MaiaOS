@@ -17,7 +17,7 @@ In the browser, CoValue persistence uses **OPFS** (Origin Private File System) w
 
 OPFS and IndexedDB use **separate storage roots**. There is no automatic migration between them. First run with OPFS creates a fresh store; existing IndexedDB data is not migrated.
 
-**Source:** `@MaiaOS/storage` – `libs/maia-storage/src/getStorage.js`, `opfs.js`, `indexeddb.js`. maia-db uses storage via dependency; the actual OPFS/IndexedDB backends live in maia-storage.
+**Source:** `@MaiaOS/storage` – `libs/maia-storage/src/getStorage.browser.js` / `getStorage.node.js`, `opfs.js`, `indexeddb.js`. maia-db uses storage via dependency; the actual OPFS/IndexedDB backends live in maia-storage.
 
 ### Server Blob Storage
 

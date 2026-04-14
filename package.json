@@ -50,8 +50,5 @@
 	"lint-staged": {
 		"*.{js,css,html,md,json}": "biome check --write --no-errors-on-unmatched",
 		"*.maia": "bun scripts/format-maia.js"
-	},
-	"dependencies": {
-		"@electric-sql/pglite": "0.4.2"
 	}
 }

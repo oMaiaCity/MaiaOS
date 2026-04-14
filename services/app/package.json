@@ -22,7 +22,6 @@
 		"@MaiaOS/runtime": "workspace:*",
 		"@MaiaOS/peer": "workspace:*",
 		"@MaiaOS/universe": "workspace:*",
-		"@MaiaOS/maia-ai": "workspace:*",
 		"@MaiaOS/maia-distros": "workspace:*",
 		"@tauri-apps/api": "2.10.1"
 	},

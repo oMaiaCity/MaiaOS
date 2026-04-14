@@ -38,13 +38,11 @@ const globs = [
 	join(repoRoot, 'services/app/package.json'),
 	join(repoRoot, 'services/sync/package.json'),
 	...[
-		'maia-ai',
 		'maia-brand',
 		'maia-db',
 		'maia-distros',
 		'maia-validation',
 		'maia-game',
-		'maia-language',
 		'maia-logs',
 		'maia-peer',
 		'maia-runtime',

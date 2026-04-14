@@ -127,13 +127,6 @@ await Bun.write(join(distDir, 'style.css'), bundledCss)
 
 // brand/ already in dist via sync-assets above
 
-// Copy RunAnywhere WASM from distros output (vendored during distros:build)
-const distrosWasmDir = join(repoRoot, 'libs/maia-distros/output/runanywhere-wasm')
-const wasmOutDir = join(distDir, 'runanywhere-wasm')
-if (existsSync(distrosWasmDir)) {
-	cpSync(distrosWasmDir, wasmOutDir, { recursive: true })
-}
-
 const wellKnownSrc = join(serviceDir, 'well-known')
 const wellKnownDist = join(distDir, '.well-known')
 if (existsSync(wellKnownSrc)) {
@@ -157,10 +150,6 @@ const required = [
 	[
 		'brand/fonts/IndieFlower/IndieFlower-Regular.ttf',
 		distHas('brand/fonts/IndieFlower/IndieFlower-Regular.ttf'),
-	],
-	[
-		'runanywhere-wasm/racommons-llamacpp-webgpu.js',
-		distHas('runanywhere-wasm/racommons-llamacpp-webgpu.js'),
 	],
 	['game-assets/geodesic-dome.glb', distHas('game-assets/geodesic-dome.glb')],
 	['game-workers/terrain-height-worker.js', distHas('game-workers/terrain-height-worker.js')],

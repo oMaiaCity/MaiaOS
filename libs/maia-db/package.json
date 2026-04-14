@@ -19,9 +19,6 @@
 		"@MaiaOS/seed": "workspace:*",
 		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/peer": "workspace:*",
-		"cojson": "0.20.16",
-		"cojson-transport-ws": "0.20.16",
-		"nanoid": "^5.1.7",
-		"unicode-segmenter": "0.15.0"
+		"cojson": "0.20.16"
 	}
 }
