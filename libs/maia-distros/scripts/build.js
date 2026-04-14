@@ -1,27 +1,16 @@
 #!/usr/bin/env bun
 import { cpSync, existsSync, mkdirSync } from 'node:fs'
-import { createRequire } from 'node:module'
 /**
  * Bun-native build for maia-client, sync-server, avens.
  * Uses root jsconfig.json paths for @MaiaOS/* resolution (self-contained bundle).
  */
-import { dirname, join, normalize } from 'node:path'
+import { join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { resolvePgliteWasmPath } from './resolve-pglite-wasm.js'
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const repoRoot = join(__dirname, '../../..')
 const outputDir = join(__dirname, '../output')
-
-function resolvePgliteWasmPath(root) {
-	const fallback = join(root, 'node_modules/@electric-sql/pglite/dist/pglite.wasm')
-	try {
-		const require = createRequire(join(root, 'package.json'))
-		const pkgDir = dirname(require.resolve('@electric-sql/pglite/package.json'))
-		return join(pkgDir, 'dist', 'pglite.wasm')
-	} catch {
-		return fallback
-	}
-}
 
 const storageIndexBrowser = join(repoRoot, 'libs/maia-storage/src/index.browser.js')
 const storagePostgresStub = join(repoRoot, 'libs/maia-storage/src/adapters/postgres-stub.js')
