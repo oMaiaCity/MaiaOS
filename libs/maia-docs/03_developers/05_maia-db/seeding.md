@@ -14,11 +14,11 @@ Think of seeding like setting up a new house. First you install the plumbing (bo
 
 ## When Seeding Runs
 
-- **PEER_SYNC_SEED=true** (sync service) → Bootstrap + seed. With PGlite (localhost): auto-clears DB + blob first. With Postgres/Tigris: reset manually.
+- **PEER_SYNC_MODE=seed** (sync service) → Bootstrap + seed. With PGlite (localhost): auto-clears DB + blob first. With Postgres/Tigris: reset manually.
 - **PEER_FRESH_SEED=true** → Full bootstrap + seed (clean slate)
-- **PEER_FRESH_SEED=false** / **PEER_SYNC_SEED=false** → Use existing scaffold, no seed, no cleanup
+- **PEER_FRESH_SEED=false** / **PEER_SYNC_MODE** unset or `none` → Use existing scaffold, no seed, no cleanup
 
-**Reseed reset:** With `PEER_SYNC_STORAGE=pglite` (localhost), `PEER_SYNC_SEED=true` auto-clears the DB and binary blob storage before reseeding. With Postgres or Tigris (deployment), reset DB and blob manually; seeding runs without auto-clear.
+**Reseed reset:** With `PEER_SYNC_STORAGE=pglite` (localhost), `PEER_SYNC_MODE=seed` auto-clears the DB and binary blob storage before reseeding. With Postgres or Tigris (deployment), reset DB and blob manually; seeding runs without auto-clear.
 
 ### When to Re-seed
 

@@ -80,7 +80,7 @@ function runStandaloneWatch() {
 		})
 		if (r.status === 0) {
 			console.log(
-				'[dev:migrate] registry regenerated. Restart sync with PEER_SYNC_MIGRATE=true to apply, or run sync with MAIA_DEV_MIGRATE_WATCH=true for live migrate.',
+				'[dev:migrate] registry regenerated. Restart sync with PEER_SYNC_MODE=migrate to apply, or use full sync dev (live migrate when NODE_ENV is not production).',
 			)
 		}
 	}

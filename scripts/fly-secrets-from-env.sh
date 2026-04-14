@@ -37,7 +37,7 @@ if [ -z "$AVEN_MAIA_SECRET" ]; then
   exit 1
 fi
 
-PEER_SYNC_SEED=$(get_env PEER_SYNC_SEED)
+PEER_SYNC_MODE=$(get_env PEER_SYNC_MODE)
 AVEN_MAIA_GUARDIAN=$(get_env AVEN_MAIA_GUARDIAN)
 AVEN_MAIA_NAME=$(get_env AVEN_MAIA_NAME)
 RED_PILL_API_KEY=$(get_env RED_PILL_API_KEY)
@@ -47,7 +47,7 @@ echo "Setting secrets for sync-next-maia-city..."
 flyctl secrets set \
   PEER_SYNC_STORAGE=postgres \
   PEER_SYNC_DB_URL="$PEER_SYNC_DB_URL" \
-  PEER_SYNC_SEED="${PEER_SYNC_SEED:-true}" \
+  PEER_SYNC_MODE="${PEER_SYNC_MODE:-seed}" \
   AVEN_MAIA_ACCOUNT="$AVEN_MAIA_ACCOUNT" \
   AVEN_MAIA_SECRET="$AVEN_MAIA_SECRET" \
   AVEN_MAIA_GUARDIAN="${AVEN_MAIA_GUARDIAN:-}" \
