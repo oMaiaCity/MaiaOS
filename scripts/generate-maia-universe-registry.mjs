@@ -1,13 +1,11 @@
 #!/usr/bin/env bun
 /**
- * Emits committed files under libs/maia-universe/src/maia/:
- * - registry-core.js — .maia imports (SEED_DATA, annotate maps). @MaiaOS/universe/data points here (no cycle with vibe registry.js).
- * - registry-icons.js — data/icons/*.maia only (ICON_SVG_BY_KEY, DEFAULT_CARD_ICON_SVG). @MaiaOS/universe/dashboard-icon-svgs — seed/build-seed-config; SPA uses runtime CoText + placeholder in dashboard.js.
- * - registry.js — re-exports icons + core + aggregates vibe registry modules.
- * - libs/maia-universe/src/generated/actor-nanoid-to-executable-key.js — $nanoid → getActor key (native JS fallback).
- * - libs/maia-universe/src/generated/co-types-defs.data.js — from factories/co-types.defs.maia
- * - libs/maia-universe/src/generated/meta-factory-schema.data.js — from factories/meta.factory.maia
- * Discovers all .maia files and registry.js modules under the maia spark root (recursive).
+ * Emits committed files under libs/maia-universe/src/:
+ * - sparks/maia/registry.js — MAIA_SPARK_REGISTRY (nanoid → annotated config), ICON_SVG_BY_KEY, SEED_DATA
+ * - registry.js — aggregates vibe registry modules + re-exports ./sparks/maia/registry.js
+ * - generated/actor-nanoid-to-executable-key.js — $nanoid → getActor key
+ * - generated/co-types-defs.data.js, meta-factory-schema.data.js
+ * Discovers all .maia files under sparks/maia/ (recursive).
  */
 
 import { Glob } from 'bun'
@@ -21,10 +19,9 @@ import { fileURLToPath } from 'node:url'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = join(__dirname, '..')
 const UNIVERSE_SRC = join(REPO_ROOT, 'libs/maia-universe/src')
-const MAIA_ROOT = join(UNIVERSE_SRC, 'maia')
-const OUT_CORE = join(MAIA_ROOT, 'registry-core.js')
-const OUT_ICONS = join(MAIA_ROOT, 'registry-icons.js')
-const OUT_FILE = join(MAIA_ROOT, 'registry.js')
+const MAIA_ROOT = join(UNIVERSE_SRC, 'sparks/maia')
+const OUT_SPARK_REGISTRY = join(MAIA_ROOT, 'registry.js')
+const OUT_TOP_REGISTRY = join(UNIVERSE_SRC, 'registry.js')
 const OUT_GEN = join(UNIVERSE_SRC, 'generated')
 const OUT_ACTOR_NANOID = join(OUT_GEN, 'actor-nanoid-to-executable-key.js')
 const OUT_CO_TYPES = join(OUT_GEN, 'co-types-defs.data.js')
@@ -46,7 +43,6 @@ function posix(p) {
  */
 function isActorExecutableMaiaPath(pathKey) {
 	const pl = pathKey.toLowerCase().replace(/\\/g, '/')
-	// e.g. os/ai/actor.maia ends with "/actor.maia", not ".actor.maia"
 	return pl.endsWith('/actor.maia') || pl.endsWith('.actor.maia')
 }
 
@@ -54,7 +50,6 @@ function buildActorNanoidRegistrySource(buckets) {
 	const nanoidMap = {}
 	const rels = []
 	for (const rel of buckets.actors) rels.push(rel)
-	// Intent (and other) root actors live under vibes/<name>/... — same pathKey as registry-core / seed (no "vibes/" prefix).
 	for (const rel of buckets.vibes) rels.push(rel)
 	for (const rel of rels) {
 		const pathKey = rel.startsWith('actors/')
@@ -93,7 +88,7 @@ function buildActorNanoidRegistrySource(buckets) {
 }
 
 /**
- * @param {string} rel — path under maia/
+ * @param {string} rel — path under sparks/maia/
  * @returns {'actors'|'factories'|'seedData'|'dashboardIcons'|'vibes'|'orphan'}
  */
 function partitionMaia(rel) {
@@ -194,63 +189,82 @@ async function emitIntentVibeRegistrySource(idPrefix, exportName) {
 	const needsSeedData = dataFrag.includes('SEED_DATA')
 	const aliases = VIBE_REGISTRY_ALIASES[idPrefix] || []
 	const aliasLines = aliases.map((a) => `export { ${exportName} as ${a} }`).join('\n')
+
+	const pkBrand = 'brand/maiacity.style.maia'
+	const pkVibe = `${idPrefix}/manifest.vibe.maia`
+	const pkActor = `${idPrefix}/intent/intent.actor.maia`
+	const pkCtx = `${idPrefix}/intent/intent.context.maia`
+	const pkView = `${idPrefix}/intent/intent.view.maia`
+	const pkProc = `${idPrefix}/intent/intent.process.maia`
+
+	const nBrand = identityFromMaiaPath(pkBrand).$nanoid
+	const nActor = identityFromMaiaPath(pkActor).$nanoid
+	const nCtx = identityFromMaiaPath(pkCtx).$nanoid
+	const nView = identityFromMaiaPath(pkView).$nanoid
+	const nProc = identityFromMaiaPath(pkProc).$nanoid
+
 	return `${BANNER}
-import { annotateMaiaConfig } from '../../../helpers/annotate-maia.js'
-${needsSeedData ? "import { SEED_DATA } from '../../registry-core.js'\n" : ''}import maiacityBrand from '../brand/maiacity.style.maia'
+import { annotateMaiaConfig } from '../../../../helpers/annotate-maia.js'
+${needsSeedData ? "import { SEED_DATA } from '../../registry.js'\n" : ''}import maiacityBrand from '../brand/maiacity.style.maia'
 import intentActor from './intent/intent.actor.maia'
 import intentContext from './intent/intent.context.maia'
 import intentProcess from './intent/intent.process.maia'
 import intentView from './intent/intent.view.maia'
 import manifestVibe from './manifest.vibe.maia'
 
-const brand = annotateMaiaConfig(maiacityBrand, 'brand/maiacity.style.maia')
-const vibe = annotateMaiaConfig(manifestVibe, '${idPrefix}/manifest.vibe.maia')
-const actor = annotateMaiaConfig(intentActor, '${idPrefix}/intent/intent.actor.maia')
-const context = annotateMaiaConfig(intentContext, '${idPrefix}/intent/intent.context.maia')
-const view = annotateMaiaConfig(intentView, '${idPrefix}/intent/intent.view.maia')
-const process = annotateMaiaConfig(intentProcess, '${idPrefix}/intent/intent.process.maia')
+const brand = annotateMaiaConfig(maiacityBrand, ${JSON.stringify(pkBrand)})
+const vibe = annotateMaiaConfig(manifestVibe, ${JSON.stringify(pkVibe)})
+const actor = annotateMaiaConfig(intentActor, ${JSON.stringify(pkActor)})
+const context = annotateMaiaConfig(intentContext, ${JSON.stringify(pkCtx)})
+const view = annotateMaiaConfig(intentView, ${JSON.stringify(pkView)})
+const process = annotateMaiaConfig(intentProcess, ${JSON.stringify(pkProc)})
 
 export const ${exportName} = {
 	vibe,
 
 	styles: {
-		'brand/maiacity.style.maia': brand,
+		${JSON.stringify(nBrand)}: brand,
 	},
 
 	actors: {
-		'${idPrefix}/intent/intent.actor.maia': actor,
+		${JSON.stringify(nActor)}: actor,
 	},
 
 	views: {
-		'${idPrefix}/intent/intent.view.maia': view,
+		${JSON.stringify(nView)}: view,
 	},
 
 	contexts: {
-		'${idPrefix}/intent/intent.context.maia': context,
+		${JSON.stringify(nCtx)}: context,
 	},
 
 	processes: {
-		'${idPrefix}/intent/intent.process.maia': process,
+		${JSON.stringify(nProc)}: process,
 	}${dataFrag},
 }
 ${aliasLines ? `${aliasLines}\n` : ''}`
 }
 
 async function emitPaperVibeRegistrySource() {
+	const pkBrand = 'brand/maiacity.style.maia'
+	const pkVibe = 'paper/manifest.vibe.maia'
+	const nBrand = identityFromMaiaPath(pkBrand).$nanoid
+	const nVibe = identityFromMaiaPath(pkVibe).$nanoid
+
 	return `${BANNER}
-import { annotateMaiaConfig } from '../../../helpers/annotate-maia.js'
-import { SEED_DATA } from '../../registry-core.js'
+import { annotateMaiaConfig } from '../../../../helpers/annotate-maia.js'
+import { SEED_DATA } from '../../registry.js'
 import maiacityBrand from '../brand/maiacity.style.maia'
 import paperVibe from './manifest.vibe.maia'
 
-const brand = annotateMaiaConfig(maiacityBrand, 'brand/maiacity.style.maia')
-const vibe = annotateMaiaConfig(paperVibe, 'paper/manifest.vibe.maia')
+const brand = annotateMaiaConfig(maiacityBrand, ${JSON.stringify(pkBrand)})
+const vibe = annotateMaiaConfig(paperVibe, ${JSON.stringify(pkVibe)})
 
 export const PaperVibeRegistry = {
 	vibe,
 
 	styles: {
-		'brand/maiacity.style.maia': brand,
+		${JSON.stringify(nBrand)}: brand,
 	},
 
 	actors: {},
@@ -282,7 +296,7 @@ async function emitQuickjsVibeRegistrySource() {
 	rels.sort((a, b) => a.localeCompare(b))
 
 	const imports = [
-		`import { annotateMaiaConfig } from '../../../helpers/annotate-maia.js'`,
+		`import { annotateMaiaConfig } from '../../../../helpers/annotate-maia.js'`,
 		`import maiacityBrand from '../brand/maiacity.style.maia'`,
 		`import quickjsVibe from './manifest.vibe.maia'`,
 	]
@@ -316,11 +330,17 @@ async function emitQuickjsVibeRegistrySource() {
 
 	const mkBlock = (arr) =>
 		arr
-			.map(
-				({ rel, idx }) =>
-					`\t\t${JSON.stringify(`quickjs/${rel}`)}: annotateMaiaConfig(raw${idx}, ${JSON.stringify(`quickjs/${rel}`)}),`,
-			)
+			.map(({ rel, idx }) => {
+				const pathKey = `quickjs/${rel}`
+				const nanoid = identityFromMaiaPath(pathKey).$nanoid
+				return `\t\t${JSON.stringify(nanoid)}: annotateMaiaConfig(raw${idx}, ${JSON.stringify(pathKey)}),`
+			})
 			.join('\n')
+
+	const pkBrand = 'brand/maiacity.style.maia'
+	const pkVibe = 'quickjs/manifest.vibe.maia'
+	const nBrand = identityFromMaiaPath(pkBrand).$nanoid
+	const nVibe = identityFromMaiaPath(pkVibe).$nanoid
 
 	const actorsBlock = mkBlock(buckets.actors)
 	const viewsBlock = mkBlock(buckets.views)
@@ -329,12 +349,14 @@ async function emitQuickjsVibeRegistrySource() {
 	const interfacesBlock = mkBlock(buckets.interfaces)
 	const stylesBlock = mkBlock(buckets.styles)
 
+	const depsCtxPath = 'quickjs/deps-list/context.dynamic.maia'
+	const nDepsCtx = identityFromMaiaPath(depsCtxPath).$nanoid
+
 	return `${BANNER}
 ${imports.join('\n')}
 
-const base = 'quickjs'
-const brand = annotateMaiaConfig(maiacityBrand, 'brand/maiacity.style.maia')
-const vibe = annotateMaiaConfig(quickjsVibe, \`\${base}/manifest.vibe.maia\`)
+const brand = annotateMaiaConfig(maiacityBrand, ${JSON.stringify(pkBrand)})
+const vibe = annotateMaiaConfig(quickjsVibe, ${JSON.stringify(pkVibe)})
 
 const depsListContext = annotateMaiaConfig(
 	{
@@ -354,14 +376,14 @@ const depsListContext = annotateMaiaConfig(
 		},
 		selectedItem: { id: '', label: '' },
 	},
-	\`\${base}/deps-list/context.dynamic.maia\`,
+	${JSON.stringify(depsCtxPath)},
 )
 
 export const QuickjsVibeRegistry = {
 	vibe,
 
 	styles: {
-		'brand/maiacity.style.maia': brand,
+		${JSON.stringify(nBrand)}: brand,
 ${stylesBlock ? `\t\t${stylesBlock.split('\n').join('\n\t\t')}` : ''}
 	},
 
@@ -375,7 +397,7 @@ ${viewsBlock}
 
 	contexts: {
 ${contextsBlock}
-		[\`\${base}/deps-list/context.dynamic.maia\`]: depsListContext,
+		${JSON.stringify(nDepsCtx)}: depsListContext,
 	},
 
 	processes: {
@@ -415,7 +437,39 @@ async function generateAllVibeRegistryFiles() {
 	}
 }
 
-async function buildCoreAndShell() {
+function pathKeyForRel(rel, partition) {
+	if (partition === 'actors') return rel.slice('actors/'.length)
+	if (partition === 'factories') return rel.slice('factories/'.length)
+	if (partition === 'vibes') return rel.slice('vibes/'.length)
+	if (partition === 'dashboardIcons') {
+		const base = rel.split('/').pop().replace(/\.maia$/, '')
+		return `data/icons/${base}.maia`
+	}
+	if (partition === 'seedData') return rel
+	throw new Error(`[generate-registry] pathKeyForRel: ${partition}`)
+}
+
+function importSpecifierForRel(rel, partition) {
+	if (partition === 'actors') {
+		return `@MaiaOS/universe/actors/${rel.slice('actors/'.length)}`
+	}
+	if (partition === 'factories') {
+		return `@MaiaOS/universe/factories/${rel.slice('factories/'.length)}`
+	}
+	if (partition === 'vibes') {
+		return `@MaiaOS/universe/vibes/${rel.slice('vibes/'.length)}`
+	}
+	if (partition === 'dashboardIcons') {
+		const base = rel.split('/').pop().replace(/\.maia$/, '')
+		return `@MaiaOS/universe/data/icons/${base}.maia`
+	}
+	if (partition === 'seedData') {
+		return `./data/${rel.replace(/^data\//, '')}`
+	}
+	throw new Error(`[generate-registry] importSpecifierForRel: ${partition}`)
+}
+
+async function buildSparkRegistryAndTopShell() {
 	const allMaia = await collectAllMaia()
 	const buckets = {
 		actors: [],
@@ -432,83 +486,56 @@ async function buildCoreAndShell() {
 		buckets[p].push(rel)
 	}
 
-	const coreImports = []
-	let idx = 0
-	const pushCoreImport = (spec) => {
-		const line = `import raw${idx} from '${spec}'`
-		coreImports.push(line)
-		idx++
-		return idx - 1
-	}
-	const iconImports = []
-	let iconIdx = 0
-	const pushIconImport = (spec) => {
-		const line = `import raw${iconIdx} from '${spec}'`
-		iconImports.push(line)
-		iconIdx++
-		return iconIdx - 1
+	/** @type {Array<{rel: string, pathKey: string, partition: string, importSpec: string, nanoid: string, varName: string}>} */
+	const sparkEntries = []
+	const seenNanoids = new Map()
+
+	function addSparkEntry(rel, partition) {
+		const pathKey = pathKeyForRel(rel, partition)
+		const { $nanoid } = identityFromMaiaPath(pathKey)
+		if (seenNanoids.has($nanoid)) {
+			throw new Error(
+				`[generate-registry] MAIA_SPARK_REGISTRY nanoid collision: ${$nanoid} (${seenNanoids.get($nanoid)} vs ${rel})`,
+			)
+		}
+		seenNanoids.set($nanoid, rel)
+		const importSpec = importSpecifierForRel(rel, partition)
+		const varName = `m_${$nanoid}`
+		sparkEntries.push({ rel, pathKey, partition, importSpec, nanoid: $nanoid, varName })
 	}
 
-	/** @type {Array<[string, number]>} */
-	const actorPairs = []
-	for (const rel of buckets.actors) {
-		const key = rel.slice('actors/'.length)
-		const i = pushCoreImport(`@MaiaOS/universe/actors/${key}`)
-		actorPairs.push([key, i])
-	}
+	for (const rel of buckets.actors) addSparkEntry(rel, 'actors')
+	for (const rel of buckets.factories) addSparkEntry(rel, 'factories')
+	for (const rel of buckets.vibes) addSparkEntry(rel, 'vibes')
+	for (const rel of buckets.dashboardIcons) addSparkEntry(rel, 'dashboardIcons')
+	for (const rel of buckets.seedData) addSparkEntry(rel, 'seedData')
 
-	/** @type {Array<[string, number]>} */
-	const factoryPairs = []
-	for (const rel of buckets.factories) {
-		const key = rel.slice('factories/'.length)
-		const i = pushCoreImport(`@MaiaOS/universe/factories/${key}`)
-		factoryPairs.push([key, i])
-	}
+	sparkEntries.sort((a, b) => a.nanoid.localeCompare(b.nanoid))
 
-	/** @type {Array<[string, number]>} */
-	const vibePairs = []
-	for (const rel of buckets.vibes) {
-		const key = rel.slice('vibes/'.length)
-		const i = pushCoreImport(`@MaiaOS/universe/vibes/${key}`)
-		vibePairs.push([key, i])
-	}
+	const importLines = sparkEntries.map((e) => `import ${e.varName} from '${e.importSpec}'`)
+	const sparkRegistryLines = sparkEntries.map(
+		(e) => `\t${JSON.stringify(e.nanoid)}: annotateMaiaConfig(${e.varName}, ${JSON.stringify(e.pathKey)}),`,
+	)
 
-	/** @type {Array<[string, number]>} */
-	const iconPairs = []
-	for (const rel of buckets.dashboardIcons) {
+	const iconPairs = buckets.dashboardIcons.map((rel) => {
 		const base = rel.split('/').pop().replace(/\.maia$/, '')
-		const i = pushIconImport(`@MaiaOS/universe/data/icons/${base}.maia`)
-		iconPairs.push([base, i])
-	}
+		const e = sparkEntries.find((x) => x.partition === 'dashboardIcons' && x.rel === rel)
+		if (!e) throw new Error(`[generate-registry] icon pair: ${rel}`)
+		return { base, varName: e.varName }
+	})
 
-	/** @type {Array<[string, number]>} */
-	const seedPairs = []
-	for (const rel of buckets.seedData) {
-		const key = rel.replace(/^data\//, '').replace(/\.data\.maia$/, '')
-		const i = pushCoreImport(`./data/${rel.replace(/^data\//, '')}`)
-		seedPairs.push([key, i])
-	}
-
-	const registryJsFiles = await collectRegistryJs()
-	const vibeRegistryImports = []
-	const vibeRegistryNames = []
-	for (const f of registryJsFiles) {
-		const abs = join(MAIA_ROOT, f)
-		const src = await readFile(abs, 'utf8')
-		const m = src.match(/export const (\w+)\s*=/)
-		if (!m) throw new Error(`[generate-registry] ${f}: expected export const NameRegistry =`)
-		const exportName = m[1]
-		vibeRegistryImports.push(`import { ${exportName} } from './${f}'`)
-		vibeRegistryNames.push(exportName)
-	}
-
-	const iconsLines = [
+	const iconsSource = [
 		BANNER,
+		`import { annotateMaiaConfig } from '../../helpers/annotate-maia.js'`,
 		'',
-		...iconImports.map((l) => l),
+		...importLines,
+		'',
+		'export const MAIA_SPARK_REGISTRY = Object.freeze({',
+		...sparkRegistryLines,
+		'})',
 		'',
 		'const _iconPairs = [',
-		...iconPairs.map(([k, i]) => `\t['${k}', raw${i}],`),
+		...iconPairs.map(({ base, varName }) => `\t['${base}', ${varName}],`),
 		']',
 		'export const ICON_SVG_BY_KEY = Object.fromEntries(',
 		'\t_iconPairs.map(([key, raw]) => [key, raw.svg]),',
@@ -530,48 +557,40 @@ async function buildCoreAndShell() {
 		'',
 	]
 
-	const coreLines = [
-		BANNER,
-		`import { annotateMaiaConfig } from '../helpers/annotate-maia.js'`,
-		'',
-		...coreImports.map((l) => l),
-		'',
-		'const _actorPairs = [',
-		...actorPairs.map(([k, i]) => `\t['${k}', raw${i}],`),
-		']',
-		'export const annotateMaiaByActorsPath = Object.fromEntries(',
-		'\t_actorPairs.map(([rel, raw]) => [rel, annotateMaiaConfig(raw, rel)]),',
-		')',
-		'',
-		'const _factoryPairs = [',
-		...factoryPairs.map(([k, i]) => `\t['${k}', raw${i}],`),
-		']',
-		'export const annotateMaiaByFactoriesPath = Object.fromEntries(',
-		'\t_factoryPairs.map(([rel, raw]) => [rel, annotateMaiaConfig(raw, rel)]),',
-		')',
-		'',
-		'const _vibeMaiaPairs = [',
-		...vibePairs.map(([k, i]) => `\t['${k}', raw${i}],`),
-		']',
-		'export const annotateMaiaByVibesPath = Object.fromEntries(',
-		'\t_vibeMaiaPairs.map(([rel, raw]) => [rel, annotateMaiaConfig(raw, rel)]),',
-		')',
-		'',
-		'const _seedPairs = [',
-		...seedPairs.map(([k, i]) => `\t['${k}', raw${i}],`),
-		']',
-		'export const SEED_DATA = Object.fromEntries(_seedPairs)',
-		'',
-	]
+	const seedPairs = buckets.seedData.map((rel) => {
+		const key = rel.replace(/^data\//, '').replace(/\.data\.maia$/, '')
+		const e = sparkEntries.find((x) => x.partition === 'seedData' && x.rel === rel)
+		if (!e) throw new Error(`[generate-registry] seed pair: ${rel}`)
+		return { key, varName: e.varName }
+	})
 
-	const shellLines = [
+	iconsSource.push(
+		'export const SEED_DATA = Object.freeze({',
+		...seedPairs.map(({ key, varName }) => `\t${JSON.stringify(key)}: ${varName},`),
+		'})',
+		'',
+	)
+
+	const registryJsFiles = await collectRegistryJs()
+	const vibeRegistryImports = []
+	const vibeRegistryNames = []
+	for (const f of registryJsFiles) {
+		const abs = join(MAIA_ROOT, f)
+		const src = await readFile(abs, 'utf8')
+		const m = src.match(/export const (\w+)\s*=/)
+		if (!m) throw new Error(`[generate-registry] ${f}: expected export const NameRegistry =`)
+		const exportName = m[1]
+		vibeRegistryImports.push(`import { ${exportName} } from './sparks/maia/${f}'`)
+		vibeRegistryNames.push(exportName)
+	}
+
+	const topShell = [
 		BANNER,
-		`import { getVibeKey } from '../helpers/vibe-keys.js'`,
+		`export * from './sparks/maia/registry.js'`,
+		'',
+		`import { getVibeKey } from './helpers/vibe-keys.js'`,
 		'',
 		...vibeRegistryImports,
-		'',
-		`export * from './registry-icons.js'`,
-		`export * from './registry-core.js'`,
 		'',
 		`const collected = [`,
 		...vibeRegistryNames.map((n) => `\t${n},`),
@@ -590,9 +609,8 @@ async function buildCoreAndShell() {
 	const actorNanoid = buildActorNanoidRegistrySource(buckets)
 
 	return {
-		core: coreLines.join('\n'),
-		icons: iconsLines.join('\n'),
-		shell: shellLines.join('\n'),
+		sparkRegistry: iconsSource.join('\n'),
+		topRegistry: topShell.join('\n'),
 		actorNanoid,
 	}
 }
@@ -619,6 +637,8 @@ async function removeLegacyGenerated() {
 		join(MAIA_ROOT, 'generated', 'annotate-maia-by-actors-path.generated.js'),
 		join(MAIA_ROOT, 'generated', 'vibe-registries.generated.js'),
 		join(MAIA_ROOT, 'generated', 'seed-data.generated.js'),
+		join(MAIA_ROOT, 'registry-core.js'),
+		join(MAIA_ROOT, 'registry-icons.js'),
 	]
 	for (const p of legacy) {
 		try {
@@ -633,13 +653,12 @@ async function main() {
 	const watchMode = process.argv.includes('--watch')
 	const run = async () => {
 		await generateAllVibeRegistryFiles()
-		const { core, icons, shell, actorNanoid } = await buildCoreAndShell()
+		const { sparkRegistry, topRegistry, actorNanoid } = await buildSparkRegistryAndTopShell()
 		await removeLegacyGenerated()
 		await mkdir(dirname(OUT_ACTOR_NANOID), { recursive: true })
 		await emitCoTypesAndMetaFactory()
-		await writeFile(OUT_CORE, core, 'utf8')
-		await writeFile(OUT_ICONS, icons, 'utf8')
-		await writeFile(OUT_FILE, shell, 'utf8')
+		await writeFile(OUT_SPARK_REGISTRY, sparkRegistry, 'utf8')
+		await writeFile(OUT_TOP_REGISTRY, topRegistry, 'utf8')
 		await writeFile(OUT_ACTOR_NANOID, actorNanoid, 'utf8')
 		const vibeRegistries = (
 			await Array.fromAsync(
@@ -652,9 +671,8 @@ async function main() {
 				'biome',
 				'check',
 				'--write',
-				OUT_CORE,
-				OUT_ICONS,
-				OUT_FILE,
+				OUT_SPARK_REGISTRY,
+				OUT_TOP_REGISTRY,
 				OUT_ACTOR_NANOID,
 				OUT_CO_TYPES,
 				OUT_META_FACTORY,
@@ -667,9 +685,8 @@ async function main() {
 		)
 		console.log(
 			'[generate-maia-universe-registry] wrote',
-			posix(relative(REPO_ROOT, OUT_CORE)),
-			posix(relative(REPO_ROOT, OUT_ICONS)),
-			posix(relative(REPO_ROOT, OUT_FILE)),
+			posix(relative(REPO_ROOT, OUT_SPARK_REGISTRY)),
+			posix(relative(REPO_ROOT, OUT_TOP_REGISTRY)),
 			posix(relative(REPO_ROOT, OUT_ACTOR_NANOID)),
 			posix(relative(REPO_ROOT, OUT_CO_TYPES)),
 			posix(relative(REPO_ROOT, OUT_META_FACTORY)),

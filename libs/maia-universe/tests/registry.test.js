@@ -1,20 +1,20 @@
 import { describe, expect, test } from 'bun:test'
+import { identityFromMaiaPath } from '../src/helpers/annotate-maia.js'
 import {
 	ALL_VIBE_REGISTRIES,
-	annotateMaiaByActorsPath,
 	getAllVibeRegistries,
 	ICON_SVG_BY_KEY,
+	MAIA_SPARK_REGISTRY,
 	SEED_DATA,
-} from '../src/maia/registry.js'
+} from '../src/registry.js'
 
 describe('maia registry (generated)', () => {
-	test('annotateMaiaByActorsPath keys are POSIX paths under actors/', () => {
-		expect(annotateMaiaByActorsPath['os/ai/actor.maia']).toBeDefined()
-		expect(annotateMaiaByActorsPath['views/sparks/actor.maia']).toBeDefined()
-		const keys = Object.keys(annotateMaiaByActorsPath).sort()
-		for (let i = 1; i < keys.length; i++) {
-			expect(keys[i - 1] < keys[i]).toBe(true)
-		}
+	test('MAIA_SPARK_REGISTRY maps nanoid → annotated config for actors', () => {
+		const id = identityFromMaiaPath('os/ai/actor.maia')
+		expect(MAIA_SPARK_REGISTRY[id.$nanoid]).toBeDefined()
+		expect(MAIA_SPARK_REGISTRY[id.$nanoid].$nanoid).toBe(id.$nanoid)
+		const idSparks = identityFromMaiaPath('views/sparks/actor.maia')
+		expect(MAIA_SPARK_REGISTRY[idSparks.$nanoid]).toBeDefined()
 	})
 
 	test('SEED_DATA has icons, notes, todos from data/*.data.maia', () => {

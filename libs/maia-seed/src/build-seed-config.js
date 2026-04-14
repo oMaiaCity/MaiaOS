@@ -4,11 +4,11 @@
 
 import { identityFromMaiaPath } from '@MaiaOS/factories/identity-from-maia-path.js'
 import {
-	annotateMaiaByActorsPath,
 	dashboardIconCotextSeedRows,
 	getVibeKey,
 	ICON_SVG_BY_KEY,
 	isActorFilePathId,
+	MAIA_SPARK_REGISTRY,
 	SEED_DATA,
 } from '@MaiaOS/universe'
 import { deriveInboxId } from './derive-inbox.js'
@@ -18,7 +18,22 @@ const INBOX_SCHEMA = '°maia/factory/inbox.factory.maia'
 /** Instance shape for inbox.factory.maia (schema says cotype: costream). */
 const INBOX_INSTANCE_COTYPE = 'costream'
 
-const ann = annotateMaiaByActorsPath
+function pathKeyFromMaiaLabel($label) {
+	if (typeof $label !== 'string' || !$label.startsWith('°maia/')) {
+		throw new Error(`[vibes] expected °maia/ $label, got ${String($label)}`)
+	}
+	return $label.slice('°maia/'.length)
+}
+
+function assignLabeledBucket(target, bucket) {
+	if (!bucket || typeof bucket !== 'object') return
+	for (const cfg of Object.values(bucket)) {
+		if (!cfg || typeof cfg !== 'object' || typeof cfg.$label !== 'string') {
+			throw new Error('[vibes] registry entry missing $label')
+		}
+		target[pathKeyFromMaiaLabel(cfg.$label)] = cfg
+	}
+}
 
 /** deriveInboxId → logical ref so transformInstanceForSeeding resolves to co_z (bare paths are skipped). */
 function inboxLogicalRef(inboxPathFromDerive) {
@@ -74,19 +89,19 @@ export function buildSeedConfig(vibeRegistries) {
 		data: {},
 	}
 	for (const registry of validRegistries) {
-		Object.assign(merged.styles, registry.styles || {})
-		Object.assign(merged.actors, registry.actors || {})
-		Object.assign(merged.views, registry.views || {})
-		Object.assign(merged.contexts, registry.contexts || {})
-		Object.assign(merged.processes, registry.processes || {})
-		Object.assign(merged.interfaces, registry.interfaces || {})
-		Object.assign(merged.wasms, registry.wasms || {})
+		assignLabeledBucket(merged.styles, registry.styles)
+		assignLabeledBucket(merged.actors, registry.actors)
+		assignLabeledBucket(merged.views, registry.views)
+		assignLabeledBucket(merged.contexts, registry.contexts)
+		assignLabeledBucket(merged.processes, registry.processes)
+		assignLabeledBucket(merged.interfaces, registry.interfaces)
+		assignLabeledBucket(merged.wasms, registry.wasms)
 		Object.assign(merged.data, registry.data || {})
 	}
 	const vibeKeysForIcons = validRegistries.map((r) => getVibeKey(r.vibe)).filter(Boolean)
 	merged.data.dashboardIconCotexts = dashboardIconCotextSeedRows(vibeKeysForIcons)
-	for (const [actorPath, config] of Object.entries(merged.actors)) {
-		const inboxId = deriveInboxId(actorPath)
+	for (const [, config] of Object.entries(merged.actors)) {
+		const inboxId = deriveInboxId(config.$label)
 		if (inboxId) {
 			config.inbox = inboxLogicalRef(inboxId)
 			const id = identityFromMaiaPath(inboxId)
@@ -129,11 +144,13 @@ function toInboxConfig(inboxPath) {
 }
 
 function a(p) {
-	const v = ann[p]
-	if (!v)
+	const id = identityFromMaiaPath(p)
+	const v = MAIA_SPARK_REGISTRY[id.$nanoid]
+	if (!v) {
 		throw new Error(
-			`[build-seed-config] missing annotateMaiaByActorsPath['${p}'] — run bun scripts/generate-maia-universe-registry.mjs`,
+			`[build-seed-config] missing MAIA_SPARK_REGISTRY[${id.$nanoid}] for path '${p}' — run bun scripts/generate-maia-universe-registry.mjs`,
 		)
+	}
 	return v
 }
 

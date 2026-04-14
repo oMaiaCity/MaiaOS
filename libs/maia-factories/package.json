@@ -15,7 +15,8 @@
 		"./builtin-schemas": "./src/data/builtin-schemas.data.js",
 		"./operation-result": "./src/operation-result.js",
 		"./vibe-keys": "./src/vibe-keys.js",
-		"./remove-id-fields": "./src/remove-id-fields.js"
+		"./remove-id-fields": "./src/remove-id-fields.js",
+		"./factory-registry": "./src/factory-registry.js"
 	},
 	"dependencies": {
 		"@MaiaOS/universe": "workspace:*",

@@ -1,11 +1,11 @@
 import { beforeAll, describe, expect, test } from 'bun:test'
+import { ensureFactoriesLoaded, getAllFactories } from '../src/factory-registry.js'
 import {
 	identityFromMaiaPath,
 	logicalRefToSeedNanoid,
 	maiaFactoryLabel,
 	withCanonicalFactorySchema,
 } from '../src/identity-from-maia-path.js'
-import { ensureFactoriesLoaded, getAllFactories } from '../src/index.js'
 
 beforeAll(async () => {
 	await ensureFactoriesLoaded()

@@ -85,7 +85,9 @@ export async function seed(
 	const needsBootstrap =
 		!account.get('registries') || !String(account.get('registries')).startsWith('co_z')
 	if (needsBootstrap) {
-		const { ensureFactoriesLoaded, getAllFactories } = await import('@MaiaOS/factories')
+		const { ensureFactoriesLoaded, getAllFactories } = await import(
+			'@MaiaOS/factories/factory-registry'
+		)
 		await ensureFactoriesLoaded()
 		await bootstrapAndScaffold(account, node, schemas || getAllFactories(), peer.dbEngine)
 	}
