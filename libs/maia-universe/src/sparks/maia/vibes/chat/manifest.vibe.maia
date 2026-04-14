@@ -2,6 +2,7 @@
 	"$factory": "°maia/factory/vibe.factory.maia",
 	"name": "Chat",
 	"description": "CTO-level AI assistant for MaiaOS codebase",
+	"icon": "°maia/data/icons.data.maia[dw5wMME7GWnX]",
 	"actor": "°maia/chat/intent/intent.actor.maia",
 	"runtime": [
 		"browser"
@@ -9,13 +10,6 @@
 	"seedData": {
 		"chat": {
 			"kind": "emptyArray"
-		},
-		"notes": {
-			"kind": "seedDataField",
-			"field": [
-				"notes",
-				"chat"
-			]
 		}
 	},
 	"dependencies": [

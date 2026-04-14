@@ -1,7 +1,7 @@
 {
 	"$factory": "°maia/factory/context.factory.maia",
 	"list": {
-		"factory": "°maia/factory/todos.factory.maia",
+		"factory": "°maia/factory/todo.factory.maia",
 		"map": {
 			"id": "id",
 			"text": "text",

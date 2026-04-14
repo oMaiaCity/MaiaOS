@@ -3,6 +3,7 @@
  */
 
 import { MAIA_SPARK_REGISTRY, SEED_DATA } from '../generated/registry.js'
+import { parseDataMaiaBracketRef } from '../helpers/bracket-ref.js'
 import { maiaIdentity } from '../helpers/identity-from-maia-path.js'
 import { getVibeKey } from '../helpers/vibe-keys.js'
 import { isActorFilePathId } from '../sparks/maia/actors/index.js'
@@ -36,12 +37,25 @@ function inboxLogicalRef(inboxPathFromDerive) {
 	return inboxPathFromDerive ? `°maia/${inboxPathFromDerive}` : null
 }
 
-/** Merge `registry.data` into `merged.data`: concatenate arrays for the same key (e.g. notes from chat + paper). */
+/**
+ * Merge `registry.data` into `merged.data`.
+ * Buckets are `{ $factory, instances }`; concatenate `instances` when both sides use that shape.
+ */
 function mergeSeedDataBucket(mergedData, registryData) {
 	if (!registryData || typeof registryData !== 'object') return
 	for (const [key, value] of Object.entries(registryData)) {
-		if (Array.isArray(value) && Array.isArray(mergedData[key])) {
-			mergedData[key] = mergedData[key].concat(value)
+		const prev = mergedData[key]
+		if (
+			prev &&
+			typeof prev === 'object' &&
+			typeof value === 'object' &&
+			Array.isArray(prev.instances) &&
+			Array.isArray(value.instances)
+		) {
+			mergedData[key] = {
+				...prev,
+				instances: prev.instances.concat(value.instances),
+			}
 		} else {
 			mergedData[key] = value
 		}
@@ -63,28 +77,57 @@ function normalizeVibeForSeeding(vibe) {
 	if (!normalized.$label?.startsWith('°maia/vibe/')) {
 		normalized.$label = `°maia/vibe/${key}`
 	}
-	normalized.icon = maiaIdentity(`data/icons/${key}.maia`).$label
+	if (typeof normalized.icon !== 'string' || !normalized.icon.startsWith('°maia/data/')) {
+		throw new Error(
+			`[vibes] manifest must set icon: bracket ref °maia/data/icons.data.maia[<nanoid>] (vibe "${key}")`,
+		)
+	}
 	if (!Array.isArray(normalized.runtime)) {
 		normalized.runtime = ['browser']
 	}
 	return normalized
 }
 
-export function buildSeedConfig(vibeRegistries) {
-	for (const k of SEED_DATA.icons.dashboardVibeKeys) {
-		const entry = SEED_DATA.icons[k]
-		if (!entry || typeof entry.svg !== 'string' || !entry.svg.trim()) {
+function validateIconsSeedData() {
+	const icons = SEED_DATA.icons
+	if (!icons || typeof icons !== 'object' || !Array.isArray(icons.instances)) {
+		throw new Error('[vibes] SEED_DATA.icons must be { $factory, instances } from icons.data.maia')
+	}
+	for (const row of icons.instances) {
+		if (!row || typeof row.svg !== 'string' || !row.svg.trim()) {
+			throw new Error('[vibes] each icons.data.maia row needs non-empty svg')
+		}
+		if (typeof row.$nanoid !== 'string' || !row.$nanoid.trim()) {
+			throw new Error('[vibes] each icons.data.maia row needs $nanoid')
+		}
+	}
+}
+
+function validateVibeIconsAgainstSeed(vibes) {
+	const nanos = new Set((SEED_DATA.icons.instances || []).map((r) => r.$nanoid))
+	for (const vibe of vibes) {
+		const icon = vibe?.icon
+		const bracket = typeof icon === 'string' ? parseDataMaiaBracketRef(icon) : null
+		if (!bracket || !nanos.has(bracket.itemNanoid)) {
+			const k = getVibeKey(vibe) || '?'
 			throw new Error(
-				`[vibes] data/icons.data.maia lists unknown vibe key "${k}" (no SVG merged in SEED_DATA.icons)`,
+				`[vibes] vibe "${k}" icon must be °maia/data/icons.data.maia[<nanoid>] with nanoid from SEED_DATA.icons.instances`,
 			)
 		}
 	}
+}
+
+export function buildSeedConfig(vibeRegistries) {
+	validateIconsSeedData()
 	const validRegistries = vibeRegistries.filter((r) => r?.vibe && typeof r.vibe === 'object')
 	if (vibeRegistries.length > 0 && validRegistries.length === 0) {
 		throw new Error(
 			'[vibes] All vibe manifests invalid (null or not object). Ensure .maia files load as JSON (bunfig.toml: [loader] ".maia" = "json")',
 		)
 	}
+	const vibesNorm = validRegistries.map((r) => normalizeVibeForSeeding(r.vibe))
+	validateVibeIconsAgainstSeed(vibesNorm)
+
 	const merged = {
 		styles: {},
 		actors: {},
@@ -94,7 +137,7 @@ export function buildSeedConfig(vibeRegistries) {
 		interfaces: {},
 		inboxes: {},
 		wasms: {},
-		vibes: validRegistries.map((r) => normalizeVibeForSeeding(r.vibe)),
+		vibes: vibesNorm,
 		data: {},
 	}
 	for (const registry of validRegistries) {
@@ -108,7 +151,7 @@ export function buildSeedConfig(vibeRegistries) {
 		mergeSeedDataBucket(merged.data, registry.data)
 	}
 	if (validRegistries.length > 0) {
-		merged.data.icons = SEED_DATA.icons
+		merged.data.icons = structuredClone(SEED_DATA.icons)
 	}
 	for (const [, config] of Object.entries(merged.actors)) {
 		const inboxId = deriveInboxId(pathKeyFromMaiaLabel(config.$label))

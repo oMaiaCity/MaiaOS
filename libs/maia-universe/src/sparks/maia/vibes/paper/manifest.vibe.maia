@@ -2,6 +2,7 @@
 	"$factory": "°maia/factory/vibe.factory.maia",
 	"name": "Paper",
 	"description": "Docs / Notes - collaborative notes",
+	"icon": "°maia/data/icons.data.maia[OFsal1JHWA0t]",
 	"actor": "°maia/views/layout-paper/actor.maia",
 	"runtime": [
 		"browser"
@@ -10,8 +11,7 @@
 		"notes": {
 			"kind": "seedDataField",
 			"field": [
-				"notes",
-				"paper"
+				"notes"
 			]
 		}
 	},

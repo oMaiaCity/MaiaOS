@@ -2,7 +2,7 @@
 	"$factory": "°maia/factory/context.factory.maia",
 	"selectedNoteId": null,
 	"selectedNote": {
-		"factory": "°maia/factory/notes.factory.maia",
+		"factory": "°maia/factory/note.factory.maia",
 		"filter": {
 			"id": "$selectedNoteId"
 		},

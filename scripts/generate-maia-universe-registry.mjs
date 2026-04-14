@@ -61,7 +61,6 @@ function isActorExecutableMaiaPath(pathKey) {
 
 function partitionMaia(rel) {
 	if (/^data\/[^/]+\.data\.maia$/.test(rel)) return 'seedData'
-	if (/^data\/icons\/[^/]+\.maia$/.test(rel)) return 'dashboardIcons'
 	if (rel.startsWith('actors/')) return 'actors'
 	if (rel.startsWith('factories/')) return 'factories'
 	if (rel.startsWith('vibes/')) return 'vibes'
@@ -72,10 +71,6 @@ function pathKeyForRel(rel, partition) {
 	if (partition === 'actors') return rel.slice('actors/'.length)
 	if (partition === 'factories') return rel.slice('factories/'.length)
 	if (partition === 'vibes') return rel.slice('vibes/'.length)
-	if (partition === 'dashboardIcons') {
-		const base = rel.split('/').pop().replace(/\.maia$/, '')
-		return `data/icons/${base}.maia`
-	}
 	if (partition === 'seedData') return rel
 	throw new Error(`[generate-registry] pathKeyForRel: ${partition}`)
 }
@@ -89,10 +84,6 @@ function importSpecifierForRel(rel, partition) {
 	}
 	if (partition === 'vibes') {
 		return `@MaiaOS/universe/vibes/${rel.slice('vibes/'.length)}`
-	}
-	if (partition === 'dashboardIcons') {
-		const base = rel.split('/').pop().replace(/\.maia$/, '')
-		return `@MaiaOS/universe/data/icons/${base}.maia`
 	}
 	if (partition === 'seedData') {
 		return `../sparks/maia/data/${rel.replace(/^data\//, '')}`
@@ -164,9 +155,14 @@ function seedDataCodegenFragment(manifest) {
 		if (typeof v !== 'object' || v === null || !('kind' in v)) continue
 		if (v.kind === 'emptyArray') {
 			parts.push(`\t\t${JSON.stringify(k)}: [],`)
-		} else if (v.kind === 'seedDataField' && Array.isArray(v.field) && v.field.length === 2) {
-			const [a, b] = v.field
-			parts.push(`\t\t${JSON.stringify(k)}: SEED_DATA.${a}.${b},`)
+		} else if (v.kind === 'seedDataField' && Array.isArray(v.field)) {
+			if (v.field.length === 1) {
+				const [a] = v.field
+				parts.push(`\t\t${JSON.stringify(k)}: SEED_DATA.${a},`)
+			} else if (v.field.length === 2) {
+				const [a, b] = v.field
+				parts.push(`\t\t${JSON.stringify(k)}: SEED_DATA.${a}.${b},`)
+			}
 		}
 	}
 	if (parts.length === 0) return ''
@@ -214,7 +210,6 @@ async function main() {
 		actors: [],
 		factories: [],
 		vibes: [],
-		dashboardIcons: [],
 		seedData: [],
 	}
 	for (const rel of allMaia) {
@@ -248,7 +243,6 @@ async function main() {
 	for (const rel of buckets.actors) addSparkEntry(rel, 'actors')
 	for (const rel of buckets.factories) addSparkEntry(rel, 'factories')
 	for (const rel of buckets.vibes) addSparkEntry(rel, 'vibes')
-	for (const rel of buckets.dashboardIcons) addSparkEntry(rel, 'dashboardIcons')
 	for (const rel of buckets.seedData) addSparkEntry(rel, 'seedData')
 
 	sparkEntries.sort((a, b) => a.nanoid.localeCompare(b.nanoid))
@@ -264,13 +258,6 @@ async function main() {
 		(e) => `\t${JSON.stringify(e.nanoid)}: annotateMaiaConfig(${e.varName}, ${JSON.stringify(e.pathKey)}),`,
 	)
 
-	const iconPairs = buckets.dashboardIcons.map((rel) => {
-		const base = rel.split('/').pop().replace(/\.maia$/, '')
-		const e = sparkEntries.find((x) => x.partition === 'dashboardIcons' && x.rel === rel)
-		if (!e) throw new Error(`[generate-registry] icon pair: ${rel}`)
-		return { base, varName: e.varName }
-	})
-
 	const seedPairs = buckets.seedData.map((rel) => {
 		const key = rel.replace(/^data\//, '').replace(/\.data\.maia$/, '')
 		const e = sparkEntries.find((x) => x.partition === 'seedData' && x.rel === rel)
@@ -283,13 +270,6 @@ async function main() {
 		throw new Error('[generate-registry] missing data/icons.data.maia for SEED_DATA.icons')
 	}
 	const seedPairsNoIcons = seedPairs.filter((p) => p.key !== 'icons')
-	const iconSvgObjectLines = iconPairs.map(
-		({ base, varName }) => `\t\t${JSON.stringify(base)}: { svg: ${varName}.svg },`,
-	)
-	const iconsSeedObject = `Object.freeze({
-\tdashboardVibeKeys: ${iconsSeedPair.varName}.dashboardVibeKeys,
-${iconSvgObjectLines.join('\n')}
-})`
 
 	const brandNk = maiaIdentity('brand/maiacity.style.maia').$nanoid
 	const vibeDirs = Object.keys(VIBE_REGISTRY_EXPORT).sort((a, b) => a.localeCompare(b))
@@ -370,6 +350,13 @@ ${emitBucketObject('interfaces', byBucket.interfaces)}${dataFrag}
 
 	const actorLines = buildActorNanoidLines(buckets)
 
+	const factorySchemaLines = []
+	for (const e of sparkEntries) {
+		if (e.partition !== 'factories' || !e.rel.endsWith('.factory.maia')) continue
+		const base = e.rel.slice('factories/'.length)
+		factorySchemaLines.push(`\t${JSON.stringify(base)}: ${e.varName},`)
+	}
+
 	const parts = [
 		BANNER,
 		...importLines,
@@ -380,7 +367,11 @@ ${emitBucketObject('interfaces', byBucket.interfaces)}${dataFrag}
 		'',
 		'export const SEED_DATA = Object.freeze({',
 		...seedPairsNoIcons.map(({ key, varName }) => `\t${JSON.stringify(key)}: ${varName},`),
-		`\ticons: ${iconsSeedObject},`,
+		`\ticons: ${iconsSeedPair.varName},`,
+		'})',
+		'',
+		'export const FACTORY_SCHEMAS = Object.freeze({',
+		...factorySchemaLines,
 		'})',
 		'',
 		'export const ACTOR_NANOID_TO_EXECUTABLE_KEY = Object.freeze({',

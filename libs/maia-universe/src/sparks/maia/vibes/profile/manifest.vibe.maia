@@ -3,6 +3,7 @@
 	"key": "profile",
 	"name": "My Profile",
 	"description": "Update your profile picture",
+	"icon": "°maia/data/icons.data.maia[nD7KNPHZ6mp9]",
 	"actor": "°maia/profile/intent/intent.actor.maia",
 	"runtime": [
 		"browser"

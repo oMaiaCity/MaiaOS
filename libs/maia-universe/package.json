@@ -5,6 +5,7 @@
 	"main": "src/index.js",
 	"exports": {
 		".": "./src/index.js",
+		"./helpers/bracket-ref.js": "./src/helpers/bracket-ref.js",
 		"./helpers/identity-from-maia-path.js": "./src/helpers/identity-from-maia-path.js",
 		"./helpers/nanoid.js": "./src/helpers/nanoid.js",
 		"./helpers/operation-result.js": "./src/helpers/operation-result.js",
@@ -13,12 +14,12 @@
 		"./helpers/vibe-keys.js": "./src/helpers/vibe-keys.js",
 		"./actors": "./src/sparks/maia/actors/index.js",
 		"./actors/*": "./src/sparks/maia/actors/*",
-		"./data/icons/*": "./src/sparks/maia/data/icons/*",
 		"./factories/*": "./src/sparks/maia/factories/*",
 		"./vibes/*": "./src/sparks/maia/vibes/*",
 		"./config/build-seed-config.js": "./src/config/build-seed-config.js",
 		"./config/vibe-seed-helpers.js": "./src/config/vibe-seed-helpers.js",
-		"./config/derive-inbox.js": "./src/config/derive-inbox.js"
+		"./config/derive-inbox.js": "./src/config/derive-inbox.js",
+		"./generated/registry.js": "./src/generated/registry.js"
 	},
 	"dependencies": {
 		"@MaiaOS/db": "workspace:*",

@@ -7,7 +7,8 @@
 	"required": [
 		"name",
 		"description",
-		"actor"
+		"actor",
+		"icon"
 	],
 	"properties": {
 		"key": {
@@ -41,8 +42,8 @@
 			"description": "Runtime colocation - which runtimes this vibe runs on (e.g. browser, server)"
 		},
 		"icon": {
-			"$co": "°maia/factory/cotext.factory.maia",
-			"description": "Co-id of seeded CoText (colist of graphemes) holding SVG markup for dashboard / vibe chrome"
+			"type": "string",
+			"description": "Bracket ref °maia/data/icons.data.maia[<nanoid>] — resolves to seeded CoText co-id after transform"
 		}
 	}
 }

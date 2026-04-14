@@ -22,10 +22,11 @@ describe('maia registry (generated)', () => {
 		expect(SEED_DATA.todos).toBeDefined()
 	})
 
-	test('SEED_DATA.icons has svg for each dashboard vibe key', () => {
-		for (const k of SEED_DATA.icons.dashboardVibeKeys) {
-			expect(typeof SEED_DATA.icons[k]?.svg).toBe('string')
-			expect(SEED_DATA.icons[k].svg.length).toBeGreaterThan(0)
+	test('SEED_DATA.icons instances each have svg', () => {
+		expect(Array.isArray(SEED_DATA.icons.instances)).toBe(true)
+		for (const row of SEED_DATA.icons.instances) {
+			expect(typeof row.svg).toBe('string')
+			expect(row.svg.length).toBeGreaterThan(0)
 		}
 	})
 
