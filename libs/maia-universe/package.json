@@ -15,7 +15,6 @@
 		"./actors/*": "./src/sparks/maia/actors/*",
 		"./data/icons/*": "./src/sparks/maia/data/icons/*",
 		"./factories/*": "./src/sparks/maia/factories/*",
-		"./todos/loader": "./src/sparks/maia/vibes/todos/loader.js",
 		"./vibes/*": "./src/sparks/maia/vibes/*",
 		"./config/build-seed-config.js": "./src/config/build-seed-config.js",
 		"./config/vibe-seed-helpers.js": "./src/config/vibe-seed-helpers.js",
