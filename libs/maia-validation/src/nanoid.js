@@ -1,5 +1,4 @@
 export {
-	maiaRefFromPathKey,
 	NANOID_LENGTH,
 	nanoidFromPath,
 	normalizeMaiaPathKey,

@@ -3,7 +3,7 @@
  */
 
 import { createCoValueForSpark } from '@MaiaOS/db'
-import { identityFromMaiaPath } from '@MaiaOS/validation/identity-from-maia-path.js'
+import { maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { splitGraphemes } from 'unicode-segmenter/grapheme'
 
 const DEFAULT_PAPER_TEXT = "Dear future us, what we're creating together..."
@@ -32,14 +32,14 @@ export async function seedData(account, node, maiaGroup, peer, data, seedRegistr
 		if (collectionName === 'icons') continue
 		if (!Array.isArray(collectionItems)) continue
 
-		const factoryCoId = registry.get(identityFromMaiaPath(`${collectionName}.factory.maia`).$nanoid)
+		const factoryCoId = registry.get(maiaIdentity(`${collectionName}.factory.maia`).$nanoid)
 
 		if (!factoryCoId) continue
 
 		// Special handling for Notes: create CoText (colist) first, then Note (comap) with content ref
 		if (collectionName === 'notes') {
 			const cotextSchemaCoId =
-				registry.get(identityFromMaiaPath('cotext.factory.maia').$nanoid) || registry.get('os/cotext')
+				registry.get(maiaIdentity('cotext.factory.maia').$nanoid) || registry.get('os/cotext')
 			if (!cotextSchemaCoId) continue
 
 			let itemCount = 0

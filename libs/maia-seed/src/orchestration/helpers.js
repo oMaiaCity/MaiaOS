@@ -4,7 +4,7 @@
 
 import { metaFactorySchemaRaw } from '@MaiaOS/universe'
 import {
-	identityFromMaiaPath,
+	maiaIdentity,
 	withCanonicalFactorySchema,
 } from '@MaiaOS/validation/identity-from-maia-path.js'
 
@@ -112,7 +112,7 @@ export async function ensureSparkOs(account, node, maiaGroup, peer, factoryCoIdM
 	}
 
 	const vibesRegistrySchemaCoId =
-		factoryCoIdMap?.get(identityFromMaiaPath('vibes-registry.factory.maia').$nanoid) ??
+		factoryCoIdMap?.get(maiaIdentity('vibes-registry.factory.maia').$nanoid) ??
 		(await lookupRegistryKey(peer, '°maia/factory/vibes-registry.factory.maia', {
 			returnType: 'coId',
 		}))

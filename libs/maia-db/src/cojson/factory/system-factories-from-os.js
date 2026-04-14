@@ -4,10 +4,7 @@
  */
 
 import { namekeyFromFactoryDefinitionContent } from '@MaiaOS/validation'
-import {
-	identityFromMaiaPath,
-	maiaFactoryRefToNanoid,
-} from '@MaiaOS/validation/identity-from-maia-path.js'
+import { maiaFactoryRefToNanoid, maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { ensureCoValueLoaded } from '../crud/collection-helpers.js'
 import { INFRA_FACTORY_NANOID_BY_ROLE, RUNTIME_REF } from '../factory/runtime-factory-refs.js'
 import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
@@ -80,7 +77,7 @@ export async function buildSystemFactoryCoIdsFromSparkOs(peer, osId) {
 	}
 
 	if (metaCoId?.startsWith?.('co_z')) {
-		out.set(identityFromMaiaPath('meta.factory.maia').$nanoid, metaCoId)
+		out.set(maiaIdentity('meta.factory.maia').$nanoid, metaCoId)
 	}
 
 	return out

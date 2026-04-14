@@ -4,10 +4,7 @@
  * Call {@link fillRuntimeRefsFromSystemFactories} after {@link peer.systemFactoryCoIds} is populated.
  */
 
-import {
-	identityFromMaiaPath,
-	logicalRefToSeedNanoid,
-} from '@MaiaOS/validation/identity-from-maia-path.js'
+import { logicalRefToSeedNanoid, maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
 
 /** Short role keys for {@link getRuntimeRef} — no ° in call sites. */
 export const RUNTIME_REF = {
@@ -26,7 +23,7 @@ export const RUNTIME_REF = {
 }
 
 function infraNanoid(basename) {
-	return identityFromMaiaPath(basename).$nanoid
+	return maiaIdentity(basename).$nanoid
 }
 
 /** role → factory schema $nanoid (registry map key). */

@@ -21,6 +21,6 @@
 		"°maia/views/list/actor.maia",
 		"°maia/services/todos/actor.maia",
 		"°maia/views/placeholder/actor.maia",
-		"°maia/os/db/actor.maia"
+		"°maia/services/db/actor.maia"
 	]
 }

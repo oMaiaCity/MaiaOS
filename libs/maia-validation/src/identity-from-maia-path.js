@@ -1,9 +1,10 @@
 export {
 	annotateMaiaConfig,
 	cotextNanoidFromInstancePath,
-	identityFromMaiaPath,
+	executableKeyFromMaiaPath,
 	logicalRefToSeedNanoid,
 	maiaFactoryLabel,
 	maiaFactoryRefToNanoid,
+	maiaIdentity,
 	withCanonicalFactorySchema,
 } from '@MaiaOS/universe/helpers/identity-from-maia-path.js'

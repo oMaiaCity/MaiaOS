@@ -39,10 +39,3 @@ export function nanoidFromPath(pathKey) {
 	}
 	return id
 }
-
-/**
- * Spark ref string: ° + normalized path (always lowercase maia/...).
- */
-export function maiaRefFromPathKey(pathKey) {
-	return `°${normalizeMaiaPathKey(pathKey)}`
-}

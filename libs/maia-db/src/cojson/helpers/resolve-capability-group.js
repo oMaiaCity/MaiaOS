@@ -87,8 +87,16 @@ async function buildCapabilityGroupMap(maia, accountId) {
 				if (!osId?.startsWith('co_')) continue
 
 				const sparkName = sparkData?.name ?? key
-				const displaySparkName =
-					sparkName.startsWith('°') || sparkName.startsWith('@') ? sparkName : `°${sparkName}`
+				if (
+					typeof sparkData?.name === 'string' &&
+					sparkData.name.trim() !== '' &&
+					!sparkData.name.startsWith('°')
+				) {
+					throw new Error(
+						'[resolveCapabilityGroup] spark name must be a full logical ref starting with °',
+					)
+				}
+				const displaySparkName = typeof sparkName === 'string' ? sparkName : String(key ?? '')
 
 				const osStore = await maia.do({ op: 'read', factory: null, key: osId })
 				await waitForStore(osStore, 3000)

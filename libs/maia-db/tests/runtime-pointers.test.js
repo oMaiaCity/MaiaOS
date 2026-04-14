@@ -1,7 +1,4 @@
-import {
-	identityFromMaiaPath,
-	maiaFactoryRefToNanoid,
-} from '@MaiaOS/validation/identity-from-maia-path.js'
+import { maiaFactoryRefToNanoid, maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { describe, expect, test } from 'bun:test'
 import {
 	fillRuntimeRefsFromSystemFactories,
@@ -14,7 +11,7 @@ import {
 describe('runtimeRefs', () => {
 	test('fillRuntimeRefsFromSystemFactories maps infra roles from systemFactoryCoIds', () => {
 		const peer = {
-			systemFactoryCoIds: new Map([[identityFromMaiaPath('meta.factory.maia').$nanoid, 'co_zMETA']]),
+			systemFactoryCoIds: new Map([[maiaIdentity('meta.factory.maia').$nanoid, 'co_zMETA']]),
 			runtimeRefs: new Map(),
 		}
 		fillRuntimeRefsFromSystemFactories(peer)
@@ -23,9 +20,7 @@ describe('runtimeRefs', () => {
 
 	test('resolveInfraFactoryCoId falls back to systemFactoryCoIds when runtimeRefs empty', () => {
 		const peer = {
-			systemFactoryCoIds: new Map([
-				[identityFromMaiaPath('capability.factory.maia').$nanoid, 'co_zCAP'],
-			]),
+			systemFactoryCoIds: new Map([[maiaIdentity('capability.factory.maia').$nanoid, 'co_zCAP']]),
 			runtimeRefs: new Map(),
 		}
 		expect(resolveInfraFactoryCoId(peer, RUNTIME_REF.OS_CAPABILITY)).toBe('co_zCAP')

@@ -66,3 +66,47 @@ export function isPermissionError(e) {
 	const str = String(e)
 	return PERMISSION_PATTERNS.some((p) => msg.includes(p.toLowerCase()) || str.includes(p))
 }
+
+/**
+ * Extract human-readable message from API error (handles nested structures like RedPill/upstream).
+ * @param {unknown} apiError
+ * @returns {string}
+ */
+function extractApiErrorMessage(apiError) {
+	if (!apiError || typeof apiError !== 'object') return 'Unknown error'
+	const nested = apiError.error
+	if (nested && typeof nested === 'object' && typeof nested.message === 'string') {
+		return nested.message
+	}
+	if (typeof apiError.message === 'string') return apiError.message
+	const err = apiError.error
+	if (typeof err === 'string') {
+		const msg = typeof apiError.message === 'string' ? apiError.message : ''
+		return msg && msg !== 'Unknown' ? `${err}: ${msg}` : err
+	}
+	return 'Unknown error'
+}
+
+/**
+ * Map API error response to structured errors (createErrorEntry shape).
+ * Handles { error, validationErrors } from agent, LLM proxy, etc.
+ * @param {unknown} apiError
+ * @returns {Array<{ type: string, message: string, path?: string }>}
+ */
+export function toStructuredErrors(apiError) {
+	if (!apiError || typeof apiError !== 'object') {
+		return [createErrorEntry('structural', 'Unknown error')]
+	}
+	const validationErrors = apiError.validationErrors
+	if (Array.isArray(validationErrors) && validationErrors.length > 0) {
+		return validationErrors.map((v) =>
+			createErrorEntry(
+				'schema',
+				v.message || v.msg || 'Validation error',
+				v.field ?? v.path ?? undefined,
+			),
+		)
+	}
+	const message = extractApiErrorMessage(apiError)
+	return [createErrorEntry('structural', message)]
+}

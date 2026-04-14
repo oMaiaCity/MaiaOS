@@ -1,6 +1,6 @@
 {
 	"$factory": "°maia/factory/meta.factory.maia",
-	"title": "°maia/os/messages/interface.maia",
+	"title": "°maia/services/messages/interface.maia",
 	"description": "Sends a message to the chat - creates user message and asks AI for response",
 	"cotype": "comap",
 	"indexing": true,

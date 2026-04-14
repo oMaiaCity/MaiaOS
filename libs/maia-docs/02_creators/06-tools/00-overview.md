@@ -58,13 +58,13 @@ MaiaOS uses two mechanisms for "doing work":
 
 ## Service Actors (Function Execution)
 
-Some actors have **executable functions** (e.g. `@maia/actor/os/db`). When a process handler uses `{ "function": true }`, the actor's `execute(actor, payload)` runs.
+Some actors have **executable functions** (e.g. `@maia/actor/services/db`). When a process handler uses `{ "function": true }`, the actor's `execute(actor, payload)` runs.
 
 **Example:** Spark operations target `°Maia/actor/os/db` with event type `SPARK_OP`. The db service actor's function handles the payload and calls `maia.do()`.
 
 ## Available Service Actors
 
-### Database Service Actor (`@maia/actor/os/db`)
+### Database Service Actor (`@maia/actor/services/db`)
 
 **Creator-facing alias:** `@db` (resolved by getActor fallback)
 

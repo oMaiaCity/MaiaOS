@@ -56,7 +56,7 @@ Process handlers use `op` for create, update, delete. See [Process Handlers](./0
 - Co-id — `co_zActor123...`
 - Human-readable path — `°Maia/actor/services/todos`
 
-## Spark Operations (via `@maia/actor/os/db`)
+## Spark Operations (via `@maia/actor/services/db`)
 
 **Create Spark:**
 ```json

@@ -8,10 +8,10 @@ const BUILTIN_MODULES = {
 			name: 'db',
 			version: '1.0.0',
 			description: 'Unified database operation API',
-			namespace: '@maia/actor/os',
-			tools: ['@maia/actor/os/db'],
+			namespace: '@maia/actor/services',
+			tools: ['@maia/actor/services/db'],
 		},
-		query: (q) => (q === 'tools' ? ['@maia/actor/os/db'] : null),
+		query: (q) => (q === 'tools' ? ['@maia/actor/services/db'] : null),
 	},
 	core: {
 		config: {
@@ -28,10 +28,10 @@ const BUILTIN_MODULES = {
 			name: 'ai',
 			version: '1.0.0',
 			description: 'Unified AI tool for OpenAI-compatible API integration (RedPill)',
-			namespace: '@maia/actor/os',
-			tools: ['@maia/actor/os/ai'],
+			namespace: '@maia/actor/services',
+			tools: ['@maia/actor/services/ai'],
 		},
-		query: (q) => (q === 'tools' ? ['@maia/actor/os/ai'] : null),
+		query: (q) => (q === 'tools' ? ['@maia/actor/services/ai'] : null),
 	},
 }
 

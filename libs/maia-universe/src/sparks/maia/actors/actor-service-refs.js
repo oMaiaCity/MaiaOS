@@ -23,8 +23,8 @@ export function resolveServiceActorCoId(actorRef) {
 
 /** Map actor $id to primary interface event type (path-based $id). */
 export const ACTOR_ID_TO_EVENT_TYPE = {
-	'°maia/os/ai/actor.maia': 'CHAT',
-	'°maia/os/db/actor.maia': 'DB_OP',
+	'°maia/services/ai/actor.maia': 'CHAT',
+	'°maia/services/db/actor.maia': 'DB_OP',
 	'°maia/services/names/actor.maia': 'COMPUTE_NAMES',
 	'°maia/services/paper/actor.maia': 'UPDATE_PAPER',
 	'°maia/services/update-wasm-code/actor.maia': 'UPDATE_WASM_CODE',

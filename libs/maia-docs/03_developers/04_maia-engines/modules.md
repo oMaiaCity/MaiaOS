@@ -14,9 +14,9 @@ const BUILTIN_MODULES = {
   db: createModule('db', {
     version: '1.0.0',
     description: 'Unified database operation API',
-    namespace: '@maia/actor/os',
-    tools: ['@maia/actor/os/db'],
-  }, (q) => (q === 'tools' ? ['@maia/actor/os/db'] : null)),
+    namespace: '@maia/actor/services',
+    tools: ['@maia/actor/services/db'],
+  }, (q) => (q === 'tools' ? ['@maia/actor/services/db'] : null)),
   core: createModule('core', {
     version: '1.0.0',
     description: 'Core UI tools',
@@ -26,9 +26,9 @@ const BUILTIN_MODULES = {
   ai: createModule('ai', {
     version: '1.0.0',
     description: 'Unified AI tool for OpenAI-compatible API',
-    namespace: '@maia/actor/os',
-    tools: ['@maia/actor/os/ai'],
-  }, (q) => (q === 'tools' ? ['@maia/actor/os/ai'] : null)),
+    namespace: '@maia/actor/services',
+    tools: ['@maia/actor/services/ai'],
+  }, (q) => (q === 'tools' ? ['@maia/actor/services/ai'] : null)),
 };
 ```
 
@@ -43,7 +43,7 @@ const BUILTIN_MODULES = {
 **Operations:** read, create, update, delete, readFactory, factory, colist ops, binary upload, spark ops, etc.
 
 **Tools:**
-- `@maia/actor/os/db` - Unified database operations
+- `@maia/actor/services/db` - Unified database operations
 
 **Usage:**
 ```javascript
@@ -67,7 +67,7 @@ const created = await maia.do({ op: 'create', factory: '°Maia/factory/todos', d
 **Purpose:** AI tools module for OpenAI-compatible API (RedPill).
 
 **Tools:**
-- `@maia/actor/os/ai` - Unified AI chat
+- `@maia/actor/services/ai` - Unified AI chat
 
 ---
 

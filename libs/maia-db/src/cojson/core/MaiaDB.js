@@ -193,7 +193,10 @@ export class MaiaDB {
 		if (!this.systemSparkCoId?.startsWith('co_z')) await this.resolveSystemSparkCoId()
 		if (this.dbEngine?.resolveSystemFactories) await this.dbEngine.resolveSystemFactories()
 		const trimmed = typeof name === 'string' ? name.trim() : ''
-		const normalizedName = trimmed && !trimmed.startsWith('°') ? `°${trimmed}` : trimmed
+		if (trimmed && !trimmed.startsWith('°')) {
+			throw new Error('[MaiaDB] createSpark: name must be a full logical ref starting with °')
+		}
+		const normalizedName = trimmed
 		const maiaGuardian = await this.getMaiaGroup()
 		if (!maiaGuardian) throw new Error('[MaiaDB] °maia spark group not found')
 		const { createChildGroup } = await import('../groups/create.js')
@@ -246,7 +249,10 @@ export class MaiaDB {
 		const { group: _g, ...allowed } = data || {}
 		if (typeof allowed.name === 'string') {
 			const trimmed = allowed.name.trim()
-			allowed.name = trimmed && !trimmed.startsWith('°') ? `°${trimmed}` : trimmed
+			if (trimmed && !trimmed.startsWith('°')) {
+				throw new Error('[MaiaDB] updateSpark: name must be a full logical ref starting with °')
+			}
+			allowed.name = trimmed
 		}
 		const factoryCoId = await resolve(this, { fromCoValue: id }, { returnType: 'coId' })
 		return await this.update(factoryCoId, id, allowed)

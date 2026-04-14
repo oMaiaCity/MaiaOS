@@ -3,7 +3,7 @@
  */
 
 import { ACTOR_NANOID_TO_EXECUTABLE_KEY } from '@MaiaOS/universe'
-import { identityFromMaiaPath } from '@MaiaOS/validation/identity-from-maia-path.js'
+import { maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { escapeHtml } from './utils.js'
 
 const SPARKLE_ICON = `<svg class="maia-ai-center-icon maia-ai-icon-mic" width="24" height="24" viewBox="0 0 24 24" fill="none"><path fill="currentColor" fill-opacity="0.16" d="m9.96 9.137l.886-3.099c.332-1.16 1.976-1.16 2.308 0l.885 3.099a1.2 1.2 0 0 0 .824.824l3.099.885c1.16.332 1.16 1.976 0 2.308l-3.099.885a1.2 1.2 0 0 0-.824.824l-.885 3.099c-.332 1.16-1.976 1.16-2.308 0l-.885-3.099a1.2 1.2 0 0 0-.824-.824l-3.099-.885c-1.16-.332-1.16-1.976 0-2.308l3.099-.885a1.2 1.2 0 0 0 .824-.824"/><path stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-miterlimit="10" stroke-width="1.5" d="m9.96 9.137l.886-3.099c.332-1.16 1.976-1.16 2.308 0l.885 3.099a1.2 1.2 0 0 0 .824.824l3.099.885c1.16.332 1.16 1.976 0 2.308l-3.099.885a1.2 1.2 0 0 0-.824.824l-.885 3.099c-.332 1.16-1.976 1.16-2.308 0l-.885-3.099a1.2 1.2 0 0 0-.824-.824l-3.099-.885c-1.16-.332-1.16-1.976 0-2.308l3.099-.885a1.2 1.2 0 0 0 .824-.824M4.43 4.283l.376-1.507c.05-.202.338-.202.388 0l.377 1.507a.2.2 0 0 0 .145.146l1.508.377c.202.05.202.337 0 .388l-1.508.377a.2.2 0 0 0-.145.145l-.377 1.508c-.05.202-.338.202-.388 0l-.377-1.508a.2.2 0 0 0-.145-.145l-1.508-.377c-.202-.05-.202-.338 0-.388l1.508-.377a.2.2 0 0 0 .145-.146M18.43 18.284l.376-1.508c.05-.202.337-.202.388 0l.377 1.508a.2.2 0 0 0 .145.145l1.508.377c.202.05.202.337 0 .388l-1.508.377a.2.2 0 0 0-.145.145l-.377 1.508c-.05.202-.337.202-.388 0l-.377-1.508a.2.2 0 0 0-.145-.145l-1.508-.377c-.202-.05-.202-.338 0-.388l1.508-.377a.2.2 0 0 0 .145-.145"/></svg>`
@@ -12,7 +12,7 @@ const HOME_ICON = `<svg class="maia-nav-icon" xmlns="http://www.w3.org/2000/svg"
 const BELL_ICON = `<svg class="maia-nav-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><path fill="currentColor" d="M18.75 9v.704c0 .845.24 1.671.692 2.374l1.108 1.723c1.011 1.574.239 3.713-1.52 4.21a25.8 25.8 0 0 1-14.06 0c-1.759-.497-2.531-2.636-1.52-4.21l1.108-1.723a4.4 4.4 0 0 0 .693-2.374V9c0-3.866 3.022-7 6.749-7s6.75 3.134 6.75 7" opacity="0.5"/><path fill="currentColor" d="M7.243 18.545a5.002 5.002 0 0 0 9.513 0c-3.145.59-6.367.59-9.513 0"/></svg>`
 const SEND_ICON = `<svg class="maia-ai-send-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path fill="currentColor" d="M3 20V4l18 8z"/></svg>`
 
-const CHAT_INTENT_ACTOR_NANOID = identityFromMaiaPath('chat/intent/intent.actor.maia').$nanoid
+const CHAT_INTENT_ACTOR_NANOID = maiaIdentity('chat/intent/intent.actor.maia').$nanoid
 
 function execKeyFromActorCfg(cfg) {
 	if (!cfg || typeof cfg !== 'object' || typeof cfg.$nanoid !== 'string') return ''
@@ -160,7 +160,7 @@ function actorConfigMatchesMessages(cfg) {
 	const k = execKeyFromActorCfg(cfg)
 	return (
 		typeof k === 'string' &&
-		(k.includes('views/messages') || k.includes('actor/os/messages') || k.endsWith('/messages'))
+		(k.includes('views/messages') || k.includes('actor/services/messages') || k.endsWith('/messages'))
 	)
 }
 

@@ -277,7 +277,7 @@ export function collectInboxMessageCoIds(peer, inboxCoId) {
 }
 
 /**
- * After a tool deliver + target process, SUCCESS is often processed immediately on the caller (e.g. os/ai),
+ * After a tool deliver + target process, SUCCESS is often processed immediately on the caller (e.g. services/ai),
  * so it no longer appears in processInbox unprocessed. Find the newest SUCCESS from targetActorCoId among
  * messages whose co-id was not present before the tool run.
  *

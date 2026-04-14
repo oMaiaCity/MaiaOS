@@ -23,10 +23,10 @@
 		"°maia/views/layout-chat/actor.maia",
 		"°maia/views/messages/actor.maia",
 		"°maia/views/paper/actor.maia",
-		"°maia/os/messages/actor.maia",
+		"°maia/services/messages/actor.maia",
 		"°maia/services/paper/actor.maia",
 		"°maia/services/todos/actor.maia",
-		"°maia/os/db/actor.maia",
-		"°maia/os/ai/actor.maia"
+		"°maia/services/db/actor.maia",
+		"°maia/services/ai/actor.maia"
 	]
 }
