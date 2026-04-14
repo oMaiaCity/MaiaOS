@@ -3,11 +3,11 @@
  * Reactive read() snapshots are not used here — they can omit indexes/catalog keys before deep resolve.
  */
 
-import { namekeyFromFactoryDefinitionContent } from '@MaiaOS/factories'
+import { namekeyFromFactoryDefinitionContent } from '@MaiaOS/validation'
 import {
 	identityFromMaiaPath,
 	maiaFactoryRefToNanoid,
-} from '@MaiaOS/factories/identity-from-maia-path.js'
+} from '@MaiaOS/validation/identity-from-maia-path.js'
 import { ensureCoValueLoaded } from '../crud/collection-helpers.js'
 import { INFRA_FACTORY_NANOID_BY_ROLE, RUNTIME_REF } from '../factory/runtime-factory-refs.js'
 import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'

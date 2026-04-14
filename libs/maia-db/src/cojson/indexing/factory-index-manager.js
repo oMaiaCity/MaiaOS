@@ -10,8 +10,8 @@
  * - spark.os.unknown: colist of co-values without schemas
  */
 
-import { FACTORY_REF_PATTERN } from '@MaiaOS/factories'
-import { removeIdFields } from '@MaiaOS/factories/remove-id-fields'
+import { FACTORY_REF_PATTERN } from '@MaiaOS/validation'
+import { removeIdFields } from '@MaiaOS/validation/remove-id-fields'
 import { EXCEPTION_FACTORIES } from '../../factories/registry.js'
 import { ensureCoValueLoaded } from '../crud/collection-helpers.js'
 import { create } from '../crud/create.js'

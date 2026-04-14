@@ -31,10 +31,10 @@
       "name": "@MaiaOS/db",
       "version": "26.4.21315-next",
       "dependencies": {
-        "@MaiaOS/factories": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
         "@MaiaOS/seed": "workspace:*",
+        "@MaiaOS/validation": "workspace:*",
         "cojson": "0.20.16",
         "cojson-transport-ws": "0.20.16",
         "nanoid": "^5.1.7",
@@ -46,22 +46,12 @@
       "version": "26.4.21315-next",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
-        "@MaiaOS/factories": "workspace:*",
         "@MaiaOS/runtime": "workspace:*",
         "@MaiaOS/universe": "workspace:*",
+        "@MaiaOS/validation": "workspace:*",
         "@runanywhere/web-llamacpp": "0.1.0-beta.10",
         "@runanywhere/web-onnx": "0.1.0-beta.10",
         "cojson-transport-ws": "0.20.16",
-      },
-    },
-    "libs/maia-factories": {
-      "name": "@MaiaOS/factories",
-      "version": "26.4.21315-next",
-      "dependencies": {
-        "@MaiaOS/universe": "workspace:*",
-        "@noble/hashes": "2.0.1",
-        "ajv": "8.17.1",
-        "unicode-segmenter": "0.15.0",
       },
     },
     "libs/maia-game": {
@@ -95,11 +85,11 @@
       "version": "26.4.21315-next",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
-        "@MaiaOS/factories": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/maia-ucan": "workspace:*",
         "@MaiaOS/self": "workspace:*",
         "@MaiaOS/universe": "workspace:*",
+        "@MaiaOS/validation": "workspace:*",
         "@jitl/quickjs-singlefile-cjs-release-sync": "0.32.0",
         "cojson-transport-ws": "0.20.16",
         "dompurify": "3.3.3",
@@ -116,9 +106,9 @@
       "version": "26.4.21315-next",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
-        "@MaiaOS/factories": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/universe": "workspace:*",
+        "@MaiaOS/validation": "workspace:*",
       },
     },
     "libs/maia-self": {
@@ -162,11 +152,22 @@
         "@noble/hashes": "2.0.1",
       },
     },
+    "libs/maia-validation": {
+      "name": "@MaiaOS/validation",
+      "version": "26.4.21315-next",
+      "dependencies": {
+        "@MaiaOS/db": "workspace:*",
+        "@MaiaOS/logs": "workspace:*",
+        "@MaiaOS/universe": "workspace:*",
+        "@noble/hashes": "2.0.1",
+        "ajv": "8.17.1",
+        "unicode-segmenter": "0.15.0",
+      },
+    },
     "services/app": {
       "name": "@MaiaOS/app",
       "version": "26.4.21315-next",
       "dependencies": {
-        "@MaiaOS/factories": "workspace:*",
         "@MaiaOS/game": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/maia-ai": "workspace:*",
@@ -174,6 +175,7 @@
         "@MaiaOS/peer": "workspace:*",
         "@MaiaOS/runtime": "workspace:*",
         "@MaiaOS/universe": "workspace:*",
+        "@MaiaOS/validation": "workspace:*",
         "@tauri-apps/api": "2.10.1",
       },
       "devDependencies": {
@@ -202,8 +204,6 @@
 
     "@MaiaOS/db": ["@MaiaOS/db@workspace:libs/maia-db"],
 
-    "@MaiaOS/factories": ["@MaiaOS/factories@workspace:libs/maia-factories"],
-
     "@MaiaOS/game": ["@MaiaOS/game@workspace:libs/maia-game"],
 
     "@MaiaOS/logs": ["@MaiaOS/logs@workspace:libs/maia-logs"],
@@ -227,6 +227,8 @@
     "@MaiaOS/sync": ["@MaiaOS/sync@workspace:services/sync"],
 
     "@MaiaOS/universe": ["@MaiaOS/universe@workspace:libs/maia-universe"],
+
+    "@MaiaOS/validation": ["@MaiaOS/validation@workspace:libs/maia-validation"],
 
     "@aws-crypto/crc32": ["@aws-crypto/crc32@5.2.0", "", { "dependencies": { "@aws-crypto/util": "^5.2.0", "@aws-sdk/types": "^3.222.0", "tslib": "^2.6.2" } }, "sha512-nLbCWqQNgUiwwtFsen1AdzAtvuLRsQS8rYgMuxCrdKf9kOssamGLuPwyTY9wyYblNr9+1XM8v6zoDTPPSIeANg=="],
 

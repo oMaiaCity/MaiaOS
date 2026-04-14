@@ -1,11 +1,20 @@
 /**
- * Deterministic nano-ID from a maia path — same algorithm as @MaiaOS/factories/nanoid.js (universe has no workspace deps).
+ * Deterministic 12-char nano-ID from a maia file path (case-insensitive).
+ * Hash input: normalized path (lowercase, forward slashes) relative to package src/maia root.
+ *
+ * Uses @noble/hashes/sha256 (browser + Node) — same digest as former node:crypto createHash('sha256').
  */
+
 import { sha256 } from '@noble/hashes/sha2.js'
 
 const ALPHABET = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz'
 export const NANOID_LENGTH = 12
 
+/**
+ * Normalize path for identity: lowercase, always `/`, trim slashes.
+ * @param {string} pathKey - e.g. "Maia/Chat/X.maia" or "maia/chat/x.maia"
+ * @returns {string} e.g. "maia/chat/x.maia"
+ */
 export function normalizeMaiaPathKey(pathKey) {
 	if (typeof pathKey !== 'string' || !pathKey.trim()) {
 		throw new Error('[nanoid] pathKey must be a non-empty string')
@@ -17,6 +26,10 @@ export function normalizeMaiaPathKey(pathKey) {
 		.toLowerCase()
 }
 
+/**
+ * Deterministic nano-ID from normalized path.
+ * @param {string} pathKey - Relative path under src/ (will be normalized)
+ */
 export function nanoidFromPath(pathKey) {
 	const normalized = normalizeMaiaPathKey(pathKey)
 	const hash = sha256(new TextEncoder().encode(normalized))
@@ -25,4 +38,11 @@ export function nanoidFromPath(pathKey) {
 		id += ALPHABET[hash[i] % ALPHABET.length]
 	}
 	return id
+}
+
+/**
+ * Spark ref string: ° + normalized path (always lowercase maia/...).
+ */
+export function maiaRefFromPathKey(pathKey) {
+	return `°${normalizeMaiaPathKey(pathKey)}`
 }

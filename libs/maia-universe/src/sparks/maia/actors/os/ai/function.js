@@ -13,7 +13,7 @@ import {
 	createErrorEntry,
 	createErrorResult,
 	createSuccessResult,
-} from '@MaiaOS/factories/operation-result'
+} from '@MaiaOS/universe/helpers/operation-result.js'
 import { getApiBaseUrl, toStructuredErrors } from '../../shared/api-helpers.js'
 
 const MAX_TURNS = 4

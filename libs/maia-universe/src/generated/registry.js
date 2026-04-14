@@ -240,10 +240,11 @@ import m_WJp1VRg1Doq0 from '@MaiaOS/universe/vibes/todos/intent/intent.context.m
 import m_qWrT4xarG80I from '@MaiaOS/universe/vibes/todos/intent/intent.process.maia'
 import m_KtUzIAwlaape from '@MaiaOS/universe/vibes/todos/intent/intent.view.maia'
 import m_5SdJuIJ2xx0D from '@MaiaOS/universe/vibes/todos/manifest.vibe.maia'
-import { annotateMaiaConfig } from '../../helpers/annotate-maia.js'
-import m_wm1ZmdsK7U9N from './data/icons.data.maia'
-import m_NXZN5YwuxZST from './data/notes.data.maia'
-import m_7yUNIeJD8cXu from './data/todos.data.maia'
+import { annotateMaiaConfig } from '../helpers/identity-from-maia-path.js'
+import { getVibeKey } from '../helpers/vibe-keys.js'
+import m_wm1ZmdsK7U9N from '../sparks/maia/data/icons.data.maia'
+import m_NXZN5YwuxZST from '../sparks/maia/data/notes.data.maia'
+import m_7yUNIeJD8cXu from '../sparks/maia/data/todos.data.maia'
 
 export const MAIA_SPARK_REGISTRY = Object.freeze({
 	'007B3PE7JbEk': annotateMaiaConfig(m_007B3PE7JbEk, 'views/addressbook-avens-grid/context.maia'),
@@ -487,35 +488,606 @@ export const MAIA_SPARK_REGISTRY = Object.freeze({
 	ZXukwP1kkMUV: annotateMaiaConfig(m_ZXukwP1kkMUV, 'os/ai/interface.maia'),
 })
 
-const _iconPairs = [
-	['chat', m_dw5wMME7GWnX],
-	['humans', m_eDai54e5xrEv],
-	['logs', m_gKQfa4ddebAf],
-	['paper', m_OFsal1JHWA0t],
-	['profile', m_nD7KNPHZ6mp9],
-	['quickjs', m_UKqnOjPwqebR],
-	['registries', m_EVErah1WB5Yd],
-	['sparks', m_UH6c0Gz163Jc],
-	['todos', m_k68km7zEav76],
-]
-export const ICON_SVG_BY_KEY = Object.fromEntries(_iconPairs.map(([key, raw]) => [key, raw.svg]))
-
-export const DEFAULT_CARD_ICON_SVG = ICON_SVG_BY_KEY.chat ?? Object.values(ICON_SVG_BY_KEY)[0]
-
-export function dashboardIconCotextSeedRows(vibeKeys) {
-	const rows = []
-	for (const key of vibeKeys) {
-		const svg = ICON_SVG_BY_KEY[key]
-		if (typeof svg !== 'string' || !svg.trim()) {
-			throw new Error(`[vibes] dashboard icon SVG missing for vibe key "${key}"`)
-		}
-		rows.push({ vibeKey: key, svg })
-	}
-	return rows
-}
-
 export const SEED_DATA = Object.freeze({
-	icons: m_wm1ZmdsK7U9N,
 	notes: m_NXZN5YwuxZST,
 	todos: m_7yUNIeJD8cXu,
+	icons: Object.freeze({
+		dashboardVibeKeys: m_wm1ZmdsK7U9N.dashboardVibeKeys,
+		chat: { svg: m_dw5wMME7GWnX.svg },
+		humans: { svg: m_eDai54e5xrEv.svg },
+		logs: { svg: m_gKQfa4ddebAf.svg },
+		paper: { svg: m_OFsal1JHWA0t.svg },
+		profile: { svg: m_nD7KNPHZ6mp9.svg },
+		quickjs: { svg: m_UKqnOjPwqebR.svg },
+		registries: { svg: m_EVErah1WB5Yd.svg },
+		sparks: { svg: m_UH6c0Gz163Jc.svg },
+		todos: { svg: m_k68km7zEav76.svg },
+	}),
 })
+
+export const ACTOR_NANOID_TO_EXECUTABLE_KEY = Object.freeze({
+	'2gVESpVjSjnn': 'maia/quickjs/layout-quickjs',
+	'2l9jBH1RcGBO': 'maia/views/profile-image',
+	'2uOKmQavmw5P': 'maia/views/humans',
+	'6QQTj3bsBVVS': 'maia/services/todos',
+	'7BxzYDbE0a8J': 'sparks/intent',
+	'7GU32bGSAOEQ': 'maia/views/layout-paper',
+	'7q9UTwp141uT': 'humans/intent',
+	'8O3eF7wudvlR': 'maia/services/profile-image',
+	'8RZda05XUOGd': 'logs/intent',
+	b6zIxLfL7U6F: 'chat/intent',
+	bpCP5HDpQTfq: 'todos/intent',
+	BU960h6g84IS: 'maia/services/update-wasm-code',
+	czHOBTneaUIn: 'maia/views/placeholder',
+	eetq9nlpKKkw: 'maia/services/names',
+	Fvi4Q6z3X7aS: 'maia/services/paper',
+	GdUkhno8D7Wq: 'maia/os/messages',
+	GqBpurTHeBSA: 'maia/quickjs/add-form',
+	Grpymj3Oj5R1: 'maia/quickjs/deps-list',
+	Hv2UdNUBQE7j: 'maia/views/info-card',
+	IOl2Lh54uw40: 'maia/views/addressbook-avens-grid',
+	J5Wb4IdhASDa: 'maia/views/input/for-list',
+	kDFzLDGsOcok: 'maia/views/layout-chat',
+	MAIl6lM8g7Zr: 'maia/views/input/for-sparks',
+	MLQ8EcLJRmN4: 'maia/os/ai',
+	n9ws9MPStaKO: 'maia/views/paper',
+	nPMDld2ZbXCh: 'maia/services/spark',
+	NYVUUdK9v783: 'maia/quickjs/deps-list-detail',
+	OOB2CfxhmalY: 'maia/views/messages',
+	OS3RgD0XllLU: 'maia/views/tabs/todos',
+	qRpEskVYQ5oo: 'maia/os/db',
+	QTi5we20xoDN: 'maia/views/sparks',
+	rYabQOLtByEe: 'maia/views/detail',
+	sT9nXs6LEQ4x: 'maia/views/list',
+	SwQem1kx98up: 'maia/views/input/for-chat',
+	TaDroFDU2rJ3: 'maia/views/logs',
+	vv35ZGYqifye: 'maia/services/sandboxed-add',
+	XV1ARTtfudRM: 'quickjs/intent',
+	y4ELr96pwpfc: 'profile/intent',
+	y7G0Db5JrfSI: 'maia/views/input/for-detail',
+	yFBKHozblSsA: 'maia/views/addressbook-humans-grid',
+})
+
+export const CO_TYPES_DEFS = {
+	comap: {
+		description: 'CoMap - CRDT-based collaborative map/object',
+		type: 'object',
+		properties: {},
+		additionalProperties: {
+			anyOf: [
+				{
+					type: 'string',
+					description: 'Standard string value',
+				},
+				{
+					type: 'number',
+					description: 'Standard number value',
+				},
+				{
+					type: 'integer',
+					description: 'Standard integer value',
+				},
+				{
+					type: 'boolean',
+					description: 'Standard boolean value',
+				},
+				{
+					type: 'null',
+					description: 'Null value',
+				},
+				{
+					type: 'object',
+					description: 'Nested object value',
+				},
+				{
+					type: 'array',
+					description: 'Array value',
+				},
+				{
+					type: 'string',
+					pattern: '^co_z[a-zA-Z0-9]+$',
+					description: 'Co-id reference to another CoValue',
+				},
+				{
+					type: 'string',
+					pattern: '^key_[a-zA-Z0-9_]+$',
+					description: 'Key reference',
+				},
+				{
+					type: 'string',
+					pattern: '^sealed_',
+					description: 'Sealed/encrypted value',
+				},
+			],
+		},
+	},
+	costream: {
+		description: 'CoStream - CRDT-based append-only stream',
+		type: 'array',
+		items: {
+			anyOf: [
+				{
+					type: 'object',
+					description: 'Stream item object',
+				},
+				{
+					type: 'string',
+					description: 'Stream item string',
+				},
+				{
+					type: 'number',
+					description: 'Stream item number',
+				},
+				{
+					type: 'boolean',
+					description: 'Stream item boolean',
+				},
+				{
+					type: 'null',
+					description: 'Stream item null',
+				},
+			],
+		},
+	},
+	colist: {
+		description: 'CoList - CRDT-based collaborative list/array',
+		type: 'array',
+		items: {
+			anyOf: [
+				{
+					type: 'object',
+					description: 'List item object',
+				},
+				{
+					type: 'string',
+					description: 'List item string (can be co-id reference)',
+				},
+				{
+					type: 'number',
+					description: 'List item number',
+				},
+				{
+					type: 'integer',
+					description: 'List item integer',
+				},
+				{
+					type: 'boolean',
+					description: 'List item boolean',
+				},
+				{
+					type: 'null',
+					description: 'List item null',
+				},
+				{
+					type: 'array',
+					description: 'Nested array',
+				},
+			],
+		},
+	},
+}
+
+export const metaFactorySchemaRaw = {
+	$factory: '°maia/factory/meta.factory.maia',
+	$schema: 'https://json-schema.org/draft/2020-12/schema',
+	$vocabulary: {
+		'https://json-schema.org/draft/2020-12/vocab/core': true,
+		'https://json-schema.org/draft/2020-12/vocab/applicator': true,
+		'https://json-schema.org/draft/2020-12/vocab/unevaluated': true,
+		'https://json-schema.org/draft/2020-12/vocab/validation': true,
+		'https://json-schema.org/draft/2020-12/vocab/meta-data': true,
+		'https://json-schema.org/draft/2020-12/vocab/format-annotation': true,
+		'https://json-schema.org/draft/2020-12/vocab/content': true,
+		'https://maiaos.dev/vocab/cojson': true,
+	},
+	allOf: [
+		{
+			$ref: 'https://json-schema.org/draft/2020-12/schema',
+		},
+	],
+	title: '°maia/factory/meta.factory.maia',
+	type: ['object', 'boolean'],
+	indexing: false,
+	properties: {
+		title: {
+			type: 'string',
+			description: 'Human-readable schema title (required)',
+		},
+		cotype: {
+			enum: ['comap', 'colist', 'costream', 'cobinary'],
+			description:
+				'CRDT type at schema root. Schemas can be comap (with properties), colist (with items), or costream (with items). CoText is modeled as colist with string items. CoBinary is a binary stream for files.',
+		},
+		$co: {
+			type: 'string',
+			anyOf: [
+				{
+					pattern: '^co_z[a-zA-Z0-9]+$',
+					description: 'Co-id reference (after transformation)',
+				},
+				{
+					pattern: '^@[a-zA-Z0-9_-]+/schema/',
+					description: 'Human-readable schema ID (before transformation)',
+				},
+			],
+			description:
+				'Reference to schema that this property value must conform to (human-readable ID or co-id). Use $co in properties to reference separate CoValues, never use cotype in properties.',
+		},
+		indexing: {
+			type: 'boolean',
+			default: false,
+			description:
+				'Whether instances of this schema should be indexed in spark.os.indexes. Default: false. Set explicitly to true to index.',
+		},
+	},
+	required: ['title', 'cotype'],
+	$defs: {
+		comap: {
+			description: 'CoMap - CRDT-based collaborative map/object',
+			type: 'object',
+			properties: {},
+			additionalProperties: {
+				anyOf: [
+					{
+						type: 'string',
+						description: 'Standard string value',
+					},
+					{
+						type: 'number',
+						description: 'Standard number value',
+					},
+					{
+						type: 'integer',
+						description: 'Standard integer value',
+					},
+					{
+						type: 'boolean',
+						description: 'Standard boolean value',
+					},
+					{
+						type: 'null',
+						description: 'Null value',
+					},
+					{
+						type: 'object',
+						description: 'Nested object value',
+					},
+					{
+						type: 'array',
+						description: 'Array value',
+					},
+					{
+						type: 'string',
+						pattern: '^co_z[a-zA-Z0-9]+$',
+						description: 'Co-id reference to another CoValue',
+					},
+					{
+						type: 'string',
+						pattern: '^key_[a-zA-Z0-9_]+$',
+						description: 'Key reference',
+					},
+					{
+						type: 'string',
+						pattern: '^sealed_',
+						description: 'Sealed/encrypted value',
+					},
+				],
+			},
+		},
+		costream: {
+			description: 'CoStream - CRDT-based append-only stream',
+			type: 'array',
+			items: {
+				anyOf: [
+					{
+						type: 'object',
+						description: 'Stream item object',
+					},
+					{
+						type: 'string',
+						description: 'Stream item string',
+					},
+					{
+						type: 'number',
+						description: 'Stream item number',
+					},
+					{
+						type: 'boolean',
+						description: 'Stream item boolean',
+					},
+					{
+						type: 'null',
+						description: 'Stream item null',
+					},
+				],
+			},
+		},
+		colist: {
+			description: 'CoList - CRDT-based collaborative list/array',
+			type: 'array',
+			items: {
+				anyOf: [
+					{
+						type: 'object',
+						description: 'List item object',
+					},
+					{
+						type: 'string',
+						description: 'List item string (can be co-id reference)',
+					},
+					{
+						type: 'number',
+						description: 'List item number',
+					},
+					{
+						type: 'integer',
+						description: 'List item integer',
+					},
+					{
+						type: 'boolean',
+						description: 'List item boolean',
+					},
+					{
+						type: 'null',
+						description: 'List item null',
+					},
+					{
+						type: 'array',
+						description: 'Nested array',
+					},
+				],
+			},
+		},
+		cobinary: {
+			description:
+				'CoBinary - CRDT-based binary stream for files. Uses RawBinaryCoStream. Metadata: mimeType (required), totalSizeBytes.',
+			type: 'object',
+			properties: {
+				mimeType: {
+					type: 'string',
+					description: 'MIME type (e.g. application/pdf, image/png)',
+				},
+				totalSizeBytes: {
+					type: 'integer',
+					minimum: 0,
+					description: 'Total file size in bytes',
+				},
+			},
+			required: ['mimeType'],
+		},
+		registryLabel: {
+			type: 'string',
+			description:
+				'Opaque human-readable registry path (typically equals pre-seed $id). Never ref-walked; never resolved as co-id. Native module path for getActor is derived at runtime from $label, not stored.',
+		},
+	},
+}
+
+export const ChatVibeRegistry = {
+	vibe: MAIA_SPARK_REGISTRY.GU1OICieGAZx,
+	styles: {
+		kIIgf0iCfbAU: MAIA_SPARK_REGISTRY.kIIgf0iCfbAU,
+	},
+	actors: {
+		b6zIxLfL7U6F: MAIA_SPARK_REGISTRY.b6zIxLfL7U6F,
+	},
+	views: {
+		f0uOEZ57ivnw: MAIA_SPARK_REGISTRY.f0uOEZ57ivnw,
+	},
+	contexts: {
+		pW7oUFig7GnS: MAIA_SPARK_REGISTRY.pW7oUFig7GnS,
+	},
+	processes: {
+		gX2RsbLpr2ux: MAIA_SPARK_REGISTRY.gX2RsbLpr2ux,
+	},
+	interfaces: {},
+	data: {
+		chat: [],
+		notes: SEED_DATA.notes.chat,
+	},
+}
+
+export const RegistriesVibeRegistry = {
+	vibe: MAIA_SPARK_REGISTRY['1n6XsI0ZNtBs'],
+	styles: {
+		kIIgf0iCfbAU: MAIA_SPARK_REGISTRY.kIIgf0iCfbAU,
+	},
+	actors: {
+		'7q9UTwp141uT': MAIA_SPARK_REGISTRY['7q9UTwp141uT'],
+	},
+	views: {
+		EnIjV7828lum: MAIA_SPARK_REGISTRY.EnIjV7828lum,
+	},
+	contexts: {
+		bAjhglq1QN3p: MAIA_SPARK_REGISTRY.bAjhglq1QN3p,
+	},
+	processes: {
+		eb5PcRxreEbn: MAIA_SPARK_REGISTRY.eb5PcRxreEbn,
+	},
+	interfaces: {},
+}
+
+export const LogsVibeRegistry = {
+	vibe: MAIA_SPARK_REGISTRY.CGxAUqux4agO,
+	styles: {
+		kIIgf0iCfbAU: MAIA_SPARK_REGISTRY.kIIgf0iCfbAU,
+	},
+	actors: {
+		'8RZda05XUOGd': MAIA_SPARK_REGISTRY['8RZda05XUOGd'],
+	},
+	views: {
+		YuS1Ux69GBXC: MAIA_SPARK_REGISTRY.YuS1Ux69GBXC,
+	},
+	contexts: {
+		'5QcEnyvON5Xe': MAIA_SPARK_REGISTRY['5QcEnyvON5Xe'],
+	},
+	processes: {
+		B6kNjDps5u4X: MAIA_SPARK_REGISTRY.B6kNjDps5u4X,
+	},
+	interfaces: {},
+	data: {},
+}
+
+export const PaperVibeRegistry = {
+	vibe: MAIA_SPARK_REGISTRY.FKlOWNzyTE3Q,
+	styles: {
+		kIIgf0iCfbAU: MAIA_SPARK_REGISTRY.kIIgf0iCfbAU,
+	},
+	actors: {},
+	views: {},
+	contexts: {},
+	processes: {},
+	interfaces: {},
+	data: {
+		notes: SEED_DATA.notes.paper,
+	},
+}
+
+export const ProfileVibeRegistry = {
+	vibe: MAIA_SPARK_REGISTRY.Qk4fq4jADZ43,
+	styles: {
+		kIIgf0iCfbAU: MAIA_SPARK_REGISTRY.kIIgf0iCfbAU,
+	},
+	actors: {
+		y4ELr96pwpfc: MAIA_SPARK_REGISTRY.y4ELr96pwpfc,
+	},
+	views: {
+		Pl6MAFGIS4hW: MAIA_SPARK_REGISTRY.Pl6MAFGIS4hW,
+	},
+	contexts: {
+		'8iWEKtKvTOMu': MAIA_SPARK_REGISTRY['8iWEKtKvTOMu'],
+	},
+	processes: {
+		Ce7Cl0T9a1xs: MAIA_SPARK_REGISTRY.Ce7Cl0T9a1xs,
+	},
+	interfaces: {},
+}
+
+const quickjsManifest = MAIA_SPARK_REGISTRY.Z67ATG5FGRdZ
+
+export const QuickjsVibeRegistry = {
+	vibe: MAIA_SPARK_REGISTRY.Z67ATG5FGRdZ,
+	styles: {
+		kIIgf0iCfbAU: MAIA_SPARK_REGISTRY.kIIgf0iCfbAU,
+		ZCpUzlYVunuN: MAIA_SPARK_REGISTRY.ZCpUzlYVunuN,
+	},
+	actors: {
+		'2gVESpVjSjnn': MAIA_SPARK_REGISTRY['2gVESpVjSjnn'],
+		Grpymj3Oj5R1: MAIA_SPARK_REGISTRY.Grpymj3Oj5R1,
+		XV1ARTtfudRM: MAIA_SPARK_REGISTRY.XV1ARTtfudRM,
+		NYVUUdK9v783: MAIA_SPARK_REGISTRY.NYVUUdK9v783,
+		GqBpurTHeBSA: MAIA_SPARK_REGISTRY.GqBpurTHeBSA,
+	},
+	views: {
+		cFB70xEjB4fk: MAIA_SPARK_REGISTRY.cFB70xEjB4fk,
+		'49OFyUsKeVOM': MAIA_SPARK_REGISTRY['49OFyUsKeVOM'],
+		W0QaHbPA2tDZ: MAIA_SPARK_REGISTRY.W0QaHbPA2tDZ,
+		yYVLCY44Dc8J: MAIA_SPARK_REGISTRY.yYVLCY44Dc8J,
+	},
+	contexts: {
+		HgVyMuPMjjXf: MAIA_SPARK_REGISTRY.HgVyMuPMjjXf,
+		'5tBQe39jkMAG': MAIA_SPARK_REGISTRY['5tBQe39jkMAG'],
+		IhvLzZmyXyU3: MAIA_SPARK_REGISTRY.IhvLzZmyXyU3,
+		PNtp1Sh3X9uz: MAIA_SPARK_REGISTRY.PNtp1Sh3X9uz,
+		LTRLNKm2zgEl: annotateMaiaConfig(
+			{
+				$factory: '°maia/factory/context.factory.maia',
+				title: 'Dependency actors',
+				listItems: (quickjsManifest.dependencies || []).map((id) => ({
+					id,
+					label: id.replace(/^°maia\//, ''),
+				})),
+				hasSelection: false,
+				selectedActorRef: null,
+				selectedCodeCoId: null,
+				selectedWasmCode: {
+					factory: '°maia/factory/cotext.factory.maia',
+					filter: { id: '$selectedCodeCoId' },
+					map: { items: 'items' },
+				},
+				selectedItem: { id: '', label: '' },
+			},
+			'quickjs/deps-list/context.dynamic.maia',
+		),
+	},
+	processes: {
+		i83Hy1P8q2hu: MAIA_SPARK_REGISTRY.i83Hy1P8q2hu,
+		vpfwDs7jV9WS: MAIA_SPARK_REGISTRY.vpfwDs7jV9WS,
+		QK0Mho2ETiZ7: MAIA_SPARK_REGISTRY.QK0Mho2ETiZ7,
+		i7ZIOCbuLlCZ: MAIA_SPARK_REGISTRY.i7ZIOCbuLlCZ,
+	},
+	interfaces: {
+		Q8EVlYmS4Ya9: MAIA_SPARK_REGISTRY.Q8EVlYmS4Ya9,
+		bea6hRfoH6c0: MAIA_SPARK_REGISTRY.bea6hRfoH6c0,
+		'0Fgi5h1rpLCF': MAIA_SPARK_REGISTRY['0Fgi5h1rpLCF'],
+		f4RcjFf8QWIb: MAIA_SPARK_REGISTRY.f4RcjFf8QWIb,
+	},
+}
+
+export const SparksVibeRegistry = {
+	vibe: MAIA_SPARK_REGISTRY.A3qiBC3C6lt2,
+	styles: {
+		kIIgf0iCfbAU: MAIA_SPARK_REGISTRY.kIIgf0iCfbAU,
+	},
+	actors: {
+		'7BxzYDbE0a8J': MAIA_SPARK_REGISTRY['7BxzYDbE0a8J'],
+	},
+	views: {
+		MXluU6t0jgmu: MAIA_SPARK_REGISTRY.MXluU6t0jgmu,
+	},
+	contexts: {
+		wRT5wxZ9tj6b: MAIA_SPARK_REGISTRY.wRT5wxZ9tj6b,
+	},
+	processes: {
+		hVe88ZqsZhmJ: MAIA_SPARK_REGISTRY.hVe88ZqsZhmJ,
+	},
+	interfaces: {},
+}
+
+export const TodosVibeRegistry = {
+	vibe: MAIA_SPARK_REGISTRY['5SdJuIJ2xx0D'],
+	styles: {
+		kIIgf0iCfbAU: MAIA_SPARK_REGISTRY.kIIgf0iCfbAU,
+	},
+	actors: {
+		bpCP5HDpQTfq: MAIA_SPARK_REGISTRY.bpCP5HDpQTfq,
+	},
+	views: {
+		KtUzIAwlaape: MAIA_SPARK_REGISTRY.KtUzIAwlaape,
+	},
+	contexts: {
+		WJp1VRg1Doq0: MAIA_SPARK_REGISTRY.WJp1VRg1Doq0,
+	},
+	processes: {
+		qWrT4xarG80I: MAIA_SPARK_REGISTRY.qWrT4xarG80I,
+	},
+	interfaces: {},
+	data: {
+		todos: SEED_DATA.todos.todos,
+	},
+}
+
+const collected = [
+	ChatVibeRegistry,
+	RegistriesVibeRegistry,
+	LogsVibeRegistry,
+	PaperVibeRegistry,
+	ProfileVibeRegistry,
+	QuickjsVibeRegistry,
+	SparksVibeRegistry,
+	TodosVibeRegistry,
+]
+
+collected.sort((a, b) => (getVibeKey(a.vibe) || '').localeCompare(getVibeKey(b.vibe) || ''))
+
+export const ALL_VIBE_REGISTRIES = collected
+
+export async function getAllVibeRegistries() {
+	return ALL_VIBE_REGISTRIES.filter((R) => R?.vibe)
+}
+
+export {
+	ChatVibeRegistry as ChatAvenRegistry,
+	LogsVibeRegistry as LogsAvenRegistry,
+	PaperVibeRegistry as PaperAvenRegistry,
+}

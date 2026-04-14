@@ -17,7 +17,7 @@
 	},
 	"dependencies": {
 		"@MaiaOS/db": "workspace:*",
-		"@MaiaOS/factories": "workspace:*",
+		"@MaiaOS/validation": "workspace:*",
 		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/maia-ucan": "workspace:*",
 		"@MaiaOS/self": "workspace:*",

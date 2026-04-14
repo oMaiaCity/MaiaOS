@@ -10,7 +10,7 @@
  */
 
 import { resolve, resolveReactive } from '@MaiaOS/db'
-import { validateAgainstFactoryOrThrow } from '@MaiaOS/factories/validation.helper'
+import { validateAgainstFactoryOrThrow } from '@MaiaOS/validation/validation.helper'
 import { ActorEngine } from './engines/actor.engine.js'
 import { DataEngine } from './engines/data.engine.js'
 import { ProcessEngine } from './engines/process.engine.js'
@@ -268,7 +268,7 @@ export class MaiaOS {
 		await MaiaOS._initializeDatabase(os, config)
 
 		// Set schema resolver for runtime validation (engines need dataEngine for schema lookups)
-		const { setFactoryResolver } = await import('@MaiaOS/factories/validation.helper')
+		const { setFactoryResolver } = await import('@MaiaOS/validation/validation.helper')
 		setFactoryResolver({ dataEngine: os.dataEngine })
 
 		// Initialize engines

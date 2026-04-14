@@ -7,7 +7,7 @@ import {
 	createErrorEntry,
 	createErrorResult,
 	createSuccessResult,
-} from '@MaiaOS/factories/operation-result'
+} from '@MaiaOS/universe/helpers/operation-result.js'
 
 export default {
 	async execute(actor, payload) {

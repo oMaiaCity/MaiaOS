@@ -3,11 +3,11 @@
  */
 
 import { createCoValueForSpark } from '@MaiaOS/db'
-import { cotextNanoidFromInstancePath } from '@MaiaOS/factories'
+import { cotextNanoidFromInstancePath } from '@MaiaOS/validation'
 import {
 	identityFromMaiaPath,
 	maiaFactoryRefToNanoid,
-} from '@MaiaOS/factories/identity-from-maia-path.js'
+} from '@MaiaOS/validation/identity-from-maia-path.js'
 import { splitGraphemes } from 'unicode-segmenter/grapheme'
 
 /**

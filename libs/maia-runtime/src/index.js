@@ -27,13 +27,6 @@ export {
 	waitForStoreReady,
 } from '@MaiaOS/db'
 export {
-	createErrorEntry,
-	createErrorResult,
-	createSuccessResult,
-	isPermissionError,
-	isSuccessResult,
-} from '@MaiaOS/factories/operation-result'
-export {
 	createAgentAccount,
 	generateAgentCredentials,
 	isPRFSupported,
@@ -42,6 +35,13 @@ export {
 	signInWithPasskey,
 	signUpWithPasskey,
 } from '@MaiaOS/self'
+export {
+	createErrorEntry,
+	createErrorResult,
+	createSuccessResult,
+	isPermissionError,
+	isSuccessResult,
+} from '@MaiaOS/validation/operation-result'
 export { createWebSocketPeer } from 'cojson-transport-ws'
 export { createCoJSONAPI } from './cojson-factory.js'
 export { ActorEngine } from './engines/actor.engine.js'

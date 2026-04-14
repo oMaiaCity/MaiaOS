@@ -7,8 +7,8 @@ import {
 	SPARK_OS_META_FACTORY_CO_ID_KEY,
 	waitForStoreReady,
 } from '@MaiaOS/db'
-import { maiaFactoryRefToNanoid } from '@MaiaOS/factories/identity-from-maia-path.js'
-import { removeIdFields } from '@MaiaOS/factories/remove-id-fields'
+import { maiaFactoryRefToNanoid } from '@MaiaOS/validation/identity-from-maia-path.js'
+import { removeIdFields } from '@MaiaOS/validation/remove-id-fields'
 import { seedDefinitionCatalogBootstrap } from './definition-catalog-bootstrap.js'
 import { buildMetaFactoryForSeeding, sortSchemasByDependency } from './helpers.js'
 
@@ -20,7 +20,7 @@ const MAIA_SPARK = '°maia'
  */
 export async function bootstrapAndScaffold(account, node, schemas, dbEngine = null) {
 	const { EXCEPTION_FACTORIES } = await import('@MaiaOS/db/registry')
-	const { getAllFactories } = await import('@MaiaOS/factories/factory-registry')
+	const { getAllFactories } = await import('@MaiaOS/validation/factory-registry')
 	const allSchemas = schemas || getAllFactories()
 
 	const guardian = node.createGroup()

@@ -1,7 +1,7 @@
 import {
 	identityFromMaiaPath,
 	maiaFactoryRefToNanoid,
-} from '@MaiaOS/factories/identity-from-maia-path.js'
+} from '@MaiaOS/validation/identity-from-maia-path.js'
 import { describe, expect, test } from 'bun:test'
 import {
 	fillRuntimeRefsFromSystemFactories,

@@ -26,7 +26,7 @@ MaiaOS/ (root)
 │       ├── package.json
 │       └── deploy.sh     # Runs sync-server.mjs from maia-distros output
 └── libs/                 # Shared libraries (@MaiaOS/*)
-    └── maia-*/           # maia-db, maia-runtime, maia-factories, etc.
+    └── maia-*/           # maia-db, maia-runtime, maia-validation, etc.
         ├── package.json
         └── src/
 ```

@@ -5,8 +5,8 @@
  * Ensures proper validation and CRDT-native message handling.
  */
 
-import { containsExpressions } from '@MaiaOS/factories/expression-resolver.js'
 import { perfDbUpload } from '@MaiaOS/logs'
+import { containsExpressions } from '@MaiaOS/validation/expression-resolver.js'
 import { resolve } from '../factory/resolver.js'
 import {
 	getRuntimeRef,

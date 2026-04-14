@@ -1,5 +1,5 @@
-import { identityFromMaiaPath } from '@MaiaOS/factories/identity-from-maia-path.js'
-import { isFactoryRef } from '@MaiaOS/factories/patterns'
+import { identityFromMaiaPath } from '@MaiaOS/validation/identity-from-maia-path.js'
+import { isFactoryRef } from '@MaiaOS/validation/patterns'
 
 /** Actor instance targets in @actors: file path ending with actor.maia (e.g. …/intent.actor.maia or …/actor.maia) */
 const ACTOR_REF_FILE = /^[@°].*actor\.maia$/

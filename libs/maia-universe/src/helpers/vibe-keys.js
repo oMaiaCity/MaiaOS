@@ -1,5 +1,7 @@
 /**
- * Stable dashboard / icon key — same behavior as @MaiaOS/factories/vibe-keys.js (universe leaf).
+ * Stable dashboard / icon key. Prefer explicit `key` when `name` would not match SEED_DATA.icons
+ * (e.g. "My Profile" → my-profile vs profile).
+ * Shared by @MaiaOS/universe (seeding) and @MaiaOS/db (genesis icon CoText).
  */
 
 /** @param {{ key?: string, name?: string, $label?: string } | null | undefined} vibe */

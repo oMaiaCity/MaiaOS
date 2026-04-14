@@ -1,4 +1,4 @@
-import { identityFromMaiaPath } from '@MaiaOS/factories/identity-from-maia-path.js'
+import { identityFromMaiaPath } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { describe, expect, test } from 'bun:test'
 import { transformInstanceForSeeding } from '../src/ref-transform.js'
 

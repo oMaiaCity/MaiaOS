@@ -21,7 +21,7 @@ import {
 	INSTANCE_REF_PATTERN,
 	removeIdFields,
 	VIBE_REF_PATTERN,
-} from '@MaiaOS/factories'
+} from '@MaiaOS/validation'
 import { ReactiveStore } from '../../reactive-store.js'
 import { ensureCoValueLoaded } from '../crud/collection-helpers.js'
 import { normalizeCoValueData } from '../crud/data-extraction.js'

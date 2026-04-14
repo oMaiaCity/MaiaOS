@@ -12,10 +12,10 @@
  */
 
 import { normalizeCoValueData } from '@MaiaOS/db'
-import { containsExpressions } from '@MaiaOS/factories/expression-resolver'
-import { validateAgainstFactory } from '@MaiaOS/factories/validation.helper'
 import { createOpsLogger } from '@MaiaOS/logs'
 import { ACTOR_NANOID_TO_EXECUTABLE_KEY } from '@MaiaOS/universe'
+import { containsExpressions } from '@MaiaOS/validation/expression-resolver'
+import { validateAgainstFactory } from '@MaiaOS/validation/validation.helper'
 import {
 	perfEnginesChat,
 	perfEnginesPipeline,

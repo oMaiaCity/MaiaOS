@@ -1,5 +1,5 @@
-import { withCanonicalFactorySchema } from '@MaiaOS/factories/identity-from-maia-path.js'
-import { validateAgainstFactoryOrThrow } from '@MaiaOS/factories/validation.helper'
+import { withCanonicalFactorySchema } from '@MaiaOS/validation/identity-from-maia-path.js'
+import { validateAgainstFactoryOrThrow } from '@MaiaOS/validation/validation.helper'
 import { FORBIDDEN_PATH_KEYS } from './security.js'
 
 // getContextValue removed - Backend unified store provides merged value directly via context.value

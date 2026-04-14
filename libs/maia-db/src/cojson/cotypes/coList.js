@@ -1,4 +1,4 @@
-import { loadFactoryAndValidate } from '@MaiaOS/factories/validation.helper'
+import { loadFactoryAndValidate } from '@MaiaOS/validation/validation.helper'
 import {
 	createFactoryMeta,
 	EXCEPTION_FACTORIES,

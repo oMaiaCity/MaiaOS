@@ -20,10 +20,7 @@ execFileSync(
 		'--exit-code',
 		'--',
 		'libs/maia-universe/src/registry.js',
-		'libs/maia-universe/src/sparks/maia/registry.js',
-		'libs/maia-universe/src/generated/actor-nanoid-to-executable-key.js',
-		'libs/maia-universe/src/generated/co-types-defs.data.js',
-		'libs/maia-universe/src/generated/meta-factory-schema.data.js',
+		'libs/maia-universe/src/generated/registry.js',
 	],
 	{
 		cwd: ROOT,
