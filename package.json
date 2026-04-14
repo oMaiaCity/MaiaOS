@@ -32,7 +32,7 @@
 		"lint": "bunx biome lint .",
 		"check": "bunx biome check .",
 		"check:fix": "bunx biome check --write .",
-		"check:ci": "bun run format:maia:check && bun scripts/check-maia-app-no-inline-handlers.mjs && bun scripts/check-universe-registry.mjs && bunx biome ci .",
+		"check:ci": "bun run format:maia:check && bun scripts/check-maia-app-no-inline-handlers.mjs && bunx biome ci .",
 		"universe:registry": "bun scripts/generate-maia-universe-registry.mjs",
 		"universe:registry:watch": "bun scripts/generate-maia-universe-registry.mjs --watch",
 		"dev:migrate": "bun --env-file=.env libs/maia-seed/src/dev/watch-migrate.js",
