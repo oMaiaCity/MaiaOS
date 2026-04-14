@@ -23,7 +23,7 @@
 	"dependencies": {
 		"@MaiaOS/peer": "workspace:*",
 		"@MaiaOS/runtime": "workspace:*",
-		"@noble/hashes": "2.0.1",
+		"@noble/hashes": "2.2.0",
 		"unicode-segmenter": "0.15.0"
 	},
 	"devDependencies": {},
