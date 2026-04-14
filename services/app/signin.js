@@ -72,6 +72,7 @@ export function renderSignInPrompt(
 	viewMode,
 	showTestAven = false,
 	handlers = null,
+	passkeysUnavailable = false,
 ) {
 	const hasAccount = hasExistingAccount()
 	const mode = viewMode ?? (hasAccount ? 'signin' : 'signup')
@@ -94,6 +95,12 @@ export function renderSignInPrompt(
 						</button>
 					`
 		: ''
+	const passkeyDisabled = passkeysUnavailable
+		? ' disabled title="Passkeys not available in this browser"'
+		: ''
+	const prfNotice = passkeysUnavailable
+		? `<p class="sign-in-prf-notice">Passkeys are not available in this browser. Use Chrome or Safari for passkey sign-in.</p>`
+		: ''
 
 	document.getElementById('app').innerHTML = `
 		<div class="sign-in-container">
@@ -108,6 +115,7 @@ export function renderSignInPrompt(
 								? `
 							<h1 class="sign-in-panel-heading">Create your Self</h1>
 							<p class="sign-in-panel-lede">Passkeys only — pick a name, then register. No password to remember.</p>
+							${prfNotice}
 							<div class="sign-in-first-name-wrap">
 								<input
 									type="text"
@@ -120,7 +128,7 @@ export function renderSignInPrompt(
 								/>
 							</div>
 							<div class="sign-in-buttons">
-								<button type="button" class="btn btn-solid-water" data-maia-action="register">
+								<button type="button" class="btn btn-solid-water" data-maia-action="register"${passkeyDisabled}>
 									Create new Self
 								</button>
 								${testAvenButton}
@@ -133,8 +141,9 @@ export function renderSignInPrompt(
 								<span class="sign-in-line-hero">humans</span>
 							</h1>
 							<p class="sign-in-panel-lede">who outgrow ourselves everyday creating the extraordinary</p>
+							${prfNotice}
 							<div class="sign-in-buttons">
-								<button type="button" class="btn btn-solid-water" data-maia-action="signIn">
+								<button type="button" class="btn btn-solid-water" data-maia-action="signIn"${passkeyDisabled}>
 									Unlock your Self
 								</button>
 								${testAvenButton}
