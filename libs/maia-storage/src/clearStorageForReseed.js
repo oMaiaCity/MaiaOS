@@ -2,7 +2,7 @@ import { SQL } from 'bun'
 import { normalizePostgresConnectionString } from './normalizePostgresUrl.js'
 
 /**
- * Clear DB and binary blob storage for reseed (PEER_SYNC_SEED=true).
+ * Clear DB and binary blob storage for reseed (sync: PEER_SYNC_MODE=seed).
  * Ensures a complete reset before loadOrCreateAgentAccount + seed.
  *
  * Node.js server only. Reads env: PEER_SYNC_STORAGE, PEER_DB_PATH, PEER_SYNC_DB_URL,

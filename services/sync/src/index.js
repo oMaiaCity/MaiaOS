@@ -11,12 +11,12 @@
  *     - pglite: PEER_DB_PATH (default ./pg-lite.db)
  *     - postgres: PEER_SYNC_DB_URL (required)
  *   AVEN_MAIA_GUARDIAN: Human account co-id (co_z...). If set, add as admin of °maia spark guardian; also seeds /sync/write so that account can sync without POST /register.
- *   PEER_SYNC_SEED: Default false. Set true to run genesis seed (bootstrap + schemas + vibes).
- *     - true: Fresh seed (first deploy or intentional reset). May overwrite existing scaffold.
- *     - false/unset: Skip seed, use persisted data. Never overwrite on restart.
+ *   PEER_SYNC_MODE: seed | migrate | unset/empty/none — controls one-shot sync startup behavior.
+ *     - seed: Clear storage (PGlite) then genesis seed (bootstrap + schemas + vibes). May overwrite scaffold.
+ *     - migrate: Diff MAIA_SPARK_REGISTRY vs live CoValues and apply CRDT updates (after resolveSystemFactories). No seed.
+ *     - unset, empty, or none: Normal run — use persisted scaffold; no genesis seed; no one-shot migrate.
  *   SEED_VIBES: Default "all". Which vibes to seed (todos, chat, quickjs, etc). "all" seeds every vibe including quickjs.
- *   PEER_SYNC_MIGRATE: Default false. Set true to diff MAIA_SPARK_REGISTRY vs live CoValues and apply CRDT updates (after resolveSystemFactories).
- *   MAIA_DEV_MIGRATE_WATCH: Watch .maia files and run migrate after registry regen. `bun dev` and `bun dev:sync` set this true unless you export MAIA_DEV_MIGRATE_WATCH=false.
+ *   Dev: when NODE_ENV is not production, sync watches `.maia` under maia-universe and live-migrates after registry regen. Production (Fly) sets NODE_ENV=production, so watch is off.
  *   PEER_APP_HOST: Allowed CORS origin (e.g. https://next.maia.city). When set, only that origin can call sync/LLM in production. Unset = * (dev).
  *   MAIA_DEV_CORS=1: With Postgres local dev, enable same multi-origin dev CORS as PGlite (localhost / 127.0.0.1 / ::1 on port 4200).
  */
@@ -75,9 +75,20 @@ const dbPath = usePGlite ? pathResolve(_syncDir, PEER_DB_PATH) : undefined
 const RED_PILL_API_KEY = process.env.RED_PILL_API_KEY || ''
 
 const avenMaiaGuardian = process.env.AVEN_MAIA_GUARDIAN?.trim() || null
-const peerSyncSeed = process.env.PEER_SYNC_SEED === 'true'
-const peerSyncMigrate = process.env.PEER_SYNC_MIGRATE === 'true'
-const maiaDevMigrateWatch = process.env.MAIA_DEV_MIGRATE_WATCH === 'true'
+function parsePeerSyncMode() {
+	const raw = (process.env.PEER_SYNC_MODE ?? '').trim().toLowerCase()
+	if (raw === '' || raw === 'none') return 'none'
+	if (raw === 'seed') return 'seed'
+	if (raw === 'migrate') return 'migrate'
+	throw new Error(
+		`${OPS_PREFIX.sync} PEER_SYNC_MODE must be seed, migrate, none, or unset. Got: ${process.env.PEER_SYNC_MODE ?? ''}`,
+	)
+}
+
+const peerSyncMode = parsePeerSyncMode()
+const peerSyncSeed = peerSyncMode === 'seed'
+const peerSyncMigrate = peerSyncMode === 'migrate'
+const maiaDevMigrateWatch = process.env.NODE_ENV !== 'production'
 // SEED_VIBES: which vibes to seed on genesis. Default "all" (includes quickjs). Override: "todos,chat" or "todos,chat,quickjs"
 const seedVibesConfig = process.env.SEED_VIBES || 'all'
 
@@ -1154,10 +1165,10 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 				throw new Error(`${OPS_PREFIX.sync} Genesis seed failed: ${msg}`)
 			}
 			opsSync.log(
-				`Genesis seeded: ${vibeRegistries.length} vibe(s) (schemas + scaffold). Set PEER_SYNC_SEED=false for subsequent restarts.`,
+				`Genesis seeded: ${vibeRegistries.length} vibe(s) (schemas + scaffold). Clear PEER_SYNC_MODE or set none for subsequent restarts.`,
 			)
 		} else {
-			opsSync.log('PEER_SYNC_SEED not set — using persisted scaffold (skip seed).')
+			opsSync.log('PEER_SYNC_MODE not seed — using persisted scaffold (skip genesis seed).')
 		}
 
 		await peer.resolveSystemSparkCoId()
@@ -1170,7 +1181,7 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 				opsSync.warn(err)
 			}
 			opsSync.log(
-				`PEER_SYNC_MIGRATE: ${result.updated} CoValues updated, ${result.skipped} unchanged.`,
+				`PEER_SYNC_MODE=migrate: ${result.updated} CoValues updated, ${result.skipped} unchanged.`,
 			)
 		}
 
@@ -1178,7 +1189,9 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 			const repoRoot = pathResolve(_syncDir, '..', '..')
 			const { startMaiaMigrateWatch } = await import('@MaiaOS/seed/dev/watch-migrate')
 			startMaiaMigrateWatch(peer, dataEngine, { rootDir: repoRoot })
-			opsSync.log('MAIA_DEV_MIGRATE_WATCH: watching .maia files for registry + migrate.')
+			opsSync.log(
+				'Dev migrate watch: .maia changes regenerate registry and apply migrate (NODE_ENV not production).',
+			)
 		}
 
 		// Seed /admin for AVEN_MAIA_ACCOUNT (grants all endpoints). Must run after scaffold exists (genesis or prior run).

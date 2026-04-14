@@ -32,7 +32,7 @@ The sync service consolidates WebSocket sync, agent API, and LLM proxy in one pr
 - `PEER_BLOB_PATH` - Default: `./binary-bucket` (binary CoValue offload). Ignored when `BUCKET_NAME` set (Tigris).
 - `PEER_SYNC_DB_URL` - Required when `PEER_SYNC_STORAGE=postgres` (e.g. Neon, Fly Postgres)
 - `AVEN_MAIA_GUARDIAN` - Optional. If set (human account co-id), add as admin on startup (one-time genesis).
-- `PEER_SYNC_SEED` - Set `true` for genesis seed (bootstrap + schemas + avens). Default: `false`.
+- `PEER_SYNC_MODE` - `seed` (genesis seed + PGlite clear), `migrate` (one-shot registry migrate), or unset / empty / `none` (normal). Invalid values throw at startup.
 
 ## Dependencies
 

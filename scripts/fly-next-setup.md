@@ -39,7 +39,7 @@ Or set manually:
 flyctl secrets set \
   PEER_SYNC_STORAGE=postgres \
   PEER_SYNC_DB_URL="<your-neon-connection-string>" \
-  PEER_SYNC_SEED=true \
+  PEER_SYNC_MODE=seed \
   AVEN_MAIA_ACCOUNT="<from .env>" \
   AVEN_MAIA_SECRET="<from .env>" \
   AVEN_MAIA_GUARDIAN="<from .env>" \
@@ -48,9 +48,9 @@ flyctl secrets set \
   --app sync-next-maia-city
 ```
 
-**First deploy:** Use `PEER_SYNC_SEED=true` to run genesis seed. After successful seed, set `PEER_SYNC_SEED=false`:
+**First deploy:** Use `PEER_SYNC_MODE=seed` to run genesis seed. After successful seed, clear the mode or set none:
 ```bash
-flyctl secrets set PEER_SYNC_SEED=false --app sync-next-maia-city
+flyctl secrets set PEER_SYNC_MODE=none --app sync-next-maia-city
 ```
 
 **App secrets:** The app (next-maia-city) has no runtime secrets — `VITE_PEER_SYNC_HOST` and `VITE_PEER_APP_HOST` are build args in fly.toml.
@@ -108,7 +108,7 @@ bun run deploy
 | `PEER_SYNC_STORAGE` | — | ✓ | `postgres` (Neon) or `pglite` |
 | `PEER_SYNC_DB_URL` | — | ✓ | Neon connection string |
 | `PEER_DB_PATH` | — | — | Only for PGlite |
-| `PEER_SYNC_SEED` | — | ✓ | `true` first run, then `false` |
+| `PEER_SYNC_MODE` | — | ✓ | `seed` first run, then unset / `none` |
 | `AVEN_MAIA_ACCOUNT` | — | ✓ | Guardian account co-id |
 | `AVEN_MAIA_SECRET` | — | ✓ | Guardian sealer secret |
 | `AVEN_MAIA_GUARDIAN` | — | ✓ | Guardian co-id |
