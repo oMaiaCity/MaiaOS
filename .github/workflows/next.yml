@@ -1,0 +1,185 @@
+# Single pipeline for `next`: CI → deploy Fly → version tag + GitHub release → (on [release] push) promote to main.
+# Replaces separate version-tag, deploy-next, promote-next-to-main triggers to avoid wrong order and duplicate runs.
+
+name: Next
+
+on:
+  push:
+    branches: [next]
+  workflow_dispatch:
+
+concurrency:
+  group: next-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: Lint & Format + Build
+    if: github.event_name == 'push' && github.event.head_commit != null && !startsWith(github.event.head_commit.message, '[release] ')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Install maia-distros workspace (distros build)
+        run: cd libs/maia-distros && bun install --frozen-lockfile
+
+      - name: Generate universe registry
+        run: bun run universe:registry
+
+      - name: Run Biome
+        run: bun run check:ci
+
+      - name: Build distros
+        run: bun run distros:build
+
+      - name: Build app (Docker)
+        run: docker build -f services/app/Dockerfile --build-arg VITE_PEER_SYNC_HOST=sync.next.maia.city -t app-build . 2>&1 | tail -30
+
+      - name: Build sync (Docker)
+        run: docker build -f services/sync/Dockerfile -t sync-build . 2>&1 | tail -30
+
+      - name: Build landing (Docker)
+        run: docker build -f services/landing/Dockerfile -t landing-build . 2>&1 | tail -30
+
+  deploy-sync:
+    name: Deploy sync
+    needs: [ci]
+    if: |
+      always() && (
+        github.event_name == 'workflow_dispatch' ||
+        (needs.ci.result == 'success' && github.event.head_commit != null && !startsWith(github.event.head_commit.message, '[release] ')) ||
+        (needs.ci.result == 'skipped' && github.event.head_commit != null && startsWith(github.event.head_commit.message, '[release] '))
+      )
+    runs-on: ubuntu-latest
+    environment:
+      name: Next
+      url: https://sync.next.maia.city/health
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Fly.io CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+        with:
+          version: latest
+
+      - name: Deploy sync
+        run: ./services/sync/deploy.sh
+
+  deploy-app:
+    name: Deploy app
+    needs: [ci]
+    if: |
+      always() && (
+        github.event_name == 'workflow_dispatch' ||
+        (needs.ci.result == 'success' && github.event.head_commit != null && !startsWith(github.event.head_commit.message, '[release] ')) ||
+        (needs.ci.result == 'skipped' && github.event.head_commit != null && startsWith(github.event.head_commit.message, '[release] '))
+      )
+    runs-on: ubuntu-latest
+    environment:
+      name: Next
+      url: https://next.maia.city
+    env:
+      FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Setup Fly.io CLI
+        uses: superfly/flyctl-actions/setup-flyctl@master
+        with:
+          version: latest
+
+      - name: Deploy app
+        run: ./services/app/deploy.sh
+
+  version-tag:
+    name: Version tag & release
+    needs: [deploy-sync, deploy-app]
+    if: |
+      success() &&
+      github.event_name == 'push' &&
+      github.event.head_commit != null &&
+      !startsWith(github.event.head_commit.message, '[release] ')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.DEPLOY_KEY }}
+
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: oven-sh/setup-bun@v2
+
+      - name: Generate version
+        id: version
+        run: |
+          CORE=$(date -u +%y.%-m.%-d%H%M)
+          VERSION="${CORE}-next"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Generated version: $VERSION"
+
+      - name: Sync version across all packages
+        run: bun run version:sync ${{ steps.version.outputs.version }}
+
+      - name: Commit and tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add 'services/*/package.json' 'libs/*/package.json' \
+            'services/app/src-tauri/Cargo.toml' 'services/app/src-tauri/tauri.conf.json'
+          git diff --staged --quiet || git commit -m "[release] ${{ steps.version.outputs.version }}"
+          git tag -a "v${{ steps.version.outputs.version }}" -m "Release ${{ steps.version.outputs.version }}"
+
+      - name: Push and create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git remote set-url origin "git@github.com:${{ github.repository }}.git"
+          git push origin next
+          git push origin "v${{ steps.version.outputs.version }}"
+          gh release create "v${{ steps.version.outputs.version }}" \
+            --prerelease \
+            --title "v${{ steps.version.outputs.version }}" \
+            --notes "Prerelease (\`-next\`) after successful deploy to Fly from \`next\`. Production \`main\` is promoted separately when ready."
+
+  promote:
+    name: Promote next to main
+    needs: [deploy-sync, deploy-app]
+    if: |
+      success() &&
+      github.event_name == 'push' &&
+      github.event.head_commit != null &&
+      startsWith(github.event.head_commit.message, '[release] ')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          ssh-key: ${{ secrets.DEPLOY_KEY }}
+
+      - name: Merge next into main
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git fetch origin main next
+          git checkout main
+          git merge origin/next -m "[chore] promote next after release"
+          git push origin main

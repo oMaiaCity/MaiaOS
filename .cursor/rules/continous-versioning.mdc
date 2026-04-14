@@ -39,15 +39,13 @@ flowchart LR
     AskPR{Ask user: create PR?}
     CreatePR[gh pr create]
     Merge[gh pr merge]
-    VT[version-tag.yml]
-    Sync[Sync packages]
-    Tag[Tag + Release]
-    Deploy[deploy-next.yml]
+    CI[CI in next.yml]
+    Deploy[Deploy Fly]
+    VT[Version sync + tag + GitHub release]
 
     Branch --> Commit --> Push --> AskPR
     AskPR -->|Yes| CreatePR --> Merge
-    Merge --> VT --> Sync --> Tag
-    Merge --> Deploy
+    Merge --> CI --> Deploy --> VT
 ```
 
 **Developer flow:**
@@ -58,14 +56,18 @@ flowchart LR
 5. **Ask the user** if they want to merge. Only merge when confirmed.
 6. `gh pr merge --rebase` → merge into `next`.
 
-**CI flow (after merge):**
-1. Push to `next` triggers `version-tag` and `deploy-next`.
-2. `version-tag`: Generate `YY.MM.DDHHMM`, sync all packages, commit, tag, create GitHub release.
-3. `deploy-next`: Deploy app and sync to Fly.io.
+**CI flow (after merge to `next`):** A single workflow **`.github/workflows/next.yml`** runs in order:
 
-Version changes only on merge to `next`. No manual bumping.
+1. **Lint & Format + Build** — same checks as PR CI (Biome, distros, Docker) on non-`[release]` commits only.
+2. **Deploy sync + Deploy app** — Fly deploy after CI succeeds (or on `[release]` / `workflow_dispatch` when CI is skipped by design).
+3. **Version tag & release** — only after both deploys succeed, on non-`[release]` pushes: generate version, `bun run version:sync`, commit `[release] …`, tag, GitHub prerelease.
+4. The **`[release]` push** triggers another run: CI skipped, **deploy** runs again (version bump in packages), then **Promote next → main** after deploy succeeds.
 
-The version-tag workflow skips when the head commit message starts with `[release] `, so the release push does not trigger another run (no loop). Deploy-next runs only on `[release]` commits (or manual trigger), so we deploy once per merge.
+GitHub Release and version bump happen **only after** a successful deploy, so tags are not ahead of what shipped.
+
+Version changes only via that automated step on `next`. No manual bumping.
+
+The `[release]` commit message prefix avoids re-running version-tag on the release commit itself.
 
 ---
 
@@ -108,12 +110,11 @@ gh pr merge <number> --rebase
 
 ## GitHub Actions
 
-### Version Tag (`.github/workflows/version-tag.yml`)
+### Next pipeline (`.github/workflows/next.yml`)
 
-- **Trigger:** Push to `next`.
-- **Skips:** If the push is its own release commit (avoids loop).
-- **Steps:** Generate version → `bun run version:sync <version>` → commit → tag → release.
-- **Requires:** `DEPLOY_KEY` secret (SSH private key) to push to protected `next`.
+- **Trigger:** Push to `next`, or `workflow_dispatch` (manual deploy only — skips CI and version-tag).
+- **Order:** CI (lint + Docker) → deploy sync + app → version sync + tag + GitHub release (merge commits only) → on the follow-up `[release]` push, deploy again then promote `next` → `main`.
+- **Requires:** `DEPLOY_KEY` (SSH) for version-tag push and promote; `FLY_API_TOKEN` for deploy.
 
 **Protected branch setup:** GitHub Actions is not a bypass actor. Add **Deploy keys** to the bypass list for the ruleset that applies to `next`. Ensure Deploy keys bypasses **all** rules (including "Require pull request"), then:
 1. Generate SSH key: `ssh-keygen -t ed25519 -f ~/.ssh/maia_version_tag_deploy -N ""`
@@ -121,21 +122,13 @@ gh pr merge <number> --rebase
 3. Add **private** key as repo secret `DEPLOY_KEY` (full content including BEGIN/END lines).
 4. Only the workflow (using this key) can push; no user bypass needed.
 
-### Deploy Next (`.github/workflows/deploy-next.yml`)
+### CI on PRs (`.github/workflows/biome.yml`)
 
-- **Trigger:** Push to `next`, or manual.
-- **Runs only on:** `[release]` commits (version-tag push) or workflow_dispatch. Skips merge commits — deploy once per merge.
-- Deploys the app and sync services to Fly.io (parallel).
-
-### CI (`.github/workflows/biome.yml`)
-
-- **Trigger:** Pull requests and pushes to `next`.
-- **Jobs:**
-  1. **Lint & Format** – `bun run check:ci` (Biome + .maia format check).
-  2. **Build (app + sync)** – Docker build for app, sync, and landing. Validates deployment will succeed before merge.
-- **Branch protection:** Require **Lint & Format** and **`Build (app + sync)`**. If an old ruleset still lists **`Build (maia + moai)`**, remove it in GitHub (that name is obsolete; there is no separate moai-only check). Settings → Rules → ruleset for `next` → Required status checks. If "No results" appears, push a PR, let the workflow run once, then the check names become searchable.
-- **Deployment gate:** PRs cannot merge until the Build job passes. This prevents merging code that would break the deploy pipeline.
-- **When changing:** Dockerfiles, `package.json` workspaces, or deploy scripts — ensure the Build job passes before merging.
+- **Trigger:** Pull requests to `next` / `main`, and **pushes to `main` only** (not `next` — avoids duplicating the post-merge `next.yml` CI).
+- **Jobs:** **Lint & Format** and **Build (app + sync)** — same commands as the combined job in `next.yml`.
+- **Branch protection (PRs):** Require **Lint & Format** and **`Build (app + sync)`** before merge to `next`. If an old ruleset lists **`Build (maia + moai)`**, remove it (obsolete).
+- **After merge:** Required checks on `next` for **direct pushes** are optional; the **Next / Lint & Format + Build** job runs from `next.yml` on each merge. Update rulesets if you gate merges on post-merge checks — use that job name once it has run once.
+- **When changing:** Dockerfiles, `package.json` workspaces, or deploy scripts — ensure PR CI passes before merging.
 
 ---
 
