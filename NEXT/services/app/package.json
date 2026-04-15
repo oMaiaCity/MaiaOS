@@ -3,8 +3,12 @@
 	"version": "0.0.0",
 	"type": "module",
 	"private": true,
+	"dependencies": {
+		"@maiacity/self": "workspace:*"
+	},
 	"scripts": {
-		"dev": "bun run dev.js",
-		"start": "bun run server.js"
+		"build:client": "bun run ../../libs/self/build.mjs && bun build ./client.js --outfile ./dist/client.mjs --target browser --format esm",
+		"dev": "bun run build:client && bun run dev.js",
+		"start": "bun run build:client && bun run server.js"
 	}
 }
