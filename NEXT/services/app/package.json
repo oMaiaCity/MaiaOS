@@ -1,13 +1,10 @@
 {
-	"name": "@maiacity/app",
+	"name": "@MaiaOS/app",
 	"version": "0.0.0",
 	"type": "module",
 	"private": true,
-	"dependencies": {
-		"@maiacity/self": "workspace:*"
-	},
 	"scripts": {
-		"build:client": "bun run ../../libs/self/build.mjs && bun build ./client.js --outfile ./dist/client.mjs --target browser --format esm",
+		"build:client": "bun build ./client.js --outfile ./dist/client.mjs --target browser --format esm",
 		"dev": "bun run build:client && bun run dev.js",
 		"start": "bun run build:client && bun run server.js"
 	}

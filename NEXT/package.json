@@ -6,7 +6,7 @@
 		"libs/*"
 	],
 	"scripts": {
-		"dev": "bun --filter @maiacity/app dev",
-		"build": "bun --filter @maiacity/self build"
+		"dev": "bun run --filter '@MaiaOS/app' dev",
+		"build": "bun run --filter '@MaiaOS/app' build:client"
 	}
 }
