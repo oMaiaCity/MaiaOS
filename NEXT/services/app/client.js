@@ -21,15 +21,15 @@ function setError(msg) {
 
 function showWelcome() {
 	session = null
-	if (elWelcome) elWelcome.hidden = false
-	if (elMe) elMe.hidden = true
+	if (elWelcome) elWelcome.style.display = 'flex'
+	if (elMe) elMe.style.display = 'none'
 	setError('')
 }
 
 function showMe(data) {
 	session = data
-	if (elWelcome) elWelcome.hidden = true
-	if (elMe) elMe.hidden = false
+	if (elWelcome) elWelcome.style.display = 'none'
+	if (elMe) elMe.style.display = 'flex'
 	if (elAccountId) elAccountId.textContent = data.accountID
 	if (elCredentialId) elCredentialId.textContent = data.credentialId ?? '—'
 	setError('')
@@ -49,8 +49,8 @@ function syncPathToView() {
 			showWelcome()
 			return
 		}
-		if (elWelcome) elWelcome.hidden = true
-		if (elMe) elMe.hidden = false
+		if (elWelcome) elWelcome.style.display = 'none'
+		if (elMe) elMe.style.display = 'flex'
 		if (elAccountId && session) elAccountId.textContent = session.accountID
 		if (elCredentialId && session) elCredentialId.textContent = session.credentialId ?? '—'
 	} else {
