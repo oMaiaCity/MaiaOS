@@ -1,3 +1,13 @@
+:root {
+	--bg-cream: #f8ece0; /* Warmer, more reddish clay-cream */
+	--marine-blue: #002b45;
+	--forest-green: #2d4a3e;
+	--danger-red: #8b3a2b; /* More reddish clay/terracotta for errors/danger */
+	--text-main: #002b45;
+	--text-muted: #5a6b75;
+	--accent-cream: #fdf3e9; /* Matching clay accent */
+}
+
 *,
 *::before,
 *::after {
@@ -12,19 +22,19 @@ body {
 
 body {
 	font-family: "Montserrat", ui-sans-serif, system-ui, sans-serif;
-	color: #1a1a1a;
-	background-color: #f2ede4; /* Warm cream background from images */
+	color: var(--text-main);
+	background-color: var(--bg-cream);
 	background-image:
-		radial-gradient(at 0% 0%, rgba(255, 255, 255, 0.4) 0, transparent 50%),
-		radial-gradient(at 100% 0%, rgba(210, 190, 160, 0.2) 0, transparent 50%);
+		radial-gradient(at 0% 0%, rgba(255, 255, 255, 0.5) 0, transparent 50%),
+		radial-gradient(at 100% 100%, rgba(45, 74, 62, 0.05) 0, transparent 50%);
 	display: flex;
 	flex-direction: column;
 	align-items: center;
 	justify-content: center;
 	min-height: 100dvh;
-	padding: 1.5rem;
+	padding: 2rem;
 	-webkit-font-smoothing: antialiased;
-	gap: 2rem;
+	gap: 3rem;
 }
 
 .hero {
@@ -33,30 +43,40 @@ body {
 	align-items: center;
 	justify-content: center;
 	text-align: center;
-	gap: 0.5rem;
-	max-width: min(95vw, 40rem);
+	gap: 1rem;
+	max-width: min(95vw, 45rem);
+	position: relative;
+}
+
+.hero::after {
+	content: "";
+	position: absolute;
+	bottom: -2rem;
+	width: 40px;
+	height: 1px;
+	background: var(--forest-green);
+	opacity: 0.3;
 }
 
 .kicker {
 	margin: 0;
 	font-family: "Montserrat", sans-serif;
-	font-size: 0.75rem;
-	font-weight: 500;
-	letter-spacing: 0.3em;
+	font-size: 0.7rem;
+	font-weight: 600;
+	letter-spacing: 0.4em;
 	text-transform: uppercase;
-	color: #6b665f;
-	opacity: 0.8;
+	color: var(--forest-green);
 }
 
 .title {
 	margin: 0;
 	font-family: "Cormorant Garamond", serif;
-	font-size: clamp(3.5rem, 12vw, 6.5rem);
+	font-size: clamp(4rem, 15vw, 8rem);
 	font-weight: 300;
 	font-style: italic;
-	line-height: 0.9;
-	letter-spacing: -0.02em;
-	color: #1a1a1a;
+	line-height: 0.85;
+	letter-spacing: -0.03em;
+	color: var(--marine-blue);
 	text-wrap: balance;
 }
 
@@ -64,118 +84,128 @@ body {
 	display: flex;
 	flex-direction: column;
 	align-items: center;
-	gap: 3rem;
+	gap: 4rem;
+	width: 100%;
 }
 
 .actions {
 	display: flex;
 	flex-wrap: wrap;
-	gap: 1.5rem;
+	gap: 2rem;
 	justify-content: center;
-	margin-top: 1rem;
 }
 
 .btn {
 	font-family: "Montserrat", sans-serif;
-	font-size: 0.8rem;
-	font-weight: 500;
-	letter-spacing: 0.15em;
+	font-size: 0.75rem;
+	font-weight: 600;
+	letter-spacing: 0.2em;
 	text-transform: uppercase;
-	padding: 1rem 2.5rem;
-	border-radius: 0; /* Sharp corners like the high-end look */
-	border: 1px solid #1a1a1a;
+	padding: 1.25rem 3rem;
+	border-radius: 1.25rem; /* Apple-style rounded corners */
+	border: 1px solid var(--marine-blue);
 	background: transparent;
-	color: #1a1a1a;
+	color: var(--marine-blue);
 	cursor: pointer;
-	transition: all 0.3s ease;
+	transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .btn:hover {
-	background: #1a1a1a;
-	color: #f2ede4;
+	background: var(--marine-blue);
+	color: var(--bg-cream);
+	transform: translateY(-2px);
 }
 
 .btn.primary {
-	background: #1a1a1a;
-	color: #f2ede4;
+	background: var(--forest-green);
+	border-color: var(--forest-green);
+	color: var(--bg-cream);
 }
 
 .btn.primary:hover {
-	background: transparent;
-	color: #1a1a1a;
+	background: var(--marine-blue);
+	border-color: var(--marine-blue);
 }
 
 .btn.danger {
-	border-color: #991b1b;
-	color: #991b1b;
+	border-color: var(--danger-red);
+	color: var(--danger-red);
 }
 
 .btn.danger:hover {
-	background: #991b1b;
-	color: #fff;
+	background: var(--danger-red);
+	color: var(--bg-cream);
 }
 
 .auth-error {
 	margin: 0;
 	max-width: 28rem;
 	text-align: center;
-	font-size: 0.85rem;
-	color: #b91c1c;
+	font-size: 0.8rem;
+	color: var(--danger-red);
 	font-family: "Montserrat", sans-serif;
+	font-weight: 500;
+	background: rgba(124, 45, 18, 0.05);
+	padding: 1rem 2rem;
+	border-radius: 1rem;
 }
 
 .me-panel {
-	max-width: min(90vw, 36rem);
+	max-width: min(90vw, 40rem);
 	width: 100%;
-	padding: 3rem;
-	background: #fff;
-	border: 1px solid rgba(0, 0, 0, 0.05);
-	box-shadow: 0 20px 40px rgba(0, 0, 0, 0.03);
+	padding: 4rem;
+	background: var(--accent-cream);
+	border-radius: 2.5rem; /* Apple-style rounded corners */
+	border: 1px solid rgba(0, 43, 69, 0.08);
+	box-shadow: 0 30px 60px rgba(0, 43, 69, 0.04);
 	display: flex;
 	flex-direction: column;
-	gap: 2rem;
+	gap: 3rem;
 }
 
 .me-title {
 	margin: 0;
 	font-family: "Cormorant Garamond", serif;
-	font-size: 2.5rem;
+	font-size: 3rem;
 	font-weight: 300;
 	font-style: italic;
-	border-bottom: 1px solid #eee;
-	padding-bottom: 1rem;
+	color: var(--marine-blue);
+	border-bottom: 1px solid rgba(45, 74, 62, 0.1);
+	padding-bottom: 1.5rem;
 }
 
 .me-dl {
 	margin: 0;
 	display: grid;
 	grid-template-columns: 1fr;
-	gap: 1.5rem;
-	font-size: 0.9rem;
+	gap: 2rem;
 }
 
 .me-dl dt {
 	font-family: "Montserrat", sans-serif;
-	color: #6b665f;
-	font-weight: 500;
-	font-size: 0.7rem;
+	color: var(--forest-green);
+	font-weight: 600;
+	font-size: 0.65rem;
 	text-transform: uppercase;
-	letter-spacing: 0.1em;
+	letter-spacing: 0.2em;
+	margin-bottom: 0.5rem;
 }
 
 .me-dl dd {
 	margin: 0;
 	word-break: break-all;
 	font-family: "Montserrat", sans-serif;
-	color: #1a1a1a;
-	font-weight: 300;
+	color: var(--marine-blue);
+	font-weight: 400;
+	font-size: 0.95rem;
+	line-height: 1.5;
 }
 
 .mono {
 	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-	font-size: 0.75rem;
-	background: #f8f8f8;
-	padding: 0.5rem;
+	font-size: 0.8rem;
+	background: rgba(0, 43, 69, 0.03);
+	padding: 0.75rem 1rem;
 	display: block;
-	margin-top: 0.25rem;
+	border-radius: 0.75rem; /* Apple-style rounded corners */
 }
