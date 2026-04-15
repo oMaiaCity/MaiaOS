@@ -5,12 +5,21 @@
     "": {
       "name": "maiacity-next",
     },
+    "libs/self": {
+      "name": "@maiacity/self",
+      "version": "0.0.0",
+    },
     "services/app": {
       "name": "@maiacity/app",
       "version": "0.0.0",
+      "dependencies": {
+        "@maiacity/self": "workspace:*",
+      },
     },
   },
   "packages": {
     "@maiacity/app": ["@maiacity/app@workspace:services/app"],
+
+    "@maiacity/self": ["@maiacity/self@workspace:libs/self"],
   }
 }

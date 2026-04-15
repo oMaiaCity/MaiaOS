@@ -4,6 +4,7 @@ import { join } from 'node:path'
 
 const root = import.meta.dir
 const bun = process.execPath
+const selfSrc = join(root, '../../libs/self/src')
 
 function shouldIgnore(relativePath) {
 	if (!relativePath) return true
@@ -83,6 +84,29 @@ process.once('SIGINT', shutdown)
 process.once('SIGTERM', shutdown)
 
 start()
+
+let buildTimer = null
+function scheduleBuildClient() {
+	clearTimeout(buildTimer)
+	buildTimer = setTimeout(() => {
+		const b = spawn(bun, ['run', 'build:client'], {
+			cwd: root,
+			stdio: 'inherit',
+			env: process.env,
+		})
+		b.on('exit', (code) => {
+			if (code !== 0) console.error('[maiacity/app] build:client failed')
+		})
+	}, 250)
+}
+
+watch(join(root, 'client.js'), () => {
+	scheduleBuildClient()
+})
+watch(selfSrc, { recursive: true }, (_event, filename) => {
+	if (shouldIgnore(filename)) return
+	scheduleBuildClient()
+})
 
 watch(root, { recursive: true }, (_event, filename) => {
 	if (shouldIgnore(filename)) return

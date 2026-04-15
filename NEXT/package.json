@@ -2,9 +2,11 @@
 	"name": "maiacity-next",
 	"private": true,
 	"workspaces": [
-		"services/*"
+		"services/*",
+		"libs/*"
 	],
 	"scripts": {
-		"dev": "bun --filter @maiacity/app dev"
+		"dev": "bun --filter @maiacity/app dev",
+		"build": "bun --filter @maiacity/self build"
 	}
 }

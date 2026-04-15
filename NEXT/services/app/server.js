@@ -1,8 +1,10 @@
 import { execSync } from 'node:child_process'
-import { watch } from 'node:fs'
+import { existsSync, watch } from 'node:fs'
+import { join } from 'node:path'
 
 const PORT = 2042
 const root = import.meta.dir
+const selfDist = join(root, '../../libs/self/dist')
 const isDev = process.env.MAIACITY_DEV === '1'
 
 function killListenersOnPort(port) {
@@ -69,7 +71,41 @@ Bun.serve({
 	port: PORT,
 	async fetch(req, srv) {
 		const url = new URL(req.url)
-		const pathname = url.pathname === '/' ? '/index.html' : url.pathname
+		let pathname = url.pathname
+		if (pathname === '/') pathname = '/index.html'
+		if (pathname === '/me') pathname = '/index.html'
+
+		if (pathname === '/client.mjs') {
+			const clientPath = join(root, 'dist/client.mjs')
+			if (!existsSync(clientPath)) {
+				return new Response('client bundle missing — run: bun run build:client', {
+					status: 503,
+					headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+				})
+			}
+			return new Response(Bun.file(clientPath), {
+				headers: {
+					'Content-Type': 'application/javascript; charset=utf-8',
+					...(isDev ? { 'Cache-Control': 'no-store' } : {}),
+				},
+			})
+		}
+
+		if (pathname === '/self.mjs') {
+			const selfPath = join(selfDist, 'self.mjs')
+			if (!existsSync(selfPath)) {
+				return new Response('run: bun --filter @maiacity/self build', {
+					status: 503,
+					headers: { 'Content-Type': 'text/plain; charset=utf-8' },
+				})
+			}
+			return new Response(Bun.file(selfPath), {
+				headers: {
+					'Content-Type': 'application/javascript; charset=utf-8',
+					...(isDev ? { 'Cache-Control': 'no-store' } : {}),
+				},
+			})
+		}
 
 		if (isDev && pathname === '/__livereload') {
 			const ok = srv.upgrade(req)
@@ -106,6 +142,32 @@ Bun.serve({
 			return new Response(Bun.file(`${root}/styles.css`), {
 				headers: {
 					'Content-Type': 'text/css; charset=utf-8',
+					...(isDev ? { 'Cache-Control': 'no-store' } : {}),
+				},
+			})
+		}
+
+		if (pathname.startsWith('/fonts/')) {
+			const name = pathname.slice('/fonts/'.length)
+			if (!name || name.includes('/') || name.includes('..')) {
+				return new Response('Not Found', { status: 404 })
+			}
+			const fontPath = join(root, 'fonts', name)
+			if (!existsSync(fontPath)) {
+				return new Response('Not Found', { status: 404 })
+			}
+			const ext = name.split('.').pop()?.toLowerCase()
+			const type =
+				ext === 'ttf'
+					? 'font/ttf'
+					: ext === 'woff2'
+						? 'font/woff2'
+						: ext === 'woff'
+							? 'font/woff'
+							: 'application/octet-stream'
+			return new Response(Bun.file(fontPath), {
+				headers: {
+					'Content-Type': type,
 					...(isDev ? { 'Cache-Control': 'no-store' } : {}),
 				},
 			})
