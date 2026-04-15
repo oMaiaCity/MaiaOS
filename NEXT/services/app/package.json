@@ -1,0 +1,10 @@
+{
+	"name": "@maiacity/app",
+	"version": "0.0.0",
+	"type": "module",
+	"private": true,
+	"scripts": {
+		"dev": "bun run dev.js",
+		"start": "bun run server.js"
+	}
+}
