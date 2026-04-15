@@ -5,6 +5,8 @@ import { join } from 'node:path'
 const root = import.meta.dir
 const bun = process.execPath
 const selfSrc = join(root, '../../libs/self/src')
+const dbSrc = join(root, '../../libs/db/src')
+const storageSrc = join(root, '../../libs/storage/src')
 
 function shouldIgnore(relativePath) {
 	if (!relativePath) return true
@@ -103,10 +105,16 @@ function scheduleBuildClient() {
 watch(join(root, 'client.js'), () => {
 	scheduleBuildClient()
 })
-watch(selfSrc, { recursive: true }, (_event, filename) => {
-	if (shouldIgnore(filename)) return
-	scheduleBuildClient()
-})
+function watchForClientRebuild(dir) {
+	watch(dir, { recursive: true }, (_event, filename) => {
+		if (shouldIgnore(filename)) return
+		scheduleBuildClient()
+	})
+}
+
+watchForClientRebuild(selfSrc)
+watchForClientRebuild(dbSrc)
+watchForClientRebuild(storageSrc)
 
 watch(root, { recursive: true }, (_event, filename) => {
 	if (shouldIgnore(filename)) return

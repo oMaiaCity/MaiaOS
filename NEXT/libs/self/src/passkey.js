@@ -1,12 +1,17 @@
+import { cojsonInternals } from 'cojson'
+import { WasmCrypto } from 'cojson/crypto/WasmCrypto'
+import { createAccountWithSecret, ensureAccountScaffold, loadAccount } from '../../db/src/index.js'
+import { getStorage } from '../../storage/src/index.js'
 import { requirePRFSupport } from './feature-detect.js'
 import { createPasskeyWithPRF, evaluatePRF } from './prf.js'
-import { arrayBufferToBase64, deriveAccountID, stringToUint8Array } from './utils.js'
+import { arrayBufferToBase64, stringToUint8Array } from './utils.js'
+
+const { accountHeaderForInitialAgentSecret, idforHeader } = cojsonInternals
 
 /**
  * @param {Object} [options]
  * @param {string} [options.name]
  * @param {string} [options.salt]
- * @returns {Promise<{ accountID: string, secret: Uint8Array, credentialId: string }>}
  */
 export async function signUp({ name, salt = 'maia.city' } = {}) {
 	await requirePRFSupport()
@@ -18,21 +23,45 @@ export async function signUp({ name, salt = 'maia.city' } = {}) {
 			? name.trim()
 			: `Traveler ${(webCrypto?.randomUUID?.() ?? '').slice(0, 8)}`
 
-	const { credentialId, prfOutput } = await createPasskeyWithPRF({
-		name: passkeyName,
-		userId: globalThis.crypto.getRandomValues(new Uint8Array(32)),
-		salt: saltBytes,
-	})
+	const [{ credentialId, prfOutput }, storage] = await Promise.all([
+		createPasskeyWithPRF({
+			name: passkeyName,
+			userId: globalThis.crypto.getRandomValues(new Uint8Array(32)),
+			salt: saltBytes,
+		}),
+		getStorage({ mode: 'human' }),
+	])
 
 	if (!prfOutput) {
 		throw new Error('PRF evaluation failed')
 	}
 
-	const accountID = await deriveAccountID(prfOutput)
+	const crypto = await WasmCrypto.create()
+	const agentSecret = crypto.agentSecretFromSecretSeed(prfOutput)
+	const accountHeader = accountHeaderForInitialAgentSecret(agentSecret, crypto)
+	const computedAccountID = idforHeader(accountHeader, crypto)
+
+	const createResult = await createAccountWithSecret({
+		agentSecret,
+		name,
+		peers: [],
+		storage,
+		migration: ensureAccountScaffold,
+	})
+
+	const { node, account, accountID: createdAccountID } = createResult
+
+	if (createdAccountID !== computedAccountID) {
+		throw new Error(
+			`AccountID mismatch: computed ${computedAccountID} vs created ${createdAccountID}`,
+		)
+	}
 
 	return {
-		accountID,
-		secret: prfOutput,
+		accountID: createdAccountID,
+		agentSecret,
+		node,
+		account,
 		credentialId: arrayBufferToBase64(credentialId),
 	}
 }
@@ -40,22 +69,37 @@ export async function signUp({ name, salt = 'maia.city' } = {}) {
 /**
  * @param {Object} [options]
  * @param {string} [options.salt]
- * @returns {Promise<{ accountID: string, secret: Uint8Array }>}
  */
 export async function signIn({ salt = 'maia.city' } = {}) {
 	await requirePRFSupport()
 
 	const saltBytes = stringToUint8Array(salt)
-	const { prfOutput } = await evaluatePRF({ salt: saltBytes })
+	const [{ prfOutput }, storage] = await Promise.all([
+		evaluatePRF({ salt: saltBytes }),
+		getStorage({ mode: 'human' }),
+	])
 
 	if (!prfOutput) {
 		throw new Error('PRF evaluation failed during sign-in')
 	}
 
-	const accountID = await deriveAccountID(prfOutput)
+	const crypto = await WasmCrypto.create()
+	const agentSecret = crypto.agentSecretFromSecretSeed(prfOutput)
+	const accountHeader = accountHeaderForInitialAgentSecret(agentSecret, crypto)
+	const accountID = idforHeader(accountHeader, crypto)
+
+	const { node, account } = await loadAccount({
+		accountID,
+		agentSecret,
+		peers: [],
+		storage,
+		migration: ensureAccountScaffold,
+	})
 
 	return {
 		accountID,
-		secret: prfOutput,
+		agentSecret,
+		node,
+		account,
 	}
 }
