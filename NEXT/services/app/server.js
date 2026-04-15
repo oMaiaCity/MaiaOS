@@ -73,7 +73,7 @@ Bun.serve({
 		const url = new URL(req.url)
 		let pathname = url.pathname
 		if (pathname === '/') pathname = '/index.html'
-		if (pathname === '/me') pathname = '/index.html'
+		if (pathname === '/me' || pathname === '/profile' || pathname === '/db') pathname = '/index.html'
 
 		if (pathname === '/client.mjs') {
 			const clientPath = join(root, 'dist/client.mjs')

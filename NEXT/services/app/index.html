@@ -22,28 +22,32 @@
 		</div>
 	</div>
 
-	<div id="view-logged-in" class="me-panel" style="display: none;">
-		<nav class="me-tabs" role="tablist" aria-label="Account">
-			<button type="button" id="tab-me" class="me-tab" role="tab" aria-selected="true">Me</button>
-			<button type="button" id="tab-db" class="me-tab" role="tab" aria-selected="false">DB</button>
-		</nav>
-		<div id="panel-me" class="me-tab-panel" role="tabpanel">
-			<h2 class="me-title">Signed in</h2>
-			<dl class="me-dl">
-				<dt>Profile name</dt>
-				<dd id="profile-name" class="mono"></dd>
-				<dt>Account ID</dt>
-				<dd id="account-id" class="mono"></dd>
-				<dt>Credential ID (sign up only)</dt>
-				<dd id="credential-id" class="mono"></dd>
-			</dl>
+	<div id="view-logged-in" class="me-panel session-shell" style="display: none;">
+		<aside class="session-aside" aria-label="Account">
+			<nav class="session-nav" role="tablist">
+				<button type="button" id="nav-profile" class="session-nav-item" role="tab" aria-selected="true">Profile</button>
+				<button type="button" id="nav-db" class="session-nav-item" role="tab" aria-selected="false">DB</button>
+			</nav>
+			<button type="button" id="btn-signout" class="btn danger session-signout">Sign out</button>
+		</aside>
+		<div class="session-main">
+			<div id="panel-profile" class="me-tab-panel" role="tabpanel">
+				<h2 class="me-title">Profile</h2>
+				<dl class="me-dl">
+					<dt>Display name</dt>
+					<dd id="profile-name" class="mono"></dd>
+					<dt>Account ID</dt>
+					<dd id="account-id" class="mono"></dd>
+					<dt>Credential ID (sign up only)</dt>
+					<dd id="credential-id" class="mono"></dd>
+				</dl>
+			</div>
+			<div id="panel-db" class="me-tab-panel" role="tabpanel" hidden>
+				<h2 class="me-title">DB</h2>
+				<p class="me-lede">Local CoValue snapshot (read-only).</p>
+				<pre id="db-snapshot" class="mono db-pre"></pre>
+			</div>
 		</div>
-		<div id="panel-db" class="me-tab-panel" role="tabpanel" hidden>
-			<h2 class="me-title">Database</h2>
-			<p class="me-lede">Local CoValue snapshot (read-only).</p>
-			<pre id="db-snapshot" class="mono db-pre"></pre>
-		</div>
-		<button type="button" id="btn-signout" class="btn danger">Sign out</button>
 	</div>
 
 	<script type="module" src="/client.mjs"></script>
