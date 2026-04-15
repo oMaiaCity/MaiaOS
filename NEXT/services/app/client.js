@@ -1,6 +1,6 @@
 /**
  * In-memory session only. Full page reload clears auth.
- * /me is client-side (pushState) so navigation does not lose the in-memory session.
+ * `/me` and `/db` are client-side (pushState) so navigation does not lose the in-memory session.
  */
 import { signIn, signUp } from '../../libs/self/src/index.js'
 
@@ -8,7 +8,12 @@ import { signIn, signUp } from '../../libs/self/src/index.js'
 let session = null
 
 const elWelcome = document.getElementById('view-welcome')
-const elMe = document.getElementById('view-me')
+const elLoggedIn = document.getElementById('view-logged-in')
+const elPanelMe = document.getElementById('panel-me')
+const elPanelDb = document.getElementById('panel-db')
+const elTabMe = document.getElementById('tab-me')
+const elTabDb = document.getElementById('tab-db')
+const elDbSnapshot = document.getElementById('db-snapshot')
 const elAccountId = document.getElementById('account-id')
 const elCredentialId = document.getElementById('credential-id')
 const elProfileName = document.getElementById('profile-name')
@@ -32,6 +37,57 @@ function readProfileName(node, account) {
 	return typeof n === 'string' && n.length > 0 ? n : '—'
 }
 
+/**
+ * @param {import('cojson').LocalNode | undefined} node
+ * @param {import('cojson').RawAccount | undefined} account
+ */
+function buildDbSnapshot(node, account) {
+	if (!node || !account) {
+		return { error: 'No active session.' }
+	}
+	const out = {
+		accountId: account.id,
+		accountKeys: typeof account.keys === 'function' ? [...account.keys()] : [],
+		profileRef: account.get('profile') ?? null,
+		rootRef: account.get('root') ?? null,
+	}
+	const pid = account.get('profile')
+	if (typeof pid === 'string' && pid.length > 0) {
+		const core = node.getCoValue(pid)
+		const content = core?.getCurrentContent?.()
+		if (content && typeof content.get === 'function') {
+			out.profileCoMap = {
+				name: content.get('name'),
+				avatar: content.get('avatar'),
+			}
+		}
+	}
+	const rid = account.get('root')
+	if (typeof rid === 'string' && rid.length > 0) {
+		const core = node.getCoValue(rid)
+		const content = core?.getCurrentContent?.()
+		if (content) {
+			out.rootCoMap = {
+				keys:
+					typeof content.keys === 'function'
+						? [...content.keys()]
+						: typeof content.entries === 'function'
+							? [...content.entries()].map(([k]) => k)
+							: [],
+			}
+		}
+	}
+	return out
+}
+
+function renderDbSnapshot() {
+	if (!elDbSnapshot) return
+	const snap = session
+		? buildDbSnapshot(session.node, session.account)
+		: { error: 'No active session.' }
+	elDbSnapshot.textContent = JSON.stringify(snap, null, 2)
+}
+
 function setMeFields(data) {
 	if (elAccountId) elAccountId.textContent = data.accountID
 	if (elCredentialId) elCredentialId.textContent = data.credentialId ?? '—'
@@ -42,20 +98,44 @@ function setMeFields(data) {
 	}
 }
 
+/**
+ * @param {'me' | 'db'} tab
+ */
+function activateTab(tab) {
+	const isMe = tab === 'me'
+	if (elPanelMe) elPanelMe.hidden = !isMe
+	if (elPanelDb) elPanelDb.hidden = isMe
+	if (elTabMe) {
+		elTabMe.classList.toggle('active', isMe)
+		elTabMe.setAttribute('aria-selected', isMe ? 'true' : 'false')
+	}
+	if (elTabDb) {
+		elTabDb.classList.toggle('active', !isMe)
+		elTabDb.setAttribute('aria-selected', !isMe ? 'true' : 'false')
+	}
+	if (!isMe) renderDbSnapshot()
+}
+
 function showWelcome() {
 	session = null
 	if (elWelcome) elWelcome.style.display = 'flex'
-	if (elMe) elMe.style.display = 'none'
+	if (elLoggedIn) elLoggedIn.style.display = 'none'
 	setError('')
 }
 
-function showMe(data) {
+function showLoggedInView(data) {
 	session = data
 	if (elWelcome) elWelcome.style.display = 'none'
-	if (elMe) elMe.style.display = 'flex'
+	if (elLoggedIn) elLoggedIn.style.display = 'flex'
 	setMeFields(data)
+	renderDbSnapshot()
+}
+
+function showMe(data) {
+	showLoggedInView(data)
+	activateTab('me')
 	setError('')
-	history.pushState({ me: true }, '', '/me')
+	history.pushState({ loggedIn: true, tab: 'me' }, '', '/me')
 }
 
 function signOut() {
@@ -63,17 +143,26 @@ function signOut() {
 	history.pushState({}, '', '/')
 }
 
+function isLoggedInPath(path) {
+	return path === '/me' || path === '/db'
+}
+
 function syncPathToView() {
 	const path = window.location.pathname
-	if (path === '/me') {
+	if (isLoggedInPath(path)) {
 		if (!session) {
 			history.replaceState({}, '', '/')
 			showWelcome()
 			return
 		}
 		if (elWelcome) elWelcome.style.display = 'none'
-		if (elMe) elMe.style.display = 'flex'
-		if (session) setMeFields(session)
+		if (elLoggedIn) elLoggedIn.style.display = 'flex'
+		setMeFields(session)
+		if (path === '/db') {
+			activateTab('db')
+		} else {
+			activateTab('me')
+		}
 	} else {
 		showWelcome()
 	}
@@ -117,6 +206,18 @@ document.getElementById('btn-signin')?.addEventListener('click', async () => {
 
 document.getElementById('btn-signout')?.addEventListener('click', () => {
 	signOut()
+})
+
+elTabMe?.addEventListener('click', () => {
+	if (!session) return
+	activateTab('me')
+	history.pushState({ loggedIn: true, tab: 'me' }, '', '/me')
+})
+
+elTabDb?.addEventListener('click', () => {
+	if (!session) return
+	activateTab('db')
+	history.pushState({ loggedIn: true, tab: 'db' }, '', '/db')
 })
 
 syncPathToView()
