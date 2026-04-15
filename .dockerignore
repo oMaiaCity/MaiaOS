@@ -1,7 +1,38 @@
-# Exclude workspace symlinks - they resolve to /libs/* in container (ENOENT)
-# The Dockerfile copies libs/* and builds node_modules fresh with bun install
-# Exclude .env - never use local env in Docker builds (would override build args)
-services/sync/node_modules
+# Large dirs that are never used in Docker builds
+.git
+node_modules
+services/app/src-tauri/target
+services/app/dist
+services/landing
+
+# Dev / IDE / OS
+.cursor
+.github
+.husky
+.vscode
+*.md
+.editorconfig
+.gitattributes
+biome.jsonc
+
+# Env files — secrets come from Fly, not local .env
 .env
 .env.local
 .env.*.local
+
+# Workspace symlinked node_modules (resolved via bun install inside Docker)
+services/sync/node_modules
+services/app/node_modules
+libs/*/node_modules
+
+# Build artifacts / caches
+libs/maia-distros/output
+libs/maia-distros/vendor
+*.tsbuildinfo
+
+# Future / non-production libs
+libs/FUTURE
+
+# Agent transcripts / plans
+.cursor
+agent-transcripts
