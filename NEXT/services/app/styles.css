@@ -160,7 +160,64 @@ body {
 	box-shadow: 0 30px 60px rgba(0, 43, 69, 0.04);
 	display: flex;
 	flex-direction: column;
-	gap: 3rem;
+	gap: 2rem;
+}
+
+.me-tabs {
+	display: flex;
+	gap: 0.5rem;
+	padding-bottom: 0.5rem;
+	border-bottom: 1px solid rgba(45, 74, 62, 0.12);
+}
+
+.me-tab {
+	font-family: "Montserrat", sans-serif;
+	font-size: 0.65rem;
+	font-weight: 600;
+	letter-spacing: 0.2em;
+	text-transform: uppercase;
+	padding: 0.75rem 1.25rem;
+	border-radius: 0.75rem;
+	border: 1px solid transparent;
+	background: transparent;
+	color: var(--text-muted);
+	cursor: pointer;
+	transition:
+		color 0.2s ease,
+		background 0.2s ease,
+		border-color 0.2s ease;
+}
+
+.me-tab:hover {
+	color: var(--marine-blue);
+	background: rgba(0, 43, 69, 0.04);
+}
+
+.me-tab.active {
+	color: var(--marine-blue);
+	border-color: rgba(0, 43, 69, 0.15);
+	background: rgba(255, 255, 255, 0.6);
+}
+
+.me-tab-panel {
+	display: flex;
+	flex-direction: column;
+	gap: 2rem;
+}
+
+.me-lede {
+	margin: 0;
+	font-size: 0.85rem;
+	color: var(--text-muted);
+	line-height: 1.5;
+}
+
+.db-pre {
+	margin: 0;
+	max-height: min(50vh, 24rem);
+	overflow: auto;
+	white-space: pre-wrap;
+	word-break: break-word;
 }
 
 .me-title {
