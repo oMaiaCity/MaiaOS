@@ -23,6 +23,7 @@ import {
 	updateSyncState,
 } from '@MaiaOS/runtime'
 import { renderApp, toggleMetadataInternalKey } from './db-view.js'
+import { beginIntroDiary, renderIntroPage } from './intro.js'
 import { renderLandingPage } from './landing.js'
 import { disposeGlobalAI, initGlobalAI, setFabVisible, updateNavLeft } from './maia-ai-global.js'
 import {
@@ -200,6 +201,14 @@ async function handleRoute() {
 			getSignInUiHandlers(),
 			!prfOk,
 		)
+		return
+	}
+
+	if (path === '/intro') {
+		removeSigninKeyHandler()
+		setFabVisible(false)
+		if (redirectIfSignedIn()) return
+		renderIntroPage()
 		return
 	}
 
@@ -1487,6 +1496,20 @@ function setupMaiaAppDelegation() {
 	const app = document.getElementById('app')
 	if (!app || app.dataset.maiaDelegationBound) return
 	app.dataset.maiaDelegationBound = '1'
+
+	app.addEventListener('submit', (e) => {
+		const form = e.target
+		if (!(form instanceof HTMLFormElement) || form.id !== 'intro-form') return
+		e.preventDefault()
+		const raw = document.getElementById('intro-name')
+		const name = raw && typeof raw.value === 'string' ? raw.value.trim() : ''
+		if (name.length > 0) {
+			sessionStorage.setItem('maia_intro_first_name', name)
+		} else {
+			sessionStorage.removeItem('maia_intro_first_name')
+		}
+		void beginIntroDiary()
+	})
 
 	app.addEventListener('click', (e) => {
 		const el = e.target.closest('[data-maia-action]')
