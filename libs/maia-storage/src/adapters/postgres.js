@@ -15,6 +15,7 @@ import { SQL } from 'bun'
 import { emptyKnownState, logger } from 'cojson'
 import { StorageApiAsync } from 'cojson/dist/storage/storageAsync.js'
 import { DeletedCoValueDeletionStatus } from 'cojson/dist/storage/types.js'
+import { createStorageInspector } from '../inspector.js'
 import { normalizePostgresConnectionString } from '../normalizePostgresUrl.js'
 import { runMigrations } from '../schema/postgres.js'
 
@@ -396,6 +397,10 @@ class PostgresClient {
 		}
 
 		return knownState
+	}
+
+	inspector() {
+		return createStorageInspector(this.db)
 	}
 }
 

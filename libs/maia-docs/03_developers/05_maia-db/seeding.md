@@ -14,7 +14,7 @@ Think of seeding like setting up a new house. First you install the plumbing (bo
 
 ## When Seeding Runs
 
-- **Sync service (default)** → If all CoJSON data tables are empty (SQL probe), bootstrap + genesis seed; registry migrate runs every startup.
+- **Sync service** → `PEER_SYNC_MODE=seed` runs genesis seed once (then unset `PEER_SYNC_MODE` so later restarts use the persisted scaffold). Unset or `none` = normal run, no genesis seed.
 - **PEER_FRESH_SEED=true** → Full bootstrap + seed (clean slate) where applicable
 
 **Reseed:** Wipe Postgres, PGlite data directory, and/or Tigris blob storage manually, then restart sync. There is no env-based force reseed.

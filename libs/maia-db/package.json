@@ -16,7 +16,7 @@
 	},
 	"dependencies": {
 		"@MaiaOS/validation": "workspace:*",
-		"@MaiaOS/migrate": "workspace:*",
+		"@MaiaOS/seed": "workspace:*",
 		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/peer": "workspace:*",
 		"cojson": "0.20.16"

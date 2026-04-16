@@ -1,14 +1,12 @@
 {
-	"name": "@MaiaOS/migrate",
+	"name": "@MaiaOS/seed",
 	"version": "26.4.142216-next",
 	"type": "module",
 	"main": "src/index.js",
 	"exports": {
 		".": "./src/index.js",
 		"./ref-transform": "./src/ref-transform.js",
-		"./orchestration": "./src/orchestration/seed.js",
-		"./orchestration/migrate": "./src/orchestration/migrate.js",
-		"./dev/watch-migrate": "./src/dev/watch-migrate.js"
+		"./orchestration": "./src/orchestration/seed.js"
 	},
 	"dependencies": {
 		"@MaiaOS/db": "workspace:*",

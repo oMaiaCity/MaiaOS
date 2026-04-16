@@ -68,6 +68,24 @@ let capabilityGrantsIndexColistCoId = null
 let currentScreen = 'dashboard' // Current screen: 'dashboard' | 'maia-db' | 'the-game' | 'vibe-viewer' | …
 let currentView = 'account' // Current schema filter (default: 'account')
 let currentContextCoValueId = null // Currently loaded CoValue in main context (explorer-style navigation)
+/** Maia DB SYNC SERVER: selected storage table name, or null when using Explorer */
+let syncServerSelectedTable = null
+/** Row offset for SYNC SERVER table paging (500 rows per page). */
+let syncServerTableOffset = 0
+
+const SYNC_SERVER_PAGE_SIZE = 500
+
+function syncServerPagePrev() {
+	if (!syncServerSelectedTable) return
+	syncServerTableOffset = Math.max(0, syncServerTableOffset - SYNC_SERVER_PAGE_SIZE)
+	renderAppInternal()
+}
+
+function syncServerPageNext() {
+	if (!syncServerSelectedTable) return
+	syncServerTableOffset += SYNC_SERVER_PAGE_SIZE
+	renderAppInternal()
+}
 let currentVibe = null // Currently loaded vibe (null = DB view mode, 'todos' = todos vibe, etc.)
 let currentSpark = null // Grid hierarchy: null = sparks level, '°maia' = avens for that spark
 let navigationHistory = [] // Navigation history stack for back button
@@ -1072,6 +1090,8 @@ function navigateToScreen(screen, options = {}) {
 	if (screen === 'dashboard') {
 		currentVibe = null
 		currentContextCoValueId = null
+		syncServerSelectedTable = null
+		syncServerTableOffset = 0
 		if (!options.preserveSpark) {
 			currentSpark = null
 		}
@@ -1094,6 +1114,8 @@ function loadSpark(spark) {
 // switchView moved above selectCoValue
 
 function selectCoValueInternal(coId, skipHistory = false) {
+	syncServerSelectedTable = null
+	syncServerTableOffset = 0
 	// Collapse sidebars when selecting a co-value
 	collapseAllSidebars()
 
@@ -1198,8 +1220,21 @@ function goBack() {
 function switchView(view) {
 	currentView = view
 	currentContextCoValueId = null // Reset context when switching views
+	syncServerSelectedTable = null
+	syncServerTableOffset = 0
 	navigationHistory = [] // Clear navigation history when switching views
 	currentScreen = 'maia-db' // Ensure we're in DB viewer when switching views
+	renderAppInternal()
+}
+
+function selectSyncServerTable(tableName) {
+	if (typeof tableName !== 'string' || !tableName.trim()) return
+	collapseAllSidebars()
+	syncServerSelectedTable = tableName.trim()
+	syncServerTableOffset = 0
+	currentContextCoValueId = null
+	currentScreen = 'maia-db'
+	navigationHistory = []
 	renderAppInternal()
 }
 
@@ -1227,6 +1262,8 @@ async function renderAppInternal() {
 			loadSpark,
 			navigateToScreen,
 			capabilityGrantsIndexColistCoId,
+			syncServerSelectedTable,
+			syncServerTableOffset,
 		)
 		// Update unified nav left button: always "home", action = go to dashboard when not on dashboard
 		if (currentScreen === 'dashboard') {
@@ -1523,6 +1560,19 @@ function setupMaiaAppDelegation() {
 		if (action === 'selectCoValue') {
 			const id = el.dataset.coid
 			if (id) void selectCoValue(id)
+			return
+		}
+		if (action === 'selectSyncServerTable') {
+			const t = el.dataset.table
+			if (t) selectSyncServerTable(t)
+			return
+		}
+		if (action === 'syncServerPagePrev') {
+			syncServerPagePrev()
+			return
+		}
+		if (action === 'syncServerPageNext') {
+			syncServerPageNext()
 			return
 		}
 		if (action === 'toggleExpand') {

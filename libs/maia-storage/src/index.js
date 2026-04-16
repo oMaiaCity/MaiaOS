@@ -6,3 +6,4 @@
  */
 
 export { getStorage } from './getStorage.node.js'
+export { createStorageInspector } from './inspector.js'

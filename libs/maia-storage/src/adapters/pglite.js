@@ -16,6 +16,7 @@ import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
 import { emptyKnownState, logger } from 'cojson'
 import { StorageApiAsync } from 'cojson/dist/storage/storageAsync.js'
 import { DeletedCoValueDeletionStatus } from 'cojson/dist/storage/types.js'
+import { createStorageInspector } from '../inspector.js'
 import { runMigrations } from '../schema/postgres.js'
 
 const opsStor = createOpsLogger('STORAGE')
@@ -367,6 +368,10 @@ class PGliteClient {
 		}
 
 		return knownState
+	}
+
+	inspector() {
+		return createStorageInspector(this.db)
 	}
 }
 

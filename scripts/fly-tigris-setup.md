@@ -45,11 +45,11 @@ Alternatively, create a fresh Neon DB and update `PEER_SYNC_DB_URL` in Fly secre
 bun run deploy:sync
 ```
 
-Empty Postgres + `PEER_SYNC_MODE=seed` runs genesis seed; unset afterward. Registry migrate runs only when `PEER_SYNC_MODE=migrate` (then unset if you do not want it every boot). Storage is never cleared by sync — wipe Postgres/PGlite/Tigris manually for a full reset. All new binary uploads go to Tigris automatically.
+Empty Postgres + `PEER_SYNC_MODE=seed` runs genesis seed; unset afterward. Storage is never cleared by sync — wipe Postgres/PGlite/Tigris manually for a full reset. All new binary uploads go to Tigris automatically.
 
 ## 4. After First Deploy
 
-After a one-shot `PEER_SYNC_MODE=seed` or `migrate` deploy, unset that Fly secret so it does not run on every restart.
+After a one-shot `PEER_SYNC_MODE=seed` deploy, unset that Fly secret so it does not run on every restart.
 
 ## 5. Verify
 
