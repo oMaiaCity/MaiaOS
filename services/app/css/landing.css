@@ -25,17 +25,27 @@
 	-webkit-font-smoothing: antialiased;
 }
 
-/* Blueprint Grid Lines */
+/*
+ * Background mesh: three 60° families (0° / 60° / 120°) — triangular / honeycomb lattice,
+ * same subtle marine line weight as the old square blueprint grid.
+ */
 .blueprint-lines {
 	position: fixed;
 	inset: 0;
 	z-index: 0;
 	pointer-events: none;
-	background-image:
-		linear-gradient(rgba(0, 43, 69, 0.07) 1px, transparent 1px),
-		linear-gradient(90deg, rgba(0, 43, 69, 0.07) 1px, transparent 1px);
-	background-size: 10vw 10vh;
 	opacity: 1;
+	--hx: rgba(0, 43, 69, 0.078);
+	background-image:
+		repeating-linear-gradient(0deg, var(--hx) 0 0.5px, transparent 0.5px 21px),
+		repeating-linear-gradient(60deg, var(--hx) 0 0.5px, transparent 0.5px 21px),
+		repeating-linear-gradient(120deg, var(--hx) 0 0.5px, transparent 0.5px 21px);
+	/* Period tuned so the three families close on an equilateral-triangle grid (~36px cell edge). */
+	background-size: 36px 62.3538px;
+	background-position:
+		0 0,
+		0 0,
+		18px 31.1769px;
 }
 
 /* Landing Navbar — NEXT cream glass + brand blue / green */
@@ -204,21 +214,6 @@
 	align-items: center;
 }
 
-/* Kicker — own row, uppercase; stepped up so it reads clearly above the display line */
-.res-preface {
-	display: block;
-	width: 100%;
-	text-align: center;
-	font-family: var(--next-font-ui);
-	font-size: clamp(0.82rem, 1.85vw, 1rem);
-	font-weight: 700;
-	letter-spacing: 0.28em;
-	text-transform: uppercase;
-	color: var(--next-brand-green);
-	margin: 0;
-	line-height: 1.45;
-}
-
 /* Display line — NEXT title vibe + clay red */
 .res-break {
 	font-size: clamp(2.75rem, 12vw, 5.5rem);
@@ -287,7 +282,7 @@
 	max-width: 28rem;
 }
 
-/* NEXT .btn — brand blue default, green hover (matches nav Sign in) */
+/* Hero CTA — pill, slightly smaller than full NEXT .btn */
 .hero-cta-btn {
 	display: inline-flex;
 	align-items: center;
@@ -295,12 +290,12 @@
 	text-decoration: none;
 	cursor: pointer;
 	font-family: var(--next-font-ui);
-	font-size: 0.75rem;
+	font-size: 0.68rem;
 	font-weight: 600;
-	letter-spacing: 0.2em;
+	letter-spacing: 0.18em;
 	text-transform: uppercase;
-	padding: 1.25rem 3rem;
-	border-radius: 1.25rem;
+	padding: 0.75rem 2.25rem;
+	border-radius: 9999px;
 	border: 1px solid var(--next-brand-blue);
 	background: var(--next-brand-blue);
 	color: var(--next-bg-cream);
@@ -335,6 +330,158 @@
 	background-image: radial-gradient(rgba(0, 43, 69, 0.14) 1px, transparent 1px);
 	background-size: 20px 20px;
 	opacity: 0.12;
+}
+
+/* /intro — centered headline + name field (NEXT tokens on .manifesto-canvas) */
+.intro-page {
+	display: flex;
+	flex-direction: column;
+	min-height: 100svh;
+	position: relative;
+}
+
+.intro-center {
+	flex: 1;
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	justify-content: center;
+	padding: clamp(2rem, 8vh, 5rem) max(1.5rem, 6vw);
+	position: relative;
+	z-index: 1;
+	width: 100%;
+	max-width: min(100%, 38rem);
+	margin: 0 auto;
+	box-sizing: border-box;
+}
+
+.intro-form {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 1.75rem;
+	width: 100%;
+	margin: 0;
+}
+
+.intro-submit {
+	align-self: center;
+	margin-top: 0.25rem;
+}
+
+.intro-headline-stack {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 0.65rem;
+	text-align: center;
+	margin: 0;
+	width: 100%;
+	font-weight: inherit;
+}
+
+/* Row 1 — display / title (Cormorant) */
+.intro-headline-title {
+	display: block;
+	font-family: var(--next-font-display);
+	font-size: clamp(1.2rem, 3.6vw, 2rem);
+	font-weight: 300;
+	font-style: italic;
+	letter-spacing: -0.02em;
+	line-height: 1.2;
+	color: var(--next-text-main);
+	margin: 0;
+	max-width: 100%;
+	white-space: nowrap;
+}
+
+/* Row 2 — UI body, smaller, normal */
+.intro-headline-sub {
+	display: block;
+	font-family: var(--next-font-ui);
+	font-size: clamp(0.78rem, 1.7vw, 0.95rem);
+	font-weight: 500;
+	font-style: normal;
+	letter-spacing: 0.03em;
+	line-height: 1.35;
+	color: var(--next-text-muted);
+	margin: 0;
+	max-width: 100%;
+	white-space: nowrap;
+}
+
+@media (max-width: 360px) {
+	.intro-headline-title,
+	.intro-headline-sub {
+		white-space: normal;
+		text-wrap: balance;
+	}
+}
+
+.intro-field {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	max-width: 20rem;
+	align-self: center;
+}
+
+.intro-input {
+	width: 100%;
+	box-sizing: border-box;
+	font-family: var(--next-font-ui);
+	font-size: 1rem;
+	font-weight: 500;
+	color: var(--next-text-main);
+	background: rgba(255, 255, 255, 0.65);
+	border: 1px solid rgba(0, 43, 69, 0.18);
+	border-radius: 1rem;
+	padding: 0.85rem 1.1rem;
+	outline: none;
+	transition:
+		border-color 0.2s ease,
+		box-shadow 0.2s ease;
+}
+
+.intro-input::placeholder {
+	color: var(--next-text-muted);
+	opacity: 0.7;
+}
+
+.intro-input:hover {
+	border-color: rgba(0, 43, 69, 0.28);
+}
+
+.intro-input:focus {
+	border-color: var(--next-brand-blue);
+	box-shadow: 0 0 0 3px rgba(0, 43, 69, 0.1);
+}
+
+/* /intro — future diary (hand font, typewriter swap after "Start journey") */
+.intro-diary {
+	display: flex;
+	flex-direction: column;
+	align-items: stretch;
+	gap: 0.85rem;
+	width: 100%;
+	margin: 0;
+	min-height: min(50vh, 22rem);
+}
+
+.intro-diary-line {
+	font-family: var(--font-hand);
+	font-size: clamp(1.05rem, 3vw, 1.35rem);
+	font-weight: 400;
+	line-height: 1.45;
+	color: var(--next-text-main);
+	margin: 0;
+	text-wrap: pretty;
+}
+
+.intro-diary-actions {
+	display: flex;
+	justify-content: center;
+	margin-top: 1.5rem;
 }
 
 /* Mobile Adjustments */

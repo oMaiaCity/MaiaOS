@@ -27,7 +27,6 @@ export function renderLandingPage() {
 				<div class="magazine-story">
 					<p class="hero-pain">
 						<span class="pain-resolution">
-							<span class="res-preface">You can feel it</span>
 							<span class="breaking-free">
 								<span class="res-break">The <strong class="res-break-old">old</strong> world is breaking</span>
 							</span>
@@ -35,8 +34,8 @@ export function renderLandingPage() {
 						</span>
 					</p>
 					<div class="hero-cta">
-						<p class="hero-cta-lead">Ready to build the new world?</p>
-						<a href="/signin" class="hero-cta-btn" data-maia-action="navigateTo" data-path="/signin">Yes</a>
+						<p class="hero-cta-lead">Ready to enter the new world?</p>
+						<a href="/intro" class="hero-cta-btn" data-maia-action="navigateTo" data-path="/intro">Show me</a>
 					</div>
 				</div>
 			</section>

@@ -178,6 +178,11 @@ export function renderSignInPrompt(
 	// Focus name input when in signup mode (double rAF avoids forced reflow: first frame paints, second focuses)
 	if (isSignupMode) {
 		const input = document.getElementById('signin-first-name')
+		const pre = sessionStorage.getItem('maia_intro_first_name')
+		if (pre != null && pre !== '' && input) {
+			input.value = pre
+			sessionStorage.removeItem('maia_intro_first_name')
+		}
 		requestAnimationFrame(() => {
 			requestAnimationFrame(() => input?.focus())
 		})
