@@ -29,10 +29,13 @@ flyctl apps create next-maia-city --org maia-city  # skip if exists
 PEER_SYNC_DB_URL=postgresql://user:pass@ep-xxx.region.aws.neon.tech/neondb?sslmode=require
 ```
 
-Then run the setup script:
+Then run the setup script (dry-run first to review key names without writing):
 ```bash
+./scripts/fly-secrets-from-env.sh --dry-run
 ./scripts/fly-secrets-from-env.sh
 ```
+
+`bun run deploy` (`./scripts/deploy-all.sh`) optionally asks whether to compare/sync secrets from `.env` before deploy; nothing is applied without confirmation.
 
 Or set manually:
 ```bash
