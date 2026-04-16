@@ -15,7 +15,7 @@
  *     - seed: Genesis seed (bootstrap + schemas + vibes). Does not clear storage — wipe Postgres/PGlite/Tigris manually if you need a full reset.
  *     - unset, empty, or none: Normal run — use persisted scaffold; no genesis seed.
  *   SEED_VIBES: Default "all". Which vibes to seed (todos, chat, quickjs, etc). "all" seeds every vibe including quickjs.
- *   PEER_APP_HOST: Allowed CORS origin (e.g. https://next.maia.city). When set, only that origin can call sync/LLM in production. Unset = * (dev).
+ *   PEER_APP_HOST: Allowed CORS origin (e.g. https://next.maia.city). Required when NODE_ENV=production. Unset in dev with PGlite or MAIA_DEV_CORS=1: localhost:4200 only (no wildcard).
  *   MAIA_DEV_CORS=1: With Postgres local dev, enable same multi-origin dev CORS as PGlite (localhost / 127.0.0.1 / ::1 on port 4200).
  *   Read-only storage inspector (when sync is up): same paths; Bearer UCAN cmd `/admin/storage` + Capability grant (or `/admin`). BEGIN READ ONLY for POST /query.
  */
@@ -41,6 +41,7 @@ import {
 	waitForStoreReady,
 } from '@MaiaOS/runtime'
 import { buildSeedConfig, filterVibesForSeeding, getSeedConfig } from '@MaiaOS/seed'
+import { createHash } from 'node:crypto'
 import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -85,14 +86,21 @@ function parsePeerSyncMode() {
 
 const peerSyncMode = parsePeerSyncMode()
 const peerSyncSeed = peerSyncMode === 'seed'
+
+const isProduction = process.env.NODE_ENV === 'production'
+if (isProduction && !process.env.PEER_APP_HOST?.trim()) {
+	throw new Error(
+		`${OPS_PREFIX.sync} PEER_APP_HOST is required in production (allowed browser origin, e.g. https://next.maia.city)`,
+	)
+}
+
 // SEED_VIBES: which vibes to seed on genesis. Default "all" (includes quickjs). Override: "todos,chat" or "todos,chat,quickjs"
 const seedVibesConfig = process.env.SEED_VIBES || 'all'
 
-/** CORS: PEER_APP_HOST = allowed origin (e.g. https://next.maia.city or localhost:4200). When unset, * (dev). */
+/** CORS: PEER_APP_HOST = allowed origin (e.g. https://next.maia.city or localhost:4200). No wildcard. */
 function normalizeCorsOrigin(host) {
-	if (!host) return '*'
-	const trimmed = host.trim()
-	if (!trimmed) return '*'
+	const trimmed = host?.trim() ?? ''
+	if (!trimmed) return ''
 	if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
 		return `http://${trimmed}`
 	}
@@ -109,18 +117,37 @@ const IS_LOCAL_DEV_CORS =
 	usePGlite || process.env.MAIA_DEV_CORS === 'true' || process.env.MAIA_DEV_CORS === '1'
 
 const rawPeerAppHost = process.env.PEER_APP_HOST?.trim() || ''
-const CONFIGURED_CORS_ORIGIN = rawPeerAppHost ? normalizeCorsOrigin(rawPeerAppHost) : null
+const CONFIGURED_CORS_ORIGIN = rawPeerAppHost ? normalizeCorsOrigin(rawPeerAppHost) : ''
 
-/** Per-request CORS: dev reflects Origin from allowlist; prod matches CONFIGURED_CORS_ORIGIN only; unset PEER_APP_HOST → *. */
+/** Per-request CORS: no wildcard. With PEER_APP_HOST set, prod/dev match that origin; without it, localhost:4200 only (PGlite or MAIA_DEV_CORS). */
 function corsHeadersForRequest(req) {
 	const base = {
 		'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
 		'Access-Control-Allow-Headers': 'Content-Type, Authorization',
 	}
-	if (!CONFIGURED_CORS_ORIGIN) {
-		return { ...base, 'Access-Control-Allow-Origin': '*' }
-	}
 	const origin = req?.headers?.get?.('Origin') ?? null
+
+	if (!CONFIGURED_CORS_ORIGIN) {
+		if (!IS_LOCAL_DEV_CORS) {
+			if (origin && DEV_APP_ORIGINS.has(origin)) {
+				return { ...base, 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
+			}
+			if (!origin) {
+				return { ...base, 'Access-Control-Allow-Origin': 'http://localhost:4200', Vary: 'Origin' }
+			}
+			opsSync.warn('CORS: origin not allowed (set PEER_APP_HOST or MAIA_DEV_CORS=1)', origin)
+			return { ...base, Vary: 'Origin' }
+		}
+		if (origin && DEV_APP_ORIGINS.has(origin)) {
+			return { ...base, 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
+		}
+		if (!origin) {
+			return { ...base, 'Access-Control-Allow-Origin': 'http://localhost:4200', Vary: 'Origin' }
+		}
+		opsSync.warn('CORS: origin not allowed (dev, no PEER_APP_HOST)', origin)
+		return { ...base, Vary: 'Origin' }
+	}
+
 	if (IS_LOCAL_DEV_CORS) {
 		if (origin && (DEV_APP_ORIGINS.has(origin) || origin === CONFIGURED_CORS_ORIGIN)) {
 			return { ...base, 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
@@ -162,6 +189,56 @@ function jsonResponse(data, status = 200, headers = {}, req) {
 
 function err(msg, status = 400, extra = {}, req) {
 	return jsonResponse({ ok: false, error: msg, ...extra }, status, {}, req)
+}
+
+/** Default 10 req/min/IP; override per path. OPTIONS exempt. */
+const RL_DEFAULT = 10
+const RL_OVERRIDES = new Map([
+	['/health', Number.POSITIVE_INFINITY],
+	['/syncRegistry', 30],
+	['/api/v0/llm/chat', 60],
+	['/extend-capability', 20],
+])
+
+const RL_BUCKETS = new Map()
+
+function clientIp(req) {
+	return (
+		req.headers.get('fly-client-ip') ??
+		req.headers.get('cf-connecting-ip') ??
+		req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
+		'unknown'
+	)
+}
+
+function takeRateLimit(key, limit, windowMs = 60_000) {
+	const now = Date.now()
+	let b = RL_BUCKETS.get(key)
+	if (!b || now - b.start >= windowMs) {
+		b = { start: now, count: 1 }
+		RL_BUCKETS.set(key, b)
+		return { ok: true, reset: now + windowMs }
+	}
+	if (b.count >= limit) {
+		return { ok: false, reset: b.start + windowMs }
+	}
+	b.count += 1
+	return { ok: true, reset: b.start + windowMs }
+}
+
+function rateLimitFor(req, url) {
+	if (req.method === 'OPTIONS') return { ok: true, reset: 0 }
+	const limit = RL_OVERRIDES.get(url.pathname) ?? RL_DEFAULT
+	if (!Number.isFinite(limit) || limit === Number.POSITIVE_INFINITY) {
+		return { ok: true, reset: 0 }
+	}
+	const ip = clientIp(req)
+	return takeRateLimit(`${url.pathname}:${ip}`, limit)
+}
+
+function auditRegisterDecision(req, data) {
+	const ipHash = createHash('sha256').update(clientIp(req)).digest('hex').slice(0, 12)
+	opsRegister.log('decision', { route: '/register', ip_hash: ipHash, ...data })
 }
 
 const LOAD_TIMEOUT_MS = 25000
@@ -356,34 +433,6 @@ async function ensureCapabilityGrant(worker, { sub, cmd, pol, exp }) {
 	}
 }
 
-/**
- * For every humans registry key that is an account co-id (co_z...), ensure /llm/chat and /sync/write.
- * Repairs pre-grant registries and cases where POST /register did not create grants.
- */
-async function ensureCapabilityGrantsForRegisteredHumanAccountKeys(worker) {
-	const { peer, account } = worker
-	let registryId
-	try {
-		registryId = await getCoIdByPath(peer, getRegistriesId(account), ['humans'], { retries: 2 })
-	} catch (e) {
-		opsRegister.warn(
-			'ensureCapabilityGrantsForRegisteredHumanAccountKeys: no humans registry',
-			e?.message,
-		)
-		return
-	}
-	const raw = await peer.getRawRecord(registryId)
-	if (!raw || typeof raw !== 'object') return
-	const exp = Math.floor(Date.now() / 1000) + 365 * 24 * 3600
-	for (const k of Object.keys(raw)) {
-		if (!k.startsWith('co_z')) continue
-		const v = raw[k]
-		if (typeof v !== 'string' || !v.startsWith('co_z')) continue
-		await ensureCapabilityGrant(worker, { sub: k, cmd: '/llm/chat', pol: [], exp })
-		await ensureCapabilityGrant(worker, { sub: k, cmd: '/sync/write', pol: [], exp })
-	}
-}
-
 /** Ensure AVEN_MAIA_ACCOUNT has /admin capability (grants all endpoints). Seeded at sync startup. */
 async function seedAdminCapabilityForServerAccount(worker) {
 	if (!accountID?.startsWith('co_z')) return
@@ -526,7 +575,7 @@ async function checkSyncWriteCapability(worker, msg) {
 		if (!hasCap) {
 			return {
 				ok: false,
-				error: `Account ${accountId.slice(0, 12)}... lacks /sync/write capability. Register to enable writes.`,
+				error: `Account ${accountId.slice(0, 12)}... lacks /sync/write capability. Ask a guardian to approve in Capabilities (Members).`,
 			}
 		}
 	}
@@ -614,24 +663,18 @@ async function handleRegister(worker, body, req) {
 		const raw = await peer.getRawRecord(registryId)
 
 		if (type === 'human') {
-			// Re-auth: accountId already registered — still ensure grants (migrations / pre-grant accounts)
+			// Re-auth: accountId already registered — no auto-grants (guardian approves in Capabilities)
 			const existingHumanId = raw?.[accountId]
 			if (existingHumanId?.startsWith('co_z')) {
 				const existingUsername = raw
 					? Object.keys(raw).find((k) => raw[k] === existingHumanId && k !== accountId)
 					: null
-				const llmExp = Math.floor(Date.now() / 1000) + 365 * 24 * 3600
-				await ensureCapabilityGrant(worker, {
-					sub: accountId,
-					cmd: '/llm/chat',
-					pol: [],
-					exp: llmExp,
-				})
-				await ensureCapabilityGrant(worker, {
-					sub: accountId,
-					cmd: '/sync/write',
-					pol: [],
-					exp: llmExp,
+				auditRegisterDecision(req, {
+					ok: true,
+					status: 200,
+					type: 'human',
+					accountId_prefix: accountId?.slice(0, 12) ?? null,
+					reauth: true,
 				})
 				return jsonResponse(
 					{
@@ -662,9 +705,8 @@ async function handleRegister(worker, body, req) {
 			const humanGroup = node.createGroup()
 			humanGroup.extend(guardian, 'extend')
 			humanGroup.addMember('everyone', 'reader')
-			const llmExp = Math.floor(Date.now() / 1000) + 365 * 24 * 3600
 			const humanCoMap = humanGroup.createMap(
-				{ account: accountId, profile: profileId, llmExp },
+				{ account: accountId, profile: profileId },
 				{ $factory: humanSchemaCoId },
 			)
 			const memberIdToRemove =
@@ -679,17 +721,12 @@ async function handleRegister(worker, body, req) {
 			const r = await dataEngine.execute({ op: 'update', id: registryId, data: registryData })
 			if (r?.ok === false)
 				return err(r.errors?.map((e) => e.message).join('; ') ?? 'update failed', 500, {}, req)
-			await ensureCapabilityGrant(worker, {
-				sub: accountId,
-				cmd: '/llm/chat',
-				pol: [],
-				exp: llmExp,
-			})
-			await ensureCapabilityGrant(worker, {
-				sub: accountId,
-				cmd: '/sync/write',
-				pol: [],
-				exp: llmExp,
+			auditRegisterDecision(req, {
+				ok: true,
+				status: 200,
+				type: 'human',
+				accountId_prefix: accountId?.slice(0, 12) ?? null,
+				reauth: false,
 			})
 			return jsonResponse(
 				{
@@ -788,6 +825,11 @@ async function handleRegister(worker, body, req) {
 			req,
 		)
 	} catch (e) {
+		auditRegisterDecision(req, {
+			ok: false,
+			status: 500,
+			error: e?.message ?? 'failed to register',
+		})
 		return err(e?.message ?? 'failed to register', 500, {}, req)
 	}
 }
@@ -839,6 +881,14 @@ async function handleExtendCapability(worker, body, req) {
 		})
 		if (r?.ok === false)
 			return err(r.errors?.map((e) => e.message).join('; ') ?? 'update failed', 500, {}, req)
+		const ipHash = createHash('sha256').update(clientIp(req)).digest('hex').slice(0, 12)
+		opsRegister.log('decision', {
+			route: '/extend-capability',
+			ok: true,
+			status: 200,
+			ip_hash: ipHash,
+			capabilityId_prefix: capabilityId?.slice(0, 12) ?? null,
+		})
 		return jsonResponse({ ok: true, newExp }, 200, {}, req)
 	} catch (e) {
 		return err(e?.message ?? 'failed to extend capability', 500, {}, req)
@@ -1050,9 +1100,21 @@ Bun.serve({
 	hostname: '0.0.0.0',
 	port: PORT,
 	async fetch(req, srv) {
-		const url = new URL(req.url)
-
 		if (req.method === 'OPTIONS') return handleCORS(req)
+
+		const url = new URL(req.url)
+		const rl = rateLimitFor(req, url)
+		if (!rl.ok) {
+			const retryAfter = Math.max(1, Math.ceil((rl.reset - Date.now()) / 1000))
+			return new Response(JSON.stringify({ ok: false, error: 'Too many requests' }), {
+				status: 429,
+				headers: {
+					'Content-Type': 'application/json',
+					'Retry-After': String(retryAfter),
+					...corsHeadersForRequest(req),
+				},
+			})
+		}
 
 		if (url.pathname === '/health') {
 			return jsonResponse({ status: 'ok', service: 'sync', ready: !!syncHandler }, 200, {}, req)
@@ -1294,10 +1356,6 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 
 		await seedCapabilitiesForGuardian(agentWorker).catch((e) =>
 			opsSync.warn('seedCapabilitiesForGuardian:', e?.message),
-		)
-
-		await ensureCapabilityGrantsForRegisteredHumanAccountKeys(agentWorker).catch((e) =>
-			opsRegister.warn('ensureCapabilityGrantsForRegisteredHumanAccountKeys:', e?.message),
 		)
 
 		// Self-register Maia aven in registries.avens for profile resolution (idempotent)

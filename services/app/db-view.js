@@ -233,6 +233,113 @@ function buildCapabilitiesGrantRowsHtml(grants, profiles) {
 }
 
 /** Load grants + profiles after first paint (sync continues in background). */
+/** Human registry members + approval (guardian grants /sync/write + /llm/chat). */
+async function hydrateMembersView(maia) {
+	const tbody = document.getElementById('capabilities-members-tbody')
+	const banner = document.getElementById('capabilities-members-banner')
+	if (!tbody) return
+	try {
+		const peer = maia?.dataEngine?.peer
+		if (!peer?.account?.get) {
+			tbody.innerHTML = '<tr class="capabilities-empty"><td colspan="5">Peer not ready</td></tr>'
+			if (banner) banner.remove()
+			return
+		}
+		const account = maia.id?.maiaId
+		if (!account?.id?.startsWith?.('co_z')) {
+			tbody.innerHTML = '<tr class="capabilities-empty"><td colspan="5">Account not ready</td></tr>'
+			if (banner) banner.remove()
+			return
+		}
+		const accountStore = await maia.do({ op: 'read', factory: '@account', key: account.id })
+		const accountData = accountStore.value || accountStore
+		const registriesId = accountData?.registries
+		if (!registriesId?.startsWith('co_z')) {
+			tbody.innerHTML =
+				'<tr class="capabilities-empty"><td colspan="5">No registries linked yet</td></tr>'
+			if (banner) banner.remove()
+			return
+		}
+		const registriesStore = await maia.do({ op: 'read', factory: null, key: registriesId })
+		const registriesData = registriesStore.value || registriesStore
+		const humansId = registriesData?.humans
+		if (!humansId?.startsWith('co_z')) {
+			tbody.innerHTML = '<tr class="capabilities-empty"><td colspan="5">No humans registry</td></tr>'
+			if (banner) banner.remove()
+			return
+		}
+		const raw = await peer.getRawRecord(humansId)
+		if (!raw || typeof raw !== 'object') {
+			tbody.innerHTML =
+				'<tr class="capabilities-empty"><td colspan="5">Humans registry empty</td></tr>'
+			if (banner) banner.remove()
+			return
+		}
+		const accountIdKeys = Object.keys(raw).filter(
+			(k) => k.startsWith('co_z') && typeof raw[k] === 'string' && raw[k].startsWith('co_z'),
+		)
+		const grants = await loadCapabilitiesGrants(maia)
+		const nowSec = Math.floor(Date.now() / 1000)
+		const profiles =
+			accountIdKeys.length > 0 ? await resolveAccountCoIdsToProfiles(maia, accountIdKeys) : new Map()
+
+		const rows = accountIdKeys
+			.map((aid) => {
+				const gWrite = grants.find((g) => g.sub === aid && g.cmd === '/sync/write' && g.exp > nowSec)
+				const gLlm = grants.find((g) => g.sub === aid && g.cmd === '/llm/chat' && g.exp > nowSec)
+				const approved = !!(gWrite && gLlm)
+				const expVals = [gWrite?.exp, gLlm?.exp].filter((x) => typeof x === 'number' && x > nowSec)
+				const earliestExp = expVals.length ? Math.min(...expVals) : null
+				const profile = profiles.get(aid)
+				const displayName = profile?.name ?? truncate(aid, 16)
+				const avatarHtml = getProfileAvatarHtml(profile?.image ?? null, {
+					size: 24,
+					className: 'capabilities-avatar',
+				})
+				const subjectHtml = `<span class="capabilities-subject-wrap">${avatarHtml}<span>${escapeHtml(displayName)}</span></span>`
+				const statusBadge = approved
+					? '<span class="capabilities-member-status capabilities-member-approved">Approved</span>'
+					: '<span class="capabilities-member-status capabilities-member-pending">Pending</span>'
+				const expCell =
+					approved && earliestExp != null ? escapeHtml(formatCapabilitiesExp(earliestExp)) : '—'
+				const actions = approved
+					? `<button type="button" class="capabilities-revoke-btn" data-maia-action="revokeMember" data-account-id="${escapeAttr(aid)}" title="Revoke /sync/write and /llm/chat">Revoke</button>`
+					: `<button type="button" class="capabilities-extend-btn" data-maia-action="approveMember" data-account-id="${escapeAttr(aid)}" title="Grant /sync/write and /llm/chat (30d)">Approve</button>`
+				return {
+					accountId: aid,
+					approved,
+					sortKey: approved ? 1 : 0,
+					earliestExp: earliestExp ?? 0,
+					html: `
+					<tr class="capabilities-row ${approved ? 'capabilities-row-active' : ''}">
+						<td class="capabilities-cell capabilities-subject">${subjectHtml}</td>
+						<td class="capabilities-cell"><code class="capabilities-id" data-maia-action="selectCoValue" data-coid="${escapeAttr(aid)}" title="${escapeHtml(aid)}">${truncate(aid, 12)}</code></td>
+						<td class="capabilities-cell">${statusBadge}</td>
+						<td class="capabilities-cell capabilities-expiry">${expCell}</td>
+						<td class="capabilities-cell capabilities-actions">${actions}</td>
+					</tr>`,
+				}
+			})
+			.sort((a, b) => {
+				if (a.sortKey !== b.sortKey) return a.sortKey - b.sortKey
+				if (a.approved !== b.approved) return 0
+				return (a.earliestExp || 0) - (b.earliestExp || 0)
+			})
+
+		tbody.innerHTML =
+			rows.length > 0
+				? rows.map((r) => r.html).join('')
+				: '<tr class="capabilities-empty"><td colspan="5">No humans in registry</td></tr>'
+		const countEl = document.getElementById('capabilities-members-count')
+		if (countEl) countEl.textContent = `${rows.length} human(s)`
+		if (banner) banner.remove()
+	} catch (e) {
+		debugWarn('app', 'maia-db', 'hydrateMembersView failed', e?.message ?? e)
+		tbody.innerHTML = `<tr class="capabilities-empty"><td colspan="5">${escapeHtml(String(e?.message ?? e ?? 'Error'))}</td></tr>`
+		if (banner) banner.remove()
+	}
+}
+
 async function hydrateCapabilitiesView(maia) {
 	try {
 		const grants = await perfAppMaiaDb.measure('loadCapabilitiesGrants', () =>
@@ -256,6 +363,7 @@ async function hydrateCapabilitiesView(maia) {
 		if (banner) banner.remove()
 		const countEl = document.getElementById('capabilities-grant-count')
 		if (countEl) countEl.textContent = `${grants.length} grant(s)`
+		void hydrateMembersView(maia)
 	} catch (capErr) {
 		debugWarn('app', 'maia-db', 'loadCapabilitiesGrants failed', capErr?.message ?? capErr)
 		const tbody = document.getElementById('capabilities-tbody')
@@ -265,6 +373,7 @@ async function hydrateCapabilitiesView(maia) {
 		}
 		const banner = document.getElementById('capabilities-sync-banner')
 		if (banner) banner.remove()
+		void hydrateMembersView(maia)
 	}
 }
 
@@ -789,6 +898,35 @@ export async function renderApp(
 			}
 			tableContent = `
 			<div class="capabilities-table-wrap">
+				<nav class="capabilities-subtab-nav" role="tablist" aria-label="Capabilities sections">
+					<button type="button" class="capabilities-subtab capabilities-subtab-active" role="tab" aria-selected="true" data-maia-action="capabilitiesSubTab" data-subtab="members">Members</button>
+					<button type="button" class="capabilities-subtab" role="tab" aria-selected="false" data-maia-action="capabilitiesSubTab" data-subtab="grants">Grants</button>
+				</nav>
+				<div class="capabilities-subtab-panel" data-subtab-panel="members" data-capabilities-active="true">
+					<p class="capabilities-sync-banner" id="capabilities-members-banner" role="status">
+						<span class="capabilities-loading-spinner" aria-hidden="true"></span>
+						<span>Loading members…</span>
+					</p>
+					<table class="capabilities-table">
+						<thead>
+							<tr>
+								<th class="capabilities-th">Member</th>
+								<th class="capabilities-th">Account</th>
+								<th class="capabilities-th">Status</th>
+								<th class="capabilities-th">Expires</th>
+								<th class="capabilities-th capabilities-th-actions"></th>
+							</tr>
+						</thead>
+						<tbody id="capabilities-members-tbody">
+							<tr class="capabilities-row capabilities-row-loading">
+								<td colspan="5" class="capabilities-loading-cell">
+									<span class="text-marine-blue-light text-sm">Loading rows…</span>
+								</td>
+							</tr>
+						</tbody>
+					</table>
+				</div>
+				<div class="capabilities-subtab-panel capabilities-subtab-panel-hidden" data-subtab-panel="grants" data-capabilities-active="false">
 				<p class="capabilities-sync-banner" id="capabilities-sync-banner" role="status">
 					<span class="capabilities-loading-spinner" aria-hidden="true"></span>
 					<span>Syncing capability grants…</span>
@@ -812,6 +950,7 @@ export async function renderApp(
 						</tr>
 					</tbody>
 				</table>
+				</div>
 			</div>
 		`
 		} else if (currentContextCoValueId && maia) {
@@ -1664,7 +1803,7 @@ export async function renderApp(
 										<span class="badge badge-type badge-${headerInfo.type} text-[10px] px-2 py-1 font-bold uppercase tracking-widest rounded-lg border border-white/50 shadow-sm">${headerInfo.typeLabel}</span>
 										${
 											data?._capabilitiesView
-												? `<span id="capabilities-grant-count" class="text-sm font-semibold text-marine-blue">${data?._loading ? '…' : `${(data.grants || []).length} grant(s)`}</span>`
+												? `<span class="text-sm font-semibold text-marine-blue"><span id="capabilities-members-count">…</span> · <span id="capabilities-grant-count">${data?._loading ? '…' : `${(data.grants || []).length} grant(s)`}</span></span>`
 												: headerInfo.itemCount != null
 													? `<span class="text-sm font-semibold text-marine-blue">${headerInfo.itemCount} ${headerInfo.itemCount === 1 ? 'Item' : 'Items'}</span>`
 													: ''

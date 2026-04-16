@@ -124,7 +124,7 @@ if ! retry_flyctl_deploy \
   "next-maia-city" \
   "services/app/Dockerfile" \
   "services/app/fly.toml" \
-  "--build-arg VITE_PEER_SYNC_HOST=sync.next.maia.city --build-arg VITE_PEER_APP_HOST=next.maia.city"; then
+  "--build-arg VITE_PEER_SYNC_HOST=sync.next.maia.city"; then
   echo "❌ Failed to deploy app service after retries"
   exit 1
 fi

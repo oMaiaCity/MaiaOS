@@ -8,6 +8,7 @@
 
 // Peer setup, sync state, backend for operations
 export {
+	CAP_GRANT_TTL_SECONDS,
 	ensureProfileForNewAccount,
 	generateRegistryName,
 	getCapabilityGrantIndexColistCoId,
@@ -16,10 +17,12 @@ export {
 	loadCapabilitiesGrants,
 	MaiaDB,
 	ReactiveStore,
+	RUNTIME_REF,
 	removeGroupMember,
 	resolve,
 	resolveAccountCoIdsToProfiles,
 	resolveGroupCoIdsToCapabilityNames,
+	resolveInfraFactoryCoId,
 	SYSTEM_SPARK_REGISTRY_KEY,
 	setupSyncPeers,
 	subscribeSyncState,
