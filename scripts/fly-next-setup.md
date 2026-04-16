@@ -47,7 +47,7 @@ flyctl secrets set \
   --app sync-next-maia-city
 ```
 
-**First deploy (empty Postgres):** set `PEER_SYNC_MODE=seed` for **one** deploy so sync runs genesis seed. When logs show `Genesis seeded`, unset it: `fly secrets unset PEER_SYNC_MODE --app sync-next-maia-city`. If `PEER_SYNC_MODE=seed` stays in Fly secrets, genesis runs on every boot (no automatic storage wipe — wipe DB/blob storage manually when you need a full reset). For a one-off registry patch deploy, use `PEER_SYNC_MODE=migrate` similarly, then unset if you do not want migrate-only on every boot.
+**First deploy (empty Postgres):** set `PEER_SYNC_MODE=seed` for **one** deploy so sync runs genesis seed. When logs show `Genesis seeded`, unset it: `fly secrets unset PEER_SYNC_MODE --app sync-next-maia-city`. If `PEER_SYNC_MODE=seed` stays in Fly secrets, genesis runs on every boot (no automatic storage wipe — wipe DB/blob storage manually when you need a full reset).
 
 **App secrets:** The app (next-maia-city) has no runtime secrets — `VITE_PEER_SYNC_HOST` and `VITE_PEER_APP_HOST` are build args in fly.toml.
 

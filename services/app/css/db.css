@@ -479,6 +479,18 @@
 	margin: 0;
 }
 
+.sidebar-header-sync-server {
+	padding-top: 0.5rem;
+	margin-top: 0.25rem;
+	border-top: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.sync-server-sidebar-error {
+	padding: 0.5rem 0.75rem;
+	font-size: 0.75rem;
+	color: #b91c1c;
+}
+
 .sidebar-content {
 	padding: 0 0.75rem 1rem 0.75rem;
 }
@@ -896,6 +908,8 @@
 	flex: 1;
 	padding: 1rem;
 	min-height: 0;
+	/* Let nested sync-server table shrink to panel width so overflow-x:auto on inner scroll works */
+	min-width: 0;
 }
 
 .sidebar-content-inner,
@@ -905,7 +919,20 @@
 	flex-direction: column;
 	height: 100%;
 	min-height: 0;
+	min-width: 0;
 	overflow: hidden;
+}
+
+/* Maia DB left sidebar: Explorer + ADMIN stack directly (do not let .sidebar-content flex-grow) */
+.db-sidebar .sidebar-content {
+	flex: 0 0 auto;
+	overflow-y: visible;
+	min-height: 0;
+}
+
+.db-sidebar .sidebar-content-inner {
+	overflow-y: auto;
+	overflow-x: hidden;
 }
 
 /* Sidebar Styles */
@@ -1547,6 +1574,162 @@
 	background: rgba(255, 255, 255, 0.5);
 	border-color: rgba(255, 255, 255, 0.4);
 	transform: translateY(-1px);
+}
+
+/* SYNC SERVER — storage inspector table (Maia DB) */
+.sync-server-table-wrap {
+	display: flex;
+	flex-direction: column;
+	width: 100%;
+	max-width: 100%;
+	max-height: min(70vh, 720px);
+	min-height: 0;
+	min-width: 0;
+	overflow: hidden;
+	border-radius: 16px;
+	border: 1px solid rgba(255, 255, 255, 0.35);
+	background: rgba(255, 255, 255, 0.35);
+	backdrop-filter: blur(8px);
+}
+
+.sync-server-sticky-toolbar {
+	flex-shrink: 0;
+	position: sticky;
+	top: 0;
+	z-index: 4;
+}
+
+.sync-server-table-scroll {
+	flex: 1;
+	min-height: 0;
+	/* min-width:0 lets this flex child shrink so overflow-x can scroll instead of clipping */
+	min-width: 0;
+	overflow-x: auto;
+	overflow-y: auto;
+	-webkit-overflow-scrolling: touch;
+}
+
+.sync-server-pagination {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	flex-wrap: wrap;
+	gap: 0.75rem 1.25rem;
+	padding: 0.6rem 0.75rem;
+	border-bottom: 1px solid rgba(148, 163, 184, 0.3);
+	background: rgba(255, 255, 255, 0.92);
+	backdrop-filter: blur(8px);
+}
+
+.sync-server-page-range {
+	font-size: 0.8rem;
+	font-weight: 600;
+	color: var(--color-marine-blue);
+	font-family: var(--font-body, system-ui, sans-serif);
+}
+
+.sync-server-page-btn {
+	font-size: 0.8rem;
+	font-weight: 600;
+	padding: 0.35rem 0.9rem;
+	border-radius: 10px;
+	border: 1px solid rgba(148, 163, 184, 0.45);
+	background: rgba(255, 255, 255, 0.85);
+	color: var(--color-marine-blue);
+	cursor: pointer;
+}
+
+.sync-server-page-btn:hover:not(:disabled) {
+	background: rgba(255, 255, 255, 1);
+	border-color: var(--color-marine-blue-light);
+}
+
+.sync-server-page-btn:disabled {
+	opacity: 0.45;
+	cursor: not-allowed;
+}
+
+.sync-server-table {
+	/* Grow past the panel when columns are wide; parent scrolls on x and y */
+	width: max-content;
+	min-width: 100%;
+	border-collapse: collapse;
+	font-size: 0.8rem;
+	font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.sync-server-table-scroll .sync-server-table thead th {
+	position: sticky;
+	top: 0;
+	z-index: 2;
+}
+
+.sync-server-th-factory,
+.sync-server-td-factory {
+	max-width: 12rem;
+	min-width: 7rem;
+}
+
+.sync-server-th {
+	text-align: left;
+	padding: 0.65rem 0.75rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 0.05em;
+	font-size: 0.6rem;
+	color: var(--color-marine-blue-light);
+	border-bottom: 1px solid rgba(148, 163, 184, 0.35);
+	background: rgba(255, 255, 255, 0.85);
+}
+
+.sync-server-td {
+	padding: 0.45rem 0.65rem;
+	border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+	max-width: 14rem;
+	overflow: hidden;
+	text-overflow: ellipsis;
+	white-space: nowrap;
+	vertical-align: top;
+}
+
+/* Must come after .sync-server-td — same specificity would lose if ordered wrong; use double class */
+.sync-server-th.sync-server-th-header,
+.sync-server-td.sync-server-td-header {
+	max-width: none;
+	min-width: 12rem;
+	overflow: visible;
+	text-overflow: clip;
+	white-space: nowrap;
+	vertical-align: top;
+}
+
+.sync-server-cell-full {
+	display: inline-block;
+	max-width: none;
+	min-width: min-content;
+	white-space: nowrap;
+	vertical-align: top;
+}
+
+.sync-server-null {
+	color: #94a3b8;
+	font-style: italic;
+}
+
+.sync-server-coid-link {
+	background: none;
+	border: none;
+	padding: 0;
+	cursor: pointer;
+	color: #0ea5e9;
+	text-decoration: underline;
+	font: inherit;
+}
+
+.sync-server-table-error {
+	padding: 1rem;
+	color: #b91c1c;
+	font-size: 0.9rem;
 }
 
 .prop-type {

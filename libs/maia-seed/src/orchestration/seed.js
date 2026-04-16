@@ -10,7 +10,7 @@ import {
 	fillRuntimeRefsFromSystemFactories,
 	SPARK_OS_META_FACTORY_CO_ID_KEY,
 } from '@MaiaOS/db'
-import { OPS_PREFIX } from '@MaiaOS/logs'
+import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
 import { maiaFactoryRefToNanoid, maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { removeIdFields } from '@MaiaOS/validation/remove-id-fields'
 import { getVibeKey } from '@MaiaOS/validation/vibe-keys'
@@ -32,6 +32,39 @@ function registerSeedCoId(registry, humanId, coId) {
 		return
 	}
 	registry.set(humanId, coId)
+}
+
+const opsSeed = createOpsLogger('seed')
+
+function collectUniqueGenesisCoIds({
+	metaSchemaCoId,
+	seededSchemas,
+	seededConfigs,
+	seededData,
+	seedRegistry,
+	instanceCoIdMap,
+	factoryCoIdMap,
+	combinedRegistry,
+}) {
+	const s = new Set()
+	const add = (id) => {
+		if (typeof id === 'string' && id.startsWith('co_z')) s.add(id)
+	}
+	for (const id of seedRegistry.values()) add(id)
+	add(metaSchemaCoId)
+	if (Array.isArray(seededSchemas)) {
+		for (const row of seededSchemas) add(row?.coId)
+	}
+	if (Array.isArray(seededConfigs?.configs)) {
+		for (const c of seededConfigs.configs) add(c?.coId)
+	}
+	if (Array.isArray(seededData?.coIds)) {
+		for (const id of seededData.coIds) add(id)
+	}
+	for (const id of instanceCoIdMap.values()) add(id)
+	for (const id of factoryCoIdMap.values()) add(id)
+	for (const id of combinedRegistry.values()) add(id)
+	return s
 }
 
 const REFERENCE_PROPS = [
@@ -586,6 +619,22 @@ export async function seed(
 			}
 		}
 	}
+
+	const uniqueGenesisCoIds = collectUniqueGenesisCoIds({
+		metaSchemaCoId,
+		seededSchemas,
+		seededConfigs,
+		seededData,
+		seedRegistry,
+		instanceCoIdMap,
+		factoryCoIdMap,
+		combinedRegistry,
+	})
+	opsSeed.log(
+		'Genesis seed %d unique CoValues (co_z); registry keys %d. PG coValues row count is total storage (bootstrap, this seed pass, sessions/transactions, runtime) — not identical to this number.',
+		uniqueGenesisCoIds.size,
+		seedRegistry.size,
+	)
 
 	return {
 		metaSchema: metaSchemaCoId,

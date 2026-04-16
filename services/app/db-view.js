@@ -4,6 +4,7 @@
  */
 
 import { applyLogModeFromEnv, createPerfTracer, debugLog, debugWarn } from '@MaiaOS/logs'
+import { getSyncHttpBaseUrl } from '@MaiaOS/peer'
 // Import from kernel bundle - everything bundled (no direct @MaiaOS/db in production)
 import {
 	loadCapabilitiesGrants,
@@ -14,6 +15,89 @@ import { MAIADB_LAYER_STACK_ICON_SVG } from './maia-icons.js'
 
 /** Same channel as `perfAppMaiaDb` in @MaiaOS/logs — created here so bundled app always resolves (named export can be omitted by some bundles). */
 const perfAppMaiaDb = createPerfTracer('app', 'maia-db')
+
+const SYNC_SERVER_PAGE_SIZE = 500
+
+/** PG stores the table as `covalues` (identifier folded); inspector may list either spelling. */
+function isStorageCoValuesTable(name) {
+	return String(name || '').toLowerCase() === 'covalues'
+}
+
+const _isLocalAppHost =
+	typeof window !== 'undefined' &&
+	(window.location.hostname === 'localhost' ||
+		window.location.hostname === '127.0.0.1' ||
+		window.location.hostname === '[::1]')
+const _isDevEnv = import.meta.env?.DEV || _isLocalAppHost
+function _syncDomainForPeer() {
+	if (_isDevEnv) return null
+	return import.meta.env?.VITE_PEER_SYNC_HOST || null
+}
+function getSyncStorageApiBase() {
+	return getSyncHttpBaseUrl({
+		dev: _isDevEnv,
+		syncDomain: _syncDomainForPeer(),
+		vitePeerSyncHost: import.meta.env?.VITE_PEER_SYNC_HOST,
+		windowLocation: typeof window !== 'undefined' ? window.location : null,
+	})
+}
+
+let syncServerTablesCache = null
+let syncServerTablesError = null
+async function loadSyncServerTablesOnce() {
+	if (syncServerTablesCache !== null || syncServerTablesError !== null) return
+	const base = getSyncStorageApiBase()
+	if (!base) {
+		syncServerTablesError = 'Sync URL not configured'
+		return
+	}
+	try {
+		const r = await fetch(`${base}/api/v0/admin/storage/tables`)
+		if (!r.ok) throw new Error(`${r.status} ${r.statusText}`)
+		const j = await r.json()
+		syncServerTablesCache = j.tables || []
+		syncServerTablesError = null
+	} catch (e) {
+		syncServerTablesError = e?.message || String(e)
+	}
+}
+
+/**
+ * @param {unknown} val
+ * @param {{ noTruncate?: boolean }} [opts] - full string for wide columns (e.g. header JSON); enables horizontal scroll
+ */
+function formatSyncServerCell(val, opts = {}) {
+	const noTruncate = opts.noTruncate === true
+	if (val === null || val === undefined) {
+		return '<span class="sync-server-null">NULL</span>'
+	}
+	if (typeof val === 'string') {
+		if (val.startsWith('co_z')) {
+			return `<button type="button" class="sync-server-coid-link" data-maia-action="selectCoValue" data-coid="${escapeAttr(val)}">${escapeHtml(val)}</button>`
+		}
+		if (noTruncate) {
+			return `<span class="sync-server-cell-str sync-server-cell-full">${escapeHtml(val)}</span>`
+		}
+		const full = escapeAttr(val)
+		const short = val.length > 120 ? `${escapeHtml(val.slice(0, 120))}…` : escapeHtml(val)
+		return `<span class="sync-server-cell-str" title="${full}">${short}</span>`
+	}
+	if (typeof val === 'object') {
+		let s
+		try {
+			s = JSON.stringify(val)
+		} catch {
+			s = String(val)
+		}
+		if (noTruncate) {
+			return `<span class="sync-server-cell-json sync-server-cell-full">${escapeHtml(s)}</span>`
+		}
+		const full = escapeAttr(s)
+		const short = s.length > 120 ? `${escapeHtml(s.slice(0, 120))}…` : escapeHtml(s)
+		return `<span class="sync-server-cell-json" title="${full}">${short}</span>`
+	}
+	return escapeHtml(String(val))
+}
 
 /** Resolve schema definition from DB (dynamic - factory ref must be co_z) */
 async function getFactoryFromDb(maia, factoryRef) {
@@ -249,6 +333,8 @@ export async function renderApp(
 	loadSpark,
 	navigateToScreen,
 	capabilityGrantsIndexColistCoId,
+	syncServerSelectedTable = null,
+	syncServerTableOffset = 0,
 ) {
 	// Re-apply LOG_MODE every render: in-memory perf/debug gates reset on HMR; ensures perf.all works after clicks.
 	if (typeof window !== 'undefined' && window.__MAIA_DEV_ENV__?.LOG_MODE !== undefined) {
@@ -318,7 +404,7 @@ export async function renderApp(
 
 	// Default: render MaiaDB (currentScreen === 'maia-db')
 	perfAppMaiaDb.start(
-		`renderApp view=${currentView} ctx=${String(currentContextCoValueId ?? '').slice(0, 32)}`,
+		`renderApp view=${currentView} syncTable=${syncServerSelectedTable ?? ''} ctx=${String(currentContextCoValueId ?? '').slice(0, 32)}`,
 	)
 	try {
 		// CoJSON internal keys: sealer/signer, KEY_..._FOR_SEALER_..., and agent IDs as map keys - shown in metadata sidebar
@@ -496,18 +582,149 @@ export async function renderApp(
 		let data, viewTitle, _viewSubtitle
 		let tableContent = ''
 		let headerInfo = null
+		const syncServerPanel = Boolean(syncServerSelectedTable)
 
 		// Get account and node for navigation
 		const account = maia.id.maiaId
 		const _node = maia.id.node
 
-		// Default to showing account if no context is set
-		if (!currentContextCoValueId && account?.id) {
+		await loadSyncServerTablesOnce()
+
+		// Default to showing account if no context is set (not when SYNC SERVER table is selected)
+		if (!syncServerPanel && !currentContextCoValueId && account?.id) {
 			currentContextCoValueId = account.id
 		}
 
-		// Capabilities view — shell first; grants + profiles load after paint (hydrateCapabilitiesView)
-		if (
+		// SYNC SERVER — raw PG table (storage inspector API)
+		if (syncServerSelectedTable) {
+			viewTitle = syncServerSelectedTable
+			headerInfo = null
+			const base = getSyncStorageApiBase()
+			if (!base) {
+				tableContent = `<div class="sync-server-table-error">Sync URL not configured.</div>`
+			} else {
+				const quoted = `"${String(syncServerSelectedTable).replace(/"/g, '""')}"`
+				const offset = Math.max(0, Number(syncServerTableOffset) || 0)
+				const coValuesTable = isStorageCoValuesTable(syncServerSelectedTable)
+				const sqlRows = coValuesTable
+					? `SELECT (COALESCE(NULLIF(TRIM(header::json->'meta'->>'$factory'), ''), CASE WHEN header::json->'ruleset'->>'type' = 'group' THEN 'group' END)) AS factory, * FROM ${quoted} LIMIT ${SYNC_SERVER_PAGE_SIZE} OFFSET ${offset}`
+					: `SELECT * FROM ${quoted} LIMIT ${SYNC_SERVER_PAGE_SIZE} OFFSET ${offset}`
+				const sqlCount = `SELECT COUNT(*)::bigint AS cnt FROM ${quoted}`
+				try {
+					const [cRes, qRes, nRes] = await Promise.all([
+						fetch(
+							`${base}/api/v0/admin/storage/tables/${encodeURIComponent(syncServerSelectedTable)}/columns`,
+						),
+						fetch(`${base}/api/v0/admin/storage/query`, {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({ sql: sqlRows }),
+						}),
+						fetch(`${base}/api/v0/admin/storage/query`, {
+							method: 'POST',
+							headers: { 'Content-Type': 'application/json' },
+							body: JSON.stringify({ sql: sqlCount }),
+						}),
+					])
+					const cJson = await cRes.json().catch(() => ({}))
+					const qJson = await qRes.json().catch(() => ({}))
+					const nJson = await nRes.json().catch(() => ({}))
+					if (!cRes.ok) {
+						tableContent = `<div class="sync-server-table-error">${escapeHtml(cJson.error || `columns ${cRes.status}`)}</div>`
+					} else if (!qRes.ok || qJson.ok === false) {
+						tableContent = `<div class="sync-server-table-error">${escapeHtml(qJson.error || `query ${qRes.status}`)}</div>`
+					} else if (!nRes.ok || nJson.ok === false) {
+						tableContent = `<div class="sync-server-table-error">${escapeHtml(nJson.error || `count ${nRes.status}`)}</div>`
+					} else {
+						const columns = cJson.columns || []
+						const rows = qJson.rows || []
+						const countRow = nJson.rows?.[0]
+						let totalRows = null
+						if (countRow && typeof countRow === 'object') {
+							const raw = countRow.cnt ?? countRow.CNT ?? Object.values(countRow)[0]
+							const n = Number(raw)
+							if (Number.isFinite(n)) totalRows = n
+						}
+						const describeNames = columns.map((c) => c.name).filter(Boolean)
+						const colNames =
+							qJson.fields?.length > 0
+								? qJson.fields
+								: coValuesTable
+									? ['factory', ...describeNames]
+									: describeNames
+						const headerRow = colNames
+							.map((name) => {
+								const col = columns.find(
+									(c) => c.name === name || c.name?.toLowerCase() === String(name).toLowerCase(),
+								)
+								const tip = col?.dataType ? escapeAttr(String(col.dataType)) : ''
+								const label = name
+								const isHeaderCol = String(name).toLowerCase() === 'header'
+								const thClass = [
+									'sync-server-th',
+									name === 'factory' ? 'sync-server-th-factory' : '',
+									isHeaderCol ? 'sync-server-th-header' : '',
+								]
+									.filter(Boolean)
+									.join(' ')
+								return `<th class="${thClass}" title="${tip}">${escapeHtml(label)}</th>`
+							})
+							.join('')
+						const bodyRows = rows
+							.map((row) => {
+								const tds = colNames
+									.map((name) => {
+										const v = row[name] ?? row[name.toLowerCase()] ?? row[name.toUpperCase()]
+										const isHeaderCol = String(name).toLowerCase() === 'header'
+										const tdClass = [
+											'sync-server-td',
+											name === 'factory' ? 'sync-server-td-factory' : '',
+											isHeaderCol ? 'sync-server-td-header' : '',
+										]
+											.filter(Boolean)
+											.join(' ')
+										return `<td class="${tdClass}">${formatSyncServerCell(v, { noTruncate: isHeaderCol })}</td>`
+									})
+									.join('')
+								return `<tr class="sync-server-tr">${tds}</tr>`
+							})
+							.join('')
+						const rowStart = rows.length === 0 ? 0 : offset + 1
+						const rowEnd = offset + rows.length
+						const rangeLabel =
+							rows.length === 0
+								? 'No rows'
+								: totalRows != null
+									? `Rows ${rowStart}–${rowEnd} of ${totalRows}`
+									: `Rows ${rowStart}–${rowEnd}${rows.length === SYNC_SERVER_PAGE_SIZE ? ' (more may exist)' : ''}`
+						const prevDisabled = offset === 0
+						const nextDisabled =
+							totalRows != null
+								? offset + rows.length >= totalRows || rows.length === 0
+								: rows.length < SYNC_SERVER_PAGE_SIZE
+						tableContent = `
+			<div class="sync-server-table-wrap">
+				<div class="sync-server-sticky-toolbar">
+					<div class="sync-server-pagination" role="navigation" aria-label="Table pages">
+						<button type="button" class="sync-server-page-btn" data-maia-action="syncServerPagePrev" ${prevDisabled ? 'disabled' : ''}>Previous</button>
+						<span class="sync-server-page-range">${escapeHtml(rangeLabel)}</span>
+						<button type="button" class="sync-server-page-btn" data-maia-action="syncServerPageNext" ${nextDisabled ? 'disabled' : ''}>Next</button>
+					</div>
+				</div>
+				<div class="sync-server-table-scroll">
+					<table class="sync-server-table" aria-label="Storage table ${escapeAttr(syncServerSelectedTable)}">
+						<thead><tr>${headerRow}</tr></thead>
+						<tbody>${bodyRows || `<tr><td class="sync-server-td" colspan="${colNames.length}">No rows</td></tr>`}</tbody>
+					</table>
+				</div>
+			</div>
+		`
+					}
+				} catch (err) {
+					tableContent = `<div class="sync-server-table-error">${escapeHtml(err?.message || String(err))}</div>`
+				}
+			}
+		} else if (
 			capabilityGrantsIndexColistCoId &&
 			currentContextCoValueId === capabilityGrantsIndexColistCoId &&
 			maia
@@ -637,6 +854,8 @@ export async function renderApp(
 									loadSpark,
 									navigateToScreen,
 									capabilityGrantsIndexColistCoId,
+									syncServerSelectedTable,
+									syncServerTableOffset,
 								)
 							}, 0)
 						}
@@ -687,6 +906,8 @@ export async function renderApp(
 										loadSpark,
 										navigateToScreen,
 										capabilityGrantsIndexColistCoId,
+										syncServerSelectedTable,
+										syncServerTableOffset,
 									)
 								}, 0)
 							}
@@ -727,7 +948,8 @@ export async function renderApp(
 
 		// Build table content based on view (tableContent/headerInfo already set by capabilities branch if applicable)
 		// DB Viewer only shows DB content (no agent rendering here)
-		if (currentContextCoValueId && data) {
+		// SYNC SERVER already set tableContent — do not fall through to the empty-state else (would wipe the grid).
+		if (!syncServerPanel && currentContextCoValueId && data) {
 			// Capabilities view: tableContent already set above
 			if (!data._capabilitiesView) {
 				// Explorer-style: if context CoValue is loaded, show its properties in main container
@@ -928,7 +1150,7 @@ export async function renderApp(
 						'<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">No properties available</div>'
 				}
 			}
-		} else {
+		} else if (!syncServerPanel) {
 			// Default view - show list of CoValues or error
 			tableContent =
 				'<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">Select a CoValue to explore its content</div>'
@@ -1242,9 +1464,11 @@ export async function renderApp(
 		// Build sidebar navigation items (Account only - vibes via spark.os.vibes)
 		const sidebarItems = navigationItems
 			.map((item) => {
-				// Account navigation - select account CoValue
+				// Explorer — Account / Capabilities
 				const isActive =
-					currentContextCoValueId === item.id || (currentView === 'account' && !currentContextCoValueId)
+					!syncServerPanel &&
+					(currentContextCoValueId === item.id ||
+						(currentView === 'account' && !currentContextCoValueId))
 
 				return `
 			<div class="sidebar-item ${isActive ? 'active' : ''}" data-maia-action="selectCoValue" data-coid="${escapeAttr(item.id)}" role="button" tabindex="0">
@@ -1256,6 +1480,23 @@ export async function renderApp(
 		`
 			})
 			.join('')
+
+		const syncTableList = syncServerTablesCache || []
+		const syncServerSidebarHtml = syncTableList
+			.map((t) => {
+				const active = syncServerSelectedTable === t
+				return `
+			<div class="sidebar-item ${active ? 'active' : ''}" data-maia-action="selectSyncServerTable" data-table="${escapeAttr(t)}" role="button" tabindex="0">
+				<div class="sidebar-label">
+					<span class="sidebar-name">${escapeHtml(t)}</span>
+				</div>
+			</div>
+		`
+			})
+			.join('')
+		const syncServerSidebarFooter = syncServerTablesError
+			? `<div class="sync-server-sidebar-error" role="status">${escapeHtml(syncServerTablesError)}</div>`
+			: ''
 
 		perfAppMaiaDb.step('data + sidebars ready → paint', {
 			context: currentContextCoValueId,
@@ -1334,10 +1575,17 @@ export async function renderApp(
 							</button>
 						</div>
 						<div class="sidebar-header">
-							<h3>Navigation</h3>
+							<h3>Explorer</h3>
 						</div>
 						<div class="sidebar-content">
 							${sidebarItems}
+						</div>
+						<div class="sidebar-header sidebar-header-sync-server">
+							<h3>SYNC SERVER</h3>
+						</div>
+						<div class="sidebar-content">
+							${syncServerSidebarHtml}
+							${syncServerSidebarFooter}
 						</div>
 					</div>
 				</aside>
@@ -1391,7 +1639,7 @@ export async function renderApp(
 			</div>
 
 			<!-- MaiaDB navigation latches and back notch -->
-			<button type="button" class="db-latch db-latch-left" id="db-latch-left" data-maia-action="toggleDBLeftSidebar" aria-label="Toggle navigation sidebar">
+			<button type="button" class="db-latch db-latch-left" id="db-latch-left" data-maia-action="toggleDBLeftSidebar" aria-label="Toggle Explorer sidebar">
 				<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
 			</button>
 			

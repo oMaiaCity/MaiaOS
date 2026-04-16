@@ -11,14 +11,13 @@
  *     - pglite: PEER_DB_PATH (default ./pg-lite.db)
  *     - postgres: PEER_SYNC_DB_URL (required)
  *   AVEN_MAIA_GUARDIAN: Human account co-id (co_z...). If set, add as admin of °maia spark guardian; also seeds /sync/write so that account can sync without POST /register.
- *   PEER_SYNC_MODE: seed | migrate | unset/empty/none — controls one-shot sync startup behavior.
+ *   PEER_SYNC_MODE: seed | unset/empty/none — controls one-shot sync startup behavior.
  *     - seed: Genesis seed (bootstrap + schemas + vibes). Does not clear storage — wipe Postgres/PGlite/Tigris manually if you need a full reset.
- *     - migrate: Diff MAIA_SPARK_REGISTRY vs live CoValues and apply CRDT updates (after resolveSystemFactories). No seed.
- *     - unset, empty, or none: Normal run — use persisted scaffold; no genesis seed; no one-shot migrate.
+ *     - unset, empty, or none: Normal run — use persisted scaffold; no genesis seed.
  *   SEED_VIBES: Default "all". Which vibes to seed (todos, chat, quickjs, etc). "all" seeds every vibe including quickjs.
- *   Dev: when NODE_ENV is not production, sync watches `.maia` under maia-universe and live-migrates after registry regen. Production (Fly) sets NODE_ENV=production, so watch is off.
  *   PEER_APP_HOST: Allowed CORS origin (e.g. https://next.maia.city). When set, only that origin can call sync/LLM in production. Unset = * (dev).
  *   MAIA_DEV_CORS=1: With Postgres local dev, enable same multi-origin dev CORS as PGlite (localhost / 127.0.0.1 / ::1 on port 4200).
+ *   Read-only storage inspector (default when sync is up): GET /api/v0/admin/storage/tables, GET .../tables/:name/columns, POST .../query (BEGIN READ ONLY).
  */
 
 import {
@@ -29,7 +28,6 @@ import {
 } from '@MaiaOS/db'
 import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
 import { agentIDToDidKey, verifyInvocationToken } from '@MaiaOS/maia-ucan'
-import { buildSeedConfig, filterVibesForSeeding, getSeedConfig } from '@MaiaOS/migrate'
 import {
 	createWebSocketPeer,
 	DataEngine,
@@ -42,6 +40,7 @@ import {
 	SYSTEM_SPARK_REGISTRY_KEY,
 	waitForStoreReady,
 } from '@MaiaOS/runtime'
+import { buildSeedConfig, filterVibesForSeeding, getSeedConfig } from '@MaiaOS/seed'
 import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -79,16 +78,13 @@ function parsePeerSyncMode() {
 	const raw = (process.env.PEER_SYNC_MODE ?? '').trim().toLowerCase()
 	if (raw === '' || raw === 'none') return 'none'
 	if (raw === 'seed') return 'seed'
-	if (raw === 'migrate') return 'migrate'
 	throw new Error(
-		`${OPS_PREFIX.sync} PEER_SYNC_MODE must be seed, migrate, none, or unset. Got: ${process.env.PEER_SYNC_MODE ?? ''}`,
+		`${OPS_PREFIX.sync} PEER_SYNC_MODE must be seed, none, or unset. Got: ${process.env.PEER_SYNC_MODE ?? ''}`,
 	)
 }
 
 const peerSyncMode = parsePeerSyncMode()
 const peerSyncSeed = peerSyncMode === 'seed'
-const peerSyncMigrate = peerSyncMode === 'migrate'
-const maiaDevMigrateWatch = process.env.NODE_ENV !== 'production'
 // SEED_VIBES: which vibes to seed on genesis. Default "all" (includes quickjs). Override: "todos,chat" or "todos,chat,quickjs"
 const seedVibesConfig = process.env.SEED_VIBES || 'all'
 
@@ -148,6 +144,8 @@ function corsHeadersForRequest(req) {
 let localNode = null
 let agentWorker = null
 let syncHandler = null
+/** Read-only SQL inspector (PGlite / Postgres); set after LocalNode + MaiaDB boot. Always mounted when storage is ready. */
+let storageInspector = null
 /** Sessions we allowed through when unresolved (first message). Next message we'll check. */
 const sessionsAllowedUnresolved = new Set()
 
@@ -176,6 +174,60 @@ function withTimeout(promise, ms, label) {
 			setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms),
 		),
 	])
+}
+
+const STORAGE_INSPECTOR_BASE = '/api/v0/admin/storage'
+
+/**
+ * @param {Request} req
+ * @param {URL} url
+ * @returns {Promise<Response | null>}
+ */
+async function handleStorageInspectorHttp(req, url) {
+	if (!storageInspector) {
+		return jsonResponse({ error: 'Initializing', status: 503 }, 503, {}, req)
+	}
+	const pathname = url.pathname
+
+	if (pathname === `${STORAGE_INSPECTOR_BASE}/tables` && req.method === 'GET') {
+		const res = await storageInspector.listTables()
+		return jsonResponse({ ok: true, ...res }, 200, {}, req)
+	}
+
+	const prefix = `${STORAGE_INSPECTOR_BASE}/tables/`
+	const suffix = '/columns'
+	if (pathname.startsWith(prefix) && pathname.endsWith(suffix) && req.method === 'GET') {
+		const enc = pathname.slice(prefix.length, -suffix.length)
+		const name = decodeURIComponent(enc)
+		try {
+			const res = await storageInspector.describeTable(name)
+			return jsonResponse({ ok: true, ...res }, 200, {}, req)
+		} catch (e) {
+			return jsonResponse({ ok: false, error: e?.message || String(e) }, 400, {}, req)
+		}
+	}
+
+	if (pathname === `${STORAGE_INSPECTOR_BASE}/query` && req.method === 'POST') {
+		let body
+		try {
+			body = await req.json()
+		} catch {
+			return jsonResponse({ ok: false, error: 'Invalid JSON body' }, 400, {}, req)
+		}
+		const sql = body?.sql
+		const params = body?.params
+		if (typeof sql !== 'string') {
+			return jsonResponse({ ok: false, error: 'sql string required' }, 400, {}, req)
+		}
+		try {
+			const res = await storageInspector.query(sql, Array.isArray(params) ? params : [])
+			return jsonResponse({ ok: true, ...res }, 200, {}, req)
+		} catch (e) {
+			return jsonResponse({ ok: false, error: e?.message || String(e) }, 400, {}, req)
+		}
+	}
+
+	return null
 }
 
 function getRegistriesId(account) {
@@ -998,6 +1050,11 @@ Bun.serve({
 			return handleLLMChat(req, agentWorker)
 		}
 
+		if (url.pathname.startsWith(STORAGE_INSPECTOR_BASE)) {
+			const res = await handleStorageInspectorHttp(req, url)
+			if (res) return res
+		}
+
 		return new Response('Not Found', { status: 404, headers: corsHeadersForRequest(req) })
 	},
 	websocket: {
@@ -1101,6 +1158,7 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 				},
 			},
 		)
+		storageInspector = localNode.storage.dbClient.inspector()
 		const evaluator = new MaiaScriptEvaluator()
 		const dataEngine = new DataEngine(peer, { evaluator })
 		peer.dbEngine = dataEngine
@@ -1167,26 +1225,6 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 
 		await peer.resolveSystemSparkCoId()
 		await dataEngine.resolveSystemFactories()
-
-		if (peerSyncMigrate) {
-			const { migrate } = await import('@MaiaOS/migrate/orchestration/migrate')
-			const result = await migrate(peer, dataEngine)
-			for (const err of result.errors ?? []) {
-				opsSync.warn(err)
-			}
-			opsSync.log(
-				`PEER_SYNC_MODE=migrate: ${result.updated} CoValues updated, ${result.skipped} unchanged.`,
-			)
-		}
-
-		if (maiaDevMigrateWatch) {
-			const repoRoot = pathResolve(_syncDir, '..', '..')
-			const { startMaiaMigrateWatch } = await import('@MaiaOS/migrate/dev/watch-migrate')
-			startMaiaMigrateWatch(peer, dataEngine, { rootDir: repoRoot })
-			opsSync.log(
-				'Dev migrate watch: .maia changes regenerate registry and apply migrate (NODE_ENV not production).',
-			)
-		}
 
 		// Seed /admin for AVEN_MAIA_ACCOUNT (grants all endpoints). Must run after scaffold exists (genesis or prior run).
 		await seedAdminCapabilityForServerAccount(agentWorker).catch((e) =>
