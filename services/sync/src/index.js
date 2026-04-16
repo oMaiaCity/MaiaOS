@@ -17,7 +17,7 @@
  *   SEED_VIBES: Default "all". Which vibes to seed (todos, chat, quickjs, etc). "all" seeds every vibe including quickjs.
  *   PEER_APP_HOST: Allowed CORS origin (e.g. https://next.maia.city). When set, only that origin can call sync/LLM in production. Unset = * (dev).
  *   MAIA_DEV_CORS=1: With Postgres local dev, enable same multi-origin dev CORS as PGlite (localhost / 127.0.0.1 / ::1 on port 4200).
- *   Read-only storage inspector (default when sync is up): GET /api/v0/admin/storage/tables, GET .../tables/:name/columns, POST .../query (BEGIN READ ONLY).
+ *   Read-only storage inspector (when sync is up): same paths; Bearer UCAN cmd `/admin/storage` + Capability grant (or `/admin`). BEGIN READ ONLY for POST /query.
  */
 
 import {
@@ -181,12 +181,56 @@ const STORAGE_INSPECTOR_BASE = '/api/v0/admin/storage'
 /**
  * @param {Request} req
  * @param {URL} url
+ * @param {object} worker - agent worker (peer + account for capability checks)
  * @returns {Promise<Response | null>}
  */
-async function handleStorageInspectorHttp(req, url) {
+async function handleStorageInspectorHttp(req, url, worker) {
+	if (!worker) return jsonResponse({ error: 'Initializing', status: 503 }, 503, {}, req)
 	if (!storageInspector) {
 		return jsonResponse({ error: 'Initializing', status: 503 }, 503, {}, req)
 	}
+
+	const auth = req.headers.get('Authorization')
+	const token = auth?.startsWith('Bearer ') ? auth.slice(7).trim() : null
+	if (!token) {
+		return jsonResponse({ error: 'Unauthorized', message: 'Bearer token required' }, 401, {}, req)
+	}
+	let payload
+	try {
+		payload = verifyInvocationToken(token, {
+			now: Math.floor(Date.now() / 1000),
+			allowedCmd: '/admin/storage',
+		})
+	} catch {
+		return jsonResponse({ error: 'Unauthorized', message: 'Invalid or expired token' }, 401, {}, req)
+	}
+	const accountId = payload?.accountId
+	if (!accountId?.startsWith('co_z')) {
+		return jsonResponse({ error: 'Forbidden', message: 'Invalid token claims' }, 403, {}, req)
+	}
+	const bindingOk = await verifyAccountBinding(worker.peer, accountId, payload.iss)
+	if (!bindingOk) {
+		return jsonResponse(
+			{ error: 'Forbidden', message: 'Account binding verification failed' },
+			403,
+			{},
+			req,
+		)
+	}
+	const hasCap = await hasValidCapability(worker, accountId, '/admin/storage')
+	if (!hasCap) {
+		return jsonResponse(
+			{
+				error: 'Forbidden',
+				message:
+					'No valid /admin/storage capability. Ask a guardian to grant you access in Capabilities.',
+			},
+			403,
+			{},
+			req,
+		)
+	}
+
 	const pathname = url.pathname
 
 	if (pathname === `${STORAGE_INSPECTOR_BASE}/tables` && req.method === 'GET') {
@@ -355,7 +399,7 @@ async function seedCapabilitiesForGuardian(worker) {
 	if (!avenMaiaGuardian?.startsWith('co_z')) return
 	if (avenMaiaGuardian === accountID) return
 	const exp = Math.floor(Date.now() / 1000) + 10 * 365 * 24 * 3600
-	for (const cmd of ['/sync/write', '/llm/chat']) {
+	for (const cmd of ['/sync/write', '/llm/chat', '/admin/storage']) {
 		await ensureCapabilityGrant(worker, { sub: avenMaiaGuardian, cmd, pol: [], exp })
 	}
 }
@@ -1051,7 +1095,7 @@ Bun.serve({
 		}
 
 		if (url.pathname.startsWith(STORAGE_INSPECTOR_BASE)) {
-			const res = await handleStorageInspectorHttp(req, url)
+			const res = await handleStorageInspectorHttp(req, url, agentWorker)
 			if (res) return res
 		}
 
@@ -1168,7 +1212,18 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 		// loadAccount defers migration; seed needs guardian in os.groups
 		await ensureProfileForNewAccount(result.account, localNode)
 
-		if (peerSyncSeed) {
+		const accountHasRegistries =
+			typeof result.account?.get === 'function' && result.account.get('registries')?.startsWith('co_z')
+		/** First-time / empty local PGlite: account loads without scaffold; MaiaDB still needs registries + spark OS. */
+		const mustSeedMissingScaffold = !accountHasRegistries
+		const runGenesis = peerSyncSeed || mustSeedMissingScaffold
+
+		if (runGenesis) {
+			if (mustSeedMissingScaffold && !peerSyncSeed) {
+				opsSync.log(
+					'[sync] account.registries missing — running genesis scaffold (required). Persisted after this run.',
+				)
+			}
 			const { ensureFactoriesLoaded, getAllFactories } = await import(
 				'@MaiaOS/validation/factory-registry'
 			)
@@ -1216,9 +1271,15 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 				const msg = seedResult.errors.map((e) => e?.message ?? e).join('; ')
 				throw new Error(`${OPS_PREFIX.sync} Genesis seed failed: ${msg}`)
 			}
-			opsSync.log(
-				`Genesis seeded: ${vibeRegistries.length} vibe(s) (schemas + scaffold). Unset PEER_SYNC_MODE (or set none) after first seed so later restarts use the persisted scaffold.`,
-			)
+			if (peerSyncSeed) {
+				opsSync.log(
+					`Genesis seeded: ${vibeRegistries.length} vibe(s) (schemas + scaffold). Unset PEER_SYNC_MODE (or set none) after first seed so later restarts use the persisted scaffold.`,
+				)
+			} else if (mustSeedMissingScaffold) {
+				opsSync.log(
+					`[sync] Scaffold seeded: ${vibeRegistries.length} vibe(s). Next boots use persisted account.registries (PEER_SYNC_MODE unset).`,
+				)
+			}
 		} else {
 			opsSync.log('PEER_SYNC_MODE not seed — using persisted scaffold (skip genesis seed).')
 		}
