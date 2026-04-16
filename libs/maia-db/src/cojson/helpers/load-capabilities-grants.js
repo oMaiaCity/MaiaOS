@@ -1,5 +1,8 @@
+import { createLogger } from '@MaiaOS/logs'
 import { collectCapabilityGrantCoIdsFromColistContent } from './capability-grant-co-ids.js'
 import { getCapabilityGrantIndexColistCoId } from './capability-grants-resolve.js'
+
+const log = createLogger('maia-db')
 
 export { getCapabilityGrantIndexColistCoId } from './capability-grants-resolve.js'
 
@@ -19,8 +22,7 @@ export async function loadCapabilitiesGrants(maia) {
 		const tCap0 = devCap ? performance.now() : 0
 		const capLog = (label) => {
 			if (devCap) {
-				// biome-ignore lint/suspicious/noConsole: localhost dev timing for slow capabilities path
-				console.info(`[MaiaDB capabilities path] ${label} +${(performance.now() - tCap0).toFixed(0)}ms`)
+				log.info(`[MaiaDB capabilities path] ${label} +${(performance.now() - tCap0).toFixed(0)}ms`)
 			}
 		}
 

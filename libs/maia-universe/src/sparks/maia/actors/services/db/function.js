@@ -3,11 +3,14 @@
  * Unified API for all database operations.
  * Returns OperationResult; maia.do() throws on write failure, we catch and convert.
  */
+import { createLogger } from '@MaiaOS/logs'
 import {
 	createErrorEntry,
 	createErrorResult,
 	createSuccessResult,
 } from '@MaiaOS/universe/helpers/operation-result.js'
+
+const log = createLogger('db-actor')
 
 export default {
 	async execute(actor, payload) {
@@ -18,7 +21,7 @@ export default {
 		const os = actor.actorOps?.os
 		if (!os?.do) {
 			if (typeof window !== 'undefined')
-				console.warn('[@db] os not available, actorOps:', !!actor.actorOps)
+				log.warn('[@db] os not available, actorOps:', !!actor.actorOps)
 			return createErrorResult([createErrorEntry('structural', '[@db] Database engine not available')])
 		}
 
@@ -32,7 +35,7 @@ export default {
 				createErrorEntry('structural', err.message || 'Database operation failed'),
 			]
 			const msg = errors.map((e) => e.message).join('; ')
-			console.error('[@db] Operation failed:', payload?.op, msg || err?.message, { id: payload?.id })
+			log.error('[@db] Operation failed:', payload?.op, msg || err?.message, { id: payload?.id })
 			return createErrorResult(errors)
 		}
 	},

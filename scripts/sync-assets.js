@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 /**
  * Asset sync for °maia/brand: libs/maia-brand/src/assets → target dir.
  *
@@ -21,6 +22,10 @@ import {
 } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { bootstrapNodeLogging, createLogger } from '../libs/maia-logs/src/index.js'
+
+bootstrapNodeLogging()
+const assetsLog = createLogger('sync-assets')
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const monorepoRoot = resolve(__dirname, '..')
@@ -38,8 +43,8 @@ if (
 		outDirNormalized.includes('/services/maia-city/')) &&
 	!outDirNormalized.includes('/services/app/')
 ) {
-	console.error('[sync-assets] REFUSING legacy path:', outDir)
-	console.error('[sync-assets] Expected: services/app/brand or --out <path>')
+	assetsLog.error('[sync-assets] REFUSING legacy path:', outDir)
+	assetsLog.error('[sync-assets] Expected: services/app/brand or --out <path>')
 	process.exit(1)
 }
 const serviceStaticDirs = [outDir]
@@ -203,7 +208,7 @@ syncAllAssets()
 // Watch mode (enabled by default)
 if (!isNoWatch) {
 	watchAssets()
-	console.log('[assets] Watching assets')
+	assetsLog.log('[assets] Watching assets')
 } else {
 	process.exit(0)
 }

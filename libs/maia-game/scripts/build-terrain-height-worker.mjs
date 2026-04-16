@@ -3,9 +3,13 @@
  * Bundle terrain-height-worker.mjs into a single ESM file (imports terrain.js graph).
  * Served at /game-workers/terrain-height-worker.mjs — raw source cannot be used (relative imports 404).
  */
+import { bootstrapNodeLogging, createLogger } from '@MaiaOS/logs'
 import { mkdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+bootstrapNodeLogging()
+const buildWorkerLog = createLogger('game-build')
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const gameRoot = join(__dirname, '..')
@@ -25,6 +29,6 @@ const result = await Bun.build({
 })
 
 if (!result.success) {
-	console.error(result.logs)
+	buildWorkerLog.error(result.logs)
 	process.exit(1)
 }

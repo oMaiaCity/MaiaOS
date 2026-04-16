@@ -9,6 +9,10 @@ import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, extname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { serve } from 'bun'
+import { bootstrapNodeLogging, createLogger } from '../../libs/maia-logs/src/index.js'
+
+bootstrapNodeLogging()
+const serverLog = createLogger('app-server')
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -107,5 +111,5 @@ serve({
 	},
 })
 
-console.log(`🚀 Maia City server running on http://localhost:${PORT}`)
-console.log(`📁 Serving from: ${DIST_DIR}`)
+serverLog.log(`🚀 Maia City server running on http://localhost:${PORT}`)
+serverLog.log(`📁 Serving from: ${DIST_DIR}`)

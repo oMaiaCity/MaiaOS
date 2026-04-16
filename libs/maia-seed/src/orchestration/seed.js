@@ -90,7 +90,7 @@ async function collectSparkOsRegistry(peer, osId, metaCoId) {
 }
 
 export async function simpleAccountSeed(_account, _node) {
-	console.log('✅ Simple account seed: (registries via link)')
+	opsSeed.log('✅ Simple account seed: (registries via link)')
 }
 
 export async function seed(

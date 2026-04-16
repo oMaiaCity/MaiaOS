@@ -5,11 +5,14 @@
  * Validates updates BEFORE applying them to CRDT (before content.set() calls).
  */
 
+import { createLogger } from '@MaiaOS/logs'
 import { loadFactoryAndValidate } from '@MaiaOS/validation/validation.helper'
 import { invalidateResolvedDataForMutatedCoValue } from '../cache/coCache.js'
 import { resolve } from '../factory/resolver.js'
 import * as collectionHelpers from './collection-helpers.js'
 import * as dataExtraction from './data-extraction.js'
+
+const log = createLogger('maia-db')
 
 /**
  * Update existing record - directly updates CoValue using CoJSON raw methods
@@ -43,7 +46,7 @@ export async function update(peer, _schema, id, data) {
 		factoryCoId = await resolve(peer, { fromCoValue: id }, { returnType: 'coId' })
 	} catch (error) {
 		// Schema extraction failed - skip validation (co-values without schemas, like context co-values)
-		console.log(`[Update] Skipping validation for ${id}: ${error.message}`)
+		log.log(`[Update] Skipping validation for ${id}: ${error.message}`)
 	}
 
 	// Skip validation if:

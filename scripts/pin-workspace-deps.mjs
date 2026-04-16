@@ -3,9 +3,13 @@
  * Pin all non-workspace dependency versions in workspace package.json files
  * to exact semver from installed node_modules (Bun .bun layout supported).
  */
+import { bootstrapNodeLogging, createLogger } from '../libs/maia-logs/src/index.js'
 import { readFileSync, writeFileSync, existsSync } from 'node:fs'
 import { execSync } from 'node:child_process'
 import { join } from 'node:path'
+
+bootstrapNodeLogging()
+const pinLog = createLogger('pin-deps')
 
 const repoRoot = join(import.meta.dirname, '..')
 
@@ -61,7 +65,7 @@ function pinSection(deps) {
 		if (v.startsWith('workspace:')) continue
 		const exact = readInstalledVersion(name)
 		if (!exact) {
-			console.warn(`Could not resolve version for ${name}`)
+			pinLog.warn(`Could not resolve version for ${name}`)
 			continue
 		}
 		if (v !== exact) {
@@ -80,8 +84,8 @@ for (const path of globs) {
 	changed ||= pinSection(json.devDependencies)
 	if (changed) {
 		writeFileSync(path, `${JSON.stringify(json, null, '\t')}\n`)
-		console.log('Pinned', path.replace(repoRoot + '/', ''))
+		pinLog.log('Pinned', path.replace(repoRoot + '/', ''))
 	}
 }
 
-console.log('Done.')
+pinLog.log('Done.')

@@ -5,6 +5,10 @@
  * Uses factory-index-manager for indexing logic (single source of truth).
  */
 
+import { createLogger } from '@MaiaOS/logs'
+
+const log = createLogger('maia-db')
+
 /**
  * Get schema index colist ID using schema co-id as key (all schemas indexed in spark.os.indexes)
  * Lazily creates the index colist if it doesn't exist and the schema has indexing: true
@@ -18,7 +22,7 @@ export async function getFactoryIndexColistId(peer, schema) {
 	}
 	const factoryCoId = schema
 	if (typeof process !== 'undefined' && process.env?.DEBUG)
-		console.log('[DEBUG getFactoryIndexColistId] schema=', schema, 'factoryCoId=', factoryCoId)
+		log.debug('[DEBUG getFactoryIndexColistId] schema=', schema, 'factoryCoId=', factoryCoId)
 	if (!factoryCoId) return null
 
 	const { ensureIndexesCoMap, ensureFactoryIndexColist } = await import(
@@ -26,13 +30,13 @@ export async function getFactoryIndexColistId(peer, schema) {
 	)
 	const indexesCoMap = await ensureIndexesCoMap(peer)
 	if (typeof process !== 'undefined' && process.env?.DEBUG)
-		console.log('[DEBUG getFactoryIndexColistId] indexesCoMap=', !!indexesCoMap)
+		log.debug('[DEBUG getFactoryIndexColistId] indexesCoMap=', !!indexesCoMap)
 	if (!indexesCoMap) return null
 
 	const indexColistId = indexesCoMap.get(factoryCoId)
 	if (indexColistId && typeof indexColistId === 'string' && indexColistId.startsWith('co_')) {
 		if (typeof process !== 'undefined' && process.env?.DEBUG)
-			console.log('[DEBUG getFactoryIndexColistId] found indexColistId=', indexColistId)
+			log.debug('[DEBUG getFactoryIndexColistId] found indexColistId=', indexColistId)
 		return indexColistId
 	}
 
@@ -41,13 +45,13 @@ export async function getFactoryIndexColistId(peer, schema) {
 		const idAfter = indexesCoMap.get(factoryCoId)
 		if (idAfter && typeof idAfter === 'string' && idAfter.startsWith('co_z')) {
 			if (typeof process !== 'undefined' && process.env?.DEBUG)
-				console.log('[DEBUG getFactoryIndexColistId] ensured indexColistId=', idAfter)
+				log.debug('[DEBUG getFactoryIndexColistId] ensured indexColistId=', idAfter)
 			return idAfter
 		}
 		return null
 	} catch (e) {
 		if (typeof process !== 'undefined' && process.env?.DEBUG)
-			console.error('[DEBUG getFactoryIndexColistId] error=', e)
+			log.error('[DEBUG getFactoryIndexColistId] error=', e)
 		return null
 	}
 }
@@ -86,8 +90,7 @@ async function acquireCoValueCore(peer, coId, deadlineAt) {
 
 	if (peer.node?.loadCoValueCore) {
 		await peer.node.loadCoValueCore(coId).catch((_err) => {
-			if (typeof process !== 'undefined' && process.env?.DEBUG)
-				console.log('[CoValue load error]', _err)
+			if (typeof process !== 'undefined' && process.env?.DEBUG) log.debug('[CoValue load error]', _err)
 		})
 	}
 
@@ -130,8 +133,7 @@ export async function ensureCoValueLoaded(peer, coId, options = {}) {
 
 	if (peer.node?.loadCoValueCore) {
 		peer.node.loadCoValueCore(coId).catch((_err) => {
-			if (typeof process !== 'undefined' && process.env?.DEBUG)
-				console.log('[CoValue load error]', _err)
+			if (typeof process !== 'undefined' && process.env?.DEBUG) log.debug('[CoValue load error]', _err)
 		})
 	}
 
@@ -141,7 +143,7 @@ export async function ensureCoValueLoaded(peer, coId, options = {}) {
 
 	const remaining = deadline - Date.now()
 	if (remaining <= 0) {
-		if (typeof process !== 'undefined' && process.env?.DEBUG) console.log('[CoValue timeout]', coId)
+		if (typeof process !== 'undefined' && process.env?.DEBUG) log.debug('[CoValue timeout]', coId)
 		return coValueCore.isAvailable() ? coValueCore : null
 	}
 
@@ -149,7 +151,7 @@ export async function ensureCoValueLoaded(peer, coId, options = {}) {
 		let unsubscribe
 		const timer = setTimeout(() => {
 			unsubscribe?.()
-			if (typeof process !== 'undefined' && process.env?.DEBUG) console.log('[CoValue timeout]', coId)
+			if (typeof process !== 'undefined' && process.env?.DEBUG) log.debug('[CoValue timeout]', coId)
 			reject(new Error(`Timeout waiting for CoValue ${coId} to load after ${timeoutMs}ms`))
 		}, remaining)
 

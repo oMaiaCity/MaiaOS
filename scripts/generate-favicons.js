@@ -17,6 +17,10 @@ import {
 	IconTransformationType,
 } from '@realfavicongenerator/generate-favicon'
 import { getNodeImageAdapter, loadAndConvertToSvg } from '@realfavicongenerator/image-adapter-node'
+import { bootstrapNodeLogging, createLogger } from '../libs/maia-logs/src/index.js'
+
+bootstrapNodeLogging()
+const faviconsLog = createLogger('favicons')
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = resolve(__dirname, '..')
@@ -116,7 +120,7 @@ async function generateFavicons() {
 			// Non-fatal
 		}
 
-		console.log('[favicons] ✓ All favicons generated successfully!')
+		faviconsLog.log('[favicons] ✓ All favicons generated successfully!')
 	} catch (_error) {
 		// Don't throw - make it non-fatal so dev server can continue
 	} finally {

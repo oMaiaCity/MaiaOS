@@ -11,7 +11,7 @@
  * - Trust CRDT sync - CoJSON handles reactivity automatically
  */
 
-import { traceInboxFilter } from '@MaiaOS/logs'
+import { createLogger, traceInboxFilter } from '@MaiaOS/logs'
 import { resolve } from '../factory/resolver.js'
 import {
 	getRuntimeRef,
@@ -21,6 +21,8 @@ import {
 import { extractCoValueData } from './data-extraction.js'
 import { read as universalRead } from './read.js'
 import { waitForStoreReady } from './read-operations.js'
+
+const log = createLogger('maia-db')
 
 /**
  * Multi-client: only the runtime whose session appended the stream item should execute
@@ -239,7 +241,7 @@ export async function processInbox(peer, actorId, inboxCoId) {
 		hasStatusUpdate &&
 		(typeof import.meta !== 'undefined' ? import.meta?.env?.DEV : process.env?.MAIA_DEBUG)
 	) {
-		console.log('[processInbox] STATUS_UPDATE messages', {
+		log.debug('[processInbox] STATUS_UPDATE messages', {
 			actorId,
 			currentSessionID,
 			count: unprocessedMessages.filter((m) => m.type === 'STATUS_UPDATE').length,

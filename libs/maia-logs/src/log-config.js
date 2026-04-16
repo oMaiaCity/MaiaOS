@@ -1,5 +1,5 @@
 /**
- * In-memory gates for PERF / TRACE / DEBUG — set only by `applyLogModeFromEnv` (`LOG_MODE` from `/__maia_env`).
+ * In-memory gates for PERF / TRACE / DEBUG — set only by `applyLogModeFromEnv` (`LOG_MODE` from `/__maia_env` or `import.meta.env`).
  * No localStorage, no URL params (avoids stale browser flags).
  */
 

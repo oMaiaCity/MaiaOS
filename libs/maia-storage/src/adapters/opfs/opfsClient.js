@@ -7,9 +7,11 @@
  * preventing race conditions that corrupt session rowIDs and cause signature mismatches.
  */
 
-import { isStorageOpfsPerfEnabled, logStorageOpfsStep } from '@MaiaOS/logs'
+import { createLogger, isStorageOpfsPerfEnabled, logStorageOpfsStep } from '@MaiaOS/logs'
 import { getOrCreateDir, listDir, readJSON, sanitizeForFilename, writeJSON } from './opfsHelpers.js'
 import { OPFSTransaction } from './opfsTransaction.js'
+
+const opfsLog = createLogger('storage-opfs')
 
 const META_PATH = '_meta.json'
 const STORAGE_LOCK = 'maia-opfs-storage'
@@ -57,11 +59,7 @@ export class OPFSClient {
 			)
 		}
 		if (stored < FORMAT_VERSION) {
-			if (typeof console?.warn === 'function') {
-				console.warn(
-					`[OPFS] Stored format ${stored} < ${FORMAT_VERSION}, proceeding with existing data`,
-				)
-			}
+			opfsLog.warn(`[OPFS] Stored format ${stored} < ${FORMAT_VERSION}, proceeding with existing data`)
 		}
 		this._metaCache = { ...DEFAULT_META, ...m }
 		return this._metaCache
@@ -218,7 +216,7 @@ export class OPFSClient {
 	async eraseCoValueButKeepTombstone(coValueID) {
 		const coValue = await this.getCoValue(coValueID)
 		if (!coValue) {
-			console.warn(`[OPFS] CoValue ${coValueID} not found, skipping deletion`)
+			opfsLog.warn(`[OPFS] CoValue ${coValueID} not found, skipping deletion`)
 			return
 		}
 		await this.transaction((tx) => tx.deleteCoValueContent(coValue))

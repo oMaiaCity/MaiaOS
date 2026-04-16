@@ -9,7 +9,11 @@ import { existsSync, readdirSync, readFileSync, statSync } from 'node:fs'
  */
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { bootstrapNodeLogging, createLogger } from '../../libs/maia-logs/src/index.js'
 import index from './index.html'
+
+bootstrapNodeLogging()
+const devLog = createLogger('dev-server')
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const serviceDir = __dirname
@@ -36,13 +40,13 @@ const terrainWorkerBundled = join(
 	'libs/maia-game/dist/game-workers/terrain-height-worker.js',
 )
 if (!existsSync(terrainWorkerBundled)) {
-	console.log('[dev-server] Building terrain-height-worker bundle…')
+	devLog.log('[dev-server] Building terrain-height-worker bundle…')
 	const r = spawnSync('bun', ['run', 'build:terrain-worker'], {
 		cwd: join(repoRoot, 'libs/maia-game'),
 		stdio: 'inherit',
 	})
 	if (r.status !== 0) {
-		console.error(
+		devLog.error(
 			'[dev-server] terrain-height-worker build failed — terrain may fall back to main thread',
 		)
 	}
@@ -64,10 +68,9 @@ const MIME = {
 	'.glb': 'model/gltf-binary',
 }
 
-console.log(
-	'[dev-server] process.env.LOG_MODE =',
-	process.env.LOG_MODE ||
-		'(empty — perf logs need this; try: LOG_MODE=perf.all bun dev:app or add to .env)',
+devLog.log(
+	'[dev-server] LOG_MODE =',
+	process.env.LOG_MODE || '(empty — no perf/debug/trace; try LOG_MODE=perf.all or add to .env)',
 )
 
 Bun.serve({
@@ -125,6 +128,9 @@ Bun.serve({
 			const body = {
 				DEV: true,
 				LOG_MODE: process.env.LOG_MODE ?? '',
+				LOG_LEVEL: process.env.LOG_LEVEL ?? '',
+				LOG_MODE_PROD: process.env.LOG_MODE_PROD ?? '',
+				NODE_ENV: process.env.NODE_ENV ?? 'development',
 				VITE_AVEN_TEST_MODE: process.env.VITE_AVEN_TEST_MODE || '',
 				...(testMode
 					? {
@@ -207,4 +213,4 @@ Bun.serve({
 	},
 })
 
-console.log('Local: http://localhost:4200 (brand at /brand; sync at :4201)')
+devLog.log('Local: http://localhost:4200 (brand at /brand; sync at :4201)')

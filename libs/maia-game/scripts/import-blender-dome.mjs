@@ -24,6 +24,7 @@ if (typeof globalThis.FileReader === 'undefined') {
 	}
 }
 
+import { bootstrapNodeLogging, createLogger } from '@MaiaOS/logs'
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -31,6 +32,9 @@ import * as THREE from 'three'
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
 import { MTLLoader } from 'three/addons/loaders/MTLLoader.js'
 import { OBJLoader } from 'three/addons/loaders/OBJLoader.js'
+
+bootstrapNodeLogging()
+const domeScriptLog = createLogger('game-scripts')
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const assetDir = join(__dirname, '../src/assets/blender-dome')
@@ -94,4 +98,4 @@ const exporter = new GLTFExporter()
 const arrayBuffer = await exporter.parseAsync(scene, { binary: true })
 writeFileSync(outPath, Buffer.from(arrayBuffer))
 
-console.log(`Wrote ${outPath} (${(arrayBuffer.byteLength / 1024).toFixed(1)} KB)`)
+domeScriptLog.log(`Wrote ${outPath} (${(arrayBuffer.byteLength / 1024).toFixed(1)} KB)`)

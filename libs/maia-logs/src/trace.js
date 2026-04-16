@@ -2,6 +2,7 @@
  * TRACE — gated by `LOG_MODE` (`trace.all` / `trace.scope`); in-memory only.
  */
 
+import { emitLog } from './core.js'
 import { isTraceEnabledFromConfig } from './log-config.js'
 
 /** @deprecated Gating uses `LOG_MODE` only; kept for doc / search. */
@@ -34,30 +35,47 @@ function _detectLoop(from, to, type) {
 			now - d.ts < LOOP_WINDOW_MS,
 	).length
 	if (count >= LOOP_THRESHOLD) {
-		console.warn('[Trace] possible message loop', { type, from: _short(from), to: _short(to), count })
+		emitLog(
+			'warn',
+			'',
+			['[Trace] possible message loop', { type, from: _short(from), to: _short(to), count }],
+			{ applyLevelGate: false },
+		)
 	}
 }
 
 export function traceView(eventName, actorId) {
 	if (!isTraceEnabled()) return
-	console.log('[Trace:View]', { event: eventName, actor: _short(actorId) })
+	emitLog('log', '', ['[Trace:View]', { event: eventName, actor: _short(actorId) }], {
+		applyLevelGate: false,
+	})
 }
 
 export function traceInbox(senderId, targetId, type) {
 	if (!isTraceEnabled()) return
 	_detectLoop(senderId, targetId, type)
-	console.log('[Trace:Inbox]', { type, from: _short(senderId), to: _short(targetId) })
+	emitLog('log', '', ['[Trace:Inbox]', { type, from: _short(senderId), to: _short(targetId) }], {
+		applyLevelGate: false,
+	})
 }
 
 export function traceProcess(processId, event, source, guardPassed) {
 	if (!isTraceEnabled()) return
 	const actorId = processId?.replace(/_process$/, '')
-	console.log('[Trace:Process]', {
-		event,
-		actor: _short(actorId),
-		source: _short(source),
-		guardPassed: guardPassed ?? '-',
-	})
+	emitLog(
+		'log',
+		'',
+		[
+			'[Trace:Process]',
+			{
+				event,
+				actor: _short(actorId),
+				source: _short(source),
+				guardPassed: guardPassed ?? '-',
+			},
+		],
+		{ applyLevelGate: false },
+	)
 }
 
 export function traceContextOnError(actorId, context) {
@@ -69,7 +87,9 @@ export function traceContextOnError(actorId, context) {
 		for (const k of ['phase', 'hasError', 'error', 'inputValue', 'isLoading', 'pendingInputText']) {
 			if (k in val) snapshot[k] = val[k]
 		}
-		console.log('[Trace:Context] ERROR state', { actor: _short(actorId), ...snapshot })
+		emitLog('log', '', ['[Trace:Context] ERROR state', { actor: _short(actorId), ...snapshot }], {
+			applyLevelGate: false,
+		})
 	} catch {}
 }
 
@@ -81,15 +101,23 @@ export function traceInboxFilter(detail) {
 	if (!isTraceEnabled()) return
 	const { decision, messageType, messageCoId, messageSessionId, currentSessionId, actorId, reason } =
 		detail
-	console.log('[Trace:Inbox:Filter]', {
-		decision,
-		messageType,
-		messageCoId: _short(messageCoId),
-		messageSessionId: messageSessionId != null ? _short(String(messageSessionId)) : null,
-		currentSessionId: currentSessionId != null ? _short(String(currentSessionId)) : null,
-		actorId: actorId != null ? _short(actorId) : null,
-		reason: reason ?? '-',
-	})
+	emitLog(
+		'log',
+		'',
+		[
+			'[Trace:Inbox:Filter]',
+			{
+				decision,
+				messageType,
+				messageCoId: _short(messageCoId),
+				messageSessionId: messageSessionId != null ? _short(String(messageSessionId)) : null,
+				currentSessionId: currentSessionId != null ? _short(String(currentSessionId)) : null,
+				actorId: actorId != null ? _short(actorId) : null,
+				reason: reason ?? '-',
+			},
+		],
+		{ applyLevelGate: false },
+	)
 }
 
 /**
@@ -98,12 +126,20 @@ export function traceInboxFilter(detail) {
 export function traceProcessOp(detail) {
 	if (!isTraceEnabled()) return
 	const { opKey, factory, hasIdempotencyKey, processId } = detail
-	console.log('[Trace:Process:Op]', {
-		opKey,
-		factory: typeof factory === 'string' ? factory.slice(0, 40) : factory,
-		hasIdempotencyKey: hasIdempotencyKey ?? false,
-		processId: processId != null ? String(processId).slice(0, 36) : '-',
-	})
+	emitLog(
+		'log',
+		'',
+		[
+			'[Trace:Process:Op]',
+			{
+				opKey,
+				factory: typeof factory === 'string' ? factory.slice(0, 40) : factory,
+				hasIdempotencyKey: hasIdempotencyKey ?? false,
+				processId: processId != null ? String(processId).slice(0, 36) : '-',
+			},
+		],
+		{ applyLevelGate: false },
+	)
 }
 
 /**
@@ -112,11 +148,19 @@ export function traceProcessOp(detail) {
 export function traceDataCreate(detail) {
 	if (!isTraceEnabled()) return
 	const { factory, idempotencyKey, deduplicated } = detail
-	console.log('[Trace:Data:Create]', {
-		factory: typeof factory === 'string' ? factory.slice(0, 40) : factory,
-		idempotencyKey: idempotencyKey != null ? _short(String(idempotencyKey)) : null,
-		deduplicated: deduplicated ?? false,
-	})
+	emitLog(
+		'log',
+		'',
+		[
+			'[Trace:Data:Create]',
+			{
+				factory: typeof factory === 'string' ? factory.slice(0, 40) : factory,
+				idempotencyKey: idempotencyKey != null ? _short(String(idempotencyKey)) : null,
+				deduplicated: deduplicated ?? false,
+			},
+		],
+		{ applyLevelGate: false },
+	)
 }
 
 /**
@@ -125,12 +169,20 @@ export function traceDataCreate(detail) {
 export function traceRuntimeProcess(detail) {
 	if (!isTraceEnabled()) return
 	const { inboxCoId, actorId, messageCount, runtimeType } = detail
-	console.log('[Trace:Runtime:Process]', {
-		inboxCoId: _short(inboxCoId),
-		actorId: _short(actorId),
-		messageCount,
-		runtimeType: runtimeType ?? '-',
-	})
+	emitLog(
+		'log',
+		'',
+		[
+			'[Trace:Runtime:Process]',
+			{
+				inboxCoId: _short(inboxCoId),
+				actorId: _short(actorId),
+				messageCount,
+				runtimeType: runtimeType ?? '-',
+			},
+		],
+		{ applyLevelGate: false },
+	)
 }
 
 /**
@@ -139,7 +191,9 @@ export function traceRuntimeProcess(detail) {
 export function traceViewDeliver(detail) {
 	if (!isTraceEnabled()) return
 	const { actorId, eventName } = detail
-	console.log('[Trace:View:Deliver]', { event: eventName, actor: _short(actorId) })
+	emitLog('log', '', ['[Trace:View:Deliver]', { event: eventName, actor: _short(actorId) }], {
+		applyLevelGate: false,
+	})
 }
 
 /**
@@ -148,11 +202,19 @@ export function traceViewDeliver(detail) {
 export function traceActorProcessEvents(detail) {
 	if (!isTraceEnabled()) return
 	const { actorId, messageType, source, messageCoId, outcome } = detail
-	console.log('[Trace:Actor:ProcessEvents]', {
-		actor: _short(actorId),
-		messageType,
-		source: source != null ? _short(source) : null,
-		messageCoId: _short(messageCoId),
-		outcome,
-	})
+	emitLog(
+		'log',
+		'',
+		[
+			'[Trace:Actor:ProcessEvents]',
+			{
+				actor: _short(actorId),
+				messageType,
+				source: source != null ? _short(source) : null,
+				messageCoId: _short(messageCoId),
+				outcome,
+			},
+		],
+		{ applyLevelGate: false },
+	)
 }

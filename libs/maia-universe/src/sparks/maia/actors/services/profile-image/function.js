@@ -5,6 +5,7 @@
  */
 
 import { resolveAccountCoIdsToProfiles } from '@MaiaOS/db'
+import { createLogger } from '@MaiaOS/logs'
 import {
 	createErrorEntry,
 	createErrorResult,
@@ -15,17 +16,19 @@ const DEBUG =
 	typeof window !== 'undefined' &&
 	(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
 
+const log = createLogger('profile-image')
+
 export default {
 	async execute(actor, payload) {
 		if (DEBUG)
-			console.log('[ProfileImagePipe] function.execute: start', {
+			log.debug('[ProfileImagePipe] function.execute: start', {
 				hasAvatar: !!payload?.avatar,
 				mimeType: payload?.mimeType,
 			})
 		const { avatar: avatarCoId } = payload
 
 		if (!avatarCoId || typeof avatarCoId !== 'string' || !avatarCoId.startsWith('co_z')) {
-			if (DEBUG) console.warn('[ProfileImagePipe] function.execute: missing avatar')
+			if (DEBUG) log.warn('[ProfileImagePipe] function.execute: missing avatar')
 			return createErrorResult([
 				createErrorEntry(
 					'structural',
@@ -56,13 +59,13 @@ export default {
 		try {
 			await os.do({ op: 'update', id: profileCoId, data: { avatar: avatarCoId } })
 			if (DEBUG)
-				console.log('[ProfileImagePipe] function.execute: SUCCESS', {
+				log.debug('[ProfileImagePipe] function.execute: SUCCESS', {
 					avatar: `${avatarCoId?.slice(0, 20)}...`,
 				})
 			return createSuccessResult({ avatar: avatarCoId })
 		} catch (err) {
-			if (DEBUG) console.error('[ProfileImagePipe] function.execute: FAILED', err?.message ?? err)
-			console.error('[uploadProfileImage] Failed:', err?.message ?? err)
+			if (DEBUG) log.error('[ProfileImagePipe] function.execute: FAILED', err?.message ?? err)
+			log.error('[uploadProfileImage] Failed:', err?.message ?? err)
 			return createErrorResult([
 				createErrorEntry('structural', err?.message || 'Failed to update profile avatar'),
 			])

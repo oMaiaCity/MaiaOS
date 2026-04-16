@@ -1,4 +1,5 @@
 #!/usr/bin/env bun
+import { bootstrapNodeLogging, createLogger } from '@MaiaOS/logs'
 import { cpSync, existsSync, mkdirSync } from 'node:fs'
 /**
  * Bun-native build for maia-client, sync-server, avens.
@@ -7,6 +8,9 @@ import { cpSync, existsSync, mkdirSync } from 'node:fs'
 import { join, normalize } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { resolvePgliteWasmPath } from './resolve-pglite-wasm.js'
+
+bootstrapNodeLogging()
+const distrosLog = createLogger('distros')
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const repoRoot = join(__dirname, '../../..')
@@ -79,13 +83,13 @@ async function build(entry, outfile, target, opts = {}) {
 	})
 
 	if (!result.success) {
-		console.error('Build failed:', result.logs)
+		distrosLog.error('Build failed:', result.logs)
 		process.exit(1)
 	}
 
 	const entryOutput = result.outputs.find((o) => o.kind === 'entry-point')
 	if (!entryOutput) {
-		console.error('No entry output')
+		distrosLog.error('No entry output')
 		process.exit(1)
 	}
 
@@ -94,7 +98,7 @@ async function build(entry, outfile, target, opts = {}) {
 		await Bun.write(outPath, Bun.file(entryOutput.path))
 		Bun.spawnSync(['rm', '-f', entryOutput.path])
 	}
-	console.log(`Built ${outfile} (${target})`)
+	distrosLog.log(`Built ${outfile} (${target})`)
 }
 
 async function main() {
@@ -107,13 +111,13 @@ async function main() {
 	const wasmSource = resolvePgliteWasmPath(repoRoot)
 	const wasmDest = join(outputDir, 'pglite.wasm')
 	if (!existsSync(wasmSource)) {
-		console.error('[maia-distros] Missing pglite.wasm at', wasmSource)
+		distrosLog.error('[maia-distros] Missing pglite.wasm at', wasmSource)
 		process.exit(1)
 	}
 	cpSync(wasmSource, wasmDest)
-	console.log('Vendored pglite.wasm')
+	distrosLog.log('Vendored pglite.wasm')
 
-	console.log('Distros build complete')
+	distrosLog.log('Distros build complete')
 }
 
 main()

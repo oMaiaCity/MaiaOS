@@ -1,3 +1,17 @@
+export {
+	emitLog,
+	getLoggingLevel,
+	getLoggingMode,
+	getRecentLogs,
+	getTransport,
+	normalizeLevel,
+	redact,
+	resolveLevel,
+	resolveMode,
+	setLoggingRuntime,
+	setTransport,
+	shouldLog,
+} from './core.js'
 export { debugLog, debugWarn } from './debug.js'
 export {
 	isDebugChannelEnabled,
@@ -5,7 +19,9 @@ export {
 	isTraceEnabledFromConfig,
 	setLogModeState,
 } from './log-config.js'
-export { applyLogModeFromEnv } from './log-mode.js'
+export { applyLogModeFromEnv, resolveMaiaLogMode } from './log-mode.js'
+export { bootstrapNodeLogging, createLogger, installDefaultTransport } from './logger.js'
+export { applyMaiaLoggingFromEnv, resolveMaiaLoggingEnv } from './maia-logging-env.js'
 export { createOpsLogger, OPS_PREFIX } from './ops.js'
 export {
 	createPerfTracer,
@@ -35,3 +51,5 @@ export {
 	traceView,
 	traceViewDeliver,
 } from './trace.js'
+export { createConsoleTransport } from './transports/console.js'
+export { createNoopTransport } from './transports/noop.js'

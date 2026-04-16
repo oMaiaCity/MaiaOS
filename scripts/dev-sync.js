@@ -8,8 +8,8 @@
 import { execSync, spawn } from 'node:child_process'
 import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { createLogger } from '../libs/maia-logs/src/index.js'
 import { freePort } from './free-port.js'
-import { createLogger } from './logger.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = resolve(__dirname, '..')

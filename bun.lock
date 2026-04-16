@@ -32,6 +32,7 @@
       "version": "26.4.142216-next",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
+        "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/runtime": "workspace:*",
         "@MaiaOS/universe": "workspace:*",
         "@MaiaOS/validation": "workspace:*",
@@ -97,6 +98,7 @@
       "version": "26.4.142216-next",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
+        "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
         "@MaiaOS/storage": "workspace:*",
         "@tauri-apps/api": "2.10.1",
@@ -128,6 +130,7 @@
       "version": "26.4.142216-next",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
+        "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
         "@MaiaOS/runtime": "workspace:*",
         "@noble/hashes": "2.2.0",

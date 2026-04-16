@@ -5,6 +5,7 @@
  * Supports UPDATE_WASM_CODE (persist) and GET_WASM_CODE (read live code).
  */
 
+import { createLogger } from '@MaiaOS/logs'
 import { readStore } from '@MaiaOS/runtime/utils/resolve-helpers.js'
 import {
 	createErrorEntry,
@@ -12,6 +13,8 @@ import {
 	createSuccessResult,
 } from '@MaiaOS/universe/helpers/operation-result.js'
 import { splitGraphemes } from 'unicode-segmenter/grapheme'
+
+const log = createLogger('update-wasm-code')
 
 async function resolveCodeCoId(os, actorCoId) {
 	if (!actorCoId?.startsWith?.('co_z')) return null
@@ -152,7 +155,7 @@ export default {
 			})
 			return createSuccessResult({ codeCoId, length: graphemes.length })
 		} catch (err) {
-			console.error('[updateWasmCode] Failed:', err?.message ?? err)
+			log.error('[updateWasmCode] Failed:', err?.message ?? err)
 			return createErrorResult([
 				createErrorEntry('structural', err?.message || 'Failed to update wasm code'),
 			])

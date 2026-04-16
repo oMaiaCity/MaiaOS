@@ -1,8 +1,9 @@
 /**
  * PERF — gated by `LOG_MODE` in dev (`applyLogModeFromEnv`); in-memory only.
- * Console: `[Perf:scope:name] ...`
+ * Lines: `[Perf:scope:name] ...`
  */
 
+import { emitLog } from './core.js'
 import { isPerfChannelEnabled } from './log-config.js'
 
 /**
@@ -33,6 +34,11 @@ export function createPerfTracer(scope, name) {
 
 	const isEnabled = () => isPerfChannelEnabled(scope, name)
 
+	const line = (msg, extra) => {
+		const parts = extra !== undefined && Object.keys(extra).length ? [msg, extra] : [msg]
+		emitLog('log', '', parts, { applyLevelGate: false })
+	}
+
 	return {
 		isEnabled,
 		/** @returns {number} */
@@ -42,25 +48,25 @@ export function createPerfTracer(scope, name) {
 		start(label = id) {
 			if (!isEnabled()) return
 			_start = performance.now()
-			console.log(`[Perf:${id}] START ${label}`)
+			line(`[Perf:${id}] START ${label}`)
 		},
 		step(label, extra = {}) {
 			if (!isEnabled()) return
 			const elapsed = _start != null ? (performance.now() - _start).toFixed(1) : null
 			const msg = elapsed != null ? `[Perf:${id}] +${elapsed}ms ${label}` : `[Perf:${id}] ${label}`
-			console.log(msg, Object.keys(extra).length ? extra : '')
+			line(msg, Object.keys(extra).length ? extra : undefined)
 		},
 		end(label) {
 			if (!isEnabled()) return
 			const elapsed = _start != null ? (performance.now() - _start).toFixed(1) : null
-			console.log(`[Perf:${id}] END ${label} total=${elapsed}ms`)
+			line(`[Perf:${id}] END ${label} total=${elapsed}ms`)
 			_start = null
 		},
 		/** @param {string} label @param {number} ms @param {Record<string, unknown>} [extra] */
 		timing(label, ms, extra = {}) {
 			if (!isEnabled()) return
 			const suffix = Object.keys(extra).length ? ` ${JSON.stringify(extra)}` : ''
-			console.log(`[Perf:${id}] ${label}: ${ms}ms${suffix}`)
+			line(`[Perf:${id}] ${label}: ${ms}ms${suffix}`)
 		},
 		async measure(label, fn) {
 			if (!isEnabled()) return fn()
@@ -73,7 +79,7 @@ export function createPerfTracer(scope, name) {
 				elapsed != null
 					? `[Perf:${id}] +${elapsed}ms ${label}: ${ms}ms`
 					: `[Perf:${id}] ${label}: ${ms}ms`
-			console.log(msg, '')
+			line(msg, undefined)
 			return result
 		},
 	}
@@ -103,5 +109,7 @@ export function isStorageOpfsPerfEnabled() {
 export function logStorageOpfsStep(step, ms, extra = {}) {
 	if (!isStorageOpfsPerfEnabled()) return
 	const suffix = Object.keys(extra).length ? ` ${JSON.stringify(extra)}` : ''
-	console.log(`[Perf:storage:opfs] OPFS.${step}: ${ms}ms${suffix}`)
+	emitLog('log', '', [`[Perf:storage:opfs] OPFS.${step}: ${ms}ms${suffix}`], {
+		applyLevelGate: false,
+	})
 }

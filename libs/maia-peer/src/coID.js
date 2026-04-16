@@ -63,7 +63,7 @@ export async function createAccountWithSecret(options) {
 		try {
 			await seed(rawAccount, result.node)
 		} catch (seedError) {
-			console.error('❌ Simple account seed failed:', seedError?.message ?? seedError)
+			opsPeer.error('❌ Simple account seed failed:', seedError?.message ?? seedError)
 		}
 	}
 

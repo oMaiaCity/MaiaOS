@@ -17,6 +17,7 @@
  *   bun agent:generate --no-write
  */
 
+import { bootstrapNodeLogging, createLogger } from '@MaiaOS/logs'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -28,6 +29,9 @@ const __dirname = dirname(__filename)
 const rootDir = resolve(__dirname, '../../..')
 
 const { accountHeaderForInitialAgentSecret, idforHeader } = cojsonInternals
+
+bootstrapNodeLogging()
+const credLog = createLogger('credentials')
 
 async function generateAgentCredentials({ name = 'Maia Agent' } = {}) {
 	const crypto = await WasmCrypto.create()
@@ -44,8 +48,7 @@ const shouldWrite = !args.includes('--no-write')
 
 async function main() {
 	try {
-		const log = (..._a) => {}
-		log('🔑 Generating agent credentials...\n')
+		credLog.log('🔑 Generating agent credentials...\n')
 
 		const { accountID, agentSecret } = await generateAgentCredentials({ name })
 		const { accountID: testAccountID, agentSecret: testAgentSecret } = await generateAgentCredentials(
@@ -53,7 +56,7 @@ async function main() {
 		)
 
 		if (!shouldWrite) {
-			console.log(`# AVENS
+			credLog.log(`# AVENS
 AVEN_MAIA_ACCOUNT=${accountID}
 AVEN_MAIA_SECRET=${agentSecret}
 AVEN_MAIA_GUARDIAN=${testAccountID}
@@ -65,7 +68,7 @@ VITE_AVEN_TEST_SECRET=${testAgentSecret}
 			return
 		}
 
-		log('📋 Writing credentials to .env file...\n')
+		credLog.log('📋 Writing credentials to .env file...\n')
 		const envPath = join(rootDir, '.env')
 		let content = existsSync(envPath) ? readFileSync(envPath, 'utf-8') : ''
 
@@ -166,8 +169,8 @@ VITE_AVEN_TEST_SECRET=${testAgentSecret}
 			.trim()
 
 		writeFileSync(envPath, `${content}\n`, 'utf-8')
-		log(`✅ Credentials written to ${envPath}\n`)
-		log(
+		credLog.log(`✅ Credentials written to ${envPath}\n`)
+		credLog.log(
 			'🔒 Keep AVEN_MAIA_SECRET and VITE_AVEN_TEST_SECRET secure. Never commit to version control.\n',
 		)
 	} catch (_error) {

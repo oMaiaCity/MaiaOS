@@ -3,7 +3,14 @@
  * Liquid glass design with widget-based layout
  */
 
-import { applyLogModeFromEnv, createPerfTracer, debugLog, debugWarn } from '@MaiaOS/logs'
+import {
+	applyMaiaLoggingFromEnv,
+	createLogger,
+	createPerfTracer,
+	debugLog,
+	debugWarn,
+	resolveMaiaLoggingEnv,
+} from '@MaiaOS/logs'
 import { getSyncHttpBaseUrl } from '@MaiaOS/peer'
 // Import from kernel bundle - everything bundled (no direct @MaiaOS/db in production)
 import {
@@ -12,6 +19,8 @@ import {
 	resolveGroupCoIdsToCapabilityNames,
 } from '@MaiaOS/runtime'
 import { MAIADB_LAYER_STACK_ICON_SVG } from './maia-icons.js'
+
+const appShellLog = createLogger('app')
 
 /** Same channel as `perfAppMaiaDb` in @MaiaOS/logs — created here so bundled app always resolves (named export can be omitted by some bundles). */
 const perfAppMaiaDb = createPerfTracer('app', 'maia-db')
@@ -488,8 +497,8 @@ export async function renderApp(
 	clearSyncServerSelectionIfDenied,
 ) {
 	// Re-apply LOG_MODE every render: in-memory perf/debug gates reset on HMR; ensures perf.all works after clicks.
-	if (typeof window !== 'undefined' && window.__MAIA_DEV_ENV__?.LOG_MODE !== undefined) {
-		applyLogModeFromEnv(String(window.__MAIA_DEV_ENV__.LOG_MODE))
+	if (typeof window !== 'undefined') {
+		applyMaiaLoggingFromEnv(resolveMaiaLoggingEnv())
 	}
 
 	if (currentScreen !== 'the-game') {
@@ -524,7 +533,7 @@ export async function renderApp(
 		// Do not await: loading + Three.js mount can take seconds; awaiting would keep
 		// renderAppInternal's isRendering lock and drop navigateToScreen (e.g. home) until load finishes.
 		void renderGame().catch((err) => {
-			console.error('[Maia game] render failed', err)
+			appShellLog.error('[Maia game] render failed', err)
 		})
 		return
 	}

@@ -9,7 +9,13 @@
  * - No manual re-seeding needed - Jazz handles persistence and loading
  */
 
-import { applyLogModeFromEnv, createPerfTracer } from '@MaiaOS/logs'
+import {
+	applyMaiaLoggingFromEnv,
+	createLogger,
+	createPerfTracer,
+	installDefaultTransport,
+	resolveMaiaLoggingEnv,
+} from '@MaiaOS/logs'
 import { getSyncHttpBaseUrl } from '@MaiaOS/peer'
 import {
 	CAP_GRANT_TTL_SECONDS,
@@ -37,6 +43,8 @@ import {
 	setSignInLoading,
 } from './signin.js'
 import { escapeHtml, getSyncStatusMessage } from './utils.js'
+
+const appLog = createLogger('app')
 
 /** Message string from catch — handles non-Error throws (string, Tauri, undefined). */
 function caughtErrMessage(error) {
@@ -334,10 +342,22 @@ async function init() {
 				if (res.ok) {
 					window.__MAIA_DEV_ENV__ = await res.json()
 				} else {
-					window.__MAIA_DEV_ENV__ = { DEV: true, LOG_MODE: '' }
+					window.__MAIA_DEV_ENV__ = {
+						DEV: true,
+						LOG_MODE: '',
+						LOG_LEVEL: '',
+						LOG_MODE_PROD: '',
+						NODE_ENV: 'development',
+					}
 				}
 			} catch (_e) {
-				window.__MAIA_DEV_ENV__ = { DEV: true, LOG_MODE: '' }
+				window.__MAIA_DEV_ENV__ = {
+					DEV: true,
+					LOG_MODE: '',
+					LOG_LEVEL: '',
+					LOG_MODE_PROD: '',
+					NODE_ENV: 'development',
+				}
 			}
 			// URL override: /me?log_mode=perf.all (useful when shell env did not reach dev-server)
 			const params = new URLSearchParams(window.location.search)
@@ -345,8 +365,9 @@ async function init() {
 			if (urlLogMode) {
 				window.__MAIA_DEV_ENV__.LOG_MODE = urlLogMode
 			}
-			applyLogModeFromEnv(window.__MAIA_DEV_ENV__?.LOG_MODE ?? '')
 		}
+		applyMaiaLoggingFromEnv(resolveMaiaLoggingEnv())
+		installDefaultTransport()
 
 		// Check if we're in agent mode
 		const mode = detectMode()
@@ -375,7 +396,7 @@ async function init() {
  */
 async function initAgentMode() {
 	try {
-		console.log('🤖 [AGENT MODE] Initializing agent mode...')
+		appLog.log('🤖 [AGENT MODE] Initializing agent mode...')
 
 		const accountID = import.meta.env?.AVEN_MAIA_ACCOUNT || import.meta.env?.VITE_AVEN_MAIA_ACCOUNT
 		const agentSecret = import.meta.env?.AVEN_MAIA_SECRET || import.meta.env?.VITE_AVEN_MAIA_SECRET
@@ -390,7 +411,7 @@ async function initAgentMode() {
 		const syncDomain = getSyncDomain()
 
 		// Load or create agent account using universal DRY interface
-		console.log('🤖 [AGENT MODE] Loading agent account...')
+		appLog.log('🤖 [AGENT MODE] Loading agent account...')
 		const agentResult = await loadOrCreateAgentAccount({
 			accountID,
 			agentSecret,
@@ -437,7 +458,7 @@ async function initAgentMode() {
 		// Load linked CoValues in background
 		loadLinkedCoValues().catch((_error) => {})
 
-		console.log('🤖 [AGENT MODE] Agent mode initialized successfully')
+		appLog.log('🤖 [AGENT MODE] Agent mode initialized successfully')
 	} catch (error) {
 		showToast(`Failed to initialize agent mode: ${error.message}`, 'error', 10000)
 
@@ -708,8 +729,8 @@ async function signIn() {
 		loadingPromise
 			.then(async (accountResult) => {
 				const { node, account } = accountResult
-				console.log(`   node: ${node ? 'ready' : 'not ready'}`)
-				console.log(`   account: ${account ? 'ready' : 'not ready'}`)
+				appLog.log(`   node: ${node ? 'ready' : 'not ready'}`)
+				appLog.log(`   account: ${account ? 'ready' : 'not ready'}`)
 
 				try {
 					await applySyncRegistriesToAccount(account, node)
@@ -744,7 +765,7 @@ async function signIn() {
 			.catch((loadError) => {
 				const msg = caughtErrMessage(loadError)
 				const isNotFound = loadError?.isAccountNotFound || msg.includes('Account not found in storage')
-				console.error('[app] signIn loadingPromise failed', {
+				appLog.error('[app] signIn loadingPromise failed', {
 					message: msg,
 					isAccountNotFound: isNotFound,
 					original: loadError?.originalError?.message,

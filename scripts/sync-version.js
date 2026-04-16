@@ -1,4 +1,5 @@
 #!/usr/bin/env node
+
 /**
  * Sync version across all packages in the monorepo.
  * Version is passed as the only argument — no fallbacks.
@@ -25,6 +26,10 @@ import { readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { exit } from 'node:process'
 import { fileURLToPath } from 'node:url'
+import { bootstrapNodeLogging, createLogger } from '../libs/maia-logs/src/index.js'
+
+bootstrapNodeLogging()
+const versionSyncLog = createLogger('version-sync')
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = dirname(__filename)
@@ -62,9 +67,9 @@ function toSemverVersion(continuous) {
 const newVersion = toSemverVersion(rawVersion)
 
 if (rawVersion !== newVersion) {
-	console.log(`Normalized ${rawVersion} → ${newVersion} (semver)`)
+	versionSyncLog.log(`Normalized ${rawVersion} → ${newVersion} (semver)`)
 }
-console.log(`Syncing version ${newVersion} across all packages...`)
+versionSyncLog.log(`Syncing version ${newVersion} across all packages...`)
 
 function findPackageJsonFiles(dir) {
 	const files = []
@@ -93,7 +98,7 @@ function sync(dir) {
 		const pkg = JSON.parse(readFileSync(pkgPath, 'utf-8'))
 		pkg.version = newVersion
 		writeFileSync(pkgPath, `${JSON.stringify(pkg, null, '\t')}\n`)
-		console.log(`  ${pkgPath.replace(`${rootDir}/`, '')}`)
+		versionSyncLog.log(`  ${pkgPath.replace(`${rootDir}/`, '')}`)
 	}
 }
 
@@ -105,7 +110,7 @@ try {
 	let cargo = readFileSync(tauriCargoPath, 'utf-8')
 	cargo = cargo.replace(/^version = "[^"]*"$/m, `version = "${newVersion}"`)
 	writeFileSync(tauriCargoPath, cargo)
-	console.log(`  ${tauriCargoPath.replace(`${rootDir}/`, '')}`)
+	versionSyncLog.log(`  ${tauriCargoPath.replace(`${rootDir}/`, '')}`)
 } catch {
 	// Optional workspace layout
 }
@@ -118,7 +123,7 @@ try {
 	}
 	const next = raw.replace(/^(\s*"version"\s*:\s*)"[^"]*"/m, `$1"${newVersion}"`)
 	writeFileSync(tauriConfPath, next)
-	console.log(`  ${tauriConfPath.replace(`${rootDir}/`, '')}`)
+	versionSyncLog.log(`  ${tauriConfPath.replace(`${rootDir}/`, '')}`)
 } catch (err) {
 	if (err?.code === 'ENOENT') {
 		// Optional workspace layout
@@ -127,4 +132,4 @@ try {
 	}
 }
 
-console.log(`Version ${newVersion} synced.`)
+versionSyncLog.log(`Version ${newVersion} synced.`)
