@@ -97,6 +97,7 @@ export {
 export { resolveAccountCoIdsToProfiles } from './cojson/helpers/resolve-account-profile.js'
 export { resolveGroupCoIdsToCapabilityNames } from './cojson/helpers/resolve-capability-group.js'
 export { SPARK_OS_META_FACTORY_CO_ID_KEY } from './cojson/spark-os-keys.js'
+export { CAP_GRANT_TTL_SECONDS } from './constants/capability-grant-ttl.js'
 export {
 	createFactoryMeta,
 	EXCEPTION_FACTORIES,

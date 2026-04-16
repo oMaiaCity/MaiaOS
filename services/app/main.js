@@ -12,11 +12,15 @@
 import { applyLogModeFromEnv, createPerfTracer } from '@MaiaOS/logs'
 import { getSyncHttpBaseUrl } from '@MaiaOS/peer'
 import {
+	CAP_GRANT_TTL_SECONDS,
 	getCapabilityGrantIndexColistCoId,
 	isPRFSupported,
+	loadCapabilitiesGrants,
 	loadOrCreateAgentAccount,
 	MaiaOS,
+	RUNTIME_REF,
 	resolveAccountCoIdsToProfiles,
+	resolveInfraFactoryCoId,
 	signInWithPasskey,
 	signUpWithPasskey,
 	subscribeSyncState,
@@ -1368,6 +1372,84 @@ async function extendCapability(capabilityId, _currentExp = 0) {
 }
 
 /**
+ * Grant /sync/write + /llm/chat for a human account (guardian approval).
+ */
+async function grantMemberCapabilities(targetAccountId) {
+	const m = maia ?? window.maia
+	if (!m?.dataEngine?.peer) {
+		showToast('Maia not ready', 'error')
+		return
+	}
+	const peer = m.dataEngine.peer
+	try {
+		const grants = await loadCapabilitiesGrants(m)
+		const nowSec = Math.floor(Date.now() / 1000)
+		const exp = nowSec + CAP_GRANT_TTL_SECONDS
+		await m.dataEngine.resolveSystemFactories?.()
+		let factory = resolveInfraFactoryCoId(peer, RUNTIME_REF.OS_CAPABILITY)
+		if (!factory?.startsWith('co_z')) {
+			await m.dataEngine.resolveSystemFactories?.()
+			factory = resolveInfraFactoryCoId(peer, RUNTIME_REF.OS_CAPABILITY)
+		}
+		if (!factory?.startsWith('co_z')) {
+			showToast('Capability factory not available', 'error')
+			return
+		}
+		const spark = peer.systemSparkCoId
+		if (!spark?.startsWith('co_z')) {
+			showToast('Spark not ready', 'error')
+			return
+		}
+		for (const cmd of ['/sync/write', '/llm/chat']) {
+			const existing = grants.find((g) => g.sub === targetAccountId && g.cmd === cmd && g.exp > nowSec)
+			if (existing) {
+				await m.do({ op: 'update', id: existing.id, data: { exp } })
+			} else {
+				await m.do({
+					op: 'create',
+					factory,
+					data: { sub: targetAccountId, cmd, pol: [], exp },
+					spark,
+				})
+			}
+		}
+		showToast('Member approved', 'success')
+		await renderAppInternal()
+	} catch (error) {
+		showToast(`Approve failed: ${error?.message ?? error}`, 'error')
+	}
+}
+
+async function revokeMemberCapabilities(targetAccountId) {
+	const m = maia ?? window.maia
+	if (!m?.dataEngine?.peer) {
+		showToast('Maia not ready', 'error')
+		return
+	}
+	try {
+		const grants = await loadCapabilitiesGrants(m)
+		const nowSec = Math.floor(Date.now() / 1000)
+		const past = nowSec - 1
+		const toRevoke = grants.filter(
+			(g) =>
+				g.sub === targetAccountId &&
+				(g.cmd === '/sync/write' || g.cmd === '/llm/chat') &&
+				g.exp > nowSec,
+		)
+		for (const g of toRevoke) {
+			await m.do({ op: 'update', id: g.id, data: { exp: past } })
+		}
+		if (toRevoke.some((g) => g.cmd === '/sync/write' && g.sub === authState.accountID)) {
+			updateSyncState({ writeEnabled: false })
+		}
+		showToast('Member access revoked', 'success')
+		await renderAppInternal()
+	} catch (error) {
+		showToast(`Revoke failed: ${error?.message ?? error}`, 'error')
+	}
+}
+
+/**
  * @param {string} vibeCoId - Vibe CoMap co-id (co_z...)
  * @param {string} [_sparkCoId] - Reserved (spark is implicit on peer.systemSparkCoId)
  */
@@ -1596,6 +1678,32 @@ function setupMaiaAppDelegation() {
 		if (action === 'revokeCapability') {
 			const id = el.dataset.revokeId
 			if (id) void revokeCapability(id, { cmd: el.dataset.cmd, sub: el.dataset.sub })
+			return
+		}
+		if (action === 'capabilitiesSubTab') {
+			const subtab = el.dataset.subtab
+			if (!subtab) return
+			const wrap = el.closest('.capabilities-table-wrap')
+			if (!wrap) return
+			for (const btn of wrap.querySelectorAll('[data-maia-action="capabilitiesSubTab"]')) {
+				btn.classList.toggle('capabilities-subtab-active', btn.dataset.subtab === subtab)
+				btn.setAttribute('aria-selected', btn.dataset.subtab === subtab ? 'true' : 'false')
+			}
+			for (const panel of wrap.querySelectorAll('[data-subtab-panel]')) {
+				const isActive = panel.getAttribute('data-subtab-panel') === subtab
+				panel.classList.toggle('capabilities-subtab-panel-hidden', !isActive)
+				panel.setAttribute('data-capabilities-active', isActive ? 'true' : 'false')
+			}
+			return
+		}
+		if (action === 'approveMember') {
+			const aid = el.dataset.accountId
+			if (aid) void grantMemberCapabilities(aid)
+			return
+		}
+		if (action === 'revokeMember') {
+			const aid = el.dataset.accountId
+			if (aid) void revokeMemberCapabilities(aid)
 			return
 		}
 		if (action === 'copyId') {

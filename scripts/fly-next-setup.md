@@ -49,7 +49,7 @@ flyctl secrets set \
 
 **First deploy (empty Postgres):** set `PEER_SYNC_MODE=seed` for **one** deploy so sync runs genesis seed. When logs show `Genesis seeded`, unset it: `fly secrets unset PEER_SYNC_MODE --app sync-next-maia-city`. If `PEER_SYNC_MODE=seed` stays in Fly secrets, genesis runs on every boot (no automatic storage wipe — wipe DB/blob storage manually when you need a full reset).
 
-**App secrets:** The app (next-maia-city) has no runtime secrets — `VITE_PEER_SYNC_HOST` and `VITE_PEER_APP_HOST` are build args in fly.toml.
+**App secrets:** The app (next-maia-city) has no runtime secrets — `VITE_PEER_SYNC_HOST` is a build arg in fly.toml.
 
 **Never set on Fly:** `VITE_AVEN_TEST_ACCOUNT`, `VITE_AVEN_TEST_SECRET`, `VITE_AVEN_TEST_MODE`, `VITE_AVEN_TEST_NAME` — client-only test credentials for local dev. Sync server must never receive them.
 
@@ -110,4 +110,3 @@ bun run deploy
 | `AVEN_MAIA_NAME` | — | ✓ | Display name |
 | `RED_PILL_API_KEY` | — | ✓ | Optional, LLM chat |
 | `VITE_PEER_SYNC_HOST` | build | — | `sync.next.maia.city` (fly.toml) |
-| `VITE_PEER_APP_HOST` | build | — | `next.maia.city` (fly.toml) |

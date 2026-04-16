@@ -2994,6 +2994,61 @@ pre {
 	backdrop-filter: blur(8px);
 }
 
+.capabilities-subtab-nav {
+	display: flex;
+	gap: 0.5rem;
+	margin-bottom: 0.75rem;
+	padding: 0.35rem 0.5rem 0;
+	flex-wrap: wrap;
+}
+
+.capabilities-subtab {
+	padding: 0.45rem 1rem;
+	font-size: 0.8rem;
+	font-weight: 600;
+	letter-spacing: 0.06em;
+	text-transform: uppercase;
+	color: var(--color-marine-blue-muted);
+	background: transparent;
+	border: 1px solid transparent;
+	border-radius: 10px;
+	cursor: pointer;
+	transition:
+		background 0.15s ease,
+		color 0.15s ease,
+		border-color 0.15s ease;
+}
+
+.capabilities-subtab:hover {
+	background: rgba(255, 255, 255, 0.35);
+	color: var(--color-marine-blue);
+}
+
+.capabilities-subtab-active {
+	color: var(--color-marine-blue);
+	background: rgba(255, 255, 255, 0.55);
+	border-color: rgba(0, 31, 51, 0.12);
+}
+
+.capabilities-subtab-panel-hidden {
+	display: none;
+}
+
+.capabilities-member-status {
+	font-size: 0.72rem;
+	font-weight: 700;
+	letter-spacing: 0.05em;
+	text-transform: uppercase;
+}
+
+.capabilities-member-approved {
+	color: var(--color-lush-green);
+}
+
+.capabilities-member-pending {
+	color: #b8860b;
+}
+
 .capabilities-sync-banner {
 	display: flex;
 	align-items: center;

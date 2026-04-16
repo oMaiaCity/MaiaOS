@@ -31,7 +31,6 @@ retry_flyctl_deploy() {
       --app "$app_name" \
       --wait-timeout 600 \
       --build-arg VITE_PEER_SYNC_HOST="${VITE_PEER_SYNC_HOST}" \
-      --build-arg VITE_PEER_APP_HOST=next.maia.city \
       --build-arg "GIT_SHA=${GITHUB_SHA:-$(git -C "$MONOREPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)}" \
       2>&1 | tee /tmp/flyctl-deploy.log
     

@@ -17,8 +17,6 @@ COPY scripts ./scripts
 # VITE_PEER_SYNC_HOST must be set BEFORE distros:build - client bundle inlines sync domain
 ARG VITE_PEER_SYNC_HOST=sync.next.maia.city
 ENV VITE_PEER_SYNC_HOST=$VITE_PEER_SYNC_HOST
-ARG VITE_PEER_APP_HOST=next.maia.city
-ENV VITE_PEER_APP_HOST=$VITE_PEER_APP_HOST
 
 ENV HUSKY=0
 RUN bun install
@@ -34,7 +32,6 @@ RUN bun scripts/generate-favicons.js
 RUN cd services/app && \
   NODE_ENV=production \
   VITE_PEER_SYNC_HOST=${VITE_PEER_SYNC_HOST:-sync.next.maia.city} \
-  VITE_PEER_APP_HOST=${VITE_PEER_APP_HOST:-next.maia.city} \
   bun build.js
 
 # Runtime stage - only built SPA + static server, no source
