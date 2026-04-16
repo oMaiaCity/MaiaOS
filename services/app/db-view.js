@@ -42,23 +42,64 @@ function getSyncStorageApiBase() {
 	})
 }
 
+/** Bearer + `/admin/storage` UCAN; same pattern as LLM chat. */
+async function syncInspectorFetch(path, init = {}) {
+	const base = getSyncStorageApiBase()
+	if (!base) throw new Error('Sync URL not configured')
+	const maia = globalThis.maia
+	const token = await maia?.getCapabilityToken?.({ cmd: '/admin/storage', args: {} })
+	if (!token) throw new Error('No /admin/storage capability')
+	const url = `${base}${path.startsWith('/') ? path : `/${path}`}`
+	const method = (init.method || 'GET').toUpperCase()
+	const hasBody = init.body != null && method !== 'GET' && method !== 'HEAD'
+	return fetch(url, {
+		...init,
+		headers: {
+			...(hasBody ? { 'Content-Type': 'application/json' } : {}),
+			...(init.headers || {}),
+			Authorization: `Bearer ${token}`,
+		},
+	})
+}
+
 let syncServerTablesCache = null
 let syncServerTablesError = null
+/** After probe: true = may use inspector API; false = hide SYNC SERVER (401/403 or no token). */
+let syncServerAllowed = false
 async function loadSyncServerTablesOnce() {
 	if (syncServerTablesCache !== null || syncServerTablesError !== null) return
 	const base = getSyncStorageApiBase()
 	if (!base) {
 		syncServerTablesError = 'Sync URL not configured'
+		syncServerAllowed = false
 		return
 	}
 	try {
-		const r = await fetch(`${base}/api/v0/admin/storage/tables`)
+		const maia = globalThis.maia
+		const token = await maia?.getCapabilityToken?.({ cmd: '/admin/storage', args: {} })
+		if (!token) {
+			syncServerTablesCache = []
+			syncServerTablesError = null
+			syncServerAllowed = false
+			return
+		}
+		const r = await fetch(`${base}/api/v0/admin/storage/tables`, {
+			headers: { Authorization: `Bearer ${token}` },
+		})
+		if (r.status === 401 || r.status === 403) {
+			syncServerTablesCache = []
+			syncServerTablesError = null
+			syncServerAllowed = false
+			return
+		}
 		if (!r.ok) throw new Error(`${r.status} ${r.statusText}`)
 		const j = await r.json()
 		syncServerTablesCache = j.tables || []
 		syncServerTablesError = null
+		syncServerAllowed = true
 	} catch (e) {
 		syncServerTablesError = e?.message || String(e)
+		syncServerAllowed = true
 	}
 }
 
@@ -335,6 +376,7 @@ export async function renderApp(
 	capabilityGrantsIndexColistCoId,
 	syncServerSelectedTable = null,
 	syncServerTableOffset = 0,
+	clearSyncServerSelectionIfDenied,
 ) {
 	// Re-apply LOG_MODE every render: in-memory perf/debug gates reset on HMR; ensures perf.all works after clicks.
 	if (typeof window !== 'undefined' && window.__MAIA_DEV_ENV__?.LOG_MODE !== undefined) {
@@ -578,17 +620,22 @@ export async function renderApp(
 		`
 		}
 
-		// Get data based on current view
-		let data, viewTitle, _viewSubtitle
-		let tableContent = ''
-		let headerInfo = null
-		const syncServerPanel = Boolean(syncServerSelectedTable)
-
 		// Get account and node for navigation
 		const account = maia.id.maiaId
 		const _node = maia.id.node
 
 		await loadSyncServerTablesOnce()
+		let effectiveSyncTable = syncServerSelectedTable
+		if (syncServerAllowed === false && syncServerSelectedTable) {
+			clearSyncServerSelectionIfDenied?.()
+			effectiveSyncTable = null
+		}
+
+		// Get data based on current view
+		let data, viewTitle, _viewSubtitle
+		let tableContent = ''
+		let headerInfo = null
+		const syncServerPanel = Boolean(effectiveSyncTable)
 
 		// Default to showing account if no context is set (not when SYNC SERVER table is selected)
 		if (!syncServerPanel && !currentContextCoValueId && account?.id) {
@@ -596,33 +643,32 @@ export async function renderApp(
 		}
 
 		// SYNC SERVER — raw PG table (storage inspector API)
-		if (syncServerSelectedTable) {
-			viewTitle = syncServerSelectedTable
+		if (effectiveSyncTable) {
+			viewTitle = effectiveSyncTable
 			headerInfo = null
 			const base = getSyncStorageApiBase()
 			if (!base) {
 				tableContent = `<div class="sync-server-table-error">Sync URL not configured.</div>`
 			} else {
-				const quoted = `"${String(syncServerSelectedTable).replace(/"/g, '""')}"`
+				const quoted = `"${String(effectiveSyncTable).replace(/"/g, '""')}"`
 				const offset = Math.max(0, Number(syncServerTableOffset) || 0)
-				const coValuesTable = isStorageCoValuesTable(syncServerSelectedTable)
+				const coValuesTable = isStorageCoValuesTable(effectiveSyncTable)
 				const sqlRows = coValuesTable
 					? `SELECT (COALESCE(NULLIF(TRIM(header::json->'meta'->>'$factory'), ''), CASE WHEN header::json->'ruleset'->>'type' = 'group' THEN 'group' END)) AS factory, * FROM ${quoted} LIMIT ${SYNC_SERVER_PAGE_SIZE} OFFSET ${offset}`
 					: `SELECT * FROM ${quoted} LIMIT ${SYNC_SERVER_PAGE_SIZE} OFFSET ${offset}`
 				const sqlCount = `SELECT COUNT(*)::bigint AS cnt FROM ${quoted}`
 				try {
 					const [cRes, qRes, nRes] = await Promise.all([
-						fetch(
-							`${base}/api/v0/admin/storage/tables/${encodeURIComponent(syncServerSelectedTable)}/columns`,
+						syncInspectorFetch(
+							`/api/v0/admin/storage/tables/${encodeURIComponent(effectiveSyncTable)}/columns`,
+							{ method: 'GET' },
 						),
-						fetch(`${base}/api/v0/admin/storage/query`, {
+						syncInspectorFetch(`/api/v0/admin/storage/query`, {
 							method: 'POST',
-							headers: { 'Content-Type': 'application/json' },
 							body: JSON.stringify({ sql: sqlRows }),
 						}),
-						fetch(`${base}/api/v0/admin/storage/query`, {
+						syncInspectorFetch(`/api/v0/admin/storage/query`, {
 							method: 'POST',
-							headers: { 'Content-Type': 'application/json' },
 							body: JSON.stringify({ sql: sqlCount }),
 						}),
 					])
@@ -712,7 +758,7 @@ export async function renderApp(
 					</div>
 				</div>
 				<div class="sync-server-table-scroll">
-					<table class="sync-server-table" aria-label="Storage table ${escapeAttr(syncServerSelectedTable)}">
+					<table class="sync-server-table" aria-label="Storage table ${escapeAttr(effectiveSyncTable)}">
 						<thead><tr>${headerRow}</tr></thead>
 						<tbody>${bodyRows || `<tr><td class="sync-server-td" colspan="${colNames.length}">No rows</td></tr>`}</tbody>
 					</table>
@@ -856,6 +902,7 @@ export async function renderApp(
 									capabilityGrantsIndexColistCoId,
 									syncServerSelectedTable,
 									syncServerTableOffset,
+									clearSyncServerSelectionIfDenied,
 								)
 							}, 0)
 						}
@@ -908,6 +955,7 @@ export async function renderApp(
 										capabilityGrantsIndexColistCoId,
 										syncServerSelectedTable,
 										syncServerTableOffset,
+										clearSyncServerSelectionIfDenied,
 									)
 								}, 0)
 							}
@@ -1484,7 +1532,7 @@ export async function renderApp(
 		const syncTableList = syncServerTablesCache || []
 		const syncServerSidebarHtml = syncTableList
 			.map((t) => {
-				const active = syncServerSelectedTable === t
+				const active = effectiveSyncTable === t
 				return `
 			<div class="sidebar-item ${active ? 'active' : ''}" data-maia-action="selectSyncServerTable" data-table="${escapeAttr(t)}" role="button" tabindex="0">
 				<div class="sidebar-label">
@@ -1580,6 +1628,9 @@ export async function renderApp(
 						<div class="sidebar-content">
 							${sidebarItems}
 						</div>
+						${
+							syncServerAllowed === true
+								? `
 						<div class="sidebar-header sidebar-header-sync-server">
 							<h3>SYNC SERVER</h3>
 						</div>
@@ -1587,6 +1638,9 @@ export async function renderApp(
 							${syncServerSidebarHtml}
 							${syncServerSidebarFooter}
 						</div>
+						`
+								: ''
+						}
 					</div>
 				</aside>
 				

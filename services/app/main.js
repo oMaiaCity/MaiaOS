@@ -1238,6 +1238,12 @@ function selectSyncServerTable(tableName) {
 	renderAppInternal()
 }
 
+/** Clear SYNC SERVER selection when inspector is not allowed (keeps main state in sync with db-view probe). */
+function clearSyncServerSelectionIfDenied() {
+	syncServerSelectedTable = null
+	syncServerTableOffset = 0
+}
+
 async function renderAppInternal() {
 	if (isRendering) {
 		pendingRender = true
@@ -1264,6 +1270,7 @@ async function renderAppInternal() {
 			capabilityGrantsIndexColistCoId,
 			syncServerSelectedTable,
 			syncServerTableOffset,
+			clearSyncServerSelectionIfDenied,
 		)
 		// Update unified nav left button: always "home", action = go to dashboard when not on dashboard
 		if (currentScreen === 'dashboard') {
