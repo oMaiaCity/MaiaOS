@@ -41,6 +41,10 @@ import {
 	waitForStoreReady,
 } from '@MaiaOS/runtime'
 import { buildSeedConfig, filterVibesForSeeding, getSeedConfig } from '@MaiaOS/seed'
+import {
+	STORAGE_INSPECTOR_DEFAULT_TABLE_PAGE,
+	STORAGE_INSPECTOR_MAX_TABLE_PAGE,
+} from '@MaiaOS/storage'
 import { createHash } from 'node:crypto'
 import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -311,7 +315,12 @@ async function handleStorageInspectorHttp(req, url, worker) {
 	const pathname = url.pathname
 
 	if (pathname === `${STORAGE_INSPECTOR_BASE}/tables` && req.method === 'GET') {
-		const res = await storageInspector.listTables()
+		let limit = Number(url.searchParams.get('limit'))
+		let offset = Number(url.searchParams.get('offset'))
+		if (Number.isNaN(limit) || limit < 1) limit = STORAGE_INSPECTOR_DEFAULT_TABLE_PAGE
+		if (limit > STORAGE_INSPECTOR_MAX_TABLE_PAGE) limit = STORAGE_INSPECTOR_MAX_TABLE_PAGE
+		if (Number.isNaN(offset) || offset < 0) offset = 0
+		const res = await storageInspector.listTables({ limit, offset })
 		return jsonResponse({ ok: true, ...res }, 200, {}, req)
 	}
 
@@ -1100,68 +1109,73 @@ Bun.serve({
 	hostname: '0.0.0.0',
 	port: PORT,
 	async fetch(req, srv) {
-		if (req.method === 'OPTIONS') return handleCORS(req)
+		try {
+			if (req.method === 'OPTIONS') return handleCORS(req)
 
-		const url = new URL(req.url)
-		const rl = rateLimitFor(req, url)
-		if (!rl.ok) {
-			const retryAfter = Math.max(1, Math.ceil((rl.reset - Date.now()) / 1000))
-			return new Response(JSON.stringify({ ok: false, error: 'Too many requests' }), {
-				status: 429,
-				headers: {
-					'Content-Type': 'application/json',
-					'Retry-After': String(retryAfter),
-					...corsHeadersForRequest(req),
-				},
-			})
-		}
-
-		if (url.pathname === '/health') {
-			return jsonResponse({ status: 'ok', service: 'sync', ready: !!syncHandler }, 200, {}, req)
-		}
-
-		if (url.pathname === '/syncRegistry' && req.method === 'GET') {
-			if (!agentWorker) return jsonResponse({ error: 'Initializing', status: 503 }, 503, {}, req)
-			return withTimeout(handleSyncRegistry(agentWorker, req), REQUEST_TIMEOUT_MS, '/syncRegistry')
-		}
-
-		if (url.pathname === '/sync') {
-			if (!syncHandler) return jsonResponse({ error: 'Initializing', status: 503 }, 503, {}, req)
-			const wsCors = corsHeadersForRequest(req)
-			if (req.headers.get('upgrade') !== 'websocket')
-				return new Response('Expected WebSocket upgrade', {
-					status: 426,
-					headers: wsCors,
+			const url = new URL(req.url)
+			const rl = rateLimitFor(req, url)
+			if (!rl.ok) {
+				const retryAfter = Math.max(1, Math.ceil((rl.reset - Date.now()) / 1000))
+				return new Response(JSON.stringify({ ok: false, error: 'Too many requests' }), {
+					status: 429,
+					headers: {
+						'Content-Type': 'application/json',
+						'Retry-After': String(retryAfter),
+						...corsHeadersForRequest(req),
+					},
 				})
-			const ok = srv.upgrade(req, { data: {}, headers: wsCors })
-			return ok
-				? undefined
-				: new Response('Failed to upgrade', {
-						status: 500,
+			}
+
+			if (url.pathname === '/health') {
+				return jsonResponse({ status: 'ok', service: 'sync', ready: !!syncHandler }, 200, {}, req)
+			}
+
+			if (url.pathname === '/syncRegistry' && req.method === 'GET') {
+				if (!agentWorker) return jsonResponse({ error: 'Initializing', status: 503 }, 503, {}, req)
+				return withTimeout(handleSyncRegistry(agentWorker, req), REQUEST_TIMEOUT_MS, '/syncRegistry')
+			}
+
+			if (url.pathname === '/sync') {
+				if (!syncHandler) return jsonResponse({ error: 'Initializing', status: 503 }, 503, {}, req)
+				const wsCors = corsHeadersForRequest(req)
+				if (req.headers.get('upgrade') !== 'websocket')
+					return new Response('Expected WebSocket upgrade', {
+						status: 426,
 						headers: wsCors,
 					})
-		}
+				const ok = srv.upgrade(req, { data: {}, headers: wsCors })
+				return ok
+					? undefined
+					: new Response('Failed to upgrade', {
+							status: 500,
+							headers: wsCors,
+						})
+			}
 
-		// Agent routes (require agentWorker)
-		if (agentWorker) {
-			const agentRes = await handleAgentHttp(req, agentWorker)
-			if (agentRes) return agentRes
-		} else if (url.pathname.startsWith('/register') || url.pathname.startsWith('/syncRegistry')) {
-			return jsonResponse({ error: 'Initializing', status: 503 }, 503, {}, req)
-		}
+			// Agent routes (require agentWorker)
+			if (agentWorker) {
+				const agentRes = await handleAgentHttp(req, agentWorker)
+				if (agentRes) return agentRes
+			} else if (url.pathname.startsWith('/register') || url.pathname.startsWith('/syncRegistry')) {
+				return jsonResponse({ error: 'Initializing', status: 503 }, 503, {}, req)
+			}
 
-		// API (LLM)
-		if (url.pathname === '/api/v0/llm/chat' && req.method === 'POST') {
-			if (!agentWorker) return jsonResponse({ error: 'Initializing', status: 503 }, 503, {}, req)
-			return handleLLMChat(req, agentWorker)
-		}
+			// API (LLM)
+			if (url.pathname === '/api/v0/llm/chat' && req.method === 'POST') {
+				if (!agentWorker) return jsonResponse({ error: 'Initializing', status: 503 }, 503, {}, req)
+				return handleLLMChat(req, agentWorker)
+			}
 
-		if (url.pathname.startsWith(STORAGE_INSPECTOR_BASE)) {
-			const res = await handleStorageInspectorHttp(req, url, agentWorker)
-			if (res) return res
-		}
+			if (url.pathname.startsWith(STORAGE_INSPECTOR_BASE)) {
+				const res = await handleStorageInspectorHttp(req, url, agentWorker)
+				if (res) return res
+			}
 
-		return new Response('Not Found', { status: 404, headers: corsHeadersForRequest(req) })
+			return new Response('Not Found', { status: 404, headers: corsHeadersForRequest(req) })
+		} catch (e) {
+			opsSync.error('fetch:', e?.message ?? e, e?.stack)
+			return jsonResponse({ ok: false, error: 'Internal server error' }, 500, {}, req)
+		}
 	},
 	websocket: {
 		async open(ws) {

@@ -25,7 +25,6 @@
 		"docs:watch": "bun scripts/generate-llm-docs.js --watch",
 		"version:sync": "node scripts/sync-version.js",
 		"agent:generate": "bun libs/maia-self/scripts/generate-credentials.js",
-		"deploy:secrets": "bun scripts/fly-secrets-sync.js",
 		"format": "bun run format:maia && bunx biome format --write .",
 		"format:maia": "bun scripts/format-maia.js",
 		"format:maia:check": "bun scripts/format-maia.js --check",

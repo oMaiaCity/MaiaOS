@@ -54,7 +54,8 @@ flyctl volumes create moai_data --app moai-next-maia-city --region fra --size 3
 
 # Generate credentials and sync to Fly secrets
 bun agent:generate
-bun run deploy:secrets
+./scripts/fly-secrets-from-env.sh --dry-run   # optional: review keys vs Fly
+./scripts/fly-secrets-from-env.sh             # apply from .env (or use flyctl secrets set manually)
 
 # Deploy all
 bun run deploy
@@ -110,7 +111,7 @@ flyctl volumes create moai_data --app moai-next-maia-city --region fra --size 3
 
 # 2. Generate credentials and set secrets
 bun agent:generate
-bun run deploy:secrets
+./scripts/fly-secrets-from-env.sh
 
 # 3. Deploy
 bun run deploy
@@ -253,7 +254,7 @@ After setting up DNS:
 
 **Optional:** `RED_PILL_API_KEY` for LLM chat.
 
-**Sync from .env:** `bun run deploy:secrets` copies AVEN_MAIA_ACCOUNT, AVEN_MAIA_SECRET, RED_PILL_API_KEY from root `.env` to Fly.
+**Sync from .env:** `./scripts/fly-secrets-from-env.sh` (use `--dry-run` first) sets required keys from root `.env` on Fly app `sync-next-maia-city`, or set secrets manually with `flyctl secrets set`.
 
 **fly.toml:** `PORT` (4201), `PEER_DB_PATH` (`/data/sync.db`)
 
@@ -358,7 +359,7 @@ Usually missing secrets. Run:
 ```bash
 flyctl secrets list --app moai-next-maia-city
 bun agent:generate
-bun run deploy:secrets
+./scripts/fly-secrets-from-env.sh
 ```
 
 ### Volume not mounted (sync)

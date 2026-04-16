@@ -90,6 +90,18 @@ retry_flyctl_deploy() {
 echo "🚀 Deploying all MaiaOS services to Fly.io..."
 echo ""
 
+# Optional: compare / apply Fly secrets from .env (never automatic; stdin must be a TTY)
+if [ -t 0 ] && [ -t 1 ]; then
+	read -r -p "Compare Fly secrets vs .env before deploy? [y/N] " _secrets_ans || true
+	if [[ "${_secrets_ans:-}" =~ ^[yY]$ ]]; then
+		"$SCRIPT_DIR/fly-secrets-from-env.sh" --dry-run || true
+		read -r -p "Run ./scripts/fly-secrets-from-env.sh to apply secrets? [y/N] " _apply_ans || true
+		if [[ "${_apply_ans:-}" =~ ^[yY]$ ]]; then
+			"$SCRIPT_DIR/fly-secrets-from-env.sh"
+		fi
+	fi
+fi
+
 # Sync deploy - requires manual secrets: AVEN_MAIA_ACCOUNT, AVEN_MAIA_SECRET, and PEER_SYNC_DB_URL (postgres)
 echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 echo "📦 Step 1/2: Deploying sync service (sync-next-maia-city)..."
@@ -138,9 +150,10 @@ echo "📋 Service URLs:"
 echo "   Frontend: https://next.maia.city"
 echo "   Sync:     https://sync.next.maia.city/health"
 echo ""
-echo "⚠️  Set secrets manually before first deploy:"
+echo "⚠️  Secrets are not changed by deploy. Set manually or run when ready:"
+echo "   ./scripts/fly-secrets-from-env.sh --dry-run   # review"
+echo "   ./scripts/fly-secrets-from-env.sh             # apply from root .env"
 echo "   See scripts/fly-next-setup.md"
-echo "   fly secrets set AVEN_MAIA_ACCOUNT=... AVEN_MAIA_SECRET=... PEER_SYNC_DB_URL=... --app sync-next-maia-city"
 echo ""
 echo "🔍 Verify deployment:"
 echo "   flyctl status --app next-maia-city"

@@ -92,18 +92,28 @@ async function loadSyncServerTablesOnce() {
 			syncServerAllowed = false
 			return
 		}
-		const r = await fetch(`${base}/api/v0/admin/storage/tables`, {
-			headers: { Authorization: `Bearer ${token}` },
-		})
-		if (r.status === 401 || r.status === 403) {
-			syncServerTablesCache = []
-			syncServerTablesError = null
-			syncServerAllowed = false
-			return
+		const pageSize = 500
+		const allTables = []
+		let offset = 0
+		let hasMore = true
+		while (hasMore) {
+			const r = await fetch(`${base}/api/v0/admin/storage/tables?limit=${pageSize}&offset=${offset}`, {
+				headers: { Authorization: `Bearer ${token}` },
+			})
+			if (r.status === 401 || r.status === 403) {
+				syncServerTablesCache = []
+				syncServerTablesError = null
+				syncServerAllowed = false
+				return
+			}
+			if (!r.ok) throw new Error(`${r.status} ${r.statusText}`)
+			const j = await r.json()
+			const page = j.tables || []
+			allTables.push(...page)
+			hasMore = j.hasMore === true && page.length > 0
+			offset += pageSize
 		}
-		if (!r.ok) throw new Error(`${r.status} ${r.statusText}`)
-		const j = await r.json()
-		syncServerTablesCache = j.tables || []
+		syncServerTablesCache = allTables
 		syncServerTablesError = null
 		syncServerAllowed = true
 	} catch (e) {
