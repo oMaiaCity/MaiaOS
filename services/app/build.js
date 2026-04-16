@@ -8,6 +8,10 @@ import { cpSync, existsSync, mkdirSync, readFileSync, rmSync } from 'node:fs'
  */
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { bootstrapNodeLogging, createLogger } from '../../libs/maia-logs/src/index.js'
+
+bootstrapNodeLogging()
+const buildLog = createLogger('build')
 
 const __dirname = fileURLToPath(new URL('.', import.meta.url))
 const serviceDir = join(__dirname)
@@ -29,7 +33,7 @@ const syncResult = spawnSync(
 	},
 )
 if (syncResult.status !== 0) {
-	console.error('sync-assets failed')
+	buildLog.error('sync-assets failed')
 	process.exit(1)
 }
 
@@ -37,7 +41,7 @@ if (syncResult.status !== 0) {
 
 const clientPath = join(serviceDir, '../../libs/maia-distros/output/maia-client.mjs')
 if (!existsSync(clientPath)) {
-	console.error('Run bun run distros:build first')
+	buildLog.error('Run bun run distros:build first')
 	process.exit(1)
 }
 
@@ -48,12 +52,12 @@ const terrainWorkerBuild = spawnSync('bun', ['run', 'build:terrain-worker'], {
 	env: { ...process.env, NODE_ENV: 'production' },
 })
 if (terrainWorkerBuild.status !== 0) {
-	console.error('libs/maia-game build:terrain-worker failed')
+	buildLog.error('libs/maia-game build:terrain-worker failed')
 	process.exit(1)
 }
 const terrainWorkerSrc = join(repoRoot, 'libs/maia-game/dist/game-workers/terrain-height-worker.js')
 if (!existsSync(terrainWorkerSrc)) {
-	console.error('terrain-height-worker.js missing after maia-game build')
+	buildLog.error('terrain-height-worker.js missing after maia-game build')
 	process.exit(1)
 }
 const gameWorkersOut = join(distDir, 'game-workers')
@@ -64,6 +68,8 @@ cpSync(terrainWorkerSrc, join(gameWorkersOut, 'terrain-height-worker.js'))
 // VITE_AVEN_TEST_MODE: NEVER add to production - test mode is localhost-only, in-memory
 const envDefine = {
 	global: 'globalThis',
+	'globalThis.__MAIA_STRIP__': 'false',
+	'globalThis.__MAIA_DEBUG__': 'false',
 	'import.meta.env.DEV': 'false',
 	'import.meta.env.VITE_PEER_SYNC_HOST': JSON.stringify(
 		process.env.VITE_PEER_SYNC_HOST || 'sync.next.maia.city',
@@ -78,6 +84,10 @@ const envObj = JSON.stringify({
 	VITE_PEER_SYNC_HOST: syncHost,
 	VITE_SEED_VIBES: seedVibes,
 	DEV: false,
+	LOG_MODE: process.env.LOG_MODE || '',
+	LOG_LEVEL: process.env.LOG_LEVEL || 'warn',
+	LOG_MODE_PROD: process.env.LOG_MODE_PROD || '',
+	NODE_ENV: 'production',
 })
 const banner = `(function(){try{var m=typeof import.meta!=="undefined"?import.meta:{};var e=${envObj};if(!m.env){try{Object.defineProperty(m,"env",{value:e,writable:!0,configurable:!0})}catch(_){m.env=e}}else{Object.assign(m.env,e)}}catch(_){}})();`
 
@@ -88,7 +98,12 @@ const result = await Bun.build({
 	target: 'browser',
 	conditions: ['browser'],
 	format: 'esm',
-	minify: true,
+	minify: {
+		whitespace: true,
+		syntax: true,
+		identifiers: true,
+	},
+	drop: ['debugger'],
 	sourcemap: false,
 	define: envDefine,
 	banner,
@@ -97,7 +112,7 @@ const result = await Bun.build({
 })
 
 if (!result.success) {
-	console.error('Build failed:', result.logs)
+	buildLog.error('Build failed:', result.logs)
 	process.exit(1)
 }
 
@@ -156,8 +171,8 @@ const required = [
 ]
 const missing = required.filter(([, ok]) => !ok).map(([p]) => p)
 if (missing.length > 0) {
-	console.error('Build verification failed - missing:', missing.join(', '))
+	buildLog.error('Build verification failed - missing:', missing.join(', '))
 	process.exit(1)
 }
 
-console.log('Maia SPA build complete')
+buildLog.log('Maia SPA build complete')

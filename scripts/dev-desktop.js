@@ -8,6 +8,10 @@
 import { spawn } from 'node:child_process'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { bootstrapNodeLogging, createLogger } from '../libs/maia-logs/src/index.js'
+
+bootstrapNodeLogging()
+const devDesktopLog = createLogger('dev-desktop')
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = resolve(__dirname, '..')
@@ -19,7 +23,7 @@ const devProc = spawn('bun', ['scripts/dev.js'], {
 })
 
 devProc.on('error', (err) => {
-	console.error(err)
+	devDesktopLog.error(err)
 	process.exit(1)
 })
 
@@ -32,7 +36,7 @@ const tauriProc = spawn('bun', ['run', 'tauri:dev'], {
 })
 
 tauriProc.on('error', (err) => {
-	console.error(err)
+	devDesktopLog.error(err)
 	devProc.kill('SIGTERM')
 	process.exit(1)
 })

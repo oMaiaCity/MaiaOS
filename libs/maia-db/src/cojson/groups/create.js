@@ -4,7 +4,10 @@
  * Handles creation of Groups and Profiles.
  */
 
+import { createLogger } from '@MaiaOS/logs'
 import { createFactoryMeta } from '../../factories/registry.js'
+
+const log = createLogger('maia-db')
 
 /**
  * Create a new Group with optional name property
@@ -24,12 +27,12 @@ export function createGroup(node, { name = null } = {}) {
 		group.set('name', name)
 	}
 
-	console.log('✅ Group created:', group.id)
+	log.log('✅ Group created:', group.id)
 	if (name) {
-		console.log('   Name:', name)
+		log.log('   Name:', name)
 	}
-	console.log('   Type:', group.type)
-	console.log('   HeaderMeta:', group.headerMeta)
+	log.log('   Type:', group.type)
+	log.log('   HeaderMeta:', group.headerMeta)
 
 	return group
 }
@@ -57,9 +60,9 @@ export function createChildGroup(node, parentGroup, { name = null } = {}) {
 		childGroup.set('name', name)
 	}
 
-	console.log('✅ Child group created:', childGroup.id)
-	if (name) console.log('   Name:', name)
-	console.log('   Owner:', parentGroup?.id)
+	log.log('✅ Child group created:', childGroup.id)
+	if (name) log.log('   Name:', name)
+	log.log('   Owner:', parentGroup?.id)
 
 	return childGroup
 }
@@ -76,9 +79,9 @@ export function createProfile(group, { name = 'User' } = {}) {
 	const meta = createFactoryMeta('ProfileFactory')
 	const profile = group.createMap({ name }, meta)
 
-	console.log('✅ Profile created:', profile.id)
-	console.log('   Name:', name)
-	console.log('   HeaderMeta:', profile.headerMeta)
+	log.log('✅ Profile created:', profile.id)
+	log.log('   Name:', name)
+	log.log('   HeaderMeta:', profile.headerMeta)
 
 	return profile
 }

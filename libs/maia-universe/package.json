@@ -22,6 +22,7 @@
 		"./generated/registry.js": "./src/generated/registry.js"
 	},
 	"dependencies": {
+		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/peer": "workspace:*",
 		"@MaiaOS/runtime": "workspace:*",

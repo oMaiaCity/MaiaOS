@@ -3,10 +3,14 @@
  * Vendor only pglite.wasm to output/ - minimal dependency for self-contained server bundle.
  * Adapter passes wasmModule to PGlite.create() so no path resolution needed.
  */
+import { bootstrapNodeLogging, createLogger } from '@MaiaOS/logs'
 import { cpSync, existsSync, mkdirSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { resolvePgliteWasmPath } from './resolve-pglite-wasm.js'
+
+bootstrapNodeLogging()
+const vendorLog = createLogger('distros')
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const repoRoot = join(__dirname, '../../..')
@@ -26,4 +30,4 @@ cpSync(wasmSource, wasmTarget, { dereference: true })
 const pgliteDir = join(outputRoot, 'pglite')
 if (existsSync(pgliteDir)) rmSync(pgliteDir, { recursive: true })
 
-console.log('[maia-distros] Vendored pglite.wasm to output/')
+vendorLog.log('[maia-distros] Vendored pglite.wasm to output/')

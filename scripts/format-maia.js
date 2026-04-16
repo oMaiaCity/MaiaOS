@@ -1,12 +1,16 @@
 #!/usr/bin/env bun
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { join, relative } from 'node:path'
 /**
  * Format .maia config files (JSON with DSL flavor).
  * Biome doesn't support custom extensions, so we format them as JSON:
  * tabs, no trailing commas, LF line endings.
  * Use --check to validate without writing (exit 1 if any file needs formatting).
  */
-import { readdirSync, readFileSync, writeFileSync } from 'node:fs'
-import { join, relative } from 'node:path'
+import { bootstrapNodeLogging, createLogger } from '../libs/maia-logs/src/index.js'
+
+bootstrapNodeLogging()
+const formatMaiaLog = createLogger('format-maia')
 
 const ROOT = join(import.meta.dir, '..')
 const IGNORE = new Set(['node_modules', 'build', 'dist', 'gen', '.git', '.cursor', '.vscode'])
@@ -34,25 +38,25 @@ for (const fp of files) {
 	try {
 		parsed = JSON.parse(raw)
 	} catch (err) {
-		console.error(`[format-maia] ${relative(ROOT, fp)}: invalid JSON - ${err.message}`)
+		formatMaiaLog.error(`[format-maia] ${relative(ROOT, fp)}: invalid JSON - ${err.message}`)
 		process.exit(1)
 	}
 	const formatted = `${JSON.stringify(parsed, null, '\t')}\n`
 	if (formatted !== raw) {
 		if (CHECK) {
-			console.error(`[format-maia] ${relative(ROOT, fp)}: needs formatting`)
+			formatMaiaLog.error(`[format-maia] ${relative(ROOT, fp)}: needs formatting`)
 			changed++
 		} else {
 			writeFileSync(fp, formatted)
 			changed++
-			console.log(`Formatted ${relative(ROOT, fp)}`)
+			formatMaiaLog.log(`Formatted ${relative(ROOT, fp)}`)
 		}
 	}
 }
 if (CHECK && changed > 0) {
-	console.error(`[format-maia] ${changed} file(s) need formatting. Run 'bun run format:maia'`)
+	formatMaiaLog.error(`[format-maia] ${changed} file(s) need formatting. Run 'bun run format:maia'`)
 	process.exit(1)
 }
 if (changed > 0 && !CHECK) {
-	console.log(`[format-maia] Formatted ${changed} file(s)`)
+	formatMaiaLog.log(`[format-maia] Formatted ${changed} file(s)`)
 }

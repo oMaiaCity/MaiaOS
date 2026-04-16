@@ -1041,7 +1041,7 @@ async function handleLLMChat(req, worker) {
 		return jsonResponse(data, 200, {}, req)
 	} catch (e) {
 		const msg = e?.message ?? String(e)
-		console.error(OPS_PREFIX.llm, msg, e)
+		opsLlm.error('handleLLMChat catch', msg, e)
 		return jsonResponse({ error: 'Failed to process LLM request', message: msg }, 500, {}, req)
 	}
 }
@@ -1456,7 +1456,7 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 		opsSync.log('Ready')
 	} catch (e) {
 		opsSync.error('Init failed:', e?.message ?? e)
-		if (e?.stack) console.error(e.stack)
+		if (e?.stack) opsSync.error('stack', e.stack)
 		process.exit(1)
 	}
 })()

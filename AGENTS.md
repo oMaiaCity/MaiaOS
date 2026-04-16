@@ -38,6 +38,10 @@ All commands are documented in root `package.json`. Key commands:
 - **`bun test`** — runs `test` in every workspace that defines it (`bun run --workspaces --if-present test`; currently `@MaiaOS/db`)
 - **`bun run format`** — auto-fix formatting
 
+### Logging policy
+
+All application and tooling output goes through **`@MaiaOS/logs`** (`createLogger`, `createOpsLogger`, or channel helpers). **Do not call `console.*` in shipping code** — Biome `suspicious/noConsole` is enforced in CI. The only file allowed to call `console` directly is [`libs/maia-logs/src/transports/console.js`](libs/maia-logs/src/transports/console.js).
+
 ### Logging: dev:app vs dev:sync
 
 Both [`scripts/dev-app.js`](scripts/dev-app.js) and [`scripts/dev-sync.js`](scripts/dev-sync.js) load root [`.env`](.env) via `bun --env-file=.env`, but **`LOG_MODE` applies only to the app SPA** (browser), not to the sync server process.

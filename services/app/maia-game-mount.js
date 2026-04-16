@@ -2,6 +2,10 @@
  * Full-viewport Three.js scene from @MaiaOS/game (dashboard screen `the-game`).
  * Loads `@MaiaOS/game` only when entering The Game (dynamic import + parallel splash decode).
  */
+import { createLogger } from '@MaiaOS/logs'
+
+const gameMountLog = createLogger('game')
+
 const LOADING_SCREEN_IMAGE = '/brand/images/loading-screen.png'
 
 let _gameDispose = null
@@ -94,7 +98,7 @@ async function runMountAsync(token, container, mountGame) {
 			isCancelled: () => token !== _loadSession,
 		})
 	} catch (err) {
-		console.error('[Maia game] mount failed', err)
+		gameMountLog.error('[Maia game] mount failed', err)
 		return
 	}
 	if (token !== _loadSession) {

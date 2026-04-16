@@ -1,47 +1,72 @@
 # @MaiaOS/logs
 
-Structured logging for MaiaOS: **PERF**, **TRACE**, **DEBUG**, and **OPS** channels.
+Single entry point for MaiaOS logging: **modes**, **levels**, **PERF / TRACE / DEBUG / OPS** channels, **redaction**, **ring buffer** (`getRecentLogs`), and a **pluggable transport** (default: pretty console in development, JSON lines in production).
 
-## Channels
+## API
 
-| Channel | Purpose |
-|--------|---------|
-| **PERF** | Timings (`createPerfTracer`, pipeline/chat/upload keys) |
-| **TRACE** | Engine tracing (`traceView`, `traceInbox`, `traceProcess`) |
-| **DEBUG** | Feature-gated (`debugLog` / `debugWarn`, channel keys in `log-config`) |
-| **OPS** | Node/server lifecycle, storage, sync; `createOpsLogger(subsystem)` and `OPS_PREFIX` for stable bracket tags |
+| Export | Role |
+|--------|------|
+| `createLogger(subsystem)` | `.error` / `.warn` / `.info` / `.log` / `.debug` / `.perf(name)` / `.child(sub)` — gated by `LOG_LEVEL` unless you use `createOpsLogger` |
+| `createOpsLogger(subsystem)` | Operational lines (sync, storage, hooks); not suppressed by `LOG_LEVEL` |
+| `bootstrapNodeLogging()` | Node scripts: set mode/level from env + `installDefaultTransport()` |
+| `installDefaultTransport()` | Browser after `applyMaiaLoggingFromEnv` / env applied |
+| `applyMaiaLoggingFromEnv` + `resolveMaiaLoggingEnv` | Full env: `LOG_LEVEL`, `NODE_ENV`, `LOG_MODE` vs `LOG_MODE_PROD` |
+| `setTransport` / `getTransport` | Replace or wrap the sink (e.g. remote logging later) |
+| `getRecentLogs()` | Last 500 entries for diagnostics |
+| `redact` | Strip secrets from string args (Bearer, `PEER_SECRET`, etc.) |
+| `debugLog` / `debugWarn`, perf/trace helpers | Existing channel gates + `emitLog` |
 
-## Configuration
+## Modes (`resolveMode`)
 
-**Env only (no `localStorage` for gating):** set **`LOG_MODE`** in the repo root **`.env`**, or prefix the command: `LOG_MODE=debug.all bun dev`.
+| Mode | When | Default `LOG_LEVEL` |
+|------|------|---------------------|
+| `development` | Default in browser/Node when not production | `debug` |
+| `production` | `NODE_ENV=production` or `import.meta.env.DEV === false` | `warn` |
+| `test` | `NODE_ENV=test` | `silent` |
 
-On **localhost**, `services/app` exposes **`/__maia_env`** so the client applies PERF / TRACE / DEBUG **in memory** before app boot. Empty or `off` / `none` / `0` / `false` → all three off.
+In **production**, PERF/TRACE/DEBUG channels follow **`LOG_MODE_PROD`** (not `LOG_MODE`), so verbose dev flags do not accidentally enable noise in prod.
 
-**Token examples** (comma / semicolon / whitespace separated; see `src/log-mode.js` for full rules):
+## Env
+
+| Variable | Purpose |
+|----------|---------|
+| `LOG_LEVEL` | `silent` \| `error` \| `warn` \| `info` \| `log` \| `debug` |
+| `LOG_MODE` | Dev: comma-separated PERF/TRACE/DEBUG tokens (`perf.all`, `debug.app.maia-db`, …) |
+| `LOG_MODE_PROD` | Production-only channel string; required to enable PERF/TRACE/DEBUG in prod |
+| `NODE_ENV` | Selects mode profile |
+
+The app dev server exposes **`/__maia_env`** (`LOG_MODE`, `LOG_LEVEL`, `LOG_MODE_PROD`, `NODE_ENV`) so the SPA applies the same matrix before boot.
+
+## Channels (PERF / TRACE / DEBUG)
+
+**Token examples** (see `src/log-mode.js`):
 
 | Kind | Examples |
 |------|----------|
 | PERF | `perf.all`, `perf.engines.pipeline`, `engines:pipeline` |
 | TRACE | `trace.all` |
-| DEBUG | `debug.all`, `debug.engines.loadBinary`, `debug.app.cobinary` |
+| DEBUG | `debug.all`, `debug.app.maia-db` |
 
-**OPS** is not gated by `LOG_MODE`. Loggers use bracket prefixes such as `[sync]`, `[Storage]`, `[STORAGE]`, `[peer]`, `[ValidationHook]`, `[ActorEngine]`, `[ViewEngine]`.
+**OPS** (`createOpsLogger`) is not gated by `LOG_MODE`. Use stable bracket tags via **`OPS_PREFIX`** for grep and orchestration.
 
-## Shared prefixes (`OPS_PREFIX`)
+## Production client bundle
 
-Export **`OPS_PREFIX`** from this package so grep and orchestration stay aligned:
+`services/app/build.js` sets `globalThis.__MAIA_DEBUG__` and `globalThis.__MAIA_STRIP__` to `false` and `drop: ['debugger']`. `createLogger().debug` returns early when those flags are false.
 
-- **`scripts/dev.js`** imports it (via `../libs/maia-logs/src/index.js`) to detect sync readiness lines without hardcoding `[sync]`.
-- **`throw new Error(\`…\`)`** and user-facing strings that must remain stable should use the same prefixes (e.g. `` `${OPS_PREFIX.sync} …` ``).
+## Lint
 
-Do not duplicate raw `[sync]` / `[STORAGE]` strings outside this package for new code.
+Biome **`suspicious/noConsole`** is **error** in this repo. Only `libs/maia-logs/src/transports/console.js` may call `console.*` directly.
 
 ## Workspace
-
-Add to `package.json`:
 
 ```json
 "@MaiaOS/logs": "workspace:*"
 ```
 
 Run `bun install` from the repo root after changing dependencies.
+
+## Tests
+
+```bash
+bun --filter @MaiaOS/logs test
+```

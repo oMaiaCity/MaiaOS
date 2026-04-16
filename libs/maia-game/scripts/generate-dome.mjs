@@ -22,12 +22,16 @@ if (typeof globalThis.FileReader === 'undefined') {
 	}
 }
 
+import { bootstrapNodeLogging, createLogger } from '@MaiaOS/logs'
 import { mkdirSync, writeFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import * as THREE from 'three'
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js'
 import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js'
+
+bootstrapNodeLogging()
+const domeScriptLog = createLogger('game-scripts')
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const outDir = join(__dirname, '../src/assets')
@@ -333,4 +337,4 @@ const exporter = new GLTFExporter()
 const arrayBuffer = await exporter.parseAsync(scene, { binary: true })
 writeFileSync(outPath, Buffer.from(arrayBuffer))
 
-console.log(`Wrote ${outPath} (${(arrayBuffer.byteLength / 1024).toFixed(1)} KB)`)
+domeScriptLog.log(`Wrote ${outPath} (${(arrayBuffer.byteLength / 1024).toFixed(1)} KB)`)

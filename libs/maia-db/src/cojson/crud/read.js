@@ -8,7 +8,7 @@
  * ONE universal function that works for CoMap, CoList, and CoStream.
  */
 
-import { perfDbRead } from '@MaiaOS/logs'
+import { createLogger, perfDbRead } from '@MaiaOS/logs'
 import { resolveExpressions } from '@MaiaOS/validation/expression-resolver.js'
 import { ReactiveStore } from '../../reactive-store.js'
 import { observeCoValue } from '../cache/coCache.js'
@@ -26,8 +26,10 @@ import { matchesFilter } from './filter-helpers.js'
 import { applyMapTransform, applyMapTransformToArray } from './map-transform.js'
 import { waitForStoreReady } from './read-operations.js'
 
+const log = createLogger('maia-db')
+
 function debugLog(...args) {
-	if (typeof process !== 'undefined' && process.env?.DEBUG) console.error(...args)
+	if (typeof process !== 'undefined' && process.env?.DEBUG) log.debug(...args)
 }
 
 /**
@@ -459,7 +461,7 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 								factoryCoId = resolved
 							}
 						} catch (_) {
-							console.error(
+							log.error(
 								'[createUnifiedStore] Query schema must be co-id or resolve to co-id. Got:',
 								factoryCoId,
 							)
@@ -1191,7 +1193,7 @@ async function readCollection(peer, schema, filter = null, options = {}) {
 	// Get schema index colist ID from spark.os.indexes (keyed by schema co-id)
 	const coListId = await getCoListId(peer, schema)
 	if (typeof process !== 'undefined' && process.env?.DEBUG)
-		console.log('[DEBUG readCollection] schema=', schema, 'coListId=', coListId)
+		log.debug('[DEBUG readCollection] schema=', schema, 'coListId=', coListId)
 	if (!coListId) {
 		return store
 	}

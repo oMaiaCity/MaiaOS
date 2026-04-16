@@ -6,6 +6,7 @@
  */
 
 import { ensureProfileForNewAccount } from '@MaiaOS/db'
+import { createLogger } from '@MaiaOS/logs'
 import { createAccountWithSecret, loadAccount, setupSyncPeers } from '@MaiaOS/peer'
 // Import dependencies directly (workspace imports work in dev)
 // In Docker: These will be resolved via the kernel bundle or copied files
@@ -15,6 +16,8 @@ import { WasmCrypto } from 'cojson/crypto/WasmCrypto'
 import { requirePRFSupport } from './feature-detection.js'
 import { createPasskeyWithPRF, evaluatePRF } from './prf-adapter.js'
 import { arrayBufferToBase64, stringToUint8Array } from './utils.js'
+
+const selfLog = createLogger('self')
 
 // Extract functions from cojsonInternals for cleaner code
 const { accountHeaderForInitialAgentSecret, idforHeader } = cojsonInternals
@@ -181,11 +184,11 @@ export async function signInWithPasskey({ salt = 'maia.city' } = {}) {
 			await waitForSyncPeers()
 			const peerCount = syncSetup?.peers?.length ?? 0
 			const hasWs = !!syncSetup?.wsPeer
-			console.log(
+			selfLog.log(
 				`[signInWithPasskey] before loadAccount: hasWsPeer=${hasWs} syncPeers=${peerCount} account=${typeof accountID === 'string' ? `${accountID.slice(0, 12)}…` : '?'}`,
 			)
 			if (!hasWs) {
-				console.warn(
+				selfLog.warn(
 					'[signInWithPasskey] No sync WebSocket (setupSyncPeers returned empty URL). Load relies on local OPFS/IndexedDB only.',
 				)
 			}
@@ -195,13 +198,13 @@ export async function signInWithPasskey({ salt = 'maia.city' } = {}) {
 				loadResult = await doLoad()
 			} catch (first) {
 				if (first?.isAccountNotFound && syncSetup?.wsPeer) {
-					console.warn(
+					selfLog.warn(
 						'[signInWithPasskey] loadAccount failed (no local row + 0 peers at error time). Retrying after 2s for WebSocket race…',
 						{ peersAtFail: syncSetup.peers.length, message: first?.message },
 					)
 					await new Promise((r) => setTimeout(r, 2000))
 					await waitForSyncPeers()
-					console.log(`[signInWithPasskey] retry loadAccount: syncPeers=${syncSetup.peers.length}`)
+					selfLog.log(`[signInWithPasskey] retry loadAccount: syncPeers=${syncSetup.peers.length}`)
 					loadResult = await doLoad()
 				} else {
 					throw first
@@ -214,8 +217,8 @@ export async function signInWithPasskey({ salt = 'maia.city' } = {}) {
 				syncSetup.setNode(node)
 			}
 
-			console.log('   💾 0 secrets retrieved from storage')
-			console.log('   ⚡ Everything computed deterministically!')
+			selfLog.log('   💾 0 secrets retrieved from storage')
+			selfLog.log('   ⚡ Everything computed deterministically!')
 
 			return {
 				accountID: account.id,
@@ -224,7 +227,7 @@ export async function signInWithPasskey({ salt = 'maia.city' } = {}) {
 				account,
 			}
 		} catch (loadError) {
-			console.error('[signInWithPasskey] loadAccount failed', {
+			selfLog.error('[signInWithPasskey] loadAccount failed', {
 				message: loadError?.message,
 				isAccountNotFound: loadError?.isAccountNotFound,
 				peers: syncSetup?.peers?.length,
@@ -237,7 +240,7 @@ export async function signInWithPasskey({ salt = 'maia.city' } = {}) {
 
 	// Return immediately with loading promise (non-blocking)
 	// Caller can await loadingPromise if they need the account/node
-	console.log('🔄 Returning from signInWithPasskey() immediately (account loading in background)...')
+	selfLog.log('🔄 Returning from signInWithPasskey() immediately (account loading in background)...')
 	return {
 		accountID,
 		agentSecret,

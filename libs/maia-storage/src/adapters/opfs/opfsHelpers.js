@@ -3,6 +3,10 @@
  * Uses async File System API - works in main thread.
  */
 
+import { createLogger } from '@MaiaOS/logs'
+
+const opfsLog = createLogger('storage-opfs')
+
 /** v1: Batched transaction format, meta cache, dir cache. Fresh start. */
 export const DEFAULT_DB_NAME = 'cojson-storage-opfs-v1'
 
@@ -161,9 +165,7 @@ export async function deleteFile(root, path) {
 		if (e?.name === 'NotFoundError') return
 		if (e?.name === 'NoModificationAllowedError') {
 			// OPFS can throw when dir is read-only (e.g. during unload, some browser states)
-			if (typeof console?.warn === 'function') {
-				console.warn('[OPFS] removeEntry skipped (NoModificationAllowedError):', path)
-			}
+			opfsLog.warn('[OPFS] removeEntry skipped (NoModificationAllowedError):', path)
 			return
 		}
 		throw e

@@ -1,5 +1,5 @@
 /**
- * Single dev control: `LOG_MODE` (root `.env` → `/__maia_env` → in-memory state only).
+ * Single selector **`LOG_MODE`** for PERF / TRACE / DEBUG (root `.env` → `/__maia_env` → `applyLogModeFromEnv`, or `import.meta.env.LOG_MODE` from the prod banner).
  *
  * Tokens (comma / semicolon / whitespace separated):
  * - **`perf.all`** — all PERF channels
@@ -110,4 +110,19 @@ export function applyLogModeFromEnv(value) {
 	else debugKeys = [...debugGranular]
 
 	setLogModeState({ perfKeys, debugKeys, trace: traceAll })
+}
+
+/**
+ * Resolved `LOG_MODE` string: dev server sets `window.__MAIA_DEV_ENV__`; otherwise build banner `import.meta.env.LOG_MODE` (default `''` → all channels off).
+ * @returns {string}
+ */
+export function resolveMaiaLogMode() {
+	if (typeof window !== 'undefined' && window.__MAIA_DEV_ENV__) {
+		return String(window.__MAIA_DEV_ENV__.LOG_MODE ?? '')
+	}
+	const m =
+		typeof import.meta !== 'undefined' && import.meta.env && typeof import.meta.env === 'object'
+			? import.meta.env
+			: {}
+	return String(m.LOG_MODE ?? '')
 }

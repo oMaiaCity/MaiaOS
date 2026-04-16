@@ -3,11 +3,15 @@
  * Single output: libs/maia-universe/src/generated/registry.js
  */
 
+import { bootstrapNodeLogging, createLogger } from '../libs/maia-logs/src/index.js'
 import { Glob } from 'bun'
 import { maiaIdentity } from '../libs/maia-universe/src/helpers/identity-from-maia-path.js'
 import { mkdir, readFile, unlink, writeFile } from 'node:fs/promises'
 import { dirname, join, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
+
+bootstrapNodeLogging()
+const universeRegLog = createLogger('universe-registry')
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const REPO_ROOT = join(__dirname, '..')
@@ -411,7 +415,7 @@ ${emitBucketObject('interfaces', byBucket.interfaces)}${dataFrag}
 	await removeLegacyGenerated()
 	await deleteOldSplitOutputs()
 
-	console.log('[generate-maia-universe-registry] ok', posix(relative(REPO_ROOT, OUT_GENERATED)))
+	universeRegLog.log('[generate-maia-universe-registry] ok', posix(relative(REPO_ROOT, OUT_GENERATED)))
 }
 
 async function removeLegacyGenerated() {
@@ -455,6 +459,6 @@ async function deleteOldSplitOutputs() {
 }
 
 main().catch((e) => {
-	console.error(e)
+	universeRegLog.error(e)
 	process.exit(1)
 })

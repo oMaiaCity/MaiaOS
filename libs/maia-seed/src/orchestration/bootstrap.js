@@ -7,10 +7,13 @@ import {
 	SPARK_OS_META_FACTORY_CO_ID_KEY,
 	waitForStoreReady,
 } from '@MaiaOS/db'
+import { createOpsLogger } from '@MaiaOS/logs'
 import { maiaFactoryRefToNanoid } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { removeIdFields } from '@MaiaOS/validation/remove-id-fields'
 import { seedDefinitionCatalogBootstrap } from './definition-catalog-bootstrap.js'
 import { buildMetaFactoryForSeeding, sortSchemasByDependency } from './helpers.js'
+
+const opsBootstrap = createOpsLogger('seed')
 
 const MAIA_SPARK = '°maia'
 
@@ -168,9 +171,9 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 
 	const wfs = node.syncManager?.waitForStorageSync
 	if (!node.storage) {
-		console.warn('[Bootstrap] node.storage missing - scaffold may not persist across restart')
+		opsBootstrap.warn('[Bootstrap] node.storage missing - scaffold may not persist across restart')
 	} else if (!wfs || typeof wfs !== 'function') {
-		console.warn(
+		opsBootstrap.warn(
 			'[Bootstrap] waitForStorageSync unavailable - scaffold may not persist across restart',
 		)
 	} else {
@@ -204,7 +207,7 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		}
 	}
 
-	console.log(
+	opsBootstrap.log(
 		'✅ Bootstrap scaffold complete: account.registries, °maia spark, os, metaFactoryCoId, indexes (definition catalog), vibes',
 	)
 }
@@ -392,5 +395,5 @@ export async function bootstrapAccountRegistries(peer, maiaGroup) {
 		registriesContent.set('avens', avens.id)
 	}
 
-	console.log('✅ account.registries bootstrapped (sparks[°maia], humans, avens)')
+	opsBootstrap.log('✅ account.registries bootstrapped (sparks[°maia], humans, avens)')
 }

@@ -6,6 +6,7 @@
  * No states/transitions; phase lives in context when needed.
  */
 
+import { createLogger } from '@MaiaOS/logs'
 import { resolveExpressions } from '@MaiaOS/validation/expression-resolver'
 import {
 	createErrorEntry,
@@ -20,6 +21,8 @@ import {
 	traceProcessOp,
 } from '../utils/debug.js'
 import { readStore, resolveSchemaFromCoValue, resolveToCoId } from '../utils/resolve-helpers.js'
+
+const log = createLogger('process-engine')
 
 export class ProcessEngine {
 	constructor(evaluator, actorOps = null) {
@@ -46,7 +49,7 @@ export class ProcessEngine {
 		perfEnginesPipeline.step('process:send:start', { event, processId: processId?.slice(0, 30) })
 		const process = this.processes.get(processId)
 		if (!process) {
-			console.warn('[ProcessEngine] send: process not found', { processId, event })
+			log.warn('[ProcessEngine] send: process not found', { processId, event })
 			return false
 		}
 		process.eventPayload = payload || {}
@@ -59,7 +62,7 @@ export class ProcessEngine {
 
 		const handlers = process.definition?.handlers
 		if (!handlers || typeof handlers !== 'object') {
-			console.warn('[ProcessEngine] send: no handlers', { processId, event })
+			log.warn('[ProcessEngine] send: no handlers', { processId, event })
 			return false
 		}
 
@@ -158,9 +161,9 @@ export class ProcessEngine {
 					return true // ask = stop processing (request-response)
 				}
 				if (act.function === true) {
-					if (DEBUG) console.log('[ProcessEngine] calling _executeFunction')
+					if (DEBUG) log.debug('[ProcessEngine] calling _executeFunction')
 					await this._executeFunction(process, payload)
-					if (DEBUG) console.log('[ProcessEngine] _executeFunction completed')
+					if (DEBUG) log.debug('[ProcessEngine] _executeFunction completed')
 					return true // function delivers SUCCESS/ERROR to caller; stop
 				}
 				return false
@@ -347,7 +350,7 @@ export class ProcessEngine {
 			typeof window !== 'undefined' &&
 			(window.location?.hostname === 'localhost' || import.meta?.env?.DEV)
 		if (DEBUG) {
-			console.log('[ProcessEngine] _executeFunction', {
+			log.debug('[ProcessEngine] _executeFunction', {
 				hasActor: !!actor,
 				hasActorOps: !!actor?.actorOps,
 				hasExecutableFunction: !!actor?.executableFunction,
@@ -356,7 +359,7 @@ export class ProcessEngine {
 		}
 		if (!actor?.actorOps || typeof actor?.executableFunction?.execute !== 'function') {
 			if (DEBUG)
-				console.warn('[ProcessEngine] _executeFunction: abort - missing actorOps or executableFunction')
+				log.warn('[ProcessEngine] _executeFunction: abort - missing actorOps or executableFunction')
 			return
 		}
 		const eventPayload = process.eventPayload || payload || {}
@@ -364,7 +367,7 @@ export class ProcessEngine {
 		try {
 			const rawResult = await actor.executableFunction.execute(actor, eventPayload)
 			if (DEBUG)
-				console.log('[ProcessEngine] _executeFunction: result', {
+				log.debug('[ProcessEngine] _executeFunction: result', {
 					ok: rawResult?.ok,
 					hasData: !!rawResult?.data,
 				})
@@ -378,9 +381,9 @@ export class ProcessEngine {
 			const cleanedResult = data != null ? this._cleanToolResult(data) : null
 			const successPayload = { ...eventPayload, result: cleanedResult }
 			await this._deliverResult(actor, callerId, 'SUCCESS', successPayload)
-			if (DEBUG) console.log('[ProcessEngine] _executeFunction: delivered SUCCESS')
+			if (DEBUG) log.debug('[ProcessEngine] _executeFunction: delivered SUCCESS')
 		} catch (error) {
-			if (DEBUG) console.error('[ProcessEngine] _executeFunction: error', error?.message ?? error)
+			if (DEBUG) log.error('[ProcessEngine] _executeFunction: error', error?.message ?? error)
 			const errors = error?.errors ?? [
 				createErrorEntry(isPermissionError(error) ? 'permission' : 'structural', error?.message),
 			]

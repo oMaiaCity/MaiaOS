@@ -9,7 +9,7 @@
  * - Any other write path
  */
 
-import { debugLog } from '@MaiaOS/logs'
+import { createLogger, debugLog } from '@MaiaOS/logs'
 import {
 	extractSchemaFromMessage,
 	isAccountGroupOrProfile,
@@ -18,6 +18,8 @@ import {
 import { EXCEPTION_FACTORIES } from '../../factories/registry.js'
 import * as groups from '../groups/groups.js'
 import { applyPersistentCoValueIndexing } from './factory-index-manager.js'
+
+const log = createLogger('maia-db')
 
 // Track pending indexing operations to prevent duplicates
 const pendingIndexing = new Set()
@@ -267,7 +269,7 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 				} catch (error) {
 					const isFactoryCompilationError = error?.message?.includes('Failed to compile factory')
 					if (!isFactoryCompilationError) {
-						console.error('[StorageHook] Indexing failed', coId, error)
+						log.error('[StorageHook] Indexing failed', coId, error)
 					}
 				} finally {
 					pendingIndexing.delete(coId)

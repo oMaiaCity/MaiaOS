@@ -53,10 +53,7 @@
 			},
 			"suspicious": {
 				"noConsole": {
-					"level": "warn",
-					"options": {
-						"allow": ["log", "error", "warn"]
-					}
+					"level": "error"
 				}
 			},
 			"style": {}
@@ -99,6 +96,26 @@
 				"formatter": {
 					"trailingCommas": "none",
 					"expand": "always"
+				}
+			}
+		},
+		{
+			"includes": ["libs/maia-logs/src/transports/console.js"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noConsole": "off"
+					}
+				}
+			}
+		},
+		{
+			"includes": ["NEXT/**", "libs/FUTURE/**"],
+			"linter": {
+				"rules": {
+					"suspicious": {
+						"noConsole": "off"
+					}
 				}
 			}
 		},

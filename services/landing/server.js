@@ -8,6 +8,10 @@ import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, extname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { serve } from 'bun'
+import { bootstrapNodeLogging, createLogger } from '../../libs/maia-logs/src/index.js'
+
+bootstrapNodeLogging()
+const landingLog = createLogger('landing')
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const PORT = Number(process.env.PORT) || 8080
@@ -80,4 +84,4 @@ serve({
 	},
 })
 
-console.log(`Maia landing: http://localhost:${PORT}`)
+landingLog.log(`Maia landing: http://localhost:${PORT}`)

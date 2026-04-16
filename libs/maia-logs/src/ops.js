@@ -1,15 +1,17 @@
 /**
  * OPS channel: server lifecycle, storage backends, CORS, hooks, engine warnings.
  * Subsystem name appears in brackets; stable prefixes for grep and scripts/dev.js.
+ * Always emitted (not gated by LOG_LEVEL) — channel is operational.
  */
+
+import { emitLog } from './core.js'
 
 /** @param {string} subsystem Label inside brackets (e.g. sync, Storage, llm) */
 export function createOpsLogger(subsystem) {
-	const tag = `[${subsystem}]`
 	return {
-		log: (fmt, ...args) => console.log(`${tag} ${fmt}`, ...args),
-		warn: (fmt, ...args) => console.warn(`${tag} ${fmt}`, ...args),
-		error: (fmt, ...args) => console.error(`${tag} ${fmt}`, ...args),
+		log: (fmt, ...args) => emitLog('log', subsystem, [fmt, ...args], { applyLevelGate: false }),
+		warn: (fmt, ...args) => emitLog('warn', subsystem, [fmt, ...args], { applyLevelGate: false }),
+		error: (fmt, ...args) => emitLog('error', subsystem, [fmt, ...args], { applyLevelGate: false }),
 	}
 }
 

@@ -4,11 +4,14 @@
  * Payload: { value: string, path?: string } — path is dot path into context (default "notes.0.content").
  */
 
+import { createLogger } from '@MaiaOS/logs'
 import {
 	createErrorEntry,
 	createErrorResult,
 	createSuccessResult,
 } from '@MaiaOS/universe/helpers/operation-result.js'
+
+const log = createLogger('paper')
 
 /** Cache last value per coId to skip split+diff when unchanged. */
 const _lastValueByCoId = new Map()
@@ -84,7 +87,7 @@ export default {
 			_lastValueByCoId.set(coId, value)
 			return createSuccessResult({ coId, length: graphemes.length })
 		} catch (err) {
-			console.error('[updateCoTextContent] Failed:', err?.message ?? err)
+			log.error('[updateCoTextContent] Failed:', err?.message ?? err)
 			return createErrorResult([
 				createErrorEntry('structural', err?.message || 'Failed to update CoText content'),
 			])

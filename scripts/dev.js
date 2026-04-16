@@ -9,9 +9,9 @@ import { execSync, spawn } from 'node:child_process'
 import { existsSync, rmSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { OPS_PREFIX } from '../libs/maia-logs/src/index.js'
+import { createLogger, OPS_PREFIX } from '../libs/maia-logs/src/index.js'
+import { bootFooter, bootHeader } from './boot-banner.js'
 import { freePort } from './free-port.js'
-import { bootFooter, bootHeader, createLogger } from './logger.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = resolve(__dirname, '..')

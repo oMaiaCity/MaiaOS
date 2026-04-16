@@ -11,6 +11,7 @@
  * - spark.os.indexes["@nanoids"]: nanoid string → co_z (header.meta.$nanoid index). Legacy spark.os.nanoids is migrated on load.
  */
 
+import { createLogger } from '@MaiaOS/logs'
 import { FACTORY_REF_PATTERN } from '@MaiaOS/validation'
 import { removeIdFields } from '@MaiaOS/validation/remove-id-fields'
 import { EXCEPTION_FACTORIES } from '../../factories/registry.js'
@@ -25,6 +26,8 @@ import {
 } from '../factory/runtime-factory-refs.js'
 import * as groups from '../groups/groups.js'
 import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
+
+const log = createLogger('maia-db')
 
 // Matches both °Spark/schema/... and @domain/schema/... (captures prefix + path)
 const SCHEMA_REF_MATCH = /^([°@][a-zA-Z0-9_-]+)\/factory\/(.+)$/
@@ -47,7 +50,7 @@ async function loadIndexColistContent(peer, indexColistId, timeoutMs = 8000) {
 	const contentType = content.cotype || content.type
 	if (contentType !== 'colist') return null
 	if (typeof process !== 'undefined' && process.env?.DEBUG && Date.now() - start > 2000) {
-		console.log('[DEBUG loadIndexColistContent] slow', indexColistId, Date.now() - start, 'ms')
+		log.debug('[DEBUG loadIndexColistContent] slow', indexColistId, Date.now() - start, 'ms')
 	}
 	return content
 }
@@ -107,7 +110,7 @@ async function ensureOsCoMap(peer, spark) {
 	if (!registriesId?.startsWith('co_z')) {
 		if (!warnedRegistriesMissingDuringBootstrap) {
 			warnedRegistriesMissingDuringBootstrap = true
-			console.warn(
+			log.warn(
 				'[SchemaIndexManager] account.registries not set yet (bootstrap). Indexing deferred until linkAccountToRegistries.',
 			)
 		}
@@ -447,7 +450,7 @@ async function ensureSchemaSpecificIndexColistSchema(peer, factoryCoId, metaSche
 	// Load schema definition to get its title
 	const factoryDef = await resolve(peer, factoryCoId, { returnType: 'factory' })
 	if (!factoryDef) {
-		if (typeof process !== 'undefined' && process.env?.DEBUG) console.error('factoryDef missing')
+		if (typeof process !== 'undefined' && process.env?.DEBUG) log.error('factoryDef missing')
 		return null
 	}
 
