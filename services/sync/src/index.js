@@ -13,7 +13,7 @@
  *   AVEN_MAIA_GUARDIAN: Human account co-id (co_z...). If set, add as admin of °maia spark guardian; also seeds /sync/write so that account can sync without POST /register.
  *   PEER_SYNC_SEED: unset/false vs true — optional genesis when scaffold exists (same as former PEER_SYNC_MODE=seed).
  *     Local dev + pglite + no BUCKET_NAME: clears PGlite data dir + local binary-bucket; new Aven Tester is written to repo .env after startup succeeds (avoids mid-boot .env watcher restarts). Production/postgres/Tigris: never auto-clears or auto-rotates; manual only.
- *   SEED_VIBES: Default "all". Which vibes to seed (todos, chat, addressbook, quickjs, etc). "all" seeds every vibe including quickjs.
+ *   SEED_VIBES: Default "all". Which vibes to seed (todos, chat, addressbook, quickjs/Vibe Creator, etc). "all" seeds every vibe including quickjs.
  *   PEER_APP_HOST: Allowed CORS origin (e.g. https://next.maia.city). Required when NODE_ENV=production. Unset in dev with PGlite or MAIA_DEV_CORS=1: localhost:4200 only (no wildcard).
  *   MAIA_DEV_CORS=1: With Postgres local dev, enable same multi-origin dev CORS as PGlite (localhost / 127.0.0.1 / ::1 on port 4200).
  *   Read-only storage inspector (when sync is up): same paths; Bearer UCAN cmd `/admin/storage` + Capability grant (or `/admin`). BEGIN READ ONLY for POST /query.
@@ -101,7 +101,7 @@ if (isProduction && !process.env.PEER_APP_HOST?.trim()) {
 	)
 }
 
-// SEED_VIBES: which vibes to seed on genesis. Default "all" (includes quickjs). Override: "todos,chat" or "todos,chat,addressbook,quickjs"
+// SEED_VIBES: which vibes to seed on genesis. Default "all" (includes quickjs / Vibe Creator). Override: "todos,chat" or "todos,chat,addressbook,quickjs"
 const seedVibesConfig = process.env.SEED_VIBES || 'all'
 
 /** CORS: PEER_APP_HOST = allowed origin (e.g. https://next.maia.city or localhost:4200). No wildcard. */

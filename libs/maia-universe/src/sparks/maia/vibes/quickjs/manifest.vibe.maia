@@ -1,7 +1,7 @@
 {
 	"$factory": "°maia/factory/vibe.factory.maia",
-	"name": "QuickJS",
-	"description": "Add two numbers via sandboxed QuickJS",
+	"name": "Vibe Creator",
+	"description": "Sandboxed QuickJS tools, deps, and developer logs",
 	"icon": "°maia/data/icons.data.maia[UKqnOjPwqebR]",
 	"actor": "°maia/quickjs/intent/intent.actor.maia",
 	"runtime": [
@@ -12,6 +12,7 @@
 		"°maia/quickjs/layout-quickjs/actor.maia",
 		"°maia/quickjs/add-form/actor.maia",
 		"°maia/quickjs/deps-list/actor.maia",
+		"°maia/views/logs/actor.maia",
 		"°maia/views/tabs/view.maia",
 		"°maia/views/tabs/process.maia",
 		"°maia/views/tabs/style.maia",
