@@ -29,6 +29,7 @@ export {
 	logStorageOpfsStep,
 	perfAppMaiaDb,
 	perfAppVibes,
+	perfBootstrap,
 	perfDbRead,
 	perfDbUpload,
 	perfEnginesChat,

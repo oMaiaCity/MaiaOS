@@ -3,9 +3,11 @@
 	"title": "My Sparks",
 	"sparks": {
 		"factory": "°maia/factory/spark.factory.maia",
-		"map": {
-			"id": "id",
-			"name": "name"
+		"options": {
+			"map": {
+				"id": "id",
+				"name": "name"
+			}
 		}
 	},
 	"inputActor": "@input",

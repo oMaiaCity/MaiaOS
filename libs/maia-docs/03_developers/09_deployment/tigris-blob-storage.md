@@ -91,7 +91,7 @@ Empty Postgres + deploy runs genesis seed automatically. All new binary uploads 
 
 ### 4. After First Deploy
 
-Optional: unset `PEER_SYNC_MODE` on Fly after a one-shot `seed` deploy so it is not applied on every restart.
+Optional: unset `PEER_SYNC_SEED` on Fly after a one-shot seed deploy so it is not applied on every restart.
 
 ### 5. Verify
 

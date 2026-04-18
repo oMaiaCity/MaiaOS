@@ -14,7 +14,7 @@ import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
 import { maiaFactoryRefToNanoid, maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { removeIdFields } from '@MaiaOS/validation/remove-id-fields'
 import { getVibeKey } from '@MaiaOS/validation/vibe-keys'
-import { bootstrapAccountRegistries, bootstrapAndScaffold } from './bootstrap.js'
+import { bootstrapAccountSparks, bootstrapAndScaffold } from './bootstrap.js'
 import { seedConfigs } from './configs.js'
 import { seedData } from './data.js'
 import { buildMetaFactoryForSeeding, ensureSparkOs, sortSchemasByDependency } from './helpers.js'
@@ -111,8 +111,7 @@ export async function seed(
 	const { MaiaDB } = await import('@MaiaOS/db')
 	const peer = existingBackend || new MaiaDB({ node, account }, {})
 
-	const needsBootstrap =
-		!account.get('registries') || !String(account.get('registries')).startsWith('co_z')
+	const needsBootstrap = !account.get('sparks') || !String(account.get('sparks')).startsWith('co_z')
 	if (needsBootstrap) {
 		const { ensureFactoriesLoaded, getAllFactories } = await import(
 			'@MaiaOS/validation/factory-registry'
@@ -133,7 +132,7 @@ export async function seed(
 			'[CoJSONSeed] °maia spark group not found. Ensure bootstrap has created °maia spark.',
 		)
 	}
-	await bootstrapAccountRegistries(peer, maiaGroup)
+	await bootstrapAccountSparks(peer, maiaGroup)
 	await peer.resolveSystemSparkCoId()
 
 	const uniqueSchemasByNanoid = new Map()

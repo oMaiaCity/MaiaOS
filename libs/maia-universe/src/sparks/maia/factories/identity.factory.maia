@@ -1,10 +1,17 @@
 {
 	"$factory": "°maia/factory/meta.factory.maia",
-	"title": "°maia/factory/aven-identity.factory.maia",
-	"description": "Aven identity: account + profile. Referenced by avens identity registry.",
+	"title": "°maia/factory/identity.factory.maia",
+	"description": "Unified human/aven identity: type + account + profile. Auto-indexed in spark.os.indexes. Display name from profile.name.",
 	"cotype": "comap",
-	"indexing": false,
+	"indexing": true,
 	"properties": {
+		"type": {
+			"type": "string",
+			"enum": [
+				"human",
+				"aven"
+			]
+		},
 		"account": {
 			"type": "string",
 			"pattern": "^co_z[a-zA-Z0-9]{20,}$",
@@ -17,6 +24,7 @@
 		}
 	},
 	"required": [
+		"type",
 		"account",
 		"profile"
 	],

@@ -9,11 +9,14 @@
 // Peer setup, sync state, backend for operations
 export {
 	CAP_GRANT_TTL_SECONDS,
+	ensureIdentity,
 	ensureProfileForNewAccount,
+	findFirst,
 	generateRegistryName,
 	getCapabilityGrantIndexColistCoId,
 	getFactoryIndexColistId,
 	getSchema,
+	listAccountIdsFromIdentityIndex,
 	loadCapabilitiesGrants,
 	MaiaDB,
 	ReactiveStore,
@@ -27,13 +30,22 @@ export {
 	setupSyncPeers,
 	subscribeSyncState,
 	updateSyncState,
+	validateInvite,
 	waitForStoreReady,
 } from '@MaiaOS/db'
 export {
-	createAgentAccount,
+	BOOTSTRAP_PHASES,
+	BootstrapError,
+	bootstrapAccountHandshake,
+	getBootstrapPhase,
+	resetBootstrapPhase,
+	setBootstrapPhase,
+	subscribeBootstrapPhase,
+} from '@MaiaOS/peer'
+export {
+	ensureAccount,
 	generateAgentCredentials,
 	isPRFSupported,
-	loadAgentAccount,
 	loadOrCreateAgentAccount,
 	signInWithPasskey,
 	signUpWithPasskey,

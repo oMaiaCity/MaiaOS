@@ -90,12 +90,17 @@ export {
 	accountHasCapabilityOnPeer,
 	getCapabilityGrantIndexColistCoIdFromPeer,
 } from './cojson/helpers/capability-grants-resolve.js'
+export { validateInvite } from './cojson/helpers/invite-validate.js'
 export {
 	getCapabilityGrantIndexColistCoId,
 	loadCapabilitiesGrants,
 } from './cojson/helpers/load-capabilities-grants.js'
 export { resolveAccountCoIdsToProfiles } from './cojson/helpers/resolve-account-profile.js'
 export { resolveGroupCoIdsToCapabilityNames } from './cojson/helpers/resolve-capability-group.js'
+export {
+	ensureIdentity,
+	listAccountIdsFromIdentityIndex,
+} from './cojson/registry/ensure-identity.js'
 export { SPARK_OS_META_FACTORY_CO_ID_KEY } from './cojson/spark-os-keys.js'
 export { CAP_GRANT_TTL_SECONDS } from './constants/capability-grant-ttl.js'
 export {

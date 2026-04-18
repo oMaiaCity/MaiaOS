@@ -55,6 +55,7 @@
       "name": "@MaiaOS/peer",
       "version": "26.4.142216-next",
       "dependencies": {
+        "@MaiaOS/db": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/storage": "workspace:*",
         "cojson": "0.20.16",
@@ -68,6 +69,7 @@
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/maia-ucan": "workspace:*",
+        "@MaiaOS/peer": "workspace:*",
         "@MaiaOS/self": "workspace:*",
         "@MaiaOS/universe": "workspace:*",
         "@MaiaOS/validation": "workspace:*",
@@ -175,6 +177,7 @@
         "@MaiaOS/maia-ucan": "workspace:*",
         "@MaiaOS/runtime": "workspace:*",
         "@MaiaOS/seed": "workspace:*",
+        "@MaiaOS/self": "workspace:*",
         "@MaiaOS/storage": "workspace:*",
         "@MaiaOS/universe": "workspace:*",
       },

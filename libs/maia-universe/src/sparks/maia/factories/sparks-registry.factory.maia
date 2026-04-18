@@ -1,7 +1,7 @@
 {
 	"$factory": "°maia/factory/meta.factory.maia",
 	"title": "°maia/factory/sparks-registry.factory.maia",
-	"description": "Sparks registry CoMap - spark name -> spark co-id. Stored in account.registries.sparks",
+	"description": "Sparks registry CoMap - spark name -> spark co-id. Stored in account.sparks",
 	"cotype": "comap",
 	"indexing": false,
 	"additionalProperties": {

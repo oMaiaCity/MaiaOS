@@ -10,6 +10,7 @@
 		".": "./src/index.js",
 		"./registry": "./src/factories/registry.js",
 		"./factory/system-factories-from-os": "./src/cojson/factory/system-factories-from-os.js",
+		"./profile-bootstrap": "./src/profile-bootstrap.js",
 		"./cojson/crud/create": "./src/cojson/crud/create.js",
 		"./cojson/crud/update": "./src/cojson/crud/update.js",
 		"./cojson/indexing/factory-index-manager": "./src/cojson/indexing/factory-index-manager.js"

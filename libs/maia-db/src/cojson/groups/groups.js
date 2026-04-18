@@ -8,6 +8,47 @@ import { waitForStoreReady } from '../crud/read-operations.js'
 import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
 
 /**
+ * Read a co_z string field from an in-memory CoMap (bypasses read() ReactiveStore snapshot lag).
+ * Genesis bootstrap + seed can call group resolution in the same tick as writes; peer.read() may
+ * still serve a pre-write cached value until the observer runs.
+ * @param {Object} peer
+ * @param {string} coId
+ * @param {string} key
+ * @returns {string|null}
+ */
+function readCoMapCoIdField(peer, coId, key) {
+	if (!coId?.startsWith('co_z') || !key) return null
+	const core = peer.getCoValue?.(coId) ?? peer.node?.getCoValue?.(coId)
+	if (!core?.isAvailable?.()) return null
+	const content = peer.getCurrentContent?.(core) ?? core.getCurrentContent?.()
+	if (!content || typeof content.get !== 'function') return null
+	const v = content.get(key)
+	return typeof v === 'string' && v.startsWith('co_z') ? v : null
+}
+
+/**
+ * Flatten sparks registry CoMap to { logicalKey: co_z } using live content (for resolveSparkCoId).
+ * @param {Object} peer
+ * @param {string} sparksId
+ * @returns {Record<string, string>}
+ */
+function readLiveSparksRegistryEntries(peer, sparksId) {
+	const out = {}
+	if (!sparksId?.startsWith('co_z')) return out
+	const core = peer.getCoValue?.(sparksId) ?? peer.node?.getCoValue?.(sparksId)
+	if (!core?.isAvailable?.()) return out
+	const content = peer.getCurrentContent?.(core) ?? core.getCurrentContent?.()
+	if (!content || typeof content.get !== 'function') return out
+	const keys = typeof content.keys === 'function' ? content.keys() : Object.keys(content)
+	for (const k of keys) {
+		if (k === 'maiaPathKey') continue
+		const v = content.get(k)
+		if (typeof v === 'string' && v.startsWith('co_z')) out[k] = v
+	}
+	return out
+}
+
+/**
  * Get a Group CoValue by ID
  * @param {LocalNode} node - LocalNode instance
  * @param {string} groupId - Group CoValue ID
@@ -52,7 +93,10 @@ export async function getCapabilityGroupIdFromOsId(peer, osId, capabilityName) {
 	if (!osCore || !peer.isAvailable(osCore)) return null
 	const osContent = peer.getCurrentContent(osCore)
 	if (!osContent || typeof osContent.get !== 'function') return null
-	const groupsId = osContent.get('groups')
+	let groupsId = osContent.get('groups')
+	if (!groupsId?.startsWith('co_z')) {
+		groupsId = readCoMapCoIdField(peer, osId, 'groups')
+	}
 	if (!groupsId || typeof groupsId !== 'string' || !groupsId.startsWith('co_z')) return null
 	const groupsStore = await peer.read(null, groupsId)
 	await waitForStoreReady(groupsStore, groupsId, 15000)
@@ -60,7 +104,10 @@ export async function getCapabilityGroupIdFromOsId(peer, osId, capabilityName) {
 	if (!groupsCore || !peer.isAvailable(groupsCore)) return null
 	const groupsContent = peer.getCurrentContent(groupsCore)
 	if (!groupsContent || typeof groupsContent.get !== 'function') return null
-	const groupId = groupsContent.get(capabilityName)
+	let groupId = groupsContent.get(capabilityName)
+	if (!groupId?.startsWith('co_z')) {
+		groupId = readCoMapCoIdField(peer, groupsId, capabilityName)
+	}
 	if (!groupId || typeof groupId !== 'string' || !groupId.startsWith('co_z')) return null
 	return groupId
 }
@@ -124,38 +171,13 @@ export async function getSparkGroup(peer, spark) {
 }
 
 /**
- * Load account.registries → registries.sparks CoMap content for spark resolution.
- * @param {Object} peer
- * @returns {Promise<{get(key: string): string|undefined}|null>} Sparks registry content or null
+ * Account.sparks CoMap (spark name → spark co-id). Returns null if not found.
  */
-/** Get sparks registry CoMap co-id (account.registries.sparks). Returns null if not found. */
+/** Get sparks registry CoMap co-id (top-level account.sparks). Returns null if not found. */
 export async function getSparksRegistryId(peer) {
-	const registriesId = peer.account?.get?.('registries')
-	if (!registriesId?.startsWith('co_z')) return null
-	const registriesStore = await peer.read(null, registriesId)
-	await waitForStoreReady(registriesStore, registriesId, 10000)
-	const registriesContent = registriesStore?.value ?? {}
-	return registriesContent.sparks ?? null
-}
-
-/** Get humans registry CoMap co-id (account.registries.humans). Returns null if not found. */
-export async function getHumansRegistryId(peer) {
-	const registriesId = peer.account?.get?.('registries')
-	if (!registriesId?.startsWith('co_z')) return null
-	const registriesStore = await peer.read(null, registriesId)
-	await waitForStoreReady(registriesStore, registriesId, 10000)
-	const registriesContent = registriesStore?.value ?? {}
-	return registriesContent.humans ?? null
-}
-
-/** Get avens registry CoMap co-id (account.registries.avens). Returns null if not found. */
-export async function getAvensRegistryId(peer) {
-	const registriesId = peer.account?.get?.('registries')
-	if (!registriesId?.startsWith('co_z')) return null
-	const registriesStore = await peer.read(null, registriesId)
-	await waitForStoreReady(registriesStore, registriesId, 10000)
-	const registriesContent = registriesStore?.value ?? {}
-	return registriesContent.avens ?? null
+	const sparksId = peer.account?.get?.('sparks')
+	if (!sparksId?.startsWith('co_z')) return null
+	return sparksId
 }
 
 export async function getSparksRegistryContent(peer) {
@@ -163,10 +185,12 @@ export async function getSparksRegistryContent(peer) {
 	if (!sparksId?.startsWith('co_z')) return null
 	const sparksStore = await peer.read(null, sparksId)
 	await waitForStoreReady(sparksStore, sparksId, 10000)
-	const sparksContent = sparksStore?.value ?? {}
+	const fromStore = sparksStore?.value ?? {}
+	const live = readLiveSparksRegistryEntries(peer, sparksId)
+	const merged = { ...fromStore, ...live }
 	return {
 		get(key) {
-			const v = sparksContent[key]
+			const v = merged[key]
 			return typeof v === 'string' && v.startsWith('co_z') ? v : undefined
 		},
 	}
@@ -182,7 +206,7 @@ export async function resolveSparkCoId(peer, spark) {
 }
 
 /**
- * Get spark's os CoMap id (account.registries.sparks[spark].os)
+ * Get spark's os CoMap id (account.sparks[spark].os)
  * @param {Object} peer
  * @param {string} spark - Spark name (e.g. "°maia") or spark co-id
  * @returns {Promise<string|null>}
@@ -214,13 +238,16 @@ export async function getSparkOsId(peer, spark) {
 	const sparkStore = await peer.read(null, sparkCoId)
 	await waitForStoreReady(sparkStore, sparkCoId, 10000)
 	const sparkData = sparkStore?.value ?? {}
-	const osId = sparkData.os || null
+	let osId = sparkData.os || null
+	if (!osId?.startsWith('co_z')) {
+		osId = readCoMapCoIdField(peer, sparkCoId, 'os')
+	}
 	if (osId) peer._cachedMaiaOsId = osId
 	return osId
 }
 
 /**
- * Get spark's vibes CoMap id (account.registries.sparks[spark].os.vibes)
+ * Get spark's vibes CoMap id (account.sparks[spark].os.vibes)
  * @param {Object} peer
  * @param {string} spark
  * @returns {Promise<string|null>}
@@ -231,7 +258,11 @@ export async function getSparkVibesId(peer, spark) {
 	const osStore = await peer.read(null, osId)
 	await waitForStoreReady(osStore, osId, 10000)
 	const osData = osStore?.value ?? {}
-	return osData.vibes ?? null
+	let vibesId = osData.vibes ?? null
+	if (!vibesId?.startsWith('co_z')) {
+		vibesId = readCoMapCoIdField(peer, osId, 'vibes')
+	}
+	return vibesId
 }
 
 /**

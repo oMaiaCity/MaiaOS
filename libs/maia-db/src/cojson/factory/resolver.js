@@ -63,7 +63,7 @@ export async function lookupRegistryKey(peer, identifier, options = {}) {
 			normalizedKey = `${effectiveSpark}/schema/${normalizedKey}`
 		}
 
-		// Use read() API to load spark.os (account.registries.sparks[spark].os) or spark.os.vibes registry
+		// Use read() API to load spark.os (account.sparks[spark].os) or spark.os.vibes registry
 		if (!peer.account || typeof peer.account.get !== 'function') {
 			return null
 		}
@@ -434,21 +434,14 @@ async function waitForCoValueAvailable(core, timeoutMs = 5000) {
 }
 
 /**
- * Resolve spark.os id from account via account.registries.sparks[spark].os (node-only, no peer.read)
+ * Resolve spark.os id from account via account.sparks[spark].os (node-only, no peer.read)
  * @param {LocalNode} node
  * @param {RawAccount} account
  * @param {string} spark - Spark name (e.g. '°maia')
  * @returns {Promise<string|null>} os co-id or null
  */
 async function resolveSparkOsIdFromNode(node, account, spark) {
-	const registriesId = account.get?.('registries')
-	if (!registriesId?.startsWith('co_z')) return null
-	const registriesCore =
-		node.getCoValue(registriesId) || (await node.loadCoValueCore?.(registriesId))
-	if (!(await waitForCoValueAvailable(registriesCore))) return null
-	const registries = registriesCore?.getCurrentContent?.()
-	if (!registries || typeof registries.get !== 'function') return null
-	const sparksId = registries.get('sparks')
+	const sparksId = account.get?.('sparks')
 	if (!sparksId?.startsWith('co_z')) return null
 
 	const sparksCore = node.getCoValue(sparksId) || (await node.loadCoValueCore?.(sparksId))

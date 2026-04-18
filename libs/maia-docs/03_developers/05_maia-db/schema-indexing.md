@@ -20,7 +20,7 @@ spark.os.indexes     →  schema-co-id → colist of instance co-ids (index)
 spark.os.unknown     →  colist of co-values without schemas
 ```
 
-**Location:** `account.registries.sparks[°Maia].os` (or system spark)
+**Location:** `account.sparks[°maia].os` (or system spark)
 
 ---
 

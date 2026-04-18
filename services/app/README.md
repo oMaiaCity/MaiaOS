@@ -52,7 +52,7 @@ Vibes are loaded dynamically within the main maia app. When a user navigates to 
 
 1. Calls `loadVibe('todos')` which sets `currentVibe = 'todos'`
 2. Renders a container div in the main view area
-3. Calls `maia.loadVibeFromAccount('todos', container)` to load the vibe from `account.registries.sparks[°Maia].os.vibes`
+3. Calls `maia.loadVibeFromAccount('todos', container)` to load the vibe from `account.sparks[°maia].os.vibes`
 4. The vibe renders inline within the database inspector interface
 
 **Example:**

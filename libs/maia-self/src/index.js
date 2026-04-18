@@ -5,23 +5,18 @@
  */
 
 export { getStorage } from '@MaiaOS/storage'
-
+export { ensureAccount } from './ensure-account.js'
 export {
 	isPRFSupported,
 	requirePRFSupport,
 } from './feature-detection.js'
-
 export { createPasskeyWithPRF, evaluatePRF } from './prf-adapter.js'
 export { getExistingPasskey } from './prf-evaluator.js'
 export {
-	createAgentAccount,
 	generateAgentCredentials,
-	loadAgentAccount,
 	loadOrCreateAgentAccount,
 	signInWithPasskey,
 	signUpWithPasskey,
-	// NO LOCALSTORAGE: Removed isSignedIn, signOut, getCurrentAccount, inspectStorage
-	// NO SYNC STATE: subscribeSyncState moved to @MaiaOS/db
 } from './self.js'
 export {
 	arrayBufferToBase64,
