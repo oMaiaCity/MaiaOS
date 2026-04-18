@@ -15,6 +15,8 @@ export {
 export { debugLog, debugWarn } from './debug.js'
 export {
 	isDebugChannelEnabled,
+	isDevVerboseEnabled,
+	isOpsInfoEnabled,
 	isPerfChannelEnabled,
 	isTraceEnabledFromConfig,
 	setLogModeState,
@@ -22,7 +24,7 @@ export {
 export { applyLogModeFromEnv, resolveMaiaLogMode } from './log-mode.js'
 export { bootstrapNodeLogging, createLogger, installDefaultTransport } from './logger.js'
 export { applyMaiaLoggingFromEnv, resolveMaiaLoggingEnv } from './maia-logging-env.js'
-export { createOpsLogger, OPS_PREFIX } from './ops.js'
+export { createOpsLogger, getOpsSubsystemForPrefixedLine, OPS_PREFIX } from './ops.js'
 export {
 	createPerfTracer,
 	isStorageOpfsPerfEnabled,

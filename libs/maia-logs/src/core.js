@@ -5,9 +5,9 @@
 import { createConsoleTransport } from './transports/console.js'
 
 /** @typedef {'development' | 'production' | 'test'} LogModeName */
-/** @typedef {'silent' | 'error' | 'warn' | 'info' | 'log' | 'debug'} LogLevelName */
+/** @typedef {'silent' | 'error' | 'warn' | 'info' | 'log' | 'success' | 'debug'} LogLevelName */
 
-const LEVEL_RANK = { silent: 0, error: 1, warn: 2, info: 3, log: 4, debug: 5 }
+const LEVEL_RANK = { silent: 0, error: 1, warn: 2, info: 3, log: 4, success: 4, debug: 5 }
 
 const REDACT_PATTERNS = [
 	/(Bearer\s+)[^\s]+/gi,
@@ -138,7 +138,7 @@ export function shouldLog(levelName) {
  * @param {string} level
  * @param {string} subsystem
  * @param {unknown[]} parts
- * @param {{ applyLevelGate?: boolean }} [opts] — `applyLevelGate` false for OPS and for PERF/DEBUG/TRACE after channel gating (LOG_MODE), so they are not double-gated by LOG_LEVEL.
+ * @param {{ applyLevelGate?: boolean }} [opts] — `applyLevelGate` false for OPS (warn/error; informational OPS `.log` is pre-gated by `LOG_MODE` in `createOpsLogger`) and for PERF/DEBUG/TRACE after channel gating, so they are not double-gated by `LOG_LEVEL`.
  */
 export function emitLog(level, subsystem, parts, opts = {}) {
 	ensureTransportForEmit()

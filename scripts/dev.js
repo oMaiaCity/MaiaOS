@@ -1,20 +1,35 @@
 #!/usr/bin/env bun
 
 /**
- * Development script for MaiaOS
- * Runs app (4200) and sync (4201)
+ * Development script for MaiaOS — app (4200) + sync (4201), started in parallel.
+ * - **Default (empty `LOG_MODE`)**: orchestrator is quiet — no piped child OPS lines; only boot banner, universe manifest, orchestrator hints, errors/warnings, and a final green “Ready” cluster after sync finishes (`[sync] Ready` from services/sync).
+ * - **`LOG_MODE=dev.verbose`**: forward essentially all child stdout/stderr (split-terminal parity).
+ * - **OPS passthrough without verbose**: set `LOG_MODE=ops.sync`, `ops.all`, etc.
  */
 
 import { execSync, spawn } from 'node:child_process'
 import { existsSync, rmSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createLogger, OPS_PREFIX } from '../libs/maia-logs/src/index.js'
-import { bootFooter, bootHeader } from './boot-banner.js'
+import {
+	createLogger,
+	getOpsSubsystemForPrefixedLine,
+	isDevVerboseEnabled,
+	isOpsInfoEnabled,
+	OPS_PREFIX,
+} from '../libs/maia-logs/src/index.js'
+import { bootHeader } from './boot-banner.js'
 import { freePort } from './free-port.js'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = resolve(__dirname, '..')
+const appServiceDir = join(rootDir, 'services/app')
+const syncServiceDir = join(rootDir, 'services/sync')
+
+/** Bun `--filter` adds `@MaiaOS/pkg dev:` — strip if any line still has it (defensive). */
+function stripBunFilterPrefix(line) {
+	return String(line).replace(/^@MaiaOS\/(?:sync|app)\s+dev:\s*/i, '')
+}
 
 let appProcess = null
 let syncProcess = null
@@ -29,6 +44,95 @@ const serviceStatus = {
 	docs: false,
 	sync: false,
 	app: false,
+}
+
+/** URLs for buffered "Ready - …" block (printed after sync emits final `[sync] Ready`). */
+const readyUrl = { app: null, sync: null }
+
+/** `services/sync` logs `opsSync.log('Ready')` when the server is fully up — defer the green cluster until then. */
+let syncEmittedFinalReady = false
+
+/** @type {ReturnType<typeof setTimeout> | null} */
+let readyFallbackTimer = null
+
+/**
+ * Empty `LOG_MODE`: do not forward child OPS lines through the orchestrator (sync still logs them when run directly).
+ * Non-empty: use `isOpsInfoEnabled` (explicit `ops.*` / `dev.verbose` path uses the verbose branch instead).
+ * @param {string | null} opsSub
+ */
+function shouldPassthroughChildOpsLine(opsSub) {
+	const raw = String(process.env.LOG_MODE ?? '').trim()
+	if (!raw) return false
+	return isOpsInfoEnabled(opsSub)
+}
+
+/**
+ * Child processes often already prefix lines with `[sync]` / `[app]`; avoid `[sync] [sync] …`.
+ * @param {string} service
+ * @param {string} line
+ */
+function stripChildSubsystemPrefix(service, line) {
+	const t = String(line).trimStart()
+	const p = `[${service}]`
+	if (t.startsWith(p)) {
+		return t.slice(p.length).trimStart()
+	}
+	return line
+}
+
+function recordServiceReady(service, url) {
+	if (serviceStatus[service]) return false
+	readyUrl[service] = url
+	serviceStatus[service] = true
+	scheduleReadyFallback()
+	tryFlushReadyBlock()
+	return true
+}
+
+function recordSyncFinalReadyLine() {
+	if (syncEmittedFinalReady) return
+	syncEmittedFinalReady = true
+	tryFlushReadyBlock()
+}
+
+function scheduleReadyFallback() {
+	if (readyFallbackTimer != null) return
+	if (!readyUrl.app || !readyUrl.sync) return
+	readyFallbackTimer = setTimeout(() => {
+		readyFallbackTimer = null
+		if (!serviceStatus._readyBlockPrinted && readyUrl.app && readyUrl.sync) {
+			syncEmittedFinalReady = true
+			tryFlushReadyBlock()
+		}
+	}, 120_000)
+}
+
+/**
+ * One green block at the end: URLs + dev footer (after sync’s `[sync] Ready` or fallback).
+ */
+function tryFlushReadyBlock() {
+	if (serviceStatus._readyBlockPrinted) return
+	if (!readyUrl.app || !readyUrl.sync) return
+	if (!syncEmittedFinalReady) return
+	serviceStatus._readyBlockPrinted = true
+	if (readyFallbackTimer != null) {
+		clearTimeout(readyFallbackTimer)
+		readyFallbackTimer = null
+	}
+	const devLog = createLogger('dev')
+	devLog.log('')
+	createLogger('app').success(`Ready - ${readyUrl.app}`)
+	createLogger('sync').success(`Ready - ${readyUrl.sync}`)
+	devLog.log('')
+	devLog.success('✓ All services ready (Ctrl+C to stop)')
+	devLog.log('')
+}
+
+/** @param {string} service
+ * @param {string} trimmed
+ * @returns {boolean} true if this line is sync’s final Ready signal (consumed; not re-logged). */
+function isSyncFinalReadyLine(service, trimmed) {
+	return service === 'sync' && /^\[sync\]\s*Ready\s*$/.test(trimmed)
 }
 
 // Filter verbose output from child processes
@@ -90,86 +194,116 @@ function shouldFilterLine(line) {
 	return false
 }
 
+/** Expected noisy messages — still hidden in minimal mode */
+function isBenignNoiseLine(trimmed) {
+	return (
+		trimmed.includes('Error withLoadedAccount') ||
+		trimmed.includes('Account unavailable from all peers') ||
+		(/\d+\s*\|\s*/.test(trimmed) && trimmed.includes('throw new Error'))
+	)
+}
+
+/**
+ * Real issues — never suppressed (except {@link isBenignNoiseLine}).
+ * Keyword-based so stderr progress noise from Vite is not treated as an error.
+ * @param {string} trimmed
+ */
+function looksLikeErrorOrWarningLine(trimmed) {
+	if (!trimmed || isBenignNoiseLine(trimmed)) return false
+	if (trimmed.includes('stack') || /^\s*at\s/.test(trimmed)) return false
+	const low = trimmed.toLowerCase()
+	if (/\b(error|warn|warning|failed)\b/.test(low)) return true
+	if (trimmed.includes('✖') || trimmed.includes('ERR!')) return true
+	return false
+}
+
+function markLiveIfUrl(service, trimmed) {
+	if (!trimmed.includes('http://') || serviceStatus[service]) return false
+	const urlMatch = trimmed.match(/http:\/\/localhost:(\d+)/)
+	if (!urlMatch) return false
+	const url = urlMatch[0]
+	recordServiceReady(service, url)
+	return true
+}
+
+function markLiveIfReadyPattern(service, trimmed) {
+	if (serviceStatus[service]) return false
+	// Sync: opsSync.log('Listening on 0.0.0.0:%s', PORT) — no http:// URL; match port explicitly
+	if (service === 'sync' && trimmed.includes(OPS_PREFIX.sync) && trimmed.includes('Listening')) {
+		const port = (trimmed.match(/0\.0\.0\.0:(\d+)/) || trimmed.match(/:(\d+)\s*$/))?.[1] ?? null
+		if (port) {
+			recordServiceReady(service, `http://localhost:${port}`)
+			return true
+		}
+	}
+	const serverReadyPattern =
+		trimmed.includes('running on port') ||
+		trimmed.includes('Sync service running') ||
+		trimmed.includes('Running on port') ||
+		trimmed.includes('HTTP server on port') ||
+		(trimmed.includes('[api]') && trimmed.includes('HTTP server')) ||
+		(trimmed.includes(OPS_PREFIX.sync) && trimmed.includes('Listening'))
+	if (serverReadyPattern) {
+		const portMatch = trimmed.match(/port\s+(\d+)/i) || trimmed.match(/:(\d+)/)
+		if (portMatch) {
+			const port = portMatch[1]
+			recordServiceReady(service, `http://localhost:${port}`)
+			return true
+		}
+	}
+	if (
+		(trimmed.includes('ready') || trimmed.includes('Ready') || trimmed.includes('VITE')) &&
+		!serviceStatus[service]
+	) {
+		const portMatch = trimmed.match(/port\s+(\d+)/i) || trimmed.match(/:(\d+)/)
+		const knownPort = service === 'sync' ? 4201 : null
+		const port =
+			portMatch?.[1] ?? (knownPort && trimmed.includes(`[${service}]`) ? String(knownPort) : null)
+		if (port) {
+			recordServiceReady(service, `http://localhost:${port}`)
+			return true
+		}
+	}
+	return false
+}
+
 // Process output line by line
-function processOutput(service, data, isError = false) {
+function processOutput(service, data) {
 	const lines = data.toString().split('\n')
 	for (const line of lines) {
-		const trimmed = line.trim()
+		const trimmed = stripBunFilterPrefix(line).trim()
 		const logger = createLogger(service)
 
-		// Check for "Local:" / "➜" or any "http://localhost:PORT" — before filtering
-		if (trimmed.includes('http://') && !serviceStatus[service]) {
-			const urlMatch = trimmed.match(/http:\/\/localhost:(\d+)/)
-			if (urlMatch) {
-				const _port = urlMatch[1]
-				const url = urlMatch[0]
-				logger.success(`Running on ${url}`)
-				serviceStatus[service] = true
-				checkAllReady()
-				continue
-			}
-		}
-
-		// Skip filtered lines after checking for Vite URL
-		if (shouldFilterLine(line)) continue
-
-		// Server/API ready messages — check BEFORE error block (agent may log to stderr)
-		const serverReadyPattern =
-			trimmed.includes('running on port') ||
-			trimmed.includes('Sync service running') ||
-			trimmed.includes('Running on port') ||
-			trimmed.includes('HTTP server on port') ||
-			(trimmed.includes('[api]') && trimmed.includes('HTTP server')) ||
-			(trimmed.includes(OPS_PREFIX.sync) && trimmed.includes('Listening'))
-		if (serverReadyPattern) {
-			const portMatch = trimmed.match(/port\s+(\d+)/i) || trimmed.match(/:(\d+)/)
-			if (portMatch && !serviceStatus[service]) {
-				const port = portMatch[1]
-				logger.success(`Running on http://localhost:${port}`)
-				serviceStatus[service] = true
-				checkAllReady()
-				continue
-			}
-		}
-
-		// [sync] Ready — use known ports when applicable
-		if (
-			(trimmed.includes('ready') || trimmed.includes('Ready') || trimmed.includes('VITE')) &&
-			!serviceStatus[service]
-		) {
-			const portMatch = trimmed.match(/port\s+(\d+)/i) || trimmed.match(/:(\d+)/)
-			const knownPort = service === 'sync' ? 4201 : null
-			const port =
-				portMatch?.[1] ?? (knownPort && trimmed.includes(`[${service}]`) ? String(knownPort) : null)
-			if (port) {
-				logger.success(`Running on http://localhost:${port}`)
-				serviceStatus[service] = true
-				checkAllReady()
-				continue
-			}
-		}
-
-		// Error messages
-		if (
-			isError ||
-			trimmed.includes('error') ||
-			trimmed.includes('Error') ||
-			trimmed.includes('Failed')
-		) {
-			if (!trimmed.includes('stack') && !trimmed.includes('at ')) {
-				logger.error(trimmed)
-			}
+		if (isSyncFinalReadyLine(service, trimmed)) {
+			recordSyncFinalReadyLine()
 			continue
 		}
 
-		// Passthrough: sync init progress
-		if (service === 'sync' && trimmed.startsWith(OPS_PREFIX.sync)) {
-			logger.log(trimmed)
+		if (isDevVerboseEnabled()) {
+			if (trimmed !== '') {
+				logger.log(stripChildSubsystemPrefix(service, trimmed))
+			}
+			markLiveIfUrl(service, trimmed) || markLiveIfReadyPattern(service, trimmed)
 			continue
 		}
 
-		// Skip remaining verbose output
-		if (trimmed.includes('$') || trimmed.includes('│') || trimmed.includes('└─')) {
+		if (trimmed === '') continue
+
+		// Errors / warnings — before any filter (never suppressed)
+		if (looksLikeErrorOrWarningLine(trimmed)) {
+			logger.error(trimmed)
+			continue
+		}
+
+		if (markLiveIfUrl(service, trimmed)) continue
+
+		if (shouldFilterLine(trimmed)) continue
+
+		if (markLiveIfReadyPattern(service, trimmed)) continue
+
+		const opsSub = getOpsSubsystemForPrefixedLine(trimmed)
+		if (opsSub && shouldPassthroughChildOpsLine(opsSub)) {
+			logger.log(stripChildSubsystemPrefix(service, trimmed))
 		}
 	}
 }
@@ -181,51 +315,13 @@ function maybeLogBrandReady() {
 	}
 }
 
-function checkAllReady() {
-	// Main services (sync = unified WebSocket + agent + LLM)
-	const mainServices = ['sync', 'app']
-	const mainReady = mainServices.every((service) => serviceStatus[service] === true)
-
-	// Helper services (brand = favicons + assets combined; nice to have but not critical)
-	const helperServices = ['brand', 'docs']
-	const _helpersReady = helperServices.every((service) => serviceStatus[service] === true)
-
-	// Show footer when main services are ready (helpers are optional)
-	if (mainReady && !serviceStatus._footerShown) {
-		serviceStatus._footerShown = true
-		setTimeout(() => bootFooter(), 500)
-	}
-}
-
-/** Poll service /health until ready (orchestration at dev boundary — no client polling) */
-async function waitForServiceReady(healthUrl, timeoutMs = 30000, pollMs = 300) {
-	const logger = createLogger('dev')
-	const deadline = Date.now() + timeoutMs
-	while (Date.now() < deadline) {
-		try {
-			const res = await fetch(healthUrl)
-			if (res.ok) {
-				const data = await res.json()
-				if (data?.ready) return true
-			}
-		} catch (_e) {
-			// Server not yet listening
-		}
-		await new Promise((r) => setTimeout(r, pollMs))
-	}
-	logger.warn(
-		`Sync server not ready after ${timeoutMs}ms – app will start anyway (WebSocket retries)`,
-	)
-	return false
-}
-
 async function startApp() {
 	const logger = createLogger('app')
 	const ok = await freePort(4200, (msg) => logger.warn(msg))
 	if (!ok) process.exit(1)
 
-	appProcess = spawn('bun', ['--env-file=.env', '--filter', '@MaiaOS/app', 'dev'], {
-		cwd: rootDir,
+	appProcess = spawn('bun', ['run', 'dev'], {
+		cwd: appServiceDir,
 		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,
 		env: { ...process.env },
@@ -233,7 +329,7 @@ async function startApp() {
 
 	appProcess.stdout.on('data', (data) => processOutput('app', data))
 	appProcess.stdout.on('error', () => {})
-	appProcess.stderr.on('data', (data) => processOutput('app', data, true))
+	appProcess.stderr.on('data', (data) => processOutput('app', data))
 	appProcess.stderr.on('error', () => {})
 
 	appProcess.on('error', (_error) => {
@@ -252,8 +348,8 @@ async function startSync() {
 	const ok = await freePort(4201, (msg) => logger.warn(msg))
 	if (!ok) process.exit(1)
 
-	syncProcess = spawn('bun', ['--env-file=.env', '--filter', '@MaiaOS/sync', 'dev'], {
-		cwd: rootDir,
+	syncProcess = spawn('bun', ['run', 'dev'], {
+		cwd: syncServiceDir,
 		stdio: ['ignore', 'pipe', 'pipe'],
 		shell: false,
 		env: process.env,
@@ -261,7 +357,7 @@ async function startSync() {
 
 	syncProcess.stdout.on('data', (data) => processOutput('sync', data))
 	syncProcess.stdout.on('error', () => {})
-	syncProcess.stderr.on('data', (data) => processOutput('sync', data, true))
+	syncProcess.stderr.on('data', (data) => processOutput('sync', data))
 	syncProcess.stderr.on('error', () => {})
 
 	syncProcess.on('error', (_error) => {
@@ -296,7 +392,6 @@ function startDocsWatcher() {
 			if (!serviceStatus.docs) {
 				logger.success('Watching docs')
 				serviceStatus.docs = true
-				checkAllReady()
 			}
 		} else if (!shouldFilterLine(output)) {
 			processOutput('docs', data)
@@ -304,7 +399,7 @@ function startDocsWatcher() {
 	})
 
 	docsWatcherProcess.stderr.on('data', (data) => {
-		processOutput('docs', data, true)
+		processOutput('docs', data)
 	})
 
 	docsWatcherProcess.on('error', (_error) => {
@@ -334,7 +429,6 @@ function generateFavicons() {
 		if (output.includes('generated successfully')) {
 			serviceStatus.favicons = true
 			maybeLogBrandReady()
-			checkAllReady()
 		}
 	})
 
@@ -353,7 +447,6 @@ function generateFavicons() {
 		if (code === 0) {
 			serviceStatus.favicons = true
 			maybeLogBrandReady()
-			checkAllReady()
 		}
 	})
 }
@@ -379,12 +472,11 @@ function startAssetSync() {
 		) {
 			serviceStatus.assets = true
 			maybeLogBrandReady()
-			checkAllReady()
 		}
 	})
 
 	assetSyncProcess.stderr.on('data', (data) => {
-		processOutput('assets', data, true)
+		processOutput('assets', data)
 	})
 
 	assetSyncProcess.on('error', (_error) => {
@@ -395,7 +487,6 @@ function startAssetSync() {
 		if (code === 0) {
 			serviceStatus.assets = true
 			maybeLogBrandReady()
-			checkAllReady()
 		}
 	})
 }
@@ -495,31 +586,34 @@ async function main() {
 		freePort(4201, (msg) => logger.warn(msg)),
 	])
 
-	// Regenerate universe registry before anything imports it
-	const registryLogger = createLogger('registry')
+	logger.log('')
+
+	// Regenerate maia-universe registry before anything imports it
+	const universeLogger = createLogger('universe')
 	try {
 		execSync('bun scripts/generate-maia-universe-registry.mjs', {
 			cwd: rootDir,
 			stdio: 'pipe',
 			env: process.env,
 		})
-		registryLogger.success('Universe registry generated')
+		universeLogger.success('manifested')
 	} catch (e) {
-		registryLogger.error(`Registry generation failed: ${e.stderr?.toString().trim() || e.message}`)
+		universeLogger.error(`Manifest failed: ${e.stderr?.toString().trim() || e.message}`)
 		process.exit(1)
 	}
+
+	createLogger('sync').log('Server booting ...')
+	createLogger('app').log('View booting ...')
 
 	// Generate favicons first (runs once, then exits)
 	generateFavicons()
 
-	// Orchestrated startup: sync first, wait for sync ready, then app
-	// Ensures WebSocket connects on first attempt (no "bad response" on sign-in)
+	// Parallel startup: sync + app spawn together (ports already freed above).
+	// If the app loads before sync is listening, the client retries WebSocket/sign-in — same as a slow sync boot.
 	setTimeout(async () => {
 		startAssetSync()
 		startDocsWatcher()
-		await startSync()
-		await waitForServiceReady('http://localhost:4201/health')
-		await startApp()
+		await Promise.all([startSync(), startApp()])
 	}, 1000)
 
 	process.stdin.resume()

@@ -6,13 +6,16 @@
  */
 
 import { execSync, spawn } from 'node:child_process'
-import { dirname, resolve } from 'node:path'
+import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { createLogger } from '../libs/maia-logs/src/index.js'
+import { bootstrapNodeLogging, createLogger } from '../libs/maia-logs/src/index.js'
 import { freePort } from './free-port.js'
+
+bootstrapNodeLogging()
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const rootDir = resolve(__dirname, '..')
+const syncDir = join(rootDir, 'services/sync')
 const logger = createLogger('sync')
 
 ;(async () => {
@@ -31,8 +34,11 @@ const logger = createLogger('sync')
 	const ok = await freePort(4201, (msg) => logger.warn(msg))
 	if (!ok) process.exit(1)
 
-	const proc = spawn('bun', ['--env-file=.env', '--filter', '@MaiaOS/sync', 'dev'], {
-		cwd: rootDir,
+	logger.log('Server booting…')
+
+	// Run from package dir — avoids Bun `--filter` prefix noise (`@MaiaOS/sync dev:` on every line).
+	const proc = spawn('bun', ['run', 'dev'], {
+		cwd: syncDir,
 		stdio: 'inherit',
 		shell: false,
 		env: process.env,

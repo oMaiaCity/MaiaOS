@@ -6,8 +6,10 @@ Single entry point for MaiaOS logging: **modes**, **levels**, **PERF / TRACE / D
 
 | Export | Role |
 |--------|------|
-| `createLogger(subsystem)` | `.error` / `.warn` / `.info` / `.log` / `.debug` / `.perf(name)` / `.child(sub)` — gated by `LOG_LEVEL` unless you use `createOpsLogger` |
-| `createOpsLogger(subsystem)` | Operational lines (sync, storage, hooks); not suppressed by `LOG_LEVEL` |
+| `createLogger(subsystem)` | `.error` / `.warn` / `.info` / `.log` / `.debug` / `.perf(name)` / `.child(sub)` — gated by `LOG_LEVEL` |
+| `createOpsLogger(subsystem)` | OPS: `.warn` / `.error` always emit; informational `.log` gated by `LOG_MODE` (`ops.all`, `ops.sync`, …) |
+| `isOpsInfoEnabled` / `isDevVerboseEnabled` | Read gates after `applyLogModeFromEnv` (used by orchestrator / tests) |
+| `getOpsSubsystemForPrefixedLine` | Map a child log line prefix to an OPS subsystem (orchestrator) |
 | `bootstrapNodeLogging()` | Node scripts: set mode/level from env + `installDefaultTransport()` |
 | `installDefaultTransport()` | Browser after `applyMaiaLoggingFromEnv` / env applied |
 | `applyMaiaLoggingFromEnv` + `resolveMaiaLoggingEnv` | Full env: `LOG_LEVEL`, `NODE_ENV`, `LOG_MODE` vs `LOG_MODE_PROD` |
@@ -31,7 +33,7 @@ In **production**, PERF/TRACE/DEBUG channels follow **`LOG_MODE_PROD`** (not `LO
 | Variable | Purpose |
 |----------|---------|
 | `LOG_LEVEL` | `silent` \| `error` \| `warn` \| `info` \| `log` \| `debug` |
-| `LOG_MODE` | Dev: comma-separated PERF/TRACE/DEBUG tokens (`perf.all`, `debug.app.maia-db`, …) |
+| `LOG_MODE` | Dev: comma-separated tokens — PERF/TRACE/DEBUG (`perf.all`, …), OPS (`ops.all`, `ops.sync`), `bun dev` passthrough (`dev.verbose`). **Empty** on **Node** (not `production`/`test`): OPS informational `.log` defaults **on**. **`off`**: all of that off. **`dev.verbose`** also enables **`ops.all`** so sync emits Listening lines. |
 | `LOG_MODE_PROD` | Production-only channel string; required to enable PERF/TRACE/DEBUG in prod |
 | `NODE_ENV` | Selects mode profile |
 
@@ -46,12 +48,18 @@ The app dev server exposes **`/__maia_env`** (`LOG_MODE`, `LOG_LEVEL`, `LOG_MODE
 | PERF | `perf.all`, `perf.engines.pipeline`, `engines:pipeline` |
 | TRACE | `trace.all` |
 | DEBUG | `debug.all`, `debug.app.maia-db` |
+| OPS (informational `.log` only) | `ops.all`, `ops.sync`, `ops.storage` (subsystem names match `createOpsLogger` case-insensitively) |
+| Dev orchestrator | `dev.verbose` — root `bun dev` forwards piped Vite/sync output like split terminals |
 
-**OPS** (`createOpsLogger`) is not gated by `LOG_MODE`. Use stable bracket tags via **`OPS_PREFIX`** for grep and orchestration.
+**OPS** — `.warn` / `.error` always emit. Informational `.log` uses stable bracket tags via **`OPS_PREFIX`** for grep and `scripts/dev.js` passthrough when `LOG_MODE` enables that subsystem.
 
 ## Production client bundle
 
 `services/app/build.js` sets `globalThis.__MAIA_DEBUG__` and `globalThis.__MAIA_STRIP__` to `false` and `drop: ['debugger']`. `createLogger().debug` returns early when those flags are false.
+
+## Pretty console
+
+In **non-JSON** mode, `[subsystem]` prefixes use **ANSI colors** when `stdout` is a TTY and **`NO_COLOR`** is unset (see `src/transports/console.js`). Disable with `NO_COLOR=1` or pipe output to a file.
 
 ## Lint
 

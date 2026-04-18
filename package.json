@@ -8,7 +8,7 @@
 	],
 	"type": "module",
 	"scripts": {
-		"dev": "bun --silent scripts/dev.js",
+		"dev": "bun scripts/dev.js",
 		"dev:app": "bun scripts/dev-app.js",
 		"dev:sync": "bun scripts/dev-sync.js",
 		"dev:desktop": "bun scripts/dev-desktop.js",
