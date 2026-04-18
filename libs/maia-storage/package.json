@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/storage",
-	"version": "26.4.142216-next",
+	"version": "26.4.181522-next",
 	"type": "module",
 	"main": "./src/index.js",
 	"exports": {
