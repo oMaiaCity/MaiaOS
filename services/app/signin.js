@@ -9,6 +9,8 @@
  *
  * Enter key: Create new Self (signup) or Unlock (signin)
  */
+import { accountLoadingSpinnerHtml } from './account-loading-spinner-html.js'
+
 let signinKeyHandler = null
 
 /**
@@ -25,7 +27,7 @@ export function setSignInLoading(loading) {
 			overlay.className = 'sign-in-loading-overlay'
 			overlay.innerHTML = `
 				<div class="loading-connecting-overlay">
-					<div class="loading-spinner"></div>
+					${accountLoadingSpinnerHtml}
 					<div class="loading-connecting-content">
 						<div class="loading-connecting-subtitle">Authenticating…</div>
 					</div>

@@ -5,6 +5,7 @@
 
 import { createPerfTracer } from '@MaiaOS/logs'
 import { resolveAccountCoIdsToProfiles } from '@MaiaOS/runtime'
+import { accountLoadingSpinnerHtml } from './account-loading-spinner-html.js'
 import { findSessionChatIntentActorId, resolveChatVibeCoId } from './maia-ai-global.js'
 import { MAIADB_LAYER_STACK_ICON_SVG } from './maia-icons.js'
 import {
@@ -231,7 +232,7 @@ export async function renderDashboard(
 		const message = isLoading ? 'Loading account…' : 'Please sign in.'
 		document.getElementById('app').innerHTML = `
 			<div class="loading-connecting-overlay">
-				${isLoading ? '<div class="loading-spinner"></div>' : ''}
+				${isLoading ? accountLoadingSpinnerHtml : ''}
 				<div class="loading-connecting-content">
 					<h2>${message}</h2>
 					${isLoading ? '<div class="loading-connecting-subtitle">Setting up your sovereign self…</div>' : ''}

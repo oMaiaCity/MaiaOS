@@ -38,6 +38,7 @@ import {
 	updateSyncState,
 	validateInvite,
 } from '@MaiaOS/runtime'
+import { accountLoadingSpinnerHtml } from './account-loading-spinner-html.js'
 import { renderApp, toggleMetadataInternalKey } from './db-view.js'
 import { beginIntroDiary, renderIntroPage } from './intro.js'
 import { renderLandingPage } from './landing.js'
@@ -1045,7 +1046,7 @@ const LOADING_SCREEN_HTML = (syncMessage, indicatorStyle) => `
 		</div>
 	</div>
 	<div class="loading-connecting-overlay loading-skeleton-overlay">
-		<div class="loading-spinner"></div>
+		${accountLoadingSpinnerHtml}
 		<div class="loading-connecting-content">
 			<h2>Initializing your account</h2>
 			<div class="loading-connecting-subtitle">Setting up your sovereign self…</div>

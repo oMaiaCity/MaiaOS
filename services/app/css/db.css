@@ -2327,6 +2327,35 @@ pre {
 	animation: spin 0.8s linear infinite;
 }
 
+/* Clock glyph (duotone vibe palette); used for account / connecting overlays */
+.account-loading-spinner {
+	width: 64px;
+	height: 64px;
+	flex-shrink: 0;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	animation: spin 1.2s linear infinite;
+}
+
+.account-loading-spinner svg {
+	width: 100%;
+	height: 100%;
+	display: block;
+}
+
+.account-loading-spinner-disk {
+	fill: var(--color-vibe-duotone-tertiary);
+}
+
+.account-loading-spinner-ticks {
+	fill: none;
+	stroke: var(--color-vibe-duotone-primary);
+	stroke-width: 4;
+	stroke-linecap: round;
+	stroke-linejoin: round;
+}
+
 @keyframes spin {
 	to {
 		transform: rotate(360deg);
