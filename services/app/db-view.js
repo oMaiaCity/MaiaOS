@@ -1300,7 +1300,7 @@ export async function renderApp(
 							factoryTag.includes('factories-registry') ||
 							factoryTag.includes('indexes-registry')
 						const emptyHint = isRegistryEmpty
-							? '<p class="mt-3 text-sm text-amber-600 max-w-md mx-auto">Vibes and registry scaffolds come from the sync server (<code class="bg-amber-100 px-1 rounded">bun dev</code> on :4201). Humans/avens registry rows are CoMap entries (username or account co-id → identity co-id); the same data powers the Registries grid.</p>'
+							? '<p class="mt-3 text-sm text-amber-600 max-w-md mx-auto">Vibes and registry scaffolds come from the sync server (<code class="bg-amber-100 px-1 rounded">bun dev</code> on :4201). Humans/avens registry rows are CoMap entries (username or account co-id → identity co-id); the same data powers the Addressbook grid.</p>'
 							: ''
 						tableContent = `<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">No properties available${emptyHint}</div>`
 					} else {
