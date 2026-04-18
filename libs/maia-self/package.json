@@ -4,10 +4,12 @@
 	"type": "module",
 	"main": "./src/index.js",
 	"exports": {
-		".": "./src/index.js"
+		".": "./src/index.js",
+		"./generate-credentials": "./scripts/generate-credentials.js"
 	},
 	"scripts": {
-		"generate-credentials": "bun scripts/generate-credentials.js"
+		"generate-credentials": "bun scripts/generate-credentials.js",
+		"test": "bun test tests"
 	},
 	"dependencies": {
 		"@MaiaOS/logs": "workspace:*",

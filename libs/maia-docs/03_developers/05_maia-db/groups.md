@@ -15,8 +15,8 @@ Groups are CoMaps with special `ruleset.type === "group"` that:
 
 ### °Maia Spark's Group
 
-Every account has the **°Maia spark** with a group at `registries.sparks["°Maia"]`:
-- Resolved via `account.registries.sparks`; created during bootstrap when account is first seeded
+Every account has the **°Maia spark** with a group at `account.sparks["°maia"]` (see `SYSTEM_SPARK_REGISTRY_KEY`):
+- Resolved via `account.sparks`; created during bootstrap when account is first seeded
 - Owns ALL user data CoValues (schemas, configs, data)
 - Single source of truth for user's data ownership
 
@@ -32,7 +32,7 @@ The °Maia spark's group can create child groups it owns. Use Spark operations (
 
 Sparks are CoMaps with factory `@factory/data/spark` that reference groups:
 - Structure: `{name: string, group: co-id}`
-- Registered in `account.registries.sparks` CoMap (sparkName -> sparkCoId)
+- Registered in `account.sparks` CoMap (sparkName -> sparkCoId)
 - Automatically indexed in `account.os.{sparkSchemaCoId}` colist
 
 ### Spark Operations
@@ -78,11 +78,11 @@ await maia.do({
 // Removes from indexed colist (registry via POST /register)
 ```
 
-### account.registries.sparks Registry
+### account.sparks registry
 
-Sparks are registered in `account.registries.sparks` CoMap:
+Sparks are registered in `account.sparks` CoMap:
 - Created during bootstrap (seed.js); new sparks register via POST /register
-- Structure: `registries.sparks.sparkName = sparkCoId`
+- Structure: `account.sparks.sparkName = sparkCoId`
 - Cross-links to indexed colist `account.os.{sparkSchemaCoId}`
 
 **Implementation:** `libs/maia-db/src/migrations/seeding/` (bootstrap); `libs/maia-runtime/src/engines/data.engine.js` (POST /register after createSpark)

@@ -33,7 +33,12 @@ let syncState = {
 	syncing: false,
 	error: null,
 	status: null, // 'authenticating' | 'loading-account' | 'syncing' | 'connected' | 'error'
-	writeEnabled: true, // true = read+write, false = read-only. Set by app after register.
+	/** @type {boolean} Derived from /sync/write capability when available */
+	writeEnabled: true,
+	/** @type {'empty'|'ready'} Local account materialized */
+	local: 'empty',
+	/** @type {'unknown'|'pending'|'approved'} Registry + capability membership */
+	member: 'unknown',
 }
 const syncStateListeners = new Set()
 

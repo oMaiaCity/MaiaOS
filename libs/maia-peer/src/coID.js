@@ -13,6 +13,45 @@ import { WasmCrypto } from 'cojson/crypto/WasmCrypto'
 const opsPeer = createOpsLogger('peer')
 
 /**
+ * CoJSON `LocalNode.withLoadedAccount` throws "Account has no profile" before `migration` runs.
+ * Recover by constructing a {@link LocalNode}, loading the account, then {@link ensureProfileForNewAccount}.
+ * @param {object} p
+ * @returns {Promise<import('cojson').LocalNode>}
+ */
+export async function recoverAccountWithMissingProfile({
+	accountID,
+	agentSecret,
+	peers,
+	finalStorage,
+	crypto,
+	migration,
+	originalError,
+}) {
+	const node = new LocalNode(agentSecret, crypto.newRandomSessionID(accountID), crypto)
+	if (finalStorage) node.setStorage(finalStorage)
+	for (const p of peers) node.syncManager.addPeer(p)
+	const account = await node.load(accountID)
+	if (account === 'unavailable') {
+		throw originalError
+	}
+	const { ensureProfileForNewAccount } = await import('@MaiaOS/db/profile-bootstrap')
+	if (!account.get('profile')) {
+		await ensureProfileForNewAccount(account, node, {})
+	}
+	if (migration) await migration(account, node)
+	const profileID = account.get('profile')
+	if (profileID) {
+		await node.load(profileID)
+	}
+	if (node.syncManager?.waitForStorageSync) {
+		await node.syncManager.waitForStorageSync(account.id)
+		if (profileID) await node.syncManager.waitForStorageSync(profileID)
+	}
+	opsPeer.log('loadAccount: recovered account with missing profile field')
+	return node
+}
+
+/**
  * Create a new MaiaID (Account) with provided agentSecret
  * STRICT: Requires agentSecret from passkey authentication
  *
@@ -43,13 +82,21 @@ export async function createAccountWithSecret(options) {
 		: await getStorage({ mode: 'human' })
 
 	// Peers at creation may be empty until WS connects; setupSyncPeers registerPeersIfMissing avoids duplicate addPeer (see sync-peers.js).
+	const wrappedMigration = async (account, node, creationProps) => {
+		if (migration) await migration(account, node, creationProps)
+		if (!account.get('profile')) {
+			const { ensureProfileForNewAccount } = await import('@MaiaOS/db/profile-bootstrap')
+			await ensureProfileForNewAccount(account, node, creationProps)
+		}
+	}
+
 	const result = await LocalNode.withNewlyCreatedAccount({
 		creationProps: { name },
 		crypto,
 		initialAgentSecret: agentSecret,
 		peers,
 		storage: finalStorage,
-		migration: migration ?? undefined,
+		migration: wrappedMigration,
 	})
 
 	const rawAccount = result.node.expectCurrentAccount('oID/createAccountWithSecret')
@@ -130,17 +177,15 @@ export async function loadAccount(options) {
 
 	// CRITICAL: Must AWAIT migration so profile is created before cojson validates.
 	// Fire-and-forget caused "Account has no profile" when storage returned incomplete data (OPFS restart).
-	const deferredMigration = migration
-		? async (account, node) => {
-				await migration(account, node)
-			}
-		: undefined
-
-	const INITIAL_LOAD_TIMEOUT = 3000
-
-	// Do not require a local row before withLoadedAccount: a new browser has empty OPFS until sync
-	// hydrates. Callers must register WebSocket peers first — setupSyncPeers fills `peers` in addPeer
-	// asynchronously, so peers.length may be 0 if loadAccount runs too early (see signInWithPasskey).
+	// After sync-from-peer or cleared local storage, account JSON can arrive before `profile` exists —
+	// always chain ensureProfile so CoJSON's account validation passes (same as ensureAccount default migration).
+	const deferredMigration = async (account, node) => {
+		if (migration) await migration(account, node)
+		if (!account.get('profile')) {
+			const { ensureProfileForNewAccount } = await import('@MaiaOS/db/profile-bootstrap')
+			await ensureProfileForNewAccount(account, node, {})
+		}
+	}
 
 	// Peers at load time may be empty if WS connects later; setupSyncPeers registerPeersIfMissing + addPeer when node exists avoids duplicate PeerState (see sync-peers.js).
 	const loadPromise = LocalNode.withLoadedAccount({
@@ -151,18 +196,16 @@ export async function loadAccount(options) {
 		peers,
 		storage: finalStorage,
 		migration: deferredMigration,
-	}).catch((error) => {
-		if (
-			error?.message?.includes('Account unavailable from all peers') &&
-			peers.length === 0 &&
-			finalStorage
-		) {
+	}).catch(async (error) => {
+		const msg = error?.message ?? ''
+		// Account not in any peer (fresh install + rotated creds + PEER_SYNC_SEED): wrap so callers
+		// can treat it as "first-time setup" and create via ensureAccount rather than a hard failure.
+		if (msg.includes('Account unavailable from all peers') && finalStorage) {
 			const accountShort = typeof accountID === 'string' ? `${accountID.slice(0, 12)}…` : '(no id)'
 			opsPeer.log(
-				'loadAccount: no sync peers yet + nothing in local storage → wrapping as first-time / race. account=%s peers=%s original=%s',
+				'loadAccount: account unavailable on network + no local replica → wrapping as first-time / race. account=%s peers=%s',
 				accountShort,
 				peers.length,
-				error?.message ?? error,
 			)
 			const accountNotFoundError = new Error(
 				'Account not found in storage (first-time setup - will be created)',
@@ -171,19 +214,26 @@ export async function loadAccount(options) {
 			accountNotFoundError.isAccountNotFound = true
 			throw accountNotFoundError
 		}
+		// CoJSON's withLoadedAccount validates `profile` BEFORE running custom migration; recover by
+		// constructing LocalNode directly, loading the account, then running ensureProfileForNewAccount.
+		if (msg.includes('Account has no profile')) {
+			opsPeer.log(
+				'loadAccount: Account has no profile — recovering via LocalNode.load + ensureProfileForNewAccount',
+			)
+			return recoverAccountWithMissingProfile({
+				accountID,
+				agentSecret,
+				peers,
+				finalStorage,
+				crypto,
+				migration: deferredMigration,
+				originalError: error,
+			})
+		}
 		throw error
 	})
 
-	const timeoutPromise = new Promise((resolve) => {
-		setTimeout(() => resolve(null), INITIAL_LOAD_TIMEOUT)
-	})
-
-	const node = await Promise.race([loadPromise, timeoutPromise]).then((result) => {
-		if (result === null) {
-			return loadPromise
-		}
-		return result
-	})
+	const node = await loadPromise
 
 	const rawAccount = node.expectCurrentAccount('oID/loadAccount')
 
@@ -199,38 +249,6 @@ export async function loadAccount(options) {
 			await node.load(profileID)
 		}
 	}
-
-	;(async () => {
-		const registriesId = rawAccount.get?.('registries')
-		if (!registriesId?.startsWith('co_z')) return
-		try {
-			await node.loadCoValueCore?.(registriesId)
-			const regCore = node.getCoValue(registriesId)
-			if (!regCore?.isAvailable?.()) return
-			const reg = regCore.getCurrentContent?.()
-			if (!reg?.get) return
-			const sparksId = reg.get('sparks')
-			if (!sparksId?.startsWith('co_z')) return
-			await node.loadCoValueCore?.(sparksId)
-			const sparksCore = node.getCoValue(sparksId)
-			if (!sparksCore?.isAvailable?.()) return
-			const sparks = sparksCore.getCurrentContent?.()
-			if (!sparks?.get) return
-			const maiaSparkId = sparks.get('°maia')
-			if (!maiaSparkId?.startsWith('co_z')) return
-			await node.loadCoValueCore?.(maiaSparkId)
-			const sparkCore = node.getCoValue(maiaSparkId)
-			if (!sparkCore?.isAvailable?.()) return
-			const spark = sparkCore.getCurrentContent?.()
-			if (!spark?.get) return
-			const osId = spark.get('os')
-			if (!osId?.startsWith('co_z')) return
-			const osCoValue = node.getCoValue(osId)
-			if (osCoValue && !osCoValue.isAvailable()) {
-				node.loadCoValueCore?.(osId).catch(() => {})
-			}
-		} catch (_) {}
-	})()
 
 	return {
 		node,

@@ -5,6 +5,7 @@
  * No DBAdapter interface. Direct CoJSON operations.
  */
 
+import { TIMEOUT_COVALUE_LOAD } from '@MaiaOS/peer'
 import { wrapSyncManagerWithValidation } from '@MaiaOS/validation/validation-hook-wrapper'
 import { ReactiveStore } from '../../reactive-store.js'
 import { getGlobalCoCache } from '../cache/coCache.js'
@@ -16,8 +17,6 @@ import { processInbox as processInboxFn } from '../crud/process-inbox.js'
 import { findFirst as findFirstByFilter, read as universalRead } from '../crud/read.js'
 import {
 	waitForReactiveResolution as waitForReactiveResolutionFn,
-	waitForRegistriesSparksCoId,
-	waitForSparksCoMapRegistryKey,
 	waitForStoreReady,
 } from '../crud/read-operations.js'
 import * as crudUpdate from '../crud/update.js'
@@ -30,7 +29,37 @@ import { getRuntimeRef, RUNTIME_REF } from '../factory/runtime-factory-refs.js'
 import * as groups from '../groups/groups.js'
 import { wrapStorageWithIndexingHooks } from '../indexing/storage-hook-wrapper.js'
 
-/** Key used in `registries.sparks` CoMap for the primary OS spark (written at seed). */
+/**
+ * Spark CoMap `name` is a stable logical ref (°…) and is usually the key in `account.sparks`.
+ * Plain-text input is normalized to a single segment: `°<slug>` (e.g. "xyz" → "°xyz").
+ * Full logical refs may be passed unchanged if they already start with `°`.
+ * @param {string} raw
+ * @returns {string}
+ */
+function normalizeSparkLogicalName(raw) {
+	const trimmed = typeof raw === 'string' ? raw.trim() : ''
+	if (!trimmed) {
+		throw new Error('[MaiaDB] createSpark: name is required (short label or full °… logical ref)')
+	}
+	if (trimmed.startsWith('°')) return trimmed
+	// °<slug>: letters/numbers/hyphens/underscore across scripts; collapse noise to hyphen
+	let slug = trimmed
+		.replace(/[^\p{L}\p{N}_-]/gu, '-')
+		.replace(/-+/g, '-')
+		.replace(/^-|-$/g, '')
+	slug = slug.slice(0, 80)
+	if (!slug) {
+		const suffix =
+			typeof crypto !== 'undefined' && crypto.randomUUID
+				? crypto.randomUUID().replace(/-/g, '').slice(0, 8)
+				: String(Math.random()).slice(2, 10)
+		slug = `spark-${suffix}`
+	}
+	// Stable, comparable keys in account.sparks (user labels only; explicit °… refs unchanged above)
+	return `°${slug.toLowerCase()}`
+}
+
+/** Key used in `account.sparks` CoMap for the primary OS spark (written at seed). */
 export const SYSTEM_SPARK_REGISTRY_KEY = '°maia'
 
 export class MaiaDB {
@@ -69,30 +98,42 @@ export class MaiaDB {
 	}
 
 	/**
-	 * Resolve and cache `account.registries.sparks[SYSTEM_SPARK_REGISTRY_KEY]` as {@link #systemSparkCoId}.
-	 * Call after {@link #dbEngine} is set (loader boot).
+	 * Resolve and cache `account.sparks[SYSTEM_SPARK_REGISTRY_KEY]` as {@link #systemSparkCoId}.
+	 *
+	 * Fast path (new unified bootstrap): the caller (MaiaOS.boot) has already awaited
+	 * bootstrapAccountHandshake -> account.sparks is set ('trusting', public pointer) and
+	 * the sparks CoMap is synced. We read both values directly via node.load — no 20s × N
+	 * cascading waits, no reactive subscription polling.
+	 *
+	 * Call order: after peer + dataEngine are wired, before dataEngine.resolveSystemFactories.
 	 */
 	async resolveSystemSparkCoId() {
 		if (this.systemSparkCoId?.startsWith('co_z')) return this.systemSparkCoId
 		if (!this.account?.id) {
 			throw new Error('[MaiaDB] resolveSystemSparkCoId: account required')
 		}
-		const accountStore = await this.read('@account', this.account.id)
-		const registriesId = accountStore?.value?.registries
-		if (!registriesId?.startsWith?.('co_z')) {
-			throw new Error('[MaiaDB] resolveSystemSparkCoId: account.registries missing')
+		const sparksId = this.account.get?.('sparks')
+		if (!sparksId?.startsWith('co_z')) {
+			throw new Error(
+				`[MaiaDB] account.sparks not set (account: ${this.account.id.slice(0, 12)}…). ` +
+					`POST /bootstrap must run before MaiaOS.boot — see bootstrapAccountHandshake.`,
+			)
 		}
-		const registriesStore = await this.read(null, registriesId)
-		await waitForStoreReady(registriesStore, registriesId, 20000)
-		const sparksId = await waitForRegistriesSparksCoId(registriesStore, registriesId, 20000)
 		const sparksStore = await this.read(sparksId, sparksId)
-		await waitForStoreReady(sparksStore, sparksId, 20000)
-		const id = await waitForSparksCoMapRegistryKey(
-			sparksStore,
-			sparksId,
-			SYSTEM_SPARK_REGISTRY_KEY,
-			20000,
-		)
+		try {
+			await waitForStoreReady(sparksStore, sparksId, TIMEOUT_COVALUE_LOAD)
+		} catch (e) {
+			throw new Error(
+				`[MaiaDB] sparks CoMap ${sparksId.slice(0, 12)}… did not load within ${TIMEOUT_COVALUE_LOAD}ms: ${e?.message ?? e}`,
+			)
+		}
+		const sparksRaw = sparksStore?.value
+		const id = sparksRaw?.[SYSTEM_SPARK_REGISTRY_KEY]
+		if (!id?.startsWith?.('co_z')) {
+			throw new Error(
+				`[MaiaDB] sparks CoMap ${sparksId.slice(0, 12)}… missing '${SYSTEM_SPARK_REGISTRY_KEY}' entry`,
+			)
+		}
 		this.systemSparkCoId = id
 		return id
 	}
@@ -192,11 +233,7 @@ export class MaiaDB {
 		if (!this.account) throw new Error('[MaiaDB] Account required for createSpark')
 		if (!this.systemSparkCoId?.startsWith('co_z')) await this.resolveSystemSparkCoId()
 		if (this.dbEngine?.resolveSystemFactories) await this.dbEngine.resolveSystemFactories()
-		const trimmed = typeof name === 'string' ? name.trim() : ''
-		if (trimmed && !trimmed.startsWith('°')) {
-			throw new Error('[MaiaDB] createSpark: name must be a full logical ref starting with °')
-		}
-		const normalizedName = trimmed
+		const normalizedName = normalizeSparkLogicalName(name)
 		const maiaGuardian = await this.getMaiaGroup()
 		if (!maiaGuardian) throw new Error('[MaiaDB] °maia spark group not found')
 		const { createChildGroup } = await import('../groups/create.js')
@@ -248,11 +285,9 @@ export class MaiaDB {
 	async updateSpark(id, data) {
 		const { group: _g, ...allowed } = data || {}
 		if (typeof allowed.name === 'string') {
-			const trimmed = allowed.name.trim()
-			if (trimmed && !trimmed.startsWith('°')) {
-				throw new Error('[MaiaDB] updateSpark: name must be a full logical ref starting with °')
-			}
-			allowed.name = trimmed
+			const t = allowed.name.trim()
+			if (t) allowed.name = normalizeSparkLogicalName(allowed.name)
+			else allowed.name = ''
 		}
 		const factoryCoId = await resolve(this, { fromCoValue: id }, { returnType: 'coId' })
 		return await this.update(factoryCoId, id, allowed)

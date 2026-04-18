@@ -93,6 +93,8 @@ export const perfGameInit = createPerfTracer('game', 'init')
 export const perfAppVibes = createPerfTracer('app', 'vibes')
 /** Maia DB viewer `renderApp` (data + DOM); enable with `perf.app.maia-db` or `perf.all` */
 export const perfAppMaiaDb = createPerfTracer('app', 'maia-db')
+/** Account bootstrap handshake (POST /bootstrap + account.sparks anchor + system spark read); enable with `perf.app.bootstrap` or `perf.all`. */
+export const perfBootstrap = createPerfTracer('app', 'bootstrap')
 
 /**
  * @returns {boolean}

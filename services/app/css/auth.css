@@ -163,7 +163,7 @@ body:has(.sign-in-container) #app {
 	width: 100%;
 }
 
-.sign-in-buttons .sign-in-test-aven.btn-outline-marine {
+.sign-in-buttons .sign-in-secretkey-dev.btn-outline-marine {
 	background: var(--color-nav-pill-surface);
 	border-color: rgba(27, 43, 27, 0.14);
 	color: var(--color-marine-blue);

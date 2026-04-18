@@ -8,16 +8,13 @@ import { withCanonicalFactorySchema } from './identity-from-maia-path.js'
 /** Basename → key in getAllFactories() return object. */
 const FACTORY_BASENAME_TO_REGISTRY_KEY = {
 	'actor.factory.maia': 'actor',
-	'aven-identity.factory.maia': 'os/aven-identity',
-	'avens-identity-registry.factory.maia': 'os/avens-identity-registry',
 	'capability.factory.maia': 'os/capability',
 	'context.factory.maia': 'context',
 	'cotext.factory.maia': 'os/cotext',
 	'event.factory.maia': 'event',
 	'factories-registry.factory.maia': 'os/factories-registry',
 	'groups.factory.maia': 'os/groups',
-	'human.factory.maia': 'os/human',
-	'humans-registry.factory.maia': 'os/humans-registry',
+	'identity.factory.maia': 'os/identity',
 	'icon.factory.maia': 'data/icon',
 	'inbox.factory.maia': 'inbox',
 	'indexes-registry.factory.maia': 'os/indexes-registry',
@@ -25,7 +22,6 @@ const FACTORY_BASENAME_TO_REGISTRY_KEY = {
 	'note.factory.maia': 'data/notes',
 	'os-registry.factory.maia': 'os/os-registry',
 	'process.factory.maia': 'process',
-	'registries.factory.maia': 'os/registries',
 	'sparks-registry.factory.maia': 'os/sparks-registry',
 	'style.factory.maia': 'style',
 	'todo.factory.maia': 'data/todos',
@@ -58,8 +54,6 @@ function buildFactories(rawByBasename) {
 	}
 
 	const actorSchema = p('actor.factory.maia')
-	const avenIdentitySchema = p('aven-identity.factory.maia')
-	const avensIdentityRegistrySchema = p('avens-identity-registry.factory.maia')
 	const capabilitySchema = p('capability.factory.maia')
 	const chatDataSchema = p('chat.factory.maia')
 	const cobinaryDataSchema = p('cobinary.factory.maia')
@@ -68,8 +62,7 @@ function buildFactories(rawByBasename) {
 	const eventFactory = p('event.factory.maia')
 	const factoriesRegistryFactory = p('factories-registry.factory.maia')
 	const groupsSchema = p('groups.factory.maia')
-	const humanSchema = p('human.factory.maia')
-	const humansRegistrySchema = p('humans-registry.factory.maia')
+	const identitySchema = p('identity.factory.maia')
 	const inboxFactory = p('inbox.factory.maia')
 	const indexesRegistrySchema = p('indexes-registry.factory.maia')
 	const maiaScriptExpressionSchema = p('maia-script-expression.factory.maia')
@@ -78,7 +71,6 @@ function buildFactories(rawByBasename) {
 	const osRegistrySchema = p('os-registry.factory.maia')
 	const processSchema = p('process.factory.maia')
 	const profileDataSchema = p('profile.factory.maia')
-	const registriesSchema = p('registries.factory.maia')
 	const sparkDataSchema = p('spark.factory.maia')
 	const sparksRegistrySchema = p('sparks-registry.factory.maia')
 	const styleSchema = p('style.factory.maia')
@@ -105,15 +97,11 @@ function buildFactories(rawByBasename) {
 		'os/capability': capabilitySchema,
 		'os/groups': groupsSchema,
 		'os/indexes-registry': indexesRegistrySchema,
-		'os/aven-identity': avenIdentitySchema,
-		'os/avens-identity-registry': avensIdentityRegistrySchema,
+		'os/identity': identitySchema,
 		'os/vibes-registry': vibesRegistrySchema,
 		'os/sparks-registry': sparksRegistrySchema,
 		'os/cotext': cotextSchema,
 		'os/wasm': wasmSchema,
-		'os/human': humanSchema,
-		'os/humans-registry': humansRegistrySchema,
-		'os/registries': registriesSchema,
 		'maia-script-expression': maiaScriptExpressionSchema,
 		'data/cobinary': cobinaryDataSchema,
 		'data/notes': notesDataSchema,

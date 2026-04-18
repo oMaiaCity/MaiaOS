@@ -73,6 +73,45 @@ devLog.log(
 	process.env.LOG_MODE || '(empty — no perf/debug/trace; try LOG_MODE=perf.all or add to .env)',
 )
 
+const repoDotEnvPath = join(repoRoot, '.env')
+
+/**
+ * Parse the repo `.env` fresh from disk (dev only). Minimal parser: strips `export`, `#` comments,
+ * surrounding double/single quotes. Handles the `KEY=VALUE` case only — no `\n` expansion, no
+ * multi-line. Returns `{}` when the file is missing or unreadable.
+ *
+ * We need this because PEER_SYNC_SEED rewrites `.env` after boot to rotate
+ * `VITE_AVEN_TEST_ACCOUNT`/`VITE_AVEN_TEST_SECRET`/`AVEN_MAIA_GUARDIAN`; `process.env` captured at
+ * `--env-file=.env` startup is stale, so `/__maia_env` would otherwise ship old tester creds.
+ */
+function readDotEnvVarsFresh() {
+	if (!existsSync(repoDotEnvPath)) return {}
+	let text
+	try {
+		text = readFileSync(repoDotEnvPath, 'utf8')
+	} catch {
+		return {}
+	}
+	const out = {}
+	for (const rawLine of text.split('\n')) {
+		const line = rawLine.trim()
+		if (!line || line.startsWith('#')) continue
+		const cleaned = line.startsWith('export ') ? line.slice(7) : line
+		const eq = cleaned.indexOf('=')
+		if (eq <= 0) continue
+		const key = cleaned.slice(0, eq).trim()
+		let value = cleaned.slice(eq + 1).trim()
+		if (
+			(value.startsWith('"') && value.endsWith('"')) ||
+			(value.startsWith("'") && value.endsWith("'"))
+		) {
+			value = value.slice(1, -1)
+		}
+		out[key] = value
+	}
+	return out
+}
+
 Bun.serve({
 	hostname: '127.0.0.1',
 	port: 4200,
@@ -122,25 +161,31 @@ Bun.serve({
 				headers: { 'Content-Type': 'application/json', ...COOP_COEP },
 			})
 		},
-		// Dev env endpoint (client fetches when import.meta.env not populated)
+		// Dev env endpoint (client fetches when import.meta.env not populated).
+		// IMPORTANT: read .env fresh on every request. PEER_SYNC_SEED rotates VITE_AVEN_TEST_*
+		// after this process started; process.env is frozen, so we must re-parse the file.
 		'/__maia_env': () => {
-			const testMode = process.env.VITE_AVEN_TEST_MODE === 'true'
+			const fileEnv = readDotEnvVarsFresh()
+			const pickString = (key) => fileEnv[key] ?? process.env[key] ?? ''
+			const testMode = pickString('VITE_AVEN_TEST_MODE') === 'true'
 			const body = {
 				DEV: true,
-				LOG_MODE: process.env.LOG_MODE ?? '',
-				LOG_LEVEL: process.env.LOG_LEVEL ?? '',
-				LOG_MODE_PROD: process.env.LOG_MODE_PROD ?? '',
+				LOG_MODE: pickString('LOG_MODE'),
+				LOG_LEVEL: pickString('LOG_LEVEL'),
+				LOG_MODE_PROD: pickString('LOG_MODE_PROD'),
 				NODE_ENV: process.env.NODE_ENV ?? 'development',
-				VITE_AVEN_TEST_MODE: process.env.VITE_AVEN_TEST_MODE || '',
+				VITE_AVEN_TEST_MODE: pickString('VITE_AVEN_TEST_MODE'),
 				...(testMode
 					? {
-							VITE_AVEN_TEST_ACCOUNT: process.env.VITE_AVEN_TEST_ACCOUNT || '',
-							VITE_AVEN_TEST_SECRET: process.env.VITE_AVEN_TEST_SECRET || '',
-							VITE_AVEN_TEST_NAME: process.env.VITE_AVEN_TEST_NAME || '',
+							VITE_AVEN_TEST_ACCOUNT: pickString('VITE_AVEN_TEST_ACCOUNT'),
+							VITE_AVEN_TEST_SECRET: pickString('VITE_AVEN_TEST_SECRET'),
+							VITE_AVEN_TEST_NAME: pickString('VITE_AVEN_TEST_NAME'),
 						}
 					: {}),
 			}
-			return new Response(JSON.stringify(body), { headers: { 'Content-Type': 'application/json' } })
+			return new Response(JSON.stringify(body), {
+				headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+			})
 		},
 		// Internal: raw index - only our wrappers should serve this with COOP/COEP
 		'/__index_raw': index,

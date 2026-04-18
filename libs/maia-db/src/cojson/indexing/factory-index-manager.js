@@ -2,7 +2,7 @@
  * Schema Index Manager
  *
  * Provides helper functions for automatic schema-based indexing of co-values.
- * Manages schema index colists keyed by schema co-id in spark.os.indexes (account.registries.sparks[°maia].os.indexes).
+ * Manages schema index colists keyed by schema co-id in spark.os.indexes (account.sparks[°maia].os.indexes).
  *
  * Structure:
  * - spark.os.metaFactoryCoId: co_z of metafactory (anchor)
@@ -58,7 +58,7 @@ async function loadIndexColistContent(peer, indexColistId, timeoutMs = 8000) {
 let warnedRegistriesMissingDuringBootstrap = false
 
 /**
- * Ensure spark.os CoMap exists (account.registries.sparks[spark].os)
+ * Ensure spark.os CoMap exists (account.sparks[spark].os)
  * @param {Object} peer - Backend instance
  * @param {string} [spark='°maia'] - Spark name
  * @returns {Promise<RawCoMap|null>} spark.os CoMap
@@ -106,12 +106,12 @@ async function ensureOsCoMap(peer, spark) {
 		}
 	}
 
-	const registriesId = peer.account?.get?.('registries')
-	if (!registriesId?.startsWith('co_z')) {
+	const sparksTop = peer.account?.get?.('sparks')
+	if (!sparksTop?.startsWith('co_z')) {
 		if (!warnedRegistriesMissingDuringBootstrap) {
 			warnedRegistriesMissingDuringBootstrap = true
 			log.warn(
-				'[SchemaIndexManager] account.registries not set yet (bootstrap). Indexing deferred until linkAccountToRegistries.',
+				'[SchemaIndexManager] account.sparks not set yet (bootstrap). Indexing deferred until account.sparks is anchored.',
 			)
 		}
 	}

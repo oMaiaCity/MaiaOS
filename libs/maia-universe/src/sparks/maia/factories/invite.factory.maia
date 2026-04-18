@@ -1,0 +1,34 @@
+{
+	"$factory": "°maia/factory/meta.factory.maia",
+	"title": "°maia/factory/invite.factory.maia",
+	"description": "Invite to join a human registry (future paywall / enforcement). Not required for permissive guardian approval.",
+	"cotype": "comap",
+	"indexing": false,
+	"properties": {
+		"sub": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "Subject account co-id"
+		},
+		"iss": {
+			"type": "string",
+			"pattern": "^co_z[a-zA-Z0-9]+$",
+			"description": "Issuer (guardian account)"
+		},
+		"nbf": {
+			"type": "integer"
+		},
+		"exp": {
+			"type": "integer"
+		},
+		"uses": {
+			"type": "integer",
+			"description": "Remaining uses (optional)"
+		}
+	},
+	"required": [
+		"sub",
+		"iss",
+		"exp"
+	]
+}

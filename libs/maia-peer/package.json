@@ -6,7 +6,11 @@
 	"exports": {
 		".": "./src/index.js"
 	},
+	"scripts": {
+		"test": "bun test tests"
+	},
 	"dependencies": {
+		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/storage": "workspace:*",
 		"cojson": "0.20.16",

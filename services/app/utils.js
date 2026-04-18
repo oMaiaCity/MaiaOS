@@ -38,11 +38,20 @@ export function getSyncStatusMessage(syncState, defaultMsg = 'Offline') {
 	if (syncState.status === 'authenticating') return 'Authenticating...'
 	if (syncState.status === 'loading-account') return 'Loading your account...'
 	if (syncState.status === 'syncing') return 'Syncing data...'
-	if (syncState.status === 'connected')
-		return syncState.writeEnabled === false ? 'Read-only' : 'Connected'
+	if (syncState.status === 'connected') {
+		const ro =
+			syncState.writeEnabled === false ||
+			syncState.member === 'pending' ||
+			syncState.member === 'unknown'
+		return ro ? 'Read-only' : 'Connected'
+	}
 	if (syncState.status === 'error') return syncState.error || 'Error'
 	if (syncState.connected) {
-		if (syncState.writeEnabled === false) return 'Read-only'
+		const ro =
+			syncState.writeEnabled === false ||
+			syncState.member === 'pending' ||
+			syncState.member === 'unknown'
+		if (ro) return 'Read-only'
 		return syncState.syncing ? 'Syncing' : 'Connected'
 	}
 	if (syncState.error) return syncState.error
@@ -56,7 +65,11 @@ export function getSyncStatusMessage(syncState, defaultMsg = 'Offline') {
  */
 export function getSyncStatusClass(syncState) {
 	if (syncState.connected) {
-		return syncState.writeEnabled === false ? 'read-only' : 'connected'
+		const ro =
+			syncState.writeEnabled === false ||
+			syncState.member === 'pending' ||
+			syncState.member === 'unknown'
+		return ro ? 'read-only' : 'connected'
 	}
 	return 'disconnected'
 }

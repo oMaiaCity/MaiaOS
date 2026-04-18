@@ -14,10 +14,10 @@ Think of seeding like setting up a new house. First you install the plumbing (bo
 
 ## When Seeding Runs
 
-- **Sync service** → `PEER_SYNC_MODE=seed` runs genesis seed once (then unset `PEER_SYNC_MODE` so later restarts use the persisted scaffold). Unset or `none` = normal run, no genesis seed.
+- **Sync service** → `PEER_SYNC_SEED=true` runs optional genesis when scaffold exists (then unset `PEER_SYNC_SEED` so later restarts use the persisted scaffold). Unset or not `true` = normal run, no optional genesis seed. **Local dev only** (PGlite, no remote bucket): sync may also clear local PGlite + `binary-bucket`, regenerate tester lines in `.env` — not used on production or with Postgres/Tigris.
 - **PEER_FRESH_SEED=true** → Full bootstrap + seed (clean slate) where applicable
 
-**Reseed:** Wipe Postgres, PGlite data directory, and/or Tigris blob storage manually, then restart sync. There is no env-based force reseed.
+**Reseed:** Wipe Postgres, PGlite data directory, and/or Tigris blob storage manually, then restart sync. **Remote/prod:** no automatic wipe from env. **Local PGlite only:** `PEER_SYNC_SEED=true` (with no remote bucket) triggers a local filesystem reset and tester regen as described above—still not applicable to Postgres or Tigris.
 
 ### When to Re-seed
 

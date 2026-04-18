@@ -18,19 +18,25 @@ import {
 } from '@MaiaOS/logs'
 import { getSyncHttpBaseUrl } from '@MaiaOS/peer'
 import {
+	BOOTSTRAP_PHASES,
+	bootstrapAccountHandshake,
 	CAP_GRANT_TTL_SECONDS,
+	ensureIdentity,
 	getCapabilityGrantIndexColistCoId,
 	isPRFSupported,
 	loadCapabilitiesGrants,
 	loadOrCreateAgentAccount,
 	MaiaOS,
 	RUNTIME_REF,
+	resetBootstrapPhase,
 	resolveAccountCoIdsToProfiles,
 	resolveInfraFactoryCoId,
 	signInWithPasskey,
 	signUpWithPasskey,
+	subscribeBootstrapPhase,
 	subscribeSyncState,
 	updateSyncState,
+	validateInvite,
 } from '@MaiaOS/runtime'
 import { renderApp, toggleMetadataInternalKey } from './db-view.js'
 import { beginIntroDiary, renderIntroPage } from './intro.js'
@@ -150,19 +156,9 @@ function setupSyncSubscription() {
 	} catch (_syncError) {}
 }
 
-// Check if user has previously authenticated (localStorage flag only, no secrets)
-const HAS_ACCOUNT_KEY = 'maia_has_account'
-
+/** Both sign-in and sign-up stay available — no separate localStorage flag (OPFS is source of truth). */
 function hasExistingAccount() {
-	return localStorage.getItem(HAS_ACCOUNT_KEY) === 'true'
-}
-
-function markAccountExists() {
-	localStorage.setItem(HAS_ACCOUNT_KEY, 'true')
-}
-
-function _clearAccountFlag() {
-	localStorage.removeItem(HAS_ACCOUNT_KEY)
+	return true
 }
 
 const TOAST_ICONS = { success: '✓', error: '✕', info: 'ℹ' }
@@ -222,12 +218,12 @@ async function handleRoute() {
 			await isPRFSupported()
 			prfOk = true
 		} catch (_) {
-			/* passkeys unavailable — test aven can still sign in */
+			/* passkeys unavailable — secret-key dev sign-in can still work */
 		}
 		renderSignInPrompt(
 			hasExistingAccount,
 			undefined,
-			isAvenTestModeEnabled(),
+			isSecretKeyDevSignInEnabled(),
 			getSignInUiHandlers(),
 			!prfOk,
 		)
@@ -391,12 +387,12 @@ async function init() {
 }
 
 /**
- * Initialize agent mode
- * Automatically loads or creates account using static credentials from env vars
+ * Initialize agent mode — same unified bootstrap path as human mode.
+ * (loadOrCreateAgentAccount -> bootstrapAccountHandshake -> MaiaOS.boot)
  */
 async function initAgentMode() {
 	try {
-		appLog.log('🤖 [AGENT MODE] Initializing agent mode...')
+		appLog.log('[AGENT MODE] Initializing agent mode...')
 
 		const accountID = import.meta.env?.AVEN_MAIA_ACCOUNT || import.meta.env?.VITE_AVEN_MAIA_ACCOUNT
 		const agentSecret = import.meta.env?.AVEN_MAIA_SECRET || import.meta.env?.VITE_AVEN_MAIA_SECRET
@@ -407,62 +403,56 @@ async function initAgentMode() {
 			)
 		}
 
-		// Determine sync domain
 		const syncDomain = getSyncDomain()
 
-		// Load or create agent account using universal DRY interface
-		appLog.log('🤖 [AGENT MODE] Loading agent account...')
-		const agentResult = await loadOrCreateAgentAccount({
+		startBootstrapPhaseOverlay()
+
+		appLog.log('[AGENT MODE] Loading agent account...')
+		const { node, account } = await loadOrCreateAgentAccount({
 			accountID,
 			agentSecret,
 			syncDomain: syncDomain || null,
 			createName: 'Maia Agent',
 		})
 
-		const { node, account } = agentResult
+		const baseUrl = getSyncBaseUrl()
+		if (baseUrl) {
+			await bootstrapAccountHandshake(account, { syncBaseUrl: baseUrl, node })
+		} else {
+			appLog.warn?.('[AGENT MODE] no sync base URL — skipping bootstrap handshake (offline mode)')
+		}
 
-		await applySyncRegistriesToAccount(account, node)
-
-		// Boot MaiaOS with agent account
 		maia = await MaiaOS.boot({
 			node,
 			account,
-			mode: 'agent', // Explicitly set mode
-			syncDomain, // Pass sync domain to kernel
-			getSyncBaseUrl, // For POST /register after createSpark
-			modules: ['db', 'core', 'ai'], // Include all modules
+			syncDomain,
+			getSyncBaseUrl,
+			modules: ['db', 'core', 'ai'],
 		})
+		stopBootstrapPhaseOverlay()
 		window.maia = maia
-		// CRITICAL: Await link before first render - indexing requires account.registries
-		await linkAccountToRegistries(maia).catch(() => {})
+		void refreshMemberSyncState(maia)
 		capabilityGrantsIndexColistCoId = (await getCapabilityGrantIndexColistCoId(maia)) ?? null
 		initGlobalAI(maia)
 		notifyMaiaReady(maia)
 
-		// Set auth state
-		authState = {
-			signedIn: true,
-			accountID: account.id,
-		}
+		authState = { signedIn: true, accountID: account.id }
 
 		setupSyncSubscription()
 
-		// Start with dashboard screen
 		currentScreen = 'dashboard'
 		currentContextCoValueId = null
 
-		// Navigate to /me
 		window.history.pushState({}, '', '/me')
 		await handleRoute()
 
-		// Load linked CoValues in background
 		loadLinkedCoValues().catch((_error) => {})
 
-		appLog.log('🤖 [AGENT MODE] Agent mode initialized successfully')
+		appLog.log('[AGENT MODE] Agent mode initialized successfully')
 	} catch (error) {
+		stopBootstrapPhaseOverlay()
 		showToast(`Failed to initialize agent mode: ${error.message}`, 'error', 10000)
 
-		// Show error screen
 		document.getElementById('app').innerHTML = `
 			<div style="display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; gap: 1rem;">
 				<h1 style="color: #ef4444;">Agent Mode Error</h1>
@@ -490,21 +480,47 @@ function getSyncDomain() {
 }
 
 /**
- * AVEN_TEST_MODE: Non-human test login for local dev (no passkeys).
- * NEVER allowed in production - double-gated by env and hostname.
- * In-memory only - no localStorage.
+ * Secret-key dev env (`VITE_AVEN_*`): **prefer** `window.__MAIA_DEV_ENV__` over `import.meta.env`.
+ * `import.meta.env` is baked at bundle time from `--env-file=.env` when the app dev-server
+ * started; if `bun dev:sync` later rewrites `.env` (PEER_SYNC_SEED rotates tester creds), those
+ * baked values are stale. `window.__MAIA_DEV_ENV__` is populated from `/__maia_env`, which reads
+ * `.env` fresh on every request, so it always reflects the latest rotation.
  */
-function isAvenTestModeEnabled() {
-	const env = import.meta.env ?? window.__MAIA_DEV_ENV__
-	if (env?.VITE_AVEN_TEST_MODE !== 'true') return false
+function getSecretKeyDevEnv() {
+	const devEnv = (typeof window !== 'undefined' ? window.__MAIA_DEV_ENV__ : null) ?? null
+	const buildEnv = (typeof import.meta !== 'undefined' ? import.meta.env : null) ?? null
+	const pick = (key) => {
+		const v = devEnv?.[key]
+		if (typeof v === 'string' && v !== '') return v
+		const b = buildEnv?.[key]
+		if (typeof b === 'string' && b !== '') return b
+		return ''
+	}
+	return {
+		VITE_AVEN_TEST_MODE: pick('VITE_AVEN_TEST_MODE'),
+		VITE_AVEN_TEST_ACCOUNT: pick('VITE_AVEN_TEST_ACCOUNT'),
+		VITE_AVEN_TEST_SECRET: pick('VITE_AVEN_TEST_SECRET'),
+		VITE_AVEN_TEST_NAME: pick('VITE_AVEN_TEST_NAME'),
+		DEV: devEnv?.DEV === true || buildEnv?.DEV === true,
+	}
+}
+
+/**
+ * `VITE_AVEN_TEST_MODE`: secret-key dev sign-in for **human** operators (browser, no WebAuthn).
+ * Same app as passkey users; uses pre-provisioned `AgentSecret` from env. Not the sync server Maia agent.
+ * NEVER allowed in production — gated by env + localhost.
+ */
+function isSecretKeyDevSignInEnabled() {
+	const env = getSecretKeyDevEnv()
+	if (env.VITE_AVEN_TEST_MODE !== 'true') return false
 	const isLocal =
-		env?.DEV ||
+		env.DEV ||
 		(typeof window !== 'undefined' &&
 			(window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'))
 	return isLocal
 }
 
-/** Base URL for sync HTTP API (syncRegistry, register, extend-capability). */
+/** Base URL for sync HTTP API (signup, register, extend-capability). */
 function getSyncBaseUrl() {
 	return getSyncHttpBaseUrl({
 		dev: isDevEnvironment,
@@ -514,102 +530,98 @@ function getSyncBaseUrl() {
 	})
 }
 
-/** Set account.registries from GET /syncRegistry (must run before MaiaOS.boot if peer was reseeded). */
-async function applySyncRegistriesToAccount(account, node) {
-	if (!account?.set) return
-	const existing = account.get?.('registries')
-	if (existing?.startsWith('co_z')) {
-		const wfs = node?.syncManager?.waitForStorageSync
-		if (typeof wfs === 'function') {
-			await wfs.call(node.syncManager, account.id)
-			await wfs.call(node.syncManager, existing)
-		}
-		return
+async function readProfileIdForAccount(maia, accountCoId) {
+	try {
+		const accountStore = await maia.do({ op: 'read', factory: '@account', key: accountCoId })
+		const v = accountStore?.value ?? accountStore
+		const p = v?.profile
+		return p?.startsWith?.('co_z') ? p : null
+	} catch {
+		return null
 	}
-	const baseUrl = getSyncBaseUrl()
-	if (!baseUrl) return
-	const res = await fetch(`${baseUrl}/syncRegistry`)
-	if (!res.ok) {
-		throw new Error(`[Maia] syncRegistry failed: HTTP ${res.status}`)
-	}
-	const data = await res.json()
-	const registriesId = data?.registries
-	if (!registriesId?.startsWith('co_z')) {
-		throw new Error('[Maia] syncRegistry response missing registries co-id')
-	}
-	account.set('registries', registriesId)
-	const linked = account.get?.('registries')
-	if (linked !== registriesId) {
-		throw new Error(
-			`[Maia] account.set('registries') did not apply (have ${linked}, expected ${registriesId})`,
-		)
-	}
-	const wfs = node?.syncManager?.waitForStorageSync
-	if (typeof wfs === 'function') {
-		await wfs.call(node.syncManager, account.id)
-		await wfs.call(node.syncManager, registriesId)
-	}
-}
-
-/** Link account to sync server's registries. Set account.registries only. Sparks resolved via registries.sparks. Human and agent. */
-async function linkAccountToRegistries(maia) {
-	if (!maia?.id?.node || !maia.id.maiaId) return
-	await applySyncRegistriesToAccount(maia.id.maiaId, maia.id.node)
-}
-
-/** Register human with sync server. Call before boot so server has registry entry before any sync writes. */
-async function registerHuman(account) {
-	if (!account || detectMode() === 'agent') return false
-	const baseUrl = getSyncBaseUrl()
-	if (!baseUrl) return false
-	const accountId = account.id ?? account.$jazz?.id
-	if (!accountId?.startsWith('co_z')) return false
-	const profileId = account.get?.('profile')
-	if (!profileId?.startsWith('co_z')) return false
-	const doRegister = () =>
-		fetch(`${baseUrl}/register`, {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json' },
-			body: JSON.stringify({ type: 'human', accountId, profileId }),
-		})
-	for (let i = 0; i < 5; i++) {
-		try {
-			const res = await doRegister()
-			if (res.status === 503) {
-				await new Promise((r) => setTimeout(r, 1500))
-				continue
-			}
-			if (typeof updateSyncState === 'function') updateSyncState({ writeEnabled: res.ok })
-			return res.ok
-		} catch (_e) {
-			if (i < 4) await new Promise((r) => setTimeout(r, 1000))
-		}
-	}
-	if (typeof updateSyncState === 'function') updateSyncState({ writeEnabled: false })
-	return false
-}
-
-/** Auto-register human in registry (uses maia.id.maiaId). For Test Aven, use registerHuman(account) before boot. */
-async function autoRegisterHuman(maia) {
-	await registerHuman(maia?.id?.maiaId)
 }
 
 /**
- * Sign in with Test AVEN (local dev only, no passkeys).
- * In-memory only - no markAccountExists, no localStorage.
- * NEVER in production (isAvenTestModeEnabled gates this).
+ * User-facing subtitle shown in the loading overlay, keyed by bootstrap phase.
+ * Keep terse + human-friendly; the phase id is the source of truth for diagnostics/tests.
  */
-async function signInWithTestAven() {
-	if (!isAvenTestModeEnabled()) {
-		showToast('Test AVEN mode is not available.', 'error')
+const BOOTSTRAP_PHASE_SUBTITLES = Object.freeze({
+	[BOOTSTRAP_PHASES.INIT]: 'Setting up your sovereign self…',
+	[BOOTSTRAP_PHASES.CONNECTING_SYNC]: 'Connecting to sync…',
+	[BOOTSTRAP_PHASES.LOADING_ACCOUNT]: 'Loading account…',
+	[BOOTSTRAP_PHASES.HANDSHAKE]: 'Handshaking with sync server…',
+	[BOOTSTRAP_PHASES.ANCHORING_SPARKS]: 'Anchoring sparks…',
+	[BOOTSTRAP_PHASES.READING_SYSTEM_SPARK]: 'Resolving system spark…',
+	[BOOTSTRAP_PHASES.INITIALIZING_MAIADB]: 'Initializing MaiaDB…',
+	[BOOTSTRAP_PHASES.READY]: 'Ready.',
+	[BOOTSTRAP_PHASES.FAILED]: 'Bootstrap failed.',
+})
+
+let _bootstrapPhaseUnsub = null
+function _applyBootstrapPhaseToOverlay(phase) {
+	const subtitleEl = document.querySelector('.loading-connecting-subtitle')
+	if (!subtitleEl) return
+	const text = BOOTSTRAP_PHASE_SUBTITLES[phase]
+	if (text) subtitleEl.textContent = text
+}
+
+/**
+ * Subscribe bootstrap phase events to the visible loading overlay subtitle.
+ * Also resets phase state so each sign-in / sign-up starts from INIT.
+ */
+function startBootstrapPhaseOverlay() {
+	resetBootstrapPhase()
+	if (_bootstrapPhaseUnsub) _bootstrapPhaseUnsub()
+	_bootstrapPhaseUnsub = subscribeBootstrapPhase(({ phase }) => _applyBootstrapPhaseToOverlay(phase))
+}
+
+function stopBootstrapPhaseOverlay() {
+	if (_bootstrapPhaseUnsub) {
+		_bootstrapPhaseUnsub()
+		_bootstrapPhaseUnsub = null
+	}
+}
+
+async function refreshMemberSyncState(maia) {
+	try {
+		if (!maia || detectMode() === 'agent') {
+			updateSyncState({ local: 'ready', member: 'approved', writeEnabled: true })
+			return
+		}
+		const id = authState.accountID
+		if (!id?.startsWith('co_z')) return
+		const grants = await loadCapabilitiesGrants(maia)
+		const nowSec = Math.floor(Date.now() / 1000)
+		const hasWrite = grants.some((g) => g.sub === id && g.cmd === '/sync/write' && g.exp > nowSec)
+		updateSyncState({
+			local: 'ready',
+			member: hasWrite ? 'approved' : 'pending',
+			writeEnabled: hasWrite,
+		})
+	} catch (_e) {
+		updateSyncState({ local: 'ready', member: 'unknown', writeEnabled: true })
+	}
+}
+
+/**
+ * Secret-key dev sign-in (local only): human operator, env `VITE_AVEN_TEST_*`, no passkeys.
+ * NEVER in production (isSecretKeyDevSignInEnabled gates this).
+ *
+ * Unified bootstrap: loadOrCreateAgentAccount -> bootstrapAccountHandshake -> MaiaOS.boot,
+ * all awaited. No fire-and-forget .then chains — the loading overlay stays accurate,
+ * any error surfaces immediately, and there is nothing for a 60s watchdog to paper over.
+ */
+async function signInWithSecretKeyDev() {
+	if (!isSecretKeyDevSignInEnabled()) {
+		showToast('Secret key dev sign-in is not available.', 'error')
 		return
 	}
-	const env = import.meta.env ?? window.__MAIA_DEV_ENV__
-	const accountID = env?.VITE_AVEN_TEST_ACCOUNT
-	const agentSecret = env?.VITE_AVEN_TEST_SECRET
+	const env = getSecretKeyDevEnv()
+	const accountID = env.VITE_AVEN_TEST_ACCOUNT
+	const agentSecret = env.VITE_AVEN_TEST_SECRET
 	if (!accountID || !agentSecret) {
 		showToast(
-			'VITE_AVEN_TEST_ACCOUNT and VITE_AVEN_TEST_SECRET required. Run `bun agent:generate`.',
+			'VITE_AVEN_TEST_ACCOUNT and VITE_AVEN_TEST_SECRET required. Run `bun agent:generate` or `bun dev:sync` with PEER_SYNC_SEED=true.',
 			'error',
 		)
 		return
@@ -617,46 +629,45 @@ async function signInWithTestAven() {
 	try {
 		setSignInLoading(true)
 		const syncDomain = getSyncDomain()
-		const avenTestNameRaw = env?.VITE_AVEN_TEST_NAME || 'Test'
-		const avenTestName = avenTestNameRaw.startsWith('Aven ')
-			? avenTestNameRaw
-			: `Aven ${avenTestNameRaw}`
-		const agentResult = await loadOrCreateAgentAccount({
-			accountID,
-			agentSecret,
-			syncDomain: syncDomain || null,
-			inMemory: false, // NEVER allow in-memory storage
-			createName: avenTestName,
-		})
-		const { node, account } = agentResult
+		const devNameRaw = env.VITE_AVEN_TEST_NAME || 'Test'
+		const devDisplayName =
+			devNameRaw.startsWith('Aven ') || /\s/.test(devNameRaw) ? devNameRaw : `Aven ${devNameRaw}`
 
-		// Ensure profile name matches env var
-		try {
-			const profileId = account.get('profile')
-			if (profileId) {
-				const profileCore = node.getCoValue(profileId)
-				if (profileCore?.isAvailable()) {
-					const profile = profileCore.getCurrentContent()
-					if (profile?.get('name') !== avenTestName) {
-						profile.set('name', avenTestName)
-					}
-				}
-			}
-		} catch (_e) {}
-
-		await applySyncRegistriesToAccount(account, node)
-
-		// Register BEFORE any sync writes so the server grants /sync/write capability
-		await registerHuman(account)
-
-		authState = { signedIn: true, accountID: account.id }
+		authState = { signedIn: true, accountID }
 		setupSyncSubscription()
 		currentScreen = 'dashboard'
 		currentContextCoValueId = null
 		window.history.pushState({}, '', '/me')
 		await handleRoute()
 
-		MaiaOS.boot({
+		startBootstrapPhaseOverlay()
+
+		const { node, account } = await loadOrCreateAgentAccount({
+			accountID,
+			agentSecret,
+			syncDomain: syncDomain || null,
+			inMemory: false,
+			createName: devDisplayName,
+		})
+
+		try {
+			const profileId = account.get('profile')
+			if (profileId) {
+				const profileCore = node.getCoValue(profileId)
+				if (profileCore?.isAvailable()) {
+					const profile = profileCore.getCurrentContent()
+					if (profile?.get('name') !== devDisplayName) {
+						profile.set('name', devDisplayName)
+					}
+				}
+			}
+		} catch (_e) {}
+
+		const baseUrl = getSyncBaseUrl()
+		if (!baseUrl) throw new Error('Sync base URL not configured')
+		await bootstrapAccountHandshake(account, { syncBaseUrl: baseUrl, node })
+
+		maia = await MaiaOS.boot({
 			node,
 			account,
 			agentSecret,
@@ -664,145 +675,121 @@ async function signInWithTestAven() {
 			getSyncBaseUrl,
 			modules: ['db', 'core', 'ai'],
 		})
-			.then(async (bootedMaia) => {
-				maia = bootedMaia
-				window.maia = maia
-				await linkAccountToRegistries(maia).catch(() => {})
-				capabilityGrantsIndexColistCoId = (await getCapabilityGrantIndexColistCoId(maia)) ?? null
-				initGlobalAI(maia)
-				notifyMaiaReady(maia)
-				cleanupLoadingScreenSync()
-				if (authState.signedIn) {
-					renderAppInternal().catch((e) =>
-						showToast(`Failed to render app: ${caughtErrMessage(e)}`, 'error'),
-					)
-				}
-			})
-			.catch((bootError) => {
-				showToast(`Failed to initialize: ${bootError?.message ?? bootError}`, 'error')
-				authState = { signedIn: false, accountID: null }
-				maia = null
-				setSignInLoading(false)
-				window.history.pushState({}, '', '/signin')
-				renderSignInPrompt(hasExistingAccount, undefined, true, getSignInUiHandlers())
-			})
-
+		stopBootstrapPhaseOverlay()
+		window.maia = maia
+		void refreshMemberSyncState(maia)
+		capabilityGrantsIndexColistCoId = (await getCapabilityGrantIndexColistCoId(maia)) ?? null
+		initGlobalAI(maia)
+		notifyMaiaReady(maia)
+		cleanupLoadingScreenSync()
+		if (authState.signedIn) {
+			renderAppInternal().catch((e) =>
+				showToast(`Failed to render app: ${caughtErrMessage(e)}`, 'error'),
+			)
+		}
 		loadLinkedCoValues().catch(() => {})
 	} catch (error) {
+		stopBootstrapPhaseOverlay()
+		cleanupLoadingScreenSync()
 		authState = { signedIn: false, accountID: null }
 		maia = null
 		setSignInLoading(false)
-		showToast(`Test AVEN sign-in failed: ${caughtErrMessage(error)}`, 'error')
-		renderSignInPrompt(hasExistingAccount, undefined, true, getSignInUiHandlers())
+		showToast(`Secret key dev sign-in failed: ${caughtErrMessage(error)}`, 'error', 9000)
+		window.history.pushState({}, '', '/signin')
+		renderSignInPrompt(
+			hasExistingAccount,
+			undefined,
+			isSecretKeyDevSignInEnabled(),
+			getSignInUiHandlers(),
+		)
 	}
 }
 
 /**
- * Sign in with existing passkey
+ * Sign in with existing passkey.
+ *
+ * Unified bootstrap: signInWithPasskey -> loadingPromise -> bootstrapAccountHandshake -> MaiaOS.boot,
+ * all awaited in one path. Overlay subtitle tracks live bootstrap phase; failures reset auth state
+ * and surface immediately instead of silently timing out.
  */
 async function signIn() {
 	try {
 		setSignInLoading(true)
-		// Determine sync domain (single source of truth - passed through kernel)
 		const syncDomain = getSyncDomain()
-		if (!syncDomain) {
-		}
 
-		const signInResult = await signInWithPasskey({
+		const { accountID, agentSecret, loadingPromise } = await signInWithPasskey({
 			salt: 'maia.city',
 		})
-		const { accountID, agentSecret, loadingPromise } = signInResult
 
-		// Set auth state IMMEDIATELY after auth (before account loads)
-		// This allows UI to show right away
-		authState = {
-			signedIn: true,
-			accountID: accountID,
-		}
-
-		// Mark that user has successfully authenticated
-		markAccountExists()
-
-		setSignInLoading(false)
-
-		// Await account loading in background and boot MaiaOS when ready
-		loadingPromise
-			.then(async (accountResult) => {
-				const { node, account } = accountResult
-				appLog.log(`   node: ${node ? 'ready' : 'not ready'}`)
-				appLog.log(`   account: ${account ? 'ready' : 'not ready'}`)
-
-				try {
-					await applySyncRegistriesToAccount(account, node)
-					maia = await MaiaOS.boot({
-						node,
-						account,
-						agentSecret, // For getCapabilityToken (UCAN-like auth)
-						syncDomain, // Pass sync domain to kernel (single source of truth)
-						getSyncBaseUrl, // For POST /register after createSpark
-						modules: ['db', 'core', 'ai'], // Include all modules
-					})
-					window.maia = maia
-					await Promise.all([
-						autoRegisterHuman(maia).catch(() => {}),
-						linkAccountToRegistries(maia).catch(() => {}),
-					])
-					capabilityGrantsIndexColistCoId = (await getCapabilityGrantIndexColistCoId(maia)) ?? null
-					initGlobalAI(maia)
-					notifyMaiaReady(maia)
-
-					// Re-render app now that maia is ready
-					if (authState.signedIn) {
-						renderAppInternal().catch((error) => {
-							showToast(`Failed to render app: ${caughtErrMessage(error)}`, 'error')
-						})
-					}
-				} catch (bootError) {
-					showToast(`Failed to initialize MaiaOS: ${caughtErrMessage(bootError)}`, 'error')
-					// Don't throw - UI is already shown, user can retry
-				}
-			})
-			.catch((loadError) => {
-				const msg = caughtErrMessage(loadError)
-				const isNotFound = loadError?.isAccountNotFound || msg.includes('Account not found in storage')
-				appLog.error('[app] signIn loadingPromise failed', {
-					message: msg,
-					isAccountNotFound: isNotFound,
-					original: loadError?.originalError?.message,
-				})
-				const hint = isNotFound
-					? ' If this persists: ensure `bun dev:sync` is running (port 4201), or use Sign up once on this device. Check console for [signInWithPasskey] and peer logs.'
-					: ''
-				showToast(`Failed to load account: ${msg}${hint}`, 'error')
-				// Reset auth state on error
-				authState = { signedIn: false, accountID: null }
-				maia = null
-			})
-
+		authState = { signedIn: true, accountID }
 		setupSyncSubscription()
-
-		// Start with dashboard screen (don't set default context)
 		currentScreen = 'dashboard'
 		currentContextCoValueId = null
 
-		// Navigate to /me IMMEDIATELY - don't wait for data loading
-		// This ensures UI shows right away, especially important on mobile
-
-		// Update URL first
 		window.history.pushState({}, '', '/me')
-
-		// Then handle route (which will render the app)
-		handleRoute().catch((error) => {
+		await handleRoute().catch((error) => {
 			showToast(`Navigation error: ${caughtErrMessage(error)}`, 'error')
 		})
+		setSignInLoading(false)
+		startBootstrapPhaseOverlay()
 
-		// Load linked CoValues in background (non-blocking)
-		// This allows the UI to show immediately while data loads progressively
-		loadLinkedCoValues().catch((_error) => {
-			// Non-fatal - UI is already shown, data will load progressively via sync
-		})
+		try {
+			const { node, account } = await loadingPromise
+			const baseUrl = getSyncBaseUrl()
+			if (!baseUrl) throw new Error('Sync base URL not configured')
+			await bootstrapAccountHandshake(account, { syncBaseUrl: baseUrl, node })
+
+			maia = await MaiaOS.boot({
+				node,
+				account,
+				agentSecret,
+				syncDomain,
+				getSyncBaseUrl,
+				modules: ['db', 'core', 'ai'],
+			})
+			stopBootstrapPhaseOverlay()
+			window.maia = maia
+			void refreshMemberSyncState(maia)
+			capabilityGrantsIndexColistCoId = (await getCapabilityGrantIndexColistCoId(maia)) ?? null
+			initGlobalAI(maia)
+			notifyMaiaReady(maia)
+			cleanupLoadingScreenSync()
+			if (authState.signedIn) {
+				renderAppInternal().catch((error) => {
+					showToast(`Failed to render app: ${caughtErrMessage(error)}`, 'error')
+				})
+			}
+			loadLinkedCoValues().catch((_error) => {})
+		} catch (bootOrLoadError) {
+			stopBootstrapPhaseOverlay()
+			cleanupLoadingScreenSync()
+			const msg = caughtErrMessage(bootOrLoadError)
+			const isNotFound =
+				bootOrLoadError?.isAccountNotFound ||
+				msg.includes('Account not found in storage') ||
+				msg.includes('Account unavailable from all peers')
+			appLog.error('[app] signIn boot/load failed', {
+				message: msg,
+				phase: bootOrLoadError?.phase,
+				isAccountNotFound: isNotFound,
+				original: bootOrLoadError?.originalError?.message,
+			})
+			const hint = isNotFound
+				? ' No record of this passkey on the sync server or in local storage. If you are a new user, choose "Create your Self" instead. If you were here before, your server data may have been reset (PEER_SYNC_SEED) — clear site data (OPFS) and sign up again.'
+				: ''
+			showToast(`Sign-in failed: ${msg}.${hint}`, 'error', 9000)
+			authState = { signedIn: false, accountID: null }
+			maia = null
+			window.history.pushState({}, '', '/signin')
+			renderSignInPrompt(
+				hasExistingAccount,
+				undefined,
+				isSecretKeyDevSignInEnabled(),
+				getSignInUiHandlers(),
+			)
+		}
 	} catch (error) {
-		// Reset state on error to prevent stuck state
+		stopBootstrapPhaseOverlay()
 		authState = { signedIn: false, accountID: null }
 		maia = null
 		setSignInLoading(false)
@@ -814,7 +801,7 @@ async function signIn() {
 			renderSignInPrompt(
 				hasExistingAccount,
 				undefined,
-				isAvenTestModeEnabled(),
+				isSecretKeyDevSignInEnabled(),
 				getSignInUiHandlers(),
 				true,
 			)
@@ -828,7 +815,12 @@ async function signIn() {
 				'info',
 				5000,
 			)
-			renderSignInPrompt(hasExistingAccount, undefined, isAvenTestModeEnabled(), getSignInUiHandlers())
+			renderSignInPrompt(
+				hasExistingAccount,
+				undefined,
+				isSecretKeyDevSignInEnabled(),
+				getSignInUiHandlers(),
+			)
 		} else {
 			const friendlyMessage = msg.includes('Failed to evaluate PRF')
 				? 'Unable to authenticate with your passkey. Please try again.'
@@ -839,25 +831,26 @@ async function signIn() {
 	}
 }
 
-/** Load linked CoValues from account (registries via deep resolution) */
+/** Load linked CoValues from account (sparks registry via deep resolution) */
 async function loadLinkedCoValues() {
 	if (!maia?.id?.maiaId) return
 	try {
 		const accountStore = await maia.do({ op: 'read', factory: '@account', key: maia.id.maiaId.id })
 		const accountData = accountStore?.value ?? accountStore
-		const registriesId = accountData?.registries
-		if (typeof registriesId === 'string' && registriesId.startsWith('co_')) {
-			await maia.do({ op: 'read', factory: registriesId, key: registriesId, deepResolve: true })
+		const sparksId = accountData?.sparks
+		if (typeof sparksId === 'string' && sparksId.startsWith('co_')) {
+			await maia.do({ op: 'read', factory: sparksId, key: sparksId, deepResolve: true })
 		}
 	} catch (_e) {}
 }
 
 /**
- * Register new passkey
+ * Register new passkey.
+ *
+ * Unified bootstrap path: same as signIn but with signUpWithPasskey at the front.
  */
 async function register() {
 	try {
-		// Require first name before passkey prompt - input must exist and be filled
 		const firstNameInput = document.getElementById('signin-first-name')
 		if (firstNameInput) {
 			const val = (firstNameInput.value || '').trim()
@@ -873,64 +866,67 @@ async function register() {
 		setSignInLoading(true)
 		const syncDomain = getSyncDomain()
 
-		// First name from input (trimmed, max 50 chars); empty → fallback to "Traveler " + short id
 		const firstName = getFirstNameForRegister()
 		const name = firstName && firstName.length <= 50 ? firstName.trim() : undefined
 
-		const { accountID, node, account } = await signUpWithPasskey({
+		const { accountID, loadingPromise } = await signUpWithPasskey({
 			name,
 			salt: 'maia.city',
 		})
 
-		// Set auth and navigate IMMEDIATELY - don't wait for boot
 		authState = { signedIn: true, accountID }
-		markAccountExists()
 		setupSyncSubscription()
 		currentScreen = 'dashboard'
 		currentContextCoValueId = null
 		window.history.pushState({}, '', '/me')
-		handleRoute().catch((error) => {
+		await handleRoute().catch((error) => {
 			showToast(`Navigation error: ${caughtErrMessage(error)}`, 'error')
 		})
 
-		// Boot MaiaOS in background (registries must be linked before DB init)
-		;(async () => {
-			await applySyncRegistriesToAccount(account, node)
-			return MaiaOS.boot({
+		setSignInLoading(false)
+		startBootstrapPhaseOverlay()
+
+		try {
+			const { node, account } = await loadingPromise
+			const baseUrl = getSyncBaseUrl()
+			if (!baseUrl) throw new Error('Sync base URL not configured')
+			await bootstrapAccountHandshake(account, { syncBaseUrl: baseUrl, node })
+
+			maia = await MaiaOS.boot({
 				node,
 				account,
-				syncDomain, // Pass sync domain to kernel (single source of truth)
-				getSyncBaseUrl, // For POST /register after createSpark
-				modules: ['db', 'core', 'ai'], // Include all modules
+				syncDomain,
+				getSyncBaseUrl,
+				modules: ['db', 'core', 'ai'],
 			})
-		})()
-			.then(async (bootedMaia) => {
-				maia = bootedMaia
-				window.maia = maia
-				await Promise.all([
-					autoRegisterHuman(maia).catch(() => {}),
-					linkAccountToRegistries(maia).catch(() => {}),
-				])
-				capabilityGrantsIndexColistCoId = (await getCapabilityGrantIndexColistCoId(maia)) ?? null
-				initGlobalAI(maia)
-				notifyMaiaReady(maia)
-				cleanupLoadingScreenSync()
-				if (authState.signedIn) {
-					renderAppInternal().catch((e) =>
-						showToast(`Failed to render app: ${caughtErrMessage(e)}`, 'error'),
-					)
-				}
-				loadLinkedCoValues().catch(() => {})
+			stopBootstrapPhaseOverlay()
+			window.maia = maia
+			void refreshMemberSyncState(maia)
+			capabilityGrantsIndexColistCoId = (await getCapabilityGrantIndexColistCoId(maia)) ?? null
+			initGlobalAI(maia)
+			notifyMaiaReady(maia)
+			cleanupLoadingScreenSync()
+			if (authState.signedIn) {
+				renderAppInternal().catch((e) =>
+					showToast(`Failed to render app: ${caughtErrMessage(e)}`, 'error'),
+				)
+			}
+			loadLinkedCoValues().catch(() => {})
+		} catch (bootError) {
+			stopBootstrapPhaseOverlay()
+			cleanupLoadingScreenSync()
+			authState = { signedIn: false, accountID: null }
+			maia = null
+			capabilityGrantsIndexColistCoId = null
+			setSignInLoading(false)
+			appLog.error('[app] register boot failed', {
+				message: caughtErrMessage(bootError),
+				phase: bootError?.phase,
 			})
-			.catch((bootError) => {
-				authState = { signedIn: false, accountID: null }
-				maia = null
-				capabilityGrantsIndexColistCoId = null
-				setSignInLoading(false)
-				showToast(`Failed to initialize MaiaOS: ${caughtErrMessage(bootError)}`, 'error')
-				window.history.pushState({}, '', '/signup')
-				renderSignInPrompt(hasExistingAccount, undefined, false, getSignInUiHandlers())
-			})
+			showToast(`Failed to initialize MaiaOS: ${caughtErrMessage(bootError)}`, 'error', 9000)
+			window.history.pushState({}, '', '/signup')
+			renderSignInPrompt(hasExistingAccount, undefined, false, getSignInUiHandlers())
+		}
 	} catch (error) {
 		setSignInLoading(false)
 		const msg = caughtErrMessage(error)
@@ -940,7 +936,7 @@ async function register() {
 			renderSignInPrompt(
 				hasExistingAccount,
 				'signup',
-				isAvenTestModeEnabled(),
+				isSecretKeyDevSignInEnabled(),
 				getSignInUiHandlers(),
 				true,
 			)
@@ -954,13 +950,23 @@ async function register() {
 				'info',
 				5000,
 			)
-			renderSignInPrompt(hasExistingAccount, 'signup', isAvenTestModeEnabled(), getSignInUiHandlers())
+			renderSignInPrompt(
+				hasExistingAccount,
+				'signup',
+				isSecretKeyDevSignInEnabled(),
+				getSignInUiHandlers(),
+			)
 		} else {
 			const friendlyMessage = msg.includes('Failed to create passkey')
 				? 'Unable to create passkey. Please try again.'
 				: msg
 			showToast(friendlyMessage, 'error', 7000)
-			renderSignInPrompt(hasExistingAccount, 'signup', isAvenTestModeEnabled(), getSignInUiHandlers())
+			renderSignInPrompt(
+				hasExistingAccount,
+				'signup',
+				isSecretKeyDevSignInEnabled(),
+				getSignInUiHandlers(),
+			)
 		}
 	}
 }
@@ -973,7 +979,11 @@ function signOut() {
 	}
 	authState = { signedIn: false, accountID: null }
 	syncState = { connected: false, syncing: false, error: null, status: null }
-	updateSyncState({ writeEnabled: true }) // Reset for next session
+	updateSyncState({
+		writeEnabled: true,
+		local: 'empty',
+		member: 'unknown',
+	})
 	maia = null
 	capabilityGrantsIndexColistCoId = null
 
@@ -1050,7 +1060,11 @@ const LOADING_SCREEN_HTML = (syncMessage, indicatorStyle) => `
 function renderLoadingConnectingScreen() {
 	const syncMsg = getSyncStatusMessage(syncState, 'Connecting to sync...')
 	const isConnected = syncState.connected && syncState.status === 'connected'
-	const isReadOnly = syncState.connected && syncState.writeEnabled === false
+	const isReadOnly =
+		syncState.connected &&
+		(syncState.writeEnabled === false ||
+			syncState.member === 'pending' ||
+			syncState.member === 'unknown')
 	const hasError = syncState.status === 'error' || syncState.error
 	const indicatorColor = isConnected
 		? isReadOnly
@@ -1081,7 +1095,11 @@ function updateLoadingConnectingScreen() {
 	if (syncStatusElement && syncIndicator && syncMessageElement) {
 		syncMessageElement.textContent = syncMessage
 		const isConnected = syncState.connected && syncState.status === 'connected'
-		const isReadOnly = syncState.connected && syncState.writeEnabled === false
+		const isReadOnly =
+			syncState.connected &&
+			(syncState.writeEnabled === false ||
+				syncState.member === 'pending' ||
+				syncState.member === 'unknown')
 		const hasError = syncState.status === 'error' || syncState.error
 		const color = isConnected
 			? isReadOnly
@@ -1403,6 +1421,19 @@ async function grantMemberCapabilities(targetAccountId) {
 	}
 	const peer = m.dataEngine.peer
 	try {
+		validateInvite(peer, null, { sub: targetAccountId })
+		const profileId = await readProfileIdForAccount(m, targetAccountId)
+		if (!profileId) {
+			showToast('Could not load profile for that account — user must sign up and sync first.', 'error')
+			return
+		}
+		await ensureIdentity({
+			peer,
+			dataEngine: m.dataEngine,
+			type: 'human',
+			accountId: targetAccountId,
+			profileId,
+		})
 		const grants = await loadCapabilitiesGrants(m)
 		const nowSec = Math.floor(Date.now() / 1000)
 		const exp = nowSec + CAP_GRANT_TTL_SECONDS
@@ -1435,6 +1466,7 @@ async function grantMemberCapabilities(targetAccountId) {
 			}
 		}
 		showToast('Member approved', 'success')
+		void refreshMemberSyncState(m)
 		await renderAppInternal()
 	} catch (error) {
 		showToast(`Approve failed: ${error?.message ?? error}`, 'error')
@@ -1460,10 +1492,8 @@ async function revokeMemberCapabilities(targetAccountId) {
 		for (const g of toRevoke) {
 			await m.do({ op: 'update', id: g.id, data: { exp: past } })
 		}
-		if (toRevoke.some((g) => g.cmd === '/sync/write' && g.sub === authState.accountID)) {
-			updateSyncState({ writeEnabled: false })
-		}
 		showToast('Member access revoked', 'success')
+		void refreshMemberSyncState(m)
 		await renderAppInternal()
 	} catch (error) {
 		showToast(`Revoke failed: ${error?.message ?? error}`, 'error')
@@ -1631,11 +1661,21 @@ function getSignInUiHandlers() {
 	return {
 		register,
 		signIn,
-		signInWithTestAven,
+		signInWithSecretKeyDev,
 		switchToSignin: () =>
-			renderSignInPrompt(hasExistingAccount, 'signin', isAvenTestModeEnabled(), getSignInUiHandlers()),
+			renderSignInPrompt(
+				hasExistingAccount,
+				'signin',
+				isSecretKeyDevSignInEnabled(),
+				getSignInUiHandlers(),
+			),
 		switchToSignup: () =>
-			renderSignInPrompt(hasExistingAccount, 'signup', isAvenTestModeEnabled(), getSignInUiHandlers()),
+			renderSignInPrompt(
+				hasExistingAccount,
+				'signup',
+				isSecretKeyDevSignInEnabled(),
+				getSignInUiHandlers(),
+			),
 	}
 }
 
@@ -1786,8 +1826,8 @@ function setupMaiaAppDelegation() {
 			void signIn()
 			return
 		}
-		if (action === 'signInWithTestAven') {
-			void signInWithTestAven()
+		if (action === 'signInWithSecretKeyDev') {
+			void signInWithSecretKeyDev()
 			return
 		}
 		if (action === 'switchToSignin') {

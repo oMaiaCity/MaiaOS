@@ -30,6 +30,9 @@ export async function ensureProfileForNewAccount(account, node, creationProps) {
 		const profileGroup = node.createGroup()
 		profileGroup.addMember('everyone', 'reader')
 		const profileCoMap = profileGroup.createMap({ name: profileName }, profileMeta)
-		account.set('profile', profileCoMap.id)
+		// 'trusting' (public): CoJSON's own validation reads `profile` before any migration runs
+		// and fresh browsers can't decrypt private fields before the owning group's readKey has synced.
+		// Profile points at a CoMap whose own group controls visibility; the pointer itself must be public.
+		account.set('profile', profileCoMap.id, 'trusting')
 	}
 }

@@ -50,7 +50,7 @@ flyctl secrets set \
   --app sync-next-maia-city
 ```
 
-**First deploy (empty Postgres):** set `PEER_SYNC_MODE=seed` for **one** deploy so sync runs genesis seed. When logs show `Genesis seeded`, unset it: `fly secrets unset PEER_SYNC_MODE --app sync-next-maia-city`. If `PEER_SYNC_MODE=seed` stays in Fly secrets, genesis runs on every boot (no automatic storage wipe — wipe DB/blob storage manually when you need a full reset).
+**First deploy (empty Postgres):** set `PEER_SYNC_SEED=true` for **one** deploy so sync runs genesis seed. When logs show `Genesis seeded`, unset it: `fly secrets unset PEER_SYNC_SEED --app sync-next-maia-city`. If it stays set, genesis runs on every boot. Sync does **not** auto-clear Postgres or Tigris — wipe storage manually when you need a full reset.
 
 **App secrets:** The app (next-maia-city) has no runtime secrets — `VITE_PEER_SYNC_HOST` is a build arg in fly.toml.
 

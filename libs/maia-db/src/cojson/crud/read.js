@@ -14,7 +14,7 @@ import { ReactiveStore } from '../../reactive-store.js'
 import { observeCoValue } from '../cache/coCache.js'
 import { resolve as resolveSchema } from '../factory/resolver.js'
 import { getRuntimeRef, RUNTIME_REF } from '../factory/runtime-factory-refs.js'
-import { getAvensRegistryId, getHumansRegistryId, getSparksRegistryId } from '../groups/groups.js'
+import { getSparksRegistryId } from '../groups/groups.js'
 import { ensureCoValueLoaded, getCoListId } from './collection-helpers.js'
 import { extractCoValueData } from './data-extraction.js'
 import {
@@ -23,7 +23,7 @@ import {
 	resolveNestedReferencesPublic,
 } from './deep-resolution.js'
 import { matchesFilter } from './filter-helpers.js'
-import { applyMapTransform, applyMapTransformToArray } from './map-transform.js'
+import { applyMapTransform } from './map-transform.js'
 import { waitForStoreReady } from './read-operations.js'
 
 const log = createLogger('maia-db')
@@ -80,19 +80,11 @@ export async function read(
 
 	// Collection read (by schema)
 	if (schema) {
-		// Sparks: read from account.registries.sparks (index only has user-created sparks)
+		// Sparks: read from account.sparks (index only has user-created sparks)
 		const sparkSchemaCoId = getRuntimeRef(peer, RUNTIME_REF.DATA_SPARK)
-		const humanSchemaCoId = getRuntimeRef(peer, RUNTIME_REF.OS_HUMAN)
 		const resolvedSchema = await resolveSchema(peer, schema, { returnType: 'coId' })
 		if (sparkSchemaCoId && resolvedSchema === sparkSchemaCoId) {
 			return readSparksFromAccount(peer, readOptions)
-		}
-		if (humanSchemaCoId && resolvedSchema === humanSchemaCoId) {
-			return readHumansFromRegistries(peer, readOptions)
-		}
-		const avenIdentitySchemaCoId = getRuntimeRef(peer, RUNTIME_REF.OS_AVEN_IDENTITY)
-		if (avenIdentitySchemaCoId && resolvedSchema === avenIdentitySchemaCoId) {
-			return readAvensFromRegistries(peer, readOptions)
 		}
 		return readCollection(peer, schema, filter, readOptions)
 	}
@@ -160,6 +152,15 @@ function isQueryObject(value) {
 	return true
 }
 
+/** Context queries use `options.filter` / `options.map` (context.factory.maia); top-level filter/map is legacy. */
+function getQueryFilterFromValue(value) {
+	return value?.filter ?? value?.options?.filter ?? null
+}
+
+function getQueryMapFromValue(value) {
+	return value?.map ?? value?.options?.map ?? null
+}
+
 /**
  * One lifecycle bag per cached derived ReactiveStore (collection, allCoValues, registry readers).
  * Replaces scattered _maiaRead* flags.
@@ -202,7 +203,8 @@ async function wireQueryStoreForSchema(
 ) {
 	const isFindOne = isFindOneFilter(evaluatedFilter)
 	const singleCoId = isFindOne ? evaluatedFilter.id : null
-	const queryOptions = { ...options, timeoutMs, ...(value.map ? { map: value.map } : {}) }
+	const queryMap = getQueryMapFromValue(value)
+	const queryOptions = { ...options, timeoutMs, ...(queryMap ? { map: queryMap } : {}) }
 	const queryStore =
 		isFindOne && singleCoId
 			? await readFn(peer, singleCoId, resolvedSchemaCoId, null, null, queryOptions)
@@ -212,7 +214,7 @@ async function wireQueryStoreForSchema(
 	queryDefinitions.set(key, {
 		factory: value.factory,
 		filter: evaluatedFilter,
-		...(value.map ? { map: value.map } : {}),
+		...(queryMap ? { map: queryMap } : {}),
 	})
 
 	const unsub = queryStore.subscribe(() => enqueueUpdate())
@@ -422,7 +424,11 @@ async function createUnifiedStore(peer, contextStore, options = {}) {
 				// @scope already handled in pre-pass
 				if (value.factory === '@scope') continue
 
-				const evaluatedFilter = await evaluateFilter(value.filter || null, contextWithScope, evaluator)
+				const evaluatedFilter = await evaluateFilter(
+					getQueryFilterFromValue(value),
+					contextWithScope,
+					evaluator,
+				)
 
 				// Re-read after await: another resolve leg must not skip wiring with a stale "existing" ref
 				const existingStore = queryStores.get(key)
@@ -878,7 +884,7 @@ async function readSingleCoValue(peer, coId, schemaHint = null, options = {}) {
 }
 
 /**
- * Read sparks from account.registries.sparks CoMap.
+ * Read sparks from account.sparks CoMap.
  * Used when schema is spark schema - index colist only has user-created sparks.
  * @param {Object} peer - Backend instance
  * @param {Object} options - Read options
@@ -950,164 +956,6 @@ async function readSparksFromAccount(peer, options = {}) {
 	}
 	sparksLc.registryReaderWired = true
 	return store
-}
-
-/**
- * Fallback when profile has no name: "Traveler " + short id
- */
-function travelerFallback(accountCoId) {
-	const shortId = typeof accountCoId === 'string' ? accountCoId.slice(-12) : ''
-	return `Traveler ${shortId}`
-}
-
-/**
- * Humans + avens: same registry shape (identity co-id → account/profile rows).
- * @param {Object} peer
- * @param {Object} options
- * @param {{ getRegistryId: (p: Object) => Promise<string|null>, baseCacheKey: string, subscriptionPrefix: string }} spec
- */
-async function readProfileBackedRegistryList(peer, options, spec) {
-	const { getRegistryId, baseCacheKey, subscriptionPrefix } = spec
-	const { timeoutMs = 5000, map = null } = options
-	const cacheKey = map ? `${baseCacheKey}:${JSON.stringify(map)}` : baseCacheKey
-	const store = peer.subscriptionCache.getOrCreateStore(cacheKey, () => {
-		const s = new ReactiveStore([])
-		s._cacheKey = `store:${cacheKey}`
-		return s
-	})
-
-	const regLc = ensureDerivedLifecycle(store)
-	if (regLc.registryReaderWired) {
-		return store
-	}
-
-	const registryId = await getRegistryId(peer)
-	if (!registryId?.startsWith('co_')) {
-		return store
-	}
-
-	const updateItems = async () => {
-		const registryStore = await readSingleCoValue(peer, registryId, null, { deepResolve: false })
-		try {
-			await waitForStoreReady(registryStore, registryId, timeoutMs)
-		} catch {
-			return
-		}
-		const registryData = registryStore?.value ?? {}
-		if (registryData?.error) return
-
-		// CoMap: keys = registry name or account co-id, values = identity CoMap co-id (dual-key).
-		// Dedupe by identity co-id; prefer registry name (key that does NOT start with co_z).
-		const identityCoIdToRegistryName = new Map()
-		for (const k of Object.keys(registryData)) {
-			if (k === 'id' || k === 'loading' || k === 'error' || k === '$factory' || k === 'type') continue
-			const identityCoId = registryData[k]
-			if (typeof identityCoId !== 'string' || !identityCoId.startsWith('co_')) continue
-			const isRegistryName = !k.startsWith('co_z')
-			if (isRegistryName) {
-				identityCoIdToRegistryName.set(identityCoId, k)
-			} else if (!identityCoIdToRegistryName.has(identityCoId)) {
-				identityCoIdToRegistryName.set(identityCoId, k)
-			}
-		}
-
-		const uniqueIds = [...new Set(identityCoIdToRegistryName.keys())]
-		const items = []
-
-		for (const identityCoId of uniqueIds) {
-			const registryName = identityCoIdToRegistryName.get(identityCoId) ?? identityCoId
-			try {
-				const identityStore = await readSingleCoValue(peer, identityCoId, null, {
-					deepResolve: false,
-					timeoutMs,
-				})
-				await waitForStoreReady(identityStore, identityCoId, Math.min(timeoutMs, 2000))
-				const identityData = identityStore?.value ?? {}
-				if (identityData?.error) {
-					items.push({
-						id: identityCoId,
-						accountId: identityCoId,
-						registryName,
-						profileName: travelerFallback(identityCoId),
-						profile: null,
-					})
-					continue
-				}
-				const accountId = identityData.account ?? identityCoId
-				const profileCoId = identityData.profile
-
-				let profileName = travelerFallback(accountId)
-				if (profileCoId && typeof profileCoId === 'string' && profileCoId.startsWith('co_')) {
-					try {
-						const profileStore = await readSingleCoValue(peer, profileCoId, null, {
-							deepResolve: false,
-							timeoutMs: Math.min(timeoutMs, 2000),
-						})
-						await waitForStoreReady(profileStore, profileCoId, 2000)
-						const profileData = profileStore?.value ?? {}
-						const name = profileData?.name
-						if (typeof name === 'string' && name.length > 0) {
-							profileName = name
-						}
-					} catch {
-						/* use fallback */
-					}
-				}
-
-				items.push({
-					id: identityCoId,
-					accountId,
-					registryName,
-					profileName,
-					profile: profileCoId,
-				})
-			} catch {
-				items.push({
-					id: identityCoId,
-					accountId: identityCoId,
-					registryName,
-					profileName: travelerFallback(identityCoId),
-					profile: null,
-				})
-			}
-		}
-
-		const finalItems = map ? await applyMapTransformToArray(peer, items, map, { timeoutMs }) : items
-		store._set(finalItems)
-	}
-
-	await updateItems()
-	const outerRegistryStore = await readSingleCoValue(peer, registryId, null, { deepResolve: false })
-	const unsub = outerRegistryStore?.subscribe?.(() => updateItems())
-	if (unsub) {
-		peer.subscriptionCache.getOrCreate(`subscription:${subscriptionPrefix}:${registryId}`, () => ({
-			unsubscribe: unsub,
-		}))
-	}
-	regLc.registryReaderWired = true
-	return store
-}
-
-/**
- * Read humans from account.registries.humans CoMap (schema index is not the source of truth).
- */
-async function readHumansFromRegistries(peer, options = {}) {
-	return readProfileBackedRegistryList(peer, options, {
-		getRegistryId: getHumansRegistryId,
-		baseCacheKey: 'humans:registries',
-		subscriptionPrefix: 'humans',
-	})
-}
-
-/**
- * Read avens from account.registries.avens CoMap (public readers; same resolution shape as humans).
- */
-async function readAvensFromRegistries(peer, options = {}) {
-	return readProfileBackedRegistryList(peer, options, {
-		getRegistryId: getAvensRegistryId,
-		baseCacheKey: 'avens:registries',
-		subscriptionPrefix: 'avens',
-	})
 }
 
 /**

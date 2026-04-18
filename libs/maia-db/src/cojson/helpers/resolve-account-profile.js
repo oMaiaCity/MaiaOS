@@ -3,6 +3,9 @@
  * Used by maia-db and other UIs to display human-readable names instead of opaque co-ids
  */
 
+import { findFirst } from '../crud/read.js'
+import { getRuntimeRef, RUNTIME_REF } from '../factory/runtime-factory-refs.js'
+
 /**
  * Wait for a reactive store to finish loading (if loading)
  * @param {Object} store - Store with .loading and .subscribe()
@@ -39,57 +42,27 @@ function travelerFallback(accountCoId) {
 }
 
 /**
- * Resolve account co-id to profile co-id via humans registry (public lookup)
+ * Resolve account co-id to profile co-id via identity index (spark.os.indexes[identity])
  * @param {Object} maia - MaiaOS instance with maia.do()
  * @param {string} accountCoId - Account co-id (co_z...)
  * @returns {Promise<string|null>} Profile co-id or null if not found
  */
-async function resolveAccountToProfileCoIdViaHumans(maia, accountCoId) {
+async function resolveAccountToProfileCoIdViaIdentity(maia, accountCoId) {
 	try {
-		const registriesId = maia?.id?.maiaId?.get?.('registries')
-		if (!registriesId?.startsWith('co_z')) return null
-		const registriesStore = await maia.do({ op: 'read', factory: null, key: registriesId })
-		await waitForStore(registriesStore, 5000)
-		const registriesData = registriesStore?.value ?? registriesStore
-		if (!registriesData?.humans?.startsWith('co_z')) return null
-		const humansStore = await maia.do({ op: 'read', factory: null, key: registriesData.humans })
-		await waitForStore(humansStore, 5000)
-		const humansData = humansStore?.value ?? humansStore
-		const humanCoId = humansData?.[accountCoId]
-		if (!humanCoId?.startsWith('co_z')) return null
-		const humanStore = await maia.do({ op: 'read', factory: null, key: humanCoId })
-		await waitForStore(humanStore, 5000)
-		const humanData = humanStore?.value ?? humanStore
-		const profileCoId = humanData?.profile
-		return profileCoId?.startsWith('co_z') ? profileCoId : null
-	} catch (_e) {
-		return null
-	}
-}
-
-/**
- * Resolve account co-id to profile co-id via avens registry (public lookup)
- * @param {Object} maia - MaiaOS instance with maia.do()
- * @param {string} accountCoId - Account co-id (co_z...)
- * @returns {Promise<string|null>} Profile co-id or null if not found
- */
-async function resolveAccountToProfileCoIdViaAvens(maia, accountCoId) {
-	try {
-		const registriesId = maia?.id?.maiaId?.get?.('registries')
-		if (!registriesId?.startsWith('co_z')) return null
-		const registriesStore = await maia.do({ op: 'read', factory: null, key: registriesId })
-		await waitForStore(registriesStore, 5000)
-		const registriesData = registriesStore?.value ?? registriesStore
-		if (!registriesData?.avens?.startsWith('co_z')) return null
-		const avensStore = await maia.do({ op: 'read', factory: null, key: registriesData.avens })
-		await waitForStore(avensStore, 5000)
-		const avensData = avensStore?.value ?? avensStore
-		const avenIdentityCoId = avensData?.[accountCoId]
-		if (!avenIdentityCoId?.startsWith('co_z')) return null
-		const avenIdentityStore = await maia.do({ op: 'read', factory: null, key: avenIdentityCoId })
-		await waitForStore(avenIdentityStore, 5000)
-		const avenIdentityData = avenIdentityStore?.value ?? avenIdentityStore
-		const profileCoId = avenIdentityData?.profile
+		const peer = maia?.dataEngine?.peer
+		if (!peer) return null
+		if (peer.dbEngine?.resolveSystemFactories) {
+			await peer.dbEngine.resolveSystemFactories()
+		}
+		const identitySchemaCoId = getRuntimeRef(peer, RUNTIME_REF.OS_IDENTITY)
+		if (!identitySchemaCoId?.startsWith('co_z')) return null
+		const row = await findFirst(
+			peer,
+			identitySchemaCoId,
+			{ account: accountCoId },
+			{ timeoutMs: 8000 },
+		)
+		const profileCoId = row?.profile
 		return profileCoId?.startsWith('co_z') ? profileCoId : null
 	} catch (_e) {
 		return null
@@ -124,7 +97,7 @@ async function resolveSelfAccountProfileFromLiveAccount(maia, accountCoId) {
 /**
  * Resolve a single account co-id to profile id, name, and image
  * Self account: read profile from live account first (avoids registries wait chain).
- * Others: humans registry, then avens, then @account read.
+ * Others: identity index (human|aven), then @account read.
  * @param {Object} maia - MaiaOS instance with maia.do()
  * @param {string} accountCoId - Account co-id (co_z...)
  * @returns {Promise<{ id: string|null, name: string, image: string|null }>}
@@ -134,10 +107,7 @@ async function resolveOneToProfile(maia, accountCoId) {
 		const selfProfile = await resolveSelfAccountProfileFromLiveAccount(maia, accountCoId)
 		if (selfProfile) return selfProfile
 
-		let profileCoId = await resolveAccountToProfileCoIdViaHumans(maia, accountCoId)
-		if (!profileCoId) {
-			profileCoId = await resolveAccountToProfileCoIdViaAvens(maia, accountCoId)
-		}
+		let profileCoId = await resolveAccountToProfileCoIdViaIdentity(maia, accountCoId)
 		if (!profileCoId) {
 			const accountStore = await maia.do({ op: 'read', factory: '@account', key: accountCoId })
 			await waitForStore(accountStore, 5000)

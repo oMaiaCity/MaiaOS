@@ -81,7 +81,7 @@ describe('getCapabilityGrantIndexColistCoIdFromPeer', () => {
 			grantCmd: '/x',
 			grantExp: futureExp(),
 		})
-		const account = makeCoMap({ registries: 'co_zreg' })
+		const account = makeCoMap({ sparks: 'co_zsparks' })
 		const id = await getCapabilityGrantIndexColistCoIdFromPeer(peer, account)
 		expect(id).toBe('co_zcolist')
 	})
@@ -94,7 +94,7 @@ describe('accountHasCapabilityOnPeer', () => {
 			grantCmd: '/sync/write',
 			grantExp: futureExp(),
 		})
-		const account = makeCoMap({ registries: 'co_zreg' })
+		const account = makeCoMap({ sparks: 'co_zsparks' })
 		const ok = await accountHasCapabilityOnPeer(peer, account, ACCOUNT_ID, '/sync/write')
 		expect(ok).toBe(true)
 	})
@@ -105,7 +105,7 @@ describe('accountHasCapabilityOnPeer', () => {
 			grantCmd: '/admin',
 			grantExp: futureExp(),
 		})
-		const account = makeCoMap({ registries: 'co_zreg' })
+		const account = makeCoMap({ sparks: 'co_zsparks' })
 		const ok = await accountHasCapabilityOnPeer(peer, account, ACCOUNT_ID, '/any')
 		expect(ok).toBe(true)
 	})
@@ -116,7 +116,7 @@ describe('accountHasCapabilityOnPeer', () => {
 			grantCmd: '/x',
 			grantExp: 1,
 		})
-		const account = makeCoMap({ registries: 'co_zreg' })
+		const account = makeCoMap({ sparks: 'co_zsparks' })
 		const ok = await accountHasCapabilityOnPeer(peer, account, ACCOUNT_ID, '/x')
 		expect(ok).toBe(false)
 	})
@@ -127,7 +127,7 @@ describe('accountHasCapabilityOnPeer', () => {
 			grantCmd: '/x',
 			grantExp: futureExp(),
 		})
-		const account = makeCoMap({ registries: 'co_zreg' })
+		const account = makeCoMap({ sparks: 'co_zsparks' })
 		const ok = await accountHasCapabilityOnPeer(peer, account, ACCOUNT_ID, '/x')
 		expect(ok).toBe(false)
 	})
@@ -138,7 +138,7 @@ describe('accountHasCapabilityOnPeer', () => {
 			grantCmd: '/a',
 			grantExp: futureExp(),
 		})
-		const account = makeCoMap({ registries: 'co_zreg' })
+		const account = makeCoMap({ sparks: 'co_zsparks' })
 		const ok = await accountHasCapabilityOnPeer(peer, account, ACCOUNT_ID, '/b')
 		expect(ok).toBe(false)
 	})
@@ -149,7 +149,7 @@ describe('accountHasCapabilityOnPeer', () => {
 			grantCmd: '/x',
 			grantExp: futureExp(),
 		})
-		const account = makeCoMap({ registries: 'co_zreg' })
+		const account = makeCoMap({ sparks: 'co_zsparks' })
 		const ok = await accountHasCapabilityOnPeer(peer, account, 'nope', '/x')
 		expect(ok).toBe(false)
 	})

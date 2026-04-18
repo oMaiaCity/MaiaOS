@@ -64,13 +64,13 @@ export function getFirstNameForRegister() {
 /**
  * @param {() => boolean} hasExistingAccount
  * @param {'signup' | 'signin'} [viewMode] - Override; default: hasAccount ? 'signin' : 'signup'
- * @param {boolean} [showTestAven] - Show "Sign in with Test AVEN" (local dev only, no passkeys)
- * @param {{ register: () => void, signIn: () => void, signInWithTestAven: () => void, switchToSignin: () => void, switchToSignup: () => void }} [handlers] - Required for CSP-safe UI (no inline handlers)
+ * @param {boolean} [showSecretKeyDevSignIn] - Show secret-key dev button (local only, `VITE_AVEN_TEST_MODE`; human operator, not server agent)
+ * @param {{ register: () => void, signIn: () => void, signInWithSecretKeyDev: () => void, switchToSignin: () => void, switchToSignup: () => void }} [handlers] - Required for CSP-safe UI (no inline handlers)
  */
 export function renderSignInPrompt(
 	hasExistingAccount,
 	viewMode,
-	showTestAven = false,
+	showSecretKeyDevSignIn = false,
 	handlers = null,
 	passkeysUnavailable = false,
 ) {
@@ -81,17 +81,18 @@ export function renderSignInPrompt(
 	// State 2: Signin – big Unlock button only, link to switch to signup
 
 	const isSignupMode = mode === 'signup'
-	const testAvenNameRaw =
+	const secretKeyDevNameRaw =
+		(typeof window !== 'undefined' && window.__MAIA_DEV_ENV__?.VITE_AVEN_TEST_NAME) ||
 		(typeof import.meta !== 'undefined' && import.meta.env?.VITE_AVEN_TEST_NAME) ||
-		window.__MAIA_DEV_ENV__?.VITE_AVEN_TEST_NAME ||
 		'Test'
-	const testAvenName = testAvenNameRaw.startsWith('Aven ')
-		? testAvenNameRaw
-		: `Aven ${testAvenNameRaw}`
-	const testAvenButton = showTestAven
+	const secretKeyDevLabel =
+		secretKeyDevNameRaw.startsWith('Aven ') || /\s/.test(secretKeyDevNameRaw)
+			? secretKeyDevNameRaw
+			: `Aven ${secretKeyDevNameRaw}`
+	const secretKeyDevButton = showSecretKeyDevSignIn
 		? `
-						<button type="button" class="btn btn-outline-marine sign-in-test-aven" data-maia-action="signInWithTestAven" style="margin-top: 0.5rem;">
-							Sign in with ${testAvenName}
+						<button type="button" class="btn btn-outline-marine sign-in-secretkey-dev" data-maia-action="signInWithSecretKeyDev" style="margin-top: 0.5rem;">
+							Secret key (dev) · ${secretKeyDevLabel}
 						</button>
 					`
 		: ''
@@ -131,7 +132,7 @@ export function renderSignInPrompt(
 								<button type="button" class="btn btn-solid-water" data-maia-action="register"${passkeyDisabled}>
 									Create new Self
 								</button>
-								${testAvenButton}
+								${secretKeyDevButton}
 								<a href="#" class="sign-in-swap-link" data-maia-action="switchToSignin">Already have a Self? Sign in</a>
 							</div>
 						`
@@ -146,7 +147,7 @@ export function renderSignInPrompt(
 								<button type="button" class="btn btn-solid-water" data-maia-action="signIn"${passkeyDisabled}>
 									Unlock your Self
 								</button>
-								${testAvenButton}
+								${secretKeyDevButton}
 								<a href="#" class="sign-in-swap-link" data-maia-action="switchToSignup">New here? Create your Self</a>
 							</div>
 						`

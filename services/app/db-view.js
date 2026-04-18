@@ -14,6 +14,7 @@ import {
 import { getSyncHttpBaseUrl } from '@MaiaOS/peer'
 // Import from kernel bundle - everything bundled (no direct @MaiaOS/db in production)
 import {
+	listAccountIdsFromIdentityIndex,
 	loadCapabilitiesGrants,
 	resolveAccountCoIdsToProfiles,
 	resolveGroupCoIdsToCapabilityNames,
@@ -272,31 +273,23 @@ async function hydrateMembersView(maia) {
 		}
 		const accountStore = await maia.do({ op: 'read', factory: '@account', key: account.id })
 		const accountData = accountStore.value || accountStore
-		const registriesId = accountData?.registries
-		if (!registriesId?.startsWith('co_z')) {
+		const sparksId = accountData?.sparks
+		if (!sparksId?.startsWith('co_z')) {
 			tbody.innerHTML =
-				'<tr class="capabilities-empty"><td colspan="5">No registries linked yet</td></tr>'
+				'<tr class="capabilities-empty"><td colspan="5">No sparks linked yet (complete signup with sync)</td></tr>'
 			if (banner) banner.remove()
 			return
 		}
-		const registriesStore = await maia.do({ op: 'read', factory: null, key: registriesId })
-		const registriesData = registriesStore.value || registriesStore
-		const humansId = registriesData?.humans
-		if (!humansId?.startsWith('co_z')) {
-			tbody.innerHTML = '<tr class="capabilities-empty"><td colspan="5">No humans registry</td></tr>'
-			if (banner) banner.remove()
-			return
+		if (peer.dbEngine?.resolveSystemFactories) {
+			await peer.dbEngine.resolveSystemFactories()
 		}
-		const raw = await peer.getRawRecord(humansId)
-		if (!raw || typeof raw !== 'object') {
+		const accountIdKeys = await listAccountIdsFromIdentityIndex(peer, 'human')
+		if (!accountIdKeys?.length) {
 			tbody.innerHTML =
-				'<tr class="capabilities-empty"><td colspan="5">Humans registry empty</td></tr>'
+				'<tr class="capabilities-empty"><td colspan="5">No humans in identity index yet</td></tr>'
 			if (banner) banner.remove()
 			return
 		}
-		const accountIdKeys = Object.keys(raw).filter(
-			(k) => k.startsWith('co_z') && typeof raw[k] === 'string' && raw[k].startsWith('co_z'),
-		)
 		const grants = await loadCapabilitiesGrants(maia)
 		const nowSec = Math.floor(Date.now() / 1000)
 		const profiles =
@@ -584,6 +577,9 @@ export async function renderApp(
 			// Keys can BE agent IDs or revelation keys (e.g. "sealer_z.../signer_z..." or "key_z..._for_sealer_z.../signer_z...")
 			if (k.startsWith('sealer_') && k.includes('/signer_')) return true
 			if (k.startsWith('key_') && k.includes('_for_sealer_')) return true
+			// Identity index + co_z ids are user data — not internal CoJSON sealer metadata
+			if (typeof key === 'string' && key.startsWith('co_')) return false
+			if (typeof value === 'string' && value.startsWith('co_')) return false
 			if (typeof value !== 'string') return false
 			const v = value.toLowerCase()
 			return (
@@ -1295,14 +1291,16 @@ export async function renderApp(
 					)
 
 					if (propertyKeys.length === 0) {
-						// No properties - show empty state (with hint for avens/factories/indexes)
-						const schemaId = (factoryCoId || '').toString()
+						// No properties - show empty state (with hint for avens/factories/indexes).
+						// Schema id may be co_z — also match factory namekey on the CoValue (humans-registry / avens-registry).
+						const factoryTag = `${factoryCoId ?? ''} ${data.$factory ?? ''} ${data.$factoryCoId ?? ''}`
 						const isRegistryEmpty =
-							schemaId.includes('avens-registry') ||
-							schemaId.includes('factories-registry') ||
-							schemaId.includes('indexes-registry')
+							factoryTag.includes('avens-registry') ||
+							factoryTag.includes('humans-registry') ||
+							factoryTag.includes('factories-registry') ||
+							factoryTag.includes('indexes-registry')
 						const emptyHint = isRegistryEmpty
-							? '<p class="mt-3 text-sm text-amber-600 max-w-md mx-auto">Vibes/schemas come from the sync server. Run <code class="bg-amber-100 px-1 rounded">bun dev</code> (sync on :4201), sign in, and check console for <code class="bg-amber-100 px-1 rounded">linkAccountToSyncRegistry</code>.</p>'
+							? '<p class="mt-3 text-sm text-amber-600 max-w-md mx-auto">Vibes and registry scaffolds come from the sync server (<code class="bg-amber-100 px-1 rounded">bun dev</code> on :4201). Humans/avens registry rows are CoMap entries (username or account co-id → identity co-id); the same data powers the Registries grid.</p>'
 							: ''
 						tableContent = `<div class="p-12 italic text-center rounded-2xl border border-dashed empty-state text-slate-400 bg-slate-50/30 border-slate-200">No properties available${emptyHint}</div>`
 					} else {

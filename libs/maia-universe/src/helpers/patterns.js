@@ -1,6 +1,6 @@
 /**
  * Universal reference pattern helpers
- * Use spark name as prefix (e.g. °maia/factory/, °maia/vibe/) - matches account.registries.sparks keys
+ * Use spark name as prefix (e.g. °maia/factory/, °maia/vibe/) - matches account.sparks keys
  */
 export const FACTORY_REF_PATTERN = /^°[a-zA-Z0-9_-]+\/factory\//
 export const VIBE_REF_PATTERN = /^°[a-zA-Z0-9_-]+\/vibe\//

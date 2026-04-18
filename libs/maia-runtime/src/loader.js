@@ -191,80 +191,36 @@ export class MaiaOS {
 	}
 
 	/**
-	 * Boot the operating system
+	 * Boot the operating system.
+	 *
+	 * Single unified path for humans and agents: the caller provides { node, account }
+	 * (or a pre-initialized { peer }). Server-side sparks anchoring + identity indexing
+	 * is done via POST /bootstrap at the call site (see services/app/main.js) so there
+	 * is only one way to reach a ready MaiaOS instance.
+	 *
 	 * @param {Object} config - Boot configuration
 	 * @param {Object} [config.node] - LocalNode instance (required if peer not provided)
 	 * @param {Object} [config.account] - RawAccount instance (required if peer not provided)
 	 * @param {Object} [config.peer] - Pre-initialized peer/MaiaDB (alternative to node+account)
-	 * @param {string} [config.syncDomain] - Sync service domain (overrides env vars, single source of truth)
-	 * @param {'human' | 'agent'} [config.mode] - Operational mode (default: detect from env vars)
+	 * @param {string} [config.syncDomain] - Sync service domain (single source of truth)
 	 * @returns {Promise<MaiaOS>} Booted OS instance
-	 * @throws {Error} If neither peer nor node+account is provided (or agent mode credentials missing)
+	 * @throws {Error} If neither peer nor node+account is provided
 	 */
 	static async boot(config = {}) {
 		const os = new MaiaOS()
 
-		// Booting MaiaOS
-
-		// Detect operational mode from config or environment variables
-		const mode =
-			config.mode ||
-			(typeof process !== 'undefined' && process.env?.MAIA_MODE) ||
-			(typeof import.meta !== 'undefined' && import.meta.env?.MAIA_MODE) ||
-			(typeof import.meta !== 'undefined' && import.meta.env?.VITE_MAIA_MODE) ||
-			'human' // Default to human mode
-
-		// Store sync domain (single source of truth for sync configuration)
-		// If provided, use it; otherwise will be determined from env vars when needed
 		if (config.syncDomain) {
 			os._syncDomain = config.syncDomain
 		}
 
-		// Handle agent mode: automatically load/create account if node/account not provided
-		if (mode === 'agent' && !config.node && !config.account && !config.peer) {
-			// Import agent mode functions dynamically (to avoid circular dependencies)
-			const { loadOrCreateAgentAccount } = await import('@MaiaOS/self')
-
-			// Get credentials from environment variables (AVEN_MAIA_ACCOUNT, AVEN_MAIA_SECRET)
-			const accountID =
-				(typeof process !== 'undefined' && process.env?.AVEN_MAIA_ACCOUNT) ||
-				(typeof import.meta !== 'undefined' && import.meta.env?.AVEN_MAIA_ACCOUNT) ||
-				(typeof import.meta !== 'undefined' && import.meta.env?.VITE_AVEN_MAIA_ACCOUNT)
-			const agentSecret =
-				(typeof process !== 'undefined' && process.env?.AVEN_MAIA_SECRET) ||
-				(typeof import.meta !== 'undefined' && import.meta.env?.AVEN_MAIA_SECRET) ||
-				(typeof import.meta !== 'undefined' && import.meta.env?.VITE_AVEN_MAIA_SECRET)
-
-			if (!accountID || !agentSecret) {
-				throw new Error(
-					'Agent mode requires AVEN_MAIA_ACCOUNT and AVEN_MAIA_SECRET environment variables. Run `bun agent:generate` to generate credentials.',
-				)
-			}
-
-			const agentResult = await loadOrCreateAgentAccount({
-				accountID,
-				agentSecret,
-				syncDomain: config.syncDomain || null,
-				createName: 'Maia Agent',
-			})
-
-			// Store node and account from agent mode
-			os._node = agentResult.node
-			os._account = agentResult.account
-		} else {
-			// Human mode or explicit node/account provided
-			// Store node and account for CoJSON backend compatibility
-			if (config.node && config.account) {
-				os._node = config.node
-				os._account = config.account
-			}
-			// Store agentSecret for getCapabilityToken (UCAN-like auth, in-memory only)
-			if (config.agentSecret) {
-				os._agentSecret = config.agentSecret
-			}
+		if (config.node && config.account) {
+			os._node = config.node
+			os._account = config.account
+		}
+		if (config.agentSecret) {
+			os._agentSecret = config.agentSecret
 		}
 
-		// Initialize database (requires peer via node+account or pre-initialized peer)
 		await MaiaOS._initializeDatabase(os, config)
 
 		// Set schema resolver for runtime validation (engines need dataEngine for schema lookups)

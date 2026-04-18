@@ -72,8 +72,17 @@ async function getSparkDisplayName(maia, sparkCoId) {
 	}
 }
 
+/** Label when registry key or spark is malformed (e.g. co_z used as map key with no `name`). */
+function sparkRegistryFallbackLabel(registryKey) {
+	if (registryKey?.startsWith('co_')) {
+		const short = registryKey.length > 22 ? `${registryKey.slice(0, 18)}…` : registryKey
+		return `Unnamed spark (${short})`
+	}
+	return registryKey
+}
+
 /**
- * Load available sparks (context scopes) from account.registries.sparks
+ * Load available sparks (context scopes) from account.sparks
  * @param {Object} maia - MaiaOS instance
  * @returns {Promise<Array>} Array of spark objects with {key, name, description}
  */
@@ -87,13 +96,7 @@ async function loadSparksFromAccount(maia) {
 		const accountStore = await maia.do({ op: 'read', factory: '@account', key: account.id })
 		const accountData = accountStore.value || accountStore
 
-		const registriesId = accountData?.registries
-		if (!registriesId || typeof registriesId !== 'string' || !registriesId.startsWith('co_')) {
-			return sparks
-		}
-		const registriesStore = await maia.do({ op: 'read', factory: null, key: registriesId })
-		const registriesData = registriesStore.value || registriesStore
-		const sparksId = registriesData.sparks
+		const sparksId = accountData?.sparks
 		if (!sparksId || typeof sparksId !== 'string' || !sparksId.startsWith('co_')) {
 			return sparks
 		}
@@ -117,7 +120,8 @@ async function loadSparksFromAccount(maia) {
 		const sparkResults = await Promise.all(
 			sparkKeys.map(async (key) => {
 				const coId = sparksData[key]
-				const displayName = (await getSparkDisplayName(maia, coId)) || key
+				const fromSpark = await getSparkDisplayName(maia, coId)
+				const displayName = fromSpark || sparkRegistryFallbackLabel(key)
 				return {
 					key,
 					coId,
