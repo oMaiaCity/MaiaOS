@@ -19,6 +19,7 @@ import {
 	resolveAccountCoIdsToProfiles,
 	resolveGroupCoIdsToCapabilityNames,
 } from '@MaiaOS/runtime'
+import { accountLoadingSpinnerHtml } from './account-loading-spinner-html.js'
 import { MAIADB_LAYER_STACK_ICON_SVG } from './maia-icons.js'
 
 const appShellLog = createLogger('app')
@@ -555,7 +556,7 @@ export async function renderApp(
 		const message = isLoading ? 'Loading account…' : 'Please sign in to view the DB.'
 		document.getElementById('app').innerHTML = `
 			<div class="loading-connecting-overlay">
-				${isLoading ? '<div class="loading-spinner"></div>' : ''}
+				${isLoading ? accountLoadingSpinnerHtml : ''}
 				<div class="loading-connecting-content">
 					<h2>${message}</h2>
 					${isLoading ? '<div class="loading-connecting-subtitle">Setting up your sovereign self…</div>' : ''}
