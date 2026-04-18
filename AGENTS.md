@@ -30,7 +30,7 @@
 
 All commands are documented in root `package.json`. Key commands:
 
-- **`bun dev`** — starts both app (4200) and sync (4201) with orchestrated startup (sync must be healthy before app starts)
+- **`bun dev`** — starts app (4200) and sync (4201) in **parallel** after registry + helpers; the client retries if sync is still warming up
 - **`bun run dev:desktop`** — full stack (`bun dev`) then Tauri macOS window (requires Rust 1.88+, Xcode toolchain for Swift passkey plugin). **`tauri dev` is not fully code-signed like the bundle**; native passkeys (`ASAuthorizationController`) need a **built** `.app` (see below).
 - **`bun run build:desktop`** — production SPA build + Tauri `.app` bundle (signed per `src-tauri/tauri.conf.json`). **Use this build to test passkeys**, then open `services/app/src-tauri/target/release/bundle/macos/Maia City.app` (or run from Finder). Start `bun dev` (or sync only) in another terminal if the UI should talk to local sync.
 - **`bun run build:desktop:debug`** — same as `build:desktop` but `tauri build --debug` (faster Rust compile); signed bundle under `target/debug/bundle/macos/`.
@@ -42,25 +42,40 @@ All commands are documented in root `package.json`. Key commands:
 
 All application and tooling output goes through **`@MaiaOS/logs`** (`createLogger`, `createOpsLogger`, or channel helpers). **Do not call `console.*` in shipping code** — Biome `suspicious/noConsole` is enforced in CI. The only file allowed to call `console` directly is [`libs/maia-logs/src/transports/console.js`](libs/maia-logs/src/transports/console.js).
 
-### Logging: dev:app vs dev:sync
+### Logging: `LOG_MODE` (browser, sync, and root `bun dev`)
 
-Both [`scripts/dev-app.js`](scripts/dev-app.js) and [`scripts/dev-sync.js`](scripts/dev-sync.js) load root [`.env`](.env) via `bun --env-file=.env`, but **`LOG_MODE` applies only to the app SPA** (browser), not to the sync server process.
+Root [`.env`](.env) **`LOG_MODE`** is applied in three places:
 
-| Process | What controls verbosity |
+1. **Browser SPA** — [`applyMaiaLoggingFromEnv`](libs/maia-logs/src/maia-logging-env.js) after [`/__maia_env`](services/app/dev-server.js) (see [`services/app/main.js`](services/app/main.js)). On localhost, flags are **in-memory** before boot — **not** localStorage.
+2. **Sync server** — [`bootstrapNodeLogging()`](libs/maia-logs/src/logger.js) at startup of [`services/sync/src/index.js`](services/sync/src/index.js) calls [`applyLogModeFromEnv(process.env.LOG_MODE)`](libs/maia-logs/src/log-mode.js) so informational [`createOpsLogger`](libs/maia-logs/src/ops.js) **`.log()`** lines respect **`ops.*`** tokens. **`.warn` / `.error`** always emit.
+3. **Root [`bun dev`](scripts/dev.js)** — loads [`boot-banner`](scripts/boot-banner.js) / `bootstrapNodeLogging` first. **Empty `LOG_MODE`**: orchestrator does **not** forward child OPS lines (quiet console); **`dev.verbose`**: full piped child streams. The green **Ready** cluster prints after sync emits **`[sync] Ready`**. Errors and warnings from children are not suppressed.
+
+[`scripts/dev-app.js`](scripts/dev-app.js) and [`scripts/dev-sync.js`](scripts/dev-sync.js) call **`bootstrapNodeLogging()`** so the same **`LOG_MODE`** applies when those processes run.
+
+| Token class | Examples |
 |---|---|
-| **`bun dev:app`** / **`bun dev`** (app) | **`LOG_MODE`** → [`applyLogModeFromEnv`](libs/maia-logs/src/log-mode.js) in the browser after [`/__maia_env`](services/app/dev-server.js) (see [`services/app/main.js`](services/app/main.js)). On localhost, flags are **in-memory** before boot — **not** localStorage. Empty **`LOG_MODE`** → no PERF/TRACE/DEBUG. No browser overrides (old `maia:perf:*` / `maia:debug:trace` keys are ignored). |
-| **`bun dev:sync`** | Sync does **not** read **`LOG_MODE`**. It uses [`createOpsLogger`](libs/maia-logs/src/ops.js) (`[sync]`, `[register]`, `[ValidationHook]`, …) and prints to the **terminal** as needed. Use the sync terminal and grep those tags when debugging POST `/register` and validation hooks. |
+| PERF / DEBUG / TRACE | **`perf.all`**, **`debug.app.maia-db`**, **`trace.all`** (see [`libs/maia-logs/src/log-mode.js`](libs/maia-logs/src/log-mode.js)) |
+| OPS informational `.log` only | **`ops.all`**, **`ops.sync`**, **`ops.storage`** (match `createOpsLogger` subsystems case-insensitively) |
+| Root orchestrator | **`dev.verbose`** — full child streams in **`bun dev`** |
 
-**dev:app — set in root `.env`** (or one-off: `LOG_MODE='…' bun dev:app` / `bun dev`):
+**Exact `LOG_MODE` strings to “see logs again”** (add to root `.env` or prefix a one-off command):
+
+| What you want | Value |
+|---|---|
+| Full Vite + sync terminal spam from **`bun dev`** (like two terminals) | `LOG_MODE=dev.verbose` (child processes still emit OPS; orchestrator forwards everything) |
+| **Quiet everything** (no OPS info, no dev verbose) | `LOG_MODE=off` |
+| **Default** (empty `LOG_MODE` in `.env`) — **sync / CLI** run directly: informational OPS **`.log()`** is **on** in development (`[sync] Listening…`, etc.). **Root `bun dev` orchestrator**: does **not** pipe those OPS lines to the console (use **`dev.verbose`** or **`ops.*`** to see them). **Browser SPA**: empty still means no PERF/DEBUG unless you set tokens. |
+| **`[sync]`** OPS lines through **`bun dev`** without full verbose | `LOG_MODE=ops.sync` or `ops.all` |
+| Browser PERF/DEBUG | e.g. `LOG_MODE=debug.app.maia-db` |
+
+**Set in root `.env`** (or one-off: `LOG_MODE='…' bun dev:app`):
 
 - Maia DB / capability / DB view: **`debug.app.maia-db`** or **`debug.all`**
 - Perf for the same areas: **`perf.app.maia-db`** or **`perf.all`**
-- Combined example: **`debug.app.maia-db,perf.app.maia-db`**
-- Very noisy: **`trace.all`** (only when needed)
+- Sync OPS info lines: **`ops.sync`** or **`ops.all`**
+- **`bun dev`** full Vite/sync logs: **`dev.verbose`** (combine: **`ops.sync,dev.verbose`**)
 
-General tokens (comma-separated): **`perf.all`**, **`perf.game.init`**, **`trace.all`**, **`debug.all`**, **`debug.engines.loadBinary`**, **`debug.app.cobinary`**. Colon form **`engines:pipeline`** is supported for granular PERF (see [`libs/maia-logs/src/log-mode.js`](libs/maia-logs/src/log-mode.js)).
-
-**dev:sync:** No `LOG_MODE` knob today. Optional follow-up: env-gated extra lines (e.g. `MAIA_SYNC_REGISTER_DEBUG=1`) wired to stable [`OPS_PREFIX`](libs/maia-logs/src/ops.js) tags if you need more than existing ops logs.
+General tokens (comma-separated): **`perf.all`**, **`perf.game.init`**, **`trace.all`**, **`debug.all`**, **`debug.engines.loadBinary`**, **`debug.app.cobinary`**. Colon form **`engines:pipeline`** is supported for granular PERF.
 
 ### Tauri + passkeys (macOS)
 

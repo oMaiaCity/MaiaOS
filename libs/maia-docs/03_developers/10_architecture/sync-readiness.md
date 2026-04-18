@@ -20,11 +20,10 @@ The client assumes the server is ready when it connects. Orchestration (dev scri
 ┌─────────────────────────────────────────────────────────────────┐
 │  Dev (bun dev)                                                   │
 │                                                                  │
-│  1. Start sync (spawn, async init begins)                        │
-│  2. Poll GET /health until ready: true                           │
-│  3. Start app (user can load page; sync is ready)                │
+│  1. Start sync + app in parallel (both spawn; faster boot)        │
+│  2. Client may connect before sync is ready → retries (OK)       │
 │                                                                  │
-│  → No client polling. No "bad response" on first load.            │
+│  → Readiness is not serialized in dev; WebSocketPeer retries.    │
 └─────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────┐
@@ -54,14 +53,11 @@ The client assumes the server is ready when it connects. Orchestration (dev scri
 ### 2. Dev Orchestration (scripts/dev.js)
 
 ```javascript
-await startSync()
-await waitForServiceReady('http://localhost:4201/health')
-await startApp()
+await Promise.all([startSync(), startApp()])
 ```
 
-- `waitForServiceReady` polls `/health` until `ready: true` or timeout.
-- On timeout: app still starts; WebSocket retries (existing behavior).
-- Orchestration lives at the dev boundary; no client code changes.
+- Sync and app start together; the browser may load before sync finishes init.
+- `WebSocketPeerWithReconnection` retries until sync is ready (same as a slow server).
 
 ### 3. Client (sync-peers.js)
 

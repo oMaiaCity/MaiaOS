@@ -29,7 +29,7 @@ import {
 	RUNTIME_REF,
 	resolveInfraFactoryCoId,
 } from '@MaiaOS/db'
-import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
+import { bootstrapNodeLogging, createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
 import { agentIDToDidKey, verifyInvocationToken } from '@MaiaOS/maia-ucan'
 import {
 	createWebSocketPeer,
@@ -54,6 +54,8 @@ import { createHash } from 'node:crypto'
 import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { parseBootstrapBody } from './signup-helpers.js'
+
+bootstrapNodeLogging()
 
 // Resolve db path relative to sync package root (not process.cwd) so persistence is stable across restarts
 const _syncDir = pathResolve(dirname(fileURLToPath(import.meta.url)), '..')
