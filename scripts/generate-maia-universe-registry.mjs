@@ -31,7 +31,6 @@ const VIBE_REGISTRY_EXPORT = {
 	chat: 'ChatVibeRegistry',
 	todos: 'TodosVibeRegistry',
 	humans: 'RegistriesVibeRegistry',
-	logs: 'LogsVibeRegistry',
 	paper: 'PaperVibeRegistry',
 	profile: 'ProfileVibeRegistry',
 	quickjs: 'QuickjsVibeRegistry',
@@ -40,7 +39,6 @@ const VIBE_REGISTRY_EXPORT = {
 
 const VIBE_REGISTRY_ALIASES = {
 	chat: 'ChatAvenRegistry',
-	logs: 'LogsAvenRegistry',
 	paper: 'PaperAvenRegistry',
 }
 

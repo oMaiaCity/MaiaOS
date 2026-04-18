@@ -1,7 +1,7 @@
 {
 	"$factory": "°maia/factory/meta.factory.maia",
 	"title": "°maia/quickjs/layout-quickjs/interface.maia",
-	"description": "QuickJS Add layout tabs",
+	"description": "Vibe Creator layout tabs (quickjs, code, logs)",
 	"cotype": "comap",
 	"indexing": true,
 	"properties": {

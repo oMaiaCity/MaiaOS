@@ -53,9 +53,8 @@ libs/maia-vibes/src/
 ├── chat/                       # Chat vibe
 ├── paper/                      # Paper vibe
 ├── profile/                    # Profile vibe
-├── logs/                       # Logs vibe
 ├── humans/                     # Addressbook vibe (slug `addressbook`)
-└── quickjs/                   # QuickJS vibe
+└── quickjs/                   # Vibe Creator (quickjs / code / logs tabs; slug `quickjs`)
 ```
 
 ---
@@ -301,9 +300,8 @@ import { loadSparksVibe } from '@MaiaOS/vibes';
 - **chat** - Chat interface
 - **paper** - Paper/document editing
 - **profile** - Profile management
-- **logs** - Logs / diagnostics interface
 - **addressbook** - Addressbook (humans / avens grid) view
-- **quickjs** - QuickJS Add tool
+- **quickjs** - Vibe Creator (tabs **quickjs** / **code** / **logs**; sandboxed add form, deps list, developer logs)
 
 Registries for these are exported from `getAllVibeRegistries()`. Loaders can be created via `createVibeLoader(vibeKey, Registry, modules)`.
 
