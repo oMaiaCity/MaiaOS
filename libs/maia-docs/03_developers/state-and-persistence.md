@@ -80,7 +80,7 @@ The sync service requires persistent storage (never in-memory). Two backends are
 | **createAccountWithSecret** (human or agent) | simpleAccountSeed | `account.sparks` anchored via `POST /bootstrap` right after creation. |
 | **Sync PEER_SYNC_SEED=true** | genesisAccountSeed | Full scaffold + vibes into sync server account (genesis). |
 
-**SEED_VIBES** (sync server env) controls which vibes are seeded during genesis: `"all"` or comma-separated `"todos,chat,db,sparks,logs"`.
+**SEED_VIBES** (sync server env) controls which vibes are seeded during genesis: `"all"` or comma-separated slugs such as `"todos,chat,addressbook,sparks,logs,quickjs,profile,paper"`.
 
 ---
 
