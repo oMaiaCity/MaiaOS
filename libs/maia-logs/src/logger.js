@@ -11,8 +11,46 @@ import {
 	setTransport,
 } from './core.js'
 import { applyLogModeFromEnv } from './log-mode.js'
+import { createOpsLogger } from './ops.js'
 import { createPerfTracer } from './perf.js'
 import { createConsoleTransport } from './transports/console.js'
+
+/** Known-transient PG driver errors that should not take down a long-running server. */
+const BENIGN_ERROR_CODES = new Set(['ERR_POSTGRES_IDLE_TIMEOUT', 'ERR_POSTGRES_CONNECTION_CLOSED'])
+
+let processGuardsInstalled = false
+
+/**
+ * @param {unknown} reason
+ * @returns {Error}
+ */
+function normalizeRejectionReason(reason) {
+	if (reason instanceof Error) return reason
+	const err = new Error(String(reason))
+	if (reason && typeof reason === 'object' && 'code' in reason) {
+		err.code = /** @type {{ code?: string }} */ (reason).code
+	}
+	return err
+}
+
+function installProcessGuards() {
+	if (processGuardsInstalled || typeof process === 'undefined') return
+	processGuardsInstalled = true
+	const ops = createOpsLogger('process')
+	const handle = (kind) => (err) => {
+		const code = err?.code
+		if (BENIGN_ERROR_CODES.has(code)) {
+			ops.warn(`${kind} (benign, continuing):`, code, err?.message)
+			return
+		}
+		ops.error(`${kind} (fatal):`, err?.stack ?? err)
+		process.exit(1)
+	}
+	process.on('uncaughtException', handle('uncaughtException'))
+	process.on('unhandledRejection', (reason) => {
+		handle('unhandledRejection')(normalizeRejectionReason(reason))
+	})
+}
 
 /**
  * @param {string} subsystem
@@ -59,4 +97,5 @@ export function bootstrapNodeLogging() {
 	setLoggingRuntime({ mode, level })
 	installDefaultTransport()
 	applyLogModeFromEnv(process.env.LOG_MODE ?? '')
+	installProcessGuards()
 }

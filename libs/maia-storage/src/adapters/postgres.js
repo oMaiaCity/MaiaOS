@@ -21,43 +21,23 @@ import { runMigrations } from '../schema/postgres.js'
 
 const opsStor = createOpsLogger('STORAGE')
 
-const TRANSIENT_PG_CODES = new Set([
-	'ERR_POSTGRES_INVALID_MESSAGE',
-	'ERR_POSTGRES_CONNECTION_CLOSED',
-	'ConnectionClosed',
-	'ECONNRESET',
-	'EPIPE',
-])
-
-function isTransientPgError(err) {
-	return (
-		TRANSIENT_PG_CODES.has(err?.code) || /failed to read data|connection closed/i.test(err?.message)
-	)
-}
+/** Options passed to `new SQL()` — single connection, no idleTimeout (Neon + Bun default). */
+export const BUN_SQL_ADAPTER_OPTIONS = { max: 1 }
 
 /**
  * @param {import('bun').SQL} sql
  * @returns {{ query: (text: string, params?: unknown[]) => Promise<{ rows: unknown[] }>, exec: (text: string) => Promise<void> }}
  */
-function createSqlDbInterface(sql) {
-	async function runWithRetry(fn) {
-		try {
-			return await fn()
-		} catch (err) {
-			if (!isTransientPgError(err)) throw err
-			opsStor.warn('Transient Postgres error, retrying once:', err?.code || err?.message)
-			await new Promise((r) => setTimeout(r, 250))
-			return await fn()
-		}
-	}
+export function createSqlDbInterface(sql) {
 	return {
-		query: (text, params) =>
-			runWithRetry(async () => {
-				const raw = await sql.unsafe(text, params ?? [])
-				const rows = Array.isArray(raw) ? raw : [...raw]
-				return { rows }
-			}),
-		exec: (text) => runWithRetry(() => sql.unsafe(text)),
+		query: async (text, params) => {
+			const raw = await sql.unsafe(text, params ?? [])
+			const rows = Array.isArray(raw) ? raw : [...raw]
+			return { rows }
+		},
+		exec: async (text) => {
+			await sql.unsafe(text)
+		},
 	}
 }
 
@@ -419,11 +399,7 @@ export async function createPostgresAdapter(connectionString, blobStore) {
 	}
 
 	const normalized = normalizePostgresConnectionString(connectionString)
-	const sql = new SQL(normalized, {
-		max: 1,
-		idleTimeout: 30,
-		connectionTimeout: 30,
-	})
+	const sql = new SQL(normalized, BUN_SQL_ADAPTER_OPTIONS)
 	const db = createSqlDbInterface(sql)
 
 	if (typeof process !== 'undefined' && process.env?.NODE_ENV !== 'production') {
