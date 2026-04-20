@@ -5,11 +5,11 @@
  * Serves the Bun-built SPA with proper routing
  */
 
+import { bootstrapNodeLogging, createLogger } from '@MaiaOS/logs'
 import { existsSync, readFileSync, statSync } from 'node:fs'
 import { dirname, extname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { serve } from 'bun'
-import { bootstrapNodeLogging, createLogger } from '../../libs/maia-logs/src/index.js'
 
 bootstrapNodeLogging()
 const serverLog = createLogger('app-server')
@@ -32,8 +32,9 @@ const SECURITY_HEADERS = {
 	'X-Frame-Options': 'DENY',
 	'Referrer-Policy': 'strict-origin-when-cross-origin',
 	'Permissions-Policy': 'camera=(), microphone=(self), geolocation=()',
+	// JSON Schema (AJV) compiles validators with new Function; matches Tauri csp script-src.
 	'Content-Security-Policy':
-		"default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https:; font-src 'self' data:; connect-src 'self' https: wss: data:; media-src 'self' blob: mediastream:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
+		"default-src 'self'; script-src 'self' 'unsafe-eval' 'wasm-unsafe-eval'; worker-src 'self' blob:; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: blob: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https: wss: data:; media-src 'self' blob: mediastream:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'",
 }
 
 const MIME_TYPES = {

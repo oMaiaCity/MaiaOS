@@ -42,5 +42,9 @@ COPY --from=builder /app/services/app/dist ./dist
 COPY --from=builder /app/services/app/server.js ./
 COPY --from=builder /app/services/app/package.json ./
 
+# server.js imports @MaiaOS/logs; runtime stage does not copy monorepo libs/ by default
+RUN mkdir -p node_modules/@MaiaOS
+COPY --from=builder /app/libs/maia-logs ./node_modules/@MaiaOS/logs
+
 EXPOSE 8080
 CMD ["bun", "server.js"]

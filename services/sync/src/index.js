@@ -53,6 +53,7 @@ import {
 import { createHash } from 'node:crypto'
 import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { clientIp } from './client-ip.js'
 import { parseBootstrapBody } from './signup-helpers.js'
 
 bootstrapNodeLogging()
@@ -109,7 +110,8 @@ function normalizeCorsOrigin(host) {
 	const trimmed = host?.trim() ?? ''
 	if (!trimmed) return ''
 	if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
-		return `http://${trimmed}`
+		// Bare host (e.g. next.maia.city): browsers use https:// in production; http:// would never match Origin.
+		return isProduction ? `https://${trimmed}` : `http://${trimmed}`
 	}
 	return trimmed
 }
@@ -210,15 +212,6 @@ const RL_OVERRIDES = new Map([
 
 const RL_BUCKETS = new Map()
 
-function clientIp(req) {
-	return (
-		req.headers.get('fly-client-ip') ??
-		req.headers.get('cf-connecting-ip') ??
-		req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ??
-		'unknown'
-	)
-}
-
 function takeRateLimit(key, limit, windowMs = 60_000) {
 	const now = Date.now()
 	let b = RL_BUCKETS.get(key)
@@ -249,7 +242,8 @@ function auditRegisterDecision(req, data) {
 	opsRegister.log('decision', { route: '/register', ip_hash: ipHash, ...data })
 }
 
-const LOAD_TIMEOUT_MS = 25000
+/** Genesis seeds 265+ CoValues on cold Neon; 25s/load was marginal. 90s per-load is steady-state fine. */
+const LOAD_TIMEOUT_MS = 90_000
 const REQUEST_TIMEOUT_MS = 35000
 
 function withTimeout(promise, ms, label) {

@@ -110,7 +110,7 @@
 			}
 		},
 		{
-			"includes": ["NEXT/**", "libs/FUTURE/**"],
+			"includes": ["libs/FUTURE/**"],
 			"linter": {
 				"rules": {
 					"suspicious": {

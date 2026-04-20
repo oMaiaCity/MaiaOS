@@ -103,7 +103,8 @@ bun run deploy
 
 | Var | App | Sync | Notes |
 |-----|-----|------|-------|
-| `PEER_SYNC_HOST` | — | — | Local dev only |
+| `PEER_APP_HOST` | — | ✓ | **Required in production:** exact browser origin of the web app (e.g. `https://next.maia.city`). CORS for `/bootstrap`, `/register`, and WebSocket. Set in `services/sync/fly.toml` `[env]` for this stack, or `fly secrets set`. Bare hostname defaults to **https** in production. |
+| `PEER_SYNC_HOST` | — | optional | Runtime override for sync URL (same role as `VITE_PEER_SYNC_HOST` for clients). Not required on the sync Fly app for genesis; the sync process is storage-backed and does not open a self WebSocket. |
 | `PEER_SYNC_STORAGE` | — | ✓ | `postgres` (Neon) or `pglite` |
 | `PEER_SYNC_DB_URL` | — | ✓ | Neon connection string |
 | `PEER_DB_PATH` | — | — | Only for PGlite |

@@ -67,6 +67,9 @@ binary-bucket/
 services/maia/
 services/maia-city/
 
+# Legacy NEXT/ offline scaffold (removed from repo; main app is services/app)
+NEXT/
+
 # Brand assets (synced from libs/maia-brand/src/assets to services/app/brand or dist/brand)
 **/static/brand/
 services/app/brand/

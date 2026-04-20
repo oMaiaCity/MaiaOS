@@ -17,6 +17,8 @@ primary_region = "fra"
   PORT = "4201"
   NODE_ENV = "production"
   PEER_SYNC_STORAGE = "postgres"
+  # Browser origin for the Next app (CORS on /bootstrap, /register, WebSocket upgrade). Not a secret.
+  PEER_APP_HOST = "https://next.maia.city"
 
 # Secrets: set manually via fly secrets set
 # AVEN_MAIA_ACCOUNT, AVEN_MAIA_SECRET - required
