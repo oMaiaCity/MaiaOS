@@ -1,5 +1,18 @@
 # AGENTS.md
 
+## Git: PRs into `next` (required)
+
+Pull requests that merge a feature branch (for example `samuel/next`) into **`next`** must be **rebased on the latest `origin/next`** before review and merge. **Do not** rely on an outdated base or a plain merge of `next` into your branch if policy expects a linear, up-to-date history on top of `next`.
+
+**Workflow:**
+
+1. `git fetch origin`
+2. `git checkout <your-branch>`  (e.g. `samuel/next`)
+3. `git rebase origin/next` — resolve conflicts, then `git rebase --continue` until done
+4. If the branch was already on the remote: `git push --force-with-lease origin <your-branch>`
+
+**Check:** your branch’s commits should sit **on top of** the current `next` tip (`git log origin/next..HEAD` should show only your work).
+
 ## Cursor Cloud specific instructions
 
 ### Services overview
