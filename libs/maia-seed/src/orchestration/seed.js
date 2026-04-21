@@ -4,20 +4,31 @@
 
 import * as groups from '@MaiaOS/db'
 import {
-	buildSystemFactoryCoIdsFromSparkOs,
 	createCoValueForSpark,
 	ensureCoValueLoaded,
-	fillRuntimeRefsFromSystemFactories,
+	loadInfraFromSparkOs,
 	SPARK_OS_META_FACTORY_CO_ID_KEY,
 } from '@MaiaOS/db'
+import { loadNanoidIndex } from '@MaiaOS/db/cojson/indexing/factory-index-manager'
+import { lookupRegistryKey } from '@MaiaOS/db/seed/lookup-registry-key'
+import { canonicalizePayloadRefs } from '@MaiaOS/db/seed/ref-canonicalize'
 import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
-import { maiaFactoryRefToNanoid, maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
+import {
+	logicalRefToSeedNanoid,
+	maiaFactoryRefToNanoid,
+	maiaIdentity,
+} from '@MaiaOS/validation/identity-from-maia-path.js'
 import { removeIdFields } from '@MaiaOS/validation/remove-id-fields'
 import { getVibeKey } from '@MaiaOS/validation/vibe-keys'
 import { bootstrapAccountSparks, bootstrapAndScaffold } from './bootstrap.js'
 import { seedConfigs } from './configs.js'
 import { seedData } from './data.js'
-import { buildMetaFactoryForSeeding, ensureSparkOs, sortSchemasByDependency } from './helpers.js'
+import {
+	buildMetaFactoryForSeeding,
+	ensureSparkOs,
+	sortSchemasByDependency,
+	writeInfraSlotsToSparkOs,
+} from './helpers.js'
 
 const MAIA_SPARK = '°maia'
 
@@ -84,9 +95,86 @@ const NESTED_REF_PROPS = []
  * Title/instance-path → co_z from spark.os (definition catalog colist).
  * @param {object} peer — MaiaDB peer
  */
-async function collectSparkOsRegistry(peer, osId, metaCoId) {
-	if (!osId || !metaCoId?.startsWith?.('co_z')) return new Map()
-	return buildSystemFactoryCoIdsFromSparkOs(peer, osId)
+async function collectSparkOsRegistry(peer, _osId, _metaCoId) {
+	const m = await loadNanoidIndex(peer)
+	if (!m || typeof m.get !== 'function') return new Map()
+	const out = new Map()
+	try {
+		if (typeof m.forEach === 'function') {
+			m.forEach((v, k) => {
+				if (typeof v === 'string' && v.startsWith('co_z') && typeof k === 'string') {
+					out.set(k, v)
+				}
+			})
+			return out
+		}
+	} catch {
+		/* CoMap may not have forEach; fall through */
+	}
+	if (m.keys) {
+		for (const k of m.keys()) {
+			const v = m.get(k)
+			if (typeof v === 'string' && v.startsWith('co_z')) out.set(k, v)
+		}
+	}
+	return out
+}
+
+/**
+ * @param {object} peer
+ * @param {string | null} metaSchemaCoId
+ * @param {Map<string, string>} factoryCoIdMap
+ * @param {string | null} selfFactoryNanoid — row being created; `title` is the factory's own `°...` path
+ * @param {{ deferUnresolved?: boolean }} [options] — if true, leave `°…` in place when still unknown (pass 1); pass 2 must be strict
+ */
+function createResolveRefForSeed(
+	peer,
+	metaSchemaCoId,
+	factoryCoIdMap,
+	selfFactoryNanoid,
+	options = {},
+) {
+	const { deferUnresolved = false } = options
+	return async (s) => {
+		if (s === '@metaSchema') {
+			if (!metaSchemaCoId?.startsWith('co_z')) {
+				throw new Error('[seed] @metaSchema but metaSchemaCoId is not set')
+			}
+			return metaSchemaCoId
+		}
+		if (typeof s === 'string' && s.startsWith('co_z') && /^co_z[a-zA-Z0-9]+$/.test(s)) {
+			return s
+		}
+		if (s.startsWith('°maia/factory/')) {
+			const n = maiaFactoryRefToNanoid(s)
+			if (n) {
+				// Own `title` / self paths before the row has a co-id; keep the logical namekey
+				if (selfFactoryNanoid && n === selfFactoryNanoid) {
+					return s
+				}
+				const id = factoryCoIdMap.get(n)
+				if (id?.startsWith('co_z')) return id
+				const idx = await loadNanoidIndex(peer)
+				if (idx?.get) {
+					const fromIdx = idx.get(n)
+					if (fromIdx?.startsWith('co_z')) return fromIdx
+				}
+			}
+		}
+		if (s.startsWith('°')) {
+			const n = logicalRefToSeedNanoid(s)
+			if (n) {
+				const id = factoryCoIdMap.get(n)
+				if (id?.startsWith('co_z')) return id
+			}
+		}
+		const fromPeer = await lookupRegistryKey(peer, s, { returnType: 'coId' })
+		if (fromPeer?.startsWith('co_z')) return fromPeer
+		if (deferUnresolved && typeof s === 'string' && (s.startsWith('°') || s === '@metaSchema')) {
+			return s
+		}
+		throw new Error(`[seed] unresolved authored ref string: ${s}`)
+	}
 }
 
 export async function simpleAccountSeed(_account, _node) {
@@ -216,12 +304,10 @@ export async function seed(
 		registerSeedCoId(seedRegistry, metaFactoryNanoid, metaSchemaCoId)
 	}
 
-	peer.systemFactoryCoIds.set(metaFactoryNanoid, metaSchemaCoId)
-	fillRuntimeRefsFromSystemFactories(peer)
-	const { hydrateValidationMetaFromPeer } = await import('@MaiaOS/validation/validation.helper')
-	await hydrateValidationMetaFromPeer(peer)
-
 	const factoryCoIdMap = new Map()
+	if (metaSchemaCoId) {
+		factoryCoIdMap.set(metaFactoryNanoid, metaSchemaCoId)
+	}
 	const factoryCoMaps = new Map()
 	const { create: crudCreate } = await import('@MaiaOS/db/cojson/crud/create')
 	const { update: crudUpdate } = await import('@MaiaOS/db/cojson/crud/update')
@@ -245,13 +331,17 @@ export async function seed(
 		if (!factoryNanoid) {
 			throw new Error(`[Seed] Missing factory $nanoid for ${factoryNanoidKey}`)
 		}
-		const existingSchemaCoId = existingSchemaRegistry.get(factoryNanoid)
+		const resolveRef = createResolveRefForSeed(peer, metaSchemaCoId, factoryCoIdMap, factoryNanoid, {
+			deferUnresolved: true,
+		})
+		const canonicalProperties = await canonicalizePayloadRefs(cleanedProperties, { resolveRef })
+		const existingSchemaCoId = existingSchemaRegistry.get(factoryNanoid) ?? null
 		let actualCoId
 		if (existingSchemaCoId) {
-			await crudUpdate(peer, metaSchemaCoId, existingSchemaCoId, cleanedProperties)
+			await crudUpdate(peer, metaSchemaCoId, existingSchemaCoId, canonicalProperties)
 			actualCoId = existingSchemaCoId
 		} else {
-			const createdSchema = await crudCreate(peer, metaSchemaCoId, cleanedProperties)
+			const createdSchema = await crudCreate(peer, metaSchemaCoId, canonicalProperties)
 			actualCoId = createdSchema.id
 		}
 		factoryCoIdMap.set(factoryNanoid, actualCoId)
@@ -263,9 +353,41 @@ export async function seed(
 		registerSeedCoId(seedRegistry, factoryNanoid, actualCoId)
 	}
 
-	if (metaSchemaCoId) {
-		factoryCoIdMap.set(metaFactoryNanoid, metaSchemaCoId)
+	// Break factory-definition cycles (e.g. actor → inbox → event → actor): pass 1 may still hold `°…`;
+	// re-write with full `factoryCoIdMap` so every cross-ref is `co_z`.
+	for (const factoryNanoidKey of sortedFactoryKeys) {
+		const { schema: schema2 } = uniqueSchemasByNanoid.get(factoryNanoidKey)
+		const {
+			$schema: _s2,
+			$factory: _f2,
+			$label: _lb2,
+			$nanoid: _n2,
+			$id: _i2,
+			id: _id2,
+			...direct2
+		} = schema2
+		const cleaned2 = removeIdFields(direct2)
+		const fn2 = typeof _n2 === 'string' && _n2.length > 0 ? _n2 : factoryNanoidKey
+		if (!fn2) {
+			continue
+		}
+		const coId = factoryCoIdMap.get(fn2)
+		if (!coId?.startsWith('co_z')) {
+			continue
+		}
+		const resolveRef2 = createResolveRefForSeed(peer, metaSchemaCoId, factoryCoIdMap, fn2, {
+			deferUnresolved: false,
+		})
+		const sealed = await canonicalizePayloadRefs(cleaned2, { resolveRef: resolveRef2 })
+		await crudUpdate(peer, metaSchemaCoId, coId, sealed)
 	}
+
+	if (osId) {
+		await writeInfraSlotsToSparkOs(peer, osId, factoryCoIdMap, metaSchemaCoId)
+		await loadInfraFromSparkOs(peer, osId)
+	}
+	const { hydrateValidationMetaFromPeer } = await import('@MaiaOS/validation/validation.helper')
+	await hydrateValidationMetaFromPeer(peer)
 
 	// Schema definitions (meta-schema children) must always be CoMaps (have .get for resolution)
 	for (const factoryNanoidKey of sortedFactoryKeys) {
@@ -531,9 +653,7 @@ export async function seed(
 			const { EXCEPTION_FACTORIES } = await import('@MaiaOS/db/registry')
 			const vibesRegistrySchemaCoId =
 				factoryCoIdMap?.get(maiaIdentity('vibes-registry.factory.maia').$nanoid) ??
-				(await (
-					await import('@MaiaOS/db')
-				).lookupRegistryKey(peer, '°maia/factory/vibes-registry.factory.maia', {
+				(await lookupRegistryKey(peer, '°maia/factory/vibes-registry.factory.maia', {
 					returnType: 'coId',
 				}))
 			const { coValue: vibesCoMap } = await createCoValueForSpark(
@@ -563,9 +683,7 @@ export async function seed(
 				const factoryCoId =
 					(factoryRefN ? factoryCoIdMap?.get(factoryRefN) : null) ??
 					factoryCoIdMap?.get(factoryRef) ??
-					(await (
-						await import('@MaiaOS/db')
-					).lookupRegistryKey(peer, factoryRef, { returnType: 'coId' }))
+					(await lookupRegistryKey(peer, factoryRef, { returnType: 'coId' }))
 				if (factoryCoId) combinedRegistry.set(factoryRefN ?? factoryRef, factoryCoId)
 			}
 			const retransformedVibe = transformInstanceForSeeding(vibe, combinedRegistry)
@@ -598,12 +716,9 @@ export async function seed(
 		}
 	}
 
-	for (const [k, v] of factoryCoIdMap) {
-		if (typeof k === 'string' && typeof v === 'string' && v.startsWith('co_z')) {
-			peer.systemFactoryCoIds.set(k, v)
-		}
+	if (osId) {
+		await loadInfraFromSparkOs(peer, osId)
 	}
-	fillRuntimeRefsFromSystemFactories(peer)
 
 	const dataCoIds = seededData?.coIds
 	if (Array.isArray(dataCoIds) && dataCoIds.length > 0) {

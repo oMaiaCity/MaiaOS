@@ -5,7 +5,6 @@
 import { ensureCoValueLoaded, getCoListId } from '../crud/collection-helpers.js'
 import { extractCoValueData } from '../crud/data-extraction.js'
 import { matchesFilter } from '../crud/filter-helpers.js'
-import { getRuntimeRef, RUNTIME_REF } from '../factory/runtime-factory-refs.js'
 import { removeGroupMember } from '../groups/groups.js'
 
 const MAP_TIMEOUT_MS = 25000
@@ -56,9 +55,9 @@ export async function ensureIdentity({ peer, dataEngine, type, accountId, profil
 	}
 	await dataEngine.resolveSystemFactories()
 
-	const identitySchemaCoId = getRuntimeRef(peer, RUNTIME_REF.OS_IDENTITY)
+	const identitySchemaCoId = peer.infra?.identity
 	if (!identitySchemaCoId?.startsWith('co_z')) {
-		throw new Error('Identity schema not found — resolve system factories')
+		throw new Error('Identity schema not found — resolve system factories / peer.infra')
 	}
 
 	const existingId = await findIdentity(peer, identitySchemaCoId, accountId, type)
@@ -99,7 +98,7 @@ export async function listAccountIdsFromIdentityIndex(peer, type) {
 	if (peer.dbEngine?.resolveSystemFactories) {
 		await peer.dbEngine.resolveSystemFactories()
 	}
-	const identitySchemaCoId = getRuntimeRef(peer, RUNTIME_REF.OS_IDENTITY)
+	const identitySchemaCoId = peer.infra?.identity
 	if (!identitySchemaCoId?.startsWith('co_z')) return []
 	const coListId = await getCoListId(peer, identitySchemaCoId)
 	if (!coListId?.startsWith('co_z')) return []

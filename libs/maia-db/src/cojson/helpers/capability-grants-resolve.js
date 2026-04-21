@@ -5,7 +5,6 @@
 
 import { getFactoryIndexColistId } from '../crud/collection-helpers.js'
 import { waitForStoreReady } from '../crud/read-operations.js'
-import { RUNTIME_REF, resolveInfraFactoryCoId } from '../factory/runtime-factory-refs.js'
 import { collectCapabilityGrantCoIdsFromColistContent } from './capability-grant-co-ids.js'
 
 /**
@@ -26,10 +25,10 @@ export async function getCapabilityGrantIndexColistCoId(maia) {
  * @returns {Promise<string|null>}
  */
 export async function getCapabilityGrantIndexColistCoIdFromPeer(peer, _account) {
-	let capSchema = resolveInfraFactoryCoId(peer, RUNTIME_REF.OS_CAPABILITY)
+	let capSchema = peer?.infra?.capability
 	if (!capSchema?.startsWith('co_z') && peer?.dbEngine?.resolveSystemFactories) {
 		await peer.dbEngine.resolveSystemFactories()
-		capSchema = resolveInfraFactoryCoId(peer, RUNTIME_REF.OS_CAPABILITY)
+		capSchema = peer?.infra?.capability
 	}
 	if (!capSchema?.startsWith('co_z')) return null
 	try {

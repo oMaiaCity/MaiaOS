@@ -7,12 +7,7 @@
 
 import { perfDbUpload } from '@MaiaOS/logs'
 import { containsExpressions } from '@MaiaOS/validation/expression-resolver.js'
-import { resolve } from '../factory/resolver.js'
-import {
-	getRuntimeRef,
-	getSystemFactoryCoId,
-	RUNTIME_REF,
-} from '../factory/runtime-factory-refs.js'
+import { resolve } from '../factory/authoring-resolver.js'
 
 /**
  * Create a message CoMap and push its co-id to an inbox CoStream
@@ -54,16 +49,13 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 
 		if (inboxFactory?.items?.$co) {
 			const messageFactoryRef = inboxFactory.items.$co
-
 			if (messageFactoryRef.startsWith('co_z')) {
 				messageFactoryCoId = messageFactoryRef
-			} else if (messageFactoryRef.startsWith('°maia/factory/')) {
-				messageFactoryCoId = getSystemFactoryCoId(peer, messageFactoryRef) ?? null
 			}
 		}
 
 		if (!messageFactoryCoId) {
-			messageFactoryCoId = getRuntimeRef(peer, RUNTIME_REF.EVENT)
+			messageFactoryCoId = peer.infra?.event
 		}
 
 		if (!messageFactoryCoId?.startsWith('co_z')) {

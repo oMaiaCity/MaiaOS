@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { resolve, resolveReactive } from '../src/cojson/factory/resolver.js'
+import { resolve, resolveReactive } from '../src/cojson/factory/authoring-resolver.js'
 
 describe('resolve() strict-only', () => {
 	test('throws on registry namekey string (co_z required)', async () => {

@@ -27,10 +27,8 @@ import {
 	loadCapabilitiesGrants,
 	loadOrCreateAgentAccount,
 	MaiaOS,
-	RUNTIME_REF,
 	resetBootstrapPhase,
 	resolveAccountCoIdsToProfiles,
-	resolveInfraFactoryCoId,
 	signInWithPasskey,
 	signUpWithPasskey,
 	subscribeBootstrapPhase,
@@ -1160,8 +1158,8 @@ function loadSpark(spark) {
 function selectCoValueInternal(coId, skipHistory = false) {
 	syncServerSelectedTable = null
 	syncServerTableOffset = 0
-	// Collapse sidebars when selecting a co-value
-	collapseAllSidebars()
+	// Collapse detail (right) only so Explorer (Account / Capabilities) stays discoverable on the left
+	collapseDbMetadataSidebar()
 
 	// If we're in agent mode and selecting account, exit agent mode first
 	if (currentVibe !== null && coId === maia?.id?.maiaId?.id) {
@@ -1198,6 +1196,14 @@ async function selectCoValue(coId, skipHistory = false) {
 		} catch (_e) {}
 	}
 	selectCoValueInternal(targetCoId, skipHistory)
+}
+
+/** Right metadata panel only — keeps left Explorer (incl. Capabilities) visible. */
+function collapseDbMetadataSidebar() {
+	const dbMetadata = document.querySelector('.db-metadata')
+	if (dbMetadata) {
+		dbMetadata.classList.add('collapsed')
+	}
 }
 
 /**
@@ -1297,6 +1303,15 @@ async function renderAppInternal() {
 	isRendering = true
 
 	try {
+		// Boot can run before peer.infra + indexes exist; refresh so Explorer shows Capabilities link
+		if (
+			maia &&
+			authState.signedIn &&
+			currentScreen === 'maia-db' &&
+			!capabilityGrantsIndexColistCoId
+		) {
+			capabilityGrantsIndexColistCoId = (await getCapabilityGrantIndexColistCoId(maia)) ?? null
+		}
 		await renderApp(
 			maia,
 			authState,
@@ -1439,10 +1454,10 @@ async function grantMemberCapabilities(targetAccountId) {
 		const nowSec = Math.floor(Date.now() / 1000)
 		const exp = nowSec + CAP_GRANT_TTL_SECONDS
 		await m.dataEngine.resolveSystemFactories?.()
-		let factory = resolveInfraFactoryCoId(peer, RUNTIME_REF.OS_CAPABILITY)
+		let factory = peer.infra?.capability
 		if (!factory?.startsWith('co_z')) {
 			await m.dataEngine.resolveSystemFactories?.()
-			factory = resolveInfraFactoryCoId(peer, RUNTIME_REF.OS_CAPABILITY)
+			factory = peer.infra?.capability
 		}
 		if (!factory?.startsWith('co_z')) {
 			showToast('Capability factory not available', 'error')

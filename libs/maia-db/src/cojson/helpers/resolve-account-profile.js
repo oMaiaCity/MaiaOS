@@ -4,7 +4,6 @@
  */
 
 import { findFirst } from '../crud/read.js'
-import { getRuntimeRef, RUNTIME_REF } from '../factory/runtime-factory-refs.js'
 
 /**
  * Wait for a reactive store to finish loading (if loading)
@@ -54,7 +53,7 @@ async function resolveAccountToProfileCoIdViaIdentity(maia, accountCoId) {
 		if (peer.dbEngine?.resolveSystemFactories) {
 			await peer.dbEngine.resolveSystemFactories()
 		}
-		const identitySchemaCoId = getRuntimeRef(peer, RUNTIME_REF.OS_IDENTITY)
+		const identitySchemaCoId = peer.infra?.identity
 		if (!identitySchemaCoId?.startsWith('co_z')) return null
 		const row = await findFirst(
 			peer,

@@ -12,8 +12,7 @@ import { createLogger, perfDbRead } from '@MaiaOS/logs'
 import { resolveExpressions } from '@MaiaOS/validation/expression-resolver.js'
 import { ReactiveStore } from '../../reactive-store.js'
 import { observeCoValue } from '../cache/coCache.js'
-import { resolve as resolveSchema } from '../factory/resolver.js'
-import { getRuntimeRef, RUNTIME_REF } from '../factory/runtime-factory-refs.js'
+import { resolve as resolveSchema } from '../factory/authoring-resolver.js'
 import { getSparksRegistryId } from '../groups/groups.js'
 import { ensureCoValueLoaded, getCoListId } from './collection-helpers.js'
 import { extractCoValueData } from './data-extraction.js'
@@ -81,7 +80,7 @@ export async function read(
 	// Collection read (by schema)
 	if (schema) {
 		// Sparks: read from account.sparks (index only has user-created sparks)
-		const sparkSchemaCoId = getRuntimeRef(peer, RUNTIME_REF.DATA_SPARK)
+		const sparkSchemaCoId = peer.infra?.dataSpark
 		const resolvedSchema = await resolveSchema(peer, schema, { returnType: 'coId' })
 		if (sparkSchemaCoId && resolvedSchema === sparkSchemaCoId) {
 			return readSparksFromAccount(peer, readOptions)

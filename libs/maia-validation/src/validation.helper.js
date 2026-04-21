@@ -49,7 +49,7 @@ export function setFactoryResolver(options) {
 		throw new Error('[setFactoryResolver] dataEngine is REQUIRED. No fallbacks allowed.')
 	}
 
-	// Strict runtime: co_z via resolve(); namekeys only via peer.systemFactoryCoIds → resolve(co_z) (see resolveFactoryDefFromPeer)
+	// Strict runtime: factory co-ids are co_z; resolveFactoryDefFromPeer(peer, key) (see resolve in @MaiaOS/db)
 	const operationsResolver = async (factoryKey) => {
 		try {
 			if (!dataEngine.peer) {

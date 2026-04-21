@@ -3,4 +3,4 @@
  */
 
 export * from '@MaiaOS/validation/peer-factory-registry'
-export { loadFactoriesFromAccount } from '../cojson/factory/resolver.js'
+export { loadFactoriesFromAccount } from '../cojson/factory/authoring-resolver.js'

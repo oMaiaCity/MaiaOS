@@ -2,13 +2,9 @@
  * Bootstrap - guardian, scaffold, account.sparks
  */
 
-import {
-	createCoValueForSpark,
-	SPARK_OS_META_FACTORY_CO_ID_KEY,
-	waitForStoreReady,
-} from '@MaiaOS/db'
+import { createCoValueForSpark, INFRA_SLOTS, waitForStoreReady } from '@MaiaOS/db'
 import { createOpsLogger } from '@MaiaOS/logs'
-import { maiaFactoryRefToNanoid } from '@MaiaOS/validation/identity-from-maia-path.js'
+import { maiaFactoryRefToNanoid, maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { removeIdFields } from '@MaiaOS/validation/remove-id-fields'
 import { seedDefinitionCatalogBootstrap } from './definition-catalog-bootstrap.js'
 import { buildMetaFactoryForSeeding, sortSchemasByDependency } from './helpers.js'
@@ -116,7 +112,16 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	)
 	groups.set('guardian', guardian.id)
 	os.set('groups', groups.id)
-	os.set(SPARK_OS_META_FACTORY_CO_ID_KEY, metaSchemaCoId)
+	for (const { slotKey, basename } of INFRA_SLOTS) {
+		const n = maiaIdentity(basename).$nanoid
+		let coId = factoryCoIdMap.get(n)
+		if (slotKey === 'metaFactoryCoId') {
+			coId = metaSchemaCoId
+		}
+		if (coId?.startsWith?.('co_z')) {
+			os.set(slotKey, coId)
+		}
+	}
 	const { coValue: indexes } = await createCoValueForSpark(
 		ctx,
 		null,

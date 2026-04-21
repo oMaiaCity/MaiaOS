@@ -18,16 +18,44 @@ import { EXCEPTION_FACTORIES } from '../../factories/registry.js'
 import { ensureCoValueLoaded } from '../crud/collection-helpers.js'
 import { create } from '../crud/create.js'
 import { read as universalRead } from '../crud/read.js'
-import { resolve } from '../factory/resolver.js'
-import {
-	getRuntimeRef,
-	getSystemFactoryCoId,
-	RUNTIME_REF,
-} from '../factory/runtime-factory-refs.js'
+import { resolve } from '../factory/authoring-resolver.js'
 import * as groups from '../groups/groups.js'
 import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
 
 const log = createLogger('maia-db')
+
+/**
+ * `isAvailable` can flip true before CoJSON has a verified view; `getCurrentContent` then throws.
+ * Used from storage hooks right after remote merge — wait + tiny backoff to avoid log spam.
+ * @param {object} peer
+ * @param {string} coId
+ * @returns {Promise<{ core: object; content: object } | null>}
+ */
+async function getLoadedCoreWithVerifiedContent(peer, coId) {
+	if (!coId?.startsWith('co_z')) {
+		return null
+	}
+	const core = await ensureCoValueLoaded(peer, coId, { waitForAvailable: true, timeoutMs: 15000 })
+	if (!core || !peer.isAvailable?.(core)) {
+		return null
+	}
+	for (let i = 0; i < 8; i++) {
+		try {
+			const content = peer.getCurrentContent(core)
+			if (content) {
+				return { core, content }
+			}
+		} catch (e) {
+			const m = String(e?.message || e)
+			if (m.includes('verified state') && i < 7) {
+				await new Promise((r) => setTimeout(r, 15 * (i + 1)))
+				continue
+			}
+			return null
+		}
+	}
+	return null
+}
 
 // Matches both °Spark/schema/... and @domain/schema/... (captures prefix + path)
 const SCHEMA_REF_MATCH = /^([°@][a-zA-Z0-9_-]+)\/factory\/(.+)$/
@@ -164,7 +192,7 @@ export async function ensureIndexesCoMap(peer) {
 	// Create new spark.os.indexes CoMap (per-CoValue group)
 	// Use proper runtime validation with dbEngine when schema is available
 	if (peer.dbEngine?.resolveSystemFactories) await peer.dbEngine.resolveSystemFactories()
-	const indexesSchemaCoId = getRuntimeRef(peer, RUNTIME_REF.OS_INDEXES_REGISTRY)
+	const indexesSchemaCoId = peer.infra?.indexesRegistry
 
 	// Validate indexesSchemaCoId is a string
 	let indexesCoMapId
@@ -220,7 +248,7 @@ export async function ensureIndexesCoMap(peer) {
  */
 async function createNanoidsCoMapId(peer) {
 	if (peer.dbEngine?.resolveSystemFactories) await peer.dbEngine.resolveSystemFactories()
-	const indexesSchemaCoId = getRuntimeRef(peer, RUNTIME_REF.OS_INDEXES_REGISTRY)
+	const indexesSchemaCoId = peer.infra?.indexesRegistry
 
 	if (
 		indexesSchemaCoId &&
@@ -425,73 +453,73 @@ async function ensureSchemaSpecificIndexColistSchema(peer, factoryCoId, metaSche
 		throw new Error(`[SchemaIndexManager] Invalid schema co-id: ${factoryCoId}`)
 	}
 
+	const schemaCoValueCore = peer.getCoValue(factoryCoId)
+	/** @type {import('@cojson/cojson').RawCoMap|null} */
+	let schemaMapContent = null
+	if (schemaCoValueCore) {
+		const sLoaded = await getLoadedCoreWithVerifiedContent(peer, factoryCoId)
+		schemaMapContent = sLoaded?.content ?? null
+		if (schemaMapContent && typeof schemaMapContent.get === 'function') {
+			const existingIdx = schemaMapContent.get('indexColistFactoryCoId')
+			if (typeof existingIdx === 'string' && existingIdx.startsWith('co_z')) {
+				return existingIdx
+			}
+		}
+	}
+
 	// Get metaSchema co-id - prefer provided parameter, otherwise extract from schema's headerMeta
 	if (!metaSchemaCoId) {
-		const schemaCoValueCore = peer.getCoValue(factoryCoId)
 		if (schemaCoValueCore) {
 			const header = peer.getHeader(schemaCoValueCore)
 			const headerMeta = header?.meta
 			metaSchemaCoId = headerMeta?.$factory
 
-			// If it's a human-readable key, resolve via system factory map
 			if (metaSchemaCoId && !metaSchemaCoId.startsWith('co_z')) {
-				metaSchemaCoId = getSystemFactoryCoId(peer, metaSchemaCoId) ?? null
+				metaSchemaCoId = peer.infra?.meta ?? null
 			}
 		}
 
-		// Fallback: try registry lookup
 		if (!metaSchemaCoId?.startsWith('co_z')) {
-			metaSchemaCoId = await getMetafactoryCoId(peer)
+			metaSchemaCoId = (await getMetafactoryCoId(peer)) || peer.infra?.meta
 		}
 	}
 
 	if (!metaSchemaCoId?.startsWith('co_z')) return null
 
-	// Load schema definition to get its title
 	const factoryDef = await resolve(peer, factoryCoId, { returnType: 'factory' })
 	if (!factoryDef) {
 		if (typeof process !== 'undefined' && process.env?.DEBUG) log.error('factoryDef missing')
 		return null
 	}
 
-	// Extract schema title (e.g., "@domain/schema/data/todos")
 	const factoryTitle = factoryDef.title || factoryDef.$id
 	if (!factoryTitle || typeof factoryTitle !== 'string' || !FACTORY_REF_PATTERN.test(factoryTitle)) {
 		return null
 	}
 
-	// Generate schema-specific index colist schema name
-	// Preserves the full path structure: °maia/factory/path → °maia/factory/index/path (or @domain/...)
 	const match = factoryTitle.match(SCHEMA_REF_MATCH)
 	if (!match) return null
 	const [, prefix, path] = match
 	const indexColistFactoryTitle = `${prefix}/factory/index/${path}`
 
-	// Check if schema-specific index colist schema already exists
-	const existingSchemaCoId = getSystemFactoryCoId(peer, indexColistFactoryTitle) ?? null
-	if (existingSchemaCoId?.startsWith('co_z')) {
-		return existingSchemaCoId
-	}
-
-	// Create schema-specific index colist schema definition
-	// This schema enforces that only instances of the target schema can be stored
-	// CRITICAL: Set indexing: false explicitly to prevent infinite recursion
 	const indexColistFactoryDef = {
 		title: indexColistFactoryTitle,
 		description: `Factory-specific index colist for ${factoryTitle} - only allows instances of this factory`,
 		cotype: 'colist',
-		indexing: false, // Index colist factories themselves should not be indexed
+		indexing: false,
 		items: {
-			// Factory-first: reference the seeded definition by co-id (not °…/factory/… namekeys)
 			$co: factoryCoId,
 		},
 	}
 
-	// Create the schema as a CoValue
 	try {
 		const createdFactory = await create(peer, metaSchemaCoId, indexColistFactoryDef)
 		const indexColistFactoryCoId = createdFactory.id
-
+		if (schemaMapContent && typeof schemaMapContent.set === 'function') {
+			try {
+				schemaMapContent.set('indexColistFactoryCoId', indexColistFactoryCoId)
+			} catch (_e) {}
+		}
 		return indexColistFactoryCoId
 	} catch (_error) {
 		return null
@@ -768,6 +796,9 @@ export async function shouldIndexCoValue(peer, coValueCore) {
  * @returns {Promise<string|null>}
  */
 async function getMetafactoryCoId(peer) {
+	if (peer.infra?.meta?.startsWith('co_z')) {
+		return peer.infra.meta
+	}
 	const spark = peer?.systemSparkCoId
 	const osId = await groups.getSparkOsId(peer, spark)
 	if (!osId) return null
@@ -796,12 +827,14 @@ async function ensureDefinitionCatalogColistId(peer, metaCoId) {
 	if (catalogColistId && typeof catalogColistId === 'string' && catalogColistId.startsWith('co_z')) {
 		return catalogColistId
 	}
+	const metaForItems = (await getMetafactoryCoId(peer)) || peer?.infra?.meta
+	if (!metaForItems?.startsWith?.('co_z')) return null
 	const catalogSchemaDef = {
 		title: '°maia/factory/index/definitions-catalog',
 		description: 'Colist of factory definition co_zs',
 		cotype: 'colist',
 		indexing: false,
-		items: { $co: '°maia/factory/meta.factory.maia' },
+		items: { $co: metaForItems },
 	}
 	try {
 		const created = await create(peer, metaCoId, removeIdFields(catalogSchemaDef))
@@ -828,8 +861,8 @@ export async function appendFactoryDefinitionToCatalog(peer, defCoId) {
 	if (!metaCoId) return
 	const catalogColistId = await ensureDefinitionCatalogColistId(peer, metaCoId)
 	if (!catalogColistId) return
-	const core = peer.getCoValue(catalogColistId)
-	const colistContent = core?.getCurrentContent?.()
+	const loaded = await getLoadedCoreWithVerifiedContent(peer, catalogColistId)
+	const colistContent = loaded?.content
 	if (!colistContent || typeof colistContent.append !== 'function') return
 	try {
 		const items = colistContent.toJSON?.() ?? []
@@ -849,32 +882,33 @@ export async function registerFactoryCoValue(peer, schemaCoValueCore) {
 		return
 	}
 
-	const content = peer.getCurrentContent(schemaCoValueCore)
-	if (!content || typeof content.get !== 'function') {
+	const loaded = await getLoadedCoreWithVerifiedContent(peer, schemaCoValueCore.id)
+	if (!loaded?.content || typeof loaded.content.get !== 'function') {
 		return
 	}
+	const { core: defCore, content } = loaded
 
 	const title = content.get('title')
 	if (!title || typeof title !== 'string' || !FACTORY_REF_PATTERN.test(title)) {
 		return
 	}
 
-	await appendFactoryDefinitionToCatalog(peer, schemaCoValueCore.id)
+	await appendFactoryDefinitionToCatalog(peer, defCore.id)
 
 	const indexing = content.get('indexing')
 	if (indexing !== true) {
 		return
 	}
 
-	const header = peer.getHeader(schemaCoValueCore)
+	const header = peer.getHeader(defCore)
 	const headerMeta = header?.meta
 	let metaSchemaCoId = headerMeta?.$factory
 
 	if (metaSchemaCoId && !metaSchemaCoId.startsWith('co_z')) {
-		metaSchemaCoId = getSystemFactoryCoId(peer, metaSchemaCoId) ?? null
+		metaSchemaCoId = peer.infra?.meta ?? null
 	}
 
-	await ensureFactoryIndexColist(peer, schemaCoValueCore.id, metaSchemaCoId)
+	await ensureFactoryIndexColist(peer, defCore.id, metaSchemaCoId)
 }
 
 /**
@@ -925,7 +959,8 @@ export async function isFactoryCoValue(peer, coValueCore) {
 	// Special case: Check content.title to confirm it's metaschema
 	// Uses "°maia/factory/meta.factory.maia" (schema namekey from JSON definition - single source of truth)
 	if (schema === EXCEPTION_FACTORIES.META_SCHEMA) {
-		const content = peer.getCurrentContent(coValueCore)
+		const loaded = await getLoadedCoreWithVerifiedContent(peer, coValueCore.id)
+		const content = loaded?.content
 		if (content && typeof content.get === 'function') {
 			const title = content.get('title')
 			if (title === '°maia/factory/meta.factory.maia') {
@@ -954,7 +989,8 @@ export async function isFactoryCoValue(peer, coValueCore) {
 				const referencedCoValueCore = peer.getCoValue(schema)
 
 				if (referencedCoValueCore?.isAvailable()) {
-					const referencedContent = peer.getCurrentContent(referencedCoValueCore)
+					const refLoaded = await getLoadedCoreWithVerifiedContent(peer, schema)
+					const referencedContent = refLoaded?.content
 
 					if (referencedContent && typeof referencedContent.get === 'function') {
 						const referencedTitle = referencedContent.get('title')

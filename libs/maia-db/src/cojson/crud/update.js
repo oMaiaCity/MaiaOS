@@ -8,7 +8,7 @@
 import { createLogger } from '@MaiaOS/logs'
 import { loadFactoryAndValidate } from '@MaiaOS/validation/validation.helper'
 import { invalidateResolvedDataForMutatedCoValue } from '../cache/coCache.js'
-import { resolve } from '../factory/resolver.js'
+import { resolve } from '../factory/authoring-resolver.js'
 import * as collectionHelpers from './collection-helpers.js'
 import * as dataExtraction from './data-extraction.js'
 

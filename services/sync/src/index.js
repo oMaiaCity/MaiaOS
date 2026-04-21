@@ -25,9 +25,6 @@ import {
 	ensureIdentity,
 	findFirst,
 	getCoListId,
-	getRuntimeRef,
-	RUNTIME_REF,
-	resolveInfraFactoryCoId,
 } from '@MaiaOS/db'
 import {
 	bootstrapGuardianSteps,
@@ -412,7 +409,7 @@ async function verifyAccountBinding(peer, accountId, expectedDidKey) {
 /** Check if account has valid capability from Capability index CoList. /admin grants all. */
 async function hasValidCapability(worker, accountId, cmd) {
 	const peer = worker.peer
-	if (!resolveInfraFactoryCoId(peer, RUNTIME_REF.OS_CAPABILITY)) {
+	if (!peer.infra?.capability) {
 		await worker.dataEngine.resolveSystemFactories()
 	}
 	return accountHasCapabilityOnPeer(peer, worker.account, accountId, cmd)
@@ -480,7 +477,7 @@ async function resolveAgentIdToAccountId(worker, agentId) {
 		if (worker.dataEngine?.resolveSystemFactories) {
 			await worker.dataEngine.resolveSystemFactories()
 		}
-		const identitySchemaCoId = getRuntimeRef(worker.peer, RUNTIME_REF.OS_IDENTITY)
+		const identitySchemaCoId = worker.peer.infra?.identity
 		if (identitySchemaCoId?.startsWith('co_z')) {
 			const coListId = await getCoListId(worker.peer, identitySchemaCoId)
 			if (coListId?.startsWith('co_z')) {
@@ -667,7 +664,7 @@ async function handleRegister(worker, body, req) {
 	try {
 		if (type === 'aven') {
 			await dataEngine.resolveSystemFactories()
-			const identitySchemaCoId = getRuntimeRef(peer, RUNTIME_REF.OS_IDENTITY)
+			const identitySchemaCoId = peer.infra?.identity
 			if (!identitySchemaCoId)
 				return err(
 					'Identity schema not found. Ensure sync ran genesis (PEER_SYNC_SEED=true once).',

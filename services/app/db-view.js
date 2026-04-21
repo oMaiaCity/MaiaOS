@@ -29,6 +29,9 @@ const perfAppMaiaDb = createPerfTracer('app', 'maia-db')
 
 const SYNC_SERVER_PAGE_SIZE = 500
 
+/** Only the first Maia DB paint should default-collapse sidebars; repeating would fight the user toggling Explorer. */
+let dbViewerSidebarsInitialStateApplied = false
+
 /** PG stores the table as `covalues` (identifier folded); inspector may list either spelling. */
 function isStorageCoValuesTable(name) {
 	return String(name || '').toLowerCase() === 'covalues'
@@ -1884,22 +1887,16 @@ export async function renderApp(
 		// Deferred re-hydration: CoBinary may not be ready immediately (sync/lazy-load)
 		setTimeout(() => hydrateCobinaryPreviews(maia), 500)
 
-		// Add sidebar toggle handlers for DB viewer
-		setTimeout(() => {
-			// Ensure sidebars are initialized with collapsed class by default
-			// Don't add sidebar-ready class initially to prevent ghost animations
-			const leftSidebar = document.querySelector('.db-sidebar')
-			const rightSidebar = document.querySelector('.db-metadata')
-
-			if (leftSidebar) {
-				// Start collapsed by default, no transitions
-				leftSidebar.classList.add('collapsed')
-			}
-			if (rightSidebar) {
-				// Start collapsed by default, no transitions
-				rightSidebar.classList.add('collapsed')
-			}
-		}, 100)
+		// First paint only: default-collapse so the inspector has space; later re-renders must not close Explorer (Account / Capabilities).
+		if (!dbViewerSidebarsInitialStateApplied) {
+			dbViewerSidebarsInitialStateApplied = true
+			setTimeout(() => {
+				const leftSidebar = document.querySelector('.db-sidebar')
+				const rightSidebar = document.querySelector('.db-metadata')
+				if (leftSidebar) leftSidebar.classList.add('collapsed')
+				if (rightSidebar) rightSidebar.classList.add('collapsed')
+			}, 100)
+		}
 	} finally {
 		perfAppMaiaDb.end('renderApp')
 	}
