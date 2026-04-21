@@ -6,13 +6,7 @@
  * For each dependency: when inbox has unprocessed messages, spawns headless actor.
  */
 
-import {
-	collectInboxMessageCoIds,
-	findNewSuccessFromTarget,
-	getRuntimeRef,
-	getSystemFactoryCoId,
-	RUNTIME_REF,
-} from '@MaiaOS/db'
+import { collectInboxMessageCoIds, findNewSuccessFromTarget } from '@MaiaOS/db'
 import { debugLog, isDebugChannelEnabled, traceRuntimeProcess } from '@MaiaOS/logs'
 
 export class Runtime {
@@ -155,8 +149,8 @@ export class Runtime {
 		const { actorRefs } = await this._getVibesAndDependenciesFromDb()
 		const tools = []
 		const peer = this.dataEngine.peer
-		const actorSchemaCoId = getRuntimeRef(peer, RUNTIME_REF.ACTOR)
-		const metaSchemaCoId = getRuntimeRef(peer, RUNTIME_REF.META)
+		const actorSchemaCoId = peer.infra?.actor
+		const metaSchemaCoId = peer.infra?.meta
 		if (!actorSchemaCoId || !metaSchemaCoId) return []
 
 		for (const actorCoId of actorRefs) {
@@ -164,9 +158,8 @@ export class Runtime {
 			const actorConfig = await this.getActorConfig(actorCoId)
 			const interfaceRef = actorConfig?.interface
 			if (!interfaceRef || typeof interfaceRef !== 'string') continue
-			const interfaceCoId = interfaceRef.startsWith('co_z')
-				? interfaceRef
-				: (getSystemFactoryCoId(peer, interfaceRef) ?? null)
+			if (!interfaceRef.startsWith('co_z')) continue
+			const interfaceCoId = interfaceRef
 			if (!interfaceCoId?.startsWith?.('co_z')) continue
 			const ifaceStore = await this.dataEngine.execute({
 				op: 'read',

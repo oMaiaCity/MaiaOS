@@ -1,4 +1,4 @@
-import { accountHasCapabilityOnPeer, RUNTIME_REF, resolveInfraFactoryCoId } from '@MaiaOS/db'
+import { accountHasCapabilityOnPeer } from '@MaiaOS/db'
 
 const CAP_EXP = () => Math.floor(Date.now() / 1000) + 10 * 365 * 24 * 3600
 
@@ -9,11 +9,11 @@ const CAP_EXP = () => Math.floor(Date.now() / 1000) + 10 * 365 * 24 * 3600
 export async function ensureCapabilityGrant(ctx, { sub, cmd }) {
 	const { worker, log } = ctx
 	const { peer, dataEngine } = worker
-	if (!resolveInfraFactoryCoId(peer, RUNTIME_REF.OS_CAPABILITY)) {
+	if (!peer.infra?.capability) {
 		await dataEngine.resolveSystemFactories()
 	}
 	if (await accountHasCapabilityOnPeer(peer, worker.account, sub, cmd)) return
-	const capabilitySchemaCoId = resolveInfraFactoryCoId(peer, RUNTIME_REF.OS_CAPABILITY)
+	const capabilitySchemaCoId = peer.infra?.capability
 	if (!capabilitySchemaCoId) {
 		log.warn('ensureCapabilityGrant: OS_CAPABILITY factory missing after resolveSystemFactories', {
 			sub: sub?.slice(0, 14),

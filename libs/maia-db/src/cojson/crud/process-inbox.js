@@ -12,12 +12,7 @@
  */
 
 import { createLogger, traceInboxFilter } from '@MaiaOS/logs'
-import { resolve } from '../factory/resolver.js'
-import {
-	getRuntimeRef,
-	getSystemFactoryCoId,
-	RUNTIME_REF,
-} from '../factory/runtime-factory-refs.js'
+import { resolve } from '../factory/authoring-resolver.js'
 import { extractCoValueData } from './data-extraction.js'
 import { read as universalRead } from './read.js'
 import { waitForStoreReady } from './read-operations.js'
@@ -69,16 +64,13 @@ export async function processInbox(peer, actorId, inboxCoId) {
 
 		if (inboxFactory?.items?.$co) {
 			const messageFactoryRef = inboxFactory.items.$co
-
 			if (messageFactoryRef.startsWith('co_z')) {
 				messageSchemaCoId = messageFactoryRef
-			} else if (messageFactoryRef.startsWith('°maia/factory/')) {
-				messageSchemaCoId = getSystemFactoryCoId(peer, messageFactoryRef) ?? null
 			}
 		}
 
 		if (!messageSchemaCoId) {
-			messageSchemaCoId = getRuntimeRef(peer, RUNTIME_REF.EVENT)
+			messageSchemaCoId = peer.infra?.event
 		}
 	} catch (_error) {}
 
@@ -299,12 +291,10 @@ export async function findNewSuccessFromTarget(peer, inboxCoId, targetActorCoId,
 			const messageFactoryRef = inboxFactory.items.$co
 			if (messageFactoryRef.startsWith('co_z')) {
 				messageSchemaCoId = messageFactoryRef
-			} else if (messageFactoryRef.startsWith('°maia/factory/')) {
-				messageSchemaCoId = getSystemFactoryCoId(peer, messageFactoryRef) ?? null
 			}
 		}
 		if (!messageSchemaCoId) {
-			messageSchemaCoId = getRuntimeRef(peer, RUNTIME_REF.EVENT)
+			messageSchemaCoId = peer.infra?.event
 		}
 	} catch (_error) {}
 

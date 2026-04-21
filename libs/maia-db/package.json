@@ -9,7 +9,8 @@
 	"exports": {
 		".": "./src/index.js",
 		"./registry": "./src/factories/registry.js",
-		"./factory/system-factories-from-os": "./src/cojson/factory/system-factories-from-os.js",
+		"./seed/lookup-registry-key": "./src/seed/lookup-registry-key.js",
+		"./seed/ref-canonicalize": "./src/seed/ref-canonicalize.js",
 		"./profile-bootstrap": "./src/profile-bootstrap.js",
 		"./cojson/crud/create": "./src/cojson/crud/create.js",
 		"./cojson/crud/update": "./src/cojson/crud/update.js",

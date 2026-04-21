@@ -14,8 +14,7 @@ export {
 
 export async function getMetaFactoryFromPeer(peer) {
 	if (!peer) throw new Error('[getMetaFactoryFromPeer] Peer required')
-	const { getRuntimeRef, RUNTIME_REF } = await import('@MaiaOS/db')
-	const metaSchemaCoId = getRuntimeRef(peer, RUNTIME_REF.META)
+	const metaSchemaCoId = peer?.infra?.meta
 	if (!metaSchemaCoId) throw new Error('[getMetaFactoryFromPeer] Metaschema not found in registry')
 	const metaSchemaStore = await peer.read(null, metaSchemaCoId)
 	if (!metaSchemaStore || metaSchemaStore.value?.error) {

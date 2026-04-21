@@ -1,40 +1,22 @@
-import { maiaFactoryRefToNanoid, maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { describe, expect, test } from 'bun:test'
-import {
-	fillRuntimeRefsFromSystemFactories,
-	getRuntimeRef,
-	RUNTIME_REF,
-	resolveFactoryRefToCoId,
-	resolveInfraFactoryCoId,
-} from '../src/cojson/factory/runtime-factory-refs.js'
 
-describe('runtimeRefs', () => {
-	test('fillRuntimeRefsFromSystemFactories maps infra roles from systemFactoryCoIds', () => {
-		const peer = {
-			systemFactoryCoIds: new Map([[maiaIdentity('meta.factory.maia').$nanoid, 'co_zMETA']]),
-			runtimeRefs: new Map(),
-		}
-		fillRuntimeRefsFromSystemFactories(peer)
-		expect(getRuntimeRef(peer, RUNTIME_REF.META)).toBe('co_zMETA')
-	})
+describe('peer.infra', () => {
+	test('loadInfraFromSparkOs populates peer.infra from spark.os', async () => {
+		const { loadInfraFromSparkOs } = await import('../src/cojson/factory/infra-from-spark-os.js')
 
-	test('resolveInfraFactoryCoId falls back to systemFactoryCoIds when runtimeRefs empty', () => {
-		const peer = {
-			systemFactoryCoIds: new Map([[maiaIdentity('capability.factory.maia').$nanoid, 'co_zCAP']]),
-			runtimeRefs: new Map(),
+		const osContent = {
+			get(k) {
+				return `co_zslot_${k}`
+			},
 		}
-		expect(resolveInfraFactoryCoId(peer, RUNTIME_REF.OS_CAPABILITY)).toBe('co_zCAP')
-	})
-
-	test('resolveFactoryRefToCoId maps namekey and @metaSchema to catalog co_z', () => {
+		const osCore = { id: 'co_zos', isAvailable: () => true }
 		const peer = {
-			systemFactoryCoIds: new Map([
-				[maiaFactoryRefToNanoid('°maia/factory/event.factory.maia'), 'co_zEVENT'],
-			]),
-			runtimeRefs: new Map([['meta', 'co_zMETA']]),
+			getCoValue: (id) => (id === 'co_zos' ? osCore : null),
+			getCurrentContent: () => osContent,
+			isAvailable: () => true,
 		}
-		expect(resolveFactoryRefToCoId(peer, 'co_zSELF')).toBe('co_zSELF')
-		expect(resolveFactoryRefToCoId(peer, '°maia/factory/event.factory.maia')).toBe('co_zEVENT')
-		expect(resolveFactoryRefToCoId(peer, '@metaSchema')).toBe('co_zMETA')
+		await loadInfraFromSparkOs(peer, 'co_zos', { timeoutMs: 2000 })
+		expect(peer.infra.meta).toBe('co_zslot_metaFactoryCoId')
+		expect(peer.infra.capability).toBe('co_zslot_capabilityFactoryCoId')
 	})
 })

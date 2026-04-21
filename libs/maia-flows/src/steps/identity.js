@@ -1,4 +1,4 @@
-import { ensureIdentity, findFirst, getRuntimeRef, RUNTIME_REF } from '@MaiaOS/db'
+import { ensureIdentity, findFirst } from '@MaiaOS/db'
 
 export function identitySelfAvenStep(id = 'identity.selfAven') {
 	return {
@@ -8,7 +8,7 @@ export function identitySelfAvenStep(id = 'identity.selfAven') {
 			const profileId = ctx.worker.account.get('profile')
 			if (!accountId?.startsWith('co_z') || !profileId?.startsWith('co_z')) return true
 			await ctx.worker.dataEngine.resolveSystemFactories()
-			const identitySchemaCoId = getRuntimeRef(ctx.worker.peer, RUNTIME_REF.OS_IDENTITY)
+			const identitySchemaCoId = ctx.worker.peer.infra?.identity
 			if (!identitySchemaCoId?.startsWith('co_z')) return true
 			const existingRow = await findFirst(ctx.worker.peer, identitySchemaCoId, {
 				account: accountId,
@@ -21,7 +21,7 @@ export function identitySelfAvenStep(id = 'identity.selfAven') {
 			const profileId = ctx.worker.account.get('profile')
 			if (!accountId?.startsWith('co_z') || !profileId?.startsWith('co_z')) return
 			await ctx.worker.dataEngine.resolveSystemFactories()
-			const identitySchemaCoId = getRuntimeRef(ctx.worker.peer, RUNTIME_REF.OS_IDENTITY)
+			const identitySchemaCoId = ctx.worker.peer.infra?.identity
 			if (!identitySchemaCoId?.startsWith('co_z')) {
 				ctx.log.warn('identity.selfAven: OS_IDENTITY not ready')
 				return
@@ -48,7 +48,7 @@ export function identityHumanBootstrapStep(id = 'identity.human') {
 			const profileId = ctx.bootstrap?.profileId
 			if (!accountId?.startsWith('co_z') || !profileId?.startsWith('co_z')) return true
 			await ctx.worker.dataEngine.resolveSystemFactories()
-			const identitySchemaCoId = getRuntimeRef(ctx.worker.peer, RUNTIME_REF.OS_IDENTITY)
+			const identitySchemaCoId = ctx.worker.peer.infra?.identity
 			if (!identitySchemaCoId?.startsWith('co_z')) return true
 			const existing = await findFirst(ctx.worker.peer, identitySchemaCoId, {
 				account: accountId,
@@ -61,7 +61,7 @@ export function identityHumanBootstrapStep(id = 'identity.human') {
 			const profileId = ctx.bootstrap?.profileId
 			if (!accountId?.startsWith('co_z') || !profileId?.startsWith('co_z')) return
 			await ctx.worker.dataEngine.resolveSystemFactories()
-			const identitySchemaCoId = getRuntimeRef(ctx.worker.peer, RUNTIME_REF.OS_IDENTITY)
+			const identitySchemaCoId = ctx.worker.peer.infra?.identity
 			if (!identitySchemaCoId?.startsWith('co_z')) {
 				ctx.log.warn('identity.human: OS_IDENTITY factory not ready')
 				return

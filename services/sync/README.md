@@ -34,6 +34,7 @@ The sync service consolidates WebSocket sync, agent API, and LLM proxy in one pr
 - `PEER_SYNC_DB_URL` - Required when `PEER_SYNC_STORAGE=postgres` (e.g. Neon, Fly Postgres)
 - `AVEN_MAIA_GUARDIAN` - Optional. If set (human account co-id), add as admin on startup (one-time genesis).
 - `PEER_SYNC_SEED` - **Only** env gate for **genesis**: required one boot when `account.sparks` is missing; also allows optional re-genesis when scaffold exists (unset after one-shot). **Local dev only** (`NODE_ENV` not production, `PEER_SYNC_STORAGE=pglite`, `BUCKET_NAME` unset): sync clears the PGlite data dir and `./binary-bucket` before load, generates new Aven Tester credentials in-memory, then **writes tester + guardian lines to repo `.env` after** startup succeeds (avoids tools that restart when `.env` changes mid-boot). **Production, Postgres/Neon, or Tigris:** no automatic storage or credential rotation. Startup/bootstrap flows: `@MaiaOS/flows`.
+- `PEER_APP_HOST` - Allowed **browser** origin for CORS and WebSocket upgrade (e.g. `https://next.maia.city`). **Required in production** (`NODE_ENV=production`); the service exits on boot if missing. For Fly, [`fly.toml`](fly.toml) sets `[env] PEER_APP_HOST` (not a secret). If sync crashes during init, the edge often returns **502**; browsers then report **CORS** failures because the error response is not the app’s CORS success path. Fix the process crash (or health) first; then confirm this origin matches the app you load.
 
 ## Dependencies
 
@@ -98,6 +99,28 @@ The sync server requires persistent storage (never in-memory or sync-only):
 3. **WebSocket Peers**: Each client connection creates a peer via `createWebSocketPeer`
 4. **Automatic Sync**: cojson's `SyncManager` handles all sync protocol automatically
 5. **Message Routing**: cojson routes messages between peers based on what they need
+
+## Debugging: CoValue timeout (502 on `/bootstrap`)
+
+Postgres (Neon) uses the CoJSON schema from `libs/maia-storage` (`covalues`, `sessions`, `transactions`, etc.). If logs show `Timeout waiting for CoValue co_z…` during `resolveSystemFactories` / `buildSystemFactoryCoIdsFromSparkOs`, run the following in the **same** database as `PEER_SYNC_DB_URL` (use Neon’s SQL editor for the project/branch the Fly app points at):
+
+```sql
+-- Header present?
+SELECT "rowID", id, left(header, 500) AS header_preview
+FROM covalues
+WHERE id = 'co_zYOURID';
+
+-- Any session rows to replay (join on serial rowID)?
+SELECT s."rowID", s."sessionID", s."lastIdx"
+FROM covalues c
+JOIN sessions s ON s."coValue" = c."rowID"
+WHERE c.id = 'co_zYOURID';
+```
+
+- **0 rows in `covalues`:** id never persisted, or you queried the wrong Neon database/branch.
+- **Row + sessions exist** but startup used to time out: the id can still be **listed in the spark OS factory catalog** while the runtime never marks the CoValue “available” (e.g. ruleset edge cases). Current `@MaiaOS/db` builds **skip** that catalog def after logging (`maia-db.factory-os` warnings) so the process stays up; per-def wait is **capped (a few seconds)** so many bad ids do not block WebSocket for minutes—repair data if a factory is missing at runtime.
+- **Tigris / `BUCKET_NAME`:** large/binary payloads may be offloaded. If `header` indicates `meta.type === 'binary'`, check the object store for that environment (missing blob can block load even when Postgres has a row).
+- **Soft delete flag:** `SELECT * FROM deletedcovalues WHERE "coValueID" = 'co_zYOURID';`
 
 ## Deployment
 

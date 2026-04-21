@@ -199,19 +199,15 @@ export class ValidationEngine {
 
 	/**
 	 * Register metaschema in AJV from the metaschema CoValue on peer (runtime source of truth).
-	 * Requires peer.systemFactoryCoIds (meta $nanoid) or runtimeRefs.meta.
+	 * Requires {@link peer.infra}.meta (set by loadInfraFromSparkOs).
 	 */
 	async hydrateMetaFromPeer(peer) {
 		await this.initialize()
-		const { getRuntimeRef, getSystemFactoryCoId, resolveFactoryDefFromPeer, RUNTIME_REF } =
-			await import('@MaiaOS/db')
-		let metaCoId = getSystemFactoryCoId(peer, '°maia/factory/meta.factory.maia')
-		if (!metaCoId?.startsWith?.('co_z')) {
-			metaCoId = getRuntimeRef(peer, RUNTIME_REF.META)
-		}
+		const { resolveFactoryDefFromPeer } = await import('@MaiaOS/db')
+		const metaCoId = peer?.infra?.meta
 		if (!metaCoId?.startsWith?.('co_z')) {
 			throw new Error(
-				'[ValidationEngine] hydrateMetaFromPeer: metaschema co-id missing — systemFactoryCoIds (meta nanoid) or runtimeRefs (meta)',
+				'[ValidationEngine] hydrateMetaFromPeer: metaschema co-id missing — peer.infra.meta (loadInfraFromSparkOs)',
 			)
 		}
 		const def = await resolveFactoryDefFromPeer(peer, metaCoId)

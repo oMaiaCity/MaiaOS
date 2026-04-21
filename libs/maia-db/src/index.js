@@ -56,24 +56,14 @@ export {
 // Read Operations (store-based loading with proper $store architecture)
 export { findFirst } from './cojson/crud/read.js'
 export { waitForStoreReady } from './cojson/crud/read-operations.js'
+export { loadInfraFromSparkOs } from './cojson/factory/infra-from-spark-os.js'
 export {
 	checkCotype,
 	loadFactoriesFromAccount,
-	lookupRegistryKey,
 	resolve,
 	resolveFactoryDefFromPeer,
 	resolveReactive,
 } from './cojson/factory/resolver.js'
-// Universal Schema Resolver (single source of truth)
-export {
-	fillRuntimeRefsFromSystemFactories,
-	getRuntimeRef,
-	getSystemFactoryCoId,
-	RUNTIME_REF,
-	resolveFactoryRefToCoId,
-	resolveInfraFactoryCoId,
-} from './cojson/factory/runtime-factory-refs.js'
-export { buildSystemFactoryCoIdsFromSparkOs } from './cojson/factory/system-factories-from-os.js'
 // Re-export services for external use
 // Account primitives moved to @MaiaOS/peer (createAccountWithSecret, loadAccount). Migration/seed stay here.
 export { createGroup, createProfile } from './cojson/groups/create.js'
@@ -98,6 +88,7 @@ export {
 } from './cojson/helpers/load-capabilities-grants.js'
 export { resolveAccountCoIdsToProfiles } from './cojson/helpers/resolve-account-profile.js'
 export { resolveGroupCoIdsToCapabilityNames } from './cojson/helpers/resolve-capability-group.js'
+export { INFRA_SLOTS } from './cojson/infra-slot-manifest.js'
 export {
 	ensureIdentity,
 	listAccountIdsFromIdentityIndex,

@@ -4,8 +4,14 @@
  * Provides extractCoValueData - single canonical extraction, always outputs flat format for CoMaps.
  */
 
-import { resolveFactoryRefToCoId } from '../factory/runtime-factory-refs.js'
 import { ensureCoValueLoaded } from './collection-helpers.js'
+
+function resolveHeaderFactoryToCoId(peer, ref) {
+	if (!ref || typeof ref !== 'string') return null
+	if (ref.startsWith('co_z') && ref.length > 6) return ref
+	if (ref === '@metaSchema') return peer?.infra?.meta ?? null
+	return null
+}
 
 /**
  * Flat snapshot of the live account CoMap from peer.account (single path for all account branches).
@@ -44,7 +50,7 @@ export function extractCoValueData(peer, coValueCore, schemaHint = null) {
 	const header = peer.getHeader(coValueCore)
 	const headerMeta = header?.meta || null
 	// Read-side only: `$factoryCoId` helps UI when persisted `meta.$factory` is still a namekey; creation paths should store co_z in headers.
-	const factoryCoIdResolved = resolveFactoryRefToCoId(peer, headerMeta?.$factory)
+	const factoryCoIdResolved = resolveHeaderFactoryToCoId(peer, headerMeta?.$factory)
 	const withResolvedFactory = (obj) => {
 		if (factoryCoIdResolved) obj.$factoryCoId = factoryCoIdResolved
 		return obj

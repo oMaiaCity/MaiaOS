@@ -8,13 +8,10 @@
 
 import {
 	ensureCoValueAvailable,
-	fillRuntimeRefsFromSystemFactories,
-	getRuntimeRef,
 	getSparkOsId,
+	loadInfraFromSparkOs,
 	normalizeCoValueData,
-	RUNTIME_REF,
 } from '@MaiaOS/db'
-import { buildSystemFactoryCoIdsFromSparkOs } from '@MaiaOS/db/factory/system-factories-from-os'
 import { debugLog, debugWarn, traceDataCreate } from '@MaiaOS/logs'
 import { resolveExpressions } from '@MaiaOS/validation/expression-resolver'
 import {
@@ -1036,7 +1033,7 @@ export class DataEngine {
 			: {}
 	}
 
-	/** Fills peer.systemFactoryCoIds from the definition catalog: spark.os.indexes[metaFactoryCoId] colist (title / $id namekeys → co_z), plus meta anchor °maia/factory/meta.factory.maia. */
+	/** Loads `peer.infra` from named `spark.os` slots (written at seed). */
 	async resolveSystemFactories() {
 		const peer = this.peer
 		if (
@@ -1048,24 +1045,8 @@ export class DataEngine {
 		if (!peer?.systemSparkCoId?.startsWith('co_z')) return
 		const osId = await getSparkOsId(peer, peer.systemSparkCoId)
 		if (!osId?.startsWith('co_z')) return
-		const hasSparkScaffoldRefs = () =>
-			!!(
-				getRuntimeRef(peer, RUNTIME_REF.DATA_SPARK) &&
-				getRuntimeRef(peer, RUNTIME_REF.OS_GROUPS) &&
-				getRuntimeRef(peer, RUNTIME_REF.OS_OS_REGISTRY) &&
-				getRuntimeRef(peer, RUNTIME_REF.OS_VIBES_REGISTRY)
-			)
-		const maxAttempts = 8
-		for (let attempt = 0; attempt < maxAttempts; attempt++) {
-			if (attempt > 0) await new Promise((r) => setTimeout(r, 50 * attempt))
-			peer.systemFactoryCoIds.clear()
-			const built = await buildSystemFactoryCoIdsFromSparkOs(peer, osId)
-			for (const [k, v] of built) peer.systemFactoryCoIds.set(k, v)
-			fillRuntimeRefsFromSystemFactories(peer)
-			if (hasSparkScaffoldRefs() && getRuntimeRef(peer, RUNTIME_REF.DATA_COBINARY)) break
-		}
-
-		const cob = getRuntimeRef(peer, RUNTIME_REF.DATA_COBINARY)
+		await loadInfraFromSparkOs(peer, osId)
+		const cob = peer.infra?.cobinary
 		if (cob) this.cobinaryFactoryCoId = cob
 		const { hydrateValidationMetaFromPeer } = await import('@MaiaOS/validation/validation.helper')
 		await hydrateValidationMetaFromPeer(peer)

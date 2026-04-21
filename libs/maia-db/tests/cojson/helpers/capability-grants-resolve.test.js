@@ -52,7 +52,7 @@ function makePeer({ grantSub, grantCmd, grantExp }) {
 
 	return {
 		systemSparkCoId: 'co_zspark',
-		runtimeRefs: new Map([['osCapability', CAP_SCHEMA]]),
+		infra: { capability: CAP_SCHEMA },
 		node: {
 			getCoValue(id) {
 				return contents[id] !== undefined ? { id } : null

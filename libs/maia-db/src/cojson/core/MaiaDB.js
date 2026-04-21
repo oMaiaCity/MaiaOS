@@ -24,8 +24,7 @@ import {
 	checkCotype as checkCotypeFn,
 	resolve,
 	resolveReactive as resolveReactiveFromResolver,
-} from '../factory/resolver.js'
-import { getRuntimeRef, RUNTIME_REF } from '../factory/runtime-factory-refs.js'
+} from '../factory/authoring-resolver.js'
 import * as groups from '../groups/groups.js'
 import { wrapStorageWithIndexingHooks } from '../indexing/storage-hook-wrapper.js'
 
@@ -81,10 +80,8 @@ export class MaiaDB {
 		this.dbEngine = dbEngine
 		/** @type {string|null} Spark CoMap co-id for {@link SYSTEM_SPARK_REGISTRY_KEY}; set by {@link #resolveSystemSparkCoId} */
 		this.systemSparkCoId = options.systemSparkCoId ?? null
-		/** Registry namekey → schema factory co-id; filled by DataEngine.resolveSystemFactories */
-		this.systemFactoryCoIds = new Map()
-		/** Short role → co_z for infra factories; filled by fillRuntimeRefsFromSystemFactories */
-		this.runtimeRefs = new Map()
+		/** @type {Readonly<Record<string, string>>|null} Infra factory co-ids (meta, actor, …); set by loadInfraFromSparkOs */
+		this.infra = null
 
 		this.subscriptionCache = getGlobalCoCache(node)
 		if (node.storage) {
@@ -238,12 +235,14 @@ export class MaiaDB {
 		if (!maiaGuardian) throw new Error('[MaiaDB] °maia spark group not found')
 		const { createChildGroup } = await import('../groups/create.js')
 		const childGroup = createChildGroup(this.node, maiaGuardian, { name: normalizedName })
-		const sparkSchemaCoId = getRuntimeRef(this, RUNTIME_REF.DATA_SPARK)
-		const groupsSchemaCoId = getRuntimeRef(this, RUNTIME_REF.OS_GROUPS)
-		const osSchemaCoId = getRuntimeRef(this, RUNTIME_REF.OS_OS_REGISTRY)
-		const vibesRegistrySchemaCoId = getRuntimeRef(this, RUNTIME_REF.OS_VIBES_REGISTRY)
+		const sparkSchemaCoId = this.infra?.dataSpark
+		const groupsSchemaCoId = this.infra?.groups
+		const osSchemaCoId = this.infra?.osRegistry
+		const vibesRegistrySchemaCoId = this.infra?.vibesRegistry
 		if (!sparkSchemaCoId || !groupsSchemaCoId || !osSchemaCoId || !vibesRegistrySchemaCoId) {
-			throw new Error('[MaiaDB] Spark scaffold factories not found')
+			throw new Error(
+				'[MaiaDB] Spark scaffold factories not found (peer.infra missing — call resolveSystemFactories)',
+			)
 		}
 		const ctx = { node: this.node, account: this.account, guardian: childGroup }
 		const { createCoValueForSpark } = await import('../covalue/create-covalue-for-spark.js')
