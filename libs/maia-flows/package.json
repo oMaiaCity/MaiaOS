@@ -1,6 +1,6 @@
 {
 	"name": "@MaiaOS/flows",
-	"version": "26.4.181522-next",
+	"version": "26.4.212041-next",
 	"type": "module",
 	"main": "src/index.js",
 	"exports": {
