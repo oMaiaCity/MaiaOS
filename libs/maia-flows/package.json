@@ -1,0 +1,22 @@
+{
+	"name": "@MaiaOS/flows",
+	"version": "26.4.181522-next",
+	"type": "module",
+	"main": "src/index.js",
+	"exports": {
+		".": "./src/index.js"
+	},
+	"dependencies": {
+		"@MaiaOS/db": "workspace:*",
+		"@MaiaOS/runtime": "workspace:*",
+		"@MaiaOS/seed": "workspace:*",
+		"@MaiaOS/universe": "workspace:*",
+		"@MaiaOS/validation": "workspace:*"
+	},
+	"scripts": {
+		"test": "bun test tests/"
+	},
+	"files": [
+		"src"
+	]
+}

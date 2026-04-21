@@ -284,7 +284,7 @@ export async function seed(
 			const rawType = content?.type ?? core?.type ?? 'unknown'
 			throw new Error(
 				`[Seed] Factory definition ${factoryNanoidKey} must be CoMap but is ${rawType}. ` +
-					'Corrupt data. Clear storage (delete DB file or IndexedDB) and run with PEER_FRESH_SEED=true.',
+					'Corrupt data. Clear storage (delete DB file or IndexedDB) and re-run sync genesis (PEER_SYNC_SEED=true once) or wipe and re-seed.',
 			)
 		}
 	}

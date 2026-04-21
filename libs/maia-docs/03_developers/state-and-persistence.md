@@ -73,12 +73,12 @@ The sync service requires persistent storage (never in-memory). Two backends are
 
 **simpleAccountSeed** – No top-level `account.sparks` at creation time. Used for all client signups (human + agent). The sparks registry co-id is anchored once via `POST /bootstrap` right after account creation.
 
-**genesisAccountSeed** – Full scaffold + vibes. Only when **PEER_SYNC_SEED=true** (sync server first boot).
+**genesisAccountSeed** – Full scaffold + vibes. Gated only by **`PEER_SYNC_SEED=true`**: if the server account has no `account.sparks` and the flag is off, sync **fails fast** (operator must run one boot with the flag, then unset). Implemented as a reconcile step in `@MaiaOS/flows`.
 
 | Trigger | Mode | Behavior |
 |---------|------|----------|
 | **createAccountWithSecret** (human or agent) | simpleAccountSeed | `account.sparks` anchored via `POST /bootstrap` right after creation. |
-| **Sync PEER_SYNC_SEED=true** | genesisAccountSeed | Full scaffold + vibes into sync server account (genesis). |
+| **Sync** (`@MaiaOS/flows` genesis step + `PEER_SYNC_SEED=true`) | genesisAccountSeed | Full scaffold + vibes into sync server account (genesis). |
 
 **SEED_VIBES** (sync server env) controls which vibes are seeded during genesis: `"all"` or comma-separated slugs such as `"todos,chat,addressbook,sparks,quickjs,profile,paper"` (`quickjs` is the **Vibe Creator** vibe; developer logs live in its **logs** tab).
 

@@ -78,6 +78,7 @@ export { buildSystemFactoryCoIdsFromSparkOs } from './cojson/factory/system-fact
 // Account primitives moved to @MaiaOS/peer (createAccountWithSecret, loadAccount). Migration/seed stay here.
 export { createGroup, createProfile } from './cojson/groups/create.js'
 export {
+	extractAccountMembers,
 	getMaiaGroup,
 	getSparkCapabilityGroupIdFromSparkCoId,
 	getSparkOsId,

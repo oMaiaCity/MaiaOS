@@ -10,6 +10,7 @@
 		"test": "bun test tests"
 	},
 	"dependencies": {
+		"@MaiaOS/flows": "workspace:*",
 		"@MaiaOS/self": "workspace:*",
 		"@MaiaOS/seed": "workspace:*",
 		"@MaiaOS/db": "workspace:*",
