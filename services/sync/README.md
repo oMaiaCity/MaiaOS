@@ -33,11 +33,11 @@ The sync service consolidates WebSocket sync, agent API, and LLM proxy in one pr
 - `PEER_BLOB_PATH` - Default: `./binary-bucket` (binary CoValue offload). Ignored when `BUCKET_NAME` set (Tigris).
 - `PEER_SYNC_DB_URL` - Required when `PEER_SYNC_STORAGE=postgres` (e.g. Neon, Fly Postgres)
 - `AVEN_MAIA_GUARDIAN` - Optional. If set (human account co-id), add as admin on startup (one-time genesis).
-- `PEER_SYNC_SEED` - Set to `true` for optional genesis when scaffold already exists. **Local dev only** (`NODE_ENV` not production, `PEER_SYNC_STORAGE=pglite`, `BUCKET_NAME` unset): sync clears the PGlite data dir and `./binary-bucket` before load, generates new Aven Tester credentials in-memory, then **writes tester + guardian lines to repo `.env` after** startup succeeds (avoids tools that restart when `.env` changes mid-boot). **Production, Postgres/Neon, or Tigris:** no automatic storage or credential rotation.
+- `PEER_SYNC_SEED` - **Only** env gate for **genesis**: required one boot when `account.sparks` is missing; also allows optional re-genesis when scaffold exists (unset after one-shot). **Local dev only** (`NODE_ENV` not production, `PEER_SYNC_STORAGE=pglite`, `BUCKET_NAME` unset): sync clears the PGlite data dir and `./binary-bucket` before load, generates new Aven Tester credentials in-memory, then **writes tester + guardian lines to repo `.env` after** startup succeeds (avoids tools that restart when `.env` changes mid-boot). **Production, Postgres/Neon, or Tigris:** no automatic storage or credential rotation. Startup/bootstrap flows: `@MaiaOS/flows`.
 
 ## Dependencies
 
-- `@MaiaOS/maia-distros` + `@MaiaOS/runtime`. Sync imports from runtime (engines + `MaiaOS` boot + db/self); cojson-transport-ws. maia-distros has no app logic—only bundling. Sync owns the logic (src/index.js); distros bundles it to sync-server.mjs. Prod runs the bundle; dev runs source.
+- `@MaiaOS/maia-distros` + `@MaiaOS/runtime` + `@MaiaOS/flows`. Sync imports from runtime (engines + `MaiaOS` boot + db/self); cojson-transport-ws. maia-distros has no app logic—only bundling. Sync owns HTTP/WS (src/index.js); distros bundles it to sync-server.mjs. Prod runs the bundle; dev runs source.
 
 ## Development
 

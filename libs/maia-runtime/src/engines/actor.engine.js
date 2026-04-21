@@ -171,7 +171,7 @@ export class ActorEngine {
 			if (!processStore) {
 				throw new Error(
 					`[ActorEngine] Failed to load process for actor ${actor.id}: process co-id ${actorConfig.process} returned null. ` +
-						`Run with PEER_FRESH_SEED=true to re-seed configs.`,
+						`Re-run sync with PEER_SYNC_SEED=true (one-shot genesis) or wipe DB/storage and re-seed configs.`,
 				)
 			}
 			const processDef = processStore.value

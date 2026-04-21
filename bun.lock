@@ -14,11 +14,11 @@
     },
     "libs/maia-brand": {
       "name": "@MaiaOS/brand",
-      "version": "26.4.142216-next",
+      "version": "26.4.181522-next",
     },
     "libs/maia-db": {
       "name": "@MaiaOS/db",
-      "version": "26.4.142216-next",
+      "version": "26.4.181522-next",
       "dependencies": {
         "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/peer": "workspace:*",
@@ -29,7 +29,7 @@
     },
     "libs/maia-distros": {
       "name": "@MaiaOS/maia-distros",
-      "version": "26.4.142216-next",
+      "version": "26.4.181522-next",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
@@ -39,9 +39,20 @@
         "@electric-sql/pglite": "0.4.2",
       },
     },
+    "libs/maia-flows": {
+      "name": "@MaiaOS/flows",
+      "version": "26.4.181522-next",
+      "dependencies": {
+        "@MaiaOS/db": "workspace:*",
+        "@MaiaOS/runtime": "workspace:*",
+        "@MaiaOS/seed": "workspace:*",
+        "@MaiaOS/universe": "workspace:*",
+        "@MaiaOS/validation": "workspace:*",
+      },
+    },
     "libs/maia-game": {
       "name": "@MaiaOS/game",
-      "version": "26.4.142216-next",
+      "version": "26.4.181522-next",
       "dependencies": {
         "@MaiaOS/logs": "workspace:*",
         "three": "0.170.0",
@@ -49,11 +60,11 @@
     },
     "libs/maia-logs": {
       "name": "@MaiaOS/logs",
-      "version": "26.4.142216-next",
+      "version": "26.4.181522-next",
     },
     "libs/maia-peer": {
       "name": "@MaiaOS/peer",
-      "version": "26.4.142216-next",
+      "version": "26.4.181522-next",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
@@ -64,7 +75,7 @@
     },
     "libs/maia-runtime": {
       "name": "@MaiaOS/runtime",
-      "version": "26.4.142216-next",
+      "version": "26.4.181522-next",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
@@ -86,7 +97,7 @@
     },
     "libs/maia-seed": {
       "name": "@MaiaOS/seed",
-      "version": "26.4.142216-next",
+      "version": "26.4.181522-next",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
@@ -97,7 +108,7 @@
     },
     "libs/maia-self": {
       "name": "@MaiaOS/self",
-      "version": "26.4.142216-next",
+      "version": "26.4.181522-next",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
@@ -109,7 +120,7 @@
     },
     "libs/maia-storage": {
       "name": "@MaiaOS/storage",
-      "version": "26.4.142216-next",
+      "version": "26.4.181522-next",
       "dependencies": {
         "@MaiaOS/logs": "workspace:*",
         "@electric-sql/pglite": "0.4.2",
@@ -120,7 +131,7 @@
     },
     "libs/maia-ucan": {
       "name": "@MaiaOS/maia-ucan",
-      "version": "26.4.142216-next",
+      "version": "26.4.181522-next",
       "dependencies": {
         "@noble/ed25519": "3.0.1",
         "@noble/hashes": "2.2.0",
@@ -129,7 +140,7 @@
     },
     "libs/maia-universe": {
       "name": "@MaiaOS/universe",
-      "version": "26.4.142216-next",
+      "version": "26.4.181522-next",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
@@ -141,7 +152,7 @@
     },
     "libs/maia-validation": {
       "name": "@MaiaOS/validation",
-      "version": "26.4.142216-next",
+      "version": "26.4.181522-next",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
@@ -152,7 +163,7 @@
     },
     "services/app": {
       "name": "@MaiaOS/app",
-      "version": "26.4.142216-next",
+      "version": "26.4.181522-next",
       "dependencies": {
         "@MaiaOS/game": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
@@ -169,9 +180,10 @@
     },
     "services/sync": {
       "name": "@MaiaOS/sync",
-      "version": "26.4.142216-next",
+      "version": "26.4.181522-next",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
+        "@MaiaOS/flows": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
         "@MaiaOS/maia-distros": "workspace:*",
         "@MaiaOS/maia-ucan": "workspace:*",
@@ -189,6 +201,8 @@
     "@MaiaOS/brand": ["@MaiaOS/brand@workspace:libs/maia-brand"],
 
     "@MaiaOS/db": ["@MaiaOS/db@workspace:libs/maia-db"],
+
+    "@MaiaOS/flows": ["@MaiaOS/flows@workspace:libs/maia-flows"],
 
     "@MaiaOS/game": ["@MaiaOS/game@workspace:libs/maia-game"],
 

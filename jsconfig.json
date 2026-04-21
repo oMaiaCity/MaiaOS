@@ -9,7 +9,8 @@
 			"@MaiaOS/self": ["./libs/maia-self/src/index.js"],
 			"@MaiaOS/universe": ["./libs/maia-universe/src"],
 			"@MaiaOS/universe/*": ["./libs/maia-universe/src/*"],
-			"@MaiaOS/seed": ["./libs/maia-seed/src"]
+			"@MaiaOS/seed": ["./libs/maia-seed/src"],
+			"@MaiaOS/flows": ["./libs/maia-flows/src/index.js"]
 		}
 	}
 }

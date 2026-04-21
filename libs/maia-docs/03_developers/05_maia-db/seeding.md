@@ -14,17 +14,17 @@ Think of seeding like setting up a new house. First you install the plumbing (bo
 
 ## When Seeding Runs
 
-- **Sync service** → `PEER_SYNC_SEED=true` runs optional genesis when scaffold exists (then unset `PEER_SYNC_SEED` so later restarts use the persisted scaffold). Unset or not `true` = normal run, no optional genesis seed. **Local dev only** (PGlite, no remote bucket): sync may also clear local PGlite + `binary-bucket`, regenerate tester lines in `.env` — not used on production or with Postgres/Tigris.
-- **PEER_FRESH_SEED=true** → Full bootstrap + seed (clean slate) where applicable
+- **Sync service** → `PEER_SYNC_SEED=true` is the **only** env gate for **genesis** (full scaffold + seed). Without it, if `account.sparks` is missing, sync **fails fast** (operator must run one boot with `PEER_SYNC_SEED=true`, then unset). When scaffold already exists, unset or not `true` = normal run (genesis step skips). **Local dev only** (PGlite, no remote bucket): sync may also clear local PGlite + `binary-bucket`, regenerate tester lines in `.env` — not used on production or with Postgres/Tigris.
+- **Operational flows** — Server startup and `POST /bootstrap` sequences live in `@MaiaOS/flows` (reconcile steps: `{ id, check, apply }`); only the genesis step is gated by `PEER_SYNC_SEED`.
 
-**Reseed:** Wipe Postgres, PGlite data directory, and/or Tigris blob storage manually, then restart sync. **Remote/prod:** no automatic wipe from env. **Local PGlite only:** `PEER_SYNC_SEED=true` (with no remote bucket) triggers a local filesystem reset and tester regen as described above—still not applicable to Postgres or Tigris.
+**Reseed:** Wipe Postgres, PGlite data directory, and/or Tigris blob storage manually, then restart sync with `PEER_SYNC_SEED=true` for one boot. **Remote/prod:** no automatic wipe from env. **Local PGlite only:** `PEER_SYNC_SEED=true` (with no remote bucket) triggers a local filesystem reset and tester regen as described above—still not applicable to Postgres or Tigris.
 
 ### When to Re-seed
 
-**Re-seed when actor, process, view, or context configs change.** Runtime expects all config references to be co-ids. Refs are transformed to co-ids only during seeding. If you modify `.maia` files (actors, processes, views, contexts) or the seed config, run with `PEER_FRESH_SEED=true` before testing. Otherwise the app may fail with "Expected co-id, got ref" or process load errors.
+**Re-seed when actor, process, view, or context configs change.** Runtime expects all config references to be co-ids. Refs are transformed to co-ids only during seeding. If you modify `.maia` files (actors, processes, views, contexts) or the seed config, run sync with `PEER_SYNC_SEED=true` (one-shot) after wiping storage, or follow your usual DB reset flow. Otherwise the app may fail with "Expected co-id, got ref" or process load errors.
 
 ```bash
-PEER_FRESH_SEED=true bun dev:sync
+PEER_SYNC_SEED=true bun dev:sync
 ```
 
 ---

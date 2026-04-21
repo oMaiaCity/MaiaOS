@@ -11,7 +11,7 @@
  *     - pglite: PEER_DB_PATH (default ./pg-lite.db)
  *     - postgres: PEER_SYNC_DB_URL (required)
  *   AVEN_MAIA_GUARDIAN: Human account co-id (co_z...). If set, add as admin of °maia spark guardian; also seeds /sync/write so that account can sync without POST /register.
- *   PEER_SYNC_SEED: unset/false vs true — optional genesis when scaffold exists (same as former PEER_SYNC_MODE=seed).
+ *   PEER_SYNC_SEED: unset/false vs true — **only** gate for genesis (missing scaffold fails fast until true). Optional re-genesis when already scaffolded (then unset after one-shot).
  *     Local dev + pglite + no BUCKET_NAME: clears PGlite data dir + local binary-bucket; new Aven Tester is written to repo .env after startup succeeds (avoids mid-boot .env watcher restarts). Production/postgres/Tigris: never auto-clears or auto-rotates; manual only.
  *   SEED_VIBES: Default "all". Which vibes to seed (todos, chat, addressbook, quickjs/Vibe Creator, etc). "all" seeds every vibe including quickjs.
  *   PEER_APP_HOST: Allowed CORS origin (e.g. https://next.maia.city). Required when NODE_ENV=production. Unset in dev with PGlite or MAIA_DEV_CORS=1: localhost:4200 only (no wildcard).
@@ -29,6 +29,14 @@ import {
 	RUNTIME_REF,
 	resolveInfraFactoryCoId,
 } from '@MaiaOS/db'
+import {
+	bootstrapGuardianSteps,
+	bootstrapIdentitySteps,
+	createFlowContext,
+	identitySelfAvenStep,
+	runSteps,
+	syncServerInfraSteps,
+} from '@MaiaOS/flows'
 import { bootstrapNodeLogging, createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
 import { agentIDToDidKey, verifyInvocationToken } from '@MaiaOS/maia-ucan'
 import {
@@ -41,7 +49,6 @@ import {
 	MaiaScriptEvaluator,
 	waitForStoreReady,
 } from '@MaiaOS/runtime'
-import { buildSeedConfig, filterVibesForSeeding, getSeedConfig } from '@MaiaOS/seed'
 import {
 	applyTesterCredentialsToEnvFile,
 	generateAgentCredentials,
@@ -361,7 +368,9 @@ async function handleStorageInspectorHttp(req, url, worker) {
 function getSparksRegistryCoId(account) {
 	const id = account.get('sparks')
 	if (!id?.startsWith('co_z'))
-		throw new Error('account.sparks not found. Ensure genesis seeded (PEER_FRESH_SEED=true).')
+		throw new Error(
+			'account.sparks not found. Run sync once with PEER_SYNC_SEED=true to create genesis scaffold, then unset.',
+		)
 	return id
 }
 
@@ -397,75 +406,6 @@ async function verifyAccountBinding(peer, accountId, expectedDidKey) {
 		return derivedDidKey === expectedDidKey
 	} catch {
 		return false
-	}
-}
-
-/** Create Capability CoMap; index hook appends to spark.os.indexes[capability schema]. Skips if a non-expired grant for the same sub+cmd already exists. */
-async function ensureCapabilityGrant(worker, { sub, cmd, pol, exp }) {
-	const peer = worker.peer
-	if (!resolveInfraFactoryCoId(peer, RUNTIME_REF.OS_CAPABILITY)) {
-		await worker.dataEngine.resolveSystemFactories()
-	}
-	if (await accountHasCapabilityOnPeer(peer, worker.account, sub, cmd)) return
-	const capabilitySchemaCoId = resolveInfraFactoryCoId(peer, RUNTIME_REF.OS_CAPABILITY)
-	if (!capabilitySchemaCoId) {
-		opsRegister.warn(
-			'ensureCapabilityGrant: OS_CAPABILITY factory missing after resolveSystemFactories',
-			{
-				sub: sub?.slice(0, 14),
-				cmd,
-			},
-		)
-		return
-	}
-	try {
-		await worker.dataEngine.execute({
-			op: 'create',
-			factory: capabilitySchemaCoId,
-			data: { sub, cmd, pol, exp },
-			spark: peer.systemSparkCoId,
-		})
-	} catch (e) {
-		opsRegister.warn('Failed to create capability grant', e?.message)
-	}
-}
-
-/** Ensure AVEN_MAIA_ACCOUNT has /admin capability (grants all endpoints). Seeded at sync startup. */
-async function seedAdminCapabilityForServerAccount(worker) {
-	if (!accountID?.startsWith('co_z')) return
-	const exp = Math.floor(Date.now() / 1000) + 10 * 365 * 24 * 3600 // 10 years
-	await ensureCapabilityGrant(worker, { sub: accountID, cmd: '/admin', pol: [], exp })
-}
-
-/**
- * Ensure AVEN_MAIA_GUARDIAN has /sync/write and /llm/chat (same grants as POST /register for humans).
- * Without this, the guardian’s browser session syncs but every write hits ValidationHook — they never called /register.
- */
-async function seedCapabilitiesForGuardian(worker) {
-	if (!avenMaiaGuardian?.startsWith('co_z')) return
-	if (avenMaiaGuardian === accountID) return
-	const exp = Math.floor(Date.now() / 1000) + 10 * 365 * 24 * 3600
-	for (const cmd of ['/sync/write', '/llm/chat', '/admin/storage']) {
-		await ensureCapabilityGrant(worker, { sub: avenMaiaGuardian, cmd, pol: [], exp })
-	}
-}
-
-/**
- * Best-effort: add AVEN_MAIA_GUARDIAN as admin of °maia spark guardian group.
- * Idempotent; safe to call inline from POST /bootstrap.
- * @returns {Promise<boolean>} true if promoted or already member
- */
-async function tryAddGuardianToMaiaSpark(worker) {
-	if (!avenMaiaGuardian?.startsWith('co_z')) return false
-	try {
-		const guardian = await worker.peer.getMaiaGroup()
-		if (!guardian) return false
-		await worker.peer.addGroupMember(guardian, avenMaiaGuardian, 'admin')
-		return true
-	} catch (e) {
-		const msg = e?.message ?? String(e)
-		if (msg.includes('already') || msg.includes('member')) return true
-		throw e
 	}
 }
 
@@ -637,41 +577,36 @@ async function handleBootstrap(worker, body, req) {
 	try {
 		const sparksId = getSparksRegistryCoId(worker.account)
 
-		if (avenMaiaGuardian?.startsWith('co_z') && accountId === avenMaiaGuardian) {
-			try {
-				await tryAddGuardianToMaiaSpark(worker)
-			} catch (e) {
-				opsSync.warn('handleBootstrap: guardian admin promotion deferred:', e?.message ?? e)
-			}
-			try {
-				await seedCapabilitiesForGuardian(worker)
-			} catch (e) {
-				opsSync.warn('handleBootstrap: seedCapabilitiesForGuardian:', e?.message ?? e)
-			}
-		}
+		const _mnRaw = process.env.AVEN_MAIA_NAME || 'Maia'
+		const _mn = _mnRaw.startsWith('Aven ') ? _mnRaw : `Aven ${_mnRaw}`
+		const flowCtx = createFlowContext({
+			worker,
+			log: opsSync,
+			env: {
+				serverAccountId: accountID,
+				guardianAccountId: avenMaiaGuardian,
+				maiaName: _mn,
+				seedVibes: seedVibesConfig,
+			},
+			allowApply: peerSyncSeed,
+			bootstrap: { accountId, profileId },
+		})
 
 		try {
-			await worker.dataEngine.resolveSystemFactories()
-			const identitySchemaCoId = getRuntimeRef(worker.peer, RUNTIME_REF.OS_IDENTITY)
-			if (identitySchemaCoId?.startsWith('co_z')) {
-				const existing = await findFirst(worker.peer, identitySchemaCoId, {
-					account: accountId,
-					type: 'human',
-				})
-				if (!existing?.id?.startsWith('co_z')) {
-					await ensureIdentity({
-						peer: worker.peer,
-						dataEngine: worker.dataEngine,
-						type: 'human',
-						accountId,
-						profileId,
-					})
-				}
-			} else {
-				opsSync.warn('handleBootstrap: OS_IDENTITY factory not ready; skipping identity index write')
-			}
+			await runSteps(
+				flowCtx,
+				bootstrapGuardianSteps({
+					guardianAccountId: avenMaiaGuardian,
+					bootstrapAccountId: accountId,
+				}),
+			)
 		} catch (e) {
-			opsSync.warn('handleBootstrap: identity index write failed:', e?.message ?? e)
+			opsSync.warn('handleBootstrap: guardian flow:', e?.message ?? e)
+		}
+		try {
+			await runSteps(flowCtx, bootstrapIdentitySteps())
+		} catch (e) {
+			opsSync.warn('handleBootstrap: identity flow:', e?.message ?? e)
 		}
 
 		return jsonResponse({ sparks: sparksId }, 200, {}, req)
@@ -734,7 +669,12 @@ async function handleRegister(worker, body, req) {
 			await dataEngine.resolveSystemFactories()
 			const identitySchemaCoId = getRuntimeRef(peer, RUNTIME_REF.OS_IDENTITY)
 			if (!identitySchemaCoId)
-				return err('Identity schema not found. Ensure genesis seed has run.', 500, {}, req)
+				return err(
+					'Identity schema not found. Ensure sync ran genesis (PEER_SYNC_SEED=true once).',
+					500,
+					{},
+					req,
+				)
 			const existingRow = await findFirst(peer, identitySchemaCoId, {
 				account: accountId,
 				type,
@@ -1263,118 +1203,21 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 		// loadAccount defers migration; seed needs guardian in os.groups
 		await ensureProfileForNewAccount(result.account, localNode)
 
-		const accountHasSparks =
-			typeof result.account?.get === 'function' && result.account.get('sparks')?.startsWith('co_z')
-		/** First-time / empty local PGlite: account loads without scaffold; MaiaDB still needs sparks + spark OS. */
-		const mustSeedMissingScaffold = !accountHasSparks
-		const runGenesis = peerSyncSeed || mustSeedMissingScaffold
-
-		if (runGenesis) {
-			if (mustSeedMissingScaffold && !peerSyncSeed) {
-				opsSync.log(
-					'account.sparks missing — running genesis scaffold (required). Persisted after this run.',
-				)
-			}
-			const { ensureFactoriesLoaded, getAllFactories } = await import(
-				'@MaiaOS/validation/factory-registry'
-			)
-			await ensureFactoriesLoaded()
-			const { getAllVibeRegistries } = await import('@MaiaOS/universe')
-			const allVibeRegistries = await getAllVibeRegistries()
-			const vibeRegistries = await filterVibesForSeeding(allVibeRegistries, seedVibesConfig)
-			if (vibeRegistries.length === 0) {
-				throw new Error(
-					`${OPS_PREFIX.sync} Genesis sync requires vibes. getAllVibeRegistries returned none or SEED_VIBES filtered all.`,
-				)
-			}
-			const { configs: mergedConfigs, data } = await buildSeedConfig(vibeRegistries)
-			const {
-				actors: serviceActors,
-				interfaces: serviceInterfaces,
-				inboxes: serviceInboxes,
-				contexts: actorContexts,
-				views: actorViews,
-				processes: actorProcesses,
-				styles: actorStyles,
-				wasms: serviceWasms,
-			} = getSeedConfig()
-			const configsForSeed = {
-				...mergedConfigs,
-				actors: { ...mergedConfigs.actors, ...serviceActors },
-				states: mergedConfigs.states,
-				interfaces: { ...(mergedConfigs.interfaces || {}), ...serviceInterfaces },
-				inboxes: { ...mergedConfigs.inboxes, ...serviceInboxes },
-				contexts: { ...mergedConfigs.contexts, ...(actorContexts || {}) },
-				views: { ...mergedConfigs.views, ...(actorViews || {}) },
-				processes: { ...mergedConfigs.processes, ...(actorProcesses || {}) },
-				styles: { ...mergedConfigs.styles, ...(actorStyles || {}) },
-				wasms: { ...(mergedConfigs.wasms || {}), ...(serviceWasms || {}) },
-			}
-			const schemas = getAllFactories()
-			const seedResult = await dataEngine.execute({
-				op: 'seed',
-				configs: configsForSeed,
-				schemas,
-				data,
-				forceFreshSeed: true,
-			})
-			if (seedResult?.ok === false && seedResult?.errors?.length) {
-				const msg = seedResult.errors.map((e) => e?.message ?? e).join('; ')
-				throw new Error(`${OPS_PREFIX.sync} Genesis seed failed: ${msg}`)
-			}
-			if (peerSyncSeed) {
-				opsSync.log(
-					`Genesis seeded: ${vibeRegistries.length} vibe(s) (schemas + scaffold). Unset PEER_SYNC_SEED (or set false) after first seed so later restarts use the persisted scaffold.`,
-				)
-			} else if (mustSeedMissingScaffold) {
-				opsSync.log(
-					`Scaffold seeded: ${vibeRegistries.length} vibe(s). Next boots use persisted account.sparks (PEER_SYNC_SEED unset).`,
-				)
-			}
-		} else {
-			opsSync.log('PEER_SYNC_SEED not true — using persisted scaffold (skip genesis seed).')
-		}
-
-		await peer.resolveSystemSparkCoId()
-		await dataEngine.resolveSystemFactories()
-
-		// Seed /admin for AVEN_MAIA_ACCOUNT (grants all endpoints). Must run after scaffold exists (genesis or prior run).
-		await seedAdminCapabilityForServerAccount(agentWorker).catch((e) =>
-			opsSync.warn('seedAdminCapabilityForServerAccount:', e?.message),
+		const flowCtx = createFlowContext({
+			worker: agentWorker,
+			log: opsSync,
+			env: {
+				serverAccountId: accountID,
+				guardianAccountId: avenMaiaGuardian,
+				maiaName,
+				seedVibes: seedVibesConfig,
+			},
+			allowApply: peerSyncSeed,
+		})
+		await runSteps(flowCtx, syncServerInfraSteps)
+		await runSteps(flowCtx, [identitySelfAvenStep()]).catch((e) =>
+			opsSync.warn('Self-register aven:', e?.message),
 		)
-
-		await seedCapabilitiesForGuardian(agentWorker).catch((e) =>
-			opsSync.warn('seedCapabilitiesForGuardian:', e?.message),
-		)
-
-		// Self-register Maia aven in identity index (idempotent)
-		const profileId = result.account.get('profile')
-		if (profileId?.startsWith('co_z')) {
-			await handleRegister(agentWorker, {
-				type: 'aven',
-				username: maiaName,
-				accountId: accountID,
-				profileId,
-			}).catch((e) => opsSync.warn('Self-register aven:', e?.message))
-		}
-
-		// Best-effort one-shot guardian admin promotion at startup.
-		// If the guardian's account isn't in storage yet (first-ever boot), POST /bootstrap will promote
-		// them inline when the client connects, so no retry scheduler is needed here.
-		if (avenMaiaGuardian?.startsWith('co_z')) {
-			tryAddGuardianToMaiaSpark(agentWorker)
-				.then((ok) => {
-					if (ok) opsSync.log('Added guardian as admin of °maia spark.')
-					else
-						opsSync.log(
-							'Guardian admin deferred to first POST /bootstrap (guardian account not in storage yet).',
-						)
-				})
-				.catch((e) => {
-					const msg = e?.message ?? String(e)
-					opsSync.log('Guardian admin deferred to first POST /bootstrap (%s).', msg.slice(0, 80))
-				})
-		}
 
 		syncHandler = {
 			async open(ws) {

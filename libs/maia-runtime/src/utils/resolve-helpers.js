@@ -18,7 +18,7 @@ export async function readStore(dataEngine, coId) {
 	if (!coId.startsWith('co_z')) {
 		throw new Error(
 			`[StoreReader] Expected co-id (co_z...), got ref: ${coId}. ` +
-				`Refs must be transformed to co-ids during seeding. Run with PEER_FRESH_SEED=true to re-seed.`,
+				`Refs must be transformed to co-ids during seeding. Re-run sync genesis (PEER_SYNC_SEED=true once) or wipe local storage and re-seed.`,
 		)
 	}
 	const factoryCoId = await dataEngine.peer.resolve({ fromCoValue: coId }, { returnType: 'coId' })
