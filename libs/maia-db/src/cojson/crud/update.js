@@ -21,13 +21,17 @@ const log = createLogger('maia-db')
  * @param {string} schema - Schema co-id (co_z...)
  * @param {string} id - Record co-id to update
  * @param {Object} data - Data to update
+ * @param {{ skipEnsureLoaded?: boolean }} [options] - `skipEnsureLoaded: true` avoids long availability waits (same process just wrote the CoValue)
  * @returns {Promise<Object>} Updated record
  */
-export async function update(peer, _schema, id, data) {
+export async function update(peer, _schema, id, data, options = {}) {
+	const { skipEnsureLoaded = false } = options
 	// Ensure CoValue is loaded before updating (jazz-tools pattern)
-	const coValueCore = await collectionHelpers.ensureCoValueLoaded(peer, id, {
-		waitForAvailable: true,
-	})
+	const coValueCore = skipEnsureLoaded
+		? peer.getCoValue(id)
+		: await collectionHelpers.ensureCoValueLoaded(peer, id, {
+				waitForAvailable: true,
+			})
 	if (!coValueCore) {
 		throw new Error(`[MaiaDB] CoValue not found: ${id}`)
 	}

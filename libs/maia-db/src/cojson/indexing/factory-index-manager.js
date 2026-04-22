@@ -25,36 +25,50 @@ import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
 const log = createLogger('maia-db')
 
 /**
- * `isAvailable` can flip true before CoJSON has a verified view; `getCurrentContent` then throws.
- * Used from storage hooks right after remote merge — wait + tiny backoff to avoid log spam.
- * @param {object} peer
- * @param {string} coId
- * @returns {Promise<{ core: object; content: object } | null>}
+ * @param {object} msg - Storage / NewContentMessage-style payload
+ * @returns {import('@cojson/cojson').CoValueHeader|undefined}
  */
-async function getLoadedCoreWithVerifiedContent(peer, coId) {
-	if (!coId?.startsWith('co_z')) {
-		return null
-	}
-	const core = await ensureCoValueLoaded(peer, coId, { waitForAvailable: true, timeoutMs: 15000 })
-	if (!core || !peer.isAvailable?.(core)) {
-		return null
-	}
-	for (let i = 0; i < 8; i++) {
-		try {
-			const content = peer.getCurrentContent(core)
-			if (content) {
-				return { core, content }
+export function extractHeaderFromStorageMessage(msg) {
+	if (!msg || typeof msg !== 'object') return undefined
+	let header = msg.header
+	if (!header && msg.new && typeof msg.new === 'object') {
+		for (const sessionId of Object.keys(msg.new)) {
+			const session = msg.new[sessionId]
+			if (session?.header) {
+				header = session.header
+				break
 			}
-		} catch (e) {
-			const m = String(e?.message || e)
-			if (m.includes('verified state') && i < 7) {
-				await new Promise((r) => setTimeout(r, 15 * (i + 1)))
-				continue
+			const txs = session?.newTransactions
+			if (Array.isArray(txs) && txs.length > 0 && txs[0]?.header) {
+				header = txs[0].header
+				break
 			}
-			return null
 		}
 	}
-	return null
+	return header
+}
+
+/**
+ * Read header + content without retry loops. Never use on remote-only CoValues in write paths
+ * that require content: `content` is null when CoJSON has not materialized a verified view yet.
+ * @param {object} peer
+ * @param {import('@cojson/cojson').CoValueCore} core
+ * @returns {{ header: object | null; content: object | null; core: object }}
+ */
+export function readHeaderAndContent(peer, core) {
+	if (!core) {
+		return { header: null, content: null, core: null }
+	}
+	const header = peer.getHeader?.(core) ?? null
+	if (!core.hasVerifiedContent?.()) {
+		return { header, content: null, core }
+	}
+	try {
+		const content = peer.getCurrentContent?.(core) ?? core.getCurrentContent?.() ?? null
+		return { header, content, core }
+	} catch {
+		return { header, content: null, core }
+	}
 }
 
 // Matches both °Spark/schema/... and @domain/schema/... (captures prefix + path)
@@ -417,18 +431,9 @@ export async function ensureNanoidIndexCoMap(peer) {
  */
 export async function indexByNanoid(peer, coValueCore) {
 	if (!coValueCore?.id || !peer.isAvailable(coValueCore)) return
-	if (await isInternalCoValue(peer, coValueCore.id)) return
-
 	const header = peer.getHeader(coValueCore)
-	const nanoid = header?.meta?.$nanoid
-	if (typeof nanoid !== 'string' || nanoid.length === 0) return
-
-	const nanoidsContent = await ensureNanoidIndexCoMap(peer)
-	if (!nanoidsContent || typeof nanoidsContent.set !== 'function') return
-
-	try {
-		nanoidsContent.set(nanoid, coValueCore.id)
-	} catch (_e) {}
+	if (!header) return
+	return indexByNanoidFromHeader(peer, coValueCore.id, header)
 }
 
 /**
@@ -457,7 +462,7 @@ async function ensureSchemaSpecificIndexColistSchema(peer, factoryCoId, metaSche
 	/** @type {import('@cojson/cojson').RawCoMap|null} */
 	let schemaMapContent = null
 	if (schemaCoValueCore) {
-		const sLoaded = await getLoadedCoreWithVerifiedContent(peer, factoryCoId)
+		const sLoaded = readHeaderAndContent(peer, schemaCoValueCore)
 		schemaMapContent = sLoaded?.content ?? null
 		if (schemaMapContent && typeof schemaMapContent.get === 'function') {
 			const existingIdx = schemaMapContent.get('indexColistFactoryCoId')
@@ -715,6 +720,70 @@ async function isInternalCoValue(peer, coId) {
 }
 
 /**
+ * @param {object} peer
+ * @param {string} coId
+ * @param {object} header
+ */
+async function indexByNanoidFromHeader(peer, coId, header) {
+	if (!coId?.startsWith('co_z') || !header) return
+	if (await isInternalCoValue(peer, coId)) return
+	const nanoid = header?.meta?.$nanoid
+	if (typeof nanoid !== 'string' || nanoid.length === 0) return
+	const nanoidsContent = await ensureNanoidIndexCoMap(peer)
+	if (!nanoidsContent || typeof nanoidsContent.set !== 'function') return
+	try {
+		nanoidsContent.set(nanoid, coId)
+	} catch (_e) {}
+}
+
+/**
+ * Post-store indexing: full path when `hasVerifiedContent`, else header from msg for nanoid only.
+ * @param {object} peer
+ * @param {object} msg
+ * @returns {Promise<void>}
+ */
+export async function indexFromMessage(peer, msg) {
+	const coId = msg?.id
+	if (!coId?.startsWith('co_z')) return
+	const core = peer.getCoValue(coId)
+	if (!core || !peer.isAvailable(core)) return
+
+	if (core.hasVerifiedContent?.()) {
+		return applyPersistentCoValueIndexing(peer, core)
+	}
+
+	const fromMsg = extractHeaderFromStorageMessage(msg)
+	const header = fromMsg || peer.getHeader(core)
+	if (header) {
+		await indexByNanoidFromHeader(peer, coId, header)
+	}
+}
+
+/**
+ * One pass over all local CoValues: (re)apply catalog + instance indexes. Used after seed with indexing disabled.
+ * @param {object} peer
+ * @returns {Promise<void>}
+ */
+export async function rebuildAllIndexes(peer) {
+	const map = peer.getAllCoValues?.() ?? peer.node?.coValues
+	if (!map || typeof map.entries !== 'function') return
+	for (const [coId, core] of map.entries()) {
+		if (!coId?.startsWith('co_z') || !core) continue
+		if (!peer.isAvailable?.(core)) continue
+		if (!core.hasVerifiedContent?.()) continue
+		try {
+			// eslint-disable-next-line no-await-in-loop
+			await applyPersistentCoValueIndexing(peer, core)
+		} catch (error) {
+			const isFactoryCompilationError = error?.message?.includes('Failed to compile factory')
+			if (!isFactoryCompilationError) {
+				log.error('[rebuildAllIndexes] failed for', coId, error)
+			}
+		}
+	}
+}
+
+/**
  * @param {object|null|undefined} factoryDef - result of resolve(..., { returnType: 'factory' })
  * @returns {boolean} true only when schema explicitly has indexing: true
  */
@@ -861,7 +930,8 @@ export async function appendFactoryDefinitionToCatalog(peer, defCoId) {
 	if (!metaCoId) return
 	const catalogColistId = await ensureDefinitionCatalogColistId(peer, metaCoId)
 	if (!catalogColistId) return
-	const loaded = await getLoadedCoreWithVerifiedContent(peer, catalogColistId)
+	const catCore = peer.getCoValue(catalogColistId)
+	const loaded = readHeaderAndContent(peer, catCore)
 	const colistContent = loaded?.content
 	if (!colistContent || typeof colistContent.append !== 'function') return
 	try {
@@ -882,7 +952,7 @@ export async function registerFactoryCoValue(peer, schemaCoValueCore) {
 		return
 	}
 
-	const loaded = await getLoadedCoreWithVerifiedContent(peer, schemaCoValueCore.id)
+	const loaded = readHeaderAndContent(peer, schemaCoValueCore)
 	if (!loaded?.content || typeof loaded.content.get !== 'function') {
 		return
 	}
@@ -959,8 +1029,7 @@ export async function isFactoryCoValue(peer, coValueCore) {
 	// Special case: Check content.title to confirm it's metaschema
 	// Uses "°maia/factory/meta.factory.maia" (schema namekey from JSON definition - single source of truth)
 	if (schema === EXCEPTION_FACTORIES.META_SCHEMA) {
-		const loaded = await getLoadedCoreWithVerifiedContent(peer, coValueCore.id)
-		const content = loaded?.content
+		const { content } = readHeaderAndContent(peer, coValueCore)
 		if (content && typeof content.get === 'function') {
 			const title = content.get('title')
 			if (title === '°maia/factory/meta.factory.maia') {
@@ -974,33 +1043,20 @@ export async function isFactoryCoValue(peer, coValueCore) {
 	// Check if headerMeta.$factory points to metaschema directly (via content check)
 	// This works during seeding when registry doesn't exist yet
 	if (schema && typeof schema === 'string' && schema.startsWith('co_z')) {
-		// PRIMARY: Check if headerMeta.$factory points to metaschema directly
-		// Use universal read() API to load and resolve the referenced co-value
 		try {
-			// Use universal read() API to ensure referenced co-value is loaded and resolved
-			const referencedStore = await universalRead(peer, schema, null, null, null, {
-				deepResolve: false, // Don't need deep resolution for schema detection
-				timeoutMs: 5000, // 5 second timeout - metaschema should be available but may need more time during seeding
-			})
-
-			// Check if read succeeded
-			if (referencedStore && !referencedStore.value?.error) {
-				// Get the raw CoValueCore and content after read() has loaded it
-				const referencedCoValueCore = peer.getCoValue(schema)
-
-				if (referencedCoValueCore?.isAvailable()) {
-					const refLoaded = await getLoadedCoreWithVerifiedContent(peer, schema)
-					const referencedContent = refLoaded?.content
-
-					if (referencedContent && typeof referencedContent.get === 'function') {
-						const referencedTitle = referencedContent.get('title')
-
-						// Check if it's the metaschema by title
-						// - "°maia/factory/meta.factory.maia" (schema namekey from JSON definition - single source of truth)
-						if (referencedTitle === '°maia/factory/meta.factory.maia') {
-							// headerMeta.$factory points to metaschema - this is a schema!
-							return true
-						}
+			let referencedCoValueCore = peer.getCoValue(schema)
+			if (!referencedCoValueCore) {
+				referencedCoValueCore = await ensureCoValueLoaded(peer, schema, {
+					waitForAvailable: true,
+					timeoutMs: 5000,
+				})
+			}
+			if (referencedCoValueCore?.isAvailable()) {
+				const { content: referencedContent } = readHeaderAndContent(peer, referencedCoValueCore)
+				if (referencedContent && typeof referencedContent.get === 'function') {
+					const referencedTitle = referencedContent.get('title')
+					if (referencedTitle === '°maia/factory/meta.factory.maia') {
+						return true
 					}
 				}
 			}
@@ -1009,10 +1065,8 @@ export async function isFactoryCoValue(peer, coValueCore) {
 		}
 
 		// FALLBACK: Try registry lookup (for runtime cases when registry exists)
-		// This is a fallback for cases where metaschema co-value isn't available yet
 		const metaSchemaCoId = await getMetafactoryCoId(peer)
 		if (metaSchemaCoId && schema === metaSchemaCoId) {
-			// This co-value's $schema points to metaschema - it's a schema co-value
 			return true
 		}
 	}

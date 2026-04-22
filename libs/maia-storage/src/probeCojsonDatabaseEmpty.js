@@ -5,22 +5,10 @@
 
 import { SQL } from 'bun'
 import { createPGliteAdapter } from './adapters/pglite.js'
+import { BUN_SQL_ADAPTER_OPTIONS, createSqlDbInterface } from './adapters/postgres.js'
 import { isDatabaseEmptyFromQueryInterface, isDatabaseEmptyFromSql } from './isDatabaseEmpty.js'
 import { normalizePostgresConnectionString } from './normalizePostgresUrl.js'
 import { runMigrations } from './schema/postgres.js'
-
-function createSqlDbInterface(sql) {
-	return {
-		query: async (text, params) => {
-			const raw = await sql.unsafe(text, params ?? [])
-			const rows = Array.isArray(raw) ? raw : [...raw]
-			return { rows }
-		},
-		exec: async (text) => {
-			await sql.unsafe(text)
-		},
-	}
-}
 
 /**
  * @param {string} connectionString
@@ -28,7 +16,7 @@ function createSqlDbInterface(sql) {
  */
 export async function probePostgresDatabaseEmpty(connectionString) {
 	const normalized = normalizePostgresConnectionString(connectionString)
-	const sql = new SQL(normalized, { max: 1 })
+	const sql = new SQL(normalized, BUN_SQL_ADAPTER_OPTIONS)
 	try {
 		const db = createSqlDbInterface(sql)
 		await runMigrations(db)

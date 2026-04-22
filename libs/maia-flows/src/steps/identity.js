@@ -10,10 +10,15 @@ export function identitySelfAvenStep(id = 'identity.selfAven') {
 			await ctx.worker.dataEngine.resolveSystemFactories()
 			const identitySchemaCoId = ctx.worker.peer.infra?.identity
 			if (!identitySchemaCoId?.startsWith('co_z')) return true
-			const existingRow = await findFirst(ctx.worker.peer, identitySchemaCoId, {
-				account: accountId,
-				type: 'aven',
-			})
+			const existingRow = await findFirst(
+				ctx.worker.peer,
+				identitySchemaCoId,
+				{
+					account: accountId,
+					type: 'aven',
+				},
+				{ timeoutMs: 15000 },
+			)
 			return existingRow?.id?.startsWith('co_z') === true
 		},
 		apply: async (ctx) => {
@@ -50,10 +55,15 @@ export function identityHumanBootstrapStep(id = 'identity.human') {
 			await ctx.worker.dataEngine.resolveSystemFactories()
 			const identitySchemaCoId = ctx.worker.peer.infra?.identity
 			if (!identitySchemaCoId?.startsWith('co_z')) return true
-			const existing = await findFirst(ctx.worker.peer, identitySchemaCoId, {
-				account: accountId,
-				type: 'human',
-			})
+			const existing = await findFirst(
+				ctx.worker.peer,
+				identitySchemaCoId,
+				{
+					account: accountId,
+					type: 'human',
+				},
+				{ timeoutMs: 15000 },
+			)
 			return existing?.id?.startsWith('co_z') === true
 		},
 		apply: async (ctx) => {

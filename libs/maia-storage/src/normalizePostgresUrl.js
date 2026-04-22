@@ -1,6 +1,7 @@
 /**
- * Normalize PEER_SYNC_DB_URL so pg / pg-connection-string do not emit SSL mode deprecation warnings.
- * Maps sslmode=require|prefer|verify-ca to verify-full (explicit current behavior per libpq docs).
+ * Normalize PEER_SYNC_DB_URL: safe sslmode tweaks, connect timeout, app name.
+ * - Keeps `sslmode=require` (Neon / pooler). Maps deprecated `prefer` → `require`, `verify-ca` → `verify-full`.
+ * - Does not force `require` → `verify-full` (that broke some Neon pooler hostnames in the wild).
  *
  * @param {string} connectionString
  * @returns {string}
@@ -10,8 +11,16 @@ export function normalizePostgresConnectionString(connectionString) {
 	try {
 		const u = new URL(connectionString)
 		const mode = u.searchParams.get('sslmode')
-		if (mode === 'require' || mode === 'prefer' || mode === 'verify-ca') {
+		if (mode === 'prefer') {
+			u.searchParams.set('sslmode', 'require')
+		} else if (mode === 'verify-ca') {
 			u.searchParams.set('sslmode', 'verify-full')
+		}
+		if (!u.searchParams.has('connect_timeout') && !u.searchParams.has('connect-timeout')) {
+			u.searchParams.set('connect_timeout', '15')
+		}
+		if (!u.searchParams.get('application_name')?.trim()) {
+			u.searchParams.set('application_name', 'maia-sync')
 		}
 		return u.toString()
 	} catch {

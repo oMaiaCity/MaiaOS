@@ -170,25 +170,16 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 	} else {
 		const PERSIST_TIMEOUT_MS = 30000
 		try {
-			await Promise.race([
-				Promise.all([
+			if (node.syncManager.waitForAllCoValuesSync) {
+				await node.syncManager.waitForAllCoValuesSync(PERSIST_TIMEOUT_MS)
+			} else {
+				opsBootstrap.warn(
+					'[Bootstrap] waitForAllCoValuesSync unavailable — falling back to per-id waitForStorageSync',
+				)
+				await Promise.all([
 					wfs.call(node.syncManager, account.id),
 					wfs.call(node.syncManager, sparksRegistry.id),
 					wfs.call(node.syncManager, maiaSpark.id),
-				]),
-				new Promise((_, reject) =>
-					setTimeout(
-						() => reject(new Error(`waitForStorageSync timeout after ${PERSIST_TIMEOUT_MS}ms`)),
-						PERSIST_TIMEOUT_MS,
-					),
-				),
-			])
-			if (node.syncManager.waitForAllCoValuesSync) {
-				await Promise.race([
-					node.syncManager.waitForAllCoValuesSync(PERSIST_TIMEOUT_MS),
-					new Promise((_, reject) =>
-						setTimeout(() => reject(new Error('waitForAllCoValuesSync timeout')), PERSIST_TIMEOUT_MS),
-					),
 				])
 			}
 		} catch (e) {

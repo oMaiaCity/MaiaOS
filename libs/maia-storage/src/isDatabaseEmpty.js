@@ -4,6 +4,7 @@
  * Table names are a fixed allowlist (schema/postgres.js); never user input.
  */
 
+import { createSqlDbInterface } from './adapters/postgres.js'
 import { COJSON_DATA_TABLES } from './coStorageTables.js'
 
 /**
@@ -11,11 +12,11 @@ import { COJSON_DATA_TABLES } from './coStorageTables.js'
  * @returns {Promise<boolean>} true if no CoJSON data rows exist
  */
 export async function isDatabaseEmptyFromSql(sql) {
+	const db = createSqlDbInterface(sql)
 	for (const table of COJSON_DATA_TABLES) {
 		try {
-			const raw = await sql.unsafe(`SELECT 1 FROM ${table} LIMIT 1`)
-			const rows = Array.isArray(raw) ? raw : [...raw]
-			if (rows.length > 0) return false
+			const result = await db.query(`SELECT 1 FROM ${table} LIMIT 1`, [])
+			if (result.rows?.length > 0) return false
 		} catch {
 			/* missing table or unreadable — treat as no data in that table */
 		}

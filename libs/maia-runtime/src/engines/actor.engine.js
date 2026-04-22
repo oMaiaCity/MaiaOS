@@ -239,6 +239,13 @@ export class ActorEngine {
 		if (!actorConfig.process)
 			throw new Error(`[ActorEngine] Actor config must have process: ${actorId}`)
 		const actor = await this.spawnActor(actorConfig)
+		if (!actor) {
+			const processRef = actorConfig.process
+			throw new Error(
+				`[ActorEngine] Failed to spawn actor ${actorId}: process CoValue not loadable from sync yet, ` +
+					`or process definition has no handlers. Wait for sync and retry. process=${String(processRef)}`,
+			)
+		}
 
 		// Container/aven registration (ActorEngine)
 		if (containerElement) {

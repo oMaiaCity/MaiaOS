@@ -17,7 +17,7 @@ import {
 } from '@MaiaOS/validation/co-value-detection'
 import { EXCEPTION_FACTORIES } from '../../factories/registry.js'
 import * as groups from '../groups/groups.js'
-import { applyPersistentCoValueIndexing } from './factory-index-manager.js'
+import { extractHeaderFromStorageMessage, indexFromMessage } from './factory-index-manager.js'
 
 const log = createLogger('maia-db')
 
@@ -62,22 +62,7 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 		const coId = msg.id
 
 		// Normalize: CoJSON may send header in msg.header, msg.new[sessionId].header, or first transaction
-		let header = msg.header
-		if (!header && msg.new && typeof msg.new === 'object') {
-			for (const sessionId of Object.keys(msg.new)) {
-				const session = msg.new[sessionId]
-				if (session?.header) {
-					header = session.header
-					break
-				}
-				// First transaction may contain header (CoJSON creation format)
-				const txs = session?.newTransactions
-				if (Array.isArray(txs) && txs.length > 0 && txs[0]?.header) {
-					header = txs[0].header
-					break
-				}
-			}
-		}
+		const header = msg.header || extractHeaderFromStorageMessage(msg)
 		const normalizedMsg = header && !msg.header ? { ...msg, header } : msg
 
 		// CRITICAL: ENFORCE that every co-value MUST have a schema in headerMeta.$factory
@@ -226,8 +211,12 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 			return storeResult
 		}
 
-		// CRITICAL: Chain indexing to store - storage is not complete until BOTH stored AND indexed
-		// This ensures readCollection and other consumers never see unindexed data
+		// Seed and bulk paths disable hook-side indexing; rebuildAllIndexes() runs after.
+		if (peer._indexingEnabled === false) {
+			return storeResult
+		}
+
+		// CRITICAL: Chain indexing to store (msg-based, no re-read / verified-state retry)
 		return Promise.resolve(storeResult)
 			.then(async () => {
 				// Deduplication: Skip if already indexing this co-value
@@ -242,29 +231,7 @@ export function wrapStorageWithIndexingHooks(storage, peer) {
 						await groups.getSparkOsId(peer, peer.systemSparkCoId)
 					}
 
-					// Get co-value core (may need retries for local rapid writes during seeding)
-					let coValueCore = peer.getCoValue(coId)
-					let attempts = 0
-					const maxAttempts = 10
-					while ((!coValueCore || !peer.isAvailable(coValueCore)) && attempts < maxAttempts) {
-						if (peer.node?.loadCoValueCore) {
-							await peer.node.loadCoValueCore(coId).catch(() => {})
-						}
-						await new Promise((r) => setTimeout(r, 10 * (attempts + 1)))
-						coValueCore = peer.getCoValue(coId)
-						attempts++
-					}
-					if (!coValueCore || !peer.isAvailable(coValueCore)) {
-						// Remote write or still not available - explicit re-index pass will catch if local
-						return
-					}
-
-					const updatedCoValueCore = peer.getCoValue(coId)
-					if (!updatedCoValueCore || !peer.isAvailable(updatedCoValueCore)) {
-						return
-					}
-
-					await applyPersistentCoValueIndexing(peer, updatedCoValueCore)
+					await indexFromMessage(peer, normalizedMsg)
 					debugLog('db', 'storageHook', 'indexed coId=', coId)
 				} catch (error) {
 					const isFactoryCompilationError = error?.message?.includes('Failed to compile factory')

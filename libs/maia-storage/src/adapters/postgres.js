@@ -21,24 +21,131 @@ import { runMigrations } from '../schema/postgres.js'
 
 const opsStor = createOpsLogger('STORAGE')
 
-/** Options passed to `new SQL()` — single connection, no idleTimeout (Neon + Bun default). */
-export const BUN_SQL_ADAPTER_OPTIONS = { max: 1 }
+const DEFAULT_PG_POOL_MAX = 5
+const DEFAULT_PG_MAX_LIFETIME_SEC = 900
 
 /**
- * @param {import('bun').SQL} sql
+ * Bun `new SQL(url, options)` for long-running sync (Fly/Neon/MPG).
+ *
+ * **Pooling:** Non-transaction traffic uses a Bun `SQL` pool (`PEER_PG_MAX`, default
+ * `DEFAULT_PG_POOL_MAX`). **Transactions** use {@link SQL.begin} (reserved
+ * connection), not `sql.unsafe("BEGIN" | "COMMIT" | "ROLLBACK")` on the pool, so
+ * `max` can be &gt; 1 without `ERR_POSTGRES_UNSAFE_TRANSACTION`.
+ * Resilience: {@link withPgRetry} on the pool for hard connection loss. {@link withPgTxnRetry}
+ * re-runs a failed `sql.begin` once (includes lifetime/idle codes). Default
+ * `maxLifetime` 15m (Bun jitter) — tune `PEER_PG_MAX_LIFETIME_SEC` (0 = no
+ * client-side rotation). `PEER_PG_CONNECT_TIMEOUT_SEC` for new sockets.
+ */
+export function resolveBunPostgresPoolOptions() {
+	const max = Math.max(1, Number(process.env.PEER_PG_MAX) || DEFAULT_PG_POOL_MAX)
+	const raw = process.env.PEER_PG_MAX_LIFETIME_SEC
+	const hasExplicitLifetime = raw !== undefined && String(raw).trim() !== ''
+	/** 0 = disable client maxLifetime */
+	const maxLifetime = hasExplicitLifetime
+		? Math.max(0, Number(raw) || 0)
+		: DEFAULT_PG_MAX_LIFETIME_SEC
+	const connectionTimeout = Math.max(5, Number(process.env.PEER_PG_CONNECT_TIMEOUT_SEC) || 30)
+	/** @type {Record<string, number>} */
+	const o = { max, connectionTimeout }
+	if (maxLifetime > 0) {
+		o.maxLifetime = maxLifetime
+	}
+	return o
+}
+
+export const BUN_SQL_ADAPTER_OPTIONS = resolveBunPostgresPoolOptions()
+
+function isPostgresConnectionLostError(e) {
+	const code = e && typeof e === 'object' && 'code' in e ? e.code : null
+	// Do not retry LIFETIME / IDLE on the pool path — the driver is mid-teardown; retry
+	// can race and surface ERR_POSTGRES_UNSUPPORTED_INTEGER_SIZE. The next natural query
+	// recovers. Do retry hard disconnects the app did not schedule.
+	if (code === 'ERR_POSTGRES_CONNECTION_CLOSED' || code === 'ERR_POSTGRES_CONNECTION_TIMEOUT') {
+		return true
+	}
+	const msg = String(e && typeof e === 'object' && 'message' in e ? e.message : e)
+	return /connection closed|connection terminated|server closed the connection|ECONNRESET/i.test(msg)
+}
+
+/** @param {unknown} e */
+function isPostgresConnectionLostErrorForTxn(e) {
+	if (isPostgresConnectionLostError(e)) return true
+	const code = e && typeof e === 'object' && e !== null && 'code' in e ? e.code : null
+	// whole-transaction retry after planned pool or server recycle
+	if (code === 'ERR_POSTGRES_LIFETIME_TIMEOUT' || code === 'ERR_POSTGRES_IDLE_TIMEOUT') {
+		return true
+	}
+	return false
+}
+
+/**
+ * One retry after connection loss; pool may open a new socket on next use.
+ * @param {() => Promise<T>} fn
+ * @returns {Promise<T>}
+ * @template T
+ */
+async function withPgRetry(fn) {
+	try {
+		return await fn()
+	} catch (e) {
+		if (!isPostgresConnectionLostError(e)) throw e
+		opsStor.warn('Postgres: transient connection error, retrying once', {
+			code: e && typeof e === 'object' && 'code' in e ? e.code : undefined,
+		})
+		await new Promise((r) => setTimeout(r, 40))
+		return await fn()
+	}
+}
+
+/**
+ * Retries a failed `sql.begin(...)` block once (including lifetime/idle on checkout).
+ * @param {() => Promise<T>} fn
+ * @returns {Promise<T>}
+ * @template T
+ */
+export async function withPgTxnRetry(fn) {
+	try {
+		return await fn()
+	} catch (e) {
+		if (!isPostgresConnectionLostErrorForTxn(e)) throw e
+		opsStor.warn('Postgres: transaction start failed, retrying once', {
+			code: e && typeof e === 'object' && 'code' in e ? e.code : undefined,
+		})
+		await new Promise((r) => setTimeout(r, 40))
+		return await fn()
+	}
+}
+
+/**
+ * @param {object} runner - Bun `SQL` pool or transaction-scoped instance from `sql.begin`
+ * @param {{ retry?: boolean }} [opts] - `retry: true` (default) uses {@link withPgRetry} (pool only).
  * @returns {{ query: (text: string, params?: unknown[]) => Promise<{ rows: unknown[] }>, exec: (text: string) => Promise<void> }}
  */
-export function createSqlDbInterface(sql) {
+export function makeDb(runner, opts = {}) {
+	const useRetry = opts.retry !== false
+	const wrap = useRetry ? (fn) => withPgRetry(fn) : (fn) => fn()
 	return {
 		query: async (text, params) => {
-			const raw = await sql.unsafe(text, params ?? [])
-			const rows = Array.isArray(raw) ? raw : [...raw]
-			return { rows }
+			return wrap(async () => {
+				const raw = await runner.unsafe(text, params ?? [])
+				const rows = Array.isArray(raw) ? raw : [...raw]
+				return { rows }
+			})
 		},
 		exec: async (text) => {
-			await sql.unsafe(text)
+			return wrap(async () => {
+				await runner.unsafe(text)
+			})
 		},
 	}
+}
+
+/**
+ * Pooled `SQL` instance — uses {@link withPgRetry} on each query.
+ * @param {import('bun').SQL} sql
+ */
+export function createSqlDbInterface(sql) {
+	return makeDb(sql, { retry: true })
 }
 
 /**
@@ -156,7 +263,7 @@ class PostgresTransaction {
  * @param {object} client - pg.Client instance
  * @param {import('../blob/interface.js').BlobStore} [blobStore] - optional blob store for binary offloading
  */
-class PostgresClient {
+export class PostgresClient {
 	/**
 	 * @param {object} sql - Bun SQL connection (close())
 	 * @param {{ query: Function, exec: Function }} db
@@ -283,15 +390,13 @@ class PostgresClient {
 	}
 
 	async transaction(callback) {
-		await this.db.query('BEGIN')
-		try {
-			const tx = new PostgresTransaction(this.db, this)
-			await callback(tx)
-			await this.db.query('COMMIT')
-		} catch (e) {
-			await this.db.query('ROLLBACK')
-			throw e
-		}
+		return withPgTxnRetry(() =>
+			this._sql.begin(async (tx) => {
+				const txDb = makeDb(tx, { retry: false })
+				const ptxn = new PostgresTransaction(txDb, this)
+				return await callback(ptxn)
+			}),
+		)
 	}
 
 	async trackCoValuesSyncState(updates) {
@@ -327,8 +432,8 @@ class PostgresClient {
 		}
 		const rowId = coValueRow.rows[0].rowID || coValueRow.rows[0].rowid
 
-		await this.transaction(async () => {
-			await this.db.query(
+		await this.transaction(async (ptxn) => {
+			await ptxn.db.query(
 				`DELETE FROM transactions
          WHERE ses IN (
            SELECT "rowID" FROM sessions
@@ -336,7 +441,7 @@ class PostgresClient {
          )`,
 				[rowId],
 			)
-			await this.db.query(
+			await ptxn.db.query(
 				`DELETE FROM signatureAfter
          WHERE ses IN (
            SELECT "rowID" FROM sessions
@@ -344,12 +449,12 @@ class PostgresClient {
          )`,
 				[rowId],
 			)
-			await this.db.query(
+			await ptxn.db.query(
 				`DELETE FROM sessions
          WHERE "coValue" = $1 AND "sessionID" NOT LIKE '%$'`,
 				[rowId],
 			)
-			await this.db.query(
+			await ptxn.db.query(
 				`INSERT INTO deletedCoValues ("coValueID", status) VALUES ($1, $2)
          ON CONFLICT ("coValueID") DO UPDATE SET status = $2`,
 				[coValueID, DeletedCoValueDeletionStatus.Done],

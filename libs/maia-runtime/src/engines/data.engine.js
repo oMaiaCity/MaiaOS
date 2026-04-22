@@ -979,6 +979,10 @@ export class DataEngine {
 	 */
 	cobinaryFactoryCoId = null
 
+	/** In-flight dedupe + cache key for {@link DataEngine#resolveSystemFactories}. */
+	_rsfInflight = null
+	_rsfInflightKey = null
+
 	constructor(peer, options = {}) {
 		this.peer = peer
 		const { evaluator, getSyncBaseUrl } = options
@@ -1033,23 +1037,43 @@ export class DataEngine {
 			: {}
 	}
 
+	_getResolveSystemFactoriesInflightKey() {
+		const peer = this.peer
+		return `${peer?.systemSparkCoId ?? 'none'}|${peer?.infra ? '1' : '0'}`
+	}
+
 	/** Loads `peer.infra` from named `spark.os` slots (written at seed). */
 	async resolveSystemFactories() {
 		const peer = this.peer
-		if (
-			typeof peer.resolveSystemSparkCoId === 'function' &&
-			!peer.systemSparkCoId?.startsWith('co_z')
-		) {
-			await peer.resolveSystemSparkCoId()
+		if (peer?.infra) {
+			return
 		}
-		if (!peer?.systemSparkCoId?.startsWith('co_z')) return
-		const osId = await getSparkOsId(peer, peer.systemSparkCoId)
-		if (!osId?.startsWith('co_z')) return
-		await loadInfraFromSparkOs(peer, osId)
-		const cob = peer.infra?.cobinary
-		if (cob) this.cobinaryFactoryCoId = cob
-		const { hydrateValidationMetaFromPeer } = await import('@MaiaOS/validation/validation.helper')
-		await hydrateValidationMetaFromPeer(peer)
+		const key = this._getResolveSystemFactoriesInflightKey()
+		if (this._rsfInflight && this._rsfInflightKey === key) {
+			return this._rsfInflight
+		}
+		this._rsfInflightKey = key
+		this._rsfInflight = (async () => {
+			if (
+				typeof peer.resolveSystemSparkCoId === 'function' &&
+				!peer.systemSparkCoId?.startsWith('co_z')
+			) {
+				await peer.resolveSystemSparkCoId()
+			}
+			if (!peer?.systemSparkCoId?.startsWith('co_z')) return
+			const osId = await getSparkOsId(peer, peer.systemSparkCoId)
+			if (!osId?.startsWith('co_z')) return
+			await loadInfraFromSparkOs(peer, osId)
+			const cob = peer.infra?.cobinary
+			if (cob) this.cobinaryFactoryCoId = cob
+			const { hydrateValidationMetaFromPeer } = await import('@MaiaOS/validation/validation.helper')
+			await hydrateValidationMetaFromPeer(peer)
+		})().finally(() => {
+			if (this._rsfInflightKey === key) {
+				this._rsfInflight = null
+			}
+		})
+		return this._rsfInflight
 	}
 
 	async execute(payload) {

@@ -9,7 +9,7 @@
  *   maia.do({ op: 'read', schema, key, filter, ... });
  */
 
-import { resolve, resolveReactive } from '@MaiaOS/db'
+import { ensureCoValueLoaded, resolve, resolveReactive } from '@MaiaOS/db'
 import { validateAgainstFactoryOrThrow } from '@MaiaOS/validation/validation.helper'
 import { ActorEngine } from './engines/actor.engine.js'
 import { DataEngine } from './engines/data.engine.js'
@@ -520,6 +520,25 @@ export class MaiaOS {
 		}
 
 		const actorConfig = actorStore.value
+		const processCoId =
+			typeof actorConfig?.process === 'string' && actorConfig.process.startsWith('co_z')
+				? actorConfig.process
+				: null
+		if (processCoId) {
+			try {
+				await ensureCoValueLoaded(this.dataEngine.peer, processCoId, {
+					waitForAvailable: true,
+					timeoutMs: 30000,
+				})
+			} catch (e) {
+				const msg = e instanceof Error ? e.message : String(e)
+				throw new Error(
+					`[MaiaOS] Actor process CoValue did not load from sync in time (${processCoId}). ` +
+						`Check network and sync. ${msg}`,
+				)
+			}
+		}
+
 		const actor = await this.runtime.createActorForView(actorConfig, container, vibeCoIdForActors)
 
 		return { vibe, actor }
