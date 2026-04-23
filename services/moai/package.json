@@ -1,0 +1,11 @@
+{
+	"name": "moai",
+	"version": "0.1.0",
+	"private": true,
+	"type": "module",
+	"description": "Moai fullstack: web UI (here) + dev runner for the `maia-ai` Python stack (libs/maia-ai). From repo root: `bun run dev:moai`.",
+	"scripts": {
+		"dev": "bun run ./run-maia-dev.js",
+		"sync:ai": "bun run ./sync-maia-venv.js"
+	}
+}

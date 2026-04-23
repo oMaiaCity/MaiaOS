@@ -97,14 +97,20 @@ libs/maia-game/dist/
 # Cursor / agent skills local lock (optional tooling output)
 skills-lock.json
 
-# services/parlor — local Python (uv), bytecode, coverage, tool caches
-services/parlor/**/.venv/
-services/parlor/**/__pycache__/
-services/parlor/**/*.py[cod]
-services/parlor/**/$py.class
-services/parlor/**/.pytest_cache/
-services/parlor/**/.mypy_cache/
-services/parlor/**/.ruff_cache/
-services/parlor/**/*.egg-info/
-services/parlor/**/default.profraw
-services/parlor/**/*.profraw
+# Moai — Hugging Face + LiteRT on-device model cache; Python venv (not in libs/maia-ai)
+services/moai/.cache/
+services/moai/.venv/
+services/moai/**/default.profraw
+services/moai/**/*.profraw
+
+# libs/maia-ai — local Python (uv), bytecode, coverage, tool caches
+libs/maia-ai/**/.venv/
+libs/maia-ai/**/__pycache__/
+libs/maia-ai/**/*.py[cod]
+libs/maia-ai/**/$py.class
+libs/maia-ai/**/.pytest_cache/
+libs/maia-ai/**/.mypy_cache/
+libs/maia-ai/**/.ruff_cache/
+libs/maia-ai/**/*.egg-info/
+libs/maia-ai/**/default.profraw
+libs/maia-ai/**/*.profraw

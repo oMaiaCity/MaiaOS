@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Parlor</title>
+<title>Moai</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=Syne:wght@700;800&display=swap" rel="stylesheet">
@@ -394,6 +394,9 @@
     color: var(--c-text-dim);
     transition: color 0.3s;
   }
+  #stateText {
+    font-variant-numeric: tabular-nums;
+  }
 
   .state-indicator .dot {
     width: 8px;
@@ -415,6 +418,22 @@
 
   .msg.assistant a { color: #93c5fd; }
   .msg.assistant code { font-size: 0.9em; background: rgba(255,255,255,0.06); padding: 0.1em 0.35em; border-radius: 4px; }
+  .msg.assistant .msg-json {
+    display: block;
+    margin: 0;
+    padding: 10px 12px;
+    font-size: 12px;
+    line-height: 1.45;
+    font-family: ui-monospace, Menlo, Monaco, "Courier New", monospace;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: min(70vh, 32rem);
+    overflow: auto;
+    background: #0a0a12;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 8px;
+    color: #c0d0e0;
+  }
 
   /* ── Mode tabs + chat composer ── */
   .tab-bar {
@@ -444,12 +463,13 @@
     background: rgba(255,255,255,0.08);
     border-color: rgba(255,255,255,0.12);
   }
+  /* Sits between transcript and composer (chat) or above voice controls */
   .state-row {
     width: 100%;
     max-width: 640px;
     display: flex;
     justify-content: center;
-    padding: 0 2px 8px;
+    padding: 8px 2px 6px;
     flex-shrink: 0;
   }
   .voice-block { width: 100%; max-width: 640px; flex-shrink: 0; }
@@ -570,7 +590,7 @@
 <header>
   <div class="logo">
     <div class="logo-mark"></div>
-    <h1>Parlor</h1>
+    <h1>Moai</h1>
   </div>
   <span class="model-label" id="modelLabel">Gemma 4 E4B</span>
   <div id="status" class="status-pill disconnected">Disconnected</div>
@@ -581,13 +601,6 @@
     <button type="button" class="tab active" data-mode="chat" id="tabChat" role="tab" aria-selected="true">Chat</button>
     <button type="button" class="tab" data-mode="voice" id="tabVoice" role="tab" aria-selected="false">Voice &amp; camera</button>
   </div>
-  <div class="state-row" id="stateRow">
-    <div class="state-indicator">
-      <div id="stateDot" class="dot loading"></div>
-      <span id="stateText">Connecting…</span>
-    </div>
-  </div>
-
   <div id="voiceBlock" class="voice-block" hidden>
     <div id="viewportWrap" class="viewport-wrap loading">
       <div class="viewport-glow"></div>
@@ -599,6 +612,13 @@
   </div>
 
   <div id="messages" class="transcript"></div>
+
+  <div class="state-row" id="stateRow">
+    <div class="state-indicator">
+      <div id="stateDot" class="dot loading"></div>
+      <span id="stateText">Connecting…</span>
+    </div>
+  </div>
 
   <div class="chat-composer-wrap" id="chatComposerWrap">
     <div id="chatImagePreview" class="chat-image-preview" hidden></div>
@@ -644,6 +664,7 @@ let ignoreIncomingAudio = false;
 let activeMode = 'chat';
 let voiceStarted = false;
 let waveformRafId = 0;
+let thinkingIntervalId = null;
 
 // Streaming audio playback state
 let streamSampleRate = 24000;
@@ -737,6 +758,13 @@ function updateSpeakingGlow() {
   requestAnimationFrame(updateSpeakingGlow);
 }
 
+function clearThinkingTimer() {
+  if (thinkingIntervalId !== null) {
+    clearInterval(thinkingIntervalId);
+    thinkingIntervalId = null;
+  }
+}
+
 // ── State Machine ──
 function setState(newState) {
   state = newState;
@@ -750,7 +778,22 @@ function setState(newState) {
     processing: 'Thinking...',
     speaking: 'Speaking',
   };
-  stateText.textContent = labels[newState] || newState;
+  clearThinkingTimer();
+  if (newState === 'processing') {
+    const t0 = Date.now();
+    const tick = () => {
+      if (state !== 'processing') {
+        clearThinkingTimer();
+        return;
+      }
+      const secs = Math.floor((Date.now() - t0) / 1000);
+      stateText.textContent = `Thinking... · ${secs}s`;
+    };
+    tick();
+    thinkingIntervalId = setInterval(tick, 1000);
+  } else {
+    stateText.textContent = labels[newState] || newState;
+  }
 
   // Update viewport glow class
   viewportWrap.className = `viewport-wrap ${newState}`;
@@ -818,7 +861,11 @@ function connect() {
           lastUserMsg.innerHTML = `${msg.transcription}${meta ? meta.outerHTML : ''}`;
         }
       }
-      addMessage('assistant', msg.text, `LLM ${msg.llm_time}s`);
+      if (msg.display_format === 'json') {
+        addMessage('assistant', `<pre class="msg-json">${escapeHtml(msg.text)}</pre>`, `LLM ${msg.llm_time}s · structured`);
+      } else {
+        addMessage('assistant', msg.text, `LLM ${msg.llm_time}s`);
+      }
       if (msg.mode === 'chat') {
         setState('ready');
         setStatus('connected', 'Connected');

@@ -4,11 +4,14 @@
 	"workspaces": [
 		"services/app",
 		"services/sync",
+		"services/moai",
 		"libs/*"
 	],
 	"type": "module",
 	"scripts": {
 		"dev": "bun scripts/dev.js",
+		"dev:moai": "bun services/moai/run-maia-dev.js",
+		"maia:sync": "bun services/moai/sync-maia-venv.js",
 		"dev:app": "bun scripts/dev-app.js",
 		"dev:sync": "bun scripts/dev-sync.js",
 		"dev:desktop": "bun scripts/dev-desktop.js",
