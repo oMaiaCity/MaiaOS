@@ -135,6 +135,15 @@
 					"allowComments": true
 				}
 			}
+		},
+		{
+			"includes": ["services/parlor/**"],
+			"formatter": {
+				"enabled": false
+			},
+			"linter": {
+				"enabled": false
+			}
 		}
 	]
 }

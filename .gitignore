@@ -96,3 +96,15 @@ libs/maia-game/dist/
 
 # Cursor / agent skills local lock (optional tooling output)
 skills-lock.json
+
+# services/parlor — local Python (uv), bytecode, coverage, tool caches
+services/parlor/**/.venv/
+services/parlor/**/__pycache__/
+services/parlor/**/*.py[cod]
+services/parlor/**/$py.class
+services/parlor/**/.pytest_cache/
+services/parlor/**/.mypy_cache/
+services/parlor/**/.ruff_cache/
+services/parlor/**/*.egg-info/
+services/parlor/**/default.profraw
+services/parlor/**/*.profraw
