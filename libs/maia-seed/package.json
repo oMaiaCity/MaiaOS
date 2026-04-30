@@ -5,6 +5,7 @@
 	"main": "src/index.js",
 	"exports": {
 		".": "./src/index.js",
+		"./genesis-runtime": "./src/genesis-runtime.js",
 		"./ref-transform": "./src/ref-transform.js",
 		"./orchestration": "./src/orchestration/seed.js"
 	},

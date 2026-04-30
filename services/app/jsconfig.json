@@ -2,7 +2,7 @@
 	"compilerOptions": {
 		"baseUrl": ".",
 		"paths": {
-			"@MaiaOS/runtime": ["../../libs/maia-runtime/src/index.js"]
+			"@MaiaOS/aven-os/client": ["../../libs/aven-os/client/index.js"]
 		}
 	}
 }

@@ -2,7 +2,7 @@
  * Group Operations — peer.read / OS-spark resolution (core extractors in groups-core.js).
  */
 
-import { ensureCoValueLoaded } from '../crud/ensure-covalue-core.js'
+import { ensureCoValueLoaded } from '../../primitives/ensure-covalue-core.js'
 import { waitForStoreReady } from '../crud/read-operations.js'
 import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
 import { readCoMapCoIdField, readLiveSparksRegistryEntries } from './groups-core.js'

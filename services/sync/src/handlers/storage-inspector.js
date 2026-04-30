@@ -2,7 +2,7 @@ import {
 	STORAGE_INSPECTOR_DEFAULT_TABLE_PAGE,
 	STORAGE_INSPECTOR_MAX_TABLE_PAGE,
 	verifyInvocationToken,
-} from '@MaiaOS/runtime'
+} from '@MaiaOS/aven-os/server'
 
 export const STORAGE_INSPECTOR_BASE = '/api/v0/admin/storage'
 

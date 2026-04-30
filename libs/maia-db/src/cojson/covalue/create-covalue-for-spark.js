@@ -9,11 +9,11 @@
  * Exception: guardian itself is NOT created via this util - it keeps the account.
  */
 
+import { normalizeCoValueData } from '../../primitives/data-extraction.js'
 import { createCoBinary } from '../cotypes/coBinary.js'
 import { createCoList } from '../cotypes/coList.js'
 import { createCoMap } from '../cotypes/coMap.js'
 import { createCoStream } from '../cotypes/coStream.js'
-import { normalizeCoValueData } from '../crud/data-extraction.js'
 import { getSparkGroup, removeGroupMember } from '../groups/groups.js'
 
 /**

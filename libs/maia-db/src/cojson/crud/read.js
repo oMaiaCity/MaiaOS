@@ -5,8 +5,8 @@
  * using $stores architecture with progressive loading and true reactivity.
  */
 
+import { extractCoValueData } from '../../primitives/data-extraction.js'
 import { ensureCoValueLoaded, getCoListId } from './collection-helpers.js'
-import { extractCoValueData } from './data-extraction.js'
 import { matchesFilter } from './filter-helpers.js'
 import { readAllCoValues } from './read-all-covalues.js'
 import { readCollection } from './read-collection.js'

@@ -10,7 +10,7 @@
  * Content-addressable: resolves by co-id when traversing. Never pre-resolves everything.
  */
 
-import { resolveCoIdShallow } from './data-extraction.js'
+import { resolveCoIdShallow } from '../../primitives/data-extraction.js'
 
 /**
  * Traverse path step-by-step. When value is co-id, resolve by id (content-addressable).

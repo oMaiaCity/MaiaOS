@@ -6,7 +6,7 @@ import { MAIA_SPARK_REGISTRY, SEED_DATA } from '../generated/registry.js'
 import { parseDataMaiaBracketRef } from '../helpers/bracket-ref.js'
 import { maiaIdentity } from '../helpers/identity-from-maia-path.js'
 import { getVibeKey } from '../helpers/vibe-keys.js'
-import { isActorFilePathId } from '../sparks/maia/actors/index.js'
+import { isActorFilePathId } from '../sparks/maia/actors/actor-service-refs.js'
 import { deriveInboxId } from './derive-inbox.js'
 
 const VIBE_SCHEMA = '°maia/factory/vibe.factory.maia'

@@ -31,8 +31,8 @@ describe('maia registry (generated)', () => {
 	})
 
 	test('ALL_VIBE_REGISTRIES matches registry.js discovery', async () => {
-		expect(ALL_VIBE_REGISTRIES.length).toBe(8)
 		const asyncList = await getAllVibeRegistries()
-		expect(asyncList.length).toBe(8)
+		const withVibe = ALL_VIBE_REGISTRIES.filter((R) => R?.vibe)
+		expect(asyncList).toEqual(withVibe)
 	})
 })

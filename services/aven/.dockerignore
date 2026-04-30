@@ -28,11 +28,11 @@ scripts
 
 libs/maia-brand
 libs/maia-db
-libs/maia-distros
+libs/aven-os
 libs/maia-flows
 libs/maia-game
 libs/maia-peer
-libs/maia-runtime
+libs/maia-engine
 libs/maia-seed
 libs/maia-self
 libs/maia-storage

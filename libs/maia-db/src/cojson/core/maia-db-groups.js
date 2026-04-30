@@ -1,4 +1,4 @@
-import { extractCoStreamWithSessions } from '../crud/data-extraction.js'
+import { extractCoStreamWithSessions } from '../../primitives/data-extraction.js'
 import * as groups from '../groups/groups.js'
 
 /**

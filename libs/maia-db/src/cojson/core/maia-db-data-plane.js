@@ -1,13 +1,9 @@
 import * as crudCreate from '../crud/create.js'
-import * as crudDelete from '../crud/delete.js'
-import { createAndPushMessage as createAndPushMessageFn } from '../crud/message-helpers.js'
-import { processInbox as processInboxFn } from '../crud/process-inbox.js'
 import { findFirst as findFirstByFilter, read as universalRead } from '../crud/read.js'
 import {
 	waitForReactiveResolution as waitForReactiveResolutionFn,
 	waitForStoreReady,
 } from '../crud/read-operations.js'
-import * as crudUpdate from '../crud/update.js'
 import {
 	checkCotype as checkCotypeFn,
 	resolve,
@@ -55,6 +51,7 @@ export async function maiaDbCreate(db, schema, data, options = {}) {
  * @param {object} db - MaiaDB
  */
 export async function maiaDbUpdate(db, schema, id, data) {
+	const crudUpdate = await import('../crud/update.js')
 	return await crudUpdate.update(db, schema, id, data)
 }
 
@@ -62,6 +59,7 @@ export async function maiaDbUpdate(db, schema, id, data) {
  * @param {object} db - MaiaDB
  */
 export async function maiaDbDelete(db, schema, id) {
+	const crudDelete = await import('../crud/delete.js')
 	return await crudDelete.deleteRecord(db, schema, id)
 }
 
@@ -121,6 +119,7 @@ export async function maiaDbWaitForReactiveResolution(_db, store, opts = {}) {
  * @param {object} db - MaiaDB
  */
 export async function maiaDbProcessInbox(db, actorId, inboxCoId) {
+	const { processInbox: processInboxFn } = await import('../crud/process-inbox.js')
 	return processInboxFn(db, actorId, inboxCoId)
 }
 
@@ -131,5 +130,6 @@ export async function maiaDbCreateAndPushMessage(db, inboxCoId, messageData) {
 	if (!db.dbEngine) {
 		throw new Error('[MaiaDB.createAndPushMessage] dbEngine required (set via DataEngine)')
 	}
+	const { createAndPushMessage: createAndPushMessageFn } = await import('../crud/message-helpers.js')
 	return createAndPushMessageFn(db.dbEngine, inboxCoId, messageData)
 }

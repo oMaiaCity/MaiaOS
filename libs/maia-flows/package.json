@@ -4,11 +4,16 @@
 	"type": "module",
 	"main": "src/index.js",
 	"exports": {
-		".": "./src/index.js"
+		".": "./src/index.js",
+		"./runner": "./src/runner.js",
+		"./context": "./src/context.js",
+		"./catalog/sync-server": "./src/catalog/sync-server.js",
+		"./catalog/bootstrap-handshake": "./src/catalog/bootstrap-handshake.js",
+		"./steps/identity": "./src/steps/identity.js"
 	},
 	"dependencies": {
 		"@MaiaOS/db": "workspace:*",
-		"@MaiaOS/runtime": "workspace:*",
+		"@MaiaOS/engine": "workspace:*",
 		"@MaiaOS/seed": "workspace:*",
 		"@MaiaOS/universe": "workspace:*",
 		"@MaiaOS/validation": "workspace:*"

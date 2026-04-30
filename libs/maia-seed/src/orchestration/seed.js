@@ -28,7 +28,7 @@ import { seedData } from './data.js'
 import {
 	buildMetaFactoryForSeeding,
 	ensureSparkOs,
-	sortSchemasByDependency,
+	sortFactoriesByDependency,
 	writeInfraSlotsToSparkOs,
 } from './helpers.js'
 
@@ -266,7 +266,7 @@ export async function seed(
 		if (!uniqueSchemasByNanoid.has(nn)) uniqueSchemasByNanoid.set(nn, { name, schema })
 	}
 
-	const sortedFactoryKeys = sortSchemasByDependency(uniqueSchemasByNanoid)
+	const sortedFactoryKeys = sortFactoriesByDependency(uniqueSchemasByNanoid)
 
 	await ensureSparkOs(account, node, maiaGroup, peer, undefined)
 

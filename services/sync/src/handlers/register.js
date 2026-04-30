@@ -1,4 +1,4 @@
-import { ensureIdentity, findFirst, generateRegistryName } from '@MaiaOS/runtime'
+import { ensureIdentity, findFirst, generateRegistryName } from '@MaiaOS/aven-os/server'
 import { auditRegisterDecision } from '../http/rate-limit.js'
 
 /**

@@ -17,13 +17,7 @@
 	},
 	"dependencies": {
 		"@MaiaOS/game": "workspace:*",
-		"@MaiaOS/runtime": "workspace:*",
-		"@MaiaOS/db": "workspace:*",
-		"@MaiaOS/logs": "workspace:*",
-		"@MaiaOS/maia-distros": "workspace:*",
-		"@MaiaOS/peer": "workspace:*",
-		"@MaiaOS/universe": "workspace:*",
-		"@MaiaOS/validation": "workspace:*",
+		"@MaiaOS/aven-os": "workspace:*",
 		"@tauri-apps/api": "2.10.1"
 	},
 	"devDependencies": {

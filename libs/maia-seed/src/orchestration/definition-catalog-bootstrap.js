@@ -10,7 +10,7 @@ import { removeIdFields } from '@MaiaOS/validation/remove-id-fields'
  * @param {import('@cojson/cojson').CoValueCore} indexesCoValue
  * @param {string} metaSchemaCoId
  * @param {Map<string, string>} factoryCoIdMap
- * @param {import('@MaiaOS/runtime').DataEngine | null} dbEngine
+ * @param {import('@MaiaOS/engine').DataEngine | null} dbEngine
  */
 export async function seedDefinitionCatalogBootstrap(
 	ctx,

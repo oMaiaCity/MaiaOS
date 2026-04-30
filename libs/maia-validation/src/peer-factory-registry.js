@@ -6,11 +6,11 @@ export {
 	createFactoryMeta,
 	EXCEPTION_FACTORIES,
 	FACTORY_REGISTRY,
-	getSchema,
-	hasSchema,
+	getFactory,
+	hasFactory,
 	isExceptionFactory,
 	validateHeaderMetaFactory,
-} from './data/builtin-schemas.data.js'
+} from './data/builtin-factories.data.js'
 
 export async function getMetaFactoryFromPeer(peer) {
 	if (!peer) throw new Error('[getMetaFactoryFromPeer] Peer required')

@@ -25,7 +25,7 @@ order = 1
 
 [[layers]]
 name = "runtime_stack"
-paths = ["libs/maia-runtime/*", "libs/maia-distros/*", "libs/maia-flows/*"]
+paths = ["libs/maia-engine/*", "libs/aven-os/*", "libs/maia-flows/*"]
 order = 2
 
 [[layers]]

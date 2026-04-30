@@ -17,7 +17,7 @@ function stripComments(src) {
 /** @MaiaOS/pkg → libs dirname */
 const MAIA_SCOPE_TO_DIR = {
 	db: "maia-db",
-	runtime: "maia-runtime",
+	engine: "maia-engine",
 	peer: "maia-peer",
 	logs: "maia-logs",
 	validation: "maia-validation",
@@ -26,7 +26,7 @@ const MAIA_SCOPE_TO_DIR = {
 	seed: "maia-seed",
 	universe: "maia-universe",
 	flows: "maia-flows",
-	"maia-distros": "maia-distros",
+	"aven-os": "aven-os",
 	game: "maia-game",
 	mail: "maia-mail",
 	"maia-ucan": "maia-ucan",

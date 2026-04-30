@@ -5,9 +5,9 @@
  * are available before returning stores. Inspired by jazz-tools' deepLoading pattern.
  */
 
-import { observeCoValue } from '../cache/coCache.js'
+import { observeCoValue } from '../../primitives/co-cache.js'
+import { extractCoValueData } from '../../primitives/data-extraction.js'
 import { ensureCoValueLoaded } from './collection-helpers.js'
-import { extractCoValueData } from './data-extraction.js'
 
 /**
  * Check if a CoValue is already resolved or being resolved

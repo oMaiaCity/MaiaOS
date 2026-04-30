@@ -1,113 +1,13 @@
 /**
- * Main entry point for @MaiaOS/db
- *
- * Pure cojson with custom schema migration and automatic subscription management
- * STRICT: All account operations require passkey-derived agentSecret
- *
- * NEW: Subscription Layer
- * - Automatic CoValue loading from IndexedDB
- * - Subscription caching and deduplication
- * - Auto-loading of linked CoValues
- * - Memory-efficient cleanup
+ * @MaiaOS/db — public facade. Layering: ./primitives → ./cojson (implementation) → ./modules (grouped surface).
  */
 
-// Sync Peer Setup (client-side peer configuration for LocalNode) - re-exported from @MaiaOS/peer
 export { setupSyncPeers, subscribeSyncState, updateSyncState } from '@MaiaOS/peer'
-// Unified cache (subscriptions, stores, resolutions, resolved data)
-export {
-	CoCache,
-	getGlobalCoCache,
-	invalidateResolvedDataForMutatedCoValue,
-	observeCoValue,
-	resetGlobalCoCache,
-} from './cojson/cache/coCache.js'
-// MaiaDB - single data layer implementation (was CoJSONBackend)
-export { MaiaDB, SYSTEM_SPARK_REGISTRY_KEY } from './cojson/core/MaiaDB.js'
-export { createCoList } from './cojson/cotypes/coList.js'
-export { createCoMap } from './cojson/cotypes/coMap.js'
-export { createCoStream } from './cojson/cotypes/coStream.js'
-export { createCoValueForSpark } from './cojson/covalue/create-covalue-for-spark.js'
-// Collection Helpers (schema index lookup, CoValue loading)
-export {
-	ensureCoValueAvailable,
-	ensureCoValueLoaded,
-	getCoListId,
-	getFactoryIndexColistId,
-} from './cojson/crud/collection-helpers.js'
-// Data extraction (single canonical read format; normalizeCoValueData for CoMap/CoList shapes)
-export { extractCoValueData, normalizeCoValueData } from './cojson/crud/data-extraction.js'
-// Message Helpers (create and push message CoMaps)
-export { createAndPushMessage } from './cojson/crud/message-helpers.js'
-// Process Inbox (peer-to-peer inbox processing)
-export {
-	collectInboxMessageCoIds,
-	findNewSuccessFromTarget,
-	processInbox,
-	shouldProcessInboxMessageForSession,
-} from './cojson/crud/process-inbox.js'
-// Reactive Dependency Resolver (universal progressive reactive resolution)
-// Note: resolveReactive is exported from resolver.js (wraps reactive-resolver.js)
-export {
-	resolveCoValueReactive,
-	resolveFactoryReactive,
-	resolveQueryReactive,
-	waitForReactiveResolution,
-} from './cojson/crud/reactive-resolver.js'
-// Read Operations (store-based loading with proper $store architecture)
-export { findFirst } from './cojson/crud/read.js'
-export { waitForStoreReady } from './cojson/crud/read-operations.js'
-export { loadInfraFromSparkOs } from './cojson/factory/infra-from-spark-os.js'
-export {
-	checkCotype,
-	loadFactoriesFromAccount,
-	resolve,
-	resolveFactoryDefFromPeer,
-	resolveReactive,
-} from './cojson/factory/resolver.js'
-// Re-export services for external use
-// Account primitives moved to @MaiaOS/peer (createAccountWithSecret, loadAccount). Migration/seed stay here.
-export { createGroup, createProfile } from './cojson/groups/create.js'
-export {
-	extractAccountMembers,
-	getMaiaGroup,
-	getSparkCapabilityGroupIdFromSparkCoId,
-	getSparkOsId,
-	getSparkVibesId,
-	removeGroupMember,
-	setSparkVibesId,
-} from './cojson/groups/groups.js'
-export { collectCapabilityGrantCoIdsFromColistContent } from './cojson/helpers/capability-grant-co-ids.js'
-export {
-	accountHasCapabilityOnPeer,
-	getCapabilityGrantIndexColistCoIdFromPeer,
-} from './cojson/helpers/capability-grants-resolve.js'
-export { validateInvite } from './cojson/helpers/invite-validate.js'
-export {
-	getCapabilityGrantIndexColistCoId,
-	loadCapabilitiesGrants,
-} from './cojson/helpers/load-capabilities-grants.js'
-export { resolveAccountCoIdsToProfiles } from './cojson/helpers/resolve-account-profile.js'
-export { resolveGroupCoIdsToCapabilityNames } from './cojson/helpers/resolve-capability-group.js'
-export { INFRA_SLOTS } from './cojson/infra-slot-manifest.js'
-export {
-	ensureIdentity,
-	listAccountIdsFromIdentityIndex,
-} from './cojson/registry/ensure-identity.js'
-export {
-	loadContextStore,
-	readStore,
-	resolveSchemaFromCoValue,
-	resolveToCoId,
-} from './cojson/resolve-helpers.js'
-export { SPARK_OS_META_FACTORY_CO_ID_KEY } from './cojson/spark-os-keys.js'
-export { CAP_GRANT_TTL_SECONDS } from './constants/capability-grant-ttl.js'
-export {
-	createFactoryMeta,
-	EXCEPTION_FACTORIES,
-	getSchema,
-	hasSchema,
-} from './factories/registry.js'
+
+export * from './modules/crud.js'
+export * from './modules/groups.js'
+export * from './modules/indexing.js'
+export * from './modules/spark.js'
+
 export { ensureProfileForNewAccount } from './profile-bootstrap.js'
-// ReactiveStore - reactive data store pattern (owned by maia-db; engines import from here)
-export { ReactiveStore } from './reactive-store.js'
 export { generateRegistryName } from './utils/registry-name-generator.js'

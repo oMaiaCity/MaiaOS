@@ -1,4 +1,4 @@
-import { verifyInvocationToken } from '@MaiaOS/runtime'
+import { verifyInvocationToken } from '@MaiaOS/aven-os/server'
 import { createHash } from 'node:crypto'
 import { clientIp } from '../client-ip.js'
 

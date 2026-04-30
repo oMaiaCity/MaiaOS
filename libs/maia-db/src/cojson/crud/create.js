@@ -5,9 +5,9 @@
  */
 
 import { perfEnginesChat } from '@MaiaOS/logs'
+import { extractCoValueData } from '../../primitives/data-extraction.js'
+import { determineCotypeAndFlag } from '../../primitives/ensure-covalue-core.js'
 import { createCoValueForSpark } from '../covalue/create-covalue-for-spark.js'
-import { extractCoValueData } from './data-extraction.js'
-import { determineCotypeAndFlag } from './ensure-covalue-core.js'
 
 // Schema indexing is handled by storage-level hooks (more resilient than API hooks)
 // No CRUD-level hooks needed - storage hook catches ALL writes

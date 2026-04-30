@@ -2,7 +2,7 @@
  * @see observeCoValue — fan-out, refcount teardown, independent listeners per coId
  */
 import { expect, test } from 'bun:test'
-import { CoCache, observeCoValue } from '../../../src/cojson/cache/coCache.js'
+import { CoCache, observeCoValue } from '../../../src/primitives/co-cache.js'
 
 function makeMockPeer(coId, core) {
 	const cache = new CoCache(5000)

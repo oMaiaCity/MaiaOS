@@ -3,7 +3,7 @@
  * Lives outside authoring-resolver.js so that module has no edge to read.js (Sentrux acyclicity).
  */
 
-import { getGlobalCoCache } from '../cache/coCache.js'
+import { getGlobalCoCache } from '../../primitives/co-cache.js'
 import { read as universalRead } from '../crud/read.js'
 import { waitForStoreReady } from '../crud/read-operations.js'
 import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'

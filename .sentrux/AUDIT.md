@@ -2,6 +2,30 @@
 
 Generated from Sentrux CLI + repo changes. Re-run after refactors: `sentrux check .` (enforces [`.sentrux/rules.toml`](.sentrux/rules.toml)); GUI: `sentrux .` or MCP `scan` + `health` + `dsm`.
 
+## Baseline — depth cut pass (2026-04-30, pre-implementation)
+
+| Metric | Value | Notes |
+|--------|-------|-------|
+| **Quality** (`sentrux check` / MCP `quality_signal`) | **5,651** | MCP `health` at repo root |
+| **depth raw** | **28** | bottleneck **depth** (score ~2,222) |
+| **DSM** | propagation_cost **709**, level_breaks **30**, edges **897**, size **415** | clean layering |
+| **Local longest-chain** (`scripts/sentrux-longest-chain.mjs`) | **25 nodes** | see chain below |
+
+**Longest chain (local tracer):**
+
+`services/app/main.js` → `main-bootstrap-overlay.js` → `libs/maia-runtime/src/index.js` → `loader.js` → `engines/view.engine.js` → `engines/actor.engine.js` → `libs/maia-universe/src/index.js` → … → `libs/maia-db/src/index.js` → `cojson/core/MaiaDB.js` → `maia-db-data-plane.js` → `crud/read.js` → `read-all-covalues.js` → `deep-resolution.js` → `collection-helpers.js` → `cojson/indexing/factory-index-schema.js` → `libs/maia-validation/src/index.js` → `validation.helper.js` → `validation.engine.js` → `identity-from-maia-path.js` → `libs/maia-universe/src/helpers/identity-from-maia-path.js` → `nanoid.js`.
+
+## Post-pass — `@MaiaOS/db` primitives + modules facade (2026-04-30)
+
+Implemented in repo (re-run Sentrux when CLI available):
+
+- **`libs/maia-db/src/primitives/`** — `reactive-store`, `co-cache`, `ensure-covalue-core`, `data-extraction`, `factory-registry` (→ validation), `capability-grant-ttl`; cojson code imports these via `../../primitives/...`.
+- **`libs/maia-db/src/modules/{crud,groups,spark,indexing}.js`** — grouped barrels (no cross-imports between module files); implementation stays under `cojson/` until any full single-file merge.
+- **`libs/maia-db/src/index.js`** — thin facade: `@MaiaOS/peer` + `export *` from modules + `profile-bootstrap` + `generateRegistryName`.
+- **Maia-domain naming** — `getFactory` / `hasFactory` / `resolveFactoryFromCoValue`; **`builtin-factories.data.js`**; seed **`sortFactoriesByDependency`**; `clearLocalPgliteAndFsBlob` from **`@MaiaOS/aven-os/server`** so sync keeps a single `@MaiaOS/*` workspace dep.
+- **CI** — [`scripts/lint-import-invariants.mjs`](../scripts/lint-import-invariants.mjs), [`scripts/lint-naming-invariants.mjs`](../scripts/lint-naming-invariants.mjs) in `check:ci`; Biome ignores vendored **`libs/aven-os/output`**.
+- **Verification** — `bun test` (db, validation, engine, seed); **`bun run check:ci`** passes.
+
 ## Snapshot (2026-04-30 — Sentrux depth execution pass)
 
 | Metric | Value | Notes |

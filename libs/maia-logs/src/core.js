@@ -2,8 +2,6 @@
  * Canonical logging runtime: mode, level gate, redaction, ring buffer, transport.
  */
 
-import { createConsoleTransport } from './transports/console.js'
-
 /** @typedef {'development' | 'production' | 'test'} LogModeName */
 /** @typedef {'silent' | 'error' | 'warn' | 'info' | 'log' | 'success' | 'debug'} LogLevelName */
 
@@ -26,15 +24,17 @@ let _ring = []
 /** @type {MaiaLogTransport | null} */
 let _transport = null
 
+let _loggingRuntimeReady = false
+
 /**
- * First emit installs default console transport + runtime (Node + browser before `applyMaiaLoggingFromEnv`).
+ * Ensures mode + level match env before emit. Console transport is installed only from `logger.js` bootstrap.
  */
-function ensureTransportForEmit() {
-	if (_transport) return
+function ensureLoggingRuntimeInitialized() {
+	if (_loggingRuntimeReady) return
+	_loggingRuntimeReady = true
 	const mode = resolveMode()
 	const level = resolveLevel(process.env.LOG_LEVEL, mode)
 	setLoggingRuntime({ mode, level })
-	setTransport(createConsoleTransport({ json: mode === 'production' }))
 }
 
 /**
@@ -141,7 +141,7 @@ export function shouldLog(levelName) {
  * @param {{ applyLevelGate?: boolean }} [opts] — `applyLevelGate` false for OPS (warn/error; informational OPS `.log` is pre-gated by `LOG_MODE` in `createOpsLogger`) and for PERF/DEBUG/TRACE after channel gating, so they are not double-gated by `LOG_LEVEL`.
  */
 export function emitLog(level, subsystem, parts, opts = {}) {
-	ensureTransportForEmit()
+	ensureLoggingRuntimeInitialized()
 	const applyLevelGate = opts.applyLevelGate !== false
 	if (applyLevelGate && !shouldLog(level)) return
 	const safe = redact(parts)

@@ -22,7 +22,9 @@
 import {
 	accountHasCapabilityOnPeer,
 	agentIDToDidKey,
+	applyTesterCredentialsToEnvFile,
 	bootstrapNodeLogging,
+	clearLocalPgliteAndFsBlob,
 	createFlowContext,
 	createLogger,
 	createOpsLogger,
@@ -40,8 +42,7 @@ import {
 	signIn,
 	syncServerInfraSteps,
 	waitForStoreReady,
-} from '@MaiaOS/runtime'
-import { applyTesterCredentialsToEnvFile } from '@MaiaOS/self/generate-credentials'
+} from '@MaiaOS/aven-os/server'
 import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHandleAgentHttp } from './handlers/agent-http.js'
@@ -519,7 +520,6 @@ syncDevLifecycleLog.log(`Listening on 0.0.0.0:${PORT}`)
 			const blobPathResolved = pathResolve(_syncDir, process.env.PEER_BLOB_PATH || './binary-bucket')
 			process.env.PEER_BLOB_PATH = blobPathResolved
 
-			const { clearLocalPgliteAndFsBlob } = await import('@MaiaOS/storage/clearLocalPgliteAndFsBlob')
 			await clearLocalPgliteAndFsBlob({ dbPath, blobPath: blobPathResolved })
 			opsSync.log(
 				'PEER_SYNC_SEED: removed + recreated PGlite data dir and cleared local binary-bucket chunks (tester credentials saved to .env after Ready)',

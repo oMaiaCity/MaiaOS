@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { normalizeCoValueData } from '../src/cojson/crud/data-extraction.js'
+import { normalizeCoValueData } from '../src/primitives/data-extraction.js'
 
 describe('normalizeCoValueData', () => {
 	test('drops maiaPathKey from persisted-shaped objects (not exposed to clients)', () => {

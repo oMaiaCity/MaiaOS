@@ -7,9 +7,9 @@
 
 import { createLogger } from '@MaiaOS/logs'
 import { loadFactoryAndValidate } from '@MaiaOS/validation/validation.helper'
-import { invalidateResolvedDataForMutatedCoValue } from '../cache/coCache.js'
+import { invalidateResolvedDataForMutatedCoValue } from '../../primitives/co-cache.js'
+import * as dataExtraction from '../../primitives/data-extraction.js'
 import * as collectionHelpers from './collection-helpers.js'
-import * as dataExtraction from './data-extraction.js'
 
 const log = createLogger('maia-db')
 

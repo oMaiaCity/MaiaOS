@@ -1,0 +1,38 @@
+{
+	"name": "@MaiaOS/engine",
+	"version": "26.4.212041-next",
+	"type": "module",
+	"main": "src/index.js",
+	"exports": {
+		".": "./src/index.js",
+		"./sync-core": "./src/sync-core.js",
+		"./sync-auth": "./src/sync-auth.js",
+		"./utils/*": "./src/utils/*"
+	},
+	"files": [
+		"src"
+	],
+	"scripts": {
+		"test": "bun test ./tests"
+	},
+	"dependencies": {
+		"@MaiaOS/db": "workspace:*",
+		"@MaiaOS/flows": "workspace:*",
+		"@MaiaOS/peer": "workspace:*",
+		"@MaiaOS/storage": "workspace:*",
+		"@MaiaOS/validation": "workspace:*",
+		"@MaiaOS/logs": "workspace:*",
+		"@MaiaOS/maia-ucan": "workspace:*",
+		"@MaiaOS/self": "workspace:*",
+		"@MaiaOS/universe": "workspace:*",
+		"@jitl/quickjs-singlefile-cjs-release-sync": "0.32.0",
+		"cojson-transport-ws": "0.20.16",
+		"dompurify": "3.3.3",
+		"fast-myers-diff": "3.2.0",
+		"marked": "15.0.12",
+		"quickjs-emscripten-core": "0.32.0"
+	},
+	"devDependencies": {
+		"cojson": "0.20.16"
+	}
+}

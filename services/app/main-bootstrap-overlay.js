@@ -1,4 +1,8 @@
-import { BOOTSTRAP_PHASES, resetBootstrapPhase, subscribeBootstrapPhase } from '@MaiaOS/runtime'
+import {
+	BOOTSTRAP_PHASES,
+	resetBootstrapPhase,
+	subscribeBootstrapPhase,
+} from '@MaiaOS/aven-os/client'
 
 /**
  * User-facing subtitle shown in the loading overlay, keyed by bootstrap phase.

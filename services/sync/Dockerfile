@@ -24,8 +24,8 @@ RUN echo "GIT_SHA=${GIT_SHA}" && bun run universe:registry && bun run distros:bu
 FROM oven/bun:1-slim
 WORKDIR /app
 
-COPY --from=builder /app/libs/maia-distros/output/sync-server.mjs ./
-COPY --from=builder /app/libs/maia-distros/output/pglite.wasm ./
+COPY --from=builder /app/libs/aven-os/output/aven-server.mjs ./sync-server.mjs
+COPY --from=builder /app/libs/aven-os/output/pglite.wasm ./
 
 EXPOSE 4201
 

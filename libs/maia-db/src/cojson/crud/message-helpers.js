@@ -67,7 +67,7 @@ export async function createAndPushMessage(dbEngine, inboxCoId, messageData) {
 		throw new Error(`[createAndPushMessage] Failed to get message schema co-id: ${error.message}`)
 	}
 	perfDbUpload.timing(
-		'createAndPushMessage.getSchema',
+		'createAndPushMessage.getFactory',
 		Math.round((perfDbUpload.now() - t0) * 100) / 100,
 	)
 

@@ -6,10 +6,13 @@
  */
 
 import { createLogger } from '@MaiaOS/logs'
+import { ensureCoValueLoaded } from '../../primitives/ensure-covalue-core.js'
 import { ensureFactoryIndexColist, ensureIndexesCoMap } from '../indexing/factory-index-schema.js'
-import { ensureCoValueLoaded } from './ensure-covalue-core.js'
 
-export { ensureCoValueAvailable, ensureCoValueLoaded } from './ensure-covalue-core.js'
+export {
+	ensureCoValueAvailable,
+	ensureCoValueLoaded,
+} from '../../primitives/ensure-covalue-core.js'
 
 const log = createLogger('maia-db')
 

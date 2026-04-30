@@ -12,6 +12,20 @@
         "lint-staged": "16.4.0",
       },
     },
+    "libs/aven-os": {
+      "name": "@MaiaOS/aven-os",
+      "version": "26.4.212041-next",
+      "dependencies": {
+        "@MaiaOS/db": "workspace:*",
+        "@MaiaOS/engine": "workspace:*",
+        "@MaiaOS/logs": "workspace:*",
+        "@MaiaOS/self": "workspace:*",
+        "@MaiaOS/storage": "workspace:*",
+        "@MaiaOS/universe": "workspace:*",
+        "@MaiaOS/validation": "workspace:*",
+        "@electric-sql/pglite": "0.4.2",
+      },
+    },
     "libs/maia-brand": {
       "name": "@MaiaOS/brand",
       "version": "26.4.212041-next",
@@ -28,16 +42,28 @@
         "cojson": "0.20.16",
       },
     },
-    "libs/maia-distros": {
-      "name": "@MaiaOS/maia-distros",
+    "libs/maia-engine": {
+      "name": "@MaiaOS/engine",
       "version": "26.4.212041-next",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
+        "@MaiaOS/flows": "workspace:*",
         "@MaiaOS/logs": "workspace:*",
-        "@MaiaOS/runtime": "workspace:*",
+        "@MaiaOS/maia-ucan": "workspace:*",
+        "@MaiaOS/peer": "workspace:*",
+        "@MaiaOS/self": "workspace:*",
+        "@MaiaOS/storage": "workspace:*",
         "@MaiaOS/universe": "workspace:*",
         "@MaiaOS/validation": "workspace:*",
-        "@electric-sql/pglite": "0.4.2",
+        "@jitl/quickjs-singlefile-cjs-release-sync": "0.32.0",
+        "cojson-transport-ws": "0.20.16",
+        "dompurify": "3.3.3",
+        "fast-myers-diff": "3.2.0",
+        "marked": "15.0.12",
+        "quickjs-emscripten-core": "0.32.0",
+      },
+      "devDependencies": {
+        "cojson": "0.20.16",
       },
     },
     "libs/maia-flows": {
@@ -45,7 +71,7 @@
       "version": "26.4.212041-next",
       "dependencies": {
         "@MaiaOS/db": "workspace:*",
-        "@MaiaOS/runtime": "workspace:*",
+        "@MaiaOS/engine": "workspace:*",
         "@MaiaOS/seed": "workspace:*",
         "@MaiaOS/universe": "workspace:*",
         "@MaiaOS/validation": "workspace:*",
@@ -80,30 +106,6 @@
         "@MaiaOS/timeouts": "workspace:*",
         "cojson": "0.20.16",
         "cojson-transport-ws": "0.20.16",
-      },
-    },
-    "libs/maia-runtime": {
-      "name": "@MaiaOS/runtime",
-      "version": "26.4.212041-next",
-      "dependencies": {
-        "@MaiaOS/db": "workspace:*",
-        "@MaiaOS/flows": "workspace:*",
-        "@MaiaOS/logs": "workspace:*",
-        "@MaiaOS/maia-ucan": "workspace:*",
-        "@MaiaOS/peer": "workspace:*",
-        "@MaiaOS/self": "workspace:*",
-        "@MaiaOS/storage": "workspace:*",
-        "@MaiaOS/universe": "workspace:*",
-        "@MaiaOS/validation": "workspace:*",
-        "@jitl/quickjs-singlefile-cjs-release-sync": "0.32.0",
-        "cojson-transport-ws": "0.20.16",
-        "dompurify": "3.3.3",
-        "fast-myers-diff": "3.2.0",
-        "marked": "15.0.12",
-        "quickjs-emscripten-core": "0.32.0",
-      },
-      "devDependencies": {
-        "cojson": "0.20.16",
       },
     },
     "libs/maia-seed": {
@@ -185,14 +187,8 @@
       "name": "@MaiaOS/app",
       "version": "26.4.212041-next",
       "dependencies": {
-        "@MaiaOS/db": "workspace:*",
+        "@MaiaOS/aven-os": "workspace:*",
         "@MaiaOS/game": "workspace:*",
-        "@MaiaOS/logs": "workspace:*",
-        "@MaiaOS/maia-distros": "workspace:*",
-        "@MaiaOS/peer": "workspace:*",
-        "@MaiaOS/runtime": "workspace:*",
-        "@MaiaOS/universe": "workspace:*",
-        "@MaiaOS/validation": "workspace:*",
         "@tauri-apps/api": "2.10.1",
       },
       "devDependencies": {
@@ -211,11 +207,7 @@
       "name": "@MaiaOS/sync",
       "version": "26.4.212041-next",
       "dependencies": {
-        "@MaiaOS/logs": "workspace:*",
-        "@MaiaOS/maia-distros": "workspace:*",
-        "@MaiaOS/runtime": "workspace:*",
-        "@MaiaOS/self": "workspace:*",
-        "@MaiaOS/storage": "workspace:*",
+        "@MaiaOS/aven-os": "workspace:*",
       },
     },
   },
@@ -226,9 +218,13 @@
 
     "@MaiaOS/aven": ["@MaiaOS/aven@workspace:services/aven"],
 
+    "@MaiaOS/aven-os": ["@MaiaOS/aven-os@workspace:libs/aven-os"],
+
     "@MaiaOS/brand": ["@MaiaOS/brand@workspace:libs/maia-brand"],
 
     "@MaiaOS/db": ["@MaiaOS/db@workspace:libs/maia-db"],
+
+    "@MaiaOS/engine": ["@MaiaOS/engine@workspace:libs/maia-engine"],
 
     "@MaiaOS/flows": ["@MaiaOS/flows@workspace:libs/maia-flows"],
 
@@ -236,15 +232,11 @@
 
     "@MaiaOS/logs": ["@MaiaOS/logs@workspace:libs/maia-logs"],
 
-    "@MaiaOS/maia-distros": ["@MaiaOS/maia-distros@workspace:libs/maia-distros"],
-
     "@MaiaOS/maia-ucan": ["@MaiaOS/maia-ucan@workspace:libs/maia-ucan"],
 
     "@MaiaOS/mail": ["@MaiaOS/mail@workspace:libs/maia-mail"],
 
     "@MaiaOS/peer": ["@MaiaOS/peer@workspace:libs/maia-peer"],
-
-    "@MaiaOS/runtime": ["@MaiaOS/runtime@workspace:libs/maia-runtime"],
 
     "@MaiaOS/seed": ["@MaiaOS/seed@workspace:libs/maia-seed"],
 

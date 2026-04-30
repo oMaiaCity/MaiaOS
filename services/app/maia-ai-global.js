@@ -2,7 +2,7 @@
  * Maia AI Global — RedPill LLM chat via Chat vibe (messages actor). FAB + modal with text input.
  */
 
-import { ACTOR_NANOID_TO_EXECUTABLE_KEY } from '@MaiaOS/universe/generated/registry.js'
+import { ACTOR_NANOID_TO_EXECUTABLE_KEY } from '@MaiaOS/aven-os/client'
 import { findSessionChatIntentActorId, resolveChatVibeCoId } from './chat-session-ids.js'
 import { escapeHtml } from './utils.js'
 

@@ -22,7 +22,8 @@
 			"!**/*.generated.*",
 			"!.cursor",
 			"!.vscode",
-			"!.agents"
+			"!.agents",
+			"!libs/aven-os/output"
 		]
 	},
 	"formatter": {

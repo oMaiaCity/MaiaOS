@@ -13,6 +13,7 @@
 		"./helpers/remove-id-fields.js": "./src/helpers/remove-id-fields.js",
 		"./helpers/vibe-keys.js": "./src/helpers/vibe-keys.js",
 		"./actors": "./src/sparks/maia/actors/index.js",
+		"./actors/definitions": "./src/sparks/maia/actors/definitions.js",
 		"./actors/*": "./src/sparks/maia/actors/*",
 		"./factories/*": "./src/sparks/maia/factories/*",
 		"./vibes/*": "./src/sparks/maia/vibes/*",

@@ -6,8 +6,8 @@
  */
 
 import { wrapSyncManagerWithValidation } from '@MaiaOS/validation/validation-hook-wrapper'
-import { ReactiveStore } from '../../reactive-store.js'
-import { getGlobalCoCache } from '../cache/coCache.js'
+import { getGlobalCoCache } from '../../primitives/co-cache.js'
+import { ReactiveStore } from '../../primitives/reactive-store.js'
 import { resolve } from '../factory/authoring-resolver.js'
 import { wrapStorageWithIndexingHooks } from '../indexing/storage-hook-wrapper.js'
 import {

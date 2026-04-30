@@ -2,7 +2,7 @@
  * Chat vibe / session actor resolution — no @MaiaOS/runtime (avoids flows barrel on dashboard import path).
  */
 
-import { maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
+import { maiaIdentity } from '@MaiaOS/aven-os/client'
 
 const CHAT_INTENT_ACTOR_NANOID = maiaIdentity('chat/intent/intent.actor.maia').$nanoid
 

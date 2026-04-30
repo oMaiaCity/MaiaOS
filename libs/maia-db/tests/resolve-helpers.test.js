@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import {
 	loadContextStore,
 	readStore,
-	resolveSchemaFromCoValue,
+	resolveFactoryFromCoValue,
 	resolveToCoId,
 } from '../src/cojson/resolve-helpers.js'
 
@@ -25,8 +25,8 @@ describe('resolve-helpers', () => {
 		expect(await resolveToCoId(null, 'co_z1')).toBe('co_z1')
 	})
 
-	test('resolveSchemaFromCoValue returns null without peer', async () => {
-		expect(await resolveSchemaFromCoValue(null, 'co_z1')).toBe(null)
+	test('resolveFactoryFromCoValue returns null without peer', async () => {
+		expect(await resolveFactoryFromCoValue(null, 'co_z1')).toBe(null)
 	})
 
 	test('loadContextStore returns empty when ref not co_z', async () => {

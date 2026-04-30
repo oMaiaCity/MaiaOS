@@ -14,9 +14,9 @@
  * Runtime factory resolution is **co_z only** — no registry namekey strings.
  */
 
-import { ReactiveStore } from '../../reactive-store.js'
-import { observeCoValue } from '../cache/coCache.js'
-import { ensureCoValueLoaded } from './ensure-covalue-core.js'
+import { observeCoValue } from '../../primitives/co-cache.js'
+import { ensureCoValueLoaded } from '../../primitives/ensure-covalue-core.js'
+import { ReactiveStore } from '../../primitives/reactive-store.js'
 
 export { waitForReactiveResolution } from './read-operations.js'
 

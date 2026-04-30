@@ -38,7 +38,7 @@ The sync service consolidates WebSocket sync, agent API, and LLM proxy in one pr
 
 ## Dependencies
 
-- `@MaiaOS/maia-distros` + `@MaiaOS/runtime` + `@MaiaOS/flows`. Sync imports from runtime (engines + `MaiaOS` boot + db/self); cojson-transport-ws. maia-distros has no app logic—only bundling. Sync owns HTTP/WS (src/index.js); distros bundles it to sync-server.mjs. Prod runs the bundle; dev runs source.
+- `@MaiaOS/db`, `@MaiaOS/flows` (subpaths where possible), `@MaiaOS/logs`, `@MaiaOS/self`, `@MaiaOS/maia-ucan`, `@MaiaOS/runtime` (`sync-core` / `sync-auth` only — no runtime root barrel), `@MaiaOS/storage`, `@MaiaOS/maia-distros`. maia-distros has no app logic—only bundling. Sync owns HTTP/WS (`src/index.js`); distros bundles it to `sync-server.mjs`. Prod runs the bundle; dev runs source.
 
 ## Development
 

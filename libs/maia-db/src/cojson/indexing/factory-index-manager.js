@@ -6,8 +6,8 @@
 import { FACTORY_REF_PATTERN } from '@MaiaOS/validation'
 import { EXCEPTION_FACTORIES } from '@MaiaOS/validation/peer-factory-registry'
 import { removeIdFields } from '@MaiaOS/validation/remove-id-fields'
+import { ensureCoValueLoaded } from '../../primitives/ensure-covalue-core.js'
 import { create as crudCreate } from '../crud/create.js'
-import { ensureCoValueLoaded } from '../crud/ensure-covalue-core.js'
 import * as groups from '../groups/groups.js'
 import { extractHeaderFromStorageMessage, readHeaderAndContent } from './factory-index-headers.js'
 import {
@@ -535,7 +535,7 @@ export async function reconcileIndexes(peer, options = {}) {
 	return { indexed, skipped, errors }
 }
 
-async function getSchemaIndexColistForRemoval(peer, factoryCoId) {
+async function getFactoryIndexColistForRemoval(peer, factoryCoId) {
 	if (!factoryCoId?.startsWith('co_z')) {
 		return null
 	}
@@ -595,7 +595,7 @@ export async function removeFromIndex(peer, coId, factoryCoId = null) {
 	}
 
 	if (factoryCoId && typeof factoryCoId === 'string' && factoryCoId.startsWith('co_z')) {
-		const indexColist = await getSchemaIndexColistForRemoval(peer, factoryCoId)
+		const indexColist = await getFactoryIndexColistForRemoval(peer, factoryCoId)
 		removeAllFromColist(indexColist, coId)
 	} else {
 		const unknownColist = await ensureUnknownColist(peer)

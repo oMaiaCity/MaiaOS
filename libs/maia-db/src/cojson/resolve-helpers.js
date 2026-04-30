@@ -1,6 +1,6 @@
 /**
  * Universal co-id resolution and context loading (DataEngine peer + execute).
- * Lives in @MaiaOS/db so @MaiaOS/universe spark code can use readStore without depending on @MaiaOS/runtime.
+ * Lives in @MaiaOS/db so @MaiaOS/universe spark code can use readStore without depending on @MaiaOS/engine.
  */
 
 import { ensureCoValueLoaded } from './crud/collection-helpers.js'
@@ -40,14 +40,14 @@ export async function resolveToCoId(_peer, ref) {
 }
 
 /**
- * Resolve schema co-id from a CoValue.
+ * Resolve factory co-id from a CoValue.
  * Reads header.meta.$factory directly from CoValueCore (fast path).
  * Falls back to peer.resolve({ fromCoValue }) if direct read fails.
  * @param {Object} peer - MaiaDB peer
  * @param {string} coId - CoValue co-id
- * @returns {Promise<string|null>} Schema co-id or null
+ * @returns {Promise<string|null>} Factory co-id or null
  */
-export async function resolveSchemaFromCoValue(peer, coId) {
+export async function resolveFactoryFromCoValue(peer, coId) {
 	if (!peer || !coId?.startsWith('co_z')) return null
 	try {
 		const coValueCore = peer.getCoValue(coId)
@@ -102,6 +102,6 @@ export async function loadContextStore(dataEngine, ref, options = {}) {
 	if (options.waitForStoreReadyMs) {
 		await waitForStoreReady(store, coId, options.waitForStoreReadyMs).catch(() => {})
 	}
-	const factoryCoId = await resolveSchemaFromCoValue(peer, coId)
+	const factoryCoId = await resolveFactoryFromCoValue(peer, coId)
 	return { store, coId, factoryCoId }
 }

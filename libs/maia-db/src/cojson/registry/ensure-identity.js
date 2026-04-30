@@ -2,8 +2,8 @@
  * Guardian flow: create or assert an identity CoMap (human|aven), auto-indexed under spark.os.indexes.
  */
 
+import { extractCoValueData } from '../../primitives/data-extraction.js'
 import { ensureCoValueLoaded, getCoListId } from '../crud/collection-helpers.js'
-import { extractCoValueData } from '../crud/data-extraction.js'
 import { matchesFilter } from '../crud/filter-helpers.js'
 import { removeGroupMember } from '../groups/groups.js'
 
@@ -35,7 +35,7 @@ async function findIdentity(peer, identitySchemaCoId, accountId, type) {
 
 /**
  * @param {import('../core/MaiaDB.js').MaiaDB} peer
- * @param {import('@MaiaOS/runtime').DataEngine} dataEngine
+ * @param {import('@MaiaOS/engine').DataEngine} dataEngine
  * @param {'human' | 'aven'} type
  * @param {string} accountId
  * @param {string} profileId

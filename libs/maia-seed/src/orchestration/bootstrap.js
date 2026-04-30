@@ -7,7 +7,7 @@ import { createOpsLogger } from '@MaiaOS/logs'
 import { maiaFactoryRefToNanoid, maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
 import { removeIdFields } from '@MaiaOS/validation/remove-id-fields'
 import { seedDefinitionCatalogBootstrap } from './definition-catalog-bootstrap.js'
-import { buildMetaFactoryForSeeding, sortSchemasByDependency } from './helpers.js'
+import { buildMetaFactoryForSeeding, sortFactoriesByDependency } from './helpers.js'
 
 const opsBootstrap = createOpsLogger('seed')
 
@@ -61,7 +61,7 @@ export async function bootstrapAndScaffold(account, node, schemas, dbEngine = nu
 		const key = schema.$label || `°maia/factory/${name}`
 		if (!uniqueSchemasByLabel.has(key)) uniqueSchemasByLabel.set(key, { name, schema })
 	}
-	const sorted = sortSchemasByDependency(uniqueSchemasByLabel)
+	const sorted = sortFactoriesByDependency(uniqueSchemasByLabel)
 
 	const factoryCoIdMap = new Map()
 	const ctx = { node, account, guardian }

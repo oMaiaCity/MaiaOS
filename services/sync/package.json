@@ -5,15 +5,11 @@
 	"private": true,
 	"scripts": {
 		"dev": "bun run --env-file=../../.env src/index.js",
-		"start": "bun run --env-file=../../.env ../../libs/maia-distros/output/sync-server.mjs",
+		"start": "bun run --env-file=../../.env ../../libs/aven-os/output/aven-server.mjs",
 		"deploy": "./deploy.sh",
 		"test": "bun test tests"
 	},
 	"dependencies": {
-		"@MaiaOS/logs": "workspace:*",
-		"@MaiaOS/self": "workspace:*",
-		"@MaiaOS/maia-distros": "workspace:*",
-		"@MaiaOS/runtime": "workspace:*",
-		"@MaiaOS/storage": "workspace:*"
+		"@MaiaOS/aven-os": "workspace:*"
 	}
 }

@@ -12,8 +12,8 @@
  */
 
 import { createLogger, traceInboxFilter } from '@MaiaOS/logs'
+import { extractCoValueData } from '../../primitives/data-extraction.js'
 import { resolve } from '../factory/authoring-resolver.js'
-import { extractCoValueData } from './data-extraction.js'
 import { read as universalRead } from './read.js'
 import { waitForStoreReady } from './read-operations.js'
 

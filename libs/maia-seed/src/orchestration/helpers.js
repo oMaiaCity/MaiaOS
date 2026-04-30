@@ -86,12 +86,12 @@ function stringSetToPrereqMapKeys(strSet, selfKey, uniqueSchemasByLabel) {
  * Topologically sort schema keys by `°maia/factory/*.factory.maia` cross-refs in each schema
  * (Kahn). Ensures a factory is created before any row that $co-refs it (e.g. event before
  * actor was a bug with the old DFS+push order when `Map` iteration + multiple roots mixed).
- * @param {Map<string, { name, schema }>} uniqueSchemasByLabel
+ * @param {Map<string, { name, schema }>} uniqueFactoriesByLabel
  * @param {string[]} [excludeKeys] - Keys to omit from the result (by nanoid, or by label if present in the map for bootstrap)
  * @returns {string[]} Factory keys in safe creation order
  */
-export function sortSchemasByDependency(
-	uniqueSchemasByLabel,
+export function sortFactoriesByDependency(
+	uniqueFactoriesByLabel,
 	excludeKeys = ['°maia/factory/meta.factory.maia'],
 ) {
 	/** @type {Set<string>} */
@@ -105,7 +105,7 @@ export function sortSchemasByDependency(
 			}
 		}
 	}
-	const allKeys = [...uniqueSchemasByLabel.keys()].filter((k) => !exclude.has(k))
+	const allKeys = [...uniqueFactoriesByLabel.keys()].filter((k) => !exclude.has(k))
 	const keySet = new Set(allKeys)
 
 	/** depNanoid is ready → these children can drop one in-degree */
@@ -115,8 +115,8 @@ export function sortSchemasByDependency(
 		inDegree.set(k, 0)
 	}
 	for (const child of allKeys) {
-		const { schema } = uniqueSchemasByLabel.get(child)
-		const prereq = stringSetToPrereqMapKeys(findCoReferences(schema), child, uniqueSchemasByLabel)
+		const { schema } = uniqueFactoriesByLabel.get(child)
+		const prereq = stringSetToPrereqMapKeys(findCoReferences(schema), child, uniqueFactoriesByLabel)
 		for (const depKey of prereq) {
 			if (!keySet.has(depKey)) {
 				continue

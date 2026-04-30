@@ -8,7 +8,7 @@ import {
 	getCoValueContentSnapshot,
 	isAccountGroupOrProfile,
 } from './co-value-detection.js'
-import { isExceptionFactory } from './data/builtin-schemas.data.js'
+import { isExceptionFactory } from './data/builtin-factories.data.js'
 import { loadFactoryAndValidate } from './validation.helper.js'
 
 const opsValidation = createOpsLogger('ValidationHook')

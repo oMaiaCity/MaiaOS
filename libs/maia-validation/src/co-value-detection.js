@@ -5,7 +5,7 @@
  * Eliminates duplication across storage hooks, validation hooks, and CRUD operations.
  */
 
-import { isExceptionFactory } from './data/builtin-schemas.data.js'
+import { isExceptionFactory } from './data/builtin-factories.data.js'
 
 /**
  * Detect if a co-value is an account, group, or profile

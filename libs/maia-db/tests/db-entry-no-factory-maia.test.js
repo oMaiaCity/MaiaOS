@@ -13,7 +13,7 @@ const pkgRoot = join(_dir, '..')
 
 const filesMustNotReferenceMaiaImports = [
 	'src/index.js',
-	'src/factories/registry.js',
+	'src/primitives/factory-registry.js',
 	'src/cojson/cotypes/coMap.js',
 	'src/cojson/cotypes/coList.js',
 ]

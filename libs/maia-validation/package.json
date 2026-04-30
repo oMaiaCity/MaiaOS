@@ -12,7 +12,7 @@
 		"./payload-resolver": "./src/payload-resolver.js",
 		"./nanoid": "./src/nanoid.js",
 		"./identity-from-maia-path": "./src/identity-from-maia-path.js",
-		"./builtin-schemas": "./src/data/builtin-schemas.data.js",
+		"./builtin-factories": "./src/data/builtin-factories.data.js",
 		"./operation-result": "./src/operation-result.js",
 		"./vibe-keys": "./src/vibe-keys.js",
 		"./remove-id-fields": "./src/remove-id-fields.js",

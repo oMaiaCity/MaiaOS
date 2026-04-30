@@ -27,7 +27,7 @@ import {
 	subscribeSyncState,
 	updateSyncState,
 	validateInvite,
-} from '@MaiaOS/runtime'
+} from '@MaiaOS/aven-os/client'
 import { renderApp, toggleMetadataInternalKey } from './db-view.js'
 import { beginIntroDiary, renderIntroPage } from './intro.js'
 import { renderLandingPage } from './landing.js'

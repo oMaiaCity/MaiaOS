@@ -2,8 +2,10 @@
 	"compilerOptions": {
 		"paths": {
 			"@MaiaOS/db": ["./libs/maia-db/src/index.js"],
-			"@MaiaOS/runtime": ["./libs/maia-runtime/src/index.js"],
-			"@MaiaOS/runtime/*": ["./libs/maia-runtime/src/*"],
+			"@MaiaOS/engine": ["./libs/maia-engine/src/index.js"],
+			"@MaiaOS/engine/*": ["./libs/maia-engine/src/*"],
+			"@MaiaOS/aven-os/client": ["./libs/aven-os/client/index.js"],
+			"@MaiaOS/aven-os/server": ["./libs/aven-os/server/index.js"],
 			"@MaiaOS/validation": ["./libs/maia-validation/src"],
 			"@MaiaOS/validation/*": ["./libs/maia-validation/src/*"],
 			"@MaiaOS/self": ["./libs/maia-self/src/index.js"],

@@ -18,9 +18,9 @@
  */
 
 import { removeIdFields } from '@MaiaOS/validation'
-import { ReactiveStore } from '../../reactive-store.js'
-import { normalizeCoValueData } from '../crud/data-extraction.js'
-import { ensureCoValueLoaded } from '../crud/ensure-covalue-core.js'
+import { normalizeCoValueData } from '../../primitives/data-extraction.js'
+import { ensureCoValueLoaded } from '../../primitives/ensure-covalue-core.js'
+import { ReactiveStore } from '../../primitives/reactive-store.js'
 import { resolveReactive as resolveReactiveBase } from '../crud/reactive-resolver.js'
 import { waitForStoreReady } from '../crud/read-operations.js'
 
@@ -54,11 +54,11 @@ export async function resolve(peer, identifier, options = {}) {
 
 	// Handle options object (fromCoValue pattern) or resolved schema object ({ $id, id })
 	if (identifier && typeof identifier === 'object' && !Array.isArray(identifier)) {
-		// Resolved schema object: { $id: 'co_z...' } or { id: 'co_z...' }
-		const schemaCoId = identifier.$id ?? identifier.id
-		if (typeof schemaCoId === 'string' && schemaCoId.startsWith('co_z')) {
-			if (returnType === 'coId') return schemaCoId
-			return await resolve(peer, schemaCoId, { returnType, deepResolve, timeoutMs })
+		// Resolved factory object: { $id: 'co_z...' } or { id: 'co_z...' }
+		const factoryCoId = identifier.$id ?? identifier.id
+		if (typeof factoryCoId === 'string' && factoryCoId.startsWith('co_z')) {
+			if (returnType === 'coId') return factoryCoId
+			return await resolve(peer, factoryCoId, { returnType, deepResolve, timeoutMs })
 		}
 		if (identifier.fromCoValue) {
 			if (!identifier.fromCoValue.startsWith('co_z')) {

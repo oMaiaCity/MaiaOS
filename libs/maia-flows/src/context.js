@@ -3,7 +3,7 @@
  * @property {import('cojson').LocalNode} node
  * @property {import('cojson').RawAccount} account
  * @property {import('@MaiaOS/db').MaiaDB} peer
- * @property {import('@MaiaOS/runtime').DataEngine} dataEngine
+ * @property {import('@MaiaOS/engine').DataEngine} dataEngine
  */
 
 /**

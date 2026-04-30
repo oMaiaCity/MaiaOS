@@ -1,4 +1,3 @@
-import { buildSeedConfig, filterVibesForSeeding, getSeedConfig } from '@MaiaOS/seed'
 import { PEER_SYNC_SEED_POLICY } from '../runner.js'
 
 /**
@@ -13,6 +12,9 @@ export function genesisSeedScaffoldStep(id = 'genesis.seedScaffold') {
 			return typeof sparks === 'string' && sparks.startsWith('co_z')
 		},
 		apply: async (ctx) => {
+			const { buildSeedConfig, filterVibesForSeeding, getSeedConfig } = await import(
+				'@MaiaOS/seed/genesis-runtime'
+			)
 			const { worker, env, log } = ctx
 			const { dataEngine } = worker
 			const { ensureFactoriesLoaded, getAllFactories } = await import(

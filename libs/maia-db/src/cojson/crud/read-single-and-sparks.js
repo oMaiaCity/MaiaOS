@@ -1,9 +1,9 @@
 import { resolveExpressions } from '@MaiaOS/validation/expression-resolver.js'
-import { ReactiveStore } from '../../reactive-store.js'
-import { observeCoValue } from '../cache/coCache.js'
+import { observeCoValue } from '../../primitives/co-cache.js'
+import { extractCoValueData } from '../../primitives/data-extraction.js'
+import { ReactiveStore } from '../../primitives/reactive-store.js'
 import { getSparksRegistryId } from '../groups/groups.js'
 import { ensureCoValueLoaded } from './collection-helpers.js'
-import { extractCoValueData } from './data-extraction.js'
 import { deepResolveCoValue } from './deep-resolution.js'
 import { applyMapTransform } from './map-transform.js'
 import {
