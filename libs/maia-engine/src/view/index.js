@@ -6,7 +6,7 @@ import { containsExpressions, resolveExpressions } from '@MaiaOS/validation/expr
 import { extractDOMValuesAsync } from '@MaiaOS/validation/payload-resolver'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
-import { RENDER_STATES } from '../actor/index.js'
+import { RENDER_STATES } from '../render-states.js'
 import { BOOLEAN_ATTRS, SAFE_TAGS, sanitizePayloadForValidation, URL_ATTRS } from '../security.js'
 import { perfEnginesPipeline, traceView, traceViewDeliver } from '../utils/debug.js'
 import { isContentEditableUpdateEvent, toKebabCase } from '../utils/utils.js'

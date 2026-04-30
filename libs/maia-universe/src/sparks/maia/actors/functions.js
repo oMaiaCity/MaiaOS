@@ -5,7 +5,6 @@ import computeMessageNamesFn from './services/names/function.js'
 import paperFn from './services/paper/function.js'
 import profileImageFn from './services/profile-image/function.js'
 import updateWasmCodeFn from './services/update-wasm-code/function.js'
-import profileImageViewFn from './views/profile-image/function.js'
 
 export const ACTOR_FUNCTIONS = {
 	'maia/services/ai': aiChatFn,
@@ -13,7 +12,7 @@ export const ACTOR_FUNCTIONS = {
 	'maia/services/paper': paperFn,
 	'maia/services/update-wasm-code': updateWasmCodeFn,
 	'maia/services/profile-image': profileImageFn,
-	'maia/views/profile-image': profileImageViewFn,
+	'maia/views/profile-image': profileImageFn,
 	'maia/services/todos': null,
 	'maia/services/db': dbFn,
 }

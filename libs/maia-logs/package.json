@@ -5,6 +5,7 @@
 	"main": "./src/index.js",
 	"exports": {
 		".": "./src/index.js",
+		"./storage-opfs": "./src/storage-opfs.js",
 		"./subsystem-logger": "./src/subsystem-logger.js"
 	},
 	"description": "PERF, TRACE, DEBUG, OPS logging channels for MaiaOS",

@@ -22,13 +22,16 @@ export {
 	setLogModeState,
 } from './log-config.js'
 export { applyLogModeFromEnv, resolveMaiaLogMode } from './log-mode.js'
-export { bootstrapNodeLogging, createLogger, installDefaultTransport } from './logger.js'
-export { applyMaiaLoggingFromEnv, resolveMaiaLoggingEnv } from './maia-logging-env.js'
-export { createOpsLogger, getOpsSubsystemForPrefixedLine, OPS_PREFIX } from './ops.js'
 export {
+	bootstrapNodeLogging,
+	createLogger,
+	createOpsLogger,
 	createPerfTracer,
+	getOpsSubsystemForPrefixedLine,
+	installDefaultTransport,
 	isStorageOpfsPerfEnabled,
 	logStorageOpfsStep,
+	OPS_PREFIX,
 	perfAppMaiaDb,
 	perfAppVibes,
 	perfBootstrap,
@@ -39,7 +42,8 @@ export {
 	perfGameInit,
 	perfLabel,
 	perfStorageKey,
-} from './perf.js'
+} from './logger.js'
+export { applyMaiaLoggingFromEnv, resolveMaiaLoggingEnv } from './maia-logging-env.js'
 export {
 	isTraceEnabled,
 	traceActorProcessEvents,

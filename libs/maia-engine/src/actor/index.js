@@ -22,6 +22,7 @@ import { createOpsLogger } from '@MaiaOS/logs'
 import { ACTOR_NANOID_TO_EXECUTABLE_KEY } from '@MaiaOS/universe'
 import { containsExpressions } from '@MaiaOS/validation/expression-resolver'
 import { validateAgainstFactory } from '@MaiaOS/validation/validation.helper'
+import { RENDER_STATES } from '../render-states.js'
 import { sanitizePayloadForValidation, stripInfrastructureKeysForValidation } from '../security.js'
 import {
 	perfEnginesChat,
@@ -76,14 +77,6 @@ const INBOX_DEBOUNCE_MS = 0
 
 /** System events accepted by all actors implicitly */
 const SYSTEM_EVENTS = new Set(['SUCCESS', 'ERROR'])
-
-// Render state machine - prevents race conditions by ensuring renders only happen when state allows
-export const RENDER_STATES = {
-	INITIALIZING: 'initializing', // Setting up subscriptions, loading initial data
-	RENDERING: 'rendering', // Currently rendering (prevents nested renders)
-	READY: 'ready', // Initial render complete, ready for updates
-	UPDATING: 'updating', // Data changed, queued for rerender
-}
 
 export class ActorEngine {
 	constructor(styleEngine, viewEngine, processEngine) {
