@@ -17,7 +17,9 @@
 	},
 	"dependencies": {
 		"@MaiaOS/db": "workspace:*",
+		"@MaiaOS/flows": "workspace:*",
 		"@MaiaOS/peer": "workspace:*",
+		"@MaiaOS/storage": "workspace:*",
 		"@MaiaOS/validation": "workspace:*",
 		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/maia-ucan": "workspace:*",

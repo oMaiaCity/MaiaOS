@@ -1,9 +1,7 @@
 /**
- * Unified Storage Factory
- * Runtime-aware storage selection based on environment and configuration
- *
- * Browser: OPFS first (~4x faster for blobs), IndexedDB fallback when OPFS unavailable.
- * Node: PGlite or Postgres for agent mode.
+ * CoValue storage factory (Node).
+ * Runtime-driven: **PGlite** or **Postgres** via `PEER_SYNC_STORAGE` (+ `PEER_DB_PATH` / `PEER_SYNC_DB_URL`).
+ * Blob store: Tigris when `BUCKET_NAME` is set, else local FS at `PEER_BLOB_PATH` or `./binary-bucket`.
  */
 
 import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
@@ -29,10 +27,7 @@ function getEnvVar(key) {
 	return undefined
 }
 
-const _inMemory = () => undefined
-
 const opsStorage = createOpsLogger('Storage')
-const opsStorErr = createOpsLogger('STORAGE')
 
 /**
  * Create the appropriate BlobStore based on environment.
@@ -57,21 +52,17 @@ async function createBlobStore() {
 }
 
 /**
- * Get storage instance based on runtime and configuration
- * Agent mode (`mode: 'agent'`): PEER_SYNC_STORAGE, PEER_DB_PATH — Node sync server / headless agents.
- * Browser (`mode: 'human'`): OPFS first, IndexedDB fallback (MAIA_STORAGE=indexeddb to force). Used for **passkey** accounts and for **secret key dev** sign-in (both are human-operated browser sessions).
+ * CoValue storage: browser **OPFS** (IndexedDB fallback) or Node **PGlite** / **Postgres**.
  *
  * @param {Object} [options]
- * @param {'human' | 'agent'} [options.mode='human']
- * @param {string} [options.dbPath]
- * @param {boolean} [options.inMemory]
+ * @param {string} [options.dbPath] — Node PGlite directory (overrides `PEER_DB_PATH` when set)
  * @returns {Promise<StorageAPI | undefined>}
  */
 export async function getStorage(options = {}) {
-	const { mode = 'human', dbPath, inMemory: forceInMemory } = options
+	const { dbPath: dbPathOpt } = options
 	const runtime = detectRuntime()
 	const storageType =
-		mode === 'agent'
+		runtime === 'node'
 			? typeof process !== 'undefined' && process.env?.PEER_SYNC_STORAGE
 			: getEnvVar('MAIA_STORAGE')
 
@@ -85,14 +76,8 @@ export async function getStorage(options = {}) {
 			`${OPS_PREFIX.STORAGE} in-memory storage disabled. Use OPFS, IndexedDB, PGlite, or Postgres.`,
 		)
 	}
-	if (forceInMemory === true) {
-		// STRICT: in-memory storage is forbidden in MaiaOS.
-		// Fallback to human storage (OPFS/IndexedDB) even if inMemory was requested.
-		opsStorErr.warn('in-memory storage requested but forbidden. Falling back to persistent storage.')
-	}
 
 	if (runtime === 'browser') {
-		// OPFS first (best for blob-heavy local-first). IndexedDB fallback when OPFS unavailable.
 		if (storageType !== 'indexeddb' && isOPFSAvailable()) {
 			const storage = await getOPFSStorageAdapter()
 			if (storage) {
@@ -113,27 +98,18 @@ export async function getStorage(options = {}) {
 	}
 
 	if (runtime === 'node') {
-		const finalDbPath = dbPath || (typeof process !== 'undefined' && process.env?.PEER_DB_PATH)
+		const finalDbPath = dbPathOpt || (typeof process !== 'undefined' && process.env?.PEER_DB_PATH)
 		const databaseUrl = typeof process !== 'undefined' && process.env?.PEER_SYNC_DB_URL
 
-		// Agent/server mode: pglite or postgres only. No in-memory or jazz-cloud.
-		if (mode === 'agent' && !forceInMemory) {
-			if (storageType === 'in-memory' || storageType === 'jazz-cloud') {
-				throw new Error(
-					`${OPS_PREFIX.STORAGE} Agent/server requires persistent storage. Use PEER_SYNC_STORAGE=pglite or PEER_SYNC_STORAGE=postgres. No in-memory or jazz-cloud.`,
-				)
-			}
-			if (storageType && storageType !== 'pglite' && storageType !== 'postgres') {
-				throw new Error(
-					`${OPS_PREFIX.STORAGE} Agent/server mode requires PEER_SYNC_STORAGE=pglite or PEER_SYNC_STORAGE=postgres. Got: ${storageType}`,
-				)
-			}
+		if (!storageType || (storageType !== 'pglite' && storageType !== 'postgres')) {
+			throw new Error(
+				`${OPS_PREFIX.STORAGE} Node requires PEER_SYNC_STORAGE=pglite or PEER_SYNC_STORAGE=postgres. Got: ${storageType ?? '(unset)'}`,
+			)
 		}
 
 		const blobStore = await createBlobStore()
 
-		// Postgres (Fly MPG or any Postgres)
-		if (storageType === 'postgres' && !forceInMemory) {
+		if (storageType === 'postgres') {
 			if (!databaseUrl) {
 				throw new Error(
 					`${OPS_PREFIX.STORAGE} PEER_SYNC_STORAGE=postgres requires PEER_SYNC_DB_URL env var`,
@@ -150,12 +126,7 @@ export async function getStorage(options = {}) {
 			}
 		}
 
-		// PGlite (local WASM Postgres)
-		if (
-			(storageType === 'pglite' || (storageType !== 'postgres' && finalDbPath)) &&
-			!forceInMemory &&
-			finalDbPath
-		) {
+		if (storageType === 'pglite' && finalDbPath) {
 			try {
 				const { getPGliteStorage } = await import('@MaiaOS/storage/adapters/pglite.js')
 				return await getPGliteStorage(finalDbPath, blobStore)
@@ -167,15 +138,10 @@ export async function getStorage(options = {}) {
 			}
 		}
 
-		// Agent mode with no valid storage → fail hard
-		if (mode === 'agent') {
-			throw new Error(
-				`${OPS_PREFIX.STORAGE} Agent mode requires PEER_SYNC_STORAGE=pglite (with PEER_DB_PATH) or PEER_SYNC_STORAGE=postgres (with PEER_SYNC_DB_URL).`,
-			)
-		}
+		throw new Error(
+			`${OPS_PREFIX.STORAGE} Node storage requires PEER_SYNC_STORAGE=pglite (with PEER_DB_PATH or options.dbPath) or PEER_SYNC_STORAGE=postgres (with PEER_SYNC_DB_URL).`,
+		)
 	}
 
-	throw new Error(
-		`${OPS_PREFIX.STORAGE} No persistent storage configured for runtime=${runtime} mode=${mode}. No in-memory fallback.`,
-	)
+	throw new Error(`${OPS_PREFIX.STORAGE} No persistent storage configured for runtime=${runtime}.`)
 }

@@ -5,7 +5,7 @@
  */
 export {
 	DataEngine,
-	loadOrCreateAgentAccount,
 	MaiaDB,
+	signIn,
 	waitForStoreReady,
 } from '@MaiaOS/runtime'

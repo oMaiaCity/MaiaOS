@@ -1,36 +1,34 @@
 # @MaiaOS/self
 
-Self-Sovereign Identity (SSI) via WebAuthn PRF for MaiaOS.
+Self-sovereign identity for MaiaOS. Two key types (**`passkey`**, **`secretkey`**) with three sources (**`webauthn`**, **`envvars`**, **`config`**) behind a single entry point: **`signIn()`**.
 
 ## Overview
 
-This package provides passkey-based authentication with deterministic account derivation using the WebAuthn PRF (Pseudo-Random Function) extension.
+`@MaiaOS/self` owns identity keys. CoValue persistence is runtime-driven in `@MaiaOS/storage` (browser-opfs / pglite / postgres) and is never coupled to the key type.
 
-**STRICT: PRF is REQUIRED - No fallbacks.**
+**STRICT: PRF is REQUIRED for passkey paths - no fallbacks.**
+
+### Type × Source
+
+| Type | Source | Where the key comes from |
+|---|---|---|
+| `passkey` | `webauthn` | WebAuthn PRF (in-memory only, derived per session) |
+| `secretkey` | `envvars` | Node: `AVEN_MAIA_ACCOUNT` + `AVEN_MAIA_SECRET`. Browser dev: `VITE_AVEN_TEST_ACCOUNT` + `VITE_AVEN_TEST_SECRET` |
+| `secretkey` | `config` | Caller-supplied `accountID` + `agentSecret` |
+
+Passkey implies `webauthn` (implicit source). Secret-key requires an explicit source.
 
 ## Features
 
-- 🔐 **Hardware-backed authentication** - Uses Secure Enclave/TPM
-- 🔑 **Deterministic accounts** - Same passkey = same account
-- 🚫 **Zero secret storage** - All secrets derived on-demand (NO localStorage!)
-- 🔄 **Cross-device sync** - Passkeys sync via iCloud/Google, accounts via self-hosted sync service
-- 🎯 **Self-sovereign** - No metadata storage, everything in passkey + self-hosted sync
-- ⚡ **Fast login** - Only 1 biometric prompt (no PRF re-evaluation!)
+- Hardware-backed passkeys (Secure Enclave/TPM) with PRF-derived agent secrets — nothing stored in `localStorage`.
+- Deterministic accounts: same passkey → same `accountID`.
+- Cross-device sync via iCloud/Google (passkeys) and self-hosted MaiaOS sync (accounts).
+- Uniform contract across browser clients, the sync server, and scripted agents.
 
-## Browser Support
+## Browser support (passkey paths)
 
-### ✅ Supported
-
-- Chrome on macOS, Linux, Windows 11
-- Safari on macOS 13+, iOS 16+
-
-### ❌ NOT Supported
-
-- Firefox (all platforms)
-- Windows 10 (any browser)
-- Old browsers
-
-**The package will throw an error on unsupported browsers with instructions.**
+- Chrome / Edge (macOS, Linux, Windows 11), Safari (macOS 13+, iOS 16+).
+- Firefox and Windows 10 are unsupported; `signIn({ type: 'passkey', ... })` throws on call.
 
 ## Installation
 
@@ -38,289 +36,150 @@ This package provides passkey-based authentication with deterministic account de
 bun add @MaiaOS/self
 ```
 
-## Setup
-
-### 1. Self-Hosted Sync Service (Required)
-
-MaiaOS uses a self-hosted sync service for cross-device account persistence. The sync service URL is determined automatically:
-
-- **Development**: Uses relative path `/sync` (Vite proxy forwards to `localhost:4201`)
-- **Production**: Uses `PEER_MOAI` environment variable or same origin
-
-**Why needed?** Without sync service, accounts can't persist across devices. IndexedDB handles same-browser persistence, sync service enables cross-device sync.
-
 ## Usage
 
-### Sign Up (Create New Account)
+### `signIn(options)` — single entry point
 
-```javascript
-import { signUpWithPasskey } from '@MaiaOS/self';
+```js
+import { signIn } from '@MaiaOS/self'
 
-const { accountID, agentSecret, node, account } = await signUpWithPasskey({
-  name: "maia",
-  salt: "maia.city"
-});
+// Passkey sign-up (2 biometric prompts: temp → final passkey)
+const { accountID, agentSecret, loadingPromise } = await signIn({
+  type: 'passkey',
+  mode: 'signup',
+  name: 'maia',
+  salt: 'maia.city',
+})
+const { node, account } = await loadingPromise
 
-// accountID: "co_z..." (public)
-// agentSecret: cojson AgentSecret (ephemeral, never store!)
-// node: LocalNode instance (active session)
-// account: RawAccount instance (your cojson account)
+// Passkey sign-in (1 biometric prompt, loads existing account)
+const { accountID, agentSecret, loadingPromise } = await signIn({
+  type: 'passkey',
+  mode: 'signin',
+  salt: 'maia.city',
+})
+const { node, account } = await loadingPromise
+
+// Secret-key from env (Node: AVEN_MAIA_*; browser dev: VITE_AVEN_TEST_*)
+const { node, account } = await signIn({
+  type: 'secretkey',
+  source: 'envvars',
+  syncDomain: null,
+  createName: 'Maia Agent',
+})
+
+// Secret-key from explicit config (e.g. sync server bootstrap)
+const { node, account } = await signIn({
+  type: 'secretkey',
+  source: 'config',
+  accountID,
+  agentSecret,
+  dbPath, // Node PGlite path, optional
+  syncDomain: null,
+  createName: 'Maia Agent',
+})
 ```
 
-### Sign In (Use Existing Passkey)
+**Options**
 
-```javascript
-import { signInWithPasskey } from '@MaiaOS/self';
+| Field | Applies to | Notes |
+|---|---|---|
+| `type` | all | `'passkey'` \| `'secretkey'` |
+| `source` | `secretkey` | `'envvars'` (default) \| `'config'` |
+| `mode` | `passkey` | `'signin'` \| `'signup'` |
+| `accountID` | `secretkey` + `config` | Required |
+| `agentSecret` | `secretkey` + `config` | Required |
+| `name` | `passkey` + `signup` | Optional display name |
+| `salt` | `passkey` | Defaults to `'maia.city'` |
+| `syncDomain` | all | Override sync WS host (optional) |
+| `createName` | `secretkey` | Profile name used when the account is first created |
+| `dbPath` | Node + `secretkey` | Explicit PGlite directory (otherwise `PEER_DB_PATH`) |
 
-const { accountID, agentSecret, node, account } = await signInWithPasskey({
-  salt: "maia.city"
-});
+**Returns**
 
-// Loads existing account from sync service
-// Returns same structure as signUpWithPasskey
-// ⚡ Only 1 biometric prompt (PRF output cached in passkey!)
-```
-
-### Sync Status Monitoring
-
-```javascript
-import { subscribeSyncState } from '@MaiaOS/self';
-
-const unsubscribe = subscribeSyncState((state) => {
-  console.log("Sync status:", state);
-  // { connected: true, syncing: true, error: null }
-});
-
-// Later: unsubscribe when done
-unsubscribe();
-```
-
-### Feature Detection
-
-```javascript
-import { isPRFSupported } from '@MaiaOS/self';
-
-try {
-  await isPRFSupported();
-  console.log("PRF supported!");
-} catch (error) {
-  console.error(error.message); // Instructions for user
+```ts
+{
+  accountID: string,
+  agentSecret: AgentSecret,
+  // passkey paths return a deferred loader:
+  loadingPromise?: Promise<{ node, account, accountID }>,
+  credentialId?: string, // passkey signup only
+  // secretkey paths return the resolved pair directly:
+  node?: LocalNode,
+  account?: RawAccount,
+  wasCreated?: boolean,
 }
 ```
 
-## Security Guarantees
+### `ensureAccount(options)` — low-level primitive
 
-### What's Stored in Passkey (Hardware-Protected)
+Called by `signIn` once the identity material is known. Useful when you already have `agentSecret` + `accountID` and want fine-grained control over `mode: 'signup' | 'signin' | 'bootstrap'`, custom migrations, or a pre-wired storage instance. See `libs/maia-self/src/ensure-account.js`.
 
-```
-userHandle (inside Secure Enclave/TPM):
-  - First 32 bytes: PRF output (derived secret)
-  - Remaining bytes: accountID (public, but hardware-protected)
-```
+### `generateAgentCredentials({ name })` — static key factory
 
-### What's Stored NOWHERE (No localStorage!)
+Mint a fresh `(accountID, agentSecret)` pair for scripts/seeds. No network, no storage, no profile. The generated pair is meant to be persisted by the caller (env file, secret store) and later loaded via `signIn({ type: 'secretkey', source: 'config' | 'envvars' })`.
 
-- ❌ NO localStorage - Nothing stored in browser!
-- ❌ NO IndexedDB - No metadata cached!
-- ✅ Everything in passkey (hardware-protected) + sync service (encrypted)
+### `isPRFSupported()` / `requirePRFSupport()`
 
-### What's NEVER Stored Anywhere
+Feature detection for WebAuthn PRF. `requirePRFSupport()` throws with a user-facing upgrade message on unsupported browsers.
 
-- `AgentSecret` (derived from PRF output each session)
-- `SignerSecret` (derived from AgentSecret)
-- `SealerSecret` (derived from AgentSecret)
+## Security properties
 
-### Security Properties
+- Passkey secrets live in Secure Enclave/TPM only; `AgentSecret` / `SignerSecret` / `SealerSecret` are derived per session.
+- No `localStorage` or metadata cache — XSS retrieves nothing.
+- Passkeys sync across devices via the platform credential manager; accounts sync via the MaiaOS sync service.
 
-- ✅ XSS attack → Gets ZERO data (no localStorage!)
-- ✅ Device theft → Needs biometric + passkey
-- ✅ localStorage compromise → Nothing to steal!
-- ✅ Passkey in hardware → Can't extract, biometric required
-- ✅ Cross-device sync → Automatic via iCloud/Google (passkey) + sync service (account)
+## How the passkey flow works
 
-## How It Works
-
-### Sign Up Flow (2 biometric prompts - unavoidable)
+### Sign-up (2 biometric prompts)
 
 ```
-Step 1: Create TEMP passkey + evaluate PRF
-  → User sees 1st biometric prompt
-  → PRF returns 32-byte secret (deterministic!)
-
-Step 2: Create cojson account
-  → Derive AgentSecret from PRF output
-  → Create account → get accountID (e.g., "co_z...")
-
-Step 3: Create FINAL passkey
-  → Concatenate: [PRF_output (32 bytes) || accountID (UTF-8)]
-  → Store in userHandle (inside Secure Enclave/TPM)
-  → User sees 2nd biometric prompt
-  → DONE! Account persists to sync service
-
-Why 2 prompts?
-  - Can't know accountID before account is created
-  - Can't modify passkey after creation
-  - Therefore: temp passkey (derive secret) → final passkey (store secret + ID)
+Step 1: Create TEMP passkey + evaluate PRF            → 1st biometric prompt
+Step 2: Derive AgentSecret, create cojson account     → account.id known
+Step 3: Create FINAL passkey with userHandle =
+        [PRF_output (32B) || accountID]               → 2nd biometric prompt
 ```
 
-### Sign In Flow (1 biometric prompt - FAST! ⚡)
+Two prompts are unavoidable: the `accountID` only exists after step 2, and a passkey's `userHandle` is immutable after creation.
+
+### Sign-in (1 biometric prompt)
 
 ```
-Step 1: Get existing passkey
-  → User sees biometric prompt
-  → Retrieve userHandle from passkey
-
-Step 2: Parse userHandle
-  → Extract: first 32 bytes = PRF output (cached!)
-  → Extract: remaining bytes = accountID
-  → NO PRF re-evaluation needed! (secret already in passkey)
-
-Step 3: Load account
-  → Derive AgentSecret from cached PRF output
-  → Load account from sync service using accountID
-  → DONE! Logged in with 1 prompt!
-
-Why only 1 prompt?
-  - PRF output stored in passkey's userHandle
-  - accountID also stored in userHandle
-  - No need to re-evaluate PRF (we already have the secret!)
+Step 1: Get existing passkey                          → biometric prompt
+Step 2: Parse userHandle → PRF_output + accountID
+Step 3: Derive AgentSecret + load account via sync
 ```
 
-## API Reference
+No PRF re-evaluation is needed — the derived secret is already cached in `userHandle`.
 
-### `signUpWithPasskey(options)`
+## Integration example
 
-Create a new passkey and derive deterministic account.
+```js
+import { MaiaOS, requirePRFSupport, signIn, subscribeSyncState } from '@MaiaOS/runtime'
 
-**Parameters:**
-- `options.name` (string, default: "maia") - Display name
-- `options.salt` (string, default: "maia.city") - Salt for PRF
-
-**Returns:** `Promise<{accountID: string, agentSecret: Object, node: Object, account: Object, credentialId: string}>`
-
-**Throws:** If PRF not supported
-
-**Note:** Shows 2 biometric prompts (temp passkey + final passkey)
-
-### `signInWithPasskey(options)`
-
-Sign in with existing passkey.
-
-**Parameters:**
-- `options.salt` (string, default: "maia.city") - Salt for PRF
-
-**Returns:** `Promise<{accountID: string, agentSecret: Object, node: Object, account: Object, credentialId: string}>`
-
-**Throws:** If PRF not supported or no passkey found
-
-**Note:** Shows only 1 biometric prompt (fast login!)
-
-### `subscribeSyncState(listener)` ⚠️ Moved to `@MaiaOS/db`
-
-**Note:** This function has been moved to `@MaiaOS/db` for better separation of concerns. It's still available via `@MaiaOS/runtime` bundle for convenience.
-
-Subscribe to sync status changes.
-
-**Parameters:**
-- `listener` (Function) - Callback: `(state) => void`
-  - `state.connected` (boolean) - WebSocket connected?
-  - `state.syncing` (boolean) - Actively syncing?
-  - `state.error` (string | null) - Error message if any
-
-**Returns:** `Function` - Unsubscribe function
-
-**Example:**
-```javascript
-import { subscribeSyncState } from '@MaiaOS/runtime'; // or '@MaiaOS/db'
-
-const unsub = subscribeSyncState((state) => {
-  console.log("Sync:", state.connected ? "Online" : "Offline");
-});
-// Later: unsub();
-```
-
-### `isPRFSupported()`
-
-Check if WebAuthn PRF is supported (async version).
-
-**Returns:** `Promise<boolean>`
-
-**Throws:** If not supported, with instructions
-
-### `requirePRFSupport()`
-
-Strictly require PRF support (throws on unsupported browsers).
-
-**Returns:** `Promise<void>`
-
-**Throws:** If not supported, with detailed browser upgrade instructions
-
-## Integration Example
-
-```javascript
-// In your app initialization
-import { signInWithPasskey, signUpWithPasskey, subscribeSyncState } from '@MaiaOS/runtime';
-import { MaiaOS } from '@MaiaOS/runtime';
-
-async function init() {
-  // Check PRF support first
-  await requirePRFSupport();
-  
-  // Show sign-in UI with both "Sign In" and "Register" buttons
-  renderSignInPrompt();
+async function boot() {
+  await requirePRFSupport()
+  renderSignInPrompt()
 }
 
-async function register() {
-  try {
-    // Create new account (2 biometric prompts)
-    const { node, account, accountID } = await signUpWithPasskey({
-      name: "maia",
-      salt: "maia.city"
-    });
-    
-    console.log("Registered! Account ID:", accountID);
-    
-    // Subscribe to sync state
-    subscribeSyncState((state) => {
-      console.log("Sync:", state.connected ? "Online" : "Offline");
-    });
-    
-    // Create MaiaOS with node and account
-    const o = await createMaiaOS({ node, account, accountID });
-    
-    // Show app UI
-    renderApp(o);
-  } catch (error) {
-    console.error("Registration failed:", error.message);
-  }
+async function register(displayName) {
+  const { loadingPromise } = await signIn({
+    type: 'passkey',
+    mode: 'signup',
+    name: displayName,
+    salt: 'maia.city',
+  })
+  const { node, account } = await loadingPromise
+  subscribeSyncState((state) => console.log('Sync:', state.connected ? 'Online' : 'Offline'))
+  const maia = await MaiaOS.boot({ node, account, modules: ['db', 'core', 'ai'] })
+  renderApp(maia)
 }
 
-async function signIn() {
-  try {
-    // Load existing account (1 biometric prompt - fast!)
-    const { node, account, accountID } = await signInWithPasskey({
-      salt: "maia.city"
-    });
-    
-    console.log("Signed in! Account ID:", accountID);
-    
-    // Subscribe to sync state
-    subscribeSyncState((state) => {
-      console.log("Sync:", state.connected ? "Online" : "Offline");
-    });
-    
-    // Create MaiaOS with node and account
-    const o = await createMaiaOS({ node, account, accountID });
-    
-    // Show app UI
-    renderApp(o);
-  } catch (error) {
-    console.error("Sign in failed:", error.message);
-    // If no passkey found, suggest registration
-    if (error.message.includes("No passkey found")) {
-      console.log("No passkey found. Please register first.");
-    }
-  }
+async function signInPasskey() {
+  const { loadingPromise } = await signIn({ type: 'passkey', mode: 'signin', salt: 'maia.city' })
+  const { node, account } = await loadingPromise
+  const maia = await MaiaOS.boot({ node, account, modules: ['db', 'core', 'ai'] })
+  renderApp(maia)
 }
 ```
 

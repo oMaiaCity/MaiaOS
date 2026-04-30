@@ -10,10 +10,8 @@ import {
 	resolveFactoryDefFromPeer,
 	SPARK_OS_META_FACTORY_CO_ID_KEY,
 } from '@MaiaOS/db'
-import {
-	loadNanoidIndex,
-	rebuildAllIndexes,
-} from '@MaiaOS/db/cojson/indexing/factory-index-manager'
+import { loadNanoidIndex } from '@MaiaOS/db/cojson/indexing/factory-index-manager'
+import { rebuildAllIndexes } from '@MaiaOS/db/cojson/indexing/factory-index-rebuild'
 import { lookupRegistryKey } from '@MaiaOS/db/seed/lookup-registry-key'
 import { canonicalizePayloadRefs } from '@MaiaOS/db/seed/ref-canonicalize'
 import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'

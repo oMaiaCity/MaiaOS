@@ -3,8 +3,12 @@
  * Handles dashboard screen and vibe viewer rendering
  */
 
-import { createLogger, createPerfTracer } from '@MaiaOS/logs'
-import { resolveAccountCoIdsToProfiles, waitForStoreReady } from '@MaiaOS/runtime'
+import {
+	createLogger,
+	createPerfTracer,
+	resolveAccountCoIdsToProfiles,
+	waitForStoreReady,
+} from '@MaiaOS/runtime'
 import { accountLoadingSpinnerHtml } from './account-loading-spinner-html.js'
 import { findSessionChatIntentActorId, resolveChatVibeCoId } from './maia-ai-global.js'
 import { MAIADB_LAYER_STACK_ICON_SVG } from './maia-icons.js'

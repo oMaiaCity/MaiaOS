@@ -2,7 +2,8 @@
  * Universal Resolver - Single Source of Truth
  *
  * ONE universal utility function that replaces ALL resolver functions.
- * Uses read() API internally for all lookups (registry, schemas, co-values).
+ * Uses peer.read (MaiaDB) for loads — authoring-resolver does not import read.js
+ * (decouples resolve from the universal read module for the main SCC).
  *
  * Replaces:
  * - resolveHumanReadableKey()
@@ -19,18 +20,19 @@
 import { removeIdFields } from '@MaiaOS/validation'
 import { ReactiveStore } from '../../reactive-store.js'
 import { normalizeCoValueData } from '../crud/data-extraction.js'
+import { ensureCoValueLoaded } from '../crud/ensure-covalue-core.js'
 import { resolveReactive as resolveReactiveBase } from '../crud/reactive-resolver.js'
 import { waitForStoreReady } from '../crud/read-operations.js'
-import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
 
-async function ensureCoValueLoadedAuthoring(peer, id, opts) {
-	const { ensureCoValueLoaded } = await import('../crud/collection-helpers.js')
-	return ensureCoValueLoaded(peer, id, opts)
+function readViaPeer(peer, coId, options) {
+	if (typeof peer?.read !== 'function') {
+		throw new Error('[resolve] peer.read is required (MaiaDB-like peer)')
+	}
+	return peer.read(null, coId, null, null, options)
 }
 
-async function readLazy(...args) {
-	const { read } = await import('../crud/read.js')
-	return read(...args)
+async function ensureCoValueLoadedAuthoring(peer, id, opts) {
+	return ensureCoValueLoaded(peer, id, opts)
 }
 
 /**
@@ -65,8 +67,8 @@ export async function resolve(peer, identifier, options = {}) {
 				)
 			}
 
-			// Extract schema co-id from co-value's headerMeta using read() API
-			const coValueStore = await readLazy(peer, identifier.fromCoValue, null, null, null, {
+			// Extract schema co-id from co-value's headerMeta using peer.read
+			const coValueStore = await readViaPeer(peer, identifier.fromCoValue, {
 				deepResolve: false,
 				timeoutMs,
 			})
@@ -119,8 +121,8 @@ export async function resolve(peer, identifier, options = {}) {
 		} catch (_e) {
 			// Timeout: still try read() — subscription may populate the store.
 		}
-		// Load co-value using read() API
-		const store = await readLazy(peer, identifier, null, null, null, {
+		// Load co-value using peer.read
+		const store = await readViaPeer(peer, identifier, {
 			deepResolve,
 			timeoutMs,
 		})
@@ -273,114 +275,6 @@ export async function checkCotype(peer, factoryCoId, expectedCotype) {
 	}
 	const cotype = schema.cotype || 'comap' // Default to comap if not specified
 	return cotype === expectedCotype
-}
-
-/** Wait for co-value to become available (node-only, no peer) */
-async function waitForCoValueAvailable(core, timeoutMs = 5000) {
-	if (!core) return false
-	const deadline = Date.now() + timeoutMs
-	while (Date.now() < deadline) {
-		if (core.isAvailable?.()) return true
-		await new Promise((r) => setTimeout(r, 50))
-	}
-	return false
-}
-
-/**
- * Resolve spark.os id from account via account.sparks[spark].os (node-only, no peer.read)
- * @param {LocalNode} node
- * @param {RawAccount} account
- * @param {string} spark - Spark name (e.g. '°maia')
- * @returns {Promise<string|null>} os co-id or null
- */
-async function resolveSparkOsIdFromNode(node, account, spark) {
-	const sparksId = account.get?.('sparks')
-	if (!sparksId?.startsWith('co_z')) return null
-
-	const sparksCore = node.getCoValue(sparksId) || (await node.loadCoValueCore?.(sparksId))
-	if (!(await waitForCoValueAvailable(sparksCore))) return null
-	const sparks = sparksCore?.getCurrentContent?.()
-	if (!sparks || typeof sparks.get !== 'function') return null
-	const sparkCoId = sparks.get(spark)
-	if (!sparkCoId?.startsWith('co_z')) return null
-
-	const sparkCore = node.getCoValue(sparkCoId) || (await node.loadCoValueCore?.(sparkCoId))
-	if (!(await waitForCoValueAvailable(sparkCore))) return null
-	const sparkContent = sparkCore?.getCurrentContent?.()
-	if (!sparkContent || typeof sparkContent.get !== 'function') return null
-	return sparkContent.get('os') || null
-}
-
-/**
- * Load all factory definitions (definition catalog colist)
- * MIGRATIONS ONLY - uses resolve(peer, factoryCoId, { returnType: 'schema' }) for each schema
- *
- * @param {LocalNode} node - LocalNode instance
- * @param {RawAccount} account - Account CoMap
- * @returns {Promise<Object>} Map of schema co-ids to schema definitions { [coId]: schemaDefinition }
- */
-export async function loadFactoriesFromAccount(node, account) {
-	if (!node || !account) {
-		throw new Error('[loadFactoriesFromAccount] Node and account required')
-	}
-
-	try {
-		const { getGlobalCoCache } = await import('../cache/coCache.js')
-		const peer = {
-			node,
-			account,
-			getCoValue: (id) => node.getCoValue(id),
-			isAvailable: (c) => c?.isAvailable?.() ?? false,
-			getHeader: (c) => c?.verified?.header ?? null,
-			getCurrentContent: (c) => c?.getCurrentContent?.() ?? null,
-			subscriptionCache: getGlobalCoCache(node),
-			systemSpark: '°maia',
-		}
-
-		const osId = await resolveSparkOsIdFromNode(node, account, '°maia')
-		if (!osId?.startsWith('co_z')) return {}
-
-		const osStore = await readLazy(peer, osId, null, null, null, { deepResolve: false })
-		await waitForStoreReady(osStore, osId, 5000)
-		const osData = osStore.value
-		const metaCoId = osData?.[SPARK_OS_META_FACTORY_CO_ID_KEY]
-		const indexesId = osData?.indexes
-		const factoryCoIds = []
-		if (metaCoId?.startsWith?.('co_z') && indexesId?.startsWith?.('co_z')) {
-			const indexesStore = await readLazy(peer, indexesId, null, null, null, {
-				deepResolve: false,
-			})
-			await waitForStoreReady(indexesStore, indexesId, 5000)
-			const indexesData = indexesStore.value
-			const catalogColistId = indexesData?.[metaCoId]
-			if (catalogColistId?.startsWith?.('co_z')) {
-				const colistCore = peer.getCoValue(catalogColistId)
-				if (colistCore && peer.isAvailable(colistCore)) {
-					const colistContent = peer.getCurrentContent(colistCore)
-					const items = colistContent?.toJSON?.() ?? []
-					if (Array.isArray(items)) {
-						for (const id of items) {
-							if (typeof id === 'string' && id.startsWith('co_z')) factoryCoIds.push(id)
-						}
-					}
-				}
-			}
-		}
-
-		if (factoryCoIds.length === 0) return {}
-
-		const schemas = {}
-		for (const factoryCoId of factoryCoIds) {
-			if (typeof factoryCoId !== 'string' || !factoryCoId.startsWith('co_z')) continue
-			try {
-				const schema = await resolve(peer, factoryCoId, { returnType: 'factory', timeoutMs: 5000 })
-				if (schema) schemas[factoryCoId] = schema
-			} catch (_error) {}
-		}
-		return schemas
-	} catch (_error) {
-		return {}
-	}
 }
 
 /**

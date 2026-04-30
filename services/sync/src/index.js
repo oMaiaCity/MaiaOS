@@ -19,28 +19,29 @@
  *   Read-only storage inspector (when sync is up): same paths; Bearer UCAN cmd `/admin/storage` + Capability grant (or `/admin`). BEGIN READ ONLY for POST /query.
  */
 
-import { accountHasCapabilityOnPeer, ensureCoValueLoaded, getCoListId } from '@MaiaOS/db'
 import {
+	accountHasCapabilityOnPeer,
+	agentIDToDidKey,
+	bootstrapNodeLogging,
 	createFlowContext,
-	identitySelfAvenStep,
-	runSteps,
-	syncServerInfraSteps,
-} from '@MaiaOS/flows'
-import { bootstrapNodeLogging, createLogger, createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
-import { agentIDToDidKey } from '@MaiaOS/maia-ucan'
-import {
+	createLogger,
+	createOpsLogger,
 	createWebSocketPeer,
 	DataEngine,
+	ensureCoValueLoaded,
 	ensureProfileForNewAccount,
-	loadOrCreateAgentAccount,
+	generateAgentCredentials,
+	getCoListId,
+	identitySelfAvenStep,
 	MaiaDB,
 	MaiaScriptEvaluator,
+	OPS_PREFIX,
+	runSteps,
+	signIn,
+	syncServerInfraSteps,
 	waitForStoreReady,
 } from '@MaiaOS/runtime'
-import {
-	applyTesterCredentialsToEnvFile,
-	generateAgentCredentials,
-} from '@MaiaOS/self/generate-credentials'
+import { applyTesterCredentialsToEnvFile } from '@MaiaOS/self/generate-credentials'
 import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { createHandleAgentHttp } from './handlers/agent-http.js'
@@ -547,7 +548,9 @@ syncDevLifecycleLog.log(`Listening on 0.0.0.0:${PORT}`)
 
 		const maiaNameRaw = process.env.AVEN_MAIA_NAME || 'Maia'
 		const maiaName = maiaNameRaw.startsWith('Aven ') ? maiaNameRaw : `Aven ${maiaNameRaw}`
-		const result = await loadOrCreateAgentAccount({
+		const result = await signIn({
+			type: 'secretkey',
+			source: 'config',
 			accountID,
 			agentSecret,
 			syncDomain: null,
@@ -668,7 +671,7 @@ syncDevLifecycleLog.log(`Listening on 0.0.0.0:${PORT}`)
 		if (pendingApplyTesterEnv) {
 			applyTesterCredentialsToEnvFile(repoRoot, pendingApplyTesterEnv)
 			opsSync.log(
-				'PEER_SYNC_SEED: persisted Aven Tester + guardian to repo .env — restart app dev server to pick up VITE_AVEN_*',
+				'PEER_SYNC_SEED: persisted secret key dev tester + guardian to repo .env — restart app dev server to pick up VITE_AVEN_*',
 			)
 		}
 		syncDevLifecycleLog.log('Ready')

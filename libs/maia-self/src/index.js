@@ -1,7 +1,7 @@
 /**
- * @MaiaOS/self - Self-Sovereign Identity via WebAuthn PRF
+ * @MaiaOS/self - Self-sovereign identity: passkey (WebAuthn PRF) and secret-key bootstrap
  *
- * STRICT: PRF required, no fallbacks
+ * STRICT: PRF required for passkey paths, no fallbacks
  */
 
 export { getStorage } from '@MaiaOS/storage'
@@ -12,12 +12,8 @@ export {
 } from './feature-detection.js'
 export { createPasskeyWithPRF, evaluatePRF } from './prf-adapter.js'
 export { getExistingPasskey } from './prf-evaluator.js'
-export {
-	generateAgentCredentials,
-	loadOrCreateAgentAccount,
-	signInWithPasskey,
-	signUpWithPasskey,
-} from './self.js'
+export { generateAgentCredentials } from './self.js'
+export { signIn } from './sign-in.js'
 export {
 	arrayBufferToBase64,
 	base64ToArrayBuffer,

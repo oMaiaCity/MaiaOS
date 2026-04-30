@@ -240,16 +240,14 @@ export function setupSyncPeers(syncDomain = null) {
 /**
  * Jazz Cloud peer setup - server-side only
  * Creates outbound WebSocket peer to Jazz Cloud for persistence/sync.
- * Used when PEER_STORAGE=jazz-cloud (no local PGlite/Postgres).
+ * Historical helper (not used by MaiaOS sync). Jazz Cloud is not a supported CoValue storage backend.
  *
  * @param {string} apiKey - Jazz Cloud API key (dashboard.jazz.tools or email as temp key)
  * @returns {{peers: Array, setNode: Function, waitForPeer: () => Promise<boolean>, wsPeer: Object}} Peer setup
  */
 export function setupJazzCloudPeer(apiKey) {
 	if (!apiKey || typeof apiKey !== 'string') {
-		throw new Error(
-			'setupJazzCloudPeer requires apiKey. Set JAZZ_SYNC_API_KEY when PEER_STORAGE=jazz-cloud.',
-		)
+		throw new Error('setupJazzCloudPeer requires apiKey. Set JAZZ_SYNC_API_KEY.')
 	}
 
 	const syncServerUrl = `wss://cloud.jazz.tools/?key=${encodeURIComponent(apiKey)}`

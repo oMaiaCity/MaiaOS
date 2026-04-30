@@ -1,11 +1,9 @@
 # MaiaOS — Sentrux rules. Run: sentrux check .
 
 [constraints]
-# `reactive-resolver` no longer imports `read.js`; indexing uses `ensure-covalue-core` (not read) for warm-load.
-# Remaining SCC: `read` ↔ `authoring-resolver` (`readLazy` / `resolveSchemaLazy`) ↔ bootstrap chain through
-# `collection-helpers` → `factory-index-manager` → `create-covalue-for-spark` → cotypes → dynamic authoring.
-# Eliminating it requires narrowing `resolve()` off universal `read()` without changing semantics — tracked for a follow-up.
-max_cycles = 1
+# `authoring-resolver.js`: peer.read + ensure-covalue-core (no read.js / collection-helpers for pre-flight).
+# `groups.js`: addGroupMember uses ensure-covalue-core only (breaks groups ↔ collection-helpers ↔ factory-index SCC).
+max_cycles = 0
 max_coupling = "F"
 no_god_files = false
 

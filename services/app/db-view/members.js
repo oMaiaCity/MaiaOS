@@ -1,8 +1,8 @@
 /**
  * Capabilities shell — human registry members (guardian approval flow).
  */
-import { debugWarn } from '@MaiaOS/logs'
 import {
+	debugWarn,
 	listAccountIdsFromIdentityIndex,
 	loadCapabilitiesGrants,
 	resolveAccountCoIdsToProfiles,

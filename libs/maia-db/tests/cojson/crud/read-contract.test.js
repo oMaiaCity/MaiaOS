@@ -12,11 +12,9 @@ import { join } from 'node:path'
 const crudDir = join(import.meta.dirname, '../../../src/cojson/crud')
 const readContractSources = [
 	'read-helpers.js',
-	'read-unified.js',
 	'read-single-and-sparks.js',
 	'read-collection.js',
 	'read-all-covalues.js',
-	'read-find-first.js',
 	'read.js',
 ].map((f) => readFileSync(join(crudDir, f), 'utf8'))
 const readJs = readContractSources.join('\n')

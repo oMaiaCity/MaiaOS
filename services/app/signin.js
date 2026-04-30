@@ -66,7 +66,7 @@ export function getFirstNameForRegister() {
 /**
  * @param {() => boolean} hasExistingAccount
  * @param {'signup' | 'signin'} [viewMode] - Override; default: hasAccount ? 'signin' : 'signup'
- * @param {boolean} [showSecretKeyDevSignIn] - Show secret-key dev button (local only, `VITE_AVEN_TEST_MODE`; human operator, not server agent)
+ * @param {boolean} [showSecretKeyDevSignIn] - Show secret-key dev button (local only, `VITE_AVEN_TEST_MODE`)
  * @param {{ register: () => void, signIn: () => void, signInWithSecretKeyDev: () => void, switchToSignin: () => void, switchToSignup: () => void }} [handlers] - Required for CSP-safe UI (no inline handlers)
  */
 export function renderSignInPrompt(

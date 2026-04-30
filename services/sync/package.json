@@ -10,15 +10,10 @@
 		"test": "bun test tests"
 	},
 	"dependencies": {
-		"@MaiaOS/flows": "workspace:*",
-		"@MaiaOS/self": "workspace:*",
-		"@MaiaOS/seed": "workspace:*",
-		"@MaiaOS/db": "workspace:*",
 		"@MaiaOS/logs": "workspace:*",
-		"@MaiaOS/runtime": "workspace:*",
-		"@MaiaOS/universe": "workspace:*",
-		"@MaiaOS/storage": "workspace:*",
+		"@MaiaOS/self": "workspace:*",
 		"@MaiaOS/maia-distros": "workspace:*",
-		"@MaiaOS/maia-ucan": "workspace:*"
+		"@MaiaOS/runtime": "workspace:*",
+		"@MaiaOS/storage": "workspace:*"
 	}
 }

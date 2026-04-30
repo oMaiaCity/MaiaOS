@@ -140,11 +140,23 @@ export async function writeJSON(root, path, obj) {
 	if (parts.length === 0) return
 	const fileName = parts.pop()
 	const dirPath = parts.join('/')
-	const dir = dirPath ? await getOrCreateDir(root, dirPath) : root
-	const handle = await dir.getFileHandle(fileName, { create: true })
-	const writable = await handle.createWritable()
-	await writable.write(JSON.stringify(obj))
-	await writable.close()
+	const doWrite = async () => {
+		const dir = dirPath ? await getOrCreateDir(root, dirPath) : root
+		const handle = await dir.getFileHandle(fileName, { create: true })
+		const writable = await handle.createWritable()
+		await writable.write(JSON.stringify(obj))
+		await writable.close()
+	}
+	try {
+		await doWrite()
+	} catch (e) {
+		if (e?.name === 'NotFoundError') {
+			_dirCache.delete(root)
+			await doWrite()
+			return
+		}
+		throw e
+	}
 }
 
 /**

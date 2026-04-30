@@ -3,7 +3,7 @@ import { normalizePostgresConnectionString } from './normalizePostgresUrl.js'
 
 /**
  * Clear DB and binary blob storage (manual reseed scripts / operators only — not wired to any env flag).
- * Ensures a complete reset before loadOrCreateAgentAccount + seed.
+ * Ensures a complete reset before `signIn({ type: 'secretkey', source: 'config' })` + seed.
  *
  * Node.js server only. Reads env: PEER_SYNC_STORAGE, PEER_DB_PATH, PEER_SYNC_DB_URL,
  * PEER_BLOB_PATH, BUCKET_NAME.

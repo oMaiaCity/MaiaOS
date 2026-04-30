@@ -1,4 +1,4 @@
-import { verifyInvocationToken } from '@MaiaOS/maia-ucan'
+import { verifyInvocationToken } from '@MaiaOS/runtime'
 
 /** LLM messages schema: role + optional content. Enforces structure and limits. */
 const LLM_MAX_MESSAGES = 100

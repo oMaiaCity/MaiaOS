@@ -8,10 +8,10 @@ import {
 	createLogger,
 	createPerfTracer,
 	debugLog,
+	resolveAccountCoIdsToProfiles,
+	resolveGroupCoIdsToCapabilityNames,
 	resolveMaiaLoggingEnv,
-} from '@MaiaOS/logs'
-// Import from kernel bundle - everything bundled (no direct @MaiaOS/db in production)
-import { resolveAccountCoIdsToProfiles, resolveGroupCoIdsToCapabilityNames } from '@MaiaOS/runtime'
+} from '@MaiaOS/runtime'
 import { accountLoadingSpinnerHtml } from './account-loading-spinner-html.js'
 import { renderDashboard, renderVibeViewer } from './dashboard.js'
 import { hydrateCapabilitiesView } from './db-view/capabilities.js'

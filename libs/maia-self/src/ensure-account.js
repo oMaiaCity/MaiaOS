@@ -1,12 +1,11 @@
 /**
- * Single local-first primitive for browser accounts (passkey / PRF) and env-secret accounts.
- * - signup / signin: passkey identity (human operator).
- * - bootstrap: secret-key material (sync server process, browser secret-key dev login) — still NOT “Aven product type”; see `account-authentication-types.md`.
+ * Single local-first primitive for accounts after identity material is known:
+ * - signup / signin: passkey (via `signIn({ type: 'passkey', ... })`) supplies PRF-derived `agentSecret`.
+ * - bootstrap: secret-key material (sync process or browser secret-key dev) — see `account-authentication-types.md`.
  * mode: signup → load or create | signin → load only | bootstrap → load or create
  */
 import { ensureProfileForNewAccount as defaultEnsureProfileForNewAccount } from '@MaiaOS/db'
-import { createAccountWithSecret, loadAccount, setupSyncPeers } from '@MaiaOS/peer'
-import { getStorage } from '@MaiaOS/storage'
+import { createAccountWithSecret, loadAccount } from '@MaiaOS/peer'
 import { cojsonInternals } from 'cojson'
 import { WasmCrypto } from 'cojson/crypto/WasmCrypto'
 
@@ -100,57 +99,5 @@ export async function ensureAccount({
 		accountID,
 		agentSecret: identity.agentSecret,
 		loadingPromise,
-	}
-}
-
-/**
- * Agent / sync server: load existing account or create (empty DB).
- * Same as previous loadOrCreateAgentAccount.
- */
-export async function loadOrCreateAgentAccount({
-	accountID,
-	agentSecret,
-	syncDomain = null,
-	dbPath = null,
-	inMemory = false,
-	createName = 'Maia Agent',
-} = {}) {
-	if (!agentSecret) {
-		throw new Error(
-			'agentSecret is required. Set AVEN_MAIA_SECRET env var. Run `bun agent:generate` to generate credentials.',
-		)
-	}
-	if (!accountID) {
-		throw new Error(
-			'accountID is required. Set AVEN_MAIA_ACCOUNT env var. Run `bun agent:generate` to generate credentials.',
-		)
-	}
-
-	const storage = await getStorage({ mode: 'agent', dbPath, inMemory })
-	const syncSetup = setupSyncPeers(syncDomain)
-
-	const {
-		accountID: id,
-		agentSecret: sec,
-		loadingPromise,
-	} = await ensureAccount({
-		mode: 'bootstrap',
-		identity: { accountID, agentSecret },
-		storage,
-		peers: syncSetup?.peers ?? [],
-		name: createName,
-		syncSetup,
-	})
-
-	const resolved = await loadingPromise
-	if (resolved.accountID !== id) {
-		throw new Error('CRITICAL: accountID mismatch after ensureAccount')
-	}
-	return {
-		accountID: resolved.accountID,
-		agentSecret: sec,
-		node: resolved.node,
-		account: resolved.account,
-		wasCreated: resolved.wasCreated,
 	}
 }

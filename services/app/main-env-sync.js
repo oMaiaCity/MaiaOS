@@ -1,4 +1,4 @@
-import { getSyncHttpBaseUrl } from '@MaiaOS/peer'
+import { getSyncHttpBaseUrl } from '@MaiaOS/runtime'
 
 export const isLocalAppHost =
 	typeof window !== 'undefined' &&
@@ -40,7 +40,7 @@ export function getSecretKeyDevEnv() {
 }
 
 /**
- * `VITE_AVEN_TEST_MODE`: secret-key dev sign-in for **human** operators (browser, no WebAuthn).
+ * `VITE_AVEN_TEST_MODE`: secret key dev sign-in in the browser (no WebAuthn).
  */
 export function isSecretKeyDevSignInEnabled() {
 	const env = getSecretKeyDevEnv()

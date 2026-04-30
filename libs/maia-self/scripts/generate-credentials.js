@@ -9,7 +9,7 @@
  * Modes:
  *   sync  - Sync server (hosts /sync). Never connects to another. Default.
  *   agent - Client agent (connects to sync at PEER_SYNC_HOST). For future pure agent workers.
- *   human - Browser app (`getStorage` human): passkey users; secret-key dev uses same storage (VITE_AVEN_TEST_*).
+ *   passkey client - Browser SPA: `getStorage` human bucket; passkey users and secret key dev share it (`VITE_AVEN_TEST_*`).
  *
  * Usage:
  *   bun agent:generate
@@ -22,13 +22,15 @@
 import { bootstrapNodeLogging, createLogger } from '@MaiaOS/logs'
 import { existsSync, readFileSync, writeFileSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import * as nodeUrl from 'node:url'
 import { cojsonInternals } from 'cojson'
 import { WasmCrypto } from 'cojson/crypto/WasmCrypto'
 
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
-export const defaultCredentialsRootDir = resolve(__dirname, '../../..')
+/** Repo root for `.env` writes. Prefer real `process.cwd()` (Bun/Node/sync) so browser bundles never call `fileURLToPath`. */
+export const defaultCredentialsRootDir =
+	typeof process !== 'undefined' && typeof process.cwd === 'function'
+		? process.cwd()
+		: resolve(dirname(nodeUrl.fileURLToPath(import.meta.url)), '../../..')
 
 const { accountHeaderForInitialAgentSecret, idforHeader } = cojsonInternals
 
@@ -130,7 +132,7 @@ AVEN_MAIA_GUARDIAN=${testAccountID}
 }
 
 /**
- * Generate a fresh **secret-key dev** browser identity (human operator, `VITE_AVEN_*`) and overwrite tester + guardian lines in `.env`.
+ * Generate a fresh **secret-key dev** browser identity (`VITE_AVEN_*`) and overwrite tester + guardian lines in `.env`.
  * Does not rotate AVEN_MAIA_ACCOUNT / AVEN_MAIA_SECRET.
  *
  * @param {{ rootDir?: string, envPath?: string }} [options]

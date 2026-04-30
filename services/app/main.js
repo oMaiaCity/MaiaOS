@@ -1,7 +1,7 @@
 /**
- * MaiaCity Inspector - First Principles
+ * MaiaCity Inspector
  *
- * STRICT: Requires passkey authentication via WebAuthn PRF
+ * Sign-in: passkey (WebAuthn PRF) or, in local dev, secret key dev (`VITE_AVEN_TEST_*`).
  *
  * Jazz Lazy-Loading Pattern:
  * - CoValues are only loaded from IndexedDB when referenced by a parent or subscribed to
@@ -11,23 +11,19 @@
 
 import {
 	applyMaiaLoggingFromEnv,
-	createLogger,
-	createPerfTracer,
-	installDefaultTransport,
-	resolveMaiaLoggingEnv,
-} from '@MaiaOS/logs'
-import {
 	bootstrapAccountHandshake,
 	CAP_GRANT_TTL_SECONDS,
+	createLogger,
+	createPerfTracer,
 	ensureIdentity,
 	getCapabilityGrantIndexColistCoId,
+	installDefaultTransport,
 	isPRFSupported,
 	loadCapabilitiesGrants,
-	loadOrCreateAgentAccount,
 	MaiaOS,
+	signIn as maiaSignIn,
 	resolveAccountCoIdsToProfiles,
-	signInWithPasskey,
-	signUpWithPasskey,
+	resolveMaiaLoggingEnv,
 	subscribeSyncState,
 	updateSyncState,
 	validateInvite,
@@ -263,13 +259,13 @@ async function handleRoute() {
 }
 
 /**
- * Detect operational mode from environment variables
- * Defaults to human mode (client frontend with passkeys)
- * @returns {'human' | 'agent'} Operational mode
+ * Detect operational mode from environment variables.
+ * Default: **passkey** (browser SPA — passkey and/or secret key dev sign-in). `VITE_PEER_MODE=agent`: headless sync agent.
+ * @returns {'passkey' | 'agent'}
  */
 function detectMode() {
-	const mode = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PEER_MODE) || 'human'
-	return mode === 'agent' ? 'agent' : 'human'
+	const mode = (typeof import.meta !== 'undefined' && import.meta.env?.VITE_PEER_MODE) || 'passkey'
+	return mode === 'agent' ? 'agent' : 'passkey'
 }
 
 /** `/game` route: dev-only (never enabled in production bundle; localhost + __maia_env DEV for Bun dev without import.meta.DEV). */
@@ -332,11 +328,10 @@ async function init() {
 		const mode = detectMode()
 
 		if (mode === 'agent') {
-			// Agent mode: automatically load/create account and boot MaiaOS
+			// Headless agent (VITE_PEER_MODE=agent): auto bootstrap from AVEN_MAIA_* env
 			await initAgentMode()
 		} else {
-			// Human mode: use existing passkey flow
-			// Handle initial route
+			// Passkey client: passkey + optional secret key dev sign-in
 			await handleRoute()
 
 			// Listen for browser back/forward navigation
@@ -350,30 +345,21 @@ async function init() {
 }
 
 /**
- * Initialize agent mode — same unified bootstrap path as human mode.
- * (loadOrCreateAgentAccount -> bootstrapAccountHandshake -> MaiaOS.boot)
+ * Initialize headless agent (VITE_PEER_MODE=agent) — same bootstrap chain as passkey client.
+ * (signIn({ type: 'secretkey', source: 'envvars' }) -> bootstrapAccountHandshake -> MaiaOS.boot)
  */
 async function initAgentMode() {
 	try {
-		appLog.log('[AGENT MODE] Initializing agent mode...')
-
-		const accountID = import.meta.env?.AVEN_MAIA_ACCOUNT || import.meta.env?.VITE_AVEN_MAIA_ACCOUNT
-		const agentSecret = import.meta.env?.AVEN_MAIA_SECRET || import.meta.env?.VITE_AVEN_MAIA_SECRET
-
-		if (!accountID || !agentSecret) {
-			throw new Error(
-				'Agent mode requires AVEN_MAIA_ACCOUNT and AVEN_MAIA_SECRET. Run `bun agent:generate` to generate credentials.',
-			)
-		}
+		appLog.log('[HEADLESS_AGENT] Initializing sync agent (VITE_PEER_MODE=agent)…')
 
 		const syncDomain = getSyncDomain()
 
 		startBootstrapPhaseOverlay()
 
 		appLog.log('[AGENT MODE] Loading agent account...')
-		const { node, account } = await loadOrCreateAgentAccount({
-			accountID,
-			agentSecret,
+		const { node, account } = await maiaSignIn({
+			type: 'secretkey',
+			source: 'envvars',
 			syncDomain: syncDomain || null,
 			createName: 'Maia Agent',
 		})
@@ -411,14 +397,14 @@ async function initAgentMode() {
 
 		loadLinkedCoValues().catch((_error) => {})
 
-		appLog.log('[AGENT MODE] Agent mode initialized successfully')
+		appLog.log('[HEADLESS_AGENT] Initialized')
 	} catch (error) {
 		stopBootstrapPhaseOverlay()
-		showToast(`Failed to initialize agent mode: ${error.message}`, 'error', 10000)
+		showToast(`Failed to initialize headless agent: ${error.message}`, 'error', 10000)
 
 		document.getElementById('app').innerHTML = `
 			<div style="display: flex; align-items: center; justify-content: center; height: 100vh; flex-direction: column; gap: 1rem;">
-				<h1 style="color: #ef4444;">Agent Mode Error</h1>
+				<h1 style="color: #ef4444;">Headless agent error</h1>
 				<p style="color: #666;">${escapeHtml(error.message)}</p>
 				<p style="color: #999; font-size: 0.875rem;">Check your environment variables and try again.</p>
 			</div>
@@ -448,12 +434,11 @@ async function refreshMemberSyncState(maia) {
 }
 
 /**
- * Secret-key dev sign-in (local only): human operator, env `VITE_AVEN_TEST_*`, no passkeys.
+ * Secret key dev sign-in (local only): env `VITE_AVEN_TEST_*`, no WebAuthn.
  * NEVER in production (isSecretKeyDevSignInEnabled gates this).
  *
- * Unified bootstrap: loadOrCreateAgentAccount -> bootstrapAccountHandshake -> MaiaOS.boot,
- * all awaited. No fire-and-forget .then chains — the loading overlay stays accurate,
- * any error surfaces immediately, and there is nothing for a 60s watchdog to paper over.
+ * Bootstrap: signIn({ type: 'secretkey', source: 'envvars' }) (OPFS + peer wait) -> handshake -> MaiaOS.boot.
+ * Navigation runs only after the account exists to avoid races with sync/OPFS.
  */
 async function signInWithSecretKeyDev() {
 	if (!isSecretKeyDevSignInEnabled()) {
@@ -472,10 +457,20 @@ async function signInWithSecretKeyDev() {
 	}
 	try {
 		setSignInLoading(true)
+		startBootstrapPhaseOverlay()
 		const syncDomain = getSyncDomain()
 		const devNameRaw = env.VITE_AVEN_TEST_NAME || 'Test'
 		const devDisplayName =
 			devNameRaw.startsWith('Aven ') || /\s/.test(devNameRaw) ? devNameRaw : `Aven ${devNameRaw}`
+
+		const { node, account } = await maiaSignIn({
+			type: 'secretkey',
+			source: 'config',
+			accountID,
+			agentSecret,
+			syncDomain: syncDomain || null,
+			createName: devDisplayName,
+		})
 
 		authState = { signedIn: true, accountID }
 		setupSyncSubscription()
@@ -483,16 +478,6 @@ async function signInWithSecretKeyDev() {
 		currentContextCoValueId = null
 		window.history.pushState({}, '', '/me')
 		await handleRoute()
-
-		startBootstrapPhaseOverlay()
-
-		const { node, account } = await loadOrCreateAgentAccount({
-			accountID,
-			agentSecret,
-			syncDomain: syncDomain || null,
-			inMemory: false,
-			createName: devDisplayName,
-		})
 
 		try {
 			const profileId = account.get('profile')
@@ -552,7 +537,7 @@ async function signInWithSecretKeyDev() {
 /**
  * Sign in with existing passkey.
  *
- * Unified bootstrap: signInWithPasskey -> loadingPromise -> bootstrapAccountHandshake -> MaiaOS.boot,
+ * Unified bootstrap: signIn({ type: 'passkey', mode: 'signin' }) -> loadingPromise -> bootstrapAccountHandshake -> MaiaOS.boot,
  * all awaited in one path. Overlay subtitle tracks live bootstrap phase; failures reset auth state
  * and surface immediately instead of silently timing out.
  */
@@ -561,7 +546,9 @@ async function signIn() {
 		setSignInLoading(true)
 		const syncDomain = getSyncDomain()
 
-		const { accountID, agentSecret, loadingPromise } = await signInWithPasskey({
+		const { accountID, agentSecret, loadingPromise } = await maiaSignIn({
+			type: 'passkey',
+			mode: 'signin',
 			salt: 'maia.city',
 		})
 
@@ -691,7 +678,7 @@ async function loadLinkedCoValues() {
 /**
  * Register new passkey.
  *
- * Unified bootstrap path: same as signIn but with signUpWithPasskey at the front.
+ * Unified bootstrap path: same as signIn but with signIn({ type: 'passkey', mode: 'signup' }) at the front.
  */
 async function register() {
 	try {
@@ -713,7 +700,9 @@ async function register() {
 		const firstName = getFirstNameForRegister()
 		const name = firstName && firstName.length <= 50 ? firstName.trim() : undefined
 
-		const { accountID, loadingPromise } = await signUpWithPasskey({
+		const { accountID, loadingPromise } = await maiaSignIn({
+			type: 'passkey',
+			mode: 'signup',
 			name,
 			salt: 'maia.city',
 		})
@@ -874,7 +863,7 @@ function selectCoValueInternal(coId, skipHistory = false) {
 	// Collapse detail (right) only so Explorer (Account / Capabilities) stays discoverable on the left
 	collapseDbMetadataSidebar()
 
-	// If we're in agent mode and selecting account, exit agent mode first
+	// If we're in headless agent mode and selecting account, exit that mode first
 	if (currentVibe !== null && coId === maia?.id?.maiaId?.id) {
 		currentVibe = null
 		// If there's navigation history, restore the previous context instead of going to account
@@ -948,7 +937,7 @@ function collapseAllSidebars() {
 }
 
 function goBack() {
-	// If we're in agent mode, exit agent mode first
+	// If we're in headless agent mode, exit that mode first
 	if (currentVibe !== null) {
 		loadVibe(null)
 		return
@@ -1140,7 +1129,7 @@ async function extendCapability(capabilityId, _currentExp = 0) {
 }
 
 /**
- * Grant /sync/write + /llm/chat for a human account (guardian approval).
+ * Grant /sync/write + /llm/chat for a passkey / secret-key-dev account (guardian approval).
  */
 async function grantMemberCapabilities(targetAccountId) {
 	const m = maia ?? window.maia

@@ -1,72 +1,57 @@
 # Sentrux structural audit — MaiaOS
 
-Generated from Sentrux MCP + repo changes. Re-run after refactors: `sentrux .` (GUI) or MCP `scan` + `health` + `dsm`.
+Generated from Sentrux CLI + repo changes. Re-run after refactors: `sentrux check .` (enforces [`.sentrux/rules.toml`](.sentrux/rules.toml)); GUI: `sentrux .` or MCP `scan` + `health` + `dsm`.
 
-## Snapshot (2026-04-30 — removed `services/moai` + `libs/maia-ai`, rescan)
+## Snapshot (2026-04-30 — depth/quality push complete)
 
 | Metric | Value | Notes |
 |--------|-------|-------|
-| quality_signal | **4847** | `health` / `scan` (geometric mean) |
-| files | 817 | `scan` |
-| lines (approx.) | 120437 | `scan` |
-| import_edges | 848–850 | `scan` / `health` (tool rounding) |
-| bottleneck | **depth** | raw **31** (score 2051) |
-| acyclicity | 5000 | raw **1** |
-| DSM | above_diagonal **0**, level_breaks **27**, matrix size **399** | `dsm` stats; propagation_cost **778** |
-| cross_module_edges | 312 | `health` |
+| **Quality** (`sentrux check`) | **5537** | printed as single composite after `check` |
+| **Cycles** | **0** | `max_cycles = 0` in rules — `sentrux check` passes |
+| rules.toml | `max_cycles = 0` | No tolerated SCCs |
 
-**Compare — Phase 5 row (2026-04-30, pre-removal inventory):** quality_signal **4938**, depth raw **26**, level_breaks **26**, propagation_cost **801**, DSM size **345**, cross_module_edges **283**, import_edges **712–714**, files **783**.
+**Prior snapshot (plan baseline):** quality_signal **4926**, acyclicity raw **1**, depth raw **28**, propagation_cost **748**, cross_module_edges **312**.
 
-Numbers move with **which files are in the tree** (e.g. `libs/ui` and other additions) as well as refactors; treat **bottleneck label** and **rule targets** as the stable guide, not single-point diffs.
+## Refactors captured in this audit
 
-## Cycle & depth optimization (audit focus)
+### `@MaiaOS/db` — SCC breaks
 
-### 1. Cycles (acyclicity raw = 1)
+1. **groups / indexing / create** — `factory-index-schema.js` no longer imports `../crud/create.js`. Creation uses `createCoValueForSpark` + shared [`determine-cotype-for-create.js`](libs/maia-db/src/cojson/crud/determine-cotype-for-create.js) (`ensure-covalue-core` only). [`create.js`](libs/maia-db/src/cojson/crud/create.js) imports the same helper (removed dependency on `collection-helpers` for cotype resolution).
+2. **factory-index-manager ↔ rebuild** — [`rebuildAllIndexes`](libs/maia-db/src/cojson/indexing/factory-index-rebuild.js) is exported from `@MaiaOS/db/cojson/indexing/factory-index-rebuild` only (not re-exported from `factory-index-manager.js`). Seed imports the rebuild subpath.
 
-- **Constraint:** `.sentrux/rules.toml` keeps **`max_cycles = 1`** until the last SCC is gone.
-- **Where it lives:** `read` ↔ authoring resolver (`readLazy` / `resolveSchemaLazy`) ↔ bootstrap through **`collection-helpers` → `factory-index-manager` → `create-covalue-for-spark` → cotypes → dynamic authoring** (see comment in `rules.toml`).
-- **Primary lever:** Stop **`resolve()`** from depending on universal **`read()`** on the authoring ↔ indexing bootstrap path, **without** changing semantics — use peer-scoped reads and patterns already used elsewhere (**`ensure-covalue-core`**, warm-load paths that avoid pulling full `read.js`).
+### Read / groups / MaiaDB split
 
-Breaking this SCC raises acyclicity score and usually **shortens** dependent chains that sit on top of the cycle.
+- Prior work: read stack flatten, `groups-core` / `groups.js`, `factory-index-schema` / `factory-index-rebuild`, MaiaDB split modules under `cojson/core/`.
 
-### 2. Depth (current bottleneck)
+### Services via `@MaiaOS/runtime`
 
-Raw depth and **level_breaks** track how long dependency chains are; **propagation_cost** tracks churn sensitivity across the DSM. Improve by:
+- Sync/app consumer imports should route through the runtime facade per monorepo policy; verify in PR diff.
 
-- **Facades:** Prefer one **`@MaiaOS/runtime` / `maia-distros`** entry for “app+sync call into the stack” so lib→lib edges do not duplicate long paths (matches monorepo dependency rules).
-- **Narrow `maia-db` surface:** Continue splitting **read**, **indexing**, and **reactive** so indexing and reactive code do not import the heavyweight read stack unless necessary (Phase 4-style dispatch tables and `ensure-covalue-core` are the pattern).
-- **Guard universe ↔ runtime:** Keep **`@MaiaOS/universe`** on **`@MaiaOS/db`** for resolve/read helpers; do not reintroduce **`@MaiaOS/runtime`** into universe `package.json`.
-- **Verify:** After each structural PR, MCP **`scan`** + **`dsm`** (`format: stats`) — watch **propagation_cost**, **level_breaks**, and **cross_module_edges** together, not raw depth alone.
+## `@MaiaOS/db` resolver graph (2026-04-30)
 
-## Package cycle removed (2026-04-30)
+- **`resolve()`** uses **`peer.read(null, coId, null, null, options)`** — requires MaiaDB-like **`peer.read`**. See [`authoring-resolver.js`](libs/maia-db/src/cojson/factory/authoring-resolver.js).
+- **`ensureCoValueLoadedAuthoring`** imports **`ensure-covalue-core.js`** only.
+- **`loadFactoriesFromAccount`** in [`load-factories-from-account.js`](libs/maia-db/src/cojson/factory/load-factories-from-account.js); re-exported from [`resolver.js`](libs/maia-db/src/cojson/factory/resolver.js).
 
-- **Before:** `@MaiaOS/runtime` → `@MaiaOS/universe` → `@MaiaOS/runtime` (via `readStore` import from `runtime/utils/resolve-helpers.js`).
-- **After:** `readStore` / `loadContextStore` / `resolveSchemaFromCoValue` / `resolveToCoId` live in **`@MaiaOS/db`** (`resolve-helpers` export). `@MaiaOS/runtime/utils/resolve-helpers` re-exports from db. **Universe** imports `readStore` from **`@MaiaOS/db/resolve-helpers`** and no longer lists `@MaiaOS/runtime` in `package.json`.
+## Package cycle removed (historical)
 
-## Longest chain / tooling
-
-Sentrux Pro advertises deeper “root-cause diagnostics.” In OSS tooling, use **GUI treemap** (`sentrux .`) for file-level longest paths.
+- **`@MaiaOS/runtime` ↔ `@MaiaOS/universe`:** Universe imports `readStore` from **`@MaiaOS/db/resolve-helpers`**.
 
 ## Next actions
 
-1. **Eliminate the remaining SCC** per `rules.toml` (resolve off universal `read()` in the authoring ↔ indexing bootstrap path).
-2. **`sentrux check .`** in PR CI (`.github/workflows/biome.yml` — Linux binary) when ready.
+1. **`sentrux check .`** in PR CI when ready (metrics align with `rules.toml`).
+2. **MCP `health` / `dsm`:** optional for full quality_signal / depth raw / propagation_cost table when GUI/MCP available.
 3. **Test gaps:** follow [`TEST-GAPS.md`](TEST-GAPS.md).
 
-### 2026-04-30 — `@MaiaOS/db` cycle shrink
+### Historical — `@MaiaOS/db` cycle shrink
 
-- `reactive-resolver.js` no longer imports `read.js`; reactive queries use **`peer.read`** (MaiaDB).
-- `data-extraction.js` + `reactive-resolver.js` use **`ensure-covalue-core.js`** instead of `collection-helpers` for load/wait (avoids pulling indexing into that edge).
-- `factory-index-manager.js` warm-load uses **`ensureCoValueLoaded`** from `ensure-covalue-core.js`, not universal `read()`.
+- `reactive-resolver.js` / `data-extraction.js`: **`ensure-covalue-core.js`** where applicable.
+- `groups.js` **`addGroupMember`**: **`ensure-covalue-core`** (no dynamic `collection-helpers`).
 
-### 2026-04-30 — Phase 4: DataEngine CoList dispatch table
+### Historical — Phase 4: DataEngine CoList dispatch
 
-- **`libs/maia-runtime/src/engines/data.engine.js`**: all `colist*` mutations are registered from one **`COLIST_OP_DISPATCH`** map plus **`bindColistDispatch`**; **`execute`’s** `WRITE_OPS` uses **`COLIST_WRITE_OP_NAMES`** derived from the same map (no duplicated op name lists).
+- **`libs/maia-runtime/src/engines/data.engine.js`**: `COLIST_OP_DISPATCH` / **`COLIST_WRITE_OP_NAMES`**.
 
-### 2026-04-30 — Repo trim: Moai / maia-ai
+### Historical — Repo trim: Moai / maia-ai
 
-- Removed **`services/moai`** and **`libs/maia-ai`** (on-device Python stack). In-app chat remains: **`services/app/maia-ai-global.js`**, sync **`/api/v0/llm/chat`**, **`RED_PILL_API_KEY`**.
-
-### 2026-04-30 — Phase 5 (historical)
-
-- MCP **`scan`**, **`health`**, **`dsm`** after Phase 4; earlier snapshot table preserved in **Compare** row above.
+- In-app chat: **`services/app/maia-ai-global.js`**, sync **`/api/v0/llm/chat`**.

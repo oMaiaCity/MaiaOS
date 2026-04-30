@@ -1,8 +1,8 @@
-import { verifyInvocationToken } from '@MaiaOS/maia-ucan'
 import {
 	STORAGE_INSPECTOR_DEFAULT_TABLE_PAGE,
 	STORAGE_INSPECTOR_MAX_TABLE_PAGE,
-} from '@MaiaOS/storage'
+	verifyInvocationToken,
+} from '@MaiaOS/runtime'
 
 export const STORAGE_INSPECTOR_BASE = '/api/v0/admin/storage'
 

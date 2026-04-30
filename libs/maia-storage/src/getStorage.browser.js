@@ -1,5 +1,5 @@
 /**
- * Browser-only storage factory (OPFS / IndexedDB). No Node, PGlite, Postgres, or Bun.
+ * Browser CoValue storage: **OPFS** first (~4× faster for blobs), **IndexedDB** fallback when OPFS is unavailable.
  */
 
 import { createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
@@ -26,22 +26,14 @@ function getEnvVar(key) {
 }
 
 const opsStorage = createOpsLogger('Storage')
-const opsStorErr = createOpsLogger('STORAGE')
 
 /**
- * @param {Object} [options]
- * @param {'human' | 'agent'} [options.mode='human']
- * @param {string} [options.dbPath]
- * @param {boolean} [options.inMemory]
+ * @param {Object} [options] — Reserved for API symmetry with Node; browser ignores options.
  * @returns {Promise<StorageAPI | undefined>}
  */
-export async function getStorage(options = {}) {
-	const { mode = 'human', inMemory: forceInMemory } = options
+export async function getStorage(_options = {}) {
 	const runtime = detectRuntime()
-	const storageType =
-		mode === 'agent'
-			? typeof process !== 'undefined' && process.env?.PEER_SYNC_STORAGE
-			: getEnvVar('MAIA_STORAGE')
+	const storageType = getEnvVar('MAIA_STORAGE')
 
 	if (runtime === 'edge') {
 		throw new Error(
@@ -49,12 +41,7 @@ export async function getStorage(options = {}) {
 		)
 	}
 	if (storageType === 'in-memory') {
-		throw new Error(
-			`${OPS_PREFIX.STORAGE} in-memory storage disabled. Use OPFS, IndexedDB, PGlite, or Postgres.`,
-		)
-	}
-	if (forceInMemory === true) {
-		opsStorErr.warn('in-memory storage requested but forbidden. Falling back to persistent storage.')
+		throw new Error(`${OPS_PREFIX.STORAGE} in-memory storage disabled. Use OPFS or IndexedDB.`)
 	}
 
 	if (runtime === 'browser') {
@@ -77,7 +64,5 @@ export async function getStorage(options = {}) {
 		)
 	}
 
-	throw new Error(
-		`${OPS_PREFIX.STORAGE} No persistent storage configured for runtime=${runtime} mode=${mode}. No in-memory fallback.`,
-	)
+	throw new Error(`${OPS_PREFIX.STORAGE} No persistent storage configured for runtime=${runtime}.`)
 }

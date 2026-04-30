@@ -16,12 +16,8 @@
 		"tauri:icon": "tauri icon brand/logo_app.svg -o src-tauri/icons"
 	},
 	"dependencies": {
-		"@MaiaOS/validation": "workspace:*",
-		"@MaiaOS/logs": "workspace:*",
 		"@MaiaOS/game": "workspace:*",
 		"@MaiaOS/runtime": "workspace:*",
-		"@MaiaOS/peer": "workspace:*",
-		"@MaiaOS/universe": "workspace:*",
 		"@MaiaOS/maia-distros": "workspace:*",
 		"@tauri-apps/api": "2.10.1"
 	},

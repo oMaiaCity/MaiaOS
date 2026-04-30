@@ -6,67 +6,11 @@
 
 import { perfEnginesChat } from '@MaiaOS/logs'
 import { createCoValueForSpark } from '../covalue/create-covalue-for-spark.js'
-import * as collectionHelpers from './collection-helpers.js'
 import { extractCoValueData } from './data-extraction.js'
+import { determineCotypeAndFlag } from './ensure-covalue-core.js'
 
 // Schema indexing is handled by storage-level hooks (more resilient than API hooks)
 // No CRUD-level hooks needed - storage hook catches ALL writes
-
-/**
- * Determine cotype from schema or data type.
- * CRITICAL: Schema definitions (derived from meta-schema) must ALWAYS be CoMaps.
- * The cotype in the schema describes instance types (colist/comap), not the schema document's type.
- *
- * @param {Object} peer - Backend instance
- * @param {string} schema - Schema co-id
- * @param {*} data - Data to create
- * @returns {Promise<{ cotype: string, isSchemaDefinition: boolean }>} Cotype and schema-definition flag
- */
-async function determineCotypeAndFlag(peer, schema, data) {
-	try {
-		const schemaCore = await collectionHelpers.ensureCoValueLoaded(peer, schema, {
-			waitForAvailable: true,
-		})
-		if (schemaCore && peer.isAvailable(schemaCore)) {
-			const schemaContent = peer.getCurrentContent(schemaCore)
-			if (schemaContent?.get) {
-				// Factory schema definitions (meta-schema) must ALWAYS be CoMaps
-				const title = schemaContent.get('title')
-				if (title === '°maia/factory/meta.factory.maia') {
-					return { cotype: 'comap', isSchemaDefinition: true }
-				}
-
-				// For instance schemas: use cotype from definition or root
-				const definition = schemaContent.get('definition')
-				const cotype =
-					definition?.cotype && typeof definition.cotype === 'string'
-						? definition.cotype
-						: schemaContent.get('cotype')
-				if (cotype && typeof cotype === 'string') {
-					if (cotype === 'cotext' || cotype === 'coplaintext') {
-						throw new Error(
-							`[MaiaDB] Schema ${schema} specifies cotext or coplaintext, which are not supported. Use colist with °maia/factory/cotext.factory.maia for plaintext.`,
-						)
-					}
-					return { cotype, isSchemaDefinition: false }
-				}
-			}
-		}
-	} catch (_e) {}
-
-	// Fallback: infer from data type
-	if (Array.isArray(data)) {
-		return { cotype: 'colist', isSchemaDefinition: false }
-	} else if (typeof data === 'string') {
-		throw new Error(
-			`[MaiaDB] Cannot determine cotype from data type for schema ${schema}. String is not a valid CoValue type. Use CoMap or colist with °maia/factory/cotext.factory.maia for plaintext.`,
-		)
-	} else if (typeof data === 'object' && data !== null) {
-		return { cotype: 'comap', isSchemaDefinition: false }
-	} else {
-		throw new Error(`[MaiaDB] Cannot determine cotype from data type for schema ${schema}`)
-	}
-}
 
 /**
  * Create new record - directly creates CoValue using CoJSON raw methods

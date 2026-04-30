@@ -71,7 +71,8 @@ Configure `LocalNode` to connect to the sync service via WebSocket.
 import { setupSyncPeers } from '@MaiaOS/db';
 
 // After creating/loading account
-const { node, account } = await signUpWithPasskey();
+const { loadingPromise } = await signIn({ type: 'passkey', mode: 'signup' });
+const { node, account } = await loadingPromise;
 
 // Configure sync peers (connects to sync service automatically)
 await setupSyncPeers({

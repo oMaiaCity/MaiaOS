@@ -2,10 +2,11 @@
  * Collection Helper Functions
  *
  * Provides helpers for getting CoList IDs from spark.os.indexes and ensuring CoValues are loaded.
- * Uses factory-index-manager for indexing logic (single source of truth).
+ * Uses factory-index-schema for indexing logic (single source of truth).
  */
 
 import { createLogger } from '@MaiaOS/logs'
+import { ensureFactoryIndexColist, ensureIndexesCoMap } from '../indexing/factory-index-schema.js'
 import { ensureCoValueLoaded } from './ensure-covalue-core.js'
 
 export { ensureCoValueAvailable, ensureCoValueLoaded } from './ensure-covalue-core.js'
@@ -28,9 +29,6 @@ export async function getFactoryIndexColistId(peer, schema) {
 		log.debug('[DEBUG getFactoryIndexColistId] schema=', schema, 'factoryCoId=', factoryCoId)
 	if (!factoryCoId) return null
 
-	const { ensureIndexesCoMap, ensureFactoryIndexColist } = await import(
-		'../indexing/factory-index-manager.js'
-	)
 	const indexesCoMap = await ensureIndexesCoMap(peer)
 	if (typeof process !== 'undefined' && process.env?.DEBUG)
 		log.debug('[DEBUG getFactoryIndexColistId] indexesCoMap=', !!indexesCoMap)

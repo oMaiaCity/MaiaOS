@@ -1,4 +1,4 @@
-import { verifyInvocationToken } from '@MaiaOS/maia-ucan'
+import { verifyInvocationToken } from '@MaiaOS/runtime'
 import { createHash } from 'node:crypto'
 import { clientIp } from '../client-ip.js'
 

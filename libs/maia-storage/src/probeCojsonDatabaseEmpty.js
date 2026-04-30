@@ -1,6 +1,6 @@
 /**
  * One-shot probe: open storage, run migrations, check if any CoJSON data exists, close.
- * Used by sync before loadOrCreateAgentAccount so genesis seed runs only on truly empty DBs.
+ * Used by sync before `signIn({ type: 'secretkey', source: 'config' })` so genesis seed runs only on truly empty DBs.
  */
 
 import { SQL } from 'bun'

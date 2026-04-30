@@ -3,3 +3,4 @@
  * Kept so deep imports to `.../factory/resolver.js` keep working.
  */
 export * from './authoring-resolver.js'
+export { loadFactoriesFromAccount } from './load-factories-from-account.js'

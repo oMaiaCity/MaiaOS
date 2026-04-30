@@ -3,7 +3,7 @@ import {
 	bootstrapIdentitySteps,
 	createFlowContext,
 	runSteps,
-} from '@MaiaOS/flows'
+} from '@MaiaOS/runtime'
 
 /**
  * POST /bootstrap — unified one-shot handshake for new/returning humans.

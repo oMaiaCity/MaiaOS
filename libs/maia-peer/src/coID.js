@@ -84,16 +84,16 @@ export async function createAccountWithSecret(options) {
 	} = options
 
 	if (!agentSecret) {
-		throw new Error('agentSecret is required. Use signInWithPasskey() to get agentSecret.')
+		throw new Error(
+			"agentSecret is required. Use signIn({ type: 'passkey', mode: 'signin' | 'signup' }) from @MaiaOS/self.",
+		)
 	}
 
 	const crypto = await WasmCrypto.create()
 
-	// Use human storage by default ONLY if storage property is missing.
-	// If storage is passed as undefined, it means explicitly in-memory.
-	const finalStorage = Object.hasOwn(options, 'storage')
-		? storage
-		: await getStorage({ mode: 'human' })
+	// Default to the runtime CoValue storage (OPFS/IndexedDB in browser; PGlite/Postgres in Node).
+	// If the caller explicitly passes `storage: undefined`, that signal is kept (sync-only node).
+	const finalStorage = Object.hasOwn(options, 'storage') ? storage : await getStorage()
 
 	// Peers at creation may be empty until WS connects; setupSyncPeers registerPeersIfMissing avoids duplicate addPeer (see sync-peers.js).
 	const wrappedMigration = async (account, node, creationProps) => {
@@ -167,7 +167,9 @@ export async function loadAccount(options) {
 	} = options
 
 	if (!agentSecret) {
-		throw new Error('agentSecret is required. Use signInWithPasskey() to get agentSecret.')
+		throw new Error(
+			"agentSecret is required. Use signIn({ type: 'passkey', mode: 'signin' | 'signup' }) from @MaiaOS/self.",
+		)
 	}
 	if (!accountID) {
 		throw new Error('accountID is required.')
@@ -175,21 +177,19 @@ export async function loadAccount(options) {
 
 	const crypto = await WasmCrypto.create()
 
-	// Use human storage by default ONLY if storage property is missing.
-	// If storage is passed as undefined, it means explicitly in-memory.
-	const finalStorage = Object.hasOwn(options, 'storage')
-		? storage
-		: await getStorage({ mode: 'human' })
+	// Default to the runtime CoValue storage (OPFS/IndexedDB in browser; PGlite/Postgres in Node).
+	// If the caller explicitly passes `storage: undefined`, that signal is kept (sync-only node).
+	const finalStorage = Object.hasOwn(options, 'storage') ? storage : await getStorage()
 
 	opsPeer.log('Sync peers: %s', peers.length > 0 ? `${peers.length} peer(s)` : 'none')
 	const storageLabel = finalStorage
 		? typeof process !== 'undefined' && process.versions?.node
 			? `${
-					process.env.PEER_STORAGE === 'postgres'
+					process.env.PEER_SYNC_STORAGE === 'postgres'
 						? 'Postgres'
-						: process.env.PEER_STORAGE === 'pglite'
+						: process.env.PEER_SYNC_STORAGE === 'pglite'
 							? 'PGlite'
-							: process.env.PEER_STORAGE || 'storage'
+							: process.env.PEER_SYNC_STORAGE || 'storage'
 				} available (local-first)`
 			: finalStorage?.__maiaBackend === 'opfs'
 				? 'OPFS available (local-first)'

@@ -68,11 +68,11 @@ Clients connect via kernel bundle, which automatically connects to the sync serv
 import {
 	bootstrapAccountHandshake,
 	MaiaOS,
-	signUpWithPasskey,
+	signIn,
 } from '@MaiaOS/runtime'
 
 // Sync server is used automatically - no API key needed
-const { loadingPromise } = await signUpWithPasskey()
+const { loadingPromise } = await signIn({ type: 'passkey', mode: 'signup' })
 const { node, account } = await loadingPromise
 
 // Single POST /bootstrap call anchors account.sparks (trusting) + triggers server-side identity write.

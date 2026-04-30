@@ -1,5 +1,4 @@
-import { ensureIdentity, findFirst } from '@MaiaOS/db'
-import { generateRegistryName } from '@MaiaOS/runtime'
+import { ensureIdentity, findFirst, generateRegistryName } from '@MaiaOS/runtime'
 import { auditRegisterDecision } from '../http/rate-limit.js'
 
 /**

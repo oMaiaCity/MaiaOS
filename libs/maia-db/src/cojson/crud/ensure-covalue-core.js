@@ -122,3 +122,56 @@ export async function ensureCoValueAvailable(backend, coId, operationName) {
 		throw e
 	}
 }
+
+/**
+ * Cotype resolution for create() — uses ensureCoValueLoaded in this module only (no collection-helpers),
+ * so factory-index-schema avoids importing create.js (cycle-free).
+ *
+ * @param {object} peer
+ * @param {string} schema
+ * @param {*} data
+ * @returns {Promise<{ cotype: string, isSchemaDefinition: boolean }>}
+ */
+export async function determineCotypeAndFlag(peer, schema, data) {
+	try {
+		const schemaCore = await ensureCoValueLoaded(peer, schema, {
+			waitForAvailable: true,
+		})
+		if (schemaCore && peer.isAvailable(schemaCore)) {
+			const schemaContent = peer.getCurrentContent(schemaCore)
+			if (schemaContent?.get) {
+				const title = schemaContent.get('title')
+				if (title === '°maia/factory/meta.factory.maia') {
+					return { cotype: 'comap', isSchemaDefinition: true }
+				}
+
+				const definition = schemaContent.get('definition')
+				const cotype =
+					definition?.cotype && typeof definition.cotype === 'string'
+						? definition.cotype
+						: schemaContent.get('cotype')
+				if (cotype && typeof cotype === 'string') {
+					if (cotype === 'cotext' || cotype === 'coplaintext') {
+						throw new Error(
+							`[MaiaDB] Schema ${schema} specifies cotext or coplaintext, which are not supported. Use colist with °maia/factory/cotext.factory.maia for plaintext.`,
+						)
+					}
+					return { cotype, isSchemaDefinition: false }
+				}
+			}
+		}
+	} catch (_e) {}
+
+	if (Array.isArray(data)) {
+		return { cotype: 'colist', isSchemaDefinition: false }
+	}
+	if (typeof data === 'string') {
+		throw new Error(
+			`[MaiaDB] Cannot determine cotype from data type for schema ${schema}. String is not a valid CoValue type. Use CoMap or colist with °maia/factory/cotext.factory.maia for plaintext.`,
+		)
+	}
+	if (typeof data === 'object' && data !== null) {
+		return { cotype: 'comap', isSchemaDefinition: false }
+	}
+	throw new Error(`[MaiaDB] Cannot determine cotype from data type for schema ${schema}`)
+}

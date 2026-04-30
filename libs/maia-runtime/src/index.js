@@ -8,12 +8,15 @@
 
 // Peer setup, sync state, backend for operations
 export {
+	accountHasCapabilityOnPeer,
 	CAP_GRANT_TTL_SECONDS,
+	ensureCoValueLoaded,
 	ensureIdentity,
 	ensureProfileForNewAccount,
 	findFirst,
 	generateRegistryName,
 	getCapabilityGrantIndexColistCoId,
+	getCoListId,
 	getFactoryIndexColistId,
 	getSchema,
 	listAccountIdsFromIdentityIndex,
@@ -32,10 +35,32 @@ export {
 	waitForStoreReady,
 } from '@MaiaOS/db'
 export {
+	bootstrapGuardianSteps,
+	bootstrapIdentitySteps,
+	createFlowContext,
+	identitySelfAvenStep,
+	runSteps,
+	syncServerInfraSteps,
+} from '@MaiaOS/flows'
+export {
+	applyMaiaLoggingFromEnv,
+	bootstrapNodeLogging,
+	createLogger,
+	createOpsLogger,
+	createPerfTracer,
+	debugLog,
+	debugWarn,
+	installDefaultTransport,
+	OPS_PREFIX,
+	resolveMaiaLoggingEnv,
+} from '@MaiaOS/logs'
+export { agentIDToDidKey, verifyInvocationToken } from '@MaiaOS/maia-ucan'
+export {
 	BOOTSTRAP_PHASES,
 	BootstrapError,
 	bootstrapAccountHandshake,
 	getBootstrapPhase,
+	getSyncHttpBaseUrl,
 	resetBootstrapPhase,
 	setBootstrapPhase,
 	subscribeBootstrapPhase,
@@ -44,10 +69,14 @@ export {
 	ensureAccount,
 	generateAgentCredentials,
 	isPRFSupported,
-	loadOrCreateAgentAccount,
-	signInWithPasskey,
-	signUpWithPasskey,
+	signIn,
 } from '@MaiaOS/self'
+export {
+	STORAGE_INSPECTOR_DEFAULT_TABLE_PAGE,
+	STORAGE_INSPECTOR_MAX_TABLE_PAGE,
+} from '@MaiaOS/storage'
+export { ACTOR_NANOID_TO_EXECUTABLE_KEY } from '@MaiaOS/universe'
+export { maiaIdentity } from '@MaiaOS/validation/identity-from-maia-path.js'
 export {
 	createErrorEntry,
 	createErrorResult,
