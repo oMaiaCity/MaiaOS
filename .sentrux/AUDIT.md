@@ -1,6 +1,30 @@
 # Sentrux structural audit — MaiaOS
 
-Generated from Sentrux CLI + repo changes. Re-run after refactors: `sentrux check .` (enforces [`.sentrux/rules.toml`](.sentrux/rules.toml)); GUI: `sentrux .` or MCP `scan` + `health` + `dsm`.
+Generated from Sentrux CLI + repo changes. Re-run after refactors: `sentrux check .` (enforces [`.sentrux/rules.toml`](.sentrux/rules.toml)); GUI: `sentrux .` or MCP `rescan` + `health` + `dsm`.
+
+## Canonical source of truth (Sentrux only)
+
+Depth and structural quality are defined **only** by Sentrux — not by ad‑hoc repo scripts.
+
+- **CLI:** `sentrux check .`
+- **MCP (Cursor):** `rescan` then `health` on the repo root
+
+Use **`health.quality_signal`**, **`health.bottleneck`**, and **`health.root_causes`** (`depth`, `equality`, `modularity`, `redundancy`, `acyclicity` — each has `raw` and `score`). Use **`health.total_import_edges`** and **`health.cross_module_edges`** for graph size. **`rescan`** reports **`files`** included in the scan.
+
+### Latest MCP snapshot (2026-04-30)
+
+| Field | Value |
+|--------|--------|
+| `quality_signal` | **5757** |
+| `bottleneck` | **depth** |
+| `depth.raw` / `depth.score` | **24** / **2500** |
+| `equality.score` | **4193** |
+| `modularity.score` | **6807** |
+| `redundancy.score` | **8866** |
+| `acyclicity.score` | **10000** |
+| `total_import_edges` | **905** |
+| `cross_module_edges` | **325** |
+| `files` (after `rescan`) | **837** |
 
 ## Baseline — depth cut pass (2026-04-30, pre-implementation)
 
@@ -9,11 +33,6 @@ Generated from Sentrux CLI + repo changes. Re-run after refactors: `sentrux chec
 | **Quality** (`sentrux check` / MCP `quality_signal`) | **5,651** | MCP `health` at repo root |
 | **depth raw** | **28** | bottleneck **depth** (score ~2,222) |
 | **DSM** | propagation_cost **709**, level_breaks **30**, edges **897**, size **415** | clean layering |
-| **Local longest-chain** (`scripts/sentrux-longest-chain.mjs`) | **25 nodes** | see chain below |
-
-**Longest chain (local tracer):**
-
-`services/app/main.js` → `main-bootstrap-overlay.js` → `libs/maia-runtime/src/index.js` → `loader.js` → `engines/view.engine.js` → `engines/actor.engine.js` → `libs/maia-universe/src/index.js` → … → `libs/maia-db/src/index.js` → `cojson/core/MaiaDB.js` → `maia-db-data-plane.js` → `crud/read.js` → `read-all-covalues.js` → `deep-resolution.js` → `collection-helpers.js` → `cojson/indexing/factory-index-schema.js` → `libs/maia-validation/src/index.js` → `validation.helper.js` → `validation.engine.js` → `identity-from-maia-path.js` → `libs/maia-universe/src/helpers/identity-from-maia-path.js` → `nanoid.js`.
 
 ## Post-pass — `@MaiaOS/db` primitives + modules facade (2026-04-30)
 
@@ -37,10 +56,6 @@ Implemented in repo (re-run Sentrux when CLI available):
 | **cross_module_edges** (health) | **312** | |
 
 **Historical baselines:** quality_signal **4926** (older); **5537** (pre–depth-execution doc row).
-
-### Local longest-path script
-
-[`scripts/sentrux-longest-chain.mjs`](../scripts/sentrux-longest-chain.mjs) — static `from` imports with comments stripped; `@MaiaOS/*` resolved via `package.json` workspace layout. **Not identical** to Sentrux’s resolver (e.g. `.maia` graph); use for **before/after chain length** and **which files sit on the spine**. After this pass, example spine length **~27 nodes** (often via **`services/sync`** → runtime → flows → seed → universe → db → … → logs).
 
 ### validation → universe tail (Phase 3 decision)
 
