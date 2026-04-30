@@ -13,6 +13,7 @@ import {
 	normalizeCoValueData,
 	resolveFactoryDefFromPeer,
 } from '@MaiaOS/db'
+import { resolveSchemaFromCoValue } from '@MaiaOS/db/resolve-helpers'
 import { debugLog, debugWarn, traceDataCreate } from '@MaiaOS/logs'
 import { resolveExpressions } from '@MaiaOS/validation/expression-resolver'
 import {
@@ -28,7 +29,6 @@ import {
 	validateCoId,
 	validateItems,
 } from '../utils/ops-assertions.js'
-import { resolveSchemaFromCoValue } from '../utils/resolve-helpers.js'
 
 /**
  * Resolve factory param for read/create to a co-id. Runtime uses co_z only (plus account/group sentinels).
@@ -323,6 +323,37 @@ async function colistApplyDiffOp(peer, dataEngine, params) {
 		if (typeof coValueCore?.resumeNotifyUpdate === 'function') coValueCore.resumeNotifyUpdate()
 	}
 	return createSuccessResult({ coId, patchesApplied: patches.length }, { op: 'colistApplyDiff' })
+}
+
+/** Single source for CoList mutation ops: constructor `ops` + `execute` WRITE_OPS. */
+const COLIST_OP_DISPATCH = {
+	colistSet: colistSetOp,
+	colistPush: colistPushOp,
+	colistUnshift: colistUnshiftOp,
+	colistPop: colistPopOp,
+	colistShift: colistShiftOp,
+	colistSplice: colistSpliceOp,
+	colistRemove: colistRemoveOp,
+	colistRetain: colistRetainOp,
+	colistApplyDiff: colistApplyDiffOp,
+}
+
+const COLIST_WRITE_OP_NAMES = Object.freeze(
+	/** @type {readonly string[]} */ (Object.keys(COLIST_OP_DISPATCH)),
+)
+
+/**
+ * @param {Object} peer
+ * @param {Object} dataEngine
+ * @returns {Record<string, (p: object) => Promise<unknown>>}
+ */
+function bindColistDispatch(peer, dataEngine) {
+	/** @type {Record<string, (p: object) => Promise<unknown>>} */
+	const out = {}
+	for (const [name, impl] of Object.entries(COLIST_OP_DISPATCH)) {
+		out[name] = (p) => impl(peer, dataEngine, p)
+	}
+	return out
 }
 
 const CHUNK_SIZE = 100 * 1024
@@ -1010,15 +1041,7 @@ export class DataEngine {
 					factory: (p) => factoryOp(peer, this, p),
 					append: (p) => appendOp(peer, this, p),
 					spliceCoList: (p) => spliceCoListOp(peer, this, p),
-					colistSet: (p) => colistSetOp(peer, this, p),
-					colistPush: (p) => colistPushOp(peer, this, p),
-					colistUnshift: (p) => colistUnshiftOp(peer, this, p),
-					colistPop: (p) => colistPopOp(peer, this, p),
-					colistShift: (p) => colistShiftOp(peer, this, p),
-					colistSplice: (p) => colistSpliceOp(peer, this, p),
-					colistRemove: (p) => colistRemoveOp(peer, this, p),
-					colistRetain: (p) => colistRetainOp(peer, this, p),
-					colistApplyDiff: (p) => colistApplyDiffOp(peer, this, p),
+					...bindColistDispatch(peer, this),
 					push: (p) => appendOp(peer, this, { ...p, cotype: 'costream' }),
 					processInbox: (p) => processInboxOp(peer, this, p),
 					uploadBinary: (p) => uploadBinaryOp(peer, this, p),
@@ -1106,15 +1129,7 @@ export class DataEngine {
 			'seed',
 			'addSparkMember',
 			'removeSparkMember',
-			'colistSet',
-			'colistPush',
-			'colistUnshift',
-			'colistPop',
-			'colistShift',
-			'colistSplice',
-			'colistRemove',
-			'colistRetain',
-			'colistApplyDiff',
+			...COLIST_WRITE_OP_NAMES,
 		])
 		try {
 			return await fn(params)

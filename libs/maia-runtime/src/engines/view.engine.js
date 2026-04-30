@@ -1,4 +1,5 @@
 import { normalizeCoValueData, ReactiveStore } from '@MaiaOS/db'
+import { loadContextStore, readStore } from '@MaiaOS/db/resolve-helpers'
 import { createOpsLogger } from '@MaiaOS/logs'
 import { validateViewDef } from '@MaiaOS/validation'
 import { containsExpressions, resolveExpressions } from '@MaiaOS/validation/expression-resolver'
@@ -6,7 +7,6 @@ import { extractDOMValuesAsync } from '@MaiaOS/validation/payload-resolver'
 import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import { perfEnginesPipeline, traceView, traceViewDeliver } from '../utils/debug.js'
-import { loadContextStore, readStore } from '../utils/resolve-helpers.js'
 import {
 	BOOLEAN_ATTRS,
 	SAFE_TAGS,

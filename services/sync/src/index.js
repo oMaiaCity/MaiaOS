@@ -19,28 +19,19 @@
  *   Read-only storage inspector (when sync is up): same paths; Bearer UCAN cmd `/admin/storage` + Capability grant (or `/admin`). BEGIN READ ONLY for POST /query.
  */
 
+import { accountHasCapabilityOnPeer, ensureCoValueLoaded, getCoListId } from '@MaiaOS/db'
 import {
-	accountHasCapabilityOnPeer,
-	ensureCoValueLoaded,
-	ensureIdentity,
-	findFirst,
-	getCoListId,
-} from '@MaiaOS/db'
-import {
-	bootstrapGuardianSteps,
-	bootstrapIdentitySteps,
 	createFlowContext,
 	identitySelfAvenStep,
 	runSteps,
 	syncServerInfraSteps,
 } from '@MaiaOS/flows'
-import { bootstrapNodeLogging, createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
-import { agentIDToDidKey, verifyInvocationToken } from '@MaiaOS/maia-ucan'
+import { bootstrapNodeLogging, createLogger, createOpsLogger, OPS_PREFIX } from '@MaiaOS/logs'
+import { agentIDToDidKey } from '@MaiaOS/maia-ucan'
 import {
 	createWebSocketPeer,
 	DataEngine,
 	ensureProfileForNewAccount,
-	generateRegistryName,
 	loadOrCreateAgentAccount,
 	MaiaDB,
 	MaiaScriptEvaluator,
@@ -50,14 +41,17 @@ import {
 	applyTesterCredentialsToEnvFile,
 	generateAgentCredentials,
 } from '@MaiaOS/self/generate-credentials'
-import {
-	STORAGE_INSPECTOR_DEFAULT_TABLE_PAGE,
-	STORAGE_INSPECTOR_MAX_TABLE_PAGE,
-} from '@MaiaOS/storage'
-import { createHash } from 'node:crypto'
 import { dirname, resolve as pathResolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { clientIp } from './client-ip.js'
+import { createHandleAgentHttp } from './handlers/agent-http.js'
+import { handleLLMChat } from './handlers/llm-chat.js'
+import {
+	createHandleStorageInspectorHttp,
+	STORAGE_INSPECTOR_BASE,
+} from './handlers/storage-inspector.js'
+import { corsHeadersForRequestFactory, normalizeCorsOrigin } from './http/cors.js'
+import { rateLimitFor } from './http/rate-limit.js'
+import { adaptBunWebSocket, startPing, wsMessageToUtf8String } from './http/ws-adapter.js'
 import { parseBootstrapBody } from './signup-helpers.js'
 
 bootstrapNodeLogging()
@@ -66,6 +60,8 @@ bootstrapNodeLogging()
 const _syncDir = pathResolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 const opsSync = createOpsLogger('sync')
+/** Not OPS-gated: `scripts/dev.js` must observe Listening + Ready on stdout when `LOG_MODE` is empty. */
+const syncDevLifecycleLog = createLogger('sync')
 const opsRegister = createOpsLogger('register')
 const opsLlm = createOpsLogger('llm')
 
@@ -109,77 +105,18 @@ if (isProduction && !process.env.PEER_APP_HOST?.trim()) {
 // SEED_VIBES: which vibes to seed on genesis. Default "all" (includes quickjs / Vibe Creator). Override: "todos,chat" or "todos,chat,addressbook,quickjs"
 const seedVibesConfig = process.env.SEED_VIBES || 'all'
 
-/** CORS: PEER_APP_HOST = allowed origin (e.g. https://next.maia.city or localhost:4200). No wildcard. */
-function normalizeCorsOrigin(host) {
-	const trimmed = host?.trim() ?? ''
-	if (!trimmed) return ''
-	if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
-		// Bare host (e.g. next.maia.city): browsers use https:// in production; http:// would never match Origin.
-		return isProduction ? `https://${trimmed}` : `http://${trimmed}`
-	}
-	return trimmed
-}
-
-const DEV_APP_ORIGINS = new Set([
-	'http://localhost:4200',
-	'http://127.0.0.1:4200',
-	'http://[::1]:4200',
-])
-
 const IS_LOCAL_DEV_CORS =
 	usePGlite || process.env.MAIA_DEV_CORS === 'true' || process.env.MAIA_DEV_CORS === '1'
 
 const rawPeerAppHost = process.env.PEER_APP_HOST?.trim() || ''
-const CONFIGURED_CORS_ORIGIN = rawPeerAppHost ? normalizeCorsOrigin(rawPeerAppHost) : ''
+const CONFIGURED_CORS_ORIGIN = rawPeerAppHost
+	? normalizeCorsOrigin(rawPeerAppHost, isProduction)
+	: ''
 
-/** Per-request CORS: no wildcard. With PEER_APP_HOST set, prod/dev match that origin; without it, localhost:4200 only (PGlite or MAIA_DEV_CORS). */
-function corsHeadersForRequest(req) {
-	const base = {
-		'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-		'Access-Control-Allow-Headers': 'Content-Type, Authorization',
-	}
-	const origin = req?.headers?.get?.('Origin') ?? null
-
-	if (!CONFIGURED_CORS_ORIGIN) {
-		if (!IS_LOCAL_DEV_CORS) {
-			if (origin && DEV_APP_ORIGINS.has(origin)) {
-				return { ...base, 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
-			}
-			if (!origin) {
-				return { ...base, 'Access-Control-Allow-Origin': 'http://localhost:4200', Vary: 'Origin' }
-			}
-			opsSync.warn('CORS: origin not allowed (set PEER_APP_HOST or MAIA_DEV_CORS=1)', origin)
-			return { ...base, Vary: 'Origin' }
-		}
-		if (origin && DEV_APP_ORIGINS.has(origin)) {
-			return { ...base, 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
-		}
-		if (!origin) {
-			return { ...base, 'Access-Control-Allow-Origin': 'http://localhost:4200', Vary: 'Origin' }
-		}
-		opsSync.warn('CORS: origin not allowed (dev, no PEER_APP_HOST)', origin)
-		return { ...base, Vary: 'Origin' }
-	}
-
-	if (IS_LOCAL_DEV_CORS) {
-		if (origin && (DEV_APP_ORIGINS.has(origin) || origin === CONFIGURED_CORS_ORIGIN)) {
-			return { ...base, 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
-		}
-		if (!origin) {
-			return { ...base, 'Access-Control-Allow-Origin': CONFIGURED_CORS_ORIGIN, Vary: 'Origin' }
-		}
-		opsSync.warn('CORS: origin not allowed (dev)', origin)
-		return { ...base, Vary: 'Origin' }
-	}
-	if (!origin) {
-		return { ...base, 'Access-Control-Allow-Origin': CONFIGURED_CORS_ORIGIN, Vary: 'Origin' }
-	}
-	if (origin === CONFIGURED_CORS_ORIGIN) {
-		return { ...base, 'Access-Control-Allow-Origin': origin, Vary: 'Origin' }
-	}
-	opsSync.warn('CORS: origin not allowed', origin)
-	return { ...base, Vary: 'Origin' }
-}
+const corsHeadersForRequest = corsHeadersForRequestFactory(opsSync, {
+	configuredCorsOrigin: CONFIGURED_CORS_ORIGIN,
+	isLocalDevCors: IS_LOCAL_DEV_CORS,
+})
 
 let localNode = null
 let agentWorker = null
@@ -204,51 +141,8 @@ function err(msg, status = 400, extra = {}, req) {
 	return jsonResponse({ ok: false, error: msg, ...extra }, status, {}, req)
 }
 
-/** Default 10 req/min/IP; override per path. OPTIONS exempt. */
-const RL_DEFAULT = 10
-const RL_OVERRIDES = new Map([
-	['/health', Number.POSITIVE_INFINITY],
-	['/bootstrap', 30],
-	['/api/v0/llm/chat', 60],
-	['/extend-capability', 20],
-	['/register', 30],
-])
-
-const RL_BUCKETS = new Map()
-
-function takeRateLimit(key, limit, windowMs = 60_000) {
-	const now = Date.now()
-	let b = RL_BUCKETS.get(key)
-	if (!b || now - b.start >= windowMs) {
-		b = { start: now, count: 1 }
-		RL_BUCKETS.set(key, b)
-		return { ok: true, reset: now + windowMs }
-	}
-	if (b.count >= limit) {
-		return { ok: false, reset: b.start + windowMs }
-	}
-	b.count += 1
-	return { ok: true, reset: b.start + windowMs }
-}
-
-function rateLimitFor(req, url) {
-	if (req.method === 'OPTIONS') return { ok: true, reset: 0 }
-	const limit = RL_OVERRIDES.get(url.pathname) ?? RL_DEFAULT
-	if (!Number.isFinite(limit) || limit === Number.POSITIVE_INFINITY) {
-		return { ok: true, reset: 0 }
-	}
-	const ip = clientIp(req)
-	return takeRateLimit(`${url.pathname}:${ip}`, limit)
-}
-
-function auditRegisterDecision(req, data) {
-	const ipHash = createHash('sha256').update(clientIp(req)).digest('hex').slice(0, 12)
-	opsRegister.log('decision', { route: '/register', ip_hash: ipHash, ...data })
-}
-
 /** Genesis seeds 265+ CoValues on cold Neon; 25s/load was marginal. 90s per-load is steady-state fine. */
 const LOAD_TIMEOUT_MS = 90_000
-const REQUEST_TIMEOUT_MS = 35000
 
 function withTimeout(promise, ms, label) {
 	return Promise.race([
@@ -257,109 +151,6 @@ function withTimeout(promise, ms, label) {
 			setTimeout(() => reject(new Error(`${label} timed out after ${ms}ms`)), ms),
 		),
 	])
-}
-
-const STORAGE_INSPECTOR_BASE = '/api/v0/admin/storage'
-
-/**
- * @param {Request} req
- * @param {URL} url
- * @param {object} worker - agent worker (peer + account for capability checks)
- * @returns {Promise<Response | null>}
- */
-async function handleStorageInspectorHttp(req, url, worker) {
-	if (!worker) return jsonResponse({ error: 'Initializing', status: 503 }, 503, {}, req)
-	if (!storageInspector) {
-		return jsonResponse({ error: 'Initializing', status: 503 }, 503, {}, req)
-	}
-
-	const auth = req.headers.get('Authorization')
-	const token = auth?.startsWith('Bearer ') ? auth.slice(7).trim() : null
-	if (!token) {
-		return jsonResponse({ error: 'Unauthorized', message: 'Bearer token required' }, 401, {}, req)
-	}
-	let payload
-	try {
-		payload = verifyInvocationToken(token, {
-			now: Math.floor(Date.now() / 1000),
-			allowedCmd: '/admin/storage',
-		})
-	} catch {
-		return jsonResponse({ error: 'Unauthorized', message: 'Invalid or expired token' }, 401, {}, req)
-	}
-	const accountId = payload?.accountId
-	if (!accountId?.startsWith('co_z')) {
-		return jsonResponse({ error: 'Forbidden', message: 'Invalid token claims' }, 403, {}, req)
-	}
-	const bindingOk = await verifyAccountBinding(worker.peer, accountId, payload.iss)
-	if (!bindingOk) {
-		return jsonResponse(
-			{ error: 'Forbidden', message: 'Account binding verification failed' },
-			403,
-			{},
-			req,
-		)
-	}
-	const hasCap = await hasValidCapability(worker, accountId, '/admin/storage')
-	if (!hasCap) {
-		return jsonResponse(
-			{
-				error: 'Forbidden',
-				message:
-					'No valid /admin/storage capability. Ask a guardian to grant you access in Capabilities.',
-			},
-			403,
-			{},
-			req,
-		)
-	}
-
-	const pathname = url.pathname
-
-	if (pathname === `${STORAGE_INSPECTOR_BASE}/tables` && req.method === 'GET') {
-		let limit = Number(url.searchParams.get('limit'))
-		let offset = Number(url.searchParams.get('offset'))
-		if (Number.isNaN(limit) || limit < 1) limit = STORAGE_INSPECTOR_DEFAULT_TABLE_PAGE
-		if (limit > STORAGE_INSPECTOR_MAX_TABLE_PAGE) limit = STORAGE_INSPECTOR_MAX_TABLE_PAGE
-		if (Number.isNaN(offset) || offset < 0) offset = 0
-		const res = await storageInspector.listTables({ limit, offset })
-		return jsonResponse({ ok: true, ...res }, 200, {}, req)
-	}
-
-	const prefix = `${STORAGE_INSPECTOR_BASE}/tables/`
-	const suffix = '/columns'
-	if (pathname.startsWith(prefix) && pathname.endsWith(suffix) && req.method === 'GET') {
-		const enc = pathname.slice(prefix.length, -suffix.length)
-		const name = decodeURIComponent(enc)
-		try {
-			const res = await storageInspector.describeTable(name)
-			return jsonResponse({ ok: true, ...res }, 200, {}, req)
-		} catch (e) {
-			return jsonResponse({ ok: false, error: e?.message || String(e) }, 400, {}, req)
-		}
-	}
-
-	if (pathname === `${STORAGE_INSPECTOR_BASE}/query` && req.method === 'POST') {
-		let body
-		try {
-			body = await req.json()
-		} catch {
-			return jsonResponse({ ok: false, error: 'Invalid JSON body' }, 400, {}, req)
-		}
-		const sql = body?.sql
-		const params = body?.params
-		if (typeof sql !== 'string') {
-			return jsonResponse({ ok: false, error: 'sql string required' }, 400, {}, req)
-		}
-		try {
-			const res = await storageInspector.query(sql, Array.isArray(params) ? params : [])
-			return jsonResponse({ ok: true, ...res }, 200, {}, req)
-		} catch (e) {
-			return jsonResponse({ ok: false, error: e?.message || String(e) }, 400, {}, req)
-		}
-	}
-
-	return null
 }
 
 function getSparksRegistryCoId(account) {
@@ -549,442 +340,47 @@ async function checkSyncWriteCapability(worker, msg) {
 	return { ok: true }
 }
 
-/**
- * POST /bootstrap — unified one-shot handshake for new/returning humans.
- *
- * Responsibilities (all atomic from the client's perspective):
- *   1. Return the server's sparks registry co-id so the client can anchor account.sparks (trusting).
- *   2. If accountId is AVEN_MAIA_GUARDIAN: promote to °maia spark admin (idempotent) + seed capabilities.
- *   3. Ensure an identity CoMap exists in the identity index for this account (type='human').
- *
- * maiaSparkCoId intentionally NOT returned: it is already set inside the sparks CoMap at genesis,
- * and the client reads it directly via MaiaDB.resolveSystemSparkCoId.
- */
-async function handleBootstrap(worker, body, req) {
-	const parsed = parseBootstrapBody(body)
-	if (!parsed.ok) {
-		return err(
-			`${parsed.field} required (co_z…)`,
-			400,
-			{ validationErrors: [{ field: parsed.field }] },
-			req,
-		)
-	}
-	const { accountId, profileId } = parsed
-	try {
-		const sparksId = getSparksRegistryCoId(worker.account)
+const handleStorageInspectorHttp = createHandleStorageInspectorHttp({
+	jsonResponse,
+	getStorageInspector: () => storageInspector,
+	verifyAccountBinding,
+	hasValidCapability,
+})
 
-		const _mnRaw = process.env.AVEN_MAIA_NAME || 'Maia'
-		const _mn = _mnRaw.startsWith('Aven ') ? _mnRaw : `Aven ${_mnRaw}`
-		const flowCtx = createFlowContext({
-			worker,
-			log: opsSync,
-			env: {
-				serverAccountId: accountID,
-				guardianAccountId: avenMaiaGuardian,
-				maiaName: _mn,
-				seedVibes: seedVibesConfig,
-			},
-			allowApply: peerSyncSeed,
-			bootstrap: { accountId, profileId },
-		})
-
-		try {
-			await runSteps(
-				flowCtx,
-				bootstrapGuardianSteps({
-					guardianAccountId: avenMaiaGuardian,
-					bootstrapAccountId: accountId,
-				}),
-			)
-		} catch (e) {
-			opsSync.warn('handleBootstrap: guardian flow:', e?.message ?? e)
-		}
-		try {
-			await runSteps(flowCtx, bootstrapIdentitySteps())
-		} catch (e) {
-			opsSync.warn('handleBootstrap: identity flow:', e?.message ?? e)
-		}
-
-		return jsonResponse({ sparks: sparksId }, 200, {}, req)
-	} catch (e) {
-		return err(e?.message ?? 'bootstrap failed', 500, {}, req)
-	}
-}
-
-// --- Agent handlers ---
-/**
- * POST /register — server self-registration only.
- *
- * Used for:
- *   - type='aven': the Maia server registers its own account at startup.
- *   - type='spark': sparks created server-side (e.g. during genesis seed).
- *
- * Human identities are registered via POST /bootstrap (see handleBootstrap).
- */
-async function handleRegister(worker, body, req) {
-	const { type, username, accountId, profileId, sparkCoId } = body || {}
-	if (type !== 'spark' && type !== 'aven')
-		return err(
-			'type required: spark or aven',
-			400,
-			{ validationErrors: [{ field: 'type', message: 'must be spark or aven' }] },
-			req,
-		)
-	if (type === 'aven' && (!accountId || typeof accountId !== 'string'))
-		return err(
-			'accountId required for type=aven',
-			400,
-			{ validationErrors: [{ field: 'accountId', message: 'required' }] },
-			req,
-		)
-	if (
-		type === 'aven' &&
-		(!profileId || typeof profileId !== 'string' || !profileId.startsWith('co_z'))
-	)
-		return err(
-			'profileId required for type=aven',
-			400,
-			{ validationErrors: [{ field: 'profileId', message: 'required (co_z...)' }] },
-			req,
-		)
-	if (type === 'spark' && (!sparkCoId || typeof sparkCoId !== 'string'))
-		return err(
-			'sparkCoId required for type=spark',
-			400,
-			{ validationErrors: [{ field: 'sparkCoId', message: 'required' }] },
-			req,
-		)
-
-	const coId = type === 'spark' ? sparkCoId : accountId
-	let u =
-		username != null && typeof username === 'string' && username.trim() ? username.trim() : null
-
-	const { peer, dataEngine } = worker
-	try {
-		if (type === 'aven') {
-			await dataEngine.resolveSystemFactories()
-			const identitySchemaCoId = peer.infra?.identity
-			if (!identitySchemaCoId)
-				return err(
-					'Identity schema not found. Ensure sync ran genesis (PEER_SYNC_SEED=true once).',
-					500,
-					{},
-					req,
-				)
-			const existingRow = await findFirst(peer, identitySchemaCoId, {
-				account: accountId,
-				type,
-			})
-			if (existingRow?.id?.startsWith('co_z')) {
-				return jsonResponse(
-					{
-						ok: true,
-						type,
-						username: u ?? generateRegistryName(type),
-						accountId: coId,
-						identityCoMapId: existingRow.id,
-						alreadyRegistered: true,
-					},
-					200,
-					{},
-					req,
-				)
-			}
-			if (!u) u = generateRegistryName(type)
-			const result = await ensureIdentity({ peer, dataEngine, type, accountId, profileId })
-			return jsonResponse(
-				{ ok: true, type, username: u, accountId: coId, identityCoMapId: result.identityCoMapId },
-				200,
-				{},
-				req,
-			)
-		}
-
-		const registryId = getSparksRegistryCoId(worker.account)
-		const raw = await peer.getRawRecord(registryId)
-
-		if (!u) u = generateRegistryName(type)
-		if (raw?.[u] != null && raw[u] !== coId)
-			return err(`username "${u}" already registered to different identity`, 409, {}, req)
-		const r = await dataEngine.execute({ op: 'update', id: registryId, data: { [u]: coId } })
-		if (r?.ok === false)
-			return err(r.errors?.map((e) => e.message).join('; ') ?? 'update failed', 500, {}, req)
-		return jsonResponse({ ok: true, type, username: u, sparkCoId: coId }, 200, {}, req)
-	} catch (e) {
-		auditRegisterDecision(req, {
-			ok: false,
-			status: 500,
-			error: e?.message ?? 'failed to register',
-		})
-		return err(e?.message ?? 'failed to register', 500, {}, req)
-	}
-}
-
-/** Extend a capability by 1 day. Server-side write (avoids chicken-and-egg: client needs /sync/write to sync). */
-async function handleExtendCapability(worker, body, req) {
-	const { capabilityId } = body || {}
-	if (!capabilityId || typeof capabilityId !== 'string' || !capabilityId.startsWith('co_z'))
-		return err('capabilityId required (co_z...)', 400, {}, req)
-
-	const auth = body._authHeader
-	const token = auth?.startsWith('Bearer ') ? auth.slice(7).trim() : null
-	if (!token) return err('Authorization: Bearer token required', 401, {}, req)
-
-	let payload
-	try {
-		payload = verifyInvocationToken(token, {
-			now: Math.floor(Date.now() / 1000),
-			allowedCmd: null, // Any valid token
-		})
-	} catch {
-		return err('Invalid or expired token', 401, {}, req)
-	}
-	const callerAccountId = payload?.accountId
-	if (!callerAccountId?.startsWith('co_z')) return err('Invalid token claims', 403, {}, req)
-
-	const bindingOk = await verifyAccountBinding(worker.peer, callerAccountId, payload.iss)
-	if (!bindingOk) return err('Account binding verification failed', 403, {}, req)
-
-	try {
-		const capContent = await loadCoMap(worker.peer, capabilityId, { retries: 2 })
-		const sub = capContent?.get?.('sub')
-		const currentExp = capContent?.get?.('exp')
-		if (!sub?.startsWith('co_z')) return err('Invalid capability (no sub)', 400, {}, req)
-
-		const isOwner = callerAccountId === sub
-		const isGuardian = avenMaiaGuardian?.startsWith('co_z') && callerAccountId === avenMaiaGuardian
-		if (!isOwner && !isGuardian)
-			return err('Forbidden: only capability owner or guardian can extend', 403, {}, req)
-
-		const now = Math.floor(Date.now() / 1000)
-		const oneDay = 86400
-		const newExp = Math.max(now, typeof currentExp === 'number' ? currentExp : 0) + oneDay
-
-		const r = await worker.dataEngine.execute({
-			op: 'update',
-			id: capabilityId,
-			data: { exp: newExp },
-		})
-		if (r?.ok === false)
-			return err(r.errors?.map((e) => e.message).join('; ') ?? 'update failed', 500, {}, req)
-		const ipHash = createHash('sha256').update(clientIp(req)).digest('hex').slice(0, 12)
-		opsRegister.log('decision', {
-			route: '/extend-capability',
-			ok: true,
-			status: 200,
-			ip_hash: ipHash,
-			capabilityId_prefix: capabilityId?.slice(0, 12) ?? null,
-		})
-		return jsonResponse({ ok: true, newExp }, 200, {}, req)
-	} catch (e) {
-		return err(e?.message ?? 'failed to extend capability', 500, {}, req)
-	}
-}
-
-async function handleAgentHttp(req, worker) {
-	const url = new URL(req.url)
-	const post = async (strict, handler) => {
-		try {
-			const body = strict ? await req.json() : await req.json().catch(() => ({}))
-			return await handler(worker, body, req)
-		} catch (e) {
-			return err(e.message, e?.message?.includes('timed out') ? 504 : 400, {}, req)
-		}
-	}
-	if (url.pathname === '/register' && req.method === 'POST')
-		return post(false, (w, b, r) =>
-			withTimeout(handleRegister(w, b, r), REQUEST_TIMEOUT_MS, '/register'),
-		)
-	if (url.pathname === '/bootstrap' && req.method === 'POST')
-		return post(false, (w, b, r) =>
-			withTimeout(handleBootstrap(w, b, r), REQUEST_TIMEOUT_MS, '/bootstrap'),
-		)
-	if (url.pathname === '/extend-capability' && req.method === 'POST') {
-		const auth = req.headers.get('Authorization')
-		return post(false, (w, b, r) =>
-			withTimeout(
-				handleExtendCapability(w, { ...b, _authHeader: auth }, r),
-				REQUEST_TIMEOUT_MS,
-				'/extend-capability',
-			),
-		)
-	}
-	return null
-}
-
-/** LLM messages schema: role + optional content. Enforces structure and limits. */
-const LLM_MAX_MESSAGES = 100
-const LLM_MAX_CONTENT_LENGTH = 200_000
-const LLM_ALLOWED_ROLES = new Set(['system', 'user', 'assistant'])
-
-function validateLLMMessages(messages) {
-	if (!messages || !Array.isArray(messages) || messages.length === 0) {
-		return { ok: false, error: 'messages array required' }
-	}
-	if (messages.length > LLM_MAX_MESSAGES) {
-		return { ok: false, error: `messages array exceeds max ${LLM_MAX_MESSAGES}` }
-	}
-	for (let i = 0; i < messages.length; i++) {
-		const m = messages[i]
-		if (!m || typeof m !== 'object' || Array.isArray(m)) {
-			return { ok: false, error: `messages[${i}] must be object` }
-		}
-		if (!m.role || typeof m.role !== 'string' || !LLM_ALLOWED_ROLES.has(m.role)) {
-			return { ok: false, error: `messages[${i}].role must be system, user, or assistant` }
-		}
-		if ('content' in m && m.content != null) {
-			if (typeof m.content !== 'string') {
-				return { ok: false, error: `messages[${i}].content must be string` }
-			}
-			if (m.content.length > LLM_MAX_CONTENT_LENGTH) {
-				return {
-					ok: false,
-					error: `messages[${i}].content exceeds max ${LLM_MAX_CONTENT_LENGTH} chars`,
-				}
-			}
-		}
-	}
-	return { ok: true }
-}
-
-/** LLM proxy: forwards request to RedPill, returns response. Tool execution is client-side (Runtime). Requires Bearer token + valid /llm/chat capability. */
-async function handleLLMChat(req, worker) {
-	if (!RED_PILL_API_KEY)
-		return jsonResponse({ error: 'RED_PILL_API_KEY not configured' }, 500, {}, req)
-	if (!worker) return jsonResponse({ error: 'Initializing', status: 503 }, 503, {}, req)
-
-	// Auth gate: Bearer token + account binding + capability
-	const auth = req.headers.get('Authorization')
-	const token = auth?.startsWith('Bearer ') ? auth.slice(7).trim() : null
-	if (!token) {
-		return jsonResponse({ error: 'Unauthorized', message: 'Bearer token required' }, 401, {}, req)
-	}
-	let payload
-	try {
-		payload = verifyInvocationToken(token, {
-			now: Math.floor(Date.now() / 1000),
-			allowedCmd: '/llm/chat',
-		})
-	} catch {
-		return jsonResponse({ error: 'Unauthorized', message: 'Invalid or expired token' }, 401, {}, req)
-	}
-	const accountId = payload?.accountId
-	if (!accountId?.startsWith('co_z')) {
-		return jsonResponse({ error: 'Forbidden', message: 'Invalid token claims' }, 403, {}, req)
-	}
-	const bindingOk = await verifyAccountBinding(worker.peer, accountId, payload.iss)
-	if (!bindingOk) {
-		opsLlm.warn('Account binding failed', { accountId: accountId?.slice(0, 12) })
-		return jsonResponse(
-			{ error: 'Forbidden', message: 'Account binding verification failed' },
-			403,
-			{},
-			req,
-		)
-	}
-	const hasCap = await hasValidCapability(worker, accountId, '/llm/chat')
-	if (!hasCap) {
-		opsLlm.warn('No valid capability', { accountId: accountId?.slice(0, 12) })
-		return jsonResponse(
-			{
-				error: 'Forbidden',
-				message: 'No valid /llm/chat capability. Ask a guardian to grant you access in Capabilities.',
-			},
-			403,
-			{},
-			req,
-		)
-	}
-
-	try {
-		const body = await req.json()
-		const { messages, model = 'qwen/qwen3-30b-a3b-instruct-2507', temperature = 1, tools } = body
-		const validation = validateLLMMessages(messages)
-		if (!validation.ok) return jsonResponse({ error: validation.error }, 400, {}, req)
-
-		const reqBody = {
-			model,
-			messages,
-			temperature,
-			...(Array.isArray(tools) && tools.length > 0 && { tools }),
-		}
-		const res = await fetch('https://api.redpill.ai/v1/chat/completions', {
-			method: 'POST',
-			headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${RED_PILL_API_KEY}` },
-			body: JSON.stringify(reqBody),
-		})
-		const txt = await res.text()
-		if (!res.ok) {
-			let data = { error: 'LLM request failed' }
-			try {
-				data = JSON.parse(txt)
-			} catch {}
-			opsLlm.error('RedPill upstream error', res.status, data.error || txt.slice(0, 200))
-			return jsonResponse(
-				{ error: data.error || `HTTP ${res.status}`, message: data.message || txt.slice(0, 200) },
-				500,
-				{},
-				req,
-			)
-		}
-		const data = JSON.parse(txt)
-		return jsonResponse(data, 200, {}, req)
-	} catch (e) {
-		const msg = e?.message ?? String(e)
-		opsLlm.error('handleLLMChat catch', msg, e)
-		return jsonResponse({ error: 'Failed to process LLM request', message: msg }, 500, {}, req)
-	}
-}
+const handleAgentHttp = createHandleAgentHttp({
+	err,
+	register: {
+		err,
+		jsonResponse,
+		getSparksRegistryCoId,
+		opsRegister,
+	},
+	bootstrap: {
+		err,
+		jsonResponse,
+		parseBootstrapBody,
+		getSparksRegistryCoId,
+		opsSync,
+		accountID,
+		avenMaiaGuardian,
+		peerSyncSeed,
+		seedVibesConfig,
+	},
+	extend: {
+		err,
+		jsonResponse,
+		verifyAccountBinding,
+		loadCoMap,
+		avenMaiaGuardian,
+		opsRegister,
+	},
+})
 
 function handleCORS(req) {
 	return new Response(null, {
 		status: 204,
 		headers: corsHeadersForRequest(req),
 	})
-}
-
-// --- WebSocket (sync) ---
-function adaptBunWebSocket(ws, _clientId) {
-	const messageListeners = []
-	const openListeners = []
-	const adaptedWs = {
-		...ws,
-		addEventListener(type, listener) {
-			if (type === 'message') messageListeners.push(listener)
-			else if (type === 'open') openListeners.push(listener)
-		},
-		removeEventListener() {},
-		send: (data) => ws.send(data),
-		close: (code, reason) => ws.close(code, reason),
-		get readyState() {
-			return ws.readyState
-		},
-	}
-	ws._messageListeners = messageListeners
-	ws._adaptedWs = adaptedWs
-	return { adaptedWs, messageListeners, openListeners }
-}
-
-/** Bun passes `string | Buffer` (and sometimes views); cojson-transport-ws requires a string for deserializeMessages. */
-function wsMessageToUtf8String(msg) {
-	if (typeof msg === 'string') return msg
-	return Buffer.from(msg).toString('utf8')
-}
-
-function startPing(ws) {
-	const send = () => {
-		if (ws.readyState === WebSocket.OPEN) {
-			try {
-				ws.send(JSON.stringify({ type: 'ping', time: Date.now(), dc: 'unknown' }))
-			} catch (_e) {
-				clearInterval(iv)
-			}
-		} else clearInterval(iv)
-	}
-	const iv = setInterval(send, 1500)
-	send()
-	return iv
 }
 
 Bun.serve({
@@ -1040,7 +436,17 @@ Bun.serve({
 			// API (LLM)
 			if (url.pathname === '/api/v0/llm/chat' && req.method === 'POST') {
 				if (!agentWorker) return jsonResponse({ error: 'Initializing', status: 503 }, 503, {}, req)
-				return handleLLMChat(req, agentWorker)
+				return handleLLMChat(
+					{
+						jsonResponse,
+						verifyAccountBinding,
+						hasValidCapability,
+						redPillApiKey: RED_PILL_API_KEY,
+						opsLlm,
+					},
+					req,
+					agentWorker,
+				)
 			}
 
 			if (url.pathname.startsWith(STORAGE_INSPECTOR_BASE)) {
@@ -1085,7 +491,7 @@ Bun.serve({
 	},
 })
 
-opsSync.log('Listening on 0.0.0.0:%s', PORT)
+syncDevLifecycleLog.log(`Listening on 0.0.0.0:${PORT}`)
 
 ;(async () => {
 	/** Set when local PEER_SYNC_SEED wipe runs; `.env` is updated at Ready via {@link applyTesterCredentialsToEnvFile}. */
@@ -1265,7 +671,7 @@ opsSync.log('Listening on 0.0.0.0:%s', PORT)
 				'PEER_SYNC_SEED: persisted Aven Tester + guardian to repo .env — restart app dev server to pick up VITE_AVEN_*',
 			)
 		}
-		opsSync.log('Ready')
+		syncDevLifecycleLog.log('Ready')
 	} catch (e) {
 		opsSync.error('Init failed:', e?.message ?? e)
 		if (e?.stack) opsSync.error('stack', e.stack)

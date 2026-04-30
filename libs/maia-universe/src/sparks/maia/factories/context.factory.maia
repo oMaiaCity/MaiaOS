@@ -39,17 +39,6 @@
 							}
 						},
 						"additionalProperties": true
-					},
-					"filter": {
-						"description": "Filter criteria (legacy - use options.filter instead)",
-						"oneOf": [
-							{
-								"type": "object"
-							},
-							{
-								"type": "null"
-							}
-						]
 					}
 				},
 				"required": [

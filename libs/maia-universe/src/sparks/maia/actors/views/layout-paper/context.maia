@@ -2,23 +2,27 @@
 	"$factory": "°maia/factory/context.factory.maia",
 	"notes": {
 		"factory": "°maia/factory/note.factory.maia",
-		"map": {
-			"id": "id",
-			"title": "title",
-			"content": "$content"
+		"options": {
+			"map": {
+				"id": "id",
+				"title": "title",
+				"content": "$content"
+			}
 		}
 	},
 	"selectedNoteId": null,
 	"selectedNoteIds": {},
 	"selectedNote": {
 		"factory": "°maia/factory/note.factory.maia",
-		"filter": {
-			"id": "$selectedNoteId"
-		},
-		"map": {
-			"id": "id",
-			"title": "title",
-			"content": "$content"
+		"options": {
+			"filter": {
+				"id": "$selectedNoteId"
+			},
+			"map": {
+				"id": "id",
+				"title": "title",
+				"content": "$content"
+			}
 		}
 	},
 	"paper": "@paper",

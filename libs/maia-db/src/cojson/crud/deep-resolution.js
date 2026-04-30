@@ -33,7 +33,6 @@ export function isDeepResolvedOrResolving(coId, peer = null) {
  * @returns {Set<string>} Set of CoValue IDs found (excluding already visited ones)
  */
 function extractCoValueIds(data, visited = new Set(), depth = 0, maxDepth = 15) {
-	// TODO: temporarily 15
 	const coIds = new Set()
 
 	if (depth > maxDepth) {
@@ -139,7 +138,7 @@ async function _waitForCoValueAvailable(peer, coId, timeoutMs = 5000) {
  */
 export async function resolveNestedReferences(peer, data, visited = new Set(), options = {}) {
 	const {
-		maxDepth = 15, // TODO: temporarily scaled up from 10 for °maia spark detail
+		maxDepth = 15,
 		timeoutMs = 5000, // Kept for API compatibility but not used in progressive mode
 		currentDepth = 0,
 	} = options
@@ -269,11 +268,7 @@ export async function resolveNestedReferences(peer, data, visited = new Set(), o
  * @returns {Promise<void>} Resolves when main CoValue is available (nested resolution is progressive)
  */
 export async function deepResolveCoValue(peer, coId, options = {}) {
-	const {
-		deepResolve = true,
-		maxDepth = 15, // TODO: temporarily scaled up from 10 for °maia spark detail
-		timeoutMs = 5000,
-	} = options
+	const { deepResolve = true, maxDepth = 15, timeoutMs = 5000 } = options
 
 	const _debugPrefix = `[deepResolveCoValue:${coId.substring(0, 12)}...]`
 

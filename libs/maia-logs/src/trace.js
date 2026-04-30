@@ -5,9 +5,6 @@
 import { emitLog } from './core.js'
 import { isTraceEnabledFromConfig } from './log-config.js'
 
-/** @deprecated Gating uses `LOG_MODE` only; kept for doc / search. */
-export const TRACE_STORAGE_KEY = 'maia:debug:trace'
-
 const LOOP_WINDOW_MS = 2000
 const LOOP_THRESHOLD = 4
 

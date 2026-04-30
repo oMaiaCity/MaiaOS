@@ -6,6 +6,7 @@
  * No states/transitions; phase lives in context when needed.
  */
 
+import { readStore, resolveSchemaFromCoValue, resolveToCoId } from '@MaiaOS/db/resolve-helpers'
 import { createLogger } from '@MaiaOS/logs'
 import { resolveExpressions } from '@MaiaOS/validation/expression-resolver'
 import {
@@ -20,7 +21,6 @@ import {
 	traceProcess,
 	traceProcessOp,
 } from '../utils/debug.js'
-import { readStore, resolveSchemaFromCoValue, resolveToCoId } from '../utils/resolve-helpers.js'
 
 const log = createLogger('process-engine')
 

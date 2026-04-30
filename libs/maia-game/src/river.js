@@ -461,12 +461,6 @@ export function riverFlowAlongT(wx, wy) {
 	return THREE.MathUtils.clamp((dot + FLOW_SPAN) / (2 * FLOW_SPAN), 0, 1)
 }
 
-/** @deprecated Use riverCenterlinePointAtS + arc length; kept for narrow ribbon resampling. */
-export function centerlineWxForFlowT(t) {
-	const p = riverCenterlinePointAtS(THREE.MathUtils.clamp(t, 0, 1))
-	return p.wx
-}
-
 export function isRiverCorridor(wx, wy) {
 	const c = closestPointOnRiverPolyline(wx, wy)
 	return c.dist < riverHalfWidthAtS(c.sNorm)

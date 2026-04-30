@@ -3,14 +3,16 @@
 	"sparkId": null,
 	"sparkDetails": {
 		"factory": "°maia/factory/spark.factory.maia",
-		"filter": {
-			"id": "$sparkId"
-		},
-		"map": {
-			"id": "id",
-			"name": "name",
-			"members": "$os.groups.guardian.accountMembers",
-			"groupId": "$os.groups.guardian.id"
+		"options": {
+			"filter": {
+				"id": "$sparkId"
+			},
+			"map": {
+				"id": "id",
+				"name": "name",
+				"members": "$os.groups.guardian.accountMembers",
+				"groupId": "$os.groups.guardian.id"
+			}
 		}
 	},
 	"hasSpark": false,

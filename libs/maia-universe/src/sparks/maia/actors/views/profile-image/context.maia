@@ -6,13 +6,15 @@
 	},
 	"profile": {
 		"factory": "°maia/factory/profile.factory.maia",
-		"filter": {
-			"id": "$scope.profileId"
-		},
-		"map": {
-			"id": "id",
-			"name": "name",
-			"avatar": "avatar"
+		"options": {
+			"filter": {
+				"id": "$scope.profileId"
+			},
+			"map": {
+				"id": "id",
+				"name": "name",
+				"avatar": "avatar"
+			}
 		}
 	},
 	"uploadStatus": null,

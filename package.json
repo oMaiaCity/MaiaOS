@@ -28,8 +28,6 @@
 		"deploy:landing": "flyctl deploy --dockerfile services/landing/Dockerfile --config services/landing/fly.toml --app maia-city --wait-timeout 300 && flyctl scale count 1 --app maia-city --yes",
 		"universe:build": "cd libs/maia-universe && bun run build",
 		"distros:build": "cd libs/maia-distros && bun run build",
-		"docs:generate": "bun scripts/generate-llm-docs.js",
-		"docs:watch": "bun scripts/generate-llm-docs.js --watch",
 		"version:sync": "node scripts/sync-version.js",
 		"agent:generate": "bun libs/maia-self/scripts/generate-credentials.js",
 		"format": "bun run format:maia && bunx biome format --write .",

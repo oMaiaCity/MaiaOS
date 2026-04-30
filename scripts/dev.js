@@ -33,7 +33,6 @@ function stripBunFilterPrefix(line) {
 
 let appProcess = null
 let syncProcess = null
-let docsWatcherProcess = null
 let assetSyncProcess = null
 let faviconProcess = null
 
@@ -41,7 +40,6 @@ let faviconProcess = null
 const serviceStatus = {
 	favicons: false,
 	assets: false,
-	docs: false,
 	sync: false,
 	app: false,
 }
@@ -128,11 +126,19 @@ function tryFlushReadyBlock() {
 	devLog.log('')
 }
 
+/** Strip ANSI so piped child output still matches (TTY-enabled formatter is rare for spawned processes). */
+function stripAnsi(s) {
+	const esc = '\u001b'
+	return String(s).replace(new RegExp(`${esc}\\[[0-9;]*m`, 'g'), '')
+}
+
 /** @param {string} service
  * @param {string} trimmed
  * @returns {boolean} true if this line is sync’s final Ready signal (consumed; not re-logged). */
 function isSyncFinalReadyLine(service, trimmed) {
-	return service === 'sync' && /^\[sync\]\s*Ready\s*$/.test(trimmed)
+	if (service !== 'sync') return false
+	const plain = stripAnsi(trimmed)
+	return /^\[sync\]\s*Ready\s*$/.test(plain)
 }
 
 // Filter verbose output from child processes
@@ -228,7 +234,7 @@ function markLiveIfUrl(service, trimmed) {
 
 function markLiveIfReadyPattern(service, trimmed) {
 	if (serviceStatus[service]) return false
-	// Sync: opsSync.log('Listening on 0.0.0.0:%s', PORT) — no http:// URL; match port explicitly
+	// Sync: createLogger('sync') Listening line (not OPS-gated; dev.js needs it when LOG_MODE is empty)
 	if (service === 'sync' && trimmed.includes(OPS_PREFIX.sync) && trimmed.includes('Listening')) {
 		const port = (trimmed.match(/0\.0\.0\.0:(\d+)/) || trimmed.match(/:(\d+)\s*$/))?.[1] ?? null
 		if (port) {
@@ -371,48 +377,6 @@ async function startSync() {
 	})
 }
 
-function startDocsWatcher() {
-	const logger = createLogger('docs')
-	docsWatcherProcess = spawn('bun', ['scripts/generate-llm-docs.js', '--watch'], {
-		cwd: rootDir,
-		stdio: ['ignore', 'pipe', 'pipe'],
-		shell: false,
-		env: { ...process.env },
-	})
-
-	docsWatcherProcess.stdout.on('error', () => {})
-	docsWatcherProcess.stderr.on('error', () => {})
-	docsWatcherProcess.stdout.on('data', (data) => {
-		const output = data.toString()
-		if (
-			output.includes('generated successfully') ||
-			output.includes('LLM documentation generated') ||
-			output.includes('Watching')
-		) {
-			if (!serviceStatus.docs) {
-				logger.success('Watching docs')
-				serviceStatus.docs = true
-			}
-		} else if (!shouldFilterLine(output)) {
-			processOutput('docs', data)
-		}
-	})
-
-	docsWatcherProcess.stderr.on('data', (data) => {
-		processOutput('docs', data)
-	})
-
-	docsWatcherProcess.on('error', (_error) => {
-		logger.warn('Failed to start')
-	})
-
-	docsWatcherProcess.on('exit', (code) => {
-		if (code !== 0 && code !== null) {
-			logger.warn(`Exited with code ${code}`)
-		}
-	})
-}
-
 function generateFavicons() {
 	const logger = createLogger('favicons')
 	faviconProcess = spawn('bun', ['scripts/generate-favicons.js'], {
@@ -491,21 +455,15 @@ function startAssetSync() {
 	})
 }
 
-/** Kill zombie sync-assets and docs watchers from previous dev runs (prevents ghost dirs) */
+/** Kill zombie sync-assets from previous dev runs (prevents ghost dirs) */
 function killZombieDevProcesses() {
 	try {
 		execSync('pkill -f "node scripts/sync-assets.js" 2>/dev/null || true', { timeout: 2000 })
-		execSync('pkill -f "bun scripts/generate-llm-docs.js --watch" 2>/dev/null || true', {
-			timeout: 2000,
-		})
-		execSync('pkill -f "bun run scripts/generate-llm-docs.js --watch" 2>/dev/null || true', {
-			timeout: 2000,
-		})
 	} catch (_) {}
 }
 
 async function killChildren() {
-	const procs = [faviconProcess, assetSyncProcess, docsWatcherProcess, syncProcess, appProcess]
+	const procs = [faviconProcess, assetSyncProcess, syncProcess, appProcess]
 	const toWait = []
 	for (const p of procs) {
 		if (p && !p.killed) {
@@ -562,7 +520,7 @@ function setupSignalHandlers() {
 }
 
 async function main() {
-	// Kill zombie sync-assets and docs watchers from previous dev runs (prevents ghost dirs)
+	// Kill zombie sync-assets from previous dev runs (prevents ghost dirs)
 	killZombieDevProcesses()
 	await new Promise((r) => setTimeout(r, 300))
 
@@ -612,7 +570,6 @@ async function main() {
 	// If the app loads before sync is listening, the client retries WebSocket/sign-in — same as a slow sync boot.
 	setTimeout(async () => {
 		startAssetSync()
-		startDocsWatcher()
 		await Promise.all([startSync(), startApp()])
 	}, 1000)
 

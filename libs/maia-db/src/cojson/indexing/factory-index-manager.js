@@ -8,7 +8,7 @@
  * - spark.os.metaFactoryCoId: co_z of metafactory (anchor)
  * - spark.os.indexes: schema-co-id → colist (definition catalog at key === metaFactoryCoId; per-schema instance indexes otherwise)
  * - spark.os.unknown: colist of co-values without schemas
- * - spark.os.indexes["@nanoids"]: nanoid string → co_z (header.meta.$nanoid index). Legacy spark.os.nanoids is migrated on load.
+ * - spark.os.indexes["@nanoids"]: nanoid string → co_z (header.meta.$nanoid index).
  */
 
 import { createLogger } from '@MaiaOS/logs'
@@ -19,99 +19,21 @@ import { create as crudCreate } from '../crud/create.js'
 import { ensureCoValueLoaded } from '../crud/ensure-covalue-core.js'
 import * as groups from '../groups/groups.js'
 import { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../spark-os-keys.js'
+import { extractHeaderFromStorageMessage, readHeaderAndContent } from './factory-index-headers.js'
+import {
+	bootstrapWarnState,
+	ensureCoValueReadyForIndex,
+	loadIndexColistContent,
+	resolveFactoryAuthoring,
+} from './factory-index-warm-load.js'
 
 const log = createLogger('maia-db')
-
-/** Warm-load for indexing; avoids universal read() (Sentrux: breaks SCC with collection-helpers). */
-async function ensureCoValueReadyForIndex(peer, coId, timeoutMs) {
-	try {
-		await ensureCoValueLoaded(peer, coId, { waitForAvailable: true, timeoutMs })
-		const core = peer.getCoValue(coId)
-		return Boolean(core && peer.isAvailable(core))
-	} catch {
-		return false
-	}
-}
-
-async function resolveFactoryAuthoring(peer, identifier, options) {
-	const { resolve } = await import('../factory/authoring-resolver.js')
-	return resolve(peer, identifier, options)
-}
-
-/**
- * @param {object} msg - Storage / NewContentMessage-style payload
- * @returns {import('@cojson/cojson').CoValueHeader|undefined}
- */
-export function extractHeaderFromStorageMessage(msg) {
-	if (!msg || typeof msg !== 'object') return undefined
-	let header = msg.header
-	if (!header && msg.new && typeof msg.new === 'object') {
-		for (const sessionId of Object.keys(msg.new)) {
-			const session = msg.new[sessionId]
-			if (session?.header) {
-				header = session.header
-				break
-			}
-			const txs = session?.newTransactions
-			if (Array.isArray(txs) && txs.length > 0 && txs[0]?.header) {
-				header = txs[0].header
-				break
-			}
-		}
-	}
-	return header
-}
-
-/**
- * Read header + content without retry loops. Never use on remote-only CoValues in write paths
- * that require content: `content` is null when CoJSON has not materialized a verified view yet.
- * @param {object} peer
- * @param {import('@cojson/cojson').CoValueCore} core
- * @returns {{ header: object | null; content: object | null; core: object }}
- */
-export function readHeaderAndContent(peer, core) {
-	if (!core) {
-		return { header: null, content: null, core: null }
-	}
-	const header = peer.getHeader?.(core) ?? null
-	if (!core.hasVerifiedContent?.()) {
-		return { header, content: null, core }
-	}
-	try {
-		const content = peer.getCurrentContent?.(core) ?? core.getCurrentContent?.() ?? null
-		return { header, content, core }
-	} catch {
-		return { header, content: null, core }
-	}
-}
 
 // Matches both °Spark/schema/... and @domain/schema/... (captures prefix + path)
 const SCHEMA_REF_MATCH = /^([°@][a-zA-Z0-9_-]+)\/factory\/(.+)$/
 
 /** Nanoid lookup CoMap lives under spark.os.indexes (not a schema index colist). */
 export const NANOID_INDEX_KEY = '@nanoids'
-
-/** Single load path for index colists (no universalRead fallback). */
-async function loadIndexColistContent(peer, indexColistId, timeoutMs = 8000) {
-	const start = Date.now()
-	let core
-	try {
-		core = await ensureCoValueLoaded(peer, indexColistId, { waitForAvailable: true, timeoutMs })
-	} catch {
-		return null
-	}
-	if (!core?.isAvailable?.()) return null
-	const content = peer.getCurrentContent?.(core) ?? core.getCurrentContent?.()
-	if (!content) return null
-	const contentType = content.cotype || content.type
-	if (contentType !== 'colist') return null
-	if (typeof process !== 'undefined' && process.env?.DEBUG && Date.now() - start > 2000) {
-		log.debug('[DEBUG loadIndexColistContent] slow', indexColistId, Date.now() - start, 'ms')
-	}
-	return content
-}
-
-let warnedRegistriesMissingDuringBootstrap = false
 
 /**
  * Ensure spark.os CoMap exists (account.sparks[spark].os)
@@ -156,8 +78,8 @@ async function ensureOsCoMap(peer, spark) {
 
 	const sparksTop = peer.account?.get?.('sparks')
 	if (!sparksTop?.startsWith('co_z')) {
-		if (!warnedRegistriesMissingDuringBootstrap) {
-			warnedRegistriesMissingDuringBootstrap = true
+		if (!bootstrapWarnState.registriesMissing) {
+			bootstrapWarnState.registriesMissing = true
 			log.warn(
 				'[SchemaIndexManager] account.sparks not set yet (bootstrap). Indexing deferred until account.sparks is anchored.',
 			)
@@ -250,7 +172,7 @@ export async function ensureIndexesCoMap(peer) {
 }
 
 /**
- * Create empty nanoid lookup CoMap (META_SCHEMA) — used by {@link migrateLegacySparkOsNanoids} and {@link ensureNanoidIndexCoMap}.
+ * Create empty nanoid lookup CoMap (META_SCHEMA) — used by {@link ensureNanoidIndexCoMap}.
  * @param {Object} peer
  * @returns {Promise<string|null>} co_z id or null
  */
@@ -277,69 +199,6 @@ async function createNanoidsCoMapId(peer) {
 }
 
 /**
- * Copy nanoid → co_z entries from legacy spark.os.nanoids into spark.os.indexes["@nanoids"], then remove top-level nanoids key.
- * No-op when there is no legacy pointer or nanoids already live under indexes.
- * @param {Object} peer
- * @returns {Promise<void>}
- */
-export async function migrateLegacySparkOsNanoids(peer) {
-	const osCoMap = await ensureOsCoMap(peer)
-	if (!osCoMap) return
-
-	const legacyId = osCoMap.get('nanoids')
-	if (typeof legacyId !== 'string' || !legacyId.startsWith('co_z')) {
-		return
-	}
-
-	const indexesContent = await ensureIndexesCoMap(peer)
-	if (!indexesContent || typeof indexesContent.set !== 'function') {
-		return
-	}
-
-	const newId = indexesContent.get(NANOID_INDEX_KEY)
-	if (typeof newId === 'string' && newId.startsWith('co_z')) {
-		try {
-			osCoMap.delete?.('nanoids')
-		} catch (_e) {}
-		return
-	}
-
-	try {
-		if (!(await ensureCoValueReadyForIndex(peer, legacyId, 10000))) return
-		const legacyCore = peer.getCoValue(legacyId)
-		if (!legacyCore?.isAvailable()) return
-		const legacyContent = legacyCore.getCurrentContent?.()
-		if (!legacyContent || typeof legacyContent.get !== 'function') return
-
-		const nanoidsCoMapId = await createNanoidsCoMapId(peer)
-		if (!nanoidsCoMapId?.startsWith?.('co_z')) return
-
-		indexesContent.set(NANOID_INDEX_KEY, nanoidsCoMapId)
-
-		if (!(await ensureCoValueReadyForIndex(peer, nanoidsCoMapId, 5000))) return
-		const nanoidsCore = peer.getCoValue(nanoidsCoMapId)
-		if (!nanoidsCore?.isAvailable()) return
-		const target = nanoidsCore.getCurrentContent?.()
-		if (!target || typeof target.set !== 'function') return
-
-		const keySource =
-			legacyContent.keys && typeof legacyContent.keys === 'function'
-				? legacyContent.keys()
-				: Object.keys(legacyContent)
-		for (const k of keySource) {
-			const v = legacyContent.get(k)
-			if (typeof v === 'string' && v.startsWith('co_z')) {
-				target.set(k, v)
-			}
-		}
-
-		try {
-			osCoMap.delete?.('nanoids')
-		} catch (_e) {}
-	} catch (_e) {}
-}
-
-/**
  * Resolve loaded CoMap content for a co_z id, or null.
  * @param {Object} peer
  * @param {string} coId
@@ -363,15 +222,13 @@ async function loadNanoidCoMapContentById(peer, coId) {
 }
 
 /**
- * Ensure spark.os.indexes["@nanoids"] CoMap exists (nanoid string → instance/factory co_z). Migrates legacy spark.os.nanoids on first use.
+ * Ensure spark.os.indexes["@nanoids"] CoMap exists (nanoid string → instance/factory co_z).
  * @param {Object} peer
  * @returns {Promise<import('@cojson/cojson').RawCoMap|null>}
  */
 export async function ensureNanoidIndexCoMap(peer) {
 	const osCoMap = await ensureOsCoMap(peer)
 	if (!osCoMap) return null
-
-	await migrateLegacySparkOsNanoids(peer)
 
 	const indexesContent = await ensureIndexesCoMap(peer)
 	if (!indexesContent || typeof indexesContent.get !== 'function') return null
@@ -415,7 +272,7 @@ export async function indexByNanoid(peer, coValueCore) {
 }
 
 /**
- * Load nanoid index CoMap content (nanoid → co_z) from spark.os.indexes["@nanoids"] (runs legacy migration when needed).
+ * Load nanoid index CoMap content (nanoid → co_z) from spark.os.indexes["@nanoids"].
  * @param {Object} peer
  * @returns {Promise<import('@cojson/cojson').RawCoMap|null>}
  */
@@ -657,11 +514,6 @@ async function isInternalCoValue(peer, coId) {
 				// Check if it's unknown colist
 				const unknownId = osContent.get('unknown')
 				if (coId === unknownId) {
-					return true
-				}
-
-				const nanoidsId = osContent.get('nanoids')
-				if (coId === nanoidsId) {
 					return true
 				}
 
@@ -1024,7 +876,7 @@ export async function isFactoryCoValue(peer, coValueCore) {
 		try {
 			let referencedCoValueCore = peer.getCoValue(schema)
 			if (!referencedCoValueCore) {
-				referencedCoValueCore = await ensureCoValueLoadedLazy(peer, schema, {
+				referencedCoValueCore = await ensureCoValueLoaded(peer, schema, {
 					waitForAvailable: true,
 					timeoutMs: 5000,
 				})
@@ -1298,3 +1150,5 @@ export async function removeFromIndex(peer, coId, factoryCoId = null) {
 		removeAllFromColist(unknownColist, coId)
 	}
 }
+
+export { extractHeaderFromStorageMessage, readHeaderAndContent } from './factory-index-headers.js'

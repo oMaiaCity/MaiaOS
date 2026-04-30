@@ -7,11 +7,19 @@
  */
 import { expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
-import { dirname, join } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { join } from 'node:path'
 
-const __dirname = dirname(fileURLToPath(import.meta.url))
-const readJs = readFileSync(join(__dirname, '../../../src/cojson/crud/read.js'), 'utf8')
+const crudDir = join(import.meta.dirname, '../../../src/cojson/crud')
+const readContractSources = [
+	'read-helpers.js',
+	'read-unified.js',
+	'read-single-and-sparks.js',
+	'read-collection.js',
+	'read-all-covalues.js',
+	'read-find-first.js',
+	'read.js',
+].map((f) => readFileSync(join(crudDir, f), 'utf8'))
+const readJs = readContractSources.join('\n')
 
 test('wireItemSubscription invokes updateStore after subscribe', () => {
 	const i = readJs.indexOf('const wireItemSubscription')

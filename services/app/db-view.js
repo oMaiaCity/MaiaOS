@@ -8,19 +8,31 @@ import {
 	createLogger,
 	createPerfTracer,
 	debugLog,
-	debugWarn,
 	resolveMaiaLoggingEnv,
 } from '@MaiaOS/logs'
-import { getSyncHttpBaseUrl } from '@MaiaOS/peer'
 // Import from kernel bundle - everything bundled (no direct @MaiaOS/db in production)
-import {
-	listAccountIdsFromIdentityIndex,
-	loadCapabilitiesGrants,
-	resolveAccountCoIdsToProfiles,
-	resolveGroupCoIdsToCapabilityNames,
-} from '@MaiaOS/runtime'
+import { resolveAccountCoIdsToProfiles, resolveGroupCoIdsToCapabilityNames } from '@MaiaOS/runtime'
 import { accountLoadingSpinnerHtml } from './account-loading-spinner-html.js'
+import { renderDashboard, renderVibeViewer } from './dashboard.js'
+import { hydrateCapabilitiesView } from './db-view/capabilities.js'
+import { hydrateCobinaryPreviews } from './db-view/cobinary-preview.js'
+import {
+	formatSyncServerCell,
+	getSyncServerTablesState,
+	getSyncStorageApiBase,
+	isStorageCoValuesTable,
+	loadSyncServerTablesOnce,
+	syncInspectorFetch,
+} from './db-view/sync-inspector.js'
+import { disposeGame, renderGame } from './maia-game-mount.js'
 import { MAIADB_LAYER_STACK_ICON_SVG } from './maia-icons.js'
+import {
+	escapeAttr,
+	escapeHtml,
+	getProfileAvatarHtml,
+	getSyncStatusMessage,
+	truncate,
+} from './utils.js'
 
 const appShellLog = createLogger('app')
 
@@ -31,138 +43,6 @@ const SYNC_SERVER_PAGE_SIZE = 500
 
 /** Only the first Maia DB paint should default-collapse sidebars; repeating would fight the user toggling Explorer. */
 let dbViewerSidebarsInitialStateApplied = false
-
-/** PG stores the table as `covalues` (identifier folded); inspector may list either spelling. */
-function isStorageCoValuesTable(name) {
-	return String(name || '').toLowerCase() === 'covalues'
-}
-
-const _isLocalAppHost =
-	typeof window !== 'undefined' &&
-	(window.location.hostname === 'localhost' ||
-		window.location.hostname === '127.0.0.1' ||
-		window.location.hostname === '[::1]')
-const _isDevEnv = import.meta.env?.DEV || _isLocalAppHost
-function _syncDomainForPeer() {
-	if (_isDevEnv) return null
-	return import.meta.env?.VITE_PEER_SYNC_HOST || null
-}
-function getSyncStorageApiBase() {
-	return getSyncHttpBaseUrl({
-		dev: _isDevEnv,
-		syncDomain: _syncDomainForPeer(),
-		vitePeerSyncHost: import.meta.env?.VITE_PEER_SYNC_HOST,
-		windowLocation: typeof window !== 'undefined' ? window.location : null,
-	})
-}
-
-/** Bearer + `/admin/storage` UCAN; same pattern as LLM chat. */
-async function syncInspectorFetch(path, init = {}) {
-	const base = getSyncStorageApiBase()
-	if (!base) throw new Error('Sync URL not configured')
-	const maia = globalThis.maia
-	const token = await maia?.getCapabilityToken?.({ cmd: '/admin/storage', args: {} })
-	if (!token) throw new Error('No /admin/storage capability')
-	const url = `${base}${path.startsWith('/') ? path : `/${path}`}`
-	const method = (init.method || 'GET').toUpperCase()
-	const hasBody = init.body != null && method !== 'GET' && method !== 'HEAD'
-	return fetch(url, {
-		...init,
-		headers: {
-			...(hasBody ? { 'Content-Type': 'application/json' } : {}),
-			...(init.headers || {}),
-			Authorization: `Bearer ${token}`,
-		},
-	})
-}
-
-let syncServerTablesCache = null
-let syncServerTablesError = null
-/** After probe: true = may use inspector API; false = hide SYNC SERVER (401/403 or no token). */
-let syncServerAllowed = false
-async function loadSyncServerTablesOnce() {
-	if (syncServerTablesCache !== null || syncServerTablesError !== null) return
-	const base = getSyncStorageApiBase()
-	if (!base) {
-		syncServerTablesError = 'Sync URL not configured'
-		syncServerAllowed = false
-		return
-	}
-	try {
-		const maia = globalThis.maia
-		const token = await maia?.getCapabilityToken?.({ cmd: '/admin/storage', args: {} })
-		if (!token) {
-			syncServerTablesCache = []
-			syncServerTablesError = null
-			syncServerAllowed = false
-			return
-		}
-		const pageSize = 500
-		const allTables = []
-		let offset = 0
-		let hasMore = true
-		while (hasMore) {
-			const r = await fetch(`${base}/api/v0/admin/storage/tables?limit=${pageSize}&offset=${offset}`, {
-				headers: { Authorization: `Bearer ${token}` },
-			})
-			if (r.status === 401 || r.status === 403) {
-				syncServerTablesCache = []
-				syncServerTablesError = null
-				syncServerAllowed = false
-				return
-			}
-			if (!r.ok) throw new Error(`${r.status} ${r.statusText}`)
-			const j = await r.json()
-			const page = j.tables || []
-			allTables.push(...page)
-			hasMore = j.hasMore === true && page.length > 0
-			offset += pageSize
-		}
-		syncServerTablesCache = allTables
-		syncServerTablesError = null
-		syncServerAllowed = true
-	} catch (e) {
-		syncServerTablesError = e?.message || String(e)
-		syncServerAllowed = true
-	}
-}
-
-/**
- * @param {unknown} val
- * @param {{ noTruncate?: boolean }} [opts] - full string for wide columns (e.g. header JSON); enables horizontal scroll
- */
-function formatSyncServerCell(val, opts = {}) {
-	const noTruncate = opts.noTruncate === true
-	if (val === null || val === undefined) {
-		return '<span class="sync-server-null">NULL</span>'
-	}
-	if (typeof val === 'string') {
-		if (val.startsWith('co_z')) {
-			return `<button type="button" class="sync-server-coid-link" data-maia-action="selectCoValue" data-coid="${escapeAttr(val)}">${escapeHtml(val)}</button>`
-		}
-		if (noTruncate) {
-			return `<span class="sync-server-cell-str sync-server-cell-full">${escapeHtml(val)}</span>`
-		}
-		const full = escapeAttr(val)
-		const short = val.length > 120 ? `${escapeHtml(val.slice(0, 120))}…` : escapeHtml(val)
-		return `<span class="sync-server-cell-str" title="${full}">${short}</span>`
-	}
-	if (typeof val === 'object') {
-		let s
-		try {
-			s = JSON.stringify(val)
-		} catch {
-			s = String(val)
-		}
-		if (noTruncate) {
-			return `<span class="sync-server-cell-json sync-server-cell-full">${escapeHtml(s)}</span>`
-		}
-		const full = escapeAttr(s)
-		const short = s.length > 120 ? `${escapeHtml(s.slice(0, 120))}…` : escapeHtml(s)
-		return `<span class="sync-server-cell-json" title="${full}">${short}</span>`
-	}
-	return escapeHtml(String(val))
-}
 
 /** Resolve schema definition from DB (dynamic - factory ref must be co_z) */
 async function getFactoryFromDb(maia, factoryRef) {
@@ -175,16 +55,6 @@ async function getFactoryFromDb(maia, factoryRef) {
 		return null
 	}
 }
-
-import { renderDashboard, renderVibeViewer } from './dashboard.js'
-import { disposeGame, renderGame } from './maia-game-mount.js'
-import {
-	escapeAttr,
-	escapeHtml,
-	getProfileAvatarHtml,
-	getSyncStatusMessage,
-	truncate,
-} from './utils.js'
 
 /** Header-resolved factory co_z (`$factoryCoId`) first; legacy fallback: flat `data.$factory` only. */
 function factoryRefForDbView(data) {
@@ -212,276 +82,6 @@ export function toggleMetadataInternalKey(btn) {
 		btn.textContent = '⊖'
 		btn.setAttribute('aria-label', 'Collapse')
 	}
-}
-
-function formatCapabilitiesExp(exp) {
-	if (typeof exp !== 'number' || exp <= 0) return '—'
-	const d = new Date(exp * 1000)
-	return d.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })
-}
-
-function formatCapabilitiesPolicyDisplay(pol) {
-	if (!Array.isArray(pol) || pol.length === 0) return '—'
-	return escapeHtml(JSON.stringify(pol))
-}
-
-function buildCapabilitiesGrantRowsHtml(grants, profiles) {
-	const nowSec = Math.floor(Date.now() / 1000)
-	return grants
-		.map((g, i) => {
-			const profile = profiles.get(g.sub)
-			const displayName = profile?.name ?? truncate(g.sub, 16)
-			const avatarHtml = getProfileAvatarHtml(profile?.image ?? null, {
-				size: 24,
-				className: 'capabilities-avatar',
-			})
-			const subjectHtml = `<span class="capabilities-subject-wrap">${avatarHtml}<span>${escapeHtml(displayName)}</span></span>`
-			const expired = typeof g.exp === 'number' && g.exp > 0 && g.exp < nowSec
-			const rowClass = `capabilities-row ${i % 2 === 0 ? 'capabilities-row-even' : 'capabilities-row-odd'}${expired ? ' capabilities-row-expired' : ' capabilities-row-active'}`
-			const currentExp = typeof g.exp === 'number' ? g.exp : 0
-			return `
-			<tr class="${rowClass}">
-				<td class="capabilities-cell capabilities-subject">${subjectHtml}</td>
-				<td class="capabilities-cell"><span class="capabilities-cmd">${escapeHtml(g.cmd || '—')}</span></td>
-				<td class="capabilities-cell capabilities-expiry">${escapeHtml(formatCapabilitiesExp(g.exp))}</td>
-				<td class="capabilities-cell capabilities-policy">${formatCapabilitiesPolicyDisplay(g.pol)}</td>
-				<td class="capabilities-cell"><code class="capabilities-id" data-maia-action="selectCoValue" data-coid="${escapeAttr(g.id)}" title="${escapeHtml(g.id)}">${truncate(g.id, 12)}</code></td>
-				<td class="capabilities-cell capabilities-actions">
-					<button type="button" class="capabilities-extend-btn" data-maia-action="extendCapability" data-cap-id="${escapeAttr(g.id)}" data-cap-exp="${currentExp}" title="Extend expiry by 1 day">+1 day</button>
-					<button type="button" class="capabilities-revoke-btn" data-maia-action="revokeCapability" data-revoke-id="${escapeAttr(g.id)}" data-cmd="${escapeHtml(g.cmd || '')}" data-sub="${escapeHtml(g.sub || '')}" title="Revoke capability">Delete</button>
-				</td>
-			</tr>
-		`
-		})
-		.join('')
-}
-
-/** Load grants + profiles after first paint (sync continues in background). */
-/** Human registry members + approval (guardian grants /sync/write + /llm/chat). */
-async function hydrateMembersView(maia) {
-	const tbody = document.getElementById('capabilities-members-tbody')
-	const banner = document.getElementById('capabilities-members-banner')
-	if (!tbody) return
-	try {
-		const peer = maia?.dataEngine?.peer
-		if (!peer?.account?.get) {
-			tbody.innerHTML = '<tr class="capabilities-empty"><td colspan="5">Peer not ready</td></tr>'
-			if (banner) banner.remove()
-			return
-		}
-		const account = maia.id?.maiaId
-		if (!account?.id?.startsWith?.('co_z')) {
-			tbody.innerHTML = '<tr class="capabilities-empty"><td colspan="5">Account not ready</td></tr>'
-			if (banner) banner.remove()
-			return
-		}
-		const accountStore = await maia.do({ op: 'read', factory: '@account', key: account.id })
-		const accountData = accountStore.value || accountStore
-		const sparksId = accountData?.sparks
-		if (!sparksId?.startsWith('co_z')) {
-			tbody.innerHTML =
-				'<tr class="capabilities-empty"><td colspan="5">No sparks linked yet (complete signup with sync)</td></tr>'
-			if (banner) banner.remove()
-			return
-		}
-		if (peer.dbEngine?.resolveSystemFactories) {
-			await peer.dbEngine.resolveSystemFactories()
-		}
-		const accountIdKeys = await listAccountIdsFromIdentityIndex(peer, 'human')
-		if (!accountIdKeys?.length) {
-			tbody.innerHTML =
-				'<tr class="capabilities-empty"><td colspan="5">No humans in identity index yet</td></tr>'
-			if (banner) banner.remove()
-			return
-		}
-		const grants = await loadCapabilitiesGrants(maia)
-		const nowSec = Math.floor(Date.now() / 1000)
-		const profiles =
-			accountIdKeys.length > 0 ? await resolveAccountCoIdsToProfiles(maia, accountIdKeys) : new Map()
-
-		const rows = accountIdKeys
-			.map((aid) => {
-				const gWrite = grants.find((g) => g.sub === aid && g.cmd === '/sync/write' && g.exp > nowSec)
-				const gLlm = grants.find((g) => g.sub === aid && g.cmd === '/llm/chat' && g.exp > nowSec)
-				const approved = !!(gWrite && gLlm)
-				const expVals = [gWrite?.exp, gLlm?.exp].filter((x) => typeof x === 'number' && x > nowSec)
-				const earliestExp = expVals.length ? Math.min(...expVals) : null
-				const profile = profiles.get(aid)
-				const displayName = profile?.name ?? truncate(aid, 16)
-				const avatarHtml = getProfileAvatarHtml(profile?.image ?? null, {
-					size: 24,
-					className: 'capabilities-avatar',
-				})
-				const subjectHtml = `<span class="capabilities-subject-wrap">${avatarHtml}<span>${escapeHtml(displayName)}</span></span>`
-				const statusBadge = approved
-					? '<span class="capabilities-member-status capabilities-member-approved">Approved</span>'
-					: '<span class="capabilities-member-status capabilities-member-pending">Pending</span>'
-				const expCell =
-					approved && earliestExp != null ? escapeHtml(formatCapabilitiesExp(earliestExp)) : '—'
-				const actions = approved
-					? `<button type="button" class="capabilities-revoke-btn" data-maia-action="revokeMember" data-account-id="${escapeAttr(aid)}" title="Revoke /sync/write and /llm/chat">Revoke</button>`
-					: `<button type="button" class="capabilities-extend-btn" data-maia-action="approveMember" data-account-id="${escapeAttr(aid)}" title="Grant /sync/write and /llm/chat (30d)">Approve</button>`
-				return {
-					accountId: aid,
-					approved,
-					sortKey: approved ? 1 : 0,
-					earliestExp: earliestExp ?? 0,
-					html: `
-					<tr class="capabilities-row ${approved ? 'capabilities-row-active' : ''}">
-						<td class="capabilities-cell capabilities-subject">${subjectHtml}</td>
-						<td class="capabilities-cell"><code class="capabilities-id" data-maia-action="selectCoValue" data-coid="${escapeAttr(aid)}" title="${escapeHtml(aid)}">${truncate(aid, 12)}</code></td>
-						<td class="capabilities-cell">${statusBadge}</td>
-						<td class="capabilities-cell capabilities-expiry">${expCell}</td>
-						<td class="capabilities-cell capabilities-actions">${actions}</td>
-					</tr>`,
-				}
-			})
-			.sort((a, b) => {
-				if (a.sortKey !== b.sortKey) return a.sortKey - b.sortKey
-				if (a.approved !== b.approved) return 0
-				return (a.earliestExp || 0) - (b.earliestExp || 0)
-			})
-
-		tbody.innerHTML =
-			rows.length > 0
-				? rows.map((r) => r.html).join('')
-				: '<tr class="capabilities-empty"><td colspan="5">No humans in registry</td></tr>'
-		const countEl = document.getElementById('capabilities-members-count')
-		if (countEl) countEl.textContent = `${rows.length} human(s)`
-		if (banner) banner.remove()
-	} catch (e) {
-		debugWarn('app', 'maia-db', 'hydrateMembersView failed', e?.message ?? e)
-		tbody.innerHTML = `<tr class="capabilities-empty"><td colspan="5">${escapeHtml(String(e?.message ?? e ?? 'Error'))}</td></tr>`
-		if (banner) banner.remove()
-	}
-}
-
-async function hydrateCapabilitiesView(maia) {
-	try {
-		const grants = await perfAppMaiaDb.measure('loadCapabilitiesGrants', () =>
-			loadCapabilitiesGrants(maia),
-		)
-		let profiles = new Map()
-		if (grants.length > 0) {
-			const subIds = [...new Set(grants.map((g) => g.sub).filter(Boolean))]
-			profiles = await perfAppMaiaDb.measure('resolveAccountCoIdsToProfiles (subjects)', () =>
-				resolveAccountCoIdsToProfiles(maia, subIds),
-			)
-		}
-		debugLog('app', 'maia-db', 'capabilities grants loaded', { count: grants.length })
-		const tbody = document.getElementById('capabilities-tbody')
-		if (!tbody) return
-		tbody.innerHTML =
-			grants.length > 0
-				? buildCapabilitiesGrantRowsHtml(grants, profiles)
-				: '<tr class="capabilities-empty"><td colspan="6">No capability grants in the Capability index</td></tr>'
-		const banner = document.getElementById('capabilities-sync-banner')
-		if (banner) banner.remove()
-		const countEl = document.getElementById('capabilities-grant-count')
-		if (countEl) countEl.textContent = `${grants.length} grant(s)`
-		void hydrateMembersView(maia)
-	} catch (capErr) {
-		debugWarn('app', 'maia-db', 'loadCapabilitiesGrants failed', capErr?.message ?? capErr)
-		const tbody = document.getElementById('capabilities-tbody')
-		if (tbody) {
-			const msg = escapeHtml(String(capErr?.message ?? capErr ?? 'Unknown error'))
-			tbody.innerHTML = `<tr class="capabilities-empty"><td colspan="6">Failed to load grants: ${msg}</td></tr>`
-		}
-		const banner = document.getElementById('capabilities-sync-banner')
-		if (banner) banner.remove()
-		void hydrateMembersView(maia)
-	}
-}
-
-// Cache for CoBinary image data URLs - survives re-renders, enables progressive reactive preview
-const cobinaryPreviewCache = new Map()
-
-function extractDataUrl(res) {
-	const dataUrl = res?.dataUrl ?? res?.data?.dataUrl ?? (res?.ok === true && res?.data?.dataUrl)
-	if (res && !dataUrl) {
-		debugWarn('app', 'cobinary', 'extractDataUrl: no dataUrl in response', {
-			keys: Object.keys(res || {}),
-			hasData: !!res?.data,
-			dataKeys: res?.data ? Object.keys(res.data) : [],
-		})
-	}
-	return dataUrl ?? null
-}
-
-function loadBinaryWithRetry(maia, coId, maxAttempts = 4) {
-	const attempt = (n) =>
-		maia
-			.do({ op: 'loadBinaryAsBlob', coId })
-			.then((res) => extractDataUrl(res))
-			.catch((err) => {
-				const msg = err?.message ?? ''
-				const retryable =
-					msg.includes('not found') ||
-					msg.includes('not available') ||
-					msg.includes('still be loading') ||
-					msg.includes('no binary data') ||
-					msg.includes('stream not finished') ||
-					err?.name === 'NotReadableError'
-				if (n < maxAttempts && retryable) {
-					return new Promise((r) => setTimeout(r, 300)).then(() => attempt(n + 1))
-				}
-				throw err
-			})
-	return attempt(0)
-}
-
-/** Hydrate cobinary image previews: load from cache or fetch, then set img.src. Runs after DOM update. */
-export function hydrateCobinaryPreviews(maia) {
-	debugLog('app', 'cobinary', 'hydrateCobinaryPreviews', { hasMaia: !!maia?.do })
-	if (!maia?.do) return
-	const imgs = document.querySelectorAll('img[data-co-id]')
-	debugLog('app', 'cobinary', 'hydrateCobinaryPreviews found imgs', imgs.length)
-	imgs.forEach((img) => {
-		const coId = img.getAttribute('data-co-id')
-		if (!coId?.startsWith('co_z')) {
-			debugLog('app', 'cobinary', 'hydrateCobinaryPreviews skip invalid coId', { coId })
-			return
-		}
-		if (img.src && (img.src.startsWith('data:') || img.src.startsWith('blob:'))) return
-		const cached = cobinaryPreviewCache.get(coId)
-		if (cached?.dataUrl) {
-			img.src = cached.dataUrl
-			return
-		}
-		if (cached?.loading) {
-			cached.loading.then((dataUrl) => {
-				const current = document.querySelector(`img[data-co-id="${coId}"]`)
-				if (current) {
-					if (dataUrl) current.src = dataUrl
-					else current.alt = 'Preview unavailable'
-				}
-			})
-			return
-		}
-		debugLog('app', 'cobinary', 'loadBinaryAsBlob start', { coId })
-		const loading = loadBinaryWithRetry(maia, coId)
-			.then((dataUrl) => {
-				cobinaryPreviewCache.set(coId, { dataUrl })
-				debugLog('app', 'cobinary', 'loadBinaryAsBlob done', {
-					coId,
-					hasDataUrl: !!dataUrl,
-					len: dataUrl?.length,
-				})
-				return dataUrl
-			})
-			.catch((err) => {
-				debugWarn('app', 'cobinary', 'loadBinaryAsBlob failed', { coId, err: err?.message })
-				return null
-			})
-		cobinaryPreviewCache.set(coId, { loading })
-		loading.then((dataUrl) => {
-			const current = document.querySelector(`img[data-co-id="${coId}"]`)
-			if (current) {
-				if (dataUrl) current.src = dataUrl
-				else current.alt = 'Preview unavailable'
-			}
-		})
-	})
 }
 
 export async function renderApp(
@@ -753,6 +353,7 @@ export async function renderApp(
 		const _node = maia.id.node
 
 		await loadSyncServerTablesOnce()
+		const { allowed: syncServerAllowed } = getSyncServerTablesState()
 		let effectiveSyncTable = syncServerSelectedTable
 		if (syncServerAllowed === false && syncServerSelectedTable) {
 			clearSyncServerSelectionIfDenied?.()
@@ -1689,7 +1290,8 @@ export async function renderApp(
 			})
 			.join('')
 
-		const syncTableList = syncServerTablesCache || []
+		const { cache: syncCache, error: syncTablesErr } = getSyncServerTablesState()
+		const syncTableList = syncCache || []
 		const syncServerSidebarHtml = syncTableList
 			.map((t) => {
 				const active = effectiveSyncTable === t
@@ -1702,8 +1304,8 @@ export async function renderApp(
 		`
 			})
 			.join('')
-		const syncServerSidebarFooter = syncServerTablesError
-			? `<div class="sync-server-sidebar-error" role="status">${escapeHtml(syncServerTablesError)}</div>`
+		const syncServerSidebarFooter = syncTablesErr
+			? `<div class="sync-server-sidebar-error" role="status">${escapeHtml(syncTablesErr)}</div>`
 			: ''
 
 		perfAppMaiaDb.step('data + sidebars ready → paint', {

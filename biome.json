@@ -111,16 +111,6 @@
 			}
 		},
 		{
-			"includes": ["libs/FUTURE/**"],
-			"linter": {
-				"rules": {
-					"suspicious": {
-						"noConsole": "off"
-					}
-				}
-			}
-		},
-		{
 			"includes": ["**/*.maia"],
 			"formatter": {
 				"enabled": true

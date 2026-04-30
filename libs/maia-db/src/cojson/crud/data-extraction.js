@@ -325,7 +325,6 @@ export async function resolveCoValueReferences(
 	maxDepth = 15,
 	currentDepth = 0,
 ) {
-	// TODO: temporarily 15
 	const { fields = null, timeoutMs = 2000 } = options
 
 	if (currentDepth > maxDepth) {
@@ -433,7 +432,6 @@ async function resolveCoId(
 	maxDepth = 15,
 	currentDepth = 0,
 ) {
-	// TODO: temporarily 15
 	const { schemas = null, timeoutMs = 2000 } = options
 
 	// CRITICAL: Check visited set first to prevent circular references within this resolution pass

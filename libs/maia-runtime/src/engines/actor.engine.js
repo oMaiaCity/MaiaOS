@@ -12,6 +12,12 @@
  */
 
 import { normalizeCoValueData } from '@MaiaOS/db'
+import {
+	loadContextStore,
+	readStore,
+	resolveSchemaFromCoValue,
+	resolveToCoId,
+} from '@MaiaOS/db/resolve-helpers'
 import { createOpsLogger } from '@MaiaOS/logs'
 import { ACTOR_NANOID_TO_EXECUTABLE_KEY } from '@MaiaOS/universe'
 import { containsExpressions } from '@MaiaOS/validation/expression-resolver'
@@ -22,12 +28,6 @@ import {
 	traceActorProcessEvents,
 	traceInbox,
 } from '../utils/debug.js'
-import {
-	loadContextStore,
-	readStore,
-	resolveSchemaFromCoValue,
-	resolveToCoId,
-} from '../utils/resolve-helpers.js'
 import {
 	sanitizePayloadForValidation,
 	stripInfrastructureKeysForValidation,

@@ -59,7 +59,7 @@ async function createBlobStore() {
 /**
  * Get storage instance based on runtime and configuration
  * Agent mode (`mode: 'agent'`): PEER_SYNC_STORAGE, PEER_DB_PATH — Node sync server / headless agents.
- * Browser (`mode: 'human'`): OPFS first, IndexedDB fallback (MAIA_STORAGE=indexeddb to force). Used for **passkey** accounts and for **secret key dev** sign-in (both are human-operated browser sessions; see maia-docs `account-authentication-types.md`).
+ * Browser (`mode: 'human'`): OPFS first, IndexedDB fallback (MAIA_STORAGE=indexeddb to force). Used for **passkey** accounts and for **secret key dev** sign-in (both are human-operated browser sessions).
  *
  * @param {Object} [options]
  * @param {'human' | 'agent'} [options.mode='human']

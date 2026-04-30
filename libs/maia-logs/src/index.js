@@ -42,7 +42,6 @@ export {
 } from './perf.js'
 export {
 	isTraceEnabled,
-	TRACE_STORAGE_KEY,
 	traceActorProcessEvents,
 	traceContextOnError,
 	traceDataCreate,

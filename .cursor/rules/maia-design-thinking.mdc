@@ -201,7 +201,7 @@ Milestone 3: [Docs & review] → Update docs → Final test → Approval ✋
 **Human Feedback:** Present summary, testing results, trade-offs.
 - Questions: Meets requirements? Root cause solved? Architecture improved? Edge cases? Maintainable? Ship?
 
-**Documentation:** Update `maia-docs/developers/` (deep), `creators/` (how-to), `getting-started/` (beginner). Skip `LLM_*.md`.
+**Documentation:** Use per-package `README.md` and JSDoc on public APIs.
 
 **What to write:** Start with "why"—what problem does this solve? Show don't tell—working examples with comments. Clear language, avoid jargon unless explained.
 

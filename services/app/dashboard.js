@@ -3,8 +3,8 @@
  * Handles dashboard screen and vibe viewer rendering
  */
 
-import { createPerfTracer } from '@MaiaOS/logs'
-import { resolveAccountCoIdsToProfiles } from '@MaiaOS/runtime'
+import { createLogger, createPerfTracer } from '@MaiaOS/logs'
+import { resolveAccountCoIdsToProfiles, waitForStoreReady } from '@MaiaOS/runtime'
 import { accountLoadingSpinnerHtml } from './account-loading-spinner-html.js'
 import { findSessionChatIntentActorId, resolveChatVibeCoId } from './maia-ai-global.js'
 import { MAIADB_LAYER_STACK_ICON_SVG } from './maia-icons.js'
@@ -16,6 +16,12 @@ import {
 	truncate,
 	truncateWords,
 } from './utils.js'
+
+const dashLog = createLogger('app')
+
+/** Max wait for account + sparks registry reactive stores before reading dashboard structure. */
+const DASHBOARD_ACCOUNT_WAIT_MS = 20_000
+const DASHBOARD_SPARK_CHAIN_WAIT_MS = 15_000
 
 /** Neutral placeholder when manifest icon CoText is not yet available (icons come from runtime CoValues, not bundled registry). */
 const VIBE_ICON_PLACEHOLDER_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="7" fill="none" stroke="currentColor" stroke-width="1.5" opacity="0.35"/></svg>`
@@ -95,6 +101,13 @@ async function loadSparksFromAccount(maia) {
 	try {
 		const account = maia.id.maiaId
 		const accountStore = await maia.do({ op: 'read', factory: '@account', key: account.id })
+		try {
+			await waitForStoreReady(accountStore, account.id, DASHBOARD_ACCOUNT_WAIT_MS)
+		} catch (e) {
+			dashLog.warn('[dashboard] account read not ready (sparks may be empty until sync)', {
+				message: e?.message,
+			})
+		}
 		const accountData = accountStore.value || accountStore
 
 		const sparksId = accountData?.sparks
@@ -103,6 +116,11 @@ async function loadSparksFromAccount(maia) {
 		}
 
 		const sparksStore = await maia.do({ op: 'read', factory: sparksId, key: sparksId })
+		try {
+			await waitForStoreReady(sparksStore, sparksId, DASHBOARD_SPARK_CHAIN_WAIT_MS)
+		} catch (e) {
+			dashLog.warn('[dashboard] sparks registry not ready', { message: e?.message })
+		}
 		const sparksData = sparksStore.value || sparksStore
 
 		if (!sparksData || typeof sparksData !== 'object' || Array.isArray(sparksData)) return sparks
@@ -132,7 +150,9 @@ async function loadSparksFromAccount(maia) {
 			}),
 		)
 		sparks.push(...sparkResults)
-	} catch (_error) {}
+	} catch (e) {
+		dashLog.warn('[dashboard] loadSparksFromAccount failed', { message: e?.message })
+	}
 	return sparks
 }
 
@@ -148,16 +168,43 @@ async function loadVibesFromSpark(maia, sparkCoId) {
 	if (!maia || !sparkCoId?.startsWith?.('co_')) return vibes
 	try {
 		const sparkStore = await maia.do({ op: 'read', factory: null, key: sparkCoId })
+		try {
+			await waitForStoreReady(sparkStore, sparkCoId, DASHBOARD_SPARK_CHAIN_WAIT_MS)
+		} catch (e) {
+			dashLog.warn('[dashboard] spark CoMap not ready', {
+				spark: sparkCoId.slice(0, 12),
+				message: e?.message,
+			})
+			return vibes
+		}
 		const sparkData = sparkStore?.value ?? sparkStore
 		const osId = sparkData?.os
 		if (typeof osId !== 'string' || !osId.startsWith('co_')) return vibes
 
 		const osStore = await maia.do({ op: 'read', factory: null, key: osId })
+		try {
+			await waitForStoreReady(osStore, osId, DASHBOARD_SPARK_CHAIN_WAIT_MS)
+		} catch (e) {
+			dashLog.warn('[dashboard] spark.os not ready', {
+				os: osId.slice(0, 12),
+				message: e?.message,
+			})
+			return vibes
+		}
 		const osData = osStore?.value ?? osStore
 		const vibesId = osData?.vibes
 		if (typeof vibesId !== 'string' || !vibesId.startsWith('co_')) return vibes
 
 		const vibesStore = await maia.do({ op: 'read', factory: vibesId, key: vibesId })
+		try {
+			await waitForStoreReady(vibesStore, vibesId, DASHBOARD_SPARK_CHAIN_WAIT_MS)
+		} catch (e) {
+			dashLog.warn('[dashboard] vibes registry not ready', {
+				vibes: vibesId.slice(0, 12),
+				message: e?.message,
+			})
+			return vibes
+		}
 		const vibesData = vibesStore?.value ?? vibesStore
 		if (!vibesData || typeof vibesData !== 'object' || Array.isArray(vibesData)) return vibes
 
@@ -191,7 +238,12 @@ async function loadVibesFromSpark(maia, sparkCoId) {
 			}),
 		)
 		vibes.push(...vibeEntries)
-	} catch (_error) {}
+	} catch (e) {
+		dashLog.warn('[dashboard] loadVibesFromSpark failed', {
+			spark: sparkCoId?.slice?.(0, 12),
+			message: e?.message,
+		})
+	}
 	return vibes
 }
 
@@ -264,7 +316,9 @@ export async function renderDashboard(
 			className: 'navbar-avatar',
 			syncState,
 		})
-	} catch (_e) {}
+	} catch (e) {
+		dashLog.error('[dashboard] renderDashboard failed', { message: e?.message })
+	}
 	if (accountId && !accountAvatarHtml) {
 		accountAvatarHtml = getProfileAvatarHtml(null, { size: 44, className: 'navbar-avatar' })
 	}

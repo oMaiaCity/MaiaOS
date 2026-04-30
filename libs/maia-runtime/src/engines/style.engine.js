@@ -1,4 +1,4 @@
-import { resolveSchemaFromCoValue } from '../utils/resolve-helpers.js'
+import { resolveSchemaFromCoValue } from '@MaiaOS/db/resolve-helpers'
 import { CSS_INJECTION_PATTERNS, FORBIDDEN_PATH_KEYS } from '../utils/security.js'
 import { compileCSSProperties, toKebabCase } from '../utils/utils.js'
 

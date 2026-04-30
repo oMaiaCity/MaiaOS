@@ -3,12 +3,14 @@
 	"selectedNoteId": null,
 	"selectedNote": {
 		"factory": "°maia/factory/note.factory.maia",
-		"filter": {
-			"id": "$selectedNoteId"
-		},
-		"map": {
-			"id": "id",
-			"content": "$content"
+		"options": {
+			"filter": {
+				"id": "$selectedNoteId"
+			},
+			"map": {
+				"id": "id",
+				"content": "$content"
+			}
 		}
 	}
 }
