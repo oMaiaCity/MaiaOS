@@ -3,7 +3,6 @@
  */
 
 import {
-	emitLog,
 	getLoggingMode,
 	resolveLevel,
 	resolveMode,
@@ -13,6 +12,7 @@ import {
 import { applyLogModeFromEnv } from './log-mode.js'
 import { createOpsLogger } from './ops.js'
 import { createPerfTracer } from './perf.js'
+import { createLogger as createSubsystemLogger } from './subsystem-logger.js'
 import { createConsoleTransport } from './transports/console.js'
 
 /** Known-transient PG driver errors that should not take down a long-running server. */
@@ -57,26 +57,10 @@ function installProcessGuards() {
  * @param {{ applyLevelGate?: boolean }} [opts]
  */
 export function createLogger(subsystem, opts = {}) {
-	const applyLevelGate = opts.applyLevelGate !== false
+	const base = createSubsystemLogger(subsystem, opts)
 	return {
-		error: (...args) => emitLog('error', subsystem, args, { applyLevelGate }),
-		warn: (...args) => emitLog('warn', subsystem, args, { applyLevelGate }),
-		info: (...args) => emitLog('info', subsystem, args, { applyLevelGate }),
-		log: (...args) => emitLog('log', subsystem, args, { applyLevelGate }),
-		/** Positive completion (pretty console: `app`/`sync` = green message, colored `[prefix]`; `dev` = grey; same gate as `.log`). */
-		success: (...args) => emitLog('success', subsystem, args, { applyLevelGate }),
-		debug: (...args) => {
-			if (globalThis.__MAIA_STRIP__ === false) return
-			if (globalThis.__MAIA_DEBUG__ === false) return
-			emitLog('debug', subsystem, args, { applyLevelGate })
-		},
-		/**
-		 * @param {string} name
-		 */
+		...base,
 		perf: (name) => createPerfTracer(subsystem, name),
-		/**
-		 * @param {string} sub
-		 */
 		child: (sub) => createLogger(subsystem ? `${subsystem}:${sub}` : sub, opts),
 	}
 }

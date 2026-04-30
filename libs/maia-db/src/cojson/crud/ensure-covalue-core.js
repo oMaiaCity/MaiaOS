@@ -2,7 +2,7 @@
  * Core CoValue load/wait helpers — no dependency on factory indexing (avoids index-manager ↔ collection-helpers cycles).
  */
 
-import { createLogger } from '@MaiaOS/logs'
+import { createLogger } from '@MaiaOS/logs/subsystem-logger'
 
 const log = createLogger('maia-db')
 
