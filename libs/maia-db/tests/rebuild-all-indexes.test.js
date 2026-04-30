@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { rebuildAllIndexes } from '../src/cojson/indexing/factory-index-rebuild.js'
+import { rebuildAllIndexes } from '../src/modules/cojson-impl.js'
 
 describe('rebuildAllIndexes', () => {
 	test('completes with empty coValues map', async () => {

@@ -112,6 +112,15 @@
 			}
 		},
 		{
+			"includes": ["libs/maia-db/src/modules/cojson-impl.js"],
+			"formatter": {
+				"enabled": false
+			},
+			"linter": {
+				"enabled": false
+			}
+		},
+		{
 			"includes": ["**/*.maia"],
 			"formatter": {
 				"enabled": true

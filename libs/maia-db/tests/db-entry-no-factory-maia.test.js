@@ -14,8 +14,8 @@ const pkgRoot = join(_dir, '..')
 const filesMustNotReferenceMaiaImports = [
 	'src/index.js',
 	'src/primitives/factory-registry.js',
-	'src/cojson/cotypes/coMap.js',
-	'src/cojson/cotypes/coList.js',
+	'src/_cojson_src/cotypes/coMap.js',
+	'src/_cojson_src/cotypes/coList.js',
 ]
 
 describe('@MaiaOS/db public graph — no universe .maia imports', () => {

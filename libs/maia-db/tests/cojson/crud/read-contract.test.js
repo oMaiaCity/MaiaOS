@@ -9,7 +9,7 @@ import { expect, test } from 'bun:test'
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 
-const crudDir = join(import.meta.dirname, '../../../src/cojson/crud')
+const crudDir = join(import.meta.dirname, '../../../src/_cojson_src/crud')
 const readContractSources = [
 	'read-helpers.js',
 	'read-single-and-sparks.js',

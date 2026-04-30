@@ -1,8 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import {
-	ensureCoValueAvailable,
-	ensureCoValueLoaded,
-} from '../src/cojson/crud/collection-helpers.js'
+import { ensureCoValueAvailable, ensureCoValueLoaded } from '../src/modules/cojson-impl.js'
 
 describe('ensureCoValueLoaded', () => {
 	test('acquires core when getCoValue is null until loadCoValueCore registers it', async () => {

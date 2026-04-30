@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { factoryDefAllowsInstanceIndexing } from '../src/cojson/indexing/factory-index-manager.js'
+import { factoryDefAllowsInstanceIndexing } from '../src/modules/cojson-impl.js'
 
 describe('factoryDefAllowsInstanceIndexing', () => {
 	test('true only when indexing is strictly true', () => {

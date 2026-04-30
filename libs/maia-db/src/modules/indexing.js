@@ -1,5 +1,5 @@
 /**
- * Indexing pipeline entry (prefer `@MaiaOS/db/cojson/indexing/*` subpaths for granular imports).
+ * Indexing pipeline entry.
  */
 
-export { applyPersistentCoValueIndexing } from '../cojson/indexing/factory-index-manager.js'
+export { applyPersistentCoValueIndexing } from './cojson-impl.js'

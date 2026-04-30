@@ -95,8 +95,10 @@ for (const file of walkDir(modulesDir)) {
 		if (spec.startsWith('../modules/')) {
 			fail(`[maia-db modules] must not import sibling module:\n  ${rel(file)}\n  ${spec}`)
 		}
-		if (spec.startsWith('./')) {
-			fail(`[maia-db modules] must not use ./ imports (use ../cojson or ../primitives):\n  ${rel(file)}\n  ${spec}`)
+		if (spec.startsWith('./') && spec !== './cojson-impl.js') {
+			fail(
+				`[maia-db modules] only ./cojson-impl.js is allowed for ./ imports:\n  ${rel(file)}\n  ${spec}`,
+			)
 		}
 	}
 }

@@ -4,7 +4,7 @@ import {
 	readStore,
 	resolveFactoryFromCoValue,
 	resolveToCoId,
-} from '../src/cojson/resolve-helpers.js'
+} from '../src/modules/cojson-impl.js'
 
 describe('resolve-helpers', () => {
 	test('readStore returns null when dataEngine has no peer', async () => {

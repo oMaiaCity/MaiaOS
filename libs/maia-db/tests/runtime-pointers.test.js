@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 
 describe('peer.infra', () => {
 	test('loadInfraFromSparkOs populates peer.infra from spark.os', async () => {
-		const { loadInfraFromSparkOs } = await import('../src/cojson/factory/infra-from-spark-os.js')
+		const { loadInfraFromSparkOs } = await import('../src/modules/cojson-impl.js')
 
 		const osContent = {
 			get(k) {

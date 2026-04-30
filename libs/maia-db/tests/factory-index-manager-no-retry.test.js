@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { readHeaderAndContent } from '../src/cojson/indexing/factory-index-manager.js'
+import { readHeaderAndContent } from '../src/modules/cojson-impl.js'
 
 describe('readHeaderAndContent (no verified-state retry path)', () => {
 	test('returns null content when getCurrentContent would be unsafe (not verified)', () => {

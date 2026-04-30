@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test'
-import { validateInvite } from '../src/cojson/helpers/invite-validate.js'
+import { validateInvite } from '../src/modules/cojson-impl.js'
 
 describe('validateInvite', () => {
 	test('permissive default', () => {

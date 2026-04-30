@@ -2,7 +2,7 @@ import { describe, expect, test } from 'bun:test'
 import {
 	extractHeaderFromStorageMessage,
 	readHeaderAndContent,
-} from '../src/cojson/indexing/factory-index-manager.js'
+} from '../src/modules/cojson-impl.js'
 
 describe('msg-based indexing helpers', () => {
 	test('extractHeaderFromStorageMessage reads top-level header', () => {
@@ -23,7 +23,7 @@ describe('msg-based indexing helpers', () => {
 
 describe('indexFromMessage export', () => {
 	test('is exported', async () => {
-		const { indexFromMessage } = await import('../src/cojson/indexing/factory-index-manager.js')
+		const { indexFromMessage } = await import('../src/modules/cojson-impl.js')
 		expect(typeof indexFromMessage).toBe('function')
 	})
 })

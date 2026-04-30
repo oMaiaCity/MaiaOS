@@ -188,7 +188,7 @@ export function resolveQueryReactive(peer, queryDef, options = {}) {
  * @param {Object} [options] - Options
  * @returns {ReactiveStore} ReactiveStore that updates when dependency resolves
  */
-export function resolveReactive(peer, identifier, options = {}) {
+export function resolveReactiveDependency(peer, identifier, options = {}) {
 	// Handle query definition objects
 	if (identifier && typeof identifier === 'object' && !Array.isArray(identifier)) {
 		if (identifier.factory) {

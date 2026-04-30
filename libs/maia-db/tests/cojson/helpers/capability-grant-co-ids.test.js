@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'bun:test'
-import { collectCapabilityGrantCoIdsFromColistContent } from '../../../src/cojson/helpers/capability-grant-co-ids.js'
+import { collectCapabilityGrantCoIdsFromColistContent } from '../../../src/modules/cojson-impl.js'
 
 describe('collectCapabilityGrantCoIdsFromColistContent', () => {
 	it('collects string co-ids from colist items array', () => {

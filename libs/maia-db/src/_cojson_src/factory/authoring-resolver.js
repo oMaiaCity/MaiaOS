@@ -21,7 +21,7 @@ import { removeIdFields } from '@MaiaOS/validation'
 import { normalizeCoValueData } from '../../primitives/data-extraction.js'
 import { ensureCoValueLoaded } from '../../primitives/ensure-covalue-core.js'
 import { ReactiveStore } from '../../primitives/reactive-store.js'
-import { resolveReactive as resolveReactiveBase } from '../crud/reactive-resolver.js'
+import { resolveReactiveDependency as resolveReactiveBase } from '../crud/reactive-resolver.js'
 import { waitForStoreReady } from '../crud/read-operations.js'
 
 function readViaPeer(peer, coId, options) {

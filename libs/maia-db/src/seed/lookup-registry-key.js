@@ -4,11 +4,13 @@
  */
 import { FACTORY_REF_PATTERN, INSTANCE_REF_PATTERN, VIBE_REF_PATTERN } from '@MaiaOS/validation'
 import { logicalRefToSeedNanoid } from '@MaiaOS/validation/identity-from-maia-path.js'
-import { read as universalRead } from '../cojson/crud/read.js'
-import { waitForStoreReady } from '../cojson/crud/read-operations.js'
-import { resolve } from '../cojson/factory/authoring-resolver.js'
-import { resolveSparkCoId } from '../cojson/groups/groups.js'
-import { loadNanoidIndex } from '../cojson/indexing/factory-index-manager.js'
+import {
+	loadNanoidIndex,
+	resolve,
+	resolveSparkCoId,
+	read as universalRead,
+	waitForStoreReady,
+} from '../modules/cojson-impl.js'
 
 /**
  * @param {object} peer

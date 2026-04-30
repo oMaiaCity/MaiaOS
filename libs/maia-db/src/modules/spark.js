@@ -1,12 +1,13 @@
 /**
- * MaiaDB core, system spark, spark.os infra (surface module).
+ * MaiaDB core, system spark, spark.os infra (surface over bundled cojson impl).
  */
 
-export { MaiaDB, SYSTEM_SPARK_REGISTRY_KEY } from '../cojson/core/MaiaDB.js'
-export { loadInfraFromSparkOs } from '../cojson/factory/infra-from-spark-os.js'
-export { INFRA_SLOTS } from '../cojson/infra-slot-manifest.js'
 export {
 	ensureIdentity,
+	INFRA_SLOTS,
 	listAccountIdsFromIdentityIndex,
-} from '../cojson/registry/ensure-identity.js'
-export { SPARK_OS_META_FACTORY_CO_ID_KEY } from '../cojson/spark-os-keys.js'
+	loadInfraFromSparkOs,
+	MaiaDB,
+	SPARK_OS_META_FACTORY_CO_ID_KEY,
+	SYSTEM_SPARK_REGISTRY_KEY,
+} from './cojson-impl.js'

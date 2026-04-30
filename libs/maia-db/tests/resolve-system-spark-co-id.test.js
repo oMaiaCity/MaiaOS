@@ -1,6 +1,6 @@
 import { describe, expect, mock, test } from 'bun:test'
 
-import { MaiaDB, SYSTEM_SPARK_REGISTRY_KEY } from '../src/cojson/core/MaiaDB.js'
+import { MaiaDB, SYSTEM_SPARK_REGISTRY_KEY } from '../src/modules/cojson-impl.js'
 
 /**
  * resolveSystemSparkCoId is a small, self-contained method.

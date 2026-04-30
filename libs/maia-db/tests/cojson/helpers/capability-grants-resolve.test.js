@@ -1,5 +1,5 @@
 import { describe, expect, it, spyOn } from 'bun:test'
-import * as collectionHelpers from '../../../src/cojson/crud/collection-helpers.js'
+import * as collectionHelpers from '../../../src/modules/cojson-impl.js'
 
 const CAP_SCHEMA = 'co_zcapschema'
 const ACCOUNT_ID = 'co_zaccount'
@@ -71,7 +71,7 @@ function makePeer({ grantSub, grantCmd, grantExp }) {
 spyOn(collectionHelpers, 'getFactoryIndexColistId').mockImplementation(async () => 'co_zcolist')
 
 const { accountHasCapabilityOnPeer, getCapabilityGrantIndexColistCoIdFromPeer } = await import(
-	'../../../src/cojson/helpers/capability-grants-resolve.js'
+	'../../../src/modules/cojson-impl.js'
 )
 
 describe('getCapabilityGrantIndexColistCoIdFromPeer', () => {

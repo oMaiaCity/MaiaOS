@@ -4,7 +4,8 @@
 	"type": "module",
 	"main": "./src/index.js",
 	"scripts": {
-		"test": "bun test tests"
+		"test": "bun test tests",
+		"bundle:cojson": "bun ../../scripts/bundle-maia-db-cojson.mjs"
 	},
 	"exports": {
 		".": "./src/index.js",
@@ -13,11 +14,11 @@
 		"./seed/ref-canonicalize": "./src/seed/ref-canonicalize.js",
 		"./sync-http-peer": "./src/entry-sync-http-peer.js",
 		"./profile-bootstrap": "./src/profile-bootstrap.js",
-		"./cojson/crud/create": "./src/cojson/crud/create.js",
-		"./cojson/crud/update": "./src/cojson/crud/update.js",
-		"./cojson/indexing/factory-index-manager": "./src/cojson/indexing/factory-index-manager.js",
-		"./cojson/indexing/factory-index-rebuild": "./src/cojson/indexing/factory-index-rebuild.js",
-		"./resolve-helpers": "./src/cojson/resolve-helpers.js"
+		"./cojson/crud/create": "./src/modules/cojson-impl.js",
+		"./cojson/crud/update": "./src/modules/cojson-impl.js",
+		"./cojson/indexing/factory-index-manager": "./src/modules/cojson-impl.js",
+		"./cojson/indexing/factory-index-rebuild": "./src/modules/cojson-impl.js",
+		"./resolve-helpers": "./src/modules/cojson-impl.js"
 	},
 	"dependencies": {
 		"@MaiaOS/validation": "workspace:*",

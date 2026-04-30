@@ -2,7 +2,7 @@ import * as db from '@MaiaOS/db'
 import { INFRA_SLOTS } from '@MaiaOS/db'
 import * as vh from '@MaiaOS/validation/validation.helper.js'
 import { afterEach, describe, expect, spyOn, test } from 'bun:test'
-import * as ch from '../../maia-db/src/cojson/crud/collection-helpers.js'
+import * as ch from '../../maia-db/src/modules/cojson-impl.js'
 
 const osId = 'co_zos_runtime_test_1'
 
