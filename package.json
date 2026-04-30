@@ -16,6 +16,7 @@
 		"dev:app": "bun scripts/dev-app.js",
 		"dev:sync": "bun scripts/dev-sync.js",
 		"dev:aven": "bun --filter @MaiaOS/aven dev",
+		"dev:avenos-ui": "bun --filter @AvenOS/ui demo",
 		"dev:desktop": "bun scripts/dev-desktop.js",
 		"build:desktop": "cd services/app && bun run build && bun run tauri:build && ditto \"src-tauri/target/release/bundle/macos/Maia City.app\" \"/Applications/Maia City.app\" && open \"/Applications/Maia City.app\"",
 		"build:desktop:debug": "cd services/app && bun run build && bun run tauri:build:debug && ditto \"src-tauri/target/debug/bundle/macos/Maia City.app\" \"/Applications/Maia City.app\" && open \"/Applications/Maia City.app\"",

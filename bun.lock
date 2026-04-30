@@ -172,6 +172,13 @@
         "unicode-segmenter": "0.15.0",
       },
     },
+    "libs/ui": {
+      "name": "@AvenOS/ui",
+      "version": "26.4.212041-next",
+      "dependencies": {
+        "@chenglou/pretext": "^0.0.6",
+      },
+    },
     "services/app": {
       "name": "@MaiaOS/app",
       "version": "26.4.212041-next",
@@ -219,6 +226,8 @@
     },
   },
   "packages": {
+    "@AvenOS/ui": ["@AvenOS/ui@workspace:libs/ui"],
+
     "@MaiaOS/app": ["@MaiaOS/app@workspace:services/app"],
 
     "@MaiaOS/aven": ["@MaiaOS/aven@workspace:services/aven"],
@@ -342,6 +351,8 @@
     "@biomejs/cli-win32-arm64": ["@biomejs/cli-win32-arm64@2.4.10", "", { "os": "win32", "cpu": "arm64" }, "sha512-umwQU6qPzH+ISTf/eHyJ/QoQnJs3V9Vpjz2OjZXe9MVBZ7prgGafMy7yYeRGnlmDAn87AKTF3Q6weLoMGpeqdQ=="],
 
     "@biomejs/cli-win32-x64": ["@biomejs/cli-win32-x64@2.4.10", "", { "os": "win32", "cpu": "x64" }, "sha512-aW/JU5GuyH4uxMrNYpoC2kjaHlyJGLgIa3XkhPEZI0uKhZhJZU8BuEyJmvgzSPQNGozBwWjC972RaNdcJ9KyJg=="],
+
+    "@chenglou/pretext": ["@chenglou/pretext@0.0.6", "", {}, "sha512-U10s4tFeyu3oVHfXuNWwZSKqHXefhaigpcBkGj60qQFRJ+yUoQ+ez3cGJelP7BWDAB58HCgjcTSmOcg+77afBQ=="],
 
     "@electric-sql/pglite": ["@electric-sql/pglite@0.4.2", "", {}, "sha512-1GUUl/MZpy5QWgWisD3Epho3GkJrZ1MzVgQpo2pifQWUs96F9rXKZxeVLPhkwFYck34CH/kQ8lis6wX9ifn3kg=="],
 

@@ -1,0 +1,16 @@
+{
+	"name": "@AvenOS/ui",
+	"version": "26.4.212041-next",
+	"private": true,
+	"type": "module",
+	"main": "./src/index.js",
+	"exports": {
+		".": "./src/index.js"
+	},
+	"scripts": {
+		"demo": "bun demo/dev.js"
+	},
+	"dependencies": {
+		"@chenglou/pretext": "^0.0.6"
+	}
+}
